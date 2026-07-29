@@ -37,13 +37,22 @@ import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
 // ADR-726 Φ3 — anchored-raster geometry + policy (pure, DOM-free, unit-tested).
 import {
+  ANCHOR_PROBE_WORLD_POINT,
   IDLE_RERASTER_MS,
   type AnchorTransform,
-  canServeAnchoredBlit,
+  type AnchoredBlitRect,
   computeAnchoredBlitRect,
   computeOverscanPx,
+  isAnchoredBlitAcceptable,
   isSameTransform,
+  magnification,
+  overscannedRenderTransform,
+  overscannedViewport,
 } from './dxf-bitmap-cache-anchor';
+// ADR-726 Φ3 — the ONE authority for world→screen (margins + Y-inversion). The projection
+// offset is MEASURED through it, never re-derived here: a hand-written copy of this formula
+// is exactly what made the raster pan the wrong way vertically.
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-726 Φ3 — the offscreen canvas is replaced whenever its size changes; its stubbed
 // bounds live in the shared bounds cache and must be evicted with it.
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
@@ -175,18 +184,47 @@ export class DxfBitmapCache {
     );
   }
 
-  /** ADR-726 Φ3 — can the anchored raster still be projected onto `transform`? */
-  private canServe(transform: ViewTransform, viewport: Viewport): boolean {
+  /**
+   * ADR-726 Φ3 — the destination rect for `transform`, plus its magnification.
+   * ONE code path, shared by the accept/reject decision and by the actual blit, so the
+   * pixels that get drawn are always the ones that were judged acceptable.
+   */
+  private resolveBlit(
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): { rect: AnchoredBlitRect; k: number } | null {
     const canvas = this.offscreenCanvas;
     const anchor = this.anchor;
     const key = this.cacheKey;
-    if (!canvas || !anchor || !key) return false;
-    return canServeAnchoredBlit({
-      anchor,
-      current: transform,
-      overscanPx: this.overscanPx,
-      rasterDeviceW: canvas.width,
-      rasterDeviceH: canvas.height,
+    if (!canvas || !anchor || !key) return null;
+    const k = magnification(anchor, transform);
+    // Measure, do not derive: ask the world→screen SSoT where one probe point sits inside
+    // the raster and where it belongs on screen now. Margins + Y-inversion come for free.
+    const rect = computeAnchoredBlitRect(
+      {
+        raster: CoordinateTransforms.worldToScreen(
+          ANCHOR_PROBE_WORLD_POINT,
+          overscannedRenderTransform(anchor, this.overscanPx),
+          overscannedViewport(viewport, this.overscanPx),
+        ),
+        screen: CoordinateTransforms.worldToScreen(ANCHOR_PROBE_WORLD_POINT, transform, viewport),
+      },
+      k,
+      canvas.width,
+      canvas.height,
+      key.dpr,
+    );
+    return { rect, k };
+  }
+
+  /** ADR-726 Φ3 — can the anchored raster still be projected onto `transform`? */
+  private canServe(transform: ViewTransform, viewport: Viewport): boolean {
+    const key = this.cacheKey;
+    const resolved = this.resolveBlit(transform, viewport);
+    if (!key || !resolved) return false;
+    return isAnchoredBlitAcceptable({
+      rect: resolved.rect,
+      magnification: resolved.k,
       dpr: key.dpr,
       physW: toDevicePixels(viewport.width, key.dpr),
       physH: toDevicePixels(viewport.height, key.dpr),
@@ -222,10 +260,7 @@ export class DxfBitmapCache {
     // served by re-projection instead of a rebuild. Shifting the render offset by the
     // margin is what maps raster pixel (M,M) onto viewport pixel (0,0).
     const overscanPx = computeOverscanPx(viewport);
-    const rasterViewport: Viewport = {
-      width: viewport.width + 2 * overscanPx,
-      height: viewport.height + 2 * overscanPx,
-    };
+    const rasterViewport = overscannedViewport(viewport, overscanPx);
     this.ensureOffscreen(rasterViewport, dpr);
 
     if (!this.offscreenRenderer) return;
@@ -233,7 +268,7 @@ export class DxfBitmapCache {
     try {
       this.offscreenRenderer.render(
         scene,
-        { ...transform, offsetX: transform.offsetX + overscanPx, offsetY: transform.offsetY + overscanPx },
+        { ...transform, ...overscannedRenderTransform(transform, overscanPx) },
         rasterViewport,
         {
           showGrid: baseOptions.showGrid,
@@ -283,12 +318,12 @@ export class DxfBitmapCache {
   blit(targetCtx: CanvasRenderingContext2D, viewport: Viewport, transform: ViewTransform): void {
     const canvas = this.offscreenCanvas;
     const key = this.cacheKey;
-    const anchor = this.anchor;
-    if (!canvas || !key || !anchor) return;
+    const resolved = this.resolveBlit(transform, viewport);
+    if (!canvas || !key || !resolved) return;
     const dpr = key.dpr;
     const physW = toDevicePixels(viewport.width, dpr);
     const physH = toDevicePixels(viewport.height, dpr);
-    const rect = computeAnchoredBlitRect(anchor, transform, this.overscanPx, canvas.width, canvas.height, dpr);
+    const rect = resolved.rect;
 
     targetCtx.save();
     // Reset to identity so we draw at backing-store pixel coords (1:1 with offscreen).

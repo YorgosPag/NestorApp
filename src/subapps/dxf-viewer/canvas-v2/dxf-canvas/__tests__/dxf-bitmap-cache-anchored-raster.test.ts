@@ -15,9 +15,11 @@
  * Τα pixels δεν εξετάζονται (το jsdom δεν έχει 2D context) — μόνο το συμβόλαιο.
  */
 
+import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
 import type { ViewTransform, Viewport } from '../../../rendering/types/Types';
 import type { DxfScene } from '../dxf-types';
 import { DxfBitmapCache, type BitmapCacheRenderInputs } from '../dxf-bitmap-cache';
+import { overscannedRenderTransform, overscannedViewport } from '../dxf-bitmap-cache-anchor';
 
 interface RenderCall {
   transform: ViewTransform;
@@ -169,13 +171,48 @@ describe('DxfBitmapCache — ADR-726 Φ3 anchored raster', () => {
       ]);
     });
 
-    it('shifts the destination by the pan delta', () => {
+    it('🔴 shifts by the pan delta — with Y INVERTED, per CoordinateTransforms', () => {
+      // `screenY = (viewport.height − top) − world.y·scale − offsetY`: offsetY is SUBTRACTED,
+      // so a POSITIVE offsetY moves content UP. The first implementation ADDED it — the
+      // drawing panned the wrong way vertically and the live selection overlay separated
+      // from its own baked copy. This assertion is the regression pin.
       const cache = freshCache();
       const { ctx, drawImage } = targetCtxStub();
       cache.blit(ctx, VIEWPORT, { scale: 1, offsetX: 45, offsetY: -20 });
       const [, dx, dy] = drawImage.mock.calls[0];
       expect(dx).toBe(45 - OVERSCAN);
-      expect(dy).toBe(-20 - OVERSCAN);
+      expect(dy).toBe(+20 - OVERSCAN);
+    });
+
+    it.each([
+      ['pan', { scale: 1, offsetX: 45, offsetY: -20 }],
+      ['pan upward', { scale: 1, offsetX: 0, offsetY: 70 }],
+      ['zoom', { scale: 1.1, offsetX: -18, offsetY: 33 }],
+    ])('🔴 keeps the raster REGISTERED with what the live overlay draws (%s)', (_label, current) => {
+      // Το σύμπτωμα που είδε ο Giorgio: η επιλεγμένη οντότητα ζωγραφίζεται ΔΥΟ φορές — ψημένη
+      // μέσα στο raster + ζωντανό overlay από τον renderer. Αν η προβολή δεν συμφωνεί με το
+      // `worldToScreen`, τα δύο αντίγραφα ΞΕΧΩΡΙΖΟΥΝ και κινούνται διαφορετικά («δεύτερη
+      // μπαλίτσα»). Εδώ ζητάμε ΤΑΥΤΙΣΗ, μέσα από τον πραγματικό καμβά του cache.
+      const cache = freshCache();
+      const { ctx, drawImage } = targetCtxStub();
+      cache.blit(ctx, VIEWPORT, current);
+      const [src, dx, dy, dw, dh] = drawImage.mock.calls[0] as [HTMLCanvasElement, number, number, number, number];
+
+      for (const world of [{ x: 0, y: 0 }, { x: 250, y: -140 }, { x: -95, y: 310 }]) {
+        const inRaster = CoordinateTransforms.worldToScreen(
+          world,
+          overscannedRenderTransform(ANCHOR, OVERSCAN),
+          overscannedViewport(VIEWPORT, OVERSCAN),
+        );
+        // dpr = 1 in this suite ⇒ raster CSS coords are its device coords.
+        const projected = {
+          x: (inRaster.x / src.width) * dw + dx,
+          y: (inRaster.y / src.height) * dh + dy,
+        };
+        const overlay = CoordinateTransforms.worldToScreen(world, current, VIEWPORT);
+        expect(projected.x).toBeCloseTo(overlay.x, 0);
+        expect(projected.y).toBeCloseTo(overlay.y, 0);
+      }
     });
 
     it('clears the backing store first (no ghost trails over last frame)', () => {

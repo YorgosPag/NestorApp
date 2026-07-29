@@ -1,32 +1,61 @@
 /**
  * ADR-726 Φ3 / ADR-040 Phase XXII.B — anchored-raster geometry.
  *
- * The load-bearing claim of the whole fix is ONE equation: a raster rasterised at the
- * anchor transform can be re-projected onto ANY other pure scale+translate transform with
- * a single `drawImage`. If that is wrong the drawing silently slides out of register
- * during every pan — a defect no snapshot test would catch, because the pixels are all
- * still there, just in the wrong place.
+ * 🔴 **ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΓΡΑΦΤΗΚΕ ΔΥΟ ΦΟΡΕΣ. Η ΠΡΩΤΗ ΕΚΔΟΣΗ ΗΤΑΝ ΠΡΑΣΙΝΗ ΚΑΙ ΛΑΘΟΣ.**
+ * Ξανάγραφε μόνη της τη μετατροπή world→screen, αντιγράφοντας τη σύμβαση από **σχόλιο** του
+ * `dxf-viewport-culling` (`screen.y = world.y·scale + offsetY`). Η αληθινή σύμβαση είναι
+ * `CoordinateTransforms.worldToScreen`: `screenY = (viewport.height − top) − world.y·scale −
+ * **offsetY**` — Y ανεστραμμένο, `offsetY` **αφαιρούμενο**, περιθώρια και στους δύο άξονες.
+ * Το test περνούσε επειδή **κώδικας και έλεγχος έκαναν το ΙΔΙΟ λάθος**. Στην οθόνη: το σχέδιο
+ * πήγαινε ανάποδα στο pan, η επιλεγμένη οντότητα ξεκόλλαγε από το ψημένο αντίγραφό της
+ * («δεύτερη μπαλίτσα»), και η κάλυψη έσπαγε κάθε καρέ ⇒ **το lag δεν έφυγε ποτέ**.
  *
- * So the central test here does NOT re-state the algebra (a mutated formula would be
- * copied into the assertion). It takes a WORLD point, computes where the renderer would
- * put it on screen, and asserts the projected raster puts it in exactly the same place.
+ * **Ο κανόνας που επιβάλλει τώρα το αρχείο: καμία γραμμή εδώ δεν ξαναγράφει τη μετατροπή.**
+ * Και ο κώδικας και ο έλεγχος **ρωτούν** το `CoordinateTransforms`. Αν αλλάξει η σύμβαση,
+ * αλλάζουν μαζί· αν κάποιος την ξαναγράψει με το χέρι, το test το βλέπει.
  */
 
+import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
+import type { Point2D, Viewport } from '../../../rendering/types/Types';
 import {
+  ANCHOR_PROBE_WORLD_POINT,
   IDLE_RERASTER_MS,
   type AnchorTransform,
-  canServeAnchoredBlit,
+  type AnchoredProbe,
   computeAnchoredBlitRect,
   computeOverscanPx,
   coversViewport,
+  isAnchoredBlitAcceptable,
   isSameTransform,
   magnification,
   maxMagnification,
+  overscannedRenderTransform,
+  overscannedViewport,
 } from '../dxf-bitmap-cache-anchor';
 
-/** Renderer convention (dxf-viewport-culling): screen = world * scale + offset. */
-function worldToScreen(world: number, t: AnchorTransform, axis: 'x' | 'y'): number {
-  return world * t.scale + (axis === 'x' ? t.offsetX : t.offsetY);
+const VIEWPORT: Viewport = { width: 800, height: 600 };
+const OVERSCAN = 120;
+
+/** Where a world point sits inside the raster, in the raster's own CSS coordinates. */
+function inRaster(world: Point2D, anchor: AnchorTransform, viewport: Viewport, overscanPx: number): Point2D {
+  return CoordinateTransforms.worldToScreen(
+    world,
+    overscannedRenderTransform(anchor, overscanPx),
+    overscannedViewport(viewport, overscanPx),
+  );
+}
+
+/** Exactly what the cache builds — same probe point, same SSoT calls. */
+function probeFor(
+  anchor: AnchorTransform,
+  current: AnchorTransform,
+  viewport: Viewport,
+  overscanPx: number,
+): AnchoredProbe {
+  return {
+    raster: inRaster(ANCHOR_PROBE_WORLD_POINT, anchor, viewport, overscanPx),
+    screen: CoordinateTransforms.worldToScreen(ANCHOR_PROBE_WORLD_POINT, current, viewport),
+  };
 }
 
 describe('computeOverscanPx', () => {
@@ -48,6 +77,24 @@ describe('computeOverscanPx', () => {
   });
 });
 
+describe('the overscanned offscreen pass', () => {
+  it('grows the viewport by the margin on every side', () => {
+    expect(overscannedViewport(VIEWPORT, OVERSCAN)).toEqual({ width: 1040, height: 840 });
+  });
+
+  it('places raster CSS point (M, M) exactly on visible-canvas point (0, 0)', () => {
+    // The load-bearing property of the +overscan offset shift — asserted through the REAL
+    // conversion, including the Y-inversion that a hand-written formula got backwards.
+    const anchor: AnchorTransform = { scale: 1.7, offsetX: 42, offsetY: -8 };
+    for (const world of [{ x: 0, y: 0 }, { x: 130, y: -75 }, { x: -410, y: 260 }]) {
+      const raster = inRaster(world, anchor, VIEWPORT, OVERSCAN);
+      const screen = CoordinateTransforms.worldToScreen(world, anchor, VIEWPORT);
+      expect(raster.x - screen.x).toBeCloseTo(OVERSCAN, 6);
+      expect(raster.y - screen.y).toBeCloseTo(OVERSCAN, 6);
+    }
+  });
+});
+
 describe('maxMagnification', () => {
   it('allows up to native CSS resolution on a HiDPI screen', () => {
     expect(maxMagnification(2)).toBe(2);
@@ -65,45 +112,55 @@ describe('maxMagnification', () => {
 });
 
 describe('computeAnchoredBlitRect — world-point registration', () => {
-  // A raster of 1040×840 device px = an 800×600 viewport + 120 overscan per side, dpr 1.
-  const OVERSCAN = 120;
-
   it.each([
     ['pure pan', { scale: 1, offsetX: 0, offsetY: 0 }, { scale: 1, offsetX: 57, offsetY: -31 }, 1],
+    ['pan upward (positive offsetY)', { scale: 1, offsetX: 0, offsetY: 0 }, { scale: 1, offsetX: 0, offsetY: 64 }, 1],
     ['zoom in', { scale: 1, offsetX: 0, offsetY: 0 }, { scale: 1.1, offsetX: 12, offsetY: 4 }, 1],
     ['zoom out', { scale: 2, offsetX: 10, offsetY: -5 }, { scale: 1.4, offsetX: -60, offsetY: 33 }, 1],
     ['dpr 2 + zoom', { scale: 2, offsetX: 10, offsetY: 10 }, { scale: 3, offsetX: -25, offsetY: 7 }, 2],
-  ])('projects a world point to its true screen position (%s)', (_label, anchor, current, dpr) => {
-    const rasterW = (800 + 2 * OVERSCAN) * dpr;
-    const rasterH = (600 + 2 * OVERSCAN) * dpr;
-    const rect = computeAnchoredBlitRect(anchor, current, OVERSCAN, rasterW, rasterH, dpr);
+  ])('projects world points to their TRUE screen position (%s)', (_label, anchor, current, dpr) => {
+    const rasterW = (VIEWPORT.width + 2 * OVERSCAN) * dpr;
+    const rasterH = (VIEWPORT.height + 2 * OVERSCAN) * dpr;
+    const k = magnification(anchor, current);
+    const rect = computeAnchoredBlitRect(probeFor(anchor, current, VIEWPORT, OVERSCAN), k, rasterW, rasterH, dpr);
 
-    for (const world of [-250, 0, 37.5, 410]) {
-      // Where the offscreen render put this point inside the raster (device px).
-      const rasterX = (worldToScreen(world, anchor, 'x') + OVERSCAN) * dpr;
-      const rasterY = (worldToScreen(world, anchor, 'y') + OVERSCAN) * dpr;
-      // Where the projected raster puts it on the visible backing store.
-      const projectedX = (rasterX / rasterW) * rect.dw + rect.dx;
-      const projectedY = (rasterY / rasterH) * rect.dh + rect.dy;
+    for (const world of [{ x: -250, y: 90 }, { x: 0, y: 0 }, { x: 37.5, y: -12 }, { x: 410, y: 305 }]) {
+      // Where the offscreen pass actually put it (device px inside the raster).
+      const raster = inRaster(world, anchor, VIEWPORT, OVERSCAN);
+      const projectedX = (raster.x * dpr / rasterW) * rect.dw + rect.dx;
+      const projectedY = (raster.y * dpr / rasterH) * rect.dh + rect.dy;
       // Where the renderer would have drawn it had it re-rendered this frame.
-      const expectedX = worldToScreen(world, current, 'x') * dpr;
-      const expectedY = worldToScreen(world, current, 'y') * dpr;
+      const truth = CoordinateTransforms.worldToScreen(world, current, VIEWPORT);
 
-      // ≤0.5 device px: the deliberate whole-pixel snap on pure pan (see below).
-      expect(projectedX).toBeCloseTo(expectedX, 0);
-      expect(projectedY).toBeCloseTo(expectedY, 0);
+      // ≤0.5 device px: the deliberate whole-pixel snap on pure pan.
+      expect(projectedX).toBeCloseTo(truth.x * dpr, 0);
+      expect(projectedY).toBeCloseTo(truth.y * dpr, 0);
     }
+  });
+
+  it('🔴 moves the raster UP for a positive offsetY (the sign that was inverted)', () => {
+    const anchor: AnchorTransform = { scale: 1, offsetX: 0, offsetY: 0 };
+    const atAnchor = computeAnchoredBlitRect(probeFor(anchor, anchor, VIEWPORT, OVERSCAN), 1, 1040, 840, 1);
+    const pannedUp = computeAnchoredBlitRect(
+      probeFor(anchor, { ...anchor, offsetY: 50 }, VIEWPORT, OVERSCAN),
+      1, 1040, 840, 1,
+    );
+    // screenY = (height − top) − world.y·scale − offsetY ⇒ MORE offsetY = SMALLER screenY.
+    expect(pannedUp.dy).toBe(atAnchor.dy - 50);
   });
 
   it('sits at exactly −overscan when the current transform IS the anchor', () => {
     const anchor: AnchorTransform = { scale: 1.7, offsetX: 42, offsetY: -8 };
-    const rect = computeAnchoredBlitRect(anchor, anchor, OVERSCAN, 1040, 840, 1);
-    expect(rect).toEqual({ dx: -120, dy: -120, dw: 1040, dh: 840 });
+    const rect = computeAnchoredBlitRect(probeFor(anchor, anchor, VIEWPORT, OVERSCAN), 1, 1040, 840, 1);
+    expect(rect).toEqual({ dx: -OVERSCAN, dy: -OVERSCAN, dw: 1040, dh: 840 });
   });
 
   it('snaps a pure pan to whole device pixels (1:1 bitmap, no resample blur)', () => {
     const anchor: AnchorTransform = { scale: 1, offsetX: 0, offsetY: 0 };
-    const rect = computeAnchoredBlitRect(anchor, { scale: 1, offsetX: 17.4, offsetY: -3.6 }, OVERSCAN, 1040, 840, 1);
+    const rect = computeAnchoredBlitRect(
+      probeFor(anchor, { scale: 1, offsetX: 17.4, offsetY: -3.6 }, VIEWPORT, OVERSCAN),
+      1, 1040, 840, 1,
+    );
     expect(Number.isInteger(rect.dx)).toBe(true);
     expect(Number.isInteger(rect.dy)).toBe(true);
     expect(rect.dw).toBe(1040);
@@ -111,7 +168,8 @@ describe('computeAnchoredBlitRect — world-point registration', () => {
 
   it('does NOT snap when scale changed (rounding there would mis-register the drawing)', () => {
     const anchor: AnchorTransform = { scale: 1, offsetX: 0, offsetY: 0 };
-    const rect = computeAnchoredBlitRect(anchor, { scale: 1.13, offsetX: 17.4, offsetY: 0 }, OVERSCAN, 1040, 840, 1);
+    const current: AnchorTransform = { scale: 1.13, offsetX: 17.4, offsetY: 0 };
+    const rect = computeAnchoredBlitRect(probeFor(anchor, current, VIEWPORT, OVERSCAN), 1.13, 1040, 840, 1);
     expect(Number.isInteger(rect.dx)).toBe(false);
   });
 });
@@ -135,47 +193,36 @@ describe('coversViewport', () => {
   });
 });
 
-describe('canServeAnchoredBlit', () => {
-  const BASE = {
-    anchor: { scale: 1, offsetX: 0, offsetY: 0 } as AnchorTransform,
-    overscanPx: 120,
-    rasterDeviceW: 1040,
-    rasterDeviceH: 840,
-    dpr: 1,
-    physW: 800,
-    physH: 600,
-  };
+describe('isAnchoredBlitAcceptable', () => {
+  const COVERING = { dx: -120, dy: -120, dw: 1040, dh: 840 };
 
-  it('serves a pan that stays inside the overscan margin', () => {
-    expect(canServeAnchoredBlit({ ...BASE, current: { scale: 1, offsetX: 100, offsetY: -100 } })).toBe(true);
+  it('accepts a covering rect at a sane magnification', () => {
+    expect(isAnchoredBlitAcceptable({ rect: COVERING, magnification: 1, dpr: 1, physW: 800, physH: 600 })).toBe(true);
   });
 
-  it('refuses a pan that runs past the overscan margin', () => {
-    expect(canServeAnchoredBlit({ ...BASE, current: { scale: 1, offsetX: 200, offsetY: 0 } })).toBe(false);
+  it('refuses a rect that leaves a hole', () => {
+    const holed = { ...COVERING, dw: 700 };
+    expect(isAnchoredBlitAcceptable({ rect: holed, magnification: 1, dpr: 1, physW: 800, physH: 600 })).toBe(false);
   });
 
-  it('serves a modest zoom-in on a dpr=1 screen', () => {
-    expect(canServeAnchoredBlit({ ...BASE, current: { scale: 1.1, offsetX: 0, offsetY: 0 } })).toBe(true);
-  });
-
-  it('refuses a zoom-in past the magnification budget (would look soft)', () => {
-    expect(canServeAnchoredBlit({ ...BASE, current: { scale: 1.5, offsetX: 0, offsetY: 0 } })).toBe(false);
-  });
-
-  it('refuses a zoom-out that shrinks the raster below the viewport', () => {
-    expect(canServeAnchoredBlit({ ...BASE, current: { scale: 0.7, offsetX: 0, offsetY: 0 } })).toBe(false);
+  it('refuses magnification past the budget even when the rect covers', () => {
+    const big = { dx: -400, dy: -400, dw: 2000, dh: 1800 };
+    expect(isAnchoredBlitAcceptable({ rect: big, magnification: 1.5, dpr: 1, physW: 800, physH: 600 })).toBe(false);
+    // …and accepts the very same projection on a dpr=2 screen, where it is still native-res.
+    expect(isAnchoredBlitAcceptable({ rect: big, magnification: 1.5, dpr: 2, physW: 800, physH: 600 })).toBe(true);
   });
 
   it.each([
-    ['zero anchor scale', { scale: 1, offsetX: 0, offsetY: 0 }, 0],
-    ['negative scale', { scale: -1, offsetX: 0, offsetY: 0 }, 1],
-  ])('refuses a degenerate transform pair (%s)', (_label, current, anchorScale) => {
-    const result = canServeAnchoredBlit({
-      ...BASE,
-      anchor: { ...BASE.anchor, scale: anchorScale },
-      current,
-    });
-    expect(result).toBe(false);
+    ['zero magnification (anchor scale was 0)', 0],
+    ['negative magnification', -1],
+    ['NaN magnification', Number.NaN],
+  ])('refuses a degenerate magnification (%s)', (_label, k) => {
+    expect(isAnchoredBlitAcceptable({ rect: COVERING, magnification: k, dpr: 1, physW: 800, physH: 600 })).toBe(false);
+  });
+
+  it('refuses a non-finite destination (a NaN transform must not reach drawImage)', () => {
+    const broken = { ...COVERING, dx: Number.NaN };
+    expect(isAnchoredBlitAcceptable({ rect: broken, magnification: 1, dpr: 1, physW: 800, physH: 600 })).toBe(false);
   });
 });
 

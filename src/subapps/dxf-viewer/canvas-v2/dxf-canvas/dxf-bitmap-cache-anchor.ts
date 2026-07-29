@@ -11,12 +11,23 @@
  * frame budget, ~12 FPS.
  *
  * THE FIX: the transform leaves the key. Both transforms are pure scale+translation
- * (no rotation — see `dxf-viewport-culling` coordinate convention), so the difference
- * between anchor and current is expressible as ONE `drawImage(src, dx,dy,dw,dh)`:
+ * (no rotation), so the raster→screen map is exactly `screen = k·raster + b`, i.e. ONE
+ * `drawImage(src, dx,dy,dw,dh)` with `k = sC/sA`.
  *
- *   screen  = world * scale + offset            (renderer convention, both axes)
- *   raster  = world * sA    + (oA + overscan)   (offscreen render, anchor transform)
- *   ⇒ screen = k * raster + (oC − k·(oA + overscan)),  k = sC / sA
+ * 🔴 **`b` IS MEASURED, NOT DERIVED — AND THAT IS THE WHOLE POINT.**
+ * The first version of this module re-wrote the world→screen formula by hand, copying it
+ * from a comment in `dxf-viewport-culling` that says `screen.y = world.y·scale + offsetY`.
+ * The REAL convention (`CoordinateTransforms.worldToScreen`) is
+ * `screenY = (viewport.height − top) − world.y·scale − **offsetY**` — Y inverted, offsetY
+ * SUBTRACTED, and margins in both axes. Result: the raster panned the WRONG WAY vertically,
+ * the live selection overlay separated from its own baked copy («a second ball»), and the
+ * coverage test failed every frame so the rebuild never actually stopped. **The unit test
+ * did not catch it: it had copied the same wrong formula into its own assertion.**
+ *
+ * So `b` is now obtained by asking the SSoT where ONE probe world point lands — once inside
+ * the raster (anchor transform + overscanned viewport) and once on the live canvas. One
+ * point plus `k` determines the map completely. Margins, Y-inversion and any FUTURE change
+ * to the convention are inherited automatically, because nothing here restates them.
  *
  * Prior art: Google Maps / Figma / every software renderer — *project the raster during
  * the gesture, re-rasterise at rest*. Zero GPU (the target machine has none).
@@ -31,10 +42,29 @@
  */
 
 import { DXF_TIMING } from '../../config/dxf-timing';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
 /** The scale/offset triple a raster was rasterised at (rotation is never used here). */
 export type AnchorTransform = Pick<ViewTransform, 'scale' | 'offsetX' | 'offsetY'>;
+
+/**
+ * The same world point seen twice: where the offscreen pass put it INSIDE the raster, and
+ * where it belongs on the visible canvas right now. Both in CSS px, both produced by
+ * `CoordinateTransforms.worldToScreen` — never by re-derived algebra.
+ */
+export interface AnchoredProbe {
+  /** Position inside the raster, in the raster's own CSS coordinates. */
+  raster: Point2D;
+  /** Position on the visible canvas for the live transform, in CSS px. */
+  screen: Point2D;
+}
+
+/**
+ * The world point used to measure the offset. Any point works — the map is affine and `k`
+ * is known independently — so the origin is chosen for readability. Exported so tests probe
+ * with exactly the same point the cache does.
+ */
+export const ANCHOR_PROBE_WORLD_POINT: Point2D = { x: 0, y: 0 };
 
 /** `drawImage` destination rect, in DEVICE (backing-store) pixels. */
 export interface AnchoredBlitRect {
@@ -95,23 +125,44 @@ export function magnification(anchor: AnchorTransform, current: AnchorTransform)
 }
 
 /**
- * Destination rect that places the anchored raster so its content lands exactly where
- * the CURRENT transform says it belongs.
+ * The offscreen render transform: the anchor shifted by the overscan margin, which is what
+ * makes raster CSS coordinate (M, M) coincide with visible-canvas coordinate (0, 0).
  *
- * `rasterDeviceW/H` are the offscreen canvas backing-store dimensions (already
- * including the overscan on both sides).
+ * ⚠️ `+overscanPx` on BOTH offsets is correct even though `worldToScreen` SUBTRACTS
+ * `offsetY` — the raster viewport is also `2M` taller, and `(H+2M − top) − (oy+M)` is
+ * exactly `(H − top) − oy + M`. Verified by the probe, not by this comment.
+ */
+export function overscannedRenderTransform(anchor: AnchorTransform, overscanPx: number): AnchorTransform {
+  return {
+    scale: anchor.scale,
+    offsetX: anchor.offsetX + overscanPx,
+    offsetY: anchor.offsetY - overscanPx,
+  };
+}
+
+/** The offscreen viewport: the visible one grown by the overscan on every side. */
+export function overscannedViewport(viewport: Viewport, overscanPx: number): Viewport {
+  return { width: viewport.width + 2 * overscanPx, height: viewport.height + 2 * overscanPx };
+}
+
+/**
+ * Destination rect that places the anchored raster so its content lands exactly where the
+ * live transform says it belongs.
+ *
+ * `probe` carries the measured correspondence (see `AnchoredProbe`); `rasterDeviceW/H` are
+ * the offscreen canvas backing-store dimensions (overscan already included).
  */
 export function computeAnchoredBlitRect(
-  anchor: AnchorTransform,
-  current: AnchorTransform,
-  overscanPx: number,
+  probe: AnchoredProbe,
+  k: number,
   rasterDeviceW: number,
   rasterDeviceH: number,
   dpr: number,
 ): AnchoredBlitRect {
-  const k = magnification(anchor, current);
-  const dx = dpr * (current.offsetX - k * (anchor.offsetX + overscanPx));
-  const dy = dpr * (current.offsetY - k * (anchor.offsetY + overscanPx));
+  // screen = k·raster + b  ⇒  b = screen(probe) − k·raster(probe). One point is enough:
+  // the map is affine with a KNOWN scale, so a single correspondence pins the offset.
+  const dx = dpr * (probe.screen.x - k * probe.raster.x);
+  const dy = dpr * (probe.screen.y - k * probe.raster.y);
   const dw = k * rasterDeviceW;
   const dh = k * rasterDeviceH;
   // Pure pan (k === 1): snap the translation to whole device pixels. A fractional
@@ -133,28 +184,24 @@ export function coversViewport(rect: AnchoredBlitRect, physW: number, physH: num
 }
 
 /**
- * Can the existing raster still serve `current` — i.e. is it both sharp enough and
- * hole-free? `false` ⇒ the caller must rebuild THIS frame (worst case: today's cost,
- * never worse).
+ * Can this projection still be shown — i.e. is it both sharp enough and hole-free?
+ * `false` ⇒ the caller must rebuild THIS frame (worst case: the pre-ADR-726 cost, never
+ * worse).
  *
  * Note the self-stabilising loop: cheaper frames ⇒ less drift per frame ⇒ fewer
  * rebuilds ⇒ cheaper frames.
  */
-export function canServeAnchoredBlit(params: {
-  anchor: AnchorTransform;
-  current: AnchorTransform;
-  overscanPx: number;
-  rasterDeviceW: number;
-  rasterDeviceH: number;
+export function isAnchoredBlitAcceptable(params: {
+  rect: AnchoredBlitRect;
+  magnification: number;
   dpr: number;
   physW: number;
   physH: number;
 }): boolean {
-  const { anchor, current, overscanPx, rasterDeviceW, rasterDeviceH, dpr, physW, physH } = params;
-  const k = magnification(anchor, current);
+  const { rect, magnification: k, dpr, physW, physH } = params;
   if (!Number.isFinite(k) || k <= 0) return false;
+  if (!Number.isFinite(rect.dx) || !Number.isFinite(rect.dy)) return false;
   if (k > maxMagnification(dpr)) return false;
-  const rect = computeAnchoredBlitRect(anchor, current, overscanPx, rasterDeviceW, rasterDeviceH, dpr);
   return coversViewport(rect, physW, physH);
 }
 
