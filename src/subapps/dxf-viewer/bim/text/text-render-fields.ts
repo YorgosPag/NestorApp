@@ -37,6 +37,10 @@ export const TEXT_RENDER_FIELDS = [
   'width',
   'widthFactor',
   'lineSpacing',
+  // ADR-635 Φ C.20 — το AST ταξιδεύει ΜΕ ΑΝΑΦΟΡΑ ώστε η διάταξη να βάφει κάθε run με το δικό
+  // του χρώμα/γραμματοσειρά/ύψος. Χωρίς αυτό το `layoutTextBlock` έπεφτε στο flat κείμενο και
+  // ένα πολύχρωμο MTEXT έβγαινε μονόχρωμο — η αναδίπλωση δούλευε, τα χρώματα όχι.
+  'textNode',
 ] as const satisfies readonly (keyof DxfText)[];
 
 export type TextRenderField = (typeof TEXT_RENDER_FIELDS)[number];

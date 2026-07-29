@@ -72,11 +72,38 @@ export function tokenizeMtext(raw: string): MtextToken[] {
     } else if (ch === '%' && state.input[state.pos + 1] === '%') {
       const tok = readPercentCode(state);
       if (tok !== null) tokens.push(tok);
+    } else if (ch === '^') {
+      const tok = readCaretCode(state);
+      if (tok !== null) tokens.push(tok);
     } else {
       tokens.push(readTextRun(state));
     }
   }
   return tokens;
+}
+
+// ── Caret (control-character) notation ────────────────────────────────────────
+
+/**
+ * DXF **caret notation**: a control character is stored as `^` + the letter whose ASCII code
+ * is `letter − 64`. AutoCAD emits `^I` for every TAB inside MTEXT — 149 of them in the sample
+ * that exposed this (ADR-635 Φ C.20). Nothing recognised `^`, so the two characters flowed
+ * through `readTextRun` as ordinary text and were **painted literally** («*I*I» on the canvas)
+ * while every tab-aligned column collapsed.
+ *
+ * Only the three control codes AutoCAD actually writes are consumed, plus the documented
+ * literal-caret escape `^ ` (caret + space). Anything else keeps the caret as plain text and
+ * advances ONE character, so an ordinary `^` in prose is untouched and the loop cannot stall.
+ */
+function readCaretCode(state: TokenizerState): MtextToken | null {
+  const next = state.input[state.pos + 1];
+  switch (next) {
+    case 'I': state.pos += 2; return { kind: 'text', value: '\t' };
+    case 'J': state.pos += 2; return { kind: 'lineBreak' };
+    case 'M': state.pos += 2; return null;            // CR — paired with ^J, no visual effect
+    case ' ': state.pos += 2; return { kind: 'text', value: '^' }; // escaped literal caret
+    default:  state.pos += 1; return { kind: 'text', value: '^' };
+  }
 }
 
 // ── Backslash dispatch ────────────────────────────────────────────────────────
@@ -217,25 +244,62 @@ function readAlignmentCode(state: TokenizerState): MtextToken {
   return { kind: 'alignment', value };
 }
 
+/** `\pq` justification given as a LETTER: left / centre / right / justified / distributed. */
+const PARAGRAPH_JUSTIFICATION_LETTERS: Readonly<Record<string, number>> = {
+  l: 0, c: 1, r: 2, j: 3, d: 3,
+};
+
+/**
+ * `\p…;` paragraph properties.
+ *
+ * 🐛 ADR-635 Φ C.20 — ΗΤΑΝ ΣΧΕΔΟΝ ΟΛΟΚΛΗΡΟΣ ΝΕΚΡΟΣ ΣΕ ΠΡΑΓΜΑΤΙΚΑ ΑΡΧΕΙΑ. Δύο λόγοι:
+ *   1. **Το πρόθεμα `x`.** Το AutoCAD γράφει `\pxqc;`, `\pxi-3,l3,sm1.5,t3;`. Το `x` έμπαινε ως
+ *      «κλειδί» του πρώτου πεδίου και το `parseFloat('qc')`/`parseFloat('i-3')` έβγαζε NaN ⇒ το
+ *      **πρώτο** πεδίο κάθε τέτοιου κωδικού πεταγόταν σιωπηλά.
+ *   2. **Γραμματικές τιμές.** Το `q` παίρνει γράμμα (`qc` = κεντραρισμένη, `qj` = πλήρης
+ *      στοίχιση), όχι αριθμό· ο αριθμητικός-μόνο αναγνώστης τα αγνοούσε όλα.
+ * Μετρημένο στο δείγμα: **36 κωδικοί `\p`**, από τους οποίους διαβαζόταν σωστά **ένα** πεδίο.
+ *
+ * Τα tab stops είναι **πολλαπλάσια του ύψους χαρακτήρα** (ezdxf, MTEXT internals) — η μετατροπή
+ * σε μονάδες σχεδίου γίνεται στη διάταξη, όχι εδώ, ώστε το AST να μένει ανεξάρτητο κλίμακας.
+ * Οι τρεις τύποι στάσης (`t` αριστερή, `r` δεξιά, `c` κεντρική — π.χ. `\pxt1,r5,c8`) κρατούνται
+ * όλοι ως ΘΕΣΕΙΣ· η δεξιά/κεντρική **προσαρμογή** δεν υλοποιείται ακόμη (η θέση είναι σωστή,
+ * η στοίχιση πάνω της είναι αριστερή).
+ *
+ * ⚠️ Το `s` (διάστιχο παραγράφου, `sm1.5` / `sa2` / `s*`) διαβάζεται αλλά **δεν** μεταφέρεται:
+ * το token δεν έχει πεδίο διάστιχου και η αλλαγή αγγίζει τη στοίβαξη γραμμών σε 2D/3D/κουτί.
+ * Καταγράφεται ρητά ως ανοιχτό, αντί να «μισο-συνδεθεί».
+ */
 function readParagraphCode(state: TokenizerState): MtextToken {
   state.pos++; // skip 'p'
-  const content = readUntilSemicolon(state);
+  const raw = readUntilSemicolon(state);
+  // Το ηγετικό `x` σημαίνει «ακολουθούν ιδιότητες παραγράφου» — δεν είναι ιδιότητα το ίδιο.
+  const content = raw.startsWith('x') ? raw.slice(1) : raw;
   let indent = 0;
   let left = 0;
   let right = 0;
   let justification = 0;
   const tabs: number[] = [];
+  let inTabList = false;
   for (const part of content.split(',')) {
     if (!part) continue;
     const key = part[0];
-    const val = parseFloat(part.slice(1));
+    const rest = part.slice(1);
+    const val = parseFloat(rest);
+    if (key === 'q') {
+      // `q*` = επαναφορά στην προεπιλογή· γράμμα ή αριθμός αλλιώς.
+      justification = PARAGRAPH_JUSTIFICATION_LETTERS[rest] ?? (isNaN(val) ? 0 : Math.floor(val));
+      continue;
+    }
     if (isNaN(val)) continue;
     switch (key) {
       case 'i': indent = val; break;
       case 'l': left = val; break;
-      case 'r': right = val; break;
-      case 'q': justification = Math.floor(val); break;
-      case 't': tabs.push(val); break;
+      case 't': tabs.push(val); inTabList = true; break;
+      // Μόλις ανοίξει η λίστα στάσεων, τα `r`/`c` είναι δεξιά/κεντρική ΣΤΑΣΗ (`t1,r5,c8`)·
+      // πριν από αυτήν, το `r` είναι το δεξί περιθώριο της παραγράφου.
+      case 'c': if (inTabList) tabs.push(val); break;
+      case 'r': if (inTabList) tabs.push(val); else right = val; break;
     }
   }
   return { kind: 'paragraph', indent, left, right, tabs, justification };
@@ -269,6 +333,9 @@ function readTextRun(state: TokenizerState): MtextToken {
       ch === '\\' ||
       ch === '{' ||
       ch === '}' ||
+      // ADR-635 Φ C.20 — caret notation (`^I` tab κ.λπ.)· χωρίς αυτό το stop, το run θα
+      // κατάπινε το `^` και ο `readCaretCode` δεν θα καλούνταν ΠΟΤΕ.
+      ch === '^' ||
       (ch === '%' && state.input[state.pos + 1] === '%');
     if (stop) break;
     state.pos++;

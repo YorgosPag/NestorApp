@@ -158,8 +158,10 @@ function buildTextSceneEntity(params: {
   alignment: 'left' | 'center' | 'right';
   textNode: DxfTextNode;
   color?: string;
+  /** MTEXT reference-rectangle width (group 41, world units) — the column the text wraps in. */
+  width?: number;
 }): AnySceneEntity {
-  const { idPrefix, index, layer, x, y, text, height, rotation, alignment, textNode, color } = params;
+  const { idPrefix, index, layer, x, y, text, height, rotation, alignment, textNode, color, width } = params;
   return {
     id: `${idPrefix}_${index}`,
     type: 'text',
@@ -172,7 +174,11 @@ function buildTextSceneEntity(params: {
     rotation,
     alignment,
     textNode,
-    ...(color && { color })
+    ...(color && { color }),
+    // ADR-635 Φ C.20 — χωρίς αυτό δεν υπάρχει ΚΑΝΕΝΑ πλάτος στήλης ⇒ καμία αναδίπλωση: το
+    // κείμενο έσπαγε μόνο στα ρητά `\P` και οι μεγάλες παράγραφοι έτρεχαν σε μία ατέρμονη
+    // γραμμή έξω από το σχέδιο. Το `text-box.ts` ήδη περίμενε αυτό το πεδίο (`text.width`).
+    ...(width !== undefined && width > 0 && { width }),
   };
 }
 
@@ -281,10 +287,16 @@ export function convertMText(
   const plainText = extractFlatText(textNode);
   const color = extractEntityColor(data);
 
+  // Group 41 = πλάτος ορθογωνίου αναφοράς (world units). Το AutoCAD γράφει `0` όταν το MTEXT
+  // δεν έχει καθορισμένη στήλη (μονή γραμμή, «auto») — άρα το 0 ΔΕΝ είναι πλάτος μηδέν, είναι
+  // «χωρίς πλαίσιο»· ο guard `> 0` στο `buildTextSceneEntity` το κρατά εκτός.
+  const referenceWidth = parseFloat(data['41']);
+
   return buildTextSceneEntity({
     idPrefix: 'mtext', index, layer, x, y, text: plainText, height, rotation, alignment,
     textNode,
     color,
+    ...(Number.isFinite(referenceWidth) && { width: referenceWidth }),
   });
 }
 

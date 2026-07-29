@@ -65,7 +65,10 @@ import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
 // ADR-557 (multi-line) — the shared split + line-stacking SSoT: box height = Σ γραμμών,
 // width = max γραμμής. The SAME helper the renderer + 3D use, so the three stay in parity.
-import { splitTextLines, textLineCount, resolveLineSpacingRatio, resolveMultilineExtents, type TextRow, type MultilineExtents } from './text-lines';
+import { resolveLineSpacingRatio, resolveMultilineExtents, type TextRow, type MultilineExtents } from './text-lines';
+// ADR-635 Φ C.20 — η αναδίπλωση στη στήλη (group 41) + οι στηλοθέτες ζουν σε ΕΝΑ SSoT που
+// μοιράζονται κουτί και renderer· εδώ διαβάζουμε τις ΟΠΤΙΚΕΣ γραμμές, όχι τα ρητά `\P`.
+import { layoutTextBlock, layoutLineStrings } from './text-layout';
 // ADR-557 — the oblique shear SSoT (angle → tan θ). The SAME map the renderer uses, so the
 // box parallelogram leans by exactly what the drawn glyphs lean by (no second `Math.tan`).
 import { obliqueShearFromAngle } from './text-oblique';
@@ -94,7 +97,7 @@ function naturalTextWidth(text: string | undefined | null, height: number): numb
 }
 
 /** Font/X-scale inputs for the metrics-accurate advance, read off the flat `DxfText`. */
-function advanceStyleOf(text: DxfText): TextAdvanceStyle {
+export function advanceStyleOf(text: DxfText): TextAdvanceStyle {
   const style = text.textStyle;
   return {
     fontFamily: style?.fontFamily,
@@ -117,10 +120,15 @@ export function resolveBoxHeight(text: DxfText): number {
  * line, so width + side-bearings agree. Single-line → the sole line (zero regression).
  */
 function widestLineOf(text: DxfText): string {
-  const lines = splitTextLines(text.text);
-  if (lines.length <= 1) return lines[0] ?? '';
+  // ADR-635 Φ C.20 — ΟΙ ΓΡΑΜΜΕΣ ΕΙΝΑΙ ΟΙ **ΟΠΤΙΚΕΣ**, όχι μόνο τα ρητά `\P`. Εδώ διαβαζόταν
+  // `splitTextLines(text.text)`, οπότε ένα MTEXT με στήλη (group 41) που αναδιπλώνεται σε 30
+  // γραμμές μετριόταν ως **μία** τεράστια γραμμή: το κουτί/λαβές/hover δεν είχαν καμία σχέση
+  // με τα ζωγραφισμένα glyphs. Ο renderer καλεί το ΙΔΙΟ `layoutTextBlock` — μία απόφαση
+  // αναδίπλωσης, δύο καταναλωτές (η σύμβαση ισοτιμίας του ADR-557).
   const h = resolveBoxHeight(text);
   const style = advanceStyleOf(text);
+  const lines = layoutLineStrings(text, h, style);
+  if (lines.length <= 1) return lines[0] ?? '';
   let best = lines[0] ?? '';
   let bestW = -1;
   for (const line of lines) {
@@ -143,7 +151,13 @@ function contentAdvanceWorld(text: DxfText): number {
  * like a simple TEXT. `false` for simple TEXT (no frame) and for a frame ≥ the content.
  */
 export function isTextBoxFrameConstrained(text: DxfText): boolean {
-  return text.width != null && text.width > 0 && text.width < contentAdvanceWorld(text);
+  if (text.width == null || text.width <= 0) return false;
+  // ⚠️ ADR-635 Φ C.20 — ΜΕΤΡΑ ΤΟ ΑΝΑΔΙΠΛΩΤΟ ΠΛΑΤΟΣ, ΟΧΙ ΤΟ ΑΝΑΔΙΠΛΩΜΕΝΟ. Η ερώτηση εδώ είναι
+  // «θα αναδιπλωθεί;» — μόλις η αναδίπλωση έγινε πραγματική, το `contentAdvanceWorld` επιστρέφει
+  // πάντα ≤ frame (αυτό ΚΑΝΕΙ η αναδίπλωση), οπότε η σύγκριση θα ήταν μονίμως `false` και το
+  // πλαίσιο δεν θα «νικούσε» ΠΟΤΕ. Μετράμε το ίδιο κείμενο **χωρίς στήλη**: αν έτσι ξεπερνά το
+  // πλαίσιο, τότε όντως αναδιπλώνεται.
+  return text.width < contentAdvanceWorld({ ...text, width: undefined });
 }
 
 /**
@@ -155,8 +169,13 @@ export function isTextBoxFrameConstrained(text: DxfText): boolean {
  * no font + no DOM are available (jest / SSR). Robust to a missing flat `text` — never throws.
  */
 export function effectiveTextWidth(text: DxfText): number {
-  const content = contentAdvanceWorld(text);
-  return text.width != null && text.width > 0 ? Math.min(text.width, content) : content;
+  // ADR-635 Φ C.20 — ήταν `Math.min(width, content)`. Αυτό έδινε το πλαίσιο **μόνο επειδή** το
+  // `content` μετριόταν ΧΩΡΙΣ αναδίπλωση και ξεχείλιζε. Με πραγματική αναδίπλωση το `content`
+  // είναι εξ ορισμού ≤ πλαίσιο, οπότε το `min` θα επέστρεφε πάντα το (μικρότερο) περιεχόμενο
+  // και το πλαίσιο δεν θα κέρδιζε ΠΟΤΕ. Γράφουμε πλέον την πρόθεση κατευθείαν: αναδιπλώνεται →
+  // η στήλη· δεν αναδιπλώνεται → αγκαλιάζει τα glyphs (Giorgio 2026-07-07).
+  if (text.width == null || text.width <= 0) return contentAdvanceWorld(text);
+  return isTextBoxFrameConstrained(text) ? text.width : contentAdvanceWorld(text);
 }
 
 /** Re-export so a resize can recompute width from a patched height (TEXT widthFactor path). */
@@ -214,7 +233,10 @@ interface VBoxRatios {
  * offset (`text-lines.ts`), so render ≡ box for every attachment + line count.
  */
 function multilineExtentsOf(text: DxfText, just: TextJustification): MultilineExtents {
-  return resolveMultilineExtents(just[0] as TextRow, textLineCount(text.text), resolveLineSpacingRatio(text));
+  // ADR-635 Φ C.20 — πλήθος **οπτικών** γραμμών (μετά την αναδίπλωση), όχι μόνο τα `\P`:
+  // αλλιώς το ύψος του κουτιού ενός αναδιπλωμένου MTEXT έμενε στο ύψος μίας γραμμής.
+  const lineCount = layoutTextBlock(text, resolveBoxHeight(text), advanceStyleOf(text)).length;
+  return resolveMultilineExtents(just[0] as TextRow, Math.max(1, lineCount), resolveLineSpacingRatio(text));
 }
 
 /**

@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { LineSpacingMode } from '../../text-engine/types';
+import type { LineSpacingMode, DxfTextNode } from '../../text-engine/types';
 import type { SceneLayer, LineweightMm, HatchEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 // ADR-362 Phase C1 — Dimension entity wrapper for DXF render pipeline.
@@ -226,6 +226,17 @@ export interface DxfText extends DxfEntity {
    * factor (the ribbon «Διάστιχο» edit did nothing on canvas). Absent → factor 1.
    */
   lineSpacing?: { readonly mode: LineSpacingMode; readonly factor: number };
+  /**
+   * ADR-635 Φ C.20 — the ADR-344 AST, carried BY REFERENCE (never cloned) so the layout SSoT
+   * (`bim/text/text-layout.ts`) can paint each run with ITS OWN colour / font / height.
+   *
+   * 🔴 Γιατί έσπασε η αρχική «σκόπιμη ισοπέδωση»: το AST ήταν η ΜΟΝΗ πηγή που ήξερε ότι μέσα
+   * σε ΕΝΑ MTEXT το AutoCAD αλλάζει χρώμα δεκάδες φορές (`\C1;`/`\C7;`). Με μόνο το `textStyle`
+   * (= στυλ του **πρώτου** run) κάθε πολύχρωμο υπόμνημα βαφόταν μονόχρωμο — δεν ήταν
+   * ρύθμιση, ήταν απώλεια δεδομένων στη διαδρομή. Οι flat συντομεύσεις (`textStyle`,
+   * `lineSpacing`, `width`) **μένουν**: είναι η γρήγορη οδός για όποιον δεν χρειάζεται το AST.
+   */
+  textNode?: DxfTextNode;
 }
 
 export interface DxfAngleMeasurement extends DxfEntity {

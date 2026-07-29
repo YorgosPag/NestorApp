@@ -53,10 +53,13 @@ import { resolveEntityFont, paintTextRun, type ResolvedFont } from '../../text-e
 import { getTextGrips } from '../../bim/text/text-grips';
 // ADR-557 Φ-attachment — attachment-aware text-box SSoT: the hitTest hit-box + the 2D
 // hover frame use the SAME box as the grips / 3D mesh / culling (one geometry, N consumers).
-import { resolveTextBox, textBoxCornersWorld } from '../../bim/text/text-box';
+import { resolveTextBox, textBoxCornersWorld, advanceStyleOf } from '../../bim/text/text-box';
+// ADR-635 Φ C.20 — ΤΟ ΙΔΙΟ SSoT διάταξης που διαβάζει το κουτί/λαβές: αναδίπλωση στη στήλη
+// (group 41), στηλοθέτες, και στυλ ανά run. Μία απόφαση αναδίπλωσης, δύο καταναλωτές.
+import { layoutTextBlock, type TextLayoutLine, type TextLayoutSpan } from '../../bim/text/text-layout';
 // ADR-557 (multi-line) — split flat `text` on `\n` and stack each line at its own y-offset,
 // with the SAME line-spacing + attachment distribution the box SSoT uses (render ≡ box).
-import { splitTextLines, resolveLineSpacingRatio, resolveMultilineExtents, type TextRow } from '../../bim/text/text-lines';
+import { resolveLineSpacingRatio, resolveMultilineExtents, type TextRow } from '../../bim/text/text-lines';
 // ADR-557 — the oblique shear SSoT. The box (`text-box.ts`) reads the SAME map (world y-up);
 // this screen-y-DOWN path negates it ONCE (below) — the only place the y-flip lives.
 import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
@@ -75,6 +78,29 @@ type TextRichStyle = {
   obliqueAngle?: number; // ADR-557 — AutoCAD oblique (shear) angle in degrees
   tracking?: number; // AutoCAD `\T` — inter-glyph spacing factor (1 = normal)
 } | undefined;
+
+/**
+ * ADR-635 Φ C.20 — everything the per-span paint needs, bundled so the two paint helpers keep
+ * ≤ 40-line bodies (N.7.1) instead of a 14-parameter signature.
+ */
+interface LayoutPaintOptions {
+  readonly advancePx: number;
+  readonly firstOffsetPx: number;
+  readonly screenHeight: number;
+  /** World → screen px factor (`transform.scale`) — span offsets arrive in world units. */
+  readonly worldToPx: number;
+  readonly align: CanvasTextAlign;
+  readonly baseline: CanvasTextBaseline;
+  /** Font resolved for the ENTITY family — reused for every span that doesn't override it. */
+  readonly resolved: ResolvedFont | null;
+  readonly richStyle: TextRichStyle;
+  readonly hasDecoration: boolean;
+  readonly tracking: number;
+  /** Colour for spans that inherit (ByLayer/ByBlock): entity colour → layer → default. */
+  readonly fallbackFill: string;
+  /** Overrides EVERY span colour (hover) — undefined in the normal paint. */
+  readonly forcedFill?: string;
+}
 
 export class TextRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
@@ -201,13 +227,29 @@ export class TextRenderer extends BaseEntityRenderer {
     // ADR-557 (multi-line) — split on `\n`; each line steps down by `advancePx`. The block is
     // shifted so `position` stays the attachment anchor (T/M/B) — `firstOffsetPx = −topAdd·height`,
     // the exact rule the box SSoT applies, so the drawn lines fill the grip/hover box precisely.
-    const lines = splitTextLines(text);
-    const lineSpacingRatio = resolveLineSpacingRatio(entity as unknown as DxfText);
+    // 🏢 ADR-635 Φ C.20 — οι ΟΠΤΙΚΕΣ γραμμές έρχονται από το κοινό `layoutTextBlock`:
+    // αναδίπλωση μέσα στη στήλη του MTEXT (group 41), στηλοθέτες `\t` σε πραγματικές θέσεις,
+    // και στυλ **ανά run** (χρώμα/γραμματοσειρά/ύψος). Το `text-box.ts` καλεί το ΙΔΙΟ, οπότε
+    // κουτί/λαβές/hover/hit-test βλέπουν ακριβώς τις γραμμές που ζωγραφίζονται.
+    const dxfText = entity as unknown as DxfText;
+    const worldToPx = this.transform.scale;
+    const worldHeight = worldToPx > 0 ? screenHeight / worldToPx : screenHeight;
+    const layout = layoutTextBlock(dxfText, worldHeight, advanceStyleOf(dxfText));
+    const lineSpacingRatio = resolveLineSpacingRatio(dxfText);
     const advancePx = screenHeight * lineSpacingRatio;
     const row: TextRow = baselineMode === 'middle' ? 'M' : baselineMode === 'bottom' ? 'B' : 'T';
-    const firstOffsetPx = -resolveMultilineExtents(row, lines.length, lineSpacingRatio).topAdd * screenHeight;
+    const firstOffsetPx = -resolveMultilineExtents(row, layout.length, lineSpacingRatio).topAdd * screenHeight;
+    // Το hover νικά κάθε χρώμα run (AutoCAD: όλη η οντότητα κιτρινίζει)· αλλιώς το χρώμα του
+    // span, και τελευταίο δίχτυ το χρώμα οντότητας/layer.
+    const fallbackFill = isHovered
+      ? HOVER_HIGHLIGHT.ENTITY.glowColor
+      : (richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY);
     const paint = (ox: number, oy: number) =>
-      this.paintTextLines(ox, oy, lines, advancePx, firstOffsetPx, screenHeight, textAlignMode, baselineMode, resolved, richStyle, hasDecoration, tracking);
+      this.paintLayoutLines(ox, oy, layout, {
+        advancePx, firstOffsetPx, screenHeight, worldToPx, align: textAlignMode,
+        baseline: baselineMode, resolved, richStyle, hasDecoration, tracking,
+        fallbackFill, forcedFill: isHovered ? HOVER_HIGHLIGHT.ENTITY.glowColor : undefined,
+      });
 
     // ADR-557 — any of rotation / widthFactor / oblique needs a local frame around the
     // anchor; when all are neutral, keep the original anchor-space paint (byte-identical).
@@ -227,21 +269,47 @@ export class TextRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * ADR-557 (multi-line) — paint each visual line at `origin + firstOffset + i·advance`
-   * (screen y-down). Reuses the single-line `paintText` (glyph-path or CSS fallback) +
-   * `paintDecorations` per line, so every line keeps the run's font / baseline / decorations.
+   * ADR-557 (multi-line) + ADR-635 Φ C.20 (rich) — paint each VISUAL line at
+   * `origin + firstOffset + i·advance` (screen y-down), span by span.
+   *
+   * Κάθε span κρατά το δικό του x (από τη διάταξη: στηλοθέτες + αναδίπλωση) και το δικό του
+   * στυλ, οπότε ένα MTEXT με δεκάδες αλλαγές `\C`/`\f`/`\H` βάφεται όπως στο AutoCAD αντί να
+   * ισοπεδώνεται στο στυλ του πρώτου run. Τα spans είναι αριστερά-αγκυρωμένα και η στοίχιση
+   * της γραμμής εφαρμόζεται ΜΙΑ φορά στο x της γραμμής (το `ctx.textAlign` ανά span θα
+   * στοίχιζε το καθένα χωριστά και θα τα έριχνε το ένα πάνω στο άλλο).
    */
-  private paintTextLines(
-    originX: number, originY: number, lines: string[], advancePx: number, firstOffsetPx: number,
-    screenHeight: number, align: CanvasTextAlign, baseline: CanvasTextBaseline,
-    resolved: ResolvedFont | null, richStyle: TextRichStyle, hasDecoration: boolean,
-    tracking = 1,
+  private paintLayoutLines(
+    originX: number, originY: number, layout: readonly TextLayoutLine[], opts: LayoutPaintOptions,
   ): void {
-    for (let i = 0; i < lines.length; i++) {
+    const { advancePx, firstOffsetPx, screenHeight, worldToPx, align, richStyle, hasDecoration } = opts;
+    for (let i = 0; i < layout.length; i++) {
+      const line = layout[i];
       const y = originY + firstOffsetPx + i * advancePx;
-      const w = this.paintText(originX, y, lines[i], screenHeight, align, baseline, resolved, tracking);
-      if (hasDecoration) this.paintDecorations(originX, y, w, screenHeight, richStyle, align);
+      const lineWidthPx = line.widthWorld * worldToPx;
+      const xOff = align === 'center' ? -lineWidthPx / 2 : align === 'right' ? -lineWidthPx : 0;
+      for (const span of line.spans) {
+        this.paintLayoutSpan(originX + xOff + span.xWorld * worldToPx, y, span, opts);
+      }
+      // Οι διακοσμήσεις (υπογράμμιση κ.λπ.) μένουν σε επίπεδο ΓΡΑΜΜΗΣ με το στυλ του μπλοκ:
+      // το `TextLayoutSpan` δεν μεταφέρει ακόμη per-run underline/overline/strike.
+      if (hasDecoration) this.paintDecorations(originX + xOff, y, lineWidthPx, screenHeight, richStyle, 'left');
     }
+  }
+
+  /** Paint ONE span with its own font / height / colour (left-anchored at `x`). */
+  private paintLayoutSpan(
+    x: number, y: number, span: TextLayoutSpan, opts: LayoutPaintOptions,
+  ): void {
+    const spanHeightPx = Math.max(1, span.heightWorld * opts.worldToPx);
+    const family = span.fontFamily || opts.richStyle?.fontFamily || 'arial';
+    const weight: 'normal' | 'bold' = span.bold ?? opts.richStyle?.bold ? 'bold' : 'normal';
+    const italic = span.italic ?? opts.richStyle?.italic;
+    this.ctx.font = buildUIFont(spanHeightPx, family, weight, italic);
+    this.ctx.fillStyle = opts.forcedFill ?? span.color ?? opts.fallbackFill;
+    const resolved = family === (opts.richStyle?.fontFamily || 'arial')
+      ? opts.resolved
+      : resolveEntityFont(family, { bold: weight === 'bold', italic });
+    this.paintText(x, y, span.text, spanHeightPx, 'left', opts.baseline, resolved, opts.tracking);
   }
 
   /**

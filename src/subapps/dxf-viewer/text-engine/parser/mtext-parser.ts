@@ -191,7 +191,13 @@ function applyParagraphCode(
   state: ParserState,
 ): void {
   flushRun(state);
-  flushParagraph(state);
+  // ADR-635 Φ C.20 — ένας κωδικός `\p` στην ΑΡΧΗ **ρυθμίζει** την πρώτη παράγραφο· δεν κλείνει
+  // κάποια. Το άνευ όρων flush παρήγαγε μια φανταστική κενή παράγραφο ⇒ μια κενή γραμμή στην
+  // κορυφή κάθε MTEXT που ξεκινά με `\pxq…;` (και τις στάσεις/στοίχιση τις έβρισκε ο καταναλωτής
+  // μία παράγραφο πιο κάτω απ' όσο περίμενε). Τα ενδιάμεσα `\p` κλείνουν κανονικά, όπως και τα
+  // ρητά `\P\P` που παράγουν **πραγματικές** κενές γραμμές.
+  const atStart = state.paragraphs.length === 0 && state.runs.length === 0;
+  if (!atStart) flushParagraph(state);
   const j = token.justification;
   const justification: 0 | 1 | 2 | 3 = j === 1 ? 1 : j === 2 ? 2 : j === 3 ? 3 : 0;
   state.currentParagraphStyle = {

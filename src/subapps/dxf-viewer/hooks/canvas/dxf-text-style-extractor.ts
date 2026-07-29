@@ -11,6 +11,8 @@
 import type { DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { DxfColor, DxfTextNode, TextRun } from '../../text-engine/types';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
+// ADR-635 Φ C.20 — SSoT για το χρώμα ενός run (TrueColor + ACI + κληρονομιά).
+import { resolveRunColorHex } from '../../text-engine/render/run-color';
 
 /** Entity shape required by the text-style helpers (narrow subset of SceneEntity). */
 type TextStyledEntity = { textNode?: DxfTextNode; height?: number; fontSize?: number };
@@ -54,13 +56,12 @@ export function extractFirstRunStyle(entity: TextStyledEntity): DxfTextStyle | u
       // Carry the AutoCAD `\T` character tracking so `TextRenderer` can space the glyphs
       // (the ribbon «Διάκενο» writes `run.style.tracking`; the renderer reads it from here).
       if (s.tracking !== undefined) result.tracking = s.tracking;
-      if (s.color) {
-        const c = s.color as DxfColor;
-        if (c.kind === 'TrueColor') {
-          result.runColor = `#${c.r.toString(16).padStart(2, '0')}${c.g.toString(16).padStart(2, '0')}${c.b.toString(16).padStart(2, '0')}`;
-        }
-        // ByLayer / ByBlock → inherit entity color, omit runColor
-      }
+      // ADR-635 Φ C.20 — χρώμα run μέσω του SSoT (TrueColor **και** ACI· ByLayer/ByBlock →
+      // undefined = κληρονομεί το χρώμα της οντότητας). Πριν καλυπτόταν ΜΟΝΟ το TrueColor,
+      // οπότε κάθε inline `\C<n>;` του AutoCAD αγνοούνταν και όλο το κείμενο έπαιρνε το
+      // group-62 της οντότητας — «όλα κόκκινα».
+      const runColor = resolveRunColorHex(s.color as DxfColor | undefined);
+      if (runColor) result.runColor = runColor;
     }
   }
 

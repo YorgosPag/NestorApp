@@ -172,6 +172,15 @@ function scaleText(e: Entity & { type: 'text' }, base: Point2D, sx: number, sy: 
     // render / grip / ghost / 3D all read the scaled value. Reuses the same helper the
     // grip-resize path uses — no duplicate scaler.
     ...(node ? { textNode: scaleTextNodeRunHeights(node, Math.abs(sy)) } : {}),
+    // 🐛 ADR-635 Φ C.20 — Η ΣΤΗΛΗ ΤΟΥ MTEXT ΕΙΝΑΙ ΜΗΚΟΣ ΚΑΙ ΠΡΕΠΕΙ ΝΑ ΚΛΙΜΑΚΩΝΕΤΑΙ. Το
+    // εισαγόμενο MTEXT **ισοπεδώνεται σε `type:'text'`**, άρα περνά από ΕΔΩ και όχι από το
+    // `scaleMText` (που ήδη το έκανε σωστά). Χωρίς αυτό, μετά την κανονικοποίηση σε mm (×1000)
+    // το ύψος γινόταν 799,6 ενώ το πλάτος στήλης έμενε 34,17 ωμές μονάδες: κάθε **χαρακτήρας**
+    // ήταν φαρδύτερος από τη στήλη ⇒ η αναδίπλωση έσπαγε το κείμενο σε μία γραμμή ανά γράμμα.
+    // Απόλυτο μήκος (όχι λόγος όπως το `widthFactor`) → `|sx|`, ίδιο με το `scaleMText`.
+    ...((e as { width?: number }).width !== undefined
+      ? { width: (e as { width: number }).width * Math.abs(sx) }
+      : {}),
   };
 }
 
