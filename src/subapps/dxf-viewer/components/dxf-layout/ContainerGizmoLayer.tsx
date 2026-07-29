@@ -27,7 +27,7 @@
  */
 'use client';
 
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntities';
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
@@ -46,10 +46,14 @@ import {
   paintOverlayDispatchFrame,
   type OverlayDispatchPainter,
 } from './overlay-dispatch/overlay-dispatch-frame';
+// ADR-040 Phase XXII.B — zero-lag: transform από το SSoT στο draw time + scheduler frame
+// αντί για React prop (ιδίωμα HomeRunWiresOverlay).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import type { Entity } from '../../types/entities';
 import type { GripInfo } from '../../hooks/grip-types';
 import type { GripRenderConfig, GripTemperature } from '../../rendering/grips/types';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { DxfGripInteractionState } from '../../hooks/grip-computation';
 
 /** Resolve the gizmo grips for every selected container in a scene (container-specific). */
@@ -61,7 +65,13 @@ export type ContainerGripResolver = (
 interface ContainerGizmoLayerProps {
   /** Active level id — the reactive scene slice this leaf subscribes to (ADR-040). */
   sceneLevelId: string | null;
-  transform: ViewTransform;
+  /**
+   * Container discriminator — ΚΑΙ το scheduler slot id (XXII.B frame-sub): τα δύο mounted
+   * layers (group + block) ΔΕΝ επιτρέπεται να μοιράζονται id (ο δεύτερος register θα
+   * αντικαθιστούσε τον πρώτο → παγωμένος gizmo στο pan). Ρητό prop — ΟΧΙ `fn.name`
+   * (mangled σε production build).
+   */
+  containerKind: 'group' | 'block';
   viewport: { width: number; height: number };
   /** Hovered/active grip refs → warm/hot temperature (pixel parity with every grip). */
   gripInteractionState: DxfGripInteractionState | undefined;
@@ -86,7 +96,7 @@ function resolveGizmoTemperature(
 
 export const ContainerGizmoLayer = React.memo(function ContainerGizmoLayer({
   sceneLevelId,
-  transform,
+  containerKind,
   viewport,
   gripInteractionState,
   gripSize,
@@ -111,38 +121,57 @@ export const ContainerGizmoLayer = React.memo(function ContainerGizmoLayer({
     [sceneModel, selectedEntityIds, resolveGrips, showMidpoints, showCenters, showQuadrants],
   );
 
-  useLayoutEffect(() => {
+  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
+  const drawStateRef = useRef({ grips, viewport, gripInteractionState, gripSize });
+  drawStateRef.current = { grips, viewport, gripInteractionState, gripSize };
+
+  // Bitmap size = viewport × DPR (μέσω του ΕΝΟΣ primitive)· the CSS box size comes from the
+  // `w-full h-full` className (the SAME positioning every sibling overlay uses — no inline
+  // style, N.3). ADR-726 Φ2: χωρίς λαβές, ο καμβάς δεν αγγίζεται καθόλου.
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const s = drawStateRef.current;
 
-    // Bitmap size = viewport × DPR (μέσω του ΕΝΟΣ primitive)· the CSS box size comes from the
-    // `w-full h-full` className (the SAME positioning every sibling overlay uses — no inline
-    // style, N.3). ADR-726 Φ2: χωρίς λαβές, ο καμβάς δεν αγγίζεται καθόλου.
     const painter: OverlayDispatchPainter | null =
-      grips.length > 0
+      s.grips.length > 0
         ? (ctx, t, vp) => {
             const worldToScreen = (p: Point2D): Point2D =>
               CoordinateTransforms.worldToScreen(p, t, vp);
             const renderer = new UnifiedGripRenderer(ctx, worldToScreen);
-            const configs: GripRenderConfig[] = grips.map((g) => ({
+            const configs: GripRenderConfig[] = s.grips.map((g) => ({
               position: g.position,
               type: g.type,
               // Entity-agnostic glyph: the grip's tagged `gripKind.kind` (`group-*` / `block-*`)
               // resolves to its glyph via the ONE registry, no container branch (mirror
               // hotGripKindOf).
               shape: gripGlyphShape(g.gripKind?.kind),
-              temperature: resolveGizmoTemperature(g, gripInteractionState),
+              temperature: resolveGizmoTemperature(g, s.gripInteractionState),
               entityId: g.entityId,
               gripIndex: g.gripIndex,
             }));
             // dpiScale = 1: the ctx is already DPR-transformed, so sizes stay in CSS px (parity
             // with the main grip pass, which resolves the SAME `gripSize` base).
-            renderer.renderGripSetBatched(configs, gripSize != null ? { gripSize } : undefined);
+            renderer.renderGripSetBatched(configs, s.gripSize != null ? { gripSize: s.gripSize } : undefined);
           }
         : null;
 
-    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
-  }, [grips, transform, viewport, gripInteractionState, gripSize]);
+    paintOverlayDispatchFrame(canvas, [painter], getImmediateTransform(), s.viewport);
+  }, []);
+
+  // (α) Repaint σε content change (grips/viewport/hover/size) με ΑΚΙΝΗΤΟ transform.
+  useLayoutEffect(() => {
+    repaint();
+  }, [grips, viewport, gripInteractionState, gripSize, repaint]);
+
+  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
+  useEffect(() => {
+    return subscribeImmediateTransformFrame(
+      `container-gizmo-${containerKind}`,
+      `Container Gizmo (${containerKind})`,
+      repaint,
+    );
+  }, [repaint, containerKind]);
 
   if (grips.length === 0) return null;
 

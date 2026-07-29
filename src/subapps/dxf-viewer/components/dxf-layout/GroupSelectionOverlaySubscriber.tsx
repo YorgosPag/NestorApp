@@ -19,19 +19,19 @@ import {
   resolveSelectedGroups,
   computeGroupSelectionBounds,
 } from '../../systems/group/group-selection-bounds';
-import type { ViewTransform } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — transform subscription στο inner layer (mounted μόνο με επιλεγμένα
+// groups), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 
 interface GroupSelectionOverlaySubscriberProps {
   /** Active level id — the reactive scene slice this leaf subscribes to (ADR-040). */
   sceneLevelId: string | null;
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   className?: string;
 }
 
 export const GroupSelectionOverlaySubscriber = React.memo(function GroupSelectionOverlaySubscriber({
   sceneLevelId,
-  transform,
   viewport,
   className,
 }: GroupSelectionOverlaySubscriberProps) {
@@ -54,6 +54,18 @@ export const GroupSelectionOverlaySubscriber = React.memo(function GroupSelectio
 
   if (groups.length === 0) return null;
 
+  return <GroupSelectionTransformLayer groups={groups} viewport={viewport} className={className} />;
+});
+
+/** Inner layer — mounted ΜΟΝΟ με επιλεγμένα groups· κατέχει το transform subscription. */
+function GroupSelectionTransformLayer({
+  groups, viewport, className,
+}: {
+  groups: LabeledSelectionBounds[];
+  viewport: { width: number; height: number };
+  className?: string;
+}) {
+  const transform = useTransformValue();
   return (
     <GroupSelectionOverlay
       groups={groups}
@@ -62,4 +74,4 @@ export const GroupSelectionOverlaySubscriber = React.memo(function GroupSelectio
       className={className}
     />
   );
-});
+}

@@ -25,12 +25,12 @@ import { useActiveBlockEditId } from '../../systems/block/useActiveBlockEdit';
 import type { GripInfo } from '../../hooks/grip-types';
 import type { Entity } from '../../types/entities';
 import { ContainerGizmoLayer, type ContainerGripResolver } from './ContainerGizmoLayer';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { DxfGripInteractionState } from '../../hooks/grip-computation';
 
+// ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε: ο ContainerGizmoLayer ζωγραφίζει
+// μέσω subscribeImmediateTransformFrame (zero React ανά καρέ).
 interface BlockGizmoLayerProps {
   sceneLevelId: string | null;
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   gripInteractionState: DxfGripInteractionState | undefined;
   gripSize?: number;
@@ -59,5 +59,5 @@ export const BlockGizmoLayer = React.memo(function BlockGizmoLayer(props: BlockG
   // Low-freq leaf subscription (one transition per enter/exit) → ADR-040-safe.
   const inBlockEdit = useActiveBlockEditId() !== null;
   if (inBlockEdit) return null;
-  return <ContainerGizmoLayer {...props} resolveGrips={resolveBlockGizmoGrips} />;
+  return <ContainerGizmoLayer {...props} containerKind="block" resolveGrips={resolveBlockGizmoGrips} />;
 });

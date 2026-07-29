@@ -23,12 +23,11 @@
 'use client';
 
 import React from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 
+// ADR-040 Phase XXII.B — το (νεκρό εδώ) `transform` prop αφαιρέθηκε μαζί με το flip του shell.
 interface BlockSelectionOverlaySubscriberProps {
   /** Active level id — retained for prop-shape parity with the sibling container leaves. */
   sceneLevelId: string | null;
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   className?: string;
 }

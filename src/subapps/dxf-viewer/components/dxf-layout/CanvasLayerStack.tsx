@@ -51,7 +51,7 @@ import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-lea
 import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers'; import { useCanvasLayerStackZoomHandlers } from './useCanvasLayerStackZoomHandlers';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
-  transform, viewport, activeTool, overlayMode, showLayers,
+  viewport, activeTool, overlayMode, showLayers,
   showDxfCanvas, showLayerCanvas,
   containerRef, dxfCanvasRef, overlayCanvasRef, previewCanvasRef, drawingHandlersRef, entitySelectedOnMouseDownRef,
   dxfScene, convertScene, colorLayers, draftPolygon, currentStatus,
@@ -192,7 +192,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   // passed: the DxfCanvas above owns every pointer path (the same handlers are wired
   // to it below). Only render-relevant state reaches the LayerCanvas.
   const layerCanvasPassthroughProps: LayerCanvasPassthroughProps = useMemo(() => ({
-    transform,
     viewport,
     activeTool,
     layersVisible: showLayers,
@@ -210,7 +209,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     className: layerClassName,
     style: layerStyle,
   }), [
-    transform, viewport, activeTool, showLayers,
+    viewport, activeTool, showLayers,
     crosshairSettings, cursorCanvasSettings,
     snapSettings, gridSettingsDisabled, rulerSettingsDisabled, selectionSettings,
     layerRenderOptions, draggingOverlayDelta, layerClassName, layerStyle,
@@ -258,13 +257,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
     [dxfGripInteraction.gripInteractionState, activeTool, movePreview.phase, copyPreview.phase, rotationPreview.phase, mirrorPreview.phase, gripDraggedEntityId, gripDragIsCopy],
   );
   // Guide workflow computed params (passed to DxfCanvasSubscriber)
+  // ADR-040 Phase XXII.B — το transform ΒΓΗΚΕ από τα params: το useGuideWorkflowComputed
+  // διαβάζει scale μόνο του (useTransformScale, leaf-level) — το αντικείμενο μένει σταθερό στο pan.
   const guideComputedParams = useMemo(() => ({
     activeTool,
     guideState: guideStateObj,
     cpState: cpStateObj,
-    transform,
     state: guideWorkflowState,
-  }), [activeTool, guideStateObj, cpStateObj, transform, guideWorkflowState]);
+  }), [activeTool, guideStateObj, cpStateObj, guideWorkflowState]);
 
   // ADR-549 Phase 8 — hardware-cursor crosshair on the canvas-stack div (inline, overrides the class
   // cursor). Perfect 1:1 tracking (OS cursor plane). Shown whenever the crosshair is enabled — no
@@ -293,14 +293,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               Always mounted (grid shows on an empty canvas too). ADR-040 (2026-06-05). */}
           <GridUnderlayCanvas
             gridSettings={gridSettings}
-            transform={transform}
             viewport={viewport}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
           />
           {floorId && (
             <FloorplanBackgroundCanvas
               floorId={floorId}
-              worldToCanvas={transform}
               viewport={viewport}
               cad={{ mode: 'cad-y-up', margins: COORDINATE_LAYOUT.MARGINS }}
               className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
@@ -308,7 +306,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           )}
           {/* ADR-399 Phase D — 2D underlay of other building floors (read-only, faded),
               behind the active DXF canvas. Self-gated to floor3DScope==='all' && mode==='2d'. */}
-          <FloorUnderlayOverlay transform={transform} viewport={viewport} />
+          <FloorUnderlayOverlay viewport={viewport} />
           {showLayerCanvas && (
             <DraftLayerSubscriber
               canvasRef={overlayCanvasRef as React.RefObject<HTMLCanvasElement>}
@@ -316,7 +314,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               draftPolygon={draftPolygon}
               currentStatus={currentStatus}
               overlayMode={overlayMode}
-              transformScale={transform.scale}
               layerCanvasPassthroughProps={layerCanvasPassthroughProps}
             />
           )}
@@ -338,7 +335,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               scene={dxfScene}
               sceneLevelId={levelManager.currentLevelId}
               convertScene={convertScene}
-              transform={transform}
               viewport={viewport}
               activeTool={activeTool}
               overlayMode={overlayMode}
@@ -375,7 +371,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               subscription-free (CHECK 6C) and only threads the transform/viewport it already holds.
               SEPARATE from the F7 drawing-aid grid (GridUnderlayCanvas z0). */}
           <TopoGridUnderlayLeaf
-            transform={transform}
             viewport={viewport}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['20']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
           />
@@ -387,7 +382,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           />
           <PreviewCanvas
             ref={previewCanvasRef as React.RefObject<PreviewCanvasHandle>}
-            transform={transform}
             viewport={viewport}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
             defaultOptions={PREVIEW_DEFAULTS}
@@ -413,7 +407,6 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             openingGhost={openingGhostPreview}
             gripDragPreview={dxfGripInteraction.dragPreview}
             levelManager={levelManager}
-            transform={transform}
             viewport={viewport}
             getCanvas={getPreviewCanvas}
             getViewportElement={getViewportEl}
@@ -423,14 +416,12 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <SnapIndicatorSubscriber
             viewport={viewport}
             dxfCanvasRef={dxfCanvasRef}
-            transform={transform}
             className={`absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`}
           />
           {/* ADR-575/640 — GROUP + BLOCK selection affordances (dashed box overlays + move/
               rotation gizmos). Self-subscribing ADR-040 leaves; the shell stays subscription-free. */}
           <ContainerSelectionLayers
             sceneLevelId={levelManager.currentLevelId}
-            transform={transform}
             viewport={viewport}
             gripInteractionState={dxfGripInteraction.gripInteractionState}
             gripSize={settings.grip?.gripSize}
@@ -455,18 +446,16 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           {/* Read-only 2D overlay group (AutoArea/Region/Riser/HeatLoad/PipeSizing/
               Balancing) — εξαγωγή σε leaf ώστε ο shell να μένει <500 γραμμές (N.7.1).
               Ίδια σειρά render (z-order αμετάβλητο), ίδιο data flow. STAGE ADR-040. */}
-          <CanvasLayerStack2DOverlays transform={transform} viewport={viewport} />
-          <PolygonCropPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          <LassoFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          <SketchFreehandPreviewSubscriber transform={transform} viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          <DistMeasureOverlayLeaf transform={transform} viewport={viewport} sceneUnits={dxfScene?.units ?? 'mm'} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          <CanvasLayerStack2DOverlays viewport={viewport} />
+          <PolygonCropPreviewSubscriber viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          <LassoFreehandPreviewSubscriber viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          <SketchFreehandPreviewSubscriber viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          <DistMeasureOverlayLeaf viewport={viewport} sceneUnits={dxfScene?.units ?? 'mm'} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />
           <CanvasNumericInputOverlay />
           <DynamicInputSubscriber
             activeTool={activeTool}
             viewport={viewport}
-            transform={transform}
-            canvasRect={dxfCanvasRef?.current?.getCanvas?.()?.getBoundingClientRect() ?? null}
             onDrawingPoint={drawingHandlers.onDrawingPoint}
             getSceneUnits={() => {
               // ADR-513 — draw-time read του ενεργού level scene (mirror slabOpening ghost).
@@ -478,11 +467,11 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           <CanvasLayerStack3dLeaf />
           {/* ADR-366 §B.5.U — unified 2D+3D Performance HUD (sibling leaf, lives in both modes). */}
           <UnifiedPerformanceHudLeaf getCanvas2D={() => dxfCanvasRef?.current?.getCanvas?.() ?? null} />
-          <Focus2DOverlayLeaf scene={dxfScene} transform={transform} viewport={viewport} />
-          <EnvelopeOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
-          <HomeRunWiresOverlay scene={dxfScene} transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
+          <Focus2DOverlayLeaf scene={dxfScene} viewport={viewport} />
+          <EnvelopeOverlay scene={dxfScene} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
+          <HomeRunWiresOverlay scene={dxfScene} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
           {/* ADR-362 Round 35 — row-move handles (self-gated: renders null unless the mode is ON). */}
-          <DimRowHandleOverlay transform={transform} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
+          <DimRowHandleOverlay viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           <SelectionCursorIcon />
           <ViewMode3DToggleButton /><CutPlaneSliderLeaf />{/* ADR-452 */}
           <AxisCutSliderLeaf bounds={dxfScene?.bounds ?? null} />{/* ADR-455 */}

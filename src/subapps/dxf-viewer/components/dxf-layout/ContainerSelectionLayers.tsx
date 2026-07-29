@@ -19,15 +19,18 @@ import { BlockGizmoLayer } from './BlockGizmoLayer';
  * (N.18). This is a pure composition — every subscription lives in the leaves themselves, so
  * this wrapper (like the shell) never touches a high-frequency store (ADR-040 cardinal #1).
  */
+// ADR-040 Phase XXII.B — το transform ΔΕΝ διαπερνά πια αυτή τη σύνθεση: τα selection
+// overlays subscribe-άρουν μόνα τους (useTransformValue) και οι gizmo painters ζωγραφίζουν
+// μέσω subscribeImmediateTransformFrame.
 type ContainerSelectionLayersProps = Pick<
   React.ComponentProps<typeof BlockGizmoLayer>,
-  'sceneLevelId' | 'transform' | 'viewport' | 'gripInteractionState' | 'gripSize'
+  'sceneLevelId' | 'viewport' | 'gripInteractionState' | 'gripSize'
 >;
 
 export const ContainerSelectionLayers = React.memo(function ContainerSelectionLayers(
   props: ContainerSelectionLayersProps,
 ) {
-  const { sceneLevelId, transform, viewport } = props;
+  const { sceneLevelId, viewport } = props;
   const overlayClassName = `absolute ${PANEL_LAYOUT.INSET['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['30']}`;
   // Group + block gizmos take the identical prop shape → build once, spread into both.
   const gizmoProps = {
@@ -40,7 +43,6 @@ export const ContainerSelectionLayers = React.memo(function ContainerSelectionLa
           group. Self-subscribing leaf (selection + scene) → the Shell stays subscription-free. */}
       <GroupSelectionOverlaySubscriber
         sceneLevelId={sceneLevelId}
-        transform={transform}
         viewport={viewport}
         className={overlayClassName}
       />
@@ -51,7 +53,6 @@ export const ContainerSelectionLayers = React.memo(function ContainerSelectionLa
           block. Self-subscribing leaf (selection + scene), mirror of the group. */}
       <BlockSelectionOverlaySubscriber
         sceneLevelId={sceneLevelId}
-        transform={transform}
         viewport={viewport}
         className={overlayClassName}
       />

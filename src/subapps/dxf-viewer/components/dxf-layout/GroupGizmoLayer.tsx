@@ -23,12 +23,12 @@ import { getGroupGizmoGrips } from '../../systems/group/group-gizmo-grips';
 import type { GripInfo } from '../../hooks/grip-types';
 import type { Entity } from '../../types/entities';
 import { ContainerGizmoLayer, type ContainerGripResolver } from './ContainerGizmoLayer';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { DxfGripInteractionState } from '../../hooks/grip-computation';
 
+// ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε: ο ContainerGizmoLayer ζωγραφίζει
+// μέσω subscribeImmediateTransformFrame (zero React ανά καρέ).
 interface GroupGizmoLayerProps {
   sceneLevelId: string | null;
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   gripInteractionState: DxfGripInteractionState | undefined;
   gripSize?: number;
@@ -51,5 +51,5 @@ const resolveGroupGizmoGrips: ContainerGripResolver = (
 };
 
 export const GroupGizmoLayer = React.memo(function GroupGizmoLayer(props: GroupGizmoLayerProps) {
-  return <ContainerGizmoLayer {...props} resolveGrips={resolveGroupGizmoGrips} />;
+  return <ContainerGizmoLayer {...props} containerKind="group" resolveGrips={resolveGroupGizmoGrips} />;
 });

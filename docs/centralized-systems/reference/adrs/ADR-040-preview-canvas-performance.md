@@ -157,6 +157,9 @@ SSoT + ρητή αγκύρωση στο `resetToOrigin`), (β) οι mouse handle
 CanvasSection re-render-άρεται για άλλους λόγους (inline object literals ~10 σημεία) και ανά
 grip-drag frame (`dxfGripInteraction` νέο ref) — υποψήφιος επόμενος μοχλός.
 
+Ο ίδιος ο shell (`CanvasLayerStack.tsx`) + τα gizmo/selection leaves (Container/Group/Block)
+ολοκλήρωσαν το ίδιο flip (μηδέν `transform` prop).
+
 ### 2026-07-29 (δ) — 🐛 FIX: NaN στο CSS `left`/`top` του snap glyph (εκφυλισμένη γεωμετρία)
 
 Ο `snap-scheduler` (Φ11) μπορούσε να δημοσιεύσει `snappedPoint`/`ghostPoint` με μη-πεπερασμένες
