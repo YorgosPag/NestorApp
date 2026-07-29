@@ -7,19 +7,21 @@ import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { dxfEntityOutlineSegments } from '../dxf-entity-outline';
 // ADR-557 Φ-attachment — the text box now measures the real glyph advance; pin a stub
 // font at the 0.6 monospace ratio so the hand-computed 'AB'=6 bbox stays deterministic.
-import { installStubFont, stubAdvanceWorld, stubEmSize } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installStubFont, stubAdvanceWorld } from '../../../text-engine/fonts/__tests__/_stub-font';
 
 let __stubCleanup: () => void;
 beforeAll(() => { __stubCleanup = installStubFont(); });
 afterAll(() => __stubCleanup());
 
-// ADR-635 Φ C.22 — το περίγραμμα κειμένου ΔΕΝ έχει πια τις διαστάσεις του ονομαστικού ύψους:
-// το κείμενο βάφεται σε `em = ύψος × unitsPerEm / sCapHeight`. Παράγονται από το SSoT του stub
-// (ΜΕΣΑ στο `it()` — η γραμματοσειρά δηλώνεται στο `beforeAll`), ποτέ literal.
-/** Πλάτος περιγράμματος «AB» (2 χαρακτήρες) σε ύψος κειμένου `h`. */
+// 🔴 ADR-635 Φ C.22 — ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΕΙΝΑΙ ΤΟ **ΟΝΟΜΑΣΤΙΚΟ** em box (`textEmBoxCornersWorld`),
+// και οι δύο άξονές του ΔΕΝ συμπεριφέρονται ίδια:
+//   - ΠΛΑΤΟΣ = το πραγματικό advance ⇒ **ακολουθεί** τον κανόνα `em = ύψος × unitsPerEm/sCapHeight`
+//     (το κείμενο βάφεται πλατύτερο), άρα παράγεται από το SSoT του stub — ποτέ literal·
+//   - ΥΨΟΣ = το **ονομαστικό ύψος κειμένου** ⇒ **ΔΕΝ** ακολουθεί τον κανόνα, γιατί το 3D επίπεδο
+//     και το culling είναι em-based με δικό τους κελί (σχεδίαση, τεκμηριωμένη στο `text-box.ts`).
+// Μην «διορθώσεις» τον έναν άξονα για να μοιάσει στον άλλο.
+/** Πλάτος περιγράμματος «AB» (2 χαρακτήρες) σε ύψος κειμένου `h` — ΜΕΣΑ στο `it()`. */
 const advAB = (h: number) => stubAdvanceWorld(2, h);
-/** Ύψος περιγράμματος σε ύψος κειμένου `h` — default stub: ink ≡ μετρικά, άρα ένα em. */
-const boxH = (h: number) => stubEmSize(h);
 /** Σύγκριση κορυφής με ανοχή κινητής υποδιαστολής (τα advance βγαίνουν από γινόμενα). */
 const expectPoint = (p: { x: number; y: number }, x: number, y: number): void => {
   expect(p.x).toBeCloseTo(x, 6);
@@ -97,7 +99,7 @@ describe('dxfEntityOutlineSegments', () => {
     const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
     const [seg] = dxfEntityOutlineSegments(t);
     const right = 10 + advAB(5);
-    const bottom = 20 - boxH(5);
+    const bottom = 20 - 5; // ΟΝΟΜΑΣΤΙΚΟ ύψος — το em box δεν ακολουθεί τον κανόνα καθ' ύψος
     expect(seg).toHaveLength(5);
     expectPoint(seg[0], right, 20);   // NE
     expectPoint(seg[1], 10, 20);      // NW = the insertion point (TL)
@@ -110,6 +112,6 @@ describe('dxfEntityOutlineSegments', () => {
     const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
     const [seg] = dxfEntityOutlineSegments(t, 10);
     expectPoint(seg[0], (10 + advAB(5)) * 10, 200);        // NE
-    expectPoint(seg[2], 100, (20 - boxH(5)) * 10);         // SW
+    expectPoint(seg[2], 100, (20 - 5) * 10);               // SW (ονομαστικό ύψος × 10)
   });
 });
