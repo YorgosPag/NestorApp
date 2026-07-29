@@ -226,12 +226,8 @@ function identityOf(data: Record<string, unknown>, fields: readonly string[]): R
   return out;
 }
 
-async function scanTarget(db: Firestore, target: AuditTarget): Promise<TargetResult> {
-  const ref: CollectionReference = db.collection(target.collection);
-  const countSnap = await ref.count().get();
-  const totalDocs = countSnap.data().count;
-
-  const result: TargetResult = {
+function emptyResult(target: AuditTarget, totalDocs: number): TargetResult {
+  return {
     target,
     collectionExists: totalDocs > 0,
     totalDocs,
@@ -242,6 +238,40 @@ async function scanTarget(db: Firestore, target: AuditTarget): Promise<TargetRes
     typeDrift: {},
     offenders: [],
   };
+}
+
+/** Ενσωματώνει ΕΝΑ έγγραφο εντός εμβέλειας στο συγκεντρωτικό αποτέλεσμα. */
+function accumulateDoc(
+  result: TargetResult,
+  docId: string,
+  data: Record<string, unknown>
+): void {
+  const { target } = result;
+  result.inScopeDocs += 1;
+
+  const reading = readInstantChain(data, target.fieldChain);
+  result.typeDrift[reading.rawType] = (result.typeDrift[reading.rawType] ?? 0) + 1;
+  if (reading.readable || reading.shape === null) return;
+
+  const behavioural = changesBehaviour(target.behaviourChange, reading.shape);
+  result.unreadable += 1;
+  if (behavioural) result.behaviourChanging += 1;
+  result.shapes[reading.shape] = (result.shapes[reading.shape] ?? 0) + 1;
+  result.offenders.push({
+    docId,
+    usedField: reading.usedField,
+    shape: reading.shape,
+    rawType: reading.rawType,
+    rawPreview: reading.rawPreview,
+    changesBehaviour: behavioural,
+    identity: identityOf(data, target.idFields),
+  });
+}
+
+async function scanTarget(db: Firestore, target: AuditTarget): Promise<TargetResult> {
+  const ref: CollectionReference = db.collection(target.collection);
+  const totalDocs = (await ref.count().get()).data().count;
+  const result = emptyResult(target, totalDocs);
 
   if (totalDocs === 0) return result;
   if (totalDocs > MAX_DOCS_PER_COLLECTION) {
@@ -254,26 +284,7 @@ async function scanTarget(db: Firestore, target: AuditTarget): Promise<TargetRes
   const snap = await ref.get();
   for (const doc of snap.docs) {
     const data = doc.data() as Record<string, unknown>;
-    if (!target.inScope(data)) continue;
-    result.inScopeDocs += 1;
-
-    const reading = readInstantChain(data, target.fieldChain);
-    result.typeDrift[reading.rawType] = (result.typeDrift[reading.rawType] ?? 0) + 1;
-    if (reading.readable || reading.shape === null) continue;
-
-    const behavioural = changesBehaviour(target.behaviourChange, reading.shape);
-    result.unreadable += 1;
-    if (behavioural) result.behaviourChanging += 1;
-    result.shapes[reading.shape] = (result.shapes[reading.shape] ?? 0) + 1;
-    result.offenders.push({
-      docId: doc.id,
-      usedField: reading.usedField,
-      shape: reading.shape,
-      rawType: reading.rawType,
-      rawPreview: reading.rawPreview,
-      changesBehaviour: behavioural,
-      identity: identityOf(data, target.idFields),
-    });
+    if (target.inScope(data)) accumulateDoc(result, doc.id, data);
   }
 
   return result;
@@ -385,55 +396,56 @@ function printSweep(sweep: SweepResult): void {
 // MAIN
 // =============================================================================
 
+function printHeader(projectId: string): void {
+  console.log('');
+  console.log(line('═'));
+  console.log('  🔍 AUDIT: μη αναγνώσιμες χρονικές στιγμές (ADR-218 §Phase 4 pre-flight)');
+  console.log(`  Firestore project : ${projectId} · database: (default)`);
+  console.log('  Κριτής            : normalizeToMillisOrNull (src/lib/date-local.ts)');
+  console.log('  Λειτουργία        : READ-ONLY · όλες οι εταιρείες (χωρίς φίλτρο companyId)');
+  console.log(line('═'));
+  console.log('');
+}
+
+function toJsonPayload(
+  projectId: string,
+  results: readonly TargetResult[],
+  nested: readonly string[],
+  sweep: SweepResult
+): unknown {
+  return {
+    projectId,
+    scannedAt: new Date().toISOString(),
+    nestedCollectionHits: nested,
+    sweep,
+    results: results.map(({ target, ...rest }) => ({
+      key: target.key,
+      collection: target.collection,
+      fieldChain: target.fieldChain,
+      consumer: target.consumer,
+      ...rest,
+    })),
+  };
+}
+
 async function main(): Promise<void> {
   const { db, projectId } = initAdmin();
   const targets = expandTargets(TARGETS);
-
-  if (!JSON_MODE) {
-    console.log('');
-    console.log(line('═'));
-    console.log('  🔍 AUDIT: μη αναγνώσιμες χρονικές στιγμές (ADR-218 §Phase 4 pre-flight)');
-    console.log(`  Firestore project : ${projectId} · database: (default)`);
-    console.log('  Κριτής            : normalizeToMillisOrNull (src/lib/date-local.ts)');
-    console.log('  Λειτουργία        : READ-ONLY · όλες οι εταιρείες (χωρίς φίλτρο companyId)');
-    console.log(line('═'));
-    console.log('');
-  }
+  if (!JSON_MODE) printHeader(projectId);
 
   const results: TargetResult[] = [];
   for (const target of targets) {
     results.push(await scanTarget(db, target));
   }
 
-  const nested = await findNestedCollections(
-    db,
-    [...new Set(targets.map((t) => t.collection))]
-  );
+  const nested = await findNestedCollections(db, [...new Set(targets.map((t) => t.collection))]);
 
   // Φάση 2 — ό,τι δεν ήξερα να ρωτήσω: σάρωση όλων των συλλογών για χρονικά
   // πεδία που τα ίδια τα δεδομένα αποδεικνύουν ότι κρατούν χρόνο.
   const sweep = await sweepAllCollections(db);
 
   if (JSON_MODE) {
-    console.log(
-      JSON.stringify(
-        {
-          projectId,
-          scannedAt: new Date().toISOString(),
-          nestedCollectionHits: nested,
-          sweep,
-          results: results.map(({ target, ...rest }) => ({
-            key: target.key,
-            collection: target.collection,
-            fieldChain: target.fieldChain,
-            consumer: target.consumer,
-            ...rest,
-          })),
-        },
-        null,
-        2
-      )
-    );
+    console.log(JSON.stringify(toJsonPayload(projectId, results, nested, sweep), null, 2));
     return;
   }
 
