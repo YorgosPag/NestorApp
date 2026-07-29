@@ -214,7 +214,7 @@ describe('mtext-tokenizer — \\p paragraph formatting', () => {
   });
 
   it('ADR-635 Φ C.21 — `\psm0.9;` (διάστιχο παραγράφου) διαβάζεται πια', () => {
-    const tok = firstToken('\psm0.9;') as Extract<MtextToken, { kind: 'paragraph' }>;
+    const tok = firstToken('\\psm0.9;') as Extract<MtextToken, { kind: 'paragraph' }>;
     expect(tok.lineSpacingMode).toBe('multiple');
     expect(tok.lineSpacingFactor).toBe(0.9);
   });
@@ -222,13 +222,13 @@ describe('mtext-tokenizer — \\p paragraph formatting', () => {
   it('ADR-635 Φ C.21 — `\pse2;` ακριβώς, `\psa1.5;` τουλάχιστον, `\ps*;` επαναφορά', () => {
     const mode = (raw: string) =>
       (firstToken(raw) as Extract<MtextToken, { kind: 'paragraph' }>).lineSpacingMode;
-    expect(mode('\pse2;')).toBe('exact');
-    expect(mode('\psa1.5;')).toBe('at-least');
-    expect(mode('\ps*;')).toBeNull();
+    expect(mode('\\pse2;')).toBe('exact');
+    expect(mode('\\psa1.5;')).toBe('at-least');
+    expect(mode('\\ps*;')).toBeNull();
   });
 
   it('ADR-635 Φ C.21 — το διάστιχο συνυπάρχει με τα υπόλοιπα πεδία (`\pxi-3,l3,sm1.5,t3;`)', () => {
-    const tok = firstToken('\pxi-3,l3,sm1.5,t3;') as Extract<MtextToken, { kind: 'paragraph' }>;
+    const tok = firstToken('\\pxi-3,l3,sm1.5,t3;') as Extract<MtextToken, { kind: 'paragraph' }>;
     expect(tok.indent).toBe(-3);
     expect(tok.left).toBe(3);
     expect(tok.tabs).toEqual([3]);
