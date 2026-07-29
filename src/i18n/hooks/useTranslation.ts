@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
-import { remapLegacyTranslationKey, getCompatNamespaces } from '../namespace-compat';
+import { remapLegacyTranslationKey, getCompatNamespaces, getExplicitNamespace } from '../namespace-compat';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
@@ -21,6 +21,48 @@ function resolveAllNamespaces(namespaces: string[]): string[] {
   // Previously filtered out 'common', but that broke rawT lookups for
   // unsplit keys like audit.* that still live in the common namespace.
   return [...new Set([...namespaces, ...compatSplits])];
+}
+
+/**
+ * 🔴 ADR-635 Φ C.23 — ΠΟΤΕ ΔΕΝ ΤΟ ΞΑΝΑΓΡΑΨΕΙΣ ΩΣ `result !== key`.
+ *
+ * Όταν το i18next **αστοχεί** σε κλειδί με πρόθεμα namespace (`dxf-viewer:import.warnings.summary`)
+ * επιστρέφει το κλειδί **χωρίς** το πρόθεμα (`import.warnings.summary`). Η παλιά σύγκριση
+ * `result !== key` το έβλεπε ως **επιτυχία**, οπότε:
+ *   1. το ωμό κλειδί ζωγραφιζόταν στην οθόνη σαν να ήταν μετάφραση, και
+ *   2. το compat στρώμα του ADR-280 **δεν δοκιμαζόταν ΠΟΤΕ** για ολόκληρη τη σύμβαση `ns:key`
+ *      — δηλαδή για όλα τα `NOTIFICATION_KEYS`.
+ * Μετρημένο 2026-07-29: `import.warnings.summary` στην οθόνη ενώ η μετάφραση ΥΠΑΡΧΕΙ.
+ */
+function isUnresolved(result: unknown, key: string): boolean {
+  if (typeof result !== 'string') return true;
+  return result === key || result === getExplicitNamespace(key).bareKey;
+}
+
+/** Ένα προειδοποιητικό ανά κλειδί ανά session — ένα ωμό κλειδί μπορεί να ζωγραφιστεί σε κάθε frame. */
+const warnedUnresolvedKeys = new Set<string>();
+
+/** Ελάχιστη όψη του i18next instance που χρειάζεται η διάγνωση (χωρίς `any`). */
+interface BundleProbe {
+  readonly language: string;
+  hasResourceBundle(language: string, namespace: string): boolean;
+}
+
+/**
+ * Ένα ωμό κλειδί στην οθόνη δεν επιτρέπεται να είναι **σιωπηλό**: αφήνει ίχνος με το ΠΟΙΟ
+ * κλειδί, σε ΠΟΙΑ γλώσσα, και **ποια namespaces ήταν όντως φορτωμένα** τη στιγμή της κλήσης —
+ * που είναι ακριβώς η διαφορά ανάμεσα σε «λείπει η μετάφραση» και «δεν είχε φορτώσει ακόμα».
+ */
+function warnUnresolvedKey(fullKey: string, probe: BundleProbe, namespaces: readonly string[]): void {
+  if (process.env.NODE_ENV === 'production') return;
+  if (warnedUnresolvedKeys.has(fullKey)) return;
+  warnedUnresolvedKeys.add(fullKey);
+
+  const language = probe.language;
+  const bundles = namespaces.map(
+    (ns) => `${ns}=${probe.hasResourceBundle(language, ns) ? 'loaded' : 'MISSING'}`,
+  );
+  logger.warn(`i18n: raw key reached the UI → ${fullKey}`, { language, bundles });
 }
 
 /**
@@ -63,24 +105,27 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
     const wrapped = (key: string, optionsOrDefault?: TOptions | string, ...rest: unknown[]) => {
       // Try original namespace first
       const result = rawTCall(key, optionsOrDefault, ...rest);
-      if (typeof result === 'string' && result !== key && !result.includes(':')) {
+      if (!isUnresolved(result, key)) {
         return result;
       }
 
-      // If key wasn't found, try remapping via compat layer
-      const fullKey = `${primaryNs}:${key}`;
+      // If key wasn't found, try remapping via compat layer. Ένα κλειδί που φέρει ΗΔΗ πρόθεμα
+      // namespace δεν ξανα-προθεματίζεται — το `dxf-viewer:dxf-viewer:import.…` δεν ταιριάζει
+      // με κανέναν legacy κανόνα, άρα ακύρωνε σιωπηλά όλο το compat στρώμα του ADR-280.
+      const fullKey = getExplicitNamespace(key).namespace ? key : `${primaryNs}:${key}`;
       const remapped = remapLegacyTranslationKey(fullKey, optionsOrDefault);
       if (remapped.key !== fullKey) {
         const remappedResult = rawTCall(remapped.key, remapped.options as TOptions, ...rest);
-        if (typeof remappedResult === 'string' && remappedResult !== remapped.key) {
+        if (!isUnresolved(remappedResult, remapped.key)) {
           return remappedResult;
         }
       }
 
+      warnUnresolvedKey(fullKey, i18n, allNamespacesToLoad);
       return result;
     };
     return wrapped as unknown as typeof rawT;
-  }, [rawT, primaryNs, namespaceLoaded]);
+  }, [rawT, primaryNs, namespaceLoaded, i18n, allNamespacesToLoad]);
 
   // Lazy load namespace + its compat split namespaces (ADR-280)
   useEffect(() => {

@@ -312,7 +312,12 @@ function isTOptions(value: unknown): value is TOptions {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function getExplicitNamespace(key: string): { namespace: string | null; bareKey: string } {
+/**
+ * Σπάει ένα κλειδί `ns:bare.key` στα δύο μέρη του. **Εξαγόμενο SSoT** (ADR-635 Φ C.23): ο
+ * `useTranslation` χρειάζεται ΑΚΡΙΒΩΣ την ίδια ερμηνεία του `:` για να καταλάβει πότε το
+ * i18next αστόχησε — αστοχώντας, επιστρέφει το κλειδί **χωρίς** το πρόθεμα namespace.
+ */
+export function getExplicitNamespace(key: string): { namespace: string | null; bareKey: string } {
   const separatorIndex = key.indexOf(':');
   if (separatorIndex === -1) {
     return { namespace: null, bareKey: key };

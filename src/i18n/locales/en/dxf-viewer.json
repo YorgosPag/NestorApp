@@ -171,6 +171,8 @@
   "callbacks": {
     "copy": "Copy",
     "tekImportFailed": "Tekton (.tek) file import failed",
+    "dxfImportFailed": "DXF import failed.",
+    "dxfImportFailedWithReason": "DXF import failed: {reason}",
     "copiedToClipboard": "Copied to clipboard!",
     "copyFailed": "Copy failed",
     "perfMonitorOn": "FPS, Memory, Rendering metrics active",

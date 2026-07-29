@@ -171,6 +171,8 @@
   "callbacks": {
     "copy": "Αντιγραφή",
     "tekImportFailed": "Αποτυχία εισαγωγής αρχείου Τέκτονα (.tek)",
+    "dxfImportFailed": "Η εισαγωγή του DXF απέτυχε.",
+    "dxfImportFailedWithReason": "Η εισαγωγή του DXF απέτυχε: {reason}",
     "copiedToClipboard": "Αντιγράφηκε στο πρόχειρο!",
     "copyFailed": "Αποτυχία αντιγραφής",
     "perfMonitorOn": "Μετρήσεις FPS, Memory, Rendering ενεργές",
