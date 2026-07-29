@@ -10,7 +10,10 @@
 
 import type { MutableRefObject, RefObject } from 'react';
 import type { PreviewRenderer, PreviewRenderOptions } from './PreviewRenderer';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — κάθε draw method διαβάζει το ζωντανό transform από το SSoT στην
+// κλήση (αντί για το πρώην transformRef που τροφοδοτούνταν από React prop και θα πάγωνε).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
 import type { AcquiredTrackingPoint } from '../../systems/tracking/TrackingPointStore';
 import type { TrackingAlignmentPath } from '../../systems/tracking/tracking-resolver';
@@ -27,7 +30,6 @@ import type { PreviewCanvasHandle } from './PreviewCanvas';
 export interface PreviewCanvasHandleRefs {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   rendererRef: MutableRefObject<PreviewRenderer | null>;
-  transformRef: MutableRefObject<ViewTransform>;
   viewportRef: MutableRefObject<{ width: number; height: number }>;
   optionsRef: MutableRefObject<PreviewRenderOptions | undefined>;
 }
@@ -37,7 +39,7 @@ export interface PreviewCanvasHandleRefs {
  * the current transform/viewport from `refs` so overlays stay world-locked without a React re-render.
  */
 export function createPreviewCanvasHandle(refs: PreviewCanvasHandleRefs): PreviewCanvasHandle {
-  const { canvasRef, rendererRef, transformRef, viewportRef, optionsRef } = refs;
+  const { canvasRef, rendererRef, viewportRef, optionsRef } = refs;
   return {
     /**
      * 🏢 ENTERPRISE: Draw preview directly
@@ -84,7 +86,7 @@ export function createPreviewCanvasHandle(refs: PreviewCanvasHandleRefs): Previe
         snappedAngle,
         label,
         cursorWorld,
-        transformRef.current,
+        getImmediateTransform(),
         viewportRef.current,
       );
     },
@@ -108,7 +110,7 @@ export function createPreviewCanvasHandle(refs: PreviewCanvasHandleRefs): Previe
         intersections,
         snappedPoint,
         label,
-        transformRef.current,
+        getImmediateTransform(),
         viewportRef.current,
       );
     },
@@ -117,63 +119,63 @@ export function createPreviewCanvasHandle(refs: PreviewCanvasHandleRefs): Previe
     drawGhostFaceDimensions: (meta: GhostFaceDimensionsMeta) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawGhostFaceDimensions(meta, transformRef.current, viewportRef.current);
+      renderer.drawGhostFaceDimensions(meta, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-508 §wall-hud: live wall identity HUD (aligned length dim + angle + spec) */
     drawWallHud: (meta: WallHudMeta, specLabel: string) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawWallHud(meta, specLabel, transformRef.current, viewportRef.current);
+      renderer.drawWallHud(meta, specLabel, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-564 §footprint-hud: live column/pad footprint HUD (per-face dims + angle + height) */
     drawColumnHud: (footprint: readonly Point2D[], params: ColumnParams, heightSpecLabel: string) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawColumnHud(footprint, params, heightSpecLabel, transformRef.current, viewportRef.current);
+      renderer.drawColumnHud(footprint, params, heightSpecLabel, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-564 §foundation-hud: entity-agnostic footprint HUD (pad) via minimal descriptor */
     drawFootprintHud: (footprint: readonly Point2D[], descriptor: FootprintHudDescriptor, heightSpecLabel: string) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawFootprintHud(footprint, descriptor, heightSpecLabel, transformRef.current, viewportRef.current);
+      renderer.drawFootprintHud(footprint, descriptor, heightSpecLabel, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-397 §15 (wall): colored angle direction arc (shared SSoT with rotation) */
     drawDirectionArc: (pivotW: Point2D, anchorW: Point2D, cursorW: Point2D, sweepDeg: number) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawDirectionArc(pivotW, anchorW, cursorW, sweepDeg, transformRef.current, viewportRef.current);
+      renderer.drawDirectionArc(pivotW, anchorW, cursorW, sweepDeg, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-508 §opening-conflict: 🔴 tooltip explaining the height-band opening cut */
     drawGhostConflictTooltip: (label: string, anchorWorld: Point2D) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawGhostConflictTooltip(label, anchorWorld, transformRef.current, viewportRef.current);
+      renderer.drawGhostConflictTooltip(label, anchorWorld, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-398 §3.13: Polar Magnet grid overlay (center / rings / spokes) */
     drawPolarDisk: (grid: PolarDiskGrid) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawPolarDisk(grid, transformRef.current, viewportRef.current);
+      renderer.drawPolarDisk(grid, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-398 §3.15: Cartesian Magnet grid overlay (u/v grid lines + center) */
     drawRectGrid: (grid: RectGrid) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawRectGrid(grid, transformRef.current, viewportRef.current);
+      renderer.drawRectGrid(grid, getImmediateTransform(), viewportRef.current);
     },
 
     /** ADR-398 §3.20/§3.20d: alignment guide(s) overlay (έως 2 πλευρές στη γωνία ορθογωνίου) */
     drawAlignmentGuide: (guide: PlacementAlignmentGuide | readonly PlacementAlignmentGuide[]) => {
       const renderer = rendererRef.current;
       if (!renderer) return;
-      renderer.drawAlignmentGuide(guide, transformRef.current, viewportRef.current);
+      renderer.drawAlignmentGuide(guide, getImmediateTransform(), viewportRef.current);
     },
   };
 }

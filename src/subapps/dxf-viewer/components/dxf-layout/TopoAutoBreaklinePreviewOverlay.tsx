@@ -14,11 +14,12 @@ import {
   AUTO_BREAKLINE_HALO_OPACITY as HALO_OPACITY,
   AUTO_BREAKLINE_STROKE_PX as STROKE_WIDTH,
 } from '../../systems/topography/auto-breaklines/auto-breakline-review-style';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Viewport } from '../../rendering/types/Types';
 import type { AutoBreaklineCandidate } from '../../systems/topography/auto-breaklines/auto-breakline-types';
+// ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 
 interface Props {
-  readonly transform: ViewTransform;
   readonly viewport: Viewport;
 }
 
@@ -41,8 +42,10 @@ interface Props {
  * ADR-040 compliant: standalone subscriber leaf (`useSyncExternalStore` εδώ, ΟΧΙ στο shell),
  * LOW-frequency store (γράφεται μόνο σε κλικ). Mirror του `RegionPerimeterPreviewOverlay`.
  */
-export function TopoAutoBreaklinePreviewOverlay({ transform, viewport }: Props) {
+export function TopoAutoBreaklinePreviewOverlay({ viewport }: Props) {
   const { report, selected, focusedId } = useAutoBreaklineState();
+  // ADR-040 Phase XXII.B — leaf-level transform (κοστίζει μόνο όσο υπάρχει report).
+  const transform = useTransformValue();
 
   if (report === null || report.candidates.length === 0) return null;
 

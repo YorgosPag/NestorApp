@@ -151,11 +151,31 @@ zoom-reset βασιζόταν στο re-fire του bootstrap effect (λύση: 
 SSoT + ρητή αγκύρωση στο `resetToOrigin`), (β) οι mouse handlers ήταν refactor 3 αρχείων /
 ~25 σημείων, όχι «dep tweak». Tests: `__tests__/canvas-layer-stack-transform-decoupling.test.tsx`
 (22 — ραφή flip/6C/handlers/αγκύρωση/frame-subs + συμπεριφορά GridUnderlay split-effect)·
-2 overlay tests μετέπεσαν σε store-seeding. ⏳ Εκκρεμεί η επαληθευτική μέτρηση pan
-(πρωτόκολλο ADR-726 §4/ADR-728 §2.3 — κριτήριο: `frame:INTERVAL` < 33ms με OSNAP ON).
+2 overlay tests μετέπεσαν σε store-seeding.
+
+**Μέτρηση (2026-07-30, πρωτόκολλο ADR-728 §2.3 — dev server, `47_ergasia.dxf` 2909 οντότητες,
+1:1361, OSNAP ON, όλες οι πύλες ✓: focus/visible, pan-pending 60/60, snap:ENTITIES 2909,
+warm-up πεταμένο, 3 τρεξίματα × 60 καρέ, p50 ως κεντρικός δείκτης):**
+- `frame:TOTAL` p50 **7,3-8,1ms** (συνεπές με το μετά-Α δάπεδο 4,7-7,8ms — το δικό μας rAF έργο αμετάβλητα μικρό).
+- `frame:snap-detection` p50 0ms ✓ (η Φ1/ADR-728 αναστολή δουλεύει).
+- `frame:INTERVAL` p50 **~51ms** — ΔΕΝ έπεσε. **Attribution (long-animation-frame observer,
+  δύο τρεξίματα):** scripts/καρέ ≈ **9ms** (τα δικά μας rAF callbacks), styleAndLayout **0ms**,
+  και **median 42ms καθυστέρηση ΠΡΙΝ το renderStart με ΑΔΕΙΟ main thread** ⇒ το υπόλοιπο
+  δεν είναι React commits ούτε JS — είναι **software compositing/rasterization** (PC χωρίς GPU,
+  13 στοιβαγμένα full-viewport canvases): ο compositor δεν προλαβαίνει >~20fps και το rAF
+  cadence κλειδώνει στον ρυθμό παρουσίασης. Δηλαδή ο Μοχλός Β πέτυχε τον δευτερεύοντα στόχο
+  του (React commits ανά καρέ χειρονομίας ≈ 0), αλλά το κριτήριο INTERVAL<33ms δεν επιτυγχάνεται
+  από αυτόν: **ο περιοριστής μετακινήθηκε από το React στο presentation**. (Τα «React fiber
+  walks» του trace της 29/07 ήταν σε μεγάλο βαθμό React-DevTools-hook δείγματα, όπως είχε
+  προειδοποιήσει το ίδιο το handoff.)
+- **Επόμενος υποψήφιος μοχλός (Δ):** μείωση του composited-canvas αποτυπώματος σε GPU-less
+  μηχάνημα (λιγότερα/μικρότερα ζωντανά full-viewport layers ανά pan καρέ)· ο Γ του handoff
+  (~17ms JS στο render pass) τρώει από το `frame:TOTAL` (~8ms πλέον), όχι από το 42ms gap —
+  ΜΕΤΡΑ πριν τον προκρίνεις.
+
 Γνωστό υπόλοιπο (ΕΚΤΟΣ per-frame pan path): ο shell ξανα-render-άρεται ακόμη όταν ο
 CanvasSection re-render-άρεται για άλλους λόγους (inline object literals ~10 σημεία) και ανά
-grip-drag frame (`dxfGripInteraction` νέο ref) — υποψήφιος επόμενος μοχλός.
+grip-drag frame (`dxfGripInteraction` νέο ref).
 
 Ο ίδιος ο shell (`CanvasLayerStack.tsx`) + τα gizmo/selection leaves (Container/Group/Block)
 ολοκλήρωσαν το ίδιο flip (μηδέν `transform` prop).

@@ -27,7 +27,7 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { PreviewRenderer, type PreviewRenderOptions } from './PreviewRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { ExtendedSceneEntity } from '../../hooks/drawing/useUnifiedDrawing';
 import type { SceneUnits } from '../../utils/scene-units';
 // ADR-357 Phase 4: Object Snap Tracking handle types.
@@ -53,13 +53,14 @@ import { subscribeDevicePixelRatio } from '../../systems/cursor/device-pixel-rat
 // TYPES - Enterprise TypeScript Standards (ZERO any)
 // ============================================================================
 
+// ADR-040 Phase XXII.B — το `transform` prop ΑΦΑΙΡΕΘΗΚΕ: κάθε draw method του handle
+// διαβάζει `getImmediateTransform()` στην κλήση (preview-canvas-handle.ts) και ο render
+// tick του scheduler δεν το χρειαζόταν ποτέ ('preview-canvas' στο TRANSFORM_CANVAS_IDS).
 export interface PreviewCanvasProps {
   /** CSS class name */
   className?: string;
   /** Custom styles */
   style?: React.CSSProperties;
-  /** Current view transform (for coordinate conversion) */
-  transform: ViewTransform;
   /** Viewport dimensions */
   viewport: { width: number; height: number };
   /** Default preview render options */
@@ -183,7 +184,6 @@ export interface PreviewCanvasHandle {
  *
  * <PreviewCanvas
  *   ref={previewRef}
- *   transform={transform}
  *   viewport={viewport}
  * />
  * ```
@@ -193,7 +193,6 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     {
       className = '',
       style,
-      transform,
       viewport,
       defaultOptions,
       sceneUnits,
@@ -203,13 +202,11 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const rendererRef = useRef<PreviewRenderer | null>(null);
 
-    // Store current transform/viewport/options in refs for scheduler callback
-    const transformRef = useRef<ViewTransform>(transform);
+    // Store current viewport/options in refs for scheduler callback
     const viewportRef = useRef<{ width: number; height: number }>(viewport);  // 🏢 ADR-040: Required for Y-axis inversion
     const optionsRef = useRef<PreviewRenderOptions | undefined>(defaultOptions);
 
     // Keep refs in sync
-    transformRef.current = transform;
     viewportRef.current = viewport;  // 🏢 ADR-040: Keep viewport in sync
     optionsRef.current = defaultOptions;
 
@@ -348,7 +345,6 @@ export const PreviewCanvas = forwardRef<PreviewCanvasHandle, PreviewCanvasProps>
         createPreviewCanvasHandle({
           canvasRef,
           rendererRef,
-          transformRef,
           viewportRef,
           optionsRef,
         }),

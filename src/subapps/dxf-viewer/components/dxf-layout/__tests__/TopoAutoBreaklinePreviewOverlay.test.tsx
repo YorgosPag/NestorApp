@@ -21,9 +21,12 @@ import type {
   AutoBreaklineReport,
 } from '../../../systems/topography/auto-breaklines/auto-breakline-types';
 import { UI_COLORS } from '../../../config/color-config';
-import type { ViewTransform, Viewport } from '../../../rendering/types/Types';
+// ADR-040 Phase XXII.B — το overlay διαβάζει το transform από το SSoT (leaf subscription)·
+// το test κάνει seed το store αντί να περνά prop.
+import { updateImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
+import type { Viewport } from '../../../rendering/types/Types';
 
-const transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
+updateImmediateTransform({ scale: 1, offsetX: 0, offsetY: 0 });
 const viewport = { width: 800, height: 600 } as unknown as Viewport;
 
 function candidate(id: string): AutoBreaklineCandidate {
@@ -45,7 +48,7 @@ const REPORT: AutoBreaklineReport = {
 };
 
 const renderOverlay = () =>
-  render(<TopoAutoBreaklinePreviewOverlay transform={transform} viewport={viewport} />);
+  render(<TopoAutoBreaklinePreviewOverlay viewport={viewport} />);
 
 /**
  * Κάθε γραφή στο store μέσα σε `act`. Το `reset` του afterEach τρέχει με το overlay ΑΚΟΜΗ mounted,

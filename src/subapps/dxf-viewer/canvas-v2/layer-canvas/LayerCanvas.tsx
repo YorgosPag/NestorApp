@@ -36,7 +36,7 @@ import { CANVAS_THEME } from '../../config/color-config';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
 import { subscribeToTransformChanges } from '../../rendering/canvas/core/CanvasEventSystem';
 import { useLayerCanvasRenderer } from './layer-canvas-hooks';
-import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
+import type { Viewport, Point2D } from '../../rendering/types/Types';
 import type {
   ColorLayer,
   LayerRenderOptions,
@@ -53,9 +53,11 @@ import type { CursorSettings } from '../../systems/cursor/config';
 // (selection/click/mousemove/wheel/transform/drawing-hover/context-menu) was removed
 // because it routed through the dead LayerCanvas handler. Drawing-hover + unified-move
 // run via DxfCanvas → handleDxfMouseMove. SSoT: ONE handler.
+// ADR-040 Phase XXII.B — το `transform` prop ΑΦΑΙΡΕΘΗΚΕ: ο renderer διαβάζει
+// `getImmediateTransform()` στο tick (layer-canvas-hooks) και το dirty-on-transform
+// το κάνει το ίδιο το store (`'layer-canvas'` στο TRANSFORM_CANVAS_IDS).
 interface LayerCanvasProps {
   layers: ColorLayer[];
-  transform: ViewTransform;
   viewport?: Viewport;
   activeTool?: string;
   layersVisible?: boolean;
@@ -78,7 +80,6 @@ interface LayerCanvasProps {
 
 export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerCanvasProps>(({
   layers,
-  transform,
   viewport: viewportProp,
   activeTool,
   layersVisible = true,
@@ -118,9 +119,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     onSetupCanvas: runSetupCanvas,
   });
 
-  // 🏢 FIX: Transform/viewport refs for RAF callback — prevents stale closures
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
+  // 🏢 FIX: Viewport ref for RAF callback — prevents stale closures
   const resolvedViewportRef = useRef(viewport);
   resolvedViewportRef.current = viewport;
 
@@ -220,7 +219,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   const { isDirtyRef } = useLayerCanvasRenderer({
     layers,
     rendererRef,
-    transformRef,
     resolvedViewportRef,
     viewport,
     activeTool,
@@ -238,7 +236,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     selectionSettings,
     renderOptions,
     useUnifiedUIRendering,
-    transform,
   });
 
   // 🚀 PERF (2026-05-10): imperative SelectionStore subscription for LayerCanvas.

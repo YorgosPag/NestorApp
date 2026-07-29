@@ -42,10 +42,11 @@ interface LayerHitTestParams {
   onLayerClick?: (layerId: string, point: Point2D) => void;
 }
 
+// ADR-040 Phase XXII.B — transformRef/transform ΑΦΑΙΡΕΘΗΚΑΝ: ο render tick διαβάζει
+// `getImmediateTransform()` και το dirty-on-transform το κάνει το store (TRANSFORM_CANVAS_IDS).
 interface LayerCanvasRendererParams {
   layers: ColorLayer[];
   rendererRef: React.MutableRefObject<LayerRenderer | null>;
-  transformRef: React.MutableRefObject<ViewTransform>;
   resolvedViewportRef: React.MutableRefObject<Viewport>;
   viewport: Viewport;
   activeTool?: string;
@@ -61,7 +62,6 @@ interface LayerCanvasRendererParams {
   selectionSettings: SelectionSettings;
   renderOptions: LayerRenderOptions;
   useUnifiedUIRendering: boolean;
-  transform: ViewTransform;
 }
 
 // ── useLayerHitTest ──────────────────────────────────────────────────
@@ -119,7 +119,6 @@ export function useLayerHitTest({
 export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
   const {
     rendererRef,
-    transformRef,
     resolvedViewportRef,
     viewport,
     selectionRef,
@@ -242,7 +241,6 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     isDirtyRef.current = true;
   }, [
     params.layers,
-    params.transform,
     params.viewport,
     params.layersVisible,
     params.activeTool,

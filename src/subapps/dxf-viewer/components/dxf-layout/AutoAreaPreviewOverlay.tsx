@@ -3,10 +3,11 @@
 import React, { useSyncExternalStore } from 'react';
 import { subscribeAutoAreaPreview, getAutoAreaPreview } from '../../systems/auto-area/AutoAreaPreviewStore';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
+import type { Point2D } from '../../rendering/types/Types';
 
 interface Props {
-  transform: ViewTransform;
   viewport: { width: number; height: number };
 }
 
@@ -16,12 +17,14 @@ interface Props {
  * polygons create transparent cutouts (donut/annulus visual).
  * ADR-040 compliant: standalone subscriber — no useSyncExternalStore in shell.
  */
-export function AutoAreaPreviewOverlay({ transform, viewport }: Props) {
+export function AutoAreaPreviewOverlay({ viewport }: Props) {
   const preview = useSyncExternalStore(
     subscribeAutoAreaPreview,
     getAutoAreaPreview,
     getAutoAreaPreview,
   );
+  // ADR-040 Phase XXII.B — leaf-level transform (κοστίζει μόνο όσο υπάρχει preview).
+  const transform = useTransformValue();
 
   if (!preview || preview.polygon.length < 3) return null;
 

@@ -10,10 +10,11 @@ import {
   getRealtimeWorldCursor,
   subscribeRealtimeWorldCursor,
 } from '../../systems/cursor/ImmediatePositionStore';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — δικό του transform subscription στο INNER (gate-at-mount), όχι prop.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
+import type { Viewport } from '../../rendering/types/Types';
 
 interface Props {
-  transform: ViewTransform;
   viewport: Viewport;
 }
 
@@ -38,16 +39,18 @@ const getServerCursor = (): null => null;
  * high-freq realtime-cursor subscriber ζει μόνο όσο armed (ο inner unmount-άρει αλλιώς). Read-only,
  * `pointer-events-none`. Mirror του {@link RegionGapMarkersOverlay} (SVG leaf projection).
  */
-export function BasePointPickMarkerOverlay({ transform, viewport }: Props) {
+export function BasePointPickMarkerOverlay({ viewport }: Props) {
   const armed = useSyncExternalStore(subscribePickBasePoint, isPickBasePointArmed, getServerArmed);
   if (!armed) return null;
-  return <BasePointPickMarkerInner transform={transform} viewport={viewport} />;
+  return <BasePointPickMarkerInner viewport={viewport} />;
 }
 
-const BasePointPickMarkerInner: React.FC<Props> = ({ transform, viewport }) => {
+const BasePointPickMarkerInner: React.FC<Props> = ({ viewport }) => {
   // Ο realtime channel είναι το FINAL effective **snapped** world (mouse-handler-move) — locked στο
   // crosshair/ghosts (ΟΧΙ ο throttled raw channel). Read-only leaf → επιτρεπτό high-freq sub (ADR-040).
   const world = useSyncExternalStore(subscribeRealtimeWorldCursor, getRealtimeWorldCursor, getServerCursor);
+  // ADR-040 Phase XXII.B — leaf-level transform, μόνο όσο το pick είναι armed (inner mount).
+  const transform = useTransformValue();
   if (!world) return null;
 
   const p = CoordinateTransforms.worldToScreen(world, transform, viewport);

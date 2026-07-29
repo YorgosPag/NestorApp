@@ -14,18 +14,21 @@ import {
   __resetPickBasePointForTests,
 } from '../../../systems/block/pick-base-point-store';
 import { setRealtimeWorldCursor } from '../../../systems/cursor/ImmediatePositionStore';
-import type { ViewTransform, Viewport } from '../../../rendering/types/Types';
+// ADR-040 Phase XXII.B — το overlay διαβάζει πλέον το transform από το SSoT (leaf
+// subscription), όχι από prop: το test κάνει seed το store αντί να περνά prop.
+import { updateImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
+import type { Viewport } from '../../../rendering/types/Types';
 
-const transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
 const viewport = { width: 800, height: 600 } as unknown as Viewport;
 
 const renderOverlay = () =>
-  render(<BasePointPickMarkerOverlay transform={transform} viewport={viewport} />);
+  render(<BasePointPickMarkerOverlay viewport={viewport} />);
 
 describe('ADR-652 M6.1 — BasePointPickMarkerOverlay', () => {
   beforeEach(() => {
     __resetPickBasePointForTests();
     setRealtimeWorldCursor(null);
+    updateImmediateTransform({ scale: 1, offsetX: 0, offsetY: 0 });
   });
 
   it('renders nothing while not armed', () => {

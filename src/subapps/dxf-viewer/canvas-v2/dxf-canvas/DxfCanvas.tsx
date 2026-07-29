@@ -31,8 +31,14 @@ import type { GridAxis } from '../../ai-assistant/grid-types';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import { useCanvasResize } from '../../hooks/canvas';
-import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config';
 import { useDxfCanvasRenderer } from './dxf-canvas-renderer';
+// ADR-040 Phase XXII.B — το transform ΔΕΝ είναι πια React prop: ο render tick και οι
+// handlers διαβάζουν το ζωντανό SSoT· το handle `getTransform` επιστρέφει την ίδια πηγή
+// (διόρθωση του λανθάνοντος stale closure — το παλιό handle πάγωνε στο memo χωρίς dep).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+// ADR-040 Phase XXII.B — κοινός SSoT αγκύρωσης world(0,0) στη γωνία χαράκων (bootstrap +
+// zoom-reset· βλ. ruler-origin.ts για το γιατί το interception μέσω prop καταργήθηκε).
+import { computeRulerOriginTransform } from '../../systems/rulers-grid/ruler-origin';
 
 const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
   showGrid: false,
@@ -43,7 +49,6 @@ const DEFAULT_RENDER_OPTIONS: DxfRenderOptions = {
 
 interface DxfCanvasProps {
   scene: DxfScene | null;
-  transform: ViewTransform;
   viewport?: Viewport;
   crosshairSettings?: { enabled?: boolean };
   gridSettings?: GridSettings;
@@ -90,7 +95,6 @@ export interface DxfCanvasRef {
 
 export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProps>(({
   scene,
-  transform,
   viewport: viewportProp,
   crosshairSettings,
   gridSettings,
@@ -143,8 +147,6 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   const { viewport } = useCanvasResize({ canvasRef, viewportProp, onSetupCanvas: runSetupCanvas });
 
   // Refs for RAF callback — prevents stale closures
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
   const resolvedViewportRef = useRef(viewport);
   resolvedViewportRef.current = viewport;
 
@@ -184,7 +186,10 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // Imperative handle
   useImperativeHandle(ref, () => ({
     getCanvas: () => canvasRef.current,
-    getTransform: () => transform,
+    // ADR-040 Phase XXII.B — ζωντανή ανάγνωση από το SSoT. Το παλιό `() => transform`
+    // ήταν stale closure (το memo ΔΕΝ είχε το transform στα deps) — snap tolerance /
+    // drawing scale μπορούσαν να διαβάσουν παγωμένη τιμή μετά από zoom.
+    getTransform: () => getImmediateTransform(),
     fitToView: () => {
       if (!onTransformChange) { logger.warn('fitToView: No onTransformChange callback'); return; }
       const fitToViewService = serviceRegistry.get('fit-to-view');
@@ -200,9 +205,9 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     }
   }), [scene, colorLayers, viewport, onTransformChange, onWheelZoom]);
 
-  // Centralized mouse handlers
+  // Centralized mouse handlers — event-time transform reads (cardinal rule #2, XXII.B).
   const mouseHandlers = useCentralizedMouseHandlers({
-    scene, transform, viewport, activeTool, overlayMode,
+    scene, viewport, activeTool, overlayMode,
     onTransformChange, onEntitySelect, onMouseMove, onWheelZoom, onCanvasClick,
     colorLayers, onLayerSelected, onMultiLayerSelected, onEntitiesSelected,
     onUnifiedMarqueeResult, canvasRef, isGripDragging,
@@ -259,7 +264,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   // useCallback dep stable across renders (was the dominant invalidation cause).
   const rendererRefs = useMemo(() => ({
     rendererRef, canvasRef, gridRendererRef, rulerRendererRef,
-    guideRendererRef, selectionRendererRef, transformRef, resolvedViewportRef,
+    guideRendererRef, selectionRendererRef, resolvedViewportRef,
     selectionStateRef, activeToolRef,
     guidesRef, guidesVisibleRef, showGuideDimensionsRef, highlightedGuideIdRef,
     selectedGuideIdsRef, ghostGuideRef, ghostDiagonalGuideRef,
@@ -270,7 +275,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   const { isDirtyRef } = useDxfCanvasRenderer({
     scene, renderOptions, gridSettings, rulerSettings, viewport,
     refs: rendererRefs,
-    transform, guides, guidesVisible, showGuideDimensions,
+    guides, guidesVisible, showGuideDimensions,
     ghostGuide, ghostDiagonalGuide, highlightedGuideId,
     constructionPoints, highlightedPointId, ghostSegmentLine,
     // selection state read imperatively from selectionStateRef via subscription below
@@ -319,19 +324,18 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     isDirtyRef.current = true;
   }, [viewport.width, viewport.height, setupCanvas, isDirtyRef]);
 
-  // Initial transform: set world (0,0) at bottom-left ruler corner
+  // Initial transform: set world (0,0) at bottom-left ruler corner.
+  // ADR-040 Phase XXII.B — τρέχει σε mount/viewport change και διαβάζει το ζωντανό SSoT.
+  // ΔΕΝ ξανα-πυροδοτείται σε transform change: το zoom-reset ΔΕΝ περνά πια από εδώ —
+  // το `resetToOrigin()` (useCanvasOperations) θέτει ΑΠΕΥΘΕΙΑΣ το αγκυρωμένο transform
+  // μέσω του ΙΔΙΟΥ SSoT helper (`computeRulerOriginTransform`), χωρίς interception.
   useEffect(() => {
     if (!viewport.width || !viewport.height || !onTransformChange) return;
-    if (transform.offsetX === 0 && transform.offsetY === 0 && transform.scale === 1) {
-      const RULER_WIDTH = RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH;
-      const RULER_HEIGHT = RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT;
-      onTransformChange({
-        scale: 1,
-        offsetX: RULER_WIDTH,
-        offsetY: viewport.height - RULER_HEIGHT
-      });
+    const t = getImmediateTransform();
+    if (t.offsetX === 0 && t.offsetY === 0 && t.scale === 1) {
+      onTransformChange(computeRulerOriginTransform(viewport.height));
     }
-  }, [viewport.width, viewport.height, transform.offsetX, transform.offsetY, transform.scale, onTransformChange]);
+  }, [viewport.width, viewport.height, onTransformChange]);
 
   return (
     <canvas

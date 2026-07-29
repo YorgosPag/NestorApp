@@ -12,7 +12,7 @@ import type { DxfRenderer } from './DxfRenderer';
 import type { DxfScene, DxfRenderOptions, DxfEntityUnion } from './dxf-types';
 import { DxfBitmapCache } from './dxf-bitmap-cache';
 import { isBimRegionOrPerimeterTool } from '../../systems/tools/region-tool-ids';
-import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
+import type { Viewport, Point2D } from '../../rendering/types/Types';
 import type { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import type { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
 import { createUIRenderContext } from '../../rendering/ui/core/UIRenderContext';
@@ -50,7 +50,8 @@ interface RendererRefs {
   rulerRendererRef: React.MutableRefObject<RulerRenderer | null>;
   guideRendererRef: React.MutableRefObject<GuideRenderer | null>;
   selectionRendererRef: React.MutableRefObject<SelectionRenderer | null>;
-  transformRef: React.MutableRefObject<ViewTransform>;
+  // ADR-040 Phase XXII.B — transformRef ΑΦΑΙΡΕΘΗΚΕ (νεκρό): ο render tick διαβάζει
+  // απευθείας getImmediateTransform() (γρ. ~148) — ποτέ δεν διάβαζε το ref.
   resolvedViewportRef: React.MutableRefObject<Viewport>;
   selectionStateRef: React.MutableRefObject<SelectionState>;
   activeToolRef: React.MutableRefObject<string | undefined>;
@@ -74,8 +75,9 @@ export interface DxfCanvasRendererParams {
   rulerSettings?: RulerSettings;
   viewport: Viewport;
   refs: RendererRefs;
-  // Dependencies for dirty tracking
-  transform: ViewTransform;
+  // Dependencies for dirty tracking.
+  // ADR-040 Phase XXII.B — `transform` ΑΦΑΙΡΕΘΗΚΕ: το dirty-on-transform το κάνει το ίδιο
+  // το store ('dxf-canvas' στο TRANSFORM_CANVAS_IDS μέσω markSystemsDirty).
   guides?: readonly Guide[];
   guidesVisible: boolean;
   showGuideDimensions: boolean;
@@ -95,7 +97,7 @@ export interface DxfCanvasRendererParams {
 export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   const {
     scene, viewport, refs,
-    transform, guides, guidesVisible, showGuideDimensions,
+    guides, guidesVisible, showGuideDimensions,
     ghostGuide, ghostDiagonalGuide, highlightedGuideId,
     constructionPoints, highlightedPointId, ghostSegmentLine,
     renderOptions, gridSettings, rulerSettings,
@@ -434,7 +436,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   // Mark dirty when dependencies change
   useEffect(() => {
     isDirtyRef.current = true;
-  }, [scene, transform, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, showGuideDimensions, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
+  }, [scene, viewport, renderOptions, gridSettings, rulerSettings, guides, guidesVisible, showGuideDimensions, ghostGuide, ghostDiagonalGuide, highlightedGuideId, constructionPoints, highlightedPointId, ghostSegmentLine]);
 
   // File-size SRP split (N.7.1) — the bitmap-cache dirty/invalidate store subscriptions
   // (isolate / LayerStore / BIM settings / fonts / LWDISPLAY / background) live in a
