@@ -10,6 +10,8 @@
 
 // ✅ ENTERPRISE: Χρήση unified Point2D από rendering/types/Types.ts
 import type { Point2D } from '../rendering/types/Types';
+// 🛡️ SSoT finite-point guard (ADR-510 Φ5) — φρουρεί το snap marker από NaN/∞ γεωμετρία.
+import { isFinitePoint } from '../config/geometry-constants';
 export type { Point2D } from '../rendering/types/Types';
 
 // 🏢 ENTERPRISE CENTRALIZATION: Entity από κεντρικοποιημένο σύστημα
@@ -159,6 +161,12 @@ export function isVisibleSnapMode(mode: string | null | undefined): boolean {
 
 export function isSnapMarkerVisible(view: SnapIndicatorView | null | undefined): view is SnapIndicatorView {
   if (!view || !view.point) return false;
+  // 🛡️ Μη-πεπερασμένο σημείο (NaN/∞ από εκφυλισμένη γεωμετρία engine — π.χ. τομή σχεδόν
+  // παράλληλων) ΔΕΝ είναι έλξη: το `worldToScreen` θα έδινε NaN στο CSS `left/top` του glyph
+  // (React: «NaN is an invalid value», περιστατικό 2026-07-29). ΕΝΑ φίλτρο εδώ = καλύπτονται
+  // ΟΛΟΙ οι καταναλωτές του predicate (2D overlay, 3D wrapper, crosshair pickbox), από ΟΛΟΥΣ
+  // τους writers (scheduler + σύγχρονο grip-drag path). SSoT: isFinitePoint (ADR-510 Φ5).
+  if (!isFinitePoint(view.point)) return false;
   return isVisibleSnapMode(view.type);
 }
 
