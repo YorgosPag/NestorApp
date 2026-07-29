@@ -319,12 +319,19 @@ export class TextRenderer extends BaseEntityRenderer {
     this.ctx.font = buildUIFont(spanHeightPx, family, weight, italic);
     this.ctx.fillStyle = opts.forcedFill ?? span.color ?? opts.fallbackFill;
     const tracking = style.tracking != null && style.tracking > 0 ? style.tracking : 1;
+    const resolved = this.resolveSpanFont(family, weight === 'bold', italic, opts);
     const advance = this.paintText(
-      x, y, span.text, spanHeightPx, 'left', opts.baseline,
-      this.resolveSpanFont(family, weight === 'bold', italic, opts), tracking,
+      x, y, span.text, spanHeightPx, 'left', opts.baseline, resolved, tracking,
     );
     if (hasAnyDecoration(span.decoration)) {
-      this.paintDecorations(x, y, advance, spanHeightPx, span.decoration, opts.baseline);
+      // 🐛 ADR-635 Φ C.24 — οι γραμμές διακόσμησης τοποθετούνται σε κλάσματα του **em**, γιατί
+      // αυτό ζωγραφίζει ο καμβάς (`paintText` → `emSizeForTextHeight`). Έπαιρναν το **ύψος
+      // κειμένου**, που από το Φ C.22 και μετά είναι ~1,4× ΜΙΚΡΟΤΕΡΟ του em ⇒ η υπογράμμιση
+      // (0,90·h) έπεφτε ψηλότερα από τη βάση των γραμμάτων (0,905·em = 1,27·h) — δηλαδή **μέσα
+      // στο κείμενο**. Οι σταθερές 0,90/−0,05/0,40 ήταν βαθμονομημένες όταν em ≡ ύψος κειμένου.
+      this.paintDecorations(
+        x, y, advance, emSizeForTextHeight(spanHeightPx, resolved), span.decoration, opts.baseline,
+      );
     }
   }
 
@@ -373,14 +380,14 @@ export class TextRenderer extends BaseEntityRenderer {
    * αριστερά-αγκυρωμένα, άρα δεν υπάρχει πια όρισμα `align`.
    */
   private paintDecorations(
-    x: number, y: number, width: number, spanHeight: number,
+    x: number, y: number, width: number, emPx: number,
     decoration: TextSpanDecoration, baseline: CanvasTextBaseline,
   ): void {
     const baselineVOffset = baseline === 'middle' ? 0.5 : baseline === 'bottom' ? 1.0 : 0;
-    const thickness = Math.max(1, spanHeight * 0.07);
-    if (decoration.underline)     this.ctx.fillRect(x, y + spanHeight * ( 0.90 - baselineVOffset), width, thickness);
-    if (decoration.overline)      this.ctx.fillRect(x, y + spanHeight * (-0.05 - baselineVOffset), width, thickness);
-    if (decoration.strikethrough) this.ctx.fillRect(x, y + spanHeight * ( 0.40 - baselineVOffset), width, thickness);
+    const thickness = Math.max(1, emPx * 0.07);
+    if (decoration.underline)     this.ctx.fillRect(x, y + emPx * ( 0.90 - baselineVOffset), width, thickness);
+    if (decoration.overline)      this.ctx.fillRect(x, y + emPx * (-0.05 - baselineVOffset), width, thickness);
+    if (decoration.strikethrough) this.ctx.fillRect(x, y + emPx * ( 0.40 - baselineVOffset), width, thickness);
   }
 
   /**
