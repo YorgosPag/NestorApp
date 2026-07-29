@@ -41,4 +41,13 @@ describe('isVisibleSnapMode (SSoT — «τι βλέπει/κλείδωσε ρη�
     expect(isSnapMarkerVisible(null)).toBe(false);
     expect(isSnapMarkerVisible({ type: 'endpoint', point: undefined } as never)).toBe(false);
   });
+
+  it('🛡️ μη-πεπερασμένο σημείο → false (NaN CSS left/top στο glyph, περιστατικό 2026-07-29)', () => {
+    // Εκφυλισμένη γεωμετρία engine (τομή σχεδόν παράλληλων ⇒ ορίζουσα → 0) μπορεί να δώσει
+    // NaN/±∞ — τέτοιο «σημείο» ΔΕΝ είναι έλξη και δεν πρέπει να ζωγραφιστεί ποτέ (2D ή 3D).
+    expect(isSnapMarkerVisible({ type: 'intersection', point: { x: NaN, y: 2 } })).toBe(false);
+    expect(isSnapMarkerVisible({ type: 'intersection', point: { x: 1, y: NaN } })).toBe(false);
+    expect(isSnapMarkerVisible({ type: 'endpoint', point: { x: Infinity, y: 0 } })).toBe(false);
+    expect(isSnapMarkerVisible({ type: 'endpoint', point: { x: 0, y: -Infinity } })).toBe(false);
+  });
 });
