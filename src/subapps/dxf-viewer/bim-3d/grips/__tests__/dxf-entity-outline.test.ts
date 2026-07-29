@@ -7,11 +7,24 @@ import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
 import { dxfEntityOutlineSegments } from '../dxf-entity-outline';
 // ADR-557 Φ-attachment — the text box now measures the real glyph advance; pin a stub
 // font at the 0.6 monospace ratio so the hand-computed 'AB'=6 bbox stays deterministic.
-import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installStubFont, stubAdvanceWorld, stubEmSize } from '../../../text-engine/fonts/__tests__/_stub-font';
 
 let __stubCleanup: () => void;
 beforeAll(() => { __stubCleanup = installStubFont(); });
 afterAll(() => __stubCleanup());
+
+// ADR-635 Φ C.22 — το περίγραμμα κειμένου ΔΕΝ έχει πια τις διαστάσεις του ονομαστικού ύψους:
+// το κείμενο βάφεται σε `em = ύψος × unitsPerEm / sCapHeight`. Παράγονται από το SSoT του stub
+// (ΜΕΣΑ στο `it()` — η γραμματοσειρά δηλώνεται στο `beforeAll`), ποτέ literal.
+/** Πλάτος περιγράμματος «AB» (2 χαρακτήρες) σε ύψος κειμένου `h`. */
+const advAB = (h: number) => stubAdvanceWorld(2, h);
+/** Ύψος περιγράμματος σε ύψος κειμένου `h` — default stub: ink ≡ μετρικά, άρα ένα em. */
+const boxH = (h: number) => stubEmSize(h);
+/** Σύγκριση κορυφής με ανοχή κινητής υποδιαστολής (τα advance βγαίνουν από γινόμενα). */
+const expectPoint = (p: { x: number; y: number }, x: number, y: number): void => {
+  expect(p.x).toBeCloseTo(x, 6);
+  expect(p.y).toBeCloseTo(y, 6);
+};
 
 const line = (): DxfEntityUnion =>
   ({ id: 'l', type: 'line', visible: true, start: { x: 0, y: 0 }, end: { x: 100, y: 0 } }) as unknown as DxfEntityUnion;
@@ -78,20 +91,25 @@ describe('dxfEntityOutlineSegments', () => {
   });
 
   // ADR-557 Φ-attachment — text glows as its attachment-aware box (SAME box grips/2D frame/3D use).
-  // Default justification 'TL' (top-left): height 5 hangs BELOW the insertion point (y∈[15,20]),
-  // width 6 to the right ('AB' = 2·5·CHAR_WIDTH_MONOSPACE, x∈[10,16]). Corners NE,NW,SW,SE + closing NE.
+  // Default justification 'TL' (top-left): the box hangs BELOW the insertion point and extends
+  // right. Corners NE,NW,SW,SE + closing NE.
   it('returns a closed attachment-aware bbox rectangle for text', () => {
     const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
     const [seg] = dxfEntityOutlineSegments(t);
-    expect(seg).toEqual([
-      { x: 16, y: 20 }, { x: 10, y: 20 }, { x: 10, y: 15 }, { x: 16, y: 15 }, { x: 16, y: 20 },
-    ]);
+    const right = 10 + advAB(5);
+    const bottom = 20 - boxH(5);
+    expect(seg).toHaveLength(5);
+    expectPoint(seg[0], right, 20);   // NE
+    expectPoint(seg[1], 10, 20);      // NW = the insertion point (TL)
+    expectPoint(seg[2], 10, bottom);  // SW
+    expectPoint(seg[3], right, bottom); // SE
+    expectPoint(seg[4], right, 20);   // closing NE
   });
 
   it('scales the text bbox to mm for a cm scene (unitToMm = 10)', () => {
     const t = { id: 't', type: 'text', visible: true, position: { x: 10, y: 20 }, height: 5, text: 'AB' } as unknown as DxfEntityUnion;
     const [seg] = dxfEntityOutlineSegments(t, 10);
-    expect(seg[0]).toEqual({ x: 160, y: 200 }); // NE
-    expect(seg[2]).toEqual({ x: 100, y: 150 }); // SW
+    expectPoint(seg[0], (10 + advAB(5)) * 10, 200);        // NE
+    expectPoint(seg[2], 100, (20 - boxH(5)) * 10);         // SW
   });
 });
