@@ -16,8 +16,10 @@
  * ADR-040: this is an SVG sibling leaf — `pointer-events:none` except on the handle
  * circles, so pan / select / zoom under it are untouched. The orchestrator
  * (CanvasSection / CanvasLayerStack shell) gains NO `useSyncExternalStore`; only this
- * leaf subscribes (mode store + live scene). `transform` / `viewport` arrive as props
- * (Bridge-fed), so the handles reposition on pan/zoom via the shell's normal re-render.
+ * leaf subscribes (mode store + live scene + transform).
+ * ADR-040 Phase XXII.B — το transform ΔΕΝ είναι πια prop: ο outer gate διαβάζει ΜΟΝΟ το
+ * (low-freq) mode store· το inner (mounted μόνο με mode ON) κάνει `useTransformValue()`,
+ * ώστε με το mode OFF το pan/zoom να μην αγγίζει καθόλου αυτό το leaf.
  *
  * SSoT reuse: `partitionDimensionRows` (rows) · `computeRowHandleScreenPos` /
  * `computeRowGhostSegments` / `projectRowDelta` (geometry) · `CoordinateTransforms`
@@ -25,7 +27,8 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
+import type { Viewport, Point2D } from '../../rendering/types/Types';
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 import type { DimensionEntity } from '../../types/dimension';
 import { isDimensionEntity, type Entity } from '../../types/entities';
 import { useLevelScene } from '../../systems/scene/useSceneSelectors';
@@ -42,7 +45,6 @@ import {
 } from '../../systems/dimensions/dim-row-handle-geometry';
 
 export interface DimRowHandleOverlayProps {
-  readonly transform: ViewTransform;
   readonly viewport: Viewport;
   readonly currentLevelId: string | null;
 }
@@ -58,8 +60,9 @@ interface DragState {
   readonly rect: { left: number; top: number };
 }
 
-function DimRowHandleOverlayInner({ transform, viewport, currentLevelId }: DimRowHandleOverlayProps) {
-  const active = useDimRowHandleModeActive();
+function DimRowHandleOverlayInner({ viewport, currentLevelId }: DimRowHandleOverlayProps) {
+  // Leaf-level transform subscription — ζει ΜΟΝΟ όσο το mode είναι ON (outer gate).
+  const transform = useTransformValue();
   const sceneModel = useLevelScene(currentLevelId);
   const colors = useSemanticColors();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -67,10 +70,10 @@ function DimRowHandleOverlayInner({ transform, viewport, currentLevelId }: DimRo
   const [drag, setDrag] = useState<DragState | null>(null);
 
   const rows = useMemo<DimRow[]>(() => {
-    if (!active || !sceneModel) return [];
+    if (!sceneModel) return [];
     const dims = (sceneModel.entities as unknown as Entity[]).filter(isDimensionEntity);
     return partitionDimensionRows(dims);
-  }, [active, sceneModel]);
+  }, [sceneModel]);
 
   const handles = useMemo(() => {
     const out: { row: DimRow; screen: Point2D }[] = [];
@@ -134,8 +137,6 @@ function DimRowHandleOverlayInner({ transform, viewport, currentLevelId }: DimRo
     };
   }, [dragRowId, transform, viewport]);
 
-  if (!active) return null;
-
   const w2s = (p: Point2D): Point2D => CoordinateTransforms.worldToScreen(p, transform, viewport);
   const ghostSegs = drag ? computeRowGhostSegments(drag.dims, drag.delta) : [];
 
@@ -189,4 +190,12 @@ function DimRowHandleOverlayInner({ transform, viewport, currentLevelId }: DimRo
   );
 }
 
-export const DimRowHandleOverlay = React.memo(DimRowHandleOverlayInner);
+/**
+ * Outer gate (ADR-040 Phase XXII.B): subscribe-άρει ΜΟΝΟ το low-freq mode store· το inner
+ * (με το transform subscription) mount-άρεται μόνο όσο οι «Λαβές Μετακίνησης Σειρών» είναι ON.
+ */
+export const DimRowHandleOverlay = React.memo(function DimRowHandleOverlay(props: DimRowHandleOverlayProps) {
+  const active = useDimRowHandleModeActive();
+  if (!active) return null;
+  return <DimRowHandleOverlayInner {...props} />;
+});

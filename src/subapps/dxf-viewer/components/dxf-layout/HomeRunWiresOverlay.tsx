@@ -23,7 +23,7 @@
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Viewport } from '../../rendering/types/Types';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 // ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
@@ -55,9 +55,10 @@ import type { DxfGripDragPreview } from '../../hooks/grip-computation';
 import { applyEntityPreview } from '../../rendering/ghost';
 import { toEntityPreviewTransform } from '../../hooks/tools/grip-drag-preview-transform';
 
+// ADR-040 Phase XXII.B — το `transform` prop ΑΦΑΙΡΕΘΗΚΕ: δεν διαβαζόταν καν (ο painter
+// διαβάζει `getImmediateTransform()` στο frame tick — το prop «lags the canvas during pan»).
 export interface HomeRunWiresOverlayProps {
   readonly scene: DxfScene | null;
-  readonly transform: ViewTransform;
   readonly viewport: Viewport;
   /** Τρέχων BIM όροφος — μέρος του repaint key (αλλαγή ορόφου ⇒ νέο scene). */
   readonly currentLevelId: string | null;

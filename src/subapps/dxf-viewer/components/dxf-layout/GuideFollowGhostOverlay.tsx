@@ -60,7 +60,7 @@ import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor
 
 
 export interface GuideFollowGhostOverlayProps {
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly viewport: { readonly width: number; readonly height: number };
   readonly levelManager: LevelSceneReader;
 }

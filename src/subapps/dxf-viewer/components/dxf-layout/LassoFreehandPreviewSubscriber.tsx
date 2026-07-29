@@ -10,12 +10,12 @@ import React, { useSyncExternalStore } from 'react';
 import { LassoFreehandStore } from '../../systems/lasso/LassoFreehandStore';
 // ADR-658 — shared freehand trace→screen projection SSoT (no parallel twins, N.18).
 import { freehandScreenGeometry } from './freehand-preview-projection';
-import type { ViewTransform } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 // 🏢 ADR-571: lasso dark-cyan stroke SSoT
 import { LASSO_STROKE_CYAN } from '../../config/color-config';
 
 interface LassoFreehandPreviewSubscriberProps {
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   className?: string;
 }
@@ -30,9 +30,11 @@ const _subscribe = (cb: () => void) => LassoFreehandStore.subscribe(cb);
  * Points stream in via mousemove, so this re-renders at move frequency.
  */
 export const LassoFreehandPreviewSubscriber = React.memo(function LassoFreehandPreviewSubscriber({
-  transform, viewport, className,
+  viewport, className,
 }: LassoFreehandPreviewSubscriberProps) {
   const { points, nearClose } = useSyncExternalStore(_subscribe, _getSnapshot);
+  // ADR-040 Phase XXII.B — leaf-level transform (ενεργό κόστος μόνο όσο υπάρχει lasso trace).
+  const transform = useTransformValue();
 
   const geo = freehandScreenGeometry(points, transform, viewport);
   if (!geo) return null;

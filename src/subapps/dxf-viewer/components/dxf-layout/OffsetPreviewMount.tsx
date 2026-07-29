@@ -1,10 +1,9 @@
 'use client';
 import React from 'react';
 import { useOffsetPreview } from '../../hooks/tools/useOffsetPreview';
-import type { ViewTransform } from '../../rendering/types/Types';
 
 interface OffsetPreviewMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }

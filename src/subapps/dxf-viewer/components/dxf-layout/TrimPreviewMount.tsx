@@ -2,10 +2,9 @@
 import React from 'react';
 import { useTrimPreview } from '../../hooks/tools/useTrimPreview';
 import { useTrimDragCapture } from '../../hooks/tools/useTrimDragCapture';
-import type { ViewTransform } from '../../rendering/types/Types';
 
 interface TrimPreviewMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -18,6 +17,6 @@ export const TrimPreviewMount = React.memo(function TrimPreviewMount(
   props: TrimPreviewMountProps,
 ) {
   useTrimPreview(props);
-  useTrimDragCapture({ transform: props.transform, getViewportElement: props.getViewportElement });
+  useTrimDragCapture({ getViewportElement: props.getViewportElement });
   return null;
 });

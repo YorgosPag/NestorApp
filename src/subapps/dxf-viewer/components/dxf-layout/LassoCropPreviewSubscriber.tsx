@@ -10,10 +10,11 @@ import React, { useSyncExternalStore } from 'react';
 import { PolygonCropStore } from '../../systems/lasso/LassoCropStore';
 import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
+import type { Point2D } from '../../rendering/types/Types';
 
 interface PolygonCropPreviewSubscriberProps {
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   className?: string;
 }
@@ -27,10 +28,13 @@ const _subscribePolygon = (cb: () => void) => PolygonCropStore.subscribe(cb);
  * Updates only on click (low-freq) or snap change (high-freq, but cheap SVG redraw).
  */
 export const PolygonCropPreviewSubscriber = React.memo(function PolygonCropPreviewSubscriber({
-  transform, viewport, className,
+  viewport, className,
 }: PolygonCropPreviewSubscriberProps) {
   const points = useSyncExternalStore(_subscribePolygon, _getPolygonPoints);
   const snapResult = useSyncExternalStore(subscribeSnapResult, getFullSnapResult);
+  // ADR-040 Phase XXII.B — leaf-level transform (re-render ανά καρέ ΜΟΝΟ όσο υπάρχουν σημεία
+  // στο in-progress crop· αλλιώς το return null παρακάτω κοστίζει ~0).
+  const transform = useTransformValue();
 
   if (points.length === 0) return null;
 

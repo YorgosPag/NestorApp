@@ -6,10 +6,10 @@ import {
   getRegionGapMarkers,
 } from '../../systems/region-preview/RegionGapMarkersStore';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import type { ViewTransform } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 
 interface Props {
-  transform: ViewTransform;
   viewport: { width: number; height: number };
 }
 
@@ -26,12 +26,14 @@ const GAP_MARKER_COLOR = '#ef4444';
  * subscription). Mirror του `RegionPerimeterPreviewOverlay`. Λευκό halo κάτω από τον
  * κόκκινο δακτύλιο για ορατότητα πάνω σε σκουρόχρωμο/ανοιχτό σχέδιο.
  */
-export function RegionGapMarkersOverlay({ transform, viewport }: Props) {
+export function RegionGapMarkersOverlay({ viewport }: Props) {
   const markers = useSyncExternalStore(
     subscribeRegionGapMarkers,
     getRegionGapMarkers,
     getRegionGapMarkers,
   );
+  // ADR-040 Phase XXII.B — leaf-level transform (κοστίζει μόνο όσο υπάρχουν markers).
+  const transform = useTransformValue();
 
   if (markers.length === 0) return null;
 

@@ -8,11 +8,11 @@
 import React, { useSyncExternalStore } from 'react';
 import { SketchFreehandStore } from '../../systems/sketch/SketchFreehandStore';
 import { freehandScreenGeometry } from './freehand-preview-projection';
-import type { ViewTransform } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 
 interface SketchFreehandPreviewSubscriberProps {
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   className?: string;
 }
@@ -27,9 +27,11 @@ const _subscribe = (cb: () => void) => SketchFreehandStore.subscribe(cb);
  * nears the start. Points stream in via pointermove → re-renders at move frequency.
  */
 export const SketchFreehandPreviewSubscriber = React.memo(function SketchFreehandPreviewSubscriber({
-  transform, viewport, className,
+  viewport, className,
 }: SketchFreehandPreviewSubscriberProps) {
   const { points, nearClose } = useSyncExternalStore(_subscribe, _getSnapshot);
+  // ADR-040 Phase XXII.B — leaf-level transform (ενεργό κόστος μόνο όσο υπάρχει trace).
+  const transform = useTransformValue();
 
   const geo = freehandScreenGeometry(points, transform, viewport);
   if (!geo) return null;

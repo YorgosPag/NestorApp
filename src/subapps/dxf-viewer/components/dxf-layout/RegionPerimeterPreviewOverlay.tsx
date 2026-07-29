@@ -7,10 +7,11 @@ import {
   getRegionPerimeterPreview,
 } from '../../systems/region-preview/RegionPerimeterPreviewStore';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+// ADR-040 Phase XXII.B — δικό του transform subscription (leaf), όχι prop από τον shell.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
+import type { Point2D } from '../../rendering/types/Types';
 
 interface Props {
-  transform: ViewTransform;
   viewport: { width: number; height: number };
 }
 
@@ -23,13 +24,15 @@ interface Props {
  * ADR-040 compliant: standalone subscriber (useSyncExternalStore στο leaf, όχι στο
  * shell). Mirror του `AutoAreaPreviewOverlay`.
  */
-export function RegionPerimeterPreviewOverlay({ transform, viewport }: Props) {
+export function RegionPerimeterPreviewOverlay({ viewport }: Props) {
   const { t } = useTranslation('dxf-viewer-shell');
   const preview = useSyncExternalStore(
     subscribeRegionPerimeterPreview,
     getRegionPerimeterPreview,
     getRegionPerimeterPreview,
   );
+  // ADR-040 Phase XXII.B — leaf-level transform (κοστίζει μόνο όσο υπάρχει preview).
+  const transform = useTransformValue();
 
   if (!preview || preview.zones.length === 0) return null;
 
