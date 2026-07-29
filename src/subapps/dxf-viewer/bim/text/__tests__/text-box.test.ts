@@ -26,7 +26,7 @@ import { gripKindOf } from '../../../hooks/grip-kinds';
 // ADR-557 Φ-attachment — the box now measures the real glyph advance; pin a stub font
 // at the 0.6 monospace ratio so these hand-computed widths stay deterministic (the jest
 // jsdom canvas would otherwise feed machine-dependent metrics into the tier-2 fallback).
-import { installStubFont, stubAdvanceWorld } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installStubFont, stubAdvanceWorld, stubEmSize } from '../../../text-engine/fonts/__tests__/_stub-font';
 
 let __stubCleanup: () => void;
 beforeAll(() => { __stubCleanup = installStubFont(); });
@@ -40,6 +40,8 @@ afterAll(() => __stubCleanup());
  * HEIGHTS are unaffected — a line box stays a multiple of the text height (Φ C.21).
  */
 const w = (chars: number, height = 10): number => stubAdvanceWorld(chars, height);
+/** Half the NOMINAL EM BOX height — the stub's ascent+descent are exactly 1.0 em. */
+const hl = (height = 10): number => stubEmSize(height) / 2;
 
 // "DDD" (3 chars) at height 10 → halfWidth = w(3)/2; height 10 → halfLength 5.
 function text(extra: Partial<DxfText> = {}): DxfText {
@@ -84,21 +86,21 @@ describe('resolveTextBox — centre per attachment (9-point grid)', () => {
   it.each(cases)('%s → centre (%f·halfWidth, %f·halfLength)', (att, sx, sy) => {
     const hw = w(3) / 2;
     const f = resolveTextBox(text({ textStyle: style(att) }));
-    expect(nearP(f.center, sx * hw, sy * 5)).toBe(true);
+    expect(nearP(f.center, sx * hw, sy * hl())).toBe(true);
     expect(f.halfWidth).toBeCloseTo(hw, 9);
-    expect(f.halfLength).toBeCloseTo(5, 9);
+    expect(f.halfLength).toBeCloseTo(hl(), 9);
   });
 
   it('no textStyle defaults to TL (the renderer default top/left)', () => {
-    expect(nearP(resolveTextBox(text()).center, w(3) / 2, -5)).toBe(true);
+    expect(nearP(resolveTextBox(text()).center, w(3) / 2, -hl())).toBe(true);
   });
 });
 
 describe('resolveTextBox — corners pin the attachment point', () => {
   it('BR: position (0,0) is the bottom-right corner; box extends left + up', () => {
     const c = textBoxCornersWorld(text({ textStyle: style('BR') })); // NE, NW, SW, SE
-    expect(nearP(c[0], 0, 10)).toBe(true);        // NE (top-right)
-    expect(nearP(c[1], -w(3), 10)).toBe(true);    // NW (top-left)
+    expect(nearP(c[0], 0, 2 * hl())).toBe(true);        // NE (top-right)
+    expect(nearP(c[1], -w(3), 2 * hl())).toBe(true);    // NW (top-left)
     expect(nearP(c[2], -w(3), 0)).toBe(true);     // SW (bottom-left)
     expect(nearP(c[3], 0, 0)).toBe(true);         // SE = position (BR anchor)
   });
@@ -106,7 +108,7 @@ describe('resolveTextBox — corners pin the attachment point', () => {
   it('TL: position (0,0) is the top-left corner; box extends right + down', () => {
     const c = textBoxCornersWorld(text({ textStyle: style('TL') }));
     expect(nearP(c[1], 0, 0)).toBe(true);         // NW = position (TL anchor)
-    expect(nearP(c[3], w(3), -10)).toBe(true);    // SE (bottom-right)
+    expect(nearP(c[3], w(3), -2 * hl())).toBe(true);    // SE (bottom-right)
   });
 });
 
@@ -132,14 +134,17 @@ describe('textBoxToPosition — inverse round-trip (resize/rotate pins the ancho
 
 describe('rotation + textBoxAABB', () => {
   it('rotates the centre offset about the position (CCW)', () => {
-    // BL localCentre (halfWidth, 5) rotated +90° → (-5, halfWidth).
+    // BL localCentre (halfWidth, halfLength) rotated +90° → (-halfLength, halfWidth).
     const f = resolveTextBox(text({ textStyle: style('BL'), rotation: 90 }));
-    expect(nearP(f.center, -5, w(3) / 2, 1e-6)).toBe(true);
+    expect(nearP(f.center, -hl(), w(3) / 2, 1e-6)).toBe(true);
     expect(f.rotationDeg).toBe(90);
   });
 
   it('AABB encloses the (axis-aligned) attachment-aware box', () => {
-    // TL at (10,20), box w(2, 5)×5 ("AB" at height 5) → x∈[10, 10+w], y∈[15,20].
+    // TL at (10,20) → x∈[10, 10+w(2,5)], y∈[15,20]. The AABB is built on the NOMINAL em box
+    // (`textEmBoxCornersWorld`), whose WIDTH is the glyph advance (so it follows the Φ C.22
+    // cap-height rule) but whose HEIGHT stays the DXF text height — unlike `resolveTextBox`,
+    // which is the METRICS box and grows with the em. Two boxes by design (see text-box.ts).
     const b = textBoxAABB(text({ text: 'AB', height: 5, position: { x: 10, y: 20 } }));
     expect(b.minX).toBeCloseTo(10, 9);
     expect(b.maxX).toBeCloseTo(10 + w(2, 5), 9);

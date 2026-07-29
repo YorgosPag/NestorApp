@@ -83,9 +83,18 @@ export function stubAdvanceWorld(
   emPerChar = 0.6,
   family = 'arial',
 ): number {
+  return charCount * emPerChar * stubEmSize(textHeight, family);
+}
+
+/**
+ * The FONT EM SIZE the stub is drawn at for a given DXF `textHeight` — the height→em SSoT applied
+ * to the registered stub (ADR-635 Φ C.22). Use it for any expectation stated in EM units: the
+ * stub's ascent+descent are 1.0 em, so its nominal em BOX height is exactly `stubEmSize(h)`.
+ * Call INSIDE a test — the font is registered in `beforeAll`.
+ */
+export function stubEmSize(textHeight: number, family = 'arial'): number {
   const font = fontCache.get(family);
-  const resolved = font ? { font, cacheName: family } : null;
-  return charCount * emPerChar * emSizeForTextHeight(textHeight, resolved);
+  return emSizeForTextHeight(textHeight, font ? { font, cacheName: family } : null);
 }
 
 /**
