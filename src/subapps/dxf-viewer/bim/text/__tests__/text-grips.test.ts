@@ -21,13 +21,24 @@ import { gripKindOf } from '../../../hooks/grip-kinds';
 // ADR-557 Φ-attachment — the box now measures the real glyph advance; pin a stub font
 // at the 0.6 monospace ratio so these hand-computed widths stay deterministic (the jest
 // jsdom canvas would otherwise feed machine-dependent metrics into the tier-2 fallback).
-import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installStubFont, stubAdvanceWorld, stubEmSize } from '../../../text-engine/fonts/__tests__/_stub-font';
 
 let __stubCleanup: () => void;
 beforeAll(() => { __stubCleanup = installStubFont(); });
 afterAll(() => __stubCleanup());
 
-// CHAR_WIDTH_MONOSPACE = 0.6 (TEXT_METRICS_RATIOS). "DDD" (3) × height 10 × 0.6 = 18.
+// ADR-635 Φ C.22 — ΚΑΜΙΑ σταθερή διάσταση εδώ. Ο κανόνας `em = ύψος × unitsPerEm / sCapHeight`
+// σημαίνει ότι το κουτί ΔΕΝ έχει πια το ονομαστικό ύψος του κειμένου, οπότε κάθε «18» / «10»
+// αυτού του αρχείου ήταν σιωπηλή υπόθεση «em == ύψος κειμένου». Παράγονται από το SSoT:
+//   - ΠΛΑΤΟΣ → `stubAdvanceWorld(chars, height)` (πραγματικό advance του stub)
+//   - ΥΨΟΣ κουτιού → `stubEmSize(height)`: το default stub έχει ink ≡ μετρικά (ascent 0.8 +
+//     descent 0.2 = 1 em), άρα το ΟΠΤΙΚΟ κουτί είναι ακριβώς ένα em ψηλό.
+// ⚠️ Καλούνται ΜΕΣΑ στο `it()` — η γραμματοσειρά δηλώνεται στο `beforeAll`.
+/** Οπτικό ύψος κουτιού (world) για ύψος κειμένου `h` — default stub: ink ≡ em. */
+const boxH = (h = 10) => stubEmSize(h);
+/** Advance του «DDD» (3 χαρακτήρες) σε ύψος κειμένου `h`. */
+const adv = (h = 10) => stubAdvanceWorld(3, h);
+
 // ADR-557 Φ-attachment: the box is now attachment-aware. These adapter tests pin the
 // classic baseline-left case explicitly (`textStyle` BL → box extends +x/+y, the old
 // default), so the resize/rotation/patch math is verified on a known box; the full
@@ -44,26 +55,29 @@ const nearP = (p: { x: number; y: number }, x: number, y: number, eps = 1e-9) =>
   near(p.x, x, eps) && near(p.y, y, eps);
 
 describe('effectiveTextWidth', () => {
-  it('TEXT → len·height·0.6·widthFactor (default factor 1)', () => {
-    expect(effectiveTextWidth(text())).toBeCloseTo(18, 9);
+  it('TEXT → the real glyph advance at the em the height→em rule picks (factor 1)', () => {
+    expect(effectiveTextWidth(text())).toBeCloseTo(adv(), 9);
   });
   it('TEXT → honours widthFactor', () => {
-    expect(effectiveTextWidth(text({ widthFactor: 2 }))).toBeCloseTo(36, 9);
+    expect(effectiveTextWidth(text({ widthFactor: 2 }))).toBeCloseTo(2 * adv(), 9);
   });
   it('MTEXT wide frame → HUGS the glyphs (Giorgio 2026-07-07: frame ignored when text is narrower)', () => {
-    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(6, 9); // content 'X' = 6, NOT 50
+    // content 'X' = the 1-char advance, NOT the 50-unit frame.
+    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(stubAdvanceWorld(1, 10), 9);
   });
   it('MTEXT narrow frame → the column frame wins (text wraps to it)', () => {
-    expect(effectiveTextWidth(text({ width: 4, text: 'X' }))).toBeCloseTo(4, 9); // 4 < content 6
+    // 4 < content('X') → frame-constrained.
+    expect(stubAdvanceWorld(1, 10)).toBeGreaterThan(4);
+    expect(effectiveTextWidth(text({ width: 4, text: 'X' }))).toBeCloseTo(4, 9);
   });
 });
 
 describe('textToRectFrame', () => {
   it('axis-aligned box: centre + half-extents from lower-left position', () => {
     const f = textToRectFrame(text());
-    expect(nearP(f.center, 9, 5)).toBe(true); // box extends +x (right) and +y (up)
-    expect(f.halfWidth).toBeCloseTo(9, 9);
-    expect(f.halfLength).toBeCloseTo(5, 9);
+    expect(nearP(f.center, adv() / 2, boxH() / 2)).toBe(true); // box extends +x (right) and +y (up)
+    expect(f.halfWidth).toBeCloseTo(adv() / 2, 9);
+    expect(f.halfLength).toBeCloseTo(boxH() / 2, 9);
     expect(f.rotationDeg).toBe(0);
   });
   it('position round-trips through the frame for a rotated box', () => {
@@ -73,7 +87,7 @@ describe('textToRectFrame', () => {
     const patch = applyTextGripDrag('text-move', { entity: t, delta: { x: 0, y: 0 } });
     expect(nearP(patch.position!, 12, -7)).toBe(true);
     // Sanity: centre is offset from the top-left by the rotated (w/2,−h/2).
-    expect(near(Math.hypot(f.center.x - 12, f.center.y + 7), Math.hypot(9, 5))).toBe(true);
+    expect(near(Math.hypot(f.center.x - 12, f.center.y + 7), Math.hypot(adv() / 2, boxH() / 2))).toBe(true);
   });
 });
 
@@ -99,24 +113,25 @@ describe('getTextGrips', () => {
 
   it('places corners at the box extremes (lower-left = position)', () => {
     const by = (k: string) => grips.find(g => gripKindOf(g, 'text') === k)!.position;
-    expect(nearP(by('text-corner-sw'), 0, 0)).toBe(true);    // lower-left = position
-    expect(nearP(by('text-corner-se'), 18, 0)).toBe(true);   // lower-right
-    expect(nearP(by('text-corner-nw'), 0, 10)).toBe(true);   // upper-left
-    expect(nearP(by('text-corner-ne'), 18, 10)).toBe(true);  // upper-right
+    expect(nearP(by('text-corner-sw'), 0, 0)).toBe(true);                // lower-left = position
+    expect(nearP(by('text-corner-se'), adv(), 0)).toBe(true);            // lower-right
+    expect(nearP(by('text-corner-nw'), 0, boxH())).toBe(true);           // upper-left
+    expect(nearP(by('text-corner-ne'), adv(), boxH())).toBe(true);       // upper-right
   });
 
   it('places edge midpoints + move on the box centre lines', () => {
     const by = (k: string) => grips.find(g => gripKindOf(g, 'text') === k)!.position;
-    expect(nearP(by('text-edge-e'), 18, 5)).toBe(true);
-    expect(nearP(by('text-edge-w'), 0, 5)).toBe(true);
-    expect(nearP(by('text-edge-n'), 9, 10)).toBe(true); // top edge
-    expect(nearP(by('text-edge-s'), 9, 0)).toBe(true);  // bottom edge (baseline)
-    expect(nearP(by('text-move'), 9, 5)).toBe(true);
+    expect(nearP(by('text-edge-e'), adv(), boxH() / 2)).toBe(true);
+    expect(nearP(by('text-edge-w'), 0, boxH() / 2)).toBe(true);
+    expect(nearP(by('text-edge-n'), adv() / 2, boxH())).toBe(true); // top edge
+    expect(nearP(by('text-edge-s'), adv() / 2, 0)).toBe(true);      // bottom edge (baseline)
+    expect(nearP(by('text-move'), adv() / 2, boxH() / 2)).toBe(true);
   });
 
   it('rotation handle sits midway between centre and bottom edge (−height/4)', () => {
     const rot = grips.find(g => gripKindOf(g, 'text') === 'text-rotation')!.position;
-    expect(nearP(rot, 9, 2.5)).toBe(true); // centre (9,5) − height/4 (2.5) → (9, 2.5)
+    // centre (adv/2, boxH/2) − boxH/4 → (adv/2, boxH/4)
+    expect(nearP(rot, adv() / 2, boxH() / 4)).toBe(true);
   });
 
   it('the move grip is the only one that moves the entity', () => {
@@ -137,22 +152,30 @@ describe('applyTextGripDrag — move', () => {
 describe('applyTextGripDrag — edge resize (opposite edge fixed)', () => {
   it('TEXT east edge → grows box width via widthFactor, height untouched, west edge fixed', () => {
     const patch = applyTextGripDrag('text-edge-e', { entity: text(), delta: { x: 6, y: 0 } });
-    expect(patch.height).toBeCloseTo(10, 9);            // height untouched
-    expect(patch.widthFactor).toBeCloseTo(24 / 18, 9);  // new box width 24 / natural 18
-    expect(patch.width).toBeUndefined();                // TEXT patches widthFactor, not width
-    expect(nearP(patch.position!, 0, 0)).toBe(true);    // west (left) edge held at x=0
+    expect(patch.height).toBeCloseTo(10, 9);                        // height untouched
+    expect(patch.widthFactor).toBeCloseTo((adv() + 6) / adv(), 9);  // new box width / natural advance
+    expect(patch.width).toBeUndefined();                            // TEXT patches widthFactor, not width
+    expect(nearP(patch.position!, 0, 0)).toBe(true);                // west (left) edge held at x=0
   });
 
   it('TEXT north edge → grows height, box width held constant (widthFactor compensates)', () => {
-    const patch = applyTextGripDrag('text-edge-n', { entity: text(), delta: { x: 0, y: 4 } });
-    expect(patch.height).toBeCloseTo(14, 9);
-    // box width stays 18 → widthFactor = 18 / (3·14·0.6) = 18/25.2
-    expect(patch.widthFactor).toBeCloseTo(18 / 25.2, 9);
+    const t0 = text();
+    const patch = applyTextGripDrag('text-edge-n', { entity: t0, delta: { x: 0, y: 4 } });
+    // ADR-635 Φ C.22 — η ΑΝΕΞΑΡΤΗΤΗ αλήθεια: το ονομαστικό `height` που γράφτηκε είναι εκείνο
+    // που ΞΑΝΑΠΑΡΑΓΕΙ το συρμένο κουτί. Γραμμένο έτσι, το test σπάει και αν χαθεί η μετατροπή
+    // ύψους→em και αν αλλάξει ο κανόνας — χωρίς να αντιγράφει τον τύπο της υλοποίησης.
+    expect(stubEmSize(patch.height!)).toBeCloseTo(boxH() + 4, 9);
+    // box width held → widthFactor compensates the taller (wider) natural advance.
+    expect(patch.widthFactor).toBeCloseTo(adv() / stubAdvanceWorld(3, patch.height!), 9);
     expect(patch.position!.y).toBeCloseTo(0, 9);        // bottom edge (baseline) held at y=0
+    // …and the box actually holds on release (no jump): height dragged, width unchanged.
+    const f = textToRectFrame({ ...t0, ...patch } as DxfText);
+    expect(f.halfLength).toBeCloseTo((boxH() + 4) / 2, 6);
+    expect(f.halfWidth).toBeCloseTo(adv() / 2, 6);
   });
 
   it('frame-constrained MTEXT east edge → patches width directly (no widthFactor)', () => {
-    // width 4 < content('X')=6 → frame-constrained → the column frame resizes (not widthFactor).
+    // width 4 < content('X') → frame-constrained → the column frame resizes (not widthFactor).
     const patch = applyTextGripDrag('text-edge-e', { entity: text({ width: 4, text: 'X' }), delta: { x: 4, y: 0 } });
     expect(patch.width).toBeCloseTo(8, 9); // 4 + Δx 4
     expect(patch.widthFactor).toBeUndefined();
@@ -166,23 +189,23 @@ describe('applyTextGripDrag — edge resize (opposite edge fixed)', () => {
 });
 
 describe('applyTextGripDrag — corner resize (opposite corner fixed)', () => {
-  it('SE corner grows both dims; NW corner (opposite) stays pinned at (0,10)', () => {
+  it('SE corner grows both dims; NW corner (opposite) stays pinned at the box top-left', () => {
     const t = text();
     const patch = applyTextGripDrag('text-corner-se', { entity: t, delta: { x: 6, y: -4 } });
-    expect(patch.height).toBeCloseTo(14, 9);
-    // box width 24 → widthFactor = 24 / (3·14·0.6) = 24/25.2
-    expect(patch.widthFactor).toBeCloseTo(24 / 25.2, 9);
+    // Dragging SE down by 4 grows the box by 4 → the nominal height that reproduces it.
+    expect(stubEmSize(patch.height!)).toBeCloseTo(boxH() + 4, 9);
+    expect(patch.widthFactor).toBeCloseTo((adv() + 6) / stubAdvanceWorld(3, patch.height!), 9);
     // Re-frame the patched entity: the opposite (NW, upper-left) corner must hold.
     const f = textToRectFrame({ ...t, ...patch });
     const nw = { x: f.center.x - f.halfWidth, y: f.center.y + f.halfLength };
-    expect(nearP(nw, 0, 10)).toBe(true);
+    expect(nearP(nw, 0, boxH(), 1e-6)).toBe(true);
   });
 });
 
 describe('applyTextGripDrag — rotation (pivot = bbox-centre)', () => {
   it('sweeps rotation by the cursor angle and holds the centre fixed', () => {
     const t = text();
-    const center = textToRectFrame(t).center; // BL box → (9, 5)
+    const center = textToRectFrame(t).center; // BL box centre
     // start angle 0° (east of centre), current 90° (north of centre) → sweep +90°.
     const start = { x: center.x + 10, y: center.y };
     const currentPos = { x: center.x, y: center.y + 10 };
@@ -212,7 +235,7 @@ describe('applyTextGripDrag — rotation (pivot = bbox-centre)', () => {
   // hot-grip (ghost via `rotatePivot`, commit via `BimRotateHotGripStore`).
   it('honors a picked pivot override — the box centre ORBITS the pivot', () => {
     const t = text();
-    const center = textToRectFrame(t).center; // BL box → (9, 5)
+    const center = textToRectFrame(t).center; // BL box centre
     const pivot = { x: 0, y: 0 };
     // start east of the pivot, current north of the pivot → sweep +90° about the PIVOT.
     const start = { x: pivot.x + 10, y: pivot.y };
