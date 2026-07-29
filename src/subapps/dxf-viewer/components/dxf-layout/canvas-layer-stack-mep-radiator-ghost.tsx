@@ -13,12 +13,12 @@
 import React from 'react';
 import { useMepRadiatorGhostPreview } from '../../hooks/tools/useMepRadiatorGhostPreview';
 import type { Point3D } from '../../bim/types/bim-base';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 
 export interface MepRadiatorGhostPreviewMountProps {
   isAwaitingPosition: boolean;
   getGhostFootprint: (cursorPos: Readonly<Point2D> | null) => readonly Point3D[] | null;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }

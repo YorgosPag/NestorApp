@@ -18,7 +18,6 @@ import { useOpeningGhostPreview } from '../../hooks/tools/useOpeningGhostPreview
 import type { OpeningKind } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { OpeningParamOverrides } from '../../hooks/drawing/opening-completion';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 
 export interface OpeningGhostPreviewMountProps {
@@ -27,7 +26,7 @@ export interface OpeningGhostPreviewMountProps {
   overrides: OpeningParamOverrides;
   /** Resolver — returns the locked host wall όσο `isAwaitingPosition === true`. */
   getHostWall: () => WallEntity | null;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
   /** ADR-370 — active scene units για mm→scene conversion. */

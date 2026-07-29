@@ -12,14 +12,13 @@
  */
 
 import React, { useCallback, useMemo } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/entities';
 import { useMepWireWaypointInteraction } from '../../hooks/canvas/use-mep-wire-waypoint-interaction';
 import { useUniversalSelection } from '../../systems/selection';
 import { useMepCircuitEditorStore } from '../../bim/mep-systems/mep-circuit-editor-store';
 
 export interface MepWireWaypointDragMountProps {
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getViewportElement: () => HTMLElement | null;
   readonly currentLevelId: string | null;
   readonly getLevelScene: (levelId: string) => SceneModel | null;
@@ -28,7 +27,7 @@ export interface MepWireWaypointDragMountProps {
 export const MepWireWaypointDragMount = React.memo(function MepWireWaypointDragMount(
   props: MepWireWaypointDragMountProps,
 ) {
-  const { transform, getViewportElement, currentLevelId, getLevelScene } = props;
+  const { getViewportElement, currentLevelId, getLevelScene } = props;
   // Wrap `currentLevelId` in a getter so handlers observe the latest level
   // without an effect teardown / re-mount on every floor switch.
   const getCurrentLevelId = useMemo(() => () => currentLevelId, [currentLevelId]);
@@ -47,7 +46,6 @@ export const MepWireWaypointDragMount = React.memo(function MepWireWaypointDragM
     [universalSelection],
   );
   useMepWireWaypointInteraction({
-    transform,
     getViewportElement,
     getCurrentLevelId,
     getLevelScene,

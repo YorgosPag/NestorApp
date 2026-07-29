@@ -21,7 +21,7 @@ import {
   type UseMepSegmentGhostPreviewProps,
   type GhostSegmentSpec,
 } from '../../hooks/tools/useMepSegmentGhostPreview';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 
 export interface MepSegmentGhostPreviewMountProps {
   /** True while awaiting the second click (end point). */
@@ -31,7 +31,7 @@ export interface MepSegmentGhostPreviewMountProps {
    * null when no ghost should be drawn. Called each RAF frame.
    */
   getGhostSegment: (cursorPos: Readonly<Point2D> | null) => GhostSegmentSpec | null;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -41,7 +41,6 @@ export const MepSegmentGhostPreviewMount = React.memo(function MepSegmentGhostPr
 ) {
   const hookProps: UseMepSegmentGhostPreviewProps = {
     isAwaitingEnd: props.isAwaitingEnd,
-    transform: props.transform,
     getGhostSegment: props.getGhostSegment,
     getCanvas: props.getCanvas,
     getViewportElement: props.getViewportElement,

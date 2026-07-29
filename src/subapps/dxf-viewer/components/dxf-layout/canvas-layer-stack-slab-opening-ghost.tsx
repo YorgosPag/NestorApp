@@ -17,7 +17,6 @@ import { useSlabOpeningGhostPreview } from '../../hooks/tools/useSlabOpeningGhos
 import type { SlabOpeningKind } from '../../bim/types/slab-opening-types';
 import type { SlabOpeningParamOverrides } from '../../hooks/drawing/slab-opening-completion';
 import type { SlabEntity } from '../../bim/types/slab-types';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
 import type { SceneUnits } from '../../utils/scene-units';
 
@@ -28,7 +27,7 @@ export interface SlabOpeningGhostPreviewMountProps {
   /** ADR-574 Σ2b — locked host slab resolver (WYSIWYG ghost via commit builders). */
   getHostSlab: () => SlabEntity | null;
   hoveredEdgeMidpointGrip?: UnifiedGripInfo | null;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
   /** ADR-370 — active scene units για mm→scene conversion στο ghost rectangle. */
