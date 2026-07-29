@@ -6,11 +6,12 @@
  */
 
 import { NextResponse } from 'next/server';
-import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { requireBuildingInTenant, logAuditEvent } from '@/lib/auth';
+import { logAuditEvent } from '@/lib/auth';
 import type { AuthContext } from '@/lib/auth';
+import type { AdminFirestore } from '@/lib/api/building-scoped-route';
+import { requireDocOfBuilding } from '@/lib/api/firestore-doc-guards';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { FieldValue } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -60,11 +61,10 @@ export async function handleCreate(
   body: CreatePayload,
   buildingId: string,
   ctx: AuthContext,
-): Promise<NextResponse> {
-  const adminDb = requireAdminFirestore();
-
-  await requireBuildingInTenant({ ctx, buildingId, path: `/api/buildings/${buildingId}/construction-phases` });
-
+  adminDb: AdminFirestore,
+): Promise<NextResponse<ConstructionMutationResponse>> {
+  // Ο έλεγχος tenant έγινε ΗΔΗ από το `runBuildingScoped` του route — δεύτερη
+  // κλήση εδώ θα ήταν επιπλέον ανάγνωση Firestore για την ίδια απάντηση.
   const { type, name, plannedStartDate, plannedEndDate } = body;
 
   if (!name || !plannedStartDate || !plannedEndDate) {
@@ -127,11 +127,8 @@ export async function handleDelete(
   url: string,
   buildingId: string,
   ctx: AuthContext,
-): Promise<NextResponse> {
-  const adminDb = requireAdminFirestore();
-
-  await requireBuildingInTenant({ ctx, buildingId, path: `/api/buildings/${buildingId}/construction-phases` });
-
+  adminDb: AdminFirestore,
+): Promise<NextResponse<ConstructionMutationResponse>> {
   const { searchParams } = new URL(url);
   const type = searchParams.get('type') as 'phase' | 'task' | null;
   const id = searchParams.get('id');
@@ -141,15 +138,9 @@ export async function handleDelete(
   }
 
   const collection = type === 'task' ? COLLECTIONS.CONSTRUCTION_TASKS : COLLECTIONS.CONSTRUCTION_PHASES;
-  const docRef = adminDb.collection(collection).doc(id);
-  const docSnap = await docRef.get();
-
-  if (!docSnap.exists) throw new ApiError(404, `${type} not found`);
-
-  const existingData = docSnap.data();
-  if (existingData?.buildingId !== buildingId) {
-    throw new ApiError(403, 'Document does not belong to this building');
-  }
+  const { ref: docRef } = await requireDocOfBuilding({
+    adminDb, collection, id, buildingId, label: type, ownerLabel: 'Document',
+  });
 
   let cascadedTasks = 0;
 
