@@ -105,6 +105,16 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-07-29 (γ) — Η Φ11 (decoupled snap scheduler) απέκτησε πύλη πλοήγησης (ADR-728 Φ1)
+
+Ο `snap-scheduler` (Φ11) δεν τρέχει πλέον `findSnapPoint` όσο διαρκεί χειρονομία πλοήγησης —
+νέος guard `isNavigationGesture()` στο `onSnapFrame`, ίδιο σχήμα με τον grip guard του ADR-560
+(bail **χωρίς** καθάρισμα του `ImmediateSnapStore`). Η κατάσταση συνάγεται από τις αλλαγές του
+`ImmediateTransformStore` (νέο `systems/navigation/NavigationGestureStore.ts` — subscriber του
+transform SSoT, **μηδέν αλλαγή** στο cardinal αρχείο)· ρητό `endNavigationGesture()` μόνο-για-
+τερματισμό στο pan mouseup/mouseleave. Μετρημένο: `frame:snap-detection` υπό pan 24,2 → **0,5-0,9ms**,
+`frame:TOTAL` 27,2 → **4,7-7,8ms**. Πλήρη νούμερα + συμπεριφορική επαλήθευση: **ADR-728 §2.3**.
+
 ### 2026-07-29 (β) — 🐛 FIX: η προβολή του αγκυρωμένου raster είχε **ανεστραμμένο Y** (βρέθηκε από τον Giorgio σε 2΄)
 
 **Τι είδε ο χρήστης — τρία συμπτώματα, ΜΙΑ ρίζα:** (α) η επιλεγμένη οντότητα **ξεκόλλησε από το
