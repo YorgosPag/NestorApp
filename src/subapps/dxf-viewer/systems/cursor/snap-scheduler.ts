@@ -43,6 +43,8 @@ import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './Immed
 import { getActiveDragGrip } from './GripDragStore';
 // ADR-728 Φ1 — SSoT «είμαστε σε χειρονομία πλοήγησης;» (ΕΝΑ ερώτημα, όχι σκόρπιο isPanning).
 import { isNavigationGesture } from '../navigation/NavigationGestureStore';
+// 🛡️ SSoT finite-point guard (ADR-510 Φ5) — μη-πεπερασμένο snap δεν δημοσιεύεται ποτέ.
+import { isFinitePoint } from '../../config/geometry-constants';
 import { findColumnDrawCornerSnap } from '../../bim/columns/column-corner-snap';
 import { resolveColumnDrawSnap } from '../../bim/columns/column-placement-snap-context';
 import { clearColumnGhostStatus } from './ColumnPlacementGhostStatusStore';
@@ -128,6 +130,13 @@ function runSnapDetection(input: SnapDetectionInput): void {
       snapResult = input.findSnapPoint(input.worldPos.x, input.worldPos.y);
       ghostPoint = snapResult?.snappedPoint ?? null;
     }
+
+    // 🛡️ Μη-πεπερασμένο σημείο (NaN/∞ από εκφυλισμένη γεωμετρία engine) = ΔΕΝ βρέθηκε έλξη.
+    // Δεν είναι μόνο θέμα glyph: το `ImmediateSnap` είναι το **σημείο commit** (κολώνα/δοκάρι/
+    // τοίχος μέσω `resolveEffectivePreviewCursor`) — NaN εδώ σημαίνει γεωμετρία τοποθετημένη
+    // στο πουθενά, σιωπηλά. Μία πύλη στην πηγή της δημοσίευσης. SSoT: isFinitePoint (ADR-510 Φ5).
+    if (snapResult?.snappedPoint && !isFinitePoint(snapResult.snappedPoint)) snapResult = null;
+    if (ghostPoint && !isFinitePoint(ghostPoint)) ghostPoint = null;
 
     if (snapResult && snapResult.found && snapResult.snappedPoint && ghostPoint) {
       const sx = snapResult.snappedPoint.x;

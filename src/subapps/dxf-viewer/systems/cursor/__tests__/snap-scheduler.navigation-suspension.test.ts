@@ -179,6 +179,27 @@ describe('snap-scheduler — αναστολή κατά τη χειρονομία
     expect(findSnapPoint).toHaveBeenCalledTimes(1);
   });
 
+  it('🛡️ μη-πεπερασμένο snap point ΔΕΝ δημοσιεύεται ποτέ — ούτε ως glyph ούτε ως σημείο commit', () => {
+    // Περιστατικό 2026-07-29: «NaN is an invalid value for the left css style property»
+    // στο SnapIndicatorGlyph. Εκφυλισμένη γεωμετρία engine (π.χ. τομή σχεδόν παράλληλων:
+    // ορίζουσα → 0 → NaN/∞) δεν πρέπει να φτάνει ΠΟΤΕ στο store: το `ImmediateSnap` είναι
+    // και το σημείο commit (κολώνα/δοκάρι/τοίχος) — NaN εκεί = γεωμετρία στο πουθενά.
+    findSnapPoint.mockReturnValue({
+      found: true,
+      snappedPoint: { x: NaN, y: 24 },
+      activeMode: 'intersection',
+      snapPoint: { entityId: 'e-degenerate', distance: 0 },
+    } as unknown as ProSnapResult);
+
+    armAndRunFrame();
+
+    expect(getImmediateSnap()).toBeNull();          // δεν γράφτηκε commit anchor
+    // Ο React δείκτης είτε δεν κλήθηκε είτε κλήθηκε ΜΟΝΟ για καθάρισμα ([]) — ποτέ με NaN.
+    for (const call of setSnapResults.mock.calls) {
+      expect(call[0]).toEqual([]);
+    }
+  });
+
   it('συνεχής χειρονομία: κανένα από πολλά διαδοχικά καρέ δεν τρέχει snap', () => {
     for (let frame = 0; frame < 12; frame++) {
       changeTransform();

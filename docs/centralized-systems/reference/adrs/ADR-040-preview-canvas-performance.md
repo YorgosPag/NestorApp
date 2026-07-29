@@ -105,6 +105,19 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-07-29 (δ) — 🐛 FIX: NaN στο CSS `left`/`top` του snap glyph (εκφυλισμένη γεωμετρία)
+
+Ο `snap-scheduler` (Φ11) μπορούσε να δημοσιεύσει `snappedPoint`/`ghostPoint` με μη-πεπερασμένες
+συντεταγμένες (NaN/∞) όταν μια engine επέστρεφε εκφυλισμένη γεωμετρία (π.χ. τομή σχεδόν
+παράλληλων γραμμών — ορίζουσα → 0). Το `ImmediateSnapStore` είναι **και** το σημείο commit
+(κολώνα/δοκάρι/τοίχος μέσω `resolveEffectivePreviewCursor`), όχι μόνο δείκτης — NaN εκεί σήμαινε
+είτε React console error (`SnapIndicatorGlyph`) είτε σιωπηλή τοποθέτηση γεωμετρίας στο πουθενά.
+Δύο πύλες, ίδιο SSoT (`isFinitePoint`, ADR-510 Φ5): (α) στην πηγή δημοσίευσης μέσα στον
+`onSnapFrame` — μη-πεπερασμένο σημείο γίνεται `null` πριν γραφτεί στο store· (β) στο predicate
+`isSnapMarkerVisible` (`snapping/extended-types.ts`) — δεύτερη γραμμή άμυνας για κάθε άλλο writer
+(π.χ. σύγχρονο grip-drag path). Tests: `snap-scheduler.navigation-suspension.test.ts` (8/8),
+`visible-snap-mode.test.ts`.
+
 ### 2026-07-29 (γ) — Η Φ11 (decoupled snap scheduler) απέκτησε πύλη πλοήγησης (ADR-728 Φ1)
 
 Ο `snap-scheduler` (Φ11) δεν τρέχει πλέον `findSnapPoint` όσο διαρκεί χειρονομία πλοήγησης —
