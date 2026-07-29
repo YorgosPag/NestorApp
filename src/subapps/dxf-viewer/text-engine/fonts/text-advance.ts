@@ -33,6 +33,7 @@
 
 import { resolveEntityFont } from './font-resolver';
 import { getGlyphRun, GLYPH_REFERENCE_SIZE } from './glyph-path-cache';
+import { emSizeForTextHeight } from './text-height-scale';
 import { TEXT_METRICS_RATIOS, buildUIFont } from '../../config/text-rendering-config';
 
 const CHAR_WIDTH_MONOSPACE = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
@@ -89,7 +90,10 @@ function baseAdvanceWorld(text: string, height: number, style?: TextAdvanceStyle
   const resolved = resolveEntityFont(family, { bold: style?.bold, italic: style?.italic });
   if (resolved) {
     const run = getGlyphRun(resolved.font, resolved.cacheName, text, tracking);
-    return (run.metrics.width / GLYPH_REFERENCE_SIZE) * height;
+    // ADR-635 Φ C.22 — `height` is a DXF TEXT HEIGHT; the run is cached at GLYPH_REFERENCE_SIZE em
+    // units, so it scales by the EM the renderer will actually draw at, not by the height itself.
+    // `TextRenderer.paintText` converts with the SAME call ⇒ measured advance ≡ painted advance.
+    return (run.metrics.width / GLYPH_REFERENCE_SIZE) * emSizeForTextHeight(height, resolved);
   }
 
   // Tier 2 — CSS fillText parity: same font string, measured at a reference px size.

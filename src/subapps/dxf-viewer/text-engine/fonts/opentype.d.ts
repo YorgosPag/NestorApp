@@ -5,11 +5,33 @@ declare module 'opentype.js' {
   export function loadSync(path: string): Font;
   export function parse(buffer: ArrayBuffer): Font;
 
+  /**
+   * The parsed OpenType tables opentype.js exposes. Only the fields the viewer actually reads are
+   * declared. `os2.sCapHeight` is the metric AutoCAD scales text height by (ADR-635 Φ C.22) and is
+   * OPTIONAL by spec: `OS/2` below version 2 does not define it.
+   */
+  export interface FontTables {
+    os2?: {
+      version?: number;
+      sCapHeight?: number;
+      sTypoAscender?: number;
+      sTypoDescender?: number;
+      usWinAscent?: number;
+      usWinDescent?: number;
+    };
+    hhea?: {
+      ascender?: number;
+      descender?: number;
+    };
+  }
+
   export class Font {
     glyphs: GlyphSet;
     unitsPerEm: number;
     ascender: number;
     descender: number;
+    /** Optional at runtime: hand-built test fixture fonts do not carry parsed tables. */
+    tables?: FontTables;
     getPath(text: string, x: number, y: number, fontSize: number, options?: PathOptions): Path;
     getPaths(text: string, x: number, y: number, fontSize: number, options?: PathOptions): Path[];
     getAdvanceWidth(text: string, fontSize: number, options?: PathOptions): number;

@@ -34,18 +34,18 @@ type SpacingCtx = CanvasRenderingContext2D & { letterSpacing: string };
 
 /**
  * Run `body` with AutoCAD `\T` tracking applied as canvas `letterSpacing`
- * ((tracking − 1) × targetHeight between glyphs), restoring the previous value after.
+ * ((tracking − 1) × emSize between glyphs), restoring the previous value after.
  * `body` measures/paints while the spacing is set so its advance matches the drawn text.
  * When tracking is 1 or `letterSpacing` is unsupported, `body` runs with no spacing change.
  * The ONE place the CSS-fallback tracking dance lives — shared by paint + measure.
  */
 function withTrackingSpacing<T>(
   ctx: CanvasRenderingContext2D,
-  targetHeight: number,
+  emSize: number,
   tracking: number,
   body: () => T,
 ): T {
-  const extraPx = tracking !== 1 ? (tracking - 1) * targetHeight : 0;
+  const extraPx = tracking !== 1 ? (tracking - 1) * emSize : 0;
   if (extraPx !== 0 && 'letterSpacing' in ctx) {
     const spacingCtx = ctx as SpacingCtx;
     const prev = spacingCtx.letterSpacing;
@@ -60,21 +60,27 @@ function withTrackingSpacing<T>(
 }
 
 /**
- * Fill a cached glyph run's Path2D at (originX, originY), scaled to `targetHeight`
- * (draw scale = targetHeight / GLYPH_REFERENCE_SIZE) and positioned per `align`/`baseline`.
+ * Fill a cached glyph run's Path2D at (originX, originY), scaled to `emSize`
+ * (draw scale = emSize / GLYPH_REFERENCE_SIZE) and positioned per `align`/`baseline`.
  * Glyph paths are baseline-anchored at the reference em size; the baseline map matches the
  * canvas `textBaseline` modes. Returns the drawn advance width in px.
+ *
+ * ⚠️ `emSize` is a FONT EM SIZE, not a DXF text height — the two differ by the font's cap-height
+ * ratio (ADR-635 Φ C.22). A caller holding a text height must convert with
+ * `emSizeForTextHeight()`; a caller already working in em space (the 3D glyph atlas rasterises at
+ * a fixed em and stores em ratios) passes its em straight through. Naming the unit is what keeps
+ * the conversion from being applied twice.
  */
 export function drawGlyphRunToCanvas(
   ctx: CanvasRenderingContext2D,
   run: GlyphRun,
   originX: number,
   originY: number,
-  targetHeight: number,
+  emSize: number,
   align: CanvasTextAlign,
   baseline: CanvasTextBaseline,
 ): number {
-  const s = targetHeight / GLYPH_REFERENCE_SIZE;
+  const s = emSize / GLYPH_REFERENCE_SIZE;
   const widthPx = run.metrics.width * s;
   const ascentPx = run.metrics.ascent * s;
   const descentPx = run.metrics.descent * s;
@@ -95,8 +101,12 @@ export function drawGlyphRunToCanvas(
 export interface PaintTextRunOptions {
   readonly originX: number;
   readonly originY: number;
-  /** Target cap/em height in px — the glyph draw scale, and the CSS font size for tracking. */
-  readonly targetHeight: number;
+  /**
+   * FONT EM SIZE in px — the glyph draw scale, and the CSS `font-size` the fallback tier assumes
+   * the caller has already set on `ctx.font`. NOT a DXF text height: convert one with
+   * `emSizeForTextHeight()` first (ADR-635 Φ C.22).
+   */
+  readonly emSize: number;
   readonly align: CanvasTextAlign;
   readonly baseline: CanvasTextBaseline;
   /** A loaded opentype font, or null → CSS `ctx.fillText` on the caller-set `ctx.font`. */
@@ -118,12 +128,12 @@ export function paintTextRun(
   const tracking = opts.tracking ?? 1;
   if (opts.resolved) {
     const run = getGlyphRun(opts.resolved.font, opts.resolved.cacheName, text, tracking);
-    return drawGlyphRunToCanvas(ctx, run, opts.originX, opts.originY, opts.targetHeight, opts.align, opts.baseline);
+    return drawGlyphRunToCanvas(ctx, run, opts.originX, opts.originY, opts.emSize, opts.align, opts.baseline);
   }
   // CSS fillText fallback (no loaded opentype font). AutoCAD `\T` → canvas `letterSpacing`
   // applied on BOTH paint + measure so the returned advance matches the drawn text. Requires
   // the caller to have set `ctx.font` (+ textAlign/baseline).
-  return withTrackingSpacing(ctx, opts.targetHeight, tracking, () => {
+  return withTrackingSpacing(ctx, opts.emSize, tracking, () => {
     ctx.fillText(text, opts.originX, opts.originY);
     return ctx.measureText(text).width;
   });
@@ -137,12 +147,12 @@ export function paintTextRun(
 export function measureTextRunPx(
   ctx: CanvasRenderingContext2D,
   text: string,
-  opts: { readonly targetHeight: number; readonly resolved: ResolvedFont | null; readonly tracking?: number },
+  opts: { readonly emSize: number; readonly resolved: ResolvedFont | null; readonly tracking?: number },
 ): number {
   const tracking = opts.tracking ?? 1;
   if (opts.resolved) {
     const run = getGlyphRun(opts.resolved.font, opts.resolved.cacheName, text, tracking);
-    return run.metrics.width * (opts.targetHeight / GLYPH_REFERENCE_SIZE);
+    return run.metrics.width * (opts.emSize / GLYPH_REFERENCE_SIZE);
   }
-  return withTrackingSpacing(ctx, opts.targetHeight, tracking, () => ctx.measureText(text).width);
+  return withTrackingSpacing(ctx, opts.emSize, tracking, () => ctx.measureText(text).width);
 }

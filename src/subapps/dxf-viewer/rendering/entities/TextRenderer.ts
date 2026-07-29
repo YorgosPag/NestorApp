@@ -46,7 +46,7 @@ import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // ADR-557 Φάση C — the single-line glyph-run paint SSoT (`paintTextRun`), shared with the 3D
 // textured-plane converter so 2D & 3D draw the SAME outlines. `getGlyphRun`/`GLYPH_REFERENCE_SIZE`
 // now live inside that SSoT (was the old private `fillGlyphRun`).
-import { resolveEntityFont, paintTextRun, type ResolvedFont } from '../../text-engine/fonts';
+import { resolveEntityFont, paintTextRun, emSizeForTextHeight, type ResolvedFont } from '../../text-engine/fonts';
 // ADR-557 — 2D grip render parity: the SAME 10-grip set the interaction +
 // 3D paths use (`computeDxfEntityGrips` → `getTextGrips`), so the on-canvas grip
 // squares match the rect-box. `gripGlyphShape` paints the move/rotation glyphs.
@@ -352,8 +352,13 @@ export class TextRenderer extends BaseEntityRenderer {
     align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont | null,
     tracking = 1,
   ): number {
+    // ADR-635 Φ C.22 — `screenHeight` is a DXF TEXT HEIGHT (group 40 / `\H`, scaled to px), and the
+    // font em that renders it as AutoCAD does is LARGER by the face's cap-height ratio. The SAME
+    // conversion runs inside `measureTextAdvanceWorld`, so the layout that placed this span
+    // measured it at exactly this size — measure ≡ paint (Φ C.21's «ΦΕΚ405» invariant).
     return paintTextRun(this.ctx, text, {
-      originX, originY, targetHeight: screenHeight, align, baseline, resolved, tracking,
+      originX, originY, emSize: emSizeForTextHeight(screenHeight, resolved),
+      align, baseline, resolved, tracking,
     });
   }
 

@@ -27,6 +27,59 @@ import { ExtendedSnapType, type Entity, type SnapEngineStats, type ProSnapSettin
 import { SnapEngineRegistry } from './SnapEngineRegistry';
 import { SnapCandidateProcessor } from './SnapCandidateProcessor';
 import { SnapContextManager } from './SnapContextManager';
+// 🏢 ADR-728 Φ0.1 — attribution ΑΝΑ ENGINE μέσω του ΥΠΑΡΧΟΝΤΟΣ aggregator (μηδέν νέο σύστημα).
+import { withPerf, isPerfEnabled, recordSample } from '../../systems/cursor/mouse-handler-perf';
+import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+
+/**
+ * 🏢 ADR-728 Φ0.1 — πρόθεμα των per-engine γραμμών στο κοινό `console.table`.
+ *
+ * Ίδιο ιδίωμα με το `FRAME_STAGE_PREFIX` (`rendering/core/frame-scheduler-perf-bridge.ts`), ώστε οι
+ * γραμμές να ομαδοποιούνται οπτικά και να ξεχωρίζουν από τα cursor stages του ίδιου aggregator.
+ *
+ * **Γιατί υπάρχει:** η μέτρηση της 2026-07-29 έδειξε `frame:snap-detection` = **97,4%** του χρόνου
+ * του καρέ (122/411 καρέ × **50,2ms**), αλλά είναι **ΜΙΑ γραμμή** — δεν λέει *ποια* από τις 26
+ * engines το τρώει. Το ADR-726 έπεσε **τέσσερις** φορές σε ακριβώς αυτό το κενό (διόρθωση πριν από
+ * attribution). Το ADR-728 §5 Φ0.1 το κάνει προϋπόθεση: **καμία διόρθωση πριν από αυτόν τον πίνακα.**
+ */
+export const SNAP_ENGINE_STAGE_PREFIX = 'snap:';
+
+/**
+ * 🏢 ADR-728 Φ0.1 — το **μέγεθος του προβλήματος**, όχι χρόνος: πόσες οντότητες παραδίδονται σε
+ * κάθε engine ανά αναζήτηση.
+ *
+ * Σήμερα είναι **ολόκληρη η σκηνή** (2.910), επειδή δεν υπάρχει broad phase (ADR-728 §3.1). Είναι
+ * το ίδιο μέγεθος που η Φ2 υποχρεούται να ρίξει σε ~5-20 — άρα η **ίδια** γραμμή που τεκμηριώνει
+ * το πρόβλημα θα αποδείξει και τη θεραπεία, χωρίς δεύτερο όργανο.
+ */
+export const SNAP_ENTITY_COUNT_STAGE = `${SNAP_ENGINE_STAGE_PREFIX}ENTITIES`;
+
+/**
+ * «Μάζεψα αρκετά — σταμάτα τις υπόλοιπες engines;» — δύο ανεξάρτητοι λόγοι, ένα ερώτημα.
+ *
+ * 1. **Sub-pixel early-exit** (FIX 2026-02-20): υποψήφιος πιο κοντά από ~1,5 pixel σε world units
+ *    είναι όσο καλός γίνεται· οι ακριβές engines που απομένουν (`PERPENDICULAR` / `PARALLEL` /
+ *    `NEAREST`) δεν έχουν τι να προσφέρουν.
+ * 2. **Φράγμα `maxCandidates`** (ADR-597 anti-starvation): ο processor χρειάζεται λίγους καλούς
+ *    υποψήφιους, όχι όλους.
+ *
+ * Καθαρή συνάρτηση, εξηγμένη από τον βρόχο για το όριο των 40 γραμμών (N.7.1). Η σημασιολογία
+ * είναι **ταυτόσημη** με τον inline κώδικα που αντικατέστησε — καρφωμένη με tests
+ * (`__tests__/SnapOrchestrator.collect-candidates.test.ts`).
+ */
+function hasEnoughCandidates(
+  candidates: readonly SnapCandidate[],
+  subPixelThreshold: number,
+  maxCandidates: number,
+): boolean {
+  if (candidates.length === 0) return false;
+  if (subPixelThreshold > 0) {
+    let best = Infinity;
+    for (const c of candidates) if (c.distance < best) best = c.distance;
+    if (best <= subPixelThreshold) return true;
+  }
+  return candidates.length >= maxCandidates;
+}
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -127,8 +180,35 @@ export class SnapOrchestrator {
       });
     }
 
-    const allCandidates: SnapCandidate[] = [];
     const context = this.contextManager.createEngineContext(cursorPoint, this.entities, excludeEntityId);
+
+    // 🏢 ADR-728 Φ0.1 — το μέγεθος που η Φ2 υποχρεούται να ρίξει. Δείγμα, όχι χρόνος.
+    if (isPerfEnabled()) recordSample(SNAP_ENTITY_COUNT_STAGE, context.entities.length);
+
+    const collected = this.collectCandidates(cursorPoint, context, settings);
+    if (collected.earlyReturn) return collected.earlyReturn;
+
+    return this.processor.processResults(cursorPoint, collected.candidates, settings);
+  }
+
+  /**
+   * Τρέχει τις enabled engines με σειρά προτεραιότητας και μαζεύει υποψηφίους.
+   *
+   * Εξήχθη από το {@link findSnapPoint} (N.7.1: εκείνο ήταν 83 γραμμές, όριο 40). Η σημασιολογία
+   * είναι **ταυτόσημη** — ίδια σειρά, ίδια early-return, ίδια sub-pixel early-exit, ίδιο
+   * `maxCandidates` φράγμα· μόνο η θέση του κώδικα άλλαξε.
+   *
+   * 🏢 **ADR-728 Φ2:** εδώ θα μπει το **broad phase**. Αυτός ο βρόχος είναι το μοναδικό σημείο που
+   * βλέπει ΚΑΙ τον κέρσορα ΚΑΙ όλες τις engines ΚΑΙ τις ανοχές — δηλαδή το μόνο σημείο όπου η
+   * ερώτηση «ποιες οντότητες είναι κοντά;» μπορεί να απαντηθεί **μία φορά** αντί για 26
+   * (ADR-728 §3.3).
+   */
+  private collectCandidates(
+    cursorPoint: Point2D,
+    context: SnapEngineContext,
+    settings: ProSnapSettings,
+  ): { candidates: SnapCandidate[]; earlyReturn?: ProSnapResult } {
+    const allCandidates: SnapCandidate[] = [];
 
     // 🏢 FIX (2026-02-20): Sub-pixel early-exit threshold.
     // If a snap candidate is closer than ~1 pixel in world units, stop iterating modes.
@@ -148,7 +228,15 @@ export class SnapOrchestrator {
         continue;
       }
 
-      const result = engine.findSnapCandidates(cursorPoint, context);
+      // 🏢 ADR-728 Φ0.1 — attribution ανά engine, πίσω από το ΥΠΑΡΧΟΝ flag `dxf-perf-trace`.
+      // Με κλειστό flag το `withPerf` καλεί τη συνάρτηση **ασύλητη** (ένα boolean) — μηδέν κόστος
+      // στην παραγωγή. Με ανοιχτό, το ίδιο το probe αλλοιώνει τα απόλυτα νούμερα (ADR-726 §2.2:
+      // ~26 ζεύγη `performance.now()` ανά αναζήτηση) — **έγκυρη είναι μόνο η σχετική κατάταξη**,
+      // που είναι ακριβώς το ερώτημα («ποια engine;»).
+      const result: SnapEngineResult | null | undefined = withPerf(
+        `${SNAP_ENGINE_STAGE_PREFIX}${snapType}`,
+        () => engine.findSnapCandidates(cursorPoint, context),
+      );
 
       // Guard against null/undefined result
       if (!result) {
@@ -158,7 +246,7 @@ export class SnapOrchestrator {
 
       // Early return αν το engine το ζητάει
       if (result.earlyReturn) {
-        return result.earlyReturn;
+        return { candidates: allCandidates, earlyReturn: result.earlyReturn };
       }
 
       // Guard against invalid candidates array
@@ -168,22 +256,10 @@ export class SnapOrchestrator {
         if (DEBUG_SNAP_ORCHESTRATOR) console.warn(`🔺 SnapOrchestrator: Invalid candidates from ${snapType} engine:`, result.candidates);
       }
 
-      // 🏢 FIX (2026-02-20): Early-exit when high-quality snap found.
-      // If any candidate is sub-pixel distance, no need to run remaining engines.
-      if (subPixelThreshold > 0 && allCandidates.length > 0) {
-        const bestDistance = Math.min(...allCandidates.map(c => c.distance));
-        if (bestDistance <= subPixelThreshold) {
-          break;
-        }
-      }
-
-      // Αν έχουμε αρκετούς candidates, σταματάμε
-      if (allCandidates.length >= context.maxCandidates) {
-        break;
-      }
+      if (hasEnoughCandidates(allCandidates, subPixelThreshold, context.maxCandidates)) break;
     }
 
-    return this.processor.processResults(cursorPoint, allCandidates, settings);
+    return { candidates: allCandidates };
   }
 
   cycleCandidates(): void {

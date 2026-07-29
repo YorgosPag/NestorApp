@@ -29,6 +29,7 @@ import { degToRad } from '../entities/shared/geometry-utils';
 // would pull those heavy deps into the bundle and break the node test env.
 import { resolveEntityFont } from '../../text-engine/fonts/font-resolver';
 import { paintTextRun } from '../../text-engine/fonts/glyph-run-draw';
+import { emSizeForTextHeight } from '../../text-engine/fonts/text-height-scale';
 
 /** Base cap-height (mm) that a `scale` of 1 maps to — ISO 3098 / AutoCAD default (2.5mm). */
 const BASE_TEXT_HEIGHT_MM = TEXT_SIZE_LIMITS.DEFAULT_HEIGHT;
@@ -84,7 +85,10 @@ export function drawTextElement(
   paintTextRun(ctx, value, {
     originX: 0,
     originY: 0,
-    targetHeight: heightPx,
+    // ADR-635 Φ C.22 — `heightPx` is the LTYPE element's TEXT HEIGHT; the em that draws caps at
+    // that height is larger by the face's cap-height ratio. Same rule as TEXT/MTEXT: embedded
+    // linetype text must not be the one place that renders 40% small.
+    emSize: emSizeForTextHeight(heightPx, resolved),
     align: 'center',
     baseline: 'middle',
     resolved,

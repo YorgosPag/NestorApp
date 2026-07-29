@@ -39,6 +39,7 @@
 import { resolveEntityFont } from './font-resolver';
 import { measureText } from './glyph-renderer';
 import { GLYPH_REFERENCE_SIZE } from './glyph-path-cache';
+import { emSizeForTextHeight } from './text-height-scale';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 
 /** Font-resolution inputs (the X-scale `widthFactor` is applied by the consumer, not here). */
@@ -48,7 +49,12 @@ export interface TextGlyphInkStyle {
   readonly italic?: boolean;
 }
 
-/** All fields are ÷ the nominal em height, so they are size- and X-scale-independent. */
+/**
+ * All fields are ÷ the DXF TEXT HEIGHT (group 40 / `\H`), so they are size- and X-scale-independent
+ * and a consumer recovers world units by multiplying with the entity height. Since ADR-635 Φ C.22
+ * that is NOT the same as ÷ the em: the font is drawn at `em = height / capHeightRatio`, and these
+ * ratios already carry that factor.
+ */
 export interface TextGlyphInk {
   /** Font ascent above the baseline ÷ em — where the renderer seats the baseline. */
   readonly fontAscent: number;
@@ -91,9 +97,14 @@ export function measureTextGlyphInk(text: string, style?: TextGlyphInkStyle): Te
 
   const ref = GLYPH_REFERENCE_SIZE;
   const m = measureText(resolved.font, text, ref);
-  const fontAscent = m.ascent / ref;
-  const fontDescent = m.descent / ref;
-  const advance = m.width / ref;
+  // ADR-635 Φ C.22 — every field is a ratio of the DXF TEXT HEIGHT (that is what consumers
+  // multiply by), while the metrics below are measured in EM units at `ref`. `emSizeForTextHeight(1)`
+  // is exactly «em per unit of text height», so this one factor converts the whole set. Without it
+  // the box would keep hugging the OLD (≈40% smaller) glyphs while the renderer drew the new ones.
+  const emPerRef = emSizeForTextHeight(1, resolved) / ref;
+  const fontAscent = m.ascent * emPerRef;
+  const fontDescent = m.descent * emPerRef;
+  const advance = m.width * emPerRef;
 
   // Real glyph ink bounds — opentype path is y-DOWN with the baseline at y=0 (topmost
   // point y1 ≤ 0 above the baseline, y2 ≥ 0 for descenders); x is the pen axis (x=0 origin).
@@ -104,12 +115,12 @@ export function measureTextGlyphInk(text: string, style?: TextGlyphInkStyle): Te
   const path = resolved.font.getPath(text, 0, 0, ref);
   const bb = typeof path?.getBoundingBox === 'function' ? path.getBoundingBox() : null;
   if (bb && Number.isFinite(bb.y1) && Number.isFinite(bb.y2) && bb.y2 > bb.y1) {
-    inkAscent = Math.max(0, -bb.y1) / ref;
-    inkDescent = Math.max(0, bb.y2) / ref;
+    inkAscent = Math.max(0, -bb.y1) * emPerRef;
+    inkDescent = Math.max(0, bb.y2) * emPerRef;
   }
   if (bb && Number.isFinite(bb.x1) && Number.isFinite(bb.x2) && bb.x2 > bb.x1) {
-    inkLeft = Math.max(0, bb.x1) / ref;
-    inkRight = Math.min(m.width, bb.x2) / ref;
+    inkLeft = Math.max(0, bb.x1) * emPerRef;
+    inkRight = Math.min(m.width, bb.x2) * emPerRef;
   }
   // Guard whitespace / empty-bbox glyphs so the box keeps a positive height.
   if (!(inkAscent + inkDescent > 0)) {
