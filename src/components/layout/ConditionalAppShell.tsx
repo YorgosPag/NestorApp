@@ -63,8 +63,15 @@ import '@/lib/design-system';
  */
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/action'] as const;
 
-/** Routes where sidebar must always start collapsed on page load / refresh */
-const SIDEBAR_COLLAPSED_ROUTES = ['/dxf/viewer', '/geo/canvas'] as const;
+/**
+ * Routes where sidebar must always start collapsed on page load / refresh.
+ *
+ * ADR-726 §13.1 — `/test-harness/dxf-perf` mounts the SAME viewer as `/dxf/viewer`
+ * for frame-budget measurement. With the sidebar open the canvas is ~256px narrower,
+ * so the harness would measure a viewport the real route never has. Same list, one
+ * answer: the measured geometry must be the shipped geometry.
+ */
+const SIDEBAR_COLLAPSED_ROUTES = ['/dxf/viewer', '/geo/canvas', '/test-harness/dxf-perf'] as const;
 
 function isSidebarCollapsedRoute(pathname: string): boolean {
   return SIDEBAR_COLLAPSED_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));

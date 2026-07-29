@@ -322,6 +322,13 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   // ADR-526 — Open the native file picker for Tekton .tek import (DxfViewerDialogs
   // listens). Emitted by the ribbon Insert → «Εισαγωγή Τέκτονα» action.
   'dxf:import-tek-requested': Record<string, never>;
+  // ADR-726 §13.1 — Deliver an already-picked File to the ONE import path
+  // (`handleFileImportWithEncoding`) from OUTSIDE the provider tree. Sibling of
+  // `dxf:import-tek-requested`, which asks for a picker; this one carries the result.
+  // The only emitter today is the perf harness route (`/test-harness/dxf-perf`), which
+  // mounts `DxfViewerApp` and therefore has no access to the in-tree callback.
+  // DxfViewerDialogs listens — same handler, same level resolution, same persistence.
+  'dxf:import-file': { file: File };
   // ADR-400 — Restore persisted viewport transform (pan+zoom) without bounds recalc.
   // Emitted by the useViewportAutoFit SSoT controller (ADR-399) when a valid persisted
   // transform is found on first scene load. Consumed by useFitToView via setTransform.

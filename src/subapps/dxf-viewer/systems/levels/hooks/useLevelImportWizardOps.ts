@@ -1,5 +1,5 @@
 'use client';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { Level, FloorplanDoc, ImportWizardState, CalibrationData } from '../config';
 import { DEFAULT_IMPORT_WIZARD_STATE } from '../LevelsSystem.types';
 import type { SceneUnits } from '../../../utils/scene-units';
@@ -99,13 +99,21 @@ export function useLevelImportWizardOps({
     importWizardHook.cancelImportWizard();
   }, [importWizardHook, setImportWizard]);
 
-  return {
-    startImportWizard,
-    setImportWizardStep,
-    setSelectedLevel,
-    setUserDrawingUnits,
-    setCalibration,
-    completeImport,
-    cancelImportWizard,
-  };
+  // Σταθερό δέμα — βλ. σχόλιο στο `useLevelOperations`: ο `LevelsSystem` το εξαρτάται
+  // ως ΕΝΑ αντικείμενο αντί για 7 ξεχωριστά ονόματα.
+  return useMemo<LevelImportWizardOps>(
+    () => ({
+      startImportWizard,
+      setImportWizardStep,
+      setSelectedLevel,
+      setUserDrawingUnits,
+      setCalibration,
+      completeImport,
+      cancelImportWizard,
+    }),
+    [
+      startImportWizard, setImportWizardStep, setSelectedLevel, setUserDrawingUnits,
+      setCalibration, completeImport, cancelImportWizard,
+    ],
+  );
 }

@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useRef } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { getErrorMessage } from '@/lib/error-utils';
 import { useAutoSaveSceneManager } from '../../../hooks/scene/useAutoSaveSceneManager';
 import { LevelOperations, FloorplanOperations } from '../utils';
@@ -376,18 +376,29 @@ export function useLevelOperations({
     [enableFirestore, handleError, setLevels]
   );
 
-  return {
-    addLevel,
-    removeLevel,
-    deleteLevel,
-    clearAllLevels,
-    reorderLevels,
-    renameLevel,
-    setCurrentLevel,
-    toggleLevelVisibility,
-    setDefaultLevel,
-    duplicateLevel,
-    linkLevelToFloor,
-    updateLevelContext,
-  };
+  // 🚀 Ένα σταθερό δέμα, όχι 12 σκόρπιες αναφορές: ο καταναλωτής (`LevelsSystem`) το
+  // περνά ολόκληρο στο context memo με **μία** εξάρτηση. Πριν, κάθε τελεστής έμπαινε
+  // ξεχωριστά στον πίνακα εξαρτήσεων εκεί — 12 ονόματα γραμμένα δύο φορές, που είναι
+  // ακριβώς ο διπλότυπος κώδικας που πιάνει το CHECK 3.28 (ADR-583).
+  return useMemo<UseLevelOperationsResult>(
+    () => ({
+      addLevel,
+      removeLevel,
+      deleteLevel,
+      clearAllLevels,
+      reorderLevels,
+      renameLevel,
+      setCurrentLevel,
+      toggleLevelVisibility,
+      setDefaultLevel,
+      duplicateLevel,
+      linkLevelToFloor,
+      updateLevelContext,
+    }),
+    [
+      addLevel, removeLevel, deleteLevel, clearAllLevels, reorderLevels, renameLevel,
+      setCurrentLevel, toggleLevelVisibility, setDefaultLevel, duplicateLevel,
+      linkLevelToFloor, updateLevelContext,
+    ],
+  );
 }

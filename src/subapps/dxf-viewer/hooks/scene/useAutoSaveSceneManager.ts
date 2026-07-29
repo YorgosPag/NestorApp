@@ -1,7 +1,15 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { STORAGE_TIMING } from '../../config/timing-config';
-import { useSceneManager, type SceneManagerState } from './useSceneManager';
+import { useSceneManager } from './useSceneManager';
+// N.7.1 — το δημόσιο συμβόλαιο ζει σε `.types.ts` (ίδια σύμβαση με LevelsSystem.types.ts).
+// Re-export ώστε τα `import { AutoSaveSceneManagerState } from './useAutoSaveSceneManager'`
+// να συνεχίσουν να δουλεύουν: η μετακίνηση είναι εσωτερική, όχι αλλαγή API.
+import type {
+  AutoSaveSceneManagerState,
+  AutoSaveSceneManagerOptions,
+} from './useAutoSaveSceneManager.types';
+export type { AutoSaveSceneManagerState, AutoSaveSceneManagerOptions };
 import {
   originSchedulesAutoSave,
   DEFAULT_SCENE_WRITE_ORIGIN,
@@ -19,84 +27,6 @@ import { useAuth } from '@/auth/hooks/useAuth';
 // subscribe to it WITHOUT the status flowing through the LevelsSystem context
 // (which churned ~40 ribbon bridges on every save cycle). See AutoSaveStatusStore.
 import { autoSaveStatusStore } from '../../stores/AutoSaveStatusStore';
-
-export interface AutoSaveSceneManagerState extends SceneManagerState {
-  currentFileName: string | null;
-  setCurrentFileName: (fileName: string | null) => void;
-  autoSaveEnabled: boolean;
-  setAutoSaveEnabled: (enabled: boolean) => void;
-  lastSaveTime: Date | null;
-  saveStatus: 'idle' | 'saving' | 'success' | 'error';
-  /** 🏢 ENTERPRISE: Inject existing FileRecord ID so cadFiles uses the same ID */
-  setFileRecordId: (id: string | null) => void;
-  /**
-   * 🛡️ ADR-714 — δηλώνει σε ποιον όροφο ανήκει ένα επίπεδο.
-   *
-   * Ο `useLevelSceneLoader` το καλεί σε κάθε αλλαγή επιπέδου. Το auto-save το διαβάζει
-   * **μόνο τη στιγμή του scheduling**, για να παγώσει τον `floorId` μέσα στο
-   * {@link SceneSaveTicket}. Κρατιέται ως map (levelId → floorId) και όχι ως σκέτο
-   * «τρέχον», ώστε η αντιστοίχιση να μην εξαρτάται από το πότε έτρεξε τελευταία ο loader.
-   */
-  setLevelFloorScope: (levelId: string, floorId: string | null) => void;
-  /**
-   * 🛡️ ADR-714 — καταγράφει πόσες DXF οντότητες έχει ΗΔΗ ο αποθηκευμένος προορισμός.
-   *
-   * Ο `useLevelSceneLoader` το καλεί μετά από κάθε επιτυχή φόρτωση. Είναι το baseline
-   * του φρουρού `isDxfWipe`: χωρίς αυτό, ο φρουρός δεν ξέρει τι θα χαθεί.
-   */
-  setPersistedDxfBaseline: (fileId: string, dxfCount: number) => void;
-  /**
-   * 🛡️ ADR-714 — ειδοποίηση ότι μια εγγραφή ματαιώθηκε από φρουρό δεδομένων.
-   * Ο `useLevelSceneLoader` το συνδέει με το i18n toast.
-   */
-  setOnSaveBlocked: (cb: ((reason: SceneSaveBlockReason) => void) | null) => void;
-  /**
-   * 🪜 ADR-358 Phase 8: reactive mirror of the injected FileRecord id so
-   * downstream consumers (e.g. `useStairPersistence` via `StairAdvancedPanelHost`)
-   * can subscribe to it as state. The setter still updates the internal ref
-   * synchronously for auto-save reads.
-   */
-  fileRecordId: string | null;
-  /** 🏢 ADR-240: Inject save context (entityType/floorId/purpose) from Wizard import */
-  setSaveContext: (ctx: DxfSaveContext | null) => void;
-  /**
-   * 🪜 ADR-358 Phase 8: reactive mirror of the injected save context so
-   * `projectId` (and any other context field) propagates to React subtrees
-   * needing tenant/project scope (Phase 8 stair persistence).
-   */
-  saveContext: DxfSaveContext | null;
-  /**
-   * 🏢 ENTERPRISE: Callback after successful scene save — used by LevelsSystem to link scene→level.
-   *
-   * 🛡️ ADR-714 — παίρνει το ΠΑΓΩΜΕΝΟ ticket, όχι σκέτο `fileId`. Πριν, ο δέκτης
-   * linkάριζε το «τρέχον» επίπεδο· αν ο χρήστης άλλαζε όροφο όσο έτρεχε το debounced
-   * save, το save του ορόφου Α linkάριζε τον όροφο Β στο αρχείο του Α. Το
-   * `ticket.levelId` λέει ποιος ΓΕΝΝΗΣΕ την εγγραφή — και αυτός είναι που linkάρεται.
-   */
-  setOnSceneSaved: (cb: ((ticket: SceneSaveTicket, fileId: string) => void) | null) => void;
-  /** 🏢 ENTERPRISE: Set loading guard to prevent auto-save during scene load from Storage */
-  setIsLoadingFromFirestore: (loading: boolean) => void;
-  /**
-   * 🛡️ ADR-469 v1.2 — SSoT orphaned-target latch (writer). Marks a `fileId` whose
-   * backing `files`/`cadFiles` doc is gone (orphaned / file-less floor) so DXF scene
-   * auto-save is permanently suppressed for it this session. The DXF floorplan blob
-   * no longer exists to overwrite; the floor's BIM persists independently via its
-   * floorId-keyed per-entity collections (ADR-420/469). Prevents the ADR-293
-   * `canonicalScenePath is required` throw on every local edit of such a floor.
-   */
-  markFileTargetOrphaned: (fileId: string) => void;
-  /** 🛡️ ADR-469 v1.2 — orphaned-target latch (reader). See `markFileTargetOrphaned`. */
-  isFileTargetOrphaned: (fileId: string | null | undefined) => boolean;
-  /**
-   * 🏢 ADR-354 Phase B Part 1: full session reset for super admin company switch.
-   * Cancels pending debounced auto-save, clears scenes + saveContext + fileRecordId +
-   * currentFileName + per-file caches, and engages the loading guard so any subsequent
-   * setLevelScene (triggered by the new tenant's level bootstrap) does NOT auto-save the
-   * empty scene over the previous tenant's file. The guard is released on the next
-   * animation frame so the next genuine scene load from useLevelSceneLoader proceeds.
-   */
-  resetSceneSession: () => void;
-}
 
 /**
  * 🛡️ ADR-714 — κλειδί της fileId cache: ο ΟΡΟΦΟΣ μαζί με το όνομα.
@@ -126,7 +56,9 @@ function resolveKnownScenePath(
   );
 }
 
-export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
+export function useAutoSaveSceneManager(
+  { enabled = true }: AutoSaveSceneManagerOptions = {},
+): AutoSaveSceneManagerState {
   const sceneManager = useSceneManager();
   const sceneManagerRef = useRef(sceneManager);
   sceneManagerRef.current = sceneManager;
@@ -139,7 +71,11 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
   // even before React re-renders (avoids stale closure when called synchronously
   // after setCurrentFileName in the same event handler as setLevelScene).
   const currentFileNameRef = useRef<string | null>(null);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
+  // ADR-726 §13.1 — ο διακόπτης του χρήστη ξεκινά από τη δηλωμένη μονιμότητα, ώστε το
+  // widget κατάστασης να λέει την αλήθεια· η ΠΥΛΗ όμως είναι το ref από κάτω.
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(enabled);
+  const persistenceEnabledRef = useRef<boolean>(enabled);
+  persistenceEnabledRef.current = enabled;
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
@@ -333,7 +269,12 @@ export function useAutoSaveSceneManager(): AutoSaveSceneManagerState {
     // the derived 950KB scene blob would be pure waste — and the snapshot echo from
     // that write would re-enter ~22 persistence hooks → storm. The SINGLE decision
     // lives in `originSchedulesAutoSave` (no scattered suppress flags).
+    //
+    // 🔒 ADR-726 §13.1 — `persistenceEnabledRef` είναι ΣΚΛΗΡΗ πύλη, πριν από κάθε άλλο
+    // κριτήριο: όταν ο viewer δηλώθηκε χωρίς μονιμότητα (perf harness), καμία εγγραφή
+    // δεν προγραμματίζεται — ούτε αν ο χρήστης ξαναανάψει τον διακόπτη από το UI.
     if (
+      persistenceEnabledRef.current &&
       originSchedulesAutoSave(origin) &&
       autoSaveEnabled && fileName && !isLoadingFromFirestoreRef.current && !isEmptyScene &&
       // 🛡️ ADR-469 v1.2 — belt #1: never schedule a save for a known-orphaned target.

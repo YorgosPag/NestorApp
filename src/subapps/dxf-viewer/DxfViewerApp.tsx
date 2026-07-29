@@ -41,7 +41,10 @@ import { EnterpriseDxfSettingsProvider as DxfSettingsProvider } from './settings
 // layer was retired. Style-store hydration now lives in one runtime driver
 // (EnterpriseDxfSettingsProvider → stores/style-store-sync.ts). No DI wiring here.
 
-export function DxfViewerApp(props: DxfViewerAppProps) {
+// ADR-726 §13.1 — `enablePersistence` is destructured OUT of the props that reach
+// `DxfViewerContent`: it configures the provider stack, it is not viewer content.
+// Default `true` ⇒ production behaviour is byte-for-byte what it was before the flag.
+export function DxfViewerApp({ enablePersistence = true, ...props }: DxfViewerAppProps) {
   // Debug logging removed for performance
   return (
     <NotificationProvider>
@@ -69,7 +72,7 @@ export function DxfViewerApp(props: DxfViewerAppProps) {
                   <CursorSystem>
                       <SelectionSystem>
                         <ToolbarsSystem>
-                          <LevelsSystem enableFirestore>
+                          <LevelsSystem enableFirestore={enablePersistence}>
                             <OverlayStoreProvider>
                               <CanvasProvider>
                                 <DxfViewerContent {...props} />

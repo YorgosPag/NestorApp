@@ -5,12 +5,11 @@ import {
   Level,
   FloorplanDoc,
   ImportWizardState,
-  CalibrationData,
   LevelSystemSettings,
   DEFAULT_LEVEL_SETTINGS,
   LEVELS_EXPORT_VERSION,
 } from './config';
-import { FloorplanOperations, CalibrationOperations, LevelOperations } from './utils';
+import { LevelOperations } from './utils';
 import { type LevelsHookReturn } from './useLevels';
 import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManager';
 import type { SceneModel } from '../../types/scene';
@@ -25,6 +24,7 @@ import { useLevelsFirestoreSync } from './hooks/useLevelsFirestoreSync';
 // levels sync (top-level DXF viewer provider), tenant-gated by the same claims.
 import { useDimStylesFirestoreSync } from '../dimensions/hooks/useDimStylesFirestoreSync';
 import { useLevelOperations } from './hooks/useLevelOperations';
+import { useLevelFloorplanOperations } from './hooks/useLevelFloorplanOperations';
 import { useLevelFloorplanSync } from './hooks/useLevelFloorplanSync';
 import { useLevelImportWizardOps } from './hooks/useLevelImportWizardOps';
 import { useAuth } from '@/auth';
@@ -73,7 +73,10 @@ function useLevelsSystemState({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const sceneManager = useAutoSaveSceneManager();
+  // ADR-726 §13.1 — μία δήλωση μονιμότητας για ΟΛΟ το σύστημα: ό,τι σβήνει τα Firestore
+  // subscriptions σβήνει και τις εγγραφές. Αλλιώς ένας «in-memory» viewer θα εξακολουθούσε
+  // να χτυπά /api/dxf-levels + Storage στο πρώτο import (μετρημένο, 2026-07-29).
+  const sceneManager = useAutoSaveSceneManager({ enabled: enableFirestore });
   const sceneManagerRef = useRef(sceneManager);
   sceneManagerRef.current = sceneManager;
 
@@ -135,20 +138,9 @@ function useLevelsSystemState({
   });
 
   // 🏢 ENTERPRISE: Mutating level operations (add/remove/rename/reorder/…)
-  const {
-    addLevel,
-    removeLevel,
-    deleteLevel,
-    clearAllLevels,
-    reorderLevels,
-    renameLevel,
-    setCurrentLevel,
-    toggleLevelVisibility,
-    setDefaultLevel,
-    duplicateLevel,
-    linkLevelToFloor,
-    updateLevelContext,
-  } = useLevelOperations({
+  // Κρατιέται ως ΔΕΜΑ (όχι destructured): μπαίνει στο context memo με ένα spread και
+  // μία εξάρτηση. Το ίδιο ισχύει για τα δέματα κατόψεων και οδηγού εισαγωγής παρακάτω.
+  const levelOps = useLevelOperations({
     levels,
     setLevels,
     currentLevelId,
@@ -162,71 +154,13 @@ function useLevelsSystemState({
     onLevelChange,
   });
 
-  // Floorplan operations
-  const addFloorplan = useCallback(
-    (floorplan: Omit<FloorplanDoc, 'id' | 'importedAt'>): string => {
-      const { floorplans: updatedFloorplans, floorplanId } = FloorplanOperations.addFloorplan(
-        floorplans,
-        floorplan
-      );
-      setFloorplans(updatedFloorplans);
-      onFloorplanAdd?.(updatedFloorplans[floorplanId]);
-      return floorplanId;
-    },
-    [floorplans, onFloorplanAdd]
-  );
-
-  const removeFloorplan = useCallback(
-    (floorplanId: string) => {
-      setFloorplans(prev => {
-        const updated = FloorplanOperations.removeFloorplan(prev, floorplanId);
-        onFloorplanRemove?.(floorplanId);
-        return updated;
-      });
-    },
-    [onFloorplanRemove]
-  );
-
-  const updateFloorplan = useCallback((floorplanId: string, updates: Partial<FloorplanDoc>) => {
-    setFloorplans(prev => {
-      const floorplan = prev[floorplanId];
-      if (!floorplan) return prev;
-
-      return {
-        ...prev,
-        [floorplanId]: { ...floorplan, ...updates },
-      };
-    });
-  }, []);
-
-  const getFloorplansForLevel = useCallback(
-    (levelId: string): FloorplanDoc[] => {
-      return FloorplanOperations.getFloorplansForLevel(floorplans, levelId);
-    },
-    [floorplans]
-  );
-
-  const calibrateFloorplan = useCallback((floorplanId: string, calibration: CalibrationData) => {
-    setFloorplans(prev => {
-      const floorplan = prev[floorplanId];
-      if (!floorplan) return prev;
-
-      const newTransform = CalibrationOperations.applyCalibrationToTransform(
-        floorplan.transform,
-        calibration
-      );
-
-      return {
-        ...prev,
-        [floorplanId]: {
-          ...floorplan,
-          transform: newTransform,
-          units: calibration.units,
-          calibrated: true,
-        },
-      };
-    });
-  }, []);
+  // Floorplan operations (extracted to a dedicated hook — SRP / N.7.1)
+  const floorplanOps = useLevelFloorplanOperations({
+    floorplans,
+    setFloorplans,
+    onFloorplanAdd,
+    onFloorplanRemove,
+  });
 
   // Scene management (delegated to sceneManager via stable ref)
   const setLevelScene = useCallback(
@@ -287,15 +221,7 @@ function useLevelsSystemState({
   }, [currentLevelId, setLevelScene]);
 
   // Import wizard operations (extracted to a dedicated hook — SRP / N.7.1)
-  const {
-    startImportWizard,
-    setImportWizardStep,
-    setSelectedLevel,
-    setUserDrawingUnits,
-    setCalibration,
-    completeImport,
-    cancelImportWizard,
-  } = useLevelImportWizardOps({
+  const importWizardOps = useLevelImportWizardOps({
     levels,
     floorplans,
     setLevels,
@@ -379,6 +305,11 @@ function useLevelsSystemState({
   // the bare object literal `value` caused every consumer (CanvasSection,
   // floorplan-background hook, entity-join hook, …) to receive a new
   // reference on each Provider render, even when content was identical.
+  // 📦 Τα τρία δέματα τελεστών (`levelOps` / `floorplanOps` / `importWizardOps`) μπαίνουν
+  // με spread και εξαρτώνται ως ΕΝΑ αντικείμενο το καθένα. Πριν, και τα 40 ονόματα ήταν
+  // γραμμένα δύο φορές — μία στην τιμή, μία στον πίνακα εξαρτήσεων — που το CHECK 3.28
+  // (jscpd, ADR-583) το έβλεπε σωστά ως διπλότυπο. Το σχήμα του `LevelsHookReturn` μένει
+  // επίπεδο και αμετάβλητο: κανένας καταναλωτής δεν αλλάζει.
   return useMemo<LevelsHookReturn>(
     () => ({
       // State
@@ -391,26 +322,8 @@ function useLevelsSystemState({
       sceneLoading,
       error,
 
-      // Level operations
-      addLevel,
-      removeLevel,
-      deleteLevel,
-      clearAllLevels,
-      reorderLevels,
-      renameLevel,
-      setCurrentLevel,
-      toggleLevelVisibility,
-      setDefaultLevel,
-      duplicateLevel,
-      linkLevelToFloor,
-      updateLevelContext,
-
-      // Floorplan operations
-      addFloorplan,
-      removeFloorplan,
-      updateFloorplan,
-      getFloorplansForLevel,
-      calibrateFloorplan,
+      ...levelOps,
+      ...floorplanOps,
 
       // Scene management
       setLevelScene,
@@ -426,14 +339,7 @@ function useLevelsSystemState({
       saveContext: sceneManager.saveContext,
       linkSceneToLevel,
 
-      // Import wizard
-      startImportWizard,
-      setImportWizardStep,
-      setSelectedLevel,
-      setUserDrawingUnits,
-      setCalibration,
-      completeImport,
-      cancelImportWizard,
+      ...importWizardOps,
 
       // Settings
       updateSettings,
@@ -446,17 +352,12 @@ function useLevelsSystemState({
     }),
     [
       levels, currentLevelId, floorplans, importWizard, settings, isLoading, sceneLoading, error,
-      addLevel, removeLevel, deleteLevel, clearAllLevels, reorderLevels, renameLevel,
-      setCurrentLevel, toggleLevelVisibility, setDefaultLevel, duplicateLevel, linkLevelToFloor,
-      updateLevelContext,
-      addFloorplan, removeFloorplan, updateFloorplan, getFloorplansForLevel, calibrateFloorplan,
+      levelOps, floorplanOps, importWizardOps,
       setLevelScene, getLevelScene, clearLevelScene,
       linkSceneToLevel,
       // ADR-358 Phase 8: reactive scope inputs so `useStairPersistence` re-runs
       // when a new floorplan loads or the wizard updates the project context.
       sceneManager.fileRecordId, sceneManager.saveContext,
-      startImportWizard, setImportWizardStep, setSelectedLevel, setUserDrawingUnits, setCalibration, completeImport,
-      cancelImportWizard,
       updateSettings, resetSettings,
       validateLevelName, exportLevelsData, importLevelsData,
     ],

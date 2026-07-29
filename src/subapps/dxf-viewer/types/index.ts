@@ -208,4 +208,17 @@ export type { FloatingPanelType, PanelType } from './panel-types';
 
 export interface DxfViewerAppProps {
   className?: string;
+  /**
+   * ADR-726 §13.1 — persistence master switch for the whole viewer.
+   *
+   * `true` (default, production): levels/scenes/DIMSTYLES sync with Firestore, exactly
+   * as before this flag existed.
+   *
+   * `false`: the viewer runs fully in-memory — `LevelsSystem` skips every Firestore
+   * subscription and creates levels locally (`LevelOperations.addLevel`). Used by the
+   * frame-budget harness so auth + backend stay OUT of the measurement loop
+   * (hermeticity, the Web Page Replay principle). Consumed by `DxfViewerApp` only —
+   * it is destructured out and never reaches `DxfViewerContent`.
+   */
+  enablePersistence?: boolean;
 }

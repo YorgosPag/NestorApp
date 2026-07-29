@@ -92,6 +92,15 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
   const tekInputRef = React.useRef<HTMLInputElement>(null);
   React.useEffect(() => EventBus.on('dxf:import-tek-requested', () => tekInputRef.current?.click()), []);
 
+  // ADR-726 §13.1 — external File delivery into the SAME import path. Callers outside
+  // the provider tree (the perf harness route, which mounts `DxfViewerApp` and thus
+  // cannot reach `handleFileImportWithEncoding`) hand over an already-picked File.
+  // Deliberately NOT a second import implementation: it forwards to the one callback.
+  React.useEffect(
+    () => EventBus.on('dxf:import-file', ({ file }) => { void handleFileImportWithEncoding(file); }),
+    [handleFileImportWithEncoding],
+  );
+
   return (
     <>
       <input
