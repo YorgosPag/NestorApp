@@ -1,5 +1,7 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
 import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
+// SSoT για τη μετατροπή του ωμού κειμένου σε (code\nvalue) ροή γραμμών — ADR-635 Φ C.19.
+import { splitDxfLines } from './dxf-line-stream';
 // ADR-635 Φ C.4 — LTYPE table pre-pass: register the DXF's custom linetypes into the
 // runtime registry BEFORE entities convert, so per-entity linetype names (group 6) that
 // reference custom `.lin` patterns resolve at render instead of falling back to solid.
@@ -96,12 +98,9 @@ export class DxfSceneBuilder {
   ): { scene: SceneModel; diagnostics: ImportDiagnostics } {
     const diagnostics = createImportDiagnostics();
 
-    // ⚠️ DO NOT filter empty lines. DXF is a strict (code\nvalue) stream and AutoCAD writes
-    // EMPTY string values (empty TEXT/handle/name codes). Dropping blank lines shifts the
-    // fixed 2-line stride in parseEntities/parseHeader/table-parsers → alignment corrupts and
-    // ~90% of entities are silently lost (real R12 sample: 4483 → 467). Trim strips \r/spaces;
-    // empty values survive as '' so every (code,value) pair stays aligned.
-    const lines = content.split('\n').map(line => line.trim());
+    // SSoT — ΜΗΝ φιλτράρεις κενές γραμμές, ΜΗΝ κάνεις trim. Το σκεπτικό (και τα δύο
+    // περιστατικά που το γέννησαν) ζει στο `dxf-line-stream.ts`, δίπλα στον κώδικα.
+    const lines = splitDxfLines(content);
 
     // ╔════════════════════════════════════════════════════════════════════════╗
     // ║ 🏢 ENTERPRISE: Parse HEADER first for unit/scale information          ║

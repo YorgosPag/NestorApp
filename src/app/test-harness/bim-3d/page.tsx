@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { isTestHarnessRouteEnabled } from '@/config/test-harness-access';
 import Bim3DHarness from './Bim3DHarness';
 
 /**
@@ -8,6 +9,6 @@ import Bim3DHarness from './Bim3DHarness';
  * Dev-only — 404 in production.
  */
 export default function Bim3DTestPage() {
-  if (process.env.NODE_ENV === 'production') notFound();
+  if (!isTestHarnessRouteEnabled()) notFound();
   return <Bim3DHarness />;
 }

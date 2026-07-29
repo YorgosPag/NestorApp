@@ -243,6 +243,10 @@ export function convertMText(
   styleFonts?: StyleFontMap,
 ): AnySceneEntity | null {
   const { x, y, height, rotation } = parseTextTransform(data);
+  // ADR-635 — `data['1']` έρχεται ΗΔΗ ενωμένο από τον parser (`dxf-mtext-chunks`): MTEXT >250
+  // χαρακτήρες γράφεται 3…3/1 και το flat `data` κρατούσε μόνο την ουρά ⇒ ολόκληρες παράγραφοι
+  // «εξαφανίζονταν». Το `|| data['3']` μένει ως δίχτυ για EntityData φτιαγμένο με το χέρι
+  // (tests/adapters) που δεν πέρασε από τον parser — δεν είναι η κύρια διαδρομή.
   const rawContent = data['1'] || data['3'] || '';
   const attachmentPoint = parseInt(data['71']) || 1;
   const alignment = mapMTextAlignment(attachmentPoint);

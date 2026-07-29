@@ -44,6 +44,9 @@ import {
 // (REGION/3DSOLID/…) are dropped BEFORE the scene-builder's converter loop, so only the parser
 // can record them. Reuses the ImportDiagnostics SSoT (no twin collector) — no-op when absent.
 import { recordSkipped, type ImportDiagnostics } from './dxf-import-diagnostics';
+// ADR-635 — MTEXT 250-char chunk reassembly (SSoT). Ζει εδώ γιατί ΜΟΝΟ ο parser βλέπει
+// ακόμα το ΩΜΟ (untrimmed) value της γραμμής, που είναι απαραίτητο στις ραφές των chunks.
+import { createMTextContentCollector } from './dxf-mtext-chunks';
 
 // Re-export table parsers for backward compatibility
 export { parseDimStyles, parseLayerColors } from './dxf-table-parsers';
@@ -288,12 +291,17 @@ export class DxfEntityParser {
     const data: Record<string, string> = {};
     // ADR-507 — ordered pairs διατηρούν επαναλαμβανόμενους κωδικούς (HATCH boundaries).
     const pairs: Array<readonly [string, string]> = [];
+    // ADR-635 — MTEXT >250 χαρακτήρες γράφεται ως 3…3/1 chunks· το flat `data` κρατά ΕΝΑ
+    // ανά κωδικό ⇒ έμενε μόνο η ουρά. Ο collector μαζεύει τα ΩΜΑ values (η κοπή στους 250
+    // πέφτει και μέσα σε κενά — trim θα κολλούσε λέξεις) και ξαναγράφει το `data['1']`.
+    const mtextContent = createMTextContentCollector(entityType);
     let layer = '0';
 
     let i = startIndex + 2;
     while (i < lines.length - 1) {
       const code = lines[i].trim();
-      const value = lines[i + 1].trim();
+      const rawValue = lines[i + 1];
+      const value = rawValue.trim();
 
       if (code === '0') break;
 
@@ -301,10 +309,13 @@ export class DxfEntityParser {
         layer = value || '0';
       }
 
+      mtextContent.take(code, rawValue);
       data[code] = value;
       pairs.push([code, value]);
       i += 2;
     }
+
+    mtextContent.applyTo(data);
 
     return { type: entityType, layer, data, pairs };
   }

@@ -815,7 +815,72 @@ stale-blob-over-reverted-doc bug παραμένει αποτραμμένο)· κ
 φάση με split. 🔴 browser-verify (Giorgio): άνοιγμα «1ος Όροφος» → MCP count `floorplan_hatches` > 0· hard
 refresh → γραμμοσκιάσεις παραμένουν, πλήθος σταθερό (όχι 2178)· `HEX` κρατά το μοτίβο μετά reload.
 
+## Φ C.19 — MTEXT >250 χαρακτήρες: **όλα** τα chunks πλην της ουράς χάνονταν σιωπηλά
+
+**Σύμπτωμα (Giorgio, 2026-07-29, `47_ergasia.dxf` — AutoCAD 2021 τοπογραφικό ΕΓΣΑ'87).**
+Τα μεγάλα κειμενικά μπλοκ του σχεδίου («ΣΤΟΙΧΕΙΑ ΕΡΕΥΝΑΣ ΙΔΙΩΤΗ ΜΗΧΑΝΙΚΟΥ», «ΠΡΑΞΕΙΣ
+ΤΑΚΤΟΠΟΙΗΣΗΣ», «ΤΙΤΛΟΣ ΙΔΙΟΚΤΗΣΙΑΣ», «ΠΑΡΑΤΗΡΗΣΕΙΣ») **δεν εμφανίζονταν καθόλου** στον Νέστορα,
+ενώ τα υπόλοιπα κείμενα του ίδιου layer (`ΠΕΡΙΓΡΑΦΗ`) φαίνονταν κανονικά.
+
+**Ground truth (μετρημένο και στα δύο αρχεία, όχι εικασία).** Στο εξαγόμενο του Νέστορα οι φράσεις
+`ΣΤΟΙΧΕΙΑ ΕΡΕΥΝΑΣ` / `ΠΡΑΞΕΙΣ ΤΑΚΤΟΠΟΙΗΣΗΣ` / `ΕΜΒΑΔΟΝ ΟΙΚΟΠΕΔΟΥ` / `ΠΑΡΑΤΗΡΗΣΕΙΣ` εμφανίζονταν
+**0 φορές** (στο πρωτότυπο: 2/2/1/2). Στη θέση τους υπήρχε ένα `TEXT` με ύψος `0.7996` και
+περιεχόμενο `"1.3329x;"` — **ακριβώς** το group-40 και η ουρά του κυκλωμένου MTEXT.
+
+**Ρίζα.** Το DXF spec γράφει το MTEXT περιεχόμενο σε **250-χαρακτήρων chunks**: `3`×N (συνέχειες)
+και `1` (τελευταίο κομμάτι). Ο `parseEntity` χτίζει flat `Record<string,string>` (`data[code] = value`)
+⇒ οι επαναλαμβανόμενοι κωδικοί `3` **αλληλοσβήνονται** και ο `convertMText` διάβαζε
+`data['1'] || data['3']` ⇒ **μόνο η ουρά**. Το μπλοκ των **5.317 χαρακτήρων** (21 chunks) έφτανε στη
+σκηνή ως **12 χαρακτήρες**. Ίδια οικογένεια με ADR-507 (HATCH boundaries) και με τα
+LWPOLYLINE/SPLINE vertices — ο **`pairs`** πίνακας που λύνει ακριβώς αυτό υπήρχε ήδη, αλλά ο MTEXT
+δεν τον υιοθέτησε ποτέ.
+
+**Δύο ξεχωριστές συνέπειες, όχι μία.**
+1. **Ακρωτηριασμός** — μένει η ουρά (πρακτικά αόρατο ψίχουλο).
+2. **Πλήρης απώλεια** — όταν η ουρά είναι σκέτα κενά, χτυπά το empty-text guard του `convertMText`
+   (`rawContent.trim() === ''`) και η οντότητα **πετιέται ολόκληρη**. Έτσι χάθηκε το μπλοκ των
+   2.824 χαρακτήρων. Το `⚠️ Skipping MTEXT` warning υπήρχε — αλλά ήταν `dwarn`, όχι διάγνωση.
+
+**Γιατί δεν το έπιασε τίποτα.** 81 από τα 89 MTEXT του αρχείου είναι <250 χαρακτήρες → χωράνε σε
+ένα chunk → **περνούσαν σωστά**. Το σφάλμα ενεργοποιείται **μόνο** από μακρύ κείμενο, το οποίο
+κανένα fixture δεν είχε. Το Φ4 (rich MTEXT AST) δοκίμασε **μορφοποίηση**, ποτέ **μήκος**.
+
+**Fix.** Νέο SSoT `utils/dxf-mtext-chunks.ts` (`createMTextContentCollector`): μαζεύει τα
+content codes (`1`/`3`) **μόνο** για `MTEXT`/`MULTILINETEXT`, με τη σειρά ροής, και ξαναγράφει το
+`data['1']` με το ενωμένο string — που **είναι** η σημασιολογία του κωδικού 1 κατά το spec (η ουρά
+υπάρχει *επειδή* υπάρχουν chunks). Καμία αλλαγή υπογραφής downstream, καμία διακλάδωση στους
+converters, `pairs` **ανέγγιχτο** (μηδενική ακτίνα σε HATCH/LWPOLYLINE/SPLINE/MLINE/LEADER).
+Allocation-free no-op singleton για τα ~99% μη-MTEXT (ο `parseEntity` τρέχει έως 500k φορές).
+Καλύπτει **και** τα MTEXT μέσα σε ορισμούς BLOCK (κοινός `parseEntity`).
+
+**Δεύτερη ρίζα στην ίδια διαδρομή — το global `trim()`.** Ο `dxf-scene-builder` έκανε
+`content.split('\n').map(line => line.trim())`. Η κοπή στους 250 χαρακτήρες πέφτει σε **αυθαίρετο**
+σημείο, άρα και μέσα σε ακολουθία κενών: `"…των Δήμων Εύοσμου, "` + `"όπως…"` → **`"…Εύοσμου,όπως…"`**.
+Μετρημένο στο ίδιο αρχείο: **9 από τα 74 chunks** κουβαλούν σημαντικό κενό στα άκρα. Πλέον αφαιρείται
+**μόνο** το `\r` — ασφαλές γιατί **όλοι** οι καταναλωτές κάνουν ήδη δικό τους `.trim()` σε code ΚΑΙ
+value (`parseEntity`, `lineAt`, `parseHeader`, `findSectionRange`, `dxf-table-parsers`) — επαληθεύτηκε
+με grep ότι δεν υπάρχει ωμή ανάγνωση `lines[i]` εκτός αυτών.
+
+**Files:** NEW `utils/dxf-mtext-chunks.ts` · NEW `utils/dxf-line-stream.ts` (`splitDxfLines` — το
+σκεπτικό «ούτε φιλτράρισμα κενών γραμμών, ούτε trim» απέκτησε δικό του σπίτι δίπλα στον κώδικα·
+εξήχθη από τον builder που έφτασε 503 γρ. > 500, **extract όχι trim**) · MOD
+`utils/dxf-entity-parser.ts` (`parseEntity`) · MOD `utils/dxf-scene-builder.ts` (καλεί το SSoT) ·
+MOD `utils/dxf-text-converters.ts` (σχόλιο — το `|| data['3']` μένει ως δίχτυ για χειροποίητο
+`EntityData` σε tests/adapters).
+
+**Verification.** NEW `utils/__tests__/dxf-mtext-chunked-content.test.ts` (12 tests, **mutation-verified**:
+απενεργοποίηση του `applyTo` → 4 κόκκινα). Καμία παλινδρόμηση: **669/669** (57 suites) στο
+`utils/__tests__` + **1612/1612** (148 suites) σε `text-engine`/`io`/`bim/text`/`export`.
+Στο **πραγματικό** `47_ergasia.dxf`: και οι 6 φράσεις-στόχοι πλέον παρούσες, μεγαλύτερο κείμενο
+**12 → 2.400 χαρακτήρες**.
+
+**Εκκρεμεί (τίμια, εκτός σκοπού).** Το εισαγόμενο MTEXT εξακολουθεί να flatten-άρεται σε
+`type:'text'` (γνωστός περιορισμός, Φ4 changelog 2026-07-12) → σε re-export τα paragraph breaks
+συμπτύσσονται. Δεν είναι παλινδρόμηση αυτής της φάσης· θέλει διατήρηση ταυτότητας `type:'mtext'`
+σε render/hit-test/snap.
+
 ## Changelog
+- **2026-07-29 — Φ C.19 (🐛 MTEXT >250 χαρακτήρες: όλα τα chunks πλην της ουράς χάνονταν, Opus 5):** UNCOMMITTED. Ο Giorgio κύκλωσε σε screenshot του AutoCAD τα μεγάλα κειμενικά μπλοκ του `47_ergasia.dxf` που **δεν εμφανίζονται** στον Νέστορα. **Ground truth:** στο εξαγόμενο του Νέστορα οι φράσεις-στόχοι εμφανίζονται **0 φορές**· στη θέση του μπλοκ των **5.317 χαρακτήρων** υπάρχει ένα `TEXT` με `"1.3329x;"` — 12 χαρακτήρες, ακριβώς η ουρά, με το ίδιο group-40 ύψος `0.7996`. **Ρίζα:** το DXF γράφει MTEXT >250 χαρακτήρες ως `3`×N + `1`· ο `parseEntity` χτίζει flat `Record<string,string>` ⇒ οι κωδικοί `3` αλληλοσβήνονται και ο `convertMText` διάβαζε `data['1'] || data['3']` = **μόνο την ουρά**. **Ίδια οικογένεια με ADR-507** (HATCH boundaries) και με LWPOLYLINE/SPLINE vertices — ο `pairs` πίνακας που λύνει ακριβώς αυτό **υπήρχε ήδη** και ο MTEXT δεν τον υιοθέτησε ποτέ. **Δύο συνέπειες:** ακρωτηριασμός (ουρά) και, όταν η ουρά είναι σκέτα κενά, **πλήρης απώλεια** από το empty-text guard (έτσι χάθηκε το μπλοκ των 2.824 χαρακτήρων). **Γιατί ήταν αόρατο:** 81/89 MTEXT του αρχείου είναι <250 χαρακτήρες ⇒ περνούσαν σωστά· το Φ4 δοκίμασε **μορφοποίηση**, ποτέ **μήκος**. **Fix:** NEW SSoT `dxf-mtext-chunks.ts` — ο collector ενώνει τα content codes με τη σειρά ροής και ξαναγράφει το `data['1']` (η σημασιολογία του spec), οπότε **καμία** αλλαγή υπογραφής downstream και το `pairs` μένει **ανέγγιχτο** (μηδενική ακτίνα σε HATCH/LWPOLYLINE/SPLINE/MLINE/LEADER)· allocation-free no-op για τα μη-MTEXT (ο `parseEntity` τρέχει έως 500k φορές)· καλύπτει και τα MTEXT μέσα σε BLOCK. **Δεύτερη ρίζα στην ίδια διαδρομή:** το global `line.trim()` του `dxf-scene-builder` έτρωγε τα κενά **στη ραφή** των chunks (`"…Εύοσμου, "`+`"όπως…"` → `"…Εύοσμου,όπως…"`) — **9/74 chunks** του αρχείου κουβαλούν σημαντικό κενό στα άκρα· πλέον αφαιρείται μόνο το `\r`, ασφαλές γιατί **όλοι** οι καταναλωτές trim-άρουν ήδη μόνοι τους (επαληθευμένο με grep) — και το σκεπτικό εξήχθη σε νέο `dxf-line-stream.ts` (ο builder είχε φτάσει 503 γρ. > 500: **extract, όχι trim του σχολίου**). 2 NEW + 3 MOD + 1 test file (12 tests, **mutation-verified 4/4**)· **669/669** utils + **1612/1612** text-engine/io/bim-text/export· στο πραγματικό αρχείο: 6/6 φράσεις παρούσες, μεγαλύτερο κείμενο **12 → 2.400** χαρακτήρες. **Εκκρεμεί (γνωστό, εκτός σκοπού):** το εισαγόμενο MTEXT μένει `type:'text'` ⇒ σε re-export συμπτύσσονται τα paragraph breaks. 🔴 browser-verify (Giorgio): re-import `47_ergasia.dxf` → τα κυκλωμένα μπλοκ ορατά και ακέραια.
 - **2026-07-27 — ADR-650 §M10e: το import ΚΡΑΤΑ πλέον το offset της κανονικοποίησης (`sourceOrigin`), και η αυτόματη ταύτιση το καταναλώνει.** Το `normalizeEntitiesToOrigin` (`systems/zoom/utils/bounds-entity.ts`) υπολόγιζε το `(minX,minY)` για να μετακινήσει τα entities στο (0,0) και **το πετούσε** — τοπική μεταβλητή, ποτέ επιστρεφόμενη. Για τοπογραφικό σε ΕΓΣΑ'87 αυτό είναι ~4,5e9 mm που χάνονταν **μόνιμα**, και ήταν η μετρημένη αιτία που ένα εισαγμένο σχέδιο κατέληγε ~4.500 km από το CSV τοπογραφικό — **και εκτός του culling ±1e6 αυτού του ADR**. Πλέον επιστρέφεται και αποθηκεύεται ως `SceneModel.sourceOrigin` (συμβόλαιο `world_αρχείου = local + sourceOrigin`, canonical mm), οπότε η γεωαναφορά γίνεται **αναλυτική**: `{originWorld: sourceOrigin, rotationDeg: 0}` επαναφέρει ακριβώς τις συντεταγμένες του αρχείου, με μηδενικό υπόλοιπο. ⚠️ **Το culling ΔΕΝ αλλάζει και τα entities ΔΕΝ μετακινούνται στο ΕΓΣΑ** — η φορά μένει world→local (`regenerate-topo.ts`)· το `sourceOrigin` είναι **μεταδεδομένο**, όχι μετασχηματισμός γεωμετρίας. 🔴 **Τα ήδη αποθηκευμένα DXF έχουν χάσει το offset ΟΡΙΣΤΙΚΑ** (δεν ανακτάται) — θέλουν **re-import**, αλλιώς πέφτουν στο γεωμετρικό σκέλος του M10e. Δεύτερη, ανεξάρτητη παγίδα που διορθώθηκε μαζί: το `services/dxf-scene-json.ts` έχτιζε τη σκηνή με **χειροκίνητο whitelist 4 πεδίων** → κάθε νέο πεδίο γραφόταν σωστά και **εξαφανιζόταν σιωπηλά στο reload**· έτρωγε ήδη **4 υπάρχοντα** πεδία (`dimStyles`, `headerDimscale`, `linetypeScale`, `version`). Λύθηκε **ως κατηγορία** (spread-then-override), όχι με προσθήκη ενός ακόμη ονόματος στη λίστα. Δες **ADR-650 §M10e v21**.
 - **2026-07-20 — Φ C.18 (🐛 γραμμοσκιάσεις ΧΑΝΟΝΤΑΙ στο hard refresh — server-wizard Door B δεν first-save-άρει ποτέ, Opus 4.8):** UNCOMMITTED. Πλήθος **2277→2178** στο reload (−99). **Ground-truth (MCP):** `floorplan_hatches` **άδεια (0 docs)**· blob = 117 hatch + 2178 pure-DXF· `reconcileLoadedSceneBim` πετά και τις 117 → 2178 (ακριβώς το μετρημένο). **ΔΥΟ πόρτες:** Door A (client, `commitImportedScene`→emit→first-save, δουλεύει) vs **Door B (server wizard ADR-033, `useLevelSceneLoader` Tier-2 apply — ΠΟΤΕ δεν εκπέμπει create event → κανένα doc)**. Ο server parser = μόνο primitives + hatch (BIM/stair interactive-only) → η στριμωγμένη-χωρίς-docs οικογένεια είναι **hatch-only**. **Απόφαση Giorgio «2 και net στο 1»** (source fix + idempotent net, συγκλίνουν στον loader). **Fix:** NEW `backfill-missing-per-entity-docs.ts` (`detectMissingPerEntityDocIds` = read-only `batchGet` ανά family → ids χωρίς doc· `emitBackfillFirstSaves` = εκπέμπει μέσω του **ίδιου** emitter ΜΟΝΟ για missing με explicit scope Φ C.16· το always-on `HatchPersistenceHost` γράφει → loader χωρίς userId/service) + NEW pure `reconcileLoadedSceneBimPreserving` (κρατά τα no-doc entities ορατά, no-flash· delegates στο base όταν κενό· base **ανέγγιχτο**) + `useLevelSceneLoader` detect→preserve→apply→emit (awaited πριν τον aborted guard) + `LevelPanel.onLoad`→`commitImportedScene` (N.18, durable link αντί session-only). **Δευτερεύον:** `HATCH_SCALAR_KEYS` δεν είχε `inlinePattern` → σωσμένη γραμμοσκίαση έχανε το μοτίβο (`HEX`) στο reload· προστέθηκε (Firestore-legal). **Ορθότητα:** doc υπάρχει→no-op byte-identical (stale-blob bug παραμένει αποτραμμένο)· 2× no-op· abort-safe. 2 NEW + 3 MOD + 2 test (12 tests)· 68/68· jscpd καθαρό. **Παραλείφθηκε:** logging στο `persistToScope` catch (αρχείο 628γρ>500 → χωριστή φάση με split). 🔴 browser: MCP count>0· reload → σταθερό πλήθος.
 - **2026-07-20 — Φ C.17 (🐛 οι 117 γραμμοσκιάσεις είναι ΟΡΦΑΝΕΣ ΑΠΟ LAYER — κάθε import αναγεννά τον χώρο των layer ids, Opus 4.8):** UNCOMMITTED. Άθροισμα per-layer **2178** vs scene **2295**· ζωγραφίζονται αλλά απρόσιτες από ορατότητα/πάγωμα/isolate/χρώμα. **Διορθώνει ΛΑΘΟΣ διάγνωση του Φ C.16** («timing gap μέτρησης· ο layerId μηχανισμός είναι σωστός») — η επαλήθευση κοίταξε parse/save/load/hydration **μεμονωμένα** και έχασε ότι ο **ΧΩΡΟΣ** των ids αναγεννιέται. **Ρίζα:** `registerLayer` δεν περνά ποτέ `id` → `createSceneLayer` κόβει νέο τυχαίο `lyr_<UUID>` σε ΚΑΘΕ import ακόμα και για ίδιο όνομα, ενώ οι γραμμοσκιάσεις persist-άρουν το παλιό `layerId` και το επιστρέφουν ωμό (`hatchDocToEntity`) → `resolveEntityLayerName` undefined → `getEntitiesByLayer` ποτέ match. Φαίνονται μόνο λόγω **fail-open** του `isEntityLayerSkipped`. **Ίδια αρρώστια με ADR-420** (volatile id): οι γραμμοσκιάσεις είναι το ορατό σύμπτωμα — **κάθε** per-entity service persist-άρει `layerId`. **SSoT audit:** κανένας deterministic generator, κανένα remap (0 hits), κανένα validation `lyr_` prefix, layers όχι Firestore docs· precedent explicit id σε 3 σημεία. **Απόφαση Giorgio «όπως οι μεγάλοι παίχτες»** → δύο κανόνες: ταυτότητα = **opaque σταθερό id ποτέ παράγωγο ονόματος** (Revit UniqueId/Figma node id/ArchiCAD GUID/AutoCAD handle) + **reconcile-by-name στο σύνορο εισαγωγής** (ArchiCAD Attribute Manager/AutoCAD XREF bind/Revit link-reload). **⛔ Η σύσταση «deterministic id = f(όνομα)» απορρίφθηκε**: θα έσπαγε το `renameLayer` invariant (κλειδωμένο από `layer-rename-backref-integration.test.ts`) ορφανιάζοντας όλα τα entities σε κάθε μετονομασία. **Fix:** NEW pure `reconcile-scene-layer-identity.ts` (post-pass στο import boundary — ο builder είναι pure & τρέχει σε **worker**, απαγορεύεται store access· καλύπτει ΚΑΙ .tek) + NEW `commit-imported-scene.ts` (**Boy Scout N.18** — τα 2 branches είχαν την ίδια πεντάδα copy-pasted, το reconcile θα ήταν το 3ο δίδυμο) + `sourceName` immutable στο `SceneLayer` (χωρίς αυτό, rename→re-import ξανα-ορφάνιαζε) + διόρθωση **σχολίου που έλεγε ψέματα** στο `resolveEntityLayerName` (υποσχόταν legacy fallback που ο κώδικας δεν είχε ποτέ — διορθώθηκε το σχόλιο, ΟΧΙ ο κώδικας). **Κρίσιμα:** ΤΡΕΙΣ nested containers (block/array/group, όχι μόνο blocks)· injectivity (δύο incoming στο ίδιο id θα έσβηναν layer σιωπηλά)· union carry-over (αλλιώς BIM entities ορφανιάζουν εκ νέου)· case-insensitive (AutoCAD parity)· merge policy «κατάσταση=χρήστης, εμφάνιση=αρχείο» (ο builder ψήνει το BYLAYER χρώμα)· άγνωστο layerId μένει ανέπαφο ώστε το ανοιχτό **ADR-670** να μην κρυφτεί· identity-mapping skip για structural sharing (ADR-040 WeakMap). 4 MOD + 2 NEW + 2 test files (19 tests)· 150/150 levels, 54/54 regression· jscpd καθαρό· **discriminating: εξουδετέρωση → 10/15 fail**. Τα 117 ήδη-ορφανά docs: πληροφορία χαμένη (το όνομα δεν σώθηκε ποτέ) → **καθαρό re-import**, καμία migration μηχανή. 🔴 browser: re-import → άθροισμα per-layer === 2295· visibility off → εξαφανίζονται.

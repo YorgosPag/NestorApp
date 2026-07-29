@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { isPerfHarnessRouteEnabled } from '@/config/test-harness-access';
 import DxfPerfHarness from './DxfPerfHarness';
 
 /**
@@ -10,10 +11,12 @@ import DxfPerfHarness from './DxfPerfHarness';
  * tight loop — the pattern Speedometer 3 abandoned) and NOT `/dxf/viewer` (AdminGuard
  * puts the backend in the loop — the noise Web Page Replay exists to remove).
  *
- * Dev-only — 404 in production, same guard as its sibling harnesses. The Φ5 criterion
- * needs a production measurement; that opt-in is a separate, explicit decision.
+ * 404 σε παραγωγή, **εκτός** αν το build ζήτησε ρητά το αντίθετο με
+ * `ENABLE_PERF_HARNESS=1` — το κριτήριο Φ5 απαιτεί μέτρηση σε production build, και η
+ * έκδοση ανάπτυξης (StrictMode = διπλό render) δεν το περιγράφει. Διακόπτης χρόνου
+ * **κατασκευής**, σβηστός από προεπιλογή· λεπτομέρειες στο SSoT της πολιτικής.
  */
 export default function DxfPerfHarnessPage() {
-  if (process.env.NODE_ENV === 'production') notFound();
+  if (!isPerfHarnessRouteEnabled()) notFound();
   return <DxfPerfHarness />;
 }
