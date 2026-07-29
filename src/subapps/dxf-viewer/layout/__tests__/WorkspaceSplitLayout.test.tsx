@@ -30,6 +30,21 @@ jest.mock('../../systems/workspace/workspace-dock-store', () => {
   };
 });
 
+/*
+  ADR-724 Φ3 — Η αιωρούμενη παλέτα αντικαθίσταται με δείκτη, ΕΠΙΤΗΔΕΣ.
+
+  Το `WorkspaceFloatingPalette` σέρνει μαζί του `FloatingPanel` → `useDraggable` →
+  `useResizable` → design tokens → localStorage. Αν αποδιδόταν εδώ, αυτό το αρχείο θα έπαυε να
+  ελέγχει **διακλάδωση διάταξης** και θα γινόταν integration test της αιώρησης — δηλαδή θα
+  κοκκίνιζε για λόγους άσχετους με τον σκοπό του. Η ίδια η αιώρηση ελέγχεται στο δικό της
+  αρχείο (`WorkspaceFloatingPalette.test.tsx`).
+*/
+jest.mock('../WorkspaceFloatingPalette', () => ({
+  WorkspaceFloatingPalette: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="floating-palette">{children}</div>
+  ),
+}));
+
 import { WorkspaceSplitLayout } from '../WorkspaceSplitLayout';
 import { getDockedWidth, setDockedWidth, setDockMode } from '../../systems/workspace/workspace-dock-store';
 // ADR-724 §5.2 — το πληκτρολόγιο του splitter ΔΕΝ ζει σε αυτό το αρχείο· ζει στον φύλακα
@@ -39,9 +54,21 @@ import { shouldGlobalShortcutYield } from '@/lib/a11y/keyboard-scope';
 const SIDEBAR = <aside data-testid="sidebar">παλέτα</aside>;
 const CANVAS = <section data-testid="canvas">καμβάς</section>;
 
+/**
+ * Ποια **μορφή** ζήτησε η διάταξη από την παλέτα στο τελευταίο render (ADR-724 Φ3).
+ *
+ * Το `variant` δεν είναι διακοσμητικό: αποφασίζει ποιος φοράει το περίγραμμα/σκιά. Λάθος τιμή
+ * ⇒ διπλή κάρτα μέσα στο `FloatingPanel`. Είναι παρατηρήσιμο **μόνο** από τον καλούντα, γι'
+ * αυτό καταγράφεται εδώ.
+ */
+let requestedVariant: string | null = null;
+
 function renderLayout(split: boolean) {
   return render(
-    <WorkspaceSplitLayout split={split} sidebar={SIDEBAR}>
+    <WorkspaceSplitLayout
+      split={split}
+      sidebar={(variant) => { requestedVariant = variant; return SIDEBAR; }}
+    >
       {CANVAS}
     </WorkspaceSplitLayout>,
   );
@@ -49,6 +76,7 @@ function renderLayout(split: boolean) {
 
 beforeEach(() => {
   localStorage.clear();
+  requestedVariant = null;
   setDockedWidth(384);
   setDockMode('docked-left'); // το store είναι module singleton — η πλευρά επιζεί των tests
 });
@@ -283,6 +311,73 @@ describe('ADR-724 Φ1 — WorkspaceSplitLayout', () => {
         .filter(([key]) => String(key).includes('workspace-dock-width'));
       expect(widthWrites).toHaveLength(0);
       spy.mockRestore();
+    });
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ADR-724 Φ3 — αιωρούμενη
+  // ══════════════════════════════════════════════════════════════════════════
+
+  describe('🔴 Φ3 — η αιώρηση ΔΕΝ επιτρέπεται να πέσει στον κλάδο της αγκύρωσης', () => {
+    /*
+      ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΦΥΛΑΕΙ ΑΥΤΟ ΤΟ describe (handoff §4β, ADR-724 §14.8):
+
+      Μέχρι τη Φ2 η διάταξη ρωτούσε `isDockedRight(mode) ? [καμβάς,δ,παλέτα] : [παλέτα,δ,καμβάς]`.
+      Ένα **δυαδικό** predicate πάνω σε **τριμερή** ένωση δεν παράγει σφάλμα μεταγλώττισης: το
+      `'floating'` απαντά «όχι δεξιά» και πέφτει στο `else`. Αποτέλεσμα: ο χρήστης επιλέγει
+      «Αιωρούμενη» και παίρνει **αγκυρωμένη αριστερά** — με διαχωριστικό, με splitter, με τα πάντα.
+
+      Κάθε test εδώ κοκκινίζει αν κάποιος επαναφέρει το δυαδικό predicate.
+    */
+    it('καμία ομάδα splitter — η αιωρούμενη παλέτα δεν μοιράζεται χώρο με τίποτα', () => {
+      setDockMode('floating');
+      const { container } = renderLayout(true);
+      expect(container.querySelector('[data-group]')).toBeNull();
+    });
+
+    it('κανένα διαχωριστικό — δεν υπάρχει πλάτος panel να αλλάξει', () => {
+      setDockMode('floating');
+      renderLayout(true);
+      expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+    });
+
+    it('η παλέτα αποδίδεται ΜΕΣΑ στο αιωρούμενο δοχείο, όχι σε panel', () => {
+      setDockMode('floating');
+      renderLayout(true);
+      const host = screen.getByTestId('floating-palette');
+      expect(host).toContainElement(screen.getByTestId('sidebar'));
+      // Και ο καμβάς **έξω** από αυτό: αν ήταν μέσα, η παλέτα θα «περιείχε» τον καμβά.
+      expect(host).not.toContainElement(screen.getByTestId('canvas'));
+    });
+
+    it('ο καμβάς παραμένει ορατός — η αιώρηση δεν είναι απόκρυψη', () => {
+      setDockMode('floating');
+      renderLayout(true);
+      expect(screen.getByTestId('canvas')).toBeInTheDocument();
+    });
+  });
+
+  describe('Φ3 — ποια μορφή ζητείται από την παλέτα', () => {
+    it('αγκυρωμένη ⇒ «inline» (η παλέτα ΕΙΝΑΙ η κάρτα)', () => {
+      renderLayout(true);
+      expect(requestedVariant).toBe('inline');
+    });
+
+    it('αιωρούμενη ⇒ «floating» (η κάρτα είναι το FloatingPanel ⇒ μηδέν διπλό περίγραμμα)', () => {
+      setDockMode('floating');
+      renderLayout(true);
+      expect(requestedVariant).toBe('floating');
+    });
+
+    it('🔴 κινητό ⇒ «drawer» ΑΚΟΜΗ ΚΑΙ ΜΕ αποθηκευμένο «floating»', () => {
+      // Το dock system είναι desktop-only (§4.5). Ένας χρήστης που άφησε την παλέτα
+      // αιωρούμενη στο desktop και άνοιξε τον viewer σε tablet ΔΕΝ πρέπει να πάρει
+      // αιωρούμενο panel μέσα σε συρτάρι. Ο έλεγχος `split` προηγείται — και αυτό το test
+      // είναι ο λόγος που τα δύο ερωτήματα δεν συγχωνεύτηκαν σε έναν διακόπτη.
+      setDockMode('floating');
+      renderLayout(false);
+      expect(requestedVariant).toBe('drawer');
+      expect(screen.queryByTestId('floating-palette')).not.toBeInTheDocument();
     });
   });
 

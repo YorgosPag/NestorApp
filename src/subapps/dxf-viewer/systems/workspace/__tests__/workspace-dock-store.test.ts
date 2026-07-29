@@ -217,3 +217,131 @@ describe('ADR-724 — workspace-dock-store', () => {
     });
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADR-724 Φ3 — Η ΤΕΛΕΥΤΑΙΑ ΠΛΕΥΡΑ ΚΑΙ Η ΕΝΑΛΛΑΓΗ
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const LAST_SIDE_KEY = 'dxf-viewer:workspace-dock-last-side:v1';
+
+describe('ADR-724 Φ3 — η μνήμη της πλευράς', () => {
+  describe('getLastDockedSide / η καταγραφή γίνεται ΜΕΣΑ στο setDockMode', () => {
+    it('χωρίς ιστορικό ⇒ η προεπιλεγμένη πλευρά', async () => {
+      const store = await freshStore();
+      expect(store.getLastDockedSide()).toBe('docked-left');
+    });
+
+    it('🔴 κάθε αγκύρωση καταγράφεται — ο καλών δεν χρειάζεται να το θυμηθεί', async () => {
+      /*
+        Υπάρχουν ΤΕΣΣΕΡΙΣ ανεξάρτητοι καλούντες του `setDockMode` (μενού «⋮», μενού δεξιού
+        κλικ, απόθεση σε ζώνη §7.1, διπλό κλικ επικεφαλίδας). Αν η καταγραφή ζούσε στον
+        καλούντα, θα αρκούσε ΕΝΑΣ να την ξεχάσει ώστε η παλέτα να «γυρίζει αριστερά»
+        ανεξήγητα — και μόνο στη διαδρομή που κανείς δεν δοκίμασε.
+      */
+      const store = await freshStore();
+      store.setDockMode('docked-right');
+      expect(store.getLastDockedSide()).toBe('docked-right');
+    });
+
+    it('🔴 η αιώρηση ΔΕΝ σβήνει τη μνήμη — αλλιώς δεν υπάρχει «επιστροφή εκεί που ήταν»', async () => {
+      const store = await freshStore();
+      store.setDockMode('docked-right');
+      store.setDockMode('floating');
+      expect(store.getDockMode()).toBe('floating');
+      expect(store.getLastDockedSide()).toBe('docked-right');
+    });
+
+    it('η μνήμη επιβιώνει επανεκκίνησης (είναι ιδιότητα του χρήστη, όχι της συνεδρίας)', async () => {
+      const first = await freshStore();
+      first.setDockMode('docked-right');
+      first.setDockMode('floating');
+
+      const second = await freshStore(); // νέο άνοιγμα του app
+      expect(second.getLastDockedSide()).toBe('docked-right');
+    });
+
+    it('αλλοιωμένη αποθηκευμένη τιμή «floating» ⇒ προεπιλογή, όχι βρόχος', async () => {
+      // Αν περνούσε, το διπλό κλικ θα εναλλασσόταν από αιώρηση σε αιώρηση = τίποτα.
+      localStorage.setItem(LAST_SIDE_KEY, JSON.stringify('floating'));
+      const store = await freshStore();
+      expect(store.getLastDockedSide()).toBe('docked-left');
+    });
+  });
+
+  describe('toggleDockFloat — η χειρονομία του διπλού κλικ (§8)', () => {
+    it('αγκυρωμένη ⇒ αιωρούμενη', async () => {
+      const store = await freshStore();
+      store.toggleDockFloat();
+      expect(store.getDockMode()).toBe('floating');
+    });
+
+    it('🔴 αιωρούμενη ⇒ επιστρέφει ΕΚΕΙ ΠΟΥ ΗΤΑΝ, όχι στην προεπιλογή (κανόνας Revit)', async () => {
+      const store = await freshStore();
+      store.setDockMode('docked-right');
+      store.toggleDockFloat();            // → floating
+      store.toggleDockFloat();            // → πίσω
+      expect(store.getDockMode()).toBe('docked-right');
+    });
+
+    it('το ζεύγος είναι ιδεμποτεντικό: δύο εναλλαγές = καμία', async () => {
+      const store = await freshStore();
+      const before = store.getDockMode();
+      store.toggleDockFloat();
+      store.toggleDockFloat();
+      expect(store.getDockMode()).toBe(before);
+    });
+
+    it('η εναλλαγή ΔΕΝ αγγίζει το πλάτος — ο χρήστης δεν ζήτησε άλλο μέγεθος', async () => {
+      const store = await freshStore();
+      store.setDockedWidth(640);
+      store.toggleDockFloat();
+      store.toggleDockFloat();
+      expect(store.getDockedWidth()).toBe(640);
+    });
+  });
+
+  describe('resetDockLayout — «Reset palette locations» (§7)', () => {
+    it('🔴 επαναφέρει ΚΑΙ τη μνήμη πλευράς, όχι μόνο την τρέχουσα κατάσταση', async () => {
+      /*
+        Χωρίς αυτό, ο χρήστης πατά «Επαναφορά», βλέπει την παλέτα αριστερά, την αιωρεί με
+        διπλό κλικ, ξανα-διπλοκλικάρει — και προσγειώνεται ΔΕΞΙΑ, από μια συνεδρία που
+        νόμιζε ότι είχε σβήσει. Μερική επαναφορά είναι χειρότερη από καμία.
+      */
+      const store = await freshStore();
+      store.setDockMode('docked-right');
+      store.setDockMode('floating');
+
+      store.resetDockLayout();
+
+      expect(store.getDockMode()).toBe('docked-left');
+      expect(store.getLastDockedSide()).toBe('docked-left');
+      store.toggleDockFloat();
+      store.toggleDockFloat();
+      expect(store.getDockMode()).toBe('docked-left');
+    });
+
+    it('παραμένει ιδεμποτεντικό με το τρίτο πεδίο (N.7.2 #3)', async () => {
+      const store = await freshStore();
+      store.setDockMode('floating');
+      store.resetDockLayout();
+      store.resetDockLayout();
+      expect(store.getDockMode()).toBe('docked-left');
+      expect(store.getLastDockedSide()).toBe('docked-left');
+      expect(store.getDockedWidth()).toBe(DEFAULT_WIDTH);
+    });
+  });
+
+  describe('η ενυδάτωση δέχεται πλέον το «floating» (Φ3)', () => {
+    it('αποθηκευμένο «floating» ⇒ επιστρέφεται, δεν πέφτει στην προεπιλογή', async () => {
+      localStorage.setItem(MODE_KEY, JSON.stringify('floating'));
+      const store = await freshStore();
+      expect(store.getDockMode()).toBe('floating');
+    });
+
+    it('άγνωστη κατάσταση ⇒ προεπιλογή (ο φύλακας δεν αφαιρέθηκε)', async () => {
+      localStorage.setItem(MODE_KEY, JSON.stringify('docked-top'));
+      const store = await freshStore();
+      expect(store.getDockMode()).toBe('docked-left');
+    });
+  });
+});
