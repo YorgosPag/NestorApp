@@ -14,7 +14,16 @@ import { applyEntityPreview } from '../apply-entity-preview';
 // ADR-557 Φ-attachment — the box now measures real glyph metrics (width + vertical ink).
 // Pin a deterministic stub whose ink == its font metrics, so the VISUAL box equals the
 // nominal em box (extent ratio 1) and these resize expectations stay machine-independent.
-import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installStubFont, stubEmSize } from '../../../text-engine/fonts/__tests__/_stub-font';
+
+// ADR-635 Φ C.22 — το κείμενο βάφεται σε `em = ύψος × unitsPerEm / sCapHeight`, άρα το ΚΟΥΤΙ δεν
+// έχει το ονομαστικό ύψος: «250 + 40 = 290» ήταν σιωπηλή υπόθεση «em == ύψος κειμένου». Το σωστό
+// ερώτημα είναι «ποιο ονομαστικό ύψος ΞΑΝΑΠΑΡΑΓΕΙ το συρμένο κουτί» — αυτό μετρά ο βοηθός.
+// ⚠️ Κλήση ΜΕΣΑ στο `it()` (η γραμματοσειρά δηλώνεται στο `beforeAll`).
+/** Επαλήθευσε ότι το `height` του ghost δίνει κουτί ύψους `boxHeight`. */
+const expectBoxHeight = (height: number, boxHeight: number): void => {
+  expect(stubEmSize(height)).toBeCloseTo(boxHeight, 6);
+};
 
 let __stubCleanup: () => void;
 beforeAll(() => { __stubCleanup = installStubFont(); });
@@ -59,7 +68,7 @@ describe('applyEntityPreview — text/mtext', () => {
       gripKind: { on: 'text', kind: 'text-corner-se' }, anchorPos: { x: 0, y: 0 },
     };
     const ghost = applyEntityPreview(mtext(), preview) as unknown as { widthFactor?: number; height: number };
-    expect(ghost.height).toBeCloseTo(290, 6);           // SE corner grows height by |Δy|=40
+    expectBoxHeight(ghost.height, stubEmSize(250) + 40); // SE corner grows the BOX height by |Δy|=40
     expect(typeof ghost.widthFactor).toBe('number');    // hug stretch, not a frame resize
   });
 
@@ -81,8 +90,8 @@ describe('applyEntityPreview — text/mtext', () => {
     const ghost = applyEntityPreview(textNodeOnly(), preview) as unknown as { text: string; height: number };
     // Flat text injected → TextRenderer paints the ghost (was: missing → early-return → no ghost).
     expect(ghost.text).toBe('DDD');
-    // Height resized from the REAL 250 box (SE corner grows height by |Δy|=40), NOT the 2.5 default.
-    expect(ghost.height).toBeCloseTo(290, 6);
+    // Height resized from the REAL 250 box (SE corner grows the box by |Δy|=40), NOT the 2.5 default.
+    expectBoxHeight(ghost.height, stubEmSize(250) + 40);
   });
 
   // ADR-557 / body-drag — clicking INSIDE the text body and dragging arms a whole-entity
