@@ -16,7 +16,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-507-hatch-creation-system.md
  */
 
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { isHatchEntity } from '../../../types/entities';
 import type { HatchEntity, LineweightMm } from '../../../types/entities';
@@ -41,8 +41,6 @@ import {
   subscribeHatchPickMode,
   type HatchPickMode,
 } from '../../../bim/hatch/hatch-pick-mode-store';
-// ADR-507 — mode-aware «Απόσταση» στο «έτοιμο μοτίβο»: patternScale ⇄ spacing (write-side).
-import { patternScaleForSpacingMm } from '../../../bim/geometry/shared/hatch-pattern-geometry';
 // ADR-507 — «Επιλογή γραμμοσκίασης» (armed pick-existing) mode SSoT.
 import {
   armHatchSelect,
@@ -56,13 +54,15 @@ import {
   withGradientPatch,
   type GradientFieldPatch,
 } from '../../../bim/hatch/hatch-gradient-build';
-import { normalizeGradientType, normalizeGradientShift } from '../../../bim/hatch/hatch-gradient';
+import { normalizeGradientType } from '../../../bim/hatch/hatch-gradient';
 // ADR-643 Φ3 — image-fill build SSoT (mirror του gradient-build).
 import {
   buildImageFillFromDefaults,
   withImageFillPatch,
   type ImageFieldPatch,
 } from '../../../bim/hatch/hatch-image-build';
+// ADR-507/643/653 — numeric-field write dispatcher (εξήχθη· όριο 500 γρ.).
+import { applyHatchNumberChange } from './bridge/hatch-bridge-number-write';
 // ADR-653 Φ9 — procedural υλικό (assetId `proc:*`) → panel visibility διάκριση.
 import { isProceduralAssetId } from '../../../data/procedural-material-catalog';
 // ADR-507/510 Φ4 — κοινό «Επίπεδο» field wiring (ίδιο SSoT με το line bridge).
@@ -75,6 +75,19 @@ import {
   imageDefaultPatch,
   IMAGE_STRING_FIELDS,
 } from './bridge/hatch-bridge-default-patch';
+// ADR-507 — contour-pen (περίγραμμα) bridge slice (εξήχθη· όριο 500 γρ.).
+import {
+  readHatchContourComboboxState,
+  getHatchContourToggleState,
+  applyHatchContourStringChange,
+  applyHatchContourToggleChange,
+} from './bridge/hatch-contour-bridge';
+// ADR-507/358 — live linetype catalog (ISO + custom) για το «Τύπος γραμμής» του περιγράμματος.
+import {
+  getLinetypeRegistrySnapshot,
+  subscribeLinetypeRegistry,
+} from '../../../stores/LinetypeRegistry';
+import { buildLinetypeRibbonOptions } from '../data/linetype-ribbon-options';
 import {
   HATCH_RIBBON_KEYS,
   isHatchRibbonNumberKey,
@@ -92,7 +105,6 @@ import type { useUniversalSelection } from '../../../systems/selection';
 import {
   useResolveSelectedEntity,
   useStableBridge,
-  clampTransparency,
   type RibbonEntityBridgeCore,
 } from './ribbon-entity-bridge-shared';
 
@@ -135,6 +147,12 @@ export function useRibbonHatchBridge(
     isHatchSelectArmed,
     isHatchSelectArmed,
   );
+  // ADR-507 — live linetype catalog για το «Τύπος γραμμής» του περιγράμματος (χαμηλή
+  // συχνότητα: registrations σπάνιες, mirror `useRibbonLineToolBridge`).
+  const linetypeRegistry = useSyncExternalStore(
+    subscribeLinetypeRegistry, getLinetypeRegistrySnapshot, getLinetypeRegistrySnapshot,
+  );
+  const linetypeOptions = useMemo(() => buildLinetypeRibbonOptions(), [linetypeRegistry]);
 
   const resolveHatch = useResolveSelectedEntity(levelManager, universalSelection, isHatchEntity);
   // ADR-510 Φ4 — «Επίπεδο»: per-object layerId (επιλεγμένο) / current layer (defaults).
@@ -182,17 +200,25 @@ export function useRibbonHatchBridge(
   );
 
   // Read-side εξήχθη ολόκληρο στο `hatch-bridge-read` (pure· single-responsibility +
-  // όριο 500 γρ.). Εδώ μένει μόνο η resolve-and-delegate.
+  // όριο 500 γρ.). Εδώ μένει μόνο η resolve-and-delegate. Το contour-pen slice (δικό
+  // του module, N.7.1) ρωτιέται ΠΡΩΤΟ — καθαρός, μηδέν state, μηδέν σειρά side effects.
   const getComboboxState = useCallback(
-    (commandKey: string): RibbonComboboxState | null =>
-      readHatchComboboxState(commandKey, resolveHatch(), defaults, layerField),
-    [resolveHatch, defaults, layerField],
+    (commandKey: string): RibbonComboboxState | null => {
+      const hatch = resolveHatch();
+      return readHatchContourComboboxState(commandKey, hatch, defaults, linetypeOptions)
+        ?? readHatchComboboxState(commandKey, hatch, defaults, layerField);
+    },
+    [resolveHatch, defaults, layerField, linetypeOptions],
   );
 
   const onComboboxChange = useCallback(
     (commandKey: string, value: string): void => {
       const hatch = resolveHatch();
       if (isHatchRibbonStringKey(commandKey)) {
+        // ADR-507 — contour-pen (περίγραμμα) πεδία: δικό τους module (N.7.1 όριο 500 γρ.).
+        if (applyHatchContourStringChange(commandKey, value, hatch, defaults, patchHatch, setHatchDrawDefaults)) {
+          return;
+        }
         if (commandKey === HATCH_RIBBON_KEYS.stringParams.layer) {
           layerField.apply(hatch, value);
           return;
@@ -263,89 +289,12 @@ export function useRibbonHatchBridge(
         return;
       }
       if (isHatchRibbonNumberKey(commandKey)) {
-        const numeric = Number.parseFloat(value);
-        if (Number.isNaN(numeric)) return;
-        // Διαφάνεια: 0 ΕΓΚΥΡΟ (αδιαφανές) → πριν τον generic >0 έλεγχο. Selected-only.
-        if (commandKey === HATCH_RIBBON_KEYS.params.transparency) {
-          if (numeric < 0 || !hatch) return;
-          patchHatch(hatch, { transparency: clampTransparency(numeric) });
-          return;
-        }
-        // Gap tolerance: 0 ΕΓΚΥΡΟ (απενεργοποίηση) → πριν από τον generic >0 έλεγχο.
-        if (commandKey === HATCH_RIBBON_KEYS.params.gapTolerance) {
-          if (numeric < 0) return;
-          if (hatch) patchHatch(hatch, { gapTolerance: numeric > 0 ? numeric : undefined });
-          else setHatchDrawDefaults({ gapTolerance: numeric });
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.gradientAngle) {
-          applyGradientChange(hatch, { field: 'angleDeg', value: numeric });
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.gradientShift) {
-          applyGradientChange(hatch, { field: 'shift', value: normalizeGradientShift(numeric) });
-          return;
-        }
-        // Image tile διαστάσεις (mm, >0) + γωνία (0..360· 0 ΕΓΚΥΡΟ → πριν τον generic >0 έλεγχο).
-        if (commandKey === HATCH_RIBBON_KEYS.params.imageTileWidth) {
-          if (numeric <= 0) return;
-          applyImageChange(hatch, { field: 'tileWidth', value: numeric });
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.imageTileHeight) {
-          if (numeric <= 0) return;
-          applyImageChange(hatch, { field: 'tileHeight', value: numeric });
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.imageAngle) {
-          if (numeric < 0) return;
-          applyImageChange(hatch, { field: 'angle', value: numeric });
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.groutWidth) {
-          if (numeric <= 0) return;
-          applyImageChange(hatch, { field: 'groutWidth', value: numeric });
-          return;
-        }
-        // Ένταση duotone: UI σε % (0..100· 0 ΕΓΚΥΡΟ → πριν τον generic >0 έλεγχο)· domain 0..1.
-        if (commandKey === HATCH_RIBBON_KEYS.params.tintStrength) {
-          if (numeric < 0) return;
-          applyImageChange(hatch, { field: 'tintStrength', value: Math.min(numeric, 100) / 100 });
-          return;
-        }
-        // Αρμός procedural (mm): 0 ΕΓΚΥΡΟ (χωρίς αρμό) → πριν τον generic >0 έλεγχο.
-        if (commandKey === HATCH_RIBBON_KEYS.params.procJointMm) {
-          if (numeric < 0) return;
-          applyImageChange(hatch, { field: 'procJointMm', value: numeric });
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.lineAngle) {
-          // «Γωνία»: predefined → patternAngle (ο renderer αγνοεί το lineAngle στο μοτίβο)·
-          // αλλιώς → lineAngle (user-defined).
-          const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
-          const patch = isPredef ? { patternAngle: numeric } : { lineAngle: numeric };
-          if (hatch) patchHatch(hatch, patch);
-          else setHatchDrawDefaults(patch);
-          return;
-        }
-        if (commandKey === HATCH_RIBBON_KEYS.params.patternScale) {
-          if (numeric <= 0) return;
-          if (hatch) patchHatch(hatch, { patternScale: numeric });
-          else setHatchDrawDefaults({ patternScale: numeric });
-          return;
-        }
-        if (numeric <= 0) return;
-        // «Απόσταση»: predefined → μεταφράζεται σε patternScale ώστε οι γραμμές του μοτίβου
-        // να απέχουν ~numeric mm (SSoT conversion)· αλλιώς → lineSpacing (user-defined mm).
-        const isPredef = (hatch?.fillType ?? defaults.fillType) === 'predefined';
-        if (isPredef) {
-          const patternScale = patternScaleForSpacingMm(hatch?.patternName ?? defaults.patternName, numeric);
-          if (hatch) patchHatch(hatch, { patternScale });
-          else setHatchDrawDefaults({ patternScale });
-          return;
-        }
-        if (hatch) patchHatch(hatch, { lineSpacing: numeric });
-        else setHatchDrawDefaults({ lineSpacing: numeric });
+        // ADR-507/643/653 — δικό του module (N.7.1 όριο 500 γρ.)· κάλυψη σε
+        // `hatch-bridge-number-write.test.ts`.
+        applyHatchNumberChange(
+          commandKey, value, hatch, defaults, patchHatch, setHatchDrawDefaults,
+          applyGradientChange, applyImageChange,
+        );
       }
     },
     [resolveHatch, patchHatch, applyGradientChange, applyImageChange, defaults, layerField],
@@ -376,6 +325,10 @@ export function useRibbonHatchBridge(
         return;
       }
       const hatch = resolveHatch();
+      // ADR-507 — contour-pen (περίγραμμα) ορατότητα: δικό της module (N.7.1 όριο 500 γρ.).
+      if (applyHatchContourToggleChange(commandKey, nextValue, hatch, defaults, patchHatch, setHatchDrawDefaults)) {
+        return;
+      }
       // «Πίσω πλάνο»: ON → στο πίσω μέρος του entities array (ζωγραφίζεται ΚΑΤΩ)· OFF → μπροστά.
       // drawOrder = αποθηκευμένο intent, ReorderEntityCommand = η ενέργεια· ΕΝΑ compound = 1 undo.
       if (commandKey === HATCH_RIBBON_KEYS.toggles.sendToBack) {
@@ -406,7 +359,7 @@ export function useRibbonHatchBridge(
       if (hatch) patchHatch(hatch, { doubleCrossHatch: nextValue || undefined });
       else setHatchDrawDefaults({ doubleCrossHatch: nextValue });
     },
-    [resolveHatch, patchHatch, applyGradientChange, applyImageChange, executeCommand, levelManager, t],
+    [resolveHatch, patchHatch, applyGradientChange, applyImageChange, executeCommand, levelManager, t, defaults],
   );
 
   const getToggleState = useCallback(
@@ -424,6 +377,9 @@ export function useRibbonHatchBridge(
         return hatchSelectArmed;
       }
       const hatch = resolveHatch();
+      // ADR-507 — contour-pen (περίγραμμα) ορατότητα: δικό της module (N.7.1 όριο 500 γρ.).
+      const contourVisible = getHatchContourToggleState(commandKey, hatch, defaults);
+      if (contourVisible !== null) return contourVisible;
       // «Πίσω πλάνο» πατημένο = drawOrder στο back bucket (0). Νέες γραμμοσκιάσεις = 0 → ON.
       if (commandKey === HATCH_RIBBON_KEYS.toggles.sendToBack) {
         return hatch ? (hatch.drawOrder ?? 0) === 0 : NULL_TOGGLE;

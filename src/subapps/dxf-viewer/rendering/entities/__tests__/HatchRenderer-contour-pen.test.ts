@@ -33,6 +33,9 @@ function createMockCtx(width = 800, height = 600) {
   const calls: MockCtxCall[] = [];
   let strokeStyle = '';
   let lineWidth = 0;
+  // ADR-510 Φ2 — «ενεργό» dash pattern (ΤΕΛΕΥΤΑΙΟ setLineDash πριν το stroke), ίδιο ιδίωμα
+  // με strokeStyle/lineWidth παρακάτω: το stroke() καταγράφει το state που ίσχυε ΤΗ ΣΤΙΓΜΗ του.
+  let dash: readonly number[] = [];
   const record = (fn: string) => (...args: unknown[]): unknown => { calls.push({ fn, args }); return undefined; };
   const canvas = {
     width, height, clientWidth: width, clientHeight: height,
@@ -43,9 +46,14 @@ function createMockCtx(width = 800, height = 600) {
     save: record('save'), restore: record('restore'),
     beginPath: record('beginPath'), moveTo: record('moveTo'), lineTo: record('lineTo'),
     closePath: record('closePath'), clip: record('clip'), fill: record('fill'),
-    // Το stroke καταγράφει το ΕΝΕΡΓΟ στυλ — έτσι ελέγχουμε χρώμα/πάχος περιγράμματος.
-    stroke: (...args: unknown[]): unknown => { calls.push({ fn: 'stroke', args: [strokeStyle, lineWidth, ...args] }); return undefined; },
-    setLineDash: record('setLineDash'), createPattern: () => null,
+    // Το stroke καταγράφει το ΕΝΕΡΓΟ στυλ — έτσι ελέγχουμε χρώμα/πάχος/dash περιγράμματος.
+    stroke: (...args: unknown[]): unknown => { calls.push({ fn: 'stroke', args: [strokeStyle, lineWidth, dash, ...args] }); return undefined; },
+    setLineDash: (...args: unknown[]): unknown => {
+      calls.push({ fn: 'setLineDash', args });
+      dash = args[0] as readonly number[];
+      return undefined;
+    },
+    createPattern: () => null,
     set globalAlpha(_v: number) {},
     set globalCompositeOperation(_v: string) {},
     set fillStyle(_v: string) {},
@@ -108,6 +116,31 @@ describe('HatchRenderer — contour pen (ADR-507)', () => {
     const [outline] = renderWith({ visible: true, lineweightMm: 0.5 });
     expect(outline.args[1]).not.toBe(1);
     expect(outline.args[1] as number).toBeGreaterThan(0);
+  });
+
+  it('🔴 απόν `linetypeName` ⇒ ΣΥΜΠΑΓΗΣ γραμμή (zero regression για ήδη αποθηκευμένα)', () => {
+    const [outline] = renderWith({ visible: true });
+    expect(outline.args[2]).toEqual([]);
+  });
+
+  it('απόν `color`/`lineweightMm` ΜΑΖΙ με απόν `linetypeName` ⇒ κι αυτό συμπαγές', () => {
+    const [outline] = renderWith({ visible: true, color: '#ff00ff', lineweightMm: 0.5 });
+    expect(outline.args[2]).toEqual([]);
+  });
+
+  it("`linetypeName: 'Continuous'` (ρητό) ⇒ συμπαγής γραμμή, ίδιο με απόν", () => {
+    const [outline] = renderWith({ visible: true, linetypeName: 'Continuous' });
+    expect(outline.args[2]).toEqual([]);
+  });
+
+  it("άγνωστο `linetypeName` ⇒ συμπαγής γραμμή (καμία εξαφάνιση/σφάλμα)", () => {
+    const [outline] = renderWith({ visible: true, linetypeName: 'ΑΝΥΠΑΡΚΤΟ_LTYPE' });
+    expect(outline.args[2]).toEqual([]);
+  });
+
+  it("ρητό `linetypeName: 'Dashed'` ⇒ μη-κενό dash array (ζωγραφίζεται διακεκομμένο)", () => {
+    const [outline] = renderWith({ visible: true, linetypeName: 'Dashed' });
+    expect((outline.args[2] as number[]).length).toBeGreaterThan(0);
   });
 
   it('το `visible:false` ΔΕΝ σβήνει το γέμισμα — μόνο το περίγραμμα', () => {

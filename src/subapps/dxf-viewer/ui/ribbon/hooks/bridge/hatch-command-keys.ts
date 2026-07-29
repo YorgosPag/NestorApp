@@ -44,6 +44,12 @@ export const HATCH_RIBBON_KEYS = {
     procColorB: 'hatch.params.procColorB',
     /** ADR-653 Φ9 — χρώμα αρμού διαδικαστικού υλικού (hex) — μόνο procedural (grid/brick). */
     procJointColor: 'hatch.params.procJointColor',
+    /** ADR-507 — χρώμα περιγράμματος (contour pen, hex)· απόν ⇒ κληρονομεί το fillColor. */
+    contourColor: 'hatch.params.contourColor',
+    /** ADR-507 — πάχος περιγράμματος (contour pen, AutoCAD LWT)· 'ByLayer' = μη-customized (hairline). */
+    contourLineweight: 'hatch.params.contourLineweight',
+    /** ADR-507 — τύπος γραμμής περιγράμματος (contour pen, `LinetypeRegistry` SSoT)· απόν ⇒ Continuous. */
+    contourLinetype: 'hatch.params.contourLinetype',
   },
   params: {
     /** Γωνία γραμμών (μοίρες) — user-defined. */
@@ -96,6 +102,8 @@ export const HATCH_RIBBON_KEYS = {
      * `ReorderEntityCommand` (array-order = paint-order). Μόνο επιλεγμένη γραμμοσκίαση.
      */
     sendToBack: 'hatch.toggle.sendToBack',
+    /** ADR-507 — ζωγραφίζεται το περίγραμμα (contour pen) της γραμμοσκίασης; */
+    contourVisible: 'hatch.toggle.contourVisible',
   },
   readouts: {
     /** Live εμβαδόν (read-only, m²). */
@@ -150,7 +158,10 @@ export type HatchRibbonStringCommandKey =
   | typeof HATCH_RIBBON_KEYS.stringParams.tintColorB
   | typeof HATCH_RIBBON_KEYS.stringParams.procColorA
   | typeof HATCH_RIBBON_KEYS.stringParams.procColorB
-  | typeof HATCH_RIBBON_KEYS.stringParams.procJointColor;
+  | typeof HATCH_RIBBON_KEYS.stringParams.procJointColor
+  | typeof HATCH_RIBBON_KEYS.stringParams.contourColor
+  | typeof HATCH_RIBBON_KEYS.stringParams.contourLineweight
+  | typeof HATCH_RIBBON_KEYS.stringParams.contourLinetype;
 
 export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.doubleCrossHatch
@@ -160,7 +171,8 @@ export type HatchRibbonToggleKey =
   | typeof HATCH_RIBBON_KEYS.toggles.selectExisting
   | typeof HATCH_RIBBON_KEYS.toggles.methodPickPoint
   | typeof HATCH_RIBBON_KEYS.toggles.methodBoundary
-  | typeof HATCH_RIBBON_KEYS.toggles.sendToBack;
+  | typeof HATCH_RIBBON_KEYS.toggles.sendToBack
+  | typeof HATCH_RIBBON_KEYS.toggles.contourVisible;
 
 export type HatchRibbonReadoutKey =
   | typeof HATCH_RIBBON_KEYS.readouts.area;
@@ -207,6 +219,9 @@ export const isHatchRibbonStringKey = makeKeySetGuard<HatchRibbonStringCommandKe
   HATCH_RIBBON_KEYS.stringParams.procColorA,
   HATCH_RIBBON_KEYS.stringParams.procColorB,
   HATCH_RIBBON_KEYS.stringParams.procJointColor,
+  HATCH_RIBBON_KEYS.stringParams.contourColor,
+  HATCH_RIBBON_KEYS.stringParams.contourLineweight,
+  HATCH_RIBBON_KEYS.stringParams.contourLinetype,
 ]);
 export const isHatchRibbonToggleKey = makeKeySetGuard<HatchRibbonToggleKey>([
   HATCH_RIBBON_KEYS.toggles.doubleCrossHatch,
@@ -217,6 +232,7 @@ export const isHatchRibbonToggleKey = makeKeySetGuard<HatchRibbonToggleKey>([
   HATCH_RIBBON_KEYS.toggles.methodPickPoint,
   HATCH_RIBBON_KEYS.toggles.methodBoundary,
   HATCH_RIBBON_KEYS.toggles.sendToBack,
+  HATCH_RIBBON_KEYS.toggles.contourVisible,
 ]);
 export const isHatchRibbonReadoutKey = makeKeySetGuard<HatchRibbonReadoutKey>([
   HATCH_RIBBON_KEYS.readouts.area,

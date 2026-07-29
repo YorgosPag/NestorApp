@@ -189,3 +189,29 @@ describe('buildHatchPostCreateCommands', () => {
     expect(cmds[1].name).toBe('HatchLifecycleSignal');
   });
 });
+
+// ADR-507 — contour-pen (περίγραμμα) draw-defaults wiring: baseline (ορατό, μηδέν
+// overrides) → ΑΠΟΝ `contourPen` (zero regression, ίδιο με πριν την προσθήκη του UI
+// ελέγχου)· customized draw-defaults → populated `contourPen`.
+describe('buildHatchEntityFromBoundary — contour pen', () => {
+  beforeEach(() => resetHatchDrawDefaults());
+
+  it('omits contourPen when the contour draw-defaults are untouched (baseline)', () => {
+    const h = buildHatchEntityFromBoundary(SQUARE, 'e1', 'lyr')!;
+    expect(h.contourPen).toBeUndefined();
+  });
+
+  it('populates contourPen when the user customizes the draw-default visibility', () => {
+    setHatchDrawDefaults({ contourVisible: false });
+    const h = buildHatchEntityFromBoundary(SQUARE, 'e1', 'lyr')!;
+    expect(h.contourPen).toEqual({ visible: false });
+  });
+
+  it('populates contourPen when the user customizes the draw-default color/lineweight/linetype', () => {
+    setHatchDrawDefaults({ contourColor: '#ff0000', contourLineweightMm: 0.5, contourLinetypeName: 'DASHED' });
+    const h = buildHatchEntityFromBoundary(SQUARE, 'e2', 'lyr')!;
+    expect(h.contourPen).toEqual({
+      visible: true, color: '#ff0000', lineweightMm: 0.5, linetypeName: 'DASHED',
+    });
+  });
+});

@@ -863,7 +863,13 @@ export interface HatchContourPen {
   /** Χρώμα περιγράμματος· απόν ⇒ το `fillColor`/`color` της γραμμοσκίασης. */
   color?: string;
   /** Πάχος σε mm (AutoCAD LWT, zoom-independent)· απόν ⇒ 1px hairline. */
-  lineweightMm?: number;
+  lineweightMm?: LineweightMm;
+  /**
+   * Όνομα linetype (SSoT: `LinetypeRegistry.resolveLinetype`)· απόν ⇒ `Continuous`.
+   * Καθαρά **viewer/print-side** — δεν εξάγεται στο DXF (το περίγραμμα δεν είναι
+   * native DXF έννοια για HATCH, βλ. `isHatchContourVisible` header).
+   */
+  linetypeName?: string;
 }
 
 /**

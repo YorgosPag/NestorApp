@@ -4303,6 +4303,10 @@
         "patternName": "Pattern",
         "patternScale": "Scale",
         "lineweight": "Lineweight",
+        "contourVisible": "Contour visible",
+        "contourColor": "Contour color",
+        "contourLineweight": "Contour lineweight",
+        "contourLinetype": "Contour linetype",
         "doubleCrossHatch": "Cross-hatch",
         "islandStyle": "Islands",
         "islandNormal": "Normal",
@@ -5752,6 +5756,9 @@
       },
       "pattern": {
         "title": "Pattern"
+      },
+      "contour": {
+        "title": "Contour"
       },
       "gradient": {
         "title": "Gradient"

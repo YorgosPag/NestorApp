@@ -39,9 +39,10 @@ describe('HATCH_PROPERTY_GROUPS descriptor', () => {
     }
   });
 
-  it('keeps general/pattern/info always-visible and gates gradient', () => {
+  it('keeps general/pattern/contour/info always-visible and gates gradient', () => {
     expect(groupById('general')?.visibilityKey).toBeUndefined();
     expect(groupById('pattern')?.visibilityKey).toBeUndefined();
+    expect(groupById('contour')?.visibilityKey).toBeUndefined();
     expect(groupById('info')?.visibilityKey).toBeUndefined();
     expect(groupById('gradient')?.visibilityKey).toBe(HATCH_RIBBON_KEYS.visibility.gradient);
   });
@@ -68,12 +69,21 @@ describe('HATCH_PROPERTY_GROUPS descriptor', () => {
     expect(byKeySuffix('.doubleCrossHatch')?.control).toBe('toggle');
     expect(byKeySuffix('.gradientSingleColor')?.control).toBe('toggle');
     expect(byKeySuffix('.area')?.control).toBe('readout');
+    // ADR-507 — contour-pen (περίγραμμα) fields.
+    expect(byKeySuffix('.contourVisible')?.control).toBe('toggle');
+    expect(byKeySuffix('.contourColor')?.control).toBe('color');
+    expect(byKeySuffix('.contourLineweight')?.control).toBe('select');
+    expect(byKeySuffix('.contourLinetype')?.control).toBe('select');
   });
 
   it('provides static options for select fields the bridge does not feed live', () => {
-    for (const suffix of ['.fillType', '.patternName', '.islandStyle', '.gradientType', '.lineweight']) {
+    for (const suffix of ['.fillType', '.patternName', '.islandStyle', '.gradientType', '.lineweight', '.contourLineweight']) {
       expect(byKeySuffix(suffix)?.options.length).toBeGreaterThan(0);
     }
+  });
+
+  it('leaves contour linetype options empty (live from the bridge, mirror `.layer`)', () => {
+    expect(byKeySuffix('.contourLinetype')?.options.length).toBe(0);
   });
 
   it('marks transparency / πίσω πλάνο / εμβαδόν as selection-only (hidden in draft)', () => {
@@ -82,5 +92,12 @@ describe('HATCH_PROPERTY_GROUPS descriptor', () => {
     expect(HATCH_SELECTION_ONLY_KEYS.has(HATCH_RIBBON_KEYS.readouts.area)).toBe(true);
     // Layer/pattern/color are NOT selection-only — they drive draw-defaults too.
     expect(HATCH_SELECTION_ONLY_KEYS.has(HATCH_RIBBON_KEYS.stringParams.layer)).toBe(false);
+  });
+
+  it('does NOT mark contour-pen fields as selection-only (drawing-time appearance, mirror fillColor)', () => {
+    expect(HATCH_SELECTION_ONLY_KEYS.has(HATCH_RIBBON_KEYS.toggles.contourVisible)).toBe(false);
+    expect(HATCH_SELECTION_ONLY_KEYS.has(HATCH_RIBBON_KEYS.stringParams.contourColor)).toBe(false);
+    expect(HATCH_SELECTION_ONLY_KEYS.has(HATCH_RIBBON_KEYS.stringParams.contourLineweight)).toBe(false);
+    expect(HATCH_SELECTION_ONLY_KEYS.has(HATCH_RIBBON_KEYS.stringParams.contourLinetype)).toBe(false);
   });
 });

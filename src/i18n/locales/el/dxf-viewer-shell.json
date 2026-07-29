@@ -4303,6 +4303,10 @@
         "patternName": "Μοτίβο",
         "patternScale": "Κλίμακα",
         "lineweight": "Πάχος",
+        "contourVisible": "Ορατό περίγραμμα",
+        "contourColor": "Χρώμα περιγράμματος",
+        "contourLineweight": "Πάχος περιγράμματος",
+        "contourLinetype": "Τύπος γραμμής περιγράμματος",
         "doubleCrossHatch": "Σταυρωτή",
         "islandStyle": "Νησίδες",
         "islandNormal": "Κανονικό",
@@ -5752,6 +5756,9 @@
       },
       "pattern": {
         "title": "Μοτίβο"
+      },
+      "contour": {
+        "title": "Περίγραμμα"
       },
       "gradient": {
         "title": "Διαβάθμιση"

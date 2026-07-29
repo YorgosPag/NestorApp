@@ -119,6 +119,21 @@ export const HATCH_PROPERTY_GROUPS: readonly EntityPropertyGroup[] = [
     ],
   },
   {
+    // ADR-507 — περίγραμμα (contour pen, ArchiCAD-style boundary pen): ορατότητα/χρώμα/
+    // πάχος/τύπος γραμμής. Ίδια κατηγορία με το `general` (drawing-time appearance, ΟΧΙ
+    // selection-only) — μια νέα γραμμοσκίαση υιοθετεί το επιλεγμένο στιλ περιγράμματος.
+    id: 'contour',
+    titleKey: 'hatchAdvancedPanel.sections.contour.title',
+    fields: [
+      H(K.toggles.contourVisible, lbl('contourVisible'), 'toggle'),
+      H(K.stringParams.contourColor, lbl('contourColor'), 'color'),
+      H(K.stringParams.contourLineweight, lbl('contourLineweight'), 'select', { options: LINEWEIGHT_RIBBON_OPTIONS }),
+      // Linetype options: live από το `LinetypeRegistry` (bridge.getComboboxState) — καμία
+      // στατική λίστα εδώ (mirror του `layer` field· ISO + custom registrations).
+      H(K.stringParams.contourLinetype, lbl('contourLinetype'), 'select'),
+    ],
+  },
+  {
     // Revit-style contextual: ορατό μόνο όταν fillType='gradient' (bridge.getPanelVisibility).
     id: 'gradient',
     titleKey: 'hatchAdvancedPanel.sections.gradient.title',

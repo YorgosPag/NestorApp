@@ -21,6 +21,7 @@ import { calculatePolygonArea } from '../../rendering/entities/shared/geometry-p
 import { getHatchDrawDefaults, type HatchDrawDefaults } from './hatch-draw-defaults-store';
 import { buildGradientFromDefaults } from './hatch-gradient-build';
 import { buildImageFillFromDefaults } from './hatch-image-build';
+import { buildContourPenFromDefaults, isContourAtBaseline } from './hatch-contour-build';
 import { isConcreteLineweight } from '../../config/lineweight-iso-catalog';
 import { projectVerticesTo2D } from '../geometry/shared/polygon-utils';
 
@@ -76,6 +77,10 @@ function buildHatchEntityFromPaths(
     // Πάχος γραμμών (AutoCAD LWT) — αποθηκεύεται μόνο όταν concrete· ByLayer/default
     // παραλείπεται ώστε ο renderer να εφαρμόσει το fallback (mirror completeEntity).
     lineweightMm: isConcreteLineweight(d.lineweightMm) ? d.lineweightMm : undefined,
+    // Contour pen (ADR-507) — μόνο όταν ο χρήστης έχει αγγίξει τα draw-defaults του
+    // περιγράμματος· στο baseline (ορατό, μηδέν overrides) μένει ΑΠΟΝ (zero regression
+    // — ίδιο `contourPen === undefined` με πριν την προσθήκη του UI ελέγχου).
+    contourPen: isContourAtBaseline(d) ? undefined : buildContourPenFromDefaults(d),
     // §5δ — back bucket· το ReorderEntityCommand κατεβάζει και τη θέση στον πίνακα.
     drawOrder: 0,
     visible: true,

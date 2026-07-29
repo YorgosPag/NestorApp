@@ -118,4 +118,55 @@ describe('ADR-507 — contour pen: το χαρτί είναι ΚΑΤΟΠΤΡΟ �
     const widthsPt = [...raw.matchAll(/([\d.]+) w\b/g)].map((m) => parseFloat(m[1]));
     expect(widthsPt.some((w) => Math.abs(w - 0.7 * MM_TO_PT) < 1e-6)).toBe(true);
   });
+
+  // ADR-510 Φ2 — contour pen linetype στο ΧΑΡΤΙ (κάτοπτρο του `HatchRenderer.ts` canvas path).
+  describe('contour pen linetype (ADR-510 Φ2)', () => {
+    /** Πλήθος `d` (dash-pattern) operators με ΜΗ-ΚΕΝΟ array γραμμένο στο content stream. */
+    const nonEmptyDashOps = (raw: string): number => (raw.match(/\[[^\]]+\] [\d.]+ d\b/g) ?? []).length;
+
+    it('🔴 απόν `linetypeName` ⇒ ΚΑΝΕΝΑ dash-pattern operator με περιεχόμενο (zero regression)', () => {
+      const raw = emitRaw([bareHatch({ id: 'legacy', contourPen: { visible: true } })]);
+      expect(nonEmptyDashOps(raw)).toBe(0);
+    });
+
+    it("`linetypeName: 'Continuous'` (ρητό) ⇒ ίδιο με απόν, καμία dash εγγραφή", () => {
+      const raw = emitRaw([bareHatch({
+        id: 'cont', contourPen: { visible: true, linetypeName: 'Continuous' },
+      })]);
+      expect(nonEmptyDashOps(raw)).toBe(0);
+    });
+
+    it('άγνωστο `linetypeName` ⇒ συμπαγής γραμμή, καμία dash εγγραφή', () => {
+      const raw = emitRaw([bareHatch({
+        id: 'unk', contourPen: { visible: true, linetypeName: 'ΑΝΥΠΑΡΚΤΟ_LTYPE' },
+      })]);
+      expect(nonEmptyDashOps(raw)).toBe(0);
+    });
+
+    it("ρητό `linetypeName: 'Dashed'` ⇒ γράφεται μη-κενό dash-pattern operator", () => {
+      const raw = emitRaw([bareHatch({
+        id: 'dashed', contourPen: { visible: true, linetypeName: 'Dashed' },
+      })]);
+      expect(nonEmptyDashOps(raw)).toBeGreaterThan(0);
+    });
+
+    it('το dash-state ΔΕΝ διαρρέει στην επόμενη γραμμοσκίαση της ΙΔΙΑΣ σελίδας', () => {
+      // Πρώτη: dashed contour. Δεύτερη: legacy (απόν linetypeName) σε ΔΙΑΦΟΡΕΤΙΚΗ θέση, ώστε τα
+      // δύο περιγράμματα να μην επικαλύπτονται. Αν το reset λείπει, η 2η θα κληρονομούσε dash.
+      const raw = emitRaw([
+        bareHatch({
+          id: 'dashed', contourPen: { visible: true, linetypeName: 'Dashed' },
+        }),
+        bareHatch({
+          id: 'legacy', contourPen: { visible: true },
+          boundaryPaths: [[
+            { x: 100, y: 100 }, { x: 140, y: 100 }, { x: 140, y: 140 }, { x: 100, y: 140 },
+          ]],
+        }),
+      ]);
+      // Ακριβώς ΕΝΑ μη-κενό dash operator (του πρώτου hatch) — ο δεύτερος επαναφέρει σε `[] d`
+      // πριν τυπώσει το δικό του (συμπαγές) περίγραμμα, άρα δεν προστίθεται δεύτερο μη-κενό.
+      expect(nonEmptyDashOps(raw)).toBe(1);
+    });
+  });
 });

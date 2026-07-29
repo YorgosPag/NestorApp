@@ -22,6 +22,10 @@ import { isHatchContourVisible, isSolidHatch } from '../../bim/hatch/hatch-prope
 import { applyPlotColor } from '../../config/print-color-policy';
 import type { ResolvedPatternCell } from './scene-image-resolver';
 import type { ResolvedStripeFill } from './scene-hatch-line-resolver';
+// ADR-510 Φ2 — ΙΔΙΟ όνομα→mm pattern SSoT με την οθόνη (`HatchRenderer.ts`). Απών/άγνωστο/
+// 'Continuous' → `[]` = συμπαγής γραμμή (μηδέν regression). jsPDF δουλεύει ήδη σε mm εδώ
+// (βλ. `setLineWidth(pen.lineweightMm)` παρακάτω) → καμία μετατροπή px χρειάζεται.
+import { resolveLinetypePatternMm } from '../../rendering/linetype-dash-resolver';
 // ADR-667 Φ3.1 — η ΙΔΙΑ διαφάνεια tint που χρησιμοποιεί η οθόνη (SSoT). Σκέτο `0.45` εδώ θα
 // περνούσε το jscpd πράσινο (N.18: δεν πιάνει σκέτο literal) και θα ξέφευγε τη μέρα που κάποιος
 // θα άλλαζε τη μία μόνο πλευρά.
@@ -288,7 +292,20 @@ function emitBoundaryOutline(
     pdf.setLineWidth(pen.lineweightMm);
   }
 
-  for (const loop of e.boundaryPaths ?? []) {
-    if (loop.length >= 2) strokePolyline(pdf, loop, true, toPaper);
+  // ADR-510 Φ2 — resolve όνομα → mm pattern (ΙΔΙΟ SSoT με την οθόνη). Απών/άγνωστο/'Continuous'
+  // ⇒ `[]` ⇒ ο κλάδος παρακάτω δεν πειράζει καθόλου το dash draw-state (μηδέν regression).
+  const dashMm = resolveLinetypePatternMm(pen?.linetypeName);
+  if (dashMm.length > 0) pdf.setLineDashPattern([...dashMm], 0);
+
+  try {
+    for (const loop of e.boundaryPaths ?? []) {
+      if (loop.length >= 2) strokePolyline(pdf, loop, true, toPaper);
+    }
+  } finally {
+    // 🔴 Το dash draw-state του jsPDF ΔΕΝ είναι scoped σε αυτό το stroke — διαρρέει σε ΚΑΘΕ
+    // επόμενο σχήμα της ΙΔΙΑΣ σελίδας (καμία άλλη εκπομπή σε αυτόν τον φάκελο δεν το άγγιξε
+    // ποτέ πριν — πρώτο dashed-print feature). Reset ΠΑΝΤΑ, ακόμα κι αν δεν τέθηκε pattern
+    // εδώ (defensive: leaked state από αλλού) και ό,τι κι αν συμβεί στο stroke loop.
+    pdf.setLineDashPattern([], 0);
   }
 }

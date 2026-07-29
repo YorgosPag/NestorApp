@@ -32,6 +32,8 @@ import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-patter
 import {
   isHatchContourVisible, isSolidHatch, resolveHatchLineWidthPx,
 } from '../../bim/hatch/hatch-properties';
+// ADR-507 — contour pen style + dash + stroke (N.7.1 extraction, keeps this file ≤500 lines).
+import { strokeHatchContourPen } from './hatch-contour-pen-draw';
 import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
 // ADR-507 Φ5 / A3 — pure gradient paint SSoT (κοινό με το live grip-drag ghost,
 // `draw-ghost-entity` case 'hatch'· preview === commit, μηδέν δεύτερη gradient math).
@@ -258,15 +260,12 @@ export class HatchRenderer extends BaseEntityRenderer {
     // δεύτερο, κάθε εισαγόμενο σχέδιο έβγαινε με **διπλή γραμμή**.
     // `undefined` ⇒ ορατό (backward-compat για ήδη αποθηκευμένα)· ο import γράφει ρητά `false`.
     // Η **συνθήκη** ζει στο `hatch-properties` (SSoT): την ίδια ερώτηση κάνει και το vector PDF.
-    const contour = hatch.contourPen;
+    // Στυλ + dash pattern + stroke: `strokeHatchContourPen` (N.7.1 — extracted κρατά αυτό το
+    // αρχείο ≤500 γραμμές).
     if (isHatchContourVisible(hatch)) {
-      this.ctx.strokeStyle = contour?.color ?? color;
-      this.ctx.lineWidth = contour?.lineweightMm !== undefined
-        ? resolveHatchLineWidthPx(contour.lineweightMm)
-        : 1;
-      this.ctx.setLineDash([]);
-      this.drawBoundaryPath(paths);
-      this.ctx.stroke();
+      strokeHatchContourPen(
+        this.ctx, hatch.contourPen, color, this.transform.scale, () => this.drawBoundaryPath(paths),
+      );
     }
 
     this.ctx.restore();

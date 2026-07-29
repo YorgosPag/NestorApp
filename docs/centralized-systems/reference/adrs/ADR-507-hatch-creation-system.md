@@ -1200,6 +1200,42 @@ alignElementId?: string;         // host· η γωνία μοτίβου = εφα
 
 ## 8. Changelog
 
+- **2026-07-30** — **CONTOUR PEN Φ3: PALETTE UI — ορατότητα/χρώμα/πάχος/linetype ΕΚΘΕΤΑ πλέον στο
+  αριστερό Properties palette.**
+
+  Το `HatchContourPen` (`visible`/`color`/`lineweightMm`/`linetypeName`) υπήρχε ήδη στο data model
+  (Φ1/Φ2) και στον renderer/χαρτί, αλλά ήταν **αόρατο στο UI** — ο χρήστης δεν μπορούσε να το
+  αλλάξει, μόνο ο import το έγραφε (`{ visible: false }`). Νέο group `contour` στο
+  `hatch-property-fields.ts` (μετά το `pattern`, πριν το `gradient`) με 4 πεδία: toggle (ορατό),
+  color, select (πάχος — reuse `LINEWEIGHT_RIBBON_OPTIONS`), select (linetype — live options από
+  το `LinetypeRegistry` μέσω `buildLinetypeRibbonOptions()`, ΟΧΙ νέα στατική λίστα). **Ίδια
+  κατηγορία με `fillColor`/`lineweight`** (drawing-time appearance) — ΟΧΙ selection-only: μια νέα
+  γραμμοσκίαση υιοθετεί το επιλεγμένο στιλ περιγράμματος ως draw-default (Revit «διάλεξε → σχεδίασε»).
+
+  🆕 `hatch-contour-build.ts` (bim/hatch, mirror `hatch-gradient-build.ts`): `ContourDefaults` +
+  `buildContourPenFromDefaults` + `withContourPenPatch` (immutable nested-object merge) +
+  `isContourAtBaseline` (guard ώστε μια ανέγγιχτη γραμμοσκίαση να συνεχίσει να αφήνει το
+  `contourPen` **ΑΠΟΝ** — zero-diff με πριν, το SSoT `isHatchContourVisible`/inherit-fillColor/
+  hairline/Continuous fallback μένει ανέγγιχτο). `HatchDrawDefaults` πήρε 4 flat πεδία
+  (`contourVisible`/`contourColor`/`contourLineweightMm`/`contourLinetypeName`, sentinels `''`/
+  ByLayer = «μη-customized»)· το `buildHatchEntityFromPaths` (hatch-completion.ts) τα υλοποιεί
+  ΜΟΝΟ όταν διαφέρουν από το baseline.
+
+  Bridge: `useRibbonHatchBridge.ts` ήταν ήδη στις 495/500 γραμμές — η προσθήκη έσπρωξε δύο
+  εξαγωγές (N.7.1): `bridge/hatch-contour-bridge.ts` (read/toggle/write dual-mode dispatch για
+  τα 4 πεδία περιγράμματος) + `bridge/hatch-bridge-number-write.ts` (ολόκληρο το προϋπάρχον
+  `hatch.params.*` numeric branch, άσχετο με το contour, εξήχθη για να χωρέσει). Οι δύο νέοι
+  dispatchers μοιράζονταν πανομοιότυπη παραμετρική υπογραφή (`patchHatch`/`setDrawDefaults`) —
+  jscpd (CHECK 3.28) το έπιασε ως sibling clone μέσα στο ίδιο commit· διορθώθηκε με κοινούς τύπους
+  `PatchHatchFn`/`SetHatchDrawDefaultsFn` σε `bridge/hatch-bridge-write-types.ts`.
+
+  i18n: `ribbon.commands.hatchEditor.contourVisible/contourColor/contourLineweight/contourLinetype`
+  + `hatchAdvancedPanel.sections.contour.title` (el+en, `npm run generate:i18n-types`).
+
+  Tests: `hatch-contour-build.test.ts`, `hatch-contour-bridge.test.ts`,
+  `hatch-bridge-number-write.test.ts`, + επεκτάσεις σε `hatch-completion.test.ts` (baseline vs
+  customized draw-defaults) και `hatch-property-fields.test.ts` (νέο group, όχι selection-only).
+
 - **2026-07-29 (β)** — **Φ7: `$MEASUREMENT` — ΣΕ ΤΙ ΜΟΝΑΔΕΣ ΕΙΝΑΙ Ο ΟΡΙΣΜΟΣ ΤΟΥ ΜΟΤΙΒΟΥ.**
 
   Το DXF group `41` **δεν είναι απόσταση** — είναι πολλαπλασιαστής πάνω σε έναν ορισμό μοτίβου

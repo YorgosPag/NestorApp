@@ -99,6 +99,17 @@ export interface HatchDrawDefaults {
   readonly procJointMm: number;
   /** Χρώμα αρμού διαδικαστικού υλικού (hex) — grid/brick. */
   readonly procJointColor: string;
+  // ── ADR-507 — περίγραμμα (contour pen): ορατότητα/χρώμα/πάχος/τύπος γραμμής ──
+  // Draft defaults για το ΕΠΟΜΕΝΟ hatch (mirror του `hatch-contour-build.ts`
+  // sentinel contract — '' / μη-concrete = μη-customized, κληρονομεί/hairline/Continuous).
+  /** Ζωγραφίζεται περίγραμμα στην επόμενη γραμμοσκίαση; */
+  readonly contourVisible: boolean;
+  /** Χρώμα περιγράμματος (hex) — '' = μη-customized (κληρονομεί το fillColor). */
+  readonly contourColor: string;
+  /** Πάχος περιγράμματος (AutoCAD LWT) — μη-concrete (ByLayer) = μη-customized (1px hairline). */
+  readonly contourLineweightMm: LineweightMm;
+  /** Όνομα linetype περιγράμματος — '' = μη-customized (Continuous). */
+  readonly contourLinetypeName: string;
 }
 
 // ADR-643 Φ3 — πρώτο catalog υλικό ως default· tile size DERIVED (SSoT, μηδέν διπλότυπη διάσταση).
@@ -146,6 +157,12 @@ export const DEFAULT_HATCH_DRAW_DEFAULTS: HatchDrawDefaults = {
   procColorB: '#f5f5f5',
   procJointMm: 8,
   procJointColor: '#9a9488',
+  // Contour-pen defaults (ADR-507) — baseline = ορατό, μηδέν overrides (ίδια συμπεριφορά
+  // με πριν την προσθήκη του UI ελέγχου· βλ. `isContourAtBaseline`).
+  contourVisible: true,
+  contourColor: '',
+  contourLineweightMm: LINEWEIGHT_SPECIAL.BYLAYER,
+  contourLinetypeName: '',
 };
 
 // Plain single-state store (always-notify· ο caller στέλνει partial patch → πάντα νέο object).
