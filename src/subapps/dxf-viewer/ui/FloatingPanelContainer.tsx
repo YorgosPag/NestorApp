@@ -29,6 +29,8 @@ import { usePanelContentRenderer } from './hooks/usePanelContentRenderer';
 // 🏢 ENTERPRISE: Centralized spacing tokens
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { DxfBreadcrumb } from './components/DxfBreadcrumb';
+// ADR-724 Φ4 §9.1 — οι κανόνες πυκνότητας απαντούν στο πλάτος ΤΗΣ ΠΑΛΕΤΑΣ, όχι του παραθύρου.
+import styles from './workspace-palette-density.module.css';
 
 interface FloatingPanelContainerProps {
   sceneModel: SceneModel | null;
@@ -132,11 +134,23 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   return (
     // 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds
     // 🧪 TEST: Removed quick.card to hide outer border
-    <div className={`${PANEL_LAYOUT.WIDTH.PANEL_LG} flex flex-col ${colors.bg.card} rounded-lg relative`}>
+    /*
+      ADR-724 Φ4 §9.1 — ΤΟ ΠΛΑΤΟΣ ΔΕΝ ΚΛΕΙΔΩΝΕΙ ΠΛΕΟΝ ΕΔΩ (ήταν `WIDTH.PANEL_LG` = `w-96` = 384px).
+
+      Η Φ1 ξεκλείδωσε το πλάτος στο `SidebarSection`, αλλά **αυτό** το δεύτερο κλείδωμα, ένα
+      επίπεδο πιο μέσα, επιβίωσε: η παλέτα μεγάλωνε και το περιεχόμενό της έμενε στα 384px,
+      αφήνοντας κενή λωρίδα δεξιά. Το trigger strip των καρτελών έχει **ήδη** `flex-wrap`
+      (`tabs-types.ts`) — δηλαδή ήξερε να ξεδιπλώνεται σε λιγότερες σειρές· απλώς δεν του
+      δινόταν ποτέ πλάτος πάνω από 384. Ένα `w-full` το ενεργοποιεί, χωρίς νέα μηχανική.
+
+      ⛔ ΜΗΝ ξαναβάλεις σταθερό πλάτος εδώ: ακυρώνει ΚΑΙ τη Φ1 (αλλαγή μεγέθους) ΚΑΙ όλο το
+      `workspace-palette-density.module.css` (ο container θα μετρά πάντα την ίδια τιμή).
+    */
+    <div className={`${PANEL_LAYOUT.WIDTH.FULL} ${styles.palette} flex flex-col ${colors.bg.card} rounded-lg relative`}>
       {/* 🏢 ENTERPRISE: Breadcrumb — Ιεραρχία τοποθεσίας σχεδίου (Εταιρεία → Έργο → Κτίριο → Όροφος) */}
       <DxfBreadcrumb />
       {/* 🏢 ENTERPRISE: Only bottom border on tabs container (quick.borderB) */}
-      <div className={`${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${colors.bg.card} ${quick.borderB}`}>
+      <div className={`${styles.tabStrip} ${PANEL_LAYOUT.FLEX_SHRINK.NONE} ${colors.bg.card} ${quick.borderB}`}>
         <PanelTabs
           activePanel={activePanel}
           onTabClick={panelNavigation.handleTabClick}
@@ -147,7 +161,11 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
 
       {/* ✅ ENTERPRISE: Centralized spacing from PANEL_LAYOUT (ADR-003) */}
       {/* 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds */}
-      <div className={`${colors.bg.card} ${colors.text.primary} ${PANEL_LAYOUT.SPACING.SM}`}>
+      {/*
+        ADR-724 Φ4 §9.1 — `styles.content` δεν αλλάζει τίποτα από μόνο του: είναι ο **εμβέλεια**
+        του κανόνα των δύο στηλών. Συμμετέχουν μόνο τα group που δηλώνουν `data-palette-rows`.
+      */}
+      <div className={`${styles.content} ${colors.bg.card} ${colors.text.primary} ${PANEL_LAYOUT.SPACING.SM}`}>
         {renderPanelContent()}
       </div>
 

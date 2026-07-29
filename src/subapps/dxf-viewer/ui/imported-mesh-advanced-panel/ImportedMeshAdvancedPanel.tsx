@@ -63,6 +63,8 @@ import {
 } from '../../bim/entities/imported-mesh/imported-mesh-param-access';
 import type { ImportedMeshEntity } from '../../bim/entities/imported-mesh/imported-mesh-types';
 import type { DispatchImportedMeshParamPatch } from './commands/dispatchImportedMeshParamPatch';
+// ADR-724 §14.7 — ο σκελετός του group ζει σε ΕΝΑ σημείο.
+import { PaletteGroupSection } from '../components/palette-primitives';
 import type { EntityPropertyField, EntityPropertyGroup } from '../entity-properties/entity-property-fields';
 import type { RibbonComboboxState } from '../ribbon/context/RibbonCommandContext';
 import type { RibbonNumericInputConfig } from '../ribbon/types/ribbon-types';
@@ -212,12 +214,11 @@ function MaterialSection({
     ? t('importedMeshAdvancedPanel.field.multipleMaterials')
     : entry?.label ?? sourceName ?? t('importedMeshAdvancedPanel.field.noMaterial');
   return (
-    <section className="flex flex-col gap-1">
-      <header>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t('importedMeshAdvancedPanel.section.material')}
-        </h4>
-      </header>
+    /*
+      ADR-724 §9.1 — ΧΩΡΙΣ `uniformRows`, σκόπιμα: το swatch των 64px κάνει αυτό το group
+      μεταβλητού ύψους. Σε δύο στήλες θα ξεχείλιζε δίπλα στην ετικέτα του.
+    */
+    <PaletteGroupSection title={t('importedMeshAdvancedPanel.section.material')} tone="overline">
       <div className="flex flex-col gap-1 py-0.5">
         <span className="truncate text-xs text-muted-foreground">
           {t('importedMeshAdvancedPanel.field.currentMaterial')}
@@ -238,7 +239,7 @@ function MaterialSection({
           <span className="truncate text-xs font-medium text-foreground">{displayLabel}</span>
         </div>
       </div>
-    </section>
+    </PaletteGroupSection>
   );
 }
 
@@ -247,18 +248,14 @@ function PartsSection({ mesh, t }: { mesh: ImportedMeshEntity; t: (key: string) 
   const slots = mesh.params.materialSlots ?? [];
   if (slots.length === 0) return null;
   return (
-    <section className="flex flex-col gap-1">
-      <header>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t('importedMeshAdvancedPanel.section.parts')}
-        </h4>
-      </header>
+    /* ADR-724 §9.1 — ΧΩΡΙΣ `uniformRows`: ένα `<ul>` είναι ΕΝΑ παιδί· θα πήγαινε ολόκληρο δεξιά. */
+    <PaletteGroupSection title={t('importedMeshAdvancedPanel.section.parts')} tone="overline">
       <ul className="flex flex-col gap-0.5">
         {slots.map((slotName) => (
           <li key={slotName} className="truncate text-xs text-foreground">{slotName}</li>
         ))}
       </ul>
-    </section>
+    </PaletteGroupSection>
   );
 }
 
@@ -267,16 +264,12 @@ function BoqSection({ mesh, t }: { mesh: ImportedMeshEntity; t: (key: string) =>
   const identity = mesh.params.importedMeshIdentity;
   if (!identity) return null;
   return (
-    <section className="flex flex-col gap-1">
-      <header>
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          {t('importedMeshAdvancedPanel.section.boq')}
-        </h4>
-      </header>
+    /* ADR-724 §9.1 — ΧΩΡΙΣ `uniformRows`: μία παράγραφος δεν είναι λίστα γραμμών. */
+    <PaletteGroupSection title={t('importedMeshAdvancedPanel.section.boq')} tone="overline">
       <p className="text-xs text-foreground">
         {identity.categoryCode} · {identity.titleEL} ({identity.unit})
       </p>
-    </section>
+    </PaletteGroupSection>
   );
 }
 

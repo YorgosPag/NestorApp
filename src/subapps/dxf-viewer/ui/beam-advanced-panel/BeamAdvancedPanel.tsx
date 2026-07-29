@@ -28,6 +28,8 @@ import {
 import type { DispatchBeamParams } from '../ribbon/hooks/bridge/useBeamParamsDispatcher';
 import { BEAM_EFFECTIVE_FLANGE_FIELD, BEAM_PROPERTY_GROUPS } from './beam-property-fields';
 import { BimPropertyRow } from '../bim-properties/BimPropertyRow';
+// ADR-724 §14.7 — ο σκελετός του group ζει σε ΕΝΑ σημείο.
+import { PaletteGroupSection } from '../components/palette-primitives';
 import type { BimPropertyGroup } from '../bim-properties/bim-property-types';
 import { EntityWarningsSection } from '../structural-warnings/EntityWarningsSection';
 import { IntermediateColumnsAction } from '../structural-warnings/IntermediateColumnsAction';
@@ -88,8 +90,8 @@ function BeamAdvancedSection({
     ) : null;
   const firstReadoutKey = group.fields.find((f) => f.readOnly)?.commandKey;
   return (
-    <section className="flex flex-col gap-1">
-      <h4 className="text-xs font-semibold text-foreground">{t(group.titleKey)}</h4>
+    /* ADR-724 §9.1 — `uniformRows`: κάθε παιδί είναι `BimPropertyRow` σταθερού ύψους. */
+    <PaletteGroupSection title={t(group.titleKey)} uniformRows>
       {group.fields.map((field) => (
         <React.Fragment key={field.commandKey}>
           {flangeRow && field.commandKey === firstReadoutKey ? flangeRow : null}
@@ -100,7 +102,7 @@ function BeamAdvancedSection({
           />
         </React.Fragment>
       ))}
-    </section>
+    </PaletteGroupSection>
   );
 }
 

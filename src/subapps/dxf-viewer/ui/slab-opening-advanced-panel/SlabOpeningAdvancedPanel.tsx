@@ -19,6 +19,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { SlabOpeningEntity } from '../../bim/types/slab-opening-types';
 import { isManagedOpeningParams } from '../../bim/stairs/managed-slab-opening-lock';
 import { SlabOpeningWarningsSection } from './sections/SlabOpeningWarningsSection';
+// ADR-724 §14.7 — ο σκελετός του group ζει σε ΕΝΑ σημείο.
+import { PaletteGroupSection } from '../components/palette-primitives';
 
 export interface SlabOpeningAdvancedPanelProps {
   readonly opening: SlabOpeningEntity;
@@ -45,10 +47,8 @@ export function SlabOpeningAdvancedPanel({
   return (
     <div className={containerClassName ?? 'flex flex-col gap-3 p-2'}>
       <SlabOpeningWarningsSection opening={opening} />
-      <section className="flex flex-col gap-1">
-        <h4 className="text-xs font-semibold text-foreground">
-          {t('slabOpeningAdvancedPanel.sections.info.title')}
-        </h4>
+      {/* ADR-724 §9.1 — ΧΩΡΙΣ `uniformRows`: το `<dl>` είναι ΗΔΗ δίστηλο και ΕΝΑ παιδί. */}
+      <PaletteGroupSection title={t('slabOpeningAdvancedPanel.sections.info.title')}>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <dt className="text-muted-foreground">{t('slabOpeningAdvancedPanel.info.kind')}</dt>
           <dd className="text-foreground">
@@ -59,7 +59,7 @@ export function SlabOpeningAdvancedPanel({
           <dt className="text-muted-foreground">{t('slabOpeningAdvancedPanel.info.status')}</dt>
           <dd className="text-foreground">{t(`slabOpeningAdvancedPanel.status.${statusKey}`)}</dd>
         </dl>
-      </section>
+      </PaletteGroupSection>
     </div>
   );
 }

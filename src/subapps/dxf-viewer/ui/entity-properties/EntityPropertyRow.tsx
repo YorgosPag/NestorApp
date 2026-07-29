@@ -26,6 +26,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useEscapeHandler, ESC_PRIORITY } from '@/subapps/dxf-viewer/systems/escape-bus';
 import { ColorDialogTrigger } from '../color/EnterpriseColorDialog';
 import { BimPropertyRow } from '../bim-properties/BimPropertyRow';
+// ADR-724 §14.7 — group & γραμμή σε ΕΝΑ σημείο (ήταν αντιγραμμένα σε 6 το καθένα).
+import { PaletteGroupSection, PaletteFieldRow } from '../components/palette-primitives';
 import {
   resolveNumericConfig,
   filterNumericDraft,
@@ -102,8 +104,12 @@ export function EntityPropertySection({
   readonly toggle?: EntityPropertyToggleBridge;
 }): React.ReactElement {
   return (
-    <section className="flex flex-col gap-1">
-      <h3 className="text-xs font-semibold text-foreground">{title}</h3>
+    /*
+      ADR-724 Φ4 §9.1 — `uniformRows`: ρητή συγκατάθεση στις δύο στήλες πάνω από 520px. Πληροί το
+      κριτήριο επειδή **κάθε** παιδί είναι `EntityPropertyRow`, δηλαδή `PaletteFieldRow` σταθερού
+      ύψους. `headingLevel={3}`: αυτό το group ζει στη ρίζα μιας καρτέλας, όχι φωλιασμένο.
+    */
+    <PaletteGroupSection title={title} headingLevel={3} uniformRows>
       {group.fields.map((f) => (
         <EntityPropertyRow
           key={f.commandKey}
@@ -113,7 +119,7 @@ export function EntityPropertySection({
           toggle={toggle}
         />
       ))}
-    </section>
+    </PaletteGroupSection>
   );
 }
 
@@ -122,8 +128,7 @@ export function EntityPropertySection({
 function ColorRow({ field, value, onChange }: ValueRowProps) {
   const label = useFieldLabel(field);
   return (
-    <div className="flex items-center justify-between gap-2 py-0.5">
-      <span className="truncate text-xs text-muted-foreground">{label}</span>
+    <PaletteFieldRow label={label}>
       <ColorDialogTrigger
         value={value}
         onChange={(hex) => onChange(field.commandKey, hex)}
@@ -136,7 +141,7 @@ function ColorRow({ field, value, onChange }: ValueRowProps) {
         eyedropper
         dimBackdrop={false}
       />
-    </div>
+    </PaletteFieldRow>
   );
 }
 
@@ -172,8 +177,7 @@ function DraftInputRow({
   };
 
   return (
-    <div className="flex items-center justify-between gap-2 py-0.5">
-      <span className="truncate text-xs text-muted-foreground">{label}</span>
+    <PaletteFieldRow label={label}>
       <Input
         className="h-7 w-36 shrink-0 text-xs"
         type="text"
@@ -185,7 +189,7 @@ function DraftInputRow({
         onBlur={finish}
         onKeyDown={(ev) => { if (ev.key === 'Enter') ev.currentTarget.blur(); }}
       />
-    </div>
+    </PaletteFieldRow>
   );
 }
 
@@ -266,8 +270,7 @@ function InlineRenameRow({ field, value, onChange }: ValueRowProps) {
   );
 
   return (
-    <div className="flex items-center justify-between gap-2 py-0.5">
-      <span className="truncate text-xs text-muted-foreground">{label}</span>
+    <PaletteFieldRow label={label}>
       {editing ? (
         <Input
           className="h-7 w-36 shrink-0 text-xs"
@@ -304,7 +307,7 @@ function InlineRenameRow({ field, value, onChange }: ValueRowProps) {
           </button>
         </span>
       )}
-    </div>
+    </PaletteFieldRow>
   );
 }
 
@@ -317,13 +320,12 @@ function ToggleRow({
   const label = useFieldLabel(field);
   const checked = toggle?.getToggleState(field.commandKey) ?? false;
   return (
-    <div className="flex items-center justify-between gap-2 py-0.5">
-      <span className="truncate text-xs text-muted-foreground">{label}</span>
+    <PaletteFieldRow label={label}>
       <Switch
         checked={checked}
         aria-label={label}
         onCheckedChange={(next) => toggle?.onToggle(field.commandKey, next)}
       />
-    </div>
+    </PaletteFieldRow>
   );
 }

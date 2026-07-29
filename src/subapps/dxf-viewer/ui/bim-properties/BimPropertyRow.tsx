@@ -24,6 +24,8 @@ import {
   SelectGroup,
   SelectLabel,
 } from '@/components/ui/select';
+// ADR-724 §14.7 — ο σκελετός της γραμμής ζει σε ΕΝΑ σημείο (ήταν αντιγραμμένος σε 6).
+import { PaletteFieldRow } from '../components/palette-primitives';
 import type { BimPropertyField, BimPropertyOption } from './bim-property-types';
 
 const MIXED_PLACEHOLDER = '—';
@@ -75,12 +77,11 @@ export function BimPropertyRow({
   // Read-only readout (βάρη/όγκοι/ρ%): απλή ένδειξη, χωρίς control.
   if (field.readOnly) {
     return (
-      <div className="flex items-center justify-between gap-2 py-0.5">
-        <span className="truncate text-xs text-muted-foreground">{label}</span>
+      <PaletteFieldRow label={label}>
         <span className="shrink-0 text-xs font-medium text-foreground">
           {value ?? MIXED_PLACEHOLDER}
         </span>
-      </div>
+      </PaletteFieldRow>
     );
   }
 
@@ -96,8 +97,7 @@ export function BimPropertyRow({
     : [{ value: resolved, labelKey: resolved, isLiteralLabel: true }, ...baseOptions];
 
   return (
-    <div className="flex items-center justify-between gap-2 py-0.5">
-      <span className="truncate text-xs text-muted-foreground">{label}</span>
+    <PaletteFieldRow label={label}>
       <Select
         value={resolved ?? undefined}
         onValueChange={(next) => onChange(field.commandKey, next)}
@@ -121,6 +121,6 @@ export function BimPropertyRow({
           ))}
         </SelectContent>
       </Select>
-    </div>
+    </PaletteFieldRow>
   );
 }
