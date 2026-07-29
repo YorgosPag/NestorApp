@@ -175,14 +175,21 @@ export class DxfSceneBuilder {
     // enterprise-id-convenience.generateLayerId). Replaces legacy inline literal that
     // bypassed the id-gen contract.
     const defaultLayerColor = layerColors[DXF_DEFAULT_LAYER]?.color || DEFAULT_LAYER_COLOR;
+    // ⚠️ ΤΟ «0» ΠΡΟΗΓΕΙΤΑΙ ΤΟΥ `registerLayer` — και επειδή εκείνο κάνει `if (!layers[name])`,
+    // αυτή είναι η **μοναδική** ευκαιρία να πάρει τις σημαίες του πίνακα. Όσο έγραφε καρφωτά
+    // `visible: true` / `locked: false`, ένα layer «0» δηλωμένο OFF / παγωμένο / κλειδωμένο στο
+    // αρχείο εισαγόταν ως κανονικό — το «0» ήταν το ΜΟΝΟ layer εξαιρεμένο από τον πίνακα.
+    // Απουσία εγγραφής (αρχείο χωρίς TABLES) κρατά τα ιστορικά defaults.
+    const defaultLayerEntry = layerColors[DXF_DEFAULT_LAYER];
     layers[DXF_DEFAULT_LAYER] = createSceneLayer({
       name: DXF_DEFAULT_LAYER,
       // ADR-635 Φ C.17 — βλ. registerLayer· το «0» είναι το ΣΗΜΑΝΤΙΚΟΤΕΡΟ match, γιατί
       // κάθε νέο BIM entity καρφώνεται στο id του (useSceneState.onEntityCreated).
       sourceName: DXF_DEFAULT_LAYER,
       color: defaultLayerColor,
-      visible: true,
-      locked: false,
+      visible: defaultLayerEntry?.visible ?? true,
+      frozen: defaultLayerEntry?.frozen ?? false,
+      locked: defaultLayerEntry?.locked ?? false,
     });
 
     // ADR-635 Φ2 — parse BLOCK definitions, then parse ONLY the ENTITIES section so block-
@@ -437,6 +444,10 @@ export class DxfSceneBuilder {
       // Το δεύτερο δεν περνούσε ποτέ ⇒ παγωμένα layers εμφανίζονταν (μετρημένο: 8 layers /
       // ~700 οντότητες στο `47_ergasia.dxf`). Ο συνδυασμός γίνεται στο `isLayerRenderable`.
       const frozen = layerColors[layerName]?.frozen ?? false;
+      // ΤΡΙΤΗ ανεξάρτητη ιδιότητα (group 70 bit 2): **επεξεργασιμότητα**, όχι ορατότητα. Ήταν
+      // καρφωμένη σε `false`, οπότε κάθε κλειδωμένο layer του αρχείου γινόταν ελεύθερα
+      // επεξεργάσιμο μετά την εισαγωγή — και το κλείδωμα χανόταν και στην εξαγωγή.
+      const locked = layerColors[layerName]?.locked ?? false;
       const resolvedColor = resolveLayerColor(layerName, layerColors) ?? getLayerColor(layerName);
 
       // ADR-358 Phase 9C/9D-2 — factory auto-gens stable `lyr_<UUID-v4>` id.
@@ -449,7 +460,7 @@ export class DxfSceneBuilder {
         color: resolvedColor,
         visible,
         frozen,
-        locked: false,
+        locked,
       });
     }
   }

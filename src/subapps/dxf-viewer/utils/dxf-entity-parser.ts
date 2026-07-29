@@ -90,6 +90,19 @@ function parseIntSysvar(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Το ίδιο συμβόλαιο για **δεκαδικό** sysvar (group 40). Χωριστή συνάρτηση επειδή το `parseInt`
+ * θα έκοβε σιωπηλά το κλασματικό μέρος (`'2.5'` → `2`) — δεν είναι υπερφόρτωση του από πάνω.
+ *
+ * Ο λόγος ύπαρξης είναι ο **ίδιος**: `parseFloat(v) || DEFAULT` συγχέει το `0` με την αποτυχία,
+ * και στο `$DIMSCALE` το `0` είναι το AutoCAD **annotative sentinel** — «η κλίμακα δεν ορίζεται
+ * εδώ, την καθορίζει το viewport». Βλ. το σχόλιο στο `switch` του `parseHeader`.
+ */
+function parseFloatSysvar(value: string): number | null {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 // ============================================================================
 // 🏢 ENTERPRISE: DXF ENTITY PARSER CLASS
 // ============================================================================
@@ -156,14 +169,25 @@ export class DxfEntityParser {
         //     **«δηλωμένα χιλιοστά»**: ο κλάδος abstain ήταν αναλλοίωτα νεκρός.
         //   • `$MEASUREMENT 0` = **English** ⇒ `acad.pat` (ορισμοί μοτίβου σε ίντσες). Με
         //     `0 → 1` κάθε imperial αρχείο διαβαζόταν ως metric.
+        //   • `$DIMSCALE 0` = **annotative** (η κλίμακα έρχεται από το viewport, όχι από το
+        //     αρχείο). Με `0 → 1` το «δεν ορίζω κλίμακα» γινόταν «ορίζω κλίμακα 1:1» —
+        //     **διαφορετική δήλωση**, ακόμα κι όταν ο τελικός αριθμός συμπίπτει. Το ίδιο
+        //     ιδίωμα είχε ήδη διορθωθεί στο DIMSTYLE `40` (`dxf-table-parsers`, «ADR-362 R10:
+        //     preserve 0»): εκεί το `0` του **στυλ** διαβάζεται σωστά και ο
+        //     `dim-style-importer` πέφτει πίσω στο header — αν το header ψευδόταν «1», η
+        //     υποχώρηση κατέληγε σε **σιωπηλή** 1:1 αντί για την ανοιχτή ερώτηση.
         // Απουσία της μεταβλητής κρατά τα defaults του αρχικοποιητή (μηδέν regression) — αλλάζει
         // **μόνο** η συμπεριφορά για αρχεία που δηλώνουν ρητά 0.
         case '$INSUNITS':
           if (code === '70') header.insunits = parseIntSysvar(value) ?? 4;
           break;
         case '$DIMSCALE':
-          if (code === '40') header.dimscale = parseFloat(value) || 1;
+          if (code === '40') header.dimscale = parseFloatSysvar(value) ?? 1;
           break;
+        // ⚠️ ΤΑ ΔΥΟ ΕΠΟΜΕΝΑ ΜΕΝΟΥΝ ΣΚΟΠΙΜΑ ΜΕ `||` — ΜΗΝ τα «διορθώσεις» κατ' αναλογία.
+        // Ύψος κειμένου `0` και κλίμακα σχολιασμού `0` δεν δηλώνουν τίποτα· είναι **εκφυλισμένες**
+        // τιμές (αόρατο κείμενο / διαίρεση με το μηδέν κατάντη). Εδώ το `0` ΕΙΝΑΙ σφάλμα, άρα η
+        // υποχώρηση στο default είναι η σωστή ανάγνωση — το αντίθετο ακριβώς από το `$DIMSCALE`.
         case '$DIMTXT':
           if (code === '40') header.dimtxt = parseFloat(value) || 2.5;
           break;
@@ -174,11 +198,14 @@ export class DxfEntityParser {
           if (code === '70') header.measurement = parseIntSysvar(value) ?? 1;
           break;
         // ADR-635 Φάση C — point display sysvars (drawing-wide glyph mode + size).
+        // (Το `0` είναι εδώ **και** νόμιμη τιμή **και** το default, οπότε το `||` έδινε ήδη σωστό
+        // αποτέλεσμα· περνούν στους sysvar readers ώστε να μη μείνει το ιδίωμα-παγίδα ως πρότυπο
+        // αντιγραφής για την επόμενη μεταβλητή, όπου θα ξαναχτυπούσε.)
         case '$PDMODE':
-          if (code === '70') header.pdmode = parseInt(value) || 0;
+          if (code === '70') header.pdmode = parseIntSysvar(value) ?? 0;
           break;
         case '$PDSIZE':
-          if (code === '40') header.pdsize = parseFloat(value) || 0;
+          if (code === '40') header.pdsize = parseFloatSysvar(value) ?? 0;
           break;
         // ADR-635 Φ C.4 — global linetype scale. Parsed for fidelity/round-trip; NOT
         // applied at import (see DxfHeaderData.ltscale). Only a finite positive value

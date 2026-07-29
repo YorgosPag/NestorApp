@@ -359,6 +359,14 @@ export interface LayerColorEntry {
   visible: boolean;
   /** AutoCAD `LAYFRZ` — group 70 bit 0. Ανεξάρτητο από το `visible`· βλ. `isLayerRenderable`. */
   frozen: boolean;
+  /**
+   * AutoCAD `LAYLCK` — group 70 **bit 2**. Ορατό και εκτυπώσιμο, αλλά **μη επεξεργάσιμο**.
+   *
+   * ⚠️ **ΔΕΝ αφορά ορατότητα** — μην το βάλεις ποτέ στο `isLayerRenderable`. Το ρωτούν τα
+   * εργαλεία τροποποίησης (trim/extend/stretch/scale/offset/fillet), ο `CanEditLayerGuard` και
+   * ο layer picker· ο `dxf-layer-table-writer` το ξαναγράφει ως bit 4 στο round-trip.
+   */
+  locked: boolean;
 }
 
 /** Map of layer names to their color properties */

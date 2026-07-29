@@ -1,7 +1,8 @@
 # ADR-726 — Frame budget: έγκυρη μέτρηση, attribution και ο πραγματικός ένοχος του DXF Viewer
 
 **Status:** Phase 1 (ΑΝΑΓΝΩΡΙΣΗ) — ΟΛΟΚΛΗΡΩΜΕΝΗ ·
-**Phase 2: Φ1 + Φ2 ΥΛΟΠΟΙΗΜΕΝΕΣ (2026-07-29)** · Φ3–Φ5 ΕΚΚΡΕΜΟΥΝ
+**Phase 2: Φ1 + Φ2 ΥΛΟΠΟΙΗΜΕΝΕΣ (2026-07-29)** · Φ3–Φ5 ΕΚΚΡΕΜΟΥΝ ·
+**Benchmark: Α0 + Α1 ΥΛΟΠΟΙΗΜΕΝΑ (2026-07-29)** · Α2 ΕΚΚΡΕΜΕΙ (§13.4, §13.5)
 **Ημερομηνία:** 2026-07-29
 **Σχετικά:** ADR-040 (micro-leaf / preview-canvas-performance· εκεί το changelog της υλοποίησης) ·
 ADR-552/554 (overlay dispatch canvases) · ADR-118 (geometry constants SSoT) ·
@@ -593,13 +594,111 @@ wheel. Αυτό έπαψε να ισχύει — το `page.mouse.move()` του
 | Βήμα | Κατάσταση |
 |---|---|
 | **Α0** — συμπλήρωση του οργάνου (§5.1, §5.2) | ✅ **ΕΓΙΝΕ**, 43 νέες δοκιμές |
-| **Α1** — harness route με ολόκληρο τον viewer | ⬜ εκκρεμεί |
+| **Α1** — harness route με ολόκληρο τον viewer | ✅ **ΕΓΙΝΕ** (§13.5), επαληθευμένο στον browser |
 | **Α2** — perf spec (ντετερμινιστική χειρονομία, κατανομή, N επαναλήψεις, production build) | ⬜ εκκρεμεί |
 | **Β** — απόφαση Φ3 με βάση τα δεδομένα | ⬜ εκκρεμεί |
 
-⚠️ **Το Α1 έχει ρίσκο που δεν έχει διερευνηθεί:** το `DxfViewerApp` περιέχει
-`LevelsSystem enableFirestore` + `ProjectHierarchyProvider`. Αν δεν σηκώνεται χωρίς auth,
-χρειάζεται δουλειά που **δεν** έχει εκτιμηθεί.
+### 13.5 Α1 — το harness route (2026-07-29)
+
+**Διαδρομή:** `/test-harness/dxf-perf` — `src/app/test-harness/dxf-perf/`
+(`page.tsx` + `DxfPerfHarness.tsx`), ίδιο ιδίωμα με τα αδέρφια `dxf-canvas` / `bim-3d`,
+**404 σε παραγωγή**.
+
+#### Το ρίσκο του §5 του handoff: **απαντήθηκε με μέτρηση, όχι με υπόθεση**
+
+Το `DxfViewerApp` **σηκώνεται πλήρες χωρίς authenticated Firestore.** Επαληθεύτηκε στον
+browser: ribbon, παλέτα, χάρακες, πλέγμα, γραμμή κατάστασης, **12 καμβάδες σε ηρεμία →
+13 μετά τη φόρτωση σχεδίου**. Ο λόγος είναι δομικός, όχι τύχη:
+
+| Ύποπτο | Γιατί υποβαθμίζεται ομαλά |
+|---|---|
+| `ProjectHierarchyProvider` | `loadCompanies` επιστρέφει νωρίς σε `!user` — auth-ready gating που **προϋπήρχε** |
+| `LevelsSystem enableFirestore` | `useLevelsFirestoreSync` επιστρέφει νωρίς σε `!isSuperAdmin && !companyId` |
+| `AdminGuard` | Ζει στο `page.tsx` της πραγματικής διαδρομής, **όχι** μέσα στο `DxfViewerApp` |
+
+#### Τι χρειάστηκε πράγματι — και γιατί δεν ήταν προαιρετικό
+
+**`DxfViewerAppProps.enablePersistence` (default `true` ⇒ μηδέν αλλαγή στην παραγωγή).**
+Δεν είναι καλλωπισμός hermeticity· **χωρίς αυτό ο harness δεν μπορεί να φορτώσει σχέδιο
+καθόλου**: χωρίς auth η λίστα επιπέδων είναι κενή, οπότε το
+`handleFileImportWithEncoding` πέφτει στο `addLevel()`, που με `enableFirestore` καλεί
+`createDxfLevelWithPolicy` → 401 → `null` → «Failed to create new level» → **καμία σκηνή**.
+Με `enablePersistence={false}` το `addLevel` παίρνει το in-memory μονοπάτι
+(`LevelOperations.addLevel`) και η αλυσίδα ολοκληρώνεται.
+
+**Το σβήσιμο των subscriptions ΔΕΝ αρκούσε (μετρημένο, όχι υποτεθειμένο).** Με μόνο τα
+Firestore reads σβηστά, η πρώτη εισαγωγή εξακολουθούσε να γράφει: `setCurrentFileName()`
+ξεκινούσε το debounced auto-save → `canonicalScenePath is required (ADR-293)` +
+`autoSaveV2 returned false`. Άρα το `enablePersistence` **κατεβαίνει και στο auto-save**
+(`LevelsSystem` → `useAutoSaveSceneManager({ enabled })`) ως **σκληρή** πύλη: ούτε ο
+διακόπτης του χρήστη (`AutoSaveStatus`) μπορεί να την ανοίξει. Ένα «χωρίς μονιμότητα» που
+είναι απλώς αρχική τιμή θα ήταν ένα κλικ μακριά από δίκτυο μέσα στη μέτρηση.
+**6 νέες δοκιμές** (`useAutoSaveSceneManager-persistence-gate.test.ts`), εκ των οποίων δύο
+είναι άγκυρες παλινδρόμησης για την προεπιλογή της παραγωγής.
+
+#### Το μονοπάτι φόρτωσης — μία πόρτα εισαγωγής, όχι δεύτερη
+
+Ο harness ζει **έξω** από τη στοίβα providers, άρα δεν φτάνει το
+`handleFileImportWithEncoding`. Νέο τυπωμένο συμβάν `dxf:import-file` (`{ file: File }`),
+**αδερφάκι του υπάρχοντος `dxf:import-tek-requested` (ADR-526) στο ίδιο αρχείο**:
+εκείνο ζητά επιλογέα, αυτό παραδίδει το αποτέλεσμα. Ο δέκτης στο `DxfViewerDialogs`
+προωθεί στην **ίδια** συνάρτηση — μηδέν δεύτερη υλοποίηση εισαγωγής (N.0.2 / N.18).
+
+Απορρίφθηκαν ρητά: (α) να «καθίσει» ο harness στο κρυφό input του Tekton — δουλεύει
+σήμερα μόνο επειδή το `accept` δεν ελέγχεται, δηλαδή θα έσπαγε σιωπηλά με τον πρώτο
+έλεγχο επέκτασης· (β) οδήγηση του πραγματικού modal από το Playwright — τα ribbon κουμπιά
+δεν εκπέμπουν σταθερό αναγνωριστικό, μόνο i18n ετικέτα.
+
+#### Συμβόλαιο ετοιμότητας — **getter, όχι παρατηρητής**
+
+```js
+window.__dxfPerfHarness = { canvasCount(): number, isReady(): boolean }
+```
+
+`isReady()` = «το `DxfViewerContent` μοντάρισε **και** υπάρχει καμβάς», όπου το πρώτο
+σκέλος διαβάζει τον **υπάρχοντα δείκτη παραγωγής** `documentElement.dataset.appRoute`
+(ADR-345) — όχι νέο σημάδι για δοκιμές. Είναι getter κατ' απαίτηση επειδή ένας
+`MutationObserver`/`setInterval` που καθρεφτίζει το πλήθος καμβάδων στο DOM **είναι κόστος
+καρέ μέσα στη σελίδα που μετράμε** (§2.2). Το Playwright το δημοσκοπεί με
+`waitForFunction`, ίδιο ιδίωμα με το υπάρχον `window.__dxfTest`.
+Το `[data-testid="dxf-perf-file"]` δέχεται `setInputFiles`.
+
+#### Πιστότητα διάταξης
+
+Το `/test-harness/dxf-perf` προστέθηκε στο `SIDEBAR_COLLAPSED_ROUTES`
+(`ConditionalAppShell`), δίπλα στο `/dxf/viewer`. Με ανοιχτή πλαϊνή μπάρα ο καμβάς είναι
+~256px στενότερος: ο harness θα μετρούσε πλάτος προβολής που η πραγματική διαδρομή δεν
+έχει ποτέ. Τα ribbon design tokens εισάγονται από το ίδιο αρχείο CSS με τη διαδρομή
+παραγωγής· το route-scoping τους το κάνει μόνο του το `DxfViewerContent`.
+
+**Μηδέν επίπτωση στο bundle παραγωγής:** ο harness κάνει `dynamic()` **ίδιο module
+specifier** με το `src/app/dxf/viewer/page.tsx`, άρα μοιράζεται το ίδιο chunk — γι' αυτό
+**δεν** χρειάζεται `.prod.ts` stub όπως ο `dxf-canvas` (που εισάγει δικό του δέντρο).
+
+#### ⚠️ Τι έμεινε ανοιχτό στο Α1 — δηλωμένο, όχι κρυμμένο
+
+1. **Δύο κλήσεις δικτύου επιβιώνουν στην εισαγωγή**, από συστήματα **εκτός** `LevelsSystem`:
+   `PATCH /api/dxf-levels` (404) από `saveBimRenderSettings` (ADR-375 Φ B.2, μέσω
+   `useBimRenderSettingsSync`) και `GET /api/floorplan-backgrounds` ×2 (200). Είναι
+   **εφάπαξ, τη στιγμή της εισαγωγής**, δηλαδή πριν το `__dxfPerf.reset()` ανοίξει το
+   παράθυρο — δεν μολύνουν τη μέτρηση όπως στήνεται. Το κλείσιμό τους απαιτεί το
+   `enablePersistence` να γίνει **context**, όχι prop (πολλοί καταναλωτές μέσα στο
+   `DxfViewerContent`) ⇒ cross-cutting αλλαγή, **δεν έγινε μονομερώς** (N.8).
+2. **Το Φ5 χρειάζεται παραγωγή, το route κάνει `notFound()` σε παραγωγή.** Το opt-in
+   (env var για τον φρουρό) είναι **απόφαση του Giorgio** και δεν ελήφθη σε αυτή τη
+   συνεδρία.
+3. **Ασυμμετρία του οργάνου που φάνηκε τώρα:** ο κανόνας ορατότητας του §1.2 επιβάλλεται
+   στις γραμμές `frame:*` (μέσα στη γέφυρα) αλλά **όχι** στις γραμμές του
+   mouse-handler — σε κρυφή καρτέλα οι δεύτερες καταγράφονται κανονικά. Άρα το spec του
+   Α2 **πρέπει να βεβαιώνει το ίδιο** `visibilityState === 'visible'`, χωρίς να το
+   θεωρεί δεδομένο από το όργανο.
+4. **`headlesschrome` είναι σε `BLOCKED_BOT_PATTERNS` του `src/middleware.ts` → 403.**
+   Τα υπάρχοντα e2e γλιτώνουν επειδή τα `devices[...]` descriptors του Playwright ορίζουν
+   ρητό user-agent. Το spec του Α2 **οφείλει** να τρέξει με τέτοιο project — αλλιώς θα
+   μετρά μια σελίδα σφάλματος.
+5. **Το `useViewportUrlSync` γράφει `?s=&ox=&oy=&lvl=` στο URL.** Δύο διαδοχικές
+   εκτελέσεις δεν ξεκινούν από την ίδια κατάσταση αν δεν καθαριστεί το query — απαίτηση
+   ντετερμινισμού για το Α2, όχι σφάλμα.
 
 ---
 
@@ -607,6 +706,7 @@ wheel. Αυτό έπαψε να ισχύει — το `page.mouse.move()` του
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-29 (ε) | **Α1 — harness route με ΟΛΟΚΛΗΡΟ τον viewer** (νέα §13.5). Το ρίσκο «σηκώνεται χωρίς auth;» **απαντήθηκε με μέτρηση**: ναι, 12 καμβάδες σε ηρεμία → **13 μετά τη φόρτωση σχεδίου**, μηδέν σφάλματα. Το `enablePersistence` (default `true`) δεν είναι καλλωπισμός: **χωρίς αυτό δεν φορτώνεται σχέδιο καθόλου** (το `addLevel` χτυπά 401 και επιστρέφει `null`). Βρέθηκε στον browser ότι το σβήσιμο των Firestore reads **δεν αρκούσε** — το auto-save εξακολουθούσε να γράφει (`canonicalScenePath is required`), οπότε η σημαία κατέβηκε και στο `useAutoSaveSceneManager` ως **σκληρή** πύλη (ούτε ο διακόπτης του χρήστη την ανοίγει), **6 νέες δοκιμές**. Η φόρτωση περνά από τη **μία** πόρτα εισαγωγής μέσω νέου τυπωμένου `dxf:import-file` — αδερφάκι του ADR-526 `dxf:import-tek-requested`, ίδιο αρχείο, ίδιος δέκτης. Ετοιμότητα = **getter** (`window.__dxfPerfHarness`), όχι observer, γιατί ο παρατηρητής **είναι** κόστος καρέ μέσα στη μετρούμενη σελίδα (§2.2). Πιστότητα διάταξης: το route μπήκε στο `SIDEBAR_COLLAPSED_ROUTES` (αλλιώς ο καμβάς ~256px στενότερος από την πραγματική διαδρομή). Μηδέν επίπτωση στο bundle (ίδιο dynamic specifier ⇒ ίδιο chunk). **Δηλωμένα ανοιχτά:** 2 εφάπαξ κλήσεις δικτύου εκτός `LevelsSystem` (ADR-375 / floorplan-backgrounds· κλείσιμο = cross-cutting, N.8), το production opt-in του φρουρού (απόφαση Giorgio), ασυμμετρία ορατότητας στο όργανο, `headlesschrome` → 403 στο middleware, και το `?s/ox/oy/lvl` του `useViewportUrlSync`. Παλινδρόμηση πράσινη· `jscpd:diff` **μηδέν νέα clones** (το μοναδικό εύρημα στο `LevelsSystem.tsx` αποδείχθηκε **προϋπάρχον στο HEAD** — `useMemo` body ↔ deps array, δομικά μη εξαγώγιμο). **Μηδέν commit.** |
 | 2026-07-29 (δ) | **Α0 — το όργανο έγινε ικανό να παραγάγει τα κριτήρια του §5** (νέα §5.1, §5.2, §13). Το audit βρήκε ότι η Φ1 κατέγραφε **διάρκεια rAF callback** ενώ τα κριτήρια είναι **διαστήματα μεταξύ καρέ** — τέταρτη λανθασμένη διάγνωση, αποτραπείσα πριν γραφτεί spec πάνω της. Προστέθηκαν: `frame:INTERVAL`, `snapshotPerfDistribution()` (p50/p90/p99 + υπέρβαση κατωφλίου), `window.__dxfPerf` (μηχαναγνώσιμο), `reset()` που κρατά ανοιχτό το παράθυρο. Ο κανόνας §1.2 επεκτάθηκε ώστε να πετιέται και **η ραφή** μετά από κενό ορατότητας. Boy-scout (N.0.2): δύο percentile με **διαφορετική σύμβαση** κεντρικοποιήθηκαν σε νέο SSoT `utils/sample-distribution.ts`. Τεκμηριώθηκαν οι αποφάσεις του benchmark (§13) με Speedometer 3 + Chromium Telemetry ως βάση. **43 νέες δοκιμές**, παλινδρόμηση 103 suites / 968 tests πράσινη, `jscpd:diff` μηδέν clones. **Μηδέν commit.** |
 | 2026-07-29 | **Δημιουργία.** Phase 1 ολοκληρωμένη: ακύρωση τριών διαγνώσεων (§1), ορισμός έγκυρου οργάνου (§2), μέτρηση με ανθρώπινο input σε ορατό tab (§4), frame budget (§5), σχέδιο Φ1-Φ5 (§6). **Μηδέν κώδικας.** |
 | 2026-07-29 (γ) | **Επαλήθευση στον browser (§12).** Φ1 επιβεβαιώθηκε end-to-end (7 γραμμές `frame:*` στον πραγματικό aggregator). Φ2: μηδέν clears σε 9 overlays σε πλήρη κύκλο επανασχεδίασης, μηδέν φαντάσματα. **Βρέθηκε ένας 9ος καμβάς που είχε ξεφύγει** — `Focus2DOverlay` (§Φ2.1): το `clearRect` του κρυβόταν πίσω από τον helper `clearFocus2DOverlay`, άρα ήταν αόρατο στο grep του handoff. Διορθώθηκε (11 καμβάδες συνολικά στο primitive). Εκκρεμής μένει **μόνο** ο `layer-canvas`. |

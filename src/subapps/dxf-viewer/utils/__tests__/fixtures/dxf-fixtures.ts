@@ -37,6 +37,12 @@ export interface MakeDxfOptions {
   readonly extents?: Extents | null;
   /** Κωδικός `$MEASUREMENT` — γράφεται μόνο όταν δοθεί (ADR-716 §4: ΔΕΝ χρησιμοποιείται). */
   readonly measurement?: number | null;
+  /**
+   * `$DIMSCALE` (group **40**, δεκαδικό). `0` = AutoCAD *annotative* — «η κλίμακα δεν ορίζεται
+   * εδώ». `null` ⇒ η μεταβλητή λείπει, που είναι **άλλη δήλωση** από το `0`: ο parser πρέπει να
+   * ξεχωρίζει τις τρεις περιπτώσεις (απούσα / ρητό 0 / ρητός αριθμός).
+   */
+  readonly dimscale?: number | null;
 }
 
 /** Ο αντίστοιχος κωδικός `$INSUNITS` για κάθε μονάδα — παράγωγος, όχι μαγικός. */
@@ -54,10 +60,11 @@ export const INSUNITS_CODE: Readonly<Record<SceneUnits, number>> = {
  * **αποτέλεσμα κλιμάκωσης**, όχι παρενέργειες παρσαρίσματος.
  */
 export function makeDxf(options: MakeDxfOptions = {}): string {
-  const { insunits = 0, extents = null, measurement = null } = options;
+  const { insunits = 0, extents = null, measurement = null, dimscale = null } = options;
   const header: string[] = ['0', 'SECTION', '2', 'HEADER'];
   if (insunits !== null) header.push('9', '$INSUNITS', '70', String(insunits));
   if (measurement !== null) header.push('9', '$MEASUREMENT', '70', String(measurement));
+  if (dimscale !== null) header.push('9', '$DIMSCALE', '40', String(dimscale));
   if (extents) {
     header.push('9', '$EXTMIN', '10', String(extents.min.x), '20', String(extents.min.y));
     header.push('9', '$EXTMAX', '10', String(extents.max.x), '20', String(extents.max.y));

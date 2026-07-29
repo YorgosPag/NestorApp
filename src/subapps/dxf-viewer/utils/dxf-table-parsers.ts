@@ -10,7 +10,7 @@
 
 import { getAciColor } from '../settings/standards/aci';
 import { DXF_DEFAULT_LAYER } from '../config/layer-config';
-import { isFrozenFlag } from './dxf-layer-flags';
+import { isFrozenFlag, isLockedFlag } from './dxf-layer-flags';
 import { dxfLayerTableEntries } from './dxf-layer-table-walk';
 import type { DimStyleEntry, DimStyleMap, LayerColorEntry, LayerColorMap } from './dxf-parser-types';
 import { DEFAULT_DIMSTYLE, STANDARD_DIMSTYLE_NAME } from './dxf-parser-types';
@@ -40,6 +40,8 @@ function flushLayerEntry(
     // το layer αλλά θα εμφάνιζε λάθος εικονίδιο/κατάσταση στο panel και θα έσπαγε το LAYTHW.
     visible: colorIndex >= 0,
     frozen: entry.frozen ?? false,
+    // Τρίτη, ανεξάρτητη ιδιότητα: **επεξεργασιμότητα**, όχι ορατότητα (group 70 bit 2).
+    locked: entry.locked ?? false,
   };
 }
 
@@ -265,6 +267,7 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
     color: getAciColor(7),
     visible: true,
     frozen: false,
+    locked: false,
   };
 
   // Η ΔΙΑΣΧΙΣΗ ζει στο `dxf-layer-table-walk` (SSoT) — εδώ μένει μόνο η **ερμηνεία** των
@@ -285,9 +288,18 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
         // `47_ergasia.dxf`: 8 παγωμένα layers / ~700 οντότητες που το AutoCAD **δεν δείχνει**
         // — μεταξύ τους το `pl` (60 οντότητες), frozen αλλά με **θετικό** χρώμα, οπότε ο
         // έλεγχος προσήμου του 62 δεν το έπιανε ποτέ.
-        case '70':
-          currentLayer.frozen = isFrozenFlag(parseInt(value, 10));
+        // Το ΙΔΙΟ group 70 κουβαλά ΚΑΙ το κλείδωμα (bit 2) — άλλη ερώτηση, άλλο bit: το πάγωμα
+        // αφορά **ορατότητα**, το κλείδωμα **επεξεργασιμότητα**. Ο πλήρης parser
+        // (`dxf-layer-table-parser`) ρωτούσε ήδη και τα δύο· εδώ ρωτιόταν μόνο το πρώτο, οπότε
+        // το `registerLayer` κατέληγε να γράφει καρφωτά `locked: false` — και το κλείδωμα του
+        // αρχείου χανόταν, ακόμα και στο round-trip (ο writer ξέρει να το γράψει, απλώς δεν
+        // υπήρχε τι να γράψει). Ίδιο σχήμα με το `frozen`: η μηχανή υπήρχε, ο writer έλειπε.
+        case '70': {
+          const flag = parseInt(value, 10);
+          currentLayer.frozen = isFrozenFlag(flag);
+          currentLayer.locked = isLockedFlag(flag);
           break;
+        }
       }
     }
     flushLayerEntry(currentLayer, layerColors);
@@ -303,6 +315,7 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
         color: layer.color,
         visible: layer.visible,
         frozen: layer.frozen,
+        locked: layer.locked,
       })),
     });
   }

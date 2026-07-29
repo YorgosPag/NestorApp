@@ -19,6 +19,7 @@
 
 import { DxfEntityParser } from '../dxf-entity-parser';
 import { insunitsCodeToSceneUnits } from '../scene-units';
+import { resolveEffectiveDimscale } from '../annotation-scale';
 import {
   ERGASIA_47_EXTENTS, ERGASIA_47_HEADER, makeDxf, makeErgasia47Dxf,
 } from './fixtures/dxf-fixtures';
@@ -75,5 +76,64 @@ describe('parseHeader — sysvars όπου το 0 είναι τιμή', () => {
     const h = parse(makeDxf({ insunits: 6, measurement: 1 }));
     expect(h.insunits).toBe(6);
     expect(h.measurement).toBe(1);
+  });
+});
+
+/**
+ * `$DIMSCALE` — **η τρίτη περίπτωση της ίδιας κλάσης** (Giorgio, 2026-07-29).
+ *
+ * Το handoff #4 §4β το άφησε ανοιχτό ως «ίδια κλάση, άλλο domain». Είναι group **40**
+ * (δεκαδικό), οπότε δεν αρκούσε ο `parseIntSysvar` — το `parseInt` θα έκοβε το `'2.5'` σε `2`.
+ *
+ * ⚠️ **ΤΙΜΙΑ ΔΙΑΤΥΠΩΣΗ ΤΟΥ ΟΦΕΛΟΥΣ:** και οι **δύο** καταναλωτές του `header.dimscale` κάνουν
+ * ήδη guard στο μη-θετικό (`dxf-dimension-legacy-fallback` → `> 0 ? … : 1`·
+ * `resolveEffectiveDimscale` → πέφτει στο `drawingScale`). Άρα η διόρθωση **δεν αλλάζει
+ * μέγεθος διάστασης σε καμία υπάρχουσα διαδρομή** — και ακριβώς γι' αυτό ήταν ασφαλής.
+ * Αυτό που διορθώνει είναι η **πιστότητα της ανάγνωσης**: «δεν ορίζω κλίμακα» (annotative)
+ * και «ορίζω κλίμακα 1:1» έπαυαν να ξεχωρίζουν μόλις περνούσαν τον parser. Τα tests εδώ
+ * κλειδώνουν ότι ξεχωρίζουν — ώστε ο επόμενος καταναλωτής, που ίσως ΔΕΝ κάνει guard, να
+ * παραλάβει την αλήθεια του αρχείου αντί για ένα εφευρημένο `1`.
+ */
+describe('parseHeader — `$DIMSCALE` (group 40): το annotative μηδέν επιβιώνει', () => {
+  it('🔴 ρητό `$DIMSCALE 0` μένει 0 (annotative), δεν γίνεται 1', () => {
+    expect(parse(makeDxf({ dimscale: 0 })).dimscale).toBe(0);
+  });
+
+  it('ΤΡΕΙΣ ΔΙΑΚΡΙΤΕΣ ΔΗΛΩΣΕΙΣ — απούσα ≠ ρητό 0 ≠ ρητός αριθμός', () => {
+    // Με `|| 1` οι δύο πρώτες κατέρρεαν στην ίδια τιμή: το αρχείο που **σιωπά** και το αρχείο
+    // που λέει ρητά «annotative» γίνονταν δυσδιάκριτα μετά τον parser.
+    expect(parse(makeDxf({ dimscale: null })).dimscale).toBe(1);   // σιωπή ⇒ ιστορικό default
+    expect(parse(makeDxf({ dimscale: 0 })).dimscale).toBe(0);      // ρητό «δεν ορίζω»
+    expect(parse(makeDxf({ dimscale: 100 })).dimscale).toBe(100);  // ρητό 1:100
+  });
+
+  it('ΔΕΚΑΔΙΚΟ, όχι ακέραιο — γι\' αυτό χρειάστηκε ξεχωριστός float reader', () => {
+    // Σαμποτάζ-φρουρός: αν κάποιος «ενοποιήσει» τους δύο readers στον `parseIntSysvar`,
+    // το 2.5 θα γίνει 2 και αυτό το test πέφτει.
+    expect(parse(makeDxf({ dimscale: 2.5 })).dimscale).toBe(2.5);
+  });
+
+  it('μη-αριθμητική τιμή ⇒ default 1 (το `??` δεν καταπίνει σκουπίδια)', () => {
+    const dxf = [
+      '0', 'SECTION', '2', 'HEADER',
+      '9', '$DIMSCALE', '40', 'ΧΑΛΑΣΜΕΝΟ',
+      '0', 'ENDSEC', '0', 'EOF',
+    ].join('\n');
+    expect(parse(dxf).dimscale).toBe(1);
+  });
+
+  it('ΤΟ ΚΑΤΑΝΤΗ ΜΕΝΕΙ ΑΣΦΑΛΕΣ — το 0 δεν παράγει ποτέ μηδενικό μέγεθος', () => {
+    // Ο λόγος που η αλλαγή ήταν ακίνδυνη: το annotative μηδέν σημαίνει «ρώτα το viewport»,
+    // και ο resolver ήδη το τιμά πέφτοντας στο `drawingScale` SSoT. Χωρίς αυτό, ένα πιστά
+    // διαβασμένο 0 θα κατέληγε σε διαστάσεις ύψους μηδέν.
+    const dimscale = parse(makeDxf({ dimscale: 0 })).dimscale;
+    expect(resolveEffectiveDimscale(dimscale, 100)).toBe(100);
+  });
+
+  it('ΚΑΜΙΑ ΠΑΡΕΝΕΡΓΕΙΑ στα γειτονικά sysvars του ίδιου header', () => {
+    const h = parse(makeDxf({ insunits: 6, measurement: 1, dimscale: 0 }));
+    expect(h.insunits).toBe(6);
+    expect(h.measurement).toBe(1);
+    expect(h.dimtxt).toBe(2.5);   // απούσα ⇒ default· το `$DIMTXT` μένει σκόπιμα με `||`
   });
 });

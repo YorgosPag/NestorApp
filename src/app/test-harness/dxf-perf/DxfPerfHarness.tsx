@@ -23,9 +23,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-726-frame-budget-instrumentation-and-attribution.md §13
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, type ChangeEvent } from 'react';
 import dynamic from 'next/dynamic';
 import { EventBus } from '@/subapps/dxf-viewer/systems/events';
+// Ίδιος SSoT σύνθεσης κλάσεων με τη διαδρομή παραγωγής (`src/app/dxf/viewer/page.tsx`).
+import { cn } from '@/lib/design-system';
 // Ίδιο CSS με τη διαδρομή παραγωγής (`src/app/dxf/viewer/layout.tsx`): χωρίς τα ribbon
 // design tokens η διάταξη —άρα και το paint— δεν είναι η μετρούμενη διάταξη.
 import '@/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css';
@@ -59,9 +61,10 @@ declare global {
 
 const DXF_VIEWER_ROUTE_MARKER = 'dxf-viewer';
 
-export default function DxfPerfHarness() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+/** Ίδια γεωμετρία με το `<main>` της πραγματικής διαδρομής — ο harness δεν αλλάζει διάταξη. */
+const FULL_BLEED = 'w-full h-full';
 
+export default function DxfPerfHarness() {
   useEffect(() => {
     window.__dxfPerfHarness = {
       canvasCount: () => document.querySelectorAll('canvas').length,
@@ -78,23 +81,22 @@ export default function DxfPerfHarness() {
    * harness ζει **έξω** από τη στοίβα providers — δεύτερη υλοποίηση εισαγωγής δεν
    * υπάρχει και δεν πρέπει να υπάρξει (N.0.2 / N.18).
    */
-  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = ''; // επιτρέπει επανεπιλογή του ίδιου αρχείου
     if (file) EventBus.emit('dxf:import-file', { file });
   }, []);
 
   return (
-    <main data-testid="dxf-perf-harness" className="w-full h-full">
+    <main data-testid="dxf-perf-harness" className={cn(FULL_BLEED)}>
       <input
-        ref={fileInputRef}
         data-testid="dxf-perf-file"
         type="file"
         accept=".dxf,.tek,.txt"
         hidden
         onChange={handleFileChange}
       />
-      <DxfViewerApp className="w-full h-full" enablePersistence={false} />
+      <DxfViewerApp className={FULL_BLEED} enablePersistence={false} />
     </main>
   );
 }
