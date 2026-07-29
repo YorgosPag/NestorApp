@@ -23,7 +23,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 // 🚀 ADR-040 cursor-lag Φ12 — read the live effective-world cursor IMPERATIVELY
 // (no useSyncExternalStore → zero React re-render on the leaf) and arm a redraw
 // SYNCHRONOUSLY from the same 60fps stream that drives the compositor crosshair.
@@ -69,14 +69,7 @@ export interface CanvasGhostPreviewConfig {
   getCanvas(): HTMLCanvasElement | null;
   /** Το element για μέτρηση viewport (κανονικά το DxfCanvas)· fallback `getCanvas`. */
   getViewportElement?(): HTMLElement | null;
-  /**
-   * @deprecated (ADR-398 §4) Ο redraw σε transform change οδηγείται πλέον από το
-   * live `subscribeTransform` SSoT (zero-lag, ίδιο store με τον main canvas) — όχι
-   * από αυτό το React-prop. Παραμένει στο interface για backward-compat με τους ~19
-   * consumers· δεν διαβάζεται πλέον εσωτερικά. Η ΠΡΑΓΜΑΤΙΚΗ τιμή που ζωγραφίζεται
-   * είναι το live `getImmediateTransform()` μέσα στο canonical frame.
-   */
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   /** Default `'world-position'`. */
   readonly cursorMode?: GhostCursorMode;
   /** Default `false` — `true` ⇒ snapped cursor (`getImmediateSnap`) όπως το commit. */

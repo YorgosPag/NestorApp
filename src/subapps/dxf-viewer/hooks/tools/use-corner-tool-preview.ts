@@ -24,7 +24,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import { distanceToEntity } from '../../utils/entity-distance';
 import { resolveSharedPolylineCorner } from '../../systems/corner/corner-math';
@@ -62,7 +62,7 @@ export interface CornerPreviewConfig<S extends { readonly phase: string }> {
   readonly store: GhostOverlayStore<S>;
   /** Active-tool id this preview belongs to (paint only while it is active). */
   readonly activeToolId: ToolType;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;
   /** Live scene getter (event-time read, not captured) for the hover hit-test. */
@@ -87,7 +87,7 @@ export function useCornerToolPreview<S extends { readonly phase: string }>(
   config: CornerPreviewConfig<S>,
 ): void {
   const {
-    store, activeToolId, transform, getCanvas, getViewportElement,
+    store, activeToolId, getCanvas, getViewportElement,
     getScene, computeStrokes, buildLabel, pathFn,
   } = config;
 
@@ -127,7 +127,6 @@ export function useCornerToolPreview<S extends { readonly phase: string }>(
   useGhostOverlay<S>({
     store,
     isActive: (phase) => activeTool === activeToolId && (phase === 'picking-first' || phase === 'picking-second'),
-    transform,
     getCanvas,
     getViewportElement,
     draw,

@@ -105,6 +105,15 @@ export function applyOrthoToDelta(delta: Point2D): Point2D {
 }
 
 /**
+ * ORTHO-locked destination point for a base→cursor drag — `base ⊕ applyOrthoToDelta(cursor − base)`.
+ * Shared by every ghost-preview hook that draws a rubber band from a base point (Move/Copy/…):
+ * same SSoT, no independent re-derivation (CHECK 3.28 de-dup, ADR-583).
+ */
+export function applyOrthoToDestination(base: Point2D, cursor: Point2D): Point2D {
+  return translatePoint(base, applyOrthoToDelta({ x: cursor.x - base.x, y: cursor.y - base.y }));
+}
+
+/**
  * ADR-363 §line local-ortho — ORTHO πάνω σε whole-entity move όταν είναι ενεργό το ΤΟΠΙΚΟ
  * πλαίσιο άξονα (σύρσιμο μέσου / MOVE-cross λοξής γραμμής, `MoveOrthoAxisStore`): κλείδωσε τη
  * μετατόπιση στον ΔΙΚΟ ΤΗΣ άξονα (∥ û) Ή στην κάθετή του (⟂ n̂) — νικά η μεγαλύτερη προβολή

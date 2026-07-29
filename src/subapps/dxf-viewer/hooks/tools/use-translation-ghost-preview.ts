@@ -41,7 +41,7 @@ export interface UseTranslationGhostPreviewParams {
   isActive: boolean;
   basePoint: Point2D | null;
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
   /** Per-tool draw, run after the base marker with non-null base + cursor. Wrap in
@@ -50,7 +50,7 @@ export interface UseTranslationGhostPreviewParams {
 }
 
 export function useTranslationGhostPreview(params: UseTranslationGhostPreviewParams): void {
-  const { isActive, basePoint, levelManager, transform, getCanvas, getViewportElement, drawFrame } = params;
+  const { isActive, basePoint, levelManager, getCanvas, getViewportElement, drawFrame } = params;
   const deps = useEntityTranslationPreviewDeps(levelManager);
 
   const draw = useCallback((frame: GhostDrawFrame) => {
@@ -63,5 +63,5 @@ export function useTranslationGhostPreview(params: UseTranslationGhostPreviewPar
     drawFrame({ ctx, basePoint, effectiveCursor, viewport, transform: t, deps });
   }, [basePoint, deps, drawFrame]);
 
-  useCanvasGhostPreview({ isActive, getCanvas, getViewportElement, transform, draw });
+  useCanvasGhostPreview({ isActive, getCanvas, getViewportElement, draw });
 }

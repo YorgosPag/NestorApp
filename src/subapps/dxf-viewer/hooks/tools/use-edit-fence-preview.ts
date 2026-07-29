@@ -20,7 +20,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import { useGhostOverlay, type GhostOverlayStore } from './use-ghost-overlay';
 import { tracePolyline } from './overlay-draw-primitives';
@@ -52,7 +52,7 @@ export interface EditFencePreviewColors {
 export interface UseEditFencePreviewConfig<S extends EditFencePreviewState> {
   readonly store: GhostOverlayStore<S>;
   readonly colors: EditFencePreviewColors;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;
 }
@@ -63,7 +63,7 @@ const FENCE_LINE_COLOR = '#FFD24A';
 export function useEditFencePreview<S extends EditFencePreviewState>(
   config: UseEditFencePreviewConfig<S>,
 ): void {
-  const { store, colors, transform, getCanvas, getViewportElement } = config;
+  const { store, colors, getCanvas, getViewportElement } = config;
 
   const draw = useCallback(
     (frame: GhostDrawFrame, s: S, toScreen: (p: Point2D) => Point2D) => {
@@ -143,7 +143,6 @@ export function useEditFencePreview<S extends EditFencePreviewState>(
   useGhostOverlay<S>({
     store,
     isActive: (phase) => phase !== 'idle',
-    transform,
     getCanvas,
     getViewportElement,
     draw,

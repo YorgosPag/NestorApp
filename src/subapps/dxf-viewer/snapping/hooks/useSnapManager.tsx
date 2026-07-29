@@ -15,6 +15,11 @@ const DEBUG_SNAP_MANAGER = false; // 🔍 DISABLED - set to true only for debugg
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useSnapContext } from '../context/SnapContext';
 import { getGlobalSnapEngine } from '../global-snap-engine';
+// ADR-040 Phase XXII.B — το ζωντανό zoom scale διαβάζεται από το SSoT στην κλήση του
+// findSnapPoint (event-time), ΟΧΙ από το render-time `scale` option: μετά την αποσύνδεση
+// του transform από τα React props, το option πάγωνε στην τιμή του τελευταίου re-render
+// (λάθος pixel→world tolerance μετά από zoom). Το option μένει ως αρχικό seed/συμβατότητα.
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { ExtendedSnapType } from '../extended-types';
 import type { SceneModel } from '../../types/scene';
 import type { Entity } from '../extended-types';
@@ -84,7 +89,10 @@ export const useSnapManager = (
     if (DEBUG_SNAP_MANAGER) {
       dlog('Snap', '[useSnapManager.findSnapPoint] Called with:', { worldX, worldY });
     }
-    const currentScale = scaleRef.current;
+    // ADR-040 Phase XXII.B — ζωντανό scale από το SSoT στην κλήση (βλ. σχόλιο import).
+    // Fallback στο scaleRef μόνο αν το store δεν έχει αρχικοποιηθεί με θετική τιμή.
+    const liveScale = getImmediateTransform().scale;
+    const currentScale = liveScale > 0 ? liveScale : scaleRef.current;
     if (currentScale > 0 && currentScale !== lastSyncedScaleRef.current) {
       lastSyncedScaleRef.current = currentScale;
       snapManager.setViewport({

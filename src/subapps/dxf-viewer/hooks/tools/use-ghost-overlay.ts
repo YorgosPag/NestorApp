@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useSyncExternalStore } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
@@ -32,7 +32,7 @@ export interface GhostOverlayConfig<S extends { phase: string }> {
   readonly store: GhostOverlayStore<S>;
   /** Reactive activation gate resolved from the subscribed phase. */
   readonly isActive: (phase: S['phase']) => boolean;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;
   /**
@@ -43,7 +43,7 @@ export interface GhostOverlayConfig<S extends { phase: string }> {
 }
 
 export function useGhostOverlay<S extends { phase: string }>(config: GhostOverlayConfig<S>): void {
-  const { store, isActive, transform, getCanvas, getViewportElement, draw } = config;
+  const { store, isActive, getCanvas, getViewportElement, draw } = config;
 
   const phase = useSyncExternalStore(store.subscribe, () => store.getState().phase);
 
@@ -60,7 +60,6 @@ export function useGhostOverlay<S extends { phase: string }>(config: GhostOverla
     isActive: isActive(phase),
     getCanvas,
     getViewportElement,
-    transform,
     draw: wrapped,
   });
 }

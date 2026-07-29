@@ -24,7 +24,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { drawRubberBandWorld } from '../../canvas-v2/preview-canvas/rubber-band-paint';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -35,9 +35,7 @@ import { GHOST_DEFAULTS } from '../../rendering/ghost';
 // SSoT translated-selection ghost loop (deep import — pulls in the full EntityRendererComposite).
 import { drawTranslatedEntitiesPreview } from '../../rendering/ghost/draw-real-entity-preview';
 // ADR-363 — ORTHO (F8) axis-lock for the live MOVE ghost (no-op when OFF).
-import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
-// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
-import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+import { applyOrthoToDestination } from '../../bim/grips/grip-move-constraints';
 import { resolveSceneUnits } from '../../utils/scene-units';
 // ADR-562 Φ9.3 — AutoAlign traces during the 2-click MOVE (base point ⊕ ambient). Same
 // SSoT resolve + paint as the dim grip flow; WYSIWYG parity with the commit (useMoveTool).
@@ -63,7 +61,7 @@ export interface UseMovePreviewProps {
   selectedOverlayIds?: string[];
   getOverlay?: (id: string) => Overlay | null;
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -85,7 +83,6 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     selectedOverlayIds,
     getOverlay,
     levelManager,
-    transform,
     getCanvas,
     getViewportElement,
   } = props;
@@ -94,8 +91,7 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     // ORTHO (F8): lock the destination to the H/V axis from the base point so the
     // rubber band, ghost, and tooltip all match the committed move (useMoveTool).
     // No-op when ORTHO is OFF.
-    const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - base.x, y: effectiveCursor.y - base.y });
-    const orthoDestination: Point2D = translatePoint(base, orthoDelta);
+    const orthoDestination: Point2D = applyOrthoToDestination(base, effectiveCursor);
 
     // ADR-562 Φ9.3 — AutoAlign override + traces on the ORTHO-locked destination (base
     // point ⊕ ambient). SAME resolve as the commit (useMoveTool) → the ghost, rubber band
@@ -181,7 +177,6 @@ export function useMovePreview(props: UseMovePreviewProps): void {
     isActive: PREVIEW_PHASES.has(phase),
     basePoint,
     levelManager,
-    transform,
     getCanvas,
     getViewportElement,
     drawFrame,

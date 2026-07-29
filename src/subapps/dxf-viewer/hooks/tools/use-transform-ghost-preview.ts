@@ -97,7 +97,7 @@ export interface TransformGhostFrame<S> {
 export interface TransformGhostConfig<S extends { phase: string }> {
   readonly store: GhostOverlayStore<S>;
   readonly levelManager: LevelSceneReader;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;
   /** Reactive activation gate (redraw re-schedule trigger). */
@@ -123,7 +123,7 @@ export function useTransformGhostPreview<S extends { phase: string }>(
   config: TransformGhostConfig<S>,
 ): void {
   const {
-    store, levelManager, transform, getCanvas, getViewportElement,
+    store, levelManager, getCanvas, getViewportElement,
     isActivePhase, isDrawPhase, getBasePoint, buildTooltip, renderCopies, matrixGhost,
   } = config;
 
@@ -179,7 +179,6 @@ export function useTransformGhostPreview<S extends { phase: string }>(
   useGhostOverlay<S>({
     store,
     isActive: isActivePhase,
-    transform,
     getCanvas,
     getViewportElement,
     draw,

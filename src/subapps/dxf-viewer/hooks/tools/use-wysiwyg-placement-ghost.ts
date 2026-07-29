@@ -31,7 +31,7 @@
  */
 
 import { useCallback, type DependencyList } from 'react';
-import type { Entity, Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Entity, Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import { renderWysiwygPlacementGhost } from '../../bim/ghosts/wysiwyg-placement-ghost';
@@ -43,8 +43,7 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 export interface WysiwygPlacementGhostConfig<TBuild = Entity> {
   /** Gate — true ⇒ ενεργό preview (κανονικά `isAwaitingPosition` / `isAwaitingEnd`). */
   readonly isActive: boolean;
-  /** Legacy transform prop (ADR-398 §4: το harness διαβάζει live transform). */
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas(): HTMLCanvasElement | null;
   getViewportElement?(): HTMLElement | null;
   /**
@@ -85,7 +84,7 @@ export interface WysiwygPlacementGhostConfig<TBuild = Entity> {
 export function useWysiwygPlacementGhost<TBuild = Entity>(
   config: Readonly<WysiwygPlacementGhostConfig<TBuild>>,
 ): void {
-  const { isActive, transform, getCanvas, getViewportElement, buildGhostEntity, paintGhost, drawOverlay, drawDeps, useImmediateSnap } = config;
+  const { isActive, getCanvas, getViewportElement, buildGhostEntity, paintGhost, drawOverlay, drawDeps, useImmediateSnap } = config;
 
   const draw = useCallback((frame: GhostDrawFrame) => {
     const build = buildGhostEntity(frame);
@@ -101,7 +100,6 @@ export function useWysiwygPlacementGhost<TBuild = Entity>(
     isActive,
     getCanvas,
     getViewportElement,
-    transform,
     // Default true (snapped WYSIWYG). Free-point placement passes false → raw 60fps cursor.
     useImmediateSnap: useImmediateSnap ?? true,
     draw,
@@ -124,7 +122,7 @@ export type BuildPlacementEntityResult<TEntity> =
 /** Public props ΚΑΘΕ generated single-point bridge-store placement-ghost hook. */
 export interface BridgeStorePlacementGhostProps {
   readonly isAwaitingPosition: boolean;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas(): HTMLCanvasElement | null;
   getViewportElement?(): HTMLElement | null;
 }
@@ -169,11 +167,10 @@ export function createBridgeStorePlacementGhostHook<
   const { bridgeStore, buildDefaultParams, buildEntity, useImmediateSnap } = spec;
 
   return function useBridgeStorePlacementGhost(props: Readonly<BridgeStorePlacementGhostProps>): void {
-    const { isAwaitingPosition, transform, getCanvas, getViewportElement } = props;
+    const { isAwaitingPosition, getCanvas, getViewportElement } = props;
 
     useWysiwygPlacementGhost({
       isActive: isAwaitingPosition,
-      transform,
       getCanvas,
       getViewportElement,
       useImmediateSnap,

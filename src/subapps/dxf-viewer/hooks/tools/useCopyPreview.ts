@@ -25,7 +25,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { drawRubberBandWorld } from '../../canvas-v2/preview-canvas/rubber-band-paint';
 import type { CopyPhase } from './useCopyTool';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
@@ -33,9 +33,7 @@ import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor
 import { drawTranslatedEntitiesPreview } from '../../rendering/ghost/draw-real-entity-preview';
 // ADR-363 — ORTHO (F8) axis-lock for the live COPY ghost (no-op when OFF). SAME SSoT as
 // the commit (useCopyTool) so the ghost and the committed clone can never diverge (WYSIWYG).
-import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
-// ADR-090 — SSoT point+vector add (translate), replaces inline `{x:A.x+B.x,y:A.y+B.y}`.
-import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
+import { applyOrthoToDestination } from '../../bim/grips/grip-move-constraints';
 import {
   useTranslationGhostPreview,
   type TranslationGhostDrawFrame,
@@ -46,7 +44,7 @@ export interface UseCopyPreviewProps {
   basePoint: Point2D | null;
   selectedEntityIds: string[];
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -57,14 +55,13 @@ const PREVIEW_PHASES: ReadonlySet<CopyPhase> = new Set([
 ]);
 
 export function useCopyPreview(props: UseCopyPreviewProps): void {
-  const { phase, basePoint, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { phase, basePoint, selectedEntityIds, levelManager, getCanvas, getViewportElement } = props;
 
   const drawFrame = useCallback(({ ctx, basePoint: base, effectiveCursor, viewport, transform: t, deps }: TranslationGhostDrawFrame) => {
     // ORTHO (F8): lock the destination to the H/V axis from the base point via the SAME
     // SSoT the commit uses (useCopyTool.handleCopyClick), so the rubber band, ghost and
     // committed clone all land on the same point (WYSIWYG). No-op when ORTHO is OFF.
-    const orthoDelta = applyOrthoToDelta({ x: effectiveCursor.x - base.x, y: effectiveCursor.y - base.y });
-    const destination = translatePoint(base, orthoDelta);
+    const destination = applyOrthoToDestination(base, effectiveCursor);
 
     // Rubber band (dashed gold) — shared SSoT paint (CHECK 3.28 de-dup with Move/Rotation).
     drawRubberBandWorld(ctx, base, destination, t, viewport);
@@ -91,7 +88,6 @@ export function useCopyPreview(props: UseCopyPreviewProps): void {
     isActive: PREVIEW_PHASES.has(phase),
     basePoint,
     levelManager,
-    transform,
     getCanvas,
     getViewportElement,
     drawFrame,
