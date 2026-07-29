@@ -470,25 +470,8 @@ export class DxfSceneBuilder {
     return computeEntityArrayBounds(entities);
   }
 
-  static validateScene(scene: SceneModel): boolean {
-    // ADR-358 Phase 9E-6a: layersById guaranteed post-9E-5; layers kept for legacy compat.
-    if (!scene.entities || !scene.layersById || !scene.bounds) {
-      return false;
-    }
-
-    // Check bounds validity
-    const { min, max } = scene.bounds;
-    if (isNaN(min.x) || isNaN(min.y) || isNaN(max.x) || isNaN(max.y)) {
-      return false;
-    }
-
-    // Check entities validity.
-    // ADR-358 Phase 9D-5a — validate stable `layerId` (post-9D-2 attribution). Legacy `.layer`
-    // name check dropped; resolution at read-time goes through `LayerStore.getLayer(id)?.name`.
-    if (scene.entities.some(entity => !entity.id || !entity.type || !(entity as { layerId?: string }).layerId)) {
-      return false;
-    }
-
-    return true;
-  }
+  // ADR-635 Φ C.23 — το `validateScene` ΜΕΤΑΚΟΜΙΣΕ στο `scene-validation.ts` και επιστρέφει
+  // πλέον **ποια** από τις τρεις συνθήκες έπεσε (δομή / bounds NaN / οντότητα χωρίς ταυτότητα)
+  // αντί για ένα αδιάγνωστο `boolean`. Η σημασιολογία αποδοχής είναι ταυτόσημη.
+  // @see scene-validation.ts → validateSceneModel
 }

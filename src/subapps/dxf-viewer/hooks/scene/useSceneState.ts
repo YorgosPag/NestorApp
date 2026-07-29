@@ -226,7 +226,12 @@ export function useSceneState() {
         commitImported(scene);
       } else {
         derr('SceneState', '❌ DXF import returned null scene');
-        const errorMessage = importError ? `DXF Import Error: ${importError}` : 'Failed to import DXF file. Please check the file format and try again.';
+        // N.11 — καμία καρφωτή συμβολοσειρά· ΚΑΙ το «check the file format» έφυγε επίτηδες:
+        // ήταν λάθος συμβουλή στις δύο από τις τρεις αιτίες αποτυχίας (ADR-635 Φ C.23). Τη
+        // διάγνωση την κουβαλά πλέον το ίδιο το `importError`.
+        const errorMessage = importError
+          ? t('callbacks.dxfImportFailedWithReason', { reason: importError })
+          : t('callbacks.dxfImportFailed');
         notifications.error(errorMessage, {
           duration: 6000,
           actions: [{

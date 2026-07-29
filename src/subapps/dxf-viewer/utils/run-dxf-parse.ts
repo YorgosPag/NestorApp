@@ -17,6 +17,8 @@ import { DxfSceneBuilder } from './dxf-scene-builder';
 import { countSceneLayers } from './scene-entity-count';
 import { normalizeEntitiesToOrigin } from './bounds-utils';
 import { summarizeDiagnostics } from './dxf-import-diagnostics';
+// ADR-635 Φ C.23 — διαγνώσιμη επικύρωση σκηνής (ποια συνθήκη έπεσε, σε ποια οντότητα).
+import { validateSceneModel, describeSceneValidationFailure } from './scene-validation';
 
 export interface RunDxfParseOptions {
   /**
@@ -50,12 +52,17 @@ export function runDxfParse(
       scene.sourceOrigin = normalized.sourceOrigin;
     }
 
-    if (!DxfSceneBuilder.validateScene(scene)) {
+    // ADR-635 Φ C.23 — η επικύρωση λέει **ΓΙΑΤΙ** απέτυχε. Το πόρισμα ταξιδεύει ΚΑΙ στο
+    // `error` (κονσόλα/clipboard του χρήστη) ΚΑΙ στα `warnings` (ορατό στο toast), γιατί μια
+    // αποτυχία εισαγωγής χωρίς αιτία κοστίζει μια ολόκληρη συνεδρία εικασιών.
+    const validation = validateSceneModel(scene);
+    if (!validation.valid) {
+      const reason = describeSceneValidationFailure(validation.failure);
       return {
         success: false,
-        error: 'Scene validation failed',
+        error: `Scene validation failed: ${reason}`,
         diagnostics,
-        warnings: summarizeDiagnostics(diagnostics),
+        warnings: [...summarizeDiagnostics(diagnostics), `Scene validation failed: ${reason}`],
         stats: { entityCount: 0, layerCount: 0, parseTimeMs: performance.now() - startTime },
       };
     }
