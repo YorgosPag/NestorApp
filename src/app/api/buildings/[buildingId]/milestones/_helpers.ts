@@ -1,7 +1,7 @@
 /** Milestone mutation helpers — extracted from route.ts for Google SRP compliance */
 
 import { NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { requireBuildingInTenant, logAuditEvent } from '@/lib/auth';
@@ -36,6 +36,31 @@ export interface UpdateMilestonePayload {
   updates: Record<string, unknown>;
 }
 
+// ─── Shared ─────────────────────────────────────────────────────────────
+
+/**
+ * Φέρνει το έγγραφο ορόσημου και **επιβεβαιώνει ότι ανήκει στο κτήριο** της διαδρομής.
+ *
+ * Ο έλεγχος ιδιοκτησίας (403) ήταν αντιγραμμένος σε update + delete. Ζει εδώ ώστε
+ * μια μελλοντική διαδρομή μετάλλαξης να μην μπορεί να τον ξεχάσει: το `requireBuildingInTenant`
+ * βεβαιώνει ότι ο χρήστης δικαιούται **το κτήριο**, όχι ότι το ορόσημο ανήκει σε αυτό.
+ */
+async function requireMilestoneOfBuilding(
+  adminDb: ReturnType<typeof requireAdminFirestore>,
+  id: string,
+  buildingId: string,
+): Promise<FirebaseFirestore.DocumentReference> {
+  const docRef = adminDb.collection(COLLECTIONS.BUILDING_MILESTONES).doc(id);
+  const docSnap = await docRef.get();
+
+  if (!docSnap.exists) throw new ApiError(404, 'Milestone not found');
+  if (docSnap.data()?.buildingId !== buildingId) {
+    throw new ApiError(403, 'Milestone does not belong to this building');
+  }
+
+  return docRef;
+}
+
 // ─── Create ─────────────────────────────────────────────────────────────
 
 export async function handleCreate(
@@ -43,8 +68,7 @@ export async function handleCreate(
   buildingId: string,
   ctx: AuthContext,
 ): Promise<NextResponse<MilestoneMutationResponse>> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database unavailable');
+  const adminDb = requireAdminFirestore();
 
   await requireBuildingInTenant({
     ctx,
@@ -109,8 +133,7 @@ export async function handleUpdate(
   buildingId: string,
   ctx: AuthContext,
 ): Promise<NextResponse<MilestoneMutationResponse>> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database unavailable');
+  const adminDb = requireAdminFirestore();
 
   await requireBuildingInTenant({
     ctx,
@@ -121,13 +144,7 @@ export async function handleUpdate(
   const { id, updates } = body;
   if (!id) throw new ApiError(400, 'id is required');
 
-  const docRef = adminDb.collection(COLLECTIONS.BUILDING_MILESTONES).doc(id);
-  const docSnap = await docRef.get();
-
-  if (!docSnap.exists) throw new ApiError(404, 'Milestone not found');
-  if (docSnap.data()?.buildingId !== buildingId) {
-    throw new ApiError(403, 'Milestone does not belong to this building');
-  }
+  const docRef = await requireMilestoneOfBuilding(adminDb, id, buildingId);
 
   const cleanUpdates: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(updates)) {
@@ -161,8 +178,7 @@ export async function handleDelete(
   buildingId: string,
   ctx: AuthContext,
 ): Promise<NextResponse<MilestoneMutationResponse>> {
-  const adminDb = getAdminFirestore();
-  if (!adminDb) throw new ApiError(503, 'Database unavailable');
+  const adminDb = requireAdminFirestore();
 
   await requireBuildingInTenant({
     ctx,
@@ -174,13 +190,7 @@ export async function handleDelete(
   const id = searchParams.get('id');
   if (!id) throw new ApiError(400, 'id query param is required');
 
-  const docRef = adminDb.collection(COLLECTIONS.BUILDING_MILESTONES).doc(id);
-  const docSnap = await docRef.get();
-
-  if (!docSnap.exists) throw new ApiError(404, 'Milestone not found');
-  if (docSnap.data()?.buildingId !== buildingId) {
-    throw new ApiError(403, 'Milestone does not belong to this building');
-  }
+  const docRef = await requireMilestoneOfBuilding(adminDb, id, buildingId);
 
   await docRef.delete();
 

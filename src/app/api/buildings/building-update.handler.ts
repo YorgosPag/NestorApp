@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
@@ -116,11 +116,7 @@ interface BuildingUpdateResponse {
 export const PATCH = withStandardRateLimit(
   withAuth<ApiSuccessResponse<BuildingUpdateResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-    const adminDb = getAdminFirestore();
-    if (!adminDb) {
-      logger.error('Firebase Admin not initialized');
-      throw new ApiError(503, 'Database unavailable');
-    }
+    const adminDb = requireAdminFirestore();
 
     try {
       const body = await request.json();

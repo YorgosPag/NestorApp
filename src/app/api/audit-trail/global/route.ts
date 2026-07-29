@@ -39,7 +39,7 @@ import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import {
@@ -103,8 +103,7 @@ const SCAN_CAP = 500;
 export const GET = withStandardRateLimit(
   withAuth<ApiSuccessResponse<EntityAuditResponse>>(
     async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const db = getAdminFirestore();
-      if (!db) throw new ApiError(503, 'Database unavailable');
+      const db = requireAdminFirestore();
 
       const url = new URL(request.url);
 

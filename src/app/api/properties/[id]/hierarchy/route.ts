@@ -8,7 +8,7 @@ import { NextRequest } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -63,10 +63,7 @@ export const GET = withStandardRateLimit(
       ctx: AuthContext,
       _cache: PermissionCache,
     ) => {
-      const adminDb = getAdminFirestore();
-      if (!adminDb) {
-        throw new ApiError(503, 'Database unavailable');
-      }
+      const adminDb = requireAdminFirestore();
 
       const propertyId = extractNestedIdFromUrl(request.url, 'properties');
 
