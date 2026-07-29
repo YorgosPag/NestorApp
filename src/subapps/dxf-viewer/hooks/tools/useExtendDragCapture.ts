@@ -10,40 +10,25 @@
  * @module hooks/tools/useExtendDragCapture
  */
 
-import { useEffect, useRef } from 'react';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { getCachedClientRect } from '../../rendering/core/pointer-rect-cache';
+import { useEffect } from 'react';
+import { screenToWorldCached } from '../../rendering/core/CoordinateTransforms';
 import { ExtendToolStore } from '../../systems/extend/ExtendToolStore';
 
 export interface UseExtendDragCaptureProps {
-  transform: ViewTransform;
   getViewportElement: () => HTMLElement | null;
 }
 
 export function useExtendDragCapture(props: UseExtendDragCaptureProps): void {
-  const { transform, getViewportElement } = props;
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
+  const { getViewportElement } = props;
 
   useEffect(() => {
     const el = getViewportElement();
     if (!el) return;
 
-    function screenToWorld(screenX: number, screenY: number): Point2D {
-      const rect = getCachedClientRect(el!); // Φ5 cache — no per-move reflow (ADR-040 Φ10)
-      const viewport = { width: rect.width, height: rect.height };
-      return CoordinateTransforms.screenToWorld(
-        { x: screenX - rect.left, y: screenY - rect.top },
-        transformRef.current,
-        viewport,
-      );
-    }
-
     function onPointerMove(e: PointerEvent): void {
       if (e.buttons !== 0) return;
       if (ExtendToolStore.getState().phase === 'picking') {
-        ExtendToolStore.execHoverMove(screenToWorld(e.clientX, e.clientY), e.shiftKey);
+        ExtendToolStore.execHoverMove(screenToWorldCached(el!, e.clientX, e.clientY), e.shiftKey);
       }
     }
 

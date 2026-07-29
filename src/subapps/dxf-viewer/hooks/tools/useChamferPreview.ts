@@ -13,7 +13,7 @@
  * @see hooks/tools/use-corner-tool-preview — shared CHAMFER/FILLET paint skeleton (ADR-625)
  */
 
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { ChamferToolStore } from '../../systems/corner/ChamferToolStore';
 import type { ChamferToolState } from '../../systems/corner/chamfer-types';
 import { computeChamferTwoLines, computeChamferPolyline, computeChamferPolylineCorner } from '../../systems/corner/chamfer-geometry';
@@ -36,7 +36,7 @@ import {
 } from './use-corner-tool-preview';
 
 export interface UseChamferPreviewProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
   getScene: () => SceneModel | null;
@@ -82,7 +82,6 @@ export function useChamferPreview(props: UseChamferPreviewProps): void {
   useCornerToolPreview<ChamferToolState>({
     store: ChamferToolStore,
     activeToolId: 'chamfer',
-    transform: props.transform,
     getCanvas: props.getCanvas,
     getViewportElement: props.getViewportElement,
     getScene: props.getScene,

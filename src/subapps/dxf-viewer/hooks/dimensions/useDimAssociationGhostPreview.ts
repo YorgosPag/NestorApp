@@ -28,7 +28,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DimensionEntity } from '../../types/dimension';
@@ -70,7 +70,7 @@ export interface UseDimAssociationGhostPreviewProps {
   readonly mirrorFirstPoint: Point2D | null;
   readonly mirrorSecondPoint: Point2D | null;
   readonly levelManager: LevelSceneReader;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;
 }
@@ -109,7 +109,7 @@ export function useDimAssociationGhostPreview(props: UseDimAssociationGhostPrevi
     movePhase, moveBasePoint, moveSelectedEntityIds, gripDragPreview,
     rotationPhase, rotationBasePoint, rotationAngle,
     mirrorPhase, mirrorFirstPoint, mirrorSecondPoint,
-    levelManager, transform, getCanvas, getViewportElement,
+    levelManager, getCanvas, getViewportElement,
   } = props;
 
   // SCALE / STRETCH live state is store-owned (ADR-348/349) — subscribe for the
@@ -292,7 +292,6 @@ export function useDimAssociationGhostPreview(props: UseDimAssociationGhostPrevi
     isActive,
     getCanvas,
     getViewportElement,
-    transform,
     // Move needs the live (snapped) world cursor for its delta; grip ignores it
     // (the delta is carried in dragPreview). useImmediateSnap = WYSIWYG with commit.
     cursorMode: 'world-position',

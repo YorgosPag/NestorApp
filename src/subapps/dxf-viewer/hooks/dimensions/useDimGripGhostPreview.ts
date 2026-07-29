@@ -26,7 +26,6 @@
  */
 
 import React, { useCallback } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { DxfGripDragPreview } from '../grip-computation';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import { applyDimensionGripDrag, toDimensionEntity } from './useDimensionGrips';
@@ -46,13 +45,13 @@ export interface UseDimGripGhostPreviewProps {
   /** Live grip-drag snapshot (carries `dimGripKind` only when a dim grip is dragged). */
   readonly dragPreview: DxfGripDragPreview | null;
   readonly levelManager: LevelSceneReader;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getCanvas: () => HTMLCanvasElement | null;
   readonly getViewportElement?: () => HTMLElement | null;
 }
 
 export function useDimGripGhostPreview(props: UseDimGripGhostPreviewProps): void {
-  const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { dragPreview, levelManager, getCanvas, getViewportElement } = props;
 
   const isActive = (dragPreview ? gripKindOf(dragPreview, 'dimension') : undefined) != null;
 
@@ -102,7 +101,6 @@ export function useDimGripGhostPreview(props: UseDimGripGhostPreviewProps): void
     isActive,
     getCanvas,
     getViewportElement,
-    transform,
     // Delta comes from dragPreview (not the cursor stream); layer on top of the
     // entity-ghost frame without wiping it. Committed dim stays on the main canvas.
     cursorMode: 'none',

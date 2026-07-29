@@ -12,12 +12,11 @@
  * @see hooks/tools/use-edit-fence-preview — shared EXTEND/TRIM draw-skeleton (ADR-625)
  */
 
-import type { ViewTransform } from '../../rendering/types/Types';
 import { ExtendToolStore } from '../../systems/extend/ExtendToolStore';
 import { useEditFencePreview, type EditFencePreviewColors } from './use-edit-fence-preview';
 
 export interface UseExtendPreviewProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }

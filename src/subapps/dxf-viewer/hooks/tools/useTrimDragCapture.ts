@@ -14,23 +14,19 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
-import { getCachedClientRect } from '../../rendering/core/pointer-rect-cache';
+import type { Point2D } from '../../rendering/types/Types';
+import { screenToWorldCached } from '../../rendering/core/CoordinateTransforms';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
 
 /** Screen-space pixel threshold for click-vs-drag discrimination. */
 const FENCE_DRAG_THRESHOLD_PX = 5;
 
 export interface UseTrimDragCaptureProps {
-  transform: ViewTransform;
   getViewportElement: () => HTMLElement | null;
 }
 
 export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
-  const { transform, getViewportElement } = props;
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
+  const { getViewportElement } = props;
 
   const dragStartScreenRef = useRef<{ x: number; y: number } | null>(null);
   const isDraggingRef = useRef(false);
@@ -41,13 +37,7 @@ export function useTrimDragCapture(props: UseTrimDragCaptureProps): void {
     if (!el) return;
 
     function screenToWorld(screenX: number, screenY: number): Point2D {
-      const rect = getCachedClientRect(el!); // Φ5 cache — no per-move reflow (ADR-040 Φ10)
-      const viewport = { width: rect.width, height: rect.height };
-      return CoordinateTransforms.screenToWorld(
-        { x: screenX - rect.left, y: screenY - rect.top },
-        transformRef.current,
-        viewport,
-      );
+      return screenToWorldCached(el!, screenX, screenY);
     }
 
     function onPointerDown(e: PointerEvent): void {

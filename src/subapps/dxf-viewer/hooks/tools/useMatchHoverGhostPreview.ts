@@ -25,7 +25,6 @@
  */
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { EntityType } from '../../types/entities';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -51,14 +50,14 @@ import { useCanvasGhostPreview } from './useCanvasGhostPreview';
 import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 
 export interface UseMatchHoverGhostPreviewProps {
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly levelManager: LevelSceneReader;
   getCanvas(): HTMLCanvasElement | null;
   getViewportElement?(): HTMLElement | null;
 }
 
 export function useMatchHoverGhostPreview(props: Readonly<UseMatchHoverGhostPreviewProps>): void {
-  const { transform, levelManager, getCanvas, getViewportElement } = props;
+  const { levelManager, getCanvas, getViewportElement } = props;
 
   const activeTool = useActiveTool();
   const hoveredId = useHoveredEntity();
@@ -128,7 +127,6 @@ export function useMatchHoverGhostPreview(props: Readonly<UseMatchHoverGhostPrev
     isActive,
     getCanvas,
     getViewportElement,
-    transform,
     cursorMode: 'none',
     draw,
   });

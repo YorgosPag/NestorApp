@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useSyncExternalStore } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { OffsetToolStore } from '../../systems/offset/OffsetToolStore';
 import { offsetEntity } from '../../systems/offset/offset-entity-geometry';
@@ -38,7 +38,7 @@ import { useActiveTool } from '../../stores/ToolStateStore';
 const GHOST_COLOR = '#22DD55';
 
 export interface UseOffsetPreviewProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -48,7 +48,7 @@ function shouldClose(ghost: Entity): boolean {
 }
 
 export function useOffsetPreview(props: UseOffsetPreviewProps): void {
-  const { transform, getCanvas, getViewportElement } = props;
+  const { getCanvas, getViewportElement } = props;
 
   const phase = useSyncExternalStore(OffsetToolStore.subscribe, () => OffsetToolStore.getState().phase);
   const activeTool = useActiveTool();
@@ -106,7 +106,6 @@ export function useOffsetPreview(props: UseOffsetPreviewProps): void {
     isActive: activeTool === 'offset' && (phase === 'picking-source' || phase === 'picking-side'),
     getCanvas,
     getViewportElement,
-    transform,
     draw,
   });
 }

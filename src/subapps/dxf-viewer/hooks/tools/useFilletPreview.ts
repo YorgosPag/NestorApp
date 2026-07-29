@@ -15,7 +15,7 @@
  * @see hooks/tools/use-corner-tool-preview — shared CHAMFER/FILLET paint skeleton (ADR-625)
  */
 
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { FilletToolStore } from '../../systems/corner/FilletToolStore';
 import type { FilletToolState } from '../../systems/corner/fillet-types';
 import {
@@ -45,7 +45,7 @@ import {
 } from './use-corner-tool-preview';
 
 export interface UseFilletPreviewProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
   /** Live scene getter (event-time read, not captured) for the hover hit-test. */
@@ -107,7 +107,6 @@ export function useFilletPreview(props: UseFilletPreviewProps): void {
   useCornerToolPreview<FilletToolState>({
     store: FilletToolStore,
     activeToolId: 'fillet',
-    transform: props.transform,
     getCanvas: props.getCanvas,
     getViewportElement: props.getViewportElement,
     getScene: props.getScene,
