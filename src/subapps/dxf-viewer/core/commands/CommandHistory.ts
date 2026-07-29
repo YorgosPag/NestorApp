@@ -38,6 +38,11 @@ export class CommandHistory implements ICommandHistory {
   private readonly versionStore = createExternalStore<number>(0);
   private lastEvent: CommandHistoryEvent;
   private config: CommandHistoryConfig;
+  // ADR-729 — ανοιχτή ατομική ομάδα αναίρεσης. `groupDepth > 0` ⇒ το `execute` ΕΚΤΕΛΕΙ κανονικά
+  // (η επόμενη εντολή της παρτίδας πρέπει να δει τη γραμμένη σκηνή) αλλά **συλλέγει** αντί να
+  // σπρώχνει στη στοίβα· η ομάδα προσγειώνεται ως ΜΙΑ εγγραφή όταν κλείσει η εμβέλεια.
+  private groupDepth = 0;
+  private groupBuffer: ICommand[] = [];
 
   constructor(config: Partial<CommandHistoryConfig> = {}) {
     this.config = { ...DEFAULT_HISTORY_CONFIG, ...config };
@@ -54,6 +59,16 @@ export class CommandHistory implements ICommandHistory {
    * Execute a new command and add to history
    */
   execute(command: ICommand): void {
+    // ADR-729 — μέσα σε ατομική ομάδα: τρέξε ΤΩΡΑ (η σκηνή πρέπει να είναι σωστή για την
+    // επόμενη εντολή της παρτίδας), αλλά **συλλογή** αντί για push. Χωρίς merge (η ομάδα
+    // ΕΙΝΑΙ η ενέργεια), χωρίς trim (δεν καταναλώνει θέσεις ιστορικού ανά οντότητα) και
+    // χωρίς ειδοποίηση ανά παιδί (186 ειδοποιήσεις → 1).
+    if (this.groupDepth > 0) {
+      command.execute();
+      this.groupBuffer.push(command);
+      return;
+    }
+
     // Check for merge with last command
     if (this.config.mergeConfig.enableMerging) {
       const lastCommand = this.undoStack[this.undoStack.length - 1];

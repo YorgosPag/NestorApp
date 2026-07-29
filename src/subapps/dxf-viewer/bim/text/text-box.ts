@@ -386,9 +386,14 @@ export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
 }
 
 /**
- * The VISUAL box's vertical extent ÷ em height (= inkAscent + inkDescent) — the divisor a
- * resize uses to recover the nominal `height` from a dragged box height, so the box holds
- * after release (`resolveTextBox(after) === draggedFrame`, no jump). Em-box path → 1.0.
+ * The VISUAL box's vertical extent ÷ the DXF **TEXT HEIGHT** (= inkAscent + inkDescent) — the
+ * divisor a resize uses to recover the nominal `height` from a dragged box height, so the box
+ * holds after release (`resolveTextBox(after) === draggedFrame`, no jump). Em-box path → 1.0.
+ *
+ * ⚠️ ADR-635 Φ C.22 — ΟΧΙ «÷ em». Αφότου το κείμενο βάφεται σε `em = ύψος × unitsPerEm/sCapHeight`,
+ * τα δύο διαφέρουν κατά τον λόγο cap-height, και ο διαιρέτης εδώ πρέπει να είναι στη μονάδα που
+ * ΠΟΛΛΑΠΛΑΣΙΑΖΕΙ ο `buildTextBox` (`… × h`, δηλαδή ύψος κειμένου). Με cap ink 0,7·em σε γραμματοσειρά
+ * με cap 0,8·em η τιμή είναι 0,875 — όχι 0,7.
  */
 export function textVisualExtentRatio(text: DxfText): number {
   const just = justificationOf(text);

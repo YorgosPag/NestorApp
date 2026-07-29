@@ -10,8 +10,10 @@
  * «μεγάλο κενό πάνω», measured 93 units) AND wider than the letters left+right (Greek
  * caps «ΠΑΠΑΠ»: box «επεκτείνεται προς τα έξω» δεξιά/αριστερά).
  *
- * All fields are height-INDEPENDENT ratios of the nominal em height (they scale linearly
- * with size, so one measure at a reference size serves every height + X-scale):
+ * All fields are height-INDEPENDENT ratios of the DXF TEXT HEIGHT — NOT of the em (ADR-635
+ * Φ C.22: the font is drawn at `em = height × unitsPerEm / sCapHeight`, and these ratios already
+ * carry that factor). They scale linearly with size, so one measure at a reference size serves
+ * every height + X-scale:
  *   - `fontAscent` / `fontDescent` — where the renderer seats the BASELINE (mirrors
  *     `TextRenderer.fillGlyphRun`'s `metrics.ascent`-based baseline placement).
  *   - `inkAscent` / `inkDescent` — the glyph INK above / below the baseline (box top/bottom).
@@ -56,19 +58,19 @@ export interface TextGlyphInkStyle {
  * ratios already carry that factor.
  */
 export interface TextGlyphInk {
-  /** Font ascent above the baseline ÷ em — where the renderer seats the baseline. */
+  /** Font ascent above the baseline ÷ text height — where the renderer seats the baseline. */
   readonly fontAscent: number;
-  /** Font descent below the baseline ÷ em. */
+  /** Font descent below the baseline ÷ text height. */
   readonly fontDescent: number;
-  /** Glyph ink ascent above the baseline ÷ em — box TOP. */
+  /** Glyph ink ascent above the baseline ÷ text height — box TOP. */
   readonly inkAscent: number;
-  /** Glyph ink descent below the baseline ÷ em — box BOTTOM. */
+  /** Glyph ink descent below the baseline ÷ text height — box BOTTOM. */
   readonly inkDescent: number;
-  /** Glyph ink LEFT edge from the pen origin ÷ em (leading side bearing). */
+  /** Glyph ink LEFT edge from the pen origin ÷ text height (leading side bearing). */
   readonly inkLeft: number;
-  /** Glyph ink RIGHT edge from the pen origin ÷ em. */
+  /** Glyph ink RIGHT edge from the pen origin ÷ text height. */
   readonly inkRight: number;
-  /** Pen advance ÷ em (0 ⇒ no font → consumers apply ZERO horizontal ink insets). */
+  /** Pen advance ÷ text height (0 ⇒ no font → consumers apply ZERO horizontal ink insets). */
   readonly advance: number;
 }
 
