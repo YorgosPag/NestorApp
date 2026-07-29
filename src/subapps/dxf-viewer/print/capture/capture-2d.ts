@@ -24,6 +24,7 @@ import {
   resolveAppliedScaleDenominator,
 } from '../config/paper-math';
 import { setPrintColorPolicy, clearPrintColorPolicy } from '../../config/print-color-policy';
+import { IDENTITY_VIEW_TRANSFORM } from '../../config/geometry-constants';
 import type { CaptureResult } from './capture-types';
 import { createOffscreen2dTarget } from './capture-2d-offscreen-canvas';
 
@@ -40,8 +41,6 @@ export interface Capture2dInput {
    */
   plotStyle?: PrintPlotStyle;
 }
-
-const IDENTITY_TRANSFORM: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
 
 /**
  * Resolve the print transform for the requested fit mode. Exported so the vector
@@ -63,7 +62,8 @@ export function resolvePrintTransform(
     });
   }
   const fit = FitToViewService.calculateFitToViewTransform(dxfScene, [], viewport);
-  return fit.transform ?? IDENTITY_TRANSFORM;
+  // 🏢 ADR-118 SSoT — ο ουδέτερος μετασχηματισμός έχει ΜΙΑ πηγή (N.0.2, ήταν τοπικό literal εδώ).
+  return fit.transform ?? IDENTITY_VIEW_TRANSFORM;
 }
 
 /**

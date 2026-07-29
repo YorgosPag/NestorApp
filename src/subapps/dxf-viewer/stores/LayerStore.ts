@@ -22,6 +22,7 @@ import {
 } from '../systems/isolate/IsolateEffectsStore';
 import { dimOpacityToTransparency } from '../services/layer-isolate-resolver';
 import { DXF_DEFAULT_LAYER } from '../config/layer-config';
+import { isLayerRenderable } from '../config/layer-visibility';
 import { createExternalStore } from './createExternalStore';
 
 type Listener = () => void;
@@ -122,6 +123,26 @@ export function subscribeLayerStore(cb: Listener): () => void {
 
 export function getLayer(idOrName: string): SceneLayer | null {
   return layersById.get(idOrName) ?? null;
+}
+
+/**
+ * «Μπορεί ο χρήστης να **πιάσει** οντότητα αυτού του layer;» — ζωντανή ανάγνωση store +
+ * ο καθαρός SSoT `isLayerRenderable` (ON **και** μη-παγωμένο).
+ *
+ * 🔴 Γεννήθηκε από περιστατικό (Giorgio, 2026-07-29): αφού το πάγωμα άρχισε να τιμάται στο
+ * rendering, οι παγωμένες οντότητες έγιναν **αόρατες αλλά ακόμη hover-άρονταν και
+ * επιλέγονταν**. Το ίδιο ερώτημα ήταν γραμμένο σε **τρία** σημεία με **τρεις** διαφορετικές
+ * απαντήσεις: `hit-tester-utils` (μόνο `entity.visible`), `SelectionUtils.findEntityAtPoint`
+ * (`!layer.visible` — truthiness, άρα `undefined` ⇒ «κρυφό»), `findEntitiesInMarquee`
+ * (**κανένας** έλεγχος). Ζει εδώ μία φορά· τα τρία το καλούν.
+ *
+ * **Fail-open**: άγνωστο/απόν `layerId` ⇒ `true`. Μια σπασμένη αναφορά layer δεν πρέπει να
+ * εξαφανίζει σιωπηλά τη δυνατότητα επιλογής — ίδια στάση με τον renderer.
+ */
+export function isLayerIdPickable(layerId: string | null | undefined): boolean {
+  if (!layerId) return true;
+  const layer = getLayer(layerId);
+  return layer ? isLayerRenderable(layer) : true;
 }
 
 /**

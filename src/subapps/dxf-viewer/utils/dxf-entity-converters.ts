@@ -412,7 +412,8 @@ function routeEntityToConverter(
       return convertLine(data, layer, index);
     case 'HATCH':
       // ADR-507 Φ1a — χρειάζεται ordered pairs (boundary loops με επαναλαμβανόμενα 10/20).
-      return convertHatch(entityData.pairs ?? [], layer, index);
+      // Το `header` περνά για το `$MEASUREMENT` (μονάδες ορισμού μοτίβου) — ADR-507 Φ7.
+      return convertHatch(entityData.pairs ?? [], layer, index, header);
     case 'LWPOLYLINE':
       // ADR-507 pairs → survive repeated 10/20 that the flat `data` map overwrites.
       return convertLwPolyline(data, layer, index, entityData.pairs);

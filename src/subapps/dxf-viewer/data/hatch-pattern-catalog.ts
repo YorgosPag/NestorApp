@@ -410,6 +410,33 @@ export function getSuggestedScale(name: string | undefined): number {
   return SUGGESTED_SCALES[name] ?? SUGGESTED_SCALES[name.toUpperCase()] ?? 1;
 }
 
+/** DXF `$MEASUREMENT` = 0 ⇒ English (`acad.pat`)· 1 ⇒ Metric (`acadiso.pat`). */
+const MEASUREMENT_ENGLISH = 0;
+
+/**
+ * Διαιρέτης που μεταφράζει την κλίμακα (DXF group 41) του **αρχείου** σε κλίμακα πάνω στον
+ * **δικό μας** κατάλογο. SSoT — ο κατάλογος είναι που ξέρει σε τι μονάδες είναι γραμμένος.
+ *
+ * Το `$MEASUREMENT` επιλέγει **ποιο αρχείο ορισμών** κλιμακώνει το σχέδιο:
+ *   • `0` (English) → `acad.pat`, τιμές σε **ίντσες** (`ANSI31` delta-y = 0,125″)
+ *   • `1` (Metric)  → `acadiso.pat`, τιμές σε **χιλιοστά** (`ANSI31` delta-y = 3,175 mm)
+ *
+ * Ο κατάλογός μας είναι `acad.pat × 25.4` (βλ. κεφαλίδα αρχείου) ⇒ **ταυτίζεται με το acadiso**.
+ * Άρα ένα metric σχέδιο πολλαπλασιάζει ακριβώς τους αριθμούς που ήδη έχουμε (διαιρέτης 1), ενώ
+ * ένα imperial πολλαπλασιάζει αριθμούς **25,4× μικρότερους** — για να δώσει το ίδιο **φυσικό**
+ * βήμα με τον δικό μας κατάλογο, η κλίμακά του πρέπει να διαιρεθεί με 25,4.
+ *
+ * ⚠️ **ΔΕΝ είναι τεκμήριο μονάδας σχεδίου.** Το ADR-716 §4 απέκλεισε ρητά το `$MEASUREMENT` από
+ * τη σκάλα τεκμηρίων του `$INSUNITS` (στο πραγματικό δείγμα έδινε ίντσες). Εδώ απαντά **άλλη
+ * ερώτηση**: όχι «σε τι μονάδα είναι η γεωμετρία;» αλλά «σε τι μονάδα είναι ο ορισμός του
+ * μοτίβου;». Μην τα ταυτίσεις — είναι ο λόγος που το ένα απορρίφθηκε και το άλλο ισχύει.
+ *
+ * Απόν/άγνωστο ⇒ 1 (metric): συντηρητικό, γιατί είναι η ιστορική συμπεριφορά.
+ */
+export function patternDefinitionUnitDivisor(measurement: number | undefined): number {
+  return measurement === MEASUREMENT_ENGLISH ? INCH : 1;
+}
+
 /**
  * Πραγματική κλίμακα = προτεινόμενη (ανά μοτίβο) × user multiplier (`patternScale`).
  * SSoT — την καλούν ΚΑΙ ο geometry resolver ΚΑΙ ο DXF writer (group 41) ώστε

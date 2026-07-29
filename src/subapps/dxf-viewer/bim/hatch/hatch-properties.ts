@@ -52,6 +52,25 @@ export function isSolidHatch(hatch: SolidProbe): boolean {
   return (hatch.patternName ?? '').toUpperCase() === 'SOLID';
 }
 
+/** Το μόνο πεδίο που χρειάζεται ο έλεγχος περιγράμματος (loose, όπως το `SolidProbe`). */
+type ContourProbe = Pick<HatchEntity, 'contourPen'>;
+
+/**
+ * SSoT: ζωγραφίζει αυτή η γραμμοσκίαση **δικό της** περίγραμμα; (ADR-507 — contour pen).
+ *
+ * `undefined` ⇒ **ναι** (backward-compat για ήδη αποθηκευμένα έγγραφα)· ο import γράφει ρητά
+ * `{ visible: false }`, γιατί στο AutoCAD το όριο είναι **ξεχωριστή οντότητα** που έρχεται με
+ * το ίδιο DXF (μετρημένο στο `47_ergasia.dxf`: 47 LWPOLYLINE στο layer `pl`, **99,4%** των
+ * κορυφών τους πάνω σε κορυφή ορίου hatch) ⇒ δεύτερο δικό μας περίγραμμα = **διπλή γραμμή**.
+ *
+ * Ζει εδώ και **όχι** μέσα στον renderer επειδή την ίδια ερώτηση κάνουν **δύο** pipelines:
+ * η οθόνη (`HatchRenderer`) και το vector PDF (`print/vector/scene-hatch-emitter`). Όσο η
+ * συνθήκη ήταν inline στην οθόνη, το χαρτί δεν την ρωτούσε καν και τύπωνε πάντα περίγραμμα.
+ */
+export function isHatchContourVisible(hatch: ContourProbe): boolean {
+  return hatch.contourPen?.visible !== false;
+}
+
 /** SSoT: islandStyle → DXF code 75 (normal=0, outer=1, ignore=2). */
 export function islandStyleToDxf75(style: HatchEntity['islandStyle']): number {
   return style === 'outer' ? 1 : style === 'ignore' ? 2 : 0;

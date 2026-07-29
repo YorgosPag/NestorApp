@@ -13,11 +13,13 @@
 
 import type { AnySceneEntity } from '../types/scene';
 import type { Point2D } from '../rendering/types/Types';
+import type { DxfHeaderData } from './dxf-parser-types';
 import { dxf75ToIslandStyle } from '../bim/hatch/hatch-properties';
 import { extractEntityColor } from './dxf-converter-helpers';
 import {
   getHatchPattern,
   getSuggestedScale,
+  patternDefinitionUnitDivisor,
   type HatchPattern,
   type PatternLine,
 } from '../data/hatch-pattern-catalog';
@@ -53,6 +55,12 @@ export interface HatchAssemblyInput {
   angle: number | undefined;
   /** EFFECTIVE pattern scale as written in the file (undefined ⇒ omit). */
   scale: number | undefined;
+  /**
+   * DXF HEADER `$MEASUREMENT` του αρχείου-πηγής: επιλέγει σε τι μονάδες είναι γραμμένος ο
+   * ορισμός του μοτίβου που κλιμακώνει το group 41 (0 = ίντσες/`acad.pat`, 1 = mm/`acadiso.pat`).
+   * Απόν ⇒ metric — ισχύει για τον R12/XDATA importer, όπου το μοτίβο το γράψαμε **εμείς** σε mm.
+   */
+  measurement?: number;
   color: string | undefined;
   seedPoints?: Point2D[];
   gradient?: HatchGradient;
@@ -69,7 +77,7 @@ export interface HatchAssemblyInput {
 export function buildHatchSceneEntity(input: HatchAssemblyInput): AnySceneEntity {
   const {
     id, layer, boundaryPaths, patternName, solid, patternTypeCode, islandCode,
-    angle, scale, color, seedPoints = [], gradient, inlinePattern,
+    angle, scale, color, seedPoints = [], gradient, inlinePattern, measurement,
   } = input;
 
   const fillType = gradient ? 'gradient'
@@ -80,7 +88,15 @@ export function buildHatchSceneEntity(input: HatchAssemblyInput): AnySceneEntity
     const catalogHit = getHatchPattern(patternName);
     if (catalogHit) {
       const suggested = getSuggestedScale(patternName);
-      if (scale !== undefined && !Number.isNaN(scale) && suggested > 0) patternScale = scale / suggested;
+      // Δύο **διαφορετικές** επαναμεταφράσεις της τιμής του αρχείου προς τον δικό μας κατάλογο:
+      //   ÷ suggested → αντιστρέφει τη ΔΙΚΗ ΜΑΣ κανονικοποίηση πυκνότητας (idempotency, Φ6)
+      //   ÷ divisor   → μεταφράζει τις ΜΟΝΑΔΕΣ του ορισμού μοτίβου (ίντσες→mm όταν $MEASUREMENT=0)
+      // Το πρώτο ισχύει επειδή τη γράψαμε εμείς· το δεύτερο επειδή το AutoCAD κλιμακώνει άλλο
+      // αρχείο ορισμών. Ίδιο πρόσημο, ασύνδετες αιτίες — μην τα ενοποιήσεις σε μία σταθερά.
+      const divisor = patternDefinitionUnitDivisor(measurement);
+      if (scale !== undefined && !Number.isNaN(scale) && suggested > 0) {
+        patternScale = scale / suggested / divisor;
+      }
     }
   }
 
@@ -202,12 +218,16 @@ function parseInlinePatternLines(pairs: DxfPairs, idx78: number): PatternLine[] 
  * {@link parseHatchBoundaryPaths} (τόξα/ελλείψεις/splines + η διπλή σημασία του `93`).
  * Τα 10/20 του elevation point (πριν το 91) και των seed points (μετά) δεν μπερδεύονται.
  *
+ * Το `header` χρειάζεται **μόνο** για το `$MEASUREMENT` (μονάδες του ορισμού μοτίβου, βλ.
+ * {@link patternDefinitionUnitDivisor}). Απόν ⇒ metric, δηλαδή η ιστορική συμπεριφορά.
+ *
  * @see AutoCAD DXF Reference: HATCH entity (boundary path data)
  */
 export function convertHatch(
   pairs: DxfPairs,
   layer: string,
   index: number,
+  header?: DxfHeaderData,
 ): AnySceneEntity | null {
   // ── Scalars (μη-10/20 κωδικοί → μοναδικοί, ασφαλές πρώτο match) ──────────────
   let patternName: string | undefined;
@@ -326,5 +346,6 @@ export function convertHatch(
     seedPoints,
     gradient,
     inlinePattern,
+    measurement: header?.measurement,
   });
 }

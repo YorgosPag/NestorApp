@@ -187,5 +187,71 @@ docblock που περιγράφει τους «καταναλωτές» του 
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-29 | 🔴 **Ο ΔΕΥΤΕΡΟΣ ΜΗΧΑΝΙΣΜΟΣ ΑΠΟΚΡΥΨΗΣ ΔΕΝ ΕΙΣΑΓΟΤΑΝ ΠΟΤΕ, ΚΑΙ ΤΟ PICKING ΔΕΝ ΤΟΝ ΡΩΤΟΥΣΕ.** Βλ. §10 |
 | 2026-07-28 | §9 — εκκαθάριση CHECK 3.30 (9 νέες νεκρές εξαγωγές, κανένα rebaseline): 4+1 διαγραφές, 4 συνδέσεις. Τα 9 χειρόγραφα αντίγραφα του layer-store subscription μετανάστευσαν στο `useLayerStoreSnapshot`· η εισερχόμενη πύλη `unprojectDisplayPoint` συνδέθηκε στο `topo-survey-point-resolve`· το `topoSurfaceGripsOf` αντικατέστησε δύο ανέλεγκτα casts· το `levelId` του `topo-frame-status-store` έγινε πεδίο snapshot και το `TopoFrameNotice` το τιμά (**διόρθωση συμπεριφοράς**: το μήνυμα δεν εμφανίζεται πια για άλλον όροφο). Gate: `✅ CHECK 3.30 OK`. Jest: 193/193 στις 19 σχετικές σουίτες |
 | 2026-07-28 | Αρχική έκδοση. Ρίζα εντοπισμένη με browser probe· §1-8 IMPLEMENTED· 218/218 jest· browser-verified. Κώδικας: `9b6b80c3` (SSoT γραφής + gateway), `e1391324` (κάλυψη), `58bf78b8` (ανα-αρίθμηση 719→721 — το 719 ήταν πιασμένο από το ambient-declaration-ssot) |
+
+
+## 10. 🔴 2026-07-29 — Το πάγωμα (group 70) και το picking
+
+**Αφορμή (Giorgio):** *«γιατί αυτή η μπλε γραμμή δεν φαίνεται στο AutoCAD;»* — για μια πολυγραμμή
+που ο Νέστορας ζωγράφιζε κανονικά.
+
+### 10.1 Η εισαγωγή διάβαζε τον μισό πίνακα
+
+Το AutoCAD κρύβει ένα layer με **δύο ανεξάρτητους** μηχανισμούς — και το §1 αυτού του ADR το
+δηλώνει ήδη ρητά («ON και FREEZE είναι ΔΥΟ ερωτήματα»). Ο reader όμως που τροφοδοτεί τον
+`DxfSceneBuilder` (`parseLayerColors`) διάβαζε **μόνο** τα group `2` και `62`:
+
+| Μηχανισμός | DXF | Τιμούνταν; |
+|---|---|---|
+| **OFF** | `62` αρνητικό | ✅ ναι |
+| **FROZEN** | `70` bit 0 | ❌ **δεν διαβαζόταν καθόλου** |
+
+Μετρημένο στο πραγματικό `47_ergasia.dxf`: **8 παγωμένα layers / ~700 οντότητες** που το AutoCAD
+δεν δείχνει (`Point_Tax_2019` 284, `Num_Tax_2019` 244, `pl` 60, `kryfo` 38, `Visible Elevation` 24,
+`Δημανιδης`/`Survey`/`Name` 43). Το `pl` — η μπλε γραμμή — έχει **θετικό** χρώμα και είναι *μόνο*
+frozen, γι' αυτό γλιστρούσε από τον έλεγχο προσήμου.
+
+⚠️ **Ολόκληρη η μηχανή του παγώματος υπήρχε και ήταν σωστή** (`isLayerRenderable`,
+`LayerFreezeCommand`, `LAYTHW`, smart filters, `dxf-entity-layer-skip`). **Κανείς δεν έγραφε το
+πεδίο.** Η ιδιότητα χωρίς συγγραφέα είναι σχόλιο, όχι συμπεριφορά.
+
+🆕 `utils/dxf-layer-flags.ts` — SSoT για τα bits του group 70. Ο πλήρης parser
+(`dxf-layer-table-parser`) υπολόγιζε ήδη `flag & 1` inline· τώρα **και οι δύο** readers ρωτούν το
+ίδιο module ⇒ αδύνατο να πουν διαφορετικά για το ίδιο αρχείο. Το `LayerColorEntry` απέκτησε
+`frozen`, και το `registerLayer` το περνά στο `createSceneLayer` (χωρίς αυτό ο parser θα ήταν
+σωστός και **αδρανής** — ένα test το φυλάει).
+
+### 10.2 Και μετά: «τις ανακαλύπτει ο κέρσορας»
+
+Μόλις το πάγωμα άρχισε να τιμάται στο **rendering**, ο Giorgio ανέφερε αμέσως: *«εξαφανίστηκαν οι
+μπλε γραμμές, αλλά όταν κάνω hover τις ανακαλύπτει ο κέρσορας, φωτίζονται και επιλέγονται»*.
+
+Το ίδιο ερώτημα ήταν γραμμένο σε **τέσσερα** σημεία με **τέσσερις** απαντήσεις — ακριβώς η
+παθολογία που γέννησε αυτό το ADR, σε άλλο υποσύστημα:
+
+| Σημείο | Τι ρωτούσε | Αποτέλεσμα |
+|---|---|---|
+| `dxf-entity-layer-skip` (render) | `frozen \|\| !visible` | ✅ σωστό |
+| `hit-tester-utils.passesFilters` (hover/click) | μόνο `entity.visible` | ❌ **καμία** ερώτηση για layer |
+| `SelectionUtils.findEntityAtPoint` | `layer && !layer.visible` | ❌ αγνοεί πάγωμα· truthiness ⇒ `undefined` = «κρυφό» |
+| `SelectionUtils.findEntitiesInMarquee` / `findEntitiesInLasso` | — | ❌ **κανένας** έλεγχος |
+
+🆕 `LayerStore.isLayerIdPickable(layerId)` — ζωντανή ανάγνωση store + ο καθαρός
+`isLayerRenderable`. **Ένα** κατηγόρημα, **τέσσερα** call sites. Fail-open σε άγνωστο `layerId`
+(ίδια στάση με τον renderer: σπασμένη αναφορά δεν εξαφανίζει σιωπηλά τη δυνατότητα επιλογής),
+και σεβασμός του `includeInvisible` για όποιον θέλει ρητά τα πάντα.
+
+**Γιατί event-time και όχι φιλτράρισμα στο χτίσιμο του spatial index:** ο index ξαναχτίζεται μόνο
+σε αλλαγή σκηνής (`scene === this.currentScene` guard). Ένα toggle παγώματος στο panel δεν αλλάζει
+τη σκηνή ⇒ το φίλτρο θα έμενε μπαγιάτικο. Ένα test το καρφώνει.
+
+### 10.3 Επαλήθευση
+
+- `utils/__tests__/dxf-layer-frozen-import.test.ts` (9) — το περιστατικό `pl`, πειθαρχία bit
+  (`locked`=4 και «frozen σε νέα viewports»=2 **δεν** κρύβουν), η καλωδίωση μέχρι το `SceneLayer`,
+  και anti-drift μεταξύ των δύο parsers σε 6 τιμές flag.
+- `rendering/hitTesting/__tests__/hit-test-layer-renderable.test.ts` (8) — hover + **και τα τρία**
+  μονοπάτια επιλογής (click/marquee/lasso), fail-open, `includeInvisible`, ζωντανή ανάγνωση.
+- Σαμποτάζ: 5 / 1 / 3 / 1 κόκκινα αντίστοιχα ⇒ τα δίχτυα δαγκώνουν.

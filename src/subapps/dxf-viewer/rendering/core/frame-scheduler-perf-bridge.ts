@@ -54,22 +54,75 @@ export const FRAME_STAGE_PREFIX = 'frame:';
 export const FRAME_TOTAL_STAGE = `${FRAME_STAGE_PREFIX}TOTAL`;
 
 /**
+ * Η γραμμή του **ΔΙΑΣΤΗΜΑΤΟΣ** μεταξύ δύο διαδοχικών καταγεγραμμένων καρέ (wall clock).
+ *
+ * 🔴 **Αυτό είναι το μέγεθος των κριτηρίων του ADR-726 §5, και έλειπε.** Η Φ1 κατέγραφε μόνο το
+ * `totalFrameTime` — τη **διάρκεια του rAF callback**. Τα νούμερα του §4 όμως (p90 = 80ms,
+ * max = 576,5ms) είναι **διαστήματα μεταξύ καρέ**: αυτό που νιώθει ο χρήστης ως κόλλημα. Δύο
+ * διαφορετικά μεγέθη με παρόμοιο όνομα· ένα benchmark πάνω στο πρώτο θα παρήγαγε αριθμούς που
+ * δεν σημαίνουν αυτό που λέει η ετικέτα τους — η τέταρτη λανθασμένη διάγνωση της σειράς.
+ *
+ * ## Γιατί μετριέται ΕΔΩ και όχι από το `metrics.deltaTime`
+ *
+ * Το `UnifiedFrameScheduler.processFrame` ενημερώνει το `lastFrameTime` **πριν** τον έλεγχο
+ * throttling (γρ. 194-202) και μετά επιστρέφει χωρίς να εκπέμψει metrics. Άρα το
+ * `metrics.deltaTime` ενός καρέ που ζωγράφισε μετριέται από το τελευταίο **rAF tick** — που
+ * μπορεί να ήταν throttled και αόρατο — όχι από το τελευταίο καρέ **που ζωγράφισε**. Η γέφυρα
+ * κρατά δικό της ρολόι, οπότε το διάστημα είναι πάντα «από το προηγούμενο καρέ που μέτρησε».
+ *
+ * ## Το ζεύγος INTERVAL + TOTAL είναι η διάγνωση
+ *
+ * | Παρατήρηση | Συμπέρασμα |
+ * |---|---|
+ * | `INTERVAL` ≫ `TOTAL` | ο χρόνος πάει σε **browser work** (layout/paint/composite) ⇒ Φ2 |
+ * | `INTERVAL` ≈ `TOTAL` | ο χρόνος πάει στον **δικό μας** κώδικα ⇒ Φ3/Φ4 |
+ *
+ * Κανένα από τα δύο μεγέθη **μόνο του** δεν απαντά «ποιος φταίει».
+ */
+export const FRAME_INTERVAL_STAGE = `${FRAME_STAGE_PREFIX}INTERVAL`;
+
+/**
  * Καταγράφει ένα καρέ στον κοινό aggregator. Εξάγεται για να μπορεί να ελεγχθεί χωρίς rAF/DOM.
  *
  * Καταγράφονται **μόνο** τα συστήματα που πραγματικά ζωγράφισαν: ένα skipped σύστημα κοστίζει 0ms
  * και θα αραίωνε τον μέσο όρο κρύβοντας την αλήθεια. Η συχνότητα φαίνεται από τη σύγκριση του
  * `count` κάθε γραμμής με το `count` της {@link FRAME_TOTAL_STAGE}.
  */
-export function recordFrameAttribution(metrics: FrameMetrics): void {
-  if (!isPerfEnabled()) return;
+let lastRecordedAtMs: number | null = null;
+
+/**
+ * Ξεχνά το προηγούμενο καρέ, ώστε το επόμενο **να μην** παραγάγει διάστημα.
+ *
+ * Καλείται σε κάθε έξοδο χωρίς καταγραφή (κλειστό flag, μη-ορατό tab). Χωρίς αυτό, το πρώτο
+ * καρέ μετά από ένα κενό θα κατέγραφε ως «διάστημα καρέ» **ολόκληρη τη διάρκεια του κενού** —
+ * ένα tab κρυμμένο 30΄΄ θα γεννούσε ένα δείγμα των 30.000ms και θα δηλητηρίαζε max/p99.
+ * Ο κανόνας του §1.2 δεν αρκεί να πετάει τα κρυμμένα καρέ· πρέπει να πετάει και **τη ραφή**.
+ */
+function forgetPreviousFrame(): void {
+  lastRecordedAtMs = null;
+}
+
+export function recordFrameAttribution(
+  metrics: FrameMetrics,
+  nowMs: number = performance.now(),
+): void {
+  if (!isPerfEnabled()) return forgetPreviousFrame();
   // ADR-726 §1.2 — δεσμευτικός κανόνας εγκυρότητας: κρυμμένο/throttled tab ⇒ το δείγμα πετιέται.
-  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+    return forgetPreviousFrame();
+  }
 
   for (const [systemId, sample] of metrics.systemMetrics) {
     if (sample.skipped) continue;
     recordSample(`${FRAME_STAGE_PREFIX}${systemId}`, sample.renderTime);
   }
   recordSample(FRAME_TOTAL_STAGE, metrics.totalFrameTime);
+
+  // Το πρώτο καρέ ενός παραθύρου δεν έχει προηγούμενο ⇒ δεν υπάρχει διάστημα να καταγραφεί.
+  if (lastRecordedAtMs !== null) {
+    recordSample(FRAME_INTERVAL_STAGE, nowMs - lastRecordedAtMs);
+  }
+  lastRecordedAtMs = nowMs;
 }
 
 /** Ο ένας listener στον scheduler, όσο κι αν είναι οι κάτοχοι (refcount). */

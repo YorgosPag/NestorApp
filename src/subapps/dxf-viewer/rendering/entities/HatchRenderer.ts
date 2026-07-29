@@ -29,7 +29,9 @@ import { getHatchMoveRotateGrips } from '../../bim/hatch/hatch-move-rotate-grips
 import { toMoveRotateGlyphGrips } from '../../bim/grips/move-rotate-glyph-grips';
 import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { buildHatchEntitySegments } from '../../bim/geometry/shared/hatch-pattern-geometry';
-import { isSolidHatch, resolveHatchLineWidthPx } from '../../bim/hatch/hatch-properties';
+import {
+  isHatchContourVisible, isSolidHatch, resolveHatchLineWidthPx,
+} from '../../bim/hatch/hatch-properties';
 import type { HatchGradient } from '../../bim/hatch/hatch-gradient';
 // ADR-507 Φ5 / A3 — pure gradient paint SSoT (κοινό με το live grip-drag ghost,
 // `draw-ghost-entity` case 'hatch'· preview === commit, μηδέν δεύτερη gradient math).
@@ -255,8 +257,9 @@ export class HatchRenderer extends BaseEntityRenderer {
     // όριο είναι ξεχωριστή οντότητα που ζωγραφίζεται μόνη της ⇒ ζωγραφίζοντας κι εμείς ένα
     // δεύτερο, κάθε εισαγόμενο σχέδιο έβγαινε με **διπλή γραμμή**.
     // `undefined` ⇒ ορατό (backward-compat για ήδη αποθηκευμένα)· ο import γράφει ρητά `false`.
+    // Η **συνθήκη** ζει στο `hatch-properties` (SSoT): την ίδια ερώτηση κάνει και το vector PDF.
     const contour = hatch.contourPen;
-    if (contour?.visible !== false) {
+    if (isHatchContourVisible(hatch)) {
       this.ctx.strokeStyle = contour?.color ?? color;
       this.ctx.lineWidth = contour?.lineweightMm !== undefined
         ? resolveHatchLineWidthPx(contour.lineweightMm)

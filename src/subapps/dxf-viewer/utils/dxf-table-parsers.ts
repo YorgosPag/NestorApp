@@ -11,6 +11,7 @@
 import { getAciColor } from '../settings/standards/aci';
 import { DXF_DEFAULT_LAYER } from '../config/layer-config';
 import { isFrozenFlag } from './dxf-layer-flags';
+import { dxfLayerTableEntries } from './dxf-layer-table-walk';
 import type { DimStyleEntry, DimStyleMap, LayerColorEntry, LayerColorMap } from './dxf-parser-types';
 import { DEFAULT_DIMSTYLE, STANDARD_DIMSTYLE_NAME } from './dxf-parser-types';
 
@@ -266,87 +267,30 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
     frozen: false,
   };
 
-  let inTablesSection = false;
-  let inLayerTable = false;
-  let inLayerEntry = false;
-  let currentLayer: Partial<LayerColorEntry> = {};
-  let prevCode = '';
-  let prevValue = '';
-
-  for (const { code, value } of dxfCodeValuePairs(lines)) {
-    if (prevCode === '0' && prevValue === 'SECTION' && code === '2' && value === 'TABLES') {
-      inTablesSection = true;
-      prevCode = code;
-      prevValue = value;
-      continue;
+  // Η ΔΙΑΣΧΙΣΗ ζει στο `dxf-layer-table-walk` (SSoT) — εδώ μένει μόνο η **ερμηνεία** των
+  // ζευγών. Πριν, η ίδια μηχανή καταστάσεων ήταν αντιγραμμένη εδώ και στον πλήρη parser,
+  // και είχε ήδη αποκλίνει (ο legacy έχανε την τελευταία εγγραφή σε αρχείο χωρίς `ENDTAB`).
+  for (const pairs of dxfLayerTableEntries(lines)) {
+    const currentLayer: Partial<LayerColorEntry> = {};
+    for (const { code, value } of pairs) {
+      switch (code) {
+        case '2':
+          currentLayer.name = value;
+          break;
+        case '62':
+          currentLayer.colorIndex = parseInt(value, 10) || 7;
+          break;
+        // 🔴 Ο ΔΕΥΤΕΡΟΣ ΜΗΧΑΝΙΣΜΟΣ ΑΠΟΚΡΥΨΗΣ (2026-07-29). Ο reader διάβαζε **μόνο** `2` και
+        // `62`, οπότε κάθε **παγωμένο** layer περνούσε ως ορατό. Μετρημένο στο
+        // `47_ergasia.dxf`: 8 παγωμένα layers / ~700 οντότητες που το AutoCAD **δεν δείχνει**
+        // — μεταξύ τους το `pl` (60 οντότητες), frozen αλλά με **θετικό** χρώμα, οπότε ο
+        // έλεγχος προσήμου του 62 δεν το έπιανε ποτέ.
+        case '70':
+          currentLayer.frozen = isFrozenFlag(parseInt(value, 10));
+          break;
+      }
     }
-
-    if (code === '0' && value === 'ENDSEC' && inTablesSection) {
-      break;
-    }
-
-    if (!inTablesSection) {
-      prevCode = code;
-      prevValue = value;
-      continue;
-    }
-
-    if (prevCode === '0' && prevValue === 'TABLE' && code === '2' && value === 'LAYER') {
-      inLayerTable = true;
-      prevCode = code;
-      prevValue = value;
-      continue;
-    }
-
-    if (code === '0' && value === 'ENDTAB' && inLayerTable) {
-      if (inLayerEntry) flushLayerEntry(currentLayer, layerColors);
-      inLayerTable = false;
-      inLayerEntry = false;
-      prevCode = code;
-      prevValue = value;
-      continue;
-    }
-
-    if (!inLayerTable) {
-      prevCode = code;
-      prevValue = value;
-      continue;
-    }
-
-    if (code === '0' && value === 'LAYER') {
-      if (inLayerEntry) flushLayerEntry(currentLayer, layerColors);
-      currentLayer = {};
-      inLayerEntry = true;
-      prevCode = code;
-      prevValue = value;
-      continue;
-    }
-
-    if (!inLayerEntry) {
-      prevCode = code;
-      prevValue = value;
-      continue;
-    }
-
-    switch (code) {
-      case '2':
-        currentLayer.name = value;
-        break;
-      case '62':
-        currentLayer.colorIndex = parseInt(value, 10) || 7;
-        break;
-      // 🔴 Ο ΔΕΥΤΕΡΟΣ ΜΗΧΑΝΙΣΜΟΣ ΑΠΟΚΡΥΨΗΣ (2026-07-29). Ο reader διάβαζε **μόνο** `2` και `62`,
-      // οπότε κάθε **παγωμένο** layer περνούσε ως ορατό. Μετρημένο στο `47_ergasia.dxf`:
-      // 8 παγωμένα layers / ~700 οντότητες που το AutoCAD **δεν δείχνει** — μεταξύ τους το
-      // `pl` (60 οντότητες), που είναι frozen αλλά με **θετικό** χρώμα ⇒ ο έλεγχος του 62
-      // δεν το έπιανε ποτέ.
-      case '70':
-        currentLayer.frozen = isFrozenFlag(parseInt(value, 10));
-        break;
-    }
-
-    prevCode = code;
-    prevValue = value;
+    flushLayerEntry(currentLayer, layerColors);
   }
 
   const layerCount = Object.keys(layerColors).length;
@@ -357,8 +301,9 @@ export function parseLayerColors(lines: string[]): LayerColorMap {
         name,
         colorIndex: layer.colorIndex,
         color: layer.color,
-        visible: layer.visible
-      }))
+        visible: layer.visible,
+        frozen: layer.frozen,
+      })),
     });
   }
 

@@ -20,10 +20,8 @@ import {
   type ArcEntity,
   type Entity
 } from '../../types/entities';
-// ADR-130: Centralized Default Layer Name
-import { getLayerNameOrDefault } from '../../config/layer-config';
 // 🏢 ADR-358 Phase 9D-3: id-first reader SSoT
-import { resolveEntityLayerName } from '../../stores/LayerStore';
+import { isLayerIdPickable } from '../../stores/LayerStore';
 import { createRectangleVertices, calculateEntityBounds } from './shared/selection-duplicate-utils';
 import { extractAngleMeasurementPoints } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { isPointInPolygon, segmentsIntersect, arcToPolyline } from '../../utils/geometry/GeometryUtils';
@@ -88,6 +86,7 @@ export class UnifiedEntitySelection {
   static findEntityAtPoint(
     screenPoint: Point2D,
     entities: Entity[],
+    /** @deprecated ADR-721 — αχρησιμοποίητο: η ορατότητα διαβάζεται ζωντανά από το LayerStore. */
     layers: Record<string, SceneLayer>,
     transform: ViewTransform,
     canvasRect: DOMRect,
@@ -101,14 +100,13 @@ export class UnifiedEntitySelection {
     // Iterate backwards to find topmost entity
     for (let i = entities.length - 1; i >= 0; i--) {
       const entity = entities[i];
-      // ADR-130: Centralized default layer
-      // ADR-358 Phase 9D-3b: id-first via LayerStore, name fallback
-      const layer = layers[getLayerNameOrDefault(resolveEntityLayerName(entity))];
-      
-      if (layer && !layer.visible) {
+      // ADR-721 — ΕΝΑ κατηγόρημα για «πιάνεται;» (ON **και** μη-παγωμένο), ζωντανή ανάγνωση.
+      // Πριν: `layer && !layer.visible` — αγνοούσε το **πάγωμα** (⇒ αόρατες οντότητες
+      // επιλέγονταν) και ήταν truthiness, άρα `visible: undefined` μετρούσε ως «κρυφό».
+      if (!isLayerIdPickable(entity.layerId)) {
         continue;
       }
-      
+
       if (this.isPointNearEntity(worldPoint, entity, toleranceInWorld)) {
         return { entityId: entity.id, entity };
       }
@@ -147,6 +145,10 @@ export class UnifiedEntitySelection {
     const selectedIds: string[] = [];
 
     for (const entity of entities) {
+      // ADR-721 — το marquee ΔΕΝ έλεγχε καθόλου layer: ένα κουτί πάνω από παγωμένο/σβηστό
+      // layer «διάλεγε» οντότητες που ο χρήστης δεν βλέπει. Ίδιο κατηγόρημα με το click/hover.
+      if (!isLayerIdPickable(entity.layerId)) continue;
+
       if (isCrossing) {
         // Crossing: select if any part of the entity is inside
         if (this.entityIntersectsBounds(entity, marqueeBounds)) {
@@ -185,6 +187,9 @@ export class UnifiedEntitySelection {
     const selectedIds: string[] = [];
 
     for (const entity of entities) {
+      // ADR-721 — ίδιο κατηγόρημα με click/marquee: ό,τι δεν ζωγραφίζεται, δεν πιάνεται.
+      if (!isLayerIdPickable(entity.layerId)) continue;
+
       const keyPts = this.getEntityKeyPoints(entity);
       if (keyPts.length === 0) continue;
 

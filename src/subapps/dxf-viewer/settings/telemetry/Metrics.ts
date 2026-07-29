@@ -13,6 +13,8 @@
  *  - Module #7
  */
 
+import { percentileOfSorted } from '../../utils/sample-distribution';
+
 // ============================================================================
 // METRIC TYPES
 // ============================================================================
@@ -262,11 +264,21 @@ export class Metrics {
   // PRIVATE
   // ==========================================================================
 
+  /**
+   * SSoT ποσοστημορίων — `utils/sample-distribution.ts` (ADR-726 §5, N.0.2).
+   *
+   * Πριν: ιδιωτικό αντίγραφο της ίδιας αριθμητικής εδώ, και **δεύτερο με άλλη σύμβαση** στο
+   * `systems/cursor/mouse-handler-perf.ts`. Η σύμβαση αυτού του αρχείου (nearest-rank) είναι
+   * αυτή που επικράτησε, άρα η συμπεριφορά εδώ **δεν αλλάζει** — εκτός από την κενή είσοδο.
+   *
+   * ⚠️ Κενός πίνακας: το SSoT επιστρέφει `NaN` (απουσία μέτρησης), ενώ αυτή η μέθοδος
+   * επέστρεφε `0`. Διατηρείται το `0` **μόνο εδώ**, γιατί ο μοναδικός καλών
+   * (`getHistogramStats`) έχει ήδη εγγυηθεί `metric.count > 0` πριν φτάσει εδώ, και ένα `NaN`
+   * θα μόλυνε το δημόσιο σχήμα του histogram για μια περίπτωση που δεν συμβαίνει.
+   */
   private percentile(sorted: number[], p: number): number {
     if (sorted.length === 0) return 0;
-
-    const index = Math.ceil(sorted.length * p) - 1;
-    return sorted[Math.max(0, index)];
+    return percentileOfSorted(sorted, p);
   }
 }
 

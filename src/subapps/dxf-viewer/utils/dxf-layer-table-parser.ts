@@ -32,6 +32,7 @@
 import { getAciColor } from '../settings/standards/aci';
 import { trueColorToHex } from './dxf-true-color';
 import { isFrozenFlag, isLockedFlag } from './dxf-layer-flags';
+import { dxfLayerTableEntries } from './dxf-layer-table-walk';
 import {
   parseDxfCode370,
 } from '../config/lineweight-iso-catalog';
@@ -80,112 +81,61 @@ export function parseLayerTable(lines: string[]): ParseLayerTableResult {
   const layers: SceneLayer[] = [];
   const warnings: ParseLayerWarning[] = [];
 
-  let inTables = false;
-  let inLayerTable = false;
-  let inLayerEntry = false;
-  let current: MutableLayerDraft = { xdataBuf: [] };
-  let currentXDataApp: string | null = null;
-  let prevCode = '';
-  let prevValue = '';
+  // Η ΔΙΑΣΧΙΣΗ ζει στο `dxf-layer-table-walk` (SSoT) — κοινή με τον legacy
+  // `parseLayerColors`. Εδώ μένει μόνο η **ερμηνεία** των ζευγών μιας εγγραφής.
+  for (const pairs of dxfLayerTableEntries(lines)) {
+    const current: MutableLayerDraft = { xdataBuf: [] };
+    let currentXDataApp: string | null = null;
 
-  const flush = (): void => {
-    if (!inLayerEntry) return;
+    for (const { code, value } of pairs) {
+      if (code === '1001') {
+        currentXDataApp = value;
+        continue;
+      }
+      if (currentXDataApp && (code === '1000' || code === '1071' || code === '1070' || code === '1040')) {
+        current.xdataBuf.push({ app: currentXDataApp, code, value });
+        continue;
+      }
+
+      switch (code) {
+        case '2':
+          current.name = value;
+          break;
+        case '62':
+          current.colorAci = Number.parseInt(value, 10);
+          break;
+        case '6':
+          current.linetypeName = value;
+          break;
+        case '70':
+          current.flag = Number.parseInt(value, 10) || 0;
+          break;
+        case '290':
+          current.plottable = value === '1';
+          break;
+        case '370': {
+          const n = Number.parseInt(value, 10);
+          if (Number.isFinite(n)) current.lineweight = parseDxfCode370(n);
+          break;
+        }
+        case '420': {
+          const n = Number.parseInt(value, 10);
+          if (Number.isFinite(n) && n >= 0) current.colorTrueColor = n & 0xffffff;
+          break;
+        }
+        default:
+          break;
+      }
+    }
+
     if (!current.name) {
       warnings.push({
         layer: '<unknown>',
         message: 'LAYER entry missing required group code 2 (name) — skipped.',
       });
-      current = { xdataBuf: [] };
-      currentXDataApp = null;
-      return;
+      continue;
     }
     layers.push(buildSceneLayer(current, warnings));
-    current = { xdataBuf: [] };
-    currentXDataApp = null;
-  };
-
-  for (let i = 0; i < lines.length - 1; i += 2) {
-    const code = lines[i].trim();
-    const value = lines[i + 1]?.trim() ?? '';
-
-    if (prevCode === '0' && prevValue === 'SECTION' && code === '2' && value === 'TABLES') {
-      inTables = true;
-      prevCode = code; prevValue = value; continue;
-    }
-
-    if (code === '0' && value === 'ENDSEC' && inTables) {
-      if (inLayerTable) flush();
-      break;
-    }
-
-    if (!inTables) { prevCode = code; prevValue = value; continue; }
-
-    if (prevCode === '0' && prevValue === 'TABLE' && code === '2' && value === 'LAYER') {
-      inLayerTable = true;
-      prevCode = code; prevValue = value; continue;
-    }
-
-    if (code === '0' && value === 'ENDTAB' && inLayerTable) {
-      flush();
-      inLayerTable = false;
-      inLayerEntry = false;
-      prevCode = code; prevValue = value; continue;
-    }
-
-    if (!inLayerTable) { prevCode = code; prevValue = value; continue; }
-
-    if (code === '0' && value === 'LAYER') {
-      flush();
-      current = { xdataBuf: [] };
-      currentXDataApp = null;
-      inLayerEntry = true;
-      prevCode = code; prevValue = value; continue;
-    }
-
-    if (!inLayerEntry) { prevCode = code; prevValue = value; continue; }
-
-    if (code === '1001') {
-      currentXDataApp = value;
-      prevCode = code; prevValue = value; continue;
-    }
-
-    if (currentXDataApp && (code === '1000' || code === '1071' || code === '1070' || code === '1040')) {
-      current.xdataBuf.push({ app: currentXDataApp, code, value });
-      prevCode = code; prevValue = value; continue;
-    }
-
-    switch (code) {
-      case '2':
-        current.name = value;
-        break;
-      case '62':
-        current.colorAci = Number.parseInt(value, 10);
-        break;
-      case '6':
-        current.linetypeName = value;
-        break;
-      case '70':
-        current.flag = Number.parseInt(value, 10) || 0;
-        break;
-      case '290':
-        current.plottable = value === '1';
-        break;
-      case '370': {
-        const n = Number.parseInt(value, 10);
-        if (Number.isFinite(n)) current.lineweight = parseDxfCode370(n);
-        break;
-      }
-      case '420': {
-        const n = Number.parseInt(value, 10);
-        if (Number.isFinite(n) && n >= 0) current.colorTrueColor = n & 0xffffff;
-        break;
-      }
-      default:
-        break;
-    }
-
-    prevCode = code;
-    prevValue = value;
   }
 
   return {

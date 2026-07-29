@@ -17,7 +17,9 @@ import type { Point2D } from '../../rendering/types/Types';
 import { parseHex, type Rgb } from '../../config/color-math';
 // ADR-667 Απόφαση 5 — dispatch #2. Χειρίζεται `fillType === undefined` μέσω `patternType`/
 // `patternName` (οι παραγωγοί `dxfFaces` ΔΕΝ θέτουν `fillType`) → μηδέν δεύτερη «είναι solid;» math.
-import { isSolidHatch } from '../../bim/hatch/hatch-properties';
+import { isHatchContourVisible, isSolidHatch } from '../../bim/hatch/hatch-properties';
+// ADR-507 — το χαρτί βάφει με το ΙΔΙΟ plot-color policy που βάφει κάθε άλλη γραμμή του σχεδίου.
+import { applyPlotColor } from '../../config/print-color-policy';
 import type { ResolvedPatternCell } from './scene-image-resolver';
 import type { ResolvedStripeFill } from './scene-hatch-line-resolver';
 // ADR-667 Φ3.1 — η ΙΔΙΑ διαφάνεια tint που χρησιμοποιεί η οθόνη (SSoT). Σκέτο `0.45` εδώ θα
@@ -110,10 +112,8 @@ export function emitHatch(
     strokeHatchSegments(pdf, e, params, toPaper);
   }
 
-  // ΔΑΠΕΔΟ — boundary outline. **Πάντα** (Απόφαση 8: καμία διαδρομή δεν καταλήγει σε «τίποτα»),
-  // και κάτοπτρο της οθόνης, που ζωγραφίζει το περίγραμμα σε **κάθε** κλάδο (`HatchRenderer.ts:246-250`)
-  // ⇒ ένα hatch χωρίς γραμμές (catalog MISS / πάνω από budget / gradient) τυπώνει ό,τι και σήμερα.
-  emitBoundaryOutline(pdf, e, toPaper);
+  // Περίγραμμα ορίου — **υπό τη ΜΙΑ συνθήκη** που ρωτά και η οθόνη (βλ. `emitBoundaryOutline`).
+  emitBoundaryOutline(pdf, e, params, toPaper);
 }
 
 /**
@@ -257,10 +257,37 @@ function fillHatchLoops(
   }
 }
 
-/** ΔΑΠΕΔΟ (Απόφαση 8) — stroke τα boundary loops ώστε καμία γραμμοσκίαση να μη χαθεί εντελώς. */
+/**
+ * Περίγραμμα ορίου — **κάτοπτρο** του contour pen της οθόνης (`HatchRenderer`, ADR-507).
+ *
+ * ⚠️ Ήταν «ΔΑΠΕΔΟ» (Απόφαση 8: καμία διαδρομή δεν καταλήγει σε «τίποτα») και η αιτιολόγηση ήταν
+ * ρητά «κάτοπτρο της οθόνης, που ζωγραφίζει το περίγραμμα σε **κάθε** κλάδο». **Η οθόνη άλλαξε**:
+ * πλέον ρωτά `isHatchContourVisible`, γιατί στο AutoCAD το όριο είναι ξεχωριστή οντότητα που
+ * έρχεται με το ίδιο DXF. Το δάπεδο όμως έμεινε άνευ όρων ⇒ κάθε εισαγόμενη γραμμοσκίαση
+ * τύπωνε **διπλή γραμμή στο χαρτί** ενώ η οθόνη ήταν καθαρή. Όταν το δάπεδο και το κάτοπτρο
+ * συγκρούονται, **υπερισχύει το κάτοπτρο**: ό,τι βλέπεις είναι ό,τι τυπώνεις.
+ *
+ * Η Απόφαση 8 δεν καταργείται — περιορίζεται: το «μη χαθεί εντελώς» ισχύει για τις αστοχίες
+ * (catalog MISS / πάνω από budget / gradient), **όχι** ενάντια σε ρητή εντολή του χρήστη ή του
+ * import ότι αυτή η γραμμοσκίαση **δεν έχει** περίγραμμα.
+ */
 function emitBoundaryOutline(
-  pdf: jsPDF, e: HatchEntity, toPaper: (p: Point2D) => Point2D,
+  pdf: jsPDF, e: HatchEntity, params: SceneVectorEmitParams, toPaper: (p: Point2D) => Point2D,
 ): void {
+  if (!isHatchContourVisible(e)) return;
+
+  // Ρητά τεθειμένη πένα ⇒ τιμάται και στο χαρτί (η οθόνη κάνει το ίδιο: `contour?.color ?? color`).
+  // Απούσα ⇒ μένει το ενεργό draw-state του `applyEntityStyle` — **μηδέν regression** για ό,τι
+  // τυπωνόταν πριν το contour pen.
+  const pen = e.contourPen;
+  if (pen?.color) {
+    const rgb = parseHex(applyPlotColor(pen.color, e.colorAci ?? null, params.colorPolicy)) ?? BLACK;
+    pdf.setDrawColor(rgb.r, rgb.g, rgb.b);
+  }
+  if (pen?.lineweightMm !== undefined && Number.isFinite(pen.lineweightMm) && pen.lineweightMm > 0) {
+    pdf.setLineWidth(pen.lineweightMm);
+  }
+
   for (const loop of e.boundaryPaths ?? []) {
     if (loop.length >= 2) strokePolyline(pdf, loop, true, toPaper);
   }
