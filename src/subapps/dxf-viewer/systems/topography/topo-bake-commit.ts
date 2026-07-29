@@ -79,30 +79,39 @@ export interface CommitBakedTopoInput {
  * δεν μένει πίσω σφραγίδα που να ισχυρίζεται ότι κάτι ψήθηκε — και το ίδιο για το σήμα, που
  * διαβάζει τις σφραγίδες.
  *
- * ⚠️ **Δύο βήματα undo** (διαγραφή· δημιουργία), όχι ένα. Η δημιουργία **πρέπει** να περάσει από
- * το `completeEntities` (ADR-057 SSoT — και το capability anchor του §M10g το επιβάλλει), το
- * οποίο σπρώχνει μόνο του στο `CommandHistory`· τύλιγμα και των δύο σε ένα `CompoundCommand` θα
- * απαιτούσε παράκαμψη της SSoT. **Κανένα από τα δύο βήματα δεν χάνει δεδομένα**: η διαγραφή
- * είναι πλήρως αναστρέψιμη (`DeleteMultipleEntitiesCommand` κρατά snapshots). Καταγεγραμμένο
- * ρητά στο ADR-722 ως επόμενο βήμα, όχι ως παράλειψη.
+ * ## ΕΝΑ βήμα undo (ADR-729)
+ * Μέχρι το ADR-729 εδώ υπήρχαν **δύο** βήματα αναίρεσης (διαγραφή· δημιουργία) και το σχόλιο
+ * αυτό τα δικαιολογούσε: «τύλιγμα και των δύο θα απαιτούσε παράκαμψη της SSoT». **Αυτό δεν
+ * ισχύει πλέον** — και δεν ίσχυε ποτέ ως δίλημμα: η `CommandHistory.runAsSingleUndo` τυλίγει
+ * **γύρω** από το `completeEntities` αντί να το παρακάμψει, οπότε η διαδρομή που επιβάλλει το
+ * capability anchor του §M10g μένει **ακέραιη** και το ψήσιμο γίνεται ΜΙΑ ενέργεια χρήστη =
+ * **ΜΙΑ** αναίρεση. Η αναίρεση ξετυλίγεται αντίστροφα (πρώτα φεύγουν τα φρέσκα, μετά
+ * επιστρέφουν τα αντικατασταθέντα από τα snapshots του `DeleteMultipleEntitiesCommand`), άρα ο
+ * χρήστης δεν βλέπει ποτέ ενδιάμεση κατάσταση με **κανένα** από τα δύο σύνολα.
  */
 export function commitBakedTopoEntities(input: CommitBakedTopoInput): void {
   const frame = getActiveProjectFrame();
   assertBakedInDisplayFrame(input.entities, input.group, frame);
 
   const plan = planBakedUpsert(input.getScene(input.levelId), input.group, input.entities);
-  if (plan.replacedIds.length > 0) {
-    getGlobalCommandHistory().execute(new DeleteMultipleEntitiesCommand(
-      [...plan.replacedIds],
-      createLevelSceneManagerAdapter(input.getScene, input.setScene, input.levelId),
-    ));
-  }
 
-  completeEntities(plan.entities as Entity[], {
-    tool: input.tool,
-    levelId: input.levelId,
-    getScene: input.getScene,
-    setScene: input.setScene,
+  // ADR-729 — αντικατάσταση = ΜΙΑ ενέργεια χρήστη: η διαγραφή της παλιάς ομάδας και η εγγραφή
+  // της φρέσκιας προσγειώνονται ως ΕΝΑ βήμα αναίρεσης. Το `completeEntities` ανοίγει τη δική
+  // του (ένθετη) εμβέλεια, η οποία ενώνεται με αυτήν — δεν παρακάμπτεται τίποτα.
+  getGlobalCommandHistory().runAsSingleUndo(`Bake ${input.group}`, () => {
+    if (plan.replacedIds.length > 0) {
+      getGlobalCommandHistory().execute(new DeleteMultipleEntitiesCommand(
+        [...plan.replacedIds],
+        createLevelSceneManagerAdapter(input.getScene, input.setScene, input.levelId),
+      ));
+    }
+
+    completeEntities(plan.entities as Entity[], {
+      tool: input.tool,
+      levelId: input.levelId,
+      getScene: input.getScene,
+      setScene: input.setScene,
+    });
   });
 
   setBakedFrame(input.levelId, input.group, frame);

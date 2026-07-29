@@ -313,16 +313,42 @@ export function completeEntity(
 }
 
 /**
- * 🏢 ENTERPRISE: Batch entity completion
+ * 🏢 ENTERPRISE: Batch entity completion — **ΜΙΑ παρτίδα = ΜΙΑ αναίρεση** (ADR-729).
  *
- * Completes multiple entities in a single operation (e.g., continuous measurement)
- * Optimized to emit single event and handle tool persistence once at the end.
+ * Completes multiple entities in a single operation (e.g., continuous measurement, ψήσιμο
+ * τοπογραφικών ετικετών). Emits a single event and handles tool persistence once at the end.
+ *
+ * ## 🔴 Γιατί η ατομικότητα ζει **εδώ** και είναι υποχρεωτική
+ * Μέχρι το ADR-729 ο βρόχος έγραφε **μία εγγραφή ιστορικού ανά οντότητα**. Μετρημένο ζωντανά
+ * (2026-07-29): ένα ψήσιμο 186 ετικετών παρήγαγε **187 εγγραφές** σε ιστορικό με ταβάνι
+ * `maxHistorySize: 100` ⇒ (α) η εντολή **δεν ξεκανόταν** — 100 αναιρέσεις άφηναν 86 ορφανές
+ * ετικέτες· (β) η παρτίδα **σάρωνε ΟΛΟ το προηγούμενο ιστορικό της συνεδρίας**, δηλαδή ο χρήστης
+ * έχανε τη δυνατότητα να ξεκάνει **άσχετη** δουλειά. Το (β) είναι το σοβαρό.
+ *
+ * Η εμβέλεια ανοίγεται **αδιαπραγμάτευτα εδώ**, όχι στους καλούντες: αν ήταν προαιρετική, ο
+ * επόμενος παραγωγός παρτίδας θα γεννιόταν με το ίδιο ακριβώς σφάλμα — **σιωπηλά**, ακριβώς
+ * όπως συμβαίνει σε Revit/AutoCAD/C4D όταν ξεχαστεί το transaction group.
  *
  * @param entities - Array of entities to complete
  * @param options - Completion options (skipEvent/skipToolPersistence are auto-set)
  * @returns Array of results
+ * @see ../../core/commands/CommandHistory.ts — `runAsSingleUndo` (το SSoT της ατομικότητας)
  */
 export function completeEntities(
+  entities: (Entity | null)[],
+  options: Omit<CompleteEntityOptions, 'skipEvent' | 'skipToolPersistence'>
+): CompleteEntityResult[] {
+  return getGlobalCommandHistory().runAsSingleUndo(String(options.tool), () =>
+    completeEntitiesInGroup(entities, options),
+  );
+}
+
+/**
+ * Ο βρόχος της παρτίδας. Τρέχει **πάντα** μέσα σε ανοιχτή ατομική ομάδα (βλ. `completeEntities`)·
+ * κάθε `completeEntity` εκτελείται κανονικά και γράφει τη σκηνή — ώστε η επόμενη οντότητα να
+ * χτίζεται πάνω στη **γραμμένη** κατάσταση — αλλά οι εντολές συλλέγονται σε μία εγγραφή.
+ */
+function completeEntitiesInGroup(
   entities: (Entity | null)[],
   options: Omit<CompleteEntityOptions, 'skipEvent' | 'skipToolPersistence'>
 ): CompleteEntityResult[] {

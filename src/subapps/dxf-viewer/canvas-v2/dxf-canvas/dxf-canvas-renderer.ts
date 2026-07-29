@@ -193,7 +193,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         if (bitmapCache.isDirty(curScene, currentTransform, currentViewport, cacheInputs)) {
           bitmapCache.rebuild(curScene, currentTransform, currentViewport, cacheInputs);
         }
-        bitmapCache.blit(ctx, currentViewport);
+        // ADR-726 Φ3 — the blit is ANCHORED: it projects the cached raster onto the live
+        // transform, so a pan/zoom frame is one drawImage instead of a full rebuild.
+        bitmapCache.blit(ctx, currentViewport, currentTransform);
       } else {
         // Fallback before the cache effect mounts (or no 2D ctx): direct redraw.
         renderer.render(curScene, currentTransform, currentViewport, {
@@ -395,8 +397,13 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
   }, [refs]);
 
   // Phase D RE-IMPLEMENT (ADR-040, 2026-05-09): bitmap cache lifecycle
+  // ADR-726 Φ3 — `requestRepaint` is the ONLY way the settled-gesture re-raster can reach
+  // the scheduler: when a gesture ends nothing else marks the canvas dirty, so without it
+  // the raster would stay projected (and its overscan off-centre) until the next input.
   useEffect(() => {
-    bitmapCacheRef.current = new DxfBitmapCache();
+    bitmapCacheRef.current = new DxfBitmapCache({
+      requestRepaint: () => { isDirtyRef.current = true; },
+    });
     return () => {
       bitmapCacheRef.current?.dispose();
       bitmapCacheRef.current = null;

@@ -317,6 +317,11 @@ export const DXF_TIMING = {
      *  Also governs the 3D hover-silhouette refine-on-settle (bim3d-pointer-scheduler) so the
      *  deferred hover render COALESCES with the shadow-on render → ONE settle frame, not two. */
     SHADOW_SETTLE: 350,
+    /** ADR-726 Φ3 / ADR-040 Phase XXII.B — quiet period after the last transform change before
+     *  the 2D entity raster is rebuilt at the live transform. During a gesture the cached raster
+     *  is projected (one `drawImage`); at rest the re-raster restores exact pixels AND re-centres
+     *  the overscan margin, which is what gives the NEXT gesture its free budget again. */
+    RASTER_IDLE: 120,
   },
 
   // ──────────────────────────────────────────────────────────────────────────

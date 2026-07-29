@@ -24,14 +24,24 @@ import { generateEntityId } from '../../systems/entity-creation/utils';
 
 export class CompositeCommand implements ICompoundCommand {
   readonly id: string;
-  readonly name = 'Composite';
+  readonly name: string;
   readonly type = 'composite';
   readonly timestamp: number;
 
   private children: ICommand[];
+  /** Δόθηκε ρητό όνομα ομάδας; (ADR-729 — καθορίζει τη μορφή του `getDescription`.) */
+  private readonly named: boolean;
 
-  constructor(children: readonly ICommand[]) {
+  /**
+   * @param children τα παιδιά της ομάδας (ήδη εκτελεσμένα ή προς εκτέλεση).
+   * @param name προαιρετικό όνομα ομάδας (ADR-729). Χωρίς αυτό η συμπεριφορά είναι **ακριβώς**
+   *   η ιστορική (`'Composite'` + περιγραφή με ένωση παιδιών) — μηδέν αλλαγή για τους
+   *   υπάρχοντες καταναλωτές (`appendToLast`, `executeAsAtomicBatch`, BIM/3D).
+   */
+  constructor(children: readonly ICommand[], name?: string) {
     this.children = [...children];
+    this.named = name !== undefined;
+    this.name = name ?? 'Composite';
     this.id = generateEntityId();
     this.timestamp = Date.now();
   }
@@ -72,8 +82,15 @@ export class CompositeCommand implements ICompoundCommand {
     return false;
   }
 
+  /**
+   * Ονομασμένη ομάδα (ADR-729 batch) → σταθερή, **φραγμένη** ετικέτα: μια παρτίδα 186 ετικετών
+   * δεν επιτρέπεται να παράγει περιγραφή 186 όρων στο UI αναίρεσης. Ανώνυμη (ζεύγη
+   * `appendToLast`) → η ιστορική ένωση, αμετάβλητη.
+   */
   getDescription(): string {
-    return this.children.map((c) => c.getDescription()).join(' + ');
+    return this.named
+      ? `${this.name} (${this.children.length} operations)`
+      : this.children.map((c) => c.getDescription()).join(' + ');
   }
 
   getAffectedEntityIds(): string[] {

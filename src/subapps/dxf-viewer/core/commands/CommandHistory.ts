@@ -101,6 +101,63 @@ export class CommandHistory implements ICommandHistory {
   }
 
   /**
+   * 🏢 ADR-729 — ΑΤΟΜΙΚΗ ΟΜΑΔΑ ΑΝΑΙΡΕΣΗΣ: **ΜΙΑ ενέργεια χρήστη = ΜΙΑ εγγραφή ιστορικού**.
+   *
+   * Ό,τι εκτελεστεί μέσα στο `work()` — όσο βαθιά κι αν βρίσκεται στη στοίβα κλήσεων —
+   * προσγειώνεται ως **ΕΝΑ** βήμα αναίρεσης. Είναι το ίδιο σχήμα που χρησιμοποιούν όλοι οι
+   * μεγάλοι, επαληθευμένο (2026-07-29): Revit `TransactionGroup` + `Assimilate()`, AutoCAD
+   * `UNDO Begin/End`, Cinema 4D `doc.StartUndo()/EndUndo()` («only the Start/EndUndo containers
+   * determine how often you need to hit Ctrl-Z»).
+   *
+   * ## Γιατί **εμβέλεια** και όχι «τύλιξε αυτόν τον πίνακα»
+   * Το `executeAsAtomicBatch` απαιτεί τα commands **χτισμένα και ανεκτέλεστα**. Ο παραγωγός
+   * οντοτήτων δεν μπορεί: κάθε `completeEntity` διαβάζει τη **γραμμένη** σκηνή πριν χτίσει την
+   * επόμενη. Η εμβέλεια δεν ζητά καμία αναδιάρθρωση του καλούντος — γι' αυτό πιάνει και ό,τι
+   * εκτελεί **ένθετος** κώδικας που δεν ελέγχεις (post-create, δομικές αντιδράσεις,
+   * `appendToLast`).
+   *
+   * ## 🎯 Πού πάμε ΠΙΟ ΠΕΡΑ από τους μεγάλους
+   * Σε Revit/AutoCAD/C4D η εμβέλεια είναι **πειθαρχία**: αν ο προγραμματιστής ξεχάσει να την
+   * ανοίξει, η αποτυχία είναι **σιωπηλή** (πολλά βήματα undo, κανένα σφάλμα). Εδώ την ανοίγει
+   * το ίδιο το `completeEntities` (ADR-057 SSoT), άρα η ατομικότητα είναι **ΔΟΜΙΚΗ** — ο
+   * επόμενος παραγωγός παρτίδας τη κληρονομεί χωρίς να την ξέρει.
+   *
+   * ## Συμπεριφορά
+   * - **Ένθεση**: εσωτερική εμβέλεια ενώνεται με την εξωτερική (Revit assimilation)· **μόνο** η
+   *   εξώτατη γράφει εγγραφή ⇒ η εγγύηση «ΜΙΑ» δεν σπάει από ενδιάμεσο επίπεδο.
+   * - **0 παιδιά** ⇒ καμία εγγραφή (όχι φάντασμα, όχι ειδοποίηση)· **1** ⇒ σκέτο το command
+   *   (μηδέν overhead, ίδια συμπεριφορά με σήμερα)· **N** ⇒ ΕΝΑ `CompositeCommand`.
+   * - **Σφάλμα μέσα στο `work()`** ⇒ **rollback**: τα εκτελεσμένα παιδιά αναιρούνται αντίστροφα
+   *   και **τίποτα** δεν μπαίνει στο ιστορικό (Revit `TransactionGroup.RollBack`). Ο χρήστης δεν
+   *   μένει ποτέ με μισή παρτίδα που δεν ξεκάνεται.
+   *
+   * @param name Όνομα της ομάδας — γίνεται η περιγραφή της εγγραφής αναίρεσης.
+   * @returns ό,τι επιστρέφει το `work()` (η εμβέλεια είναι διαφανής στον καλούντα).
+   * @see ./CompositeCommand.ts — το atomic undo group
+   * @see ../../hooks/drawing/completeEntity.ts — ο δομικός καταναλωτής
+   */
+  runAsSingleUndo<T>(name: string, work: () => T): T {
+    // Ένθετη εμβέλεια → ενώνεται με την εξωτερική· μόνο η εξώτατη κάνει commit.
+    if (this.groupDepth > 0) return work();
+
+    this.groupDepth = 1;
+    this.groupBuffer = [];
+    try {
+      const result = work();
+      this.pushGroupEntry(name, this.endGroup());
+      return result;
+    } catch (error) {
+      undoInReverse(this.endGroup()); // ατομικότητα: ή όλα, ή τίποτα
+      throw error;
+    }
+  }
+
+  /** Είναι ανοιχτή ατομική ομάδα αναίρεσης αυτή τη στιγμή; */
+  isGrouping(): boolean {
+    return this.groupDepth > 0;
+  }
+
+  /**
    * Execute a command and GROUP it with the immediately-preceding entry into a
    * single atomic undo step (Revit transaction group). Used for **derived /
    * associative** reactions — e.g. the auto-foundation re-derive that follows a
@@ -114,6 +171,14 @@ export class CommandHistory implements ICommandHistory {
   appendToLast(command: ICommand): void {
     // Run the (derived) command now — its children-effects apply immediately.
     command.execute();
+
+    // ADR-729 — μέσα σε ατομική ομάδα δεν υπάρχει «προηγούμενη εγγραφή» να κολλήσει: ΟΛΑ
+    // ανήκουν ήδη στην ίδια ενέργεια. Συλλογή, ώστε μια δομική αντίδραση μέσα σε παρτίδα να
+    // μη σπάσει την εγγύηση «ΜΙΑ εγγραφή».
+    if (this.groupDepth > 0) {
+      this.groupBuffer.push(command);
+      return;
+    }
 
     const last = this.undoStack[this.undoStack.length - 1];
     const withinWindow =
@@ -249,6 +314,30 @@ export class CommandHistory implements ICommandHistory {
   // ============================================================================
 
   /**
+   * ADR-729 — κλείσε την εμβέλεια **ΠΡΙΝ** από κάθε push/notify, ώστε ακροατής που αντιδρά
+   * εκτελώντας εντολή να μη συλλεχθεί σε buffer που μόλις αδειάζει.
+   */
+  private endGroup(): ICommand[] {
+    const captured = this.groupBuffer;
+    this.groupBuffer = [];
+    this.groupDepth = 0;
+    return captured;
+  }
+
+  /**
+   * ADR-729 — γράψε τα συλλεγμένα παιδιά ως **ΜΙΑ** εγγραφή. Δεν επιχειρείται merge με την
+   * προηγούμενη εγγραφή: μια ομάδα **ΕΙΝΑΙ** μια διακριτή ενέργεια χρήστη.
+   */
+  private pushGroupEntry(name: string, captured: ICommand[]): void {
+    if (captured.length === 0) return; // τίποτα δεν έγινε → καμία εγγραφή, καμία ειδοποίηση
+    const entry = captured.length === 1 ? captured[0] : new CompositeCommand(captured, name);
+    this.undoStack.push(entry);
+    this.redoStack = [];
+    this.trimUndoStack();
+    this.notifyListeners('execute', entry);
+  }
+
+  /**
    * Check if two commands can be merged
    */
   private canMergeCommands(lastCommand: ICommand, newCommand: ICommand): boolean {
@@ -289,6 +378,21 @@ export class CommandHistory implements ICommandHistory {
       redoStackSize: this.redoStack.length,
     };
     this.versionStore.set(this.versionStore.get() + 1);
+  }
+}
+
+/**
+ * ADR-729 — ξετύλιγμα εκτελεσμένων παιδιών σε αντίστροφη σειρά (Revit
+ * `TransactionGroup.RollBack`). Κάθε παιδί προστατεύεται ξεχωριστά: μια αποτυχία αναίρεσης
+ * δεν εμποδίζει τα υπόλοιπα να επανέλθουν — ίδια σημασιολογία με `CompoundCommand.rollback`.
+ */
+function undoInReverse(commands: readonly ICommand[]): void {
+  for (let i = commands.length - 1; i >= 0; i--) {
+    try {
+      commands[i].undo();
+    } catch (undoError) {
+      console.error(`[CommandHistory] group rollback failed for child ${i}:`, undoError);
+    }
   }
 }
 

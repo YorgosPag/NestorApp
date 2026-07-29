@@ -56,6 +56,38 @@ Mouse Event → DxfCanvas.onMouseMove
 3. **No React state for preview entity**: Uses `previewEntityRef` (ref) instead of `useState` to avoid re-renders on every mouse move
 4. **`pointer-events: none`**: Mouse events pass through preview canvas to DxfCanvas below
 
+### Bitmap cache — ΑΓΚΥΡΩΜΕΝΟ raster (ADR-726 Φ3, 2026-07-29)
+
+Το entity layer του `DxfCanvas` σερβίρεται από τον `DxfBitmapCache`. **Το transform ΔΕΝ είναι
+μέρος του cache key** — ήταν, και αυτό ήταν ο μοναδικός ένοχος του pan/zoom lag (μετρημένο:
+`frame:dxf-canvas` **min 32,7ms**, δάπεδο σε κάθε καρέ, 98,3% του frame budget, ~12 FPS, γιατί
+κάθε καρέ χειρονομίας ήταν **αστοχία εξ ορισμού** → ανακατασκευή 2.996 οντοτήτων offscreen).
+
+| Έννοια | Τι είναι |
+|---|---|
+| **Άγκυρα** | το transform στο οποίο ραστεροποιήθηκε το raster |
+| **Overscan** | περιθώριο πέρα από το viewport (0,2 × μικρή πλευρά, clamp 96–256 CSS px) — το «καύσιμο» του pan |
+| **Προβολή** | `drawImage(src, dx,dy,dw,dh)` που εκφράζει τη διαφορά άγκυρας→τρέχοντος· και τα δύο transform είναι καθαρά scale+translate, άρα η διαφορά είναι **ακριβώς** ένα drawImage |
+| **Idle re-raster** | `DXF_TIMING.gesture.RASTER_IDLE` (120ms) μετά την τελευταία κίνηση — αποκαθιστά τα ακριβή pixels **και ξανακεντράρει το overscan** |
+
+**Πότε ξαναχτίζεται** (και μόνο τότε): δομική αλλαγή κλειδιού (scene / viewport / dpr / annotation
+scale / BIM settings / toggles) · το raster δεν καλύπτει πια το viewport (τρύπα) · μεγέθυνση πάνω
+από `max(1.25, dpr)` (θα φαινόταν θολό) · το idle re-raster.
+
+**Αυτο-σταθεροποιείται**: φθηνότερα καρέ ⇒ μικρότερη μετατόπιση ανά καρέ ⇒ σπανιότερες
+ανακατασκευές ⇒ φθηνότερα καρέ. Χειρότερη περίπτωση (πολύ γρήγορο flick) = **το σημερινό κόστος,
+ποτέ χειρότερο**.
+
+**Δηλωμένα τιμήματα** (ανταλλαγή, όχι έκπτωση — μηδέν GPU στο μηχάνημα): (α) στο zoom το σχέδιο
+είναι στιγμιαία θολό μέχρι το idle re-raster· (β) το overscan κάνει την ανακατασκευή ακριβότερη
+(~1,5×, περισσότερες οντότητες περνούν το culling), αλλά η ανακατασκευή μετακομίζει στην ηρεμία.
+
+⚠️ **Ο κανόνας #3 ισχύει ακέραιος**: αυτή η αλλαγή **μόνο αφαιρεί** εισόδους από το κλειδί.
+`hoveredEntityId` / `selectedEntityIds` / `gripInteractionState` μένουν **έξω** — ό,τι μπει
+ξαναφέρνει το Phase D v1 πάγωμα (FPS 1).
+
+SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (καθαρό, χωρίς DOM).
+
 ## Supported Entity Types
 
 | Entity Type | Tools |
@@ -71,6 +103,64 @@ Mouse Event → DxfCanvas.onMouseMove
 ---
 
 ## Changelog
+
+### 2026-07-29 — 🚀 Phase XXII.B part 2 ΥΛΟΠΟΙΗΘΗΚΕ: το transform φεύγει από το bitmap-cache key (ADR-726 Φ3)
+
+**Τι:** ο `DxfBitmapCache` δεν ξαναχτίζει πια σε κάθε καρέ pan/zoom. Το raster χτίζεται **μία φορά**
+με **overscan** περιθώριο σε μια *άγκυρα* και **προβάλλεται** στο ζωντανό transform με **ένα**
+`drawImage` — 1 drawImage αντί για 2.996 οντότητες ανά καρέ.
+
+**Ρίζα (μετρημένη, ADR-726 §6 Φ3):** τα `scale/offsetX/offsetY` ήταν **μέσα** στο cache key
+(`dxf-bitmap-cache.ts:104-106`) ⇒ hit rate **0% by design** σε κάθε χειρονομία. Το αποδεικτικό δεν
+ήταν ο μέσος όρος αλλά το **`min = 32,7ms`**: κανένα από τα 30 καρέ pan δεν κόστισε λιγότερο —
+**δάπεδο**, όχι σπασμωδικότητα. `frame:dxf-canvas` = **98,3%** του frame budget, `frame:INTERVAL`
+avg 81,2ms ⇒ **~12 FPS**. Κάθε άλλος υποψήφιος αποκλείστηκε με μέτρηση (snap 1,06%, layer-canvas
+0,097ms, webgl-line 0,117ms, κάθε overlay <0,02ms).
+
+**⚠️ Η πρόταση υπήρχε ήδη γραμμένη εδώ και αρχειοθετήθηκε λανθασμένα.** Η γραμμή «Phase XXII.B
+part 2 / C: CSS-transform live-zoom + idle re-raster (Figma pattern)» αρχειοθετήθηκε **2026-05-27**
+ως *«obviated by profile data»* με ρητή αιτιολογία ότι *«το cache είναι dead code — instantiated
+but `rebuild()`/`blit()` never invoked»*. Το **Phase D wiring το ενεργοποίησε 2026-06-11**: η
+αιτιολόγηση της αρχειοθέτησης **έπαψε να ισχύει τη μέρα εκείνη** και **κανείς δεν επανεξέτασε** —
+έμεινε 7 εβδομάδες ως «obviated» ενώ ήταν ο κύριος ένοχος. **Κανόνας: όταν ένα αρχειοθετημένο
+στοιχείο στηρίζεται σε συνθήκη («είναι dead code»), η αρχειοθέτηση λήγει μαζί με τη συνθήκη.**
+
+**Πώς:** νέο καθαρό SSoT `dxf-bitmap-cache-anchor.ts` (γεωμετρία + πολιτική, χωρίς DOM/store/χρόνο):
+`computeOverscanPx` · `computeAnchoredBlitRect` · `coversViewport` · `maxMagnification` ·
+`canServeAnchoredBlit`. Ο `DxfBitmapCache` κρατά `anchor` + `overscanPx`, ραστεροποιεί σε viewport
++2×overscan με μετατοπισμένο offset, και το `blit(ctx, viewport, **transform**)` προβάλλει. Στο
+καθαρό pan (k===1) η μετατόπιση **στρογγυλοποιείται σε ακέραια device px** ώστε το bitmap να μένει
+1:1 (μηδέν resample blur κατά τη χειρονομία). Το idle re-raster (`DXF_TIMING.gesture.RASTER_IDLE`,
+νέα εγγραφή στο ADR-516 SSoT) φτάνει στον scheduler μέσω `requestRepaint` — **χωρίς αυτό** τίποτα
+δεν μαρκάρει dirty όταν σταματά η χειρονομία και το overscan θα έμενε αποκεντρωμένο.
+
+**Boy Scout (N.0.2):** ο αντικαθιστώμενος offscreen canvas αφαιρείται πλέον από το
+`CanvasBoundsService` (Map, όχι WeakMap) σε `ensureOffscreen`/`dispose` — αλλιώς κάθε resize άφηνε
+ένα ολόκληρο backing store να διαρρέει (και με το overscan είναι ~1,5× μεγαλύτερο).
+
+**Tests:** NEW `dxf-bitmap-cache-anchor.test.ts` (30) + `dxf-bitmap-cache-anchored-raster.test.ts`
+(23). Ο κεντρικός έλεγχος **δεν επαναλαμβάνει την άλγεβρα**: παίρνει **σημείο του κόσμου**,
+υπολογίζει πού θα το έβαζε ο renderer, και απαιτεί το προβαλλόμενο raster να το βάζει στο **ίδιο
+ακριβώς σημείο** (4 συνδυασμοί pan/zoom-in/zoom-out/dpr2 × 4 σημεία). Ένας λάθος τύπος θα
+αντιγραφόταν σε έναν έλεγχο άλγεβρας· εδώ δεν μπορεί. **Mutation-verified 3/3** (πέταξα το
+overscan από το `dy` → 5 κόκκινα· ακύρωσα την ανακατασκευή στη μετατόπιση → 4· άρμοσα τον idle
+timer και στην άγκυρα → 1). 14 suites / **132 tests πράσινα**, `jscpd:diff` καθαρό.
+
+**Files:** NEW `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` · MOD `dxf-bitmap-cache.ts`
+(κλειδί χωρίς transform + overscan + άγκυρα + idle) · MOD `dxf-canvas-renderer.ts` (transform στο
+blit + `requestRepaint`) · MOD `config/dxf-timing.ts` (`gesture.RASTER_IDLE`) · 2 NEW tests.
+CHECK 6B/6D touch → co-staged ADR-040 + ADR-726. ΟΧΙ tsc (N.17).
+
+**Δεν έγινε εδώ** (μετρημένα ανεξάρτητα, ADR-726 §6.2/§6.3): ο `CanvasLayerStackTransformBridge`
+που περνά το transform ως **prop** ⇒ 41 components re-render ανά καρέ· και τα **δύο ανεξάρτητα
+rAF** του pan (`mouse-handler-move.ts:418` vs `UnifiedFrameScheduler:298`) που κοστίζουν **+1
+εγγυημένο καρέ**. Και τα δύο θέλουν δική τους μέτρηση πρώτα.
+
+✅ Google-level: YES — αφαιρεί εισόδους από το κλειδί (ποτέ προσθέτει, κανόνας #3 ακέραιος)·
+ιδεμποτεντικό (δεύτερο rebuild στο ίδιο transform = ίδια κατάσταση)· ένας ιδιοκτήτης κύκλου ζωής
+(ο cache, με ρητό `requestRepaint` αντί για αναδυόμενη συμπεριφορά)· belt-and-suspenders (τρύπα
+**ή** θολούρα **ή** ηρεμία → ανακατασκευή· χειρότερη περίπτωση = το σημερινό κόστος)· καθαρό SSoT
+γεωμετρίας με mutation-verified tests.
 
 ### 2026-07-28 — 🧊 Layer-scope freeze: το isolate σταματά να γράφει στο έγγραφο (ADR-721 §8)
 
@@ -1745,6 +1835,12 @@ wheel notch
 Zero React `useState` cascades on wheel zoom. Zero duplicate `EventBus.emit('dxf-zoom-changed')`. Zero ghost Provider re-render. ADR-040 cardinal rules unchanged.
 
 **Profile-driven scope decision**: Brief planned Phase XXII.B (bitmap-cache CSS-transform live zoom). Production-profile inspection of the Phase XXII.A baseline revealed (a) the `dxf-bitmap-cache.ts` is currently dead code (instantiated in `useDxfCanvasRenderer` but `rebuild()`/`blit()` never invoked — `DxfRenderer.render()` is called directly), and (b) raster cost is < 10% of frame budget; the 14% concentrated React time labeled `RibbonGroupRoot` was the remaining tall pole. Phase XXII.B is therefore **archived as "obviated by profile data"** in this changelog. XXII.C addresses the actual root cause; if production profile still shows unacceptable wheel-zoom FPS after XXII.C lands, the surviving options are (i) audit `RibbonGroupRoot` displayName (component identity unclear from JPG; need clarification) + memo/leaf-isolate, or (ii) write ADR-379 for a WebGL migration roadmap.
+
+> ⛔ **Η ΑΡΧΕΙΟΘΕΤΗΣΗ ΑΥΤΗ ΕΛΗΞΕ ΣΤΙΣ 2026-06-11 — δες την εγγραφή 2026-07-29 (ADR-726 Φ3).**
+> Στηριζόταν ρητά στο ότι *«ο `dxf-bitmap-cache.ts` είναι dead code»*. Το **Phase D wiring** το
+> ενεργοποίησε δύο εβδομάδες αργότερα και **κανείς δεν επανεξέτασε**· έμεινε «obviated» άλλες 7
+> εβδομάδες ενώ ήταν ο **μοναδικός** ένοχος του pan/zoom lag (98,3% του frame budget, μετρημένο).
+> Η πρόταση ήταν σωστή από την αρχή· λάθος ήταν το ότι η αρχειοθέτηση **επιβίωσε της συνθήκης της**.
 
 **Verification plan**: production build (`npm run build && npm run start`) + Firefox profiler at `localhost:3000/dxf/viewer`. Target: wheel-zoom FPS ≥ 50, total React time < 30% of frame budget, zero `TransformContext` references in stack samples.
 

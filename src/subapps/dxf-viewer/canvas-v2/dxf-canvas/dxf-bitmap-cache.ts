@@ -9,19 +9,44 @@
  * ARCHITECTURAL RULE — DO NOT VIOLATE:
  * Bitmap cache invalidation triggers are LIMITED to:
  *   - scene reference
- *   - transform.scale / offsetX / offsetY
  *   - viewport size
  *   - device pixel ratio
  *
  * Including hoveredEntityId / selectedEntityIds / gripInteractionState / dragPreview
  * in the cache key WILL cause the cache to invalidate at ~60Hz on hover and
  * trigger a full N-entity rebuild per frame, freezing the page (Phase D v1 incident).
+ *
+ * ANCHORED RASTER — ADR-726 Φ3 (2026-07-29), ADR-040 Phase XXII.B part 2:
+ * `transform.scale/offsetX/offsetY` are NO LONGER part of the key. They used to be, which
+ * made every pan/zoom frame a MISS BY DESIGN: measured `frame:dxf-canvas` **min 32,7ms**
+ * across every sampled pan frame (98,3% of the frame budget, ~12 FPS) because all 2.996
+ * entities were re-rasterised offscreen per frame. The raster is now built with an
+ * OVERSCAN margin at an *anchor* transform and projected onto the live transform with a
+ * single `drawImage` (see `dxf-bitmap-cache-anchor` for the geometry). It is rebuilt only
+ * when the raster can no longer serve the view (hole / too magnified), when a structural
+ * input changes, or ~120ms after the gesture stops (idle re-raster, which also re-centres
+ * the overscan so the next gesture gets its budget back).
+ *
+ * ⚠️ This change only ever REMOVES inputs from the key. Adding any interactive state back
+ *    in reintroduces the Phase D v1 freeze.
  */
 
 import { DxfRenderer } from './DxfRenderer';
 import type { DxfScene, DxfRenderOptions } from './dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils';
+// ADR-726 Φ3 — anchored-raster geometry + policy (pure, DOM-free, unit-tested).
+import {
+  IDLE_RERASTER_MS,
+  type AnchorTransform,
+  canServeAnchoredBlit,
+  computeAnchoredBlitRect,
+  computeOverscanPx,
+  isSameTransform,
+} from './dxf-bitmap-cache-anchor';
+// ADR-726 Φ3 — the offscreen canvas is replaced whenever its size changes; its stubbed
+// bounds live in the shared bounds cache and must be evicted with it.
+import { canvasBoundsService } from '../../services/CanvasBoundsService';
 // 🏢 ADR-344 Phase 11: bitmap cache must invalidate on viewport annotation scale change
 import { getActiveScaleName } from '../../systems/viewport/ViewportStore';
 // 🏢 ADR-375 Phase B: BIM render settings (drawingScale + viewRange + objectStyles)
@@ -36,11 +61,13 @@ const logger = createModuleLogger('DxfBitmapCache');
 /** Normal-state render toggles that change the cached pixels (ADR-040 Phase D wiring). */
 export type BitmapCacheRenderInputs = Pick<DxfRenderOptions, 'showGrid' | 'showLayerNames' | 'wireframeMode'>;
 
+/**
+ * STRUCTURAL cache key — inputs that change the cached PIXELS THEMSELVES.
+ * ADR-726 Φ3: the view transform is deliberately absent — it is handled by the anchor
+ * projection instead (a transform change re-uses the raster, it does not invalidate it).
+ */
 interface CacheKey {
   sceneRef: object | null;
-  scale: number;
-  offsetX: number;
-  offsetY: number;
   width: number;
   height: number;
   dpr: number;
@@ -82,38 +109,88 @@ function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string }
   };
 }
 
+/** Wiring the cache needs from its host renderer (ADR-726 Φ3 idle re-raster). */
+export interface DxfBitmapCacheOptions {
+  /**
+   * Mark the host canvas dirty so the scheduler runs one more frame. Called once,
+   * `IDLE_RERASTER_MS` after the last transform change, to trigger the re-raster —
+   * without it the raster would stay projected (and the overscan off-centre) until
+   * something else happened to repaint.
+   */
+  requestRepaint?: () => void;
+}
+
 export class DxfBitmapCache {
   private offscreenCanvas: HTMLCanvasElement | null = null;
   private offscreenRenderer: DxfRenderer | null = null;
   private cacheKey: CacheKey | null = null;
 
-  /** True when cache content is missing or stale relative to inputs. */
+  // ── ADR-726 Φ3: anchored-raster state ──────────────────────────────
+  /** View transform the raster was rasterised at. `null` ⇒ no usable raster. */
+  private anchor: AnchorTransform | null = null;
+  /** Overscan margin (CSS px per side) baked into the current raster. */
+  private overscanPx = 0;
+  /** Set by the idle timer; forces ONE rebuild at the settled transform. */
+  private rerasterDue = false;
+  private idleTimerId: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private readonly options: DxfBitmapCacheOptions = {}) {}
+
+  /** True when the cache cannot serve this frame and must be rebuilt first. */
   isDirty(
     scene: DxfScene | null,
     transform: ViewTransform,
     viewport: Viewport,
     inputs: BitmapCacheRenderInputs,
   ): boolean {
-    if (!this.offscreenCanvas || !this.cacheKey) return true;
+    if (!this.offscreenCanvas || !this.cacheKey || !this.anchor) return true;
+    // ADR-726 Φ3 — the settled-gesture re-raster: one rebuild at the live transform.
+    if (this.rerasterDue) return true;
+    if (this.isStructurallyStale(scene, viewport, inputs)) return true;
+    // Transform drift is NOT staleness: the raster is re-projected while it still
+    // covers the viewport sharply enough. Only then does it need rebuilding.
+    return !this.canServe(transform, viewport);
+  }
 
-    const dpr = getDevicePixelRatio();
-    const activeAnnotationScale = getActiveScaleName();
+  /** Structural key comparison — everything that changes the cached pixels. */
+  private isStructurallyStale(
+    scene: DxfScene | null,
+    viewport: Viewport,
+    inputs: BitmapCacheRenderInputs,
+  ): boolean {
+    const key = this.cacheKey;
+    if (!key) return true;
     const { drawingScale, bimSettingsHash } = readBimCacheInputs();
     return (
-      this.cacheKey.sceneRef !== scene ||
-      this.cacheKey.scale !== transform.scale ||
-      this.cacheKey.offsetX !== transform.offsetX ||
-      this.cacheKey.offsetY !== transform.offsetY ||
-      this.cacheKey.width !== viewport.width ||
-      this.cacheKey.height !== viewport.height ||
-      this.cacheKey.dpr !== dpr ||
-      this.cacheKey.activeAnnotationScale !== activeAnnotationScale ||
-      this.cacheKey.drawingScale !== drawingScale ||
-      this.cacheKey.bimSettingsHash !== bimSettingsHash ||
-      this.cacheKey.showGrid !== !!inputs.showGrid ||
-      this.cacheKey.showLayerNames !== !!inputs.showLayerNames ||
-      this.cacheKey.wireframeMode !== !!inputs.wireframeMode
+      key.sceneRef !== scene ||
+      key.width !== viewport.width ||
+      key.height !== viewport.height ||
+      key.dpr !== getDevicePixelRatio() ||
+      key.activeAnnotationScale !== getActiveScaleName() ||
+      key.drawingScale !== drawingScale ||
+      key.bimSettingsHash !== bimSettingsHash ||
+      key.showGrid !== !!inputs.showGrid ||
+      key.showLayerNames !== !!inputs.showLayerNames ||
+      key.wireframeMode !== !!inputs.wireframeMode
     );
+  }
+
+  /** ADR-726 Φ3 — can the anchored raster still be projected onto `transform`? */
+  private canServe(transform: ViewTransform, viewport: Viewport): boolean {
+    const canvas = this.offscreenCanvas;
+    const anchor = this.anchor;
+    const key = this.cacheKey;
+    if (!canvas || !anchor || !key) return false;
+    return canServeAnchoredBlit({
+      anchor,
+      current: transform,
+      overscanPx: this.overscanPx,
+      rasterDeviceW: canvas.width,
+      rasterDeviceH: canvas.height,
+      dpr: key.dpr,
+      physW: toDevicePixels(viewport.width, key.dpr),
+      physH: toDevicePixels(viewport.height, key.dpr),
+    });
   }
 
   /**
@@ -124,6 +201,8 @@ export class DxfBitmapCache {
    */
   invalidate(): void {
     this.cacheKey = null;
+    this.anchor = null;
+    this.clearIdleTimer();
   }
 
   /**
@@ -139,26 +218,37 @@ export class DxfBitmapCache {
     if (viewport.width <= 0 || viewport.height <= 0) return;
 
     const dpr = getDevicePixelRatio();
-    this.ensureOffscreen(viewport, dpr);
+    // ADR-726 Φ3 — rasterise a margin BEYOND the viewport on every side so a pan can be
+    // served by re-projection instead of a rebuild. Shifting the render offset by the
+    // margin is what maps raster pixel (M,M) onto viewport pixel (0,0).
+    const overscanPx = computeOverscanPx(viewport);
+    const rasterViewport: Viewport = {
+      width: viewport.width + 2 * overscanPx,
+      height: viewport.height + 2 * overscanPx,
+    };
+    this.ensureOffscreen(rasterViewport, dpr);
 
     if (!this.offscreenRenderer) return;
 
     try {
-      this.offscreenRenderer.render(scene, transform, viewport, {
-        showGrid: baseOptions.showGrid,
-        showLayerNames: baseOptions.showLayerNames,
-        wireframeMode: baseOptions.wireframeMode,
-        selectedEntityIds: [],
-        hoveredEntityId: null,
-        skipInteractive: true,
-      });
+      this.offscreenRenderer.render(
+        scene,
+        { ...transform, offsetX: transform.offsetX + overscanPx, offsetY: transform.offsetY + overscanPx },
+        rasterViewport,
+        {
+          showGrid: baseOptions.showGrid,
+          showLayerNames: baseOptions.showLayerNames,
+          wireframeMode: baseOptions.wireframeMode,
+          selectedEntityIds: [],
+          hoveredEntityId: null,
+          skipInteractive: true,
+        },
+      );
 
       const { drawingScale, bimSettingsHash } = readBimCacheInputs();
       this.cacheKey = {
         sceneRef: scene,
-        scale: transform.scale,
-        offsetX: transform.offsetX,
-        offsetY: transform.offsetY,
+        // The VISIBLE viewport — the raster's own (overscanned) size is derived from it.
         width: viewport.width,
         height: viewport.height,
         dpr,
@@ -169,21 +259,36 @@ export class DxfBitmapCache {
         showLayerNames: !!baseOptions.showLayerNames,
         wireframeMode: !!baseOptions.wireframeMode,
       };
+      this.anchor = { scale: transform.scale, offsetX: transform.offsetX, offsetY: transform.offsetY };
+      this.overscanPx = overscanPx;
+      // A fresh raster IS the settled state — cancel any pending re-raster (idempotent:
+      // rebuilding twice at the same transform leaves exactly this state).
+      this.rerasterDue = false;
+      this.clearIdleTimer();
     } catch (error) {
       logger.error('Bitmap cache rebuild failed', { error });
       this.cacheKey = null;
+      this.anchor = null;
     }
   }
 
   /**
-   * Blit the cached bitmap onto the visible canvas at logical (CSS) coordinates.
+   * Project the cached raster onto the visible canvas for `transform` (ADR-726 Φ3).
    * Caller's ctx is expected to have its DPR transform applied (setupCanvasContext).
+   *
+   * When `transform` equals the anchor this is the classic 1:1 blit; otherwise the
+   * destination rect expresses the pan/zoom difference — ONE `drawImage` instead of a
+   * 2.996-entity rebuild.
    */
-  blit(targetCtx: CanvasRenderingContext2D, viewport: Viewport): void {
-    if (!this.offscreenCanvas || !this.cacheKey) return;
-    const dpr = this.cacheKey.dpr;
+  blit(targetCtx: CanvasRenderingContext2D, viewport: Viewport, transform: ViewTransform): void {
+    const canvas = this.offscreenCanvas;
+    const key = this.cacheKey;
+    const anchor = this.anchor;
+    if (!canvas || !key || !anchor) return;
+    const dpr = key.dpr;
     const physW = toDevicePixels(viewport.width, dpr);
     const physH = toDevicePixels(viewport.height, dpr);
+    const rect = computeAnchoredBlitRect(anchor, transform, this.overscanPx, canvas.width, canvas.height, dpr);
 
     targetCtx.save();
     // Reset to identity so we draw at backing-store pixel coords (1:1 with offscreen).
@@ -193,18 +298,45 @@ export class DxfBitmapCache {
     // background, so drawImage alone would composite over last frame's overlays
     // → ghost trails. Clear the full backing store first.
     targetCtx.clearRect(0, 0, physW, physH);
-    targetCtx.drawImage(this.offscreenCanvas, 0, 0, physW, physH);
+    targetCtx.drawImage(canvas, rect.dx, rect.dy, rect.dw, rect.dh);
     // Restore caller's DPR transform.
     targetCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     targetCtx.restore();
+
+    this.syncIdleReraster(transform);
+  }
+
+  /**
+   * Arm (or stand down) the settled-gesture re-raster. Re-armed on every drifted frame,
+   * so it fires exactly once — `IDLE_RERASTER_MS` after the gesture actually stops.
+   */
+  private syncIdleReraster(transform: ViewTransform): void {
+    const anchor = this.anchor;
+    this.clearIdleTimer();
+    if (!anchor || isSameTransform(anchor, transform)) return;
+    this.idleTimerId = setTimeout(() => {
+      this.idleTimerId = null;
+      this.rerasterDue = true;
+      this.options.requestRepaint?.();
+    }, IDLE_RERASTER_MS);
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimerId === null) return;
+    clearTimeout(this.idleTimerId);
+    this.idleTimerId = null;
   }
 
   dispose(): void {
+    this.clearIdleTimer();
+    if (this.offscreenCanvas) canvasBoundsService.clearCache(this.offscreenCanvas);
     this.offscreenCanvas = null;
     this.offscreenRenderer = null;
     this.cacheKey = null;
+    this.anchor = null;
   }
 
+  /** `viewport` here is the RASTER viewport (visible size + overscan on both sides). */
   private ensureOffscreen(viewport: Viewport, dpr: number): void {
     const physicalW = toDevicePixels(viewport.width, dpr);
     const physicalH = toDevicePixels(viewport.height, dpr);
@@ -217,6 +349,10 @@ export class DxfBitmapCache {
     ) {
       return;
     }
+
+    // The replaced canvas keeps a strong entry in the shared bounds cache (Map, not
+    // WeakMap) — evict it, or every resize leaks one overscanned backing store.
+    if (this.offscreenCanvas) canvasBoundsService.clearCache(this.offscreenCanvas);
 
     const canvas = document.createElement('canvas');
     canvas.width = physicalW;
