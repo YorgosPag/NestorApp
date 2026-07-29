@@ -35,6 +35,9 @@ import { resolveBodyDragTarget } from '../drag/body-drag-target';
 // ADR-642 §6.8 — Alt+press on a complex-linetype pattern snap (railway rail/sleeper) → whole-entity move.
 import { tryArmComplexSnapAltMove } from '../drag/complex-snap-alt-move';
 import { getHoveredEntity } from '../hover/HoverStore';
+// ADR-040 Phase XXII.B — event-time transform reads (cardinal rule #2): το transform ΔΕΝ
+// είναι πια prop· κάθε handler διαβάζει τη ζωντανή τιμή από το SSoT τη στιγμή του event.
+import { getImmediateTransform } from './ImmediateTransformStore';
 // ADR-728 Φ1 — ρητός τερματισμός της αναστολής πλοήγησης όταν το pan εγκαταλείπει τον καμβά.
 import { endNavigationGesture } from '../navigation/NavigationGestureStore';
 import { SelectedEntitiesStore } from '../selection/SelectedEntitiesStore';
@@ -73,7 +76,7 @@ export function useCentralizedMouseHandlers(
 ) {
   const exposeSnapResultsState = options?.exposeSnapResultsState ?? false;
   const {
-    scene, transform, viewport, activeTool, overlayMode,
+    scene, viewport, activeTool, overlayMode,
     onTransformChange, onEntitySelect, hitTestCallback,
     colorLayers, canvasRef, onCanvasClick,
     isGripDragging = false, onGripMouseDown, onHoverEntity,
@@ -91,10 +94,11 @@ export function useCentralizedMouseHandlers(
   // ADR-040 Φ10: removed the dead `overlaySnapEntities` useMemo (O(n) over all
   // overlay polygons on every colorLayers change) — it fed `useSnapManager`'s
   // `overlayEntities` arg, which is @deprecated/no-op (scene-init is owned by
-  // `useGlobalSnapSceneSync`, ADR-040). `useSnapManager` reads only `scale`.
-  const { findSnapPoint } = useSnapManager(activeCanvasRef, {
-    scale: transform.scale,
-  });
+  // `useGlobalSnapSceneSync`, ADR-040).
+  // ADR-040 Phase XXII.B — το `scale` option ΔΕΝ περνιέται πια: το `findSnapPoint`
+  // διαβάζει το ζωντανό scale από το ImmediateTransformStore στην κλήση. Το prop-fed
+  // scale θα πάγωνε μόλις το DxfCanvas έπαψε να re-render-άρεται στο zoom.
+  const { findSnapPoint } = useSnapManager(activeCanvasRef);
 
   // SSoT note (ADR-040 Φ9): every `setSnapResults` call in mouse-handler-move is
   // paired with a write to `ImmediateSnapStore` (setImmediateSnap/setFullSnapResult).
@@ -144,6 +148,9 @@ export function useCentralizedMouseHandlers(
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const pointerSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
     if (!pointerSnap) return;
+
+    // Event-time transform (cardinal rule #2) — ζωντανή τιμή τη στιγμή του press.
+    const transform = getImmediateTransform();
 
     const screenPos = getScreenPosFromEvent(e, pointerSnap);
     cursor.updatePosition(screenPos);
@@ -276,7 +283,7 @@ export function useCentralizedMouseHandlers(
       lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }
 
-  }, [transform, cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown, lassoDownRef]);
+  }, [cursor, activeTool, overlayMode, isGripDragging, onGripMouseDown, lassoDownRef]);
 
   // ===== MOUSE MOVE (delegated) =====
   const handleMouseMove = useMouseMoveHandler({
@@ -324,6 +331,9 @@ export function useCentralizedMouseHandlers(
   const handleWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
     const pointerSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
     if (!pointerSnap) return;
+
+    // Event-time transform (cardinal rule #2) — ζωντανή τιμή τη στιγμή του wheel.
+    const transform = getImmediateTransform();
 
     const zoomCenter = getScreenPosFromEvent(e, pointerSnap);
     const modifiers = { ctrlKey: e.ctrlKey || e.metaKey, shiftKey: e.shiftKey };
@@ -373,7 +383,7 @@ export function useCentralizedMouseHandlers(
         'dxf-canvas'
       );
     }
-  }, [transform, onTransformChange, props.onWheelZoom, viewport]);
+  }, [onTransformChange, props.onWheelZoom, viewport]);
 
   return {
     handleMouseDown,

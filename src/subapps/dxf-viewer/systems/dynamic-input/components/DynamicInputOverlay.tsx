@@ -49,7 +49,6 @@ export default function DynamicInputOverlay({
   cursorPosition = null,
   viewport = { width: 0, height: 0 },
   activeTool = 'select',
-  canvasRect = null,
   mouseWorldPosition = null,
   tempPoints = null
 }: DynamicInputOverlayProps) {

@@ -14,7 +14,7 @@
 'use client';
 
 import React, { useEffect, useSyncExternalStore } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import {
   subscribeToImmediatePosition,
   subscribeToImmediateWorldPosition,
@@ -90,11 +90,12 @@ import type { SceneUnits } from '../../utils/scene-units';
 // (διπλά window listeners / intercepts → σπασμένο commit). ΕΝΑ `RadialCommandRing` ανά view.
 import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DStore';
 
+// ADR-040 Phase XXII.B — `transform` + `canvasRect` props ΑΦΑΙΡΕΘΗΚΑΝ: το transform ήταν
+// δηλωμένο αλλά ουδέποτε διαβαζόταν, και το canvasRect ήταν νεκρό σε όλο το βάθος
+// (DynamicInputOverlay το destructure-άρει χωρίς καμία ανάγνωση).
 interface DynamicInputSubscriberProps {
   activeTool: string;
   viewport: { width: number; height: number };
-  transform: ViewTransform;
-  canvasRect: DOMRect | null;
   onDrawingPoint: (worldPoint: Point2D) => void;
   /** ADR-513 — draw-time getter των scene-units (μηδέν subscription· mirror slabOpening ghost). */
   getSceneUnits?: () => SceneUnits;
@@ -114,7 +115,6 @@ function unlockGripEndpointLocks(): void {
 export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber({
   activeTool,
   viewport,
-  canvasRect,
   onDrawingPoint,
   getSceneUnits,
   getCanvasEl,
@@ -325,7 +325,6 @@ export const DynamicInputSubscriber = React.memo(function DynamicInputSubscriber
       cursorPosition={cursorPosition}
       mouseWorldPosition={mouseWorldPosition}
       viewport={viewport}
-      canvasRect={canvasRect}
       activeTool={activeTool}
       tempPoints={tempPoints}
     />

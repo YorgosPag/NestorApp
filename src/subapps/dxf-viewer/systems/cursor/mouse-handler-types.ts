@@ -26,9 +26,12 @@ export interface ZoomConstraints {
   stepSize?: number;
 }
 
+// ADR-040 Phase XXII.B — το `transform` ΑΦΑΙΡΕΘΗΚΕ από τα props (cardinal rule #2):
+// οι handlers διαβάζουν `getImmediateTransform()` ΣΤΗΝ ΚΛΗΣΗ. Ως prop, έμενε φρέσκο μόνο
+// επειδή το DxfCanvas re-render-άρονταν ανά καρέ χειρονομίας — μετά την αποσύνδεση θα ήταν
+// μονίμως stale (λάθος world συντεταγμένες κλικ / snap radius / hit test μετά από pan/zoom).
 export interface CentralizedMouseHandlersProps {
   scene: DxfScene | null;
-  transform: ViewTransform;
   viewport: Viewport;
   activeTool?: string;
   overlayMode?: 'select' | 'draw' | 'edit';

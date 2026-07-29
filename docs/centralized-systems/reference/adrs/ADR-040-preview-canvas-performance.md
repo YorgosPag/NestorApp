@@ -105,6 +105,21 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-07-30 — Phase XXII.B: `transform`/`canvasRect` φεύγουν ως React props (~60 αρχεία)
+
+Συνέχεια της Φ XXII.A (Bridge wrapper): το `transform` έπαψε ήδη να προκαλεί re-render στο
+`CanvasSection`/`CanvasLayerStack`, αλλά πολλά leaf/overlay components + το `useCentralizedMouseHandlers`
++ το `useSnapManager` εξακολουθούσαν να **δέχονται** `transform`/`canvasRect` ως prop — δηλαδή
+διάβαζαν μια τιμή που μπορούσε να είναι μπαγιάτικη όποτε ο γονιός τους δεν ξαναρενταρίστηκε.
+Cardinal rule #2 εφαρμόστηκε ρητά: κάθε event handler διαβάζει πλέον το ζωντανό transform τη
+στιγμή του event μέσω `getImmediateTransform()` (`ImmediateTransformStore`), όχι από closure/prop.
+Νέο SSoT `systems/rulers-grid/ruler-origin.ts` (`computeRulerOriginTransform`) — η αγκύρωση
+world(0,0) στη γωνία των χαράκων γίνεται πλέον ρητή κλήση (bootstrap + zoom-reset), όχι εξάρτηση
+από re-fire ενός React effect. Αγγίζει: mouse-handler-{types,move,up}.ts,
+useCentralizedMouseHandlers.ts, useSnapManager.tsx, ~15 ghost-preview hooks (`hooks/tools/`),
+~25 overlay/gizmo/subscriber leaves (`components/dxf-layout/`), DxfCanvas/LayerCanvas/PreviewCanvas,
+dynamic-input σύστημα. Μηδέν αλλαγή γεωμετρίας — μόνο πότε/πώς διαβάζεται το transform.
+
 ### 2026-07-29 (δ) — 🐛 FIX: NaN στο CSS `left`/`top` του snap glyph (εκφυλισμένη γεωμετρία)
 
 Ο `snap-scheduler` (Φ11) μπορούσε να δημοσιεύσει `snappedPoint`/`ghostPoint` με μη-πεπερασμένες

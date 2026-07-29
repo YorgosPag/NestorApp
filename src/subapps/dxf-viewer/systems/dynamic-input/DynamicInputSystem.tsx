@@ -10,7 +10,6 @@ export interface DynamicInputSystemProps {
   cursorPosition?: Point2D | null;
   viewport?: Viewport;
   activeTool?: string;
-  canvasRect?: DOMRect | null;
   mouseWorldPosition?: Point2D | null;
   tempPoints?: Point2D[] | null;
 }

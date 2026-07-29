@@ -82,7 +82,7 @@ interface MouseUpHandlerDeps {
 
 export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerDeps) {
   const {
-    transform, viewport, onTransformChange, onEntitySelect, hitTestCallback,
+    viewport, onTransformChange, onEntitySelect, hitTestCallback,
     scene, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef,
     onCanvasClick, activeTool, overlayMode, onEntitiesSelected,
     onUnifiedMarqueeResult, onGripMouseUp,
@@ -91,6 +91,10 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
 
   return useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     cursor.setMouseDown(false);
+
+    // ADR-040 Phase XXII.B — event-time transform (cardinal rule #2): ζωντανή ανάγνωση στην
+    // αρχή του handler· όλα τα screenToWorld / commit-parity resolves βλέπουν την ίδια τιμή.
+    const transform = getImmediateTransform();
 
     // ADR-455 — finish a section-cut handle drag; consume the up, skip select/click.
     if (isAxisCutDragging()) {
@@ -483,5 +487,5 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         }
       }
     }
-  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, transform, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, overlayMode, snapEnabled, findSnapPoint, onGripMouseUp, onEntitiesSelected, onUnifiedMarqueeResult, refs]);
+  }, [cursor, onTransformChange, viewport, hitTestCallback, scene, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, overlayMode, snapEnabled, findSnapPoint, onGripMouseUp, onEntitiesSelected, onUnifiedMarqueeResult, refs]);
 }

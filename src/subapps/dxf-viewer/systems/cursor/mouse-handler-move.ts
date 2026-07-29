@@ -15,6 +15,10 @@ import { isInDrawingMode } from '../tools/ToolStateManager';
 import { isRectMarqueeDragTool } from '../tools/region-tool-ids';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { setImmediatePosition, setRealtimeWorldCursor } from './ImmediatePositionStore';
+// ADR-040 Phase XXII.B — event-time transform (cardinal rule #2): διαβάζεται ζωντανό στην
+// αρχή του handler αντί να έρχεται ως prop (το prop έμενε φρέσκο μόνο όσο το DxfCanvas
+// re-render-άρονταν ανά καρέ — μετά την αποσύνδεση θα ήταν μονίμως stale).
+import { getImmediateTransform } from './ImmediateTransformStore';
 import { setColumnPolarShiftFractions } from './ColumnPolarStore';
 import { resolveGripDragSnap, publishGripSnap, clearGripSnap } from './grip-drag-snap-resolver';
 import { getLockedGripWorldPos } from './GripSnapStore';
@@ -74,7 +78,7 @@ export function useMouseMoveHandler({
   props, cursor, refs, snap, setSnapResults, applyPendingTransform, debugEnabled,
 }: MouseMoveHandlerDeps) {
   const {
-    transform, viewport, activeTool, overlayMode, onMouseMove,
+    viewport, activeTool, overlayMode, onMouseMove,
     onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback,
     scene, colorLayers, isGripDragging = false, entityPickingActive = false,
   } = props;
@@ -93,6 +97,10 @@ export function useMouseMoveHandler({
 
     const screenPos = withPerf('coord-calc-screen', () => getScreenPosFromEvent(e, pointerSnap));
     const freshViewport = pointerSnap.viewport;
+
+    // Event-time transform (cardinal rule #2) — ΜΙΑ ζωντανή ανάγνωση ανά move, όλα τα
+    // παρακάτω (screenToWorld / snap tolerance / pan delta) βλέπουν την ίδια φρέσκια τιμή.
+    const transform = getImmediateTransform();
 
     // ADR-455 — dragging the on-canvas section-cut handle: move the world cut position to
     // the cursor and short-circuit pan/snap/hover. The 2D overlay (fade + line + handle)
@@ -407,10 +415,15 @@ export function useMouseMoveHandler({
         const deltaX = screenPos.x - panState.lastMousePos!.x;
         const deltaY = screenPos.y - panState.lastMousePos!.y;
 
+        // Βάση = το pending (αν υπάρχει) αλλιώς το ζωντανό store: δύο moves στο ίδιο καρέ
+        // ΣΩΡΕΥΟΝΤΑΙ πάνω στο μη-εφαρμοσμένο pending αντί να χάνεται το πρώτο delta (με το
+        // παλιό prop-base, το delta του 1ου move χανόταν αν το React δεν είχε προλάβει να
+        // ξανα-render-άρει ανάμεσα στα δύο events).
+        const panBase = panState.pendingTransform ?? transform;
         panState.pendingTransform = {
-          scale: transform.scale,
-          offsetX: transform.offsetX + deltaX,
-          offsetY: transform.offsetY - deltaY,
+          scale: panBase.scale,
+          offsetX: panBase.offsetX + deltaX,
+          offsetY: panBase.offsetY - deltaY,
         };
 
         panState.lastMousePos = screenPos;
@@ -422,5 +435,5 @@ export function useMouseMoveHandler({
     }
 
     perfTick();
-  }, [transform, viewport, onMouseMove, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers, isGripDragging, entityPickingActive, debugEnabled, refs, setSnapResults]);
+  }, [viewport, onMouseMove, cursor, activeTool, overlayMode, applyPendingTransform, snapEnabled, findSnapPoint, onDrawingHover, onHoverEntity, onHoverOverlay, hitTestCallback, scene, colorLayers, isGripDragging, entityPickingActive, debugEnabled, refs, setSnapResults]);
 }
