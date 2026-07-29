@@ -15,7 +15,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import { screenToWorldCached } from '../../rendering/core/CoordinateTransforms';
+import { screenToWorldCached } from '../../rendering/core/screen-to-world-cached';
 import { TrimToolStore } from '../../systems/trim/TrimToolStore';
 
 /** Screen-space pixel threshold for click-vs-drag discrimination. */

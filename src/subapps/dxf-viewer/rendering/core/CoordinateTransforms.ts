@@ -13,8 +13,10 @@
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCachedClientRect } from './pointer-rect-cache';
-// ADR-040 Phase XXII.B — event-time transform for `screenToWorldCached` below.
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+// ADR-726 Φ5 build fix (2026-07-30): ΚΑΝΕΝΑ import από systems/cursor εδώ. Αυτό το αρχείο
+// φτάνει σε SERVER API routes (route.ts → dxf-scene-builder → … → bounds-operations) και
+// κάθε React-hook import στο γράφημα σπάει το production build. Το client-only helper
+// `screenToWorldCached` ζει στο ./screen-to-world-cached.
 
 const logger = createModuleLogger('CoordinateTransforms');
 
@@ -455,21 +457,8 @@ export function screenToWorldFromElement(
   return CoordinateTransforms.screenToWorld(screenPoint, transform, snap.viewport);
 }
 
-/**
- * Screen (client) point → WORLD, using the cached rect + the LIVE event-time transform
- * (`getImmediateTransform`, ADR-040 Phase XXII.B). Shared by native-pointer-event
- * listeners that need one-off coordinate conversion outside the ghost-preview draw-frame
- * flow (CHECK 3.28 de-dup — extracted from Extend/Trim drag-capture, ADR-583).
- */
-export function screenToWorldCached(element: HTMLElement, screenX: number, screenY: number): Point2D {
-  const rect = getCachedClientRect(element);
-  const viewport = { width: rect.width, height: rect.height };
-  return CoordinateTransforms.screenToWorld(
-    { x: screenX - rect.left, y: screenY - rect.top },
-    getImmediateTransform(),
-    viewport,
-  );
-}
+// `screenToWorldCached` (ADR-583 de-dup, ADR-040 Phase XXII.B) μετακόμισε στο
+// ./screen-to-world-cached — client-only, διαβάζει το live ImmediateTransformStore.
 
 // ============================================================================
 // 🏢 ADR-151: SIMPLE COORDINATE TRANSFORM FUNCTIONS (Standalone Exports)

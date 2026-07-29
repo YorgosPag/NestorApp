@@ -11,7 +11,7 @@
  */
 
 import { useEffect } from 'react';
-import { screenToWorldCached } from '../../rendering/core/CoordinateTransforms';
+import { screenToWorldCached } from '../../rendering/core/screen-to-world-cached';
 import { ExtendToolStore } from '../../systems/extend/ExtendToolStore';
 
 export interface UseExtendDragCaptureProps {
