@@ -15,7 +15,7 @@
  * δοκαριού — ποια κομμάτια παρειάς καλύπτονται από τοίχο).
  */
 
-import { projectVerticesTo2D } from './polygon-utils';
+import { pointInPolygon, projectVerticesTo2D } from './polygon-utils';
 import { clamp01 } from '../../../rendering/entities/shared/geometry-utils';
 
 /** Ελάχιστο 2D σημείο (plan space). */
@@ -53,24 +53,6 @@ function axisPolygonCrossings(a: Pt2, b: Pt2, poly: readonly Pt2[]): number[] {
     }
   }
   return ts;
-}
-
-/**
- * Σημείο μέσα σε πολύγωνο (ray-cast, even-odd). Inline εδώ ώστε το module να
- * μένει αυτόνομο (μηδέν dep σε GeometryUtils → reusable από geometry + finishes).
- */
-function pointInPolygon(pt: Pt2, poly: readonly Pt2[]): boolean {
-  let inside = false;
-  const n = poly.length;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const pi = poly[i];
-    const pj = poly[j];
-    const intersects =
-      pi.y > pt.y !== pj.y > pt.y &&
-      pt.x < ((pj.x - pi.x) * (pt.y - pi.y)) / (pj.y - pi.y) + pi.x;
-    if (intersects) inside = !inside;
-  }
-  return inside;
 }
 
 /**

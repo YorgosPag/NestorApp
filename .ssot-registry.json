@@ -1963,6 +1963,22 @@
       ],
       "tier": 3
     },
+    "point-in-polygon-semantics": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/geometry/shared/polygon-point-location.ts",
+      "description": "ADR-730 — «μέσα στο πολύγωνο» ζει ΜΙΑ φορά. locatePointInPolygon() δίνει τριαδική θέση (interior/boundary/exterior, JTS Location) με ρητή ανοχή σε mm (ArcGIS XY tolerance)· pointInPolygonCovers/Within είναι παράγωγα κατηγορήματα, όχι δεύτεροι αλγόριθμοι. Το ωμό crossing-number pointInPolygon (polygon-utils) μένει για κανόνες γεμίσματος even-odd (hatch/fill/clip), όπου ανοχή συνόρου θα πάχαινε τα νησιά. Βρέθηκαν και αποσύρθηκαν 4 κλώνοι του ίδιου βρόχου (segment-polygon-coverage — δίπλα-δίπλα με τον κύριο, roof-tile-tessellation, clip-geometry, wall-tilt-attach-clip-3d.test). ⚙ Η κλάση «ίδιος βρόχος, ΑΛΛΟ όνομα» ΔΕΝ πιάνεται από εδώ (το 3.7/3.18 είναι name/regex-based) — την καλύπτει το CHECK 3.28 (jscpd, token-based). Ακριβώς έτσι έζησαν οι 4: και οι δύο στο bim/geometry/shared λέγονταν pointInPolygon.",
+      "forbiddenPatterns": [
+        "function +pointInPolygon",
+        "function +locatePointInPolygon",
+        "const +pointInPolygon *="
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/geometry/shared/polygon-point-location.ts",
+        "src/subapps/dxf-viewer/bim/geometry/shared/polygon-utils.ts",
+        "src/subapps/dxf-viewer/services/clip/clip-geometry.ts",
+        "src/subapps/dxf-viewer/bim-3d/converters/roof-tile-tessellation.ts"
+      ],
+      "tier": 3
+    },
     "geometry": {
       "ssotFile": "src/lib/geometry.ts",
       "description": "SVG/2D geometry primitives — getCentroid (polygon centroid), distanceToLineSegment (point-to-segment distance). Re-export in ConnectionElements.tsx uses `export { X }` form — not matched by `export const` pattern. ADR-314 Phase D.3b.",

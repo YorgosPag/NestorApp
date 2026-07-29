@@ -29,6 +29,7 @@
 import * as THREE from 'three';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { RoofFace } from '../../bim/types/roof-types';
+import { pointInPolygon } from '../../bim/geometry/shared/polygon-utils';
 import { setSlopeAlignedTileUvs, type SlopeTileUvOptions } from './bim-uv-helpers';
 import { toWorld } from './roof-world-transform';
 
@@ -86,18 +87,17 @@ export function slopeZMm(x: number, y: number, plane: SlopePlane): number {
 /**
  * Ray-casting point-in-polygon test. O(n) per call. Handles concave and
  * non-convex outlines (hip valleys, L-shaped, triangular).
+ *
+ * Adapter υπογραφής (βαθμωτά `px`/`py` αντί για `{x,y}`) — **μηδέν δικός του αλγόριθμος**
+ * (ADR-730): ο βρόχος ζει μία φορά στο `polygon-utils`. Πριν ήταν κλώνος του (ένας από
+ * **τέσσερις** στο repo), αόρατος στο CHECK 3.18 επειδή είχε **άλλο όνομα** (`…2D`).
+ *
+ * 🔴 Παραμένει **ωμό** crossing-number χωρίς ανοχή — σωστά: εδώ το ερώτημα είναι «γεμίζει αυτό
+ * το κελί του πλέγματος;», δηλαδή κανόνας γεμίσματος. Επίσης οι μονάδες είναι **canvas units**,
+ * όχι mm ⇒ ανοχή σε mm θα ήταν **λάθος** εδώ (ADR-716).
  */
 export function pointInPolygon2D(px: number, py: number, outline: readonly Point3D[]): boolean {
-  let inside = false;
-  const n = outline.length;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const xi = outline[i].x, yi = outline[i].y;
-    const xj = outline[j].x, yj = outline[j].y;
-    if (((yi > py) !== (yj > py)) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
+  return pointInPolygon({ x: px, y: py }, outline);
 }
 
 // ── Main tessellation ──────────────────────────────────────────────────────────

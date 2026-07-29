@@ -8,7 +8,9 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { SpatialBounds } from '../../types/entity-bounds';
+import type { PlanarPoint } from '../../bim/geometry/shared/polygon-point-location';
 import { normalizeAngleDeg } from '../../rendering/entities/shared/geometry-angle-utils';
+import { pointInPolygon as pointInPolygonRaw } from '../../bim/geometry/shared/polygon-utils';
 
 export interface ClipRect {
   xMin: number;
@@ -109,18 +111,39 @@ export function sutherlandRect(verts: Point2D[], rect: ClipRect): Point2D[] {
   return output;
 }
 
-/** Ray-casting point-in-polygon. Works for convex AND concave polygons. */
+/**
+ * Προβολή του tuple δακτυλίου σε `{x,y}` — **μία φορά ανά πίνακα πολυγώνου**.
+ *
+ * Ο crop καλεί το {@link pointInPolygon} μία φορά ανά σημείο/κορυφή/γωνία bbox με τον **ίδιο**
+ * δακτύλιο (λάσσο ~20-200 κορυφές × ~10K οντότητες). Μετατροπή ανά κλήση θα ήταν O(n) ανά σημείο
+ * — εδώ είναι O(n) **ανά δακτύλιο**. `WeakMap` ⇒ όταν ο πίνακας του λάσσο γίνει σκουπίδι, φεύγει
+ * και η προβολή· μηδέν διαρροή, μηδέν χειροκίνητη ακύρωση.
+ *
+ * ⚠️ Προϋποθέτει ότι οι πίνακες πολυγώνου **δεν μεταλλάσσονται επί τόπου** — ισχύει: τα overlay /
+ * lasso polygons αντικαθίστανται με νέο πίνακα σε κάθε αλλαγή (`setDraftPolygon`, `.map(...)`).
+ */
+const RING_PROJECTION = new WeakMap<Array<[number, number]>, PlanarPoint[]>();
+
+function projectRing(poly: Array<[number, number]>): PlanarPoint[] {
+  const cached = RING_PROJECTION.get(poly);
+  if (cached) return cached;
+  const projected = poly.map(([x, y]): PlanarPoint => ({ x, y }));
+  RING_PROJECTION.set(poly, projected);
+  return projected;
+}
+
+/**
+ * Ray-casting point-in-polygon (convex + concave) πάνω σε **tuple** δακτύλιο.
+ *
+ * Adapter αναπαράστασης — **μηδέν δικός του αλγόριθμος** (ADR-730): ο βρόχος ζει μία φορά στο
+ * `bim/geometry/shared/polygon-utils`. Πριν ήταν byte-ισοδύναμος κλώνος του (ένας από **τέσσερις**
+ * στο repo), τυφλό σημείο του CHECK 3.18 γιατί και οι δύο λέγονταν `pointInPolygon`.
+ *
+ * 🔴 Παραμένει **ωμό** crossing-number χωρίς ανοχή — **σωστά**: ο crop είναι κανόνας γεμίσματος /
+ * απόδοσης, όπου ανοχή συνόρου θα πάχαινε την περιοχή. Μη «αναβαθμίσεις» σε `covers`.
+ */
 export function pointInPolygon(p: Point2D, poly: Array<[number, number]>): boolean {
-  let inside = false;
-  const n = poly.length;
-  for (let i = 0, j = n - 1; i < n; j = i++) {
-    const [xi, yi] = poly[i];
-    const [xj, yj] = poly[j];
-    if ((yi > p.y) !== (yj > p.y) && p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi) {
-      inside = !inside;
-    }
-  }
-  return inside;
+  return pointInPolygonRaw(p, projectRing(poly));
 }
 
 /**

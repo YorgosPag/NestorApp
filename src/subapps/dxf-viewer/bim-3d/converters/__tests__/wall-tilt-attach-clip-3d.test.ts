@@ -25,6 +25,7 @@ import { wallToMesh } from '../BimToThreeConverter';
 import { wallTiltShearAt } from '../../../bim/geometry/wall-tilt';
 import { computeWallGeometry } from '../../../bim/geometry/wall-geometry';
 import type { HostFootprintInput, Pt2 } from '../../../bim/geometry/wall-host-plan-builder';
+import { pointInPolygon } from '../../../bim/geometry/shared/polygon-utils';
 import type { WallEntity, WallParams } from '../../../bim/types/wall-types';
 import type { WallTopProfile } from '../../../bim/geometry/wall-top-profile';
 
@@ -165,15 +166,14 @@ describe('ADR-404↔401 — wallToMesh attached+tilt (clip ακολουθεί τ
 });
 
 // ── Utility ───────────────────────────────────────────────────────────────────
-
-/** Ray-casting point-in-polygon (inclusive-ish· tolerant στα όρια μέσω μικρού bias). */
-function pointInPolygon(pt: Pt2, poly: readonly Pt2[]): boolean {
-  let inside = false;
-  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-    const xi = poly[i].x, yi = poly[i].y, xj = poly[j].x, yj = poly[j].y;
-    const intersect = (yi > pt.y) !== (yj > pt.y)
-      && pt.x < ((xj - xi) * (pt.y - yi)) / (yj - yi) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
+//
+// Το point-in-polygon έρχεται από τον SSoT (ADR-730). Ήταν εδώ **πέμπτος** κλώνος του ίδιου
+// βρόχου — αόρατος και στα δύο προηγούμενα audits, επειδή τα greps τους έκοβαν `__tests__`.
+//
+// ⚠️ Το σχόλιό του έλεγε «tolerant στα όρια μέσω μικρού bias». **Δεν υπήρχε κανένα bias** — ίδιο
+// ψέμα με το `polygon-utils` και το `check-boundary-elevation-coverage` (τρίτη εμφάνιση). Κλώνος
+// κώδικα κλωνοποιεί και το σχόλιό του, άρα και το λάθος του.
+//
+// Χρησιμοποιείται το **ωμό** `pointInPolygon` (πανομοιότυπη συμπεριφορά με τον κλώνο ⇒ μηδέν
+// αλλαγή στα αποτελέσματα). Αν κάποια στιγμή χρειαστεί όντως ανοχή στο σύνορο — δηλαδή αυτό που
+// το παλιό σχόλιο **νόμιζε** ότι έκανε — υπάρχει το `pointInPolygonCovers`.

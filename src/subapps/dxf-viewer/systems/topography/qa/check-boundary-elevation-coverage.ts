@@ -54,7 +54,10 @@ import type { TopoQaFlag, TopoQaSeverity } from './topo-qa-types';
 import { TOPO_QA_CONFIG } from './topo-qa-config';
 import { tinEdgeLength, tinEdgeLengths } from './topo-qa-topology';
 import { median } from '../../../utils/statistics';
-import { pointInPolygon, polygonArea, polygon2DAreaCentroid } from '../../../bim/geometry/shared/polygon-utils';
+import {
+  pointInPolygonCovers, polygonArea, polygon2DAreaCentroid,
+  DEFAULT_BOUNDARY_TOLERANCE_MM,
+} from '../../../bim/geometry/shared/polygon-utils';
 import { clipTinToBoundary } from '../tin-clip-to-boundary';
 import { topoSurfaceAreas } from '../topo-surface-area';
 import { hasElevation } from '../topo-point-elevation';
@@ -93,11 +96,24 @@ function planAreaInsideMm2(surface: TinSurface, ring: readonly Point2D[]): numbe
 }
 
 /**
- * Πόσα **μετρημένα** σημεία πέφτουν εντός/επί του ορίου. Ο δακτύλιος έρχεται ήδη σε LOCAL.
+ * Πόσα **μετρημένα** σημεία πέφτουν εντός **ή επί** του ορίου. Ο δακτύλιος έρχεται ήδη σε LOCAL.
  *
  * Δισδιάστατα σημεία δεν μετριούνται: το ερώτημα είναι «τι στηρίζει την επιφάνεια εδώ», και ένα
  * σημείο χωρίς Ζ δεν δίνει κορυφή στο TIN (ADR-720). Θα ήταν ακριβώς το ψέμα που ο έλεγχος
  * υπάρχει για να ξεσκεπάσει: **29 σημεία εντός, μόνο 6 μετρημένα**.
+ *
+ * 🔴 **Γιατί `covers` και όχι σκέτο «εντός» (ADR-730)**: βολή **πάνω στη γραμμή** του οικοπέδου
+ * το **στηρίζει** — είναι μέτρηση επί του συνόρου, όχι έξω από αυτό. Μέχρι το 2026-07-29 εδώ
+ * καλούνταν το ωμό `pointInPolygon`, που για σημείο επί ακμής απαντά **αυθαίρετα**: το σχόλιο
+ * υποσχόταν «εντός/επί» αλλά καμία γραμμή δεν έλεγχε ακμή. Στο πραγματικό εργοτάξιο **10** βολές
+ * κάθονται στη γραμμή (≤5 cm) και **2** έχουν υψόμετρο — το `N = 6` της ζωντανής επαλήθευσης
+ * βγήκε σωστό **κατά τύχη**. Οικόπεδο με βολές **μόνο στις κορυφές του** (συνηθισμένο σε αστικό
+ * τεμάχιο) μπορούσε να μετρηθεί «0 εντός» ⇒ **ψευδές `high`** από το §3.4, δηλαδή ακριβώς η
+ * παραβίαση του «μηδέν ψευδώς θετικά» που ο έλεγχος υπάρχει για να αποφύγει.
+ *
+ * Ανοχή: η προεπιλογή {@link DEFAULT_BOUNDARY_TOLERANCE_MM} (**1 mm** — η προεπιλεγμένη XY
+ * tolerance του ArcGIS). Έγκυρη εδώ γιατί `worldToLocal` = καθαρή αφαίρεση origin ⇒ **canonical
+ * mm** και στα δύο ορίσματα.
  */
 function measuredPointsInside(
   points: readonly TopoPoint[], ringLocal: readonly Point3D[], origin: TinSurface['origin'],
@@ -105,7 +121,7 @@ function measuredPointsInside(
   let inside = 0;
   for (const point of points) {
     if (!hasElevation(point)) continue;
-    if (pointInPolygon(worldToLocal(point, origin), ringLocal)) inside++;
+    if (pointInPolygonCovers(worldToLocal(point, origin), ringLocal)) inside++;
   }
   return inside;
 }

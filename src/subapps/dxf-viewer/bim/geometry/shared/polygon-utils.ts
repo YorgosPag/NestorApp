@@ -15,6 +15,7 @@
 import type { MultiPolygon, Pair, Polygon } from 'polygon-clipping';
 import type { BoundingBox3D, Point3D, Polygon3D } from '../../types/bim-base';
 import type { Point2D } from '../../../rendering/types/Types';
+import type { PlanarPoint } from './polygon-point-location';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
 import { angleBetweenVectors } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { radToDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
@@ -184,10 +185,17 @@ export function closedRingFromEdges<T>(outer: readonly T[], inner: readonly T[])
  *
  * (Το προηγούμενο σχόλιο έλεγε «μέσα **ή στην ακμή**» — ήταν **λάθος**: καμία
  * γραμμή του σώματος δεν ελέγχει ακμή. Διορθώθηκε 2026-07-29.)
+ *
+ * ✅ **Χρειάζεσαι ντετερμινιστική απάντηση στο σύνορο;** → {@link pointInPolygonCovers} /
+ * {@link locatePointInPolygon} (ADR-730, τριαδική θέση + ανοχή σε mm).
+ * 🔴 **ΜΗΝ** τα χρησιμοποιήσεις για **κανόνα γεμίσματος even-odd** (hatch islands, image fill,
+ * clipping): εκεί το σύνορο είναι σύμβαση απόδοσης και η ανοχή **παχαίνει τα νησιά**. Γι' αυτόν
+ * ακριβώς τον λόγο αυτή η συνάρτηση **διατηρείται αμετάβλητη** — είναι το σωστό εργαλείο εκεί,
+ * όχι απλώς το παλιό.
  */
 export function pointInPolygon(
   point: { readonly x: number; readonly y: number },
-  vertices: readonly Point3D[],
+  vertices: readonly PlanarPoint[],
 ): boolean {
   const n = vertices.length;
   if (n < 3) return false;
@@ -202,6 +210,24 @@ export function pointInPolygon(
   }
   return inside;
 }
+
+// ─── Τριαδική θέση σημείου / OGC covers-within (SSoT) ─────────────────────────
+//
+// Ζει στο sibling module `polygon-point-location.ts` (N.7.1 500-line cap · ADR-730).
+// Re-exported εδώ ώστε ο καταναλωτής να βλέπει και τις ΤΡΕΙΣ σημασιολογίες δίπλα-δίπλα
+// και να διαλέγει συνειδητά — «δύο έννοιες μέσα» χωρίς αυτή τη γειτνίαση = το επόμενο SSoT χρέος.
+
+export type {
+  PlanarPoint,
+  PolygonPointLocation,
+  PolygonLocationOptions,
+} from './polygon-point-location';
+export {
+  locatePointInPolygon,
+  pointInPolygonCovers,
+  pointInPolygonWithin,
+  DEFAULT_BOUNDARY_TOLERANCE_MM,
+} from './polygon-point-location';
 
 /**
  * Naive self-intersection check για polygon edges (O(n²)). Επιστρέφει `true`
