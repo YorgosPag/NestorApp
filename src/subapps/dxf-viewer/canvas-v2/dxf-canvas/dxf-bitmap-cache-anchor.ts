@@ -136,7 +136,7 @@ export function overscannedRenderTransform(anchor: AnchorTransform, overscanPx: 
   return {
     scale: anchor.scale,
     offsetX: anchor.offsetX + overscanPx,
-    offsetY: anchor.offsetY - overscanPx,
+    offsetY: anchor.offsetY + overscanPx,
   };
 }
 
