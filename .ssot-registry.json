@@ -2492,6 +2492,31 @@
       ],
       "tier": 3
     },
+    "guarded-route-composition": {
+      "ssotFile": "src/lib/api/guarded-route.ts",
+      "description": "ADR-245 — the ONE composition behind every protected API route: rate limit -> auth -> permission -> Admin Firestore. Registered 2026-07-29 after CHECK 3.28 blocked five routes on clones that were INSIDE each file, between its own HTTP verbs (PATCH == DELETE preambles of 55-82 tokens). Companions: building-scoped-route.ts adds requireBuildingInTenant, entity-id-route.ts adds id resolution (URL segment or Next params), firestore-doc-guards.ts holds requireDocOfBuilding (the 404-BEFORE-403 order is a security contract: reversed, a foreign tenant learns the id exists) and buildAllowedUpdates (without the allowlist a PATCH can write companyId). ⚠️ The patterns guard only against a SECOND declaration of these helpers. They deliberately do NOT forbid the raw `withStandardRateLimit(withAuth(` chain: dozens of legitimate routes still compose it directly and encoding it today would be pure noise — the N.12 trap. Matches ZERO files outside the allowlist as of 2026-07-29, so it needs neither allowlist growth nor baseline: any hit is a NEW clone.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+(runGuarded|buildingScopedRoute|entityIdRoute|segmentIdRoute|requireDocOfBuilding|buildAllowedUpdates)\\b"
+      ],
+      "allowlist": [
+        "src/lib/api/guarded-route.ts",
+        "src/lib/api/building-scoped-route.ts",
+        "src/lib/api/entity-id-route.ts",
+        "src/lib/api/firestore-doc-guards.ts"
+      ],
+      "tier": 3
+    },
+    "construction-doc-mappers": {
+      "ssotFile": "src/lib/api/construction-doc-mappers.ts",
+      "description": "ADR-245/ADR-266 — Firestore document -> ConstructionPhase/ConstructionTask. Registered 2026-07-29: the field-by-field mapper existed twice, in the construction-phases GET and in the construction-baselines POST that freezes the snapshot. Not the same shape — the same ANSWER: the baseline must freeze exactly what GET serves, or 'baseline vs actual' compares two schemas. A field added to only one mapper is a silent divergence, not a compile error. Phase and task differ in three fields (status union, phaseId, dependencies); the other 18 live in one function.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+(mapConstructionPhaseDoc|mapConstructionTaskDoc|fetchPhasesAndTasks)\\b"
+      ],
+      "allowlist": [
+        "src/lib/api/construction-doc-mappers.ts"
+      ],
+      "tier": 3
+    },
     "building-ids-config": {
       "ssotFile": "src/config/building-ids-config.ts",
       "description": "Building IDs configuration — BUILDING_IDS, BuildingIdUtils. Canonical SSoT for multi-tenant building identifier management sourced from env vars (zero hardcoded values). ADR-314 Phase D.3k.",
