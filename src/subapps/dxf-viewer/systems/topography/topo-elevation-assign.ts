@@ -99,6 +99,10 @@ export function isElevationAssignable(point: TopoPoint): boolean {
  * `candidateIndices` = τι διάλεξε ο χρήστης. Δείκτες εκτός ορίων αγνοούνται σιωπηλά (ο πίνακας
  * σημείων μπορεί να έχει αλλάξει ανάμεσα σε επιλογή και εκτέλεση — μια επιλογή που παλιώνει δεν
  * είναι λόγος να σκάσει η εντολή).
+ *
+ * 🔴 **Ο καλών ΠΡΕΠΕΙ να δώσει την ΠΛΗΡΗ επιφάνεια.** Αν χρησιμοποιήσει `getTopoSurface()`, αυτή
+ * κόβει το όριο και τα bridges υπολογίζονται σε κομμένο TIN — **ψεύτικα bridges**. Χρησιμοποίησε
+ * `getTopoSurfaceFull()` ή pass `getTopoSurface(undefined)` (παρακάμπτει την αποκοπή).
  */
 export function planElevationAssignment(
   points: readonly TopoPoint[],
