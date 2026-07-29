@@ -2,10 +2,9 @@
 import React from 'react';
 import { useExtendPreview } from '../../hooks/tools/useExtendPreview';
 import { useExtendDragCapture } from '../../hooks/tools/useExtendDragCapture';
-import type { ViewTransform } from '../../rendering/types/Types';
 
 interface ExtendPreviewOverlayProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -18,6 +17,6 @@ export const ExtendPreviewOverlay = React.memo(function ExtendPreviewOverlay(
   props: ExtendPreviewOverlayProps,
 ) {
   useExtendPreview(props);
-  useExtendDragCapture({ transform: props.transform, getViewportElement: props.getViewportElement });
+  useExtendDragCapture({ getViewportElement: props.getViewportElement });
   return null;
 });

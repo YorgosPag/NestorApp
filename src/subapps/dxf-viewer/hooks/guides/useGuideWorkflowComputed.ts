@@ -10,6 +10,9 @@ import type { Guide } from '../../systems/guides/guide-types';
 import type { Point2D } from '../../rendering/types/Types';
 import { getImmediateSnap } from '../../systems/cursor/ImmediateSnapStore';
 import { useCursorWorldPosition } from '../../systems/cursor/useCursor';
+// ADR-040 Phase XXII.B — scale-only leaf subscription (αλλάζει ΜΟΝΟ στο zoom, όχι στο pan)·
+// αντικατέστησε το `transform` param ώστε ο shell να μην ξαναχτίζει params ανά καρέ χειρονομίας.
+import { useTransformScale } from '../../systems/cursor/ImmediateTransformStore';
 // ADR-189 §3.13 — WYSIWYG φάντασμα: όσο πληκτρολογείται απόσταση, το φάντασμα
 // κουμπώνει σε αυτήν αντί να ακολουθεί τον κέρσορα.
 import { useCanvasNumericPendingDistance, useCanvasNumericAnchor } from '../../systems/canvas-numeric-input/CanvasNumericInputStore';
@@ -39,7 +42,6 @@ interface UseGuideWorkflowComputedParams {
   activeTool: ToolType | string;
   guideState: UseGuideStateReturn;
   cpState: UseConstructionPointStateReturn;
-  transform: { scale: number; offsetX: number; offsetY: number };
   state: GuideWorkflowState;
 }
 
@@ -50,8 +52,10 @@ interface UseGuideWorkflowComputedParams {
  * re-renders stay scoped to the canvas tree, not CanvasSection.
  */
 export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams) {
-  const { activeTool, guideState, cpState, transform, state } = params;
+  const { activeTool, guideState, cpState, state } = params;
   const mouseWorld = useCursorWorldPosition();
+  // Μόνο το scale χρειάζεται (hit tolerances px→world) — leaf-level subscription.
+  const transformScale = useTransformScale();
   // Low-frequency: αλλάζει ΜΟΝΟ σε πάτημα πλήκτρου, όχι στα 60fps του κέρσορα.
   const typedDistance = useCanvasNumericPendingDistance();
   // Low-frequency: παγώνει 1× στο κλικ επιλογής αναφοράς (ADR-189 §3.13).
@@ -72,7 +76,7 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
       activeTool === 'guide-mirror';
 
     if (needsToolHighlight) {
-      const hitToleranceWorld = GUIDE_HIT_TOLERANCE_PX / transform.scale;
+      const hitToleranceWorld = GUIDE_HIT_TOLERANCE_PX / transformScale;
       let nearestId: string | null = null;
       let nearestDist = hitToleranceWorld;
       for (const guide of guideState.guides) {
@@ -103,16 +107,16 @@ export function useGuideWorkflowComputed(params: UseGuideWorkflowComputedParams)
     }
 
     return null;
-  }, [mouseWorld, guideState.guides, activeTool, state.parallelRefGuideId, state.perpRefGuideId, state.rotateRefGuideId, transform.scale]);
+  }, [mouseWorld, guideState.guides, activeTool, state.parallelRefGuideId, state.perpRefGuideId, state.rotateRefGuideId, transformScale]);
 
   const effectiveHighlightedGuideId = highlightedGuideId ?? state.panelHighlightGuideId;
 
   const highlightedPointId = useMemo<string | null>(() => {
     if (!mouseWorld || activeTool !== 'guide-delete-point') return null;
-    const hitToleranceWorld = 30 / transform.scale;
+    const hitToleranceWorld = 30 / transformScale;
     const nearest = cpState.findNearest(mouseWorld, hitToleranceWorld);
     return nearest?.id ?? null;
-  }, [mouseWorld, activeTool, cpState, transform.scale]);
+  }, [mouseWorld, activeTool, cpState, transformScale]);
 
   // ─── Ghost previews ───
   const ghostGuide = useMemo(() => {

@@ -27,9 +27,11 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// ADR-040 Phase XXII.B — event-time transform read (SSoT: ImmediateTransformStore).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { useCommandHistory } from '../../core/commands';
 import { UpdateMepSystemParamsCommand } from '../../core/commands/entity-commands/UpdateMepSystemParamsCommand';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
@@ -66,7 +68,7 @@ const NODE_TOL_PX = 8;
 const WIRE_TOL_PX = 14;
 
 export interface UseMepWireWaypointInteractionParams {
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   readonly getViewportElement: () => HTMLElement | null;
   readonly getCurrentLevelId: () => string | null;
   readonly getLevelScene: (levelId: string) => SceneModel | null;
@@ -90,12 +92,10 @@ interface ActiveContext {
 export function useMepWireWaypointInteraction(
   params: UseMepWireWaypointInteractionParams,
 ): void {
-  const { transform, getViewportElement, getCurrentLevelId, getLevelScene, selectCircuit } = params;
+  const { getViewportElement, getCurrentLevelId, getLevelScene, selectCircuit } = params;
   const { execute: executeCommand } = useCommandHistory();
 
   // Refs mirror props so handlers see latest values without effect teardown.
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
   const executeRef = useRef(executeCommand);
   executeRef.current = executeCommand;
   const getCurrentLevelIdRef = useRef(getCurrentLevelId);
@@ -137,10 +137,10 @@ export function useMepWireWaypointInteraction(
       const viewport = { width: rect.width, height: rect.height };
       const world = CoordinateTransforms.screenToWorld(
         { x: e.clientX - rect.left, y: e.clientY - rect.top },
-        transformRef.current,
+        getImmediateTransform(),
         viewport,
       );
-      return { world, scale: transformRef.current.scale || 1 };
+      return { world, scale: getImmediateTransform().scale || 1 };
     }
 
     function pushOptimistic(point: WirePlanPoint): void {

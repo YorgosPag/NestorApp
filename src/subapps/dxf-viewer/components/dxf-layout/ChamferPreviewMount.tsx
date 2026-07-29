@@ -1,11 +1,10 @@
 'use client';
 import React, { useCallback } from 'react';
 import { useChamferPreview } from '../../hooks/tools/useChamferPreview';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/scene';
 
 interface ChamferPreviewMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
   levelManager: {
@@ -22,11 +21,11 @@ interface ChamferPreviewMountProps {
 export const ChamferPreviewMount = React.memo(function ChamferPreviewMount(
   props: ChamferPreviewMountProps,
 ) {
-  const { transform, getCanvas, getViewportElement, levelManager } = props;
+  const { getCanvas, getViewportElement, levelManager } = props;
   const getScene = useCallback(
     () => (levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null),
     [levelManager],
   );
-  useChamferPreview({ transform, getCanvas, getViewportElement, getScene });
+  useChamferPreview({ getCanvas, getViewportElement, getScene });
   return null;
 });

@@ -24,6 +24,11 @@ import { ZOOM_FACTORS, ZOOM_LIMITS } from '../../config/transform-config';
 import { worldToScreenSimple, screenToWorldSimple } from '../../rendering/core/CoordinateTransforms';
 // 🏢 ENTERPRISE: Unified EventBus for type-safe event dispatch
 import { EventBus } from '../../systems/events';
+// ADR-040 Phase XXII.B — ρητή αγκύρωση world(0,0) στη γωνία χαράκων (ΙΔΙΟΣ SSoT helper με
+// το bootstrap του DxfCanvas). Το παλιό resetToOrigin έθετε ΩΜΟ identity και βασιζόταν στο
+// re-fire του bootstrap effect (interception μέσω transform prop) — μηχανισμός που
+// καταργήθηκε όταν το transform βγήκε από τα React props.
+import { computeRulerOriginTransform } from '../../systems/rulers-grid/ruler-origin';
 
 export interface CanvasOperations {
   getCanvas: () => HTMLCanvasElement | null;
@@ -183,17 +188,21 @@ export const useCanvasOperations = (): CanvasOperations => {
 
   /**
    * 🏢 ENTERPRISE: Reset To Origin
-   * Sets transform to identity (scale: 1, offset: 0,0)
+   * Θέτει ΑΠΕΥΘΕΙΑΣ το αγκυρωμένο transform (world (0,0) στην κάτω-αριστερή γωνία των
+   * χαράκων) — ίδιο τελικό αποτέλεσμα με πριν, χωρίς το ενδιάμεσο identity καρέ και χωρίς
+   * εξάρτηση από το bootstrap effect του DxfCanvas (ADR-040 Phase XXII.B).
+   * Fallback σε identity αν ο καμβάς δεν είναι ακόμη μετρήσιμος (ύψος 0).
    */
   const resetToOrigin = useCallback(() => {
     if (context?.setTransform) {
-      context.setTransform({
-        scale: 1,
-        offsetX: 0,
-        offsetY: 0
-      });
+      const canvasHeight = getCanvas()?.getBoundingClientRect().height ?? 0;
+      context.setTransform(
+        canvasHeight > 0
+          ? computeRulerOriginTransform(canvasHeight)
+          : { scale: 1, offsetX: 0, offsetY: 0 },
+      );
     }
-  }, [context]);
+  }, [context, getCanvas]);
 
   /**
    * 🏢 ENTERPRISE: Fit To View

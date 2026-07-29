@@ -34,7 +34,7 @@
 'use client';
 
 import { useCallback } from 'react';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 import type { DxfGripDragPreview } from '../grip-computation';
@@ -64,7 +64,7 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 export interface UseGripDimAnnotationProps {
   dragPreview: DxfGripDragPreview | null;
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -185,7 +185,7 @@ function buildFoundationLabel(
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
-  const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { dragPreview, levelManager, getCanvas, getViewportElement } = props;
 
   // ADR-508 §column-hud — ΜΟΝΟ δοκάρι + πέδιλο ενεργοποιούν το pill leaf· η κολόνα (ΟΛΟΙ οι τύποι)
   // δείχνει πλέον το πλούσιο HUD στο `useGripGhostPreview`.
@@ -237,7 +237,6 @@ export function useGripDimAnnotation(props: UseGripDimAnnotationProps): void {
     isActive: isDimPreview,
     getCanvas,
     getViewportElement,
-    transform,
     cursorMode: 'none',
     clearMode: 'skip-clear',
     draw,

@@ -21,7 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import type { Entity, ViewTransform } from '../../rendering/types/Types';
+import type { Entity } from '../../rendering/types/Types';
 import type { SlabOpeningKind } from '../../bim/types/slab-opening-types';
 import type { SlabEntity } from '../../bim/types/slab-types';
 import {
@@ -50,7 +50,7 @@ export interface UseSlabOpeningGhostPreviewProps {
   readonly getHostSlab: () => SlabEntity | null;
   /** ADR-363 Phase 3.7b++ — pre-drag hover indicator for edge-midpoint grips. */
   readonly hoveredEdgeMidpointGrip?: UnifiedGripInfo | null;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas(): HTMLCanvasElement | null;
   getViewportElement?(): HTMLElement | null;
   /** ADR-370 — active scene units· propagated στον `buildDefaultSlabOpeningParams`. */
@@ -64,14 +64,13 @@ interface SlabOpeningGhostBuild {
 }
 
 export function useSlabOpeningGhostPreview(props: Readonly<UseSlabOpeningGhostPreviewProps>): void {
-  const { isAwaitingPosition, kind, overrides, getHostSlab, hoveredEdgeMidpointGrip, transform, getCanvas, getViewportElement, getSceneUnits } = props;
+  const { isAwaitingPosition, kind, overrides, getHostSlab, hoveredEdgeMidpointGrip, getCanvas, getViewportElement, getSceneUnits } = props;
 
   // Gate: ενεργό είτε σε placement είτε σε hover mode.
   const isActive = isAwaitingPosition || hoveredEdgeMidpointGrip != null;
 
   useWysiwygPlacementGhost<SlabOpeningGhostBuild>({
     isActive,
-    transform,
     getCanvas,
     getViewportElement,
     buildGhostEntity: ({ effectiveCursor }): SlabOpeningGhostBuild | null => {

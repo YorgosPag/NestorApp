@@ -20,7 +20,6 @@
  */
 
 import { useEffect, useRef } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { OpeningEntity, OpeningParams } from '../../bim/types/opening-types';
 import type { AnySceneEntity, SceneModel } from '../../types/entities';
 import {
@@ -31,9 +30,10 @@ import {
 import { UpdateOpeningParamsCommand } from '../../core/commands/entity-commands/UpdateOpeningParamsCommand';
 import { useCommandHistory } from '../../core/commands';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
+// ADR-040 Phase XXII.B — event-time transform read (SSoT: ImmediateTransformStore).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 
 export interface UseOpeningTagDragInteractionParams {
-  readonly transform: ViewTransform;
   readonly getViewportElement: () => HTMLElement | null;
   readonly getCurrentLevelId: () => string | null;
   readonly getLevelScene: (levelId: string) => SceneModel | null;
@@ -70,7 +70,6 @@ export function useOpeningTagDragInteraction(
   params: UseOpeningTagDragInteractionParams,
 ): void {
   const {
-    transform,
     getViewportElement,
     getCurrentLevelId,
     getLevelScene,
@@ -81,8 +80,6 @@ export function useOpeningTagDragInteraction(
 
   // Refs that mirror props so the event handlers always see latest values
   // without forcing an effect teardown / re-mount on every prop change.
-  const transformRef = useRef(transform);
-  transformRef.current = transform;
   const executeRef = useRef(executeCommand);
   executeRef.current = executeCommand;
   const getCurrentLevelIdRef = useRef(getCurrentLevelId);
@@ -144,7 +141,7 @@ export function useOpeningTagDragInteraction(
       const rect = el!.getBoundingClientRect();
       const hit = hitTestTag({
         openings: getOpenings(),
-        transform: transformRef.current,
+        transform: getImmediateTransform(),
         viewport: { width: rect.width, height: rect.height },
         canvasRect: { left: rect.left, top: rect.top },
         clientX: e.clientX,
@@ -202,7 +199,7 @@ export function useOpeningTagDragInteraction(
       const rect = el!.getBoundingClientRect();
       const hit = hitTestTag({
         openings: getOpenings(),
-        transform: transformRef.current,
+        transform: getImmediateTransform(),
         viewport: { width: rect.width, height: rect.height },
         canvasRect: { left: rect.left, top: rect.top },
         clientX: e.clientX,
@@ -219,7 +216,7 @@ export function useOpeningTagDragInteraction(
       const rect = el!.getBoundingClientRect();
       const canvasX = e.clientX - rect.left;
       const canvasY = e.clientY - rect.top;
-      const offset = controller.updateDrag(canvasX, canvasY, transformRef.current);
+      const offset = controller.updateDrag(canvasX, canvasY, getImmediateTransform());
       if (!offset) return;
       const id = controller.getActiveOpeningId();
       if (!id) return;
@@ -233,7 +230,7 @@ export function useOpeningTagDragInteraction(
       const id = controller.getActiveOpeningId();
       const start = startParamsRef.current;
       const finalOffset = lastOffsetRef.current;
-      controller.endDrag(0, 0, transformRef.current);
+      controller.endDrag(0, 0, getImmediateTransform());
       startParamsRef.current = null;
       lastOffsetRef.current = null;
       if (!id || !start || !finalOffset) return;

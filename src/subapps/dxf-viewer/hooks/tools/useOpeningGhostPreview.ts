@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  */
 
-import type { Entity, ViewTransform } from '../../rendering/types/Types';
+import type { Entity } from '../../rendering/types/Types';
 import type { OpeningKind } from '../../bim/types/opening-types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import {
@@ -36,7 +36,7 @@ export interface UseOpeningGhostPreviewProps {
   readonly overrides: OpeningParamOverrides;
   /** Resolver για locked host wall (null όταν `isAwaitingPosition === false`). */
   readonly getHostWall: () => WallEntity | null;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas(): HTMLCanvasElement | null;
   getViewportElement?(): HTMLElement | null;
   /** ADR-370 — active scene units για mm→scene conversion. */
@@ -44,11 +44,10 @@ export interface UseOpeningGhostPreviewProps {
 }
 
 export function useOpeningGhostPreview(props: Readonly<UseOpeningGhostPreviewProps>): void {
-  const { isAwaitingPosition, kind, overrides, getHostWall, transform, getCanvas, getViewportElement, getSceneUnits } = props;
+  const { isAwaitingPosition, kind, overrides, getHostWall, getCanvas, getViewportElement, getSceneUnits } = props;
 
   useWysiwygPlacementGhost({
     isActive: isAwaitingPosition,
-    transform,
     getCanvas,
     getViewportElement,
     buildGhostEntity: ({ effectiveCursor }): Entity | null => {

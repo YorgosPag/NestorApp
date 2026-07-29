@@ -1,11 +1,10 @@
 'use client';
 import React, { useCallback } from 'react';
 import { useFilletPreview } from '../../hooks/tools/useFilletPreview';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/scene';
 
 interface FilletPreviewMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
   levelManager: {
@@ -23,11 +22,11 @@ interface FilletPreviewMountProps {
 export const FilletPreviewMount = React.memo(function FilletPreviewMount(
   props: FilletPreviewMountProps,
 ) {
-  const { transform, getCanvas, getViewportElement, levelManager } = props;
+  const { getCanvas, getViewportElement, levelManager } = props;
   const getScene = useCallback(
     () => (levelManager.currentLevelId ? levelManager.getLevelScene(levelManager.currentLevelId) : null),
     [levelManager],
   );
-  useFilletPreview({ transform, getCanvas, getViewportElement, getScene });
+  useFilletPreview({ getCanvas, getViewportElement, getScene });
   return null;
 });
