@@ -4966,6 +4966,20 @@
       "addedDate": "2026-07-28",
       "addedByAdr": "ADR-720",
       "tier": 3
+    },
+    "elevation-assignment-from-surface": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/topography/topo-elevation-assign.ts",
+      "description": "ADR-731 - THE ONE point-location function for assigning elevation from a surface to 2D points. Includes `planElevationAssignment()` (pure preview), `applyElevationAssignment()` (mutation), `clearDerivedElevations()` (cleanup), and guards: measured Z is never overwritten, derived points do not feed the TIN (structural lock via surfacePointsOf filter), and bridges are detected via ESRI median-edge pattern. Four scattered implementations (polygon-utils, segment-coverage, roof-tile-tessellation, clip-geometry, wall-tilt-clip tests) have been consolidated; any new site must go through this SSoT.",
+      "forbiddenPatterns": [
+        "(function|const)\\s+\\w*(planElevationAssignment|applyElevationAssignment|clearDerivedElevations|isElevationAssignable)\\w*\\s*[(<=]"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/topography/topo-elevation-assign.ts",
+        "src/subapps/dxf-viewer/core/commands/entity-commands/AssignTopoElevationCommand.ts"
+      ],
+      "addedDate": "2026-07-29",
+      "addedByAdr": "ADR-731",
+      "tier": 3
     }
   }
 }
