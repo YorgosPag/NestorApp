@@ -52,42 +52,24 @@ import type { Point3D } from '../../../bim/types/bim-base';
 import type { TinSurface, TopoBoundary, TopoPoint } from '../topo-types';
 import type { TopoQaFlag, TopoQaSeverity } from './topo-qa-types';
 import { TOPO_QA_CONFIG } from './topo-qa-config';
-import { tinEdgeLength, tinEdgeLengths } from './topo-qa-topology';
-import { median } from '../../../utils/statistics';
+import { bridgingTrianglesOnly } from './topo-qa-topology';
 import {
   pointInPolygonCovers, polygonArea, polygon2DAreaCentroid,
   DEFAULT_BOUNDARY_TOLERANCE_MM,
 } from '../../../bim/geometry/shared/polygon-utils';
 import { clipTinToBoundary } from '../tin-clip-to-boundary';
 import { topoSurfaceAreas } from '../topo-surface-area';
-import { hasElevation } from '../topo-point-elevation';
+import { isMeasuredElevation } from '../topo-point-elevation';
 import { worldToLocal } from '../topo-local-origin';
 
 const {
   COVERAGE_GAP_MIN_FRACTION, COVERAGE_GAP_HIGH_FRACTION,
-  BRIDGING_EDGE_MEDIAN_MULTIPLIER, INTERPOLATED_MIN_FRACTION, INTERPOLATED_HIGH_FRACTION,
+  INTERPOLATED_MIN_FRACTION, INTERPOLATED_HIGH_FRACTION,
 } = TOPO_QA_CONFIG;
 
 /** Ο δακτύλιος ως `Point3D` — το `polygon-utils` δουλεύει σε 3Δ κορυφές με αδιάφορο z. */
 function lift(verts: readonly Point2D[]): Point3D[] {
   return verts.map((p) => ({ x: p.x, y: p.y, z: 0 }));
-}
-
-/**
- * Η ίδια επιφάνεια με **μόνο** τα τρίγωνα-γέφυρες. Shallow copy: το `clipTinToBoundary` και το
- * `topoSurfaceAreas` διαβάζουν αποκλειστικά `positions` / `elevations` / `triangles` / `origin`,
- * οπότε τα `bounds` / `flatTriangleCount` που κληρονομούνται αυτούσια είναι μεν υπερεκτίμηση αλλά
- * **δεν διαβάζονται από κανέναν στη διαδρομή αυτή**. Η εναλλακτική — να ξαναϋπολογιστούν — θα ήταν
- * δεύτερος υπολογισμός bounds για να μη διαβαστεί ποτέ.
- */
-function bridgesOnly(surface: TinSurface): TinSurface {
-  const lengths = tinEdgeLengths(surface);
-  if (lengths.length === 0) return { ...surface, triangles: [] };
-  const limit = median(lengths) * BRIDGING_EDGE_MEDIAN_MULTIPLIER;
-  const triangles = surface.triangles.filter(([i, j, k]) => Math.max(
-    tinEdgeLength(surface, i, j), tinEdgeLength(surface, j, k), tinEdgeLength(surface, k, i),
-  ) > limit);
-  return { ...surface, triangles };
 }
 
 /** Το plan εμβαδόν της `surface` **μέσα** στον δακτύλιο, μέσω των δύο υπαρχουσών SSoT. */
@@ -120,7 +102,7 @@ function measuredPointsInside(
 ): number {
   let inside = 0;
   for (const point of points) {
-    if (!hasElevation(point)) continue;
+    if (!isMeasuredElevation(point)) continue;
     if (pointInPolygonCovers(worldToLocal(point, origin), ringLocal)) inside++;
   }
   return inside;
@@ -186,7 +168,7 @@ export function checkBoundaryElevationCoverage(
   if (!(plotAreaMm2 > 0)) return [];
 
   const coveredMm2 = planAreaInsideMm2(surface, ring);
-  const bridgedMm2 = planAreaInsideMm2(bridgesOnly(surface), ring);
+  const bridgedMm2 = planAreaInsideMm2(bridgingTrianglesOnly(surface), ring);
 
   // Ψαλιδισμένο στο [0,1]: η κομμένη επιφάνεια δεν μπορεί να ξεπεράσει το όριο (ADR-718 —
   // «η μεγέθυνση είναι ΑΔΥΝΑΤΗ, όχι απαγορευμένη»), αλλά ένα αρνητικό ποσοστό από συσσωρευμένο

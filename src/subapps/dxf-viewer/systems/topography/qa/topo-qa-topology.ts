@@ -14,6 +14,8 @@
 
 import type { TinSurface, Breakline, LocalOrigin } from '../topo-types';
 import { localVertexKey } from '../tin-builder';
+import { median } from '../../../utils/statistics';
+import { TOPO_QA_CONFIG } from './topo-qa-config';
 
 /** Undirected vertex-index pair, always `min:max`, so direction never matters. */
 export function edgeKey(a: number, b: number): string {
@@ -69,6 +71,36 @@ export function tinEdgeLength(surface: TinSurface, a: number, b: number): number
   const pb = surface.positions[b];
   if (!pa || !pb) return NaN;
   return Math.hypot(pb[0] - pa[0], pb[1] - pa[1]);
+}
+
+/**
+ * The same surface carrying **only its bridging triangles** — the ones whose longest edge exceeds
+ * {@link TOPO_QA_CONFIG.BRIDGING_EDGE_MEDIAN_MULTIPLIER}× the survey's own MEDIAN edge, i.e. the
+ * triangles that jump a gap instead of describing measured ground.
+ *
+ * Self-calibrating on purpose (ESRI «Delineate TIN Data Area»): the threshold comes from the
+ * median edge of *this* survey, never from an absolute metre value, so a uniformly sparse survey
+ * flags nothing — correctly, since it is uniformly as good as it is anywhere. See ADR-725 §3.3.
+ *
+ * Shallow copy: `clipTinToBoundary`, `topoSurfaceAreas` and `createTinSampler` read only
+ * `positions` / `elevations` / `triangles` / `origin` / `bounds`. The inherited `bounds` is a
+ * (harmless) over-estimate of the bridging subset's extent — the sampler uses it solely as a
+ * cheap early-out before the per-triangle barycentric test, so a larger box costs a few extra
+ * bucket probes and can never turn a miss into a hit.
+ *
+ * 🔴 Lives HERE, not inside a check, because ADR-731 needs the very same question from the other
+ * side: `check-boundary-elevation-coverage` asks «how much of the parcel rests on bridges?», and
+ * the elevation-assignment command asks «is THIS point standing on one?» — an elevation sampled
+ * over a bridge is **interpolation of an interpolation**. Two callers, one definition of «bridge».
+ */
+export function bridgingTrianglesOnly(surface: TinSurface): TinSurface {
+  const lengths = tinEdgeLengths(surface);
+  if (lengths.length === 0) return { ...surface, triangles: [] };
+  const limit = median(lengths) * TOPO_QA_CONFIG.BRIDGING_EDGE_MEDIAN_MULTIPLIER;
+  const triangles = surface.triangles.filter(([i, j, k]) => Math.max(
+    tinEdgeLength(surface, i, j), tinEdgeLength(surface, j, k), tinEdgeLength(surface, k, i),
+  ) > limit);
+  return { ...surface, triangles };
 }
 
 /** One interior TIN edge and the two triangle indices that share it. */
