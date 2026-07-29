@@ -65,10 +65,10 @@ import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
 // ADR-557 (multi-line) — the shared split + line-stacking SSoT: box height = Σ γραμμών,
 // width = max γραμμής. The SAME helper the renderer + 3D use, so the three stay in parity.
-import { resolveLineSpacingRatio, resolveMultilineExtents, type TextRow, type MultilineExtents } from './text-lines';
+import { resolveMultilineExtentsFromExtra, type TextRow, type MultilineExtents } from './text-lines';
 // ADR-635 Φ C.20 — η αναδίπλωση στη στήλη (group 41) + οι στηλοθέτες ζουν σε ΕΝΑ SSoT που
 // μοιράζονται κουτί και renderer· εδώ διαβάζουμε τις ΟΠΤΙΚΕΣ γραμμές, όχι τα ρητά `\P`.
-import { layoutTextBlock, layoutLineStrings } from './text-layout';
+import { layoutTextBlock, layoutLineStrings, totalExtraLineRatio } from './text-layout';
 // ADR-557 — the oblique shear SSoT (angle → tan θ). The SAME map the renderer uses, so the
 // box parallelogram leans by exactly what the drawn glyphs lean by (no second `Math.tan`).
 import { obliqueShearFromAngle } from './text-oblique';
@@ -235,8 +235,10 @@ interface VBoxRatios {
 function multilineExtentsOf(text: DxfText, just: TextJustification): MultilineExtents {
   // ADR-635 Φ C.20 — πλήθος **οπτικών** γραμμών (μετά την αναδίπλωση), όχι μόνο τα `\P`:
   // αλλιώς το ύψος του κουτιού ενός αναδιπλωμένου MTEXT έμενε στο ύψος μίας γραμμής.
-  const lineCount = layoutTextBlock(text, resolveBoxHeight(text), advanceStyleOf(text)).length;
-  return resolveMultilineExtents(just[0] as TextRow, Math.max(1, lineCount), resolveLineSpacingRatio(text));
+  // ADR-635 Φ C.21 (Δ) — άθροισμα των ΠΡΑΓΜΑΤΙΚΩΝ διάστιχων: με `\ps` ανά παράγραφο το βήμα δεν
+  // είναι σταθερό, οπότε ένα `(πλήθος − 1) × ratio` έδινε κουτί/λαβές σε λάθος ύψος.
+  const lines = layoutTextBlock(text, resolveBoxHeight(text), advanceStyleOf(text));
+  return resolveMultilineExtentsFromExtra(just[0] as TextRow, totalExtraLineRatio(lines));
 }
 
 /**

@@ -17,6 +17,13 @@
 
 // ── Token types ───────────────────────────────────────────────────────────────
 
+/**
+ * Τρόπος διάστιχου παραγράφου, όπως τον γράφει το `\ps<γράμμα><τιμή>;`. Ίδιο λεξιλόγιο με το
+ * `LineSpacingMode` του AST — ο tokenizer μένει ανεξάρτητος από τους τύπους του AST, οπότε η
+ * αντιστοίχιση γίνεται στον parser (μία μετάφραση, ένα σημείο).
+ */
+export type MtextLineSpacingMode = 'multiple' | 'exact' | 'at-least';
+
 export type MtextToken =
   | { kind: 'text'; value: string }
   | { kind: 'font'; family: string; bold: boolean; italic: boolean; charset: number; pitch: number }
@@ -36,7 +43,17 @@ export type MtextToken =
   | { kind: 'lineBreak' }
   | { kind: 'stack'; top: string; bottom: string; type: 'tolerance' | 'diagonal' | 'horizontal' }
   | { kind: 'alignment'; value: 0 | 1 | 2 }
-  | { kind: 'paragraph'; indent: number; left: number; right: number; tabs: number[]; justification: number }
+  | {
+      kind: 'paragraph';
+      indent: number;
+      left: number;
+      right: number;
+      tabs: number[];
+      justification: number;
+      /** `\ps…` διάστιχο παραγράφου· `null` = δεν δηλώθηκε ή `s*` (επαναφορά στην προεπιλογή). */
+      lineSpacingMode: MtextLineSpacingMode | null;
+      lineSpacingFactor: number | null;
+    }
   | { kind: 'nonBreakSpace' }
   | { kind: 'diameter' }
   | { kind: 'degree' }
@@ -266,43 +283,76 @@ const PARAGRAPH_JUSTIFICATION_LETTERS: Readonly<Record<string, number>> = {
  * όλοι ως ΘΕΣΕΙΣ· η δεξιά/κεντρική **προσαρμογή** δεν υλοποιείται ακόμη (η θέση είναι σωστή,
  * η στοίχιση πάνω της είναι αριστερή).
  *
- * ⚠️ Το `s` (διάστιχο παραγράφου, `sm1.5` / `sa2` / `s*`) διαβάζεται αλλά **δεν** μεταφέρεται:
- * το token δεν έχει πεδίο διάστιχου και η αλλαγή αγγίζει τη στοίβαξη γραμμών σε 2D/3D/κουτί.
- * Καταγράφεται ρητά ως ανοιχτό, αντί να «μισο-συνδεθεί».
+ * Το `s` είναι το **διάστιχο παραγράφου**: `\psm1;` πολλαπλάσιο 1,0 · `\psm0.9;` 0,9 ·
+ * `\pse2;` ακριβώς 2 · `\psa1.5;` «τουλάχιστον» 1,5 · `\ps*;` επαναφορά στην προεπιλογή.
+ * Μετρημένο στο δείγμα: **28 κωδικοί `s`** (12×`sm1`, 10×`sm0.9`, 4×`s*`, 2×`sm1`) που μέχρι το
+ * Φ C.20 πέφτονταν σιωπηλά στο `if (isNaN(val)) continue` — το `parseFloat('m1')` είναι NaN.
+ * Πηγή γραμμάτων: CAD Forum «Text formatting codes in MText objects» («se» line spacing exactly,
+ * «sm» line spacing multiples)· η μονάδα του πολλαπλασιαστή είναι το μονό διάστιχο του AutoCAD
+ * (= 5/3 × ύψος χαρακτήρα, DXF κωδ. 44 «3-on-5»), που ζει στο `CHARACTER_METRICS`.
  */
 function readParagraphCode(state: TokenizerState): MtextToken {
   state.pos++; // skip 'p'
   const raw = readUntilSemicolon(state);
   // Το ηγετικό `x` σημαίνει «ακολουθούν ιδιότητες παραγράφου» — δεν είναι ιδιότητα το ίδιο.
   const content = raw.startsWith('x') ? raw.slice(1) : raw;
-  let indent = 0;
-  let left = 0;
-  let right = 0;
-  let justification = 0;
-  const tabs: number[] = [];
-  let inTabList = false;
-  for (const part of content.split(',')) {
-    if (!part) continue;
-    const key = part[0];
-    const rest = part.slice(1);
-    const val = parseFloat(rest);
-    if (key === 'q') {
-      // `q*` = επαναφορά στην προεπιλογή· γράμμα ή αριθμός αλλιώς.
-      justification = PARAGRAPH_JUSTIFICATION_LETTERS[rest] ?? (isNaN(val) ? 0 : Math.floor(val));
-      continue;
-    }
-    if (isNaN(val)) continue;
-    switch (key) {
-      case 'i': indent = val; break;
-      case 'l': left = val; break;
-      case 't': tabs.push(val); inTabList = true; break;
-      // Μόλις ανοίξει η λίστα στάσεων, τα `r`/`c` είναι δεξιά/κεντρική ΣΤΑΣΗ (`t1,r5,c8`)·
-      // πριν από αυτήν, το `r` είναι το δεξί περιθώριο της παραγράφου.
-      case 'c': if (inTabList) tabs.push(val); break;
-      case 'r': if (inTabList) tabs.push(val); else right = val; break;
-    }
+  const acc: ParagraphAccumulator = {
+    indent: 0, left: 0, right: 0, tabs: [], justification: 0,
+    lineSpacingMode: null, lineSpacingFactor: null, inTabList: false,
+  };
+  for (const part of content.split(',')) if (part) applyParagraphField(acc, part);
+  const { inTabList: _drop, ...token } = acc;
+  return { kind: 'paragraph', ...token };
+}
+
+/** Τα πεδία ενός `\p…;` καθώς συλλέγονται (το `inTabList` είναι κατάσταση, όχι αποτέλεσμα). */
+interface ParagraphAccumulator {
+  indent: number;
+  left: number;
+  right: number;
+  tabs: number[];
+  justification: number;
+  lineSpacingMode: MtextLineSpacingMode | null;
+  lineSpacingFactor: number | null;
+  inTabList: boolean;
+}
+
+/** `\ps` τρόπος διάστιχου: το γράμμα ΜΕΤΑ το `s`. `*` = επαναφορά (καμία δήλωση). */
+const LINE_SPACING_MODE_LETTERS: Readonly<Record<string, MtextLineSpacingMode>> = {
+  m: 'multiple', e: 'exact', a: 'at-least',
+};
+
+/** Ένα πεδίο `κλειδί+τιμή` του `\p…;` πάνω στον συσσωρευτή. */
+function applyParagraphField(acc: ParagraphAccumulator, part: string): void {
+  const key = part[0];
+  const rest = part.slice(1);
+  if (key === 'q') {
+    // `q*` = επαναφορά στην προεπιλογή· γράμμα ή αριθμός αλλιώς.
+    const numeric = parseFloat(rest);
+    acc.justification =
+      PARAGRAPH_JUSTIFICATION_LETTERS[rest] ?? (isNaN(numeric) ? 0 : Math.floor(numeric));
+    return;
   }
-  return { kind: 'paragraph', indent, left, right, tabs, justification };
+  if (key === 's') {
+    const mode = LINE_SPACING_MODE_LETTERS[rest[0]];
+    const factor = parseFloat(rest.slice(1));
+    // `s*` (ή οτιδήποτε μη αναγνωρίσιμο) = επαναφορά: αφήνει `null`, ώστε ο parser να ξέρει τη
+    // διαφορά «γύρνα στην προεπιλογή» από «κράτα ό,τι ίσχυε».
+    acc.lineSpacingMode = mode ?? null;
+    acc.lineSpacingFactor = mode && isFinite(factor) && factor > 0 ? factor : null;
+    return;
+  }
+  const val = parseFloat(rest);
+  if (isNaN(val)) return;
+  switch (key) {
+    case 'i': acc.indent = val; break;
+    case 'l': acc.left = val; break;
+    case 't': acc.tabs.push(val); acc.inTabList = true; break;
+    // Μόλις ανοίξει η λίστα στάσεων, τα `r`/`c` είναι δεξιά/κεντρική ΣΤΑΣΗ (`t1,r5,c8`)·
+    // πριν από αυτήν, το `r` είναι το δεξί περιθώριο της παραγράφου.
+    case 'c': if (acc.inTabList) acc.tabs.push(val); break;
+    case 'r': if (acc.inTabList) acc.tabs.push(val); else acc.right = val; break;
+  }
 }
 
 function readUnicodeCode(state: TokenizerState): MtextToken {

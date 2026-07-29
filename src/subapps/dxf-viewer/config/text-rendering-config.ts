@@ -95,7 +95,7 @@ export const TEXT_SIZE_LIMITS = {
  * - WIDTH_RATIO: 0.6 is standard for proportional fonts like Arial
  *   (Average character width is ~60% of height)
  * - MONOSPACE_WIDTH_RATIO: 0.6 for fixed-width fonts
- * - LINE_HEIGHT_RATIO: 1.2 for multi-line text spacing
+ * - LINE_HEIGHT_RATIO: 5/3 — AutoCAD single line spacing (DXF «3-on-5», βλ. σχόλιο πεδίου)
  *
  * These are approximations for hit testing and bounding box calculation.
  * Actual rendering uses canvas measureText() for precision.
@@ -115,10 +115,22 @@ export const CHARACTER_METRICS = {
   MONOSPACE_WIDTH_RATIO: 0.6,
 
   /**
-   * Line height multiplier for multi-line text
-   * Standard typographic line height: 1.2 (120%)
+   * 🏢 AutoCAD ΜΟΝΟ ΔΙΑΣΤΙΧΟ — απόσταση γραμμής βάσης προς γραμμή βάσης ÷ ύψος χαρακτήρα.
+   *
+   * ⚠️ ΗΤΑΝ `1.2` («τυπογραφικό» 120%) — ένας κανόνας ΤΟΥ WEB, όχι του CAD. Αποτέλεσμα: κάθε
+   * MTEXT στοιβαζόταν ~28% πιο σφιχτά απ' ό,τι στο AutoCAD, οπότε καμία πολύγραμμη παράγραφος
+   * δεν έπεφτε στη σωστή θέση (Giorgio 2026-07-29: «κάποιες στοιχίσεις δεν είναι ίδιες»).
+   *
+   * ΠΗΓΕΣ (δύο ανεξάρτητες, συμφωνούν):
+   *   1. **DXF Reference, MTEXT κωδ. 44** — «Percentage of default (**3-on-5**) line spacing»·
+   *      3-on-5 = 5/3 = 1,666… Ο ίδιος ο μορφότυπος ορίζει τη μονάδα.
+   *   2. **AutoCAD Help, -MTEXT / «To Change the Line Spacing of Multiline Text»** — «Single
+   *      spacing is **1.66 times the height of the text characters**.»
+   *
+   * Κρατιέται ως ακριβές κλάσμα `5/3` (όχι το στρογγυλεμένο 1.66): ο πολλαπλασιαστής
+   * («Multiple 0.9 / 1.0 / 1.5» του συντάκτη MTEXT, κωδ. 44 ή inline `\psm…`) πέφτει πάνω του.
    */
-  LINE_HEIGHT_RATIO: 1.2,
+  LINE_HEIGHT_RATIO: 5 / 3,
 
   /**
    * Superscript/subscript scale factor

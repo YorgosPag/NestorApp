@@ -1,9 +1,9 @@
 /**
- * 🏢 ENTERPRISE — MTEXT visual layout SSoT (ADR-635 Φ C.20).
+ * 🏢 ENTERPRISE — MTEXT visual layout SSoT (ADR-635 Φ C.20/C.21).
  *
  * Turns a `DxfText` into the VISUAL lines that are actually painted: word-wrapped inside the
  * MTEXT column (group 41), with `\t` resolved to real tab stops, and with the per-run style
- * (colour / font / weight / height) preserved on each span.
+ * (colour / font / weight / height / decorations) preserved on each span.
  *
  * ── Why this module exists ───────────────────────────────────────────────────────────────
  * Everything downstream used to consume the FLAT `text` string and one style:
@@ -14,11 +14,13 @@
  *   3. **One colour for the whole block.** `extractFirstRunStyle` takes the FIRST run and
  *      applies it everywhere, while AutoCAD switches colour dozens of times inside one MTEXT.
  *
- * ── Parity contract (ADR-557) ────────────────────────────────────────────────────────────
+ * ── Parity contract (ADR-557 + ADR-635 Φ C.21) ───────────────────────────────────────────
  * The renderer and the box/grip math MUST agree on the line set. Both call `layoutTextBlock`,
  * so the wrap decision is made ONCE. Measurement is in WORLD units via the existing
  * `measureTextAdvanceWorld` SSoT — the same metric the box already used — so wrapping is
- * zoom-independent, exactly like AutoCAD.
+ * zoom-independent, exactly like AutoCAD. **Φ C.21:** each span additionally carries the exact
+ * style object it was measured with, so the painter cannot resolve a different font/weight
+ * than the measurer did (see `text-layout-types.ts` for the incident this prevents).
  *
  * ── Deliberately NOT imported ────────────────────────────────────────────────────────────
  * `text-box.ts` (which consumes this) is not imported back: height + font style arrive as
@@ -31,10 +33,16 @@
  */
 
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { DxfTextNode, TextRun, TextRunStyle } from '../../text-engine/types';
 import { measureTextAdvanceWorld, type TextAdvanceStyle } from '../../text-engine/fonts';
-import { resolveRunColorHex } from '../../text-engine/render/run-color';
-import { splitTextLines } from './text-lines';
+import { sourceLinesOf } from './text-layout-source';
+import { applyParagraphJustification } from './text-layout-justify';
+import { resolveLineSpacingRatio } from './text-lines';
+import type { SourceLine, SourcePiece, TextLayoutLine, TextLayoutSpan } from './text-layout-types';
+
+export type {
+  TextLayoutLine, TextLayoutSpan, TextSpanDecoration, ParagraphJustification,
+} from './text-layout-types';
+export { hasAnyDecoration, NO_DECORATION } from './text-layout-types';
 
 /**
  * Default tab-stop interval, in **em** (multiples of the text height), used when the MTEXT
@@ -52,119 +60,6 @@ import { splitTextLines } from './text-lines';
  * αλλάζει — μην κυνηγήσεις τον αλγόριθμο.
  */
 export const MTEXT_DEFAULT_TAB_INTERVAL_EM = 4;
-
-/** A contiguous piece of one visual line, at its own x offset, with its own paint style. */
-export interface TextLayoutSpan {
-  readonly text: string;
-  /** Horizontal offset from the line start, world units. */
-  readonly xWorld: number;
-  /** Glyph advance of `text`, world units. */
-  readonly widthWorld: number;
-  /** Character height for this span, world units (inline `\H` overrides the block height). */
-  readonly heightWorld: number;
-  /** CSS colour, or undefined when the run inherits the entity/layer colour. */
-  readonly color?: string;
-  readonly fontFamily?: string;
-  readonly bold?: boolean;
-  readonly italic?: boolean;
-}
-
-/** One VISUAL line (after wrapping) — what the renderer paints on a single baseline. */
-export interface TextLayoutLine {
-  readonly spans: readonly TextLayoutSpan[];
-  /** Total advance of the line, world units (max span right edge). */
-  readonly widthWorld: number;
-}
-
-/** A styled piece of SOURCE text, before tabs/wrapping are resolved. */
-interface SourcePiece {
-  readonly text: string;
-  readonly style: TextAdvanceStyle;
-  readonly heightWorld: number;
-  readonly color?: string;
-}
-
-/**
- * One SOURCE line (a paragraph, or a `\N` break inside one) with the tab stops that apply to it.
- * Stops are **per paragraph** in the AST — a single global list would apply one paragraph's
- * `\pt` ladder to the whole entity.
- */
-interface SourceLine {
-  readonly pieces: SourcePiece[];
-  /** Tab stops in **em** (multiples of char height) — converted to world at layout time. */
-  readonly tabsEm: readonly number[];
-}
-
-// ── Source extraction: AST first, flat string as fallback ─────────────────────
-
-/** Is this AST child a styled run (vs a `\S` stack)? */
-function isRun(child: TextRun | { top: string }): child is TextRun {
-  return !('top' in child);
-}
-
-/** Merge a run's style over the block style — the run wins wherever it declares something. */
-function pieceStyle(runStyle: TextRunStyle | undefined, block: TextAdvanceStyle): TextAdvanceStyle {
-  if (!runStyle) return block;
-  return {
-    fontFamily: runStyle.fontFamily || block.fontFamily,
-    bold: runStyle.bold ?? block.bold,
-    italic: runStyle.italic ?? block.italic,
-    // widthFactor stays the ENTITY's X-scale: `\W` is a run code we do not carry per span yet.
-    widthFactor: block.widthFactor,
-    tracking: runStyle.tracking > 0 ? runStyle.tracking : block.tracking,
-  };
-}
-
-/**
- * Source lines from the AST: one per paragraph (`\P`), further split on any `\n` a `\N`
- * line-break produced inside a run. Each line is a list of styled pieces whose concatenated
- * text equals what `extractFlatText` yields — so the wrap/box maths cannot drift from the
- * flat path for texts that have no per-run styling.
- */
-function sourceLinesFromNode(
-  node: DxfTextNode, block: TextAdvanceStyle, blockHeight: number,
-): SourceLine[] {
-  const lines: SourceLine[] = [];
-  for (const para of node.paragraphs) {
-    // `tabs` λείπει σε χειροποίητα/legacy AST (in-app κείμενο, fixtures) παρότι ο τύπος το
-    // δηλώνει υποχρεωτικό — το AST έρχεται και από μη-parser πηγές. Χωρίς αυτό το `?? []`,
-    // κάθε in-app κείμενο έριχνε `Cannot read properties of undefined` μέσα από το κουτί
-    // επιλογής (το έπιασαν τα υπάρχοντα tests παρότι ο compiler ήταν ευχαριστημένος).
-    const tabsEm = para.tabs ?? [];
-    let current: SourcePiece[] = [];
-    const close = (): void => { lines.push({ pieces: current, tabsEm }); current = []; };
-    for (const child of para.runs) {
-      // Ένα `\S` stack δεν έχει πλήρες run style — κρατά μόνο fontFamily/height/color. Το
-      // αποδίδουμε γραμμικά ως `πάνω/κάτω` (η κάθετη στοίβαξη είναι δικό της κεφάλαιο)· έτσι
-      // το περιεχόμενο **υπάρχει** αντί να εξαφανίζεται από τη διάταξη.
-      const raw = isRun(child) ? child.text : `${child.top}/${child.bottom}`;
-      const runStyle = isRun(child) ? child.style : undefined;
-      const height = child.style.height > 0 ? child.style.height : blockHeight;
-      const piece = {
-        style: pieceStyle(runStyle, block),
-        heightWorld: height,
-        color: resolveRunColorHex(child.style.color),
-      };
-      const parts = raw.split('\n');
-      parts.forEach((part, i) => {
-        if (i > 0) close();
-        if (part) current.push({ ...piece, text: part });
-      });
-    }
-    close();
-  }
-  return lines.length > 0 ? lines : [{ pieces: [], tabsEm: [] }];
-}
-
-/** Source lines from the flat string — legacy / in-app text with no AST. */
-function sourceLinesFromFlat(
-  flat: string | undefined, block: TextAdvanceStyle, blockHeight: number,
-): SourceLine[] {
-  return splitTextLines(flat).map(line => ({
-    pieces: line ? [{ text: line, style: block, heightWorld: blockHeight }] : [],
-    tabsEm: [],
-  }));
-}
 
 // ── Tab stops ─────────────────────────────────────────────────────────────────
 
@@ -205,15 +100,26 @@ class LineBuilder {
   get cursor(): number { return this.x; }
   get isEmpty(): boolean { return this.spans.length === 0 && this.x === 0; }
 
+  /** Διάστιχο (em) που ισχύει για τις γραμμές που κλείνουν από δω και πέρα. */
+  private spacingRatio = 0;
+
   moveTo(x: number): void { this.x = x; }
 
+  useSpacing(ratio: number): void { this.spacingRatio = ratio; }
+
+  /**
+   * ADR-635 Φ C.21 — το span κρατά ΤΟ ΙΔΙΟ `style` object με το οποίο μετρήθηκε το `width`
+   * (καμία αντιγραφή πεδίων, καμία «προαιρετικότητα» που θα ζητούσε κληρονομιά κατάντη).
+   */
   push(text: string, width: number, piece: SourcePiece): void {
     this.spans.push({
-      text, xWorld: this.x, widthWorld: width, heightWorld: piece.heightWorld,
+      text,
+      xWorld: this.x,
+      widthWorld: width,
+      heightWorld: piece.heightWorld,
+      style: piece.style,
+      decoration: piece.decoration,
       ...(piece.color ? { color: piece.color } : {}),
-      ...(piece.style.fontFamily ? { fontFamily: piece.style.fontFamily } : {}),
-      ...(piece.style.bold ? { bold: true } : {}),
-      ...(piece.style.italic ? { italic: true } : {}),
     });
     this.x += width;
   }
@@ -221,7 +127,9 @@ class LineBuilder {
   /** Close the current line (even when empty — an empty source line is a real blank line). */
   flush(): void {
     const width = this.spans.reduce((m, s) => Math.max(m, s.xWorld + s.widthWorld), 0);
-    this.lines.push({ spans: this.spans, widthWorld: width });
+    this.lines.push({
+      spans: this.spans, widthWorld: width, xOffsetWorld: 0, spacingRatio: this.spacingRatio,
+    });
     this.spans = [];
     this.x = 0;
   }
@@ -232,9 +140,7 @@ class LineBuilder {
  * falls back to a character cut when a single word is wider than the whole column (AutoCAD
  * does the same rather than overflowing indefinitely). Returns 0 when nothing fits.
  */
-function fittingPrefixLength(
-  text: string, available: number, piece: SourcePiece,
-): number {
+function fittingPrefixLength(text: string, available: number, piece: SourcePiece): number {
   if (available <= 0) return 0;
   const measure = (s: string): number => measureTextAdvanceWorld(s, piece.heightWorld, piece.style);
   if (measure(text) <= available) return text.length;
@@ -260,9 +166,7 @@ function fittingPrefixLength(
 }
 
 /** Append one piece's text to the builder, wrapping at `frame` as needed. */
-function emitPiece(
-  builder: LineBuilder, piece: SourcePiece, frame: number,
-): void {
+function emitPiece(builder: LineBuilder, piece: SourcePiece, frame: number): void {
   let rest = piece.text;
   while (rest.length > 0) {
     const width = measureTextAdvanceWorld(rest, piece.heightWorld, piece.style);
@@ -286,6 +190,26 @@ function emitPiece(
     builder.flush();
     rest = rest.slice(cut).replace(/^ +/, '');
   }
+}
+
+/**
+ * ADR-635 Φ C.21 (Δ) — το διάστιχο (em) που ισχύει για ΑΥΤΗ την πηγαία γραμμή.
+ *
+ * `base` είναι το διάστιχο **οντότητας** (`resolveLineSpacingRatio`: μονό διάστιχο AutoCAD ×
+ * τον συντελεστή του κωδ. 44). Ο συντελεστής **παραγράφου** (`\psm0.9;`) πέφτει πολλαπλασιαστικά
+ * πάνω του: και οι δύο έχουν προεπιλογή 1, οπότε η σύνθεση είναι ουδέτερη όταν δηλώνεται μόνο
+ * ο ένας — η μόνη περίπτωση που εμφανίζεται σε πραγματικά αρχεία.
+ *
+ * `at-least` («τουλάχιστον») μεγαλώνει ώστε να χωρέσει τον **ψηλότερο** χαρακτήρα της γραμμής —
+ * γι' αυτό υπολογίζεται ΜΕΤΑ τη διάταξη, όταν τα ύψη των span είναι γνωστά. `exact` («ακριβώς»)
+ * είναι σκόπιμα σταθερό: αυτή ΕΙΝΑΙ η σημασία του — αγνοεί τα ύψη χαρακτήρων.
+ */
+function spacingRatioOf(line: SourceLine, base: number, height: number): number {
+  const ratio = base * line.spacingFactor;
+  if (line.spacingMode !== 'at-least' || !(height > 0)) return ratio;
+  // Το ψηλότερο `\H…x;` της γραμμής, σε em του ύψους μπλοκ.
+  const tallestEm = line.pieces.reduce((m, p) => Math.max(m, p.heightWorld), 0) / height;
+  return tallestEm > 1 ? Math.max(ratio, base * tallestEm) : ratio;
 }
 
 /** Lay out ONE source line: tabs → stops, overflow → wrapped visual lines. */
@@ -317,15 +241,34 @@ function layoutSourceLine(
 export function layoutTextBlock(
   text: DxfText, height: number, style: TextAdvanceStyle,
 ): readonly TextLayoutLine[] {
-  const node = (text as { textNode?: DxfTextNode }).textNode;
   const frame = text.width != null && text.width > 0 ? text.width : Number.POSITIVE_INFINITY;
-  const sources = node?.paragraphs?.length
-    ? sourceLinesFromNode(node, style, height)
-    : sourceLinesFromFlat(text.text, style, height);
+  const sources = sourceLinesOf(text, style, height);
 
   const builder = new LineBuilder();
-  for (const line of sources) layoutSourceLine(line, frame, height, builder);
+  const baseSpacing = resolveLineSpacingRatio(text);
+  for (const line of sources) {
+    builder.useSpacing(spacingRatioOf(line, baseSpacing, height));
+    // ADR-635 Φ C.21 (Γ) — η στοίχιση παραγράφου εφαρμόζεται ΑΝΑ ΠΗΓΑΙΑ ΓΡΑΜΜΗ, μόλις είναι
+    // γνωστό σε πόσες οπτικές γραμμές αναδιπλώθηκε: χωρίς αυτό δεν ξέρεις ποια είναι η
+    // «τελευταία» — και η τελευταία είναι ακριβώς αυτή που ΔΕΝ τεντώνεται.
+    const start = builder.lines.length;
+    layoutSourceLine(line, frame, height, builder);
+    applyParagraphJustification(builder.lines, start, line.justification, frame);
+  }
   return builder.lines;
+}
+
+/**
+ * ADR-635 Φ C.21 (Δ) — το ΕΠΙΠΛΕΟΝ κατακόρυφο ύψος του μπλοκ πέρα από μία γραμμή, σε em.
+ *
+ * Δεν είναι `(πλήθος − 1) × σταθερό διάστιχο`: με `\ps` ανά παράγραφο κάθε γραμμή μπορεί να
+ * έχει διαφορετικό βήμα, οπότε το άθροισμα είναι η ΜΟΝΗ σωστή απάντηση. Το ίδιο άθροισμα
+ * χρησιμοποιούν renderer (θέση γραμμής) και κουτί/λαβές (ύψος) — μία απόφαση, δύο καταναλωτές.
+ */
+export function totalExtraLineRatio(lines: readonly TextLayoutLine[]): number {
+  let sum = 0;
+  for (let i = 1; i < lines.length; i++) sum += lines[i].spacingRatio;
+  return sum;
 }
 
 /** The plain string of each visual line — for consumers that only need the text, not spans. */

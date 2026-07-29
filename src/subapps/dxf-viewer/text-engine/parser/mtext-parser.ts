@@ -200,6 +200,7 @@ function applyParagraphCode(
   if (!atStart) flushParagraph(state);
   const j = token.justification;
   const justification: 0 | 1 | 2 | 3 = j === 1 ? 1 : j === 2 ? 2 : j === 3 ? 3 : 0;
+  const spacing = buildDefaultParagraphStyle();
   state.currentParagraphStyle = {
     ...state.currentParagraphStyle,
     indent: token.indent,
@@ -207,6 +208,11 @@ function applyParagraphCode(
     rightMargin: token.right,
     tabs: token.tabs,
     justification,
+    // ADR-635 Φ C.21 (Δ) — `\psm0.9;` κ.λπ. Το `null` σημαίνει «`s*` / δεν δηλώθηκε» ⇒ επαναφορά
+    // στην προεπιλογή, ΟΧΙ «κράτα ό,τι ίσχυε»: ένα `\ps*;` στο AutoCAD ακυρώνει ρητά το
+    // προηγούμενο διάστιχο, και ένα `\pxqc;` χωρίς `s` ανοίγει καθαρή παράγραφο.
+    lineSpacingMode: token.lineSpacingMode ?? spacing.lineSpacingMode,
+    lineSpacingFactor: token.lineSpacingFactor ?? spacing.lineSpacingFactor,
   };
 }
 

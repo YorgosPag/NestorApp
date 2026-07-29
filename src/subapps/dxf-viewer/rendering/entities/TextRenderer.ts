@@ -56,10 +56,14 @@ import { getTextGrips } from '../../bim/text/text-grips';
 import { resolveTextBox, textBoxCornersWorld, advanceStyleOf } from '../../bim/text/text-box';
 // ADR-635 Φ C.20 — ΤΟ ΙΔΙΟ SSoT διάταξης που διαβάζει το κουτί/λαβές: αναδίπλωση στη στήλη
 // (group 41), στηλοθέτες, και στυλ ανά run. Μία απόφαση αναδίπλωσης, δύο καταναλωτές.
-import { layoutTextBlock, type TextLayoutLine, type TextLayoutSpan } from '../../bim/text/text-layout';
+// ADR-635 Φ C.21 — το span κουβαλά ΤΟ στυλ της μέτρησής του + τις διακοσμήσεις του run.
+import {
+  layoutTextBlock, hasAnyDecoration, totalExtraLineRatio,
+  type TextLayoutLine, type TextLayoutSpan, type TextSpanDecoration,
+} from '../../bim/text/text-layout';
 // ADR-557 (multi-line) — split flat `text` on `\n` and stack each line at its own y-offset,
 // with the SAME line-spacing + attachment distribution the box SSoT uses (render ≡ box).
-import { resolveLineSpacingRatio, resolveMultilineExtents, type TextRow } from '../../bim/text/text-lines';
+import { resolveMultilineExtentsFromExtra, type TextRow } from '../../bim/text/text-lines';
 // ADR-557 — the oblique shear SSoT. The box (`text-box.ts`) reads the SAME map (world y-up);
 // this screen-y-DOWN path negates it ONCE (below) — the only place the y-flip lives.
 import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
@@ -84,18 +88,18 @@ type TextRichStyle = {
  * ≤ 40-line bodies (N.7.1) instead of a 14-parameter signature.
  */
 interface LayoutPaintOptions {
-  readonly advancePx: number;
   readonly firstOffsetPx: number;
   readonly screenHeight: number;
   /** World → screen px factor (`transform.scale`) — span offsets arrive in world units. */
   readonly worldToPx: number;
   readonly align: CanvasTextAlign;
   readonly baseline: CanvasTextBaseline;
-  /** Font resolved for the ENTITY family — reused for every span that doesn't override it. */
-  readonly resolved: ResolvedFont | null;
-  readonly richStyle: TextRichStyle;
-  readonly hasDecoration: boolean;
-  readonly tracking: number;
+  /**
+   * Per-render memo for `resolveEntityFont` — a real MTEXT has ~140 spans over a handful of
+   * distinct (family, bold, italic) triples, so resolving per span would repeat the same
+   * cache+substitution walk dozens of times per repaint on a GPU-less machine.
+   */
+  readonly fontMemo: Map<string, ResolvedFont | null>;
   /** Colour for spans that inherit (ByLayer/ByBlock): entity colour → layer → default. */
   readonly fallbackFill: string;
   /** Overrides EVERY span colour (hover) — undefined in the normal paint. */
@@ -175,7 +179,6 @@ export class TextRenderer extends BaseEntityRenderer {
     const baseColor = ('color' in entity ? entity.color : undefined) as string | undefined;
     const textAlignMode = richStyle?.textAlign ?? 'left';
     const baselineMode = richStyle?.textBaseline ?? 'top';
-    const hasDecoration = !!(richStyle?.underline || richStyle?.overline || richStyle?.strikethrough);
 
     this.ctx.save();
     this.ctx.font = buildUIFont(screenHeight, fontFamily, weight, italic);
@@ -183,7 +186,12 @@ export class TextRenderer extends BaseEntityRenderer {
     this.ctx.fillStyle = isHovered
       ? HOVER_HIGHLIGHT.ENTITY.glowColor
       : (richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY);
-    this.ctx.textAlign = textAlignMode;
+    // 🐛 ADR-635 Φ C.21 — τα spans είναι ΑΡΙΣΤΕΡΑ-ΑΓΚΥΡΩΜΕΝΑ: η στοίχιση της γραμμής μπαίνει
+    // ΜΙΑ φορά στο x της γραμμής (`paintLayoutLines`). Το `ctx.textAlign` όμως διαβάζεται από
+    // το `fillText` της CSS-εφεδρικής διαδρομής **παρακάμπτοντας** την παράμετρο `align` που
+    // περνάμε — οπότε σε κάθε MTEXT με αγκύρωση TC/TR κάθε span στοιχιζόταν ΞΕΧΩΡΙΣΤΑ πάνω στο
+    // δικό του x και τα spans έπεφταν το ένα πάνω στο άλλο. Ο καμβάς μένει σε 'left'.
+    this.ctx.textAlign = 'left';
     // textBaseline from textNode.attachment[0]: T→top, M→middle, B→bottom. Default 'top' per DXF baseline fix.
     this.ctx.textBaseline = baselineMode;
     // Hover glow: shadowBlur creates visible halo even for sub-pixel text (SHX/unknown fonts).
@@ -192,11 +200,6 @@ export class TextRenderer extends BaseEntityRenderer {
       this.ctx.shadowBlur = HOVER_HIGHLIGHT.TEXT.glowShadowBlur;
       this.ctx.shadowColor = HOVER_HIGHLIGHT.TEXT.glowColor;
     }
-
-    // 🏢 ADR-530: resolve a loaded glyph font for this family; null → CSS fillText
-    // fallback (zero regression). Resolved once; the glyph paint reuses the SAME
-    // rotation/screenHeight math below — the rotation calculation is unchanged.
-    const resolved = resolveEntityFont(fontFamily, { bold: weight === 'bold', italic });
 
     // 🏢 ADR-557 — AutoCAD TEXT X-scale (`widthFactor`). ONLY a horizontal stretch is
     // added here (the guard's «μόνο πρόσθεση horizontal scale»): around the text
@@ -217,13 +220,6 @@ export class TextRenderer extends BaseEntityRenderer {
     const obliqueAngle = (richStyle && typeof richStyle.obliqueAngle === 'number') ? richStyle.obliqueAngle : 0;
     const obliqueShear = -obliqueShearFromAngle(obliqueAngle);
 
-    // AutoCAD `\T` character tracking (spacing factor). `1` (every legacy TEXT + untouched
-    // MTEXT) keeps the byte-identical kerned glyph run — zero regression. The ribbon «Διάκενο»
-    // writes `run.style.tracking` → extractor → `richStyle.tracking` → here.
-    const tracking = (richStyle && typeof richStyle.tracking === 'number' && richStyle.tracking > 0)
-      ? richStyle.tracking
-      : 1;
-
     // ADR-557 (multi-line) — split on `\n`; each line steps down by `advancePx`. The block is
     // shifted so `position` stays the attachment anchor (T/M/B) — `firstOffsetPx = −topAdd·height`,
     // the exact rule the box SSoT applies, so the drawn lines fill the grip/hover box precisely.
@@ -235,10 +231,12 @@ export class TextRenderer extends BaseEntityRenderer {
     const worldToPx = this.transform.scale;
     const worldHeight = worldToPx > 0 ? screenHeight / worldToPx : screenHeight;
     const layout = layoutTextBlock(dxfText, worldHeight, advanceStyleOf(dxfText));
-    const lineSpacingRatio = resolveLineSpacingRatio(dxfText);
-    const advancePx = screenHeight * lineSpacingRatio;
     const row: TextRow = baselineMode === 'middle' ? 'M' : baselineMode === 'bottom' ? 'B' : 'T';
-    const firstOffsetPx = -resolveMultilineExtents(row, layout.length, lineSpacingRatio).topAdd * screenHeight;
+    // ADR-635 Φ C.21 (Δ) — το βήμα γραμμής ΔΕΝ είναι σταθερό: το `\ps` το ορίζει ανά παράγραφο.
+    // Renderer και κουτί διαβάζουν το ΙΔΙΟ άθροισμα (`totalExtraLineRatio`), αλλιώς η πρώτη
+    // γραμμή τοποθετούνταν με άλλη υπόθεση από αυτήν που έδινε το ύψος του κουτιού.
+    const firstOffsetPx =
+      -resolveMultilineExtentsFromExtra(row, totalExtraLineRatio(layout)).topAdd * screenHeight;
     // Το hover νικά κάθε χρώμα run (AutoCAD: όλη η οντότητα κιτρινίζει)· αλλιώς το χρώμα του
     // span, και τελευταίο δίχτυ το χρώμα οντότητας/layer.
     const fallbackFill = isHovered
@@ -246,8 +244,8 @@ export class TextRenderer extends BaseEntityRenderer {
       : (richStyle?.runColor || baseColor || UI_COLORS.DEFAULT_ENTITY);
     const paint = (ox: number, oy: number) =>
       this.paintLayoutLines(ox, oy, layout, {
-        advancePx, firstOffsetPx, screenHeight, worldToPx, align: textAlignMode,
-        baseline: baselineMode, resolved, richStyle, hasDecoration, tracking,
+        firstOffsetPx, screenHeight, worldToPx, align: textAlignMode,
+        baseline: baselineMode, fontMemo: new Map(),
         fallbackFill, forcedFill: isHovered ? HOVER_HIGHLIGHT.ENTITY.glowColor : undefined,
       });
 
@@ -281,35 +279,65 @@ export class TextRenderer extends BaseEntityRenderer {
   private paintLayoutLines(
     originX: number, originY: number, layout: readonly TextLayoutLine[], opts: LayoutPaintOptions,
   ): void {
-    const { advancePx, firstOffsetPx, screenHeight, worldToPx, align, richStyle, hasDecoration } = opts;
+    const { firstOffsetPx, screenHeight, worldToPx, align } = opts;
+    // Συσσωρευτική θέση: κάθε γραμμή πέφτει κατά ΤΟ ΔΙΚΟ ΤΗΣ βήμα (`\ps` ανά παράγραφο).
+    let y = originY + firstOffsetPx;
     for (let i = 0; i < layout.length; i++) {
       const line = layout[i];
-      const y = originY + firstOffsetPx + i * advancePx;
+      if (i > 0) y += line.spacingRatio * screenHeight;
       const lineWidthPx = line.widthWorld * worldToPx;
-      const xOff = align === 'center' ? -lineWidthPx / 2 : align === 'right' ? -lineWidthPx : 0;
+      // Δύο ΑΝΕΞΑΡΤΗΤΕΣ στοιχίσεις, με αυτή τη σειρά (AutoCAD): πρώτα η στοίχιση **παραγράφου**
+      // μέσα στη στήλη (`\pxqc`/`\pxqr` → `xOffsetWorld`, ADR-635 Φ C.21), μετά η **αγκύρωση**
+      // της οντότητας (κωδ. 71 → `align`) που τοποθετεί ολόκληρο το μπλοκ.
+      const xOff = (align === 'center' ? -lineWidthPx / 2 : align === 'right' ? -lineWidthPx : 0)
+        + line.xOffsetWorld * worldToPx;
       for (const span of line.spans) {
         this.paintLayoutSpan(originX + xOff + span.xWorld * worldToPx, y, span, opts);
       }
-      // Οι διακοσμήσεις (υπογράμμιση κ.λπ.) μένουν σε επίπεδο ΓΡΑΜΜΗΣ με το στυλ του μπλοκ:
-      // το `TextLayoutSpan` δεν μεταφέρει ακόμη per-run underline/overline/strike.
-      if (hasDecoration) this.paintDecorations(originX + xOff, y, lineWidthPx, screenHeight, richStyle, 'left');
     }
   }
 
-  /** Paint ONE span with its own font / height / colour (left-anchored at `x`). */
+  /**
+   * Paint ONE span with ITS OWN resolved style (left-anchored at `x`).
+   *
+   * 🐛 ADR-635 Φ C.21 — εδώ έγραφε `span.bold ?? opts.richStyle?.bold`, δηλαδή κληρονομούσε το
+   * στυλ του **μπλοκ** (= του ΠΡΩΤΟΥ run) όποτε το span δεν δήλωνε ρητά κάτι. Επειδή το span
+   * κρατούσε σημαία μόνο όταν ήταν αληθής, ένα ρητό `b0` ήταν αδιάκριτο από «δεν δηλώθηκε» ⇒
+   * ολόκληρο το MTEXT του δείγματος βαφόταν έντονο ενώ η **διάταξη το είχε μετρήσει κανονικό**:
+   * κάθε span ζωγραφιζόταν πλατύτερο απ' όσο μετρήθηκε, καβαλούσε το επόμενο («ΦΕΚ405») και η
+   * γραμμή ξεχείλιζε δεξιά. Τώρα το span κουβαλά ΤΟ στυλ της μέτρησής του και δεν υπάρχει
+   * τίποτα να «κληρονομηθεί» — μέτρηση και βαφή δεν μπορούν δομικά να αποκλίνουν.
+   */
   private paintLayoutSpan(
     x: number, y: number, span: TextLayoutSpan, opts: LayoutPaintOptions,
   ): void {
     const spanHeightPx = Math.max(1, span.heightWorld * opts.worldToPx);
-    const family = span.fontFamily || opts.richStyle?.fontFamily || 'arial';
-    const weight: 'normal' | 'bold' = span.bold ?? opts.richStyle?.bold ? 'bold' : 'normal';
-    const italic = span.italic ?? opts.richStyle?.italic;
+    const style = span.style;
+    const family = style.fontFamily || 'arial';
+    const weight: 'normal' | 'bold' = style.bold ? 'bold' : 'normal';
+    const italic = style.italic;
     this.ctx.font = buildUIFont(spanHeightPx, family, weight, italic);
     this.ctx.fillStyle = opts.forcedFill ?? span.color ?? opts.fallbackFill;
-    const resolved = family === (opts.richStyle?.fontFamily || 'arial')
-      ? opts.resolved
-      : resolveEntityFont(family, { bold: weight === 'bold', italic });
-    this.paintText(x, y, span.text, spanHeightPx, 'left', opts.baseline, resolved, opts.tracking);
+    const tracking = style.tracking != null && style.tracking > 0 ? style.tracking : 1;
+    const advance = this.paintText(
+      x, y, span.text, spanHeightPx, 'left', opts.baseline,
+      this.resolveSpanFont(family, weight === 'bold', italic, opts), tracking,
+    );
+    if (hasAnyDecoration(span.decoration)) {
+      this.paintDecorations(x, y, advance, spanHeightPx, span.decoration, opts.baseline);
+    }
+  }
+
+  /** `resolveEntityFont` behind the per-render memo (≈140 spans, a handful of distinct faces). */
+  private resolveSpanFont(
+    family: string, bold: boolean, italic: boolean | undefined, opts: LayoutPaintOptions,
+  ): ResolvedFont | null {
+    const key = `${family}|${bold ? 1 : 0}|${italic ? 1 : 0}`;
+    const hit = opts.fontMemo.get(key);
+    if (hit !== undefined) return hit;
+    const resolved = resolveEntityFont(family, { bold, italic });
+    opts.fontMemo.set(key, resolved);
+    return resolved;
   }
 
   /**
@@ -330,20 +358,24 @@ export class TextRenderer extends BaseEntityRenderer {
   }
 
   /**
-   * Paint underline / overline / strikethrough rules. Offsets are fractions of
-   * screenHeight relative to the text origin, accounting for the textBaseline
-   * (baselineVOffset: 0=top, 0.5=middle, 1.0=bottom).
+   * Paint underline / overline / strikethrough rules for ONE span. Offsets are fractions of
+   * the SPAN height relative to the text origin, accounting for the textBaseline
+   * (baselineVOffset: 0=top, 0.5=middle, 1.0=bottom). The rule inherits `ctx.fillStyle`, i.e.
+   * the span's own colour — AutoCAD underlines in the colour of the underlined run.
+   *
+   * ADR-635 Φ C.21 — ήταν ΑΝΑ ΓΡΑΜΜΗ με τις σημαίες του μπλοκ, οπότε ένα `\L` στον πρώτο run
+   * υπογράμμιζε ολόκληρο το MTEXT· το AutoCAD υπογραμμίζει μόνο τον τίτλο. Spans είναι πάντα
+   * αριστερά-αγκυρωμένα, άρα δεν υπάρχει πια όρισμα `align`.
    */
   private paintDecorations(
-    x: number, y: number, width: number, screenHeight: number,
-    richStyle: TextRichStyle, align: CanvasTextAlign,
+    x: number, y: number, width: number, spanHeight: number,
+    decoration: TextSpanDecoration, baseline: CanvasTextBaseline,
   ): void {
-    const baselineVOffset = richStyle?.textBaseline === 'middle' ? 0.5 : richStyle?.textBaseline === 'bottom' ? 1.0 : 0;
-    const thickness = Math.max(1, screenHeight * 0.07);
-    const xOff = align === 'center' ? -width / 2 : align === 'right' ? -width : 0;
-    if (richStyle?.underline)     this.ctx.fillRect(x + xOff, y + screenHeight * ( 0.90 - baselineVOffset), width, thickness);
-    if (richStyle?.overline)      this.ctx.fillRect(x + xOff, y + screenHeight * (-0.05 - baselineVOffset), width, thickness);
-    if (richStyle?.strikethrough) this.ctx.fillRect(x + xOff, y + screenHeight * ( 0.40 - baselineVOffset), width, thickness);
+    const baselineVOffset = baseline === 'middle' ? 0.5 : baseline === 'bottom' ? 1.0 : 0;
+    const thickness = Math.max(1, spanHeight * 0.07);
+    if (decoration.underline)     this.ctx.fillRect(x, y + spanHeight * ( 0.90 - baselineVOffset), width, thickness);
+    if (decoration.overline)      this.ctx.fillRect(x, y + spanHeight * (-0.05 - baselineVOffset), width, thickness);
+    if (decoration.strikethrough) this.ctx.fillRect(x, y + spanHeight * ( 0.40 - baselineVOffset), width, thickness);
   }
 
   /**

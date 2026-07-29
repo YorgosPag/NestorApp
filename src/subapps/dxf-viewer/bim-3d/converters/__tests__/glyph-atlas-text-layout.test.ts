@@ -8,6 +8,7 @@
  */
 
 import type { DxfText } from '../../../canvas-v2/dxf-canvas/dxf-types';
+import { CHARACTER_METRICS } from '../../../config/text-rendering-config';
 import { layoutTextGlyphs, type GlyphCell, type GlyphLayoutSource } from '../glyph-atlas-text-layout';
 import type { TextFontResolution } from '../dxf-text-font-resolution';
 
@@ -92,9 +93,11 @@ describe('layoutTextGlyphs — oblique shear & rotation', () => {
 });
 
 describe('layoutTextGlyphs — multi-line stacking', () => {
-  it('the second line sits one line-advance (1.2·em) below the first', () => {
+  it('the second line sits one line-advance (LINE_HEIGHT_RATIO·em) below the first', () => {
     const [a, b] = layoutTextGlyphs(text({ text: 'A\nB' }), font(), source);
     const midY = (q: { y0: number; y3: number }) => (q.y0 + q.y3) / 2;
-    expect(midY(a) - midY(b)).toBeCloseTo(1.2 * EM, 5); // LINE_HEIGHT_RATIO·em, first line higher
+    // ADR-635 Φ C.21 — ΑΠΟ ΤΟ SSoT, όχι σκληροκωδικωμένο: το μονό διάστιχο του AutoCAD είναι
+    // 5/3 (DXF κωδ. 44 «3-on-5»), όχι το τυπογραφικό 1,2 του web που ίσχυε ώς το Φ C.20.
+    expect(midY(a) - midY(b)).toBeCloseTo(CHARACTER_METRICS.LINE_HEIGHT_RATIO * EM, 5);
   });
 });

@@ -5,7 +5,10 @@
  *
  * Default stub font (ink == em metrics: ascent 0.8 / descent 0.2, advance 0.6·em·char), so the
  * VISUAL box == the NOMINAL em box vertically and the numbers are hand-computable.
- * Line spacing = LINE_HEIGHT_RATIO (1.2) × factor(1.0) = 1.2 em baseline-to-baseline.
+ * Line spacing = LINE_HEIGHT_RATIO × factor(1.0) em baseline-to-baseline. ⚠️ ADR-635 Φ C.21: η
+ * σταθερά είναι πλέον το ΜΟΝΟ ΔΙΑΣΤΙΧΟ ΤΟΥ AutoCAD (5/3 — DXF κωδ. 44 «3-on-5»), όχι το
+ * τυπογραφικό 1,2 του web. Κάθε προσδοκία εδώ ΠΑΡΑΓΕΤΑΙ από τη σταθερά — σκληροκωδικωμένος
+ * αριθμός θα ξαναπάγωνε τη λάθος τιμή.
  */
 
 import type { DxfText, DxfTextStyle } from '../../../canvas-v2/dxf-canvas/dxf-types';
@@ -13,6 +16,12 @@ import { resolveTextBox, resolveTextEmBox, textBoxToPosition, isTextBoxFrameCons
 import { applyTextGripDrag } from '../text-grips';
 import { splitTextLines, textLineCount, resolveLineSpacingRatio, resolveMultilineExtents } from '../text-lines';
 import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { CHARACTER_METRICS } from '../../../config/text-rendering-config';
+
+/** Το μονό διάστιχο του AutoCAD, από το SSoT. */
+const LS = CHARACTER_METRICS.LINE_HEIGHT_RATIO;
+/** Μισό ύψος κουτιού 2 γραμμών σε ύψος 10: (1 + LS)·10 / 2. */
+const HALF_2LINES = (1 + LS) * 10 / 2;
 
 let __cleanup: () => void;
 beforeAll(() => { __cleanup = installStubFont(0.6, 'arial'); });
@@ -43,13 +52,14 @@ describe('splitTextLines / textLineCount', () => {
 });
 
 describe('resolveLineSpacingRatio', () => {
-  it('is LINE_HEIGHT_RATIO (1.2) by default', () => {
-    expect(resolveLineSpacingRatio(text())).toBeCloseTo(1.2, 9);
+  it('είναι το μονό διάστιχο του AutoCAD (5/3 — DXF κωδ. 44 «3-on-5»)', () => {
+    expect(resolveLineSpacingRatio(text())).toBeCloseTo(LS, 9);
+    expect(LS).toBeCloseTo(5 / 3, 9);
   });
   it('multiplies by the node line-spacing factor', () => {
     const t = text() as DxfText & { textNode?: unknown };
     (t as { textNode?: unknown }).textNode = { lineSpacing: { factor: 1.5 } };
-    expect(resolveLineSpacingRatio(t)).toBeCloseTo(1.8, 9); // 1.2 × 1.5
+    expect(resolveLineSpacingRatio(t)).toBeCloseTo(LS * 1.5, 9);
   });
 });
 
@@ -70,9 +80,9 @@ describe('VISUAL box — 2 lines, height 10, TL', () => {
   it('width = widest line, height = stacked block, top pinned at position', () => {
     const f = resolveTextBox(t);
     expect(f.halfWidth).toBeCloseTo(9, 6);   // widest line 'CDE' = 3 × 0.6 × 10 = 18
-    expect(f.halfLength).toBeCloseTo(11, 6); // (1 + 1.2)·10 / 2
+    expect(f.halfLength).toBeCloseTo(HALF_2LINES, 6); // (1 + LS)·10 / 2
     expect(near(f.center.y + f.halfLength, 0)).toBe(true);   // block top = position.y (TL)
-    expect(near(f.center.y - f.halfLength, -22)).toBe(true); // block bottom = -22
+    expect(near(f.center.y - f.halfLength, -2 * HALF_2LINES)).toBe(true); // block bottom
   });
 
   it('is taller than the single-line box (parity: grips/hover/hit follow)', () => {
@@ -86,14 +96,14 @@ describe('VISUAL box — M attachment stays centred on position', () => {
   it('2 lines centre symmetrically about position.y', () => {
     const f = resolveTextBox(text({ text: 'AB\nCDE', textStyle: style('MC') }));
     expect(near(f.center.y, 0)).toBe(true);   // centred anchor unchanged by line count
-    expect(f.halfLength).toBeCloseTo(11, 6);  // (1 + 1.2)·10 / 2
+    expect(f.halfLength).toBeCloseTo(HALF_2LINES, 6); // (1 + LS)·10 / 2
   });
 });
 
 describe('NOMINAL em box (3D plane + culling) is multi-line aware', () => {
   it('em box height grows with the line count', () => {
     const em = resolveTextEmBox(text({ text: 'AB\nCDE', textStyle: style('TL') }));
-    expect(em.halfLength).toBeCloseTo(11, 6); // matches the visual box (default stub: ink == em)
+    expect(em.halfLength).toBeCloseTo(HALF_2LINES, 6); // matches the visual box (stub: ink == em)
     expect(near(em.center.y + em.halfLength, 0)).toBe(true);
   });
 });
@@ -110,7 +120,7 @@ describe('MTEXT box HUGS the glyphs when the frame is wider than the text (Giorg
     const t = text({ text: 'AB\nCDE', width: 100, textStyle: style('TL') });
     const f = resolveTextBox(t);
     expect(f.halfWidth).toBeCloseTo(9, 6);   // widest line 'CDE'
-    expect(f.halfLength).toBeCloseTo(11, 6); // 3-line stack unaffected by the frame
+    expect(f.halfLength).toBeCloseTo(HALF_2LINES, 6); // stack unaffected by the frame
   });
 
   it('a NARROW frame still wins (text wraps to the column)', () => {

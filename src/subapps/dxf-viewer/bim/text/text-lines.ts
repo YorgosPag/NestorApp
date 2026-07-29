@@ -87,7 +87,17 @@ export interface MultilineExtents {
 export function resolveMultilineExtents(
   row: TextRow, lineCount: number, lineSpacingRatio: number,
 ): MultilineExtents {
-  const extra = Math.max(0, lineCount - 1) * lineSpacingRatio;
+  return resolveMultilineExtentsFromExtra(row, Math.max(0, lineCount - 1) * lineSpacingRatio);
+}
+
+/**
+ * Ίδια κατανομή, αλλά με το **έτοιμο άθροισμα** των διάστιχων (em) αντί για `πλήθος × σταθερό`.
+ *
+ * ADR-635 Φ C.21 (Δ): με `\ps` ανά παράγραφο το βήμα δεν είναι σταθερό μέσα σε ένα MTEXT, οπότε
+ * το γινόμενο `(πλήθος − 1) × ratio` δίνει λάθος ύψος μπλοκ. Ο υπολογισμός του αθροίσματος ζει
+ * στη διάταξη (`totalExtraLineRatio`) — αυτή ξέρει το διάστιχο κάθε γραμμής.
+ */
+export function resolveMultilineExtentsFromExtra(row: TextRow, extra: number): MultilineExtents {
   if (extra <= 0) return { topAdd: 0, bottomAdd: 0 };
   if (row === 'B') return { topAdd: extra, bottomAdd: 0 };
   if (row === 'M') return { topAdd: extra / 2, bottomAdd: extra / 2 };
