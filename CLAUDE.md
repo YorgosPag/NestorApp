@@ -720,8 +720,7 @@ powershell.exe -ExecutionPolicy Bypass -File "C:\Nestor_Pagonis\enterprise-backu
 | File | Architecture role |
 |------|------------------|
 | `components/dxf-layout/CanvasSection.tsx` | Orchestrator — MUST NOT subscribe to high-freq stores (Phase XXII.A: uses `useCanvasRefs()` only, reads transform via `getImmediateTransform()` at event time) |
-| `components/dxf-layout/CanvasLayerStack.tsx` | Shell — MUST NOT subscribe to high-freq stores (receives transform via Bridge wrapper) |
-| `components/dxf-layout/CanvasLayerStackTransformBridge.tsx` | Sole transform subscriber on CanvasSection→Shell path (ADR-040 Phase XXII.A). MUST stay thin — only `useTransformValue()` + pass-through to `<CanvasLayerStack>` |
+| `components/dxf-layout/CanvasLayerStack.tsx` | Shell — MUST NOT subscribe to high-freq stores. ADR-040 Phase XXII.B: δεν δέχεται πια `transform` prop (ο Bridge ΔΙΑΓΡΑΦΗΚΕ)· κάθε leaf/painter διαβάζει το ImmediateTransformStore SSoT μόνος του |
 | `components/dxf-layout/canvas-layer-stack-leaves.tsx` | Micro-leaves — the ONLY subscribers to high-freq stores |
 | `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` | Bitmap cache — invalidation rules in ADR-040 |
 | `canvas-v2/dxf-canvas/DxfRenderer.ts` | Entity render pipeline |
