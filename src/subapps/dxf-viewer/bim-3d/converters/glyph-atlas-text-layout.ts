@@ -28,6 +28,7 @@ import { getTextHeightWithFallback } from '../../config/text-rendering-config';
 import { resolveTextEmBox } from '../../bim/text/text-box';
 import { splitTextLines, resolveLineSpacingRatio } from '../../bim/text/text-lines';
 import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
+import { emSizeForTextHeight } from '../../text-engine/fonts/text-height-scale';
 import type { TextFontResolution } from './dxf-text-font-resolution';
 
 const DEG_TO_RAD = Math.PI / 180;
@@ -136,10 +137,16 @@ export function layoutTextGlyphs(
   source: GlyphLayoutSource,
 ): GlyphQuad[] {
   if (!entity.text || !entity.text.trim()) return [];
-  const emUnits = getTextHeightWithFallback(undefined, entity.height);
+  const textHeight = getTextHeightWithFallback(undefined, entity.height);
+  // ADR-635 Φ C.22 — the atlas cells are EM ratios, so they must be multiplied by the EM the font
+  // is drawn at, which is larger than the DXF text height by the face's cap-height ratio. The 2D
+  // renderer applies the identical conversion, so a text is the same size in plan and in 3D.
+  const emUnits = emSizeForTextHeight(textHeight, font.resolved);
   const lines = splitTextLines(entity.text);
-  const lineAdvUnits = emUnits * resolveLineSpacingRatio(entity);
-  const blockUnits = emUnits + (lines.length - 1) * lineAdvUnits;
+  // Line advance + block extent stay multiples of the TEXT HEIGHT (AutoCAD spaces lines by the
+  // text height, not by the em — `LINE_HEIGHT_RATIO`, Φ C.21), so they must NOT use `emUnits`.
+  const lineAdvUnits = textHeight * resolveLineSpacingRatio(entity);
+  const blockUnits = textHeight + (lines.length - 1) * lineAdvUnits;
   const box = resolveTextEmBox(entity);
   const rot = (box.rotationDeg ?? 0) * DEG_TO_RAD;
   const fm = source.fontMetrics;
@@ -153,7 +160,8 @@ export function layoutTextGlyphs(
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (line.length === 0) continue;
-    const vCenter = blockUnits / 2 - emUnits / 2 - i * lineAdvUnits; // line centre, up from box centre
+    // Line centre, up from the box centre — a LINE-BOX quantity (text height), not an em one.
+    const vCenter = blockUnits / 2 - textHeight / 2 - i * lineAdvUnits;
     let penU = -lineAdvanceUnits(line, source, emUnits, f.tracking) / 2; // centre the line
     for (const ch of line) {
       const cell = source.getCell(ch);

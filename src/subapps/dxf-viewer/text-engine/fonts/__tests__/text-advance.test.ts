@@ -12,6 +12,8 @@
  */
 
 import { measureTextAdvanceWorld, __resetTextAdvanceMeasureCtx } from '../text-advance';
+import { emSizeForTextHeight } from '../text-height-scale';
+import { fontCache } from '../font-cache';
 import { installStubFont } from './_stub-font';
 
 const MONOSPACE = 0.6; // TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE
@@ -53,12 +55,22 @@ describe('measureTextAdvanceWorld — tier 1 real glyph metrics (font loaded)', 
   });
   afterAll(() => cleanup());
 
+  // ADR-635 Φ C.22 — the advance is per EM, and the em that renders a text height is
+  // `height / capHeightRatio` (stub: sCapHeight 800 / em 1000 ⇒ ×1.25). Derived from the SSoT,
+  // never hard-coded: if the rule changes, this expectation follows it instead of going red.
+  const emOf = (height: number): number => emSizeForTextHeight(height, { font: fontCache.get(NAME)!, cacheName: NAME });
+
   it('uses the font advance (0.5 em/char), NOT the 0.6 monospace approx', () => {
-    // 4 chars · 0.5 em · height 20 = 40 world (monospace would give 4·0.6·20 = 48).
-    expect(measureTextAdvanceWorld('WXYZ', 20, { fontFamily: NAME })).toBeCloseTo(40, 6);
+    // 4 chars · 0.5 em · em(20) = 50 world (monospace would give 4·0.6·20 = 48).
+    expect(measureTextAdvanceWorld('WXYZ', 20, { fontFamily: NAME })).toBeCloseTo(4 * 0.5 * emOf(20), 6);
+  });
+
+  it('applies the cap-height rule — the em is LARGER than the DXF text height', () => {
+    expect(emOf(20)).toBeCloseTo(25, 9); // 20 / (800/1000)
   });
 
   it('scales linearly with height and widthFactor', () => {
-    expect(measureTextAdvanceWorld('WXYZ', 20, { fontFamily: NAME, widthFactor: 1.5 })).toBeCloseTo(60, 6);
+    expect(measureTextAdvanceWorld('WXYZ', 20, { fontFamily: NAME, widthFactor: 1.5 }))
+      .toBeCloseTo(4 * 0.5 * emOf(20) * 1.5, 6);
   });
 });

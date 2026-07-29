@@ -60,7 +60,7 @@ describe('TextRenderer.paintText → shared paintTextRun SSoT (ADR-557 Φάση 
     }).paintText(5, 7, 'AB', 100, 'center', 'middle', resolved, 2);
 
     expect(paintTextRun).toHaveBeenCalledWith(ctx, 'AB', {
-      originX: 5, originY: 7, targetHeight: 100, align: 'center', baseline: 'middle', resolved, tracking: 2,
+      originX: 5, originY: 7, emSize: 100, align: 'center', baseline: 'middle', resolved, tracking: 2,
     });
     expect(width).toBe(60); // returns the SSoT's advance width
   });
@@ -72,7 +72,7 @@ describe('TextRenderer.paintText → shared paintTextRun SSoT (ADR-557 Φάση 
     }).paintText(0, 0, 'A', 50, 'left', 'top', null);
 
     expect(paintTextRun).toHaveBeenCalledWith(ctx, 'A', {
-      originX: 0, originY: 0, targetHeight: 50, align: 'left', baseline: 'top', resolved: null, tracking: 1,
+      originX: 0, originY: 0, emSize: 50, align: 'left', baseline: 'top', resolved: null, tracking: 1,
     });
   });
 });

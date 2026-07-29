@@ -14,6 +14,7 @@
 import type { Font } from 'opentype.js';
 import { fontCache } from '../font-cache';
 import { __resetTextAdvanceMeasureCtx } from '../text-advance';
+import { __resetCapHeightCache } from '../text-height-scale';
 
 /** Ink-bounds override (em ratios) for the stub glyph path — see `stubProportionalFont`. */
 export interface StubInkBounds {
@@ -44,6 +45,11 @@ export function stubProportionalFont(emPerChar: number, ink?: StubInkBounds): Fo
     unitsPerEm: 1000,
     ascender: 800,
     descender: -200,
+    // ADR-635 Φ C.22 — a DECLARED cap height, deliberately ≠ the em (0.8, matching the stub's
+    // ascent) so `emSizeForTextHeight` returns height × 1.25 here. A stub with capHeight == em
+    // would make the conversion an identity and NO test could catch a call site that forgot it —
+    // exactly the measure-vs-paint divergence that produced the Φ C.21 «ΦΕΚ405» bug.
+    tables: { os2: { sCapHeight: 800 } },
     getAdvanceWidth: (text: string, size: number): number => text.length * emPerChar * size,
     getPath: (text: string, _x: number, _y: number, size: number) => {
       const advance = (text?.length ?? 0) * emPerChar * size;
@@ -72,9 +78,13 @@ export function installStubFont(emPerChar = 0.6, family = 'arial', ink?: StubInk
   if (!hadPath2D) (globalThis as { Path2D?: unknown }).Path2D = class {};
   fontCache.set(family, stubProportionalFont(emPerChar, ink));
   __resetTextAdvanceMeasureCtx();
+  // The cap-height memo is keyed by FontCache name; a suite re-registering 'arial' with different
+  // metrics would otherwise inherit the previous suite's ratio.
+  __resetCapHeightCache();
   return () => {
     fontCache.clear();
     __resetTextAdvanceMeasureCtx();
+    __resetCapHeightCache();
     if (!hadPath2D) delete (globalThis as { Path2D?: unknown }).Path2D;
   };
 }

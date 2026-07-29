@@ -27,6 +27,10 @@ export type { GlyphRun } from './glyph-path-cache';
 export { drawGlyphRunToCanvas, paintTextRun, measureTextRunPx } from './glyph-run-draw';
 export type { PaintTextRunOptions } from './glyph-run-draw';
 
+// ADR-635 Φ C.22 — THE «DXF text height → font em size» conversion. Every site that turns a
+// group-40 height into a font size goes through this, or measurement and painting drift apart.
+export { emSizeForTextHeight, capHeightRatio, __resetCapHeightCache } from './text-height-scale';
+
 // ADR-557 Φ-attachment — metrics-accurate text advance SSoT (real glyph width in
 // world units), shared by the text-box geometry so grips/hover/hitTest ≡ drawn glyphs.
 export { measureTextAdvanceWorld, __resetTextAdvanceMeasureCtx } from './text-advance';

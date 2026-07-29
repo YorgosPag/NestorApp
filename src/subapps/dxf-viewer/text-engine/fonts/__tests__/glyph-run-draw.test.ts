@@ -64,7 +64,7 @@ describe('drawGlyphRunToCanvas — glyph-path geometry', () => {
 describe('paintTextRun — tier selection', () => {
   it('resolved font → fills the glyph path, never CSS fillText', () => {
     const { ctx, calls } = makeMockCtx();
-    const w = paintTextRun(ctx, 'AB', { originX: 0, originY: 0, targetHeight: 10, align: 'left', baseline: 'top', resolved: arial() });
+    const w = paintTextRun(ctx, 'AB', { originX: 0, originY: 0, emSize: 10, align: 'left', baseline: 'top', resolved: arial() });
     expect(w).toBeCloseTo(12);
     expect(find(calls, 'fill')).toBeTruthy();
     expect(find(calls, 'fillText')).toBeFalsy();
@@ -72,7 +72,7 @@ describe('paintTextRun — tier selection', () => {
 
   it('no resolved font → CSS fillText fallback (returns measured width)', () => {
     const { ctx, calls } = makeMockCtx();
-    const w = paintTextRun(ctx, 'AB', { originX: 5, originY: 6, targetHeight: 10, align: 'left', baseline: 'top', resolved: null });
+    const w = paintTextRun(ctx, 'AB', { originX: 5, originY: 6, emSize: 10, align: 'left', baseline: 'top', resolved: null });
     const ft = find(calls, 'fillText')!;
     expect(ft.args).toEqual(['AB', 5, 6]);
     expect(find(calls, 'fill')).toBeFalsy();
@@ -82,14 +82,14 @@ describe('paintTextRun — tier selection', () => {
   it('italic resolves to null → drives the CSS fallback (2D parity)', () => {
     expect(resolveEntityFont('arial', { italic: true })).toBeNull();
     const { ctx, calls } = makeMockCtx();
-    paintTextRun(ctx, 'AB', { originX: 0, originY: 0, targetHeight: 10, align: 'left', baseline: 'top', resolved: resolveEntityFont('arial', { italic: true }) });
+    paintTextRun(ctx, 'AB', { originX: 0, originY: 0, emSize: 10, align: 'left', baseline: 'top', resolved: resolveEntityFont('arial', { italic: true }) });
     expect(find(calls, 'fillText')).toBeTruthy();
   });
 
   it('CSS fallback + tracking: sets letterSpacing during paint and restores it', () => {
     const { ctx } = makeMockCtx();
     (ctx as unknown as { letterSpacing: string }).letterSpacing = 'PREV';
-    paintTextRun(ctx, 'AB', { originX: 0, originY: 0, targetHeight: 10, align: 'left', baseline: 'top', resolved: null, tracking: 2 });
+    paintTextRun(ctx, 'AB', { originX: 0, originY: 0, emSize: 10, align: 'left', baseline: 'top', resolved: null, tracking: 2 });
     // (2 − 1) × 10 = 10px applied between glyphs, then restored to the prior value.
     expect((ctx as unknown as { letterSpacing: string }).letterSpacing).toBe('PREV');
   });
@@ -98,7 +98,7 @@ describe('paintTextRun — tier selection', () => {
 describe('measureTextRunPx — mirrors paintTextRun without drawing', () => {
   it('resolved → glyph advance scaled, no draw calls', () => {
     const { ctx, calls } = makeMockCtx();
-    const px = measureTextRunPx(ctx, 'AB', { targetHeight: 10, resolved: arial() });
+    const px = measureTextRunPx(ctx, 'AB', { emSize: 10, resolved: arial() });
     expect(px).toBeCloseTo(12);
     expect(find(calls, 'fill')).toBeFalsy();
     expect(find(calls, 'fillText')).toBeFalsy();
@@ -106,6 +106,6 @@ describe('measureTextRunPx — mirrors paintTextRun without drawing', () => {
 
   it('no font → CSS measureText', () => {
     const { ctx } = makeMockCtx();
-    expect(measureTextRunPx(ctx, 'ABC', { targetHeight: 10, resolved: null })).toBe(21); // 3 × 7
+    expect(measureTextRunPx(ctx, 'ABC', { emSize: 10, resolved: null })).toBe(21); // 3 × 7
   });
 });
