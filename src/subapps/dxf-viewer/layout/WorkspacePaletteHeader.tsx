@@ -33,6 +33,7 @@ import React, { useCallback, useId } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
+import { zIndex } from '@/styles/design-tokens';
 import { useFloatingPanelContextOptional } from '@/components/ui/floating';
 import {
   DropdownMenu,
@@ -50,6 +51,28 @@ import {
 } from '@/components/ui/context-menu';
 import { toggleDockFloat } from '../systems/workspace/workspace-dock-store';
 import { DockMenuItems, useWorkspaceDockMenu } from './workspace-dock-menu';
+
+/**
+ * 🔴 ΤΟ ΣΤΡΩΜΑ ΤΩΝ ΜΕΝΟΥ — Η ΔΕΥΤΕΡΗ ΜΙΣΗ ΤΗΣ ΔΙΟΡΘΩΣΗΣ ΤΟΥ §14.9.
+ *
+ * Ο Giorgio ανέφερε: *«όταν είναι ξεκρεμασμένο, οι τελίτσες δεν ακούν»*. Μετρήθηκε ζωντανά ότι
+ * το μενού **άνοιγε κανονικά** (`[role="menu"]` παρόν) — απλώς με `z-index: 50`, ενώ η
+ * αιωρούμενη παλέτα ήταν στα 1700. Ζωγραφιζόταν **ολόκληρο πίσω από την παλέτα**:
+ * `elementFromPoint` στο κέντρο του μενού επέστρεφε κουμπί **του περιεχομένου της παλέτας**.
+ * Ένα κουμπί που ανοίγει κάτι αόρατο είναι, για τον χρήστη, ένα κουμπί που δεν λειτουργεί.
+ *
+ * ⚠️ **Η ρίζα είναι ευρύτερη και ΔΕΝ διορθώνεται εδώ**: το `component-sizes.ts` δίνει σε κάθε
+ * dropdown της εφαρμογής `z-50`, αγνοώντας το ίδιο το SSoT της (`zIndex.dropdown = 1000`). Κάθε
+ * μενού που ανοίγει μέσα από στοιχείο με `z-index > 50` έχει το ίδιο πρόβλημα. Είναι θέμα
+ * ADR-002 και αγγίζει ΟΛΗ την εφαρμογή — καταγράφεται στο ADR-724 §14.9.3, δεν αλλάζει εν μέσω
+ * της Φ3.
+ *
+ * ⚠️ **Γιατί inline style και όχι κλάση**: η μόνη εναλλακτική του Tailwind είναι `z-[1500]` —
+ * δηλαδή **καρφωμένος αριθμός** εκτός SSoT, ακριβώς ό,τι απαγορεύει το ADR-002. Η τιμή εδώ
+ * έρχεται από το token. Ίδιο ακριβώς προηγούμενο με το `getOverlayContainerStyles()` του
+ * ADR-723, που ορίζει το `zIndex` του ίδιου του panel ως inline style από token.
+ */
+const MENU_LAYER_STYLE: React.CSSProperties = { zIndex: zIndex.popover };
 
 const HEADER_CLASS = 'flex-shrink-0 flex items-center justify-between gap-2 h-8 px-2 select-none';
 const TITLE_CLASS = 'text-xs font-medium truncate';
@@ -135,7 +158,7 @@ export const WorkspacePaletteHeader = React.memo((): React.ReactElement => {
             >
               <MoreVertical className={ICON_CLASS} aria-hidden />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" style={MENU_LAYER_STYLE}>
               <DockMenuItems
                 entries={entries}
                 Item={DropdownMenuItem}
@@ -146,7 +169,7 @@ export const WorkspacePaletteHeader = React.memo((): React.ReactElement => {
         </header>
       </ContextMenuTrigger>
 
-      <ContextMenuContent>
+      <ContextMenuContent style={MENU_LAYER_STYLE}>
         <DockMenuItems
           entries={entries}
           Item={ContextMenuItem}

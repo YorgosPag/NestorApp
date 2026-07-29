@@ -38,6 +38,7 @@ import { getDockedWidth, getLastDockedSide, setDockMode } from '../systems/works
 import {
   dockToFloatGeometry,
   resolveDropTarget,
+  type DraggedPanelEdges,
   type WorkspaceRect,
 } from '../systems/workspace/workspace-dock-geometry';
 import type { WorkspaceDockedSide } from '../systems/workspace/workspace-dock-mode';
@@ -61,6 +62,22 @@ interface DragObserverProps {
   readonly measureWorkspace: () => WorkspaceRect;
   readonly onPreviewChange: (side: WorkspaceDockedSide | null) => void;
   readonly onDrop: (side: WorkspaceDockedSide) => void;
+}
+
+/**
+ * Οι ακμές της παλέτας **τώρα**. `undefined` αν δεν έχει προσαρτηθεί.
+ *
+ * ⚠️ Μετριέται σε **κάθε** κίνηση, σε αντίθεση με τον χώρο εργασίας που μετριέται μία φορά:
+ * η παλέτα **κινείται** κατά τη χειρονομία — αυτό είναι όλο το νόημα. Το κόστος είναι μία
+ * ανάγνωση διάταξης ανά καρέ, σε ένα `position: fixed` στοιχείο, τη στιγμή που το `useDraggable`
+ * κάνει ούτως ή άλλως `setState` + render. Η εναλλακτική (κράτημα offset από την αρχή) θα
+ * κρατούσε **δεύτερο** αντίγραφο της θέσης, που αποκλίνει μόλις κάτι άλλο τη διορθώσει —
+ * π.χ. η διάσωση εκτός οθόνης του ADR-723.
+ */
+function readPanelEdges(element: HTMLElement | null): DraggedPanelEdges | undefined {
+  if (!element) return undefined;
+  const rect = element.getBoundingClientRect();
+  return { left: rect.left, right: rect.right };
 }
 
 /**
@@ -93,7 +110,7 @@ const WorkspaceDragObserver = React.memo<DragObserverProps>(({
   onPreviewChange,
   onDrop,
 }) => {
-  const { isDragging } = useFloatingPanelContext();
+  const { isDragging, elementRef } = useFloatingPanelContext();
 
   // Οι callbacks σε ref ⇒ οι εξαρτήσεις του effect είναι **μόνο** το `isDragging`. Αν έμπαιναν
   // στις εξαρτήσεις, μια αλλαγή ταυτότητας συνάρτησης στον γονέα θα ξανάστηνε τους ακροατές
@@ -108,14 +125,14 @@ const WorkspaceDragObserver = React.memo<DragObserverProps>(({
     let target: WorkspaceDockedSide | null = null;
 
     const handleMove = (event: PointerEvent): void => {
-      const next = resolveDropTarget(event.clientX, workspace);
+      const next = resolveDropTarget(event.clientX, workspace, readPanelEdges(elementRef.current));
       if (next === target) return;
       target = next;
       latest.current.onPreviewChange(next);
     };
 
     const handleUp = (event: PointerEvent): void => {
-      const dropped = resolveDropTarget(event.clientX, workspace);
+      const dropped = resolveDropTarget(event.clientX, workspace, readPanelEdges(elementRef.current));
       latest.current.onPreviewChange(null);
       if (dropped) latest.current.onDrop(dropped);
     };
@@ -138,6 +155,9 @@ const WorkspaceDragObserver = React.memo<DragObserverProps>(({
       window.removeEventListener('pointercancel', handleCancel);
       latest.current.onPreviewChange(null);
     };
+    // `elementRef` είναι σταθερό ref του ADR-723 ⇒ δεν προστίθεται στις εξαρτήσεις: θα ήταν
+    // θόρυβος που δεν μπορεί να αλλάξει. Η **τιμή** του διαβάζεται τη στιγμή του συμβάντος.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDragging]);
 
   return null;
@@ -161,9 +181,11 @@ interface DropPreviewProps {
  * Οι τιμές θέσης/μεγέθους είναι **δυναμική γεωμετρία** ⇒ η ρητή εξαίρεση του N.3 (ίδιο
  * προηγούμενο με το `FloatingPanel` του ADR-723). Ό,τι είναι στατικό ζει σε κλάσεις.
  *
- * `z-index` από το **SSoT** του subapp (`dxfZIndex.ui.sidebar` = 1110): πάνω από κάθε καμβά,
- * κάτω από την ίδια την παλέτα που σέρνεται (1700) — αλλιώς η προεπισκόπηση θα σκέπαζε το
- * αντικείμενο που περιγράφει.
+ * `z-index` από το **SSoT** του subapp: **το ίδιο** (`dxfZIndex.ui.sidebar`) με την παλέτα που
+ * σέρνεται — και αυτό είναι σκόπιμο, όχι παράλειψη. Η προεπισκόπηση **είναι** η μελλοντική θέση
+ * της παλέτας· ανήκει στο ίδιο στρώμα. Σε ισοβαθμία αποφασίζει η σειρά DOM, και η προεπισκόπηση
+ * αποδίδεται **πριν** το panel ⇒ το panel ζωγραφίζεται από πάνω. Ένα αυθαίρετο «1109» θα ήταν
+ * μαγικός αριθμός εκτός SSoT για να πει ό,τι λέει ήδη η σειρά των αδελφών.
  */
 const WorkspaceDropPreview = React.memo<DropPreviewProps>(({ side, workspace, width }) => {
   const { t } = useTranslation('dxf-viewer-shell');
@@ -272,6 +294,19 @@ export const WorkspaceFloatingPalette = React.memo<WorkspaceFloatingPaletteProps
         // «στενότερο λειτουργικό πλάτος παλέτας» σε όλη την εφαρμογή. Ρητή επανάληψη εδώ θα
         // δημιουργούσε δεύτερο ιδιοκτήτη της ίδιας τιμής.
         minSize={DEFAULT_MIN_PANEL_SIZE}
+        /*
+          🔴 ΤΟ ΣΤΡΩΜΑ — Η ΔΙΟΡΘΩΣΗ ΤΟΥ §14.9.
+
+          Η προεπιλογή του `FloatingPanel` είναι `zIndex.toast` (1700), δηλαδή **πάνω από τα
+          μενού (1000) και πάνω από τους διαλόγους (1400)**. Αποτέλεσμα, μετρημένο ζωντανά: το
+          μενού της ίδιας της παλέτας άνοιγε στα z=50 και ζωγραφιζόταν **πίσω** της — ο χρήστης
+          έβλεπε ένα κουμπί που «δεν ακούει».
+
+          Το `dxfZIndex.ui.sidebar` (1110) είναι το στρώμα που **το ίδιο το ADR-724 §10 όρισε**
+          για αυτή την παλέτα: πάνω από κάθε καμβά (≤45) και από τη γραμμή εργαλείων (1100),
+          κάτω από μενού, διαλόγους και ειδοποιήσεις — δηλαδή η κανονική ιεραρχία ενός CAD.
+        */
+        zIndex={dxfZIndex.ui.sidebar}
       >
         <WorkspaceDragObserver
           measureWorkspace={measureWorkspace}

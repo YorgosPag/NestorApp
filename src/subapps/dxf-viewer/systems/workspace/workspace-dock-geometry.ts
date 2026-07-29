@@ -151,10 +151,41 @@ export function dockToFloatGeometry(params: {
   );
 }
 
+/** Οι δύο κατακόρυφες ακμές της αιωρούμενης παλέτας, σε συντεταγμένες viewport. */
+export interface DraggedPanelEdges {
+  readonly left: number;
+  readonly right: number;
+}
+
 /**
  * **floating → docked** (§7.1): σε ποια πλευρά θα αγκυρώσει η παλέτα αν αφεθεί εδώ.
  *
  * `null` ⇒ καμία ζώνη· η παλέτα μένει αιωρούμενη.
+ *
+ * ── 🔴 ΔΥΟ ΔΙΟΡΘΩΣΕΙΣ ΜΕΤΑ ΑΠΟ ΖΩΝΤΑΝΗ ΑΝΑΦΟΡΑ (Giorgio, 2026-07-29) ──
+ *
+ * *«Όταν ξεκρεμάω το πάνελ δεν μπορώ με drag+drop να το ξαναβάλω στη θέση του.»* Η πρώτη γραφή
+ * ρωτούσε **μόνο** τον δείκτη και **απέρριπτε** ό,τι έπεφτε εκτός του χώρου εργασίας. Και τα δύο
+ * ήταν λάθος, και μαζί έκαναν την αγκύρωση σχεδόν ανέφικτη:
+ *
+ * **(α) Ο δείκτης εκτός χώρου εργασίας ΔΕΝ είναι ακύρωση — είναι η πιο εμφατική αγκύρωση.**
+ * Σέρνοντας την παλέτα αριστερά, ο δείκτης περνά πάνω από τη ράγα πλοήγησης της εφαρμογής, άρα
+ * `pointerX < workspace.left`. Η παλιά συνθήκη `distanceToLeft < 0 ⇒ null` ακύρωνε **ακριβώς**
+ * τη χειρονομία που ο χρήστης εννοούσε περισσότερο από κάθε άλλη. Τώρα «πιο έξω» σημαίνει
+ * «σίγουρα εκεί».
+ *
+ * **(β) Ο δείκτης δεν είναι η μόνη πηγή πρόθεσης — μετράει και η ΙΔΙΑ Η ΠΑΛΕΤΑ.** Ο χρήστης
+ * κοιτάζει το **panel**, όχι τον κέρσορα. Αν πιάσει τη λαβή κοντά στο «⋮» (370px από την
+ * αριστερή ακμή της παλέτας), τότε για να μπει ο **δείκτης** σε ζώνη 64px, η παλέτα πρέπει να
+ * έχει βγει ~300px **εκτός οθόνης** — κανείς δεν σέρνει τόσο, γιατί βλέπει την παλέτα να
+ * εξαφανίζεται. Γι' αυτό αγκυρώνει **και** όταν η ίδια η ακμή της παλέτας περάσει την ακμή του
+ * χώρου εργασίας (πρακτική Photoshop/Illustrator: σπρώχνεις το panel στην άκρη).
+ *
+ * ⚠️ **Το κατώφλι της παλέτας είναι 0, όχι 64 — και αυτό είναι ουσιώδες.** Η γεωμετρία
+ * εκκίνησης γεννά την παλέτα στα `+FLOAT_SPAWN_OFFSET` (24px) από την ακμή. Με κατώφλι 64px, η
+ * παλέτα θα ήταν **ήδη μέσα στη ζώνη τη στιγμή που αιωρείται**: το πρώτο σύρσιμο θα την
+ * ξανα-αγκύρωνε αμέσως και η αιώρηση κοντά στην ακμή θα ήταν αδύνατη. Με κατώφλι 0 («η ακμή
+ * πέρασε **έξω**»), η πρόθεση είναι αδιαμφισβήτητη.
  *
  * ── ΓΙΑΤΙ «ΠΛΗΣΙΕΣΤΕΡΗ ΑΚΜΗ» ΚΑΙ ΟΧΙ ΣΕΙΡΑ ΠΡΟΤΕΡΑΙΟΤΗΤΑΣ ──
  *
@@ -164,22 +195,45 @@ export function dockToFloatGeometry(params: {
  * σύγκριση αποστάσεων απαντά σωστά σε **κάθε** πλάτος και δεν έχει ειδική περίπτωση.
  *
  * Ισοπαλία (ο δείκτης ακριβώς στο μέσο) ⇒ αριστερά, που είναι η προεπιλογή του συστήματος.
+ *
+ * @param pointerX θέση δείκτη σε συντεταγμένες viewport
+ * @param workspace ο χώρος εργασίας (ΟΧΙ το παράθυρο — δες {@link WorkspaceRect})
+ * @param panel οι ακμές της παλέτας που σέρνεται· `undefined` ⇒ μόνο ο κανόνας του δείκτη
  */
 export function resolveDropTarget(
   pointerX: number,
   workspace: WorkspaceRect,
+  panel?: DraggedPanelEdges,
 ): WorkspaceDockedSide | null {
   if (!Number.isFinite(pointerX) || workspace.width <= 0) return null;
 
+  const workspaceRight = workspace.left + workspace.width;
   const distanceToLeft = pointerX - workspace.left;
-  const distanceToRight = workspace.left + workspace.width - pointerX;
+  const distanceToRight = workspaceRight - pointerX;
 
-  // Έξω από τον χώρο εργασίας (αρνητική απόσταση) ⇒ καμία αγκύρωση: ο χρήστης έσυρε την
-  // παλέτα σε άλλο κομμάτι της εφαρμογής, δεν σημάδεψε ακμή.
-  if (distanceToLeft < 0 || distanceToRight < 0) return null;
+  // «≤» και όχι «0 ≤ … ≤ ZONE»: πέρα από την ακμή είναι **περισσότερο** αγκύρωση, όχι λιγότερο.
+  let inLeftZone = distanceToLeft <= DOCK_DROP_ZONE_WIDTH;
+  let inRightZone = distanceToRight <= DOCK_DROP_ZONE_WIDTH;
 
-  const inLeftZone = distanceToLeft <= DOCK_DROP_ZONE_WIDTH;
-  const inRightZone = distanceToRight <= DOCK_DROP_ZONE_WIDTH;
+  /*
+    Η ακμή της ίδιας της παλέτας πέρασε έξω από τον χώρο εργασίας ⇒ ρητή πρόθεση αγκύρωσης.
+
+    ⚠️ `panel.right > panel.left` **υποχρεωτικά**: ένα εκφυλισμένο ορθογώνιο (μηδενικό πλάτος)
+    δεν έχει «ακμές» — έχει ένα σημείο στο μηδέν. Χωρίς αυτόν τον έλεγχο, ένα `{left:0,right:0}`
+    (αποπροσαρτημένο στοιχείο, στοιχείο πριν από την πρώτη διάταξη, ή jsdom) θα ικανοποιούσε
+    πάντα το `panel.left < workspace.left` και **κάθε** απόθεση θα αγκύρωνε αριστερά. Εντοπίστηκε
+    ακριβώς έτσι: 2 tests κοκκίνισαν με «η μεσαία απόθεση αγκύρωσε αριστερά».
+  */
+  if (
+    panel
+    && Number.isFinite(panel.left)
+    && Number.isFinite(panel.right)
+    && panel.right > panel.left
+  ) {
+    if (panel.left < workspace.left) inLeftZone = true;
+    if (panel.right > workspaceRight) inRightZone = true;
+  }
+
   if (!inLeftZone && !inRightZone) return null;
   if (inLeftZone && inRightZone) {
     return distanceToLeft <= distanceToRight ? 'docked-left' : 'docked-right';

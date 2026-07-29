@@ -185,10 +185,79 @@ describe('ADR-724 Φ3 — resolveDropTarget (§7.1)', () => {
     expect(resolveDropTarget(WORKSPACE.left + WORKSPACE.width / 2, WORKSPACE)).toBeNull();
   });
 
-  it('έξω από τον χώρο εργασίας ⇒ null, όχι «πλησιέστερη ακμή»', () => {
-    // Ο χρήστης έσυρε την παλέτα πάνω στη ράγα πλοήγησης ή εκτός παραθύρου: δεν σημάδεψε ακμή.
-    expect(resolveDropTarget(WORKSPACE.left - 1, WORKSPACE)).toBeNull();
-    expect(resolveDropTarget(RIGHT_EDGE + 1, WORKSPACE)).toBeNull();
+  it('🔴 ΠΕΡΑ από την ακμή ⇒ αγκύρωση σε ΕΚΕΙΝΗ την πλευρά, ποτέ null', () => {
+    /*
+      ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΦΥΛΑΕΙ ΑΥΤΟ ΤΟ TEST (αναφορά Giorgio, 2026-07-29):
+      *«όταν ξεκρεμάω το πάνελ δεν μπορώ με drag+drop να το ξαναβάλω στη θέση του»*.
+
+      Η πρώτη γραφή είχε `if (distanceToLeft < 0) return null` με σκεπτικό «ο χρήστης έσυρε
+      αλλού». Λάθος: σέρνοντας την παλέτα προς τα αριστερά, ο δείκτης περνά **πάνω από τη ράγα
+      πλοήγησης** της εφαρμογής — δηλαδή ακριβώς η πιο εμφατική χειρονομία αγκύρωσης
+      ακυρωνόταν. «Πιο έξω» σημαίνει «σίγουρα εκεί», όχι «άκυρο».
+    */
+    expect(resolveDropTarget(WORKSPACE.left - 1, WORKSPACE)).toBe('docked-left');
+    expect(resolveDropTarget(WORKSPACE.left - 500, WORKSPACE)).toBe('docked-left');
+    expect(resolveDropTarget(RIGHT_EDGE + 1, WORKSPACE)).toBe('docked-right');
+    expect(resolveDropTarget(RIGHT_EDGE + 500, WORKSPACE)).toBe('docked-right');
+  });
+
+  describe('🔴 η ακμή ΤΗΣ ΠΑΛΕΤΑΣ ως δεύτερη πηγή πρόθεσης (Photoshop/Illustrator)', () => {
+    /*
+      Ο χρήστης κοιτάζει το **panel**, όχι τον κέρσορα. Αν πιάσει τη λαβή κοντά στο «⋮»
+      (≈370px από την αριστερή ακμή μιας παλέτας 384px), τότε για να μπει ο ΔΕΙΚΤΗΣ σε ζώνη
+      64px, η παλέτα πρέπει να έχει βγει ~300px εκτός οθόνης. Κανείς δεν σέρνει τόσο.
+    */
+    const farFromEdges = WORKSPACE.left + 500; // ο δείκτης ΔΕΝ βοηθά καθόλου
+
+    it('η αριστερή ακμή της παλέτας πέρασε έξω ⇒ αγκύρωση αριστερά', () => {
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, { left: WORKSPACE.left - 1, right: 400 }))
+        .toBe('docked-left');
+    });
+
+    it('η δεξιά ακμή της παλέτας πέρασε έξω ⇒ αγκύρωση δεξιά', () => {
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, { left: 800, right: RIGHT_EDGE + 1 }))
+        .toBe('docked-right');
+    });
+
+    it('🔴 το κατώφλι της παλέτας είναι 0, ΟΧΙ 64 — αλλιώς η αιώρηση κοντά στην ακμή είναι αδύνατη', () => {
+      /*
+        Η γεωμετρία εκκίνησης γεννά την παλέτα στα `+FLOAT_SPAWN_OFFSET` (24px) από την ακμή.
+        Με κατώφλι 64px η παλέτα θα ήταν ΗΔΗ μέσα στη ζώνη τη στιγμή που αιωρείται: το πρώτο
+        σύρσιμο θα την ξανα-αγκύρωνε αμέσως.
+      */
+      const justInside = { left: WORKSPACE.left + FLOAT_SPAWN_OFFSET, right: 500 };
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, justInside)).toBeNull();
+      // Ακριβώς πάνω στην ακμή = ακόμη μέσα.
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, { left: WORKSPACE.left, right: 500 }))
+        .toBeNull();
+    });
+
+    it('παλέτα εντός ορίων + δείκτης στη μέση ⇒ μένει αιωρούμενη', () => {
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, { left: 300, right: 700 })).toBeNull();
+    });
+
+    it('χωρίς ακμές παλέτας, ο κανόνας του δείκτη ισχύει αναλλοίωτος', () => {
+      expect(resolveDropTarget(WORKSPACE.left + 10, WORKSPACE, undefined)).toBe('docked-left');
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, undefined)).toBeNull();
+    });
+
+    it.each([
+      ['NaN', { left: NaN, right: NaN }],
+      ['Infinity', { left: -Infinity, right: Infinity }],
+    ])('αλλοιωμένες ακμές (%s) αγνοούνται αντί να αγκυρώσουν τυχαία', (_label, panel) => {
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, panel)).toBeNull();
+    });
+
+    it('🔴 ΕΚΦΥΛΙΣΜΕΝΟ ορθογώνιο (μηδενικό πλάτος) δεν αγκυρώνει — έχει σημείο, όχι ακμές', () => {
+      /*
+        `{left:0,right:0}` προκύπτει από αποπροσαρτημένο στοιχείο, από στοιχείο πριν από την
+        πρώτη διάταξη, και από το jsdom. Χωρίς φύλακα ικανοποιεί πάντα το
+        `panel.left < workspace.left` ⇒ **κάθε** απόθεση θα αγκύρωνε αριστερά. Εντοπίστηκε από
+        δύο κόκκινα tests («η μεσαία απόθεση αγκύρωσε αριστερά»), όχι από πρόβλεψη.
+      */
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, { left: 0, right: 0 })).toBeNull();
+      expect(resolveDropTarget(farFromEdges, WORKSPACE, { left: 900, right: 400 })).toBeNull();
+    });
   });
 
   it('🔴 σε ΣΤΕΝΟ χώρο (ζώνες που επικαλύπτονται) η δεξιά αγκύρωση παραμένει προσπελάσιμη', () => {

@@ -15,6 +15,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
 
 import { WorkspacePaletteHeader } from '../WorkspacePaletteHeader';
 import { FloatingPanel } from '@/components/ui/floating';
+import { zIndex } from '@/styles/design-tokens';
 import {
   getDockMode,
   setDockMode,
@@ -146,6 +147,44 @@ describe('ADR-724 — WorkspacePaletteHeader', () => {
       expect(screen.getByText('workspaceDock.floating')).toBeInTheDocument();
       expect(screen.getByText('workspaceDock.resetLayout')).toBeInTheDocument();
     });
+  });
+
+  describe('🔴 το μενού πρέπει να ζωγραφίζεται ΠΑΝΩ από την παλέτα', () => {
+    /*
+      ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΦΥΛΑΕΙ ΑΥΤΟ ΤΟ describe (αναφορά Giorgio, 2026-07-29):
+      *«όταν είναι ξεκρεμασμένο, οι τελίτσες δεν ακούν»*.
+
+      Το μενού άνοιγε κανονικά — αλλά με `z-index: 50` ενώ η αιωρούμενη παλέτα ήταν στα 1700,
+      οπότε ζωγραφιζόταν ΟΛΟΚΛΗΡΟ πίσω της. Ένα κουμπί που ανοίγει κάτι αόρατο είναι, για τον
+      χρήστη, ένα κουμπί χαλασμένο.
+
+      Ο έλεγχος είναι **σχεσιακός**: «το μενού πάνω από την παλέτα», όχι «το μενού είναι 1500».
+      Έτσι κοκκινίζει και αν αλλάξει το στρώμα της παλέτας, όχι μόνο αν αλλάξει του μενού.
+    */
+    function menuLayer(): number {
+      openMenu();
+      return Number(screen.getByRole('menu').style.zIndex);
+    }
+
+    it.each([['αγκυρωμένη', renderDocked], ['αιωρούμενη', renderFloating]])(
+      '%s: το μενού δηλώνει ΡΗΤΑ το στρώμα των popover — μία συμπεριφορά, όχι δύο κλάδοι',
+      (_label, renderIt) => {
+        renderIt();
+        // Χωρίς τη ρητή δήλωση, το Radix το αφήνει στο `z-50` του `component-sizes.ts` —
+        // δηλαδή **κάτω** από κάθε αιωρούμενο panel.
+        expect(menuLayer()).toBe(zIndex.popover);
+      },
+    );
+
+    /*
+      ⚠️ Η ΣΧΕΣΗ «μενού πάνω από την παλέτα» ΔΕΝ ελέγχεται εδώ, ΕΠΙΤΗΔΕΣ.
+
+      Το `renderFloating()` αυτού του αρχείου στήνει ένα **γυμνό** `FloatingPanel` (προεπιλογή
+      `zIndex.toast` = 1700) — δεν είναι η παλέτα του χώρου εργασίας, που δηλώνει ρητά
+      `dxfZIndex.ui.sidebar`. Ένα assertion εδώ θα μετρούσε το harness, όχι το προϊόν.
+      Η σχέση ελέγχεται εκεί που συντίθενται πραγματικά τα δύο:
+      `WorkspaceFloatingPalette.test.tsx` → «κάθεται στο στρώμα ΤΗΣ ΠΑΛΕΤΑΣ».
+    */
   });
 
   describe('προσβασιμότητα της αόρατης χειρονομίας', () => {

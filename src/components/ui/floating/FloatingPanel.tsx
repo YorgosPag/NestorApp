@@ -34,12 +34,11 @@
  * - Zero inline styles πλην της γεωμετρίας (που είναι εξ ορισμού δυναμική)
  */
 
-import React, { createContext, useContext, useState, useEffect, useId, useMemo } from 'react';
+import React, { useState, useEffect, useId, useMemo } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { type DraggableOptions } from '@/hooks/useDraggable';
-import { type ResizeEdge } from '@/hooks/useResizable';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { performanceMonitorUtilities } from '@/styles/design-tokens';
 import { X } from 'lucide-react';
@@ -52,6 +51,12 @@ import {
   type PanelSize,
 } from './floating-panel-geometry';
 import type { FloatingPanelId } from './floating-panel-persistence';
+import {
+  FloatingPanelContext,
+  useFloatingPanelContext,
+  useFloatingPanelContextOptional,
+  type FloatingPanelContextValue,
+} from './floating-panel-context';
 
 // ============================================================================
 // TYPES & INTERFACES - Enterprise TypeScript Standards
@@ -102,6 +107,18 @@ export interface FloatingPanelProps {
    * Όταν λείπει, τίποτα δεν αποθηκεύεται.
    */
   persistenceKey?: FloatingPanelId;
+  /**
+   * ADR-724 Φ3 — **στρώμα στοίβαξης** του panel. Προεπιλογή: `zIndex.toast` (1700).
+   *
+   * ⚠️ Η προεπιλογή είναι **σκόπιμα ψηλή αλλά και λανθασμένη για κάθε panel**: επιλέχθηκε ως
+   * «πάνω από κάθε καμβά» και κατέληξε πάνω και από τα **μενού** (1000) και από τους
+   * **διαλόγους** (1400). Ένα panel που κρύβει το μενού που ανοίγει το ίδιο δεν είναι panel —
+   * είναι παγίδα (μετρημένο ζωντανά, ADR-724 §14.9).
+   *
+   * Δεν αλλάζει η προεπιλογή, ώστε οι 17 υπάρχοντες καταναλωτές να μείνουν **ακριβώς** ως έχουν.
+   * Όποιος ξέρει σε ποιο στρώμα ανήκει, το δηλώνει — με τιμή από το SSoT (ADR-002), ποτέ ωμή.
+   */
+  zIndex?: number;
 }
 
 /** FloatingPanel Header props */
@@ -141,50 +158,10 @@ export interface FloatingPanelDragHandleProps {
 }
 
 // ============================================================================
-// CONTEXT - Enterprise State Management
+// CONTEXT — μετακόμισε στο `floating-panel-context.ts` (ADR-724 Φ3, όριο N.7.1)
 // ============================================================================
-
-export interface FloatingPanelContextValue {
-  readonly position: FloatingPanelPosition;
-  readonly isDragging: boolean;
-  readonly isResizing: boolean;
-  readonly isMounted: boolean;
-  readonly handleMouseDown: (e: React.MouseEvent) => void;
-  readonly startResize: (edge: ResizeEdge, e: React.PointerEvent) => void;
-  readonly onClose?: () => void;
-  readonly elementRef: React.RefObject<HTMLDivElement>;
-  /** ADR-723 — id του `<h3>` τίτλου· η ρίζα το δείχνει με `aria-labelledby`. */
-  readonly titleId: string;
-  /** `true` όταν η ρίζα επιβάλλει ρητό width/height ⇒ το σώμα πρέπει να κυλά. */
-  readonly isSizeControlled: boolean;
-}
-
-const FloatingPanelContext = createContext<FloatingPanelContextValue | null>(null);
-
-/**
- * ADR-724 Φ3 — «Είμαι μέσα σε αιωρούμενη παλέτα;» **χωρίς** εξαίρεση.
- *
- * Ένα component που πρέπει να λειτουργεί **και** μέσα **και** έξω από `FloatingPanel` (η
- * επικεφαλίδα της κύριας παλέτας του viewer: αγκυρωμένη ή αιωρούμενη, ίδιο component) δεν
- * μπορεί να καλέσει το {@link useFloatingPanelContext} — θα έσκαγε στην αγκυρωμένη κατάσταση.
- *
- * ⛔ Η προφανής εναλλακτική είναι **λάθος** και γι' αυτό γράφεται εδώ: «κάλεσε το hook μόνο
- * όταν αιωρείται» παραβιάζει τους κανόνες των hooks (υπό συνθήκη κλήση). Ένα hook που
- * επιστρέφει `null` καλείται **πάντα** και απαντά ειλικρινά.
- *
- * @returns το context, ή `null` όταν ο καλών δεν είναι απόγονος `FloatingPanel`
- */
-export const useFloatingPanelContextOptional = (): FloatingPanelContextValue | null =>
-  useContext(FloatingPanelContext);
-
-/** Hook to access FloatingPanel context */
-const useFloatingPanelContext = (): FloatingPanelContextValue => {
-  const context = useFloatingPanelContextOptional();
-  if (!context) {
-    throw new Error('FloatingPanel compound components must be used within FloatingPanel');
-  }
-  return context;
-};
+// Το αρχείο έφτασε τις 510 γραμμές· εξήχθη η **κατάσταση**, όχι κομμένη τεκμηρίωση.
+// Τα ονόματα επανεξάγονται ώστε κανένας από τους 17 καταναλωτές να μην αλλάξει import.
 
 // ============================================================================
 // CONSTANTS - Enterprise Design Tokens
@@ -223,6 +200,7 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
   minSize = DEFAULT_MIN_PANEL_SIZE,
   maxSize,
   persistenceKey,
+  zIndex,
 }) => {
   // ✅ ENTERPRISE: Hydration safety
   const [isMounted, setIsMounted] = useState(false);
@@ -288,6 +266,8 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
         // κατά ένα frame και θα έμοιαζε με υστέρηση.
         transition: isDragging || isResizing ? 'none' : 'left 0.2s ease, top 0.2s ease',
         ...performanceMonitorUtilities.getOverlayContainerStyles(),
+        // ΜΕΤΑ το spread: η ρητή δήλωση του καλούντος υπερισχύει της προεπιλογής των tokens.
+        ...(zIndex === undefined ? {} : { zIndex }),
       }
     : undefined;
 
@@ -489,7 +469,10 @@ export {
   FloatingPanelContent,
   FloatingPanelClose,
   FloatingPanelDragHandle,
+  // Επανεξαγωγή από το `floating-panel-context` ⇒ μηδέν αλλαγή για τους 17 καταναλωτές.
   useFloatingPanelContext,
+  useFloatingPanelContextOptional,
 };
+export type { FloatingPanelContextValue };
 
 export default FloatingPanel;

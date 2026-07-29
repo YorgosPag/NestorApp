@@ -23,6 +23,7 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'el' } }),
 }));
 
+import { zIndex } from '@/styles/design-tokens';
 import { WorkspaceFloatingPalette } from '../WorkspaceFloatingPalette';
 import { WorkspacePaletteHeader } from '../WorkspacePaletteHeader';
 import {
@@ -128,6 +129,20 @@ describe('ADR-724 Φ3 — WorkspaceFloatingPalette', () => {
     it('ο διάλογος ΔΕΝ είναι modal — ο καμβάς παραμένει χρησιμοποιήσιμος από πίσω', () => {
       render(<Harness />);
       expect(screen.getByRole('dialog')).toHaveAttribute('aria-modal', 'false');
+    });
+
+    it('🔴 κάθεται στο στρώμα ΤΗΣ ΠΑΛΕΤΑΣ, όχι στο στρώμα των ειδοποιήσεων', () => {
+      /*
+        Η προεπιλογή του `FloatingPanel` είναι `zIndex.toast` (1700) — πάνω από τα μενού (1000)
+        **και** από τους διαλόγους (1400). Με αυτή, το μενού της ίδιας της παλέτας άνοιγε πίσω
+        της και ο χρήστης έβλεπε ένα κουμπί που «δεν ακούει» (αναφορά Giorgio, §14.9).
+        Ο έλεγχος είναι **σχεσιακός**, όχι μαγικός αριθμός: κάτω από το στρώμα των μενού.
+      */
+      render(<Harness />);
+      const z = Number(screen.getByRole('dialog').style.zIndex);
+      expect(z).toBeGreaterThan(0);
+      expect(z).toBeLessThan(zIndex.popover);
+      expect(z).toBeLessThan(zIndex.modal);
     });
 
     it('μία μόνο επικεφαλίδα — όχι μία της παλέτας και μία του FloatingPanel', () => {
