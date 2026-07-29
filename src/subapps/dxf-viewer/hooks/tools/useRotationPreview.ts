@@ -17,7 +17,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { Entity } from '../../types/entities';
 // ADR-641 — BEDIT-aware O(1) cached entity getter (member in VIEW space while inside a Block Editor).
@@ -60,7 +60,7 @@ export interface UseRotationPreviewProps {
   currentAngle: number;
   selectedEntityIds: string[];
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   /** Callback returning the canvas element to draw on (PreviewCanvas) */
   getCanvas: () => HTMLCanvasElement | null;
   /** Callback returning the DxfCanvas element — used for viewport calculation
@@ -81,7 +81,7 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
   const {
     phase, basePoint, referencePoint, currentAngle,
     selectedEntityIds, levelManager,
-    transform, getCanvas, getViewportElement,
+    getCanvas, getViewportElement,
   } = props;
 
   // ADR-641 — BEDIT-aware O(1) getter (member in VIEW space inside a Block Editor, else top-level).
@@ -215,7 +215,6 @@ export function useRotationPreview(props: UseRotationPreviewProps): void {
     isActive: PREVIEW_PHASES.has(phase),
     getCanvas,
     getViewportElement,
-    transform,
     draw,
   });
 }

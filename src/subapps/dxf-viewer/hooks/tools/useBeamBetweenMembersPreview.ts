@@ -20,7 +20,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useCanvasGhostPreview } from './useCanvasGhostPreview';
@@ -42,7 +42,7 @@ export interface UseBeamBetweenMembersPreviewProps {
   /** Anchor member (last picked), or null while awaiting the first click. */
   anchor: BeamBetweenAnchor | null;
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -130,7 +130,7 @@ function drawBeamGhost(
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useBeamBetweenMembersPreview(props: UseBeamBetweenMembersPreviewProps): void {
-  const { anchor, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { anchor, levelManager, getCanvas, getViewportElement } = props;
 
   const getEntities = useCallback((): readonly Entity[] => {
     if (!levelManager.currentLevelId) return [];
@@ -182,7 +182,6 @@ export function useBeamBetweenMembersPreview(props: UseBeamBetweenMembersPreview
     isActive: anchor !== null,
     getCanvas,
     getViewportElement,
-    transform,
     useImmediateSnap: false, // members are large hit areas — raw world cursor picks them; preview ≡ commit (raw worldPoint)
     draw,
   });

@@ -14,7 +14,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { StretchToolStore, type StretchToolState } from '../../systems/stretch/StretchToolStore';
@@ -31,13 +31,13 @@ import { useTransformGhostPreview, type TransformGhostFrame } from './use-transf
 
 export interface UseStretchPreviewProps {
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
 
 export function useStretchPreview(props: UseStretchPreviewProps): void {
-  const { levelManager, transform, getCanvas, getViewportElement } = props;
+  const { levelManager, getCanvas, getViewportElement } = props;
 
   // ADR-641 — `getEntity` (BEDIT-aware, VIEW-space members) is supplied by the harness frame.
   const renderCopies = useCallback(
@@ -70,7 +70,6 @@ export function useStretchPreview(props: UseStretchPreviewProps): void {
   useTransformGhostPreview<StretchToolState>({
     store: StretchToolStore,
     levelManager,
-    transform,
     getCanvas,
     getViewportElement,
     isActivePhase: (phase) => phase !== 'idle',

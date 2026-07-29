@@ -32,7 +32,6 @@
  */
 
 import { useCallback } from 'react';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { WallEntity } from '../../bim/types/wall-types';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
@@ -127,7 +126,7 @@ export interface UseGripGhostPreviewProps {
   /** Live drag-preview snapshot from useUnifiedGripInteraction (null when idle). */
   dragPreview: DxfGripDragPreview | null;
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -135,7 +134,7 @@ export interface UseGripGhostPreviewProps {
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
-  const { dragPreview, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { dragPreview, levelManager, getCanvas, getViewportElement } = props;
 
   const isActive = dragPreview !== null;
 
@@ -484,7 +483,6 @@ export function useGripGhostPreview(props: UseGripGhostPreviewProps): void {
     isActive,
     getCanvas,
     getViewportElement,
-    transform,
     // ADR-040 Φ12 — world-position: arm the live realtime effective-world stream so the
     // ghost redraws synchronously (same frame as the crosshair) on every cursor move.
     cursorMode: 'world-position',

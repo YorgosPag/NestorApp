@@ -37,7 +37,7 @@ export interface UseMirrorPreviewProps {
   secondPoint: Point2D | null;
   selectedEntityIds: string[];
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -49,7 +49,7 @@ const PREVIEW_PHASES: ReadonlySet<MirrorPhase> = new Set(['awaiting-second-point
 // ============================================================================
 
 export function useMirrorPreview(props: UseMirrorPreviewProps): void {
-  const { phase, firstPoint, secondPoint, selectedEntityIds, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { phase, firstPoint, secondPoint, selectedEntityIds, levelManager, getCanvas, getViewportElement } = props;
 
   const { ortho } = useCadToggles();
   const orthoOnRef = useRef(ortho.on);
@@ -141,7 +141,6 @@ export function useMirrorPreview(props: UseMirrorPreviewProps): void {
     isActive: PREVIEW_PHASES.has(phase),
     getCanvas,
     getViewportElement,
-    transform,
     draw,
   });
 }

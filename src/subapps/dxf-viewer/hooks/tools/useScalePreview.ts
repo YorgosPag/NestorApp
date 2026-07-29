@@ -13,7 +13,6 @@
  */
 
 import { useCallback, useRef } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { ScaleToolStore, type ScaleToolState } from '../../systems/scale/ScaleToolStore';
@@ -36,7 +35,7 @@ import { scaleAboutBaseWorldAffine, type MatrixGhostConfig } from './transform-g
 
 export interface UseScalePreviewProps {
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -70,7 +69,7 @@ const SCALE_MATRIX_GHOST: MatrixGhostConfig<ScaleToolState> = {
 };
 
 export function useScalePreview(props: UseScalePreviewProps): void {
-  const { levelManager, transform, getCanvas, getViewportElement } = props;
+  const { levelManager, getCanvas, getViewportElement } = props;
 
   // ADR-646 Φάση 5 — the selection's UNSCALED union bbox is constant for a whole drag, so cache it
   // (keyed by the selection array identity, stable per scale op) → only the O(1) per-frame scaling
@@ -118,7 +117,6 @@ export function useScalePreview(props: UseScalePreviewProps): void {
   useTransformGhostPreview<ScaleToolState>({
     store: ScaleToolStore,
     levelManager,
-    transform,
     getCanvas,
     getViewportElement,
     isActivePhase: (phase) => phase !== 'idle',

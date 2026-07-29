@@ -20,7 +20,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { Guide } from '../../systems/guides/guide-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 // ADR-049 — κόκκινο ＋ (world-space· προβάλλει μόνο του) + χρυσή διακεκομμένη (screen-space).
@@ -51,7 +51,7 @@ export interface UseParallelGuideAnchorPreviewProps {
    * `null` ⇒ δεν υπάρχει περιορισμός· η γραμμή πέφτει πίσω στον ωμό κέρσορα.
    */
   refGuide: Guide | null;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -81,7 +81,7 @@ function paintLengthHud(
 }
 
 export function useParallelGuideAnchorPreview(props: UseParallelGuideAnchorPreviewProps): void {
-  const { anchor, refGuide, transform, getCanvas, getViewportElement } = props;
+  const { anchor, refGuide, getCanvas, getViewportElement } = props;
 
   const draw = useCallback(({ ctx, effectiveCursor, viewport, transform: t }: GhostDrawFrame) => {
     if (!anchor) return;
@@ -120,7 +120,6 @@ export function useParallelGuideAnchorPreview(props: UseParallelGuideAnchorPrevi
     isActive: anchor !== null,
     getCanvas,
     getViewportElement,
-    transform,
     draw,
   });
 }

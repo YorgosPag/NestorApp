@@ -17,7 +17,7 @@
  */
 
 import { useCallback } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { WallEntity } from '../../bim/types/wall-types';
 import { isWallEntity } from '../../types/entities';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -38,7 +38,7 @@ export interface UseWallSplitKnifePreviewProps {
   /** First knife point (world coords), or null while awaiting the first click. */
   firstPoint: Point2D | null;
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -51,7 +51,7 @@ const CUT_INDICATOR = TOOL_ANCHOR_CYAN;
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useWallSplitKnifePreview(props: UseWallSplitKnifePreviewProps): void {
-  const { firstPoint, levelManager, transform, getCanvas, getViewportElement } = props;
+  const { firstPoint, levelManager, getCanvas, getViewportElement } = props;
 
   const getWalls = useCallback((): WallEntity[] => {
     if (!levelManager.currentLevelId) return [];
@@ -116,7 +116,6 @@ export function useWallSplitKnifePreview(props: UseWallSplitKnifePreviewProps): 
     isActive: firstPoint !== null,
     getCanvas,
     getViewportElement,
-    transform,
     useImmediateSnap: true, // preview ≡ commit (the click point is centrally snapped)
     draw,
   });

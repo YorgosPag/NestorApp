@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useRef, useSyncExternalStore } from 'react';
-import type { Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 import type { AnySceneEntity, Entity } from '../../types/entities';
 import type { DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -64,7 +64,7 @@ import { translatePoint } from '../../rendering/entities/shared/geometry-vector-
 
 export interface UseEntityBodyDragPreviewProps {
   levelManager: LevelSceneReader;
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement?: () => HTMLElement | null;
 }
@@ -72,7 +72,7 @@ export interface UseEntityBodyDragPreviewProps {
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): void {
-  const { levelManager, transform, getCanvas, getViewportElement } = props;
+  const { levelManager, getCanvas, getViewportElement } = props;
 
   const active = useSyncExternalStore(
     EntityBodyDragStore.subscribe,
@@ -209,7 +209,6 @@ export function useEntityBodyDragPreview(props: UseEntityBodyDragPreviewProps): 
     isActive: active,
     getCanvas,
     getViewportElement,
-    transform,
     draw,
   });
 }

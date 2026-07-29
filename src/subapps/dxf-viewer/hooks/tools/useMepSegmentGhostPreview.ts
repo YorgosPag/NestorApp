@@ -18,7 +18,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-574-ghost-preview-ssot-audit.md
  */
 
-import type { Entity, Point2D, ViewTransform } from '../../rendering/types/Types';
+import type { Entity, Point2D } from '../../rendering/types/Types';
 import type { MepSegmentDomain } from '../../bim/types/mep-segment-types';
 import {
   buildDefaultMepSegmentParams,
@@ -48,7 +48,7 @@ export interface UseMepSegmentGhostPreviewProps {
    * second click (end point). Ghost is drawn only in this phase.
    */
   readonly isAwaitingEnd: boolean;
-  readonly transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   /**
    * Legacy segment-spec getter — kept for parent wiring parity (ADR-574: unused
    * here; the WYSIWYG draw reads start + section spec from the bridge instead).
@@ -62,11 +62,10 @@ export interface UseMepSegmentGhostPreviewProps {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useMepSegmentGhostPreview(props: Readonly<UseMepSegmentGhostPreviewProps>): void {
-  const { isAwaitingEnd, transform, getCanvas, getViewportElement } = props;
+  const { isAwaitingEnd, getCanvas, getViewportElement } = props;
 
   useWysiwygPlacementGhost({
     isActive: isAwaitingEnd,
-    transform,
     getCanvas,
     getViewportElement,
     buildGhostEntity: ({ effectiveCursor }): Entity | null => {
