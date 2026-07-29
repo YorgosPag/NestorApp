@@ -14,7 +14,7 @@
 import type { Font } from 'opentype.js';
 import { fontCache } from '../font-cache';
 import { __resetTextAdvanceMeasureCtx } from '../text-advance';
-import { __resetCapHeightCache } from '../text-height-scale';
+import { __resetCapHeightCache, emSizeForTextHeight } from '../text-height-scale';
 
 /** Ink-bounds override (em ratios) for the stub glyph path — see `stubProportionalFont`. */
 export interface StubInkBounds {
@@ -65,6 +65,27 @@ export function stubProportionalFont(emPerChar: number, ink?: StubInkBounds): Fo
       };
     },
   } as unknown as Font;
+}
+
+/**
+ * The world advance the stub font produces for `charCount` characters at a DXF `textHeight` —
+ * DERIVED from the height→em SSoT (ADR-635 Φ C.22), never a frozen number.
+ *
+ * Geometry suites used to hand-compute `len × height × 0.6`, which silently assumed «em == text
+ * height». Since the cap-height rule that assumption is false, and an expectation written as a
+ * literal would have to be re-typed every time the rule is refined. Written through this helper it
+ * simply follows the SSoT — and still FAILS loudly if a production call site drops the conversion,
+ * because the helper applies it once while the code under test would not apply it at all.
+ */
+export function stubAdvanceWorld(
+  charCount: number,
+  textHeight: number,
+  emPerChar = 0.6,
+  family = 'arial',
+): number {
+  const font = fontCache.get(family);
+  const resolved = font ? { font, cacheName: family } : null;
+  return charCount * emPerChar * emSizeForTextHeight(textHeight, resolved);
 }
 
 /**

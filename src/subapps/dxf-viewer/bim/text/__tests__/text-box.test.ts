@@ -26,13 +26,22 @@ import { gripKindOf } from '../../../hooks/grip-kinds';
 // ADR-557 Φ-attachment — the box now measures the real glyph advance; pin a stub font
 // at the 0.6 monospace ratio so these hand-computed widths stay deterministic (the jest
 // jsdom canvas would otherwise feed machine-dependent metrics into the tier-2 fallback).
-import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
+import { installStubFont, stubAdvanceWorld } from '../../../text-engine/fonts/__tests__/_stub-font';
 
 let __stubCleanup: () => void;
 beforeAll(() => { __stubCleanup = installStubFont(); });
 afterAll(() => __stubCleanup());
 
-// "DDD" (3) × height 10 × CHAR_WIDTH_MONOSPACE 0.6 = 18 → halfWidth 9; height 10 → halfLength 5.
+/**
+ * ADR-635 Φ C.22 — every WIDTH here is the glyph advance, which is per EM, and the em that renders
+ * a DXF text height is larger by the face's cap-height ratio. So widths are DERIVED from the SSoT
+ * rather than written as `len × 0.6 × height` literals. Must be called INSIDE a test: the stub font
+ * is registered in `beforeAll`, after this module is evaluated.
+ * HEIGHTS are unaffected — a line box stays a multiple of the text height (Φ C.21).
+ */
+const w = (chars: number, height = 10): number => stubAdvanceWorld(chars, height);
+
+// "DDD" (3 chars) at height 10 → halfWidth = w(3)/2; height 10 → halfLength 5.
 function text(extra: Partial<DxfText> = {}): DxfText {
   return { id: 't1', type: 'text', visible: true, position: { x: 0, y: 0 }, text: 'DDD', height: 10, ...extra };
 }
@@ -52,11 +61,11 @@ const nearP = (p: { x: number; y: number }, x: number, y: number, eps = 1e-9) =>
 
 describe('resolveTextBox — width/height SSoT', () => {
   it('effectiveTextWidth: TEXT formula, widthFactor, MTEXT frame (hug vs constrained)', () => {
-    expect(effectiveTextWidth(text())).toBeCloseTo(18, 9);
-    expect(effectiveTextWidth(text({ widthFactor: 2 }))).toBeCloseTo(36, 9);
+    expect(effectiveTextWidth(text())).toBeCloseTo(w(3), 9);
+    expect(effectiveTextWidth(text({ widthFactor: 2 }))).toBeCloseTo(w(3) * 2, 9);
     // MTEXT wide frame → hugs the glyphs (Giorgio 2026-07-07); narrow frame → the frame wins.
-    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(6, 9); // content 'X', NOT 50
-    expect(effectiveTextWidth(text({ width: 4, text: 'X' }))).toBeCloseTo(4, 9);  // 4 < content 6
+    expect(effectiveTextWidth(text({ width: 50, text: 'X' }))).toBeCloseTo(w(1), 9); // content 'X', NOT 50
+    expect(effectiveTextWidth(text({ width: 4, text: 'X' }))).toBeCloseTo(4, 9);     // 4 < content w(1)
   });
   it('resolveBoxHeight falls back to the AutoCAD DIMTXT default for a bad height', () => {
     expect(resolveBoxHeight(text({ height: 0 }))).toBeCloseTo(2.5, 9);
@@ -65,37 +74,39 @@ describe('resolveTextBox — width/height SSoT', () => {
 });
 
 describe('resolveTextBox — centre per attachment (9-point grid)', () => {
-  // position (0,0), box 18×10 → halfWidth 9, halfLength 5. Expected box centres:
+  // position (0,0), box w(3)×10. Cases carry the SIGN of each half-extent, not a frozen number,
+  // so the grid assertion stays about the ATTACHMENT ALGEBRA and not about the glyph scale.
   const cases: Array<[string, number, number]> = [
-    ['TL', 9, -5], ['TC', 0, -5], ['TR', -9, -5],
-    ['ML', 9, 0], ['MC', 0, 0], ['MR', -9, 0],
-    ['BL', 9, 5], ['BC', 0, 5], ['BR', -9, 5],
+    ['TL', 1, -1], ['TC', 0, -1], ['TR', -1, -1],
+    ['ML', 1, 0], ['MC', 0, 0], ['MR', -1, 0],
+    ['BL', 1, 1], ['BC', 0, 1], ['BR', -1, 1],
   ];
-  it.each(cases)('%s → centre (%f, %f)', (att, cx, cy) => {
+  it.each(cases)('%s → centre (%f·halfWidth, %f·halfLength)', (att, sx, sy) => {
+    const hw = w(3) / 2;
     const f = resolveTextBox(text({ textStyle: style(att) }));
-    expect(nearP(f.center, cx, cy)).toBe(true);
-    expect(f.halfWidth).toBeCloseTo(9, 9);
+    expect(nearP(f.center, sx * hw, sy * 5)).toBe(true);
+    expect(f.halfWidth).toBeCloseTo(hw, 9);
     expect(f.halfLength).toBeCloseTo(5, 9);
   });
 
   it('no textStyle defaults to TL (the renderer default top/left)', () => {
-    expect(nearP(resolveTextBox(text()).center, 9, -5)).toBe(true);
+    expect(nearP(resolveTextBox(text()).center, w(3) / 2, -5)).toBe(true);
   });
 });
 
 describe('resolveTextBox — corners pin the attachment point', () => {
   it('BR: position (0,0) is the bottom-right corner; box extends left + up', () => {
     const c = textBoxCornersWorld(text({ textStyle: style('BR') })); // NE, NW, SW, SE
-    expect(nearP(c[0], 0, 10)).toBe(true);    // NE (top-right)
-    expect(nearP(c[1], -18, 10)).toBe(true);  // NW (top-left)
-    expect(nearP(c[2], -18, 0)).toBe(true);   // SW (bottom-left)
-    expect(nearP(c[3], 0, 0)).toBe(true);     // SE = position (BR anchor)
+    expect(nearP(c[0], 0, 10)).toBe(true);        // NE (top-right)
+    expect(nearP(c[1], -w(3), 10)).toBe(true);    // NW (top-left)
+    expect(nearP(c[2], -w(3), 0)).toBe(true);     // SW (bottom-left)
+    expect(nearP(c[3], 0, 0)).toBe(true);         // SE = position (BR anchor)
   });
 
   it('TL: position (0,0) is the top-left corner; box extends right + down', () => {
     const c = textBoxCornersWorld(text({ textStyle: style('TL') }));
-    expect(nearP(c[1], 0, 0)).toBe(true);     // NW = position (TL anchor)
-    expect(nearP(c[3], 18, -10)).toBe(true);  // SE (bottom-right)
+    expect(nearP(c[1], 0, 0)).toBe(true);         // NW = position (TL anchor)
+    expect(nearP(c[3], w(3), -10)).toBe(true);    // SE (bottom-right)
   });
 });
 
@@ -121,17 +132,17 @@ describe('textBoxToPosition — inverse round-trip (resize/rotate pins the ancho
 
 describe('rotation + textBoxAABB', () => {
   it('rotates the centre offset about the position (CCW)', () => {
-    // BL localCentre (9,5) rotated +90° → (-5, 9).
+    // BL localCentre (halfWidth, 5) rotated +90° → (-5, halfWidth).
     const f = resolveTextBox(text({ textStyle: style('BL'), rotation: 90 }));
-    expect(nearP(f.center, -5, 9, 1e-6)).toBe(true);
+    expect(nearP(f.center, -5, w(3) / 2, 1e-6)).toBe(true);
     expect(f.rotationDeg).toBe(90);
   });
 
   it('AABB encloses the (axis-aligned) attachment-aware box', () => {
-    // TL at (10,20), box 6×5 ("AB" → 2×5×0.6 = 6) → x∈[10,16], y∈[15,20].
+    // TL at (10,20), box w(2, 5)×5 ("AB" at height 5) → x∈[10, 10+w], y∈[15,20].
     const b = textBoxAABB(text({ text: 'AB', height: 5, position: { x: 10, y: 20 } }));
     expect(b.minX).toBeCloseTo(10, 9);
-    expect(b.maxX).toBeCloseTo(16, 9);
+    expect(b.maxX).toBeCloseTo(10 + w(2, 5), 9);
     expect(b.minY).toBeCloseTo(15, 9);
     expect(b.maxY).toBeCloseTo(20, 9);
   });
