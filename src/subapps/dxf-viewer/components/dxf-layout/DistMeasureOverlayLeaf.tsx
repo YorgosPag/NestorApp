@@ -16,8 +16,11 @@
 
 import React, { useEffect, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Point2D, Viewport } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// ADR-040 Phase XXII.B — το transform ΔΕΝ είναι πια prop: subscription ΜΟΝΟ στο inner
+// `DistActiveLayer` (mounted μόνο όσο το DIST είναι ενεργό) — ο outer gate μένει low-freq.
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type { SceneUnits } from '../../utils/scene-units';
 import { useActiveTool, toolStateStore } from '../../stores/ToolStateStore';
@@ -41,7 +44,6 @@ const LABEL_BG = 'rgba(17,24,39,0.82)';
 const LABEL_FG = PANEL_LAYOUT.CAD_COLORS.TEXT_INVERTED;
 
 interface Props {
-  transform: ViewTransform;
   viewport: Viewport;
   sceneUnits: SceneUnits;
   className?: string;
@@ -66,9 +68,11 @@ export const DistMeasureOverlayLeaf = React.memo(function DistMeasureOverlayLeaf
   return <DistActiveLayer {...props} />;
 });
 
-/** Inner layer: mounted only while «dist» is active → the 60fps cursor sub is confined here. */
-function DistActiveLayer({ transform, viewport, sceneUnits, className }: Props) {
+/** Inner layer: mounted only while «dist» is active → the 60fps cursor + transform subs are confined here. */
+function DistActiveLayer({ viewport, sceneUnits, className }: Props) {
   const { t } = useTranslation('dxf-viewer-panels');
+  // ADR-040 Phase XXII.B — leaf-level transform, μόνο όσο το DIST είναι mounted.
+  const transform = useTransformValue();
   const snap = useSyncExternalStore(subscribeDist, getDistSnapshot);
   const cursor = useSyncExternalStore(subscribeRealtimeWorldCursor, getRealtimeWorldCursor, () => null);
 

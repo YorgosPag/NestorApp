@@ -23,7 +23,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-399-dxf-floor-navigation-tabs.md §Phase D
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { DxfRenderer } from '../../canvas-v2/dxf-canvas/DxfRenderer';
 import { getDevicePixelRatio } from '../../systems/cursor/utils';
 // ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
@@ -31,10 +31,14 @@ import {
   paintOverlayDispatchFrame,
   type OverlayDispatchPainter,
 } from './overlay-dispatch/overlay-dispatch-frame';
+// ADR-040 Phase XXII.B — zero-lag: transform από το SSoT στο draw time + scheduler frame
+// αντί για React prop (ιδίωμα HomeRunWiresOverlay).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
 import { useFloors2DUnderlay } from '../../hooks/data/useFloors2DUnderlay';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Viewport } from '../../rendering/types/Types';
 
 /**
  * Fraction of each underlay pixel's alpha removed via `destination-out` →
@@ -43,11 +47,10 @@ import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 const UNDERLAY_FADE = 0.65;
 
 export interface FloorUnderlayOverlayProps {
-  readonly transform: ViewTransform;
   readonly viewport: Viewport;
 }
 
-export function FloorUnderlayOverlay({ transform, viewport }: FloorUnderlayOverlayProps) {
+export function FloorUnderlayOverlay({ viewport }: FloorUnderlayOverlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<DxfRenderer | null>(null);
 
@@ -74,19 +77,23 @@ export function FloorUnderlayOverlay({ transform, viewport }: FloorUnderlayOverl
     };
   }, [floors]);
 
-  useEffect(() => {
+  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
+  const drawStateRef = useRef({ active, merged, viewport });
+  drawStateRef.current = { active, merged, viewport };
+
+  // ADR-726 Φ2 — «painter ή null» είναι ΟΛΗ η δήλωση περιεχομένου· το DPR sizing, η πύλη και το
+  // clear ζουν στο ΕΝΑ primitive. Όταν το underlay είναι ανενεργό (ο κανόνας, όχι η εξαίρεση:
+  // μόνο σε 2D «Όλοι οι όροφοι» ζωγραφίζει) ο καμβάς δεν αγγίζεται καθόλου.
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const { active: isActive, merged: mergedScene, viewport: vp } = drawStateRef.current;
 
-    // ADR-726 Φ2 — «painter ή null» είναι ΟΛΗ η δήλωση περιεχομένου· το DPR sizing, η πύλη και το
-    // clear ζουν στο ΕΝΑ primitive. Όταν το underlay είναι ανενεργό (ο κανόνας, όχι η εξαίρεση:
-    // μόνο σε 2D «Όλοι οι όροφοι» ζωγραφίζει) ο καμβάς δεν αγγίζεται καθόλου, αντί να ακυρώνει
-    // ολόκληρο compositor layer 131–148 φορές για μηδέν ορατό pixel.
     const painter: OverlayDispatchPainter | null =
-      active && merged
-        ? (ctx, t, vp) => {
+      isActive && mergedScene
+        ? (ctx, t, pvp) => {
             if (!rendererRef.current) rendererRef.current = new DxfRenderer(canvas);
-            rendererRef.current.render(merged, t, vp, {
+            rendererRef.current.render(mergedScene, t, pvp, {
               showGrid: false,
               showLayerNames: false,
               wireframeMode: false,
@@ -103,13 +110,23 @@ export function FloorUnderlayOverlay({ transform, viewport }: FloorUnderlayOverl
             ctx.globalCompositeOperation = 'destination-out';
             ctx.globalAlpha = UNDERLAY_FADE;
             ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, vp.width, vp.height);
+            ctx.fillRect(0, 0, pvp.width, pvp.height);
             ctx.restore();
           }
         : null;
 
-    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
-  }, [active, merged, transform, viewport]);
+    paintOverlayDispatchFrame(canvas, [painter], getImmediateTransform(), vp);
+  }, []);
+
+  // (α) Repaint σε content change (scope/floors/viewport) με ΑΚΙΝΗΤΟ transform.
+  useEffect(() => {
+    repaint();
+  }, [active, merged, viewport, repaint]);
+
+  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
+  useEffect(() => {
+    return subscribeImmediateTransformFrame('floor-underlay', 'Floor Underlay', repaint);
+  }, [repaint]);
 
   return (
     <canvas

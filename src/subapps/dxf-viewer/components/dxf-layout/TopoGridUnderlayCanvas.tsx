@@ -10,13 +10,15 @@
  * edges (top for Eastings, right for Northings — clear of the bottom/left rulers). Everything
  * reflows on pan/zoom because the effect re-runs on `transform`.
  *
- * ADR-040: this component takes `transform`/`viewport` as PROPS and does NOT subscribe to any
- * high-freq store — the parent micro-leaf owns the (low-freq) grid-visibility subscription.
+ * ADR-040 Phase XXII.B — το transform ΔΕΝ είναι πια prop: η ζωγραφική διαβάζει
+ * `getImmediateTransform()` και τρέχει (α) σε content change (visible/viewport/geoRef effect)
+ * και (β) σε transform change μέσω `subscribeImmediateTransformFrame` (ΜΗΔΕΝ React ανά καρέ —
+ * ιδίωμα HomeRunWiresOverlay). Ο parent micro-leaf κρατά το low-freq visibility subscription.
  */
 
 'use client';
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { CoordinateTransforms as CT } from '../../rendering/core/CoordinateTransforms';
 // ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
 import {
@@ -28,6 +30,9 @@ import { formatGridCoordinate } from '../../systems/topography/topo-grid-entitie
 import {
   getGeoReference, subscribeGeoReference,
 } from '../../systems/geo-referencing/geo-reference-store';
+// ADR-040 Phase XXII.B — zero-lag transform από το SSoT (βλ. header).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import {
   getTopoDisplayProjector, projectWorldPoint, projectWorldPoints, unprojectRectToWorld,
 } from '../../systems/topography/topo-display-frame';
@@ -37,8 +42,6 @@ import {
 import type { ViewTransform } from '../../rendering/types/Types';
 
 export interface TopoGridUnderlayCanvasProps {
-  /** Live view transform (prop, not a store subscription — ADR-040). */
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   /** Whether the graticule is shown (owned by the micro-leaf's low-freq store subscription). */
   visible: boolean;
@@ -114,7 +117,7 @@ function drawEdgeLabels(
 }
 
 export function TopoGridUnderlayCanvas({
-  transform, viewport, visible, className,
+  viewport, visible, className,
 }: TopoGridUnderlayCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // ADR-040: LOW-frequency store (η γεωαναφορά αλλάζει με ενέργεια χρήστη, όχι ανά frame) — δεν
@@ -122,37 +125,47 @@ export function TopoGridUnderlayCanvas({
   // το επόμενο pan.
   const geoRef = useSyncExternalStore(subscribeGeoReference, getGeoReference, getGeoReference);
 
-  // Repaint only when the transform / viewport / visibility change (no continuous RAF).
-  //
-  // DPR-aware backing store via the SAME primitive as the sibling canvases (ADR-040) — το κάνει
-  // πλέον το ΕΝΑ `paintOverlayDispatchFrame`, πριν την πύλη, σε κάθε κλήση.
-  //
+  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
+  const drawStateRef = useRef({ visible, viewport });
+  drawStateRef.current = { visible, viewport };
+
+  // DPR-aware backing store via the SAME primitive as the sibling canvases (ADR-040).
   // ADR-726 Φ2 — με τον graticule κρυμμένο (η συνήθης κατάσταση εκτός τοπογραφίας) ο καμβάς δεν
-  // αγγίζεται καθόλου, αντί για ένα clearRect ανά καρέ που ακύρωνε ολόκληρο compositor layer.
-  useEffect(() => {
+  // αγγίζεται καθόλου.
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const { visible: isVisible, viewport: vp } = drawStateRef.current;
 
-    const active = visible && viewport.width > 0 && viewport.height > 0;
+    const active = isVisible && vp.width > 0 && vp.height > 0;
     const painter: OverlayDispatchPainter | null = active
-      ? (ctx, t, vp) => {
+      ? (ctx, t, pvp) => {
           // ADR-650 §M10f — τρία συστήματα, με τη σειρά: οθόνη → display (screenToWorld) → WORLD
           // ΕΓΣΑ (unproject) όπου ΜΟΝΟ εκεί έχει νόημα η ερώτηση «ποιες στρογγυλές γραμμές ΕΓΣΑ
           // πέφτουν μέσα;» → πίσω σε display (project) για να σχεδιαστούν. Το βήμα (`scale`) είναι
           // αναλλοίωτο: ο rigid μετασχηματισμός δεν έχει κλίμακα.
           const projector = getTopoDisplayProjector();
-          const world = unprojectRectToWorld(visibleDisplayRect(t, vp), projector);
+          const world = unprojectRectToWorld(visibleDisplayRect(t, pvp), projector);
           const stepMm = pickSurveyGridStepMm(t.scale);
           const grid = buildTopoGrid(world, stepMm);
-          drawCrosses(ctx, projectWorldPoints(grid.crosses, projector), t, vp);
-          drawEdgeLabels(ctx, world, grid, projector, t, vp);
+          drawCrosses(ctx, projectWorldPoints(grid.crosses, projector), t, pvp);
+          drawEdgeLabels(ctx, world, grid, projector, t, pvp);
         }
       : null;
 
-    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
-    // `geoRef` δεν διαβάζεται εδώ αλλά μέσα στον projector — μένει dependency ώστε η αλλαγή
-    // γεωαναφοράς να ξαναζωγραφίζει (ADR-656 M11).
-  }, [transform, viewport, visible, geoRef]);
+    paintOverlayDispatchFrame(canvas, [painter], getImmediateTransform(), vp);
+  }, []);
+
+  // (α) Repaint σε content change — `geoRef` δεν διαβάζεται εδώ αλλά μέσα στον projector·
+  // μένει dependency ώστε η αλλαγή γεωαναφοράς να ξαναζωγραφίζει (ADR-656 M11).
+  useEffect(() => {
+    repaint();
+  }, [viewport, visible, geoRef, repaint]);
+
+  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
+  useEffect(() => {
+    return subscribeImmediateTransformFrame('topo-grid-underlay', 'Topo Grid Underlay', repaint);
+  }, [repaint]);
 
   return <canvas ref={canvasRef} className={className} aria-hidden />;
 }

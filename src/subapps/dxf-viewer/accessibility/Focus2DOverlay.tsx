@@ -15,23 +15,26 @@
 // outline anchored to the entity).
 // ============================================================================
 
-import { useEffect, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKeyboardFocus2DManager } from './keyboard-focus-2d-manager';
 import { paintFocus2DOutline, clearFocus2DOverlay } from './focus-2d-outline-painter';
 import { findFocusedEntityData2D } from './focus-2d-order';
 import { entityTypeLabel } from '../bim-3d/accessibility/status-bar-text-generator';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
-import type { ViewTransform, Viewport } from '../rendering/types/Types';
+import type { Viewport } from '../rendering/types/Types';
 // 🏢 SSoT overlay frame — DPR-aware sizing + πύλη + clear + paint σε ΕΝΑ primitive (ADR-726 Φ2).
 import {
   paintOverlayDispatchFrame,
   type OverlayDispatchPainter,
 } from '../components/dxf-layout/overlay-dispatch/overlay-dispatch-frame';
+// ADR-040 Phase XXII.B — zero-lag: transform από το SSoT στο draw time + scheduler frame
+// αντί για React prop (ιδίωμα HomeRunWiresOverlay).
+import { getImmediateTransform } from '../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../rendering/core/immediate-transform-frame';
 
 export interface Focus2DOverlayProps {
   readonly scene: DxfScene | null;
-  readonly transform: ViewTransform;
   readonly viewport: Viewport;
   /** Hide the overlay outright while in 3D mode — caller gates via ViewMode3DStore. */
   readonly active: boolean;
@@ -40,7 +43,6 @@ export interface Focus2DOverlayProps {
 
 export function Focus2DOverlay({
   scene,
-  transform,
   viewport,
   active,
   className,
@@ -66,15 +68,30 @@ export function Focus2DOverlay({
   // οντότητα (η συνήθης κατάσταση: η εστίαση πληκτρολογίου είναι σπάνια) το overlay καθάριζε
   // άνευ όρων σε **κάθε αλλαγή transform**, δηλαδή σε κάθε pan/zoom — ακυρώνοντας ολόκληρο
   // compositor layer για μηδέν pixel. Τώρα δηλώνει «painter ή null» και η πύλη το σιωπά.
-  useEffect(() => {
+  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
+  const drawStateRef = useRef({ active, focusedId, scene, viewport });
+  drawStateRef.current = { active, focusedId, scene, viewport };
+
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const data = active && focusedId ? findFocusedEntityData2D(scene, focusedId) : null;
+    const s = drawStateRef.current;
+    const data = s.active && s.focusedId ? findFocusedEntityData2D(s.scene, s.focusedId) : null;
     const painter: OverlayDispatchPainter | null = data
       ? (_ctx, t, vp) => paintFocus2DOutline(canvas, data.bbox, t, vp)
       : null;
-    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
-  }, [active, focusedId, scene, transform, viewport]);
+    paintOverlayDispatchFrame(canvas, [painter], getImmediateTransform(), s.viewport);
+  }, []);
+
+  // (α) Repaint σε content change (focus/scene/viewport) με ΑΚΙΝΗΤΟ transform.
+  useEffect(() => {
+    repaint();
+  }, [active, focusedId, scene, viewport, repaint]);
+
+  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
+  useEffect(() => {
+    return subscribeImmediateTransformFrame('focus-2d-overlay', 'Focus 2D Overlay', repaint);
+  }, [repaint]);
 
   // Clear when going inactive (mode flip to 3D) so stale outline never lingers.
   useEffect(() => {

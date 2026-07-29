@@ -14,28 +14,27 @@ import React, { useSyncExternalStore } from 'react';
 import { useViewMode3DStore } from '../../bim-3d/stores/ViewMode3DStore';
 import { Focus2DOverlay } from '../../accessibility/Focus2DOverlay';
 import type { DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { Viewport } from '../../rendering/types/Types';
 
 const subscribeMode = (listener: () => void) => useViewMode3DStore.subscribe(listener);
 const getModeIs2D = () => useViewMode3DStore.getState().mode === '2d';
 const getModeIs2DSSR = () => true;
 
+// ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε: το Focus2DOverlay ζωγραφίζει
+// μέσω subscribeImmediateTransformFrame (zero React ανά καρέ).
 export interface Focus2DOverlayLeafProps {
   readonly scene: DxfScene | null;
-  readonly transform: ViewTransform;
   readonly viewport: Viewport;
 }
 
 export const Focus2DOverlayLeaf = React.memo(function Focus2DOverlayLeaf({
   scene,
-  transform,
   viewport,
 }: Focus2DOverlayLeafProps) {
   const is2D = useSyncExternalStore(subscribeMode, getModeIs2D, getModeIs2DSSR);
   return (
     <Focus2DOverlay
       scene={scene}
-      transform={transform}
       viewport={viewport}
       active={is2D}
     />

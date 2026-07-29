@@ -18,21 +18,20 @@
 import { useSyncExternalStore } from 'react';
 import { TopoGridUnderlayCanvas } from './TopoGridUnderlayCanvas';
 import { isTopoGridVisible, subscribeTopoGrid } from '../../systems/topography/topo-grid-store';
-import type { ViewTransform } from '../../rendering/types/Types';
 
+// ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε: ο TopoGridUnderlayCanvas ζωγραφίζει
+// πλέον μέσω subscribeImmediateTransformFrame (zero React ανά καρέ).
 export interface TopoGridUnderlayLeafProps {
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   className?: string;
 }
 
-export function TopoGridUnderlayLeaf({ transform, viewport, className }: TopoGridUnderlayLeafProps) {
+export function TopoGridUnderlayLeaf({ viewport, className }: TopoGridUnderlayLeafProps) {
   // LOW-freq subscription (a visibility toggle) — permitted in a leaf, never in the Shell (CHECK 6C).
   const visible = useSyncExternalStore(subscribeTopoGrid, isTopoGridVisible, isTopoGridVisible);
 
   return (
     <TopoGridUnderlayCanvas
-      transform={transform}
       viewport={viewport}
       visible={visible}
       className={className}

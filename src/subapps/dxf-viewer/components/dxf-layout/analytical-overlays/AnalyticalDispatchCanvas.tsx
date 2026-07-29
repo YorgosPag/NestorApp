@@ -17,7 +17,7 @@
  * τα 7 παλιά overlays, σε ΕΝΑ component· όλες low-freq (toggles/analysis), όχι 60fps.
  */
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { paintAnalyticalFrame } from './analytical-painter';
 import { useRiserThroughPainter } from './use-riser-through-painter';
 import { useHeatLoadPainter } from './use-heat-load-painter';
@@ -26,14 +26,17 @@ import { useHydraulicBalancingPainter } from './use-hydraulic-balancing-painter'
 import { useStructuralUtilizationPainter } from './use-structural-utilization-painter';
 import { useStructuralDiagramPainter } from './use-structural-diagram-painter';
 import { useStructuralWarningPainter } from './use-structural-warning-painter';
-import type { ViewTransform, Viewport } from '../../../rendering/types/Types';
+// ADR-040 Phase XXII.B — zero-lag: transform από το SSoT στο draw time + scheduler frame
+// αντί για React prop (ιδίωμα HomeRunWiresOverlay).
+import { getImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../../../rendering/core/immediate-transform-frame';
+import type { Viewport } from '../../../rendering/types/Types';
 
 export interface AnalyticalDispatchCanvasProps {
-  readonly transform: ViewTransform;
   readonly viewport: Viewport;
 }
 
-export function AnalyticalDispatchCanvas({ transform, viewport }: AnalyticalDispatchCanvasProps) {
+export function AnalyticalDispatchCanvas({ viewport }: AnalyticalDispatchCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // z-order (ίδιο με την πρώην σειρά render των 7 overlays): riser → heat-load →
@@ -46,16 +49,31 @@ export function AnalyticalDispatchCanvas({ transform, viewport }: AnalyticalDisp
   const diagrams = useStructuralDiagramPainter();
   const warnings = useStructuralWarningPainter();
 
-  useEffect(() => {
+  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
+  const drawStateRef = useRef({ riser, heatLoad, pipeSizing, balancing, utilization, diagrams, warnings, viewport });
+  drawStateRef.current = { riser, heatLoad, pipeSizing, balancing, utilization, diagrams, warnings, viewport };
+
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const s = drawStateRef.current;
     paintAnalyticalFrame(
       canvas,
-      [riser, heatLoad, pipeSizing, balancing, utilization, diagrams, warnings],
-      transform,
-      viewport,
+      [s.riser, s.heatLoad, s.pipeSizing, s.balancing, s.utilization, s.diagrams, s.warnings],
+      getImmediateTransform(),
+      s.viewport,
     );
-  }, [riser, heatLoad, pipeSizing, balancing, utilization, diagrams, warnings, transform, viewport]);
+  }, []);
+
+  // (α) Repaint σε content change (painters/viewport) με ΑΚΙΝΗΤΟ transform.
+  useEffect(() => {
+    repaint();
+  }, [riser, heatLoad, pipeSizing, balancing, utilization, diagrams, warnings, viewport, repaint]);
+
+  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
+  useEffect(() => {
+    return subscribeImmediateTransformFrame('analytical-dispatch', 'Analytical Dispatch', repaint);
+  }, [repaint]);
 
   return (
     <canvas

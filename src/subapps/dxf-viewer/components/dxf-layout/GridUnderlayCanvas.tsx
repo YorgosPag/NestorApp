@@ -11,29 +11,32 @@
  * κάτοψη it must live on its own canvas mounted BEFORE the floorplan background.
  * (Giorgio 2026-06-05 — see ADR-040 changelog.)
  *
- * Mirrors the FloorplanBackgroundCanvas pattern: effect-based render (no 60fps
- * RAF loop) that repaints only when grid settings / transform / viewport change.
+ * ADR-040 Phase XXII.B — zero-lag: το transform ΔΕΝ είναι πια React prop. Η ζωγραφική
+ * διαβάζει `getImmediateTransform()` και τρέχει (α) σε content change (settings/viewport
+ * effect) και (β) σε transform change μέσω `subscribeImmediateTransformFrame` (ΜΗΔΕΝ React
+ * ανά καρέ — ιδίωμα HomeRunWiresOverlay). Παράπλευρο όφελος: ο κάναβος είναι world-locked
+ * στο ΙΔΙΟ tick με τον main canvas αντί ένα React commit πίσω.
  */
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 // ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
 import {
   paintOverlayDispatchFrame,
   type OverlayDispatchPainter,
 } from './overlay-dispatch/overlay-dispatch-frame';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import type { GridSettings as GridRendererSettings } from '../../rendering/ui/grid/GridTypes';
 // Same GridSettings type the rest of the canvas stack passes around (layer-types).
 // The runtime object carries the full GridTypes shape (built by useCanvasSettings),
 // hence the cast to GridRendererSettings at the renderDirect boundary — mirrors DxfCanvas.
 import type { GridSettings } from '../../canvas-v2';
-import type { ViewTransform } from '../../rendering/types/Types';
 
 export interface GridUnderlayCanvasProps {
   gridSettings: GridSettings;
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   /** Consumer sets z-index appropriate for the stacking context (ADR-002). */
   className?: string;
@@ -41,7 +44,6 @@ export interface GridUnderlayCanvasProps {
 
 export function GridUnderlayCanvas({
   gridSettings,
-  transform,
   viewport,
   className,
 }: GridUnderlayCanvasProps) {
@@ -50,33 +52,43 @@ export function GridUnderlayCanvas({
   const rendererRef = useRef<GridRenderer | null>(null);
   if (!rendererRef.current) rendererRef.current = new GridRenderer();
 
-  // Repaint only when inputs change (no continuous RAF — same as FloorplanBackgroundCanvas).
-  //
+  // Volatile low-freq inputs μέσω ref (unconditional assign) — το scheduler callback
+  // διαβάζει ΠΑΝΤΑ τα φρέσκα (ιδίωμα HomeRunWires: ref bundle + 2 effects → ΙΔΙΟ repaint).
+  const drawStateRef = useRef({ gridSettings, viewport });
+  drawStateRef.current = { gridSettings, viewport };
+
   // 🏢 SSoT sizing (ADR-040) — το DPR-aware backing store από το authoritative viewport το κάνει
-  // πλέον το ΕΝΑ primitive, σε κάθε κλήση και **πριν** την πύλη (idempotent: γράφει
-  // `canvas.width/height` μόνο σε πραγματική αλλαγή). Before: `canvas.width = viewport.width`
-  // (NO dpr) → the buffer was CSS-sized (the DOM «grid 670×1011» while sibling layers were
-  // 670×0.8=536) → the exact size desync that produced the right-side «dead zone».
-  //
-  // ADR-726 Φ2 — με τον κάναβο σβηστό ο καμβάς δεν αγγίζεται καθόλου, αντί για ένα clearRect ανά
-  // αλλαγή transform που ακύρωνε ολόκληρο compositor layer χωρίς να ζωγραφίζει ούτε pixel.
-  useEffect(() => {
+  // το ΕΝΑ primitive (paintOverlayDispatchFrame), idempotent, πριν την πύλη.
+  // ADR-726 Φ2 — με τον κάναβο σβηστό ο καμβάς δεν αγγίζεται καθόλου.
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const { gridSettings: gs, viewport: vp } = drawStateRef.current;
 
-    const painter: OverlayDispatchPainter | null = gridSettings.enabled
-      ? (ctx, t, vp) => {
+    const painter: OverlayDispatchPainter | null = gs.enabled
+      ? (ctx, t, pvp) => {
           rendererRef.current?.renderDirect(
             ctx,
-            vp,
-            gridSettings as unknown as GridRendererSettings,
+            pvp,
+            gs as unknown as GridRendererSettings,
             { scale: t.scale, offsetX: t.offsetX, offsetY: t.offsetY },
           );
         }
       : null;
 
-    paintOverlayDispatchFrame(canvas, [painter], transform, viewport);
-  }, [gridSettings, transform, viewport]);
+    paintOverlayDispatchFrame(canvas, [painter], getImmediateTransform(), vp);
+  }, []);
+
+  // (α) Repaint σε content change — settings/viewport, με ΑΚΙΝΗΤΟ transform.
+  useEffect(() => {
+    repaint();
+  }, [gridSettings, viewport, repaint]);
+
+  // (β) Zero-lag pan/zoom — reproject στο LOW-priority scheduler frame, gated στο
+  // immediate transform signature. Unregister στο cleanup (StrictMode-safe).
+  useEffect(() => {
+    return subscribeImmediateTransformFrame('grid-underlay', 'Grid Underlay', repaint);
+  }, [repaint]);
 
   return (
     <canvas

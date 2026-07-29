@@ -10,7 +10,11 @@ import {
 import { IDENTITY_VIEW_TRANSFORM } from '../../config/geometry-constants';
 import { useFloorplanBackground } from '../hooks/useFloorplanBackground';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
-import type { CadCoordinateAdaptation, ViewTransform } from '../providers/types';
+// ADR-040 Phase XXII.B — zero-lag: το view transform (πρώην `worldToCanvas` prop) διαβάζεται
+// από το SSoT στο draw/click time + scheduler frame (ιδίωμα HomeRunWiresOverlay).
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
+import type { CadCoordinateAdaptation } from '../providers/types';
 import type { CalibrationSession } from '../stores/floorplanBackgroundStore';
 import type { Point2D } from '../providers/types';
 
@@ -18,7 +22,6 @@ import type { Point2D } from '../providers/types';
 
 export interface FloorplanBackgroundCanvasProps {
   floorId: string;
-  worldToCanvas: ViewTransform;
   viewport: { width: number; height: number };
   /** Optional CAD adaptation (Y-flip + margins). Required for DXF integration. */
   cad?: CadCoordinateAdaptation;
@@ -30,7 +33,6 @@ export interface FloorplanBackgroundCanvasProps {
 
 export function FloorplanBackgroundCanvas({
   floorId,
-  worldToCanvas,
   viewport,
   cad,
   className,
@@ -49,14 +51,19 @@ export function FloorplanBackgroundCanvas({
   // dpr-scaled, οπότε όλη η ζωγραφική δουλεύει σε CSS coords όπως πριν.
   //
   // ADR-726 Φ2 — χωρίς ορατή κάτοψη ΚΑΙ χωρίς σημάδια βαθμονόμησης ο καμβάς δεν αγγίζεται καθόλου.
-  useEffect(() => {
+  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
+  const drawStateRef = useRef({ background, provider, viewport, cad, calibrationSession, floorId });
+  drawStateRef.current = { background, provider, viewport, cad, calibrationSession, floorId };
+
+  const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const s = drawStateRef.current;
 
     // `const` bindings ⇒ το narrowing επιβιώνει μέσα στο closure του painter (χωρίς `!`, N.2).
-    const visibleBackground = background?.visible ? background : null;
-    const activeProvider = visibleBackground ? provider : null;
-    const showsMarkers = hasCalibrationMarkers(calibrationSession, floorId);
+    const visibleBackground = s.background?.visible ? s.background : null;
+    const activeProvider = visibleBackground ? s.provider : null;
+    const showsMarkers = hasCalibrationMarkers(s.calibrationSession, s.floorId);
 
     const painter: OverlayDispatchPainter | null =
       (visibleBackground && activeProvider) || showsMarkers
@@ -64,30 +71,34 @@ export function FloorplanBackgroundCanvas({
             if (visibleBackground && activeProvider) {
               activeProvider.render(ctx, {
                 transform: visibleBackground.transform,
-                worldToCanvas,
+                // Zero-lag view transform από το SSoT στο draw time (XXII.B).
+                worldToCanvas: getImmediateTransform(),
                 viewport: vp,
                 opacity: visibleBackground.opacity,
-                cad,
+                cad: s.cad,
               });
             }
-            _drawCalibrationMarkers(ctx, calibrationSession, floorId);
+            _drawCalibrationMarkers(ctx, s.calibrationSession, s.floorId);
           }
         : null;
 
-    // Ο μετασχηματισμός της κάτοψης ταξιδεύει μέσα στο `worldToCanvas` (τύπος του
-    // floorplan-background domain) — το primitive δεν τον χρειάζεται, άρα ουδέτερος.
-    paintOverlayDispatchFrame(canvas, [painter], IDENTITY_VIEW_TRANSFORM, viewport);
-  }, [
-    background,
-    provider,
-    worldToCanvas,
-    viewport,
-    cad,
-    calibrationSession,
-    floorId,
-  ]);
+    // Ο μετασχηματισμός της κάτοψης ταξιδεύει μέσα στο `worldToCanvas` — το primitive
+    // δεν τον χρειάζεται, άρα ουδέτερος.
+    paintOverlayDispatchFrame(canvas, [painter], IDENTITY_VIEW_TRANSFORM, s.viewport);
+  }, []);
 
-  // Click handler for calibration point picking — reads fresh store state
+  // (α) Repaint σε content change (background/provider/viewport/calibration) με ΑΚΙΝΗΤΟ transform.
+  useEffect(() => {
+    repaint();
+  }, [background, provider, viewport, cad, calibrationSession, floorId, repaint]);
+
+  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
+  useEffect(() => {
+    return subscribeImmediateTransformFrame('floorplan-background', 'Floorplan Background', repaint);
+  }, [repaint]);
+
+  // Click handler for calibration point picking — reads fresh store state.
+  // Event-time transform read (cardinal rule #2) — όχι πια από prop.
   const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { calibrationSession: session, setCalibrationPoint } =
       useFloorplanBackgroundStore.getState();
@@ -100,9 +111,9 @@ export function FloorplanBackgroundCanvas({
     // else the marker would double under the ctx transform).
     setCalibrationPoint(
       { x: e.clientX - rect.left, y: e.clientY - rect.top },
-      worldToCanvas.scale,
+      getImmediateTransform().scale,
     );
-  }, [floorId, worldToCanvas]);
+  }, [floorId]);
 
   return (
     <canvas
