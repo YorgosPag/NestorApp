@@ -37,10 +37,22 @@
  * - **desktop** → `WorkspaceSplitLayout` (panel με όρια σε pixels, διαχωριστικό, πληκτρολόγιο)
  * - **tablet/mobile** → `MobileSidebarDrawer` (Sheet, `w-[85vw] max-w-[384px]`)
  *
- * Δύο γονείς, **ένας** κανόνας εδώ: «γέμισε τον χώρο σου». Γι' αυτό έφυγε και το `variant`
- * prop — μετά την απελευθέρωση του πλάτους οι δύο κλάδοι του παρήγαγαν **ταυτόσημο** markup,
- * δηλαδή θα ήταν διακόπτης που δεν ανάβει τίποτα. Επιστρέφει στη Φ3, όταν η αιωρούμενη
- * λειτουργία του δώσει πραγματικό νόημα.
+ * Δύο γονείς, **ένας** κανόνας εδώ: «γέμισε τον χώρο σου». Γι' αυτό είχε φύγει και το `variant`
+ * prop — μετά την απελευθέρωση του πλάτους οι δύο κλάδοι του παρήγαγαν **ταυτόσημο** markup.
+ *
+ * ============================================================================
+ * ADR-724 Φ3 — ΤΟ `variant` ΕΠΙΣΤΡΕΦΕΙ, ΜΕ ΤΡΙΤΟ ΓΟΝΕΑ ΚΑΙ ΠΡΑΓΜΑΤΙΚΗ ΔΙΑΦΟΡΑ
+ * ============================================================================
+ *
+ * - **inline / drawer** → η παλέτα **είναι** η κάρτα: δικό της περίγραμμα, σκιά, στρογγύλεμα.
+ * - **floating** → η κάρτα είναι το `FloatingPanel` (ADR-723), που φέρει **ήδη**
+ *   `border` + `rounded-lg` + `shadow-lg` από τα design tokens του overlay. Επαναλαμβάνοντάς
+ *   τα εδώ θα βλέπαμε **διπλό περίγραμμα** και διπλή σκιά — το κλασικό σημάδι δύο components
+ *   που νομίζουν και τα δύο ότι είναι το εξωτερικό δοχείο.
+ *
+ * ⚠️ Το `variant` ελέγχει **μόνο** το εξωτερικό ένδυμα. Ο τίτλος, το περιεχόμενο και η γραμμή
+ * κατάστασης είναι **ταυτόσημα** και στις τρεις περιπτώσεις — καμία διακλάδωση περιεχομένου.
+ * Αν κάποτε χρειαστεί τέτοια, είναι σημάδι ότι θέλει δικό της component, όχι τέταρτο variant.
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/HTML/Element/aside
  * @see ./WorkspaceSplitLayout — ο κάτοχος του πλάτους στο desktop
@@ -71,8 +83,22 @@ import { useViewScale } from '../systems/zoom/hooks/useViewScale';
 // 📋 TYPE DEFINITIONS
 // ============================================================================
 
-/** Props interface for SidebarSection component */
-interface SidebarSectionProps {
+/**
+ * Πώς είναι «ντυμένη» η παλέτα — δηλαδή **ποιος** είναι το εξωτερικό δοχείο (ADR-724 Φ3).
+ *
+ * `'inline'` = panel του splitter · `'drawer'` = Sheet κινητού · `'floating'` = `FloatingPanel`.
+ */
+export type SidebarVariant = 'inline' | 'drawer' | 'floating';
+
+/**
+ * Τα δεδομένα που χρειάζεται η παλέτα για να ζωγραφιστεί — **ο ένας** ορισμός τους.
+ *
+ * Εξάγεται επειδή το `WorkspaceSidebarSlot` (ADR-724 Φ3) τα προωθεί αυτούσια: χωρίς αυτό,
+ * το ίδιο μπλοκ πεδίων θα ζούσε σε δύο αρχεία και η επόμενη προσθήκη θα ξεχνιόταν στο ένα.
+ */
+export interface SidebarSectionProps {
+  /** Προεπιλογή `'inline'`: ο μοναδικός κλάδος που υπήρχε πριν τη Φ3. */
+  variant?: SidebarVariant;
   floatingRef: React.RefObject<FloatingPanelHandle>;
   currentScene: SceneModel | null;
   activeTool: string;
@@ -114,6 +140,7 @@ SidebarZoomLeaf.displayName = 'SidebarZoomLeaf';
  * The main content area scrolls while the status bar stays fixed at bottom.
  */
 export const SidebarSection = React.memo<SidebarSectionProps>(({
+  variant = 'inline',
   floatingRef,
   currentScene,
   activeTool,
@@ -129,9 +156,19 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
   // usePrimarySelectedId(), so this orchestrator-level sidebar stops re-rendering
   // (and re-rendering FloatingPanelContainer) on every click.
 
+  // ADR-724 Φ3 — δες την κεφαλίδα: το ένδυμα ανήκει στο εξωτερικό δοχείο, όχι και στα δύο.
+  const isFloatingVariant = variant === 'floating';
+  const chromeClass = isFloatingVariant
+    ? ''
+    : `${quick.card} ${PANEL_LAYOUT.SHADOW.XL} ${getStatusBorder('default')}`;
+  // Μέσα σε `FloatingPanel` η παλέτα είναι flex item καθορισμένου ύψους: `flex-1 min-h-0` είναι
+  // ο μόνος συνδυασμός που της επιτρέπει να **συρρικνωθεί** ώστε να κυλήσει το περιεχόμενο
+  // (προεπιλογή `min-height:auto` ⇒ δεν συρρικνώνεται ⇒ ξεχειλίζει αντί να κυλά).
+  const asideSizeClass = isFloatingVariant ? 'w-full flex-1 min-h-0' : 'w-full h-full';
+
   return (
     <aside
-      className={`w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
+      className={`${asideSizeClass} ${PANEL_LAYOUT.POINTER_EVENTS.AUTO}`}
       aria-label={t('workspaceDock.sidebarLabel')}
     >
       {/*
@@ -145,9 +182,7 @@ export const SidebarSection = React.memo<SidebarSectionProps>(({
           h-full
           flex flex-col
           ${colors.bg.card}
-          ${quick.card}
-          ${PANEL_LAYOUT.SHADOW.XL}
-          ${getStatusBorder('default')}
+          ${chromeClass}
         `}
       >
         {/*

@@ -18,7 +18,9 @@ export {
   FloatingPanelContent,
   FloatingPanelClose,
   FloatingPanelDragHandle,
-  useFloatingPanelContext
+  useFloatingPanelContext,
+  // ADR-724 Φ3 — μη-πετώσα παραλλαγή, για components που ζουν και μέσα και έξω από panel.
+  useFloatingPanelContextOptional
 } from './FloatingPanel';
 
 // ============================================================================
@@ -32,7 +34,8 @@ export type {
   FloatingPanelCloseProps,
   FloatingPanelDragHandleProps,
   FloatingPanelPosition,
-  FloatingPanelDimensions
+  FloatingPanelDimensions,
+  FloatingPanelContextValue
 } from './FloatingPanel';
 
 // ============================================================================

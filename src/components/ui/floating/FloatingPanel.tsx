@@ -144,7 +144,7 @@ export interface FloatingPanelDragHandleProps {
 // CONTEXT - Enterprise State Management
 // ============================================================================
 
-interface FloatingPanelContextValue {
+export interface FloatingPanelContextValue {
   readonly position: FloatingPanelPosition;
   readonly isDragging: boolean;
   readonly isResizing: boolean;
@@ -161,9 +161,25 @@ interface FloatingPanelContextValue {
 
 const FloatingPanelContext = createContext<FloatingPanelContextValue | null>(null);
 
+/**
+ * ADR-724 Φ3 — «Είμαι μέσα σε αιωρούμενη παλέτα;» **χωρίς** εξαίρεση.
+ *
+ * Ένα component που πρέπει να λειτουργεί **και** μέσα **και** έξω από `FloatingPanel` (η
+ * επικεφαλίδα της κύριας παλέτας του viewer: αγκυρωμένη ή αιωρούμενη, ίδιο component) δεν
+ * μπορεί να καλέσει το {@link useFloatingPanelContext} — θα έσκαγε στην αγκυρωμένη κατάσταση.
+ *
+ * ⛔ Η προφανής εναλλακτική είναι **λάθος** και γι' αυτό γράφεται εδώ: «κάλεσε το hook μόνο
+ * όταν αιωρείται» παραβιάζει τους κανόνες των hooks (υπό συνθήκη κλήση). Ένα hook που
+ * επιστρέφει `null` καλείται **πάντα** και απαντά ειλικρινά.
+ *
+ * @returns το context, ή `null` όταν ο καλών δεν είναι απόγονος `FloatingPanel`
+ */
+export const useFloatingPanelContextOptional = (): FloatingPanelContextValue | null =>
+  useContext(FloatingPanelContext);
+
 /** Hook to access FloatingPanel context */
 const useFloatingPanelContext = (): FloatingPanelContextValue => {
-  const context = useContext(FloatingPanelContext);
+  const context = useFloatingPanelContextOptional();
   if (!context) {
     throw new Error('FloatingPanel compound components must be used within FloatingPanel');
   }

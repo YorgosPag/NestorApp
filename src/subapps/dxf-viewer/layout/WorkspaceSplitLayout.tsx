@@ -66,7 +66,9 @@ import {
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 import { getDockedWidth, setDockedWidth } from '../systems/workspace/workspace-dock-store';
 import { useDockMode } from '../systems/workspace/useWorkspaceDock';
-import { isDockedRight } from '../systems/workspace/workspace-dock-mode';
+import { resolveWorkspaceLayout } from '../systems/workspace/workspace-dock-mode';
+import { WorkspaceFloatingPalette } from './WorkspaceFloatingPalette';
+import type { SidebarVariant } from './SidebarSection';
 
 const { WIDTH_MIN, WIDTH_MAX, CANVAS_MIN_WIDTH } = PANEL_LAYOUT.WORKSPACE_DOCK;
 
@@ -109,8 +111,21 @@ interface WorkspaceSplitLayoutProps {
    * σε tablet/mobile η παλέτα είναι συρτάρι (Sheet) και δεν έχει πλάτος να αλλάξει.
    */
   split: boolean;
-  /** Η κύρια παλέτα (αγκυρωμένη ή συρτάρι — το αποφασίζει ο καλών). */
-  sidebar: React.ReactNode;
+  /**
+   * Η κύρια παλέτα, ως **συνάρτηση της μορφής** που της αναλογεί (ADR-724 Φ3).
+   *
+   * ── ΓΙΑΤΙ ΣΥΝΑΡΤΗΣΗ ΚΑΙ ΟΧΙ `ReactNode` ──
+   *
+   * Στη Φ3 η παλέτα φοράει διαφορετικό «ένδυμα» ανά κατάσταση (§6.3): αγκυρωμένη είναι η ίδια
+   * η κάρτα, αιωρούμενη κάθεται **μέσα** στην κάρτα του `FloatingPanel`. Κάποιος πρέπει να
+   * μεταφράσει την κατάσταση σε ένδυμα.
+   *
+   * Αν το έκανε ο καλών (`DxfViewerContent`), θα έπρεπε να **συνδρομηθεί στην κατάσταση** — και
+   * ο `DxfViewerContent` είναι ο κορυφαίος orchestrator του viewer: ένα render του σέρνει
+   * ολόκληρο το υποδέντρο (ADR-040). Εδώ η συνδρομή **ήδη υπάρχει** (η σειρά των παιδιών
+   * εξαρτάται από αυτήν) και το component είναι memoized. Μία συνδρομή, στο σωστό ύψος.
+   */
+  sidebar: (variant: SidebarVariant) => React.ReactNode;
   /** Οι καμβάδες 2D/3D, τυλιγμένοι στο fullscreen overlay τους. */
   children: React.ReactNode;
 }
@@ -125,6 +140,18 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
   // Η ΜΟΝΑΔΙΚΗ αντιδραστική συνδρομή αυτού του component — χαμηλής συχνότητας (κλικ μενού).
   // Το πλάτος σκόπιμα ΔΕΝ έχει αντίστοιχη (ADR-040): ζει στο DOM κατά τη χειρονομία.
   const mode = useDockMode();
+  /*
+    ⚠️ ΜΙΑ ΟΛΙΚΗ ΕΡΩΤΗΣΗ, ΟΧΙ ΔΥΟ ΔΥΑΔΙΚΕΣ (ADR-724 Φ3).
+
+    Μέχρι τη Φ2 εδώ υπήρχε `isDockedRight(mode) ? … : …`. Με την προσθήκη του `'floating'` αυτό
+    το predicate **δεν σπάει** — απλώς απαντά «όχι δεξιά» και η αιωρούμενη παλέτα θα
+    ζωγραφιζόταν αγκυρωμένη αριστερά. Σφάλμα που κανένας compiler και κανένα υπάρχον test δεν
+    μπορούσε να δει. Το `resolveWorkspaceLayout` είναι εξαντλητικό: τέταρτη κατάσταση χωρίς
+    `case` ⇒ σφάλμα μεταγλώττισης.
+  */
+  const layout = resolveWorkspaceLayout(mode);
+  /** Ο χώρος εργασίας — η αναφορά των ζωνών αγκύρωσης όταν η παλέτα αιωρείται (§7.1). */
+  const workspaceRef = useRef<HTMLDivElement | null>(null);
 
   // Διαβάζεται ΜΙΑ φορά: το `defaultSize` είναι αρχική τιμή, όχι ελεγχόμενη ιδιότητα. Αν
   // άλλαζε ανά render, κάθε render θα ξαναέστηνε τη διάταξη πάνω από τον χρήστη.
@@ -226,8 +253,41 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
     schedulePersist();
   }, [schedulePersist]);
 
+  /*
+    ⚠️ ΤΡΕΙΣ ΚΛΑΔΟΙ, ΟΧΙ ΔΥΟ — ΚΑΙ ΤΟ «ΟΧΙ DESKTOP» ΕΙΝΑΙ ΑΛΛΟ ΕΡΩΤΗΜΑ ΑΠΟ ΤΟ «ΑΙΩΡΕΙΤΑΙ».
+
+    Ο πειρασμός της Φ3 είναι `split={mode !== 'floating'}` — δηλαδή να περάσει η αιώρηση από τον
+    **υπάρχοντα** κλάδο του κινητού. Θα «δούλευε» και θα ήταν λάθος: εκείνος ο κλάδος υπάρχει
+    επειδή σε tablet/mobile η παλέτα είναι **συρτάρι** (Sheet) και δεν έχει πλάτος να αλλάξει.
+    Συγχωνεύοντάς τα, μια μελλοντική αλλαγή στη συμπεριφορά του κινητού θα άλλαζε σιωπηλά τη
+    συμπεριφορά της αιώρησης — δύο άσχετες απαιτήσεις σε έναν διακόπτη.
+  */
   if (!split) {
-    return <>{sidebar}{children}</>;
+    return <>{sidebar('drawer')}{children}</>;
+  }
+
+  /*
+    ΑΙΩΡΟΥΜΕΝΗ: ο καμβάς παίρνει **όλο** τον χώρο εργασίας και η παλέτα επιπλέει από πάνω.
+
+    Ο `<div ref={workspaceRef}>` δεν είναι διακοσμητικός: είναι η **αναφορά** των ζωνών
+    αγκύρωσης (§7.1). Χωρίς αυτόν, οι ζώνες θα μετρούσαν από την ακμή του **παραθύρου** και η
+    αριστερή θα έπεφτε πάνω στη ράγα πλοήγησης της εφαρμογής.
+
+    ⓘ Ο καμβάς δεν χρειάζεται ειδοποίηση εδώ: η μετάβαση **αλλάζει το πλάτος** του (ο
+    ResizeObserver ξυπνά) **και** αλλάζει το `mode` (το `useViewportManager` είναι ήδη
+    συνδρομητής του `subscribeDockMode` από τη Φ2). Δύο ανεξάρτητα μονοπάτια, N.7.2 #4.
+  */
+  if (layout === 'floating') {
+    return (
+      <>
+        <div ref={workspaceRef} className={`flex ${GROUP_CLASS}`}>
+          {children}
+        </div>
+        <WorkspaceFloatingPalette workspaceRef={workspaceRef}>
+          {sidebar('floating')}
+        </WorkspaceFloatingPalette>
+      </>
+    );
   }
 
   /*
@@ -260,7 +320,7 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
       onResize={handleSidebarResize}
       className={PANEL_CLASS}
     >
-      {sidebar}
+      {sidebar('inline')}
     </ResizablePanel>
   );
 
@@ -296,7 +356,7 @@ export const WorkspaceSplitLayout = React.memo<WorkspaceSplitLayoutProps>(({
       className={GROUP_CLASS}
       onLayoutChanged={handleLayoutChanged}
     >
-      {isDockedRight(mode)
+      {layout === 'canvas-first'
         ? [canvasPanel, separator, sidebarPanel]
         : [sidebarPanel, separator, canvasPanel]}
     </ResizablePanelGroup>

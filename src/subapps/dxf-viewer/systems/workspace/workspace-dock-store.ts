@@ -32,7 +32,15 @@
  * οθόνης, συνήθεια), όχι του σχεδίου. Revit / AutoCAD / Photoshop αποθηκεύουν διάταξη παλετών
  * στο προφίλ — ποτέ στο αρχείο.
  *
- * ⓘ Το `'floating'` (Φ3) **δεν** είναι ακόμη δυνατή τιμή του `mode` — βλ. `workspace-dock-mode.ts`.
+ * ── ΤΡΙΑ ΠΕΔΙΑ, ΤΡΙΑ ΚΛΕΙΔΙΑ (Φ3) ──
+ *
+ * `dockedWidth` (χωρίς συνδρομητές, ~60 εγγραφές/δευτ. κατά το σύρσιμο), `mode` (με
+ * συνδρομητές, μία εγγραφή στους μήνες) και `lastDockedSide` (χωρίς συνδρομητές, γράφεται
+ * **παράπλευρα** στο `mode`). Τρία προφίλ ⇒ τρία κλειδιά. Ένα κοινό record θα σήμαινε ότι κάθε
+ * σύρσιμο ειδοποιεί τους συνδρομητές της κατάστασης — το ADR-040 πρόβλημα, από την πίσω πόρτα.
+ *
+ * ⓘ Η γεωμετρία της παλέτας **όταν αιωρείται** (x/y/w/h) **δεν** ζει εδώ: την κατέχει το
+ * ADR-723 (`persistenceKey`), που ήδη κάνει clamp σε κάθε ανάγνωση. Δες ADR-724 §6.1.
  */
 
 import { clearAllPanelGeometry } from '@/components/ui/floating';
@@ -40,7 +48,16 @@ import { createPersistedValue } from '../../stores/createPersistedValue';
 import { STORAGE_KEYS } from '../../utils/storage-utils';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { clampDockWidth, parseDockWidth } from './workspace-dock-geometry';
-import { DOCK_MODE_DEFAULT, parseDockMode, type WorkspaceDockMode } from './workspace-dock-mode';
+import {
+  DOCK_MODE_DEFAULT,
+  DOCKED_SIDE_DEFAULT,
+  isFloating,
+  parseDockMode,
+  parseDockedSide,
+  toDockedSide,
+  type WorkspaceDockedSide,
+  type WorkspaceDockMode,
+} from './workspace-dock-mode';
 
 const { WIDTH_DEFAULT } = PANEL_LAYOUT.WORKSPACE_DOCK;
 
@@ -97,13 +114,57 @@ export function getDockMode(): WorkspaceDockMode {
 }
 
 /**
- * Αλλάζει πλευρά. Ίδια τιμή ⇒ πλήρες no-op (ούτε notify ούτε εγγραφή).
+ * Η **τελευταία πλευρά** αγκύρωσης — «πού επιστρέφει η παλέτα όταν πάψει να αιωρείται».
+ *
+ * Δεν εκθέτει `subscribe`: κανείς δεν **ζωγραφίζει** αυτή την τιμή. Διαβάζεται τη στιγμή της
+ * μετάβασης (διπλό κλικ επικεφαλίδας) και μόνο τότε. Ένας συνδρομητής θα ήταν συνδρομή σε
+ * ιστορικό.
+ */
+const lastDockedSideStore = createPersistedValue<WorkspaceDockedSide>(
+  STORAGE_KEYS.WORKSPACE_DOCK_LAST_SIDE,
+  DOCKED_SIDE_DEFAULT,
+  {
+    equals: Object.is,
+    removeOnDefault: true,
+    // Στενότερος επικυρωτής από του `mode`: ένα αποθηκευμένο `'floating'` εδώ (από
+    // χειροκίνητη αλλοίωση ή από μελλοντικό σχήμα) θα σήμαινε «βγες από την αιώρηση προς την
+    // αιώρηση» — δηλαδή ένα διπλό κλικ που δεν κάνει τίποτα. Δες `parseDockedSide`.
+    validate: (hydrated): WorkspaceDockedSide => parseDockedSide(hydrated) ?? DOCKED_SIDE_DEFAULT,
+  },
+);
+
+/** Πού θα επιστρέψει η παλέτα αν ξανα-αγκυρωθεί χωρίς να δηλωθεί πλευρά. */
+export function getLastDockedSide(): WorkspaceDockedSide {
+  return lastDockedSideStore.get();
+}
+
+/**
+ * Αλλάζει κατάσταση αγκύρωσης. Ίδια τιμή ⇒ πλήρες no-op (ούτε notify ούτε εγγραφή).
  *
  * ⚠️ Το **πλάτος δεν αλλάζει** (ADR-724 §7): αλλάζοντας πλευρά ο χρήστης δεν ζήτησε άλλο
  * μέγεθος. Αυτό είναι και ο λόγος που τα δύο πεδία είναι ανεξάρτητα.
+ *
+ * ⚠️ **Η καταγραφή της τελευταίας πλευράς γίνεται ΕΔΩ, όχι στον καλούντα** (Φ3). Υπάρχουν
+ * ήδη τρεις ανεξάρτητοι καλούντες (μενού «⋮», μενού δεξιού κλικ, απόθεση σε ζώνη §7.1) και
+ * η Φ3 προσθέτει τέταρτο (διπλό κλικ επικεφαλίδας). Αν η καταγραφή ζούσε στον καλούντα, θα
+ * αρκούσε **ένας** να την ξεχάσει ώστε η παλέτα να «γυρίζει αριστερά» ανεξήγητα — και το
+ * σφάλμα θα φαινόταν μόνο στη διαδρομή που κανείς δεν δοκίμασε. Ένας γράφων, μία εγγύηση.
  */
 export function setDockMode(mode: WorkspaceDockMode): void {
+  const side = toDockedSide(mode);
+  if (side !== null) lastDockedSideStore.set(side);
   dockModeStore.set(mode);
+}
+
+/**
+ * Εναλλαγή **αγκύρωση ⇄ αιώρηση** — η χειρονομία του διπλού κλικ στην επικεφαλίδα (§8, Revit).
+ *
+ * Ιδεμποτεντικό ως προς το ζεύγος (δύο κλήσεις = επιστροφή στην αρχική κατάσταση) και
+ * **ασύμμετρο ως προς την πληροφορία**: η έξοδος από την αιώρηση χρειάζεται προορισμό, η
+ * είσοδος όχι. Γι' αυτό διαβάζει το {@link getLastDockedSide} και όχι κάποια προεπιλογή.
+ */
+export function toggleDockFloat(): void {
+  setDockMode(isFloating(getDockMode()) ? getLastDockedSide() : 'floating');
 }
 
 /**
@@ -133,6 +194,11 @@ export const subscribeDockMode = dockModeStore.subscribe;
  */
 export function resetDockLayout(): void {
   setDockedWidth(WIDTH_DEFAULT);
+  // ⚠️ Ρητά **πριν** το `setDockMode`, και ρητά **χωριστά**: το `setDockMode(DOCK_MODE_DEFAULT)`
+  // θα έγραφε ούτως ή άλλως την ίδια πλευρά — αλλά **μόνο επειδή** οι δύο προεπιλογές τυχαίνει
+  // να συμπίπτουν σήμερα. Αν αύριο το `DOCK_MODE_DEFAULT` γίνει `'floating'`, η σιωπηρή
+  // εξάρτηση θα άφηνε την «τελευταία πλευρά» άθικτη — δηλαδή η «Επαναφορά» θα ήταν μερική.
+  lastDockedSideStore.set(DOCKED_SIDE_DEFAULT);
   setDockMode(DOCK_MODE_DEFAULT);
   clearAllPanelGeometry();
 }

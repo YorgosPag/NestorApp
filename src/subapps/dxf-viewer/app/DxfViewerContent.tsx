@@ -36,8 +36,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { type FloatingPanelHandle } from '../ui/FloatingPanelContainer';
 import { MainContentSection, FloatingPanelsSection } from './dxf-viewer-lazy-components';
 // Layout Components - Canvas V2
-import { SidebarSection } from '../layout/SidebarSection';
-import { MobileSidebarDrawer } from '../layout/MobileSidebarDrawer';
+import { WorkspaceSidebarSlot } from '../layout/WorkspaceSidebarSlot'; // ADR-724 Φ3
 import { WorkspaceSplitLayout } from '../layout/WorkspaceSplitLayout'; // ADR-724 Φ1
 import { useResponsiveLayout } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 // ADR-040 Phase XXII.C: TransformContext duplicate SSoT removed. ImmediateTransformStore
@@ -375,23 +374,20 @@ export const DxfViewerContent = React.memo<DxfViewerAppProps>((props) => {
           ✅ ADR-176 responsive · ADR-309 Φ2 wizard import */}
       <WorkspaceSplitLayout
         split={layoutMode === 'desktop'}
-        sidebar={layoutMode === 'desktop' ? (
-          <SidebarSection
+        /* ADR-724 Φ3 — render prop: η **κατάσταση** αγκύρωσης δεν φτάνει ποτέ εδώ (θα απαιτούσε
+           συνδρομή στον κορυφαίο orchestrator, ADR-040). Η αντιστοίχιση μορφή→δοχείο ζει στο
+           `WorkspaceSidebarSlot`· εδώ μένει μόνο η τροφοδοσία με δεδομένα. */
+        sidebar={(variant) => (
+          <WorkspaceSidebarSlot
+            variant={variant}
             floatingRef={floatingRef}
             currentScene={currentScene}
             activeTool={activeTool}
             onSceneImported={handleFileImportWithEncoding}
             projectId={levelManager.saveContext?.projectId ?? undefined}
             floorplanId={levelManager.fileRecordId ?? undefined}
-          />
-        ) : (
-          <MobileSidebarDrawer
-            open={ui.sidebarOpen}
-            onOpenChange={ui.setSidebarOpen}
-            floatingRef={floatingRef}
-            currentScene={currentScene}
-            activeTool={activeTool}
-            onSceneImported={handleFileImportWithEncoding}
+            drawerOpen={ui.sidebarOpen}
+            onDrawerOpenChange={ui.setSidebarOpen}
           />
         )}
       >

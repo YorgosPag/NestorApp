@@ -7279,7 +7279,12 @@
     "menuLabel": "Palette options",
     "dockLeft": "Dock left",
     "dockRight": "Dock right",
+    "floating": "Floating",
     "resetLayout": "Reset palette layout",
-    "statusLabel": "Palette status"
+    "statusLabel": "Palette status",
+    "dragHandleHint": "Drag to move · double-click to dock",
+    "dockHandleHint": "Double-click to float the palette",
+    "dropPreviewLeft": "Dock left on drop",
+    "dropPreviewRight": "Dock right on drop"
   }
 }

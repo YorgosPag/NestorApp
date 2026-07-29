@@ -74,6 +74,13 @@ export const STORAGE_KEYS = {
   // προφίλ συνδρομητών (το πλάτος **δεν** έχει, η πλευρά έχει). Κοινό record θα σήμαινε ότι
   // κάθε σύρσιμο ειδοποιεί τους συνδρομητές της πλευράς — ακριβώς το ADR-040 πρόβλημα.
   WORKSPACE_DOCK_MODE: 'dxf-viewer:workspace-dock-mode:v1',
+
+  // Η **τελευταία πλευρά** στην οποία ήταν αγκυρωμένη η παλέτα πριν αιωρηθεί (ADR-724 Φ3).
+  // Ξεχωριστό πεδίο και όχι «παράγωγο» του `WORKSPACE_DOCK_MODE`: μόλις το mode γίνει
+  // `'floating'`, η πληροφορία «πού ήταν» έχει **χαθεί** από εκείνο το κλειδί. Χωρίς αυτό, το
+  // διπλό κλικ στην επικεφαλίδα θα επέστρεφε πάντα αριστερά — ενώ το Revit επιστρέφει την
+  // παλέτα **εκεί που την άφησες**. Ένα τρίτο κλειδί κοστίζει λιγότερο από ένα ψέμα.
+  WORKSPACE_DOCK_LAST_SIDE: 'dxf-viewer:workspace-dock-last-side:v1',
 } as const;
 
 export type StorageKey = typeof STORAGE_KEYS[keyof typeof STORAGE_KEYS] | string;

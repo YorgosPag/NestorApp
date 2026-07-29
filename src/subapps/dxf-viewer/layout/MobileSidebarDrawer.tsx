@@ -53,10 +53,14 @@ export const MobileSidebarDrawer: React.FC<MobileSidebarDrawerProps> = ({
         </SheetHeader>
         <nav role="navigation" className="h-full">
           {/*
-            ADR-724 Φ1: το `variant` prop έφυγε — η παλέτα γεμίζει πλέον ό,τι της δώσει ο
-            γονέας της, και εδώ ο γονέας είναι το `SheetContent` (`w-[85vw] max-w-[384px]`).
+            ADR-724 Φ1: το πλάτος δεν έρχεται από το `variant` — η παλέτα γεμίζει ό,τι της δώσει
+            ο γονέας της, και εδώ ο γονέας είναι το `SheetContent` (`w-[85vw] max-w-[384px]`).
+            ADR-724 Φ3: το `variant` επέστρεψε, αλλά δηλώνει **ποιος είναι το εξωτερικό δοχείο**.
+            Εδώ είναι το συρτάρι — και είναι **σταθερό**: το dock system είναι desktop-only
+            (§4.5), οπότε αυτή η τιμή δεν εξαρτάται ποτέ από το `mode` του store.
           */}
           <SidebarSection
+            variant="drawer"
             floatingRef={floatingRef}
             currentScene={currentScene}
             activeTool={activeTool}

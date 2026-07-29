@@ -24,11 +24,11 @@
 'use client';
 
 import React, { useCallback, useMemo } from 'react';
-import { Check, PanelLeft, PanelRight, RotateCcw, type LucideIcon } from 'lucide-react';
+import { AppWindow, Check, PanelLeft, PanelRight, RotateCcw, type LucideIcon } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useDockMode } from '../systems/workspace/useWorkspaceDock';
 import { setDockMode, resetDockLayout } from '../systems/workspace/workspace-dock-store';
-import { DOCK_MODES } from '../systems/workspace/workspace-dock-mode';
+import { DOCK_MODES, type WorkspaceDockMode } from '../systems/workspace/workspace-dock-mode';
 
 /** Μία εντολή του μενού, ανεξάρτητη από το primitive που θα τη ζωγραφίσει. */
 export interface DockMenuEntry {
@@ -42,16 +42,34 @@ export interface DockMenuEntry {
   readonly onSelect: () => void;
 }
 
-/** Τα i18n κλειδιά κάθε πλευράς, δίπλα στην τιμή που περιγράφουν — μηδέν `switch` αλλού. */
-const MODE_PRESENTATION = {
+/**
+ * Τα i18n κλειδιά κάθε κατάστασης, δίπλα στην τιμή που περιγράφουν — μηδέν `switch` αλλού.
+ *
+ * ⚠️ Ο τύπος είναι `Record<WorkspaceDockMode, …>` **ρητά**, όχι συμπερασμένος από το literal.
+ * Με συμπερασμό, μια νέα τιμή στο `DOCK_MODES` χωρίς αντίστοιχη καταχώριση εδώ θα έδινε
+ * `undefined` στο `MODE_PRESENTATION[value]` και το μενού θα έσκαγε **στον χρόνο εκτέλεσης**,
+ * τη στιγμή που ο χρήστης ανοίγει το μενού. Με ρητό `Record`, λείπει κλειδί ⇒ **σφάλμα
+ * μεταγλώττισης**. Ίδιο δόγμα με το `resolveWorkspaceLayout`: η απαρίθμηση δεν επιτρέπεται να
+ * μεγαλώσει σιωπηλά.
+ */
+const MODE_PRESENTATION: Record<
+  WorkspaceDockMode,
+  { readonly labelKey: string; readonly icon: LucideIcon }
+> = {
   'docked-left': { labelKey: 'workspaceDock.dockLeft', icon: PanelLeft },
   'docked-right': { labelKey: 'workspaceDock.dockRight', icon: PanelRight },
+  // `AppWindow` και όχι `Move`: το εικονίδιο περιγράφει **τι γίνεται η παλέτα** (ελεύθερο
+  // παράθυρο), όχι τι θα κάνει ο χρήστης μετά. Ίδια λογική με τα `PanelLeft`/`PanelRight`.
+  floating: { labelKey: 'workspaceDock.floating', icon: AppWindow },
 } as const;
 
 /**
  * Το μοντέλο του μενού: η **μία** πηγή για το τι εντολές υπάρχουν, με ποια σειρά, και ποια
- * είναι ενεργή. Οι πλευρές παράγονται από το `DOCK_MODES` — μια μελλοντική τιμή (Φ3
- * `'floating'`) εμφανίζεται μόνη της, χωρίς να το θυμηθεί κανείς εδώ.
+ * είναι ενεργή. Οι καταστάσεις παράγονται από το `DOCK_MODES`.
+ *
+ * ✅ **Επαληθεύτηκε στη Φ3**: η προσθήκη του `'floating'` στο `DOCK_MODES` εμφάνισε την εντολή
+ * «Αιωρούμενη» **χωρίς καμία αλλαγή σε αυτή τη συνάρτηση** — μόνο η μία καταχώριση στο
+ * `MODE_PRESENTATION` (που ο compiler απαιτεί ούτως ή άλλως). Η πρόβλεψη της Φ2 ίσχυσε.
  */
 export function useWorkspaceDockMenu(): readonly DockMenuEntry[] {
   const { t } = useTranslation('dxf-viewer-shell');
