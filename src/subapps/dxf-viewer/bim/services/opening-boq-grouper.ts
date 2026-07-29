@@ -23,6 +23,7 @@ import type { OpeningKind, OpeningParams } from '../types/opening-types';
 import type { OpeningTypeParams } from '../types/bim-family-type';
 import type { AtoeMappingEntry } from '../config/bim-to-atoe-mapping';
 import { buildBoqBaseRow } from './boq-base-row';
+import { compareInstantsAsc } from '@/lib/date-local';
 
 // ────────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -47,7 +48,7 @@ export interface GrouperOpeningRow {
   readonly kind: OpeningKind;
   readonly params: OpeningParams;
   /** `createdAt.toMillis()` for stable chronological sort within a group. */
-  readonly createdAtMillis: number;
+  readonly createdAtMillis: number | null;
 }
 
 /**
@@ -62,7 +63,7 @@ export interface OpeningDocRow {
   readonly params: OpeningParams;
   readonly typeId?: string;
   readonly typeOverrides?: Partial<OpeningTypeParams>;
-  readonly createdAtMillis: number;
+  readonly createdAtMillis: number | null;
 }
 
 /**
@@ -241,7 +242,7 @@ export function groupBySignature(
     bucket.rows.push(row);
   }
   for (const bucket of buckets.values()) {
-    bucket.rows.sort((a, b) => a.createdAtMillis - b.createdAtMillis);
+    bucket.rows.sort((a, b) => compareInstantsAsc(a.createdAtMillis, b.createdAtMillis));
   }
   return buckets;
 }
@@ -273,7 +274,7 @@ export function buildEffectiveSignatureMembers(
     bucket.members.push({ id: row.id, kind: sig.kind, params: eff, createdAtMillis: row.createdAtMillis });
   }
   for (const bucket of buckets.values()) {
-    bucket.members.sort((a, b) => a.createdAtMillis - b.createdAtMillis);
+    bucket.members.sort((a, b) => compareInstantsAsc(a.createdAtMillis, b.createdAtMillis));
   }
   return buckets;
 }

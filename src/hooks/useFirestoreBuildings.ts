@@ -31,6 +31,7 @@ import type { QueryResult } from '@/services/firestore';
 import type { DocumentData } from 'firebase/firestore';
 import type { Building } from '@/types/building/contracts';
 import { createModuleLogger } from '@/lib/telemetry';
+import { compareInstantsDesc } from '@/lib/date-local';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
 // SSoT pub/sub primitive (WAVE 3) — replaces the hand-rolled listener Set + emit()
@@ -48,19 +49,7 @@ interface UseFirestoreBuildingsReturn {
   refetch: () => Promise<void>;
 }
 
-/**
- * Normalize a createdAt value to milliseconds.
- * Handles Firestore Timestamp objects, ISO strings, and numeric millis.
- */
-function toMillis(value: unknown): number {
-  if (!value) return 0;
-  if (typeof value === 'object' && value !== null && 'toMillis' in value) {
-    return (value as { toMillis(): number }).toMillis();
-  }
-  if (typeof value === 'string') return new Date(value).getTime() || 0;
-  if (typeof value === 'number') return value;
-  return 0;
-}
+
 
 // ──────────────────────────────────────────────────────────────────────────
 // Shared module-level store (SSoT listener — one onSnapshot for ALL consumers)
@@ -101,7 +90,7 @@ function startFirestoreSubscription(): void {
         // Mirror server-side soft-delete exclusion (ADR-281)
         .filter(doc => doc.status !== 'deleted')
         // Mirror server-side sort: createdAt desc
-        .sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt))
+        .sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt))
         .map(doc => doc as unknown as Building);
 
       logger.debug('Buildings updated via real-time subscription', { count: mapped.length });

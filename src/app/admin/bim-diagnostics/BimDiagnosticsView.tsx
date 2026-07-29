@@ -11,10 +11,9 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Timestamp } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { nowISO } from '@/lib/date-local';
+import { MS_PER_DAY, nowISO, normalizeToMillisOrNull } from '@/lib/date-local';
 import { useDiagnosticsQuery } from './hooks/useDiagnosticsQuery';
 import {
   DiagnosticsFiltersBar,
@@ -27,25 +26,12 @@ import { DiagnosticsCharts } from './components/DiagnosticsCharts';
 import { downloadDiagnosticsCsv } from '@/lib/exports/diagnostics-csv';
 import type { PerformanceDiagnostic, TriageStatus } from '@/types/performance-diagnostic';
 
-function tsToMs(value: Timestamp | string | null | undefined): number | null {
-  if (!value) return null;
-  if (typeof value === 'string') {
-    const ms = Date.parse(value);
-    return Number.isNaN(ms) ? null : ms;
-  }
-  try {
-    return value.toDate().getTime();
-  } catch {
-    return null;
-  }
-}
-
 function applyFilters(
   rows: ReadonlyArray<PerformanceDiagnostic>,
   filters: DiagnosticsFilters,
 ): PerformanceDiagnostic[] {
   const fromMs = filters.dateFrom ? Date.parse(filters.dateFrom) : null;
-  const toMs = filters.dateTo ? Date.parse(filters.dateTo) + 24 * 60 * 60 * 1000 : null;
+  const toMs = filters.dateTo ? Date.parse(filters.dateTo) + MS_PER_DAY : null;
   const fpsMin = filters.fpsMin ? Number(filters.fpsMin) : null;
   const fpsMax = filters.fpsMax ? Number(filters.fpsMax) : null;
   const projectQ = filters.projectQuery.trim().toLowerCase();
@@ -70,7 +56,7 @@ function applyFilters(
       if (browserFamily !== filters.browser) return false;
     }
 
-    const ms = tsToMs(row.createdAt);
+    const ms = normalizeToMillisOrNull(row.createdAt);
     if (fromMs !== null && (ms === null || ms < fromMs)) return false;
     if (toMs !== null && (ms === null || ms >= toMs)) return false;
 

@@ -1473,9 +1473,10 @@
     },
     "date-local": {
       "ssotFile": "src/lib/date-local.ts",
-      "description": "Date normalization + ISO/millis conversion canonical module. Blocks: (a) re-declaration of normalizeToDate/normalizeToISO/fieldToISO/normalizeToMillis/getNestedTimestampISO/toLocalDateInputValue/combineLocalDateTime; (b) scattered new Date().toISOString() — migrated to nowISO() in Phase C.1; (c) scattered Timestamp.fromDate(new Date()) — migrated to nowTimestamp() in Phase C.2. Baseline freezes current 309 + 19 legacy occurrences. ADR-314 Phase A + C.",
+      "description": "Date normalization + ISO/millis conversion canonical module. Blocks: (a) re-declaration of normalizeToDate/normalizeToISO/fieldToISO/normalizeToMillis/getNestedTimestampISO/toLocalDateInputValue/combineLocalDateTime; (b) scattered new Date().toISOString() — migrated to nowISO() in Phase C.1; (c) scattered Timestamp.fromDate(new Date()) — migrated to nowTimestamp() in Phase C.2; (d) ADR-218 Phase 4 — RENAMED re-implementations of the millis funnel: toMs/tsToMs/toMillis/toEpochMs/normalizeCreatedAtMs. Pattern (d) is the lesson of Phase 3: the name-based guard in (a) blocked only the CANONICAL names, so 11 clones simply called themselves toMs/tsToMs/toMillis and stayed invisible — 4 different 'I do not know' sentinels (NaN/null/undefined/0) and 7 of them re-implementing shape detection badly enough to silently return 0 for ISO strings, Date instances and JSON-serialised Timestamps. Deliberately anchored on 'function\\s+' and NOT '(function|const)': local variables named toMs/toEpochMs are legitimate date-RANGE filter bounds (BimDiagnosticsView, entity-audit-client, quarter-helpers) and matching them would be pure false-positive noise — the N.12 trap. Matches ZERO files as of 2026-07-29, so it needs neither allowlist nor baseline: any hit is a NEW clone. Baseline freezes current 309 + 19 legacy occurrences. ADR-314 Phase A + C, ADR-218 Phase 4.",
       "forbiddenPatterns": [
         "(function|const)\\s+(normalizeToDate|normalizeToISO|fieldToISO|normalizeToMillis|getNestedTimestampISO|toLocalDateInputValue|combineLocalDateTime)\\b",
+        "function\\s+(toMs|tsToMs|toMillis|toEpochMs|normalizeCreatedAtMs)\\s*\\(",
         "new\\s+Date\\s*\\(\\s*\\)\\.toISOString\\s*\\(\\s*\\)",
         "Timestamp\\.fromDate\\s*\\(\\s*new\\s+Date\\s*\\("
       ],

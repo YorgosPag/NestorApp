@@ -30,6 +30,7 @@ import type {
 } from '@/types/floorplan-overlays';
 import type { FloorOverlayItem } from '@/hooks/useFloorOverlays';
 import type { Overlay, OverlayKind, OverlayStyle, Status, UpdateOverlayData } from './types';
+import { normalizeToMillisOrNull } from '@/lib/date-local';
 
 // ─── Internal: only the 4 layering roles map back to OverlayKind ──────────────
 
@@ -81,34 +82,44 @@ export function polygonGeometryFromTuples(
 
 // ─── Style ⇄ legacy style ─────────────────────────────────────────────────────
 
+// Τα δύο σχήματα διαφέρουν σε **ένα** όνομα πεδίου: `strokeWidth` (SSoT) ⇄
+// `lineWidth` (legacy). Τα υπόλοιπα τρία ταυτίζονται. Οι δύο συναρτήσεις μένουν
+// χωριστές επίτηδες — μια γενική «remap» θα έκρυβε ποια κατεύθυνση κάνει τι.
 export function ssotStyleToLegacy(style: SsotOverlayStyle | undefined): OverlayStyle | undefined {
   if (!style) return undefined;
+  const { stroke, fill, strokeWidth, opacity } = style;
   return {
-    ...(style.stroke !== undefined ? { stroke: style.stroke } : {}),
-    ...(style.fill !== undefined ? { fill: style.fill } : {}),
-    ...(style.strokeWidth !== undefined ? { lineWidth: style.strokeWidth } : {}),
-    ...(style.opacity !== undefined ? { opacity: style.opacity } : {}),
+    ...(stroke !== undefined ? { stroke } : {}),
+    ...(fill !== undefined ? { fill } : {}),
+    ...(strokeWidth !== undefined ? { lineWidth: strokeWidth } : {}),
+    ...(opacity !== undefined ? { opacity } : {}),
   };
 }
 
 export function legacyStyleToSsot(style: OverlayStyle | undefined): SsotOverlayStyle | undefined {
   if (!style) return undefined;
+  const { stroke, fill, lineWidth, opacity } = style;
   return {
-    ...(style.stroke !== undefined ? { stroke: style.stroke } : {}),
-    ...(style.fill !== undefined ? { fill: style.fill } : {}),
-    ...(style.lineWidth !== undefined ? { strokeWidth: style.lineWidth } : {}),
-    ...(style.opacity !== undefined ? { opacity: style.opacity } : {}),
+    ...(stroke !== undefined ? { stroke } : {}),
+    ...(fill !== undefined ? { fill } : {}),
+    ...(lineWidth !== undefined ? { strokeWidth: lineWidth } : {}),
+    ...(opacity !== undefined ? { opacity } : {}),
   };
 }
 
 // ─── Read mapper: FloorOverlayItem → legacy Overlay ───────────────────────────
 
-function toMillis(ts: FloorplanOverlay['createdAt']): number {
-  if (typeof ts === 'number') return ts;
-  if (ts && typeof ts === 'object' && typeof (ts as { toMillis?: () => number }).toMillis === 'function') {
-    return (ts as { toMillis: () => number }).toMillis();
-  }
-  return 0;
+/**
+ * Το legacy `Overlay` δηλώνει `createdAt: number` (μη προαιρετικό) και το
+ * καταναλώνουν 33 αρχεία — δεν μπορεί να γίνει `number | null` σε αυτό το βήμα.
+ * Άρα το `?? 0` μένει, αλλά **σε ΕΝΑ τεκμηριωμένο σύνορο** αντί για ξαναγραμμένη
+ * ανίχνευση σχήματος: η ανάγνωση γίνεται πλέον από τον SSoT, οπότε ISO strings,
+ * `Date` και `{ seconds }` **δεν χάνονται** πια (πριν επέστρεφαν `0`).
+ *
+ * 📌 Εκκρεμεί: διαπλάτυνση `Overlay.createdAt` σε `number | null` (ADR-218 §Phase 4).
+ */
+function toLegacyOverlayMillis(ts: FloorplanOverlay['createdAt']): number {
+  return normalizeToMillisOrNull(ts) ?? 0;
 }
 
 /**
@@ -137,8 +148,8 @@ export function floorItemToLegacyOverlay(
     ...(item.label !== undefined ? { label: item.label } : {}),
     ...(item.linked ? { linked: { ...item.linked } } : {}),
     ...(ssotStyleToLegacy(item.style) ? { style: ssotStyleToLegacy(item.style) } : {}),
-    createdAt: toMillis(item.createdAt),
-    updatedAt: toMillis(item.updatedAt),
+    createdAt: toLegacyOverlayMillis(item.createdAt),
+    updatedAt: toLegacyOverlayMillis(item.updatedAt),
     createdBy: item.createdBy,
   };
 }

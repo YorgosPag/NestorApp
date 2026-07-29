@@ -14,8 +14,18 @@ export const nowISO = (): string => new Date().toISOString();
 export function normalizeToDate(val: unknown): Date | null {
   if (!val) return null;
   // Firestore Timestamp (client or admin SDK) — both expose toDate()
-  const timestampCandidate = val as { toDate?: () => Date };
+  const timestampCandidate = val as { toDate?: () => Date; toMillis?: () => number };
   if (timestampCandidate && typeof timestampCandidate.toDate === 'function') return timestampCandidate.toDate();
+  // A Timestamp-like that exposes only toMillis(). Ένας ζωντανός Firestore
+  // Timestamp έχει **και τα δύο**, οπότε το `toDate()` παραπάνω τον πιάνει πρώτο·
+  // αυτός ο κλάδος υπάρχει για τους τύπους που δηλώνουν μόνο `{ toMillis(): number }`
+  // (DXF overlays, BIM openings) και για test doubles.
+  // ⚠️ ADR-218 §Phase 4: η **απουσία** αυτού του κλάδου ήταν η αιτία 6 από τους 11
+  // τοπικούς κλώνους — δεν αντέγραφαν από τεμπελιά, ο SSoT δεν διάβαζε το σχήμα τους.
+  if (timestampCandidate && typeof timestampCandidate.toMillis === 'function') {
+    const fromMillis = new Date(timestampCandidate.toMillis());
+    return isNaN(fromMillis.getTime()) ? null : fromMillis;
+  }
   // JS Date
   if (val instanceof Date) return val;
   // A Timestamp that has been through JSON.stringify. The client SDK serialises
@@ -61,19 +71,92 @@ export function fieldToISO(
   return normalizeToISO(data[field]) ?? (fallback ?? '');
 }
 
+/** Ένα εικοσιτετράωρο σε χιλιοστά του δευτερολέπτου. */
+export const MS_PER_DAY = 86_400_000;
+
 /**
- * Extract timestamp from nested object path (e.g., "audit.createdAt").
- * Replaces `getNestedTimestamp()` in conversations/route.ts.
- * @see ADR-218
+ * Timestamp / Date / string / number → epoch millis, ή `null` όταν η τιμή **δεν
+ * είναι αναγνώσιμη χρονική στιγμή**.
+ *
+ * Αυτή είναι η **μοναδική** συνάρτηση του module που επιστρέφει ωμά millis. Ο
+ * τύπος `number | null` είναι σκόπιμος: ο compiler αναγκάζει τον καλούντα να
+ * απαντήσει «τι κάνω όταν δεν ξέρω;» στο σημείο κλήσης. Ένα sentinel μέσα στο
+ * `number` (`0` ή `NaN`) **δεν** το κάνει αυτό — και οι δύο περνούν αθόρυβα από
+ * κάθε gate που έχει το repo.
+ *
+ * Αν αυτό που θέλεις είναι **ταξινόμηση**, μην καλέσεις αυτή· κάλεσε
+ * {@link compareInstantsDesc} / {@link compareInstantsAsc}. Δεν χρειάζεσαι τον
+ * αριθμό, χρειάζεσαι τη σειρά — και ο comparator δεν εκθέτει sentinel καθόλου.
+ *
+ * @see ADR-218 §Phase 4 — γιατί έφυγε το `normalizeToMillis` που επέστρεφε `0`
  */
+export function normalizeToMillisOrNull(val: unknown): number | null {
+  return normalizeToDate(val)?.getTime() ?? null;
+}
+
 /**
- * Timestamp / Date / string / number → epoch millis, or 0.
- * Replaces scattered `getTime()` / `resolveMillis()` helpers in sort comparators.
- * @see ADR-218 Phase 2
+ * Κοινός πυρήνας των δύο comparators. `direction` = 1 για αύξουσα, -1 για φθίνουσα.
+ *
+ * **Οι άγνωστες στιγμές πηγαίνουν πάντα τελευταίες, και στις δύο κατευθύνσεις** —
+ * η σύμβαση `NULLS LAST` της SQL, και αυτό που κάνει κάθε επαγγελματικός πίνακας:
+ * μια εγγραφή χωρίς ημερομηνία δεν είναι «η αρχαιότερη», είναι «άγνωστη», και ο
+ * χρήστης θέλει πρώτα αυτά που ξέρει. Με φθίνουσα σειρά το αποτέλεσμα είναι
+ * **ταυτόσημο** με το παλιό sentinel `0` — καμία αλλαγή συμπεριφοράς στα υπάρχοντα
+ * σημεία κλήσης, που ήταν όλα φθίνοντα.
  */
-export function normalizeToMillis(val: unknown): number {
-  const d = normalizeToDate(val);
-  return d ? d.getTime() : 0;
+function compareInstants(a: unknown, b: unknown, direction: 1 | -1): number {
+  const aMs = normalizeToMillisOrNull(a);
+  const bMs = normalizeToMillisOrNull(b);
+  if (aMs === null) return bMs === null ? 0 : 1;
+  if (bMs === null) return -1;
+  const diff = aMs - bMs;
+  // `0 * -1` είναι `-0`. Το `Array.sort` το χειρίζεται σωστά, αλλά ένας comparator
+  // που επιστρέφει `-0` αποτυγχάνει σε `Object.is`-based ελέγχους ισότητας και
+  // είναι απλώς λάθος συμβόλαιο. Επιστρέφουμε κανονικό μηδέν.
+  return diff === 0 ? 0 : diff * direction;
+}
+
+/**
+ * Comparator παλαιότερου→νεότερου· άγνωστες στιγμές τελευταίες.
+ * `items.sort((a, b) => compareInstantsAsc(a.createdAt, b.createdAt))`
+ * @see ADR-218 §Phase 4
+ */
+export function compareInstantsAsc(a: unknown, b: unknown): number {
+  return compareInstants(a, b, 1);
+}
+
+/**
+ * Comparator νεότερου→παλαιότερου· άγνωστες στιγμές τελευταίες.
+ * `items.sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt))`
+ * @see ADR-218 §Phase 4
+ */
+export function compareInstantsDesc(a: unknown, b: unknown): number {
+  return compareInstants(a, b, -1);
+}
+
+/**
+ * Ημέρες που πέρασαν από τη `val` μέχρι το `now`, ή `null` αν η `val` δεν είναι
+ * αναγνώσιμη στιγμή. **Κλασματικό** αποτέλεσμα — η στρογγυλοποίηση είναι απόφαση
+ * πολιτικής του καλούντος (`Math.floor` για «συμπληρωμένες ημέρες», ωμό για κατώφλια).
+ *
+ * Το `now` είναι παράμετρος ώστε τα tests να μη χρειάζονται fake timers.
+ *
+ * @see ADR-218 §Phase 4
+ */
+export function daysSinceOrNull(val: unknown, now: number = Date.now()): number | null {
+  const ms = normalizeToMillisOrNull(val);
+  return ms === null ? null : (now - ms) / MS_PER_DAY;
+}
+
+/**
+ * Ημέρες που απομένουν μέχρι τη `val`, ή `null` αν δεν είναι αναγνώσιμη στιγμή.
+ * Αρνητικό = η στιγμή έχει ήδη περάσει. Κλασματικό, όπως το {@link daysSinceOrNull}.
+ *
+ * @see ADR-218 §Phase 4
+ */
+export function daysUntilOrNull(val: unknown, now: number = Date.now()): number | null {
+  const ms = normalizeToMillisOrNull(val);
+  return ms === null ? null : (ms - now) / MS_PER_DAY;
 }
 
 /**
@@ -121,6 +204,11 @@ export function splitDateAndTime(
   return { date: d, time: `${hh}:${mm}` };
 }
 
+/**
+ * Extract timestamp from nested object path (e.g., "audit.createdAt").
+ * Replaces `getNestedTimestamp()` in conversations/route.ts.
+ * @see ADR-218
+ */
 export function getNestedTimestampISO(data: Record<string, unknown>, path: string): string {
   const parts = path.split('.');
   let current: unknown = data;

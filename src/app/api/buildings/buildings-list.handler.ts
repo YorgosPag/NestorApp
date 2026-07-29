@@ -25,7 +25,7 @@ import { tenantScopedCollection } from '@/lib/firestore/tenant-scoped-query';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
-import { normalizeToMillis } from '@/lib/date-local';
+import { compareInstantsDesc } from '@/lib/date-local';
 
 const logger = createModuleLogger('BuildingsRoute');
 
@@ -151,7 +151,7 @@ export const GET = withStandardRateLimit(
           id: doc.id,  // ✅ Firestore document ID (always last to prevent override)
         })) as BuildingDocument[];
       // 🔄 ENTERPRISE: Server-side sort by createdAt (desc order)
-      buildings.sort((a, b) => normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt));
+      buildings.sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt));
       logger.info('[Buildings] Found buildings', { count: buildings.length, projectId, scope });
 
       return apiSuccess<BuildingsResponseData>(

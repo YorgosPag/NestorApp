@@ -19,7 +19,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { createStaleCache } from '@/lib/stale-cache';
 import { useAuth } from '@/hooks/useAuth';
 import { useCompanyId } from '@/hooks/useCompanyId';
-import { normalizeToMillis } from '@/lib/date-local';
+import { compareInstantsDesc } from '@/lib/date-local';
 import type {
   FrameworkAgreement,
   FrameworkAgreementWire,
@@ -93,9 +93,7 @@ export function useFrameworkAgreements(): UseFrameworkAgreementsReturn {
         const items = result.documents
           .map((d) => d as unknown as FrameworkAgreement)
           .filter((a) => a.isDeleted === false)
-          .sort((a, b) => {
-            return normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt);
-          });
+          .sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt));
 
         agreementsCache.set(items);
         setAgreements(items);

@@ -37,7 +37,7 @@ import { getAdminBucket, getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTITY_TYPES, type FileCategory } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { normalizeToDate } from '@/lib/date-local';
+import { compareInstantsDesc, normalizeToMillisOrNull } from '@/lib/date-local';
 
 const logger = createModuleLogger('PropertyMediaService');
 
@@ -97,10 +97,6 @@ const JS_PDF_FORMAT_BY_MIME: Record<string, 'JPEG' | 'PNG'> = {
   'image/png': 'PNG',
 };
 
-function normalizeCreatedAtMs(raw: unknown): number | undefined {
-  return normalizeToDate(raw)?.getTime() ?? undefined;
-}
-
 function toMediaItem(id: string, data: Record<string, unknown>): PropertyMediaItem | null {
   const storagePath = data.storagePath as string | undefined;
   if (!storagePath) return null;
@@ -113,7 +109,7 @@ function toMediaItem(id: string, data: Record<string, unknown>): PropertyMediaIt
     contentType: (data.contentType as string) || undefined,
     sizeBytes: typeof data.sizeBytes === 'number' ? (data.sizeBytes as number) : undefined,
     downloadUrl: (data.downloadUrl as string) || undefined,
-    createdAtMs: normalizeCreatedAtMs(data.createdAt),
+    createdAtMs: normalizeToMillisOrNull(data.createdAt) ?? undefined,
     ext: rawExt ? rawExt.toLowerCase() : undefined,
     thumbnailUrl: (data.thumbnailUrl as string) || undefined,
     thumbnailStoragePath: (data.thumbnailStoragePath as string) || undefined,
@@ -158,7 +154,7 @@ export async function listEntityMedia(
     if (item) items.push(item);
   }
 
-  items.sort((a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0));
+  items.sort((a, b) => compareInstantsDesc(a.createdAtMs, b.createdAtMs));
   return items.slice(0, limit);
 }
 
@@ -256,7 +252,7 @@ export async function downloadEntityMedia(
     })
   );
 
-  buffers.sort((a, b) => (b.createdAtMs ?? 0) - (a.createdAtMs ?? 0));
+  buffers.sort((a, b) => compareInstantsDesc(a.createdAtMs, b.createdAtMs));
 
   const totalBytes = buffers.reduce((sum, b) => sum + b.bytes.byteLength, 0);
   logger.info('Entity media buffers loaded', {

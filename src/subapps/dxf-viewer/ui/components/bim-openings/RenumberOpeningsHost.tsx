@@ -27,19 +27,13 @@ import { RenumberOpeningsCommand } from '../../../core/commands/entity-commands/
 import type { OpeningKind, OpeningParams } from '../../../bim/types/opening-types';
 import type { RenumberOpeningRow, RenumberResult } from '../../../bim/services/opening-renumber-service';
 import { RenumberOpeningsDialog } from './RenumberOpeningsDialog';
+import { normalizeToMillisOrNull } from '@/lib/date-local';
 
 interface OpeningRawDoc {
   readonly kind?: OpeningKind;
   readonly floorId?: string;
   readonly params?: OpeningParams;
   readonly createdAt?: Timestamp | { toMillis?: () => number };
-}
-
-function toMillis(value: OpeningRawDoc['createdAt']): number {
-  if (value && typeof (value as { toMillis?: () => number }).toMillis === 'function') {
-    try { return (value as Timestamp).toMillis(); } catch { return 0; }
-  }
-  return 0;
 }
 
 export interface RenumberOpeningsHostProps {
@@ -200,7 +194,7 @@ async function loadRows(
       kind: data.kind,
       floorId: data.floorId,
       params: data.params,
-      createdAtMillis: toMillis(data.createdAt),
+      createdAtMillis: normalizeToMillisOrNull(data.createdAt),
     });
     if (data.floorId) floorIds.add(data.floorId);
   });

@@ -1,22 +1,22 @@
 /**
  * Framework Agreement discount computation — ADR-330 Phase 5.5
  *
- * Pure, side-effect-free functions. No state, no hooks.
+ * Deterministic functions. No state, no hooks. Η μόνη παρενέργεια είναι
+ * διαγνωστικό `logger.warn` όταν μια συμφωνία έχει μη αναγνώσιμο εύρος ισχύος
+ * (ADR-218 §Phase 4) — δεν επηρεάζει το αποτέλεσμα, δεν φτάνει στον χρήστη.
  * Used by usePOFrameworkAgreement to resolve and compute discounts.
  */
 
 import type { FrameworkAgreementLike } from '../types/framework-agreement';
-import { normalizeToDate } from '@/lib/date-local';
+import { normalizeToMillisOrNull } from '@/lib/date-local';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('FrameworkAgreementDiscount');
 
 export interface FADiscountResult {
   discountPercent: number;
   discountAmount: number;
   netTotal: number;
-}
-
-/** ms-since-epoch, or NaN when the value is not a readable instant. */
-function toMs(ts: unknown): number {
-  return normalizeToDate(ts)?.getTime() ?? NaN;
 }
 
 /**
@@ -38,8 +38,20 @@ export function resolveActiveFa(
       if (fa.isDeleted) return false;
       if (fa.vendorContactId !== supplierId) return false;
 
-      const from = toMs(fa.validFrom);
-      const until = toMs(fa.validUntil);
+      // ⚠️ ADR-218 §Phase 4 — μη αναγνώσιμο εύρος ισχύος ΔΕΝ σημαίνει «ισχύει».
+      // Πριν, το `toMs()` επέστρεφε `NaN` και οι δύο συγκρίσεις παρακάτω έβγαζαν
+      // `false` (κάθε σύγκριση με NaN είναι false) ⇒ η συμφωνία περνούσε ως
+      // **μονίμως ενεργή** και εφαρμοζόταν έκπτωση που έπρεπε να έχει λήξει.
+      const from = normalizeToMillisOrNull(fa.validFrom);
+      const until = normalizeToMillisOrNull(fa.validUntil);
+      if (from === null || until === null) {
+        logger.warn('Framework agreement has an unreadable validity range — treated as not active', {
+          agreementId: fa.id,
+          validFrom: String(fa.validFrom),
+          validUntil: String(fa.validUntil),
+        });
+        return false;
+      }
       if (now < from || now > until) return false;
 
       // null = all projects; [] = no projects; list = specific projects

@@ -1,6 +1,7 @@
 import { normalizeSearchText } from '@/lib/search/search';
 import { parseLocaleNumber } from '@/lib/number/locale-number';
 import type { Quote } from '../types/quote';
+import { normalizeToDate } from '@/lib/date-local';
 
 export type SearchPattern = 'quote-number' | 'date' | 'numeric' | 'free-text';
 
@@ -32,19 +33,9 @@ function parseQueryDate(query: string): Date | null {
   return new Date(year, month - 1, day);
 }
 
-// Handles both Firestore Timestamp and serialized { seconds } objects
-function toMs(ts: unknown): number {
-  if (!ts) return 0;
-  const t = ts as { toMillis?: () => number; seconds?: number };
-  if (typeof t.toMillis === 'function') return t.toMillis();
-  if (typeof t.seconds === 'number') return t.seconds * 1000;
-  return 0;
-}
-
 function isSameDay(ts: unknown, targetDate: Date): boolean {
-  const ms = toMs(ts);
-  if (!ms) return false;
-  const d = new Date(ms);
+  const d = normalizeToDate(ts);
+  if (!d) return false;
   return (
     d.getFullYear() === targetDate.getFullYear() &&
     d.getMonth() === targetDate.getMonth() &&

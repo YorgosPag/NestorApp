@@ -1,4 +1,5 @@
 import type { Quote, QuoteStatus } from '../types/quote';
+import { compareInstantsDesc } from '@/lib/date-local';
 
 // NOTE: 'expired' IS a status in our FSM (quote.ts) — ADR §5.BB overlay is a separate UI concern
 // superseded ranks last — excluded from main list by useQuotes default filter (§5.AA.7)
@@ -26,15 +27,6 @@ export const VALID_SORT_KEYS: readonly SortKey[] = [
 
 export const DEFAULT_SORT_KEY: SortKey = 'status-price';
 
-// Handles both Firestore Timestamp (toMillis) and serialized { seconds } objects
-function toMs(ts: unknown): number {
-  if (!ts) return 0;
-  const t = ts as { toMillis?: () => number; seconds?: number };
-  if (typeof t.toMillis === 'function') return t.toMillis();
-  if (typeof t.seconds === 'number') return t.seconds * 1000;
-  return 0;
-}
-
 function compareByPrice(a: Quote, b: Quote): number {
   const aTotal = a.totals?.total ?? Number.POSITIVE_INFINITY;
   const bTotal = b.totals?.total ?? Number.POSITIVE_INFINITY;
@@ -48,7 +40,7 @@ function compareByPriceDesc(a: Quote, b: Quote): number {
 }
 
 function compareByRecency(a: Quote, b: Quote): number {
-  return toMs(b.submittedAt) - toMs(a.submittedAt);
+  return compareInstantsDesc(a.submittedAt, b.submittedAt);
 }
 
 function compareByVendor(a: Quote, b: Quote): number {

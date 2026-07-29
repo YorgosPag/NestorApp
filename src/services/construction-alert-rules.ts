@@ -11,7 +11,10 @@ import type { AlertRuleType, AlertSeverity } from '@/types/building/construction
 import type { BuildingMilestone } from '@/types/building/milestone';
 import type { EVMResult } from '@/services/report-engine/evm-calculator';
 import type { WeatherForecast } from '@/services/weather/open-meteo.service';
-import { normalizeToDate, nowISO } from '@/lib/date-local';
+import { daysSinceOrNull, daysUntilOrNull, nowISO } from '@/lib/date-local';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('ConstructionAlertRules');
 
 // ─── Shared helpers ───────────────────────────────────────────────────────
 
@@ -20,25 +23,44 @@ function formatDateEU(isoDate: string): string {
   return `${d}/${m}/${y}`;
 }
 
-const MS_PER_DAY = 86_400_000;
-
-/** ms-since-epoch, or NaN when the value is not a readable instant. */
-function toMs(value: unknown): number {
-  return normalizeToDate(value)?.getTime() ?? NaN;
+/**
+ * Στρογγυλοποίηση σε συμπληρωμένες ημέρες, διατηρώντας το «δεν ξέρω».
+ *
+ * Το `Math.floor` είναι απόφαση **πολιτικής** αυτού του engine («3 ημέρες
+ * μπλοκαρισμένη» σημαίνει τρεις συμπληρωμένες), γι' αυτό ζει εδώ και όχι στον
+ * SSoT — το `date-local` επιστρέφει την ακριβή κλασματική διαφορά.
+ */
+function wholeDays(value: number | null): number | null {
+  return value === null ? null : Math.floor(value);
 }
 
-function daysSince(value: unknown): number {
-  const ms = toMs(value);
-  if (isNaN(ms)) return NaN;
-  return Math.floor((Date.now() - ms) / MS_PER_DAY);
-}
-
-function daysUntil(isoDate: string): number {
-  return Math.floor((new Date(isoDate).getTime() - Date.now()) / MS_PER_DAY);
-}
-
-function overdueDays(plannedEnd: string): number {
-  return Math.floor((Date.now() - new Date(plannedEnd).getTime()) / MS_PER_DAY);
+/**
+ * Μια χρονική στιγμή που δεν διαβάζεται είναι **πρόβλημα δεδομένων**, όχι
+ * μη-συμβάν. Ο κανόνας παραλείπεται — δεν μπορούμε να αποφανθούμε — αλλά η
+ * παράλειψη **καταγράφεται**, ώστε να είναι ανιχνεύσιμο ποιο έγγραφο χρειάζεται
+ * διόρθωση.
+ *
+ * Είναι η πρακτική των επαγγελματικών εργαλείων (Revit journal, ArchiCAD Report
+ * window): κατεστραμμένα δεδομένα **ποτέ** δεν απορρίπτονται σιωπηλά. Δεν φτάνει
+ * στον χρήστη — είναι log του server.
+ *
+ * ⚠️ Πριν το ADR-218 §Phase 4 δεν υπήρχε ούτε παράλειψη ούτε καταγραφή: το
+ * `toMs()` επέστρεφε `NaN`, κάθε σύγκριση με `NaN` είναι `false`, και οι φύλακες
+ * `if (days < 3) continue` **δεν παρέλειπαν** — εξέπεμπαν ειδοποίηση με κείμενο
+ * «για NaN ημέρες» και έγραφαν `NaN` στο Firestore.
+ */
+function reportUnreadableInstant(
+  ruleType: AlertRuleType,
+  field: string,
+  rawValue: unknown,
+  entityId: string | undefined,
+): void {
+  logger.warn('Unreadable instant on construction entity — alert rule skipped', {
+    ruleType,
+    field,
+    entityId,
+    rawValue: String(rawValue),
+  });
 }
 
 // ─── Result type ─────────────────────────────────────────────────────────
@@ -65,7 +87,11 @@ export function detectTaskOverdue(tasks: ConstructionTask[]): AlertCandidate[] {
     if (task.status === 'completed') continue;
     if (task.plannedEndDate >= today) continue;
 
-    const days = overdueDays(task.plannedEndDate);
+    const days = wholeDays(daysSinceOrNull(task.plannedEndDate));
+    if (days === null) {
+      reportUnreadableInstant('task_overdue', 'plannedEndDate', task.plannedEndDate, task.id);
+      continue;
+    }
     if (days <= 0) continue;
 
     results.push({
@@ -136,7 +162,11 @@ export function detectTaskBlocked(tasks: ConstructionTask[]): AlertCandidate[] {
     const blockedSince = task.updatedAt ?? task.createdAt;
     if (!blockedSince) continue;
 
-    const days = daysSince(blockedSince);
+    const days = wholeDays(daysSinceOrNull(blockedSince));
+    if (days === null) {
+      reportUnreadableInstant('task_blocked', 'updatedAt/createdAt', blockedSince, task.id);
+      continue;
+    }
     if (days < 3) continue;
 
     results.push({
@@ -165,7 +195,11 @@ export function detectMilestoneAtRisk(
   for (const ms of milestones) {
     if (ms.status === 'completed') continue;
 
-    const days = daysUntil(ms.date);
+    const days = wholeDays(daysUntilOrNull(ms.date));
+    if (days === null) {
+      reportUnreadableInstant('milestone_risk', 'date', ms.date, ms.id);
+      continue;
+    }
     if (days > daysWindow || days < 0) continue;
     if (ms.progress >= progressThreshold) continue;
 
@@ -192,7 +226,11 @@ export function detectNoProgress(phases: ConstructionPhase[], staleDays = 5): Al
     const lastUpdate = phase.updatedAt ?? phase.createdAt;
     if (!lastUpdate) continue;
 
-    const days = daysSince(lastUpdate);
+    const days = wholeDays(daysSinceOrNull(lastUpdate));
+    if (days === null) {
+      reportUnreadableInstant('no_progress', 'updatedAt/createdAt', lastUpdate, phase.id);
+      continue;
+    }
     if (days < staleDays) continue;
 
     results.push({

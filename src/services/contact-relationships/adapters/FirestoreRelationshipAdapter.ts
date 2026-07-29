@@ -24,10 +24,11 @@ import {
   deleteDoc,
   query,
   where,
-  serverTimestamp
+  serverTimestamp,
+  type QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { normalizeToMillis } from '@/lib/date-local';
+import { compareInstantsDesc } from '@/lib/date-local';
 import { compareByLocale } from '@/lib/intl-formatting';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
@@ -218,30 +219,25 @@ export class FirestoreRelationshipAdapter {
         return `${ids[0]}_${ids[1]}_${d.relationshipType}`;
       };
 
-      // Process source relationships
-      sourceSnapshot.forEach((doc) => {
-        const rel = { id: doc.id, ...doc.data() } as ContactRelationship;
-        const key = pairKey(rel);
-        if (!processedIds.has(doc.id) && !processedPairs.has(key)) {
+      // Οι δύο όψεις (πηγή / στόχος) συγκεντρώνονται με ΤΟΝ ΙΔΙΟ κανόνα
+      // αποδιπλασιασμού — ένα σώμα, δύο κλήσεις. Δύο αντίγραφα του βρόχου θα
+      // μπορούσαν να αποκλίνουν σιωπηλά στον έλεγχο διπλότυπων.
+      const collectUnique = (snapshot: { forEach(cb: (doc: QueryDocumentSnapshot) => void): void }): void => {
+        snapshot.forEach((doc) => {
+          const rel = { id: doc.id, ...doc.data() } as ContactRelationship;
+          const key = pairKey(rel);
+          if (processedIds.has(doc.id) || processedPairs.has(key)) return;
           relationships.push(rel);
           processedIds.add(doc.id);
           processedPairs.add(key);
-        }
-      });
+        });
+      };
 
-      // Process target relationships
-      targetSnapshot.forEach((doc) => {
-        const rel = { id: doc.id, ...doc.data() } as ContactRelationship;
-        const key = pairKey(rel);
-        if (!processedIds.has(doc.id) && !processedPairs.has(key)) {
-          relationships.push(rel);
-          processedIds.add(doc.id);
-          processedPairs.add(key);
-        }
-      });
+      collectUnique(sourceSnapshot);
+      collectUnique(targetSnapshot);
 
       // Sort by createdAt manually (since we can't use orderBy with OR)
-      relationships.sort((a, b) => normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt));
+      relationships.sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt));
 
       return relationships;
     } catch (error) {

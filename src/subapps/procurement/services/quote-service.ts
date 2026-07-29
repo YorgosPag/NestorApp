@@ -6,7 +6,7 @@ import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { generateQuoteId, generateOptimisticId } from '@/services/enterprise-id.service';
 import { getNextQuoteNumber } from './quote-counters';
 import { createModuleLogger } from '@/lib/telemetry';
-import { normalizeToDate, normalizeToMillis } from '@/lib/date-local';
+import { normalizeToDate, compareInstantsDesc } from '@/lib/date-local';
 import admin from 'firebase-admin';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
@@ -159,9 +159,7 @@ export async function listQuotes(
     const docs = snap.docs
       .map((d) => ({ id: d.id, ...d.data() } as Quote))
       .filter((q) => filters.status ? q.status === filters.status : q.status !== 'archived')
-      .sort((a, b) => {
-        return normalizeToMillis(b.createdAt) - normalizeToMillis(a.createdAt);
-      });
+      .sort((a, b) => compareInstantsDesc(a.createdAt, b.createdAt));
     return docs;
   }, []);
 }

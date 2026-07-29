@@ -25,6 +25,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { OpeningKind, OpeningParams } from '../types/opening-types';
 import { formatMark } from './opening-mark-service';
+import { compareInstantsAsc, normalizeToMillisOrNull } from '@/lib/date-local';
 
 // ────────────────────────────────────────────────────────────────────────────
 // PUBLIC TYPES
@@ -36,8 +37,8 @@ export interface RenumberOpeningRow {
   readonly kind: OpeningKind;
   readonly floorId?: string;
   readonly params: OpeningParams;
-  /** `createdAt.toMillis()` for stable chronological sort. */
-  readonly createdAtMillis: number;
+  /** `createdAt` σε epoch millis, ή `null` όταν δεν είναι αναγνώσιμη στιγμή (ADR-218 §Phase 4). */
+  readonly createdAtMillis: number | null;
 }
 
 export type RenumberScope =
@@ -157,7 +158,7 @@ export function computeRenumberUpdates(
     const floorNumber = bucketFloorNumbers.get(bucketKey)!;
     const kind = bucketKinds.get(bucketKey)!;
     const kindPrefix = args.kindPrefixes[kind];
-    bucketRows.sort((a, b) => a.createdAtMillis - b.createdAtMillis);
+    bucketRows.sort((a, b) => compareInstantsAsc(a.createdAtMillis, b.createdAtMillis));
     let seq = 1;
     for (const row of bucketRows) {
       const newMark = formatMark({
@@ -192,14 +193,6 @@ interface OpeningRawDoc {
   readonly createdAt?: Timestamp | { toMillis?: () => number };
 }
 
-function toMillis(value: OpeningRawDoc['createdAt']): number {
-  if (!value) return 0;
-  if (typeof value === 'object' && typeof (value as { toMillis?: () => number }).toMillis === 'function') {
-    try { return (value as Timestamp).toMillis(); } catch { return 0; }
-  }
-  return 0;
-}
-
 /**
  * Firestore-backed renumber computation. Fetches openings rows for the given
  * (company, project, floorplan), then runs pure compute. Returns the result
@@ -230,7 +223,7 @@ async function fetchOpeningRows(args: RenumberFetchArgs): Promise<RenumberOpenin
       kind: data.kind,
       floorId: data.floorId,
       params: data.params,
-      createdAtMillis: toMillis(data.createdAt),
+      createdAtMillis: normalizeToMillisOrNull(data.createdAt),
     });
   });
   return rows;

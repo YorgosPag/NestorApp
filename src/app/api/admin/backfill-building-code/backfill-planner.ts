@@ -16,6 +16,7 @@ import {
   buildBuildingCode,
   BUILDING_CODE_PREFIX,
 } from '@/config/entity-code-config';
+import { compareInstantsAsc } from '@/lib/date-local';
 
 // =============================================================================
 // TYPES
@@ -26,7 +27,12 @@ export interface BuildingRow {
   projectId: string;
   name: string;
   existingCode: string | null;
-  createdAtMs: number;
+  /**
+   * `null` όταν το `createdAt` του εγγράφου δεν είναι αναγνώσιμη στιγμή. ΔΕΝ είναι
+   * `0`: το `0` είναι έγκυρο epoch (1970) και θα έστελνε το κτήριο **πρώτο** στη
+   * σειρά ανάθεσης γραμμάτων. Τα άγνωστα πάνε τελευταία — δες {@link compareInstantsAsc}.
+   */
+  createdAtMs: number | null;
 }
 
 export interface ProjectBackfillResult {
@@ -79,8 +85,8 @@ export function planProjectCodes(buildings: BuildingRow[]): ProjectBackfillResul
     assignments: [],
   };
 
-  // Sort by createdAt ascending (oldest first)
-  const sorted = [...buildings].sort((a, b) => a.createdAtMs - b.createdAtMs);
+  // Sort by createdAt ascending (oldest first); άγνωστες ημερομηνίες τελευταίες
+  const sorted = [...buildings].sort((a, b) => compareInstantsAsc(a.createdAtMs, b.createdAtMs));
 
   // Reserve letters already taken by existing `code` OR by "Κτήριο X" names
   const takenLetters = new Set<string>();

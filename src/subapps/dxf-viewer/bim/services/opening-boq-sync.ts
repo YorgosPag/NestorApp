@@ -25,6 +25,7 @@ import type { OpeningTypeParams } from '../types/bim-family-type';
 import { resolveOpeningEffective } from '../family-types/opening-type-resolution';
 import { deleteBoqRowIdempotent, recordBaselineDrift } from './boq-firestore-sync';
 import { boqRowWriteQueue } from './boq-row-write-queue';
+import { normalizeToMillisOrNull } from '@/lib/date-local';
 // ADR-674 rev.3 — static import of the hardware sync sibling. Creates a module
 // cycle with opening-hardware-boq-sync.ts (which imports `fetchAllOpeningsForFloorplan`
 // + `OpeningBoqContext` from THIS file), but it is safe: both sides only export
@@ -283,7 +284,7 @@ async function fetchOpeningsForSignature(
       id: d.id,
       kind: signature.kind,
       params,
-      createdAtMillis: typeof data.createdAt?.toMillis === 'function' ? data.createdAt.toMillis() : 0,
+      createdAtMillis: normalizeToMillisOrNull(data.createdAt),
     });
   });
   return matches;
@@ -324,7 +325,7 @@ export async function fetchAllOpeningsForFloorplan(
       params: data.params,
       typeId: data.typeId,
       typeOverrides: data.typeOverrides,
-      createdAtMillis: typeof data.createdAt?.toMillis === 'function' ? data.createdAt.toMillis() : 0,
+      createdAtMillis: normalizeToMillisOrNull(data.createdAt),
     });
   });
   return rows;

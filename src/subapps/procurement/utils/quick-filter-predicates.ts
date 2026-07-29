@@ -11,25 +11,15 @@
 
 import type { Material } from '@/subapps/procurement/types/material';
 import type { FrameworkAgreement } from '@/subapps/procurement/types/framework-agreement';
-import { normalizeToDate } from '@/lib/date-local';
+import { daysSinceOrNull, daysUntilOrNull, normalizeToMillisOrNull } from '@/lib/date-local';
 import type { VendorCardData } from '@/domain/cards/vendor';
 
-const DAY_MS = 86_400_000;
 const VENDOR_ACTIVE_DAYS = 365;
 const VENDOR_NEW_DAYS = 30;
 const MATERIAL_RECENT_DAYS = 90;
 const MATERIAL_INACTIVE_DAYS = 180;
 const AGREEMENT_EXPIRING_DAYS = 30;
 const VENDOR_PREFERRED_PERCENTILE = 0.2;
-
-function tsToMs(value: unknown): number | null {
-  return normalizeToDate(value)?.getTime() ?? null;
-}
-
-function daysSince(ms: number | null): number | null {
-  if (ms === null) return null;
-  return (Date.now() - ms) / DAY_MS;
-}
 
 export type VendorFilter = '' | 'all' | 'active' | 'preferred' | 'inactive' | 'new';
 
@@ -55,14 +45,14 @@ export function makeVendorPredicate(
 
   if (filter === 'active') {
     return (v) => {
-      const days = daysSince(tsToMs(v.metrics?.lastOrderDate));
+      const days = daysSinceOrNull(v.metrics?.lastOrderDate);
       return days !== null && days <= VENDOR_ACTIVE_DAYS;
     };
   }
 
   if (filter === 'inactive') {
     return (v) => {
-      const days = daysSince(tsToMs(v.metrics?.lastOrderDate));
+      const days = daysSinceOrNull(v.metrics?.lastOrderDate);
       return days === null || days > VENDOR_ACTIVE_DAYS;
     };
   }
@@ -70,7 +60,7 @@ export function makeVendorPredicate(
   if (filter === 'new') {
     return (v) => {
       const createdAt = (v.contact as { createdAt?: unknown }).createdAt;
-      const days = daysSince(tsToMs(createdAt));
+      const days = daysSinceOrNull(createdAt);
       return days !== null && days <= VENDOR_NEW_DAYS;
     };
   }
@@ -87,14 +77,14 @@ export function makeMaterialPredicate(
 
   if (filter === 'recently_used') {
     return (m) => {
-      const days = daysSince(tsToMs(m.lastPurchaseDate));
+      const days = daysSinceOrNull(m.lastPurchaseDate);
       return days !== null && days <= MATERIAL_RECENT_DAYS;
     };
   }
 
   if (filter === 'inactive') {
     return (m) => {
-      const days = daysSince(tsToMs(m.lastPurchaseDate));
+      const days = daysSinceOrNull(m.lastPurchaseDate);
       return days === null || days > MATERIAL_INACTIVE_DAYS;
     };
   }
@@ -117,7 +107,7 @@ export function makeAgreementPredicate(
 
   if (filter === 'active') {
     return (a) => {
-      const ms = tsToMs(a.validUntil);
+      const ms = normalizeToMillisOrNull(a.validUntil);
       return a.status === 'active' && ms !== null && ms > Date.now();
     };
   }
@@ -125,9 +115,8 @@ export function makeAgreementPredicate(
   if (filter === 'expiring') {
     return (a) => {
       if (a.status !== 'active') return false;
-      const ms = tsToMs(a.validUntil);
-      if (ms === null) return false;
-      const daysLeft = (ms - Date.now()) / DAY_MS;
+      const daysLeft = daysUntilOrNull(a.validUntil);
+      if (daysLeft === null) return false;
       return daysLeft >= 0 && daysLeft <= AGREEMENT_EXPIRING_DAYS;
     };
   }
@@ -135,7 +124,7 @@ export function makeAgreementPredicate(
   if (filter === 'expired') {
     return (a) => {
       if (a.status === 'expired') return true;
-      const ms = tsToMs(a.validUntil);
+      const ms = normalizeToMillisOrNull(a.validUntil);
       return ms !== null && ms < Date.now();
     };
   }
