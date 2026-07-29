@@ -1,7 +1,7 @@
 /**
  * SNAP SCHEDULER — decoupled draw-snap detection (ADR-040 cursor-lag Φ11, Revit/AutoCAD-grade)
  *
- * THE PROBLEM: `findSnapPoint` is 1-5ms of synchronous main-thread work. While it
+ * THE PROBLEM: `findSnapPoint` is heavy synchronous main-thread work. While it
  * ran INSIDE the `mousemove` event handler it kept the event handler busy, so the
  * compositor could not present the freshly-written crosshair `translate3d` until
  * the handler returned → the crosshair trailed the physical cursor under load.
@@ -16,6 +16,18 @@
  * (`ImmediateSnapStore`). The snap marker therefore lands ≤1 frame later, which
  * is imperceptible, while the crosshair stays 1:1.
  *
+ * ⚠️ ΠΟΣΟ ΑΚΡΙΒΩΣ ΚΟΣΤΙΖΕΙ — ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΕΙΚΑΣΙΑ. Η κεφαλίδα αυτή έγραφε «1-5ms»
+ * από το ADR-040 Φ11 και ΔΕΝ ξαναμετρήθηκε ποτέ, ενώ στο μεταξύ προστέθηκαν engines
+ * (ADR-597 BIM ×3, ADR-378 TEXT, ADR-408 MEP, ADR-580 grips, ADR-642 complex ×3) και το
+ * σχέδιο μεγάλωσε. Μέτρηση 2026-07-29 με το όργανο του ADR-726 (`__dxfPerf`), σχέδιο
+ * 2.910 οντοτήτων στο 1:1361, ορατή+εστιασμένη καρτέλα, `pan-pending` 60/60:
+ * `frame:snap-detection` **avg 24,2ms · min 22,1ms**, δηλαδή **75-88%** του `frame:TOTAL`.
+ * Ένας αριθμός σε σχόλιο χωρίς ημερομηνία και χωρίς όργανο είναι παγίδα για τον επόμενο
+ * (ADR-728 §2.1 / §7.3) — γι' αυτό εδώ υπάρχουν και τα τρία.
+ *
+ * ΑΝΑΣΤΟΛΗ ΚΑΤΑ ΤΗ ΠΛΟΗΓΗΣΗ (ADR-728 Φ1): αυτή η δουλειά ΔΕΝ τρέχει όσο ο χρήστης
+ * μετακινεί την οθόνη — βλ. τον guard στο `onSnapFrame` και το `NavigationGestureStore`.
+ *
  * SSoT: this module is the SOLE owner of draw-snap detection scheduling + the
  * snap-dedup state. `ImmediateSnapStore` remains the snap-RESULT SSoT (read by
  * `SnapIndicatorSubscriber`). Grip-drag snap stays synchronous in the handler
@@ -29,6 +41,8 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 // ADR-560 — grip-drag ownership guard: skip the decoupled scheduler while a grip drag owns the snap.
 import { getActiveDragGrip } from './GripDragStore';
+// ADR-728 Φ1 — SSoT «είμαστε σε χειρονομία πλοήγησης;» (ΕΝΑ ερώτημα, όχι σκόρπιο isPanning).
+import { isNavigationGesture } from '../navigation/NavigationGestureStore';
 import { findColumnDrawCornerSnap } from '../../bim/columns/column-corner-snap';
 import { resolveColumnDrawSnap } from '../../bim/columns/column-placement-snap-context';
 import { clearColumnGhostStatus } from './ColumnPlacementGhostStatusStore';
@@ -163,6 +177,22 @@ function onSnapFrame(): void {
   // `isGripDragging` prop, which flickers and let stale-armed frames slip through. Bail WITHOUT
   // clearing the store, so the grip handler's result stands.
   if (getActiveDragGrip()) { dirty = false; return; }
+  // ADR-728 Φ1 — ΑΝΑΣΤΟΛΗ ΚΑΤΑ ΤΗ ΧΕΙΡΟΝΟΜΙΑ ΠΛΟΗΓΗΣΗΣ (Revit/AutoCAD parity).
+  // Όσο ο χρήστης μετακινεί την οθόνη δεν σχεδιάζει: τα σημεία έλξης που θα υπολογίζαμε
+  // δεν τα βλέπει και δεν τα χρησιμοποιεί κανείς — και ο υπολογισμός κάθεται ΜΠΡΟΣΤΑ από
+  // τη ζωγραφική στην ίδια σειριακή ουρά του `UnifiedFrameScheduler` (ADR-728 §3.6).
+  // Μετρημένο στον browser 2026-07-29 (pan, 2.910 οντότητες, 1:1361, focus+visible,
+  // `pan-pending` 60/60): `frame:snap-detection` avg 24,2ms / **min 22,1ms** = 75-88% του
+  // `frame:TOTAL`· με OSNAP off (control group) το `frame:TOTAL` πέφτει 27,2 → 6,3ms.
+  //
+  // 🔴 Bail WITHOUT clearing the store — ΙΔΙΟ σχήμα με τον grip guard από πάνω, και εδώ
+  // είναι ΚΡΙΣΙΜΟ: το `ImmediateSnapStore` ΔΕΝ είναι μόνο δείκτης, είναι το **σημείο
+  // commit** για κολώνα/δοκάρι/τοίχο (`resolveEffectivePreviewCursor` → σιωπηλό fallback
+  // στον raw cursor όταν είναι κενό· `mouse-handler-up` ΔΕΝ ξανακαλεί `findSnapPoint` εκεί
+  // by design). Καθάρισμά του μέσα στο παράθυρο αναστολής ⇒ γεωμετρία τοποθετημένη ΕΚΤΟΣ
+  // OSNAP, σιωπηλά. Ένα snap point ζει σε ΚΟΣΜΙΚΕΣ συντεταγμένες: δεν γίνεται λάθος επειδή
+  // κινήθηκε η κάμερα. «Μην υπολογίζεις τώρα» ≠ «σβήσε ό,τι υπολογίστηκε» (ADR-728 §8.7).
+  if (isNavigationGesture()) { dirty = false; return; }
   const now = performance.now();
   if (now - lastRunMs < PANEL_LAYOUT.TIMING.SNAP_DETECTION_THROTTLE) return; // retry next frame
   lastRunMs = now;

@@ -304,7 +304,13 @@ export const DXF_TIMING = {
     /** Command-history merge window — consecutive drags within this window
      *  collapse into one undo step (shared by useEntityDrag + useGripMovement). */
     COMMAND_MERGE_WINDOW: 500,
-    /** Wheel-interaction idle timeout (bim-3d camera settles after scroll). */
+    /** Wheel-interaction idle timeout — «πότε τελείωσε η ανθρώπινη ριπή ροδέλας».
+     *  ⚠️ ΔΥΟ καταναλωτές, ένα concept (ADR-516 §4): (α) bim-3d camera settle μετά το scroll·
+     *  (β) **ADR-728 Φ1** — το idle παράθυρο του `NavigationGestureStore`, δηλαδή πόσο μετά την
+     *  τελευταία αλλαγή view transform θεωρείται ότι η χειρονομία πλοήγησης τελείωσε και το
+     *  2D snap detection ξαναρχίζει. Αλλαγή εδώ αγγίζει **και τα δύο** — και πρέπει να μένει
+     *  άνετα πάνω από ένα αργό καρέ υπό pan (μετρημένα ~50-70ms), αλλιώς η αναστολή «σπάει»
+     *  στη μέση της χειρονομίας. */
     WHEEL_IDLE: 220,
     /** Camera idle threshold before bim-3d quality escalation (IdleDetector, ADR-516 Group 6). */
     CAMERA_IDLE: 800,

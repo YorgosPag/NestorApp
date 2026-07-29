@@ -26,6 +26,8 @@ import { processMarqueeSelection } from './mouse-handler-up-marquee';
 // but the click world point was already snapped here BEFORE reaching that gate.
 import { isDimLineRefPhase } from '../../hooks/dimensions/dim-skip-snap';
 import { getActiveDragGrip, isActiveGripAltMove } from './GripDragStore';
+// ADR-728 Φ1 — ρητός τερματισμός της αναστολής πλοήγησης όταν το τέλος του pan είναι γνωστό.
+import { endNavigationGesture } from '../navigation/NavigationGestureStore';
 import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { resolveGripDragSnap } from './grip-drag-snap-resolver';
 import { isLineEntity } from '../../types/entities';
@@ -53,7 +55,7 @@ import { setColumnFaceAnchor, setColumnGhostStatus, setColumnFaceRotation, setCo
 import { columnToolBridgeStore } from '../../ui/ribbon/hooks/bridge/column-tool-bridge-store';
 import { resolveSnapConnectorElevationMm } from '../../bim/mep-segments/mep-snap-connector-elevation';
 import { LassoStore, computeLassoMode } from './LassoStore';
-import { ZoomWindowStore } from '../zoom-window/ZoomWindowStore';
+import { finishZoomWindowOnMouseUp } from '../zoom-window/finish-zoom-window';
 // ADR-455 — on-canvas X/Y section-cut handle drag.
 import { isAxisCutDragging, endAxisCutDrag } from '../axis-cut/axis-cut-drag-store';
 // ADR-507 — «Επιλογή γραμμοσκίασης»: armed hatch-only pick (even-odd SSoT, world-coords).
@@ -97,30 +99,9 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
     }
 
     // ADR-374 — ZOOM Window finish: screen rect → world bounds → fit-to-view via EventBus.
-    if (activeTool === 'zoom-window' && e.button === 0 && ZoomWindowStore.isActive()) {
-      const screenRect = ZoomWindowStore.finish();
-      if (screenRect) {
-        const upSnap = getPointerSnapshotFromElement(e.currentTarget as HTMLElement);
-        if (upSnap) {
-          const w1 = screenToWorldWithSnapshot(
-            { x: screenRect.x, y: screenRect.y },
-            transform,
-            upSnap,
-          );
-          const w2 = screenToWorldWithSnapshot(
-            { x: screenRect.x + screenRect.width, y: screenRect.y + screenRect.height },
-            transform,
-            upSnap,
-          );
-          EventBus.emit('zoom-window:apply', {
-            worldBounds: {
-              min: { x: Math.min(w1.x, w2.x), y: Math.min(w1.y, w2.y) },
-              max: { x: Math.max(w1.x, w2.x), y: Math.max(w1.y, w2.y) },
-            },
-            viewport: upSnap.viewport,
-          });
-        }
-      }
+    // Εξήχθη σε δικό του module (N.7.1) — η λογική ζει δίπλα στο ZoomWindowStore της.
+    if (activeTool === 'zoom-window' && e.button === 0
+        && finishZoomWindowOnMouseUp(e.currentTarget as HTMLElement, transform)) {
       return;
     }
 
@@ -142,6 +123,13 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
         cancelAnimationFrame(panState.animationId);
         panState.animationId = null;
       }
+
+      // ADR-728 Φ1 — το τέλος του pan είναι ΓΝΩΣΤΟ εδώ: τερμάτισε την αναστολή αμέσως,
+      // ώστε το snap να ξαναδουλέψει στην πρώτη κίνηση μετά την άφεση αντί να περιμένει
+      // ολόκληρο το idle παράθυρο.
+      // ⚠️ ΣΕΙΡΑ: ΥΠΟΧΡΕΩΤΙΚΑ **ΜΕΤΑ** το `onTransformChange(pendingTransform)` από πάνω —
+      // εκείνη η εγγραφή είναι αλλαγή transform και θα ξαναόπλιζε την αναστολή.
+      endNavigationGesture();
     }
 
     // Body-drag commit (grab body → MOVE; Ctrl+drag → COPY). Runs after pan

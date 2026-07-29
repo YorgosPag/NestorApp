@@ -35,6 +35,8 @@ import { resolveBodyDragTarget } from '../drag/body-drag-target';
 // ADR-642 §6.8 — Alt+press on a complex-linetype pattern snap (railway rail/sleeper) → whole-entity move.
 import { tryArmComplexSnapAltMove } from '../drag/complex-snap-alt-move';
 import { getHoveredEntity } from '../hover/HoverStore';
+// ADR-728 Φ1 — ρητός τερματισμός της αναστολής πλοήγησης όταν το pan εγκαταλείπει τον καμβά.
+import { endNavigationGesture } from '../navigation/NavigationGestureStore';
 import { SelectedEntitiesStore } from '../selection/SelectedEntitiesStore';
 import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 // ADR-560 §big-player grip-guard — protect a selected object's grip zone from body-drag.
@@ -312,6 +314,9 @@ export function useCentralizedMouseHandlers(
         cancelAnimationFrame(panState.animationId);
         panState.animationId = null;
       }
+      // ADR-728 Φ1 — ο δείκτης έφυγε από τον καμβά μεσοδρομής: το pan τελείωσε, άρα και
+      // η αναστολή. Χωρίς αυτό θα κρατούσε άσκοπα ολόκληρο το idle παράθυρο.
+      endNavigationGesture();
     }
   }, [cursor, onHoverEntity, lassoDownRef]);
 
