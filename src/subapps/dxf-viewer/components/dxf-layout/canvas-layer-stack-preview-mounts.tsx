@@ -76,42 +76,41 @@ import {
   type StretchPreviewMountProps,
 } from './canvas-layer-stack-tool-preview-mounts';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { SceneModel } from '../../types/scene';
 
 // PREVIEW CANVAS MOUNTS — composite zero-jsx preview mounts
 export interface PreviewCanvasMountsProps {
-  rotation: Omit<RotationPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
-  move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
-  copy: Omit<CopyPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
-  mirror: Omit<MirrorPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
-  scale: Omit<ScalePreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
-  stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'transform' | 'getCanvas' | 'getViewportElement'>;
+  rotation: Omit<RotationPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'getCanvas' | 'getViewportElement'>;
+  move: Omit<MovePreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'getCanvas' | 'getViewportElement'>;
+  copy: Omit<CopyPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'getCanvas' | 'getViewportElement'>;
+  mirror: Omit<MirrorPreviewMountProps, 'selectedEntityIds' | 'levelManager' | 'getCanvas' | 'getViewportElement'>;
+  scale: Omit<ScalePreviewMountProps, 'levelManager' | 'getCanvas' | 'getViewportElement'>;
+  stretch: Omit<StretchPreviewMountProps, 'levelManager' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-350: TRIM overlay has no extra payload — full state lives in TrimToolStore. */
   trim?: Record<string, never>;
   /** ADR-406 — MEP fixture 2D placement ghost payload. */
-  mepFixtureGhost: Omit<MepFixtureGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  mepFixtureGhost: Omit<MepFixtureGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-415 — floorplan-symbol 2D placement ghost payload. */
-  floorplanSymbolGhost: Omit<FloorplanSymbolGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  floorplanSymbolGhost: Omit<FloorplanSymbolGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ3 — electrical panel 2D placement ghost payload. */
-  electricalPanelGhost: Omit<ElectricalPanelGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  electricalPanelGhost: Omit<ElectricalPanelGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ12 — MEP manifold (plumbing) 2D placement ghost payload. */
-  mepManifoldGhost: Omit<MepManifoldGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  mepManifoldGhost: Omit<MepManifoldGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Εύρος Β — heating radiator 2D placement ghost payload. */
-  mepRadiatorGhost: Omit<MepRadiatorGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  mepRadiatorGhost: Omit<MepRadiatorGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Εύρος Β #2 — heating boiler 2D placement ghost payload. */
-  mepBoilerGhost: Omit<MepBoilerGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  mepBoilerGhost: Omit<MepBoilerGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 DHW — domestic water heater 2D placement ghost payload. */
-  mepWaterHeaterGhost: Omit<MepWaterHeaterGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  mepWaterHeaterGhost: Omit<MepWaterHeaterGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ8 — MEP segment (duct/pipe) 2D rubber-band ghost payload. */
-  mepSegmentGhost: Omit<MepSegmentGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
-  slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
-  openingGhost: Omit<OpeningGhostPreviewMountProps, 'transform' | 'getCanvas' | 'getViewportElement'>;
+  mepSegmentGhost: Omit<MepSegmentGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
+  slabOpeningGhost: Omit<SlabOpeningGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
+  openingGhost: Omit<OpeningGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   gripDragPreview: DxfGripDragPreview | null;
   levelManager: MovePreviewMountProps['levelManager'] & {
     setLevelScene: (levelId: string, scene: SceneModel) => void;
   };
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   /** ADR-040 SSoT — viewport size for the dedicated-canvas proposal ghost overlays. */
   viewport: { width: number; height: number };
   getCanvas: () => HTMLCanvasElement | null;
@@ -125,7 +124,7 @@ export interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, copy, mirror, scale, stretch, mepFixtureGhost, floorplanSymbolGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, levelManager, transform, viewport, getCanvas, getViewportElement } = props;
+  const { rotation, move, copy, mirror, scale, stretch, mepFixtureGhost, floorplanSymbolGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, levelManager, viewport, getCanvas, getViewportElement } = props;
   // ADR-532 B4 — leaf subscription: ghost mounts need the CURRENT selection at the
   // moment a Move/Rotate/Mirror tool engages, without re-rendering CanvasSection.
   const selectedEntityIds = useSelectedEntityIds();
@@ -135,7 +134,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         {...rotation}
         selectedEntityIds={selectedEntityIds}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -143,7 +141,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         {...mirror}
         selectedEntityIds={selectedEntityIds}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -151,7 +148,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         {...move}
         selectedEntityIds={selectedEntityIds}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -162,21 +158,18 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         {...copy}
         selectedEntityIds={selectedEntityIds}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <ScalePreviewMount
         {...scale}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <StretchPreviewMount
         {...stretch}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -184,7 +177,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           activation + anchor live in EntityBodyDragStore (no payload prop). */}
       <EntityBodyDragPreviewMount
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -192,7 +184,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           + per-crossing cut indicators. Store-driven first point (self-subscribes). */}
       <WallSplitKnifePreviewMount
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -200,7 +191,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           του anchor-μέλους προς το μέλος/κέρσορα. Store-driven anchor (self-subscribes). */}
       <BeamBetweenMembersPreviewMount
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -208,44 +198,37 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           στον οδηγό αναφοράς + χρυσή διακεκομμένη προς τον κέρσορα, με τους ΙΔΙΟΥΣ
           painters του Move (ADR-049). Store-driven anchor (self-subscribes). */}
       <ParallelGuideAnchorPreviewMount
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <TrimPreviewMount
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <OffsetPreviewMount
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       {/* ADR-510 Φ4e — FILLET live ghost (tangent arc + trims / rounded polyline).
           Reads the live scene at frame time for the hover hit-test (levelManager). */}
       <FilletPreviewMount
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
         levelManager={levelManager}
       />
       {/* ADR-510 Φ4f — CHAMFER live ghost (bevel line + trims / beveled polyline). */}
       <ChamferPreviewMount
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
         levelManager={levelManager}
       />
       <ExtendPreviewOverlay
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <GripDragPreviewMount
         dragPreview={gripDragPreview}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -256,7 +239,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <DimGripGhostPreviewMount
         dragPreview={gripDragPreview}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -275,56 +257,47 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
           hovered target BEFORE the click. Store-driven → no payload prop. */}
       <MatchHoverGhostPreviewMount
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <MepFixtureGhostPreviewMount
         {...mepFixtureGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       {/* ADR-415 — floorplan-symbol 2D placement ghost (WYSIWYG, sibling of the MEP fixture ghost). */}
       <FloorplanSymbolGhostPreviewMount
         {...floorplanSymbolGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <ElectricalPanelGhostPreviewMount
         {...electricalPanelGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <MepManifoldGhostPreviewMount
         {...mepManifoldGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <MepRadiatorGhostPreviewMount
         {...mepRadiatorGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <MepBoilerGhostPreviewMount
         {...mepBoilerGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <MepWaterHeaterGhostPreviewMount
         {...mepWaterHeaterGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <MepSegmentGhostPreviewMount
         {...mepSegmentGhost}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
@@ -335,14 +308,14 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       <ProposalDispatchCanvas viewport={viewport} />
       {/* ADR-441 Slice 3-perf — zero-lag follow ghost: hosted πεδιλοδοκοί ακολουθούν
           τον dragged οδηγό frame-for-frame (dedicated canvas, mount μόνο όσο σύρεται). */}
-      <GuideFollowGhostPreviewMount transform={transform} viewport={viewport} levelManager={levelManager} />
+      <GuideFollowGhostPreviewMount viewport={viewport} levelManager={levelManager} />
       {/* ADR-435 Slice 1 — clash-detection report overlay (low-freq store, inert while idle). */}
-      <ClashOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <ClashOverlayMount getCanvas={getCanvas} getViewportElement={getViewportElement} />
       {/* ADR-650 M5α — topography QA markers (low-freq report store, inert until «Έλεγχος ποιότητας»). */}
-      <TopoQaOverlayMount transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
-      <SlabOpeningGhostPreviewMount {...slabOpeningGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
-      <OpeningGhostPreviewMount {...openingGhost} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
-      <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} transform={transform} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <TopoQaOverlayMount getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <SlabOpeningGhostPreviewMount {...slabOpeningGhost} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <OpeningGhostPreviewMount {...openingGhost} getCanvas={getCanvas} getViewportElement={getViewportElement} />
+      <GripDimAnnotationMount dragPreview={gripDragPreview} levelManager={levelManager} getCanvas={getCanvas} getViewportElement={getViewportElement} />
       {/* ADR-362 Phase J4 (Round 21) + Round 23 — associated dimensions follow a
           Move/grip/rotate/mirror/scale/stretch drag LIVE (recompute per frame via the
           SAME applyAssociationUpdates SSoT the release commits). Rotate/mirror state =
@@ -361,12 +334,10 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         mirrorFirstPoint={mirror.firstPoint}
         mirrorSecondPoint={mirror.secondPoint}
         levelManager={levelManager}
-        transform={transform}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
       <OpeningTagDragMount
-        transform={transform}
         getViewportElement={getViewportElement}
         currentLevelId={levelManager.currentLevelId}
         getLevelScene={levelManager.getLevelScene}
@@ -374,7 +345,6 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       />
       {/* ADR-408 Φ7 FU#3 — editable home-run wire waypoints (active circuit). */}
       <MepWireWaypointDragMount
-        transform={transform}
         getViewportElement={getViewportElement}
         currentLevelId={levelManager.currentLevelId}
         getLevelScene={levelManager.getLevelScene}

@@ -24,7 +24,6 @@
 'use client';
 
 import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useTopoQaReport, useTopoQaSelectedFlagId } from '../../systems/topography/qa/topo-qa-store';
 import { topoQaMarkerGlyphs, topoQaMarkerPositions } from '../../systems/topography/qa/topo-qa-marker-set';
@@ -34,7 +33,7 @@ import { useViewMode3DStore, selectIs3D } from '../../bim-3d/stores/ViewMode3DSt
 import { ClashMarkerLayer } from './clash-markers/ClashMarkerLayer';
 
 export interface TopoQaOverlayMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }

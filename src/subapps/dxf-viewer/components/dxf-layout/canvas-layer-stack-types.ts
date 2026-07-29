@@ -72,9 +72,11 @@ interface ZoomSystemForStack {
   zoomToRatio: (ratioN: number, sceneUnits: SceneUnits) => void;
 }
 
+// ADR-040 Phase XXII.B — το `transform` ΑΦΑΙΡΕΘΗΚΕ από τα props: κάθε καταναλωτής
+// διαβάζει το ImmediateTransformStore SSoT μόνος του (leaf hook / frame-sub / event-time
+// getter). Ο shell ΔΕΝ ξανα-render-άρεται σε pan/zoom — αυτό είναι το συμβόλαιο.
 export interface CanvasLayerStackProps {
   // === Core canvas state ===
-  transform: ViewTransform;
   viewport: Viewport;
   activeTool: string;
   overlayMode: OverlayEditorMode;
@@ -292,7 +294,7 @@ export interface CanvasLayerStackProps {
   // === ADR-408 Φ8: MEP segment (duct/pipe) 2-click ghost preview payload ===
   mepSegmentGhostPreview: Omit<
     import('./canvas-layer-stack-mep-segment-ghost').MepSegmentGhostPreviewMountProps,
-    'transform' | 'getCanvas' | 'getViewportElement'
+    'getCanvas' | 'getViewportElement'
   >;
   // === ADR-363 Phase 3.7b+: Slab-opening ghost preview payload ===
   slabOpeningGhostPreview: {

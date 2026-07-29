@@ -6,10 +6,10 @@
  */
 'use client';
 import React, { useRef, useCallback, useEffect } from 'react';
-// ADR-040 Phase XXII.A: rendering CanvasLayerStack via the TransformBridge so the
-// transform subscription lives below CanvasSection — CanvasSection stays inert on
-// wheel zoom. Direct render is preserved as the historical reference point.
-import { CanvasLayerStackTransformBridge as CanvasLayerStack } from './CanvasLayerStackTransformBridge';
+// ADR-040 Phase XXII.B: ο TransformBridge ΚΑΤΑΡΓΗΘΗΚΕ — το transform δεν είναι πια React
+// prop πουθενά στο μονοπάτι CanvasSection→CanvasLayerStack→leaves· κάθε καταναλωτής διαβάζει
+// το ImmediateTransformStore SSoT μόνος του, άρα shell + orchestrator μένουν αδρανείς σε pan/zoom.
+import { CanvasLayerStack } from './CanvasLayerStack';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
 // ADR-040 Phase XXII.A: useCanvasRefs (stable refs + setTransform) replaces merged
 // useCanvasContext (volatile). Transform read from ImmediateTransformStore at event time,

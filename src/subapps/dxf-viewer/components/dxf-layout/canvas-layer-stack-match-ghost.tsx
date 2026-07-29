@@ -12,11 +12,10 @@
 
 import React from 'react';
 import { useMatchHoverGhostPreview } from '../../hooks/tools/useMatchHoverGhostPreview';
-import type { ViewTransform } from '../../rendering/types/Types';
 import type { LevelSceneReader } from '../../systems/levels/level-scene-accessor';
 
 export interface MatchHoverGhostPreviewMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   levelManager: LevelSceneReader;
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;

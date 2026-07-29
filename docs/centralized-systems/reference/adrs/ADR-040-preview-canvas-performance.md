@@ -4,7 +4,7 @@
 |----------|-------|
 | **Status** | APPROVED |
 | **Date** | 2026-01-01 |
-| **Last Updated** | 2026-07-11 |
+| **Last Updated** | 2026-07-30 |
 | **Category** | Drawing System |
 | **Canonical Location** | `canvas-v2/preview-canvas/` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
@@ -119,6 +119,43 @@ world(0,0) στη γωνία των χαράκων γίνεται πλέον ρ�
 useCentralizedMouseHandlers.ts, useSnapManager.tsx, ~15 ghost-preview hooks (`hooks/tools/`),
 ~25 overlay/gizmo/subscriber leaves (`components/dxf-layout/`), DxfCanvas/LayerCanvas/PreviewCanvas,
 dynamic-input σύστημα. Μηδέν αλλαγή γεωμετρίας — μόνο πότε/πώς διαβάζεται το transform.
+
+**Ολοκλήρωση (το flip):** το `transform` ΑΦΑΙΡΕΘΗΚΕ από τα `CanvasLayerStackProps` και ο
+`CanvasLayerStackTransformBridge.tsx` **ΔΙΑΓΡΑΦΗΚΕ** — ο `CanvasSection` κάνει import απευθείας
+τον shell, και ΚΑΝΕΝΑ σημείο του μονοπατιού CanvasSection→CanvasLayerStack→leaves δεν δέχεται
+πια το transform ως React prop ⇒ ο shell (React.memo) **δεν ξανα-render-άρεται σε pan/zoom**
+(πριν: memo έσπαγε ανά καρέ ⇒ 18 `transform={...}` sites ⇒ ~41 components re-render/καρέ —
+η μετρημένη αιτία του `frame:INTERVAL` ~50ms με `frame:TOTAL` 4,7-7,8ms, ADR-728 §2.3).
+
+**Μηχανισμός ανά κατηγορία καταναλωτή** (cardinal rules #1/#2):
+- **SVG/JSX overlays** → εσωτερικό `useTransformValue()` ΚΑΤΩ από low-freq gate (inner
+  subscriber component): SnapIndicator (split — ΚΑΙ το ADR-397 gate `snapCoversMoveCross`
+  μετακινήθηκε στο inner μαζί με το scale), Polygon/LassoFreehand/SketchFreehand,
+  DistMeasure (inner), DimRowHandle (νέος outer mode-gate), Group/BlockSelection, τα 5 SVG
+  παιδιά του 2D-overlays group.
+- **Effect-paint canvas painters** → `subscribeImmediateTransformFrame` + ref bundle +
+  2 effects (ιδίωμα HomeRunWires — ΜΗΔΕΝ React ανά καρέ + σωστό world-lock στο ΙΔΙΟ tick
+  με τον main canvas): GridUnderlay, FloorUnderlay, TopoGridUnderlay, FloorplanBackground,
+  Focus2D, Envelope, ContainerGizmo (×2 mounted: ρητό `containerKind` ⇒ διακριτά scheduler
+  ids — ΟΧΙ `fn.name`, mangled σε production), AnalyticalDispatch.
+- **Scheduler-driven canvases (β)** → prop περιττό, αφαιρέθηκε: DxfCanvas (νεκρό transformRef
+  διαγράφηκε· handle `getTransform` → `getImmediateTransform()` = διόρθωση λανθάνοντος stale
+  closure που πάγωνε snap tolerance/drawing scale), PreviewCanvas (11 draws του handle →
+  ζωντανό SSoT), LayerCanvas.
+- **Event-time** → `getImmediateTransform()` στην κλήση: mouse handlers (pan pending πλέον
+  σωρεύεται σε `pendingTransform ?? live` — δεν χάνεται delta σε 2 moves/καρέ),
+  `useSnapManager.findSnapPoint` (ζωντανό scale — το render-time `scale` option πάγωνε).
+
+**Αντίπαλη κριτική πριν τη γραφή** έπιασε 2 confirmed bugs του αρχικού πλάνου: (α) το
+zoom-reset βασιζόταν στο re-fire του bootstrap effect (λύση: `computeRulerOriginTransform`
+SSoT + ρητή αγκύρωση στο `resetToOrigin`), (β) οι mouse handlers ήταν refactor 3 αρχείων /
+~25 σημείων, όχι «dep tweak». Tests: `__tests__/canvas-layer-stack-transform-decoupling.test.tsx`
+(22 — ραφή flip/6C/handlers/αγκύρωση/frame-subs + συμπεριφορά GridUnderlay split-effect)·
+2 overlay tests μετέπεσαν σε store-seeding. ⏳ Εκκρεμεί η επαληθευτική μέτρηση pan
+(πρωτόκολλο ADR-726 §4/ADR-728 §2.3 — κριτήριο: `frame:INTERVAL` < 33ms με OSNAP ON).
+Γνωστό υπόλοιπο (ΕΚΤΟΣ per-frame pan path): ο shell ξανα-render-άρεται ακόμη όταν ο
+CanvasSection re-render-άρεται για άλλους λόγους (inline object literals ~10 σημεία) και ανά
+grip-drag frame (`dxfGripInteraction` νέο ref) — υποψήφιος επόμενος μοχλός.
 
 ### 2026-07-29 (δ) — 🐛 FIX: NaN στο CSS `left`/`top` του snap glyph (εκφυλισμένη γεωμετρία)
 

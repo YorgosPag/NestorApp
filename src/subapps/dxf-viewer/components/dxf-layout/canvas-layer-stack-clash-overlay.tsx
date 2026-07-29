@@ -19,7 +19,6 @@
 'use client';
 
 import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
-import type { ViewTransform } from '../../rendering/types/Types';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { useClashReport } from '../../systems/coordination/clash-report-store';
 import { sceneUnitsToMeters } from '../../utils/scene-units';
@@ -30,7 +29,7 @@ import { ClashMarkerLayer } from './clash-markers/ClashMarkerLayer';
 import type { ClashMarkerGlyphProps } from './clash-markers/ClashMarkerGlyph';
 
 export interface ClashOverlayMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }

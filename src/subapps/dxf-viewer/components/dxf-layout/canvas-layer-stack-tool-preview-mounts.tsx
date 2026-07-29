@@ -28,7 +28,7 @@ import type { MovePhase } from '../../hooks/tools/useMoveTool';
 import type { CopyPhase } from '../../hooks/tools/useCopyTool';
 import type { MirrorPhase } from '../../hooks/tools/useMirrorTool';
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
-import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { Point2D } from '../../rendering/types/Types';
 
 export interface RotationPreviewMountProps {
   phase: import('../../hooks/tools/useRotationTool').RotationPhase;
@@ -37,7 +37,7 @@ export interface RotationPreviewMountProps {
   currentAngle: number;
   selectedEntityIds: string[];
   levelManager: Parameters<typeof useRotationPreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -56,7 +56,7 @@ export interface MovePreviewMountProps {
   selectedOverlayIds?: string[];
   getOverlay?: Parameters<typeof useMovePreview>[0]['getOverlay'];
   levelManager: Parameters<typeof useMovePreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -73,7 +73,7 @@ export interface CopyPreviewMountProps {
   basePoint: Point2D | null;
   selectedEntityIds: string[];
   levelManager: Parameters<typeof useCopyPreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -91,7 +91,7 @@ export interface MirrorPreviewMountProps {
   secondPoint: Point2D | null;
   selectedEntityIds: string[];
   levelManager: Parameters<typeof useMirrorPreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -105,7 +105,7 @@ export const MirrorPreviewMount = React.memo(function MirrorPreviewMount(
 
 export interface ScalePreviewMountProps {
   levelManager: Parameters<typeof useScalePreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -119,7 +119,7 @@ export const ScalePreviewMount = React.memo(function ScalePreviewMount(
 
 export interface StretchPreviewMountProps {
   levelManager: Parameters<typeof useStretchPreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -133,7 +133,7 @@ export const StretchPreviewMount = React.memo(function StretchPreviewMount(
 
 export interface EntityBodyDragPreviewMountProps {
   levelManager: Parameters<typeof useEntityBodyDragPreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -148,7 +148,7 @@ export const EntityBodyDragPreviewMount = React.memo(function EntityBodyDragPrev
 export interface GripDragPreviewMountProps {
   dragPreview: DxfGripDragPreview | null;
   levelManager: Parameters<typeof useGripGhostPreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -164,7 +164,7 @@ export const GripDragPreviewMount = React.memo(function GripDragPreviewMount(
 
 export interface WallSplitKnifePreviewMountProps {
   levelManager: Parameters<typeof useWallSplitKnifePreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -185,7 +185,7 @@ export const WallSplitKnifePreviewMount = React.memo(function WallSplitKnifePrev
 
 export interface BeamBetweenMembersPreviewMountProps {
   levelManager: Parameters<typeof useBeamBetweenMembersPreview>[0]['levelManager'];
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }
@@ -206,7 +206,7 @@ export const BeamBetweenMembersPreviewMount = React.memo(function BeamBetweenMem
 // ── Παράλληλος οδηγός: anchor ＋ δυναμική διακεκομμένη (ADR-189 §3.13) ─────────
 
 export interface ParallelGuideAnchorPreviewMountProps {
-  transform: ViewTransform;
+  // ADR-040 Phase XXII.B — το transform prop αφαιρέθηκε (βλ. ImmediateTransformStore SSoT).
   getCanvas: () => HTMLCanvasElement | null;
   getViewportElement: () => HTMLElement | null;
 }

@@ -63,6 +63,9 @@ import type { SceneModel } from '../../types/scene';
 import { ScaleToolStore } from '../../systems/scale/ScaleToolStore';
 import { StretchToolStore } from '../../systems/stretch/StretchToolStore';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
+// ADR-040 Phase XXII.B — leaf-level transform subscriptions· ο shell δεν περνά πια
+// transform/transformScale props, ώστε να μην ξανα-render-άρεται ανά καρέ χειρονομίας.
+import { useTransformScale, useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
@@ -88,28 +91,55 @@ const _getGuidesVisible = () => _guideStore.isVisible();
 interface SnapIndicatorSubscriberProps {
   viewport: { width: number; height: number };
   dxfCanvasRef: React.RefObject<DxfCanvasRef> | undefined;
-  transform: ViewTransform;
   className: string;
 }
 
 /**
  * Subscribes to ImmediateSnapStore and renders SnapIndicatorOverlay.
  * Only this component re-renders on snap changes — NOT CanvasLayerStack.
+ *
+ * ADR-040 Phase XXII.B — split: ο outer gate-άρει σε `view == null` ΠΡΙΝ mount-αριστεί το
+ * transform subscription· χωρίς ορατό glyph, το pan/zoom δεν αγγίζει καθόλου αυτό το leaf.
  */
 export const SnapIndicatorSubscriber = React.memo(function SnapIndicatorSubscriber({
-  viewport, dxfCanvasRef, transform, className,
+  viewport, dxfCanvasRef, className,
 }: SnapIndicatorSubscriberProps) {
   const snapResult = useSyncExternalStore(subscribeSnapResult, getFullSnapResult);
+  const view = toSnapIndicatorView(snapResult);
+  if (!view) return null;
+  return (
+    <SnapIndicatorTransformLayer
+      view={view}
+      viewport={viewport}
+      dxfCanvasRef={dxfCanvasRef}
+      className={className}
+    />
+  );
+});
+
+/**
+ * Inner layer — mounted ΜΟΝΟ όσο υπάρχει ορατό snap glyph. Κατέχει το transform
+ * subscription ΚΑΙ το suppression gate (ADR-397): το `snapCoversMoveCross` χρειάζεται το
+ * ζωντανό `transform.scale`, άρα μετακινήθηκε ΜΑΖΙ με τη subscription (όχι στον outer,
+ * που δεν βλέπει πια transform — εύρημα αντίπαλης κριτικής Phase XXII.B).
+ */
+function SnapIndicatorTransformLayer({
+  view, viewport, dxfCanvasRef, className,
+}: {
+  view: NonNullable<ReturnType<typeof toSnapIndicatorView>>;
+  viewport: { width: number; height: number };
+  dxfCanvasRef: React.RefObject<DxfCanvasRef> | undefined;
+  className: string;
+}) {
+  const transform = useTransformValue();
   // ADR-532 B4 — re-render on selection change so the live move-grip set (AllGripsStore,
   // written by GripRegistryPublisher) is fresh for the suppression gate below. Low-freq
   // (one change per selection) → ADR-040-safe; only this leaf re-renders.
   useSelectedEntityIds();
-  const view = toSnapIndicatorView(snapResult);
-  // ADR-397 §glyph-suppression — hooks run unconditionally, then gate. If the snap
-  // glyph would sit on a selected entity's MOVE cross, render nothing so the □/△ does
-  // not hide the 4-arrow handle. Same `snapResult` that draws the glyph → zero desync.
-  // The snap attraction (mouse-handler-up) is untouched → the click still snaps.
-  if (view && transform && snapCoversMoveCross(view.point, transform.scale, AllGripsStore.get())) {
+  // ADR-397 §glyph-suppression — αν το glyph θα κάθονταν πάνω στον 4-βελο MOVE σταυρό
+  // επιλεγμένης οντότητας, μην το ζωγραφίσεις. Ίδιο `snapResult` με τη ζωγραφική → zero desync.
+  // Η έλξη του snap (mouse-handler-up) δεν αγγίζεται → το κλικ κουμπώνει κανονικά.
+  if (snapCoversMoveCross(view.point, transform.scale, AllGripsStore.get())) {
     return null;
   }
   return (
@@ -121,7 +151,7 @@ export const SnapIndicatorSubscriber = React.memo(function SnapIndicatorSubscrib
       className={className}
     />
   );
-});
+}
 
 // ============================================================================
 // DRAFT LAYER SUBSCRIBER
@@ -137,7 +167,6 @@ interface DraftLayerSubscriberProps {
   draftPolygon: Array<[number, number]>;
   currentStatus: string;
   overlayMode: 'select' | 'draw' | 'edit';
-  transformScale: number;
   layerCanvasPassthroughProps: LayerCanvasPassthroughProps;
 }
 
@@ -151,9 +180,10 @@ export const DraftLayerSubscriber = React.memo(function DraftLayerSubscriber({
   draftPolygon,
   currentStatus,
   overlayMode,
-  transformScale,
   layerCanvasPassthroughProps,
 }: DraftLayerSubscriberProps) {
+  // ADR-040 Phase XXII.B — scale-only leaf subscription (πρώην prop από τον shell).
+  const transformScale = useTransformScale();
   const { colorLayersWithDraft } = useDraftPolygonLayer({
     colorLayers,
     draftPolygon,
@@ -198,7 +228,6 @@ interface DxfCanvasSubscriberProps {
   sceneLevelId: string | null;
   /** Cached SceneModel → DxfScene converter (shares the orchestrator's WeakMap). */
   convertScene: (scene: SceneModel | null) => DxfScene;
-  transform: ViewTransform;
   viewport: { width: number; height: number };
   activeTool?: string;
   overlayMode?: 'select' | 'draw' | 'edit';
@@ -242,7 +271,7 @@ interface DxfCanvasSubscriberProps {
  * Concrete typed props avoid forwardRef ComponentProps gymnastics.
  */
 export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
-  dxfCanvasRef, scene, sceneLevelId, convertScene, transform, viewport, activeTool, overlayMode, colorLayers,
+  dxfCanvasRef, scene, sceneLevelId, convertScene, viewport, activeTool, overlayMode, colorLayers,
   renderOptionsBase, crosshairSettings, gridSettings, rulerSettings,
   selectedGuideIds, constructionPoints, panelHighlightPointId,
   guideWorkflowComputedParams, isGripDragging, entityPickingActive,
@@ -355,7 +384,6 @@ export const DxfCanvasSubscriber = React.memo(function DxfCanvasSubscriber({
     <DxfCanvas
       ref={dxfCanvasRef}
       scene={reactiveScene}
-      transform={transform}
       viewport={viewport}
       activeTool={activeTool}
       overlayMode={overlayMode}
