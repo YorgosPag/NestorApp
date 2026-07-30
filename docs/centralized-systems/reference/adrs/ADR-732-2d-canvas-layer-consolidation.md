@@ -1,7 +1,8 @@
 # ADR-732 — Μοχλός Δ: Ενοποίηση των 13 full-viewport 2D καμβάδων (compositing footprint)
 
-**Status:** 📐 **ΣΧΕΔΙΟ (Phase 0 — ΚΑΝΕΝΑΣ κώδικας)** — εγκεκριμένο αντικείμενο από τον Giorgio
-2026-07-30 («Δ τώρα»)· execution mode εκκρεμεί (N.8).
+**Status:** 🔨 **Batch 1 ΥΛΟΠΟΙΗΜΕΝΟ (2026-07-30, uncommitted)** — ζώνη Β 4→1
+(`Overlay2DDispatchCanvas`)· Batches 2-3 εκκρεμούν· μέτρηση-απόδειξη στο τέλος (Batch 4).
+Εγκεκριμένο από τον Giorgio 2026-07-30 («Δ τώρα» + N.8: batch-by-batch).
 **Ημερομηνία:** 2026-07-30
 **Σχετικά:** **ADR-726 §4.Γ/§6** (η διάγνωση: software compositing 13 στρωμάτων = ο ΕΝΑΣ
 εναπομείνας μετρημένος περιοριστής) · **ADR-040** (cardinal rules — ΑΠΑΡΑΒΙΑΣΤΑ εδώ) ·
@@ -171,5 +172,16 @@ staged στο ίδιο commit (CHECK 6B/6D), ΟΧΙ tsc (N.17).
 
 ## Changelog
 
+- **2026-07-30 (β) — Batch 1 ΥΛΟΠΟΙΗΜΕΝΟ (ζώνη Β: 4 → 1).** Νέα: `overlay-dispatch/
+  Overlay2DDispatchCanvas.tsx` (ο καμβάς της ζώνης, z-[11], scheduler id `overlay-dispatch-2d`),
+  `overlay-dispatch/overlay-2d-zone.ts` (pure z-συμβόλαιο) + φρουρός `overlay-2d-zone.test.ts`
+  (mutation-verified: αντιστροφή σειράς → 2 κόκκινα), `use-analytical-painters.ts`,
+  `use-proposal-painters.ts`. Μετατροπές σε painter hooks: `EnvelopeOverlay.tsx` →
+  `useEnvelopePainter`, `HomeRunWiresOverlay.tsx` → `useHomeRunWiresPainter` (το
+  `buildResolver` export άθικτο — έχει δικό του test). ΔΙΑΓΡΑΦΗΚΑΝ:
+  `AnalyticalDispatchCanvas.tsx`, `ProposalDispatchCanvas.tsx`. Mounts: shell mount-άρει τον
+  ενιαίο καμβά· αφαιρέθηκαν από `canvas-layer-stack-2d-overlays-leaf` + `canvas-layer-stack-
+  preview-mounts`. Tests: 6 suites / 50 πράσινα (μαζί ο ενημερωμένος φρουρός XXII.B §4)·
+  jscpd:diff καθαρό σε 9 αρχεία. DOM αναμενόμενο: 13 → 10 canvases με ίδιο ορατό αποτέλεσμα.
 - **2026-07-30** — Δημιουργία (Phase 0, σχέδιο). Απογραφή 13 καμβάδων από ζωντανό DOM census
   σε production :3000. Καμία γραμμή κώδικα.

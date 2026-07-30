@@ -4,35 +4,28 @@
  * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
  * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  *
- * ADR-396 Phase P4 — Envelope (ETICS) 2D overlay micro-leaf.
+ * ADR-396 Phase P4 — Envelope (ETICS) 2D painter hook.
  *
- * Dedicated always-on overlay canvas που ζωγραφίζει το ενιαίο συνεχές εξωτερικό
- * περίγραμμα μόνωσης + insulation hatch band του τρέχοντος ορόφου. **Παράγωγο
- * floor-overlay** (ADR-396 §3 DISPLAY) — ΟΧΙ registered renderer στο
- * `EntityRendererComposite`.
+ * Ζωγραφίζει το ενιαίο συνεχές εξωτερικό περίγραμμα μόνωσης + insulation hatch band
+ * του τρέχοντος ορόφου. **Παράγωγο floor-overlay** (ADR-396 §3 DISPLAY) — ΟΧΙ
+ * registered renderer στο `EntityRendererComposite`.
  *
- * ADR-040 micro-leaf: subscribes ΜΟΝΟ εδώ (envelope-spec-store + objectStyles
- * visibility slice). Ο shell `CanvasLayerStack` / `CanvasSection` ΔΕΝ αποκτούν νέο
- * `useSyncExternalStore` (CHECK 6C safe). Repaint σε αλλαγή scene/transform/spec/
- * visibility — anchored στο world bbox, άρα pan/zoom ξαναζωγραφίζουν.
+ * ADR-732 Batch 1 — δεν κατέχει πια δικό του `<canvas>`: επιστρέφει «painter ή null»
+ * στον κοινό καμβά της ζώνης Β (`Overlay2DDispatchCanvas`). Οι subscriptions
+ * (envelope-spec-store + objectStyles visibility slice) μένουν leaf-level (ADR-040,
+ * CHECK 6C safe) — απλώς ζουν πλέον στο hook αντί στο πρώην component.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-396-bim-external-thermal-envelope-etics.md §3, §7 (P4)
+ * @see docs/centralized-systems/reference/adrs/ADR-732-2d-canvas-layer-consolidation.md (ζώνη Β)
  * @see ../../bim/geometry/envelope-shell (computeEnvelopeShell — footprint-driven, v2 Φ5B)
  * @see ../../bim/renderers/EnvelopeRenderer (plan + draw)
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { DxfScene, DxfEntityUnion } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
-// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
-import {
-  paintOverlayDispatchFrame,
-  type OverlayDispatchPainter,
-} from './overlay-dispatch/overlay-dispatch-frame';
-// ADR-040 Phase XXII.B — zero-lag: transform από το SSoT στο draw time + scheduler frame
-// αντί για React prop (ιδίωμα HomeRunWiresOverlay).
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο primitive του κοινού καμβά· εδώ μόνο «painter ή null».
+import type { OverlayDispatchPainter } from './overlay-dispatch/overlay-dispatch-frame';
 import { computeEnvelopeShell, collectEnvelopeOverrides } from '../../bim/geometry/envelope-shell';
 import { computeEnvelopeOpeningCuts } from '../../bim/geometry/envelope-opening-cuts';
 import { isWallHostedOpening } from '../../bim/types/opening-types';
@@ -55,13 +48,6 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { resolveCutState, type ViewRange } from '../../config/bim-view-range';
-
-export interface EnvelopeOverlayProps {
-  readonly scene: DxfScene | null;
-  readonly viewport: Viewport;
-  /** Τρέχων BIM όροφος — κλειδί του per-level spec store. */
-  readonly currentLevelId: string | null;
-}
 
 /**
  * Z2/Z3 — διαγράμμιση μόνωσης πάνω στο footprint κάθε εκτεθειμένης πλάκας. Διαβάζει
@@ -204,13 +190,19 @@ function makeEnvelopePainter(inputs: EnvelopePaintInputs): OverlayDispatchPainte
   };
 }
 
-export function EnvelopeOverlay({
-  scene,
-  viewport,
-  currentLevelId,
-}: EnvelopeOverlayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
+/**
+ * ADR-732 Batch 1 — «painter ή null» για τον κοινό καμβά της ζώνης Β.
+ *
+ * ADR-396 P6: ΟΧΙ auto-seed. Το envelope εμφανίζεται ΜΟΝΟ όταν ο χρήστης τρέξει το command
+ * «Εφαρμογή Θερμοπρόσοψης» (ThermalEnvelopeHost → setEnvelopeSpec). Το `spec` είναι null μέχρι
+ * τότε → επιστρέφεται `null` (η πύλη Φ2 του κοινού primitive δεν αγγίζει καν τον καμβά).
+ *
+ * @param currentLevelId Τρέχων BIM όροφος — κλειδί του per-level spec store.
+ */
+export function useEnvelopePainter(
+  scene: DxfScene | null,
+  currentLevelId: string | null,
+): OverlayDispatchPainter | null {
   // Leaf subscriptions (ADR-040): per-level spec + V/G visibility slice.
   const spec = useSyncExternalStore(
     subscribeEnvelopeSpec,
@@ -233,42 +225,13 @@ export function EnvelopeOverlay({
     { objectStyles, disciplineVisibility },
   );
 
-  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
-  const drawStateRef = useRef({ scene, viewport, spec, visible, viewRange, floorSlabs });
-  drawStateRef.current = { scene, viewport, spec, visible, viewRange, floorSlabs };
-
-  // ADR-396 P6: ΟΧΙ auto-seed. Το envelope εμφανίζεται ΜΟΝΟ όταν ο χρήστης
-  // τρέξει το command «Εφαρμογή Θερμοπρόσοψης» (ThermalEnvelopeHost → setEnvelopeSpec).
-  // Το `spec` είναι null μέχρι τότε → το render path κάνει early-return.
-  // ADR-726 Φ2 — ολόκληρη η δήλωση περιεχομένου είναι «painter ή null». Το DPR sizing, η πύλη
-  // και το clear ζουν στο ΕΝΑ primitive (`paintOverlayDispatchFrame`) — κανένα clearRect εδώ.
-  const repaint = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const s = drawStateRef.current;
-    const painter =
-      s.visible && s.spec && s.scene
-        ? makeEnvelopePainter({ scene: s.scene, spec: s.spec, floorSlabs: s.floorSlabs, viewRange: s.viewRange })
-        : null;
-    paintOverlayDispatchFrame(canvas, [painter], getImmediateTransform(), s.viewport);
-  }, []);
-
-  // (α) Repaint σε content change με ΑΚΙΝΗΤΟ transform.
-  useEffect(() => {
-    repaint();
-  }, [scene, viewport, spec, visible, viewRange, floorSlabs, repaint]);
-
-  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
-  useEffect(() => {
-    return subscribeImmediateTransformFrame('envelope-overlay', 'Envelope Overlay', repaint);
-  }, [repaint]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      data-dxf-overlay="envelope"
-      className="pointer-events-none absolute inset-0 w-full h-full z-[11]"
-      aria-hidden="true"
-    />
+  // Reference-stable painter: νέα ταυτότητα ΜΟΝΟ σε πραγματική αλλαγή περιεχομένου —
+  // ο κοινός καμβάς repaint-άρει στο content-change effect του πάνω σε αυτή την ταυτότητα.
+  return useMemo(
+    () =>
+      visible && spec && scene
+        ? makeEnvelopePainter({ scene, spec, floorSlabs, viewRange })
+        : null,
+    [scene, spec, visible, viewRange, floorSlabs],
   );
 }

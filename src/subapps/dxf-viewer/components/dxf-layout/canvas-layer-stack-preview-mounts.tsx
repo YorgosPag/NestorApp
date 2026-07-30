@@ -30,7 +30,6 @@ import { MepWaterHeaterGhostPreviewMount, type MepWaterHeaterGhostPreviewMountPr
 import { MepSegmentGhostPreviewMount, type MepSegmentGhostPreviewMountProps } from './canvas-layer-stack-mep-segment-ghost';
 // ADR-554 — the 7 separate proposal-ghost canvases (water/drainage/heating/electrical/hvac/fire/gas)
 // are folded into ONE zero-lag dispatch canvas (ADR-551 §5.2 #2).
-import { ProposalDispatchCanvas } from './proposal-overlays/ProposalDispatchCanvas';
 // ADR-441 Slice 3-perf — zero-lag associative follow ghost (hosted foundation strips
 // follow a dragged guide frame-for-frame on a dedicated canvas).
 import { GuideFollowGhostPreviewMount } from './GuideFollowGhostOverlay';
@@ -301,11 +300,10 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />
-      {/* ADR-554 — ONE proposal dispatch canvas replaces the 7 separate ProposalGhostOverlay canvases
-          (water/drainage/heating/electrical/hvac/fire/gas — ADR-426–434 Slice 2). Pull model with
-          zero-lag immediate transform; paint verbatim; z-order water→gas (topmost). Persists across
-          idle/pan/zoom on its own canvas, never wiped by the shared PreviewCanvas. */}
-      <ProposalDispatchCanvas viewport={viewport} />
+      {/* ADR-732 Batch 1 — ο proposal dispatch canvas (ADR-554) ΔΕΝ ζει πια εδώ: οι 7 proposal
+          painters είναι το ΤΕΛΕΥΤΑΙΟ (topmost) pass του κοινού καμβά της ζώνης Β
+          (`Overlay2DDispatchCanvas`, mounted στον shell) — ίδια θέση στο z-συμβόλαιο
+          (πάνω από analytical/envelope/wires, κάτω από το PreviewCanvas z15). */}
       {/* ADR-441 Slice 3-perf — zero-lag follow ghost: hosted πεδιλοδοκοί ακολουθούν
           τον dragged οδηγό frame-for-frame (dedicated canvas, mount μόνο όσο σύρεται). */}
       <GuideFollowGhostPreviewMount viewport={viewport} levelManager={levelManager} />

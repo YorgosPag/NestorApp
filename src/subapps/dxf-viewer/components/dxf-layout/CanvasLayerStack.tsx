@@ -41,8 +41,10 @@ import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleBu
 // out of this shell to keep it under the 500-line budget (N.7.1). ADR-040 leaves inside.
 import { ContainerSelectionLayers } from './ContainerSelectionLayers';
 import { CutPlaneSliderLeaf } from './CutPlaneSliderLeaf'; /* ADR-452 cut-plane slider, self-gated 2D */ import { AxisCutSliderLeaf } from './AxisCutSliderLeaf'; /* ADR-455 vertical X/Y section sliders, self-gated 2D */ import { useDxfOverlay3DSync } from './useDxfOverlay3DSync'; import { useLevelId3DSync } from './useLevelId3DSync';
-// ADR-396 P4 — ETICS θερμοπρόσοψη 2D overlay (dedicated floor-overlay micro-leaf).
-import { EnvelopeOverlay } from './EnvelopeOverlay'; import { HomeRunWiresOverlay } from './HomeRunWiresOverlay';
+// ADR-732 Batch 1 — Ο ΕΝΑΣ καμβάς της ζώνης Β (analytical + envelope + mep-wires + proposals):
+// αντικαθιστά τα πρώην EnvelopeOverlay/HomeRunWiresOverlay canvases (και τα dispatch canvases
+// των ADR-552/554 που ζούσαν σε άλλα leaves) με ένα full-viewport στρώμα z-[11].
+import { Overlay2DDispatchCanvas } from './overlay-dispatch/Overlay2DDispatchCanvas';
 // ADR-362 Round 35 — «Λαβές Μετακίνησης Σειρών» row-move handle overlay (self-gated leaf).
 import { DimRowHandleOverlay } from './DimRowHandleOverlay';
 // ADR-399 Phase D — 2D «Όλοι οι όροφοι» read-only underlay (other floors, faded, behind active).
@@ -468,8 +470,15 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           {/* ADR-366 §B.5.U — unified 2D+3D Performance HUD (sibling leaf, lives in both modes). */}
           <UnifiedPerformanceHudLeaf getCanvas2D={() => dxfCanvasRef?.current?.getCanvas?.() ?? null} />
           <Focus2DOverlayLeaf scene={dxfScene} viewport={viewport} />
-          <EnvelopeOverlay scene={dxfScene} viewport={viewport} currentLevelId={levelManager.currentLevelId} />
-          <HomeRunWiresOverlay scene={dxfScene} viewport={viewport} currentLevelId={levelManager.currentLevelId} gripDragPreview={dxfGripInteraction.dragPreview} />
+          {/* ADR-732 ζώνη Β — analytical (ADR-552) + envelope (ADR-396 P4) + mep-wires
+              (ADR-408 Φ7) + proposals (ADR-554) σε ΕΝΑΝ καμβά z-[11] (πάνω από dxf z10,
+              κάτω από preview z15)· η σειρά ζωγραφικής αναπαράγει το πρώην z-συμβόλαιο. */}
+          <Overlay2DDispatchCanvas
+            scene={dxfScene}
+            viewport={viewport}
+            currentLevelId={levelManager.currentLevelId}
+            gripDragPreview={dxfGripInteraction.dragPreview}
+          />
           {/* ADR-362 Round 35 — row-move handles (self-gated: renders null unless the mode is ON). */}
           <DimRowHandleOverlay viewport={viewport} currentLevelId={levelManager.currentLevelId} />
           <SelectionCursorIcon />

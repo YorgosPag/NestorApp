@@ -1,6 +1,6 @@
 # ADR-554 — MEP Proposal-Ghost Dispatch Canvas (7 → 1)
 
-**Status:** 🟡 IMPLEMENTED (UNCOMMITTED)
+**Status:** ✅ IMPLEMENTED · ⚠️ **2026-07-30, ADR-732 Batch 1:** ο δικός του `<canvas>` (`ProposalDispatchCanvas.tsx`, z14) ΚΑΤΑΡΓΗΘΗΚΕ — οι 7 painters (αμετάβλητοι) είναι πλέον το ΤΕΛΕΥΤΑΙΟ (topmost) pass του κοινού καμβά ζώνης Β (`overlay-dispatch/Overlay2DDispatchCanvas`), μέσω `use-proposal-painters.ts`. Ίδια θέση στο z-συμβόλαιο.
 **Date:** 2026-06-29
 **Domain:** Canvas & Rendering / DXF Viewer / MEP auto-design
 **Implements:** ADR-551 §5.2 #2

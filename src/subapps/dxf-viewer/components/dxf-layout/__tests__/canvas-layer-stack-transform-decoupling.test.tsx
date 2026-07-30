@@ -16,9 +16,11 @@
  *    interception μέσω re-fire του bootstrap effect καταργήθηκε.
  * 4. Το handle `getTransform` του DxfCanvas επιστρέφει τη ΖΩΝΤΑΝΗ τιμή του SSoT (το παλιό
  *    stale closure πάγωνε snap tolerance / drawing scale μετά από zoom).
- * 5. Οι 8 canvas painters είναι frame-subscribed (subscribeImmediateTransformFrame) — και
+ * 5. Οι frame-subscribed canvas painters (subscribeImmediateTransformFrame) — και
  *    συμπεριφορικά: ο GridUnderlayCanvas ξαναζωγραφίζει ΚΑΙ σε transform tick με φρέσκια
  *    τιμή ΚΑΙ σε content change με ακίνητο transform (split-effect ιδίωμα, ρίσκο κριτικής #9).
+ *    ADR-732 Batch 1: envelope + analytical (μαζί με mep-wires + proposals) ζουν πλέον ως
+ *    painter hooks μέσα στον ΕΝΑΝ Overlay2DDispatchCanvas — ο κατάλογος ελέγχει εκείνον.
  */
 
 import fs from 'fs';
@@ -131,7 +133,7 @@ describe('zoom-reset — ρητή αγκύρωση, όχι interception', () => 
   });
 });
 
-// ─── 4. Οι 8 canvas painters είναι frame-subscribed ─────────────────────────────
+// ─── 4. Οι canvas painters είναι frame-subscribed ───────────────────────────────
 describe('canvas painters — subscribeImmediateTransformFrame (ιδίωμα HomeRunWires)', () => {
   it.each([
     'GridUnderlayCanvas.tsx',
@@ -139,9 +141,10 @@ describe('canvas painters — subscribeImmediateTransformFrame (ιδίωμα Hom
     'TopoGridUnderlayCanvas.tsx',
     '../../floorplan-background/components/FloorplanBackgroundCanvas.tsx',
     '../../accessibility/Focus2DOverlay.tsx',
-    'EnvelopeOverlay.tsx',
+    // ADR-732 Batch 1 — ο ΕΝΑΣ καμβάς της ζώνης Β (πρώην EnvelopeOverlay +
+    // AnalyticalDispatchCanvas + HomeRunWiresOverlay + ProposalDispatchCanvas).
+    'overlay-dispatch/Overlay2DDispatchCanvas.tsx',
     'ContainerGizmoLayer.tsx',
-    'analytical-overlays/AnalyticalDispatchCanvas.tsx',
   ])('%s', (rel) => {
     const src = readSource(rel);
     expect(src).toContain('subscribeImmediateTransformFrame(');

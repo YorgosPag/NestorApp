@@ -4,33 +4,28 @@
  * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 BEFORE EDITING
  * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
  *
- * ADR-408 Φ7 — Home-run circuit wires 2D annotation micro-leaf.
+ * ADR-408 Φ7 — Home-run circuit wires 2D painter hook.
  *
- * Dedicated always-on overlay canvas that strokes the **derived** wiring of every
- * electrical circuit of the current floor (panel → daisy-chained fixtures, with a
- * home-run arrow at the panel). Geometry is NOT persisted: it is recomputed each
- * paint from the live host transforms via the SSoT `computeCircuitWirePaths`, so
- * it follows moved/rotated panels and fixtures for free.
+ * Strokes the **derived** wiring of every electrical circuit of the current floor
+ * (panel → daisy-chained fixtures, with a home-run arrow at the panel). Geometry is
+ * NOT persisted: it is recomputed on each content change from the live host
+ * transforms via the SSoT `computeCircuitWirePaths`, so it follows moved/rotated
+ * panels and fixtures for free.
  *
- * ADR-040 micro-leaf: subscribes ONLY here (mep-system store + objectStyles
- * visibility slice). The shell `CanvasLayerStack` / `CanvasSection` gain NO new
- * `useSyncExternalStore` (CHECK 6C safe). Repaints on scene/transform/systems/
- * visibility change — anchored to world coords, so pan/zoom repaint.
+ * ADR-732 Batch 1 — no longer owns a `<canvas>`: returns «painter ή null» to the
+ * shared zone-Β canvas (`Overlay2DDispatchCanvas`). The subscriptions (mep-system
+ * store + objectStyles visibility slice) stay leaf-level (ADR-040, CHECK 6C safe) —
+ * they live in the hook instead of the former component.
  *
+ * @see docs/centralized-systems/reference/adrs/ADR-732-2d-canvas-layer-consolidation.md (ζώνη Β)
  * @see ../../bim/mep-systems/mep-wire-routing (computeCircuitWirePaths — routing SSoT)
  * @see ../../bim/renderers/MepWireRenderer (drawCircuitWires — draw)
  */
 
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { DxfEntityUnion, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { Viewport } from '../../rendering/types/Types';
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
-// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
-import {
-  paintOverlayDispatchFrame,
-  type OverlayDispatchPainter,
-} from './overlay-dispatch/overlay-dispatch-frame';
+// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο primitive του κοινού καμβά· εδώ μόνο «painter ή null».
+import type { OverlayDispatchPainter } from './overlay-dispatch/overlay-dispatch-frame';
 import { useMepSystemStore } from '../../bim/mep-systems/mep-system-store';
 import {
   computeCircuitWirePaths,
@@ -54,21 +49,6 @@ import { resolveIsEntityVisible } from '../../bim/visibility/visibility-resolver
 import type { DxfGripDragPreview } from '../../hooks/grip-computation';
 import { applyEntityPreview } from '../../rendering/ghost';
 import { toEntityPreviewTransform } from '../../hooks/tools/grip-drag-preview-transform';
-
-// ADR-040 Phase XXII.B — το `transform` prop ΑΦΑΙΡΕΘΗΚΕ: δεν διαβαζόταν καν (ο painter
-// διαβάζει `getImmediateTransform()` στο frame tick — το prop «lags the canvas during pan»).
-export interface HomeRunWiresOverlayProps {
-  readonly scene: DxfScene | null;
-  readonly viewport: Viewport;
-  /** Τρέχων BIM όροφος — μέρος του repaint key (αλλαγή ορόφου ⇒ νέο scene). */
-  readonly currentLevelId: string | null;
-  /**
-   * ADR-408 Φ7 P2 — live grip drag snapshot (null when idle). When the dragged
-   * entity is a fixture/panel, its circuit wire follows the drag live: the
-   * resolver reads the previewed host transform instead of the committed one.
-   */
-  readonly gripDragPreview: DxfGripDragPreview | null;
-}
 
 /**
  * Build the host-resolver from the render scene's connector hosts (fixtures +
@@ -112,7 +92,6 @@ export function buildResolver(scene: DxfScene, dragPreview: DxfGripDragPreview |
  */
 interface WirePaintInputs {
   readonly scene: DxfScene | null;
-  readonly viewport: Viewport;
   readonly systems: Parameters<typeof computeCircuitWirePaths>[0];
   readonly visible: boolean;
   readonly gripDragPreview: DxfGripDragPreview | null;
@@ -163,13 +142,18 @@ function buildHomeRunWirePainter(input: WirePaintInputs): OverlayDispatchPainter
   };
 }
 
-export function HomeRunWiresOverlay({
-  scene,
-  viewport,
-  gripDragPreview,
-}: HomeRunWiresOverlayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
+/**
+ * ADR-732 Batch 1 — «painter ή null» για τον κοινό καμβά της ζώνης Β.
+ *
+ * @param gripDragPreview ADR-408 Φ7 P2 — live grip drag snapshot (null when idle). When
+ *   the dragged entity is a fixture/panel, its circuit wire follows the drag live: the
+ *   resolver reads the previewed host transform instead of the committed one (the
+ *   painter identity changes per drag frame → the shared canvas repaints, όπως πριν).
+ */
+export function useHomeRunWiresPainter(
+  scene: DxfScene | null,
+  gripDragPreview: DxfGripDragPreview | null,
+): OverlayDispatchPainter | null {
   // Leaf subscriptions (ADR-040): live systems + V/G visibility slice.
   const systems = useMepSystemStore((s) => s.systems);
   const objectStyles = useDrawingScaleStore((s) => s.objectStyles);
@@ -188,58 +172,13 @@ export function HomeRunWiresOverlay({
     { objectStyles, disciplineVisibility },
   );
 
-  // ADR-040 zero-lag (2026-06-10): the wires used to repaint on the React `transform`
-  // prop, which lags the canvas during pan (the canvas pans via the 60 fps IMMEDIATE
-  // transform, not React state) — the whole wire visibly trailed the cursor. The draw
-  // now reads `getImmediateTransform()` inside a LOW-priority `UnifiedFrameScheduler`
-  // frame (same zero-lag mechanism as the DXF canvas + clash overlay). All volatile
-  // draw inputs are funnelled through a ref so the scheduler callback reads the latest.
-  const drawStateRef = useRef({
-    scene, viewport, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem,
-  });
-  drawStateRef.current = {
-    scene, viewport, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem,
-  };
-
-  const repaint = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const state = drawStateRef.current;
-
-    // ADR-408 Φ7 perf guard: skip everything — including the DPR sizing — when the overlay canvas
-    // has no usable size (idle 0×0 viewport / collapsed shell).
-    if (state.viewport.width <= 0 || state.viewport.height <= 0) return;
-
-    // ADR-726 Φ2 — το DPR sizing, η πύλη και το clear ζουν στο ΕΝΑ primitive (ο ctx είναι
-    // DPR-scaled, οπότε ο MepWireRenderer ζωγραφίζει σε CSS/world coords όπως πριν).
-    // Zero-lag: project through the IMMEDIATE transform, read at draw time (not the prop).
-    paintOverlayDispatchFrame(
-      canvas,
-      [buildHomeRunWirePainter(state)],
-      getImmediateTransform(),
-      state.viewport,
-    );
-  }, []);
-
-  // Repaint on content change (systems / scene / viewport / visibility / hover / live
-  // host drag — `gripDragPreview` changes each drag frame so the wire tracks the host).
-  useEffect(() => {
-    repaint();
-  }, [scene, viewport, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem, repaint]);
-
-  // Zero-lag pan/zoom: reproject in the LOW-priority scheduler frame (after the DXF
-  // canvas), gated on the immediate transform changing — frame-synced, no React churn.
-  // SSoT: the same helper the clash + proposal-ghost overlays use.
-  useEffect(() => {
-    return subscribeImmediateTransformFrame('home-run-wires', 'Home-Run Wires', repaint);
-  }, [repaint]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      data-dxf-overlay="mep-wires"
-      className="pointer-events-none absolute inset-0 w-full h-full z-[11]"
-      aria-hidden="true"
-    />
+  // Reference-stable painter: η δρομολόγηση (`computeCircuitWirePaths`) τρέχει σε αλλαγή
+  // περιεχομένου — ΟΧΙ ανά καρέ pan/zoom όπως στο πρώην per-frame build (ίδιο αποτέλεσμα,
+  // φθηνότερο). Το transform το δίνει το primitive του κοινού καμβά σε κάθε καρέ.
+  return useMemo(
+    () => buildHomeRunWirePainter({
+      scene, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem,
+    }),
+    [scene, systems, visible, gripDragPreview, selectedSystemIds, waypointHover, colorBySystem],
   );
 }

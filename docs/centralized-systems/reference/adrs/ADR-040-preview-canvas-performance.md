@@ -113,6 +113,30 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-07-30 (γ) — ADR-732 Batch 1: ζώνη Β — 4 overlay canvases → 1 (`Overlay2DDispatchCanvas`)
+
+Ο μετρημένος περιοριστής μετά τη Φ3.1 είναι το software compositing 13 στοιβαγμένων
+full-viewport canvases (ADR-726 §4.Γ — median 42ms αναμονή προ renderStart με άδειο main
+thread σε PC χωρίς GPU). Το ADR-732 τα ενοποιεί σε ζώνες· το Batch 1 συγχώνευσε τα 4
+στρώματα μεταξύ DxfCanvas (z10) και PreviewCanvas (z15):
+
+- **Πριν:** `AnalyticalDispatchCanvas` (z10, ADR-552) + `EnvelopeOverlay` (z11, ADR-396 P4)
+  + `HomeRunWiresOverlay` (z11, ADR-408 Φ7) + `ProposalDispatchCanvas` (z14, ADR-554) —
+  4 canvases, 4 scheduler ids.
+- **Μετά:** ΕΝΑΣ `overlay-dispatch/Overlay2DDispatchCanvas` (z-[11], id `overlay-dispatch-2d`)·
+  η σχετική σειρά σύνθεσης έγινε σειρά ζωγραφικής μέσα στον καμβά (pure SSoT:
+  `overlay-2d-zone.ts::composeOverlay2DPainters`, φρουρός `overlay-2d-zone.test.ts`).
+- Τα 4 μέλη έγιναν painter hooks: `useAnalyticalPainters` / `useEnvelopePainter` /
+  `useHomeRunWiresPainter` / `useProposalPainters` — ίδιες low-freq subscriptions,
+  «painter ή null» στο ίδιο primitive `paintOverlayDispatchFrame` (πύλη ADR-726 Φ2 άθικτη).
+- **Cardinal rules αμετάβλητα:** ο shell `CanvasLayerStack` δεν απέκτησε subscription
+  (CHECK 6C)· transform μόνο μέσω `getImmediateTransform()` σε scheduler frame· pointer-events
+  none σε όλη τη ζώνη (ο DxfCanvas μένει ο μόνος interactive)· κανένα interactive state σε
+  cache key. Bonus: η δρομολόγηση των wires (`computeCircuitWirePaths`) τρέχει πλέον σε
+  content change αντί για κάθε transform καρέ (memoized painter, ίδιο αποτέλεσμα).
+- Ο φρουρός XXII.B (`canvas-layer-stack-transform-decoupling.test.tsx` §4) ελέγχει πλέον τον
+  ενιαίο καμβά αντί των πρώην Envelope/AnalyticalDispatch.
+
 ### 2026-07-30 (β) — Gesture-aware raster acceptance: ΚΑΝΕΝΑ transform-driven rebuild μέσα στη χειρονομία (ADR-726 Φ3.1)
 
 Η production μέτρηση (ADR-726 Φ5) έδειξε ότι το pan λύθηκε (60 FPS median) αλλά το wheel-zoom

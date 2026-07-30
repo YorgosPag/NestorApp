@@ -2,7 +2,7 @@
 
 | Πεδίο | Τιμή |
 |---|---|
-| **Status** | 🟡 IMPLEMENTED (UNCOMMITTED) |
+| **Status** | ✅ IMPLEMENTED · ⚠️ **2026-07-30, ADR-732 Batch 1:** ο δικός του `<canvas>` (`AnalyticalDispatchCanvas.tsx`) ΚΑΤΑΡΓΗΘΗΚΕ — οι 7 painters (αμετάβλητοι) είναι πλέον το πρώτο pass του κοινού καμβά ζώνης Β (`overlay-dispatch/Overlay2DDispatchCanvas`), μέσω `use-analytical-painters.ts`. Ίδια σειρά z-order. |
 | **Date** | 2026-06-29 |
 | **Last Updated** | 2026-06-29 |
 | **Category** | Canvas & Rendering |

@@ -19,12 +19,10 @@ import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
 import { RegionGapMarkersOverlay } from './RegionGapMarkersOverlay';
 import { BasePointPickMarkerOverlay } from './BasePointPickMarkerOverlay';
 import { TopoAutoBreaklinePreviewOverlay } from './TopoAutoBreaklinePreviewOverlay';
-import { AnalyticalDispatchCanvas } from './analytical-overlays/AnalyticalDispatchCanvas';
 import type { Viewport } from '../../rendering/types/Types';
 
 // ADR-040 Phase XXII.B — το transform ΔΕΝ διαπερνά πια το group: κάθε SVG child
-// subscribe-άρει μόνο του (useTransformValue) και ο AnalyticalDispatchCanvas ζωγραφίζει
-// μέσω subscribeImmediateTransformFrame (zero React ανά καρέ).
+// subscribe-άρει μόνο του (useTransformValue).
 export interface CanvasLayerStack2DOverlaysProps {
   readonly viewport: Viewport;
 }
@@ -51,14 +49,9 @@ export function CanvasLayerStack2DOverlays({ viewport }: CanvasLayerStack2DOverl
           πράσινο = τσεκαρισμένη, γκρι διακεκομμένο = απορριφθείσα. Self-subscribes στο
           LOW-freq auto-breakline store· read-only, pointer-events-none. STAGE ADR-650. */}
       <TopoAutoBreaklinePreviewOverlay viewport={viewport} />
-      {/* ADR-552 — ΕΝΑΣ analytical dispatch canvas αντικαθιστά τα 7 ξεχωριστά
-          analytical overlays (riser-through ADR-408 Φ15 · heat-load ADR-422 L1 ·
-          pipe-sizing ADR-422 L3 · hydraulic-balancing ADR-422 L4 · utilization
-          ADR-485 · M/V/N diagrams ADR-483 · warnings ADR-490). Κάθε painter
-          self-subscribes + self-gates· ο dispatch κάνει size+clear ΜΙΑ φορά και
-          ζωγραφίζει με σειρά z-order (warnings topmost). Read-only,
-          pointer-events-none. STAGE ADR-040 + ADR-552. */}
-      <AnalyticalDispatchCanvas viewport={viewport} />
+      {/* ADR-732 Batch 1 — ο analytical dispatch canvas (ADR-552) ΔΕΝ ζει πια εδώ:
+          οι 7 analytical painters είναι το πρώτο pass του κοινού καμβά της ζώνης Β
+          (`Overlay2DDispatchCanvas`, mounted στον shell). Ίδια σειρά z-order. */}
     </>
   );
 }
