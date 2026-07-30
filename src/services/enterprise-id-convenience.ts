@@ -34,6 +34,13 @@ export const generateParagraphId = () => enterpriseIdService.generateParagraphId
 export const generateObligationId = () => enterpriseIdService.generateObligationId();
 export const generateTransmittalId = () => enterpriseIdService.generateTransmittalId();
 
+// OAuth 2.1 Authorization Server (ADR-738)
+export const generateOAuthClientId = () => enterpriseIdService.generateOAuthClientId();
+export const generateOAuthAuthRequestId = () => enterpriseIdService.generateOAuthAuthRequestId();
+export const generateOAuthCodeId = () => enterpriseIdService.generateOAuthCodeId();
+export const generateOAuthTokenId = () => enterpriseIdService.generateOAuthTokenId();
+export const generateOAuthConsentId = () => enterpriseIdService.generateOAuthConsentId();
+
 // Runtime & Ephemeral
 export const generateSessionId = () => enterpriseIdService.generateSessionId();
 export const generateTransactionId = () => enterpriseIdService.generateTransactionId();

@@ -202,6 +202,22 @@ export const COLLECTIONS = {
   // 💰 AI USAGE TRACKING (ADR-259A: Cost Protection — per-user monthly token/cost tracking)
   AI_USAGE: process.env.NEXT_PUBLIC_AI_USAGE_COLLECTION || 'ai_usage',
 
+  // 🔐 OAUTH 2.1 AUTHORIZATION SERVER (ADR-738 — MCP transport)
+  // ⚠️ Οι τέσσερις είναι **deny-all** στο firestore.rules: γράφονται και διαβάζονται
+  // ΑΠΟΚΛΕΙΣΤΙΚΑ από το Admin SDK. Ένα client SDK που τις άγγιζε θα εξέθετε hashes
+  // token και code verifiers στον browser — δηλαδή θα ακύρωνε ολόκληρο το σχήμα.
+  // Δεν δέχονται env override: το όνομα συλλογής διαπιστευτηρίων δεν είναι ρύθμιση.
+  /** Στιγμιότυπα CIMD των MCP clients (client_id = HTTPS URL). */
+  OAUTH_CLIENTS: 'oauth_clients',
+  /** Εκκρεμή αιτήματα εξουσιοδότησης — ζουν όσο ο άνθρωπος σκέφτεται. */
+  OAUTH_AUTH_REQUESTS: 'oauth_auth_requests',
+  /** Authorization codes — 60s TTL, μιας χρήσης, με PKCE challenge. */
+  OAUTH_CODES: 'oauth_codes',
+  /** Access & refresh tokens — αποθηκεύεται ΜΟΝΟ SHA-256 του μυστικού. */
+  OAUTH_TOKENS: 'oauth_tokens',
+  /** Ενεργές συγκαταθέσεις χρήστη→client — η λίστα που ο χρήστης ανακαλεί. */
+  OAUTH_CONSENTS: 'oauth_consents',
+
   // 📋 AUDIT LOGS
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
   /** Cloud Function audit log (orphan cleanup, system events) */

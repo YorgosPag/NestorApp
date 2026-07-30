@@ -45,16 +45,18 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
+import { BimEntityIdGenerators } from './enterprise-id-bim-generators';
 
 // Alias for compact generator methods
 const P = ENTERPRISE_ID_PREFIXES;
 
-export class EnterpriseIdService {
+export class EnterpriseIdService extends BimEntityIdGenerators {
   private readonly config: IdGenerationConfig;
   private readonly generatedIds = new Set<string>();
   private readonly cache = new Map<string, EnterpriseId>();
 
   constructor(config: Partial<IdGenerationConfig> = {}) {
+    super();
     this.config = {
       maxRetries: 3,
       // Opt-in only — see enterprise-id-singleton.ts. Default off to keep the dev
@@ -87,11 +89,11 @@ export class EnterpriseIdService {
    * uniqueness-retry loop του {@link generateId} (σκόπιμα επαναλήψιμο). Ο pure
    * seeded-hash ζει στο `./enterprise-id-deterministic` (SRP/N.7.1).
    */
-  private generateDeterministicId(prefix: EnterpriseIdPrefix, seed: string): string {
+  protected generateDeterministicId(prefix: EnterpriseIdPrefix, seed: string): string {
     return `${prefix}_${deterministicUuid(seed)}`;
   }
 
-  private generateId(prefix: EnterpriseIdPrefix): EnterpriseId {
+  protected generateId(prefix: EnterpriseIdPrefix): EnterpriseId {
     let attempts = 0;
     let id: string;
     let uuid: string;
@@ -149,6 +151,13 @@ export class EnterpriseIdService {
   generateParagraphId(): string { return this.generateId(P.PARAGRAPH).id; }
   generateObligationId(): string { return this.generateId(P.OBLIGATION).id; }
   generateTransmittalId(): string { return this.generateId(P.TRANSMITTAL).id; }
+
+  // OAuth 2.1 Authorization Server (ADR-738)
+  generateOAuthClientId(): string { return this.generateId(P.OAUTH_CLIENT).id; }
+  generateOAuthAuthRequestId(): string { return this.generateId(P.OAUTH_AUTH_REQUEST).id; }
+  generateOAuthCodeId(): string { return this.generateId(P.OAUTH_CODE).id; }
+  generateOAuthTokenId(): string { return this.generateId(P.OAUTH_TOKEN).id; }
+  generateOAuthConsentId(): string { return this.generateId(P.OAUTH_CONSENT).id; }
 
   // Runtime & Ephemeral
   generateSessionId(): string { return this.generateId(P.SESSION).id; }
@@ -375,50 +384,8 @@ export class EnterpriseIdService {
   // ISO 19650 Cost Log (ADR-373 P2.5)
   generateIso19650CostLogId(): string { return this.generateId(P.ISO19650_COST_LOG).id; }
 
-  // DXF BIM Drawing Mode (ADR-363)
-  generateWallId(): string { return this.generateId(P.WALL).id; }
-  generateOpeningId(): string { return this.generateId(P.OPENING).id; }
-  generateSlabId(): string { return this.generateId(P.SLAB).id; }
-  generateSlabOpeningId(): string { return this.generateId(P.SLAB_OPENING).id; }
-  /** ADR-632 Φ5 — σταθερό slab-opening id ανά seed (auto stairwell opening: `stairId::slabId`). */
-  generateDeterministicSlabOpeningId(seed: string): string { return this.generateDeterministicId(P.SLAB_OPENING, seed); }
-  generateBimStackGroupId(): string { return this.generateId(P.BIM_STACK_GROUP).id; }
-  generateColumnId(): string { return this.generateId(P.COLUMN).id; }
-  generateBeamId(): string { return this.generateId(P.BEAM).id; }
-  generateFoundationId(): string { return this.generateId(P.FOUNDATION).id; }
-  generateGridGuideDocId(): string { return this.generateId(P.GRID_GUIDE).id; }
-  generateTopoSurfaceId(): string { return this.generateId(P.TOPO_SURFACE).id; }
-  generateMepFixtureId(): string { return this.generateId(P.MEP_FIXTURE).id; }
-  generateMepSystemId(): string { return this.generateId(P.MEP_SYSTEM).id; }
-  generateElectricalPanelId(): string { return this.generateId(P.ELECTRICAL_PANEL).id; }
-  generateMepSegmentId(): string { return this.generateId(P.MEP_SEGMENT).id; }
-  generateMepFittingId(): string { return this.generateId(P.MEP_FITTING).id; }
-  generateMepManifoldId(): string { return this.generateId(P.MEP_MANIFOLD).id; }
-  generateMepRadiatorId(): string { return this.generateId(P.MEP_RADIATOR).id; }
-  generateMepBoilerId(): string { return this.generateId(P.MEP_BOILER).id; }
-  generateMepWaterHeaterId(): string { return this.generateId(P.MEP_WATER_HEATER).id; }
-  generateMepUnderfloorId(): string { return this.generateId(P.MEP_UNDERFLOOR).id; }
-  generateRailingId(): string { return this.generateId(P.RAILING).id; }
-  /** ADR-407 Φ7 — σταθερό railing id ανά seed (auto stair-hosted railing: `stairId::side`). */
-  generateDeterministicRailingId(seed: string): string { return this.generateDeterministicId(P.RAILING, seed); }
-  generateRoofId(): string { return this.generateId(P.ROOF).id; }
-  generateFloorFinishId(): string { return this.generateId(P.FLOOR_FINISH).id; }
-  generateWallCoveringId(): string { return this.generateId(P.WALL_COVERING).id; }
-  generateHatchId(): string { return this.generateId(P.HATCH).id; }
-  generateThermalSpaceId(): string { return this.generateId(P.THERMAL_SPACE).id; }
-  generateSpaceSeparatorId(): string { return this.generateId(P.SPACE_SEPARATOR).id; }
-  generateFurnitureId(): string { return this.generateId(P.FURNITURE).id; }
-  generateImportedMeshId(): string { return this.generateId(P.IMPORTED_MESH).id; }
-  generateGenericSolidId(): string { return this.generateId(P.GENERIC_SOLID).id; }
-  generateFloorplanSymbolId(): string { return this.generateId(P.FLOORPLAN_SYMBOL).id; }
-  generateBimPresetId(): string { return this.generateId(P.BIM_PRESET).id; }
-  generateBimMaterialId(): string { return this.generateId(P.BIM_MATERIAL).id; }
-  generateBlockLibraryItemId(): string { return this.generateId(P.BLOCK_LIBRARY_ITEM).id; }
-  generateBimSettingsId(): string { return this.generateId(P.BIM_SETTINGS).id; }
-  generateBimFamilyTypeId(): string { return this.generateId(P.BIM_FAMILY_TYPE).id; }
-
-  // Opening Component Library — Frame Presets (ADR-676)
-  generateOpeningFramePresetId(): string { return this.generateId(P.OPENING_FRAME_PRESET).id; }
+  // DXF BIM Drawing Mode (ADR-363) + Opening Frame Presets (ADR-676) live in the
+  // `BimEntityIdGenerators` base class (N.7.1 split) — same public surface.
 
   // --- Deterministic Composite Key Generators ---
   // Public surface only; the pure builders live in `./enterprise-id-composite-keys`

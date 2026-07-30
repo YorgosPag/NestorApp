@@ -42,6 +42,8 @@ export {
   generateAddressId, generateOpportunityId, generateLandownerId,
   generateSectionId, generateArticleId, generateParagraphId, generateObligationId,
   generateTransmittalId, generateSessionId, generateTransactionId,
+  generateOAuthClientId, generateOAuthAuthRequestId, generateOAuthCodeId,
+  generateOAuthTokenId, generateOAuthConsentId,
   generateNotificationId, generateTaskId, generateEventId, generateRequestId,
   generateMessageId, generateJobId, generateOverlayId, generateLevelId, generateViewTemplateId,
   generateLayerId, generateElementId, generateHistoryId, generateAnnotationId,

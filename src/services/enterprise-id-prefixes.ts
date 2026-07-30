@@ -34,6 +34,22 @@ export const ENTERPRISE_ID_PREFIXES = {
   OBLIGATION: 'obl',
   TRANSMITTAL: 'xmit',
 
+  // OAuth 2.1 Authorization Server (ADR-738) — έγγραφα ΜΟΝΟ Admin SDK, deny-all στα rules
+  /** Στιγμιότυπο CIMD ενός MCP client (client_id = HTTPS URL, βλ. ADR-738 §4). */
+  OAUTH_CLIENT: 'oacli',
+  /**
+   * Εκκρεμές αίτημα εξουσιοδότησης — ζει όσο ο **άνθρωπος** σκέφτεται.
+   * Ξεχωριστό από το `OAUTH_CODE` επίτηδες: άλλος κύκλος ζωής (λεπτά έναντι
+   * δευτερολέπτων) και άλλος καταναλωτής (browser έναντι μηχανής).
+   */
+  OAUTH_AUTH_REQUEST: 'oareq',
+  /** Authorization code — εφήμερο (60s), μιας χρήσης. */
+  OAUTH_CODE: 'oacode',
+  /** Access ή refresh token — αποθηκεύεται **μόνο** ως SHA-256, ποτέ ωμό. */
+  OAUTH_TOKEN: 'oatok',
+  /** Συγκατάθεση χρήστη προς client — ό,τι ο Γιώργος βλέπει και ανακαλεί. */
+  OAUTH_CONSENT: 'oacons',
+
   // Runtime & Ephemeral
   SESSION: 'sess',
   TRANSACTION: 'txn',
