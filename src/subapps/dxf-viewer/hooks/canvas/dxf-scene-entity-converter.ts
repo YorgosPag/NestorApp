@@ -117,7 +117,13 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
     return null;
   }
   const out = handler(entity, base);
-  if (entity.type === 'image') console.log('[ADR736-PROBE] convertEntity image', entity.id, out ? 'OK' : 'NULL', JSON.stringify(base));
+  const probe = globalThis as unknown as { __adr736n?: number };
+  probe.__adr736n = (probe.__adr736n ?? 0) + 1;
+  if (entity.type === 'image' || probe.__adr736n <= 6) {
+    const g = entity as unknown as { position?: unknown; vertices?: unknown[]; center?: unknown; start?: unknown };
+    console.log('[ADR736-PROBE] convertEntity', entity.type, entity.id,
+      JSON.stringify({ position: g.position, v0: g.vertices?.[0], center: g.center, start: g.start }));
+  }
   return out;
 }
 
