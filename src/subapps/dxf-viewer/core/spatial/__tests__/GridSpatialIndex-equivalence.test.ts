@@ -192,6 +192,49 @@ describe('ADR-735 — getCandidates: ίδιο σύνολο ΚΑΙ ίδια σε�
   });
 });
 
+describe('ADR-735 — το βιβλίο των κατοικημένων κελιών μένει συγχρονισμένο', () => {
+  // Το `populatedCells` είναι ΝΕΑ κατάσταση (ADR-735 Επίπεδο 2). Αν ξεσυγχρονιστεί, το φράγμα
+  // διαλέγει λάθος μονοπάτι — που παραμένει **σωστό** (τα δύο μονοπάτια είναι ισοδύναμα, §5),
+  // αλλά χάνει το κέρδος σιωπηλά. Ακριβώς το είδος σφάλματος που δεν εμφανίζεται ως αποτυχία.
+  const bounds: SpatialBounds = { minX: 0, minY: 0, maxX: 1000, maxY: 1000 };
+
+  it('insert → remove → clear: το βιβλίο επιστρέφει στο μηδέν', () => {
+    const grid = new ProbeGrid(bounds, 100);
+    grid.insert(pointItem('a', 50, 50));
+    grid.insert(pointItem('b', 950, 950));
+    expect(grid.populatedCellCount).toBe(2);
+
+    // Δεύτερο σημείο στο ΙΔΙΟ κελί δεν είναι νέο κελί.
+    grid.insert(pointItem('a2', 60, 60));
+    expect(grid.populatedCellCount).toBe(2);
+
+    // Το κελί ζει όσο κρατά έστω ένα item…
+    expect(grid.remove('a')).toBe(true);
+    expect(grid.populatedCellCount).toBe(2);
+    // …και φεύγει όταν αδειάσει.
+    expect(grid.remove('a2')).toBe(true);
+    expect(grid.populatedCellCount).toBe(1);
+
+    expect(grid.remove('missing')).toBe(false);
+    expect(grid.populatedCellCount).toBe(1);
+
+    grid.clear();
+    expect(grid.populatedCellCount).toBe(0);
+    expect(grid.itemCount).toBe(0);
+    expect(grid.candidateIds(bounds)).toEqual([]);
+  });
+
+  it('item με ΕΚΤΑΣΗ σε πολλά κελιά: το βιβλίο τα μετρά και τα αποδεσμεύει όλα', () => {
+    const grid = new ProbeGrid(bounds, 100);
+    grid.insert({ id: 'wide', bounds: { minX: 0, minY: 0, maxX: 250, maxY: 0 } });
+    expect(grid.populatedCellCount).toBe(3); // στήλες 0,1,2 στη γραμμή 0
+
+    expect(grid.remove('wide')).toBe(true);
+    expect(grid.populatedCellCount).toBe(0);
+    expect(grid.candidateIds(bounds)).toEqual([]);
+  });
+});
+
 describe('ADR-735 — το κόστος δεν ακολουθεί πλέον το zoom', () => {
   it('ίδια δεδομένα, aperture ×100: ο χρόνος δεν εκρήγνυται', () => {
     // Η ρίζα του ευρήματος: πριν, το κόστος ήταν Ο((2·radius/cellSize)²) — δηλαδή Ο(zoom²) με
