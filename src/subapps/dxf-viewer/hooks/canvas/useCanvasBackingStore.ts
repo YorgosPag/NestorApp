@@ -59,10 +59,11 @@ export function useCanvasBackingStore({
   viewportProp,
   label,
 }: UseCanvasBackingStoreOptions): UseCanvasBackingStoreResult {
-  // Stable indirection: lets useCanvasResize's DPR-change handler call the latest
-  // `setupCanvas` (defined below) instead of a parallel subscription.
-  const setupCanvasRef = useRef<() => void>(() => {});
-  const runSetupCanvas = useCallback(() => setupCanvasRef.current(), []);
+  // Stable indirection: lets useCanvasResize's observer / DPR-change handler call the latest
+  // `setupCanvas` (defined below) instead of a parallel subscription. The optional viewport is
+  // forwarded verbatim — see `setupCanvas` for why the caller-supplied size wins.
+  const setupCanvasRef = useRef<(vp?: Viewport) => void>(() => {});
+  const runSetupCanvas = useCallback((vp?: Viewport) => setupCanvasRef.current(vp), []);
 
   const { viewport } = useCanvasResize({ canvasRef, viewportProp, onSetupCanvas: runSetupCanvas });
 
@@ -70,10 +71,13 @@ export function useCanvasBackingStore({
   const resolvedViewportRef = useRef(viewport);
   resolvedViewportRef.current = viewport;
 
-  const setupCanvas = useCallback(() => {
+  // `explicitViewport` wins when given: the local ResizeObserver knows the fresh size BEFORE the
+  // render body writes `resolvedViewportRef`, so reading the ref there would size to the stale
+  // (usually 0×0) value and silently no-op — the buffer would stay at the 300×150 default.
+  const setupCanvas = useCallback((explicitViewport?: Viewport) => {
     const canvas = canvasRef.current;
     if (!canvas || !(canvas instanceof HTMLCanvasElement)) return;
-    const vp = resolvedViewportRef.current;
+    const vp = explicitViewport ?? resolvedViewportRef.current;
     if (!vp.width || !vp.height) return;
     try {
       CanvasUtils.sizeCanvasToViewport(canvas, vp);

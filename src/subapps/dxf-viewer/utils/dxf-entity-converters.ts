@@ -433,7 +433,10 @@ function routeEntityToConverter(
       return convertText(data, layer, index, styleFonts);
     case 'MTEXT':
     case 'MULTILINETEXT':
-      return convertMText(data, layer, index, styleFonts);
+      // ADR-737 §11-1 — τα embedded objects (group 101) ζουν ΕΚΤΟΣ του flat `data` (ο parser τα
+      // κρατά χωριστά για να μην επιγράψουν τους κωδικούς της host οντότητας). Ίδιο ιδίωμα με τα
+      // `entityData.pairs` που παίρνουν ήδη οι HATCH/LWPOLYLINE/SPLINE/MLINE converters.
+      return convertMText(data, layer, index, styleFonts, entityData.embeddedObjects);
     // ADR-635 Φάση B Batch 2 — block attribute value (visible) + definition template.
     case 'ATTRIB':
       return convertAttrib(data, layer, index);

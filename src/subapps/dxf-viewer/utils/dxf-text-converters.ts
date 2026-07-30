@@ -39,6 +39,10 @@ import {
   mapTextAttachment,
   resolveTextAnchor,
 } from './dxf-text-anchor';
+// ADR-737 §11-1 — MTEXT columns (DXF R2018 embedded object, group 101). Ο τυποποιητής είναι
+// ΗΔΗ SSoT στο `dxf-embedded-object.ts`· εδώ μόνο τον καλούμε — κανένας δεύτερος parser.
+import { findMTextColumns } from './dxf-embedded-object';
+import type { EmbeddedObjectList, MTextColumnsData } from './dxf-embedded-object';
 
 // ── Text node builder (ADR-344 SSOT unification) ──────────────────────────────
 
@@ -202,10 +206,16 @@ function buildTextSceneEntity(params: {
    * MTEXT — αν σφραγιστούν, ο writer θα τα εξάγει ως MTEXT και θα σπάσει το round-trip τους.
    */
   dxfSourceType?: 'mtext';
+  /**
+   * ADR-737 §11-1 — στηλοποίηση MTEXT (embedded object 101). Όπως και το `dxfSourceType`,
+   * **ΜΟΝΟ** το `convertMText` το περνά: το embedded object ενός ATTRIB/ATTDEF είναι ολόκληρο
+   * MTEXT (άλλη σημασιολογία στους ίδιους κωδικούς) και δεν περιγράφει στήλες.
+   */
+  mtextColumns?: MTextColumnsData;
 }): AnySceneEntity {
   const {
     idPrefix, index, layer, x, y, text, height, rotation, alignment, textNode, color, width,
-    dxfSourceType,
+    dxfSourceType, mtextColumns,
   } = params;
   return {
     id: `${idPrefix}_${index}`,
@@ -227,6 +237,9 @@ function buildTextSceneEntity(params: {
     // Γράφεται μόνο όταν υπάρχει, ώστε το TEXT/ATTRIB/ATTDEF node να μένει byte-identical
     // (Firestore-safe: κανένα `undefined` πεδίο) — ίδιο pattern με `color`/`width`.
     ...(dxfSourceType && { dxfSourceType }),
+    // Ίδιο Firestore-safe ιδίωμα: γράφεται μόνο όταν η οντότητα ΟΝΤΩΣ έχει στήλες, ώστε τα
+    // MTEXT χωρίς στηλοποίηση (η συντριπτική πλειοψηφία) να μένουν byte-identical.
+    ...(mtextColumns && { mtextColumns }),
   };
 }
 
@@ -296,6 +309,14 @@ export function convertMText(
   layer: string,
   index: number,
   styleFonts?: StyleFontMap,
+  /**
+   * ADR-737 §11-1 — τα ωμά buckets του `EntityData.embeddedObjects` (group code 101). Ο
+   * dispatcher τα δίνει από το `entityData`, ακριβώς όπως δίνει ήδη τα `entityData.pairs` στους
+   * HATCH/LWPOLYLINE/SPLINE/MLINE converters — **το flat `data` δεν τα κουβαλά ποτέ** (ο parser
+   * τα κρατά ΕΚΤΟΣ `data`/`pairs` για να μην επιγράψουν τους κωδικούς της host οντότητας).
+   * Απόν (tests/adapters που δεν πέρασαν από τον parser) → καμία στηλοποίηση, όπως πριν.
+   */
+  embeddedObjects?: EmbeddedObjectList,
 ): AnySceneEntity | null {
   const { x, y, height, rotation } = parseTextTransform(data);
   // ADR-635 — `data['1']` έρχεται ΗΔΗ ενωμένο από τον parser (`dxf-mtext-chunks`): MTEXT >250
@@ -340,6 +361,8 @@ export function convertMText(
   // δεν έχει καθορισμένη στήλη (μονή γραμμή, «auto») — άρα το 0 ΔΕΝ είναι πλάτος μηδέν, είναι
   // «χωρίς πλαίσιο»· ο guard `> 0` στο `buildTextSceneEntity` το κρατά εκτός.
   const referenceWidth = parseFloat(data['41']);
+  // ADR-737 §11-1 — μία στηλοποίηση ανά οντότητα, τυποποιημένη από τον SSoT τυποποιητή.
+  const mtextColumns = findMTextColumns(embeddedObjects);
 
   return buildTextSceneEntity({
     idPrefix: 'mtext', index, layer, x, y, text: plainText, height, rotation, alignment,
@@ -351,6 +374,9 @@ export function convertMText(
     // μονογραμμικό TEXT. Το `type` μένει σκόπιμα `'text'` — δες `TextEntity.dxfSourceType` για το
     // γιατί (ασύμμετρη κάλυψη 15+ registries· ίδιο ιδίωμα με `HatchEntity.dxfSourceType`).
     dxfSourceType: 'mtext',
+    // ADR-737 §11-1 — χωρίς αυτό η στηλοποίηση πέθαινε εδώ: ο parser τη διάβαζε σωστά, καμία
+    // scene entity δεν την κουβαλούσε, ο writer δεν είχε τι να ξαναγράψει ⇒ σιωπηλή απώλεια.
+    ...(mtextColumns && { mtextColumns }),
   });
 }
 

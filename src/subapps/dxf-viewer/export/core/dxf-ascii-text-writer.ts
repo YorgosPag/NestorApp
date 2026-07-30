@@ -27,6 +27,11 @@ import { ensureTextNode } from '../../text-engine/edit/ensure-text-node';
 import { DxfDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import { alignmentToHJust } from '../../utils/dxf-converter-helpers';
 import { attachmentToMTextCode, attachmentToVJust } from '../../utils/dxf-text-converters';
+// ADR-737 §11-1 — MTEXT columns: ο marker + ο ΑΝΤΙΣΤΡΟΦΟΣ χάρτης τύπου→code 71 ζουν στον ίδιο
+// leaf SSoT με τον importer (`dxf-embedded-object.ts`), ώστε τα δύο άκρα να μη διαφωνήσουν ποτέ.
+import {
+  EMBEDDED_OBJECT_MARKER, mtextColumnTypeCode, type MTextColumnsData,
+} from '../../utils/dxf-embedded-object';
 import type { Pair } from './dxf-ascii-hatch-writer';
 import { emitAcDbEntity, type EntityR2018 } from './dxf-ascii-primitive-emitters';
 
@@ -166,6 +171,60 @@ export function emitMText(
   pair(7, styleName);
   pair(50, node.rotation);                          // rotation (CCW degrees)
   pair(1, sanitizeText(content));
+
+  // ADR-737 §11-1 — η στηλοποίηση μπαίνει **ΤΕΛΕΥΤΑΙΑ**: το `101` είναι ΤΟΜΗ ΕΝΟΤΗΤΑΣ (ισοδύναμη
+  // με `0`/`100`), άρα ό,τι γραφτεί μετά ανήκει στο ενσωματωμένο αντικείμενο και ΟΧΙ στο MTEXT.
+  //
+  // ΔΙΠΛΗ ΠΥΛΗ — και οι δύο όροι είναι απαραίτητοι:
+  //  • `version === R2018`: το embedded object είναι χαρακτηριστικό **R2018+**. Πριν το R2018 οι
+  //    στήλες ζούσαν σε XDATA («ACAD» app group)· ένα `101` σε R2000/R2013 αρχείο είναι άκυρο.
+  //  • `r2018` (professional path): στο **γυμνό** μονοπάτι ο dispatcher προσθέτει τους κοινούς
+  //    STYLE κωδικούς (6/48/370) **ΜΕΤΑ** τον emitter (`STYLE_APPEND_TYPES` περιέχει text/mtext).
+  //    Με ανοιχτή ενότητα `101` αυτοί θα κατέληγαν **μέσα** στο ενσωματωμένο αντικείμενο και θα
+  //    χάνονταν στην επανεισαγωγή. Στο professional μονοπάτι είναι ήδη διπλωμένοι μέσα στο
+  //    `AcDbEntity` block, πριν τη γεωμετρία — άρα δεν γράφεται τίποτα μετά το `101`.
+  const columns = (e as TextEntity | MTextEntity).mtextColumns;
+  if (columns && r2018 && version === DxfDocumentVersion.R2018) {
+    emitMTextColumns(pair, columns, (e as MTextEntity).position, node.rotation, width, s);
+  }
+}
+
+/**
+ * ADR-737 §11-1 — εξαγωγή του **embedded object** των στηλών MTEXT (DXF R2018, group `101`).
+ * Σειρά κωδικών κατά ezdxf `MTextColumns.export_embedded_object` (επαληθευμένη και στα
+ * «MTEXT Internals» της τεκμηρίωσης ezdxf): 70, 10/20/30, 11/21/31, 40, 41, 42, 43, 71, 72,
+ * 44, 45, 73, 74, 46×n.
+ *
+ * ⚠️ **ΓΙΑΤΙ ΔΕΝ ξαναγράφουμε το ωμό bucket αυτούσιο**: τα ωμά ζεύγη είναι μήκη σε **μονάδες
+ * πηγής**, ενώ ΟΛΟ το υπόλοιπο MTEXT εξάγεται πολλαπλασιασμένο με τον canonical-mm συντελεστή
+ * `s` (ADR-462) — αυτούσια αντιγραφή ⇒ στήλες σε λάθος κλίμακα μέσα σε σωστά κλιμακωμένη
+ * οντότητα. Εδώ το `* s` μπαίνει **μόνο στα μήκη** (40/41/42/43/44/45/46) και **ΠΟΤΕ** στα
+ * πλήθη/σημαίες (71/72/73/74) ούτε στο **μοναδιαίο** διάνυσμα κατεύθυνσης (10/20/30).
+ *
+ * Οι κωδικοί που το ίδιο το embedded object αντιγράφει από τον host (70 flag, 10/20/30 text
+ * direction, 11/21/31 insertion point, 40 reference column width) **ξαναπαράγονται από τον
+ * host**, σωστά κλιμακωμένοι — δεν κουβαλιούνται ως δεδομένα.
+ */
+export function emitMTextColumns(
+  pair: Pair, columns: MTextColumnsData, position: Point2D, rotationDeg: number,
+  referenceWidth: number, s: number,
+): void {
+  const rad = (rotationDeg * Math.PI) / 180;
+  pair(101, EMBEDDED_OBJECT_MARKER);
+  pair(70, 1);
+  pair(10, Math.cos(rad)); pair(20, Math.sin(rad)); pair(30, 0); // μοναδιαίο → ΧΩΡΙΣ `* s`
+  pair(11, position.x * s); pair(21, position.y * s); pair(31, 0);
+  pair(40, referenceWidth * s);                     // repeated reference column width
+  pair(41, (columns.definedHeight ?? 0) * s);
+  pair(42, (columns.totalWidth ?? 0) * s);
+  pair(43, (columns.totalHeight ?? 0) * s);
+  pair(71, mtextColumnTypeCode(columns.columnType));
+  pair(72, columns.count ?? 0);                     // πλήθος — ΧΩΡΙΣ `* s`
+  pair(44, (columns.width ?? 0) * s);
+  pair(45, (columns.gutterWidth ?? 0) * s);
+  pair(73, columns.autoHeight ? 1 : 0);             // σημαία — ΧΩΡΙΣ `* s`
+  pair(74, columns.reversedFlow ? 1 : 0);           // σημαία — ΧΩΡΙΣ `* s`
+  for (const h of columns.heights ?? []) pair(46, h * s);
 }
 
 /** Character height from the first real run of the node (SSoT for MTEXT code 40). */

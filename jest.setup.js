@@ -55,14 +55,25 @@ if (typeof global.DecompressionStream === 'undefined') {
   global.CompressionStream = CompressionStream;
   global.DecompressionStream = DecompressionStream;
 }
-if (typeof global.Blob === 'undefined' || typeof global.Blob.prototype.arrayBuffer !== 'function') {
-  global.Blob = require('buffer').Blob;
-}
-// Το `File` του jsdom έχει `name`/`size` αλλά **ΟΥΤΕ** `arrayBuffer()` **ΟΥΤΕ** `text()` — δηλαδή
-// κάθε κώδικας που διαβάζει τα bytes ενός αρχείου χρήστη (hash, unzip, decode) «αποτυγχάνει»
-// στα τεστ για λόγο που δεν υπάρχει στον browser. Ο Node 20 έχει πλήρες `File` στο `buffer`.
-if (typeof global.File === 'undefined' || typeof global.File.prototype.arrayBuffer !== 'function') {
-  global.File = require('buffer').File;
+// Το `Blob`/`File` του jsdom έχει `name`/`size` αλλά **ΟΥΤΕ** `arrayBuffer()` **ΟΥΤΕ** `text()` —
+// δηλαδή κάθε κώδικας που διαβάζει τα bytes ενός αρχείου χρήστη (hash, unzip, decode) «αποτυγχάνει»
+// στα τεστ για λόγο που **δεν υπάρχει στον browser**.
+//
+// ⚠️ ΣΥΜΠΛΗΡΩΝΟΥΜΕ τα πρωτότυπα — ΔΕΝ αντικαθιστούμε τις κλάσεις με του Node. Το `Blob` του Node
+// είναι ΑΛΛΟΣ τύπος: το jsdom `FileReader.readAsArrayBuffer` κάνει brand-check και πετά
+// «parameter 1 is not of type 'Blob'» (μετρημένο: 19 τεστ κόκκινα σε GLTFExporter/three).
+// Το `File` του jsdom κληρονομεί από το `Blob`, οπότε ένα patch καλύπτει και τα δύο.
+if (typeof global.Blob !== 'undefined' && typeof global.Blob.prototype.arrayBuffer !== 'function') {
+  const readWith = (method) => function () {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader[method](this);
+    });
+  };
+  global.Blob.prototype.arrayBuffer = readWith('readAsArrayBuffer');
+  global.Blob.prototype.text = readWith('readAsText');
 }
 
 // Mock για Path2D (Canvas 2D API — not in jsdom)

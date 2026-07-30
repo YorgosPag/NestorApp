@@ -146,6 +146,24 @@ const COLUMN_TYPE_BY_VALUE: Readonly<Record<string, MTextColumnType>> = {
   '2': 'dynamic',
 };
 
+/**
+ * ΑΝΤΙΣΤΡΟΦΟ του {@link COLUMN_TYPE_BY_VALUE} — τυποποιημένος τύπος → DXF code 71.
+ * **Παράγεται μία φορά από τον ίδιο χάρτη** ώστε ο export writer να μην εφεύρει δεύτερο
+ * πίνακα που μπορεί να αποκλίνει (ίδιο ιδίωμα με το `ATTACHMENT_TO_MTEXT_CODE` του
+ * `dxf-text-converters.ts`).
+ */
+const COLUMN_TYPE_TO_VALUE: Readonly<Record<MTextColumnType, number>> = Object.fromEntries(
+  Object.entries(COLUMN_TYPE_BY_VALUE).map(([code, type]) => [type, Number(code)]),
+) as Record<MTextColumnType, number>;
+
+/**
+ * DXF code 71 για έναν τύπο στηλών (ADR-737 §11-1, export). Άγνωστη τιμή είναι αδύνατη
+ * (το union είναι κλειστό)· το `?? 0` υπάρχει ως structural fallback = «καμία στήλωση».
+ */
+export function mtextColumnTypeCode(type: MTextColumnType): number {
+  return COLUMN_TYPE_TO_VALUE[type] ?? 0;
+}
+
 /** Τα αριθμητικά πεδία των στηλών, με τα ονόματα του ezdxf. */
 type MTextColumnScalarKey =
   | 'count'

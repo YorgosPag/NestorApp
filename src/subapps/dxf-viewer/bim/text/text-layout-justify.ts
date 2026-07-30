@@ -107,7 +107,14 @@ function stretchLine(line: TextLayoutLine, frame: number): TextLayoutLine {
     if (seg.isGap && gaps.has(i)) { extra += delta; x += delta; }
   });
   const width = out.reduce((m, s) => Math.max(m, s.xWorld + s.widthWorld), 0);
-  return { spans: out, widthWorld: width, xOffsetWorld: line.xOffsetWorld };
+  // 🐛 Το `spacingRatio` ΕΛΕΙΠΕ από αυτό το literal (προστέθηκε στο `TextLayoutLine` με το
+  // Φ C.21 Δ, χωρίς να ενημερωθεί εδώ). Κάθε τεντωμένη γραμμή έβγαινε `spacingRatio:undefined`,
+  // και οι δύο καταναλωτές το ΠΟΛΛΑΠΛΑΣΙΑΖΟΥΝ για να βρουν το y της (`paintLayoutLines`,
+  // `explodeTextEntity`) ⇒ NaN, που μολύνει και το `totalExtraLineRatio` ⇒ ΟΛΟ το MTEXT με
+  // πλήρη στοίχιση (`\pxqj`/`\pxqd`) εξαφανιζόταν από τον καμβά. Ο compiler δεν το είδε ποτέ:
+  // το subapp είναι εκτός του root `tsconfig.json` (CHECK 3.29 / ADR-663).
+  // Η στοίχιση είναι ΟΡΙΖΟΝΤΙΑ απόφαση — το κατακόρυφο βήμα περνά ανέπαφο, εξ ορισμού.
+  return { spans: out, widthWorld: width, xOffsetWorld: line.xOffsetWorld, spacingRatio: line.spacingRatio };
 }
 
 /** Η οριζόντια μετατόπιση μιας γραμμής για κεντρική / δεξιά στοίχιση παραγράφου. */

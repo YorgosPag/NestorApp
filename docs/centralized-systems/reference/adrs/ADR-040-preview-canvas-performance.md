@@ -5512,3 +5512,51 @@ wipe και μηδέν κόστος στο steady state. Ίδιο μοτίβο �
 ήταν ήδη διαθέσιμο στο σημείο της βαφής, και το `getImmediateTransform()` παραμένει η event-time
 πηγή του μετασχηματισμού. Η εγγραφή εδώ είναι υποχρεωτική επειδή το αρχείο ανήκει στη λίστα
 CHECK 6B — όχι επειδή άλλαξε η αρχιτεκτονική.
+
+---
+
+## 2026-07-30 (b): `useCanvasBackingStore` — ΕΝΑ SSoT για τον κύκλο ζωής του backing store (CHECK 6B/6D stage)
+
+Συμπλήρωμα της προηγούμενης εγγραφής. Το size-at-paint-time έκλεισε το **χρονικό** παράθυρο στον
+`dxf-canvas-renderer`· εδώ κλείνουν οι **δομικές** τρύπες που το γεννούσαν, και μπαίνει το ίδιο
+συμβόλαιο και στον `layer-canvas-hooks` (ο κάτω καμβάς έπασχε ακριβώς το ίδιο — πλέγμα/κάτοψη).
+
+**Τρία ευρήματα, ένα ανά επίπεδο:**
+
+1. **Δίδυμα** — `DxfCanvas.tsx` και `LayerCanvas.tsx` κουβαλούσαν ~20 ταυτόσημες γραμμές
+   (setupCanvasRef indirection → `useCanvasResize` → `resolvedViewportRef` → `setupCanvas` →
+   mount effect → viewport-change effect). Το jscpd (CHECK 3.28) τα έβγαζε clone. Εξήχθησαν στο
+   `hooks/canvas/useCanvasBackingStore.ts`.
+2. **«skip initial»** — και τα **δύο** αντίγραφα είχαν `if (prev.width === 0 && prev.height === 0)
+   return;`, δηλαδή παρέκαμπταν το sizing **ακριβώς** στη μετάβαση `0 → πραγματικό μέγεθος` —
+   τη μοναδική στιγμή που ο buffer είναι ακόμα στο default `300×150`. Στηρίζονταν σε ένα mount
+   effect που είχε κάνει early-return (viewport 0×0). Αφαιρέθηκε: το `sizeCanvasToViewport` είναι
+   idempotent, οπότε η κλήση δεν κοστίζει όταν το μέγεθος είναι ήδη σωστό.
+3. **Observer-time stale ref** (standalone mode) — χωρίς `viewportProp` το μέγεθος έρχεται από τον
+   ΤΟΠΙΚΟ `ResizeObserver` του `useCanvasResize`. Ο callback ενημέρωνε μόνο το δικό του ref, ενώ
+   το sizing ζούσε σε effect με deps `viewportProp` — που εκεί **δεν αλλάζει ποτέ** ⇒ ο buffer
+   έμενε 300×150 επ' αόριστον. Η προφανής διόρθωση (`onSetupCanvas?.()` μέσα στον observer) είναι
+   **ανεπαρκής**: το `resolvedViewportRef` του καταναλωτή γράφεται στο **render body**, που δεν
+   έχει τρέξει ακόμα σε observer time → το `setupCanvas` διάβαζε 0×0 και έκανε no-op. Γι' αυτό ο
+   observer περνά πλέον το μέγεθος **ρητά**: `onSetupCanvas?.({ width, height })`, και το
+   `setupCanvas(explicitViewport?)` το προτιμά έναντι του ref.
+
+**Ιεραρχία ευθύνης (μην την αντιστρέψεις):** το `useCanvasBackingStore` είναι **πρόληψη** — φροντίζει
+ο buffer να είναι ήδη σωστός. Το size-at-paint-time στον render tick είναι το **δίχτυ** — εγγυάται
+ότι **κανένα** καρέ δεν βάφεται με ασύμφωνο buffer, ό,τι κι αν κάνει το timing των passive effects.
+Το hook **δεν** σημαίνει dirty: το dirty-on-viewport ανήκει στους renderers (έχουν ήδη `viewport`
+στα deps τους) — μία ευθύνη ανά module.
+
+**Files**: NEW `hooks/canvas/useCanvasBackingStore.ts`· MOD `canvas-v2/dxf-canvas/DxfCanvas.tsx`,
+`canvas-v2/layer-canvas/{LayerCanvas.tsx,layer-canvas-hooks.ts}`, `hooks/canvas/{useCanvasResize.ts,index.ts}`.
+
+**Tests (mutation-verified — ο έλεγχος αντιστράφηκε και τα δύο κοκκίνισαν):**
+`canvas-v2/dxf-canvas/__tests__/dxf-canvas-backing-store-sync.test.ts` (5· χωρίς το size-at-paint-time
+3 κόκκινα με `300` αντί `1540`) και `hooks/canvas/__tests__/useCanvasBackingStore.test.ts` (6· χωρίς
+το explicit-viewport forwarding 2 κόκκινα). ⚠️ Η πρώτη γραφή του δεύτερου τεστ ισχυριζόταν ότι
+καρφώνει το «skip initial» — το mutation check το διέψευσε (το `useCanvasResize` effect το κάλυπτε
+ήδη μέσω των `viewportProp` deps). Ο ισχυρισμός διορθώθηκε αντί να κρατηθεί ένα πράσινο τεστ που
+δεν απέδειξε τίποτα.
+
+✅ Google-level: YES — ένα module = ένα σημείο διόρθωσης, idempotent sizing, μηδέν νέα συνδρομή,
+belt-and-suspenders (πρόληψη σε effect + εγγύηση στο frame).

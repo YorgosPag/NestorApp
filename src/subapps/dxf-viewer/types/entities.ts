@@ -8,6 +8,9 @@ import type { DxfTextNode } from '../text-engine/types';
 import type { LineweightMm } from './scene-types';
 import type { HatchPattern } from '../data/hatch-pattern-catalog';
 import type { HatchGradient } from '../bim/hatch/hatch-gradient';
+// ADR-737 §11-1 — τυποποιημένη περιγραφή στηλών MTEXT (DXF embedded object, group 101).
+// Το `dxf-embedded-object.ts` είναι leaf (μηδέν imports) → κανένας κύκλος.
+import type { MTextColumnsData } from '../utils/dxf-embedded-object';
 
 // ─── BaseEntity + EntityType extracted to break circular import (ADR-363 fix) ─
 // bim-base.ts used to import BaseEntity from here → created:
@@ -217,6 +220,21 @@ export interface TextEntity extends BaseEntity {
    * ο compiler δεν γνωρίζει. Η δήλωση είναι additive — καμία αλλαγή συμπεριφοράς.
    */
   width?: number;
+  /**
+   * ADR-737 §11-1 — **στηλοποίηση MTEXT** (DXF R2018 embedded object, group code `101`).
+   *
+   * Ο parser ήδη κρατούσε το ωμό bucket στο `EntityData.embeddedObjects`, αλλά **καμία** scene
+   * entity δεν το κουβαλούσε ⇒ πέθαινε στον converter και το re-export έχανε τη στηλοποίηση
+   * (το AutoCAD/ezdxf την ξαναγράφουν — `export_embedded_object`).
+   *
+   * ⚠️ **ΓΙΑΤΙ τυποποιημένο και ΟΧΙ το ωμό bucket**: τα ωμά ζεύγη είναι **μήκη σε μονάδες
+   * πηγής** και ο `scaleEntity` δεν τα αγγίζει ποτέ (δεν είναι στη σκηνή). Αυτούσια
+   * επανεγγραφή μετά από ένα `101` θα έβαζε στήλες σε **λάθος κλίμακα** μέσα σε σωστά
+   * κλιμακωμένη οντότητα (ο writer πολλαπλασιάζει κάθε μήκος με τον canonical-mm συντελεστή
+   * `s`, ADR-462). Το `MTextColumnsData` ξεχωρίζει **μήκη** (41/42/43/44/45/46) από
+   * **πλήθη/σημαίες** (71/72/73/74), οπότε ο `emitMTextColumns` κλιμακώνει μόνο τα πρώτα.
+   */
+  mtextColumns?: MTextColumnsData;
   // 🏢 ADR-344 Phase 11 — Annotative scaling (optional, populated by XDATA parser)
   isAnnotative?: boolean;
   annotationScales?: readonly EntityAnnotationScale[];
@@ -277,6 +295,8 @@ export interface MTextEntity extends BaseEntity {
   lineSpacing?: number;       // ✅ ENTERPRISE: AutoCAD line spacing factor
   paragraphSpacing?: number;  // ✅ ENTERPRISE: AutoCAD paragraph spacing
   wordWrap?: boolean;         // ✅ ENTERPRISE: AutoCAD word wrap option
+  /** ADR-737 §11-1 — στηλοποίηση MTEXT (group 101). Δες {@link TextEntity.mtextColumns}. */
+  mtextColumns?: MTextColumnsData;
   // 🏢 ADR-344 Phase 11 — Annotative scaling (optional, populated by XDATA parser)
   isAnnotative?: boolean;
   annotationScales?: readonly EntityAnnotationScale[];

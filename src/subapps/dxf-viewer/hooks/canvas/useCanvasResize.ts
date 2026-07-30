@@ -41,8 +41,15 @@ export interface UseCanvasResizeOptions {
   /** Viewport from parent (SSoT when provided) */
   viewportProp?: Viewport;
 
-  /** Optional callback when canvas needs setup (e.g., CanvasUtils.setupCanvasContext) */
-  onSetupCanvas?: () => void;
+  /**
+   * Optional callback when the canvas needs setup (e.g. CanvasUtils.sizeCanvasToViewport).
+   *
+   * ADR-040 (2026-07-30) — receives the FRESH viewport when the caller knows it (local
+   * ResizeObserver). The consumer's own viewport ref is only updated in the React render body,
+   * so an observer-time callback that read it would still see the pre-resize value and no-op.
+   * Omitted when the size did not change (DPR switch / window resize) → read your own ref.
+   */
+  onSetupCanvas?: (viewport?: Viewport) => void;
 }
 
 export interface UseCanvasResizeResult {
@@ -134,11 +141,13 @@ export function useCanvasResize({
           if (width > 0 && height > 0) {
             // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
             viewportRef.current = { width, height };
-            // ADR-040 (2026-07-30) — re-size the backing store IMMEDIATELY. In standalone mode the
-            // effect deps are `viewportProp` (which never changes here), so without this call the
-            // buffer stayed at the <canvas> default 300×150 while the ref reported the real size →
-            // the CSS-stretched «giant ruler». The setState below is for React deps only.
-            onSetupCanvas?.();
+            // ADR-040 (2026-07-30) — re-size the backing store IMMEDIATELY, with the size we just
+            // measured. In standalone mode the effect deps are `viewportProp` (which never changes
+            // here), so without this call the buffer stayed at the <canvas> default 300×150 while
+            // the ref reported the real size → the CSS-stretched «giant ruler». Passing the size
+            // explicitly matters: the consumer's own viewport ref is written in the render body,
+            // which has not run yet at observer time. The setState below is for React deps only.
+            onSetupCanvas?.({ width, height });
             // Also trigger React state update for dependencies
             setInternalViewport({ width, height });
           }
