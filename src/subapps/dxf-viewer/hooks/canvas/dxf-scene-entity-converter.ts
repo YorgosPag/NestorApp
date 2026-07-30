@@ -116,15 +116,7 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
     dwarn('useDxfSceneConversion', 'Unsupported entity type:', entity.type);
     return null;
   }
-  const out = handler(entity, base);
-  const probe = globalThis as unknown as { __adr736n?: number };
-  probe.__adr736n = (probe.__adr736n ?? 0) + 1;
-  if (entity.type === 'image' || probe.__adr736n <= 6) {
-    const g = entity as unknown as { position?: unknown; vertices?: unknown[]; center?: unknown; start?: unknown };
-    console.log('[ADR736-PROBE] convertEntity', entity.type, entity.id,
-      JSON.stringify({ position: g.position, v0: g.vertices?.[0], center: g.center, start: g.start }));
-  }
-  return out;
+  return handler(entity, base);
 }
 
 /**

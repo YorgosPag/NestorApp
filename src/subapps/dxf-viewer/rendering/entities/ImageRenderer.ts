@@ -71,7 +71,6 @@ export class ImageRenderer extends BaseEntityRenderer {
   );
 
   render(entity: EntityModel, options: RenderOptions = {}): void {
-    console.log('[ADR736-PROBE] ImageRenderer.render', (entity as { id?: string }).id, (entity as { type?: string }).type);
     if (!isImageEntity(entity as Entity)) return;
     const e = entity as unknown as ImageEntity;
     this.renderWithPhases(entity, options, () => this.drawImage(e));
@@ -89,7 +88,12 @@ export class ImageRenderer extends BaseEntityRenderer {
     // *ανεπίλυτη*, όχι *χαλασμένη* — δεν έχει νόημα να ρωτηθεί καν το cache.
     if (!e.url) {
       const sc = corners.map((c) => this.worldToScreen(c));
-      console.log('[ADR736-PROBE] placeholder', e.id, 'name=', e.sourceName, 'world=', JSON.stringify(corners), 'screen=', JSON.stringify(sc));
+      const p = globalThis as unknown as { __adr736p?: number };
+      p.__adr736p = (p.__adr736p ?? 0) + 1;
+      if (p.__adr736p <= 12) {
+        console.log('[ADR736-PROBE] placeholder', e.id, 'name=', e.sourceName,
+          'w0=', JSON.stringify(corners[0]), 's0=', JSON.stringify(sc[0]), 't=', JSON.stringify(this.transform));
+      }
       paintImagePlaceholder(this.ctx, sc, e.sourceName);
       return;
     }
