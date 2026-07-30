@@ -15,8 +15,7 @@
 'use client';
 import React, { useMemo, useSyncExternalStore, useEffect } from 'react';
 import { perfStart, perfEnd, PERF_LINE_PROFILE } from '../../debug/perf-line-profile';
-import { useHoveredOverlay } from '../../systems/hover/useHover';
-import { DxfCanvas, LayerCanvas } from '../../canvas-v2';
+import { DxfCanvas } from '../../canvas-v2';
 import SnapIndicatorOverlay from '../../canvas-v2/overlays/SnapIndicatorOverlay';
 import { subscribeSnapResult, getFullSnapResult } from '../../systems/cursor/ImmediateSnapStore';
 import { toSnapIndicatorView } from '../../snapping/extended-types';
@@ -30,7 +29,6 @@ import { toSnapIndicatorView } from '../../snapping/extended-types';
 import { AllGripsStore } from '../../systems/grip/AllGripsStore';
 import { snapCoversMoveCross } from '../../systems/grip/snap-over-move-cross';
 import { useGuideWorkflowComputed } from '../../hooks/guides/useGuideWorkflowComputed';
-import { useDraftPolygonLayer } from '../../hooks/layers/useDraftPolygonLayer';
 import { useHoveredEntity } from '../../systems/hover/useHover';
 import { useSelectedRoofEdge } from '../../bim/roofs/useRoofEdgeSelection';
 // ADR-358 Q19 Φ3a — sub-element selection store (2D stair tread highlight redraw).
@@ -65,7 +63,7 @@ import { StretchToolStore } from '../../systems/stretch/StretchToolStore';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 // ADR-040 Phase XXII.B — leaf-level transform subscriptions· ο shell δεν περνά πια
 // transform/transformScale props, ώστε να μην ξανα-render-άρεται ανά καρέ χειρονομίας.
-import { useTransformScale, useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
+import { useTransformValue } from '../../systems/cursor/ImmediateTransformStore';
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
 import type { DxfCanvasRef } from '../../canvas-v2';
 import type { ColorLayer } from '../../canvas-v2/layer-canvas/layer-types';
@@ -156,61 +154,14 @@ function SnapIndicatorTransformLayer({
 // ============================================================================
 // DRAFT LAYER SUBSCRIBER
 // ============================================================================
-// LayerCanvas pass-through props (layers injected by subscriber after computing draft)
-export type LayerCanvasPassthroughProps = Omit<React.ComponentPropsWithoutRef<typeof LayerCanvas>, 'layers'>;
-
-interface DraftLayerSubscriberProps {
-  // React 18 useRef returns RefObject<T | null>; forwardRef expects RefObject<T>.
-  // Cast is safe — the underlying ref object is identical at runtime.
-  canvasRef: React.RefObject<HTMLCanvasElement | null> | React.RefObject<HTMLCanvasElement>;
-  colorLayers: ColorLayer[];
-  draftPolygon: Array<[number, number]>;
-  currentStatus: string;
-  overlayMode: 'select' | 'draw' | 'edit';
-  layerCanvasPassthroughProps: LayerCanvasPassthroughProps;
-}
-
-/**
- * Subscribes to useCursorWorldPosition (via useDraftPolygonLayer) and renders LayerCanvas.
- * Only this component re-renders on mousemove when the rubber-band preview is active.
- */
-export const DraftLayerSubscriber = React.memo(function DraftLayerSubscriber({
-  canvasRef,
-  colorLayers,
-  draftPolygon,
-  currentStatus,
-  overlayMode,
-  layerCanvasPassthroughProps,
-}: DraftLayerSubscriberProps) {
-  // ADR-040 Phase XXII.B — scale-only leaf subscription (πρώην prop από τον shell).
-  const transformScale = useTransformScale();
-  const { colorLayersWithDraft } = useDraftPolygonLayer({
-    colorLayers,
-    draftPolygon,
-    currentStatus: currentStatus as import('../../types/overlay').RegionStatus,
-    overlayMode,
-    transformScale,
-  });
-
-  // 🚀 PERF (ADR-040 Phase II): useHoveredOverlay moved here from CanvasSection.
-  // This leaf already re-renders every mousemove (useDraftPolygonLayer → useCursorWorldPosition),
-  // so the subscription is free. CanvasSection no longer re-renders on overlay hover.
-  const hoveredOverlayId = useHoveredOverlay();
-  const finalLayers = useMemo(() => {
-    if (!hoveredOverlayId) return colorLayersWithDraft;
-    return colorLayersWithDraft.map(l =>
-      l.id === hoveredOverlayId ? { ...l, isHovered: true } : l
-    );
-  }, [colorLayersWithDraft, hoveredOverlayId]);
-
-  return (
-    <LayerCanvas
-      ref={canvasRef as React.RefObject<HTMLCanvasElement>}
-      {...layerCanvasPassthroughProps}
-      layers={finalLayers}
-    />
-  );
-});
+// ADR-732 §3 — mount-on-demand: ο draft/layer leaf μετακόμισε σε δικό του αρχείο μαζί
+// με την πύλη περιεχομένου (outer gate / inner canvas, ιδίωμα Batch 3). Re-export ώστε
+// το `canvas-layer-stack-leaves` να μένει το ΕΝΑ import barrel του shell.
+export {
+  DraftLayerSubscriber,
+  type LayerCanvasPassthroughProps,
+  type DraftLayerSubscriberProps,
+} from './canvas-layer-stack-draft-layer-leaf';
 
 // ============================================================================
 // DXF CANVAS SUBSCRIBER

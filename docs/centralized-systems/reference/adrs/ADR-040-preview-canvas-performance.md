@@ -113,6 +113,21 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-07-30 (στ) — ADR-732 Batch 5: LayerCanvas mount-on-demand (νέο leaf αρχείο)
+
+- **`DraftLayerSubscriber` μετακόμισε** από το `canvas-layer-stack-leaves.tsx` (432 γρ., όριο
+  N.7.1) στο ΝΕΟ `canvas-layer-stack-draft-layer-leaf.tsx` (re-export κρατά τους καλούντες
+  αμετάβλητους — ίδιο ιδίωμα με `-webgl-line-leaf`). Νέα δομή: **outer gate / inner canvas**
+  (μοτίβο Batch 3): ο outer κρατά ΜΟΝΟ 2 low-freq boolean subscriptions
+  (`SelectionStore.getIsSelecting()` — boolean snapshot ⇒ re-render μόνο στα flips της
+  χειρονομίας· `ruler-debug-toggle` event) και αποφασίζει με το pure predicate
+  `canvas-v2/layer-canvas/layer-canvas-content.ts` (`hasLayerCanvasContent`, fail-mounted)·
+  ο inner κατέχει τα high-freq (`useDraftPolygonLayer` → `useCursorWorldPosition`,
+  `useHoveredOverlay`, `useTransformScale`) και σε άδειο σχέδιο ΔΕΝ mount-άρεται καθόλου —
+  το mousemove δεν αγγίζει πια το υποδέντρο. Cardinal rules άθικτοι: κανένα νέο subscription
+  σε orchestrator· το `showLayerCanvas` του CanvasSection ως έχει. Πλήρης τεκμηρίωση:
+  **ADR-732 §3 + changelog (στ)**.
+
 ### 2026-07-30 (ε) — ADR-732 Batch 3: mount-on-demand (topo-grid, focus-2d, webgl-line) + zone hook SSoT
 
 - **Mount-on-demand** (το unmount = ισχυρότερη μορφή της Φ2 πύλης — μηδέν compositor layer):

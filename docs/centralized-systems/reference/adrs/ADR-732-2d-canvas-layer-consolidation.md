@@ -1,12 +1,13 @@
 # ADR-732 — Μοχλός Δ: Ενοποίηση των 13 full-viewport 2D καμβάδων (compositing footprint)
 
-**Status:** ✅ **Batches 1-4 ΟΛΟΚΛΗΡΩΜΕΝΑ (2026-07-30, uncommitted)** — ζώνη Β 4→1
+**Status:** ✅ **Batches 1-5 ΟΛΟΚΛΗΡΩΜΕΝΑ (2026-07-30)** — ζώνη Β 4→1
 (`Overlay2DDispatchCanvas`) + ζώνη Α grid/floorplan→1 (`UnderlayDispatchCanvas`) +
 mount-on-demand (floor-underlay, topo-grid, focus-2d, webgl-line) + zone hook SSoT
 (`use-overlay-zone-dispatch`) + **Batch 4 μέτρηση σε production: DOM 13→5 ✓, p90
-49,8→33,3ms ✓, p50 60 FPS αμετάβλητο ✓** (πλήρη νούμερα: §7.1). ΕΚΚΡΕΜΟΥΝ: LayerCanvas
-unmount-when-empty (αναβλήθηκε — βλ. §3) + οπτική επαλήθευση calibration click σε level
-με αποθηκευμένη raster κάτοψη (§7.1 σημ. 3).
+49,8→33,3ms ✓, p50 60 FPS αμετάβλητο ✓** (πλήρη νούμερα: §7.1) + **Batch 5: LayerCanvas
+unmount-when-empty (§3 — τυπικό σχέδιο 5→4, ΕΚΚΡΕΜΕΙ DOM census σε production)**.
+ΕΚΚΡΕΜΕΙ: οπτική επαλήθευση calibration click σε level με αποθηκευμένη raster κάτοψη
+(§7.1 σημ. 3).
 Εγκεκριμένο από τον Giorgio 2026-07-30 («Δ τώρα» + N.8: batch-by-batch).
 **Ημερομηνία:** 2026-07-30
 **Σχετικά:** **ADR-726 §4.Γ/§6** (η διάγνωση: software compositing 13 στρωμάτων = ο ΕΝΑΣ
@@ -117,13 +118,27 @@ dispatch (ή εγγράφονται σε registry), `paintOverlayDispatchFrame` 
   δηλαδή σχεδόν ΚΑΘΕ σκηνή είναι από κάτω) έγινε gate-at-mount: ούτε container, ούτε
   WebGL context, ούτε το `gl.clear`-ανά-καρέ του ADR-726 §4.Δ. Σε software rasterization
   αυτό ήταν ολόκληρο ζωντανό στρώμα + context για μηδέν draws.
-- `layer` (LayerCanvas) ⏳ **ΑΝΑΒΛΗΘΗΚΕ με λόγο** (2026-07-30): το «είναι άδειος;» ΔΕΝ
-  κρίνεται από έξω μόνο με `colorLayers.length === 0 && !draft` — το `LayerCanvas` δέχεται
-  `renderOptions.showSnapIndicators: true` και 6 ομάδες ρυθμίσεων (ADR-726 Φ2: «θέλει δικό
-  του predicate»)· ένα λάθος unmount θα έκοβε περιεχόμενο που δεν είναι color layer (π.χ.
-  ό,τι ζωγραφίζει το unified path). Απαιτεί ανάγνωση του `LayerRenderer` (unified/legacy)
-  και δικό του predicate + tests — δική της απόφαση, ΟΧΙ βιαστικό μέρος του Batch 3
-  (§6 παγίδα 4). Μέχρι τότε ο `canvas:layer` μένει το ΕΝΑ γνωστό Φ2-κενό.
+- `layer` (LayerCanvas) ✅ **Batch 5 (2026-07-30)** — υλοποιήθηκε ΜΕΤΑ την ανάγνωση που
+  ζητούσε η αναβολή. Το «θα έκοβε περιεχόμενο που δεν είναι color layer» **διαψεύστηκε με
+  ανάγνωση**: το `showSnapIndicators` είναι **νεκρή είσοδος** για αυτόν τον καμβά (ADR-137 —
+  snap indicators = SVG `SnapIndicatorOverlay`· ο `initializeUIRenderers` κάνει register ΜΟΝΟ
+  `'selection'`), crosshair/cursor/rulers δεν έχουν registered renderer, και το unified path
+  (ζωντανό: `useUnifiedRendering` default `true`) ζωγραφίζει ΜΟΝΟ color layers + selection.
+  **Ρητό pure predicate** `canvas-v2/layer-canvas/layer-canvas-content.ts`
+  (`hasLayerCanvasContent` — 4 πηγές pixel: (α) color layers/draft με όρια κορυφών από τον
+  ΠΡΑΓΜΑΤΙΚΟ renderer (≥3 μη-draft, ≥1 draft), (β) selection box — **ζωντανό σήμα το
+  `SelectionStore.getIsSelecting()`, ΟΧΙ τα props** (ο `renderLayers` τα παρακάμπτει ανά
+  καρέ)· marquee σε άδειο σχέδιο mount-άρει ΜΕΣΑ στη χειρονομία, (γ) legacy grid
+  (`showGrid && gridEnabled` — νεκρό στην παραγωγή: ο `CanvasLayerStack` περνά `false` +
+  disabled, αλλά το predicate δεν εξαρτάται από το ποιο path τρέχει), (δ) dev calibration
+  grid (`rulerDebugOverlay`). **Fail-mounted** σε κάθε αβεβαιότητα — ασύμμετρο κόστος: άσκοπο
+  στρώμα < κομμένα pixels. Νέο leaf `canvas-layer-stack-draft-layer-leaf.tsx`: outer gate
+  (2 low-freq boolean subscriptions, re-render μόνο στα flips) / inner με ΟΛΑ τα high-freq
+  (`useDraftPolygonLayer`/`useHoveredOverlay`/`useTransformScale`) — σε άδειο σχέδιο το
+  mousemove δεν αγγίζει καν το υποδέντρο. Το `showLayerCanvas` του CanvasSection μένει ως
+  έχει (η πύλη = επιπλέον συνθήκη). 26 νέα tests (17 unit + 9 component), mutations 4/4·
+  15 suites/103 πράσινα· jscpd καθαρό. Κλείνει το Φ2-κενό του `LayerRenderer.ts:189` με τον
+  ισχυρότερο τρόπο: ούτε στρώμα, όχι απλώς όχι-clear.
 
 ### Αποτέλεσμα (όπως υλοποιήθηκε, Batches 1-3)
 
@@ -132,8 +147,8 @@ dispatch (ή εγγράφονται σε registry), `paintOverlayDispatchFrame` 
 | Τυπικό σχέδιο (χωρίς MEP συστήματα/ανάλυση/topo toggle/focus) | 13 | **5** (underlay-dispatch, layer†, dxf, overlay-dispatch-2d, preview) |
 | Όλα ενεργά (≥50k σκηνή, MEP, ανάλυση, όλοι οι όροφοι) | 13 | **7** (+ webgl-line + floor-underlay) |
 
-† Το LayerCanvas μένει ζωντανό — το unmount-when-empty του ΑΝΑΒΛΗΘΗΚΕ (βλ. παραπάνω)·
-όταν γίνει, το τυπικό σενάριο πέφτει στο **4**. Επιπλέον ο overlay-dispatch-2d θα μπορούσε
+† ✅ Batch 5 (2026-07-30): το unmount-when-empty ΕΓΙΝΕ (βλ. παραπάνω) — το τυπικό σενάριο
+(χωρίς regions/draft/marquee) πέφτει στο **4**· εκκρεμεί DOM census σε production. Επιπλέον ο overlay-dispatch-2d θα μπορούσε
 μελλοντικά να unmount-άρεται με όλα τα passes null (⇒ 3) — ΔΕΝ έγινε στο Batch 1: τα painter
 hooks πρέπει να τρέχουν για να ξέρουμε πότε παύουν να είναι null, άρα απαιτεί outer/inner
 split με τα 16 hooks στον outer — κόστος/όφελος αμφίβολο, ο άδειος καμβάς με Φ2 πύλη δεν
@@ -247,6 +262,27 @@ z11 · preview z15) — ακριβώς η αναμονή του §3· μόνο �
 
 ## Changelog
 
+- **2026-07-30 (στ) — Batch 5 ΕΓΙΝΕ: LayerCanvas unmount-when-empty (5 → 4 στρώματα στο
+  τυπικό σχέδιο).** Η αναβολή του §3 ήρθη με την ανάγνωση που ζητούσε: το
+  `showSnapIndicators` αποδείχθηκε **νεκρή είσοδος** (ADR-137 — SVG overlay· μόνο
+  `'selection'` registered στον uiComposite), το unified path είναι το ζωντανό
+  (`useUnifiedRendering` default true ⇒ `renderLegacy`/grid/debug-calibration = νεκρά στην
+  παραγωγή, αλλά το predicate τα καλύπτει ούτως ή άλλως). ΝΕΑ: pure predicate
+  `layer-canvas-content.ts` (4 πηγές pixel, **fail-mounted** σε κάθε αβεβαιότητα) + leaf
+  `canvas-layer-stack-draft-layer-leaf.tsx` (outer gate 2 low-freq booleans / inner με τα
+  high-freq — μοτίβο Batch 3, το component μετακόμισε από το 432-γραμμών
+  `canvas-layer-stack-leaves.tsx` που κρατά re-export). Κρίσιμο εύρημα: το ζωντανό σήμα του
+  selection box είναι το `SelectionStore.getIsSelecting()` — τα props
+  `showSelectionBox/selectionBox` παρακάμπτονται από τον `renderLayers` ανά καρέ· χωρίς το
+  store η marquee σε άδειο σχέδιο δεν θα mount-άριζε ποτέ (δικό της component test, mount
+  μέσα στη χειρονομία). Απογραφή imperative καταναλωτών: `overlayCanvasRef` χωρίς κανέναν
+  αναγνώστη `.current`· `useLayerHitTest` νεκρός (ΔΕΝ σβήστηκε — dead-code baseline, απόφαση
+  Giorgio)· 14 DOM probes null-safe πλην του χειροκίνητου QA
+  `layering-workflow-test.qa.ts:530` (πετάει μόνο σε άδειο σχέδιο — σημειωμένο). Bonus perf:
+  σε άδειο σχέδιο δεν mount-άρεται το `useCursorWorldPosition` subscription του υποδέντρου.
+  Tests: 17 unit + 9 component, mutations 4/4 στο σωστό test· 15 suites/103 πράσινα· jscpd
+  καθαρό (5 αρχεία). ΕΚΚΡΕΜΕΙ: DOM census 4 σε production (μαζί με τη μέτρηση snap Φ2/Φ3
+  του ADR-728).
 - **2026-07-30 (ε) — Batch 4 ΕΓΙΝΕ: μέτρηση-απόδειξη σε production (BUILD_ID
   `T-mlZj7zMYXP22PFETbIm`).** DOM census **13 → 5** ✓· p90 καρέ **49,8 → 33,3ms** ✓·
   p50 60 FPS αμετάβλητο ✓· >33ms 11,5→15,9% (ΔΕΝ έπεσε — άλλαξε φύση: η διάσπαρτη
