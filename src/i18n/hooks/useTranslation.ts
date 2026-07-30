@@ -42,6 +42,47 @@ function isUnresolved(result: unknown, key: string): boolean {
 /** Ένα προειδοποιητικό ανά κλειδί ανά session — ένα ωμό κλειδί μπορεί να ζωγραφιστεί σε κάθε frame. */
 const warnedUnresolvedKeys = new Set<string>();
 
+type RawTCall = (key: string, opts?: TOptions | string, ...rest: unknown[]) => string;
+
+/**
+ * 🔴 Ο ΠΙΝΑΚΑΣ NAMESPACES ΔΕΝ ΚΑΝΕΙ LOOKUP — ΜΟΝΟ ΦΟΡΤΩΣΗ.
+ *
+ * Το react-i18next δένει το `t` στο **πρώτο** namespace, όχι σε όλα:
+ * `useTranslation.js:56` → `i18nOptions.nsMode === 'fallback' ? namespaces : namespaces[0]`.
+ * Άρα το `useTranslation(['dxf-viewer', …, 'files-media'])` **φορτώνει** το `files-media`
+ * αλλά δεν ψάχνει ΠΟΤΕ μέσα του. Μετρημένο 2026-07-31 (ADR-716 Φ5): το console έλεγε
+ * `files-media=loaded` ενώ η οθόνη ζωγράφιζε `floorplanImport.drawingUnits.title`.
+ * Μέχρι τότε το μόνο μονοπάτι προς μη-πρωτεύον ns ήταν το compat στρώμα του ADR-280 —
+ * που καλύπτει μόνο όσες ρίζες έχει καταγεγραμμένες.
+ *
+ * Δίχτυ **τελευταίας γραμμής**: τρέχει ΜΟΝΟ αφού αποτύχουν και το primary και το compat,
+ * δηλαδή ακριβώς εκεί που σήμερα ζωγραφιζόταν ωμό κλειδί. Ό,τι λύνεται σήμερα λύνεται
+ * απαράλλαχτα — μηδενική επιφάνεια παλινδρόμησης by construction. Η σειρά του πίνακα
+ * παραμένει η σειρά προτεραιότητας, όπως θα έκανε και το `nsMode: 'fallback'`.
+ *
+ * ⚠️ ΜΗΝ το μετατρέψεις σε καθολικό `nsMode: 'fallback'` στο init: εκείνο τρέχει **πριν**
+ * το compat remap και μπορεί να αλλάξει την επίλυση κλειδιών που σήμερα δουλεύουν.
+ */
+function resolveAcrossNamespaces(
+  rawTCall: RawTCall,
+  key: string,
+  namespaces: readonly string[],
+  primaryNs: string,
+  optionsOrDefault?: TOptions | string,
+  rest: readonly unknown[] = [],
+): string | undefined {
+  // Κλειδί που φέρει ΗΔΗ πρόθεμα ns έχει δηλώσει πού ζει — δεν το ξανα-προθεματίζουμε.
+  if (getExplicitNamespace(key).namespace) return undefined;
+
+  for (const ns of namespaces) {
+    if (ns === primaryNs) continue;
+    const scopedKey = `${ns}:${key}`;
+    const scoped = rawTCall(scopedKey, optionsOrDefault, ...rest);
+    if (!isUnresolved(scoped, scopedKey)) return scoped;
+  }
+  return undefined;
+}
+
 /** Ελάχιστη όψη του i18next instance που χρειάζεται η διάγνωση (χωρίς `any`). */
 interface BundleProbe {
   readonly language: string;
@@ -100,7 +141,6 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
 
   // Wrap t to apply compat remapping for split namespaces (ADR-280)
   const t = useMemo(() => {
-    type RawTCall = (key: string, opts?: TOptions | string, ...rest: unknown[]) => string;
     const rawTCall = rawT as unknown as RawTCall;
     const wrapped = (key: string, optionsOrDefault?: TOptions | string, ...rest: unknown[]) => {
       // Try original namespace first
@@ -120,6 +160,13 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
           return remappedResult;
         }
       }
+
+      // Τελευταία γραμμή: τα υπόλοιπα namespaces του πίνακα είναι ΦΟΡΤΩΜΕΝΑ αλλά το
+      // react-i18next δεν κοιτάζει μέσα τους — ρώτα τα ρητά πριν παραδοθεί ωμό κλειδί.
+      const crossNs = resolveAcrossNamespaces(
+        rawTCall, key, allNamespacesToLoad, primaryNs, optionsOrDefault, rest,
+      );
+      if (crossNs !== undefined) return crossNs;
 
       warnUnresolvedKey(fullKey, i18n, allNamespacesToLoad);
       return result;

@@ -78,7 +78,7 @@ function isAdminGlobalRole(globalRole: string): boolean {
 // ΑΠΟΤΕΛΕΣΜΑΤΑ
 // ============================================================================
 
-export type IdentityFailureKind = 'unauthenticated' | 'insufficient_scope';
+export type IdentityFailureKind = 'unauthenticated' | 'invalid_token' | 'insufficient_scope';
 
 export interface IdentityFailure {
   readonly kind: IdentityFailureKind;
@@ -110,6 +110,31 @@ export function buildUnauthenticatedChallenge(): string {
   return `Bearer resource_metadata="${resourceMetadataUrl()}", scope="${MCP_REQUIRED_SCOPE}"`;
 }
 
+/**
+ * `401` challenge για token που **προσκομίστηκε αλλά δεν ισχύει** — RFC 6750 §3.1.
+ *
+ * ⚠️ **Η διάκριση από το `buildUnauthenticatedChallenge()` δεν είναι φιλολογική.**
+ * Το RFC 6750 ορίζει ότι το 401 *χωρίς* `error` σημαίνει «δεν έστειλες
+ * διαπιστευτήρια», ενώ το `error="invalid_token"` σημαίνει «το έστειλες, είναι
+ * άχρηστο». Οι MCP clients αντιδρούν **διαφορετικά**: το πρώτο τους λέει να
+ * ξεκινήσουν ροή discovery + συγκατάθεσης· το δεύτερο, να **ανανεώσουν σιωπηλά**
+ * με το refresh token. Χωρίς τη διάκριση, ένα access token που απλώς έληξε μετά
+ * από μία ώρα εμφανίζεται στον client ως «δεν έχεις πρόσβαση» — και ο χρήστης
+ * καλείται να ξαναδώσει συγκατάθεση για κάτι που ήδη ενέκρινε.
+ *
+ * ⚠️ Το `error_description` είναι **ενιαίο επίτηδες**. Ο `lookupToken()` ελέγχει
+ * με συγκεκριμένη σειρά ώστε ένα ληγμένο token για λάθος ακροατήριο να μην
+ * αποκαλύπτει ποιο από τα δύο έφταιγε· αν το αντιγράφαμε εδώ ανά `rejection`,
+ * ο header θα ξανάνοιγε ακριβώς αυτό το κανάλι πληροφορίας.
+ */
+export function buildInvalidTokenChallenge(): string {
+  return (
+    `Bearer error="invalid_token", ` +
+    `error_description="The access token is expired, revoked, or otherwise invalid", ` +
+    `resource_metadata="${resourceMetadataUrl()}", scope="${MCP_REQUIRED_SCOPE}"`
+  );
+}
+
 /** `403` challenge για ανεπαρκές scope — RFC 6750 §3.1 + βήμα step-up. */
 export function buildInsufficientScopeChallenge(): string {
   return (
@@ -122,6 +147,13 @@ function unauthenticated(): McpIdentity {
   return {
     ok: false,
     failure: { kind: 'unauthenticated', status: 401, challenge: buildUnauthenticatedChallenge() },
+  };
+}
+
+function invalidToken(): McpIdentity {
+  return {
+    ok: false,
+    failure: { kind: 'invalid_token', status: 401, challenge: buildInvalidTokenChallenge() },
   };
 }
 
@@ -181,7 +213,7 @@ export async function resolveMcpIdentity(request: NextRequest): Promise<McpIdent
     };
   }
 
-  if (lookup.rejection !== 'not_found') return unauthenticated();
+  if (lookup.rejection !== 'not_found') return invalidToken();
 
   return resolveFirebaseIdentity(request);
 }
@@ -194,7 +226,10 @@ export async function resolveMcpIdentity(request: NextRequest): Promise<McpIdent
  */
 async function resolveFirebaseIdentity(request: NextRequest): Promise<McpIdentity> {
   const ctx = await buildRequestContext(request);
-  if (!isAuthenticated(ctx)) return unauthenticated();
+  // `invalid_token`, όχι `unauthenticated`: εδώ φτάνουμε **μόνο** όταν υπήρχε
+  // Bearer token (βλ. `resolveMcpIdentity`). Αν το Firebase το απορρίψει, ο
+  // client έστειλε διαπιστευτήριο που δεν ισχύει — δεν παρέλειψε να στείλει.
+  if (!isAuthenticated(ctx)) return invalidToken();
 
   return {
     ok: true,

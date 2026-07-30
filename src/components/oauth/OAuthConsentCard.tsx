@@ -40,6 +40,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { describeOAuthScope } from './oauth-scope-labels';
 
 // ============================================================================
 // ΤΥΠΟΙ
@@ -218,11 +219,7 @@ export function OAuthConsentCard({
           </h3>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
             {data.scopes.map((scope) => (
-              <li key={scope}>
-                {scope === 'boq:read'
-                  ? t('auth:oauthConsent.scopeBoqRead')
-                  : t('auth:oauthConsent.scopeUnknown', { scope })}
-              </li>
+              <li key={scope}>{describeOAuthScope(t, scope)}</li>
             ))}
           </ul>
           <p className="mt-2 text-sm text-muted-foreground">

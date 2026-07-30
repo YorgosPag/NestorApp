@@ -17,6 +17,7 @@ import { buildRequestContext } from '@/lib/auth/auth-context';
 import { getMcpResourceUri } from '@/lib/oauth/oauth-config';
 import {
   buildInsufficientScopeChallenge,
+  buildInvalidTokenChallenge,
   buildUnauthenticatedChallenge,
   extractBearerToken,
   resolveMcpIdentity,
@@ -143,6 +144,38 @@ describe('resolveMcpIdentity — OAuth token', () => {
     },
   );
 
+  it.each(['revoked', 'expired', 'wrong_type', 'audience_mismatch'])(
+    'token %s ⇒ error="invalid_token", ώστε ο client να ΑΝΑΝΕΩΣΕΙ αντί να ξαναζητήσει συγκατάθεση',
+    async (rejection) => {
+      mockLookup.mockResolvedValue({ ok: false, rejection });
+      const identity = await resolveMcpIdentity(requestWith({ authorization: 'Bearer x' }));
+
+      expect(identity.ok).toBe(false);
+      if (!identity.ok) {
+        expect(identity.failure.kind).toBe('invalid_token');
+        expect(identity.failure.challenge).toContain('error="invalid_token"');
+      }
+    },
+  );
+
+  it('το challenge είναι ΤΑΥΤΟΣΗΜΟ για κάθε rejection — δεν αποκαλύπτει ποιος έλεγχος απέτυχε', async () => {
+    // Ο lookupToken ελέγχει με συγκεκριμένη σειρά ακριβώς για να μην μαθαίνει ο
+    // καλών αν το token «υπάρχει αλλά έληξε» ή «είναι για άλλον server». Ένα
+    // error_description ανά rejection θα ξανάνοιγε το κανάλι από τον header.
+    // Γι' αυτό το μήνυμα απαριθμεί ΟΛΕΣ τις αιτίες αντί να ονομάζει μία.
+    const challenges: string[] = [];
+
+    for (const rejection of ['revoked', 'expired', 'wrong_type', 'audience_mismatch']) {
+      mockLookup.mockResolvedValue({ ok: false, rejection });
+      const identity = await resolveMcpIdentity(requestWith({ authorization: 'Bearer x' }));
+      if (!identity.ok) challenges.push(identity.failure.challenge);
+    }
+
+    expect(challenges).toHaveLength(4);
+    expect(new Set(challenges).size).toBe(1);
+    expect(challenges[0]).toBe(buildInvalidTokenChallenge());
+  });
+
   it('token χωρίς το απαιτούμενο scope ⇒ 403 insufficient_scope', async () => {
     mockLookup.mockResolvedValue({ ok: true, record: tokenRecord({ scopes: [] }) });
 
@@ -198,6 +231,19 @@ describe('resolveMcpIdentity — fallback Firebase', () => {
     expect(identity.ok).toBe(false);
     if (!identity.ok) expect(identity.failure.status).toBe(401);
   });
+
+  it('άκυρο Firebase token ⇒ invalid_token, ΟΧΙ unauthenticated', async () => {
+    // Ο client έστειλε διαπιστευτήριο — δεν παρέλειψε να στείλει. Η διάκριση
+    // είναι αυτή που του λέει «ανανέωσε» αντί «ξεκίνα από την αρχή».
+    mockLookup.mockResolvedValue({ ok: false, rejection: 'not_found' });
+    mockBuildContext.mockResolvedValue({ isAuthenticated: false, reason: 'invalid_token' });
+
+    const identity = await resolveMcpIdentity(requestWith({ authorization: 'Bearer junk' }));
+    if (!identity.ok) {
+      expect(identity.failure.kind).toBe('invalid_token');
+      expect(identity.failure.challenge).toContain('error="invalid_token"');
+    }
+  });
 });
 
 describe('challenges', () => {
@@ -211,5 +257,17 @@ describe('challenges', () => {
     const challenge = buildInsufficientScopeChallenge();
     expect(challenge).toContain('error="insufficient_scope"');
     expect(challenge).toContain('resource_metadata=');
+  });
+
+  it('το challenge «απόντος token» ΔΕΝ φέρει error — RFC 6750 §3.1', () => {
+    // Αν έφερε `error`, ο client θα νόμιζε ότι έστειλε κάτι άκυρο και θα
+    // προσπαθούσε refresh με token που δεν έχει.
+    expect(buildUnauthenticatedChallenge()).not.toContain('error=');
+  });
+
+  it('τα δύο challenges του 401 είναι ΔΙΑΦΟΡΕΤΙΚΑ', () => {
+    expect(buildInvalidTokenChallenge()).not.toBe(buildUnauthenticatedChallenge());
+    expect(buildInvalidTokenChallenge()).toContain('resource_metadata=');
+    expect(buildInvalidTokenChallenge()).toContain('scope="boq:read"');
   });
 });

@@ -12,9 +12,33 @@
 
 type DocData = Record<string, unknown>;
 
+/** Οι τελεστές που πραγματικά χρησιμοποιεί ο κώδικας OAuth. */
+type WhereOp = '==' | '<=';
+
 interface WhereClause {
   readonly field: string;
+  readonly op: WhereOp;
   readonly value: unknown;
+}
+
+/** Τιμή συγκρίσιμη με `<=` — Timestamp ή αριθμός. */
+function comparableValue(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as { toMillis?: unknown }).toMillis === 'function'
+  ) {
+    return (value as { toMillis: () => number }).toMillis();
+  }
+  throw new Error('FakeFirestore: μη συγκρίσιμη τιμή για <= (περίμενε Timestamp ή number)');
+}
+
+function matchesClause(data: DocData, clause: WhereClause): boolean {
+  const actual = data[clause.field];
+  if (clause.op === '==') return actual === clause.value;
+  if (actual === undefined) return false;
+  return comparableValue(actual) <= comparableValue(clause.value);
 }
 
 export class FakeFirestore {
@@ -41,6 +65,9 @@ export class FakeFirestore {
       set: async (data: DocData, options?: { merge?: boolean }) => {
         bucket.set(id, options?.merge ? { ...(bucket.get(id) ?? {}), ...data } : { ...data });
       },
+      delete: async () => {
+        bucket.delete(id);
+      },
     });
 
     return {
@@ -58,6 +85,9 @@ export class FakeFirestore {
         options?: { merge?: boolean },
       ) => {
         writes.push(() => void ref.set(data, options));
+      },
+      delete: (ref: { id: string; delete: () => Promise<void> }) => {
+        writes.push(() => void ref.delete());
       },
       commit: async () => {
         writes.forEach((write) => write());
@@ -107,12 +137,18 @@ function makeSnapshot(id: string, data: DocData | undefined) {
 function makeQuery(
   bucket: Map<string, DocData>,
   clauses: readonly WhereClause[],
-  makeDoc: (id: string) => { id: string; set: (data: DocData, o?: { merge?: boolean }) => Promise<void> },
+  makeDoc: (id: string) => {
+    id: string;
+    set: (data: DocData, o?: { merge?: boolean }) => Promise<void>;
+    delete: () => Promise<void>;
+  },
 ) {
   const query = {
     where: (field: string, op: string, value: unknown) => {
-      if (op !== '==') throw new Error(`FakeFirestore supports only '==' (got '${op}')`);
-      return makeQuery(bucket, [...clauses, { field, value }], makeDoc);
+      if (op !== '==' && op !== '<=') {
+        throw new Error(`FakeFirestore supports only '==' and '<=' (got '${op}')`);
+      }
+      return makeQuery(bucket, [...clauses, { field, op, value }], makeDoc);
     },
     limit: (count: number) => ({
       ...query,
@@ -124,7 +160,7 @@ function makeQuery(
     }),
     get: async () => {
       const docs = [...bucket.entries()]
-        .filter(([, data]) => clauses.every((clause) => data[clause.field] === clause.value))
+        .filter(([, data]) => clauses.every((clause) => matchesClause(data, clause)))
         .map(([id, data]) => ({
           id,
           data: () => data,

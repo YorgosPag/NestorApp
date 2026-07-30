@@ -135,7 +135,18 @@
       "revokeAllDescription": "This will sign out all devices except this one. Other users will need to sign in again.",
       "revokeAll": "Sign out all",
       "comingSoon": "Coming Soon",
-      "twoFactorTitle": "Two factor title"
+      "twoFactorTitle": "Two factor title",
+      "agentsTitle": "Connected agents",
+      "agentsDescription": "External applications that can access your data",
+      "agentsEmpty": "You have not connected any agent",
+      "agentsLoadError": "Error loading connected agents",
+      "agentsGrantedOn": "Approved {date}",
+      "agentsUnknownClient": "Unknown origin",
+      "agentsRevoke": "Disconnect",
+      "agentsRevoking": "Disconnecting...",
+      "agentsRevokeTitle": "Disconnect agent",
+      "agentsRevokeDescription": "The agent {clientName} loses access immediately. It will need a new approval to reconnect.",
+      "agentsRevokeError": "Disconnecting failed. Please try again."
     },
     "privacy": {
       "title": "Privacy",

@@ -44,7 +44,15 @@ export function DxfUnitsSelector({ value, onChange, colors, t, decision }: DxfUn
         <Ruler className="w-3.5 h-3.5" aria-hidden="true" />
         {t('floorplanImport.drawingUnits.title')}
       </legend>
-      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t('floorplanImport.drawingUnits.title')}>
+      {/*
+        ΠΛΕΓΜΑ, όχι flex-wrap: το πλάτος του πλήκτρου το ορίζει η **στήλη**, όχι το κείμενο.
+        Με `flex-wrap` τα 6 πλήκτρα έπαιρναν intrinsic πλάτος («Εκατοστά (cm)» ≫ «Πόδια (ft)»),
+        το άθροισμα ξεπερνούσε το πλάτος του dialog και το σπάσιμο έβγαινε άνισο και
+        απρόβλεπτο — 2+2+2 με ωμά κλειδιά, 5+1 στα ελληνικά, 4+2 σε στενότερο παράθυρο
+        (μετρημένο 2026-07-31). Οι 3 στήλες δίνουν σταθερό 3+3 σε ΚΑΘΕ γλώσσα και πλάτος·
+        το κείμενο τυλίγεται μέσα στο πλήκτρο αντί να ξεχειλίζει έξω από το πλαίσιο.
+      */}
+      <div className="grid grid-cols-3 gap-1.5" role="radiogroup" aria-label={t('floorplanImport.drawingUnits.title')}>
         {UNIT_OPTIONS.map(opt => {
           const active = value === opt.value;
           return (
@@ -54,7 +62,7 @@ export function DxfUnitsSelector({ value, onChange, colors, t, decision }: DxfUn
               role="radio"
               aria-checked={active}
               onClick={() => onChange(opt.value)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors border ${
+              className={`px-2 py-1 rounded text-xs font-medium text-center transition-colors border ${
                 active
                   ? 'bg-primary text-primary-foreground border-primary'
                   : `${colors.bg.secondary} ${colors.text.secondary} border-border hover:border-primary/50`

@@ -182,10 +182,17 @@ export function middleware(request: NextRequest) {
   // ένα σφάλμα που μοιάζει με «λάθος διαπιστευτήρια» και δεν είναι.
   // Δεν χαλαρώνει τίποτα — αυτά τα paths έχουν δική τους ταυτοποίηση
   // (Bearer token + audience) και δικό τους rate limit.
+  // ⚠️ Το `/api/cron/oauth-cleanup` μπαίνει **ονομαστικά**, όχι ως `/api/cron`.
+  // Τα υπόλοιπα 9 cron routes έχουν το ίδιο λανθάνον ζήτημα (ένας
+  // προγραμματισμένος καλών στέλνει μηχανικό user-agent και τρώει 403 από το
+  // Edge), αλλά η διόρθωσή τους αλλάζει τη συμπεριφορά routes που δεν αφορούν
+  // το ADR-738 — και ένα από αυτά, το `purge-deleted-entities`, δεν έχει καν
+  // `verifyCronAuthorization`. Καταγράφεται αντί να διορθωθεί εν παρόδω (N.0.2).
   const isMachineEndpoint =
     pathname.startsWith('/api/communications/webhooks') ||
     pathname.startsWith('/api/mcp') ||
     pathname.startsWith('/api/oauth') ||
+    pathname.startsWith('/api/cron/oauth-cleanup') ||
     pathname.startsWith('/.well-known/oauth-');
 
   if (!isMachineEndpoint && userAgent) {

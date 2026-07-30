@@ -34,6 +34,15 @@ beforeAll(async () => {
   });
   // ΜΟΝΟ το split namespace — το legacy `building` μένει σκόπιμα άδειο.
   instance.addResourceBundle('el', 'building-timeline', { tabs: { timeline: 'Χρονολόγιο' } }, true, true);
+
+  // ADR-716 Φ5 — το μετρημένο περιστατικό: το `files-media` ΦΟΡΤΩΜΕΝΟ, δεύτερο στον πίνακα.
+  instance.addResourceBundle('el', 'files-media', {
+    floorplanImport: { drawingUnits: { title: 'Μονάδες Σχεδίου DXF', auto: 'Αυτόματα' } },
+  }, true, true);
+  // Ομώνυμο κλειδί στο ΠΡΩΤΕΥΟΝ ns — για να αποδειχθεί ποιος κερδίζει.
+  instance.addResourceBundle('el', 'dxf-viewer', {
+    floorplanImport: { drawingUnits: { auto: 'ΠΡΩΤΕΥΟΝ' } },
+  }, true, true);
 });
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -61,5 +70,34 @@ describe('useTranslation — κλειδί με πρόθεμα namespace', () => 
 
   it('επιτυχής άμεση μετάφραση επιστρέφεται αυτούσια χωρίς περιπλάνηση στο compat', () => {
     expect(translate(['building-timeline'], 'building-timeline:tabs.timeline')).toBe('Χρονολόγιο');
+  });
+});
+
+/**
+ * ADR-716 Φ5 — Ο πίνακας namespaces ΔΕΝ κάνει lookup, μόνο φόρτωση.
+ *
+ * Το react-i18next δένει το `t` στο `namespaces[0]` (useTranslation.js:56 —
+ * `nsMode === 'fallback' ? namespaces : namespaces[0]`). Το `DxfImportModal` πέρασε το
+ * `files-media` στον πίνακα και το bundle **φόρτωσε** («files-media=loaded» στο console),
+ * αλλά κανείς δεν κοίταξε μέσα του: ο χρήστης είδε 8 ωμά `floorplanImport.drawingUnits.*`
+ * στην οθόνη (μετρημένο 2026-07-31). Το compat στρώμα δεν έσωζε, γιατί καλύπτει μόνο
+ * καταγεγραμμένες ρίζες και το `floorplanImport` δεν είναι κάτω από `dxf-viewer`.
+ *
+ * ⚠️ Αν κάποιος αφαιρέσει το `resolveAcrossNamespaces`, το πρώτο test εδώ γίνεται κόκκινο.
+ */
+describe('useTranslation — κλειδί σε ΜΗ πρωτεύον namespace του πίνακα', () => {
+  it('λύνεται από δεύτερο φορτωμένο ns χωρίς πρόθεμα στο κλειδί', () => {
+    expect(translate(['dxf-viewer', 'files-media'], 'floorplanImport.drawingUnits.title'))
+      .toBe('Μονάδες Σχεδίου DXF');
+  });
+
+  it('το ΠΡΩΤΕΥΟΝ ns κερδίζει σε ομώνυμο κλειδί — η σειρά του πίνακα είναι η προτεραιότητα', () => {
+    expect(translate(['dxf-viewer', 'files-media'], 'floorplanImport.drawingUnits.auto'))
+      .toBe('ΠΡΩΤΕΥΟΝ');
+  });
+
+  it('κλειδί ανύπαρκτο σε ΟΛΑ τα ns του πίνακα επιστρέφει το κλειδί — δεν εφευρίσκει', () => {
+    const out = translate(['dxf-viewer', 'files-media'], 'floorplanImport.drawingUnits.nope');
+    expect(out).toContain('nope');
   });
 });

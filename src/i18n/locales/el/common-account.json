@@ -135,7 +135,18 @@
       "revokeAllDescription": "Θα αποσυνδεθούν όλες οι συσκευές εκτός από αυτή. Οι χρήστες θα χρειαστεί να συνδεθούν ξανά.",
       "revokeAll": "Αποσύνδεση όλων",
       "comingSoon": "Σύντομα",
-      "twoFactorTitle": "Τίτλος διπλής επαλήθευσης"
+      "twoFactorTitle": "Τίτλος διπλής επαλήθευσης",
+      "agentsTitle": "Συνδεδεμένοι πράκτορες",
+      "agentsDescription": "Εξωτερικές εφαρμογές που έχουν πρόσβαση στα δεδομένα σου",
+      "agentsEmpty": "Δεν έχεις συνδέσει κανέναν πράκτορα",
+      "agentsLoadError": "Σφάλμα φόρτωσης συνδεδεμένων πρακτόρων",
+      "agentsGrantedOn": "Εγκρίθηκε {date}",
+      "agentsUnknownClient": "Άγνωστη προέλευση",
+      "agentsRevoke": "Αποσύνδεση",
+      "agentsRevoking": "Αποσύνδεση...",
+      "agentsRevokeTitle": "Αποσύνδεση πράκτορα",
+      "agentsRevokeDescription": "Ο πράκτορας {clientName} χάνει αμέσως την πρόσβαση. Θα χρειαστεί νέα έγκριση για να ξανασυνδεθεί.",
+      "agentsRevokeError": "Η αποσύνδεση απέτυχε. Δοκίμασε ξανά."
     },
     "privacy": {
       "title": "Απόρρητο",
