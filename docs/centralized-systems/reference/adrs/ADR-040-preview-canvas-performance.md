@@ -75,6 +75,14 @@ Mouse Event → DxfCanvas.onMouseMove
 scale / BIM settings / toggles) · το raster δεν καλύπτει πια το viewport (τρύπα) · μεγέθυνση πάνω
 από `max(1.25, dpr)` (θα φαινόταν θολό) · το idle re-raster.
 
+**Gesture-aware acceptance (ADR-726 Φ3.1, 2026-07-30):** τα δύο ΠΟΙΟΤΙΚΑ κριτήρια (τρύπα /
+θολούρα) κρίνονται **μόνο σε ηρεμία**. Όσο `isNavigationGesture()` (NavigationGestureStore,
+ADR-728 Φ1), το raster σερβίρεται ΟΠΩΣ ΕΙΝΑΙ — θολό ή/και ελλιπές — και ΚΑΝΕΝΑ transform-driven
+rebuild δεν τρέχει μέσα στη χειρονομία (μετρημένο σε production: το wheel-zoom πλήρωνε full
+re-raster 2.909 οντοτήτων ΜΕΣΑ στη χειρονομία — `frame:dxf-canvas` p90 74,6ms, max 184,9ms).
+Η δομική ακύρωση, το `invalidate()`, το `rerasterDue` και το πρώτο χτίσιμο ΔΕΝ αναστέλλονται.
+Η πύλη ζει στον caller (`DxfBitmapCache.canServe`), ΟΧΙ στα pure functions του anchor module.
+
 **Αυτο-σταθεροποιείται**: φθηνότερα καρέ ⇒ μικρότερη μετατόπιση ανά καρέ ⇒ σπανιότερες
 ανακατασκευές ⇒ φθηνότερα καρέ. Χειρότερη περίπτωση (πολύ γρήγορο flick) = **το σημερινό κόστος,
 ποτέ χειρότερο**.
@@ -104,6 +112,33 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 ---
 
 ## Changelog
+
+### 2026-07-30 (β) — Gesture-aware raster acceptance: ΚΑΝΕΝΑ transform-driven rebuild μέσα στη χειρονομία (ADR-726 Φ3.1)
+
+Η production μέτρηση (ADR-726 Φ5) έδειξε ότι το pan λύθηκε (60 FPS median) αλλά το wheel-zoom
+πλήρωνε ακόμη full re-raster ΜΕΣΑ στη χειρονομία: `frame:dxf-canvas` p50 1,2ms (το blit δουλεύει)
+αλλά **p90 74,6ms · p99 167,9 · max 184,9ms — 60/295 εκτελέσεις (20%) >33ms**. Αιτία: σε dpr=1
+το budget `maxMagnification = max(1.25, dpr)` εξαντλείται σε 1-2 wheel notches ⇒ το
+`isAnchoredBlitAcceptable` απορρίπτει ⇒ rebuild 2.909 οντοτήτων μέσα στο καρέ της χειρονομίας
+(zoom-out: τρώει το overscan ⇒ τρύπα ⇒ ίδιο).
+
+**Η αλλαγή (μοτίβο Google Maps/Figma — ADR-726 §9.3):** το `DxfBitmapCache.canServe()` ρωτά το
+ΥΠΑΡΧΟΝ SSoT `isNavigationGesture()` (NavigationGestureStore, ADR-728 Φ1): μέσα σε χειρονομία,
+προβολή που είναι **αριθμητικά έγκυρη** σερβίρεται πάντα — η ποιότητα (θολούρα/τρύπα) κρίνεται
+μόνο σε ηρεμία, όπου το ΥΠΑΡΧΟΝ idle re-raster (`rerasterDue`, `RASTER_IDLE` 120ms) αποκαθιστά
+τα ακριβή pixels. Το «αριθμητικά έγκυρη» έγινε νέο pure predicate `isAnchoredBlitUsable` στο
+anchor module (validity· η ποιότητα έμεινε στο `isAnchoredBlitAcceptable` που πλέον το καλεί) —
+η ΠΟΛΙΤΙΚΗ ζει στον caller, τα pure functions δεν έμαθαν τίποτα για χειρονομίες.
+
+**ΔΕΝ αναστέλλονται** (πινγκαρισμένα με tests): δομική ακύρωση (scene/viewport/dpr/BIM/toggles
+— αλλιώς stale pixels μετά από π.χ. layer toggle κατά το pan), `invalidate()`, `rerasterDue`,
+πρώτο χτίσιμο (χωρίς raster δεν υπάρχει τι να προβληθεί). Το ρητό `endNavigationGesture()`
+(pan mouseup) επαναφέρει τα αυστηρά κριτήρια αμέσως — sharp αμέσως μετά την άφεση.
+
+Αρχεία: MOD `dxf-bitmap-cache.ts` (πύλη στο `canServe`) · MOD `dxf-bitmap-cache-anchor.ts`
+(εξαγωγή `isAnchoredBlitUsable`). Tests: +9 στο `dxf-bitmap-cache-anchored-raster.test.ts`
+(νέο describe «gesture-aware acceptance») + 4 στο `dxf-bitmap-cache-anchor.test.ts`,
+mutation-verified. Cardinal rule #3 άθικτος: μηδέν νέα είσοδος στο cache key.
 
 ### 2026-07-30 — Phase XXII.B: `transform`/`canvasRect` φεύγουν ως React props (~60 αρχεία)
 
