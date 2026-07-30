@@ -173,8 +173,22 @@ export function middleware(request: NextRequest) {
 
   // ── 2. Block known bots (403 Forbidden) ──
   // Exception: Allow webhook callbacks (Mailgun, Telegram, etc.)
-  const isWebhook = pathname.startsWith('/api/communications/webhooks');
-  if (!isWebhook && userAgent) {
+  //
+  // ⚠️ ADR-738: **και** τα μηχανικά σύνορα (MCP transport + OAuth). Η λίστα
+  // BLOCKED_BOT_PATTERNS περιέχει `node-fetch`, `axios/`, `go-http-client`,
+  // `python-requests` και `curl/` — δηλαδή ακριβώς τους user-agents που στέλνει
+  // κάθε MCP client και κάθε δοκιμή με curl. Χωρίς αυτή την εξαίρεση το
+  // endpoint θα επέστρεφε **403 από το Edge**, πριν καν τρέξει ο κώδικάς του:
+  // ένα σφάλμα που μοιάζει με «λάθος διαπιστευτήρια» και δεν είναι.
+  // Δεν χαλαρώνει τίποτα — αυτά τα paths έχουν δική τους ταυτοποίηση
+  // (Bearer token + audience) και δικό τους rate limit.
+  const isMachineEndpoint =
+    pathname.startsWith('/api/communications/webhooks') ||
+    pathname.startsWith('/api/mcp') ||
+    pathname.startsWith('/api/oauth') ||
+    pathname.startsWith('/.well-known/oauth-');
+
+  if (!isMachineEndpoint && userAgent) {
     const isBot = BLOCKED_BOT_PATTERNS.some((pattern) =>
       userAgent.includes(pattern)
     );

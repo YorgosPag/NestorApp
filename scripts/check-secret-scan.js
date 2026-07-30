@@ -33,7 +33,12 @@ const NC     = '\x1b[0m';
 const FILE_SKIP_RE = /(\.(png|jpg|ico|woff|lock)$|\.env\.(example|sample)|node_modules|scripts[\\/]git-hooks[\\/]|\.github[\\/]workflows[\\/]|docs[\\/]architecture-review[\\/]|(^|[\\/])\.gitleaks\.toml$|(^|[\\/])check-secret-scan\.js$)/;
 
 // Line-level patterns
-const API_KEY_RE     = /(sk-[a-zA-Z0-9_-]{20,}|sk_live_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|ghp_[a-zA-Z0-9]{36}|xoxb-[a-zA-Z0-9-]+|AAAA[a-zA-Z0-9_-]{100,})/;
+// Το `(^|[^a-zA-Z0-9])` είναι όριο λέξης, όχι χαλάρωση: ένα πραγματικό κλειδί
+// αρχίζει πάντα σε όριο (`"sk-…"`, `=sk-…`, αρχή γραμμής), ενώ χωρίς αυτό κάθε
+// URL με «…sk-λέξη-λέξη…» έσκαγε ως κλειδί — π.χ. το `autodesk-helped-make-mcp`
+// σε παραπομπή ADR. Ψευδώς θετικό blocking check = θόρυβος που εκπαιδεύει στο
+// να το προσπερνάς (ADR-738 βιβλιογραφία, 2026-07-31).
+const API_KEY_RE     = /(^|[^a-zA-Z0-9])(sk-[a-zA-Z0-9_-]{20,}|sk_live_[a-zA-Z0-9]{20,}|AIza[a-zA-Z0-9_-]{35}|ghp_[a-zA-Z0-9]{36}|xoxb-[a-zA-Z0-9-]+|AAAA[a-zA-Z0-9_-]{100,})/;
 const SECRET_RE      = /(password|secret|private_key|api_key)\s*[:=]\s*['"][^'"]{8,}['"]/i;
 const PRIVATE_KEY_RE = /BEGIN.*PRIVATE KEY/;
 const COMMENT_RE     = /^\s*(\/\/|\*|#)/;

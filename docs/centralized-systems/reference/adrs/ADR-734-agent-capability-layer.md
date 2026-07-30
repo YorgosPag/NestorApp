@@ -375,7 +375,7 @@ getById(id: string): Promise<BOQItem | null>;   // ⛔ ΚΑΝΕΝΑ companyId
 | **1** ✅ | Τύποι VQE + `buildEnvelope()` + tests — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-30** (§8.1) | 16 | Μηδενικό (νέος κώδικας) |
 | **2** ✅ | Capability Registry + OpenAI adapter + τα 7 read tools — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-30** (§8.2) | 17 | Χαμηλό (μόνο ανάγνωση) |
 | **3α** ✅ | MCP adapter (L3) + **σύνδεση με τον in-app πράκτορα** + γεφύρωση SDK — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-31** (§8.3) | 16 | Χαμηλό (εσωτερική επιφάνεια· μόνο ανάγνωση) |
-| **3β** | **Streamable HTTP endpoint** + `withAuth()` + rate limiting + OAuth 2.1 για εξωτερικούς MCP clients (§10.2) | ~4 | Μεσαίο (εξωτερική επιφάνεια) |
+| **3β** ✅ | **Streamable HTTP endpoint** + **OAuth 2.1 authorization server** + rate limiting — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-31** (§8.4· ο AS σε **ADR-738**) | 27 | Μεσαίο (εξωτερική επιφάνεια) |
 | **4** | Write tools με governance gate | ~4 | Υψηλό — χωριστή έγκριση |
 | **5** | Επέκταση σε `model_*` (BIM/γεωμετρία) | — | Μελλοντικό |
 
@@ -511,6 +511,51 @@ getById(id: string): Promise<BOQItem | null>;   // ⛔ ΚΑΝΕΝΑ companyId
 
 **Δεν υπάρχει ακόμη εξωτερικό MCP endpoint.** Ο adapter παράγει σωστά `Tool`/`CallToolResult`, αλλά κανένας transport δεν τα εκθέτει, άρα **κανένας εξωτερικός client (Claude Desktop, Cursor) δεν μπορεί να συνδεθεί σήμερα**. Συνεπώς δεν έγιναν ούτε το `withAuth()` στο HTTP σύνορο ούτε η επιλογή κατηγορίας rate limit — δεν υπάρχει route να τα φιλοξενήσει. Ο in-app πράκτορας **δεν** επηρεάζεται: αντλεί ταυτότητα από το `AgenticContext`, που χτίζει το ήδη ταυτοποιημένο pipeline.
 
+> ✅ **Έκλεισε στη Φάση 3β** (2026-07-31, §8.4).
+
+---
+
+### 8.4 Παραδοτέα Φάσης 3β (2026-07-31) — transport + OAuth
+
+#### 8.4.1 ⛔ Ο αποκλειστής ήταν ψευδοδίλημμα
+
+Το handoff έθεσε «Α = μόνο bearer / Β = πλήρες OAuth (τεράστιο) / Γ = stdio bridge» και συνιστούσε το Α. Η έρευνα στο πρότυπο **2025-11-25** — την έκδοση που ήδη δηλώνει ο adapter μας — έδειξε ότι το «τεράστιο πακέτο Β» δεν υπάρχει: το spec ορίζει τον MCP server ως **resource server** και αφήνει τον authorization server **ρητά εκτός εμβέλειας** («It may be hosted with the resource server or a separate entity»). Επιπλέον το **DCR υποβαθμίστηκε σε `MAY`** και το **CIMD ανέβηκε σε `SHOULD`** — το handoff το ανέφερε ως απαίτηση.
+
+**Απόφαση Γιώργου: δικός μας AS πάνω στο Firebase** (Firebase = *ποιος είσαι*· AS = *τι επιτρέπεις σε αυτόν τον πράκτορα*). Πλήρης τεκμηρίωση σε **ADR-738**.
+
+#### 8.4.2 Τι παραδόθηκε
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `agent-capability/transport/mcp-http-guards.ts` | **ΝΕΟ** — `Origin`→403, `MCP-Protocol-Version`→400, απουσία ⇒ υπονοούμενη `2025-03-26` |
+| `agent-capability/transport/mcp-jsonrpc.ts` | **ΝΕΟ** — καθαρή ανάλυση JSON-RPC 2.0· διάκριση request / notification / **απόκριση client** |
+| `agent-capability/transport/mcp-method-dispatch.ts` | **ΝΕΟ** — `initialize` / `tools/list` / `tools/call` / `ping` |
+| `agent-capability/transport/mcp-identity.ts` | **ΝΕΟ** — OAuth token (**με έλεγχο ακροατηρίου + scope**) → `CapabilityContext`· fallback Firebase |
+| `agent-capability/capabilities/boq/boq-admin-registry.ts` | **ΝΕΟ SSoT** — το registry εξήχθη από τον `boq-capability-handler` (§8.4.3) |
+| `app/api/mcp/route.ts` | **ΝΕΟ** — `POST` + `GET` στο ίδιο path, stateless, `application/json` |
+| + 11 αρχεία OAuth AS + οθόνη συγκατάθεσης | **ADR-738** |
+
+**Τροποποιημένα:** `middleware.ts` (εξαίρεση bot-block — βλ. ADR-738 §7.1), `next.config.js` (rewrites discovery), `firestore-collections.ts`, `firestore.rules`, `enterprise-id-*` (5 νέα προθέματα), `boq-capability-handler.ts` (καταναλώνει πλέον το κοινό registry), locales `el`/`en`.
+
+#### 8.4.3 Το registry εξήχθη — N.0.2 στην πράξη
+
+Στη Φάση 3α η σύνδεση «τεμπέλικο admin service → registry» ζούσε **ιδιωτικά** μέσα στον `boq-capability-handler.ts`, όπου ήταν ο μοναδικός καταναλωτής. Με το transport εμφανίστηκε δεύτερος. Η αντιγραφή θα έδινε **δύο registries** με τους ίδιους επτά ορισμούς — δηλαδή ένα `boq_get_item` που θα μπορούσε να συμπεριφέρεται αλλιώς στον in-app πράκτορα και αλλιώς στο Claude Desktop. Ακριβώς η κατηγορία σφάλματος που το §5.2 υπάρχει για να αποκλείσει. Εξήχθη σε `capabilities/boq/boq-admin-registry.ts`· τα 629 υπάρχοντα tests πέρασαν αμετάβλητα.
+
+#### 8.4.4 Ρυθμίσεις που επιλέχθηκαν
+
+- **Rate limit:** `STANDARD` (60/min) για το `/api/mcp` — ανάγνωση, όχι HEAVY· **`SENSITIVE`** (20/min) για κάθε OAuth endpoint (brute force σε codes/tokens). Καμία 7η κατηγορία.
+- **Χωρίς SSE:** `POST` απαντά `application/json`· ο `GET` απαντά **405** με `Allow: POST` — ρητά επιτρεπτό από το πρότυπο. Τα επτά εργαλεία είναι σύντομα request/response.
+- **Stateless:** κανένα `MCP-Session-Id`.
+- **Χωρίς `@modelcontextprotocol/sdk`:** το §8.3.3 άφηνε την πόρτα ανοιχτή για τη Φάση 3β. Κλείνει με λόγο: το `StreamableHTTPServerTransport` γράφτηκε για Node `http`/Express, ενώ ο App Router δίνει Web `Request`/`Response`· η γεφύρωση κοστίζει περισσότερο — και είναι δυσκολότερα ελέγξιμη — από ~120 γραμμές καθαρού JSON-RPC για **τρεις** μεθόδους. Οι χειρόγραφοι τύποι του §8.3.3 **καταναλώνονται** όπως προβλεπόταν.
+
+#### 8.4.5 Επαλήθευση
+
+**185 νέα tests** σε 8 suites· σύνολο `agent-capability` + `lib/oauth` + `lib/security` = **357 πράσινα**· τα προϋπάρχοντα 629 (`agent-capability` + `ai-pipeline/tools`) αμετάβλητα.
+
+**16 σκόπιμες μεταλλάξεις — 16 σκοτώθηκαν** (πήχης: Φ1=3, Φ2=6, Φ3α=8). Πλήρης πίνακας: **ADR-738 §8**. Ενδεικτικά: αφαίρεση ελέγχου ακροατηρίου (1 κόκκινο), `Origin` χωρίς έλεγχο (4), `redirect_uri` mismatch που γίνεται redirectable — **open redirect** (1), αστοχία εργαλείου που γίνεται JSON-RPC error αντί `isError` (1).
+
+**CHECK 3.28 (jscpd):** έπιασε **πραγματικό** δίδυμο — η ανάλυση `resource` ήταν γραμμένη δύο φορές. Κεντρικοποιήθηκε· δεύτερη εκτέλεση καθαρή σε 21 αρχεία.
+
 ---
 
 ## 9. Τι ΔΕΝ Κάνουμε
@@ -554,6 +599,19 @@ getById(id: string): Promise<BOQItem | null>;   // ⛔ ΚΑΝΕΝΑ companyId
 - Ο client **MUST** στέλνει `MCP-Protocol-Version` σε κάθε αίτημα μετά την αρχικοποίηση.
 
 **Γνωστό κενό, ρητά καταγεγραμμένο:** οι εξωτερικοί MCP clients απαιτούν **OAuth 2.1** με discovery (`.well-known`) και Dynamic Client Registration. Ο Νέστωρ σήμερα ταυτοποιεί με Firebase ID token. Άρα ένα endpoint προστατευμένο μόνο με `withAuth()` θα δούλευε για δικούς μας καταναλωτές αλλά **δεν** θα συνδεόταν με Claude Desktop / Cursor. Η γεφύρωση είναι η ουσία της Φάσης 3β και **δεν** πρέπει να παρουσιαστεί ως «σχεδόν έτοιμη».
+
+> ✅ **ΕΚΛΕΙΣΕ — Φάση 3β (2026-07-31).** Δύο διορθώσεις στην παραπάνω παράγραφο:
+>
+> 1. **Το Dynamic Client Registration ΔΕΝ απαιτείται πλέον.** Στο 2025-11-25
+>    υποβαθμίστηκε σε `MAY` («included for backwards compatibility») και τη θέση
+>    του πήραν τα **Client ID Metadata Documents** (`SHOULD`) — η αλλαγή που
+>    πέρασε η Autodesk για λόγους ελέγχου πρόσβασης σε επίπεδο επιχείρησης.
+> 2. **Η «γεφύρωση» δεν ήταν τεράστια, επειδή ο authorization server είναι
+>    εκτός εμβέλειας του προτύπου.** Ο MCP server οφείλει μόνο PRM + `401`
+>    challenge + επικύρωση ακροατηρίου. Ο AS υλοποιήθηκε δικός μας, πάνω από το
+>    υπάρχον Firebase — **ADR-738**.
+
+**Rate limiting (η δεύτερη εκκρεμότητα του §8.3.5):** `STANDARD` για το `/api/mcp`, **`SENSITIVE`** για τα OAuth endpoints. Επιλογή από τις 6 υπάρχουσες κατηγορίες· καμία 7η.
 
 ---
 
@@ -599,6 +657,7 @@ getById(id: string): Promise<BOQItem | null>;   // ⛔ ΚΑΝΕΝΑ companyId
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-31 | **Φάση 3β ΥΛΟΠΟΙΗΘΗΚΕ — ο Νέστωρ είναι πλέον MCP server, κυριολεκτικά.** Streamable HTTP endpoint (`POST`+`GET`, stateless, `application/json`) + **OAuth 2.1 authorization server** (ADR-738)· 27 αρχεία, 185 νέα tests, **16** μεταλλάξεις επαλήθευσης — **16 σκοτώθηκαν** (§8.4.5). **Ο αποκλειστής §3.1 του handoff ήταν ψευδοδίλημμα** και διορθώθηκε (§8.4.1): το πρότυπο 2025-11-25 αφήνει τον authorization server **εκτός εμβέλειας** και υποβάθμισε το **DCR σε `MAY`** υπέρ του **CIMD** — άρα το «Β» δεν ήταν το τεράστιο εγχείρημα που περιγράφηκε. Ακολουθήθηκε η γραμμή **Autodesk** (CIMD, σταθερές ταυτότητες client) και **Figma** (OAuth υποχρεωτικό, δικός τους AS πάνω από τη δική τους ταυτότητα). **N.0.2 στην πράξη:** το registry BOQ εξήχθη από τον `boq-capability-handler` σε κοινό SSoT μόλις εμφανίστηκε δεύτερος καταναλωτής — αλλιώς θα υπήρχαν δύο registries των ίδιων επτά εργαλείων (§8.4.3). **Δύο παγίδες που θα έσπαγαν σιωπηλά τα πάντα:** το bot-blocking του Edge έκοβε κάθε MCP client με 403 πριν τρέξει ο κώδικας, και το `isAdminRole()` ανήκει σε **άλλο λεξιλόγιο ρόλων** (ADR-738 §7.1, §7.2). **Το §8.3.3 έκλεισε με λόγο:** το `@modelcontextprotocol/sdk` **δεν** μπήκε — γράφτηκε για Node `http`, όχι για App Router· οι χειρόγραφοι τύποι καταναλώθηκαν όπως προβλεπόταν. **Έντιμη ονοματοδοσία:** ο όρος «MCP server» είναι πλέον **ακριβής** — υπάρχει transport, discovery και OAuth. Κατάσταση: **ACCEPTED — Φάσεις 1-3β σε κώδικα· Φάση 4 (write tools) εκκρεμής, χωριστή έγκριση.** |
 | 2026-07-31 | **Φάση 3α ΥΛΟΠΟΙΗΘΗΚΕ.** MCP adapter (L3) + σύνδεση των 7 εργαλείων με τον in-app πράκτορα + γεφύρωση της ασυμφωνίας SDK· 16 αρχεία, 50 νέα tests, **8** μεταλλάξεις επαλήθευσης (§8.3). **Ο αποκλειστής §3.1 έκλεισε με δρόμο Α** (`BOQAdminReadService`), με δύο αποφάσεις που ξεπερνούν το ζητούμενο: τα σφάλματα **ρίχνουν** αντί να γίνονται ψευδές «κενό», και οι δυνατότητες δέχονται **`IBOQReadService`** ώστε καμία μέθοδος εγγραφής να μην είναι καν συντακτικά προσβάσιμη. **Ρητή απόκλιση από τον πάγο του §9** για εξαγωγή κοινού κώδικα, τεκμηριωμένη στο §8.3.2 (απόφαση Γιώργου: full SSoT)· βρέθηκε και **προϋπάρχον** διπλότυπο static ΑΤΟΕ, 2× μέσα στο ίδιο αρχείο. **Q2 έκλεισε** και το ερώτημα **διορθώθηκε**: το HTTP+SSE που ανέφερε είναι καταργημένο — επιλέχθηκε **Streamable HTTP** (§10.2). Κατάσταση: **ACCEPTED — Φάσεις 1-3α σε κώδικα· Φάση 3β (transport + OAuth) εκκρεμής, §8.3.5.** |
 | 2026-07-30 | **Δημιουργία.** Φάση 1 (Αναγνώριση, N.0.1): χαρτογράφηση `src/` + έρευνα αγοράς/προτύπων. Κατάσταση DESIGN — καμία γραμμή κώδικα. Εκκρεμεί έγκριση Γιώργου για Φάση 1 υλοποίησης. |
 | 2026-07-30 | **Φάση 2 ΥΛΟΠΟΙΗΘΗΚΕ.** Capability Registry (L2) + OpenAI adapter (L3) + τα 7 read tools· 18 αρχεία, 72 νέα tests, 6 μεταλλάξεις επαλήθευσης (§8.2). Προηγήθηκε υποχρεωτικό SSoT audit: επιβεβαιώθηκε ότι το `AgenticToolDefinition` είναι το SSoT μορφής (ο adapter το **παράγει**, δεν φτιάχνει δεύτερο)· μετρήθηκαν **40** ορισμοί — ο header του `agentic-tool-definitions.ts` έλεγε «8 generic tools», μπαγιάτικος· διαπιστώθηκε ότι **δεν** υπάρχει μετατροπέας Zod → JSON Schema (γι' αυτό η δήλωση παραμέτρων είναι ενιαία και παράγει και τα δύο)· βρέθηκε χειρόγραφο αντίγραφο των `BOQScope` τιμών σε component (κεντρικοποιήθηκε, N.0.2). **Το §7 διορθώθηκε: έλεγε ψέμα** — δύο κενά tenant isolation, ένα στο `getById` και ένα σοβαρότερο στο ίδιο το σχέδιο (`companyId` ως παράμετρος εργαλείου). Και τα δύο κλείνουν σε ντετερμινιστικό στρώμα (§7.1). **Q4 έκλεισε** (§10.1). Κατάσταση: **ACCEPTED — Φάσεις 1-2 σε κώδικα, Φάσεις 3-5 εκκρεμείς.** |

@@ -199,6 +199,13 @@ export function OAuthConsentCard({
     <Card className="w-full max-w-lg">
       <CardHeader>
         <CardTitle>{t('auth:oauthConsent.title')}</CardTitle>
+        {/*
+          Το όνομα του client είναι **δεδομένο τρίτου** — έρχεται από το CIMD
+          του. Αποδίδεται ως κείμενο μέσω ICU interpolation (το έργο τρέχει
+          `i18next-icu`, άρα `{clientName}` και όχι `{{clientName}}`), ποτέ ως
+          HTML: ένα `dangerouslySetInnerHTML` εδώ θα άφηνε τον client να
+          γράψει markup στην ίδια οθόνη που ζητά την έγκρισή του.
+        */}
         <CardDescription>
           {t('auth:oauthConsent.intro', { clientName: data.clientName })}
         </CardDescription>

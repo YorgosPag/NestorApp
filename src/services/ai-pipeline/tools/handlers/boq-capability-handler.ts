@@ -33,57 +33,25 @@
 
 import 'server-only';
 
-import type { BOQCategory, BOQItem, BOQSummary } from '@/types/boq';
-import type { BOQSearchFilters, BOQStats } from '@/services/measurements/contracts';
-import type { IBOQReadService } from '@/services/measurements/boq-read-contract';
-import { getBoqAdminReadService } from '@/services/measurements/admin/boq-admin-read-service';
 import {
   type CapabilityContext,
   type CapabilityRegistry,
 } from '@/services/agent-capability/registry';
-import { createBoqCapabilityRegistry } from '@/services/agent-capability/capabilities/boq';
+import { boqAdminCapabilityRegistry } from '@/services/agent-capability/capabilities/boq/boq-admin-registry';
 import { toOpenAiToolDefinitions } from '@/services/agent-capability/adapters';
 import type { AgenticToolDefinition } from '../agentic-tool-definitions';
 import type { AgenticContext, ToolHandler, ToolResult } from '../executor-shared';
 import { logger } from '../executor-shared';
 
 /**
- * Τεμπέλης προώθηση προς το admin service.
- *
- * ⚠️ Ο handler κατασκευάζεται κατά τη **φόρτωση** του executor, ενώ το admin
- * service χρειάζεται διαπιστευτήρια Firebase. Αν το singleton λυνόταν στον
- * κατασκευαστή, μια απλή εισαγωγή του module σε περιβάλλον χωρίς
- * διαπιστευτήρια (π.χ. build step) θα έριχνε. Εδώ η σύνδεση λύνεται στην πρώτη
- * **κλήση**, δηλαδή όταν υπάρχει πραγματικό αίτημα.
- *
- * Οι έξι μέθοδοι γράφονται ρητά και όχι με proxy: ο τύπος `IBOQReadService`
- * επιβάλλει την πληρότητα σε χρόνο μεταγλώττισης, ενώ ένα `Proxy` θα την
- * ανέβαλλε σε χρόνο εκτέλεσης.
- */
-const lazyAdminBoq: IBOQReadService = {
-  getByBuilding: (companyId: string, buildingId: string): Promise<BOQItem[]> =>
-    getBoqAdminReadService().getByBuilding(companyId, buildingId),
-  getById: (id: string): Promise<BOQItem | null> =>
-    getBoqAdminReadService().getById(id),
-  search: (companyId: string, buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]> =>
-    getBoqAdminReadService().search(companyId, buildingId, filters),
-  getStatistics: (companyId: string, buildingId: string): Promise<BOQStats> =>
-    getBoqAdminReadService().getStatistics(companyId, buildingId),
-  getCategories: (companyId: string): Promise<BOQCategory[]> =>
-    getBoqAdminReadService().getCategories(companyId),
-  getBuildingSummary: (companyId: string, buildingId: string): Promise<BOQSummary | null> =>
-    getBoqAdminReadService().getBuildingSummary(companyId, buildingId),
-};
-
-/**
  * Το registry των επτά εργαλείων BOQ.
  *
- * Χτίζεται μία φορά κατά τη φόρτωση — σκόπιμα: οι έλεγχοι κατασκευής του
- * ADR-734 §5.3/§5.4 (μορφή ονόματος, απαγόρευση παραμέτρου `companyId`,
- * συμφωνία υπόδειξης με πολιτική) **ρίχνουν εδώ**, δηλαδή στο πρώτο import και
- * άρα στο πρώτο test — όχι στο πρώτο αίτημα χρήστη.
+ * ⚠️ **Εισάγεται, δεν κατασκευάζεται εδώ** (Φάση 3β): από τη στιγμή που το MCP
+ * transport έγινε δεύτερος καταναλωτής, μια τοπική κατασκευή θα σήμαινε **δύο**
+ * registries με τους ίδιους επτά ορισμούς — δύο δρόμοι που θα μπορούσαν να
+ * αποκλίνουν. Ο SSoT ζει στο `capabilities/boq/boq-admin-registry.ts`.
  */
-const boqRegistry: CapabilityRegistry = createBoqCapabilityRegistry({ boq: lazyAdminBoq });
+const boqRegistry: CapabilityRegistry = boqAdminCapabilityRegistry;
 
 /**
  * Οι ορισμοί που **βλέπει το μοντέλο** για τα επτά εργαλεία.

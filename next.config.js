@@ -397,12 +397,35 @@ const nextConfig = {
     ];
   },
 
-  // [PWA] PWA MANIFEST
+  // [PWA] PWA MANIFEST + [ADR-738] OAuth discovery
   async rewrites() {
     return [
       {
         source: '/manifest.json',
         destination: '/api/manifest',
+      },
+
+      // ── ADR-738: OAuth 2.1 / MCP discovery ──────────────────────────────
+      // Rewrite αντί για φάκελο `src/app/.well-known/`: οι διαδρομές είναι
+      // υποχρεωτικές από RFC 9728 / RFC 8414, και δεν εξαρτώνται από το πώς ο
+      // App Router χειρίζεται φακέλους που ξεκινούν με τελεία.
+      //
+      // ⚠️ Το PRM σερβίρεται σε ΔΥΟ διαδρομές επίτηδες. Το πρότυπο ορίζει ότι
+      // ο client δοκιμάζει ΠΡΩΤΑ την εκδοχή με path insertion
+      // (`/.well-known/oauth-protected-resource/api/mcp`) και μόνο αν αποτύχει
+      // πέφτει στη ρίζα. Σερβίροντας μόνο τη ρίζα θα δουλεύαμε — μετά από ένα
+      // περιττό 404 σε κάθε σύνδεση.
+      {
+        source: '/.well-known/oauth-protected-resource',
+        destination: '/api/oauth/metadata/protected-resource',
+      },
+      {
+        source: '/.well-known/oauth-protected-resource/api/mcp',
+        destination: '/api/oauth/metadata/protected-resource',
+      },
+      {
+        source: '/.well-known/oauth-authorization-server',
+        destination: '/api/oauth/metadata/authorization-server',
       },
     ];
   },
