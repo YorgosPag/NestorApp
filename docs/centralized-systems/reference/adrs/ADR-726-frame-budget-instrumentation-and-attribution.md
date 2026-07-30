@@ -576,6 +576,13 @@ LoAF. Πλήρες αναπαράξιμο πρωτόκολλο + παγίδες 
 «12-14-22 FPS» ήταν dev θόρυβος (StrictMode + DevTools — §5 σημ. περιβάλλοντος στο HANDOFF).
 Ο ΕΝΑΣ εναπομείνας μετρημένος ένοχος: το transform-driven rebuild μέσα στο wheel-zoom ⇒ **Φ3.1**.
 
+**Follow-up (2026-07-30, μετά τον Μοχλό Δ/ADR-732):** νέα μέτρηση, ίδιο πρωτόκολλο, νέο
+build `T-mlZj7zMYXP22PFETbIm` με 13→5 στρώματα: **p90 49,8 → 33,3ms** (η compositing
+αναμονή του §4.Γ εξαφανίστηκε — τα αργά καρέ είναι πλέον καθαρό double-vsync), p50 60 FPS
+αμετάβλητο, οι δύο zone καμβάδες p99 0,1ms. Η ουρά που μένει: Φ3.1 idle re-rasters
+(`frame:dxf-canvas` p95 100ms) + snap/hover. Πλήρη νούμερα + τίμιες επιφυλάξεις
+συγκρισιμότητας: **ADR-732 §7.1**.
+
 ---
 
 ## 7. Τι **δεν** θα γίνει
@@ -963,6 +970,7 @@ specifier** με το `src/app/dxf/viewer/page.tsx`, άρα μοιράζεται
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-30 (δ) | ✅ **Ο Μοχλός Δ (ADR-732) ΜΕΤΡΗΘΗΚΕ σε production** (σημ. στο §6 Φ5) — νέο build `T-mlZj7zMYXP22PFETbIm`, 13→5 στρώματα: **p90 καρέ 49,8 → 33,3ms** (η compositing αναμονή του §4.Γ εξαφανίστηκε — τα αργά καρέ = καθαρό double-vsync), p50 60 FPS αμετάβλητο, zone καμβάδες p99 0,1ms. Το >33ms 11,5→15,9% ΔΕΝ έπεσε ως ποσοστό — η ουρά που μένει είναι Φ3.1 idle re-rasters + snap/hover (στο baseline το snap ήταν απόν ⇒ όχι αυστηρά συγκρίσιμα). Πλήρη νούμερα: **ADR-732 §7.1**. **Μηδέν commit.** |
 | 2026-07-30 (γ) | ✅ **Η Φ3.1 ΑΠΟΔΕΙΧΘΗΚΕ ΜΕ ΜΕΤΡΗΣΗ** (§6 Φ3.1) — production build (commit `d9ef705d`, BUILD_ID `MSiFeQyJAWdg0RRzZFKbG`), δύο πειράματα: (1) ανθρώπινο wheel-zoom-heavy: `frame:dxf-canvas` **p90 74,6 → 9,9ms**, >33ms 20% → 9,9%· (2) **συνθετικό συνεχές zoom 5s χωρίς παύση: ακριβώς ΕΝΑ καρέ >70ms** (το idle re-raster στην ηρεμία) έναντι rebuild-ανά-1-2-notches χθες ⇒ μηδέν transform-driven rebuild μέσα στη χειρονομία, τα εναπομείναντα ακριβά καρέ του (1) = σχεδιασμένα rest-time re-rasters μεταξύ ριπών. Παγίδα μέτρησης που πληρώθηκε: το synthetic test σε **κρυφό tab** δίνει ΚΕΝΟ distribution (ο §1.2 φρουρός δουλεύει) — λύση: one-shot `visibilitychange` arming ώστε το test να ξεκινά μόλις ο χρήστης φέρει το tab μπροστά. **Μηδέν commit** (τα ADR updates εκκρεμούν). |
 | 2026-07-30 (β) | **Φ3.1 — gesture-aware raster acceptance ΥΛΟΠΟΙΗΘΗΚΕ** (νέα §6 Φ3.1). Η πύλη `isNavigationGesture()` μπήκε στο `DxfBitmapCache.canServe()`: μέσα σε χειρονομία πλοήγησης τα ποιοτικά κριτήρια (θολούρα/τρύπα) αναστέλλονται και το raster σερβίρεται όπως είναι — **κανένα transform-driven rebuild μέσα στη χειρονομία**· rebuild μόνο από τον υπάρχοντα idle μηχανισμό (`rerasterDue`/`RASTER_IDLE`) ή από δομική ακύρωση (ρητά ΜΗ ανασταλμένη). Νέο pure predicate `isAnchoredBlitUsable` στο anchor module (validity χωρίς policy)· ΜΗΔΕΝ νέα συστήματα — SSOT audit επιβεβαίωσε NavigationGestureStore (ADR-728 Φ1) + `rerasterDue` ως υπάρχοντα. Tests: +9 anchored-raster (νέο describe) / +4 anchor, **mutation-verified 3/3**. Πλήρης εγγραφή: ADR-040 changelog 2026-07-30 (β). ΕΚΚΡΕΜΕΙ η μέτρηση-απόδειξη (ίδιο πρωτόκολλο Φ5). **Μηδέν commit.** |
 | 2026-07-30 (α) | ✅ **Φ5 ΕΓΙΝΕ — η πρώτη production μέτρηση του project** (§6 Φ5). 60 FPS median (p50/p75 16,7ms), καρέ >70ms μόλις 1,8%, `frame:TOTAL` p50 **0,0ms**, snap-detection **απόν**. **Το pan είναι ΛΥΜΕΝΟ** (Φ3 + ADR-728 Φ1 + XXII.B). Τα προ-Φ3 «~12 FPS σταθερά» επιβεβαιώθηκαν ως πραγματικά, τα ενδιάμεσα «12-14-22 FPS» ως dev θόρυβος. Ο ΕΝΑΣ εναπομείνας μετρημένος ένοχος: `frame:dxf-canvas` p90 74,6ms/max 184,9ms = full re-raster ΜΕΣΑ στο wheel-zoom (budget 1,25× σε dpr=1) ⇒ γέννησε τη Φ3.1. Αναπαράξιμο πρωτόκολλο + build παγίδες (heap 12GB, `NEXT_DISABLE_FS_CACHE=1`, detached `Start-Process`): HANDOFF 2026-07-30 §4. **Μηδέν commit.** |
