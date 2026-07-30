@@ -33,7 +33,7 @@ export type {
   UpdateBOQItemInput,
   BOQFilters,
 } from './boq';
-export { BOQ_ITEM_DEFAULTS } from './boq';
+export { BOQ_ITEM_DEFAULTS, BOQ_SCOPE_VALUES } from './boq';
 
 // Governance lifecycle ordering (ADR-734 §6.3 κανόνας 1)
 export {

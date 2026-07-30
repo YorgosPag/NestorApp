@@ -41,6 +41,25 @@ export type BOQScope =
   | 'properties';
 
 /**
+ * Τα ίδια εύρη σε **χρόνο εκτέλεσης** — τα χρειάζονται όσοι παράγουν λίστες
+ * επιλογών (UI dropdown, JSON Schema `enum` για πράκτορες ΤΝ).
+ *
+ * ⚠️ Ο τύπος `Record<BOQScope, true>` είναι σκόπιμος: νέο εύρος στον τύπο σπάει
+ * **εδώ** τη μεταγλώττιση, οπότε καμία λίστα δεν μένει πίσω σιωπηλά. Πριν
+ * υπήρχε χειρόγραφο αντίγραφο στο `BOQEditorScopeSection.tsx` (ADR-734 Φάση 2).
+ */
+const BOQ_SCOPE_PRESENCE: Readonly<Record<BOQScope, true>> = {
+  building: true,
+  common_areas: true,
+  floor: true,
+  property: true,
+  properties: true,
+};
+
+/** Κατάλογος ευρών — παράγεται, δεν ξαναγράφεται. */
+export const BOQ_SCOPE_VALUES: readonly BOQScope[] = Object.keys(BOQ_SCOPE_PRESENCE) as BOQScope[];
+
+/**
  * Cost allocation method για multi-property scopes (ADR-329 §3.1.1)
  * - by_area: Αναλογικά κατά εμβαδόν (DEFAULT) — cost_i = total * (area_i / Σ area)
  * - equal: Ισόποσα — cost_i = total / N

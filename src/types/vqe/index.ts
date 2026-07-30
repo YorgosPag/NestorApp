@@ -19,4 +19,4 @@ export type {
   VerifiableQuantityEnvelope,
 } from './envelope';
 
-export { VQE_SCHEMA_VERSION } from './envelope';
+export { VQE_SCHEMA_VERSION, PROVENANCE_ACTIVITIES, ENVELOPE_WARNING_CODES } from './envelope';

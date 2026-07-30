@@ -75,6 +75,24 @@ export type EnvelopeWarningCode =
   /** Πεδίο βάσης μέτρησης δεν είναι ενιαίο στο σύνολο ⇒ επιστράφηκε `null`. */
   | 'non_uniform_measurement_basis';
 
+/**
+ * Οι ίδιοι κωδικοί σε **χρόνο εκτέλεσης**, για το `outputSchema` των adapters.
+ * `Record<EnvelopeWarningCode, true>` ⇒ νέος κωδικός σπάει τη μεταγλώττιση εδώ.
+ */
+const ENVELOPE_WARNING_CODE_PRESENCE: Readonly<Record<EnvelopeWarningCode, true>> = {
+  no_source_items: true,
+  duplicate_source_items: true,
+  mixed_governance_status: true,
+  unknown_governance_status: true,
+  non_finite_quantity: true,
+  baseline_drift_present: true,
+  non_uniform_measurement_basis: true,
+};
+
+/** Κατάλογος κωδικών προειδοποίησης φακέλου — παράγεται, δεν ξαναγράφεται. */
+export const ENVELOPE_WARNING_CODES: readonly EnvelopeWarningCode[] =
+  Object.keys(ENVELOPE_WARNING_CODE_PRESENCE) as EnvelopeWarningCode[];
+
 /** Προειδοποίηση που γεννήθηκε στο στρώμα του φακέλου. */
 export interface EnvelopeIssue {
   readonly source: 'envelope';
@@ -151,6 +169,31 @@ export type ProvenanceActivity =
   | 'boq-service.getById'
   | 'boq-service.getStatistics'
   | 'boq-service.getCategories';
+
+/**
+ * Οι ίδιες δραστηριότητες σε **χρόνο εκτέλεσης** — τις χρειάζονται τα adapters
+ * για να δηλώσουν `enum` στο `outputSchema` που βλέπουν οι MCP clients.
+ *
+ * ⚠️ Ο τύπος `Record<ProvenanceActivity, true>` είναι σκόπιμος: νέα τιμή στην
+ * κλειστή ένωση σπάει **εδώ** τη μεταγλώττιση. Καμία σιωπηλή απόκλιση μεταξύ
+ * του τύπου και του σχήματος που δημοσιεύεται προς τα έξω (ίδιο μοτίβο με το
+ * `BOQ_STATUS_RANK` του `types/boq/lifecycle.ts`).
+ */
+const PROVENANCE_ACTIVITY_PRESENCE: Readonly<Record<ProvenanceActivity, true>> = {
+  'cost-engine.computeItemCost': true,
+  'cost-engine.computeVariance': true,
+  'cost-engine.computeBaselineDrift': true,
+  'cost-engine.computeBuildingSummary': true,
+  'cost-engine.allocateCost': true,
+  'boq-service.search': true,
+  'boq-service.getById': true,
+  'boq-service.getStatistics': true,
+  'boq-service.getCategories': true,
+};
+
+/** Κατάλογος δραστηριοτήτων — παράγεται, δεν ξαναγράφεται. */
+export const PROVENANCE_ACTIVITIES: readonly ProvenanceActivity[] =
+  Object.keys(PROVENANCE_ACTIVITY_PRESENCE) as ProvenanceActivity[];
 
 /** W3C PROV-O aligned ίχνος παραγωγής. */
 export interface ProvenanceRecord {

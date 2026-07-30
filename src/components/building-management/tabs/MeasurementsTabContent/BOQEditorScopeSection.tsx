@@ -26,7 +26,7 @@ import { PropertySelectByBuilding } from '@/components/properties/shared/Propert
 import { PropertyMultiSelectByBuilding } from '@/components/properties/shared/PropertyMultiSelectByBuilding';
 import { usePropertiesByBuilding } from '@/components/properties/shared/usePropertiesByBuilding';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
-import type { BOQScope } from '@/types/boq';
+import { BOQ_SCOPE_VALUES, type BOQScope } from '@/types/boq';
 
 interface BOQEditorScopeSectionProps {
   buildingId: string;
@@ -41,7 +41,9 @@ interface BOQEditorScopeSectionProps {
   onLinkedUnitIdsChange: (ids: string[]) => void;
 }
 
-const SCOPE_OPTIONS: BOQScope[] = ['building', 'common_areas', 'floor', 'property', 'properties'];
+// SSoT: `BOQ_SCOPE_VALUES` (@/types/boq). Το χειρόγραφο αντίγραφο αφαιρέθηκε —
+// νέο εύρος στον τύπο εμφανίζεται πλέον εδώ αυτόματα (N.0.2, ADR-734 Φάση 2).
+const SCOPE_OPTIONS: readonly BOQScope[] = BOQ_SCOPE_VALUES;
 
 export function BOQEditorScopeSection({
   buildingId, scope, linkedFloorId, linkedUnitId, linkedUnitIds, scopeLocked,
