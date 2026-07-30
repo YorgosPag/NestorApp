@@ -34,7 +34,7 @@ import {
   TestsModal, CreditsDialog, FloorplanBackgroundPanel, ReplaceConfirmDialog, CalibrationDialog,
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
-  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette,
+  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
   DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
@@ -273,6 +273,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><AdminLayerManagerPalette projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {/* ADR-736 Φ4 — μητρώο συνημμένων· modeless, ανοίγει από Insert > Εξωτερικές Αναφορές. */}
       <React.Suspense fallback={hiddenFallback}><ExternalReferencesPalette /></React.Suspense>
+      {/* ADR-736 §5 — η ΑΥΤΟΜΑΤΗ επίλυση συνημμένων. Ξεχωριστό host γιατί η παλέτα από πάνω
+          αποδίδει `null` όσο είναι κλειστή: μέσα της, το «αυτόματα» σήμαινε στην πράξη «μόλις
+          ο χρήστης ανοίξει το μητρώο». Ζωγραφίζει τίποτα· υπάρχει μόνο για να είναι mounted. */}
+      <React.Suspense fallback={hiddenFallback}><ExternalReferencesAutoResolveHost /></React.Suspense>
       {/* ADR-683 Φ3.1β — «Ανάθεση προμέτρησης» modal (opened from the imported-mesh contextual tab). */}
       <React.Suspense fallback={hiddenFallback}><ImportedMeshBoqHost levelManager={levelManager} projectId={projectId} /></React.Suspense>
       {/* ADR-686 Φ5 — «Αντιστοίχιση Υλικών» modal (opened from the imported-mesh contextual tab). */}

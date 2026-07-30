@@ -126,6 +126,8 @@ client_id». Η Figma διάλεξε κλειστό κατάλογο — που 
 | `app/api/oauth/metadata/{protected-resource,authorization-server}/route.ts` | discovery (rewrites στο `next.config.js`) |
 | `app/(auth)/oauth/consent/page.tsx` + `components/oauth/OAuthConsentCard.tsx` | η οθόνη |
 | `firestore.rules` | **deny-all** στις 5 συλλογές OAuth |
+| `tests/firestore-rules/suites/oauth-*.rules.test.ts` | 5 suites — κλειδώνουν ότι το deny ισχύει **και για τον super_admin** |
+| `tests/firestore-rules/_harness/deny-all-suite.ts` | **ΝΕΟ SSoT** — το σώμα κάθε κελιού `deny_all` (βλ. §8.1) |
 
 ### 5.1 Πέντε αποφάσεις που ξεπερνούν το ελάχιστο
 
@@ -247,6 +249,37 @@ hook· το `undici` **δεν** είναι άμεση εξάρτηση. Πρακ
 **Δεν εκτελέστηκε `tsc`** (N.17) — ο έλεγχος τύπων γίνεται από τον Γιώργο και το
 pre-commit hook.
 
+### 8.1 CHECK 3.16 — το commit μπλόκαρε, και καλά έκανε
+
+Οι πέντε νέες `match` μπλοκ στο `firestore.rules` **έριξαν το commit**: το CHECK
+3.16 (ADR-298) είναι zero-tolerance on touch — κάθε top-level μπλοκ θέλει είτε
+εγγραφή στο `coverage-manifest.ts` με πλήρη μήτρα, είτε ρητή αναφορά στο
+`FIRESTORE_RULES_PENDING`. Το `PENDING` **δεν** χρησιμοποιήθηκε: υπάρχει για τη
+σταδιακή μετανάστευση ~90 παλαιών συλλογών, και μια συλλογή διαπιστευτηρίων που
+γεννιέται σήμερα δεν είναι legacy χρέος.
+
+Η μήτρα είναι ο **υπάρχων** `denyAllMatrix()` — δεν γράφτηκε νέος. Ζει στο
+`coverage-matrices-accounting.ts` για ιστορικούς λόγους· είναι builder του
+**pattern**, όχι του domain.
+
+**Η παγίδα ήταν η ίδια η συμμόρφωση.** Πέντε suites για πανομοιότυπο κανόνα =
+πέντε αντίγραφα του ίδιου σώματος — ακριβώς το sibling clone του N.18. Και δεν
+γλιτώνει με «ένα αρχείο για τα πέντε»: το CHECK 3.16 απαιτεί ανά αρχείο **και**
+`export const COVERAGE` που δείχνει στη δική του συλλογή, **και** κυριολεκτικό
+`for (const cell of COVERAGE.matrix)`. Δηλαδή η πύλη **επιβάλλει** πέντε αρχεία.
+
+Λύση: το σώμα του κελιού βγήκε στο `_harness/deny-all-suite.ts`
+(`useDenyAllEmulator` + `defineDenyAllCell`)· στο suite μένει μόνο ο βρόχος που
+απαιτεί η πύλη. Τα **δύο προϋπάρχοντα** `deny_all` suites
+(`accounting-invoice-counters`, `asset-pack-config`) — που ήταν ήδη δίδυμα
+μεταξύ τους — πέρασαν στο ίδιο SSoT (κανόνας N.0.2). CHECK 3.28 σε 8 αρχεία:
+καθαρό. CHECK 3.16 `--all`: OK.
+
+⚠️ **Τα suites ΔΕΝ εκτελέστηκαν** — απαιτούν ζωντανό Firestore emulator
+(`localhost:8080`), που δεν έτρεχε. Η πύλη 3.16 είναι **στατική**: αποδεικνύει
+ότι η κάλυψη *δηλώθηκε*, όχι ότι *περνά*. Εκκρεμεί εκτέλεση με
+`npm run test:firestore-rules`.
+
 ---
 
 ## 9. Google-Level (N.7.2)
@@ -297,4 +330,5 @@ pre-commit hook.
 
 | Ημ/νία | Αλλαγή |
 |---|---|
+| 2026-07-31 | **CHECK 3.16 — κάλυψη κανόνων.** Το commit μπλόκαρε: 5 νέες συλλογές OAuth χωρίς suite. Προστέθηκαν 5 `oauth-*.rules.test.ts` + 5 εγγραφές `deny_all` στο `coverage-manifest.ts` (με τον **υπάρχοντα** `denyAllMatrix()`). Το σώμα του κελιού βγήκε σε ΝΕΟ SSoT `_harness/deny-all-suite.ts` — αλλιώς η ίδια η πύλη γεννούσε 5 sibling clones (N.18)· τα 2 προϋπάρχοντα `deny_all` suites πέρασαν κι αυτά εκεί (N.0.2). Λεπτομέρειες: §8.1. ⚠️ Τα suites **δεν** εκτελέστηκαν — θέλουν emulator. |
 | 2026-07-31 | **Δημιουργία + υλοποίηση.** OAuth 2.1 AS πάνω στο Firebase, ως στρώμα εξουσιοδότησης και **όχι** δεύτερη ταυτότητα. Το §3.1 του handoff της Φάσης 3α ήταν **ψευδοδίλημμα**: το πρότυπο αφήνει τον AS εκτός εμβέλειας και το DCR είναι πλέον `MAY` — διορθώθηκε στο §2. CIMD αντί DCR (η γραμμή της Autodesk). 16/16 μεταλλάξεις σκοτώθηκαν· το CHECK 3.28 έπιασε πραγματικό δίδυμο στην ανάλυση `resource`, που κεντρικοποιήθηκε. Κατάσταση: **ACCEPTED — σε κώδικα.** |

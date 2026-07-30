@@ -197,8 +197,27 @@ export interface TextEntity extends BaseEntity {
   text: string;
   /** SSoT for content when present — populated by DXF import (ADR-344 unification) and CreateTextCommand. */
   textNode?: DxfTextNode;
+  /**
+   * ADR-737 §18 — @deprecated **κάτοπτρο** του {@link height}. Προτίμησε το `resolveTextHeight`.
+   *
+   * Δεν είναι ανεξάρτητο δεδομένο: ο importer γράφει **την ίδια τιμή** και στα δύο πεδία από
+   * το DXF group 40 (`buildTextSceneEntity` → `fontSize: height, height`). Επιβιώνει μόνο ως
+   * όνομα δανεισμένο από web-typography· το CAD λεξιλόγιο (AutoCAD/ODA/ezdxf) έχει **ένα**
+   * char height. Νέος κώδικας **δεν** το γράφει και **δεν** το διαβάζει απευθείας.
+   */
   fontSize?: number;
-  height?: number;           // 🏢 ENTERPRISE: DXF text height (alias for fontSize, used by converters)
+  /**
+   * ADR-737 §18 — **ύψος ΧΑΡΑΚΤΗΡΑ** σε world units (DXF group 40). Το κανονικό πεδίο· το
+   * {@link fontSize} είναι κάτοπτρό του.
+   *
+   * ⚠️ **ΔΕΝ είναι η αυθεντική πηγή.** Όταν υπάρχει `textNode`, το ζωντανό ύψος ζει στο
+   * `textNode.paragraphs[0].runs[0].style.height` και τα flat πεδία είναι **εφεδρεία** —
+   * μια εγγραφή μόνο εδώ είναι *shadowed* (ADR-635, `scale-entity-transform`). Ο μόνος
+   * σωστός αναγνώστης είναι το `resolveTextHeight()`.
+   *
+   * @see MTextEntity.definedHeight — ομώνυμο ΑΛΛΟ μέγεθος (ύψος πλαισίου, group 46)
+   */
+  height?: number;
   fontFamily?: string;
   alignment?: 'left' | 'center' | 'right';
   rotation?: number;
@@ -286,8 +305,25 @@ export interface MTextEntity extends BaseEntity {
   text: string;
   /** SSoT for content when present — populated by DXF import (ADR-344 unification) and CreateTextCommand. */
   textNode?: DxfTextNode;
-  width: number;              // ✅ ENTERPRISE: AutoCAD multiline text width boundary
-  height?: number;            // ✅ ENTERPRISE: AutoCAD multiline text height boundary
+  width: number;              // ✅ ENTERPRISE: AutoCAD multiline text width boundary (DXF group 41)
+  /**
+   * ADR-737 §18 — **ύψος ΠΛΑΙΣΙΟΥ** (DXF *defined column height*, group 46 / embedded 41),
+   * ΟΧΙ ύψος χαρακτήρα. Είναι το κατακόρυφο αντίστοιχο του {@link width}.
+   *
+   * 🔴 **Λεγόταν `height` και αυτό ήταν η ρίζα του §11-7.** Το `TextEntity.height` σημαίνει
+   * **ύψος χαρακτήρα** (συνώνυμο του `fontSize`, DXF group 40) — δηλαδή **ένα όνομα για δύο
+   * ασύμβατα μεγέθη**, σε δύο τύπους που μοιράζονται καλούντες (bounds SSoT, hit-test,
+   * renderer, export). Κάθε `entity.height ?? entity.fontSize` που έβλεπε MTextEntity
+   * επέστρεφε **το ύψος του πλαισίου ως ύψος γραμματοσειράς**, σιωπηλά.
+   *
+   * Η μετονομασία **δεν** είναι καλλωπισμός: κάνει το λάθος **σφάλμα τύπου**. Το
+   * `resolveTextHeight` δέχεται δομικό `{ height?; fontSize? }` — με το πεδίο μετονομασμένο,
+   * ένα MTextEntity απλώς **δεν ταιριάζει** στο slot `height`, οπότε η αλυσίδα πέφτει σωστά
+   * στο char height αντί να διαβάσει το πλαίσιο. Ο τύπος επιβάλλει τη σημασιολογία.
+   *
+   * @see {@link TextEntity.height} — το ΑΛΛΟ «height» (χαρακτήρα, group 40)
+   */
+  definedHeight?: number;
   fontSize?: number;
   fontFamily?: string;
   alignment?: 'left' | 'center' | 'right' | 'justify';
@@ -1233,7 +1269,11 @@ export function readMTextGeometry(entity: TextLikeEntity): MTextGeometry {
   return {
     position: entity.position,
     width: entity.width ?? 0,
-    fallbackHeight: entity.fontSize ?? entity.height,
+    // ADR-737 §18 — το `height` είναι char height **μόνο** στο `TextEntity`. Στο `MTextEntity`
+    // το ομώνυμο πεδίο ήταν το ΠΛΑΙΣΙΟ (τώρα `definedHeight`) — γι' αυτό εδώ διαβάζεται με
+    // στένωση και ΟΧΙ ως κοινό πεδίο του union: ένα σκέτο `entity.height` επέστρεφε το ύψος
+    // κουτιού ως ύψος γραμματοσειράς για κάθε πραγματικό MTextEntity, σιωπηλά.
+    fallbackHeight: entity.fontSize ?? (entity.type === 'text' ? entity.height : undefined),
     columns: entity.mtextColumns,
   };
 }

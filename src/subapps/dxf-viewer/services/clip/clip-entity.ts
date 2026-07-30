@@ -28,7 +28,9 @@ import type {
   EllipseEntity, PointEntity, SplineEntity, HatchEntity,
 } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
-import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
+// ADR-737 §18 — SSoT ύψους χαρακτήρα (κουβαλά και το `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE`,
+// γι' αυτό ο τοπικός import της σταθεράς έφυγε μαζί με το αντίγραφο της λογικής).
+import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
 import type { ClipRegion } from './clip-region';
 import { DEG, normAngle, arcSweepDeg, ptEq, boundsOfPoints } from './clip-geometry';
 import { clipHatchLoops, bboxCullEntity } from './clip-entity-helpers';
@@ -148,15 +150,11 @@ function clipText(e: TextEntity | MTextEntity, region: ClipRegion): Entity[] {
     : (e.text ?? '');
   if (!plainText) return region.containsPoint(e.position) ? [e] : [];
 
-  // charH mirrors resolveTextHeight() (ADR-344 Phase 6.E).
-  let charH: number;
-  if (textNode) {
-    const run0 = textNode.paragraphs[0]?.runs[0];
-    const runH = (run0 && !('top' in run0)) ? (run0.style.height ?? 0) : 0;
-    charH = runH > 0 ? runH : TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
-  } else {
-    charH = (e.height && e.height > 0 ? e.height : 0) || (e.fontSize && e.fontSize > 0 ? e.fontSize : 0) || 2.5;
-  }
+  // ADR-737 §18 — ΚΛΗΣΗ, όχι αντίγραφο. Εδώ ζούσαν 8 γραμμές που «mirror resolveTextHeight()»:
+  // ένα σχόλιο δεν είναι σύνδεσμος — οι δύο υλοποιήσεις είχαν ήδη αποκλίνει (η ντόπια έπεφτε
+  // σε σκέτο `2.5` αντί για `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE` στον flat κλάδο) και η ντόπια
+  // διάβαζε `e.height` πάνω σε `TextEntity | MTextEntity`, δηλαδή ύψος ΠΛΑΙΣΙΟΥ για το MTEXT.
+  const charH = resolveTextHeight(e);
   const charW = charH * 0.6;
   const chars = [...plainText];
   if (chars.length === 0) return [];

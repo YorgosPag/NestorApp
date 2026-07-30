@@ -26,6 +26,8 @@ import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
 import { wallFootprintPolygon } from '../finishes/wall-footprint-union';
 import { textBoxCornersWorld } from '../text/text-box';
+// ADR-737 §18 — SSoT ύψους χαρακτήρα (run του textNode πρώτα, μετά flat, μετά DIMTXT default).
+import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
 import { getEntityBounds, type BoundsEntity } from '../../systems/zoom/utils/bounds-entity';
 import { arcToPolyline } from '../../utils/geometry/GeometryUtils';
 import { isFinitePoint } from '../../config/geometry-constants';
@@ -56,11 +58,13 @@ export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Poi
   // N.0.2 — ADR-737 §11-4: το ζεύγος `isTextEntity(e) || isMTextEntity(e)` ήταν το **τρίτο**
   // αντίγραφο του ίδιου ερωτήματος· ζει πλέον ως `isTextLikeEntity` δίπλα στα άλλα guards.
   if (isTextLikeEntity(entity)) {
-    const src = entity as unknown as { position?: Point2D; height?: number; fontSize?: number };
+    const src = entity as unknown as { position?: Point2D };
     if (src.position && isFinitePoint(src.position)) {
       const dxfText: DxfText = {
         ...(entity as unknown as DxfText),
-        height: src.height || src.fontSize || 2.5,
+        // ADR-737 §18 — SSoT: το inline `height || fontSize || 2.5` αγνοούσε το run του
+        // `textNode` (άρα έδινε προ-κλίμακας ύψος) και για MTEXT διάβαζε το ύψος πλαισίου.
+        height: resolveTextHeight(entity),
       };
       const corners = textBoxCornersWorld(dxfText);
       // Finite-guard (SSoT `isFinitePoint`): a degenerate text (no glyph metrics / bad width)

@@ -21,6 +21,9 @@ import type {
   TextJustification,
 } from '../types';
 import { DXF_COLOR_BY_LAYER } from '../types';
+// ADR-737 §18 — SSoT ύψους χαρακτήρα. Εδώ καλείται στον κλάδο «δεν υπάρχει AST», οπότε
+// αποφασίζει πάνω στα flat πεδία — ακριβώς η σειρά που θέλουμε, χωρίς δεύτερη διατύπωση.
+import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
 
 interface LegacyTextLike {
   readonly type?: string;
@@ -62,7 +65,10 @@ function buildFallbackNode(entity: LegacyTextLike): DxfTextNode {
       underline: false,
       overline: false,
       strikethrough: false,
-      height: entity.height ?? entity.fontSize ?? 2.5,
+      // ADR-737 §18 — SSoT. Το `??` που ήταν εδώ κρατούσε το `height === 0` (έγκυρο DXF:
+      // «το ύψος ορίζεται από το TextStyle») και έσπερνε run με ύψος 0 ⇒ **αόρατο κείμενο**
+      // που κανένα fallback πιο κάτω δεν μπορούσε πια να σώσει, αφού το AST υπερισχύει.
+      height: resolveTextHeight(entity),
       widthFactor: 1,
       obliqueAngle: 0,
       tracking: 1,

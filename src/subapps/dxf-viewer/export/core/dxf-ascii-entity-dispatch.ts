@@ -54,6 +54,8 @@ import {
   type EntityStyleCodes,
 } from './dxf-ascii-primitive-emitters';
 import { emitInsert } from './dxf-ascii-insert-writer';
+// ADR-737 §18 — SSoT ύψους χαρακτήρα: ίδια πηγή με τον `emitMText` (run του textNode πρώτα).
+import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
 
 // ADR-636 Φ2.4 (D.6) — single-header entities whose STYLE codes (6/48/370) are appended
 // AFTER the emitter (valid: the pairs bind to the entity until the next `0`). POLYLINE /
@@ -116,8 +118,12 @@ export function writeEntity(
       }
       // ADR-636 Φ2.3 — single-line TEXT with H/V justification (72/73/11/21) on the AutoCAD path.
       // Tekton (`explode`) keeps the bare, alignment-less, unrotated TEXT (byte-identical legacy).
+      // ADR-737 §18 — ύψος από τον SSoT: ο `emitMText` διάβαζε **ήδη** το run πρώτα
+      // (`firstRunHeight(node) ?? …`), ενώ ο αδελφός δρόμος TEXT εδώ κοιτούσε μόνο τα flat
+      // πεδία. Δύο writers στο ΙΔΙΟ αρχείο με διαφορετική πηγή ⇒ ένα grip-resize (που γράφει
+      // στο run) εξαγόταν σωστά ως MTEXT και **λάθος** ως TEXT. Ίδια πηγή, ίδια απάντηση.
       emitText(
-        e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair,
+        e.position, e.text ?? '', resolveTextHeight(e), layer, aci, s, pair,
         explode ? 0 : (e.rotation ?? 0), explode ? undefined : alignFromTextEntity(e),
         // ADR-636 Φ2.4 (D.5) — real group 7 (AutoCAD path); Tekton `explode` → emitText default STANDARD.
         explode ? undefined : textStyleName(readTextEntityFamily(e)), r2018,
@@ -126,7 +132,9 @@ export function writeEntity(
     case 'mtext':
       // ADR-636 Φ2.3 — real MTEXT (\P line breaks, 71 attachment) on the AutoCAD path; Tekton's
       // minimal parser reads only TEXT, so `explode` keeps the historic single-line TEXT fallback.
-      if (explode) emitText(e.position, e.text ?? '', e.height ?? e.fontSize, layer, aci, s, pair);
+      // ADR-737 §18 — ΟΧΙ `e.definedHeight` (ύψος πλαισίου): ο Τέκτων θέλει ύψος ΧΑΡΑΚΤΗΡΑ.
+      // Πριν τη μετονομασία το ομώνυμο `e.height` έδινε σιωπηλά το πλαίσιο.
+      if (explode) emitText(e.position, e.text ?? '', resolveTextHeight(e), layer, aci, s, pair);
       else emitMText(e, layer, aci, s, pair, version, r2018);
       break;
     case 'rectangle':

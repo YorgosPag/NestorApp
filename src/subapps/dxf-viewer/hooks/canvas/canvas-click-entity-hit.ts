@@ -19,6 +19,13 @@ import {
 import { pointToLineDistance } from '../../rendering/entities/shared/geometry-utils';
 import { pointToArcDistance } from '../../utils/angle-entity-math';
 import { resolveEntityText } from '../../utils/text-node-utils';
+// ADR-737 §18 — SSoT ύψους χαρακτήρα. Το inline `height ?? fontSize ?? 2.5` που ήταν εδώ
+// (α) αγνοούσε το run του `textNode` και (β) στο MTEXT διάβαζε το ύψος ΠΛΑΙΣΙΟΥ.
+import { resolveTextHeight } from './dxf-text-style-extractor';
+// ADR-089 — SSoT point-in-bounds· ADR-737 §18 — SSoT εκτίμησης πλάτους (ίδια αναλογία 0.6
+// που ήταν γραμμένη inline εδώ δύο φορές).
+import { SpatialUtils } from '../../core/spatial/SpatialUtils';
+import { estimateTextWidth } from '../../config/text-rendering-config';
 
 /**
  * Tests if a world point hits any entity type. Returns true if hit.
@@ -68,22 +75,47 @@ export function testEntityHit(
     return Math.abs(normalizedDist - 1) <= hitTolerance / Math.min(rx, ry);
   }
   if (isTextEntity(entity)) {
-    const height = entity.height ?? entity.fontSize ?? 2.5;
-    const width = resolveEntityText(entity).length * height * 0.6;
-    return worldPoint.x >= entity.position.x - hitTolerance &&
-           worldPoint.x <= entity.position.x + width + hitTolerance &&
-           worldPoint.y >= entity.position.y - height - hitTolerance &&
-           worldPoint.y <= entity.position.y + hitTolerance;
+    const height = resolveTextHeight(entity);
+    return testTextBoxHit(worldPoint, entity, estimateTextWidth(resolveEntityText(entity), height), height, hitTolerance);
   }
   if (isMTextEntity(entity)) {
-    const height = entity.height ?? entity.fontSize ?? 2.5;
-    const width = entity.width || (resolveEntityText(entity).length * height * 0.6);
-    return worldPoint.x >= entity.position.x - hitTolerance &&
-           worldPoint.x <= entity.position.x + width + hitTolerance &&
-           worldPoint.y >= entity.position.y - height - hitTolerance &&
-           worldPoint.y <= entity.position.y + hitTolerance;
+    // ADR-737 §18 — ΟΧΙ `entity.definedHeight`: αυτό είναι το ύψος του πλαισίου. Το hit-test
+    // θέλει ύψος ΧΑΡΑΚΤΗΡΑ, που είναι άλλο μέγεθος (πριν τα δύο μοιράζονταν το όνομα `height`
+    // και εδώ διαβαζόταν σιωπηλά το λάθος).
+    const height = resolveTextHeight(entity);
+    // Το ρητό πλάτος στήλης του MTEXT υπερισχύει· `||` όχι `??` — πλάτος 0 σημαίνει
+    // «χωρίς αναδίπλωση», δηλαδή πέφτουμε στην εκτίμηση από το κείμενο.
+    const width = entity.width || estimateTextWidth(resolveEntityText(entity), height);
+    return testTextBoxHit(worldPoint, entity, width, height, hitTolerance);
   }
   return false;
+}
+
+/**
+ * ADR-737 §18 — ΕΝΑ κουτί χτυπήματος κειμένου, για TEXT **και** MTEXT.
+ *
+ * Ήταν γραμμένο **δύο φορές** ολόκληρο (4 συγκρίσεις × 2 κλάδοι) και οι δύο εκδοχές ήταν ήδη
+ * ταυτόσημες — το CHECK 3.28 το είδε μόλις η μετονομασία `height`→`definedHeight` ισοπέδωσε
+ * και την τελευταία διαφορά τους. Ό,τι διαφέρει πραγματικά (πώς βγαίνει το πλάτος) μένει
+ * στον καλούντα· ό,τι είναι κοινό (η γεωμετρία του κουτιού) ζει εδώ.
+ *
+ * Το κουτί κρέμεται **κάτω** από το `position` (`minY = y - height`), γιατί το σημείο
+ * εισαγωγής του DXF TEXT είναι στη γραμμή βάσης — δεν είναι top-left κουτί UI.
+ */
+function testTextBoxHit(
+  worldPoint: Point2D,
+  entity: { position: Point2D },
+  width: number,
+  height: number,
+  hitTolerance: number,
+): boolean {
+  // ADR-089 — ο κανονικός point-in-bounds· εδώ δίνουμε μόνο το κουτί, διογκωμένο κατά την ανοχή.
+  return SpatialUtils.pointInBounds(worldPoint, {
+    minX: entity.position.x - hitTolerance,
+    maxX: entity.position.x + width + hitTolerance,
+    minY: entity.position.y - height - hitTolerance,
+    maxY: entity.position.y + hitTolerance,
+  });
 }
 
 /** Helper: Test if point hits a polyline (vertices + optional closed) */

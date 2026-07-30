@@ -5150,5 +5150,36 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ─── OAUTH 2.1 AUTHORIZATION SERVER (ADR-738) ────────────────────────
+    // ΚΑΘΟΛΙΚΟ deny — και για ανάγνωση. Οι τέσσερις συλλογές κρατούν
+    // διαπιστευτήρια: SHA-256 access/refresh tokens, PKCE challenges,
+    // authorization codes. Ένα `allow read` έστω και tenant-scoped θα έδινε σε
+    // κάθε συνδεδεμένο browser τη δυνατότητα να απαριθμήσει hashes και χρόνους
+    // λήξης — υλικό για offline επίθεση και για χρονική ανάλυση.
+    //
+    // Η οθόνη «συνδεδεμένοι πράκτορες» ΔΕΝ διαβάζει από εδώ: περνά από API
+    // route με Admin SDK, που επιστρέφει **προβολή** (όνομα client, scopes,
+    // ημερομηνία) χωρίς κανένα κρυπτογραφικό υλικό. Δηλαδή η ορατότητα
+    // υπάρχει· απλώς δεν περνά από τα rules.
+    match /oauth_clients/{clientDocId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
+    match /oauth_auth_requests/{authRequestDocId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
+    match /oauth_codes/{codeDocId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
+    match /oauth_tokens/{tokenDocId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
+    match /oauth_consents/{consentDocId} {
+      allow read, write: if false; // Server-side only via Admin SDK
+    }
+
   }
 }

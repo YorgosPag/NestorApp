@@ -1135,6 +1135,48 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [2952, 2955],
     matrix: denyAllMatrix(),
   },
+  // ─── OAUTH 2.1 AUTHORIZATION SERVER (ADR-738) ─────────────────────────────
+  // Πέντε συλλογές, ένα σχήμα: `allow read, write: if false`. Κρατούν
+  // διαπιστευτήρια (SHA-256 tokens, PKCE challenges, authorization codes), άρα
+  // η ΑΝΑΓΝΩΣΗ είναι εξίσου επικίνδυνη με την εγγραφή — γι' αυτό `deny_all`
+  // και όχι `admin_write_only`. Ο `denyAllMatrix()` ζει στο
+  // coverage-matrices-accounting.ts για ιστορικούς λόγους· είναι builder του
+  // PATTERN, όχι του domain — μην τον αντιγράψεις εδώ.
+  {
+    collection: 'oauth_clients',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/oauth-clients.rules.test.ts',
+    rulesRange: [5164, 5167],
+    matrix: denyAllMatrix(),
+  },
+  {
+    collection: 'oauth_auth_requests',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/oauth-auth-requests.rules.test.ts',
+    rulesRange: [5168, 5171],
+    matrix: denyAllMatrix(),
+  },
+  {
+    collection: 'oauth_codes',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/oauth-codes.rules.test.ts',
+    rulesRange: [5172, 5175],
+    matrix: denyAllMatrix(),
+  },
+  {
+    collection: 'oauth_tokens',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/oauth-tokens.rules.test.ts',
+    rulesRange: [5176, 5179],
+    matrix: denyAllMatrix(),
+  },
+  {
+    collection: 'oauth_consents',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/oauth-consents.rules.test.ts',
+    rulesRange: [5180, 5183],
+    matrix: denyAllMatrix(),
+  },
 ] as const;
 
 /**

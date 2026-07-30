@@ -14,7 +14,16 @@ import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // ADR-635 Φ C.20 — SSoT για το χρώμα ενός run (TrueColor + ACI + κληρονομιά).
 import { resolveRunColorHex } from '../../text-engine/render/run-color';
 
-/** Entity shape required by the text-style helpers (narrow subset of SceneEntity). */
+/**
+ * Entity shape required by the text-style helpers (narrow subset of SceneEntity).
+ *
+ * ADR-737 §18 — το `height` εδώ σημαίνει **ύψος ΧΑΡΑΚΤΗΡΑ** (DXF group 40) και τίποτα άλλο.
+ * Είναι δομικός τύπος, οπότε η εγγύηση δεν είναι το όνομα αλλά το ότι **κανένας τύπος
+ * οντότητας δεν έχει `height` με άλλη σημασία**: το `MTextEntity` έλεγε κάποτε «ύψος
+ * πλαισίου» με το ίδιο όνομα και ταίριαζε σιωπηλά εδώ. Μετονομάστηκε σε `definedHeight`
+ * ακριβώς ώστε να **μην** ταιριάζει. Αν προσθέσεις πεδίο `height` σε νέα οντότητα με
+ * σημασία «κουτί», αυτή η υπογραφή θα το καταπιεί ξανά — μην το κάνεις.
+ */
 type TextStyledEntity = { textNode?: DxfTextNode; height?: number; fontSize?: number };
 
 /**
@@ -85,6 +94,24 @@ export function extractFirstRunStyle(entity: TextStyledEntity): DxfTextStyle | u
 /**
  * ADR-344 Phase 6.E — Resolve text height: prefer first run's textNode height,
  * fall back to flat entity.height / entity.fontSize / default.
+ *
+ * 🏢 **ADR-737 §18 — Ο ΜΟΝΟΣ ΕΓΚΥΡΟΣ ΑΝΑΓΝΩΣΤΗΣ ΥΨΟΥΣ ΧΑΡΑΚΤΗΡΑ.** Κάθε άλλο σημείο που
+ * γράφει μόνο του `height ?? fontSize ?? 2.5` απαντά **λάθος** σε δύο περιπτώσεις:
+ *
+ * 1. **Αγνοεί το AST.** Όταν υπάρχει `textNode`, το ζωντανό ύψος ζει στο run· μια κλίμακα ή
+ *    ένα grip-resize γράφει ΕΚΕΙ. Ο αναγνώστης που κοιτά μόνο τα flat πεδία διαβάζει τιμή
+ *    *shadowed* — το σχήμα που το `scale-entity-transform` περιγράφει ρητά.
+ * 2. **Χάνει τη διάκριση χαρακτήρα/πλαισίου.** Το `MTextEntity` είχε ομώνυμο `height` που
+ *    σήμαινε **ύψος κουτιού** (τώρα `definedHeight`) ⇒ επέστρεφε πλαίσιο ως γραμματοσειρά.
+ *
+ * ⚠️ **Το `||` ΔΕΝ είναι στιλιστική επιλογή — μην το «διορθώσεις» σε `??`.** Στο DXF το
+ * μηδενικό ύψος είναι **έγκυρη τιμή με σημασία «δεν ορίζεται εδώ»**: όταν το TextStyle έχει
+ * σταθερό ύψος, το group 40 της οντότητας γράφεται `0` και το πραγματικό ύψος έρχεται από το
+ * STYLE. Το `??` θα κρατούσε το `0` και θα ζωγράφιζε **αόρατο κείμενο**· το `||` προχωρά στην
+ * επόμενη πηγή. Ίδιος λόγος και για τον έλεγχο `h > 0` στο run παραπάνω — τα δύο σκέλη
+ * λένε **το ίδιο πράγμα** και πρέπει να αλλάζουν μαζί.
+ *
+ * @see MTextEntity.definedHeight — το ύψος πλαισίου, που ΔΕΝ διαβάζεται ποτέ από εδώ
  */
 export function resolveTextHeight(entity: TextStyledEntity): number {
   const run = entity.textNode?.paragraphs?.[0]?.runs?.[0];
@@ -92,5 +119,12 @@ export function resolveTextHeight(entity: TextStyledEntity): number {
     const h = (run as TextRun).style?.height;
     if (h !== undefined && h > 0) return h;
   }
-  return entity.height || entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE;
+  // 🐛 ADR-737 §18 — ΗΤΑΝ `DEFAULT_FONT_SIZE` (**12**), δηλαδή ο ίδιος ο SSoT κουβαλούσε το
+  // σφάλμα που το `bounds-primitives` είχε διορθώσει τοπικά στις 2026-02-20: «*Used
+  // entity.fontSize || DEFAULT_FONT_SIZE (12) — but DXF entities have height (e.g. 2.5) →
+  // bounds were ~5x inflated*». Το `DEFAULT_FONT_SIZE: 12` είναι πρακτικό fallback σε **pixels**
+  // (ADR-142)· εδώ μιλάμε **drawing units**, όπου το πρότυπο είναι ISO 3098 / AutoCAD = 2,5.
+  // Γι' αυτό τα 7 σημεία είχαν γράψει το καθένα το δικό του `|| 2.5`: **παρέκαμπταν** τον SSoT
+  // επειδή ο SSoT απαντούσε λάθος. Διορθώνεται εδώ, μία φορά, κι έτσι η υιοθέτηση είναι ασφαλής.
+  return entity.height || entity.fontSize || TEXT_SIZE_LIMITS.DEFAULT_HEIGHT;
 }

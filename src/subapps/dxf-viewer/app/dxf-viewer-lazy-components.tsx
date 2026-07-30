@@ -50,6 +50,9 @@ export const SlabDetailHost = React.lazy(() => import('../ui/components/slab-det
 export const AdminLayerManagerPalette = React.lazy(() => import('../ui/components/AdminLayerManagerPalette').then(mod => ({ default: mod.AdminLayerManagerPalette })));
 // ADR-736 Φ4 — modeless παλέτα «Εξωτερικές Αναφορές» (αδελφή της παραπάνω, ίδιο κέλυφος).
 export const ExternalReferencesPalette = React.lazy(() => import('../ui/components/ExternalReferencesPalette').then(mod => ({ default: mod.ExternalReferencesPalette })));
+// ADR-736 §5 — ΠΑΝΤΑ mounted, ζωγραφίζει `null`: η αυτόματη επίλυση δεν επιτρέπεται να κρέμεται
+// από την παλέτα (που είναι κλειστή σχεδόν πάντα). Βλ. το αρχείο για το μετρημένο περιστατικό.
+export const ExternalReferencesAutoResolveHost = React.lazy(() => import('../ui/components/ExternalReferencesAutoResolveHost').then(mod => ({ default: mod.ExternalReferencesAutoResolveHost })));
 // ADR-683 Φ3.1β — «Ανάθεση προμέτρησης» dialog host (εισαγόμενο πλέγμα → άρθρο ΑΤΟΕ + μονάδα)
 export const ImportedMeshBoqHost = React.lazy(() => import('./ImportedMeshBoqHost').then(mod => ({ default: mod.ImportedMeshBoqHost })));
 export const ImportedMeshMaterialMapHost = React.lazy(() => import('./ImportedMeshMaterialMapHost').then(mod => ({ default: mod.ImportedMeshMaterialMapHost })));

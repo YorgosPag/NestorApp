@@ -17,6 +17,8 @@ import {
 } from './tek-text-alignment';
 import type { TekText } from './tek-types';
 import { entityColor, entityTag } from './dxf-to-tek';
+// ADR-737 §18 — SSoT ύψους χαρακτήρα (run του textNode πρώτα, μετά flat, μετά ISO 3098 2,5).
+import { resolveTextHeight } from '../../../hooks/canvas/dxf-text-style-extractor';
 
 // ── ADR-608 Φ-texts — text sizing ────────────────────────────────────────────
 // Ο Τέκτων ζωγραφίζει native ttfont text με μέγεθος `<ptsize>` (font=30, abssize=0),
@@ -26,8 +28,8 @@ import { entityColor, entityTag } from './dxf-to-tek';
 const TEK_TEXT_PT_PER_M = 44;
 const TEK_TEXT_MIN_PT = 6;
 const TEK_TEXT_MAX_PT = 60;
-/** Fallback ύψος (scene units) όταν το text entity δεν φέρει height/fontSize. */
-const DEFAULT_TEXT_HEIGHT = 2.5;
+// ADR-737 §18 — το τοπικό `DEFAULT_TEXT_HEIGHT = 2.5` έφυγε: ήταν ένα από ≥5 αντίγραφα της
+// ίδιας σταθεράς. Ζει στο `TEXT_SIZE_LIMITS.DEFAULT_HEIGHT` και το σερβίρει ο `resolveTextHeight`.
 // ── ADR-608 Φ-texts — text ANCHOR (browser-calibrated) ──────────────────────
 // Browser-verify (Giorgio 2026-07-09): ο Τέκτων ΔΕΝ τιμά το `hallign` για κέντρο —
 // αγκυρώνει το type-3 text στην ΑΡΙΣΤΕΡΗ ακμή στο (x20,x21), οπότε τα κεντραρισμένα
@@ -84,7 +86,9 @@ export function collectTekTexts(entities: readonly Entity[], f: number): TekText
     const content = (t.text ?? '').trim();
     if (content === '') continue; // κενή ετικέτα → χωρίς record
     const anchor = sceneXYToTekMeters(t.position.x, t.position.y, f);
-    const heightMeters = (t.height ?? t.fontSize ?? DEFAULT_TEXT_HEIGHT) * f;
+    // ADR-737 §18 — SSoT (run του textNode πρώτα). Το inline `?? ` αγνοούσε το AST, άρα ένα
+    // κλιμακωμένο/resized κείμενο εξαγόταν στον Τέκτονα με το ΠΡΟ-κλίμακας ύψος.
+    const heightMeters = resolveTextHeight(t) * f;
     const ptSize = clampPt(Math.round(heightMeters * TEK_TEXT_PT_PER_M));
     const { hAlignKey, vAlignKey } = resolveTextAlign(e);
     // Ο Τέκτων αγκυρώνει αριστερά (δεν κεντράρει με hallign) → μετατοπίζουμε το anchor

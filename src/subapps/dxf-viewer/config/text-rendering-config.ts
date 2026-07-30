@@ -1364,35 +1364,21 @@ export function estimateTextWidth(text: string, screenHeight: number): number {
   return text.length * screenHeight * CHARACTER_METRICS.WIDTH_RATIO;
 }
 
-/**
- * Get text height with fallback chain
- *
- * ENTERPRISE: Follows CAD standard fallback priority
- * 1. fontSize (canonical)
- * 2. height (legacy)
- * 3. DEFAULT_HEIGHT (fallback)
- *
- * @param fontSize - Optional fontSize from entity
- * @param height - Optional height from entity (legacy)
- * @returns Valid text height in drawing units
- */
-export function getTextHeightWithFallback(
-  fontSize?: number,
-  height?: number
-): number {
-  // Priority 1: fontSize (canonical)
-  if (typeof fontSize === 'number' && fontSize > TEXT_SIZE_LIMITS.MIN_VALID_HEIGHT) {
-    return fontSize;
-  }
-
-  // Priority 2: height (legacy/backward compatibility)
-  if (typeof height === 'number' && height > TEXT_SIZE_LIMITS.MIN_VALID_HEIGHT) {
-    return height;
-  }
-
-  // Default: CAD standard default text height
-  return TEXT_SIZE_LIMITS.DEFAULT_HEIGHT;
-}
+// ────────────────────────────────────────────────────────────────────────────────
+// ADR-737 §18 — Η `getTextHeightWithFallback(fontSize?, height?)` ΔΙΑΓΡΑΦΗΚΕ.
+//
+// Ήταν η **πέμπτη** διατύπωση της αλυσίδας ύψους κειμένου και η **μόνη** που δήλωνε
+// `fontSize` ως canonical και `height` ως legacy — δηλαδή **αντίθετα** από το
+// `entities.ts` («height = DXF standard, fontSize = alias»). Δύο SSoT με αντίθετη
+// θέση για το ίδιο ερώτημα είναι χειρότερα από κανέναν.
+//
+// Είχε **έναν** καλούντα (`glyph-atlas-text-layout`), που της περνούσε μονίμως
+// `undefined` στο πρώτο όρισμα — άρα το «canonical fontSize» σκέλος δεν εκτελέστηκε ποτέ.
+//
+// Κανονικός δρόμος: `resolveTextHeight(entity)` στο `hooks/canvas/dxf-text-style-extractor`
+// — διαβάζει ΠΡΩΤΑ το run του `textNode` (η αυθεντική πηγή), κάτι που καμία εκδοχή με
+// σκέτα primitives δεν μπορεί να κάνει, αφού δεν βλέπει την οντότητα.
+// ────────────────────────────────────────────────────────────────────────────────
 
 /**
  * Build CSS font string for canvas rendering

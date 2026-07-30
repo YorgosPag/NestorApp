@@ -18,6 +18,8 @@ import { createBoundingBox, type BoundingBox } from './Bounds';
 // ADR-557 (multi-line) — the attachment/rotation/multi-line-aware text-box AABB SSoT (em box),
 // the generous superset the spatial-index broad phase uses so it always encloses every line.
 import { textBoxAABB } from '../../bim/text/text-box';
+// ADR-737 §18 — ο SSoT για το ύψος χαρακτήρα (διαβάζει ΠΡΩΤΑ το run του `textNode`).
+import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
 import type {
   EntityWithLine,
   EntityWithCircle,
@@ -232,6 +234,16 @@ export function calculateEllipseBounds(entity: EntityModel, tolerance: number): 
  * AFTER: height || fontSize || 2.5 (AutoCAD Standard DIMTXT default)
  * Matches TextRenderer.extractTextHeight() priority chain.
  *
+ * 🐛 **ADR-737 §18 — η παραπάνω αλυσίδα ήταν ΑΚΟΜΑ λάθος, με τον ίδιο ακριβώς τρόπο που
+ * περιγράφει το σχόλιο του 2026-02-20.** Διόρθωσε το `fontSize`→`height` αλλά σταμάτησε ένα
+ * επίπεδο νωρίς: όταν υπάρχει `textNode`, το ζωντανό ύψος ζει στο **run** και τα flat πεδία
+ * μένουν στην αρχική τιμή. Μετά από κλίμακα ή grip-resize (που γράφουν στο run — ADR-635)
+ * το broad phase υπολόγιζε bounds με **παλιό** ύψος ⇒ ίδια κλάση συμπτώματος με το 2026-02-20
+ * (υποψήφιοι από λάθος απόσταση), απλώς σπανιότερη. Τώρα περνά από τον SSoT `resolveTextHeight`.
+ *
+ * ⚠️ Το `entity as EntityWithText` είναι cast: ο compiler **δεν** θα σε προστατέψει εδώ —
+ * γι' αυτό η ανάγνωση ύψους πρέπει να μένει στον SSoT και να μην ξαναγραφτεί inline.
+ *
  * ADR-557 (multi-line, Giorgio 2026-07-07) — the spatial-index broad phase uses the
  * attachment / rotation / MULTI-LINE-aware em-box AABB SSoT (`textBoxAABB`), the generous
  * superset of the VISUAL hover/hit box (`resolveTextBox`). Was: a hardcoded single-line box
@@ -245,7 +257,7 @@ export function calculateTextBounds(entity: EntityModel, tolerance: number): Bou
   const textEntity = entity as EntityWithText;
   const dxfText = {
     ...(textEntity as unknown as DxfText),
-    height: textEntity.height || textEntity.fontSize || 2.5,
+    height: resolveTextHeight(textEntity),
   };
   const aabb = textBoxAABB(dxfText);
   return createBoundingBox(

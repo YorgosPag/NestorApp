@@ -22,7 +22,10 @@
  * απελευθερώσει τα υποκείμενα blobs.
  *
  * @see ../components/DxfImportModal — ο παραγωγός (επιλογή συνοδευτικών / zip / φακέλου)
- * @see ../hooks/useExternalReferenceResolution — ο καταναλωτής (αυτόματη επίλυση)
+ * @see ../ui/components/ExternalReferencesAutoResolveHost — ο ΜΟΝΑΔΙΚΟΣ καταναλωτής. Είναι
+ *      ξεχωριστό, **πάντα mounted** component και όχι μέρος της παλέτας: μέσα στην παλέτα (που
+ *      αποδίδει `null` όσο είναι κλειστή) ο κατάλογος δεν καταναλωνόταν ποτέ μόνος του — η
+ *      «αυτόματη» επίλυση περίμενε τον χρήστη να ανοίξει το μητρώο (ADR-736 §5, μετρημένο).
  */
 
 import { createExternalStore } from './createExternalStore';

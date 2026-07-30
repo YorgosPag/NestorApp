@@ -203,7 +203,12 @@ function scaleMText(e: Entity & { type: 'mtext' }, base: Point2D, sx: number, sy
   const node = (e as { textNode?: DxfTextNode }).textNode;
   return {
     position: scalePoint(e.position, base, sx, sy),
-    height: e.height !== undefined ? e.height * Math.abs(sy) : undefined,
+    // ADR-737 §18 — ΔΥΟ διαφορετικά κατακόρυφα μεγέθη, όχι ένα:
+    //   `definedHeight` = ύψος ΠΛΑΙΣΙΟΥ (group 46) — το κατακόρυφο ταίρι του `width`
+    //   `fontSize`      = ύψος ΧΑΡΑΚΤΗΡΑ (group 40)
+    // Και τα δύο είναι μήκη ⇒ κλιμακώνονται με |sy|, αλλά ΑΝΕΞΑΡΤΗΤΑ. Όσο μοιράζονταν το
+    // όνομα `height`, κάθε αναγνώστης char-height διάβαζε το πλαίσιο (βλ. `MTextEntity`).
+    definedHeight: e.definedHeight !== undefined ? e.definedHeight * Math.abs(sy) : undefined,
     fontSize: e.fontSize !== undefined ? e.fontSize * Math.abs(sy) : undefined,
     width: e.width * Math.abs(sx),
     // ADR-635 — mirror `scaleText`: the run `style.height` in the `textNode` is what

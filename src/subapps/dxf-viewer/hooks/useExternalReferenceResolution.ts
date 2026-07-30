@@ -12,6 +12,11 @@
  * 1. **Αυτόματα, τη στιγμή της εισαγωγής.** Ο χρήστης έδωσε τα συνοδευτικά μαζί με το `.dxf`· τα
  *    αρχεία περιμένουν στο `ExternalReferenceCandidatesStore` και μόλις φανεί σκηνή με αναφορές
  *    η επίλυση τρέχει **χωρίς καμία ενέργεια** — 9 στα 10 υπόβαθρα βρίσκονται μόνα τους.
+ *    🔴 Το πέρασμα αυτό **ΔΕΝ ζει εδώ**: ζει στον {@link ../ui/components/ExternalReferencesAutoResolveHost},
+ *    που είναι **πάντα** mounted. Ζούσε μέσα σε αυτό το hook, και επειδή ο μόνος καλών του ήταν
+ *    η παλέτα (που επιστρέφει `null` όσο είναι κλειστή), η «αυτόματη» επίλυση δεν έτρεχε ποτέ
+ *    αυτόματα — ξεκινούσε τη στιγμή που ο χρήστης άνοιγε το μητρώο. Μετρημένο στον browser
+ *    (ADR-736 §5): τα 9 υπόβαθρα έμεναν πλαίσια μέχρι το πρώτο άνοιγμα της παλέτας.
  * 2. **Χειροκίνητα, οποτεδήποτε.** Από την παλέτα, πάνω σε ήδη ανοιχτή σκηνή — ακόμη και σε μία
  *    που ήρθε από τη δεύτερη πόρτα (server wizard) και δεν πέρασε ποτέ από επίλυση.
  *
@@ -29,7 +34,7 @@
  * @see ../io/dxf-external-reference-deps — η καλωδίωση με Storage/ids
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useLevels, useCurrentLevelScene } from '../systems/levels';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import {
@@ -41,7 +46,6 @@ import { applyExternalReferencesToEntities } from '../utils/dxf-external-referen
 import { resolveExternalReferences, type ResolveReferenceFailure } from '../io/dxf-external-reference-resolver';
 import type { ReferenceAmbiguity } from '../io/dxf-external-reference-match';
 import { buildDxfExternalReferenceDeps } from '../io/dxf-external-reference-deps';
-import { takeExternalReferenceCandidates } from '../stores/ExternalReferenceCandidatesStore';
 import { dwarn } from '../debug';
 
 const NO_REFERENCES: readonly DxfExternalReference[] = [];
@@ -120,21 +124,6 @@ export function useExternalReferenceResolution(): ExternalReferenceResolutionRes
     },
     [companyId, currentLevelId, setLevelScene],
   );
-
-  /**
-   * Αυτόματο πέρασμα: ό,τι πρόσφερε ο χρήστης στο modal εισαγωγής, καταναλώνεται **μία φορά**
-   * μόλις υπάρξει σκηνή με αναφορές. Ο κατάλογος αδειάζει με το που διαβαστεί, οπότε ούτε
-   * επαναλαμβάνεται ούτε διαρρέει στην επόμενη εισαγωγή.
-   */
-  useEffect(() => {
-    if (!canResolve || references.length === 0 || isResolving) return;
-    const candidates = takeExternalReferenceCandidates();
-    if (candidates.length === 0) return;
-    void resolve(candidates);
-    // `isResolving` σκόπιμα ΕΚΤΟΣ deps: μπαίνει/βγαίνει μέσα στο ίδιο το effect και θα
-    // προκαλούσε δεύτερο πέρασμα πάνω σε ήδη άδειο κατάλογο (αβλαβές, αλλά θόρυβος).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canResolve, references.length, resolve]);
 
   return { references, summary, ambiguous, failures, isResolving, canResolve, resolve };
 }
