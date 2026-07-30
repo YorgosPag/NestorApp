@@ -6,6 +6,9 @@
 import type { Point2D } from '../../rendering/types/Types';
 import { ExtendedSnapType, type Entity, type ProSnapSettings } from '../extended-types';
 import { SnapEngineContext } from '../shared/BaseSnapEngine';
+// ADR-728 Φ2 — η ημιπλευρά του aperture box υπολογίζεται από ΤΙΣ ΙΔΙΕΣ συναρτήσεις ανοχής που
+// παραδίδονται στις engines· ο manager τις κατέχει, άρα εδώ ζει και ο υπολογισμός.
+import { resolveBroadPhaseAperture } from './snap-broad-phase';
 
 interface Viewport {
   worldPerPixelAt(p: Point2D): number;
@@ -26,13 +29,33 @@ export class SnapContextManager {
     this.settings = { ...this.settings, ...settings };
   }
 
+  /**
+   * 🎯 ADR-728 Φ2 — η ημιπλευρά του aperture box για το broad phase, στη θέση του κέρσορα.
+   *
+   * Ζει εδώ επειδή **εδώ ζουν οι ανοχές**: `snapDistance`, `perModePxTolerance`, και η μετατροπή
+   * pixel→world μέσω του viewport. Ο orchestrator ρωτά· δεν ξαναϋπολογίζει.
+   */
+  getBroadPhaseAperture(cursorPoint: Point2D): number {
+    return resolveBroadPhaseAperture(cursorPoint, this.settings.enabledTypes, {
+      worldRadiusAt: (point: Point2D) => this.worldRadiusAt(point),
+      worldRadiusForType: (point: Point2D, snapType: ExtendedSnapType) => this.worldRadiusForType(point, snapType),
+    });
+  }
+
+  /**
+   * @param entities — το **broad-phase φιλτραρισμένο** σύνολο (κανονικό μονοπάτι των engines).
+   * @param allEntities — ο **πλήρης** πίνακας σκηνής· παραλείπεται ⇒ ταυτίζεται με το `entities`
+   *   (pass-through, ίδια συμπεριφορά με πριν τη Φ2 — ADR-728 §Φ2 «δικλείδα»).
+   */
   createEngineContext(
-    cursorPoint: Point2D, 
+    cursorPoint: Point2D,
     entities: Entity[],
-    excludeEntityId?: string
+    excludeEntityId?: string,
+    allEntities?: Entity[]
   ): SnapEngineContext {
     return {
       entities,
+      allEntities: allEntities ?? entities,
       worldRadiusAt: (point: Point2D) => this.worldRadiusAt(point),
       worldRadiusForType: (point: Point2D, snapType: ExtendedSnapType) => this.worldRadiusForType(point, snapType),
       perModePxTolerance: this.settings.perModePxTolerance as Record<ExtendedSnapType, number> | undefined,

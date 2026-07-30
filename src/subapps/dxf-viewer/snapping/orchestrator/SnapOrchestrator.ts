@@ -30,6 +30,8 @@ import { SnapContextManager } from './SnapContextManager';
 // 🏢 ADR-728 Φ0.1 — attribution ΑΝΑ ENGINE μέσω του ΥΠΑΡΧΟΝΤΟΣ aggregator (μηδέν νέο σύστημα).
 import { withPerf, isPerfEnabled, recordSample } from '../../systems/cursor/mouse-handler-perf';
 import type { SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+// 🏢 ADR-728 Φ2 — ΕΝΑ broad phase, εδώ, πριν από τον βρόχο των engines.
+import { buildSnapBroadPhase, selectBroadPhaseCandidates, type SnapBroadPhase } from './snap-broad-phase';
 
 /**
  * 🏢 ADR-728 Φ0.1 — πρόθεμα των per-engine γραμμών στο κοινό `console.table`.
@@ -53,6 +55,34 @@ export const SNAP_ENGINE_STAGE_PREFIX = 'snap:';
  * το πρόβλημα θα αποδείξει και τη θεραπεία, χωρίς δεύτερο όργανο.
  */
 export const SNAP_ENTITY_COUNT_STAGE = `${SNAP_ENGINE_STAGE_PREFIX}ENTITIES`;
+
+/**
+ * 🏢 ADR-728 Φ2 — ο χρόνος του **ίδιου** του broad phase, στην ίδια στήλη με τις engines.
+ *
+ * Χωρίς αυτή τη γραμμή η Φ2 θα ήταν αναπόδεικτη προς τα κάτω: το `snap:ENTITIES` δείχνει πόσο
+ * **μικρότερο** έγινε το πρόβλημα, αλλά όχι πόσο κόστισε να γίνει μικρότερο. Οι δύο γραμμές μαζί
+ * είναι ο πλήρης απολογισμός (ίδιο ιδίωμα με τα per-engine stages της Φ0.1).
+ *
+ * ⚠️ **Καταγράφεται μόνο όταν υπάρχει πράγματι broad phase.** Σε pass-through (καμία οντότητα με
+ * γνωστά bounds, ή ρητά απενεργοποιημένο) δεν εκτελείται δουλειά, άρα δεν υπάρχει τι να χρεωθεί —
+ * μια γραμμή με μηδενικά δείγματα θα ήταν θόρυβος, όχι μέτρηση.
+ */
+export const SNAP_BROAD_PHASE_STAGE = `${SNAP_ENGINE_STAGE_PREFIX}BROAD`;
+
+/**
+ * 🏢 ADR-728 §Φ2 «δικλείδα» — η **άγκυρα pass-through**.
+ *
+ * Με `false` ο orchestrator συμπεριφέρεται **ακριβώς** όπως πριν τη Φ2 (κάθε engine βλέπει
+ * ολόκληρη τη σκηνή). Υπάρχει ώστε το ίδιο σενάριο να τρέχει με και χωρίς φίλτρο και τα δύο
+ * αποτελέσματα να συγκρίνονται — αυτό είναι το κριτήριο «συμπεριφορική ισοδυναμία 100%» του §6,
+ * και είναι η μόνη απόδειξη που δεν στηρίζεται σε επιχείρημα.
+ */
+export const SNAP_BROAD_PHASE_DEFAULT_ENABLED = true;
+
+/** Ρυθμίσεις κατασκευής του orchestrator (σήμερα: μόνο η άγκυρα pass-through). */
+export interface SnapOrchestratorOptions {
+  broadPhaseEnabled?: boolean;
+}
 
 /**
  * «Μάζεψα αρκετά — σταμάτα τις υπόλοιπες engines;» — δύο ανεξάρτητοι λόγοι, ένα ερώτημα.
@@ -98,11 +128,15 @@ export class SnapOrchestrator {
   private processor: SnapCandidateProcessor;
   private contextManager: SnapContextManager;
   private entities: Entity[] = [];
+  /** ADR-728 Φ2 — `null` ⇒ pass-through (καμία αλλαγή συμπεριφοράς έναντι της Φ0.1). */
+  private broadPhase: SnapBroadPhase | null = null;
+  private readonly broadPhaseEnabled: boolean;
 
-  constructor(settings: ProSnapSettings) {
+  constructor(settings: ProSnapSettings, options?: SnapOrchestratorOptions) {
     this.registry = new SnapEngineRegistry();
     this.processor = new SnapCandidateProcessor();
     this.contextManager = new SnapContextManager(settings);
+    this.broadPhaseEnabled = options?.broadPhaseEnabled ?? SNAP_BROAD_PHASE_DEFAULT_ENABLED;
   }
 
   /**
@@ -121,6 +155,11 @@ export class SnapOrchestrator {
 
     this.entities = entities;
     this.contextManager.setViewport(viewport || null);
+
+    // 🏢 ADR-728 Φ2 — το broad-phase ευρετήριο εξαρτάται ΜΟΝΟ από τις οντότητες, και αυτό εδώ
+    // είναι το μοναδικό σημείο όπου αλλάζουν. Ο κύκλος ζωής είναι ήδη idle-deferred +
+    // fingerprint-guarded από το `useGlobalSnapSceneSync` (ADR-040) — κανένας δικός μας.
+    this.broadPhase = this.broadPhaseEnabled ? buildSnapBroadPhase(entities) : null;
 
     // Initialize engines through registry
     this.registry.initializeEnginesWithEntities(entities, this.contextManager.getSettings());
@@ -150,6 +189,12 @@ export class SnapOrchestrator {
     }
 
     // Only re-initialize engines if enabledTypes actually changed (prevents redundant spatial index rebuilds)
+    // 🏢 ADR-728 Φ2 — το broad-phase ευρετήριο ΔΕΝ ξαναχτίζεται εδώ, **σκόπιμα**: το περιεχόμενό
+    // του είναι συνάρτηση ΜΟΝΟ των `this.entities` (AABB ανά οντότητα), που δεν αλλάζουν σε
+    // `updateSettings`. Η εξάρτηση από τα `enabledTypes` ζει αποκλειστικά στο **aperture**, το
+    // οποίο υπολογίζεται ανά ερώτημα (`SnapContextManager.getBroadPhaseAperture`) — άρα είναι ήδη
+    // φρέσκο. Ένα rebuild εδώ θα ήταν O(N) δουλειά με μηδέν διαφορά στο αποτέλεσμα, ακριβώς το
+    // προφίλ «μία ακριβή εκτέλεση, 118 φθηνές» που το ADR-728 §2.2 εντόπισε ως ύποπτο.
     if (enabledTypesChanged) {
       this.registry.initializeEnginesWithEntities(this.entities, this.contextManager.getSettings());
     }
@@ -180,9 +225,15 @@ export class SnapOrchestrator {
       });
     }
 
-    const context = this.contextManager.createEngineContext(cursorPoint, this.entities, excludeEntityId);
+    // 🏢 ADR-728 Φ2 — ΕΝΑ broad phase, ΜΙΑ φορά, ΠΡΙΝ από τον βρόχο των engines (§3.3).
+    const candidateEntities = this.selectCandidateEntities(cursorPoint);
+    const context = this.contextManager.createEngineContext(
+      cursorPoint, candidateEntities, excludeEntityId, this.entities,
+    );
 
     // 🏢 ADR-728 Φ0.1 — το μέγεθος που η Φ2 υποχρεούται να ρίξει. Δείγμα, όχι χρόνος.
+    // Μετά τη Φ2 αυτή η γραμμή είναι **η απόδειξη της θεραπείας**: ό,τι μετρούσε 2.910 σε κάθε
+    // αναζήτηση οφείλει να μετράει ~5-50. Ίδιο όργανο, ίδια γραμμή, αντίθετο πρόσημο.
     if (isPerfEnabled()) recordSample(SNAP_ENTITY_COUNT_STAGE, context.entities.length);
 
     const collected = this.collectCandidates(cursorPoint, context, settings);
@@ -192,16 +243,38 @@ export class SnapOrchestrator {
   }
 
   /**
+   * 🏢 ADR-728 Φ2 — «ποιες οντότητες είναι κοντά στον κέρσορα;», απαντημένη **μία** φορά.
+   *
+   * Το κόστος του ίδιου του φίλτρου χρεώνεται ρητά στο {@link SNAP_BROAD_PHASE_STAGE}, στην ίδια
+   * στήλη με τις engines — αλλιώς η Φ2 θα μπορούσε να «κερδίσει» μετακινώντας τον χρόνο σε
+   * αμέτρητη θέση (ακριβώς το λάθος που το ADR-728 §3.6 καταγράφει για τη Φ11 του ADR-040).
+   *
+   * Χωρίς broad phase (pass-through) **δεν εκτελείται καμία δουλειά** και δεν καταγράφεται
+   * stage: επιστρέφεται ο πίνακας της σκηνής αυτούσιος, δηλαδή η προ-Φ2 συμπεριφορά.
+   */
+  private selectCandidateEntities(cursorPoint: Point2D): Entity[] {
+    const broadPhase = this.broadPhase;
+    if (!broadPhase) return this.entities;
+
+    return withPerf(SNAP_BROAD_PHASE_STAGE, () => selectBroadPhaseCandidates(
+      broadPhase,
+      this.entities,
+      cursorPoint,
+      this.contextManager.getBroadPhaseAperture(cursorPoint),
+    ));
+  }
+
+  /**
    * Τρέχει τις enabled engines με σειρά προτεραιότητας και μαζεύει υποψηφίους.
    *
    * Εξήχθη από το {@link findSnapPoint} (N.7.1: εκείνο ήταν 83 γραμμές, όριο 40). Η σημασιολογία
    * είναι **ταυτόσημη** — ίδια σειρά, ίδια early-return, ίδια sub-pixel early-exit, ίδιο
    * `maxCandidates` φράγμα· μόνο η θέση του κώδικα άλλαξε.
    *
-   * 🏢 **ADR-728 Φ2:** εδώ θα μπει το **broad phase**. Αυτός ο βρόχος είναι το μοναδικό σημείο που
-   * βλέπει ΚΑΙ τον κέρσορα ΚΑΙ όλες τις engines ΚΑΙ τις ανοχές — δηλαδή το μόνο σημείο όπου η
-   * ερώτηση «ποιες οντότητες είναι κοντά;» μπορεί να απαντηθεί **μία φορά** αντί για 26
-   * (ADR-728 §3.3).
+   * 🏢 **ADR-728 Φ2 (υλοποιημένη):** το `context.entities` που βλέπει αυτός ο βρόχος είναι πλέον
+   * **broad-phase φιλτραρισμένο** — η ερώτηση «ποιες οντότητες είναι κοντά;» απαντήθηκε **μία**
+   * φορά στο {@link selectCandidateEntities}, όχι μία ανά engine (ADR-728 §3.3). Οι engines
+   * **δεν άλλαξαν γραμμή**: ίδιος τύπος, ίδια σημασιολογία, μικρότερος πίνακας.
    */
   private collectCandidates(
     cursorPoint: Point2D,
@@ -311,5 +384,7 @@ export class SnapOrchestrator {
   dispose(): void {
     this.registry.dispose();
     this.entities = [];
+    // ADR-728 Φ2 — το ευρετήριο κρατά αναφορές σε ids/AABB της σκηνής· φεύγει μαζί της.
+    this.broadPhase = null;
   }
 }

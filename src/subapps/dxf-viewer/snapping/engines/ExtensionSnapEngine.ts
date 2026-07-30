@@ -6,7 +6,7 @@
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import type { PolylineEntity, LWPolylineEntity } from '../../types/entities';
 import { ExtendedSnapType } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine, resolveNonLocalEntities, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { CoordinateUtils } from '../../systems/constraints/constraints-geometry';
 import { getLineParameter } from '../../rendering/entities/shared/geometry-utils';
@@ -32,7 +32,11 @@ export class ExtensionSnapEngine extends BaseSnapEngine {
     
     // 🏢 ADR-087: Use centralized snap radius multiplier
     const candidates = this.processCandidateLoop(
-      context.entities,
+      // 🔴 ADR-728 §Φ2.3 — ΜΗ-ΤΟΠΙΚΗ γεωμετρία: το σημείο έλξης βρίσκεται στην **προέκταση** της
+      // οντότητας, δηλαδή έως `radius × STANDARD` ΕΞΩ από αυτήν. Μια γραμμή της οποίας το AABB
+      // δεν τέμνει καν το aperture box μπορεί να παράγει υποψήφιο **μέσα** του — άρα το
+      // broad-phase φιλτραρισμένο `context.entities` θα άλλαζε συμπεριφορά. Αιτιολογημένη χρήση.
+      resolveNonLocalEntities(context),
       context,
       cursorPoint,
       priority,

@@ -9,7 +9,7 @@
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, SnapCandidate } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine, resolveNonLocalEntities, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { getNearestPointOnLine } from '../../rendering/entities/shared/geometry-utils';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
@@ -116,13 +116,19 @@ export class ParallelSnapEngine extends BaseSnapEngine {
   private findReferenceLines(cursorPoint: Point2D, searchRadius: number, context: SnapEngineContext): Array<{start: Point2D, end: Point2D, entityId: string}> {
     const lines: Array<{start: Point2D, end: Point2D, entityId: string}> = [];
     
+    // 🔴 ADR-728 §Φ2.3 — ΜΗ-ΤΟΠΙΚΗ γεωμετρία: η engine ψάχνει γραμμές **αναφοράς** ώστε να
+    // προτείνει σημείο παράλληλο προς αυτές· η γραμμή αναφοράς είναι εξ ορισμού **αλλού** από το
+    // σημείο έλξης (ψάχνει με `radius × EXTENDED`, τον μεγαλύτερο συντελεστή του κώδικα). Το
+    // broad-phase φιλτραρισμένο σύνολο θα έκοβε ακριβώς τις γραμμές που δίνουν τη διεύθυνση.
+    const sourceEntities = resolveNonLocalEntities(context);
+
     // Guard against non-iterable entities
-    if (!Array.isArray(context.entities)) {
-      console.warn('[ParallelSnapEngine] entities is not an array:', typeof context.entities, context.entities);
+    if (!Array.isArray(sourceEntities)) {
+      console.warn('[ParallelSnapEngine] entities is not an array:', typeof sourceEntities, sourceEntities);
       return lines;
     }
-    
-    for (const entity of context.entities) {
+
+    for (const entity of sourceEntities) {
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
       if (!isEntityVisibleForSnap(entity)) continue;
 

@@ -13,7 +13,33 @@ import { createInfinityBounds, isInfinityBounds, isFinitePoint } from '../../con
 import { isEntityVisibleForSnap } from './snap-visibility';
 
 export interface SnapEngineContext {
+  /**
+   * 🎯 ADR-728 Φ2 — **broad-phase φιλτραρισμένο** σύνολο: μόνο οι οντότητες των οποίων το AABB
+   * τέμνει το aperture box γύρω από τον κέρσορα, υπολογισμένο **μία φορά** στον orchestrator
+   * (`snap-broad-phase.ts`) αντί για μία φορά ανά engine (ADR-728 §3.3).
+   *
+   * **Αυτό είναι το κανονικό μονοπάτι.** Η σειρά είναι η σειρά της σκηνής (οι engines κόβουν στο
+   * {@link maxCandidates} — άλλη σειρά ⇒ άλλος νικητής).
+   */
   entities: EntityModel[];
+  /**
+   * 🔴 ADR-728 §Φ2.3 — ο **πλήρης** πίνακας της σκηνής, ΜΟΝΟ για engines με **μη-τοπική
+   * γεωμετρία**: εκείνες που δουλεύουν με προεκτάσεις/παραλληλίες, όπου μια οντότητα **εκτός**
+   * του aperture μπορεί να παράγει υποψήφιο **εντός** του (`Extension`, `Parallel`, `OrthoTrack`,
+   * `Tangent`). Για αυτές το φιλτραρισμένο σύνολο **θα άλλαζε συμπεριφορά**.
+   *
+   * ⚠️ **Κάθε νέα χρήση απαιτεί αιτιολόγηση** — γραπτή, στο σημείο της χρήσης. Αν μια engine
+   * μπορεί να απαντήσει με το {@link entities}, οφείλει να το κάνει: το `allEntities` είναι
+   * ακριβώς το κόστος που η Φ2 υπάρχει για να εξαλείψει (2.909 οντότητες ανά κίνηση ποντικιού,
+   * μετρημένο `snap:ENTITIES`, ADR-728 §2.3). Διάβασέ το **μόνο** μέσω του
+   * {@link resolveNonLocalEntities} — ένα σύμβολο, greppable, με την αιτιολόγηση δίπλα του.
+   *
+   * **Προαιρετικό by design:** ένα context φτιαγμένο με το χέρι (τα 9 υπάρχοντα engine tests) δεν
+   * ξέρει τη διάκριση — εκεί το {@link entities} **είναι** ολόκληρη η σκηνή, άρα η επιστροφή σε
+   * αυτό είναι η σωστή απάντηση, όχι συμβιβασμός. Στην παραγωγή το πεδίο δίνεται πάντα
+   * (`SnapContextManager.createEngineContext`).
+   */
+  allEntities?: EntityModel[];
   worldRadiusAt: (point: Point2D) => number;
   worldRadiusForType: (point: Point2D, snapType: ExtendedSnapType) => number;
   perModePxTolerance?: Record<ExtendedSnapType, number>;
@@ -32,6 +58,35 @@ export interface SnapEngineResult {
     activeMode: ExtendedSnapType;
     timestamp: number;
   };
+}
+
+/**
+ * 🔴 ADR-728 §Φ2.3 — η **μοναδική** πόρτα προς τον πλήρη πίνακα σκηνής.
+ *
+ * Την καλούν αποκλειστικά οι **πέντε** engines με **μη-τοπική** γεωμετρία: οντότητα **εκτός** του
+ * aperture box παράγει υποψήφιο **εντός** του.
+ *
+ * | engine | γιατί μη-τοπική |
+ * |---|---|
+ * | `Extension` | προέκταση τμήματος, έως `radius × STANDARD` έξω από την οντότητα |
+ * | `Parallel` | γραμμή **αναφοράς** αλλού, σημείο έλξης αλλού (`radius × EXTENDED`) |
+ * | `OrthoTrack` | σημείο αναφοράς σε 100 world units, άξονες από εκεί |
+ * | `Tangent` | σημεία επαφής υπολογισμένα από τον κέρσορα προς μακρινό κύκλο |
+ * | `Perpendicular` | πόδι καθέτου **εκτός τμήματος** (`clampToSegment = false`) |
+ *
+ * ⚠️ Οι τέσσερις πρώτες απαριθμούνται στο ADR-728 §Φ2.3. Η **`Perpendicular` έλειπε** από εκείνη
+ * τη λίστα και βρέθηκε από **κόκκινο test**, όχι από ανάγνωση (βλ. `SnapOrchestrator.broad-phase-
+ * equivalence.test.ts`). Αν προσθέτεις engine εδώ, γράψε **γιατί** — και προτίμησε να το
+ * ανακαλύψεις με διαφορικό test παρά με επιχείρημα.
+ *
+ * Για κάθε άλλη engine το broad-phase φιλτραρισμένο `context.entities` είναι
+ * **η σωστή** πηγή — ADR-728 §8.2: η Φ2 αλλάζει ποιες οντότητες εξετάζονται, ποτέ ποιος νικά.
+ *
+ * Υπάρχει ως **ένα** σύμβολο ώστε ο κανόνας «κάθε νέα χρήση απαιτεί αιτιολόγηση» να είναι
+ * ελέγξιμος με ένα grep αντί για ανάγνωση 26 αρχείων.
+ */
+export function resolveNonLocalEntities(context: SnapEngineContext): EntityModel[] {
+  return context.allEntities ?? context.entities;
 }
 
 type SnapSpatialData = {

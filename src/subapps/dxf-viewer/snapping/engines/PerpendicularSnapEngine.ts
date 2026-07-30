@@ -9,7 +9,7 @@
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine, resolveNonLocalEntities, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
 import { calculateDistance, translatePoint } from '../../rendering/entities/shared/geometry-rendering-utils';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
@@ -61,9 +61,19 @@ export class PerpendicularSnapEngine extends BaseSnapEngine {
     const bimCandidates: SnapCandidate[] = [];
     const nonBimEntities: EntityModel[] = [];
 
-    if (!Array.isArray(context.entities)) return { candidates: [] };
+    // 🔴 ADR-728 §Φ2.3 — **ΠΕΜΠΤΗ** μη-τοπική engine, πέρα από τις τέσσερις που απαριθμεί το ADR.
+    // Δεν προήλθε από ανάγνωση αλλά από **μέτρηση**: το διαφορικό test ισοδυναμίας
+    // (`SnapOrchestrator.broad-phase-equivalence.test.ts`) κοκκίνισε στη θέση (0, 25) — κάθετος
+    // στη γραμμή (550,25)→(640,25), δηλαδή σε οντότητα **550 μονάδες μακριά** από τον κέρσορα.
+    // Αιτία: `getPerpendicularToLine` → `getNearestPointOnLine(..., clampToSegment = FALSE)` —
+    // «θέλουμε το πόδι της καθέτου ακόμη κι εκτός του τμήματος» (γρ. 236). Το πόδι μπορεί να
+    // βρίσκεται **πάνω** στον κέρσορα ενώ το AABB της οντότητας είναι εκτός aperture box, άρα το
+    // broad-phase φιλτραρισμένο σύνολο **αλλάζει νικητή**. Η απαρίθμηση του §Φ2.3 ήταν ελλιπής.
+    const sourceEntities = resolveNonLocalEntities(context);
 
-    for (const entity of context.entities) {
+    if (!Array.isArray(sourceEntities)) return { candidates: [] };
+
+    for (const entity of sourceEntities) {
       if (!isEntityVisibleForSnap(entity)) continue;
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
 

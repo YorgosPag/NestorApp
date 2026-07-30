@@ -5,7 +5,7 @@
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine, resolveNonLocalEntities, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 import { findCircleBasedSnapCandidates } from './shared/snap-engine-utils';
 // 🏢 ADR-065: Centralized Distance Calculation
 // 🏢 ADR-066: Centralized Angle Calculation
@@ -29,7 +29,10 @@ export class TangentSnapEngine extends BaseSnapEngine {
     // Use shared circle-based snap candidate finder to eliminate duplication
     // 🏢 ENTERPRISE FIX: Use closure to capture cursorPoint since callback receives entity
     return findCircleBasedSnapCandidates(
-      context.entities,
+      // 🔴 ADR-728 §Φ2.3 — ΜΗ-ΤΟΠΙΚΗ γεωμετρία: τα σημεία επαφής υπολογίζονται από τον κέρσορα
+      // ΠΡΟΣ τον κύκλο· ένας κύκλος του οποίου το AABB απέχει πολύ από το aperture box μπορεί να
+      // δώσει εφαπτόμενη που περνά δίπλα από τον κέρσορα. Το φιλτραρισμένο σύνολο θα τον έκοβε.
+      resolveNonLocalEntities(context),
       cursorPoint,
       context,
       {

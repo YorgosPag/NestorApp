@@ -7,7 +7,7 @@
 
 import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, SnapCandidate } from '../extended-types';
-import { BaseSnapEngine, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
+import { BaseSnapEngine, resolveNonLocalEntities, SnapEngineContext, SnapEngineResult } from '../shared/BaseSnapEngine';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
 import { isEntityVisibleForSnap } from '../shared/snap-visibility';
 import { GeometricCalculations } from '../shared/GeometricCalculations';
@@ -76,13 +76,19 @@ export class OrthoTrackSnapEngine extends BaseSnapEngine {
     // 🏢 ADR-087: Use centralized search radius
     const searchRadius = SNAP_SEARCH_RADIUS.REFERENCE_POINT;
     
+    // 🔴 ADR-728 §Φ2.3 — ΜΗ-ΤΟΠΙΚΗ γεωμετρία: το σημείο **αναφοράς** (κοντινότερο endpoint) είναι
+    // η αφετηρία των ορθογώνιων αξόνων· ψάχνεται σε `SNAP_SEARCH_RADIUS.REFERENCE_POINT` = 100
+    // world units, ΑΝΕΞΑΡΤΗΤΑ από το aperture, και το τελικό σημείο έλξης βρίσκεται πάνω στους
+    // άξονες που ξεκινούν από εκεί — δηλαδή αλλού. Το φιλτραρισμένο σύνολο θα άλλαζε αφετηρία.
+    const sourceEntities = resolveNonLocalEntities(context);
+
     // Guard against non-iterable entities
-    if (!Array.isArray(context.entities)) {
-      console.warn('[OrthoTrackSnapEngine] entities is not an array:', typeof context.entities, context.entities);
+    if (!Array.isArray(sourceEntities)) {
+      console.warn('[OrthoTrackSnapEngine] entities is not an array:', typeof sourceEntities, sourceEntities);
       return null;
     }
-    
-    for (const entity of context.entities) {
+
+    for (const entity of sourceEntities) {
       if (context.excludeEntityId && entity.id === context.excludeEntityId) continue;
       if (!isEntityVisibleForSnap(entity)) continue;
       
