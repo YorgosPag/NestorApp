@@ -144,6 +144,10 @@ mutation-verified. Cardinal rule #3 άθικτος: μηδέν νέα είσοδ
 3 μεταλλάξεις επαληθευμένες — (α) αφαίρεση πύλης ⇒ 4 κόκκινα, (β) πύλη που αναστέλλει ΚΑΙ τα
 δομικά ⇒ 4 κόκκινα, (γ) validity πάντα-true ⇒ 9 κόκκινα· `jscpd:diff` μηδέν νέα clones.
 
+✅ **Επαληθεύτηκε σε production (ίδια μέρα, ADR-726 changelog 2026-07-30 γ):** ανθρώπινο
+wheel-zoom `frame:dxf-canvas` **p90 74,6 → 9,9ms**· συνθετικό συνεχές zoom 5s = **ένα μόνο**
+καρέ >70ms (το idle re-raster στην ηρεμία) ⇒ μηδέν rebuild μέσα στη χειρονομία.
+
 ### 2026-07-30 — Phase XXII.B: `transform`/`canvasRect` φεύγουν ως React props (~60 αρχεία)
 
 Συνέχεια της Φ XXII.A (Bridge wrapper): το `transform` έπαψε ήδη να προκαλεί re-render στο
