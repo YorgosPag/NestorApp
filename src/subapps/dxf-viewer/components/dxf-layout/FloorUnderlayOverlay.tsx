@@ -50,10 +50,14 @@ export interface FloorUnderlayOverlayProps {
   readonly viewport: Viewport;
 }
 
+/**
+ * Outer gate (ADR-732 Batch 2 — mount-on-demand, ιδίωμα SnapIndicatorSubscriber):
+ * κατέχει ΜΟΝΟ τα low-freq subscriptions· χωρίς ενεργό underlay ΔΕΝ υπάρχει καν
+ * canvas element στο DOM — μηδέν compositor layer στη συνήθη περίπτωση (ένας όροφος
+ * ή scope≠all). Το `destination-out` fade απαιτεί ΔΙΚΟ του καμβά (θα έσβηνε ό,τι
+ * ζωγραφίστηκε από κάτω σε κοινό) — γι' αυτό ΔΕΝ συγχωνεύεται στη ζώνη Α (ADR-732 §3).
+ */
 export function FloorUnderlayOverlay({ viewport }: FloorUnderlayOverlayProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rendererRef = useRef<DxfRenderer | null>(null);
-
   // Leaf subscriptions (ADR-040): scope + render mode. Underlay only in 2D «all».
   const scope = useViewMode3DStore((s) => s.floor3DScope);
   const mode = useViewMode3DStore((s) => s.mode);
@@ -77,20 +81,35 @@ export function FloorUnderlayOverlay({ viewport }: FloorUnderlayOverlayProps) {
     };
   }, [floors]);
 
+  if (!active || !merged) return null;
+  return <FloorUnderlayCanvas merged={merged} viewport={viewport} />;
+}
+
+/** Inner canvas — mounted ΜΟΝΟ όσο υπάρχει ενεργό underlay περιεχόμενο. */
+function FloorUnderlayCanvas({
+  merged,
+  viewport,
+}: {
+  readonly merged: DxfScene;
+  readonly viewport: Viewport;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rendererRef = useRef<DxfRenderer | null>(null);
+
   // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
-  const drawStateRef = useRef({ active, merged, viewport });
-  drawStateRef.current = { active, merged, viewport };
+  const drawStateRef = useRef({ merged, viewport });
+  drawStateRef.current = { merged, viewport };
 
   // ADR-726 Φ2 — «painter ή null» είναι ΟΛΗ η δήλωση περιεχομένου· το DPR sizing, η πύλη και το
-  // clear ζουν στο ΕΝΑ primitive. Όταν το underlay είναι ανενεργό (ο κανόνας, όχι η εξαίρεση:
-  // μόνο σε 2D «Όλοι οι όροφοι» ζωγραφίζει) ο καμβάς δεν αγγίζεται καθόλου.
+  // clear ζουν στο ΕΝΑ primitive. (Με το mount-on-demand ο painter εδώ είναι πάντα ενεργός —
+  // το unmount είναι πλέον η ισχυρότερη μορφή της πύλης: ούτε στρώμα, όχι απλώς όχι clear.)
   const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const { active: isActive, merged: mergedScene, viewport: vp } = drawStateRef.current;
+    const { merged: mergedScene, viewport: vp } = drawStateRef.current;
 
     const painter: OverlayDispatchPainter | null =
-      isActive && mergedScene
+      mergedScene
         ? (ctx, t, pvp) => {
             if (!rendererRef.current) rendererRef.current = new DxfRenderer(canvas);
             rendererRef.current.render(mergedScene, t, pvp, {
@@ -118,10 +137,10 @@ export function FloorUnderlayOverlay({ viewport }: FloorUnderlayOverlayProps) {
     paintOverlayDispatchFrame(canvas, [painter], getImmediateTransform(), vp);
   }, []);
 
-  // (α) Repaint σε content change (scope/floors/viewport) με ΑΚΙΝΗΤΟ transform.
+  // (α) Repaint σε content change (floors/viewport) με ΑΚΙΝΗΤΟ transform.
   useEffect(() => {
     repaint();
-  }, [active, merged, viewport, repaint]);
+  }, [merged, viewport, repaint]);
 
   // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
   useEffect(() => {

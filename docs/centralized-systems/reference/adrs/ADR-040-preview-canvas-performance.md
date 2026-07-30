@@ -113,6 +113,39 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-07-30 (ε) — ADR-732 Batch 3: mount-on-demand (topo-grid, focus-2d, webgl-line) + zone hook SSoT
+
+- **Mount-on-demand** (το unmount = ισχυρότερη μορφή της Φ2 πύλης — μηδέν compositor layer):
+  - `TopoGridUnderlayLeaf`: χωρίς toggle ΕΓΣΑ87 (η συνήθης κατάσταση) κανένα canvas element.
+  - `Focus2DOverlay`: outer gate (subscriptions + focus-state hygiene σε mode flip) / inner
+    canvas ΜΟΝΟ με εστιασμένη οντότητα. Ο πρώην «unnamed z18/#10» (ADR-726 §4.Γ) εξαφανίζεται
+    από το DOM εκτός focus. Το `clearFocus2DOverlay` ΔΙΑΓΡΑΦΗΚΕ (ο inactive-teardown που το
+    καλούσε δεν υπάρχει — το canvas κάνει unmount μαζί με το focus).
+  - `WebglLineLayerSubscriber`: το large-scene gate (50k οντότητες) έγινε gate-at-mount —
+    κάτω από το κατώφλι ούτε container, ούτε WebGL context, ούτε το `gl.clear`-ανά-καρέ
+    του ADR-726 §4.Δ. Inner mount με το ίδιο unregister-before-dispose.
+- **`use-overlay-zone-dispatch.ts` (SSoT):** ο κοινός κύκλος ζωής των zone canvases
+  (refs στο frame time, repaint με Φ2 πύλη, content-change effect, ΕΝΑ
+  `subscribeImmediateTransformFrame` ανά ζώνη). Εξήχθη όταν το CHECK 3.28 έπιασε τα δύο
+  zone canvases ως sibling clones (N.18 by the book). Ο φρουρός XXII.B §4 δείχνει σε αυτό.
+
+### 2026-07-30 (δ) — ADR-732 Batch 2: ζώνη Α — grid+floorplan → 1 (`UnderlayDispatchCanvas`) + floor-underlay mount-on-demand
+
+- **Πριν:** `GridUnderlayCanvas` (z0) + `FloorplanBackgroundCanvas` (z0) — 2 canvases·
+  `FloorUnderlayOverlay` (z5) πάντα mounted (painter null όταν ανενεργός).
+- **Μετά:** ΕΝΑΣ `overlay-dispatch/UnderlayDispatchCanvas` (z0, id `underlay-dispatch`)·
+  σειρά passes: grid ΚΑΤΩ → κάτοψη ΠΑΝΩ (η απόφαση 2026-06-05 διατηρείται ως σειρά
+  ζωγραφικής). Τα δύο μέλη έγιναν painter hooks: `useGridUnderlayPainter`
+  (GridUnderlayCanvas.tsx), `useFloorplanBackgroundPainter` (FloorplanBackgroundCanvas.tsx —
+  barrel export ενημερωμένο). Η διάδραση βαθμονόμησης (calibration point picking) μεταφέρθηκε
+  στον κοινό καμβά: pointer-events auto ΜΟΝΟ όσο τρέχει calibration session.
+- **`FloorUnderlayOverlay` → mount-on-demand** (outer gate / inner canvas, ιδίωμα
+  SnapIndicatorSubscriber): χωρίς 2D «Όλοι οι όροφοι» ΔΕΝ υπάρχει καν canvas στο DOM.
+  ΔΕΝ συγχωνεύτηκε στη ζώνη Α: το xref fade του είναι `destination-out` σε όλο τον καμβά
+  (σε κοινό καμβά θα έσβηνε grid/κάτοψη) ΚΑΙ κάθεται πάνω από το LayerCanvas στο z-συμβόλαιο.
+- Ο φρουρός XXII.B §4/§5 ελέγχει πλέον τον `UnderlayDispatchCanvas` (συμπεριφορικά tests:
+  zero-lag tick + split-effect + floorplan pass null χωρίς floorId).
+
 ### 2026-07-30 (γ) — ADR-732 Batch 1: ζώνη Β — 4 overlay canvases → 1 (`Overlay2DDispatchCanvas`)
 
 Ο μετρημένος περιοριστής μετά τη Φ3.1 είναι το software compositing 13 στοιβαγμένων

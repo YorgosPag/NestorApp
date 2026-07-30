@@ -8,9 +8,10 @@ import RulerCornerBox from '../../canvas-v2/overlays/RulerCornerBox';
 import { useCrosshairCursor } from '../../systems/cursor/useCrosshairCursor';
 // 🏢 ADR-418: resolve active scene units imperatively at zoom time (no subscription)
 import { resolveSceneUnits } from '../../utils/scene-units';
-import { FloorplanBackgroundCanvas } from '../../floorplan-background';
-// 🏢 Grid as the BOTTOM-MOST layer (beneath the floorplan κάτοψη). ADR-040 (2026-06-05).
-import { GridUnderlayCanvas } from './GridUnderlayCanvas'; import { TopoGridUnderlayLeaf } from './TopoGridUnderlayLeaf'; import { NorthArrowLeaf } from './NorthArrowLeaf';
+// ADR-732 Batch 2 — Ο ΕΝΑΣ καμβάς της ζώνης Α (grid + floorplan κάτοψη σε ένα στρώμα z0)·
+// σειρά ζωγραφικής: grid ΚΑΤΩ από την κάτοψη (Giorgio 2026-06-05, ADR-040).
+import { UnderlayDispatchCanvas } from './overlay-dispatch/UnderlayDispatchCanvas';
+import { TopoGridUnderlayLeaf } from './TopoGridUnderlayLeaf'; import { NorthArrowLeaf } from './NorthArrowLeaf';
 import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms'; import { PANEL_LAYOUT } from '../../config/panel-tokens'; import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config'; import { PREVIEW_DEFAULTS } from '../../config/color-config';
 import { buildDxfRulerSettings } from './canvas-layer-stack-ruler-settings'; import { canvasUI } from '@/styles/design-tokens/canvas'; import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import type { Point2D } from '../../rendering/types/Types';
@@ -52,6 +53,9 @@ import { FloorUnderlayOverlay } from './FloorUnderlayOverlay';
 import { CanvasLayerStack2DOverlays } from './canvas-layer-stack-2d-overlays-leaf';
 import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers'; import { useCanvasLayerStackZoomHandlers } from './useCanvasLayerStackZoomHandlers';
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
+// Σταθερή αναφορά (dep του floorplan painter memo — ADR-732)· inline literal θα άλλαζε
+// ταυτότητα σε κάθε shell render.
+const FLOORPLAN_CAD = { mode: 'cad-y-up', margins: COORDINATE_LAYOUT.MARGINS } as const;
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   viewport, activeTool, overlayMode, showLayers,
   showDxfCanvas, showLayerCanvas,
@@ -291,21 +295,16 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
           onDoubleClick={containerHandlers.onDoubleClick}
           onContextMenu={handleDrawingContextMenu}
         >
-          {/* 🏢 Grid underlay — bottom-most layer, BENEATH the floorplan κάτοψη.
-              Always mounted (grid shows on an empty canvas too). ADR-040 (2026-06-05). */}
-          <GridUnderlayCanvas
+          {/* 🏢 ADR-732 ζώνη Α — ΕΝΑΣ underlay καμβάς: grid (κάτω) + floorplan κάτοψη (πάνω).
+              Bottom-most στρώμα, always mounted (grid shows on an empty canvas too).
+              ADR-040 (2026-06-05): ο κάναβος ΚΑΤΩ από την κάτοψη — τώρα ως σειρά passes. */}
+          <UnderlayDispatchCanvas
             gridSettings={gridSettings}
             viewport={viewport}
-            className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
+            floorId={floorId ?? null}
+            cad={FLOORPLAN_CAD}
+            className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']}`}
           />
-          {floorId && (
-            <FloorplanBackgroundCanvas
-              floorId={floorId}
-              viewport={viewport}
-              cad={{ mode: 'cad-y-up', margins: COORDINATE_LAYOUT.MARGINS }}
-              className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['0']} ${PANEL_LAYOUT.POINTER_EVENTS.NONE}`}
-            />
-          )}
           {/* ADR-399 Phase D — 2D underlay of other building floors (read-only, faded),
               behind the active DXF canvas. Self-gated to floor3DScope==='all' && mode==='2d'. */}
           <FloorUnderlayOverlay viewport={viewport} />

@@ -1,108 +1,88 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
-// ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
-import {
-  paintOverlayDispatchFrame,
-  type OverlayDispatchPainter,
-} from '../../components/dxf-layout/overlay-dispatch/overlay-dispatch-frame';
-import { IDENTITY_VIEW_TRANSFORM } from '../../config/geometry-constants';
+/**
+ * ⚠️  ARCHITECTURE-CRITICAL FILE — READ ADR-040 + ADR-732 BEFORE EDITING
+ * docs/centralized-systems/reference/adrs/ADR-040-preview-canvas-performance.md
+ * docs/centralized-systems/reference/adrs/ADR-732-2d-canvas-layer-consolidation.md
+ *
+ * useFloorplanBackgroundPainter — η raster κάτοψη ως pass του κοινού καμβά ζώνης Α.
+ *
+ * ADR-732 Batch 2 — δεν κατέχει `<canvas>`: επιστρέφει «painter ή null» (ADR-726 Φ2)
+ * για τον `UnderlayDispatchCanvas`, ΠΑΝΩ από το grid pass (Giorgio 2026-06-05: ο κάναβος
+ * ΚΑΤΩ από την κάτοψη). Η βαθμονόμηση (calibration point picking) είναι η ΜΟΝΗ διάδραση
+ * της ζώνης Α — εκτίθεται ως `isCalibrating` + `onCalibrationClick` ώστε ο κοινός καμβάς
+ * να γίνεται interactive ΜΟΝΟ όσο διαρκεί η συνεδρία βαθμονόμησης (σπάνιο, user-triggered).
+ *
+ * Ο μετασχηματισμός view διαβάζεται `getImmediateTransform()` στο draw/click time
+ * (ADR-040 XXII.B) — ο painter αγνοεί το `t` όρισμα του primitive (η κάτοψη κουβαλά τον
+ * δικό της BackgroundTransform μέσα στο `worldToCanvas`).
+ */
+
+import { useCallback, useMemo } from 'react';
+import type { OverlayDispatchPainter } from '../../components/dxf-layout/overlay-dispatch/overlay-dispatch-frame';
 import { useFloorplanBackground } from '../hooks/useFloorplanBackground';
 import { useFloorplanBackgroundStore } from '../stores/floorplanBackgroundStore';
-// ADR-040 Phase XXII.B — zero-lag: το view transform (πρώην `worldToCanvas` prop) διαβάζεται
-// από το SSoT στο draw/click time + scheduler frame (ιδίωμα HomeRunWiresOverlay).
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-import { subscribeImmediateTransformFrame } from '../../rendering/core/immediate-transform-frame';
 import type { CadCoordinateAdaptation } from '../providers/types';
 import type { CalibrationSession } from '../stores/floorplanBackgroundStore';
 import type { Point2D } from '../providers/types';
 
-// ── Props ─────────────────────────────────────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────────────────────
 
-export interface FloorplanBackgroundCanvasProps {
-  floorId: string;
-  viewport: { width: number; height: number };
-  /** Optional CAD adaptation (Y-flip + margins). Required for DXF integration. */
-  cad?: CadCoordinateAdaptation;
-  /** Consumer sets z-index appropriate for their stacking context (ADR-002). */
-  className?: string;
+export interface FloorplanBackgroundPainterResult {
+  /** «Painter ή null» για τον κοινό καμβά ζώνης Α (κάτοψη + σημάδια βαθμονόμησης). */
+  readonly painter: OverlayDispatchPainter | null;
+  /** true όσο τρέχει calibration session για ΑΥΤΟΝ τον όροφο — ο καμβάς γίνεται interactive. */
+  readonly isCalibrating: boolean;
+  /** Click handler του calibration point picking — δένεται στον κοινό καμβά μόνο όσο isCalibrating. */
+  readonly onCalibrationClick: (e: React.MouseEvent<HTMLCanvasElement>) => void;
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
-export function FloorplanBackgroundCanvas({
-  floorId,
-  viewport,
-  cad,
-  className,
-}: FloorplanBackgroundCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const { background, provider } = useFloorplanBackground(floorId);
+/**
+ * @param floorId null ⇒ κανένας ενεργός όροφος ⇒ painter null (η ζώνη δεν πληρώνει τίποτα).
+ * @param cad Optional CAD adaptation (Y-flip + margins). Required for DXF integration.
+ *   Πέρνα σταθερή αναφορά (module const / useMemo) — είναι dep του painter memo.
+ */
+export function useFloorplanBackgroundPainter(
+  floorId: string | null,
+  cad?: CadCoordinateAdaptation,
+): FloorplanBackgroundPainterResult {
+  // '' = ανύπαρκτο slot ⇒ background null (rules-of-hooks: η κλήση είναι άνευ όρων).
+  const { background, provider } = useFloorplanBackground(floorId ?? '');
   const calibrationSession = useFloorplanBackgroundStore((s) => s.calibrationSession);
-  const isCalibrating = calibrationSession?.floorId === floorId;
+  const isCalibrating = floorId != null && calibrationSession?.floorId === floorId;
 
-  // Render only when inputs change — Phase G: eliminated continuous 60fps RAF loop.
-  // Previous implementation re-rendered every frame even in idle (~6s/11s per trace 2026-05-09).
-  //
-  // 🏢 SSoT sizing (ADR-040) — το DPR-aware backing store από το authoritative viewport το κάνει
-  // πλέον το ΕΝΑ primitive, πριν την πύλη. Before: `canvas.width = viewport.width` (NO dpr) → the
-  // κάτοψη buffer was CSS-sized (a primary half of the size desync + blurry on HiDPI). Ο ctx μένει
-  // dpr-scaled, οπότε όλη η ζωγραφική δουλεύει σε CSS coords όπως πριν.
-  //
-  // ADR-726 Φ2 — χωρίς ορατή κάτοψη ΚΑΙ χωρίς σημάδια βαθμονόμησης ο καμβάς δεν αγγίζεται καθόλου.
-  // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
-  const drawStateRef = useRef({ background, provider, viewport, cad, calibrationSession, floorId });
-  drawStateRef.current = { background, provider, viewport, cad, calibrationSession, floorId };
-
-  const repaint = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const s = drawStateRef.current;
-
+  // Reference-stable painter: νέα ταυτότητα ΜΟΝΟ σε πραγματική αλλαγή περιεχομένου.
+  // ADR-726 Φ2 — χωρίς ορατή κάτοψη ΚΑΙ χωρίς σημάδια βαθμονόμησης: null (ο καμβάς άθικτος).
+  const painter = useMemo<OverlayDispatchPainter | null>(() => {
+    if (floorId == null) return null;
     // `const` bindings ⇒ το narrowing επιβιώνει μέσα στο closure του painter (χωρίς `!`, N.2).
-    const visibleBackground = s.background?.visible ? s.background : null;
-    const activeProvider = visibleBackground ? s.provider : null;
-    const showsMarkers = hasCalibrationMarkers(s.calibrationSession, s.floorId);
+    const visibleBackground = background?.visible ? background : null;
+    const activeProvider = visibleBackground ? provider : null;
+    const showsMarkers = hasCalibrationMarkers(calibrationSession, floorId);
+    if (!(visibleBackground && activeProvider) && !showsMarkers) return null;
 
-    const painter: OverlayDispatchPainter | null =
-      (visibleBackground && activeProvider) || showsMarkers
-        ? (ctx, _t, vp) => {
-            if (visibleBackground && activeProvider) {
-              activeProvider.render(ctx, {
-                transform: visibleBackground.transform,
-                // Zero-lag view transform από το SSoT στο draw time (XXII.B).
-                worldToCanvas: getImmediateTransform(),
-                viewport: vp,
-                opacity: visibleBackground.opacity,
-                cad: s.cad,
-              });
-            }
-            _drawCalibrationMarkers(ctx, s.calibrationSession, s.floorId);
-          }
-        : null;
-
-    // Ο μετασχηματισμός της κάτοψης ταξιδεύει μέσα στο `worldToCanvas` — το primitive
-    // δεν τον χρειάζεται, άρα ουδέτερος.
-    paintOverlayDispatchFrame(canvas, [painter], IDENTITY_VIEW_TRANSFORM, s.viewport);
-  }, []);
-
-  // (α) Repaint σε content change (background/provider/viewport/calibration) με ΑΚΙΝΗΤΟ transform.
-  useEffect(() => {
-    repaint();
-  }, [background, provider, viewport, cad, calibrationSession, floorId, repaint]);
-
-  // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
-  useEffect(() => {
-    return subscribeImmediateTransformFrame('floorplan-background', 'Floorplan Background', repaint);
-  }, [repaint]);
+    return (ctx, _t, vp) => {
+      if (visibleBackground && activeProvider) {
+        activeProvider.render(ctx, {
+          transform: visibleBackground.transform,
+          // Zero-lag view transform από το SSoT στο draw time (XXII.B).
+          worldToCanvas: getImmediateTransform(),
+          viewport: vp,
+          opacity: visibleBackground.opacity,
+          cad,
+        });
+      }
+      _drawCalibrationMarkers(ctx, calibrationSession, floorId);
+    };
+  }, [floorId, background, provider, calibrationSession, cad]);
 
   // Click handler for calibration point picking — reads fresh store state.
-  // Event-time transform read (cardinal rule #2) — όχι πια από prop.
-  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Event-time transform read (cardinal rule #2) — όχι από snapshot.
+  const onCalibrationClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const { calibrationSession: session, setCalibrationPoint } =
       useFloorplanBackgroundStore.getState();
-    if (session?.floorId !== floorId) return;
+    if (floorId == null || session?.floorId !== floorId) return;
     if (session.pointA && session.pointB) return; // both already set, waiting for dialog
     const canvas = e.currentTarget;
     const rect = canvas.getBoundingClientRect();
@@ -115,27 +95,15 @@ export function FloorplanBackgroundCanvas({
     );
   }, [floorId]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      onClick={isCalibrating ? handleClick : undefined}
-      style={isCalibrating ? { pointerEvents: 'auto' } : undefined}
-      className={cn(
-        'absolute top-0 left-0 pointer-events-none',
-        isCalibrating && 'cursor-crosshair',
-        className,
-      )}
-      aria-hidden
-    />
-  );
+  return { painter, isCalibrating, onCalibrationClick };
 }
 
 // ── Canvas drawing helpers (module-level, no closure captures) ────────────────
 
 /**
  * ADR-726 Φ2 — ΜΙΑ πηγή για την ερώτηση «θα ζωγραφιστεί σημάδι βαθμονόμησης;». Την ρωτά και η
- * πύλη (για να αποφασίσει αν θα αγγίξει τον καμβά) και ο ίδιος ο painter, ώστε οι δύο απαντήσεις
- * να μην μπορούν να ξεσυγχρονιστούν και να αφήσουν φάντασμα ή κενό.
+ * πύλη (μέσω του painter-null) και ο ίδιος ο painter, ώστε οι δύο απαντήσεις να μην μπορούν να
+ * ξεσυγχρονιστούν και να αφήσουν φάντασμα ή κενό.
  */
 function hasCalibrationMarkers(
   session: CalibrationSession | null,

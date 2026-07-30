@@ -25,11 +25,9 @@
  * draw time μέσα σε scheduler frame (XXII.B) — ποτέ ως React prop.
  */
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { paintOverlayDispatchFrame } from './overlay-dispatch-frame';
+import { useMemo } from 'react';
 import { composeOverlay2DPainters } from './overlay-2d-zone';
-import { getImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
-import { subscribeImmediateTransformFrame } from '../../../rendering/core/immediate-transform-frame';
+import { useOverlayZoneDispatch } from './use-overlay-zone-dispatch';
 import { useAnalyticalPainters } from '../analytical-overlays/use-analytical-painters';
 import { useProposalPainters } from '../proposal-overlays/use-proposal-painters';
 import { useEnvelopePainter } from '../EnvelopeOverlay';
@@ -53,8 +51,6 @@ export function Overlay2DDispatchCanvas({
   currentLevelId,
   gripDragPreview,
 }: Overlay2DDispatchCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
   const analytical = useAnalyticalPainters();
   const envelope = useEnvelopePainter(scene, currentLevelId);
   const wires = useHomeRunWiresPainter(scene, gripDragPreview);
@@ -65,33 +61,10 @@ export function Overlay2DDispatchCanvas({
     [analytical, envelope, wires, proposals],
   );
 
-  // Refs read at frame time so the scheduler callback never re-registers on data/resize change.
-  const paintersRef = useRef(painters);
-  paintersRef.current = painters;
-  const viewportRef = useRef(viewport);
-  viewportRef.current = viewport;
-
-  const repaint = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const vp = viewportRef.current;
-    // Perf guard (ADR-408 Φ7): τίποτα — ούτε DPR sizing — σε 0×0 viewport / collapsed shell.
-    if (vp.width <= 0 || vp.height <= 0) return;
-    paintOverlayDispatchFrame(canvas, paintersRef.current, getImmediateTransform(), vp);
-  }, []);
-
-  // (α) Repaint σε content change (painter identities / resize) με ΑΚΙΝΗΤΟ transform.
-  useEffect(() => {
-    repaint();
-  }, [painters, viewport, repaint]);
-
-  // (β) Zero-lag pan/zoom — ΕΝΑ scheduler frame subscription για ΟΛΗ τη ζώνη Β
-  // (πρώην 4 ξεχωριστά ids: analytical-dispatch / envelope-overlay / home-run-wires /
-  // proposal-dispatch — το per-stage attribution του __dxfPerf βλέπει πλέον ένα stage).
-  useEffect(
-    () => subscribeImmediateTransformFrame('overlay-dispatch-2d', '2D Overlay Dispatch', repaint),
-    [repaint],
-  );
+  // Κοινός zone μηχανισμός (SSoT — use-overlay-zone-dispatch): ΕΝΑ scheduler frame
+  // subscription για ΟΛΗ τη ζώνη Β (πρώην 4 ids: analytical-dispatch / envelope-overlay /
+  // home-run-wires / proposal-dispatch — το __dxfPerf βλέπει πλέον ένα stage).
+  const canvasRef = useOverlayZoneDispatch(painters, viewport, 'overlay-dispatch-2d', '2D Overlay Dispatch');
 
   return (
     <canvas

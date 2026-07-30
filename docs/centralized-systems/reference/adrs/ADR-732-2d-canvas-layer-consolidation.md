@@ -1,7 +1,10 @@
 # ADR-732 — Μοχλός Δ: Ενοποίηση των 13 full-viewport 2D καμβάδων (compositing footprint)
 
-**Status:** 🔨 **Batch 1 ΥΛΟΠΟΙΗΜΕΝΟ (2026-07-30, uncommitted)** — ζώνη Β 4→1
-(`Overlay2DDispatchCanvas`)· Batches 2-3 εκκρεμούν· μέτρηση-απόδειξη στο τέλος (Batch 4).
+**Status:** 🔨 **Batches 1-3 ΥΛΟΠΟΙΗΜΕΝΑ (2026-07-30, uncommitted)** — ζώνη Β 4→1
+(`Overlay2DDispatchCanvas`) + ζώνη Α grid/floorplan→1 (`UnderlayDispatchCanvas`) +
+mount-on-demand (floor-underlay, topo-grid, focus-2d, webgl-line) + zone hook SSoT
+(`use-overlay-zone-dispatch`). ΕΚΚΡΕΜΟΥΝ: LayerCanvas unmount-when-empty (αναβλήθηκε —
+βλ. §3) + **Batch 4: production build + μέτρηση-απόδειξη**.
 Εγκεκριμένο από τον Giorgio 2026-07-30 («Δ τώρα» + N.8: batch-by-batch).
 **Ημερομηνία:** 2026-07-30
 **Σχετικά:** **ADR-726 §4.Γ/§6** (η διάγνωση: software compositing 13 στρωμάτων = ο ΕΝΑΣ
@@ -72,12 +75,21 @@ pointer-events — όλοι οι άλλοι `pointer-events: none` (η συγχ�
 στρωμάτων γίνεται σειρά ζωγραφικής **μέσα** στον καμβά της ζώνης. Οι ζώνες ορίζονται από τα
 δύο αμετακίνητα δυναμικά στρώματα (dxf z10, preview z15):
 
-### Ζώνη Α — «underlay-dispatch» (z0, ΚΑΤΩ από το dxf) — 3 → 1
+### Ζώνη Α — «underlay-dispatch» (z0, ΚΑΤΩ από το dxf) — 2 → 1 (+ floor-underlay: mount-on-demand)
 
-`grid-underlay` → `floorplan-background` → `floor-underlay`, με σειρά ζωγραφικής = σημερινό
-DOM order. Ένας καμβάς, passes με `active`/`isDirty`/`paint` (πρότυπο `bim-overlay-pass`).
-Όλα στατικά περιεχόμενα που αλλάζουν ΜΟΝΟ με το transform ⇒ μία texture upload ανά καρέ
-χειρονομίας αντί για τρεις, μηδέν στρώμα σε ηρεμία χωρίς περιεχόμενο.
+**Όπως υλοποιήθηκε (Batch 2 — δύο ευρήματα διόρθωσαν το αρχικό «3 → 1»):**
+
+- `grid-underlay` → `floorplan-background` σε ΕΝΑΝ καμβά (`UnderlayDispatchCanvas`, z0)·
+  σειρά ζωγραφικής = «κάναβος ΚΑΤΩ από την κάτοψη» (ADR-040, Giorgio 2026-06-05). Μία
+  texture upload ανά καρέ χειρονομίας αντί για δύο. Η διάδραση βαθμονόμησης της κάτοψης
+  (calibration point picking — η ΜΟΝΗ διάδραση της ζώνης) μεταφέρθηκε στον κοινό καμβά,
+  ενεργή ΜΟΝΟ κατά τη διάρκεια calibration session.
+- **Ο `floor-underlay` ΔΕΝ συγχωνεύεται** — δύο δομικά εμπόδια που βρέθηκαν στην ανάγνωση:
+  (α) ο AutoCAD xref fade του είναι `destination-out` fillRect σε ΟΛΟ τον καμβά — σε κοινό
+  καμβά θα έσβηνε ό,τι ζωγραφίστηκε από κάτω (grid/κάτοψη)· (β) κάθεται (z5) ΠΑΝΩ από το
+  LayerCanvas (z0, DOM-μεταγενέστερο) — merge στο z0 θα άλλαζε το z-συμβόλαιο (§6 παγίδα 2).
+  Αντ' αυτού: **mount-on-demand** (outer gate / inner canvas) — στη συνήθη περίπτωση
+  (ένας όροφος ή scope≠all) δεν υπάρχει καν canvas element ⇒ μηδέν στρώμα.
 
 ### Ζώνη Β — «overlay-dispatch-2d» (z11, ΠΑΝΩ από dxf, ΚΑΤΩ από preview) — 4 → 1
 
@@ -99,19 +111,31 @@ dispatch (ή εγγράφονται σε registry), `paintOverlayDispatchFrame` 
 
 ### Επιπλέον unmount-when-empty (χωρίς συγχώνευση)
 
-- `webgl-line`: κάτω από το gate εντολών ήδη δεν χτίζει τίποτα — αλλά ο καμβάς μένει. Unmount
-  του canvas element κάτω από το gate (μικρές σκηνές = οι περισσότερες).
-- `layer` (LayerCanvas): unmount όταν `colorLayers.length === 0 && !draft` — ΚΑΙ το Φ2-κενό
-  του (`canvas:layer`, ADR-726 «Εκκρεμεί από τους 9») κλείνει δωρεάν όταν δεν υπάρχει. Η πλήρης
-  ένταξή του στη Ζώνη Α είναι ξεχωριστή, ΔΕΥΤΕΡΗ απόφαση (imperative renderer με 2 διαδρομές
-  unified/legacy — δεν πιέζεται, βλ. §6 παγίδα 4).
+- `webgl-line` ✅ (Batch 3): το large-scene gate (κατώφλι **50.000** οντότητες —
+  δηλαδή σχεδόν ΚΑΘΕ σκηνή είναι από κάτω) έγινε gate-at-mount: ούτε container, ούτε
+  WebGL context, ούτε το `gl.clear`-ανά-καρέ του ADR-726 §4.Δ. Σε software rasterization
+  αυτό ήταν ολόκληρο ζωντανό στρώμα + context για μηδέν draws.
+- `layer` (LayerCanvas) ⏳ **ΑΝΑΒΛΗΘΗΚΕ με λόγο** (2026-07-30): το «είναι άδειος;» ΔΕΝ
+  κρίνεται από έξω μόνο με `colorLayers.length === 0 && !draft` — το `LayerCanvas` δέχεται
+  `renderOptions.showSnapIndicators: true` και 6 ομάδες ρυθμίσεων (ADR-726 Φ2: «θέλει δικό
+  του predicate»)· ένα λάθος unmount θα έκοβε περιεχόμενο που δεν είναι color layer (π.χ.
+  ό,τι ζωγραφίζει το unified path). Απαιτεί ανάγνωση του `LayerRenderer` (unified/legacy)
+  και δικό του predicate + tests — δική της απόφαση, ΟΧΙ βιαστικό μέρος του Batch 3
+  (§6 παγίδα 4). Μέχρι τότε ο `canvas:layer` μένει το ΕΝΑ γνωστό Φ2-κενό.
 
-### Αποτέλεσμα
+### Αποτέλεσμα (όπως υλοποιήθηκε, Batches 1-3)
 
-| Κατάσταση | Σήμερα | Μετά |
+| Κατάσταση | Πριν | Μετά |
 |---|---|---|
-| Ηρεμία, τυπικό σχέδιο χωρίς MEP/ανάλυση/regions | 13 | **4** (underlay, dxf, overlay-dispatch*, preview) — *και αυτός unmount-άρεται αν όλα τα passes inactive ⇒ **3** |
-| Χειρονομία με όλα ενεργά (μεγάλη σκηνή, MEP, ανάλυση) | 13 | **6** (+ webgl-line + layer) |
+| Τυπικό σχέδιο (χωρίς MEP συστήματα/ανάλυση/topo toggle/focus) | 13 | **5** (underlay-dispatch, layer†, dxf, overlay-dispatch-2d, preview) |
+| Όλα ενεργά (≥50k σκηνή, MEP, ανάλυση, όλοι οι όροφοι) | 13 | **7** (+ webgl-line + floor-underlay) |
+
+† Το LayerCanvas μένει ζωντανό — το unmount-when-empty του ΑΝΑΒΛΗΘΗΚΕ (βλ. παραπάνω)·
+όταν γίνει, το τυπικό σενάριο πέφτει στο **4**. Επιπλέον ο overlay-dispatch-2d θα μπορούσε
+μελλοντικά να unmount-άρεται με όλα τα passes null (⇒ 3) — ΔΕΝ έγινε στο Batch 1: τα painter
+hooks πρέπει να τρέχουν για να ξέρουμε πότε παύουν να είναι null, άρα απαιτεί outer/inner
+split με τα 16 hooks στον outer — κόστος/όφελος αμφίβολο, ο άδειος καμβάς με Φ2 πύλη δεν
+ακυρώνεται ποτέ.
 
 ## 4. Αρχιτεκτονική — SSoT και ιδιοκτησία
 
@@ -172,6 +196,27 @@ staged στο ίδιο commit (CHECK 6B/6D), ΟΧΙ tsc (N.17).
 
 ## Changelog
 
+- **2026-07-30 (δ) — Batch 3 ΥΛΟΠΟΙΗΜΕΝΟ (mount-on-demand + zone hook SSoT).**
+  `TopoGridUnderlayLeaf` → null χωρίς toggle ΕΓΣΑ87· `Focus2DOverlay` → outer gate / inner
+  canvas (focus-state hygiene στο mode flip μένει στον outer· το `clearFocus2DOverlay`
+  ΔΙΑΓΡΑΦΗΚΕ μαζί με το test του — ο teardown που το καλούσε δεν υπάρχει πια)·
+  `WebglLineLayerSubscriber` → gate-at-mount στο 50k κατώφλι (inner mount, ίδιο
+  unregister-before-dispose). ΝΕΟ SSoT `overlay-dispatch/use-overlay-zone-dispatch.ts`:
+  ο κοινός zone κύκλος ζωής — εξήχθη όταν το CHECK 3.28 έπιασε τους δύο zone canvases ως
+  sibling clones (N.18). LayerCanvas unmount ΑΝΑΒΛΗΘΗΚΕ με τεκμηριωμένο λόγο (§3 —
+  showSnapIndicators/unified path: θέλει δικό του predicate). Tests: 94+61 πράσινα στα
+  επηρεαζόμενα suites· jscpd:diff καθαρό σε 10 αρχεία.
+- **2026-07-30 (γ) — Batch 2 ΥΛΟΠΟΙΗΜΕΝΟ (ζώνη Α: grid+floorplan → 1 · floor-underlay
+  mount-on-demand).** Νέο: `overlay-dispatch/UnderlayDispatchCanvas.tsx` (z0, scheduler id
+  `underlay-dispatch`, grid pass ΚΑΤΩ από floorplan pass — mutation-verified: αντιστροφή
+  σειράς → κόκκινο). Μετατροπές σε painter hooks: `GridUnderlayCanvas.tsx` →
+  `useGridUnderlayPainter`, `FloorplanBackgroundCanvas.tsx` → `useFloorplanBackgroundPainter`
+  (+ calibration interactivity εκτεθειμένη στον κοινό καμβά· barrel export ενημερωμένο —
+  ΠΡΟΣΟΧΗ: ο καμβάς κάνει deep import, ΟΧΙ το barrel, γιατί το barrel τραβά τη
+  levels/firestore αλυσίδα). `FloorUnderlayOverlay.tsx` → outer gate / inner canvas
+  (mount-on-demand)· το §3 Ζώνη Α διορθώθηκε από «3→1» σε «2→1 + mount-on-demand» με τα
+  δύο δομικά ευρήματα (destination-out fade, z5 πάνω από LayerCanvas). Ο φρουρός XXII.B
+  §4/§5 μεταφέρθηκε στον νέο καμβά (+ νέο test: floorplan pass null χωρίς floorId).
 - **2026-07-30 (β) — Batch 1 ΥΛΟΠΟΙΗΜΕΝΟ (ζώνη Β: 4 → 1).** Νέα: `overlay-dispatch/
   Overlay2DDispatchCanvas.tsx` (ο καμβάς της ζώνης, z-[11], scheduler id `overlay-dispatch-2d`),
   `overlay-dispatch/overlay-2d-zone.ts` (pure z-συμβόλαιο) + φρουρός `overlay-2d-zone.test.ts`

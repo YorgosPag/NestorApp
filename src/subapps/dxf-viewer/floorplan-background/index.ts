@@ -76,8 +76,10 @@ export type {
   FloorPolygonState,
 } from './services/floorplan-background-api-client';
 
-export { FloorplanBackgroundCanvas } from './components/FloorplanBackgroundCanvas';
-export type { FloorplanBackgroundCanvasProps } from './components/FloorplanBackgroundCanvas';
+// ADR-732 Batch 2 — ο δικός του καμβάς καταργήθηκε: η κάτοψη είναι pass του κοινού
+// καμβά ζώνης Α (`UnderlayDispatchCanvas`), μέσω αυτού του painter hook.
+export { useFloorplanBackgroundPainter } from './components/FloorplanBackgroundCanvas';
+export type { FloorplanBackgroundPainterResult } from './components/FloorplanBackgroundCanvas';
 
 export { FloorplanBackgroundPanel } from './components/FloorplanBackgroundPanel';
 export type { FloorplanBackgroundPanelProps } from './components/FloorplanBackgroundPanel';
