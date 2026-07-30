@@ -206,7 +206,15 @@ DXF_REAL_SAMPLE="…/47_ergasia.dxf" npx jest dxf-external-references-e2e
 - `resolveExternalReferences`: dedup περιεχομένου (ίδια bytes/άλλο όνομα ⇒ **1** ανέβασμα),
   αποτυχία **ανά αναφορά** (υπερμεγέθες δεν ρίχνει τα υπόλοιπα), idempotency.
 - CHECK 3.19 (storage rules coverage): **πράσινο** με το νέο suite (9 coverage entries).
-- `i18n:audit`: 0/0 — καμία νέα παράβαση.
+- `storage.rules` **στον πραγματικό emulator**: **12/12** (`firebase emulators:exec --only storage`).
+- `i18n:audit`: 0/0 · `jscpd:diff` σε 16 νέα αρχεία: **καθαρό**.
+
+> 🔴 **Ο emulator έπιασε αληθινό σφάλμα που το «πράσινο» θα έκρυβε.** Η πρώτη εκτέλεση έδωσε
+> **10/12**: τα δύο `write → allow` cells έσκαγαν με `storage/unauthorized`, επειδή το harness
+> ανεβάζει `application/octet-stream` ενώ ο κανόνας απαιτεί `image/*`. Δηλαδή το suite θα ήταν
+> **πράσινο στα deny και κόκκινο στα allow** — «αποτυχία για λάθος λόγο», ακριβώς η παγίδα που το
+> seeding των read/delete cells υπάρχει για να αποφύγει. **Τα 9 storage-rules suites αποτυγχάνουν
+> όλα χωρίς emulator** στο default jest config· χρειάζονται `npm run test:storage-rules:emulator`.
 
 ### ⚠️ Παγίδα του περιβάλλοντος τεστ που πληρώθηκε
 
