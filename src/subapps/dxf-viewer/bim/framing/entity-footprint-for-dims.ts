@@ -20,7 +20,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import { isColumnEntity, isBeamEntity, isWallEntity, isTextEntity, isMTextEntity, isOpeningInfoTagEntity, type Entity } from '../../types/entities';
+import { isColumnEntity, isBeamEntity, isWallEntity, isTextLikeEntity, isOpeningInfoTagEntity, type Entity } from '../../types/entities';
 import { computeOpeningInfoTagGeometry } from '../opening-info-tag/opening-info-tag-geometry';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { resolveMemberFootprintVertices } from '../structural/member-footprint-2d';
@@ -53,7 +53,9 @@ export function resolveEntityFootprintForDims(entity: Entity): ReadonlyArray<Poi
   // κινούμενο MTEXT δεν έδειχνε ΚΑΜΙΑ κυανή clearance dim (Giorgio 2026-07-07). ΕΝΑ SSoT καλύπτει
   // και τους δύο τύπους + περιστροφή + πολλαπλές γραμμές. Height fallback ίδιο με το hitTest
   // (`Bounds.calculateTextBounds`): height → fontSize → AutoCAD DIMTXT default.
-  if (isTextEntity(entity) || isMTextEntity(entity)) {
+  // N.0.2 — ADR-737 §11-4: το ζεύγος `isTextEntity(e) || isMTextEntity(e)` ήταν το **τρίτο**
+  // αντίγραφο του ίδιου ερωτήματος· ζει πλέον ως `isTextLikeEntity` δίπλα στα άλλα guards.
+  if (isTextLikeEntity(entity)) {
     const src = entity as unknown as { position?: Point2D; height?: number; fontSize?: number };
     if (src.position && isFinitePoint(src.position)) {
       const dxfText: DxfText = {
