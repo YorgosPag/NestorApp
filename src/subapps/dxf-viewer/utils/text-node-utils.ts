@@ -4,6 +4,10 @@
  */
 
 import type { DxfTextNode, TextRun, TextStack } from '../text-engine/types';
+// Deep import (όχι από το barrel): ο διαχωριστής στοίβας είναι η ΜΟΝΗ τιμή που χρειάζεται εδώ,
+// και το `text-ast.types` δεν έχει εξαρτήσεις χρόνου εκτέλεσης — η `extractFlatText` καλείται
+// από hit-test/bounds/render και δεν πρέπει να σέρνει μαζί της τον parser/serializer.
+import { mtextStackDivider } from '../text-engine/types/text-ast.types';
 
 function isTextStack(item: TextRun | TextStack): item is TextStack {
   return (item as TextStack).top !== undefined;
@@ -37,18 +41,36 @@ export function scaleTextNodeRunHeights(node: DxfTextNode, ratio: number): DxfTe
 }
 
 /**
+ * Ένα παιδί παραγράφου → κείμενο. Μια στοίβα `\S` αποδίδεται `top`+διαχωριστής+`bottom` με τον
+ * διαχωριστή που της αντιστοιχεί (`^` / `/` / `#`) — τον ΙΔΙΟ που γράφει ο serializer.
+ */
+function flattenRunItem(item: TextRun | TextStack): string {
+  if (!isTextStack(item)) return item.text ?? '';
+  return `${item.top ?? ''}${mtextStackDivider(item.type)}${item.bottom ?? ''}`;
+}
+
+/**
  * Reduce a DxfTextNode to a plain string by flattening paragraphs→runs.
- * TextStack items (subscript/superscript, identified by `'top' in run`) are skipped.
  * Paragraphs are joined with newlines to preserve multiline structure.
+ *
+ * 🐛 ΤΑ STACKS ΠΕΤΙΟΝΤΑΝ. Μέχρι τη διόρθωση αυτή η συνάρτηση έκανε `.filter(r => !('top' in r))`,
+ * δηλαδή **κάθε `TextStack` εξαφανιζόταν από τη flat προβολή**. Το AST τα κρατούσε σωστά —
+ * χάνονταν μόνο εδώ, δηλαδή ακριβώς εκεί όπου κοιτούν render / hit-test / bounds / ο καθρέφτης
+ * `.text` του import. Μετρημένο στο `47_ergasia.dxf` (89 MTEXT):
+ * `Ε\H0.7x;\S^ τίτλου;\H1.4286x;=231.04τ.μ.` → «Ε=231.04τ.μ.» — ο δείκτης «τίτλου» χανόταν
+ * (ίδιο για «καταμέτρησης» και 3 εμβαδά).
+ *
+ * Δεσμευτική πρακτική ezdxf (`tools/text.py`): το περιεχόμενο του `\S…;` **δεν πετιέται ΠΟΤΕ** —
+ * η `fast_plain_mtext()` μαζεύει όλους τους χαρακτήρες της στοίβας μαζί με τον διαχωριστή. Η
+ * κάθετη ΣΤΟΙΒΑΞΗ (η δομημένη `plain_mtext()`) είναι θέμα της διάταξης, όχι της flat προβολής.
+ *
+ * ⚠️ Hot path: καμία regex, καμία δεύτερη διαπέραση, ίδια υπογραφή. `paragraphs ?? []` —
+ * ποτέ throw σε ημιτελές AST: ένα crash εδώ ρίχνει ολόκληρο τον καμβά για μία κακοσχηματισμένη
+ * οντότητα.
  */
 export function extractFlatText(textNode: DxfTextNode): string {
-  // `paragraphs ?? []` — ποτέ throw σε ημιτελές AST. Καλείται από hit-test / bounds / render:
-  // ένα crash εδώ ρίχνει ολόκληρο τον καμβά για μία κακοσχηματισμένη οντότητα.
   return (textNode.paragraphs ?? [])
-    .map(p => (p.runs ?? [])
-      .filter(r => !('top' in r))
-      .map(r => (r as TextRun).text)
-      .join(''))
+    .map(p => (p.runs ?? []).map(flattenRunItem).join(''))
     .join('\n');
 }
 

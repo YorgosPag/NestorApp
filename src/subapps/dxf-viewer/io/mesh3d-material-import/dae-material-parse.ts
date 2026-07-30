@@ -32,7 +32,7 @@ import { parseXml, directChildren, firstChild } from '@/lib/xml/xml-dom';
 import type { ObjectMaterialAssignment, ImportedMaterial } from './obj-mtl-parse';
 import { rgbUnitToHex } from './rgb-unit-hex';
 import { clamp01 } from '../../utils/scalar-math';
-// ADR-735 — basename ξένου asset (decode + `file://` + backslashes): ΕΝΑ SSoT, ήταν 3 παραλλαγές.
+// ADR-736 — basename ξένου asset (decode + `file://` + backslashes): ΕΝΑ SSoT, ήταν 3 παραλλαγές.
 import { foreignAssetBasename } from '../shared/foreign-asset-basename';
 
 /** COLLADA `<extra>` technique profile των δικών μας metadata (mirror του write-side σταθεράς). */

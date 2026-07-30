@@ -71,6 +71,19 @@ export interface TextRunStyle {
   /** Character tracking/spacing factor (1.0 = normal). */
   tracking: number;
   color: DxfColor;
+  /**
+   * ADR-344 — κατακόρυφη στοίχιση χαρακτήρων ΜΕΣΑ στη γραμμή, από το inline `\A#;`
+   * (`0` = bottom, `1` = center, `2` = top). State-change κωδικός όπως το χρώμα/ύψος:
+   * ισχύει για τα ΕΠΟΜΕΝΑ runs και περιορίζεται στο πεδίο ενός `{…}` group.
+   *
+   * 🐛 Μέχρι τη διόρθωση αυτή ο tokenizer παρήγαγε σωστά `{ kind: 'alignment' }` αλλά η
+   * `applyStyleToken` **δεν είχε case** → έπεφτε στο `default: break`. Μετρημένο στο
+   * `47_ergasia.dxf`: **49 εμφανίσεις `\A#;`**, όλες χαμένες — άρα και το export τις έσβηνε.
+   *
+   * ⚠️ `undefined` = «δεν δηλώθηκε» ⇒ προεπιλογή `0`. Προαιρετικό σκόπιμα: ένα υποχρεωτικό
+   * πεδίο θα έσπαγε ~20 σημεία που χτίζουν πλήρες `TextRunStyle` κυριολεκτικά.
+   */
+  verticalAlign?: 0 | 1 | 2;
 }
 
 /** A contiguous run of text sharing a single style. */
@@ -89,6 +102,28 @@ export interface TextStack {
   /** ^ = tolerance (diagonal), / = diagonal fraction, # = horizontal fraction. */
   readonly type: 'tolerance' | 'diagonal' | 'horizontal';
   readonly style: Pick<TextRunStyle, 'fontFamily' | 'height' | 'color'>;
+}
+
+/**
+ * Ο διαχωριστής που χωρίζει `top` από `bottom` μέσα σε ένα `\S…;` — **ένα** λεξιλόγιο για τις
+ * τρεις διαδρομές που το χρειάζονται: ο tokenizer τον ψάχνει για να βρει τον τύπο, ο serializer
+ * τον ξαναγράφει, και η flat προβολή (`extractFlatText`) τον χρησιμοποιεί ώστε το κείμενο που
+ * βλέπει hit-test/bounds να μη λέει άλλα από ό,τι εξάγουμε.
+ *
+ * ⚠️ Αλλαγή εδώ = αλλαγή στο DXF που γράφουμε. Δεν είναι θέμα εμφάνισης.
+ */
+export const MTEXT_STACK_DIVIDERS: Readonly<Record<TextStack['type'], string>> = {
+  tolerance: '^',
+  diagonal: '/',
+  horizontal: '#',
+};
+
+/**
+ * Ο διαχωριστής μιας στοίβας, ανεκτικός σε χειροποίητα/legacy AST όπου το `type` λείπει
+ * (`'#'` = ο ίδιος κανόνας «ό,τι δεν είναι `^` ή `/`» που εφαρμόζει ο tokenizer).
+ */
+export function mtextStackDivider(type: TextStack['type'] | undefined): string {
+  return (type && MTEXT_STACK_DIVIDERS[type]) ?? MTEXT_STACK_DIVIDERS.horizontal;
 }
 
 // ── Paragraph ─────────────────────────────────────────────────────────────────

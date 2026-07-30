@@ -1,7 +1,7 @@
 # ADR-734: Agent Capability Layer — Ο Νέστωρ ως Εργαλείο για Πράκτορες
 
 **Ημερομηνία:** 2026-07-30
-**Κατάσταση:** ACCEPTED — **Φάση 1 υλοποιημένη** (2026-07-30, §8.1)· Φάσεις 2-5 εκκρεμείς
+**Κατάσταση:** ACCEPTED — **Φάσεις 1-2 υλοποιημένες** (2026-07-30, §8.1 / §8.2)· Φάσεις 3-5 εκκρεμείς
 **Συγγραφέας:** Claude Opus 5 + Γιώργος Παγώνης
 **Σχετικά:** ADR-171 (Autonomous AI Agent), ADR-175 (BOQ), ADR-329 (Scope/Granularity), ADR-674 (Baseline Drift), ADR-294 (SSoT Ratchet)
 
@@ -314,22 +314,52 @@ export type EnvelopeWarning =
 
 ---
 
-## 7. Κατάλογος Εργαλείων — Φάση 1 (μόνο ανάγνωση)
+## 7. Κατάλογος Εργαλείων — μόνο ανάγνωση (ΥΛΟΠΟΙΗΜΕΝΑ, Φάση 2)
 
 Επτά εργαλεία. Σκόπιμα λίγα (βλ. §3.2β).
 
 | # | Όνομα | Καλεί | Επιστρέφει |
 |---|---|---|---|
-| 1 | `boq_get_summary` | `boqService.getBuildingSummary()` | `VQE<BOQSummary>` |
+| 1 | `boq_get_summary` | `getByBuilding()` + `getBuildingSummary()` | `VQE<BOQSummary \| null>` |
 | 2 | `boq_search_items` | `boqService.search()` | `VQE<BOQItem[]>` |
-| 3 | `boq_get_item` | `boqService.getById()` + `computeItemCost()` | `VQE<BOQItem & CostBreakdown>` |
-| 4 | `boq_get_variance` | `computeVariance()` | `VQE<VarianceResult>` |
-| 5 | `boq_get_baseline_drift` | `computeBaselineDrift()` | `VQE<BaselineDriftResult>` |
-| 6 | `boq_get_statistics` | `boqService.getStatistics()` | `VQE<BOQStats>` |
+| 3 | `boq_get_item` | `getById()` **μέσω guard** + `computeItemCost()` | `VQE<{ item; cost }>` |
+| 4 | `boq_get_variance` | ό.π. + `computeVariance()` | `VQE<VarianceResult \| null>` |
+| 5 | `boq_get_baseline_drift` | ό.π. + `computeBaselineDrift()` | `VQE<BaselineDriftResult \| null>` |
+| 6 | `boq_get_statistics` | `getByBuilding()` + `getStatistics()` | `VQE<BOQStats>` |
 | 7 | `boq_list_categories` | `boqService.getCategories()` | `VQE<BOQCategory[]>` |
 
-Και τα επτά: `readOnlyHint: true`, `idempotentHint: true`, `openWorldHint: false`.
-Και τα επτά: `companyId` **υποχρεωτικό** — προωθείται στα services, τα οποία ήδη το απαιτούν.
+Και τα επτά: `readOnlyHint: true`, `idempotentHint: true`, `openWorldHint: false`, `requiresAdmin: true`.
+
+### 7.1 ⛔ ΔΙΟΡΘΩΣΗ — τι έλεγε λάθος αυτή η ενότητα μέχρι τη Φάση 2
+
+Μέχρι τις 2026-07-30 το §7 έγραφε: *«Και τα επτά: `companyId` υποχρεωτικό — προωθείται στα services, τα οποία ήδη το απαιτούν.»* **Και τα δύο μισά της πρότασης ήταν λάθος**, και το καθένα με τον δικό του τρόπο επικίνδυνο. Επαληθεύτηκε στον κώδικα (`services/measurements/contracts.ts`), όχι στο κείμενο.
+
+**Διόρθωση 1 — «τα services ήδη το απαιτούν»: όχι όλα.**
+
+```ts
+getById(id: string): Promise<BOQItem | null>;   // ⛔ ΚΑΝΕΝΑ companyId
+```
+
+Είναι η **μοναδική** υπογραφή του `IBOQService` χωρίς tenant. Στο UI δεν πείραζε: το id ερχόταν πάντα από λίστα ήδη φιλτραρισμένη κατά `companyId`. Με πράκτορα αλλάζει το μοντέλο απειλής — **ο πράκτορας είναι αναξιόπιστη πηγή id**. Τρία από τα επτά εργαλεία (#3, #4, #5) περνούν από εκεί, άρα θα διέρρεαν έγγραφο άλλου πελάτη σε όποιον έδινε αυθαίρετο id.
+
+*Λύση (επιλογή Α):* `capabilities/boq/boq-tenant-guard.ts` — μία πόρτα, `fetchOwnedBoqItem()`, που ελέγχει `item.companyId === ctx.companyId` **μετά** το fetch, στο ντετερμινιστικό στρώμα (§5.4), χωρίς να αγγίξει το παγωμένο `boqService` (§9). Επιστρέφει **`NOT_FOUND`**, όχι `PERMISSION_DENIED`: το δεύτερο θα επιβεβαίωνε ότι το id υπάρχει, δηλαδή θα λειτουργούσε ως μαντείο ύπαρξης. Η απόπειρα καταγράφεται ως σήμα ασφαλείας. Τα τρία εργαλεία δεν έχουν καν άλλη διαδρομή: μοιράζονται το `withOwnedItem()`, οπότε κανένα δεν μπορεί να «ξεχάσει» τον έλεγχο. Το `.ssot-registry.json` (module `boq-capability-tenant-guard`) μπλοκάρει απευθείας `boq.getById(` εκτός του guard.
+
+*Επιλογή Β* — `companyId` στην υπογραφή του `getById` — παραμένει το σωστό **τελικό** σχήμα, αλλά είναι breaking change σε δοκιμασμένο service που το §9 παγώνει στις Φάσεις 1-3. Καταγράφηκε ως χρέος ασφαλείας στο `.claude-rules/pending-ratchet-work.md`.
+
+**Διόρθωση 2 — «`companyId` υποχρεωτικό»: ΟΧΙ ως παράμετρος εργαλείου.**
+
+Αν το `companyId` είναι παράμετρος που δηλώνει ο πράκτορας, τότε ο πράκτορας **επιλέγει πελάτη** — κενό σοβαρότερο από το πρώτο, γιατί δεν χρειάζεται καν να μαντέψει id. Ο tenant έρχεται **αποκλειστικά** από το `CapabilityContext`, δηλαδή από το ταυτοποιημένο στρώμα (`withAuth()` / claims). Δεν είναι σύμβαση καλής θέλησης: το registry **ρίχνει κατά τη φόρτωση** αν κάποια δυνατότητα δηλώσει παράμετρο `companyId` / `tenantId` / `organizationId`. Ένα λάθος αυτού του είδους δεν φτάνει σε περιβάλλον εκτέλεσης — σπάει στο πρώτο import.
+
+### 7.2 Λοιπές αποκλίσεις υλοποίησης από το αρχικό §7
+
+| # | Σχέδιο | Υλοποίηση | Γιατί |
+|---|---|---|---|
+| 1 | `#3 → VQE<BOQItem & CostBreakdown>` | **`VQE<{ item, cost }>`** | Η ένωση συγκρούεται στο `unit` και συγχέει `wasteFactor` (item) με `wasteFactorApplied` (breakdown). Σύνθεση, όχι μετασχηματισμός — κανένα από τα δύο δεν αλλοιώνεται (§6.3 κανόνας 3) |
+| 2 | `#1 → VQE<BOQSummary>` | **`VQE<BOQSummary \| null>`** + διάκριση αστοχίας | Το `getBuildingSummary()` επιστρέφει `null` **και** για «κενό κτίριο» **και** για εσωτερική αστοχία (καταπίνει το σφάλμα). Ο handler διαβάζει πρώτα τις γραμμές: κενές ⇒ `value: null` με `no_source_items`· γραμμές υπάρχουν αλλά σύνοψη `null` ⇒ **`INTERNAL`**. Φάκελος με `value: null` στη δεύτερη περίπτωση θα διαβαζόταν ως «κτίριο χωρίς επιμετρήσεις» |
+| 3 | #1/#6 καλούν μία μέθοδο | **Διαβάζουν και τις γραμμές** | Ο φάκελος *παράγει* βάση/διακυβέρνηση/drift από τα items (§6.5 #1). Άθροισμα χωρίς τις γραμμές του δεν μπορεί να απαντήσει «είναι υπογράψιμο;». Τίμημα: μία επιπλέον ανάγνωση· η εναλλακτική θα ήταν αντιγραφή της ενορχήστρωσης του service — απαγορευμένη από §9. Χρέος Φάσης 3: μέθοδος που επιστρέφει άθροισμα *και* γραμμές |
+| 4 | #2 χωρίς όριο | **`BOQ_SEARCH_MAX_ITEMS = 200`, με ΣΦΑΛΜΑ** | Σιωπηλή περικοπή είναι σφάλμα **τιμής**: ο πράκτορας αθροίζει περικομμένη λίστα νομίζοντας ότι είναι πλήρης. Υπέρβαση ⇒ `INVALID_ARGUMENT` με οδηγία να στενέψουν τα φίλτρα ή να χρησιμοποιηθεί το #1/#6 |
+| 5 | — | **`requiresAdmin: true` και στα επτά** | Το BOQ εκθέτει μοναδιαία κόστη υλικών/εργασίας/εξοπλισμού — δηλαδή το περιθώριο κέρδους. Ίδιο κριτήριο με τα financial tools (ADR-242) |
+| 6 | annotations δηλώνονται | **δένονται με την πολιτική** | Το πρότυπο MCP επιτρέπει σε annotation να λέει ψέματα (§3.2δ). Στον Νέστορα δεν μπορεί: το registry απορρίπτει κατά την κατασκευή κάθε `readOnlyHint` που αντιφάσκει με το `policy.access` |
 
 **Το #5 δεν έχει αντίστοιχο σε κανένα ανταγωνιστικό προϊόν.**
 
@@ -343,8 +373,8 @@ export type EnvelopeWarning =
 |---|---|---|---|
 | **0** | Αυτό το ADR | 1 | — |
 | **1** ✅ | Τύποι VQE + `buildEnvelope()` + tests — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-30** (§8.1) | 16 | Μηδενικό (νέος κώδικας) |
-| **2** | Capability Registry + OpenAI adapter + τα 7 read tools | ~6 | Χαμηλό (μόνο ανάγνωση) |
-| **3** | MCP server adapter + auth + rate limiting | ~5 | Μεσαίο (εξωτερική επιφάνεια) |
+| **2** ✅ | Capability Registry + OpenAI adapter + τα 7 read tools — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-30** (§8.2) | 18 | Χαμηλό (μόνο ανάγνωση) |
+| **3** | MCP adapter + **σύνδεση με τον in-app πράκτορα** + auth + rate limiting | ~5 | Μεσαίο (εξωτερική επιφάνεια) |
 | **4** | Write tools με governance gate | ~4 | Υψηλό — χωριστή έγκριση |
 | **5** | Επέκταση σε `model_*` (BIM/γεωμετρία) | — | Μελλοντικό |
 
@@ -380,6 +410,42 @@ export type EnvelopeWarning =
 
 **Πύλες:** `jscpd --diff` καθαρό (0 clones / 15 αρχεία)· CHECK 3.22 dead-code πράσινο· CHECK 3.30 barrel dead-exports **δεν επηρεάστηκε** από αυτά τα barrels (τα 3 ευρήματά του προϋπήρχαν, σε committed αρχεία `dxf-viewer`).
 
+### 8.2 Παραδοτέα Φάσης 2 (2026-07-30)
+
+**Κανένα υπάρχον αρχείο δεν τροποποιήθηκε πλην προσθηκών**: `types/vqe/envelope.ts` + barrel (δύο runtime κατάλογοι για τα `enum` του `outputSchema`), `types/boq/boq.ts` + barrel (`BOQ_SCOPE_VALUES`), `BOQEditorScopeSection.tsx` (κατανάλωση του νέου SSoT αντί χειρόγραφου αντιγράφου — N.0.2), `.ssot-registry.json` (2 modules). Τα `boqService`, `cost-engine.ts`, `boq-repository.ts`, `contracts.ts` **δεν αγγίχτηκαν**.
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `registry/parameter-spec.ts` | Η **μία** δήλωση παραμέτρων· από αυτήν παράγονται schema + έλεγχος + τύπος |
+| `…/parameter-json-schema.ts` | Δήλωση → JSON Schema (OpenAI strict / MCP `inputSchema`) |
+| `…/parameter-parse.ts` | Δήλωση → έλεγχος εισόδου, fail-closed |
+| `…/json-schema.ts` | Το υποσύνολο JSON Schema που δέχονται **και τα τρία** adapters |
+| `…/vqe-output-schema.ts` | ΕΝΑ σχήμα φακέλου για τις επτά δυνατότητες |
+| `…/capability-types.ts` | Το συμβόλαιο ορισμού (`CapabilityDescriptor`, context, policy, annotations) |
+| `…/capability-errors.ts` | Κλειστό λεξιλόγιο σφαλμάτων — υποσύνολο `google.rpc.Code` |
+| `…/capability-registry.ts` | Κατάλογος + **μοναδική πύλη εκτέλεσης** (πολιτική → έλεγχος → handler) |
+| `…/index.ts` | Barrel L2 |
+| `capabilities/boq/boq-tenant-guard.ts` | **Κλείνει το κενό του §7.1** — μία πόρτα προς το `getById` |
+| `…/boq-capability-shared.ts` | Κοινές παράμετροι/πολιτική + `withOwnedItem()` |
+| `…/boq-value-schemas.ts` | Σχήματα φορτίου με **compile-time πληρότητα** (`Record<keyof T, SchemaField>`) |
+| `…/boq-aggregate-capabilities.ts` | Εργαλεία 1, 6, 7 |
+| `…/boq-item-capabilities.ts` | Εργαλεία 2-5 |
+| `…/index.ts` | `createBoqCapabilities()` / `createBoqCapabilityRegistry()` |
+| `adapters/openai-adapter.ts` + barrel | Παράγει το **υπάρχον** `AgenticToolDefinition` — όχι δεύτερη μορφή |
+| + 5 test suites | **72 νέα tests** (σύνολο `agent-capability`: **152**) |
+
+**Επαλήθευση (όχι μόνο «πράσινο»):** έξι σκόπιμες μεταλλάξεις επιβεβαίωσαν ότι τα tests πιάνουν τις αστοχίες που ισχυρίζονται:
+1. αφαίρεση του ελέγχου ιδιοκτησίας ⇒ **6** tests κόκκινα·
+2. διαρροή του `lastUpdated` της σύνοψης στο `params` του `buildEnvelope` ⇒ 1 κόκκινο (η παγίδα του §6.6)·
+3. `required` χωρίς τα nullable κλειδιά ⇒ 2 κόκκινα (σχήμα + adapter)·
+4. αντιστροφή σειράς «πολιτική πριν έλεγχο ορισμάτων» ⇒ **8** κόκκινα·
+5. σιωπηλή περικοπή αποτελεσμάτων αναζήτησης αντί σφάλματος ⇒ 1 κόκκινο·
+6. αφαίρεση του δεσμού annotation ↔ policy ⇒ 1 κόκκινο.
+
+**Πύλες:** `jscpd --diff` καθαρό (0 clones / 26 αρχεία)· τα προϋπάρχοντα suites `measurements` + `types/boq` πράσινα αμετάβλητα· `npm run test:registry-golden` **101/102** — η μία αστοχία είναι στο module `date-local` και **προϋπάρχει** (αποδείχθηκε: το module είναι byte-ταυτόσημο με το HEAD).
+
+**Τι ΔΕΝ έγινε σκόπιμα:** τα επτά εργαλεία **δεν** συνδέθηκαν στον ζωντανό `AgenticToolExecutor`. Δύο λόγοι, και οι δύο ουσιαστικοί: (α) το §8 ορίζει ότι οι Φάσεις 1-2 δεν αγγίζουν υπάρχοντα αρχεία· (β) **ασυμφωνία SDK** — το `boqService` χτίζεται πάνω στο **client** Firebase SDK, ενώ ο `agentic-tool-executor.ts` είναι `server-only` με admin SDK (το `api/boq/items/route.ts` παρακάμπτει σήμερα το service και χτυπά κατευθείαν admin Firestore). Η γεφύρωση είναι θέμα auth, δηλαδή **Φάση 3**. Γι' αυτό οι δυνατότητες δέχονται `IBOQService` με **ένεση**: η Φάση 3 αλλάζει μία γραμμή σύνδεσης, όχι επτά handlers.
+
 ---
 
 ## 9. Τι ΔΕΝ Κάνουμε
@@ -400,7 +466,13 @@ export type EnvelopeWarning =
 | Q1 | **Embodied carbon (ICMS 3)** — εντάσσεται; Κενό στον κώδικα σήμερα. Το ICMS 3 το θεωρεί ισότιμο του κόστους | Γιώργος — Φάση 5+ |
 | Q2 | **MCP transport**: stdio (τοπικό, όπως Revit) ή HTTP+SSE (απομακρυσμένο); Επηρεάζει auth | Φάση 3 |
 | Q3 | **Provider**: ο κώδικας είναι OpenAI (60 αρχεία). Το MCP είναι provider-agnostic — δεν απαιτείται αλλαγή | Καμία ενέργεια |
-| Q4 | Ενοποίηση των 4 υπαρχόντων `firestore_*` generic tools με το registry, ή συνύπαρξη; | Φάση 2 |
+| Q4 ✅ | Ενοποίηση των 4 υπαρχόντων `firestore_*` generic tools με το registry, ή συνύπαρξη; | **ΚΛΕΙΣΤΟ — Φάση 2: συνύπαρξη, με ρητό σύνορο (§10.1)** |
+
+### 10.1 Q4 — γιατί συνύπαρξη και ποιο είναι το σύνορο
+
+**Απόφαση: συνύπαρξη.** Δεν υπάρχει επικάλυψη να ενοποιηθεί: τα `firestore_*` είναι *γενικά* εργαλεία πάνω σε **λίστα επιτρεπόμενων συλλογών** (`ALLOWED_READ_COLLECTIONS`, `executor-shared-types.ts`) — και οι συλλογές `boq_items` / `boq_categories` **δεν είναι μέσα σε αυτήν** (επαληθεύτηκε 2026-07-30). Άρα σήμερα κανένα generic εργαλείο δεν αγγίζει BOQ. Μετανάστευση των 40 χειρόγραφων ορισμών στο registry θα ήταν ξεχωριστό, υψηλού ρίσκου εγχείρημα με έξι ζωντανούς καταναλωτές, χωρίς όφελος ορθότητας εδώ.
+
+**Το σύνορο είναι κανόνας, όχι σύμπτωση:** οι συλλογές BOQ **δεν επιτρέπεται** να προστεθούν στο `ALLOWED_READ_COLLECTIONS`. Ένα generic `firestore_query` πάνω σε `boq_items` θα επέστρεφε **ωμούς αριθμούς χωρίς φάκελο** — χωρίς βάση μέτρησης, χωρίς κατάσταση έγκρισης, χωρίς αποτύπωμα. Δηλαδή ακριβώς τη «γνώμη» που το §6.1 υπάρχει για να αποτρέψει, παρακάμπτοντας ταυτόχρονα τον έλεγχο ιδιοκτησίας του §7.1. Ποσότητα φεύγει προς πράκτορα **μόνο** μέσα σε VQE.
 
 ---
 
@@ -447,4 +519,5 @@ export type EnvelopeWarning =
 | Ημ/νία | Αλλαγή |
 |---|---|
 | 2026-07-30 | **Δημιουργία.** Φάση 1 (Αναγνώριση, N.0.1): χαρτογράφηση `src/` + έρευνα αγοράς/προτύπων. Κατάσταση DESIGN — καμία γραμμή κώδικα. Εκκρεμεί έγκριση Γιώργου για Φάση 1 υλοποίησης. |
+| 2026-07-30 | **Φάση 2 ΥΛΟΠΟΙΗΘΗΚΕ.** Capability Registry (L2) + OpenAI adapter (L3) + τα 7 read tools· 18 αρχεία, 72 νέα tests, 6 μεταλλάξεις επαλήθευσης (§8.2). Προηγήθηκε υποχρεωτικό SSoT audit: επιβεβαιώθηκε ότι το `AgenticToolDefinition` είναι το SSoT μορφής (ο adapter το **παράγει**, δεν φτιάχνει δεύτερο)· μετρήθηκαν **40** ορισμοί — ο header του `agentic-tool-definitions.ts` έλεγε «8 generic tools», μπαγιάτικος· διαπιστώθηκε ότι **δεν** υπάρχει μετατροπέας Zod → JSON Schema (γι' αυτό η δήλωση παραμέτρων είναι ενιαία και παράγει και τα δύο)· βρέθηκε χειρόγραφο αντίγραφο των `BOQScope` τιμών σε component (κεντρικοποιήθηκε, N.0.2). **Το §7 διορθώθηκε: έλεγε ψέμα** — δύο κενά tenant isolation, ένα στο `getById` και ένα σοβαρότερο στο ίδιο το σχέδιο (`companyId` ως παράμετρος εργαλείου). Και τα δύο κλείνουν σε ντετερμινιστικό στρώμα (§7.1). **Q4 έκλεισε** (§10.1). Κατάσταση: **ACCEPTED — Φάσεις 1-2 σε κώδικα, Φάσεις 3-5 εκκρεμείς.** |
 | 2026-07-30 | **Φάση 1 ΥΛΟΠΟΙΗΘΗΚΕ.** Τύποι VQE + `buildEnvelope()` + 80 tests (§8.1). Προηγήθηκε υποχρεωτικό SSoT audit: επιβεβαιώθηκε η υποψία διπλότυπου `ProvenanceWarning` ↔ `AllocationWarning` και λύθηκε με ενσωμάτωση (§6.5 #2)· εντοπίστηκε ότι το `sortKeys()` **δεν** μπορεί να χρησιμεύσει για hash (§6.7). Επτά αποκλίσεις από το αρχικό σχήμα, όλες τεκμηριωμένες στο §6.5. Νέο SSoT `types/boq/lifecycle.ts`. Το `engineVersion` έγινε αυτο-επαληθευόμενο (§6.6). Κατάσταση: **ACCEPTED — Φάση 1 σε κώδικα, Φάσεις 2-5 εκκρεμείς.** |

@@ -39,6 +39,10 @@ export const ENTITY_EXPORT_COVERAGE: Readonly<Record<RenderableEntityType, Entit
   arc:         { dxf: 'native', tek: 'native' },
   rectangle:   { dxf: 'native', tek: 'native' },
   rect:        { dxf: 'native', tek: 'native' },
+  // ADR-636 Φ2.4 (D.7) — ΕΔΩ ζει στην πράξη ΚΑΙ το εισαγόμενο MTEXT: ο importer χαρτογραφεί κάθε
+  // MTEXT σε `type:'text'` + `dxfSourceType:'mtext'` (δες τη σειρά `mtext` παρακάτω). DXF: native
+  // (TEXT ή MTEXT ανάλογα με τον δείκτη). TEK: native — ο collector (`dxf-to-tek-texts`) φιλτράρει
+  // `e.type !== 'text'`, άρα πιάνει ΚΑΙ τα εισαγόμενα MTEXT (ως μονογραμμικά, όπως ο Τέκτων απαιτεί).
   text:        { dxf: 'native', tek: 'native' },
   hatch:       { dxf: 'native', tek: 'native' },
   // ADR-648 Στάδιο Β — native στο AutoCAD, tessellated στον Τέκτονα (minimal parser).
@@ -47,8 +51,19 @@ export const ENTITY_EXPORT_COVERAGE: Readonly<Record<RenderableEntityType, Entit
   // Construction geometry — native XLINE/RAY στο AutoCAD· ο Τέκτων δεν έχει infinite line → drop.
   xline:       { dxf: 'native', tek: 'drop' },
   ray:         { dxf: 'native', tek: 'drop' },
-  // Native DXF, αλλά ο TEK collector δεν τα πιάνει ακόμη (ADR-648 §7 follow-up).
+  /**
+   * ⚠️ ADR-636 Φ2.4 (D.7) — **ΣΕΙΡΑ ΧΩΡΙΣ ΣΤΙΓΜΙΟΤΥΠΑ.** ΚΑΝΕΝΑ runtime entity δεν παίρνει ποτέ
+   * `type:'mtext'`: ο importer παράγει πάντα `type:'text'` (`buildTextSceneEntity`) και καμία
+   * command/factory δεν φτιάχνει `MTextEntity` (grep 2026-07-30: μόνο ο `scaleMText` transform).
+   * Ο τύπος υπάρχει στο `RENDERABLE_ENTITY_TYPES` και ο dispatch έχει `case 'mtext'` → `emitMText`
+   * (άρα `dxf: 'native'` ισχύει **δομικά**), αλλά είναι **αφθόρευτο μονοπάτι**: η πραγματική
+   * εξαγωγή MTEXT γίνεται από τη σειρά `text` μέσω του `dxfSourceType:'mtext'`.
+   * Το `tek: 'missing'` παραμένει αληθές για τον ΤΥΠΟ (ο `dxf-to-tek-texts` φιλτράρει
+   * `e.type !== 'text'`), αλλά **δεν είναι πραγματικό κενό προϊόντος** — τα εισαγόμενα MTEXT
+   * φτάνουν στο TEK ως `text`. ΜΗΝ το «κλείσεις» χωρίς να υπάρξουν πρώτα στιγμιότυπα του τύπου.
+   */
   mtext:       { dxf: 'native', tek: 'missing' },
+  // Native DXF, αλλά ο TEK collector δεν τα πιάνει ακόμη (ADR-648 §7 follow-up).
   point:       { dxf: 'native', tek: 'missing' },
   dimension:   { dxf: 'native', tek: 'missing' },
   // ADR-635 Φ B — native LEADER στο AutoCAD (`dxf-ascii-entity-dispatch` case 'leader', ο ακριβής

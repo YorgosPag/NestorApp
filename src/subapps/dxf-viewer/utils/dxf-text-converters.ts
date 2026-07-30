@@ -196,8 +196,17 @@ function buildTextSceneEntity(params: {
   color?: string;
   /** MTEXT reference-rectangle width (group 41, world units) — the column the text wraps in. */
   width?: number;
+  /**
+   * ADR-636 Φ2.4 (D.7) — δείκτης προέλευσης· **ΜΟΝΟ** το `convertMText` τον περνά. Τα
+   * `convertText`/`convertAttrib`/`convertAttdef` μοιράζονται αυτόν τον builder αλλά ΔΕΝ είναι
+   * MTEXT — αν σφραγιστούν, ο writer θα τα εξάγει ως MTEXT και θα σπάσει το round-trip τους.
+   */
+  dxfSourceType?: 'mtext';
 }): AnySceneEntity {
-  const { idPrefix, index, layer, x, y, text, height, rotation, alignment, textNode, color, width } = params;
+  const {
+    idPrefix, index, layer, x, y, text, height, rotation, alignment, textNode, color, width,
+    dxfSourceType,
+  } = params;
   return {
     id: `${idPrefix}_${index}`,
     type: 'text',
@@ -215,6 +224,9 @@ function buildTextSceneEntity(params: {
     // κείμενο έσπαγε μόνο στα ρητά `\P` και οι μεγάλες παράγραφοι έτρεχαν σε μία ατέρμονη
     // γραμμή έξω από το σχέδιο. Το `text-box.ts` ήδη περίμενε αυτό το πεδίο (`text.width`).
     ...(width !== undefined && width > 0 && { width }),
+    // Γράφεται μόνο όταν υπάρχει, ώστε το TEXT/ATTRIB/ATTDEF node να μένει byte-identical
+    // (Firestore-safe: κανένα `undefined` πεδίο) — ίδιο pattern με `color`/`width`.
+    ...(dxfSourceType && { dxfSourceType }),
   };
 }
 
@@ -334,6 +346,11 @@ export function convertMText(
     textNode,
     color,
     ...(Number.isFinite(referenceWidth) && { width: referenceWidth }),
+    // ADR-636 Φ2.4 (D.7) — ΜΟΝΟ εδώ: θυμήσου ότι η οντότητα ήταν MTEXT ώστε ο export writer να
+    // αναπαράγει το **native** MTEXT (παράγραφοι + 41/71 + ανά-run μορφοποίηση) αντί για
+    // μονογραμμικό TEXT. Το `type` μένει σκόπιμα `'text'` — δες `TextEntity.dxfSourceType` για το
+    // γιατί (ασύμμετρη κάλυψη 15+ registries· ίδιο ιδίωμα με `HatchEntity.dxfSourceType`).
+    dxfSourceType: 'mtext',
   });
 }
 

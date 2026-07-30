@@ -215,6 +215,22 @@ export interface TextEntity extends BaseEntity {
    */
   attributeTag?: string;
   /**
+   * ADR-636 Φ2.4 (D.7) — origin primitive όταν το κείμενο προήλθε από import DXF **MTEXT**
+   * (`convertMText`). Απών → γνήσιο μονογραμμικό TEXT/ATTRIB/ATTDEF. Ο export writer το
+   * χρησιμοποιεί για να αναπαράγει το **native** MTEXT (παράγραφοι, πλάτος στήλης 41,
+   * attachment 71, ανά-run μορφοποίηση) αντί να το υποβαθμίσει σε μονογραμμικό TEXT.
+   *
+   * ⚠️ **ΓΙΑΤΙ δείκτης προέλευσης και ΟΧΙ `type:'mtext'`**: ο importer χαρτογραφεί ΚΑΘΕ MTEXT σε
+   * `type:'text'` (`buildTextSceneEntity`) και 15+ registries/switches (grips, hit-test, entity
+   * model, 3D converters, RENDERABLE_ENTITY_TYPES coverage) έχουν **ασύμμετρη** κάλυψη `text` vs
+   * `mtext` — αλλαγή του `type` θα άλλαζε ΣΙΩΠΗΛΑ συμπεριφορά (π.χ. `grip-computation-producers`
+   * δεν έχει key `mtext` → **μηδέν grips**, default `[]`). Ακριβώς το ίδιο ιδίωμα με το
+   * `HatchEntity.dxfSourceType` για τα SOLID/TRACE/3DFACE (ADR-636 Φ2.4 D.3).
+   *
+   * Μετρημένο πριν το D.7: πηγή `47_ergasia.dxf` 89 MTEXT → export 0 MTEXT / 1.197 TEXT.
+   */
+  dxfSourceType?: 'mtext';
+  /**
    * ADR-649 §associative — **ο σύνδεσμος που κάνει την ετικέτα εμβαδού ζωντανή**: η
    * οντότητα από την οποία μετρήθηκε το εμβαδόν (γραμμοσκίαση / τοπογραφική επιφάνεια).
    *

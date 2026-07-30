@@ -56,6 +56,14 @@ export interface EntityData {
    * Additive (ADR-507) — οι υπάρχοντες converters συνεχίζουν να διαβάζουν `data`.
    */
   pairs?: ReadonlyArray<readonly [string, string]>;
+  /**
+   * Τα **ενσωματωμένα αντικείμενα** (group code `101`), ένα bucket ανά `101`. Ο κωδικός 101
+   * είναι ΤΟΜΗ ΕΝΟΤΗΤΑΣ: τα ζεύγη του δεν ανήκουν στην οντότητα (γι' αυτό λείπουν από
+   * `data`/`pairs`), αλλά ΟΥΤΕ πετιούνται — κρατούν π.χ. τα MTEXT columns που το ezdxf
+   * ξαναγράφει στο export. Απών όταν η οντότητα δεν έχει `101` (~99%).
+   * @see dxf-embedded-object.ts — ο SSoT (διαχωρισμός + τυποποίηση στηλών)
+   */
+  embeddedObjects?: ReadonlyArray<ReadonlyArray<readonly [string, string]>>;
 }
 
 /**

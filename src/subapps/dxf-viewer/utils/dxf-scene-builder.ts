@@ -371,8 +371,10 @@ export class DxfSceneBuilder {
     // empty box → the real drawing is a sub-pixel speck ("empty canvas"). AutoCAD/Revit
     // exclude them from $EXTMIN/$EXTMAX + Zoom-Extents; we do the same. No-op when extents
     // are absent or nothing lies entirely outside them (normal drawings untouched).
+    // Τα drops ΚΑΤΑΓΡΑΦΟΝΤΑΙ πλέον στα diagnostics (όπως ο αδελφός `dropNonFiniteEntities`):
+    // ήταν σιωπηλά, και έτσι το σφάλμα του group code 101 (10 MTEXT στο (1,0)) δεν άφηνε ίχνος.
     const { kept: drawingEntities, dropped: offDrawingCount } = dropOutOfExtentsEntities(
-      finiteEntities, header.extmin, header.extmax,
+      finiteEntities, header.extmin, header.extmax, diagnostics,
     );
     if (offDrawingCount > 0) {
       console.debug(`🧹 Dropped ${offDrawingCount} off-drawing entities (outside $EXTMIN/$EXTMAX)`);

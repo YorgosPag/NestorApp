@@ -24,7 +24,7 @@
 import * as THREE from 'three';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
 import { serialiseGlb } from '../../export/core/mesh3d/mesh3d-serialise';
-// ADR-735 — basename ξένου asset: ΕΝΑ SSoT για .dae/.dxf (ήταν 3 παραλλαγές με 3 απαντήσεις).
+// ADR-736 — basename ξένου asset: ΕΝΑ SSoT για .dae/.dxf (ήταν 3 παραλλαγές με 3 απαντήσεις).
 // Κερδίζει και το percent-decode που έλειπε εδώ: ο ColladaLoader δίνει encoded URL, άρα ελληνικό
 // ή με-κενό όνομα υφής ΔΕΝ ταίριαζε ποτέ με το OS-decoded `File.name` (σιωπηλά άβαφη όψη).
 import { foreignAssetBasenameKey, indexFilesByBasename } from '../shared/foreign-asset-basename';

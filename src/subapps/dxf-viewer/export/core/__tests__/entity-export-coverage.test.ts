@@ -61,6 +61,11 @@ describe('Entity export coverage — declarative SSoT ↔ renderable domain (ADR
     // 29 → 30: +imported-mesh (tek only — ADR-683 Φ3· το TEK θέλει παραμετρικό στοιχείο,
     // το ψημένο πλέγμα δεν είναι· το 3Δ OBJ/glTF export ΔΟΥΛΕΥΕΙ κανονικά).
     // 30 → 31: +generic-solid (tek only — ADR-684 Φ2· ίδιος λόγος, DXF decompose δουλεύει).
+    // 31 → 31 (ADR-636 Φ2.4 D.7, ΑΜΕΤΑΒΛΗΤΟ — σκόπιμα): το εισαγόμενο MTEXT εξάγεται πλέον ως
+    // native MTEXT, ΑΛΛΑ ταξιδεύει ως `type:'text'` + `dxfSourceType:'mtext'`, άρα η διόρθωση
+    // μετράει στη σειρά `text` (ήδη native/native) και ΟΧΙ στη σειρά `mtext`. Η σειρά `mtext`
+    // κρατά `tek:'missing'` επειδή παραμένει αληθής **για τον τύπο** (ο TEK collector φιλτράρει
+    // `e.type !== 'text'`) — απλώς κανένα runtime entity δεν έχει ποτέ αυτόν τον τύπο.
     expect(entitiesWithExportGap().length).toMatchInlineSnapshot(`31`);
   });
 });

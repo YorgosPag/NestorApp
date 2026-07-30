@@ -7,7 +7,9 @@
  */
 
 import type { DxfTextNode } from '../../text-engine/types';
-import { scaleTextNodeRunHeights } from '../text-node-utils';
+import { tokenizeMtext } from '../../text-engine/parser/mtext-tokenizer';
+import { parseMtext } from '../../text-engine/parser/mtext-parser';
+import { extractFlatText, resolveEntityText, scaleTextNodeRunHeights } from '../text-node-utils';
 
 const node = (runs: Array<Record<string, unknown>>): DxfTextNode =>
   ({ paragraphs: [{ runs }], attachment: 'TL' }) as unknown as DxfTextNode;
@@ -48,5 +50,49 @@ describe('scaleTextNodeRunHeights', () => {
     const n = node([{ text: 'A', style: { height: 100 } }]);
     scaleTextNodeRunHeights(n, 3);
     expect(runHeights(n)).toEqual([100]);
+  });
+});
+
+/**
+ * ΒΛΑΒΗ Γ — η `extractFlatText` έκανε `.filter(r => !('top' in r))`, δηλαδή **πετούσε κάθε
+ * TextStack**. Μετρημένο στο `47_ergasia.dxf`: `Ε\H0.7x;\S^ τίτλου;\H1.4286x;=231.04τ.μ.`
+ * κατέληγε «Ε=231.04τ.μ.» — ο δείκτης «τίτλου» εξαφανιζόταν (ίδιο για «καταμέτρησης» + 3 εμβαδά).
+ *
+ * Πρακτική ezdxf (`fast_plain_mtext`): το περιεχόμενο του `\S…;` **δεν πετιέται ΠΟΤΕ** — μαζεύονται
+ * όλοι οι χαρακτήρες μαζί με τον διαχωριστή. Ο διαχωριστής εδώ είναι ο ΙΔΙΟΣ που γράφει ο
+ * serializer (`^` / `/` / `#`), ώστε flat προβολή και export να μη λένε διαφορετικά πράγματα.
+ */
+describe('extractFlatText — ΒΛΑΒΗ Γ: οι στοίβες `\\S` δεν χάνονται', () => {
+  const parse = (raw: string): DxfTextNode => parseMtext(tokenizeMtext(raw));
+
+  it('ΜΕΤΡΗΜΕΝΟ (47_ergasia.dxf): κρατά τον δείκτη «τίτλου»', () => {
+    const flat = extractFlatText(parse('Ε\\H0.7x;\\S^ τίτλου;\\H1.4286x;=231.04τ.μ.'));
+    expect(flat).toContain('τίτλου');
+    expect(flat).toBe('Ε^ τίτλου=231.04τ.μ.');
+  });
+
+  it.each([
+    ['diagonal', '\\S1/2;', '1/2'],
+    ['tolerance', '\\S+0.1^-0.05;', '+0.1^-0.05'],
+    ['horizontal', '\\S3#4;', '3#4'],
+  ] as const)('%s — ο διαχωριστής είναι ο ίδιος με του serializer', (_l, raw, expected) => {
+    expect(extractFlatText(parse(raw))).toBe(expected);
+  });
+
+  it('η στοίβα μένει στη ΘΕΣΗ της μέσα στη γραμμή', () => {
+    expect(extractFlatText(parse('a\\S1/2;b'))).toBe('a1/2b');
+  });
+
+  it('συνεχίζει να ενώνει τις παραγράφους με \\n', () => {
+    expect(extractFlatText(parse('a\\S1/2;\\Pb'))).toBe('a1/2\nb');
+  });
+
+  it('ανέχεται ημιτελείς στοίβες (χωρίς `type`) χωρίς να ρίχνει', () => {
+    expect(extractFlatText(node([{ top: 'x', bottom: 'y' }]))).toBe('x#y');
+  });
+
+  it('resolveEntityText: το AST νικά τον flat καθρέφτη και φέρνει τη στοίβα', () => {
+    expect(resolveEntityText({ textNode: parse('Ε\\S^ δείκτης;'), text: 'Ε' }))
+      .toBe('Ε^ δείκτης');
   });
 });

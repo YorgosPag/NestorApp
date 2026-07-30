@@ -1,5 +1,5 @@
 /**
- * ADR-735 — SSoT basename ξένου asset.
+ * ADR-736 — SSoT basename ξένου asset.
  *
  * Οι τρεις πρώτες περιπτώσεις κάθε describe είναι **μεταφερμένες αυτούσιες** από το
  * `collada-to-glb.test.ts` (ADR-690), ώστε η κεντρικοποίηση να αποδεικνύεται ισοδύναμη και
@@ -63,7 +63,7 @@ describe('foreignAssetBasename — ό,τι ΚΕΡΔΙΣΕ το .dae μονοπά
   });
 });
 
-describe('foreignAssetBasename — οι μορφές διαδρομής που δηλώνει ένα DXF (ADR-735)', () => {
+describe('foreignAssetBasename — οι μορφές διαδρομής που δηλώνει ένα DXF (ADR-736)', () => {
   it('απόλυτη Windows διαδρομή με γράμμα δίσκου και ελληνικά (το πραγματικό δείγμα)', () => {
     expect(foreignAssetBasename('Z:\\Jobs\\OT\\ΕΥΟΣΜΟΣ\\EYOSMO_1\\047\\2026 ΠΑΓΩΝΗΣ\\dianomi_1.JPG'))
       .toBe('dianomi_1.JPG');

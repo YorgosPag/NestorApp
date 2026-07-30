@@ -19,16 +19,24 @@
 import type { AnySceneEntity } from '../types/scene';
 import { computeEntityArrayBounds } from './dxf-entity-array-bounds';
 import { isUsableDetectionExtent, type DetectionBounds } from './scene-units';
+import { recordError, type ImportDiagnostics } from './dxf-import-diagnostics';
 
 export interface OutOfExtentsResult {
   kept: AnySceneEntity[];
   dropped: number;
 }
 
+/**
+ * @param diagnostics - Προαιρετικός συλλέκτης {@link ImportDiagnostics} (ΤΟ ΥΠΑΡΧΟΝ SSoT, ίδιο
+ *   σχήμα με τον αδελφό `dropNonFiniteEntities`). Χωρίς αυτόν η διαγραφή ήταν **σιωπηλή** —
+ *   και μια σιωπηλή διαγραφή είναι η μισή βλάβη: το σφάλμα του group code 101 έστελνε 10 MTEXT
+ *   στο (1,0) και **αυτό το φίλτρο** τα εξαφάνιζε χωρίς να το πει ποτέ κανείς (2026-07-30).
+ */
 export function dropOutOfExtentsEntities(
   entities: AnySceneEntity[],
   extmin: { x: number; y: number } | undefined,
   extmax: { x: number; y: number } | undefined,
+  diagnostics?: ImportDiagnostics,
 ): OutOfExtentsResult {
   if (!extmin || !extmax) return { kept: entities, dropped: 0 };
   const extents: DetectionBounds = { min: extmin, max: extmax };
@@ -56,6 +64,15 @@ export function dropOutOfExtentsEntities(
     const entirelyOutside = b.max.x < minX || b.min.x > maxX || b.max.y < minY || b.min.y > maxY;
     if (finite && entirelyOutside) {
       dropped++;
+      if (diagnostics) {
+        recordError(diagnostics, {
+          kind: e.type || 'UNKNOWN',
+          reason:
+            `entirely outside $EXTMIN/$EXTMAX (+1 diagonal margin) — bounds ` +
+            `(${b.min.x}, ${b.min.y})…(${b.max.x}, ${b.max.y})`,
+          at: e.id,
+        });
+      }
       continue;
     }
     kept.push(e);

@@ -47,6 +47,15 @@ import { recordSkipped, type ImportDiagnostics } from './dxf-import-diagnostics'
 // ADR-635 — MTEXT 250-char chunk reassembly (SSoT). Ζει εδώ γιατί ΜΟΝΟ ο parser βλέπει
 // ακόμα το ΩΜΟ (untrimmed) value της γραμμής, που είναι απαραίτητο στις ραφές των chunks.
 import { createMTextContentCollector } from './dxf-mtext-chunks';
+// 🔴 group code 101 «Embedded Object» = ΤΟΜΗ ΕΝΟΤΗΤΑΣ (ισοδύναμη με 0/100): ό,τι ακολουθεί
+// ΔΕΝ ανήκει στη host οντότητα. Χωρίς αυτό, τα codes του embedded object ΕΠΕΓΡΑΦΑΝ τα
+// πραγματικά (10/20 → 1/0) και 10 MTEXT εξαφανίζονταν σιωπηλά — βλ. dxf-embedded-object.ts.
+import {
+  EMBEDDED_OBJECT_CODE,
+  openEmbeddedObject,
+  appendEmbeddedPair,
+  type EmbeddedObjectBuckets,
+} from './dxf-embedded-object';
 // ADR-736 — SSoT πλοήγησης section (leaf, μηδέν imports). Η `findSectionRange` αναθέτει εδώ.
 import { findDxfSectionRange } from './dxf-section-scan';
 
@@ -298,6 +307,8 @@ export class DxfEntityParser {
     // πέφτει και μέσα σε κενά — trim θα κολλούσε λέξεις) και ξαναγράφει το `data['1']`.
     const mtextContent = createMTextContentCollector(entityType);
     let layer = '0';
+    // Τεμπέλικο: παραμένει `null` (μηδέν allocation) για τις ~99% οντότητες χωρίς `101`.
+    let embedded: EmbeddedObjectBuckets | null = null;
 
     let i = startIndex + 2;
     while (i < lines.length - 1) {
@@ -306,6 +317,11 @@ export class DxfEntityParser {
       const value = rawValue.trim();
 
       if (code === '0') break;
+
+      // Τομή ενότητας: από εδώ και κάτω τα ζεύγη ανήκουν στο ενσωματωμένο αντικείμενο — δεν
+      // αγγίζουν `data`/`pairs`/τον MTEXT collector (αλλιώς θα ρουφούσε και ξένο κείμενο).
+      if (code === EMBEDDED_OBJECT_CODE) { embedded = openEmbeddedObject(embedded); i += 2; continue; }
+      if (embedded) { appendEmbeddedPair(embedded, code, value); i += 2; continue; }
 
       if (code === '8') {
         layer = value || '0';
@@ -319,7 +335,8 @@ export class DxfEntityParser {
 
     mtextContent.applyTo(data);
 
-    return { type: entityType, layer, data, pairs };
+    // Το πεδίο μπαίνει ΜΟΝΟ όταν υπάρχει — οντότητα χωρίς `101` μένει byte-identical με πριν.
+    return { type: entityType, layer, data, pairs, ...(embedded !== null && { embeddedObjects: embedded }) };
   }
 
   /**

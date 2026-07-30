@@ -144,6 +144,12 @@ function applyStyleToken(token: MtextToken, style: TextRunStyle): void {
     case 'overlineOff': style.overline = false; break;
     case 'strikeOn': style.strikethrough = true; break;
     case 'strikeOff': style.strikethrough = false; break;
+    // 🐛 Το `\A#;` ΕΛΕΙΠΕ από αυτό το switch και έπεφτε στο `default: break` — σιωπηλή
+    // απόρριψη ενός κωδικού που ο tokenizer διάβαζε σωστά. Μετρημένο στο `47_ergasia.dxf`:
+    // **49 εμφανίσεις**, όλες χαμένες (και άρα σβησμένες και από το export).
+    // Είναι state-change κωδικός όπως το χρώμα/ύψος: μπαίνει στο run style, κληρονομείται από
+    // τα επόμενα runs και περιορίζεται στο πεδίο του `{…}` group μέσω του styleStack.
+    case 'alignment': style.verticalAlign = token.value; break;
     default: break;
   }
 }

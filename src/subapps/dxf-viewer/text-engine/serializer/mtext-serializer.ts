@@ -24,6 +24,7 @@ import type {
   TextRunStyle,
   TextStack,
 } from '../types/text-ast.types';
+import { mtextStackDivider } from '../types/text-ast.types';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -125,6 +126,12 @@ function serializeStyleDiff(
   if (curr.widthFactor !== prev.widthFactor) parts.push(`\\W${curr.widthFactor};`);
   if (curr.tracking !== prev.tracking) parts.push(`\\T${curr.tracking};`);
   if (curr.obliqueAngle !== prev.obliqueAngle) parts.push(`\\Q${curr.obliqueAngle};`);
+  // `\A#;` — κατακόρυφη στοίχιση χαρακτήρα. `undefined` = «δεν δηλώθηκε» ⇒ η προεπιλογή `0`
+  // (bottom), οπότε ένα ρητό `\A0;` δεν χρειάζεται να ξαναγραφτεί: το `?? 0` κάνει τη σύγκριση
+  // στη ΣΗΜΑΣΙΑ, όχι στην παρουσία του πεδίου (αλλιώς `0 !== undefined` ⇒ θόρυβος σε κάθε run).
+  if ((curr.verticalAlign ?? 0) !== (prev.verticalAlign ?? 0)) {
+    parts.push(`\\A${curr.verticalAlign ?? 0};`);
+  }
   if (colorDiffers(curr.color, prev.color)) {
     parts.push(serializeColor(curr.color, options.version));
   }
@@ -182,8 +189,9 @@ function isTextStack(run: TextRun | TextStack): run is TextStack {
 }
 
 function serializeStack(stack: TextStack): string {
-  const sep = stack.type === 'tolerance' ? '^' : stack.type === 'diagonal' ? '/' : '#';
-  return `\\S${stack.top}${sep}${stack.bottom};`;
+  // SSoT ο πίνακας διαχωριστών στο `text-ast.types` — τον διαβάζει και η flat προβολή
+  // (`extractFlatText`), ώστε export και οθόνη να μη λένε διαφορετικά πράγματα.
+  return `\\S${stack.top}${mtextStackDivider(stack.type)}${stack.bottom};`;
 }
 
 function escapeText(text: string): string {

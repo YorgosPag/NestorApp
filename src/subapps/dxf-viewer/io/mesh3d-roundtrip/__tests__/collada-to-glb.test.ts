@@ -102,7 +102,7 @@ beforeEach(() => {
   (URL.revokeObjectURL as unknown) = jest.fn();
 });
 
-// ADR-735 — τα `textureBasename` / `indexImagesByBasename` μετακόμισαν στο SSoT
+// ADR-736 — τα `textureBasename` / `indexImagesByBasename` μετακόμισαν στο SSoT
 // `io/shared/foreign-asset-basename.ts` (ήταν 3 παραλλαγές σε 3 αρχεία). Τα tests τους ζουν
 // πλέον στο `io/shared/__tests__/foreign-asset-basename.test.ts` — ΜΕΤΑΚΙΝΗΘΗΚΑΝ, δεν χάθηκαν.
 

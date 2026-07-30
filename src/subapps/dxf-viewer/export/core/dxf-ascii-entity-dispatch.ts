@@ -102,6 +102,18 @@ export function writeEntity(
       else emitArc(e.center, e.radius, e.startAngle, e.endAngle, layer, aci, s, pair, r2018);
       break;
     case 'text':
+      // ADR-636 Φ2.4 (D.7) — ΕΙΣΑΓΟΜΕΝΟ MTEXT: ο importer χαρτογραφεί κάθε MTEXT σε `type:'text'`
+      // (`buildTextSceneEntity`), οπότε το `case 'mtext'` παρακάτω ΔΕΝ το φτάνει ΠΟΤΕ — κάθε
+      // εισαγόμενο MTEXT εξαγόταν ως μονογραμμικό TEXT (μετρημένο: 89 MTEXT → 0). Ο δείκτης
+      // προέλευσης `dxfSourceType` (ίδιο ιδίωμα με `HatchEntity.dxfSourceType` για SOLID/TRACE/
+      // 3DFACE, D.3) το δρομολογεί στο πραγματικό `emitMText`: παράγραφοι, πλάτος στήλης (41),
+      // attachment (71), ανά-run μορφοποίηση. AutoCAD path ΜΟΝΟ — ο Τέκτων (`explode`) διαβάζει
+      // μόνο TEXT, άρα το exploded μονοπάτι μένει ακριβώς όπως ήταν. Γνήσιο TEXT/ATTRIB/ATTDEF
+      // (χωρίς marker) δεν επηρεάζεται.
+      if (!explode && e.dxfSourceType === 'mtext') {
+        emitMText(e, layer, aci, s, pair, version, r2018);
+        break;
+      }
       // ADR-636 Φ2.3 — single-line TEXT with H/V justification (72/73/11/21) on the AutoCAD path.
       // Tekton (`explode`) keeps the bare, alignment-less, unrotated TEXT (byte-identical legacy).
       emitText(

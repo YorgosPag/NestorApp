@@ -125,10 +125,25 @@ function readCaretCode(state: TokenizerState): MtextToken | null {
 
 // ── Backslash dispatch ────────────────────────────────────────────────────────
 
+/**
+ * 🐛 Escaped literals — `\\` → `\`, `\{` → `{`, `\}` → `}` (Autodesk MTEXT spec· ezdxf
+ * `tools/text.py`: `if char in "\\{}": chars.append(char)`).
+ *
+ * Μέχρι τη διόρθωση αυτή έπεφταν στο `default: state.pos++; return null;` — ο χαρακτήρας
+ * **εξαφανιζόταν εντελώς**. Και είναι **ασυμμετρία στο ΔΙΚΟ μας round-trip**: η `escapeText()`
+ * του `mtext-serializer` ΗΔΗ παράγει `\\`, `\{`, `\}` για κάθε τέτοιο χαρακτήρα, άρα ό,τι
+ * εξάγαμε και ξαναεισάγαμε έχανε χαρακτήρες σε κάθε κύκλο (μονόδρομη διαρροή).
+ */
+const ESCAPED_LITERALS = '\\{}';
+
 function readBackslashToken(state: TokenizerState): MtextToken | null {
   state.pos++; // consume backslash
   if (state.pos >= state.input.length) return null;
   const cmd = state.input[state.pos];
+  if (ESCAPED_LITERALS.includes(cmd)) {
+    state.pos++;
+    return { kind: 'text', value: cmd };
+  }
   switch (cmd) {
     case 'f': case 'F': return readFontCode(state);
     case 'H': return readHeightCode(state);

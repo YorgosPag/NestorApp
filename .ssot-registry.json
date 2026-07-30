@@ -2,7 +2,7 @@
   "_meta": {
     "description": "SSoT Ratchet Registry — centralized module patterns (ADR-294)",
     "version": "2.0.0",
-    "lastUpdated": "2026-07-28",
+    "lastUpdated": "2026-07-30",
     "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
   },
   "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/|^functions/|^tests/firestore-rules/)",
@@ -4979,6 +4979,38 @@
       ],
       "addedDate": "2026-07-29",
       "addedByAdr": "ADR-731",
+      "tier": 3
+    },
+    "agent-capability-registry": {
+      "ssotFile": "src/services/agent-capability/registry/capability-registry.ts",
+      "description": "ADR-734 §5.2 — kathe nea dynatotita pou ektithetai se praktora AI orizetai MIA fora sto Capability Registry (name, description, params, valueSchema, policy, annotations, handler) kai ta schemas ton adapters PARAGONTAI apo ekei (toOpenAiToolDefinitions, kai o MCP adapter tis Fasis 3). Cheirografos orismos ergaleiou Chat Completions se NEO arxeio = triplotypo ana katanaloti (OpenAI + MCP + REST) kai parabiasi N.12/N.18. To allowlist periexei APOKLEISTIKA tis proyparxouses cheirografes epifaneies: tous 40 orismous tou agentic-tool-definitions.ts (ADR-171), ta 4 dxf-viewer ai-assistant tool definitions, ta wire/parse types kai ta 2 routes pou ta katanalonoun — kathos kai ton idio ton openai-adapter.ts, pou einai i genntria tous. Nea epifaneia ergaleion perna apo to registry.",
+      "forbiddenPatterns": [
+        "type:[[:space:]]*'function'"
+      ],
+      "allowlist": [
+        "src/services/agent-capability/adapters/openai-adapter.ts",
+        "src/services/ai-pipeline/tools/agentic-tool-definitions.ts",
+        "src/services/ai-pipeline/agentic-openai-client.ts",
+        "src/services/ai-pipeline/__tests__/",
+        "src/services/ai/openai-responses/wire-types.ts",
+        "src/config/admin-tool-definitions.ts",
+        "src/app/api/financial-intelligence/query/route.ts",
+        "src/app/api/dxf-ai/match/route.ts",
+        "src/subapps/dxf-viewer/ai-assistant/"
+      ],
+      "tier": 3
+    },
+    "boq-capability-tenant-guard": {
+      "ssotFile": "src/services/agent-capability/capabilities/boq/boq-tenant-guard.ts",
+      "description": "ADR-734 §7 (diorthosi tenant isolation) — to IBOQService.getById(id) DEN pairnei companyId, monadiki eksairesi se ena interface pou pantou allou ton apaitei. Sto UI den peiraze (to id erxotan apo idi filtrarismeni lista). Gia praktora AI, pou einai ANAKSIOPISTI pigi id, einai diarroi eggrafou allou pelati. Kathe prosvasi se MEMONOMENO BOQ item apo to agent-capability strwma perna ypoxreotika apo to fetchOwnedBoqItem(): elegxei item.companyId === ctx.companyId META to fetch kai epistrefei NOT_FOUND — oxi PERMISSION_DENIED, giati to deutero epivevaionei tin yparksi tou id (mandeio). Apeutheias klisi boq.getById()/boqService.getById() ektos tou guard epanaferei to keno. Allowlist: mono o idios o guard kai to services/measurements, opou to getById einai eswteriko tou strwmatos L0.",
+      "forbiddenPatterns": [
+        "boq\\.getById\\(",
+        "boqService\\.getById\\("
+      ],
+      "allowlist": [
+        "src/services/agent-capability/capabilities/boq/boq-tenant-guard.ts",
+        "src/services/measurements/"
+      ],
       "tier": 3
     }
   }

@@ -25,7 +25,7 @@
  */
 
 import { transliterateGreekToLatin, toGreekTitleCase } from '@/utils/greek-text';
-// ADR-735 — basename ξένου asset + ευρετήριο αρχείων χρήστη: ΕΝΑ SSoT (ήταν 3 παραλλαγές, 2 ευρετήρια).
+// ADR-736 — basename ξένου asset + ευρετήριο αρχείων χρήστη: ΕΝΑ SSoT (ήταν 3 παραλλαγές, 2 ευρετήρια).
 import {
   foreignAssetBasename,
   foreignAssetBasenameKey,
