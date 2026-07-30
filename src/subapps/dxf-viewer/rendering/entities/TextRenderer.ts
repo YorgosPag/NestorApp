@@ -124,6 +124,11 @@ export class TextRenderer extends BaseEntityRenderer {
     const position = entity.position as Point2D;
     const text = entity.text as string;
     if (!position || !text) return;
+    const px = globalThis as unknown as { __adr736x?: number };
+    if ((px.__adr736x = (px.__adr736x ?? 0) + 1) <= 6) {
+      console.log('[ADR736-PROBE] textWorld', (entity as { id?: string }).id, JSON.stringify(position),
+        'screen=', JSON.stringify(this.worldToScreen(position)));
+    }
 
     const height = this.extractTextHeight(entity);
     const rotation = ('rotation' in entity) ? entity.rotation as number : 0;

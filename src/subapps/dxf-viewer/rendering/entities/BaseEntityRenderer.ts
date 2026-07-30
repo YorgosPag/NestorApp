@@ -94,6 +94,11 @@ export abstract class BaseEntityRenderer {
 
   // Transform setters
   setTransform(transform: ViewTransform): void {
+    const seen = ((globalThis as unknown as { __adr736t?: Record<string, string> }).__adr736t ??= {});
+    const n = this.constructor.name, s = JSON.stringify(transform);
+    if (/^(Image|Text|Polyline)Renderer$/.test(n) && seen[n] !== s) {
+      console.log('[ADR736-PROBE] setTransform', n, (seen[n] = s), 'vp=', JSON.stringify(this.getViewport()));
+    }
     this.transform = { ...transform };
     this.phaseManager.updateTransform(this.transform);
   }
