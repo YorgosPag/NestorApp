@@ -43,16 +43,46 @@ const ANGULAR_DIMENSION_TYPES: ReadonlySet<string> = new Set(['angular2L', 'angu
 /** The four DIMBREAK point sets — world-space, so each scales with the line it interrupts. */
 const BREAK_KEYS = ['dimLinePoints', 'extLine1Points', 'extLine2Points', 'leaderPoints'] as const;
 
-function scaleManualBreaks(
+function mapManualBreaks(
   breaks: DimensionManualBreaks,
-  scalePoint: (p: Point2D) => Point2D,
+  mapPoint: (p: Point2D) => Point2D,
 ): DimensionManualBreaks {
   const out: { -readonly [K in typeof BREAK_KEYS[number]]?: readonly Point2D[] } = {};
   for (const key of BREAK_KEYS) {
     const pts = breaks[key];
-    if (pts) out[key] = pts.map(scalePoint);
+    if (pts) out[key] = pts.map(mapPoint);
   }
   return out;
+}
+
+/**
+ * 🔴 SSoT — **ποια πεδία μιας διάστασης είναι σημεία κόσμου**. Ένα σημείο, μία απάντηση.
+ *
+ * Υπάρχει επειδή η απάντηση έχει ήδη ξεχαστεί **δύο φορές** σε δύο διαφορετικά περάσματα
+ * γεωμετρίας, με το ίδιο ακριβώς σύμπτωμα (η διάσταση μένει πίσω όταν όλα τα άλλα κινούνται):
+ *   · ADR-716 Φ7 — η κλίμακα μετέφερε μόνο τους @deprecated καθρέφτες, όχι τα `defPoints`·
+ *   · ADR-736 — το `normalizeEntityPositions` δεν είχε καθόλου κλάδο `dimension`.
+ * Κάθε νέος καταναλωτής (μετατόπιση, καθρεφτισμός, γεωαναφορά) οφείλει να ρωτήσει **εδώ**
+ * αντί να ξαναγράψει τη λίστα — μια δεύτερη λίστα είναι η επόμενη σιωπηλή απόκλιση.
+ *
+ * Δέχεται **οποιονδήποτε** μετασχηματισμό σημείου, οπότε κλίμακα και μετατόπιση μοιράζονται
+ * τη λίστα χωρίς να μοιράζονται τα μαθηματικά τους.
+ */
+export function mapDimensionPoints(
+  entity: Entity & { type: 'dimension' },
+  mapPoint: (p: Point2D) => Point2D,
+) {
+  const e = entity as ScalableDimension;
+  return {
+    ...(e.defPoints && { defPoints: e.defPoints.map(mapPoint) }),
+    ...(e.textMidpoint && { textMidpoint: mapPoint(e.textMidpoint) }),
+    ...(e.datum && { datum: mapPoint(e.datum) }),
+    ...(e.manualBreaks && { manualBreaks: mapManualBreaks(e.manualBreaks, mapPoint) }),
+    // @deprecated καθρέφτες — ταξιδεύουν μαζί όσο υπάρχουν καταναλωτές (ADR-716 Φ7).
+    ...(entity.startPoint !== undefined && { startPoint: mapPoint(entity.startPoint) }),
+    ...(entity.endPoint !== undefined && { endPoint: mapPoint(entity.endPoint) }),
+    ...(entity.textPosition !== undefined && { textPosition: mapPoint(entity.textPosition) }),
+  };
 }
 
 /**
@@ -96,14 +126,10 @@ export function scaleDimension(
     y: base.y + (p.y - base.y) * sy,
   });
   return {
-    ...(e.defPoints && { defPoints: e.defPoints.map(at) }),
-    ...(e.textMidpoint && { textMidpoint: at(e.textMidpoint) }),
-    ...(e.datum && { datum: at(e.datum) }),
+    // Τα ΣΗΜΕΙΑ έρχονται από το κοινό SSoT· εδώ μένουν μόνο όσα είναι ΜΗΚΗ/ΤΙΜΕΣ, δηλαδή
+    // ακριβώς ό,τι αλλάζει στην κλίμακα αλλά ΟΧΙ στη μετατόπιση.
+    ...mapDimensionPoints(entity, at),
     ...(e.leaderLength !== undefined && { leaderLength: e.leaderLength * Math.abs(sx) }),
-    ...(e.manualBreaks && { manualBreaks: scaleManualBreaks(e.manualBreaks, at) }),
     ...scaledMeasurement(e, sx, sy),
-    ...(entity.startPoint !== undefined && { startPoint: at(entity.startPoint) }),
-    ...(entity.endPoint !== undefined && { endPoint: at(entity.endPoint) }),
-    ...(entity.textPosition !== undefined && { textPosition: at(entity.textPosition) }),
   };
 }

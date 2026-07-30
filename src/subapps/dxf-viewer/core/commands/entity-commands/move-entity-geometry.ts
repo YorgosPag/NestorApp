@@ -28,6 +28,8 @@ import {
 } from '../../../types/entities';
 // ADR-363 Phase 7A — BIM move geometry (params + computed geometry atomic patch).
 import { calculateBimMovedGeometry } from '../../../bim/utils/bim-move-geometry';
+// ADR-736 — dimension/leader/xline/ray/spline: ήταν σιωπηλό `{}` εδώ (βλ. το αρχείο για το γιατί).
+import { calculateAnnotationMovedGeometry } from './move-annotation-geometry';
 // SSoT — canonical point translation (ADR-577 consolidation).
 import { translatePoint } from '../../../rendering/entities/shared/geometry-vector-utils';
 // ADR-647 — translate an imported hatch's preserved pattern def WITH its boundary (SSoT).
@@ -46,6 +48,14 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
   const bimPatch = calculateBimMovedGeometry(e, delta);
   if (bimPatch !== null) {
     return bimPatch;
+  }
+
+  // ADR-736 — διάσταση / leader / κατασκευαστική γραμμή / spline. Μπαίνει ΠΡΙΝ τα primitives
+  // γιατί κανένα από τα παρακάτω type-guards δεν τα πιάνει: έπεφταν στο τελικό `{}` και
+  // «μετακινούνταν» κατά μηδέν — αόρατα στο εργαλείο, καταστροφικά στην εισαγωγή.
+  const annotationPatch = calculateAnnotationMovedGeometry(entity, delta);
+  if (annotationPatch !== null) {
+    return annotationPatch;
   }
 
   if (isLineEntity(e)) {

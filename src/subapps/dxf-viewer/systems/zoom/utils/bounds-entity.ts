@@ -18,6 +18,10 @@ import { projectSceneTextToDxf } from '../../../bim/text/project-scene-text';
 import { DEFAULT_BOUNDS } from '../../../config/geometry-constants';
 import { createInfinityBounds, isInfinityBounds, expandInfinityBounds, isFinitePoint } from '../../../config/geometry-constants';
 import { isValidPoint } from '../../../rendering/entities/shared/entity-validation-utils';
+// ADR-736 — ΤΟ per-entity SSoT μετατόπισης (ίδιο με το εργαλείο ΜΕΤΑΚΙΝΗΣΗ). Βλ. το εκτενές
+// σχόλιο στο `normalizeEntityPositions` για το γιατί δεν υπάρχει πια switch εδώ.
+import { calculateMovedGeometry } from '../../../core/commands/entity-commands/move-entity-geometry';
+import type { SceneEntity } from '../../../core/commands/interfaces';
 import type { Bounds } from './bounds';
 // ADR-640 — a BLOCK instance (preserved DXF INSERT) must contribute its placed members' real
 // bbox to zoom-extents / selection bounds, NOT a zero-size insertion point. Reuses the render
@@ -413,85 +417,42 @@ export function calculateTightBoundsNormalized(entities: MutableBoundsEntity[]):
 }
 
 /**
- * Normalize entity positions.
  * Applies offset to all entities so that bottom-left corner is at (0,0).
- * Mutates entities in place for performance.
+ * Mutates entities in place (the callers rely on identity being preserved).
+ *
+ * ── 🔴 ΓΙΑΤΙ ΔΕΝ ΥΠΑΡΧΕΙ ΕΔΩ `switch (entity.type)` (ADR-736) ───────────────────────────────
+ * Υπήρχε — και ξέχασε τύπους **δύο φορές**, με το ίδιο ακριβώς σύμπτωμα κάθε φορά: η οντότητα
+ * μένει στις ωμές (συχνά γεωαναφερμένες) συντεταγμένες ενώ ΟΛΕΣ οι άλλες μετακινούνται στην αρχή
+ * των αξόνων ⇒ ζει στη σκηνή, περνά από τον renderer, και ζωγραφίζεται **εκατοντάδες χιλιάδες
+ * pixel εκτός καμβά**. Δεν πέφτει τίποτα, δεν προειδοποιεί κανείς: απλώς «δεν φαίνεται».
+ *   · ADR-635 Φ C.23 — έλειπε το `case 'hatch'` (οι γραμμοσκιάσεις έμεναν πίσω)·
+ *   · ADR-736 — έλειπαν `image` (10) **και** `dimension` (9) στο πραγματικό τοπογραφικό.
+ *
+ * Ένα αντιγραμμένο switch γεωμετρίας ανά πέρασμα εγγυάται ότι θα ξεχαστεί και τρίτη φορά. Άρα η
+ * ερώτηση «πώς μετατοπίζεται αυτή η οντότητα;» ρωτιέται πλέον **εκεί που ζει η απάντηση**:
+ * {@link calculateMovedGeometry}, το ίδιο SSoT που χρησιμοποιεί το εργαλείο ΜΕΤΑΚΙΝΗΣΗ.
+ * Ίδιο σκεπτικό με το `applyCanonicalMmScale`, που επαναχρησιμοποιεί το `scaleEntity` αντί να
+ * ξαναγράψει per-type μαθηματικά (ADR-462).
+ *
+ * Κερδίζονται δωρεάν και όσα το παλιό switch δεν είχε ποτέ: `ellipse`, `polygon`, `group`
+ * (αναδρομικά στα μέλη), οι BIM τύποι, και το **inline pattern** της γραμμοσκίασης (ADR-647) —
+ * που το παλιό switch άφηνε πίσω ενώ μετακινούσε τα rings της.
+ *
+ * ⚠️ Το SSoT επιστρέφει **νέα** αντικείμενα σημείων· το `Object.assign` τα γράφει πάνω στην ίδια
+ * οντότητα, οπότε η ταυτότητα του entity διατηρείται. Παρενέργεια που είναι **βελτίωση**: δύο
+ * οντότητες που μοιράζονταν κατά λάθος το ίδιο `Point2D` δεν μετατοπίζονται πια δύο φορές.
  */
 export function normalizeEntityPositions(
   entities: MutableBoundsEntity[],
   offsetX: number,
   offsetY: number
 ): void {
+  const delta = { x: offsetX, y: offsetY };
   for (const entity of entities) {
     try {
-      switch (entity.type) {
-        case 'line': {
-          if (entity.start && entity.end) {
-            entity.start.x += offsetX;
-            entity.start.y += offsetY;
-            entity.end.x += offsetX;
-            entity.end.y += offsetY;
-          }
-          break;
-        }
-
-        case 'polyline':
-        case 'lwpolyline': {
-          if (entity.vertices && Array.isArray(entity.vertices)) {
-            for (const vertex of entity.vertices) {
-              if (isValidPoint(vertex)) {
-                vertex.x += offsetX;
-                vertex.y += offsetY;
-              }
-            }
-          }
-          break;
-        }
-
-        case 'circle':
-        case 'arc': {
-          if (entity.center) {
-            entity.center.x += offsetX;
-            entity.center.y += offsetY;
-          }
-          break;
-        }
-
-        case 'text':
-        case 'point':
-        case 'block': {
-          if (entity.position) {
-            entity.position.x += offsetX;
-            entity.position.y += offsetY;
-          }
-          break;
-        }
-
-        case 'hatch': {
-          // ADR-635 — translate the hatch's boundary rings exactly like every other geometry so
-          // the import recenter moves it WITH its siblings instead of stranding it at absolute
-          // coords (see the getEntityBounds 'hatch' case for the full repro/rationale).
-          for (const ring of entity.boundaryPaths ?? []) {
-            for (const vertex of ring) {
-              if (isValidPoint(vertex)) {
-                vertex.x += offsetX;
-                vertex.y += offsetY;
-              }
-            }
-          }
-          break;
-        }
-
-        case 'rectangle':
-        case 'rect': {
-          if (entity.x !== undefined && entity.y !== undefined) {
-            (entity as { x: number; y: number }).x += offsetX;
-            (entity as { x: number; y: number }).y += offsetY;
-          }
-          break;
-        }
-      }
+      Object.assign(entity, calculateMovedGeometry(entity as unknown as SceneEntity, delta));
     } catch (error) {
+      // Μία σπασμένη οντότητα δεν μολύνει τις υπόλοιπες (ADR-635 Φ C.23).
       console.warn('Error normalizing entity:', entity, error);
     }
   }
