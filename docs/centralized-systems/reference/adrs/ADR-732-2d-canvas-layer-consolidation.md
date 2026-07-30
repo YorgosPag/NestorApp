@@ -5,7 +5,8 @@
 mount-on-demand (floor-underlay, topo-grid, focus-2d, webgl-line) + zone hook SSoT
 (`use-overlay-zone-dispatch`) + **Batch 4 μέτρηση σε production: DOM 13→5 ✓, p90
 49,8→33,3ms ✓, p50 60 FPS αμετάβλητο ✓** (πλήρη νούμερα: §7.1) + **Batch 5: LayerCanvas
-unmount-when-empty (§3 — τυπικό σχέδιο 5→4, ΕΚΚΡΕΜΕΙ DOM census σε production)**.
+unmount-when-empty (§3) — ✅ ΕΠΙΒΕΒΑΙΩΜΕΝΟ σε production: `canvasCount = 4`, δηλαδή
+**13 → 4 (−69%)** και ο στόχος «≤4» ΕΚΛΕΙΣΕ**.
 ΕΚΚΡΕΜΕΙ: οπτική επαλήθευση calibration click σε level με αποθηκευμένη raster κάτοψη
 (§7.1 σημ. 3).
 Εγκεκριμένο από τον Giorgio 2026-07-30 («Δ τώρα» + N.8: batch-by-batch).
@@ -205,7 +206,7 @@ staged στο ίδιο commit (CHECK 6B/6D), ΟΧΙ tsc (N.17).
 
 | Μετρικό | Πριν (Φ5 baseline) | Στόχος | **Αποτέλεσμα (2026-07-30, §7.1)** |
 |---|---|---|---|
-| Ζωντανά canvas στρώματα σε ηρεμία | 13 | ≤ 4 | **5** (το ≤4 περιμένει το LayerCanvas unmount, §3) |
+| Ζωντανά canvas στρώματα σε ηρεμία | 13 | ≤ 4 | ✅ **4** — ΕΚΛΕΙΣΕ (Batch 5· μετρημένο `canvasCount = 4` σε production, 2026-07-30 βράδυ, BUILD_ID `eYjId2a564HxVpkhX49jh`) |
 | Καρέ > 33ms υπό χειρονομία | 11,5% | αισθητή πτώση (report με αριθμό) | **15,9%** — ΔΕΝ έπεσε ως ποσοστό· ΑΛΛΑΞΕ φύση (βλ. §7.1) |
 | Καρέ p90 υπό χειρονομία | 49,8ms | < 40ms (κατεύθυνση· το δάπεδο ορίζει το φυσικό όριο) | **33,3ms** ✅ |
 | p50 | 16,7ms (60 FPS) | ΑΜΕΤΑΒΛΗΤΟ — καμία παλινδρόμηση | **16,7ms** ✅ |
@@ -281,8 +282,13 @@ z11 · preview z15) — ακριβώς η αναμονή του §3· μόνο �
   `layering-workflow-test.qa.ts:530` (πετάει μόνο σε άδειο σχέδιο — σημειωμένο). Bonus perf:
   σε άδειο σχέδιο δεν mount-άρεται το `useCursorWorldPosition` subscription του υποδέντρου.
   Tests: 17 unit + 9 component, mutations 4/4 στο σωστό test· 15 suites/103 πράσινα· jscpd
-  καθαρό (5 αρχεία). ΕΚΚΡΕΜΕΙ: DOM census 4 σε production (μαζί με τη μέτρηση snap Φ2/Φ3
-  του ADR-728).
+  καθαρό (5 αρχεία).
+- **2026-07-30 (ζ) — ✅ Ο ΣΤΟΧΟΣ «≤4 ΣΤΡΩΜΑΤΑ» ΕΚΛΕΙΣΕ.** Το εκκρεμές DOM census έγινε στην
+  ίδια production συνεδρία με τη μέτρηση snap Φ2/Φ3 του ADR-728 (BUILD_ID
+  `eYjId2a564HxVpkhX49jh`, `47_ergasia.dxf`, 1:2352): **μετρημένο `canvasCount = 4`** ⇒ **13 → 4**
+  συνολικά (−69%). Ο πίνακας §7 ενημερώθηκε. Το εναπομείναν κόστος του καρέ **δεν είναι πλέον
+  στρώματα**: η ίδια μέτρηση απέδωσε **37 από τα 44 καρέ >33ms στο snap** (ADR-728 §5 Φ2 «Η
+  production μέτρηση-απόδειξη» → **ADR-735**). Ο Μοχλός Δ έκλεισε ως γραμμή έρευνας.
 - **2026-07-30 (ε) — Batch 4 ΕΓΙΝΕ: μέτρηση-απόδειξη σε production (BUILD_ID
   `T-mlZj7zMYXP22PFETbIm`).** DOM census **13 → 5** ✓· p90 καρέ **49,8 → 33,3ms** ✓·
   p50 60 FPS αμετάβλητο ✓· >33ms 11,5→15,9% (ΔΕΝ έπεσε — άλλαξε φύση: η διάσπαρτη
