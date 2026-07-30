@@ -43,6 +43,19 @@ export const DXF_TIMING = {
     CURSOR_CONTEXT: 50,
     /** Snap detection throttle (≈30fps — smooth feel + low CPU). */
     SNAP_DETECTION: 32,
+    /** ADR-728 Φ3 / μέτρηση ADR-732 §7.1 (production, 2026-07-30, hover σε 2.909 οντότητες:
+     *  `frame:snap-detection` p95 34,9ms, max 205-455ms) — cost-based backoff multiplier.
+     *  Το ίδιο SNAP_DETECTION throttle είναι σταθερό χρόνου: μια εκτέλεση που κόστισε 100ms
+     *  ξανατρέχει κανονικά μετά τα ίδια ~32ms, κορένοντας το νήμα κάτω από φόρτο. Με factor 2
+     *  η επόμενη εκτέλεση περιμένει τουλάχιστον 2× το μετρημένο κόστος της τελευταίας
+     *  (100ms κόστος ⇒ ≥200ms αναμονή) — αδύναμα καρέ (λίγα ms) δεν επηρεάζονται, γιατί το
+     *  SNAP_DETECTION throttle κυριαρχεί (βλ. SNAP_BUDGET_MAX_GAP_MS για το άνω φράγμα). */
+    SNAP_BUDGET_BACKOFF_FACTOR: 2,
+    /** ADR-728 Φ3 — άνω φράγμα στο cost-based backoff (SNAP_BUDGET_BACKOFF_FACTOR). Χωρίς cap
+     *  μια ακραία ακριβή εκτέλεση (μετρημένο max 455ms, ADR-732 §7.1) θα καθυστερούσε ≥910ms
+     *  πριν ξαναδοκιμάσει — το OSNAP θα «χανόταν» αισθητά για τον χρήστη. 250ms κρατά το snap
+     *  ζωντανό ακόμη και μετά το χειρότερο μετρημένο frame. */
+    SNAP_BUDGET_MAX_GAP_MS: 250,
     /** Entity/overlay hover hit-test throttle (20fps). */
     HOVER_HITTEST: 50,
     /** 3D BIM hover pick throttle (60fps) — dedicated so it can follow the refresh rate for

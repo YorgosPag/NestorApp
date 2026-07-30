@@ -28,6 +28,17 @@
  * ΑΝΑΣΤΟΛΗ ΚΑΤΑ ΤΗ ΠΛΟΗΓΗΣΗ (ADR-728 Φ1): αυτή η δουλειά ΔΕΝ τρέχει όσο ο χρήστης
  * μετακινεί την οθόνη — βλ. τον guard στο `onSnapFrame` και το `NavigationGestureStore`.
  *
+ * ΠΡΟΫΠΟΛΟΓΙΣΜΟΣ ΚΑΡΕ ΑΝΤΙ ΓΙΑ ΣΤΑΘΕΡΟ THROTTLE (ADR-728 Φ3, 2026-07-30): το throttle
+ * `DXF_TIMING.frame.SNAP_DETECTION` είναι σταθερό χρόνου — δεν ξέρει τι κόστισε η
+ * προηγούμενη εκτέλεση. Μετρημένο production (ADR-732 §7.1, 2026-07-30, hover σε 2.909
+ * οντότητες): `frame:snap-detection` p95 34,9ms, **max 205-455ms**. Χωρίς όριο κόστους μια
+ * εκτέλεση 100-450ms ξανατρέχει κανονικά μετά το ίδιο σταθερό ~32ms διάστημα → κορένει το
+ * νήμα ξανά και ξανά όσο ο χρήστης κρατά το ποντίκι πάνω από πυκνή γεωμετρία. Η δικλείδα
+ * ασφαλείας: `onSnapFrame` μετρά το κόστος της ΤΕΛΕΥΤΑΙΑΣ εκτέλεσης (`lastRunCostMs`) και
+ * απαιτεί `requiredGap = max(SNAP_DETECTION, lastRunCostMs × SNAP_BUDGET_BACKOFF_FACTOR)`,
+ * με άνω φράγμα `SNAP_BUDGET_MAX_GAP_MS` ώστε το snap να μην «χαθεί» αισθητά για πολύ. Μια
+ * φθηνή εκτέλεση (λίγα ms) δεν αλλάζει τίποτα — κυριαρχεί το ίδιο σταθερό throttle.
+ *
  * SSoT: this module is the SOLE owner of draw-snap detection scheduling + the
  * snap-dedup state. `ImmediateSnapStore` remains the snap-RESULT SSoT (read by
  * `SnapIndicatorSubscriber`). Grip-drag snap stays synchronous in the handler
@@ -38,6 +49,8 @@
 
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
+// ADR-728 Φ3 — cost-based backoff constants (νέο κώδικας: DXF_TIMING απευθείας, ADR-516).
+import { DXF_TIMING } from '../../config/dxf-timing';
 import { setImmediateSnap, clearImmediateSnap, setFullSnapResult } from './ImmediateSnapStore';
 // ADR-560 — grip-drag ownership guard: skip the decoupled scheduler while a grip drag owns the snap.
 import { getActiveDragGrip } from './GripDragStore';
@@ -67,6 +80,9 @@ export interface SnapDetectionInput {
 let latest: SnapDetectionInput | null = null;
 let dirty = false;
 let lastRunMs = 0;
+// ADR-728 Φ3 — κόστος (ms) της ΤΕΛΕΥΤΑΙΑΣ ολοκληρωμένης `runSnapDetection`· 0 πριν την πρώτη
+// εκτέλεση (⇒ ο πρώτος υπολογισμός requiredGap δεν επηρεάζεται, κυριαρχεί το σταθερό throttle).
+let lastRunCostMs = 0;
 let lastSnapX = NaN;
 let lastSnapY = NaN;
 let lastSnapFound = false;
@@ -203,10 +219,23 @@ function onSnapFrame(): void {
   // κινήθηκε η κάμερα. «Μην υπολογίζεις τώρα» ≠ «σβήσε ό,τι υπολογίστηκε» (ADR-728 §8.7).
   if (isNavigationGesture()) { dirty = false; return; }
   const now = performance.now();
-  if (now - lastRunMs < PANEL_LAYOUT.TIMING.SNAP_DETECTION_THROTTLE) return; // retry next frame
+  // ADR-728 Φ3 — προϋπολογισμός καρέ: η προηγούμενη εκτέλεση κόστισε `lastRunCostMs`· αν αυτό
+  // × BACKOFF_FACTOR ξεπερνά το σταθερό throttle, η επόμενη εκτέλεση περιμένει ΠΕΡΙΣΣΟΤΕΡΟ
+  // (καπαρωμένο στο MAX_GAP, ώστε το snap να μη «χαθεί» αισθητά για πολύ). Φθηνή προηγούμενη
+  // εκτέλεση ⇒ ο πολλαπλασιασμός πέφτει κάτω από το throttle ⇒ κυριαρχεί το `max` σταθερό.
+  const requiredGap = Math.min(
+    Math.max(
+      PANEL_LAYOUT.TIMING.SNAP_DETECTION_THROTTLE,
+      lastRunCostMs * DXF_TIMING.frame.SNAP_BUDGET_BACKOFF_FACTOR,
+    ),
+    DXF_TIMING.frame.SNAP_BUDGET_MAX_GAP_MS,
+  );
+  if (now - lastRunMs < requiredGap) return; // retry next frame
   lastRunMs = now;
   dirty = false;
+  const runStart = performance.now();
   runSnapDetection(input);
+  lastRunCostMs = performance.now() - runStart;
 }
 
 function ensureRegistered(): void {
