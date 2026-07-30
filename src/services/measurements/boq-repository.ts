@@ -24,10 +24,9 @@ import {
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
-import { ATOE_MASTER_CATEGORIES } from '@/config/boq-categories';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateBoqItemId } from '@/services/enterprise-id.service';
-import { normalizeToISO, nowISO } from '@/lib/date-local';
+import { nowISO } from '@/lib/date-local';
 import type {
   BOQItem,
   BOQCategory,
@@ -37,92 +36,17 @@ import type {
 } from '@/types/boq';
 import { BOQ_ITEM_DEFAULTS } from '@/types/boq';
 import type { IBOQRepository, BOQSearchFilters, BOQStats } from './contracts';
+// SSoT κανονικοποίησης εγγράφου → πεδίο ορισμού. Κοινό με το admin-SDK
+// μονοπάτι ανάγνωσης του πράκτορα (ADR-734 §8.3): ένα σχήμα εγγράφου, ένας
+// μεταφραστής. Δύο αντίγραφα θα απέκλιναν σιωπηλά στην πρώτη προσθήκη πεδίου.
+import {
+  normalizeBOQCategory,
+  normalizeBOQItemSafe,
+} from './boq-document-normalize';
+import { buildStaticAtoeCategories } from './boq-atoe-fallback';
+import { applyBoqSearchText, computeBoqStats, EMPTY_BOQ_STATS } from './boq-read-shared';
 
 const logger = createModuleLogger('FirestoreBOQRepository');
-
-// ============================================================================
-// NORMALIZERS — Firestore → Domain
-// ============================================================================
-
-// ADR-218: Delegates to centralized normalizeToISO
-const toDateString = (value: unknown): string =>
-  normalizeToISO(value) ?? nowISO();
-
-/**
- * Normalize Firestore document → BOQItem
- * Every optional field → ?? null
- */
-const normalizeBOQItem = (id: string, data: Record<string, unknown>): BOQItem => ({
-  id,
-  companyId: (data.companyId as string) ?? '',
-  projectId: (data.projectId as string) ?? '',
-  buildingId: (data.buildingId as string) ?? '',
-  scope: (data.scope as BOQItem['scope']) ?? 'building',
-  linkedFloorId: (data.linkedFloorId as string) ?? null,
-  linkedUnitId: (data.linkedUnitId as string) ?? null,
-  linkedUnitIds: (data.linkedUnitIds as string[]) ?? null,
-  costAllocationMethod: (data.costAllocationMethod as BOQItem['costAllocationMethod']) ?? 'by_area',
-  customAllocations: (data.customAllocations as Record<string, number>) ?? null,
-  categoryCode: (data.categoryCode as string) ?? '',
-  subCategoryCode: (data.subCategoryCode as string) ?? null,
-  title: (data.title as string) ?? '',
-  description: (data.description as string) ?? null,
-  unit: (data.unit as BOQItem['unit']) ?? 'm2',
-  estimatedQuantity: (data.estimatedQuantity as number) ?? 0,
-  actualQuantity: (data.actualQuantity as number) ?? null,
-  wasteFactor: (data.wasteFactor as number) ?? 0,
-  wastePolicy: (data.wastePolicy as BOQItem['wastePolicy']) ?? 'inherited',
-  materialUnitCost: (data.materialUnitCost as number) ?? 0,
-  laborUnitCost: (data.laborUnitCost as number) ?? 0,
-  equipmentUnitCost: (data.equipmentUnitCost as number) ?? 0,
-  priceAuthority: (data.priceAuthority as BOQItem['priceAuthority']) ?? 'master',
-  linkedPhaseId: (data.linkedPhaseId as string) ?? null,
-  linkedTaskId: (data.linkedTaskId as string) ?? null,
-  linkedInvoiceId: (data.linkedInvoiceId as string) ?? null,
-  linkedContractorId: (data.linkedContractorId as string) ?? null,
-  source: (data.source as BOQItem['source']) ?? 'manual',
-  measurementMethod: (data.measurementMethod as BOQItem['measurementMethod']) ?? 'manual',
-  sourceType: (data.sourceType as BOQItem['sourceType']) ?? undefined,
-  sourceEntityId: (data.sourceEntityId as string) ?? null,
-  sourceEntityType: (data.sourceEntityType as BOQItem['sourceEntityType']) ?? null,
-  detached: (data.detached as boolean) ?? null,
-  status: (data.status as BOQItemStatus) ?? 'draft',
-  qaStatus: (data.qaStatus as BOQItem['qaStatus']) ?? 'pending',
-  notes: (data.notes as string) ?? null,
-  createdBy: (data.createdBy as string) ?? null,
-  approvedBy: (data.approvedBy as string) ?? null,
-  createdAt: toDateString(data.createdAt),
-  updatedAt: toDateString(data.updatedAt),
-});
-
-const normalizeBOQItemSafe = (id: string, data: Record<string, unknown>): BOQItem | null => {
-  try {
-    return normalizeBOQItem(id, data);
-  } catch (error) {
-    logger.error('Error normalizing BOQ item', { error, itemId: id });
-    return null;
-  }
-};
-
-/**
- * Normalize Firestore document → BOQCategory
- */
-const normalizeBOQCategory = (id: string, data: Record<string, unknown>): BOQCategory => ({
-  id,
-  companyId: (data.companyId as string) ?? '',
-  code: (data.code as string) ?? '',
-  nameEL: (data.nameEL as string) ?? '',
-  nameEN: (data.nameEN as string) ?? '',
-  description: (data.description as string) ?? null,
-  level: (data.level as BOQCategory['level']) ?? 'group',
-  parentId: (data.parentId as string) ?? null,
-  sortOrder: (data.sortOrder as number) ?? 0,
-  defaultWasteFactor: (data.defaultWasteFactor as number) ?? 0,
-  allowedUnits: (data.allowedUnits as BOQCategory['allowedUnits']) ?? ['m2'],
-  isActive: (data.isActive as boolean) ?? true,
-  createdAt: toDateString(data.createdAt),
-  updatedAt: toDateString(data.updatedAt),
-});
 
 // ============================================================================
 // REPOSITORY IMPLEMENTATION
@@ -130,12 +54,21 @@ const normalizeBOQCategory = (id: string, data: Record<string, unknown>): BOQCat
 
 export class FirestoreBOQRepository implements IBOQRepository {
 
-  async getByBuilding(companyId: string, buildingId: string): Promise<BOQItem[]> {
+  /**
+   * Ένα ερώτημα για τις δύο εμβέλειες. Η **μόνη** διαφορά μεταξύ «ανά κτίριο» και «ανά έργο»
+   * ήταν το όνομα του πεδίου — δύο πανομοιότυπα σώματα θα απέκλιναν σιωπηλά μόλις αλλάξει η
+   * κανονικοποίηση ή η σειρά ταξινόμησης (CHECK 3.28 / N.18).
+   */
+  private async getByScope(
+    companyId: string,
+    scopeField: 'buildingId' | 'projectId',
+    scopeId: string
+  ): Promise<BOQItem[]> {
     try {
       const boqQuery = query(
         collection(db, COLLECTIONS.BOQ_ITEMS),
         where('companyId', '==', companyId),
-        where('buildingId', '==', buildingId),
+        where(scopeField, '==', scopeId),
         orderBy('categoryCode', 'asc')
       );
 
@@ -144,28 +77,17 @@ export class FirestoreBOQRepository implements IBOQRepository {
         .map((document) => normalizeBOQItemSafe(document.id, document.data() as Record<string, unknown>))
         .filter((item): item is BOQItem => item !== null);
     } catch (error) {
-      logger.error('Error fetching BOQ items by building', { error, buildingId });
+      logger.error('Error fetching BOQ items by scope', { error, scopeField, scopeId });
       return [];
     }
   }
 
-  async getByProject(companyId: string, projectId: string): Promise<BOQItem[]> {
-    try {
-      const boqQuery = query(
-        collection(db, COLLECTIONS.BOQ_ITEMS),
-        where('companyId', '==', companyId),
-        where('projectId', '==', projectId),
-        orderBy('categoryCode', 'asc')
-      );
+  async getByBuilding(companyId: string, buildingId: string): Promise<BOQItem[]> {
+    return this.getByScope(companyId, 'buildingId', buildingId);
+  }
 
-      const snapshot = await getDocs(boqQuery);
-      return snapshot.docs
-        .map((document) => normalizeBOQItemSafe(document.id, document.data() as Record<string, unknown>))
-        .filter((item): item is BOQItem => item !== null);
-    } catch (error) {
-      logger.error('Error fetching BOQ items by project', { error, projectId });
-      return [];
-    }
+  async getByProject(companyId: string, projectId: string): Promise<BOQItem[]> {
+    return this.getByScope(companyId, 'projectId', projectId);
   }
 
   async getById(id: string): Promise<BOQItem | null> {
@@ -367,22 +289,13 @@ export class FirestoreBOQRepository implements IBOQRepository {
       const searchQuery = query(baseRef, ...constraints);
       const snapshot = await getDocs(searchQuery);
 
-      let results = snapshot.docs
+      const results = snapshot.docs
         .map((document) => normalizeBOQItemSafe(document.id, document.data() as Record<string, unknown>))
         .filter((item): item is BOQItem => item !== null);
 
-      // Client-side text search
-      if (filters?.searchText?.trim()) {
-        const term = filters.searchText.toLowerCase();
-        results = results.filter(
-          (item) =>
-            item.title.toLowerCase().includes(term) ||
-            item.categoryCode.toLowerCase().includes(term) ||
-            (item.description?.toLowerCase().includes(term) ?? false)
-        );
-      }
-
-      return results;
+      // Client-side text search — SSoT κανόνα ταιριάσματος, κοινός με το admin
+      // μονοπάτι του πράκτορα (ADR-734 §8.3).
+      return applyBoqSearchText(results, filters?.searchText);
     } catch (error) {
       logger.error('Error searching BOQ items', { error, buildingId });
       return [];
@@ -392,26 +305,11 @@ export class FirestoreBOQRepository implements IBOQRepository {
   async getStatistics(companyId: string, buildingId: string): Promise<BOQStats> {
     try {
       const items = await this.getByBuilding(companyId, buildingId);
-
-      let totalEstimatedCost = 0;
-      for (const item of items) {
-        const gross = item.estimatedQuantity * (1 + item.wasteFactor);
-        const unitCost = item.materialUnitCost + item.laborUnitCost + item.equipmentUnitCost;
-        totalEstimatedCost += gross * unitCost;
-      }
-
-      return {
-        total: items.length,
-        draft: items.filter((i) => i.status === 'draft').length,
-        submitted: items.filter((i) => i.status === 'submitted').length,
-        approved: items.filter((i) => i.status === 'approved').length,
-        certified: items.filter((i) => i.status === 'certified').length,
-        locked: items.filter((i) => i.status === 'locked').length,
-        totalEstimatedCost,
-      };
+      // SSoT υπολογισμού, κοινός με το admin μονοπάτι του πράκτορα (ADR-734 §8.3).
+      return computeBoqStats(items);
     } catch (error) {
       logger.error('Error getting BOQ statistics', { error, buildingId });
-      return { total: 0, draft: 0, submitted: 0, approved: 0, certified: 0, locked: 0, totalEstimatedCost: 0 };
+      return EMPTY_BOQ_STATS;
     }
   }
 
@@ -430,46 +328,14 @@ export class FirestoreBOQRepository implements IBOQRepository {
 
       // Fallback: αν δεν υπάρχουν στο Firestore, χρησιμοποίησε static ΑΤΟΕ
       if (firestoreCategories.length === 0) {
-        const now = nowISO();
-        return ATOE_MASTER_CATEGORIES.map((cat) => ({
-          id: `static_${cat.code}`,
-          companyId,
-          code: cat.code,
-          nameEL: cat.nameEL,
-          nameEN: cat.nameEN,
-          description: cat.description,
-          level: cat.level,
-          parentId: null,
-          sortOrder: cat.sortOrder,
-          defaultWasteFactor: cat.defaultWasteFactor,
-          allowedUnits: [...cat.allowedUnits],
-          isActive: true,
-          createdAt: now,
-          updatedAt: now,
-        }));
+        return buildStaticAtoeCategories(companyId);
       }
 
       return firestoreCategories;
     } catch (error) {
       logger.error('Error fetching BOQ categories', { error, companyId });
       // Fallback to static categories on error
-      const now = nowISO();
-      return ATOE_MASTER_CATEGORIES.map((cat) => ({
-        id: `static_${cat.code}`,
-        companyId,
-        code: cat.code,
-        nameEL: cat.nameEL,
-        nameEN: cat.nameEN,
-        description: cat.description,
-        level: cat.level,
-        parentId: null,
-        sortOrder: cat.sortOrder,
-        defaultWasteFactor: cat.defaultWasteFactor,
-        allowedUnits: [...cat.allowedUnits],
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      }));
+      return buildStaticAtoeCategories(companyId);
     }
   }
 }

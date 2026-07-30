@@ -56,6 +56,8 @@ import { DocumentReaderHandler } from './handlers/document-reader-handler';
 import { ProcurementHandler } from './handlers/procurement-handler';
 import { OrgStructureHandler } from './handlers/org-structure-handler';
 import { FinancialQueryHandler } from './handlers/financial-query-handler';
+// ADR-734 Φάση 3: τα επτά εργαλεία επιμετρήσεων, μέσω Capability Registry
+import { BoqCapabilityHandler } from './handlers/boq-capability-handler';
 
 // ============================================================================
 // EXECUTOR CLASS — Strategy Pattern Dispatcher
@@ -82,6 +84,7 @@ export class AgenticToolExecutor {
       new ProcurementHandler(),
       new OrgStructureHandler(),
       new FinancialQueryHandler(),
+      new BoqCapabilityHandler(),
     ];
 
     for (const handler of handlers) {

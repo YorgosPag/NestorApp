@@ -95,21 +95,22 @@ function serializeParagraph(
   if (paraCode) parts.push(paraCode);
   let currentStyle: TextRunStyle = { ...baseStyle };
   for (const run of para.runs) {
-    if (isTextStack(run)) {
-      // 🐛 ADR-737 §11-2 — ΙΔΙΑ ΚΑΤΗΓΟΡΙΑ ΜΕ ΤΗ ΒΛΑΒΗ Ε (μονόδρομη διαρροή): ο parser διάβαζε
-      // το `\A#;` μέσα στη στοίβα, αλλά εδώ η στοίβα έκανε `continue` **πριν** από κάθε διαφορά
-      // στυλ ⇒ το export δεν το ξανάγραφε ΠΟΤΕ. Ένας κύκλος export→import έσβηνε τη στοίχιση
-      // ακριβώς στο σημείο όπου είναι ορατή. Η κατάσταση προχωρά κανονικά και μέσα από στοίβα.
-      const alignCode = serializeAlignDiff(run.style.verticalAlign, currentStyle.verticalAlign);
-      if (alignCode) parts.push(alignCode);
-      parts.push(serializeStack(run));
-      currentStyle = { ...currentStyle, verticalAlign: run.style.verticalAlign };
-      continue;
-    }
-    const diff = serializeStyleDiff(run.style, currentStyle, options);
+    // 🐛 ADR-737 §11-2 + §11-5 — ΙΔΙΑ ΚΑΤΗΓΟΡΙΑ ΜΕ ΤΗ ΒΛΑΒΗ Ε (μονόδρομη διαρροή): ο parser
+    // διάβαζε `\A`/`\H`/`\C`/`\f` **πριν** από μια στοίβα και τα κρατούσε στο `TextStack.style`,
+    // αλλά εδώ η στοίβα έκανε `continue` **πριν** από κάθε διαφορά στυλ ⇒ το export δεν τα
+    // ξανάγραφε ΠΟΤΕ. Το §11-2 άνοιξε μια ΞΕΧΩΡΙΣΤΗ διαδρομή μόνο για το `\A` — και ακριβώς
+    // επειδή ήταν ξεχωριστή, τα υπόλοιπα τρία έμειναν πίσω. Μια στοίβα ΔΕΝ είναι εξαίρεση στη
+    // ροή του στυλ: είναι παιδί που δηλώνει **υποσύνολο** πεδίων.
+    //
+    // Άρα ΕΝΑΣ κλάδος για όλα: η στοίβα προβάλλεται σε πλήρες στυλ **κληρονομώντας** ό,τι δεν
+    // κουβαλά (bold/italic/underline/…), και μετά ρωτιέται ο ΙΔΙΟΣ `serializeStyleDiff` με τα
+    // κανονικά runs. Δύο διαδρομές diff = δύο λεξιλόγια που αποκλίνουν στην επόμενη προσθήκη
+    // πεδίου — αυτό ακριβώς που μόλις έγινε.
+    const effective: TextRunStyle = isTextStack(run) ? { ...currentStyle, ...run.style } : run.style;
+    const diff = serializeStyleDiff(effective, currentStyle, options);
     if (diff) parts.push(diff);
-    parts.push(escapeText(run.text));
-    currentStyle = { ...run.style };
+    parts.push(isTextStack(run) ? serializeStack(run) : escapeText(run.text));
+    currentStyle = { ...effective };
   }
   return parts.join('');
 }
@@ -149,8 +150,9 @@ function serializeStyleDiff(
  * «`undefined` ≡ δεν δηλώθηκε ⇒ προεπιλογή `0` (bottom)»: η σύγκριση γίνεται στη ΣΗΜΑΣΙΑ, όχι
  * στην παρουσία του πεδίου (αλλιώς `0 !== undefined` ⇒ ένα περιττό `\A0;` σε κάθε run).
  *
- * ΕΝΑ αντίγραφο, δύο καλούντες (κανονικό run + στοίβα `\S`) — αν αποκλίνουν, ξαναγεννιέται η
- * ασυμμετρία parser/serializer που το §11-2 ήρθε να κλείσει.
+ * ADR-737 §11-5 — έχει πλέον **έναν** καλούντα (τον `serializeStyleDiff`), όχι δύο: η στοίβα δεν
+ * ρωτά χωριστά. Ο χωριστός καλών ήταν το ίδιο το σφάλμα του §11-5 — μια δεύτερη διαδρομή diff που
+ * ήξερε μόνο το `\A` και σιωπούσε για ύψος/χρώμα/γραμματοσειρά.
  */
 function serializeAlignDiff(
   curr: TextRunStyle['verticalAlign'],

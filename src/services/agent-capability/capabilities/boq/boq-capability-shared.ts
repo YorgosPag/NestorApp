@@ -12,7 +12,7 @@
 
 import type { BOQItem } from '@/types/boq';
 import { BOQ_SCOPE_VALUES, BOQ_STATUS_LIFECYCLE_ORDER } from '@/types/boq';
-import type { IBOQService } from '@/services/measurements/contracts';
+import type { IBOQReadService } from '@/services/measurements/boq-read-contract';
 import type { ProvenanceActivity } from '@/types/vqe';
 import { type BuildEnvelopeInput, buildEnvelope } from '../../vqe';
 import type {
@@ -30,14 +30,21 @@ import { fetchOwnedBoqItem } from './boq-tenant-guard';
 /**
  * Οι δυνατότητες εξαρτώνται από το **interface**, όχι από το singleton.
  *
- * Δεν είναι διακοσμητικό: το `boqService` σήμερα χτίζεται πάνω στο **client**
- * Firebase SDK, ενώ ο agentic executor είναι `server-only` με admin SDK. Η
- * γεφύρωση των δύο είναι απόφαση Φάσης 3 (auth) — με την ένεση εδώ, η Φάση 3
- * αλλάζει **μία** γραμμή σύνδεσης αντί για επτά handlers. Παράλληλα τα tests
- * τρέχουν χωρίς Firestore.
+ * Δεν είναι διακοσμητικό: το `boqService` χτίζεται πάνω στο **client** Firebase
+ * SDK, ενώ ο agentic executor είναι `server-only` με admin SDK. Η Φάση 3 γεφύρωσε
+ * τα δύο με το `BOQAdminReadService` — και χάρη στην ένεση εδώ, η σύνδεση ήταν
+ * **μία γραμμή** αντί για επτά αλλαγμένους handlers. Παράλληλα τα tests τρέχουν
+ * χωρίς Firestore.
+ *
+ * ⚠️ **`IBOQReadService`, όχι `IBOQService`** (ADR-734 §8.3). Και τα επτά
+ * εργαλεία είναι μόνο ανάγνωσης· με ολόκληρο το service, το `deps.boq.delete(id)`
+ * θα παρέμενε **συντακτικά διαθέσιμο** μέσα σε handler ανάγνωσης και η μόνη
+ * άμυνα θα ήταν ότι κανείς δεν το έγραψε. Ο στενός τύπος το κάνει αδύνατο σε
+ * χρόνο μεταγλώττισης — ίδια αρχή με το §5.4: η εγγύηση δεν ανατίθεται στην
+ * πρόθεση του συγγραφέα.
  */
 export interface BoqCapabilityDeps {
-  readonly boq: IBOQService;
+  readonly boq: IBOQReadService;
 }
 
 // ============================================================================

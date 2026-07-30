@@ -21,6 +21,7 @@ import type {
 } from '@/types/boq';
 import type { IBOQService, IBOQRepository, BOQSearchFilters, BOQStats } from './contracts';
 import { FirestoreBOQRepository } from './boq-repository';
+import { buildCategoryNameMap } from './boq-read-shared';
 import { computeBuildingSummary } from './cost-engine';
 import { getDefaultWasteFactor } from '@/config/boq-categories';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -316,27 +317,15 @@ class BOQService implements IBOQService {
         return null;
       }
 
-      // Build category name map from the items' categories
-      const categoryCodes = [...new Set(items.map((i) => i.categoryCode))];
-      const categoryNames = new Map<string, string>();
-
-      // Try to get category names — fallback to code
+      // Χάρτης κωδικού → όνομα, με εφεδρεία τον ίδιο τον κωδικό. Κοινός κανόνας
+      // με το admin-SDK μονοπάτι του πράκτορα (ADR-734 §8.3) — απόκλιση εδώ θα
+      // σήμαινε ότι ο πράκτορας γράφει «OIK-2» όπου η οθόνη γράφει «Σκυροδέματα».
       const firstItem = items[0];
-      if (firstItem) {
-        const categories = await this.repository.getCategories(firstItem.companyId);
-        for (const cat of categories) {
-          categoryNames.set(cat.code, cat.nameEL);
-        }
-      }
+      const categories = firstItem
+        ? await this.repository.getCategories(firstItem.companyId)
+        : [];
 
-      // Ensure all codes have a name
-      for (const code of categoryCodes) {
-        if (!categoryNames.has(code)) {
-          categoryNames.set(code, code);
-        }
-      }
-
-      return computeBuildingSummary(buildingId, items, categoryNames);
+      return computeBuildingSummary(buildingId, items, buildCategoryNameMap(items, categories));
     } catch (error) {
       logger.error('Error computing building summary', { error, buildingId });
       return null;

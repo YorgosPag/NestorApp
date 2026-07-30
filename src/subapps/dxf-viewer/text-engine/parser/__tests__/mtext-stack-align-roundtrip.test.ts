@@ -16,37 +16,8 @@
  * αλλά χάνει πληροφορία, πέφτει στο δεύτερο.
  */
 
-import { tokenizeMtext } from '../mtext-tokenizer';
-import { parseMtext } from '../mtext-parser';
-import { serializeDxfTextNode } from '../../serializer/mtext-serializer';
-import { DxfDocumentVersion } from '../../types/text-toolbar.types';
-import type { DxfTextNode, TextRun, TextStack } from '../../types/text-ast.types';
-
-/** Η ΠΡΑΓΜΑΤΙΚΗ ετικέτα εμβαδού του `47_ergasia.dxf` (ύψος μπλοκ 0,6 — κωδ. 40). */
-const AREA_LABEL = '\\A1;{\\C7;Ε\\H0.7x;\\S^ τίτλου;\\H1.4286x;=231.04τ.μ.}';
-
-function parse(raw: string): DxfTextNode {
-  return parseMtext(tokenizeMtext(raw), { height: 0.6 });
-}
-
-function serialize(node: DxfTextNode): string {
-  return serializeDxfTextNode(node, { version: DxfDocumentVersion.R2018 }).content;
-}
-
-function isStack(child: TextRun | TextStack): child is TextStack {
-  return 'top' in child;
-}
-
-function stackOf(node: DxfTextNode): TextStack {
-  const found = node.paragraphs[0].runs.find(isStack);
-  if (!found) throw new Error('το δείγμα πρέπει να περιέχει στοίβα \\S — αλλιώς δεν ελέγχει τίποτα');
-  return found;
-}
-
-/** Η στοίχιση κάθε παιδιού του AST, runs ΚΑΙ στοίβες, με τη σειρά ζωγραφικής. */
-function alignsOf(node: DxfTextNode): Array<0 | 1 | 2 | undefined> {
-  return node.paragraphs[0].runs.map((c) => c.style.verticalAlign);
-}
+// N.18 — οι βοηθοί round-trip ζουν σε ΕΝΑ σημείο· αντιγραμμένοι στο §11-5 θα ήταν sibling clone.
+import { AREA_LABEL, alignsOf, isStack, parse, serialize, stackOf } from './mtext-roundtrip-harness';
 
 describe('ADR-737 §11-2 — ο parser γεμίζει το \\A στη στοίβα', () => {
   it('η στοίβα παίρνει την ΚΑΤΑΣΤΑΣΗ στυλ τη στιγμή που γεννιέται', () => {

@@ -43,6 +43,14 @@ jest.mock('../tools/agentic-tool-definitions', () => ({
   AGENTIC_TOOL_DEFINITIONS: [],
 }));
 
+// Ο executor διαβάζει πλέον τον **κατάλογο** (base + BOQ capability defs), όχι απευθείας τα
+// base definitions. Χωρίς αυτό το mock περνούν οι πραγματικοί ορισμοί εργαλείων και η
+// υπόθεση «άδειος πίνακας εργαλείων» παρακάτω σπάει — το τεστ δεν αφορά το περιεχόμενο
+// του καταλόγου, αφορά το τι παραδίδεται στο `executeAgenticLoop`.
+jest.mock('../tools/agentic-tool-catalog', () => ({
+  ALL_AGENTIC_TOOL_DEFINITIONS: [],
+}));
+
 jest.mock('../ai-usage.service', () => ({
   checkDailyCap: jest.fn(async () => ({ allowed: true, used: 5, limit: 50 })),
   recordUsage: jest.fn(async () => {}),

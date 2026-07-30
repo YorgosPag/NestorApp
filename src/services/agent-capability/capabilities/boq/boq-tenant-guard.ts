@@ -27,7 +27,7 @@
  */
 
 import type { BOQItem } from '@/types/boq';
-import type { IBOQService } from '@/services/measurements/contracts';
+import type { IBOQReadService } from '@/services/measurements/boq-read-contract';
 import { createModuleLogger } from '@/lib/telemetry';
 import { type CapabilityError, notFoundError } from '../../registry';
 
@@ -49,7 +49,7 @@ export type OwnedItemResult =
  * δοκιμάζει ids. Η απόπειρα **καταγράφεται** — είναι σήμα ασφαλείας, όχι θόρυβος.
  */
 export async function fetchOwnedBoqItem(
-  boq: IBOQService,
+  boq: IBOQReadService,
   itemId: string,
   companyId: string,
   requestId: string,
