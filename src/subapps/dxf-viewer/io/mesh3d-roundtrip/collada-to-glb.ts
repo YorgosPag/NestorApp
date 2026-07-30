@@ -24,19 +24,10 @@
 import * as THREE from 'three';
 import { ColladaLoader } from 'three/examples/jsm/loaders/ColladaLoader.js';
 import { serialiseGlb } from '../../export/core/mesh3d/mesh3d-serialise';
-
-/** Το τελευταίο τμήμα μετά από `/` ή `\`, πεζά — για case-insensitive αντιστοίχιση ονόματος αρχείου. */
-export function textureBasename(url: string): string {
-  const match = /[^/\\]+$/.exec(url);
-  return (match ? match[0] : url).toLowerCase();
-}
-
-/** `basename (πεζά) → File` από τα αρχεία εικόνων που επέλεξε ο χρήστης δίπλα στο `.dae`. */
-export function indexImagesByBasename(files: readonly File[]): Map<string, File> {
-  const byName = new Map<string, File>();
-  for (const file of files) byName.set(textureBasename(file.name), file);
-  return byName;
-}
+// ADR-735 — basename ξένου asset: ΕΝΑ SSoT για .dae/.dxf (ήταν 3 παραλλαγές με 3 απαντήσεις).
+// Κερδίζει και το percent-decode που έλειπε εδώ: ο ColladaLoader δίνει encoded URL, άρα ελληνικό
+// ή με-κενό όνομα υφής ΔΕΝ ταίριαζε ποτέ με το OS-decoded `File.name` (σιωπηλά άβαφη όψη).
+import { foreignAssetBasenameKey, indexFilesByBasename } from '../shared/foreign-asset-basename';
 
 export interface ColladaToGlbResult {
   /** Αυτάρκες glb (υφές ενσωματωμένες) — έτοιμο για `parseGltfScene` + upload. */
@@ -100,7 +91,7 @@ function buildTextureManager(
   const manager = new THREE.LoadingManager();
   manager.setURLModifier((url) => {
     if (url.startsWith('data:')) return url;
-    const key = textureBasename(url);
+    const key = foreignAssetBasenameKey(url);
     const file = imagesByName.get(key);
     if (!file) {
       missing.add(key);
@@ -161,7 +152,7 @@ export async function colladaToGlb(
   daeText: string,
   imageFiles: readonly File[],
 ): Promise<ColladaToGlbResult> {
-  const imagesByName = indexImagesByBasename(imageFiles);
+  const imagesByName = indexFilesByBasename(imageFiles);
   const createdUrls: string[] = [];
   const missing = new Set<string>();
   const manager = buildTextureManager(imagesByName, createdUrls, missing);

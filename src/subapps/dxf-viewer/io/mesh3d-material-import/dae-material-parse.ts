@@ -32,6 +32,8 @@ import { parseXml, directChildren, firstChild } from '@/lib/xml/xml-dom';
 import type { ObjectMaterialAssignment, ImportedMaterial } from './obj-mtl-parse';
 import { rgbUnitToHex } from './rgb-unit-hex';
 import { clamp01 } from '../../utils/scalar-math';
+// ADR-735 — basename ξένου asset (decode + `file://` + backslashes): ΕΝΑ SSoT, ήταν 3 παραλλαγές.
+import { foreignAssetBasename } from '../shared/foreign-asset-basename';
 
 /** COLLADA `<extra>` technique profile των δικών μας metadata (mirror του write-side σταθεράς). */
 const NESTOR_EXTRA_PROFILE = 'NESTOR';
@@ -102,20 +104,6 @@ function parseEffects(root: Element): Map<string, EffectAppearance> {
   return out;
 }
 
-/**
- * Το τελευταίο segment ενός URI/path (basename)· **decode** (COLLADA `<init_from>` = percent-encoded
- * URI ανά RFC 3986· ο C4D γράφει π.χ. `my%20wood.png`, ελληνικά ως `%CE%BE…`) → καθαρισμός `file://`
- * prefix + backslashes. Χωρίς decode, το ελληνικό/με-κενό filename δεν ταιριάζει με το OS-decoded
- * `File.name` → σιωπηλά αβαφή όψη. Malformed encoding → raw (guarded).
- */
-function baseName(uri: string): string {
-  let decoded = uri;
-  try { decoded = decodeURIComponent(uri); } catch { /* malformed % → κράτα το raw */ }
-  const clean = decoded.replace(/^file:\/+/i, '').replace(/\\/g, '/');
-  const parts = clean.split('/');
-  return parts[parts.length - 1] || uri;
-}
-
 /** `imageId → filename (basename)` από το `<library_images>` (COLLADA 1.4.1 `<init_from>` = URI). */
 function parseImages(root: Element): Map<string, string> {
   const out = new Map<string, string>();
@@ -124,7 +112,7 @@ function parseImages(root: Element): Map<string, string> {
   for (const image of directChildren(lib, 'image')) {
     const id = image.getAttribute('id');
     const initFrom = firstDescendant(image, 'init_from')?.textContent?.trim();
-    if (id && initFrom) out.set(id, baseName(initFrom));
+    if (id && initFrom) out.set(id, foreignAssetBasename(initFrom));
   }
   return out;
 }
@@ -168,7 +156,7 @@ function effectTextureFileName(effect: Element, imagesById: ReadonlyMap<string, 
   imageRef ??= [...surfaceToImage.values()][0] ?? null;
 
   if (imageRef && imagesById.has(imageRef)) return imagesById.get(imageRef) ?? null;
-  if (imageRef) return baseName(imageRef);
+  if (imageRef) return foreignAssetBasename(imageRef);
   if (imagesById.size === 1) return [...imagesById.values()][0] ?? null;
   return null;
 }

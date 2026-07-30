@@ -25,6 +25,12 @@
  */
 
 import { transliterateGreekToLatin, toGreekTitleCase } from '@/utils/greek-text';
+// ADR-735 — basename ξένου asset + ευρετήριο αρχείων χρήστη: ΕΝΑ SSoT (ήταν 3 παραλλαγές, 2 ευρετήρια).
+import {
+  foreignAssetBasename,
+  foreignAssetBasenameKey,
+  indexFilesByBasename,
+} from '../shared/foreign-asset-basename';
 import type {
   BimMaterial,
   SaveBimMaterialInput,
@@ -55,30 +61,6 @@ export interface ForeignTextureImporterDeps {
    * (repair in-place, σταθερό id, μηδέν διπλότυπο). Παραλείπεται → legacy συμπεριφορά (assume reachable).
    */
   readonly isAlbedoReachable?: (material: BimMaterial) => Promise<boolean>;
-}
-
-/**
- * Το τελευταίο segment ενός path (basename). **Decode** (percent-encoded παραλλαγή) ώστε το parsed
- * filename να ταιριάζει με το OS-decoded `File.name` (κρίσιμο για ελληνικά/με-κενό ονόματα — ο C4D
- * γράφει π.χ. `file:///F:/…/Ξερό-bark-21.jpg` με `%20` κενά). Malformed % → raw (guarded).
- */
-function baseNameDecoded(name: string): string {
-  let decoded = name;
-  try { decoded = decodeURIComponent(name); } catch { /* malformed % → raw */ }
-  const parts = decoded.replace(/\\/g, '/').split('/');
-  return parts[parts.length - 1] || name;
-}
-
-/** Ίδιο basename, lowercase — για case-insensitive ταίριασμα filename↔File. */
-function baseNameLower(name: string): string {
-  return baseNameDecoded(name).toLowerCase();
-}
-
-/** `basename(lower) → File` από την επιλογή του χρήστη (τελευταίο κερδίζει σε διπλό basename). */
-function indexImagesByName(imageFiles: readonly File[]): Map<string, File> {
-  const out = new Map<string, File>();
-  for (const f of imageFiles) out.set(baseNameLower(f.name), f);
-  return out;
 }
 
 /** Ανθρώπινο αγγλικό όνομα από ελληνικό (transliteration SSoT)· fallback στο πρωτότυπο. */
@@ -214,7 +196,7 @@ export async function importForeignTextures(
   const missingSeen = new Set<string>();
   if (texturesByMaterialName.size === 0) return { created, missing };
 
-  const imagesByName = indexImagesByName(imageFiles);
+  const imagesByName = indexFilesByBasename(imageFiles);
   const materialsById = new Map(deps.existingMaterials.map((m) => [m.id, m] as const));
   // content hash → material id: seed cross-session από τα live υλικά που κουβαλούν albedoHash,
   // μετά συσσωρεύει within-import ώστε ίδια υφή σε πολλά effects → ΕΝΑ νέο υλικό.
@@ -225,9 +207,9 @@ export async function importForeignTextures(
   }
 
   for (const [materialName, fileName] of texturesByMaterialName) {
-    const file = imagesByName.get(baseNameLower(fileName));
+    const file = imagesByName.get(foreignAssetBasenameKey(fileName));
     if (!file) {
-      const display = baseNameDecoded(fileName);
+      const display = foreignAssetBasename(fileName);
       if (!missingSeen.has(display)) { missingSeen.add(display); missing.push(display); }
       continue;
     }

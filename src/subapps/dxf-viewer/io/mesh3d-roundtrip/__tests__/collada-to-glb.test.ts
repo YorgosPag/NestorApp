@@ -79,11 +79,7 @@ jest.mock('three/examples/jsm/loaders/ColladaLoader.js', () => {
   };
 });
 
-import {
-  colladaToGlb,
-  textureBasename,
-  indexImagesByBasename,
-} from '../collada-to-glb';
+import { colladaToGlb } from '../collada-to-glb';
 
 function dae(...textures: string[]): string {
   return JSON.stringify({ textures });
@@ -106,24 +102,9 @@ beforeEach(() => {
   (URL.revokeObjectURL as unknown) = jest.fn();
 });
 
-describe('textureBasename', () => {
-  it('κρατά μόνο το basename, πεζά, από path με / ή \\', () => {
-    expect(textureBasename('F:\\Shared\\Υλικά\\HMI_3D01.JPG')).toBe('hmi_3d01.jpg');
-    expect(textureBasename('textures/3D01_OPC.jpg')).toBe('3d01_opc.jpg');
-    expect(textureBasename('plain.PNG')).toBe('plain.png');
-  });
-});
-
-describe('indexImagesByBasename', () => {
-  it('χαρτογραφεί basename(πεζά) → File', () => {
-    const a = new File(['x'], 'HMI_3D01.jpg');
-    const b = new File(['y'], 'sub/3D01_OPC.jpg');
-    const map = indexImagesByBasename([a, b]);
-    expect(map.get('hmi_3d01.jpg')).toBe(a);
-    expect(map.get('3d01_opc.jpg')).toBe(b);
-    expect(map.size).toBe(2);
-  });
-});
+// ADR-735 — τα `textureBasename` / `indexImagesByBasename` μετακόμισαν στο SSoT
+// `io/shared/foreign-asset-basename.ts` (ήταν 3 παραλλαγές σε 3 αρχεία). Τα tests τους ζουν
+// πλέον στο `io/shared/__tests__/foreign-asset-basename.test.ts` — ΜΕΤΑΚΙΝΗΘΗΚΑΝ, δεν χάθηκαν.
 
 describe('colladaToGlb', () => {
   it('λύνει την υφή στο δοθέν αρχείο (case/φάκελος-agnostic) και σειριοποιεί με serialiseGlb', async () => {
