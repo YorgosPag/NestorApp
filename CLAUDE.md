@@ -582,7 +582,7 @@ npm run jscpd:diff <τα staged src αρχεία σου>
 4. **`@ts-ignore`** — FORBIDDEN. Hides problems instead of solving them.
 5. **`any` type** — FORBIDDEN. Use generics (`<T>`), union types, proper interfaces.
 6. **ADR-001: Select/Dropdown Components** — CANONICAL: `@/components/ui/select` (Radix Select). New use of `EnterpriseComboBox` = FORBIDDEN. 7 legacy DXF files migrate on touch.
-7. **ADR Numbering**: Use the next sequential number after the highest existing ADR (currently **ADR-728 = next free**, verified with `ls` on 2026-07-29 — this line was stale by 357 numbers until then, so **verify with `ls docs/centralized-systems/reference/adrs/` instead of trusting it**). ⚠️ AVOID ADR-145 — it is already duplicated in 2 files (`ADR-145-super-admin-ai-assistant.md` and `ADR-145-property-types-ssot.md`); do NOT create a third. Other historical gaps (e.g. 162, 163) consolidated in `adrs/ADR-GEOMETRY.md`.
+7. **ADR Numbering**: Use the next sequential number after the highest existing ADR (currently **ADR-735 = next free**, verified with `ls` on 2026-07-30 — this line was stale by 357 numbers before 2026-07-29 and by 6 again within a single day, so **verify with `ls docs/centralized-systems/reference/adrs/` instead of trusting it**). ⚠️ AVOID ADR-145 — it is already duplicated in 2 files (`ADR-145-super-admin-ai-assistant.md` and `ADR-145-property-types-ssot.md`); do NOT create a third. Other historical gaps (e.g. 162, 163) consolidated in `adrs/ADR-GEOMETRY.md`.
 
 ## ✅ AUTONOMOUS FLOW — PROCEED WITHOUT ASKING
 
