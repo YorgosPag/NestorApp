@@ -1,10 +1,12 @@
 # ADR-732 — Μοχλός Δ: Ενοποίηση των 13 full-viewport 2D καμβάδων (compositing footprint)
 
-**Status:** 🔨 **Batches 1-3 ΥΛΟΠΟΙΗΜΕΝΑ (2026-07-30, uncommitted)** — ζώνη Β 4→1
+**Status:** ✅ **Batches 1-4 ΟΛΟΚΛΗΡΩΜΕΝΑ (2026-07-30, uncommitted)** — ζώνη Β 4→1
 (`Overlay2DDispatchCanvas`) + ζώνη Α grid/floorplan→1 (`UnderlayDispatchCanvas`) +
 mount-on-demand (floor-underlay, topo-grid, focus-2d, webgl-line) + zone hook SSoT
-(`use-overlay-zone-dispatch`). ΕΚΚΡΕΜΟΥΝ: LayerCanvas unmount-when-empty (αναβλήθηκε —
-βλ. §3) + **Batch 4: production build + μέτρηση-απόδειξη**.
+(`use-overlay-zone-dispatch`) + **Batch 4 μέτρηση σε production: DOM 13→5 ✓, p90
+49,8→33,3ms ✓, p50 60 FPS αμετάβλητο ✓** (πλήρη νούμερα: §7.1). ΕΚΚΡΕΜΟΥΝ: LayerCanvas
+unmount-when-empty (αναβλήθηκε — βλ. §3) + οπτική επαλήθευση calibration click σε level
+με αποθηκευμένη raster κάτοψη (§7.1 σημ. 3).
 Εγκεκριμένο από τον Giorgio 2026-07-30 («Δ τώρα» + N.8: batch-by-batch).
 **Ημερομηνία:** 2026-07-30
 **Σχετικά:** **ADR-726 §4.Γ/§6** (η διάγνωση: software compositing 13 στρωμάτων = ο ΕΝΑΣ
