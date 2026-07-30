@@ -37,7 +37,8 @@ import { UI_COLORS, HOVER_HIGHLIGHT } from '../../config/color-config';
 import { degToRad } from './shared/geometry-utils';
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 // 🏢 ADR-107: Centralized Text Metrics Ratios
-import { buildUIFont } from '../../config/text-rendering-config';
+// ADR-733 — decoration line positions shared with text explode (one source, two consumers).
+import { buildUIFont, TEXT_DECORATION_RATIOS } from '../../config/text-rendering-config';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 // 🏢 ADR-530: Revit-grade glyph-path text rendering (CAD fonts via opentype.js).
@@ -63,7 +64,12 @@ import {
 } from '../../bim/text/text-layout';
 // ADR-557 (multi-line) — split flat `text` on `\n` and stack each line at its own y-offset,
 // with the SAME line-spacing + attachment distribution the box SSoT uses (render ≡ box).
-import { resolveMultilineExtentsFromExtra, type TextRow } from '../../bim/text/text-lines';
+// ADR-635 Φ C.26 — `verticalAnchorToRow` is the SSoT for «which way does a multi-line block
+// grow?»; the box reads the SAME map, so renderer and box cannot disagree about a new anchor.
+import { resolveMultilineExtentsFromExtra, verticalAnchorToRow } from '../../bim/text/text-lines';
+// ADR-635 Φ C.26 — decoration rules are calibrated as fractions DOWN from the ascent line, so
+// they must be re-based for the anchor through the same SSoT that places the baseline.
+import { anchorBandFraction, measureTextGlyphInk } from '../../text-engine/fonts/text-vertical-metrics';
 // ADR-557 — the oblique shear SSoT. The box (`text-box.ts`) reads the SAME map (world y-up);
 // this screen-y-DOWN path negates it ONCE (below) — the only place the y-flip lives.
 import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
@@ -71,13 +77,16 @@ import { projectToLocalFrame } from '../../bim/grips/grip-math';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { TextVerticalAnchor } from '../../text-engine/types';
 
 
 // ADR-344 Phase 6.E: rich text style shape
 type TextRichStyle = {
   bold?: boolean; italic?: boolean; fontFamily?: string;
   runColor?: string; textAlign?: 'left' | 'center' | 'right';
-  textBaseline?: 'top' | 'middle' | 'bottom';
+  // ADR-635 Φ C.26 — includes 'alphabetic': the DXF baseline anchor (group 73 = 0), which is
+  // NOT the 'bottom' row (that one sits a full font descent lower).
+  textBaseline?: TextVerticalAnchor;
   underline?: boolean; overline?: boolean; strikethrough?: boolean;
   obliqueAngle?: number; // ADR-557 — AutoCAD oblique (shear) angle in degrees
   tracking?: number; // AutoCAD `\T` — inter-glyph spacing factor (1 = normal)
@@ -231,7 +240,9 @@ export class TextRenderer extends BaseEntityRenderer {
     const worldToPx = this.transform.scale;
     const worldHeight = worldToPx > 0 ? screenHeight / worldToPx : screenHeight;
     const layout = layoutTextBlock(dxfText, worldHeight, advanceStyleOf(dxfText));
-    const row: TextRow = baselineMode === 'middle' ? 'M' : baselineMode === 'bottom' ? 'B' : 'T';
+    // ADR-635 Φ C.26 — through the SSoT, not a local ternary: a baseline-anchored TEXT grows
+    // UPWARD like a 'B' block. The hand-written ternary here sent 'alphabetic' to 'T'.
+    const row = verticalAnchorToRow(baselineMode);
     // ADR-635 Φ C.21 (Δ) — το βήμα γραμμής ΔΕΝ είναι σταθερό: το `\ps` το ορίζει ανά παράγραφο.
     // Renderer και κουτί διαβάζουν το ΙΔΙΟ άθροισμα (`totalExtraLineRatio`), αλλιώς η πρώτη
     // γραμμή τοποθετούνταν με άλλη υπόθεση από αυτήν που έδινε το ύψος του κουτιού.
@@ -329,8 +340,14 @@ export class TextRenderer extends BaseEntityRenderer {
       // κειμένου**, που από το Φ C.22 και μετά είναι ~1,4× ΜΙΚΡΟΤΕΡΟ του em ⇒ η υπογράμμιση
       // (0,90·h) έπεφτε ψηλότερα από τη βάση των γραμμάτων (0,905·em = 1,27·h) — δηλαδή **μέσα
       // στο κείμενο**. Οι σταθερές 0,90/−0,05/0,40 ήταν βαθμονομημένες όταν em ≡ ύψος κειμένου.
+      // ADR-635 Φ C.26 — where the origin sits inside the ascent→descent band, from the SAME
+      // SSoT that places the baseline. For T/M/B it is exactly the old 0 / 0.5 / 1; a
+      // baseline-anchored span gets `ascent ÷ band` instead of silently reusing the 'top' 0.
+      // Measured only inside this branch (decorations are rare) — the hot paint path is untouched.
+      const ink = measureTextGlyphInk(span.text, { fontFamily: family, bold: style.bold, italic });
       this.paintDecorations(
-        x, y, advance, emSizeForTextHeight(spanHeightPx, resolved), span.decoration, opts.baseline,
+        x, y, advance, emSizeForTextHeight(spanHeightPx, resolved), span.decoration,
+        anchorBandFraction(opts.baseline, { ascent: ink.fontAscent, descent: ink.fontDescent }),
       );
     }
   }
@@ -371,9 +388,15 @@ export class TextRenderer extends BaseEntityRenderer {
 
   /**
    * Paint underline / overline / strikethrough rules for ONE span. Offsets are fractions of
-   * the SPAN height relative to the text origin, accounting for the textBaseline
-   * (baselineVOffset: 0=top, 0.5=middle, 1.0=bottom). The rule inherits `ctx.fillStyle`, i.e.
-   * the span's own colour — AutoCAD underlines in the colour of the underlined run.
+   * the SPAN em relative to the text origin; `baselineVOffset` re-bases them for the vertical
+   * anchor (0 = the origin is on the ascent line, 0.5 = middle, 1 = the descent line). The rule
+   * inherits `ctx.fillStyle`, i.e. the span's own colour — AutoCAD underlines in the colour of
+   * the underlined run.
+   *
+   * ADR-635 Φ C.26 — the fraction is now COMPUTED by the caller from the anchor SSoT instead of
+   * being re-derived from a local `0 / 0.5 / 1` ternary here. That ternary had no case for the
+   * DXF baseline anchor and silently answered 0 ('top'), which would have put every rule a full
+   * ascent off on baseline-anchored text.
    *
    * ADR-635 Φ C.21 — ήταν ΑΝΑ ΓΡΑΜΜΗ με τις σημαίες του μπλοκ, οπότε ένα `\L` στον πρώτο run
    * υπογράμμιζε ολόκληρο το MTEXT· το AutoCAD υπογραμμίζει μόνο τον τίτλο. Spans είναι πάντα
@@ -381,13 +404,13 @@ export class TextRenderer extends BaseEntityRenderer {
    */
   private paintDecorations(
     x: number, y: number, width: number, emPx: number,
-    decoration: TextSpanDecoration, baseline: CanvasTextBaseline,
+    decoration: TextSpanDecoration, baselineVOffset: number,
   ): void {
-    const baselineVOffset = baseline === 'middle' ? 0.5 : baseline === 'bottom' ? 1.0 : 0;
-    const thickness = Math.max(1, emPx * 0.07);
-    if (decoration.underline)     this.ctx.fillRect(x, y + emPx * ( 0.90 - baselineVOffset), width, thickness);
-    if (decoration.overline)      this.ctx.fillRect(x, y + emPx * (-0.05 - baselineVOffset), width, thickness);
-    if (decoration.strikethrough) this.ctx.fillRect(x, y + emPx * ( 0.40 - baselineVOffset), width, thickness);
+    const { UNDERLINE_EM, OVERLINE_EM, STRIKETHROUGH_EM, THICKNESS_EM } = TEXT_DECORATION_RATIOS;
+    const thickness = Math.max(1, emPx * THICKNESS_EM);
+    if (decoration.underline)     this.ctx.fillRect(x, y + emPx * (UNDERLINE_EM - baselineVOffset), width, thickness);
+    if (decoration.overline)      this.ctx.fillRect(x, y + emPx * (OVERLINE_EM - baselineVOffset), width, thickness);
+    if (decoration.strikethrough) this.ctx.fillRect(x, y + emPx * (STRIKETHROUGH_EM - baselineVOffset), width, thickness);
   }
 
   /**

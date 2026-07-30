@@ -99,6 +99,22 @@ export function resolveTextAnchor(
 }
 
 /**
+ * Is `position` the glyph BASELINE (DXF TEXT group 73 = 0, the default) rather than a row of
+ * the 9-point grid? ADR-635 Φ C.26 — the state {@link mapTextAttachment} structurally cannot
+ * return, because the grid has three rows and DXF has four vertical modes.
+ *
+ * 72 = 4 (Middle) is excluded for the SAME reason it forces row `M` there: the spec has it
+ * override 73 entirely, so a 73 = 0 alongside it is not a baseline anchor. Keeping the two
+ * functions' 72 = 4 rule identical is what stops the row and the flag from contradicting.
+ *
+ * 72 = 3 (Aligned) / 5 (Fit) DO sit on the baseline (they stretch horizontally, not vertically),
+ * so they are deliberately NOT excluded.
+ */
+export function isBaselineAnchored(hJust: number, vJust: number): boolean {
+  return vJust === 0 && hJust !== 4;
+}
+
+/**
  * DXF TEXT codes 72 (H) + 73 (V) → the 9-point attachment the text engine speaks.
  *
  * The column is derived through the EXISTING `mapHorizontalAlignment` SSoT (so the
@@ -106,8 +122,13 @@ export function resolveTextAnchor(
  * left/center/right), and only the row is decided here.
  *
  * Row: 3 → `T`, 2 → `M`, 0 (baseline) / 1 (bottom) → `B`. The 9-point grid has no
- * separate baseline slot, so baseline and bottom collapse to `B` — the historic
- * behaviour, unchanged.
+ * separate baseline slot, so baseline and bottom collapse to `B` here.
+ *
+ * ⚠️ That collapse is LOSSY and it is why every AutoCAD table text sat a font descent too
+ * high (ADR-635 Φ C.26). The lost bit is carried alongside by {@link isBaselineAnchored} →
+ * `DxfTextNode.baselineAnchored`; this function keeps returning the 9-point row because the
+ * box / grips / 3D plane / export all speak that grid. Do NOT try to encode the baseline as
+ * a fourth row here — widen the ANCHOR, not the grid.
  *
  * 72 = 4 (Middle) is BOTH horizontal center and vertical middle and the spec has it
  * override 73, so it forces row `M`.

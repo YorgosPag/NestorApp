@@ -28,6 +28,9 @@
 
 import { getGlyphRun, GLYPH_REFERENCE_SIZE, type GlyphRun } from './glyph-path-cache';
 import type { ResolvedFont } from './font-resolver';
+// ADR-635 Φ C.26 — the ONE anchor→baseline rule (world y-up), shared with the text box so the
+// glyphs and the rectangle that must hug them cannot answer the question differently.
+import { baselineOffsetFromAnchor } from './text-vertical-metrics';
 
 /** A 2D context that may expose the (recent-browser) `letterSpacing` property. */
 type SpacingCtx = CanvasRenderingContext2D & { letterSpacing: string };
@@ -82,13 +85,16 @@ export function drawGlyphRunToCanvas(
 ): number {
   const s = emSize / GLYPH_REFERENCE_SIZE;
   const widthPx = run.metrics.width * s;
-  const ascentPx = run.metrics.ascent * s;
-  const descentPx = run.metrics.descent * s;
   const xOff = align === 'center' ? -widthPx / 2 : align === 'right' ? -widthPx : 0;
-  // Glyph paths are baseline-anchored; map to the canvas textBaseline modes.
-  const baselineY = baseline === 'middle' ? (ascentPx - descentPx) / 2
-    : baseline === 'bottom' ? -descentPx
-      : ascentPx; // 'top' / 'alphabetic' default → drop by ascent so the top sits at originY
+  // Glyph paths are baseline-anchored. The anchor→baseline rule is the SSoT's (world y-up);
+  // screen y is DOWN, so this is the ONE place the sign flips.
+  // ⚠️ ADR-635 Φ C.26 — `'alphabetic'` used to fall into the `'top'` default here and drop the
+  // glyphs by a full ASCENT, while the CSS `fillText` tier of this very module honoured it
+  // correctly through `ctx.textBaseline`. The two tiers of one SSoT disagreed.
+  const baselineY = -baselineOffsetFromAnchor(baseline, {
+    ascent: run.metrics.ascent * s,
+    descent: run.metrics.descent * s,
+  });
   ctx.save();
   ctx.translate(originX + xOff, originY + baselineY);
   ctx.scale(s, s);

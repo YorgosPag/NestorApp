@@ -44,6 +44,61 @@ import { GLYPH_REFERENCE_SIZE } from './glyph-path-cache';
 import { emSizeForTextHeight } from './text-height-scale';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 
+/** The ascent/descent pair a baseline offset is measured against (any consistent unit). */
+export interface VerticalBandMetrics {
+  /** Font ascent ABOVE the baseline (positive). */
+  readonly ascent: number;
+  /** Font descent BELOW the baseline (positive magnitude). */
+  readonly descent: number;
+}
+
+/**
+ * ADR-635 Φ C.26 — THE single answer to «how far is the glyph BASELINE from the anchor point?».
+ *
+ * Returns a **world y-UP** signed offset in the same unit as `m` (px, em, or ÷ text height —
+ * the map is a pure linear combination, so it is unit-agnostic): positive ⇒ the baseline sits
+ * ABOVE the anchor. A screen-y-DOWN consumer negates ONCE at its own boundary.
+ *
+ * Before this function the identical rule existed THREE times, in three sign/unit conventions —
+ * `glyph-run-draw.baselineY` (px, y-down), `text-box.visualVerticalRatios.baselineDrop`
+ * (÷ text height, y-down, then negated) and the 3D atlas — so «where the baseline goes» could
+ * be answered differently by the painter and by the box that must hug what the painter drew.
+ *
+ * `'alphabetic'` → **0**: the anchor IS the baseline (DXF TEXT group 73 = 0). This is the state
+ * the 3-row attachment grid cannot express; it used to fall into the `'top'` default and land a
+ * whole font ASCENT away. Every other canvas mode (`'hanging'`, `'ideographic'`) keeps the
+ * historic `'top'` behaviour — deliberately, they have no DXF meaning here.
+ */
+export function baselineOffsetFromAnchor(
+  anchor: CanvasTextBaseline,
+  m: VerticalBandMetrics,
+): number {
+  switch (anchor) {
+    case 'alphabetic':
+      return 0;
+    case 'bottom':
+      return m.descent;
+    case 'middle':
+      return -(m.ascent - m.descent) / 2;
+    default:
+      return -m.ascent; // 'top' (+ 'hanging' / 'ideographic', unused by DXF)
+  }
+}
+
+/**
+ * Where the anchor sits inside the font's ascent→descent band, as a fraction (0 = the ascent
+ * line, 1 = the descent line). The decoration rules (`underline`/`overline`/`strikethrough`)
+ * are calibrated as fractions measured DOWN from that band's top, so this is the one number
+ * that re-bases them for any anchor — derived from {@link baselineOffsetFromAnchor}, never a
+ * second table: `'top'` → 0, `'middle'` → 0.5, `'bottom'` → 1, `'alphabetic'` → ascent ÷ band.
+ * A degenerate band (no metrics) → 0, i.e. the historic `'top'` behaviour.
+ */
+export function anchorBandFraction(anchor: CanvasTextBaseline, m: VerticalBandMetrics): number {
+  const band = m.ascent + m.descent;
+  if (!(band > 0)) return 0;
+  return (m.ascent + baselineOffsetFromAnchor(anchor, m)) / band;
+}
+
 /** Font-resolution inputs (the X-scale `widthFactor` is applied by the consumer, not here). */
 export interface TextGlyphInkStyle {
   readonly fontFamily?: string;

@@ -4,7 +4,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { LineSpacingMode, DxfTextNode } from '../../text-engine/types';
+import type { LineSpacingMode, DxfTextNode, TextVerticalAnchor } from '../../text-engine/types';
 import type { SceneLayer, LineweightMm, HatchEntity } from '../../types/entities';
 import type { StairEntity } from '../../bim/types/stair-types';
 // ADR-362 Phase C1 — Dimension entity wrapper for DXF render pipeline.
@@ -180,8 +180,12 @@ export interface DxfTextStyle {
   runColor?: string;
   /** Derived from textNode.attachment horizontal component (L/C/R). */
   textAlign?: 'left' | 'center' | 'right';
-  /** Derived from textNode.attachment vertical component (T/M/B). */
-  textBaseline?: 'top' | 'middle' | 'bottom';
+  /**
+   * Vertical anchor of `position` on the glyphs, derived by `resolveVerticalAnchor`.
+   * ADR-635 Φ C.26: `'alphabetic'` (DXF TEXT group 73 = 0) is a FOURTH state beyond the
+   * attachment grid's T/M/B rows — the anchor IS the baseline, offset zero.
+   */
+  textBaseline?: TextVerticalAnchor;
   /**
    * ADR-557 — AutoCAD TEXT oblique angle (degrees, +CW forward slant). Rendered as a
    * horizontal shear around the anchor by `TextRenderer` (`ctx.transform(1,0,-tan(θ),1,0,0)`);

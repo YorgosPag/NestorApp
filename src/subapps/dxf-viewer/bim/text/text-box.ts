@@ -53,19 +53,29 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { DxfText, DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { TextJustification } from '../../text-engine/types/text-ast.types';
+import type { DxfTextNode, TextJustification } from '../../text-engine/types/text-ast.types';
 import { offsetForJustification } from '../../text-engine/layout';
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 // ADR-557 Φ-attachment — metrics-accurate width: the box measures with the SAME real
 // glyph advance the renderer paints (`getGlyphRun` / CSS `measureText`), not a monospace
 // approximation, so grips / hover / hitTest coincide with the drawn glyphs.
 import { measureTextAdvanceWorld, measureTextGlyphInk, type TextAdvanceStyle, type TextGlyphInk } from '../../text-engine/fonts';
+// ADR-635 Φ C.26 — the ONE anchor→baseline rule, shared with `drawGlyphRunToCanvas`. The box
+// seats its baseline with the SAME function the painter seats the glyphs with, so the two
+// cannot drift (they used to hold the identical algebra in two hand-written ternaries).
+import { baselineOffsetFromAnchor } from '../../text-engine/fonts/text-vertical-metrics';
+// ADR-635 Φ C.26 — node → vertical anchor SSoT (`baselineAnchored` beats the attachment row).
+import { resolveVerticalAnchor } from '../../hooks/canvas/dxf-text-style-extractor';
+import type { TextVerticalAnchor } from '../../text-engine/types';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateVector } from '../grips/grip-math';
 import { RECT_CORNERS, rectCornerWorld, type RectFrame } from '../grips/rect-frame';
 // ADR-557 (multi-line) — the shared split + line-stacking SSoT: box height = Σ γραμμών,
 // width = max γραμμής. The SAME helper the renderer + 3D use, so the three stay in parity.
-import { resolveMultilineExtentsFromExtra, type TextRow, type MultilineExtents } from './text-lines';
+import {
+  resolveMultilineExtentsFromExtra, verticalAnchorToRow,
+  type TextRow, type MultilineExtents,
+} from './text-lines';
 // ADR-635 Φ C.20 — η αναδίπλωση στη στήλη (group 41) + οι στηλοθέτες ζουν σε ΕΝΑ SSoT που
 // μοιράζονται κουτί και renderer· εδώ διαβάζουμε τις ΟΠΤΙΚΕΣ γραμμές, όχι τα ρητά `\P`.
 import { layoutTextBlock, layoutLineStrings, totalExtraLineRatio } from './text-layout';
@@ -205,8 +215,21 @@ function justificationOf(text: DxfText): TextJustification {
   if (att) return att;
   const style: DxfTextStyle | undefined = text.textStyle;
   const col = style?.textAlign === 'center' ? 'C' : style?.textAlign === 'right' ? 'R' : 'L';
-  const row = style?.textBaseline === 'middle' ? 'M' : style?.textBaseline === 'bottom' ? 'B' : 'T';
-  return `${row}${col}` as TextJustification;
+  // ADR-635 Φ C.26 — through the row SSoT: 'alphabetic' belongs with 'B' (a baseline-anchored
+  // block grows upward), and the local ternary that used to live here sent it to 'T'.
+  return `${verticalAnchorToRow(style?.textBaseline)}${col}` as TextJustification;
+}
+
+/**
+ * ADR-635 Φ C.26 — the VERTICAL anchor of `position` on the glyphs. Mirrors
+ * {@link justificationOf}'s priority (canonical AST node first, then the flat derived style),
+ * but answers the FOUR-state question the 3-row `TextJustification` cannot: a DXF TEXT with
+ * group 73 = 0 anchors on the glyph BASELINE, offset zero — not on the descent line.
+ */
+function verticalAnchorOf(text: DxfText): TextVerticalAnchor {
+  const node = (text as { textNode?: DxfTextNode }).textNode;
+  if (node) return resolveVerticalAnchor(node);
+  return text.textStyle?.textBaseline ?? 'top';
 }
 
 /**
@@ -270,15 +293,20 @@ function obliqueShearOf(text: DxfText): number {
 
 /**
  * VISUAL vertical ratios from a measured glyph ink box — the box hugs the drawn glyphs:
- * baseline where the renderer seats it (font ascent/descent per the attachment row,
- * mirroring `TextRenderer.fillGlyphRun`) + extent = real glyph INK (cap height for caps,
- * +descenders for g/p/y), then extended by the multi-line block (`extents`). Degrades to the
- * nominal em box when the ink is unavailable (SSR / no font) — keeping jest stable.
+ * baseline where the renderer seats it (the SHARED `baselineOffsetFromAnchor` rule, the very
+ * function `drawGlyphRunToCanvas` negates for its screen frame) + extent = real glyph INK
+ * (cap height for caps, +descenders for g/p/y), then extended by the multi-line block
+ * (`extents`). Degrades to the nominal em box when the ink is unavailable (SSR / no font).
+ *
+ * ADR-635 Φ C.26 — `anchor`, not `just[0]`: the attachment ROW cannot express the DXF baseline
+ * anchor, so reading the row here would keep the box a full font descent away from the glyphs
+ * on every imported single-line TEXT. `just` is still passed for the degenerate-ink fallback.
  */
-function visualVerticalRatios(ink: TextGlyphInk, just: TextJustification, extents: MultilineExtents): VBoxRatios {
-  const row = just[0];
-  const baselineDrop = row === 'M' ? (ink.fontAscent - ink.fontDescent) / 2 : row === 'B' ? -ink.fontDescent : ink.fontAscent;
-  const baselineUp = -baselineDrop; // world y-up offset from `position` down to the baseline
+function visualVerticalRatios(
+  ink: TextGlyphInk, just: TextJustification, anchor: TextVerticalAnchor, extents: MultilineExtents,
+): VBoxRatios {
+  // world y-up offset from `position` to the baseline — identical algebra to the painter's.
+  const baselineUp = baselineOffsetFromAnchor(anchor, { ascent: ink.fontAscent, descent: ink.fontDescent });
   const top = baselineUp + ink.inkAscent + extents.topAdd;
   const bottom = baselineUp - ink.inkDescent - extents.bottomAdd;
   return top - bottom > 1e-9 ? { top, bottom } : emVerticalRatios(just, extents);
@@ -327,7 +355,7 @@ function buildTextBox(text: DxfText, mode: 'visual' | 'em'): RectFrame {
   }
 
   const ink = glyphInkOf(text);
-  const v = visualVerticalRatios(ink, just, extents);
+  const v = visualVerticalRatios(ink, just, verticalAnchorOf(text), extents);
   const { left, right } = horizontalInkFractions(text, ink);
   const centreY = ((v.top + v.bottom) / 2) * h;
   // Inset the advance box by the side bearings: shift the centre toward the wider bearing,
@@ -372,7 +400,7 @@ export function resolveTextEmBox(text: DxfText): RectFrame {
 export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
   const just = justificationOf(text);
   const ink = glyphInkOf(text);
-  const v = visualVerticalRatios(ink, just, multilineExtentsOf(text, just));
+  const v = visualVerticalRatios(ink, just, verticalAnchorOf(text), multilineExtentsOf(text, just));
   const { left, right } = horizontalInkFractions(text, ink);
   // Recover the advance width from the visual half-width (visualWidth = w·(1−left−right)),
   // then reproduce the SAME inset centre offset the forward build applied.
@@ -397,7 +425,9 @@ export function textBoxToPosition(frame: RectFrame, text: DxfText): Point2D {
  */
 export function textVisualExtentRatio(text: DxfText): number {
   const just = justificationOf(text);
-  const { top, bottom } = visualVerticalRatios(glyphInkOf(text), just, multilineExtentsOf(text, just));
+  const { top, bottom } = visualVerticalRatios(
+    glyphInkOf(text), just, verticalAnchorOf(text), multilineExtentsOf(text, just),
+  );
   return top - bottom;
 }
 

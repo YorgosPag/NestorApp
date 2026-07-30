@@ -922,6 +922,24 @@ export const TEXT_METRICS_RATIOS = {
  */
 export type TextMetricsRatios = typeof TEXT_METRICS_RATIOS;
 
+/**
+ * ADR-733 — Θέσεις γραμμών διακόσμησης run (underline/overline/strikethrough) ως κλάσματα
+ * του **font em** (όχι του DXF text height — ADR-635 Φ C.24), μετρημένα από το text origin
+ * (πριν το baseline offset). ΜΙΑ πηγή για renderer (`TextRenderer.paintDecorations`) ΚΑΙ
+ * text explode (`explode-text.ts`), ώστε το ορθογώνιο του explode να πέφτει ΑΚΡΙΒΩΣ πάνω
+ * στη γραμμή που ζωγραφίζει ο καμβάς.
+ */
+export const TEXT_DECORATION_RATIOS = {
+  /** Υπογράμμιση — κάτω από τη βάση των γραμμάτων (0.905·em ≈ βάση, βλ. ADR-635 Φ C.24). */
+  UNDERLINE_EM: 0.90,
+  /** Overline — πάνω από την κορυφή του em. */
+  OVERLINE_EM: -0.05,
+  /** Strikethrough — μέση του x-height. */
+  STRIKETHROUGH_EM: 0.40,
+  /** Πάχος γραμμής διακόσμησης (κλάσμα του em). */
+  THICKNESS_EM: 0.07,
+} as const;
+
 // ============================================
 // HIT TESTING CONFIGURATION
 // ============================================

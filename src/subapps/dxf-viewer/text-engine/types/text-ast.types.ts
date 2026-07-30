@@ -20,6 +20,20 @@ export type TextJustification =
   | 'ML' | 'MC' | 'MR'
   | 'BL' | 'BC' | 'BR';
 
+/**
+ * Vertical anchor of a text entity's `position` — stated in the CANVAS `textBaseline`
+ * vocabulary on purpose, because that is the vocabulary `ctx.textBaseline`,
+ * `drawGlyphRunToCanvas` and `DxfTextStyle.textBaseline` already speak. One word per
+ * concept, so nothing needs translating between the import, the box and the paint.
+ *
+ * ⚠️ `'alphabetic'` is the DXF **baseline** (TEXT group code 73 = 0) — the glyph baseline
+ * itself, offset ZERO from `position`. It is NOT `'bottom'`: `'bottom'` sits a full font
+ * DESCENT lower (ADR-635 Φ C.26). The 9-point {@link TextJustification} grid has three rows
+ * only, so it cannot express this fourth state — which is exactly why it is carried
+ * separately (`DxfTextNode.baselineAnchored`).
+ */
+export type TextVerticalAnchor = 'top' | 'middle' | 'bottom' | 'alphabetic';
+
 /** MTEXT line-spacing mode (group code 73). */
 export type LineSpacingMode = 'multiple' | 'exact' | 'at-least';
 
@@ -104,6 +118,24 @@ export interface DxfTextNode {
   readonly paragraphs: readonly TextParagraph[];
   /** 9-point attachment point for MTEXT positioning (group code 71). */
   readonly attachment: TextJustification;
+  /**
+   * ADR-635 Φ C.26 — single-line TEXT/ATTRIB/ATTDEF only: `position` is the glyph
+   * BASELINE (group code 73 = 0, the DXF default), not the bottom row of
+   * {@link attachment}. The missing 4th vertical state of the 3-row attachment grid.
+   *
+   * MEASURED (`47_ergasia.dxf`, 1.127/1.127 TEXT carry 73 = 0): treating it as the
+   * `'bottom'` row lifted every glyph by one font descent — **+0,1906 world units** for
+   * h = 0,5 Roboto = 38,1% of the text height. In a 0,9000 table cell that left 0,0094 of
+   * the 0,2000 top clearance (4,7%) for a caps/digits string, and the header «α/α» — whose
+   * ink reaches 0,6380 because of the «/» — crossed the rule above it by 0,1286.
+   * AutoCAD's own numbers in that file prove the anchor is the baseline:
+   * baseline − lower rule = 0,2000 and upper rule − (baseline + h) = 0,2000, a symmetry
+   * that holds ONLY with a zero offset.
+   *
+   * Absent (`undefined`) ⇒ the attachment row governs — MTEXT (group 71 always names a
+   * real T/M/B row) and in-app text are untouched.
+   */
+  readonly baselineAnchored?: boolean;
   /** Node-level line spacing; individual paragraphs may override. */
   readonly lineSpacing: { readonly mode: LineSpacingMode; readonly factor: number };
   /** Background fill mask (group codes 90/63/421). */

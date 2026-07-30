@@ -7,6 +7,7 @@
  *   - polyline / lwpolyline (a closed polyline == a drawn polygon) → line/arc
  *     segments. A bulged segment becomes an ARC via the linetype bulge SSoT.
  *   - rectangle / rect → 4 lines (rotation-aware).
+ *   - text / mtext → glyph-outline contours ανά γράμμα (ADR-733, explode-text.ts).
  * Every derived primitive INHERITS the source style (layer/colour/lineweight/…).
  *
  * FULL SSoT reuse — zero re-implemented geometry:
@@ -19,7 +20,7 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
-import type { Entity, LineEntity, ArcEntity, RectangleEntity, RectEntity, GroupEntity, BlockEntity } from '../../types/entities';
+import type { Entity, LineEntity, ArcEntity, RectangleEntity, RectEntity, GroupEntity, BlockEntity, TextEntity, MTextEntity } from '../../types/entities';
 import { bulgeToArc, isStraightSegment } from '../../rendering/entities/shared/geometry-bulge-utils';
 import { radToDeg } from '../../rendering/entities/shared/geometry-angle-utils';
 import { inheritEntityStyle } from '../entity-creation/inherit-entity-style';
@@ -31,9 +32,12 @@ import { ungroupGroup } from '../group/group-entity';
 // ADR-640 — EXPLODE of a BLOCK instance restores its placed members in world space (AutoCAD
 // EXPLODE of an INSERT). Single SSoT placement lives in the block engine.
 import { explodeBlockInstance } from '../block/block-instance';
+// ADR-733 — EXPLODE of TEXT/MTEXT → glyph-outline geometry (vector-first TXTEXP). Single
+// SSoT lives in the text-explode engine (layout/glyph parity με τον renderer).
+import { explodeTextEntity } from './explode-text';
 
-/** Entity types that EXPLODE can break apart (Φ5.1 + GROUP UNGROUP + BLOCK, ADR-640). */
-const EXPLODABLE_TYPES: ReadonlySet<string> = new Set(['polyline', 'lwpolyline', 'rectangle', 'rect', 'group', 'block']);
+/** Entity types that EXPLODE can break apart (Φ5.1 + GROUP + BLOCK ADR-640 + TEXT ADR-733). */
+const EXPLODABLE_TYPES: ReadonlySet<string> = new Set(['polyline', 'lwpolyline', 'rectangle', 'rect', 'group', 'block', 'text', 'mtext']);
 
 /** True when EXPLODE would produce a change for this entity type. */
 export function isExplodable(entity: Entity): boolean {
@@ -141,7 +145,8 @@ function isFiniteEntity(e: Entity): boolean {
 
 /**
  * Break a compound entity into primitives, or `null` if there is nothing to
- * explode (a primitive line/circle/arc/text, or a degenerate polyline).
+ * explode (a primitive line/circle/arc, a degenerate polyline, or a text whose
+ * font has no loaded outlines — ADR-733).
  */
 export function explodeEntity(entity: Entity): Entity[] | null {
   let segs: Entity[] | null = null;
@@ -155,6 +160,10 @@ export function explodeEntity(entity: Entity): Entity[] | null {
   } else if (entity.type === 'block') {
     // EXPLODE of a preserved DXF INSERT → its placed members in world space (ADR-640).
     segs = explodeBlockInstance(entity as BlockEntity);
+  } else if (entity.type === 'text' || entity.type === 'mtext') {
+    // EXPLODE of TEXT/MTEXT → glyph contours ανά γράμμα (ADR-733)· `null` όταν καμία
+    // φορτωμένη outline γραμματοσειρά δεν καλύπτει το κείμενο (CSS fillText tier).
+    segs = explodeTextEntity(entity as TextEntity | MTextEntity);
   }
   if (!segs) return null;
   // Belt-and-suspenders: drop any primitive with non-finite geometry so a broken

@@ -24,6 +24,10 @@ export const ENTITY_STYLE_SKIP: ReadonlySet<string> = new Set([
   'vertices', 'bulges', 'closed', 'startWidths', 'endWidths',
   // rectangle geometry
   'x', 'y', 'width', 'height', 'rotation', 'corner1', 'corner2',
+  // text geometry/content (ADR-733 text explode — superset-safe: μόνο TEXT/MTEXT τα έχουν)
+  'position', 'text', 'textNode', 'textStyle', 'fontSize', 'fontFamily', 'alignment',
+  'widthFactor', 'lineSpacing', 'paragraphSpacing', 'wordWrap',
+  'isAnnotative', 'annotationScales', 'attributeTag', 'areaSourceId',
   // transient UI state
   'selected', 'preview', 'previewGripPoints', 'showPreviewGrips',
 ]);

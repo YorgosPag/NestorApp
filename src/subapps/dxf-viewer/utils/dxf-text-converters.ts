@@ -35,6 +35,7 @@ import { extractFlatText } from './text-node-utils';
 import {
   ALIGNMENT_TO_ATTACHMENT,
   attachmentToVJust,
+  isBaselineAnchored,
   mapTextAttachment,
   resolveTextAnchor,
 } from './dxf-text-anchor';
@@ -84,6 +85,11 @@ function buildTextNodeFromFlat(
   alignment: 'left' | 'center' | 'right',
   attachment?: TextJustification,
   fontFamily = '',
+  /**
+   * ADR-635 Φ C.26 — TEXT/ATTRIB/ATTDEF with group 73 = 0: `position` is the glyph BASELINE.
+   * Omitted (the in-app / test callers) ⇒ the attachment row governs, exactly as before.
+   */
+  baselineAnchored = false,
 ): DxfTextNode {
   const run: TextRun = {
     text,
@@ -114,6 +120,8 @@ function buildTextNodeFromFlat(
   return {
     paragraphs: [para],
     attachment: attachment ?? ALIGNMENT_TO_ATTACHMENT[alignment],
+    // Written only when true so an unflagged node stays byte-identical (Firestore-safe too).
+    ...(baselineAnchored && { baselineAnchored: true }),
     lineSpacing: { mode: 'multiple', factor: 1 },
     rotation,
     isAnnotative: false,
@@ -154,6 +162,7 @@ function parseSingleLineTextTransform(data: Record<string, string>): {
   x: number; y: number; height: number; rotation: number;
   alignment: 'left' | 'center' | 'right';
   attachment: TextJustification;
+  baselineAnchored: boolean;
 } {
   const { height, rotation } = parseTextTransform(data);
   const hJust = parseInt(data['72']) || 0;
@@ -163,6 +172,8 @@ function parseSingleLineTextTransform(data: Record<string, string>): {
     x, y, height, rotation,
     alignment: mapHorizontalAlignment(hJust),
     attachment: mapTextAttachment(hJust, vJust),
+    // ADR-635 Φ C.26 — the 4th vertical state the attachment row cannot carry (73 = 0).
+    baselineAnchored: isBaselineAnchored(hJust, vJust),
   };
 }
 
@@ -230,7 +241,8 @@ export function convertText(
   index: number,
   styleFonts?: StyleFontMap,
 ): AnySceneEntity | null {
-  const { x, y, height, rotation, alignment, attachment } = parseSingleLineTextTransform(data);
+  const { x, y, height, rotation, alignment, attachment, baselineAnchored } =
+    parseSingleLineTextTransform(data);
   let text = data['1'] || '';
 
   if (isNaN(x) || isNaN(y) || text.trim() === '') {
@@ -245,7 +257,9 @@ export function convertText(
 
   return buildTextSceneEntity({
     idPrefix: 'text', index, layer, x, y, text, height, rotation, alignment,
-    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment, attachment, fontFamily),
+    textNode: buildTextNodeFromFlat(
+      text.trim(), height, rotation, alignment, attachment, fontFamily, baselineAnchored,
+    ),
     color,
   });
 }
@@ -349,7 +363,8 @@ function convertAttributeEntity(
   idPrefix: 'attrib' | 'attdef',
   label: 'ATTRIB' | 'ATTDEF',
 ): AnySceneEntity | null {
-  const { x, y, height, rotation, alignment, attachment } = parseSingleLineTextTransform(data);
+  const { x, y, height, rotation, alignment, attachment, baselineAnchored } =
+    parseSingleLineTextTransform(data);
   let text = data['1'] || '';
   const invisible = ((parseInt(data['70']) || 0) & 1) === 1;
 
@@ -364,7 +379,9 @@ function convertAttributeEntity(
 
   const base = buildTextSceneEntity({
     idPrefix, index, layer, x, y, text, height, rotation, alignment,
-    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment, attachment),
+    textNode: buildTextNodeFromFlat(
+      text.trim(), height, rotation, alignment, attachment, '', baselineAnchored,
+    ),
     color,
   });
 

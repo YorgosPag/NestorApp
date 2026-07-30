@@ -79,8 +79,12 @@ function distToChord(p: Point2D, a: Point2D, b: Point2D): number {
   return cross / Math.sqrt(len2);
 }
 
-/** Adaptive cubic Bézier → σημεία (χωρίς το p0· προσθέτει έως και το p3). */
-function flattenCubic(
+/**
+ * Adaptive cubic Bézier → σημεία (χωρίς το p0· προσθέτει έως και το p3).
+ * Exported (ADR-733): ο opentype flattener (`ot-path-flatten.ts`) υποδιαιρεί με τους
+ * ΙΔΙΟΥΣ πυρήνες de Casteljau — ένας αλγόριθμος, δύο γραμματικές εισόδου.
+ */
+export function flattenCubic(
   p0: Point2D, p1: Point2D, p2: Point2D, p3: Point2D,
   tol: number, depth: number, maxDepth: number, out: Point2D[],
 ): void {
@@ -94,8 +98,8 @@ function flattenCubic(
   flattenCubic(p0123, p123, p23, p3, tol, depth + 1, maxDepth, out);
 }
 
-/** Adaptive quadratic Bézier → σημεία (χωρίς το p0· προσθέτει έως και το p2). */
-function flattenQuad(
+/** Adaptive quadratic Bézier → σημεία (χωρίς το p0· προσθέτει έως και το p2). Exported: βλ. flattenCubic. */
+export function flattenQuad(
   p0: Point2D, p1: Point2D, p2: Point2D,
   tol: number, depth: number, maxDepth: number, out: Point2D[],
 ): void {

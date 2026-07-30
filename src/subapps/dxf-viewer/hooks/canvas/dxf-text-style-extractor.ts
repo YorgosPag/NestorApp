@@ -9,13 +9,29 @@
  */
 
 import type { DxfTextStyle } from '../../canvas-v2/dxf-canvas/dxf-types';
-import type { DxfColor, DxfTextNode, TextRun } from '../../text-engine/types';
+import type { DxfColor, DxfTextNode, TextRun, TextVerticalAnchor } from '../../text-engine/types';
 import { TEXT_SIZE_LIMITS } from '../../config/text-rendering-config';
 // ADR-635 Φ C.20 — SSoT για το χρώμα ενός run (TrueColor + ACI + κληρονομιά).
 import { resolveRunColorHex } from '../../text-engine/render/run-color';
 
 /** Entity shape required by the text-style helpers (narrow subset of SceneEntity). */
 type TextStyledEntity = { textNode?: DxfTextNode; height?: number; fontSize?: number };
+
+/**
+ * ADR-635 Φ C.26 — THE node → vertical-anchor map. `baselineAnchored` (DXF TEXT group 73 = 0)
+ * wins over the attachment row, because it is the one vertical state the 3-row grid cannot
+ * encode; otherwise the row decides, exactly as before.
+ *
+ * Every consumer that needs «where does `position` sit on the glyphs?» — the renderer's
+ * `ctx.textBaseline`, the glyph-run paint, the text box, the grips — resolves it HERE. A second
+ * reading of `attachment[0]` anywhere else is how the box stops hugging the letters.
+ */
+export function resolveVerticalAnchor(node: DxfTextNode | undefined): TextVerticalAnchor {
+  if (!node) return 'top';
+  if (node.baselineAnchored) return 'alphabetic';
+  const row = node.attachment?.[0];
+  return row === 'M' ? 'middle' : row === 'B' ? 'bottom' : 'top';
+}
 
 /**
  * ADR-344 Phase 6.E — Extract canvas-renderable style from the first run of textNode.
@@ -25,18 +41,16 @@ export function extractFirstRunStyle(entity: TextStyledEntity): DxfTextStyle | u
   if (!entity.textNode) return undefined;
   const result: DxfTextStyle = {};
 
-  // Node-level: attachment → textAlign (H) + textBaseline (V).
+  // Node-level: attachment column → textAlign (H); the vertical anchor comes from the SSoT
+  // (ADR-635 Φ C.26) so a baseline-anchored TEXT is NOT flattened onto the 'bottom' row.
   const attachment = entity.textNode.attachment;
-  if (attachment) {
-    const row = attachment[0]; // 'TL'[0]='T', 'ML'[0]='M', 'BL'[0]='B'
-    const col = attachment[1]; // 'TL'[1]='L', 'TC'[1]='C', 'TR'[1]='R'
-    if (col === 'C') result.textAlign = 'center';
-    else if (col === 'R') result.textAlign = 'right';
-    // 'L' = default 'left', omit
-    if (row === 'M') result.textBaseline = 'middle';
-    else if (row === 'B') result.textBaseline = 'bottom';
-    // 'T' = default 'top', omit
-  }
+  const col = attachment?.[1]; // 'TL'[1]='L', 'TC'[1]='C', 'TR'[1]='R'
+  if (col === 'C') result.textAlign = 'center';
+  else if (col === 'R') result.textAlign = 'right';
+  // 'L' = default 'left', omit
+  const anchor = resolveVerticalAnchor(entity.textNode);
+  // 'top' = the renderer default, omitted so an unstyled node keeps producing no style field.
+  if (anchor !== 'top') result.textBaseline = anchor;
 
   // Run-level: first run style (bold / italic / underline / font / color).
   const para = entity.textNode.paragraphs?.[0];

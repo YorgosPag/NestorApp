@@ -29,6 +29,22 @@ import { CHARACTER_METRICS } from '../../config/text-rendering-config';
 export type TextRow = 'T' | 'M' | 'B';
 
 /**
+ * ADR-635 Φ C.26 — vertical anchor → the block row that distributes a MULTI-line block's extra
+ * height. `'alphabetic'` (DXF baseline) belongs with `'bottom'`: `position` is on the LAST
+ * line's baseline, so extra lines grow UPWARD.
+ *
+ * ⚠️ This is a strictly COARSER question than the anchor itself — it only decides which way a
+ * block grows, never where the baseline of a line sits (that is `baselineOffsetFromAnchor`).
+ * Both the renderer and the box map through here, so a new anchor value cannot silently fall
+ * into the `'T'` default in one of them and `'B'` in the other — which is exactly what a
+ * hand-written `=== 'bottom' ? 'B' : 'T'` ternary did in BOTH places before.
+ */
+export function verticalAnchorToRow(anchor: CanvasTextBaseline | undefined): TextRow {
+  if (anchor === 'middle') return 'M';
+  return anchor === 'bottom' || anchor === 'alphabetic' ? 'B' : 'T';
+}
+
+/**
  * Split a flat text string into its visual lines. Handles all newline conventions
  * (`\r\n`, `\r`, `\n`). ALWAYS returns ≥ 1 element (an empty/absent string → `['']`)
  * so consumers can rely on `lines.length` as the line count without a guard.
