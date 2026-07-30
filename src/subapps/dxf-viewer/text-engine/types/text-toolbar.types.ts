@@ -57,6 +57,47 @@ export function encodeTrueColorInt(color: DxfColor): number {
   return ((color.r & 0xff) << 16) | ((color.g & 0xff) << 8) | (color.b & 0xff);
 }
 
+/**
+ * ADR-737 §11-6 — οι **δύο κωδικοί ACI που δεν είναι χρώμα αλλά κληρονομιά**. Σύμβαση AutoCAD/DXF
+ * (ίδιοι αριθμοί με το `ezdxf.colors.BYBLOCK/BYLAYER`), ίδια και για το group 62 και για το
+ * inline `\C#;` του MTEXT.
+ *
+ * ⚠️ Το `DxfColor` έχει **ξεχωριστά** `kind` για αυτά — δηλαδή το μοντέλο μας ξεχωρίζει «κληρονομώ»
+ * από «χρώμα υπ' αριθμόν 0/256», σωστά. Το τίμημα είναι ότι η μετάφραση **πρέπει** να γίνεται σε
+ * ένα σημείο, αλλιώς η μία πλευρά γράφει `256` και η άλλη το ξαναδιαβάζει ως δείκτη παλέτας.
+ */
+export const ACI_BY_BLOCK = 0;
+export const ACI_BY_LAYER = 256;
+
+/**
+ * ADR-737 §11-6 — ωμός κωδικός ACI → `DxfColor`. **Αντίστροφη** του `encodeAciColorInt`· οι δύο
+ * ζουν δίπλα-δίπλα ώστε να μην μπορούν να αποκλίνουν.
+ *
+ * 🐛 **Η ΑΙΤΙΑ ΠΟΥ ΥΠΑΡΧΕΙ (μετρημένη, 2026-07-31):** ο `serializeColor` έγραφε σωστά `\C256;` για
+ * `ByLayer`, αλλά ο parser του MTEXT περνούσε τον αριθμό **αυτούσιο** σε `{kind:'ACI', index:256}`
+ * — δηλαδή «κληρονομιά» γινόταν «χρώμα». Προσιτό από **κλείσιμο ομάδας `{…}`**, που επαναφέρει το
+ * στυλ στο εξωτερικό (= `ByLayer`): `{\C1;Α}Β` → γράφεται `\C1;Α\C256;Β` → στο **δεύτερο** πέρασμα
+ * το «Β» έπαυε να κληρονομεί. **Τρίτη όψη της ΒΛΑΒΗΣ Ε** (parser/serializer χωρίς κοινό λεξιλόγιο).
+ */
+export function parseAciColorInt(index: number): DxfColor {
+  if (index === ACI_BY_LAYER) return DXF_COLOR_BY_LAYER;
+  if (index === ACI_BY_BLOCK) return DXF_COLOR_BY_BLOCK;
+  return { kind: 'ACI', index };
+}
+
+/**
+ * `DxfColor` → ωμός κωδικός ACI. Το `TrueColor` **εξαιρείται στον τύπο**, όχι σε έλεγχο χρόνου
+ * εκτέλεσης: δεν εκφράζεται ως ACI, οπότε ο καλών οφείλει να το έχει ήδη διακλαδώσει (`\c`) —
+ * έτσι δεν υπάρχει διαδρομή που να επιστρέφει σιωπηλά μια «προεπιλογή» για κάτι ανέκφραστο.
+ */
+export function encodeAciColorInt(color: Exclude<DxfColor, { kind: 'TrueColor' }>): number {
+  switch (color.kind) {
+    case 'ByLayer': return ACI_BY_LAYER;
+    case 'ByBlock': return ACI_BY_BLOCK;
+    case 'ACI': return color.index;
+  }
+}
+
 // ── Version parsing & feature gates ──────────────────────────────────────────
 
 /**

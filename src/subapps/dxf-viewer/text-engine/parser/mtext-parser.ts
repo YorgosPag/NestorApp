@@ -18,6 +18,7 @@ import type {
   TextJustification,
 } from '../types/text-ast.types';
 import { createDefaultTextRunStyle } from '../types/text-ast.types';
+import { parseAciColorInt } from '../types/text-toolbar.types';
 import type { MtextToken } from './mtext-tokenizer';
 
 // ── Parser-internal state ─────────────────────────────────────────────────────
@@ -134,7 +135,10 @@ function applyStyleToken(token: MtextToken, style: TextRunStyle): void {
       break;
     case 'tracking': style.tracking = token.value; break;
     case 'oblique': style.obliqueAngle = token.degrees; break;
-    case 'colorAci': style.color = { kind: 'ACI', index: token.index }; break;
+    // ADR-737 §11-6 — ΟΧΙ `{kind:'ACI', index}` ωμό: το `0`/`256` είναι **κληρονομιά**, όχι
+    // χρώμα. Η μετάφραση ζει δίπλα στην αντίστροφή της (`encodeAciColorInt`) ώστε το export και
+    // το import να μη μιλούν διαφορετική γλώσσα για την ίδια συμβολοσειρά.
+    case 'colorAci': style.color = parseAciColorInt(token.index); break;
     case 'colorTrue':
       style.color = { kind: 'TrueColor', r: token.r, g: token.g, b: token.b };
       break;

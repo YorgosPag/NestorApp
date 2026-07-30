@@ -16,6 +16,7 @@ import {
   versionSupportsMtext,
   versionSupportsTrueColor,
   encodeTrueColorInt,
+  encodeAciColorInt,
 } from '../types/text-toolbar.types';
 import type {
   DxfTextNode,
@@ -161,17 +162,19 @@ function serializeAlignDiff(
   return (curr ?? 0) !== (prev ?? 0) ? `\\A${curr ?? 0};` : '';
 }
 
+/**
+ * ADR-737 §11-6 — οι κωδικοί `256`/`0` **δεν** γράφονται πια εδώ ως κυριολεκτικά: τους δίνει ο
+ * `encodeAciColorInt`, που ζει δίπλα στην αντίστροφή του (`parseAciColorInt`, τον οποίο καλεί ο
+ * parser). Όσο ήταν γραμμένοι σε αυτό το switch, το export τους εξέπεμπε και το import τους
+ * διάβαζε ως **δείκτη παλέτας** — η κληρονομιά χανόταν σε κάθε κλείσιμο ομάδας `{…}`.
+ */
 function serializeColor(color: DxfColor, version: DxfDocumentVersion): string {
-  switch (color.kind) {
-    case 'ByLayer': return '\\C256;';
-    case 'ByBlock': return '\\C0;';
-    case 'ACI': return `\\C${color.index};`;
-    case 'TrueColor':
-      if (versionSupportsTrueColor(version)) {
-        return `\\c${encodeTrueColorInt(color)};`;
-      }
-      return '\\C7;';
+  if (color.kind === 'TrueColor') {
+    // Πριν το R2004 δεν υπάρχει `\c` — υποβάθμιση σε ACI 7 (λευκό/μαύρο κατά φόντο), η ίδια
+    // επιλογή με το `versionSupportsTrueColor` gate του υπόλοιπου engine.
+    return versionSupportsTrueColor(version) ? `\\c${encodeTrueColorInt(color)};` : '\\C7;';
   }
+  return `\\C${encodeAciColorInt(color)};`;
 }
 
 // ── Paragraph formatting code ─────────────────────────────────────────────────
