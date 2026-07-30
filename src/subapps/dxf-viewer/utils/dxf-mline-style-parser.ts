@@ -11,6 +11,8 @@
  * ⚠️ SELF-CONTAINED on purpose (mirror of `style-table-reader.ts`): it does NOT import
  * `DxfEntityParser`, so it stays a leaf and cannot form the runtime cycle
  * converters → mline-converter → (value)style-parser → entity-parser → converters.
+ * ADR-736: η πλοήγηση section/ζευγών ήρθε από το `dxf-section-scan.ts`, που είναι **επίσης**
+ * leaf με μηδέν imports — η αυτάρκεια διατηρείται, το αντίγραφο έφυγε.
  *
  * ⚠️ ORDERED scan (not a `Map<code,value>`): the per-element `49/62/6` codes REPEAT,
  * so a flat map would keep only the LAST element — same idiom as HATCH/MLINE vertices.
@@ -18,6 +20,8 @@
  * @see AutoCAD DXF Reference: MLINESTYLE object · MLINE entity (group 340 pointer)
  * @see text-engine/parser/style-table-reader.ts — sibling table reader (TABLES section)
  */
+
+import { findDxfSectionRange, collectDxfRecordPairs } from './dxf-section-scan';
 
 /** One line element of an MLINESTYLE (group 49 offset + optional ACI color group 62). */
 export interface MlineElementDef {
@@ -53,7 +57,7 @@ export const STANDARD_MLINE_STYLE: MlineStyleDef = {
  */
 export function buildMlineStyleMap(lines: readonly string[]): MlineStyleMap {
   const map: MlineStyleMap = new Map();
-  const range = findObjectsSectionRange(lines);
+  const range = findDxfSectionRange(lines, 'OBJECTS');
   if (!range) return map;
 
   let i = range.start;
@@ -61,7 +65,7 @@ export function buildMlineStyleMap(lines: readonly string[]): MlineStyleMap {
     const code = lines[i]?.trim();
     const value = lines[i + 1]?.trim() ?? '';
     if (code === '0' && value === 'MLINESTYLE') {
-      const { pairs, next } = collectOrderedPairs(lines, i + 2, range.end);
+      const { pairs, next } = collectDxfRecordPairs(lines, i + 2, range.end);
       const def = pairsToMlineStyle(pairs);
       if (def) {
         map.set(def.name, def);
@@ -76,40 +80,6 @@ export function buildMlineStyleMap(lines: readonly string[]): MlineStyleMap {
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
-
-/** Locate the OBJECTS `SECTION` as a `[start,end)` line range, or null when absent. */
-function findObjectsSectionRange(lines: readonly string[]): { start: number; end: number } | null {
-  for (let i = 0; i + 3 < lines.length; i += 2) {
-    if (lines[i]?.trim() === '0' && lines[i + 1]?.trim() === 'SECTION'
-      && lines[i + 2]?.trim() === '2' && lines[i + 3]?.trim() === 'OBJECTS') {
-      const start = i + 4;
-      for (let j = start; j < lines.length - 1; j += 2) {
-        if (lines[j]?.trim() === '0' && lines[j + 1]?.trim() === 'ENDSEC') return { start, end: j };
-      }
-      return { start, end: lines.length };
-    }
-  }
-  return null;
-}
-
-/** Collect ordered `[code,value]` pairs from `start` until the next `0` (or `end`). */
-function collectOrderedPairs(
-  lines: readonly string[],
-  start: number,
-  end: number,
-): { pairs: Array<readonly [string, string]>; next: number } {
-  const pairs: Array<readonly [string, string]> = [];
-  let i = start;
-  while (i < end - 1) {
-    const code = lines[i]?.trim();
-    const value = lines[i + 1]?.trim() ?? '';
-    if (!code) { i += 2; continue; }
-    if (code === '0') break;
-    pairs.push([code, value]);
-    i += 2;
-  }
-  return { pairs, next: i };
-}
 
 /**
  * Fold ordered MLINESTYLE pairs into a definition. Each `49` opens a new element;
