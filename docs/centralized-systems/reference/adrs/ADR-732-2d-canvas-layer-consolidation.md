@@ -188,16 +188,74 @@ staged στο ίδιο commit (CHECK 6B/6D), ΟΧΙ tsc (N.17).
 
 ## 7. Κριτήρια επιτυχίας (production, 47_ergasia.dxf ή ισοδύναμο ~3k οντοτήτων)
 
-| Μετρικό | Πριν (Φ5 baseline) | Στόχος |
+| Μετρικό | Πριν (Φ5 baseline) | Στόχος | **Αποτέλεσμα (2026-07-30, §7.1)** |
+|---|---|---|---|
+| Ζωντανά canvas στρώματα σε ηρεμία | 13 | ≤ 4 | **5** (το ≤4 περιμένει το LayerCanvas unmount, §3) |
+| Καρέ > 33ms υπό χειρονομία | 11,5% | αισθητή πτώση (report με αριθμό) | **15,9%** — ΔΕΝ έπεσε ως ποσοστό· ΑΛΛΑΞΕ φύση (βλ. §7.1) |
+| Καρέ p90 υπό χειρονομία | 49,8ms | < 40ms (κατεύθυνση· το δάπεδο ορίζει το φυσικό όριο) | **33,3ms** ✅ |
+| p50 | 16,7ms (60 FPS) | ΑΜΕΤΑΒΛΗΤΟ — καμία παλινδρόμηση | **16,7ms** ✅ |
+| Οπτική ισοδυναμία | — | pixel-ίδιο z-αποτέλεσμα σε όλα τα modes | ✅ σε όσα modes ελέγχθηκαν (§7.1 σημ. 3) |
+
+### 7.1 Batch 4 — Η μέτρηση (2026-07-30, production BUILD_ID `T-mlZj7zMYXP22PFETbIm`)
+
+**Πρωτόκολλο:** F5 handoff §4 — production `next start` :3000, tab ορατό+εστιασμένο,
+αποθηκευμένο level «Γεν. Κάτοψη Έργου ΕΡΓΟ Α» = 47_ergasia.dxf **2.909 στοιχεία** (ίδιο
+πλήθος με το Φ5 baseline), ανθρώπινο συνεχόμενο pan/zoom από τον Giorgio 18,4s ενεργής
+πλοήγησης / 841 καρέ (2ο τρέξιμο — το 1ο, 36,6s με παύσεις hover, απορρίφθηκε ως μη
+συγκρίσιμο: το `frame:snap-detection` μόλυνε το δείγμα με hover κόστος άσχετο του Δ).
+
+**DOM census: 13 → 5** (underlay-dispatch z0 · layer z0 · dxf z10 pe:auto · overlay-dispatch-2d
+z11 · preview z15) — ακριβώς η αναμονή του §3· μόνο ο dxf έχει pointer-events.
+
+| Δείκτης | Φ5 baseline | Batch 4 |
 |---|---|---|
-| Ζωντανά canvas στρώματα σε ηρεμία | 13 | ≤ 4 |
-| Καρέ > 33ms υπό χειρονομία | 11,5% | αισθητή πτώση (report με αριθμό) |
-| Καρέ p90 υπό χειρονομία | 49,8ms | < 40ms (κατεύθυνση· το δάπεδο ορίζει το φυσικό όριο) |
-| p50 | 16,7ms (60 FPS) | ΑΜΕΤΑΒΛΗΤΟ — καμία παλινδρόμηση |
-| Οπτική ισοδυναμία | — | pixel-ίδιο z-αποτέλεσμα σε όλα τα modes |
+| Καρέ p50 / p75 | 16,7 / 16,7 | **16,7 / 16,8** |
+| Καρέ p90 / p95 | 49,8 / — | **33,3 / 33,4** |
+| Καρέ p99 | 83,4 | 116,6 (n=841 ⇒ ~8 καρέ, θόρυβος) |
+| Καρέ >33ms / >70ms | 11,5% / 1,8% | **15,9% / 2,0%** |
+| `frame:underlay-dispatch` (νέο id ζώνης Α) | — | **p99 0,1ms** |
+| `frame:overlay-dispatch-2d` (νέο id ζώνης Β) | — | **p99 0,1ms** |
+| `frame:TOTAL` | p95 1,4ms | p90 7,6 / p95 9,8ms |
+| `frame:dxf-canvas` | p90 74,6 / p95 111,7 / p99 167,9 | **p90 11,9** / p95 100,5 / p99 142,1 |
+
+**Ανάγνωση (τίμια):**
+
+1. **Το compositing stall εξαφανίστηκε.** Στο baseline η ζώνη 33-50ms ήταν διάσπαρτη
+   (p90 49,8ms = αυθαίρετες αναμονές compositor με άδειο main thread — η διάγνωση του
+   ADR-726 §4.Γ). Τώρα p90=p95=33,3-33,4ms: τα «αργά» καρέ είναι σχεδόν όλα καθαρό
+   double-vsync beat, όχι compositing ουρά. Οι δύο zone καμβάδες κοστίζουν **μηδέν**
+   (p99 0,1ms) και το στρώμα-φόρτος του compositor έπεσε 13→5.
+2. **Το >33% ΔΕΝ έπεσε (11,5→15,9%) — και το λέμε.** Η ουρά που έμεινε ΔΕΝ είναι
+   compositing: είναι (α) τα Φ3.1 idle re-rasters του `frame:dxf-canvas` (p95 100ms —
+   αγοράζουν το κοφτερό zoom, by design) και (β) `frame:snap-detection` που στο δικό μας
+   δείγμα έτρεχε (n=518, p95 34,9ms) ενώ στο baseline ήταν **τελείως απόν** — άρα τα δύο
+   >33% δεν είναι αυστηρά συγκρίσιμα· το δικό μας δείγμα κουβαλά και snap κόστος.
+   Ο επόμενος μοχλός για την ουρά είναι το snap/hover και το re-raster budget, ΟΧΙ άλλα
+   στρώματα.
+3. **Οπτικά:** grid pass ζωγραφίζει ΚΑΤΩ από τις οντότητες στον κοινό καμβά ζώνης Α
+   (pixel-έλεγχος: grid on → 1,08M px στον underlay, off → 0 px, η Φ2 πύλη καθαρίζει)·
+   σχέδιο/χρώματα/κείμενα/πίνακες σωστά σε όλα τα zoom· θολούρα μέσα στη χειρονομία =
+   Φ3.1 by design. **Calibration click ΔΕΝ ελέγχθηκε οπτικά** — το level δεν έχει
+   αποθηκευμένη raster κάτοψη· καλύπτεται από τα unit tests του Batch 2 (floorplan pass
+   null χωρίς floorId, XXII.B φρουρός §4/§5) και εκκρεμεί ως χειροκίνητος έλεγχος στην
+   πρώτη πραγματική βαθμονόμηση.
+4. **Build fix στο πέρασμα:** το πρώτο production build ΕΣΠΑΣΕ στο prerender του
+   `/demo/floorplan-background-image` (import του καταργημένου `FloorplanBackgroundCanvas`).
+   Η demo σελίδα ξαναγράφτηκε με demo-local canvas πάνω στο provider SSoT
+   (`provider.render()`) — ήταν ο ΜΟΝΑΔΙΚΟΣ live καταναλωτής εκτός viewer (grep όλων των
+   καταργημένων ονομάτων Batches 1-3 σε όλο το `src/`).
 
 ## Changelog
 
+- **2026-07-30 (ε) — Batch 4 ΕΓΙΝΕ: μέτρηση-απόδειξη σε production (BUILD_ID
+  `T-mlZj7zMYXP22PFETbIm`).** DOM census **13 → 5** ✓· p90 καρέ **49,8 → 33,3ms** ✓·
+  p50 60 FPS αμετάβλητο ✓· >33ms 11,5→15,9% (ΔΕΝ έπεσε — άλλαξε φύση: η διάσπαρτη
+  compositing ουρά 33-50ms έγινε καθαρό double-vsync· η εναπομείνασα ουρά είναι Φ3.1
+  re-rasters + snap-detection, όχι στρώματα — πλήρης ανάλυση §7.1). Τα νέα zone ids
+  `underlay-dispatch`/`overlay-dispatch-2d` μετρήθηκαν p99 0,1ms. Στο πέρασμα: το πρώτο
+  build έσπασε στο prerender του `/demo/floorplan-background-image` (import καταργημένου
+  component) — η demo σελίδα ξαναγράφτηκε πάνω στο provider SSoT (§7.1 σημ. 4)· ο grep
+  όλων των καταργημένων ονομάτων βρήκε ΜΟΝΟ αυτόν τον καταναλωτή εκτός viewer.
 - **2026-07-30 (δ) — Batch 3 ΥΛΟΠΟΙΗΜΕΝΟ (mount-on-demand + zone hook SSoT).**
   `TopoGridUnderlayLeaf` → null χωρίς toggle ΕΓΣΑ87· `Focus2DOverlay` → outer gate / inner
   canvas (focus-state hygiene στο mode flip μένει στον outer· το `clearFocus2DOverlay`
