@@ -152,6 +152,16 @@ const nextConfig = {
     // parallelism:1 → sequential → peak ~2-3GB, safe on 8GB+4GB swap.
     config.parallelism = 1;
 
+    // [LOCAL-MEASUREMENT] Opt-in kill switch for the webpack FILESYSTEM cache
+    // (ADR-726 Φ5, 2026-07-30). The pack cache for this project exceeds 11GB on
+    // disk — a local `next build` on a nearly-full disk dies with ENOSPC while
+    // WRITING CACHE, never reaching output. Set NEXT_DISABLE_FS_CACHE=1 to build
+    // with the in-memory cache only (~2GB of .next instead of ~13GB; every build
+    // is cold, ~25min). Unset ⇒ zero behaviour change (CI/Netcup unaffected).
+    if (process.env.NEXT_DISABLE_FS_CACHE === '1') {
+      config.cache = { type: 'memory' };
+    }
+
     // [CI-OOM] Disable filesystem cache in CI — PackFileCache serializes large
     // strings (180KB+) and holds them in heap during build, adding ~1-2GB peak.
     // On CI runners (7GB RAM) the heap already hits 9GB live; cache pushes it over.
