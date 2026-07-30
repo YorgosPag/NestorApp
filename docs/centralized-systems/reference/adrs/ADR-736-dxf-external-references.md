@@ -266,3 +266,4 @@ bytes αρχείου χρήστη «αποτυγχάνει» για λόγο **�
 | 2026-07-30 | Φ2 — placeholder με όνομα· `sourceName` + κοινή προβολή `applyExternalReferencesToEntities`· ειλικρινείς κωδικοί print/export |
 | 2026-07-30 | Φ3 — matcher (4 περάσματα), zip-unpack, content dedup, storage path + rules + suite, intake |
 | 2026-07-30 | Φ4 — modeless παλέτα «Εξωτερικές Αναφορές» (**αντί** νεκρού βήματος wizard) + συνοδευτικά στο `DxfImportModal` + i18n el/en |
+| 2026-07-31 | 🔧 **ΠΡΟΣΩΡΙΝΑ debug probes** `[ADR736-PROBE]` — 3 `console.log` σε `dxf-scene-entity-converter.convertEntity` (image → OK/NULL + base) και `ImageRenderer.render` / placeholder branch (world+screen corners). Σκοπός: εντοπισμός σε ποιο σκέλος χάνεται η ανεπίλυτη εικόνα (μετατροπή vs render vs προβολή). **ΔΕΝ είναι αρχιτεκτονική αλλαγή — αφαιρούνται μόλις κλείσει η διερεύνηση.** |

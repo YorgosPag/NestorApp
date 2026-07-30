@@ -116,7 +116,9 @@ export function convertEntity(entity: SceneEntity, layers: SceneLayers, layersBy
     dwarn('useDxfSceneConversion', 'Unsupported entity type:', entity.type);
     return null;
   }
-  return handler(entity, base);
+  const out = handler(entity, base);
+  if (entity.type === 'image') console.log('[ADR736-PROBE] convertEntity image', entity.id, out ? 'OK' : 'NULL', JSON.stringify(base));
+  return out;
 }
 
 /**
