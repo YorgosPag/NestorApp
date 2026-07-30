@@ -307,7 +307,11 @@ export function explodeTextEntity(entity: TextEntity | MTextEntity): Entity[] | 
     const xLine = (align === 'center' ? -line.widthWorld / 2 : align === 'right' ? -line.widthWorld : 0)
       + line.xOffsetWorld;
     for (const span of line.spans) {
-      emitSpan(out, ctx, span, xLine + span.xWorld, y, baseline, fonts.get(fontKeyOf(span)) ?? null);
+      // ADR-737 §11-2 — ΤΟ ΙΔΙΟ βήμα με το `paintLayoutLines`: το `\A#;` μετακινεί το span μέσα
+      // στη γραμμή. SSoT σε κόσμο y-πάνω, τοπικό πλαίσιο y-κάτω ⇒ αφαίρεση. Χωρίς αυτό, το
+      // explode θα παρήγαγε γεωμετρία που ΔΕΝ ταυτίζεται με ό,τι βλέπει ο χρήστης.
+      const spanY = y - span.yOffsetWorld;
+      emitSpan(out, ctx, span, xLine + span.xWorld, spanY, baseline, fonts.get(fontKeyOf(span)) ?? null);
     }
   }
   return out.length > 0 ? out : null;

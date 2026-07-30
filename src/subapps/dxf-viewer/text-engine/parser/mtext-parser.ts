@@ -188,7 +188,15 @@ function pushStackToken(
     top: token.top,
     bottom: token.bottom,
     type: token.type,
-    style: { fontFamily: style.fontFamily, height: style.height, color: style.color },
+    style: {
+      fontFamily: style.fontFamily,
+      height: style.height,
+      color: style.color,
+      // ADR-737 §11-2 — το `\A#;` είναι ΚΑΤΑΣΤΑΣΗ τη στιγμή που γεννιέται η στοίβα, ακριβώς
+      // όπως το ύψος/χρώμα από πάνω. Παραλείπεται όταν δεν δηλώθηκε ποτέ, ώστε το AST να μη
+      // γεμίζει ρητά μηδενικά που ο serializer θα έπρεπε μετά να ξεχωρίσει από το «άγνωστο».
+      ...(style.verticalAlign !== undefined ? { verticalAlign: style.verticalAlign } : {}),
+    },
   });
 }
 

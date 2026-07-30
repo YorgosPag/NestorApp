@@ -24,6 +24,7 @@ import { writeDxfAscii } from '../dxf-ascii-writer';
 import { DxfEntityParser } from '../../../utils/dxf-entity-parser';
 import { convertEntityToScene } from '../../../utils/dxf-entity-converters';
 import { findMTextColumns, type MTextColumnsData } from '../../../utils/dxf-embedded-object';
+import { scaleEntity } from '../../../systems/scale/scale-entity-transform';
 import type { Entity } from '../../../types/entities';
 import type { AnySceneEntity } from '../../../types/scene';
 
@@ -221,5 +222,48 @@ describe('ADR-737 §11-1 — πύλες έκδοσης/διαλέκτου', () =
     const dxf = writeDxfAscii([asEntity(importMText())], { ...R2018, lineMode: 'lines' });
     expect(dxf).not.toContain('0\nMTEXT\n');
     expect(dxf).not.toContain('Embedded Object');
+  });
+});
+
+// ── (ε) canonical-mm × στηλοποίηση: το κενό ΕΚΛΕΙΣΕ ──────────────────────────
+
+describe('ADR-737 §11-1.b — canonical-mm × στηλοποίηση', () => {
+  /**
+   * 🔴 Το ΑΚΡΙΒΩΣ ίδιο σχήμα με το περιστατικό ADR-635 Φ C.20 (`width`) — **τρίτη** επανάληψη
+   * στο ίδιο σημείο: το εισαγόμενο MTEXT περνά από `applyCanonicalMmScale` → `scaleEntity` →
+   * `scaleText`, που κλιμάκωνε `position`/`height`/`textNode`/`width` αλλά **ΟΧΙ** το
+   * `mtextColumns`. Σε σχέδιο σε μέτρα (mmFactor = 1000) οι στήλες έμεναν σε μονάδες πηγής ενώ
+   * όλα τα υπόλοιπα γίνονταν mm ⇒ το export έγραφε στήλες **1000× μικρότερες** από την οντότητα
+   * που τις φιλοξενεί. Ελληνικό τοπογραφικό σε μέτρα = **η κανονική περίπτωση**, όχι ακραία.
+   *
+   * Έκλεισε με τον SSoT `scaleMTextColumns` (`utils/dxf-embedded-object.ts`), που καλείται και
+   * από τους **δύο** κλάδους (`scaleText` για το ισοπεδωμένο `type:'text'`, `scaleMText` για το
+   * γνήσιο) — ένα σημείο απόφασης, ώστε να μην ξαναγίνει τέταρτη φορά σε έναν μόνο κλάδο.
+   */
+  it('ο scaleEntity κλιμακώνει το mtextColumns μαζί με την οντότητα', () => {
+    const imported = importMText();
+    const scaled = {
+      ...imported,
+      ...scaleEntity(imported as unknown as Entity, { x: 0, y: 0 }, 1000, 1000),
+    } as unknown as { width?: number; mtextColumns?: MTextColumnsData };
+
+    expect(scaled.width).toBe(30 * 1000);               // ADR-635 Φ C.20
+    expect(scaled.mtextColumns?.width).toBe(20 * 1000); // ADR-737 §11-1.b
+  });
+
+  /**
+   * ⚠️ ΑΡΝΗΤΙΚΟ PIN — τα `columnType`/`count` είναι **απαρίθμηση και πλήθος**, όχι μήκη.
+   * Χωρίς αυτό, ένα «πιο απλό» `Object.entries(...).map(v => v * s)` θα περνούσε τον παραπάνω
+   * έλεγχο και θα μετέτρεπε σιωπηλά 2 στήλες σε 2.000.
+   */
+  it('πλήθος και τύπος στηλών ΔΕΝ κλιμακώνονται', () => {
+    const imported = importMText();
+    const scaled = {
+      ...imported,
+      ...scaleEntity(imported as unknown as Entity, { x: 0, y: 0 }, 1000, 1000),
+    } as unknown as { mtextColumns?: MTextColumnsData };
+
+    expect(scaled.mtextColumns?.count).toBe(imported.mtextColumns?.count);
+    expect(scaled.mtextColumns?.columnType).toBe(imported.mtextColumns?.columnType);
   });
 });

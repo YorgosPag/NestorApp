@@ -101,7 +101,13 @@ export interface TextStack {
   readonly bottom: string;
   /** ^ = tolerance (diagonal), / = diagonal fraction, # = horizontal fraction. */
   readonly type: 'tolerance' | 'diagonal' | 'horizontal';
-  readonly style: Pick<TextRunStyle, 'fontFamily' | 'height' | 'color'>;
+  /**
+   * ADR-737 §11-2 — το `verticalAlign` ΠΡΕΠΕΙ να είναι εδώ, δεν είναι καλλωπισμός. Μετρημένο
+   * στο `47_ergasia.dxf`: στις 5 ετικέτες εμβαδού (`\A1;{\C7;Ε\H0.7x;\S^ τίτλου;\H1.4286x;…}`)
+   * το **κοντό** περιεχόμενο της γραμμής — αυτό ακριβώς που το `\A` μετακινεί — **ΕΙΝΑΙ** η
+   * στοίβα. Χωρίς το πεδίο, η στοίχιση θα εφαρμοζόταν παντού ΕΚΤΟΣ από εκεί που μετράει.
+   */
+  readonly style: Pick<TextRunStyle, 'fontFamily' | 'height' | 'color' | 'verticalAlign'>;
 }
 
 /**

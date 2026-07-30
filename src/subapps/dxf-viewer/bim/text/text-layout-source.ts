@@ -102,10 +102,15 @@ function pieceBaseOf(child: TextRun | TextStack, ctx: SourceContext): Omit<Sourc
   const runStyle = isRun(child) ? child.style : undefined;
   const height = child.style.height > 0 ? child.style.height : ctx.blockHeight;
   const color = resolveRunColorHex(child.style.color);
+  // ADR-737 §11-2 — `child.style`, ΟΧΙ `runStyle`: από τότε που το `TextStack.style` απέκτησε
+  // `verticalAlign`, η στοίβα απαντά στο ίδιο ερώτημα με ένα κανονικό run — και είναι ακριβώς
+  // αυτή που μετακινείται στις ετικέτες εμβαδού του `47_ergasia.dxf`.
+  const verticalAlign = child.style.verticalAlign;
   return {
     style: pieceStyle(runStyle, ctx.block),
     heightWorld: height,
     decoration: pieceDecoration(runStyle, ctx.blockDecoration),
+    ...(verticalAlign !== undefined ? { verticalAlign } : {}),
     ...(color ? { color } : {}),
   };
 }

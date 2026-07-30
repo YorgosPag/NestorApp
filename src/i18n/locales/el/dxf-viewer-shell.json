@@ -5166,6 +5166,7 @@
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",
       "importTek": "Εισαγωγή Τέκτονα (.tek)",
+      "externalReferences": "Εξωτερικές Αναφορές",
       "pdfBackground": "PDF Υπόβαθρο",
       "exportDxf": "Εξαγωγή",
       "ifcExport": "Εξαγωγή IFC",
@@ -6198,6 +6199,48 @@
   },
   "layerManagerPalette": {
     "title": "Διαχειριστής Στρώσεων"
+  },
+  "externalReferencesPalette": {
+    "title": "Εξωτερικές Αναφορές",
+    "description": "Το σχέδιο δηλώνει αρχεία που βρίσκονται εκτός του. Εδώ βλέπεις ποια βρέθηκαν και ποια λείπουν.",
+    "empty": "Αυτό το σχέδιο δεν δηλώνει εξωτερικές αναφορές.",
+    "summary": "{resolved} από {total} βρέθηκαν",
+    "columns": {
+      "name": "Όνομα",
+      "kind": "Είδος",
+      "status": "Κατάσταση",
+      "action": "Ενέργεια"
+    },
+    "kind": {
+      "raster": "Εικόνα",
+      "xref": "Εξωτερική αναφορά σχεδίου",
+      "pdf-underlay": "Υπόβαθρο PDF",
+      "dwf-underlay": "Υπόβαθρο DWF",
+      "dgn-underlay": "Υπόβαθρο DGN",
+      "ole-embedded": "Ενσωματωμένο αντικείμενο",
+      "data-link": "Σύνδεσμος δεδομένων"
+    },
+    "status": {
+      "resolved": "Βρέθηκε",
+      "missing": "Λείπει",
+      "unsupported": "Δεν αποδίδεται"
+    },
+    "statusHint": {
+      "missing": "Το σχέδιο κρατά τη διαδρομή, όχι το αρχείο. Δώσε τα αρχεία για να συνδεθούν.",
+      "unsupported": "Ανιχνεύτηκε αλλά δεν ζωγραφίζεται ακόμη από τον ΝΕΣΤΟΡΑ."
+    },
+    "locate": "Εντοπισμός αρχείου…",
+    "locateAll": "Εντοπισμός αρχείων…",
+    "resolving": "Αναζήτηση…",
+    "ambiguous": "Βρέθηκαν περισσότερα από ένα — διάλεξε",
+    "ambiguousChoose": "Επιλογή",
+    "failure": {
+      "unsupported-format": "Μη υποστηριζόμενη μορφή αρχείου",
+      "too-large": "Το αρχείο είναι πολύ μεγάλο",
+      "upload-failed": "Απέτυχε το ανέβασμα",
+      "hash-failed": "Δεν διαβάστηκε το περιεχόμενο"
+    },
+    "noCompany": "Δεν υπάρχει ενεργή εταιρεία — η αποθήκευση συνημμένων δεν είναι διαθέσιμη."
   },
   "floorManagementDialog": {
     "title": "Όροφοι Κτιρίου",

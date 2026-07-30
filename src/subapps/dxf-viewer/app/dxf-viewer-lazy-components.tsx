@@ -48,6 +48,8 @@ export const SlabDetailHost = React.lazy(() => import('../ui/components/slab-det
 // ADR-723 — «Διαχειριστής Στρώσεων» ως modeless palette (ήταν modal dialog, ADR-391).
 // Το ενδιάμεσο `AdminLayerManagerDialogHost` καταργήθηκε: ήταν καθαρό pass-through των props.
 export const AdminLayerManagerPalette = React.lazy(() => import('../ui/components/AdminLayerManagerPalette').then(mod => ({ default: mod.AdminLayerManagerPalette })));
+// ADR-736 Φ4 — modeless παλέτα «Εξωτερικές Αναφορές» (αδελφή της παραπάνω, ίδιο κέλυφος).
+export const ExternalReferencesPalette = React.lazy(() => import('../ui/components/ExternalReferencesPalette').then(mod => ({ default: mod.ExternalReferencesPalette })));
 // ADR-683 Φ3.1β — «Ανάθεση προμέτρησης» dialog host (εισαγόμενο πλέγμα → άρθρο ΑΤΟΕ + μονάδα)
 export const ImportedMeshBoqHost = React.lazy(() => import('./ImportedMeshBoqHost').then(mod => ({ default: mod.ImportedMeshBoqHost })));
 export const ImportedMeshMaterialMapHost = React.lazy(() => import('./ImportedMeshMaterialMapHost').then(mod => ({ default: mod.ImportedMeshMaterialMapHost })));

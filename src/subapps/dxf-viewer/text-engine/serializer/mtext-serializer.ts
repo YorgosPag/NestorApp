@@ -96,7 +96,14 @@ function serializeParagraph(
   let currentStyle: TextRunStyle = { ...baseStyle };
   for (const run of para.runs) {
     if (isTextStack(run)) {
+      // 🐛 ADR-737 §11-2 — ΙΔΙΑ ΚΑΤΗΓΟΡΙΑ ΜΕ ΤΗ ΒΛΑΒΗ Ε (μονόδρομη διαρροή): ο parser διάβαζε
+      // το `\A#;` μέσα στη στοίβα, αλλά εδώ η στοίβα έκανε `continue` **πριν** από κάθε διαφορά
+      // στυλ ⇒ το export δεν το ξανάγραφε ΠΟΤΕ. Ένας κύκλος export→import έσβηνε τη στοίχιση
+      // ακριβώς στο σημείο όπου είναι ορατή. Η κατάσταση προχωρά κανονικά και μέσα από στοίβα.
+      const alignCode = serializeAlignDiff(run.style.verticalAlign, currentStyle.verticalAlign);
+      if (alignCode) parts.push(alignCode);
       parts.push(serializeStack(run));
+      currentStyle = { ...currentStyle, verticalAlign: run.style.verticalAlign };
       continue;
     }
     const diff = serializeStyleDiff(run.style, currentStyle, options);
@@ -126,12 +133,8 @@ function serializeStyleDiff(
   if (curr.widthFactor !== prev.widthFactor) parts.push(`\\W${curr.widthFactor};`);
   if (curr.tracking !== prev.tracking) parts.push(`\\T${curr.tracking};`);
   if (curr.obliqueAngle !== prev.obliqueAngle) parts.push(`\\Q${curr.obliqueAngle};`);
-  // `\A#;` — κατακόρυφη στοίχιση χαρακτήρα. `undefined` = «δεν δηλώθηκε» ⇒ η προεπιλογή `0`
-  // (bottom), οπότε ένα ρητό `\A0;` δεν χρειάζεται να ξαναγραφτεί: το `?? 0` κάνει τη σύγκριση
-  // στη ΣΗΜΑΣΙΑ, όχι στην παρουσία του πεδίου (αλλιώς `0 !== undefined` ⇒ θόρυβος σε κάθε run).
-  if ((curr.verticalAlign ?? 0) !== (prev.verticalAlign ?? 0)) {
-    parts.push(`\\A${curr.verticalAlign ?? 0};`);
-  }
+  const alignCode = serializeAlignDiff(curr.verticalAlign, prev.verticalAlign);
+  if (alignCode) parts.push(alignCode);
   if (colorDiffers(curr.color, prev.color)) {
     parts.push(serializeColor(curr.color, options.version));
   }
@@ -139,6 +142,21 @@ function serializeStyleDiff(
   if (curr.overline !== prev.overline) parts.push(curr.overline ? '\\O' : '\\o');
   if (curr.strikethrough !== prev.strikethrough) parts.push(curr.strikethrough ? '\\K' : '\\k');
   return parts.join('');
+}
+
+/**
+ * `\A#;` — κατακόρυφη στοίχιση χαρακτήρα, ως διαφορά κατάστασης. **ΕΝΑ** σημείο για τη σύμβαση
+ * «`undefined` ≡ δεν δηλώθηκε ⇒ προεπιλογή `0` (bottom)»: η σύγκριση γίνεται στη ΣΗΜΑΣΙΑ, όχι
+ * στην παρουσία του πεδίου (αλλιώς `0 !== undefined` ⇒ ένα περιττό `\A0;` σε κάθε run).
+ *
+ * ΕΝΑ αντίγραφο, δύο καλούντες (κανονικό run + στοίβα `\S`) — αν αποκλίνουν, ξαναγεννιέται η
+ * ασυμμετρία parser/serializer που το §11-2 ήρθε να κλείσει.
+ */
+function serializeAlignDiff(
+  curr: TextRunStyle['verticalAlign'],
+  prev: TextRunStyle['verticalAlign'],
+): string {
+  return (curr ?? 0) !== (prev ?? 0) ? `\\A${curr ?? 0};` : '';
 }
 
 function serializeColor(color: DxfColor, version: DxfDocumentVersion): string {

@@ -35,6 +35,10 @@ import { DxfUnitsSelector } from '@/features/floorplan-import/components/DxfUnit
 import { useDxfUnitSuggestion } from '../hooks/common/useDxfUnitSuggestion';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { SceneUnits } from '../utils/scene-units';
+// ADR-736 Φ3ε — τα συνοδευτικά υπόβαθρα. Ό,τι δώσει ο χρήστης εδώ (αρχεία / φάκελος / .zip)
+// περιμένει στον κατάλογο υποψηφίων και επιλύεται ΜΟΝΟ ΤΟΥ μόλις γεννηθεί η σκηνή.
+import { collectExternalReferenceCandidates } from '../io/dxf-external-reference-intake';
+import { offerExternalReferenceCandidates } from '../stores/ExternalReferenceCandidatesStore';
 
 // 🏢 ENTERPRISE: File type detection
 type ImportFileType = 'dxf' | 'pdf' | null;
@@ -72,6 +76,10 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     const [selectedUnits, setSelectedUnits] = useState<SceneUnits | 'auto'>('auto');
     const [isLoading, setIsLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    // ADR-736 Φ3ε — τα συνοδευτικά υπόβαθρα (προαιρετικά, ΠΟΤΕ δεν μπλοκάρουν την εισαγωγή).
+    const [companionFiles, setCompanionFiles] = useState<File[]>([]);
+    const companionInputRef = useRef<HTMLInputElement>(null);
+    const companionFolderInputRef = useRef<HTMLInputElement>(null);
 
     const explicitUnits = selectedUnits !== 'auto' ? selectedUnits : undefined;
     // Διαβάζει ΜΟΝΟ την κεφαλίδα του DXF και καθρεφτίζει την ΙΔΙΑ απόφαση που θα
@@ -111,6 +119,18 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
         fileInputRef.current?.click();
     };
 
+    /**
+     * ADR-736 Φ3ε — τα συνοδευτικά. Τα `.zip` ανοίγουν εδώ (`collect…`), ώστε ο χρήστης να
+     * μπορεί να ρίξει το πακέτο *eTransmit* του τοπογράφου αυτούσιο. Ο επιλογέας μηδενίζεται
+     * πάντα, αλλιώς η δεύτερη επιλογή του ΙΔΙΟΥ αρχείου δεν εκπέμπει `change`.
+     */
+    const handleCompanionChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const picked = Array.from(event.target.files ?? []);
+        event.target.value = '';
+        if (picked.length === 0) return;
+        setCompanionFiles(await collectExternalReferenceCandidates(picked));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedFile || !fileType) return;
@@ -124,11 +144,16 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
             } else if (fileType === 'dxf') {
                 // 🏢 ENTERPRISE: Handle DXF import (existing logic)
                 console.log('📐 [DxfImportModal] Importing DXF:', selectedFile.name, encoding, selectedUnits);
+                // ADR-736 Φ3ε — ΠΡΙΝ την εισαγωγή: η σκηνή γεννιέται ασύγχρονα και η αυτόματη
+                // επίλυση τρέχει μόλις εμφανιστεί. Καταχώρηση μετά το `onImport` θα έχανε την
+                // κούρσα σε γρήγορο parse — τα αρχεία θα έφταναν αφού είχε ήδη κοιτάξει κανείς.
+                offerExternalReferenceCandidates(companionFiles);
                 await onImport(selectedFile, encoding, explicitUnits);
             }
             onClose();
             setSelectedFile(null);
             setFileType(null);
+            setCompanionFiles([]);
         } catch (error) {
             console.error(`❌ ${t('importModal.errors.importFailed')}`, error);
         } finally {
@@ -139,6 +164,7 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
     const handleClose = () => {
         setSelectedFile(null);
         setFileType(null);
+        setCompanionFiles([]);
         setEncoding('windows-1253');
         setSelectedUnits('auto');
         setIsLoading(false);
@@ -227,6 +253,61 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                                 </p>
                             )}
                         </ModalField>
+
+                        {/* ADR-736 Φ3ε — Συνοδευτικά υπόβαθρα. ΠΡΟΑΙΡΕΤΙΚΑ και μη δεσμευτικά:
+                            το DXF κρατά διαδρομές, όχι bytes, οπότε ένα σχέδιο με 10 ανεπίλυτους
+                            συνδέσμους είναι απολύτως υγιές. Δίνοντάς τα εδώ, ο resolver τα
+                            ταυτίζει (όνομα → διαστάσεις σε pixels) ΧΩΡΙΣ καμία άλλη ενέργεια·
+                            ό,τι μείνει διορθώνεται αργότερα από την παλέτα «Εξωτερικές Αναφορές». */}
+                        {(fileType === 'dxf' || !selectedFile) && (
+                            <ModalField
+                                label={t('importModal.externalReferences.label')}
+                                description={t('importModal.externalReferences.hint')}
+                            >
+                                <input
+                                    ref={companionInputRef}
+                                    type="file"
+                                    multiple
+                                    accept=".png,.jpg,.jpeg,.webp,.zip"
+                                    onChange={(e) => void handleCompanionChange(e)}
+                                    disabled={isLoading}
+                                    className="hidden"
+                                />
+                                <input
+                                    ref={companionFolderInputRef}
+                                    type="file"
+                                    multiple
+                                    /* @ts-expect-error — μη τυποποιημένο, αλλά υλοποιημένο σε όλους τους σύγχρονους browsers. */
+                                    webkitdirectory=""
+                                    onChange={(e) => void handleCompanionChange(e)}
+                                    disabled={isLoading}
+                                    className="hidden"
+                                />
+                                <div className={MODAL_FLEX_PATTERNS.ROW.centerWithGap}>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={isLoading}
+                                        onClick={() => companionInputRef.current?.click()}
+                                    >
+                                        {t('importModal.externalReferences.selectFiles')}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={isLoading}
+                                        onClick={() => companionFolderInputRef.current?.click()}
+                                    >
+                                        {t('importModal.externalReferences.selectFolder')}
+                                    </Button>
+                                </div>
+                                {companionFiles.length > 0 && (
+                                    <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_SM} text-primary`}>
+                                        {t('importModal.externalReferences.selected', { count: companionFiles.length })}
+                                    </p>
+                                )}
+                            </ModalField>
+                        )}
 
                         {/* 🏢 ENTERPRISE: Show encoding only for DXF files */}
                         {(fileType === 'dxf' || !selectedFile) && (

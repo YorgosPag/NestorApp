@@ -277,3 +277,42 @@ export function findMTextColumns(embedded: EmbeddedObjectList | undefined): MTex
   }
   return null;
 }
+
+/**
+ * 🐛 ADR-737 §11-1.b — **ΟΙ ΣΤΗΛΕΣ ΕΙΝΑΙ ΜΗΚΗ ΚΑΙ ΠΡΕΠΕΙ ΝΑ ΚΛΙΜΑΚΩΝΟΝΤΑΙ.**
+ *
+ * Τρίτη επανάληψη του **ίδιου** περιστατικού στο ίδιο σημείο: ADR-635 Φ C.20 για το
+ * `TextEntity.width`, και πριν από αυτό για το ύψος των runs. Κάθε φορά που ένα **νέο πεδίο
+ * μήκους** μπαίνει στην οντότητα κειμένου, ο `scaleEntity` το αγνοεί σιωπηλά και το σχέδιο σε
+ * **μέτρα** (canonical-mm ×1000, ADR-462) βγάζει το νέο πεδίο **1000× μικρότερο** από όλα τα
+ * υπόλοιπα. Ο μεταγλωττιστής δεν βοηθά: τα πεδία είναι προαιρετικά και η παράλειψη είναι έγκυρη.
+ *
+ * ⚠️ **ΖΕΙ ΕΔΩ, ΟΧΙ ΣΤΟΝ ΚΑΛΟΥΝΤΑ.** Το χρειάζονται **δύο** κλάδοι (`scaleText` για το
+ * εισαγόμενο MTEXT, που ισοπεδώνεται σε `type:'text'`, **και** `scaleMText`). Δύο αντίγραφα θα
+ * ήταν sibling clone που θα απέκλινε στην πρώτη αλλαγή — ο ίδιος κανόνας που έφερε εδώ τον
+ * `mtextColumnTypeCode`.
+ *
+ * **Διαστάσεις, όχι ένας συντελεστής:** πλάτη (`42` totalWidth, `44` width, `45` gutterWidth)
+ * κλιμακώνονται με `sx`· ύψη (`41` definedHeight, `43` totalHeight, `46` heights[]) με `sy`.
+ * Στην ενιαία κλιμάκωση της εισαγωγής (`sx === sy`) ταυτίζονται· σε λαβή ανισότροπης αλλαγής
+ * μεγέθους (π.χ. ανατολική λαβή, `sy === 1`) **μόνο** αυτή η διάκριση δίνει σωστό αποτέλεσμα.
+ *
+ * Τα `columnType` / `count` / `autoHeight` / `reversedFlow` είναι **απαριθμήσεις, πλήθη και
+ * σημαίες** — μένουν ανέπαφα. Πολλαπλασιασμός τους θα ήταν σφάλμα δομής, όχι κλίμακας.
+ */
+export function scaleMTextColumns(
+  columns: MTextColumnsData, sx: number, sy: number,
+): MTextColumnsData {
+  const fx = Math.abs(sx);
+  const fy = Math.abs(sy);
+  const { definedHeight, width, gutterWidth, totalWidth, totalHeight, heights } = columns;
+  return {
+    ...columns,
+    ...(definedHeight !== undefined && { definedHeight: definedHeight * fy }),
+    ...(totalHeight !== undefined && { totalHeight: totalHeight * fy }),
+    ...(width !== undefined && { width: width * fx }),
+    ...(gutterWidth !== undefined && { gutterWidth: gutterWidth * fx }),
+    ...(totalWidth !== undefined && { totalWidth: totalWidth * fx }),
+    ...(heights !== undefined && { heights: heights.map((h) => h * fy) }),
+  };
+}

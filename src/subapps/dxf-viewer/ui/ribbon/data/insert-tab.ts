@@ -72,6 +72,21 @@ export const INSERT_TAB: RibbonTab = {
                 action: 'import-tek',
               },
             },
+            // ADR-736 Φ4 — «Εξωτερικές Αναφορές»: το μητρώο των αρχείων που **δηλώνει** το
+            // σχέδιο και ζουν εκτός του. Ο AutoCAD βάζει το `XREF` ακριβώς εδώ (Insert tab),
+            // και για τον ίδιο λόγο: ανήκει δίπλα στην εισαγωγή, αλλά είναι **παλέτα** που
+            // ανοίγει οποτεδήποτε — ένας σύνδεσμος σπάει και μετά την εισαγωγή.
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'insert.external-references',
+                labelKey: 'ribbon.commands.externalReferences',
+                icon: 'external-references',
+                commandKey: 'external-references',
+                action: 'open-external-references',
+              },
+            },
           ],
         },
       ],

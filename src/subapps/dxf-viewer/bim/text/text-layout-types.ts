@@ -25,6 +25,7 @@
 
 import type { TextAdvanceStyle } from '../../text-engine/fonts';
 import type { LineSpacingMode } from '../../text-engine/types';
+import type { TextVerticalAlign } from './text-vertical-align';
 
 /** Οι γραμμικές διακοσμήσεις ενός run — AutoCAD `\L`/`\l`, `\O`/`\o`, `\K`/`\k`. */
 export interface TextSpanDecoration {
@@ -56,6 +57,18 @@ export interface TextLayoutSpan {
   readonly style: TextAdvanceStyle;
   /** Διακοσμήσεις ΑΝΑ RUN (όχι ανά γραμμή — το AutoCAD υπογραμμίζει μόνο ό,τι δηλώθηκε). */
   readonly decoration: TextSpanDecoration;
+  /**
+   * ADR-737 §11-2 — κατακόρυφη μετατόπιση ΜΕΣΑ στη γραμμή από το `\A#;`, μονάδες κόσμου,
+   * **θετική προς τα ΠΑΝΩ**. `0` για κάθε span που δεν μετακινείται (η συντριπτική πλειοψηφία).
+   *
+   * ⚠️ **ΥΠΟΧΡΕΩΤΙΚΟ, όχι προαιρετικό** — ο κανόνας της κεφαλίδας αυτού του αρχείου: ένα
+   * προαιρετικό πεδίο υποχρεώνει τον ζωγράφο να μαντέψει προεπιλογή, και η μαντεψιά του ζωγράφου
+   * δεν είναι ποτέ εγγυημένα ίδια με του μετρητή. Το `0` λέγεται ρητά.
+   *
+   * ΔΕΝ αλλάζει το κουτί/λαβές/hit-test: η μετατόπιση μένει εξ ορισμού μέσα στη ζώνη που ορίζει
+   * το ψηλότερο span της γραμμής, δηλαδή μέσα στα ήδη υπολογισμένα όρια.
+   */
+  readonly yOffsetWorld: number;
   /** CSS χρώμα, ή undefined όταν το run κληρονομεί το χρώμα οντότητας/επιπέδου. */
   readonly color?: string;
 }
@@ -93,6 +106,12 @@ export interface SourcePiece {
   readonly style: TextAdvanceStyle;
   readonly heightWorld: number;
   readonly decoration: TextSpanDecoration;
+  /**
+   * ADR-737 §11-2 — το `\A#;` του run/της στοίβας, ΑΚΑΤΕΡΓΑΣΤΟ. Η μετατόπιση δεν μπορεί να
+   * υπολογιστεί εδώ: χρειάζεται το ψηλότερο span **της γραμμής**, που είναι γνωστό μόνο αφού
+   * λυθούν στηλοθέτες και αναδίπλωση (`LineBuilder.flush`). `undefined` = ποτέ δεν δηλώθηκε.
+   */
+  readonly verticalAlign?: TextVerticalAlign;
   readonly color?: string;
 }
 

@@ -156,6 +156,13 @@
     },
     "errors": {
       "importFailed": "Error during file import:"
+    },
+    "externalReferences": {
+      "label": "Companion images (optional)",
+      "hint": "If the drawing declares images, provide the files (or the surveyor's .zip) and they will link automatically.",
+      "selectFiles": "Select files or .zip",
+      "selectFolder": "Select folder",
+      "selected": "{count, plural, one {# file pending} other {# files pending}}"
     }
   },
   "importWizard": {

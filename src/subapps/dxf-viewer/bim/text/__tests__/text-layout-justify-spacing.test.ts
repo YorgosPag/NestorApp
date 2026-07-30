@@ -21,7 +21,14 @@
  * Ο compiler ΔΕΝ το έπιασε: το `src/subapps/dxf-viewer/**` είναι εκτός του root `tsconfig.json`
  * (CHECK 3.29 / ADR-663), οπότε το «λείπει υποχρεωτικό πεδίο» δεν είχε ποιος να το δει.
  *
- * Τα tests εδώ τρέχουν τον ΠΡΑΓΜΑΤΙΚΟ αγωγό (tokenizer → parser → `layoutTextBlock`) — καμία
+ * ⚠️ ΣΗΜΕΙΩΣΗ ΓΙΑ ΟΠΟΙΟΝ ΤΑ ΕΠΕΚΤΕΙΝΕΙ — ΜΗΝ γράψεις `\pxqj;\psm1.5;`. Κάθε κωδικός `\p…`
+ * **αντικαθιστά ολόκληρο** το στυλ παραγράφου (`applyParagraphCode`), οπότε το δεύτερο `\p`
+ * μηδενίζει τη στοίχιση του πρώτου ⇒ το `stretchLine` δεν καλείται ΠΟΤΕ και το test γίνεται
+ * κενό-πράσινο. Ακριβώς αυτό συνέβη στην πρώτη γραφή αυτού του αρχείου. Το μη-προεπιλεγμένο
+ * διάστιχο έρχεται εδώ από το πεδίο **οντότητας** `lineSpacing.factor` (κωδ. 44) — αυτό που
+ * γράφουν οι μετατροπείς scene→DxfText — ώστε να συνυπάρχει με το `\pxqj;`.
+ *
+ * Τα tests τρέχουν τον ΠΡΑΓΜΑΤΙΚΟ αγωγό (tokenizer → parser → `layoutTextBlock`) — καμία
  * χειροποίητη γραμμή, κανένα πείραγμα δεδομένων για να μπούμε στη διαδρομή.
  */
 import { layoutTextBlock, totalExtraLineRatio } from '../text-layout';
@@ -40,19 +47,18 @@ function node(raw: string): DxfTextNode {
   return parseMtext(tokenizeMtext(raw), { height: H });
 }
 
-function text(over: Partial<DxfText>): DxfText {
-  return {
-    id: 't', type: 'text', visible: true, position: { x: 0, y: 0 }, text: '', height: H, ...over,
-  } as DxfText;
-}
-
 /** Το ίδιο `layoutTextBlock` που καλούν renderer / explode / κουτί. */
-function layoutOf(raw: string) {
-  return layoutTextBlock(text({ textNode: node(raw), width: FRAME }), H, {});
+function layoutOf(raw: string, lineSpacingFactor?: number) {
+  const t = {
+    id: 't', type: 'text', visible: true, position: { x: 0, y: 0 }, text: '', height: H,
+    textNode: node(raw), width: FRAME,
+    ...(lineSpacingFactor != null ? { lineSpacing: { factor: lineSpacingFactor } } : {}),
+  } as unknown as DxfText;
+  return layoutTextBlock(t, H, {});
 }
 
 describe('ADR-635 Φ C.21 (Δ) — πλήρης στοίχιση ΔΕΝ καταπίνει το διάστιχο', () => {
-  it('η πλήρης στοίχιση όντως τεντώνει (αλλιώς το test παρακάτω δεν αποδεικνύει τίποτα)', () => {
+  it('ΦΡΟΥΡΟΣ: η πλήρης στοίχιση όντως τεντώνει (αλλιώς τα υπόλοιπα δεν αποδεικνύουν τίποτα)', () => {
     const plain = layoutOf(BODY);
     const justified = layoutOf(`\\pxqj;${BODY}`);
     expect(justified.length).toBeGreaterThan(1);
@@ -65,10 +71,12 @@ describe('ADR-635 Φ C.21 (Δ) — πλήρης στοίχιση ΔΕΝ κατα
   });
 
   it.each([
-    ['χωρίς ρητό \\ps', `\\pxqj;${BODY}`],
-    ['με \\psm1.5 (μη προεπιλεγμένο διάστιχο)', `\\pxqj;\\psm1.5;${BODY}`],
-  ])('%s — ΚΑΘΕ γραμμή κρατά πεπερασμένο spacingRatio', (_label, raw) => {
-    for (const line of layoutOf(raw)) {
+    ['με προεπιλεγμένο διάστιχο οντότητας', undefined],
+    ['με διάστιχο οντότητας 1.5 (κωδ. 44)', 1.5],
+  ])('%s — ΚΑΘΕ γραμμή κρατά πεπερασμένο spacingRatio', (_label, factor) => {
+    const lines = layoutOf(`\\pxqj;${BODY}`, factor as number | undefined);
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) {
       expect(line.spacingRatio).toBeDefined();
       expect(Number.isFinite(line.spacingRatio)).toBe(true);
     }
@@ -76,15 +84,17 @@ describe('ADR-635 Φ C.21 (Δ) — πλήρης στοίχιση ΔΕΝ κατα
 
   it('το διάστιχο των τεντωμένων γραμμών ταυτίζεται με το ΑΣΤΟΙΧΙΣΤΟ ίδιο κείμενο', () => {
     // Η στοίχιση είναι ΟΡΙΖΟΝΤΙΑ απόφαση — δεν επιτρέπεται να μετακινήσει τίποτα κατακόρυφα.
-    const plain = layoutOf(`\\psm1.5;${BODY}`);
-    const justified = layoutOf(`\\pxqj;\\psm1.5;${BODY}`);
+    const plain = layoutOf(BODY, 1.5);
+    const justified = layoutOf(`\\pxqj;${BODY}`, 1.5);
     expect(justified.map(l => l.spacingRatio)).toEqual(plain.map(l => l.spacingRatio));
+    // Και το διάστιχο ΔΕΝ είναι το προεπιλεγμένο — αλλιώς η ισότητα θα ίσχυε και με σκέτο 0.
+    expect(justified[1].spacingRatio).toBeGreaterThan(layoutOf(BODY)[1].spacingRatio);
   });
 
   it('το άθροισμα που τοποθετεί ΤΗΝ ΠΡΩΤΗ γραμμή μένει αριθμός (όχι NaN)', () => {
     // Αυτό ακριβώς περνά στο `resolveMultilineExtentsFromExtra` σε renderer ΚΑΙ explode· ένα
     // NaN εδώ κάνει ΟΛΟ το μπλοκ να μη ζωγραφιστεί, όχι απλώς μια γραμμή να πέσει λάθος.
-    const extra = totalExtraLineRatio(layoutOf(`\\pxqj;\\psm1.5;${BODY}`));
+    const extra = totalExtraLineRatio(layoutOf(`\\pxqj;${BODY}`, 1.5));
     expect(Number.isNaN(extra)).toBe(false);
     expect(extra).toBeGreaterThan(0);
   });

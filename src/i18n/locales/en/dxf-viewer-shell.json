@@ -5166,6 +5166,7 @@
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",
       "importTek": "Import Tekton (.tek)",
+      "externalReferences": "External References",
       "pdfBackground": "PDF Background",
       "exportDxf": "Export",
       "ifcExport": "Export IFC",
@@ -6198,6 +6199,48 @@
   },
   "layerManagerPalette": {
     "title": "Layer Manager"
+  },
+  "externalReferencesPalette": {
+    "title": "External References",
+    "description": "This drawing declares files that live outside it. Here you see which were found and which are missing.",
+    "empty": "This drawing declares no external references.",
+    "summary": "{resolved} of {total} found",
+    "columns": {
+      "name": "Name",
+      "kind": "Type",
+      "status": "Status",
+      "action": "Action"
+    },
+    "kind": {
+      "raster": "Image",
+      "xref": "Drawing reference",
+      "pdf-underlay": "PDF underlay",
+      "dwf-underlay": "DWF underlay",
+      "dgn-underlay": "DGN underlay",
+      "ole-embedded": "Embedded object",
+      "data-link": "Data link"
+    },
+    "status": {
+      "resolved": "Found",
+      "missing": "Missing",
+      "unsupported": "Not rendered"
+    },
+    "statusHint": {
+      "missing": "The drawing stores the path, not the file. Provide the files to link them.",
+      "unsupported": "Detected but not drawn by NESTOR yet."
+    },
+    "locate": "Locate file…",
+    "locateAll": "Locate files…",
+    "resolving": "Searching…",
+    "ambiguous": "More than one match — choose",
+    "ambiguousChoose": "Choose",
+    "failure": {
+      "unsupported-format": "Unsupported file format",
+      "too-large": "File is too large",
+      "upload-failed": "Upload failed",
+      "hash-failed": "Could not read file contents"
+    },
+    "noCompany": "No active company — storing attachments is unavailable."
   },
   "floorManagementDialog": {
     "title": "Building Floors",

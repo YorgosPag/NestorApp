@@ -35,14 +35,26 @@ export class ImageAssetUploadError extends Error {
   }
 }
 
-/** Η κατάληξη του αρχείου, ή `null` όταν δεν είναι υποστηριζόμενη εικόνα. */
-export function detectImageAssetExt(file: File): ImageAssetExt | null {
-  const lower = file.name.toLowerCase();
+/**
+ * Η κατάληξη από ένα **όνομα**, ή `null` όταν δεν είναι υποστηριζόμενη εικόνα.
+ *
+ * Ξεχωριστό από το {@link detectImageAssetExt} γιατί υπάρχουν καταναλωτές που κρατούν όνομα
+ * **πριν** υπάρξει `File` — π.χ. μια εγγραφή μέσα σε `.zip`, όπου το σωστό `type` πρέπει να
+ * δοθεί τη στιγμή που κατασκευάζεται το `File` (ADR-736 Φ3). Χωρίς αυτό, ο καλών θα αντέγραφε
+ * τη σκάλα καταλήξεων — τέταρτο δίδυμο μιας ερώτησης που απαντιέται εδώ.
+ */
+export function imageAssetExtFromName(name: string): ImageAssetExt | null {
+  const lower = name.toLowerCase();
   if (lower.endsWith('.png')) return 'png';
   if (lower.endsWith('.jpg')) return 'jpg';
   if (lower.endsWith('.jpeg')) return 'jpeg';
   if (lower.endsWith('.webp')) return 'webp';
   return null;
+}
+
+/** Η κατάληξη του αρχείου, ή `null` όταν δεν είναι υποστηριζόμενη εικόνα. */
+export function detectImageAssetExt(file: File): ImageAssetExt | null {
+  return imageAssetExtFromName(file.name);
 }
 
 /** Το MIME που δηλώνεται στο Storage (οι `storage.rules` ελέγχουν `image/.*`). */

@@ -36,6 +36,7 @@ import {
 import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStore';
 // ADR-723 — άνοιγμα της παλέτας «Διαχειριστής Στρώσεων» μέσω του store SSoT
 import { LayerManagerPaletteStore } from '../stores/LayerManagerPaletteStore';
+import { ExternalReferencesPaletteStore } from '../stores/ExternalReferencesPaletteStore';
 import { ImportedMeshBoqDialogStore } from '../stores/ImportedMeshBoqDialogStore';
 import { ImportedMeshMaterialMapDialogStore } from '../stores/ImportedMeshMaterialMapDialogStore';
 import {
@@ -137,6 +138,12 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
   // ADR-723: άνοιγμα της modeless παλέτας Στρώσεων (AutoCAD `LAYER` / Revit View > Layer Manager)
   if (action === 'open-layer-manager') {
     LayerManagerPaletteStore.open();
+    return true;
+  }
+  // ADR-736 Φ4: άνοιγμα της modeless παλέτας «Εξωτερικές Αναφορές» (AutoCAD `XREF` palette /
+  // Revit *Manage Links*). Παλέτα και όχι βήμα wizard: ένας σύνδεσμος σπάει και ΜΕΤΑ την εισαγωγή.
+  if (action === 'open-external-references') {
+    ExternalReferencesPaletteStore.open();
     return true;
   }
   // ADR-563: «Αυτόματη Διαστασιολόγηση» — open options dialog, then auto-place

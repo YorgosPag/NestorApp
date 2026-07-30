@@ -34,9 +34,11 @@
 
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { measureTextAdvanceWorld, type TextAdvanceStyle } from '../../text-engine/fonts';
+import type { TextVerticalAnchor } from '../../text-engine/types';
 import { sourceLinesOf } from './text-layout-source';
 import { applyParagraphJustification } from './text-layout-justify';
 import { resolveLineSpacingRatio } from './text-lines';
+import { spanVerticalOffsetWorld, type TextVerticalAlign } from './text-vertical-align';
 import type { SourceLine, SourcePiece, TextLayoutLine, TextLayoutSpan } from './text-layout-types';
 
 export type {
@@ -94,8 +96,13 @@ function nextTabStop(x: number, stops: readonly number[], height: number): numbe
 /** Mutable accumulator for the line currently being filled. */
 class LineBuilder {
   private spans: TextLayoutSpan[] = [];
+  /** Το ακατέργαστο `\A#;` κάθε span, σε παράλληλη σειρά — λύνεται στο `flush`. */
+  private aligns: Array<TextVerticalAlign | undefined> = [];
   private x = 0;
   readonly lines: TextLayoutLine[] = [];
+
+  /** Η αγκύρωση της οντότητας — ο ΕΝΑΣ όρος αλλαγής βάσης του `\A` (βλ. text-vertical-align). */
+  constructor(private readonly anchor: TextVerticalAnchor | undefined) {}
 
   get cursor(): number { return this.x; }
   get isEmpty(): boolean { return this.spans.length === 0 && this.x === 0; }
@@ -119,18 +126,35 @@ class LineBuilder {
       heightWorld: piece.heightWorld,
       style: piece.style,
       decoration: piece.decoration,
+      // Προσωρινό: η πραγματική τιμή απαιτεί το ψηλότερο span ΤΗΣ ΓΡΑΜΜΗΣ (→ `flush`).
+      yOffsetWorld: 0,
       ...(piece.color ? { color: piece.color } : {}),
     });
+    this.aligns.push(piece.verticalAlign);
     this.x += width;
+  }
+
+  /**
+   * ADR-737 §11-2 — το `\A#;` λύνεται ΕΔΩ και όχι νωρίτερα: η αναφορά του είναι το ψηλότερο
+   * κομμάτι **της οπτικής γραμμής**, που υπάρχει μόνο αφού κλείσουν στηλοθέτες + αναδίπλωση.
+   */
+  private withVerticalAlign(): TextLayoutSpan[] {
+    const tallest = this.spans.reduce((m, s) => Math.max(m, s.heightWorld), 0);
+    return this.spans.map((span, i) => {
+      const dy = spanVerticalOffsetWorld(this.aligns[i], this.anchor, span.heightWorld, tallest);
+      return dy === 0 ? span : { ...span, yOffsetWorld: dy };
+    });
   }
 
   /** Close the current line (even when empty — an empty source line is a real blank line). */
   flush(): void {
-    const width = this.spans.reduce((m, s) => Math.max(m, s.xWorld + s.widthWorld), 0);
+    const spans = this.withVerticalAlign();
+    const width = spans.reduce((m, s) => Math.max(m, s.xWorld + s.widthWorld), 0);
     this.lines.push({
-      spans: this.spans, widthWorld: width, xOffsetWorld: 0, spacingRatio: this.spacingRatio,
+      spans, widthWorld: width, xOffsetWorld: 0, spacingRatio: this.spacingRatio,
     });
     this.spans = [];
+    this.aligns = [];
     this.x = 0;
   }
 }
@@ -244,7 +268,10 @@ export function layoutTextBlock(
   const frame = text.width != null && text.width > 0 ? text.width : Number.POSITIVE_INFINITY;
   const sources = sourceLinesOf(text, style, height);
 
-  const builder = new LineBuilder();
+  // ADR-737 §11-2 — η αγκύρωση διαβάζεται από ΤΟ ΙΔΙΟ `textStyle` που διαβάζουν και οι δύο
+  // ζωγράφοι (`TextRenderer.baselineMode`, `explodeTextEntity.baseline`) με την ίδια προεπιλογή,
+  // ώστε να μη χρειαστεί νέα παράμετρος — και να μην μπορεί κάποιος καλών να δώσει άλλη.
+  const builder = new LineBuilder(text.textStyle?.textBaseline);
   const baseSpacing = resolveLineSpacingRatio(text);
   for (const line of sources) {
     builder.useSpacing(spacingRatioOf(line, baseSpacing, height));

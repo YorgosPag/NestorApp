@@ -303,7 +303,11 @@ export class TextRenderer extends BaseEntityRenderer {
       const xOff = (align === 'center' ? -lineWidthPx / 2 : align === 'right' ? -lineWidthPx : 0)
         + line.xOffsetWorld * worldToPx;
       for (const span of line.spans) {
-        this.paintLayoutSpan(originX + xOff + span.xWorld * worldToPx, y, span, opts);
+        // ADR-737 §11-2 — `\A#;`: το span μπορεί να κάθεται ψηλότερα/χαμηλότερα ΜΕΣΑ στη γραμμή
+        // όταν η γραμμή έχει ανάμεικτα ύψη. Το SSoT μιλά **κόσμο y-πάνω**, η οθόνη είναι
+        // y-κάτω ⇒ αφαίρεση (ίδια σύμβαση με το `obliqueShear`). `0` για κάθε άλλο span.
+        const spanY = y - span.yOffsetWorld * worldToPx;
+        this.paintLayoutSpan(originX + xOff + span.xWorld * worldToPx, spanY, span, opts);
       }
     }
   }

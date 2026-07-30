@@ -16,6 +16,8 @@ import type { ArrayParams } from '../array/types';
 import type { SceneEntity } from '../../core/commands/interfaces';
 import type { DxfTextNode } from '../../text-engine/types';
 import { scaleTextNodeRunHeights } from '../../utils/text-node-utils';
+import { scaleMTextColumns } from '../../utils/dxf-embedded-object';
+import type { MTextColumnsData } from '../../utils/dxf-embedded-object';
 // ADR-646 Φ3 — reuse the geometry SSoTs: the visible-CCW arc range (shared with hit-test/snap),
 // the deg→rad helper, and the rotation-aware rect corner builder (both rect representations).
 import { arcVisibleCcwRange } from '../../rendering/entities/shared/geometry-arc-utils';
@@ -181,7 +183,20 @@ function scaleText(e: Entity & { type: 'text' }, base: Point2D, sx: number, sy: 
     ...((e as { width?: number }).width !== undefined
       ? { width: (e as { width: number }).width * Math.abs(sx) }
       : {}),
+    ...scaledMTextColumns(e, sx, sy),
   };
+}
+
+/**
+ * ADR-737 §11-1.b — κοινό για `scaleText` **και** `scaleMText`: το εισαγόμενο MTEXT ισοπεδώνεται
+ * σε `type:'text'` (ΒΛΑΒΗ Β), άρα η στηλοποίηση περνά από τον κλάδο του TEXT· το γνήσιο
+ * `type:'mtext'` περνά από τον άλλο. Ένα σημείο απόφασης, δύο σημεία κλήσης.
+ */
+function scaledMTextColumns(
+  e: Entity, sx: number, sy: number,
+): { mtextColumns?: MTextColumnsData } {
+  const columns = (e as { mtextColumns?: MTextColumnsData }).mtextColumns;
+  return columns ? { mtextColumns: scaleMTextColumns(columns, sx, sy) } : {};
 }
 
 function scaleMText(e: Entity & { type: 'mtext' }, base: Point2D, sx: number, sy: number) {
@@ -194,6 +209,7 @@ function scaleMText(e: Entity & { type: 'mtext' }, base: Point2D, sx: number, sy
     // ADR-635 — mirror `scaleText`: the run `style.height` in the `textNode` is what
     // `resolveTextHeight` reads first, so the flat-height scale alone is shadowed.
     ...(node ? { textNode: scaleTextNodeRunHeights(node, Math.abs(sy)) } : {}),
+    ...scaledMTextColumns(e, sx, sy),
   };
 }
 
