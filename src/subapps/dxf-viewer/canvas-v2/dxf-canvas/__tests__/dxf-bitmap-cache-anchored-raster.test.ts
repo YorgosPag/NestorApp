@@ -38,6 +38,13 @@ jest.mock('../DxfRenderer', () => ({
 
 // Stable, non-moving cache-key inputs so the only variable is the transform under test.
 jest.mock('../../../systems/viewport/ViewportStore', () => ({ getActiveScaleName: () => '1:50' }));
+
+// ADR-726 Φ3.1 — ελεγχόμενη «χειρονομία πλοήγησης». Default false ⇒ όλα τα υπόλοιπα tests
+// του αρχείου συνεχίζουν να καρφώνουν τα ΑΥΣΤΗΡΑ (rest-time) κριτήρια αποδοχής.
+let mockGestureActive = false;
+jest.mock('../../../systems/navigation/NavigationGestureStore', () => ({
+  isNavigationGesture: () => mockGestureActive,
+}));
 jest.mock('../../../bim/services/opening-tag-style-service', () => ({
   getCurrentOpeningTagStyle: () => ({ enabled: false }),
 }));
@@ -69,6 +76,7 @@ afterAll(() => getContextSpy.mockRestore());
 
 beforeEach(() => {
   mockRenderCalls.length = 0;
+  mockGestureActive = false;
   jest.useFakeTimers();
 });
 
@@ -277,6 +285,71 @@ describe('DxfBitmapCache — ADR-726 Φ3 anchored raster', () => {
       cache.invalidate();
       jest.advanceTimersByTime(1000);
       expect(requestRepaint).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('ADR-726 Φ3.1 — gesture-aware acceptance: ΚΑΝΕΝΑ transform-driven rebuild μέσα στη χειρονομία', () => {
+    // Το μετρημένο σφάλμα (production 2026-07-30): στο wheel-zoom το k ξεπερνά το budget σε
+    // 1-2 notches ⇒ full re-raster 2.909 οντοτήτων ΜΕΣΑ στη χειρονομία (p90 74,6ms, max 184,9ms).
+    // Η θεραπεία: όσο διαρκεί η χειρονομία, τα ΠΟΙΟΤΙΚΑ κριτήρια (θολούρα/τρύπα) αναστέλλονται.
+    const OUT_OF_BUDGET: ReadonlyArray<[string, ViewTransform]> = [
+      ['zoom-in πέρα από το magnification budget', { scale: 1.6, offsetX: 0, offsetY: 0 }],
+      ['pan πέρα από το overscan (τρύπα)', { scale: 1, offsetX: 200, offsetY: 0 }],
+      ['zoom-out που αφήνει το raster μικρότερο από το viewport', { scale: 0.6, offsetX: 0, offsetY: 0 }],
+    ];
+
+    it.each(OUT_OF_BUDGET)('σερβίρει ΟΠΩΣ ΕΙΝΑΙ μέσα σε χειρονομία — %s ⇒ ΟΧΙ rebuild', (_label, transform) => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      expect(cache.isDirty(SCENE, transform, VIEWPORT, BASE)).toBe(false);
+      expect(mockRenderCalls).toHaveLength(0);
+    });
+
+    it('το blit εξακολουθεί να ζωγραφίζει το (θολό/ελλιπές) raster μέσα στη χειρονομία', () => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      const { ctx, drawImage } = targetCtxStub();
+      cache.blit(ctx, VIEWPORT, { scale: 1.6, offsetX: 0, offsetY: 0 });
+      expect(drawImage).toHaveBeenCalledTimes(1);
+    });
+
+    it('μόλις τελειώσει η χειρονομία, τα αυστηρά κριτήρια επανέρχονται ΑΜΕΣΩΣ', () => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      const zoomed: ViewTransform = { scale: 1.6, offsetX: 0, offsetY: 0 };
+      expect(cache.isDirty(SCENE, zoomed, VIEWPORT, BASE)).toBe(false);
+      mockGestureActive = false; // endNavigationGesture() / λήξη idle παραθύρου
+      expect(cache.isDirty(SCENE, zoomed, VIEWPORT, BASE)).toBe(true);
+    });
+
+    it('η ΔΟΜΙΚΗ ακύρωση ΔΕΝ αναστέλλεται — layer toggle κατά το pan ξαναχτίζει', () => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      expect(cache.isDirty(SCENE, ANCHOR, VIEWPORT, { ...BASE, wireframeMode: true })).toBe(true);
+    });
+
+    it('το invalidate() ΔΕΝ αναστέλλεται (isolate / LayerStore mutations μέσα σε χειρονομία)', () => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      cache.invalidate();
+      expect(cache.isDirty(SCENE, ANCHOR, VIEWPORT, BASE)).toBe(true);
+    });
+
+    it('χωρίς raster δεν υπάρχει τι να προβληθεί — το πρώτο χτίσιμο ΔΕΝ αναστέλλεται', () => {
+      mockGestureActive = true;
+      const cache = new DxfBitmapCache();
+      expect(cache.isDirty(SCENE, ANCHOR, VIEWPORT, BASE)).toBe(true);
+    });
+
+    it('το idle re-raster (rerasterDue) ΔΕΝ αναστέλλεται — 120ms ησυχίας = πρακτική ηρεμία', () => {
+      // Το transform σταμάτησε να αλλάζει πριν 120ms αλλά το gesture idle παράθυρο (220ms)
+      // δεν έχει λήξει ακόμη: το settled rebuild πρέπει να τρέξει — αυτό αποκαθιστά τα pixels.
+      mockGestureActive = true;
+      const cache = freshCache();
+      const drifted: ViewTransform = { scale: 1, offsetX: 45, offsetY: 0 };
+      cache.blit(targetCtxStub().ctx, VIEWPORT, drifted);
+      jest.advanceTimersByTime(150);
+      expect(cache.isDirty(SCENE, drifted, VIEWPORT, BASE)).toBe(true);
     });
   });
 

@@ -27,6 +27,13 @@
  * input changes, or ~120ms after the gesture stops (idle re-raster, which also re-centres
  * the overscan so the next gesture gets its budget back).
  *
+ * GESTURE-AWARE ACCEPTANCE — ADR-726 Φ3.1 (2026-07-30):
+ * "hole / too magnified" are REST-TIME criteria. While `isNavigationGesture()` is true the
+ * raster is served AS-IS — no transform-driven rebuild ever runs mid-gesture (measured in
+ * production: judging quality mid-gesture caused 75-185ms full re-rasters inside wheel-zoom,
+ * `frame:dxf-canvas` p90 74,6ms). Structural invalidation, `invalidate()`, the idle
+ * re-raster and the very first build are NOT suspended.
+ *
  * ⚠️ This change only ever REMOVES inputs from the key. Adding any interactive state back
  *    in reintroduces the Phase D v1 freeze.
  */
@@ -44,11 +51,16 @@ import {
   computeAnchoredBlitRect,
   computeOverscanPx,
   isAnchoredBlitAcceptable,
+  isAnchoredBlitUsable,
   isSameTransform,
   magnification,
   overscannedRenderTransform,
   overscannedViewport,
 } from './dxf-bitmap-cache-anchor';
+// ADR-726 Φ3.1 — gesture-aware acceptance: while a navigation gesture is in flight the raster
+// is served AS-IS (quality criteria are rest-time criteria). Same SSoT the snap scheduler uses
+// (ADR-728 Φ1) — «is the user moving the view?» has exactly one owner.
+import { isNavigationGesture } from '../../systems/navigation/NavigationGestureStore';
 // ADR-726 Φ3 — the ONE authority for world→screen (margins + Y-inversion). The projection
 // offset is MEASURED through it, never re-derived here: a hand-written copy of this formula
 // is exactly what made the raster pan the wrong way vertically.
@@ -222,6 +234,17 @@ export class DxfBitmapCache {
     const key = this.cacheKey;
     const resolved = this.resolveBlit(transform, viewport);
     if (!key || !resolved) return false;
+    // A numerically unusable projection can never be shown (drawImage no-ops on
+    // non-finite args) — rebuild regardless of any gesture.
+    if (!isAnchoredBlitUsable(resolved.rect, resolved.k)) return false;
+    // ADR-726 Φ3.1 — gesture-aware acceptance (Google Maps/Figma pattern): while a
+    // navigation gesture is in flight, serve the raster AS-IS (blurred / with holes —
+    // the browser paints background into the gaps). Sharpness/coverage are REST-TIME
+    // criteria; judging them mid-gesture is what caused the measured 75-185ms full
+    // re-rasters inside wheel-zoom (production, 2026-07-30). The idle re-raster
+    // (`rerasterDue`, checked BEFORE this in isDirty) restores exact pixels at rest,
+    // and structural staleness (also checked before this) is never suspended.
+    if (isNavigationGesture()) return true;
     return isAnchoredBlitAcceptable({
       rect: resolved.rect,
       magnification: resolved.k,

@@ -26,6 +26,7 @@ import {
   computeOverscanPx,
   coversViewport,
   isAnchoredBlitAcceptable,
+  isAnchoredBlitUsable,
   isSameTransform,
   magnification,
   maxMagnification,
@@ -190,6 +191,33 @@ describe('coversViewport', () => {
 
   it('tolerates sub-device-pixel rounding rather than forcing a rebuild', () => {
     expect(coversViewport({ dx: 0.4, dy: 0.4, dw: 800, dh: 600 }, 800, 600)).toBe(true);
+  });
+});
+
+describe('isAnchoredBlitUsable — ADR-726 Φ3.1 validity (χωρίς policy)', () => {
+  // Validity ≠ ποιότητα: μέσα σε χειρονομία το cache σερβίρει ΚΑΘΕ usable προβολή
+  // (θολή/ελλιπή), αλλά ΠΟΤΕ μια αριθμητικά άκυρη — το drawImage θα την αγνοούσε σιωπηλά.
+  it('accepts a blurry AND hole-y projection — quality is NOT its question', () => {
+    // k=3 (πολύ πάνω από κάθε budget) + rect που αφήνει τρύπα: usable, όχι acceptable.
+    const blurryHoled = { dx: 200, dy: 200, dw: 300, dh: 300 };
+    expect(isAnchoredBlitUsable(blurryHoled, 3)).toBe(true);
+    expect(isAnchoredBlitAcceptable({ rect: blurryHoled, magnification: 3, dpr: 1, physW: 800, physH: 600 })).toBe(false);
+  });
+
+  it.each([
+    ['zero magnification', 0],
+    ['negative magnification', -1],
+    ['NaN magnification', Number.NaN],
+    ['Infinite magnification', Number.POSITIVE_INFINITY],
+  ])('refuses a degenerate magnification (%s)', (_label, k) => {
+    expect(isAnchoredBlitUsable({ dx: 0, dy: 0, dw: 800, dh: 600 }, k)).toBe(false);
+  });
+
+  it.each([
+    ['NaN dx', { dx: Number.NaN, dy: 0, dw: 800, dh: 600 }],
+    ['Infinite dy', { dx: 0, dy: Number.POSITIVE_INFINITY, dw: 800, dh: 600 }],
+  ])('refuses a non-finite destination (%s)', (_label, rect) => {
+    expect(isAnchoredBlitUsable(rect, 1)).toBe(false);
   });
 });
 

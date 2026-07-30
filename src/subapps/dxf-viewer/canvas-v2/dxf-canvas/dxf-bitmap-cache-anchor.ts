@@ -184,6 +184,21 @@ export function coversViewport(rect: AnchoredBlitRect, physW: number, physH: num
 }
 
 /**
+ * Is the projection NUMERICALLY VALID at all — finite scale and destination? (ADR-726 Φ3.1)
+ *
+ * Validity, not quality: a `true` here can still be blurry or hole-y. Split out of
+ * `isAnchoredBlitAcceptable` because the two answers serve different callers — during a
+ * navigation gesture the cache serves any USABLE projection as-is (gesture-aware
+ * acceptance, policy in `DxfBitmapCache.canServe`), while the quality criteria below
+ * apply only at rest. `drawImage` silently no-ops on non-finite args, so an unusable
+ * projection must always force a rebuild — gesture or not.
+ */
+export function isAnchoredBlitUsable(rect: AnchoredBlitRect, k: number): boolean {
+  if (!Number.isFinite(k) || k <= 0) return false;
+  return Number.isFinite(rect.dx) && Number.isFinite(rect.dy);
+}
+
+/**
  * Can this projection still be shown — i.e. is it both sharp enough and hole-free?
  * `false` ⇒ the caller must rebuild THIS frame (worst case: the pre-ADR-726 cost, never
  * worse).
@@ -199,8 +214,7 @@ export function isAnchoredBlitAcceptable(params: {
   physH: number;
 }): boolean {
   const { rect, magnification: k, dpr, physW, physH } = params;
-  if (!Number.isFinite(k) || k <= 0) return false;
-  if (!Number.isFinite(rect.dx) || !Number.isFinite(rect.dy)) return false;
+  if (!isAnchoredBlitUsable(rect, k)) return false;
   if (k > maxMagnification(dpr)) return false;
   return coversViewport(rect, physW, physH);
 }

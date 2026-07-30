@@ -140,6 +140,10 @@ anchor module (validity· η ποιότητα έμεινε στο `isAnchoredBli
 (νέο describe «gesture-aware acceptance») + 4 στο `dxf-bitmap-cache-anchor.test.ts`,
 mutation-verified. Cardinal rule #3 άθικτος: μηδέν νέα είσοδος στο cache key.
 
+**Αποτελέσματα υλοποίησης (ίδια μέρα):** 14/14 suites του `dxf-canvas` πράσινα (155 tests)·
+3 μεταλλάξεις επαληθευμένες — (α) αφαίρεση πύλης ⇒ 4 κόκκινα, (β) πύλη που αναστέλλει ΚΑΙ τα
+δομικά ⇒ 4 κόκκινα, (γ) validity πάντα-true ⇒ 9 κόκκινα· `jscpd:diff` μηδέν νέα clones.
+
 ### 2026-07-30 — Phase XXII.B: `transform`/`canvasRect` φεύγουν ως React props (~60 αρχεία)
 
 Συνέχεια της Φ XXII.A (Bridge wrapper): το `transform` έπαψε ήδη να προκαλεί re-render στο
