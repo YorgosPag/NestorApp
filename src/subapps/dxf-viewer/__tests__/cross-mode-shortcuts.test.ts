@@ -4,7 +4,7 @@
  * Coverage:
  *   1. computeFocusOrder2D — frustum cull + screen-distance sort + dedupe + visibility
  *   2. findFocusedEntityData2D — bbox + center resolution
- *   3. paintFocus2DOutline / clearFocus2DOverlay — canvas state (mock 2d context)
+ *   3. paintFocus2DOutline — canvas state (mock 2d context)
  *   4. keyboard-focus-2d-manager singleton — stable across calls, reset for tests
  *   5. Cross-mode isolation — 2D and 3D managers are independent (separate state)
  *   6. ESC bus — FOCUS_CLEAR sits below ENTITY_SELECTION and above COLOR_MENU
@@ -18,7 +18,6 @@ import {
 } from '../accessibility/focus-2d-order';
 import {
   paintFocus2DOutline,
-  clearFocus2DOverlay,
 } from '../accessibility/focus-2d-outline-painter';
 import {
   getKeyboardFocus2DManager,
@@ -154,12 +153,8 @@ describe('findFocusedEntityData2D', () => {
 // ── 3. Paint / clear overlay ───────────────────────────────────────────────
 
 describe('focus-2d-outline-painter', () => {
-  it('clearFocus2DOverlay clears the canvas using clientWidth/Height', () => {
-    const { canvas, ctx } = mkMockCanvas();
-    clearFocus2DOverlay(canvas);
-    expect(ctx.clearRect).toHaveBeenCalledWith(0, 0, HD_VIEWPORT.width, HD_VIEWPORT.height);
-  });
-
+  // ADR-732 Batch 3 — το clearFocus2DOverlay διαγράφηκε (mount-on-demand: το canvas
+  // κάνει unmount μαζί με το focus — ο inactive-teardown δεν υπάρχει πια).
   it('paintFocus2DOutline applies cyan dashed style + strokeRect', () => {
     const { canvas, ctx } = mkMockCanvas();
     paintFocus2DOutline(

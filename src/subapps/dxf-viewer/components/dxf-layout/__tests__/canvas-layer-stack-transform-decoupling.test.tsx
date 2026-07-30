@@ -43,7 +43,7 @@ jest.mock('../../../rendering/core/immediate-transform-frame', () => ({
   },
 }));
 
-import { GridUnderlayCanvas } from '../GridUnderlayCanvas';
+import { UnderlayDispatchCanvas } from '../overlay-dispatch/UnderlayDispatchCanvas';
 import { updateImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
 import { computeRulerOriginTransform } from '../../../systems/rulers-grid/ruler-origin';
 import { RULERS_GRID_CONFIG } from '../../../systems/rulers-grid/config';
@@ -136,14 +136,14 @@ describe('zoom-reset — ρητή αγκύρωση, όχι interception', () => 
 // ─── 4. Οι canvas painters είναι frame-subscribed ───────────────────────────────
 describe('canvas painters — subscribeImmediateTransformFrame (ιδίωμα HomeRunWires)', () => {
   it.each([
-    'GridUnderlayCanvas.tsx',
+    // ADR-732 — ο ΕΝΑΣ zone μηχανισμός (SSoT) και των δύο zone canvases:
+    // ζώνη Α UnderlayDispatchCanvas (πρώην GridUnderlayCanvas + FloorplanBackgroundCanvas),
+    // ζώνη Β Overlay2DDispatchCanvas (πρώην Envelope + AnalyticalDispatch + HomeRunWires +
+    // ProposalDispatch). Το frame subscription + το draw-time transform ζουν ΕΔΩ.
+    'overlay-dispatch/use-overlay-zone-dispatch.ts',
     'FloorUnderlayOverlay.tsx',
     'TopoGridUnderlayCanvas.tsx',
-    '../../floorplan-background/components/FloorplanBackgroundCanvas.tsx',
     '../../accessibility/Focus2DOverlay.tsx',
-    // ADR-732 Batch 1 — ο ΕΝΑΣ καμβάς της ζώνης Β (πρώην EnvelopeOverlay +
-    // AnalyticalDispatchCanvas + HomeRunWiresOverlay + ProposalDispatchCanvas).
-    'overlay-dispatch/Overlay2DDispatchCanvas.tsx',
     'ContainerGizmoLayer.tsx',
   ])('%s', (rel) => {
     const src = readSource(rel);
@@ -159,8 +159,10 @@ describe('canvas painters — subscribeImmediateTransformFrame (ιδίωμα Hom
   });
 });
 
-// ─── 5. Συμπεριφορά: GridUnderlayCanvas split-effect (ρίσκο κριτικής #9) ────────
-describe('GridUnderlayCanvas — repaint σε transform tick ΚΑΙ σε content change', () => {
+// ─── 5. Συμπεριφορά: UnderlayDispatchCanvas split-effect (ρίσκο κριτικής #9) ────
+// ADR-732 Batch 2: η συμπεριφορά του πρώην GridUnderlayCanvas ζει στον καμβά ζώνης Α —
+// το grid pass είναι το painters[0] (κάτω από την κάτοψη, Giorgio 2026-06-05).
+describe('UnderlayDispatchCanvas — repaint σε transform tick ΚΑΙ σε content change', () => {
   const gridOn = { enabled: true, size: 10 } as unknown as GridSettings;
   const gridOff = { enabled: false, size: 10 } as unknown as GridSettings;
   const viewport = { width: 800, height: 600 };
@@ -172,13 +174,13 @@ describe('GridUnderlayCanvas — repaint σε transform tick ΚΑΙ σε content
   });
 
   it('ζωγραφίζει με τη ΦΡΕΣΚΙΑ τιμή του store στο frame tick (zero-lag pan)', () => {
-    render(<GridUnderlayCanvas gridSettings={gridOn} viewport={viewport} />);
-    expect(frameSubs.map((s) => s.id)).toContain('grid-underlay');
+    render(<UnderlayDispatchCanvas gridSettings={gridOn} viewport={viewport} floorId={null} />);
+    expect(frameSubs.map((s) => s.id)).toContain('underlay-dispatch');
     framePaints.mockClear();
 
     act(() => {
       updateImmediateTransform({ scale: 2, offsetX: 50, offsetY: -30 });
-      frameSubs.find((s) => s.id === 'grid-underlay')?.cb();
+      frameSubs.find((s) => s.id === 'underlay-dispatch')?.cb();
     });
 
     expect(framePaints).toHaveBeenCalled();
@@ -187,14 +189,23 @@ describe('GridUnderlayCanvas — repaint σε transform tick ΚΑΙ σε content
   });
 
   it('ξαναζωγραφίζει σε αλλαγή gridSettings με ΑΚΙΝΗΤΟ transform (split-effect)', () => {
-    const { rerender } = render(<GridUnderlayCanvas gridSettings={gridOff} viewport={viewport} />);
+    const { rerender } = render(
+      <UnderlayDispatchCanvas gridSettings={gridOff} viewport={viewport} floorId={null} />,
+    );
     framePaints.mockClear();
 
-    rerender(<GridUnderlayCanvas gridSettings={gridOn} viewport={viewport} />);
+    rerender(<UnderlayDispatchCanvas gridSettings={gridOn} viewport={viewport} floorId={null} />);
 
     expect(framePaints).toHaveBeenCalled();
-    // Με enabled=true ο painter ΔΕΝ είναι null (η πύλη του primitive θα ζωγραφίσει).
+    // Το grid pass είναι το painters[0]· με enabled=true ΔΕΝ είναι null (η πύλη θα ζωγραφίσει).
     const [, painters] = framePaints.mock.calls.at(-1) as [unknown, Array<unknown>];
     expect(painters[0]).not.toBeNull();
+  });
+
+  it('χωρίς floorId το floorplan pass (painters[1]) είναι null — η ζώνη δεν πληρώνει τίποτα', () => {
+    render(<UnderlayDispatchCanvas gridSettings={gridOn} viewport={viewport} floorId={null} />);
+    const [, painters] = framePaints.mock.calls.at(-1) as [unknown, Array<unknown>];
+    expect(painters).toHaveLength(2);
+    expect(painters[1]).toBeNull();
   });
 });

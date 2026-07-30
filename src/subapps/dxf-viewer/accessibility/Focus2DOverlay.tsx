@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getKeyboardFocus2DManager } from './keyboard-focus-2d-manager';
-import { paintFocus2DOutline, clearFocus2DOverlay } from './focus-2d-outline-painter';
+import { paintFocus2DOutline } from './focus-2d-outline-painter';
 import { findFocusedEntityData2D } from './focus-2d-order';
 import { entityTypeLabel } from '../bim-3d/accessibility/status-bar-text-generator';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
@@ -41,14 +41,18 @@ export interface Focus2DOverlayProps {
   readonly className?: string;
 }
 
+/**
+ * Outer gate (ADR-732 Batch 3 — mount-on-demand): κατέχει ΜΟΝΟ τα low-freq subscriptions.
+ * Χωρίς keyboard focus (η συνήθης κατάσταση — η εστίαση πληκτρολογίου είναι σπάνια) ΔΕΝ
+ * υπάρχει καν canvas element στο DOM ⇒ μηδέν compositor layer. Το unmount είναι η
+ * ισχυρότερη μορφή της Φ2 πύλης (ADR-726 §4.Γ — αυτός ήταν ο «unnamed z18/#10»).
+ */
 export function Focus2DOverlay({
   scene,
   viewport,
   active,
   className,
 }: Focus2DOverlayProps) {
-  const { t } = useTranslation('bim3d');
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const focusManager = getKeyboardFocus2DManager();
 
   const focusedId = useSyncExternalStore(
@@ -57,26 +61,53 @@ export function Focus2DOverlay({
     () => null,
   );
 
+  // Active = false (mode flip to 3D) → clear focus state so re-entering 2D starts fresh.
+  // (Το stale-outline πρόβλημα δεν υπάρχει πια: το inner canvas κάνει unmount μαζί με το focus.)
+  useEffect(() => {
+    if (!active) focusManager.clear();
+  }, [active, focusManager]);
+
+  if (!active || !focusedId) return null;
+  return (
+    <Focus2DOverlayCanvas
+      scene={scene}
+      viewport={viewport}
+      focusedId={focusedId}
+      className={className}
+    />
+  );
+}
+
+/** Inner canvas — mounted ΜΟΝΟ όσο υπάρχει εστιασμένη οντότητα. */
+function Focus2DOverlayCanvas({
+  scene,
+  viewport,
+  focusedId,
+  className,
+}: {
+  readonly scene: Focus2DOverlayProps['scene'];
+  readonly viewport: Focus2DOverlayProps['viewport'];
+  readonly focusedId: string;
+  readonly className?: string;
+}) {
+  const { t } = useTranslation('bim3d');
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   // Paint on focus/transform/scene change. Outline anchors to the entity's
   // world bbox, so pan/zoom requires a repaint at the new screen position.
   //
   // 🏢 SSoT sizing (ADR-040) — DPR-aware backing store from the authoritative viewport via the ONE
   // core (was JSX `width={viewport.width}` attrs, NO dpr → blurry + buffer desync with siblings).
   // Το κάνει πλέον το `paintOverlayDispatchFrame`, πριν την πύλη.
-  //
-  // ADR-726 Φ2 — **αυτός ήταν ο «unnamed z18/#10»** των 9 καμβάδων του §4.Γ. Χωρίς εστιασμένη
-  // οντότητα (η συνήθης κατάσταση: η εστίαση πληκτρολογίου είναι σπάνια) το overlay καθάριζε
-  // άνευ όρων σε **κάθε αλλαγή transform**, δηλαδή σε κάθε pan/zoom — ακυρώνοντας ολόκληρο
-  // compositor layer για μηδέν pixel. Τώρα δηλώνει «painter ή null» και η πύλη το σιωπά.
   // Volatile low-freq inputs μέσω ref (ιδίωμα HomeRunWires: ref bundle + 2 effects).
-  const drawStateRef = useRef({ active, focusedId, scene, viewport });
-  drawStateRef.current = { active, focusedId, scene, viewport };
+  const drawStateRef = useRef({ focusedId, scene, viewport });
+  drawStateRef.current = { focusedId, scene, viewport };
 
   const repaint = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const s = drawStateRef.current;
-    const data = s.active && s.focusedId ? findFocusedEntityData2D(s.scene, s.focusedId) : null;
+    const data = findFocusedEntityData2D(s.scene, s.focusedId);
     const painter: OverlayDispatchPainter | null = data
       ? (_ctx, t, vp) => paintFocus2DOutline(canvas, data.bbox, t, vp)
       : null;
@@ -86,25 +117,14 @@ export function Focus2DOverlay({
   // (α) Repaint σε content change (focus/scene/viewport) με ΑΚΙΝΗΤΟ transform.
   useEffect(() => {
     repaint();
-  }, [active, focusedId, scene, viewport, repaint]);
+  }, [focusedId, scene, viewport, repaint]);
 
   // (β) Zero-lag pan/zoom — scheduler frame gated στο immediate transform (XXII.B).
   useEffect(() => {
     return subscribeImmediateTransformFrame('focus-2d-overlay', 'Focus 2D Overlay', repaint);
   }, [repaint]);
 
-  // Clear when going inactive (mode flip to 3D) so stale outline never lingers.
-  useEffect(() => {
-    if (active) return;
-    const canvas = canvasRef.current;
-    if (canvas) clearFocus2DOverlay(canvas);
-    // Active = false → also clear focus state so re-entering 2D starts fresh.
-    focusManager.clear();
-  }, [active, focusManager]);
-
-  if (!active) return null;
-
-  const data = focusedId ? findFocusedEntityData2D(scene, focusedId) : null;
+  const data = findFocusedEntityData2D(scene, focusedId);
   const typeLabel = data ? entityTypeLabel(data.bimType, t) : '';
   const display = data ? (typeLabel ? `${typeLabel} ${data.entityName}` : data.entityName) : '';
 

@@ -1,11 +1,14 @@
 /* eslint-disable custom/no-hardcoded-strings, design-system/enforce-semantic-colors */
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   registerProviders,
   useFloorplanBackground,
-  FloorplanBackgroundCanvas,
+} from '@/subapps/dxf-viewer/floorplan-background';
+import type {
+  FloorplanBackground,
+  IFloorplanBackgroundProvider,
 } from '@/subapps/dxf-viewer/floorplan-background';
 
 const DEMO_FLOOR = 'demo-floor';
@@ -17,6 +20,7 @@ const VIEWPORT = { width: CANVAS_W, height: CANVAS_H } as const;
 export default function FloorplanBackgroundImageDemoPage() {
   const {
     background,
+    provider,
     isLoading,
     error,
     addBackground,
@@ -149,12 +153,46 @@ export default function FloorplanBackgroundImageDemoPage() {
       )}
 
       <div style={{ position: 'relative', width: CANVAS_W, height: CANVAS_H, border: '1px solid #333', background: '#1a1a2e' }}>
-        <FloorplanBackgroundCanvas
-          floorId={DEMO_FLOOR}
-          worldToCanvas={WORLD_TO_CANVAS}
-          viewport={VIEWPORT}
-        />
+        <DemoBackgroundCanvas background={background} provider={provider} />
       </div>
     </main>
+  );
+}
+
+/**
+ * ADR-732 Batch 2: ο FloorplanBackgroundCanvas του viewer καταργήθηκε — η κάτοψη είναι πλέον
+ * pass του κοινού καμβά ζώνης Α (useFloorplanBackgroundPainter), δεμένη στο
+ * ImmediateTransformStore του viewer. Το demo έχει στατικό view transform, οπότε κρατά
+ * δικό του canvas και ζωγραφίζει απευθείας μέσω του provider SSoT.
+ */
+function DemoBackgroundCanvas({
+  background,
+  provider,
+}: {
+  background: FloorplanBackground | null;
+  provider: IFloorplanBackgroundProvider | null;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    if (!background?.visible || !provider) return;
+    provider.render(ctx, {
+      transform: background.transform,
+      worldToCanvas: WORLD_TO_CANVAS,
+      viewport: VIEWPORT,
+      opacity: background.opacity,
+    });
+  }, [background, provider]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={CANVAS_W}
+      height={CANVAS_H}
+      style={{ position: 'absolute', inset: 0 }}
+    />
   );
 }

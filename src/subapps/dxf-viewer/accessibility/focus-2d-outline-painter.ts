@@ -27,12 +27,8 @@ export interface Focus2DOutlineBBox {
   readonly maxY: number;
 }
 
-/** Clear the canvas (CSS-space). Use before paint to avoid ghost frames. */
-export function clearFocus2DOverlay(canvas: HTMLCanvasElement): void {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
-}
+// ADR-732 Batch 3 — το `clearFocus2DOverlay` ΔΙΑΓΡΑΦΗΚΕ: ο inactive-teardown που το καλούσε
+// καταργήθηκε (το inner canvas κάνει unmount μαζί με το focus — δεν υπάρχει τι να καθαρίσει).
 
 /** Paint a dashed cyan rectangle around the bbox. World coords → screen via transform. */
 export function paintFocus2DOutline(

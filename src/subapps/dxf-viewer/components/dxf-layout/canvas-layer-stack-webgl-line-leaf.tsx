@@ -57,6 +57,14 @@ interface WebglLineLayerSubscriberProps {
 /**
  * Micro-leaf that mounts + drives the WebGL line layer. Renders ONE positioned div;
  * the manager appends its own `<canvas>` into it. Nothing here re-renders on pan/zoom.
+ *
+ * ADR-732 Batch 3 — mount-on-demand: κάτω από το large-scene gate (η συνήθης περίπτωση —
+ * κατώφλι `WEBGL_LINE_LAYER_MIN_ENTITIES` = 50k οντότητες) ΔΕΝ υπάρχει ούτε container,
+ * ούτε WebGL context, ούτε compositor layer — πριν, ο καμβάς + το three.js context ζούσαν
+ * ΠΑΝΤΑ και πλήρωναν `gl.clear` ανά καρέ με μηδέν draws (ADR-726 §4.Δ), ασήκωτο σε
+ * software rasterization (PC χωρίς GPU). Το unmount cleanup του inner κάνει
+ * unregister-before-dispose + `setWebglLineLayerActive(false)` ⇒ ο Canvas2D DxfRenderer
+ * ξαναζωγραφίζει όλες τις γραμμές (fallback #1, byte-identical συμπεριφορά).
  */
 export const WebglLineLayerSubscriber = React.memo(function WebglLineLayerSubscriber({
   scene,
@@ -64,14 +72,36 @@ export const WebglLineLayerSubscriber = React.memo(function WebglLineLayerSubscr
   convertScene,
   className,
 }: WebglLineLayerSubscriberProps) {
-  const divRef = useRef<HTMLDivElement | null>(null);
-  const managerRef = useRef<WebglLineLayerManager | null>(null);
-  const unregisterRef = useRef<(() => void) | null>(null);
-
   // LOW-freq live scene — shared hook (same WeakMap convert cache as DxfCanvasSubscriber),
   // so the same DxfScene ref reaches this leaf and `manager.setScene`'s ref-equality check
   // skips a needless rebuild on this leaf's own re-renders.
   const reactiveScene = useReactiveLevelScene(sceneLevelId, convertScene, scene);
+
+  // Large-scene gate (fallback #1) — τώρα gate-at-mount, όχι μόνο gate-at-buffers.
+  const eligible =
+    reactiveScene !== null &&
+    reactiveScene.entities.length >= DXF_IMPORT_THRESHOLDS.WEBGL_LINE_LAYER_MIN_ENTITIES;
+
+  if (!eligible) return null;
+  return (
+    <WebglLineLayerMount
+      reactiveScene={reactiveScene}
+      className={className}
+    />
+  );
+});
+
+/** Inner mount — υπάρχει ΜΟΝΟ όσο η σκηνή περνά το large-scene gate. */
+function WebglLineLayerMount({
+  reactiveScene,
+  className,
+}: {
+  readonly reactiveScene: DxfScene;
+  readonly className?: string;
+}) {
+  const divRef = useRef<HTMLDivElement | null>(null);
+  const managerRef = useRef<WebglLineLayerManager | null>(null);
+  const unregisterRef = useRef<(() => void) | null>(null);
 
   // ── Mount / unmount: manager + scheduler registration + LOW-freq subscriptions ──
   useEffect(() => {
@@ -129,19 +159,14 @@ export const WebglLineLayerSubscriber = React.memo(function WebglLineLayerSubscr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Scene identity → rebuild buffers + arm/disarm the large-scene gate (LOW-freq) ──
+  // ── Scene identity → rebuild buffers (LOW-freq). Το gate ζει πλέον στον outer:
+  // εδώ η σκηνή είναι ΠΑΝΤΑ eligible (αλλιώς αυτό το component δεν υπάρχει).
   useEffect(() => {
     const manager = managerRef.current;
     if (!manager) return;
-    // Large-scene gate (fallback #1): below the threshold, build no GPU buffers and
-    // leave every line to Canvas2D. The store flag drives the DxfRenderer suppression
-    // (STEP 12) — false → Canvas2D strokes all lines (byte-identical current behaviour).
-    const eligible =
-      reactiveScene !== null &&
-      reactiveScene.entities.length >= DXF_IMPORT_THRESHOLDS.WEBGL_LINE_LAYER_MIN_ENTITIES;
-    manager.setScene(eligible ? reactiveScene : null);
-    setWebglLineLayerActive(eligible);
+    manager.setScene(reactiveScene);
+    setWebglLineLayerActive(true);
   }, [reactiveScene]);
 
   return <div ref={divRef} className={className} aria-hidden="true" />;
-});
+}

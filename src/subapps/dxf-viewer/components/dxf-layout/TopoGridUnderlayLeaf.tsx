@@ -30,6 +30,9 @@ export function TopoGridUnderlayLeaf({ viewport, className }: TopoGridUnderlayLe
   // LOW-freq subscription (a visibility toggle) — permitted in a leaf, never in the Shell (CHECK 6C).
   const visible = useSyncExternalStore(subscribeTopoGrid, isTopoGridVisible, isTopoGridVisible);
 
+  // ADR-732 Batch 3 — mount-on-demand: χωρίς toggle ΕΓΣΑ87 (η συνήθης κατάσταση) ΔΕΝ υπάρχει
+  // καν canvas element ⇒ μηδέν compositor layer, όχι απλώς σιωπηλός καμβάς (πύλη Φ2).
+  if (!visible) return null;
   return (
     <TopoGridUnderlayCanvas
       viewport={viewport}

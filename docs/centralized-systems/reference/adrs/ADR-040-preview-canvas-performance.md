@@ -280,6 +280,10 @@ grip-drag frame (`dxfGripInteraction` νέο ref).
 Ο ίδιος ο shell (`CanvasLayerStack.tsx`) + τα gizmo/selection leaves (Container/Group/Block)
 ολοκλήρωσαν το ίδιο flip (μηδέν `transform` prop).
 
+**ADR-732 batch 2 (2026-07-30):** το `canvas-layer-stack-webgl-line-leaf.tsx` απέκτησε
+unmount-when-empty gate (Ζώνη Γ, μέρος του Μοχλού Δ) — καμβάς μηδέν όταν η σκηνή δεν χτίζει
+τίποτα σε αυτόν, μηδέν αλλαγή στο ADR-639 Στάδιο 5 tick/camera-matrix path.
+
 ### 2026-07-29 (δ) — 🐛 FIX: NaN στο CSS `left`/`top` του snap glyph (εκφυλισμένη γεωμετρία)
 
 Ο `snap-scheduler` (Φ11) μπορούσε να δημοσιεύσει `snappedPoint`/`ghostPoint` με μη-πεπερασμένες
