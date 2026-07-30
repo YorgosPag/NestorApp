@@ -13,6 +13,8 @@ import { buildStyleFontMap, buildStyleHandleFontMap } from '../text-engine/parse
 // ADR-635 Φ C.7 — MLINESTYLE (OBJECTS section) pre-pass: map style name/handle → N line
 // elements so an MLINE draws its real parallel lines instead of a single reference path.
 import { buildMlineStyleMap } from './dxf-mline-style-parser';
+// ADR-736 — ανίχνευση συνημμένων (raster/xref/underlay/OLE/data link) στον ΚΟΙΝΟ builder.
+import { buildExternalReferences } from './dxf-external-reference-reader';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
 import { instantiateInsert, transformInsertHatch, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
@@ -167,6 +169,13 @@ export class DxfSceneBuilder {
     // (like dimStyles/styleFonts), threaded to convertMline so an MLINE expands to its N
     // parallel element polylines. Absent OBJECTS/MLINESTYLE ⇒ empty map ⇒ STANDARD default.
     const mlineStyles = buildMlineStyleMap(lines);
+
+    // ADR-736 — ΑΝΙΧΝΕΥΣΗ συνημμένων (OBJECTS + BLOCKS + ENTITIES pre-pass, mirror του MLINESTYLE
+    // από πάνω). Ζει ΕΔΩ και όχι στο UI ώστε να την παίρνουν **και οι δύο πόρτες** εισαγωγής
+    // (client import + server wizard `/api/floorplans/process` τρέχουν τον ΙΔΙΟ builder) — ρητή
+    // αποφυγή του Φ C.18, όπου δυνατότητα υλοποιημένη στη μία πόρτα κόστισε 117 γραμμοσκιάσεις.
+    // Κάθε αναφορά γεννιέται `missing`/`unsupported`· η ΕΠΙΛΥΣΗ είναι client-side και προαιρετική.
+    const externalReferences = buildExternalReferences(lines);
 
     const entities: AnySceneEntity[] = [];
     const layers: Record<string, SceneLayer> = {};
@@ -413,6 +422,9 @@ export class DxfSceneBuilder {
       dimStyles: Object.keys(dimStyles).length > 0 ? dimStyles : undefined,
       headerDimscale: header.dimscale, // ADR-362 R10 — annotative-style resolution in dim-style-importer
       ...(linetypeScale !== undefined && { linetypeScale }),
+      // ADR-736 — μόνο όταν το σχέδιο ΟΝΤΩΣ δηλώνει συνημμένα· απουσία πεδίου = «κανένα»,
+      // ώστε κάθε σκηνή χωρίς συνημμένα να μένει byte-identical με πριν (μηδέν θόρυβος στο blob).
+      ...(externalReferences.length > 0 && { externalReferences }),
     };
 
     return { scene, diagnostics };

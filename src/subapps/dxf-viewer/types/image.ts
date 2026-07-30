@@ -43,6 +43,18 @@ export interface ImageEntity extends BaseEntity {
   intrinsicHeight?: number;
   /** ADR-643 Φ5b marker για πιστή DXF εξαγωγή ως IMAGE/IMAGEDEF (τον γεμίζει ο export pre-pass). */
   dxfImageExport?: DxfImageExportMarker;
+  /**
+   * ADR-736 — σύνδεσμος προς τη `DxfExternalReference` που κρατά τη **διαδρομή** αυτής της εικόνας
+   * (`SceneModel.externalReferences`). Είναι το DXF handle του `IMAGEDEF` (group **340**).
+   *
+   * Υπάρχει **μόνο σε εισαγόμενες** εικόνες. Είναι ο λόγος που το `url` μπορεί να είναι κενό:
+   * όσο το πραγματικό αρχείο δεν έχει βρεθεί, η εικόνα ξέρει **πού ανήκει** και **τι ζητά**,
+   * και ο renderer ζωγραφίζει πλαίσιο-κράτημα αντί για τίποτα.
+   *
+   * ⚠️ Σχέση **N:1** — πολλές `ImageEntity` μπορούν να δείχνουν στην ίδια αναφορά (το ίδιο
+   * υπόβαθρο τοποθετημένο δύο φορές). Μία επίλυση ⇒ γεμίζουν **όλες**.
+   */
+  externalRefId?: string;
 }
 
 export const isImageEntity = (entity: { type: string }): entity is ImageEntity =>

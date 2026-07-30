@@ -355,11 +355,14 @@ export { convertPoint } from './dxf-point-converter';
 export { convertMline } from './dxf-mline-converter';
 // ADR-635 Φάση B Batch 2 Part B — LEADER (annotation callout: path + tip arrowhead).
 export { convertLeader } from './dxf-leader-converter';
+// ADR-736 — IMAGE (raster συνημμένο) → το υπάρχον ImageEntity.
+export { convertImage } from './dxf-image-converter';
 
 import { convertSolid, convert3dFace, convertTrace } from './dxf-quad-fill-converter';
 import { convertPoint } from './dxf-point-converter';
 import { convertMline } from './dxf-mline-converter';
 import { convertLeader } from './dxf-leader-converter';
+import { convertImage } from './dxf-image-converter';
 
 // ============================================================================
 // 🏢 ENTERPRISE: MASTER CONVERTER
@@ -459,6 +462,10 @@ function routeEntityToConverter(
     // ADR-635 Φάση B Batch 2 Part B — annotation callout (ordered 10/20 vertices via pairs).
     case 'LEADER':
       return convertLeader(entityData, index);
+    // ADR-736 — raster συνημμένο. Γεωμετρία από τα διανύσματα pixel (11/21, 12/22 × 13/23)·
+    // το `url` μένει κενό μέχρι να βρεθεί το αρχείο (το DXF κρατά διαδρομή, όχι bytes).
+    case 'IMAGE':
+      return convertImage(data, layer, index);
     default:
       return null;
   }

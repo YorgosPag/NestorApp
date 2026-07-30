@@ -40,7 +40,10 @@ export const SUPPORTED_ENTITY_TYPES = [
   // ADR-635 Φάση B Batch 2 Part B — annotation callout (path + tip arrowhead → LeaderEntity).
   'LEADER',
   'XLINE',
-  'RAY'
+  'RAY',
+  // ADR-736 — raster εικόνα (συνημμένο). Ο ορισμός της (η ΔΙΑΔΡΟΜΗ) ζει στο `IMAGEDEF` του
+  // OBJECTS section, όχι εδώ· η οντότητα κρατά μόνο τη γεωμετρία και το handle (group 340).
+  'IMAGE'
 ] as const;
 
 export const DXF_SECTION_MARKERS = [

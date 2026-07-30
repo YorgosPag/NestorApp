@@ -8,6 +8,8 @@ import { generateLayerId } from '@/services/enterprise-id-convenience';
 import type { DimStyleEntry } from '../utils/dxf-parser-types';
 // ADR-635 Φ3 — structured import diagnostics carried on DxfImportResult.
 import type { ImportDiagnostics } from '../utils/dxf-import-diagnostics';
+// ADR-736 — τα συνημμένα που δηλώνει το DXF (ζουν στο επίπεδο της σκηνής, σχέση 1:N με οντότητες).
+import type { DxfExternalReference } from './dxf-external-reference';
 
 /**
  * DXF group 370 lineweight catalog — 24 ISO values (mm) + 3 special enums.
@@ -216,6 +218,24 @@ export interface SceneModel {
    * otherwise it is written correctly and silently vanishes on reload.
    */
   sourceOrigin?: Point2D;
+  /**
+   * ADR-736 — τα **συνημμένα που δηλώνει το DXF** (raster / xref / underlay / OLE / data link),
+   * όπως τα ανίχνευσε ο parser. Ζουν στο επίπεδο της σκηνής και όχι πάνω στις οντότητες, επειδή
+   * ένας ορισμός εξυπηρετεί **πολλές** οντότητες (σχέση 1:N) — και επειδή ένα xref ή ένα data
+   * link **δεν είναι γεωμετρία** και δεν έχει οντότητα να κρεμαστεί.
+   *
+   * Γεμίζει ο `DxfSceneBuilder`, άρα το παίρνουν **και οι δύο πόρτες** εισαγωγής (client +
+   * server wizard) — ρητή αποφυγή του ADR-635 Φ C.18, όπου μια δυνατότητα υλοποιήθηκε στη μία
+   * πόρτα και 117 γραμμοσκιάσεις χάθηκαν στο hard refresh.
+   *
+   * Απουσία ⇒ σχέδιο χωρίς συνημμένα (ή σκηνή από import πριν το ADR-736).
+   *
+   * ✅ Persisted χωρίς επιπλέον ενέργεια: το `parseAndValidateScene` (`services/dxf-scene-json.ts`)
+   * κάνει **spread-then-override** από το ADR-650 §M10e και μεταφέρει **κάθε** αποθηκευμένο πεδίο.
+   * *(Η προειδοποίηση του `sourceOrigin` από πάνω περιγράφει το **παλιό** hand-picked whitelist,
+   * που είναι αυτό ακριβώς που το M10e κατάργησε — είναι πλέον ανακριβής.)*
+   */
+  externalReferences?: DxfExternalReference[];
   version?: string;
 }
 

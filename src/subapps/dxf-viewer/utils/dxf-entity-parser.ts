@@ -47,6 +47,8 @@ import { recordSkipped, type ImportDiagnostics } from './dxf-import-diagnostics'
 // ADR-635 — MTEXT 250-char chunk reassembly (SSoT). Ζει εδώ γιατί ΜΟΝΟ ο parser βλέπει
 // ακόμα το ΩΜΟ (untrimmed) value της γραμμής, που είναι απαραίτητο στις ραφές των chunks.
 import { createMTextContentCollector } from './dxf-mtext-chunks';
+// ADR-736 — SSoT πλοήγησης section (leaf, μηδέν imports). Η `findSectionRange` αναθέτει εδώ.
+import { findDxfSectionRange } from './dxf-section-scan';
 
 // Re-export table parsers for backward compatibility
 export { parseDimStyles, parseLayerColors } from './dxf-table-parsers';
@@ -326,19 +328,9 @@ export class DxfEntityParser {
    * closing `0/ENDSEC` marker. Returns null when the section is absent.
    */
   static findSectionRange(lines: string[], name: string): { start: number; end: number } | null {
-    for (let i = 0; i + 3 < lines.length; i += 2) {
-      if (lines[i].trim() === '0' && lines[i + 1].trim() === 'SECTION'
-        && lines[i + 2].trim() === '2' && lines[i + 3].trim() === name) {
-        const start = i + 4;
-        for (let j = start; j < lines.length - 1; j += 2) {
-          if (lines[j].trim() === '0' && lines[j + 1].trim() === 'ENDSEC') {
-            return { start, end: j };
-          }
-        }
-        return { start, end: lines.length };
-      }
-    }
-    return null;
+    // ADR-736 — το σώμα ζει στο leaf `dxf-section-scan.ts` (ήταν γραμμένο 2 φορές: εδώ και
+    // ιδιωτικά στον mline parser). Η στατική μένει ως η καθιερωμένη δημόσια είσοδος.
+    return findDxfSectionRange(lines, name);
   }
 
   /**
