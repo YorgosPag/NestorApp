@@ -47,6 +47,14 @@ const FILE_NAME = 'file_00000000-0000-4000-8000-000000000001.jpg';
 
 const TEST_PATH = `companies/${COMPANY_ID}/dxf-external-references/${FILE_NAME}`;
 
+/**
+ * Ο κανόνας απαιτεί `contentType.matches('image/.*')`. Το προεπιλεγμένο
+ * `application/octet-stream` του harness θα έκοβε **και τα allow cells**, δηλαδή το suite θα
+ * ήταν πράσινο για τα deny και κόκκινο για τα allow — «αποτυχία για λάθος λόγο», η ίδια παγίδα
+ * που το seeding των read/delete cells υπάρχει για να αποφύγει.
+ */
+const REFERENCE_CONTENT_TYPE = 'image/jpeg';
+
 describe('dxf-external-references.storage — company_scoped_no_project (ADR-736 Φ3)', () => {
   let env: RulesTestEnvironment;
 
@@ -72,7 +80,10 @@ describe('dxf-external-references.storage — company_scoped_no_project (ADR-736
         }
 
         const ctx = getStorageContext(env, cell.persona);
-        const target: AssertStorageTarget = { path: TEST_PATH };
+        const target: AssertStorageTarget = {
+          path: TEST_PATH,
+          contentType: REFERENCE_CONTENT_TYPE,
+        };
 
         await assertStorageCell(ctx, cell, target);
       });

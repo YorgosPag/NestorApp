@@ -1487,6 +1487,16 @@ LLM**: φιλτράρει ids που δεν αντιστοιχούν σε πρα
   - **Εκτός φάσης (αμετάβλητα)**: AI batch-δημιουργία (Δ, §8 #4), native paperspace LAYOUT/VPORT records
     (DEFERRED, ADR-453), revision/issue table (Απόφαση #9), refactor του print/export ή levels. Το
     DXF-σετ καλύπτεται ήδη από το `all-zip` (ADR-505). **Commit/push: εκκρεμεί από Giorgio.**
+- **2026-07-30 (ADR-736 — το `ImageEntity` απέκτησε ΕΙΣΑΓΩΓΗ)**: το `'image'` της Φάσης Ε ήταν από
+  την αρχή πλήρης πολίτης (renderer, λαβές ADR-654, hit-test, `scaleEntity`, native DXF export) και
+  **έλειπε μόνο η εισαγωγή**. Το ADR-736 τη συμπλήρωσε **χωρίς νέο τύπο οντότητας** ⇒ **κανένα
+  capability anchor δεν κουνήθηκε** (CHECK 5C ήσυχο). Δύο μικρές προσθήκες στο συμβόλαιο:
+  `externalRefId` (σύνδεσμος N:1 προς τη `DxfExternalReference`) και `sourceName` (η ετικέτα που
+  ζωγραφίζει ο renderer όσο λείπει το `url`). Ο `ImageRenderer` **δεν ρωτά πια το `HatchImageCache`
+  με κενό `url`** — κενό `img.src` επιλύεται στο URL της ίδιας της σελίδας. Boy-scout: το τοπικό
+  αντίγραφο κορυφών ορθογωνίου ενοποιήθηκε στο `shared/image-rect-vertices.ts`, που **ήδη
+  τεκμηρίωνε** τον renderer ως καταναλωτή του — τεκμηρίωση που δεν ίσχυε.
+
 - **2026-07-13 (Φάση Ε — Σφραγίδα-εικόνα + έλεγχος πληρότητας + νέο `ImageEntity`, ΥΛΟΠΟΙΗΣΗ)**:
   **κλείνει το κενό #6** (§4.2). Η πινακίδα γίνεται **καταθέσιμη**. Αρχιτεκτονική: **§5.4**. Build-on,
   πλήρες SSoT reuse:
