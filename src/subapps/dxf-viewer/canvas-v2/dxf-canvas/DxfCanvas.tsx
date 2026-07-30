@@ -10,9 +10,8 @@
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('DxfCanvas');
 
-import React, { useRef, useEffect, useCallback, useImperativeHandle, useMemo } from 'react';
+import React, { useRef, useEffect, useImperativeHandle, useMemo } from 'react';
 import { DxfRenderer } from './DxfRenderer';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { useCentralizedMouseHandlers } from '../../systems/cursor/useCentralizedMouseHandlers';
 import { wheelDeltaForFactor } from '../../systems/zoom/utils/calculations';
 import { useCursor } from '../../systems/cursor/CursorSystem';
@@ -30,7 +29,7 @@ import type { Guide, ConstructionPoint } from '../../systems/guides/guide-types'
 import type { GridAxis } from '../../ai-assistant/grid-types';
 import { canvasUI } from '@/styles/design-tokens/canvas';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
-import { useCanvasResize } from '../../hooks/canvas';
+import { useCanvasBackingStore } from '../../hooks/canvas';
 import { useDxfCanvasRenderer } from './dxf-canvas-renderer';
 // ADR-040 Phase XXII.B — το transform ΔΕΝ είναι πια React prop: ο render tick και οι
 // handlers διαβάζουν το ζωντανό SSoT· το handle `getTransform` επιστρέφει την ίδια πηγή
@@ -139,16 +138,13 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
   const rulerRendererRef = useRef<RulerRenderer | null>(null);
   const guideRendererRef = useRef<GuideRenderer | null>(null);
 
-  // Stable indirection: lets useCanvasResize's DPR-change handler call the latest `setupCanvas`
-  // (defined below) — reuses the centralized DPR re-size path instead of a parallel subscription.
-  const setupCanvasRef = useRef<() => void>(() => {});
-  const runSetupCanvas = useCallback(() => setupCanvasRef.current(), []);
-
-  const { viewport } = useCanvasResize({ canvasRef, viewportProp, onSetupCanvas: runSetupCanvas });
-
-  // Refs for RAF callback — prevents stale closures
-  const resolvedViewportRef = useRef(viewport);
-  resolvedViewportRef.current = viewport;
+  // 🏢 SSoT backing-store lifecycle (ADR-040) — resize hook + DPR indirection + sizing effects
+  // live in ONE module shared with LayerCanvas (they were byte-identical twins).
+  const { viewport, resolvedViewportRef } = useCanvasBackingStore({
+    canvasRef,
+    viewportProp,
+    label: 'DXF',
+  });
 
   const cursor = useCursor();
 
@@ -244,22 +240,6 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     }
   }, []);
 
-  // Setup canvas — SSoT sizing (ADR-040): the backing store is sized from the authoritative
-  // `viewport` (container SSoT via useViewportManager), NEVER from this canvas's own
-  // getBoundingClientRect() (per-canvas race → the intermittent right-side «dead zone»).
-  const setupCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !(canvas instanceof HTMLCanvasElement)) return;
-    const vp = resolvedViewportRef.current;
-    if (!vp.width || !vp.height) return;
-    try {
-      CanvasUtils.sizeCanvasToViewport(canvas, vp);
-    } catch (error) {
-      logger.error('Failed to setup DXF canvas', { error });
-    }
-  }, []);
-  setupCanvasRef.current = setupCanvas;
-
   // Refs are stable for component lifetime — bundle once to keep `renderScene`
   // useCallback dep stable across renders (was the dominant invalidation cause).
   const rendererRefs = useMemo(() => ({
@@ -280,12 +260,6 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     constructionPoints, highlightedPointId, ghostSegmentLine,
     // selection state read imperatively from selectionStateRef via subscription below
   });
-
-  // Setup on mount
-  useEffect(() => {
-    setupCanvas();
-    isDirtyRef.current = true;
-  }, [setupCanvas, isDirtyRef]);
 
   // Force re-render when activeTool changes (grips show/hide — AutoCAD parity).
   useEffect(() => {
@@ -312,21 +286,8 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     });
   }, [isDirtyRef]);
 
-  // Viewport resize → re-setup backing store
-  const prevViewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
-  useEffect(() => {
-    if (!viewport.width || !viewport.height) return;
-    const prev = prevViewportRef.current;
-    if (prev.width === viewport.width && prev.height === viewport.height) return;
-    prevViewportRef.current = { width: viewport.width, height: viewport.height };
-    // ADR-040 (2026-07-30) — ΚΑΜΙΑ παράλειψη της πρώτης μετάβασης 0 → πραγματικό μέγεθος. Το παλιό
-    // `if (prev.width === 0 …) return` παρέκαμπτε το setupCanvas ΑΚΡΙΒΩΣ στη μοναδική στιγμή που το
-    // backing store είναι λάθος (mount με viewport 0 → το setupCanvas είχε κάνει early-return), και
-    // στηριζόταν σε ένα mount effect που δεν είχε κάνει τίποτα. Το sizeCanvasToViewport είναι
-    // idempotent, οπότε η κλήση εδώ δεν κοστίζει όταν το μέγεθος είναι ήδη σωστό.
-    setupCanvas();
-    isDirtyRef.current = true;
-  }, [viewport.width, viewport.height, setupCanvas, isDirtyRef]);
+  // Backing-store sizing on mount/resize → useCanvasBackingStore (SSoT, shared with LayerCanvas).
+  // Το dirty-on-viewport το κάνει ήδη ο renderer (useDxfCanvasRenderer, dep `viewport`).
 
   // Initial transform: set world (0,0) at bottom-left ruler corner.
   // ADR-040 Phase XXII.B — τρέχει σε mount/viewport change και διαβάζει το ζωντανό SSoT.

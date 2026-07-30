@@ -58,6 +58,12 @@ if (typeof global.DecompressionStream === 'undefined') {
 if (typeof global.Blob === 'undefined' || typeof global.Blob.prototype.arrayBuffer !== 'function') {
   global.Blob = require('buffer').Blob;
 }
+// Το `File` του jsdom έχει `name`/`size` αλλά **ΟΥΤΕ** `arrayBuffer()` **ΟΥΤΕ** `text()` — δηλαδή
+// κάθε κώδικας που διαβάζει τα bytes ενός αρχείου χρήστη (hash, unzip, decode) «αποτυγχάνει»
+// στα τεστ για λόγο που δεν υπάρχει στον browser. Ο Node 20 έχει πλήρες `File` στο `buffer`.
+if (typeof global.File === 'undefined' || typeof global.File.prototype.arrayBuffer !== 'function') {
+  global.File = require('buffer').File;
+}
 
 // Mock για Path2D (Canvas 2D API — not in jsdom)
 class Path2DMock {

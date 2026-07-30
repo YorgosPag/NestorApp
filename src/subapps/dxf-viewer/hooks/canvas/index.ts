@@ -36,6 +36,13 @@ export type {
   UseCanvasResizeResult,
 } from './useCanvasResize';
 
+// === useCanvasBackingStore === (ADR-040 — SSoT backing-store lifecycle for canvas-stack layers)
+export { useCanvasBackingStore } from './useCanvasBackingStore';
+export type {
+  UseCanvasBackingStoreOptions,
+  UseCanvasBackingStoreResult,
+} from './useCanvasBackingStore';
+
 // === useCanvasSizeObserver === (ADR-146)
 export { useCanvasSizeObserver } from './useCanvasSizeObserver';
 export type { UseCanvasSizeObserverOptions } from './useCanvasSizeObserver';

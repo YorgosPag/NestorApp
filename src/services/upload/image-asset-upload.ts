@@ -95,6 +95,27 @@ export async function uploadImageAsset(input: ImageAssetUploadInput): Promise<st
 }
 
 /**
+ * Το download URL ενός **ήδη ανεβασμένου** asset, ή `null` αν δεν υπάρχει στο path.
+ *
+ * Υπάρχει για τα **content-addressed** paths (ADR-736 Φ3: `fileId` από SHA-256 του
+ * περιεχομένου): εκεί το path *είναι* η ταυτότητα, οπότε «υπάρχει ήδη;» απαντιέται με ένα
+ * ερώτημα μεταδεδομένων αντί για επανα-ανέβασμα δεκάδων MB. Χωρίς αυτό, το dedup θα ήταν
+ * μόνο **λογικό** (ίδιο path, ένα αντικείμενο) και όχι **πραγματικό** (μηδέν κίνηση δικτύου) —
+ * το ίδιο διάταγμα θα ξανανέβαινε σε κάθε εισαγωγή κάθε έργου.
+ *
+ * Κάθε σφάλμα (όχι μόνο `object-not-found`) μεταφράζεται σε `null`: το ερώτημα είναι
+ * **βελτιστοποίηση**, και μια αποτυχία του πρέπει να οδηγεί σε κανονικό ανέβασμα, ποτέ σε
+ * αποτυχία της εισαγωγής.
+ */
+export async function findImageAssetUrl(storagePath: string): Promise<string | null> {
+  try {
+    return await getDownloadURL(makeStorageRef(storage, storagePath));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Σβήνει το Storage object πίσω από ένα **download URL** (το modular `ref(storage, url)`
  * δέχεται `https://` URL του ίδιου bucket ⇒ κανένα μάντεμα κατάληξης). No-op σε κενό URL.
  */

@@ -185,3 +185,29 @@ export function buildBlockLibraryGeometryPath(params: {
     ? `companies/${params.companyId}/block-library/${params.blockId}.json`
     : `system/block-library/${params.blockId}.json`;
 }
+
+/**
+ * Storage path **συνημμένου (εξωτερικής αναφοράς) ενός DXF** — ADR-736 Φ3.
+ *
+ * Path scheme: `companies/{companyId}/dxf-external-references/{fileId}.{ext}`
+ *
+ * 🔑 **Το `fileId` είναι ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ από το ΠΕΡΙΕΧΟΜΕΝΟ** — `generateDeterministicFileId(sha256)`
+ * (N.6: setDoc-style ταυτότητα από generator, **ποτέ** `addDoc`/τυχαίο id). Άρα το path **είναι**
+ * το dedup: ίδια bytes ⇒ ίδιο path ⇒ το `uploadBytes` αντικαθιστά αντί να δημιουργεί δεύτερο
+ * αντίγραφο, και ο έλεγχος «υπάρχει ήδη;» είναι ένα σκέτο `getDownloadURL`.
+ *
+ * 💡 **Γιατί περιεχόμενο και όχι διαδρομή/σχέδιο (πιο έξυπνο από τον Revit):** ο Revit ταυτοποιεί
+ * τον σύνδεσμο με τη **διαδρομή** — γι' αυτό σπάει μόλις μετακινηθεί φάκελος, και το ίδιο
+ * διάταγμα αποθηκεύεται ξανά σε κάθε έργο. Εδώ το ίδιο διάταγμα ανεβαίνει **μία φορά για όλο το
+ * γραφείο** και επανασυνδέεται **μόνο του** στο επόμενο τοπογραφικό του ίδιου μηχανικού.
+ *
+ * Company-scoped (tenant isolation, mirror του material-thumbnail path) και **ΟΧΙ** project-scoped:
+ * η επαναχρησιμοποίηση μεταξύ έργων είναι ακριβώς το ζητούμενο.
+ */
+export function buildDxfExternalReferencePath(params: {
+  companyId: string;
+  fileId: string;
+  ext: string;
+}): string {
+  return `companies/${params.companyId}/dxf-external-references/${params.fileId}.${params.ext}`;
+}

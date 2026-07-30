@@ -372,6 +372,31 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
     testFile: 'tests/storage-rules/suites/bim-comment-attachments.storage.test.ts',
     matrix: companyScopedMatrix(),
   },
+
+  // -------------------------------------------------------------------------
+  // 📎 ΣΥΝΗΜΜΕΝΑ (ΕΞΩΤΕΡΙΚΕΣ ΑΝΑΦΟΡΕΣ) DXF — ADR-736 Φ3
+  //
+  // Company-scoped **χωρίς** projectId, και αυτό είναι το συμβόλαιο: το ίδιο
+  // διάταγμα/απόσπασμα ανεβαίνει ΜΙΑ φορά και επαναχρησιμοποιείται σε κάθε έργο
+  // του γραφείου (dedup με SHA-256 του περιεχομένου → ντετερμινιστικό `fileId`
+  // → ντετερμινιστικό path). Αν κάποιος «τακτοποιήσει» το δέντρο κάτω από
+  // `projects/{projectId}/`, το dedup μεταξύ έργων **παύει σιωπηλά** να ισχύει
+  // και κάθε τοπογραφικό ξανανεβάζει τα ίδια MB.
+  //
+  // Το συμβόλαιο που φυλάει το suite: **ο απλός μηχανικός γράφει εδώ**. Η
+  // εισαγωγή σχεδίου με υπόβαθρα είναι καθημερινή ενέργεια, όχι διαχειριστική·
+  // ένα σφίξιμο σε super-admin-only θα άφηνε κάθε εισαγωγή με 10 «λείπει».
+  //
+  // Το write έχει δύο επιπλέον σκέλη (μέγεθος 25 MB + contentType image/*) που
+  // δεν εξαρτώνται από την persona, οπότε δεν προσθέτουν γραμμή στη μήτρα.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'dxf_external_references',
+    pattern: 'company_scoped_no_project',
+    rulesRange: [272, 296],
+    testFile: 'tests/storage-rules/suites/dxf-external-references.storage.test.ts',
+    matrix: companyScopedMatrix(),
+  },
 ] as const;
 
 /**

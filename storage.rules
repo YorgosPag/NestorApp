@@ -270,6 +270,32 @@ service firebase.storage {
     }
 
     // =========================================================================
+    // 📎 ΣΥΝΗΜΜΕΝΑ (ΕΞΩΤΕΡΙΚΕΣ ΑΝΑΦΟΡΕΣ) DXF — ADR-736 Φ3
+    // =========================================================================
+    // Path: /companies/{companyId}/dxf-external-references/{fileName}
+    //
+    // Τα υπόβαθρα που ένα DXF **δηλώνει** ως εξωτερικά αρχεία (IMAGEDEF group 1)
+    // και ο χρήστης τα έδωσε ώστε να ξαναβρεθούν. Το `fileName` είναι
+    // `{fileId}.{ext}` με το `fileId` ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΟ από το SHA-256 του
+    // περιεχομένου ⇒ ίδια bytes = ίδιο path = ένα αντικείμενο για όλο το γραφείο.
+    //
+    // Company-scoped και **ΟΧΙ** project-scoped: η επαναχρησιμοποίηση του ίδιου
+    // διατάγματος/αποσπάσματος μεταξύ έργων είναι ακριβώς το ζητούμενο. Ο απλός
+    // μηχανικός ΠΡΕΠΕΙ να μπορεί να γράψει — η εισαγωγή σχεδίου είναι καθημερινή
+    // ενέργεια, όχι διαχειριστική. 25 MB: σαρώσεις τοπογραφικών σε υψηλή ανάλυση
+    // είναι σημαντικά μεγαλύτερες από ένα thumbnail υλικού (5 MB).
+    // =========================================================================
+
+    // @pathId: dxf_external_references
+    match /companies/{companyId}/dxf-external-references/{fileName} {
+      allow read: if isAuthenticated() && (belongsToCompany(companyId) || isSuperAdmin());
+      allow write: if (belongsToCompany(companyId) || isSuperAdmin())
+                   && request.resource.size < 25 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if (belongsToCompany(companyId) || isSuperAdmin());
+    }
+
+    // =========================================================================
     // 💬 ΣΥΝΗΜΜΕΝΑ ΣΧΟΛΙΩΝ BIM — ADR-366 Φ9/C.2
     // =========================================================================
     // Path: /companies/{companyId}/bim-comment-attachments/{commentId}/{fileName}

@@ -20,13 +20,12 @@
 
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { useCanvasResize } from '../../hooks/canvas';
+import React, { useRef, useEffect, useState } from 'react';
+import { useCanvasBackingStore } from '../../hooks/canvas';
 import { LayerRenderer } from './LayerRenderer';
 import { useCursor } from '../../systems/cursor/CursorSystem';
 import { SelectionStore } from '../../systems/cursor/SelectionStore';
 import type { SelectionState } from '../../systems/cursor/SelectionStore';
-import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { createUnifiedCanvasSystem } from '../../rendering/canvas';
 import type { CanvasManager, CanvasInstance } from '../../rendering/canvas/core/CanvasManager';
 import type { CanvasEventSystem } from '../../rendering/canvas/core/CanvasEventSystem';
@@ -107,21 +106,13 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LayerRenderer | null>(null);
 
-  // Stable indirection: lets useCanvasResize's DPR-change handler call the latest `setupCanvas`
-  // (defined below) — reuses the centralized DPR re-size path instead of a parallel subscription.
-  const setupCanvasRef = useRef<() => void>(() => {});
-  const runSetupCanvas = useCallback(() => setupCanvasRef.current(), []);
-
-  // 🏢 ADR-118: Centralized canvas resize hook
-  const { viewport } = useCanvasResize({
+  // 🏢 SSoT backing-store lifecycle (ADR-040) — resize hook + DPR indirection + sizing effects
+  // live in ONE module shared with DxfCanvas (they were byte-identical twins).
+  const { viewport, resolvedViewportRef } = useCanvasBackingStore({
     canvasRef,
     viewportProp,
-    onSetupCanvas: runSetupCanvas,
+    label: 'Layer',
   });
-
-  // 🏢 FIX: Viewport ref for RAF callback — prevents stale closures
-  const resolvedViewportRef = useRef(viewport);
-  resolvedViewportRef.current = viewport;
 
   const cursor = useCursor();
   // 🚀 PERF (2026-05-10 Phase III corrected): selection ref updated imperatively.
@@ -191,30 +182,6 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     return unsubscribe;
   }, []);
 
-  // ── Canvas setup ───────────────────────────────────────────────────
-  // SSoT sizing (ADR-040): the backing store is sized from the authoritative `viewport`
-  // (container SSoT via useViewportManager), NEVER from this canvas's own getBoundingClientRect()
-  // (per-canvas race → the intermittent right-side «dead zone» that clipped entities/ghost).
-  const setupCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const vp = resolvedViewportRef.current;
-    if (!vp.width || !vp.height) return;
-    try {
-      CanvasUtils.sizeCanvasToViewport(canvas, vp);
-    } catch (error) {
-      console.error('Failed to setup Layer canvas:', error);
-    }
-  }, []);
-  setupCanvasRef.current = setupCanvas;
-
-  useEffect(() => {
-    setupCanvas();
-  }, [setupCanvas]);
-
-  // Sync backing store when viewport changes (prevents ghost artifacts)
-  const prevViewportRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
-
   // ── Rendering (extracted hook) ─────────────────────────────────────
   const { isDirtyRef } = useLayerCanvasRenderer({
     layers,
@@ -249,21 +216,8 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     });
   }, [isDirtyRef, selectionRef]);
 
-  // Viewport resize → re-setup canvas backing store
-  useEffect(() => {
-    if (!viewport.width || !viewport.height) return;
-
-    const prevVp = prevViewportRef.current;
-    if (prevVp.width === viewport.width && prevVp.height === viewport.height) return;
-
-    prevViewportRef.current = { width: viewport.width, height: viewport.height };
-    // ADR-040 (2026-07-30) — το «skip initial» ΑΦΑΙΡΕΘΗΚΕ: παρέκαμπτε το setupCanvas ακριβώς στη
-    // μετάβαση 0 → πραγματικό μέγεθος, δηλαδή στη μοναδική στιγμή που το backing store είναι ακόμα
-    // στο default 300×150. Idempotent sizing → η κλήση είναι δωρεάν όταν δεν χρειάζεται.
-
-    setupCanvas();
-    isDirtyRef.current = true;
-  }, [viewport.width, viewport.height, setupCanvas, isDirtyRef]);
+  // Backing-store sizing on mount/resize → useCanvasBackingStore (SSoT, shared with DxfCanvas).
+  // Το dirty-on-viewport το κάνει ήδη ο renderer (useLayerCanvasRenderer, dep `params.viewport`).
 
   // ── JSX ────────────────────────────────────────────────────────────
   return (
