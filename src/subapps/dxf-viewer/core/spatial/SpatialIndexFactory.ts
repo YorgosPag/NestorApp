@@ -305,10 +305,23 @@ export const SpatialFactory = {
     spatialIndexFactory.create({ ...DEFAULT_CONFIGS.HIT_TESTING, bounds }),
 
   /**
-   * Create index optimized για snapping
+   * Create index optimized για snapping.
+   *
+   * 🏢 **ADR-735** — το `gridSize` είναι πλέον **παράμετρος**, όχι σταθερά. Το πάγιο
+   * `DEFAULT_CONFIGS.SNAPPING.gridSize` (50) υπάρχει μόνο ως fallback για καλούντες που δεν
+   * ξέρουν την έκταση/πληθυσμό τους· **κάθε καλών που τα ξέρει οφείλει να περάσει τιμή** από το
+   * SSoT `resolveGridSize` (`./grid-sizing.ts`).
+   *
+   * **Γιατί:** το 50 δεν έχει καμία σχέση με το snap aperture, το οποίο είναι σταθερό σε pixels
+   * οθόνης και άρα σε world units μεγαλώνει με το zoom-out. Στην κλίμακα 1:2352 το ερώτημα σάρωνε
+   * 62.500 κελιά για 15-76 σημεία — **16-19ms ανά κλήση**, μετρημένο σε παραγωγή 2026-07-30.
    */
-  forSnapping: (bounds: SpatialBounds) =>
-    spatialIndexFactory.create({ ...DEFAULT_CONFIGS.SNAPPING, bounds }),
+  forSnapping: (bounds: SpatialBounds, gridSize?: number) =>
+    spatialIndexFactory.create({
+      ...DEFAULT_CONFIGS.SNAPPING,
+      bounds,
+      ...(gridSize !== undefined ? { gridSize } : {}),
+    }),
 
   /**
    * Create index optimized για selection

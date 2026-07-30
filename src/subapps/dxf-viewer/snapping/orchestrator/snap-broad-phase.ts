@@ -40,7 +40,11 @@ import { resolveEntityBounds, type BoundingBox2D } from '../../rendering/hitTest
 import { spatialIndexFactory, SpatialIndexType, type ISpatialIndex, type SpatialBounds } from '../../core/spatial';
 // Ο μεγαλύτερος συντελεστής που εφαρμόζει ΟΠΟΙΑΔΗΠΟΤΕ engine πάνω στην ανοχή της (βλ. §Aperture).
 import { SNAP_RADIUS_MULTIPLIERS } from '../../config/tolerance-config';
-import { clamp } from '../../utils/scalar-math';
+// 🏢 ADR-735 — η πλευρά κελιού είναι SSoT στο `core/spatial/grid-sizing.ts`. Ζούσε **εδώ** ως
+// `private` (ADR-728 Φ2) με το σωστό επιχείρημα ήδη γραμμένο — αλλά έτσι το ωφελούνταν μόνο αυτό
+// το ένα ευρετήριο, ενώ τα εννέα ιδιωτικά των snap engines έμεναν στο πάγιο `50` που τους κόστιζε
+// 16-19ms ανά κλήση. Μετακόμισε (MOVE, όχι copy — N.18) για να το μοιράζονται όλοι.
+import { resolveGridSize } from '../../core/spatial/grid-sizing';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Σταθερές συντονισμού — κάθε μία με μετρήσιμο επιχείρημα, όχι με αίσθηση
@@ -61,14 +65,6 @@ import { clamp } from '../../utils/scalar-math';
  * δύο τρεις τάξεις μεγέθους κάτω από το 2.909. **Η ασφάλεια είναι φθηνή· η υπο-εκτίμηση όχι.**
  */
 const BROAD_PHASE_REACH_MULTIPLIER: number = SNAP_RADIUS_MULTIPLIERS.EXTENDED;
-
-/**
- * Στόχος πληρότητας κελιού ≈ **1 οντότητα/κελί** — η κλασική ρύθμιση ομοιόμορφου πλέγματος.
- * Πλευρά πλέγματος = ⌈√N⌉, φραγμένη ώστε ούτε σκηνή 10 οντοτήτων να χτίζει 4.096 κελιά ούτε
- * σκηνή 100.000 να χτίζει 316 στήλες κλειδιών. Για N = 2.909 ⇒ πλευρά 54 ⇒ 2.916 κελιά.
- */
-const MIN_GRID_SIDE = 8;
-const MAX_GRID_SIDE = 128;
 
 /**
  * Οντότητα που καλύπτει περισσότερα από τόσα κελιά (π.χ. πλαίσιο σχεδίου, μεγάλο hatch) **δεν
@@ -145,28 +141,6 @@ function unionWithMargin(boxes: readonly BoundingBox2D[]): SpatialBounds | null 
   if (!Number.isFinite(extent) || extent <= 0) return null;
   const margin = extent * BOUNDS_MARGIN_RATIO;
   return { minX: minX - margin, minY: minY - margin, maxX: maxX + margin, maxY: maxY + margin };
-}
-
-/**
- * Πλευρά κελιού = μεγαλύτερη διάσταση / ⌈√N⌉ — **κλιμακωτά ανεξάρτητη από τις μονάδες σχεδίου**.
- *
- * **Γιατί όχι το προφίλ `SpatialFactory.forSnapping`** (GRID, `gridSize: 50` πάγιο): το 50 είναι
- * συντονισμένο για **σημεία** σε γνωστή κλίμακα (τα ιδιωτικά ευρετήρια των 9 engines, που
- * ευρετηριάζουν endpoints/midpoints σε mm-ικές κατόψεις). Εδώ ευρετηριάζουμε **AABB οντοτήτων σε
- * άγνωστη κλίμακα**: σε σχέδιο σε μέτρα (έκταση ~30) το 50 δίνει **ένα** κελί ⇒ το ευρετήριο
- * εκφυλίζεται σε γραμμική σάρωση, δηλαδή **μηδέν κέρδος**· σε σχέδιο σε mm (έκταση ~300.000)
- * δίνει 6.000×6.000 κελιά και ένας τοίχος 10 m γράφεται σε 200 κελιά. Το προσαρμοστικό μέγεθος
- * δίνει και στις δύο περιπτώσεις ~1 οντότητα/κελί.
- *
- * **Γιατί όχι QuadTree:** το `QuadTreeSpatialIndex.getChildIndex` κατεβάζει item σε παιδί μόνο αν
- * το παιδί το περιέχει **πλήρως** — τα AABB που πατούν σε όριο κόμβου μένουν στον γονέα, και το
- * `queryBoundsRecursive` τα εξετάζει σε κάθε ερώτημα που τέμνει τον γονέα. Σε «σούπα» AABB αυτό
- * φορτώνει τη ρίζα. Το πλέγμα δεν έχει αυτόν τον εκφυλισμό (item = σε κάθε κελί που καλύπτει).
- */
-function resolveGridSize(bounds: SpatialBounds, itemCount: number): number {
-  const extent = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
-  const side = clamp(Math.ceil(Math.sqrt(itemCount)), MIN_GRID_SIDE, MAX_GRID_SIDE);
-  return Math.max(extent / side, Number.EPSILON);
 }
 
 /** Πόσα κελιά καλύπτει ένα AABB — φράγμα κόστους εισαγωγής (βλ. {@link MAX_CELLS_PER_ENTITY}). */

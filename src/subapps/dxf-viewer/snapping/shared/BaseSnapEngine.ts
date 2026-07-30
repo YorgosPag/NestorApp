@@ -7,6 +7,8 @@ import type { Point2D, EntityModel } from '../../rendering/types/Types';
 import { ExtendedSnapType, type SnapCandidate } from '../extended-types';
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
 import { SpatialFactory, type ISpatialIndex, type SpatialQueryResult } from '../../core/spatial';
+// 🏢 ADR-735 — SSoT πλευράς κελιού· το πάγιο `gridSize: 50` κόστιζε 16-19ms ανά κλήση στο zoom-out.
+import { resolveGridSize } from '../../core/spatial/grid-sizing';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
 import { createInfinityBounds, isInfinityBounds, isFinitePoint } from '../../config/geometry-constants';
 // 🏢 ADR-378: SSoT snap-visibility predicate (imported DXF entities omit `visible`)
@@ -191,6 +193,15 @@ export abstract class BaseSnapEngine {
    * 🎯 CENTRALIZED: Initialize spatial index with points from entities
    * Used by snap engines to build spatial indices in a unified way
    *
+   * 🔴 **ADR-735** — εδώ ζει η διόρθωση για **και τις εννέα** engines με ιδιωτικό ευρετήριο.
+   * Η πλευρά κελιού δίνεται πλέον από το SSoT {@link resolveGridSize} (προσαρμοστική στην έκταση
+   * και τον πληθυσμό) αντί για το πάγιο `50` του `DEFAULT_CONFIGS.SNAPPING`. Το 50 δεν είχε καμία
+   * σχέση με το snap aperture — που είναι σταθερό σε **pixels οθόνης**, άρα σε world units
+   * μεγαλώνει με το zoom-out: στο 1:2352 μία ερώτηση σάρωνε **62.500 κελιά** για 15-76 σημεία,
+   * **16-19ms ανά κλήση** (μετρημένο σε παραγωγή 2026-07-30, ADR-735 §2).
+   *
+   * Καμία engine δεν άλλαξε γραμμή: η κλήση είναι η ίδια, το ευρετήριο απλώς συντονίζεται σωστά.
+   *
    * @param entities - Entities to index
    * @param getPoints - Function to extract points from each entity
    * @param pointType - Type label for the points (e.g., 'endpoint', 'midpoint', 'center')
@@ -201,67 +212,78 @@ export abstract class BaseSnapEngine {
     getPoints: (entity: EntityModel) => Point2D[],
     pointType: string
   ): ISpatialIndex {
-    // Calculate bounds
-    const bounds = this.calculateBoundsFromPoints(entities, getPoints);
+    // ΕΝΑ πέρασμα: το `getPoints` είναι γεωμετρικό (`getEntityEndpoints` κ.λπ.) και κοστίζει —
+    // η προηγούμενη μορφή το καλούσε δύο φορές ανά οντότητα (bounds + χτίσιμο).
+    const { all, indexable } = this.collectSnapPoints(entities, getPoints);
+    const bounds = this.boundsFromPoints(all);
 
     // 🏢 ENTERPRISE: Use imported SpatialFactory (no require)
-    const spatialIndex = SpatialFactory.forSnapping(bounds);
+    const spatialIndex = SpatialFactory.forSnapping(bounds, resolveGridSize(bounds, indexable.length));
 
-    // Build index
-    for (const entity of entities) {
-      if (!isEntityVisibleForSnap(entity)) continue;
-
-      const points = getPoints(entity);
-      for (const point of points) {
-        // 🛡️ ADR-510 Φ5 Bug 2 — skip non-finite snap points (a legacy NaN entity must
-        // not enter the Grid index, mirror of the aggregate guard below).
-        if (!isFinitePoint(point)) continue;
-        spatialIndex.insert({
-          id: `${entity.id}_${pointType}_${point.x}_${point.y}`,
-          bounds: {
-            minX: point.x,
-            minY: point.y,
-            maxX: point.x,
-            maxY: point.y
-          },
-          data: { point, entity }
-        });
-      }
+    for (const { entity, point } of indexable) {
+      spatialIndex.insert({
+        id: `${entity.id}_${pointType}_${point.x}_${point.y}`,
+        bounds: {
+          minX: point.x,
+          minY: point.y,
+          maxX: point.x,
+          maxY: point.y
+        },
+        data: { point, entity }
+      });
     }
 
     return spatialIndex;
   }
 
   /**
-   * 🎯 CENTRALIZED: Calculate spatial bounds from entity points
-   * Used by snap engines to create spatial indices
+   * Τα σημεία της σκηνής σε **ένα** πέρασμα, σε δύο όψεις:
+   * - `all` — κάθε πεπερασμένο σημείο, **και από αόρατες οντότητες**: ορίζει τα bounds του
+   *   πλέγματος. Διατηρείται σκόπιμα η προ-ADR-735 σημασιολογία — τα bounds ήταν πάντα ευρύτερα
+   *   από το ευρετηριασμένο σύνολο, και η στένωσή τους θα ήταν **άλλη** αλλαγή.
+   * - `indexable` — μόνο όσα μπαίνουν όντως (ADR-378 ορατότητα): ο πληθυσμός που καθορίζει την
+   *   πυκνότητα, άρα την πλευρά κελιού.
    *
-   * @param entities - Entities to calculate bounds from
-   * @param getPoints - Function to extract points from each entity
-   * @returns Spatial bounds with margin
+   * 🛡️ ADR-510 Φ5 Bug 2 — ένα μη πεπερασμένο σημείο κόβεται **μία φορά, εδώ**, ώστε να μην
+   * δηλητηριάσει ούτε τα bounds (NaN → πλέγμα στο {0,0,0,0}) ούτε το ευρετήριο.
    */
-  protected calculateBoundsFromPoints(
+  private collectSnapPoints(
     entities: EntityModel[],
     getPoints: (entity: EntityModel) => Point2D[]
-  ): { minX: number; minY: number; maxX: number; maxY: number } {
-    if (entities.length === 0) {
-      return { minX: -1000, minY: -1000, maxX: 1000, maxY: 1000 };
+  ): { all: Point2D[]; indexable: SnapSpatialData[] } {
+    const all: Point2D[] = [];
+    const indexable: SnapSpatialData[] = [];
+
+    for (const entity of entities) {
+      // Η ορατότητα είναι ιδιότητα της ΟΝΤΟΤΗΤΑΣ — κρίνεται μία φορά, όχι ανά σημείο.
+      const visible = isEntityVisibleForSnap(entity);
+      for (const point of getPoints(entity)) {
+        if (!isFinitePoint(point)) continue;
+        all.push(point);
+        if (visible) indexable.push({ point, entity });
+      }
     }
 
+    return { all, indexable };
+  }
+
+  /**
+   * 🎯 CENTRALIZED: Calculate spatial bounds from already-collected snap points.
+   *
+   * @param points - Finite points (see {@link collectSnapPoints})
+   * @returns Spatial bounds with margin
+   */
+  private boundsFromPoints(
+    points: readonly Point2D[]
+  ): { minX: number; minY: number; maxX: number; maxY: number } {
     // 🏢 ADR-158: Centralized Infinity Bounds Initialization
     const bounds = createInfinityBounds();
 
-    for (const entity of entities) {
-      const points = getPoints(entity);
-      for (const point of points) {
-        // 🛡️ ADR-510 Φ5 Bug 2 — a single non-finite point must not poison the
-        // aggregate (NaN → Grid index built at {0,0,0,0} → all snap points rejected).
-        if (!isFinitePoint(point)) continue;
-        bounds.minX = Math.min(bounds.minX, point.x);
-        bounds.minY = Math.min(bounds.minY, point.y);
-        bounds.maxX = Math.max(bounds.maxX, point.x);
-        bounds.maxY = Math.max(bounds.maxY, point.y);
-      }
+    for (const point of points) {
+      bounds.minX = Math.min(bounds.minX, point.x);
+      bounds.minY = Math.min(bounds.minY, point.y);
+      bounds.maxX = Math.max(bounds.maxX, point.x);
+      bounds.maxY = Math.max(bounds.maxY, point.y);
     }
 
     // 🏢 ADR-158: Use centralized isInfinityBounds check

@@ -61,6 +61,17 @@ export {
 } from './SpatialIndexFactory';
 
 // ========================================
+// GRID TUNING (ADR-735)
+// ========================================
+
+/**
+ * ADR-735 — η **πλευρά κελιού** ενός ομοιόμορφου πλέγματος είναι συνάρτηση της έκτασης και του
+ * πληθυσμού, **ποτέ σταθερά**. Ένα πάγιο `gridSize` κόστιζε 16-19ms ανά snap ερώτημα στο
+ * zoom-out (μετρημένο). Πέρνα το αποτέλεσμα στο `SpatialFactory.forSnapping(bounds, gridSize)`.
+ */
+export { resolveGridSize, MIN_GRID_SIDE, MAX_GRID_SIDE } from './grid-sizing';
+
+// ========================================
 // BARE-COORDINATE INDEXING (different abstraction — see the class doc)
 // ========================================
 
