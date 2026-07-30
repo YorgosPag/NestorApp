@@ -1192,6 +1192,52 @@ export const isTextEntity = (entity: Entity): entity is TextEntity =>
 export const isMTextEntity = (entity: Entity): entity is MTextEntity =>
   entity.type === 'mtext';
 
+/**
+ * ADR-737 §11-4 — οι **δύο** μορφές που κουβαλούν κείμενο DXF. Δεν είναι ισοδύναμες κατά τύπο
+ * αλλά απαντούν στα ίδια ερωτήματα γεωμετρίας, και **ο εισαγόμενος MTEXT ταξιδεύει ως
+ * `type:'text'`** (δείκτης `dxfSourceType:'mtext'`, ADR-636 Φ2.4 D.3) — άρα κάθε καταναλωτής
+ * MTEXT βλέπει **και τα δύο**.
+ */
+export type TextLikeEntity = TextEntity | MTextEntity;
+
+export const isTextLikeEntity = (entity: Entity): entity is TextLikeEntity =>
+  entity.type === 'text' || entity.type === 'mtext';
+
+/** ADR-737 §11-4 — η γεωμετρία MTEXT, ανεξάρτητα από ΠΟΙΟ από τα δύο σχήματα την κουβαλά. */
+export interface MTextGeometry {
+  readonly position: Point2D;
+  /** DXF group 41 — πλάτος ορθογωνίου αναφοράς σε world units· `0` = χωρίς πλαίσιο (μονή γραμμή). */
+  readonly width: number;
+  /**
+   * Ύψος χαρακτήρα **ΜΟΝΟ ως εφεδρεία**. Ο κανονικός δρόμος είναι το πρώτο run του `textNode`
+   * (SSoT για το group 40)· αυτό απαντά όταν δεν υπάρχει AST (legacy / in-app κείμενο).
+   */
+  readonly fallbackHeight: number | undefined;
+  readonly columns: MTextColumnsData | undefined;
+}
+
+/**
+ * ADR-737 §11-4 — ΕΝΑ σημείο ανάγνωσης της γεωμετρίας MTEXT.
+ *
+ * 🐛 **Η ΑΙΤΙΑ ΠΟΥ ΥΠΑΡΧΕΙ:** ο `emitMText` δέχεται `Entity` και διάβαζε **8 φορές** μέσα από
+ * `(e as MTextEntity)`. Το cast δεν είναι στιλιστικό πρόβλημα — είναι **ψέμα στον μεταγλωττιστή**:
+ * λέει «αυτό είναι MTextEntity» ενώ στην πράξη είναι σχεδόν πάντα `TextEntity` (ο importer γράφει
+ * `type:'text'`). Όσο τα πεδία τύχαινε να υπάρχουν και στα δύο, δούλευε· την πρώτη φορά που ένα
+ * πεδίο υπήρχε **μόνο** στο `MTextEntity`, ο έλεγχος τύπων θα σιωπούσε και η τιμή θα ήταν
+ * `undefined` **στην παραγωγή** (ακριβώς το σχήμα του ADR-737 §7-2 για το `width`).
+ *
+ * Δέχεται `TextLikeEntity`, ΟΧΙ `Entity`: η στένωση γίνεται **μία φορά** στον καλούντα με το
+ * `isTextLikeEntity`, οπότε δεν υπάρχει διαδρομή που επιστρέφει «άδεια» γεωμετρία σιωπηλά.
+ */
+export function readMTextGeometry(entity: TextLikeEntity): MTextGeometry {
+  return {
+    position: entity.position,
+    width: entity.width ?? 0,
+    fallbackHeight: entity.fontSize ?? entity.height,
+    columns: entity.mtextColumns,
+  };
+}
+
 export const isSplineEntity = (entity: Entity): entity is SplineEntity =>
   entity.type === 'spline';
 

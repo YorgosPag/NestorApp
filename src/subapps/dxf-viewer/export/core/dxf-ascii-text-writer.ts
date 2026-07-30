@@ -21,6 +21,8 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity, MTextEntity, TextEntity } from '../../types/entities';
+// ADR-737 §11-4 — ο accessor ζει δίπλα στους τύπους που διαβάζει, μαζί με τα type guards.
+import { isTextLikeEntity, readMTextGeometry } from '../../types/entities';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { serializeDxfTextNode } from '../../text-engine/serializer';
 import { ensureTextNode } from '../../text-engine/edit/ensure-text-node';
@@ -146,25 +148,29 @@ export function emitMText(
   e: Entity, layer: string, aci: number, s: number, pair: Pair, version: DxfDocumentVersion,
   r2018?: EntityR2018,
 ): void {
-  const node = ensureTextNode(e as MTextEntity);
+  // ADR-737 §11-4 — ΜΙΑ στένωση, μηδέν casts. Ο dispatcher φτάνει εδώ μόνο για `text`/`mtext`,
+  // αλλά η στένωση είναι ρητή ώστε ο μεταγλωττιστής να ελέγχει τα πεδία αντί να τα εμπιστεύεται.
+  if (!isTextLikeEntity(e)) return;
+  const geometry = readMTextGeometry(e);
+  const node = ensureTextNode(e);
   const { content, entityType } = serializeDxfTextNode(node, { version });
-  const charHeight = firstRunHeight(node) ?? (e as MTextEntity).fontSize ?? (e as MTextEntity).height;
+  const charHeight = firstRunHeight(node) ?? geometry.fallbackHeight;
   // ADR-636 Φ2.4 (D.5) — real group 7 from the node's font (same derivation as the STYLE table).
   const styleName = textStyleName(readTextEntityFamily(e));
 
   if (entityType === 'TEXT') {
     // R12 downgrade — no MTEXT: emit the (space-joined) content as plain TEXT (style carried). R12 is
     // handle-less/subclass-less, so no r2018 block (the writer gates emitHandles off for R12 anyway).
-    emitText((e as MTextEntity).position, content, charHeight, layer, aci, s, pair, node.rotation, undefined, styleName);
+    emitText(geometry.position, content, charHeight, layer, aci, s, pair, node.rotation, undefined, styleName);
     return;
   }
 
-  const width = (e as MTextEntity).width ?? 0;
+  const width = geometry.width;
   pair(0, 'MTEXT');
   // ADR-644 (#9e) — R2018 MTEXT: AcDbEntity common block + `100 AcDbMText` before the data.
   if (r2018) { emitAcDbEntity(pair, layer, aci, r2018); pair(100, 'AcDbMText'); }
   else { pair(8, layer); pair(62, aci); }
-  pair(10, (e as MTextEntity).position.x * s); pair(20, (e as MTextEntity).position.y * s); pair(30, 0);
+  pair(10, geometry.position.x * s); pair(20, geometry.position.y * s); pair(30, 0);
   pair(40, charHeight != null ? charHeight * s : DEFAULT_TEXT_HEIGHT);
   pair(41, width * s);                             // reference rectangle width (0 = no wrap)
   pair(71, attachmentToMTextCode(node.attachment)); // 9-point attachment (1-9)
@@ -183,9 +189,9 @@ export function emitMText(
   //    Με ανοιχτή ενότητα `101` αυτοί θα κατέληγαν **μέσα** στο ενσωματωμένο αντικείμενο και θα
   //    χάνονταν στην επανεισαγωγή. Στο professional μονοπάτι είναι ήδη διπλωμένοι μέσα στο
   //    `AcDbEntity` block, πριν τη γεωμετρία — άρα δεν γράφεται τίποτα μετά το `101`.
-  const columns = (e as TextEntity | MTextEntity).mtextColumns;
+  const columns = geometry.columns;
   if (columns && r2018 && version === DxfDocumentVersion.R2018) {
-    emitMTextColumns(pair, columns, (e as MTextEntity).position, node.rotation, width, s);
+    emitMTextColumns(pair, columns, geometry.position, node.rotation, width, s);
   }
 }
 
