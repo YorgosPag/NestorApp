@@ -118,7 +118,10 @@ export function emitText(
     return;
   }
   if (align && (align.h !== 0 || align.v !== 0)) {
-    // Alignment point (11/21) mirrors the insertion point; 73 only when non-baseline.
+    // 11/21 == 10/20 on purpose: `p` IS the entity's attachment point (see `text-box.ts`),
+    // and once 72/73 are non-zero AutoCAD reads the anchor from 11/21 and ignores 10/20 —
+    // so writing the same point to both is correct AND round-trips through the importer's
+    // `resolveTextAnchor` (ADR-635 Φ C.25). Do NOT "fix" this into an insertion point.
     pair(72, align.h);
     pair(11, p.x * s); pair(21, p.y * s);
     if (align.v !== 0) pair(73, align.v);

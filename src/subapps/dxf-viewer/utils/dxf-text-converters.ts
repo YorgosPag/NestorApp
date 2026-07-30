@@ -5,8 +5,12 @@
  * one focused module and `dxf-entity-converters.ts` re-exports the public fns.
  *
  * SSoT: the shared TEXT/MTEXT machinery (transform parse, scene-entity builder,
- * flat→TextNode builder, ADR-344 alignment maps) lives here ONCE; the two public
- * converters differ only in `idPrefix` and the `textNode` attachment.
+ * flat→TextNode builder, ADR-344 MTEXT attachment maps) lives here ONCE; the two
+ * public converters differ only in `idPrefix` and the `textNode` attachment.
+ *
+ * The single-line (TEXT/ATTRIB/ATTDEF) anchor + 72/73 justification rules live in
+ * `dxf-text-anchor.ts` — they are DXF-spec logic with their own tests, and MTEXT must
+ * NOT share them (its group 11 is a direction vector, not a point). See ADR-635 Φ C.25.
  */
 
 import type { AnySceneEntity } from '../types/scene';
@@ -25,12 +29,21 @@ import { DXF_COLOR_BY_LAYER } from '../text-engine/types';
 // `.text` string the render/hit-test/snap pipeline reads first.
 import { parseMtext, tokenizeMtext } from '../text-engine/parser';
 import { extractFlatText } from './text-node-utils';
+// ADR-635 Φ C.25 — TEXT/ATTRIB/ATTDEF anchor (group 11/21 vs 10/20) + 72/73 → 9-point
+// attachment live in their own SSoT module (they are DXF-spec logic shared by the two
+// single-line converters, and the vertical forward+inverse maps must stay side by side).
+import {
+  ALIGNMENT_TO_ATTACHMENT,
+  attachmentToVJust,
+  mapTextAttachment,
+  resolveTextAnchor,
+} from './dxf-text-anchor';
 
 // ── Text node builder (ADR-344 SSOT unification) ──────────────────────────────
 
-const ALIGNMENT_TO_ATTACHMENT: Record<'left' | 'center' | 'right', TextJustification> = {
-  left: 'BL', center: 'BC', right: 'BR',
-};
+// Re-exported so the export writer's import path (`utils/dxf-text-converters`) stays
+// stable — same pattern as the `dxf-entity-style-extract` re-exports in the helpers.
+export { attachmentToVJust };
 
 const MTEXT_ATTACHMENT_MAP: Record<number, TextJustification> = {
   1: 'TL', 2: 'TC', 3: 'TR',
@@ -49,23 +62,6 @@ const ATTACHMENT_TO_MTEXT_CODE: Record<TextJustification, number> = Object.fromE
 
 export function attachmentToMTextCode(attachment: TextJustification | undefined): number {
   return attachment ? ATTACHMENT_TO_MTEXT_CODE[attachment] ?? 1 : 1;
-}
-
-/**
- * Attachment row → DXF TEXT vertical-alignment code 73 (0=baseline, 1=bottom,
- * 2=middle, 3=top). Companion to the H-just inverse (`alignmentToHJust`) for the
- * export writer: top row (T*) → 3, middle (M*) → 2, bottom (B*) → 0 (baseline,
- * the DXF default). Keeps left-baseline TEXT byte-identical (returns 0).
- */
-export function attachmentToVJust(attachment: TextJustification | undefined): 0 | 1 | 2 | 3 {
-  switch (attachment?.[0]) {
-    case 'T':
-      return 3;
-    case 'M':
-      return 2;
-    default:
-      return 0;
-  }
 }
 
 /**
@@ -129,6 +125,11 @@ function buildTextNodeFromFlat(
 /**
  * Parse the shared position (10/20), height (40) and rotation (50) for TEXT/MTEXT.
  * Single SSoT for the common transform parse (jscpd twin removal, ADR-583).
+ *
+ * ⚠️ The `x`/`y` here are the raw **first** alignment point (10/20). For single-line
+ * TEXT/ATTRIB/ATTDEF that is the drawing anchor ONLY when 72/73 are both 0 — see
+ * {@link parseSingleLineTextTransform}. MTEXT always anchors at 10/20, so `convertMText`
+ * uses this directly.
  */
 function parseTextTransform(data: Record<string, string>): {
   x: number; y: number; height: number; rotation: number;
@@ -138,6 +139,30 @@ function parseTextTransform(data: Record<string, string>): {
     y: parseFloat(data['20']),
     height: parseFloat(data['40']) || 1,
     rotation: parseFloat(data['50']) || 0,
+  };
+}
+
+/**
+ * ADR-635 Φ C.25 — the transform + justification of a single-line TEXT/ATTRIB/ATTDEF,
+ * with `x`/`y` already resolved to the REAL anchor (group 11/21 whenever 72/73 make it
+ * meaningful, else 10/20) and the 9-point `attachment` derived from the same 72/73 pair.
+ *
+ * One SSoT for both single-line converters — they used to each read 72 and the position
+ * on their own, which is exactly how the 11/21 gap survived in two places at once (N.18).
+ */
+function parseSingleLineTextTransform(data: Record<string, string>): {
+  x: number; y: number; height: number; rotation: number;
+  alignment: 'left' | 'center' | 'right';
+  attachment: TextJustification;
+} {
+  const { height, rotation } = parseTextTransform(data);
+  const hJust = parseInt(data['72']) || 0;
+  const vJust = parseInt(data['73']) || 0;
+  const { x, y } = resolveTextAnchor(data, hJust, vJust);
+  return {
+    x, y, height, rotation,
+    alignment: mapHorizontalAlignment(hJust),
+    attachment: mapTextAttachment(hJust, vJust),
   };
 }
 
@@ -205,10 +230,8 @@ export function convertText(
   index: number,
   styleFonts?: StyleFontMap,
 ): AnySceneEntity | null {
-  const { x, y, height, rotation } = parseTextTransform(data);
+  const { x, y, height, rotation, alignment, attachment } = parseSingleLineTextTransform(data);
   let text = data['1'] || '';
-  const horizontalJustification = parseInt(data['72']) || 0;
-  const alignment = mapHorizontalAlignment(horizontalJustification);
 
   if (isNaN(x) || isNaN(y) || text.trim() === '') {
     dwarn('EntityConverter', `⚠️ Skipping TEXT ${index}: missing position or text`, { x, y, text });
@@ -222,7 +245,7 @@ export function convertText(
 
   return buildTextSceneEntity({
     idPrefix: 'text', index, layer, x, y, text, height, rotation, alignment,
-    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment, undefined, fontFamily),
+    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment, attachment, fontFamily),
     color,
   });
 }
@@ -326,9 +349,8 @@ function convertAttributeEntity(
   idPrefix: 'attrib' | 'attdef',
   label: 'ATTRIB' | 'ATTDEF',
 ): AnySceneEntity | null {
-  const { x, y, height, rotation } = parseTextTransform(data);
+  const { x, y, height, rotation, alignment, attachment } = parseSingleLineTextTransform(data);
   let text = data['1'] || '';
-  const alignment = mapHorizontalAlignment(parseInt(data['72']) || 0);
   const invisible = ((parseInt(data['70']) || 0) & 1) === 1;
 
   if (isNaN(x) || isNaN(y) || text.trim() === '') {
@@ -342,7 +364,7 @@ function convertAttributeEntity(
 
   const base = buildTextSceneEntity({
     idPrefix, index, layer, x, y, text, height, rotation, alignment,
-    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment),
+    textNode: buildTextNodeFromFlat(text.trim(), height, rotation, alignment, attachment),
     color,
   });
 
