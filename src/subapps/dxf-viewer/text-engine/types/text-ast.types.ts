@@ -105,6 +105,34 @@ export interface TextStack {
 }
 
 /**
+ * Το ΕΞ ΟΡΙΣΜΟΥ στυλ run — η γραμμή βάσης που ο parser δίνει στο πρώτο run και ως προς την οποία
+ * ο serializer υπολογίζει τη διαφορά στυλ. **Πρέπει** να είναι το ίδιο αντικείμενο εννοιολογικά:
+ * αν αποκλίνουν, ο serializer εκπέμπει (ή παραλείπει) κωδικούς για τιμές που ο parser θεωρεί
+ * προεπιλογή — σιωπηλή διαρροή/θόρυβος σε κάθε export.
+ *
+ * N.0.2 — ήταν κυριολεκτικά αντιγραμμένο σε `mtext-parser.buildDefaultStyle` και
+ * `mtext-serializer.buildBaseStyle` (13 γραμμές / 53 tokens· το έπιασε το CHECK 3.28 jscpd).
+ *
+ * Επιστρέφει ΝΕΟ αντικείμενο σε κάθε κλήση — ο parser το μεταλλάσσει μέσα από το styleStack.
+ */
+export function createDefaultTextRunStyle(overrides?: Partial<TextRunStyle>): TextRunStyle {
+  const base: TextRunStyle = {
+    fontFamily: 'Standard',
+    bold: false,
+    italic: false,
+    underline: false,
+    overline: false,
+    strikethrough: false,
+    height: 2.5,
+    widthFactor: 1.0,
+    obliqueAngle: 0,
+    tracking: 1.0,
+    color: { kind: 'ByLayer' },
+  };
+  return overrides ? { ...base, ...overrides } : base;
+}
+
+/**
  * Ο διαχωριστής που χωρίζει `top` από `bottom` μέσα σε ένα `\S…;` — **ένα** λεξιλόγιο για τις
  * τρεις διαδρομές που το χρειάζονται: ο tokenizer τον ψάχνει για να βρει τον τύπο, ο serializer
  * τον ξαναγράφει, και η flat προβολή (`extractFlatText`) τον χρησιμοποιεί ώστε το κείμενο που

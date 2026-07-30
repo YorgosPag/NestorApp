@@ -214,7 +214,10 @@ export function buildEntityModelFromDxf(
       return {
         ...base, type: 'image',
         position: entity.position, width: entity.width, height: entity.height,
-        url: entity.url, rotation: entity.rotation,
+        // ADR-736 — το `sourceName` ΠΡΕΠΕΙ να ταξιδέψει: χωρίς αυτό μια εισαγόμενη εικόνα με
+        // ανεπίλυτη αναφορά ζωγραφίζεται ως **ανώνυμο** πλαίσιο και ο χρήστης δεν μαθαίνει ποτέ
+        // ποιο αρχείο ζητά (η ακριβώς-σιωπηλή αποτυχία που το ADR-736 υπάρχει για να λύσει).
+        url: entity.url, rotation: entity.rotation, sourceName: entity.sourceName,
       } as unknown as Entity;
     case 'topo-surface':
       // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived non-BIM topo surface (sibling of image).

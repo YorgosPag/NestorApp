@@ -11,6 +11,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import type { DxfRenderer } from './DxfRenderer';
 import type { DxfScene, DxfRenderOptions, DxfEntityUnion } from './dxf-types';
 import { DxfBitmapCache } from './dxf-bitmap-cache';
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import { isBimRegionOrPerimeterTool } from '../../systems/tools/region-tool-ids';
 import type { Viewport, Point2D } from '../../rendering/types/Types';
 import type { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
@@ -148,7 +149,14 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     const _perfPaintStart = perfStart();
 
     const currentTransform = getImmediateTransform();
-    const ctx = refs.canvasRef.current?.getContext('2d') ?? null;
+    // 🏢 ADR-040 (2026-07-30) — SIZE-AT-PAINT-TIME. Το backing store συγχρονίζεται με το ΤΡΕΧΟΝ
+    // viewport ΜΕΣΑ στο frame, όχι μόνο σε passive effect. Χωρίς αυτό ο RAF tick προλαβαίνει να
+    // ζωγραφίσει με το νέο viewport πάνω στο ΑΡΧΙΚΟ 300×150 backing store (default του <canvas>)
+    // και το CSS `width/height:100%` το τεντώνει ×5 → ο «γιγάντιος χάρακας» μετά από hard refresh.
+    // Idempotent: γράφει canvas.width/height ΜΟΝΟ σε πραγματική αλλαγή (μηδέν wipe/κόστος στο
+    // steady state) — ίδιο μοτίβο με το paintOverlayDispatchFrame (ADR-726 Φ2).
+    const canvasEl = refs.canvasRef.current;
+    const ctx = canvasEl ? CanvasUtils.sizeCanvasToViewport(canvasEl, currentViewport) : null;
     const uiTransform = ctx ? {
       scale: currentTransform.scale,
       offsetX: currentTransform.offsetX,

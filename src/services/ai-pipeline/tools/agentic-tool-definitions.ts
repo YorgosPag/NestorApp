@@ -3,8 +3,19 @@
  * AGENTIC TOOL DEFINITIONS — OpenAI Function Calling for Autonomous Agent
  * =============================================================================
  *
- * 8 generic tools that give the AI agent autonomous access to Firestore data.
- * Replaces hardcoded UC modules with generic, composable tools.
+ * Hand-written Chat Completions tool definitions for the autonomous agent.
+ * Started as 8 generic Firestore tools replacing hardcoded UC modules; the file
+ * now holds **40** definitions (counted 2026-07-30 — the "8" in this header had
+ * been stale for months, so count with a script, do not trust a comment).
+ * Domains: firestore_* (4), messaging, contacts, ESCO, files, procurement,
+ * org structure, financial intelligence.
+ *
+ * ⚠️ NEW agent-facing capabilities do NOT belong here. Since ADR-734 Φάση 2 they
+ * are declared once in the Capability Registry
+ * (`services/agent-capability/registry`) and their definitions are **generated**
+ * by `toOpenAiToolDefinitions()` — one definition, three adapters. This file is
+ * the pre-existing surface, kept as-is (allowlisted in `.ssot-registry.json`,
+ * module `agent-capability-registry`).
  *
  * Format: Chat Completions API tool calling format
  * (wrapped: { type: 'function', function: { name, description, parameters, strict } })

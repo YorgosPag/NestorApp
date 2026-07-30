@@ -32,7 +32,13 @@ import { decodeImageWithTimeout, fetchRasterWithTimeout } from './image-export-s
 /** Διαγνωστικοί κωδικοί (ASCII, μη user-facing — δεν περνούν από i18n· surface μόνο για logs). */
 export type ImageEntityExportWarning =
   | 'image-entity:decode-failed'
-  | 'image-entity:raster-fetch-failed';
+  | 'image-entity:raster-fetch-failed'
+  /**
+   * ADR-736 — εικόνα με **ανεπίλυτη** εξωτερική αναφορά (κενό `url`). Ξεχωριστός κωδικός από το
+   * `decode-failed`: εκείνο λέει «το αρχείο είναι **χαλασμένο**», αυτό λέει «το αρχείο **δεν
+   * βρέθηκε ακόμη**» — και η θεραπεία διαφέρει (εκεί ξανα-ανέβασμα, εδώ **επίλυση**).
+   */
+  | 'image-entity:unresolved-reference';
 
 /** Αποτέλεσμα του async pre-pass: entities (με marker όπου πέτυχε) + raster artifacts + warnings. */
 export interface DxfImageEntityResolution {
@@ -68,6 +74,9 @@ async function resolveOneImageEntity(
   rasters: Map<string, ExportArtifact>,
   warnings: ImageEntityExportWarning[],
 ): Promise<Entity> {
+  // ADR-736 — χωρίς `url` δεν υπάρχουν bytes να εξαχθούν· η εικόνα περνά χωρίς marker (ο writer
+  // την παραλείπει). Ο έλεγχος προηγείται του decode ώστε ο κωδικός να λέει την **αλήθεια**.
+  if (!entity.url) { warnings.push('image-entity:unresolved-reference'); return entity as unknown as Entity; }
   const img = await decodeImageWithTimeout(entity.url);
   if (!img) { warnings.push('image-entity:decode-failed'); return entity as unknown as Entity; }
 

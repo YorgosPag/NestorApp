@@ -149,6 +149,11 @@ async function resolveImageEntity(
   e: ImageEntity, out: Map<string, ResolvedSceneImage>, warnings: string[],
 ): Promise<void> {
   if (!(e.width > 0) || !(e.height > 0)) return;
+  // ADR-736 — **ανεπίλυτη** αναφορά: το DXF δήλωσε διαδρομή, το αρχείο δεν βρέθηκε. Δεν υπάρχει
+  // τίποτα να αποκωδικοποιηθεί. Χωρίς αυτόν τον έλεγχο το κενό `url` έφτανε στο decode και
+  // αναφερόταν ως `decode-failed` — που στέλνει τον χρήστη να ψάξει **χαλασμένο** αρχείο, ενώ
+  // το αρχείο απλώς **λείπει**. Ίδια απώλεια στο χαρτί, εντελώς άλλη θεραπεία.
+  if (!e.url) { warnings.push('image-entity:unresolved-reference'); return; }
   const img = await decodeImageWithTimeout(e.url);
   if (!img) { warnings.push('image-entity:decode-failed'); return; }
   const dataUrl = sourceToPngDataUrl(img, img.naturalWidth, img.naturalHeight);

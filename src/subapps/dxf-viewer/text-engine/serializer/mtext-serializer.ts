@@ -24,7 +24,7 @@ import type {
   TextRunStyle,
   TextStack,
 } from '../types/text-ast.types';
-import { mtextStackDivider } from '../types/text-ast.types';
+import { createDefaultTextRunStyle, mtextStackDivider } from '../types/text-ast.types';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -198,18 +198,5 @@ function escapeText(text: string): string {
   return text.replace(/\\/g, '\\\\').replace(/\{/g, '\\{').replace(/\}/g, '\\}');
 }
 
-function buildBaseStyle(): TextRunStyle {
-  return {
-    fontFamily: 'Standard',
-    bold: false,
-    italic: false,
-    underline: false,
-    overline: false,
-    strikethrough: false,
-    height: 2.5,
-    widthFactor: 1.0,
-    obliqueAngle: 0,
-    tracking: 1.0,
-    color: { kind: 'ByLayer' } as DxfColor,
-  };
-}
+/** SSoT η προεπιλογή στο `text-ast.types` — ίδια γραμμή βάσης με τον parser (N.0.2). */
+const buildBaseStyle = createDefaultTextRunStyle;

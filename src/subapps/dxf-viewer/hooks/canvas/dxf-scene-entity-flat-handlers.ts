@@ -37,6 +37,9 @@ export const FLAT_NONBIM_TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandle
       ...base, type: 'image' as const,
       position: img.position, width: img.width, height: img.height, url: img.url,
       ...(img.rotation !== undefined ? { rotation: img.rotation } : {}),
+      // ADR-736 — βλ. `dxf-renderer-entity-model.ts`: χωρίς το `sourceName` το πλαίσιο-κράτημα
+      // μιας ανεπίλυτης αναφοράς μένει ανώνυμο. Τα ΔΥΟ μονοπάτια πρέπει να το περνούν.
+      ...(img.sourceName !== undefined ? { sourceName: img.sourceName } : {}),
     } as DxfEntityUnion;
   },
   'topo-surface': (entity, base) => {

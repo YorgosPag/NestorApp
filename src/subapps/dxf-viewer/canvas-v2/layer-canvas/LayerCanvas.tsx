@@ -219,6 +219,7 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
   const { isDirtyRef } = useLayerCanvasRenderer({
     layers,
     rendererRef,
+    canvasRef,
     resolvedViewportRef,
     viewport,
     activeTool,
@@ -256,7 +257,9 @@ export const LayerCanvas = React.memo(React.forwardRef<HTMLCanvasElement, LayerC
     if (prevVp.width === viewport.width && prevVp.height === viewport.height) return;
 
     prevViewportRef.current = { width: viewport.width, height: viewport.height };
-    if (prevVp.width === 0 && prevVp.height === 0) return; // skip initial
+    // ADR-040 (2026-07-30) — το «skip initial» ΑΦΑΙΡΕΘΗΚΕ: παρέκαμπτε το setupCanvas ακριβώς στη
+    // μετάβαση 0 → πραγματικό μέγεθος, δηλαδή στη μοναδική στιγμή που το backing store είναι ακόμα
+    // στο default 300×150. Idempotent sizing → η κλήση είναι δωρεάν όταν δεν χρειάζεται.
 
     setupCanvas();
     isDirtyRef.current = true;

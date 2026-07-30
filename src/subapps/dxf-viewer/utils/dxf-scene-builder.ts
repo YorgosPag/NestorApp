@@ -1,5 +1,5 @@
 import type { SceneModel, AnySceneEntity, SceneLayer } from '../types/scene';
-import { DxfEntityParser, type LayerColorMap } from './dxf-entity-parser';
+import { DxfEntityParser } from './dxf-entity-parser';
 // SSoT για τη μετατροπή του ωμού κειμένου σε (code\nvalue) ροή γραμμών — ADR-635 Φ C.19.
 import { splitDxfLines } from './dxf-line-stream';
 // ADR-635 Φ C.4 — LTYPE table pre-pass: register the DXF's custom linetypes into the
@@ -15,6 +15,8 @@ import { buildStyleFontMap, buildStyleHandleFontMap } from '../text-engine/parse
 import { buildMlineStyleMap } from './dxf-mline-style-parser';
 // ADR-736 — ανίχνευση συνημμένων (raster/xref/underlay/OLE/data link) στον ΚΟΙΝΟ builder.
 import { buildExternalReferences } from './dxf-external-reference-reader';
+// ADR-736 — η ΜΙΑ προβολή «αναφορά → ImageEntity» (όνομα τώρα, `url` μετά την επίλυση).
+import { applyExternalReferencesToEntities } from './dxf-external-reference-apply';
 // ADR-635 Φ2 — INSERT/BLOCK expansion (block-definition map + placement transform).
 import { parseBlockDefinitions } from './dxf-block-parser';
 import { instantiateInsert, transformInsertHatch, DEFAULT_SCENE_ENTITY_BUDGET, type ExpandContext } from './dxf-block-expander';
@@ -38,10 +40,12 @@ import {
 } from './dxf-import-diagnostics';
 // ADR-635 Φ C.23 — μια οντότητα με NaN/±Infinity φεύγει & αναφέρεται· δεν ρίχνει το αρχείο.
 import { dropNonFiniteEntities } from './dxf-nonfinite-entity-filter';
-import { DEFAULT_LAYER_COLOR, getLayerColor } from '../config/color-config';
-import { getAciColor } from '../settings/standards/aci';
+import { DEFAULT_LAYER_COLOR } from '../config/color-config';
 // ADR-130: Centralized Default Layer Name
 import { getLayerNameOrDefault, DXF_DEFAULT_LAYER } from '../config/layer-config';
+// N.7.1 — layer registration + BYLAYER colour resolution ζουν σε ΕΝΑ module (βγήκαν από εδώ
+// όταν το αρχείο χτύπησε 508/500). Ίδια σημασιολογία, μηδέν δίδυμο.
+import { registerDxfLayer, resolveLayerColor } from './dxf-layer-registration';
 // ADR-358 Phase 9C/9D — SceneLayer construction SSoT (auto-gens `lyr_<UUID-v4>` id).
 import { createSceneLayer } from '../types/entities';
 // 🏢 ADR-158: Centralized Infinity Bounds Initialization
@@ -58,24 +62,6 @@ import { dropOutOfExtentsEntities } from './dxf-out-of-extents-filter';
 // stay visible on meter-scale drawings; ADR-462 bakes geometry to mm). SSoT lives with the
 // autoscale helpers so the scene-builder stays lean.
 import { resolveSceneLinetypeScale } from '../rendering/linetype-autoscale';
-
-/**
- * Resolve a layer's real color from the two authoritative sources (SSoT, shared by layer
- * registration and per-entity BYLAYER resolution): the parsed LAYER table, else the
- * `COLOR_<n>` layer-name → ACI convention. Returns undefined when neither applies (callers
- * decide the final fallback: hash color for layers, leave-uncolored for entities).
- */
-function resolveLayerColor(layerName: string, layerColors: LayerColorMap): string | undefined {
-  const fromTable = layerColors[layerName]?.color;
-  if (fromTable) return fromTable;
-
-  const colorMatch = layerName.match(/^COLOR_(\d+)$/i);
-  if (colorMatch) {
-    const aciIndex = parseInt(colorMatch[1], 10);
-    if (aciIndex >= 1 && aciIndex <= 255) return getAciColor(aciIndex);
-  }
-  return undefined;
-}
 
 export class DxfSceneBuilder {
   /**
@@ -234,7 +220,7 @@ export class DxfSceneBuilder {
       const layerName = getLayerNameOrDefault(entity.layerId);
 
       // Register layer with REAL ACI colors from parsed LAYER table
-      DxfSceneBuilder.registerLayer(layers, layerName, layerColors);
+      registerDxfLayer(layers, layerName, layerColors);
 
       // Attribute stable `layerId` from the registered SceneLayer (id-keyed routing downstream).
       (entity as { layerId?: string }).layerId = layers[layerName].id;
@@ -371,8 +357,7 @@ export class DxfSceneBuilder {
     // empty box → the real drawing is a sub-pixel speck ("empty canvas"). AutoCAD/Revit
     // exclude them from $EXTMIN/$EXTMAX + Zoom-Extents; we do the same. No-op when extents
     // are absent or nothing lies entirely outside them (normal drawings untouched).
-    // Τα drops ΚΑΤΑΓΡΑΦΟΝΤΑΙ πλέον στα diagnostics (όπως ο αδελφός `dropNonFiniteEntities`):
-    // ήταν σιωπηλά, και έτσι το σφάλμα του group code 101 (10 MTEXT στο (1,0)) δεν άφηνε ίχνος.
+    // Τα drops ΚΑΤΑΓΡΑΦΟΝΤΑΙ πλέον (όπως ο αδελφός `dropNonFiniteEntities`) — ήταν σιωπηλά.
     const { kept: drawingEntities, dropped: offDrawingCount } = dropOutOfExtentsEntities(
       finiteEntities, header.extmin, header.extmax, diagnostics,
     );
@@ -415,8 +400,14 @@ export class DxfSceneBuilder {
       finalEntities, layers, finalBounds, header.ltscale,
     );
 
+    // ADR-736 Φ2 — οι εικόνες παίρνουν το **όνομα** που ζητούν από την αναφορά τους. Τρέχει ΕΔΩ
+    // (στον builder) και όχι στον client resolver, ώστε να το πάρουν **και οι δύο** πόρτες: μια
+    // σκηνή από τον server wizard δεν επιλύεται ποτέ, αλλά ο χρήστης πρέπει και εκεί να βλέπει
+    // *τι* λείπει. Ίδια συνάρτηση θα ξανακληθεί μετά την επίλυση, με `url` (idempotent).
+    const entitiesWithReferences = applyExternalReferencesToEntities(finalEntities, externalReferences);
+
     const scene: SceneModel = {
-      entities: finalEntities,
+      entities: entitiesWithReferences,
       layersById,
       bounds: finalBounds,
       // ADR-462 — geometry is now millimetres by construction; downstream stops guessing.
@@ -430,61 +421,6 @@ export class DxfSceneBuilder {
     };
 
     return { scene, diagnostics };
-  }
-
-  /**
-   * 🎨 ENTERPRISE LAYER REGISTRATION (2026-01-03)
-   *
-   * Καταχωρεί layer με ΠΡΑΓΜΑΤΙΚΑ ACI colors!
-   *
-   * Priority:
-   * 1. layerColors[layerName] - Parsed from LAYER table
-   * 2. COLOR_X pattern - Extract ACI from layer name (e.g. COLOR_43)
-   * 3. getLayerColor(layerName) - Hash-based fallback (muted)
-   *
-   * @param layers - Record of registered layers
-   * @param layerName - Name of layer to register
-   * @param layerColors - Parsed LAYER table with real ACI colors
-   */
-  private static registerLayer(
-    layers: Record<string, SceneLayer>,
-    layerName: string,
-    layerColors: LayerColorMap
-  ): void {
-    if (!layers[layerName]) {
-      // ╔════════════════════════════════════════════════════════════════════════╗
-      // ║ 🎨 REAL ACI COLOR PRIORITY                                             ║
-      // ║                                                                        ║
-      // ║ 1. layerColors[layerName] → Parsed from LAYER table                   ║
-      // ║ 2. COLOR_X pattern → Extract ACI from name (e.g. COLOR_43 → ACI 43)   ║
-      // ║ 3. getLayerColor() → Hash-based fallback                               ║
-      // ╚════════════════════════════════════════════════════════════════════════╝
-
-      // Try 1+2: LAYER table → COLOR_X name (shared SSoT). Try 3: hash-based fallback.
-      const visible = layerColors[layerName]?.visible ?? true;
-      // AutoCAD κρύβει με ΔΥΟ ανεξάρτητους μηχανισμούς — OFF (62<0) **και** FROZEN (70 bit 0).
-      // Το δεύτερο δεν περνούσε ποτέ ⇒ παγωμένα layers εμφανίζονταν (μετρημένο: 8 layers /
-      // ~700 οντότητες στο `47_ergasia.dxf`). Ο συνδυασμός γίνεται στο `isLayerRenderable`.
-      const frozen = layerColors[layerName]?.frozen ?? false;
-      // ΤΡΙΤΗ ανεξάρτητη ιδιότητα (group 70 bit 2): **επεξεργασιμότητα**, όχι ορατότητα. Ήταν
-      // καρφωμένη σε `false`, οπότε κάθε κλειδωμένο layer του αρχείου γινόταν ελεύθερα
-      // επεξεργάσιμο μετά την εισαγωγή — και το κλείδωμα χανόταν και στην εξαγωγή.
-      const locked = layerColors[layerName]?.locked ?? false;
-      const resolvedColor = resolveLayerColor(layerName, layerColors) ?? getLayerColor(layerName);
-
-      // ADR-358 Phase 9C/9D-2 — factory auto-gens stable `lyr_<UUID-v4>` id.
-      // ADR-635 Φ C.17 — `sourceName` = το όνομα ΤΟΥ ΑΡΧΕΙΟΥ, immutable. Επιτρέπει στο
-      // `reconcileSceneLayerIdentity` να ξαναβρεί αυτό το layer σε επόμενο import ΑΚΟΜΑ
-      // ΚΑΙ αν ο χρήστης το έχει μετονομάσει στο μεταξύ.
-      layers[layerName] = createSceneLayer({
-        name: layerName,
-        sourceName: layerName,
-        color: resolvedColor,
-        visible,
-        frozen,
-        locked,
-      });
-    }
   }
 
   // ADR-635 ΦC.13 / N.18 — delegates to the extracted pure SSoT (keeps this class lean;

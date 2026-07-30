@@ -36,7 +36,10 @@ import type { EntityModel, Point2D, GripInfo, RenderOptions } from '../types/Typ
 import type { Entity } from '../../types/entities';
 import type { ImageEntity } from '../../types/image';
 import { isImageEntity } from '../../types/image';
-import { createRectangleVertices } from './shared/geometry-utils';
+// ADR-651 Φάση Ε — ΤΟ rotated-rect SSoT (render ≡ bounds ≡ hit-test). Πριν το ADR-736 Φ2 αυτό
+// το αρχείο είχε **δικό του** αντίγραφο (`imageEntityVertices`), ενώ το SSoT τεκμηρίωνε ρητά
+// ότι ο `ImageRenderer` είναι καταναλωτής του — τεκμηρίωση που δεν ίσχυε (N.0.2).
+import { imageEntityRectVertices } from './shared/image-rect-vertices';
 // ADR-654 — ΕΝΑ grip SSoT για render + interaction (move / rotation / 4 γωνιακές + 3 μεσοπλευρικές).
 import { getImageGrips } from '../../bim/image/image-grips';
 // ADR-397 — glyph shape registry (move cross / rotation arc), ίδιο pattern με κάθε άλλο renderer.
@@ -48,15 +51,12 @@ import { HatchImageCache } from './shared/hatch-image-cache';
 import { imageIntrinsicSize } from './shared/image-intrinsic-size';
 // ADR-040 — async asset load «σπρώχνει» ένα dirty-frame (ο renderer δεν subscribe-άρει).
 import { markAllCanvasDirty } from '../core/frame-scheduler-api';
-import { CAD_UI_COLORS } from '../../config/color-config';
+// ADR-736 Φ2 — το οπτικό συμβόλαιο του «δεν έχω (ακόμη) περιεχόμενο» (πλαίσιο + όνομα).
+import { paintImagePlaceholder } from './shared/image-placeholder-paint';
 
 /** [κάτω-αριστερά, κάτω-δεξιά, πάνω-δεξιά, πάνω-αριστερά] — ίδια σειρά με RectangleEntity. */
 function imageEntityVertices(e: ImageEntity): Point2D[] {
-  return createRectangleVertices(
-    e.position,
-    { x: e.position.x + e.width, y: e.position.y + e.height },
-    e.rotation ?? 0,
-  );
+  return imageEntityRectVertices(e) ?? [];
 }
 
 export class ImageRenderer extends BaseEntityRenderer {
@@ -79,6 +79,18 @@ export class ImageRenderer extends BaseEntityRenderer {
   /** Ζωγραφίζει την εικόνα fill (γεμίζει το πλαίσιο) μέσα στο (περιστρεφόμενο) ορθογώνιο. */
   private drawImage(e: ImageEntity): void {
     const corners = imageEntityVertices(e);
+    if (corners.length === 0) return;
+
+    // 🔴 ADR-736 Φ2 — **ανεπίλυτη αναφορά**: το DXF δήλωσε διαδρομή, το αρχείο δεν βρέθηκε (ακόμη).
+    // Το `HatchImageCache` ΔΕΝ αγγίζεται καθόλου: κενό `url` θα γινόταν `img.src = ''`, που ο
+    // browser επιλύει στο **URL της ίδιας της σελίδας** ⇒ ένα άσκοπο αίτημα δικτύου ανά εικόνα,
+    // που αποτυγχάνει στο decode και κλειδώνει slot `error` για το κενό κλειδί. Η αναφορά είναι
+    // *ανεπίλυτη*, όχι *χαλασμένη* — δεν έχει νόημα να ρωτηθεί καν το cache.
+    if (!e.url) {
+      paintImagePlaceholder(this.ctx, corners.map((c) => this.worldToScreen(c)), e.sourceName);
+      return;
+    }
+
     const img = this.imageCache.resolve(e.url);
     if (!img) {
       this.drawPlaceholder(corners);
@@ -113,18 +125,13 @@ export class ImageRenderer extends BaseEntityRenderer {
     this.ctx.restore();
   }
 
-  /** Διακεκομμένο πλαίσιο όσο η εικόνα φορτώνει / απέτυχε το decode (ίδιο idiom με τα hatch fallbacks). */
+  /**
+   * Διακεκομμένο πλαίσιο όσο η εικόνα **φορτώνει** ή απέτυχε το decode — **χωρίς** ετικέτα.
+   * Η απουσία ονόματος είναι η διάκριση από την *ανεπίλυτη αναφορά* (βλ. `drawImage`): εδώ το
+   * αρχείο υπάρχει και έρχεται· εκεί δεν υπάρχει και ο χρήστης πρέπει να μάθει ποιο είναι.
+   */
   private drawPlaceholder(corners: readonly Point2D[]): void {
-    const screenCorners = corners.map((c) => this.worldToScreen(c));
-    this.ctx.save();
-    this.ctx.strokeStyle = CAD_UI_COLORS.entity.default;
-    this.ctx.lineWidth = 1;
-    this.ctx.setLineDash([4, 4]);
-    this.ctx.beginPath();
-    screenCorners.forEach((p, i) => (i === 0 ? this.ctx.moveTo(p.x, p.y) : this.ctx.lineTo(p.x, p.y)));
-    this.ctx.closePath();
-    this.ctx.stroke();
-    this.ctx.restore();
+    paintImagePlaceholder(this.ctx, corners.map((c) => this.worldToScreen(c)));
   }
 
   /**

@@ -19,6 +19,11 @@ import type {
 } from '../../text-engine/types';
 import type { TextAdvanceStyle } from '../../text-engine/fonts';
 import { resolveRunColorHex } from '../../text-engine/render/run-color';
+// ADR-737 — ο διαχωριστής στοίβας είναι SSoT (`^` tolerance / `/` diagonal / `#` horizontal).
+// Ήταν καρφωμένο `/` εδώ για ΚΑΘΕ τύπο, ενώ η `extractFlatText` (η flat διαδρομή που το σχόλιο
+// πιο κάτω υπόσχεται ότι ταυτίζεται με αυτήν) διαβάζει τον πραγματικό τύπο ⇒ μια στοίβα
+// tolerance εμφανιζόταν `+0.1/-0.05` στη διάταξη και `+0.1^-0.05` στο flat κείμενο.
+import { mtextStackDivider } from '../../text-engine/types/text-ast.types';
 import { splitTextLines } from './text-lines';
 import {
   NO_DECORATION,
@@ -138,9 +143,11 @@ export function sourceLinesFromNode(
     };
     for (const child of para.runs) {
       // Μια στοίβα `\S` δεν έχει πλήρες run style — κρατά μόνο fontFamily/height/color. Την
-      // αποδίδουμε γραμμικά ως `πάνω/κάτω` (η κάθετη στοίβαξη είναι δικό της κεφάλαιο)· έτσι
-      // το περιεχόμενο **υπάρχει** αντί να εξαφανίζεται από τη διάταξη.
-      const raw = isRun(child) ? child.text : `${child.top}/${child.bottom}`;
+      // αποδίδουμε γραμμικά ως `πάνω<διαχωριστής>κάτω` (η κάθετη στοίβαξη είναι δικό της
+      // κεφάλαιο)· έτσι το περιεχόμενο **υπάρχει** αντί να εξαφανίζεται από τη διάταξη.
+      // ADR-737 — ο διαχωριστής από το SSoT, ΟΧΙ καρφωμένο `/`: αλλιώς η υπόσχεση ισοδυναμίας
+      // με την `extractFlatText` (σχόλιο της `sourceLinesFromNode`) σπάει για tolerance/horizontal.
+      const raw = isRun(child) ? child.text : `${child.top ?? ''}${mtextStackDivider(child.type)}${child.bottom ?? ''}`;
       const base = pieceBaseOf(child, ctx);
       raw.split('\n').forEach((part, i) => {
         if (i > 0) close();

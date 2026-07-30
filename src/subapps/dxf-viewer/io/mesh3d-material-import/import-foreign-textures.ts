@@ -17,7 +17,7 @@
  * περνούν έξωθεν — αυτό το module δεν ξέρει από Firebase/React. Ο button τα καλωδιώνει με τα SSoT
  * (`MaterialLibraryService`, `uploadMaterialTextureMap`, `sha256HexOfFile`).
  *
- * @see ./texture-content-hash — sha256HexOfFile (dedup key)
+ * @see ../shared/foreign-asset-content-hash — sha256HexOfFile (κλειδί dedup)
  * @see ../../bim/services/MaterialLibraryService — saveMaterial/updateMaterial (νέο bmat_*)
  * @see ../../bim/services/bim-material-texture-upload.service — uploadMaterialTextureMap (albedo)
  * @see ./known-import-materials — withImportedMaterials (επαύξηση resolver)

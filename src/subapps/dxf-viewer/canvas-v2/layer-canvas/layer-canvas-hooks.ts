@@ -11,6 +11,7 @@ import { useRef, useCallback, useEffect } from 'react';
 import type { SelectionState } from '../../systems/cursor/SelectionStore';
 import type { LayerRenderer } from './LayerRenderer';
 import { registerRenderCallback, RENDER_PRIORITIES } from '../../rendering';
+import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
 import type { DxfScene } from '../dxf-canvas/dxf-types';
 import { ImmediatePositionStore } from '../../systems/cursor/ImmediatePositionStore';
@@ -47,6 +48,8 @@ interface LayerHitTestParams {
 interface LayerCanvasRendererParams {
   layers: ColorLayer[];
   rendererRef: React.MutableRefObject<LayerRenderer | null>;
+  // ADR-040 (2026-07-30) — needed for size-at-paint-time backing-store sync (βλ. renderLayers).
+  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   resolvedViewportRef: React.MutableRefObject<Viewport>;
   viewport: Viewport;
   activeTool?: string;
@@ -119,6 +122,7 @@ export function useLayerHitTest({
 export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
   const {
     rendererRef,
+    canvasRef,
     resolvedViewportRef,
     viewport,
     selectionRef,
@@ -153,6 +157,13 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     const renderer = rendererRef.current;
     const current = paramsRef.current;
     if (!renderer || !current.viewport.width || !current.viewport.height) return;
+
+    // 🏢 ADR-040 (2026-07-30) — SIZE-AT-PAINT-TIME (ίδιο συμβόλαιο με το DxfCanvas tick): το backing
+    // store συγχρονίζεται με το ΤΡΕΧΟΝ viewport μέσα στο frame. Χωρίς αυτό ο RAF ζωγραφίζει με το
+    // νέο viewport πάνω στο default 300×150 buffer και το CSS 100%/100% το τεντώνει (γιγάντια
+    // πλέγμα/χάρακες μετά από hard refresh). Idempotent → μηδέν κόστος στο steady state.
+    const canvasEl = canvasRef.current;
+    if (canvasEl) CanvasUtils.sizeCanvasToViewport(canvasEl, resolvedViewportRef.current);
 
     try {
       const sel = selectionRef.current;
@@ -213,7 +224,7 @@ export function useLayerCanvasRenderer(params: LayerCanvasRendererParams) {
     } catch (error) {
       console.error('Failed to render Layer canvas:', error);
     }
-  }, [rendererRef, resolvedViewportRef, selectionRef]);
+  }, [rendererRef, canvasRef, resolvedViewportRef, selectionRef]);
 
   // Register with UnifiedFrameScheduler (ADR-119) — runs ONCE per mount
   useEffect(() => {

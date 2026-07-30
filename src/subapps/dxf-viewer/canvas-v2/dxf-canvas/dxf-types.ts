@@ -526,6 +526,8 @@ export interface DxfImage extends DxfEntity {
   url: ImageEntity['url'];
   rotation?: ImageEntity['rotation'];
   dxfImageExport?: ImageEntity['dxfImageExport'];
+  /** ADR-736 — το όνομα που ζητά η εικόνα· ο `ImageRenderer` το δείχνει όσο λείπει το `url`. */
+  sourceName?: ImageEntity['sourceName'];
 }
 
 /**

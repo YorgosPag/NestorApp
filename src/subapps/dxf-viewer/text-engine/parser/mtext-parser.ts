@@ -8,7 +8,6 @@
  * parseText()  — for simple TEXT entities (plain content, no inline codes).
  */
 
-import type { DxfColor } from '../types/text-toolbar.types';
 import type {
   DxfTextNode,
   TextParagraph,
@@ -18,6 +17,7 @@ import type {
   LineSpacingMode,
   TextJustification,
 } from '../types/text-ast.types';
+import { createDefaultTextRunStyle } from '../types/text-ast.types';
 import type { MtextToken } from './mtext-tokenizer';
 
 // ── Parser-internal state ─────────────────────────────────────────────────────
@@ -230,22 +230,8 @@ function applyParagraphCode(
   };
 }
 
-function buildDefaultStyle(overrides?: Partial<TextRunStyle>): TextRunStyle {
-  const base: TextRunStyle = {
-    fontFamily: 'Standard',
-    bold: false,
-    italic: false,
-    underline: false,
-    overline: false,
-    strikethrough: false,
-    height: 2.5,
-    widthFactor: 1.0,
-    obliqueAngle: 0,
-    tracking: 1.0,
-    color: { kind: 'ByLayer' } as DxfColor,
-  };
-  return overrides ? { ...base, ...overrides } : base;
-}
+/** SSoT η προεπιλογή στο `text-ast.types` — ίδια γραμμή βάσης με τον serializer (N.0.2). */
+const buildDefaultStyle = createDefaultTextRunStyle;
 
 function cloneStyle(style: TextRunStyle): TextRunStyle {
   return { ...style };

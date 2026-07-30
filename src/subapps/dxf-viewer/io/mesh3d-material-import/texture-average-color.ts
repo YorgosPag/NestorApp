@@ -41,7 +41,7 @@
  *
  * @see ../../config/color-math — οι ακριβείς sRGB ↔ linear συναρτήσεις μεταφοράς (SSoT, ADR-694 Φ10)
  * @see ./import-embedded-materials — ο καταναλωτής (γράφει το αποτέλεσμα στο `appearance`)
- * @see ./texture-content-hash — ο αδελφός browser-only helper (ίδιο μοτίβο DI)
+ * @see ../shared/foreign-asset-content-hash — ο αδελφός browser-only helper (ίδιο μοτίβο DI)
  * @see docs/centralized-systems/reference/adrs/ADR-691-imported-mesh-embedded-material-extraction.md
  */
 

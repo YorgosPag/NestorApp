@@ -28,7 +28,7 @@ import {
   uploadMaterialTextureMap,
   isMaterialTextureReachable,
 } from '../../bim/services/bim-material-texture-upload.service';
-import { sha256HexOfFile } from './texture-content-hash';
+import { sha256HexOfFile } from '../shared/foreign-asset-content-hash';
 import type { ForeignTextureImporterDeps } from './import-foreign-textures';
 
 /** Ό,τι δίνει το `useMaterialLibrary` + το ενεργό company scope (χωρίς αυτό δεν γίνεται upload). */

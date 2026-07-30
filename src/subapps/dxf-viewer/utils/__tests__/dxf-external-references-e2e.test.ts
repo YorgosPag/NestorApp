@@ -63,6 +63,15 @@ describe('DxfSceneBuilder — τα συνημμένα φτάνουν ΣΤΗ ΣΚ
     expect(images.every((i) => i.url === '')).toBe(true);
   });
 
+  it('🔴 Φ2 — και οι δύο εικόνες φέρουν το ΟΝΟΜΑ που ζητούν, έτοιμο για τον renderer', () => {
+    // Η προβολή τρέχει ΜΕΣΑ στον builder, άρα και οι δύο πόρτες τη διαθέτουν. Μια σκηνή από
+    // τον server wizard δεν επιλύεται ποτέ — αν το όνομα έμπαινε στον client resolver, ο
+    // χρήστης εκείνης της πόρτας θα έβλεπε ΑΝΩΝΥΜΑ πλαίσια (το σχήμα του Φ C.18).
+    const { scene } = build();
+    const images = scene.entities.filter(isImageEntity);
+    expect(images.map((i) => i.sourceName)).toEqual(['diatagma_1993.JPG', 'diatagma_1993.JPG']);
+  });
+
   it('🔴 το IMAGE ΔΕΝ μετριέται πια ως «unsupported entity» — μετριέται ως parsed', () => {
     // Αυτό ΗΤΑΝ το σφάλμα: ο χρήστης έβλεπε «Skipped 10 unsupported entities (IMAGE ×10)».
     // Σωστό πλήθος, λάθος νόημα: δεν είναι άγνωστη οντότητα, είναι 10 συνημμένα που λείπουν.
@@ -107,5 +116,11 @@ describeReal('DxfSceneBuilder — ΠΡΑΓΜΑΤΙΚΟ τοπογραφικό (o
       byLayer.set(img.layerId, (byLayer.get(img.layerId) ?? 0) + 1);
     }
     expect([...byLayer.values()].reduce((a, b) => a + b, 0)).toBe(10);
+
+    // Φ2 — και τα 10 πλαίσια-κρατήματος έχουν όνομα να δείξουν. Κανένα ανώνυμο: ένα ανώνυμο
+    // πλαίσιο λέει «κάτι λείπει» χωρίς να λέει **τι**, δηλαδή δεν βοηθά τον χρήστη να το βρει.
+    const named = scene.entities.filter(isImageEntity).map((i) => i.sourceName);
+    expect(named.every((n) => typeof n === 'string' && n.length > 0)).toBe(true);
+    expect(new Set(named).size).toBe(10); // 10 ΔΙΑΦΟΡΕΤΙΚΑ αρχεία, ένα IMAGEDEF το καθένα
   });
 });

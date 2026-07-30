@@ -47,15 +47,9 @@ import { recordSkipped, type ImportDiagnostics } from './dxf-import-diagnostics'
 // ADR-635 — MTEXT 250-char chunk reassembly (SSoT). Ζει εδώ γιατί ΜΟΝΟ ο parser βλέπει
 // ακόμα το ΩΜΟ (untrimmed) value της γραμμής, που είναι απαραίτητο στις ραφές των chunks.
 import { createMTextContentCollector } from './dxf-mtext-chunks';
-// 🔴 group code 101 «Embedded Object» = ΤΟΜΗ ΕΝΟΤΗΤΑΣ (ισοδύναμη με 0/100): ό,τι ακολουθεί
-// ΔΕΝ ανήκει στη host οντότητα. Χωρίς αυτό, τα codes του embedded object ΕΠΕΓΡΑΦΑΝ τα
-// πραγματικά (10/20 → 1/0) και 10 MTEXT εξαφανίζονταν σιωπηλά — βλ. dxf-embedded-object.ts.
-import {
-  EMBEDDED_OBJECT_CODE,
-  openEmbeddedObject,
-  appendEmbeddedPair,
-  type EmbeddedObjectBuckets,
-} from './dxf-embedded-object';
+// 🔴 group code 101 «Embedded Object» = ΤΟΜΗ ΕΝΟΤΗΤΑΣ (ισοδύναμη με 0/100). Χωρίς αυτό τα codes
+// του embedded object ΕΠΕΓΡΑΦΑΝ τα πραγματικά (10/20 → 1/0) ⇒ 10 MTEXT εξαφανίζονταν σιωπηλά.
+import { EMBEDDED_OBJECT_CODE, openEmbeddedObject, appendEmbeddedPair, type EmbeddedObjectBuckets } from './dxf-embedded-object';
 // ADR-736 — SSoT πλοήγησης section (leaf, μηδέν imports). Η `findSectionRange` αναθέτει εδώ.
 import { findDxfSectionRange } from './dxf-section-scan';
 

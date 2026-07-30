@@ -55,6 +55,18 @@ export interface ImageEntity extends BaseEntity {
    * υπόβαθρο τοποθετημένο δύο φορές). Μία επίλυση ⇒ γεμίζουν **όλες**.
    */
   externalRefId?: string;
+  /**
+   * ADR-736 — το **όνομα αρχείου** που ζητά αυτή η εικόνα (`basename` της `DxfExternalReference`,
+   * π.χ. `dianomi_1.JPG`). Ο `ImageRenderer` το ζωγραφίζει μέσα στο πλαίσιο-κράτημα όσο το `url`
+   * λείπει, ώστε ο χρήστης να βλέπει **τι** λείπει και **πού** ανήκει.
+   *
+   * ⚠️ **Ναι, είναι αντίγραφο** του `basename` της αναφοράς — και είναι σκόπιμο. Ο renderer είναι
+   * pure leaf (ADR-040): ζωγραφίζει **σύγχρονα**, χωρίς πρόσβαση στη σκηνή, άρα δεν μπορεί να
+   * ακολουθήσει το `externalRefId`. Η *αυθεντία* της διαδρομής μένει στην αναφορά· εδώ ζει μόνο
+   * η **ετικέτα προς εμφάνιση** — ίδιο σκεπτικό με το `dxfImageExport.filename` από πάνω. Το
+   * αντίγραφο γράφεται σε **ένα** σημείο (`utils/dxf-external-reference-apply.ts`), ποτέ ad hoc.
+   */
+  sourceName?: string;
 }
 
 export const isImageEntity = (entity: { type: string }): entity is ImageEntity =>

@@ -5490,3 +5490,25 @@ primitive — **εκκρεμεί**, καταγεγραμμένο στο ADR-726 
 
 ⚠️ **Κανένα αρχείο της λίστας CHECK 6B/6D δεν άλλαξε** — ο harness *καταναλώνει* την
 αρχιτεκτονική, δεν την τροποποιεί. Η καταγραφή εδώ είναι δείκτης, όχι αλλαγή συμβολαίου.
+
+---
+
+## 2026-07-30: `dxf-canvas-renderer` — **size-at-paint-time** (CHECK 6B stage)
+
+Ο κύριος καμβάς έπαιρνε context με ωμό `refs.canvasRef.current?.getContext('2d')`. Το backing
+store συγχρονιζόταν **μόνο** από passive effect — άρα ο RAF tick μπορούσε να προλάβει και να
+ζωγραφίσει με το **νέο** viewport πάνω στο **αρχικό `300×150`** (το default του `<canvas>`), ενώ
+το CSS `width/height: 100%` το τέντωνε ×5. Αυτό ήταν ο «γιγάντιος χάρακας» μετά από hard refresh.
+
+Τώρα το μέγεθος επιβεβαιώνεται **μέσα στο frame**, μέσω του υπάρχοντος SSoT
+`CanvasUtils.sizeCanvasToViewport(canvasEl, currentViewport)` — του ίδιου που ήδη τιμά η υπόλοιπη
+στοίβα (κοινό authoritative viewport από `useViewportManager`, **ποτέ** `getBoundingClientRect()`
+ανά καμβά). Η κλήση επιστρέφει και το `ctx`, οπότε δεν προστίθεται δεύτερη διαδρομή.
+
+**Idempotent**: γράφει `canvas.width/height` **μόνο** σε πραγματική αλλαγή διαστάσεων ⇒ μηδέν
+wipe και μηδέν κόστος στο steady state. Ίδιο μοτίβο με το `paintOverlayDispatchFrame` (ADR-726 Φ2).
+
+⚠️ **Καμία αλλαγή στο συμβόλαιο των micro-leaves**: δεν προστέθηκε συνδρομή, το `currentViewport`
+ήταν ήδη διαθέσιμο στο σημείο της βαφής, και το `getImmediateTransform()` παραμένει η event-time
+πηγή του μετασχηματισμού. Η εγγραφή εδώ είναι υποχρεωτική επειδή το αρχείο ανήκει στη λίστα
+CHECK 6B — όχι επειδή άλλαξε η αρχιτεκτονική.

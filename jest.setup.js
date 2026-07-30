@@ -46,6 +46,19 @@ if (typeof global.TextEncoder === 'undefined') {
   global.TextDecoder = TextDecoder;
 }
 
+// Compression/DecompressionStream + Blob — υπάρχουν στον Node 18+, ΔΕΝ τα εκθέτει το jsdom.
+// Ίδιο μοτίβο με το TextEncoder από πάνω: δανείζονται από τον Node, μόνο όταν λείπουν.
+// Χρειάζονται από τον `zip-unpack` (ADR-736 Φ3, `deflate-raw`) και από κάθε κώδικα που
+// διαβάζει bytes από Blob — το jsdom Blob δεν έχει καν `arrayBuffer()`.
+if (typeof global.DecompressionStream === 'undefined') {
+  const { CompressionStream, DecompressionStream } = require('stream/web');
+  global.CompressionStream = CompressionStream;
+  global.DecompressionStream = DecompressionStream;
+}
+if (typeof global.Blob === 'undefined' || typeof global.Blob.prototype.arrayBuffer !== 'function') {
+  global.Blob = require('buffer').Blob;
+}
+
 // Mock για Path2D (Canvas 2D API — not in jsdom)
 class Path2DMock {
   moveTo() {}

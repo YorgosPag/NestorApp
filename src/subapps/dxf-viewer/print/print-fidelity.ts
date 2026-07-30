@@ -69,6 +69,10 @@ const RESOLVER_CODE_TO_FIDELITY: Readonly<Record<string, PrintFidelityCode>> = {
   'image-fill:pattern-cap': 'hatch-image-solid',
   'image-entity:decode-failed': 'image-dropped',
   'image-entity:encode-failed': 'image-dropped',
+  // ADR-736 — εικόνα με **ανεπίλυτη εξωτερική αναφορά** (το DXF κρατά διαδρομή, όχι bytes· το
+  // αρχείο δεν βρέθηκε). Ξεχωριστός κωδικός στην πηγή, **ίδιο** είδος απώλειας στο χαρτί: η
+  // εικόνα λείπει από το PDF. Ο χρήστης το μαθαίνει — δεν εξαφανίζεται σιωπηλά.
+  'image-entity:unresolved-reference': 'image-dropped',
   // ADR-667 Φ3 — `scene-hatch-line-resolver`: υπέρβαση `MAX_TEK_FILL_LINES_PER_HATCH/TOTAL`. Ο
   // guard είναι υποχρεωτικός (χωρίς αυτόν: 164s πάγωμα / OOM 4GB) — αλλά **ποτέ σιωπηλός**.
   'hatch-lines:budget': 'hatch-lines-dropped',

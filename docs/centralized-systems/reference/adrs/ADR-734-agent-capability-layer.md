@@ -373,7 +373,7 @@ getById(id: string): Promise<BOQItem | null>;   // ⛔ ΚΑΝΕΝΑ companyId
 |---|---|---|---|
 | **0** | Αυτό το ADR | 1 | — |
 | **1** ✅ | Τύποι VQE + `buildEnvelope()` + tests — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-30** (§8.1) | 16 | Μηδενικό (νέος κώδικας) |
-| **2** ✅ | Capability Registry + OpenAI adapter + τα 7 read tools — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-30** (§8.2) | 18 | Χαμηλό (μόνο ανάγνωση) |
+| **2** ✅ | Capability Registry + OpenAI adapter + τα 7 read tools — **ΟΛΟΚΛΗΡΩΘΗΚΕ 2026-07-30** (§8.2) | 17 | Χαμηλό (μόνο ανάγνωση) |
 | **3** | MCP adapter + **σύνδεση με τον in-app πράκτορα** + auth + rate limiting | ~5 | Μεσαίο (εξωτερική επιφάνεια) |
 | **4** | Write tools με governance gate | ~4 | Υψηλό — χωριστή έγκριση |
 | **5** | Επέκταση σε `model_*` (BIM/γεωμετρία) | — | Μελλοντικό |

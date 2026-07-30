@@ -319,7 +319,11 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     const prev = prevViewportRef.current;
     if (prev.width === viewport.width && prev.height === viewport.height) return;
     prevViewportRef.current = { width: viewport.width, height: viewport.height };
-    if (prev.width === 0 && prev.height === 0) return;
+    // ADR-040 (2026-07-30) — ΚΑΜΙΑ παράλειψη της πρώτης μετάβασης 0 → πραγματικό μέγεθος. Το παλιό
+    // `if (prev.width === 0 …) return` παρέκαμπτε το setupCanvas ΑΚΡΙΒΩΣ στη μοναδική στιγμή που το
+    // backing store είναι λάθος (mount με viewport 0 → το setupCanvas είχε κάνει early-return), και
+    // στηριζόταν σε ένα mount effect που δεν είχε κάνει τίποτα. Το sizeCanvasToViewport είναι
+    // idempotent, οπότε η κλήση εδώ δεν κοστίζει όταν το μέγεθος είναι ήδη σωστό.
     setupCanvas();
     isDirtyRef.current = true;
   }, [viewport.width, viewport.height, setupCanvas, isDirtyRef]);

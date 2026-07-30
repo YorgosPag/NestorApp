@@ -134,6 +134,11 @@ export function useCanvasResize({
           if (width > 0 && height > 0) {
             // 🎯 CRITICAL: Update ref SYNCHRONOUSLY (no React batching)
             viewportRef.current = { width, height };
+            // ADR-040 (2026-07-30) — re-size the backing store IMMEDIATELY. In standalone mode the
+            // effect deps are `viewportProp` (which never changes here), so without this call the
+            // buffer stayed at the <canvas> default 300×150 while the ref reported the real size →
+            // the CSS-stretched «giant ruler». The setState below is for React deps only.
+            onSetupCanvas?.();
             // Also trigger React state update for dependencies
             setInternalViewport({ width, height });
           }

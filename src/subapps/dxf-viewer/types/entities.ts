@@ -205,6 +205,18 @@ export interface TextEntity extends BaseEntity {
    * (`scaleText`). MTEXT uses its own `width` frame instead of this.
    */
   widthFactor?: number;
+  /**
+   * ADR-737 — **πλάτος ορθογωνίου αναφοράς MTEXT** (DXF group 41, world units): η στήλη μέσα
+   * στην οποία αναδιπλώνεται το κείμενο. `0`/απών = «χωρίς πλαίσιο» (μονή γραμμή, auto).
+   *
+   * ⚠️ **Ο τύπος έλεγε ψέματα**: το πεδίο το έγραφε ήδη ο importer (`buildTextSceneEntity`,
+   * ADR-635 Φ C.20) και το διάβαζαν το `text-box.ts` και το `emitMText` — αλλά **δεν ήταν
+   * δηλωμένο εδώ**, οπότε ο writer το προσπελάζει μέσω `(e as MTextEntity)`. Ακίνδυνο όσο το
+   * `case 'mtext'` έπαιρνε μόνο MTextEntity· από το ADR-636 Φ2.4 D.7 το `emitMText` δέχεται
+   * **και** `TextEntity` (δείκτης `dxfSourceType:'mtext'`), οπότε το cast θα διάβαζε πεδίο που
+   * ο compiler δεν γνωρίζει. Η δήλωση είναι additive — καμία αλλαγή συμπεριφοράς.
+   */
+  width?: number;
   // 🏢 ADR-344 Phase 11 — Annotative scaling (optional, populated by XDATA parser)
   isAnnotative?: boolean;
   annotationScales?: readonly EntityAnnotationScale[];
