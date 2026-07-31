@@ -5,6 +5,26 @@
 > **Category**: Security / Authorization / Data Integrity
 > **Depends On**: ADR-253 (Deep Integrity Audit), ADR-252 (Security Audit), ADR-249 (Server-Side Integrity)
 > **Scope**: Firestore Rules, API Routes, Client Writes, Input Validation, Audit Trail, Cleanup
+> **Superseded in part by**: **[ADR-742](./ADR-742-tenant-document-ownership-ssot.md)** — βλ. σημείωση ↓
+
+---
+
+> ## ⚠️ 2026-07-31 — Το per-document tenant isolation μετακόμισε (ADR-742)
+>
+> Οι έξι `require*InTenant` του `lib/auth/tenant-isolation.ts` **κρατούν ονόματα,
+> υπογραφές, μηνύματα, status codes και εγγραφές audit αυτούσια** — κανένας από
+> τους 41 καταναλωτές δεν άλλαξε. Άλλαξε **πού ζει η ερώτηση**: το ίδιο 20γραμμο
+> block ήταν αντιγραμμένο **έξι φορές** μέσα στο αρχείο και υπήρχε σε **άλλα
+> τρία** συστήματα. Πλέον υπάρχει ένας `requireDocInTenant` και η σύγκριση ζει
+> στο καθαρό `lib/auth/tenant-ownership.ts`.
+>
+> 🔴 **Η αιτία που το ADR-255 δεν προστάτευσε τον εαυτό του**: το
+> `tenant-isolation.ts` **δεν καταχωρήθηκε ποτέ στο `.ssot-registry.json`**, οπότε
+> κανένα gate δεν φύλαγε την περιοχή και τον Ιούλιο γράφτηκε καλόπιστα δεύτερο
+> module για το ίδιο πράγμα. Το ADR-742 έκλεισε αυτό το κενό (module
+> `tenant-document-ownership`).
+>
+> **Αν προσθέτεις νέα οντότητα**: γράψε **δήλωση**, όχι αντίγραφο. Βλ. ADR-742 §5.
 
 ---
 

@@ -11,12 +11,18 @@
 import {
   CrossTenantAccessError,
   assertOwnedByCompany,
+  concealCrossTenant,
   isOwnedByCompany,
+  isPayloadOwnedByCompany,
   ownedOrNull,
 } from '../tenant-ownership';
 
 const OWNER = 'co-1';
 const INTRUDER = 'co-2';
+
+/** Ο μόνος ρόλος με `isBypass: true` στο `PREDEFINED_ROLES`. */
+const BYPASS_ROLE = 'super_admin';
+const NORMAL_ROLE = 'company_admin';
 
 const doc = { companyId: OWNER, title: 'Δοκιμή' };
 const subject = { resource: 'Δοκιμαστικός πόρος', resourceId: 'res-1' };
@@ -35,6 +41,88 @@ describe('isOwnedByCompany — η ερώτηση σκέτη', () => {
     // σύγκριση. Εδώ ταιριάζουν όντως — αλλά το τεκμηριώνουμε ρητά ώστε ο
     // έλεγχος «υπάρχει companyId;» να μένει ευθύνη του καλούντος (auth layer).
     expect(isOwnedByCompany({ companyId: '' }, '')).toBe(true);
+  });
+});
+
+describe('isPayloadOwnedByCompany — η ερώτηση για ωμό payload βάσης', () => {
+  it('ίδιος tenant ⇒ true', () => {
+    expect(isPayloadOwnedByCompany({ companyId: OWNER }, OWNER)).toBe(true);
+  });
+
+  it('άλλος tenant ⇒ false', () => {
+    expect(isPayloadOwnedByCompany({ companyId: OWNER }, INTRUDER)).toBe(false);
+  });
+
+  it('🔴 έγγραφο ΧΩΡΙΣ companyId δεν ανήκει σε κανέναν (ADR-232)', () => {
+    // Έγγραφα του υπεργραφείου έχουν companyId null/undefined. Κανονικός
+    // χρήστης ΔΕΝ πρέπει να τα αγγίζει· ο bypass ρόλος κρίνεται αλλού.
+    expect(isPayloadOwnedByCompany({}, OWNER)).toBe(false);
+    expect(isPayloadOwnedByCompany({ companyId: null }, OWNER)).toBe(false);
+    expect(isPayloadOwnedByCompany({ companyId: undefined }, OWNER)).toBe(false);
+  });
+
+  it('🔴 ΤΟ ΠΡΑΓΜΑΤΙΚΟ ΣΦΑΛΜΑ: δύο κενά ΔΕΝ ταιριάζουν', () => {
+    // Αυτό ακριβώς απαντούσε `true` στις τέσσερις χειρόγραφες υλοποιήσεις που
+    // έγραφαν σκέτο `a.companyId === b.companyId`: καλών με χαλασμένο token
+    // (companyId: '') έβλεπε κάθε έγγραφο που είχε επίσης κενό companyId.
+    // Το κενό είναι ΑΠΟΥΣΙΑ tenant, όχι tenant που τυχαίνει να ταιριάζει.
+    expect(isPayloadOwnedByCompany({ companyId: '' }, '')).toBe(false);
+    expect(isPayloadOwnedByCompany({ companyId: OWNER }, '')).toBe(false);
+    expect(isPayloadOwnedByCompany({ companyId: '' }, OWNER)).toBe(false);
+  });
+
+  it('ανύπαρκτο έγγραφο ⇒ false, χωρίς ρίψη', () => {
+    expect(isPayloadOwnedByCompany(null, OWNER)).toBe(false);
+    expect(isPayloadOwnedByCompany(undefined, OWNER)).toBe(false);
+  });
+
+  it('συμφωνεί με την isOwnedByCompany όποτε το companyId όντως υπάρχει', () => {
+    // Οι δύο μορφές πρέπει να λένε ΤΟ ΙΔΙΟ στο κοινό τους πεδίο ορισμού —
+    // αλλιώς η «μία ερώτηση» θα ήταν δύο.
+    for (const [docCo, caller] of [
+      [OWNER, OWNER],
+      [OWNER, INTRUDER],
+      [INTRUDER, OWNER],
+    ] as const) {
+      expect(isPayloadOwnedByCompany({ companyId: docCo }, caller)).toBe(
+        isOwnedByCompany({ companyId: docCo }, caller),
+      );
+    }
+  });
+});
+
+describe('concealCrossTenant — η απόφαση αποκάλυψης', () => {
+  const spec = { reveal: () => 'ΑΛΗΘΕΙΑ' as const, conceal: () => 'ΣΙΩΠΗ' as const };
+
+  it('κανονικός χρήστης ⇒ σιωπή', () => {
+    expect(concealCrossTenant(NORMAL_ROLE, spec)).toBe('ΣΙΩΠΗ');
+  });
+
+  it('bypass ρόλος ⇒ αλήθεια (κερδίζει τη διάγνωση, δεν χάνει τίποτα)', () => {
+    expect(concealCrossTenant(BYPASS_ROLE, spec)).toBe('ΑΛΗΘΕΙΑ');
+  });
+
+  it('άγνωστος/κενός ρόλος ⇒ σιωπή (fail closed)', () => {
+    // Ένας ρόλος που δεν υπάρχει στο μητρώο δεν είναι bypass. Η ασφαλής
+    // προεπιλογή είναι να ΜΗΝ αποκαλύψεις.
+    expect(concealCrossTenant('', spec)).toBe('ΣΙΩΠΗ');
+    expect(concealCrossTenant('ρόλος-που-δεν-υπάρχει', spec)).toBe('ΣΙΩΠΗ');
+  });
+
+  it('🔴 καλείται ΜΟΝΟ ο ένας κλάδος — ο άλλος δεν εκτελείται καν', () => {
+    // Κρίσιμο: ο κλάδος `reveal` μπορεί να χτίζει μήνυμα με ξένα δεδομένα.
+    // Αν εκτελούνταν και για κανονικό χρήστη, η διαρροή θα γινόταν πριν καν
+    // αποφασίσουμε να σιωπήσουμε (π.χ. μέσω logging μέσα στον constructor).
+    const reveal = jest.fn(() => 'ΑΛΗΘΕΙΑ');
+    const conceal = jest.fn(() => 'ΣΙΩΠΗ');
+
+    concealCrossTenant(NORMAL_ROLE, { reveal, conceal });
+    expect(reveal).not.toHaveBeenCalled();
+    expect(conceal).toHaveBeenCalledTimes(1);
+
+    concealCrossTenant(BYPASS_ROLE, { reveal, conceal });
+    expect(reveal).toHaveBeenCalledTimes(1);
+    expect(conceal).toHaveBeenCalledTimes(1);
   });
 });
 

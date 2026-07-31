@@ -22,6 +22,7 @@ import { logAuditEvent } from '@/lib/auth/audit';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { getTrackedFieldsForEntityAuditType } from '@/config/audit-tracked-fields';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import {
   parseEntityCode,
@@ -129,7 +130,10 @@ async function verifyTenantAccess(
     return; // Super admin — bypass tenant isolation
   }
 
-  if (!parentData.companyId || parentData.companyId !== ctx.companyId) {
+  // Ίδια ερώτηση με τις `require*InTenant` — ίδιος ορισμός (ADR-742). Εδώ ο
+  // γονιός έχει **ήδη διαβαστεί**, γι' αυτό καλείται σκέτη η ερώτηση και όχι ο
+  // φύλακας που φέρνει το έγγραφο.
+  if (!isPayloadOwnedByCompany(parentData, ctx.companyId)) {
     await logAuditEvent(ctx, 'access_denied', parentId, 'building', {
       metadata: {
         path: apiPath,

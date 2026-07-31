@@ -1,18 +1,41 @@
 /**
- * 🔒 TENANT ISOLATION UTILITIES
+ * 🔒 TENANT ISOLATION UTILITIES — «ανήκει ΑΥΤΟ το έγγραφο στον καλούντα;» στον server
  *
  * Enterprise-grade tenant isolation helpers for multi-tenant data access.
  * Ensures projects/resources belong to authenticated user's company.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ΤΙ ΕΙΝΑΙ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΜΕΤΑ ΤΟ ADR-742
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Είναι το **HTTP/Admin-SDK περίβλημα** γύρω από την ερώτηση, όχι η ερώτηση.
+ * Η ερώτηση ζει **μία φορά** στο `lib/auth/tenant-ownership` (καθαρό module) και
+ * την καλούν και τα τέσσερα μονοπάτια του κώδικα. Εδώ προστίθενται τα τρία που
+ * χρειάζεται μόνο ο server: **fetch** από Admin SDK, **audit trail**, και
+ * **τυποποιημένη άρνηση** (`TenantIsolationError` με status/code).
+ *
+ * Οι έξι `require*InTenant` είναι πλέον **δηλώσεις** πάνω στον έναν
+ * {@link requireDocInTenant}. Ονόματα, υπογραφές, μηνύματα, κωδικοί και εγγραφές
+ * audit είναι **αμετάβλητα** — 41 αρχεία καταναλωτές δεν αγγίχτηκαν.
+ *
+ * ⚠️ **ΜΗΝ ξαναγράψεις τη σύγκριση `companyId` εδώ.** Πριν το ADR-742 το ίδιο
+ * 20γραμμο block ήταν αντιγραμμένο **έξι φορές** μέσα σε αυτό ακριβώς το αρχείο,
+ * και η ίδια ερώτηση υπήρχε σε άλλα τρία συστήματα. Αν χρειάζεσαι νέα οντότητα,
+ * πρόσθεσε **δήλωση**, όχι αντίγραφο.
+ *
  * @module lib/auth/tenant-isolation
- * @version 1.0.0
+ * @version 2.0.0
  * @since 2026-01-17 - AUTHZ Phase 2
+ * @enterprise ADR-255 (per-document ownership) · ADR-742 (η ερώτηση ενοποιήθηκε)
+ * @see lib/auth/tenant-ownership — η ερώτηση + οι πολιτικές (καθαρό SSoT)
+ * @see lib/auth/tenant-scope — ΔΙΑΦΟΡΕΤΙΚΗ ερώτηση: «ποιανού γραμμές να λιστάρω;» (ADR-702)
  */
 
 // Direct imports to avoid circular dependency with @/lib/auth barrel
 import type { AuthContext } from './types';
+import type { AuditTargetType } from './audit-types';
 import { logAuditEvent } from './audit';
 import { isRoleBypass } from './roles';
+import { isPayloadOwnedByCompany } from './tenant-ownership';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { TenantIsolationError } from './tenant-isolation-error';
@@ -21,6 +44,77 @@ import { TenantIsolationError } from './tenant-isolation-error';
 // it without pulling the Admin SDK in. Re-exported here — this is still the
 // canonical import path for every existing consumer.
 export { TenantIsolationError } from './tenant-isolation-error';
+
+// =============================================================================
+// Ο ΠΥΡΗΝΑΣ — μία υλοποίηση, έξι δηλώσεις (ADR-742)
+// =============================================================================
+
+/** Το ελάχιστο που εγγυάται ένα έγγραφο με tenant. Το `?` είναι σκόπιμο: το Firestore δεν υπόσχεται πεδία. */
+interface TenantScopedDoc {
+  companyId?: string;
+}
+
+/** Ο λόγος άρνησης στο audit trail. Ένα string, ένας ορισμός — τα greps των logs βασίζονται σε αυτόν. */
+const TENANT_MISMATCH_REASON = 'Tenant isolation violation - companyId mismatch';
+
+/**
+ * 🔒 Ο ένας φύλακας: φέρε το έγγραφο, κρίνε την ιδιοκτησία, κατάγραψε την άρνηση.
+ *
+ * **Η σειρά των βημάτων είναι το συμβόλαιο ασφαλείας**, όχι λεπτομέρεια:
+ *
+ * 1. **Ανύπαρκτο ⇒ 404** πριν καν κοιταχτεί ο tenant. Ένα «δεν υπάρχει» δεν
+ *    πρέπει να κοστίζει διαφορετικό χρόνο ή να δίνει διαφορετικό μήνυμα από
+ *    το «δεν είναι δικό σου», αλλιώς η ίδια η απάντηση γίνεται μαντείο.
+ * 2. **Bypass ρόλος ⇒ πέρασε.** Ο υπεργραφέας έχει σκοπίμως cross-tenant
+ *    ορατότητα (ADR-232) — η ιδιοκτησία δεν ελέγχεται καν.
+ * 3. **Ξένο ⇒ audit + 403.** Η καταγραφή γίνεται **πριν** τη ρίψη: η απόπειρα
+ *    είναι σήμα ασφαλείας και πρέπει να επιβιώνει ακόμη κι αν ο καλών
+ *    καταπιεί το σφάλμα.
+ *
+ * ⚠️ Η ίδια η σύγκριση **δεν γράφεται εδώ** — τη δανείζεται από το
+ * `tenant-ownership.isPayloadOwnedByCompany`, ώστε ο κανόνας «έγγραφο χωρίς
+ * `companyId` δεν ανήκει σε κανέναν» να ισχύει με **ένα** ορισμό σε ολόκληρο
+ * το repo.
+ *
+ * @param spec.notFoundMessage Χρησιμεύει **και** ως μήνυμα σφάλματος **και** ως
+ *   `reason` στο audit — ήταν ήδη ταυτόσημα και στις έξι συναρτήσεις.
+ */
+async function requireDocInTenant<T extends TenantScopedDoc>(spec: {
+  ctx: AuthContext;
+  id: string;
+  path: string;
+  collection: string;
+  targetType: AuditTargetType;
+  notFoundMessage: string;
+}): Promise<T> {
+  const { ctx, id, path, collection, targetType, notFoundMessage } = spec;
+
+  if (!getAdminFirestore()) {
+    throw new Error('Firebase Admin not initialized');
+  }
+
+  const doc = await getAdminFirestore().collection(collection).doc(id).get();
+
+  if (!doc.exists) {
+    await logAuditEvent(ctx, 'access_denied', id, targetType, {
+      metadata: { path, reason: notFoundMessage },
+    });
+    throw new TenantIsolationError(notFoundMessage, 404, 'NOT_FOUND');
+  }
+
+  const data = doc.data() as T | undefined;
+
+  // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
+  // 🏢 ADR-232: Super admin entities may have companyId: null — allow access
+  if (!isRoleBypass(ctx.globalRole) && !isPayloadOwnedByCompany(data, ctx.companyId)) {
+    await logAuditEvent(ctx, 'access_denied', id, targetType, {
+      metadata: { path, reason: TENANT_MISMATCH_REASON },
+    });
+    throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+  }
+
+  return data!;
+}
 
 /**
  * Minimal project data required for tenant verification.
@@ -73,42 +167,14 @@ export async function requireProjectInTenant(params: {
   projectId: string;
   path: string;
 }): Promise<TenantProject> {
-  const { ctx, projectId, path } = params;
-
-  if (!getAdminFirestore()) {
-    throw new Error('Firebase Admin not initialized');
-  }
-
-  // Fetch project document
-  const doc = await getAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-
-  if (!doc.exists) {
-    // Audit the access denial
-    await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
-      metadata: { path, reason: 'Project not found' },
-    });
-    throw new TenantIsolationError('Project not found', 404, 'NOT_FOUND');
-  }
-
-  const data = doc.data() as TenantProject | undefined;
-
-  // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-  // 🏢 ADR-232: Super admin entities may have companyId: null — allow access
-  // Regular users must match companyId exactly
-  if (!isSuperAdmin) {
-    // If entity has no companyId (super admin created), deny access to regular users
-    if (!data?.companyId || data.companyId !== ctx.companyId) {
-      await logAuditEvent(ctx, 'access_denied', projectId, 'project', {
-        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-      });
-      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
-    }
-  }
-
-  // Success - return validated project data
-  return data!;
+  return requireDocInTenant<TenantProject>({
+    ctx: params.ctx,
+    id: params.projectId,
+    path: params.path,
+    collection: COLLECTIONS.PROJECTS,
+    targetType: 'project',
+    notFoundMessage: 'Project not found',
+  });
 }
 
 /**
@@ -142,40 +208,14 @@ export async function requireBuildingInTenant(params: {
   buildingId: string;
   path: string;
 }): Promise<TenantBuilding> {
-  const { ctx, buildingId, path } = params;
-
-  if (!getAdminFirestore()) {
-    throw new Error('Firebase Admin not initialized');
-  }
-
-  // Fetch building document
-  const doc = await getAdminFirestore().collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-
-  if (!doc.exists) {
-    // Audit the access denial
-    await logAuditEvent(ctx, 'access_denied', buildingId, 'building', {
-      metadata: { path, reason: 'Building not found' },
-    });
-    throw new TenantIsolationError('Building not found', 404, 'NOT_FOUND');
-  }
-
-  const data = doc.data() as TenantBuilding | undefined;
-
-  // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-  // 🏢 ADR-232: Super admin entities may have companyId: null — allow access
-  if (!isSuperAdmin) {
-    if (!data?.companyId || data.companyId !== ctx.companyId) {
-      await logAuditEvent(ctx, 'access_denied', buildingId, 'building', {
-        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-      });
-      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
-    }
-  }
-
-  // Success - return validated building data
-  return data!;
+  return requireDocInTenant<TenantBuilding>({
+    ctx: params.ctx,
+    id: params.buildingId,
+    path: params.path,
+    collection: COLLECTIONS.BUILDINGS,
+    targetType: 'building',
+    notFoundMessage: 'Building not found',
+  });
 }
 
 // =============================================================================
@@ -221,34 +261,14 @@ export async function requirePropertyInTenantScope(params: {
   propertyId: string;
   path: string;
 }): Promise<TenantProperty> {
-  const { ctx, propertyId, path } = params;
-
-  if (!getAdminFirestore()) {
-    throw new Error('Firebase Admin not initialized');
-  }
-
-  const doc = await getAdminFirestore().collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
-
-  if (!doc.exists) {
-    await logAuditEvent(ctx, 'access_denied', propertyId, 'property', {
-      metadata: { path, reason: 'Property not found' },
-    });
-    throw new TenantIsolationError('Property not found', 404, 'NOT_FOUND');
-  }
-
-  const data = doc.data() as TenantProperty | undefined;
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-  if (!isSuperAdmin) {
-    if (!data?.companyId || data.companyId !== ctx.companyId) {
-      await logAuditEvent(ctx, 'access_denied', propertyId, 'property', {
-        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-      });
-      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
-    }
-  }
-
-  return data!;
+  return requireDocInTenant<TenantProperty>({
+    ctx: params.ctx,
+    id: params.propertyId,
+    path: params.path,
+    collection: COLLECTIONS.PROPERTIES,
+    targetType: 'property',
+    notFoundMessage: 'Property not found',
+  });
 }
 
 /**
@@ -274,34 +294,14 @@ export async function requireStorageInTenant(params: {
   storageId: string;
   path: string;
 }): Promise<TenantStorage> {
-  const { ctx, storageId, path } = params;
-
-  if (!getAdminFirestore()) {
-    throw new Error('Firebase Admin not initialized');
-  }
-
-  const doc = await getAdminFirestore().collection(COLLECTIONS.STORAGE).doc(storageId).get();
-
-  if (!doc.exists) {
-    await logAuditEvent(ctx, 'access_denied', storageId, 'storage', {
-      metadata: { path, reason: 'Storage not found' },
-    });
-    throw new TenantIsolationError('Storage not found', 404, 'NOT_FOUND');
-  }
-
-  const data = doc.data() as TenantStorage | undefined;
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-  if (!isSuperAdmin) {
-    if (!data?.companyId || data.companyId !== ctx.companyId) {
-      await logAuditEvent(ctx, 'access_denied', storageId, 'storage', {
-        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-      });
-      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
-    }
-  }
-
-  return data!;
+  return requireDocInTenant<TenantStorage>({
+    ctx: params.ctx,
+    id: params.storageId,
+    path: params.path,
+    collection: COLLECTIONS.STORAGE,
+    targetType: 'storage',
+    notFoundMessage: 'Storage not found',
+  });
 }
 
 /**
@@ -312,34 +312,14 @@ export async function requireParkingInTenant(params: {
   parkingId: string;
   path: string;
 }): Promise<TenantParking> {
-  const { ctx, parkingId, path } = params;
-
-  if (!getAdminFirestore()) {
-    throw new Error('Firebase Admin not initialized');
-  }
-
-  const doc = await getAdminFirestore().collection(COLLECTIONS.PARKING_SPACES).doc(parkingId).get();
-
-  if (!doc.exists) {
-    await logAuditEvent(ctx, 'access_denied', parkingId, 'parking', {
-      metadata: { path, reason: 'Parking space not found' },
-    });
-    throw new TenantIsolationError('Parking space not found', 404, 'NOT_FOUND');
-  }
-
-  const data = doc.data() as TenantParking | undefined;
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-  if (!isSuperAdmin) {
-    if (!data?.companyId || data.companyId !== ctx.companyId) {
-      await logAuditEvent(ctx, 'access_denied', parkingId, 'parking', {
-        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-      });
-      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
-    }
-  }
-
-  return data!;
+  return requireDocInTenant<TenantParking>({
+    ctx: params.ctx,
+    id: params.parkingId,
+    path: params.path,
+    collection: COLLECTIONS.PARKING_SPACES,
+    targetType: 'parking',
+    notFoundMessage: 'Parking space not found',
+  });
 }
 
 /**
@@ -350,34 +330,14 @@ export async function requireOpportunityInTenant(params: {
   opportunityId: string;
   path: string;
 }): Promise<TenantOpportunity> {
-  const { ctx, opportunityId, path } = params;
-
-  if (!getAdminFirestore()) {
-    throw new Error('Firebase Admin not initialized');
-  }
-
-  const doc = await getAdminFirestore().collection(COLLECTIONS.OPPORTUNITIES).doc(opportunityId).get();
-
-  if (!doc.exists) {
-    await logAuditEvent(ctx, 'access_denied', opportunityId, 'opportunity', {
-      metadata: { path, reason: 'Opportunity not found' },
-    });
-    throw new TenantIsolationError('Opportunity not found', 404, 'NOT_FOUND');
-  }
-
-  const data = doc.data() as TenantOpportunity | undefined;
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-  if (!isSuperAdmin) {
-    if (!data?.companyId || data.companyId !== ctx.companyId) {
-      await logAuditEvent(ctx, 'access_denied', opportunityId, 'opportunity', {
-        metadata: { path, reason: 'Tenant isolation violation - companyId mismatch' },
-      });
-      throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
-    }
-  }
-
-  return data!;
+  return requireDocInTenant<TenantOpportunity>({
+    ctx: params.ctx,
+    id: params.opportunityId,
+    path: params.path,
+    collection: COLLECTIONS.OPPORTUNITIES,
+    targetType: 'opportunity',
+    notFoundMessage: 'Opportunity not found',
+  });
 }
 
 // =============================================================================
@@ -417,8 +377,8 @@ export async function filterSnapshotsByTenant(
       allowed.push(snap);
       continue;
     }
-    const data = snap.data();
-    if (data?.companyId && data.companyId === ctx.companyId) {
+    // Ίδια ερώτηση με τις `require*InTenant` — ίδιος ορισμός (ADR-742).
+    if (isPayloadOwnedByCompany(snap.data(), ctx.companyId)) {
       allowed.push(snap);
     } else {
       denied.push(snap.id);

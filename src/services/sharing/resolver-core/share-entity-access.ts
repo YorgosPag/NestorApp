@@ -17,18 +17,33 @@
  * against the client SDK with an `AuthorizedUser`, and their contract is a
  * `Promise<boolean>` feeding a disabled/enabled share button.
  *
- * Merging the two would mean either dragging `firebase-admin` into a client
- * bundle or weakening the server guard to a boolean. They are two doctrines on
- * purpose — the same distinction `tenant-scope.ts` draws against
- * `super-admin-scope.ts`. Keep them apart.
+ * Merging the two **wrappers** would mean either dragging `firebase-admin` into
+ * a client bundle or weakening the server guard to a boolean. They stay two
+ * doctrines on purpose — the same distinction `tenant-scope.ts` draws against
+ * `super-admin-scope.ts`.
+ *
+ * ## What DID merge (ADR-742) — read before you re-type `=== user.companyId`
+ *
+ * The paragraph above justified keeping the *wrappers* apart, and that still
+ * holds. It was silently doing more work than that, though: it also excused a
+ * hand-rolled `companyId === user.companyId` on line ~78, which is **not** a
+ * wrapper — it is the question itself, and it was the **fourth** copy of it in
+ * the repo. The bundle objection never applied to a string comparison.
+ *
+ * `lib/auth/tenant-ownership` is deliberately free of `firebase-admin` and
+ * `server-only` precisely so both sides can share it. `canShare` now asks it.
+ * That also fixed a real gap for free: the old comparison answered `true` for a
+ * document with `companyId: ''` when the caller's company was also blank.
  *
  * @module services/sharing/resolver-core/share-entity-access
  * @see adrs/ADR-699-share-resolver-declarations.md
- * @see lib/auth/tenant-isolation — server-side equivalent (ADR-255), do not merge
+ * @see lib/auth/tenant-ownership — the shared question (ADR-742)
+ * @see lib/auth/tenant-isolation — server-side wrapper (ADR-255), do not merge
  */
 
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import type { Logger } from '@/lib/telemetry/Logger';
 import type { AuthorizedUser, ShareRecord } from '@/types/sharing';
 
@@ -75,6 +90,6 @@ export function createTenantOwnershipGuard(
     if (!user?.uid || !user?.companyId) return false;
     const snap = await getDoc(doc(db, collection, entityId));
     if (!snap.exists()) return false;
-    return (snap.data() as { companyId?: string }).companyId === user.companyId;
+    return isPayloadOwnedByCompany(snap.data() as { companyId?: string }, user.companyId);
   };
 }
