@@ -11,8 +11,15 @@
 
 - Μετά από κάθε **επιτυχημένη προσπάθεια** → `git commit` αυτόνομα
 - Μετά το commit → **ΣΤΑΜΑΤΑ** και **ΠΕΡΙΜΕΝΕ** εντολή Γιώργου
-- Push triggers: "push", "στείλε", "ανέβασε", "πήγαινε Vercel"
-- **ΓΙΑΤΙ**: Κάθε push = Vercel build = κατανάλωση credits. Ο Γιώργος πληρώνει.
+- Push triggers: "push", "στείλε", "ανέβασε"
+- **ΓΙΑΤΙ**: Κάθε push → GitHub Actions → **Netcup** → **ζωντανά στο
+  nestorconstruct.gr**. Ο Γιώργος αποφασίζει πότε αλλάζει η παραγωγή.
+
+⚠️ **ΟΧΙ Vercel.** Το Vercel είναι **παγωμένο από 2026-05-09**: free tier, χωρίς
+build credits, μηδενικό κόστος ανά push. **Μην** επικαλείσαι «Vercel build» ή
+«credits» ως συνέπεια του push, και **μην** προτείνεις ενέργειες Vercel. Οι
+αποτυχίες του CI (GitHub Actions) **δεν** μπλοκάρουν το deploy στο Netcup —
+είναι ξεχωριστά συστήματα.
 
 ---
 
@@ -33,7 +40,8 @@ git commit -m "..."
 ```bash
 git push origin main
 ```
-→ Αυτόματο: GitHub Actions validation → Vercel build & deploy → Production live.
+→ Αυτόματο: `docker-build.yml` χτίζει το standalone → GHCR → trigger redeploy στο
+**Coolify** (Netcup) → production live στο **https://nestorconstruct.gr**.
 
 ### ✅ ΒΗΜΑ 4 (optional, on request): BACKUP_SUMMARY.json
 Δημιουργείται **ΜΟΝΟ** αν ο Γιώργος ζητήσει πλήρες backup ZIP. Schema:
@@ -70,12 +78,18 @@ git push origin main
 
 ---
 
-## 💰 Vercel Build Cost Optimization (`vercel.json`)
+## 🗄️ `vercel.json` — αδρανές, διατηρείται ως ρύθμιση
 
-- **`autoCancel: true`** — Πολλά pushes σερί → ακυρώνει παλιά builds, χτίζει μόνο το τελευταίο
-- **`ignoreCommand: bash scripts/ignore-build.sh`** — Push με ΜΟΝΟ μη-app αλλαγές (`.md`, `docs/`, `scripts/`) → build **skip εντελώς** (0 κόστος)
-- **App αρχεία που πυροδοτούν build:** `src/`, `public/`, `packages/`, `next.config.*`, `package.json`, `package-lock.json`, `tsconfig.*`, `vercel.json`, `.env*`
-- **Αρχεία που ΔΕΝ πυροδοτούν build:** `*.md`, `docs/`, `scripts/`, `adrs/`, `CLAUDE.md`, `BACKUP_SUMMARY.json`, `recovery/`
+Το αρχείο **δεν εκτελείται**: το Vercel είναι παγωμένο. Τα `autoCancel` /
+`ignoreCommand` θα ίσχυαν μόνο αν το ξεπάγωνε ο Γιώργος.
+
+⚠️ **Το μπλοκ `crons` αφαιρέθηκε 2026-07-31 (ADR-739).** Ήταν το **μοναδικό**
+μέρος όπου ζούσε το πρόγραμμα των προγραμματισμένων εργασιών — και επειδή κανείς
+δεν το διάβαζε, **καμία εργασία δεν έτρεξε επί τρεις μήνες** (ούτε ένα αντίγραφο
+ασφαλείας). Το πρόγραμμα ζει πλέον στο **`src/config/cron-schedule.ts`**.
+
+**ΜΗΝ ξαναβάλεις `crons` εδώ** — απαγορεύεται από το module `cron-schedule` του
+`.ssot-registry.json`.
 
 ---
 
@@ -94,6 +108,9 @@ git push origin main
 
 ## 📊 Production Monitoring
 
-- **Production URL**: https://nestor-app.vercel.app
-- **Vercel Dashboard**: deployment logs + build history
-- **Typical build time**: 2-3 λεπτά για full deploy
+- **Production URL**: **https://nestorconstruct.gr** (Netcup/Coolify).
+  ⚠️ Το παλιό `nestor-app.vercel.app` είναι **νεκρό/legacy** — μην το επικαλείσαι.
+- **Deploy logs**: GitHub Actions (`docker-build.yml`) + πίνακας Coolify
+- **Ειδοποίηση**: Telegram στο τέλος κάθε build (επιτυχία **και** αποτυχία)
+- **Προγραμματισμένες εργασίες**: Sentry Crons — χαμένο check-in ⇒ issue.
+  Το πρόγραμμα: `src/config/cron-schedule.ts` (ADR-739)
