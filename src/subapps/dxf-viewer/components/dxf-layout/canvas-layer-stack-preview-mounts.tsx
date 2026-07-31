@@ -20,6 +20,8 @@ import { useSelectedEntityIds } from '../../systems/selection/useSelectedEntitie
 import { MepFixtureGhostPreviewMount, type MepFixtureGhostPreviewMountProps } from './canvas-layer-stack-mep-fixture-ghost';
 // ADR-415 — floorplan-symbol 2D placement ghost (sibling of the MEP fixture ghost).
 import { FloorplanSymbolGhostPreviewMount, type FloorplanSymbolGhostPreviewMountProps } from './canvas-layer-stack-floorplan-symbol-ghost';
+// ADR-736 §6 — φάντασμα της εντολής «Εικόνα» (το «ποια εικόνα» ζει σε vanilla store).
+import { AttachImageGhostPreviewMount, type AttachImageGhostPreviewMountProps } from './canvas-layer-stack-attach-image-ghost';
 // ADR-581 Φ6 — «σύριγγα» live hover ghost (store-driven: hover / brush / activeTool).
 import { MatchHoverGhostPreviewMount } from './canvas-layer-stack-match-ghost';
 import { ElectricalPanelGhostPreviewMount, type ElectricalPanelGhostPreviewMountProps } from './canvas-layer-stack-electrical-panel-ghost';
@@ -91,6 +93,8 @@ export interface PreviewCanvasMountsProps {
   mepFixtureGhost: Omit<MepFixtureGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-415 — floorplan-symbol 2D placement ghost payload. */
   floorplanSymbolGhost: Omit<FloorplanSymbolGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
+  /** ADR-736 §6 — «Εικόνα» (user raster) 2D placement ghost payload. */
+  attachImageGhost: Omit<AttachImageGhostPreviewMountProps, 'levelManager' | 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ3 — electrical panel 2D placement ghost payload. */
   electricalPanelGhost: Omit<ElectricalPanelGhostPreviewMountProps, 'getCanvas' | 'getViewportElement'>;
   /** ADR-408 Φ12 — MEP manifold (plumbing) 2D placement ghost payload. */
@@ -123,7 +127,7 @@ export interface PreviewCanvasMountsProps {
 export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
   props: PreviewCanvasMountsProps,
 ) {
-  const { rotation, move, copy, mirror, scale, stretch, mepFixtureGhost, floorplanSymbolGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, levelManager, viewport, getCanvas, getViewportElement } = props;
+  const { rotation, move, copy, mirror, scale, stretch, mepFixtureGhost, floorplanSymbolGhost, attachImageGhost, electricalPanelGhost, mepManifoldGhost, mepRadiatorGhost, mepBoilerGhost, mepWaterHeaterGhost, mepSegmentGhost, slabOpeningGhost, openingGhost, gripDragPreview, levelManager, viewport, getCanvas, getViewportElement } = props;
   // ADR-532 B4 — leaf subscription: ghost mounts need the CURRENT selection at the
   // moment a Move/Rotate/Mirror tool engages, without re-rendering CanvasSection.
   const selectedEntityIds = useSelectedEntityIds();
@@ -267,6 +271,13 @@ export const PreviewCanvasMounts = React.memo(function PreviewCanvasMounts(
       {/* ADR-415 — floorplan-symbol 2D placement ghost (WYSIWYG, sibling of the MEP fixture ghost). */}
       <FloorplanSymbolGhostPreviewMount
         {...floorplanSymbolGhost}
+        getCanvas={getCanvas}
+        getViewportElement={getViewportElement}
+      />
+      {/* ADR-736 §6 — φάντασμα εισαγόμενης εικόνας — το ιδιο μέγεθος/πλαίσιο με το commit. */}
+      <AttachImageGhostPreviewMount
+        {...attachImageGhost}
+        levelManager={levelManager}
         getCanvas={getCanvas}
         getViewportElement={getViewportElement}
       />

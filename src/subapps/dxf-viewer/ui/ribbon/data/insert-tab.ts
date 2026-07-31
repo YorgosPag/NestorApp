@@ -368,6 +368,22 @@ export const INSERT_TAB: RibbonTab = {
           isInFlyout: false,
           buttons: [
             {
+              // ADR-736 §6 — «Εικόνα» (AutoCAD IMAGEATTACH / Revit Insert ▸ Image): ανοίγει
+              // επιλογέα αρχείου, ανεβάζει, και οπλίζει το placement tool 'attach-image'
+              // (κλικ = θέση, Enter = κέντρο). Δίπλα στο «PDF Υπόβαθρο»: ίδια οικογένεια —
+              // raster που μπαίνει κάτω/μέσα στο σχέδιο και δεν ήρθε από DXF.
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.attach-image',
+                labelKey: 'ribbon.commands.attachImage',
+                tooltipKey: 'ribbon.commands.attachImageTooltip',
+                icon: 'attach-image',
+                commandKey: 'attach-image',
+                action: 'attach-image',
+              },
+            },
+            {
               type: 'simple',
               size: 'large',
               command: {

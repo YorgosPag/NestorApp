@@ -70,7 +70,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   entityPickingActive,
   selectedGuideIds, constructionPoints,
   guideWorkflowState, guideStateObj, cpStateObj,
-  rotationPreview, movePreview, copyPreview, mirrorPreview, scalePreview, stretchPreview, mepFixtureGhostPreview, floorplanSymbolGhostPreview, electricalPanelGhostPreview, mepManifoldGhostPreview, mepRadiatorGhostPreview, mepBoilerGhostPreview, mepWaterHeaterGhostPreview, mepSegmentGhostPreview, slabOpeningGhostPreview, openingGhostPreview, levelManager,
+  rotationPreview, movePreview, copyPreview, mirrorPreview, scalePreview, stretchPreview, mepFixtureGhostPreview, floorplanSymbolGhostPreview, attachImageGhostPreview, electricalPanelGhostPreview, mepManifoldGhostPreview, mepRadiatorGhostPreview, mepBoilerGhostPreview, mepWaterHeaterGhostPreview, mepSegmentGhostPreview, slabOpeningGhostPreview, openingGhostPreview, levelManager,
 }: CanvasLayerStackProps) {
   // --- Destructure grouped props ---
   const {
@@ -398,6 +398,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             stretch={stretchPreview}
             mepFixtureGhost={mepFixtureGhostPreview}
             floorplanSymbolGhost={floorplanSymbolGhostPreview}
+            attachImageGhost={attachImageGhostPreview}
             electricalPanelGhost={electricalPanelGhostPreview}
             mepManifoldGhost={mepManifoldGhostPreview}
             mepRadiatorGhost={mepRadiatorGhostPreview}

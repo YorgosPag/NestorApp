@@ -26,9 +26,7 @@
 import type { Point2D } from '../types/Types';
 import { CoordinateTransforms } from '../core/CoordinateTransforms';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
-
-/** Το id του κύριου καμβά — ίδιο με το `use-selection-cycling` (μία ονομασία, ένα στοιχείο). */
-const MAIN_CANVAS_ID = 'dxf-canvas';
+import { getMainDxfCanvas } from './main-canvas-element';
 
 /** Ό,τι μπορεί να πει η τρέχουσα προβολή για τον κόσμο που δείχνει. */
 export interface ViewportWorldMetrics {
@@ -46,7 +44,7 @@ export interface ViewportWorldMetrics {
  * αόρατη, και πρακτικά αδύνατο να βρεθεί και να διαγραφεί.
  */
 export function readViewportWorldMetrics(): ViewportWorldMetrics | null {
-  const canvas = document.getElementById(MAIN_CANVAS_ID);
+  const canvas = getMainDxfCanvas();
   if (!canvas) return null;
 
   const rect = canvas.getBoundingClientRect();

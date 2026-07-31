@@ -5560,3 +5560,37 @@ CHECK 6B — όχι επειδή άλλαξε η αρχιτεκτονική.
 
 ✅ Google-level: YES — ένα module = ένα σημείο διόρθωσης, idempotent sizing, μηδέν νέα συνδρομή,
 belt-and-suspenders (πρόληψη σε effect + εγγύηση στο frame).
+
+---
+
+## 2026-07-31: `CanvasSection` — τα ghost-preview payloads βγήκαν από τον orchestrator (CHECK 6B stage)
+
+Το ADR-736 §6 πρόσθεσε το `attachImageGhostPreview` στο `CanvasLayerStack`. **Μία** γραμμή — και το
+`CanvasSection.tsx` χτύπησε 501 γραμμές, δηλαδή το όριο N.7.1. Δεν είναι σύμπτωση: το block των
+ghost previews είχε γίνει **11 γραμμές inline JSX props**, μία ανά εργαλείο τοποθέτησης, καθεμιά με
+τη δική της logic (host resolver, μονάδες σκηνής, mm→scene). Κάθε νέο εργαλείο τοποθέτησης το
+μεγάλωνε χωρίς να προσθέτει τίποτα στην **ευθύνη** του orchestrator: ο orchestrator ενορχηστρώνει,
+δεν χτίζει payloads.
+
+**Εξαγωγή, όχι περικοπή** — `components/dxf-layout/canvas-section-ghost-previews.ts`:
+`buildCanvasSectionGhostPreviews({ tools, levelManager, hoveredGrip })`. Ο τύπος επιστροφής είναι
+`Pick<CanvasLayerStackProps, …>` ώστε το σχήμα να μένει SSoT στο `canvas-layer-stack-types.ts` — δεν
+ξαναγράφτηκε ούτε ένα field. Στο JSX: `{...buildCanvasSectionGhostPreviews(...)}`. 501 → 490 γραμμές,
+και τα `gripKindOf` / `resolveSceneUnits` / `isSlabEntity` / `isWallEntity` / `DEFAULT_*_MM` imports
+έφυγαν εντελώς από το `CanvasSection` (ήταν αποκλειστικά του block).
+
+⚠️ **ΔΕΝ είναι αλλαγή αρχιτεκτονικής ADR-040**: καθαρή συνάρτηση, **καμία** συνδρομή σε store,
+καλείται στο render. Οι κλειστές συναρτήσεις (`getHostSlab`, `getHostWall`, `getSceneUnits`,
+`getGhostSegment`) εξακολουθούν να διαβάζουν **στον χρόνο του event** — ίδια σημασιολογία με το
+inline block που αντικατέστησαν, μηδέν νέο `useSyncExternalStore` στον orchestrator (CHECK 6C).
+
+**Δεύτερο δίδυμο, μέσα στο ίδιο αρχείο:** η πρώτη γραφή της εξαγωγής έβγαλε clone στο CHECK 3.28 —
+τα `getHostSlab` και `getHostWall` ήταν 7 ταυτόσημες γραμμές «βρες οντότητα με id στο τρέχον level».
+Είναι το κλασικό λάθος του N.18: κεντρικοποιείς και γεννάς αδελφά δίδυμα στην ίδια κίνηση. Λύθηκε με
+έναν τοπικό `findOnCurrentLevel(id)` resolver — ο type guard μένει ανά host, ο εντοπισμός είναι ένας.
+
+**Files**: NEW `components/dxf-layout/canvas-section-ghost-previews.ts`· MOD
+`components/dxf-layout/{CanvasSection.tsx,CanvasLayerStack.tsx,canvas-layer-stack-types.ts,canvas-layer-stack-preview-mounts.tsx}`.
+
+✅ Google-level: YES — SRP split χωρίς αλλαγή συμπεριφοράς, σχήμα props από ΕΝΑ `Pick`, μηδέν νέα
+συνδρομή, το επόμενο placement tool δεν ξαναγγίζει τον orchestrator.

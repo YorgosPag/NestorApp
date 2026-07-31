@@ -253,6 +253,10 @@ export interface CanvasLayerStackProps {
       cursorPos: Readonly<Point2D> | null,
     ) => readonly import('../../bim/types/bim-base').Point3D[] | null;
   };
+  // === ADR-736 §6: «Εικόνα» (user raster) 2D placement ghost preview payload ===
+  attachImageGhostPreview: {
+    isAwaitingPosition: boolean;
+  };
   // === ADR-408 Φ3: Electrical panel 2D placement ghost preview payload ===
   electricalPanelGhostPreview: {
     isAwaitingPosition: boolean;

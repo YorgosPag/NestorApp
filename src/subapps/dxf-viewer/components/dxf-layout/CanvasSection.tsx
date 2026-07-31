@@ -18,7 +18,6 @@ import { useCanvasRefs } from '../../contexts/CanvasContext';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore'; import { isWallRegionTool } from '../../systems/tools/region-tool-ids';
 // ADR-362 — dim create tools join the entity hit-test SSoT (entityPickingActive) so hovering an arc/circle highlights it AND fills HoverStore for the radial entity pick.
 import { isDimTool } from '../../hooks/dimensions/useDimToolRouting';
-import { gripKindOf } from '../../hooks/grip-kinds';
 import { useOverlayStore } from '../../overlays/overlay-store';
 import { useLiveOverlaysForLevel } from '../../hooks/useLiveOverlaysForLevel';
 import { useLevels } from '../../systems/levels';
@@ -41,7 +40,8 @@ import { useFinishPaintClick } from '../../hooks/canvas/useFinishPaintClick';
 import { useGuideToolWorkflows } from '../../hooks/guides';
 import { useOverlayLayers } from '../../hooks/layers';
 import { SnapSceneSyncLeaf } from './SnapSceneSyncLeaf';
-import { resolveSceneUnits, mmToSceneUnits } from '../../utils/scene-units'; import { DEFAULT_DUCT_WIDTH_MM, DEFAULT_PIPE_DIAMETER_MM } from '../../bim/types/mep-segment-types';
+// ADR-040 — τα ghost-preview payloads χτίζονται εκτός orchestrator (καθαρή συνάρτηση).
+import { buildCanvasSectionGhostPreviews } from './canvas-section-ghost-previews';
 // useHoveredOverlay REMOVED from orchestrator — ADR-040 Phase II micro-leaf (subscription lives in DraftLayerSubscriber, canvas-layer-stack-leaves.tsx).
 import { useSpecialTools } from '../../hooks/tools'; import { useModifyTools } from '../../hooks/tools/useModifyTools';
 import { useCanvasZoomWindow } from '../../hooks/canvas/useCanvasZoomWindow';
@@ -58,7 +58,6 @@ import { type EntityContextMenuHandle } from '../../ui/components/EntityContextM
 import { type GuideContextMenuHandle } from '../../ui/components/GuideContextMenu';
 import { type GuideBatchContextMenuHandle } from '../../ui/components/GuideBatchContextMenu';
 import type { ToolType } from '../../ui/toolbar/types';
-import { isWallEntity, isSlabEntity } from '../../types/entities'; import type { WallEntity } from '../../bim/types/wall-types'; import type { SlabEntity } from '../../bim/types/slab-types';
 import { useTouchGestures } from '../../hooks/gestures/useTouchGestures';
 import { useResponsiveLayout as useResponsiveLayoutForCanvas } from '@/components/contacts/dynamic/hooks/useResponsiveLayout';
 import { useViewportAutoFit } from '../../hooks/canvas/useViewportAutoFit'; import { useCanvasEditActions } from '../../hooks/canvas/useCanvasEditActions';
@@ -200,7 +199,8 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
   const { draftPolygon, setDraftPolygon, draftPolygonRef, isSavingPolygon, setIsSavingPolygon, finishDrawingWithPolygonRef, finishDrawing } = usePolygonCompletion({
     levelManager, overlayStore, eventBus, currentStatus, currentKind, activeTool, overlayMode,
   });
-  const { circleTTT, lineParallel, angleEntityMeasurement, stairTool, stairRegionTool, wallTool, slabTool, roofTool, floorFinishTool, wallCoveringTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, genericSolidTool, blockLibraryTool, titleBlockTool, furniturePlanTool, peoplePlanTool, vehiclesPlanTool, plantsPlanTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, bathroomAutoArrangeTool, spaceSeparatorTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, beamBetweenMembersTool, slabOpeningTool, openingTool, selfOpeningTool } = useSpecialTools({ activeTool, levelManager });
+  const specialTools = useSpecialTools({ activeTool, levelManager });
+  const { circleTTT, lineParallel, angleEntityMeasurement, stairTool, stairRegionTool, wallTool, slabTool, roofTool, floorFinishTool, wallCoveringTool, columnTool, foundationTool, mepFixtureTool, furnitureTool, genericSolidTool, blockLibraryTool, titleBlockTool, furniturePlanTool, peoplePlanTool, vehiclesPlanTool, plantsPlanTool, attachImageTool, floorplanSymbolTool, electricalPanelTool, mepManifoldTool, mepRadiatorTool, mepBoilerTool, mepWaterHeaterTool, mepUnderfloorTool, thermalSpaceTool, bathroomAutoArrangeTool, spaceSeparatorTool, mepSegmentTool, mepRiserTool, railingTool, beamTool, beamBetweenMembersTool, slabOpeningTool, openingTool, selfOpeningTool } = specialTools;
   // === Cursor + touch gestures ===
   const { updatePosition, setActive } = useCursorActions();
   const { layoutMode: canvasLayoutMode } = useResponsiveLayoutForCanvas();
@@ -315,7 +315,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     columnTool,
     foundationTool,
     mepFixtureTool,
-    furnitureTool, genericSolidTool, blockLibraryTool, titleBlockTool, furniturePlanTool, peoplePlanTool, vehiclesPlanTool, plantsPlanTool,
+    furnitureTool, genericSolidTool, blockLibraryTool, titleBlockTool, furniturePlanTool, peoplePlanTool, vehiclesPlanTool, plantsPlanTool, attachImageTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,
@@ -470,16 +470,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         mirrorPreview={{ phase: mirrorTool.phase, firstPoint: mirrorTool.firstPoint, secondPoint: mirrorTool.secondPoint }}
         scalePreview={{}}
         stretchPreview={{}}
-        mepFixtureGhostPreview={{ isAwaitingPosition: mepFixtureTool.isAwaitingPosition, getGhostFootprint: mepFixtureTool.getGhostFootprint }}
-        floorplanSymbolGhostPreview={{ isAwaitingPosition: floorplanSymbolTool.isAwaitingPosition, getGhostFootprint: floorplanSymbolTool.getGhostFootprint }}
-        electricalPanelGhostPreview={{ isAwaitingPosition: electricalPanelTool.isAwaitingPosition, getGhostFootprint: electricalPanelTool.getGhostFootprint }}
-        mepManifoldGhostPreview={{ isAwaitingPosition: mepManifoldTool.isAwaitingPosition, getGhostFootprint: mepManifoldTool.getGhostFootprint }}
-        mepRadiatorGhostPreview={{ isAwaitingPosition: mepRadiatorTool.isAwaitingPosition, getGhostFootprint: mepRadiatorTool.getGhostFootprint }}
-        mepBoilerGhostPreview={{ isAwaitingPosition: mepBoilerTool.isAwaitingPosition, getGhostFootprint: mepBoilerTool.getGhostFootprint, getGhostSymbol: mepBoilerTool.getGhostSymbol }}
-        mepWaterHeaterGhostPreview={{ isAwaitingPosition: mepWaterHeaterTool.isAwaitingPosition, getGhostFootprint: mepWaterHeaterTool.getGhostFootprint }}
-        mepSegmentGhostPreview={{ isAwaitingEnd: mepSegmentTool.isAwaitingEnd, getGhostSegment: () => { const st = mepSegmentTool.state; if (!st.startPoint) return null; const lvl = levelManager.currentLevelId; const units = resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : null); const widthMm = st.domain === 'pipe' ? (st.overrides.diameter ?? DEFAULT_PIPE_DIAMETER_MM) : (st.overrides.width ?? DEFAULT_DUCT_WIDTH_MM); return { startPoint: st.startPoint, sectionWidthCanvas: widthMm * mmToSceneUnits(units), domain: st.domain }; } }}
-        slabOpeningGhostPreview={{ isAwaitingPosition: slabOpeningTool.isAwaitingPosition, kind: slabOpeningTool.state.kind, overrides: slabOpeningTool.state.overrides, getHostSlab: () => { const id = slabOpeningTool.state.hostSlabId; const lvl = levelManager.currentLevelId; if (!id || !lvl) return null; const scene = levelManager.getLevelScene(lvl); if (!scene) return null; const e = scene.entities.find((x) => x.id === id); return e && isSlabEntity(e) ? (e as SlabEntity) : null; }, hoveredEdgeMidpointGrip: unified.hoveredGrip && gripKindOf(unified.hoveredGrip, 'slab-opening')?.startsWith('slab-opening-edge-midpoint-') ? unified.hoveredGrip : null, getSceneUnits: () => { const lvl = levelManager.currentLevelId; return resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : null); } }}
-        openingGhostPreview={{ isAwaitingPosition: openingTool.isAwaitingPosition, kind: openingTool.state.kind, overrides: openingTool.state.overrides, getHostWall: () => { const id = openingTool.state.hostWallId; const lvl = levelManager.currentLevelId; if (!id || !lvl) return null; const scene = levelManager.getLevelScene(lvl); if (!scene) return null; const e = scene.entities.find((x) => x.id === id); return e && isWallEntity(e) ? (e as WallEntity) : null; }, getSceneUnits: () => { const lvl = levelManager.currentLevelId; return resolveSceneUnits(lvl ? levelManager.getLevelScene(lvl) : null); } }}
+        {...buildCanvasSectionGhostPreviews({ tools: specialTools, levelManager, hoveredGrip: unified.hoveredGrip })}
         levelManager={levelManager}
       />
       <CanvasSectionOverlays
