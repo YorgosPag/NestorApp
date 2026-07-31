@@ -74,7 +74,7 @@ export const ExternalReferencesAutoResolveHost: React.FC = () => {
     // `isResolving` σκόπιμα ΕΚΤΟΣ deps: μπαίνει/βγαίνει μέσα στο ίδιο το effect και θα
     // προκαλούσε δεύτερο πέρασμα πάνω σε ήδη άδειο κατάλογο (αβλαβές, αλλά θόρυβος).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canResolve, references.length, resolve, pending]);
+  }, [canResolve, references.length, resolve]);
 
   return null;
 };
