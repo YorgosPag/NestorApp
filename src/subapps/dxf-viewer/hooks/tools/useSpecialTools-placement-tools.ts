@@ -25,6 +25,7 @@ import {
   usePlantsPlanTool,
   useFurniturePlanTool,
 } from '../drawing/entourage-tools';
+import { useAttachImageTool } from '../drawing/attach-image-tool';
 import { useFloorplanSymbolTool } from '../drawing/useFloorplanSymbolTool';
 import { useElectricalPanelTool } from '../drawing/useElectricalPanelTool';
 import { useMepManifoldTool } from '../drawing/useMepManifoldTool';
@@ -78,6 +79,7 @@ export interface PlacementToolsReturn {
   peoplePlanTool: ReturnType<typeof usePeoplePlanTool>; // ADR-654 M6
   vehiclesPlanTool: ReturnType<typeof useVehiclesPlanTool>; // ADR-654 M6
   plantsPlanTool: ReturnType<typeof usePlantsPlanTool>; // ADR-654 M7
+  attachImageTool: ReturnType<typeof useAttachImageTool>; // ADR-736 §6
 
   floorplanSymbolTool: ReturnType<typeof useFloorplanSymbolTool>; // ADR-415
   electricalPanelTool: ReturnType<typeof useElectricalPanelTool>; // ADR-408 Φ3
@@ -272,6 +274,19 @@ export function useSpecialToolsPlacementTools(
   });
   useToolLifecycle(activeTool === 'plants-plan', plantsPlanTool.activate, plantsPlanTool.deactivate);
 
+  // ADR-736 §6 — «Εικόνα» (εισαγωγή raster του χρήστη): ΙΔΙΑ entourage μηχανή, tag 'attach-image'.
+  // Το «ποια εικόνα» το γράφει η εντολή του ribbon στο attachedImageSelection ΜΕΤΑ το ανέβασμα
+  // (μαζί με το μέγεθος — δεν υπάρχει catalog να το πει)· εδώ μόνο activate/commit.
+  const attachImageTool = useAttachImageTool({
+    currentLevelId: levelManager.currentLevelId || '0',
+    onEntourageCreated: (entity) => addEntourageToScene(entity, levelManager, 'attach-image'),
+    getSceneUnits: () => {
+      const lid = levelManager.currentLevelId;
+      return lid ? resolveSceneUnits(levelManager.getLevelScene(lid)) : 'mm';
+    },
+  });
+  useToolLifecycle(activeTool === 'attach-image', attachImageTool.activate, attachImageTool.deactivate);
+
   // ADR-415 — FLOORPLAN SYMBOL TOOL: single-click placement; entity appended+broadcast.
   const floorplanSymbolTool = useFloorplanSymbolTool({
     currentLevelId: levelManager.currentLevelId || '0',
@@ -445,6 +460,7 @@ export function useSpecialToolsPlacementTools(
     peoplePlanTool,
     vehiclesPlanTool,
     plantsPlanTool,
+    attachImageTool,
     floorplanSymbolTool,
     electricalPanelTool,
     mepManifoldTool,

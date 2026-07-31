@@ -259,6 +259,8 @@ export type ToolType =
   | 'vehicles-plan'
   // ADR-654 M7: single-click placement of a top-view plant entourage image (ImageEntity)
   | 'plants-plan'
+  // ADR-736 §6: single-click (or Enter = viewport centre) placement of a user-uploaded raster (ImageEntity)
+  | 'attach-image'
   // ADR-415: pure-vector 2D floorplan symbol drawing tool (single-click placement)
   | 'floorplan-symbol'
   // ADR-408 Φ8: linear MEP segment tools (duct/pipe, 2-click; one entity, two tools like Revit)
