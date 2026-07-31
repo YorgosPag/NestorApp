@@ -4,18 +4,29 @@
  * =============================================================================
  *
  * GET /api/cron/purge-deleted-contacts
- * Triggered daily at 03:00 UTC by Vercel Cron
+ *
+ * ⚠️ **SUPERSEDED από το `/api/cron/purge-deleted-entities`** — αυτό σαρώνει *όλους* τους
+ * soft-deletable τύπους, και το `SOFT_DELETE_CONFIG.contact` δείχνει ήδη στην ίδια
+ * `COLLECTIONS.CONTACTS`. Καταχωρημένο στο `src/config/cron-schedule.ts` ως `enabled: false`
+ * με `supersededBy`. **Δεν διαγράφηκε** επειδή ο αντικαταστάτης δεν έχει τρέξει ποτέ σε
+ * παραγωγή (κανένα cron δεν έτρεξε 2026-05-09 → 2026-07-31). Αφαίρεση μόνο αφού το
+ * `purge-deleted-entities` δείξει επιτυχημένα check-ins στο Sentry — βλ. ADR-739.
  *
  * Permanently deletes contacts that have been in trash for >30 days.
  * Uses ADR-226 executeDeletion() for full dependency check + cascade.
  * Contacts with blocking dependencies are skipped (logged as warning).
  *
+ * ⚠️ Το `verifyCronAuthorization` προστέθηκε 2026-07-31 — το route έκανε **οριστική**
+ * διαγραφή χωρίς καμία ταυτοποίηση. Μην το αφαιρέσεις· επιβάλλεται από test.
+ *
  * @module api/cron/purge-deleted-contacts
  * @enterprise ADR-191 pattern — Soft-delete lifecycle auto-purge
+ * @see ADR-739 — χρονοπρογραμματισμός
  */
 
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
+import { TRASH_RETENTION_MS, rejectUnauthorizedCron } from '@/lib/cron-auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
@@ -25,13 +36,13 @@ const logger = createModuleLogger('CronPurgeDeletedContacts');
 
 export const maxDuration = 60;
 
-/** 30 days in milliseconds */
-const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-
 /** Maximum contacts to purge per cron run (avoid timeout) */
 const BATCH_LIMIT = 50;
 
-export async function GET() {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const unauthorized = rejectUnauthorizedCron(request);
+  if (unauthorized) return unauthorized;
+
   const startTime = Date.now();
 
   try {

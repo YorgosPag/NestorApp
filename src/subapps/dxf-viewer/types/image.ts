@@ -67,6 +67,20 @@ export interface ImageEntity extends BaseEntity {
    * αντίγραφο γράφεται σε **ένα** σημείο (`utils/dxf-external-reference-apply.ts`), ποτέ ad hoc.
    */
   sourceName?: string;
+  /**
+   * ADR-736 §2.Β — η **πλήρης διαδρομή** που δηλώνει το σχέδιο
+   * (`Z:\Jobs\OT\ΕΥΟΣΜΟΣ\EYOSMO_1\047\2026 ΠΑΓΩΝΗΣ\1.jpg`), δηλαδή το `rawPath` της αναφοράς.
+   *
+   * Ο `ImageRenderer` τη ζωγραφίζει μέσα στο πλαίσιο-κράτημα **όταν χωράει**, υποβαθμίζοντας
+   * σε μεσαία αποκοπή → σκέτο όνομα → τίποτα, ανάλογα με το zoom. Ο AutoCAD δείχνει την πλήρη
+   * διαδρομή χωρίς καμία υποβάθμιση· εκεί που εκείνος είναι χρήσιμος δείχνουμε **ό,τι ακριβώς
+   * κι εκείνος**, και εκεί που παράγει μουτζούρα (zoom-extents) υποχωρούμε ελεγχόμενα.
+   *
+   * ⚠️ Ίδιο σκεπτικό αντιγράφου με το {@link sourceName} από πάνω — και **ίδιο** σημείο
+   * εγγραφής (`utils/dxf-external-reference-apply.ts`). Ποτέ ad hoc: δύο σημεία εγγραφής
+   * σημαίνουν δύο εκδοχές της αλήθειας για το πού ζει ένα αρχείο.
+   */
+  sourcePath?: string;
 }
 
 export const isImageEntity = (entity: { type: string }): entity is ImageEntity =>

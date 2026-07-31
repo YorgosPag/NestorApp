@@ -49,3 +49,64 @@ export function fitCanvasTextToWidth(
   }
   return text.slice(0, lo) + ELLIPSIS;
 }
+
+/**
+ * Το ίδιο, αλλά για **διαδρομή**: όταν δεν χωρά, πέφτει η **ΜΕΣΗ** — όχι το τέλος (ADR-736 §2.Β).
+ *
+ * ## Γιατί άλλη πλευρά κοπής, και γιατί ΕΔΩ και όχι σε δεύτερο helper
+ *
+ * Σε ένα *όνομα* η αρχή είναι το πληροφοριακό μέρος, οπότε κόβεις το τέλος. Σε μια *διαδρομή*
+ * είναι πληροφοριακά **και τα δύο άκρα** και άχρηστη η μέση: `Z:\Jobs\` απαντά «σε ποιον
+ * υπολογιστή ζούσε» και `1.jpg` απαντά «ποιο αρχείο» — ενώ τα ενδιάμεσα επίπεδα φακέλων είναι
+ * ακριβώς ό,τι μπορεί να θυσιαστεί. Κόψιμο από το τέλος θα άφηνε `Z:\Jobs\OT\ΕΥΟΣ…` (ποιο
+ * αρχείο;)· κόψιμο από την αρχή θα άφηνε `…\2026 ΠΑΓΩΝΗΣ\1.jpg` (ποιανού δίσκος;).
+ *
+ * Είναι η **πρακτική του κλάδου** για διαδρομές: macOS Finder, VS Code breadcrumbs, και το
+ * native `PathCompactPathEx` των Windows κάνουν όλα μεσαία αποκοπή. Ο AutoCAD δείχνει την
+ * πλήρη διαδρομή **χωρίς LOD** — σε zoom-out γίνεται δυσανάγνωστη μουτζούρα· εδώ υποβαθμίζουμε
+ * ελεγχόμενα αντί να λερώσουμε το σχέδιο.
+ *
+ * Ζει στο **ίδιο** αρχείο με το {@link fitCanvasTextToWidth} επίτηδες: ίδια ερώτηση («χώρεσε
+ * κείμενο σε screen px με `…`»), ίδιες μετρικές, ίδια δυαδική αναζήτηση. Χωριστό module θα ήταν
+ * ακριβώς το sibling clone που απαγορεύει ο N.18 — μία γειτονιά, δύο πολιτικές κοπής.
+ */
+export function fitCanvasPathToWidth(
+  ctx: CanvasRenderingContext2D,
+  path: string,
+  maxWidthPx: number,
+): string | null {
+  if (!path || maxWidthPx <= 0) return null;
+  if (ctx.measureText(path).width <= maxWidthPx) return path;
+
+  // Το ουραίο τμήμα («…\φάκελος\όνομα») είναι **αδιαπραγμάτευτο**: χωρίς αυτό ο χρήστης δεν
+  // ξέρει καν ποιο αρχείο λείπει, οπότε η ετικέτα δεν έχει λόγο ύπαρξης. Αν δεν χωρά ούτε
+  // αυτό, γυρνάμε `null` και ο καλών πέφτει στη βαθμίδα «μόνο όνομα».
+  const tail = trailingSegments(path, 2);
+  if (ctx.measureText(ELLIPSIS + tail).width > maxWidthPx) return null;
+
+  // Πόσο πρόθεμα χωράει ΜΑΖΙ με το σταθερό ουραίο. Ίδια δυαδική αναζήτηση, ίδιο αναλλοίωτο.
+  const head = path.slice(0, path.length - tail.length);
+  let lo = 0;
+  let hi = head.length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (ctx.measureText(head.slice(0, mid) + ELLIPSIS + tail).width <= maxWidthPx) lo = mid;
+    else hi = mid - 1;
+  }
+  return head.slice(0, lo) + ELLIPSIS + tail;
+}
+
+/**
+ * Τα τελευταία `count` τμήματα της διαδρομής **μαζί με τον διαχωριστή που τα εισάγει**
+ * (`\2026 ΠΑΓΩΝΗΣ\1.jpg`). Δέχεται και τους δύο διαχωριστές: το DXF κουβαλά διαδρομές
+ * Windows, αλλά ένα αρχείο μπορεί να έχει γραφτεί από οποιοδήποτε σύστημα.
+ */
+function trailingSegments(path: string, count: number): string {
+  let cut = path.length;
+  for (let i = 0; i < count; i++) {
+    const next = Math.max(path.lastIndexOf('\\', cut - 1), path.lastIndexOf('/', cut - 1));
+    if (next <= 0) return path.slice(cut === path.length ? 0 : cut);
+    cut = next;
+  }
+  return path.slice(cut);
+}

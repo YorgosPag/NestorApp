@@ -64,10 +64,13 @@ function imagePatchFor(
   image: ImageEntity,
   ref: DxfExternalReference,
 ): Partial<ImageEntity> | null {
-  const patch: { sourceName?: string; url?: string } = {};
+  const patch: { sourceName?: string; sourcePath?: string; url?: string } = {};
   if (image.sourceName !== ref.basename) patch.sourceName = ref.basename;
+  // ADR-736 §2.Β — η πλήρης διαδρομή ταξιδεύει μαζί με το όνομα, από ΤΟ ΙΔΙΟ σημείο. Ο renderer
+  // είναι pure leaf και δεν βλέπει τη σκηνή, άρα δεν μπορεί να ακολουθήσει το `externalRefId`.
+  if (ref.rawPath && image.sourcePath !== ref.rawPath) patch.sourcePath = ref.rawPath;
   if (ref.status === 'resolved' && ref.url && image.url !== ref.url) patch.url = ref.url;
-  return patch.sourceName === undefined && patch.url === undefined ? null : patch;
+  return Object.keys(patch).length === 0 ? null : patch;
 }
 
 /**

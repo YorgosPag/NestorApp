@@ -2,14 +2,24 @@
  * GET /api/cron/purge-deleted-entities
  *
  * Daily cleanup for ALL soft-deletable entities.
- * Replaces purge-deleted-contacts (contacts-only).
+ * Replaces purge-deleted-contacts (contacts-only) — SOFT_DELETE_CONFIG.contact already
+ * covers COLLECTIONS.CONTACTS. Το προηγούμενο route παραμένει ως εφεδρικό μέχρι να
+ * αποδειχθεί αυτό σε παραγωγή (ADR-739 §Αποφάσεις).
+ *
+ * ⚠️ ΤΟ GUARD ΔΕΝ ΕΙΝΑΙ ΔΙΑΚΟΣΜΗΤΙΚΟ. Το route καλεί `executeDeletion()` — **οριστική**
+ * διαγραφή με cascade. Μέχρι 2026-07-31 δεν είχε καθόλου ταυτοποίηση: το κάλυπτε κατά
+ * λάθος το bot-block του `middleware.ts`, που όμως μπλοκάρει user-agent — αλλάζει σε ένα
+ * δευτερόλεπτο και **δεν είναι εξουσιοδότηση**. Μην αφαιρέσεις το verifyCronAuthorization.
+ * Το test κάλυψης guard (`src/lib/cron/__tests__/cron-route-contract.test.ts`) το επιβάλλει.
  *
  * @module api/cron/purge-deleted-entities
  * @enterprise ADR-281 — SSOT Soft-Delete System
+ * @see ADR-739 — χρονοπρογραμματισμός· το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { createModuleLogger } from '@/lib/telemetry';
+import { TRASH_RETENTION_MS, rejectUnauthorizedCron } from '@/lib/cron-auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { executeDeletion } from '@/lib/firestore/deletion-guard';
 import { SOFT_DELETE_CONFIG } from '@/lib/firestore/soft-delete-config';
@@ -20,13 +30,13 @@ const logger = createModuleLogger('CronPurgeDeletedEntities');
 
 export const maxDuration = 60;
 
-/** 30 days in milliseconds */
-const TRASH_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-
-/** Max documents per entity type per cron run (avoid Vercel timeout) */
+/** Max documents per entity type per cron run (avoid timeout) */
 const PER_TYPE_LIMIT = 20;
 
-export async function GET() {
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const unauthorized = rejectUnauthorizedCron(request);
+  if (unauthorized) return unauthorized;
+
   const startTime = Date.now();
   const db = getAdminFirestore();
   const cutoffDate = new Date(Date.now() - TRASH_RETENTION_MS);

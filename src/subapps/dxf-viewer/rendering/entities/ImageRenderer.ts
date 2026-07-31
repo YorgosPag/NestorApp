@@ -87,7 +87,12 @@ export class ImageRenderer extends BaseEntityRenderer {
     // που αποτυγχάνει στο decode και κλειδώνει slot `error` για το κενό κλειδί. Η αναφορά είναι
     // *ανεπίλυτη*, όχι *χαλασμένη* — δεν έχει νόημα να ρωτηθεί καν το cache.
     if (!e.url) {
-      paintImagePlaceholder(this.ctx, corners.map((c) => this.worldToScreen(c)), e.sourceName);
+      paintImagePlaceholder(
+        this.ctx,
+        corners.map((c) => this.worldToScreen(c)),
+        e.sourceName,
+        e.sourcePath,
+      );
       return;
     }
 

@@ -26,7 +26,7 @@
 import type { Point2D } from '../../types/Types';
 import { CAD_UI_COLORS } from '../../../config/color-config';
 import { buildUIFont } from '../../../config/text-rendering-config';
-import { fitCanvasTextToWidth } from './canvas-text-fit';
+import { fitCanvasPathToWidth, fitCanvasTextToWidth } from './canvas-text-fit';
 
 /** Μοτίβο παύλας του πλαισίου (screen px) — ίδιο ιδίωμα με τα υπόλοιπα fallback περιγράμματα. */
 const PLACEHOLDER_DASH: readonly [number, number] = [4, 4];
@@ -57,6 +57,7 @@ export function paintImagePlaceholder(
   ctx: CanvasRenderingContext2D,
   screenCorners: readonly Point2D[],
   label?: string,
+  path?: string,
 ): void {
   if (screenCorners.length < 2) return;
 
@@ -68,7 +69,7 @@ export function paintImagePlaceholder(
   screenCorners.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.closePath();
   ctx.stroke();
-  if (label) paintPlaceholderLabel(ctx, screenCorners, label);
+  if (label) paintPlaceholderLabel(ctx, screenCorners, label, path);
   ctx.restore();
 }
 
@@ -81,6 +82,7 @@ function paintPlaceholderLabel(
   ctx: CanvasRenderingContext2D,
   screenCorners: readonly Point2D[],
   label: string,
+  path?: string,
 ): void {
   const xs = screenCorners.map((p) => p.x);
   const ys = screenCorners.map((p) => p.y);
@@ -93,7 +95,17 @@ function paintPlaceholderLabel(
   // Η γραμματοσειρά μπαίνει ΠΡΙΝ το fit — το `fitCanvasTextToWidth` μετρά με την τρέχουσα
   // κατάσταση του context, και μέτρηση με άλλη γραμματοσειρά από τη σχεδίαση δεν χωράει.
   ctx.font = PLACEHOLDER_LABEL_FONT;
-  const fitted = fitCanvasTextToWidth(ctx, label, (maxX - minX) * LABEL_WIDTH_RATIO);
+  const available = (maxX - minX) * LABEL_WIDTH_RATIO;
+
+  /**
+   * ADR-736 §2.Β — **υπερσύνολο του AutoCAD, όχι εναλλακτική του.** Η κλίμακα αποφασίζει πόση
+   * αλήθεια χωράει, και η υποβάθμιση είναι μονότονη: πλήρης διαδρομή → μεσαία αποκοπή →
+   * σκέτο όνομα → τίποτα (το τελευταίο το έκοψε ήδη το LOD πιο πάνω). Ο AutoCAD μένει στο
+   * πρώτο σκαλί σε **κάθε** zoom, οπότε σε zoom-extents γεμίζει το σχέδιο μουτζούρες.
+   */
+  const fitted =
+    (path ? fitCanvasPathToWidth(ctx, path, available) : null) ??
+    fitCanvasTextToWidth(ctx, label, available);
   if (!fitted) return;
 
   ctx.setLineDash([]);
