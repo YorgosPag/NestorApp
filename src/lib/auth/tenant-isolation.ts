@@ -22,6 +22,43 @@
  * και η ίδια ερώτηση υπήρχε σε άλλα τρία συστήματα. Αν χρειάζεσαι νέα οντότητα,
  * πρόσθεσε **δήλωση**, όχι αντίγραφο.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ Η ΑΡΝΗΣΗ ΙΔΙΟΚΤΗΣΙΑΣ ΕΙΝΑΙ **404**, ΟΧΙ 403 (ADR-742 §7septies)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Μέχρι το 2026-08-01 αυτός ο φύλακας απαντούσε `403 'Access denied'` όταν το
+ * έγγραφο ανήκε σε άλλον πελάτη — δηλαδή **επιβεβαίωνε ότι το id υπάρχει**.
+ *
+ * Η βιομηχανία έχει **δύο** έγκυρα δόγματα, και **και τα δύο** κλείνουν το
+ * μαντείο ύπαρξης:
+ *
+ * | Δόγμα | Ποιος | Πώς κλείνει |
+ * |---|---|---|
+ * | **404-ομοιόμορφο** | GitHub, Google Drive, Figma | η άρνηση μεταμφιέζεται σε απουσία |
+ * | **403-ομοιόμορφο ασαφές** | Google Cloud (AIP-211/193) | η απουσία μεταμφιέζεται σε άρνηση: *«Permission 'p' denied on resource 'r' (or it might not exist)»*, με τον έλεγχο δικαιώματος **πριν** τον έλεγχο ύπαρξης |
+ *
+ * 🔴 **Αυτό που ανοίγει το μαντείο δεν είναι η επιλογή — είναι η ΑΝΑΜΕΙΞΗ.**
+ * Ένας πόρος στον οποίο μία διαδρομή απαντά 404 και μια αδελφή της 403 είναι
+ * **αποκαλυμμένος**, όποιο δόγμα κι αν επικαλείται η καθεμιά. Ακριβώς αυτό
+ * συνέβαινε: το `GET /api/projects/{id}` μεταμφιέστηκε (ADR-742 Ομάδα 3) ενώ
+ * το `/customers`, το `/efka-declaration`, το `/v2/.../customers` και το
+ * `floors` — που περνούν από **εδώ** — εξακολουθούσαν να λένε 403 για **το ίδιο
+ * id**. Η μεταμφίεση των δέκα σημείων ακυρωνόταν από τέσσερις αδελφές.
+ *
+ * **Γιατί ο Νέστωρ διαλέγει το 404** και όχι το δόγμα της Google: το κριτήριο
+ * του ADR-742 §3.3 είναι *«θα μπορούσε ο καλών να το μάθει νόμιμα αλλιώς;»* —
+ * το ίδιο που εφαρμόζει το S3 μέσω του `s3:ListBucket`. Στο GCP η απάντηση
+ * είναι συχνά **ναι** (τα δικαιώματα κληρονομούνται από γονικούς πόρους, και ο
+ * χρήστης δικαιούται να μάθει *ποιο* δικαίωμα του λείπει), γι' αυτό εκεί το
+ * ασαφές 403 είναι πιο χρήσιμο. Στον Νέστορα κάθε `list` είναι tenant-scoped
+ * (ADR-702), άρα κανονικός χρήστης **δεν μπορεί ποτέ** να μάθει νόμιμα ότι
+ * υπάρχει ξένο id ⇒ η σιωπή είναι η μόνη σωστή απάντηση.
+ *
+ * ⛔ **Η {@link requireTenantScope} του `tenant-scope.ts` κρατά το 403 της** —
+ * και αυτό **δεν** είναι ασυνέπεια. Εκείνη απαντά σε **άλλη ερώτηση**
+ * («ποιανού εταιρείας γραμμές να λιστάρω;», ADR-702/§2): ο καλών ονομάζει
+ * **ρητά** ξένη εταιρεία στο αίτημα, οπότε δεν του αποκαλύπτεται τίποτα που
+ * δεν έγραψε ο ίδιος. Άρνηση **παραμέτρου**, όχι άρνηση **εγγράφου**.
+ *
  * @module lib/auth/tenant-isolation
  * @version 2.0.0
  * @since 2026-01-17 - AUTHZ Phase 2
@@ -93,13 +130,26 @@ async function requireDocInTenant<T extends TenantScopedDoc>(spec: {
     throw new Error('Firebase Admin not initialized');
   }
 
+  /**
+   * Το **ένα** «δεν βρέθηκε» αυτού του φύλακα — ADR-742 §7septies.
+   *
+   * Το καλούν **και οι δύο** κλάδοι άρνησης, με **μηδέν** ορίσματα: δεν υπάρχει
+   * τιμή που θα μπορούσε να διαφέρει ανάμεσά τους, άρα δεν υπάρχει τρόπος να
+   * αποκλίνουν χωρίς να αλλάξει **αυτή** η γραμμή. Επειδή το `code` είναι
+   * `'NOT_FOUND'` και στις δύο περιπτώσεις, η ταυτότητα διαδίδεται **αυτόματα**
+   * στους 41 καταναλωτές που ήδη γράφουν
+   * `error.code === 'NOT_FOUND' ? notFoundMessage : 'Access denied'` — κανένας
+   * δεν χρειάστηκε να αλλάξει.
+   */
+  const notFound = () => new TenantIsolationError(notFoundMessage, 404, 'NOT_FOUND');
+
   const doc = await getAdminFirestore().collection(collection).doc(id).get();
 
   if (!doc.exists) {
     await logAuditEvent(ctx, 'access_denied', id, targetType, {
       metadata: { path, reason: notFoundMessage },
     });
-    throw new TenantIsolationError(notFoundMessage, 404, 'NOT_FOUND');
+    throw notFound();
   }
 
   const data = doc.data() as T | undefined;
@@ -107,10 +157,12 @@ async function requireDocInTenant<T extends TenantScopedDoc>(spec: {
   // 🏢 ENTERPRISE: Super Admin bypasses tenant isolation (cross-tenant access)
   // 🏢 ADR-232: Super admin entities may have companyId: null — allow access
   if (!isRoleBypass(ctx.globalRole) && !isPayloadOwnedByCompany(data, ctx.companyId)) {
+    // Το **ίχνος ελέγχου** κρατά την αλήθεια: εκεί ο λόγος είναι η παραβίαση
+    // απομόνωσης, όχι η απουσία. Η μεταμφίεση αφορά **μόνο** το σύρμα (§3.4).
     await logAuditEvent(ctx, 'access_denied', id, targetType, {
       metadata: { path, reason: TENANT_MISMATCH_REASON },
     });
-    throw new TenantIsolationError('Access denied', 403, 'FORBIDDEN');
+    throw notFound();
   }
 
   return data!;

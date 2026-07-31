@@ -154,7 +154,7 @@ describe.each(GUARDS)('require*InTenant — $label', (guard) => {
     }
   });
 
-  it('ξένο έγγραφο ⇒ 403 FORBIDDEN «Access denied»', async () => {
+  it('🔴 ξένο έγγραφο ⇒ 404 NOT_FOUND, ΠΑΝΟΜΟΙΟΤΥΠΟ με το γνήσιο «δεν βρέθηκε» (§7septies)', async () => {
     store.set(key, { companyId: INTRUDER });
 
     try {
@@ -162,16 +162,22 @@ describe.each(GUARDS)('require*InTenant — $label', (guard) => {
       throw new Error('έπρεπε να ρίξει');
     } catch (err) {
       const e = err as TenantIsolationError;
-      expect(e.status).toBe(403);
-      expect(e.code).toBe('FORBIDDEN');
-      expect(e.message).toBe('Access denied');
+      expect(e.status).toBe(404);
+      expect(e.code).toBe('NOT_FOUND');
+      expect(e.message).toBe(guard.notFound);
+      // 🔴 Το παλιό σχήμα δεν επιστρέφεται πια από ΚΑΝΕΝΑ πεδίο.
+      expect(e.message).not.toBe('Access denied');
     }
   });
 
-  it('🔴 έγγραφο ΧΩΡΙΣ companyId ⇒ άρνηση στον κανονικό χρήστη (ADR-232)', async () => {
+  it('🔴 έγγραφο ΧΩΡΙΣ companyId ⇒ άρνηση στον κανονικό χρήστη (ADR-232), μεταμφιεσμένη', async () => {
     store.set(key, { name: 'Φτιαγμένο από υπεργραφείο' });
 
-    await expect(guard.call(CALLER, ID)).rejects.toMatchObject({ status: 403 });
+    await expect(guard.call(CALLER, ID)).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+      message: guard.notFound,
+    });
   });
 
   it('bypass ρόλος ⇒ περνά σε ξένο έγγραφο, χωρίς audit άρνησης', async () => {
@@ -228,12 +234,20 @@ describe('🔴 συμβόλαιο που ΔΕΝ επιτρέπεται να με
     }
   });
 
-  it('ανύπαρκτο και ξένο δίνουν ΔΙΑΦΟΡΕΤΙΚΟ κωδικό — τεκμηριωμένη ανταλλαγή', async () => {
-    // Αυτή η διαφορά μαρτυρά ύπαρξη id: «403» σημαίνει «υπάρχει αλλά δεν είναι
-    // δικό σου». Είναι **συνειδητή** επιλογή του ADR-255 για ταυτοποιημένους
-    // καλούντες σε εσωτερικές οθόνες, και το ADR-742 ΔΕΝ την άλλαξε εδώ.
-    // Καρφώνεται ώστε να μην «διορθωθεί» παρεμπιπτόντως: η αλλαγή της είναι
-    // αλλαγή δόγματος και θέλει ρητή απόφαση, όχι refactor.
+  it('🔴 ανύπαρκτο και ξένο είναι ΑΔΙΑΚΡΙΤΑ — το μαντείο ύπαρξης έκλεισε (§7septies)', async () => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // ΙΣΤΟΡΙΚΟ — μην το σβήσεις, εξηγεί γιατί ο ισχυρισμός ΑΝΤΙΣΤΡΑΦΗΚΕ.
+    //
+    // Μέχρι 2026-08-01 αυτό το test κάρφωνε το **αντίθετο** (403 ≠ 404), με το
+    // σχόλιο: «συνειδητή επιλογή του ADR-255 … η αλλαγή της είναι αλλαγή
+    // δόγματος και θέλει **ρητή απόφαση**, όχι refactor».
+    //
+    // Η ρητή απόφαση λήφθηκε (ADR-742 §7septies): η διαφορά **ακύρωνε** τη
+    // μεταμφίεση της Ομάδας 3 — το `GET /api/projects/{id}` απαντούσε 404 ενώ
+    // τέσσερις αδελφές διαδρομές (`/customers`, `/efka-declaration`,
+    // `/v2/.../customers`, `floors`) απαντούσαν 403 για **το ίδιο id**.
+    // Ένας πόρος είναι κρυμμένος μόνο αν **ΟΛΕΣ** οι διαδρομές του συμφωνούν.
+    // ─────────────────────────────────────────────────────────────────────────
     store.set(`${COLLECTIONS.PROJECTS}/ksenό`, { companyId: INTRUDER });
 
     const foreign = await requireProjectInTenant({ ctx: CALLER, projectId: 'ksenό', path: PATH }).catch(
@@ -243,8 +257,24 @@ describe('🔴 συμβόλαιο που ΔΕΝ επιτρέπεται να με
       (e: TenantIsolationError) => e,
     );
 
-    expect(foreign.status).toBe(403);
-    expect(absent.status).toBe(404);
+    // Ολόκληρο το σχήμα που βλέπει ο καλών — όχι «μοιάζει», **ίσο**.
+    const wire = (e: TenantIsolationError) => ({ status: e.status, code: e.code, message: e.message });
+    expect(wire(foreign)).toEqual(wire(absent));
+    expect(foreign.status).toBe(404);
+  });
+
+  it('🔴 …αλλά το ΙΧΝΟΣ ΕΛΕΓΧΟΥ κρατά την αλήθεια — η μεταμφίεση αφορά μόνο το σύρμα (§3.4)', async () => {
+    store.set(`${COLLECTIONS.PROJECTS}/ksenό`, { companyId: INTRUDER });
+    await requireProjectInTenant({ ctx: CALLER, projectId: 'ksenό', path: PATH }).catch(() => undefined);
+    const foreignReason = (logAuditEventMock.mock.calls[0] as unknown as [unknown, unknown, unknown, unknown, { metadata: { reason: string } }])[4].metadata.reason;
+
+    logAuditEventMock.mockClear();
+    await requireProjectInTenant({ ctx: CALLER, projectId: 'apon', path: PATH }).catch(() => undefined);
+    const absentReason = (logAuditEventMock.mock.calls[0] as unknown as [unknown, unknown, unknown, unknown, { metadata: { reason: string } }])[4].metadata.reason;
+
+    expect(foreignReason).toBe(MISMATCH_REASON);
+    expect(absentReason).toBe('Project not found');
+    expect(foreignReason).not.toBe(absentReason);
   });
 
   it('requireUnitInTenant (@deprecated) εξακολουθεί να δείχνει στα properties', async () => {
