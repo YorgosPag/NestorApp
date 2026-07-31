@@ -1,0 +1,155 @@
+name: 🧩 i18n Shell Slice Freshness (CHECK 3.34)
+
+# =============================================================================
+# Layer 2 of Defense in Depth — the authoritative half of CHECK 3.34. ADR-744.
+#
+# What this asks
+# --------------
+# `src/i18n/generated/shell-slice.el.json` is the entire synchronous i18n
+# bootstrap, derived from the static import closure of the app's layouts and
+# sliced at KEY granularity. This gate regenerates it from scratch and fails if
+# what lands differs from what is committed — the canonical
+# "regenerate and diff" shape (`go generate` + `git diff --exit-code`,
+# Bazel `diff_test`), the same one CHECK 3.33 uses for `src/types/i18n.ts`.
+#
+# Why the pre-commit hook is not enough
+# -------------------------------------
+# Layer 1 (`node scripts/check-i18n-shell-slice.js <staged files>`, measured
+# 0,7s) deliberately never builds the module graph. It verifies artifact
+# integrity, re-prunes the recorded key set out of the current locales, and
+# re-fingerprints every staged file the manifest lists as a shell module. That
+# covers the three ways a slice normally goes stale, and it is EXACT for locale
+# drift — but it cannot see a re-export chain rewritten OUTSIDE any shell module
+# (barrel B forwards X; X's declaration moves from C to D). No shell file's
+# bytes change, yet the closure does.
+#
+# That gap is real, it is rare, and closing it costs a full graph rebuild:
+# 13.877 modules, ~19s. Paying that per commit is what CLAUDE.md N.17 exists to
+# prevent, so it is paid here instead — the same trade CHECK 3.29
+# (dxf-tsc-ratchet.yml) and CHECK 3.30 (barrel-deadcode-ratchet.yml) already
+# made. Stating the gap is the point: a gate that implies coverage it does not
+# have is worse than one that does not exist.
+#
+# NOT A RATCHET — there is no baseline file and there must never be one.
+# Freshness is binary, and a "tolerated number of stale keys" is a tolerated
+# number of raw keys on the user's screen. This differs from the sibling
+# workflows above precisely because it has no false-positive class: a generated
+# file either is what the generator produces from the current code, or it is not.
+#
+# WHEN THIS GOES RED
+# ------------------
+#   npm run generate:i18n-shell-slice
+#   git add src/i18n/generated/
+# If instead it names an unresolved dynamic `t()` call, the generator is asking
+# a question only a human can answer — classify the call site in
+# .i18n-shell-slice.json → dynamicKeyPolicy, with a reason you measured.
+#
+# One workflow per CHECK is the repo convention, so a red gate names itself.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/i18n/locales/**/*.json'
+      - 'src/i18n/generated/**'
+      - 'tsconfig.base.json'
+      - 'scripts/generate-i18n-shell-slice.js'
+      - 'scripts/check-i18n-shell-slice.js'
+      - 'scripts/lib/i18n-shell-slice/**'
+      - 'scripts/lib/i18n-namespace-extract.js'
+      - 'scripts/lib/module-graph/**'
+      - '.i18n-shell-slice.json'
+      - '.github/workflows/i18n-shell-slice.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/i18n/locales/**/*.json'
+      - 'src/i18n/generated/**'
+      - 'tsconfig.base.json'
+      - 'scripts/generate-i18n-shell-slice.js'
+      - 'scripts/check-i18n-shell-slice.js'
+      - 'scripts/lib/i18n-shell-slice/**'
+      - 'scripts/lib/i18n-namespace-extract.js'
+      - 'scripts/lib/module-graph/**'
+      - '.i18n-shell-slice.json'
+      - '.github/workflows/i18n-shell-slice.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: i18n-shell-slice-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  shell-slice:
+    name: 🔒 i18n Shell Slice Freshness (CHECK 3.34)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # typescript only — the walk parses with ts.createSourceFile and never
+      # builds a Program, so this is NOT a type-check (CLAUDE.md N.17). Same
+      # dependency, same reasoning, as barrel-deadcode-ratchet.yml.
+      - name: 📦 Install dependencies (TypeScript parser)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🧩 CHECK 3.34 — shell slice matches the code (full graph rebuild)
+        run: pnpm run i18n-shell-slice:check-full
+
+      # The static gate proves the slice is FRESH. This proves it is USABLE:
+      # boot i18next with the slice and nothing else, and assert no key the shell
+      # can request comes back as itself. Freshness and correctness are different
+      # claims, and green tooling proving the wrong claim is how the original
+      # 63-namespace drift survived every CHECK in the repo.
+      - name: 🧪 Runtime proof — no raw key can reach the shell
+        run: pnpm exec jest src/i18n/__tests__/shell-slice-no-raw-keys.test.ts
+
+      - name: 🧪 Gate self-test (62 cases)
+        run: pnpm exec jest scripts/__tests__/i18n-shell-slice.test.js
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=i18n Shell Slice::Slice matches the shell closure; no raw key reachable"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.34 — the synchronous i18n bootstrap is out of date"
+            echo ""
+            echo "\`src/i18n/generated/shell-slice.el.json\` is GENERATED from the static import"
+            echo "closure of the app's layouts. Do not hand-edit it, and do not hand-add a"
+            echo "namespace to \`src/i18n/config.ts\`."
+            echo ""
+            echo "**Stale slice** → regenerate and stage:"
+            echo '```'
+            echo "npm run generate:i18n-shell-slice"
+            echo "git add src/i18n/generated/"
+            echo '```'
+            echo ""
+            echo "**Unresolved dynamic \`t()\`** → the generator found a call whose key it cannot"
+            echo "know (\`t(step.titleKey)\`). It refuses to guess, because guessing is exactly how"
+            echo "a raw key reaches the screen. Classify the call site in"
+            echo "\`.i18n-shell-slice.json\` → \`dynamicKeyPolicy\`, with a reason you measured."
+            echo ""
+            echo "**Runtime proof red** → a key the shell can request resolves to nothing. The"
+            echo "failure names it, and that name is the string the user would have seen."
+          } >> "$GITHUB_STEP_SUMMARY"

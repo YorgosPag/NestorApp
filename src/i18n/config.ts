@@ -3,45 +3,69 @@
  * This config now uses lazy loading for better performance
  */
 
-import i18n from 'i18next';
+import i18n, { type Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import ICU from 'i18next-icu';
 import { loadNamespace, CRITICAL_NAMESPACES, type Language, SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE } from './lazy-config';
 import { remapLegacyTranslationKey } from './namespace-compat';
 import { pseudoPostProcessor, PSEUDO_LANGUAGE } from './pseudo-post-processor';
 
+// 🏢 ADR-744: the ONLY locale data imported synchronously — generated, not written.
+import shellSlice from './generated/shell-slice.el.json';
+
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
 const logger = createModuleLogger('i18n-config');
 
-// Load essential translations for initial boot
-import commonEl from './locales/el/common.json';
-import commonEn from './locales/en/common.json';
-import commonActionsEl from './locales/el/common-actions.json';
-import commonActionsEn from './locales/en/common-actions.json';
-import commonNavigationEl from './locales/el/common-navigation.json';
-import commonNavigationEn from './locales/en/common-navigation.json';
-import commonStatusEl from './locales/el/common-status.json';
-import commonStatusEn from './locales/en/common-status.json';
-import commonValidationEl from './locales/el/common-validation.json';
-import commonValidationEn from './locales/en/common-validation.json';
-import commonEmptyStatesEl from './locales/el/common-empty-states.json';
-import commonEmptyStatesEn from './locales/en/common-empty-states.json';
-// Pre-load landing for homepage
-import landingEl from './locales/el/landing.json';
-import landingEn from './locales/en/landing.json';
-// 🏢 ENTERPRISE: Pre-load navigation (used on every page - prevents race condition warnings)
-import navigationEl from './locales/el/navigation.json';
-import navigationEn from './locales/en/navigation.json';
-// 🏢 ENTERPRISE: Pre-load admin (used on admin pages - prevents hydration mismatch)
-import adminEl from './locales/el/admin.json';
-import adminEn from './locales/en/admin.json';
+/**
+ * 🏢 ADR-744 — the synchronous bootstrap is GENERATED, not hand-kept.
+ *
+ * What used to be here: 18 static JSON imports and a hand-written `resources`
+ * literal naming 9 namespaces — 295.093 bytes, 40% of it `admin.json`, which is
+ * not on screen at boot. Beside it lived a SECOND hand-written list, the 72
+ * `CRITICAL_NAMESPACES` loaded asynchronously below. Nothing compared the two,
+ * and they had drifted by 63 entries: any surface using one of those 63 could
+ * paint a raw key (`search.globalSearch`) until the await resolved. The strings
+ * existed — they had not arrived.
+ *
+ * What is here now: the static import closure of the app's layouts (and the
+ * cold-entry route), sliced at KEY granularity. The shell needs `search.*` out
+ * of `common-shared` — about 400 bytes of its 39.935 — so that is what ships.
+ * **295.093 → 184.599 bytes**, and the list is derived from the code instead of
+ * remembered, which is what makes the drift structurally impossible rather than
+ * merely discouraged.
+ *
+ * ⚠️ THE NUMBER IS NOT SMALLER BECAUSE OF A DELIBERATE CORRECTION. The nine
+ *    namespaces that were 100% synchronous before this ADR are still shipped
+ *    WHOLE (173.720 of those bytes). The first cut key-sliced them too, which
+ *    was correct for the shell and wrong for everything else: a PAGE is a route
+ *    boundary and sits outside the shell closure by design, but on a COLD LOAD
+ *    it paints in the SAME FRAME as the layout. `/dxf/viewer` rendered the raw
+ *    key `dxfViewer.checkingPermissions` as a result. Per-route slices are what
+ *    releases those bytes (ADR-744 §8); until then, whole is the only answer
+ *    that is provably no worse than before. The saving that IS real today: the
+ *    entire `en` half, 147 KB that could never be read (see below), plus seven
+ *    namespaces that were NOT synchronous before and now have their shell keys.
+ *
+ * ⚠️ DO NOT hand-add a namespace here. Add the `useTranslation(...)` where the
+ *    component lives and re-run `npm run generate:i18n-shell-slice`; CHECK 3.34
+ *    blocks the commit if the two disagree.
+ *
+ * ⚠️ `el` ONLY, deliberately. `getInitialLanguage()` returns DEFAULT_LANGUAGE
+ *    unconditionally (to avoid an SSR/CSR mismatch) and `fallbackLng` is the
+ *    same 'el', so the synchronous `en` half — 147 KB of the old 295 KB — could
+ *    never be read before the async preload had already replaced it. A language
+ *    switch goes through changeLanguage() → preloadCriticalNamespaces(), which
+ *    awaits.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-744-i18n-shell-slice.md
+ * @see .i18n-shell-slice.json — shell roots, migration ledger, dynamic-key policy
+ */
+const resources: Resource = { [DEFAULT_LANGUAGE]: shellSlice };
 
-// Initial resources - common, landing, and navigation for immediate availability
-const resources = {
-  el: { common: commonEl, 'common-actions': commonActionsEl, 'common-navigation': commonNavigationEl, 'common-status': commonStatusEl, 'common-validation': commonValidationEl, 'common-empty-states': commonEmptyStatesEl, landing: landingEl, navigation: navigationEl, admin: adminEl },
-  en: { common: commonEn, 'common-actions': commonActionsEn, 'common-navigation': commonNavigationEn, 'common-status': commonStatusEn, 'common-validation': commonValidationEn, 'common-empty-states': commonEmptyStatesEn, landing: landingEn, navigation: navigationEn, admin: adminEn },
-};
+// Derived, never restated: the namespaces i18next is told about at init are
+// exactly the ones the generated slice carries.
+const SHELL_NAMESPACES = Object.keys(shellSlice);
 
 // Detect preferred language
 const getInitialLanguage = (): Language => {
@@ -67,10 +91,10 @@ i18n
       escapeValue: false, // React already escapes values
     },
 
-    // 🏢 ENTERPRISE: Start with common + navigation (both pre-loaded sync)
+    // 🏢 ADR-744: derived from the generated slice — one list, no second copy.
     defaultNS: 'common',
-    ns: ['common', 'common-actions', 'common-navigation', 'common-status', 'common-validation', 'common-empty-states', 'navigation', 'obligations'],
-    
+    ns: SHELL_NAMESPACES,
+
     react: {
       useSuspense: false, // Better for lazy loading
     },

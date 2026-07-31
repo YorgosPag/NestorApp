@@ -25,6 +25,7 @@
  *   SSOT_DISCOVER_FULL             '1' = run full ssot-discover scan
  *   SKIP_NATIVE_TOOLTIP / SKIP_TABS_IMPORT / SKIP_NO_FLASH  bypass specific checks
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
+ *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -70,6 +71,7 @@ const auditCatalogsTrigger = parseList(process.env.STAGED_AUDIT_CATALOGS_TRIGGER
 
 const ssotFull    = process.env.SSOT_DISCOVER_FULL === '1';
 const skipI18nTypes = !!process.env.SKIP_I18N_TYPES;
+const skipShellSlice = !!process.env.SKIP_I18N_SHELL_SLICE;
 const skipTooltip = !!process.env.SKIP_NATIVE_TOOLTIP;
 const skipTabs    = !!process.env.SKIP_TABS_IMPORT;
 const skipFlash   = !!process.env.SKIP_NO_FLASH;
@@ -116,6 +118,21 @@ if (localeFiles.length > 0)
 // (no spawn), so it belongs here in Phase 1 rather than a sequential 0.x phase.
 if (!skipI18nTypes && (localeFiles.length > 0 || allFiles.includes('src/types/i18n.ts')))
   addThread('3.33', 'i18n types freshness', 'scripts/check-i18n-types-freshness.js');
+
+// CHECK 3.34 (ADR-744) — the synchronous i18n bootstrap is generated from the
+// shell's import closure. Three things can invalidate it, so all three are
+// triggers: a locale edit (the sliced VALUES move), any staged .ts/.tsx (it may
+// BE a shell module, or may newly resolve a specifier the walk could not), and
+// an edit to the generated output or its config. Layer 1 never builds the
+// module graph — measured 0,7s against the manifest — so it belongs in Phase 1
+// beside 3.33; the full graph rebuild is Layer 2, in CI.
+const shellSliceTriggers = [
+  ...localeFiles,
+  ...tsFiles,
+  ...allFiles.filter(f => f.startsWith('src/i18n/generated/') || f === '.i18n-shell-slice.json'),
+];
+if (!skipShellSlice && shellSliceTriggers.length > 0)
+  addThread('3.34', 'i18n shell slice', 'scripts/check-i18n-shell-slice.js', tsFiles);
 
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);

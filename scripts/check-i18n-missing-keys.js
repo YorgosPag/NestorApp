@@ -27,6 +27,7 @@ const path = require('path');
 const {
   loadNamespaceBundles,
   extractNamespaces,
+  extractTCalls,
 } = require('./lib/i18n-namespace-extract');
 
 const REPO_ROOT = path.join(__dirname, '..');
@@ -91,22 +92,8 @@ function keyExists(obj, dottedKey) {
   return I18NEXT_PLURAL_SUFFIXES.some((sfx) => `${last}${sfx}` in current);
 }
 
-/**
- * Extract all t('key') calls — only static string keys
- */
-function extractTCalls(content) {
-  const keys = [];
-  // Match t('key') or t('key', ...) — only single-quoted or double-quoted static strings
-  const regex = /\bt\(\s*['"]([a-zA-Z0-9_.\-]+)['"]\s*[,)]/g;
-  let match;
-  while ((match = regex.exec(content)) !== null) {
-    const key = match[1];
-    // Skip cross-namespace references (ns:key) — these are explicitly scoped
-    if (key.includes(':')) continue;
-    keys.push({ key, index: match.index });
-  }
-  return keys;
-}
+// `extractTCalls` moved to ./lib/i18n-namespace-extract (ADR-744) so the
+// shell-slice generator can share it instead of cloning it. Behaviour unchanged.
 
 /**
  * Get line number from character index
