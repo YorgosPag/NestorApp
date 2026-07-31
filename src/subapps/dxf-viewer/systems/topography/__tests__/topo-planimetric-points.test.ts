@@ -74,13 +74,18 @@ describe('surfacePointsOf — το ΕΝΑ φίλτρο', () => {
 });
 
 describe('describeElevationCoverage — τα νούμερα που λέει ο οδηγός', () => {
+  // Το `derived` μετρά πόσα από τα `withElevation` είναι **παραγόμενα** (παρεμβολή) αντί
+  // μετρημένα — ξεχωριστό νούμερο από το «έχει υψόμετρο». Εδώ κανένα σημείο δεν είναι
+  // παραγόμενο, οπότε είναι 0· μένει ρητό στο `toEqual` ώστε μια μελλοντική αλλαγή στη
+  // μέτρησή του να **κοκκινίσει** αντί να περάσει απαρατήρητη.
   it('χωρίζει το σύνολο σε μετρημένα / δισδιάστατα', () => {
     expect(describeElevationCoverage([at(0, 0, 1), corner(1, 1), corner(2, 2)]))
-      .toEqual({ total: 3, withElevation: 1, planimetricOnly: 2 });
+      .toEqual({ total: 3, withElevation: 1, planimetricOnly: 2, derived: 0 });
   });
 
   it('κενή αποτύπωση → μηδενικά, όχι NaN', () => {
-    expect(describeElevationCoverage([])).toEqual({ total: 0, withElevation: 0, planimetricOnly: 0 });
+    expect(describeElevationCoverage([]))
+      .toEqual({ total: 0, withElevation: 0, planimetricOnly: 0, derived: 0 });
   });
 });
 
@@ -166,6 +171,10 @@ describe('🎯 ACCEPTANCE — το αρχείο ΕΥΟΣΜΟΣ47: 93 γραμμ�
       total: 93,
       withElevation: 33,
       planimetricOnly: 60,
+      // Το CSV του τοπογράφου φέρνει **μετρημένα** υψόμετρα — κανένα παραγόμενο. Αν αυτό γίνει
+      // ποτέ >0 σε εισαγωγή, σημαίνει ότι κάτι παρεμβάλλει υψόμετρα κατά την ανάγνωση, που θα
+      // ήταν σφάλμα: η παρεμβολή ανήκει στην επιφάνεια, όχι στο parsing.
+      derived: 0,
     });
   });
 
