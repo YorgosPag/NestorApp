@@ -3937,6 +3937,29 @@
       "addedByAdr": "ADR-376",
       "tier": 3
     },
+    "table-layout-engine": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/table/table-layout.ts",
+      "description": "ADR-739 Φάση Α: ΜΙΑ μηχανή διάταξης πίνακα για όλο το repo. `layoutTable(model, style)` (τρία στάδια: `measureTable` → `placeCells` → `buildTableBorders`) βγάζει γεωμετρία σε sheet-mm που τροφοδοτεί και τα τέσσερα backends (canvas 2D preview / PDF / entities σκηνής / DXF ACAD_TABLE) — «οθόνη === PDF === DXF === σκηνή». ΤΟ ΡΙΣΚΟ (ADR-739 §1): υπάρχουν ΗΔΗ δύο μηχανές διάταξης πίνακα στο repo (`buildScheduleTable` του ADR-622 και ο React `SchedulePreviewTable.tsx`)· τρίτη υλοποίηση = sibling clone (N.18 / CHECK 3.28). Ο ADR-622 ΑΠΟΡΡΟΦΑΤΑΙ ως thin adapter στη Φάση Β — δεν μιμείται. Νέος «table renderer» / `layoutTable` / `TableLayout` / `measureTable` εκτός αυτού του φακέλου = παράβαση. Η μέτρηση πλάτους κειμένου έρχεται ΑΠΟΚΛΕΙΣΤΙΚΑ από το `measureTextAdvanceWorld` (ADR-557) — ποτέ δεύτερος measurer. Οι CellKey συντίθενται ΜΟΝΟ από το `cellKey()` του `table-model-helpers.ts`.",
+      "forbiddenPatterns": [
+        "function\\s+layoutTable\\b",
+        "function\\s+measureTable\\b",
+        "function\\s+buildTableBorders\\b",
+        "interface\\s+TableLayout\\b",
+        "interface\\s+TableModel\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/table/table-layout.ts",
+        "src/subapps/dxf-viewer/bim/table/table-layout-types.ts",
+        "src/subapps/dxf-viewer/bim/table/table-layout-measure.ts",
+        "src/subapps/dxf-viewer/bim/table/table-layout-place.ts",
+        "src/subapps/dxf-viewer/bim/table/table-layout-borders.ts",
+        "src/subapps/dxf-viewer/bim/table/table-model-helpers.ts",
+        "src/subapps/dxf-viewer/types/table.ts"
+      ],
+      "addedDate": "2026-07-31",
+      "addedByAdr": "ADR-739",
+      "tier": 3
+    },
     "resolve-entity-style": {
       "ssotFile": "src/subapps/dxf-viewer/systems/properties/resolve-entity-style.ts",
       "description": "ADR-358 §G7 Phase 6: the ByLayer/ByBlock/Concrete cascade — entity → block → layer → system default for color + linetype + lineweight + transparency — is owned by `resolve-entity-style.ts`. Calls to `resolveEntityStyle()` must live in the centralised renderer path (`DxfRenderer.resolveStyleForRender`) so that `AdminLayerManager` edits propagate live to canvas and snapshot/print/export paths share the same resolution semantics. Bypass call sites flatten styles ad-hoc and break the §G7 LIVE pipeline. Property panels reading provenance for inspection are allowlisted.",

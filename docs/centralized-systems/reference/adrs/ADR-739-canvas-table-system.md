@@ -1,8 +1,9 @@
 # ADR-739 — Σύστημα Πινάκων (Tables) στον 2Δ/3Δ Καμβά — Έρευνα Αγοράς + Αρχιτεκτονικό Blueprint
 
-- **Status**: ✅ **ΕΓΚΕΚΡΙΜΕΝΟ ΣΧΕΔΙΟ — ΥΠΟ ΥΛΟΠΟΙΗΣΗ (σταδιακά, Φ.Α→Θ)**. Οι 5 αποφάσεις του
-  §14 ελήφθησαν από τον Giorgio (2026-07-31). **Δεν προστίθεται κώδικας σε αυτό το ADR** — κάθε
-  φάση κλείνει αυτοτελώς με δικό της κύκλο (§14.1). **Επόμενο βήμα: Φάση Α.**
+- **Status**: ✅ **ΥΠΟ ΥΛΟΠΟΙΗΣΗ — ΦΑΣΗ Α ΚΛΕΙΣΤΗ** (2026-07-31). Οι 5 αποφάσεις του §14
+  ελήφθησαν από τον Giorgio. Κάθε φάση κλείνει αυτοτελώς με δικό της κύκλο (§14.1).
+  **Φ.Α ✅ Μοντέλο + μηχανή διάταξης + TableStyle SSoT + χαρακτηρισμός ADR-622** (βλ. §16).
+  **Επόμενο βήμα: Φάση Β — απορρόφηση ADR-622** (το δίχτυ χαρακτηρισμού είναι ήδη στημένο).
 - **Date**: 2026-07-31
 - **Category**: DXF Viewer / Annotation / Documentation / Data Binding / Research
 - **Σχετικά**:
@@ -430,8 +431,8 @@ snapshot tests στα **4 υπάρχοντα detail sheets + title block + το�
 
 | Φ | Τίτλος | Παραδοτέο | Αρχεία |
 |---|---|---|---|
-| **Α** | Μοντέλο + μηχανή διάταξης | `types/table.ts`, `table-layout.ts` (measure/place/borders), `TableStyle` SSoT + presets. **Καθαρές συναρτήσεις, μηδέν React/canvas** | ~6 |
-| **Β** | Απορρόφηση ADR-622 | `buildScheduleTable` → adapter· χαρακτηρισμός 6 καταναλωτών **πρώτα** | ~4 |
+| **Α** ✅ | Μοντέλο + μηχανή διάταξης | `types/table.ts`, `table-layout.ts` (measure/place/borders), `TableStyle` SSoT + presets. **Καθαρές συναρτήσεις, μηδέν React/canvas**. **+ ο χαρακτηρισμός του §12 τραβήχτηκε ΕΔΩ** ώστε η Φ.Β να ξεκινήσει με το δίχτυ στημένο | 10 + 3 tests |
+| **Β** | Απορρόφηση ADR-622 | `buildScheduleTable` → adapter· ~~χαρακτηρισμός 6 καταναλωτών **πρώτα**~~ **✅ έγινε στη Φ.Α** | ~4 |
 | **Γ** | Entity + rendering 2D | `TableEntity`, `TableRenderer`, bounds/hit-test/grips, 9 gates §12 | ~12 |
 | **Δ** | Δημιουργία + επεξεργασία | εργαλείο, inline cell editor, keyboard nav, επικόλληση TSV/CSV, undo | ~10 |
 | **Ε** | DXF interop | `ACAD_TABLE` export/import + `TABLESTYLE` + fallback | ~6 |
@@ -478,6 +479,83 @@ snapshot tests στα **4 υπάρχοντα detail sheets + title block + το�
 
 ---
 
+## 16. Φάση Α — τι υλοποιήθηκε (2026-07-31)
+
+### 16.1 Τα αρχεία
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `types/table.ts` | Το μοντέλο: `TableModel` / `TableColumn` / `TableRow` / `TableCell` / `CellSpan` / `CellKey` (**branded**) / `TableBinding` / `TableBreaking` / `TableBorderSpec` |
+| `bim/table/table-style.ts` | `TableStyle` + 3 κλάσεις γραμμής + `resolveCellStyle` (κλάση → παράκαμψη κελιού) |
+| `bim/table/table-style-presets.ts` | `standard` (πλήρες πλέγμα) + `detailSheet` (**οι ακριβείς τιμές του ADR-622**) |
+| `bim/table/table-style-registry.ts` | Μητρώο — κάτοπτρο του `line-style-registry` (ADR-570), ίδιο συμβόλαιο `useSyncExternalStore` |
+| `bim/table/table-model-helpers.ts` | `cellKey()` (η **μόνη** πηγή κλειδιών) · `buildMergeIndex()` · `createTableModel()` |
+| `bim/table/table-layout-measure.ts` | Στάδιο 1 — `fixed` → `hug` → `fill` |
+| `bim/table/table-layout-place.ts` | Στάδιο 2 — ορθογώνια κελιών + αγκύρωση κειμένου |
+| `bim/table/table-layout-borders.ts` | Στάδιο 3 — ακμές πλέγματος, **ενωμένες** |
+| `bim/table/table-layout.ts` | `layoutTable()` + `visibleRowRange()` |
+| `bim/table/table-layout-types.ts` | `TableLayout` — το συμβόλαιο προς τα 4 backends |
+
+Παράλληλα: `TABLE_STYLE: 'tblstyle'` + `generateTableStyleId()` (N.6, 3 αρχεία του
+`enterprise-id`) · i18n κλειδιά `ribbon.commands.tableStyleNames.*` σε **EL+EN** πριν τον κώδικα
+(N.11) + `npm run generate:i18n-types` (CHECK 3.33) · module `table-layout-engine` στο
+`.ssot-registry.json` (N.12, tier 3).
+
+### 16.2 Τρεις αποκλίσεις από το §4 — και ο λόγος καθεμιάς
+
+1. **Το `TableEntity` ΔΕΝ γράφτηκε.** Απαιτεί `'table'` στο `EntityType` union, που πυροδοτεί και
+   τα 9 gates του §12 (~20 capability anchors, CHECK 5C). Το roadmap τα τοποθετεί στη **Φ.Γ**·
+   entity χωρίς απαντημένα gates θα άφηνε το repo κόκκινο (ADR-587 §6.1: *«anchor χωρίς gate δεν
+   είναι anchor — είναι σχόλιο»*). Τα υπόλοιπα πεδία του §4 (`binding`, `breaking`, `styleId`)
+   υπάρχουν ήδη ως τύποι, ώστε το σχήμα να μην αλλάξει ανά φάση.
+2. **Προστέθηκε `TableRow.borderTop`** (δεν ήταν στο §4). Το row-class μοντέλο του AutoCAD
+   **δομικά δεν μπορεί** να εκφράσει «γραμμή πάνω από μία συγκεκριμένη γραμμή δεδομένων» — και
+   αυτό είναι ακριβώς η **γραμμή-σύνολο**, καθολικό μοτίβο κάθε πίνακα ποσοτήτων (το AutoCAD το
+   λύνει με per-cell border overrides· μία παράκαμψη ανά γραμμή είναι απλούστερη και αρκεί).
+3. **Το `TableBorderSpec` ζει στο μοντέλο, όχι στο στυλ.** Το χρειάζονται και τα δύο (το στυλ για
+   τις κλάσεις, το μοντέλο για τη γραμμή-σύνολο)· ένας ορισμός, το `table-style.ts` τον
+   επανεξάγει. Αλλιώς `types/table.ts` → `table-style.ts` γινόταν κύκλος εισαγωγών.
+
+### 16.3 Ο χαρακτηρισμός — τραβήχτηκε στη Φάση Α
+
+`__tests__/adr622-absorption-characterization.test.ts` — **10 snapshots** (2.042 γραμμές, 142
+text + 11 line primitives) και των **έξι** καταναλωτών: 4 detail-sheet schedules + το τοπογραφικό
+φύλλο (ADR-650 M7) + 4 title blocks + η αυτόματη πινακίδα (ADR-651).
+
+**Mutation-verified**, γιατί πράσινα snapshots δεν αποδεικνύουν από μόνα τους ότι κάτι μετριέται:
+- `ROW_H_MM 7.5 → 7.6` στο `detail-sheet-schedule-table.ts` ⇒ **5/10 κόκκινα** (ακριβώς τα
+  schedule· τα field-block έμειναν πράσινα — έχουν δικό τους `ROW_H_MM = 7`).
+- `LABEL_HEX #555555 → #555556` στο `detail-sheet-field-block.ts` ⇒ **5/10 κόκκινα** (η άλλη πλευρά).
+
+Και τα δύο mutations αναιρέθηκαν· τα δύο αρχεία του ADR-622 είναι **αναλλοίωτα** σε αυτή τη φάση.
+
+### 16.4 Τι ρητά ΔΕΝ υπόσχεται το preset `detailSheet`
+
+**Byte-identical έξοδο.** Ο σημερινός ADR-622 τοποθετεί τις δύο οριζόντιες γραμμές του
+**baseline-relative** (`y - ROW_H_MM * 0.2`), όχι στις ακμές των κελιών· η γενική μηχανή τις βάζει
+στις **ακμές** (σωστό, και συμβατό με τα DXF group codes του §5). Η γεφύρωση είναι δουλειά του
+adapter της **Φ.Β**, με το δίχτυ χαρακτηρισμού στο χέρι — **όχι εικασία στη Φ.Α**. Το preset
+κρατά τις τιμές (`7.5` / `2.6` / `#222222` / `#999999` / `0.15mm` / `4mm`), κλειδωμένες με tests.
+
+### 16.5 Απόδοση — τι μπήκε από τώρα
+
+- `visibleRowRange(layout, top, bottom)` → δυαδική αναζήτηση στο αύξον `yMm`: **O(log n + ορατές)**.
+  Επαληθεύεται έναντι γραμμικής σάρωσης σε 36 διαφορετικά παράθυρα (η επιτάχυνση δεν αλλάζει απάντηση).
+- Οι ακμές πλέγματος **ενώνονται**: πίνακας 2×3 δίνει **7** τμήματα αντί για 24 ακμές κελιών.
+- Η διάταξη είναι καθαρή συνάρτηση ⇒ ασφαλώς απομνημονεύσιμη· ποτέ ανά frame (§6).
+
+### 16.6 Έλεγχοι
+
+| Έλεγχος | Αποτέλεσμα |
+|---|---|
+| `bim/table` unit tests | **43/43** ✅ (27 layout + 16 registry) |
+| `detail-sheet` (όλα, μαζί με τον χαρακτηρισμό) | **20 suites / 144 tests / 10 snapshots** ✅ |
+| `npm run jscpd:diff` (N.18, CHECK 3.28) | ✅ καθαρό — κανένα sibling clone στα 10 νέα αρχεία |
+| N.7.1 (500 γρ./αρχείο) | ✅ μέγιστο 274 γρ. (`types/table.ts`, εξαιρούμενο ως types) |
+| `npm run test:registry-golden` | ⚠️ 101/102 — η μία αποτυχία είναι στο module **`date-local`** και **προϋπάρχει στο HEAD** (επαληθεύτηκε με stashed registry)· άσχετη με το ADR-739 |
+
+---
+
 ## Changelog
 
 - **2026-07-31** — Δημιουργία. Έρευνα αγοράς (AutoCAD/Revit/ArchiCAD/Vectorworks/Figma/C4D) +
@@ -495,3 +573,19 @@ snapshot tests στα **4 υπάρχοντα detail sheets + title block + το�
   πραγματικές καταστάσεις είναι integrated / discrete / **software rendering**, και μόνο η τρίτη
   είναι πραγματικός κίνδυνος ⇒ η απάντηση είναι **ανίχνευση δυνατότητας + σχεδιασμένη
   υποβάθμιση**, όχι απαγόρευση WebGL. Status → ΕΓΚΕΚΡΙΜΕΝΟ ΣΧΕΔΙΟ.
+- **2026-07-31 (γ)** — **ΦΑΣΗ Α ΥΛΟΠΟΙΗΘΗΚΕ** (νέο §16). 10 αρχεία + 3 test suites: το μοντέλο
+  (`types/table.ts`), η **ΜΙΑ** μηχανή διάταξης σε τρία στάδια (`measure` / `place` / `borders`),
+  το `TableStyle` SSoT με 2 presets και το μητρώο του. **Τρεις τεκμηριωμένες αποκλίσεις από το
+  §4** (§16.2): (α) το `TableEntity` αναβλήθηκε ρητά για τη **Φ.Γ** — απαιτεί `'table'` στο
+  `EntityType`, που πυροδοτεί και τα 9 gates του §12· entity χωρίς απαντημένα gates αφήνει το
+  repo κόκκινο· (β) **νέο `TableRow.borderTop`** — το row-class μοντέλο του AutoCAD δομικά δεν
+  εκφράζει τη **γραμμή-σύνολο**· (γ) το `TableBorderSpec` μετακινήθηκε στο μοντέλο (ένας ορισμός,
+  αποφυγή κύκλου). **Ο χαρακτηρισμός του §12 τραβήχτηκε ΕΔΩ** (§16.3): 10 snapshots και των 6
+  καταναλωτών, **mutation-verified 2/2** — ώστε η Φ.Β να ξεκινήσει με το δίχτυ στημένο και το «δεν
+  άλλαξε τίποτα» να είναι απόδειξη, όχι ισχυρισμός. Τα δύο αρχεία του ADR-622 **δεν αγγίχτηκαν**.
+  Ρητά **δεν** υπόσχεται byte-identical έξοδο το preset `detailSheet` (§16.4): το baseline-relative
+  quirk (`y - ROW_H_MM * 0.2`) γεφυρώνεται στη Φ.Β **με μέτρηση**, όχι με εικασία εδώ. Απόδοση από
+  τώρα (§16.5): `visibleRowRange` δυαδική (O(log n), το μάθημα του ADR-735) + ένωση ακμών πλέγματος.
+  Παράλληλα: prefix `tblstyle` + `generateTableStyleId()` (N.6) · i18n κλειδιά EL+EN **πριν** τον
+  κώδικα + `generate:i18n-types` (N.11 / CHECK 3.33) · module `table-layout-engine` στο
+  `.ssot-registry.json` (N.12) · `jscpd:diff` καθαρό (N.18).
