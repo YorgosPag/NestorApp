@@ -10,7 +10,10 @@ import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDou
 // ADR-612 — opening-info-tag inline numeric cell editor: sibling of the text
 // double-click editor, opens a store-driven numeric input over the clicked cell.
 import { useOpeningInfoTagDoubleClick } from './use-opening-info-tag-double-click';
-// ADR-739 Φ.Δ βήμα 2 — table-cell inline text editor: sibling opener, local state (ADR-040).
+// ADR-739 Φ.Δ βήμα 2 — ο οδηγός του δρομέα κελιού πίνακα: το διπλό κλικ τον ανοίγει, τα
+// Tab/Enter/βέλη τον μετακινούν. Η κατάστασή του ζει σε store (και όχι σε React state)
+// επειδή τον διαβάζει ΚΑΙ ο ζωγράφος του καμβά, που δεν βλέπει React — χαμηλή συχνότητα
+// (ένα πάτημα πλήκτρου), άρα ίδιο κόστος απόδοσης με το `useState` που αντικατέστησε.
 import { useTableCellDoubleClickEditor } from '../../ui/table-cell-editor/useTableCellDoubleClickEditor';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
@@ -95,8 +98,8 @@ export function useCanvasSectionUI({
     // ADR-612 — opening-info-tag cell editor claims the double-click when it lands on
     // a cell of the single selected tag; otherwise fall through to the text editor.
     if (openingTagEditor.handleDoubleClick(e)) return;
-    // ADR-739 Φ.Δ βήμα 2 — table-cell editor is a no-op unless the single selection is a
-    // table AND the click lands inside its grid (checked internally, void like textEditor).
+    // ADR-739 Φ.Δ βήμα 2 — ο δρομέας κελιού είναι no-op αν η μία επιλογή δεν είναι πίνακας
+    // ΚΑΙ το κλικ δεν πέφτει μέσα στο πλέγμα (ελέγχεται εσωτερικά, void όπως ο textEditor).
     tableCellEditor.handleDoubleClick(e);
     textEditor.handleDoubleClick(e);
   }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor, openingTagEditor, tableCellEditor, levelManager]);

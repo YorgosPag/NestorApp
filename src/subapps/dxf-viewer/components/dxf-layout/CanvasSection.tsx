@@ -483,7 +483,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         mirrorOverlay={mirrorTool.phase === 'awaiting-keep-originals' ? { onConfirm: mirrorTool.handleMirrorConfirm, onCancel: mirrorTool.handleMirrorEscape } : null}
         textEditorOverlay={textEditor.editingState ? { entityId: textEditor.editingState.entityId, initial: textEditor.editingState.initial, anchor: textEditor.editingState.anchor, onCommit: textEditor.onCommit, onCancel: textEditor.onCancel } : null}
         textCreationOverlay={textCreation.creatingState ? { entityId: textCreation.creatingState.entityId, initial: textCreation.creatingState.initial, anchor: textCreation.creatingState.anchor, onCommit: textCreation.onCommit, onCancel: textCreation.onCancel } : null}
-        tableCellEditorOverlay={tableCellEditor.editingState ? { entityId: tableCellEditor.editingState.entityId, rowId: tableCellEditor.editingState.rowId, colId: tableCellEditor.editingState.colId, initialText: tableCellEditor.editingState.initialText, anchor: tableCellEditor.editingState.anchor, onCommit: tableCellEditor.onCommit, onCancel: tableCellEditor.onCancel } : null}
+        tableCellEditorOverlay={tableCellEditor.overlay}
         selectionCycling={{ onSelectEntity: handleCycleEntitySelect }}
       />
     </>

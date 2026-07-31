@@ -46,7 +46,7 @@
  * @see ui/inline-editor/use-inline-editor-keys.ts — ο φρουρός «μία φορά» + ο escape-bus
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useInlineEditorKeys } from '../inline-editor/use-inline-editor-keys';
@@ -55,6 +55,7 @@ import { resolveTableCellKeyIntent } from './table-cell-key-intent';
 import {
   cancelTableCellCursorSession,
   closeTableCellCursor,
+  setTableCellCursorDraft,
   setTableCellCursorMode,
   type TableCellCursorMode,
 } from '../../state/table-cell-cursor-store';
@@ -67,7 +68,12 @@ export interface TableCellEditorOverlayProps {
   readonly rowId: TableRowId;
   readonly colId: TableColumnId;
   readonly mode: TableCellCursorMode;
-  /** Το τρέχον κείμενο του κελιού, διαβασμένο από το μοντέλο τη στιγμή της απόδοσης. */
+  /**
+   * Το **πρόχειρο** της συνεδρίας γραφής — ζει στον δρομέα, όχι εδώ. Δες το σχόλιο του
+   * `TableCellCursorState.draft`: τοπικό `useState` χανόταν σε ασύγχρονο ξαναστήσιμο.
+   */
+  readonly draft: string;
+  /** Το **δεσμευμένο** κείμενο του κελιού, διαβασμένο από το μοντέλο τη στιγμή της απόδοσης. */
   readonly initialText: string;
   readonly anchor: TextEditorAnchor;
   /** Γράψε το κείμενο στο μοντέλο (undoable). Καλείται **το πολύ μία φορά** ανά συνεδρία. */
@@ -79,12 +85,9 @@ export interface TableCellEditorOverlayProps {
 }
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
-  const { mode, initialText, anchor, onCommit, onMove, onClear } = props;
+  const { mode, draft, initialText, anchor, onCommit, onMove, onClear } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<HTMLInputElement | null>(null);
-  // Σε πλοήγηση το πεδίο είναι **άδειο** — αυτό ΕΙΝΑΙ το type-to-replace: ο πρώτος
-  // χαρακτήρας βρίσκει κενό πεδίο, άρα αντικαθιστά χωρίς λογική αντικατάστασης.
-  const [draft, setDraft] = useState(() => (mode === 'nav' ? '' : initialText));
 
   // Είσοδος με διπλό κλικ / F2: κέρσορας στο ΤΕΛΟΣ, όχι επιλογή όλου του κειμένου. Μπήκες
   // για να διορθώσεις, όχι για να ξαναγράψεις — αλλιώς η κατάσταση `edit` θα ήταν
@@ -135,9 +138,9 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
           return;
         case 'mode':
           event.preventDefault();
-          // `F2` από πλοήγηση: το πρόχειρο γεννιέται ΤΩΡΑ από το κείμενο του κελιού.
-          if (mode === 'nav') setDraft(initialText);
-          setTableCellCursorMode(intent.to);
+          // `F2` από πλοήγηση: το πρόχειρο γεννιέται ΤΩΡΑ από το δεσμευμένο κείμενο του
+          // κελιού· από γραφή αλλάζει μόνο ποιος κατέχει τα βέλη (το «διπλό F2» του Excel).
+          setTableCellCursorMode(intent.to, mode === 'nav' ? initialText : undefined);
           return;
         case 'clear':
           event.preventDefault();
@@ -155,7 +158,7 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      setDraft(event.target.value);
+      setTableCellCursorDraft(event.target.value);
       // Ο πρώτος χαρακτήρας πάνω σε επιλεγμένο κελί ανοίγει τη συνεδρία γραφής. Γίνεται
       // εδώ και όχι στο `keydown` επίτηδες: το `change` πυροδοτεί **μόνο** όταν όντως
       // μπήκε κείμενο, άρα καλύπτει IME/dead keys χωρίς λίστα «εκτυπώσιμων» πλήκτρων.
@@ -196,9 +199,12 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         value={draft}
         placeholder={t('table.cellEditor.editorPlaceholder')}
         aria-label={t('table.cellEditor.cellAriaLabel')}
+        // Το σημάδι που διαβάζει το {@link handleBlur} για να ξεχωρίσει «μετακινήθηκα σε
+        // άλλο κελί» από «έφυγα από τον πίνακα». Δεν είναι στυλ — είναι ταυτότητα ρόλου.
+        data-table-cell-cursor="true"
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onBlur={commit}
+        onBlur={handleBlur}
         className={cn(
           'box-border rounded px-2 outline-none',
           writing

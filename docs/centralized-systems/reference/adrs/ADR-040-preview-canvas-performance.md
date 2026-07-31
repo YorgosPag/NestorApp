@@ -113,6 +113,21 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-08-01 — ADR-739 Φ.Δ β2: δρομέας κελιού πίνακα (άγγιξε CanvasSection + τον ζωγράφο)
+
+- **`CanvasSection.tsx`**: **καμία** νέα συνδρομή. Το prop του inline επεξεργαστή κελιού
+  απλοποιήθηκε σε ένα αντικείμενο (`tableCellEditor.overlay`) — ο orchestrator **έγινε
+  μικρότερος**, δεν μεγάλωσε (N.7.1: 491/500 γραμμές, αμετάβλητο). Η συνδρομή στον δρομέα
+  (`useSyncExternalStore`) ζει σε **hook** (`useTableCellDoubleClickEditor`), όχι στον
+  orchestrator, και είναι **χαμηλής συχνότητας** (ένα πάτημα πλήκτρου) — ο κανόνας 1 αφορά
+  υψίσυχνα stores (pan / zoom / hover), όχι το πληκτρολόγιο.
+- **Ο κανόνας #3 τηρήθηκε ακέραιος**: το ορθογώνιο του τρέχοντος κελιού ζωγραφίζεται **μόνο** σε
+  φάση επιλογής (`options.selected`), δηλαδή **ΕΚΤΟΣ** του bitmap cache — το normal-state pass που
+  μπαίνει στο raster έχει πάντα κενό `selectedEntityIds`. **Καμία** νέα είσοδος στο κλειδί του cache.
+- Το repaint ζητείται με `markSystemsDirty(['dxf-canvas'])` **ανά πάτημα πλήκτρου** (ίδιο μοτίβο με
+  `webgl-line-layer-store` και `grip-hotgrip-actions`) — μηδενική σχέση με τον βρόχο 60fps.
+- Πλήρες σκεπτικό: **ADR-739 §20**.
+
 ### 2026-07-31 — ADR-741: η περιοχή σχεδίασης έγινε SSoT (άγγιξε καμβάδες z10/z15)
 
 - **`useCanvasGhostPreview`** (ο κοινός ghost harness, z15): `save → clipToDrawingArea → draw →

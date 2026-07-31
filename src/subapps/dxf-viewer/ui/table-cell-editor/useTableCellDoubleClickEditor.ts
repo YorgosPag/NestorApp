@@ -1,57 +1,59 @@
 'use client';
 
 /**
- * ADR-739 Φάση Δ βήμα 2 — Double-click → inline table-cell editor (**2D**).
+ * ADR-739 Φάση Δ βήμα 2 — ο **οδηγός του δρομέα κελιού** στον 2D καμβά.
  *
- * Καθρέφτης του `useTextDoubleClickEditor` (ADR-344 Φ6.E): κρατά ΤΟΠΙΚΟ React state
- * (`editingState`) — καμία `useSyncExternalStore`, ασφαλές μέσα στον orchestrator
- * (ADR-040 rule 1). ΠΟΙΟ κελί χτυπήθηκε + ΠΩΣ γίνεται commit ζουν στο καθαρό
- * `bim/table/table-cell-edit-session.ts` (ADR-739 Φ.Δ) — αυτό το hook είναι ο 2D
- * «ανοιχτήρας»: βρίσκει το σημείο κόσμου του διπλού κλικ, ρωτά το SSoT ποιο κελί
- * χτυπήθηκε, και στήνει την αγκύρωση.
+ * Ήταν «ο ανοιχτήρας του διπλού κλικ»· τώρα είναι ο ένας τόπος που ξέρει **και** το
+ * μοντέλο **και** το DOM, δηλαδή ο μόνος που μπορεί να απαντήσει στις τρεις ερωτήσεις του
+ * επεξεργαστή: «τι γράφω;» (commit), «πού πάω;» (move), «τι κείμενο έχει το κελί;».
  *
- * Selection-driven, ίδιος κανόνας ενεργοποίησης με τον text editor: ανοίγει ΜΟΝΟ όταν
- * υπάρχει ΑΚΡΙΒΩΣ μία επιλεγμένη οντότητα και είναι πίνακας (`isTableEntity`). Η ΘΕΣΗ
- * (ποιο κελί) χρειάζεται το σημείο κόσμου του ΚΛΙΚ — γι' αυτό, σε αντίθεση με το κείμενο
- * (που αγκυρώνεται στην οντότητα ολόκληρη), εδώ γίνεται η ίδια αντίστροφη προβολή
- * οθόνης→κόσμου με το `useOpeningInfoTagDoubleClick` (ADR-612).
+ * Ό,τι **δεν** χρειάζεται και τα δύο, ζει αλλού και δεν το ξαναγράφουμε εδώ:
+ *   - ΠΟΙΟ είναι το επόμενο κελί → `bim/table/table-cell-navigation.ts` (καθαρό)
+ *   - ΠΩΣ γίνεται commit + ΠΟΥ αγκυρώνεται → `bim/table/table-cell-edit-session.ts`
+ *   - ΠΟΙΑ είναι η κατάσταση του δρομέα → `state/table-cell-cursor-store.ts`
+ *   - ΤΙ σημαίνει κάθε πλήκτρο → `ui/table-cell-editor/table-cell-key-intent.ts`
  *
- * Commit: `execute(new UpdateEntityCommand(...))` μέσα από το `buildTableCellEditCommand`
- * — ΙΔΙΟ command bus με το `OpeningInfoTagEditorOverlay` (`useCommandHistory().execute`
- * πάνω από τον `LevelSceneManagerAdapter` singleton, ADR-527). Ο πίνακας ξαναδιαβάζεται
- * ΤΗ ΣΤΙΓΜΗ του commit (όχι η στιγμιότυπη αναφορά του ανοίγματος), ώστε δύο διαδοχικές
- * επεξεργασίες να μην γράφουν πάνω σε μπαγιάτικο μοντέλο.
+ * Κρατά **μηδέν** δική του κατάσταση: ο δρομέας ζει σε store επειδή τον διαβάζει και ο
+ * ζωγράφος του καμβά, που δεν βλέπει React state. Η συνδρομή είναι χαμηλής συχνότητας
+ * (ένα πάτημα πλήκτρου), δηλαδή ακριβώς το ίδιο κόστος με το `useState` που αντικατέστησε
+ * — ο κανόνας 1 του ADR-040 αφορά υψίσυχνα stores (pan/zoom/hover), όχι το πληκτρολόγιο.
  *
- * @see bim/table/table-cell-edit-session.ts — ΠΟΙΟ κελί + ΠΩΣ γίνεται commit
- * @see ui/table-cell-editor/TableCellEditorOverlay.tsx — η όψη (dumb, prop-driven)
+ * @see bim/table/table-cell-navigation.ts — ΠΟΙΟ κελί είναι το επόμενο
+ * @see ui/table-cell-editor/TableCellEditorOverlay.tsx — η όψη + η ιδιοκτησία πλήκτρων
  * @see ui/text-toolbar/hooks/useTextDoubleClickEditor.ts — ο αδελφός που καθρεφτίζει
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import type React from 'react';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useCommandHistory } from '../../core/commands';
 import { isTableEntity } from '../../types/table-entity';
 import type { TableEntity } from '../../types/table-entity';
-import type { TableColumnId, TableRowId } from '../../types/table';
-import { buildTableCellEditCommand, resolveTableCellEditTarget } from '../../bim/table/table-cell-edit-session';
+import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import {
+  buildTableCellEditCommand,
+  resolveTableCellEditTarget,
+  resolveTableCellEditTargetById,
+} from '../../bim/table/table-cell-edit-session';
+import {
+  moveTableCursor,
+  tableCursorAt,
+  type TableCursorMove,
+} from '../../bim/table/table-cell-navigation';
+import {
+  closeTableCellCursor,
+  setTableCellCursor,
+  useTableCellCursor,
+} from '../../state/table-cell-cursor-store';
 import { createTextEditorAnchor2D } from '../text-toolbar/text-editor-anchor-2d';
-import type { TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
+import type { TableCellEditorOverlayProps } from './TableCellEditorOverlay';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
 /** Σταθερό μέγεθος κουτιού (px) — ένα απλό αλφαριθμητικό input, όχι TipTap αυτόματης μεγέθυνσης. */
 const CELL_EDITOR_WIDTH_PX = 140;
 const CELL_EDITOR_HEIGHT_PX = 24;
-
-interface EditingState {
-  readonly entityId: string;
-  readonly rowId: TableRowId;
-  readonly colId: TableColumnId;
-  readonly initialText: string;
-  readonly anchor: TextEditorAnchor;
-}
 
 interface UseTableCellDoubleClickEditorParams {
   readonly transformRef: React.RefObject<ViewTransform>;
@@ -60,11 +62,19 @@ interface UseTableCellDoubleClickEditorParams {
   readonly levelManager: LevelManagerLike;
 }
 
+/**
+ * Ό,τι χρειάζεται ο καλών για να στήσει την όψη. Το `key` ταξιδεύει **δίπλα** στα props
+ * και όχι μέσα τους: το React το καταναλώνει, δεν φτάνει ποτέ στο component — και εδώ
+ * κουβαλά τον αριθμό συνεδρίας, που είναι ακριβώς ο λόγος που ξαναστήνεται το `<input>`.
+ */
+export interface TableCellOverlayMount {
+  readonly key: string;
+  readonly props: TableCellEditorOverlayProps;
+}
+
 interface TableCellDoubleClickEditorApi {
-  readonly editingState: EditingState | null;
+  readonly overlay: TableCellOverlayMount | null;
   readonly handleDoubleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
-  readonly onCommit: (nextText: string) => void;
-  readonly onCancel: () => void;
 }
 
 /** Η επιλεγμένη οντότητα, αν είναι ΑΚΡΙΒΩΣ μία και είναι πίνακας — αλλιώς `null`. */
@@ -74,9 +84,14 @@ function resolveSelectedTable(
 ): TableEntity | null {
   const ids = getSelectedEntityIds();
   if (ids.length !== 1) return null;
+  return resolveTableById(levelManager, ids[0]);
+}
+
+/** Η οντότητα πίνακα με αυτό το id, διαβασμένη **τη στιγμή της κλήσης** (ποτέ στιγμιότυπο). */
+function resolveTableById(levelManager: LevelManagerLike, entityId: string): TableEntity | null {
   const levelId = levelManager.currentLevelId;
   const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-  const entity = scene?.entities.find((e) => e.id === ids[0]);
+  const entity = scene?.entities.find((e) => e.id === entityId);
   return entity && isTableEntity(entity) ? entity : null;
 }
 
@@ -100,57 +115,116 @@ export function useTableCellDoubleClickEditor(
 ): TableCellDoubleClickEditorApi {
   const { transformRef, containerRef, getSelectedEntityIds, levelManager } = params;
   const { execute } = useCommandHistory();
-  const [editingState, setEditingState] = useState<EditingState | null>(null);
+  const cursor = useTableCellCursor();
 
   const handleDoubleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       const entity = resolveSelectedTable(levelManager, getSelectedEntityIds);
-      if (!entity) return;
       const container = containerRef.current;
       const transform = transformRef.current;
-      if (!container || !transform) return;
+      if (!entity || !container || !transform) return;
 
-      const worldPoint = eventWorldPoint(event, container, transform);
-      const target = resolveTableCellEditTarget(entity, worldPoint);
+      const target = resolveTableCellEditTarget(entity, eventWorldPoint(event, container, transform));
       if (!target) return;
-
-      const anchor = createTextEditorAnchor2D({
-        worldPoint: target.anchorWorldPoint,
-        getContainer: () => containerRef.current,
-        size: { width: CELL_EDITOR_WIDTH_PX, height: CELL_EDITOR_HEIGHT_PX },
-      });
-      setEditingState({
-        entityId: entity.id,
-        rowId: target.rowId,
-        colId: target.colId,
-        initialText: target.text,
-        anchor,
-      });
+      // Διπλό κλικ = «θέλω να διορθώσω ΑΥΤΟ το κελί» ⇒ κατάσταση `edit` (κέρσορας στο
+      // τέλος), όχι `enter`. Και **νέα** στήλη αγκύρωσης: το κλικ ξεκινά νέα σειρά
+      // καταχώρισης, άρα το επόμενο Enter επιστρέφει ΕΔΩ.
+      // Το πρόχειρο ξεκινά από το **δεσμευμένο** κείμενο του κελιού: μπήκες με διπλό κλικ
+      // για να διορθώσεις, όχι για να ξαναγράψεις από την αρχή (η `enter` κάνει εκείνο).
+      setTableCellCursor(entity.id, tableCursorAt(target.rowId, target.colId), 'edit', target.text);
     },
     [levelManager, getSelectedEntityIds, containerRef, transformRef],
   );
 
-  const onCancel = useCallback(() => setEditingState(null), []);
-
-  const onCommit = useCallback(
+  /**
+   * Γράφει κείμενο στο τρέχον κελί ως **ένα** αναιρέσιμο `UpdateEntityCommand`.
+   *
+   * Ο πίνακας ξαναδιαβάζεται ΤΗ ΣΤΙΓΜΗ του commit (όχι η αναφορά του ανοίγματος), ώστε
+   * δύο διαδοχικές επεξεργασίες — που πλέον είναι ο **κανόνας**, αφού το Tab γράφει
+   * κελί-κελί — να μη γράφουν πάνω σε μπαγιάτικο μοντέλο.
+   */
+  const commitText = useCallback(
     (nextText: string) => {
-      const state = editingState;
-      setEditingState(null);
-      if (!state) return;
+      if (!cursor) return;
       const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
-      if (!currentLevelId || !setLevelScene) return;
-      // Ξαναδιάβασμα ΤΗ ΣΤΙΓΜΗ του commit — όχι η στιγμιότυπη αναφορά του ανοίγματος.
-      const entity = getLevelScene(currentLevelId)?.entities.find((e) => e.id === state.entityId);
-      if (!entity || !isTableEntity(entity)) return;
+      const entity = resolveTableById(levelManager, cursor.entityId);
+      if (!entity || !currentLevelId || !setLevelScene) return;
       const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
-      const command = buildTableCellEditCommand(entity, state.rowId, state.colId, nextText, sceneManager);
+      const command = buildTableCellEditCommand(
+        entity,
+        cursor.position.rowId,
+        cursor.position.colId,
+        nextText,
+        sceneManager,
+      );
       if (command) execute(command);
     },
-    [editingState, levelManager, execute],
+    [cursor, levelManager, execute],
   );
 
-  return useMemo(
-    () => ({ editingState, handleDoubleClick, onCommit, onCancel }),
-    [editingState, handleDoubleClick, onCommit, onCancel],
+  /**
+   * Μετακίνηση δρομέα. Ο νέος δρομέας μπαίνει **πάντα** σε κατάσταση `nav`: μετακινήθηκες,
+   * δεν άρχισες να γράφεις — η γραφή ξεκινά μόλις πατήσεις χαρακτήρα (Excel).
+   *
+   * `null` από το `moveTableCursor` σημαίνει «άκρη πλέγματος»: ο δρομέας **μένει**. Καμία
+   * αναδίπλωση, καμία αυτόματη νέα γραμμή — δες το σκεπτικό στο `table-cell-navigation`.
+   */
+  const move = useCallback(
+    (m: TableCursorMove) => {
+      if (!cursor) return;
+      const entity = resolveTableById(levelManager, cursor.entityId);
+      // Ο πίνακας εξαφανίστηκε κάτω από τον δρομέα (undo / διαγραφή): κλείσε, μη μαντεύεις.
+      if (!entity) { closeTableCellCursor(); return; }
+      // Το entity κρατά απλό JSON (Φ.Δ Λύση Α)· το `resolveTableModel` είναι ο ΙΔΙΟΣ
+      // απομνημονευμένος (WeakMap) δρόμος που περνά και η γεωμετρία — ίδιο persisted ⇒
+      // ίδιο μοντέλο, άρα καμία δεύτερη αποσειριοποίηση ανά πάτημα πλήκτρου.
+      const next = moveTableCursor(resolveTableModel(entity.model), cursor.position, m);
+      if (next) setTableCellCursor(cursor.entityId, next, 'nav');
+    },
+    [cursor, levelManager],
   );
+
+  const clear = useCallback(() => commitText(''), [commitText]);
+
+  // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο σε κάθε απόδοση: κείμενο και
+  // αγκύρωση είναι **παράγωγα**, ποτέ αντίγραφα (γι' αυτό το store δεν κρατά κείμενο).
+  const target = useMemo(() => {
+    if (!cursor) return null;
+    const entity = resolveTableById(levelManager, cursor.entityId);
+    return entity ? resolveTableCellEditTargetById(entity, cursor.position.rowId, cursor.position.colId) : null;
+  }, [cursor, levelManager]);
+
+  // Σταθερή ταυτότητα ανά κελί: το `TextEditorAnchorLayer` ξαναδένει τη συνδρομή του σε
+  // κάθε νέο `anchor`, οπότε ένα φρέσκο αντικείμενο ανά απόδοση θα ξέδενε/ξανάδενε τον
+  // scheduler σε κάθε πάτημα πλήκτρου.
+  const anchor = useMemo(() => {
+    if (!target) return null;
+    return createTextEditorAnchor2D({
+      worldPoint: target.anchorWorldPoint,
+      getContainer: () => containerRef.current,
+      size: { width: CELL_EDITOR_WIDTH_PX, height: CELL_EDITOR_HEIGHT_PX },
+    });
+  }, [target, containerRef]);
+
+  const overlay = useMemo<TableCellOverlayMount | null>(() => {
+    if (!cursor || !target || !anchor) return null;
+    const { entityId, position, mode, sessionId } = cursor;
+    return {
+      key: `${entityId}:${position.rowId}:${position.colId}:${sessionId}`,
+      props: {
+        entityId,
+        rowId: position.rowId,
+        colId: position.colId,
+        mode,
+        draft: cursor.draft,
+        initialText: target.text,
+        anchor,
+        onCommit: commitText,
+        onMove: move,
+        onClear: clear,
+      },
+    };
+  }, [cursor, target, anchor, commitText, move, clear]);
+
+  return useMemo(() => ({ overlay, handleDoubleClick }), [overlay, handleDoubleClick]);
 }
