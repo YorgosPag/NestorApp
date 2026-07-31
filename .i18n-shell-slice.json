@@ -1,0 +1,35 @@
+{
+  "$doc": "ADR-744 — key-level i18n shell slice. Defaults (shell roots, languages, key constants) live in scripts/lib/i18n-shell-slice/config.js; this file only overrides them. Regenerate with `npm run generate:i18n-shell-slice`, verify with `npm run check:i18n-shell-slice` (CHECK 3.34).",
+
+  "$guaranteedNamespaces": "THE NINE NAMESPACES THAT WERE 100% SYNCHRONOUS BEFORE ADR-744 (src/i18n/config.ts:41-44), kept whole. This is not caution — it is the correction of a measured regression. The first cut of this ADR key-sliced them down to what the SHELL asks for, which silently dropped every key a PAGE asks for: `/dxf/viewer` painted the raw key `dxfViewer.checkingPermissions` (src/app/dxf/viewer/page.tsx:43) because that key lives in common.json, which had gone from 34.201 bytes to 5.076. A page is a route boundary and therefore outside the shell closure by design — but on a COLD LOAD the page renders in the SAME FRAME as the layout, with no transition to hide behind. Until per-route slices exist (ADR-744 §8, Φ4), whole is the only answer that is provably no worse than before. Cost: 173.720 bytes (el) against 295.093 (el+en) — still −41%, and the 63-namespace shell drift stays fixed. Each entry below states what it costs and what would let it go.",
+
+  "guaranteedNamespaces": {
+    "common": "67.761 bytes — the big one. Reachable from essentially every page; `src/app/dxf/viewer/page.tsx:43` alone needs `dxfViewer.checkingPermissions`, `dxfViewer.loading`, `dxfViewer.accessDeniedAriaLabel`, none of which the shell closure sees. Releases when the route that uses each key carries its own slice.",
+    "admin": "70.689 bytes — the other big one, and the one this ADR originally set out to delete from the synchronous path. `src/app/admin/layout.tsx` IS a shell root, so the admin chrome is key-sliced correctly; the admin PAGES underneath it are not. Releases with per-route slices for /admin/*.",
+    "navigation": "21.321 bytes — sidebar/topbar labels plus per-page navigation copy.",
+    "common-actions": "874 bytes — generic button labels, used by every form on every page.",
+    "common-status": "649 bytes — status pills, rendered inside already-mounted tables.",
+    "common-navigation": "1.547 bytes.",
+    "common-validation": "4.499 bytes — form-validation strings render inside already-mounted forms, where ADR-279 §9 forbids a loading gate.",
+    "common-empty-states": "2.111 bytes — empty-state copy paints on first data render, with no boundary of its own.",
+    "landing": "4.269 bytes. Measured: its only consumer (src/components/landing/LandingPage.tsx) is reachable solely through a dynamic import in src/utils/lazyRoutes.tsx, so this one probably IS droppable — it is kept only because 'probably' is not the standard this ADR is held to, and 4 KB is not worth being wrong about. Cheapest entry to retire first."
+  },
+
+  "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
+
+  "dynamicKeyPolicy": {
+    "src/providers/NotificationProvider.tsx": {
+      "reason": "resolveI18nMessage() calls i18n.exists(...) before every i18n.t(...) and its final statement is `return message`. A key that has not loaded fails exists(), so the function returns the original string — it is structurally incapable of painting a raw key, and there is nothing to slice."
+    },
+    "src/components/sidebar/sidebar-menu-item.tsx": {
+      "reason": "translateTitle() is triple-guarded: it returns early while isLoading, only calls t() when the title contains a dot, and falls back to the untranslated title when t() returns the key unchanged. Measured: the titles come from MODAL_SELECT_MAIN_NAVIGATION_LABELS (src/subapps/dxf-viewer/config/modal-select.ts), whose values are literal Greek strings with no dot ('Κτίρια', 'Έργα'), so t() is never reached today. Those hardcoded labels are separate i18n debt — see ADR-744 §9, not this gate's scope."
+    },
+    "src/components/ui/ProductTour/product-tour-overlay.tsx": {
+      "prefixes": ["common-shared:productTour"],
+      "reason": "step.titleKey / step.descriptionKey come from TourConfig objects built by createButtonStep(), so the literals live in another file. The only tour registered in the tree is createErrorDialogTourConfig() (src/components/ui/ErrorBoundary/errorDialogTour.ts), whose steps use 'productTour.errorDialog.*'. That subtree is 1.298 bytes in common-shared, so the whole prefix travels rather than 14 individually-listed keys."
+    },
+    "src/core/badges/UnifiedBadgeSystem.tsx": {
+      "reason": "CommonBadge only calls t() when badgeConfig.label starts with 'common.' — and no badge configuration in the tree defines such a label (grep for `label: 'common.` across src/, 0 hits on 2026-07-31). The branch is unreachable defensive code. If a 'common.'-prefixed badge label is ever introduced, its keys must be added here."
+    }
+  }
+}
