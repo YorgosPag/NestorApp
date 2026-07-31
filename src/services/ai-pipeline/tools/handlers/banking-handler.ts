@@ -15,6 +15,7 @@ import { BankAccountsServerService } from '@/services/banking/bank-accounts-serv
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import type { AuditFieldChange } from '@/types/audit-trail';
+import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import { BANK_ACCOUNT_OPERATIONS } from '../agentic-tool-definitions';
 import type { BankAccountOperation } from '../agentic-tool-definitions';
 import {
@@ -24,6 +25,7 @@ import {
   auditWrite,
   buildAttribution,
   logger,
+  nullableString,
 } from '../executor-shared';
 
 /** ADR-195: local wrapper for CONTACT entity audit (banking subcollection mutations). */
@@ -50,6 +52,35 @@ async function recordBankingAudit(
 
 const VALID_ACCOUNT_TYPES: ReadonlySet<string> = new Set(['checking', 'savings', 'business', 'other']);
 const VALID_CURRENCIES: ReadonlySet<string> = new Set(['EUR', 'USD', 'GBP', 'CHF', 'BGN', 'RON', 'RSD', 'MKD', 'ALL']);
+
+// ============================================================================
+// ARGUMENT PARSING
+// ============================================================================
+
+/**
+ * Το `accountId` όπως το έδωσε το μοντέλο — ή το έτοιμο σφάλμα.
+ *
+ * Το μήνυμα ονομάζει τη **λειτουργία** ώστε το μοντέλο να καταλάβει ποια κλήση
+ * απέτυχε· γι' αυτό η λειτουργία είναι παράμετρος και όχι σταθερά.
+ *
+ * (N.0.2 Boy Scout: `handleDelete` και `handleSetPrimary` το έγραφαν
+ * πανομοιότυπα — το CHECK 3.28 το μετρούσε ως κλώνο **ήδη στο HEAD**.)
+ */
+function requireAccountId(
+  args: Record<string, unknown>,
+  operation: BankAccountOperation,
+):
+  | { readonly ok: true; readonly accountId: string }
+  | { readonly ok: false; readonly result: ToolResult } {
+  const accountId = String(args.accountId ?? '').trim();
+  if (!accountId) {
+    return {
+      ok: false,
+      result: { success: false, error: `accountId is required for ${operation}.` },
+    };
+  }
+  return { ok: true, accountId };
+}
 
 // ============================================================================
 // HANDLER
@@ -169,13 +200,21 @@ export class BankingHandler implements ToolHandler {
   ): Promise<ToolResult> {
     const db = getAdminFirestore();
     const contactSnap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-    if (!contactSnap.exists) {
-      return { success: false, error: 'Contact not found' };
-    }
-    const contactData = contactSnap.data();
-    if (contactData?.companyId && contactData.companyId !== ctx.companyId) {
-      return { success: false, error: 'Access denied' };
-    }
+
+    // Tenant ownership (ADR-742 Φάση Δ). Δύο διακριτά μηνύματα («Contact not
+    // found» vs «Access denied») επέτρεπαν στον καλούντα να συμπεράνει ύπαρξη
+    // από το *ποιο* γύρισε· πλέον γυρίζει το ίδιο.
+    //
+    // ⚠️ ΑΛΛΑΓΗ ΣΥΜΠΕΡΙΦΟΡΑΣ: το παλιό `contactData?.companyId &&` άφηνε να
+    // περάσει επαφή **χωρίς** `companyId`. Ο SSoT ρωτά `isPayloadOwnedByCompany`
+    // — έγγραφο χωρίς tenant δεν ανήκει σε κανέναν (ADR-742 §4).
+    const owned = resolveOwnedToolDoc({
+      snap: contactSnap,
+      ctx,
+      subject: { resource: 'Contact', resourceId: contactId, path: 'banking:list' },
+      notFound: () => ({ success: false, error: 'Contact not found' }),
+    });
+    if (!owned.ok) return owned.result;
 
     const snapshot = await db
       .collection(COLLECTIONS.CONTACTS).doc(contactId)
@@ -205,10 +244,9 @@ export class BankingHandler implements ToolHandler {
     contactId: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const accountId = String(args.accountId ?? '').trim();
-    if (!accountId) {
-      return { success: false, error: 'accountId is required for delete.' };
-    }
+    const parsed = requireAccountId(args, 'delete');
+    if (!parsed.ok) return parsed.result;
+    const { accountId } = parsed;
 
     const result = await BankAccountsServerService.deleteAccount(
       contactId, accountId, ctx.companyId
@@ -237,10 +275,9 @@ export class BankingHandler implements ToolHandler {
     contactId: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const accountId = String(args.accountId ?? '').trim();
-    if (!accountId) {
-      return { success: false, error: 'accountId is required for set_primary.' };
-    }
+    const parsed = requireAccountId(args, 'set_primary');
+    if (!parsed.ok) return parsed.result;
+    const { accountId } = parsed;
 
     const db = getAdminFirestore();
     const accountRef = db
@@ -288,10 +325,4 @@ function parseAccountType(value: unknown): AccountType {
 function parseCurrency(value: unknown): CurrencyCode {
   const str = String(value ?? '').trim().toUpperCase();
   return VALID_CURRENCIES.has(str) ? (str as CurrencyCode) : 'EUR';
-}
-
-function nullableString(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const str = String(value).trim();
-  return str.length > 0 ? str : null;
 }

@@ -21,6 +21,7 @@ import { isRecord } from '@/lib/type-guards';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 
 import type { AgenticContext, ToolResult, ToolHandler } from '../executor-shared';
+import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import {
   downloadAndValidateFile,
   isVisionSupportedMime,
@@ -100,16 +101,21 @@ export class DocumentReaderHandler implements ToolHandler {
     const db = getAdminFirestore();
     const fileDoc = await db.collection(COLLECTIONS.FILES).doc(fileRecordId).get();
 
-    if (!fileDoc.exists) {
-      return { success: false, error: `FileRecord "${fileRecordId}" not found.` };
-    }
+    // 2. Security: tenant ownership (ADR-742 Φάση Δ)
+    //
+    // Το ίδιο `notFound` εξυπηρετεί «δεν υπάρχει» και «ανήκει αλλού» — ο
+    // πράκτορας δεν μπορεί να τα ξεχωρίσει, άρα δεν μπορεί να χαρτογραφήσει
+    // ids άλλου πελάτη δοκιμάζοντας. Πριν, η άρνηση έλεγε αυτολεξεί
+    // «file belongs to a different company» (ADR-734 §7: μαντείο ύπαρξης).
+    const owned = resolveOwnedToolDoc({
+      snap: fileDoc,
+      ctx,
+      subject: { resource: 'FileRecord', resourceId: fileRecordId, path: 'read_document' },
+      notFound: () => ({ success: false, error: `FileRecord "${fileRecordId}" not found.` }),
+    });
+    if (!owned.ok) return owned.result;
 
-    const fileData = fileDoc.data() as Record<string, unknown>;
-
-    // 2. Security: company isolation
-    if (fileData.companyId !== ctx.companyId) {
-      return { success: false, error: 'Access denied: file belongs to a different company.' };
-    }
+    const fileData = owned.data;
 
     const downloadUrl = String(fileData.downloadUrl ?? '');
     const filename = String(fileData.filename ?? fileData.originalFilename ?? 'unknown');

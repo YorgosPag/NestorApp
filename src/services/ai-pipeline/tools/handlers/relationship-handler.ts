@@ -9,6 +9,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateRelationshipId } from '@/services/enterprise-id.service';
+import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 import {
   type AgenticContext,
   type ToolHandler,
@@ -16,6 +17,7 @@ import {
   auditWrite,
   buildAttribution,
   logger,
+  nullableString,
 } from '../executor-shared';
 
 // ============================================================================
@@ -122,18 +124,44 @@ export class RelationshipHandler implements ToolHandler {
       db.collection(COLLECTIONS.CONTACTS).doc(targetContactId).get(),
     ]);
 
-    if (!sourceSnap.exists) {
-      return { success: false, error: `Source contact ${sourceContactId} not found.` };
-    }
-    if (!targetSnap.exists) {
-      return { success: false, error: `Target contact ${targetContactId} not found.` };
-    }
+    // Tenant ownership (ADR-742 Φάση Δ) — **και για τις δύο άκρες**.
+    //
+    // 🔴 Το `targetSnap` δεν ελεγχόταν ΚΑΘΟΛΟΥ: ο πράκτορας μπορούσε να συνδέσει
+    // δική του επαφή με **ξένη**, και η επιτυχία της κλήσης επιβεβαίωνε ότι το
+    // ξένο id υπάρχει. Ο έλεγχος της μιας άκρης δεν προστατεύει τη σχέση —
+    // η σχέση αγγίζει δύο έγγραφα, άρα ρωτάει δύο φορές.
+    //
+    // ⚠️ ΑΛΛΑΓΗ ΣΥΜΠΕΡΙΦΟΡΑΣ: το παλιό `sourceData?.companyId &&` άφηνε να
+    // περάσει επαφή **χωρίς** `companyId` (ADR-742 §4).
+    const ownedSource = resolveOwnedToolDoc({
+      snap: sourceSnap,
+      ctx,
+      subject: {
+        resource: 'Contact',
+        resourceId: sourceContactId,
+        path: 'relationship:source',
+      },
+      notFound: () => ({
+        success: false,
+        error: `Source contact ${sourceContactId} not found.`,
+      }),
+    });
+    if (!ownedSource.ok) return ownedSource.result;
 
-    // Tenant isolation
-    const sourceData = sourceSnap.data();
-    if (sourceData?.companyId && sourceData.companyId !== ctx.companyId) {
-      return { success: false, error: 'Access denied — source contact.' };
-    }
+    const ownedTarget = resolveOwnedToolDoc({
+      snap: targetSnap,
+      ctx,
+      subject: {
+        resource: 'Contact',
+        resourceId: targetContactId,
+        path: 'relationship:target',
+      },
+      notFound: () => ({
+        success: false,
+        error: `Target contact ${targetContactId} not found.`,
+      }),
+    });
+    if (!ownedTarget.ok) return ownedTarget.result;
 
     // Check duplicate — both directions (A→B or B→A) since UI queries bidirectionally
     const col = db.collection(COLLECTIONS.CONTACT_RELATIONSHIPS);
@@ -305,10 +333,4 @@ export class RelationshipHandler implements ToolHandler {
     // Greek mapping
     return GREEK_RELATIONSHIP_MAP[raw] ?? null;
   }
-}
-
-function nullableString(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const str = String(value).trim();
-  return str.length > 0 ? str : null;
 }

@@ -17,10 +17,6 @@ import {
   type QueryFilter,
   isReadAllowed,
   isWriteAllowed,
-  enforceRoleAccess,
-  enforceCompanyScope,
-  coerceFilterValue,
-  mapOperator,
   flattenNestedFields,
   redactSensitiveFields,
   redactRoleBlockedFields,
@@ -33,6 +29,13 @@ import {
   DEFAULT_QUERY_LIMIT,
 } from '../executor-shared';
 import { filterContactByTab, resolveContactType } from '../contact-tab-filter';
+import { resolveOwnedToolDoc } from '../tool-tenant-guard';
+import {
+  buildFallbackAttempts,
+  buildFilteredQuery,
+  tenantEqualityFilter,
+  withScopedRead,
+} from './firestore-query-plan';
 import { nowISO } from '@/lib/date-local';
 
 export class FirestoreHandler implements ToolHandler {
@@ -69,58 +72,47 @@ export class FirestoreHandler implements ToolHandler {
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const collection = String(args.collection ?? '');
+    return withScopedRead(args, ctx, async ({ collection, filters }, db) => {
+      const orderBy = typeof args.orderBy === 'string' ? args.orderBy : null;
+      const orderDirection = args.orderDirection === 'desc' ? 'desc' : 'asc';
+      const limit = Math.min(
+        typeof args.limit === 'number' ? args.limit : DEFAULT_QUERY_LIMIT,
+        MAX_QUERY_RESULTS
+      );
 
-    if (!isReadAllowed(collection)) {
-      return { success: false, error: `Collection "${collection}" is not accessible` };
-    }
+      // Pre-strip non-queryable filters (nested/flattened fields)
+      const isNonQueryable = (field: string) => field.includes('.') || field.startsWith('_');
+      const nestedDropped = filters.filter(f => isNonQueryable(f.field));
+      const safeFilters = filters.filter(f => !isNonQueryable(f.field));
 
-    const rawFilters = Array.isArray(args.filters) ? args.filters as QueryFilter[] : [];
-
-    const accessCheck = enforceRoleAccess(collection, rawFilters, ctx);
-    if (!accessCheck.allowed) return accessCheck.result;
-
-    const filters = enforceCompanyScope(accessCheck.filters, ctx.companyId, collection);
-    const orderBy = typeof args.orderBy === 'string' ? args.orderBy : null;
-    const orderDirection = args.orderDirection === 'desc' ? 'desc' : 'asc';
-    const limit = Math.min(
-      typeof args.limit === 'number' ? args.limit : DEFAULT_QUERY_LIMIT,
-      MAX_QUERY_RESULTS
-    );
-
-    // Pre-strip non-queryable filters (nested/flattened fields)
-    const isNonQueryable = (field: string) => field.includes('.') || field.startsWith('_');
-    const nestedDropped = filters.filter(f => isNonQueryable(f.field));
-    const safeFilters = filters.filter(f => !isNonQueryable(f.field));
-
-    if (nestedDropped.length > 0) {
-      logger.info('Stripped nested filters', { requestId: ctx.requestId, collection, dropped: nestedDropped.map(f => f.field) });
-      recordQueryStrategy({ collection, failedFilters: nestedDropped.map(f => f.field), failedReason: 'STRIPPED_NESTED_FILTER', successfulFilters: safeFilters.map(f => f.field) }).catch(() => {});
-    }
-
-    const db = getAdminFirestore();
-    const snapshot = await this.executeWithFallback(db, collection, safeFilters, orderBy, orderDirection, limit, ctx);
-
-    const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
-
-    const results = snapshot.docs.map(doc => {
-      const raw = redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx);
-      let result: Record<string, unknown> = { id: doc.id, ...flattenNestedFields(raw) };
-
-      // Server-side tab filtering: strip fields not belonging to requested tab
-      if (tabFilter && collection === COLLECTIONS.CONTACTS) {
-        const contactType = resolveContactType(result);
-        result = filterContactByTab(result, contactType, tabFilter);
+      if (nestedDropped.length > 0) {
+        logger.info('Stripped nested filters', { requestId: ctx.requestId, collection, dropped: nestedDropped.map(f => f.field) });
+        recordQueryStrategy({ collection, failedFilters: nestedDropped.map(f => f.field), failedReason: 'STRIPPED_NESTED_FILTER', successfulFilters: safeFilters.map(f => f.field) }).catch(() => {});
       }
 
-      return result;
-    });
+      const snapshot = await this.executeWithFallback(db, collection, safeFilters, orderBy, orderDirection, limit, ctx);
 
-    return {
-      success: true,
-      data: truncateResult(results),
-      count: results.length,
-    };
+      const tabFilter = typeof args.tabFilter === 'string' ? args.tabFilter : null;
+
+      const results = snapshot.docs.map(doc => {
+        const raw = redactRoleBlockedFields(redactSensitiveFields(doc.data()), ctx);
+        let result: Record<string, unknown> = { id: doc.id, ...flattenNestedFields(raw) };
+
+        // Server-side tab filtering: strip fields not belonging to requested tab
+        if (tabFilter && collection === COLLECTIONS.CONTACTS) {
+          const contactType = resolveContactType(result);
+          result = filterContactByTab(result, contactType, tabFilter);
+        }
+
+        return result;
+      });
+
+      return {
+        success: true,
+        data: truncateResult(results),
+        count: results.length,
+      };
+    });
   }
 
   private async executeFirestoreGetDocument(
@@ -141,15 +133,26 @@ export class FirestoreHandler implements ToolHandler {
     const db = getAdminFirestore();
     const doc = await db.collection(collection).doc(documentId).get();
 
-    if (!doc.exists) {
-      return { success: true, data: null, count: 0 };
-    }
+    // Tenant ownership (ADR-742 Φάση Δ).
+    //
+    // 🔴 Εδώ η μεταμφίεση ήταν σπασμένη **στο σχήμα, όχι στο κείμενο**: το
+    // γνήσιο κενό απαντούσε `{success:true, data:null, count:0}` ενώ το ξένο
+    // `{success:false, error:'Document not found'}`. Ο καλών ξεχώριζε τα δύο
+    // **χωρίς καν να διαβάσει το μήνυμα** — αρκούσε το `success` flag. Πλέον
+    // παράγονται από το ΙΔΙΟ callback, άρα δεν μπορούν να αποκλίνουν (§7.1).
+    const owned = resolveOwnedToolDoc({
+      snap: doc,
+      ctx,
+      subject: {
+        resource: collection,
+        resourceId: documentId,
+        path: 'firestore_get_document',
+      },
+      notFound: () => ({ success: true, data: null, count: 0 }),
+    });
+    if (!owned.ok) return owned.result;
 
-    const data = doc.data() ?? {};
-
-    if ('companyId' in data && data.companyId !== ctx.companyId) {
-      return { success: false, error: 'Document not found' };
-    }
+    const data = owned.data;
 
     let result: Record<string, unknown> = {
       id: doc.id,
@@ -174,44 +177,31 @@ export class FirestoreHandler implements ToolHandler {
     args: Record<string, unknown>,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const collection = String(args.collection ?? '');
+    return withScopedRead(args, ctx, async ({ collection, filters }, db) => {
+      const safeFilters = filters.filter(f => !f.field.includes('.'));
 
-    if (!isReadAllowed(collection)) {
-      return { success: false, error: `Collection "${collection}" is not accessible` };
-    }
+      // Χωρίς `limit`: το `count()` μετρά ΟΛΑ όσα ταιριάζουν, δεν φέρνει έγγραφα.
+      const query = buildFilteredQuery(db, collection, safeFilters, { limit: null });
 
-    const rawFilters = Array.isArray(args.filters) ? args.filters as QueryFilter[] : [];
-
-    const countAccessCheck = enforceRoleAccess(collection, rawFilters, ctx);
-    if (!countAccessCheck.allowed) return countAccessCheck.result;
-
-    const filters = enforceCompanyScope(countAccessCheck.filters, ctx.companyId, collection);
-    const safeFilters = filters.filter(f => !f.field.includes('.'));
-
-    const db = getAdminFirestore();
-    let query: FirebaseFirestore.Query = db.collection(collection);
-
-    for (const filter of safeFilters) {
-      const op = mapOperator(filter.operator);
-      if (op) {
-        query = query.where(filter.field, op, coerceFilterValue(filter.value));
+      try {
+        const countResult = await query.count().get();
+        return { success: true, data: { count: countResult.data().count }, count: countResult.data().count };
+      } catch (err) {
+        const msg = getErrorMessage(err);
+        if (!msg.includes('FAILED_PRECONDITION')) throw err;
+        // Το ίδιο «τελευταίο καταφύγιο» με το query path: **ισότητα tenant, πάντα**
+        // (βλ. `tenantEqualityFilter` — ο operator του μοντέλου απορρίπτεται εδώ).
+        const companyFilter = safeFilters.find(f => f.field === 'companyId');
+        const fallback = buildFilteredQuery(
+          db,
+          collection,
+          companyFilter === undefined ? [] : [tenantEqualityFilter(companyFilter)],
+          { limit: null },
+        );
+        const fallbackResult = await fallback.count().get();
+        return { success: true, data: { count: fallbackResult.data().count }, count: fallbackResult.data().count };
       }
-    }
-
-    try {
-      const countResult = await query.count().get();
-      return { success: true, data: { count: countResult.data().count }, count: countResult.data().count };
-    } catch (err) {
-      const msg = getErrorMessage(err);
-      if (!msg.includes('FAILED_PRECONDITION')) throw err;
-      const companyFilter = safeFilters.find(f => f.field === 'companyId');
-      let fallback: FirebaseFirestore.Query = db.collection(collection);
-      if (companyFilter) {
-        fallback = fallback.where('companyId', '==', coerceFilterValue(companyFilter.value));
-      }
-      const fallbackResult = await fallback.count().get();
-      return { success: true, data: { count: fallbackResult.data().count }, count: fallbackResult.data().count };
-    }
+    });
   }
 
   private async executeFirestoreWrite(
@@ -326,58 +316,15 @@ export class FirestoreHandler implements ToolHandler {
   ): Promise<FirebaseFirestore.QuerySnapshot> {
     const nestedFilters = filters.filter(f => f.field.includes('.'));
     const flatFilters = filters.filter(f => !f.field.includes('.'));
-    const companyFilter = filters.find(f => f.field === 'companyId');
 
-    const attempts: Array<{ label: string; build: () => FirebaseFirestore.Query }> = [
-      {
-        label: 'full query',
-        build: () => {
-          let q: FirebaseFirestore.Query = db.collection(collection);
-          for (const f of filters) {
-            const op = mapOperator(f.operator);
-            if (op) q = q.where(f.field, op, coerceFilterValue(f.value));
-          }
-          if (orderBy) q = q.orderBy(orderBy, orderDirection);
-          return q.limit(limit);
-        },
-      },
-      {
-        label: 'without orderBy',
-        build: () => {
-          let q: FirebaseFirestore.Query = db.collection(collection);
-          for (const f of filters) {
-            const op = mapOperator(f.operator);
-            if (op) q = q.where(f.field, op, coerceFilterValue(f.value));
-          }
-          return q.limit(limit);
-        },
-      },
-      {
-        label: 'flat filters only (no nested)',
-        build: () => {
-          let q: FirebaseFirestore.Query = db.collection(collection);
-          for (const f of flatFilters) {
-            const op = mapOperator(f.operator);
-            if (op) q = q.where(f.field, op, coerceFilterValue(f.value));
-          }
-          return q.limit(limit);
-        },
-      },
-      {
-        label: 'companyId only',
-        build: () => {
-          let q: FirebaseFirestore.Query = db.collection(collection);
-          if (companyFilter) {
-            q = q.where('companyId', '==', coerceFilterValue(companyFilter.value));
-          }
-          return q.limit(limit);
-        },
-      },
-    ];
+    const attempts = buildFallbackAttempts({ filters, orderBy, orderDirection });
 
     for (const attempt of attempts) {
       try {
-        const snapshot = await attempt.build().get();
+        const snapshot = await buildFilteredQuery(db, collection, attempt.filters, {
+          orderBy: attempt.orderBy,
+          limit,
+        }).get();
         if (attempt.label !== 'full query') {
           logger.warn('Query fallback succeeded', { requestId: ctx.requestId, collection, fallbackLevel: attempt.label });
           const dropped = [...nestedFilters.map(f => f.field), ...(orderBy ? [orderBy] : [])];

@@ -22,19 +22,32 @@ function mockFirestoreForAdd(opts: {
   sourceExists?: boolean;
   targetExists?: boolean;
   duplicateExists?: boolean;
+  /** Tenant της ΠΗΓΗΣ — για τον έλεγχο ιδιοκτησίας (ADR-742 Φάση Δ). */
+  sourceCompanyId?: string | null;
+  /** Tenant του ΣΤΟΧΟΥ — ξεχωριστός, γιατί η σχέση αγγίζει δύο έγγραφα. */
+  targetCompanyId?: string | null;
 } = {}) {
-  const { sourceExists = true, targetExists = true, duplicateExists = false } = opts;
+  const {
+    sourceExists = true,
+    targetExists = true,
+    duplicateExists = false,
+    sourceCompanyId = 'test-company-001',
+    targetCompanyId = 'test-company-001',
+  } = opts;
 
   const mockSet = jest.fn().mockResolvedValue(undefined);
   const mockUpdate = jest.fn().mockResolvedValue(undefined);
-  const mockDoc = jest.fn().mockImplementation((id: string) => ({
-    get: jest.fn().mockResolvedValue({
-      exists: id.startsWith('cont_source') ? sourceExists : targetExists,
-      data: () => ({ companyId: 'test-company-001' }),
-    }),
-    set: mockSet,
-    update: mockUpdate,
-  }));
+  const mockDoc = jest.fn().mockImplementation((id: string) => {
+    const isSource = id.startsWith('cont_source');
+    return {
+      get: jest.fn().mockResolvedValue({
+        exists: isSource ? sourceExists : targetExists,
+        data: () => ({ companyId: isSource ? sourceCompanyId : targetCompanyId }),
+      }),
+      set: mockSet,
+      update: mockUpdate,
+    };
+  });
 
   const mockWhere = jest.fn().mockReturnThis();
   const mockLimit = jest.fn().mockReturnValue({
@@ -187,6 +200,85 @@ describe('RelationshipHandler', () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toMatchObject({ message: 'Relationship already exists' });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🔴 ΙΔΙΟΚΤΗΣΙΑ TENANT — ADR-742 Φάση Δ
+    //
+    // Η σχέση αγγίζει **δύο** έγγραφα, άρα ρωτάει δύο φορές. Πριν τη Φάση Δ
+    // ελεγχόταν **μόνο η πηγή**: ο πράκτορας μπορούσε να συνδέσει δική του
+    // επαφή με **ξένη**, και η επιτυχία της κλήσης επιβεβαίωνε ότι το ξένο id
+    // υπάρχει. Ο έλεγχος της μιας άκρης δεν προστατεύει τη σχέση.
+    //
+    // Η αφαίρεση του φύλακα του ΣΤΟΧΟΥ άφηνε 12/12 tests πράσινα — γι' αυτό
+    // υπάρχουν αυτά. Βλ. [[feedback_quality_evidence_hub]]: η ραφή που δεν
+    // δοκιμάζεται ποτέ.
+    // ─────────────────────────────────────────────────────────────────────────
+    describe('🔴 ιδιοκτησία tenant — και οι δύο άκρες', () => {
+      it('ξένη ΠΗΓΗ ⇒ δυσδιάκριτη από ανύπαρκτη', async () => {
+        mockFirestoreForAdd({ sourceCompanyId: 'other-company' });
+        const foreign = await handler.execute('manage_relationship', {
+          operation: 'add', sourceContactId: 'cont_source_001',
+          targetContactId: 'cont_target_002', relationshipType: 'family',
+          relationshipId: null, note: null,
+        }, adminCtx);
+
+        mockFirestoreForAdd({ sourceExists: false });
+        const absent = await handler.execute('manage_relationship', {
+          operation: 'add', sourceContactId: 'cont_source_001',
+          targetContactId: 'cont_target_002', relationshipType: 'family',
+          relationshipId: null, note: null,
+        }, adminCtx);
+
+        expect(foreign.success).toBe(false);
+        expect(foreign).toEqual(absent);
+      });
+
+      it('🔴 ξένος ΣΤΟΧΟΣ ⇒ δυσδιάκριτος από ανύπαρκτο (ήταν εντελώς ανέλεγκτος)', async () => {
+        const { mockSet } = mockFirestoreForAdd({ targetCompanyId: 'other-company' });
+        const foreign = await handler.execute('manage_relationship', {
+          operation: 'add', sourceContactId: 'cont_source_001',
+          targetContactId: 'cont_target_002', relationshipType: 'family',
+          relationshipId: null, note: null,
+        }, adminCtx);
+
+        mockFirestoreForAdd({ targetExists: false });
+        const absent = await handler.execute('manage_relationship', {
+          operation: 'add', sourceContactId: 'cont_source_001',
+          targetContactId: 'cont_target_002', relationshipType: 'family',
+          relationshipId: null, note: null,
+        }, adminCtx);
+
+        expect(foreign.success).toBe(false);
+        expect(foreign).toEqual(absent);
+        // Καμία εγγραφή: η σχέση δεν γράφτηκε ούτε μισή.
+        expect(mockSet).not.toHaveBeenCalled();
+      });
+
+      it('επαφή ΧΩΡΙΣ companyId δεν ανήκει σε κανέναν (ADR-742 §4)', async () => {
+        // Το παλιό `sourceData?.companyId &&` την άφηνε να περάσει.
+        mockFirestoreForAdd({ sourceCompanyId: null });
+        const result = await handler.execute('manage_relationship', {
+          operation: 'add', sourceContactId: 'cont_source_001',
+          targetContactId: 'cont_target_002', relationshipType: 'family',
+          relationshipId: null, note: null,
+        }, adminCtx);
+
+        expect(result.success).toBe(false);
+      });
+
+      it('καμία λέξη για ξένη εταιρεία δεν διαρρέει στο μοντέλο', async () => {
+        mockFirestoreForAdd({ targetCompanyId: 'other-company' });
+        const result = await handler.execute('manage_relationship', {
+          operation: 'add', sourceContactId: 'cont_source_001',
+          targetContactId: 'cont_target_002', relationshipType: 'family',
+          relationshipId: null, note: null,
+        }, adminCtx);
+
+        const wire = JSON.stringify(result).toLowerCase();
+        expect(wire).not.toContain('access denied');
+        expect(wire).not.toContain('other-company');
+      });
     });
   });
 

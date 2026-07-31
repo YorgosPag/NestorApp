@@ -121,19 +121,41 @@ describe('FirestoreHandler', () => {
       expect(result.count).toBe(0);
     });
 
-    test('should block cross-company document access', async () => {
+    // ─────────────────────────────────────────────────────────────────────────
+    // 🔴 ΑΛΛΑΞΕ ΣΤΗ ΦΑΣΗ Δ (ADR-742) — το παλιό test κάρφωνε το ΣΦΑΛΜΑ.
+    //
+    // Απαιτούσε `success:false` + «not found» στο κείμενο. Αλλά το γνήσιο «δεν
+    // υπάρχει» αυτού του handler είναι `{success:true, data:null, count:0}` —
+    // δες το test ακριβώς από πάνω. Οι δύο απαντήσεις διέφεραν στο **flag**,
+    // οπότε ο καλών ξεχώριζε «δεν υπάρχει» από «υπάρχει αλλού» **χωρίς καν να
+    // διαβάσει μήνυμα**: μαντείο ύπαρξης (ADR-734 §7).
+    //
+    // Τα δύο tests στέκονταν δίπλα-δίπλα, πράσινα, τεκμηριώνοντας τη διαφορά.
+    // Το συμβόλαιο δεν είναι «αρνήσου» — είναι **«γίνε δυσδιάκριτο»**.
+    // ─────────────────────────────────────────────────────────────────────────
+    test('cross-company document is INDISTINGUISHABLE from a missing one', async () => {
       const ctx = createAdminContext();
       mockDb.seedCollection('contacts', {
         'cont_other': { companyId: 'other-company', firstName: 'Hacker' },
       });
 
-      const result = await handler.execute('firestore_get_document', {
+      const foreign = await handler.execute('firestore_get_document', {
         collection: 'contacts',
         documentId: 'cont_other',
       }, ctx);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('not found');
+      const absent = await handler.execute('firestore_get_document', {
+        collection: 'contacts',
+        documentId: 'nonexistent',
+      }, ctx);
+
+      // ΟΧΙ «μοιάζει» — ίσο (ADR-742 §3.4/§7.1).
+      expect(foreign).toEqual(absent);
+
+      // Και τίποτα από το ξένο έγγραφο δεν διέρρευσε.
+      const wire = JSON.stringify(foreign);
+      expect(wire).not.toContain('Hacker');
+      expect(wire).not.toContain('other-company');
     });
   });
 

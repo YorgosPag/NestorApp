@@ -15,6 +15,7 @@ import {
   logger,
 } from '../executor-shared';
 import { purgeFileRecord, isFileHeld } from '@/services/file-record/file-purge-helpers';
+import { resolveOwnedToolDoc } from '../tool-tenant-guard';
 
 // ============================================================================
 // HANDLER
@@ -54,16 +55,23 @@ export class FileLifecycleHandler implements ToolHandler {
     const docRef = db.collection(COLLECTIONS.FILES).doc(fileRecordId);
     const docSnap = await docRef.get();
 
-    if (!docSnap.exists) {
-      return { success: false, error: `FileRecord ${fileRecordId} not found.` };
-    }
+    // Tenant ownership (ADR-742 Φάση Δ). Το ίδιο `notFound` εξυπηρετεί «δεν
+    // υπάρχει» και «ανήκει αλλού» — πριν, η άρνηση έλεγε αυτολεξεί «file
+    // belongs to another company», δηλαδή επιβεβαίωνε την ύπαρξη του id σε
+    // καλούντα που το είχε απλώς μαντέψει (ADR-734 §7).
+    const owned = resolveOwnedToolDoc({
+      snap: docSnap,
+      ctx,
+      subject: {
+        resource: 'FileRecord',
+        resourceId: fileRecordId,
+        path: 'discard_pending_file',
+      },
+      notFound: () => ({ success: false, error: `FileRecord ${fileRecordId} not found.` }),
+    });
+    if (!owned.ok) return owned.result;
 
-    const data = docSnap.data()!;
-
-    // Verify file belongs to same company
-    if (data.companyId !== ctx.companyId) {
-      return { success: false, error: 'Access denied: file belongs to another company.' };
-    }
+    const data = owned.data;
 
     // Only discard PENDING or FAILED files
     if (data.status !== FILE_STATUS.PENDING && data.status !== FILE_STATUS.FAILED) {
