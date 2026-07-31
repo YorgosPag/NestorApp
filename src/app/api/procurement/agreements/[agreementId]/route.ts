@@ -6,21 +6,21 @@
  * Auth: withAuth | Rate: standard (GET), sensitive (PATCH/DELETE)
  * @see ADR-330 §3 Phase 5 Framework Agreements
  * @see ADR-603 API Route-Handler Factory SSoT
+ * @see ADR-742 §3.4 — η άρνηση ιδιοκτησίας περνά από τον κοινό εκτελεστή
  */
 
 import 'server-only';
 
-import { defineRoute, ok, notFound, httpError } from '@/lib/api/define-route';
+import type { z } from 'zod';
+import { defineRoute, ok, notFound } from '@/lib/api/define-route';
 import {
   getFrameworkAgreement,
   updateFrameworkAgreement,
   softDeleteFrameworkAgreement,
 } from '@/subapps/procurement/services/framework-agreement-service';
 import { toFrameworkAgreementWire } from '@/subapps/procurement/services/framework-agreement-doc';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
-import { resolveProcurementErrorStatus } from '../../_shared/error-status';
+import { runProcurementMutation } from '../../_shared/procurement-mutation';
 import { UpdateFrameworkAgreementSchema } from '../../_shared/framework-agreement-schema';
 
 const logger = createModuleLogger('FRAMEWORK_AGREEMENT_API');
@@ -39,6 +39,7 @@ export const GET = defineRoute({
   fallbackError: 'Failed to get framework agreement',
   handler: async ({ auth, params }) => {
     const { agreementId } = params;
+    // Η υπηρεσία σιωπά (Δ): ξένο ≡ ανύπαρκτο, ένα `null` για τους δύο λόγους.
     const agreement = await getFrameworkAgreement(auth, agreementId);
     if (!agreement) {
       notFound('Framework agreement not found');
@@ -51,42 +52,43 @@ export const GET = defineRoute({
 // PATCH
 // ============================================================================
 
-export const PATCH = defineRoute({
+export const PATCH = defineRoute<z.ZodTypeAny, { agreementId: string }>({
   rateLimit: 'sensitive',
   fallbackError: 'Failed to update framework agreement',
-  handler: async ({ req, auth, params }) => {
-    const { agreementId } = params;
-    try {
-      const parsed = safeParseBody(UpdateFrameworkAgreementSchema, await req.json());
-      if (parsed.error) return parsed.error;
-      const agreement = await updateFrameworkAgreement(auth, agreementId, parsed.data);
-      return ok(toFrameworkAgreementWire(agreement));
-    } catch (error) {
-      const message = getErrorMessage(error, 'Failed to update framework agreement');
-      const status = resolveProcurementErrorStatus(error, { ...AGREEMENT_ERROR_NAMES, mode: 'mutation' });
-      logger.error('Framework agreement update error', { agreementId, error: message });
-      httpError(status, message);
-    }
-  },
+  handler: ({ req, auth, params }) =>
+    runProcurementMutation({
+      req,
+      auth,
+      schema: UpdateFrameworkAgreementSchema,
+      logger,
+      logMessage: 'Framework agreement update error',
+      logContext: { agreementId: params.agreementId },
+      fallbackError: 'Failed to update framework agreement',
+      ...AGREEMENT_ERROR_NAMES,
+      run: async (data) =>
+        ok(toFrameworkAgreementWire(await updateFrameworkAgreement(auth, params.agreementId, data))),
+    }),
 });
 
 // ============================================================================
 // DELETE — soft-delete
 // ============================================================================
 
-export const DELETE = defineRoute({
+export const DELETE = defineRoute<z.ZodTypeAny, { agreementId: string }>({
   rateLimit: 'sensitive',
   fallbackError: 'Failed to delete framework agreement',
-  handler: async ({ auth, params }) => {
-    const { agreementId } = params;
-    try {
-      await softDeleteFrameworkAgreement(auth, agreementId);
-      return ok();
-    } catch (error) {
-      const message = getErrorMessage(error, 'Failed to delete framework agreement');
-      const status = resolveProcurementErrorStatus(error, { ...AGREEMENT_ERROR_NAMES, mode: 'mutation' });
-      logger.error('Framework agreement delete error', { agreementId, error: message });
-      httpError(status, message);
-    }
-  },
+  handler: ({ req, auth, params }) =>
+    runProcurementMutation({
+      req,
+      auth,
+      logger,
+      logMessage: 'Framework agreement delete error',
+      logContext: { agreementId: params.agreementId },
+      fallbackError: 'Failed to delete framework agreement',
+      ...AGREEMENT_ERROR_NAMES,
+      run: async () => {
+        await softDeleteFrameworkAgreement(auth, params.agreementId);
+        return ok();
+      },
+    }),
 });

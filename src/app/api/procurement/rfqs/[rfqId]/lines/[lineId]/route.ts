@@ -28,6 +28,7 @@ export const PATCH = defineRoute<z.ZodTypeAny, { rfqId: string; lineId: string }
   handler: ({ req, auth, params }) =>
     runProcurementMutation({
       req,
+      auth,
       schema: UpdateRfqLineSchema,
       logger,
       logMessage: 'RFQ line update error',
@@ -46,6 +47,7 @@ export const DELETE = defineRoute<z.ZodTypeAny, { rfqId: string; lineId: string 
   handler: ({ auth, params, req }) =>
     runProcurementMutation({
       req,
+      auth,
       logger,
       logMessage: 'RFQ line delete error',
       logContext: { rfqId: params.rfqId, lineId: params.lineId },

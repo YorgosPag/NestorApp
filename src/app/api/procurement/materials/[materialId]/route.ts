@@ -6,20 +6,20 @@
  * Auth: withAuth | Rate: standard (GET), sensitive (PATCH/DELETE)
  * @see ADR-330 §3 Phase 4 Material Catalog
  * @see ADR-603 API Route-Handler Factory SSoT
+ * @see ADR-742 §3.4 — η άρνηση ιδιοκτησίας περνά από τον κοινό εκτελεστή
  */
 
 import 'server-only';
 
-import { defineRoute, ok, notFound, httpError } from '@/lib/api/define-route';
+import type { z } from 'zod';
+import { defineRoute, ok, notFound } from '@/lib/api/define-route';
 import {
   getMaterial,
   updateMaterial,
   softDeleteMaterial,
 } from '@/subapps/procurement/services/material-service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
-import { resolveProcurementErrorStatus } from '../../_shared/error-status';
+import { runProcurementMutation } from '../../_shared/procurement-mutation';
 import { UpdateMaterialSchema } from '../../_shared/material-schema';
 
 const logger = createModuleLogger('MATERIAL_API');
@@ -38,6 +38,7 @@ export const GET = defineRoute({
   fallbackError: 'Failed to get material',
   handler: async ({ auth, params }) => {
     const { materialId } = params;
+    // Η υπηρεσία σιωπά (Δ): ξένο ≡ ανύπαρκτο, ένα `null` για τους δύο λόγους.
     const material = await getMaterial(auth, materialId);
     if (!material) {
       notFound('Material not found');
@@ -50,42 +51,42 @@ export const GET = defineRoute({
 // PATCH
 // ============================================================================
 
-export const PATCH = defineRoute({
+export const PATCH = defineRoute<z.ZodTypeAny, { materialId: string }>({
   rateLimit: 'sensitive',
   fallbackError: 'Failed to update material',
-  handler: async ({ req, auth, params }) => {
-    const { materialId } = params;
-    try {
-      const parsed = safeParseBody(UpdateMaterialSchema, await req.json());
-      if (parsed.error) return parsed.error;
-      const material = await updateMaterial(auth, materialId, parsed.data);
-      return ok(material);
-    } catch (error) {
-      const message = getErrorMessage(error, 'Failed to update material');
-      const status = resolveProcurementErrorStatus(error, { ...MATERIAL_ERROR_NAMES, mode: 'mutation' });
-      logger.error('Material update error', { materialId, error: message });
-      httpError(status, message);
-    }
-  },
+  handler: ({ req, auth, params }) =>
+    runProcurementMutation({
+      req,
+      auth,
+      schema: UpdateMaterialSchema,
+      logger,
+      logMessage: 'Material update error',
+      logContext: { materialId: params.materialId },
+      fallbackError: 'Failed to update material',
+      ...MATERIAL_ERROR_NAMES,
+      run: async (data) => ok(await updateMaterial(auth, params.materialId, data)),
+    }),
 });
 
 // ============================================================================
 // DELETE — soft-delete
 // ============================================================================
 
-export const DELETE = defineRoute({
+export const DELETE = defineRoute<z.ZodTypeAny, { materialId: string }>({
   rateLimit: 'sensitive',
   fallbackError: 'Failed to delete material',
-  handler: async ({ auth, params }) => {
-    const { materialId } = params;
-    try {
-      await softDeleteMaterial(auth, materialId);
-      return ok();
-    } catch (error) {
-      const message = getErrorMessage(error, 'Failed to delete material');
-      const status = resolveProcurementErrorStatus(error, { ...MATERIAL_ERROR_NAMES, mode: 'mutation' });
-      logger.error('Material delete error', { materialId, error: message });
-      httpError(status, message);
-    }
-  },
+  handler: ({ req, auth, params }) =>
+    runProcurementMutation({
+      req,
+      auth,
+      logger,
+      logMessage: 'Material delete error',
+      logContext: { materialId: params.materialId },
+      fallbackError: 'Failed to delete material',
+      ...MATERIAL_ERROR_NAMES,
+      run: async () => {
+        await softDeleteMaterial(auth, params.materialId);
+        return ok();
+      },
+    }),
 });

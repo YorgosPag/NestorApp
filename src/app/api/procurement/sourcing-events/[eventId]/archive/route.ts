@@ -28,6 +28,7 @@ export const POST = defineRoute<z.ZodTypeAny, { eventId: string }>({
   handler: ({ auth, params, req }) =>
     runProcurementMutation({
       req,
+      auth,
       logger,
       logMessage: 'Sourcing event archive error',
       logContext: { eventId: params.eventId },

@@ -41,6 +41,7 @@ export const POST = defineRoute<z.ZodTypeAny, { eventId: string }>({
   handler: ({ req, auth, params }) =>
     runProcurementMutation({
       req,
+      auth,
       schema: RfqLinkSchema,
       logger,
       logMessage: 'Sourcing event link RFQ error',
@@ -62,6 +63,7 @@ export const DELETE = defineRoute<z.ZodTypeAny, { eventId: string }>({
   handler: ({ req, auth, params }) =>
     runProcurementMutation({
       req,
+      auth,
       schema: RfqLinkSchema,
       logger,
       logMessage: 'Sourcing event unlink RFQ error',

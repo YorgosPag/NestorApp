@@ -38,6 +38,7 @@ export const POST = defineRoute<z.ZodTypeAny, { rfqId: string }>({
   handler: ({ req, auth, params }) =>
     runProcurementMutation({
       req,
+      auth,
       schema: RfqLineItemSchema,
       logger,
       logMessage: 'RFQ line create error',

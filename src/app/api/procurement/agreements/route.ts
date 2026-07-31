@@ -11,7 +11,7 @@
 
 import 'server-only';
 
-import { defineRoute, ok, created, httpError } from '@/lib/api/define-route';
+import { defineRoute, ok, created } from '@/lib/api/define-route';
 import {
   listFrameworkAgreements,
   createFrameworkAgreement,
@@ -21,10 +21,8 @@ import {
   FRAMEWORK_AGREEMENT_STATUSES,
   type FrameworkAgreementStatus,
 } from '@/subapps/procurement/types/framework-agreement';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
-import { resolveProcurementErrorStatus } from '../_shared/error-status';
+import { runProcurementMutation } from '../_shared/procurement-mutation';
 import { CreateFrameworkAgreementSchema } from '../_shared/framework-agreement-schema';
 import { readCatalogListFilters } from '../_shared/catalog-list-filters';
 
@@ -59,21 +57,17 @@ export const GET = defineRoute({
 export const POST = defineRoute({
   rateLimit: 'sensitive',
   fallbackError: 'Failed to create framework agreement',
-  handler: async ({ req, auth }) => {
-    try {
-      const parsed = safeParseBody(CreateFrameworkAgreementSchema, await req.json());
-      if (parsed.error) return parsed.error;
-      const agreement = await createFrameworkAgreement(auth, parsed.data);
-      return created(toFrameworkAgreementWire(agreement));
-    } catch (error) {
-      const message = getErrorMessage(error, 'Failed to create framework agreement');
-      const status = resolveProcurementErrorStatus(error, {
-        conflictName: 'FrameworkAgreementNumberConflictError',
-        validationName: 'FrameworkAgreementValidationError',
-        mode: 'create',
-      });
-      logger.error('Framework agreement create error', { error: message });
-      httpError(status, message);
-    }
-  },
+  handler: ({ req, auth }) =>
+    runProcurementMutation({
+      req,
+      auth,
+      schema: CreateFrameworkAgreementSchema,
+      logger,
+      logMessage: 'Framework agreement create error',
+      fallbackError: 'Failed to create framework agreement',
+      conflictName: 'FrameworkAgreementNumberConflictError',
+      validationName: 'FrameworkAgreementValidationError',
+      mode: 'create',
+      run: async (data) => created(toFrameworkAgreementWire(await createFrameworkAgreement(auth, data))),
+    }),
 });

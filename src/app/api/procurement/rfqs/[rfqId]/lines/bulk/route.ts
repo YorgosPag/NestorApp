@@ -35,6 +35,7 @@ export const POST = defineRoute<z.ZodTypeAny, { rfqId: string }>({
   handler: ({ req, auth, params }) =>
     runProcurementMutation({
       req,
+      auth,
       schema: BulkCreateSchema,
       logger,
       logMessage: 'RFQ lines bulk error',

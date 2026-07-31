@@ -11,15 +11,13 @@
 
 import 'server-only';
 
-import { defineRoute, ok, created, httpError } from '@/lib/api/define-route';
+import { defineRoute, ok, created } from '@/lib/api/define-route';
 import {
   listMaterials,
   createMaterial,
 } from '@/subapps/procurement/services/material-service';
-import { getErrorMessage } from '@/lib/error-utils';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
-import { resolveProcurementErrorStatus } from '../_shared/error-status';
+import { runProcurementMutation } from '../_shared/procurement-mutation';
 import { CreateMaterialSchema } from '../_shared/material-schema';
 import { readCatalogListFilters } from '../_shared/catalog-list-filters';
 
@@ -50,21 +48,17 @@ export const GET = defineRoute({
 export const POST = defineRoute({
   rateLimit: 'sensitive',
   fallbackError: 'Failed to create material',
-  handler: async ({ req, auth }) => {
-    try {
-      const parsed = safeParseBody(CreateMaterialSchema, await req.json());
-      if (parsed.error) return parsed.error;
-      const material = await createMaterial(auth, parsed.data);
-      return created(material);
-    } catch (error) {
-      const message = getErrorMessage(error, 'Failed to create material');
-      const status = resolveProcurementErrorStatus(error, {
-        conflictName: 'MaterialCodeConflictError',
-        validationName: 'MaterialValidationError',
-        mode: 'create',
-      });
-      logger.error('Material create error', { error: message });
-      httpError(status, message);
-    }
-  },
+  handler: ({ req, auth }) =>
+    runProcurementMutation({
+      req,
+      auth,
+      schema: CreateMaterialSchema,
+      logger,
+      logMessage: 'Material create error',
+      fallbackError: 'Failed to create material',
+      conflictName: 'MaterialCodeConflictError',
+      validationName: 'MaterialValidationError',
+      mode: 'create',
+      run: async (data) => created(await createMaterial(auth, data)),
+    }),
 });

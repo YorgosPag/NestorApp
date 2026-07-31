@@ -54,6 +54,7 @@ export const PATCH = defineRoute<z.ZodTypeAny, { eventId: string }>({
   handler: ({ req, auth, params }) =>
     runProcurementMutation({
       req,
+      auth,
       schema: UpdateSourcingEventSchema,
       logger,
       logMessage: 'Sourcing event update error',
