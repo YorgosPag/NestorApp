@@ -145,8 +145,10 @@ function resizeColumnAtEdge(
   const columns = entity.model.columns.map((col) =>
     col.id === columnId ? { ...col, sizing: { kind: 'fixed' as const, widthMm } } : col,
   );
-  // Νέο αντικείμενο μοντέλου ⇒ η απομνημονευμένη διάταξη ακυρώνεται από μόνη της
-  // (η ταυτότητα ΕΙΝΑΙ η έκδοση — βλ. `resolveTableLayout`).
+  // Το `model` του entity είναι απλό JSON (Φ.Δ Λύση Α) — το `columns` όμως είναι πίνακας
+  // και στα δύο σχήματα, άρα το spread μένει ακριβώς όπως ήταν. Νέο αντικείμενο ⇒ οι δύο
+  // απομνημονεύσεις ακυρώνονται από μόνες τους σε σειρά (`resolveTableModel` →
+  // `resolveTableLayout`): η ταυτότητα ΕΙΝΑΙ η έκδοση.
   return { model: { ...entity.model, columns } };
 }
 

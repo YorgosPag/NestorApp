@@ -18,7 +18,7 @@ import {
   TABLE_ROTATION_KIND,
 } from '../table-entity-grips';
 import { computeTableEntityGeometry, tableFrameToWorld } from '../table-entity-geometry';
-import { createTableModel } from '../table-model-helpers';
+import { createTableModel, toPersistedTableModel } from '../table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
 import { MIN_TABLE_COLUMN_WIDTH_MM } from '../../../types/table-entity';
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
@@ -44,6 +44,13 @@ const ROWS: TableRow[] = [
   { id: 'r2', rowClass: 'data', heightMm: 8 },
 ];
 
+/**
+ * Το `model` της οντότητας ταξιδεύει ως **απλό JSON** (Φ.Δ Λύση Α) — εδώ περνά από την
+ * πραγματική μετάφραση, ώστε τα tests να μιλούν την ίδια γλώσσα με το save/undo.
+ */
+const persistedModel = (input: Parameters<typeof createTableModel>[0]) =>
+  toPersistedTableModel(createTableModel(input));
+
 /** 60mm × 16mm στο (100, 200)· ο πίνακας απλώνεται δεξιά και **κάτω** (y: 200 → 184). */
 function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
   return {
@@ -53,7 +60,7 @@ function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: createTableModel({ columns: COLUMNS, rows: ROWS }),
+    model: persistedModel({ columns: COLUMNS, rows: ROWS }),
     ...overrides,
   };
 }
@@ -106,7 +113,7 @@ describe('hitTestTable — ΟΛΟ το ορθογώνιο πιάνει, όχι �
   });
 
   it('άδειος πίνακας ⇒ ποτέ hit (καμία γραμμή, καμία στήλη)', () => {
-    const empty = makeEntity({ model: createTableModel({ columns: [], rows: [] }) });
+    const empty = makeEntity({ model: persistedModel({ columns: [], rows: [] }) });
     expect(hitTestTable(empty, { x: 100, y: 200 }, 5)).toBe(false);
   });
 });
@@ -130,7 +137,7 @@ describe('calculateTableBounds', () => {
 
   it('άδειος πίνακας ⇒ εκφυλισμένο κουτί ΣΤΗΝ ΑΓΚΥΡΑ, ποτέ null: μια οντότητα χωρίς', () => {
     // …γραμμές εξακολουθεί να υπάρχει και πρέπει να μπορεί να επιλεγεί και να σβηστεί.
-    const empty = makeEntity({ model: createTableModel({ columns: [], rows: [] }) });
+    const empty = makeEntity({ model: persistedModel({ columns: [], rows: [] }) });
     expect(calculateTableBounds(empty, 0)).toEqual({
       minX: 100, minY: 200, maxX: 100, maxY: 200,
     });
@@ -160,7 +167,7 @@ describe('getTableGrips', () => {
 
   it('ΤΟ ΚΡΙΣΙΜΟ: το πλήθος λαβών ΔΕΝ μεγαλώνει με τις γραμμές — μόνο με τις στήλες', () => {
     const manyRows = makeEntity({
-      model: createTableModel({
+      model: persistedModel({
         columns: COLUMNS,
         rows: Array.from({ length: 500 }, (_, i) => ({
           id: `r${i}`, rowClass: 'data' as const, heightMm: 8,
@@ -173,7 +180,7 @@ describe('getTableGrips', () => {
   });
 
   it('άδειος πίνακας ⇒ ΜΟΝΟ η λαβή μετακίνησης (τίποτα να περιστραφεί ή να διασταλεί)', () => {
-    const empty = makeEntity({ model: createTableModel({ columns: [], rows: [] }) });
+    const empty = makeEntity({ model: persistedModel({ columns: [], rows: [] }) });
     expect(getTableGrips(empty)).toHaveLength(1);
   });
 });

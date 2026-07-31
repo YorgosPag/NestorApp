@@ -22,7 +22,7 @@ import {
   tableMmToWorld,
   tableWorldToFrame,
 } from '../table-entity-geometry';
-import { createTableModel } from '../table-model-helpers';
+import { createTableModel, toPersistedTableModel } from '../table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS, BUILTIN_TABLE_STYLES } from '../table-style-presets';
 import type { TableStyle } from '../table-style';
 import type { TableColumn, TableRow } from '../../../types/table';
@@ -48,7 +48,12 @@ const ROWS: TableRow[] = [
   { id: 'r2', rowClass: 'data', heightMm: 8 },
 ];
 
-/** 60mm × 16mm πίνακας, κενά κελιά — οι διαστάσεις επαληθεύονται ρητά παρακάτω. */
+/**
+ * 60mm × 16mm πίνακας, κενά κελιά — οι διαστάσεις επαληθεύονται ρητά παρακάτω.
+ *
+ * ⚠️ Το `model` της οντότητας είναι πλέον **απλό JSON** (Φ.Δ Λύση Α)· ο `Map` παράγεται
+ * απομνημονευμένα από το `resolveTableModel` μέσα στη γεωμετρία.
+ */
 function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
   return {
     id: 'tbl_1',
@@ -57,7 +62,7 @@ function makeEntity(overrides: Partial<TableEntity> = {}): TableEntity {
     position: { x: 100, y: 200 },
     angleRad: 0,
     styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
-    model: createTableModel({ columns: COLUMNS, rows: ROWS }),
+    model: toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS })),
     ...overrides,
   };
 }

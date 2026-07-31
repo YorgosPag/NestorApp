@@ -45,6 +45,7 @@ import type {
 } from '../../types/table-entity';
 import type { TableLayout } from './table-layout-types';
 import { layoutTable } from './table-layout';
+import { resolveTableModel } from './table-model-helpers';
 import type { TableStyle } from './table-style';
 import { getTableStyleRegistry } from './table-style-registry';
 
@@ -184,7 +185,9 @@ export function computeTableEntityGeometry(
   sceneUnits: SceneUnits = 'mm',
 ): TableEntityGeometry {
   const style = resolveTableStyle(entity);
-  const layout = resolveTableLayout(entity.model, style);
+  // Το entity κρατά απλό JSON (Φ.Δ Λύση Α)· ο `Map` είναι παράγωγος και απομνημονευμένος,
+  // οπότε οι δύο WeakMaps αλυσιδώνονται: ίδιο persisted ⇒ ίδιο μοντέλο ⇒ ίδια διάταξη.
+  const layout = resolveTableLayout(resolveTableModel(entity.model), style);
   const mmToWorld = tableMmToWorld(drawingScale, sceneUnits);
 
   // TL → TR → BR → BL (δεξιόστροφα στο πλαίσιο του χαρτιού· η αναστροφή y τα κάνει

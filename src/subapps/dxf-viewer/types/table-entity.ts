@@ -38,7 +38,13 @@
 
 import type { Point2D } from '../rendering/types/Types';
 import type { BaseEntity } from './entities';
-import type { TableBinding, TableBreaking, TableColumnId, TableModel, TableRowId } from './table';
+import type {
+  PersistedTableModel,
+  TableBinding,
+  TableBreaking,
+  TableColumnId,
+  TableRowId,
+} from './table';
 import type { TableLayout } from '../bim/table/table-layout-types';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -125,8 +131,20 @@ export interface TableEntity extends BaseEntity {
   /** Δείκτης στο `TableStyle` SSoT (`tblstyle_*`, βλ. `bim/table/table-style-registry.ts`). */
   styleId: string;
 
-  /** Το περιεχόμενο. Το ΙΔΙΟ `TableModel` που τρέφει PDF / DXF / φύλλα λεπτομερειών. */
-  model: TableModel;
+  /**
+   * Το περιεχόμενο, σε **απλό JSON** ({@link PersistedTableModel}): τα κελιά είναι
+   * ακολουθία τριάδων, όχι `Map`.
+   *
+   * Αυτή είναι η μορφή που **ταξιδεύει** — αποθήκευση σκηνής, `deepClone` για undo,
+   * διαγραφή+αναίρεση, πρόχειρο, λανθάνουσα μνήμη ζωγραφικής: και τα πέντε περνούν από
+   * `JSON.stringify`, όπου ένας `Map` θα γινόταν `{}` **σιωπηλά** και ο πίνακας θα
+   * ξανάνοιγε άδειος.
+   *
+   * Ο `TableModel` με τον `Map` — αυτόν που δέχονται η μηχανή διάταξης και ο adapter του
+   * ADR-622 — **παράγεται κατ' απαίτηση** από το `resolveTableModel`, ακριβώς όπως ήδη
+   * ισχύει για το {@link TableEntity.geometry}: παράγωγη μνήμη, ποτέ πηγή.
+   */
+  model: PersistedTableModel;
 
   /** Απόν ⇒ `static` (ο χρήστης πληκτρολόγησε τα κελιά). Φ.ΣΤ/Η. */
   binding?: TableBinding;
