@@ -5208,6 +5208,10 @@
         "projection": "Projection",
         "sketch": "Sketch"
       },
+      "tableStyleNames": {
+        "standard": "Standard",
+        "detailSheet": "Detail Sheet"
+      },
       "thermalEnvelope": {
         "label": "Apply Thermal Envelope",
         "dialog": {

@@ -349,6 +349,7 @@ export class EnterpriseIdService extends BimEntityIdGenerators {
   generateDimensionId(): string { return this.generateId(P.DIMENSION).id; }
   generateDimStyleId(): string { return this.generateId(P.DIM_STYLE).id; }
   generateLineStyleId(): string { return this.generateId(P.LINE_STYLE).id; } // ADR-570
+  generateTableStyleId(): string { return this.generateId(P.TABLE_STYLE).id; } // ADR-739
   generateCenterMarkId(): string { return this.generateId(P.CENTER_MARK).id; }
   generateCenterLineId(): string { return this.generateId(P.CENTER_LINE).id; }
 

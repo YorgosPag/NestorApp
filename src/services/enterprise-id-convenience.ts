@@ -246,6 +246,7 @@ export const generateDxfTemplateCategoryId = () => enterpriseIdService.generateD
 export const generateDimensionId = () => enterpriseIdService.generateDimensionId();
 export const generateDimStyleId = () => enterpriseIdService.generateDimStyleId();
 export const generateLineStyleId = () => enterpriseIdService.generateLineStyleId(); // ADR-570
+export const generateTableStyleId = () => enterpriseIdService.generateTableStyleId(); // ADR-739
 export const generateCenterMarkId = () => enterpriseIdService.generateCenterMarkId();
 export const generateCenterLineId = () => enterpriseIdService.generateCenterLineId();
 

@@ -5208,6 +5208,10 @@
         "projection": "Όψης",
         "sketch": "Πρόχειρη"
       },
+      "tableStyleNames": {
+        "standard": "Τυπικός",
+        "detailSheet": "Φύλλου Λεπτομέρειας"
+      },
       "thermalEnvelope": {
         "label": "Εφαρμογή Θερμοπρόσοψης",
         "dialog": {

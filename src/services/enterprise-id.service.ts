@@ -90,7 +90,7 @@ export {
   generateLayerFilterGroupId, generateLayerFilterPropertyId,
   generateLayerStateId,
   generateLayerStateTemplateId, generateDxfTemplateCategoryId,
-  generateDimensionId, generateDimStyleId, generateLineStyleId, generateCenterMarkId, generateCenterLineId,
+  generateDimensionId, generateDimStyleId, generateLineStyleId, generateTableStyleId, generateCenterMarkId, generateCenterLineId,
   generatePerformanceDiagnosticId,
   generateWallId, generateOpeningId, generateSlabId, generateSlabOpeningId,
   generateColumnId, generateBeamId, generateFoundationId, generateMepFixtureId, generateMepSystemId, generateElectricalPanelId, generateMepSegmentId, generateMepManifoldId, generateRailingId, generateFurnitureId, generateImportedMeshId, generateGenericSolidId, generateBimPresetId, generateBimMaterialId, generateBlockLibraryItemId, generateBimSettingsId, generateBimFamilyTypeId,
