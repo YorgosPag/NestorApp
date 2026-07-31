@@ -45,6 +45,7 @@ import type {
   AnnotationSymbolGripKind,
   ScaleBarGripKind,
   OpeningInfoTagGripKind,
+  TableGripKind,
   ImageGripKind,
 } from './grip-kinds-primitives';
 import type { TextGripKind } from './grip-kinds-text';
@@ -328,6 +329,7 @@ export type {
   AnnotationSymbolGripKind,
   ScaleBarGripKind,
   OpeningInfoTagGripKind,
+  TableGripKind,
   ImageGripKind,
 } from './grip-kinds-primitives';
 
@@ -421,6 +423,8 @@ export interface GripKindByEntity {
   'annotation-symbol': AnnotationSymbolGripKind;
   'scale-bar': ScaleBarGripKind;
   'opening-info-tag': OpeningInfoTagGripKind;
+  // ADR-739 Φ.Γ — γενικός πίνακας: move + rotation + λαβές ορίου στηλών (ΟΧΙ γραμμών).
+  table: TableGripKind;
   image: ImageGripKind;
   text: TextGripKind;
   // ADR-662 §13 — η επιφάνεια είναι derived: η λαβή γράφει στο survey point, όχι στο
@@ -465,7 +469,7 @@ export const GRIP_KIND_ENTITIES = [
   'mep-fixture', 'electrical-panel', 'mep-manifold', 'mep-radiator', 'mep-boiler',
   'mep-water-heater', 'furniture', 'floorplan-symbol', 'mep-segment', 'xline',
   'ray', 'polyline', 'circle', 'arc', 'line', 'group', 'block', 'annotation-symbol', 'scale-bar',
-  'opening-info-tag', 'image', 'text',
+  'opening-info-tag', 'table', 'image', 'text',
   // ADR-683 Φ3 — εισαγόμενο πλέγμα: move + rotation ΜΟΝΟ (καμία λαβή σχήματος, §3).
   'imported-mesh',
   // ADR-684 Φ2/Φ3 — παραμετρικό στερεό: move + rotation πάντα· 4 corners ΜΟΝΟ για box.

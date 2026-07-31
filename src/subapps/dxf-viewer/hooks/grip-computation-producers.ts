@@ -77,6 +77,9 @@ import { getScaleBarGrips } from '../bim/scale-bar/scale-bar-grips';
 import type { ScaleBarEntity } from '../types/scale-bar';
 import { getOpeningInfoTagGrips } from '../bim/opening-info-tag/opening-info-tag-grips';
 import type { OpeningInfoTagEntity } from '../types/opening-info-tag';
+// ADR-739 Φ.Γ — γενικός πίνακας: οι θέσεις διαβάζονται από την ΠΑΡΑΓΩΓΗ διάταξη.
+import { getTableGrips } from '../bim/table/table-entity-grips';
+import type { TableEntity } from '../types/table-entity';
 // ADR-654 — raster image (entourage / furniture-plan sprite): move + rotation + 4 corner resize.
 import { getImageGrips } from '../bim/image/image-grips';
 import type { ImageEntity } from '../types/image';
@@ -395,6 +398,11 @@ export const GRIP_PRODUCERS: Partial<Record<DxfEntityUnion['type'], (e: DxfEntit
   // ADR-612 — opening-info-tag: MOVE (box centre) + ROTATION (top-edge perp handle) +
   // SIZE (top-right corner, locked 3:2). All positions read from the DERIVED geometry SSoT.
   'opening-info-tag': (e) => getOpeningInfoTagGrips(e as unknown as OpeningInfoTagEntity),
+
+  // ADR-739 Φ.Γ — πίνακας: MOVE (άγκυρα πάνω-αριστερά) + ROTATION (μέσο πάνω ακμής) +
+  // μία λαβή ανά ΕΣΩΤΕΡΙΚΟ όριο στηλών. Καμία λαβή γραμμής — το πλήθος λαβών δεν
+  // επιτρέπεται να είναι ανάλογο των δεδομένων (βλ. `TableGripKind`).
+  table: (e) => getTableGrips(e as unknown as TableEntity),
 
   // ADR-417 Φ1-part-2 #2 — parametric roof grips (per-vertex translate + edge-midpoint insertion).
   roof: (e) => getRoofGrips(e as unknown as RoofEntity),

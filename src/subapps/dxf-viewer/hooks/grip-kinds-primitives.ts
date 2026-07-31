@@ -244,3 +244,25 @@ export type BlockGripKind =
   | 'block-edge-e'
   | 'block-edge-s'
   | 'block-edge-w';
+
+/**
+ * ADR-739 Φ.Γ — Table grip kind (γενικός πίνακας N×M· αδελφός του `opening-info-tag`,
+ * ΟΧΙ BIM params entity). Άγκυρα στην **πάνω-αριστερή** γωνία (σύμβαση AutoCAD/`ACAD_TABLE`):
+ *   - `table-move`        → λαβή στην ΑΓΚΥΡΑ· 4-arrow MOVE glyph + whole-entity translate
+ *                           (`movesEntity` → μεταφορά του `position`).
+ *   - `table-rotation`    → λαβή στο μέσο της ΠΑΝΩ ακμής, πάνω στην ακμή· γράφει ΜΟΝΟ το
+ *                           `angleRad` μέσω του κοινού `rotateEntityGripDrag` SSoT (N.18 —
+ *                           ίδιο swept-angle/orbit με scale-bar και opening-info-tag).
+ *   - `table-column-edge` → μία λαβή ανά **εσωτερικό** όριο στηλών, πάνω στην ΠΑΝΩ ακμή· το
+ *                           drag δίνει στη στήλη ΑΡΙΣΤΕΡΑ του ορίου ρητό `sizing: fixed`
+ *                           (Figma Auto Layout: το σύρσιμο ορίου «κλειδώνει» πλάτος).
+ *
+ * ⚠️ **Καμία λαβή ύψους γραμμής** — και είναι σκόπιμο: το πλήθος λαβών δεν επιτρέπεται να
+ * είναι ανάλογο των δεδομένων (500 γραμμές ⇒ 500 λαβές ζωγραφισμένες + hit-tested ανά καρέ,
+ * το σχήμα που πλήρωσε ο ADR-735). Το ύψος γραμμής αλλάζει από τον επεξεργαστή κελιού της
+ * Φ.Δ, όπου υπάρχει **μία** επιλεγμένη γραμμή (μοτίβο Excel/Figma).
+ */
+export type TableGripKind =
+  | 'table-move'
+  | 'table-rotation'
+  | 'table-column-edge';

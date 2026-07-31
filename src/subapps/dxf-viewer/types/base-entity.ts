@@ -92,6 +92,10 @@ export type EntityType =
   | 'scale-bar'
   // ADR-612 — non-BIM opening info tag (πινακίδα ανοίγματος: 3 editable numeric cells).
   | 'opening-info-tag'
+  // ADR-739 Φ.Γ — γενικός πίνακας N×M (annotative, sheet-mm διάταξη σε μοντέλο-χώρο).
+  // Ο πίνακας της σκηνής και ο πίνακας του φύλλου λεπτομερειών μοιράζονται ΤΗΝ ΙΔΙΑ
+  // μηχανή διάταξης (`bim/table/table-layout.ts`) — μία μηχανή, τέσσερα backends.
+  | 'table'
   // ADR-651 Φάση Ε — non-BIM raster image (εικόνα σε ορθογώνιο πλαίσιο).
   | 'image'
   // ADR-662 Φ2β (Δρόμος Γ) — τοπογραφική επιφάνεια ως first-class selectable
