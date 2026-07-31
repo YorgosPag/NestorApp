@@ -47,9 +47,11 @@ import {
 import { runAutoDimensionFlow } from '../systems/dimensions/auto/run-auto-dimension-flow';
 // ADR-362 §7 — «Ιδιότητες…»: open the F11/Ctrl+1 Full Properties Palette (self-follows selection).
 import { PropertiesPaletteStore } from '../systems/properties/PropertiesPaletteStore';
+// ADR-547 Stage 4 — τα modal setters δηλώνονται ΜΙΑ φορά (CHECK 3.28 / ADR-584).
+import type { DxfShellModalSetters } from './dxf-shell-modal-setters';
 
 /** Deps for the special-action dispatcher (read at event time). */
-export interface DxfSpecialActionDeps {
+export interface DxfSpecialActionDeps extends DxfShellModalSetters {
   selectedEntityIds: readonly string[];
   notifications: NotificationContextValue;
   t: TFunction;
@@ -57,13 +59,6 @@ export interface DxfSpecialActionDeps {
   fullscreen: { toggle: () => void };
   levelManager: LevelsHookReturn;
   floatingRef: React.RefObject<FloatingPanelHandle | null>;
-  setTestsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setCreditsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setPdfPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setAiChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowEnhancedImport: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowImportWizard: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowLegacyImport: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 /**
@@ -249,6 +244,13 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
   // ADR-526 — Tekton .tek import: DxfViewerDialogs opens the native file picker.
   if (action === 'import-tek') {
     EventBus.emit('dxf:import-tek-requested', {});
+    return true;
+  }
+  // ADR-736 §6 — «Εικόνα» (AutoCAD IMAGEATTACH): AttachImageHost ανοίγει τον επιλογέα, ανεβάζει
+  // και οπλίζει το placement tool. Action και όχι σκέτο commandKey: το εργαλείο δεν έχει νόημα
+  // πριν υπάρξει εικόνα — θα ενεργοποιούνταν με άδειο store και θα έδειχνε «δεν έχει επιλεγεί».
+  if (action === 'attach-image') {
+    EventBus.emit('dxf:attach-image-requested', {});
     return true;
   }
   // ADR-362 Phase G1 (2026-07-06 fix): request the text-override dialog. The

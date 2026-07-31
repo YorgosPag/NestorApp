@@ -8,10 +8,12 @@
 
 import {
   imagePlacementSize,
+  imagePlacementSizeMm,
   buildImageSourceSwapPatch,
   pixelAspect,
   IMAGE_PLACEMENT_VIEWPORT_FRACTION,
 } from '../image-source-attach';
+import { mmToSceneUnits } from '../../../utils/scene-units';
 
 /** Οι πραγματικές διαστάσεις των φωτογραφιών αυτοψίας του δείγματος (ADR-736 §1). */
 const REAL_PHOTO = { x: 4000, y: 1800 } as const;
@@ -97,5 +99,43 @@ describe('🔴 buildImageSourceSwapPatch — Η ΓΕΩΜΕΤΡΙΑ ΜΕΝΕΙ', 
     expect(
       buildImageSourceSwapPatch(IMAGE, { url: IMAGE.url, sourceName: IMAGE.sourceName }),
     ).toBeNull();
+  });
+});
+
+/**
+ * ADR-736 §6 — η **αντιστροφή** που επιτρέπει στον κοινό entourage placer να τοποθετήσει μια
+ * εικόνα χωρίς catalog. Ο έλεγχος που μετράει είναι ο κύκλος: ό,τι δηλώνει το `imagePlacementSizeMm`
+ * σε χιλιοστά πρέπει να ξαναγίνεται **ακριβώς** το μέγεθος οθόνης όταν ο placer το πολλαπλασιάσει
+ * με το ίδιο `mmToSceneUnits`. Αν αποκλίνει, η εικόνα μπαίνει σε λάθος κλίμακα — και μάλιστα με
+ * συντελεστή 1000 σε σχέδιο μέτρων, δηλαδή αόρατη.
+ */
+describe('imagePlacementSizeMm — η μία μετάφραση «κλάσμα οθόνης» → χιλιοστά', () => {
+  it.each(['mm', 'cm', 'm', 'in', 'ft'] as const)(
+    'κλειστός κύκλος σε μονάδες σκηνής «%s»: mm × mmToSceneUnits ≡ μέγεθος οθόνης',
+    (units) => {
+      const visibleWorldWidth = 90;
+      const scene = imagePlacementSize(REAL_PHOTO, visibleWorldWidth)!;
+      const mm = imagePlacementSizeMm(REAL_PHOTO, visibleWorldWidth, units)!;
+      const perMm = mmToSceneUnits(units);
+      expect(mm.widthMm * perMm).toBeCloseTo(scene.width, 9);
+      expect(mm.heightMm * perMm).toBeCloseTo(scene.height, 9);
+    },
+  );
+
+  it('κρατά τον λόγο πλευρών του αρχείου, ανεξάρτητα από τις μονάδες', () => {
+    const mm = imagePlacementSizeMm(REAL_PHOTO, 90, 'm')!;
+    expect(mm.widthMm / mm.heightMm).toBeCloseTo(4000 / 1800);
+  });
+
+  it('🔴 σε σχέδιο ΜΕΤΡΩΝ τα χιλιοστά είναι 1000× — ο συντελεστής που θα έκανε την εικόνα αόρατη', () => {
+    const inMetres = imagePlacementSizeMm(REAL_PHOTO, 90, 'm')!;
+    const inMillimetres = imagePlacementSizeMm(REAL_PHOTO, 90, 'mm')!;
+    expect(inMetres.widthMm).toBeCloseTo(inMillimetres.widthMm * 1000, 6);
+  });
+
+  it('άχρηστο ορατό πλάτος → null (ο καλών ματαιώνει, δεν επινοεί μέγεθος)', () => {
+    for (const bad of [0, -5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(imagePlacementSizeMm(REAL_PHOTO, bad, 'mm')).toBeNull();
+    }
   });
 });

@@ -494,6 +494,98 @@ zoom-out η ίδια συμβολοσειρά σμικρύνεται μέχρι 
 
 ---
 
+## 5.4 Εντολή **ΕΙΣΑΓΩΓΗΣ** εικόνας στον καμβά (AutoCAD `IMAGEATTACH`) — 2026-07-31
+
+Μέχρι εδώ το ADR απαντούσε μόνο «τι κάνουμε με τις εικόνες **που δηλώνει το DXF**». Λείπει η
+συμπληρωματική: ο χρήστης θέλει να βάλει εικόνα που **δεν** ήρθε από DXF (φωτογραφία αυτοψίας,
+σαρωμένο απόσπασμα). Κλαδικά: AutoCAD `IMAGEATTACH`, Revit *Insert ▸ Image*, ArchiCAD
+*Place Picture*. Θέση: ribbon «Εισαγωγή», **δίπλα στο «PDF Υπόβαθρο»**.
+
+### Οι 4 αποφάσεις (Giorgio, 2026-07-31)
+
+| Ερώτηση | Απόφαση | Πού ζει |
+|---|---|---|
+| Πώς τοποθετείται; | **ΚΑΙ ΤΑ ΔΥΟ** — ghost+κλικ **και** αυτόματα στο κέντρο | `hooks/drawing/attach-image-tool.ts` |
+| Τι αρχικό μέγεθος; | **Κλάσμα της οθόνης** (`1/3`), πιστός λόγος πλευρών | `imagePlacementSize(Mm)` |
+| N:1 xref αντικατάσταση | Αλλάζουν **ΟΛΕΣ** οι εμφανίσεις (AutoCAD-πιστό) | §5.3 / `useImageSourceReplace` |
+| Γεωμετρία σε αντικατάσταση | **ΜΕΝΕΙ** | `buildImageSourceSwapPatch` |
+
+**Η ερμηνεία του «ΚΑΙ ΤΑ ΔΥΟ» — ένας μηχανισμός, δύο δρόμοι** (μοτίβο Revit): μόλις επιλεγεί το
+αρχείο, το ghost ακολουθεί τον κέρσορα· **κλικ** το καρφώνει, **Enter** το αφήνει στο κέντρο της
+προβολής, **Esc** ακυρώνει. Το Enter **δεν** είναι δεύτερη διαδρομή τοποθέτησης: υπολογίζει το
+σημείο και καλεί το **ΙΔΙΟ** `onCanvasClick` ⇒ ίδιο commit, ίδιο undo, ίδιο broadcast, αδύνατο
+να αποκλίνει.
+
+⚠️ **Το μέγεθος κλειδώνει τη στιγμή της ΕΠΙΛΟΓΗΣ ΑΡΧΕΙΟΥ, όχι του κλικ** — αλλιώς το ghost θα
+άλλαζε μέγεθος όσο ο χρήστης κάνει zoom πριν το καρφώσει. Γι' αυτό οι μετρήσεις της προβολής
+διαβάζονται **πριν** το ανέβασμα (που διαρκεί): προβλέψιμο ghost > «σωστό» μέγεθος.
+
+### 🔑 Καμία νέα μηχανή τοποθέτησης — πέμπτο instance της υπάρχουσας
+
+Η ερώτηση «βάλε αυτό το raster με το κέντρο του στο κλικ» λύνεται ήδη από τη γενική entourage
+μηχανή (ADR-654 M6): `createEntourageTool` (FSM + ghost) → `createEntouragePlacer` (κέντρο →
+γωνία, mm → μονάδες σκηνής) → `addEntourageToScene` (undoable append + broadcast). Δεύτερο FSM
+ή δεύτερος ghost renderer θα ήταν structural clone (N.18).
+
+**Η ΜΟΝΗ πραγματική διαφορά: ποιος ξέρει το μέγεθος.** Ένας καναπές είναι 2.100 mm — το λέει ο
+catalog. Μια φωτογραφία **δεν έχει** φυσικό μέγεθος· το ορίζει η προβολή τη στιγμή της εισαγωγής.
+Άρα το μέγεθος ταξιδεύει **μαζί με την επιλογή** και ο `getSizeMm` του placer το διαβάζει από τον
+store. Η μετάφραση «κλάσμα οθόνης → χιλιοστά» γίνεται **μία** φορά, στο `imagePlacementSizeMm`.
+
+| Αρχείο | Ρόλος |
+|---|---|
+| `bim/image/image-source-attach.ts` | **+`imagePlacementSizeMm`** — η μία αντιστροφή οθόνη → mm (στο **ίδιο** module με τον αδελφό της· χωριστό θα ήταν clone) |
+| `bim/image/attached-image-placement.ts` **(ΝΕΟ)** | store + placer αυτής της οικογένειας (layer `IMAGES-2D`)· ταυτότητα = το **content-addressed URL** (N.6: καμία αυτοσχέδια τυχαία) |
+| `hooks/drawing/attach-image-tool.ts` **(ΝΕΟ)** | 5ο instance του `createEntourageTool` + ο listener του Enter |
+| `rendering/utils/viewport-world-metrics.ts` **(ΝΕΟ)** | «τι δείχνει η προβολή»: ορατό πλάτος + κέντρο, από **δύο πραγματικές γωνίες** μέσω `screenToWorld` — καμία δική του φόρμουλα περιθωρίων |
+| `ui/attach-image/useAttachImage.ts` **(ΝΕΟ)** | η απόφαση: μετρήσεις → ανέβασμα (`uploadUserImageAsset`, το ίδιο με την αντικατάσταση) → store → όπλισμα |
+| `ui/attach-image/AttachImageHost.tsx` **(ΝΕΟ)** | το κρυφό `<input type="file">` (mirror του Tekton picker) |
+
+**Το όπλισμα του εργαλείου** γίνεται με το **ΥΠΑΡΧΟΝ** `level-panel:tool-change` — το ίδιο κανάλι
+που χρησιμοποιεί η «AI Πινακίδα» (ADR-651 Φάση Δ). Μηδέν νέος μηχανισμός ενεργοποίησης.
+
+### 🔴 Το ghost ΔΕΝ υπήρχε — ένα getter χωρίς mount δεν είναι ghost
+
+Το handoff δήλωνε «ο μηχανισμός τοποθέτησης με ghost υπάρχει ήδη ολόκληρος». **Μισό ήταν αλήθεια.**
+Το `createEntourageTool` όντως εκθέτει `getGhostFootprint`, αλλά **κανείς δεν το ζωγράφιζε**: οι 7
+`*GhostPreviewMount` καλύπτουν την οικογένεια των BIM single-click εργαλείων· **και οι 4 entourage
+οικογένειες** (έπιπλα / άνθρωποι / οχήματα / φυτά) τοποθετούν **στα τυφλά** από το ADR-654 —
+η `computeFootprint` τους υπολογίζεται και πετιέται.
+
+Ίδιο σχήμα με το §5.3.1: «η δυνατότητα υπάρχει στον κώδικα» ≠ «η δυνατότητα φτάνει στην οθόνη».
+
+Γράφτηκε λοιπόν, ως thin binding του Level-1 primitive `useWysiwygPlacementGhost` (ADR-624) και
+**όχι** του bridge-store factory (αυτή η οικογένεια δεν έχει bridge store):
+`hooks/tools/useAttachImageGhostPreview.ts` + `components/dxf-layout/canvas-layer-stack-attach-image-ghost.tsx`.
+Το entity το χτίζει ο **ΙΔΙΟΣ** `buildGhost` του commit placer ⇒ το φάντασμα είναι κατά ταυτότητα
+ό,τι θα καρφωθεί. `useImmediateSnap: false` — free-point τοποθέτηση (το commit διαβάζει RAW
+worldPoint), αλλιώς το ghost θα κάθεται σε άλλο σημείο από αυτό που τελικά μπαίνει.
+
+⚠️ **Οι 4 catalog entourage οικογένειες παραμένουν χωρίς ghost** — προϋπάρχον κενό, εκτός σκοπού
+αυτού του περάσματος. Το mount τους είναι πλέον τετριμμένο (ίδιο binding, άλλος store/placer).
+
+### Δύο ελάχιστες γενικεύσεις στα κοινά SSoT (καμία αλλαγή συμπεριφοράς)
+
+| SSoT | Αλλαγή | Γιατί δεν είναι ρύπανση |
+|---|---|---|
+| `entourage-selection-store.ts` | τύπος-παράμετρος με **default** + προαιρετικό `sourceName` | Οι 4 οικογένειες μένουν γραμμή προς γραμμή ίδιες. Το `sourceName` ζει στη βάση ώστε ο ΚΟΙΝΟΣ `createEntourageTool` να το προωθεί χωρίς να ξέρει ποιος τον κάλεσε |
+| `place-entourage.ts` | προαιρετικό `sourceName` στα params, γραμμένο **μόνο όταν υπάρχει** | `sourceName: undefined` σε αντικείμενο προς Firestore είναι **σφάλμα εγγραφής**, όχι «κενό πεδίο» (ADR-438) |
+
+### Επαλήθευση
+
+- **1.045 suites / 10.612 tests πράσινα** (`io\|utils\|export\|rendering\|systems\|core/commands\|stores\|ui\|bim/image\|hooks`).
+  1 suite κόκκινη — `guide-commands-ssot.test.ts`: `ReferenceError: Cannot access 'BatchRotateGuidesCommand'
+  before initialization`, **κυκλική εξάρτηση στο `systems/guides/commands`**. Καμία σχέση με αυτή τη
+  δουλειά: κανένα αρχείο της δεν εμφανίζεται στο γράφημα εισαγωγών του κύκλου.
+- **+15 νέα tests** (`imagePlacementSizeMm` κλειστός κύκλος ανά μονάδα · `attached-image-placement`).
+  **Mutation-verified**: `/perMm → *perMm` και spread → σκέτο `sourceName:` ⇒ **6 κόκκινα**.
+- `jscpd:diff` σε 7 νέα αρχεία **καθαρό** · `i18n:audit` **0/0** · `generate:i18n-types` τρέχτηκε (CHECK 3.33).
+
+⚠️ **`CanvasSection.tsx` = 500 γραμμές ΑΚΡΙΒΩΣ** (499 → 500). Περνά το όριο N.7.1, αλλά **ο επόμενος
+που θα το αγγίξει μπλοκάρεται**. Χρωστά split — όπως και το `BaseEntityRenderer.ts` (494).
+
+---
+
 ## 6. Γνωστά όρια — γραμμένα ρητά
 
 - **Αναδρομικά xref: εκτός scope** (0 xref στο δείγμα)· το μοντέλο τα σηκώνει αργότερα.
@@ -545,3 +637,4 @@ zoom-out η ίδια συμβολοσειρά σμικρύνεται μέχρι 
 | 2026-07-31 | 🔴 **Εύρημα Ζ (§5.2)** — `ambiguous`/`failures`/`isResolving` ζούσαν σε `useState`, αλλά το hook το καλούν **δύο** components ⇒ η κρίση «διφορούμενο» έμενε μέσα στον host που κάνει `return null` και η οθόνη έλεγε «Λείπει». Νέο `ExternalReferenceResolutionOutcomeStore` (`createExternalStore`). Το κοινό `isResolving` κλείνει **και** race condition: δύο ταυτόχρονες επιλύσεις που έγραφαν και οι δύο τη σκηνή (N.7.2 #2). |
 | 2026-07-31 | ✅ **Απόφαση 7 ΕΚΛΕΙΣΕ** (§5.3) — ετικέτα διαδρομής στον καμβά: **υπερσύνολο AutoCAD με ΜΕΣΑΙΑ αποκοπή** (πλήρης → `Z:\Jobs\…\φάκελος\όνομα` → σκέτο όνομα → τίποτα). **Όχι** κόψιμο από την αρχή όπως πρότεινε το handoff: σε διαδρομή φέρουν πληροφορία **και τα δύο άκρα**, και το `Z:\Jobs\` είναι ό,τι απαντά «σε ποιον υπολογιστή ζούσε» (πρακτική Finder / VS Code / `PathCompactPathEx`). Υλοποίηση **χωρίς νέο SSoT**: `+fitCanvasPathToWidth` στο **ίδιο** `canvas-text-fit.ts` (χωριστό module = sibling clone, N.18) · `+sourcePath` στο `ImageEntity` γραμμένο στο **ένα** σημείο (`dxf-external-reference-apply.ts`) · μονότονη υποβάθμιση στο `image-placeholder-paint.ts`. +9 tests. |
 | 2026-07-31 | ✅ **Και τα 4 ανοιχτά σενάρια έκλεισαν στην οθόνη** (§5.2): **Β** «6 από 10» με ήδη-φορτωμένη σκηνή 10 → 10 · **Β-zip** ταυτόσημο · **LOD** ονόματα εξαφανίζονται, πλαίσια μένουν · **Στοχευμένος** «7 από 10». Επαλήθευση: **396 suites / 4.056 tests** (+ `stores\|ui/components`) · `jscpd:diff` σε 5 αρχεία **καθαρό** · `i18n:audit` **0/0**. gif: `adr736_auto_resolve` · `adr736_zip_intake` · `adr736_lod_labels` · `adr736_targeted_locate`. |
+| 2026-07-31 | ✅ **§5.4 — εντολή ΕΙΣΑΓΩΓΗΣ εικόνας** (AutoCAD `IMAGEATTACH`): ribbon «Εικόνα» → επιλογέας → ανέβασμα → ghost → **κλικ ή Enter (κέντρο)**. **Πέμπτο instance της entourage μηχανής** — μηδέν νέο FSM / upload / placer. 7 νέα αρχεία, 2 ελάχιστες γενικεύσεις στα κοινά SSoT (τύπος-παράμετρος με default· προαιρετικό `sourceName`). 🔴 **Εύρημα Η**: το ghost των entourage **δεν υπήρχε** — `getGhostFootprint` χωρίς mount από το ADR-654· γράφτηκε για τη νέα οικογένεια (οι 4 catalog μένουν ακάλυπτες, εκτός σκοπού). Επαλήθευση: **1.045 suites / 10.612 tests** πράσινα (1 προϋπάρχουσα κόκκινη: κυκλική εξάρτηση στο `systems/guides/commands`, άσχετη) · **+15 tests mutation-verified** · `jscpd:diff` καθαρό · `i18n:audit` 0/0 · `generate:i18n-types`. ⚠️ `CanvasSection.tsx` πλέον **500 γραμμές ακριβώς** — χρωστά split. |

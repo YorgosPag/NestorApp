@@ -11,6 +11,8 @@
 
 import React from 'react';
 import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
+// «Ποιος είναι ο κύριος καμβάς» — ΕΝΑ σημείο (2026-07-31: ήταν τρεις γραφές, η μία νεκρή).
+import { getMainDxfCanvas } from '../rendering/utils/main-canvas-element';
 import { createOriginIndicatorOverlay } from './origin-indicator-overlay';
 import type { ViewTransform, Point2D } from '../rendering/types/Types';
 import type { CircleEntity, ArcEntity, PolylineEntity, SceneModel } from '../types/scene';
@@ -28,6 +30,7 @@ import { nowISO } from '@/lib/date-local';
 import { useAuth } from '@/auth/hooks/useAuth';
 // ADR-547 Stage 4 — special-action dispatcher extracted to its own SRP module.
 import { dispatchDxfSpecialAction } from './dxf-special-actions';
+import type { DxfShellModalSetters } from './dxf-shell-modal-setters';
 
 /** Structural overlay entry shape used by callbacks */
 interface OverlayEntry {
@@ -37,18 +40,11 @@ interface OverlayEntry {
 }
 
 /** Params for useDxfViewerCallbacks */
-export interface DxfViewerCallbacksParams {
+export interface DxfViewerCallbacksParams extends DxfShellModalSetters {
   notifications: NotificationContextValue;
   copyToClipboard: (text: string) => Promise<boolean>;
   handleAction: (action: string, data?: string | number | Record<string, unknown>) => void;
   fullscreen: { toggle: () => void };
-  setTestsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setCreditsModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setPdfPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setAiChatOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowEnhancedImport: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowImportWizard: React.Dispatch<React.SetStateAction<boolean>>;
-  setShowLegacyImport: React.Dispatch<React.SetStateAction<boolean>>;
   setCanvasTransform: (t: { scale: number; offsetX: number; offsetY: number }) => void;
   currentScene: SceneModel | null;
   handleSceneChange: (scene: SceneModel) => void;
@@ -152,7 +148,7 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
 
   // 🏠 PAN TO WORLD ORIGIN (0,0) - Function for DebugToolbar
   const panToWorldOrigin = React.useCallback(() => {
-    const canvasElement = document.querySelector('[data-canvas-type="dxf"]') as HTMLCanvasElement;
+    const canvasElement = getMainDxfCanvas();
     if (!canvasElement) {
       showCopyableNotification('Canvas not found', 'error');
       return;

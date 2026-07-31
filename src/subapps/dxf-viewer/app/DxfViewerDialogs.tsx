@@ -28,6 +28,8 @@ import { buildDxfImportSaveContext } from './dxf-import-save-context';
 // ADR-652 M6 — «Δημιουργία Block» host (always-mounted outer reads the light request store;
 // the heavy inner mounts only while a create is requested — gate-at-mount).
 import { CreateBlockDialogHost } from '../ui/panels/block-library/CreateBlockDialogHost';
+// ADR-736 §6 — «Εικόνα»: κρυφός επιλογέας αρχείου + ανέβασμα + όπλισμα του placement tool.
+import { AttachImageHost } from '../ui/attach-image/AttachImageHost';
 import type { DxfViewerCallbacksReturn } from './useDxfViewerCallbacks';
 import type { DxfViewerUiState } from './useDxfViewerUiState';
 import {
@@ -114,6 +116,7 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
           if (file) await handleFileImportWithEncoding(file);
         }}
       />
+      <AttachImageHost />
       <React.Suspense fallback={hiddenFallback}>
         <TestsModal
           isOpen={ui.testsModalOpen}
