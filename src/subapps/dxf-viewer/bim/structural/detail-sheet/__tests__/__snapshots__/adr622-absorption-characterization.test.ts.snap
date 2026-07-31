@@ -1,0 +1,2042 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`ADR-622 χαρακτηρισμός — buildFieldBlock αυτόματη πινακίδα σχεδίου (ADR-651): κορνίζα + επικεφαλίδα + πεδία 1`] = `
+{
+  "primitives": [
+    {
+      "closed": true,
+      "kind": "polyline",
+      "points": [
+        {
+          "x": 0,
+          "y": 0,
+        },
+        {
+          "x": 420,
+          "y": 0,
+        },
+        {
+          "x": 420,
+          "y": 297,
+        },
+        {
+          "x": 0,
+          "y": 297,
+        },
+      ],
+      "stroke": {
+        "colorHex": "#9AA0A6",
+        "widthMm": 0.13,
+      },
+    },
+    {
+      "closed": true,
+      "kind": "polyline",
+      "points": [
+        {
+          "x": 20,
+          "y": 10,
+        },
+        {
+          "x": 410,
+          "y": 10,
+        },
+        {
+          "x": 410,
+          "y": 287,
+        },
+        {
+          "x": 20,
+          "y": 287,
+        },
+      ],
+      "stroke": {
+        "colorHex": "#111111",
+        "widthMm": 0.7,
+      },
+    },
+    {
+      "closed": true,
+      "kind": "polyline",
+      "points": [
+        {
+          "x": 230,
+          "y": 245,
+        },
+        {
+          "x": 410,
+          "y": 245,
+        },
+        {
+          "x": 410,
+          "y": 287,
+        },
+        {
+          "x": 230,
+          "y": 287,
+        },
+      ],
+      "stroke": {
+        "colorHex": "#111111",
+        "widthMm": 0.7,
+      },
+    },
+    {
+      "closed": true,
+      "kind": "polyline",
+      "points": [
+        {
+          "x": 230,
+          "y": 245,
+        },
+        {
+          "x": 275,
+          "y": 245,
+        },
+        {
+          "x": 275,
+          "y": 287,
+        },
+        {
+          "x": 230,
+          "y": 287,
+        },
+      ],
+      "stroke": {
+        "colorHex": "#111111",
+        "widthMm": 0.25,
+      },
+    },
+    {
+      "align": "center",
+      "colorHex": "#555555",
+      "heightMm": 2.2,
+      "kind": "text",
+      "position": {
+        "x": 252.5,
+        "y": 251.2,
+      },
+      "text": "ΣΦΡΑΓΙΔΑ",
+    },
+    {
+      "a": {
+        "x": 275,
+        "y": 252,
+      },
+      "b": {
+        "x": 410,
+        "y": 252,
+      },
+      "kind": "line",
+      "stroke": {
+        "colorHex": "#111111",
+        "widthMm": 0.25,
+      },
+    },
+    {
+      "align": "left",
+      "bold": true,
+      "colorHex": "#111111",
+      "heightMm": 3.5,
+      "kind": "text",
+      "position": {
+        "x": 279,
+        "y": 252.5,
+      },
+      "text": "ΣΤΟΙΧΕΙΑ ΣΧΕΔΙΟΥ",
+    },
+    {
+      "align": "left",
+      "bold": false,
+      "colorHex": "#555555",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 279,
+        "y": 258.6,
+      },
+      "text": "Έργο",
+    },
+    {
+      "align": "right",
+      "bold": true,
+      "colorHex": "#111111",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 406,
+        "y": 258.6,
+      },
+      "text": "Πολυκατοικία",
+    },
+    {
+      "align": "left",
+      "bold": false,
+      "colorHex": "#555555",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 279,
+        "y": 265.6,
+      },
+      "text": "Κλίμακα",
+    },
+    {
+      "align": "right",
+      "bold": true,
+      "colorHex": "#111111",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 406,
+        "y": 265.6,
+      },
+      "text": "1:50",
+    },
+    {
+      "align": "left",
+      "bold": false,
+      "colorHex": "#555555",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 279,
+        "y": 272.6,
+      },
+      "text": "Ημερομηνία",
+    },
+    {
+      "align": "right",
+      "bold": true,
+      "colorHex": "#111111",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 406,
+        "y": 272.6,
+      },
+      "text": "2026-07-31",
+    },
+  ],
+  "sizeMm": {
+    "heightMm": 297,
+    "widthMm": 420,
+  },
+}
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildFieldBlock πινακίδα δοκού 1`] = `
+[
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 197.62,
+    },
+    "text": "Section",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 197.62,
+    },
+    "text": "300×600",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 204.62,
+    },
+    "text": "Span",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 204.62,
+    },
+    "text": "5000",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 211.62,
+    },
+    "text": "Concrete",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 211.62,
+    },
+    "text": "C25/30",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 218.62,
+    },
+    "text": "Steel",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 218.62,
+    },
+    "text": "B500C",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 225.62,
+    },
+    "text": "Cover",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 225.62,
+    },
+    "text": "30",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 232.62,
+    },
+    "text": "Long",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 232.62,
+    },
+    "text": "3Ø16 / 4Ø14",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 239.62,
+    },
+    "text": "Stir",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 239.62,
+    },
+    "text": "Ø8/100-200",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildFieldBlock πινακίδα κολώνας 1`] = `
+[
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 197.62,
+    },
+    "text": "Section",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 197.62,
+    },
+    "text": "400×400",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 204.62,
+    },
+    "text": "Height",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 204.62,
+    },
+    "text": "3000",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 211.62,
+    },
+    "text": "Concrete",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 211.62,
+    },
+    "text": "C25/30",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 218.62,
+    },
+    "text": "Steel",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 218.62,
+    },
+    "text": "B500C",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 225.62,
+    },
+    "text": "Cover",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 225.62,
+    },
+    "text": "25",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 232.62,
+    },
+    "text": "Long",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 232.62,
+    },
+    "text": "8Ø16",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 239.62,
+    },
+    "text": "Stir",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 239.62,
+    },
+    "text": "Ø8/100-200",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildFieldBlock πινακίδα πεδίλου 1`] = `
+[
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 197.62,
+    },
+    "text": "Type",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 197.62,
+    },
+    "text": {
+      "pad": "Pad",
+      "strip": "Strip",
+      "tie-beam": "Tie",
+    },
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 204.62,
+    },
+    "text": "Section",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 204.62,
+    },
+    "text": "1500×1500",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 211.62,
+    },
+    "text": "Depth",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 211.62,
+    },
+    "text": "500",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 218.62,
+    },
+    "text": "Concrete",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 218.62,
+    },
+    "text": "C25/30",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 225.62,
+    },
+    "text": "Steel",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 225.62,
+    },
+    "text": "B500C",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 232.62,
+    },
+    "text": "Cover",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 232.62,
+    },
+    "text": "50",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 239.62,
+    },
+    "text": "Main",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 239.62,
+    },
+    "text": "Ø12/200",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildFieldBlock πινακίδα πλάκας 1`] = `
+[
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 197.62,
+    },
+    "text": "Type",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 197.62,
+    },
+    "text": {
+      "ceiling": "Ceiling",
+      "floor": "Floor",
+      "foundation": "Foundation",
+      "ground": "Ground",
+      "roof": "Roof",
+    },
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 204.62,
+    },
+    "text": "Section",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 204.62,
+    },
+    "text": "4000×3000",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 211.62,
+    },
+    "text": "Thickness",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 211.62,
+    },
+    "text": "200",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 218.62,
+    },
+    "text": "Concrete",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 218.62,
+    },
+    "text": "C25/30",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 225.62,
+    },
+    "text": "Steel",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 225.62,
+    },
+    "text": "B500C",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 232.62,
+    },
+    "text": "Cover",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 232.62,
+    },
+    "text": "25",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 239.62,
+    },
+    "text": "Bottom",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 239.62,
+    },
+    "text": "Ø12/200",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 246.62,
+    },
+    "text": "Top",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 246.62,
+    },
+    "text": "Ø10/250",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#555555",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 253.62,
+    },
+    "text": "Span",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#111111",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 253.62,
+    },
+    "text": "3000",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildScheduleTable δοκός: 4-στηλος μέσω buildReinforcementSchedule 1`] = `
+[
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 23.6,
+    },
+    "text": "Item",
+  },
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 23.6,
+    },
+    "text": "Reinf",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 23.6,
+    },
+    "text": "L",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 23.6,
+    },
+    "text": "W",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 27,
+    },
+    "b": {
+      "x": 406,
+      "y": 27,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 31.1,
+    },
+    "text": "Bottom",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 31.1,
+    },
+    "text": "3Ø16",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 31.1,
+    },
+    "text": "17.4",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 31.1,
+    },
+    "text": "27.5",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 38.6,
+    },
+    "text": "Top",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 38.6,
+    },
+    "text": "4Ø14",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 38.6,
+    },
+    "text": "22.8",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 38.6,
+    },
+    "text": "27.6",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 46.1,
+    },
+    "text": "Stir",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 46.1,
+    },
+    "text": "Ø8/100-200",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 46.1,
+    },
+    "text": "54.0",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 46.1,
+    },
+    "text": "21.3",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 49.5,
+    },
+    "b": {
+      "x": 406,
+      "y": 49.5,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 53.6,
+    },
+    "text": "Total",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 53.6,
+    },
+    "text": "76.3",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 64.85,
+    },
+    "text": "ρ = 0.37%",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildScheduleTable κολώνα: 5-στηλος πίνακας (το μόνο δικό του column set) 1`] = `
+[
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 23.6,
+    },
+    "text": "Item",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 353.968,
+      "y": 23.6,
+    },
+    "text": "Ø",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 371.312,
+      "y": 23.6,
+    },
+    "text": "N",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 388.656,
+      "y": 23.6,
+    },
+    "text": "L",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 23.6,
+    },
+    "text": "W",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 27,
+    },
+    "b": {
+      "x": 406,
+      "y": 27,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 31.1,
+    },
+    "text": "Long",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 353.968,
+      "y": 31.1,
+    },
+    "text": "Ø16",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 371.312,
+      "y": 31.1,
+    },
+    "text": "8",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 388.656,
+      "y": 31.1,
+    },
+    "text": "30.4",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 31.1,
+    },
+    "text": "48.0",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 38.6,
+    },
+    "text": "Stir",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 353.968,
+      "y": 38.6,
+    },
+    "text": "Ø8",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 371.312,
+      "y": 38.6,
+    },
+    "text": "21",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 388.656,
+      "y": 38.6,
+    },
+    "text": "31.4",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 38.6,
+    },
+    "text": "12.4",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 42,
+    },
+    "b": {
+      "x": 406,
+      "y": 42,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 46.1,
+    },
+    "text": "Total",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 46.1,
+    },
+    "text": "70.2",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 57.35,
+    },
+    "text": "ρ = 1.01%",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 64.85,
+    },
+    "text": "α = 0.52",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildScheduleTable πέδιλο: 4-στηλος μέσω buildReinforcementSchedule 1`] = `
+[
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 23.6,
+    },
+    "text": "Item",
+  },
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 23.6,
+    },
+    "text": "Reinf",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 23.6,
+    },
+    "text": "L",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 23.6,
+    },
+    "text": "W",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 27,
+    },
+    "b": {
+      "x": 406,
+      "y": 27,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 31.1,
+    },
+    "text": "Main",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 31.1,
+    },
+    "text": "Ø12/200",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 31.1,
+    },
+    "text": "27.0",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 31.1,
+    },
+    "text": "24.0",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 34.5,
+    },
+    "b": {
+      "x": 406,
+      "y": 34.5,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 38.6,
+    },
+    "text": "Total",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 38.6,
+    },
+    "text": "24.0",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 49.85,
+    },
+    "text": "ρ = 0.13%",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildScheduleTable πλάκα: 4-στηλος μέσω buildReinforcementSchedule 1`] = `
+[
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 23.6,
+    },
+    "text": "Item",
+  },
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 23.6,
+    },
+    "text": "Reinf",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 23.6,
+    },
+    "text": "L",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 23.6,
+    },
+    "text": "W",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 27,
+    },
+    "b": {
+      "x": 406,
+      "y": 27,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 31.1,
+    },
+    "text": "Bottom",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 31.1,
+    },
+    "text": "Ø12/200",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 31.1,
+    },
+    "text": "135.8",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 31.1,
+    },
+    "text": "120.6",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 38.6,
+    },
+    "text": "Top",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 340.96000000000004,
+      "y": 38.6,
+    },
+    "text": "Ø10/250",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 382.15200000000004,
+      "y": 38.6,
+    },
+    "text": "108.7",
+  },
+  {
+    "align": "right",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 38.6,
+    },
+    "text": "67.0",
+  },
+  {
+    "a": {
+      "x": 297.6,
+      "y": 42,
+    },
+    "b": {
+      "x": 406,
+      "y": 42,
+    },
+    "kind": "line",
+    "stroke": {
+      "colorHex": "#999999",
+      "widthMm": 0.15,
+    },
+  },
+  {
+    "align": "left",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 46.1,
+    },
+    "text": "Total",
+  },
+  {
+    "align": "right",
+    "bold": true,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 406,
+      "y": 46.1,
+    },
+    "text": "187.6",
+  },
+  {
+    "align": "left",
+    "bold": false,
+    "colorHex": "#222222",
+    "heightMm": 2.6,
+    "kind": "text",
+    "position": {
+      "x": 297.6,
+      "y": 57.35,
+    },
+    "text": "ρ = 0.32%",
+  },
+]
+`;
+
+exports[`ADR-622 χαρακτηρισμός — buildScheduleTable τοπογραφικό φύλλο (ADR-650 M7): ισοκατανεμημένες στήλες, χωρίς γραμμή συνόλου 1`] = `
+{
+  "heightMm": 50.75,
+  "primitives": [
+    {
+      "align": "left",
+      "bold": true,
+      "colorHex": "#222222",
+      "heightMm": 3.6,
+      "kind": "text",
+      "position": {
+        "x": 0,
+        "y": 5,
+      },
+      "text": "ΣΥΝΤΕΤΑΓΜΕΝΕΣ ΕΓΣΑ87",
+    },
+    {
+      "align": "left",
+      "bold": true,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 4,
+        "y": 13.6,
+      },
+      "text": "[point]",
+    },
+    {
+      "align": "right",
+      "bold": true,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 90,
+        "y": 13.6,
+      },
+      "text": "[east]",
+    },
+    {
+      "align": "right",
+      "bold": true,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 176,
+        "y": 13.6,
+      },
+      "text": "[north]",
+    },
+    {
+      "a": {
+        "x": 4,
+        "y": 17,
+      },
+      "b": {
+        "x": 176,
+        "y": 17,
+      },
+      "kind": "line",
+      "stroke": {
+        "colorHex": "#999999",
+        "widthMm": 0.15,
+      },
+    },
+    {
+      "align": "left",
+      "bold": false,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 4,
+        "y": 21.1,
+      },
+      "text": "Κ1",
+    },
+    {
+      "align": "right",
+      "bold": false,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 90,
+        "y": 21.1,
+      },
+      "text": "312450.13",
+    },
+    {
+      "align": "right",
+      "bold": false,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 176,
+        "y": 21.1,
+      },
+      "text": "4201330.50",
+    },
+    {
+      "align": "left",
+      "bold": false,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 4,
+        "y": 28.6,
+      },
+      "text": "Κ2",
+    },
+    {
+      "align": "right",
+      "bold": false,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 90,
+        "y": 28.6,
+      },
+      "text": "312470.88",
+    },
+    {
+      "align": "right",
+      "bold": false,
+      "colorHex": "#222222",
+      "heightMm": 2.6,
+      "kind": "text",
+      "position": {
+        "x": 176,
+        "y": 28.6,
+      },
+      "text": "4201355.25",
+    },
+    {
+      "a": {
+        "x": 4,
+        "y": 32,
+      },
+      "b": {
+        "x": 176,
+        "y": 32,
+      },
+      "kind": "line",
+      "stroke": {
+        "colorHex": "#999999",
+        "widthMm": 0.15,
+      },
+    },
+  ],
+}
+`;
