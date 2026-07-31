@@ -34,11 +34,24 @@ import {
   tableWorldToFrame,
 } from '../../bim/table/table-entity-geometry';
 import { visibleRowRange } from '../../bim/table/table-layout';
-import { tableRenderIndex, visibleHorizontals } from '../../bim/table/table-render-index';
+import {
+  tableRenderIndex,
+  visibleHorizontals,
+  type TableRenderIndex,
+} from '../../bim/table/table-render-index';
 import { hitTestTable } from '../../bim/table/table-entity-hit';
 import { getTableGrips } from '../../bim/table/table-entity-grips';
 import type { TableCellLayout } from '../../bim/table/table-layout-types';
-import { stampTableBorders, stampTableFills, stampTableText } from './table/stamp-table-layout';
+import {
+  stampTableBorders,
+  stampTableCellCursor,
+  stampTableFills,
+  stampTableText,
+  type StampTableContext,
+} from './table/stamp-table-layout';
+// ADR-739 Φ.Δ βήμα 2 — ο δρομέας διαβάζεται με getter τη στιγμή του καρέ (ADR-040), ποτέ
+// ως συνδρομή: ο ζωγράφος μένει καθαρό φύλλο.
+import { getTableCellCursor } from '../../state/table-cell-cursor-store';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
@@ -58,11 +71,11 @@ export class TableRenderer extends BaseEntityRenderer {
   render(entity: EntityModel, options: RenderOptions = {}): void {
     if (!isTableEntity(entity as Entity)) return;
     const e = entity as unknown as TableEntity;
-    this.renderWithPhases(entity, options, () => this.drawTable(e));
+    this.renderWithPhases(entity, options, () => this.drawTable(e, options.selected === true));
   }
 
-  /** Γεμίσματα → πλέγμα → κείμενο, μόνο για ό,τι φαίνεται. */
-  private drawTable(e: TableEntity): void {
+  /** Γεμίσματα → πλέγμα → κείμενο (→ δρομέας), μόνο για ό,τι φαίνεται. */
+  private drawTable(e: TableEntity, selected: boolean): void {
     const geometry = computeTableEntityGeometryLive(e, this._sceneUnits);
     const { layout } = geometry;
     if (layout.rows.length === 0) return;
@@ -92,6 +105,38 @@ export class TableRenderer extends BaseEntityRenderer {
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
     stampTableText(rc, cells);
+    if (selected) this.drawCellCursor(e.id, rc, index);
+  }
+
+  /**
+   * ADR-739 Φ.Δ βήμα 2 — το ορθογώνιο του **τρέχοντος κελιού**.
+   *
+   * ## Γιατί getter και όχι συνδρομή (ADR-040)
+   * Ο ζωγράφος παραμένει καθαρό φύλλο: διαβάζει τον δρομέα **τη στιγμή του καρέ**, όπως
+   * ήδη διαβάζει τη ζωντανή κλίμακα μέσα στο `computeTableEntityGeometryLive`. Το «πότε
+   * ξαναβάφω» το λέει το store με `markSystemsDirty` — ένα καρέ ανά πάτημα πλήκτρου.
+   *
+   * ## Γιατί ΜΟΝΟ σε φάση επιλογής — ADR-040 κανόνας #3
+   * Το normal-state pass είναι αυτό που μπαίνει στο **bitmap cache**, και εκεί το
+   * `selectedEntityIds` είναι πάντα κενό (`dxf-bitmap-cache`). Ο έλεγχος `selected`
+   * εγγυάται λοιπόν ότι ο δρομέας ζωγραφίζεται **μόνο** στο overlay pass, ποτέ ψημένος
+   * μέσα στο raster — αλλιώς κάθε `Tab` θα ζητούσε πλήρη ανακατασκευή N οντοτήτων και
+   * θα έμενε κιόλας ζωγραφισμένος στο παλιό κελί. Ο δρομέας υπάρχει ούτως ή άλλως μόνο
+   * όσο ο πίνακας είναι επιλεγμένος, άρα η συνθήκη δεν κρύβει τίποτα.
+   *
+   * Η αναζήτηση περνά από το **ήδη υπολογισμένο** ευρετήριο (`cellsByRowId`): O(στήλες)
+   * αντί για γραμμική σάρωση όλων των κελιών σε κάθε καρέ — το μάθημα του ADR-735.
+   */
+  private drawCellCursor(
+    entityId: string,
+    rc: StampTableContext,
+    index: TableRenderIndex,
+  ): void {
+    const cursor = getTableCellCursor();
+    if (!cursor || cursor.entityId !== entityId) return;
+    const bucket = index.cellsByRowId.get(cursor.position.rowId);
+    const cell = bucket?.find((c) => c.colId === cursor.position.colId);
+    if (cell) stampTableCellCursor(rc, cell.rect);
   }
 
   /**

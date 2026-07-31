@@ -516,7 +516,8 @@
   },
   "table": {
     "cellEditor": {
-      "editorPlaceholder": ""
+      "editorPlaceholder": "",
+      "cellAriaLabel": "Κελί πίνακα"
     }
   },
   "scene": {

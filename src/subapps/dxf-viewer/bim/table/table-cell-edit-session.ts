@@ -67,13 +67,44 @@ export function resolveTableCellEditTarget(
   const geometry = computeTableEntityGeometryLive(entity, sceneUnits);
   const hit = tableCellAtWorld(entity, worldPoint, geometry);
   if (!hit) return null;
+  return buildEditTarget(entity, geometry, hit.rowId, hit.colId, hit.rectMm);
+}
 
-  const { x, y } = hit.rectMm;
+/**
+ * Το ίδιο, αλλά για κελί που **ήδη ξέρεις ποιο είναι** — η διαδρομή του δρομέα
+ * πληκτρολογίου (ADR-739 Φ.Δ βήμα 2): το `Tab` δεν έχει σημείο κλικ να αντιστρέψει, έχει
+ * ταυτότητα κελιού.
+ *
+ * `null` όταν το κελί δεν υπάρχει στη διάταξη — είτε γιατί σβήστηκε η γραμμή/στήλη κάτω
+ * από τον δρομέα (undo, ταυτόχρονη επεξεργασία), είτε γιατί είναι **καλυμμένο** από
+ * συγχώνευση. Και οι δύο περιπτώσεις σημαίνουν το ίδιο για τον καλούντα: μπαγιάτικος
+ * δρομέας, κλείσ' τον.
+ */
+export function resolveTableCellEditTargetById(
+  entity: TableEntity,
+  rowId: TableRowId,
+  colId: TableColumnId,
+  sceneUnits: SceneUnits = 'mm',
+): TableCellEditTarget | null {
+  const geometry = computeTableEntityGeometryLive(entity, sceneUnits);
+  const cell = geometry.layout.cells.find((c) => c.rowId === rowId && c.colId === colId);
+  if (!cell) return null;
+  return buildEditTarget(entity, geometry, rowId, colId, cell.rect);
+}
+
+/** Ο ΕΝΑΣ τόπος όπου συναρμολογείται ο στόχος — και οι δύο είσοδοι καταλήγουν εδώ (N.18). */
+function buildEditTarget(
+  entity: TableEntity,
+  geometry: ReturnType<typeof computeTableEntityGeometryLive>,
+  rowId: TableRowId,
+  colId: TableColumnId,
+  rectMm: { readonly x: number; readonly y: number },
+): TableCellEditTarget {
   return {
-    rowId: hit.rowId,
-    colId: hit.colId,
-    text: getPersistedCellText(entity.model, hit.rowId, hit.colId),
-    anchorWorldPoint: tableFrameToWorld(entity, x, y, geometry.mmToWorld),
+    rowId,
+    colId,
+    text: getPersistedCellText(entity.model, rowId, colId),
+    anchorWorldPoint: tableFrameToWorld(entity, rectMm.x, rectMm.y, geometry.mmToWorld),
   };
 }
 

@@ -22,9 +22,11 @@ import type { Point2D } from '../../types/Types';
 import type {
   TableBorderSegment,
   TableCellLayout,
+  TableRectMm,
   TableTextRun,
 } from '../../../bim/table/table-layout-types';
 import { buildUIFont } from '../../../config/text-rendering-config';
+import { TABLE_CELL_CURSOR } from '../../../config/color-config';
 
 /** Κάτω από αυτό το ύψος κεφαλαίου στην οθόνη, το κείμενο κελιού δεν ζωγραφίζεται. */
 export const MIN_CELL_TEXT_SCREEN_PX = 5;
@@ -42,6 +44,8 @@ export interface StampTableContext {
    * Το χρώμα της τρέχουσας φάσης (hover / επιλογή). Όταν υπάρχει, **παρακάμπτει** τα
    * χρώματα του στυλ ώστε ολόκληρος ο πίνακας να φωτίζεται ομοιόμορφα — αλλιώς ένας
    * πίνακας με έγχρωμα κελιά θα φαινόταν μισο-επιλεγμένος.
+   *
+   * ⚠️ **Βάφει τη σιλουέτα, ΠΟΤΕ το κείμενο** — δες {@link stampRun}.
    */
   readonly phaseColor?: string;
 }
@@ -98,6 +102,44 @@ export function stampTableBorders(
   }
 }
 
+// ── Δρομέας κελιού ───────────────────────────────────────────────────────────
+
+/**
+ * ADR-739 Φ.Δ βήμα 2 — το ορθογώνιο του **τρέχοντος κελιού** (Excel cell cursor).
+ *
+ * ⚠️ **Ζωγραφίζεται ΠΑΝΤΑ τελευταίο και ΠΟΤΕ μέσα στο cached raster.** Ο καλών το
+ * επιτρέπει μόνο στη φάση επιλογής/hover, δηλαδή στο overlay pass του
+ * `dxf-canvas-interactive-overlays` — ADR-040 κανόνας #3. Αν έμπαινε στο bitmap cache,
+ * κάθε `Tab` θα ακύρωνε ολόκληρο το raster της σκηνής.
+ *
+ * Οι τέσσερις γωνίες περνούν από το `toScreen` (και όχι ένα `strokeRect` πάνω σε δύο
+ * σημεία): ο πίνακας μπορεί να είναι **περιστραμμένος**, και ένα ορθογώνιο σε άξονες
+ * οθόνης θα κρεμόταν λοξά πάνω από το κελί. Ίδιος δρόμος με τα γεμίσματα.
+ *
+ * Δεν παίρνει `phaseColor`: ο δρομέας είναι δείκτης **διεπαφής**, όχι κατάσταση της
+ * οντότητας — μια hovered επιλογή δεν αλλάζει ποιο κελί δέχεται την πληκτρολόγηση.
+ */
+export function stampTableCellCursor(rc: StampTableContext, rectMm: TableRectMm): void {
+  const { ctx } = rc;
+  const { x, y, w, h } = rectMm;
+  ctx.save();
+  ctx.strokeStyle = TABLE_CELL_CURSOR.colorHex;
+  ctx.lineWidth = TABLE_CELL_CURSOR.lineWidthPx;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  const corners = [
+    rc.toScreen(x, y),
+    rc.toScreen(x + w, y),
+    rc.toScreen(x + w, y + h),
+    rc.toScreen(x, y + h),
+  ];
+  ctx.moveTo(corners[0].x, corners[0].y);
+  for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].x, corners[i].y);
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
 // ── Κείμενο ──────────────────────────────────────────────────────────────────
 
 /**
@@ -123,6 +165,21 @@ export function stampTableText(rc: StampTableContext, cells: readonly TableCellL
   return drewAny;
 }
 
+/**
+ * ⚠️ **Το κείμενο ΔΕΝ δέχεται ποτέ το `phaseColor` — μετρημένο ελάττωμα, όχι προτίμηση.**
+ *
+ * Το χρώμα φάσης βάφει τη **σιλουέτα** (γεμίσματα + πλέγμα). Αν έβαφε και τα γράμματα, ένα
+ * κελί **με γέμισμα** θα έπαιρνε το ίδιο χρώμα δύο φορές — φόντο και μελάνι — και το κείμενο
+ * θα εξαφανιζόταν σε μονόχρωμο πλακάκι. Ακριβώς αυτό συνέβαινε: στο hover η **γραμμή
+ * κεφαλίδων** (το μόνο μέρος με `fillColorHex`) έχανε τα «Α/Α · Περιγραφή · Ποσότητα», ενώ
+ * οι σειρές δεδομένων — χωρίς γέμισμα, άρα με το σκούρο φόντο του καμβά από πίσω — κρατούσαν
+ * τα γράμματά τους. Η ασυμμετρία ήταν το αποτύπωμα: **όποιο κελί έχει γέμισμα, χάνει το
+ * κείμενο** (επαληθεύτηκε στην οθόνη, 2026-07-31, ADR-739 §19.8).
+ *
+ * Το κείμενο κρατά το `run.colorHex` του, οπότε η αντίθεση που σχεδίασε ο συγγραφέας του
+ * στυλ επιβιώνει σε **κάθε** φάση. Ίδια αρχή με το AutoCAD: το highlight αλλάζει τη
+ * σιλουέτα της οντότητας, δεν την κάνει δυσανάγνωστη.
+ */
 function stampRun(
   ctx: CanvasRenderingContext2D,
   rc: StampTableContext,
@@ -131,7 +188,7 @@ function stampRun(
 ): void {
   const anchor = rc.toScreen(run.position.x, run.position.y);
   ctx.save();
-  ctx.fillStyle = rc.phaseColor ?? run.colorHex;
+  ctx.fillStyle = run.colorHex;
   ctx.font = buildUIFont(fontPx, 'arial', run.bold ? 'bold' : 'normal');
   ctx.textAlign = run.hAlign;
   ctx.textBaseline = 'alphabetic';

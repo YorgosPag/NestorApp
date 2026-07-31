@@ -516,7 +516,8 @@
   },
   "table": {
     "cellEditor": {
-      "editorPlaceholder": ""
+      "editorPlaceholder": "",
+      "cellAriaLabel": "Table cell"
     }
   },
   "scene": {
