@@ -2,6 +2,13 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **ΔΥΟ παράλληλοι dispatchers πάνω στο ίδιο λεξιλόγιο εργαλείων, 367 + 305 γραμμές (μετρημένο 2026-07-31, κατά N.0.2 στον κύκλο ADR-739 Φ.Δ).**
+  Όριο N.7.1 = **40 γραμμές**. `createEntityFromTool` (`hooks/drawing/drawing-entity-builders.ts:96-462`) = **367 γρ.** / `switch` με **27 `case`**· `generatePreviewEntity` (`hooks/drawing/drawing-preview-generator.ts:181-485`) = **305 γρ.** / αλυσίδα **42 `if (tool === …)`**. Και τα δύο **αρχεία** μένουν κάτω από το όριο των 500 (471 / 487) — γι' αυτό **κανένα gate δεν τα βλέπει**: το pre-commit ελέγχει μέγεθος **αρχείου**, όχι **συνάρτησης**.
+  · 🔴 **Το πρόβλημα ΔΕΝ είναι το μήκος — είναι ότι είναι ΔΥΟ.** Κάθε νέο εργαλείο απαιτεί επεξεργασία **δύο** σημείων αποστολής (τι χτίζεται · τι φαίνεται ως ghost) που **δεν έχουν τίποτα να τα κρατά συγχρονισμένα**. Ο σωστός τύπος διόρθωσης είναι **μητρώο `tool → { build, preview }`** (ένα σημείο καταχώρησης, exhaustiveness από τον compiler), **όχι** «εξαγωγή helpers» — αυτή θα έφτιαχνε δύο *μικρότερους* dispatchers που εξακολουθούν να αποκλίνουν.
+  · **Μετρημένη ασυμμετρία**: `sketch` υπάρχει **μόνο** στους builders· **16** εργαλεία υπάρχουν **μόνο** στο preview (`beam block-library column column-from-polygon floor-finish foundation-pad foundation-strip foundation-tie-beam mep-underfloor mtext roof slab stair text wall wall-covering`). ⚠️ **ΔΕΝ επαληθεύτηκε ότι είναι σφάλμα** — το `switch` δεν έχει `default` που να προωθεί (επιστρέφει `null`), άρα τα 16 πιθανότατα δημιουργούνται από **άλλα** μονοπάτια BIM. Χρειάζεται ανάγνωση ανά εργαλείο **πριν** πει κανείς «λείπουν».
+  · **Ποιος τις μεγάλωσε**: η ADR-739 Φ.Δ πρόσθεσε **+8 / +11** γραμμές (το εργαλείο «Πίνακας»). Το χρέος είναι **προϋπάρχον**· η φάση απλώς το επιδείνωσε και **παρέλειψε αυτή την καταγραφή** — ο N.0.2 την επέβαλλε.
+  · **Γιατί καταγραφή και όχι διόρθωση τώρα**: 2 αρχεία αλλά **~40 εργαλεία σε 3+ domains** (2D primitives, BIM, annotation) ⇒ >1h, και το `dxf-viewer` δουλεύεται **παράλληλα** από άλλον agent. Εντολή μέτρησης: `awk 'NR>=96 && /^}/ {print NR-96+1; exit}' src/subapps/dxf-viewer/hooks/drawing/drawing-entity-builders.ts`.
+
 - ⏸️ **ADR-742 Φάσεις Γ+Δ — η legacy διασπορά του `companyId !==` (ΔΕΝ ξεκίνησε).**
   Μετρημένο 2026-07-31: **88 αρχεία** έχουν χειρόγραφο `x.companyId !== ctx.companyId` εκτός SSoT
   (`grep -rlnE '\.companyId !== ctx\.companyId' src --include=*.ts --include=*.tsx | grep -v '__tests__|\.test\.'`

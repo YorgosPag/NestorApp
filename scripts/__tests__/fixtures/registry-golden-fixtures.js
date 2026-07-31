@@ -145,8 +145,9 @@ const p = formatCurrency(price);`,
   },
 
   'date-local': {
-    shouldMatch: `// Scanner must catch all 3 date-local anti-patterns:
+    shouldMatch: `// Scanner must catch all 4 date-local anti-patterns:
 export const normalizeToDate = (x: unknown) => x as Date;
+function toMs(ts: unknown) { return Number(ts); }
 const timestamp = new Date().toISOString();
 const firestoreTs = Timestamp.fromDate(new Date());`,
     shouldSkip: `// Scanner must pass SSoT imports + usage:
