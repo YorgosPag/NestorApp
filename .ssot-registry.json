@@ -1407,13 +1407,30 @@
     },
     "cron-auth": {
       "ssotFile": "src/lib/cron-auth.ts",
-      "description": "Vercel Cron authorization must use centralized verifyCronAuthorization — no inline CRON_SECRET checks",
+      "description": "Scheduled-job authorization must use centralized verifyCronAuthorization / rejectUnauthorizedCron — no inline CRON_SECRET checks. Since ADR-739 the caller is a Coolify Scheduled Task hitting /api/cron/dispatch, not Vercel Cron (Vercel frozen 2026-05-09); the contract (two headers, secure default when the secret is absent) is unchanged. TRASH_RETENTION_MS also lives here — it was byte-copied in purge-deleted-contacts and purge-deleted-entities, two places to edit for one promise to the user.",
       "forbiddenPatterns": [
         "function\\s+verifyCronAuthorization\\s*\\(",
+        "function\\s+rejectUnauthorizedCron\\s*\\(",
         "process\\.env\\.CRON_SECRET"
       ],
       "allowlist": [
         "src/lib/cron-auth.ts"
+      ]
+    },
+    "cron-schedule": {
+      "ssotFile": "src/config/cron-schedule.ts",
+      "description": "ADR-739 — Το πρόγραμμα προγραμματισμένων εργασιών (τι τρέχει πότε) ζει ΑΠΟΚΛΕΙΣΤΙΚΑ στο src/config/cron-schedule.ts. Μέχρι 2026-07-31 ζούσε στο vercel.json, αρχείο που διαβάζει μόνο το Vercel — παγωμένο από 2026-05-09 — με αποτέλεσμα ΚΑΜΙΑ εργασία να μην τρέξει επί τρεις μήνες (κανένα αντίγραφο ασφαλείας, καμία εκκαθάριση κάδου, καμία οριστική διαγραφή). Η ίδια δήλωση τροφοδοτεί τον dispatcher, το Sentry monitor (dead-man's switch) και τα tests, ώστε πρόγραμμα και συναγερμός να μην μπορούν να αποκλίνουν. ΑΠΑΓΟΡΕΥΕΤΑΙ: δεύτερος πίνακας `crons` (vercel.json ή αλλού), δεύτερη υλοποίηση dispatchCronTick/isJobDue/buildMonitorConfig, και in-process scheduler (node-cron/BullMQ/agenda) — ο χρονοπρογραμματιστής είναι μία Coolify Scheduled Task ανά λεπτό στο /api/cron/dispatch. Νέο cron route χωρίς εγγραφή εδώ ⇒ κόκκινο στο src/lib/cron/__tests__/cron-route-contract.test.ts.",
+      "forbiddenPatterns": [
+        "\"crons\"\\s*:",
+        "(function|const)\\s+(dispatchCronTick|isJobDue|buildMonitorConfig)\\b",
+        "from\\s+'node-cron'",
+        "require\\(\\s*'node-cron'\\s*\\)"
+      ],
+      "allowlist": [
+        "src/config/cron-schedule.ts",
+        "src/lib/cron/cron-dispatcher.ts",
+        "src/lib/cron/cron-due.ts",
+        "src/lib/cron/cron-monitor.ts"
       ]
     },
     "firestore-recovery": {
@@ -4693,8 +4710,8 @@
         "src/lib/api/trash-list-route.ts",
         "src/lib/firestore/soft-delete-engine.ts",
         "src/lib/firestore/__tests__/soft-delete-trash-list.test.ts",
-        "src/app/api/cron/purge-deleted-entities/route.ts",
-        "src/app/api/cron/purge-deleted-contacts/route.ts",
+        "src/lib/cron/jobs/purge-deleted-entities.job.ts",
+        "src/lib/cron/jobs/purge-deleted-contacts.job.ts",
         "src/services/realtime/hooks/useRealtimePropertiesTrashCount.ts",
         "src/hooks/usePropertiesTrashState.ts"
       ]
