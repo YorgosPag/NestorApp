@@ -29,15 +29,17 @@ import { isDrawnByBatchedLineLayer, isDrawnByWebglLineLayer } from '../webgl-lin
 // `isEntityLayerSkipped` method, extracted so the WebGL buffer builder asks the same question).
 import { isEntityLayerSkipped as isEntityLayerSkippedShared } from './dxf-entity-layer-skip';
 // Per-frame index builders (extracted Boy-Scout file-size split, 2026-05-19).
-import { buildDimensionLookup, buildSlabOpeningsBySlab, buildOpeningsByWall, buildWallsById, buildColumnFootprints, computeSceneDimensionSpan } from './dxf-renderer-frame-builders';
+import { buildFrameIndices, computeSceneDimensionSpan } from './dxf-renderer-frame-builders';
+// ADR-743 Φ0 — attribution του re-raster με το ΥΠΑΡΧΟΝ όργανο (μηδέν κόστος με κλειστό flag).
+import { withPerf } from '../../systems/cursor/mouse-handler-perf';
+import { RASTER_STAGES } from './dxf-canvas-perf-stages';
 // ADR-550 / ADR-358 §G7 — entity render-style SSoT (shared with the WYSIWYG preview path).
 import { resolveEntityRenderStyle, type ResolvedRenderStyle } from './dxf-renderer-style-resolve';
 // ADR-642 Φ2-B — genuine complex linetypes (embedded text) opt out of the solid LINE batch.
 import { isSimpleExpressible } from '../../config/complex-linetype-adapters';
-import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay'; import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
-// Scene-level structural overlay passes (Boy-Scout file-size split, 2026-06-17 —
-// mirror του foundation overlay· ADR-449 σοβάς + ADR-456/471 οπλισμός μελών κολώνα+δοκάρι).
-import { drawMemberReinforcement2D, drawStructuralFinishSkin2D } from './dxf-renderer-structural-overlays';
+// ADR-743 Φ0 — ΟΛΑ τα scene-level structural passes πίσω από έναν ιδιοκτήτη σειράς
+// (ADR-449 σοβάς → ADR-456/471 μέλη → ADR-463 θεμελίωση → ADR-476 πλάκες).
+import { drawSceneLevelOverlays2D } from './dxf-renderer-structural-overlays';
 // DxfEntityUnion → Entity mapper (extracted file-size split, 2026-05-25).
 import { buildEntityModelFromDxf } from './dxf-renderer-entity-model';
 
@@ -103,20 +105,15 @@ export class DxfRenderer {
     this.ctx.save();
     // ✅ ΝΕΟ: Update composite settings
     this.entityComposite.setTransform(transform);
-    // ADR-362 Phase C1 — build the per-frame DimensionLookup map once and
-    // forward it to the dimension leaf. Cheap O(n) scene scan; only dim
-    // entities land in the map (typically <100 per scene).
-    this.entityComposite.setDimensionLookup(buildDimensionLookup(scene.entities));
-    this.entityComposite.setSlabOpeningsBySlab(buildSlabOpeningsBySlab(scene.entities));
-    // ADR-363 Phase 2 (deferred pipeline) — feed per-frame opening→wall index so
-    // WallRenderer can punch boolean cutouts through wall fills.
-    this.entityComposite.setOpeningsByWall(buildOpeningsByWall(scene.entities));
-    // ADR-511 — feed per-frame wall index so WallCoveringRenderer resolves its host
-    // wall and computes the live face strip (covering never stores a render polygon).
-    this.entityComposite.setWallsById(buildWallsById(scene.entities));
-    // ADR-509 §axis-clip — feed per-frame column footprints so WallRenderer clips its
-    // dashed axis at column faces (location line stops at the body, not through it).
-    this.entityComposite.setColumnFootprints(buildColumnFootprints(scene.entities));
+    // ADR-743 Φ0 — ΕΝΑ πέρασμα για τα πέντε ευρετήρια καρέ (ήταν πέντε πλήρεις O(n) σαρώσεις
+    // ΠΡΙΝ από κάθε culling): dimension lookup (ADR-362 C1), slab-openings (ADR-363 3.7),
+    // openings→wall (ADR-363 2), walls (ADR-511), column footprints (ADR-509 §axis-clip).
+    const idx = withPerf(RASTER_STAGES.indices, () => buildFrameIndices(scene.entities));
+    this.entityComposite.setDimensionLookup(idx.dimensionLookup);
+    this.entityComposite.setSlabOpeningsBySlab(idx.slabOpeningsBySlab);
+    this.entityComposite.setOpeningsByWall(idx.openingsByWall);
+    this.entityComposite.setWallsById(idx.wallsById);
+    this.entityComposite.setColumnFootprints(idx.columnFootprints);
     // ADR-449 Slice X2 μέρος Β — ο σοβάς (2Δ finished outline) σχεδιάζεται πλέον ως
     // ΕΝΑ scene-level pass (`drawStructuralFinishSkin2D`, πριν το `ctx.restore()`), από την
     // ΙΔΙΑ merged-silhouette SSoT με το 3Δ — αντικαθιστά το παλιό per-element injection στους
@@ -220,57 +217,50 @@ export class DxfRenderer {
       this.renderEntityUnified(entity, transform, actualViewport, effectiveOptions);
     };
 
-    for (const entity of scene.entities) {
-      // ADR-363 §11.Q3 — never draw a slab-opening in array position; defer to the final sub-pass.
-      // Do NOT flush the run: the opening paints nothing here, so surrounding lines may still batch.
-      if (entity.type === 'slab-opening') { deferredSlabOpenings.push(entity); continue; }
+    // ADR-743 Φ0 — `raster:entities`: ο κύριος βρόχος (batching + culling + per-entity draw).
+    withPerf(RASTER_STAGES.entities, () => {
+      for (const entity of scene.entities) {
+        // ADR-363 §11.Q3 — never draw a slab-opening in array position; defer to the final sub-pass.
+        // Do NOT flush the run: the opening paints nothing here, so surrounding lines may still batch.
+        if (entity.type === 'slab-opening') { deferredSlabOpenings.push(entity); continue; }
 
-      // Eligible solid LINE → extend the current run (ADR-040 Phase X batching, preserved per-run).
-      const entry = entity.type === 'line'
-        ? this.tryLineBatchEntry(entity, effectiveOptions, worldViewport, transform, actualViewport, webglOwnedIds)
-        : null;
-      if (entry) {
-        if (!run) run = new Map<string, LineBatch>();
-        let batch = run.get(entry.key);
-        if (!batch) { batch = { starts: [], ends: [], lw: entry.lw, alpha: entry.alpha, dashMm: entry.dashMm, celtscale: entry.celtscale }; run.set(entry.key, batch); }
-        batch.starts.push(entry.start);
-        batch.ends.push(entry.end);
-        batchedIds.add(entity.id);
-        continue;
+        // Eligible solid LINE → extend the current run (ADR-040 Phase X batching, preserved per-run).
+        const entry = entity.type === 'line'
+          ? this.tryLineBatchEntry(entity, effectiveOptions, worldViewport, transform, actualViewport, webglOwnedIds)
+          : null;
+        if (entry) {
+          if (!run) run = new Map<string, LineBatch>();
+          let batch = run.get(entry.key);
+          if (!batch) { batch = { starts: [], ends: [], lw: entry.lw, alpha: entry.alpha, dashMm: entry.dashMm, celtscale: entry.celtscale }; run.set(entry.key, batch); }
+          batch.starts.push(entry.start);
+          batch.ends.push(entry.end);
+          batchedIds.add(entity.id);
+          continue;
+        }
+
+        // ADR-639 Στάδιο 5 — a GPU-owned line that is NOT selected/hovered is drawn by the GPU: suppress
+        // its Canvas2D draw WITHOUT breaking the run (it paints nothing here). `batchedIds` also gates the
+        // per-entity pass (preserved dual meaning: «already handled», not literally «in a stroke batch»).
+        if (entity.type === 'line' && webglOwnedIds && webglOwnedIds.has(entity.id)
+            && !this._selectionSet.has(entity.id) && effectiveOptions.hoveredEntityId !== entity.id) {
+          batchedIds.add(entity.id);
+          continue;
+        }
+
+        // Any other entity (non-line, or a line excluded from batching — selected/hovered/measurement/
+        // non-solid/complex-linetype) breaks the run: flush accumulated lines, then draw in array order.
+        flushRun();
+        drawInOrder(entity);
       }
-
-      // ADR-639 Στάδιο 5 — a GPU-owned line that is NOT selected/hovered is drawn by the GPU: suppress
-      // its Canvas2D draw WITHOUT breaking the run (it paints nothing here). `batchedIds` also gates the
-      // per-entity pass (preserved dual meaning: «already handled», not literally «in a stroke batch»).
-      if (entity.type === 'line' && webglOwnedIds && webglOwnedIds.has(entity.id)
-          && !this._selectionSet.has(entity.id) && effectiveOptions.hoveredEntityId !== entity.id) {
-        batchedIds.add(entity.id);
-        continue;
-      }
-
-      // Any other entity (non-line, or a line excluded from batching — selected/hovered/measurement/
-      // non-solid/complex-linetype) breaks the run: flush accumulated lines, then draw in array order.
       flushRun();
-      drawInOrder(entity);
-    }
-    flushRun();
 
-    // ADR-363 §11.Q3 — slab-openings ΠΑΝΩ από τα slabs (dashed outline + kind-fill survive the punch).
-    for (const entity of deferredSlabOpenings) drawInOrder(entity);
-    // ADR-449 Slice X2 μέρος Β — ΕΝΑ scene-level pass για τον ΕΝΙΑΙΟ σοβά (mirror του 3Δ
-    // `syncStructuralFinishSkin`): μετά τα entities, ζωγραφίζει το merged-silhouette outline
-    // από την ΙΔΙΑ SSoT με το 3Δ → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
-    drawStructuralFinishSkin2D(this.ctx, scene.entities, transform, actualViewport);
-    // ADR-456/471 — οπλισμός δομικών μελών (κολώνα: διαμήκεις κουκκίδες+στεφάνι· δοκάρι:
-    // διαμήκεις γραμμές+εγκάρσιοι συνδετήρες) ως scene-level overlay μέσα στο cached
-    // normal-state bitmap (ίδιο pattern με τον σοβά)· gated από `showReinforcement`.
-    drawMemberReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
-    // ADR-463 — οπλισμός θεμελίωσης (πέδιλο/πεδιλοδοκός/συνδετήρια) ως scene-level overlay,
-    // ίδιο pattern/gate με την κολώνα (mirror του drawColumnReinforcement2D).
-    drawFoundationReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
-    // ADR-476 — οπλισμός πλακών (εδαφόπλακα + αναρτημένη): δι-διευθυντικές σχάρες κάτω
-    // (συμπαγείς) + άνω (διακεκομμένες), clip στο outline· ίδιο pattern/gate με το πέδιλο.
-    drawSlabReinforcement2D(this.ctx, scene.entities, transform, actualViewport);
+      // ADR-363 §11.Q3 — slab-openings ΠΑΝΩ από τα slabs (dashed outline + kind-fill survive the punch).
+      for (const entity of deferredSlabOpenings) drawInOrder(entity);
+    });
+    // ADR-743 Φ0 — `raster:scene-overlays`: σοβάς + οπλισμοί μελών/θεμελίωσης/πλακών, στη σειρά
+    // τους (ο ιδιοκτήτης της ακολουθίας είναι το `dxf-renderer-structural-overlays`).
+    withPerf(RASTER_STAGES.sceneOverlays, () =>
+      drawSceneLevelOverlays2D(this.ctx, scene.entities, transform, actualViewport));
     this.ctx.restore();
   }
 

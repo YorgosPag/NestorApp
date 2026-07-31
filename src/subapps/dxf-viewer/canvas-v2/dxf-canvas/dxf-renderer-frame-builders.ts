@@ -31,10 +31,99 @@ import { buildColumnVerticalExtentLookup } from '../../bim/geometry/column-verti
 import { useActiveStoreyStore } from '../../systems/levels/active-storey-store';
 
 /**
+ * ΤΑ ΠΕΝΤΕ ΕΥΡΕΤΗΡΙΑ ΚΑΡΕ ΩΣ ΕΝΑ ΑΝΤΙΚΕΙΜΕΝΟ (ADR-743 Φ0).
+ *
+ * Ένα όνομα για «ό,τι χρειάζεται ο `DxfRenderer.render` πριν αγγίξει έστω μία οντότητα».
+ */
+export interface FrameIndices {
+  readonly dimensionLookup: DimensionLookup;
+  readonly slabOpeningsBySlab: Map<string, SlabOpeningEntity[]>;
+  readonly openingsByWall: OpeningsByWall;
+  readonly wallsById: Map<string, WallCoveringHost>;
+  readonly columnFootprints: ReadonlyArray<readonly Point2D[]>;
+}
+
+/** Προσθέτει `value` στον κάδο `key` — ο κοινός πυρήνας των δύο group-by ευρετηρίων. */
+function pushInto<T>(map: Map<string, T[]>, key: string, value: T): void {
+  const bucket = map.get(key);
+  if (bucket) bucket.push(value);
+  else map.set(key, [value]);
+}
+
+/**
+ * Χτίζει **και τα πέντε** ευρετήρια καρέ σε **ΕΝΑ** πέρασμα των οντοτήτων (ADR-743 Φ0).
+ *
+ * ## Γιατί υπάρχει
+ *
+ * Ο `DxfRenderer.render` καλούσε πέντε ξεχωριστούς builders, καθέναν με **δικό του πλήρη O(n)
+ * βρόχο**, ΠΡΙΝ από οποιοδήποτε viewport culling — δηλαδή **πέντε πλήρεις σαρώσεις της σκηνής σε
+ * κάθε re-raster**, ανεξάρτητα από το πόσες οντότητες είναι τελικά ορατές. Οι πέντε τύποι που
+ * φιλτράρουν είναι **ξένοι μεταξύ τους** (`dimension` / `slab-opening` / `opening` / `column` /
+ * `wall`), άρα ένα `switch` σε ένα πέρασμα παράγει **ακριβώς** τα ίδια αποτελέσματα — αυτό είναι
+ * το συμβόλαιο που κλειδώνει το `dxf-renderer-frame-indices.test.ts`.
+ *
+ * 🔴 **Και είναι Η ΡΑΦΗ ΤΟΥ MEMOIZATION.** Και τα πέντε ευρετήρια είναι **καθαρές συναρτήσεις του
+ * `entities`** — δεν εξαρτώνται από transform ούτε από viewport. Άρα σε ένα pan/zoom, όπου η
+ * σκηνή δεν άλλαξε ούτε κατά μία οντότητα, ξαναχτίζονται **πανομοιότυπα** δεκάδες φορές. Το ίδιο
+ * ακριβώς σχήμα που το ADR-735 βρήκε στα ευρετήρια snap (4 μηχανές, 2.504ms → 2,7ms). Αν η
+ * μέτρηση της Φ0 δείξει το `raster:indices` κυρίαρχο, η θεραπεία μπαίνει **εδώ** και μόνο εδώ —
+ * χωρίς να ξαναγγίξει κανείς τον `DxfRenderer`.
+ *
+ * ⚠️ Παραμένει **καθαρή** (χωρίς `withPerf`): τη χρονομετρεί ο καλών. Έτσι το module μένει
+ * DOM-free/store-free και τεστάρεται χωρίς όργανο.
+ */
+export function buildFrameIndices(entities: readonly DxfEntityUnion[]): FrameIndices {
+  const dimensions = new Map<string, DimensionEntity>();
+  const slabOpeningsBySlab = new Map<string, SlabOpeningEntity[]>();
+  const openingsByWall: Map<string, OpeningEntity[]> = new Map();
+  const wallsById = new Map<string, WallCoveringHost>();
+  const columnFootprints: (readonly Point2D[])[] = [];
+
+  for (const e of entities) {
+    switch (e.type) {
+      case 'dimension':
+        dimensions.set(e.dimensionEntity.id, e.dimensionEntity);
+        break;
+      case 'slab-opening': {
+        const so = (e as DxfSlabOpening).slabOpeningEntity;
+        pushInto(slabOpeningsBySlab, so.params.slabId, so);
+        break;
+      }
+      case 'opening': {
+        const o = (e as DxfOpening).openingEntity;
+        // ADR-615 — a self-hosted opening has no host wall to cut, so it joins no bucket.
+        if (isWallHostedOpening(o)) pushInto(openingsByWall, o.params.wallId, o);
+        break;
+      }
+      case 'column': {
+        const verts = (e as DxfColumn).geometry?.footprint?.vertices;
+        if (verts && verts.length >= 3) columnFootprints.push(verts);
+        break;
+      }
+      case 'wall':
+        wallsById.set(e.id, e as DxfWall);
+        break;
+    }
+  }
+
+  return {
+    dimensionLookup: (id: string) => dimensions.get(id),
+    slabOpeningsBySlab,
+    openingsByWall,
+    wallsById,
+    columnFootprints,
+  };
+}
+
+/**
  * ADR-362 Phase C1 — build the per-frame DimensionLookup map for chained
  * dim resolution (baseline / continued). O(n) scan; only `'dimension'`
  * entities land in the map (typically <100 per scene). Returned closure is
  * O(1) lookup at render time.
+ *
+ * ⚠️ ADR-743 — ο `DxfRenderer` **δεν** καλεί πια αυτόν (ούτε τους τέσσερις αδελφούς του) ξεχωριστά:
+ * περνά από το {@link buildFrameIndices}. Μένουν εξαγόμενοι για τους ΑΛΛΟΥΣ καταναλωτές
+ * (`buildStructuralFinishSilhouette2D`) και ως το αναφορικό συμβόλαιο του ισοδυναμίας-test.
  */
 export function buildDimensionLookup(entities: readonly DxfEntityUnion[]): DimensionLookup {
   const map = new Map<string, DimensionEntity>();

@@ -14,6 +14,10 @@ import { drawColumnRebar2D } from '../../bim/renderers/column-rebar-2d';
 import { drawBeamRebar2D } from '../../bim/renderers/beam-rebar-2d';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { buildStructuralFinishSilhouette2D } from './dxf-renderer-frame-builders';
+// ADR-743 Φ0 — τα δύο αδελφά scene-level passes ζούσαν ως ξεχωριστά imports στον DxfRenderer·
+// η ΣΕΙΡΑ τους είναι σημασιολογική, οπότε αποκτά έναν ιδιοκτήτη (βλ. drawSceneLevelOverlays2D).
+import { drawFoundationReinforcement2D } from './dxf-foundation-reinforcement-overlay';
+import { drawSlabReinforcement2D } from './dxf-slab-reinforcement-overlay';
 
 /**
  * Scene-level structural overlay passes extracted from {@link DxfRenderer} (Boy-Scout
@@ -21,6 +25,39 @@ import { buildStructuralFinishSilhouette2D } from './dxf-renderer-frame-builders
  * pattern: pure draw functions που δέχονται `ctx`, μηδέν instance state / subscriptions
  * (ADR-040-safe). Ζωγραφίζονται μέσα στο cached normal-state bitmap, πριν το `ctx.restore()`.
  */
+
+/**
+ * ΟΛΑ τα scene-level overlay passes, ΣΤΗ ΣΕΙΡΑ ΤΟΥΣ — ένας ιδιοκτήτης (ADR-743 Φ0).
+ *
+ * Ο `DxfRenderer.render` καλούσε τέσσερα passes στη σειρά, καθένα με δικό του import και δικό του
+ * σχόλιο. Η **σειρά** τους δεν είναι τυχαία (ο σοβάς είναι περίγραμμα και μπαίνει πρώτος· οι
+ * οπλισμοί από πάνω), αλλά ζούσε **μόνο** ως θέση γραμμών μέσα σε έναν 500γραμμο orchestrator —
+ * δηλαδή πουθενά. Τώρα είναι μία δηλωμένη ακολουθία, με ένα σημείο αλλαγής.
+ *
+ * Κάθε pass αυτο-πυλώνεται (per-element visibility + view toggle) και είναι no-op όταν ο
+ * αντίστοιχος διακόπτης είναι κλειστός — η κλήση όλων ανά καρέ είναι η προϋπάρχουσα συμπεριφορά.
+ *
+ * ⚠️ **Καθαρή αναδιάταξη, μηδέν αλλαγή σημασιολογίας** — ίδια passes, ίδια σειρά, ίδια ορίσματα.
+ */
+export function drawSceneLevelOverlays2D(
+  ctx: CanvasRenderingContext2D,
+  entities: readonly DxfEntityUnion[],
+  transform: ViewTransform,
+  viewport: Viewport,
+): void {
+  // ADR-449 Slice X2 μέρος Β — ΕΝΑ pass για τον ΕΝΙΑΙΟ σοβά (mirror του 3Δ
+  // `syncStructuralFinishSkin`): merged-silhouette outline από την ΙΔΙΑ SSoT με το 3Δ
+  // → ίδιες γωνίες/συμβολές, μηδέν διπλή γραμμή.
+  drawStructuralFinishSkin2D(ctx, entities, transform, viewport);
+  // ADR-456/471 — οπλισμός δομικών μελών (κολώνα: διαμήκεις κουκκίδες+στεφάνι· δοκάρι:
+  // διαμήκεις γραμμές+εγκάρσιοι συνδετήρες)· gated από `showReinforcement`.
+  drawMemberReinforcement2D(ctx, entities, transform, viewport);
+  // ADR-463 — οπλισμός θεμελίωσης (πέδιλο/πεδιλοδοκός/συνδετήρια), ίδιο pattern/gate.
+  drawFoundationReinforcement2D(ctx, entities, transform, viewport);
+  // ADR-476 — οπλισμός πλακών (εδαφόπλακα + αναρτημένη): δι-διευθυντικές σχάρες κάτω
+  // (συμπαγείς) + άνω (διακεκομμένες), clip στο outline· ίδιο pattern/gate με το πέδιλο.
+  drawSlabReinforcement2D(ctx, entities, transform, viewport);
+}
 
 /**
  * ADR-471 Slice 2 (γενίκευση του ADR-456 column overlay) — ζωγραφίζει τον οπλισμό ΟΛΩΝ
@@ -46,17 +83,16 @@ export function drawMemberReinforcement2D(
     if (!entity.visible) continue;
     // ADR-470 — per-element reinforcement visibility (override → view-level) + cut-plane
     // parity: στο ενεργό υψόμετρο τομής δείχνουμε μόνο όσα υπάρχουν στο/κάτω από το επίπεδο.
+    // Το gate είναι ΤΟ ΙΔΙΟ για κολώνα και δοκάρι (ADR-460 κάθε σχήμα / ADR-471 ορισμένος ή
+    // auto οπλισμός) — μία φορά, πριν το dispatch· διαφέρει ΜΟΝΟ η συνάρτηση σχεδίασης.
+    if (entity.type !== 'column' && entity.type !== 'beam') continue;
+    if (!entity.params.reinforcement) continue;
+    if (!isStructuralComponentVisible('reinforcement', entity)) continue;
+    if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
+    const pxPerMm = mmToSceneUnits(entity.params.sceneUnits ?? 'mm') * transform.scale;
     if (entity.type === 'column') {
-      if (!entity.params.reinforcement) continue; // ADR-460 — κάθε σχήμα (όχι μόνο ορθογωνική)
-      if (!isStructuralComponentVisible('reinforcement', entity)) continue;
-      if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
-      const pxPerMm = mmToSceneUnits(entity.params.sceneUnits ?? 'mm') * transform.scale;
       drawColumnRebar2D(ctx, entity.params, pxPerMm, worldToScreen, entity.id); // ADR-491 — FEM-aware
-    } else if (entity.type === 'beam') {
-      if (!entity.params.reinforcement) continue; // ADR-471 — δοκάρι με ορισμένο/auto οπλισμό
-      if (!isStructuralComponentVisible('reinforcement', entity)) continue;
-      if (isHiddenByCutPlane(entity, bimSettings.viewRange, bimSettings.cutPlaneActive)) continue;
-      const pxPerMm = mmToSceneUnits(entity.params.sceneUnits ?? 'mm') * transform.scale;
+    } else {
       drawBeamRebar2D(ctx, entity, pxPerMm, worldToScreen);
     }
   }

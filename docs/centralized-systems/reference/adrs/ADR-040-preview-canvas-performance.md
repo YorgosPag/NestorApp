@@ -5657,6 +5657,50 @@ painter memo, ADR-732) — inline literal θα άλλαζε ταυτότητα �
 
 ---
 
+### 2026-07-31 (δ) — `DxfRenderer`: **ένα** πέρασμα για τα πέντε ευρετήρια καρέ + χρέωση σταδίων στο re-raster (ADR-743 Φ0, CHECK 6B stage)
+
+Πρώτη κίνηση πάνω στον **επόμενο ένοχο** που άφησε η μέτρηση του ADR-735: το `frame:dxf-canvas`
+re-raster (zoom p90 ~120ms). Η εγγραφή είναι **και** αρχιτεκτονική, όχι μόνο CHECK 6B stage.
+
+🔑 **Το εύρημα**: ο `renderScene` έκανε **πέντε πλήρεις O(n) σαρώσεις της σκηνής** — μία ανά
+ευρετήριο (`buildDimensionLookup` ADR-362 C1, `buildSlabOpeningsBySlab` + `buildOpeningsByWall`
+ADR-363, `buildWallsById` ADR-511, `buildColumnFootprints` ADR-509 §axis-clip) — **πριν** καν
+ξεκινήσει το culling. Δηλαδή 5n διαπεράσεις για δουλειά που θέλει n. Το κόστος ήταν αόρατο επειδή
+**κανείς δεν το είχε χρεώσει σε στάδιο**· κάθε builder φαινόταν «φθηνός O(n)» μεμονωμένα.
+
+Πλέον: `buildFrameIndices(scene.entities)` → **ένα** πέρασμα που γεμίζει και τα πέντε. Ίδια δομές
+εξόδου, ίδιοι καταναλωτές (`entityComposite.setX(...)`) — καμία αλλαγή σημασιολογίας.
+
+**Η χρέωση μπήκε με το ΥΠΑΡΧΟΝ όργανο**, όχι με νέο: `withPerf` (`systems/cursor/mouse-handler-perf`)
+γύρω από τρία στάδια — `raster:indices`, `raster:entities` (ο κύριος βρόχος: batching + culling +
+per-entity draw), `raster:scene-overlays`. **Μηδέν κόστος με κλειστό flag** (το `withPerf` επιστρέφει
+τον thunk αυτούσιο). Τα ονόματα ζουν σε SSoT: **NEW** `dxf-canvas-perf-stages.ts` — όχι σκόρπια
+string literals σε δύο αρχεία.
+
+**Οι τέσσερις scene-level overlay κλήσεις** (σοβάς ADR-449, οπλισμός μελών ADR-456/471, θεμελίωσης
+ADR-463, πλακών ADR-476) συγκεντρώθηκαν σε `drawSceneLevelOverlays2D` μέσα στο
+`dxf-renderer-structural-overlays` — **ο ιδιοκτήτης της ακολουθίας είναι ένας**, και η σειρά (που
+είναι ο μηχανισμός z-order) σταματά να ζει διάσπαρτη στον renderer. Ο `DxfRenderer` έχασε δύο
+imports.
+
+⚠️ **Τι ΔΕΝ άλλαξε**: καμία νέα `useSyncExternalStore` πουθενά (CHECK 6C ασφαλές), **καμία αλλαγή στο
+cache key** του bitmap (ο κανόνας 3 των cardinal rules ανέγγιχτος), καμία αλλαγή σε high-freq store,
+καμία οπτική διαφορά — ίδια σειρά σχεδίασης, ίδια δεδομένα.
+
+🧹 **Boy Scout (N.0.2/N.18)**: το gate οπλισμού στο `drawMemberReinforcement2D` ήταν **πανομοιότυπο**
+σε κολώνα και δοκάρι (4 έλεγχοι + `pxPerMm`), γραμμένο δύο φορές — το CHECK 3.28 το εντόπισε μόλις
+μπήκε το αρχείο στο index. Ενοποιήθηκε πριν το dispatch· διαφέρει πλέον **μόνο** η συνάρτηση
+σχεδίασης. Προϋπάρχων κλώνος, όχι δικός αυτής της αλλαγής.
+
+**Files**: MOD `canvas-v2/dxf-canvas/{DxfRenderer.ts,dxf-renderer-frame-builders.ts,dxf-renderer-structural-overlays.ts}`·
+NEW `canvas-v2/dxf-canvas/dxf-canvas-perf-stages.ts`.
+
+⚠️ **Εκκρεμεί το ίδιο το ADR-743**: ο κώδικας παραπέμπει σε «ADR-743 Φ0» αλλά το έγγραφο **δεν έχει
+γραφτεί** — η πλήρης απόφαση (τι μετρήθηκε, ποιο είναι το 86% του καρέ που δεν είναι JS) ζει προς το
+παρόν μόνο στο handoff `2026-07-31_dxf-canvas-reraster_ADR-743`.
+
+---
+
 ## 2026-07-31 (β): ADR-739 Φ.Δ βήμα 2 — ο επεξεργαστής κελιού πίνακα μπαίνει ως **overlay**, όχι ως leaf (CHECK 6B stage)
 
 Η εγγραφή υπάρχει επειδή το `CanvasSection.tsx` είναι αρχείο του CHECK 6B, **όχι** επειδή άλλαξε η
