@@ -19,7 +19,7 @@
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { PreviewBBox } from '../../systems/scale/scale-preview-lod';
 // SSoT margins used by `worldToScreen` (left=top=30) — do NOT hardcode the constant.
-import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { getDrawingAreaRect } from '../../rendering/core/drawing-area';
 
 /** 2×3 affine with canvas `transform(a,b,c,d,e,f)` semantics: `x'=a·x+c·y+e ; y'=b·x+d·y+f`. */
 export interface Affine2x3 {
@@ -65,11 +65,13 @@ export function scaleAboutBaseWorldAffine(base: Point2D, sx: number, sy: number)
 
 /** World→screen affine — the exact `CoordinateTransforms.worldToScreen` ready-state formula, as a matrix. */
 export function worldToScreenAffine(transform: ViewTransform, viewport: Viewport): Affine2x3 {
-  const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  // 🔑 Ίδια άγκυρα με το `CoordinateTransforms.worldToScreen`: κάτω-αριστερή γωνία της
+  // περιοχής σχεδίασης. Αν αποκλίνει, το ghost χορεύει σε σχέση με την committed οντότητα.
+  const area = getDrawingAreaRect(viewport);
   return {
     a: transform.scale, b: 0, c: 0, d: -transform.scale,
-    e: left + transform.offsetX,
-    f: (viewport.height - top) - transform.offsetY,
+    e: area.x + transform.offsetX,
+    f: area.bottom - transform.offsetY,
   };
 }
 
@@ -102,13 +104,16 @@ export function captureRectFromBBox(
 export function buildCaptureTransform(
   rect: CaptureRect, scale0: number,
 ): { transform: ViewTransform; viewport: Viewport } {
-  const { left, top } = COORDINATE_LAYOUT.MARGINS;
+  // Το offscreen viewport περνά κι αυτό από το ίδιο `worldToScreen`, άρα η άγκυρα του
+  // offscreen είναι η κάτω-αριστερή γωνία της ΔΙΚΗΣ ΤΟΥ περιοχής σχεδίασης.
+  const viewport: Viewport = { width: rect.wCss, height: rect.hCss };
+  const area = getDrawingAreaRect(viewport);
   return {
     transform: {
       scale: scale0,
-      offsetX: rect.margin - left - rect.wxMin * scale0,
-      offsetY: rect.hCss - top - rect.wyMax * scale0 - rect.margin,
+      offsetX: rect.margin - area.x - rect.wxMin * scale0,
+      offsetY: area.bottom - rect.wyMax * scale0 - rect.margin,
     },
-    viewport: { width: rect.wCss, height: rect.hCss },
+    viewport,
   };
 }

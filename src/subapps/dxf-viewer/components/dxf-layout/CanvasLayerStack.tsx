@@ -12,7 +12,7 @@ import { resolveSceneUnits } from '../../utils/scene-units';
 // σειρά ζωγραφικής: grid ΚΑΤΩ από την κάτοψη (Giorgio 2026-06-05, ADR-040).
 import { UnderlayDispatchCanvas } from './overlay-dispatch/UnderlayDispatchCanvas';
 import { TopoGridUnderlayLeaf } from './TopoGridUnderlayLeaf'; import { NorthArrowLeaf } from './NorthArrowLeaf';
-import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms'; import { PANEL_LAYOUT } from '../../config/panel-tokens'; import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config'; import { PREVIEW_DEFAULTS } from '../../config/color-config';
+import { DRAWING_AREA_CHROME } from '../../rendering/core/drawing-area'; import { PANEL_LAYOUT } from '../../config/panel-tokens'; import { RULERS_GRID_CONFIG } from '../../systems/rulers-grid/config'; import { PREVIEW_DEFAULTS } from '../../config/color-config';
 import { buildDxfRulerSettings } from './canvas-layer-stack-ruler-settings'; import { canvasUI } from '@/styles/design-tokens/canvas'; import { isInDrawingMode } from '../../systems/tools/ToolStateManager';
 import type { Point2D } from '../../rendering/types/Types';
 import { setHoveredEntity, setHoveredOverlay } from '../../systems/hover/HoverStore';
@@ -55,7 +55,7 @@ import { useCanvasLayerStackHandlers } from './useCanvasLayerStackHandlers'; imp
 export type { CanvasLayerStackProps } from './canvas-layer-stack-types';
 // Σταθερή αναφορά (dep του floorplan painter memo — ADR-732)· inline literal θα άλλαζε
 // ταυτότητα σε κάθε shell render.
-const FLOORPLAN_CAD = { mode: 'cad-y-up', margins: COORDINATE_LAYOUT.MARGINS } as const;
+const FLOORPLAN_CAD = { mode: 'cad-y-up', chrome: DRAWING_AREA_CHROME } as const;
 export const CanvasLayerStack = React.memo(function CanvasLayerStack({
   viewport, activeTool, overlayMode, showLayers,
   showDxfCanvas, showLayerCanvas,

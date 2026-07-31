@@ -12,7 +12,8 @@
 
 import { useEffect, useRef, type RefObject } from 'react';
 import { createCombinedBounds } from '../../systems/zoom/utils/bounds';
-import { getPointerSnapshotFromElement, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { getPointerSnapshotFromElement } from '../../rendering/core/CoordinateTransforms';
+import { getDrawingAreaRect } from '../../rendering/core/drawing-area';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { EventBus } from '../../systems/events';
 // ADR-375 Phase B.4 — explicit «Fit annotations» → recompute the fit-to-paper scale.
@@ -210,12 +211,14 @@ export function useFitToView({
       }
       const { scale } = getImmediateTransform();
       if (!Number.isFinite(scale) || scale <= 0) return;
-      const { left, top } = COORDINATE_LAYOUT.MARGINS;
-      const { width, height } = snap.viewport;
+      // 🔴 ΙΔΙΟ ελάττωμα με το σύμπτωμα Β: κέντραρε στο κέντρο του `<canvas>`, του οποίου τα
+      // 30 px αριστερά και κάτω τα σκεπάζουν οι χάρακες. Τώρα κεντράρει στο κέντρο της ΟΡΑΤΗΣ
+      // περιοχής — μετατόπιση (−left/2, +bottom/2), ανεξάρτητη από zoom/pan.
+      const area = getDrawingAreaRect(snap.viewport);
       setTransform({
         scale,
-        offsetX: width / 2 - left - point.x * scale,
-        offsetY: (height - top) - point.y * scale - height / 2,
+        offsetX: area.centerX - area.x - point.x * scale,
+        offsetY: area.bottom - point.y * scale - area.centerY,
       });
     };
 

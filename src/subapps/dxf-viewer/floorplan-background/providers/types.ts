@@ -1,4 +1,5 @@
 import type { ViewTransform, Point2D } from '../../rendering/types/Types';
+import type { DrawingAreaChrome } from '../../rendering/core/drawing-area';
 import type {
   FloorplanOverlay as SharedFloorplanOverlay,
   BackgroundScale,
@@ -43,8 +44,18 @@ export interface ProviderLoadResult {
 
 export interface CadCoordinateAdaptation {
   mode: 'cad-y-up';
-  /** Ruler/origin margins applied before world transform. Matches DXF subsystem. */
-  margins: { left: number; top: number };
+  /**
+   * Το chrome (χάρακες) γύρω από την περιοχή σχεδίασης — **ενίεται** από το DXF subapp ώστε
+   * αυτό το υποσύστημα να μη χρειάζεται να ξέρει τη διάταξη του viewer.
+   *
+   * 🔑 Η αρχή του κόσμου κάθεται στην **κάτω-αριστερή γωνία της περιοχής σχεδίασης**, δηλαδή
+   * στο `(leftRulerWidth, viewport.height − bottomRulerHeight)`. Πριν λεγόταν `margins:
+   * {left, top}` και το `top` **δεν ήταν πάνω περιθώριο** — ήταν το ύψος του ΚΑΤΩ χάρακα με
+   * λάθος όνομα, αντιγραμμένο από τον πυρήνα του DXF μαζί με το λάθος.
+   *
+   * @see subapps/dxf-viewer/rendering/core/drawing-area.ts — η μία πηγή
+   */
+  chrome: DrawingAreaChrome;
 }
 
 // ─── Render params ────────────────────────────────────────────────────────────

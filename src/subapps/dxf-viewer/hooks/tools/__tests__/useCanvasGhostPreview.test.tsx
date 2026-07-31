@@ -68,6 +68,13 @@ function makeCanvas(): { canvas: HTMLCanvasElement; mock: MockCtx } {
   const ctx = {
     setTransform: (...a: number[]) => calls.push(`setTransform(${a.join(',')})`),
     clearRect: (...a: number[]) => calls.push(`clearRect(${a.join(',')})`),
+    // Το harness κόβει στην περιοχή σχεδίασης πριν καλέσει το delegate — καταγράφονται ώστε
+    // η σειρά save → clip → draw → restore να είναι ελέγξιμη, όχι απλώς «να μη σκάει».
+    save: () => calls.push('save'),
+    restore: () => calls.push('restore'),
+    beginPath: () => calls.push('beginPath'),
+    rect: (...a: number[]) => calls.push(`rect(${a.join(',')})`),
+    clip: () => calls.push('clip'),
   } as unknown as CanvasRenderingContext2D;
   const canvas = {
     width: 1000, height: 800,
@@ -75,6 +82,12 @@ function makeCanvas(): { canvas: HTMLCanvasElement; mock: MockCtx } {
   } as unknown as HTMLCanvasElement;
   return { canvas, mock: { calls, ctx } };
 }
+
+/**
+ * Το clip της περιοχής σχεδίασης, όπως το γράφει το `clipToDrawingArea` — καμβάς 1000×800
+ * μείον τον αριστερό χάρακα (30) και τον κάτω (30). Ο caller κατέχει το `save`/`restore`.
+ */
+const CLIP_CALLS = ['save', 'beginPath', 'rect(30,0,970,770)', 'clip'];
 
 const TRANSFORM = { scale: 1, offsetX: 0, offsetY: 0 };
 const CANON = { viewport: { width: 1000, height: 800 }, transform: { scale: 3, offsetX: 7, offsetY: 9 } };
@@ -111,6 +124,8 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
       'setTransform(1,0,0,1,0,0)',
       'clearRect(0,0,1000,800)',
       expect.stringContaining('setTransform'),
+      ...CLIP_CALLS,
+      'restore',
     ]);
   });
 
@@ -122,7 +137,23 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
         clearMode: 'skip-clear', draw: jest.fn(),
       }),
     );
-    expect(mock.calls).toEqual([]); // no clear; delegate draws layered
+    // no clear; delegate draws layered — μόνο το clip της περιοχής σχεδίασης.
+    expect(mock.calls).toEqual([...CLIP_CALLS, 'restore']);
+    expect(mock.calls).not.toContain(expect.stringContaining('clearRect'));
+  });
+
+  it('κόβει το ghost στην περιοχή σχεδίασης ΠΡΙΝ καλέσει το delegate — και ξεκλείνει μετά', () => {
+    const { canvas, mock } = makeCanvas();
+    // Το delegate ζωγραφίζει· ό,τι γράψει πρέπει να είναι ήδη μέσα σε ενεργό clip.
+    const draw = jest.fn(() => { mock.calls.push('draw'); });
+    renderHook(() =>
+      useCanvasGhostPreview({
+        isActive: true, getCanvas: () => canvas, transform: TRANSFORM,
+        clearMode: 'skip-clear', draw,
+      }),
+    );
+    // Η ζώνη: πλήρης καμβάς 1000×800 μείον αριστερός χάρακας 30 και κάτω χάρακας 30.
+    expect(mock.calls).toEqual(['save', 'beginPath', 'rect(30,0,970,770)', 'clip', 'draw', 'restore']);
   });
 
   it('uses the snapped cursor when useImmediateSnap is set', () => {

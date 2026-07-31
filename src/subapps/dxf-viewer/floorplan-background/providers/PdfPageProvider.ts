@@ -7,6 +7,9 @@ import type {
   ProviderRenderParams,
   ProviderSource,
 } from './types';
+// 🔑 Ένας ορισμός των δύο μετασχηματισμών καμβά — ήταν γραμμένοι και στους δύο παρόχους
+// (CHECK 3.28, 243 tokens). Η άγκυρα του CAD τρόπου είναι το SSoT της περιοχής σχεδίασης.
+import { applyCadTransform, applyScreenTransform } from './provider-canvas-transforms';
 
 const SUPPORTED_MIME_TYPES = ['application/pdf'] as const;
 const RENDER_SCALE = 2;
@@ -71,10 +74,10 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
     ctx.save();
     ctx.globalAlpha = params.opacity;
     if (params.cad) {
-      this._applyCadTransform(ctx, params);
+      applyCadTransform(ctx, params);
       ctx.drawImage(img, 0, -img.height);
     } else {
-      this._applyScreenTransform(ctx, params);
+      applyScreenTransform(ctx, params);
       ctx.drawImage(img, 0, 0);
     }
     ctx.restore();
@@ -109,31 +112,4 @@ export class PdfPageProvider implements IFloorplanBackgroundProvider {
     });
   }
 
-  private _applyScreenTransform(
-    ctx: CanvasRenderingContext2D,
-    params: ProviderRenderParams,
-  ): void {
-    const { transform, worldToCanvas } = params;
-    ctx.translate(worldToCanvas.offsetX, worldToCanvas.offsetY);
-    ctx.scale(worldToCanvas.scale, worldToCanvas.scale);
-    ctx.translate(transform.translateX, transform.translateY);
-    ctx.rotate((transform.rotation * Math.PI) / 180);
-    ctx.scale(transform.scaleX, transform.scaleY);
-  }
-
-  private _applyCadTransform(
-    ctx: CanvasRenderingContext2D,
-    params: ProviderRenderParams,
-  ): void {
-    const { transform, worldToCanvas, viewport, cad } = params;
-    if (!cad) return;
-    ctx.translate(cad.margins.left, viewport.height - cad.margins.top);
-    ctx.scale(1, -1);
-    ctx.translate(worldToCanvas.offsetX, worldToCanvas.offsetY);
-    ctx.scale(worldToCanvas.scale, worldToCanvas.scale);
-    ctx.translate(transform.translateX, transform.translateY);
-    ctx.rotate((transform.rotation * Math.PI) / 180);
-    ctx.scale(transform.scaleX, transform.scaleY);
-    ctx.scale(1, -1);
-  }
 }

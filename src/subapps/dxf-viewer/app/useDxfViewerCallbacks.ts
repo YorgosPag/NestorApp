@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { COORDINATE_LAYOUT } from '../rendering/core/CoordinateTransforms';
+import { getDrawingAreaRect } from '../rendering/core/drawing-area';
 // «Ποιος είναι ο κύριος καμβάς» — ΕΝΑ σημείο (2026-07-31: ήταν τρεις γραφές, η μία νεκρή).
 import { getMainDxfCanvas } from '../rendering/utils/main-canvas-element';
 import { createOriginIndicatorOverlay } from './origin-indicator-overlay';
@@ -158,21 +158,20 @@ export function useDxfViewerCallbacks(params: DxfViewerCallbacksParams): DxfView
     const rect = canvasElement.getBoundingClientRect();
     const viewport = { width: rect.width, height: rect.height };
 
-    // 🏢 ENTERPRISE FIX (2026-01-27): ADR-045 - Use CENTRALIZED margins
-    const MARGIN_LEFT = COORDINATE_LAYOUT.MARGINS.left;
-    const MARGIN_TOP = COORDINATE_LAYOUT.MARGINS.top;
+    // 🔑 SSoT — «πού είναι η περιοχή σχεδίασης». 🔴 ΙΔΙΟ ελάττωμα με το σύμπτωμα Β: έφερνε την
+    // αρχή στο κέντρο του `<canvas>`, όχι στο κέντρο της ΟΡΑΤΗΣ περιοχής (τα 30 px αριστερά και
+    // κάτω τα σκεπάζουν οι χάρακες).
+    const area = getDrawingAreaRect(viewport);
 
-    const screenCenterX = viewport.width / 2;
-    const screenCenterY = viewport.height / 2;
-    const newOffsetX = screenCenterX - MARGIN_LEFT;
-    const newOffsetY = (viewport.height - MARGIN_TOP) - screenCenterY;
+    const newOffsetX = area.centerX - area.x;
+    const newOffsetY = area.bottom - area.centerY;
 
     const newTransform: ViewTransform = { scale: 1, offsetX: newOffsetX, offsetY: newOffsetY };
     wrappedHandleTransformChange(newTransform);
 
     // 🎯 SHOW VISUAL INDICATOR: Pulsing crosshair at center
-    const canvasX = MARGIN_LEFT + newOffsetX;
-    const canvasY = (viewport.height - MARGIN_TOP) - newOffsetY;
+    const canvasX = area.x + newOffsetX;
+    const canvasY = area.bottom - newOffsetY;
     const finalScreenX = rect.left + canvasX;
     const finalScreenY = rect.top + canvasY;
 

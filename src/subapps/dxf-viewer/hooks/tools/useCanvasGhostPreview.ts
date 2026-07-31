@@ -46,6 +46,10 @@ import { subscribeTransform } from '../../systems/cursor/ImmediateTransformStore
 // 🏢 SSoT — DPR-aware canvas clear (ADR-084 withCanvasState· αντικαθιστά το idiom
 // που ήταν copy-pasted στα 19 ghost hooks + ~5 άλλα σημεία).
 import { clearCanvasDpr } from '../../rendering/canvas/withCanvasState';
+// 🔑 SSoT — «πού είναι η περιοχή σχεδίασης». Ο PreviewCanvas είναι ΑΛΛΟΣ καμβάς (z15) πάνω από
+// τον κύριο (z10), όπου οι χάρακες ζωγραφίζονται ως pass ΜΕΤΑ τις οντότητες. Ό,τι γράψει ένα
+// ghost στη ζώνη των χαράκων κάθεται ΑΠΟ ΠΑΝΩ τους. Το clip εδώ ισχύει για **και τα 9 ghosts**.
+import { clipToDrawingArea } from '../../rendering/core/drawing-area';
 
 /**
  * `'world-position'` → το harness subscribe-άρει στο 60fps cursor stream και περνά
@@ -125,7 +129,18 @@ export function useCanvasGhostPreview(config: Readonly<CanvasGhostPreviewConfig>
     const viewportEl = (getViewportElement?.() ?? canvas) as HTMLCanvasElement;
     const { viewport, transform: liveTransform } = getCanonicalPreviewFrame(viewportEl);
 
-    draw({ ctx, effectiveCursor, viewport, transform: liveTransform });
+    // 🔴 Το ghost είναι **περιεχόμενο σχεδίου** ⇒ ανήκει μέσα στην περιοχή σχεδίασης. Το clip
+    // μπαίνει ΕΔΩ, μία φορά, και όχι στα 9 delegates: ήταν λανθάνον από το ADR-624 και φάνηκε
+    // μόλις ένα ghost έγινε αρκετά μεγάλο ώστε να φτάσει τα 30 px του χάρακα (ADR-736, η εικόνα
+    // πιάνει 1/3 του ορατού πλάτους· τα 8 σύμβολα-ghosts ήταν λίγα εκατοστά και δεν έφταναν ποτέ).
+    // Το save/restore προστατεύει και από delegate με ασύμμετρη στοίβα.
+    ctx.save();
+    clipToDrawingArea(ctx, viewport);
+    try {
+      draw({ ctx, effectiveCursor, viewport, transform: liveTransform });
+    } finally {
+      ctx.restore();
+    }
   }, [isActive, getCanvas, getViewportElement, cursorMode, useImmediateSnap, clearMode, draw]);
 
   // Latest-draw ref so the subscription lifecycle below can stay keyed on

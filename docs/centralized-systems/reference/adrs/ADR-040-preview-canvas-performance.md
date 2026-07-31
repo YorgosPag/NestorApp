@@ -113,6 +113,23 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-07-31 — ADR-741: η περιοχή σχεδίασης έγινε SSoT (άγγιξε καμβάδες z10/z15)
+
+- **`useCanvasGhostPreview`** (ο κοινός ghost harness, z15): `save → clipToDrawingArea → draw →
+  restore` γύρω από το delegate. **Μηδέν** νέο subscription, μηδέν νέο RAF — το clip είναι καθαρή
+  αριθμητική μέσα στο υπάρχον `drawFrame`, οπότε **το συμβόλαιο micro-leaf μένει ακέραιο**.
+- **`LayerRenderer`**: η legacy διαδρομή **απορρόφησε** το inline clip· η **unified διαδρομή δεν
+  έκοβε καθόλου** και απέκτησε το ίδιο clip από την ίδια πηγή.
+- **`RulerRenderer`**: οι ζώνες των χαράκων παράγονται πλέον **από** την περιοχή σχεδίασης
+  (`getLeftRulerBand`/`getBottomRulerBand`, πρότυπο Krita) αντί για δικό τους υπολογισμό από
+  `settings.width/height`· η νεκρή `calculateRulerRect` αφαιρέθηκε.
+- **`CoordinateTransforms`**: η άγκυρα διαβάζεται ως `rect.x`/`rect.bottom`. **Καμία αριθμητική
+  αλλαγή** (το `MARGINS.top` ήταν ήδη το ύψος του κάτω χάρακα με λάθος όνομα — βλ. ADR-741 §2),
+  άρα **μηδέν επίδραση στον `DxfBitmapCache`**: το cache key δεν αγγίχθηκε και οι τιμές είναι
+  ταυτόσημες. Το runtime-driven chrome (που **θα** απαιτούσε invalidation) ρητά **δεν** μπήκε —
+  ADR-741 §8.
+- Επαλήθευση: **185 suites / 1728 tests πράσινα**, 4/4 μεταλλάξεις κόκκινες.
+
 ### 2026-07-30 (στ) — ADR-732 Batch 5: LayerCanvas mount-on-demand (νέο leaf αρχείο)
 
 - **`DraftLayerSubscriber` μετακόμισε** από το `canvas-layer-stack-leaves.tsx` (432 γρ., όριο
@@ -5611,3 +5628,29 @@ PRIORITY 4.915f στον υπάρχοντα `dispatchBimToolClick`, με τύπ�
 **Files**: MOD `hooks/canvas/{canvas-click-types.ts,canvas-click-bim-dispatch.ts}`,
 `hooks/interfaces/useCanvasOperations.ts`, `hooks/drawing/create-entourage-tool.ts`,
 `systems/events/drawing-event-map.ts`.
+
+---
+
+### 2026-07-31 (γ) — SSoT περιοχής σχεδίασης: το `CanvasLayerStack` και η WebGL κάμερα σταματούν να κάνουν δική τους αριθμητική (ADR-741, CHECK 6B stage, μηδέν αρχιτεκτονική αλλαγή)
+
+Και τα δύο αρχεία υπολόγιζαν μόνα τους «πού είναι η περιοχή σχεδίασης» διαβάζοντας
+`COORDINATE_LAYOUT.MARGINS` — το ένα ως `{left, top}` για τον ortho frustum της γραμμής, το άλλο ως
+`margins` prop προς τους πάροχους υποβάθρου. Πλέον διαβάζουν το SSoT
+(`rendering/core/drawing-area.ts`): `DRAWING_AREA_CHROME` / `getDrawingAreaRect()`.
+
+🔑 Το εύρημα του ADR-741: το `MARGINS.top` **ήταν το ύψος του ΚΑΤΩ χάρακα με λάθος όνομα** — ο τύπος
+`screenY = (height − top)` βάζει το `worldY = 0` στην άνω ακμή της ζώνης του κάτω χάρακα. Επειδή και
+τα δύο μεγέθη είναι `30`, το λάθος ήταν αριθμητικά αόρατο· **καμία οπτική μετατόπιση** από αυτή την
+αλλαγή, μόνο ειλικρινές όνομα.
+
+Η εγγραφή υπάρχει επειδή τα δύο αρχεία είναι αρχεία του CHECK 6B, **όχι** επειδή άλλαξε η
+αρχιτεκτονική: **καμία** νέα `useSyncExternalStore` σε shell/orchestrator (CHECK 6C ασφαλές), καμία
+αλλαγή στο cache key ή σε high-freq store, καμία νέα συνδρομή. Το
+`FLOORPLAN_CAD = { mode, chrome }` παραμένει **σταθερή αναφορά** σε module scope (dep του floorplan
+painter memo, ADR-732) — inline literal θα άλλαζε ταυτότητα σε κάθε shell render.
+
+Ο `webgl-line-ortho-camera` διαβάζει το chrome ως καθαρή αριθμητική· ο WebGL leaf εξακολουθεί να
+παίρνει το transform από `getImmediateTransform()` σε χρόνο tick (ADR-639 Στάδιο 5), ανέγγιχτο.
+
+**Files**: MOD `components/dxf-layout/CanvasLayerStack.tsx`,
+`canvas-v2/webgl-lines/webgl-line-ortho-camera.ts`. Πλήρης απόφαση: **ADR-741**.

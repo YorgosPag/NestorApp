@@ -9,6 +9,9 @@ import type {
   ProviderSource,
 } from './types';
 import { isTiff } from './image-compression';
+// 🔑 Ένας ορισμός των δύο μετασχηματισμών καμβά — ήταν γραμμένοι και στους δύο παρόχους
+// (CHECK 3.28, 243 tokens). Η άγκυρα του CAD τρόπου είναι το SSoT της περιοχής σχεδίασης.
+import { applyCadTransform, applyScreenTransform } from './provider-canvas-transforms';
 
 const SUPPORTED_MIME_TYPES = [
   'image/png',
@@ -61,43 +64,15 @@ export class ImageProvider implements IFloorplanBackgroundProvider {
     ctx.save();
     ctx.globalAlpha = params.opacity;
     if (params.cad) {
-      this._applyCadTransform(ctx, params);
+      applyCadTransform(ctx, params);
       ctx.drawImage(this._canvas, 0, -this._canvas.height);
     } else {
-      this._applyScreenTransform(ctx, params);
+      applyScreenTransform(ctx, params);
       ctx.drawImage(this._canvas, 0, 0);
     }
     ctx.restore();
   }
 
-  private _applyScreenTransform(
-    ctx: CanvasRenderingContext2D,
-    params: ProviderRenderParams,
-  ): void {
-    const { transform, worldToCanvas } = params;
-    ctx.translate(worldToCanvas.offsetX, worldToCanvas.offsetY);
-    ctx.scale(worldToCanvas.scale, worldToCanvas.scale);
-    ctx.translate(transform.translateX, transform.translateY);
-    ctx.rotate((transform.rotation * Math.PI) / 180);
-    ctx.scale(transform.scaleX, transform.scaleY);
-  }
-
-  private _applyCadTransform(
-    ctx: CanvasRenderingContext2D,
-    params: ProviderRenderParams,
-  ): void {
-    // Matches PdfBackgroundCanvas pipeline (CAD origin at bottom-left, Y-up)
-    const { transform, worldToCanvas, viewport, cad } = params;
-    if (!cad) return;
-    ctx.translate(cad.margins.left, viewport.height - cad.margins.top);
-    ctx.scale(1, -1); // Y-flip → world Y-up
-    ctx.translate(worldToCanvas.offsetX, worldToCanvas.offsetY);
-    ctx.scale(worldToCanvas.scale, worldToCanvas.scale);
-    ctx.translate(transform.translateX, transform.translateY);
-    ctx.rotate((transform.rotation * Math.PI) / 180);
-    ctx.scale(transform.scaleX, transform.scaleY);
-    ctx.scale(1, -1); // restore upright image after Y-flipped world
-  }
 
   getNaturalBounds(): NaturalBounds {
     return this._bounds;
