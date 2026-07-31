@@ -67,6 +67,32 @@ export interface TableCellCursorState {
    * σιωπηλή απώλεια πληκτρολόγησης που δεν θα φαινόταν σε κανένα test κατάστασης.
    */
   readonly sessionId: number;
+
+  /**
+   * Το **πρόχειρο** κείμενο της τρέχουσας συνεδρίας γραφής· `''` σε κατάσταση πλοήγησης.
+   *
+   * ── 🔴 ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ `useState` ΤΟΥ ΕΠΕΞΕΡΓΑΣΤΗ (μετρημένο, 2026-08-01) ──
+   *
+   * Ήταν τοπικό React state. Ζωντανά, με 1.427 οντότητες, η πληκτρολόγηση χανόταν
+   * **διαλείπουσα**: ένα probe στα συμβάντα του DOM έδειξε `input value="7"` και αμέσως
+   * μετά `focusout value="7"`, ενώ το επόμενο `Tab` έφτανε σε `<input>` με `value=""` —
+   * δηλαδή ο επεξεργαστής **ξαναστηνόταν** ανάμεσα στον χαρακτήρα και το Tab, και το
+   * `useState` ξανασπερνόταν από την αρχική τιμή του κελιού. Το commit που ακολουθούσε
+   * έγραφε το **παλιό** κείμενο (`command built? false` — «τίποτα δεν άλλαξε»).
+   *
+   * Αιτία του ξαναστησίματος: το `getLevelScene` είναι σκηνή που ανανεώνεται ασύγχρονα
+   * (autosave / εξωτερική ενημέρωση). Ο επεξεργαστής **δεν επιτρέπεται** να εξαρτά τη
+   * δουλειά του χρήστη από το αν μια ανάγνωση σκηνής πέτυχε σε ένα συγκεκριμένο render.
+   *
+   * Η διόρθωση δεν είναι «κράτα και το προηγούμενο target»: αυτό θεραπεύει το σύμπτωμα.
+   * Ιδιοκτήτης της συνεδρίας γραφής είναι ο **δρομέας**, όχι ένα DOM node που μπορεί να
+   * ξεφορτωθεί. Με το πρόχειρο εδώ, ένα ξαναστήσιμο είναι **αβλαβές** εξ ορισμού.
+   *
+   * ⚠️ Αυτό ΔΕΝ αναιρεί το «το store δεν κρατά κείμενο κελιού»: το πρόχειρο **δεν είναι**
+   * το κείμενο του κελιού — είναι ό,τι δεν έχει δεσμευτεί ακόμα. Το δεσμευμένο κείμενο
+   * παραμένει παράγωγο της οντότητας, πάντα.
+   */
+  readonly draft: string;
 }
 
 /**
@@ -85,6 +111,7 @@ const store = createExternalStore<TableCellCursorState | null>(null, {
     a?.entityId === b?.entityId &&
     a?.mode === b?.mode &&
     a?.sessionId === b?.sessionId &&
+    a?.draft === b?.draft &&
     a?.position.rowId === b?.position.rowId &&
     a?.position.colId === b?.position.colId &&
     a?.position.anchorColId === b?.position.anchorColId,
@@ -119,20 +146,36 @@ export function setTableCellCursor(
   entityId: string,
   position: TableCursorPosition,
   mode: TableCellCursorMode,
+  draft = '',
 ): void {
   // Η μετακίνηση σε **άλλο** κελί ξαναστήνει ούτως ή άλλως το `<input>` (το row/col είναι
   // μέρος του React key), οπότε ο αριθμός συνεδρίας δεν χρειάζεται να αυξηθεί εδώ.
-  commit({ entityId, position, mode, sessionId: store.get()?.sessionId ?? 0 });
+  commit({ entityId, position, mode, draft, sessionId: store.get()?.sessionId ?? 0 });
 }
 
 /**
- * Αλλάζει **μόνο** την κατάσταση (F2, ή η πρώτη πληκτρολόγηση σε `nav`). No-op χωρίς
- * ενεργό δρομέα — ένα πλήκτρο δεν επιτρέπεται να γεννήσει δρομέα από το πουθενά.
+ * Ο χρήστης πληκτρολόγησε. Σε κατάσταση πλοήγησης αυτό **ανοίγει** τη συνεδρία γραφής
+ * (`enter`) — ο κανόνας type-to-replace του Excel· σε γραφή απλώς ενημερώνει το πρόχειρο.
+ *
+ * No-op χωρίς ενεργό δρομέα: ένα πλήκτρο δεν επιτρέπεται να γεννήσει δρομέα από το πουθενά.
  */
-export function setTableCellCursorMode(mode: TableCellCursorMode): void {
+export function setTableCellCursorDraft(draft: string): void {
+  const current = store.get();
+  if (!current) return;
+  commit({ ...current, draft, mode: current.mode === 'nav' ? 'enter' : current.mode });
+}
+
+/**
+ * `F2` — εναλλαγή κατάστασης. Από πλοήγηση χρειάζεται το **κείμενο του κελιού** ως αφετηρία
+ * του προχείρου (μπήκες για να διορθώσεις, όχι για να ξαναγράψεις)· από γραφή το πρόχειρο
+ * μένει ως έχει και αλλάζει μόνο ποιος κατέχει τα βέλη.
+ *
+ * No-op χωρίς ενεργό δρομέα ή όταν η κατάσταση δεν αλλάζει.
+ */
+export function setTableCellCursorMode(mode: TableCellCursorMode, seedDraft?: string): void {
   const current = store.get();
   if (!current || current.mode === mode) return;
-  commit({ ...current, mode });
+  commit({ ...current, mode, draft: seedDraft ?? current.draft });
 }
 
 /**
@@ -149,7 +192,7 @@ export function setTableCellCursorMode(mode: TableCellCursorMode): void {
 export function cancelTableCellCursorSession(): void {
   const current = store.get();
   if (!current || current.mode === 'nav') return;
-  commit({ ...current, mode: 'nav', sessionId: current.sessionId + 1 });
+  commit({ ...current, mode: 'nav', draft: '', sessionId: current.sessionId + 1 });
 }
 
 /** Κλείνει τη συνεδρία δρομέα (Esc σε `nav`, αποεπιλογή, σβήσιμο του πίνακα). Ιδεμποτής. */

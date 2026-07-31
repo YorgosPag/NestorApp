@@ -152,8 +152,15 @@ export function buildMergeIndex(model: TableModel): MergeIndex {
   return { anchors, covered, ownerByCell };
 }
 
-/** Θέση → ταυτότητα, για O(1) αναζήτηση δείκτη από id. */
-function indexById(items: readonly { readonly id: string }[]): ReadonlyMap<string, number> {
+/**
+ * Θέση → ταυτότητα, για O(1) αναζήτηση δείκτη από id.
+ *
+ * Εξαγόμενο (ADR-739 Φ.Δ βήμα 2): το χρειάζεται και η πλοήγηση δρομέα
+ * (`table-cell-navigation.ts`), που μεταφράζει διαρκώς `rowId`/`colId` σε δείκτες για να
+ * βηματίσει. Το CHECK 3.28 (jscpd) χαρακτήρισε **σωστά** ως clone το τοπικό αντίγραφο που
+ * γεννήθηκε εκεί — η απάντηση σε αυτό είναι εξαγωγή, όχι δεύτερο δίδυμο.
+ */
+export function indexById(items: readonly { readonly id: string }[]): ReadonlyMap<string, number> {
   const map = new Map<string, number>();
   for (let i = 0; i < items.length; i++) map.set(items[i].id, i);
   return map;

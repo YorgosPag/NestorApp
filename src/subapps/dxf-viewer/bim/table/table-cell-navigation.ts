@@ -33,7 +33,7 @@
  */
 
 import type { CellKey, TableColumnId, TableModel, TableRowId } from '../../types/table';
-import { buildMergeIndex, cellKey, type MergeIndex } from './table-model-helpers';
+import { buildMergeIndex, cellKey, indexById, type MergeIndex } from './table-model-helpers';
 
 /**
  * Η θέση του δρομέα κελιού. Το `anchorColId` **δεν** είναι διακόσμηση: είναι η στήλη στην
@@ -83,18 +83,15 @@ interface NavContext {
   readonly colIndex: ReadonlyMap<TableColumnId, number>;
 }
 
-function indexOfIds(items: readonly { readonly id: string }[]): ReadonlyMap<string, number> {
-  const map = new Map<string, number>();
-  for (let i = 0; i < items.length; i++) map.set(items[i].id, i);
-  return map;
-}
-
 function buildContext(model: TableModel): NavContext {
   return {
     model,
     merges: buildMergeIndex(model),
-    rowIndex: indexOfIds(model.rows),
-    colIndex: indexOfIds(model.columns),
+    // `indexById` έρχεται από το `table-model-helpers` και ΔΕΝ ξαναγράφεται εδώ: το ίδιο
+    // «ταυτότητα → θέση» χρειάζεται ήδη το `buildMergeIndex`. Το CHECK 3.28 (jscpd) το
+    // έπιασε ως clone όταν γεννήθηκε τοπικό αντίγραφο — δες το σχόλιο στην πηγή.
+    rowIndex: indexById(model.rows),
+    colIndex: indexById(model.columns),
   };
 }
 
