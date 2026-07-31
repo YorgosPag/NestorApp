@@ -34,7 +34,7 @@
  * @see ../io/dxf-external-reference-deps — η καλωδίωση με Storage/ids
  */
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useLevels, useCurrentLevelScene } from '../systems/levels';
 import { useCompanyId } from '@/hooks/useCompanyId';
 import {
@@ -46,6 +46,13 @@ import { applyExternalReferencesToEntities } from '../utils/dxf-external-referen
 import { resolveExternalReferences, type ResolveReferenceFailure } from '../io/dxf-external-reference-resolver';
 import type { ReferenceAmbiguity } from '../io/dxf-external-reference-match';
 import { buildDxfExternalReferenceDeps } from '../io/dxf-external-reference-deps';
+import {
+  clearExternalReferenceResolutionFlag,
+  markExternalReferenceResolutionStarted,
+  peekExternalReferenceResolutionOutcome,
+  recordExternalReferenceResolutionOutcome,
+  subscribeExternalReferenceResolutionOutcome,
+} from '../stores/ExternalReferenceResolutionOutcomeStore';
 import { dwarn } from '../debug';
 
 const NO_REFERENCES: readonly DxfExternalReference[] = [];
@@ -69,9 +76,17 @@ export function useExternalReferenceResolution(): ExternalReferenceResolutionRes
   const scene = useCurrentLevelScene();
   const companyId = useCompanyId()?.companyId;
 
-  const [isResolving, setIsResolving] = useState(false);
-  const [ambiguous, setAmbiguous] = useState<readonly ReferenceAmbiguity[]>([]);
-  const [failures, setFailures] = useState<readonly ResolveReferenceFailure[]>([]);
+  /**
+   * 🔴 Το αποτέλεσμα ζει σε **store**, όχι σε `useState`. Αυτό το hook το καλούν **δύο**
+   * components (ο πάντα-mounted host και η παλέτα)· με τοπικό state το καθένα κρατούσε δικό
+   * του αντίγραφο και ό,τι υπολόγιζε ο host δεν έφτανε ποτέ στην οθόνη — οι γνήσια
+   * διφορούμενες αναφορές εμφανίζονταν ως «Λείπει». Βλ. το store για τη μέτρηση.
+   */
+  const { isResolving, ambiguous, failures } = useSyncExternalStore(
+    subscribeExternalReferenceResolutionOutcome,
+    peekExternalReferenceResolutionOutcome,
+    peekExternalReferenceResolutionOutcome,
+  );
 
   const references = scene?.externalReferences ?? NO_REFERENCES;
   const summary = useMemo(() => summarizeExternalReferences(references), [references]);
@@ -94,14 +109,16 @@ export function useExternalReferenceResolution(): ExternalReferenceResolutionRes
       const refs = current.externalReferences ?? NO_REFERENCES;
       if (refs.length === 0 || (files.length === 0 && !overrides?.size)) return;
 
-      setIsResolving(true);
+      markExternalReferenceResolutionStarted();
       try {
         const result = await resolveExternalReferences(
           { references: refs, files, overrides },
           buildDxfExternalReferenceDeps(companyId),
         );
-        setAmbiguous(result.ambiguous);
-        setFailures(result.failures);
+        recordExternalReferenceResolutionOutcome({
+          ambiguous: result.ambiguous,
+          failures: result.failures,
+        });
 
         const latest = sceneRef.current;
         if (!latest) return;
@@ -119,7 +136,10 @@ export function useExternalReferenceResolution(): ExternalReferenceResolutionRes
         // καθολικό (π.χ. χαμένη σύνδεση). Δεν ρίχνει τον viewer — η σκηνή μένει ως έχει.
         dwarn('ExternalReferences', '⚠️ Η επίλυση συνημμένων απέτυχε καθολικά', error);
       } finally {
-        setIsResolving(false);
+        // Δίχτυ: στην επιτυχία τη σημαία την έσβησε ήδη η καταγραφή του αποτελέσματος. Εδώ
+        // πιάνεται μόνο ο δρόμος του `catch`, ώστε μια καθολική αποτυχία να μην αφήσει το UI
+        // κλειδωμένο σε «Επίλυση…» για πάντα.
+        clearExternalReferenceResolutionFlag();
       }
     },
     [companyId, currentLevelId, setLevelScene],
