@@ -112,6 +112,21 @@ const config = {
     'node_modules/(?!(?:\\.pnpm/[^/]+/node_modules/)?(?:three|jose)/)'
   ],
   moduleDirectories: ['node_modules', '<rootDir>'],
+  // 🔴 ΟΡΙΟ ΠΟΡΩΝ ΤΟΠΙΚΑ (2026-07-31) — ΜΗΝ το αφαιρέσεις.
+  //
+  // Το PC του Giorgio έχει **4 πυρήνες**. Χωρίς ρύθμιση, το Jest παίρνει `cores − 1` = **3
+  // workers**, και κάθε worker είναι ΠΛΗΡΗΣ διεργασία Node + jsdom → ~75% της CPU. Με VS Code,
+  // Chrome και δεύτερο agent στο ίδιο μηχάνημα, το σύστημα **γονάτιζε**: τα terminals του VS
+  // Code δεν αποκρίνονταν όσο έτρεχαν τα tests (μετρημένο, 683 σουίτες / 6.846 tests).
+  //
+  // `2` αφήνει 2 πυρήνες ελεύθερους για το UI. Το κόστος είναι ~50% περισσότερος χρόνος
+  // τοιχου σε ΜΕΓΑΛΑ τρεξίματα — που όμως δεν πρέπει να γίνονται τοπικά ούτως ή άλλως
+  // (βλ. `.claude-rules/test-execution-budget.md`: τρέχε ΜΟΝΟ τις σουίτες που άγγιξες).
+  //
+  // ⚠️ Στο CI **δεν** ισχύει: εκεί θέλουμε πλήρη παραλληλία και δεν υπάρχει UI να προστατέψουμε.
+  maxWorkers: process.env.CI ? '100%' : 2,
+  // Ανακυκλώνει worker που φουσκώνει — τα jsdom suites διαρρέουν μνήμη σε μεγάλα τρεξίματα.
+  workerIdleMemoryLimit: '512MB',
   testTimeout: 10000,
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   globals: {

@@ -33,6 +33,7 @@
 - [Disable slow pre-commit checks](feedback_disable_slow_precommit.md) — No tsc/prettier/madge/eslint in hook. Run on-demand only.
 
 ## TSC — ΑΠΑΓΟΡΕΥΜΕΝΟ ΓΙΑ ΠΡΑΚΤΟΡΕΣ (N.17 — ΑΠΑΡΑΒΑΤΟ)
+- [Προϋπολογισμός εκτέλεσης tests](test-execution-budget.md) — 🔴 **4 πυρήνες**: τρέξε ΜΟΝΟ τις σουίτες που άγγιξες, ΠΟΤΕ ολόκληρο subapp/`src` τοπικά (683 σουίτες γονάτισαν το PC, 2026-07-31). `jest.config.js` έχει πλέον `maxWorkers: 2` τοπικά — μην το αφαιρέσεις. Τρέξε ΜΙΑ φορά, κράτα την έξοδο σε αρχείο.
 - [ΠΟΤΕ tsc από πράκτορα](feedback_single_tsc_at_a_time.md) — ❌ ΑΠΑΓΟΡΕΥΕΤΑΙ να τρέχεις `tsc`/`tsc --noEmit`/typecheck (foreground ή background, 1 ή 100 αρχεία). Γράψε κώδικα & σταμάτα. ✅ jest επιτρέπεται. Τον TS έλεγχο τον κάνει ο Giorgio περιοδικά + pre-commit hook. Χάνεται τεράστιος χρόνος, τα σφάλματα είναι λίγα. CLAUDE.md N.17.
 
 ## Firestore Security
