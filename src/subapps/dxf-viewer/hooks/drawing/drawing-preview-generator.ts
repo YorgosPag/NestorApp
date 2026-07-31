@@ -46,6 +46,8 @@ import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-option
 // ADR-612 — opening info tag SINGLE-CLICK WYSIWYG ghost: SAME builder as commit (SSoT
 // mapping lives in the store module — N.18, never cloned).
 import { buildOpeningInfoTagEntityFromLiveOptions } from '../../state/opening-info-tag-options-store';
+// ADR-739 Φ.Δ — γενικός πίνακας: ΤΟ ΙΔΙΟ mapping με το commit (ζει στο module του store — N.18).
+import { buildTableEntityFromLiveOptions } from '../../state/table-options-store';
 import { sceneSnapTargetsStore } from '../../bim/framing/scene-snap-targets';
 import { resolvePolygonVertexSnap } from '../../bim/placement/polygon-vertex-snap';
 import { polygonVertexLockStore } from '../../bim/placement/polygon-vertex-lock-store';
@@ -334,6 +336,21 @@ export function generatePreviewEntity(
       getDefaultLayerId(),
     );
     return toWysiwygPreviewEntity(openingInfoTagGhost, 'preview_opening_info_tag_ghost');
+  }
+  // ── ADR-739 Φ.Δ — Γενικός πίνακας: SINGLE-CLICK WYSIWYG φάντασμα (καθρέφτης του
+  //    opening-info-tag παραπάνω). Κανένα κλειδωμένο σημείο να «τεντωθεί» — ολόκληρος ο
+  //    πίνακας ακολουθεί τον ζωντανό κέρσορα με την **πάνω-αριστερή γωνία** του (σύμβαση
+  //    ACAD_TABLE), πριν το κλικ (`tempPoints.length === 0`· το εργαλείο ολοκληρώνεται στο
+  //    σημείο 1, άρα ποτέ δεν συσσωρεύει άλλο). ΙΔΙΟΣ builder με το commit
+  //    (`buildTableEntityFromLiveOptions`, preview ≡ commit) → πραγματικές γραμμές/στήλες/
+  //    σπαρμένα κελιά, ζωγραφισμένα από τον πραγματικό `TableRenderer` (πλήρης πιστότητα). ─
+  if (tool === 'table' && tempPoints.length === 0) {
+    const tableGhost = buildTableEntityFromLiveOptions(
+      cursorPoint,
+      'preview_table_ghost',
+      getDefaultLayerId(),
+    );
+    return toWysiwygPreviewEntity(tableGhost, 'preview_table_ghost');
   }
   // ── Zero-point preview: show start indicator ─────────────────────────────
   if (tempPoints.length === 0) {

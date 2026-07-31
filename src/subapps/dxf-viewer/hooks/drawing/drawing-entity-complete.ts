@@ -27,6 +27,7 @@ export function isEntityComplete(tool: DrawingTool, pointCount: number): boolean
     case 'scale-bar': // ADR-583 Φ2 — 2 σημεία (origin + axis/length), mirror 'line'
       return pointCount >= 2;
     case 'opening-info-tag': // ADR-612 — 1 σημείο (box centre), mirror 'annotation-symbol'
+    case 'table': // ADR-739 Φ.Δ — 1 σημείο (πάνω-αριστερή γωνία, σύμβαση ACAD_TABLE)
       return pointCount >= 1;
     case 'measure-angle':
     case 'measure-angle-measuregeom':

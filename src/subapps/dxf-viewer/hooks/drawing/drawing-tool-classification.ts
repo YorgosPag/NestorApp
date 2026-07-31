@@ -37,6 +37,8 @@ export const ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
  */
 export const SINGLE_CLICK_ENTITY_TOOLS: ReadonlySet<DrawingTool> = new Set([
   'opening-info-tag',
+  // ADR-739 Φ.Δ — γενικός πίνακας: 1 κλικ = πάνω-αριστερή γωνία (σύμβαση ACAD_TABLE).
+  'table',
 ]);
 
 /** Resolves the level ID for entity placement (fallback to "0" for known tools) */

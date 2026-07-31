@@ -16,8 +16,10 @@ import type {
   AngleMeasurementEntity,
   ArcEntity,
 } from '../../types/scene';
-import type { Entity, XLineEntity, RayEntity } from '../../types/entities';
-import { getXLineModeState } from '../../systems/tools/xline-mode-store';
+import type { Entity, RayEntity } from '../../types/entities';
+// N.7.1 — ADR-359 construction-line builder extracted to drawing-entity-xline.ts (file-size SRP).
+// `normalizeDir` lives there too: the ray branch below reuses it (ένας ορισμός, N.18).
+import { buildXLineEntity, normalizeDir } from './drawing-entity-xline';
 // ADR-658 M3 (D1) — «Μολύβι» output-type SSoT: «Τεθλασμένη» (plain polyline) vs «Καμπύλη»
 // (polyline + ADR-650 smoothDisplay fitted-curve). Read at build time (mirror του xline mode).
 import { getSketchOutputType } from '../../systems/sketch/sketch-output-store';
@@ -31,6 +33,9 @@ import { buildScaleBarEntityFromLiveOptions } from '../../state/scale-bar-option
 // ADR-612 — opening info tag: SINGLE-CLICK point → OpeningInfoTagEntity (mirror scale-bar's
 // live-options SSoT mapping, sibling module — N.18: one mapping, never cloned).
 import { buildOpeningInfoTagEntityFromLiveOptions } from '../../state/opening-info-tag-options-store';
+// ADR-739 Φ.Δ — γενικός πίνακας: SINGLE-CLICK σημείο → TableEntity (ίδιο live-options SSoT
+// mapping με τα δύο αδέλφια — N.18: ένα mapping, ποτέ αντιγραμμένο).
+import { buildTableEntityFromLiveOptions } from '../../state/table-options-store';
 import type {
   DrawingTool,
   ExtendedPolylineEntity,
@@ -53,11 +58,6 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { getDefaultLayerId } from '../../stores/LayerStore';
 import { LINEWEIGHT_ISO_VALUES } from '../../config/lineweight-iso-catalog';
 const LINEWEIGHT_1MM = LINEWEIGHT_ISO_VALUES[17];
-function normalizeDir(dx: number, dy: number): { x: number; y: number } {
-  const len = Math.sqrt(dx * dx + dy * dy);
-  if (len < 1e-10) return { x: 1, y: 0 };
-  return { x: dx / len, y: dy / len };
-}
 // Shared by arc-3p/arc-cse/arc-sce (ADR-059) — same ArcEntity shape, only the
 // point-order → arcResult calculation differs per tool.
 function buildArcEntity(
@@ -405,6 +405,14 @@ export function createEntityFromTool(
         return buildOpeningInfoTagEntityFromLiveOptions(points[0], id, defaultLayerId);
       }
       break;
+    // ADR-739 Φ.Δ — γενικός πίνακας: ΕΝΑ κλικ = η **πάνω-αριστερή γωνία** (σύμβαση
+    // ACAD_TABLE — ο πίνακας μεγαλώνει κάτω-δεξιά). Πλήθος στηλών/γραμμών + πλάτος
+    // στήλης διαβάζονται ζωντανά από το options store (event-time, ADR-040).
+    case 'table':
+      if (points.length >= 1) {
+        return buildTableEntityFromLiveOptions(points[0], id, defaultLayerId);
+      }
+      break;
     // Arc drawing tools - ADR-059
     case 'arc-3p':
       // 3-Point Arc: Start -> Point on Arc -> End
@@ -432,45 +440,9 @@ export function createEntityFromTool(
         return buildArcEntity(id, arcResult, defaultLayerId, arcFlipped);
       }
       break;
-    case 'xline': {
-      const xlineState = getXLineModeState();
-      if (xlineState.mode === 'horizontal' && points.length >= 1) {
-        return { id, type: 'xline', basePoint: points[0], direction: { x: 1, y: 0 }, visible: true, layerId: defaultLayerId } as XLineEntity;
-      }
-      if (xlineState.mode === 'vertical' && points.length >= 1) {
-        return { id, type: 'xline', basePoint: points[0], direction: { x: 0, y: 1 }, visible: true, layerId: defaultLayerId } as XLineEntity;
-      }
-      if (xlineState.mode === 'angle') {
-        if (xlineState.angleValue !== null && points.length >= 1) {
-          const angleRad = xlineState.angleValue * Math.PI / 180;
-          return { id, type: 'xline', basePoint: points[0], direction: { x: Math.cos(angleRad), y: Math.sin(angleRad) }, visible: true, layerId: defaultLayerId } as XLineEntity;
-        }
-        if (points.length >= 2) {
-          return { id, type: 'xline', basePoint: points[0], direction: normalizeDir(points[1].x - points[0].x, points[1].y - points[0].y), visible: true, layerId: defaultLayerId } as XLineEntity;
-        }
-        break;
-      }
-      if (xlineState.mode === 'bisect') {
-        if (points.length >= 3) {
-          const [p1, p2, p3] = points;
-          const d2x = p2.x - p1.x, d2y = p2.y - p1.y;
-          const d3x = p3.x - p1.x, d3y = p3.y - p1.y;
-          const len2 = Math.sqrt(d2x * d2x + d2y * d2y);
-          const len3 = Math.sqrt(d3x * d3x + d3y * d3y);
-          if (len2 < 1e-10 || len3 < 1e-10) return null;
-          const dir = normalizeDir(d2x / len2 + d3x / len3, d2y / len2 + d3y / len3);
-          return { id, type: 'xline', basePoint: p1, direction: dir, visible: true, layerId: defaultLayerId } as XLineEntity;
-        }
-        break;
-      }
-      if (xlineState.mode === 'offset') return null; // Phase 4+ — needs entity pick
-      // through (default)
-      if (points.length >= 2) {
-        const dir = normalizeDir(points[1].x - points[0].x, points[1].y - points[0].y);
-        return { id, type: 'xline', basePoint: points[0], direction: dir, visible: true, layerId: defaultLayerId } as XLineEntity;
-      }
-      break;
-    }
+    // ADR-359 — construction line: όλα τα modes ζουν στο drawing-entity-xline.ts (N.7.1).
+    case 'xline':
+      return buildXLineEntity(points, id, defaultLayerId);
     case 'ray': {
       if (points.length >= 2) {
         const dir = normalizeDir(points[1].x - points[0].x, points[1].y - points[0].y);
