@@ -23,6 +23,12 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { generateFloorplanBackgroundId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+// SSoT «ανήκει σε άλλον πελάτη;» — ένας έλεγχος, δύο ρητά ονομασμένες πολιτικές.
+import {
+  CrossTenantAccessError,
+  assertOwnedByCompany,
+  ownedOrNull,
+} from '@/lib/auth/tenant-ownership';
 import type {
   FloorplanBackground,
   BackgroundTransform,
@@ -116,6 +122,56 @@ function pickTransformPatch(p: Partial<BackgroundTransform>): Partial<Background
   return out;
 }
 
+/**
+ * Ρητή άρνηση για κάθε **εγγραφή** σε υπόβαθρο — ένα σημείο, τρεις καλούντες.
+ *
+ * Οι μέθοδοι εγγραφής επιλέγουν σκόπιμα την **αντίθετη** πολιτική από το
+ * `getById()`: εκεί η σιωπή προστατεύει από απαρίθμηση ids, εδώ ο καλών ζητά
+ * εγγραφή σε id που ήδη κατέχει από την οθόνη του, οπότε το `403` είναι χρήσιμη
+ * πληροφορία. Το μήνυμα ξεκινά με «Cross-tenant» — τα routes το χαρτογραφούν σε
+ * 403 από εκεί (`floorplan-backgrounds/[id]/route.ts:154`).
+ */
+function assertBackgroundOwned(
+  row: FirebaseFirestore.DocumentData,
+  expectedCompanyId: string,
+  id: string,
+  message: string,
+): void {
+  assertOwnedByCompany(
+    { companyId: row.companyId as string },
+    expectedCompanyId,
+    (actual) =>
+      new CrossTenantAccessError({
+        message,
+        name: 'FloorplanBackgroundCrossTenantError',
+        resource: 'Floorplan background',
+        resourceId: id,
+        expectedCompanyId,
+        actualCompanyId: actual,
+      }),
+  );
+}
+
+/**
+ * «Διάβασε τη γραμμή που δικαιούμαι να γράψω» — μία έννοια, τρεις καλούντες.
+ *
+ * Ύπαρξη και ιδιοκτησία ελέγχονται **μέσα στη συναλλαγή**: εκτός αυτής, ένα
+ * ταυτόχρονο delete ανάμεσα στην ανάγνωση και την εγγραφή θα περνούσε.
+ */
+async function txReadOwnedRow(
+  tx: FirebaseFirestore.Transaction,
+  ref: FirebaseFirestore.DocumentReference,
+  id: string,
+  expectedCompanyId: string,
+  denialMessage: string,
+): Promise<FirebaseFirestore.DocumentData> {
+  const snap = await tx.get(ref);
+  if (!snap.exists) throw new Error(`Background not found: ${id}`);
+  const row = snap.data() as FirebaseFirestore.DocumentData;
+  assertBackgroundOwned(row, expectedCompanyId, id, denialMessage);
+  return row;
+}
+
 function rowToEntity(id: string, row: FirebaseFirestore.DocumentData): FloorplanBackground {
   return {
     id,
@@ -189,10 +245,16 @@ export class FloorplanBackgroundService {
     const snap = await backgroundsRef().doc(id).get();
     if (!snap.exists) return null;
     const row = snap.data() as FirebaseFirestore.DocumentData;
-    if (row.companyId !== companyId) {
-      logger.warn('Cross-tenant getById denied', { id, requested: companyId, actual: row.companyId });
-      return null;
-    }
+
+    // Πολιτική **σιωπηλή** (SSoT `lib/auth/tenant-ownership`): ξένο ≡ ανύπαρκτο,
+    // ώστε η ανάγνωση να μη μαρτυρά την ύπαρξη του id. Οι μεθόδοι εγγραφής
+    // παρακάτω επιλέγουν σκόπιμα την **αντίθετη** πολιτική — βλ. σχόλιό τους.
+    const owned = ownedOrNull({ companyId: row.companyId as string }, companyId, {
+      resource: 'Floorplan background',
+      resourceId: id,
+    });
+    if (owned === null) return null;
+
     return rowToEntity(id, row);
   }
 
@@ -214,12 +276,7 @@ export class FloorplanBackgroundService {
   static async patchTransform(id: string, input: PatchTransformInput): Promise<FloorplanBackground> {
     const ref = backgroundsRef().doc(id);
     const result = await getDb().runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) throw new Error(`Background not found: ${id}`);
-      const row = snap.data() as FirebaseFirestore.DocumentData;
-      if (row.companyId !== input.companyId) {
-        throw new Error('Cross-tenant patch denied');
-      }
+      const row = await txReadOwnedRow(tx, ref, id, input.companyId, 'Cross-tenant patch denied');
       if (row.locked === true && input.locked !== false) {
         throw new Error('Background is locked');
       }
@@ -248,12 +305,7 @@ export class FloorplanBackgroundService {
   static async patchCalibration(id: string, input: PatchCalibrationInput): Promise<FloorplanBackground> {
     const ref = backgroundsRef().doc(id);
     const result = await getDb().runTransaction(async (tx) => {
-      const snap = await tx.get(ref);
-      if (!snap.exists) throw new Error(`Background not found: ${id}`);
-      const row = snap.data() as FirebaseFirestore.DocumentData;
-      if (row.companyId !== input.companyId) {
-        throw new Error('Cross-tenant patch denied');
-      }
+      const row = await txReadOwnedRow(tx, ref, id, input.companyId, 'Cross-tenant patch denied');
       if (row.locked === true) {
         throw new Error('Background is locked');
       }
@@ -283,9 +335,7 @@ export class FloorplanBackgroundService {
         const snap = await tx.get(ref);
         if (!snap.exists) return;
         const row = snap.data() as FirebaseFirestore.DocumentData;
-        if (row.companyId !== companyId) {
-          throw new Error('Cross-tenant delete denied');
-        }
+        assertBackgroundOwned(row, companyId, id, 'Cross-tenant delete denied');
         tx.delete(ref);
       });
       logger.info('Floorplan background deleted', { id, companyId });

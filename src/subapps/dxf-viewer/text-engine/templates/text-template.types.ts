@@ -17,6 +17,8 @@
  */
 
 import { Timestamp } from 'firebase-admin/firestore';
+// SSoT «ανήκει σε άλλον πελάτη;» — ένας έλεγχος, μία δομή σφάλματος για όλο το repo.
+import { CrossTenantAccessError } from '@/lib/auth/tenant-ownership';
 import type {
   TextTemplateCreateFields,
   TextTemplateUpdateFields,
@@ -65,13 +67,17 @@ export class TextTemplateNotFoundError extends Error {
   }
 }
 
-export class TextTemplateCrossTenantError extends Error {
+export class TextTemplateCrossTenantError extends CrossTenantAccessError {
   readonly code = 'TEXT_TEMPLATE_CROSS_TENANT' as const;
   constructor(templateId: string, expectedCompanyId: string, actualCompanyId: string) {
-    super(
-      `Text template "${templateId}" belongs to company "${actualCompanyId}", not "${expectedCompanyId}".`,
-    );
-    this.name = 'TextTemplateCrossTenantError';
+    super({
+      message: `Text template "${templateId}" belongs to company "${actualCompanyId}", not "${expectedCompanyId}".`,
+      name: 'TextTemplateCrossTenantError',
+      resource: 'Text template',
+      resourceId: templateId,
+      expectedCompanyId,
+      actualCompanyId,
+    });
   }
 }
 

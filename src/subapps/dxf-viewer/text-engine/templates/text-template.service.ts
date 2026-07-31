@@ -27,6 +27,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { AuditFieldChange } from '@/types/audit-trail';
+// SSoT ιχνηλασίας — ήταν γραμμένα ταυτόσημα και στις δύο υπηρεσίες (CHECK 3.28).
+import { creationStampFields, fieldChange } from '@/services/audit/audit-field-helpers';
 import type { DxfTextNode } from '../types/text-ast.types';
 import { extractPlaceholders } from './extract-placeholders';
 import { DEFAULT_TEXT_TEMPLATE_SCOPE } from './template.types';
@@ -45,37 +47,14 @@ import {
   updateTextTemplateInputSchema,
 } from './text-template.zod';
 
+import { assertOwnedByCompany } from '@/lib/auth/tenant-ownership';
+
 const logger = createModuleLogger('TextTemplateService');
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function templateCollection() {
   return getAdminFirestore().collection(COLLECTIONS.TEXT_TEMPLATES);
-}
-
-/**
- * Validate `companyId` of a fetched doc against the caller's expected
- * tenant. Defence-in-depth: Firestore rules already block cross-tenant
- * reads via Admin SDK rules bypass, but the service is the bottleneck so
- * we enforce here too.
- */
-function assertSameTenant(
-  templateId: string,
-  expectedCompanyId: string,
-  doc: UserTextTemplateDoc,
-): void {
-  if (doc.companyId !== expectedCompanyId) {
-    throw new TextTemplateCrossTenantError(templateId, expectedCompanyId, doc.companyId);
-  }
-}
-
-function fieldChange(
-  field: string,
-  oldValue: AuditFieldChange['oldValue'],
-  newValue: AuditFieldChange['newValue'],
-  label?: string,
-): AuditFieldChange {
-  return label ? { field, oldValue, newValue, label } : { field, oldValue, newValue };
 }
 
 /** Build the field-change list for a "created" audit entry. */
@@ -219,7 +198,13 @@ export async function getTextTemplateById(
   const snap = await ref.get();
   if (!snap.exists) throw new TextTemplateNotFoundError(templateId);
   const doc = snap.data() as UserTextTemplateDoc;
-  assertSameTenant(templateId, companyId, doc);
+  // Πολιτική **ρητής άρνησης** (SSoT `lib/auth/tenant-ownership`): το route τη
+  // γυρίζει σε 403. Τίμημα, ρητά δηλωμένο: μαρτυρά την ύπαρξη του id.
+  assertOwnedByCompany(
+    doc,
+    companyId,
+    (actual) => new TextTemplateCrossTenantError(templateId, companyId, actual),
+  );
   return doc;
 }
 
@@ -258,12 +243,7 @@ export async function createTextTemplate(
     ...buildScopeFields(input),
     // Firestore απορρίπτει `undefined` ⇒ το πεδίο απλώς μένει εκτός εγγράφου όταν λείπει.
     ...(input.titleBlock ? { titleBlock: input.titleBlock } : {}),
-    createdAt: now,
-    updatedAt: now,
-    createdBy: actor.userId,
-    createdByName: actor.userName ?? null,
-    updatedBy: actor.userId,
-    updatedByName: actor.userName ?? null,
+    ...creationStampFields(actor, now),
   });
 
   const persisted = (await ref.get()).data() as UserTextTemplateDoc;

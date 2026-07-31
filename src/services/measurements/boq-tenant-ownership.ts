@@ -10,14 +10,11 @@
  * περιγράφει το ADR-584: το ένα αντίγραφο θα διορθωθεί, το άλλο θα μείνει, και
  * η απόκλιση θα είναι σε **έλεγχο πρόσβασης**.
  *
- * Το repo έχει ήδη πέντε ανεξάρτητες εκδοχές αυτής της ερώτησης
- * (`text-template.service`, `custom-dictionary.service`,
- * `dxf-layer-state-template.service`, `floorplan-background.service`,
- * `boq-tenant-guard`) με **τρεις** διαφορετικές σημασιολογίες αστοχίας. Η
- * ενοποίησή τους είναι δουλειά άλλου εύρους (4+ domains) και είναι καταγεγραμμένη
- * ως χρέος· εδώ **δεν προστίθεται έκτη**: υιοθετείται το σχήμα που ήδη επέλεξαν
- * τα δύο πιο πρόσφατα σημεία (`floorplan-background.service.ts:188`,
- * `boq-tenant-guard.ts`).
+ * ✅ **2026-07-31 — η ενοποίηση έγινε.** Ο έλεγχος ήταν γραμμένος σε **οκτώ**
+ * σημεία με **τρεις** σημασιολογίες αστοχίας· πλέον ζει ένας, στο
+ * `@/lib/auth/tenant-ownership`. Αυτό το module παραμένει ως **λεπτή γέφυρα**
+ * του πεδίου BOQ: κρατά το όνομα πόρου και τον διαχωρισμό `client`/`admin` που
+ * μπαίνει στο log, χωρίς να ξαναγράφει τον έλεγχο.
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * ⚠️ ΓΙΑΤΙ `null` ΚΑΙ ΟΧΙ ΣΦΑΛΜΑ ΑΡΝΗΣΗΣ
@@ -33,9 +30,10 @@
  */
 
 import type { BOQItem } from '@/types/boq';
-import { createModuleLogger } from '@/lib/telemetry';
+import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 
-const logger = createModuleLogger('BoqTenantOwnership');
+/** Το ανθρώπινο όνομα του πόρου στα logs. */
+const RESOURCE = 'BOQ item';
 
 /** Ποιο SDK έκανε την ανάγνωση — μπαίνει στο log ώστε η απόπειρα να εντοπίζεται. */
 export type BoqReadPath = 'client' | 'admin';
@@ -54,16 +52,5 @@ export function ownedItemOrNull(
   itemId: string,
   path: BoqReadPath,
 ): BOQItem | null {
-  if (item === null) return null;
-
-  if (item.companyId !== companyId) {
-    logger.warn('Cross-tenant BOQ item access blocked', {
-      itemId,
-      callerCompanyId: companyId,
-      path,
-    });
-    return null;
-  }
-
-  return item;
+  return ownedOrNull(item, companyId, { resource: RESOURCE, resourceId: itemId, path });
 }

@@ -14,6 +14,8 @@
  */
 
 import { Timestamp } from 'firebase-admin/firestore';
+// SSoT «ανήκει σε άλλον πελάτη;» — ένας έλεγχος, μία δομή σφάλματος για όλο το repo.
+import { CrossTenantAccessError } from '@/lib/auth/tenant-ownership';
 import type { SpellLanguage } from './spell.types';
 
 /**
@@ -66,13 +68,17 @@ export class CustomDictionaryNotFoundError extends Error {
   }
 }
 
-export class CustomDictionaryCrossTenantError extends Error {
+export class CustomDictionaryCrossTenantError extends CrossTenantAccessError {
   readonly code = 'CUSTOM_DICTIONARY_CROSS_TENANT' as const;
   constructor(entryId: string, expectedCompanyId: string, actualCompanyId: string) {
-    super(
-      `Custom dictionary entry "${entryId}" belongs to company "${actualCompanyId}", not "${expectedCompanyId}".`,
-    );
-    this.name = 'CustomDictionaryCrossTenantError';
+    super({
+      message: `Custom dictionary entry "${entryId}" belongs to company "${actualCompanyId}", not "${expectedCompanyId}".`,
+      name: 'CustomDictionaryCrossTenantError',
+      resource: 'Custom dictionary entry',
+      resourceId: entryId,
+      expectedCompanyId,
+      actualCompanyId,
+    });
   }
 }
 

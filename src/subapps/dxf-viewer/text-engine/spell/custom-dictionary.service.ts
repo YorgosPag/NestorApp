@@ -32,6 +32,8 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { AuditFieldChange } from '@/types/audit-trail';
+// SSoT ιχνηλασίας — ήταν γραμμένα ταυτόσημα και στις δύο υπηρεσίες (CHECK 3.28).
+import { creationStampFields, fieldChange } from '@/services/audit/audit-field-helpers';
 import {
   CustomDictionaryCrossTenantError,
   CustomDictionaryDuplicateError,
@@ -49,37 +51,14 @@ import {
 } from './custom-dictionary.zod';
 import type { SpellLanguage } from './spell.types';
 
+import { assertOwnedByCompany } from '@/lib/auth/tenant-ownership';
+
 const logger = createModuleLogger('CustomDictionaryService');
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function dictionaryCollection() {
   return getAdminFirestore().collection(COLLECTIONS.TEXT_CUSTOM_DICTIONARY);
-}
-
-/**
- * Validate `companyId` of a fetched doc against the caller's expected tenant.
- * Defence-in-depth: Firestore rules already block cross-tenant reads via the
- * Admin SDK rules bypass, but the service is the bottleneck so we enforce
- * here too.
- */
-function assertSameTenant(
-  entryId: string,
-  expectedCompanyId: string,
-  doc: CustomDictionaryEntryDoc,
-): void {
-  if (doc.companyId !== expectedCompanyId) {
-    throw new CustomDictionaryCrossTenantError(entryId, expectedCompanyId, doc.companyId);
-  }
-}
-
-function fieldChange(
-  field: string,
-  oldValue: AuditFieldChange['oldValue'],
-  newValue: AuditFieldChange['newValue'],
-  label?: string,
-): AuditFieldChange {
-  return label ? { field, oldValue, newValue, label } : { field, oldValue, newValue };
 }
 
 function buildCreationChanges(doc: CustomDictionaryEntryDoc): AuditFieldChange[] {
@@ -162,7 +141,13 @@ export async function getCustomDictionaryEntryById(
   const snap = await ref.get();
   if (!snap.exists) throw new CustomDictionaryNotFoundError(entryId);
   const doc = snap.data() as CustomDictionaryEntryDoc;
-  assertSameTenant(entryId, companyId, doc);
+  // Πολιτική **ρητής άρνησης** (SSoT `lib/auth/tenant-ownership`): το route τη
+  // γυρίζει σε 403. Τίμημα, ρητά δηλωμένο: μαρτυρά την ύπαρξη του id.
+  assertOwnedByCompany(
+    doc,
+    companyId,
+    (actual) => new CustomDictionaryCrossTenantError(entryId, companyId, actual),
+  );
   return doc;
 }
 
@@ -215,12 +200,7 @@ export async function createCustomDictionaryEntry(
     companyId: input.companyId,
     term: input.term,
     language: input.language,
-    createdAt: now,
-    updatedAt: now,
-    createdBy: actor.userId,
-    createdByName: actor.userName ?? null,
-    updatedBy: actor.userId,
-    updatedByName: actor.userName ?? null,
+    ...creationStampFields(actor, now),
   });
 
   const persisted = (await ref.get()).data() as CustomDictionaryEntryDoc;

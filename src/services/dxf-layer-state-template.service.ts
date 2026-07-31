@@ -46,6 +46,8 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { compareByLocale } from '@/lib/intl-formatting';
+// SSoT «ανήκει σε άλλον πελάτη;» — ένας έλεγχος, μία δομή σφάλματος για όλο το repo.
+import { CrossTenantAccessError, assertOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import {
   createDxfTemplateCategory,
   createLayerStateTemplate,
@@ -87,12 +89,16 @@ export class LayerStateTemplateNotFoundError extends Error {
   }
 }
 
-export class LayerStateTemplateCrossTenantError extends Error {
+export class LayerStateTemplateCrossTenantError extends CrossTenantAccessError {
   constructor(templateId: string, expected: string, actual: string) {
-    super(
-      `Cross-tenant access denied on template ${templateId}: expected companyId=${expected}, got ${actual}`,
-    );
-    this.name = 'LayerStateTemplateCrossTenantError';
+    super({
+      message: `Cross-tenant access denied on template ${templateId}: expected companyId=${expected}, got ${actual}`,
+      name: 'LayerStateTemplateCrossTenantError',
+      resource: 'Layer state template',
+      resourceId: templateId,
+      expectedCompanyId: expected,
+      actualCompanyId: actual,
+    });
   }
 }
 
@@ -114,16 +120,6 @@ function snapshotToTemplate(snap: QueryDocumentSnapshot<DocumentData>): LayerSta
 
 function snapshotToCategory(snap: QueryDocumentSnapshot<DocumentData>): DxfTemplateCategory {
   return snap.data() as DxfTemplateCategory;
-}
-
-function assertSameTenant(
-  templateId: string,
-  expectedCompanyId: string,
-  doc: LayerStateTemplate,
-): void {
-  if (doc.companyId !== expectedCompanyId) {
-    throw new LayerStateTemplateCrossTenantError(templateId, expectedCompanyId, doc.companyId);
-  }
 }
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -202,7 +198,13 @@ export class DxfLayerStateTemplateService {
     const snap = await getDoc(this.templateDoc(templateId));
     if (!snap.exists()) throw new LayerStateTemplateNotFoundError(templateId);
     const t = snap.data() as LayerStateTemplate;
-    assertSameTenant(templateId, this.config.companyId, t);
+    // Πολιτική **ρητής άρνησης** (SSoT `lib/auth/tenant-ownership`)· μαρτυρά
+    // την ύπαρξη του id — συνειδητή ανταλλαγή για ρητό 403.
+    assertOwnedByCompany(
+      t,
+      this.config.companyId,
+      (actual) => new LayerStateTemplateCrossTenantError(templateId, this.config.companyId, actual),
+    );
     return t;
   }
 
