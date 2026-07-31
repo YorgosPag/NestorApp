@@ -15,6 +15,8 @@ import { WallRenderer, type OpeningsByWall } from '../../bim/renderers/WallRende
 import { SlabRenderer, type SlabOpeningsBySlab } from '../../bim/renderers/SlabRenderer';
 import { WallCoveringRenderer } from '../../bim/renderers/WallCoveringRenderer';
 import type { WallCoveringHost } from '../../bim/wall-coverings/wall-covering-strip-geometry';
+// ADR-739 Φ.Γ — ο πίνακας χρειάζεται κι αυτός προώθηση μονάδων σκηνής (annotative).
+import { TableRenderer } from '../entities/TableRenderer';
 // ADR-583 — annotation symbol / scale-bar leaves need scene-units forwarding (instanceof).
 import { AnnotationSymbolRenderer } from '../entities/AnnotationSymbolRenderer';
 import { ScaleBarRenderer } from '../entities/ScaleBarRenderer';
@@ -92,6 +94,12 @@ export class EntityRendererComposite {
     const scaleBar = this.renderers.get('scale-bar');
     if (scaleBar instanceof ScaleBarRenderer) {
       scaleBar.setSceneUnits(units);
+    }
+    // ADR-739 Φ.Γ — ο πίνακας είναι annotative (sheet-mm → μονάδες σκηνής μέσω του ΙΔΙΟΥ
+    // `paperHeightToModel`), άρα χρειάζεται τις ίδιες μονάδες με τις διαστασιολογήσεις.
+    const table = this.renderers.get('table');
+    if (table instanceof TableRenderer) {
+      table.setSceneUnits(units);
     }
   }
 

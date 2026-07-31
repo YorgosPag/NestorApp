@@ -102,6 +102,10 @@ export const ENTITY_RENDER_CONTRACTS: Readonly<
   'scale-bar': dxf('scale-bar'),
   // ADR-612 — opening info tag: dedicated non-BIM annotation, 2D canvas only.
   'opening-info-tag': dxf('opening-info-tag'),
+  // ADR-739 Φ.Γ — γενικός πίνακας: annotation, 2D καμβάς μόνο. Το `d3: false` ΔΕΝ
+  // αναιρεί το §7 (HUD panel + billboard): εκείνα δεν είναι per-type 3D mesh μέσω
+  // `BimSceneLayer` — είναι ξεχωριστές επιφάνειες με δικές τους φάσεις (Θ).
+  table: dxf('table'),
   // ADR-651 Φάση Ε — standalone raster image, 2D canvas only (no per-type 3D mesh).
   image: dxf('image'),
   // ADR-662 Φάση 2β (Δρόμος Γ) — topo surface: thin/derived non-BIM entity,

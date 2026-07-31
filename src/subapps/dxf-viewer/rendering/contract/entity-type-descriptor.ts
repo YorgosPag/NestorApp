@@ -60,6 +60,10 @@ export const ANNOTATION_RENDERABLE_TYPES: readonly RenderableEntityType[] = [
   'scale-bar',
   // ADR-612 — opening info tag (dedicated sibling of scale-bar).
   'opening-info-tag',
+  // ADR-739 Φ.Γ — γενικός πίνακας N×M. Annotation και ΟΧΙ `BIM_2D_ONLY_TYPES`: εκείνη
+  // η λίστα σημαίνει «BIM στοιχείο που τυχαίνει να μην έχει 3D στερεό» (floorplan-symbol).
+  // Ο πίνακας δεν είναι δομικό στοιχείο — είναι σημείωση χαρτιού, όπως η κλίμακα.
+  'table',
 ];
 
 const BIM_TYPE_SET: ReadonlySet<string> = new Set(BIM_RENDERABLE_TYPES);

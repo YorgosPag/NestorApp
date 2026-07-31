@@ -30,6 +30,8 @@ import { HatchRenderer } from '../entities/HatchRenderer';
 import { AnnotationSymbolRenderer } from '../entities/AnnotationSymbolRenderer';
 // ADR-583 Φ2 — graphic scale-bar leaf (dedicated non-BIM annotation; two-formula split).
 import { ScaleBarRenderer } from '../entities/ScaleBarRenderer';
+// ADR-739 Φ.Γ — table leaf (γενικός πίνακας N×M· ΜΙΑ μηχανή διάταξης, τέσσερα backends).
+import { TableRenderer } from '../entities/TableRenderer';
 // ADR-612 — opening info tag leaf (dedicated non-BIM annotation; world-mm box, sibling of scale-bar).
 import { OpeningInfoTagRenderer } from '../entities/OpeningInfoTagRenderer';
 import { LeaderRenderer } from '../entities/LeaderRenderer';
@@ -171,6 +173,8 @@ export function createEntityRenderers(
   const scaleBarRenderer = new ScaleBarRenderer(ctx);
   // ADR-612 — opening info tag renderer (world-mm box, 3 editable numeral cells).
   const openingInfoTagRenderer = new OpeningInfoTagRenderer(ctx);
+  // ADR-739 Φ.Γ — table renderer (annotative· διάταξη memoized, ορατές γραμμές δυαδικά).
+  const tableRenderer = new TableRenderer(ctx);
   const leaderRenderer = new LeaderRenderer(ctx); // ADR-635 — leader callout path + tip arrowhead
   // ADR-651 Φάση Ε — raster image renderer (contain-fit εικόνας μέσα σε rotated ορθογώνιο).
   const imageRenderer = new ImageRenderer(ctx);
@@ -225,6 +229,7 @@ export function createEntityRenderers(
   renderers.set('annotation-symbol', annotationSymbolRenderer);
   renderers.set('scale-bar', scaleBarRenderer);
   renderers.set('opening-info-tag', openingInfoTagRenderer);
+  renderers.set('table', tableRenderer);
   renderers.set('leader', leaderRenderer);
   renderers.set('image', imageRenderer);
   renderers.set('topo-surface', topoSurfaceRenderer);
