@@ -16,6 +16,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import type {
   BOQItem,
   BOQItemStatus,
+  BOQScope,
   BOQSummary,
   CreateBOQItemInput,
   UpdateBOQItemInput,
@@ -45,7 +46,8 @@ const boqItemsCache = createStaleCache<BOQItem[]>('boq-items');
 // ============================================================================
 
 export interface BOQUIFilters {
-  scope: 'all' | 'building' | 'property';
+  /** SSoT: `BOQScope` (ADR-329 §3.1) — ήταν χειρόγραφη ένωση 2 από τα 5 εύρη. */
+  scope: 'all' | BOQScope;
   status: BOQItemStatus | 'all';
   categoryCode: string; // '' = all
   searchQuery: string;

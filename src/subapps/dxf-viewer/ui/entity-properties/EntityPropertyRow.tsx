@@ -18,7 +18,7 @@
  */
 
 import React from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, FolderSync, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -60,17 +60,34 @@ export interface EntityPropertyToggleBridge {
   readonly onToggle: (commandKey: string, next: boolean) => void;
 }
 
+/**
+ * Optional action half of the bridge (ADR-736 §6) — μόνο panels με `readout-action` πεδία.
+ *
+ * Ξεχωριστό από το `onChange` επίτηδες: ένα κουμπί **δεν παράγει τιμή**, και το να εκπέμπει
+ * ψεύτικο `onChange(key, '')` ως «σήμα» θα ήταν ακριβώς η έμμεση σκανδάλη που το ADR-736 §5
+ * καταγράφει ως αιτία δύο σφαλμάτων. Ίδιο ιδίωμα με το {@link EntityPropertyToggleBridge}.
+ */
+export interface EntityPropertyActionBridge {
+  readonly onAction: (commandKey: string) => void;
+  /** `true` όσο η ενέργεια τρέχει (π.χ. ανέβασμα) → το κουμπί κλειδώνει και το δηλώνει. */
+  readonly isActionPending?: (commandKey: string) => boolean;
+}
+
 interface EntityPropertyRowProps {
   readonly field: EntityPropertyField;
   readonly state: ComboState;
   readonly onChange: (commandKey: string, value: string) => void;
   readonly toggle?: EntityPropertyToggleBridge;
+  readonly action?: EntityPropertyActionBridge;
 }
 
 /** Dispatch one descriptor field to the matching palette control. */
-export function EntityPropertyRow({ field, state, onChange, toggle }: EntityPropertyRowProps): React.ReactElement {
+export function EntityPropertyRow({ field, state, onChange, toggle, action }: EntityPropertyRowProps): React.ReactElement {
   if (field.control === 'color') {
     return <ColorRow field={field} value={state?.value ?? '#000000'} onChange={onChange} />;
+  }
+  if (field.control === 'readout-action') {
+    return <ReadoutActionRow field={field} value={state?.value ?? ''} action={action} />;
   }
   if (field.control === 'numeric') {
     return <EditableRow field={field} value={state?.value ?? null} onChange={onChange} />;
@@ -95,13 +112,14 @@ export function EntityPropertyRow({ field, state, onChange, toggle }: EntityProp
 
 /** A titled group of rows (Γενικά / Μοτίβο / Διαβάθμιση / …). */
 export function EntityPropertySection({
-  title, group, getComboboxState, onComboboxChange, toggle,
+  title, group, getComboboxState, onComboboxChange, toggle, action,
 }: {
   readonly title: string;
   readonly group: EntityPropertyGroup;
   readonly getComboboxState: (commandKey: string) => ComboState;
   readonly onComboboxChange: (commandKey: string, value: string) => void;
   readonly toggle?: EntityPropertyToggleBridge;
+  readonly action?: EntityPropertyActionBridge;
 }): React.ReactElement {
   return (
     /*
@@ -117,6 +135,7 @@ export function EntityPropertySection({
           state={getComboboxState(f.commandKey)}
           onChange={onComboboxChange}
           toggle={toggle}
+          action={action}
         />
       ))}
     </PaletteGroupSection>
@@ -307,6 +326,56 @@ function InlineRenameRow({ field, value, onChange }: ValueRowProps) {
           </button>
         </span>
       )}
+    </PaletteFieldRow>
+  );
+}
+
+/**
+ * ADR-736 §6 — read-only τιμή **+ κουμπί ενέργειας** στην ίδια γραμμή (Πηγή ▸ Αντικατάσταση).
+ *
+ * Ίδιο layout με το read-only μισό του {@link InlineRenameRow} — truncate + Radix tooltip με την
+ * πλήρη τιμή (CHECK 3.23: **ποτέ** native `title=`) + εικονίδιο δεξιά. Η επανάληψη είναι
+ * σκόπιμα ελάχιστη: εκείνο εκπέμπει τιμή, αυτό εκπέμπει **πρόθεση**, και η μόνη κοινή ουσία
+ * (truncate + tooltip) είναι μία γραμμή JSX — η ενοποίησή τους θα ζητούσε discriminated
+ * παράμετρο για δύο διαφορετικά συμβόλαια bridge.
+ *
+ * Το κουμπί κλειδώνει όσο τρέχει η ενέργεια: ένα ανέβασμα 25 MB κρατά αισθητά, και χωρίς
+ * ένδειξη ο χρήστης ξαναπατά — δεύτερο ανέβασμα του ίδιου αρχείου.
+ */
+function ReadoutActionRow({
+  field, value, action,
+}: {
+  field: EntityPropertyField;
+  value: string;
+  action?: EntityPropertyActionBridge;
+}) {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const label = t(field.labelKey);
+  const actionLabel = t(field.actionLabelKey ?? field.labelKey);
+  const pending = action?.isActionPending?.(field.commandKey) ?? false;
+
+  return (
+    <PaletteFieldRow label={label}>
+      <span className="flex w-36 shrink-0 items-center justify-between gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate text-left text-xs text-foreground">{value || '—'}</span>
+          </TooltipTrigger>
+          {value ? <TooltipContent side="top">{value}</TooltipContent> : null}
+        </Tooltip>
+        <button
+          type="button"
+          className="shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+          aria-label={actionLabel}
+          aria-busy={pending}
+          disabled={pending || !action}
+          onClick={() => action?.onAction(field.commandKey)}
+        >
+          {pending
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <FolderSync className="h-3.5 w-3.5" />}
+        </button>
+      </span>
     </PaletteFieldRow>
   );
 }

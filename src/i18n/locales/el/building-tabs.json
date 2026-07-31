@@ -191,8 +191,6 @@
       "filters": {
         "scope": "Εύρος",
         "scopeAll": "Όλα",
-        "scopeBuilding": "Κτίριο",
-        "scopeUnit": "Μονάδα",
         "status": "Κατάσταση",
         "statusAll": "Όλες",
         "category": "Κατηγορία",

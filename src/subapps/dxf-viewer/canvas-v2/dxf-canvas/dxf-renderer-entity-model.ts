@@ -4,6 +4,8 @@ import type { Entity } from '../../types/entities';
 import { pickTextRenderFields } from '../../bim/text/text-render-fields';
 // ADR-507 — ο αδελφός HATCH_RENDER_FIELDS passthrough SSoT (anti-drift· βλ. hatch-render-fields.ts).
 import { pickHatchRenderFields } from '../../bim/hatch/hatch-render-fields';
+// ADR-736 §5.3 — ο τρίτος αδελφός: IMAGE_RENDER_FIELDS (βλ. bim/image/image-render-fields.ts).
+import { pickImageRenderFields } from '../../bim/image/image-render-fields';
 // ADR-642 Φ2-B — complex linetype (embedded text) def carried onto the EntityModel so the
 // per-entity render seam (`strokeStyledEntityPolyline`) can draw `──GAS──` along the geometry.
 import type { ComplexLinetypeDef } from '../../config/complex-linetype-types';
@@ -209,15 +211,16 @@ export function buildEntityModelFromDxf(
       } as unknown as Entity;
     case 'image':
       // ADR-651 Φάση Ε — lightweight non-BIM raster image (sibling of scale-bar/opening-info-tag).
-      // Flat params forwarded (position/width/height/url/rotation); ImageRenderer reads them +
-      // the shared HatchImageCache (identity resolveSrc).
+      // ImageRenderer reads the flat params + the shared HatchImageCache (identity resolveSrc).
+      //
+      // ADR-736 §5.3 (anti-drift) — τα πεδία ΔΕΝ απαριθμούνται πλέον εδώ. Ήταν χειρόγραφη λίστα,
+      // κάτοπτρο εκείνης του `FLAT_NONBIM_TO_DXF_HANDLERS.image`, και είχε ήδη ρίξει σιωπηλά το
+      // `sourcePath`: η πλήρης διαδρομή γραφόταν σωστά στη σκηνή αλλά ο renderer έπαιρνε πάντα
+      // `undefined` ⇒ το πλαίσιο-κράτημα έδειχνε σκέτο όνομα σε κάθε zoom, με 32/32 tests πράσινα.
+      // ΕΝΑ SSoT, ίδιο ιδίωμα με τα `pickTextRenderFields` (ADR-557) / `pickHatchRenderFields` (507).
       return {
         ...base, type: 'image',
-        position: entity.position, width: entity.width, height: entity.height,
-        // ADR-736 — το `sourceName` ΠΡΕΠΕΙ να ταξιδέψει: χωρίς αυτό μια εισαγόμενη εικόνα με
-        // ανεπίλυτη αναφορά ζωγραφίζεται ως **ανώνυμο** πλαίσιο και ο χρήστης δεν μαθαίνει ποτέ
-        // ποιο αρχείο ζητά (η ακριβώς-σιωπηλή αποτυχία που το ADR-736 υπάρχει για να λύσει).
-        url: entity.url, rotation: entity.rotation, sourceName: entity.sourceName,
+        ...pickImageRenderFields(entity),
       } as unknown as Entity;
     case 'topo-surface':
       // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived non-BIM topo surface (sibling of image).

@@ -27,6 +27,7 @@ import { PropertyMultiSelectByBuilding } from '@/components/properties/shared/Pr
 import { usePropertiesByBuilding } from '@/components/properties/shared/usePropertiesByBuilding';
 import { propertiesOnFloor } from '@/lib/properties/floor-helpers';
 import { BOQ_SCOPE_VALUES, type BOQScope } from '@/types/boq';
+import { boqScopeKeySegment } from './boq-scope-i18n';
 
 interface BOQEditorScopeSectionProps {
   buildingId: string;
@@ -116,11 +117,11 @@ export function BOQEditorScopeSection({
                   disabled={scopeLocked}
                   onClick={() => onScopeChange(opt)}
                 >
-                  {t(`tabs.measurements.scope.${labelKey(opt)}`)}
+                  {t(`tabs.measurements.scope.${boqScopeKeySegment(opt)}`)}
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-xs text-xs">
-                {t(`tabs.measurements.scope.tooltips.${opt === 'common_areas' ? 'commonAreas' : opt}`)}
+                {t(`tabs.measurements.scope.tooltips.${boqScopeKeySegment(opt)}`)}
               </TooltipContent>
             </Tooltip>
           </li>
@@ -164,14 +165,4 @@ export function BOQEditorScopeSection({
       )}
     </fieldset>
   );
-}
-
-function labelKey(scope: BOQScope): string {
-  switch (scope) {
-    case 'building': return 'building';
-    case 'common_areas': return 'commonAreas';
-    case 'floor': return 'floor';
-    case 'property': return 'property';
-    case 'properties': return 'properties';
-  }
 }

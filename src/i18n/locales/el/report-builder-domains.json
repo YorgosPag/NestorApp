@@ -1001,7 +1001,10 @@
       "enums": {
         "scope": {
           "building": "Κτίριο",
-          "property": "Ακίνητο"
+          "common_areas": "Κοινόχρηστοι Χώροι",
+          "floor": "Όροφος",
+          "property": "Ακίνητο",
+          "properties": "Πολλαπλά Ακίνητα"
         },
         "unit": {
           "m": "μ.",

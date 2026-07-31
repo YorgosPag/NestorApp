@@ -14,8 +14,17 @@
 import type { BimPropertyOption } from '../bim-properties/bim-property-types';
 import type { RibbonNumericInputConfig } from '../ribbon/types/ribbon-types';
 
-/** Control renderer για ένα πεδίο του Properties panel. */
-export type EntityPropertyControl = 'select' | 'color' | 'numeric' | 'toggle' | 'readout' | 'rename';
+/**
+ * Control renderer για ένα πεδίο του Properties panel.
+ *
+ * Το `readout-action` (ADR-736 §6) είναι το `readout` **συν** ένα κουμπί ενέργειας στη γραμμή:
+ * η τιμή μένει read-only, αλλά ο χρήστης μπορεί να την **αντικαταστήσει** μέσω διαλόγου. Είναι
+ * το ιδίωμα κάθε object inspector για μια σύνδεση προς αρχείο — InDesign *Relink*, Figma
+ * *Replace image*, AutoCAD External References *Change Path*, Revit *Manage Images*: η διαδρομή
+ * δεν πληκτρολογείται, **δείχνεται** και αλλάζει με επιλογή αρχείου.
+ */
+export type EntityPropertyControl =
+  | 'select' | 'color' | 'numeric' | 'toggle' | 'readout' | 'rename' | 'readout-action';
 
 /** Ένα πεδίο ιδιότητας οντότητας (descriptor). */
 export interface EntityPropertyField {
@@ -26,6 +35,12 @@ export interface EntityPropertyField {
   readonly options: readonly BimPropertyOption[];
   /** Numeric constraints (μόνο `control:'numeric'`). */
   readonly numericInput?: RibbonNumericInputConfig;
+  /**
+   * Κλειδί i18n για το προσβάσιμο όνομα του κουμπιού ενέργειας (μόνο `control:'readout-action'`).
+   * Ξεχωριστό από το `labelKey`: εκείνο ονομάζει το **πεδίο** («Πηγή»), αυτό την **πράξη**
+   * («Αντικατάσταση εικόνας») — ένα κουμπί που διαβάζεται «Πηγή» δεν λέει τι κάνει.
+   */
+  readonly actionLabelKey?: string;
 }
 
 /** Λογικό group (= section) μέσα στο panel· gated μέσω `getPanelVisibility` όταν οριστεί. */

@@ -13,7 +13,11 @@
 
 /** Οι commandKeys των πεδίων ιδιοτήτων ενός image (entourage) instance. */
 export const IMAGE_PROPERTY_KEYS = {
-  /** Πηγή (filename από το `url`) — read-only. */
+  /**
+   * Πηγή — read-only τιμή **+ ενέργεια αντικατάστασης** (ADR-736 §6). Η τιμή δεν
+   * πληκτρολογείται ποτέ: μια διαδρομή asset δεν είναι κείμενο που γράφει ο χρήστης, είναι
+   * σύνδεσμος που **δείχνει** σε αρχείο. Ίδιο ιδίωμα με InDesign *Relink* / Figma *Replace*.
+   */
   source: 'imageProps.source',
   /** Επίπεδο (layer) — select, live catalog. */
   layer: 'imageProps.layer',

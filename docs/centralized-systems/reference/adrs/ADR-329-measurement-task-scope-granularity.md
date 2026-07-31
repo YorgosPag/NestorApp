@@ -784,6 +784,33 @@ interface Property {
 
 ---
 
+## 3.10. Καταναλωτές του καταλόγου ευρών — SSoT map (NEW — 2026-07-31)
+
+Ο τύπος `BOQScope` έχει **5** τιμές (§3.1). Κάθε σημείο που παράγει λίστα επιλογών ή
+ένωση τύπων για το εύρος **πρέπει** να διαβάζει από το SSoT, ποτέ χειρόγραφα.
+
+| Επίπεδο | Κανονική πηγή | Χρήση |
+|---|---|---|
+| Τύπος | `BOQScope` (`src/types/boq/boq.ts`) | Στατικός έλεγχος |
+| Χρόνος εκτέλεσης | `BOQ_SCOPE_VALUES` — παράγεται από `Record<BOQScope, true>` | Λίστες UI, JSON Schema πρακτόρων |
+| Κλειδιά i18n | `boqScopeKeySegment()` (`…/MeasurementsTabContent/boq-scope-i18n.ts`) | snake_case τιμή → camelCase κλειδί (`common_areas` → `commonAreas`) |
+
+**Καταναλωτές** (όλοι μέσω SSoT από 2026-07-31): `BOQEditorScopeSection.tsx` (επιλογέας + tooltips),
+`BOQFilterBar.tsx` (φίλτρο καρτέλας Επιμετρήσεις), `BOQUIFilters.scope` (`useBOQItems.ts`),
+`domain-defs-construction-ext.ts` (report builder), `boq-value-schemas.ts` + `boq-capability-shared.ts`
+(πράκτορας ΤΝ, ADR-734).
+
+⚠️ **Δύο συμβάσεις κλειδιών i18n, σκόπιμα διαφορετικές** — μην τις «ενοποιήσεις» χωρίς λόγο:
+- `building-tabs.json` → `tabs.measurements.scope.<camelCase>` (χειρόγραφα κλειδιά, με tooltips)
+- `report-builder-domains.json` → `domains.boqItems.enums.scope.<ωμή τιμή>` (το `ReportResults`/`FilterRow`
+  συνθέτουν μηχανικά `${enumLabelPrefix}.${value}`, οπότε το κλειδί **οφείλει** να είναι snake_case)
+
+**Γιατί υπάρχει αυτή η ενότητα**: μέχρι το 2026-07-31 υπήρχαν **τέσσερα** χειρόγραφα αντίγραφα του
+καταλόγου, όλα μπαγιάτικα, και κανένα gate δεν τα έβλεπε — ο έλεγχος i18n μετρούσε 100% κάλυψη επειδή
+ρωτούσε «υπάρχει κλειδί για κάθε `t()`;», όχι «υπάρχει επιλογή για κάθε τιμή του τύπου;».
+
+---
+
 ## 9. References
 
 - [ADR-175: Quantity Surveying / BOQ System](./ADR-175-quantity-surveying-measurements-system.md) §4.4.3 (parent)
@@ -821,4 +848,5 @@ interface Property {
 | 2026-05-01 | §9 References: ADR-236 + ADR-261 cross-references προστέθηκαν. |
 | 2026-05-01 | **Status: ⛔ BLOCKED → ✅ ACCEPTED.** All design questions resolved (6/6 original + 3 multi-level + 3 carry-over from handoff = 12/12 total). Ready for implementation phase. |
 | 2026-05-01 | **BLOCKER identified**: multi-floor properties (μεζονέτες, καταστήματα 6μ, μεγάλα καταστήματα 4-επιπέδων). Status → ⛔ BLOCKED. §8.1 added. ADR-330 prerequisite. Implementation order: ADR-330 first → ADR-329 second. |
+| 2026-07-31 | **§3.10 προστέθηκε — SSoT map καταναλωτών + εκκαθάριση 4 μπαγιάτικων αντιγράφων.** Ευρήματα: (α) `domain-defs-construction-ext.ts` είχε `['building','unit']` — 2 από 5, και το `'unit'` **δεν υπάρχει** στον τύπο· (β) `BOQFilterBar.tsx` είχε την ίδια χειρόγραφη δυάδα, με το `'unit'` να περνά μέσω `value as BOQUIFilters['scope']` — το φίλτρο «Μονάδα» επέστρεφε **πάντα 0 γραμμές**· (γ) `BOQUIFilters.scope` ήταν `'all'\|'building'\|'property'` — 3 από 5· (δ) η αντιστοίχιση τιμή→κλειδί i18n ζούσε σε `switch` + inline ternary. Λύση: όλα διαβάζουν `BOQ_SCOPE_VALUES` + νέο `boq-scope-i18n.ts`. Κλειδιά `domains.boqItems.enums.scope.{common_areas,floor,properties}` προστέθηκαν σε el+en· τα νεκρά `tabs.measurements.filters.scope{Building,Unit}` αφαιρέθηκαν. Έλεγχοι: `validate:i18n` 30105/30105 el+en, `domain-definitions.test.ts` 466/466, `jscpd:diff` καθαρό. |
 | 2026-05-01 | **Status: ✅ ACCEPTED → ✅ IMPLEMENTED.** Commit `daf58568` covers all 17 steps (30 files, +2401 / -162 LOC): types (BOQItem 5-scope schema + cost allocation, Property archived fields), 3 new shared components (`FloorSelectByBuilding`, `PropertySelectByBuilding`, `PropertyMultiSelectByBuilding`), `BOQItemEditor` drawer refactor (Sheet 1200px + 2-column + EntityDetailsHeader + reopen-to-draft), `useBOQEditorState` (5 scopes + draft-lock + validation), `boq-service` (scope mutability lock + reopenToDraft), `cost-engine.allocateCost` (multi-level partial-area aware), `property-deletion-guard` + `PropertyDeletionGuardDialog`, `firestore.rules` (scope enum + immutable scope-fields post-draft + archivedAt/archivedBy allowlist), `firestore.indexes.json` (composite buildingId+companyId), i18n (el+en, scope/costAllocation/scopeLock/deletion), tests (`floor-helpers`, `cost-engine.allocateCost`), ADR-175 + ADR-236 cross-ref changelogs. Follow-ups: `79d0187b` (drawer width + totals layout + property type icons), `ad704b77` (multi-select floor icon SSoT via `NAVIGATION_ENTITIES.floor`). |

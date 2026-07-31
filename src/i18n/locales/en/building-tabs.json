@@ -191,8 +191,6 @@
       "filters": {
         "scope": "Scope",
         "scopeAll": "All",
-        "scopeBuilding": "Building",
-        "scopeUnit": "Unit",
         "status": "Status",
         "statusAll": "All",
         "category": "Category",

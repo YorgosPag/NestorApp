@@ -5721,6 +5721,9 @@
       "width": "Width",
       "height": "Height",
       "rotation": "Rotation"
+    },
+    "actions": {
+      "replaceSource": "Replace image…"
     }
   },
   "importedMeshAdvancedPanel": {

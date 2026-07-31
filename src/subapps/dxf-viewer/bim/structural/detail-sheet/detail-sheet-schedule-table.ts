@@ -1,28 +1,64 @@
 /**
- * detail-sheet-schedule-table — SSoT for the reinforcement steel take-off table
- * ("ΣΤΟΙΧΕΙΑ ΟΠΛΙΣΜΟΥ" region) shared by every structural detail sheet.
+ * detail-sheet-schedule-table — το «ΣΤΟΙΧΕΙΑ ΟΠΛΙΣΜΟΥ» των φύλλων οπλισμού.
  *
- * ADR-622 — the beam / column / footing / slab schedule builders all hand-rolled
- * the SAME table skeleton (padding/row/text/rule constants, the `cell` / `rule` /
- * `pushRow` primitives, and the header-rule → data rows → total-rule → total →
- * footer layout), differing ONLY in the column set and which formatted rows they
- * emit. This module owns the layout; each `build*ScheduleRegion` now resolves its
- * reinforcement + quantities (unchanged), formats its rows, and calls
- * {@link buildScheduleTable}. All `build*ScheduleRegion` signatures + Result types
- * are preserved.
+ * **ADR-739 Φάση Β — ΑΠΟΡΡΟΦΗΣΗ.** Αυτό το module ΔΕΝ είναι πια μηχανή διάταξης: είναι
+ * **thin adapter** πάνω στη μία μηχανή του repo (`bim/table/table-layout.ts`). Η δημόσια
+ * επιφάνεια (`buildScheduleTable` / `buildReinforcementSchedule` / `ScheduleColumn` /
+ * `ScheduleTableSpec` / `fmt1` / `REINFORCEMENT_SCHEDULE_COLUMNS`) μένει **ακέραιη** —
+ * και οι έξι καταναλωτές συνεχίζουν να καλούν το ίδιο πράγμα.
  *
- * @see ADR-457/463/471/476 — the per-member reinforcement detail sheets
+ * Ιστορικό: ο ADR-622 κεντρικοποίησε εδώ το χειρόγραφο layout που τα beam/column/footing/
+ * slab είχαν αντιγράψει. Ο ADR-739 βρήκε ότι αυτό ήταν **μία από τρεις** μηχανές πίνακα
+ * στο repo (§1) και ότι ο σωστός δρόμος δεν ήταν τέταρτη, αλλά **απορρόφηση** (§3 Αρχή 2).
+ *
+ * ## Οι τρεις μεταφράσεις που κάνει ο adapter
+ *
+ * 1. **`frac` (άγκυρα) → πλάτη στηλών.** Το `ScheduleColumn.frac` δεν είναι πλάτος: είναι
+ *    το x όπου *προσδένεται* το κείμενο, με την πλευρά που ορίζει το `align`. Γι' αυτό ο
+ *    παλιός πίνακας δεν μπορούσε να έχει κάθετες γραμμές. Το `resolveColumnEdges` το
+ *    μεταφράζει σε πραγματικά όρια στηλών (βλ. εκεί).
+ * 2. **Οι δύο γραμμές στο `y - ROW_H*0.2`.** Δεν είναι quirk: είναι **κοντύτερη γραμμή
+ *    κεφαλίδας** + κείμενο δεδομένων που κάθεται 1,5mm χαμηλότερα μέσα στη γραμμή του.
+ *    Ζει ολόκληρο στο preset `detailSheet` (`DETAIL_SHEET_BASELINE_INSET_MM`), όπου
+ *    αποδεικνύεται αλγεβρικά. **Η γενική μηχανή δεν έκανε καμία παραχώρηση.**
+ * 3. **Τα footers δεν είναι πίνακας.** Είναι ελεύθερες γραμμές κειμένου κάτω από αυτόν
+ *    (ο λόγος ρ, ο συντελεστής α) — χωρίς στήλες, χωρίς κελιά. Παράγονται ως έχουν.
+ *
+ * Η ισοδυναμία **αποδεικνύεται**, δεν δηλώνεται: `__tests__/adr622-absorption-characterization.test.ts`
+ * κρατά 10 snapshots και των έξι καταναλωτών, γραμμένα ΠΡΙΝ αγγιχτεί αυτό το αρχείο.
+ *
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §3, §16, §17
+ * @see ADR-457/463/471/476 — τα φύλλα οπλισμού ανά μέλος · ADR-650 M7 — τα τοπογραφικά
  */
 
+import { layoutTable } from '../../table/table-layout';
+import { tableLayoutToPrimitives } from '../../table/table-layout-to-primitives';
+import { createTableModel } from '../../table/table-model-helpers';
+import {
+  BUILTIN_TABLE_STYLES,
+  BUILTIN_TABLE_STYLE_IDS,
+  DETAIL_SHEET_BASELINE_INSET_MM,
+  DETAIL_SHEET_HEADER_HEIGHT_MM,
+  DETAIL_SHEET_ROW_HEIGHT_MM,
+  DETAIL_SHEET_RULE,
+  DETAIL_SHEET_SIDE_PAD_MM,
+  DETAIL_SHEET_TEXT_HEIGHT_MM,
+  DETAIL_SHEET_TEXT_HEX,
+  DETAIL_SHEET_TOP_PAD_MM,
+} from '../../table/table-style-presets';
+import type { TableStyle } from '../../table/table-style';
+import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { DetailPrimitive, RectMm, TextAlign } from './detail-sheet-types';
 
-const TOP_PAD_MM = 11; // clears the region heading
-const SIDE_PAD_MM = 4;
-const ROW_H_MM = 7.5;
-const TEXT_MM = 2.6;
-const RULE_HEX = '#999999';
-const TEXT_HEX = '#222222';
-const RULE_WIDTH_MM = 0.15;
+/** Το built-in στυλ που κρατά τις ακριβείς τιμές του ADR-622 (§16.4). */
+const DETAIL_SHEET_STYLE: TableStyle = (() => {
+  const style = BUILTIN_TABLE_STYLES.find((s) => s.id === BUILTIN_TABLE_STYLE_IDS.DETAIL_SHEET);
+  if (!style) throw new Error('TABLE_STYLE_DETAIL_SHEET_MISSING');
+  return style;
+})();
+
+/** Κατακόρυφο κενό ανάμεσα στη γραμμή συνόλου και την πρώτη γραμμή υποσημείωσης. */
+const FOOTER_GAP_MM = DETAIL_SHEET_ROW_HEIGHT_MM * 1.5;
 
 /** One decimal place — shared number format for schedule lengths (m) and weights (kg). */
 export function fmt1(n: number): string {
@@ -61,62 +97,182 @@ export interface ScheduleTableSpec {
   readonly footers?: readonly string[];
 }
 
-/** A text primitive whose baseline sits `TEXT_MM` below the row top. */
-function cell(x: number, rowTop: number, text: string, align: TextAlign, bold: boolean): DetailPrimitive {
-  return { kind: 'text', position: { x, y: rowTop + TEXT_MM }, text, heightMm: TEXT_MM, colorHex: TEXT_HEX, align, bold };
-}
+// ──────────────────────────────────────────────────────────────────────────────
+// Μετάφραση 1 — άγκυρες → όρια στηλών
+// ──────────────────────────────────────────────────────────────────────────────
 
-/** A faint horizontal rule spanning the table width. */
-function rule(x1: number, x2: number, y: number): DetailPrimitive {
-  return { kind: 'line', a: { x: x1, y }, b: { x: x2, y }, stroke: { colorHex: RULE_HEX, widthMm: RULE_WIDTH_MM } };
-}
-
-/** Append one table row — a cell per non-empty string at its column anchor + alignment. */
-function pushRow(
-  out: DetailPrimitive[],
-  xs: readonly number[],
-  columns: readonly ScheduleColumn[],
-  rowTop: number,
-  cells: readonly string[],
-  bold: boolean,
-): void {
-  for (let i = 0; i < columns.length; i++) {
-    const text = cells[i];
-    if (text) out.push(cell(xs[i], rowTop, text, columns[i].align, bold));
+/**
+ * Γεμίζει τα **αδιόριστα** όρια με γραμμική παρεμβολή ανάμεσα στα γνωστά γειτονικά.
+ * Τα άκρα (`0` και το πλήρες πλάτος) είναι πάντα γνωστά, οπότε κάθε κενό έχει και τις
+ * δύο πλευρές του.
+ */
+function fillEdgeGaps(edges: readonly (number | null)[]): number[] {
+  const out = edges.slice();
+  let i = 0;
+  while (i < out.length) {
+    if (out[i] !== null) {
+      i++;
+      continue;
+    }
+    let j = i;
+    while (j < out.length && out[j] === null) j++;
+    const before = out[i - 1] as number;
+    const after = out[j] as number;
+    const steps = j - i + 1;
+    for (let k = i; k < j; k++) out[k] = before + ((after - before) * (k - i + 1)) / steps;
+    i = j;
   }
+  return out as number[];
 }
 
 /**
+ * Άγκυρες + στοιχίσεις → πραγματικά όρια στηλών.
+ *
+ * Μια στήλη με `align: 'left'` κλειδώνει το **αριστερό** της όριο στην άγκυρα· με
+ * `align: 'right'` το **δεξί**. Καμία στήλη δεν κλειδώνει και τα δύο, οπότε κάποια
+ * ενδιάμεσα όρια μένουν αδιόριστα — και αυτό είναι **σωστό**: η θέση τους δεν επηρεάζει
+ * ούτε ένα glyph, αφού η στοίχιση έχει ήδη καθηλώσει την πλευρά που μετράει. Γεμίζουν με
+ * παρεμβολή ώστε οι στήλες να βγαίνουν εύλογες (και οι μελλοντικές κάθετες γραμμές, όταν
+ * κάποιο στυλ τις ζητήσει, να πέφτουν σε λογικά σημεία).
+ */
+function resolveColumnEdges(
+  columns: readonly ScheduleColumn[],
+  contentWidthMm: number,
+): number[] {
+  const edges: (number | null)[] = new Array(columns.length + 1).fill(null);
+  edges[0] = 0;
+  edges[columns.length] = contentWidthMm;
+  columns.forEach((column, i) => {
+    const anchorMm = contentWidthMm * column.frac;
+    if (column.align === 'right') edges[i + 1] = anchorMm;
+    else if (column.align === 'left') edges[i] = anchorMm;
+    // 'center': το κέντρο δεν καθηλώνει μόνο του καμία ακμή — αφήνεται στην παρεμβολή.
+  });
+  return fillEdgeGaps(edges);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Μετάφραση 2 — spec → TableModel
+// ──────────────────────────────────────────────────────────────────────────────
+
+const HEADER_ROW_ID = 'header';
+const TOTAL_ROW_ID = 'total';
+const dataRowId = (i: number): string => `d${i}`;
+const columnId = (i: number): string => `c${i}`;
+
+function toTableColumns(
+  columns: readonly ScheduleColumn[],
+  contentWidthMm: number,
+): TableColumn[] {
+  const edges = resolveColumnEdges(columns, contentWidthMm);
+  return columns.map((column, i) => ({
+    id: columnId(i),
+    sizing: { kind: 'fixed', widthMm: edges[i + 1] - edges[i] },
+    valueType: 'text',
+    align: column.align,
+    }));
+}
+
+/**
+ * Οι γραμμές: κεφαλίδα (κοντύτερη — βλ. §16.4), τα δεδομένα, και το σύνολο με τη ρητή
+ * γραμμή από πάνω του. Η γραμμή συνόλου υπάρχει **πάντα**, ακόμη και με κενά κελιά: ο
+ * ADR-622 ζωγράφιζε τη δεύτερη γραμμή ανεξάρτητα από το αν το `total` είχε περιεχόμενο
+ * (το εκμεταλλεύεται το τοπογραφικό φύλλο, που περνά `total: []`).
+ */
+function toTableRows(spec: ScheduleTableSpec): TableRow[] {
+  return [
+    { id: HEADER_ROW_ID, rowClass: 'header', heightMm: DETAIL_SHEET_HEADER_HEIGHT_MM },
+    ...spec.rows.map((_, i): TableRow => ({ id: dataRowId(i), rowClass: 'data' })),
+    { id: TOTAL_ROW_ID, rowClass: 'data', borderTop: DETAIL_SHEET_RULE },
+  ];
+}
+
+/** Έντονο κελί κειμένου (κεφαλίδα / σύνολο) — η κλάση `data` δεν είναι έντονη από μόνη της. */
+function boldCell(value: string): TableCell {
+  return { kind: 'text', value, styleOverride: { bold: true } };
+}
+
+/** Τα μη-κενά κελιά μιας γραμμής, ως τριάδες για το `createTableModel` (αραιός χάρτης). */
+function rowCells(
+  rowId: string,
+  values: readonly string[],
+  bold: boolean,
+): (readonly [string, string, TableCell])[] {
+  const out: (readonly [string, string, TableCell])[] = [];
+  values.forEach((value, i) => {
+    if (!value) return; // κενό κελί = καθόλου κελί (ο ADR-622 το παρέλειπε κι αυτός)
+    out.push([rowId, columnId(i), bold ? boldCell(value) : { kind: 'text', value }]);
+  });
+  return out;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Μετάφραση 3 — υποσημειώσεις (δεν είναι πίνακας)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Οι γραμμές κάτω από τον πίνακα (ρ, α): αριστερά στοιχισμένες στο περιθώριο, χωρίς
+ * στήλες και χωρίς κελιά. Δεν μοντελοποιούνται ως γραμμές πίνακα γιατί **δεν είναι**
+ * γραμμές πίνακα — θα χρειάζονταν πλασματική στήλη μόνο και μόνο για να χωρέσουν.
+ */
+function footerPrimitives(
+  footers: readonly string[],
+  xMm: number,
+  firstTopMm: number,
+): DetailPrimitive[] {
+  return footers.map((text, i) => ({
+    kind: 'text',
+    position: { x: xMm, y: firstTopMm + i * DETAIL_SHEET_ROW_HEIGHT_MM + DETAIL_SHEET_TEXT_HEIGHT_MM },
+    text,
+    heightMm: DETAIL_SHEET_TEXT_HEIGHT_MM,
+    colorHex: DETAIL_SHEET_TEXT_HEX,
+    align: 'left',
+    bold: false,
+  }));
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Η δημόσια επιφάνεια — αμετάβλητη
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
  * Emit the steel-schedule primitives (sheet-mm): header row + underline, one line
- * per data row, a pre-total rule + total row, then the footer lines. The layout is
- * identical across members; only `columns` / `rows` / `footers` vary.
+ * per data row, a pre-total rule + total row, then the footer lines.
+ *
+ * ADR-739 Φ.Β: η διάταξη έρχεται πλέον από το `layoutTable` — μία μηχανή στο repo.
  */
 export function buildScheduleTable(spec: ScheduleTableSpec): DetailPrimitive[] {
   const { region, columns } = spec;
-  const cw = region.w - 2 * SIDE_PAD_MM;
-  const x0 = region.x + SIDE_PAD_MM;
-  const xs = columns.map((c) => x0 + cw * c.frac);
-  const ruleRight = xs[xs.length - 1];
+  const contentWidthMm = region.w - 2 * DETAIL_SHEET_SIDE_PAD_MM;
+  const originMm = {
+    xMm: region.x + DETAIL_SHEET_SIDE_PAD_MM,
+    yMm: region.y + DETAIL_SHEET_TOP_PAD_MM,
+  };
 
-  const out: DetailPrimitive[] = [];
-  let y = region.y + TOP_PAD_MM;
+  const model = createTableModel({
+    columns: toTableColumns(columns, contentWidthMm),
+    rows: toTableRows(spec),
+    cells: [
+      ...rowCells(HEADER_ROW_ID, spec.header, true),
+      ...spec.rows.flatMap((values, i) => rowCells(dataRowId(i), values, false)),
+      ...rowCells(TOTAL_ROW_ID, spec.total, true),
+    ],
+  });
 
-  pushRow(out, xs, columns, y, spec.header, true);
-  y += ROW_H_MM;
-  out.push(rule(x0, ruleRight, y - ROW_H_MM * 0.2));
+  const layout = layoutTable(model, DETAIL_SHEET_STYLE, { availableWidthMm: contentWidthMm });
+  const out = tableLayoutToPrimitives(layout, originMm);
 
-  for (const row of spec.rows) {
-    pushRow(out, xs, columns, y, row, false);
-    y += ROW_H_MM;
-  }
-
-  out.push(rule(x0, ruleRight, y - ROW_H_MM * 0.2));
-  pushRow(out, xs, columns, y, spec.total, true);
-  y += ROW_H_MM * 1.5;
-
-  for (const footer of spec.footers ?? []) {
-    out.push(cell(x0, y, footer, 'left', false));
-    y += ROW_H_MM;
+  const footers = spec.footers ?? [];
+  if (footers.length > 0) {
+    // Μετρώνται από τη ΓΡΑΜΜΗ ΠΕΡΙΕΧΟΜΕΝΟΥ του συνόλου, όχι από την ακμή της γραμμής του:
+    // ο ADR-622 δεν είχε καθόλου έννοια «ακμής» — το `y` που κρατούσε ήταν η θέση του
+    // κειμένου (`baseline = y + TEXT_MM`), και από εκεί μετρούσε το κενό. Στο νέο μοντέλο
+    // η ίδια θέση είναι «κορυφή γραμμής + κατακόρυφο περιθώριο».
+    const totalContentTopMm =
+      layout.heightMm - DETAIL_SHEET_ROW_HEIGHT_MM + DETAIL_SHEET_BASELINE_INSET_MM;
+    out.push(
+      ...footerPrimitives(footers, originMm.xMm, originMm.yMm + totalContentTopMm + FOOTER_GAP_MM),
+    );
   }
 
   return out;

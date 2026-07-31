@@ -28,12 +28,33 @@ export interface ImagePropertyBridge {
   readonly onComboboxChange: (commandKey: string, value: string) => void;
 }
 
-/** Φιλικό όνομα πηγής: το τελευταίο path segment του url (χωρίς query), αλλιώς το ίδιο το url. */
+/**
+ * Φιλικό όνομα πηγής: το τελευταίο path segment του url (χωρίς query), αλλιώς το ίδιο το url.
+ *
+ * Είναι το **fallback**, όχι η προτίμηση — βλ. {@link imageSourceDisplay}.
+ */
 export function imageSourceLabel(url: string): string {
   if (!url) return '';
   const withoutQuery = url.split(/[?#]/)[0];
   const segment = withoutQuery.split('/').pop() ?? withoutQuery;
   return decodeURIComponent(segment) || url;
+}
+
+/**
+ * Τι γράφει η γραμμή «Πηγή» (ADR-736 §6).
+ *
+ * Προτεραιότητα στο **`sourceName`**: είναι το όνομα που ζητά το σχέδιο (`1.jpg`), δηλαδή ό,τι
+ * αναγνωρίζει ο μελετητής. Το `url` είναι company-scoped Storage path με ταυτότητα
+ * περιεχομένου (`companies/comp_9c7c…/dxf_external_references/…`) — τεχνικά σωστό και ανθρώπινα
+ * άχρηστο· ένα inspector που δείχνει hash αντί για όνομα αρχείου δεν απαντά την ερώτηση «ποια
+ * εικόνα είναι αυτή;». Οι μεγάλοι δείχνουν όλοι το όνομα (InDesign *Links*, Revit *Manage
+ * Images*), με τη διαδρομή σε υπόδειξη.
+ *
+ * Ανεπίλυτη αναφορά (χωρίς `url`) έχει ούτως ή άλλως μόνο `sourceName` — και **πρέπει** να
+ * φαίνεται: είναι ακριβώς η στιγμή που ο χρήστης θέλει να πατήσει «αντικατάσταση».
+ */
+export function imageSourceDisplay(image: Pick<ImageEntity, 'url' | 'sourceName'>): string {
+  return image.sourceName?.trim() || imageSourceLabel(image.url);
 }
 
 export function useImagePropertyBridge(
@@ -47,7 +68,7 @@ export function useImagePropertyBridge(
     (commandKey: string): RibbonComboboxState | null => {
       if (!image) return null;
       switch (commandKey) {
-        case K.source: return { value: imageSourceLabel(image.url), options: [] };
+        case K.source: return { value: imageSourceDisplay(image), options: [] };
         case K.layer: return layerField.getState(image);
         case K.posX: return { value: toDisp(image.position.x), options: [] };
         case K.posY: return { value: toDisp(image.position.y), options: [] };

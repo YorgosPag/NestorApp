@@ -12,6 +12,7 @@
  */
 
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { BOQ_SCOPE_VALUES } from '@/types/boq';
 import type { DomainDefinition } from './report-builder-types';
 
 // ============================================================================
@@ -41,7 +42,9 @@ const WASTE_POLICIES = ['inherited', 'overridden'] as const;
 
 const PRICE_AUTHORITIES = ['master', 'project', 'item'] as const;
 
-const BOQ_SCOPES = ['building', 'unit'] as const;
+// BOQ scope: SSoT = `BOQ_SCOPE_VALUES` (@/types/boq, ADR-329 §3.1 — 5 τιμές).
+// Το χειρόγραφο αντίγραφο ['building', 'unit'] έκρυβε 3 εύρη και περιείχε τιμή
+// (`unit`) που δεν υπάρχει καν στον τύπο `BOQScope`.
 
 // --- D5: Milestones ---
 const MILESTONE_STATUSES = [
@@ -139,7 +142,7 @@ export const BOQ_ITEMS_DEFINITION: DomainDefinition = {
     // Identity
     { key: 'title', labelKey: 'domains.boqItems.fields.title', type: 'text', filterable: true, sortable: true, defaultVisible: true },
     { key: 'categoryCode', labelKey: 'domains.boqItems.fields.categoryCode', type: 'text', filterable: true, sortable: true, defaultVisible: true },
-    { key: 'scope', labelKey: 'domains.boqItems.fields.scope', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: BOQ_SCOPES, enumLabelPrefix: 'domains.boqItems.enums.scope' },
+    { key: 'scope', labelKey: 'domains.boqItems.fields.scope', type: 'enum', filterable: true, sortable: true, defaultVisible: false, enumValues: BOQ_SCOPE_VALUES, enumLabelPrefix: 'domains.boqItems.enums.scope' },
     { key: 'unit', labelKey: 'domains.boqItems.fields.unit', type: 'enum', filterable: true, sortable: true, defaultVisible: true, enumValues: BOQ_MEASUREMENT_UNITS, enumLabelPrefix: 'domains.boqItems.enums.unit' },
     // Quantities
     { key: 'estimatedQuantity', labelKey: 'domains.boqItems.fields.estimatedQuantity', type: 'number', filterable: true, sortable: true, defaultVisible: true, format: 'number' },

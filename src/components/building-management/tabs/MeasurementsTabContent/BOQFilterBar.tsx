@@ -20,6 +20,8 @@ import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { BOQUIFilters } from '@/hooks/useBOQItems';
 import type { MasterBOQCategory } from '@/config/boq-categories';
+import { BOQ_SCOPE_VALUES } from '@/types/boq';
+import { boqScopeKeySegment } from './boq-scope-i18n';
 import { Search } from 'lucide-react';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
@@ -54,13 +56,18 @@ export function BOQFilterBar({ filters, onFiltersChange, categories }: BOQFilter
           onFiltersChange({ scope: value as BOQUIFilters['scope'] })
         }
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-[200px]">
           <SelectValue placeholder={t('tabs.measurements.filters.scope')} />
         </SelectTrigger>
+        {/* SSoT: BOQ_SCOPE_VALUES (@/types/boq) — η χειρόγραφη λίστα 2 τιμών
+            (building/unit) έκρυβε 3 εύρη και φιλτράριζε σε ανύπαρκτη τιμή. */}
         <SelectContent>
           <SelectItem value="all">{t('tabs.measurements.filters.scopeAll')}</SelectItem>
-          <SelectItem value="building">{t('tabs.measurements.filters.scopeBuilding')}</SelectItem>
-          <SelectItem value="unit">{t('tabs.measurements.filters.scopeUnit')}</SelectItem>
+          {BOQ_SCOPE_VALUES.map((scope) => (
+            <SelectItem key={scope} value={scope}>
+              {t(`tabs.measurements.scope.${boqScopeKeySegment(scope)}`)}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

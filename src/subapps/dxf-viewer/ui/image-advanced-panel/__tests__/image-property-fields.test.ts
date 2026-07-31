@@ -21,7 +21,7 @@ jest.mock('firebase/auth', () => ({
 
 import { IMAGE_PROPERTY_GROUPS } from '../image-property-fields';
 import { IMAGE_PROPERTY_KEYS } from '../../ribbon/hooks/bridge/image-command-keys';
-import { imageSourceLabel } from '../useImagePropertyBridge';
+import { imageSourceLabel, imageSourceDisplay } from '../useImagePropertyBridge';
 
 const allFields = IMAGE_PROPERTY_GROUPS.flatMap((g) => g.fields);
 const validKeys = new Set<string>(Object.values(IMAGE_PROPERTY_KEYS));
@@ -41,7 +41,9 @@ describe('IMAGE_PROPERTY_GROUPS descriptor', () => {
   });
 
   it('routes each field to the matching palette control', () => {
-    expect(byKey(IMAGE_PROPERTY_KEYS.source)?.control).toBe('readout');
+    // ADR-736 §6 — η Πηγή έγινε `readout-action`: η τιμή μένει read-only (μια διαδρομή asset
+    // δεν πληκτρολογείται), αλλά η γραμμή φέρει πλέον την ενέργεια αντικατάστασης.
+    expect(byKey(IMAGE_PROPERTY_KEYS.source)?.control).toBe('readout-action');
     expect(byKey(IMAGE_PROPERTY_KEYS.layer)?.control).toBe('select');
     expect(byKey(IMAGE_PROPERTY_KEYS.posX)?.control).toBe('numeric');
     expect(byKey(IMAGE_PROPERTY_KEYS.posY)?.control).toBe('numeric');
@@ -71,6 +73,38 @@ describe('IMAGE_PROPERTY_GROUPS descriptor', () => {
 
   it('exposes exactly the 2 canonical sections (general + geometry)', () => {
     expect(IMAGE_PROPERTY_GROUPS.map((g) => g.id)).toEqual(['general', 'geometry']);
+  });
+
+  it('🔴 ADR-736 — κάθε `readout-action` ονομάζει την ΠΡΑΞΗ του, όχι μόνο το πεδίο', () => {
+    // Χωρίς `actionLabelKey` το κουμπί θα διαβαζόταν «Πηγή» από τον αναγνώστη οθόνης — δηλαδή
+    // δεν θα έλεγε τι κάνει. Ο renderer πέφτει πίσω στο `labelKey`, οπότε η παράλειψη ΔΕΝ
+    // φαίνεται ως σφάλμα πουθενά αλλού: μόνο εδώ.
+    for (const f of allFields.filter((x) => x.control === 'readout-action')) {
+      expect(f.actionLabelKey).toMatch(/^imageAdvancedPanel\.actions\./);
+    }
+  });
+});
+
+describe('imageSourceDisplay — τι διαβάζει ο μελετητής στη γραμμή «Πηγή»', () => {
+  it('προτιμά το όνομα που ζητά το σχέδιο έναντι του Storage path', () => {
+    expect(
+      imageSourceDisplay({
+        sourceName: '1.jpg',
+        url: 'https://firebasestorage.googleapis.com/v0/b/x/o/companies%2Fcomp_9c7c%2Fabcdef123.jpg?alt=media',
+      }),
+    ).toBe('1.jpg');
+  });
+
+  it('🔴 ανεπίλυτη αναφορά (καθόλου url) δείχνει ΠΑΝΤΑ το όνομα — εκεί χρειάζεται η αντικατάσταση', () => {
+    expect(imageSourceDisplay({ sourceName: '2.jpg', url: '' })).toBe('2.jpg');
+  });
+
+  it('χωρίς όνομα πέφτει στο τελευταίο segment του url (entourage sprite)', () => {
+    expect(imageSourceDisplay({ url: '/assets/entourage/car_2.webp' })).toBe('car_2.webp');
+  });
+
+  it('κενό/whitespace όνομα δεν «νικά» ένα χρήσιμο url', () => {
+    expect(imageSourceDisplay({ sourceName: '   ', url: '/a/b/sofa_1.webp' })).toBe('sofa_1.webp');
   });
 });
 

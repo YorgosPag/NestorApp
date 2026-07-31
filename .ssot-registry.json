@@ -3954,6 +3954,7 @@
         "src/subapps/dxf-viewer/bim/table/table-layout-place.ts",
         "src/subapps/dxf-viewer/bim/table/table-layout-borders.ts",
         "src/subapps/dxf-viewer/bim/table/table-model-helpers.ts",
+        "src/subapps/dxf-viewer/bim/table/table-layout-to-primitives.ts",
         "src/subapps/dxf-viewer/types/table.ts"
       ],
       "addedDate": "2026-07-31",

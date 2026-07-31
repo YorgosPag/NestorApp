@@ -18,6 +18,8 @@ import type { ToDxfHandler } from './dxf-scene-entity-handlers';
 // ADR-651 Φάση Ε — standalone raster image lightweight entity for DXF render pipeline.
 import type { ImageEntity } from '../../types/image';
 import { isImageEntity } from '../../types/image';
+// ADR-736 §5.3 — IMAGE_RENDER_FIELDS passthrough SSoT (anti-drift· βλ. bim/image/image-render-fields.ts).
+import { pickImageRenderFields } from '../../bim/image/image-render-fields';
 // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface entity for DXF render pipeline.
 import type { TopoSurfaceEntity } from '../../types/topo-surface';
 import { isTopoSurfaceEntity } from '../../types/topo-surface';
@@ -33,13 +35,13 @@ export const FLAT_NONBIM_TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandle
     // un-grippable (the same drop trap as the BIM entities).
     if (!isImageEntity(entity)) return null;
     const img = entity as ImageEntity;
+    // ADR-736 §5.3 (anti-drift) — τα πεδία ΔΕΝ απαριθμούνται πλέον εδώ. Η προηγούμενη
+    // χειρόγραφη λίστα είχε ρητό σχόλιο «τα ΔΥΟ μονοπάτια πρέπει να το περνούν» για το
+    // `sourceName` — και το επόμενο πεδίο (`sourcePath`) ξεχάστηκε ούτως ή άλλως, σιωπηλά,
+    // με πράσινα tests. Ένα σχόλιο δεν είναι μηχανισμός· το `IMAGE_RENDER_FIELDS` είναι.
     return {
       ...base, type: 'image' as const,
-      position: img.position, width: img.width, height: img.height, url: img.url,
-      ...(img.rotation !== undefined ? { rotation: img.rotation } : {}),
-      // ADR-736 — βλ. `dxf-renderer-entity-model.ts`: χωρίς το `sourceName` το πλαίσιο-κράτημα
-      // μιας ανεπίλυτης αναφοράς μένει ανώνυμο. Τα ΔΥΟ μονοπάτια πρέπει να το περνούν.
-      ...(img.sourceName !== undefined ? { sourceName: img.sourceName } : {}),
+      ...pickImageRenderFields(img),
     } as DxfEntityUnion;
   },
   'topo-surface': (entity, base) => {

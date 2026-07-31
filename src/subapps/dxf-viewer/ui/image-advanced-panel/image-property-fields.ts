@@ -32,7 +32,8 @@ const field = (
   labelKey: string,
   control: EntityPropertyField['control'],
   numericInput?: RibbonNumericInputConfig,
-): EntityPropertyField => ({ commandKey, labelKey, control, options: [], numericInput });
+  actionLabelKey?: string,
+): EntityPropertyField => ({ commandKey, labelKey, control, options: [], numericInput, actionLabelKey });
 
 export const IMAGE_PROPERTY_GROUPS: readonly EntityPropertyGroup[] = [
   {
@@ -40,7 +41,12 @@ export const IMAGE_PROPERTY_GROUPS: readonly EntityPropertyGroup[] = [
     id: 'general',
     titleKey: 'imageAdvancedPanel.sections.general',
     fields: [
-      field(K.source, 'imageAdvancedPanel.fields.source', 'readout'),
+      // ADR-736 §6 — η Πηγή δείχνει ΚΑΙ αντικαθίσταται από εδώ (InDesign Relink / Figma
+      // Replace image / AutoCAD Change Path). Το object inspector είναι η σωστή θέση: το
+      // contextual ribbon tab κρατά ενέργειες που αφορούν ΠΟΛΛΕΣ επιλεγμένες οντότητες, ενώ
+      // η πηγή είναι ιδιότητα **αυτής** της εικόνας.
+      field(K.source, 'imageAdvancedPanel.fields.source', 'readout-action', undefined,
+        'imageAdvancedPanel.actions.replaceSource'),
       field(K.layer, 'imageAdvancedPanel.fields.layer', 'select'),
     ],
   },

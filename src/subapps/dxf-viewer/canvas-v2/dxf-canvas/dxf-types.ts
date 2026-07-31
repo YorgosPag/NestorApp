@@ -526,8 +526,16 @@ export interface DxfImage extends DxfEntity {
   url: ImageEntity['url'];
   rotation?: ImageEntity['rotation'];
   dxfImageExport?: ImageEntity['dxfImageExport'];
-  /** ADR-736 — το όνομα που ζητά η εικόνα· ο `ImageRenderer` το δείχνει όσο λείπει το `url`. */
+  /**
+   * ADR-736 §5.3 — τα δύο πεδία ταυτότητας της πηγής που ζωγραφίζει το πλαίσιο-κράτημα όσο
+   * λείπει το `url`: **τι** αρχείο ζητά και **πού** ανήκει.
+   *
+   * ⚠️ Η λίστα των πεδίων που ταξιδεύουν είναι το `IMAGE_RENDER_FIELDS`, **όχι** αυτός ο τύπος:
+   * ο τύπος ήταν η **τρίτη** χειρόγραφη λίστα που έπρεπε να μένει συγχρονισμένη με τις δύο
+   * προβολές, και ακριβώς αυτή η τριπλή αντιγραφή έχασε το `sourcePath` (βλ. το module).
+   */
   sourceName?: ImageEntity['sourceName'];
+  sourcePath?: ImageEntity['sourcePath'];
 }
 
 /**

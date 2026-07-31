@@ -1001,7 +1001,10 @@
       "enums": {
         "scope": {
           "building": "Building",
-          "property": "Property"
+          "common_areas": "Common Areas",
+          "floor": "Floor",
+          "property": "Property",
+          "properties": "Multiple Properties"
         },
         "unit": {
           "m": "m",

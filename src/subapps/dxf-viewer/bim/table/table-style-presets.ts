@@ -137,6 +137,34 @@ export const DETAIL_SHEET_RULE_HEX = '#999999';
 export const DETAIL_SHEET_RULE_WIDTH_MM = 0.15;
 /** `SIDE_PAD_MM` — το πλευρικό περιθώριο της ζώνης του πίνακα. */
 export const DETAIL_SHEET_SIDE_PAD_MM = 4;
+/** `TOP_PAD_MM` — καθαρίζει την επικεφαλίδα της περιοχής πάνω από τον πίνακα. */
+export const DETAIL_SHEET_TOP_PAD_MM = 11;
+
+/**
+ * **Το κλειδί της απορρόφησης (ADR-739 Φ.Β).**
+ *
+ * Ο ADR-622 ζωγραφίζει τις δύο οριζόντιες γραμμές στο `y - ROW_H_MM * 0.2`, δηλαδή 1,5mm
+ * **πάνω** από την ακμή της γραμμής. Αυτό έμοιαζε με baseline-relative quirk που δεν
+ * εκφράζεται με ακμές κελιών. **Δεν είναι.** Η μέτρηση (Φ.Β) έδειξε ότι το ίδιο σχήμα
+ * προκύπτει ακριβώς από δύο συνηθισμένες ιδιότητες πίνακα:
+ *
+ * - η γραμμή **κεφαλίδας** είναι κοντύτερη: `7.5 - 1.5 = 6mm`
+ * - το κείμενο των **δεδομένων** κάθεται 1,5mm χαμηλότερα μέσα στη γραμμή του
+ *   (κατακόρυφο περιθώριο κελιού)
+ *
+ * Αλγεβρική ταύτιση για κάθε γραμμή N:
+ * ```
+ *   ADR-622 : 7.5 + 7.5(N-1) + 2.6           = 7.5N + 2.6
+ *   μοντέλο : 6   + 7.5(N-1) + 1.5 + 2.6     = 7.5N + 2.6   ✓
+ *   rule #2 : 7.5 + 7.5n - 1.5 = 6 + 7.5n    = ακμή μετά από header(6) + n×7.5  ✓
+ * ```
+ * Άρα η γενική μηχανή **δεν χρειάστηκε καμία παραχώρηση** — ούτε offset, ούτε ειδική
+ * περίπτωση. Το «quirk» ήταν λάθος ανάγνωση της γεωμετρίας.
+ */
+export const DETAIL_SHEET_BASELINE_INSET_MM = DETAIL_SHEET_ROW_HEIGHT_MM * 0.2; // 1.5
+/** Ύψος της γραμμής κεφαλίδας — κοντύτερο, ώστε η γραμμή της να πέσει στο σωστό y. */
+export const DETAIL_SHEET_HEADER_HEIGHT_MM =
+  DETAIL_SHEET_ROW_HEIGHT_MM - DETAIL_SHEET_BASELINE_INSET_MM; // 6
 
 /**
  * Η γραμμή που ο ADR-622 ζωγραφίζει κάτω από την κεφαλίδα και πάνω από το σύνολο.
@@ -148,15 +176,20 @@ export const DETAIL_SHEET_RULE: TableBorderSpec = border(
   DETAIL_SHEET_RULE_WIDTH_MM,
 );
 
-function detailSheetRowClass(bold: boolean, borders: TableBorders): TableRowClassStyle {
+function detailSheetRowClass(
+  bold: boolean,
+  borders: TableBorders,
+  marginVMm: number,
+): TableRowClassStyle {
   return {
     textHeightMm: DETAIL_SHEET_TEXT_HEIGHT_MM,
     textColorHex: DETAIL_SHEET_TEXT_HEX,
     bold,
-    // Το σημερινό κελί έχει τη γραμμή βάσης του `TEXT_MM` κάτω από την κορυφή της
-    // γραμμής, δηλαδή το κείμενο κάθεται ΨΗΛΑ μέσα στη γραμμή των 7.5mm — όχι κεντραρισμένο.
+    // Το κείμενο κρέμεται από την ΚΟΡΥΦΗ της γραμμής (`rowTop + margin + TEXT_MM`), όχι
+    // κεντραρισμένο — ακριβώς η σύμβαση του ADR-622. Οριζόντιο περιθώριο μηδέν: το κείμενο
+    // αγκυρώνεται πάνω στην ίδια την ακμή της στήλης.
     align: 'TL',
-    margins: { hMm: 0, vMm: 0 },
+    margins: { hMm: 0, vMm: marginVMm },
     borders,
   };
 }
@@ -170,10 +203,12 @@ const DETAIL_SHEET_STYLE: TableStyle = {
   rowClasses: {
     // Τα φύλλα οπλισμού δεν έχουν ζώνη τίτλου μέσα στον πίνακα (η επικεφαλίδα της
     // περιοχής ζωγραφίζεται έξω από αυτόν) — παρόν για πληρότητα του συμβολαίου.
-    title: detailSheetRowClass(true, noBorders()),
-    // Η ΜΟΝΗ ορατή ακμή όλου του στυλ: η γραμμή κάτω από την κεφαλίδα.
-    header: detailSheetRowClass(true, { ...noBorders(), bottom: DETAIL_SHEET_RULE }),
-    data: detailSheetRowClass(false, noBorders()),
+    title: detailSheetRowClass(true, noBorders(), DETAIL_SHEET_BASELINE_INSET_MM),
+    // Η κεφαλίδα: μηδενικό κατακόρυφο περιθώριο (το κείμενό της κάθεται στην κορυφή) και η
+    // ΜΟΝΗ ορατή ακμή όλου του στυλ — η γραμμή από κάτω της. Μαζί με το κοντύτερο ύψος
+    // γραμμής (`DETAIL_SHEET_HEADER_HEIGHT_MM`) αναπαράγει το σχήμα του ADR-622.
+    header: detailSheetRowClass(true, { ...noBorders(), bottom: DETAIL_SHEET_RULE }, 0),
+    data: detailSheetRowClass(false, noBorders(), DETAIL_SHEET_BASELINE_INSET_MM),
   },
 };
 

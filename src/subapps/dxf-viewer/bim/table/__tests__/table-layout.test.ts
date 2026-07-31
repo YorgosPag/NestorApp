@@ -13,6 +13,8 @@ import { createTableModel } from '../table-model-helpers';
 import {
   BUILTIN_TABLE_STYLE_IDS,
   BUILTIN_TABLE_STYLES,
+  DETAIL_SHEET_BASELINE_INSET_MM,
+  DETAIL_SHEET_HEADER_HEIGHT_MM,
   DETAIL_SHEET_RULE,
   DETAIL_SHEET_ROW_HEIGHT_MM,
   DETAIL_SHEET_RULE_HEX,
@@ -178,14 +180,46 @@ describe('layoutTable — κελιά και στοίχιση', () => {
     expect(layoutTable(overridden, STANDARD, { measureText }).cells[0].text?.hAlign).toBe('right');
   });
 
-  it('στοίχιση «πάνω»: η γραμμή βάσης πέφτει ύψος-κειμένου κάτω από την κορυφή (σύμβαση ADR-622)', () => {
+  /**
+   * ADR-739 §16.4 — ο μηχανισμός της απορρόφησης του ADR-622. Η κεφαλίδα έχει μηδενικό
+   * κατακόρυφο περιθώριο (κείμενο στην κορυφή), τα δεδομένα κάθονται `INSET` χαμηλότερα.
+   * Μαζί με το κοντύτερο ύψος κεφαλίδας, αυτά τα δύο αναπαράγουν το `y - ROW_H*0.2` του
+   * παλιού πίνακα **χωρίς καμία ειδική περίπτωση στη μηχανή**.
+   */
+  it('στοίχιση «πάνω»: κεφαλίδα στην κορυφή, δεδομένα INSET χαμηλότερα (σύμβαση ADR-622)', () => {
     const sheet = createTableModel({
       columns: [col('a', { kind: 'fixed', widthMm: 40 })],
-      rows: [row('r1')],
-      cells: [['r1', 'a', text('X')]],
+      rows: [row('h', 'header', { heightMm: DETAIL_SHEET_HEADER_HEIGHT_MM }), row('r1')],
+      cells: [['h', 'a', text('H')], ['r1', 'a', text('X')]],
     });
-    expect(layoutTable(sheet, DETAIL_SHEET, { measureText }).cells[0].text?.position.y)
-      .toBeCloseTo(DETAIL_SHEET_TEXT_HEIGHT_MM, 6);
+    const layout = layoutTable(sheet, DETAIL_SHEET, { measureText });
+    const [header, data] = layout.cells;
+    expect(header.text?.position.y).toBeCloseTo(DETAIL_SHEET_TEXT_HEIGHT_MM, 6);
+    expect(data.text?.position.y).toBeCloseTo(
+      DETAIL_SHEET_HEADER_HEIGHT_MM + DETAIL_SHEET_BASELINE_INSET_MM + DETAIL_SHEET_TEXT_HEIGHT_MM,
+      6,
+    );
+  });
+
+  it('η αλγεβρική ταυτότητα του ADR-622: baseline γραμμής N === 7.5N + 2.6', () => {
+    const sheet = createTableModel({
+      columns: [col('a', { kind: 'fixed', widthMm: 40 })],
+      rows: [
+        row('h', 'header', { heightMm: DETAIL_SHEET_HEADER_HEIGHT_MM }),
+        ...Array.from({ length: 5 }, (_, i) => row(`d${i}`)),
+      ],
+      cells: Array.from({ length: 5 }, (_, i) => [`d${i}`, 'a', text('X')] as const),
+    });
+    const layout = layoutTable(sheet, DETAIL_SHEET, { measureText });
+    layout.cells
+      .filter((c) => c.rowId !== 'h')
+      .forEach((cell, i) => {
+        const n = i + 1; // ο ADR-622 μετρά τις γραμμές δεδομένων από το 1
+        expect(cell.text?.position.y).toBeCloseTo(
+          DETAIL_SHEET_ROW_HEIGHT_MM * n + DETAIL_SHEET_TEXT_HEIGHT_MM,
+          6,
+        );
+      });
   });
 });
 
