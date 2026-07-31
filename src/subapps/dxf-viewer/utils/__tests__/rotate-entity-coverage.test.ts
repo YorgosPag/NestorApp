@@ -50,6 +50,10 @@ describe('Rotate capability coverage — ζωντανό seam ↔ descriptor doma
         'hatch',
         // ADR-651 Φάση Ε — image: point-insertion rotation about `position` (1:1 annotation-symbol).
         'image',
+        // ADR-739 Φ.Γ — γενικός πίνακας: περιστρέφει `position` + `angleRad` (ακτίνια).
+        // Ο ΠΡΩΤΟΣ της οικογένειας σημειώσεων με handler εδώ — βλ. τη σημείωση στο
+        // `rotation-math.ts` για το γιατί το no-op θα ήταν λάθος απάντηση.
+        'table',
       ]),
     );
   });

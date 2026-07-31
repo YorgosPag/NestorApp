@@ -209,6 +209,15 @@ export function buildEntityModelFromDxf(
         topText: entity.topText, bottomLeftText: entity.bottomLeftText,
         bottomRightText: entity.bottomRightText,
       } as unknown as Entity;
+    case 'table':
+      // ADR-739 Φ.Γ — γενικός πίνακας (αδελφός του opening-info-tag). Παράμετροι στο ανώτατο
+      // επίπεδο· ο TableRenderer παράγει τη διάταξη μέσω computeTableEntityGeometryLive
+      // (απομνημονευμένη). Το `geometry` ΔΕΝ προωθείται — είναι παράγωγο, ξαναφτιάχνεται.
+      return {
+        ...base, type: 'table',
+        position: entity.position, angleRad: entity.angleRad, styleId: entity.styleId,
+        model: entity.model, binding: entity.binding, breaking: entity.breaking,
+      } as unknown as Entity;
     case 'image':
       // ADR-651 Φάση Ε — lightweight non-BIM raster image (sibling of scale-bar/opening-info-tag).
       // ImageRenderer reads the flat params + the shared HatchImageCache (identity resolveSrc).
@@ -279,7 +288,10 @@ export const TO_ENTITY_MODEL_SUPPORTED_TYPES = [
   'slab', 'slab-opening', 'opening', 'wall', 'beam', 'column', 'foundation', 'mep-fixture',
   'electrical-panel', 'railing', 'furniture', 'roof', 'floor-finish', 'thermal-space',
   'wall-covering', 'space-separator', 'mep-segment', 'mep-fitting', 'floorplan-symbol',
-  'annotation-symbol', 'scale-bar', 'opening-info-tag', 'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
+  'annotation-symbol', 'scale-bar', 'opening-info-tag',
+  // ADR-739 Φ.Γ — γενικός πίνακας.
+  'table',
+  'mep-manifold', 'mep-radiator', 'mep-boiler', 'mep-water-heater',
   'mep-underfloor', 'xline', 'ray', 'hatch', 'image', 'topo-surface', 'leader',
   // ADR-683 Φ3 — εισαγόμενο ψημένο πλέγμα.
   'imported-mesh',

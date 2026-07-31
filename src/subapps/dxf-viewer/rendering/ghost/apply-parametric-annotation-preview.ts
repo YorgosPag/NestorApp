@@ -24,6 +24,8 @@ import { applyScaleBarGripDrag } from '../../bim/scale-bar/scale-bar-grips';
 import type { ScaleBarEntity } from '../../types/scale-bar';
 import { applyOpeningInfoTagGripDrag } from '../../bim/opening-info-tag/opening-info-tag-grips';
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+import { applyTableGripDrag } from '../../bim/table/table-entity-grips';
+import type { TableEntity } from '../../types/table-entity';
 import { applyImageGripDrag } from '../../bim/image/image-grips';
 import type { ImageEntity } from '../../types/image';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
@@ -76,6 +78,14 @@ export function applyParametricAnnotationPreview(
     // ── ADR-612 — opening-info-tag (move / rotation / size) ──
     parametricGhost<'opening-info-tag', OpeningInfoTagEntity>(
       entity, preview, 'opening-info-tag', 'opening-info-tag-rotation', applyOpeningInfoTagGripDrag,
+    ) ??
+    // ── ADR-739 Φ.Γ — γενικός πίνακας (move / rotation / όριο στήλης) ──
+    // Το ίδιο μοτίβο με τα τρία αδέλφια: η διάταξη είναι ΠΑΡΑΓΩΓΗ, άρα ένα σύρσιμο λαβής
+    // είναι patch παραμέτρων και το φάντασμα ξαναϋπολογίζει. Χωρίς αυτό, το σύρσιμο ορίου
+    // στήλης δεν θα έδειχνε **τίποτα** μέχρι το commit — ακριβώς η ασυμμετρία που ο ADR-662
+    // §13 έκλεισε για την τοπογραφική επιφάνεια όταν εκείνη απέκτησε λαβές.
+    parametricGhost<'table', TableEntity>(
+      entity, preview, 'table', 'table-rotation', applyTableGripDrag,
     ) ??
     // ── ADR-654 — raster image (move / rotation / 4 corner resize) ──
     parametricGhost<'image', ImageEntity>(

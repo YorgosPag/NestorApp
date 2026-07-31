@@ -53,6 +53,8 @@ describe('toEntityModel capability coverage — ζωντανό seam ↔ descript
         // DXF primitives με variant (16)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
         'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag', 'image',
+        // ADR-739 Φ.Γ — γενικός πίνακας: έχει δικό του `DxfTable` variant + case.
+        'table',
         // ADR-635 Φ B — leader: `DxfLeader` variant (annotation path + tip arrowhead).
         'leader',
         // ADR-662 Φ2β — topo-surface: `DxfTopoSurface` variant (footprint outline της TIN· το

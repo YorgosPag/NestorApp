@@ -171,6 +171,13 @@ export function calculateMovedGeometry(entity: SceneEntity, delta: Point3D): Par
     return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
   }
 
+  // ADR-739 Φ.Γ — γενικός πίνακας (position = ΠΑΝΩ-ΑΡΙΣΤΕΡΗ γωνία, σύμβαση AutoCAD). Άκαμπτη
+  // μεταφορά της άγκυρας· η διάταξη είναι σε sheet-mm και **δεν** επηρεάζεται από τη μετακίνηση,
+  // οπότε η απομνημονευμένη διάταξη επιβιώνει ανέπαφη. Καλύπτει το εργαλείο MOVE + τη λαβή MOVE.
+  if (entity.type === 'table' && 'position' in e) {
+    return { position: translatePoint((e as unknown as { position: Point2D }).position, delta) };
+  }
+
   // ADR-651 Φάση Ε — standalone raster image (position = bottom-left corner). Rigid translate
   // of the corner (mirror scale-bar/opening-info-tag); width/height/rotation are unaffected.
   if (entity.type === 'image' && 'position' in e) {

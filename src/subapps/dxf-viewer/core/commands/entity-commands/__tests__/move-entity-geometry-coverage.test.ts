@@ -60,6 +60,8 @@ const MOVE_GOLDEN = [
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'text', 'mtext',
   'rectangle', 'rect', 'point', 'angle-measurement', 'hatch', 'annotation-symbol', 'scale-bar',
   'opening-info-tag', 'image',
+  // ADR-739 Φ.Γ — γενικός πίνακας: άκαμπτη μεταφορά της άγκυρας (πάνω-αριστερά).
+  'table',
   // BIM movers — έχουν `case` στο `calculateBimMovedGeometry` switch (20)
   'wall', 'slab', 'slab-opening', 'column', 'beam', 'foundation', 'stair', 'roof',
   'floor-finish', 'space-separator', 'furniture', 'mep-fixture', 'electrical-panel',

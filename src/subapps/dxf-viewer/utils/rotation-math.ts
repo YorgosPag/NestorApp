@@ -167,6 +167,26 @@ const ROTATE_HANDLERS: Partial<Record<EntityType, RotateHandler>> = {
   // ADR-651 Φάση Ε — standalone raster image: point-insertion rotation about `position`
   // (1:1 annotation-symbol/block — width/height are unaffected by pure rotation).
   image: rotatePointInsertionLike,
+  /**
+   * ADR-739 Φ.Γ — γενικός πίνακας. Δεν χρησιμοποιεί το `rotatePointInsertionLike` για έναν
+   * μόνο λόγο: η γωνία του λέγεται `angleRad` και μετριέται σε **ακτίνια** (οικογένεια
+   * σημειώσεων: scale-bar / opening-info-tag), όχι `rotation` σε μοίρες (σύμβαση DXF INSERT).
+   * Η μονάδα είναι στο όνομα ακριβώς για να μην γίνει αυτό το λάθος σιωπηλά (ADR-716).
+   *
+   * ⚠️ Ο πίνακας είναι ο ΠΡΩΤΟΣ της οικογένειας σημειώσεων με πραγματικό handler εδώ: τα
+   * scale-bar / opening-info-tag είναι σκόπιμα no-op (περιστρέφονται μόνο παραμετρικά, από
+   * τη λαβή τους). Για τον πίνακα αυτό θα σήμαινε ότι η **εντολή ROTATE δεν κάνει τίποτα**
+   * σε ένα αντικείμενο που προφανώς περιστρέφεται — σιωπηλή απουσία, ακριβώς ό,τι αυτό το
+   * μητρώο υπάρχει για να αποτρέπει. Η διάταξη είναι αναλλοίωτη ως προς την περιστροφή, άρα
+   * το κόστος είναι δύο αριθμοί.
+   */
+  table: (entity, pivot, angleDeg) => {
+    const e = entity as typeof entity & { position: Point2D; angleRad?: number };
+    return {
+      position: rotatePoint(e.position, pivot, angleDeg),
+      angleRad: (e.angleRad ?? 0) + (angleDeg * Math.PI) / 180,
+    } as Partial<Entity>;
+  },
   'angle-measurement': (entity, pivot, angleDeg) => {
     const e = entity as Extract<Entity, { type: 'angle-measurement' }>;
     // Angle between arms is invariant under rotation — keep original angle value

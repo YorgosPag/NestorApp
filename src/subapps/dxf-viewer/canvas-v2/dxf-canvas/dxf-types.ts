@@ -47,6 +47,8 @@ import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-612 — opening info tag lightweight entity for DXF render pipeline.
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-739 Φ.Γ — γενικός πίνακας για το DXF render pipeline.
+import type { TableEntity } from '../../types/table-entity';
 // ADR-651 Φάση Ε — standalone raster image lightweight entity for DXF render pipeline.
 import type { ImageEntity } from '../../types/image';
 // ADR-662 Φάση 2β (Δρόμος Γ) — thin/derived topo surface entity for DXF render pipeline.
@@ -67,7 +69,7 @@ import type { MepUnderfloorEntity } from '../../bim/types/mep-underfloor-types';
 // === DXF ENTITY TYPES ===
 export interface DxfEntity {
   id: string;
-  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'annotation-symbol' | 'scale-bar' | 'opening-info-tag' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch' | 'image';
+  type: 'line' | 'circle' | 'arc' | 'polyline' | 'text' | 'angle-measurement' | 'stair' | 'dimension' | 'slab' | 'slab-opening' | 'opening' | 'wall' | 'column' | 'foundation' | 'xline' | 'ray' | 'beam' | 'mep-fixture' | 'electrical-panel' | 'railing' | 'furniture' | 'mep-segment' | 'mep-fitting' | 'floorplan-symbol' | 'annotation-symbol' | 'scale-bar' | 'opening-info-tag' | 'table' | 'mep-manifold' | 'mep-radiator' | 'mep-boiler' | 'mep-water-heater' | 'mep-underfloor' | 'roof' | 'floor-finish' | 'wall-covering' | 'thermal-space' | 'space-separator' | 'hatch' | 'image';
   /**
    * @deprecated ADR-358 Phase 9D-5b-ii — transitional name backref. Resolve via
    * `LayerStore.resolveEntityLayerName()`. Made optional to align with BaseEntity
@@ -510,6 +512,28 @@ export interface DxfOpeningInfoTag extends DxfEntity {
 }
 
 /**
+ * ADR-739 Φ.Γ — DxfTable lightweight direct entity (non-BIM, αδελφός του DxfOpeningInfoTag).
+ *
+ * Κουβαλά τις παραμέτρους του πίνακα στο ανώτατο επίπεδο· ο `TableRenderer` τις διαβάζει και
+ * παράγει τη διάταξη μέσω `computeTableEntityGeometryLive` (απομνημονευμένη). Καμία τετράδα
+ * geometry/params/validation — η διάταξη είναι **παράγωγη**, ποτέ αποθηκευμένη.
+ *
+ * ⚠️ Το `model.cells` είναι `Map`. Ταξιδεύει **ως αναφορά** μέσα στο render pipeline (που
+ * είναι in-memory), αλλά **δεν επιβιώνει `JSON.stringify`** — η σειριοποίηση για το
+ * `.scene.json` ανήκει στη Φ.Δ, μαζί με τη δημιουργία (δεν σειριοποιείς ό,τι δεν μπορείς
+ * ακόμη να φτιάξεις). Μέχρι τότε ΜΗΝ υποθέσεις ότι ένας πίνακας επιβιώνει reload.
+ */
+export interface DxfTable extends DxfEntity {
+  type: 'table';
+  position: TableEntity['position'];
+  angleRad: TableEntity['angleRad'];
+  styleId: TableEntity['styleId'];
+  model: TableEntity['model'];
+  binding?: TableEntity['binding'];
+  breaking?: TableEntity['breaking'];
+}
+
+/**
  * ADR-651 Φάση Ε — DxfImage lightweight direct entity (non-BIM, sibling of DxfScaleBar /
  * DxfOpeningInfoTag). Carries the flat image params (position / width / height / url /
  * rotation) at top level; `ImageRenderer` reads them + the shared `HatchImageCache`
@@ -744,7 +768,7 @@ export interface DxfLeader extends DxfEntity {
   hasHookLine?: LeaderEntity['hasHookLine'];
 }
 
-export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader | DxfImportedMesh | DxfGenericSolid;
+export type DxfEntityUnion = DxfLine | DxfCircle | DxfPolyline | DxfArc | DxfText | DxfAngleMeasurement | DxfStair | DxfDimension | DxfSlab | DxfSlabOpening | DxfOpening | DxfWall | DxfColumn | DxfFoundation | DxfMepFixture | DxfElectricalPanel | DxfRailing | DxfFurniture | DxfMepSegment | DxfMepFitting | DxfFloorplanSymbol | DxfAnnotationSymbol | DxfScaleBar | DxfOpeningInfoTag | DxfTable | DxfMepManifold | DxfMepRadiator | DxfMepBoiler | DxfMepWaterHeater | DxfMepUnderfloor | DxfRoof | DxfFloorFinish | DxfWallCovering | DxfThermalSpace | DxfSpaceSeparator | DxfBeam | DxfHatch | DxfXLine | DxfRay | DxfImage | DxfTopoSurface | DxfLeader | DxfImportedMesh | DxfGenericSolid;
 
 // === WRAPPED (SUB-ENTITY) VARIANTS — SSoT ===
 /**

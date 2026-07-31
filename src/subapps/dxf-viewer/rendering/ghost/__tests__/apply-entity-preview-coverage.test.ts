@@ -69,6 +69,9 @@ const PREVIEW_GHOST_MAIN_TYPES = [
   'wall', 'slab', 'slab-opening', 'roof', 'floor-finish', 'hatch',
   'text', 'mtext', 'line', 'arc', 'polyline', 'annotation-symbol', 'scale-bar',
   'opening-info-tag', 'stair', 'opening',
+  // ADR-739 Φ.Γ — γενικός πίνακας: ρητό ghost branch (apply-parametric-annotation-preview),
+  // ώστε το σύρσιμο ορίου στήλης / περιστροφής να φαίνεται ΠΡΙΝ το commit (preview ≡ commit).
+  'table',
   // ADR-654 — raster image: ρητό ghost branch (apply-parametric-annotation-preview) ώστε το
   // live preview της περιστροφής/κλιμάκωσης να τρέχει τον ΙΔΙΟ transform με το commit.
   'image',
