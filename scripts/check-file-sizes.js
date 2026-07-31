@@ -38,6 +38,7 @@ const NC     = '\x1b[0m';
 const EXEMPT_RE = new RegExp([
   /\.(config)\./,
   /(^|\/)config\.tsx?$/, // a file literally named config.ts(x) is configuration (N.7.1, ίδιο με /config/ dir + *.config.*)
+  /(^|\/)types\.tsx?$/,  // ίδιο επιχείρημα με το config.ts από πάνω: /types/ dir και -types.ts είναι ήδη εξαιρέσεις — ένα αρχείο ονόματι types.ts είναι το ίδιο πράγμα (N.7.1: τύποι = χωρίς όριο, δεν έχουν λογική)
   /\.template\./,
   /\.d\.ts$/,
   /\.test\./,
