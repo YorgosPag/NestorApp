@@ -182,12 +182,14 @@ export function middleware(request: NextRequest) {
   // ένα σφάλμα που μοιάζει με «λάθος διαπιστευτήρια» και δεν είναι.
   // Δεν χαλαρώνει τίποτα — αυτά τα paths έχουν δική τους ταυτοποίηση
   // (Bearer token + audience) και δικό τους rate limit.
-  // ⚠️ Το `/api/cron/oauth-cleanup` μπαίνει **ονομαστικά**, όχι ως `/api/cron`.
-  // Τα υπόλοιπα 9 cron routes έχουν το ίδιο λανθάνον ζήτημα (ένας
-  // προγραμματισμένος καλών στέλνει μηχανικό user-agent και τρώει 403 από το
-  // Edge), αλλά η διόρθωσή τους αλλάζει τη συμπεριφορά routes που δεν αφορούν
-  // το ADR-738 — και ένα από αυτά, το `purge-deleted-entities`, δεν έχει καν
-  // `verifyCronAuthorization`. Καταγράφεται αντί να διορθωθεί εν παρόδω (N.0.2).
+  // ⚠️ Το `/api/cron/oauth-cleanup` μπαίνει **ονομαστικά**, όχι ως `/api/cron` — και
+  // ΠΑΡΑΜΕΝΕΙ έτσι σκόπιμα (ADR-739). Τα cron **δεν** χρειάζονται εξαίρεση εδώ: ο
+  // χρονοπρογραμματιστής χτυπά μόνο το `/api/cron/dispatch` με **ρητό** user-agent
+  // (`nestor-scheduler/…`) που δεν ταιριάζει σε κανένα BLOCKED_BOT_PATTERN, και από εκεί
+  // τα jobs καλούνται **ως συναρτήσεις** — δεν ξαναπερνούν ποτέ από HTTP, άρα ούτε από
+  // αυτόν τον έλεγχο. Άνοιγμα του `/api/cron` συνολικά θα εξέθετε δημόσια endpoints
+  // οριστικής διαγραφής με μόνη άμυνα το `CRON_SECRET`· δεν υπάρχει λόγος να γίνει.
+  // (Το `oauth-cleanup` κρατά την ονομαστική εξαίρεση για χειροκίνητη δοκιμή — ADR-738 §10.)
   const isMachineEndpoint =
     pathname.startsWith('/api/communications/webhooks') ||
     pathname.startsWith('/api/mcp') ||

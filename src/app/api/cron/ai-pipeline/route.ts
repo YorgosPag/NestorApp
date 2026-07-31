@@ -3,214 +3,87 @@
  * AI PIPELINE CRON ENDPOINT
  * =============================================================================
  *
- * 🏢 ENTERPRISE: Scheduled trigger for AI pipeline queue processing.
- * Same proven pattern as email-ingestion cron (ADR-071).
+ * GET  → με εξουσιοδότηση: επεξεργασία παρτίδας· χωρίς: liveness probe.
+ * POST → χειροκίνητη ενεργοποίηση (απαιτεί εξουσιοδότηση).
  *
- * Triggers:
- * - Vercel Cron (GET with Authorization header)
- * - Manual API call (POST with Authorization)
- * - Health check (GET without auth — liveness probe)
+ * ⚠️ **Δεν προγραμματίζεται σήμερα.** Το route υπάρχει από την αρχή αλλά δεν μπήκε
+ * ποτέ στο `vercel.json` — άρα δεν έτρεξε ούτε όσο ζούσε το Vercel. Δηλωμένο στο
+ * `src/config/cron-schedule.ts` ως `enabled: false` / `never-scheduled`, ώστε να είναι
+ * **ορατό** αντί να ξαναξεχαστεί (ADR-739 §Αποφάσεις).
  *
- * Configuration in vercel.json:
- * ```json
- * {
- *   "crons": [{
- *     "path": "/api/cron/ai-pipeline",
- *     "schedule": "0 0 * * *"
- *   }]
- * }
- * ```
+ * ⚠️ **Το διαγνωστικό απαιτεί πλέον εξουσιοδότηση.** Μέχρι 2026-07-31 το μη
+ * ταυτοποιημένο σκέλος επέστρεφε `intakeSubject` και `intakeSender` — δηλαδή **θέματα
+ * και διευθύνσεις αποστολέων πραγματικών μηνυμάτων σε οποιονδήποτε καλούσε**. Το
+ * κάλυπτε μόνο το bot-block του `middleware.ts`, που φιλτράρει user-agent και δεν είναι
+ * εξουσιοδότηση. Το liveness probe χρειάζεται να ξέρει **αν** η ουρά είναι υγιής, όχι
+ * **τι** περιέχει.
  *
  * @module api/cron/ai-pipeline
  * @see ADR-080 (Pipeline Implementation)
  * @see api/cron/email-ingestion (same pattern)
+ * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createModuleLogger } from '@/lib/telemetry/Logger';
+
 import { verifyCronAuthorization } from '@/lib/cron-auth';
-import {
-  processAIPipelineBatch,
-  getAIPipelineQueueHealth,
-} from '@/server/ai/workers/ai-pipeline-worker';
+import { collectAiPipelineDiagnostic } from '@/lib/cron/ai-pipeline-diagnostic';
+import { runAiPipeline } from '@/lib/cron/jobs/ai-pipeline.job';
+import { getAIPipelineQueueHealth } from '@/server/ai/workers/ai-pipeline-worker';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { QUEUE_STATUS } from '@/constants/entity-status-values';
+import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('AI_PIPELINE_CRON');
 
-// ============================================================================
-// SHARED BATCH PROCESSING LOGIC (DRY)
-// ============================================================================
+export const maxDuration = 60;
 
-type CronTrigger = 'vercel-cron' | 'manual-post' | 'api-call';
-
-async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
+/** Επεξεργασία παρτίδας — η λογική ζει στο `lib/cron/jobs/ai-pipeline.job.ts`. */
+async function executeBatchProcessing(trigger: 'manual-post' | 'api-call'): Promise<Response> {
   const startTime = Date.now();
-
   logger.info('AI pipeline batch triggered', { trigger });
 
   try {
-    const result = await processAIPipelineBatch();
+    const result = await runAiPipeline();
+    const elapsedMs = Date.now() - startTime;
 
-    const elapsed = Date.now() - startTime;
+    logger.info('AI pipeline batch completed', { trigger, ...result.metrics, elapsedMs });
 
-    logger.info('AI pipeline batch completed', {
-      trigger,
-      processed: result.processed,
-      failed: result.failed,
-      recovered: result.recovered,
-      elapsedMs: elapsed,
-    });
-
-    // 🏢 DIAGNOSTIC: Show failed item errors after batch processing
-    let diagnostic: Record<string, unknown> | undefined;
-    if (result.failed > 0 || result.queueStats.failed > 0) {
-      try {
-        const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
-        const { COLLECTIONS } = await import('@/config/firestore-collections');
-        const { FIELDS } = await import('@/config/firestore-field-constants');
-        const adminDb = getAdminFirestore();
-
-        const failedSnapshot = await adminDb
-          .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-          .where(FIELDS.STATUS, '==', QUEUE_STATUS.FAILED)
-          .orderBy(FIELDS.CREATED_AT, 'desc')
-          .limit(10)
-          .get();
-
-        diagnostic = {
-          failedItems: failedSnapshot.docs.map(doc => {
-            const d = doc.data();
-            return {
-              id: doc.id,
-              pipelineState: d.pipelineState,
-              retryCount: d.retryCount,
-              channel: d.channel,
-              lastError: d.lastError,
-              retryHistory: d.retryHistory,
-              intakeSubject: d.context?.intake?.normalized?.subject,
-              intakeSender: d.context?.intake?.normalized?.sender?.email,
-              errors: d.context?.errors,
-              createdAt: d.createdAt,
-            };
-          }),
-        };
-      } catch (diagError) {
-        diagnostic = {
-          error: getErrorMessage(diagError, 'Diagnostic error'),
-        };
-      }
-    }
+    // Το διαγνωστικό μόνο όταν υπάρχει κάτι να διαγνωστεί.
+    const failedCount = result.metrics?.failed ?? 0;
+    const diagnostic = failedCount > 0 ? await collectAiPipelineDiagnostic() : undefined;
 
     return NextResponse.json({
       ok: true,
       trigger,
-      processed: result.processed,
-      failed: result.failed,
-      recovered: result.recovered,
-      queue: result.queueStats,
+      ...result.metrics,
+      summary: result.summary,
       diagnostic,
-      elapsedMs: elapsed,
+      elapsedMs,
     });
-
   } catch (error) {
-    const elapsed = Date.now() - startTime;
+    const elapsedMs = Date.now() - startTime;
     const errorMessage = getErrorMessage(error);
 
-    logger.error('AI pipeline batch error', {
-      trigger,
-      error: errorMessage,
-      elapsedMs: elapsed,
-    });
+    logger.error('AI pipeline batch error', { trigger, error: errorMessage, elapsedMs });
 
-    return NextResponse.json({
-      ok: false,
-      trigger,
-      error: errorMessage,
-      elapsedMs: elapsed,
-    }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, trigger, error: errorMessage, elapsedMs },
+      { status: 500 }
+    );
   }
 }
 
-// ============================================================================
-// GET /api/cron/ai-pipeline
-//
-// Vercel Cron sends GET requests with Authorization header.
-// - Authorized (cron/admin) → Process pipeline queue batch
-// - Unauthenticated → Health check / liveness probe only
-//
-// @rateLimit SENSITIVE (20 req/min)
-// ============================================================================
-
 async function handleGET(request: NextRequest): Promise<Response> {
-  const authorized = verifyCronAuthorization(request);
-
-  const userAgent = request.headers.get('user-agent') || '';
-  const isVercelCron = userAgent.includes('vercel-cron');
-
-  if (authorized) {
-    const trigger: CronTrigger = isVercelCron ? 'vercel-cron' : 'api-call';
-    return executeBatchProcessing(trigger);
+  if (verifyCronAuthorization(request)) {
+    return executeBatchProcessing('api-call');
   }
 
-  // Unauthenticated → health check + diagnostic (liveness probe)
+  // Μη ταυτοποιημένος → **μόνο** liveness probe. Καμία πληροφορία περιεχομένου.
   try {
     const health = await getAIPipelineQueueHealth();
-
-    // 🏢 DIAGNOSTIC: Show failed item errors for debugging
-    const diagnostic: Record<string, unknown> = {};
-    try {
-      const { getAdminFirestore } = await import('@/lib/firebaseAdmin');
-      const { COLLECTIONS } = await import('@/config/firestore-collections');
-      const { FIELDS } = await import('@/config/firestore-field-constants');
-      const adminDb = getAdminFirestore();
-
-      const failedSnapshot = await adminDb
-        .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-        .where(FIELDS.STATUS, '==', QUEUE_STATUS.FAILED)
-        .orderBy(FIELDS.CREATED_AT, 'desc')
-        .limit(10)
-        .get();
-
-      diagnostic.failedItems = failedSnapshot.docs.map(doc => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          pipelineState: d.pipelineState,
-          retryCount: d.retryCount,
-          channel: d.channel,
-          lastError: d.lastError,
-          retryHistory: d.retryHistory,
-          intakeSubject: d.context?.intake?.normalized?.subject,
-          intakeSender: d.context?.intake?.normalized?.sender?.email,
-          errors: d.context?.errors,
-          createdAt: d.createdAt,
-        };
-      });
-
-      // Also show recent completed items for comparison
-      const completedSnapshot = await adminDb
-        .collection(COLLECTIONS.AI_PIPELINE_QUEUE)
-        .where(FIELDS.STATUS, '==', QUEUE_STATUS.COMPLETED)
-        .orderBy(FIELDS.CREATED_AT, 'desc')
-        .limit(5)
-        .get();
-
-      diagnostic.recentCompleted = completedSnapshot.docs.map(doc => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          pipelineState: d.pipelineState,
-          intakeSubject: d.context?.intake?.normalized?.subject,
-          completedAt: d.completedAt,
-        };
-      });
-    } catch (diagError) {
-      diagnostic.error = getErrorMessage(diagError, 'Diagnostic error');
-    }
 
     return NextResponse.json({
       ok: true,
@@ -222,30 +95,16 @@ async function handleGET(request: NextRequest): Promise<Response> {
         warnings: health.warnings,
         stats: health.stats,
       },
-      diagnostic,
     });
-
   } catch (error) {
-    const errorMessage = getErrorMessage(error);
-
-    return NextResponse.json({
-      ok: false,
-      service: 'ai-pipeline-worker',
-      error: errorMessage,
-    }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, service: 'ai-pipeline-worker', error: getErrorMessage(error) },
+      { status: 500 }
+    );
   }
 }
 
 export const GET = withSensitiveRateLimit(handleGET);
-
-// ============================================================================
-// POST /api/cron/ai-pipeline
-//
-// Manual trigger for batch processing (admin tools, API calls).
-// Requires authorization.
-//
-// @rateLimit SENSITIVE (20 req/min)
-// ============================================================================
 
 async function handlePOST(request: NextRequest): Promise<Response> {
   if (!verifyCronAuthorization(request)) {

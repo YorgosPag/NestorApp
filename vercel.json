@@ -4,39 +4,5 @@
   "git": {
     "autoCancel": true
   },
-  "ignoreCommand": "bash scripts/ignore-build.sh",
-  "crons": [
-    {
-      "path": "/api/cron/email-ingestion",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/ai-learning",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/file-purge",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/overdue-alerts",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/purge-deleted-contacts",
-      "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/cron/purge-deleted-entities",
-      "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/backup",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/onboarding-reminder",
-      "schedule": "0 5 * * *"
-    }
-  ]
+  "ignoreCommand": "bash scripts/ignore-build.sh"
 }
