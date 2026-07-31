@@ -5,7 +5,8 @@
 
 import type { CursorSettings, CursorState } from './config';
 import type { Point2D, Viewport } from '../../rendering/types/Types';
-import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+// 🔑 SSoT — «πού είναι η περιοχή σχεδίασης» / ποιο σημείο πέφτει πάνω σε χάρακα.
+import { isPointInRulerBand } from '../../rendering/core/drawing-area';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
 // 🏢 ADR-065: Centralized Distance Calculation
 import { calculateDistance } from '../../rendering/entities/shared/geometry-rendering-utils';
@@ -223,8 +224,11 @@ export function validateCursorSettings(settings: Partial<CursorSettings>): boole
 }
 
 /**
- * ✅ CURSOR FIX: Check if point is in ruler area using existing COORDINATE_LAYOUT
- * Uses existing ruler dimensions from rulers-grid/config.ts
+ * `true` όταν το σημείο πέφτει πάνω σε χάρακα — δηλαδή **έξω** από την περιοχή σχεδίασης.
+ *
+ * 🔑 Διαβάζει το SSoT (`rendering/core/drawing-area.ts`) αντί να ξαναχτίζει τη γεωμετρία. Πριν
+ * μιλούσε με **δύο** διαφορετικά πεδία για το ΙΔΙΟ 30 (`RULER_LEFT_WIDTH` και `MARGINS.bottom`),
+ * που ήταν ακριβώς ο τρόπος με τον οποίο η απάντηση μπορούσε να αποκλίνει σιωπηλά.
  */
 export function isPointInRulerArea(
   point: Point2D,
@@ -233,26 +237,7 @@ export function isPointInRulerArea(
   if (!canvas) return false;
 
   const canvasDimensions = CanvasUtils.getCanvasDimensions(canvas);
-
-  // Use existing ruler dimensions from COORDINATE_LAYOUT
-  const rulerLeftWidth = COORDINATE_LAYOUT.RULER_LEFT_WIDTH;
-  const rulerBottomHeight = COORDINATE_LAYOUT.MARGINS.bottom;
-
-  // Convert screen point to canvas coordinates
   const canvasPoint = CanvasUtils.screenToCanvas(point, canvas);
 
-  // Check if point is in vertical ruler area (left side)
-  const isInVerticalRuler = canvasPoint.x >= 0 &&
-                           canvasPoint.x <= rulerLeftWidth &&
-                           canvasPoint.y >= 0 &&
-                           canvasPoint.y <= canvasDimensions.height;
-
-  // Check if point is in horizontal ruler area (bottom)
-  const horizontalRulerY = canvasDimensions.height - rulerBottomHeight;
-  const isInHorizontalRuler = canvasPoint.y >= horizontalRulerY &&
-                             canvasPoint.y <= canvasDimensions.height &&
-                             canvasPoint.x >= 0 &&
-                             canvasPoint.x <= canvasDimensions.width;
-
-  return isInVerticalRuler || isInHorizontalRuler;
+  return isPointInRulerBand(canvasPoint.x, canvasPoint.y, canvasDimensions);
 }

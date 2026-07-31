@@ -14,7 +14,9 @@
  */
 
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
-import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// 🔑 SSoT — «πού είναι η περιοχή σχεδίασης» (αντικατέστησε το inline areaLeft/Right/Top/Bottom).
+import { getDrawingAreaRect } from '../../rendering/core/drawing-area';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import type { AxisCutKey, AxisCutSetting } from '../../config/bim-render-settings-types';
 import { getAxisCutGripRect } from './axis-cut-grip';
@@ -85,11 +87,11 @@ function drawCutAwayFade(
   cut: AxisCutSetting,
   bg: string,
 ): void {
-  const { left, bottom } = COORDINATE_LAYOUT.MARGINS;
-  const areaLeft = left;
-  const areaRight = viewport.width;
-  const areaTop = 0;
-  const areaBottom = viewport.height - bottom;
+  const area = getDrawingAreaRect(viewport);
+  const areaLeft = area.x;
+  const areaRight = area.right;
+  const areaTop = area.y;
+  const areaBottom = area.bottom;
 
   const probe: Point2D = axis === 'x' ? { x: cut.position, y: 0 } : { x: 0, y: cut.position };
   const screen = CoordinateTransforms.worldToScreen(probe, transform, viewport);

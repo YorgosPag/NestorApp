@@ -14,10 +14,16 @@ import type {
 import type {
   RulerSettings,
   RulerRenderMode,
-  RulerOrientation,
-  RulerPosition
+  RulerOrientation
 } from './RulerTypes';
-import { COORDINATE_LAYOUT } from '../../core/CoordinateTransforms';
+// 🔑 SSoT — οι ζώνες των χαράκων είναι το συμπλήρωμα της περιοχής σχεδίασης (πρότυπο Krita).
+import { getBottomRulerBand, getLeftRulerBand } from '../../core/drawing-area';
+
+/**
+ * Κενό (CSS px) στην **πάνω** ακμή του καμβά όπου ο κατακόρυφος χάρακας δεν τυπώνει ετικέτες.
+ * Καθαρά αισθητικό — **καμία** σχέση με τη γεωμετρία της περιοχής σχεδίασης.
+ */
+const VERTICAL_RULER_LABEL_TOP_GAP = 30;
 // 🏢 ADR-044: Centralized line widths
 // 🏢 ADR-091: Centralized UI Fonts (buildUIFont for dynamic sizes)
 import { RENDER_LINE_WIDTHS, buildUIFont } from '../../../config/text-rendering-config';
@@ -33,6 +39,114 @@ import { WORLD_ORIGIN } from '../../../config/geometry-constants';
 // live display-unit label. The legacy per-ruler `settings.unit` no longer wins —
 // Revit-style ONE project unit, shared with the status-bar X/Y readout.
 import { formatCoordinateForDisplay, currentDisplayUnitLabel } from '../../../config/display-length-format';
+
+/** Η ζώνη που καταλαμβάνει ένας χάρακας — ό,τι επιστρέφει το SSoT της περιοχής σχεδίασης. */
+type RulerBandRect = { x: number; y: number; width: number; height: number };
+
+/** Μία ένδειξη: ίδιο στυλ πάντα, διαφορετική διαδρομή ανά άξονα. */
+function strokeTick(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  path: () => void
+): void {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
+  ctx.beginPath();
+  path();
+  ctx.stroke();
+}
+
+/**
+ * Αριθμός + (προαιρετικά) μονάδα, στο ίδιο σημείο.
+ *
+ * Δέχεται συντεταγμένες αντί να τις υπολογίζει, γιατί ο κατακόρυφος χάρακας το καλεί **μέσα
+ * σε περιστραμμένο σύστημα** με αρχή στην ένδειξη, δηλαδή με `(0, 0)`.
+ */
+function drawTickLabel(
+  ctx: CanvasRenderingContext2D,
+  settings: RulerSettings,
+  numberText: string,
+  x: number,
+  y: number
+): void {
+  ctx.fillStyle = settings.textColor;
+  ctx.font = buildUIFont(settings.fontSize, 'arial');
+  ctx.fillText(numberText, x, y);
+
+  if (!settings.showUnits) return;
+  const numberWidth = ctx.measureText(numberText).width;
+  ctx.fillStyle = settings.unitsColor;
+  ctx.font = buildUIFont(settings.unitsFontSize, 'arial');
+  ctx.fillText(currentDisplayUnitLabel(), x + numberWidth / 2 + 5, y);
+}
+
+/**
+ * Οι **μόνες** διαφορές ανάμεσα στον οριζόντιο και τον κατακόρυφο χάρακα — ονοματισμένες, σε
+ * ένα σημείο. Ό,τι δεν βρίσκεται εδώ είναι κοινό εξ ορισμού και δεν μπορεί να αποκλίνει.
+ */
+interface RulerAxisOps {
+  /** Μέχρι πού τρέχει το πέρασμα ενδείξεων: πλάτος ή ύψος του καμβά. */
+  readonly limit: number;
+  /** Η πρώτη θέση όπου επιτρέπεται ετικέτα. */
+  readonly minLabelPos: number;
+  /** Κοσμική συντεταγμένη της ένδειξης — ο κατακόρυφος έχει **ανεστραμμένο** άξονα. */
+  world(pos: number): number;
+  /** Η διαδρομή μιας ένδειξης μήκους `length`: πάντα από το εσωτερικό χείλος προς τα έξω. */
+  tickPath(ctx: CanvasRenderingContext2D, pos: number, length: number): void;
+  /** Η ετικέτα στη θέση `pos` — ο κατακόρυφος τη γράφει περιστραμμένη. */
+  drawLabel(
+    ctx: CanvasRenderingContext2D,
+    settings: RulerSettings,
+    numberText: string,
+    pos: number
+  ): void;
+}
+
+function rulerAxisOps(
+  orientation: RulerOrientation,
+  viewport: Viewport,
+  rect: RulerBandRect,
+  originScreen: number,
+  scale: number
+): RulerAxisOps {
+  if (orientation === 'horizontal') {
+    const inner = rect.y + rect.height;
+    return {
+      limit: viewport.width,
+      // Η πρώτη ετικέτα ξεκινά μετά τον κατακόρυφο χάρακα — από το SSoT, ΟΧΙ σταθερά «30».
+      minLabelPos: getLeftRulerBand(viewport).width,
+      world: (x) => (x - originScreen) / scale,
+      tickPath: (ctx, x, length) => {
+        ctx.moveTo(x, inner - length);
+        ctx.lineTo(x, inner);
+      },
+      drawLabel: (ctx, settings, numberText, x) =>
+        drawTickLabel(ctx, settings, numberText, x, rect.y + rect.height / 2),
+    };
+  }
+
+  const inner = rect.x + rect.width;
+  return {
+    limit: viewport.height,
+    // ⚠️ ΟΧΙ γεωμετρία χάρακα — καθαρά αισθητικό κενό στην ΠΑΝΩ ακμή, ώστε η πρώτη ετικέτα να
+    // μην κολλά στο χείλος. Δανειζόταν το `MARGINS.top` (30) και έμοιαζε με γεωμετρία· ήταν η
+    // ΤΡΙΤΗ σημασία που φορτωνόταν στο ίδιο πεδίο. Δικό του όνομα ⇒ δεν παρασύρει τον επόμενο.
+    minLabelPos: VERTICAL_RULER_LABEL_TOP_GAP,
+    world: (y) => (originScreen - y) / scale,
+    tickPath: (ctx, y, length) => {
+      ctx.moveTo(inner - length, y);
+      ctx.lineTo(inner, y);
+    },
+    drawLabel: (ctx, settings, numberText, y) => {
+      // Το σύστημα περιστρέφεται ΓΥΡΩ ΑΠΟ την ένδειξη, οπότε η ετικέτα γράφεται στο (0, 0).
+      ctx.save();
+      ctx.translate(rect.x + rect.width / 2, y);
+      ctx.rotate(-RIGHT_ANGLE);
+      drawTickLabel(ctx, settings, numberText, 0, 0);
+      ctx.restore();
+    },
+  };
+}
 
 /**
  * 🔺 CENTRALIZED RULER RENDERER
@@ -103,24 +217,12 @@ export class RulerRenderer implements UIRenderer {
     const transformData = this.getTransformData(context);
     if (!transformData) return;
 
-    // Render both horizontal and vertical rulers
-    this.renderRuler(
-      context.ctx,
-      viewport,
-      rulerSettings,
-      transformData,
-      'horizontal',
-      'bottom'
-    );
-
-    this.renderRuler(
-      context.ctx,
-      viewport,
-      rulerSettings,
-      transformData,
-      'vertical',
-      'left'
-    );
+    // Render both horizontal and vertical rulers.
+    // Οι ΘΕΣΕΙΣ δεν δίνονται πια ως παράμετρος: οι ζώνες παράγονται από το SSoT της περιοχής
+    // σχεδίασης (κάτω + αριστερά), ώστε ο χάρακας να μη μπορεί να ζωγραφίσει ζώνη διαφορετική
+    // από αυτήν που κόβει το clip.
+    this.renderRuler(context.ctx, viewport, rulerSettings, transformData, 'horizontal');
+    this.renderRuler(context.ctx, viewport, rulerSettings, transformData, 'vertical');
 
     // ✅ CAD-GRADE: Render corner box where rulers meet (AutoCAD/Revit/Blender standard)
     drawRulerCornerBox(context.ctx, viewport, rulerSettings);
@@ -138,8 +240,8 @@ export class RulerRenderer implements UIRenderer {
     mode: RulerRenderMode = 'normal'
   ): void {
     // Render both rulers for legacy compatibility
-    this.renderRuler(ctx, viewport, settings, transform, 'horizontal', 'bottom');
-    this.renderRuler(ctx, viewport, settings, transform, 'vertical', 'left');
+    this.renderRuler(ctx, viewport, settings, transform, 'horizontal');
+    this.renderRuler(ctx, viewport, settings, transform, 'vertical');
 
     // ✅ CAD-GRADE: Render corner box where rulers meet
     drawRulerCornerBox(ctx, viewport, settings);
@@ -154,8 +256,7 @@ export class RulerRenderer implements UIRenderer {
     viewport: Viewport,
     settings: RulerSettings,
     transform: { scale: number; offsetX: number; offsetY: number },
-    orientation: RulerOrientation,
-    position: RulerPosition
+    orientation: RulerOrientation
   ): void {
     const startTime = performance.now();
 
@@ -163,50 +264,25 @@ export class RulerRenderer implements UIRenderer {
 
     ctx.save();
 
-    // Calculate ruler dimensions and position
-    const rulerSize = orientation === 'horizontal' ? settings.height : settings.width;
-    const rulerRect = this.calculateRulerRect(viewport, orientation, position, rulerSize);
+    // 🔑 SSoT — η ζώνη του χάρακα είναι το **συμπλήρωμα** της περιοχής σχεδίασης, όχι δικός του
+    // υπολογισμός από `settings.width/height`. Πρότυπο Krita (`KisZoomManager` κρατά τους
+    // `KoRuler` συγχρονισμένους ΑΠΟ τον `KisCoordinatesConverter`): ο χάρακας είναι καταναλωτής.
+    const rulerRect =
+      orientation === 'horizontal' ? getBottomRulerBand(viewport) : getLeftRulerBand(viewport);
 
     // Render background
     if (settings.showBackground) {
       this.renderRulerBackground(ctx, rulerRect, settings);
     }
 
-    // Render ticks and labels
-    if (orientation === 'horizontal') {
-      this.renderHorizontalRuler(ctx, viewport, settings, transform, rulerRect);
-    } else {
-      this.renderVerticalRuler(ctx, viewport, settings, transform, rulerRect);
-    }
+    // Render ticks and labels — μία υλοποίηση, ο άξονας είναι παράμετρος.
+    this.renderRulerTicks(ctx, viewport, settings, transform, rulerRect, orientation);
 
     ctx.restore();
 
     // Update metrics
     this.renderCount++;
     this.lastRenderTime = performance.now() - startTime;
-  }
-
-  /**
-   * Calculate ruler rectangle based on position
-   */
-  private calculateRulerRect(
-    viewport: Viewport,
-    orientation: RulerOrientation,
-    position: RulerPosition,
-    size: number
-  ): { x: number; y: number; width: number; height: number } {
-    switch (position) {
-      case 'top':
-        return { x: 0, y: 0, width: viewport.width, height: size };
-      case 'bottom':
-        return { x: 0, y: viewport.height - size, width: viewport.width, height: size };
-      case 'left':
-        return { x: 0, y: 0, width: size, height: viewport.height };
-      case 'right':
-        return { x: viewport.width - size, y: 0, width: size, height: viewport.height };
-      default:
-        return { x: 0, y: 0, width: viewport.width, height: size };
-    }
   }
 
   /**
@@ -229,34 +305,26 @@ export class RulerRenderer implements UIRenderer {
   }
 
   /**
-   * ✅ CAD-GRADE: Corner Box - Industry Standard (AutoCAD/Revit/Blender/Figma)
-   * Renders the square at the intersection of horizontal and vertical rulers
-   * This prevents visual overlap and provides origin indicator
+   * Ό,τι μοιράζονται **και οι δύο** χάρακες πριν αρχίσει το πέρασμα ενδείξεων: το βήμα
+   * (ADR-186), η οθονική αρχή του κόσμου **στον δικό τους άξονα**, η πρώτη ένδειξη, και το
+   * στυλ κειμένου.
+   *
+   * `null` ⇒ εκφυλισμένο βήμα, ο καλών δεν ζωγραφίζει τίποτα.
    */
-  /**
-   * Render horizontal ruler
-   * ✅ ADR-186: Adaptive tick spacing — ticks & labels adapt to zoom level
-   * 🎯 (0,0) στην κάτω αριστερή γωνία του lime πλαισίου
-   */
-  private renderHorizontalRuler(
+  private beginTickPass(
     ctx: CanvasRenderingContext2D,
     viewport: Viewport,
     settings: RulerSettings,
     transform: { scale: number; offsetX: number; offsetY: number },
-    rect: { x: number; y: number; width: number; height: number }
-  ): void {
+    orientation: RulerOrientation
+  ): { step: number; originScreen: number; start: number } | null {
     // ─── ADR-186: Adaptive interval calculation ──────────────────────
-    const adaptiveInterval = this.calculateAdaptiveInterval(transform.scale);
-    const step = adaptiveInterval * transform.scale;
+    const step = this.calculateAdaptiveInterval(transform.scale) * transform.scale;
+    if (step < 1) return null;
 
-    // Safety: skip if step is somehow degenerate
-    if (step < 1) return;
-
-    // ✅ CORRECT: Use world (0,0) as reference
-    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
+    // ✅ CORRECT: Use world (0,0) as reference — 🏢 ADR-118 centralized WORLD_ORIGIN.
     const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
-    const originScreenX = screenOrigin.x;
-    const startX = originScreenX % step;
+    const originScreen = orientation === 'horizontal' ? screenOrigin.x : screenOrigin.y;
 
     // Text styling
     ctx.fillStyle = settings.textColor;
@@ -264,148 +332,53 @@ export class RulerRenderer implements UIRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    for (let x = startX; x <= viewport.width; x += step) {
-      // ✅ UNIFIED: worldX calculation using same origin as DxfRenderer/LayerRenderer
-      const worldX = (x - originScreenX) / transform.scale;
-
-      // Major ticks
-      if (settings.showMajorTicks) {
-        ctx.strokeStyle = settings.majorTickColor;
-        ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
-        ctx.beginPath();
-        ctx.moveTo(x, rect.y + rect.height - settings.majorTickLength);
-        ctx.lineTo(x, rect.y + rect.height);
-        ctx.stroke();
-      }
-
-      // Labels
-      if (settings.showLabels && x >= 30) { // Avoid overlap with vertical ruler
-        // 🏢 ADR-462: number + unit follow the status-bar display-unit selector.
-        const numberText = formatCoordinateForDisplay(worldX, { withUnit: false });
-
-        // Number
-        ctx.fillStyle = settings.textColor;
-        ctx.font = buildUIFont(settings.fontSize, 'arial');
-        ctx.fillText(numberText, x, rect.y + rect.height / 2);
-
-        // Units
-        if (settings.showUnits) {
-          const numberWidth = ctx.measureText(numberText).width;
-          ctx.fillStyle = settings.unitsColor;
-          ctx.font = buildUIFont(settings.unitsFontSize, 'arial');
-          ctx.fillText(currentDisplayUnitLabel(), x + numberWidth / 2 + 5, rect.y + rect.height / 2);
-        }
-      }
-
-      // Minor ticks — only render when there is enough pixel space
-      if (settings.showMinorTicks) {
-        const minorStep = step / 5;
-        if (minorStep >= RulerRenderer.MIN_MINOR_TICK_PIXELS) {
-          for (let i = 1; i < 5; i++) {
-            const minorX = x + (i * minorStep);
-            if (minorX <= viewport.width) {
-              ctx.strokeStyle = settings.minorTickColor;
-              ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
-              ctx.beginPath();
-              ctx.moveTo(minorX, rect.y + rect.height - settings.minorTickLength);
-              ctx.lineTo(minorX, rect.y + rect.height);
-              ctx.stroke();
-            }
-          }
-        }
-      }
-    }
+    return { step, originScreen, start: originScreen % step };
   }
 
   /**
-   * Render vertical ruler
+   * Render ruler ticks + labels — **μία** υλοποίηση για τους δύο χάρακες.
+   *
+   * 🔴 Ήταν δύο συναρτήσεις (`renderHorizontalRuler` / `renderVerticalRuler`) που έτρεχαν τον
+   * ΙΔΙΟ αλγόριθμο με αναποδογυρισμένο άξονα. Το CHECK 3.28 τις σήμανε ως δίδυμα σε **τρεις
+   * διαδοχικούς γύρους**: κάθε φορά που εξαγόταν ένα κομμάτι, το επόμενο έβγαινε στην
+   * επιφάνεια — η ένδειξη ότι η διπλή γραφή δεν ήταν σε κάποιο κομμάτι, ήταν στη **δομή**.
+   * Οι διαφορές τους ζουν πλέον ονοματισμένες στο {@link rulerAxisOps}· ό,τι δεν είναι εκεί,
+   * είναι κοινό εξ ορισμού και δεν μπορεί να αποκλίνει.
+   *
    * ✅ ADR-186: Adaptive tick spacing — ticks & labels adapt to zoom level
    * 🎯 (0,0) στην κάτω αριστερή γωνία του lime πλαισίου
-   * ✅ UNIFIED: Works like horizontal ruler - iterate screen pixels, calculate worldY
    */
-  private renderVerticalRuler(
+  private renderRulerTicks(
     ctx: CanvasRenderingContext2D,
     viewport: Viewport,
     settings: RulerSettings,
     transform: { scale: number; offsetX: number; offsetY: number },
-    rect: { x: number; y: number; width: number; height: number }
+    rect: RulerBandRect,
+    orientation: RulerOrientation
   ): void {
-    // ─── ADR-186: Adaptive interval calculation ──────────────────────
-    const adaptiveInterval = this.calculateAdaptiveInterval(transform.scale);
-    const step = adaptiveInterval * transform.scale;
+    const pass = this.beginTickPass(ctx, viewport, settings, transform, orientation);
+    if (!pass) return;
 
-    // Safety: skip if step is somehow degenerate
-    if (step < 1) return;
+    const { step, originScreen, start } = pass;
+    const ops = rulerAxisOps(orientation, viewport, rect, originScreen, transform.scale);
+    const minorStep = step / 5;
+    const drawMinor = settings.showMinorTicks && minorStep >= RulerRenderer.MIN_MINOR_TICK_PIXELS;
 
-    // ✅ CORRECT: Use world (0,0) as reference (same as horizontal ruler)
-    // 🏢 ADR-118: Using centralized WORLD_ORIGIN constant
-    const screenOrigin = CoordinateTransforms.worldToScreen(WORLD_ORIGIN, transform, viewport);
-    const originScreenY = screenOrigin.y;
-    const startY = originScreenY % step;
-
-    const minY = COORDINATE_LAYOUT.MARGINS.top; // 30px - for labels only
-
-    // Text styling
-    ctx.fillStyle = settings.textColor;
-    ctx.font = buildUIFont(settings.fontSize, 'arial');
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    for (let y = startY; y <= viewport.height; y += step) {
-      // ✅ UNIFIED: worldY calculation using same origin as DxfRenderer/LayerRenderer
-      const worldY = (originScreenY - y) / transform.scale;
-
-      // Major ticks
+    for (let pos = start; pos <= ops.limit; pos += step) {
       if (settings.showMajorTicks) {
-        ctx.strokeStyle = settings.majorTickColor;
-        ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
-        ctx.beginPath();
-        ctx.moveTo(rect.x + rect.width - settings.majorTickLength, y);
-        ctx.lineTo(rect.x + rect.width, y);
-        ctx.stroke();
+        strokeTick(ctx, settings.majorTickColor, () => ops.tickPath(ctx, pos, settings.majorTickLength));
       }
 
-      // Labels (rotated for vertical ruler)
-      if (settings.showLabels && y >= minY) {
+      if (settings.showLabels && pos >= ops.minLabelPos) {
         // 🏢 ADR-462: number + unit follow the status-bar display-unit selector.
-        const numberText = formatCoordinateForDisplay(worldY, { withUnit: false });
-
-        ctx.save();
-        ctx.translate(rect.x + rect.width / 2, y);
-        ctx.rotate(-RIGHT_ANGLE);
-
-        // Number
-        ctx.fillStyle = settings.textColor;
-        ctx.font = buildUIFont(settings.fontSize, 'arial');
-        ctx.fillText(numberText, 0, 0);
-
-        // Units
-        if (settings.showUnits) {
-          const numberWidth = ctx.measureText(numberText).width;
-          ctx.fillStyle = settings.unitsColor;
-          ctx.font = buildUIFont(settings.unitsFontSize, 'arial');
-          ctx.fillText(currentDisplayUnitLabel(), numberWidth / 2 + 5, 0);
-        }
-
-        ctx.restore();
+        ops.drawLabel(ctx, settings, formatCoordinateForDisplay(ops.world(pos), { withUnit: false }), pos);
       }
 
-      // Minor ticks — only render when there is enough pixel space
-      if (settings.showMinorTicks) {
-        const minorStep = step / 5;
-        if (minorStep >= RulerRenderer.MIN_MINOR_TICK_PIXELS) {
-          for (let i = 1; i < 5; i++) {
-            const minorY = y + (i * minorStep);
-            if (minorY <= viewport.height) {
-              ctx.strokeStyle = settings.minorTickColor;
-              ctx.lineWidth = RENDER_LINE_WIDTHS.RULER_TICK;
-              ctx.beginPath();
-              ctx.moveTo(rect.x + rect.width - settings.minorTickLength, minorY);
-              ctx.lineTo(rect.x + rect.width, minorY);
-              ctx.stroke();
-            }
-          }
-        }
+      if (!drawMinor) continue;
+      for (let i = 1; i < 5; i++) {
+        const minorPos = pos + i * minorStep;
+        if (minorPos > ops.limit) continue;
+        strokeTick(ctx, settings.minorTickColor, () => ops.tickPath(ctx, minorPos, settings.minorTickLength));
       }
     }
   }

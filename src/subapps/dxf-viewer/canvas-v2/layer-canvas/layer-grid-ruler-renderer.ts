@@ -13,7 +13,9 @@
 
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import type { GridSettings } from './layer-types';
-import { COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+// 🔑 SSoT — ο κάναβος αγκυρώνεται στην ΙΔΙΑ γραμμή με τις οντότητες: την κάτω ακμή της
+// περιοχής σχεδίασης (εκεί κάθεται το world Y = 0).
+import { getDrawingAreaRect } from '../../rendering/core/drawing-area';
 import { UI_COLORS } from '../../config/color-config';
 // 🏢 ADR-042/044: Centralized rendering constants
 import { RENDER_LINE_WIDTHS } from '../../config/text-rendering-config';
@@ -53,7 +55,7 @@ export function renderGrid(
     }
 
     // Horizontal lines — UNIFIED WITH COORDINATETRANSFORMS
-    const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+    const baseY = getDrawingAreaRect(viewport).bottom;
     const startY = ((baseY - transform.offsetY) % gridSize);
     for (let y = startY; y <= viewport.height; y += gridSize) {
       ctx.moveTo(0, y);
@@ -66,7 +68,7 @@ export function renderGrid(
     ctx.fillStyle = settings.color || UI_COLORS.BLACK;
 
     const startX = (transform.offsetX % gridSize);
-    const baseY = viewport.height - COORDINATE_LAYOUT.MARGINS.top;
+    const baseY = getDrawingAreaRect(viewport).bottom;
     const startY = ((baseY - transform.offsetY) % gridSize);
 
     for (let x = startX; x <= viewport.width; x += gridSize) {

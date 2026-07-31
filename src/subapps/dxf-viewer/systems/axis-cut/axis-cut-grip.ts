@@ -14,7 +14,9 @@
  */
 
 import type { ViewTransform, Viewport, Point2D } from '../../rendering/types/Types';
-import { CoordinateTransforms, COORDINATE_LAYOUT } from '../../rendering/core/CoordinateTransforms';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
+// 🔑 SSoT — «πού είναι η περιοχή σχεδίασης» (το clamp της λαβής μιλά για την ΟΡΑΤΗ περιοχή).
+import { getDrawingAreaRect } from '../../rendering/core/drawing-area';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import type { AxisCutKey, AxisCutSetting } from '../../config/bim-render-settings-types';
 
@@ -74,12 +76,12 @@ export function getAxisCutGripRect(
   viewport: Viewport,
 ): ScreenRect | null {
   if (!viewport.width || !viewport.height) return null;
-  const { left, bottom } = COORDINATE_LAYOUT.MARGINS;
+  const area = getDrawingAreaRect(viewport);
   if (axis === 'x') {
     const px = cutScreenCoord('x', cut, transform, viewport);
     // Clamp the tab centre to [left … right] of the drawing area (right ruler width = 0).
-    const cx = clampNum(px, left + AXIS_CUT_GRIP_LONG / 2, viewport.width - AXIS_CUT_GRIP_LONG / 2);
-    const cy = viewport.height - bottom - EDGE_GAP - AXIS_CUT_GRIP_SHORT / 2;
+    const cx = clampNum(px, area.x + AXIS_CUT_GRIP_LONG / 2, area.right - AXIS_CUT_GRIP_LONG / 2);
+    const cy = area.bottom - EDGE_GAP - AXIS_CUT_GRIP_SHORT / 2;
     return {
       x: cx - AXIS_CUT_GRIP_LONG / 2,
       y: cy - AXIS_CUT_GRIP_SHORT / 2,
@@ -88,9 +90,9 @@ export function getAxisCutGripRect(
     };
   }
   const py = cutScreenCoord('y', cut, transform, viewport);
-  const cx = left + EDGE_GAP + AXIS_CUT_GRIP_SHORT / 2;
+  const cx = area.x + EDGE_GAP + AXIS_CUT_GRIP_SHORT / 2;
   // Clamp the tab centre to [top … bottom] of the drawing area (above the bottom ruler).
-  const cy = clampNum(py, AXIS_CUT_GRIP_LONG / 2, viewport.height - bottom - AXIS_CUT_GRIP_LONG / 2);
+  const cy = clampNum(py, area.y + AXIS_CUT_GRIP_LONG / 2, area.bottom - AXIS_CUT_GRIP_LONG / 2);
   return {
     x: cx - AXIS_CUT_GRIP_SHORT / 2,
     y: cy - AXIS_CUT_GRIP_LONG / 2,

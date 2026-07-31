@@ -17,6 +17,10 @@ import type { CrosshairSettings } from '../../rendering/ui/crosshair/CrosshairTy
 import type { CursorSettings } from '../../systems/cursor/config';
 // 🏢 ADR-151: Added worldToScreenSimple for simple transforms (no Y-inversion)
 import { CoordinateTransforms, worldToScreenSimple } from '../../rendering/core/CoordinateTransforms';
+// 🔑 SSoT — «πού είναι η περιοχή σχεδίασης». Αντικατέστησε την inline αριθμητική
+// `rulerSettings.width/height` που ήταν ΤΟ ΜΟΝΟ σωστό clip του subapp αλλά διάβαζε άλλη πηγή
+// από τους μετασχηματισμούς (σιωπηλή απόκλιση). Βλ. rendering/core/drawing-area.ts.
+import { clipToDrawingArea } from '../../rendering/core/drawing-area';
 import { UI_COLORS } from '../../config/color-config';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 // 🏢 ADR-105: Centralized Hit Test Fallback Tolerance
@@ -230,7 +234,12 @@ export class LayerRenderer {
     selectionSettings: SelectionSettings,
     options: LayerRenderOptions
   ): void {
+    // 🔴 Η unified διαδρομή ΔΕΝ έκοβε καθόλου — τα color layers χύνονταν πάνω στους χάρακες
+    // (ήταν η «έκτη απάντηση»: καμία). Ίδιο clip με τη legacy, από την ΙΔΙΑ πηγή.
+    this.ctx.save();
+    clipToDrawingArea(this.ctx, viewport);
     this.renderColorLayers(layers, transform, viewport);
+    this.ctx.restore();
 
     // ADR-065: Delegated to layer-ui-settings.ts
     const uiSettings = createLayerUISettings({
@@ -270,13 +279,9 @@ export class LayerRenderer {
       renderGrid(this.ctx, transform, viewport, gridSettings);
     }
 
-    // 2. Render color layers with clipping for rulers
+    // 2. Render color layers clipped to the drawing area (SSoT — ΟΧΙ inline αριθμητική)
     this.ctx.save();
-    const left = rulerSettings.width || 0;
-    const bottom = rulerSettings.height || 0;
-    this.ctx.beginPath();
-    this.ctx.rect(left, 0, viewport.width - left, viewport.height - bottom);
-    this.ctx.clip();
+    clipToDrawingArea(this.ctx, viewport);
     this.renderColorLayers(layers, transform, viewport);
     this.ctx.restore();
 

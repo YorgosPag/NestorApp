@@ -13,6 +13,9 @@
 import type { Point2D, ViewTransform, Viewport } from '../types/Types';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getCachedClientRect } from './pointer-rect-cache';
+// 🔑 SSoT — «πού είναι η περιοχή σχεδίασης». Η αρχή του κόσμου κάθεται στην ΚΑΤΩ-ΑΡΙΣΤΕΡΗ
+// γωνία της, οπότε η άγκυρα του μετασχηματισμού ΕΙΝΑΙ αυτό το ορθογώνιο (βλ. ./drawing-area.ts).
+import { DRAWING_AREA_CHROME, getDrawingAreaRect } from './drawing-area';
 // ADR-726 Φ5 build fix (2026-07-30): ΚΑΝΕΝΑ import από systems/cursor εδώ. Αυτό το αρχείο
 // φτάνει σε SERVER API routes (route.ts → dxf-scene-builder → … → bounds-operations) και
 // κάθε React-hook import στο γράφημα σπάει το production build. Το client-only helper
@@ -20,17 +23,22 @@ import { getCachedClientRect } from './pointer-rect-cache';
 
 const logger = createModuleLogger('CoordinateTransforms');
 
-// ✅ MARGINS SYSTEM - Single Source of Truth για ruler dimensions
-// 🏢 ENTERPRISE FIX (2026-01-06): Synchronized with actual ruler settings (30px)
-// Previously had inconsistent values (80px) causing snap indicator misalignment
+// ⚠️ ΔΕΝ είναι πια πηγή — είναι **προβολή** του `DRAWING_AREA_CHROME` (./drawing-area.ts), που
+// είναι το SSoT. Μένει εξαγόμενο μόνο για τους ~10 υπάρχοντες καταναλωτές· **μη γράψεις νέο**.
+//
+// 🔑 Το `MARGINS.top` ΕΙΝΑΙ το ύψος του ΚΑΤΩ χάρακα, με ιστορικά λάθος όνομα: ο τύπος
+// `screenY = (height − top)` τοποθετεί το `worldY = 0` στο `height − 30`, δηλαδή στην άνω ακμή
+// της ζώνης του κάτω χάρακα. Γι' αυτό τρέφεται από το `bottomRulerHeight` — ίδια τιμή, τώρα
+// με ειλικρινή προέλευση. Το λάθος όνομα ήταν η ρίζα των δύο ασύνδετων στρατοπέδων ανάγνωσης.
 export const COORDINATE_LAYOUT = {
-  RULER_LEFT_WIDTH: 30,   // ✅ FIXED: Was 80, actual rulers are 30px
-  RULER_TOP_HEIGHT: 30,
+  RULER_LEFT_WIDTH: DRAWING_AREA_CHROME.leftRulerWidth,
+  RULER_TOP_HEIGHT: DRAWING_AREA_CHROME.bottomRulerHeight,
   MARGINS: {
-    left: 30,   // Space for vertical ruler (synchronized with ruler width)
-    top: 30,    // Y-inversion anchor: used in formula screenY = (height - top) — NOT a top-of-screen margin
-    right: 0,   // No right margin
-    bottom: 30  // Space for bottom horizontal ruler / coordinates
+    left: DRAWING_AREA_CHROME.leftRulerWidth,
+    /** @deprecated Λάθος όνομα — είναι το ύψος του ΚΑΤΩ χάρακα. Χρησιμοποίησε `getDrawingAreaRect().bottom`. */
+    top: DRAWING_AREA_CHROME.bottomRulerHeight,
+    right: 0,   // Δεν υπάρχει δεξιός χάρακας
+    bottom: DRAWING_AREA_CHROME.bottomRulerHeight
   }
 } as const;
 
@@ -75,11 +83,11 @@ export class CoordinateTransforms {
     transform: ViewTransform,
     viewport: Viewport
   ): Point2D {
-    // ✅ RESTORED: Margins για σωστή τοποθέτηση relative σε rulers
-    const { left, top } = COORDINATE_LAYOUT.MARGINS;
+    // Άγκυρα = η κάτω-αριστερή γωνία της περιοχής σχεδίασης (SSoT ./drawing-area.ts).
+    const { leftRulerWidth: left, bottomRulerHeight: bottom } = DRAWING_AREA_CHROME;
     if (!worldPoint) {
       logger.warn('worldToScreen received undefined point. Returning (0,0)');
-      return { x: left, y: viewport?.height ? viewport.height - top : top };
+      return { x: left, y: viewport?.height ? viewport.height - bottom : bottom };
     }
 
     // 🏢 ENTERPRISE FIX (2026-01-27): Viewport validation
@@ -93,17 +101,19 @@ export class CoordinateTransforms {
       // Fallback: Use simple conversion without Y-inversion
       return {
         x: left + worldPoint.x * transform.scale + transform.offsetX,
-        y: top + worldPoint.y * transform.scale + transform.offsetY
+        y: bottom + worldPoint.y * transform.scale + transform.offsetY
       };
     }
 
     // 🎯 CRITICAL: offsetX/offsetY are SCREEN OFFSETS (pixels)
-    // Formula: screenX = left + worldX * scale + offsetX
-    //          screenY = (height - top) - worldY * scale - offsetY
+    // Formula: screenX = area.x      + worldX * scale + offsetX
+    //          screenY = area.bottom - worldY * scale - offsetY
+    // Δηλαδή το world (0,0) κάθεται στην ΚΑΤΩ-ΑΡΙΣΤΕΡΗ γωνία της περιοχής σχεδίασης.
     // Note: offsetY is SUBTRACTED because positive offset moves drawing UP (decreases screenY)
+    const area = getDrawingAreaRect(viewport);
     return {
-      x: left + worldPoint.x * transform.scale + transform.offsetX,
-      y: (viewport.height - top) - worldPoint.y * transform.scale - transform.offsetY
+      x: area.x + worldPoint.x * transform.scale + transform.offsetX,
+      y: area.bottom - worldPoint.y * transform.scale - transform.offsetY
     };
   }
 
@@ -121,8 +131,8 @@ export class CoordinateTransforms {
     transform: ViewTransform,
     viewport: Viewport
   ): Point2D {
-    // ✅ RESTORED: Margins για σωστή μετατροπή relative από rulers
-    const { left, top } = COORDINATE_LAYOUT.MARGINS;
+    // Άγκυρα = η κάτω-αριστερή γωνία της περιοχής σχεδίασης (SSoT ./drawing-area.ts).
+    const { leftRulerWidth: left, bottomRulerHeight: bottom } = DRAWING_AREA_CHROME;
     if (!screenPoint) {
       logger.warn('screenToWorld received undefined point. Returning origin offset');
       return { x: -transform.offsetX / transform.scale, y: -transform.offsetY / transform.scale };
@@ -140,17 +150,18 @@ export class CoordinateTransforms {
       // This is better than returning wildly incorrect values
       return {
         x: (screenPoint.x - left - transform.offsetX) / transform.scale,
-        y: (screenPoint.y - top - transform.offsetY) / transform.scale
+        y: (screenPoint.y - bottom - transform.offsetY) / transform.scale
       };
     }
 
     // 🎯 CRITICAL: offsetX/offsetY are SCREEN OFFSETS (pixels)
-    // Formula: worldX = (screenX - left - offsetX) / scale
-    //          worldY = ((height - top) - screenY - offsetY) / scale
+    // Formula: worldX = (screenX - area.x - offsetX) / scale
+    //          worldY = (area.bottom - screenY - offsetY) / scale
     // Note: offsetY is SUBTRACTED (inverse of worldToScreen where it's subtracted)
+    const area = getDrawingAreaRect(viewport);
     return {
-      x: (screenPoint.x - left - transform.offsetX) / transform.scale,
-      y: ((viewport.height - top) - screenPoint.y - transform.offsetY) / transform.scale
+      x: (screenPoint.x - area.x - transform.offsetX) / transform.scale,
+      y: (area.bottom - screenPoint.y - transform.offsetY) / transform.scale
     };
   }
 
@@ -160,7 +171,7 @@ export class CoordinateTransforms {
    * 🏢 ENTERPRISE FIX (2025-10-04): Zoom-to-Cursor με Margins Adjustment
    *
    * Το πρόβλημα: Το zoomCenter είναι canvas-relative (0,0 = top-left του canvas),
-   * αλλά το world (0,0) εμφανίζεται στο (MARGINS.left, MARGINS.top) του canvas.
+   * αλλά το world (0,0) εμφανίζεται στην ΚΑΤΩ-ΑΡΙΣΤΕΡΗ γωνία της περιοχής σχεδίασης.
    *
    * Η λύση: Adjust το zoomCenter για margins πριν εφαρμόσουμε τη zoom formula.
    * Αυτό εξασφαλίζει ότι το σημείο κάτω από τον cursor παραμένει σταθερό.
@@ -179,18 +190,18 @@ export class CoordinateTransforms {
     // 🎯 ENTERPRISE: Adjust zoomCenter για margins AND Y-axis inversion
     // Το zoomCenter είναι canvas-relative (screen coordinates)
     // Πρέπει να το μετατρέψουμε σε "offset-space" για τη zoom formula
-    const { left, top } = COORDINATE_LAYOUT.MARGINS;
+    const area = getDrawingAreaRect(viewport);
 
     // 🏢 X-axis: Απλή αφαίρεση margin (screen X αυξάνει προς τα δεξιά)
-    // Formula: screenX = left + worldX * scale + offsetX
-    // Άρα: adjustedX = screenX - left = worldX * scale + offsetX
-    const adjustedCenterX = zoomCenter.x - left;
+    // Formula: screenX = area.x + worldX * scale + offsetX
+    // Άρα: adjustedX = screenX - area.x = worldX * scale + offsetX
+    const adjustedCenterX = zoomCenter.x - area.x;
 
     // 🏢 Y-axis: INVERTED! (screen Y αυξάνει προς τα κάτω, world Y προς τα πάνω)
-    // Formula: screenY = (height - top) - worldY * scale - offsetY
-    // Άρα: adjustedY = (height - top) - screenY = worldY * scale + offsetY
+    // Formula: screenY = area.bottom - worldY * scale - offsetY
+    // Άρα: adjustedY = area.bottom - screenY = worldY * scale + offsetY
     // 🐛 FIX (2026-01-25): Ήταν λάθος: zoomCenter.y - top (δεν λάμβανε υπόψη Y-inversion)
-    const adjustedCenterY = (viewport.height - top) - zoomCenter.y;
+    const adjustedCenterY = area.bottom - zoomCenter.y;
 
     // ✅ CLASSIC CAD FORMULA: offsetNew = center - (center - offsetOld) * zoomFactor
     // Με adjusted center, το world point κάτω από το zoomCenter παραμένει σταθερό
