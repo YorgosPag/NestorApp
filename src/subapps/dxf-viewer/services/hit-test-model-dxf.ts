@@ -98,6 +98,11 @@ export const HIT_TEST_MODEL_DXF_HANDLERS = {
   'opening-info-tag': flatFields('opening-info-tag', [
     'position', 'angleRad', 'widthMm', 'topText', 'bottomLeftText', 'bottomRightText',
   ]),
+  // ADR-739 Φ.Γ — γενικός πίνακας. Το `model` (στήλες/γραμμές/αραιά κελιά/συγχωνεύσεις)
+  // ΚΑΙ το `styleId` πρέπει να επιβιώσουν της μετατροπής: η διάταξη — άρα και το bbox και
+  // το hit-test — παράγεται από αυτά. Χωρίς το seam ο πίνακας βγαίνει σιωπηλά εκτός
+  // spatial index (μηδέν hover/κλικ), ο ίδιος Φ10 μηχανισμός με την εικόνα.
+  table: flatFields('table', ['position', 'angleRad', 'styleId', 'model', 'binding', 'breaking']),
   // ADR-654 — standalone raster image (entourage / furniture-plan sprite). Ο τύπος που
   // έλειπε από ΟΛΟ αυτό το seam και γέννησε τη Φ10.
   image: flatFields('image', ['position', 'width', 'height', 'url', 'rotation']),

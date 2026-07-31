@@ -32,6 +32,9 @@ import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol
 import { hitTestScaleBarAxis } from '../../bim/scale-bar/scale-bar-hit';
 // ADR-612 — opening info tag precise rotated point-in-box pick SSoT (sibling of scale-bar).
 import { hitTestOpeningInfoTag } from '../../bim/opening-info-tag/opening-info-tag-hit';
+// ADR-739 Φ.Γ — γενικός πίνακας: ακριβές point-in-rotated-box SSoT (κοινό με TableRenderer.hitTest).
+import { hitTestTable } from '../../bim/table/table-entity-hit';
+import { isTableEntity } from '../../types/table-entity';
 import type { HitTestResult, SnapResult } from './hit-tester-types';
 import { pointToLineDistance, clamp } from '../entities/shared/geometry-utils';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
@@ -67,6 +70,18 @@ const hitTestScaleBar: NarrowHitTest = (entity, point, tolerance) =>
  */
 const hitTestOpeningInfoTagEntity: NarrowHitTest = (entity, point, tolerance) =>
   isOpeningInfoTagEntity(entity) && hitTestOpeningInfoTag(entity, point, tolerance)
+    ? { hitType: 'entity', hitPoint: point }
+    : null;
+
+/**
+ * ADR-739 Φ.Γ — γενικός πίνακας: ακριβές περιστραμμένο point-in-box (ΤΟ ΙΔΙΟ SSoT με τον
+ * ζωγράφο και τον μελλοντικό επεξεργαστή κελιού). Σφιχτότερο από το bbox fallback, που θα
+ * φώτιζε τις άδειες γωνίες του κουτιού ενός στραμμένου πίνακα. Το κλικ πιάνει ΟΛΟ το
+ * ορθογώνιο, όχι μόνο τις γραμμές: το preset `detailSheet` **δεν έχει** πλέγμα, οπότε
+ * πικάρισμα στις γραμμές θα τον έκανε κυριολεκτικά ανεπίλεκτο.
+ */
+const hitTestTableEntity: NarrowHitTest = (entity, point, tolerance) =>
+  isTableEntity(entity) && hitTestTable(entity as never, point, tolerance)
     ? { hitType: 'entity', hitPoint: point }
     : null;
 
@@ -114,6 +129,7 @@ export const NARROW_HIT_TEST_HANDLERS: Partial<Record<EntityType, NarrowHitTest>
   'annotation-symbol': hitTestAnnotationSymbol,
   'scale-bar': hitTestScaleBar,
   'opening-info-tag': hitTestOpeningInfoTagEntity,
+  table: hitTestTableEntity,
   // ADR-651 Φάση Ε — standalone raster image: rotation-aware point-in-rect (fill hit-test,
   // SSoT shared with ImageRenderer.hitTest — click anywhere inside the picture selects it).
   image: hitTestImage,

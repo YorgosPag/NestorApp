@@ -17,6 +17,11 @@
 
 import type { EntityModel } from '../../types/Types';
 import type { DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
+// ADR-739 Φ.Γ — ο πίνακας είναι ο ΜΟΝΟΣ τύπος του οποίου η «γεωμετρία» είναι δομημένο
+// μοντέλο (αραιός χάρτης κελιών), όχι επίπεδα αριθμητικά πεδία — άρα το fixture του πρέπει
+// να χτιστεί με τον κανονικό κατασκευαστή, αλλιώς τα `CellKey` θα ήταν άκυρα.
+import { createTableModel } from '../../../bim/table/table-model-helpers';
+import { BUILTIN_TABLE_STYLE_IDS } from '../../../bim/table/table-style-presets';
 
 /** Ένα καθαρό, πεπερασμένο bbox — ό,τι παράγει κάθε `compute*Geometry()` για τα BIM. */
 const BBOX = { min: { x: 0, y: 0, z: 0 }, max: { x: 100, y: 50, z: 30 } };
@@ -66,6 +71,24 @@ const GEOMETRY_BY_TYPE: Readonly<Record<string, Record<string, unknown>>> = {
   'topo-surface': { surfaceId: 'existing', footprint: [SQUARE] },
   // ADR-635 Φάση B — leader callout: open path vertices (tip → text) + tip arrowhead.
   leader: { vertices: SQUARE, arrowHead: { type: 'closed', size: 2.5 } },
+  // ADR-739 Φ.Γ — γενικός πίνακας 2×2. Στήλες `fixed` και ρητά ύψη γραμμών επίτηδες: έτσι η
+  // διάταξη δεν καλεί τον πραγματικό μετρητή κειμένου (που δίνει άλλο πλάτος με/χωρίς
+  // φορτωμένη γραμματοσειρά) και τα bounds είναι συγκρίσιμα σε κάθε περιβάλλον.
+  table: {
+    position: { x: 0, y: 0 },
+    angleRad: 0,
+    styleId: BUILTIN_TABLE_STYLE_IDS.STANDARD,
+    model: createTableModel({
+      columns: [
+        { id: 'c1', sizing: { kind: 'fixed', widthMm: 40 }, valueType: 'text', align: 'left' },
+        { id: 'c2', sizing: { kind: 'fixed', widthMm: 20 }, valueType: 'text', align: 'left' },
+      ],
+      rows: [
+        { id: 'r1', rowClass: 'header', heightMm: 8 },
+        { id: 'r2', rowClass: 'data', heightMm: 8 },
+      ],
+    }),
+  },
 };
 
 /** Τα BIM entities δίνουν bounds μέσω του pre-computed `geometry.bbox` — ένα κοινό fixture. */

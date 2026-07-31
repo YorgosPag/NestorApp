@@ -30,6 +30,7 @@ import {
   calculateAnnotationSymbolBounds,
   calculateScaleBarBounds,
   calculateOpeningInfoTagBounds,
+  calculateTableBounds,
   calculateImageBounds,
 } from './bounds-annotation';
 // ADR-587 Φ10 — τα per-type μαθηματικά (πρώην private statics του BoundsCalculator).
@@ -118,6 +119,9 @@ export const HIT_TEST_BOUNDS_HANDLERS: Partial<Record<EntityType, EntityBoundsHa
   'scale-bar': calculateScaleBarBounds,
   // ADR-612 — opening info tag: rotation-aware world-mm box AABB (χωρίς annotative όρο).
   'opening-info-tag': calculateOpeningInfoTagBounds,
+  // ADR-739 Φ.Γ — γενικός πίνακας: AABB των 4 περιστραμμένων γωνιών (annotative — η
+  // κλίμακα σχεδίασης είναι μέρος του μεγέθους, όχι μόνο της ζωγραφικής).
+  table: calculateTableBounds,
   // ADR-654 — standalone raster image (entourage / furniture-plan sprite): AABB των 4
   // περιστραμμένων κορυφών. Ο τύπος που έλειπε και γέννησε ΟΛΗ τη Φ10.
   image: calculateImageBounds,

@@ -69,6 +69,8 @@ const A_HANDLED = [
   // DXF (21 — ΟΛΑ, incl. arc/dimension/angle-measurement που ήταν EMPTY πριν τη Φ9 Slice 2)
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'rectangle', 'rect', 'point',
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'text', 'mtext', 'spline', 'hatch', 'xline', 'ray',
+  // ADR-739 Φ.Γ — γενικός πίνακας: resolver provider (rotation-aware AABB των 4 γωνιών).
+  'table',
   'dimension', 'angle-measurement',
   // ADR-635 Φάση B — leader callout: resolver provider `verticesBounds` (path AABB).
   'leader',
@@ -112,6 +114,8 @@ const B_HANDLED = [
   'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'ellipse', 'text', 'mtext', 'spline',
   'rectangle', 'rect', 'point', 'dimension', 'angle-measurement', 'hatch', 'xline', 'ray',
   'annotation-symbol', 'scale-bar', 'opening-info-tag',
+  // ADR-739 Φ.Γ — γενικός πίνακας: resolver provider (rotation-aware AABB των 4 γωνιών).
+  'table',
   // ADR-635 Φάση B — leader callout: resolver provider `verticesBounds` (path AABB).
   'leader',
   // ADR-651 Φάση Ε — standalone image: resolver provider (rotation-aware rectangle bbox).

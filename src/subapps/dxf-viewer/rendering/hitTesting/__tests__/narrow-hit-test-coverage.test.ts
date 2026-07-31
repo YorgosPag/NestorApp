@@ -41,6 +41,9 @@ const PRECISE = [
   // Annotations: το AABB τους έχει άδειες γωνίες (κυκλικό σύμβολο / περιστραμμένη μπάρα ή
   // ταμπέλα / περιστραμμένη εικόνα) — χωρίς ακριβές test θα φωτίζονταν από το πουθενά.
   'annotation-symbol', 'scale-bar', 'opening-info-tag', 'image',
+  // ADR-739 Φ.Γ — πίνακας: περιστραμμένο point-in-box· ΟΛΟ το ορθογώνιο πιάνει (ένας
+  // πίνακας χωρίς πλέγμα, όπως το preset `detailSheet`, δεν έχει γραμμές να πικαριστούν).
+  'table',
   // BIM με cached outline/footprint → point-in-polygon (ADR-363 Bug 1: αλλιώς ο τοίχος
   // κέρδιζε πάντα το άνοιγμα, γιατί και τα δύο δέχονταν το ίδιο bbox pick).
   'opening', 'slab-opening', 'slab', 'wall', 'column', 'beam', 'foundation',

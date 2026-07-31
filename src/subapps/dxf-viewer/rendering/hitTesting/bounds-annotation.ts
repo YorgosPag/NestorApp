@@ -20,6 +20,9 @@ import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-612 — opening info tag broad-phase bbox SSoT (sibling of scale-bar, world-mm — no annotative term).
 import { calculateOpeningInfoTagBounds as computeOpeningInfoTagBoundsBox } from '../../bim/opening-info-tag/opening-info-tag-hit';
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-739 Φ.Γ — γενικός πίνακας: το ΙΔΙΟ bbox SSoT που διαβάζουν ο ζωγράφος και το narrow phase.
+import { calculateTableBounds as computeTableBoundsBox } from '../../bim/table/table-entity-hit';
+import type { TableEntity } from '../../types/table-entity';
 // ADR-651 Φάση Ε / ADR-654 — rotation-aware ορθογώνιο εικόνας: το ΙΔΙΟ vertex SSoT που
 // χρησιμοποιούν ο renderer (`ImageRenderer`) και το narrow-phase hit-test.
 import { imageEntityRectVertices, type ImageRectShape } from '../entities/shared/image-rect-vertices';
@@ -72,6 +75,18 @@ export function calculateScaleBarBounds(entity: EntityModel, tolerance: number):
 export function calculateOpeningInfoTagBounds(entity: EntityModel, tolerance: number): BoundingBox {
   const e = entity as unknown as OpeningInfoTagEntity;
   const bbox = computeOpeningInfoTagBoundsBox(e, tolerance);
+  return createBoundingBox(bbox.minX, bbox.minY, bbox.maxX, bbox.maxY);
+}
+
+/**
+ * ADR-739 Φ.Γ — γενικός πίνακας: το AABB των 4 περιστραμμένων γωνιών, padded με το
+ * `tolerance`. Ο πίνακας είναι **annotative**, οπότε το `computeTableBoundsBox` διαβάζει
+ * τη ζωντανή κλίμακα σχεδίασης — αλλιώς σε 1:50 το κουτί θα ήταν διπλάσιο από ό,τι
+ * ζωγραφίζεται και το marquee θα «έπιανε» κενό χαρτί.
+ */
+export function calculateTableBounds(entity: EntityModel, tolerance: number): BoundingBox {
+  const e = entity as unknown as TableEntity;
+  const bbox = computeTableBoundsBox(e, tolerance);
   return createBoundingBox(bbox.minX, bbox.minY, bbox.maxX, bbox.maxY);
 }
 

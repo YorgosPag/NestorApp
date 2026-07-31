@@ -22,6 +22,9 @@ import { SelectionCyclingStore, buildCandidatesFromHits, type EntityResolver } f
 import { serviceRegistry } from '../../services/ServiceRegistry';
 import { getImmediatePosition, getClientPosition } from '../cursor/ImmediatePositionStore';
 import { getImmediateTransform } from '../cursor/ImmediateTransformStore';
+// 🔴 2026-07-31 — ο κύριος καμβάς ΔΕΝ έχει `id`· το προηγούμενο `getElementById('dxf-canvas')`
+// έβγαινε πάντα `null` και το Shift+Space δεν πυροδοτούσε ΠΟΤΕ. Ένας επιλογέας, ένα σημείο.
+import { getMainDxfCanvas } from '../../rendering/utils/main-canvas-element';
 // ADR-659 — canvas pre-highlight of the currently-cycled candidate (zero-React, ADR-040).
 import { setHoveredEntity } from '../hover/HoverStore';
 // ADR-364 — Escape Command Bus SSoT
@@ -56,7 +59,7 @@ export function useSelectionCycling({ activeTool, onSelectEntity, resolveEntity 
     if (!screenPos) return;
 
     const transform = getImmediateTransform();
-    const canvas = document.getElementById('dxf-canvas') as HTMLCanvasElement | null;
+    const canvas = getMainDxfCanvas();
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const viewport = { width: rect.width, height: rect.height };

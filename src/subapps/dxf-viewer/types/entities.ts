@@ -746,6 +746,23 @@ export {
   DEFAULT_OPENING_INFO_TAG_TEXT,
 } from './opening-info-tag';
 
+// ADR-739 Φ.Γ: γενικός πίνακας N×M (annotative· διάταξη sheet-mm σε μοντέλο-χώρο).
+// Το ΜΟΝΤΕΛΟ (`types/table.ts`) μένει καθαρό και ανεξάρτητο από τη σκηνή· εδώ ρέει μόνο
+// η οντότητα που το τυλίγει.
+import type { TableEntity } from './table-entity';
+export type {
+  TableEntity,
+  TableEntityGeometry,
+  TableFramePoint,
+  TableBBox,
+  TableCellHit,
+} from './table-entity';
+export {
+  isTableEntity,
+  MIN_TABLE_COLUMN_WIDTH_MM,
+  MIN_TABLE_ROW_HEIGHT_MM,
+} from './table-entity';
+
 // ✅ ENTERPRISE: Additional entity types from scene.ts integration
 export interface BlockEntity extends BaseEntity {
   type: 'block';
@@ -1136,6 +1153,7 @@ export type Entity = (
   | AnnotationSymbolEntity   // ADR-583: standalone annotation symbol (North arrow first)
   | ScaleBarEntity           // ADR-583 Φ2: standalone graphic scale-bar
   | OpeningInfoTagEntity     // ADR-612: standalone opening info tag (3 editable numeric cells)
+  | TableEntity              // ADR-739 Φ.Γ: γενικός πίνακας N×M (annotative, ΜΙΑ μηχανή διάταξης)
   | ImageEntity              // ADR-651 Φάση Ε: standalone raster image (rectangle + rotation)
   | TopoSurfaceEntity        // ADR-662 Φ2β: τοπογραφική επιφάνεια (first-class selectable, thin/derived)
   // Οι BIM παραμετρικοί τύποι — η λίστα ζει ΜΙΑ φορά, στο `BimParametricEntity` παραπάνω.

@@ -42,6 +42,9 @@ import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-612 — opening info tag broad-phase bbox SSoT (sibling of scale-bar).
 import { calculateOpeningInfoTagBounds } from '../../bim/opening-info-tag/opening-info-tag-hit';
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-739 Φ.Γ — γενικός πίνακας: το ΙΔΙΟ bbox SSoT (marquee ΚΑΙ hover διαβάζουν το ίδιο).
+import { calculateTableBounds } from '../../bim/table/table-entity-hit';
+import type { TableEntity } from '../../types/table-entity';
 import { RECT_CORNERS, rectCornerWorld } from '../../bim/grips/rect-frame';
 
 /** Axis-aligned 2D bounding box (the canonical hit-test/bounds shape). */
@@ -184,6 +187,15 @@ function scaleBarBounds(entity: Entity): BoundingBox2D | null {
  * (`computeOpeningInfoTagGeometry`, sibling of `scaleBarBounds`). Makes the
  * tag window/crossing-marquee selectable.
  */
+/**
+ * ADR-739 Φ.Γ — γενικός πίνακας: το rotation-aware AABB του `computeTableEntityGeometry`
+ * (αδελφός του `openingInfoTagBounds`). Κάνει τον πίνακα επιλέξιμο με marquee.
+ */
+function tableBounds(entity: Entity): BoundingBox2D | null {
+  const bbox = calculateTableBounds(entity as unknown as TableEntity);
+  return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
+}
+
 function openingInfoTagBounds(entity: Entity): BoundingBox2D | null {
   const bbox = calculateOpeningInfoTagBounds(entity as unknown as OpeningInfoTagEntity);
   return { minX: bbox.minX, minY: bbox.minY, maxX: bbox.maxX, maxY: bbox.maxY };
@@ -221,6 +233,8 @@ export const ENTITY_BOUNDS_PROVIDERS: Partial<Record<EntityType, (entity: Entity
   'scale-bar': scaleBarBounds,
   // ── ADR-612 — opening info tag: rotation-aware world-mm box AABB (marquee-selectable) ──
   'opening-info-tag': openingInfoTagBounds,
+  // ── ADR-739 Φ.Γ — γενικός πίνακας: AABB των 4 περιστραμμένων γωνιών (annotative). ──
+  table: tableBounds,
   // ── ADR-651 Φάση Ε / ADR-654 — standalone raster image: rotation-aware rectangle bbox.
   // Delegates to `BoundsCalculator` (C, `case 'image'` → `calculateImageBounds`) ώστε
   // marquee ΚΑΙ hover/click να διαβάζουν ΤΗΝ ΙΔΙΑ συνάρτηση — ήταν δύο ξεχωριστές
