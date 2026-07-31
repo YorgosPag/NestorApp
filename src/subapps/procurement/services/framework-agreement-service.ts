@@ -11,6 +11,12 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type { AuthContext } from '@/lib/auth';
+import {
+  PROCUREMENT_RESOURCE,
+  loadOwnedProcurementDoc,
+  readOwnedProcurementDoc,
+  softDeleteOwnedProcurementDoc,
+} from './procurement-owned-doc';
 import type { FrameworkAgreementDoc } from './framework-agreement-doc';
 import type {
   CreateFrameworkAgreementDTO,
@@ -152,24 +158,28 @@ async function ensureAgreementNumberUnique(
   }
 }
 
+/** Ο πόρος αυτού του αρχείου — ένα σημείο, ώστε το όνομα να μη διαφωνήσει ποτέ. */
+const subjectOf = (agreementId: string) =>
+  ({ resource: PROCUREMENT_RESOURCE.FRAMEWORK_AGREEMENT, resourceId: agreementId }) as const;
+
 /**
  * Load an agreement and authorise the caller against it.
  *
- * The load + tenant-isolation guard is identical for every mutation, and a
- * `companyId` check that exists in two hand-copied places is one edit away from
- * existing in only one of them. Single owner. (N.0.2 / CHECK 3.28)
+ * ⚠️ Το σώμα του μετακόμισε στο `procurement-owned-doc`: η ίδια τετράδα
+ * βημάτων υπήρχε **και** στις άλλες έξι υπηρεσίες, οπότε ένας τοπικός φορτωτής
+ * ανά αρχείο είναι απλώς εφτά μικρότερα δίδυμα. Το όνομα μένει γιατί εκφράζει
+ * τον **πόρο**· η αλυσίδα ασφαλείας είναι πλέον μία (N.0.2 / CHECK 3.28).
  */
 async function loadOwnedAgreement(
   db: FirebaseFirestore.Firestore,
   ctx: AuthContext,
   agreementId: string,
 ): Promise<{ ref: FirebaseFirestore.DocumentReference; current: FrameworkAgreementDoc }> {
-  const ref = db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error(`Framework agreement ${agreementId} not found`);
-  const current = { id: snap.id, ...snap.data() } as FrameworkAgreementDoc;
-  if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
-  return { ref, current };
+  return loadOwnedProcurementDoc<FrameworkAgreementDoc>(
+    db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId),
+    ctx.companyId,
+    subjectOf(agreementId),
+  );
 }
 
 // ============================================================================
@@ -252,13 +262,16 @@ export async function getFrameworkAgreement(
   ctx: AuthContext,
   agreementId: string,
 ): Promise<FrameworkAgreementDoc | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId).get();
-    if (!snap.exists) return null;
-    const agreement = { id: snap.id, ...snap.data() } as FrameworkAgreementDoc;
-    if (agreement.companyId !== ctx.companyId) return null;
-    return agreement;
-  }, null);
+  // Δ — σιωπηλή πολιτική (ADR-742 §3.3): ξένο ≡ ανύπαρκτο.
+  return safeFirestoreOperation(
+    async (db) =>
+      readOwnedProcurementDoc<FrameworkAgreementDoc>(
+        db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId),
+        ctx.companyId,
+        subjectOf(agreementId),
+      ),
+    null,
+  );
 }
 
 export async function listFrameworkAgreements(
@@ -393,28 +406,17 @@ export async function softDeleteFrameworkAgreement(
   agreementId: string,
 ): Promise<void> {
   return safeFirestoreOperation(async (db) => {
-    const { ref, current } = await loadOwnedAgreement(db, ctx, agreementId);
-    if (current.isDeleted) return;
-
-    await ref.update(
-      sanitizeForFirestore({
-        isDeleted: true,
-        updatedAt: admin.firestore.Timestamp.now(),
-      }),
-    );
-    safeFireAndForget(
-      EntityAuditService.recordChange({
+    const deleted = await softDeleteOwnedProcurementDoc<FrameworkAgreementDoc>({
+      ref: db.collection(COLLECTIONS.FRAMEWORK_AGREEMENTS).doc(agreementId),
+      companyId: ctx.companyId,
+      performedBy: ctx.uid,
+      subject: subjectOf(agreementId),
+      audit: (current) => ({
         entityType: ENTITY_TYPES.FRAMEWORK_AGREEMENT,
-        entityId: agreementId,
         entityName: `${current.agreementNumber} — ${current.title}`,
-        action: 'soft_deleted',
-        changes: [],
-        performedBy: ctx.uid,
-        performedByName: null,
-        companyId: ctx.companyId,
       }),
-      'framework-agreement-service.softDelete',
-    );
-    logger.info('Framework agreement soft-deleted', { id: agreementId });
+      logTag: 'framework-agreement-service.softDelete',
+    });
+    if (deleted) logger.info('Framework agreement soft-deleted', { id: agreementId });
   });
 }

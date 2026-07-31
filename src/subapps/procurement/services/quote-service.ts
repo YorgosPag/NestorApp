@@ -11,6 +11,11 @@ import admin from 'firebase-admin';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import {
+  PROCUREMENT_RESOURCE,
+  loadOwnedProcurementDoc,
+  readOwnedProcurementDoc,
+} from './procurement-owned-doc';
 import type {
   Quote,
   QuoteStatus,
@@ -49,22 +54,29 @@ function auditEntry(
   };
 }
 
+/** Ο πόρος αυτού του αρχείου — ένα σημείο, ώστε το όνομα να μη διαφωνήσει ποτέ. */
+const subjectOf = (quoteId: string) =>
+  ({ resource: PROCUREMENT_RESOURCE.QUOTE, resourceId: quoteId }) as const;
+
 /**
  * Load a quote by id and assert tenant ownership. Returns the live `ref` (for a
- * follow-up write) alongside the hydrated doc. Throws `… not found` / `Forbidden`
- * — the SSoT guard shared by every mutation (update / applyExtractedData / …).
+ * follow-up write) alongside the hydrated doc — ο φύλακας που μοιράζεται κάθε
+ * μεταβολή (update / applyExtractedData / …).
+ *
+ * ⚠️ Το σώμα του μετακόμισε στο `procurement-owned-doc`: ρίχνει πλέον
+ * **τυποποιημένα** `ProcurementNotFoundError` / `ProcurementCrossTenantError`
+ * αντί για σκέτα `Error` που το σύνορο διάβαζε ως **κείμενο** (ADR-742 §7.4).
  */
 async function loadOwnedQuote(
   db: admin.firestore.Firestore,
   ctx: AuthContext,
   quoteId: string,
 ): Promise<{ ref: admin.firestore.DocumentReference; current: Quote }> {
-  const ref = db.collection(COLLECTIONS.QUOTES).doc(quoteId);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error(`Quote ${quoteId} not found`);
-  const current = { id: snap.id, ...snap.data() } as Quote;
-  if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
-  return { ref, current };
+  return loadOwnedProcurementDoc<Quote>(
+    db.collection(COLLECTIONS.QUOTES).doc(quoteId),
+    ctx.companyId,
+    subjectOf(quoteId),
+  );
 }
 
 // ============================================================================
@@ -190,21 +202,14 @@ export async function getQuote(
     throw new Error('Firestore unavailable');
   }
   const db = getAdminFirestore();
-  const snap = await db.collection(COLLECTIONS.QUOTES).doc(quoteId).get();
-  if (!snap.exists) {
-    logger.info('getQuote: document does not exist', { quoteId, companyId });
-    return null;
-  }
-  const quote = { id: snap.id, ...snap.data() } as Quote;
-  if (quote.companyId !== companyId) {
-    logger.warn('getQuote: tenant mismatch', {
-      quoteId,
-      requestedBy: companyId,
-      actualCompanyId: quote.companyId,
-    });
-    return null;
-  }
-  return quote;
+  // Δ — σιωπηλή πολιτική (ADR-742 §3.3): ξένο ≡ ανύπαρκτο. Ο SSoT καταγράφει
+  // ήδη την απόπειρα ως σήμα ασφαλείας (`Cross-tenant access blocked`), οπότε
+  // ο τοπικός `logger.warn` έφυγε — **ένα** σημείο καταγραφής, όχι δύο.
+  return readOwnedProcurementDoc<Quote>(
+    db.collection(COLLECTIONS.QUOTES).doc(quoteId),
+    companyId,
+    subjectOf(quoteId),
+  );
 }
 
 // ============================================================================

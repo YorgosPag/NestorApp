@@ -12,6 +12,12 @@ import { EntityAuditService } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import type { AuthContext } from '@/lib/auth';
+import {
+  PROCUREMENT_RESOURCE,
+  loadOwnedProcurementDoc,
+  readOwnedProcurementDoc,
+  softDeleteOwnedProcurementDoc,
+} from './procurement-owned-doc';
 import type {
   Material,
   CreateMaterialDTO,
@@ -31,6 +37,10 @@ const VALID_ATOE_CODES = new Set(ATOE_MASTER_CATEGORIES.map((c) => c.code));
 // ============================================================================
 // VALIDATION
 // ============================================================================
+
+/** Ο πόρος αυτού του αρχείου — ένα σημείο, ώστε το όνομα να μη διαφωνήσει ποτέ. */
+const subjectOf = (materialId: string) =>
+  ({ resource: PROCUREMENT_RESOURCE.MATERIAL, resourceId: materialId }) as const;
 
 function validateAtoeCategory(code: string): void {
   if (!VALID_ATOE_CODES.has(code)) {
@@ -159,13 +169,17 @@ export async function getMaterial(
   ctx: AuthContext,
   materialId: string,
 ): Promise<Material | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.MATERIALS).doc(materialId).get();
-    if (!snap.exists) return null;
-    const material = { id: snap.id, ...snap.data() } as Material;
-    if (material.companyId !== ctx.companyId) return null;
-    return material;
-  }, null);
+  // Δ — σιωπηλή πολιτική: ξένο ≡ ανύπαρκτο, ώστε η ανάγνωση να μη μαρτυρά
+  // ύπαρξη ξένου id (ADR-742 §3.3). Το route απαντά ήδη `notFound` στο `null`.
+  return safeFirestoreOperation(
+    async (db) =>
+      readOwnedProcurementDoc<Material>(
+        db.collection(COLLECTIONS.MATERIALS).doc(materialId),
+        ctx.companyId,
+        subjectOf(materialId),
+      ),
+    null,
+  );
 }
 
 export async function listMaterials(
@@ -215,12 +229,11 @@ export async function updateMaterial(
   dto: UpdateMaterialDTO,
 ): Promise<Material> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.MATERIALS).doc(materialId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`Material ${materialId} not found`);
-
-    const current = { id: snap.id, ...snap.data() } as Material;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedProcurementDoc<Material>(
+      db.collection(COLLECTIONS.MATERIALS).doc(materialId),
+      ctx.companyId,
+      subjectOf(materialId),
+    );
     if (current.isDeleted) throw new Error('Cannot update a deleted material');
 
     const updates: Partial<Material> = {
@@ -283,32 +296,17 @@ export async function softDeleteMaterial(
   materialId: string,
 ): Promise<void> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.MATERIALS).doc(materialId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`Material ${materialId} not found`);
-    const current = { id: snap.id, ...snap.data() } as Material;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
-    if (current.isDeleted) return;
-
-    await ref.update(
-      sanitizeForFirestore({
-        isDeleted: true,
-        updatedAt: admin.firestore.Timestamp.now(),
-      }),
-    );
-    safeFireAndForget(
-      EntityAuditService.recordChange({
+    const deleted = await softDeleteOwnedProcurementDoc<Material>({
+      ref: db.collection(COLLECTIONS.MATERIALS).doc(materialId),
+      companyId: ctx.companyId,
+      performedBy: ctx.uid,
+      subject: subjectOf(materialId),
+      audit: (current) => ({
         entityType: ENTITY_TYPES.MATERIAL,
-        entityId: materialId,
         entityName: `${current.code} — ${current.name}`,
-        action: 'soft_deleted',
-        changes: [],
-        performedBy: ctx.uid,
-        performedByName: null,
-        companyId: ctx.companyId,
       }),
-      'material-service.softDelete',
-    );
-    logger.info('Material soft-deleted', { id: materialId });
+      logTag: 'material-service.softDelete',
+    });
+    if (deleted) logger.info('Material soft-deleted', { id: materialId });
   });
 }
