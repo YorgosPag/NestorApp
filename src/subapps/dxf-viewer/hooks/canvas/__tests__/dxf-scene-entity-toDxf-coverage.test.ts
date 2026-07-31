@@ -56,6 +56,8 @@ describe('toDxf capability coverage — ζωντανό seam ↔ descriptor domai
         'line', 'polyline', 'lwpolyline', 'circle', 'arc', 'text', 'mtext', 'rectangle',
         'dimension', 'angle-measurement', 'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar',
         'opening-info-tag', 'image', 'floorplan-symbol',
+        // ADR-739 Φ.Γ — γενικός πίνακας: ρητός handler (αλλιώς `default` → null → αόρατος).
+        'table',
         // ADR-635 Φ B — leader: flat handler (`dxf-scene-entity-flat-handlers`) → DxfLeader.
         'leader',
         // ADR-662 Φ2β — topo-surface: flat handler → DxfTopoSurface (το footprint outline ρέει

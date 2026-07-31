@@ -75,6 +75,8 @@ const SEAM_B_PARAMETRIC = [
   'foundation', 'mep-fixture', 'electrical-panel', 'mep-radiator', 'mep-boiler',
   'mep-water-heater', 'mep-segment', 'furniture', 'floorplan-symbol', 'floor-finish',
   'hatch', 'mep-underfloor', 'xline', 'ray', 'scale-bar', 'opening-info-tag',
+  // ADR-739 Φ.Γ — γενικός πίνακας: 3 kinds (move / rotation / όριο στήλης), ΕΝΑ parametric commit.
+  'table',
   // ADR-683 Φ3 — εισαγόμενο πλέγμα: Seam B parametric, χωρίς ρητό Seam-C gate.
   'imported-mesh',
   // ADR-654 — raster image: όλες οι λαβές (move/rotation/corner) περνούν από το Seam-B
@@ -173,11 +175,11 @@ const domainSet = new Set<string>(GRIP_KIND_ENTITIES);
 
 describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discriminator domain (ADR-587 Φ7)', () => {
   // ── Domain closure & disjointness ─────────────────────────────────────────
-  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 28 + 1 = 38)', () => {
+  it('(A)∪(B)∪(C) === GRIP_KIND_ENTITIES (domain closure, 9 + 29 + 1 = 39)', () => {
     const union = [...SEAM_C_GATED, ...SEAM_B_PARAMETRIC, ...GENERIC_DISPATCH_ONLY];
     expect(asSorted(union)).toEqual(asSorted([...GRIP_KIND_ENTITIES]));
-    expect(GRIP_KIND_ENTITIES).toHaveLength(38);
-    expect(union).toHaveLength(38); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
+    expect(GRIP_KIND_ENTITIES).toHaveLength(39);
+    expect(union).toHaveLength(39); // καμία επικάλυψη → κάθε entity σε ΑΚΡΙΒΩΣ 1 partition
   });
 
   it('οι 3 partitions είναι pairwise disjoint', () => {
@@ -205,8 +207,8 @@ describe('Mode-aware grip-commit routing coverage — Seam C ↔ grip discrimina
     expect(SEAM_C_GATED).toHaveLength(9);
   });
 
-  it('(B) SEAM_B_PARAMETRIC = 28 (οι 30 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
-    expect(SEAM_B_PARAMETRIC).toHaveLength(28);
+  it('(B) SEAM_B_PARAMETRIC = 29 (οι 31 Seam-B ΜΕΙΟΝ opening + mep-manifold)', () => {
+    expect(SEAM_B_PARAMETRIC).toHaveLength(29);
     // opening + mep-manifold ΔΕΝ ανήκουν εδώ — ανεβαίνουν στο (A) λόγω action gates
     expect(SEAM_B_PARAMETRIC).not.toContain('opening');
     expect(SEAM_B_PARAMETRIC).not.toContain('mep-manifold');

@@ -50,6 +50,7 @@ import {
   commitDimensionGripDrag,
   commitScaleBarGripDrag,
   commitOpeningInfoTagGripDrag,
+  commitTableGripDrag,
   commitImageGripDrag,
   commitTopoSurfaceGripDrag,
 } from './grip-parametric-commits';
@@ -132,6 +133,8 @@ export const PARAMETRIC_COMMIT_HANDLERS: Partial<
   'scale-bar': commitScaleBarGripDrag,
   // ADR-612 — opening-info-tag (move / rotation / size; geometry DERIVED).
   'opening-info-tag': commitOpeningInfoTagGripDrag,
+  // ADR-739 Φ.Γ — πίνακας (move / rotation / όριο στήλης· διάταξη DERIVED+memoized).
+  table: commitTableGripDrag,
   // ADR-654 — raster image (move / rotation / 4 corner resize; flat params, no geometry cache).
   image: commitImageGripDrag,
   // ADR-662 §13 — τοπογραφική επιφάνεια. Ο ΜΟΝΑΔΙΚΟΣ commit που δεν κάνει patch την οντότητα

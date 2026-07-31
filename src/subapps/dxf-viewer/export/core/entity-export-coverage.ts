@@ -84,6 +84,19 @@ export const ENTITY_EXPORT_COVERAGE: Readonly<Record<RenderableEntityType, Entit
   // ADR-648 §2 — νέο εύρημα: ΔΕΝ τα πιάνει ούτε flatten ούτε annotation-expand → dropped ΚΑΙ στα δύο.
   'angle-measurement': { dxf: 'missing', tek: 'missing' },
   'opening-info-tag':  { dxf: 'missing', tek: 'missing' },
+  /**
+   * ADR-739 Φ.Γ — γενικός πίνακας. `decompose` ΚΑΙ στα δύο, μέσω `decomposeTable`
+   * (`export/core/table-to-primitives.ts`): η ίδια `TableLayout` που ζωγραφίζει η οθόνη
+   * γίνεται γραμμές + κείμενα στο `expandAnnotationsToPrimitives`, όπως ο scale-bar.
+   *
+   * ⚠️ **Το §12 του ADR έγραφε `dxf: 'native'` — αυτό είναι η κατάσταση ΜΕΤΑ τη Φάση Ε.**
+   * Ο writer του `ACAD_TABLE` δεν υπάρχει ακόμη· δηλωμένο `native` χωρίς writer σημαίνει
+   * ότι ο πίνακας **χάνεται σιωπηλά** στην εξαγωγή — ακριβώς το σφάλμα που αυτός ο
+   * πίνακας κάλυψης υπάρχει για να αποτρέπει. Το `decompose` δεν είναι μπάλωμα: το §10
+   * το απαιτεί ρητά ως fallback για στόχους πριν την R2004, άρα επιβιώνει και μετά τη Φ.Ε.
+   * TEK: `decompose` κατά την Απόφαση §14.5 (ο Τέκτων δεν έχει έννοια πίνακα).
+   */
+  table:               { dxf: 'decompose', tek: 'decompose' },
   // ── BIM (parametric) — DXF: flatten→primitives· TEK: native για wall/opening/roof/stair/furniture ─
   wall:            { dxf: 'decompose', tek: 'native' },
   opening:         { dxf: 'decompose', tek: 'native' },

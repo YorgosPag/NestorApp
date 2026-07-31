@@ -83,6 +83,8 @@ export { commitScaleBarGripDrag } from './grip-scale-bar-commit';
 // ADR-612 — opening-info-tag grip commit (move / rotation / size) lives in
 // grip-opening-info-tag-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.
 export { commitOpeningInfoTagGripDrag } from './grip-opening-info-tag-commit';
+// ADR-739 Φ.Γ — γενικός πίνακας (move / rotation / όριο στήλης).
+export { commitTableGripDrag } from './grip-table-commit';
 
 // ADR-654 — raster image grip commit (move / rotation / corner resize) lives in
 // grip-image-commit.ts (N.7.1 file-size split). Re-exported so the commit API stays one import.

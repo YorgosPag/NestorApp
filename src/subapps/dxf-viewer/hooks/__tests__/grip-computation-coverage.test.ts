@@ -63,6 +63,9 @@ describe('Grip-producer capability coverage — ζωντανό seam ↔ descript
         // DXF primitives (14)
         'line', 'polyline', 'circle', 'arc', 'text', 'dimension', 'angle-measurement',
         'hatch', 'xline', 'ray', 'annotation-symbol', 'scale-bar', 'opening-info-tag',
+        // ADR-739 Φ.Γ — γενικός πίνακας: move + rotation + λαβές ορίου στηλών (ΟΧΙ γραμμών —
+        // το πλήθος λαβών δεν επιτρέπεται να είναι ανάλογο των δεδομένων).
+        'table',
         // ADR-654 — raster image (entourage / furniture-plan sprite): move + rotation + 4 corners.
         'image',
         // BIM (21 — όλα εκτός railing/wall-covering/thermal-space/space-separator/mep-fitting).

@@ -35,6 +35,10 @@ import type {
 } from '../../types/annotation-symbol';
 import { isAnnotationSymbolEntity } from '../../types/annotation-symbol';
 import { isScaleBarEntity, type ScaleBarEntity } from '../../types/scale-bar';
+// ADR-739 Φ.Γ — ο αποδομητής πίνακα ζει σε δικό του module (N.7.1) και επαναχρησιμοποιεί
+// τη γέφυρα `tableLayoutToPrimitives` της Φ.Β — μηδέν νέα γεωμετρία εδώ.
+import { isTableEntity } from '../../types/table-entity';
+import { decomposeTable } from './table-to-primitives';
 import { DEFAULT_ANNOTATION_SYMBOL_SIZE_MM } from '../../types/annotation-symbol';
 import {
   getAnnotationSymbol,
@@ -96,6 +100,9 @@ export function decomposeAnnotationEntity(
 ): Entity[] | null {
   if (isAnnotationSymbolEntity(entity)) return decomposeAnnotationSymbol(entity, ctx);
   if (isScaleBarEntity(entity)) return decomposeScaleBar(entity, ctx);
+  // ADR-739 Φ.Γ — ο πίνακας αποδομείται σε γραμμές + κείμενα μέσω της ΙΔΙΑΣ διάταξης
+  // που ζωγραφίζει η οθόνη (§10 fallback· η native `ACAD_TABLE` διαδρομή είναι Φ.Ε).
+  if (isTableEntity(entity)) return decomposeTable(entity, ctx.drawingScale, ctx.sceneUnits);
   return null;
 }
 

@@ -35,6 +35,9 @@ import type { AnnotationSymbolEntity } from '../../types/annotation-symbol';
 import type { ScaleBarEntity } from '../../types/scale-bar';
 // ADR-612 — opening info tag lightweight entity for DXF render pipeline.
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
+// ADR-739 Φ.Γ — γενικός πίνακας για το DXF render pipeline.
+import { isTableEntity } from '../../types/table-entity';
+import type { TableEntity } from '../../types/table-entity';
 // ADR-587 Φ5 / N.7.1 — flat non-BIM handlers (image / topo-surface / leader) extracted to a
 // sibling module so this file stays ≤500 LOC; spread into TO_DXF_HANDLERS below.
 import { FLAT_NONBIM_TO_DXF_HANDLERS } from './dxf-scene-entity-flat-handlers';
@@ -360,6 +363,19 @@ export const TO_DXF_HANDLERS: Partial<Record<EntityType, ToDxfHandler>> = {
       ...base, type: 'opening-info-tag' as const,
       position: oit.position, angleRad: oit.angleRad, widthMm: oit.widthMm,
       topText: oit.topText, bottomLeftText: oit.bottomLeftText, bottomRightText: oit.bottomRightText,
+    } as DxfEntityUnion;
+  },
+  table: (entity, base) => {
+    // ADR-739 Φ.Γ — γενικός πίνακας (αδελφός του opening-info-tag). Οι παράμετροι
+    // απλώνονται στο ανώτατο επίπεδο· η ΠΑΡΑΓΩΓΗ `geometry` σκόπιμα ΔΕΝ προωθείται
+    // (ξαναϋπολογίζεται στην απόδοση). Χωρίς αυτή τη γραμμή ο φρεσκο-τοποθετημένος
+    // πίνακας πέφτει στο `default` → null → αόρατος και χωρίς λαβές (η παγίδα ADR-583).
+    if (!isTableEntity(entity)) return null;
+    const tbl = entity as TableEntity;
+    return {
+      ...base, type: 'table' as const,
+      position: tbl.position, angleRad: tbl.angleRad, styleId: tbl.styleId,
+      model: tbl.model, binding: tbl.binding, breaking: tbl.breaking,
     } as DxfEntityUnion;
   },
   'mep-segment': (entity, base) => {
