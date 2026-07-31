@@ -72,6 +72,12 @@ export async function syncUserProfileToFirestore(
 }
 
 export async function ensureDevUserProfile(): Promise<void> {
+  // Ο φρουρός ζει ΕΔΩ, όχι στο call site: η συνάρτηση γράφει `users/dev-admin` με
+  // `globalRole: 'admin'` μέσω Admin SDK (παρακάμπτει τους Firestore rules). Αν ο έλεγχος
+  // περιβάλλοντος έμενε στον καλούντα, κάθε νέος καλών θα τον ξανάγραφε — και μία παράλειψη
+  // αρκεί για να γεννηθεί ψεύτικος λογαριασμός στην παραγωγή. Ένα σημείο, αδύνατο να παρακαμφθεί.
+  if (process.env.NODE_ENV !== 'development') return;
+
   try {
     const response = await fetch(API_ROUTES.ADMIN.ENSURE_USER_PROFILE, {
       method: 'POST',

@@ -62,8 +62,11 @@ const baseGET = async (request: NextRequest) => {
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
       logger.info('[Notifications/Preferences] Fetching preferences', { userId: ctx.uid });
 
-      // Fetch user preferences from Firestore
-      const docRef = getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
+      // Το προφίλ χρήστη ζει στο USERS — εκεί το γράφει το `syncUserProfileToFirestore`
+      // (ADR-100). Το CONTACTS είναι το CRM ευρετήριο επαφών, με δικά του ids· ένα
+      // `contacts/{authUid}` δεν υπάρχει ποτέ, οπότε αυτό το GET γύριζε defaults για ΚΑΘΕ
+      // χρήστη και το PUT έγραφε σε ξένο χώρο ονομάτων. Ένα uid, ένα collection.
+      const docRef = getAdminFirestore().collection(COLLECTIONS.USERS).doc(ctx.uid);
       const docSnapshot = await docRef.get();
 
       if (!docSnapshot.exists) {
@@ -98,8 +101,8 @@ const basePUT = async (request: NextRequest) => {
 
       logger.info('[Notifications/Preferences] Updating preferences', { userId: ctx.uid });
 
-      // Update user preferences in Firestore
-      const docRef = getAdminFirestore().collection(COLLECTIONS.CONTACTS).doc(ctx.uid);
+      // Ίδιο collection με το GET — βλ. σχόλιο εκεί. Γράφε όπου διαβάζεις.
+      const docRef = getAdminFirestore().collection(COLLECTIONS.USERS).doc(ctx.uid);
       await docRef.set(
         {
           notificationPreferences: body,
