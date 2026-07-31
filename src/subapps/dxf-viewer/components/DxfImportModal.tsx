@@ -211,7 +211,13 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                     </DialogTitle>
                 </DialogHeader>
 
-                <form id="dxf-import-form" onSubmit={handleSubmit}>
+                {/* 🔴 `min-w-0`: το `DialogContent` είναι **grid**, άρα το `<form>` είναι grid item με
+                    `min-width: auto` — η στήλη πλαταίνει όσο το min-content του **φαρδύτερου**
+                    παιδιού και ΟΛΑ τα αδέρφια (header, τίτλος) τεντώνονται μαζί της. Χωρίς αυτό,
+                    το `truncate` στο όνομα αρχείου είναι **ανενεργό**: το `white-space: nowrap`
+                    κρατά το min-content στο πλήρες πλάτος του κειμένου και το `overflow:hidden`
+                    δεν το μειώνει. Εδώ κόβεται η αλυσίδα — μετρημένο 2026-07-31: 539px → 500px. */}
+                <form id="dxf-import-form" onSubmit={handleSubmit} className="min-w-0">
                     <ModalFormSection>
                         <ModalField
                             label={getFileLabel()}
@@ -232,21 +238,43 @@ const DxfImportModal: React.FC<DxfImportModalProps> = ({
                                 className="hidden"
                             />
 
-                            {/* Centralized Button for file selection */}
+                            {/* Centralized Button for file selection.
+                                🔴 Το ΟΝΟΜΑ ΑΡΧΕΙΟΥ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ ΝΑ ΟΡΙΖΕΙ ΤΟ ΠΛΑΤΟΣ ΤΟΥ DIALOG.
+                                Το `Button` φέρει `whitespace-nowrap` (shadcn base): το min-content του
+                                κειμένου νικά το `w-full`, οπότε ένα μακρύ όνομα φούσκωνε το κουμπί και
+                                **παρέσυρε ΟΛΟ το δέντρο** — header, τίτλο, form, labels. Μετρημένο
+                                2026-07-31 με `2026-07-22 - Τοπογραφικό διάγραμμα - Ο.Τ. 47 (…).dxf`:
+                                dialog 500px, περιεχόμενο **539px** ⇒ 64px έξω από το παράθυρο.
+                                `min-w-0` (αναιρεί το `min-width:auto` του flex item) + `truncate`
+                                στο κείμενο ⇒ το κουμπί δεν ζητά ΠΟΤΕ πάνω από το διαθέσιμο πλάτος.
+                                Ο τύπος αρχείου δεν χάνεται με το κόψιμο: τον λέει η γραμμή από κάτω. */}
                             <Button
                                 type="button"
                                 onClick={handleFileButtonClick}
                                 disabled={isLoading}
                                 variant="outline"
-                                className={getSelectStyles().trigger}
+                                className={`${getSelectStyles().trigger} min-w-0`}
                             >
                                 {getFileIcon()}
-                                {selectedFile ? selectedFile.name : t('importModal.selectFile')}
+                                <span className="min-w-0 truncate">
+                                    {selectedFile ? selectedFile.name : t('importModal.selectFile')}
+                                </span>
                             </Button>
 
-                            {/* 🏢 ENTERPRISE: Show file type indicator */}
+                            {/* 🏢 ENTERPRISE: Show file type indicator.
+                                🔴 ΟΧΙ `text-primary`: το `--primary` είναι χρώμα **γεμίσματος** (φόντο
+                                κουμπιού), όχι χρώμα κειμένου — πάνω στο σκούρο φόντο του modal έβγαινε
+                                σκούρο μπλε σε σκούρο μπλε και το «DXF αρχείο — θα φορτωθεί ως κάτοψη»
+                                ήταν πρακτικά αόρατο (αναφορά Giorgio 2026-07-31). Το `--text-success`
+                                είναι το **theme-aware SSoT** του ADR-365: green-700 στο φωτεινό,
+                                αυτόματα green-400 στο σκοτεινό — αναγνώσιμο και στα δύο θέματα.
+                                ⚠️ Το `colors.text.info` έχει ΤΟ ΙΔΙΟ ελάττωμα — σταθερή σκούρα μπλε
+                                απόχρωση, δεν αντιστρέφεται στο σκοτεινό θέμα.
+                                (Η ωμή utility δεν γράφεται εδώ ούτε ως παράδειγμα: CHECK 3.7 και 3.26
+                                σαρώνουν κείμενο, όχι AST — δεν αφαιρούν σχόλια, οπότε την έβλεπαν ως
+                                πραγματική χρήση και μπλόκαραν το commit.) */}
                             {selectedFile && fileType && (
-                                <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_SM} ${fileType === 'pdf' ? 'text-destructive' : 'text-primary'}`}>
+                                <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.MARGIN.TOP_SM} ${fileType === 'pdf' ? 'text-destructive' : colors.text.success}`}>
                                     {fileType === 'pdf'
                                         ? t('importModal.fileTypePdf')
                                         : t('importModal.fileTypeDxf')}

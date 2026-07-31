@@ -16,6 +16,7 @@
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
 import React, { useState } from 'react';
 import { Key, AlertTriangle, Mail, RefreshCw } from 'lucide-react';
+import { ConnectedAgentsList } from '@/components/account/ConnectedAgentsList';
 import { SessionsList } from '@/components/account/SessionsList';
 import { TwoFactorEnrollment } from '@/components/account/TwoFactorEnrollment';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -174,6 +175,11 @@ export function SecurityPageContent() {
           }}
         />
       )}
+
+      {/* Connected Agents Section — ADR-738 §6: το άλλο μισό της συγκατάθεσης.
+          Μπαίνει δίπλα στις συνεδρίες γιατί απαντά την ίδια ερώτηση για
+          διαφορετικό είδος πρόσβασης: «ποιος μπορεί να δει τα δεδομένα μου;» */}
+      <ConnectedAgentsList />
 
       {/* Token Refresh Section */}
       <Card className={borders.getElementBorder('card', 'default')}>
