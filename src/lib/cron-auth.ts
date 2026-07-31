@@ -1,14 +1,20 @@
 /**
  * =============================================================================
- * CRON AUTHORIZATION — SSoT for Vercel Cron job authentication
+ * CRON AUTHORIZATION — SSoT for scheduled-job authentication
  * =============================================================================
  *
- * Centralized verification of Vercel Cron requests.
- * Vercel sends CRON_SECRET as Bearer token in the Authorization header.
+ * Centralized verification of scheduled-job requests. The caller sends CRON_SECRET
+ * either as a Bearer token in the Authorization header or in `X-Cron-Secret`.
  *
  * SSoT: ALL cron routes must use this module instead of local copies.
  *
+ * ⚠️ Το module γράφτηκε για Vercel Cron. Από ADR-739 ο καλών είναι μια **Coolify
+ * Scheduled Task** στο Netcup που χτυπά το `/api/cron/dispatch` — το Vercel είναι
+ * παγωμένο από 2026-05-09 και το `vercel.json` δεν εκτελείται. Το συμβόλαιο (δύο
+ * επικεφαλίδες, secure default όταν λείπει το μυστικό) δεν άλλαξε· άλλαξε ο καλών.
+ *
  * @module lib/cron-auth
+ * @see ADR-739 — το *πρόγραμμα* (τι τρέχει πότε) ζει στο src/config/cron-schedule.ts
  */
 
 import { NextRequest, NextResponse } from 'next/server';

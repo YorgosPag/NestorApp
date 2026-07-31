@@ -1177,6 +1177,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     rulesRange: [5180, 5183],
     matrix: denyAllMatrix(),
   },
+  // ─── ΧΡΟΝΟΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ (ADR-739) ───────────────────────────────────────
+  // Το `deny_all` εδώ δεν προστατεύει δεδομένα — προστατεύει το **ρολόι**. Το
+  // έγγραφο κρατά `leaseExpiresAt`· όποιος το γράψει παρατείνει ένα lease επ'
+  // αόριστον και ο dispatcher προσπερνά σιωπηλά την εργασία. Το αποτέλεσμα είναι
+  // «τα αντίγραφα ασφαλείας σταμάτησαν» χωρίς καμία άλλη συλλογή να αλλάξει και
+  // χωρίς κανένα σφάλμα — ακριβώς το σχήμα της τρίμηνης σιωπής που γέννησε το
+  // ADR-739. Γι' αυτό ρητή άρνηση και ΟΧΙ εμπιστοσύνη στο default-deny.
+  {
+    collection: 'cron_job_state',
+    pattern: 'deny_all',
+    testFile: 'tests/firestore-rules/suites/cron-job-state.rules.test.ts',
+    rulesRange: [5194, 5196],
+    matrix: denyAllMatrix(),
+  },
 ] as const;
 
 /**

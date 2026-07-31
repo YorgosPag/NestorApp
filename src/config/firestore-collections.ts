@@ -218,6 +218,23 @@ export const COLLECTIONS = {
   /** Ενεργές συγκαταθέσεις χρήστη→client — η λίστα που ο χρήστης ανακαλεί. */
   OAUTH_CONSENTS: 'oauth_consents',
 
+  // ⏱️ ΧΡΟΝΟΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ (ADR-739)
+  /**
+   * Κατάσταση εκτέλεσης ανά προγραμματισμένη εργασία — ένα έγγραφο ανά `slug`
+   * (`lastSuccessAt`, `leaseExpiresAt`, `consecutiveFailures`).
+   *
+   * ⚠️ **deny-all** στο firestore.rules: γράφεται αποκλειστικά από το Admin SDK μέσα
+   * από τον dispatcher. Ένας client που μπορούσε να γράψει εδώ θα μπορούσε να
+   * παρατείνει ένα lease επ' αόριστον — δηλαδή να **σταματήσει τα αντίγραφα ασφαλείας**
+   * χωρίς να αγγίξει τίποτε άλλο.
+   *
+   * Το ID του εγγράφου είναι το `slug` της εργασίας και **όχι** enterprise ID: το
+   * κλείδωμα απαιτεί ντετερμινιστικό κλειδί — δύο εκτελέσεις πρέπει να συγκρούονται
+   * στο **ίδιο** έγγραφο, αλλιώς δεν υπάρχει κλείδωμα. Ίδιο σκεπτικό με τα singleton
+   * έγγραφα ρυθμίσεων κάτω από `system/`.
+   */
+  CRON_JOB_STATE: 'cron_job_state',
+
   // 📋 AUDIT LOGS
   SYSTEM_AUDIT_LOGS: process.env.NEXT_PUBLIC_SYSTEM_AUDIT_LOGS_COLLECTION || 'system_audit_logs',
   /** Cloud Function audit log (orphan cleanup, system events) */
