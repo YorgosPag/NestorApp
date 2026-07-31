@@ -15,7 +15,6 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { FieldValue } from 'firebase-admin/firestore';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateProjectId, generateNavigationId } from '@/services/enterprise-id.service';
@@ -32,10 +31,11 @@ import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-au
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
 import type { AuditFieldChange } from '@/types/audit-trail';
+import { invalidateProjectCaches } from '../_shared/project-cache';
 
 const logger = createModuleLogger('ProjectsCreateRoute');
 
-const CACHE_KEY_PREFIX = 'api:projects:list';
+
 
 /**
  * Structural subset we care about on the server — every other extended
@@ -228,12 +228,8 @@ export const POST = withHighRateLimit(
           }
         }
 
-        // 🔄 Invalidate cache for this tenant
-        const cache = EnterpriseAPICache.getInstance();
-        cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
-        cache.delete(`${CACHE_KEY_PREFIX}:all`);
-        cache.delete('api:projects:bootstrap:admin');
-        cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
+        // 🔄 Invalidate cache for this tenant — SSoT (ADR-742 §7sexies)
+        invalidateProjectCaches(ctx.companyId);
 
         // ADR-029 Phase D: search_documents written by Cloud Function onProjectWrite.
 

@@ -9,15 +9,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { isRoleBypass } from '@/lib/auth/roles';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import type { ProjectAddress } from '@/types/project/addresses';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { createModuleLogger } from '@/lib/telemetry';
+import { loadOwnedProject } from '../_shared/project-owned-doc';
 import {
   handleUpdateProject,
   handleDeleteProject,
@@ -27,8 +24,6 @@ import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
 } from './project-mutations.types';
-
-const logger = createModuleLogger('ProjectRoute');
 
 // =============================================================================
 // FORCE DYNAMIC
@@ -62,26 +57,12 @@ async function handleGet(
 
   const handler = withAuth<ApiSuccessResponse<ProjectGetResponse>>(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const adminDb = getAdminFirestore();
-      const projectRef = adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId);
-      const projectDoc = await projectRef.get();
-
-      if (!projectDoc.exists) {
-        throw new ApiError(404, 'Project not found');
-      }
-
-      const projectData = projectDoc.data();
-
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-      if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-        throw new ApiError(403, 'Access denied - Project not found');
-      }
-      if (isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-        logger.info('[SUPER_ADMIN] Cross-tenant project view', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
-      }
+      // ADR-742 §7sexies: «υπάρχει;» και «δικό μου;» απαντούν με το **ίδιο**
+      // σφάλμα, από τον ίδιο φορτωτή. Δεν ξαναγράφεται εδώ η αλυσίδα.
+      const { id, data } = await loadOwnedProject({ projectId, caller: ctx, action: 'view' });
 
       return apiSuccess<ProjectGetResponse>(
-        { project: { id: projectDoc.id, ...projectData } as ProjectGetResponse['project'] },
+        { project: { id, ...data } as ProjectGetResponse['project'] },
         'Project fetched successfully'
       );
     },

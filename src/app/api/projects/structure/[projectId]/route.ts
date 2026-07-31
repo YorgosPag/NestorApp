@@ -28,6 +28,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { getErrorMessage } from '@/lib/error-utils';
+import { checkProjectAccess, PROJECT_NOT_FOUND_MESSAGE } from '../../_shared/project-ownership';
 
 const logger = createModuleLogger('ProjectStructureRoute');
 
@@ -76,6 +77,23 @@ export const GET = withStandardRateLimit(async function GET(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse<StructureResponse>> => {
       logger.info('[Projects/Structure] Loading structure', { projectId, uid: ctx.uid, companyId: ctx.companyId });
 
+      /**
+       * Το **ένα** «δεν βρέθηκε» αυτής της διαδρομής — ADR-742 §7.1.
+       *
+       * Η μεταμφίεση ακολουθεί **το σχήμα της διαδρομής**: εδώ το σύρμα δεν
+       * είναι `ApiError` αλλά `{ success, error, projectId }`, οπότε ένα κοινό
+       * εργοστάσιο με τις άλλες εννιά διαδρομές θα πρόδιδε τη διαφορά **με το
+       * ίδιο το σχήμα**. Κοινό μένει το **κείμενο** (`PROJECT_NOT_FOUND_MESSAGE`),
+       * που είναι και το μόνο που ο πελάτης μπορεί να συγκρίνει μεταξύ
+       * διαδρομών. Το καλούν **και** ο γνήσιος κλάδος **και** η άρνηση.
+       */
+      const projectNotFoundResponse = (): NextResponse<StructureResponse> =>
+        NextResponse.json({
+          success: false,
+          error: PROJECT_NOT_FOUND_MESSAGE,
+          projectId,
+        }, { status: 404 });
+
       try {
         // ============================================================================
         // STEP 1: VERIFY PROJECT OWNERSHIP (Tenant Isolation)
@@ -88,23 +106,19 @@ export const GET = withStandardRateLimit(async function GET(
 
         if (!projectDoc.exists) {
           logger.info('Project not found', { projectId });
-          return NextResponse.json({
-            success: false,
-            error: 'Project not found',
-            projectId
-          }, { status: 404 });
+          return projectNotFoundResponse();
         }
 
         const projectData = projectDoc.data();
-        const isSuperAdmin = isRoleBypass(ctx.globalRole);
-        if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-          logger.warn('TENANT ISOLATION VIOLATION: attempted to access project', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
-          return NextResponse.json({
-            success: false,
-            error: 'Access denied - Project not found',
-            projectId
-          }, { status: 403 });
+        // ADR-742 §7ter.4: η **απόφαση** έρχεται από τον κοινό φύλακα (PDP)· η
+        // **επιβολή** μένει εδώ, γιατί μόνο αυτή η διαδρομή ξέρει το σχήμα της.
+        if (checkProjectAccess({ projectData, caller: ctx, projectId, action: 'structure' }) === 'denied') {
+          return projectNotFoundResponse();
         }
+
+        // Ξεχωριστή ερώτηση από την ιδιοκτησία: **προνόμιο**, όχι κυριότητα —
+        // ρυθμίζει το εύρος των ερωτημάτων για κτήρια/ιδιοκτησίες παρακάτω.
+        const isSuperAdmin = isRoleBypass(ctx.globalRole);
 
         const project = { id: projectDoc.id, ...projectData } as Record<string, unknown> & { id: string; name?: string };
         logger.info('Project found and ownership verified', { projectName: project.name || 'Unnamed Project' });

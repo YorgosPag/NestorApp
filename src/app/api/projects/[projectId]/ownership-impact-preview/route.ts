@@ -1,16 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { apiSuccess, ApiError, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { isRoleBypass } from '@/lib/auth/roles';
-import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { previewOwnershipMutationImpact } from '@/lib/firestore/project-ownership-mutation-impact.service';
-import type { Project } from '@/types/project';
-import type { ProjectMutationImpactPreview } from '@/types/project-mutation-impact';
+import { projectPreviewRoute } from '../../_shared/project-preview-route';
 
 const OwnershipImpactRequestSchema = z.object({
   operation: z.enum(['finalize', 'unlock']),
@@ -19,38 +9,12 @@ const OwnershipImpactRequestSchema = z.object({
   tableStatus: z.enum(['draft', 'finalized', 'registered']),
 });
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ projectId: string }> },
-): Promise<NextResponse> {
-  const { projectId } = await segmentData!.params;
-
-  const handler = withAuth<ApiSuccessResponse<ProjectMutationImpactPreview>>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const parsed = safeParseBody(OwnershipImpactRequestSchema, await req.json());
-      if (parsed.error) {
-        throw new ApiError(400, 'Validation failed');
-      }
-
-      const db = getAdminFirestore();
-      const projectDoc = await db.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-      if (!projectDoc.exists) {
-        throw new ApiError(404, 'Project not found');
-      }
-
-      const project = { id: projectDoc.id, ...(projectDoc.data() ?? {}) } as Project;
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-      if (!isSuperAdmin && project.companyId !== ctx.companyId) {
-        throw new ApiError(403, 'Access denied - Project not found');
-      }
-
-      const preview = await previewOwnershipMutationImpact(project.id, parsed.data);
-      return apiSuccess(preview);
-    },
-    { permissions: 'projects:projects:update' },
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+/**
+ * @rateLimit STANDARD — επιβάλλεται από τον `projectPreviewRoute` μαζί με την
+ * ταυτότητα, το δικαίωμα και τον φύλακα ιδιοκτησίας (ADR-742 §7.8).
+ */
+export const POST = projectPreviewRoute({
+  schema: OwnershipImpactRequestSchema,
+  action: 'ownership-impact-preview',
+  preview: ({ project, input }) => previewOwnershipMutationImpact(project.id, input),
+});

@@ -36,6 +36,7 @@ import type { ProjectAddress } from '@/types/project/addresses';
 import type { LandownerEntry } from '@/types/ownership-table';
 import { withHighRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
+import { projectListCacheKey } from '../_shared/project-cache';
 
 const logger = createModuleLogger('ProjectsListRoute');
 
@@ -57,7 +58,7 @@ interface ProjectListResponse {
 // CONSTANTS
 // ============================================================================
 
-const CACHE_KEY_PREFIX = 'api:projects:list';
+
 
 // Cache-key slot decision delegated to ADR-356 SSOT helper
 // (`resolveSuperAdminProjectScope`) — see usage in handler below.
@@ -118,7 +119,7 @@ export const GET = withHighRateLimit(
       // ============================================================================
 
       const cache = EnterpriseAPICache.getInstance();
-      const tenantCacheKey = `${CACHE_KEY_PREFIX}:${scope.cacheSlot}`;
+      const tenantCacheKey = projectListCacheKey(scope.cacheSlot);
 
       // ADR-354 entry point #6: client-side bust via `?t=<ts>` query param
       // (used by useFirestoreProjects listener on super-admin company switch).
