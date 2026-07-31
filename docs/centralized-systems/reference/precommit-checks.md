@@ -2,10 +2,10 @@
 
 **Status:** Active
 **Owner:** Γιώργος Παγώνης
-**Last updated:** 2026-07-29 (ADR-727 — προστέθηκε η CHECK 3.33)
+**Last updated:** 2026-07-31 (ADR-744 — προστέθηκε η CHECK 3.34)
 **Referenced from:** `CLAUDE.md` SOS N.11
 
-Full details for pre-commit checks CHECK 3.13 – CHECK 3.18, plus CHECK 3.22–3.25, 3.30 and **3.33**. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
+Full details for pre-commit checks CHECK 3.13 – CHECK 3.18, plus CHECK 3.22–3.25, 3.30, **3.33** and **3.34**. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
 
 ⚠️ **Το hook είναι η αλήθεια, όχι αυτό το αρχείο.** Οι CHECK 3.26–3.29, 3.31 και 3.32 **λείπουν** από εδώ (ζουν στον πίνακα του `CLAUDE.md` N.11 και στο `scripts/git-hooks/pre-commit`). Πριν επικαλεστείς «ποιοι αριθμοί είναι πιασμένοι», άνοιξε το hook.
 
@@ -644,6 +644,99 @@ Fixtures χτίζονται προγραμματιστικά σε tempdir. Env o
 **Mutation-verified (4/4)**: επαναφορά ρολογιού → 18 κόκκινα· αφαίρεση CRLF normalization → 2·
 `classify` πάντα `fresh` → 11· fingerprint αγνοεί περιεχόμενο → 6. **Πράσινο test δεν αποδεικνύει
 τίποτα μέχρι να δεις ότι μπορεί να κοκκινίσει.**
+
+---
+
+## CHECK 3.34 — i18n Shell-Slice Freshness (ADR-744)
+
+### Rule
+Το `src/i18n/generated/shell-slice.el.json` είναι **ολόκληρο** το σύγχρονο i18n bootstrap και είναι
+**παραγόμενο** από τη στατική κλειστότητα εισαγωγών των layouts, κομμένο σε **επίπεδο κλειδιού**.
+Πρέπει ανά πάσα στιγμή να ταυτίζεται με ό,τι θα παρήγαγε **τώρα** ο
+`scripts/generate-i18n-shell-slice.js`.
+**ZERO TOLERANCE — δεν είναι ratchet, δεν υπάρχει baseline και δεν πρέπει να δημιουργηθεί ποτέ.**
+
+### Γιατί υπάρχει
+Το `config.ts` είχε **δύο** χειρόγραφες λίστες namespace — 9 σύγχρονα (295.093 bytes) και 72
+`CRITICAL_NAMESPACES` ασύγχρονα — που είχαν **αποκλίνει κατά 63** χωρίς κανένα gate να τις συγκρίνει.
+Αποτέλεσμα: ωμό κλειδί στην οθόνη (`search.globalSearch`) ενώ η μετάφραση **υπήρχε**· απλώς δεν είχε
+φορτώσει. Ίδιο σχήμα με το ADR-727: **το πράσινο σήμαινε «κανείς δεν κοίταξε».**
+
+Τώρα η λίστα **παράγεται** από τον κώδικα ⇒ η απόκλιση γίνεται δομικά αδύνατη.
+**295.093 → 184.599 bytes** (−37,4%), και 63 → 0 namespaces με πιθανό ωμό κλειδί **στο shell**.
+
+⚠️ **Γιατί όχι μικρότερο — μετρημένη διόρθωση, όχι συντηρητισμός.** Τα **9** namespaces που ήταν
+100% σύγχρονα πριν μένουν **ολόκληρα** (173.720 από αυτά τα bytes). Η πρώτη εκδοχή τα έκοψε κι αυτά
+σε επίπεδο κλειδιού και ανέφερε 35.140 bytes· ζωντανή χρήση έδειξε το `/dxf/viewer` να βάφει το ωμό
+`dxfViewer.checkingPermissions` (`src/app/dxf/viewer/page.tsx:43` → `common.json`, που είχε πέσει
+34.201 → 5.076 bytes). **Η αιτία ήταν ο ορισμός, όχι η υλοποίηση:** μια **σελίδα** είναι route
+boundary, άρα εκτός shell closure εξ ορισμού — σωστό για *μετάβαση*, λάθος για **cold load**, όπου το
+page βάφει στο **ίδιο καρέ** με το layout. Ο ισχυρισμός «καμία οπισθοδρόμηση» είχε επαληθευτεί σε
+επίπεδο **namespace** ενώ η αλλαγή ήταν σε επίπεδο **κλειδιού** — λάθος μονάδα μέτρησης.
+
+Η λίστα των 9 είναι **παγωμένη ιστορία** (ό,τι έστελνε το `config.ts:41-44`), **μόνο συρρικνώνεται**
+με per-route slices. Κλειδωμένη με regression anchor: 9 tests `whole === true` + ονομαστικό test για
+τα τρία κλειδιά του `/dxf/viewer`. Μετρήθηκε ότι η ένωση όλων των pages σε ένα slice **δεν** είναι
+δρόμος: **131 ανεπίλυτες δυναμικές `t()`** ⇒ χρειάζεται ανά-διαδρομή.
+
+### Enforcement (Defense in Depth)
+
+| Layer | Where | Mode | Speed |
+|-------|-------|------|-------|
+| **Layer 1 — pre-commit** | `scripts/run-checks-parallel.js` CHECK 3.34 (**Phase 1**, worker thread) | **χωρίς module graph** — 4 έλεγχοι κατά του manifest | **0,7s** μετρημένα |
+| **Layer 2 — CI** | `.github/workflows/i18n-shell-slice.yml` | **full** — ανακατασκευή γράφου + regenerate + diff | ~21s + install |
+| **Layer 3 — runtime** | `src/i18n/__tests__/shell-slice-no-raw-keys.test.ts` | i18next με **μόνο** το slice | ~2s |
+
+### Τι βλέπει το Layer 1 (και τι όχι)
+| | |
+|---|---|
+| **A** ακεραιότητα artifact | bytes ↔ sha256 του manifest ⇒ χειρόγραφη επεξεργασία |
+| **B** locale drift | ξανα-κλαδεύει το **καταγεγραμμένο** σύνολο κλειδιών ⇒ **ΑΚΡΙΒΕΣ** |
+| **C** shell surface drift | fingerprint κάθε staged shell module ⇒ αλλαγμένη `t()` **ή** ακμή import |
+| **D** resolution drift | νέο αρχείο που λύνει specifier καταγεγραμμένο ως unresolved |
+
+⚠️ **Δεν βλέπει:** αλυσίδα re-export ξαναγραμμένη **εκτός** shell module. Σπάνιο, πραγματικό, και
+γι' αυτό υπάρχει το Layer 2. **Η δήλωση του κενού είναι το ζητούμενο.**
+
+### Scope (pre-commit)
+- Script: `scripts/check-i18n-shell-slice.js`
+- Triggers: staged locale JSON **ή** οποιοδήποτε `.ts/.tsx` **ή** `src/i18n/generated/**` **ή** `.i18n-shell-slice.json`
+- Escape: `SKIP_I18N_SHELL_SLICE=1` (justify to Giorgio)
+
+### Πώς διορθώνεται
+```bash
+npm run generate:i18n-shell-slice
+git add src/i18n/generated/
+```
+Αν αντ' αυτού αναφέρει **ανεπίλυτη δυναμική `t()`**: ο generator βρήκε κλήση της οποίας το κλειδί δεν
+μπορεί να γνωρίζει (`t(step.titleKey)`) και **αρνείται να μαντέψει** — το μάντεμα είναι ακριβώς ο
+τρόπος που φτάνει ωμό κλειδί στην οθόνη. Χαρακτήρισε το call site στο `.i18n-shell-slice.json` →
+`dynamicKeyPolicy`, με λόγο που **μέτρησες**.
+
+### ⚠️ ΜΗΝ
+- **ΜΗΝ** προσθέσεις namespace με το χέρι στο `src/i18n/config.ts` — πρόσθεσε το `useTranslation(...)`
+  εκεί που ζει το component και ξανατρέξε τον generator.
+- **ΜΗΝ** κάνεις τον walk να ακολουθεί `next/dynamic` — μετρήθηκε: 393 αρχεία → **7.492 / 2,93 MB**.
+- **ΜΗΝ** βάλεις `new Date()` στο παραγόμενο (ADR-727 παγίδα #1) ούτε αφαιρέσεις την κανονικοποίηση
+  CRLF (παγίδα #2 — μονίμως κόκκινο σε Windows).
+- **ΜΗΝ** φτιάξεις baseline. Η φρεσκάδα είναι δυαδική.
+
+### Relationship with other checks
+- **CHECK 3.8** (missing keys) → κώδικας→locale· δεν ξέρει τι φορτώνεται **πότε**
+- **CHECK 3.13** (resolver reachability) → runtime προσπελασιμότητα **namespace**, όχι κλειδιού
+- **CHECK 3.33** (types freshness) → παραγόμενοι **τύποι** ↔ locale
+- **CHECK 3.34** (αυτό) → **σύγχρονο bootstrap ↔ ο κώδικας που βάφει πρώτος**
+
+### Test suite (Google presubmit-grade)
+`scripts/__tests__/i18n-shell-slice.test.js` — **62 tests / 12 ομάδες**. Τέσσερις ομάδες είναι
+load-bearing (κοκκινίζουν στη *προφανή λάθος υλοποίηση*): **Group 2** dynamic boundary, **Group 4** η
+σκάλα ταξινόμησης, **Group 6** τοπικότητα fingerprint (χωρίς αυτήν η φθηνή στρώση γίνεται μονίμως και
+αόρατα κόκκινη), **Group 8** line endings.
+Συν `src/i18n/__tests__/shell-slice-no-raw-keys.test.ts` — **5 tests**, runtime απόδειξη.
+
+**Οι ίδιες οι δοκιμές έπιασαν 2 πραγματικά σφάλματα πριν το commit**: το `t('a.b', { ns: 'files' })`
+έχανε το namespace override, και τα λείποντα κλειδιά namespace με άδειο slice δεν αναφέρονταν
+καθόλου. **Πράσινο test δεν αποδεικνύει τίποτα μέχρι να δεις ότι μπορεί να κοκκινίσει.**
 
 ---
 

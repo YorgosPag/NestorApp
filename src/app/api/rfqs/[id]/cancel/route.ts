@@ -19,15 +19,13 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { rfqIdRoute } from '../../_shared/rfq-id-route';
 import { cancelRfq } from '@/subapps/procurement/services/rfq-lifecycle-service';
 import { RFQ_CANCELLATION_REASONS } from '@/subapps/procurement/types/rfq';
 import type { RfqCancellationReason } from '@/subapps/procurement/types/rfq';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
-import { getErrorMessage } from '@/lib/error-utils';
 
 const CancelBodySchema = z.object({
   reason: z.enum(RFQ_CANCELLATION_REASONS as readonly [string, ...string[]]).optional().nullable(),
@@ -35,31 +33,17 @@ const CancelBodySchema = z.object({
   notifyVendors: z.boolean().optional(),
 });
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(CancelBodySchema, await req.json().catch(() => ({})));
-        if (parsed.error) return parsed.error;
-        const updated = await cancelRfq(ctx, id, {
-          reason: (parsed.data.reason as RfqCancellationReason | null | undefined) ?? null,
-          detail: parsed.data.detail ?? null,
-          notifyVendors: parsed.data.notifyVendors,
-        });
-        return NextResponse.json({ success: true, data: updated });
-      } catch (error) {
-        return NextResponse.json(
-          { success: false, error: getErrorMessage(error) },
-          { status: 400 }
-        );
-      }
-    }
-  );
-  return handler(request);
-}
+const handlePost = rfqIdRoute({
+  run: async ({ req, ctx, id }) => {
+    const parsed = safeParseBody(CancelBodySchema, await req.json().catch(() => ({})));
+    if (parsed.error) return parsed.error;
+    const updated = await cancelRfq(ctx, id, {
+      reason: (parsed.data.reason as RfqCancellationReason | null | undefined) ?? null,
+      detail: parsed.data.detail ?? null,
+      notifyVendors: parsed.data.notifyVendors,
+    });
+    return NextResponse.json({ success: true, data: updated });
+  },
+});
 
 export const POST = withSensitiveRateLimit(handlePost);

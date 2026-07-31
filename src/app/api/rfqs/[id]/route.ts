@@ -10,16 +10,15 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import {
   withStandardRateLimit,
   withSensitiveRateLimit,
 } from '@/lib/middleware/with-rate-limit';
+import { rfqIdRoute } from '../_shared/rfq-id-route';
 import { getRfq, updateRfq, archiveRfq } from '@/subapps/procurement/services/rfq-service';
-import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
+import { rfqNotFoundResponse } from '../_shared/rfq-error-response';
 import { TRADE_CODES } from '@/subapps/procurement/types/trade';
 
 // ============================================================================
@@ -48,69 +47,32 @@ const UpdateRfqSchema = z.object({
 });
 
 // ============================================================================
-// GET
+// HANDLERS — ένα κέλυφος για τα τρία ρήματα (ADR-742 §7.8)
 // ============================================================================
 
-async function handleGet(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const rfq = await getRfq(ctx.companyId, id);
-      if (!rfq) return NextResponse.json({ success: false, error: 'Not found' }, { status: 404 });
-      return NextResponse.json({ success: true, data: rfq });
-    }
-  );
-  return handler(request);
-}
+const handleGet = rfqIdRoute({
+  run: async ({ ctx, id }) => {
+    // Η υπηρεσία σιωπά (Δ): ένα `null` για «δεν υπάρχει» ΚΑΙ «ανήκει αλλού».
+    const rfq = await getRfq(ctx.companyId, id);
+    if (!rfq) return rfqNotFoundResponse();
+    return NextResponse.json({ success: true, data: rfq });
+  },
+});
 
-// ============================================================================
-// PATCH
-// ============================================================================
+const handlePatch = rfqIdRoute({
+  run: async ({ req, ctx, id }) => {
+    const parsed = safeParseBody(UpdateRfqSchema, await req.json());
+    if (parsed.error) return parsed.error;
+    return NextResponse.json({ success: true, data: await updateRfq(ctx, id, parsed.data) });
+  },
+});
 
-async function handlePatch(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const parsed = safeParseBody(UpdateRfqSchema, await req.json());
-        if (parsed.error) return parsed.error;
-        const updated = await updateRfq(ctx, id, parsed.data);
-        return NextResponse.json({ success: true, data: updated });
-      } catch (error) {
-        return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 400 });
-      }
-    }
-  );
-  return handler(request);
-}
-
-// ============================================================================
-// DELETE — soft delete
-// ============================================================================
-
-async function handleDelete(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        await archiveRfq(ctx, id);
-        return NextResponse.json({ success: true });
-      } catch (error) {
-        return NextResponse.json({ success: false, error: getErrorMessage(error) }, { status: 400 });
-      }
-    }
-  );
-  return handler(request);
-}
+const handleDelete = rfqIdRoute({
+  run: async ({ ctx, id }) => {
+    await archiveRfq(ctx, id);
+    return NextResponse.json({ success: true });
+  },
+});
 
 // ============================================================================
 // EXPORTS

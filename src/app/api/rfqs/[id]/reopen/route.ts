@@ -17,34 +17,16 @@
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { rfqIdRoute } from '../../_shared/rfq-id-route';
 import { reopenRfq } from '@/subapps/procurement/services/rfq-lifecycle-service';
-import { getErrorMessage } from '@/lib/error-utils';
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ id: string }> }
-): Promise<NextResponse> {
-  const { id } = await segmentData!.params;
-  const handler = withAuth(
-    async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      try {
-        const updated = await reopenRfq(ctx, id);
-        return NextResponse.json({ success: true, data: updated });
-      } catch (error) {
-        const code = (error as { code?: string }).code;
-        const status = code === 'PO_EXISTS' ? 409 : 400;
-        return NextResponse.json(
-          { success: false, error: getErrorMessage(error), code: code ?? null },
-          { status }
-        );
-      }
-    }
-  );
-  return handler(request);
-}
+const handlePost = rfqIdRoute({
+  // Μόνο αυτή η διαδρομή εκθέτει `code` (`PO_EXISTS` → 409, χωρίς μεταμφίεση).
+  exposeCode: true,
+  run: async ({ ctx, id }) =>
+    NextResponse.json({ success: true, data: await reopenRfq(ctx, id) }),
+});
 
 export const POST = withSensitiveRateLimit(handlePost);
