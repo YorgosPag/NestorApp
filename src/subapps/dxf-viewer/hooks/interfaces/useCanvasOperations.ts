@@ -18,6 +18,7 @@ import { useCallback } from 'react';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 // ADR-040 Phase VII: use stable refs context — never re-renders on zoom
 import { useCanvasRefs } from '../../contexts/CanvasContext';
+import { getMainDxfCanvas } from '../../rendering/utils/main-canvas-element';
 // ✅ ENTERPRISE: Import zoom constants for consistent zoom factors
 import { ZOOM_FACTORS, ZOOM_LIMITS } from '../../config/transform-config';
 // 🏢 ADR-151: Centralized Simple Coordinate Transforms
@@ -67,8 +68,9 @@ export const useCanvasOperations = (): CanvasOperations => {
     if (dxfRef?.current) {
       return dxfRef.current.getCanvas();
     }
-    // Fallback: find canvas directly from DOM
-    return document.querySelector('canvas[data-canvas-type="dxf-main"]') as HTMLCanvasElement || null;
+    // Fallback: find canvas directly from DOM. 🔴 2026-07-31 — έψαχνε τύπο `dxf-main`, τιμή που
+    // ΔΕΝ θέτει κανείς (ο `DxfCanvas` γράφει `dxf`), άρα το fallback ήταν μονίμως `null`.
+    return getMainDxfCanvas();
   }, [context]);
 
   const getTransform = useCallback((): ViewTransform => {

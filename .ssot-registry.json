@@ -3939,13 +3939,18 @@
     },
     "table-layout-engine": {
       "ssotFile": "src/subapps/dxf-viewer/bim/table/table-layout.ts",
-      "description": "ADR-739 Φάση Α: ΜΙΑ μηχανή διάταξης πίνακα για όλο το repo. `layoutTable(model, style)` (τρία στάδια: `measureTable` → `placeCells` → `buildTableBorders`) βγάζει γεωμετρία σε sheet-mm που τροφοδοτεί και τα τέσσερα backends (canvas 2D preview / PDF / entities σκηνής / DXF ACAD_TABLE) — «οθόνη === PDF === DXF === σκηνή». ΤΟ ΡΙΣΚΟ (ADR-739 §1): υπάρχουν ΗΔΗ δύο μηχανές διάταξης πίνακα στο repo (`buildScheduleTable` του ADR-622 και ο React `SchedulePreviewTable.tsx`)· τρίτη υλοποίηση = sibling clone (N.18 / CHECK 3.28). Ο ADR-622 ΑΠΟΡΡΟΦΑΤΑΙ ως thin adapter στη Φάση Β — δεν μιμείται. Νέος «table renderer» / `layoutTable` / `TableLayout` / `measureTable` εκτός αυτού του φακέλου = παράβαση. Η μέτρηση πλάτους κειμένου έρχεται ΑΠΟΚΛΕΙΣΤΙΚΑ από το `measureTextAdvanceWorld` (ADR-557) — ποτέ δεύτερος measurer. Οι CellKey συντίθενται ΜΟΝΟ από το `cellKey()` του `table-model-helpers.ts`.",
+      "description": "ADR-739 Φάση Α: ΜΙΑ μηχανή διάταξης πίνακα για όλο το repo. `layoutTable(model, style)` (τρία στάδια: `measureTable` → `placeCells` → `buildTableBorders`) βγάζει γεωμετρία σε sheet-mm που τροφοδοτεί και τα τέσσερα backends (canvas 2D preview / PDF / entities σκηνής / DXF ACAD_TABLE) — «οθόνη === PDF === DXF === σκηνή». ΤΟ ΡΙΣΚΟ (ADR-739 §1): υπάρχουν ΗΔΗ δύο μηχανές διάταξης πίνακα στο repo (`buildScheduleTable` του ADR-622 και ο React `SchedulePreviewTable.tsx`)· τρίτη υλοποίηση = sibling clone (N.18 / CHECK 3.28). Ο ADR-622 ΑΠΟΡΡΟΦΑΤΑΙ ως thin adapter στη Φάση Β — δεν μιμείται. Νέος «table renderer» / `layoutTable` / `TableLayout` / `measureTable` εκτός αυτού του φακέλου = παράβαση. Η μέτρηση πλάτους κειμένου έρχεται ΑΠΟΚΛΕΙΣΤΙΚΑ από το `measureTextAdvanceWorld` (ADR-557) — ποτέ δεύτερος measurer. Οι CellKey συντίθενται ΜΟΝΟ από το `cellKey()` του `table-model-helpers.ts`. ΦΑΣΗ Γ (2026-07-31): ο πίνακας έγινε οντότητα σκηνής. Προστέθηκαν ΤΡΙΑ ακόμη SSoT στην ίδια οικογένεια, και το καθένα έχει ΕΝΑΝ λόγο ύπαρξης: (1) `table-entity-geometry.ts` κατέχει τις τρεις μετατροπές — sheet-mm→μονάδες σκηνής (ΑΠΟΚΛΕΙΣΤΙΚΑ μέσω `paperHeightToModel`, ADR-739 §4.1), την ΑΝΑΣΤΡΟΦΗ y (η διάταξη μετρά +v κάτω, η σκηνή +y πάνω) και την περιστροφή γύρω από την άγκυρα· δεύτερο αντίγραφο της αναστροφής = η μισή εφαρμογή ζωγραφίζει τον πίνακα ανάποδα. (2) `table-entity-hit.ts` κατέχει το hit-test/όρια που μοιράζονται ΤΡΕΙΣ καταναλωτές (`TableRenderer.hitTest`, `performDetailedHitTest`, `BoundsCalculator`) — αν αποκλίνουν, ο πίνακας ζωγραφίζεται αλλού και πιάνεται αλλού. (3) `table-entity-grips.ts` κατέχει θέσεις λαβών ΚΑΙ τον καθαρό μετασχηματισμό σύρσιμου, που τρέχουν ΚΑΙ το commit ΚΑΙ το ζωντανό φάντασμα ⇒ preview ≡ commit κατά ταυτότητα. Ο `TableRenderer` ΔΕΝ υπολογίζει διάταξη: καλεί `computeTableEntityGeometryLive` (απομνημονευμένο) και ζωγραφίζει. Νέος υπολογισμός γεωμετρίας πίνακα εκτός αυτού του φακέλου = παράβαση.",
       "forbiddenPatterns": [
         "function\\s+layoutTable\\b",
         "function\\s+measureTable\\b",
         "function\\s+buildTableBorders\\b",
         "interface\\s+TableLayout\\b",
-        "interface\\s+TableModel\\b"
+        "interface\\s+TableModel\\b",
+        "function\\s+tableFrameToWorld\\b",
+        "function\\s+tableWorldToFrame\\b",
+        "function\\s+computeTableEntityGeometry\\b",
+        "function\\s+hitTestTable\\b",
+        "function\\s+getTableGrips\\b"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/bim/table/table-layout.ts",
@@ -3955,7 +3960,12 @@
         "src/subapps/dxf-viewer/bim/table/table-layout-borders.ts",
         "src/subapps/dxf-viewer/bim/table/table-model-helpers.ts",
         "src/subapps/dxf-viewer/bim/table/table-layout-to-primitives.ts",
-        "src/subapps/dxf-viewer/types/table.ts"
+        "src/subapps/dxf-viewer/types/table.ts",
+        "src/subapps/dxf-viewer/bim/table/table-entity-geometry.ts",
+        "src/subapps/dxf-viewer/bim/table/table-entity-hit.ts",
+        "src/subapps/dxf-viewer/bim/table/table-entity-grips.ts",
+        "src/subapps/dxf-viewer/bim/table/table-render-index.ts",
+        "src/subapps/dxf-viewer/types/table-entity.ts"
       ],
       "addedDate": "2026-07-31",
       "addedByAdr": "ADR-739",

@@ -5594,3 +5594,20 @@ inline block που αντικατέστησαν, μηδέν νέο `useSyncExte
 
 ✅ Google-level: YES — SRP split χωρίς αλλαγή συμπεριφοράς, σχήμα props από ΕΝΑ `Pick`, μηδέν νέα
 συνδρομή, το επόμενο placement tool δεν ξαναγγίζει τον orchestrator.
+
+---
+
+### 2026-07-31 (β) — click-routing: threading του `attachImageTool` (ADR-736 §6, CHECK 6B stage, μηδέν αρχιτεκτονική αλλαγή)
+
+Το «Εικόνα» (IMAGEATTACH) τοποθετείται με **ένα κλικ**, ακριβώς όπως τα entourage tools: raw
+`worldPoint`, κανένα hit-test υπάρχουσας γεωμετρίας. Άρα δεν χρειάστηκε νέα μηχανή — μπήκε ως
+PRIORITY 4.915f στον υπάρχοντα `dispatchBimToolClick`, με τύπο `EntouragePlacementToolLike` (τον
+ίδιο που ήδη μοιράζονται furniture/people/vehicles/plants plan tools).
+
+Η εγγραφή υπάρχει επειδή το `canvas-click-types.ts` είναι αρχείο του CHECK 6B, **όχι** επειδή άλλαξε
+η αρχιτεκτονική: καμία νέα συνδρομή, καμία αλλαγή στη σειρά προτεραιοτήτων των υπαρχόντων εργαλείων,
+το `attachImageTool` είναι optional prop (`?`) ⇒ τα υπόλοιπα call sites μένουν ανέπαφα.
+
+**Files**: MOD `hooks/canvas/{canvas-click-types.ts,canvas-click-bim-dispatch.ts}`,
+`hooks/interfaces/useCanvasOperations.ts`, `hooks/drawing/create-entourage-tool.ts`,
+`systems/events/drawing-event-map.ts`.

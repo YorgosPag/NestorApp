@@ -51,6 +51,7 @@ export function dispatchBimToolClick(
     peoplePlanTool,
     vehiclesPlanTool,
     plantsPlanTool,
+    attachImageTool,
     universalSelection,
   } = params;
 
@@ -240,6 +241,13 @@ export function dispatchBimToolClick(
   }
   if (activeTool === 'plants-plan' && plantsPlanTool?.isActive) {
     plantsPlanTool.onCanvasClick(worldPoint);
+    return true;
+  }
+  // PRIORITY 4.915f: ADR-736 §6 — «Εικόνα» (raster που ανέβασε ο χρήστης) με ένα κλικ. RAW
+  // worldPoint: ελεύθερη τοποθέτηση σημείου, κανένα hit-test υπάρχουσας γεωμετρίας — ίδιο
+  // μονοπάτι με τα entourage, ίδια μηχανή, παράγει ImageEntity.
+  if (activeTool === 'attach-image' && attachImageTool?.isActive) {
+    attachImageTool.onCanvasClick(worldPoint);
     return true;
   }
   // PRIORITIES 4.92–4.93: MEP fixture / riser / furniture / floorplan-symbol /

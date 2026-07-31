@@ -322,6 +322,10 @@ export interface DrawingEventMap extends MepAutoDesignEventMap, BimEventMap, Top
   // ADR-526 — Open the native file picker for Tekton .tek import (DxfViewerDialogs
   // listens). Emitted by the ribbon Insert → «Εισαγωγή Τέκτονα» action.
   'dxf:import-tek-requested': Record<string, never>;
+  // ADR-736 §6 — Open the native file picker for the «Εικόνα» insert command
+  // (`AttachImageHost` listens). Emitted by the ribbon Insert → «Εικόνα» action.
+  // Αδελφός του `dxf:import-tek-requested`: ζητά επιλογέα, δεν μεταφέρει αρχείο.
+  'dxf:attach-image-requested': Record<string, never>;
   // ADR-726 §13.1 — Deliver an already-picked File to the ONE import path
   // (`handleFileImportWithEncoding`) from OUTSIDE the provider tree. Sibling of
   // `dxf:import-tek-requested`, which asks for a picker; this one carries the result.

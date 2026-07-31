@@ -137,6 +137,8 @@ export interface UseCanvasClickHandlerParams {
   vehiclesPlanTool?: EntouragePlacementToolLike;
   /** ADR-654 M7 — plants-plan (entourage) tool click pipeline (single-click placement). */
   plantsPlanTool?: EntouragePlacementToolLike;
+  /** ADR-736 §6 — attach-image (user raster) tool click pipeline (single-click placement). */
+  attachImageTool?: EntouragePlacementToolLike;
   /** ADR-415 — Floorplan-symbol tool click pipeline (single-click placement). */
   floorplanSymbolTool?: FloorplanSymbolToolLike;
   /** ADR-407 — Railing tool click pipeline (2-click straight guardrail). */

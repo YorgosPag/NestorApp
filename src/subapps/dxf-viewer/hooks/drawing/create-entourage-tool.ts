@@ -18,7 +18,10 @@
 import type { ImageEntity } from '../../types/image';
 import type { Point3D } from '../../bim/types/bim-base';
 import type { SceneUnits } from '../../utils/scene-units';
-import type { EntourageSelectionStore } from '../../bim/entourage/entourage-selection-store';
+import type {
+  EntourageSelection,
+  EntourageSelectionStore,
+} from '../../bim/entourage/entourage-selection-store';
 import type {
   EntouragePlacer,
   EntouragePlacementParams,
@@ -46,9 +49,15 @@ export type UseEntourageToolResult = CorePlacementResult<
   EntourageParamOverrides
 >;
 
-/** Τι διαφέρει ανά οικογένεια: ο selection store, ο placer, τα i18n κλειδιά. */
-export interface EntourageToolDescriptor {
-  readonly selection: EntourageSelectionStore;
+/**
+ * Τι διαφέρει ανά οικογένεια: ο selection store, ο placer, τα i18n κλειδιά.
+ *
+ * Ο τύπος-παράμετρος υπάρχει για οικογένειες που κουβαλούν περισσότερα στην επιλογή τους
+ * (ADR-736 §6: η εικόνα του χρήστη φέρνει και το μέγεθός της). Το factory δεν τα κοιτά —
+ * τα διαβάζει ο δικός τους placer· εδώ χρειάζεται μόνο για να δεχθεί τον store χωρίς cast.
+ */
+export interface EntourageToolDescriptor<T extends EntourageSelection = EntourageSelection> {
+  readonly selection: EntourageSelectionStore<T>;
   readonly placer: EntouragePlacer;
   readonly statusPositionKey: string;
   readonly errorNoSelectionKey: string;
@@ -66,8 +75,8 @@ function footprintOf(entity: ImageEntity | null): readonly Point3D[] {
  * Χτίζει έναν single-click placement hook για μία οικογένεια entourage. Καλείται ΜΙΑ φορά ανά
  * family σε module scope (rules-of-hooks safe — ο πυρήνας είναι module-constant).
  */
-export function createEntourageTool(
-  descriptor: EntourageToolDescriptor,
+export function createEntourageTool<T extends EntourageSelection = EntourageSelection>(
+  descriptor: EntourageToolDescriptor<T>,
 ): (options?: UseEntourageToolOptions) => UseEntourageToolResult {
   const { selection, placer, statusPositionKey, errorNoSelectionKey, errorUnknownItemKey } =
     descriptor;
