@@ -17,7 +17,7 @@ import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { permanentDelete } from '@/lib/firestore/soft-delete-engine';
 import { isSoftDeletableEntity, SOFT_DELETE_CONFIG } from '@/lib/firestore/soft-delete-config';
 import type { SoftDeletableEntityType } from '@/types/soft-deletable';
-import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
+import { invalidateProjectCaches } from '../../../../projects/_shared/project-cache';
 
 interface PermanentDeleteResponse {
   entityType: string;
@@ -48,11 +48,8 @@ export const DELETE = withStandardRateLimit(
       );
 
       if (entityType === 'project') {
-        const cache = EnterpriseAPICache.getInstance();
-        cache.delete(`api:projects:list:${ctx.companyId}`);
-        cache.delete('api:projects:list:all');
-        cache.delete('api:projects:bootstrap:admin');
-        cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
+        // SSoT: το πρόθεμα ήταν χειρόγραφο εδώ — ADR-742 §7sexies.
+        invalidateProjectCaches(ctx.companyId);
       }
 
       await logAuditEvent(ctx, 'data_deleted', entityType, 'api', {

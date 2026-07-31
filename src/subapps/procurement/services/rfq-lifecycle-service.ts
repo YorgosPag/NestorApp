@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { safeFirestoreOperation } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { sanitizeForFirestore } from '@/utils/firestore-sanitize';
 import { createModuleLogger } from '@/lib/telemetry';
 import admin from 'firebase-admin';
@@ -11,8 +10,9 @@ import type {
 } from '../types/rfq';
 import { RFQ_STATUS_TRANSITIONS, RFQ_CANCELLATION_REASONS } from '../types/rfq';
 import type { AuthContext } from '@/lib/auth';
-import type { PurchaseOrder } from '@/types/procurement/purchase-order';
 import { recomputeSourcingEventStatus } from './sourcing-event-service';
+import { loadOwnedRfq } from './rfq-ownership';
+import { rfqHasActivePurchaseOrder } from './rfq-po-guard';
 
 const logger = createModuleLogger('RFQ_LIFECYCLE');
 
@@ -32,11 +32,7 @@ export async function cancelRfq(
   options: CancelRfqOptions = {},
 ): Promise<RFQ> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.RFQS).doc(rfqId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`RFQ ${rfqId} not found`);
-    const current = { id: snap.id, ...snap.data() } as RFQ;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedRfq<RFQ>(db, ctx.companyId, rfqId);
 
     if (!RFQ_STATUS_TRANSITIONS[current.status].includes('cancelled')) {
       throw new Error(`Cannot cancel RFQ in status ${current.status}`);
@@ -91,36 +87,15 @@ export async function cancelRfq(
 }
 
 // ============================================================================
-// REOPEN — ADR-335 Q3 (PO-gated)
+// REOPEN — ADR-335 Q3 (PO-gated, guard σε ./rfq-po-guard)
 // ============================================================================
-
-async function rfqHasActivePurchaseOrder(
-  companyId: string,
-  rfq: RFQ,
-): Promise<boolean> {
-  if (!rfq.winnerQuoteId) return false;
-  const db = admin.firestore();
-  const poSnap = await db
-    .collection(COLLECTIONS.PURCHASE_ORDERS)
-    .where('companyId', '==', companyId)
-    .where('sourceQuoteId', '==', rfq.winnerQuoteId)
-    .get();
-  return poSnap.docs.some((d) => {
-    const po = d.data() as PurchaseOrder;
-    return po.status !== 'cancelled';
-  });
-}
 
 export async function reopenRfq(
   ctx: AuthContext,
   rfqId: string,
 ): Promise<RFQ> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.RFQS).doc(rfqId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`RFQ ${rfqId} not found`);
-    const current = { id: snap.id, ...snap.data() } as RFQ;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedRfq<RFQ>(db, ctx.companyId, rfqId);
 
     if (current.status !== 'closed') {
       throw new Error(`Reopen only allowed from 'closed' status (current: ${current.status})`);

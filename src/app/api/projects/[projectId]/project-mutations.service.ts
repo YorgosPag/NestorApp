@@ -15,7 +15,6 @@ import { logAuditEvent } from '@/lib/auth';
 import { ApiError, apiSuccess } from '@/lib/api/ApiErrorHandler';
 import { isRoleBypass } from '@/lib/auth/roles';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
 import { createModuleLogger } from '@/lib/telemetry';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
 import { checkDeletionDependencies } from '@/lib/firestore/deletion-guard';
@@ -27,7 +26,9 @@ import { stripUndefinedDeep } from '@/utils/firestore-sanitize';
 import { EntityAuditService, resolveUserDisplayName } from '@/services/entity-audit.service';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { PROJECT_TRACKED_FIELDS } from '@/config/audit-tracked-fields';
-import { ProjectUpdateSchema, CACHE_KEY_PREFIX } from './project-mutations.types';
+import { projectNotFound, requireProjectAccess } from '../_shared/project-ownership';
+import { invalidateProjectCaches } from '../_shared/project-cache';
+import { ProjectUpdateSchema } from './project-mutations.types';
 import type {
   ProjectUpdateResponse,
   ProjectDeleteResponse,
@@ -59,21 +60,15 @@ export async function handleUpdateProject(
 
   if (!projectDoc.exists) {
     logger.info('[Projects/Update] Project not found', { projectId });
-    throw new ApiError(404, 'Project not found');
+    throw projectNotFound();
   }
 
   const projectData = projectDoc.data();
 
-  // 3. Validate tenant isolation
-  const isSuperAdmin = isRoleBypass(ctx.globalRole);
-  if (!isSuperAdmin) {
-    if (!projectData?.companyId || projectData.companyId !== ctx.companyId) {
-      logger.warn('[Projects/Update] TENANT ISOLATION VIOLATION', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
-      throw new ApiError(403, 'Access denied - Project not found');
-    }
-  } else if (projectData?.companyId !== ctx.companyId) {
-    logger.info('[SUPER_ADMIN] Cross-tenant project update', { email: ctx.email, projectId, projectCompanyId: projectData?.companyId });
-  }
+  // 3. Validate tenant isolation — ADR-742 §7sexies.
+  //    Ο φύλακας καταγράφει και την άρνηση και τη cross-tenant θέαση του
+  //    υπεργραφείου: ήταν η **ίδια** σύγκριση γραμμένη δύο φορές.
+  requireProjectAccess({ projectData, caller: ctx, projectId, action: 'update' });
 
   // 4. Build update payload (companyId is IMMUTABLE — ADR-232)
   const { companyId: _immutableCompanyId, ...safeBody } = body;
@@ -98,11 +93,7 @@ export async function handleUpdateProject(
   logger.info('[Projects/Update] Project updated successfully', { projectId, durationMs: duration });
 
   // 6. Invalidate caches
-  const cache = EnterpriseAPICache.getInstance();
-  cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
-  cache.delete(`${CACHE_KEY_PREFIX}:all`);
-  cache.delete('api:projects:bootstrap:admin');
-  cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
+  invalidateProjectCaches(ctx.companyId);
 
   // 7. ADR-239: Centralized linking
   if ('linkedCompanyId' in body) {
@@ -186,17 +177,18 @@ export async function handleDeleteProject(
   const projectDoc = await projectRef.get();
 
   if (!projectDoc.exists) {
-    throw new ApiError(404, 'Project not found');
+    throw projectNotFound();
   }
 
   const projectData = projectDoc.data();
 
-  // 2. Tenant isolation
+  // 2. Tenant isolation — ADR-742 §7sexies (ίδιο εργοστάσιο με το «δεν υπάρχει»).
+  requireProjectAccess({ projectData, caller: ctx, projectId, action: 'delete' });
+
+  // Ξεχωριστή ερώτηση από την ιδιοκτησία: **προνόμιο**, όχι κυριότητα. Ρυθμίζει
+  // τον έλεγχο εξαρτήσεων και τον φύλακα tenant της μηχανής διαγραφής — γι' αυτό
+  // μένει ρητή εδώ αντί να παραχθεί από την ετυμηγορία του φύλακα.
   const isSuperAdmin = isRoleBypass(ctx.globalRole);
-  if (!isSuperAdmin && projectData?.companyId !== ctx.companyId) {
-    logger.warn('[Projects/Delete] TENANT ISOLATION VIOLATION', { uid: ctx.uid, userCompanyId: ctx.companyId, projectId, projectCompanyId: projectData?.companyId });
-    throw new ApiError(403, 'Access denied - Project not found');
-  }
 
   // 3. Server-side dependency check (defense-in-depth: client guard may be bypassed via direct API calls)
   //    Super admin may skip this check (administrative override).
@@ -223,11 +215,7 @@ export async function handleDeleteProject(
   logger.info('[Projects/Delete] Project moved to trash', { projectId, durationMs: duration });
 
   // 5. Invalidate caches
-  const cache = EnterpriseAPICache.getInstance();
-  cache.delete(`${CACHE_KEY_PREFIX}:${ctx.companyId}`);
-  cache.delete(`${CACHE_KEY_PREFIX}:all`);
-  cache.delete('api:projects:bootstrap:admin');
-  cache.delete(`api:projects:bootstrap:tenant:${ctx.companyId}`);
+  invalidateProjectCaches(ctx.companyId);
 
   // 6. Legacy auth audit log (soft-delete engine handles entity audit — ADR-281 SSoT)
   await logAuditEvent(ctx, 'data_deleted', 'projects', 'api', {

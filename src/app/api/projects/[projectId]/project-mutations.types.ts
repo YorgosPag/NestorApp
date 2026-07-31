@@ -37,7 +37,6 @@ export const ProjectUpdateSchema = z.object({
   _v: z.number().int().optional(),
 }).passthrough();
 
-export const CACHE_KEY_PREFIX = 'api:projects:list';
 
 export interface ProjectUpdateResponse {
   projectId: string;
