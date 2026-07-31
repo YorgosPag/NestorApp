@@ -21,59 +21,54 @@ export interface BoundingBox {
 }
 
 // ===== BASIC TYPES =====
+
+/**
+ * Ό,τι είναι **κοινό** και στους δύο χάρακες. Οι δύο άξονες διέφεραν ποτέ μόνο σε δύο
+ * πεδία (`height`/`width` και ο άξονας του `position`) — τα υπόλοιπα 22 ήταν γραμμένα
+ * δύο φορές, ταυτόσημα. Η αντιγραφή δεν ήταν αθώα: κάθε νέα ρύθμιση χάρακα έπρεπε να
+ * θυμηθεί ο συντάκτης να τη γράψει **και στα δύο** σημεία, αλλιώς οι δύο χάρακες
+ * αποκλίνουν σιωπηλά (ADR-741 §6 — η ίδια κλάση σφάλματος με τους δύο renderers).
+ */
+export interface RulerAxisSettings {
+  enabled: boolean;
+  color: string;
+  backgroundColor: string;
+  fontSize: number;
+  fontFamily: string;
+  unitsFontSize: number;  // New property for units font size
+  precision: number;
+  showZero: boolean;
+  showMinorTicks: boolean;
+  showMajorTicks: boolean;  // New property for major ticks visibility
+  minorTickLength: number;
+  majorTickLength: number;
+  tickColor: string;
+  majorTickColor: string;   // New property for major ticks color
+  minorTickColor: string;   // New property for minor ticks color
+  textColor: string;
+  unitsColor: string;  // New property for units text color
+  showLabels: boolean; // New property to control text visibility
+  showUnits: boolean;  // New property to control units in labels
+  showBackground: boolean;  // New property to control background visibility
+  borderColor: string;
+  borderWidth: number;
+}
+
+/** Ο οριζόντιος χάρακας: έχει **ύψος** και κάθεται πάνω ή κάτω. */
+export interface HorizontalRulerSettings extends RulerAxisSettings {
+  height: number;
+  position: 'top' | 'bottom';
+}
+
+/** Ο κατακόρυφος χάρακας: έχει **πλάτος** και κάθεται αριστερά ή δεξιά. */
+export interface VerticalRulerSettings extends RulerAxisSettings {
+  width: number;
+  position: 'left' | 'right';
+}
+
 export interface RulerSettings {
-  horizontal: {
-    enabled: boolean;
-    height: number;
-    position: 'top' | 'bottom';
-    color: string;
-    backgroundColor: string;
-    fontSize: number;
-    fontFamily: string;
-    unitsFontSize: number;  // New property for units font size
-    precision: number;
-    showZero: boolean;
-    showMinorTicks: boolean;
-    showMajorTicks: boolean;  // New property for major ticks visibility
-    minorTickLength: number;
-    majorTickLength: number;
-    tickColor: string;
-    majorTickColor: string;   // New property for major ticks color  
-    minorTickColor: string;   // New property for minor ticks color
-    textColor: string;
-    unitsColor: string;  // New property for units text color
-    showLabels: boolean; // New property to control text visibility
-    showUnits: boolean;  // New property to control units in labels
-    showBackground: boolean;  // New property to control background visibility
-    borderColor: string;
-    borderWidth: number;
-  };
-  vertical: {
-    enabled: boolean;
-    width: number;
-    position: 'left' | 'right';
-    color: string;
-    backgroundColor: string;
-    fontSize: number;
-    fontFamily: string;
-    unitsFontSize: number;  // New property for units font size
-    precision: number;
-    showZero: boolean;
-    showMinorTicks: boolean;
-    showMajorTicks: boolean;  // New property for major ticks visibility
-    minorTickLength: number;
-    majorTickLength: number;
-    tickColor: string;
-    majorTickColor: string;   // New property for major ticks color  
-    minorTickColor: string;   // New property for minor ticks color
-    textColor: string;
-    unitsColor: string;  // New property for units text color
-    showLabels: boolean; // New property to control text visibility
-    showUnits: boolean;  // New property to control units in labels
-    showBackground: boolean;  // New property to control background visibility
-    borderColor: string;
-    borderWidth: number;
-  };
+  horizontal: HorizontalRulerSettings;
+  vertical: VerticalRulerSettings;
   units: 'mm' | 'cm' | 'm' | 'inches' | 'feet';
   snap: {
     enabled: boolean;
@@ -94,7 +89,7 @@ export interface GridSettings {
     axesColor: string;
     axesWeight: number;
     majorGridColor: string;
-    minorGridColor: string;
+    minorGridColor: string;
     minorGridWeight: number;
   };
   snap: {
@@ -146,59 +141,42 @@ export interface RulersGridState {
 }
 
 // ===== DEFAULT SETTINGS =====
+
+/**
+ * Οι κοινές προεπιλογές των δύο χαράκων — **μία** γραφή, όχι δύο ταυτόσημες.
+ * Τα `height`/`width` μένουν ρητά στον κάθε άξονα: είναι το **μόνο** που τους χωρίζει
+ * και πρέπει να φαίνεται. ⚠️ Οι τιμές `30`/`30` οφείλουν να συμφωνούν με το
+ * `DRAWING_AREA_CHROME` (ADR-741 §7.1) — υπάρχει έλεγχος συνέπειας που κοκκινίζει
+ * αν αποκλίνουν.
+ */
+const RULER_AXIS_DEFAULTS: RulerAxisSettings = {
+  enabled: true,
+  color: UI_COLORS.RULER_NEUTRAL_GRAY, // Ουδέτερο γκρι
+  backgroundColor: 'hsl(var(--background) / 0.8)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
+  fontSize: 10,
+  fontFamily: 'Arial, sans-serif',
+  unitsFontSize: 10,  // Same as fontSize by default
+  precision: 1,
+  showZero: true,
+  showMinorTicks: true,
+  showMajorTicks: true,  // Default: show major ticks
+  minorTickLength: 5,
+  majorTickLength: 10,
+  tickColor: UI_COLORS.RULER_DARK_GRAY,
+  majorTickColor: UI_COLORS.RULER_DARK_GRAY,  // Default: same color as tickColor
+  minorTickColor: UI_COLORS.RULER_LIGHT_GRAY,  // Default: lighter color for minor ticks
+  textColor: UI_COLORS.RULER_TEXT_GRAY,
+  unitsColor: UI_COLORS.RULER_TEXT_GRAY,  // Default: same color as textColor
+  showLabels: true,  // Default: show labels
+  showUnits: true,   // Default: show units in labels
+  showBackground: true,  // Default: show background
+  borderColor: '#cccccc',
+  borderWidth: 1
+};
+
 export const DEFAULT_RULER_SETTINGS: RulerSettings = {
-  horizontal: {
-    enabled: true,
-    height: 30,
-    position: 'top',
-    color: UI_COLORS.RULER_NEUTRAL_GRAY, // Ουδέτερο γκρι
-    backgroundColor: 'hsl(var(--background) / 0.8)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
-    fontSize: 10,
-    fontFamily: 'Arial, sans-serif',
-    unitsFontSize: 10,  // Same as fontSize by default
-    precision: 1,
-    showZero: true,
-    showMinorTicks: true,
-    showMajorTicks: true,  // Default: show major ticks
-    minorTickLength: 5,
-    majorTickLength: 10,
-    tickColor: UI_COLORS.RULER_DARK_GRAY,
-    majorTickColor: UI_COLORS.RULER_DARK_GRAY,  // Default: same color as tickColor
-    minorTickColor: UI_COLORS.RULER_LIGHT_GRAY,  // Default: lighter color for minor ticks
-    textColor: UI_COLORS.RULER_TEXT_GRAY,
-    unitsColor: UI_COLORS.RULER_TEXT_GRAY,  // Default: same color as textColor
-    showLabels: true,  // Default: show labels
-    showUnits: true,   // Default: show units in labels
-    showBackground: true,  // Default: show background
-    borderColor: '#cccccc',
-    borderWidth: 1
-  },
-  vertical: {
-    enabled: true,
-    width: 30,
-    position: 'left',
-    color: UI_COLORS.RULER_NEUTRAL_GRAY, // Ουδέτερο γκρι
-    backgroundColor: 'hsl(var(--background) / 0.8)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
-    fontSize: 10,
-    fontFamily: 'Arial, sans-serif',
-    unitsFontSize: 10,  // Same as fontSize by default
-    precision: 1,
-    showZero: true,
-    showMinorTicks: true,
-    showMajorTicks: true,  // Default: show major ticks
-    minorTickLength: 5,
-    majorTickLength: 10,
-    tickColor: UI_COLORS.RULER_DARK_GRAY,
-    majorTickColor: UI_COLORS.RULER_DARK_GRAY,  // Default: same color as tickColor
-    minorTickColor: UI_COLORS.RULER_LIGHT_GRAY,  // Default: lighter color for minor ticks
-    textColor: UI_COLORS.RULER_TEXT_GRAY,
-    unitsColor: UI_COLORS.RULER_TEXT_GRAY,  // Default: same color as textColor
-    showLabels: true,  // Default: show labels
-    showUnits: true,   // Default: show units in labels
-    showBackground: true,  // Default: show background
-    borderColor: '#cccccc',
-    borderWidth: 1
-  },
+  horizontal: { ...RULER_AXIS_DEFAULTS, height: 30, position: 'top' },
+  vertical: { ...RULER_AXIS_DEFAULTS, width: 30, position: 'left' },
   units: 'mm',
   // 🏢 ADR-105: Use centralized fallback tolerance
   snap: {
@@ -220,7 +198,7 @@ export const DEFAULT_GRID_SETTINGS: GridSettings = {
     axesColor: GRID_AXES_DEFAULTS.axesColor,
     axesWeight: GRID_AXES_DEFAULTS.axesWeight,
     majorGridColor: UI_COLORS.GRID_MAJOR, // Γκρι για τις κύριες γραμμές
-    minorGridColor: UI_COLORS.GRID_MINOR, // Ανοιχτότερο γκρι για τις δευτερεύουσες γραμμές
+    minorGridColor: UI_COLORS.GRID_MINOR, // Ανοιχτότερο γκρι για τις δευτερεύουσες γραμμές
     minorGridWeight: 0.5
   },
   snap: {
@@ -424,5 +402,9 @@ export const COORDINATE_LAYOUT = CORE_COORDINATE_LAYOUT;
 /** @deprecated Import RULER_SIZE from rendering/core/CoordinateTransforms.ts instead */
 export const RULER_SIZE = CORE_COORDINATE_LAYOUT.RULER_LEFT_WIDTH;
 
-/** @deprecated Import MARGINS from rendering/core/CoordinateTransforms.ts instead */
+/**
+ * @deprecated Το `MARGINS` είναι **προβολή** του `DRAWING_AREA_CHROME`. Για «πού είναι η περιοχή
+ * σχεδίασης» χρησιμοποίησε `getDrawingAreaRect()` από `rendering/core/drawing-area.ts` —
+ * ΟΧΙ `{left, top}` ή `{left, bottom}` με δική σου αριθμητική (ήταν οι δύο ασύνδετες γραφές).
+ */
 export const MARGINS = CORE_COORDINATE_LAYOUT.MARGINS;
