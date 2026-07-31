@@ -2,8 +2,9 @@
  * ADR-651 Φάση Δ — κοινά helpers των AI routes της πινακίδας (SSoT, N.18).
  *
  * Και τα τρία routes (`from-image` / `from-text` / `validate`) μοιράζονται το **ίδιο** κέλυφος
- * ασφαλείας (μοτίβο Φάσης Β): `withStandardRateLimit` + `withAuth` (companyId/userId από claims)
- * + try/catch → `errorResponse`. Ζει εδώ μία φορά ώστε τα routes να κρατούν ΜΟΝΟ τη δική τους
+ * ασφαλείας. Από το ADR-742 δεν το ξαναγράφουν: **εξειδικεύουν** τον κοινό εκτελεστή
+ * `runTemplateRoute` (`_domain-route.ts`), καρφώνοντας τα δικαιώματα και το μήνυμα καταγραφής που
+ * είναι κοινά και στα έξι AI routes. Ζει εδώ μία φορά ώστε τα routes να κρατούν ΜΟΝΟ τη δική τους
  * λογική — κανένα δίδυμο boilerplate.
  */
 import { NextRequest, NextResponse } from 'next/server';
