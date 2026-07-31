@@ -25,6 +25,11 @@ export default {
     './src/domain/**/*.{ts,tsx}',
     './src/hooks/**/*.ts',
     './src/subapps/**/*.{ts,tsx}',
+    // 🏢 Τα subapps έχουν ΔΙΚΟ τους node_modules (pnpm symlinks — `src/subapps/dxf-viewer/node_modules`
+    // = 33 πακέτα, incl. next/firebase/typescript). Το fast-glob ακολουθεί symlinks by default, οπότε
+    // χωρίς αυτό το negation ο scanner κατέβαινε σε ΟΛΟ το pnpm store σε κάθε compile.
+    // Επίσημη σύσταση Tailwind v3 για monorepo· στη v4 γίνεται αυτόματα μέσω .gitignore.
+    '!./src/**/node_modules/**',
   ],
   theme: {
     extend: {
