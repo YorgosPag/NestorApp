@@ -1376,6 +1376,14 @@
       "errorNoSelection": "Δεν έχει επιλεγεί φυτό",
       "errorUnknownItem": "Άγνωστο φυτό"
     },
+    "attachImage": {
+      "label": "Εικόνα",
+      "statusPosition": "Κάντε κλικ για να τοποθετήσετε την εικόνα — Enter για το κέντρο, Esc για ακύρωση",
+      "errorNoSelection": "Δεν έχει επιλεγεί εικόνα",
+      "errorUnknownItem": "Άγνωστη εικόνα",
+      "uploadFailed": "Η εισαγωγή της εικόνας απέτυχε",
+      "noCompany": "Δεν βρέθηκε ενεργή εταιρεία — η εικόνα δεν μπορεί να αποθηκευτεί"
+    },
     "genericSolid": {
       "statusPosition": "Κλικ για τοποθέτηση στερεού"
     }
@@ -5167,6 +5175,8 @@
       "enhancedImport": "Enhanced DXF Import",
       "importTek": "Εισαγωγή Τέκτονα (.tek)",
       "externalReferences": "Εξωτερικές Αναφορές",
+      "attachImage": "Εικόνα",
+      "attachImageTooltip": "Εισαγωγή εικόνας στο σχέδιο — τοποθέτηση με κλικ, ή Enter για το κέντρο της προβολής",
       "pdfBackground": "PDF Υπόβαθρο",
       "exportDxf": "Εξαγωγή",
       "ifcExport": "Εξαγωγή IFC",

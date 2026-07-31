@@ -36,6 +36,13 @@ export interface EntouragePlacementParams {
   readonly sceneUnits?: SceneUnits;
   /** Layer· default ο `layerId` του placer. */
   readonly layerId?: string;
+  /**
+   * ADR-736 §6 — η **ετικέτα προς εμφάνιση** της πηγής (όνομα αρχείου). Την έχει μόνο η εικόνα
+   * που έδωσε ρητά ο χρήστης· ο catalog entourage δεν έχει αρχείο να ονομάσει, οπότε μένει
+   * `undefined` και το πεδίο **δεν γράφεται καν** — καμία αλλαγή στο σχήμα των 4 οικογενειών.
+   * Χωρίς αυτό το πάνελ «Πηγή» θα έδειχνε storage path αντί για το όνομα που διάλεξε ο χρήστης.
+   */
+  readonly sourceName?: string;
 }
 
 /** Το μέγεθος τοποθέτησης σε ΜΟΝΑΔΕΣ ΣΚΗΝΗΣ (mm από το catalog × unit scale). */
@@ -101,6 +108,9 @@ export function createEntouragePlacer(config: EntouragePlacerConfig): EntourageP
       intrinsicWidth: size.width,
       intrinsicHeight: size.height,
       url: params.url,
+      // Μόνο όταν υπάρχει: `sourceName: undefined` σε αντικείμενο που ταξιδεύει σε Firestore
+      // γίνεται σφάλμα εγγραφής, όχι «κενό πεδίο» (ADR-438 — ο καθαρισμός τρώει sentinels).
+      ...(params.sourceName ? { sourceName: params.sourceName } : {}),
       rotation: params.rotation ?? 0,
       visible: true,
     }) as ImageEntity;

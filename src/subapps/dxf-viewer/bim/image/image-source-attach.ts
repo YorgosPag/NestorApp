@@ -30,6 +30,8 @@
  */
 
 import type { ImageEntity } from '../../types/image';
+import type { EntourageSizeMm } from '../../data/entourage-catalog-core';
+import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
 
 /** Διαστάσεις σε pixels — ίδιο σχήμα με το `ForeignAssetPixelSize` του `io/shared/`. */
 export interface ImagePixelSize {
@@ -85,6 +87,33 @@ export function imagePlacementSize(
   const width = visibleWorldWidth * IMAGE_PLACEMENT_VIEWPORT_FRACTION;
   const aspect = pixelAspect(pixelSize) ?? 1;
   return { width, height: width / aspect };
+}
+
+/**
+ * Το ίδιο μέγεθος, εκφρασμένο σε **χιλιοστά** — η μορφή που δέχεται ο κοινός placer.
+ *
+ * Δεν είναι δεύτερος υπολογισμός: καλεί το {@link imagePlacementSize} και **αντιστρέφει** τη
+ * μετατροπή μονάδων μία φορά. Ο λόγος που χρειάζεται είναι δομικός: ο `createEntouragePlacer`
+ * ρωτά «πόσα χιλιοστά είναι αυτό το αντικείμενο;» — ερώτηση με μία απάντηση για κάθε catalog
+ * entourage (ένας καναπές είναι 2.100 mm παντού), αλλά **χωρίς** απάντηση για μια φωτογραφία:
+ * το φυσικό μέγεθος ενός raster δεν υπάρχει, το ορίζει η προβολή τη στιγμή της εισαγωγής.
+ * Αντί για δεύτερη μηχανή τοποθέτησης, μεταφράζουμε την απάντηση στη γλώσσα της υπάρχουσας.
+ *
+ * ⚠️ Η μετάφραση γίνεται ΜΙΑ φορά, τη στιγμή της **επιλογής αρχείου** — όχι του κλικ. Αλλιώς
+ * το ghost θα άλλαζε μέγεθος όσο ο χρήστης κάνει zoom πριν το καρφώσει: προβλέψιμο ghost
+ * υπερισχύει του «σωστού» μεγέθους (μοτίβο Revit *Insert ▸ Image*).
+ *
+ * `null` όταν το ορατό πλάτος δεν είναι χρήσιμος αριθμός — ίδιος φρουρός με τον αδελφό του.
+ */
+export function imagePlacementSizeMm(
+  pixelSize: ImagePixelSize | null | undefined,
+  visibleWorldWidth: number,
+  sceneUnits: SceneUnits,
+): EntourageSizeMm | null {
+  const scene = imagePlacementSize(pixelSize, visibleWorldWidth);
+  if (!scene) return null;
+  const perMm = mmToSceneUnits(sceneUnits);
+  return { widthMm: scene.width / perMm, heightMm: scene.height / perMm };
 }
 
 /** Ό,τι ξέρουμε για τη νέα πηγή τη στιγμή της αντικατάστασης. */

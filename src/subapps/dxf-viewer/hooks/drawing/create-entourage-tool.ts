@@ -87,6 +87,9 @@ export function createEntourageTool(
         position: { x: clickPoint.x, y: clickPoint.y },
         itemId: current?.id ?? '',
         url: current?.url ?? '',
+        // Παρόν μόνο για εικόνες που έδωσε ρητά ο χρήστης (ADR-736 §6)· ο catalog entourage
+        // δεν έχει αρχείο να ονομάσει, οπότε το πεδίο δεν φτάνει καν στο `ImageEntity`.
+        sourceName: current?.sourceName,
         rotation: overrides.rotation,
         sceneUnits,
       };

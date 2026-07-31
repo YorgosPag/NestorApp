@@ -1376,6 +1376,14 @@
       "errorNoSelection": "No plant selected",
       "errorUnknownItem": "Unknown plant"
     },
+    "attachImage": {
+      "label": "Image",
+      "statusPosition": "Click to place the image — Enter for the centre, Esc to cancel",
+      "errorNoSelection": "No image selected",
+      "errorUnknownItem": "Unknown image",
+      "uploadFailed": "Inserting the image failed",
+      "noCompany": "No active company — the image cannot be stored"
+    },
     "genericSolid": {
       "statusPosition": "Click to place solid"
     }
@@ -5167,6 +5175,8 @@
       "enhancedImport": "Enhanced DXF Import",
       "importTek": "Import Tekton (.tek)",
       "externalReferences": "External References",
+      "attachImage": "Image",
+      "attachImageTooltip": "Insert an image into the drawing — click to place, or Enter for the centre of the view",
       "pdfBackground": "PDF Background",
       "exportDxf": "Export",
       "ifcExport": "Export IFC",
