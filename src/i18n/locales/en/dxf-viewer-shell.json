@@ -2229,6 +2229,8 @@
       "scaleBarTooltip": "Draw a graphic scale bar: click the origin, then click to set the axis and length",
       "openingInfoTag": "Opening Info Tag",
       "openingInfoTagTooltip": "Place an opening info tag with a single click (Length/Sill/Height)",
+      "table": "Table",
+      "tableTooltip": "Place a table with a single click (top-left corner)",
       "xlineModeSelector": "Mode",
       "bim": {
         "wall": {
@@ -7353,5 +7355,13 @@
     "dockHandleHint": "Double-click to float the palette",
     "dropPreviewLeft": "Dock left on drop",
     "dropPreviewRight": "Dock right on drop"
+  },
+  "table": {
+    "defaults": {
+      "title": "TABLE",
+      "columnNo": "No.",
+      "columnDesc": "Description",
+      "columnQty": "Quantity"
+    }
   }
 }

@@ -313,6 +313,9 @@ export const TOOL_DEFINITIONS: Record<ToolType, ToolInfo> = {
   // ADR-612: Opening info tag — SINGLE-CLICK placement (mirror annotation-symbol's
   // click-count), NOT the scale-bar 2-click drag. allowsContinuous: place several in a row.
   'opening-info-tag':  { id: 'opening-info-tag',  category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
+  // ADR-739 Φάση Δ: Table — SINGLE-CLICK placement (mirror 'opening-info-tag'), NOT the
+  // scale-bar 2-click drag. allowsContinuous: place several in a row.
+  'table':             { id: 'table',             category: 'drawing', requiresCanvas: true, canInterrupt: true, allowsContinuous: true, preservesOverlayMode: false },
   // ADR-649 / ADR-662 §12: «Ετικέτα Εμβαδού» — 2-κλικ (pick οντότητας με εμβαδόν →
   // place TextEntity). Το id είναι ΙΣΤΟΡΙΚΟ: το εργαλείο δέχεται πλέον ΚΑΙ τοπογραφική
   // επιφάνεια — ποιοι τύποι, το λέει ΜΟΝΟ το `systems/measure/entity-measurement-facts`.
@@ -444,6 +447,8 @@ export const TOOL_CREATES_ENTITY: Partial<Record<ToolType, RenderableEntityType>
   'scale-bar': 'scale-bar',
   // ── Opening info tag (ADR-612) — dedicated non-BIM entity, own single-click tool ──
   'opening-info-tag': 'opening-info-tag',
+  // ── Table (ADR-739 Φάση Δ) — dedicated non-BIM entity, own single-click tool ──
+  'table': 'table',
 };
 
 // ADR-587 Φ2b — project the SSoT map onto each `ToolInfo.createsEntityType` (DERIVED, mirror

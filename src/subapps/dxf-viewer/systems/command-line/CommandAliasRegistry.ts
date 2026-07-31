@@ -215,6 +215,9 @@ const BUILT_IN: ReadonlyArray<readonly [string, ToolType]> = [
   // ── Opening info tag (ADR-612) — dedicated entity, generic single-click tool ──
   ['OPENINGTAG',  'opening-info-tag'],
   ['OTAG',        'opening-info-tag'],
+  // ── Table (ADR-739 Φάση Δ) — dedicated entity, generic single-click tool ──
+  ['TABLE',       'table'],
+  ['TB',          'table'],
 ] as const;
 
 // Build lookup map (uppercase → toolId). Built-ins loaded once at module init.

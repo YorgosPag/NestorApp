@@ -279,6 +279,8 @@ export const TOOL_POINT_REQUIREMENTS: Record<string, ToolPointRequirements> = {
   'scale-bar': { minPoints: 2, maxPoints: 2, allowsContinuous: false },
   // ADR-612 — Opening info tag: single-click placement (default-size box at the pick).
   'opening-info-tag': { minPoints: 1, maxPoints: 1, allowsContinuous: false },
+  // ADR-739 Φάση Δ — Table: single-click placement (πάνω-αριστερή γωνία, default μέγεθος).
+  'table': { minPoints: 1, maxPoints: 1, allowsContinuous: false },
 };
 
 // ============================================================================

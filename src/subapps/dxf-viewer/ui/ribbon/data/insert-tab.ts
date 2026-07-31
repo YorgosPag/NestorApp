@@ -356,6 +356,22 @@ export const INSERT_TAB: RibbonTab = {
                 shortcut: 'OPENINGTAG',
               },
             },
+            {
+              // ADR-739 Φάση Δ — table: DEDICATED entity type (NOT an
+              // annotation-symbol kind), ίδια οικογένεια με το opening-info-tag
+              // από πάνω. commandKey δρομολογεί στο ίδιο generic SINGLE-CLICK
+              // drawing tool (RibbonLargeButton → onToolChange).
+              type: 'simple',
+              size: 'large',
+              command: {
+                id: 'insert.table',
+                labelKey: 'ribbon.commands.table',
+                tooltipKey: 'ribbon.commands.tableTooltip',
+                icon: 'table',
+                commandKey: 'table',
+                shortcut: 'TABLE',
+              },
+            },
           ],
         },
       ],

@@ -49,6 +49,7 @@ import { WallOnEntityIcon } from './WallOnEntityIcon';
 import { WallFromLinesIcon } from './WallFromLinesIcon';
 import { WallRegionInsideIcon } from './WallRegionInsideIcon';
 import { WallSingleIcon } from './WallSingleIcon';
+import { TableIconGlyph } from './table-icon-glyph';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -464,6 +465,9 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
         <line x1="12" y1="12" x2="12" y2="19" />
       </>
     ));
+    // ADR-739 Φάση Δ — table: γλυφή πλέγματος πίνακα (βλ. `table-icon-glyph.tsx`
+    // για σχεδιαστική τεκμηρίωση· N.7.1 SRP split, αυτό το αρχείο άγγιζε το όριο 500 γρ.).
+    case 'table': return inlineSvg(size, <TableIconGlyph />);
     // ADR-615 — free-standing (self-hosted) opening placement: a door-leaf glyph
     // sitting on a DASHED baseline (vs the solid host-wall baseline implied by the
     // regular `bim-opening` DoorOpen icon) — visually communicates "no BIM wall".

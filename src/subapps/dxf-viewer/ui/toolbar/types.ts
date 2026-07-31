@@ -312,6 +312,11 @@ export type ToolType =
   // 'annotation-symbol' click-count, scale-bar's ribbon/options/builder plumbing):
   // 1 click = box centre, default 120×80 (3:2) size, 3 empty cells (edited later).
   | 'opening-info-tag'    // OPENINGTAG — 1-click → OpeningInfoTagEntity
+  // ADR-739 Φάση Δ: Table — a DEDICATED entity type (sibling of scale-bar/opening-info-tag),
+  // NOT an annotation-symbol kind. SINGLE-CLICK generic accumulator tool (mirror
+  // 'opening-info-tag' click-count): 1 click = πάνω-αριστερή γωνία, default μέγεθος/στήλες
+  // (επεξεργάζονται μετά).
+  | 'table'               // TABLE — 1-click → TableEntity, πάνω-αριστερή γωνία
   // ADR-649: «Ετικέτα Εμβαδού Γραμμοσκίασης» — 2-κλικ placement/creation tool (pick
   // hatch → place TextEntity με το εμβαδόν). Persists ως κανονικό text (select/move/
   // delete/undo). ΔΕΝ είναι measurement readout — δεν μπαίνει στο MeasurementTool union.
