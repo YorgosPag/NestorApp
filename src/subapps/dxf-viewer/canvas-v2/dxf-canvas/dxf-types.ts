@@ -518,10 +518,12 @@ export interface DxfOpeningInfoTag extends DxfEntity {
  * παράγει τη διάταξη μέσω `computeTableEntityGeometryLive` (απομνημονευμένη). Καμία τετράδα
  * geometry/params/validation — η διάταξη είναι **παράγωγη**, ποτέ αποθηκευμένη.
  *
- * ⚠️ Το `model.cells` είναι `Map`. Ταξιδεύει **ως αναφορά** μέσα στο render pipeline (που
- * είναι in-memory), αλλά **δεν επιβιώνει `JSON.stringify`** — η σειριοποίηση για το
- * `.scene.json` ανήκει στη Φ.Δ, μαζί με τη δημιουργία (δεν σειριοποιείς ό,τι δεν μπορείς
- * ακόμη να φτιάξεις). Μέχρι τότε ΜΗΝ υποθέσεις ότι ένας πίνακας επιβιώνει reload.
+ * Το `model` είναι `PersistedTableModel` (ADR-739 Φ.Δ — Λύση Α, `types/table.ts`): τα
+ * κελιά ταξιδεύουν ως **ακολουθία** τριάδων, όχι `Map`, άρα επιβιώνει ακέραιο
+ * `JSON.stringify` και reload. Ο `TableModel` με τον `Map` — αυτόν που δέχονται η μηχανή
+ * διάταξης και ο adapter — παράγεται κατ' απαίτηση από το `resolveTableModel`
+ * (`bim/table/table-model-helpers.ts`), ποτέ δεν αποθηκεύεται. Πλήρης αιτιολόγηση στο
+ * `types/table-entity.ts`.
  */
 export interface DxfTable extends DxfEntity {
   type: 'table';

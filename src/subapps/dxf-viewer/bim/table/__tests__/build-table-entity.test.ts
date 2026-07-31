@@ -39,9 +39,14 @@ import {
   DEFAULT_TABLE_COLUMN_COUNT,
   DEFAULT_TABLE_COLUMN_WIDTH_MM,
   DEFAULT_TABLE_DATA_ROW_COUNT,
+  MAX_TABLE_COLUMN_COUNT,
+  MAX_TABLE_COLUMN_WIDTH_MM,
+  MAX_TABLE_DATA_ROW_COUNT,
   buildTableEntity,
   buildTableModel,
 } from '../build-table-entity';
+import type { BuildTableOptions } from '../build-table-entity';
+import { MIN_TABLE_COLUMN_WIDTH_MM } from '../../../types/table-entity';
 import { resolveTableModel } from '../table-model-helpers';
 import { computeTableEntityGeometry } from '../table-entity-geometry';
 import { BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
@@ -290,5 +295,100 @@ describe('ADR-739 Φ.Δ — ζωντανές επιλογές του εργαλ�
   it('ίδιο σχήμα ⇒ ΤΟ ΙΔΙΟ μοντέλο· άλλο σχήμα ⇒ άλλο (η μνήμη δεν κολλάει)', () => {
     expect(buildTableModel({})).toBe(buildTableModel({}));
     expect(buildTableModel({ columnCount: 4 })).not.toBe(buildTableModel({}));
+  });
+});
+
+// ── 6. Το φράγμα — NaN, ±Infinity, άνω όρια ─────────────────────────────────
+//
+// Η ομάδα 5 δοκίμαζε 0 / -3 / 0.001 και περνούσε, δίνοντας ψεύτικη σιγουριά ότι το
+// φράγμα ήταν πλήρες. Δεν ήταν: και τα τρία μεγέθη περνούσαν `NaN` και `±Infinity`
+// άθικτα. Και το `NaN` δεν είναι εξωτικό — `parseFloat('')` **είναι** `NaN`, δηλαδή το
+// κανονικό αποτέλεσμα ενός αριθμητικού πεδίου που ο χρήστης άδειασε με backspace.
+
+describe('ADR-739 Φ.Δ — το φράγμα του σχήματος φράζει πραγματικά', () => {
+  const initial = useTableOptionsStore.getState();
+
+  afterEach(() => {
+    useTableOptionsStore.setState({
+      columnCount: initial.columnCount,
+      dataRowCount: initial.dataRowCount,
+      columnWidthMm: initial.columnWidthMm,
+    });
+  });
+
+  const build = (opts: BuildTableOptions): TableEntity =>
+    buildTableEntity(ORIGIN, opts, 'tbl_guard', 'lyr_test');
+
+  const fixedWidth = (model: PersistedTableModel): number => {
+    const sizing = model.columns[0].sizing;
+    return sizing.kind === 'fixed' ? sizing.widthMm : Number.NaN;
+  };
+
+  it('NaN και στα τρία μεγέθη ⇒ ΠΡΟΕΠΙΛΟΓΗ (όχι μηδέν, ποτέ εξαίρεση)', () => {
+    const { model } = build({ columnCount: NaN, dataRowCount: NaN, columnWidthMm: NaN });
+    expect(model.columns).toHaveLength(DEFAULT_TABLE_COLUMN_COUNT);
+    expect(model.rows).toHaveLength(2 + DEFAULT_TABLE_DATA_ROW_COUNT);
+    expect(fixedWidth(model)).toBe(DEFAULT_TABLE_COLUMN_WIDTH_MM);
+  });
+
+  it('`columnCount: NaN` ΔΕΝ παράγει αόρατη οντότητα (`i < NaN` = ψευδές από την αρχή)', () => {
+    expect(build({ columnCount: NaN }).model.columns.length).toBeGreaterThan(0);
+  });
+
+  it('`columnCount: Infinity` ΔΕΝ γίνεται άπειρος βρόχος (πάγωμα καρτέλας + OOM)', () => {
+    expect(build({ columnCount: Number.POSITIVE_INFINITY }).model.columns)
+      .toHaveLength(DEFAULT_TABLE_COLUMN_COUNT);
+  }, 2000);
+
+  it('`-Infinity` πέφτει κι αυτό στην προεπιλογή, όχι στο κάτω άκρο', () => {
+    expect(build({ dataRowCount: Number.NEGATIVE_INFINITY }).model.rows)
+      .toHaveLength(2 + DEFAULT_TABLE_DATA_ROW_COUNT);
+  });
+
+  it('🔴 NaN πλάτος ΔΕΝ δηλητηριάζει τα όρια της σκηνής (το bounds-SSoT ΕΝΩΝΕΙ bboxes)', () => {
+    // Ένα NaN bbox σε μία οντότητα μολύνει την ένωση, άρα zoom-extents και marquee
+    // σπάνε ΚΑΘΟΛΙΚΑ — όχι μόνο πάνω στον πίνακα.
+    const geometry = computeTableEntityGeometry(build({ columnWidthMm: NaN }), 100, 'mm');
+    expect(Number.isFinite(geometry.layout.widthMm)).toBe(true);
+    expect(Number.isFinite(geometry.worldWidth)).toBe(true);
+    for (const corner of geometry.worldCorners) {
+      expect(Number.isFinite(corner.x)).toBe(true);
+      expect(Number.isFinite(corner.y)).toBe(true);
+    }
+    const { bbox } = geometry;
+    for (const bound of [bbox.minX, bbox.minY, bbox.maxX, bbox.maxY]) {
+      expect(Number.isFinite(bound)).toBe(true);
+    }
+  });
+
+  it('τεράστια πλήθη κόβονται στο άνω όριο — «άπειρος βρόχος» και «500.000 στήλες» ταυτίζονται', () => {
+    const { model } = build({ columnCount: 500_000, dataRowCount: 999_999 });
+    expect(model.columns).toHaveLength(MAX_TABLE_COLUMN_COUNT);
+    expect(model.rows).toHaveLength(2 + MAX_TABLE_DATA_ROW_COUNT);
+  }, 10_000);
+
+  it('τεράστιο πλάτος κόβεται στη μεγάλη πλευρά του A0', () => {
+    expect(fixedWidth(build({ columnWidthMm: 1e9 }).model)).toBe(MAX_TABLE_COLUMN_WIDTH_MM);
+  });
+
+  it('πεπερασμένες εκφυλισμένες τιμές ΚΟΒΟΝΤΑΙ στα άκρα (δεν πέφτουν σε προεπιλογή)', () => {
+    const { model } = build({ columnCount: 0, dataRowCount: -3, columnWidthMm: 0.001 });
+    expect(model.columns).toHaveLength(1);
+    expect(model.rows).toHaveLength(2);
+    expect(fixedWidth(model)).toBe(MIN_TABLE_COLUMN_WIDTH_MM);
+  });
+
+  it('🔴 το φράγμα ΔΕΝ παρακάμπτεται: οι setters του store καθαρίζουν κι αυτοί', () => {
+    // Χωρίς αυτό, η ribbon θα έδειχνε `NaN` ενώ ο πίνακας θα γεννιόταν με 3 στήλες — UI
+    // που λέει άλλα από όσα κάνει.
+    const store = useTableOptionsStore.getState();
+    store.setColumnCount(NaN);
+    store.setColumnWidthMm(Number.POSITIVE_INFINITY);
+    store.setDataRowCount(10_000);
+
+    const state = useTableOptionsStore.getState();
+    expect(state.columnCount).toBe(DEFAULT_TABLE_COLUMN_COUNT);
+    expect(state.columnWidthMm).toBe(DEFAULT_TABLE_COLUMN_WIDTH_MM);
+    expect(state.dataRowCount).toBe(MAX_TABLE_DATA_ROW_COUNT);
   });
 });

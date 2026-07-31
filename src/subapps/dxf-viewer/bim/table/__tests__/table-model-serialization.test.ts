@@ -13,7 +13,25 @@
  * Καθένα από τα παρακάτω τρέχει τον **πραγματικό** μηχανισμό, όχι μίμησή του.
  */
 
+type LoggerSpy = {
+  readonly debug: jest.Mock;
+  readonly info: jest.Mock;
+  readonly warn: jest.Mock;
+  readonly error: jest.Mock;
+};
+
+// `var` υποχρεωτικά, και η ανάθεση **μέσα** στο εργοστάσιο: το `jest.mock` ανυψώνεται
+// πάνω από κάθε import, και το `table-model-helpers` φτιάχνει τον logger του στο top-level
+// του module — δηλαδή πριν προλάβει να τρέξει οποιοδήποτε `const` αυτού του αρχείου.
+var mockLogger: LoggerSpy | undefined;
+
+jest.mock('@/lib/telemetry', () => {
+  mockLogger = { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+  return { createModuleLogger: () => mockLogger };
+});
+
 import { deepClone } from '@/lib/clone-utils';
+import type { CreateTableModelInput } from '../table-model-helpers';
 import {
   cellKey,
   createTableModel,
@@ -55,6 +73,21 @@ const ALL_CELLS: readonly TableCellEntry[] = [
 
 function makePersisted(cells: readonly TableCellEntry[] = ALL_CELLS): PersistedTableModel {
   return toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, cells }));
+}
+
+/** Οι κραυγές του module — «σιωπηλά άδειος πίνακας» είναι ακριβώς ό,τι δεν επιτρέπεται. */
+function loggedErrors(): jest.Mock {
+  if (!mockLogger) throw new Error('telemetry mock not initialised');
+  return mockLogger.error;
+}
+
+/**
+ * Ό,τι φτάνει από παλιά σκηνή **δεν** είναι `TableCellEntry[]` — γι' αυτό ακριβώς υπάρχει
+ * το δίχτυ. Ο τύπος χαλαρώνει εδώ, σε **ένα** σημείο και με ρητό όνομα: `unknown` που
+ * περνά ως το πεδίο. Ποτέ `any`.
+ */
+function withCells(cells: unknown): CreateTableModelInput {
+  return { columns: COLUMNS, rows: ROWS, cells: cells as CreateTableModelInput['cells'] };
 }
 
 function makeEntity(model: PersistedTableModel = makePersisted()): TableEntity {
@@ -224,5 +257,98 @@ describe('resolveTableModel — απομνημόνευση με κλειδί τ�
     const before = resolveTableModel(entity.model);
     const edited: PersistedTableModel = { ...entity.model, columns: [COLUMNS[1], COLUMNS[0]] };
     expect(resolveTableModel(edited)).not.toBe(before);
+  });
+});
+
+// ── 6. Άκυρο σχήμα κελιών: ΑΝΑΚΤΗΣΗ ή ΚΡΑΥΓΗ — ποτέ σιωπηλά άδειος ──────────
+
+describe('createTableModel — ο μηχανισμός ανάνηψης δεν έχει δικό του σιωπηλό μονοπάτι', () => {
+  beforeEach(() => {
+    loggedErrors().mockClear();
+  });
+
+  it('`{}` (το πτώμα ενός Map μετά από JSON.stringify) ΔΕΝ ρίχνει το καρέ', () => {
+    // Η κλήση ζει μέσα στο `computeTableEntityGeometry`, δηλαδή μέσα στο render pass: ένα
+    // «not iterable» εδώ έριχνε ΟΛΟΚΛΗΡΟ το καρέ, όχι μόνο τον χαλασμένο πίνακα.
+    expect(() => createTableModel(withCells({}))).not.toThrow();
+    const model = createTableModel(withCells({}));
+    expect(model.cells.size).toBe(0);
+    expect(model.rows).toBe(ROWS); // ο υπόλοιπος πίνακας υπάρχει ακόμα
+  });
+
+  it('`{}` ΟΥΡΛΙΑΖΕΙ: άδειος πίνακας χωρίς ίχνος είναι το σφάλμα που κυνηγά όλη η φάση', () => {
+    createTableModel(withCells({}));
+    expect(loggedErrors()).toHaveBeenCalledTimes(1);
+  });
+
+  it('λεξικό «κλειδί → κελί» ανακτάται ΟΛΟΚΛΗΡΟ — και το λέει', () => {
+    const runtime = createTableModel({ columns: COLUMNS, rows: ROWS, cells: ALL_CELLS });
+    const dict: Record<string, TableCell> = {};
+    for (const [key, cell] of runtime.cells) dict[key] = cell;
+
+    const model = createTableModel(withCells(dict));
+    expect(model.cells.size).toBe(4);
+    expect(getCell(model, 'r2', 'c1')?.value).toBe('Δοκός Δ1');
+    expect(loggedErrors()).toHaveBeenCalledTimes(1);
+  });
+
+  it('ΠΡΑΓΜΑΤΙΚΟΣ `Map`: τα κελιά ανακτώνται αντί να εξαφανιστούν σιωπηλά', () => {
+    // Πριν το δίχτυ δεν πετούσε τίποτα: ο iterator του `Map` δίνει ζεύγη **μήκους 2**,
+    // οπότε η τριάδα αποδομούνταν λάθος (`cell === undefined`) και ΟΛΑ τα κελιά χάνονταν
+    // χωρίς ούτε μία προειδοποίηση — ακριβώς η σιωπηλή απώλεια που η Φ.Δ ήρθε να σκοτώσει.
+    const legacy = createTableModel({ columns: COLUMNS, rows: ROWS, cells: ALL_CELLS });
+    const model = createTableModel(withCells(legacy.cells));
+
+    expect(model.cells.size).toBe(4);
+    expect(getCell(model, 'r1', 'c1')?.value).toBe('Στοιχείο');
+    expect(getCell(model, 'r2', 'c2')?.value).toBe(12.5);
+    expect(loggedErrors()).toHaveBeenCalledTimes(1);
+  });
+
+  it('`null` / `undefined` = «κανένα κελί»: νόμιμος αραιός πίνακας, ΚΑΜΙΑ κραυγή', () => {
+    expect(createTableModel(withCells(null)).cells.size).toBe(0);
+    expect(createTableModel(withCells(undefined)).cells.size).toBe(0);
+    expect(loggedErrors()).not.toHaveBeenCalled();
+  });
+
+  it('τριάδες με λάθος αριθμό σκελών πέφτουν έξω — οι υγιείς επιβιώνουν', () => {
+    const model = createTableModel(withCells([
+      ALL_CELLS[0],
+      ['r2', 'c1'],                            // 2 σκέλη: ζεύγος `Map` μεταμφιεσμένο
+      ['r2', 'c1', text('Δοκός Δ2'), 'έξτρα'], // 4 σκέλη
+      [42, 'c1', text('x')],                   // η γραμμή δεν είναι ταυτότητα
+      ['r1', 'c2', 'σκέτο κείμενο'],           // το τρίτο σκέλος δεν είναι κελί
+      ALL_CELLS[3],
+    ]));
+
+    expect(model.cells.size).toBe(2);
+    expect(getCell(model, 'r1', 'c1')?.value).toBe('Στοιχείο');
+    expect(getCell(model, 'r2', 'c2')?.value).toBe(12.5);
+    expect(loggedErrors()).toHaveBeenCalledTimes(1);
+  });
+
+  it('σκουπίδι που δεν είναι καν αντικείμενο ⇒ κενός πίνακας ΜΕ ίχνος', () => {
+    expect(createTableModel(withCells('κελιά;')).cells.size).toBe(0);
+    expect(loggedErrors()).toHaveBeenCalledTimes(1);
+  });
+
+  it('ΙΔΙΑ ΚΛΑΣΗ: και τα υπόλοιπα πεδία αντέχουν μη-ακολουθία (το πρώτο `.length` έριχνε)', () => {
+    const model = createTableModel({
+      columns: COLUMNS,
+      rows: ROWS,
+      merges: 'όχι ακολουθία' as unknown as CreateTableModelInput['merges'],
+    });
+    expect(model.merges).toEqual([]);
+    expect(loggedErrors()).toHaveBeenCalledTimes(1);
+  });
+
+  it('το `resolveTableModel` κληρονομεί το δίχτυ — αυτή είναι η πόρτα από τη σκηνή', () => {
+    const broken = {
+      columns: COLUMNS, rows: ROWS, cells: {}, merges: [],
+    } as unknown as PersistedTableModel;
+
+    expect(() => resolveTableModel(broken)).not.toThrow();
+    expect(resolveTableModel(broken).cells.size).toBe(0);
+    expect(loggedErrors()).toHaveBeenCalled();
   });
 });

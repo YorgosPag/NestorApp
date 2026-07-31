@@ -24,6 +24,9 @@ import {
   DEFAULT_TABLE_COLUMN_WIDTH_MM,
   DEFAULT_TABLE_DATA_ROW_COUNT,
   buildTableEntity,
+  sanitizeTableColumnCount,
+  sanitizeTableColumnWidthMm,
+  sanitizeTableDataRowCount,
 } from '../bim/table/build-table-entity';
 
 interface TableOptionsState {
@@ -36,13 +39,28 @@ interface TableOptionsState {
   setColumnWidthMm(columnWidthMm: number): void;
 }
 
+/**
+ * 🔴 Οι setters **καθαρίζουν** — δεν αποθηκεύουν ωμούς αριθμούς.
+ *
+ * Ο store είναι δημόσιο API και η ribbon τον ταΐζει από αριθμητικά πεδία, όπου
+ * `parseFloat('')` = `NaN` είναι το **κανονικό** αποτέλεσμα ενός πεδίου που ο χρήστης
+ * άδειασε — όχι εξωτικό σενάριο. Χωρίς καθάρισμα εδώ, ένα `NaN` πλάτος περνά στη διάταξη,
+ * βγάζει NaN bbox και — επειδή το `entity-bounds-ssot` **ενώνει** bboxes — δηλητηριάζει τα
+ * όρια ΟΛΗΣ της σκηνής· ένα `Infinity` πλήθος στηλών παγώνει την καρτέλα σε άπειρο βρόχο.
+ *
+ * Ο κανόνας είναι **ένας** και ζει στο `build-table-entity.ts` δίπλα στις προεπιλογές
+ * (`sanitizeTable*`): εδώ γίνεται μόνο η κλήση. Το ίδιο φράγμα ξαναμπαίνει και μέσα στον
+ * builder (`resolveShape`) γιατί ο store δεν είναι η μόνη πόρτα προς αυτόν — βλ. το
+ * σκεπτικό στο `resolveShape`.
+ */
 export const useTableOptionsStore = create<TableOptionsState>((set) => ({
   columnCount: DEFAULT_TABLE_COLUMN_COUNT,
   dataRowCount: DEFAULT_TABLE_DATA_ROW_COUNT,
   columnWidthMm: DEFAULT_TABLE_COLUMN_WIDTH_MM,
-  setColumnCount: (columnCount) => set({ columnCount }),
-  setDataRowCount: (dataRowCount) => set({ dataRowCount }),
-  setColumnWidthMm: (columnWidthMm) => set({ columnWidthMm }),
+  setColumnCount: (columnCount) => set({ columnCount: sanitizeTableColumnCount(columnCount) }),
+  setDataRowCount: (dataRowCount) => set({ dataRowCount: sanitizeTableDataRowCount(dataRowCount) }),
+  setColumnWidthMm: (columnWidthMm) =>
+    set({ columnWidthMm: sanitizeTableColumnWidthMm(columnWidthMm) }),
 }));
 
 /**

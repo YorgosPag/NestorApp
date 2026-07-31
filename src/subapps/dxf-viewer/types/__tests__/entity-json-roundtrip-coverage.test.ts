@@ -4,10 +4,23 @@
  *
  * ## Το σιωπηλό σφάλμα
  * Ένας `Map` δεν επιβιώνει `JSON.stringify` — γίνεται `{}` **χωρίς εξαίρεση και χωρίς
- * προειδοποίηση**. Πέντε *γενικοί* μηχανισμοί περνούν **κάθε** οντότητα από αυτό το
- * κανάλι: αποθήκευση/επαναφόρτωση σκηνής, `deepClone` για undo, διαγραφή+αναίρεση,
- * πρόχειρο, λανθάνουσα μνήμη ζωγραφικής. Άρα το σφάλμα δεν είναι «ένα bug του πίνακα»:
- * είναι μια **κλάση** που κάθε μελλοντική οντότητα μπορεί να ξαναγεννήσει.
+ * προειδοποίηση**. **ΤΡΕΙΣ** *γενικοί* μηχανισμοί περνούν **κάθε** οντότητα από αυτό το
+ * κανάλι — μετρημένοι στον κώδικα, όχι εκτιμημένοι:
+ *   1. αποθήκευση/επαναφόρτωση σκηνής — `services/dxf-firestore-storage.impl.ts:169`,
+ *   2. αναίρεση — `core/commands/.../UpdateEntityCommand.ts:38` (`deepClone`),
+ *   3. διαγραφή + αναίρεση — `DeleteEntityCommand.ts:169,301`.
+ * Άρα το σφάλμα δεν είναι «ένα bug του πίνακα»: είναι μια **κλάση** που κάθε μελλοντική
+ * οντότητα μπορεί να ξαναγεννήσει.
+ *
+ * ⚠️ **ΔΕΝ είναι πέντε** (η πρώτη γραφή αυτού του αρχείου έλεγε πέντε). Τα δύο που
+ * αφαιρέθηκαν, ελεγμένα ένα-ένα:
+ *   - **Πρόχειρο** (`systems/clipboard/EntityClipboardStore.ts`) — χρησιμοποιεί
+ *     `structuredClone`, που **διατηρεί** τον `Map`· το JSON είναι μόνο fallback.
+ *   - **Λανθάνουσα μνήμη ζωγραφικής** (`rendering/passes/EntityPass.getCacheKey`) —
+ *     **νεκρός κώδικας** (το `RenderPipeline` δεν καλείται από πουθενά), και ούτως ή
+ *     άλλως κλειδί **μνήμης**, όχι αποθήκευση: τίποτα δεν επιβιώνει εκεί εξ ορισμού.
+ * Ένας αριθμός σε σχόλιο που κανείς δεν μέτρησε είναι η ίδια κλάση σφάλματος με ένα
+ * νούμερο σε παραδοτέο που κανείς δεν πήρε (ADR-720).
  *
  * ## Γιατί δεν αρκεί το συμβόλαιο τύπου (`types/json-safe-entity.ts`)
  * Ο τύπος φρουρεί ό,τι κάποιος θυμήθηκε να καρφώσει με `AssertJsonSafe<…>`. Αυτό εδώ
@@ -32,9 +45,18 @@
 
 import { deepClone } from '@/lib/clone-utils';
 import { RENDERABLE_ENTITY_TYPES } from '../../rendering/contract/renderable-entity-type';
+import type { RenderableEntityType } from '../../rendering/contract/renderable-entity-type';
 import { makeEntityModel } from '../../rendering/hitTesting/__tests__/renderable-entity-fixtures';
-import { createTableModel, toPersistedTableModel } from '../../bim/table/table-model-helpers';
+import {
+  cellText,
+  createTableModel,
+  getCell,
+  resolveTableModel,
+  toPersistedTableModel,
+} from '../../bim/table/table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from '../../bim/table/table-style-presets';
+import { isTableEntity } from '../table-entity';
+import type { EntityType } from '../base-entity';
 import type { TableEntity } from '../table-entity';
 import type { TableModel } from '../table';
 import type { AssertJsonSafe, JsonUnsafeKeys } from '../json-safe-entity';
@@ -174,33 +196,55 @@ function findRoundTripDivergences(before: unknown, after: unknown, rootLabel = '
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * 🔴 **ΓΝΩΣΤΗ ΑΠΟΚΛΙΣΗ ΤΟΥ ΚΟΙΝΟΥ FIXTURE — όχι εξαίρεση του φρουρού.**
+ * **Καμία εξαίρεση.** Ο βρόχος τρέχει πάνω σε ΟΛΟ το ζωντανό μητρώο, `table`
+ * συμπεριλαμβανομένου.
  *
- * Το κοινό fixture του ADR-587 Φ10 (`rendering/hitTesting/__tests__/renderable-entity-
- * fixtures.ts`) φτιάχνει το `table` με `createTableModel(…)`, δηλαδή με **`TableModel`
- * (`Map`)**, ενώ το `TableEntity.model` είναι πλέον `PersistedTableModel` (ADR-739 Φ.Δ).
- * Η απόκλιση δεν σπάει τον compiler επειδή το fixture κάνει `as unknown as EntityModel`,
- * και δεν σπάει το `bounds-calculator-coverage` επειδή εκείνο το fixture τυχαίνει να έχει
- * **μηδέν κελιά** — δηλαδή είναι λάθος που σήμερα δεν κοστίζει τίποτα. Ακριβώς το είδος
- * που κοστίζει αύριο.
- *
- * Ο πίνακας **ελέγχεται κανονικά** παρακάτω, με το ΠΡΑΓΜΑΤΙΚΟ, ελεγμένο-από-compiler
- * σχήμα της οντότητας. Εδώ εξαιρείται μόνο το **μπαγιάτικο διπλό** του, καρφωμένο ρητά
- * ώστε να μην ξεχαστεί (βλ. describe «ΚΑΡΦΩΜΕΝΟ ΚΕΝΟ»).
+ * Ιστορικό, γιατί το λάθος είναι διδακτικό: μέχρι την ADR-739 Φ.Δ βήμα 1 εδώ υπήρχε ένα
+ * `STALE_SHARED_FIXTURE = ['table']` — δηλαδή ο φρουρός **εξαιρούσε ακριβώς τον τύπο για
+ * τον οποίο γράφτηκε**. Αιτία: το κοινό fixture του ADR-587 Φ10 κρατούσε ακόμη
+ * `createTableModel(…)` (`Map`) ενώ η οντότητα είχε γίνει `PersistedTableModel`, και η
+ * απόκλιση περνούσε αόρατη επειδή (α) το fixture έκανε `as unknown as EntityModel` και
+ * (β) είχε **μηδέν κελιά**, οπότε `Map` και ακολουθία έδειχναν ίδιοι. Το fixture
+ * διορθώθηκε στην πηγή: `toPersistedTableModel(…)` **και γεμάτα κελιά**.
  */
-const STALE_SHARED_FIXTURE: readonly string[] = ['table'];
-
-const REGISTRY_COVERED = RENDERABLE_ENTITY_TYPES.filter((t) => !STALE_SHARED_FIXTURE.includes(t));
+const REGISTRY_COVERED: readonly RenderableEntityType[] = RENDERABLE_ENTITY_TYPES;
 
 /**
  * Οι `EntityType` που **δεν** είναι renderable, άρα δεν έχουν fixture πουθενά στο repo:
  * καθαρά editor-side δομές (`block`/`array`/`group`) και τα δύο annotation primitives που
  * ζουν εκτός του render contract. **Δεν καλύπτονται** από αυτό το test — γραμμένο ρητά
  * αντί για σιωπηλή περικοπή.
+ *
+ * Το `satisfies` δεν είναι διακόσμηση: κάνει κάθε εγγραφή **υπαρκτό** `EntityType`, οπότε
+ * ένα τυπογραφικό ή μια λίστα που έμεινε πίσω από διαγραφή τύπου σπάει εδώ.
  */
-const NOT_COVERED_ENTITY_TYPES: readonly string[] = [
+const NOT_COVERED_ENTITY_TYPES = [
   'block', 'array', 'group', 'center-mark', 'centerline',
-];
+] as const satisfies readonly EntityType[];
+
+/**
+ * Ό,τι δεν είναι **ούτε** renderable **ούτε** ρητά καταγεγραμμένο ως ακάλυπτο. Οφείλει να
+ * είναι `never`: οι δύο λίστες μαζί πρέπει να είναι **ολόκληρο** το `EntityType`.
+ *
+ * Χωρίς αυτό, οι δύο λίστες απαντούσαν μόνο «δεν είναι renderable» — δηλαδή ένας νέος
+ * `EntityType` που δεν μπαίνει στο render contract θα έμενε **σιωπηλά εκτός ελέγχου**,
+ * χωρίς ούτε ένα κόκκινο. Ίδιο σχήμα με τη χειρόγραφη λίστα πεδίων του ADR-650 §M10e.
+ */
+type UnaccountedEntityType = Exclude<
+  EntityType,
+  RenderableEntityType | (typeof NOT_COVERED_ENTITY_TYPES)[number]
+>;
+
+/**
+ * `true` όσο δεν έχει ξεφύγει κανένας τύπος· αλλιώς αντικείμενο — η ανάθεση **δεν
+ * μεταγλωττίζεται** και το μήνυμα του compiler **ονομάζει** τον ξεχασμένο τύπο.
+ * Ίδιο μοτίβο με το `AssertJsonSafe` του `types/json-safe-entity.ts` (§5 παρακάτω).
+ */
+type AssertEveryEntityTypeAccounted<T> = [T] extends [never]
+  ? true
+  : { readonly ΞΕΧΑΣΜΕΝΟΣ_ENTITY_TYPE: T };
+
+const EVERY_ENTITY_TYPE_ACCOUNTED: AssertEveryEntityTypeAccounted<UnaccountedEntityType> = true;
 
 /** Ο πίνακας όπως ζει **πραγματικά** στη σκηνή — τυποποιημένος, χωρίς κανένα cast. */
 function makeRealTableEntity(): TableEntity {
@@ -238,9 +282,9 @@ function makeRealTableEntity(): TableEntity {
 // ──────────────────────────────────────────────────────────────────────────────
 
 describe('ΦΡΟΥΡΟΣ — κάθε renderable οντότητα επιβιώνει JSON (ζωντανό μητρώο)', () => {
-  it('καμία σιωπηλή περικοπή: ελεγμένοι + ρητά καρφωμένοι = ΟΛΟ το μητρώο', () => {
-    expect([...REGISTRY_COVERED, ...STALE_SHARED_FIXTURE].sort())
-      .toEqual([...RENDERABLE_ENTITY_TYPES].sort());
+  it('καμία σιωπηλή περικοπή: ο βρόχος τρέχει σε ΟΛΟ το μητρώο, `table` μέσα', () => {
+    expect([...REGISTRY_COVERED].sort()).toEqual([...RENDERABLE_ENTITY_TYPES].sort());
+    expect([...REGISTRY_COVERED]).toContain('table');
   });
 
   it.each(REGISTRY_COVERED)(
@@ -293,18 +337,33 @@ describe('ΠΙΝΑΚΑΣ — με το ΠΡΑΓΜΑΤΙΚΟ σχήμα της ο
 // 3. Καρφωμένα κενά — γραμμένα, όχι σιωπηλά
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe('ΚΑΡΦΩΜΕΝΟ ΚΕΝΟ — το κοινό fixture του ADR-587 Φ10 έμεινε πίσω', () => {
-  it('το `makeEntityModel("table")` δίνει ΑΚΟΜΑ `Map` — μπαγιάτικο διπλό της οντότητας', () => {
-    // 🔴 ΟΤΑΝ ΑΥΤΟ ΓΙΝΕΙ ΚΟΚΚΙΝΟ: το fixture διορθώθηκε (τυλίχθηκε σε `toPersistedTableModel`).
-    // Τότε ΣΒΗΣΕ αυτό το describe και βγάλε το 'table' από το `STALE_SHARED_FIXTURE` —
-    // ο πίνακας θα ελέγχεται πλέον και από τον βρόχο του μητρώου.
-    const paths = findJsonUnsafePaths(makeEntityModel('table'), 'fixture');
-    expect(paths).toHaveLength(1);
-    expect(paths[0]).toContain('fixture.model.cells → Map');
+describe('ΤΟ ΚΟΙΝΟ FIXTURE ΤΟΥ ADR-587 — ίδιο σχήμα με την οντότητα, όχι διπλό της', () => {
+  it('το `makeEntityModel("table")` δίνει **ακολουθία** κελιών, κανέναν `Map`', () => {
+    expect(findJsonUnsafePaths(makeEntityModel('table'), 'fixture')).toEqual([]);
   });
 
-  it('ο τύπος «table» παραμένει renderable — το κενό είναι του fixture, όχι του domain', () => {
-    expect([...RENDERABLE_ENTITY_TYPES]).toContain('table');
+  it('…και τα κελιά του είναι ΓΕΜΑΤΑ — αλλιώς ο έλεγχος δεν αποδεικνύει τίποτα', () => {
+    // 🔴 Με μηδέν κελιά, `Map` και ακολουθία επιβιώνουν και οι δύο ένα round-trip: ο
+    // φρουρός θα ήταν μονίμως πράσινος πάνω σε λάθος σχήμα. Τα κελιά ΕΙΝΑΙ ο έλεγχος.
+    const entity = makeEntityModel('table');
+    expect(isTableEntity(entity)).toBe(true);
+    if (!isTableEntity(entity)) return; // στένεμα τύπου· το expect από πάνω είναι ο έλεγχος
+    expect(Array.isArray(entity.model.cells)).toBe(true);
+    expect(entity.model.cells.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('τα κελιά φτάνουν ΣΤΗ ΜΗΧΑΝΗ: το `resolveTableModel` τα ξαναβρίσκει στη θέση τους', () => {
+    // Ο δυνατός από τους τρεις ελέγχους: δεν ρωτά «τι σχήμα έχει το πεδίο» αλλά «φτάνει το
+    // περιεχόμενο εκεί που το διαβάζει η διάταξη». Με `Map` στη θέση της ακολουθίας, το
+    // `createTableModel` αποσυνθέτει τα ζεύγη [κλειδί, κελί] σαν να ήταν τριάδες και χτίζει
+    // κλειδιά-σκουπίδια: το `getCell` γυρίζει `undefined` και ο πίνακας δείχνει ΑΔΕΙΟΣ —
+    // χωρίς καμία εξαίρεση, ακριβώς η σιωπή που φρουρεί αυτό το αρχείο.
+    const entity = makeEntityModel('table');
+    expect(isTableEntity(entity)).toBe(true);
+    if (!isTableEntity(entity)) return;
+    const model = resolveTableModel(entity.model);
+    expect(cellText(getCell(model, 'r1', 'c1'))).toBe('Στοιχείο');
+    expect(cellText(getCell(model, 'r2', 'c2'))).toBe('12.5');
   });
 });
 
@@ -313,6 +372,19 @@ describe('ΓΝΩΣΤΑ ΚΕΝΑ — `EntityType` εκτός render contract (κ�
     // Αν κάποιος τους κάνει renderable, μπαίνουν αυτόματα στον βρόχο του μητρώου — και
     // αυτό το test γίνεται κόκκινο, ζητώντας να ξαναγραφτεί η λίστα. Καμία σιωπή.
     expect([...RENDERABLE_ENTITY_TYPES]).not.toContain(type);
+  });
+
+  it('ΚΑΘΕ `EntityType` λογοδοτεί: renderable ⊎ ρητά ακάλυπτοι = ΟΛΟ το union', () => {
+    // Ο πραγματικός έλεγχος είναι του compiler (`AssertEveryEntityTypeAccounted`): νέος
+    // τύπος που δεν μπαίνει σε καμία από τις δύο λίστες σπάει τη μεταγλώττιση, ονομαστικά.
+    // Εδώ εκτίθεται ώστε να είναι ΟΡΑΤΟΣ στη σουίτα — ένας φρουρός που κανείς δεν βλέπει
+    // είναι φρουρός που κάποιος θα σβήσει.
+    expect(EVERY_ENTITY_TYPE_ACCOUNTED).toBe(true);
+    // …και οι δύο λίστες είναι ΞΕΝΕΣ μεταξύ τους: ένας τύπος δεν γίνεται και τα δύο.
+    const both = RENDERABLE_ENTITY_TYPES.filter(
+      (t) => (NOT_COVERED_ENTITY_TYPES as readonly string[]).includes(t),
+    );
+    expect(both).toEqual([]);
   });
 });
 
