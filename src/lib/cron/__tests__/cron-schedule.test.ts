@@ -11,7 +11,7 @@
  * Τα job modules παρακάμπτονται: το ζητούμενο είναι το **πρόγραμμα**, όχι οι εργασίες,
  * και ένα πραγματικό import θα έσερνε firebase-admin και δίκτυο μέσα σε unit test.
  *
- * @see ADR-739
+ * @see ADR-740
  */
 
 import { Cron } from 'croner';
@@ -42,7 +42,7 @@ const disabled = CRON_SCHEDULE.filter((job) => !isEnabledCronJob(job));
 describe('πρόγραμμα — δομή', () => {
   it('υπάρχουν ενεργές εργασίες', () => {
     // Δικλείδα: αν κάποιος απενεργοποιήσει τα πάντα, τα `it.each` παρακάτω θα ήταν
-    // κενά και πράσινα — η ακριβής μορφή του σφάλματος που διορθώνει το ADR-739.
+    // κενά και πράσινα — η ακριβής μορφή του σφάλματος που διορθώνει το ADR-740.
     expect(enabled.length).toBeGreaterThanOrEqual(8);
   });
 

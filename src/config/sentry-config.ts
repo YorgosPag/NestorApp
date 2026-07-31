@@ -17,7 +17,7 @@
  * διεύθυνση παραλαβής, όχι διαπιστευτήριο. Γι' αυτό το `NEXT_PUBLIC_SENTRY_DSN` είναι
  * θεμιτό fallback και όχι έκπτωση ασφάλειας.
  *
- * ⚠️ Γιατί υπάρχει το fallback (ADR-739): τα `sentry.server.config.ts` /
+ * ⚠️ Γιατί υπάρχει το fallback (ADR-740): τα `sentry.server.config.ts` /
  * `sentry.edge.config.ts` διάβαζαν **μόνο** `SENTRY_DSN`, ενώ το
  * `.github/workflows/docker-build.yml` περνά μόνο `NEXT_PUBLIC_SENTRY_DSN`. Αν το
  * `SENTRY_DSN` δεν είναι ορισμένο στο Netcup, ο server αρχικοποιούσε το SDK **χωρίς

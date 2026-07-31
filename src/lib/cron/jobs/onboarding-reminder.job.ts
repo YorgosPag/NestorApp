@@ -8,7 +8,7 @@
  *
  * @module lib/cron/jobs/onboarding-reminder
  * @enterprise ADR-326 Phase 8
- * @see ADR-739
+ * @see ADR-740
  */
 
 import { findCompaniesNeedingReminder } from '@/services/onboarding/onboarding-state-service';

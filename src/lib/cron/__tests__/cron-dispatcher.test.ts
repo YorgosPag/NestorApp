@@ -11,7 +11,7 @@
  * - Η επιτυχία γράφει `lastSuccessAt`· η αποτυχία **όχι**.
  * - Κάθε εκτέλεση περνά από Sentry check-in — ο dead-man's switch δεν είναι προαιρετικός.
  *
- * @see ADR-739
+ * @see ADR-740
  */
 
 import type { CronJobDefinition } from '@/types/cron-schedule';

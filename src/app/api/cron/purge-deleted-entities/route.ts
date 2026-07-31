@@ -17,7 +17,7 @@
  *
  * @module api/cron/purge-deleted-entities
  * @enterprise ADR-281 — SSOT Soft-Delete System
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

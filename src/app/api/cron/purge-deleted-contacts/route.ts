@@ -8,7 +8,7 @@
  *
  * Δεν διαγράφηκε επειδή ο αντικαταστάτης δεν έχει τρέξει ποτέ σε παραγωγή (κανένα cron
  * δεν έτρεξε 2026-05-09 → 2026-07-31). Αφαίρεση route + job μόνο αφού το
- * `purge-deleted-entities` δείξει επιτυχημένα check-ins — βλ. ADR-739 §Αποφάσεις.
+ * `purge-deleted-entities` δείξει επιτυχημένα check-ins — βλ. ADR-740 §Αποφάσεις.
  *
  * **Πυροκροτητής, όχι λογική** — η εκκαθάριση ζει στο
  * `lib/cron/jobs/purge-deleted-contacts.job.ts`.
@@ -18,7 +18,7 @@
  *
  * @module api/cron/purge-deleted-contacts
  * @enterprise ADR-191 pattern — Soft-delete lifecycle auto-purge
- * @see ADR-739
+ * @see ADR-740
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

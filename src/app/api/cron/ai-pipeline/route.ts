@@ -9,7 +9,7 @@
  * ⚠️ **Δεν προγραμματίζεται σήμερα.** Το route υπάρχει από την αρχή αλλά δεν μπήκε
  * ποτέ στο `vercel.json` — άρα δεν έτρεξε ούτε όσο ζούσε το Vercel. Δηλωμένο στο
  * `src/config/cron-schedule.ts` ως `enabled: false` / `never-scheduled`, ώστε να είναι
- * **ορατό** αντί να ξαναξεχαστεί (ADR-739 §Αποφάσεις).
+ * **ορατό** αντί να ξαναξεχαστεί (ADR-740 §Αποφάσεις).
  *
  * ⚠️ **Το διαγνωστικό απαιτεί πλέον εξουσιοδότηση.** Μέχρι 2026-07-31 το μη
  * ταυτοποιημένο σκέλος επέστρεφε `intakeSubject` και `intakeSender` — δηλαδή **θέματα
@@ -22,7 +22,7 @@
  * @module api/cron/ai-pipeline
  * @see ADR-080 (Pipeline Implementation)
  * @see api/cron/email-ingestion (same pattern — τώρα κυριολεκτικά ο ίδιος κώδικας)
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
 import 'server-only';

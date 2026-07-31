@@ -14,7 +14,7 @@
  * κοινό με το `/api/cron/ai-pipeline`.
  *
  * @module api/cron/email-ingestion
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (03:00 Europe/Athens)
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (03:00 Europe/Athens)
  */
 
 import 'server-only';

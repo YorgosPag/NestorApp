@@ -1407,7 +1407,7 @@
     },
     "cron-auth": {
       "ssotFile": "src/lib/cron-auth.ts",
-      "description": "Scheduled-job authorization must use centralized verifyCronAuthorization / rejectUnauthorizedCron — no inline CRON_SECRET checks. Since ADR-739 the caller is a Coolify Scheduled Task hitting /api/cron/dispatch, not Vercel Cron (Vercel frozen 2026-05-09); the contract (two headers, secure default when the secret is absent) is unchanged. TRASH_RETENTION_MS also lives here — it was byte-copied in purge-deleted-contacts and purge-deleted-entities, two places to edit for one promise to the user.",
+      "description": "Scheduled-job authorization must use centralized verifyCronAuthorization / rejectUnauthorizedCron — no inline CRON_SECRET checks. Since ADR-740 the caller is a Coolify Scheduled Task hitting /api/cron/dispatch, not Vercel Cron (Vercel frozen 2026-05-09); the contract (two headers, secure default when the secret is absent) is unchanged. TRASH_RETENTION_MS also lives here — it was byte-copied in purge-deleted-contacts and purge-deleted-entities, two places to edit for one promise to the user.",
       "forbiddenPatterns": [
         "function\\s+verifyCronAuthorization\\s*\\(",
         "function\\s+rejectUnauthorizedCron\\s*\\(",
@@ -1419,7 +1419,7 @@
     },
     "cron-schedule": {
       "ssotFile": "src/config/cron-schedule.ts",
-      "description": "ADR-739 — Το πρόγραμμα προγραμματισμένων εργασιών (τι τρέχει πότε) ζει ΑΠΟΚΛΕΙΣΤΙΚΑ στο src/config/cron-schedule.ts. Μέχρι 2026-07-31 ζούσε στο vercel.json, αρχείο που διαβάζει μόνο το Vercel — παγωμένο από 2026-05-09 — με αποτέλεσμα ΚΑΜΙΑ εργασία να μην τρέξει επί τρεις μήνες (κανένα αντίγραφο ασφαλείας, καμία εκκαθάριση κάδου, καμία οριστική διαγραφή). Η ίδια δήλωση τροφοδοτεί τον dispatcher, το Sentry monitor (dead-man's switch) και τα tests, ώστε πρόγραμμα και συναγερμός να μην μπορούν να αποκλίνουν. ΑΠΑΓΟΡΕΥΕΤΑΙ: δεύτερος πίνακας `crons` (vercel.json ή αλλού), δεύτερη υλοποίηση dispatchCronTick/isJobDue/buildMonitorConfig, και in-process scheduler (node-cron/BullMQ/agenda) — ο χρονοπρογραμματιστής είναι μία Coolify Scheduled Task ανά λεπτό στο /api/cron/dispatch. Νέο cron route χωρίς εγγραφή εδώ ⇒ κόκκινο στο src/lib/cron/__tests__/cron-route-contract.test.ts.",
+      "description": "ADR-740 — Το πρόγραμμα προγραμματισμένων εργασιών (τι τρέχει πότε) ζει ΑΠΟΚΛΕΙΣΤΙΚΑ στο src/config/cron-schedule.ts. Μέχρι 2026-07-31 ζούσε στο vercel.json, αρχείο που διαβάζει μόνο το Vercel — παγωμένο από 2026-05-09 — με αποτέλεσμα ΚΑΜΙΑ εργασία να μην τρέξει επί τρεις μήνες (κανένα αντίγραφο ασφαλείας, καμία εκκαθάριση κάδου, καμία οριστική διαγραφή). Η ίδια δήλωση τροφοδοτεί τον dispatcher, το Sentry monitor (dead-man's switch) και τα tests, ώστε πρόγραμμα και συναγερμός να μην μπορούν να αποκλίνουν. ΑΠΑΓΟΡΕΥΕΤΑΙ: δεύτερος πίνακας `crons` (vercel.json ή αλλού), δεύτερη υλοποίηση dispatchCronTick/isJobDue/buildMonitorConfig, και in-process scheduler (node-cron/BullMQ/agenda) — ο χρονοπρογραμματιστής είναι μία Coolify Scheduled Task ανά λεπτό στο /api/cron/dispatch. Νέο cron route χωρίς εγγραφή εδώ ⇒ κόκκινο στο src/lib/cron/__tests__/cron-route-contract.test.ts.",
       "forbiddenPatterns": [
         "\"crons\"\\s*:",
         "(function|const)\\s+(dispatchCronTick|isJobDue|buildMonitorConfig)\\b",

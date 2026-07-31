@@ -8,12 +8,12 @@
  * προσαρμογέας στο `lib/cron/jobs/backup.job.ts`.
  *
  * ⚠️ Αυτό είναι το job του οποίου η τρίμηνη σιωπή είναι το σοβαρότερο εύρημα του
- * ADR-739: από 2026-05-09 έως 2026-07-31 **δεν λήφθηκε κανένα αντίγραφο ασφαλείας**,
+ * ADR-740: από 2026-05-09 έως 2026-07-31 **δεν λήφθηκε κανένα αντίγραφο ασφαλείας**,
  * επειδή το πρόγραμμα ζούσε μόνο στο νεκρό `vercel.json`.
  *
  * @module api/cron/backup
  * @see adrs/ADR-313-enterprise-backup-restore.md §6 Phase 2
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (04:00 Europe/Athens)
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (04:00 Europe/Athens)
  */
 
 import { NextRequest, NextResponse } from 'next/server';

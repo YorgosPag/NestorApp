@@ -218,7 +218,7 @@ export const COLLECTIONS = {
   /** Ενεργές συγκαταθέσεις χρήστη→client — η λίστα που ο χρήστης ανακαλεί. */
   OAUTH_CONSENTS: 'oauth_consents',
 
-  // ⏱️ ΧΡΟΝΟΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ (ADR-739)
+  // ⏱️ ΧΡΟΝΟΠΡΟΓΡΑΜΜΑΤΙΣΜΟΣ (ADR-740)
   /**
    * Κατάσταση εκτέλεσης ανά προγραμματισμένη εργασία — ένα έγγραφο ανά `slug`
    * (`lastSuccessAt`, `leaseExpiresAt`, `consecutiveFailures`).

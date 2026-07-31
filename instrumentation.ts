@@ -8,7 +8,7 @@
  *    → RangeError. Browser-side patched in public/react-bugfix-guards.js; server
  *    SSR/RSC renderer hits the same code path and needs the same guard.
  *
- * 2. **Αρχικοποίηση Sentry ανά runtime** (ADR-739). Στο `@sentry/nextjs` v8+ τα αρχεία
+ * 2. **Αρχικοποίηση Sentry ανά runtime** (ADR-740). Στο `@sentry/nextjs` v8+ τα αρχεία
  *    `sentry.server.config.ts` / `sentry.edge.config.ts` **δεν φορτώνονται μόνα τους**:
  *    το `withSentryConfig()` στο `next.config.js` ρυθμίζει build-time πράγματα (source
  *    maps, webpack plugin) — δεν κάνει runtime init. Ο μόνος μηχανισμός είναι αυτό εδώ
@@ -19,7 +19,7 @@
  *    cron check-ins. Το `NEXT_PUBLIC_SENTRY_DSN` ήταν συμπληρωμένο και ο πίνακας του
  *    Sentry έδειχνε γεγονότα, άρα η σιωπή του server ήταν **αόρατη**: κοιτούσες ένα
  *    ζωντανό dashboard και συμπέραινες ότι η τηλεμετρία δουλεύει. Μην αφαιρέσεις το
- *    import — ο dead-man's switch του ADR-739 κρέμεται από αυτό.
+ *    import — ο dead-man's switch του ADR-740 κρέμεται από αυτό.
  */
 export async function register(): Promise<void> {
   const origRepeat = String.prototype.repeat;

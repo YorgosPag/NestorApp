@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CRON MONITOR — dead-man's switch μέσω Sentry Crons (ADR-739)
+ * CRON MONITOR — dead-man's switch μέσω Sentry Crons (ADR-740)
  * =============================================================================
  *
  * ## Το πρόβλημα που λύνει
@@ -22,7 +22,7 @@
  * το check-in (upsert) — δεν υπάρχει χειροκίνητο βήμα στο UI του Sentry.
  *
  * @module lib/cron/cron-monitor
- * @see ADR-739
+ * @see ADR-740
  */
 
 import * as Sentry from '@sentry/nextjs';

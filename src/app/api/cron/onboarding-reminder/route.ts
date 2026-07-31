@@ -11,7 +11,7 @@
  *
  * @module api/cron/onboarding-reminder
  * @enterprise ADR-326 Phase 8
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
 import 'server-only';

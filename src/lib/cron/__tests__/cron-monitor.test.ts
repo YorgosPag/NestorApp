@@ -14,7 +14,7 @@
  * κώδικας αγνοούσε εντελώς το όρισμα και επέστρεφε σταθερές — το κλασικό test που
  * επιβεβαιώνει τον εαυτό του.
  *
- * @see ADR-739
+ * @see ADR-740
  */
 
 import { buildMonitorConfig, sendHeartbeat, type CronMonitorSpec } from '@/lib/cron/cron-monitor';

@@ -11,7 +11,7 @@
  *
  * @module lib/cron/jobs/file-purge
  * @enterprise ADR-191 — Enterprise Document Management System (Phase 3.2)
- * @see ADR-739
+ * @see ADR-740
  */
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';

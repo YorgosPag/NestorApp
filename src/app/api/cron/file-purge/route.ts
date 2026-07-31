@@ -9,7 +9,7 @@
  *
  * @module api/cron/file-purge
  * @enterprise ADR-191 — Enterprise Document Management System (Phase 3.2)
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

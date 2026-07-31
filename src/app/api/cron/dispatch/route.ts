@@ -1,5 +1,5 @@
 /**
- * GET /api/cron/dispatch — το χτύπημα ρολογιού του χρονοπρογραμματιστή (ADR-739)
+ * GET /api/cron/dispatch — το χτύπημα ρολογιού του χρονοπρογραμματιστή (ADR-740)
  *
  * Καλείται **μία φορά το λεπτό** από μία Coolify Scheduled Task:
  *
@@ -17,10 +17,10 @@
  *
  * Ο πυροκροτητής δεν περιέχει λογική: αξιολόγηση προγράμματος, κλείδωμα και check-ins
  * ζουν στο `lib/cron/`. Έτσι το «τι τρέχει πότε» απαντιέται διαβάζοντας **ένα** αρχείο
- * (`src/config/cron-schedule.ts`) — που είναι ολόκληρο το νόημα του ADR-739.
+ * (`src/config/cron-schedule.ts`) — που είναι ολόκληρο το νόημα του ADR-740.
  *
  * @module api/cron/dispatch
- * @see ADR-739
+ * @see ADR-740
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

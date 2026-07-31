@@ -17,7 +17,7 @@
  *
  * @module api/cron/oauth-cleanup
  * @see ADR-738 §10
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (06:00 Europe/Athens)
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (06:00 Europe/Athens)
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

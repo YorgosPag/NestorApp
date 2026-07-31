@@ -9,7 +9,7 @@
  *
  * @route GET /api/cron/ai-learning
  * @see ADR-173 (AI Self-Improvement System)
- * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
 import { NextRequest, NextResponse } from 'next/server';

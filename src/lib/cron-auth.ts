@@ -8,13 +8,13 @@
  *
  * SSoT: ALL cron routes must use this module instead of local copies.
  *
- * ⚠️ Το module γράφτηκε για Vercel Cron. Από ADR-739 ο καλών είναι μια **Coolify
+ * ⚠️ Το module γράφτηκε για Vercel Cron. Από ADR-740 ο καλών είναι μια **Coolify
  * Scheduled Task** στο Netcup που χτυπά το `/api/cron/dispatch` — το Vercel είναι
  * παγωμένο από 2026-05-09 και το `vercel.json` δεν εκτελείται. Το συμβόλαιο (δύο
  * επικεφαλίδες, secure default όταν λείπει το μυστικό) δεν άλλαξε· άλλαξε ο καλών.
  *
  * @module lib/cron-auth
- * @see ADR-739 — το *πρόγραμμα* (τι τρέχει πότε) ζει στο src/config/cron-schedule.ts
+ * @see ADR-740 — το *πρόγραμμα* (τι τρέχει πότε) ζει στο src/config/cron-schedule.ts
  */
 
 import { NextRequest, NextResponse } from 'next/server';

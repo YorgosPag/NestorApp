@@ -6,7 +6,7 @@
  * Η λογική ζει εδώ, όχι στο route. Το `/api/cron/purge-deleted-entities` μένει
  * λεπτός πυροκροτητής — το ίδιο μοτίβο με το `oauth-cleanup` (ADR-738 §10).
  *
- * Γιατί μετακινήθηκε (ADR-739): όσο η λογική ζούσε μέσα σε `export async function GET`,
+ * Γιατί μετακινήθηκε (ADR-740): όσο η λογική ζούσε μέσα σε `export async function GET`,
  * ήταν αδύνατο να δοκιμαστεί χωρίς να στηθεί ολόκληρο Next request — γι' αυτό ακριβώς
  * υπήρχαν **μηδέν tests** σε όλα τα cron routes. Ο χρονοπρογραμματιστής καλεί αυτή τη
  * συνάρτηση **απευθείας**, χωρίς HTTP: κανένα middleware, κανένα rate limit, καμία
@@ -14,7 +14,7 @@
  *
  * @module lib/cron/jobs/purge-deleted-entities
  * @enterprise ADR-281 — SSOT Soft-Delete System
- * @see ADR-739
+ * @see ADR-740
  */
 
 import { TRASH_RETENTION_MS } from '@/lib/cron-auth';
@@ -32,7 +32,7 @@ const logger = createModuleLogger('CronPurgeDeletedEntities');
  * Ανώτατο πλήθος εγγράφων ανά τύπο οντότητας, ανά εκτέλεση.
  *
  * ⚠️ Επιλέχθηκε για το όριο **60s του Vercel serverless**, το οποίο σε Docker/Netcup
- * δεν ισχύει (ADR-739 §Γνωστά όρια). Παραμένει ως έχει: η αλλαγή του είναι απόφαση με
+ * δεν ισχύει (ADR-740 §Γνωστά όρια). Παραμένει ως έχει: η αλλαγή του είναι απόφαση με
  * δικά της δεδομένα (πόσα εκκρεμούν, πόσο κρατά ένα `executeDeletion` με cascade), όχι
  * παρενέργεια της μετακόμισης. Το batching κάνει το job **επαναληπτικό**: ό,τι δεν
  * προλάβει σήμερα, το παίρνει αύριο.
