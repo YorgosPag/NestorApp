@@ -17,9 +17,23 @@
  *    (`ok`/`created`, message-shaped `{success,message}`, or `{success,data,count}`);
  *    it may also return an early non-throwing response (e.g. a null-guard 500),
  *    which is passed through untouched.
+ *  - `mode` selects the status heuristic for **untyped** errors: `'mutation'`
+ *    (default, detail routes) or `'create'` (list-route POST, fallback 500).
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΤΟ `auth` ΕΙΝΑΙ **ΥΠΟΧΡΕΩΤΙΚΟ** (ADR-742 Ομάδα 2)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Εδώ κρέμεται **ολόκληρη** η απόφαση αποκάλυψης του πεδίου ορισμού από μία
+ * μεταβλητή: το `auth.globalRole` που παραδίδεται στη χαρτογράφηση. Ένα
+ * καρφωμένο `'super_admin'` σε αυτό το σημείο θα άνοιγε ξανά το μαντείο
+ * ύπαρξης για **κάθε** διαδρομή μεταβολής, με όλα τα άλλα tests πράσινα — γι'
+ * αυτό υπάρχει ξεχωριστό test που αποδεικνύει ότι φτάνει ο **σωστός** καλών,
+ * όχι ένας ρόλος (ίδιο σχήμα με το `_domain-route.ts` της Φάσης Β, ADR-742 §7.8).
+ *
+ * Προαιρετική παράμετρος ασφαλείας είναι αυτή που ξεχνιέται στο επόμενο route.
  *
  * @module app/api/procurement/_shared/procurement-mutation
- * @see ADR-603 API Route-Handler Factory SSoT
+ * @see ADR-603 API Route-Handler Factory SSoT · ADR-742 §3.4, §7.8
  */
 
 import 'server-only';
@@ -27,8 +41,8 @@ import 'server-only';
 import type { NextRequest, NextResponse } from 'next/server';
 import type { z } from 'zod';
 import { httpError } from '@/lib/api/define-route';
-import { resolveProcurementErrorStatus } from './error-status';
-import { getErrorMessage } from '@/lib/error-utils';
+import type { AuthContext } from '@/lib/auth';
+import { resolveProcurementErrorOutcome } from './procurement-error-outcome';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 
 /** Minimal structural view of the module logger (`error(message, ...args)`). */
@@ -38,6 +52,11 @@ interface MutationLogger {
 
 export interface ProcurementMutationOptions<TSchema extends z.ZodTypeAny> {
   req: NextRequest;
+  /**
+   * Ο ταυτοποιημένος καλών. **Υποχρεωτικός** — από εδώ βγαίνει το
+   * `globalRole` που κρίνει αν η άρνηση φεύγει ειλικρινής ή μεταμφιεσμένη.
+   */
+  auth: AuthContext;
   /** Optional body schema — omit for no-body mutations (archive / delete). */
   schema?: TSchema;
   logger: MutationLogger;
@@ -45,8 +64,14 @@ export interface ProcurementMutationOptions<TSchema extends z.ZodTypeAny> {
   logMessage: string;
   /** Extra structured-log context (e.g. `{ rfqId }`). */
   logContext?: Record<string, unknown>;
-  /** Fallback for `getErrorMessage` when the thrown value has no message. */
+  /** Fallback message when the thrown value has none. */
   fallbackError: string;
+  /** `error.name` που χαρτογραφείται σε 409 (π.χ. `MaterialCodeConflictError`). */
+  conflictName?: string;
+  /** `error.name` που χαρτογραφείται σε 400 (π.χ. `MaterialValidationError`). */
+  validationName?: string;
+  /** Route family για τα **μη τυποποιημένα** σφάλματα. Default: `'mutation'`. */
+  mode?: 'create' | 'mutation';
   /** Business step — returns the success (or early non-throwing) envelope. */
   run: (data: z.infer<TSchema>) => Promise<NextResponse>;
 }
@@ -54,7 +79,7 @@ export interface ProcurementMutationOptions<TSchema extends z.ZodTypeAny> {
 export async function runProcurementMutation<TSchema extends z.ZodTypeAny>(
   opts: ProcurementMutationOptions<TSchema>,
 ): Promise<NextResponse> {
-  const { req, schema, logger, logMessage, logContext, fallbackError, run } = opts;
+  const { req, auth, schema, logger, logMessage, logContext, run } = opts;
   try {
     let data = undefined as z.infer<TSchema>;
     if (schema) {
@@ -64,8 +89,15 @@ export async function runProcurementMutation<TSchema extends z.ZodTypeAny>(
     }
     return await run(data);
   } catch (error) {
-    const message = getErrorMessage(error, fallbackError);
-    logger.error(logMessage, { ...(logContext ?? {}), error: message });
-    httpError(resolveProcurementErrorStatus(error, { mode: 'mutation' }), message);
+    const outcome = resolveProcurementErrorOutcome(error, {
+      callerGlobalRole: auth.globalRole,
+      fallbackError: opts.fallbackError,
+      conflictName: opts.conflictName,
+      validationName: opts.validationName,
+      mode: opts.mode ?? 'mutation',
+    });
+    // Το log κρατά την **αλήθεια** ακόμη κι όταν το σύρμα παίρνει τη μεταμφίεση.
+    logger.error(logMessage, { ...(logContext ?? {}), error: outcome.logMessage });
+    httpError(outcome.status, outcome.message);
   }
 }

@@ -8,6 +8,12 @@ import { generateSourcingEventId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { normalizeToDate } from '@/lib/date-local';
 import type { AuthContext } from '@/lib/auth';
+import {
+  PROCUREMENT_RESOURCE,
+  loadOwnedProcurementDoc,
+  readOwnedProcurementDoc,
+  requireOwnedSnapshot,
+} from './procurement-owned-doc';
 import type {
   SourcingEvent,
   SourcingEventStatus,
@@ -21,6 +27,14 @@ import {
 } from '../types/sourcing-event';
 
 const logger = createModuleLogger('SOURCING_EVENT_SERVICE');
+
+/** Ο πόρος αυτού του αρχείου — ένα σημείο, ώστε το όνομα να μη διαφωνήσει ποτέ. */
+const subjectOf = (eventId: string) =>
+  ({ resource: PROCUREMENT_RESOURCE.SOURCING_EVENT, resourceId: eventId }) as const;
+
+/** Η αναφορά του γεγονότος — γράφεται μία φορά αντί για πέντε. */
+const eventRef = (db: FirebaseFirestore.Firestore, eventId: string) =>
+  db.collection(COLLECTIONS.SOURCING_EVENTS).doc(eventId);
 
 // ============================================================================
 // CREATE
@@ -70,13 +84,16 @@ export async function getSourcingEvent(
   ctx: AuthContext,
   eventId: string,
 ): Promise<SourcingEvent | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.SOURCING_EVENTS).doc(eventId).get();
-    if (!snap.exists) return null;
-    const event = { id: snap.id, ...snap.data() } as SourcingEvent;
-    if (event.companyId !== ctx.companyId) return null;
-    return event;
-  }, null);
+  // Δ — σιωπηλή πολιτική (ADR-742 §3.3): ξένο ≡ ανύπαρκτο.
+  return safeFirestoreOperation(
+    async (db) =>
+      readOwnedProcurementDoc<SourcingEvent>(
+        eventRef(db, eventId),
+        ctx.companyId,
+        subjectOf(eventId),
+      ),
+    null,
+  );
 }
 
 export async function listSourcingEvents(
@@ -116,12 +133,11 @@ export async function updateSourcingEvent(
   dto: UpdateSourcingEventDTO,
 ): Promise<SourcingEvent> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.SOURCING_EVENTS).doc(eventId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`SourcingEvent ${eventId} not found`);
-
-    const current = { id: snap.id, ...snap.data() } as SourcingEvent;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedProcurementDoc<SourcingEvent>(
+      eventRef(db, eventId),
+      ctx.companyId,
+      subjectOf(eventId),
+    );
 
     if (dto.status && dto.status !== current.status) {
       const allowed = SOURCING_EVENT_STATUS_TRANSITIONS[current.status];
@@ -163,38 +179,53 @@ export async function archiveSourcingEvent(ctx: AuthContext, eventId: string): P
 // RFQ LINKAGE — atomic transactions, idempotent
 // ============================================================================
 
+/**
+ * Η **μία** ατομική μεταβολή του συνδέσμου RFQ ↔ γεγονότος.
+ *
+ * Σύνδεση και αποσύνδεση ήταν δύο δίδυμα σώματα με **τρεις** διαφορές (τι
+ * ελέγχει η ιδεμποτεντικότητα, `arrayUnion`/`arrayRemove`, `+1`/`-1`). Ό,τι
+ * ήταν ίδιο — ο φύλακας ιδιοκτησίας, ο επαναϋπολογισμός κατάστασης, το
+ * `updatedAt` — έπρεπε να μείνει ίδιο **δομικά**: μια συναλλαγή που ξεχνά τον
+ * επαναϋπολογισμό αφήνει το γεγονός σε κατάσταση που δεν αντιστοιχεί στα
+ * παιδιά του, και τίποτα δεν το δείχνει.
+ */
+async function mutateRfqLink(
+  ctx: AuthContext,
+  eventId: string,
+  rfqId: string,
+  link: boolean,
+): Promise<void> {
+  const db = getAdminFirestore();
+  const ref = eventRef(db, eventId);
+
+  await db.runTransaction(async (tx) => {
+    const event = requireOwnedSnapshot<SourcingEvent>(
+      await tx.get(ref),
+      ctx.companyId,
+      subjectOf(eventId),
+    );
+    // Ιδεμποτεντικό: ήδη συνδεδεμένο / ήδη αποσυνδεδεμένο ⇒ καμία εγγραφή.
+    if (event.rfqIds.includes(rfqId) === link) return;
+
+    const newRfqCount = link ? event.rfqCount + 1 : Math.max(0, event.rfqCount - 1);
+    tx.update(
+      ref,
+      sanitizeForFirestore({
+        rfqIds: link ? FieldValue.arrayUnion(rfqId) : FieldValue.arrayRemove(rfqId),
+        rfqCount: newRfqCount,
+        status: deriveSourcingEventStatus(newRfqCount, event.closedRfqCount, event.status),
+        updatedAt: admin.firestore.Timestamp.now(),
+      }),
+    );
+  });
+}
+
 export async function addRfqToSourcingEvent(
   ctx: AuthContext,
   eventId: string,
   rfqId: string,
 ): Promise<void> {
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.SOURCING_EVENTS).doc(eventId);
-
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new Error(`SourcingEvent ${eventId} not found`);
-    const event = { id: snap.id, ...snap.data() } as SourcingEvent;
-    if (event.companyId !== ctx.companyId) throw new Error('Forbidden');
-    if (event.rfqIds.includes(rfqId)) return;
-
-    const newRfqCount = event.rfqCount + 1;
-    const newStatus = deriveSourcingEventStatus(
-      newRfqCount,
-      event.closedRfqCount,
-      event.status,
-    );
-    tx.update(
-      ref,
-      sanitizeForFirestore({
-        rfqIds: FieldValue.arrayUnion(rfqId),
-        rfqCount: newRfqCount,
-        status: newStatus,
-        updatedAt: admin.firestore.Timestamp.now(),
-      }),
-    );
-  });
-
+  await mutateRfqLink(ctx, eventId, rfqId, true);
   logger.info('RFQ linked to SourcingEvent', { eventId, rfqId });
 }
 
@@ -203,33 +234,7 @@ export async function removeRfqFromSourcingEvent(
   eventId: string,
   rfqId: string,
 ): Promise<void> {
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.SOURCING_EVENTS).doc(eventId);
-
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new Error(`SourcingEvent ${eventId} not found`);
-    const event = { id: snap.id, ...snap.data() } as SourcingEvent;
-    if (event.companyId !== ctx.companyId) throw new Error('Forbidden');
-    if (!event.rfqIds.includes(rfqId)) return;
-
-    const newRfqCount = Math.max(0, event.rfqCount - 1);
-    const newStatus = deriveSourcingEventStatus(
-      newRfqCount,
-      event.closedRfqCount,
-      event.status,
-    );
-    tx.update(
-      ref,
-      sanitizeForFirestore({
-        rfqIds: FieldValue.arrayRemove(rfqId),
-        rfqCount: newRfqCount,
-        status: newStatus,
-        updatedAt: admin.firestore.Timestamp.now(),
-      }),
-    );
-  });
-
+  await mutateRfqLink(ctx, eventId, rfqId, false);
   logger.info('RFQ unlinked from SourcingEvent', { eventId, rfqId });
 }
 
@@ -243,14 +248,15 @@ export async function recomputeSourcingEventStatus(
   eventId: string,
 ): Promise<SourcingEventStatus> {
   const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.SOURCING_EVENTS).doc(eventId);
+  const ref = eventRef(db, eventId);
   let derivedStatus: SourcingEventStatus = 'draft';
 
   await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new Error(`SourcingEvent ${eventId} not found`);
-    const event = { id: snap.id, ...snap.data() } as SourcingEvent;
-    if (event.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const event = requireOwnedSnapshot<SourcingEvent>(
+      await tx.get(ref),
+      ctx.companyId,
+      subjectOf(eventId),
+    );
 
     const newClosedCount = event.closedRfqCount + 1;
     derivedStatus = deriveSourcingEventStatus(event.rfqCount, newClosedCount, event.status);

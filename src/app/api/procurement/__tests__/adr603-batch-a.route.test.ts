@@ -10,7 +10,10 @@
  *   - materials (+[materialId]) and agreements (+[agreementId])
  *   - create-mode mapping: conflict→409, validation→400, else→**500**
  *   - mutation-mode mapping: conflict→409, validation→400,
- *     `not found`→404, `Forbidden`→403, else→**400**
+ *     `not found`→404, else→**400**
+ *     ⚠️ Ο κλάδος `'Forbidden'`→403 **καταργήθηκε** (ADR-742 §7.4): η άρνηση
+ *     ιδιοκτησίας ταξιδεύει τυποποιημένη και κρίνεται από τον κανόνα
+ *     αποκάλυψης, όχι από αναζήτηση λέξης σε μήνυμα.
  *   - 404 not-found (GET detail), 201 created, 200 { success:true } (DELETE)
  *
  * @enterprise ADR-603 API Route-Handler Factory SSoT
@@ -85,6 +88,11 @@ jest.mock('@/subapps/procurement/services/framework-agreement-service', () => ({
 }));
 
 import type { NextRequest } from 'next/server';
+import {
+  PROCUREMENT_RESOURCE,
+  ProcurementCrossTenantError,
+  procurementNotFound,
+} from '@/subapps/procurement/services/procurement-ownership';
 import { GET as matGet, POST as matPost } from '../materials/route';
 import { GET as matIdGet, PATCH as matIdPatch, DELETE as matIdDelete } from '../materials/[materialId]/route';
 import { GET as agrGet, POST as agrPost } from '../agreements/route';
@@ -231,10 +239,43 @@ describe('materials/[materialId] — GET/PATCH/DELETE', () => {
     expect(res.status).toBe(404);
   });
 
-  it('PATCH forbidden message → 403 (mutation)', async () => {
+  // ──────────────────────────────────────────────────────────────────────
+  // ⚠️ ΑΛΛΑΓΗ ΣΥΜΒΟΛΑΙΟΥ (ADR-742 Ομάδα 2) — ήταν `'Forbidden' → 403`
+  //
+  // Το test καρφώνει πλέον το **αντίθετο**, και αυτό είναι το ζητούμενο: η
+  // λέξη «Forbidden» σε μήνυμα σφάλματος **έπαψε** να δίνει 403. Ήταν έλεγχος
+  // πρόσβασης γραμμένος ως string-matching (ADR-742 §7.4) — μια αθώα αλλαγή
+  // διατύπωσης άλλαζε σιωπηλά τη σημασιολογία ασφαλείας, και αντίστροφα κάθε
+  // μήνυμα που τύχαινε να περιέχει τη λέξη άνοιγε το μαντείο ύπαρξης.
+  //
+  // Η άρνηση ιδιοκτησίας ταξιδεύει τώρα **τυποποιημένη**.
+  // ──────────────────────────────────────────────────────────────────────
+  it('PATCH: σκέτο μήνυμα «Forbidden» ΔΕΝ δίνει πια 403 — 400 fallback', async () => {
     materialSvc.updateMaterial.mockRejectedValue(new Error('Forbidden'));
     const res = (await matIdPatch(req({ name: 'X' }), seg)) as Envelope;
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(400);
+  });
+
+  it('PATCH: τυποποιημένη άρνηση ιδιοκτησίας → μεταμφιεσμένο 404, ίδιο με το γνήσιο', async () => {
+    const subject = { resource: PROCUREMENT_RESOURCE.MATERIAL, resourceId: 'mat_1' } as const;
+
+    materialSvc.updateMaterial.mockRejectedValue(
+      new ProcurementCrossTenantError({
+        ...subject,
+        expectedCompanyId: 'comp_1',
+        actualCompanyId: 'comp_other',
+      }),
+    );
+    const foreign = (await matIdPatch(req({ name: 'X' }), seg)) as Envelope;
+
+    materialSvc.updateMaterial.mockRejectedValue(procurementNotFound(subject));
+    const missing = (await matIdPatch(req({ name: 'X' }), seg)) as Envelope;
+
+    expect({ status: foreign.status, body: await foreign.json() }).toEqual({
+      status: missing.status,
+      body: await missing.json(),
+    });
+    expect(foreign.status).toBe(404);
   });
 
   it('PATCH unknown → 400 (mutation fallback)', async () => {

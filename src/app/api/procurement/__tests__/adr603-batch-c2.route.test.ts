@@ -7,7 +7,9 @@
  * `{success,message}`, top-level-extra `{success,data,count}`), status codes,
  * 404 messages, and the shared error→status mapping — through the REAL factory
  * + REAL `resolveProcurementErrorStatus` (mutation mode: not-found→404,
- * Forbidden→403, else→400; sourcing-events create → flat 400):
+ * else→400; sourcing-events create → flat 400):
+ *   ⚠️ Ο κλάδος `Forbidden`→403 **καταργήθηκε** (ADR-742 §7.4)· η άρνηση
+ *   ιδιοκτησίας είναι τυποποιημένη και μεταμφιέζεται κατά τον κανόνα αποκάλυψης.
  *
  *   - rfqs/[rfqId]/lines          (GET list, POST create + null-guard 500)
  *   - rfqs/[rfqId]/lines/[lineId] (PATCH update, DELETE message)
@@ -116,6 +118,11 @@ jest.mock('@/services/procurement/po-share-service', () => ({
 }));
 
 import type { NextRequest } from 'next/server';
+import {
+  PROCUREMENT_RESOURCE,
+  ProcurementCrossTenantError,
+  procurementNotFound,
+} from '@/subapps/procurement/services/procurement-ownership';
 import { GET as linesGet, POST as linesPost } from '../rfqs/[rfqId]/lines/route';
 import { PATCH as linePatch, DELETE as lineDelete } from '../rfqs/[rfqId]/lines/[lineId]/route';
 import { POST as bulkPost } from '../rfqs/[rfqId]/lines/bulk/route';
@@ -194,10 +201,35 @@ describe('rfqs/[rfqId]/lines — GET / POST', () => {
     expect((await res.json()).error).toBe('RFQ not found');
   });
 
-  it('POST service "Forbidden" → 403 (mutation mapping)', async () => {
+  // ⚠️ ΑΛΛΑΓΗ ΣΥΜΒΟΛΑΙΟΥ (ADR-742 §7.4) — ήταν `'Forbidden' → 403`.
+  // Η λέξη σε μήνυμα έπαψε να είναι έλεγχος πρόσβασης· η άρνηση ιδιοκτησίας
+  // ταξιδεύει τυποποιημένη και μεταμφιέζεται κατά τον κανόνα αποκάλυψης.
+  it('POST: σκέτο μήνυμα «Forbidden» ΔΕΝ δίνει πια 403 — 400 fallback', async () => {
     rfqLineSvc.addRfqLine.mockRejectedValue(new Error('Forbidden'));
     const res = (await linesPost(req(`${BASE}/rfqs/r1/lines`, validLine), rfqSeg)) as Envelope;
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(400);
+  });
+
+  it('POST: τυποποιημένη άρνηση ιδιοκτησίας → μεταμφιεσμένο 404, ίδιο με το γνήσιο', async () => {
+    const subject = { resource: PROCUREMENT_RESOURCE.RFQ_LINE, resourceId: 'ln1' } as const;
+
+    rfqLineSvc.addRfqLine.mockRejectedValue(
+      new ProcurementCrossTenantError({
+        ...subject,
+        expectedCompanyId: 'comp_1',
+        actualCompanyId: 'comp_other',
+      }),
+    );
+    const foreign = (await linesPost(req(`${BASE}/rfqs/r1/lines`, validLine), rfqSeg)) as Envelope;
+
+    rfqLineSvc.addRfqLine.mockRejectedValue(procurementNotFound(subject));
+    const missing = (await linesPost(req(`${BASE}/rfqs/r1/lines`, validLine), rfqSeg)) as Envelope;
+
+    expect({ status: foreign.status, body: await foreign.json() }).toEqual({
+      status: missing.status,
+      body: await missing.json(),
+    });
+    expect(foreign.status).toBe(404);
   });
 
   it('POST service other error → 400 (mutation fallback)', async () => {
@@ -319,10 +351,24 @@ describe('sourcing-events/[eventId]/archive — POST', () => {
     expect(await res.json()).toEqual({ success: true, message: 'Sourcing event archived' });
   });
 
-  it('service error → mapped (Forbidden → 403)', async () => {
+  it('σκέτο μήνυμα «Forbidden» → 400 (ο κλάδος καταργήθηκε, ADR-742 §7.4)', async () => {
     seSvc.archiveSourcingEvent.mockRejectedValue(new Error('Forbidden'));
     const res = (await archivePost(req(`${BASE}/sourcing-events/ev1/archive`, undefined), evSeg)) as Envelope;
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(400);
+  });
+
+  it('τυποποιημένη άρνηση ιδιοκτησίας → μεταμφιεσμένο 404', async () => {
+    seSvc.archiveSourcingEvent.mockRejectedValue(
+      new ProcurementCrossTenantError({
+        resource: PROCUREMENT_RESOURCE.SOURCING_EVENT,
+        resourceId: 'ev1',
+        expectedCompanyId: 'comp_1',
+        actualCompanyId: 'comp_other',
+      }),
+    );
+    const res = (await archivePost(req(`${BASE}/sourcing-events/ev1/archive`, undefined), evSeg)) as Envelope;
+    expect(res.status).toBe(404);
+    expect((await res.json()).error).toBe('SourcingEvent ev1 not found');
   });
 });
 

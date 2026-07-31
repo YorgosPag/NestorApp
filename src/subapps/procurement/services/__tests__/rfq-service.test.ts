@@ -7,14 +7,25 @@ import type { RFQ, CreateRfqDTO } from '../../types/rfq';
 
 const mockTimestamp = () => ({ seconds: 1700000000, nanoseconds: 0 });
 
+/**
+ * ⚠️ Το `firebase-admin` εκθέτει το `firestore` **και ως συνάρτηση και ως
+ * χώρο ονομάτων**: `admin.firestore()` δίνει το instance, `admin.firestore.Timestamp`
+ * τους τύπους. Το mock όριζε **μόνο** τον χώρο ονομάτων, οπότε το
+ * `admin.firestore()` του fan-out έσκαγε με `is not a function` και **ολόκληρη
+ * η σουίτα δεν φόρτωνε** ("Test suite failed to run" — όχι αποτυχία ισχυρισμού,
+ * γι' αυτό δεν φαινόταν ως σπασμένος ισχυρισμός πουθενά).
+ *
+ * Το `mockDb` δηλώνεται πιο κάτω· η αναφορά είναι **τεμπέλικη** (μέσα στο σώμα
+ * της `jest.fn`), άρα αποτιμάται στην κλήση, όχι στο hoisting.
+ */
 jest.mock('firebase-admin', () => ({
-  firestore: {
+  firestore: Object.assign(jest.fn(() => mockDb), {
     Timestamp: {
       now: jest.fn(() => mockTimestamp()),
       fromDate: jest.fn((d: Date) => mockTimestamp()),
     },
     FieldPath: { documentId: jest.fn(() => '__name__') },
-  },
+  }),
 }));
 
 jest.mock('@/utils/firestore-sanitize', () => ({

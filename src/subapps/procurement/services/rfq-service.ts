@@ -13,6 +13,9 @@ import { normalizeToDate } from '@/lib/date-local';
 import type { RFQ, RfqStatus, CreateRfqDTO, UpdateRfqDTO, RfqFilters, RfqLine } from '../types/rfq';
 import { RFQ_STATUS_TRANSITIONS } from '../types/rfq';
 import type { AuthContext } from '@/lib/auth';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { readOwnedProcurementDoc } from './procurement-owned-doc';
+import { loadOwnedRfq, rfqRef, rfqSubject } from './rfq-ownership';
 import type { BOQItem } from '@/types/boq/boq';
 import { getTradeCodeForAtoeCategory } from '../data/trades';
 import type { TradeCode } from '../types/trade';
@@ -55,7 +58,15 @@ async function dispatchRfqInviteEmails(
       const snap = await db.collection(COLLECTIONS.CONTACTS).doc(meta.vendorId).get();
       if (!snap.exists) return;
       const data = snap.data() ?? {};
-      if (data.companyId && data.companyId !== ctx.companyId) return;
+      // ⚠️ Δευτερεύον δίχτυ ασφαλείας σε **παρενέργεια**, όχι ο κύριος φύλακας
+      // της διαδρομής: ρωτά για **επαφή** ενώ ο πρωτεύων πόρος είναι το RFQ.
+      // Μένει σιωπηλή παράλειψη παραλήπτη — δεν προάγεται σε άρνηση.
+      //
+      // 🔴 Έγραφε `data.companyId && data.companyId !== ctx.companyId`: επαφή
+      // **χωρίς** `companyId` περνούσε. Εδώ η ζημιά δεν είναι διαρροή ονόματος
+      // — το μήνυμα μεταφέρει **portal token** που ανοίγει το RFQ. Έγγραφο
+      // χωρίς tenant δεν ανήκει σε κανέναν (ADR-742 §4), άρα δεν λαμβάνει.
+      if (!isPayloadOwnedByCompany(data, ctx.companyId)) return;
       const email = getContactEmail(data as Parameters<typeof getContactEmail>[0]);
       if (!email) return;
       const vendorName = String(data.displayName ?? data.companyName ?? data.fullName ?? meta.vendorId);
@@ -249,17 +260,36 @@ export async function listRfqs(
 // READ — GET
 // ============================================================================
 
+/**
+ * 🔴 **Δύο σημασιολογίες, μία γραμμή — και γι' αυτό η πολιτική είναι σιωπή.**
+ *
+ * Καλείται από **δύο** εντελώς διαφορετικούς κόσμους:
+ *
+ * | Καλών | Τι δίνει ως `companyId` | Ταυτότητα |
+ * |---|---|---|
+ * | `api/rfqs/[id]` (και οι υπηρεσίες σύγκρισης/προσκλήσεων) | `ctx.companyId` | ταυτοποιημένος χρήστης |
+ * | `api/vendor/quote/[token]`, `…/decline`, `app/vendor/quote/[token]` | `invite.companyId` — τιμή από **άλλο έγγραφο** | **δημόσιο HMAC token**, μηδέν `ctx`, μηδέν `globalRole` |
+ *
+ * ⚠️ Στο δημόσιο μονοπάτι **δεν υπάρχει ρόλος να ρωτηθεί**, άρα το
+ * `concealCrossTenant` δεν έχει τι να κρίνει: ο κλάδος `reveal` προϋποθέτει
+ * καλούντα με νόμιμη cross-tenant ορατότητα, και ο προμηθευτής με token δεν
+ * είναι τέτοιος. Χρήση σκέτου `ownedOrNull` — **μην «τυποποιήσεις» τα δύο
+ * μονοπάτια σε ένα** (ADR-742 §7ter.5).
+ *
+ * Η σιωπή εδώ δεν είναι συντηρητική επιλογή· είναι **η μόνη σωστή**: το
+ * `invite.companyId` έρχεται από έγγραφο που το ίδιο το token όρισε, οπότε ένα
+ * ειλικρινές «ανήκει αλλού» θα μαρτυρούσε ύπαρξη RFQ σε κάποιον που το μόνο
+ * που απέδειξε είναι ότι κρατά ένα token.
+ */
 export async function getRfq(
   companyId: string,
   rfqId: string
 ): Promise<RFQ | null> {
-  return safeFirestoreOperation(async (db) => {
-    const snap = await db.collection(COLLECTIONS.RFQS).doc(rfqId).get();
-    if (!snap.exists) return null;
-    const rfq = { id: snap.id, ...snap.data() } as RFQ;
-    if (rfq.companyId !== companyId) return null;
-    return rfq;
-  }, null);
+  return safeFirestoreOperation(
+    async (db) =>
+      readOwnedProcurementDoc<RFQ>(rfqRef(db, rfqId), companyId, rfqSubject(rfqId)),
+    null,
+  );
 }
 
 // ============================================================================
@@ -272,12 +302,7 @@ export async function updateRfq(
   dto: UpdateRfqDTO
 ): Promise<RFQ> {
   return safeFirestoreOperation(async (db) => {
-    const ref = db.collection(COLLECTIONS.RFQS).doc(rfqId);
-    const snap = await ref.get();
-    if (!snap.exists) throw new Error(`RFQ ${rfqId} not found`);
-
-    const current = { id: snap.id, ...snap.data() } as RFQ;
-    if (current.companyId !== ctx.companyId) throw new Error('Forbidden');
+    const { ref, current } = await loadOwnedRfq<RFQ>(db, ctx.companyId, rfqId);
 
     if (dto.status && dto.status !== current.status) {
       const allowed = RFQ_STATUS_TRANSITIONS[current.status];
