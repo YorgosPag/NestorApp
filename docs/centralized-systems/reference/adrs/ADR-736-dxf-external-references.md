@@ -564,6 +564,52 @@ worldPoint), αλλιώς το ghost θα κάθεται σε άλλο σημε�
 ⚠️ **Οι 4 catalog entourage οικογένειες παραμένουν χωρίς ghost** — προϋπάρχον κενό, εκτός σκοπού
 αυτού του περάσματος. Το mount τους είναι πλέον τετριμμένο (ίδιο binding, άλλος store/placer).
 
+### 🔴 5.4.1 — Το ghost γραφόταν και **σβηνόταν στο ίδιο frame** (μετρημένο ζωντανά, 2026-07-31)
+
+Το mount γράφτηκε, αλλά στην οθόνη **δεν φαινόταν τίποτα**. Το όργανο που το έλυσε δεν ήταν test
+ούτε screenshot — ήταν **μέτρηση pixel στον ίδιο τον καμβά**: `getImageData` στον PreviewCanvas
+(z15) έδινε **0 μη-διάφανα pixels**, ενώ ένας μετρητής στο `CanvasRenderingContext2D.prototype`
+κατέγραφε **3 `drawImage`** πάνω του. Δηλαδή ο ghost ζωγράφιζε κανονικά και κάποιος τον έσβηνε.
+
+Stack trace του τρίτου `clearRect` — όλα μέσα σε **ΕΝΑΝ** `mousemove`:
+
+```
+onMouseMove → useMouseMoveHandler.handleMouseMove
+ ├─ setRealtimeWorldCursor → ImmediatePositionStore.setRealtimeWorld → subscribers
+ │    └─ useCanvasGhostPreview.drawFrame → clearCanvasDpr + ImageRenderer.drawImage   ← ζωγραφίζει
+ └─ CanvasLayerStack.handleDxfMouseMove → onDrawingHover → processDrawingHover
+      └─ PreviewRenderer.clear → clearCanvasDpr                                        ← το σβήνει
+```
+
+**Αιτία:** ο γενικός `processDrawingHover` καθαρίζει ΟΛΟΚΛΗΡΟ τον κοινό PreviewCanvas όποτε δεν
+έχει `previewEntity`, και ο `useDrawingHandlers` τον παρακάμπτει μόνο για όσα εργαλεία περνούν το
+`toolOwnsPreviewCanvas()`. Το `attach-image` **δεν υπήρχε καθόλου** στο `TOOL_CREATES_ENTITY`, άρα
+ήταν `false`.
+
+**Τρίτο χτύπημα της ίδιας κλάσης** — μετά τα placement ghosts (ADR-624) και τη δυναμική γραμμή του
+«Παράλληλου οδηγού» (ADR-189 §3.13). Ο φρουρός `tool-owns-preview-canvas.test.ts` υπήρχε ήδη· απλώς
+κανείς δεν πρόσθεσε το νέο εργαλείο.
+
+**🔑 Γιατί η διόρθωση είναι ανά *tool id* και όχι ανά *τύπο οντότητας*** (`systems/tools/tool-definitions.ts`,
+νέο `PLACEMENT_GHOST_OWNER_TOOLS`): το `attach-image` παράγει `ImageEntity` — **ακριβώς όπως τα 4
+catalog entourage αδέλφια του**, που όμως **δεν** έχουν ghost. Ένας τύπος-ιδιοκτήτης `'image'` θα
+έκανε ιδιοκτήτες και τα 4: ο καμβάς δεν θα καθαριζόταν ποτέ όσο είναι ενεργά και θα έμενε κολλημένο
+το ghost του **προηγούμενου** εργαλείου. Ο άξονας «τύπος οντότητας» — σωστός για τα 16 `mep-*` που
+μοιράζονται μηχανή — είναι **λάθος όργανο** εδώ, γιατί ο τύπος δεν ξεχωρίζει «έχει ghost» από «δεν
+έχει». Μόλις αποκτήσουν ghost και τα 4, μπαίνουν στο ίδιο set ανά id.
+
+**Επαλήθευση μετά τη διόρθωση** (ίδιο όργανο, ίδια σελίδα): `nonEmptyPixels` **50.700 / 50.700
+δείγματα → fillRatio 1,000**, πλαίσιο **518 px = ακριβώς 1/3 του ορατού πλάτους**
+(`IMAGE_PLACEMENT_VIEWPORT_FRACTION` ✅), κεντραρισμένο στον κέρσορα και ακολουθεί τον. Δηλαδή
+πλήρες WYSIWYG raster, όχι placeholder.
+
+⚠️ **Το «παγώνει ζωντανά» του προηγούμενου handoff ΔΕΝ αναπαράχθηκε.** Δοκιμάστηκε και με το mount
+εκτός και με το mount εντός, με 6 KB και με 2,1 MB / 4032×3024 raster: σε κάθε περίπτωση 60 fps,
+μηδέν κενά >200 ms, `Runtime.evaluate` ακαριαίο. Η υπόθεση περί κύκλου `markAllCanvasDirty` στον
+`HatchImageCache` **δεν ισχύει** και ο κώδικας το επιβεβαιώνει: το cache γράφει `state:'loading'`
+πριν το `await` (idempotent), και ο `BimPreviewRenderer` είναι memoized ανά ctx μέσω `WeakMap`, άρα
+η `ImageRenderer` instance —και το cache της— **δεν** ξαναχτίζεται ανά frame.
+
 ### Δύο ελάχιστες γενικεύσεις στα κοινά SSoT (καμία αλλαγή συμπεριφοράς)
 
 | SSoT | Αλλαγή | Γιατί δεν είναι ρύπανση |
@@ -638,3 +684,5 @@ worldPoint), αλλιώς το ghost θα κάθεται σε άλλο σημε�
 | 2026-07-31 | ✅ **Απόφαση 7 ΕΚΛΕΙΣΕ** (§5.3) — ετικέτα διαδρομής στον καμβά: **υπερσύνολο AutoCAD με ΜΕΣΑΙΑ αποκοπή** (πλήρης → `Z:\Jobs\…\φάκελος\όνομα` → σκέτο όνομα → τίποτα). **Όχι** κόψιμο από την αρχή όπως πρότεινε το handoff: σε διαδρομή φέρουν πληροφορία **και τα δύο άκρα**, και το `Z:\Jobs\` είναι ό,τι απαντά «σε ποιον υπολογιστή ζούσε» (πρακτική Finder / VS Code / `PathCompactPathEx`). Υλοποίηση **χωρίς νέο SSoT**: `+fitCanvasPathToWidth` στο **ίδιο** `canvas-text-fit.ts` (χωριστό module = sibling clone, N.18) · `+sourcePath` στο `ImageEntity` γραμμένο στο **ένα** σημείο (`dxf-external-reference-apply.ts`) · μονότονη υποβάθμιση στο `image-placeholder-paint.ts`. +9 tests. |
 | 2026-07-31 | ✅ **Και τα 4 ανοιχτά σενάρια έκλεισαν στην οθόνη** (§5.2): **Β** «6 από 10» με ήδη-φορτωμένη σκηνή 10 → 10 · **Β-zip** ταυτόσημο · **LOD** ονόματα εξαφανίζονται, πλαίσια μένουν · **Στοχευμένος** «7 από 10». Επαλήθευση: **396 suites / 4.056 tests** (+ `stores\|ui/components`) · `jscpd:diff` σε 5 αρχεία **καθαρό** · `i18n:audit` **0/0**. gif: `adr736_auto_resolve` · `adr736_zip_intake` · `adr736_lod_labels` · `adr736_targeted_locate`. |
 | 2026-07-31 | ✅ **§5.4 — εντολή ΕΙΣΑΓΩΓΗΣ εικόνας** (AutoCAD `IMAGEATTACH`): ribbon «Εικόνα» → επιλογέας → ανέβασμα → ghost → **κλικ ή Enter (κέντρο)**. **Πέμπτο instance της entourage μηχανής** — μηδέν νέο FSM / upload / placer. 7 νέα αρχεία, 2 ελάχιστες γενικεύσεις στα κοινά SSoT (τύπος-παράμετρος με default· προαιρετικό `sourceName`). 🔴 **Εύρημα Η**: το ghost των entourage **δεν υπήρχε** — `getGhostFootprint` χωρίς mount από το ADR-654· γράφτηκε για τη νέα οικογένεια (οι 4 catalog μένουν ακάλυπτες, εκτός σκοπού). Επαλήθευση: **1.045 suites / 10.612 tests** πράσινα (1 προϋπάρχουσα κόκκινη: κυκλική εξάρτηση στο `systems/guides/commands`, άσχετη) · **+15 tests mutation-verified** · `jscpd:diff` καθαρό · `i18n:audit` 0/0 · `generate:i18n-types`. ⚠️ `CanvasSection.tsx` πλέον **500 γραμμές ακριβώς** — χρωστά split. |
+| 2026-07-31 | 🔴 **Εύρημα Θ (§5.4.1)** — το ghost ζωγραφιζόταν και **σβηνόταν στο ίδιο frame**: μέσα σε ΕΝΑΝ `mousemove` ο `handleMouseMove` καλεί πρώτα το `ImmediatePositionStore` (→ `useCanvasGhostPreview.drawFrame` → `ImageRenderer.drawImage`) και **αμέσως μετά** το `processDrawingHover`, που χωρίς `previewEntity` κάνει `previewCanvasRef.current.clear()`. Μετρήθηκε με `getImageData` στον PreviewCanvas: **3 `drawImage`, 0 ορατά pixels**. Αιτία: το `attach-image` δεν περνούσε το `toolOwnsPreviewCanvas()` — δεν υπήρχε καν στο `TOOL_CREATES_ENTITY`. **Τρίτο χτύπημα της ίδιας κλάσης** μετά τα ADR-624 και ADR-189 §3.13· ο φρουρός `tool-owns-preview-canvas.test.ts` υπήρχε, απλώς κανείς δεν πρόσθεσε το νέο εργαλείο. **Διόρθωση ανά *tool id*** (νέο `PLACEMENT_GHOST_OWNER_TOOLS` στο `tool-definitions.ts`) και **όχι** ανά τύπο οντότητας: το `'image'` το μοιράζονται τα 4 catalog entourage αδέλφια που **δεν** έχουν ghost, οπότε ένας τύπος-ιδιοκτήτης θα άφηνε κολλημένο το ghost του προηγούμενου εργαλείου. **+2 anchor tests, mutation-verified** (άδειο set ⇒ 1 κόκκινο). Ζωντανή επαλήθευση: **fillRatio 1,000** (50.700/50.700 δείγματα), πλαίσιο **518 px = 1/3 του ορατού πλάτους**, ακολουθεί τον κέρσορα. |
+| 2026-07-31 | ⚠️ **Το «παγώνει ζωντανά» του handoff ΑΠΟΣΥΡΕΤΑΙ — δεν αναπαράχθηκε** (§5.4.1). Δοκιμές με mount εκτός/εντός × 6 KB / 2,1 MB (4032×3024): 60 fps, μηδέν κενά >200 ms, `Runtime.evaluate` ακαριαίο, εργαλείο οπλισμένο κάθε φορά. Η υπόθεση περί κύκλου `markAllCanvasDirty` στον `HatchImageCache` δεν ισχύει (cache idempotent — `state:'loading'` πριν το `await`· `BimPreviewRenderer` memoized ανά ctx με `WeakMap` ⇒ μία `ImageRenderer` instance, όχι ανά frame). Επιβεβαιώθηκε ζωντανά και το **commit path**: κλικ → `ImageEntity` στη σκηνή (2951→2952) με ορατό raster → `Ctrl+Z` → 2951 → autosave. |

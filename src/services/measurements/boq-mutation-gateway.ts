@@ -14,16 +14,28 @@ interface CreateBOQItemWithPolicyInput {
   readonly companyId: string;
 }
 
+/**
+ * ⚠️ **Κάθε είσοδος με `id` φέρει και `companyId`** (ADR-734 §7).
+ *
+ * Δεν είναι διακοσμητικό ούτε επανάληψη του `create`: το `companyId` είναι ο
+ * tenant **του καλούντος**, και το service το χρησιμοποιεί για να αρνηθεί γραμμή
+ * που ανήκει σε άλλον — πριν από κάθε ανάγνωση ή εγγραφή. Ονομασμένα πεδία και
+ * όχι θέσεις: δύο διαδοχικά `string` (`companyId`, `id`) θα μπορούσαν να
+ * αντιστραφούν σιωπηλά σε κλήση με θέσεις.
+ */
 interface UpdateBOQItemWithPolicyInput {
+  readonly companyId: string;
   readonly id: string;
   readonly data: UpdateBOQItemInput;
 }
 
 interface DeleteBOQItemWithPolicyInput {
+  readonly companyId: string;
   readonly id: string;
 }
 
 interface TransitionBOQItemWithPolicyInput {
+  readonly companyId: string;
   readonly id: string;
   readonly status: BOQItemStatus;
   readonly userId: string;
@@ -38,34 +50,39 @@ export async function createBOQItemWithPolicy({
 }
 
 export async function updateBOQItemWithPolicy({
+  companyId,
   id,
   data,
 }: UpdateBOQItemWithPolicyInput): Promise<BOQItem | null> {
-  return boqService.update(id, data);
+  return boqService.update(companyId, id, data);
 }
 
 export async function deleteBOQItemWithPolicy({
+  companyId,
   id,
 }: DeleteBOQItemWithPolicyInput): Promise<boolean> {
-  return boqService.delete(id);
+  return boqService.delete(companyId, id);
 }
 
 export async function transitionBOQItemWithPolicy({
+  companyId,
   id,
   status,
   userId,
 }: TransitionBOQItemWithPolicyInput): Promise<boolean> {
-  return boqService.transition(id, status, userId);
+  return boqService.transition(companyId, id, status, userId);
 }
 
 interface ReopenBOQItemWithPolicyInput {
+  readonly companyId: string;
   readonly id: string;
   readonly userId: string;
 }
 
 export async function reopenBOQItemToDraftWithPolicy({
+  companyId,
   id,
   userId,
 }: ReopenBOQItemWithPolicyInput): Promise<boolean> {
-  return boqService.reopenToDraft(id, userId);
+  return boqService.reopenToDraft(companyId, id, userId);
 }

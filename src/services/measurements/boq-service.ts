@@ -140,8 +140,8 @@ class BOQService implements IBOQService {
     return this.repository.getByProject(companyId, projectId);
   }
 
-  getById(id: string): Promise<BOQItem | null> {
-    return this.repository.getById(id);
+  getById(companyId: string, id: string): Promise<BOQItem | null> {
+    return this.repository.getById(companyId, id);
   }
 
   // --- CREATE ---
@@ -175,8 +175,12 @@ class BOQService implements IBOQService {
 
   // --- UPDATE ---
 
-  async update(id: string, data: UpdateBOQItemInput): Promise<BOQItem | null> {
-    const current = await this.repository.getById(id);
+  async update(
+    companyId: string,
+    id: string,
+    data: UpdateBOQItemInput
+  ): Promise<BOQItem | null> {
+    const current = await this.repository.getById(companyId, id);
     if (!current) {
       return null;
     }
@@ -213,13 +217,13 @@ class BOQService implements IBOQService {
       throw new Error('VALIDATION_ERROR: Actual quantity cannot be negative');
     }
 
-    return this.repository.update(id, data);
+    return this.repository.update(companyId, id, data);
   }
 
   // --- DELETE ---
 
-  async delete(id: string): Promise<boolean> {
-    const current = await this.repository.getById(id);
+  async delete(companyId: string, id: string): Promise<boolean> {
+    const current = await this.repository.getById(companyId, id);
     if (!current) {
       return false;
     }
@@ -230,15 +234,15 @@ class BOQService implements IBOQService {
       throw new Error('GOVERNANCE_ERROR: Only draft items can be deleted');
     }
 
-    return this.repository.delete(id);
+    return this.repository.delete(companyId, id);
   }
 
-  async bulkDelete(ids: string[]): Promise<number> {
+  async bulkDelete(companyId: string, ids: string[]): Promise<number> {
     // Validate all items are draft before deleting
     let deletedCount = 0;
     for (const id of ids) {
       try {
-        const success = await this.delete(id);
+        const success = await this.delete(companyId, id);
         if (success) {
           deletedCount += 1;
         }
@@ -251,14 +255,14 @@ class BOQService implements IBOQService {
 
   // --- DUPLICATE ---
 
-  duplicate(id: string): Promise<BOQItem | null> {
-    return this.repository.duplicate(id);
+  duplicate(companyId: string, id: string): Promise<BOQItem | null> {
+    return this.repository.duplicate(companyId, id);
   }
 
   // --- REOPEN TO DRAFT (ADR-329 §3.3.1) ---
 
-  async reopenToDraft(id: string, userId: string): Promise<boolean> {
-    const current = await this.repository.getById(id);
+  async reopenToDraft(companyId: string, id: string, userId: string): Promise<boolean> {
+    const current = await this.repository.getById(companyId, id);
     if (!current) {
       logger.warn('BOQ item not found for reopenToDraft', { id });
       return false;
@@ -268,13 +272,18 @@ class BOQService implements IBOQService {
       logger.warn('Cannot reopen locked BOQ item', { id });
       throw new Error('GOVERNANCE_ERROR: Locked items cannot be reopened');
     }
-    return this.repository.updateStatus(id, 'draft', userId);
+    return this.repository.updateStatus(companyId, id, 'draft', userId);
   }
 
   // --- GOVERNANCE TRANSITIONS ---
 
-  async transition(id: string, targetStatus: BOQItemStatus, userId: string): Promise<boolean> {
-    const current = await this.repository.getById(id);
+  async transition(
+    companyId: string,
+    id: string,
+    targetStatus: BOQItemStatus,
+    userId: string
+  ): Promise<boolean> {
+    const current = await this.repository.getById(companyId, id);
     if (!current) {
       logger.warn('BOQ item not found for transition', { id });
       return false;
@@ -289,7 +298,7 @@ class BOQService implements IBOQService {
       return false;
     }
 
-    return this.repository.updateStatus(id, targetStatus, userId);
+    return this.repository.updateStatus(companyId, id, targetStatus, userId);
   }
 
   // --- SEARCH & STATS ---

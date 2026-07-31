@@ -39,6 +39,24 @@ describe('toolOwnsPreviewCanvas', () => {
     expect(TOOL_DEFINITIONS['guide-parallel' as ToolType].category).toBe('drawing');
   });
 
+  it('καλύπτει το «Εικόνα» (attach-image) — ghost που ζωγράφιζε και σβηνόταν στο ίδιο frame', () => {
+    // ADR-736 §6: μετρημένο ζωντανά — 3 `drawImage` στον PreviewCanvas, 0 ορατά pixels,
+    // γιατί ο `processDrawingHover` καθάριζε αμέσως μετά μέσα στον ΙΔΙΟ mousemove.
+    expect(toolOwnsPreviewCanvas('attach-image')).toBe(true);
+    expect(toolOwnsPlacementGhost('attach-image')).toBe(true);
+  });
+
+  it('ΤΟ ΚΛΕΙΔΙ ΤΟΥ BUG: τα 4 catalog entourage αδέλφια δίνουν ΤΟΝ ΙΔΙΟ τύπο οντότητας χωρίς ghost', () => {
+    // Γι' αυτό το `attach-image` δηλώνεται ανά **tool id** και όχι ως entity type `'image'`:
+    // ένας τύπος-ιδιοκτήτης θα έκανε ιδιοκτήτες και αυτά τα 4, που τοποθετούν στα τυφλά
+    // (ADR-654) — και ο καμβάς δεν θα καθαριζόταν ποτέ όσο είναι ενεργά.
+    for (const tool of ['furniture-plan', 'people-plan', 'vehicles-plan', 'plants-plan']) {
+      expect(toolOwnsPreviewCanvas(tool)).toBe(false);
+    }
+    // Αν κάποιο από τα 4 αποκτήσει ghost mount, ΑΥΤΟ το test κοκκινίζει — και αυτό είναι το
+    // νόημα: πρέπει να μπει στο `PLACEMENT_GHOST_OWNER_TOOLS`, όχι να σβηστεί η γραμμή.
+  });
+
   it('ΔΕΝ πιάνει εργαλεία που δεν κατέχουν τον καμβά', () => {
     expect(toolOwnsPreviewCanvas('select')).toBe(false);
     expect(toolOwnsPreviewCanvas('line')).toBe(false);

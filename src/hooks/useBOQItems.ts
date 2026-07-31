@@ -209,6 +209,7 @@ export function useBOQItems(
       try {
         setCrudError(null);
         const updated = await updateBOQItemWithPolicy({
+          companyId,
           id,
           data: input,
         });
@@ -224,13 +225,13 @@ export function useBOQItems(
         return false;
       }
     },
-    [refreshItems]
+    [companyId, refreshItems]
   );
 
   const deleteItem = useCallback(async (id: string): Promise<boolean> => {
     try {
       setCrudError(null);
-      const success = await deleteBOQItemWithPolicy({ id });
+      const success = await deleteBOQItemWithPolicy({ companyId, id });
       if (success) {
         await refreshItems();
       }
@@ -241,13 +242,14 @@ export function useBOQItems(
       setCrudError(message);
       return false;
     }
-  }, [refreshItems]);
+  }, [companyId, refreshItems]);
 
   const updateStatus = useCallback(
     async (id: string, status: BOQItemStatus): Promise<boolean> => {
       try {
         setCrudError(null);
         const success = await transitionBOQItemWithPolicy({
+          companyId,
           id,
           status,
           userId,
@@ -263,7 +265,7 @@ export function useBOQItems(
         return false;
       }
     },
-    [userId, refreshItems]
+    [companyId, userId, refreshItems]
   );
 
   return {

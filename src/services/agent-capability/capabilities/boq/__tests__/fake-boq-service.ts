@@ -26,7 +26,7 @@ export interface FakeBoqOptions {
 
 /** Καταγραφή κλήσεων — για να αποδεικνύεται ΤΙ κλήθηκε, όχι μόνο τι γύρισε. */
 export interface FakeBoqCalls {
-  getById: string[];
+  getById: Array<{ companyId: string; itemId: string }>;
   getByBuilding: Array<{ companyId: string; buildingId: string }>;
   search: Array<{ companyId: string; buildingId: string; filters?: BOQSearchFilters }>;
   getCategories: string[];
@@ -56,10 +56,18 @@ export function createFakeBoqService(options: FakeBoqOptions): FakeBoqService {
       return Promise.resolve(items.filter((i) => i.companyId === companyId && i.projectId === projectId));
     },
 
-    /** ⚠️ ΧΩΡΙΣ companyId — αντιγράφει πιστά το κενό του πραγματικού service. */
-    getById(id) {
-      calls.getById.push(id);
-      return Promise.resolve(items.find((i) => i.id === id) ?? null);
+    /**
+     * ⚠️ **Τιμά τον tenant, όπως το πραγματικό service** (ADR-734 §7, επιλογή Β).
+     *
+     * Ξένη γραμμή επιστρέφει `null` — ίδιο αποτέλεσμα με ανύπαρκτη. Ένας ψεύτης
+     * πιο ανεκτικός από την πραγματικότητα θα έκανε τα tests να περνούν για
+     * λάθος λόγο: θα αποδείκνυαν ότι δουλεύει ο guard, ενώ η άμυνα έχει
+     * μετακομίσει στο ίδιο το service.
+     */
+    getById(companyId, itemId) {
+      calls.getById.push({ companyId, itemId });
+      const found = items.find((i) => i.id === itemId) ?? null;
+      return Promise.resolve(found?.companyId === companyId ? found : null);
     },
 
     search(companyId, buildingId, filters) {

@@ -258,6 +258,48 @@ check-in (upsert) — **κανένα χειροκίνητο βήμα στο UI �
    σκόπιμα**: άνοιγμά του θα εξέθετε δημόσια endpoints οριστικής διαγραφής.
 4. Μετά το πρώτο 24ωρο: επιβεβαίωση των 8 monitors + heartbeat στο Sentry.
 
+### 9.1 Ενεργοποίηση παραγωγής — ολοκληρώθηκε 2026-07-31
+
+Τα βήματα 1-3 του runbook **εκτελέστηκαν και επαληθεύτηκαν** την ίδια ημέρα, μέσω
+του **REST API του Coolify** (βλ. παγίδα α παρακάτω) και όχι από το UI.
+
+| Ενέργεια | Αποτέλεσμα |
+|---|---|
+| Push `0091cd2f` (45 commits) | αναπτύχθηκε· container online 10:02 UTC |
+| `CRON_SECRET` | γράφτηκε μέσω API — `is_runtime=true`, `is_buildtime=false` |
+| `NEXT_PUBLIC_APP_URL` | **ΕΛΕΙΠΕ ΤΕΛΕΙΩΣ** από την παραγωγή· γράφτηκε `is_buildtime=true` + `is_runtime=true` |
+| Scheduled Task | `nestor-cron-dispatch` · `* * * * *` · enabled · uuid `re62oh7oi2q1bks5n417fcy4` |
+| Restart | **απαραίτητο** — οι μεταβλητές γράφτηκαν *μετά* το deploy, ο container δεν τις είχε |
+| **Απόδειξη λειτουργίας** | εκτελέσεις: **10:06 failed (exit 1) → 10:07 success → 10:08 success** |
+| Φύλακας | `GET /api/cron/dispatch` χωρίς μυστικό → **401** |
+
+Η αποτυχία στις 10:06 είναι **η απόδειξη ότι το restart χρειαζόταν**: μέχρι εκείνη
+τη στιγμή η διεργασία έτρεχε με το παλιό περιβάλλον, χωρίς `CRON_SECRET`, οπότε το
+`fetch` έπαιρνε 401 και το `process.exit(r.ok?0:1)` γύριζε 1. Δεν ήταν σφάλμα
+ρύθμισης — ήταν το αναμενόμενο secure default του `cron-auth.ts:31` να μιλάει.
+
+#### Δύο παγίδες που κόστισαν χρόνο — μην τις ξαναπληρώσεις
+
+**α) Ο πίνακας του Coolify είναι απρόσιτος σε αυτοματισμό browser.** Είναι Livewire
+με μόνιμο websocket, οπότε η σελίδα **δεν φτάνει ποτέ σε `document_idle`** ⇒ κάθε
+script injection λήγει (`Script injection timed out`). **Δεν** είναι θέμα
+δικαιωμάτων ούτε του `http://`· καμία αναμονή δεν το λύνει, γιατί η συνθήκη που
+περιμένεις δεν πρόκειται να ισχύσει ποτέ. **Χρησιμοποίησε το REST API.**
+
+**β) Ονόματα πεδίων του API**: `is_buildtime` / `is_runtime` — **όχι**
+`is_build_time` (επιστρέφει `422 This field is not allowed`).
+
+**Στοιχεία API:** base `http://159.195.44.221:8000/api/v1` · app uuid
+`f661kuiq901llma0o8unhvpi` · `Authorization: Bearer <token>` (Keys & Tokens → API
+Tokens, δικαίωμα `root`). Endpoints: `/applications`,
+`/applications/{uuid}/envs` (GET/POST), `/applications/{uuid}/scheduled-tasks`
+(GET/POST), `/scheduled-tasks/{uuid}/executions` (GET),
+`/applications/{uuid}/restart` (POST).
+
+⚠️ **Το token δεν γράφεται ποτέ σε αρχείο του repo.** Το token της ενεργοποίησης
+(`claude-cron-setup`, root, 7 ημέρες) πρέπει να γίνει **revoke** — πέρασε από
+συνομιλία.
+
 ---
 
 ## 10. Γνωστά όρια — δηλώνονται, δεν κρύβονται
@@ -305,3 +347,4 @@ check-in (upsert) — **κανένα χειροκίνητο βήμα στο UI �
 | 2026-07-31 | Αρχική έκδοση. Εντοπισμός τρίμηνου κενού· guards στα δύο αφύλακτα routes· ενεργοποίηση server Sentry· SSoT προγράμματος + dispatcher + lease + monitors· διόρθωση διαρροής `ai-pipeline`· αφαίρεση `crons` από `vercel.json`· 133 tests, 32/33 μεταλλάξεις. |
 | 2026-07-31 | **`queue-cron-route.ts`** — το CHECK 3.28 εντόπισε ότι το GET/POST wiring των `ai-pipeline` και `email-ingestion` ήταν διπλότυπο 12 γραμμών. Το διπλότυπο ήταν **έλεγχος πρόσβασης**, δηλαδή ακριβώς το σχήμα της διαρροής του §2β: το μη ταυτοποιημένο μονοπάτι γραμμένο δύο φορές. Ένα factory παράγει πλέον και τους δύο handlers· τα routes κρατούν μόνο τη δήλωση. Ο έλεγχος «κάθε route ταυτοποιεί τον καλούντα» **ακολουθεί** πλέον ένα επίπεδο έμμεσης αναφοράς μέσα στο `lib/cron/` αντί να το δεχτεί — επαληθευμένο με μετάλλαξη: αφαίρεση του guard από το factory κοκκινίζει 4 tests. |
 | 2026-07-31 | `cron_job_state` — πλήρης κάλυψη κανόνων Firestore (CHECK 3.16) αντί για `PENDING`. Το `trash-list-route` allowlist μεταφέρθηκε από τα δύο `purge-deleted-*/route.ts` στα αντίστοιχα `.job.ts` — ακολουθεί τη μετακίνηση της λογικής, δεν χαλαρώνει τον κανόνα. |
+| 2026-07-31 | **Ενεργοποίηση παραγωγής — ΟΛΟΚΛΗΡΩΘΗΚΕ** (νέο §9.1). `CRON_SECRET` + `NEXT_PUBLIC_APP_URL` (**έλειπε τελείως**) γραμμένα μέσω Coolify REST API· Scheduled Task `nestor-cron-dispatch` (`* * * * *`, uuid `re62oh7oi2q1bks5n417fcy4`)· restart απαραίτητο γιατί οι μεταβλητές γράφτηκαν *μετά* το deploy· απόδειξη 10:06 failed → 10:07/10:08 success· `401` χωρίς μυστικό. **Δύο παγίδες τεκμηριωμένες**: (α) ο πίνακας Coolify είναι Livewire με μόνιμο websocket ⇒ ποτέ `document_idle` ⇒ **απρόσιτος σε browser automation**, χρησιμοποίησε το REST API· (β) πεδία API `is_buildtime`/`is_runtime`, **όχι** `is_build_time` (`422`). Ο runbook παύει να είναι σχέδιο — είναι πλέον καταγραφή. |

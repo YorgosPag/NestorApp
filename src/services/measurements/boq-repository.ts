@@ -45,6 +45,9 @@ import {
 } from './boq-document-normalize';
 import { buildStaticAtoeCategories } from './boq-atoe-fallback';
 import { applyBoqSearchText, computeBoqStats, EMPTY_BOQ_STATS } from './boq-read-shared';
+// SSoT ελέγχου ιδιοκτησίας — κοινός με το Admin-SDK μονοπάτι. Δύο αντίγραφα του
+// ίδιου ελέγχου πρόσβασης θα απέκλιναν σιωπηλά (ADR-584 / CHECK 3.28).
+import { ownedItemOrNull } from './boq-tenant-ownership';
 
 const logger = createModuleLogger('FirestoreBOQRepository');
 
@@ -90,7 +93,17 @@ export class FirestoreBOQRepository implements IBOQRepository {
     return this.getByScope(companyId, 'projectId', projectId);
   }
 
-  async getById(id: string): Promise<BOQItem | null> {
+  /**
+   * ⚠️ **Η ΜΟΝΑΔΙΚΗ πόρτα προς έγγραφο που ζητήθηκε με id.**
+   *
+   * Κάθε μέθοδος αυτής της κλάσης που δέχεται `id` — ανάγνωση **και** εγγραφή —
+   * περνά από εδώ πρώτα. Μέχρι το ADR-734 §7 τα `delete()` και `updateStatus()`
+   * έγραφαν **χωρίς καμία ανάγνωση**: ένα id ήταν αρκετό. Τα Firestore rules τα
+   * έκοβαν (`firestore.rules:3015`), αλλά μια άμυνα που ζει μόνο στον διακομιστή
+   * σημαίνει ότι ο κώδικας εδώ δεν ξέρει τι κάνει — και η επόμενη διαδρομή
+   * (Admin SDK, migration script) δεν θα έχει καν αυτή την άμυνα.
+   */
+  private async readOwned(companyId: string, id: string): Promise<BOQItem | null> {
     try {
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);
       const snapshot = await getDoc(docRef);
@@ -99,11 +112,16 @@ export class FirestoreBOQRepository implements IBOQRepository {
         return null;
       }
 
-      return normalizeBOQItemSafe(snapshot.id, snapshot.data() as Record<string, unknown>);
+      const item = normalizeBOQItemSafe(snapshot.id, snapshot.data() as Record<string, unknown>);
+      return ownedItemOrNull(item, companyId, id, 'client');
     } catch (error) {
       logger.error('Error fetching BOQ item by ID', { error, id });
       return null;
     }
+  }
+
+  async getById(companyId: string, id: string): Promise<BOQItem | null> {
+    return this.readOwned(companyId, id);
   }
 
   async create(data: CreateBOQItemInput, userId: string, companyId: string): Promise<BOQItem> {
@@ -154,10 +172,10 @@ export class FirestoreBOQRepository implements IBOQRepository {
     return { id: enterpriseId, ...newItem };
   }
 
-  async update(id: string, data: UpdateBOQItemInput): Promise<BOQItem | null> {
+  async update(companyId: string, id: string, data: UpdateBOQItemInput): Promise<BOQItem | null> {
     // TODO(ADR-253-RC-5): Wrap in runTransaction for atomic read-then-write
     try {
-      const current = await this.getById(id);
+      const current = await this.readOwned(companyId, id);
       if (!current) {
         return null;
       }
@@ -173,7 +191,7 @@ export class FirestoreBOQRepository implements IBOQRepository {
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);
       await updateDoc(docRef, sanitized);
 
-      return await this.getById(id);
+      return await this.readOwned(companyId, id);
     } catch (error) {
       logger.error('Error updating BOQ item', { error, id });
       return null;
@@ -181,8 +199,15 @@ export class FirestoreBOQRepository implements IBOQRepository {
   }
 
   // TODO: ADR-AUDIT — Add dependency check before deletion (linked measurements, cost records)
-  async delete(id: string): Promise<boolean> {
+  async delete(companyId: string, id: string): Promise<boolean> {
     try {
+      // Η ανάγνωση **πριν** τη διαγραφή δεν είναι επικύρωση δεδομένων — είναι ο
+      // έλεγχος ιδιοκτησίας. Χωρίς αυτήν, ένα id αρκούσε για `deleteDoc`.
+      const current = await this.readOwned(companyId, id);
+      if (!current) {
+        return false;
+      }
+
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);
       await deleteDoc(docRef);
       return true;
@@ -192,10 +217,10 @@ export class FirestoreBOQRepository implements IBOQRepository {
     }
   }
 
-  async bulkDelete(ids: string[]): Promise<number> {
+  async bulkDelete(companyId: string, ids: string[]): Promise<number> {
     let deletedCount = 0;
     for (const id of ids) {
-      const success = await this.delete(id);
+      const success = await this.delete(companyId, id);
       if (success) {
         deletedCount += 1;
       }
@@ -203,10 +228,10 @@ export class FirestoreBOQRepository implements IBOQRepository {
     return deletedCount;
   }
 
-  async duplicate(id: string): Promise<BOQItem | null> {
+  async duplicate(companyId: string, id: string): Promise<BOQItem | null> {
     // TODO(ADR-253-RC-5): Wrap in runTransaction for atomic read-then-write
     try {
-      const original = await this.getById(id);
+      const original = await this.readOwned(companyId, id);
       if (!original) return null;
 
       const now = nowISO();
@@ -236,8 +261,20 @@ export class FirestoreBOQRepository implements IBOQRepository {
     }
   }
 
-  async updateStatus(id: string, status: BOQItemStatus, userId: string): Promise<boolean> {
+  async updateStatus(
+    companyId: string,
+    id: string,
+    status: BOQItemStatus,
+    userId: string
+  ): Promise<boolean> {
     try {
+      // Ίδιος λόγος με το `delete()`: η μετάβαση κατάστασης είναι εγγραφή, και
+      // μέχρι το ADR-734 §7 γινόταν χωρίς να διαβαστεί ποτέ το έγγραφο.
+      const current = await this.readOwned(companyId, id);
+      if (!current) {
+        return false;
+      }
+
       const docRef = doc(db, COLLECTIONS.BOQ_ITEMS, id);
       const updateData: Record<string, unknown> = {
         status,

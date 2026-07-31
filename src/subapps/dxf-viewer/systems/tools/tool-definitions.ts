@@ -466,9 +466,34 @@ const PLACEMENT_GHOST_OWNER_ENTITY_TYPES: ReadonlySet<RenderableEntityType> = ne
   'mep-boiler', 'mep-water-heater', 'mep-segment', 'floorplan-symbol',
 ]);
 
+/**
+ * ADR-736 §6 — placement-ghost owners που ο **τύπος οντότητας δεν μπορεί να διακρίνει**.
+ *
+ * Το `attach-image` παράγει `ImageEntity` — ακριβώς όπως τα 4 catalog entourage εργαλεία
+ * (`furniture-plan` / `people-plan` / `vehicles-plan` / `plants-plan`). Αλλά **μόνο αυτό
+ * έχει ghost mount**: τα άλλα 4 τοποθετούν στα τυφλά (ADR-654 — εκθέτουν
+ * `getGhostFootprint` που κανείς δεν ζωγραφίζει). Άρα ο άξονας «τύπος οντότητας» είναι
+ * εδώ **λάθος όργανο**: βάζοντας `'image'` στο {@link PLACEMENT_GHOST_OWNER_ENTITY_TYPES}
+ * θα γίνονταν ιδιοκτήτες και τα 4 χωρίς ghost — ο κοινός καμβάς δεν θα καθαριζόταν ποτέ
+ * όσο είναι ενεργά, οπότε το ghost του **προηγούμενου** εργαλείου θα έμενε κολλημένο.
+ *
+ * 🔴 **Το σφάλμα που κλείνει (μετρημένο ζωντανά, 2026-07-31):** μέσα σε ΕΝΑΝ `mousemove` ο
+ * `handleMouseMove` καλεί πρώτα το `ImmediatePositionStore` (→ ο ghost harness καθάριζε και
+ * ζωγράφιζε την εικόνα) και **αμέσως μετά** το `processDrawingHover`, που χωρίς
+ * `previewEntity` έκανε `previewCanvasRef.current.clear()` — δηλαδή έσβηνε το ghost στο
+ * **ίδιο frame**. Μετρητικά: 3 `drawImage` στον PreviewCanvas, **0 ορατά pixels**. Τρίτο
+ * χτύπημα της ίδιας κλάσης μετά τα ADR-624 (placement ghosts) και ADR-189 §3.13
+ * («Παράλληλος οδηγός»).
+ *
+ * ⚠️ Μόλις αποκτήσουν ghost και οι 4 catalog οικογένειες, προστίθενται **ΕΔΩ** — ποτέ ως
+ * τύπος οντότητας, γιατί ο τύπος δεν ξεχωρίζει «έχει ghost» από «δεν έχει».
+ */
+const PLACEMENT_GHOST_OWNER_TOOLS: ReadonlySet<string> = new Set<string>(['attach-image']);
+
 /** True when `tool` owns the PreviewCanvas via a dedicated placement ghost (ADR-624). */
 export function toolOwnsPlacementGhost(tool: string | undefined | null): boolean {
   if (!tool) return false;
+  if (PLACEMENT_GHOST_OWNER_TOOLS.has(tool)) return true;
   const entityType = TOOL_CREATES_ENTITY[tool as ToolType];
   return entityType !== undefined && PLACEMENT_GHOST_OWNER_ENTITY_TYPES.has(entityType);
 }

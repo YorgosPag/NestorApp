@@ -53,6 +53,8 @@ import { normalizeBOQCategory, normalizeBOQItemSafe } from '../boq-document-norm
 import { applyBoqSearchText, buildCategoryNameMap, computeBoqStats } from '../boq-read-shared';
 import { buildStaticAtoeCategories } from '../boq-atoe-fallback';
 import { computeBuildingSummary } from '../cost-engine';
+// SSoT ελέγχου ιδιοκτησίας — ο ίδιος που χρησιμοποιεί το client repository.
+import { ownedItemOrNull } from '../boq-tenant-ownership';
 
 const logger = createModuleLogger('BOQAdminReadService');
 
@@ -111,16 +113,26 @@ export class BOQAdminReadService implements IBOQReadService {
   }
 
   /**
-   * ⚠️ **Χωρίς `companyId` — κατά το συμβόλαιο του `IBOQService`.** Ο έλεγχος
-   * ιδιοκτησίας γίνεται **μετά** το fetch, στο `fetchOwnedBoqItem()`
-   * (ADR-734 §7.1). Καμία δυνατότητα δεν καλεί αυτή τη μέθοδο απευθείας· ο
-   * φύλακας `boq-capability-tenant-guard` του `.ssot-registry.json` το επιβάλλει.
+   * 🔴 **Εδώ ο έλεγχος ιδιοκτησίας είναι η ΜΟΝΗ άμυνα.**
+   *
+   * Το client μονοπάτι έχει από κάτω του τα Firestore rules
+   * (`firestore.rules:2955` — `belongsToCompany(resource.data.companyId)`). Το
+   * Admin SDK **τα παρακάμπτει εξ ορισμού**: ένα `doc(id).get()` επιστρέφει
+   * οτιδήποτε. Μέχρι το ADR-734 §7 το κενό το κάλυπτε ο `fetchOwnedBoqItem()`
+   * μαζί με ένα regex στο `.ssot-registry.json` — δηλαδή μια **σύμβαση**, όχι το
+   * σύστημα τύπων: κάθε νέος server-side καλών (route, migration, δεύτερο
+   * transport) ξεκινούσε ακάλυπτος και τίποτα δεν τον σταματούσε.
+   *
+   * Ο έλεγχος γίνεται **μετά** την ανάγνωση επειδή δεν υπάρχει άλλος τρόπος:
+   * ερώτημα κατά id δεν δέχεται `where()`. Το τίμημα είναι μία ανάγνωση που
+   * απορρίπτεται — αμελητέο μπροστά σε διαρροή μεταξύ πελατών.
    */
-  async getById(id: string): Promise<BOQItem | null> {
+  async getById(companyId: string, id: string): Promise<BOQItem | null> {
     const snapshot = await this.db.collection(COLLECTIONS.BOQ_ITEMS).doc(id).get();
     if (!snapshot.exists) return null;
 
-    return normalizeBOQItemSafe(snapshot.id, snapshot.data() as Record<string, unknown>);
+    const item = normalizeBOQItemSafe(snapshot.id, snapshot.data() as Record<string, unknown>);
+    return ownedItemOrNull(item, companyId, id, 'admin');
   }
 
   async search(

@@ -50,8 +50,8 @@ import { createBoqCapabilityRegistry } from './index';
 const lazyAdminBoq: IBOQReadService = {
   getByBuilding: (companyId: string, buildingId: string): Promise<BOQItem[]> =>
     getBoqAdminReadService().getByBuilding(companyId, buildingId),
-  getById: (id: string): Promise<BOQItem | null> =>
-    getBoqAdminReadService().getById(id),
+  getById: (companyId: string, id: string): Promise<BOQItem | null> =>
+    getBoqAdminReadService().getById(companyId, id),
   search: (companyId: string, buildingId: string, filters?: BOQSearchFilters): Promise<BOQItem[]> =>
     getBoqAdminReadService().search(companyId, buildingId, filters),
   getStatistics: (companyId: string, buildingId: string): Promise<BOQStats> =>

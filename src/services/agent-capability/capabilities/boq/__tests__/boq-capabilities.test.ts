@@ -1,10 +1,15 @@
 /**
  * Τα επτά εργαλεία BOQ (ADR-734 §7) — συμπεριφορά, όχι μόνο σχήμα.
  *
- * Το βάρος πέφτει στο **κενό tenant isolation** του `getById` (§7 διόρθωση 1):
- * ελέγχεται ότι και οι τρεις διαδρομές που περνούν από εκεί μπλοκάρουν, και ότι
- * μπλοκάρουν με μήνυμα **ταυτόσημο** με του ανύπαρκτου id — αλλιώς το σφάλμα
- * γίνεται μαντείο ύπαρξης.
+ * Το βάρος πέφτει στο **tenant isolation** του `getById` (§7): ελέγχεται ότι και
+ * οι τρεις διαδρομές που περνούν από εκεί μπλοκάρουν, και ότι μπλοκάρουν με
+ * μήνυμα **ταυτόσημο** με του ανύπαρκτου id — αλλιώς το σφάλμα γίνεται μαντείο
+ * ύπαρξης.
+ *
+ * ⚠️ Από 2026-07-31 ο tenant είναι μέρος της **υπογραφής** (`getById(companyId,
+ * id)`) και η άμυνα ζει στο service. Τα tests εδώ ελέγχουν πλέον **δύο** πράγματα
+ * που πριν ήταν ένα: ότι ο tenant του context ταξιδεύει ως όρισμα, και ότι η
+ * δεύτερη ζώνη του `fetchOwnedBoqItem` κρατά όταν μια υλοποίηση τον αγνοήσει.
  *
  * @module services/agent-capability/capabilities/boq/__tests__/boq-capabilities
  * @see ADR-734 §7
@@ -96,8 +101,32 @@ describe('BOQ capability catalogue (ADR-734 §7)', () => {
   });
 });
 
-describe('tenant isolation — το κενό του getById (ADR-734 §7)', () => {
+describe('tenant isolation — ο tenant είναι πια μέρος της υπογραφής (ADR-734 §7)', () => {
   const itemTools = ['boq_get_item', 'boq_get_variance', 'boq_get_baseline_drift'];
+
+  it('το companyId που φτάνει στο getById είναι του context, όχι των ορισμάτων', async () => {
+    const { registry, fake } = buildRegistry([ownerItem]);
+    await registry.invoke('boq_get_item', { itemId: ownerItem.id }, ADMIN_CTX);
+
+    // Η απόδειξη ότι ο tenant ταξιδεύει: αν το service αγνοούσε τη νέα παράμετρο,
+    // ο έλεγχος θα ξαναγύριζε σιωπηλά στον guard.
+    expect(fake.calls.getById).toEqual([{ companyId: OWNER, itemId: ownerItem.id }]);
+  });
+
+  it('υλοποίηση που ΑΓΝΟΕΙ τον tenant δεν διαρρέει — η δεύτερη ζώνη κρατά', async () => {
+    // Το σύστημα τύπων εγγυάται ότι το companyId **περνιέται**· δεν μπορεί να
+    // εγγυηθεί ότι κάθε υλοποίηση το **τιμά**. Αυτός ο απείθαρχος ψεύτης είναι ο
+    // μόνος τρόπος να αποδειχθεί ότι ο έλεγχος του `fetchOwnedBoqItem` δουλεύει.
+    const { fake } = buildRegistry([ownerItem, foreignItem]);
+    const rogue = { ...fake.service, getById: () => Promise.resolve(foreignItem) };
+    const registry = createBoqCapabilityRegistry({ boq: rogue });
+
+    const outcome = await registry.invoke('boq_get_item', { itemId: foreignItem.id }, ADMIN_CTX);
+
+    expect(outcome.ok).toBe(false);
+    if (outcome.ok) return;
+    expect(outcome.error.code).toBe('NOT_FOUND');
+  });
 
   it.each(itemTools)('%s: item άλλου πελάτη ⇒ NOT_FOUND', async (tool) => {
     const { registry } = buildRegistry([ownerItem, foreignItem]);

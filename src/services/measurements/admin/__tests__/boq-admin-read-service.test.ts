@@ -159,11 +159,11 @@ describe('ανάγνωση γραμμών', () => {
   });
 
   it('getById επιστρέφει null για ανύπαρκτο id χωρίς να ρίξει', async () => {
-    await expect(service().getById('boq-missing')).resolves.toBeNull();
+    await expect(service().getById(OWNER, 'boq-missing')).resolves.toBeNull();
   });
 
   it('getById επιστρέφει τη γραμμή όταν υπάρχει', async () => {
-    const item = await service().getById('boq-1');
+    const item = await service().getById(OWNER, 'boq-1');
     expect(item?.id).toBe('boq-1');
   });
 
@@ -180,6 +180,45 @@ describe('ανάγνωση γραμμών', () => {
   it('το φίλτρο κειμένου εφαρμόζεται στη μνήμη με τον κοινό κανόνα', async () => {
     await expect(service().search(OWNER, BUILDING, { searchText: 'σκυρ' })).resolves.toHaveLength(2);
     await expect(service().search(OWNER, BUILDING, { searchText: 'χάλυβας' })).resolves.toHaveLength(0);
+  });
+});
+
+// ============================================================================
+// TENANT ISOLATION — ΕΔΩ ΔΕΝ ΥΠΑΡΧΕΙ ΔΙΧΤΥ ΑΠΟ ΚΑΤΩ
+// ============================================================================
+
+/**
+ * Το client μονοπάτι προστατεύεται από τα Firestore rules
+ * (`firestore.rules:2955`). Το Admin SDK **τα παρακάμπτει**: αν λείψει ο έλεγχος
+ * εδώ, ένα id αρκεί για να διαβαστεί γραμμή οποιουδήποτε πελάτη — και ο καλών
+ * είναι ο πράκτορας ΤΝ, δηλαδή αναξιόπιστη πηγή id.
+ */
+describe('tenant isolation στο Admin SDK (ADR-734 §7)', () => {
+  const INTRUDER = 'co-2';
+
+  const withForeignItem = () =>
+    new BOQAdminReadService(
+      fakeFirestore({
+        [ITEMS_COLLECTION]: { byId: { 'boq-1': itemDocument('boq-1').data } },
+      }),
+    );
+
+  it('γραμμή άλλου πελάτη ⇒ null, όχι τα δεδομένα', async () => {
+    await expect(withForeignItem().getById(INTRUDER, 'boq-1')).resolves.toBeNull();
+  });
+
+  it('η άρνηση είναι ΤΑΥΤΟΣΗΜΗ με ανύπαρκτο id — κανένα μαντείο ύπαρξης', async () => {
+    const service = withForeignItem();
+
+    // Αν το ένα από τα δύο έριχνε ή επέστρεφε άλλο σχήμα, ο καλών θα μάθαινε ότι
+    // το id υπάρχει — αρκετό για απαρίθμηση ids άλλου πελάτη.
+    await expect(service.getById(INTRUDER, 'boq-1')).resolves.toBeNull();
+    await expect(service.getById(INTRUDER, 'boq-nope')).resolves.toBeNull();
+  });
+
+  it('ο ιδιοκτήτης εξακολουθεί να διαβάζει κανονικά', async () => {
+    const item = await withForeignItem().getById(OWNER, 'boq-1');
+    expect(item?.id).toBe('boq-1');
   });
 });
 
