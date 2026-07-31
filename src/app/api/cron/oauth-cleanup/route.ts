@@ -7,13 +7,22 @@
  * route και module θα σήμαινε ότι η απάντηση στο «πότε σβήνεται ένα token;»
  * απαιτεί ανάγνωση δύο αρχείων.
  *
+ * ⚠️ **Μην πειράξεις τα δύο παράθυρα διατήρησης** (ADR-738 §10.1) — το δεύτερο
+ * τροφοδοτεί ανιχνευτή επαναχρησιμοποίησης κωδικού· συντόμευσή του σπάει τον
+ * ανιχνευτή κλοπής.
+ *
+ * ℹ️ Το path παραμένει **ονομαστική** εξαίρεση στο `isMachineEndpoint` του
+ * `middleware.ts`, ώστε να είναι δοκιμάσιμο χειροκίνητα με `curl`. Ο
+ * χρονοπρογραμματιστής **δεν** το χρειάζεται: καλεί τη συνάρτηση απευθείας.
+ *
  * @module api/cron/oauth-cleanup
  * @see ADR-738 §10
+ * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (06:00 Europe/Athens)
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { verifyCronAuthorization } from '@/lib/cron-auth';
+import { rejectUnauthorizedCron } from '@/lib/cron-auth';
 import { cleanupExpiredOAuthDocuments } from '@/lib/oauth/oauth-cleanup';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -23,9 +32,8 @@ const logger = createModuleLogger('CronOAuthCleanup');
 export const maxDuration = 60;
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  if (!verifyCronAuthorization(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = rejectUnauthorizedCron(request);
+  if (unauthorized) return unauthorized;
 
   try {
     const report = await cleanupExpiredOAuthDocuments();

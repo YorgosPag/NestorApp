@@ -1,93 +1,55 @@
 /**
  * =============================================================================
- * AI LEARNING CRON — Daily Pattern Extraction & Cleanup
+ * AI LEARNING CRON — ημερήσια εξαγωγή μοτίβων + εκκαθάριση
  * =============================================================================
  *
- * Runs daily via Vercel Cron:
- *   1. Extract patterns from rated feedback (max 50 items)
- *   2. Cleanup low-quality patterns (score < 0.3, older than 7 days)
- *   3. Cleanup stale feedback (null rating, older than 48h)
- *   4. Recompute tool analytics success rates
+ * **Πυροκροτητής, όχι λογική** — τα πέντε βήματα ζουν στο
+ * `lib/cron/jobs/ai-learning.job.ts`. Το route μένει για χειροκίνητη εκτέλεση· η
+ * προγραμματισμένη περνά από το `/api/cron/dispatch` και καλεί τη συνάρτηση απευθείας.
  *
  * @route GET /api/cron/ai-learning
  * @see ADR-173 (AI Self-Improvement System)
+ * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getLearningService } from '@/services/ai-pipeline/learning-service';
-import { getFeedbackService } from '@/services/ai-pipeline/feedback-service';
-import { getToolAnalyticsService } from '@/services/ai-pipeline/tool-analytics-service';
-import { getChatHistoryService } from '@/services/ai-pipeline/chat-history-service';
+
+import { rejectUnauthorizedCron } from '@/lib/cron-auth';
+import { runAiLearning } from '@/lib/cron/jobs/ai-learning.job';
+import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { verifyCronAuthorization } from '@/lib/cron-auth';
 
 const logger = createModuleLogger('CRON_AI_LEARNING');
 
 export const maxDuration = 60;
 
 async function handleGET(request: NextRequest): Promise<NextResponse> {
+  const unauthorized = rejectUnauthorizedCron(request);
+  if (unauthorized) return unauthorized;
+
   const startTime = Date.now();
 
-  if (!verifyCronAuthorization(request)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  logger.info('AI learning cron started');
-
-  const results: Record<string, unknown> = {};
-
   try {
-    // 1. Extract patterns from rated feedback
-    const learningService = getLearningService();
-    const patternsExtracted = await learningService.extractPatternsFromFeedback(50);
-    results.patternsExtracted = patternsExtracted;
-
-    // 2. Cleanup low-quality patterns
-    const lowQualityDeleted = await learningService.cleanupLowQuality();
-    results.lowQualityPatternsDeleted = lowQualityDeleted;
-
-    // 3. Cleanup stale feedback (no rating after 48h)
-    const feedbackService = getFeedbackService();
-    const staleFeedbackDeleted = await feedbackService.cleanupStale();
-    results.staleFeedbackDeleted = staleFeedbackDeleted;
-
-    // 4. Recompute tool analytics success rates
-    const analyticsService = getToolAnalyticsService();
-    await analyticsService.recomputeRates();
-    results.analyticsRecomputed = true;
-
-    // 5. Cleanup old chat history (bonus — already existed in chat-history-service)
-    const chatHistoryService = getChatHistoryService();
-    const chatHistoryCleaned = await chatHistoryService.cleanupOldHistory();
-    results.chatHistoryCleaned = chatHistoryCleaned;
-
+    const result = await runAiLearning();
     const durationMs = Date.now() - startTime;
-    results.durationMs = durationMs;
-
-    logger.info('AI learning cron completed', results);
 
     return NextResponse.json({
       success: true,
-      ...results,
+      summary: result.summary,
+      ...result.metrics,
+      durationMs,
     });
   } catch (error) {
     const errorMessage = getErrorMessage(error);
     const durationMs = Date.now() - startTime;
 
-    logger.error('AI learning cron failed', {
-      error: errorMessage,
-      durationMs,
-      partialResults: results,
-    });
+    logger.error('AI learning cron failed', { error: errorMessage, durationMs });
 
-    return NextResponse.json({
-      success: false,
-      error: errorMessage,
-      durationMs,
-      partialResults: results,
-    }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: errorMessage, durationMs },
+      { status: 500 }
+    );
   }
 }
 

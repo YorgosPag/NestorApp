@@ -30,6 +30,7 @@ import { join } from 'node:path';
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
 const CRON_ROUTES_DIR = join(REPO_ROOT, 'src', 'app', 'api', 'cron');
 const SCHEDULE_FILE = join(REPO_ROOT, 'src', 'config', 'cron-schedule.ts');
+const LIB_CRON_DIR = join(REPO_ROOT, 'src', 'lib', 'cron');
 
 /** Ο πυροκροτητής του χρονοπρογραμματιστή — δεν είναι εργασία, δεν δηλώνεται. */
 const DISPATCHER_SLUG = 'dispatch';
@@ -69,6 +70,37 @@ function readRouteSource(slug: string): string {
  */
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+}
+
+/**
+ * Ο κώδικας του route **μαζί** με τα `@/lib/cron/*` modules που εισάγει.
+ *
+ * Ένα route επιτρέπεται να μη γράφει το ίδιο τον guard: τα `ai-pipeline` και
+ * `email-ingestion` μοιράζονται πλέον το `queue-cron-route.ts`, γιατί το wiring τους
+ * ήταν κυριολεκτικά διπλότυπο (CHECK 3.28). Αυτό που **δεν** επιτρέπεται είναι ο guard
+ * να λείπει από την αλυσίδα — γι' αυτό ο έλεγχος ακολουθεί την έμμεση αναφορά αντί να
+ * τη δεχτεί: ένα route που εισάγει ένα οποιοδήποτε άλλο module του `lib/cron` (π.χ. ένα
+ * `*.job.ts`) εξακολουθεί να κοκκινίζει, επειδή εκεί μέσα δεν υπάρχει ταυτοποίηση.
+ *
+ * **Ένα επίπεδο, σκόπιμα.** Αναδρομή θα σήμαινε ότι ένας guard τριών αρχείων μακριά
+ * μετράει ως απόδειξη· ένας φύλακας που δεν φαίνεται με μία ματιά δεν είναι φύλακας.
+ */
+function readGuardChain(slug: string): string {
+  const routeCode = stripComments(readRouteSource(slug));
+
+  const helperSources = [...routeCode.matchAll(/from '@\/lib\/cron\/([\w./-]+)'/g)].map(
+    ([, relativePath]) => {
+      try {
+        return stripComments(readFileSync(join(LIB_CRON_DIR, `${relativePath}.ts`), 'utf8'));
+      } catch {
+        // Ανύπαρκτο module: το αφήνουμε κενό ώστε να αποτύχει ο έλεγχος guard, όχι το
+        // ίδιο το test με ένα άσχετο σφάλμα I/O.
+        return '';
+      }
+    }
+  );
+
+  return [routeCode, ...helperSources].join('\n');
 }
 
 describe('συμβόλαιο cron routes (ADR-739)', () => {
@@ -118,7 +150,7 @@ describe('συμβόλαιο cron routes (ADR-739)', () => {
     it.each([...listCronRouteSlugs(), DISPATCHER_SLUG])(
       '%s ταυτοποιεί τον καλούντα',
       (slug) => {
-        const code = stripComments(readRouteSource(slug));
+        const code = readGuardChain(slug);
         const usesGuard =
           code.includes('rejectUnauthorizedCron(') ||
           code.includes('verifyCronAuthorization(');
@@ -129,7 +161,7 @@ describe('συμβόλαιο cron routes (ADR-739)', () => {
     it.each([...listCronRouteSlugs(), DISPATCHER_SLUG])(
       '%s παίρνει τον guard από το SSoT και όχι από τοπικό αντίγραφο',
       (slug) => {
-        const code = stripComments(readRouteSource(slug));
+        const code = readGuardChain(slug);
         expect(code).toMatch(/from '@\/lib\/cron-auth'/);
         // Απευθείας ανάγνωση του μυστικού μέσα σε route = δεύτερη υλοποίηση
         // ταυτοποίησης, ακριβώς ό,τι απαγορεύει το module `cron-auth` του

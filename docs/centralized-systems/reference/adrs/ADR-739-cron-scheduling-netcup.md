@@ -281,8 +281,10 @@ check-in (upsert) — **κανένα χειροκίνητο βήμα στο UI �
 
 **Νέα:** `src/types/cron-schedule.ts` · `src/config/cron-schedule.ts` ·
 `src/lib/cron/{cron-due,cron-lease,cron-monitor,cron-dispatcher,ai-pipeline-diagnostic}.ts` ·
+`src/lib/cron/{queue-batch-response,queue-cron-route}.ts` ·
 `src/lib/cron/jobs/*.job.ts` (10) · `src/app/api/cron/dispatch/route.ts` ·
-`src/lib/cron/__tests__/*` (6 suites)
+`src/lib/cron/__tests__/*` (6 suites) ·
+`tests/firestore-rules/suites/cron-job-state.rules.test.ts`
 
 **Τροποποιημένα:** `instrumentation.ts` · `sentry.{client,server,edge}.config.ts` ·
 `src/config/sentry-config.ts` · `src/config/firestore-collections.ts`
@@ -301,3 +303,5 @@ check-in (upsert) — **κανένα χειροκίνητο βήμα στο UI �
 | Ημ/νία | Αλλαγή |
 |---|---|
 | 2026-07-31 | Αρχική έκδοση. Εντοπισμός τρίμηνου κενού· guards στα δύο αφύλακτα routes· ενεργοποίηση server Sentry· SSoT προγράμματος + dispatcher + lease + monitors· διόρθωση διαρροής `ai-pipeline`· αφαίρεση `crons` από `vercel.json`· 133 tests, 32/33 μεταλλάξεις. |
+| 2026-07-31 | **`queue-cron-route.ts`** — το CHECK 3.28 εντόπισε ότι το GET/POST wiring των `ai-pipeline` και `email-ingestion` ήταν διπλότυπο 12 γραμμών. Το διπλότυπο ήταν **έλεγχος πρόσβασης**, δηλαδή ακριβώς το σχήμα της διαρροής του §2β: το μη ταυτοποιημένο μονοπάτι γραμμένο δύο φορές. Ένα factory παράγει πλέον και τους δύο handlers· τα routes κρατούν μόνο τη δήλωση. Ο έλεγχος «κάθε route ταυτοποιεί τον καλούντα» **ακολουθεί** πλέον ένα επίπεδο έμμεσης αναφοράς μέσα στο `lib/cron/` αντί να το δεχτεί — επαληθευμένο με μετάλλαξη: αφαίρεση του guard από το factory κοκκινίζει 4 tests. |
+| 2026-07-31 | `cron_job_state` — πλήρης κάλυψη κανόνων Firestore (CHECK 3.16) αντί για `PENDING`. Το `trash-list-route` allowlist μεταφέρθηκε από τα δύο `purge-deleted-*/route.ts` στα αντίστοιχα `.job.ts` — ακολουθεί τη μετακίνηση της λογικής, δεν χαλαρώνει τον κανόνα. |

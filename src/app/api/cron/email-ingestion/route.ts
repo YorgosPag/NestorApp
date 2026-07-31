@@ -3,176 +3,39 @@
  *
  * ADR-071: Enterprise Email Webhook Queue System
  *
- * This endpoint is triggered by Vercel Cron to process
- * emails from the ingestion queue.
+ * **Πυροκροτητής, όχι λογική** — η επεξεργασία παρτίδας ζει στο
+ * `lib/cron/jobs/email-ingestion.job.ts`. Το route μένει για χειροκίνητη εκτέλεση
+ * (GET με εξουσιοδότηση ή POST)· η προγραμματισμένη περνά από το
+ * `/api/cron/dispatch` και καλεί τη συνάρτηση απευθείας.
  *
- * 🏢 IMPORTANT: Vercel Cron sends GET requests (not POST).
- * The GET handler processes the queue when authorized (cron trigger),
- * and returns health check when unauthenticated (liveness probe).
- * POST is available for manual/API triggers.
- *
- * Configuration in vercel.json:
- * ```json
- * {
- *   "crons": [{
- *     "path": "/api/cron/email-ingestion",
- *     "schedule": "0 * * * *"
- *   }]
- * }
- * ```
+ * ⚠️ Χωρίς εξουσιοδότηση, το GET επιστρέφει **μόνο** liveness probe (υγεία ουράς,
+ * χωρίς περιεχόμενο μηνυμάτων) — σκόπιμα, διατηρημένη συμπεριφορά. Το wiring
+ * (ποιος περνά, τι βλέπει όποιος δεν περνά) ζει στο `lib/cron/queue-cron-route.ts`,
+ * κοινό με το `/api/cron/ai-pipeline`.
  *
  * @module api/cron/email-ingestion
+ * @see ADR-739 — το πρόγραμμα ζει στο src/config/cron-schedule.ts (03:00 Europe/Athens)
  */
 
 import 'server-only';
 
-import { NextRequest, NextResponse } from 'next/server';
+import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
+import { createQueueCronRoute } from '@/lib/cron/queue-cron-route';
+import { getEmailIngestionQueueHealth } from '@/server/comms/workers/email-ingestion-worker';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
-import { verifyCronAuthorization } from '@/lib/cron-auth';
-import {
-  processEmailIngestionBatch,
-  getEmailIngestionQueueHealth,
-} from '@/server/comms/workers/email-ingestion-worker';
-import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getErrorMessage } from '@/lib/error-utils';
 
 const logger = createModuleLogger('EMAIL_INGESTION_CRON');
 
-// =============================================================================
-// 🏢 ENTERPRISE: Shared batch processing logic (DRY)
-// Used by both GET (Vercel Cron) and POST (manual/API trigger)
-// Pattern: SAP Job Scheduler / Salesforce Scheduled Apex
-// =============================================================================
+export const maxDuration = 60;
 
-type CronTrigger = 'vercel-cron' | 'manual-post' | 'api-call';
+const route = createQueueCronRoute({
+  label: 'Email ingestion',
+  service: 'email-ingestion-worker',
+  version: 'v2',
+  logger,
+  run: runEmailIngestion,
+  readHealth: getEmailIngestionQueueHealth,
+});
 
-async function executeBatchProcessing(trigger: CronTrigger): Promise<Response> {
-  const startTime = Date.now();
-
-  logger.info('Email ingestion batch triggered', { trigger });
-
-  try {
-    const result = await processEmailIngestionBatch();
-
-    const elapsed = Date.now() - startTime;
-
-    logger.info('Email ingestion batch completed', {
-      trigger,
-      processed: result.processed,
-      failed: result.failed,
-      recovered: result.recovered,
-      healthy: result.healthStatus.healthy,
-      elapsedMs: elapsed,
-    });
-
-    if (result.healthStatus.warnings.length > 0) {
-      logger.warn('Queue health warnings', {
-        trigger,
-        warnings: result.healthStatus.warnings,
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      trigger,
-      processed: result.processed,
-      failed: result.failed,
-      recovered: result.recovered,
-      health: {
-        healthy: result.healthStatus.healthy,
-        warnings: result.healthStatus.warnings,
-        stats: result.healthStatus.stats,
-      },
-      elapsedMs: elapsed,
-    });
-
-  } catch (error) {
-    const elapsed = Date.now() - startTime;
-    const errorMessage = getErrorMessage(error);
-
-    logger.error('Email ingestion batch error', {
-      trigger,
-      error: errorMessage,
-      elapsedMs: elapsed,
-    });
-
-    return NextResponse.json({
-      ok: false,
-      trigger,
-      error: errorMessage,
-      elapsedMs: elapsed,
-    }, { status: 500 });
-  }
-}
-
-// =============================================================================
-// 🏢 GET /api/cron/email-ingestion
-//
-// Vercel Cron sends GET requests with Authorization header.
-// - Authorized (cron/admin) → Process email queue batch
-// - Unauthenticated → Health check / liveness probe only
-//
-// @rateLimit SENSITIVE (20 req/min)
-// =============================================================================
-
-async function handleGET(request: NextRequest): Promise<Response> {
-  const authorized = verifyCronAuthorization(request);
-
-  // 🏢 ENTERPRISE: Detect Vercel Cron via User-Agent (additional signal)
-  const userAgent = request.headers.get('user-agent') || '';
-  const isVercelCron = userAgent.includes('vercel-cron');
-
-  if (authorized) {
-    // Vercel Cron trigger OR authorized API call → process batch
-    const trigger: CronTrigger = isVercelCron ? 'vercel-cron' : 'api-call';
-    return executeBatchProcessing(trigger);
-  }
-
-  // Unauthenticated → health check only (liveness probe)
-  try {
-    const health = await getEmailIngestionQueueHealth();
-
-    return NextResponse.json({
-      ok: true,
-      service: 'email-ingestion-worker',
-      version: 'v2',
-      authorized: false,
-      health: {
-        healthy: health.healthy,
-        warnings: health.warnings,
-        stats: health.stats,
-      },
-    });
-
-  } catch (error) {
-    const errorMessage = getErrorMessage(error);
-
-    return NextResponse.json({
-      ok: false,
-      service: 'email-ingestion-worker',
-      error: errorMessage,
-    }, { status: 500 });
-  }
-}
-
-export const GET = withSensitiveRateLimit(handleGET);
-
-// =============================================================================
-// 🏢 POST /api/cron/email-ingestion
-//
-// Manual trigger for batch processing (admin tools, API calls).
-// Requires authorization.
-//
-// @rateLimit SENSITIVE (20 req/min)
-// =============================================================================
-
-async function handlePOST(request: NextRequest): Promise<Response> {
-  if (!verifyCronAuthorization(request)) {
-    logger.warn('Unauthorized POST cron request');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  return executeBatchProcessing('manual-post');
-}
-
-export const POST = withSensitiveRateLimit(handlePOST);
+export const GET = route.GET;
+export const POST = route.POST;
