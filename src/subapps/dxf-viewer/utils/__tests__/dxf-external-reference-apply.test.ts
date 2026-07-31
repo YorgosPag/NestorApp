@@ -88,6 +88,43 @@ describe('applyExternalReferencesToEntities — όνομα', () => {
   });
 });
 
+/**
+ * ADR-736 §5.3 — η **πλήρης διαδρομή** ταξιδεύει μαζί με το όνομα, από ΤΟ ΙΔΙΟ σημείο. Ο
+ * renderer είναι pure leaf (ADR-040): δεν βλέπει τη σκηνή, άρα δεν μπορεί να ακολουθήσει το
+ * `externalRefId` για να βρει το `rawPath` μόνος του.
+ */
+describe('applyExternalReferencesToEntities — πλήρης διαδρομή (§5.3)', () => {
+  const paths = (entities: readonly AnySceneEntity[]): Array<string | undefined> =>
+    entities.filter((e): e is ImageEntity => e.type === 'image').map((e) => e.sourcePath);
+
+  it('περνά το rawPath της αναφοράς στην εικόνα', () => {
+    const out = applyExternalReferencesToEntities([image()], [ref()]);
+    expect(paths(out)).toEqual(['Z:\\Jobs\\OT\\ΕΥΟΣΜΟΣ\\dianomi_1.JPG']);
+  });
+
+  it('γεμίζει ΟΛΕΣ τις εικόνες που δείχνουν στην ίδια αναφορά (σχέση N:1)', () => {
+    const out = applyExternalReferencesToEntities(
+      [image({ id: 'a' }), image({ id: 'b' })],
+      [ref()],
+    );
+    expect(paths(out)).toEqual([
+      'Z:\\Jobs\\OT\\ΕΥΟΣΜΟΣ\\dianomi_1.JPG',
+      'Z:\\Jobs\\OT\\ΕΥΟΣΜΟΣ\\dianomi_1.JPG',
+    ]);
+  });
+
+  it('αναφορά ΧΩΡΙΣ rawPath αφήνει το πεδίο κενό — ποτέ κενή συμβολοσειρά', () => {
+    const out = applyExternalReferencesToEntities([image()], [ref({ rawPath: '' })]);
+    expect(paths(out)).toEqual([undefined]);
+  });
+
+  it('είναι idempotent ως προς τη διαδρομή — δεύτερη κλήση δίνει τον ΙΔΙΟ πίνακα', () => {
+    const refs = [ref()];
+    const first = applyExternalReferencesToEntities([image()], refs);
+    expect(applyExternalReferencesToEntities(first, refs)).toBe(first);
+  });
+});
+
 describe('applyExternalReferencesToEntities — url μετά την επίλυση', () => {
   it('γράφει το url ΜΟΝΟ από αναφορά σε κατάσταση resolved', () => {
     const resolved = ref({ status: 'resolved', url: 'https://storage/dianomi_1.JPG' });
