@@ -30,6 +30,8 @@ import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 // ADR-612 — inline numeric cell editor for opening-info-tag (self-contained: reads
 // its own store, dispatches UpdateEntityCommand via useCommandHistory). No props.
 import { OpeningInfoTagEditorOverlay } from '../../ui/opening-info-tag/OpeningInfoTagEditorOverlay';
+// ADR-739 Φ.Δ βήμα 2 — inline table-cell text editor (prop-driven, mirrors TextEditorOverlay).
+import { TableCellEditorOverlay } from '../../ui/table-cell-editor/TableCellEditorOverlay';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
 import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
@@ -42,6 +44,7 @@ type GuideMenuProps = React.ComponentProps<typeof GuideContextMenu>;
 type GuideBatchMenuProps = React.ComponentProps<typeof GuideBatchContextMenu>;
 type MirrorOverlayProps = React.ComponentProps<typeof MirrorConfirmOverlay>;
 type TextOverlayProps = React.ComponentProps<typeof TextEditorOverlay>;
+type TableCellOverlayProps = React.ComponentProps<typeof TableCellEditorOverlay>;
 type CyclingProps = React.ComponentProps<typeof SelectionCyclingPopover>;
 
 export interface CanvasSectionOverlaysProps {
@@ -59,6 +62,8 @@ export interface CanvasSectionOverlaysProps {
   mirrorOverlay: MirrorOverlayProps | null;
   textEditorOverlay: TextOverlayProps | null;
   textCreationOverlay: TextOverlayProps | null;
+  // ADR-739 Φ.Δ βήμα 2 — inline table-cell editor state (null όταν κανένα κελί δεν επεξεργάζεται).
+  tableCellEditorOverlay: TableCellOverlayProps | null;
   selectionCycling: CyclingProps;
 }
 
@@ -84,6 +89,8 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       {p.textCreationOverlay && <TextEditorOverlay {...p.textCreationOverlay} />}
       {/* ADR-612 — opening-info-tag inline numeric cell editor (store-driven, no props). */}
       <OpeningInfoTagEditorOverlay />
+      {/* ADR-739 Φ.Δ βήμα 2 — table-cell inline text editor (prop-driven, mirrors TextEditorOverlay). */}
+      {p.tableCellEditorOverlay && <TableCellEditorOverlay key={`${p.tableCellEditorOverlay.entityId}:${p.tableCellEditorOverlay.rowId}:${p.tableCellEditorOverlay.colId}`} {...p.tableCellEditorOverlay} />}
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />
       {/* ADR-659 — overlap «⧉ N» badge (portal, micro-leaf, ADR-040) */}

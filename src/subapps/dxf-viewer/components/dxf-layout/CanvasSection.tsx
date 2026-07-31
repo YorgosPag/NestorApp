@@ -420,7 +420,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     drawingTempPointCount: drawingHandlers?.drawingState?.tempPoints?.length ?? 0,
     onSnapOverrideMenuRequest: (x: number, y: number) => drawingMenuRef.current?.open(x, y),
   });
-  const { textEditor, handleDoubleClick, handleMouseMoveWithAutoArea } = useCanvasSectionUI({
+  const { textEditor, tableCellEditor, handleDoubleClick, handleMouseMoveWithAutoArea } = useCanvasSectionUI({
     transformRef, containerRef, activeTool, executeCommand,
     getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
     levelManager, currentOverlays, transformScale: transform.scale,
@@ -483,6 +483,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         mirrorOverlay={mirrorTool.phase === 'awaiting-keep-originals' ? { onConfirm: mirrorTool.handleMirrorConfirm, onCancel: mirrorTool.handleMirrorEscape } : null}
         textEditorOverlay={textEditor.editingState ? { entityId: textEditor.editingState.entityId, initial: textEditor.editingState.initial, anchor: textEditor.editingState.anchor, onCommit: textEditor.onCommit, onCancel: textEditor.onCancel } : null}
         textCreationOverlay={textCreation.creatingState ? { entityId: textCreation.creatingState.entityId, initial: textCreation.creatingState.initial, anchor: textCreation.creatingState.anchor, onCommit: textCreation.onCommit, onCancel: textCreation.onCancel } : null}
+        tableCellEditorOverlay={tableCellEditor.editingState ? { entityId: tableCellEditor.editingState.entityId, rowId: tableCellEditor.editingState.rowId, colId: tableCellEditor.editingState.colId, initialText: tableCellEditor.editingState.initialText, anchor: tableCellEditor.editingState.anchor, onCommit: tableCellEditor.onCommit, onCancel: tableCellEditor.onCancel } : null}
         selectionCycling={{ onSelectEntity: handleCycleEntitySelect }}
       />
     </>

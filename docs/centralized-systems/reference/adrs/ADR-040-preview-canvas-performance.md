@@ -5654,3 +5654,34 @@ painter memo, ADR-732) — inline literal θα άλλαζε ταυτότητα �
 
 **Files**: MOD `components/dxf-layout/CanvasLayerStack.tsx`,
 `canvas-v2/webgl-lines/webgl-line-ortho-camera.ts`. Πλήρης απόφαση: **ADR-741**.
+
+---
+
+## 2026-07-31 (β): ADR-739 Φ.Δ βήμα 2 — ο επεξεργαστής κελιού πίνακα μπαίνει ως **overlay**, όχι ως leaf (CHECK 6B stage)
+
+Η εγγραφή υπάρχει επειδή το `CanvasSection.tsx` είναι αρχείο του CHECK 6B, **όχι** επειδή άλλαξε η
+αρχιτεκτονική. Τι μπήκε στον orchestrator: **δύο γραμμές** — destructure του `tableCellEditor` από
+το `useCanvasSectionUI` και προώθησή του ως prop στο `CanvasSectionOverlays`.
+
+⚠️ **Καμία νέα συνδρομή**: το `useTableCellDoubleClickEditor` κρατά την κατάστασή του σε τοπικό
+`useState`, **μηδέν `useSyncExternalStore`** (CHECK 6C ασφαλές — η μοναδική εμφάνιση της
+συμβολοσειράς στο `CanvasSection.tsx` είναι το **σχόλιο του ίδιου του κανόνα**, γραμμή 4). Καμία
+αλλαγή σε cache key, σε high-freq store, ή στη ζωγραφική.
+
+**Γιατί overlay και όχι leaf**: ο επεξεργαστής είναι **DOM πάνω από τον καμβά**, ζωντανός μόνο όσο
+γράφει ο χρήστης — δηλαδή ό,τι ήδη κάνουν ο `TextEditorOverlay` και ο `OpeningInfoTagEditorOverlay`
+στο ίδιο σημείο προσάρτησης (`CanvasSectionOverlays.tsx`). Ένα leaf θα σήμαινε συνδρομή σε κάθε
+καρέ για κάτι που υπάρχει σε **έναν** χρόνο επεξεργασίας. Η τοποθέτηση περνά από τον **υπάρχοντα**
+`TextEditorAnchorLayer` / `createTextEditorAnchor2D` (ADR-344 Φ-3D, εγγραφή 2026-07-28) — imperative
+προβολή world→screen εκτός React render, ανέγγιχτος.
+
+**Η γεωμετρία δεν ξαναγράφτηκε**: `tableCellAtWorld` (`bim/table/table-entity-geometry.ts:243`)
+υπήρχε ήδη από τη Φ.Γ με tests και **μηδέν καταναλωτές** — περιστροφή, αναστροφή y και συγχωνευμένα
+κελιά ήδη σωστά. Το βήμα 2 απλώς την **κάλεσε**. Δεύτερο hit-test κελιού δεν γεννήθηκε (N.18).
+
+**Files**: MOD `components/dxf-layout/{CanvasSection.tsx,CanvasSectionOverlays.tsx}`,
+`hooks/canvas/useCanvasSectionUI.ts`· NEW `ui/table-cell-editor/*`,
+`bim/table/table-cell-edit-session.ts`. Πλήρης απόφαση: **ADR-739 §19.9**.
+
+⚠️ `CanvasSection.tsx` = **491/500 γραμμές** (N.7.1). Η επόμενη προσθήκη στον orchestrator θα το
+σπάσει — **εξαγωγή, όχι περικοπή**, όπως η εγγραφή 2026-07-31 (α) παραπάνω.

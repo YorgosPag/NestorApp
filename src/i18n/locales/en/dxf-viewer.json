@@ -514,6 +514,11 @@
       "editorPlaceholder": ""
     }
   },
+  "table": {
+    "cellEditor": {
+      "editorPlaceholder": ""
+    }
+  },
   "scene": {
     "crossFloorLinkCleared": "The floorplan of «{floor}» was linked to a different floor and has been unlinked. Please re-import the DXF file.",
     "crossFloorSaveBlocked": "Save aborted: the floorplan file belongs to a different floor.",

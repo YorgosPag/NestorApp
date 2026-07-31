@@ -21,7 +21,7 @@
  * @see ui/text-toolbar/TextEditorOverlay.tsx — the sibling this mirrors
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useCommandHistory } from '../../core/commands';
@@ -29,8 +29,7 @@ import { useLevels } from '../../systems/levels';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import { openingInfoTagCellField } from '../../bim/opening-info-tag/opening-info-tag-geometry';
-import { useEscapeHandler } from '../../systems/escape-bus/useEscapeHandler';
-import { ESC_PRIORITY } from '../../systems/escape-bus/escape-priority';
+import { useInlineEditorKeys } from '../inline-editor/use-inline-editor-keys';
 import {
   closeOpeningInfoTagCellEditor,
   useOpeningInfoTagEditorStore,
@@ -52,11 +51,8 @@ function OpeningInfoTagCellInput({ state }: { readonly state: OpeningInfoTagEdit
   const { execute } = useCommandHistory();
   const { currentLevelId, getLevelScene, setLevelScene } = useLevels();
   const [value, setValue] = useState<string>(state.initialText);
-  const committedRef = useRef(false);
 
-  const commit = useCallback(() => {
-    if (committedRef.current) return;
-    committedRef.current = true;
+  const handleCommit = useCallback(() => {
     if (!currentLevelId || value === state.initialText) {
       closeOpeningInfoTagCellEditor();
       return;
@@ -67,42 +63,18 @@ function OpeningInfoTagCellInput({ state }: { readonly state: OpeningInfoTagEdit
     closeOpeningInfoTagCellEditor();
   }, [currentLevelId, getLevelScene, setLevelScene, execute, state, value]);
 
-  const cancel = useCallback(() => {
-    if (committedRef.current) return;
-    committedRef.current = true;
-    closeOpeningInfoTagCellEditor();
-  }, []);
-
-  // ADR-364 — Esc cancels the cell edit through the centralized escape-bus (MODAL_DIALOG priority,
-  // like TextEditorOverlay; `allowWhenEditable` since the numeric input holds focus), mirroring
-  // every other DXF ESC dispatch. Never an inline ESC key comparison (escape-command-bus
-  // SSoT / CHECK 3.7). The handler is registered only while this input is mounted (edit in flight).
-  useEscapeHandler({
+  // Keyboard semantics (Enter commits · Esc through the ADR-364 escape-bus) and the commit-once
+  // guard live in the shared SSoT — the table-cell editor runs the exact same 15 lines (N.18).
+  const { commit, onKeyDown } = useInlineEditorKeys({
     id: 'opening-info-tag-cell-editor',
-    priority: ESC_PRIORITY.MODAL_DIALOG,
-    allowWhenEditable: true,
-    canHandle: () => true,
-    handle: () => {
-      cancel();
-      return true;
-    },
+    onCommit: handleCommit,
+    onCancel: closeOpeningInfoTagCellEditor,
   });
 
   const onChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const next = e.target.value;
     if (NUMERIC_DRAFT.test(next)) setValue(next);
   }, []);
-
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      // Enter commits; Esc-to-cancel is routed through the escape-bus (ADR-364) above.
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        commit();
-      }
-    },
-    [commit],
-  );
 
   return (
     <input

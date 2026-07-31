@@ -514,6 +514,11 @@
       "editorPlaceholder": ""
     }
   },
+  "table": {
+    "cellEditor": {
+      "editorPlaceholder": ""
+    }
+  },
   "scene": {
     "crossFloorLinkCleared": "Η κάτοψη του ορόφου «{floor}» ήταν συνδεδεμένη σε άλλον όροφο και αποσυνδέθηκε. Φόρτωσε ξανά το αρχείο DXF.",
     "crossFloorSaveBlocked": "Η αποθήκευση ματαιώθηκε: το αρχείο κάτοψης ανήκει σε άλλον όροφο.",

@@ -10,6 +10,8 @@ import { useTextDoubleClickEditor } from '../../ui/text-toolbar/hooks/useTextDou
 // ADR-612 — opening-info-tag inline numeric cell editor: sibling of the text
 // double-click editor, opens a store-driven numeric input over the clicked cell.
 import { useOpeningInfoTagDoubleClick } from './use-opening-info-tag-double-click';
+// ADR-739 Φ.Δ βήμα 2 — table-cell inline text editor: sibling opener, local state (ADR-040).
+import { useTableCellDoubleClickEditor } from '../../ui/table-cell-editor/useTableCellDoubleClickEditor';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
 import { useBathroomAutoArrangeMouseMove } from './useBathroomAutoArrangeMouseMove';
@@ -59,6 +61,7 @@ export function useCanvasSectionUI({
   }, []);
   const textEditor = useTextDoubleClickEditor({ transformRef, containerRef, executeCommand, getSelectedEntityIds });
   const openingTagEditor = useOpeningInfoTagDoubleClick({ transformRef, containerRef, getSelectedEntityIds });
+  const tableCellEditor = useTableCellDoubleClickEditor({ transformRef, containerRef, getSelectedEntityIds, levelManager });
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTool === 'select') {
       const ids = getSelectedEntityIds();
@@ -92,8 +95,11 @@ export function useCanvasSectionUI({
     // ADR-612 — opening-info-tag cell editor claims the double-click when it lands on
     // a cell of the single selected tag; otherwise fall through to the text editor.
     if (openingTagEditor.handleDoubleClick(e)) return;
+    // ADR-739 Φ.Δ βήμα 2 — table-cell editor is a no-op unless the single selection is a
+    // table AND the click lands inside its grid (checked internally, void like textEditor).
+    tableCellEditor.handleDoubleClick(e);
     textEditor.handleDoubleClick(e);
-  }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor, openingTagEditor, levelManager]);
+  }, [activeTool, getSelectedEntityIds, dxfScene, containerRef, textEditor, openingTagEditor, tableCellEditor, levelManager]);
   const { handleMouseMoveWithAutoArea } = useAutoAreaMouseMove({ handleMouseMove, activeTool, levelManager, currentOverlays, transformScale });
   // ADR-419 Layer 3 — αλυσίδωση: region/perimeter hover preview πάνω από το auto-area.
   const { handleMouseMoveWithRegionPreview } = useRegionPerimeterMouseMove({ handleMouseMove: handleMouseMoveWithAutoArea, activeTool, levelManager });
@@ -101,5 +107,5 @@ export function useCanvasSectionUI({
   // region preview (τρέχει ΤΕΛΕΥΤΑΙΟ → οδηγεί το ΙΔΙΟ RegionPerimeterPreviewStore όταν
   // είναι ενεργό το εργαλείο μπάνιου· αλλιώς καθαρό passthrough).
   const { handleMouseMoveWithBathroomPreview } = useBathroomAutoArrangeMouseMove({ handleMouseMove: handleMouseMoveWithRegionPreview, activeTool, levelManager });
-  return { textEditor, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
+  return { textEditor, tableCellEditor, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
 }
