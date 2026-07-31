@@ -5,6 +5,7 @@
  */
 import * as Sentry from '@sentry/nextjs';
 import {
+  SENTRY_DSN,
   SENTRY_TRACES_SAMPLE_RATE,
   SENTRY_ENABLED,
   SENTRY_REPLAYS_SESSION_SAMPLE_RATE,
@@ -12,7 +13,7 @@ import {
 } from '@/config/sentry-config';
 
 Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: SENTRY_DSN,
   environment: process.env.NODE_ENV,
   tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
   replaysSessionSampleRate: SENTRY_REPLAYS_SESSION_SAMPLE_RATE,

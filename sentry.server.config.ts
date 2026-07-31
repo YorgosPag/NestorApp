@@ -4,10 +4,10 @@
  * @see src/config/sentry-config.ts for shared SSoT values
  */
 import * as Sentry from '@sentry/nextjs';
-import { SENTRY_TRACES_SAMPLE_RATE, SENTRY_ENABLED } from '@/config/sentry-config';
+import { SENTRY_DSN, SENTRY_TRACES_SAMPLE_RATE, SENTRY_ENABLED } from '@/config/sentry-config';
 
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
+  dsn: SENTRY_DSN,
   environment: process.env.NODE_ENV,
   tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
   enabled: SENTRY_ENABLED,
