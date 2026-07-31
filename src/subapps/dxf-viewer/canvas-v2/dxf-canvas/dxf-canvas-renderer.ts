@@ -12,7 +12,11 @@ import type { DxfRenderer } from './DxfRenderer';
 import type { DxfScene, DxfRenderOptions, DxfEntityUnion } from './dxf-types';
 import { DxfBitmapCache } from './dxf-bitmap-cache';
 import { CanvasUtils } from '../../rendering/canvas/utils/CanvasUtils';
-import { isBimRegionOrPerimeterTool } from '../../systems/tools/region-tool-ids';
+// ADR-743 Φ0 — attribution με το ΥΠΑΡΧΟΝ όργανο + το λεξιλόγιο των stages (μηδέν νέο σύστημα).
+import { withPerf } from '../../systems/cursor/mouse-handler-perf';
+import { DXF_CANVAS_STAGES, RASTER_STAGES, isCeilingProbeActive } from './dxf-canvas-perf-stages';
+// ADR-743 Φ0 — hover/selection overlays (ADR-040 cardinal rule #3) σε δικό τους module.
+import { paintInteractiveOverlays } from './dxf-canvas-interactive-overlays';
 import type { Viewport, Point2D } from '../../rendering/types/Types';
 import type { GridRenderer } from '../../rendering/ui/grid/GridRenderer';
 import type { RulerRenderer } from '../../rendering/ui/ruler/RulerRenderer';
@@ -156,7 +160,9 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     // Idempotent: γράφει canvas.width/height ΜΟΝΟ σε πραγματική αλλαγή (μηδέν wipe/κόστος στο
     // steady state) — ίδιο μοτίβο με το paintOverlayDispatchFrame (ADR-726 Φ2).
     const canvasEl = refs.canvasRef.current;
-    const ctx = canvasEl ? CanvasUtils.sizeCanvasToViewport(canvasEl, currentViewport) : null;
+    const ctx = canvasEl
+      ? withPerf(DXF_CANVAS_STAGES.size, () => CanvasUtils.sizeCanvasToViewport(canvasEl, currentViewport))
+      : null;
     const uiTransform = ctx ? {
       scale: currentTransform.scale,
       offsetX: currentTransform.offsetX,
@@ -175,8 +181,7 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
     } = paramsRef.current;
 
     try {
-      const hitTesting = serviceRegistry.get('hit-testing');
-      hitTesting.updateScene(curScene);
+      withPerf(DXF_CANVAS_STAGES.hitScene, () => serviceRegistry.get('hit-testing').updateScene(curScene));
 
       // ADR-358 §G7 Phase 5 — bridge SceneModel.layers into renderer via DxfScene.layersById.
       // Absent → renderer falls back to per-entity literal values (Phase 1-4 baseline).
@@ -200,12 +205,15 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         wireframeMode: curRenderOptions.wireframeMode,
       };
       if (bitmapCache && ctx) {
+        // ADR-743 Φ0 — `raster:rebuild` είναι ο συνολικός χρόνος του (σπάνιου) πλήρους
+        // re-raster· τα `raster:indices/entities/scene-overlays` μέσα του το επιμερίζουν.
         if (bitmapCache.isDirty(curScene, currentTransform, currentViewport, cacheInputs)) {
-          bitmapCache.rebuild(curScene, currentTransform, currentViewport, cacheInputs);
+          withPerf(RASTER_STAGES.rebuild, () =>
+            bitmapCache.rebuild(curScene, currentTransform, currentViewport, cacheInputs));
         }
         // ADR-726 Φ3 — the blit is ANCHORED: it projects the cached raster onto the live
         // transform, so a pan/zoom frame is one drawImage instead of a full rebuild.
-        bitmapCache.blit(ctx, currentViewport, currentTransform);
+        withPerf(RASTER_STAGES.blit, () => bitmapCache.blit(ctx, currentViewport, currentTransform));
       } else {
         // Fallback before the cache effect mounts (or no 2D ctx): direct redraw.
         renderer.render(curScene, currentTransform, currentViewport, {
@@ -215,104 +223,20 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         });
       }
 
-      // 1b: Single-entity interactive overlays (O(1) via entityMap)
+      // 1b: Single-entity interactive overlays (O(1) via entityMap) — ADR-743 Φ0: το pass ζει
+      // πλέον σε δικό του module (`dxf-canvas-interactive-overlays`), όπου τεκμηριώνεται ρητά
+      // γιατί η διαδραστική κατάσταση ΔΕΝ μπαίνει ποτέ στο cache key (ADR-040 cardinal rule #3).
       if (curScene) {
-        // ADR-575 §selection/hover semantics — a hovered GROUP id highlights the WHOLE
-        // group: every expanded member shares `group.id`, so `entityMap` would surface
-        // ONE arbitrary member (the pre-ADR-575 «stray member glows» bug). When the id is
-        // a group we paint EACH of its members as 'hovered' (whole-group cyan); otherwise
-        // the plain O(1) single-entity path (incl. a member the user "entered" — own id).
-        // ADR-637 §hover-grips (Giorgio 2026-07-11) — τα grips εμφανίζονται ΚΑΙ σε hover
-        // (όχι μόνο selection). Υπολογίζουμε `gripsAllowed` + `selectedSet` ΕΔΩ, πάνω από το
-        // hover pass, ώστε να τα διαβάζει: (α) κανένα grip όταν τρέχει command (Move κ.λπ.),
-        // (β) κανένα διπλό grip όταν η hovered οντότητα είναι ήδη επιλεγμένη (τα δίνει το
-        // selection pass). Overlay-only → μηδέν κόστος bitmap (ADR-040 cardinal rule #3).
-        const activeTool = refs.activeToolRef.current;
-        const gripsAllowed =
-          !activeTool ||
-          activeTool === 'select' ||
-          activeTool === 'layering' ||
-          activeTool === 'wall-on-entity' ||
-          isBimRegionOrPerimeterTool(activeTool);
-        const selectedSet = new Set(curRenderOptions.selectedEntityIds);
-
-        const hoveredId = curRenderOptions.hoveredEntityId;
-        if (hoveredId) {
-          const hoveredMembers = curMembersByGroupId.get(hoveredId);
-          if (hoveredMembers) {
-            // Whole-group hover: cyan glow μόνο — το group έχει δικό του gizmo (όπως στο
-            // selection group branch), οπότε suppressGrips στα members.
-            for (const ent of hoveredMembers) {
-              renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
-                gripInteractionState: curRenderOptions.gripInteractionState,
-                layersById: curLayersById,
-                suppressGrips: true,
-              });
-            }
-          } else {
-            const ent = curEntityMap.get(hoveredId);
-            if (ent) {
-              renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'hovered', {
-                gripInteractionState: curRenderOptions.gripInteractionState,
-                layersById: curLayersById,
-                suppressGrips: !gripsAllowed || selectedSet.has(hoveredId),
-              });
-            }
-          }
-        }
-
-        // ADR-049 SSOT: dragging entity stays painted at its ORIGINAL position
-        // here (rendered as 'selected'). The translucent ghost at the drag
-        // delta is drawn on the dedicated PreviewCanvas overlay by
-        // GripDragPreviewMount → useGripGhostPreview, identical to the Move
-        // tool path. No drag-preview branch lives in this renderer anymore.
-        //
-        // AutoCAD parity: grips are only visible in selection mode (no active command).
-        // When a tool like Move is active, grips disappear — the tool has its own UX.
-        // ADR-363 Phase 1J / ADR-419 — 'wall-on-entity' shows grips on the picked source; the
-        // region/perimeter tools show grips on the accumulated 4-line picks. `activeTool` +
-        // `gripsAllowed` are computed once above the hover pass (shared by both passes).
-        for (const selId of curRenderOptions.selectedEntityIds) {
-          // ADR-575 §selection/hover semantics — a selected GROUP renders as ONE unit:
-          // paint ALL its members as 'selected' with grips SUPPRESSED (the whole-group
-          // gizmo — move cross + rotation handle — owns the handles, emitted separately by
-          // the grip registry). Pre-ADR-575 the shared `group.id` surfaced ONE stray member
-          // with per-member grips, mis-reading as «one member selected» + letting it drag
-          // alone. A non-group id (incl. an "entered" member's own id) keeps the O(1) path.
-          const selMembers = curMembersByGroupId.get(selId);
-          if (selMembers) {
-            for (const ent of selMembers) {
-              renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
-                gripInteractionState: curRenderOptions.gripInteractionState,
-                layersById: curLayersById,
-                suppressGrips: true,
-                movePreviewActive:
-                  curRenderOptions.movePreviewActive ||
-                  (selId === curRenderOptions.gripDraggedEntityId && !curRenderOptions.gripDragIsCopy),
-                armedTransformHighlight: curRenderOptions.armedTransformHighlight,
-              });
-            }
-            continue;
-          }
-          const ent = curEntityMap.get(selId);
-          if (ent) {
-            renderer.renderSingleEntity(ent, currentTransform, currentViewport, 'selected', {
-              gripInteractionState: curRenderOptions.gripInteractionState,
-              layersById: curLayersById,
-              suppressGrips: !gripsAllowed,
-              armedTransformHighlight: curRenderOptions.armedTransformHighlight,
-              // ADR-049 inverted ghost: dim the original at its origin when this entity is
-              // the one being move-previewed. The 2-click Move tool dims ALL selected
-              // (movePreviewActive); a grip drag dims ONLY the single grabbed entity
-              // (gripDraggedEntityId) — its solid moving copy lives on PreviewCanvas.
-              // ADR-561 EXT — but a rotate-COPY keeps the source as a permanent original, so
-              // it stays SOLID (not dimmed); only the rotating clone ghost shows the move.
-              movePreviewActive:
-                curRenderOptions.movePreviewActive ||
-                (selId === curRenderOptions.gripDraggedEntityId && !curRenderOptions.gripDragIsCopy),
-            });
-          }
-        }
+        withPerf(DXF_CANVAS_STAGES.overlays, () => paintInteractiveOverlays({
+          renderer,
+          entityMap: curEntityMap,
+          membersByGroupId: curMembersByGroupId,
+          renderOptions: curRenderOptions,
+          layersById: curLayersById,
+          transform: currentTransform,
+          viewport: currentViewport,
+          activeTool: refs.activeToolRef.current,
+        }));
       }
 
       // 2: Grid — rendered on the LOWER LayerCanvas (beneath the κάτοψη), NOT here.
@@ -320,61 +244,63 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       // drawn here would always be on top. See ADR-040 "Grid is a background"
       // (2026-06-05) + LayerRenderer background-grid pass.
 
-      // 2.5: Guides
-      if (ctx && refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
-        const currentGuides = refs.guidesRef.current;
-        if (currentGuides && currentGuides.length > 0) {
-          refs.guideRendererRef.current.renderGuides(
-            ctx, currentGuides, currentTransform, currentViewport,
-            refs.highlightedGuideIdRef.current, refs.selectedGuideIdsRef.current,
-          );
+      // 2.5 + 2.6: Guides, ghost guides και construction points (ADR-743 Φ0: ένα stage —
+      // ίδιος renderer, ίδια πύλη ορατότητας, μία ερώτηση «πόσο κοστίζουν οι οδηγοί;»).
+      withPerf(DXF_CANVAS_STAGES.guides, () => {
+        if (ctx && refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
+          const currentGuides = refs.guidesRef.current;
+          if (currentGuides && currentGuides.length > 0) {
+            refs.guideRendererRef.current.renderGuides(
+              ctx, currentGuides, currentTransform, currentViewport,
+              refs.highlightedGuideIdRef.current, refs.selectedGuideIdsRef.current,
+            );
+          }
+          const currentGhost = refs.ghostGuideRef.current;
+          if (currentGhost) {
+            refs.guideRendererRef.current.renderGhostGuide(ctx, currentGhost.axis, currentGhost.offset, currentTransform, currentViewport);
+          }
+          const currentGhostDiagonal = refs.ghostDiagonalGuideRef.current;
+          if (currentGhostDiagonal) {
+            refs.guideRendererRef.current.renderGhostDiagonalGuide(ctx, currentGhostDiagonal.start, currentGhostDiagonal.end, currentTransform, currentViewport);
+          }
+          const currentGhostSegment = refs.ghostSegmentLineRef.current;
+          if (currentGhostSegment) {
+            refs.guideRendererRef.current.renderGhostDiagonalGuide(ctx, currentGhostSegment.start, currentGhostSegment.end, currentTransform, currentViewport);
+          }
         }
-        const currentGhost = refs.ghostGuideRef.current;
-        if (currentGhost) {
-          refs.guideRendererRef.current.renderGhostGuide(ctx, currentGhost.axis, currentGhost.offset, currentTransform, currentViewport);
+        if (ctx && refs.guideRendererRef.current) {
+          const currentCPs = refs.constructionPointsRef.current;
+          if (currentCPs && currentCPs.length > 0) {
+            refs.guideRendererRef.current.renderConstructionPoints(
+              ctx, currentCPs, currentTransform, currentViewport, refs.highlightedPointIdRef.current ?? undefined,
+            );
+          }
         }
-        const currentGhostDiagonal = refs.ghostDiagonalGuideRef.current;
-        if (currentGhostDiagonal) {
-          refs.guideRendererRef.current.renderGhostDiagonalGuide(ctx, currentGhostDiagonal.start, currentGhostDiagonal.end, currentTransform, currentViewport);
-        }
-        const currentGhostSegment = refs.ghostSegmentLineRef.current;
-        if (currentGhostSegment) {
-          refs.guideRendererRef.current.renderGhostDiagonalGuide(ctx, currentGhostSegment.start, currentGhostSegment.end, currentTransform, currentViewport);
-        }
-      }
-
-      // 2.6: Construction points
-      if (ctx && refs.guideRendererRef.current) {
-        const currentCPs = refs.constructionPointsRef.current;
-        if (currentCPs && currentCPs.length > 0) {
-          refs.guideRendererRef.current.renderConstructionPoints(
-            ctx, currentCPs, currentTransform, currentViewport, refs.highlightedPointIdRef.current ?? undefined,
-          );
-        }
-      }
+      });
 
       // 2.7: ADR-455 — vertical X/Y section lines + direction arrows (above entities,
       // below rulers). Reads the cut SSoT internally; no-op when both cuts are off.
       if (ctx) {
-        renderAxisCutLines(ctx, currentTransform, currentViewport);
+        withPerf(DXF_CANVAS_STAGES.axisCut, () => renderAxisCutLines(ctx, currentTransform, currentViewport));
       }
 
-      // 3: Rulers
-      if (ctx && uiTransform && refs.rulerRendererRef.current && curRuler?.enabled) {
-        const context = createUIRenderContext(ctx, currentViewport, uiTransform);
-        refs.rulerRendererRef.current.render(context, currentViewport, curRuler as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
-      }
-
-      // 3.5: Guide overlays (bubbles + dimensions)
-      if (ctx && refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
-        const currentGuides = refs.guidesRef.current;
-        if (currentGuides && currentGuides.length > 0) {
-          refs.guideRendererRef.current.renderGuideBubbles(ctx, currentGuides, currentTransform, currentViewport);
-          if (refs.showGuideDimensionsRef.current && currentGuides.length >= 2) {
-            refs.guideRendererRef.current.renderGuideDimensions(ctx, currentGuides, currentTransform, currentViewport);
+      // 3 + 3.5: Rulers και guide overlays (bubbles + dimensions) — ό,τι ζωγραφίζεται ΠΑΝΩ
+      // από τα πάντα, σε ένα stage.
+      withPerf(DXF_CANVAS_STAGES.rulers, () => {
+        if (ctx && uiTransform && refs.rulerRendererRef.current && curRuler?.enabled) {
+          const context = createUIRenderContext(ctx, currentViewport, uiTransform);
+          refs.rulerRendererRef.current.render(context, currentViewport, curRuler as import('../../rendering/ui/core/UIRenderer').UIElementSettings);
+        }
+        if (ctx && refs.guideRendererRef.current && refs.guidesVisibleRef.current) {
+          const currentGuides = refs.guidesRef.current;
+          if (currentGuides && currentGuides.length > 0) {
+            refs.guideRendererRef.current.renderGuideBubbles(ctx, currentGuides, currentTransform, currentViewport);
+            if (refs.showGuideDimensionsRef.current && currentGuides.length >= 2) {
+              refs.guideRendererRef.current.renderGuideDimensions(ctx, currentGuides, currentTransform, currentViewport);
+            }
           }
         }
-      }
+      });
 
       // 4: Selection box + lasso polygon
       const selState = refs.selectionStateRef.current;
@@ -382,23 +308,25 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       const curSettings = getCursorSettings();
 
       if (refs.selectionRendererRef.current && currentActiveTool !== 'pan') {
-        if (selState.isSelecting && selState.selectionStart && selState.selectionCurrent) {
-          const selectionBox = {
-            startPoint: selState.selectionStart,
-            endPoint: selState.selectionCurrent,
-            type: (selState.selectionCurrent.x > selState.selectionStart.x) ? 'window' : 'crossing',
-          } as const;
-          refs.selectionRendererRef.current.renderSelection(selectionBox, currentViewport, curSettings.selection);
-        }
+        withPerf(DXF_CANVAS_STAGES.selection, () => {
+          if (selState.isSelecting && selState.selectionStart && selState.selectionCurrent) {
+            const selectionBox = {
+              startPoint: selState.selectionStart,
+              endPoint: selState.selectionCurrent,
+              type: (selState.selectionCurrent.x > selState.selectionStart.x) ? 'window' : 'crossing',
+            } as const;
+            refs.selectionRendererRef.current?.renderSelection(selectionBox, currentViewport, curSettings.selection);
+          }
 
-        const lassoSnap = LassoStore.getSnapshot();
-        if (lassoSnap.isLasso && lassoSnap.lassoPath.length >= 2) {
-          refs.selectionRendererRef.current.renderLasso(
-            lassoSnap.lassoPath,
-            computeLassoMode(lassoSnap.lassoPath),
-            curSettings.selection,
-          );
-        }
+          const lassoSnap = LassoStore.getSnapshot();
+          if (lassoSnap.isLasso && lassoSnap.lassoPath.length >= 2) {
+            refs.selectionRendererRef.current?.renderLasso(
+              lassoSnap.lassoPath,
+              computeLassoMode(lassoSnap.lassoPath),
+              curSettings.selection,
+            );
+          }
+        });
       }
     } catch (error) {
       logger.error('Failed to render DXF scene', { error });
@@ -436,7 +364,12 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
         renderScene();
         isDirtyRef.current = false;
       },
-      () => isDirtyRef.current,
+      // ADR-743 Φ0 §πείραμα οροφής — με `localStorage['dxf-perf-ceiling']='1'` αυτό το σύστημα
+      // δεν ζωγραφίζει καθόλου (η εικόνα παγώνει· ΔΙΑΓΝΩΣΤΙΚΟ). Η ίδια χειρονομία μετρά τότε
+      // `frame:INTERVAL` με ΜΗΔΕΝ JS από εδώ ⇒ το κατώφλι του software compositing, δηλαδή το
+      // ταβάνι κάθε βελτιστοποίησης JS. Μετρήθηκε ότι το 86,4% του καρέ στο pan ΔΕΝ είναι JS
+      // (ADR-735 §7.3· LoAF ADR-726 §4.Γ) — χωρίς αυτόν τον αριθμό η Φ1 σχεδιάζεται στα τυφλά.
+      () => isDirtyRef.current && !isCeilingProbeActive(),
     );
     return unsubscribe;
   }, [renderScene, refs]);

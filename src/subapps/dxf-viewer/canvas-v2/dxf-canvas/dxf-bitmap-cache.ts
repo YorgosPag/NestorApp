@@ -76,6 +76,13 @@ import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store
 // 🏢 ADR-376 Phase C.2: opening tag style mutations must bust the bitmap cache.
 import { getCurrentOpeningTagStyle } from '../../bim/services/opening-tag-style-service';
 import { createModuleLogger } from '@/lib/telemetry';
+// ADR-743 Φ0 — attribution: ΤΟ ΥΠΑΡΧΟΝ όργανο (ίδιο flag, ίδιος aggregator, μηδέν νέο σύστημα).
+import { withPerf, recordSample, isPerfEnabled } from '../../systems/cursor/mouse-handler-perf';
+import {
+  RASTER_STAGES,
+  rasterRebuildReasonCounter,
+  type RasterRebuildReason,
+} from './dxf-canvas-perf-stages';
 
 const logger = createModuleLogger('DxfBitmapCache');
 
@@ -157,20 +164,44 @@ export class DxfBitmapCache {
 
   constructor(private readonly options: DxfBitmapCacheOptions = {}) {}
 
-  /** True when the cache cannot serve this frame and must be rebuilt first. */
+  /**
+   * True when the cache cannot serve this frame and must be rebuilt first.
+   *
+   * ADR-743 Φ0 — η απόφαση δεν είναι πια σκέτο `boolean` εσωτερικά: υπολογίζεται η **αιτία** και
+   * καταγράφεται ως μετρητής, χωρισμένη σε «μέσα σε χειρονομία / σε ηρεμία». Χωρίς αυτό, ένα
+   * `frame:dxf-canvas` p90 = 120ms σε n=155 είναι αριθμός **χωρίς αιτία** — δεν ξεχωρίζει το
+   * «ένα ακριβό re-raster» από το «πολλά μικρά», ούτε λέει ποιος τα ζήτησε.
+   *
+   * ⚠️ Η υπογραφή και η συμπεριφορά μένουν ΑΚΡΙΒΩΣ ίδιες· μόνο η παρατηρησιμότητα προστίθεται.
+   */
   isDirty(
     scene: DxfScene | null,
     transform: ViewTransform,
     viewport: Viewport,
     inputs: BitmapCacheRenderInputs,
   ): boolean {
-    if (!this.offscreenCanvas || !this.cacheKey || !this.anchor) return true;
+    const reason = withPerf(RASTER_STAGES.judge, () =>
+      this.resolveRebuildReason(scene, transform, viewport, inputs));
+    if (reason !== null && isPerfEnabled()) {
+      recordSample(rasterRebuildReasonCounter(reason, isNavigationGesture()), 1);
+    }
+    return reason !== null;
+  }
+
+  /** Η αιτία που επιβάλλει rebuild, ή `null` όταν το raster μπορεί να εξυπηρετήσει το καρέ. */
+  private resolveRebuildReason(
+    scene: DxfScene | null,
+    transform: ViewTransform,
+    viewport: Viewport,
+    inputs: BitmapCacheRenderInputs,
+  ): RasterRebuildReason | null {
+    if (!this.offscreenCanvas || !this.cacheKey || !this.anchor) return 'no-raster';
     // ADR-726 Φ3 — the settled-gesture re-raster: one rebuild at the live transform.
-    if (this.rerasterDue) return true;
-    if (this.isStructurallyStale(scene, viewport, inputs)) return true;
+    if (this.rerasterDue) return 'idle-due';
+    if (this.isStructurallyStale(scene, viewport, inputs)) return 'structural';
     // Transform drift is NOT staleness: the raster is re-projected while it still
     // covers the viewport sharply enough. Only then does it need rebuilding.
-    return !this.canServe(transform, viewport);
+    return this.resolveProjectionReason(transform, viewport);
   }
 
   /** Structural key comparison — everything that changes the cached pixels. */
@@ -229,14 +260,20 @@ export class DxfBitmapCache {
     return { rect, k };
   }
 
-  /** ADR-726 Φ3 — can the anchored raster still be projected onto `transform`? */
-  private canServe(transform: ViewTransform, viewport: Viewport): boolean {
+  /**
+   * ADR-726 Φ3 — can the anchored raster still be projected onto `transform`?
+   * `null` ⇒ ναι· διαφορετικά η αιτία της άρνησης (ADR-743 Φ0).
+   */
+  private resolveProjectionReason(
+    transform: ViewTransform,
+    viewport: Viewport,
+  ): RasterRebuildReason | null {
     const key = this.cacheKey;
     const resolved = this.resolveBlit(transform, viewport);
-    if (!key || !resolved) return false;
+    if (!key || !resolved) return 'unusable';
     // A numerically unusable projection can never be shown (drawImage no-ops on
     // non-finite args) — rebuild regardless of any gesture.
-    if (!isAnchoredBlitUsable(resolved.rect, resolved.k)) return false;
+    if (!isAnchoredBlitUsable(resolved.rect, resolved.k)) return 'unusable';
     // ADR-726 Φ3.1 — gesture-aware acceptance (Google Maps/Figma pattern): while a
     // navigation gesture is in flight, serve the raster AS-IS (blurred / with holes —
     // the browser paints background into the gaps). Sharpness/coverage are REST-TIME
@@ -244,14 +281,15 @@ export class DxfBitmapCache {
     // re-rasters inside wheel-zoom (production, 2026-07-30). The idle re-raster
     // (`rerasterDue`, checked BEFORE this in isDirty) restores exact pixels at rest,
     // and structural staleness (also checked before this) is never suspended.
-    if (isNavigationGesture()) return true;
-    return isAnchoredBlitAcceptable({
+    if (isNavigationGesture()) return null;
+    const acceptable = isAnchoredBlitAcceptable({
       rect: resolved.rect,
       magnification: resolved.k,
       dpr: key.dpr,
       physW: toDevicePixels(viewport.width, key.dpr),
       physH: toDevicePixels(viewport.height, key.dpr),
     });
+    return acceptable ? null : 'quality';
   }
 
   /**
@@ -284,12 +322,15 @@ export class DxfBitmapCache {
     // margin is what maps raster pixel (M,M) onto viewport pixel (0,0).
     const overscanPx = computeOverscanPx(viewport);
     const rasterViewport = overscannedViewport(viewport, overscanPx);
-    this.ensureOffscreen(rasterViewport, dpr);
+    // ADR-743 Φ0 — χωριστά: η (σπάνια) δημιουργία/αλλαγή μεγέθους backing store δεν πρέπει να
+    // χρεώνεται στο raster των οντοτήτων. Στο steady state είναι idempotent no-op.
+    withPerf(RASTER_STAGES.ensureOffscreen, () => this.ensureOffscreen(rasterViewport, dpr));
 
-    if (!this.offscreenRenderer) return;
+    const renderer = this.offscreenRenderer;
+    if (!renderer) return;
 
     try {
-      this.offscreenRenderer.render(
+      renderer.render(
         scene,
         { ...transform, ...overscannedRenderTransform(transform, overscanPx) },
         rasterViewport,
