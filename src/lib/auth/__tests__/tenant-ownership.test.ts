@@ -146,6 +146,39 @@ describe('ownedOrNull — σιωπηλή πολιτική (ΔΕΝ μαρτυρά
     expect(ownedOrNull(null, OWNER, subject)).toBeNull();
     expect(ownedOrNull(undefined, OWNER, subject)).toBeNull();
   });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // 🔴 Η παγίδα του κενού — ADR-742 §4/§7.5, ΤΡΙΤΟ μονοπάτι
+  //
+  // Η Φάση Α την έκλεισε στις έξι `require*InTenant`, η Φάση Β στη ρητή άρνηση
+  // (`assertOwnedByCompany`). Η **σιωπηλή** πολιτική ρωτούσε ακόμη σκέτο `===`
+  // επί δύο φάσεις, ενώ ο μοναδικός καλών της της έδινε `row.companyId as string`
+  // πάνω σε `DocumentData`. Εδώ η ζημιά δεν είναι λάθος κωδικός απόκρισης —
+  // είναι **σιωπηλή ανάγνωση ξένου εγγράφου**.
+  // ───────────────────────────────────────────────────────────────────────────
+  describe('🔴 η παγίδα του κενού `companyId`', () => {
+    it('καλών με κενό companyId ΔΕΝ παίρνει έγγραφο με κενό companyId', () => {
+      // Με σκέτο `===` αυτό περνούσε: `'' === ''` ⇒ true.
+      expect(ownedOrNull({ companyId: '' }, '', subject)).toBeNull();
+    });
+
+    it('έγγραφο χωρίς companyId δεν ανήκει σε κανέναν', () => {
+      expect(ownedOrNull({ companyId: undefined }, OWNER, subject)).toBeNull();
+      expect(ownedOrNull({ companyId: null }, OWNER, subject)).toBeNull();
+      expect(ownedOrNull({}, OWNER, subject)).toBeNull();
+    });
+
+    it('καλών με κενό companyId δεν παίρνει ΚΑΝΕΝΑ έγγραφο', () => {
+      expect(ownedOrNull(doc, '', subject)).toBeNull();
+    });
+
+    it('🔴 το κενό δεν διακρίνεται από το ανύπαρκτο ούτε εδώ', () => {
+      // Αν το κενό επέστρεφε το έγγραφο, ο καλών θα μάθαινε ότι υπάρχει.
+      expect(ownedOrNull({ companyId: '' }, '', subject)).toEqual(
+        ownedOrNull(null, '', subject),
+      );
+    });
+  });
 });
 
 describe('assertOwnedByCompany — ρητή άρνηση', () => {

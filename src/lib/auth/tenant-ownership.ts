@@ -145,15 +145,26 @@ export function isPayloadOwnedByCompany(
  * Η απόπειρα καταγράφεται: είναι σήμα ασφαλείας, όχι θόρυβος. Το `null` που
  * δέχεται ως είσοδο περνά αυτούσιο, ώστε ο καλών να γράφει μία γραμμή αντί για
  * δύο ελέγχους.
+ *
+ * 🔴 **Δέχεται `MaybeTenantOwned`, όχι `TenantOwned` — για τον ίδιο ακριβώς λόγο
+ * που το κάνει η {@link assertOwnedByCompany} (§7.5).** Η Φάση Α έκλεισε την
+ * παγίδα του κενού στις έξι `require*InTenant`, η Φάση Β στη ρητή άρνηση — και
+ * η **σιωπηλή** πολιτική έμεινε ανοιχτή και στις δύο, ρωτώντας σκέτο `===`.
+ * Ο μοναδικός καλών της έγραφε `ownedOrNull({ companyId: row.companyId as string }, …)`
+ * πάνω σε `DocumentData`: **ο τύπος υπόσχεται, η βάση δεν εγγυάται· το `as` ήταν
+ * το ψέμα.** Καλών με χαλασμένο token (`companyId: ''`) έπαιρνε κάθε έγγραφο με
+ * κενό/απόν `companyId` — και εδώ η ζημιά είναι **σιωπηλή ανάγνωση ξένου
+ * εγγράφου**, όχι απλώς λάθος κωδικός. Ρωτά πλέον {@link isPayloadOwnedByCompany}:
+ * **το κενό δεν είναι tenant, είναι απουσία tenant.**
  */
-export function ownedOrNull<T extends TenantOwned>(
+export function ownedOrNull<T extends MaybeTenantOwned>(
   doc: T | null | undefined,
   companyId: string,
   subject: OwnershipSubject,
 ): T | null {
   if (doc === null || doc === undefined) return null;
 
-  if (!isOwnedByCompany(doc, companyId)) {
+  if (!isPayloadOwnedByCompany(doc, companyId)) {
     logger.warn('Cross-tenant access blocked', {
       resource: subject.resource,
       resourceId: subject.resourceId,

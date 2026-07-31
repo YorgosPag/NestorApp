@@ -208,10 +208,15 @@ export class FloorplanBackgroundService {
     // ούτε ο bypass ρόλος παίρνει ρητό `403` από αυτό το μονοπάτι — παίρνει
     // `null` όπως όλοι. Η εξαίρεση υπεργραφείου του ADR-742 ισχύει μόνο εκεί
     // όπου η υπηρεσία **ρίχνει** (εγγραφές), όχι εδώ που **επιστρέφει**.
-    const owned = ownedOrNull({ companyId: row.companyId as string }, companyId, {
-      resource: 'Floorplan background',
-      resourceId: id,
-    });
+    // ⚠️ ΟΧΙ `row.companyId as string`: το `as` υποσχόταν στον compiler κάτι που
+    // η βάση δεν εγγυάται, και έκρυβε το κενό `companyId` από τον φύλακα
+    // (ADR-742 §4/§7.5). Ο SSoT ρωτά πλέον `isPayloadOwnedByCompany`, αλλά η
+    // είσοδος πρέπει να λέει την αλήθεια: ό,τι δεν είναι string **δεν είναι tenant**.
+    const owned = ownedOrNull(
+      { companyId: typeof row.companyId === 'string' ? row.companyId : null },
+      companyId,
+      { resource: 'Floorplan background', resourceId: id },
+    );
     if (owned === null) return null;
 
     return rowToEntity(id, row);
