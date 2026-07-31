@@ -375,3 +375,105 @@ export function toPersistedTableModel(model: TableModel): PersistedTableModel {
     merges: model.merges,
   };
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Αμετάβλητος εγγραφέας κειμένου κελιού (ADR-739 Φ.Δ βήμα 2)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Θέση εισαγωγής ενός **νέου** κελιού ώστε το `cells` να μείνει στη σειρά **γραμμή ×
+ * στήλη**, η ίδια σύμβαση με το {@link toPersistedTableModel}. Ένα `splice` στο τέλος
+ * (ή στη σειρά εισαγωγής) θα έσπαζε ακριβώς τη ντετερμινιστική σειρά που εκείνη η
+ * συνάρτηση εγγυάται — δύο ταυτόσημοι πίνακες θα κατέληγαν με διαφορετικό JSON ανάλογα
+ * με τη **σειρά** με την οποία πληκτρολογήθηκαν τα κελιά τους.
+ *
+ * Κελιά με άγνωστη γραμμή/στήλη (ορφανές αναφορές — ίδια ανοχή με το
+ * {@link buildMergeIndex}) αγνοούνται στη σύγκριση: δεν έχουν καθορισμένη θέση, άρα δεν
+ * μπορούν να «σπρώξουν» το νέο κελί πουθενά. Το ίδιο ισχύει αν το ίδιο το νέο κελί
+ * δείχνει σε γραμμή/στήλη που δεν υπάρχει στο μοντέλο — τότε δεν υπάρχει έγκυρη θέση και
+ * η συνάρτηση απλώς προσθέτει στο τέλος αντί να ρίξει σφάλμα.
+ */
+function insertionIndexFor(
+  model: PersistedTableModel,
+  entries: readonly TableCellEntry[],
+  targetRowId: TableRowId,
+  targetColId: TableColumnId,
+): number {
+  const rowOrder = indexById(model.rows);
+  const colOrder = indexById(model.columns);
+  const columnCount = model.columns.length;
+  const rank = (rowId: TableRowId, colId: TableColumnId): number | undefined => {
+    const r = rowOrder.get(rowId);
+    const c = colOrder.get(colId);
+    return r === undefined || c === undefined ? undefined : r * columnCount + c;
+  };
+
+  const targetRank = rank(targetRowId, targetColId);
+  if (targetRank === undefined) return entries.length;
+
+  for (let i = 0; i < entries.length; i++) {
+    const [rowId, colId] = entries[i];
+    const entryRank = rank(rowId, colId);
+    if (entryRank !== undefined && entryRank > targetRank) return i;
+  }
+  return entries.length;
+}
+
+/**
+ * Το κείμενο ενός κελιού απευθείας από το **ταξιδεύον** σχήμα — χωρίς να περάσει από
+ * `resolveTableModel` (που θα έχτιζε/κρατούσε `Map` απομνημόνευσης άσκοπα για μία απλή
+ * ανάγνωση). Ίδια σημασιολογία με {@link cellText}: κενό κελί ⇒ κενό αλφαριθμητικό.
+ */
+export function getPersistedCellText(
+  model: PersistedTableModel,
+  rowId: TableRowId,
+  colId: TableColumnId,
+): string {
+  const entry = model.cells.find(([r, c]) => r === rowId && c === colId);
+  return cellText(entry?.[2]);
+}
+
+/**
+ * Ο **αμετάβλητος** εγγραφέας κειμένου κελιού πάνω στο {@link PersistedTableModel}.
+ * Ό,τι επεξεργάζεται κείμενο πίνακα (inline editor, μελλοντικό undo command) περνά από
+ * εδώ — ποτέ `model.cells[i] = …` με το χέρι, που θα μετάλλασσε την ακολουθία που
+ * κρατά η στοίβα undo.
+ *
+ * ## Οι τέσσερις εγγυήσεις
+ * 1. **Καθαρή**: το `model` εισόδου (ο πίνακας `cells`, κάθε κελί μέσα του) δεν
+ *    αγγίζεται ποτέ — κάθε κλάδος επιστρέφει νέο `cells` (`slice` + αντικατάσταση/`splice`,
+ *    ποτέ in-place `[i] =` πάνω στον ίδιο πίνακα).
+ * 2. **Ντετερμινιστική σειρά**: κελί που υπάρχει ήδη αντικαθίσταται **στην ίδια θέση**
+ *    (ίδιος δείκτης)· κελί που δεν υπάρχει μπαίνει στη θέση που υπαγορεύει η σειρά
+ *    γραμμή × στήλη ({@link insertionIndexFor}), όχι στο τέλος.
+ * 3. **Διατήρηση**: μόνο το `value` αλλάζει — `kind` / `formula` / `styleOverride` /
+ *    `locked` ενός υπάρχοντος κελιού περνούν αυτούσια (spread). Νέο κελί παίρνει τα
+ *    προεπιλεγμένα του module: `{ kind: 'text', value: text }`, χωρίς overrides.
+ * 4. **Ταυτότητα**: αν το νέο κείμενο είναι ΙΔΙΟ με το σημερινό (`cellText` του
+ *    υπάρχοντος κελιού), επιστρέφεται το **ίδιο** `model` by-reference. Χωρίς αυτό, κάθε
+ *    πληκτρολόγηση χωρίς πραγματική αλλαγή θα γεννούσε νέο αντικείμενο μοντέλου —
+ *    άκυρη είσοδο undo και ακύρωση του `resolveTableModel`/`resolveTableLayout` `WeakMap`
+ *    (§ σχόλιο πάνω από το {@link resolveTableModel}) χωρίς λόγο.
+ */
+export function setPersistedCellText(
+  model: PersistedTableModel,
+  rowId: TableRowId,
+  colId: TableColumnId,
+  text: string,
+): PersistedTableModel {
+  const existingIndex = model.cells.findIndex(([r, c]) => r === rowId && c === colId);
+
+  if (existingIndex >= 0) {
+    const existingCell = model.cells[existingIndex][2];
+    if (cellText(existingCell) === text) return model;
+
+    const cells = model.cells.slice();
+    cells[existingIndex] = [rowId, colId, { ...existingCell, value: text }];
+    return { ...model, cells };
+  }
+
+  const insertAt = insertionIndexFor(model, model.cells, rowId, colId);
+  const cells = model.cells.slice();
+  cells.splice(insertAt, 0, [rowId, colId, { kind: 'text', value: text }]);
+  return { ...model, cells };
+}
