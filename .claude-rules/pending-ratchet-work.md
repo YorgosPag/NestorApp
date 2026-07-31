@@ -18,13 +18,48 @@
   `tenant-document-ownership` **πριν** μεταναστεύσουν τα αρχεία — θα μπλόκαρε 46 προϋπάρχοντα αρχεία.
   Τα 3 τωρινά patterns φυλάνε από **αναδημιουργία** του ενοποιημένου φύλακα, όχι από τη διασπορά.
   · **Όταν κλείσουν**: πρόσθεσε `\.companyId !== ctx\.companyId` στα forbiddenPatterns → η περιοχή κλειδώνει.
-  · Προαπαιτούμενο: **Φάση Β** (4 endpoints) πρώτα — ορίζει την πολιτική που θα εφαρμοστεί μαζικά.
+  · ✅ **Το προαπαιτούμενο έκλεισε**: η Φάση Β (2026-07-31) όρισε την πολιτική. Το πρότυπο που εφαρμόζεται
+  μαζικά είναι: υπηρεσία ρίχνει τυποποιημένο `CrossTenantAccessError` → route καλεί `concealCrossTenant`
+  με **ένα** `notFound` callback που εξυπηρετεί γνήσιο **και** μεταμφιεσμένο (ώστε η ταυτότητά τους να
+  είναι δομική, όχι θέμα προσοχής). Παραδείγματα προς αντιγραφή: `api/dxf/_domain-error-mapping.ts`,
+  `api/floorplan-backgrounds/_background-error-response.ts`.
 
-- ⏸️ **ADR-742 Φάση Β — τα 4 endpoints (εγκεκριμένη από Giorgio, ΔΕΝ ξεκίνησε).**
-  `text-templates`, `custom-dictionary`, `floorplan-backgrounds/[id]`, `.../calibrate`. Η υπηρεσία λέει
-  πάντα την αλήθεια· το **route** αποφασίζει τι φεύγει (`concealCrossTenant`, ήδη υλοποιημένο στη Φάση Α).
-  · ⚠️ Το μεταμφιεσμένο 404 πρέπει να παράγεται από τον **ίδιο constructor** με το γνήσιο — αλλιώς το
-  κείμενο γίνεται μαντείο. Λεπτομέρειες: ADR-742 §3.4 + handoff §6.
+- ✅ **ADR-742 Φάση Β — το δόγμα αποκάλυψης στα 4 endpoints (2026-07-31, Opus 5· UNCOMMITTED).**
+  Και τα 4 περνούν πλέον από `concealCrossTenant`: bypass ρόλος → ειλικρινές **403** (κερδίζει διάγνωση),
+  κάθε άλλος → **404 πανομοιότυπο** με το γνήσιο «δεν βρέθηκε», από τον **ίδιο constructor**.
+  · 🔴 **Το string-matching ως έλεγχος πρόσβασης εξαλείφθηκε**: `msg.includes('Cross-tenant')` ήταν
+  **2 ζωντανά** σημεία (όχι 3 — το `floor-wipe-queries.ts` μόνο logger-άρει). Τώρα **0**, και το
+  `includes\('Cross-tenant'\)` μπήκε **4ο forbiddenPattern** στο module `tenant-document-ownership`
+  (μετρημένο **0** εκτός allowlist με `grep -E -f`· `test:registry-golden` 102/102).
+  · 🔴 **Λάθος #2 διορθώθηκε**: το `[id]/route.ts:154` έβαζε «Cross-tenant» **μαζί** με «locked» στον ίδιο
+  κλάδο, και τα δύο ως `409 FORBIDDEN`. Είναι **αντίθετα**: το «locked» μαρτυρά ότι ο πόρος υπάρχει *και
+  σου ανήκει*. Πλέον `BackgroundLockedError` → ξεχωριστό `409 LOCKED`, χωρίς μεταμφίεση.
+  · 🔴 **ΝΕΟ ΕΥΡΗΜΑ — τρύπα που η Φάση Α είχε αφήσει ανοιχτή**: η `assertOwnedByCompany` συνέκρινε ακόμη με
+  σκέτο `===`, ενώ **και οι 4** καλούντες της της δίνουν `snap.data() as XDoc` — ο τύπος **υπόσχεται**
+  `companyId: string`, η βάση **δεν** το εγγυάται. Καλών με χαλασμένο token (`companyId: ''`) περνούσε σε
+  κάθε έγγραφο με κενό `companyId`. Ρωτά πλέον `isPayloadOwnedByCompany`. **Το βρήκε test, όχι ανάγνωση.**
+  · **9ο σημείο**: `floorplan-scale.service.ts:116` έριχνε σκέτο `Error('Cross-tenant scale write denied')`
+  → τυποποιημένο `CrossTenantAccessError`, μέσω του νέου `background-ownership.ts` (η ίδια τετράδα
+  γραμμών ήταν αντιγραμμένη σε δύο υπηρεσίες).
+  · **N.18 — 9 clones → 0** (το CHECK 3.28 μπλόκαρε **δύο φορές**): **4** τα εισήγαγα εγώ (η ίδια
+  πολιτική μεταμφίεσης γραμμένη και στα δύο `_helpers.ts`, ήδη δίδυμα κατά 19% tokens)· **5**
+  προϋπήρχαν **αυτούσια στο HEAD** — μετρημένο με `jscpd` στα `git show HEAD:` αντίγραφα, όχι
+  υποτεθειμένο. Φάνηκαν επειδή το `--diff` σαρώνει **ολόκληρα** τα staged αρχεία, και τα αδέλφια
+  ήταν staged μαζί κατ' ανάγκη (η αλλαγή υπογραφής `errorResponse(err, ctx)` είναι breaking).
+  · **Απόφαση Giorgio**: καθάρισμα **τώρα**, όχι skip. Τα 3 τελευταία ήταν το κέλυφος
+  `withStandardRateLimit(withAuth(...))` + `try/catch`, γραμμένο **έντεκα** φορές. Νέο
+  `_domain-route.ts` (`makeDxfRouteRunner`) — και τα 11 endpoints περνούν από εκεί, με τα
+  δικαιώματά τους **επαληθευμένα ένα προς ένα** (11/11 αμετάβλητα).
+  · 🔴 **Το ίδιο κέλυφος υπήρχε ΚΑΙ 12ο**: `ai/_ai-route-helpers.ts:79` — αόρατο σε κάθε gate επειδή
+  ζούσε σε άλλον φάκελο. Είναι πλέον **εξειδίκευση** του κοινού runner, όχι δεύτερη υλοποίηση.
+  Νέα κοινά: `_domain-route.ts`, `_domain-error-mapping.ts`, `_serialize-audit-fields.ts`,
+  `background-ownership.ts`, `_background-error-response.ts`.
+  · **380/380 πράσινα σε 28 suites · 13/13 μεταλλάξεις σκοτωμένες · `jscpd:diff` καθαρό. ΟΧΙ tsc (N.17).**
+  · ⚠️ **Γνωστή ασυμμετρία, δηλωμένη**: η εξαίρεση super-admin ισχύει όπου η υπηρεσία **ρίχνει**. Το
+  `FloorplanBackgroundService.getById` είναι **σιωπηλό για όλους** (απόφαση Φάσης Α), άρα από εκείνο το
+  μονοπάτι ούτε ο bypass ρόλος παίρνει `403`.
+  · ⚠️ **ΑΝΕΠΑΛΗΘΕΥΤΟ**: δεν έτρεξα `ssot:baseline` (κοινό working tree). Το `ssot:audit` της Φάσης Α
+  τελικά βγήκε: **-6/133** vs baseline, top-10 offenders **κανένα δικό μας αρχείο**.
 
 - ✅ **ADR-742 Φάση Α — η ερώτηση «ανήκει ΑΥΤΟ;» ενοποιήθηκε (2026-07-31, Opus 5· UNCOMMITTED).**
   🔴 **Ήταν ΤΕΣΣΕΡΑ συστήματα, όχι τρία** — το handoff έλεγε τριπλοτυπία· το grep βρήκε 4ο

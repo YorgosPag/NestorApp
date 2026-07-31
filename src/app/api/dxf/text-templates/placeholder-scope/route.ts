@@ -18,13 +18,10 @@
  * DXF document, so the client merges them on top (see `PlaceholderScopeSources`).
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { buildPlaceholderScope } from '@/subapps/dxf-viewer/text-engine/templates/resolver/scope-builder';
 import type { PlaceholderScopeSources } from '@/subapps/dxf-viewer/text-engine/templates/resolver/scope.types';
-import { errorResponse } from '../_helpers';
+import { runTemplateRoute } from '../_helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,30 +38,27 @@ function optionalId(value: unknown): string | undefined {
 }
 
 export async function POST(request: NextRequest) {
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          const body = (await req.json().catch(() => ({}))) as ScopeRequestBody;
-          const scope = await buildPlaceholderScope({
-            companyId: ctx.companyId,
-            userId: ctx.uid,
-            projectId: optionalId(body.projectId),
-            checkerUserId: optionalId(body.checkerUserId),
-          });
-          const sources: PlaceholderScopeSources = {
-            company: scope.company,
-            project: scope.project,
-            user: scope.user,
-          };
-          return NextResponse.json({ success: true, scope: sources });
-        } catch (err) {
-          logger.error('Failed to build placeholder scope', { companyId: ctx.companyId, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:files:view' },
-    ),
+  return runTemplateRoute(
+    request,
+    {
+      permissions: 'dxf:files:view',
+      onError: (err, ctx) =>
+        logger.error('Failed to build placeholder scope', { companyId: ctx.companyId, err }),
+    },
+    async (req, ctx) => {
+      const body = (await req.json().catch(() => ({}))) as ScopeRequestBody;
+      const scope = await buildPlaceholderScope({
+        companyId: ctx.companyId,
+        userId: ctx.uid,
+        projectId: optionalId(body.projectId),
+        checkerUserId: optionalId(body.checkerUserId),
+      });
+      const sources: PlaceholderScopeSources = {
+        company: scope.company,
+        project: scope.project,
+        user: scope.user,
+      };
+      return NextResponse.json({ success: true, scope: sources });
+    },
   );
-  return handler(request);
 }

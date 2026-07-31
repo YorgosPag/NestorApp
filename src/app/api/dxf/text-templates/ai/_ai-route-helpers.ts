@@ -7,13 +7,11 @@
  * λογική — κανένα δίδυμο boilerplate.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import type { AuthContext } from '@/lib/auth';
 import type { createModuleLogger } from '@/lib/telemetry';
 import type { AiTitleBlock } from '@/subapps/dxf-viewer/text-engine/title-block/ai/ai-title-block-schema';
 import { toAiTitleBlockResult } from '@/subapps/dxf-viewer/text-engine/title-block/ai/ai-title-block-reconcile';
-import { errorResponse } from '../_helpers';
+import { runTemplateRoute } from '../_helpers';
 
 type RouteLogger = ReturnType<typeof createModuleLogger>;
 
@@ -73,29 +71,27 @@ export function optionalString(value: unknown): string | undefined {
 }
 
 /**
- * Κοινό κέλυφος: rate limit + auth (`dxf:files:view`) + try/catch. Το `run` επιστρέφει το
- * `NextResponse` της συγκεκριμένης ροής· κάθε exception γίνεται `errorResponse` με log.
+ * Κοινό κέλυφος των AI routes της πινακίδας: rate limit + auth (`dxf:files:view`) + try/catch.
+ *
+ * Είναι **εξειδίκευση** του `runTemplateRoute` (βλ. `_domain-route.ts`), όχι δεύτερη υλοποίηση:
+ * καρφώνει τα δικαιώματα και το μήνυμα καταγραφής που είναι κοινά και στα έξι AI routes, ώστε
+ * αυτά να μη δηλώνουν τίποτα από τα δύο. Μέχρι το ADR-742 έγραφε **το ίδιο** κέλυφος με τα
+ * υπόλοιπα έντεκα endpoints του πεδίου — ένα δίδυμο που κανένα gate δεν έβλεπε, επειδή ζούσε
+ * σε άλλον φάκελο.
  */
 export function aiTitleBlockRoutePOST(
   logger: RouteLogger,
   run: (req: NextRequest, ctx: AuthContext) => Promise<NextResponse>,
 ) {
-  return (request: NextRequest): Promise<NextResponse> => {
-    const handler = withStandardRateLimit(
-      withAuth<unknown>(
-        async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-          try {
-            return await run(req, ctx);
-          } catch (err) {
-            logger.warn('AI title-block route failed', { uid: ctx.uid, err });
-            return errorResponse(err);
-          }
-        },
-        { permissions: 'dxf:files:view' },
-      ),
+  return (request: NextRequest): Promise<Response> | Response =>
+    runTemplateRoute(
+      request,
+      {
+        permissions: 'dxf:files:view',
+        onError: (err, ctx) => logger.warn('AI title-block route failed', { uid: ctx.uid, err }),
+      },
+      run,
     );
-    return handler(request);
-  };
 }
 
 /** Η κοινή απόκριση των generation routes: `null` ⇒ 422 (graceful)· αλλιώς reconciled result. */

@@ -14,6 +14,9 @@
  *
  * RBAC: super_admin, company_admin, internal_user.
  *
+ * Αποκάλυψη (ADR-742 §3.4): ξένο υπόβαθρο ⇒ `404` **πανομοιότυπο** με το γνήσιο
+ * «δεν βρέθηκε»· bypass ρόλος ⇒ ειλικρινές `403`.
+ *
  * @module api/floorplan-backgrounds/[id]/calibrate/route
  * @enterprise ADR-340 Phase 9
  */
@@ -27,15 +30,16 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { BackgroundScale } from '@/types/floorplan-overlays';
+import {
+  backgroundErrorResponse,
+  backgroundNotFoundResponse,
+  badRequest,
+} from '../../_background-error-response';
 
 const logger = createModuleLogger('FloorplanBackgroundCalibrateRoute');
 
 interface RouteContext {
   params: Promise<{ id: string }>;
-}
-
-function bad(message: string, status = 400) {
-  return NextResponse.json({ error: message, code: 'BAD_REQUEST' }, { status });
 }
 
 function isValidScale(v: unknown): v is BackgroundScale {
@@ -52,23 +56,25 @@ async function handlePost(
   ctx: AuthContext,
   routeCtx: RouteContext,
 ): Promise<NextResponse> {
-  try {
-    const { id } = await routeCtx.params;
-    if (!id) return bad('Missing background id', 400);
+  // ⚠️ Το `id` διαβάζεται **έξω** από το try: ο catch το χρειάζεται για να
+  // παράξει το «δεν βρέθηκε» — γνήσιο και μεταμφιεσμένο — από την ίδια πηγή.
+  const { id } = await routeCtx.params;
+  if (!id) return badRequest('Missing background id', 400);
 
+  try {
     let body: unknown;
     try {
       body = await request.json();
     } catch {
-      return bad('Invalid JSON body', 400);
+      return badRequest('Invalid JSON body', 400);
     }
 
     const scale = (body as { scale?: unknown }).scale;
     if (!isValidScale(scale)) {
-      return bad('Invalid scale payload — expected { unitsPerMeter > 0, sourceUnit ∈ {mm,cm,m,pixel} }', 422);
+      return badRequest('Invalid scale payload — expected { unitsPerMeter > 0, sourceUnit ∈ {mm,cm,m,pixel} }', 422);
     }
 
-    if (!ctx.companyId) return bad('Missing companyId in auth context', 403);
+    if (!ctx.companyId) return badRequest('Missing companyId in auth context', 403);
 
     const result = await setBackgroundScale({
       companyId: ctx.companyId,
@@ -87,9 +93,14 @@ async function handlePost(
     return NextResponse.json({ success: true, backgroundId: id, scale: result });
   } catch (error) {
     const msg = getErrorMessage(error);
+    // Το log κρατά **την αλήθεια** ακέραιη — τη μεταμφίεση τη βλέπει μόνο το σύρμα.
     logger.error('[FloorplanBackgroundsCalibrate/Post] Error', { error: msg });
-    if (msg.includes('not found')) return bad('Background not found', 404);
-    if (msg.includes('Cross-tenant')) return bad('Forbidden — cross-tenant', 403);
+    const mapped = backgroundErrorResponse({
+      err: error,
+      ctx,
+      notFound: () => backgroundNotFoundResponse(id),
+    });
+    if (mapped) return mapped;
     return NextResponse.json(
       { success: false, error: 'Failed to update background scale', details: msg },
       { status: 500 },

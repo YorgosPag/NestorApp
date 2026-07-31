@@ -186,4 +186,44 @@ describe('assertOwnedByCompany — ρητή άρνηση', () => {
     expect(err.resourceId).toBe(subject.resourceId);
     expect(err).toBeInstanceOf(Error);
   });
+
+  // ─── Η παγίδα του κενού, στο μονοπάτι της ρητής άρνησης (ADR-742 §4) ───────
+  //
+  // 🔴 Η Φάση Α έκλεισε αυτή την τρύπα **μόνο** στο σιωπηλό μονοπάτι
+  // (`isPayloadOwnedByCompany` → οι έξι `require*InTenant`). Η `assertOwnedByCompany`
+  // συνέχιζε να ρωτά με σκέτο `===`, ενώ **και οι τέσσερις** καλούντες της της
+  // δίνουν `snap.data() as XDoc`: ο τύπος υπόσχεται `companyId: string`, η βάση
+  // δεν το εγγυάται. Το βρήκε ο έλεγχος του υποβάθρου στη Φάση Β.
+  describe('🔴 κενό companyId — «απουσία tenant», ποτέ «tenant που ταιριάζει»', () => {
+    it('καλών με χαλασμένο token (companyId: "") ΔΕΝ περνά σε έγγραφο με κενό companyId', () => {
+      expect(() => assertOwnedByCompany({ companyId: '' }, '', makeError)).toThrow(
+        CrossTenantAccessError,
+      );
+    });
+
+    it('έγγραφο υπεργραφείου (companyId: null, ADR-232) ΔΕΝ ανήκει σε κανονικό χρήστη', () => {
+      expect(() => assertOwnedByCompany({ companyId: null }, OWNER, makeError)).toThrow(
+        CrossTenantAccessError,
+      );
+    });
+
+    it('έγγραφο χωρίς καθόλου companyId ΔΕΝ ανήκει σε κανέναν', () => {
+      expect(() => assertOwnedByCompany({}, OWNER, makeError)).toThrow(CrossTenantAccessError);
+    });
+
+    it('καλών με κενό companyId ΔΕΝ περνά ούτε σε κανονικό έγγραφο', () => {
+      expect(() => assertOwnedByCompany({ companyId: OWNER }, '', makeError)).toThrow(
+        CrossTenantAccessError,
+      );
+    });
+
+    it('το σφάλμα αναφέρει κενό ιδιοκτήτη αντί για `undefined`', () => {
+      try {
+        assertOwnedByCompany({}, OWNER, makeError);
+      } catch (err) {
+        expect((err as CrossTenantAccessError).actualCompanyId).toBe('');
+      }
+      expect.assertions(1);
+    });
+  });
 });

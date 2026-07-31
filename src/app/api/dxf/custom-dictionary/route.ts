@@ -11,9 +11,6 @@
  * The route never touches Firestore directly per CLAUDE.md N.6.
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   createCustomDictionaryEntry,
@@ -23,7 +20,7 @@ import type { CreateCustomDictionaryEntryInput } from '@/subapps/dxf-viewer/text
 import type { SpellLanguage } from '@/subapps/dxf-viewer/text-engine/spell/spell.types';
 import {
   actorFromContext,
-  errorResponse,
+  runDictionaryRoute,
   serializeEntry,
 } from './_helpers';
 
@@ -34,27 +31,24 @@ const logger = createModuleLogger('CustomDictionaryListCreateRoute');
 // ─── GET ─────────────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          const docs = await listCustomDictionaryForCompany(ctx.companyId);
-          return NextResponse.json({
-            success: true,
-            entries: docs.map(serializeEntry),
-          });
-        } catch (err) {
-          logger.error('Failed to list custom dictionary entries', {
-            companyId: ctx.companyId,
-            err,
-          });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:dictionary:view' },
-    ),
+  return runDictionaryRoute(
+    request,
+    {
+      permissions: 'dxf:dictionary:view',
+      onError: (err, ctx) =>
+        logger.error('Failed to list custom dictionary entries', {
+          companyId: ctx.companyId,
+          err,
+        }),
+    },
+    async (_req, ctx) => {
+      const docs = await listCustomDictionaryForCompany(ctx.companyId);
+      return NextResponse.json({
+        success: true,
+        entries: docs.map(serializeEntry),
+      });
+    },
   );
-  return handler(request);
 }
 
 // ─── POST ────────────────────────────────────────────────────────────────────
@@ -65,28 +59,22 @@ interface CreateBody {
 }
 
 export async function POST(request: NextRequest) {
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          const body = (await req.json()) as CreateBody;
-          const input: CreateCustomDictionaryEntryInput = {
-            companyId: ctx.companyId,
-            term: typeof body.term === 'string' ? body.term : '',
-            language: body.language as SpellLanguage,
-          };
-          const created = await createCustomDictionaryEntry(input, actorFromContext(ctx));
-          return NextResponse.json(
-            { success: true, entry: serializeEntry(created) },
-            { status: 201 },
-          );
-        } catch (err) {
-          logger.warn('Failed to create custom dictionary entry', { uid: ctx.uid, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:text:edit' },
-    ),
+  return runDictionaryRoute(
+    request,
+    {
+      permissions: 'dxf:text:edit',
+      onError: (err, ctx) =>
+        logger.warn('Failed to create custom dictionary entry', { uid: ctx.uid, err }),
+    },
+    async (req, ctx) => {
+      const body = (await req.json()) as CreateBody;
+      const input: CreateCustomDictionaryEntryInput = {
+        companyId: ctx.companyId,
+        term: typeof body.term === 'string' ? body.term : '',
+        language: body.language as SpellLanguage,
+      };
+      const created = await createCustomDictionaryEntry(input, actorFromContext(ctx));
+      return NextResponse.json({ success: true, entry: serializeEntry(created) }, { status: 201 });
+    },
   );
-  return handler(request);
 }

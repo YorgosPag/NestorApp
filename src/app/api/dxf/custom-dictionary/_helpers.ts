@@ -6,13 +6,22 @@
  *   2. Serialise `CustomDictionaryEntryDoc` for JSON transport (admin-SDK
  *      `Timestamp` cannot cross the wire — converted to ISO strings).
  *   3. Map service-layer tagged errors to HTTP responses with a consistent
- *      shape (`{ success: false, error, code, details? }`).
+ *      shape (`{ success: false, error, code, details? }`) — **και** εφαρμόζει
+ *      εδώ την απόφαση αποκάλυψης του ADR-742 (ξένος πόρος ⇒ σιωπή, εκτός
+ *      bypass ρόλου).
  *
  * Route-local: not exported from any barrel because the shape is
  * API-internal.
  */
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 import type { AuthContext } from '@/lib/auth';
+import {
+  mapDomainError,
+  toErrorResponse,
+  type MappedError,
+} from '../_domain-error-mapping';
+import { makeDxfRouteRunner } from '../_domain-route';
+import { serializeAuditFields } from '../_serialize-audit-fields';
 import {
   CustomDictionaryCrossTenantError,
   CustomDictionaryDuplicateError,
@@ -50,46 +59,49 @@ export function serializeEntry(doc: CustomDictionaryEntryDoc): SerializedCustomD
     companyId: doc.companyId,
     term: doc.term,
     language: doc.language,
-    createdAt: doc.createdAt.toDate().toISOString(),
-    updatedAt: doc.updatedAt.toDate().toISOString(),
-    createdBy: doc.createdBy,
-    createdByName: doc.createdByName,
-    updatedBy: doc.updatedBy,
-    updatedByName: doc.updatedByName,
+    ...serializeAuditFields(doc),
   };
 }
 
-interface MappedError {
-  readonly status: number;
-  readonly body: {
-    readonly success: false;
-    readonly error: string;
-    readonly code: string;
-    readonly details?: readonly string[];
-  };
+/**
+ * Σφάλμα υπηρεσίας → HTTP. Ο κανόνας αποκάλυψης (ADR-742) ζει στο κοινό
+ * `_domain-error-mapping`· εδώ δηλώνονται **μόνο οι τύποι σφάλματος αυτού του
+ * πεδίου ορισμού** — μαζί με το `Duplicate`, που **δεν** μεταμφιέζεται: ο όρος
+ * υπάρχει στο **δικό σου** λεξικό, δεν είναι μυστικό άλλου πελάτη.
+ */
+export function mapServiceError(
+  err: unknown,
+  ctx: Pick<AuthContext, 'globalRole'>,
+): MappedError {
+  return mapDomainError({
+    err,
+    ctx,
+    notFoundClass: CustomDictionaryNotFoundError,
+    crossTenantClass: CustomDictionaryCrossTenantError,
+    extra: (e) => {
+      if (e instanceof CustomDictionaryValidationError) {
+        return {
+          status: 400,
+          body: { success: false, error: e.message, code: e.code, details: e.issues },
+        };
+      }
+      if (e instanceof CustomDictionaryDuplicateError) {
+        return { status: 409, body: { success: false, error: e.message, code: e.code } };
+      }
+      return null;
+    },
+  });
 }
 
-export function mapServiceError(err: unknown): MappedError {
-  if (err instanceof CustomDictionaryNotFoundError) {
-    return { status: 404, body: { success: false, error: err.message, code: err.code } };
-  }
-  if (err instanceof CustomDictionaryCrossTenantError) {
-    return { status: 403, body: { success: false, error: 'Forbidden', code: err.code } };
-  }
-  if (err instanceof CustomDictionaryValidationError) {
-    return {
-      status: 400,
-      body: { success: false, error: err.message, code: err.code, details: err.issues },
-    };
-  }
-  if (err instanceof CustomDictionaryDuplicateError) {
-    return { status: 409, body: { success: false, error: err.message, code: err.code } };
-  }
-  const message = err instanceof Error ? err.message : 'Unknown error';
-  return { status: 500, body: { success: false, error: message, code: 'INTERNAL' } };
+export function errorResponse(
+  err: unknown,
+  ctx: Pick<AuthContext, 'globalRole'>,
+): NextResponse {
+  return toErrorResponse(mapServiceError(err, ctx));
 }
 
-export function errorResponse(err: unknown): NextResponse {
-  const { status, body } = mapServiceError(err);
-  return NextResponse.json(body, { status });
-}
+/**
+ * Ο εκτελεστής route του λεξικού — ρυθμιστής ρυθμού + ταυτότητα + δικαιώματα +
+ * `try/catch` + η απόφαση αποκάλυψης, δεμένα μία φορά (βλ. `_domain-route.ts`).
+ */
+export const runDictionaryRoute = makeDxfRouteRunner(errorResponse);

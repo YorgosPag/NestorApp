@@ -7,14 +7,24 @@
  *   2. Serialise `UserTextTemplateDoc` for JSON transport (admin-SDK
  *      `Timestamp` cannot cross the wire — converted to ISO strings).
  *   3. Map service-layer tagged errors to HTTP responses with a consistent
- *      shape (`{ success: false, error, code, details? }`).
+ *      shape (`{ success: false, error, code, details? }`) — **και** εφαρμόζει
+ *      εδώ την απόφαση αποκάλυψης του ADR-742 (ξένος πόρος ⇒ σιωπή, εκτός
+ *      bypass ρόλου). Αυτό είναι το σύνορο: το μόνο στρώμα που ξέρει *ποιος*
+ *      ρωτάει.
  *
  * These helpers stay route-local: not exported from any barrel because the
  * shape is API-internal (clients consume the serialised JSON, not these
  * types).
  */
-import { NextResponse } from 'next/server';
+import type { NextResponse } from 'next/server';
 import type { AuthContext } from '@/lib/auth';
+import {
+  mapDomainError,
+  toErrorResponse,
+  type MappedError,
+} from '../_domain-error-mapping';
+import { makeDxfRouteRunner } from '../_domain-route';
+import { serializeAuditFields } from '../_serialize-audit-fields';
 import {
   TextTemplateCrossTenantError,
   TextTemplateNotFoundError,
@@ -62,43 +72,44 @@ export function serializeTemplate(doc: UserTextTemplateDoc): SerializedUserTextT
     parentId: doc.parentId ?? null,
     parentSyncedAt: doc.parentSyncedAt ?? null,
     ...(doc.titleBlock ? { titleBlock: doc.titleBlock } : {}),
-    createdAt: doc.createdAt.toDate().toISOString(),
-    updatedAt: doc.updatedAt.toDate().toISOString(),
-    createdBy: doc.createdBy,
-    createdByName: doc.createdByName,
-    updatedBy: doc.updatedBy,
-    updatedByName: doc.updatedByName,
+    ...serializeAuditFields(doc),
   };
 }
 
-interface MappedError {
-  readonly status: number;
-  readonly body: {
-    readonly success: false;
-    readonly error: string;
-    readonly code: string;
-    readonly details?: readonly string[];
-  };
+/**
+ * Σφάλμα υπηρεσίας → HTTP. Ο κανόνας αποκάλυψης (ADR-742) ζει στο κοινό
+ * `_domain-error-mapping`· εδώ δηλώνονται **μόνο οι τύποι σφάλματος αυτού του
+ * πεδίου ορισμού**, ώστε τα `code` και τα μηνύματα — δημόσιο συμβόλαιο που ήδη
+ * καταναλώνουν clients — να μείνουν αναλλοίωτα.
+ */
+export function mapServiceError(
+  err: unknown,
+  ctx: Pick<AuthContext, 'globalRole'>,
+): MappedError {
+  return mapDomainError({
+    err,
+    ctx,
+    notFoundClass: TextTemplateNotFoundError,
+    crossTenantClass: TextTemplateCrossTenantError,
+    extra: (e) =>
+      e instanceof TextTemplateValidationError
+        ? {
+            status: 400,
+            body: { success: false, error: e.message, code: e.code, details: e.issues },
+          }
+        : null,
+  });
 }
 
-export function mapServiceError(err: unknown): MappedError {
-  if (err instanceof TextTemplateNotFoundError) {
-    return { status: 404, body: { success: false, error: err.message, code: err.code } };
-  }
-  if (err instanceof TextTemplateCrossTenantError) {
-    return { status: 403, body: { success: false, error: 'Forbidden', code: err.code } };
-  }
-  if (err instanceof TextTemplateValidationError) {
-    return {
-      status: 400,
-      body: { success: false, error: err.message, code: err.code, details: err.issues },
-    };
-  }
-  const message = err instanceof Error ? err.message : 'Unknown error';
-  return { status: 500, body: { success: false, error: message, code: 'INTERNAL' } };
+export function errorResponse(
+  err: unknown,
+  ctx: Pick<AuthContext, 'globalRole'>,
+): NextResponse {
+  return toErrorResponse(mapServiceError(err, ctx));
 }
 
-export function errorResponse(err: unknown): NextResponse {
-  const { status, body } = mapServiceError(err);
-  return NextResponse.json(body, { status });
-}
+/**
+ * Ο εκτελεστής route των προτύπων — ρυθμιστής ρυθμού + ταυτότητα + δικαιώματα +
+ * `try/catch` + η απόφαση αποκάλυψης, δεμένα μία φορά (βλ. `_domain-route.ts`).
+ */
+export const runTemplateRoute = makeDxfRouteRunner(errorResponse);

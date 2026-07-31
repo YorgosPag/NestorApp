@@ -37,8 +37,8 @@
  * - **`ownedOrNull()`** — σιωπηλή. Ξένο ≡ ανύπαρκτο. **Δεν μαρτυρά ύπαρξη.**
  *   Προεπιλογή για ό,τι δέχεται id από αναξιόπιστη πηγή.
  * - **`assertOwnedByCompany()`** — ρητή άρνηση. Ρίχνει το σφάλμα του πεδίου
- *   ορισμού, ώστε το route να το γυρίσει σε `403`. **Μαρτυρά ύπαρξη** — είναι
- *   συνειδητή ανταλλαγή, όχι παράβλεψη.
+ *   ορισμού, ώστε το route να αποφασίσει τι φεύγει στο σύρμα. **Μαρτυρά
+ *   ύπαρξη** στον εσωτερικό κώδικα — τη μεταμφίεση τη βάζει το σύνορο.
  * - **`concealCrossTenant()`** — η **απόφαση αποκάλυψης** στο σύνορο HTTP:
  *   δεδομένου του ρόλου του καλούντος, λέει αν η άρνηση βγαίνει έξω ως `403`
  *   ή μεταμφιεσμένη σε `404`. Βλ. παρακάτω.
@@ -208,14 +208,23 @@ export class CrossTenantAccessError extends Error {
  * ⚠️ Θυμήσου ότι αυτή η πολιτική **μαρτυρά την ύπαρξη** του id. Χρησιμοποίησέ
  * τη μόνο όταν ο καλών είναι ήδη ταυτοποιημένος **και** η σιωπή θα ήταν
  * χειρότερη εμπειρία από την άρνηση.
+ *
+ * 🔴 **Δέχεται `MaybeTenantOwned`, όχι `TenantOwned` — και αυτό είναι ουσία, όχι
+ * χαλάρωση τύπου.** Και οι τέσσερις καλούντες της περνούν `snap.data() as XDoc`:
+ * ο τύπος **υπόσχεται** `companyId: string`, η βάση **δεν** το εγγυάται. Με
+ * σύγκριση `===` ένας καλών με χαλασμένο token (`companyId: ''`) περνούσε κάθε
+ * έγγραφο με κενό/απόν `companyId` — ακριβώς το σφάλμα που περιγράφει το
+ * ADR-742 §4, το οποίο η Φάση Α έκλεισε μόνο στο σιωπηλό μονοπάτι. Ρωτά λοιπόν
+ * την ίδια, ασφαλή ερώτηση με το {@link isPayloadOwnedByCompany}: **το κενό δεν
+ * είναι tenant, είναι απουσία tenant.**
  */
-export function assertOwnedByCompany<T extends TenantOwned>(
-  doc: T,
+export function assertOwnedByCompany(
+  doc: MaybeTenantOwned,
   expectedCompanyId: string,
   makeError: (actualCompanyId: string) => Error,
 ): void {
-  if (!isOwnedByCompany(doc, expectedCompanyId)) {
-    throw makeError(doc.companyId);
+  if (!isPayloadOwnedByCompany(doc, expectedCompanyId)) {
+    throw makeError(doc?.companyId ?? '');
   }
 }
 

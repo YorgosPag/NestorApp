@@ -29,6 +29,8 @@ import type {
   BackgroundScaleSourceUnit,
 } from '@/types/floorplan-overlays';
 import type { FloorplanBackground } from '@/subapps/dxf-viewer/floorplan-background/providers/types';
+// SSoT «δικαιούμαι να γράψω σε ΑΥΤΟ το υπόβαθρο;» — κοινό με το background service.
+import { txReadOwnedRow } from './background-ownership';
 
 const logger = createModuleLogger('FloorplanScaleService');
 
@@ -93,7 +95,12 @@ export interface SetBackgroundScaleInput {
 
 /**
  * Persist the scale metadata on a background. Tenant isolation enforced.
- * Throws if the background does not exist or belongs to another company.
+ *
+ * Ρίχνει `BackgroundNotFoundError` αν δεν υπάρχει και `CrossTenantAccessError`
+ * αν ανήκει σε άλλον πελάτη — **τυποποιημένα**, ώστε το route να αποφασίζει με
+ * `instanceof` και όχι με ανάγνωση κειμένου. Τι από την άρνηση φεύγει στο σύρμα
+ * το κρίνει το route (ADR-742 §3.4): bypass ρόλος → `403`, κάθε άλλος → `404`
+ * πανομοιότυπο με το γνήσιο «δεν βρέθηκε».
  */
 export async function setBackgroundScale(
   input: SetBackgroundScaleInput,
@@ -109,12 +116,16 @@ export async function setBackgroundScale(
   const ref = db.collection(COLLECTIONS.FLOORPLAN_BACKGROUNDS).doc(input.backgroundId);
 
   await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new Error(`Background not found: ${input.backgroundId}`);
-    const row = snap.data() as FirebaseFirestore.DocumentData;
-    if (row.companyId !== input.companyId) {
-      throw new Error('Cross-tenant scale write denied');
-    }
+    // SSoT: ύπαρξη + ιδιοκτησία **μέσα** στη συναλλαγή. Μέχρι το ADR-742 αυτές
+    // οι τέσσερις γραμμές ήταν αντιγραμμένες εδώ με σκέτο `Error`, οπότε το
+    // route αναγκαζόταν να διαβάσει κείμενο μηνύματος για απόφαση ασφαλείας.
+    await txReadOwnedRow(
+      tx,
+      ref,
+      input.backgroundId,
+      input.companyId,
+      'Cross-tenant scale write denied',
+    );
     const now = Date.now();
     const scaleDoc: BackgroundScale & { calibratedAt: number; calibratedBy: string } = {
       unitsPerMeter: input.scale.unitsPerMeter,

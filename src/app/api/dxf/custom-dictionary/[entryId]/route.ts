@@ -8,13 +8,12 @@
  * Permission split (industry pattern: Microsoft 365 / Google Workspace /
  * AutoCAD enterprise): ADD is low-bar, EDIT and DELETE are admin-only.
  *
- * Tenant isolation handled inside `custom-dictionary.service.ts`:
- * `CustomDictionaryCrossTenantError` becomes a 403 here.
+ * Tenant isolation handled inside `custom-dictionary.service.ts`. Το
+ * `CustomDictionaryCrossTenantError` **δεν** βγαίνει αυτούσιο: το `_helpers`
+ * εφαρμόζει την απόφαση αποκάλυψης του ADR-742 — bypass ρόλος βλέπει `403`,
+ * κάθε άλλος παίρνει `404` **πανομοιότυπο** με το γνήσιο «δεν βρέθηκε».
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   deleteCustomDictionaryEntry,
@@ -25,7 +24,7 @@ import type { UpdateCustomDictionaryEntryInput } from '@/subapps/dxf-viewer/text
 import type { SpellLanguage } from '@/subapps/dxf-viewer/text-engine/spell/spell.types';
 import {
   actorFromContext,
-  errorResponse,
+  runDictionaryRoute,
   serializeEntry,
 } from '../_helpers';
 
@@ -39,21 +38,17 @@ type SegmentData = { params: Promise<{ entryId: string }> };
 
 export async function GET(request: NextRequest, segmentData: SegmentData) {
   const { entryId } = await segmentData.params;
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          const doc = await getCustomDictionaryEntryById(ctx.companyId, entryId);
-          return NextResponse.json({ success: true, entry: serializeEntry(doc) });
-        } catch (err) {
-          logger.warn('Failed to read custom dictionary entry', { entryId, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:dictionary:view' },
-    ),
+  return runDictionaryRoute(
+    request,
+    {
+      permissions: 'dxf:dictionary:view',
+      onError: (err) => logger.warn('Failed to read custom dictionary entry', { entryId, err }),
+    },
+    async (_req, ctx) => {
+      const doc = await getCustomDictionaryEntryById(ctx.companyId, entryId);
+      return NextResponse.json({ success: true, entry: serializeEntry(doc) });
+    },
   );
-  return handler(request);
 }
 
 // ─── PATCH ───────────────────────────────────────────────────────────────────
@@ -65,50 +60,42 @@ interface PatchBody {
 
 export async function PATCH(request: NextRequest, segmentData: SegmentData) {
   const { entryId } = await segmentData.params;
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          const body = (await req.json()) as PatchBody;
-          const patch: UpdateCustomDictionaryEntryInput = {
-            ...(typeof body.term === 'string' ? { term: body.term } : {}),
-            ...(body.language !== undefined ? { language: body.language as SpellLanguage } : {}),
-          };
-          const updated = await updateCustomDictionaryEntry(
-            ctx.companyId,
-            entryId,
-            patch,
-            actorFromContext(ctx),
-          );
-          return NextResponse.json({ success: true, entry: serializeEntry(updated) });
-        } catch (err) {
-          logger.warn('Failed to update custom dictionary entry', { entryId, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:dictionary:manage' },
-    ),
+  return runDictionaryRoute(
+    request,
+    {
+      permissions: 'dxf:dictionary:manage',
+      onError: (err) => logger.warn('Failed to update custom dictionary entry', { entryId, err }),
+    },
+    async (req, ctx) => {
+      const body = (await req.json()) as PatchBody;
+      const patch: UpdateCustomDictionaryEntryInput = {
+        ...(typeof body.term === 'string' ? { term: body.term } : {}),
+        ...(body.language !== undefined ? { language: body.language as SpellLanguage } : {}),
+      };
+      const updated = await updateCustomDictionaryEntry(
+        ctx.companyId,
+        entryId,
+        patch,
+        actorFromContext(ctx),
+      );
+      return NextResponse.json({ success: true, entry: serializeEntry(updated) });
+    },
   );
-  return handler(request);
 }
 
 // ─── DELETE ──────────────────────────────────────────────────────────────────
 
 export async function DELETE(request: NextRequest, segmentData: SegmentData) {
   const { entryId } = await segmentData.params;
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          await deleteCustomDictionaryEntry(ctx.companyId, entryId, actorFromContext(ctx));
-          return NextResponse.json({ success: true, deleted: true, entryId });
-        } catch (err) {
-          logger.warn('Failed to delete custom dictionary entry', { entryId, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:dictionary:manage' },
-    ),
+  return runDictionaryRoute(
+    request,
+    {
+      permissions: 'dxf:dictionary:manage',
+      onError: (err) => logger.warn('Failed to delete custom dictionary entry', { entryId, err }),
+    },
+    async (_req, ctx) => {
+      await deleteCustomDictionaryEntry(ctx.companyId, entryId, actorFromContext(ctx));
+      return NextResponse.json({ success: true, deleted: true, entryId });
+    },
   );
-  return handler(request);
 }

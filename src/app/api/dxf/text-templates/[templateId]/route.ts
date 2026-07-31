@@ -5,13 +5,12 @@
  * PATCH  — update (name / category / content)
  * DELETE — remove (audit-logged in the service)
  *
- * Tenant isolation handled inside `text-template.service.ts`:
- * `TextTemplateCrossTenantError` becomes a 403 here.
+ * Tenant isolation handled inside `text-template.service.ts`. Το
+ * `TextTemplateCrossTenantError` **δεν** βγαίνει αυτούσιο: το `_helpers`
+ * εφαρμόζει την απόφαση αποκάλυψης του ADR-742 — bypass ρόλος βλέπει `403`,
+ * κάθε άλλος παίρνει `404` **πανομοιότυπο** με το γνήσιο «δεν βρέθηκε».
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   deleteTextTemplate,
@@ -21,7 +20,7 @@ import {
 import type { UpdateTextTemplateInput } from '@/subapps/dxf-viewer/text-engine/templates/text-template.types';
 import {
   actorFromContext,
-  errorResponse,
+  runTemplateRoute,
   serializeTemplate,
 } from '../_helpers';
 
@@ -35,21 +34,17 @@ type SegmentData = { params: Promise<{ templateId: string }> };
 
 export async function GET(request: NextRequest, segmentData: SegmentData) {
   const { templateId } = await segmentData.params;
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          const doc = await getTextTemplateById(ctx.companyId, templateId);
-          return NextResponse.json({ success: true, template: serializeTemplate(doc) });
-        } catch (err) {
-          logger.warn('Failed to read text template', { templateId, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:files:view' },
-    ),
+  return runTemplateRoute(
+    request,
+    {
+      permissions: 'dxf:files:view',
+      onError: (err) => logger.warn('Failed to read text template', { templateId, err }),
+    },
+    async (_req, ctx) => {
+      const doc = await getTextTemplateById(ctx.companyId, templateId);
+      return NextResponse.json({ success: true, template: serializeTemplate(doc) });
+    },
   );
-  return handler(request);
 }
 
 // ─── PATCH ───────────────────────────────────────────────────────────────────
@@ -67,65 +62,57 @@ interface PatchBody {
 
 export async function PATCH(request: NextRequest, segmentData: SegmentData) {
   const { templateId } = await segmentData.params;
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          const body = (await req.json()) as PatchBody;
-          const patch: UpdateTextTemplateInput = {
-            ...(typeof body.name === 'string' ? { name: body.name } : {}),
-            ...(body.category !== undefined
-              ? { category: body.category as UpdateTextTemplateInput['category'] }
-              : {}),
-            ...(body.content !== undefined
-              ? { content: body.content as UpdateTextTemplateInput['content'] }
-              : {}),
-            ...(typeof body.scope === 'string'
-              ? { scope: body.scope as UpdateTextTemplateInput['scope'] }
-              : {}),
-            ...(typeof body.projectId === 'string' ? { projectId: body.projectId } : {}),
-            ...(typeof body.parentSyncedAt === 'number' && Number.isFinite(body.parentSyncedAt)
-              ? { parentSyncedAt: body.parentSyncedAt }
-              : {}),
-            ...(body.titleBlock !== undefined
-              ? { titleBlock: body.titleBlock as UpdateTextTemplateInput['titleBlock'] }
-              : {}),
-          };
-          const updated = await updateTextTemplate(
-            ctx.companyId,
-            templateId,
-            patch,
-            actorFromContext(ctx),
-          );
-          return NextResponse.json({ success: true, template: serializeTemplate(updated) });
-        } catch (err) {
-          logger.warn('Failed to update text template', { templateId, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:text:edit' },
-    ),
+  return runTemplateRoute(
+    request,
+    {
+      permissions: 'dxf:text:edit',
+      onError: (err) => logger.warn('Failed to update text template', { templateId, err }),
+    },
+    async (req, ctx) => {
+      const body = (await req.json()) as PatchBody;
+      const patch: UpdateTextTemplateInput = {
+        ...(typeof body.name === 'string' ? { name: body.name } : {}),
+        ...(body.category !== undefined
+          ? { category: body.category as UpdateTextTemplateInput['category'] }
+          : {}),
+        ...(body.content !== undefined
+          ? { content: body.content as UpdateTextTemplateInput['content'] }
+          : {}),
+        ...(typeof body.scope === 'string'
+          ? { scope: body.scope as UpdateTextTemplateInput['scope'] }
+          : {}),
+        ...(typeof body.projectId === 'string' ? { projectId: body.projectId } : {}),
+        ...(typeof body.parentSyncedAt === 'number' && Number.isFinite(body.parentSyncedAt)
+          ? { parentSyncedAt: body.parentSyncedAt }
+          : {}),
+        ...(body.titleBlock !== undefined
+          ? { titleBlock: body.titleBlock as UpdateTextTemplateInput['titleBlock'] }
+          : {}),
+      };
+      const updated = await updateTextTemplate(
+        ctx.companyId,
+        templateId,
+        patch,
+        actorFromContext(ctx),
+      );
+      return NextResponse.json({ success: true, template: serializeTemplate(updated) });
+    },
   );
-  return handler(request);
 }
 
 // ─── DELETE ──────────────────────────────────────────────────────────────────
 
 export async function DELETE(request: NextRequest, segmentData: SegmentData) {
   const { templateId } = await segmentData.params;
-  const handler = withStandardRateLimit(
-    withAuth<unknown>(
-      async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-        try {
-          await deleteTextTemplate(ctx.companyId, templateId, actorFromContext(ctx));
-          return NextResponse.json({ success: true, deleted: true, templateId });
-        } catch (err) {
-          logger.warn('Failed to delete text template', { templateId, err });
-          return errorResponse(err);
-        }
-      },
-      { permissions: 'dxf:text:delete' },
-    ),
+  return runTemplateRoute(
+    request,
+    {
+      permissions: 'dxf:text:delete',
+      onError: (err) => logger.warn('Failed to delete text template', { templateId, err }),
+    },
+    async (_req, ctx) => {
+      await deleteTextTemplate(ctx.companyId, templateId, actorFromContext(ctx));
+      return NextResponse.json({ success: true, deleted: true, templateId });
+    },
   );
-  return handler(request);
 }
