@@ -79,9 +79,35 @@ function listTypeScriptFiles(dir: string): string[] {
 const relative = (file: string): string =>
   file.slice(process.cwd().length + 1).split('\\').join('/');
 
+/**
+ * 🔴 **Αφαιρεί σχόλια πριν από κάθε μέτρηση — και αυτό είναι ουσία, όχι
+ * καλλωπισμός** (μετρημένο 2026-08-01, ADR-742 §7octies).
+ *
+ * Η Ομάδα 4 μετέφερε δύο διαδρομές από `403` σε `404` και το
+ * {@link NOT_YET_MIGRATED} **έμεινε πράσινο στο 4** — όχι επειδή δεν άλλαξε
+ * τίποτα, αλλά επειδή έφυγαν **δύο πραγματικές** παραβάσεις και μπήκαν **δύο
+ * σχόλια** που τεκμηριώνουν το παλιό σχήμα (*«απαντούσε 403 'Access denied - …'»*).
+ * Η ισότητα κρατήθηκε **κατά τύχη**, δηλαδή ο μετρητής μετρούσε **πρόζα**.
+ *
+ * Το ίδιο θα χτυπούσε και το κλείδωμα του Βήματος 7: τα SSoT modules **οφείλουν**
+ * να περιγράφουν τι αντικατέστησαν. Αν η τεκμηρίωση μετράει ως παράβαση, το
+ * gate γίνεται θόρυβος — και ένα gate που βγάζει θόρυβο το χαλαρώνει κάποιος.
+ *
+ * ⚠️ Ο διαχωρισμός είναι σκόπιμα **συντακτικός και ανόητος**: αφαιρεί
+ * `/* … *\/` και `// …`. Δεν προσπαθεί να καταλάβει συμβολοσειρές που περιέχουν
+ * `//` — για τα δύο σήματα που ψάχνουμε δεν υπάρχει τέτοια περίπτωση, και ένας
+ * «έξυπνος» αναλυτής εδώ θα ήταν δεύτερη μηχανή προς συντήρηση.
+ */
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+}
+
 const SRC_FILES = SCANNED_TREES.flatMap((tree) => listTypeScriptFiles(join(process.cwd(), tree)))
   .filter((f) => !/\.(test|spec)\.tsx?$/.test(f))
-  .map((file) => ({ path: relative(file), source: readFileSync(file, 'utf8') }));
+  .map((file) => {
+    const raw = readFileSync(file, 'utf8');
+    return { path: relative(file), source: stripComments(raw), raw };
+  });
 
 // ============================================================================
 // ΤΑ ΣΗΜΑΤΑ
@@ -109,10 +135,31 @@ const CONCEALED_RESOURCES = [
     label: 'project',
     dir: 'src/app/api/projects/',
     notFoundMessage: 'Project not found',
-    /** Το καθαρό module του πόρου: μόνο εκεί επιτρέπεται να **περιγράφεται** το παλιό σχήμα. */
-    ssot: 'src/app/api/projects/_shared/project-ownership.ts',
+  },
+  {
+    label: 'contact',
+    dir: 'src/app/api/contacts/',
+    notFoundMessage: 'Contact not found',
+  },
+  {
+    label: 'building',
+    dir: 'src/app/api/buildings/',
+    notFoundMessage: 'Building not found',
   },
 ] as const;
+
+/**
+ * ⚠️ **Δεν υπάρχει πια εξαίρεση για τα SSoT modules** (§7octies).
+ *
+ * Μέχρι τότε κάθε πόρος δήλωνε ένα `ssot:` αρχείο που εξαιρούνταν από τη
+ * σάρωση, επειδή **οφείλει** να περιγράφει στα σχόλιά του το σχήμα που
+ * αντικατέστησε. Αυτό ήταν workaround για το ότι ο μετρητής διάβαζε **πρόζα**.
+ *
+ * Με το {@link stripComments} η αιτία εξαφανίστηκε, οπότε η εξαίρεση φεύγει και
+ * το gate γίνεται **αυστηρότερο**: ούτε το ίδιο το SSoT module δεν επιτρέπεται
+ * να γράψει **εκτελέσιμο** `403 … not found`. Μια εξαίρεση που δεν χρειάζεται
+ * είναι τρύπα που περιμένει.
+ */
 
 /**
  * 🔴 Πόροι που **δεν** έχουν μεταναστεύσει, με **μετρημένο** αριθμό σημείων.
@@ -122,7 +169,13 @@ const CONCEALED_RESOURCES = [
  * ο πόρος μετακομίζει στο {@link CONCEALED_RESOURCES}.
  */
 const NOT_YET_MIGRATED = [
-  { label: 'contact (Ομάδα 4)', dir: 'src/app/api/contacts/', disguiseHits: 4 },
+  { label: 'message (Ομάδα 5)', dir: 'src/app/api/messages/', handRolledHits: 4 },
+  { label: 'conversation (Ομάδα 5)', dir: 'src/app/api/conversations/', handRolledHits: 2 },
+  { label: 'dxf level/style (Ομάδα 6)', dir: 'src/app/api/dxf-levels/', handRolledHits: 1 },
+  { label: 'floorplan (Ομάδα 6)', dir: 'src/app/api/floorplans/', handRolledHits: 2 },
+  // ⚠️ Μετρώνται **ΑΡΧΕΙΑ**, όχι σημεία: το `parking/route.ts` έχει δύο
+  // συγκρίσεις (γρ. 98 με bypass, γρ. 214 **χωρίς**) και προσμετράται ως ένα.
+  { label: 'parking (Ομάδα 6)', dir: 'src/app/api/parking/', handRolledHits: 1 },
 ] as const;
 
 // ============================================================================
@@ -140,15 +193,46 @@ describe('⚓ ADR-742 — ο ανιχνευτής δουλεύει (regex που
     expect(HAND_ROLLED_OWNERSHIP.test('if (!isSuperAdmin && p?.companyId !== ctx.companyId) {')).toBe(true);
     expect(HAND_ROLLED_OWNERSHIP.test('requireProjectAccess({ projectData, caller: ctx })')).toBe(false);
   });
+
+  describe('🔴 ο μετρητής μετρά ΚΩΔΙΚΑ, όχι πρόζα (§7octies)', () => {
+    it('η τεκμηρίωση του παλιού σχήματος ΔΕΝ μετράει ως παράβαση', () => {
+      const documented = [
+        '/**',
+        " * Μέχρι τις 2026-08-01 απαντούσε 403 'Access denied - Contact not found'.",
+        ' * Έγραφε `data.companyId !== ctx.companyId` με το χέρι.',
+        ' */',
+        'export const SAFE = 1;',
+      ].join('\n');
+
+      const stripped = stripComments(documented);
+      expect(HALF_WRITTEN_DISGUISE.test(stripped)).toBe(false);
+      expect(HAND_ROLLED_OWNERSHIP.test(stripped)).toBe(false);
+    });
+
+    it('…αλλά ο ΠΡΑΓΜΑΤΙΚΟΣ κώδικας εξακολουθεί να μετράει', () => {
+      const real = [
+        '// σχόλιο που αναφέρει Access denied - κάτι',
+        "throw new ApiError(403, 'Access denied - Contact not found');",
+        'if (data.companyId !== ctx.companyId) return;',
+      ].join('\n');
+
+      const stripped = stripComments(real);
+      expect(HALF_WRITTEN_DISGUISE.test(stripped)).toBe(true);
+      expect(HAND_ROLLED_OWNERSHIP.test(stripped)).toBe(true);
+    });
+
+    it('ο διαχωρισμός δεν καταπίνει κώδικα γύρω από μονογραμμικό σχόλιο', () => {
+      expect(stripComments('const a = 1; // σχόλιο\nconst b = 2;')).toContain('const b = 2;');
+      expect(stripComments('const a = 1; // σχόλιο\nconst b = 2;')).toContain('const a = 1;');
+    });
+  });
 });
 
 // ============================================================================
 describe.each(CONCEALED_RESOURCES)(
   '⚓ πόρος «$label» — η μεταμφίεση είναι ΟΜΟΙΟΜΟΡΦΗ σε κάθε διαδρομή',
   (resource) => {
-    const owned = SRC_FILES.filter(
-      (f) => f.path.startsWith(resource.dir) && f.path !== resource.ssot,
-    );
+    const owned = SRC_FILES.filter((f) => f.path.startsWith(resource.dir));
 
     it('υπάρχουν διαδρομές να ελεγχθούν (φύλακας κατά σιωπηλά άδειας σάρωσης)', () => {
       expect(owned.length).toBeGreaterThan(5);
@@ -171,9 +255,7 @@ describe.each(CONCEALED_RESOURCES)(
       const pattern = new RegExp(
         `403[^\\n]{0,80}${resource.notFoundMessage}|${resource.notFoundMessage}[^\\n]{0,80}403`,
       );
-      const offenders = SRC_FILES.filter(
-        (f) => f.path !== resource.ssot && pattern.test(f.source),
-      );
+      const offenders = SRC_FILES.filter((f) => pattern.test(f.source));
       expect(offenders.map((f) => f.path)).toEqual([]);
     });
   },
@@ -190,21 +272,31 @@ describe('⚓ ο ΕΝΑΣ κοινός φύλακας δεν επιστρέφε�
   it('🔴 `requireDocInTenant` δεν φτιάχνει `TenantIsolationError` με 403 (§7septies)', () => {
     // Εξυπηρετεί **έξι** οντότητες και **41** καταναλωτές: ένα 403 εδώ
     // ξανανοίγει το μαντείο για όλες μαζί, με κάθε άλλο test πράσινο.
-    expect(/403/.test(guard!.source.replace(/^\s*\*.*$/gm, ''))).toBe(false);
+    // (Το `source` είναι ήδη χωρίς σχόλια — βλ. `stripComments`. Πριν την
+    // §7octies αυτή η γραμμή έκανε **δική της**, μερική αφαίρεση σχολίων:
+    // έπιανε μόνο τις γραμμές `*` ενός block, όχι τα `//` ούτε τους
+    // οριοθέτες. Η αφαίρεση είναι πλέον **μία** και καθολική.)
+    expect(/403/.test(guard!.source)).toBe(false);
   });
 });
 
 // ============================================================================
 describe('🔴 ΤΙ ΜΕΝΕΙ — το πράσινο ΔΕΝ σημαίνει «ο κώδικας δεν έχει μαντεία»', () => {
   it.each(NOT_YET_MIGRATED)(
-    'ο πόρος «$label» έχει ΑΚΟΜΗ $disguiseHits σημεία μισογραμμένης μεταμφίεσης — μετρημένα, όχι αγνοημένα',
-    ({ dir, disguiseHits }) => {
+    'ο πόρος «$label» έχει ΑΚΟΜΗ $handRolledHits χειρόγραφες συγκρίσεις — μετρημένες, όχι αγνοημένες',
+    ({ dir, handRolledHits }) => {
       const hits = SRC_FILES.filter(
-        (f) => f.path.startsWith(dir) && HALF_WRITTEN_DISGUISE.test(f.source),
+        (f) => f.path.startsWith(dir) && HAND_ROLLED_OWNERSHIP.test(f.source),
       );
       // Ισότητα, όχι ανισότητα: **αύξηση** είναι νέα διαρροή· **μείωση**
       // σημαίνει ότι η ομάδα προχώρησε και ο κατάλογος πρέπει να ενημερωθεί.
-      expect(hits.length).toBe(disguiseHits);
+      expect(hits.length).toBe(handRolledHits);
     },
   );
+
+  it('🔴 ο κατάλογος των ΜΗ μεταναστευμένων δεν είναι άδειος όσο υπάρχουν ομάδες', () => {
+    // Φύλακας κατά της σιωπηλής εκκένωσης: αν κάποιος «καθαρίσει» τον κατάλογο
+    // αντί να μεταναστεύσει τους πόρους, το πράσινο θα σήμαινε ξανά το τίποτα.
+    expect(NOT_YET_MIGRATED.length).toBeGreaterThan(0);
+  });
 });
