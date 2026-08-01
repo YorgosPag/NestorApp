@@ -153,7 +153,11 @@ function dimensionBounds(entity: Entity): BoundingBox2D | null {
   const dimEntity =
     (entity as { dimensionEntity?: DimensionEntity }).dimensionEntity
     ?? (entity as unknown as DimensionEntity);
-  const b = dimEntity?.defPoints ? getDimensionWorldBounds(dimEntity) : null;
+  // ADR-746 — ο τοπικός φύλακας `dimEntity?.defPoints ?` ΕΦΥΓΕ. Ήταν η απόδειξη ότι το κενό
+  // `defPoints` ήταν **γνωστό** εδώ και θωρακίστηκε μόνο σε αυτό το call site, αφήνοντας τον
+  // δεύτερο καταναλωτή της ΙΔΙΑΣ συνάρτησης (viewport culling) να ρίχνει το raster της σκηνής.
+  // Η υπόσχεση «never throws» επιβάλλεται πλέον μέσα στο `getDimensionWorldBounds`.
+  const b = getDimensionWorldBounds(dimEntity);
   return b ? { minX: b.minX, minY: b.minY, maxX: b.maxX, maxY: b.maxY } : null;
 }
 

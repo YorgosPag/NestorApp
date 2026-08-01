@@ -20,6 +20,11 @@
  */
 
 import type { DxfEntityUnion } from './dxf-types';
+// ADR-746 — SSoT «σε ποιο πεδίο φωλιάζει ο κάθε wrapped τύπος» (slab/opening/stair/dimension/…).
+import { unwrapDxfSubEntity } from './dxf-types';
+import type { DimensionEntity } from '../../types/dimension';
+// ADR-746 — απομόνωση δηλητηριώδους οντότητας: ένα κακό entity δεν ακυρώνει το raster της σκηνής.
+import { reportBBoxFailure } from './dxf-bbox-quarantine';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 // ADR-557 Φ-attachment — attachment-aware text-box SSoT (same box the grips + hover
 // frame use), so culling / picking match exactly what the renderer draws.
@@ -73,8 +78,12 @@ function radialBBox(center: { x: number; y: number }, radius: number): BBox {
 /**
  * Compute axis-aligned world-space bbox for a DXF entity. Cheap O(1) per
  * primitive except polylines, which are O(vertices).
+ *
+ * ⚠️ ΕΣΩΤΕΡΙΚΗ (ADR-746): κάθε `case` εδώ αγγίζει πεδία που ο TypeScript **υπόσχεται** αλλά
+ * κανένα runtime σύνορο δεν **εγγυάται** (persistence / DXF import / clipboard / undo patches).
+ * Οι καλούντες περνούν από το εξαγόμενο {@link getEntityBBox}, που είναι ο φύλακας.
  */
-export function getEntityBBox(entity: DxfEntityUnion): BBox {
+function computeEntityBBox(entity: DxfEntityUnion): BBox {
   switch (entity.type) {
     case 'line': {
       return {
@@ -127,7 +136,13 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
       // while hover (bypasses culling) still lit it: the "dims invisible but glow on hover" bug
       // (2026-07-03). Direct sibling of the wall/column/foundation geometry.bbox fix above.
       // Degenerate dims (no usable points) keep the conservative full-plane fallback.
-      return getDimensionWorldBounds(entity.dimensionEntity) ?? FULL_PLANE_BBOX;
+      //
+      // ADR-746 — `unwrapDxfSubEntity` και ΟΧΙ σκέτο `.dimensionEntity`: μια διάσταση κυκλοφορεί
+      // σε ΔΥΟ σχήματα (flat scene entity / wrapped DxfDimension) και υπάρχει **μία** αρχή που
+      // ξέρει σε ποιο πεδίο φωλιάζει το καθένα. Δύο άλλοι καταναλωτές ξετυλίγουν ήδη με fallback
+      // (`entity-bounds-ssot`, `select-similar-by-color`) — αυτό το call site ήταν το μόνο που
+      // υπέθετε ότι το wrapper υπάρχει πάντα.
+      return getDimensionWorldBounds(unwrapDxfSubEntity<DimensionEntity>(entity)) ?? FULL_PLANE_BBOX;
     }
     case 'stair': {
       // ADR-358 Phase 5b — project the StairGeometry 3D bbox to 2D plan bounds.
@@ -186,6 +201,29 @@ export function getEntityBBox(entity: DxfEntityUnion): BBox {
       // ray, xline) keep the conservative full-plane fallback.
       return geometryBBoxOrFullPlane(entity);
     }
+  }
+}
+
+/**
+ * Axis-aligned world-space bbox για μια οντότητα DXF. **Ποτέ δεν πετάει.**
+ *
+ * 🛡️ ADR-746 — ο φύλακας ζει ΕΔΩ και όχι στους καλούντες, επειδή οι καλούντες είναι **οκτώ**:
+ * viewport culling, `scale-preview-lod`, `dxf-selection-framing-bounds`, `dxf-wireframe-hit-test`,
+ * `focus-2d-order` (×3) και `DxfToThreeConverter`. Ένας φύλακας ανά call site είναι ακριβώς το
+ * λάθος που παρήγαγε το αρχικό σφάλμα: ο ένας καταναλωτής θωρακίστηκε, ο διπλανός όχι.
+ *
+ * Το `try/catch` σε hot loop **δεν** κοστίζει στη V8: το TurboFan βελτιστοποιεί κανονικά μπλοκ
+ * που δεν πετούν (ήταν εμπόδιο μόνο στο παλιό Crankshaft). Το κόστος πληρώνεται μόνο στην
+ * αποτυχία — και η καραντίνα φροντίζει να πληρωθεί **μία φορά** ανά οντότητα, όχι 60×/δευτ.
+ */
+export function getEntityBBox(entity: DxfEntityUnion): BBox {
+  try {
+    return computeEntityBBox(entity);
+  } catch (error) {
+    reportBBoxFailure(entity?.id ?? '<no-id>', entity?.type ?? '<no-type>', error);
+    // Άγνωστα όρια ⇒ «δεν μπορώ να το παραλείψω με ασφάλεια». Βλ. dxf-bbox-quarantine.ts
+    // για το γιατί ΠΟΤΕ κενό κουτί: μια σιωπηλή εξαφάνιση είναι χειρότερη από ορατό σφάλμα.
+    return FULL_PLANE_BBOX;
   }
 }
 

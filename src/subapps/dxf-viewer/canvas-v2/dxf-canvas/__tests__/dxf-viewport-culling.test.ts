@@ -10,6 +10,8 @@
 
 import type { DxfEntityUnion } from '../dxf-types';
 import { getEntityBBox, isEntityInViewport } from '../dxf-viewport-culling';
+// ADR-746 — απομόνωση δηλητηριώδους οντότητας (η καραντίνα είναι module-level, χρειάζεται reset).
+import { quarantinedCount, resetBBoxQuarantine } from '../dxf-bbox-quarantine';
 
 /** Minimal BIM direct-entity with a world-space `geometry.bbox`. */
 function bimEntity(type: string, minX: number, minY: number, maxX: number, maxY: number): DxfEntityUnion {
@@ -143,6 +145,98 @@ describe('getEntityBBox — dimensions use real geometry, not the ±1e6 fallback
   it('a dimension with no usable points falls back to the full-plane box', () => {
     const empty = { type: 'dimension', dimensionEntity: { dimensionType: 'linear', rotation: 0, defPoints: [] } } as unknown as DxfEntityUnion;
     expect(getEntityBBox(empty)).toEqual({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 });
+  });
+});
+
+/**
+ * ADR-746 — ο ζωντανός ένοχος της 2026-08-01:
+ *   `TypeError: dim.defPoints is not iterable` → έσκαγε μέσα στο `try` του `DxfBitmapCache.rebuild`
+ *   → `cacheKey = null` → **κάθε καρέ** ξαναέχτιζε το raster ΟΛΟΥ του σχεδίου και το ξαναπετούσε.
+ * Μία κακή οντότητα κόστιζε ολόκληρη τη σκηνή, για πάντα.
+ */
+describe('getEntityBBox — μία δηλητηριώδης οντότητα ΔΕΝ ρίχνει το καρέ (ADR-746)', () => {
+  beforeEach(() => resetBBoxQuarantine());
+
+  it('🔴 διάσταση χωρίς defPoints: επιστρέφει το συντηρητικό κουτί αντί να πετάξει', () => {
+    const poison = {
+      id: 'dim_poison', type: 'dimension',
+      dimensionEntity: { id: 'dim_poison', type: 'dimension', dimensionType: 'linear', rotation: 0 },
+    } as unknown as DxfEntityUnion;
+    expect(() => getEntityBBox(poison)).not.toThrow();
+    expect(getEntityBBox(poison)).toEqual({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 });
+  });
+
+  it('καμία οντότητα δεν πετάει, όποιο κι αν είναι το σχήμα της', () => {
+    const shapes: DxfEntityUnion[] = [
+      { id: 'a', type: 'line' } as unknown as DxfEntityUnion,               // λείπει start/end
+      { id: 'b', type: 'circle' } as unknown as DxfEntityUnion,             // λείπει center
+      { id: 'c', type: 'polyline' } as unknown as DxfEntityUnion,           // λείπουν vertices
+      { id: 'd', type: 'text' } as unknown as DxfEntityUnion,               // λείπει position
+      { id: 'e', type: 'angle-measurement' } as unknown as DxfEntityUnion,  // λείπει vertex
+      { id: 'f', type: 'stair' } as unknown as DxfEntityUnion,              // λείπει stairEntity
+    ];
+    for (const s of shapes) expect(() => getEntityBBox(s)).not.toThrow();
+  });
+
+  it('η ίδια οντότητα μπαίνει σε καραντίνα ΜΙΑ φορά — όχι 60 φορές το δευτερόλεπτο', () => {
+    // `line` χωρίς start/end ⇒ `entity.start.x` πετάει πραγματικά μέσα στο switch.
+    const poison = { id: 'line_x', type: 'line' } as unknown as DxfEntityUnion;
+    for (let frame = 0; frame < 120; frame++) getEntityBBox(poison);
+    expect(quarantinedCount()).toBe(1);
+  });
+
+  /**
+   * ΔΥΟ ΣΤΡΩΜΑΤΑ, και το test λέει ΠΟΙΟ ενεργεί (N.7.2 #4 — belt-and-suspenders):
+   *   · Στρώμα 1 (κύρια διαδρομή) = `resolveDimDefPoints` — η ρίζα, λύνει τη ΓΝΩΣΤΗ κλάση.
+   *   · Στρώμα 2 (δίχτυ) = η καραντίνα — για τις ΑΓΝΩΣΤΕΣ, μελλοντικές κλάσεις.
+   * Αν αυτό το test γίνει κόκκινο, η διόρθωση της ρίζας έχει υποχωρήσει και το πρόβλημα απλώς
+   * **κρύβεται** πίσω από το δίχτυ — ακριβώς το «λύσε το δείγμα, όχι την κλάση» που φτιάξαμε.
+   */
+  it('🎯 η διάσταση διορθώνεται στη ΡΙΖΑ — δεν φτάνει καν στο δίχτυ της καραντίνας', () => {
+    const poison = { id: 'dim_x', type: 'dimension', dimensionEntity: { type: 'dimension', dimensionType: 'linear', rotation: 0 } } as unknown as DxfEntityUnion;
+    for (let frame = 0; frame < 120; frame++) getEntityBBox(poison);
+    expect(quarantinedCount()).toBe(0);
+  });
+
+  it('το culling παραμένει λειτουργικό: η δηλητηριώδης οντότητα μένει ΟΡΑΤΗ, δεν εξαφανίζεται σιωπηλά', () => {
+    const poison = { id: 'dim_y', type: 'dimension', dimensionEntity: { type: 'dimension', dimensionType: 'linear', rotation: 0 } } as unknown as DxfEntityUnion;
+    expect(isEntityInViewport(poison, { minX: 0, minY: 0, maxX: 800, maxY: 600 })).toBe(true);
+  });
+});
+
+/**
+ * ADR-746 — μια διάσταση κυκλοφορεί σε ΔΥΟ σχήματα (flat scene entity / wrapped DxfDimension).
+ * Το call site υπέθετε ότι το wrapper υπάρχει πάντα· τώρα ρωτά το `unwrapDxfSubEntity` SSoT.
+ */
+describe('getEntityBBox — dimension: wrapped ΚΑΙ flat δίνουν το ίδιο κουτί (ADR-746)', () => {
+  const defPoints = [{ x: 10, y: 20 }, { x: 110, y: 20 }, { x: 10, y: 70 }];
+
+  it('η flat μορφή δεν πέφτει πια στο ±1e6 κουτί', () => {
+    const flat = { id: 'd1', type: 'dimension', dimensionType: 'linear', rotation: 0, defPoints } as unknown as DxfEntityUnion;
+    const wrapped = { id: 'd1', type: 'dimension', dimensionEntity: { id: 'd1', type: 'dimension', dimensionType: 'linear', rotation: 0, defPoints } } as unknown as DxfEntityUnion;
+    expect(getEntityBBox(flat)).toEqual(getEntityBBox(wrapped));
+    expect(getEntityBBox(flat).minX).toBe(10);
+  });
+});
+
+/**
+ * ADR-746 — Phase-A1 επισκευή: μια διάσταση προ-ADR-362 (μόνο @deprecated κάτοπτρα) γίνεται
+ * ΟΡΑΤΗ με τα πραγματικά της όρια, αντί να πέσει στο συντηρητικό ±1e6 κουτί.
+ * Ο Revit θα τη διέγραφε σε recovery file· εδώ ανακατασκευάζεται.
+ */
+describe('getEntityBBox — διάσταση Phase-A1 ανακατασκευάζεται (ADR-746)', () => {
+  it('τα startPoint/endPoint/textPosition δίνουν τα πραγματικά όρια', () => {
+    const legacy = {
+      id: 'd_legacy', type: 'dimension',
+      dimensionEntity: {
+        id: 'd_legacy', type: 'dimension', dimensionType: 'linear', rotation: 0,
+        startPoint: { x: 500, y: 600 }, endPoint: { x: 900, y: 600 }, textPosition: { x: 700, y: 650 },
+      },
+    } as unknown as DxfEntityUnion;
+    const b = getEntityBBox(legacy);
+    expect(b.minX).toBe(500);
+    expect(b.maxX).toBe(900);
+    expect(b).not.toEqual({ minX: -1e6, minY: -1e6, maxX: 1e6, maxY: 1e6 });
   });
 });
 

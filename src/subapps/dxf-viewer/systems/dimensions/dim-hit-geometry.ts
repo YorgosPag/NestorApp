@@ -43,6 +43,8 @@ import {
   pointToCircleDistance,
 } from '../../rendering/entities/shared/geometry-utils';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των σημείων ορισμού (ποτέ δεν πετάει· επισκευάζει Phase-A1 δεδομένα).
+import { dimDefPoints } from './dimension-def-points';
 
 export interface DimHitGeometry {
   /** Dim-line start = perpendicular foot from defPoints[0] onto the dim line. */
@@ -62,7 +64,9 @@ export function computeDimHitGeometry(entity: DimensionEntity): DimHitGeometry |
   const axis = resolveDimAxis(entity);
   if (!axis) return null;
 
-  const pts = entity.defPoints;
+  // ADR-746 — SSoT ανάγνωσης. Το ωμό `entity.defPoints` εδώ ήταν το **δεύτερο** σημείο που
+  // θα έσκαγε στην ίδια διαδρομή (culling → cull-bounds → εδώ): `undefined.length`.
+  const pts = dimDefPoints(entity);
   if (pts.length < 3) return null;
 
   const footStart = projectOntoLine(pts[0], pts[2], axis);
@@ -90,7 +94,7 @@ function resolveDimAxis(entity: DimensionEntity): Point2D | null {
     return { x: Math.cos(r), y: Math.sin(r) };
   }
   if (entity.dimensionType === 'aligned') {
-    const pts = entity.defPoints;
+    const pts = dimDefPoints(entity); // ADR-746 — ίδιος SSoT αναγνώστης
     if (pts.length < 2) return null;
     const dx = pts[1].x - pts[0].x;
     const dy = pts[1].y - pts[0].y;

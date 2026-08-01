@@ -19,6 +19,10 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
 import { computeDimHitGeometry, buildVariantHitGeometry } from './dim-hit-geometry';
 import type { DimGeometry } from './dim-geometry-builder';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (parse-at-the-boundary + legacy repair +
+// φίλτρο μη-πεπερασμένων). Αντικαθιστά το ωμό `[...dim.defPoints]` που έριχνε ΟΛΟ το raster.
+import { resolveDimDefPoints } from './dimension-def-points';
+import { isValidPointStrict } from '../../rendering/entities/shared/entity-validation-utils';
 
 export interface DimWorldBounds {
   minX: number;
@@ -73,10 +77,19 @@ function collectGeometryPoints(g: DimGeometry, out: Point2D[]): void {
  * (feature + dim-line definition point) + `textMidpoint`, then expands to the hit-geometry SSoT
  * output. Never throws — degenerate/unsupported variants (baseline/continued) fall back to the
  * `defPoints` AABB. Returns `null` only for a dimension with no usable points at all.
+ *
+ * ⚠️ ADR-746 — το «Never throws» ήταν **ψέμα μέχρι 2026-08-01**: το `[...dim.defPoints]` έσκαγε
+ * με `TypeError: not iterable` σε διάσταση χωρίς σημεία, μέσα στο `try` του `DxfBitmapCache`,
+ * ακυρώνοντας το raster **ολόκληρου** του σχεδίου σε κάθε καρέ. Ο ένας από τους δύο καταναλωτές
+ * (`entity-bounds-ssot.dimensionBounds`) είχε ήδη βάλει δικό του `?.defPoints ?` φύλακα αντί να
+ * διορθώσει εδώ — γι' αυτό ο άλλος (viewport culling) έμεινε εκτεθειμένος. Τώρα η υπόσχεση
+ * επιβάλλεται στην πηγή, μέσω του `resolveDimDefPoints` SSoT, και οι φύλακες των call sites φεύγουν.
  */
 export function getDimensionWorldBounds(dim: DimensionEntity): DimWorldBounds | null {
-  const pts: Point2D[] = [...dim.defPoints];
-  if (dim.textMidpoint) pts.push(dim.textMidpoint);
+  const pts: Point2D[] = [...resolveDimDefPoints(dim).points];
+  // `isValidPointStrict`: ένα NaN `textMidpoint` δηλητηριάζει όλο το AABB (Math.min/max → NaN)
+  // → το κουτί γίνεται μη-πεπερασμένο και το culling απαντά σιωπηλά λάθος (ADR-510 Φ5).
+  if (isValidPointStrict(dim?.textMidpoint)) pts.push(dim.textMidpoint as Point2D);
 
   const hit = computeDimHitGeometry(dim); // linear / aligned (pure, style-free)
   if (hit) {

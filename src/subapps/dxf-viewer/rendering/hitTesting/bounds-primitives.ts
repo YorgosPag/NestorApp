@@ -20,6 +20,10 @@ import { createBoundingBox, type BoundingBox } from './Bounds';
 import { textBoxAABB } from '../../bim/text/text-box';
 // ADR-737 §18 — ο SSoT για το ύψος χαρακτήρα (διαβάζει ΠΡΩΤΑ το run του `textNode`).
 import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των σημείων ορισμού διάστασης (+ φίλτρο μη-πεπερασμένων).
+import { dimDefPoints } from '../../systems/dimensions/dimension-def-points';
+import type { DimensionEntity } from '../../types/dimension';
+import { isValidPointStrict } from '../entities/shared/entity-validation-utils';
 import type {
   EntityWithLine,
   EntityWithCircle,
@@ -112,13 +116,12 @@ export function calculateTopoSurfaceBounds(entity: EntityModel, tolerance: numbe
  * The resulting AABB is used for spatial broad-phase (not final hit accept).
  */
 export function calculateDimensionBounds(entity: EntityModel, tolerance: number): BoundingBox | null {
-  type DimLike = {
-    defPoints?: readonly { x: number; y: number }[];
-    textMidpoint?: { x: number; y: number };
-  };
-  const dim = entity as DimLike;
-  const pts: { x: number; y: number }[] = [...(dim.defPoints ?? [])];
-  if (dim.textMidpoint) pts.push(dim.textMidpoint);
+  // ADR-746 — το τοπικό `?? []` που ζούσε εδώ ήταν σωστό αλλά **ιδιωτικό**: ο διπλανός
+  // υπολογιστής ορίων διάστασης (`getDimensionWorldBounds`) δεν το είχε και έριχνε ΟΛΟ το
+  // raster της σκηνής. Ένα ερώτημα, μία αρχή — τώρα και οι δύο ρωτούν τον ίδιο αναγνώστη.
+  const pts: { x: number; y: number }[] = [...dimDefPoints(entity as unknown as DimensionEntity)];
+  const textMidpoint = (entity as { textMidpoint?: unknown }).textMidpoint;
+  if (isValidPointStrict(textMidpoint)) pts.push(textMidpoint);
   return pointsToBounds(pts, tolerance);
 }
 
