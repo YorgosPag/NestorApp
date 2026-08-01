@@ -16,6 +16,7 @@ import type { AuthContext } from '@/lib/auth';
 import type { POVatRate, PurchaseOrderStatus, CreatePurchaseOrderDTO } from '@/types/procurement';
 import { PO_VAT_RATES } from '@/types/procurement';
 import { createPO, getPO, listPOs } from '@/services/procurement';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { findContactByName } from '../../shared/contact-lookup';
 import {
   type AgenticContext,
@@ -286,7 +287,9 @@ export class ProcurementHandler implements ToolHandler {
   ): Promise<import('@/types/procurement').PurchaseOrder | null> {
     // Try direct ID first
     const direct = await getPO(idOrNumber);
-    if (direct && direct.companyId === companyId && !direct.isDeleted) {
+    // ADR-742 §4 — ίδια θετική παγίδα: παραγγελία χωρίς μισθωτή επιστρεφόταν σε
+    // πράκτορα με κενό `companyId`. Ο έλεγχος `direct &&` μένει (null έγγραφο).
+    if (direct && isPayloadOwnedByCompany(direct, companyId) && !direct.isDeleted) {
       return direct;
     }
 
