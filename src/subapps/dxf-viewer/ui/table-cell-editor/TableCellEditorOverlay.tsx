@@ -149,7 +149,7 @@ export interface TableCellEditorOverlayProps {
  * Το `\r\n` πιάνεται ως ένα, αλλιώς κείμενο από Windows θα άφηνε διπλά κενά. Οι διαδοχικές
  * αλλαγές γραμμής επίσης συμπτύσσονται: μια κενή γραμμή στο πρωτότυπο δεν είναι περιεχόμενο.
  */
-function flattenToSingleLine(value: string): string {
+export function flattenToSingleLine(value: string): string {
   return value.replace(/[\r\n]+/gu, ' ');
 }
 

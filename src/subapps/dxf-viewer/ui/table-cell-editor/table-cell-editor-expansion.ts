@@ -174,8 +174,8 @@ function wrappedLineCount(text: string, widthPx: number, measure: TextWidthMeasu
   const available = widthPx - WRAP_SAFETY_PX;
   if (!(available > 0)) return 1;
 
-  let rest = text;
-  let lines = 0;
+  let rest = '';
+  let lines = 1;
   while (rest.length > 0 && lines < MAX_WRAPPED_LINES) {
     lines++;
     const cut = fittingPrefixLengthByWord(rest, available, measure);
