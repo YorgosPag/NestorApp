@@ -54,6 +54,8 @@ import type { Point2D } from '../rendering/types/Types';
 import type { DimensionEntity, DimensionManualBreaks } from '../types/dimension';
 import { isDimensionEntity, type Entity } from '../types/entities';
 import type { LevelSceneWriter } from '../systems/levels/level-scene-accessor';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../systems/dimensions/dimension-def-points';
 
 
 interface ModifyContext {
@@ -144,7 +146,7 @@ export function buildRowMoveCommands(
 ): ICommand[] {
   const commands: ICommand[] = [];
   for (const dim of dims) {
-    const anchor = dim.defPoints[2] ?? { x: 0, y: 0 };
+    const anchor = dimDefPoints(dim)[2] ?? { x: 0, y: 0 }; // ADR-746
     const moved = applyDimensionGripDrag('dim-line-ref', dim, delta, anchor);
     const { patch, previous } = diffDimEntity(dim, moved);
     if (Object.keys(patch).length === 0) continue;

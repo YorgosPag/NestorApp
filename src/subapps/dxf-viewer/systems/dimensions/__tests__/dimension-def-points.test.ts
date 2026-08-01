@@ -38,6 +38,34 @@ describe('resolveDimDefPoints — canonical', () => {
   });
 });
 
+/**
+ * 🚀 ΤΑΥΤΟΤΗΤΑ ΑΝΑΦΟΡΑΣ — ο αναγνώστης καλείται σε ~40 σημεία, ανάμεσά τους **hot path**
+ * (viewport culling: ανά οντότητα, ανά καρέ) και **React memo deps** (`useDimensionGrips`).
+ * Νέος πίνακας σε κάθε κλήση = σκουπίδια GC στα 60 FPS + «άλλαξε» σε κάθε render — ακριβώς η
+ * κλάση «selector `?? []` ⇒ νέος πίνακας ⇒ βρόγχος» (ADR-040/366). Θα αντικαθιστούσα ένα crash
+ * με σιωπηλή διαρροή επιδόσεων. **Το έπιασε το `useDimensionGrips-diff` (toBe), όχι review.**
+ */
+describe('resolveDimDefPoints — μηδέν αλλοκάτωση στην κανονική διαδρομή', () => {
+  it('🚀 άρτιος πίνακας ⇒ επιστρέφεται η ΙΔΙΑ αναφορά (όχι αντίγραφο)', () => {
+    const dim = linearDim();
+    const original = (dim as unknown as { defPoints: unknown }).defPoints;
+    expect(dimDefPoints(dim)).toBe(original);
+    expect(resolveDimDefPoints(dim).points).toBe(original);
+  });
+
+  it('🚀 σταθερή ταυτότητα σε επανειλημμένες κλήσεις (memo deps δεν «αλλάζουν»)', () => {
+    const dim = linearDim();
+    expect(dimDefPoints(dim)).toBe(dimDefPoints(dim));
+  });
+
+  it('αντίγραφο γίνεται ΜΟΝΟ όταν χρειάζεται καθάρισμα (νέα αναφορά, σωστά σημεία)', () => {
+    const dim = linearDim({ defPoints: [{ x: 0, y: 0 }, { x: NaN, y: 0 }] });
+    const original = (dim as unknown as { defPoints: unknown }).defPoints;
+    expect(dimDefPoints(dim)).not.toBe(original);
+    expect(dimDefPoints(dim)).toHaveLength(1);
+  });
+});
+
 describe('resolveDimDefPoints — ο ζωντανός ένοχος: defPoints που δεν είναι iterable', () => {
   // Αυτά ΑΚΡΙΒΩΣ τα σχήματα παρήγαγαν το `is not iterable`.
   it.each([
