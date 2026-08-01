@@ -96,7 +96,7 @@ const BAND_CACHE = new Map<string, CellFontBandPx>();
 function fontBandRatio(font: string): CellFontBandPx {
   // Το κλειδί είναι η γραμματοσειρά με το μέγεθος **κανονικοποιημένο**: αυτό ακριβώς κάνει
   // το cache πεπερασμένο και το ίδιο το ερώτημα ανεξάρτητο από το zoom.
-  const key = font.replace(/\d+(?:\.\d+)?px/, `${BAND_REFERENCE_PX}px`);
+  const key = normalizedFontKey(font);
   const cached = BAND_CACHE.get(key);
   if (cached) return cached;
 
@@ -125,13 +125,72 @@ export function cellFontBandPx(font: string): CellFontBandPx {
   return { ascentPx: ratio.ascentPx * size, descentPx: ratio.descentPx * size };
 }
 
-/** Το πλάτος ενός κειμένου σε px, με τη γραμματοσειρά που θα ζωγραφιστεί. */
+/**
+ * Ο ίδιος κανόνας κανονικοποίησης με το {@link fontBandRatio}: το μέγεθος φεύγει από το
+ * κλειδί, ώστε η ίδια γραμματοσειρά σε **κάθε** zoom να είναι μία εγγραφή.
+ */
+function normalizedFontKey(font: string): string {
+  return font.replace(/\d+(?:\.\d+)?px/, `${BAND_REFERENCE_PX}px`);
+}
+
+/**
+ * 🔴 ADR-739 Φ.Δ βήμα 6 — **το πλάτος ως ΑΝΑΛΟΓΙΑ, όχι ως px**: εδώ κρίνεται το §5.2.
+ *
+ * Ο επεκτεινόμενος επεξεργαστής ρωτά «πόσο πλατύ πρέπει να γίνει το κουτί;» μέσα στο
+ * `projectBox()`, που τρέχει **σε κάθε καρέ** (γι' αυτό ο επεξεργαστής ζουμάρει μαζί με τον
+ * καμβά). Ένα cache με κλειδί το πλήρες αλφαριθμητικό γραμματοσειράς θα αστοχούσε **σε κάθε
+ * καρέ zoom** — μία `measureText` ανά καρέ ανά μετρημένο κείμενο, δηλαδή ακριβώς το σχήμα
+ * «δουλειά ανάλογη του χρόνου» που τιμώρησε ο ADR-735.
+ *
+ * Η απάντηση δεν είναι απομνημόνευση που ελπίζουμε να πετύχει, είναι **αλλαγή της ερώτησης**:
+ * η πρόοδος πένας είναι **γραμμική ως προς το μέγεθος**, οπότε μετράμε μία φορά στα
+ * {@link BAND_REFERENCE_PX} και πολλαπλασιάζουμε. Το κλειδί χάνει το μέγεθος ⇒ **μηδέν**
+ * `measureText` ανά καρέ, δομικά — όχι κατά τύχη. Είναι το ίδιο επιχείρημα που ήδη κάνει το
+ * {@link fontBandRatio} για τη ζώνη ascent/descent, εφαρμοσμένο στην άλλη διάσταση.
+ *
+ * ⚠️ **Φραγμένο επίτηδες.** Κάθε πάτημα πλήκτρου γεννά νέο πρόχειρο ⇒ νέα εγγραφή. Χωρίς
+ * φράγμα, μια μεγάλη συνεδρία γραφής είναι διαρροή μνήμης με το πρόσχημα του cache. Το
+ * `Map` διατηρεί σειρά εισαγωγής, οπότε η παλαιότερη εγγραφή φεύγει πρώτη (FIFO) — και οι
+ * εγγραφές που **όντως** επαναχρησιμοποιούνται ανά καρέ είναι ελάχιστες (το τρέχον πρόχειρο
+ * και τα προθέματά του).
+ */
+const WIDTH_RATIO_CACHE = new Map<string, number>();
+const WIDTH_RATIO_CACHE_MAX = 512;
+
+/** Πόσες φορές ρωτήθηκε **όντως** ο καμβάς — δες {@link __tableCellMeasureCallsForTests}. */
+let measureCalls = 0;
+
+function textWidthRatio(text: string, font: string): number {
+  const key = `${normalizedFontKey(font)} ${text}`;
+  const cached = WIDTH_RATIO_CACHE.get(key);
+  if (cached !== undefined) return cached;
+
+  const ctx = measuringContext();
+  let ratio = text.length * TEXT_METRICS_RATIOS.CHAR_WIDTH_PROPORTIONAL;
+  if (ctx) {
+    ctx.font = normalizedFontKey(font);
+    measureCalls++;
+    const width = ctx.measureText(text).width;
+    if (Number.isFinite(width) && width >= 0) ratio = width / BAND_REFERENCE_PX;
+  }
+
+  if (WIDTH_RATIO_CACHE.size >= WIDTH_RATIO_CACHE_MAX) {
+    const oldest = WIDTH_RATIO_CACHE.keys().next();
+    if (!oldest.done) WIDTH_RATIO_CACHE.delete(oldest.value);
+  }
+  WIDTH_RATIO_CACHE.set(key, ratio);
+  return ratio;
+}
+
+/**
+ * Το πλάτος ενός κειμένου σε px, με τη γραμματοσειρά που θα ζωγραφιστεί.
+ *
+ * Χωρίς καμβά (SSR / jest / worker) πέφτει στην **ονομαστική** εκτίμηση του κεντρικού
+ * `TEXT_METRICS_RATIOS` — ίδια δύο-βάθμια πολιτική με όλο το υπόλοιπο αρχείο. Ποτέ `NaN`.
+ */
 export function cellTextWidthPx(text: string, font: string): number {
   if (!text) return 0;
-  const ctx = measuringContext();
-  if (!ctx) return text.length * fontSizePx(font) * TEXT_METRICS_RATIOS.CHAR_WIDTH_PROPORTIONAL;
-  ctx.font = font;
-  return ctx.measureText(text).width;
+  return textWidthRatio(text, font) * fontSizePx(font);
 }
 
 /**
@@ -163,5 +222,17 @@ export function cellCaretIndexAtPx(text: string, font: string, offsetPx: number)
 /** Test helper — μηδενισμός της απομνημόνευσης ανάμεσα σε tests. */
 export function __resetTableCellTextMetricsForTests(): void {
   BAND_CACHE.clear();
+  WIDTH_RATIO_CACHE.clear();
+  measureCalls = 0;
   sharedCtx = undefined;
+}
+
+/**
+ * Test helper — πόσες φορές ρωτήθηκε **όντως** ο καμβάς για πλάτος. Είναι η **μετρήσιμη**
+ * μορφή του §5.2 («το `projectBox()` δεν κάνει `measureText` ανά καρέ»): ένα test μπορεί να
+ * καλέσει το κουτί N φορές σε διαφορετικά zoom και να απαιτήσει ότι ο μετρητής δεν κουνήθηκε.
+ * Ισχυρισμός χωρίς αριθμό δεν είναι απόδειξη.
+ */
+export function __tableCellMeasureCallsForTests(): number {
+  return measureCalls;
 }

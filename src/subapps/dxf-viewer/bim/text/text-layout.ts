@@ -35,7 +35,7 @@
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { measureTextAdvanceWorld, type TextAdvanceStyle } from '../../text-engine/fonts';
 import type { TextVerticalAnchor } from '../../text-engine/types';
-import { fittingPrefixLengthByChar } from './text-fit';
+import { fittingPrefixLengthByWord } from './text-fit';
 import { sourceLinesOf } from './text-layout-source';
 import { applyParagraphJustification } from './text-layout-justify';
 import { resolveLineSpacingRatio } from './text-lines';
@@ -166,26 +166,17 @@ class LineBuilder {
  * does the same rather than overflowing indefinitely). Returns 0 when nothing fits.
  *
  * ADR-739 Φ.Δ βήμα 5 — το **χαρακτηρο-επίπεδο** σκέλος μετακόμισε στο `text-fit.ts` επειδή
- * απέκτησε δεύτερο καταναλωτή (περικοπή κελιού πίνακα). Η **προτίμηση λέξης** μένει εδώ: την
- * χρειάζεται η αναδίπλωση, ΟΧΙ η περικοπή (βλ. το σχόλιο πολιτικής στο `text-fit.ts`).
+ * απέκτησε δεύτερο καταναλωτή (περικοπή κελιού πίνακα).
+ *
+ * ADR-739 Φ.Δ βήμα 6 — και η **προτίμηση λέξης** μετακόμισε, για τον ίδιο ακριβώς λόγο: ο
+ * επεκτεινόμενος επεξεργαστής κελιού αναδιπλώνει κι αυτός σε όρια λέξης, σε px αντί για
+ * μονάδες σχεδίου. Εδώ μένει **μόνο** το δέσιμο του μετρητή σε αυτό το `piece` — δηλαδή η
+ * μόνη γνώση που είναι όντως τοπική. Ο βρόχος είναι πλέον ΕΝΑΣ (N.18).
  */
 function fittingPrefixLength(text: string, available: number, piece: SourcePiece): number {
-  if (available <= 0) return 0;
-  const measure = (s: string): number => measureTextAdvanceWorld(s, piece.heightWorld, piece.style);
-  if (measure(text) <= available) return text.length;
-
-  // ⚠️ ΠΡΟΣΟΧΗ ΣΤΟ ΚΟΣΤΟΣ: μια αφελής σάρωση χαρακτήρα-χαρακτήρα κάνει O(n) μετρήσεις **ανά
-  // γραμμή** ⇒ O(n²) για μια παράγραφο 2.800 χαρακτήρων, σε κάθε υπολογισμό κουτιού/απόδοσης.
-  // Πρώτα λοιπόν όρια ΛΕΞΕΩΝ (O(λέξεις)), και δυαδική αναζήτηση σε χαρακτήρες **μόνο** όταν μία
-  // και μόνη λέξη είναι φαρδύτερη από ολόκληρη τη στήλη.
-  let lastWordEnd = 0;
-  for (let i = text.indexOf(' '); i >= 0; i = text.indexOf(' ', i + 1)) {
-    if (measure(text.slice(0, i + 1)) > available) break;
-    lastWordEnd = i + 1;
-  }
-  if (lastWordEnd > 0) return lastWordEnd;
-
-  return fittingPrefixLengthByChar(text, available, measure);
+  return fittingPrefixLengthByWord(text, available, (s) =>
+    measureTextAdvanceWorld(s, piece.heightWorld, piece.style),
+  );
 }
 
 /** Append one piece's text to the builder, wrapping at `frame` as needed. */
