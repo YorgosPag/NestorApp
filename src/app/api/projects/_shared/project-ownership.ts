@@ -92,15 +92,24 @@
  * @see ADR-742 §3.3 (κανόνας αποκάλυψης) · §3.4 (ποιος αποφασίζει) · §7.1 (ταυτότητα)
  */
 
-import { createModuleLogger } from '@/lib/telemetry';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { ApiError } from '@/lib/api/api-error-types';
+import type { MaybeTenantOwned } from '@/lib/auth/tenant-ownership';
 import {
-  isPayloadOwnedByCompany,
-  type MaybeTenantOwned,
-} from '@/lib/auth/tenant-ownership';
+  createOwnershipDecision,
+  type ResourceAccessCaller,
+  type ResourceAccessVerdict,
+} from '@/lib/auth/resource-ownership-guard';
 
-const logger = createModuleLogger('ProjectOwnership');
+/**
+ * Η διαδικασία απόφασης, δεμένη στο λεξιλόγιο των έργων.
+ *
+ * 🔄 **2026-08-01 (§7octies)**: η λογική (bypass → owned → denied) μετακόμισε
+ * στο `lib/auth/resource-ownership-guard.ts`. Η Ομάδα 4 χρειαζόταν την **ίδια**
+ * απόφαση για επαφές και κτήρια, και τα τρία αντίγραφα πέρασαν **καθαρά** από
+ * το `jscpd` επειδή τα ονόματα διέφεραν (`projectData`/`contactData`/
+ * `buildingData` = διαφορετικά tokens). Η δημόσια υπογραφή **δεν άλλαξε**.
+ */
+const decide = createOwnershipDecision('Project', 'projectId');
 
 /**
  * Το κείμενο του «δεν βρέθηκε» — **SSoT**.
@@ -141,12 +150,7 @@ export function projectNotFound(): ApiError {
  * module μένει καθαρό, και ο φύλακας δοκιμάζεται με σκέτα αντικείμενα αντί για
  * πλαστό context ολόκληρου του `withAuth`. Κάθε `AuthContext` το ικανοποιεί.
  */
-export interface ProjectAccessCaller {
-  readonly companyId: string;
-  readonly globalRole: string;
-  readonly uid?: string;
-  readonly email?: string | null;
-}
+export type ProjectAccessCaller = ResourceAccessCaller;
 
 /** Τι ρωτήθηκε — μπαίνει στο log ώστε η απόπειρα να εντοπίζεται. */
 export interface ProjectAccessSpec {
@@ -163,13 +167,7 @@ export interface ProjectAccessSpec {
  * boolean σε κλήση ασφαλείας είναι αυτό που ρυθμίζεται λάθος στο review
  * (ADR-742 §3.2).
  */
-export type ProjectAccessVerdict =
-  /** Ανήκει στον καλούντα — η κανονική περίπτωση. */
-  | 'owned'
-  /** Ξένο, αλλά ο καλών έχει **μόνιμο** cross-tenant προνόμιο (ADR-232). */
-  | 'cross-tenant-bypass'
-  /** Ξένο ή χωρίς tenant, και ο καλών δεν δικαιούται να μάθει ότι υπάρχει. */
-  | 'denied';
+export type ProjectAccessVerdict = ResourceAccessVerdict;
 
 /**
  * **Η απόφαση (PDP)** — ολική, χωρίς ρίψη, ώστε κάθε διαδρομή να την επιβάλλει
@@ -193,32 +191,12 @@ export type ProjectAccessVerdict =
  * απουσία tenant** (§4).
  */
 export function checkProjectAccess(spec: ProjectAccessSpec): ProjectAccessVerdict {
-  const { projectData, caller, projectId, action } = spec;
-  const owned = isPayloadOwnedByCompany(projectData, caller.companyId);
-
-  if (isRoleBypass(caller.globalRole)) {
-    if (!owned) {
-      logger.info('[SUPER_ADMIN] Cross-tenant project access', {
-        action,
-        projectId,
-        email: caller.email ?? null,
-        projectCompanyId: projectData?.companyId ?? null,
-      });
-      return 'cross-tenant-bypass';
-    }
-    return 'owned';
-  }
-
-  if (owned) return 'owned';
-
-  logger.warn('TENANT ISOLATION VIOLATION — project access blocked', {
-    action,
-    projectId,
-    uid: caller.uid ?? null,
-    userCompanyId: caller.companyId,
-    projectCompanyId: projectData?.companyId ?? null,
+  return decide({
+    data: spec.projectData,
+    caller: spec.caller,
+    resourceId: spec.projectId,
+    action: spec.action,
   });
-  return 'denied';
 }
 
 /**

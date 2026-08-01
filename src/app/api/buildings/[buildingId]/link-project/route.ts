@@ -30,7 +30,7 @@ import {
   apiSuccess,
   type ApiSuccessResponse,
 } from '@/lib/api/ApiErrorHandler';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { requireBuildingAccess } from '../../_shared/building-ownership';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -118,18 +118,13 @@ export async function POST(
             const buildingData = buildingSnap.data() ?? {};
             existingBuildingData = buildingData;
 
-            // 🔒 TENANT ISOLATION (unless super_admin)
-            const isSuperAdmin = isRoleBypass(ctx.globalRole);
-            if (!isSuperAdmin && buildingData.companyId !== ctx.companyId) {
-              logger.warn('Unauthorized link attempt', {
-                email: ctx.email,
-                buildingId,
-              });
-              throw new ApiError(
-                403,
-                'Unauthorized: Building belongs to different company',
-              );
-            }
+            // 🔒 TENANT ISOLATION (ADR-742 §7octies) — βλ. `_shared/building-ownership`
+            requireBuildingAccess({
+              buildingData,
+              caller: ctx,
+              buildingId,
+              action: 'link-project',
+            });
 
             // Scope guard: only assign to orphans; reject cross-project moves
             if (!isBlank(buildingData.projectId)) {

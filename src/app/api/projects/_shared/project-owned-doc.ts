@@ -19,6 +19,14 @@
  * στο `project-mutations.service.ts` (delete) — η ακριβώς προβλεπόμενη αστοχία
  * του N.18: *κεντρικοποιείς το Α και γράφεις Β+Γ ως δίδυμα*.
  *
+ * 🔄 **2026-08-01 (§7octies)**: η ίδια αστοχία επανεμφανίστηκε **ένα επίπεδο
+ * ψηλότερα**. Η Ομάδα 4 χρειαζόταν τον ίδιο φορτωτή για τις **επαφές**, και το
+ * αντίγραφο θα ήταν δομικά ταυτόσημο — **δίδυμα κεντρικοποιητή**. Η αλυσίδα
+ * μετακόμισε λοιπόν στο {@link loadOwnedDoc} (`lib/auth/owned-doc-loader.ts`)
+ * και **αυτό** το αρχείο κρατά μόνο ό,τι αφορά τα έργα: συλλογή, εργοστάσιο
+ * «δεν βρέθηκε», φύλακας. Η δημόσια υπογραφή **δεν άλλαξε** — οι καλούντες δεν
+ * αγγίχτηκαν.
+ *
  * 🔴 **Ο κίνδυνος δεν είναι οι γραμμές — είναι η ΣΕΙΡΑ.** Αντίγραφο που
  * φορτώνει, δουλεύει, και ρωτά «δικό μου;» **στο τέλος** απαντά κανονικά·
  * απλώς έχει ήδη διαβάσει ξένο έγγραφο. Η διαφορά **δεν φαίνεται πουθενά**:
@@ -43,17 +51,14 @@
 
 import 'server-only';
 
-import type { DocumentData, DocumentReference, Firestore } from 'firebase-admin/firestore';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import type { Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { createModuleLogger } from '@/lib/telemetry';
+import { loadOwnedDoc, type OwnedDoc } from '@/lib/auth/owned-doc-loader';
 import {
   projectNotFound,
   requireProjectAccess,
   type ProjectAccessCaller,
 } from './project-ownership';
-
-const logger = createModuleLogger('ProjectOwnedDoc');
 
 export interface LoadOwnedProjectSpec {
   readonly projectId: string;
@@ -68,33 +73,31 @@ export interface LoadOwnedProjectSpec {
   readonly db?: Firestore;
 }
 
-/** Ό,τι έχει στα χέρια του ο καλών **αφού** ο φύλακας έχει αποφανθεί. */
-export interface OwnedProjectDoc {
-  readonly id: string;
-  /** Για τους χειριστές που γράφουν αμέσως μετά — δεν ξαναχτίζεται το path. */
-  readonly ref: DocumentReference<DocumentData>;
-  /** Το φορτίο **όπως βγήκε από τη βάση** — ποτέ `as Project` (§7.5). */
-  readonly data: DocumentData | undefined;
-}
+/**
+ * Ό,τι έχει στα χέρια του ο καλών **αφού** ο φύλακας έχει αποφανθεί.
+ *
+ * Ταυτόσημο με το γενικό {@link OwnedDoc}· κρατιέται ως **ονομασμένος
+ * συνώνυμος τύπος** ώστε οι υπάρχοντες καλούντες (και τα tests τους) να μην
+ * αγγιχτούν από τη μετακόμιση της αλυσίδας.
+ */
+export type OwnedProjectDoc = OwnedDoc;
 
 /**
  * Διαβάζει το έργο και **αμέσως** το κρίνει. Και τα δύο «όχι» — γνήσια απουσία
  * **και** άρνηση ιδιοκτησίας — βγαίνουν από το **ίδιο** εργοστάσιο, οπότε ο
  * καλών δεν μπορεί να τα ξεχωρίσει σε κανένα πεδίο του σύρματος.
  */
-export async function loadOwnedProject(spec: LoadOwnedProjectSpec): Promise<OwnedProjectDoc> {
+export function loadOwnedProject(spec: LoadOwnedProjectSpec): Promise<OwnedProjectDoc> {
   const { projectId, caller, action } = spec;
 
-  const ref = (spec.db ?? getAdminFirestore()).collection(COLLECTIONS.PROJECTS).doc(projectId);
-  const snap = await ref.get();
-
-  if (!snap.exists) {
-    logger.info('Project not found', { action, projectId });
-    throw projectNotFound();
-  }
-
-  const data = snap.data();
-  requireProjectAccess({ projectData: data, caller, projectId, action });
-
-  return { id: snap.id, ref, data };
+  return loadOwnedDoc({
+    collection: COLLECTIONS.PROJECTS,
+    docId: projectId,
+    action,
+    resourceLabel: 'Project',
+    notFound: projectNotFound,
+    assertOwned: (projectData) =>
+      requireProjectAccess({ projectData, caller, projectId, action }),
+    ...(spec.db === undefined ? {} : { db: spec.db }),
+  });
 }
