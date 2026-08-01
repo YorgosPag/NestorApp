@@ -169,9 +169,37 @@ service cloud.firestore {
     match /contact_links/{linkId} {
 
       // 📖 READ: Tenant-scoped, no ownership fallback.
+      //
+      // 🔴 `resource == null` is LOad-BEARING (ADR-745 Φάση Β, 2026-08-01).
+      // Without it NO contact link could ever be created — measured, not theorised:
+      //   `evaluation error at L172:22 for 'get' … Null value error.`
+      // `linkContactToEntity` opens with a point read of the link it is ABOUT to
+      // write (deterministic id → duplicate/reactivate detection). That document
+      // does not exist yet, so `resource` is null and `resource.data.companyId`
+      // raises — which Firestore surfaces as permission-denied, which the
+      // service's catch-all reports as `{ success: false }`. This is why the
+      // collection held 0 documents: the flow was structurally impossible, and
+      // 75 green rules tests never saw it because they seed documents directly
+      // and then read documents that exist.
+      //
+      // Trade-off, stated: a point read of a NON-existent id now succeeds
+      // (returning "not found"), so an authenticated caller can probe whether a
+      // given id exists. Ids are `cl_{contactId}_{type}_{entityId}_{role}` over
+      // nanoid-based enterprise ids, so probing requires already knowing two ids
+      // from the target tenant. A denial here protects nothing — a missing
+      // document carries no data — while costing the entire write path.
+      //
+      // Order matters twice over:
+      //   - `isSuperAdminOnly()` stays the FIRST leg (ADR-195 Phase 10 shape,
+      //     enforced by CHECK 3.16's rule-shape validator).
+      //   - the null leg changes NOTHING for `list`: a query only evaluates this
+      //     rule against documents it actually returns, so `resource` is never
+      //     null there. Tenant isolation on list is untouched — pinned by the
+      //     regression tests in contact-links-flow.integration.test.ts.
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
+                       || resource == null
                        || belongsToCompany(resource.data.companyId)
                      );
 
