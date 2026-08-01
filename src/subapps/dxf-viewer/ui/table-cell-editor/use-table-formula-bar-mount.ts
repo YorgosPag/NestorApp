@@ -51,7 +51,10 @@ export interface UseTableFormulaBarMountParams extends TableCellSessionHandlers 
 export function useTableFormulaBarMount(
   params: UseTableFormulaBarMountParams,
 ): TableFormulaBarMount | null {
-  const { entity, cursor, initialText, containerRef, onCommit, onMove, onClear, onHistory } = params;
+  const {
+    entity, cursor, initialText, containerRef,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll,
+  } = params;
 
   /**
    * Το άγκυρο: η **πάνω-αριστερή γωνία του πίνακα**, όχι του κελιού.
@@ -131,7 +134,9 @@ export function useTableFormulaBarMount(
         onMove,
         onClear,
         onHistory,
+        onExtend,
+        onSelectAll,
       },
     };
-  }, [entity, cursor, anchor, initialText, onCommit, onMove, onClear, onHistory]);
+  }, [entity, cursor, anchor, initialText, onCommit, onMove, onClear, onHistory, onExtend, onSelectAll]);
 }

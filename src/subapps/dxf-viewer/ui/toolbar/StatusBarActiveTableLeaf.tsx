@@ -24,11 +24,17 @@
  * @see state/table-cell-cursor-store.ts — η κατάσταση που διαβάζεται
  */
 
+import { useContext } from 'react';
 import { useTranslation } from '@/i18n';
 import {
   useTableCellCursor,
   type TableCellCursorMode,
 } from '../../state/table-cell-cursor-store';
+// ADR-739 Φ.Δ βήμα 8 — το μέγεθος της επιλογής χρειάζεται το **μοντέλο** (οι συγχωνεύσεις
+// μεγαλώνουν την περιοχή), άρα και τη σκηνή.
+import { LevelsContext } from '../../systems/levels/LevelsSystem';
+import { resolveTableById } from '../table-cell-editor/table-entity-lookup';
+import { resolveTableSelectionSize } from '../table-cell-editor/use-table-range-actions';
 
 interface StatusBarActiveTableLeafProps {
   className?: string;
@@ -46,17 +52,40 @@ const MODE_KEY: Record<TableCellCursorMode, string> = {
   edit: 'table.mode.edit',
 };
 
-/** Inline «Πίνακας · Έτοιμο · Esc για έξοδο» όσο είσαι μέσα στον πίνακα, αλλιώς τίποτα. */
+/** Inline «Πίνακας · Έτοιμο · 3 γραμμές × 2 στήλες · Esc για έξοδο», αλλιώς τίποτα. */
 export function StatusBarActiveTableLeaf({ className, separatorClassName }: StatusBarActiveTableLeafProps) {
   const { t } = useTranslation('dxf-viewer');
   const cursor = useTableCellCursor();
+  /**
+   * 🔴 ADR-739 Φ.Δ βήμα 8 — γιατί εδώ διαβάζεται η **σκηνή** και όχι μόνο ο δρομέας.
+   *
+   * Το μέγεθος της επιλογής **δεν** είναι `|Δγραμμές| × |Δστήλες|`: η περιοχή «κουμπώνει»
+   * ώστε να περικλείει ολόκληρες τις συγχωνεύσεις (§6.4). Σε πίνακα με συγχωνευμένη γραμμή
+   * τίτλου — δηλαδή **και στους δύο** αληθινούς πίνακες της σκηνής — η αφελής αφαίρεση θα
+   * έλεγε «1 × 1» ενώ ο καμβάς θα είχε μαρκάρει τρεις στήλες. Ένας αριθμός στη γραμμή
+   * κατάστασης που διαφωνεί με την οθόνη είναι χειρότερος από κανέναν αριθμό.
+   *
+   * `useContext` απευθείας και **όχι** `useLevelsContext()`: εκείνο πετά σφάλμα εκτός
+   * `LevelsSystem`, και μια γραμμή κατάστασης δεν επιτρέπεται να ρίξει την εφαρμογή επειδή
+   * φιλοξενήθηκε αλλού. Απόν context ⇒ κανένα μέγεθος, όχι κρασάρισμα.
+   *
+   * Καμία συνδρομή στη σκηνή: το μέγεθος αλλάζει μόνο με τον **δρομέα**, που είναι ήδη η
+   * συνδρομή αυτού του φύλλου (ADR-040 — ένα πάτημα πλήκτρου, ποτέ 60fps).
+   */
+  const levels = useContext(LevelsContext);
+  const entity = cursor && levels ? resolveTableById(levels, cursor.entityId) : null;
+  const size = resolveTableSelectionSize(cursor, entity);
+
   if (!cursor) return null;
 
   return (
     <>
       <span className={separatorClassName}>|</span>
       <span className={className}>
-        {t('table.mode.label')} · {t(MODE_KEY[cursor.mode])} · {t('table.mode.hint')}
+        {t('table.mode.label')} · {t(MODE_KEY[cursor.mode])}
+        {size ? ` · ${t('table.range.size', { rows: size.rows, columns: size.columns })}` : ''}
+        {' · '}
+        {t('table.mode.hint')}
       </span>
     </>
   );

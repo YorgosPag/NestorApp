@@ -91,7 +91,7 @@
  * @see ui/inline-editor/use-inline-editor-keys.ts — ο φρουρός «μία φορά» + ο escape-bus
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, type ClipboardEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useInlineEditorKeys } from '../inline-editor/use-inline-editor-keys';
@@ -134,6 +134,15 @@ export interface TableCellEditorOverlayProps extends TableCellSessionHandlers {
    */
   readonly caretIndex?: number;
   readonly anchor: TextEditorAnchor;
+  /**
+   * ADR-739 Φ.Δ βήμα 8 — τα **φυσικά** συμβάντα προχείρου του browser. Δεν είναι πλήκτρα:
+   * δες `use-table-range-actions.ts` για τους τέσσερις λόγους που το `Ctrl+C` **δεν**
+   * αναγνωρίζεται ως `keydown`, και `table-cell-session-types.ts` για το γιατί ζουν εδώ
+   * και όχι στο κοινό συμβόλαιο των δύο πεδίων.
+   */
+  readonly onCopy: (event: ClipboardEvent<HTMLElement>) => void;
+  readonly onCut: (event: ClipboardEvent<HTMLElement>) => void;
+  readonly onPaste: (event: ClipboardEvent<HTMLElement>) => void;
 }
 
 /**
@@ -147,7 +156,10 @@ export function flattenToSingleLine(value: string): string {
 }
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
-  const { mode, draft, initialText, caretIndex, anchor, onCommit, onMove, onClear, onHistory } = props;
+  const {
+    mode, draft, initialText, caretIndex, anchor,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onCopy, onCut, onPaste,
+  } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -205,6 +217,8 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     onMove,
     onClear,
     onHistory,
+    onExtend,
+    onSelectAll,
     onPassthrough: inlineKeyDown,
   });
 
@@ -267,6 +281,14 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        // 🔴 ADR-739 Φ.Δ βήμα 8 — τα **φυσικά** συμβάντα προχείρου του browser, όχι
+        // πλήκτρα. Σε πλοήγηση τα αναλαμβάνει η **περιοχή** (TSV)· σε γραφή τα αφήνουν
+        // αυτούσια στον browser, που αντιγράφει κείμενο **μέσα** στο κελί σωστά και
+        // δωρεάν — μαζί με IME και ελληνικούς τόνους. Η απόφαση ζει στο
+        // `tableClipboardScope`, όχι εδώ.
+        onCopy={onCopy}
+        onCut={onCut}
+        onPaste={onPaste}
         // ΚΑΜΙΑ γωνία, ΚΑΝΕΝΑ περίγραμμα, ΚΑΜΙΑ σκιά εστίασης **όσο το κουτί είναι το κελί**:
         // το κελί έχει ήδη πλαίσιο — το ζωγραφίζει ο καμβάς (`stampTableCellCursor`), στην
         // περιστροφή του πίνακα. Ένα δεύτερο, ευθυγραμμισμένο στην οθόνη, θα κρεμόταν λοξά.

@@ -80,7 +80,10 @@ export interface TableFormulaBarProps extends TableCellSessionHandlers {
 }
 
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
-  const { reference, mode, draft, initialText, anchor, onCommit, onMove, onClear, onHistory } = props;
+  const {
+    reference, mode, draft, initialText, anchor,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll,
+  } = props;
   const { t } = useTranslation('dxf-viewer');
 
   /**
@@ -128,6 +131,8 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
     onMove,
     onClear,
     onHistory,
+    onExtend,
+    onSelectAll,
   });
 
   const handleBlur = useTableCellSessionBlur(handleCommit, closeTableCellCursor);

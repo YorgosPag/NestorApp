@@ -76,6 +76,13 @@ import {
   type TableFormulaBarMount,
 } from './use-table-formula-bar-mount';
 import type { TableCellEditorOverlayProps } from './TableCellEditorOverlay';
+// ADR-739 Φ.Δ βήμα 8 — οι ενέργειες περιοχής ζουν σε δικό τους module: αυτό το αρχείο
+// είναι ήδη στα όρια των 500 γραμμών (N.7.1), και ο διαχωρισμός είναι σημασιολογικός —
+// εδώ «ποιο κελί, πού, με τι όψη», εκεί «ποια κελιά και τι τους κάνω».
+import { useTableRangeActions } from './use-table-range-actions';
+// ADR-739 Φ.Δ βήμα 8 — απλό κλικ μετακινεί το ενεργό κελί, `Shift+κλικ` απλώνει την
+// περιοχή. **Παθητικός** ακροατής: δεν καταναλώνει το συμβάν, δεν αγγίζει τον καμβά.
+import { useTableCellPointer } from './use-table-cell-pointer';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -257,7 +264,7 @@ export function useTableCellDoubleClickEditor(
     [cursor, levelManager],
   );
 
-  const clear = useCallback(() => commitText(''), [commitText]);
+
 
   /**
    * ADR-739 Φ.Δ βήμα 4 — `Ctrl+Z`/`Ctrl+Y` σε **πλοήγηση**, με σημασιολογία Excel.
@@ -308,6 +315,23 @@ export function useTableCellDoubleClickEditor(
    * όχι ανά καρέ.
    */
   const liveEntity = cursor ? resolveTableById(levelManager, cursor.entityId) : null;
+
+  /**
+   * ADR-739 Φ.Δ βήμα 8 — επέκταση / επιλογή όλων / άδειασμα / πρόχειρο.
+   *
+   * Δέχεται τη **ζωντανή** οντότητα που μόλις διαβάστηκε παραπάνω: μια δεύτερη ανάγνωση
+   * σκηνής θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα μέσα στο ίδιο render — ακριβώς το
+   * σφάλμα που περιγράφει το σχόλιο του `liveEntity`.
+   */
+  const rangeActions = useTableRangeActions({ cursor, entity: liveEntity, levelManager, execute });
+
+  useTableCellPointer({
+    cursor,
+    entity: liveEntity,
+    containerRef,
+    transformRef,
+    onSelectTo: rangeActions.selectTo,
+  });
 
   // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο: κείμενο, όψη και αγκύρωση είναι
   // **παράγωγα**, ποτέ αντίγραφα (γι' αυτό το store δεν κρατά κείμενο).
@@ -389,11 +413,19 @@ export function useTableCellDoubleClickEditor(
         anchor,
         onCommit: commitText,
         onMove: move,
-        onClear: clear,
+        // ADR-739 Φ.Δ βήμα 8 — το `Delete` αδειάζει ΟΛΗ την περιοχή (μία εντολή, ένα undo).
+        // Χωρίς επιλογή, η «περιοχή» είναι το ενεργό κελί — ίδιο αποτέλεσμα με πριν, ένας
+        // δρόμος αντί για δύο.
+        onClear: rangeActions.clearSelection,
         onHistory: history,
+        onExtend: rangeActions.extend,
+        onSelectAll: rangeActions.selectAll,
+        onCopy: rangeActions.onCopy,
+        onCut: rangeActions.onCut,
+        onPaste: rangeActions.onPaste,
       },
     };
-  }, [cursor, target, anchor, commitText, move, clear, history]);
+  }, [cursor, target, anchor, commitText, move, history, rangeActions]);
 
   /**
    * 🔴 ADR-739 Φ.Δ βήμα 4 — **Η ΔΗΛΩΣΗ «ΕΙΜΑΙ ΜΕΣΑ ΣΤΟΝ ΠΙΝΑΚΑ»**.
@@ -439,8 +471,10 @@ export function useTableCellDoubleClickEditor(
     containerRef,
     onCommit: commitText,
     onMove: move,
-    onClear: clear,
+    onClear: rangeActions.clearSelection,
     onHistory: history,
+    onExtend: rangeActions.extend,
+    onSelectAll: rangeActions.selectAll,
   });
 
   return useMemo(
