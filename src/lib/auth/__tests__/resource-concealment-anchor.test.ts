@@ -123,8 +123,20 @@ const SRC_FILES = SCANNED_TREES.flatMap((tree) => listTypeScriptFiles(join(proce
  */
 const HALF_WRITTEN_DISGUISE = /Access denied - /;
 
-/** Χειρόγραφη σύγκριση ιδιοκτησίας — αυτό που αντικαθιστά ο SSoT. */
-const HAND_ROLLED_OWNERSHIP = /\.companyId\s*!==\s*ctx\.companyId/;
+/**
+ * Χειρόγραφη σύγκριση ιδιοκτησίας — αυτό που αντικαθιστά ο SSoT.
+ *
+ * 🔴 **Δύο μορφές, όχι μία** (μετρημένο 2026-08-01, ADR-742 §7decies.3): η
+ * γραφή `data?.[FIELDS.COMPANY_ID] !== ctx.companyId` κάνει **ακριβώς** το ίδιο
+ * και **δεν πιανόταν**. Δύο σημεία της Ομάδας 4 ήταν γραμμένα έτσι και τα
+ * έχασαν **τρεις** σαρώσεις (§7octies.2α)· ένα **τρίτο** —
+ * `communications/share-to-channel`, πόρος `contact` σε **άλλο δέντρο** —
+ * επέζησε ολόκληρης της Ομάδας 4 και βρέθηκε μόνο όταν η μορφή προστέθηκε εδώ.
+ *
+ * *Το grep μετρά τη ΜΟΡΦΗ που έψαξες, όχι το φαινόμενο* (μάθημα #1) — και αυτό
+ * ισχύει **και για το ίδιο το gate**.
+ */
+const HAND_ROLLED_OWNERSHIP = /(\.companyId|\[FIELDS\.COMPANY_ID\])\s*!==\s*ctx\.companyId/;
 
 /**
  * Πόροι των οποίων η μεταμφίεση έχει **ολοκληρωθεί**. Ο κατάλογος **μεγαλώνει**
@@ -135,16 +147,34 @@ const CONCEALED_RESOURCES = [
     label: 'project',
     dir: 'src/app/api/projects/',
     notFoundMessage: 'Project not found',
+    minFiles: 28,
   },
   {
     label: 'contact',
     dir: 'src/app/api/contacts/',
     notFoundMessage: 'Contact not found',
+    minFiles: 26,
   },
   {
     label: 'building',
     dir: 'src/app/api/buildings/',
     notFoundMessage: 'Building not found',
+    minFiles: 19,
+  },
+  {
+    label: 'message',
+    dir: 'src/app/api/messages/',
+    notFoundMessage: 'Message not found',
+    minFiles: 6,
+  },
+  {
+    // ⚠️ Το γνήσιο μήνυμα **παρεμβάλλει το id** (`Conversation {id} not found`),
+    // οπότε το σταθερό κομμάτι είναι το **πρόθεμα**. Το id δεν είναι διαρροή:
+    // ο καλών το έγραψε ο ίδιος στη διαδρομή (§7septies.3 — άρνηση παραμέτρου).
+    label: 'conversation',
+    dir: 'src/app/api/conversations/',
+    notFoundMessage: 'Conversation ',
+    minFiles: 5,
   },
 ] as const;
 
@@ -169,13 +199,41 @@ const CONCEALED_RESOURCES = [
  * ο πόρος μετακομίζει στο {@link CONCEALED_RESOURCES}.
  */
 const NOT_YET_MIGRATED = [
-  { label: 'message (Ομάδα 5)', dir: 'src/app/api/messages/', handRolledHits: 4 },
-  { label: 'conversation (Ομάδα 5)', dir: 'src/app/api/conversations/', handRolledHits: 2 },
   { label: 'dxf level/style (Ομάδα 6)', dir: 'src/app/api/dxf-levels/', handRolledHits: 1 },
   { label: 'floorplan (Ομάδα 6)', dir: 'src/app/api/floorplans/', handRolledHits: 2 },
   // ⚠️ Μετρώνται **ΑΡΧΕΙΑ**, όχι σημεία: το `parking/route.ts` έχει δύο
   // συγκρίσεις (γρ. 98 με bypass, γρ. 214 **χωρίς**) και προσμετράται ως ένα.
   { label: 'parking (Ομάδα 6)', dir: 'src/app/api/parking/', handRolledHits: 1 },
+] as const;
+
+/**
+ * 🔴🔴 Η **ΚΑΘΟΛΙΚΗ** απογραφή — και γιατί ο κατάλογος ανά φάκελο δεν αρκεί
+ * (ADR-742 §7decies.3)
+ *
+ * Ο έλεγχος «καμία διαδρομή **του φακέλου** δεν γράφει τη σύγκριση» αναπαράγει,
+ * **μέσα στο ίδιο το gate**, ακριβώς το λάθος που κλείνει η §7septies: το
+ * μαντείο είναι ιδιότητα **ΠΟΡΟΥ**, όχι φακέλου. Ο πόρος `contact` δηλωνόταν
+ * μεταναστευμένος ενώ το `communications/share-to-channel` — άλλο δέντρο —
+ * κρατούσε ζωντανή τη δική του σύγκριση **και** το δικό του 403.
+ *
+ * ⇒ Εδώ δηλώνεται η **πλήρης λίστα αρχείων** που επιτρέπεται να την περιέχουν,
+ * με **ισότητα**. Νέο αρχείο οπουδήποτε στα σαρωμένα δέντρα σπάει το gate,
+ * ακόμη κι αν ο φάκελός του δεν ανήκει σε κανέναν δηλωμένο πόρο.
+ *
+ * Μετρημένο 2026-08-01 μετά την Ομάδα 5: **9 αρχεία, όλα Ομάδα 6**.
+ */
+const HAND_ROLLED_INVENTORY = [
+  'src/app/api/dxf-dimension-styles/dxf-dimension-styles.handlers.ts',
+  'src/app/api/dxf-levels/dxf-levels.handlers.ts',
+  // ⛔ Δηλωμένα ΕΞΩ από τη μετανάστευση (§7ter.1): φίλτρο **λίστας** πάνω σε
+  // ήδη tenant-scoped ερώτημα — δεν είναι σημείο απόφασης αποκάλυψης.
+  'src/app/api/floorplan-overlays/floorplan-overlays.handlers.ts',
+  'src/app/api/floorplans/process/route.ts',
+  'src/app/api/floorplans/scene/route.ts',
+  'src/app/api/floors/floors.shared.ts',
+  'src/app/api/parking/route.ts',
+  'src/app/api/procurement/[poId]/pdf/route.ts',
+  'src/app/api/quotes/[id]/notify-vendor/route.ts',
 ] as const;
 
 // ============================================================================
@@ -234,8 +292,11 @@ describe.each(CONCEALED_RESOURCES)(
   (resource) => {
     const owned = SRC_FILES.filter((f) => f.path.startsWith(resource.dir));
 
+    // Το κατώφλι είναι **μετρημένο ανά πόρο** (2026-08-01), όχι αυθαίρετο: ένα
+    // κοινό «>5» θα ήταν ψευδώς αυστηρό για μικρούς πόρους και ψευδώς χαλαρό
+    // για μεγάλους — και σε καμία περίπτωση δεν θα έλεγε τι μετρήθηκε.
     it('υπάρχουν διαδρομές να ελεγχθούν (φύλακας κατά σιωπηλά άδειας σάρωσης)', () => {
-      expect(owned.length).toBeGreaterThan(5);
+      expect(owned.length).toBeGreaterThanOrEqual(resource.minFiles);
     });
 
     it('🔴 καμία διαδρομή δεν γράφει τη μισογραμμένη μεταμφίεση', () => {
@@ -293,6 +354,19 @@ describe('🔴 ΤΙ ΜΕΝΕΙ — το πράσινο ΔΕΝ σημαίνει �
       expect(hits.length).toBe(handRolledHits);
     },
   );
+
+  /**
+   * 🔴🔴 Το gate που **έλειπε**: καθολική ισότητα, όχι ανά φάκελο.
+   *
+   * Έπιασε το `communications/share-to-channel` — πόρος `contact` σε δέντρο που
+   * κανένας δηλωμένος πόρος δεν κάλυπτε, ζωντανό μετά από **ολόκληρη** την
+   * Ομάδα 4 (§7decies.3).
+   */
+  it('🔴🔴 η ΚΑΘΟΛΙΚΗ απογραφή χειρόγραφων συγκρίσεων είναι ΑΚΡΙΒΩΣ η δηλωμένη', () => {
+    const found = SRC_FILES.filter((f) => HAND_ROLLED_OWNERSHIP.test(f.source)).map((f) => f.path);
+
+    expect([...found].sort()).toEqual([...HAND_ROLLED_INVENTORY].sort());
+  });
 
   it('🔴 ο κατάλογος των ΜΗ μεταναστευμένων δεν είναι άδειος όσο υπάρχουν ομάδες', () => {
     // Φύλακας κατά της σιωπηλής εκκένωσης: αν κάποιος «καθαρίσει» τον κατάλογο
