@@ -13,25 +13,44 @@
  *
  * ── Η γραμμή που ΧΩΡΙΖΕΙ τα δύο (και γιατί δεν είναι λεπτομέρεια) ────────────────────────
  * Ο **χάρακας** είναι κοινός· η **πολιτική** όχι:
- *   - Η αναδίπλωση προτιμά όριο **λέξης** (μια λέξη κομμένη στη μέση και συνεχισμένη στην
- *     επόμενη γραμμή είναι αναγνωστικά λάθος).
- *   - Η περικοπή κόβει σε **χαρακτήρα** (η λέξη ΔΕΝ συνεχίζεται πουθενά· κόβοντας σε όριο
- *     λέξης πετάς ολόκληρη τη λέξη και δείχνεις πολύ λιγότερο απ' όσο χωρούσε — το
- *     τεκμηριωμένο παράπονο για το `Truncate text` της Figma, που κόβει ανά λέξη).
- * Γι' αυτό εδώ ζει **μόνο** το χαρακτηρο-επίπεδο ερώτημα· η προτίμηση λέξης μένει στον
- * καλούντα που τη χρειάζεται.
+ *   - Η αναδίπλωση προτιμά όριο **λέξης** ({@link fittingPrefixLengthByWord}) — μια λέξη
+ *     κομμένη στη μέση και συνεχισμένη στην επόμενη γραμμή είναι αναγνωστικά λάθος.
+ *   - Η περικοπή κόβει σε **χαρακτήρα** ({@link fittingPrefixLengthByChar}) — η λέξη ΔΕΝ
+ *     συνεχίζεται πουθενά· κόβοντας σε όριο λέξης πετάς ολόκληρη τη λέξη και δείχνεις πολύ
+ *     λιγότερο απ' όσο χωρούσε (το τεκμηριωμένο παράπονο για το `Truncate text` της Figma).
  *
  * Καθαρό: ο μετρητής **ενίεται**, ώστε το module να μην ξέρει ούτε γραμματοσειρές ούτε
- * μονάδες — ο καλών φέρνει το SSoT του (`measureTextAdvanceWorld` και στις δύο περιπτώσεις
- * σήμερα· ποτέ δεύτερος measurer, N.18).
+ * μονάδες. Οι καλούντες φέρνουν το SSoT τους: `measureTextAdvanceWorld` (μονάδες σχεδίου)
+ * ή `cellTextWidthPx` (px του browser). Ποτέ δεύτερος measurer μέσα εδώ (N.18).
  *
  * @module subapps/dxf-viewer/bim/text/text-fit
- * @see bim/text/text-layout.ts — καταναλωτής 1 (αναδίπλωση MTEXT)
- * @see bim/table/table-cell-overflow.ts — καταναλωτής 2 (περικοπή κελιού)
+ * @see bim/text/text-layout.ts — καταναλωτής 1 (αναδίπλωση MTEXT, ανά λέξη)
+ * @see bim/table/table-cell-overflow.ts — καταναλωτής 2 (περικοπή κελιού, ανά χαρακτήρα)
+ * @see ui/table-cell-editor/table-cell-editor-expansion.ts — καταναλωτής 3 (αναδίπλωση του
+ *   επεκτεταμένου επεξεργαστή σε px, ADR-739 Φ.Δ βήμα 6 — ανά λέξη)
  */
 
 /** Πλάτος ενός αλφαριθμητικού στις μονάδες του καλούντος. Καθαρή, ντετερμινιστική. */
 export type TextWidthMeasure = (text: string) => number;
+
+/**
+ * Οι τρεις περιπτώσεις που απαντιούνται **χωρίς καμία αναζήτηση** — κοινές και στις δύο
+ * πολιτικές κοπής. `null` σημαίνει «χρειάζεται πραγματική αναζήτηση».
+ *
+ * Ζει χωριστά επειδή είναι **η ίδια απόφαση**, όχι επειδή είναι λίγες γραμμές: αν αύριο η
+ * απάντηση για το κενό κείμενο ή για το μηδενικό πλάτος αλλάξει, πρέπει να αλλάξει **μία**
+ * φορά. Η εξαγωγή έγινε αφού το CHECK 3.28 (jscpd, ADR-584) το εντόπισε ως δίδυμο μέσα στο
+ * ίδιο αρχείο — ακριβώς η δουλειά για την οποία υπάρχει ο έλεγχος.
+ *
+ * ⚠️ Το `!(available > 0)` και όχι `available <= 0`: πιάνει και το `NaN`, που αλλιώς θα
+ * περνούσε σε δυαδική αναζήτηση με ασαφή τερματισμό.
+ */
+function trivialFit(text: string, available: number, measure: TextWidthMeasure): number | null {
+  if (!text) return 0;
+  if (!(available > 0)) return 0;
+  if (measure(text) <= available) return text.length;
+  return null;
+}
 
 /**
  * Το μήκος του **μεγαλύτερου προθέματος** του `text` που χωρά σε `available` — σε επίπεδο
@@ -54,9 +73,8 @@ export function fittingPrefixLengthByChar(
   available: number,
   measure: TextWidthMeasure,
 ): number {
-  if (!text) return 0;
-  if (!(available > 0)) return 0;
-  if (measure(text) <= available) return text.length;
+  const trivial = trivialFit(text, available, measure);
+  if (trivial !== null) return trivial;
 
   let lo = 0;
   let hi = text.length;
@@ -66,4 +84,41 @@ export function fittingPrefixLengthByChar(
     else hi = mid - 1;
   }
   return lo;
+}
+
+/**
+ * Το ίδιο ερώτημα, με **προτίμηση σε όριο λέξης**: το μεγαλύτερο πρόθεμα που χωρά και
+ * τελειώνει σε κενό — αλλιώς, όταν **μία και μόνη λέξη** είναι φαρδύτερη από ολόκληρο το
+ * διαθέσιμο πλάτος, πέφτει πίσω στην κοπή χαρακτήρα ({@link fittingPrefixLengthByChar}).
+ *
+ * Το επιστρεφόμενο μήκος **περιλαμβάνει** το κενό στο οποίο έσπασε η γραμμή. Ο καλών
+ * αποφασίζει τι το κάνει: η αναδίπλωση MTEXT και ο επεκτεινόμενος επεξεργαστής το **ρίχνουν**
+ * και από τις δύο πλευρές (διαχωριστικό, όχι περιεχόμενο) — αλλά η απόφαση είναι δική τους,
+ * γιατί ένας τρίτος καλών μπορεί να θέλει το ωμό όριο.
+ *
+ * ⚠️ **Πρώτα λέξεις, μετά χαρακτήρες — και όχι το αντίστροφο.** Η σάρωση ορίων λέξης είναι
+ * O(λέξεις) μετρήσεις· η δυαδική αναζήτηση χαρακτήρα O(log χαρακτήρες). Η σειρά επιλέγεται
+ * ώστε η **συνηθισμένη** περίπτωση (υπάρχει όριο λέξης) να μην πληρώνει ποτέ τη δεύτερη.
+ *
+ * 🔴 Γεννήθηκε ως **εξαγωγή**, όχι ως νέα γνώση: ο βρόχος ζούσε ιδιωτικός μέσα στο
+ * `text-layout.ts` (`fittingPrefixLength`) και απέκτησε δεύτερο καταναλωτή στο ADR-739 Φ.Δ
+ * βήμα 6. Ένα δεύτερο αντίγραφο θα ήταν ακριβώς ο structural clone που πιάνει το CHECK 3.28
+ * (jscpd, ADR-584) — **ανεξάρτητα ονόματος**.
+ */
+export function fittingPrefixLengthByWord(
+  text: string,
+  available: number,
+  measure: TextWidthMeasure,
+): number {
+  const trivial = trivialFit(text, available, measure);
+  if (trivial !== null) return trivial;
+
+  let lastWordEnd = 0;
+  for (let i = text.indexOf(' '); i >= 0; i = text.indexOf(' ', i + 1)) {
+    if (measure(text.slice(0, i + 1)) > available) break;
+    lastWordEnd = i + 1;
+  }
+  if (lastWordEnd > 0) return lastWordEnd;
+
+  return fittingPrefixLengthByChar(text, available, measure);
 }
