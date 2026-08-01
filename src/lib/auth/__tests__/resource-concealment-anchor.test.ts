@@ -139,6 +139,29 @@ const HALF_WRITTEN_DISGUISE = /Access denied - /;
 const HAND_ROLLED_OWNERSHIP = /(\.companyId|\[FIELDS\.COMPANY_ID\])\s*!==\s*ctx\.companyId/;
 
 /**
+ * **Άρνηση που ΚΑΤΟΝΟΜΑΖΕΙ τον λόγο** — η μεταμφίεση που δεν προσποιείται καν
+ * (ADR-742 §7decies.4).
+ *
+ * Η μισογραμμένη μεταμφίεση ({@link HALF_WRITTEN_DISGUISE}) κρατά σωστό κείμενο
+ * και λάθος κωδικό. **Αυτό** εδώ είναι το αντίθετο άκρο: το μήνυμα λέει στον
+ * καλούντα **γιατί** του αρνήθηκαν — «belongs to a different company», «from
+ * your company» — δηλαδή επιβεβαιώνει ότι το έγγραφο **υπάρχει και ανήκει
+ * αλλού**. Κωδικός σωστός ή λάθος, το κείμενο **είναι** το μαντείο.
+ *
+ * Τρία ζωντανά σημεία το έγραφαν μέχρι τις 2026-08-01: οι δύο διαδρομές
+ * συνομιλιών, το μαζικό `messages/delete` (ως `reason` σε απάντηση 200) και —
+ * το πιο ακριβό — ο **κοινός** `soft-delete-engine`, που εξυπηρετεί έξι
+ * οντότητες και ακύρωνε μόνος του τη μεταμφίεση **τριών** ήδη
+ * «μεταναστευμένων» πόρων.
+ *
+ * ⚠️ Δεν σαρώνει `logger.*` / audit metadata: εκεί η αλήθεια **πρέπει** να
+ * επιβιώνει (§3.4). Γι' αυτό ο έλεγχος κοιτά μόνο κείμενο που φεύγει στο σύρμα
+ * — `ApiError(...)`, `error:`, `reason:`.
+ */
+const REASON_NAMING_DENIAL =
+  /(ApiError\([^)]*|error:\s*|reason:\s*)[^\n]{0,120}(belongs to (a )?different company|from your company)/;
+
+/**
  * Πόροι των οποίων η μεταμφίεση έχει **ολοκληρωθεί**. Ο κατάλογος **μεγαλώνει**
  * καθώς κλείνουν οι ομάδες της Φάσης Γ+Δ· δεν συρρικνώνεται ποτέ.
  */
@@ -366,6 +389,44 @@ describe('🔴 ΤΙ ΜΕΝΕΙ — το πράσινο ΔΕΝ σημαίνει �
     const found = SRC_FILES.filter((f) => HAND_ROLLED_OWNERSHIP.test(f.source)).map((f) => f.path);
 
     expect([...found].sort()).toEqual([...HAND_ROLLED_INVENTORY].sort());
+  });
+
+  /**
+   * 🔴🔴 Καθολικά **μηδέν**, χωρίς κατάλογο εξαιρέσεων.
+   *
+   * Σε αντίθεση με τη χειρόγραφη σύγκριση (που έχει ακόμη 9 νόμιμα σημεία ως τη
+   * λήξη της Ομάδας 6), μια άρνηση που **κατονομάζει τον λόγο** δεν έχει καμία
+   * νόμιμη χρήση στο σύρμα: ό,τι κι αν αποφασίσει ο πόρος, το κείμενο δεν
+   * επιτρέπεται να λέει «ανήκει σε άλλη εταιρεία».
+   */
+  it('🔴🔴 καμία άρνηση στο σύρμα δεν ΚΑΤΟΝΟΜΑΖΕΙ τη διαφορά εταιρείας', () => {
+    const offenders = SRC_FILES.filter((f) => REASON_NAMING_DENIAL.test(f.source)).map((f) => f.path);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('…και ο ανιχνευτής του θα πυροδοτούσε ακόμη', () => {
+    expect(
+      REASON_NAMING_DENIAL.test(
+        "throw new ApiError(403, `Unauthorized: ${config.labelEn} belongs to different company`);",
+      ),
+    ).toBe(true);
+    expect(
+      REASON_NAMING_DENIAL.test(
+        "errors.push({ messageId, reason: 'Unauthorized - message belongs to different company' });",
+      ),
+    ).toBe(true);
+    expect(
+      REASON_NAMING_DENIAL.test(
+        "throw new ApiError(403, 'Unauthorized: You can only access conversations from your company');",
+      ),
+    ).toBe(true);
+    // Το ίχνος ελέγχου **κρατά** την αλήθεια — δεν είναι παράβαση (§3.4).
+    expect(
+      REASON_NAMING_DENIAL.test(
+        "logger.warn('Tenant isolation violation: Policy belongs to different company', { policyId });",
+      ),
+    ).toBe(false);
   });
 
   it('🔴 ο κατάλογος των ΜΗ μεταναστευμένων δεν είναι άδειος όσο υπάρχουν ομάδες', () => {
