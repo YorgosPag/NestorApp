@@ -33,6 +33,22 @@ import type { TableTextMeasurer } from './table-layout-types';
 export const defaultTableTextMeasurer: TableTextMeasurer = (text, heightMm, style) =>
   measureTextAdvanceWorld(text, heightMm, { fontFamily: style.fontFamily, bold: style.bold });
 
+/**
+ * Ο μετρητής **αυτής** της κλήσης διάταξης — η μία ανάγνωση της επιλογής.
+ *
+ * ADR-739 Φ.Δ βήμα 5: το `measure` έπαψε να αφορά μόνο το στάδιο μέτρησης. Η **περικοπή**
+ * (στάδιο `place`) οφείλει να ρωτήσει τον **ίδιο** μετρητή που αποφάσισε τα πλάτη στηλών —
+ * αλλιώς «χωράει» και «κόβεται» απαντιούνται από δύο διαφορετικά όργανα και ένα κελί μπορεί
+ * να κόβεται ενώ η στήλη είχε μετρηθεί αρκετά πλατιά (ή το αντίστροφο). Δύο σημεία που
+ * έγραφαν `options?.measureText ?? defaultTableTextMeasurer` θα ήταν δύο σημεία που μπορούν
+ * να αποκλίνουν· εδώ γράφεται **μία** φορά.
+ */
+export function resolveTableTextMeasurer(options?: {
+  readonly measureText?: TableTextMeasurer;
+}): TableTextMeasurer {
+  return options?.measureText ?? defaultTableTextMeasurer;
+}
+
 /** Πλάτη στηλών και ύψη γραμμών — η έξοδος αυτού του σταδίου. */
 export interface TableMeasurement {
   /** Πλάτος ανά στήλη, στη σειρά του `model.columns`. */
@@ -154,7 +170,7 @@ export function measureTable(
   options?: { readonly availableWidthMm?: number; readonly measureText?: TableTextMeasurer },
 ): TableMeasurement {
   const merges = buildMergeIndex(model);
-  const measure = options?.measureText ?? defaultTableTextMeasurer;
+  const measure = resolveTableTextMeasurer(options);
   return {
     columnWidthsMm: measureColumns(model, style, merges, measure, options?.availableWidthMm),
     rowHeightsMm: measureRows(model, style),

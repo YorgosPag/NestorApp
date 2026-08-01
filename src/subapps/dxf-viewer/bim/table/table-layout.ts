@@ -28,7 +28,14 @@
  * - **Τύποι** (`=SUM(...)`): Φ.Ζ, πίσω από τον adapter του §9.2.
  * - **Table breaking**: Φ.Γ, μαζί με τον renderer που το χρειάζεται — όχι προληπτικά.
  * - **Αναδίπλωση κειμένου**: όταν υπάρξει καταναλωτής. Σήμερα ένα κελί = μία γραμμή,
- *   όπως ακριβώς και ο ADR-622 που αυτή η μηχανή πρόκειται να απορροφήσει (Φ.Β).
+ *   όπως ακριβώς και ο ADR-622 που αυτή η μηχανή πρόκειται να απορροφήσει (Φ.Β). Κείμενο
+ *   που δεν χωρά **περικόπτεται** στο στάδιο `place` (Φ.Δ βήμα 5, `table-cell-overflow.ts`)
+ *   — η αναδίπλωση είναι η επόμενη τιμή του ίδιου διακόπτη, όχι δεύτερος μηχανισμός.
+ * - **Κατακόρυφη περικοπή**: τίποτα. Το ύψος γραμμής είναι πάντα ρητό (`row.heightMm` ή
+ *   `style.defaultRowHeightMm`) και το κείμενο πάντα μία γραμμή ύψους `style.textHeightMm`,
+ *   άρα κατακόρυφο ξεχείλισμα προκύπτει **μόνο** από κακορυθμισμένο στυλ — ποτέ από
+ *   δεδομένα του χρήστη, σε αντίθεση με το οριζόντιο (απόφαση Giorgio 2026-08-01· το
+ *   `table-layout.test.ts` το καρφώνει ώστε η αλλαγή να είναι συνειδητή).
  *
  * @module subapps/dxf-viewer/bim/table/table-layout
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §3, §6
@@ -36,7 +43,7 @@
 
 import type { TableModel } from '../../types/table';
 import type { TableStyle } from './table-style';
-import { measureTable } from './table-layout-measure';
+import { measureTable, resolveTableTextMeasurer } from './table-layout-measure';
 import { columnEdgesMm, placeCells, placeColumns, placeRows, rowEdgesMm } from './table-layout-place';
 import { buildTableBorders } from './table-layout-borders';
 import type { TableLayout, TableLayoutOptions } from './table-layout-types';
@@ -71,7 +78,9 @@ export function layoutTable(
     heightMm: yEdges[yEdges.length - 1],
     columns: placeColumns(model, measurement.columnWidthsMm, xEdges),
     rows: placeRows(model, measurement.rowHeightsMm, yEdges),
-    cells: placeCells(model, style, measurement, xEdges, yEdges),
+    // Ο ΙΔΙΟΣ μετρητής που έκρινε τα πλάτη στηλών κρίνει και την περικοπή (Φ.Δ βήμα 5) —
+    // αλλιώς «χωράει;» και «κόβεται;» απαντιούνται από δύο διαφορετικά όργανα.
+    cells: placeCells(model, style, measurement, xEdges, yEdges, resolveTableTextMeasurer(options)),
     borders: buildTableBorders(model, style, measurement.merges, xEdges, yEdges),
   };
 }

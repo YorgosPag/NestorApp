@@ -18,8 +18,9 @@
 
 import type { ScheduleColumnAlign } from '../schedule/types';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TableCellAlign, TableModel } from '../../types/table';
+import type { TableCellAlign, TableCellOverflow, TableModel } from '../../types/table';
 import { cellKey, cellText } from './table-model-helpers';
+import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overflow';
 import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
 import type { TableMeasurement } from './table-layout-measure';
 import type {
@@ -27,6 +28,7 @@ import type {
   TableColumnLayout,
   TableRectMm,
   TableRowLayout,
+  TableTextMeasurer,
   TableTextRun,
 } from './table-layout-types';
 
@@ -123,25 +125,60 @@ function cellRectMm(
   };
 }
 
-/** Το κείμενο τοποθετημένο· `undefined` όταν το κελί είναι κενό. */
-function placeText(
-  text: string,
-  rect: TableRectMm,
-  align: TableCellAlign,
-  hAlign: TextAlign,
-  style: TableCellStyle,
-): TableTextRun | undefined {
-  if (!text) return undefined;
+/** Ό,τι χρειάζεται το {@link placeText} για ΕΝΑ κελί — μαζεμένο, ώστε η υπογραφή να διαβάζεται. */
+interface PlaceTextInput {
+  /** Το **ακέραιο** κείμενο του μοντέλου· η περικοπή γίνεται εδώ και μόνο για την απόδοση. */
+  readonly text: string;
+  readonly rect: TableRectMm;
+  readonly align: TableCellAlign;
+  readonly hAlign: TextAlign;
+  readonly style: TableCellStyle;
+  readonly overflow: TableCellOverflow;
+  /** `typeof cell.value === 'number'` — βλ. `CellTextFitInput.numeric` για το γιατί. */
+  readonly numeric: boolean;
+  readonly measure: TableTextMeasurer;
+}
+
+/**
+ * Το κείμενο τοποθετημένο· `undefined` όταν το κελί είναι κενό **ή** όταν δεν χώρεσε ούτε
+ * ένας χαρακτήρας (μηδενικό ωφέλιμο πλάτος): ένα run με κενό κείμενο θα ήταν `fillText('')`
+ * σε κάθε καρέ και μια κενή οντότητα TEXT σε κάθε εξαγωγή.
+ *
+ * 🔴 ADR-739 Φ.Δ βήμα 5 — **ΕΔΩ γεννιέται το ορατό κείμενο, και μόνο εδώ.** Και τα τέσσερα
+ * backends διαβάζουν αυτό το `TableTextRun`, οπότε η περικοπή δεν χρειάζεται να επαναληφθεί
+ * (ούτε να θυμηθεί κανείς να την καλέσει) πουθενά αλλού — βλ. `table-cell-overflow.ts`.
+ *
+ * Το ωφέλιμο πλάτος είναι το ορθογώνιο **μείον τα δύο** οριζόντια περιθώρια: το ίδιο ζεύγος
+ * που πρόσθεσε το `naturalCellWidthMm` όταν μετρούσε τη στήλη, και η ίδια απόσταση από την
+ * ακμή που κρατά το `anchorXMm` — άρα το κείμενο σταματά ακριβώς εκεί που θα σταματούσε ένα
+ * κείμενο που «μόλις χωρούσε», σε κάθε στοίχιση.
+ */
+function placeText(input: PlaceTextInput): TableTextRun | undefined {
+  const { rect, align, hAlign, style } = input;
+  if (!input.text) return undefined;
+
+  const visible = resolveVisibleCellText({
+    text: input.text,
+    availableWidthMm: rect.w - style.margins.hMm * 2,
+    style,
+    overflow: input.overflow,
+    numeric: input.numeric,
+    measure: input.measure,
+  });
+  if (!visible.text) return undefined;
+
   return {
     position: {
       x: anchorXMm(rect, hAlign, style.margins.hMm),
       y: cellBaselineYMm(rect, align, style),
     },
-    text,
+    text: visible.text,
     heightMm: style.textHeightMm,
     colorHex: style.textColorHex,
     hAlign,
     bold: style.bold,
+    // Παρόν μόνο όταν αληθεύει — δες τη σημείωση σχήματος στο `TableTextRun.clipped`.
+    ...(visible.clipped && { clipped: true as const }),
   };
 }
 
@@ -155,6 +192,7 @@ export function placeCells(
   measurement: TableMeasurement,
   xEdges: readonly number[],
   yEdges: readonly number[],
+  measure: TableTextMeasurer,
 ): TableCellLayout[] {
   const out: TableCellLayout[] = [];
 
@@ -181,7 +219,17 @@ export function placeCells(
         // Η ΙΔΙΑ τιμή ταξιδεύει και στο κελί και στο run του: το κελί τη χρειάζεται για
         // τον in-cell επεξεργαστή (που ανοίγει και σε **κενό** κελί, όπου run δεν υπάρχει).
         hAlign,
-        text: placeText(cellText(cell), rect, cellStyle.align, hAlign, cellStyle),
+        text: placeText({
+          text: cellText(cell),
+          rect,
+          align: cellStyle.align,
+          hAlign,
+          style: cellStyle,
+          // Ίδια σειρά προτεραιότητας με τη στοίχιση: κελί → στήλη → προεπιλογή.
+          overflow: resolveCellOverflow(cell?.styleOverride?.overflow, column.overflow),
+          numeric: typeof cell?.value === 'number',
+          measure,
+        }),
         rowSpan: span?.rowSpan ?? 1,
         colSpan: span?.colSpan ?? 1,
       });

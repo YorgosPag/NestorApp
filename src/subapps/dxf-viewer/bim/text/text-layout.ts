@@ -35,6 +35,7 @@
 import type { DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import { measureTextAdvanceWorld, type TextAdvanceStyle } from '../../text-engine/fonts';
 import type { TextVerticalAnchor } from '../../text-engine/types';
+import { fittingPrefixLengthByChar } from './text-fit';
 import { sourceLinesOf } from './text-layout-source';
 import { applyParagraphJustification } from './text-layout-justify';
 import { resolveLineSpacingRatio } from './text-lines';
@@ -163,6 +164,10 @@ class LineBuilder {
  * Largest prefix of `text` that fits in `available` world units. Prefers a word boundary;
  * falls back to a character cut when a single word is wider than the whole column (AutoCAD
  * does the same rather than overflowing indefinitely). Returns 0 when nothing fits.
+ *
+ * ADR-739 Φ.Δ βήμα 5 — το **χαρακτηρο-επίπεδο** σκέλος μετακόμισε στο `text-fit.ts` επειδή
+ * απέκτησε δεύτερο καταναλωτή (περικοπή κελιού πίνακα). Η **προτίμηση λέξης** μένει εδώ: την
+ * χρειάζεται η αναδίπλωση, ΟΧΙ η περικοπή (βλ. το σχόλιο πολιτικής στο `text-fit.ts`).
  */
 function fittingPrefixLength(text: string, available: number, piece: SourcePiece): number {
   if (available <= 0) return 0;
@@ -180,13 +185,7 @@ function fittingPrefixLength(text: string, available: number, piece: SourcePiece
   }
   if (lastWordEnd > 0) return lastWordEnd;
 
-  let lo = 0;
-  let hi = text.length;
-  while (lo < hi) {
-    const mid = Math.ceil((lo + hi) / 2);
-    if (measure(text.slice(0, mid)) <= available) lo = mid; else hi = mid - 1;
-  }
-  return lo;
+  return fittingPrefixLengthByChar(text, available, measure);
 }
 
 /** Append one piece's text to the builder, wrapping at `frame` as needed. */

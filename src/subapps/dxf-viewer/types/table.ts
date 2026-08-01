@@ -77,12 +77,41 @@ export type TableColumnSizing =
   | { readonly kind: 'hug' }
   | { readonly kind: 'fill'; readonly weight: number };
 
+/**
+ * ADR-739 Φ.Δ βήμα 5 — **τι γίνεται όταν το κείμενο δεν χωρά στο κελί**.
+ *
+ * ## Γιατί είναι δεδομένο και όχι σταθερά κώδικα
+ * Είναι το «Μορφοποίηση κελιών» του Excel και το «Format → Text wrapping» του Google Sheets
+ * (Overflow / Wrap / Clip, **ανά κελί**). **Κανένα CAD δεν το δίνει ανά στήλη** — το AutoCAD
+ * αναδιπλώνει πάντα και δεν έχει καν διακόπτη· το Revit αναδιπλώνει στο φύλλο αλλά όχι στην
+ * όψη schedule. Είναι δηλαδή ένα από τα σημεία όπου ο ΝΕΣΤΩΡ **περνά** τους μεγάλους, με
+ * μοντέλο δοκιμασμένο σε άλλο domain (Giorgio, 2026-08-01: «σταδιακά σε full parity Excel»).
+ *
+ * ## 🔴 Γιατί ΜΙΑ τιμή σήμερα, και όχι όλες οι μελλοντικές δηλωμένες από τώρα
+ * Το `CellKind` δηλώνει από τη Φάση Α τιμές που δεν αξιολογούνται (`formula`/`field`/…) και
+ * αυτό είναι σωστό εκεί: η μηχανή τις **περνά ως τιμή**, δηλαδή κάνει κάτι ορατά ουδέτερο.
+ * Εδώ δεν ισχύει το ίδιο: ένα `'wrap'` που πέφτει σιωπηλά σε περικοπή θα ήταν **ψέμα του
+ * τύπου** — ο χρήστης θα είχε ζητήσει αναδίπλωση και θα έβλεπε κομμένο κείμενο, χωρίς κανένα
+ * σήμα. Κάθε νέα τιμή μπαίνει **μαζί** με τη μηχανή της. Η προσθήκη μέλους σε union δεν είναι
+ * breaking change για ήδη αποθηκευμένους πίνακες (απόν πεδίο ⇒ προεπιλογή).
+ *
+ * Επόμενες, στη φάση τους: `'wrap'` (AutoCAD — αλλάζει ύψος γραμμής, άρα γεωμετρία οντότητας),
+ * `'overflow'` (Excel — ξεχείλισμα σε κενό γείτονα), `'shrink'` (Excel Shrink to Fit).
+ */
+export type TableCellOverflow = 'clip';
+
 export interface TableColumn {
   readonly id: TableColumnId;
   readonly sizing: TableColumnSizing;
   /** ΕΠΑΝΑΧΡΗΣΗ ADR-363 — οδηγεί μορφοποίηση αριθμών + στοίχιση εξαγωγής. */
   readonly valueType: ScheduleColumnValueType;
   readonly align: ScheduleColumnAlign;
+  /**
+   * Προεπιλογή ξεχειλίσματος για **όλα** τα κελιά της στήλης. Απούσα ⇒
+   * `DEFAULT_TABLE_CELL_OVERFLOW`. Νικιέται από την παράκαμψη του κελιού — ίδια σειρά
+   * προτεραιότητας με τη στοίχιση (`TableCellStyleOverride.align` → `TableColumn.align`).
+   */
+  readonly overflow?: TableCellOverflow;
   /**
    * Κλειδί ανάγνωσης από `ExportableTableRow.cells` όταν ο πίνακας τρέφεται από
    * `ExportableTable` (`bound` / `live` mode). Σχεδιασμένο από τώρα κατά την
@@ -179,6 +208,15 @@ export interface TableCell {
  * Δομικά ίδιο με `Partial<TableCellStyle>` (βλ. `bim/table/table-style.ts`), δηλωμένο
  * εδώ ώστε `types/table.ts` → `bim/table/table-style.ts` να μην γίνει κύκλος εισαγωγών.
  * Το στυλ αναφέρεται στο μοντέλο· το μοντέλο δεν αναφέρεται στο στυλ.
+ *
+ * ⚠️ **Μία ρητή εξαίρεση στο «δομικά ίδιο»** (ADR-739 Φ.Δ βήμα 5): το {@link overflow} ΔΕΝ
+ * υπάρχει στο `TableCellStyle`. Το `TableCellStyle` είναι ό,τι χρειάζεται ο **ζωγράφος και ο
+ * μετρητής** — και το ξεχείλισμα δεν είναι ούτε τυπογραφία ούτε χρώμα: είναι **απόφαση
+ * διάταξης**, που καταναλώνεται μία φορά στο στάδιο `place` και δεν ταξιδεύει παρακάτω. Αν
+ * μπορούσε να διαβαστεί από το `TableCellStyle`, κάθε backend θα μπορούσε να το ξαναρωτήσει
+ * και να απαντήσει **αλλιώς** — ακριβώς η απόκλιση που το βήμα 5 υπάρχει για να κλείσει.
+ * Η επίλυση (κελί → στήλη → προεπιλογή) ζει στο `table-layout-place.ts`, όπως και της
+ * στοίχισης.
  */
 export interface TableCellStyleOverride {
   readonly textHeightMm?: number;
@@ -187,6 +225,8 @@ export interface TableCellStyleOverride {
   readonly bold?: boolean;
   /** 9 θέσεις (TL..BR) — DXF group code 170. */
   readonly align?: TableCellAlign;
+  /** Παράκαμψη ξεχειλίσματος **αυτού** του κελιού· νικά το {@link TableColumn.overflow}. */
+  readonly overflow?: TableCellOverflow;
 }
 
 /** Οι 9 θέσεις στοίχισης κελιού του `ACAD_TABLE` (group code 170). */
