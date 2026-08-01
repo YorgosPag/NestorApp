@@ -25,6 +25,7 @@ import { isCdcAuditDuplicate } from "@/config/audit-cdc-coverage";
 // Imported from its defining module rather than through `ApiErrorHandler`,
 // which re-exports it but pulls in the whole `next/server` surface with it.
 import { ApiError } from "@/lib/api/api-error-types";
+import { isPayloadOwnedByCompany } from "@/lib/auth/tenant-ownership";
 import { createModuleLogger } from "@/lib/telemetry";
 import { getErrorMessage } from "@/lib/error-utils";
 import type { SoftDeletableEntityType } from "@/types/soft-deletable";
@@ -364,17 +365,34 @@ async function loadLifecycleTarget(
   const docRef = db.collection(config.collection).doc(entityId);
   const docSnap = await docRef.get();
 
+  /**
+   * 🔴 **ΕΝΑ** «δεν βρέθηκε» για **δύο** κλάδους (ADR-742 §7.1 · §7decies.4).
+   *
+   * Μέχρι τις 2026-08-01 η άρνηση ιδιοκτησίας εδώ ήταν
+   * `403 'Unauthorized: {X} belongs to different company'` — μήνυμα που
+   * **περιγράφει τον λόγο**, δηλαδή επιβεβαιώνει ότι το id υπάρχει. Ο engine
+   * εξυπηρετεί **έξι** οντότητες, ανάμεσά τους `contact`, `project` και
+   * `building`, που ήδη δηλώνονταν μεταμφιεσμένες: **μία** διαδρομή διαγραφής
+   * ακύρωνε τη μεταμφίεση **και των τριών** πόρων, με κάθε άλλο test πράσινο
+   * (§7septies: το μαντείο είναι ιδιότητα ΠΟΡΟΥ).
+   *
+   * Μηδέν ορίσματα ⇒ δεν υπάρχει τιμή που να ξεχωρίζει τους δύο κλάδους.
+   */
+  const notFound = (): ApiError => new ApiError(404, `${config.labelEn} not found`);
+
   if (!docSnap.exists) {
-    throw new ApiError(404, `${config.labelEn} not found`);
+    throw notFound();
   }
 
   const data = docSnap.data();
 
-  if (!isSuperAdmin && data?.companyId && data.companyId !== companyId) {
-    throw new ApiError(
-      403,
-      `Unauthorized: ${config.labelEn} belongs to different company`,
-    );
+  // ⚠️ Δηλωμένη αυστηροποίηση: πριν, ο έλεγχος ήταν
+  // `data?.companyId && data.companyId !== companyId` ⇒ έγγραφο **χωρίς**
+  // `companyId` περνούσε για **οποιονδήποτε**. Το κενό δεν είναι tenant, είναι
+  // **απουσία** tenant (§4) — αυτολεξεί το σφάλμα που έκλεισε δύο φορές αλλού
+  // (§7quinquies στο `rfq-service`, §7octies στο `bank-accounts-server`).
+  if (!isSuperAdmin && !isPayloadOwnedByCompany(data, companyId)) {
+    throw notFound();
   }
 
   return { config, docRef, data };
