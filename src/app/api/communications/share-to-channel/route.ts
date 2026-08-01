@@ -17,8 +17,7 @@ import { NextRequest } from 'next/server';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { FIELDS } from '@/config/firestore-field-constants';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { loadOwnedContact } from '@/app/api/contacts/_shared/contact-owned-doc';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -145,14 +144,26 @@ export const POST = withSensitiveRateLimit(
 
       const db = requireAdminFirestore();
 
-      // Verify contact exists + tenant isolation
-      const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(data.contactId).get();
-      if (!contactDoc.exists) {
-        throw new ApiError(404, 'Contact not found', 'NOT_FOUND');
-      }
-      if (contactDoc.data()?.[FIELDS.COMPANY_ID] !== ctx.companyId) {
-        throw new ApiError(403, 'Access denied', 'FORBIDDEN');
-      }
+      // Verify contact exists + tenant isolation — **μία** πράξη.
+      //
+      // 🔴 Ο πόρος είναι `contacts/{id}` σε **άλλο δέντρο** (§7octies: το μαντείο
+      // είναι ιδιότητα ΠΟΡΟΥ, όχι φακέλου). Πριν τις 2026-08-01 εδώ ζούσε το
+      // **τελευταίο** μαντείο των επαφών: 404 'Contact not found' vs
+      // 403 'Access denied'. Το έχασαν και οι δύο σαρώσεις της Ομάδας 4 επειδή
+      // η σύγκριση ήταν γραμμένη `[FIELDS.COMPANY_ID] !== ctx.companyId`, μορφή
+      // που το grep τους δεν κάλυπτε (§7octies.2α) — ο ανιχνευτής του anchor
+      // την καλύπτει πλέον.
+      //
+      // ⚠️ Δηλωμένη αλλαγή: ο κωδικός σφάλματος του **γνήσιου** 404 ήταν
+      // `'NOT_FOUND'`, ενώ κάθε άλλη διαδρομή του πόρου εκπέμπει `HTTP_404`.
+      // Ενοποιείται προς τα εκεί: διαφορετικό σχήμα ανά διαδρομή για το ίδιο id
+      // είναι ακριβώς το πράγμα που κλείνει η §7septies.
+      await loadOwnedContact({
+        contactId: data.contactId,
+        caller: ctx,
+        action: 'share-to-channel',
+        db,
+      });
 
       const shareId = generateShareId();
       const pipelineChannel = PROVIDER_TO_PIPELINE[data.channel];

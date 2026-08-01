@@ -12,11 +12,10 @@
  */
 
 import { NextRequest } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { loadOwnedMessage } from '../_shared/message-owned-doc';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
@@ -89,20 +88,13 @@ async function handleEditMessage(
     throw new ApiError(400, 'messageId and newText required');
   }
 
-  // 2. Get message document
-  const messageRef = getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageId);
-  const messageDoc = await messageRef.get();
-
-  if (!messageDoc.exists) {
-    throw new ApiError(404, 'Message not found');
-  }
-
-  const messageData = messageDoc.data();
-
-  // 3. Validate tenant isolation
-  if (messageData?.companyId !== ctx.companyId) {
-    throw new ApiError(403, 'Access denied');
-  }
+  // 2+3. Φόρτωσε **και** κρίνε σε μία πράξη: ξένο μήνυμα είναι δυσδιάκριτο από
+  // ανύπαρκτο (ADR-742 §7decies· πριν: 404 'Message not found' vs 403 'Access denied').
+  const { ref: messageRef, data: messageData } = await loadOwnedMessage({
+    messageId,
+    caller: ctx,
+    action: 'edit',
+  });
 
   // 4. Validate ownership (only edit own messages)
   if (messageData?.senderId !== ctx.uid) {

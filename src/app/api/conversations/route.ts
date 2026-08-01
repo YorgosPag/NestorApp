@@ -138,8 +138,14 @@ async function handleListConversations(request: NextRequest, ctx: AuthContext): 
   const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE), 10)));
 
-  // Build cache key
-  const cacheKey = `${CACHE_KEY_PREFIX}:${status || 'all'}:${channel || 'all'}:p${page}:s${pageSize}`;
+  // Build cache key.
+  //
+  // 🔴🔴 Ο ΜΙΣΘΩΤΗΣ ΕΙΝΑΙ ΜΕΡΟΣ ΤΟΥ ΚΛΕΙΔΙΟΥ (ADR-742 §7decies.2): μέχρι τις
+  // 2026-08-01 το ερώτημα από κάτω ήταν σωστά tenant-scoped, αλλά **η μνήμη δεν
+  // ήταν** — δύο εταιρείες με τα ίδια φίλτρα μοιράζονταν **θέση**, οπότε η
+  // δεύτερη έπαιρνε **CACHE HIT** με τις συνομιλίες της πρώτης. Ένα φίλτρο
+  // μισθωτή που το προσπερνά η μνήμη δεν είναι φίλτρο μισθωτή.
+  const cacheKey = `${CACHE_KEY_PREFIX}:${ctx.companyId}:${status || 'all'}:${channel || 'all'}:p${page}:s${pageSize}`;
 
   // Check cache
   const cache = EnterpriseAPICache.getInstance();
