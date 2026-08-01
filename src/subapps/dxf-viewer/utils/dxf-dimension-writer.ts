@@ -46,6 +46,8 @@ import type {
   ContinuedDimensionEntity,
 } from '../types/dimension';
 import type { Point2D } from '../rendering/types/Types';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../systems/dimensions/dimension-def-points';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Types
@@ -126,80 +128,85 @@ function emitDimHeader(
 // Subclass emitters (one per DXF dimension subclass)
 // ──────────────────────────────────────────────────────────────────────────────
 
+/**
+ * ADR-746 — τα `?? ORIGIN` πιο κάτω προστάτευαν από **λείπον στοιχείο**, ΟΧΙ από **λείποντα
+ * πίνακα**: με `defPoints: undefined` το `entity.defPoints[0]` πετάει πριν καν φτάσει το `??`.
+ * Ο εξαγωγέας δεν είναι hot path, οπότε ο SSoT αναγνώστης καλείται ανά σημείο για ομοιομορφία.
+ */
 const ORIGIN: Point2D = { x: 0, y: 0 };
 
 function emitLinearSubclass(sink: DimGroupSink, entity: LinearDimensionEntity, scale: number): void {
   sink(100, 'AcDbAlignedDimension');
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale);
-  emitPt(sink, 14, entity.defPoints[1] ?? ORIGIN, scale);
+  emitPt(sink, 13, dimDefPoints(entity)[0] ?? ORIGIN, scale);
+  emitPt(sink, 14, dimDefPoints(entity)[1] ?? ORIGIN, scale);
   sink(50, entity.rotation ?? 0); // dim line rotation (degrees) — angle, NOT scaled
   sink(100, 'AcDbRotatedDimension');
 }
 
 function emitAlignedSubclass(sink: DimGroupSink, entity: AlignedDimensionEntity, scale: number): void {
   sink(100, 'AcDbAlignedDimension');
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale);
-  emitPt(sink, 14, entity.defPoints[1] ?? ORIGIN, scale);
+  emitPt(sink, 13, dimDefPoints(entity)[0] ?? ORIGIN, scale);
+  emitPt(sink, 14, dimDefPoints(entity)[1] ?? ORIGIN, scale);
   // No rotation code for aligned — alignment is derived from geometry
 }
 
 function emitAngular2LSubclass(sink: DimGroupSink, entity: Angular2LDimensionEntity, scale: number): void {
   sink(100, 'AcDb2LineAngularDimension');
   // AutoCAD DXF spec: line1 = code13→code14, line2 = code10(header ref)→code15, arc = code16.
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale); // line1.a
-  emitPt(sink, 14, entity.defPoints[1] ?? ORIGIN, scale); // line1.b
-  emitPt(sink, 15, entity.defPoints[3] ?? ORIGIN, scale); // line2.b (line2.a is the header code 10)
-  emitPt(sink, 16, entity.defPoints[4] ?? entity.defPoints[3] ?? ORIGIN, scale); // arc point
+  emitPt(sink, 13, dimDefPoints(entity)[0] ?? ORIGIN, scale); // line1.a
+  emitPt(sink, 14, dimDefPoints(entity)[1] ?? ORIGIN, scale); // line1.b
+  emitPt(sink, 15, dimDefPoints(entity)[3] ?? ORIGIN, scale); // line2.b (line2.a is the header code 10)
+  emitPt(sink, 16, dimDefPoints(entity)[4] ?? dimDefPoints(entity)[3] ?? ORIGIN, scale); // arc point
 }
 
 function emitAngular3PSubclass(sink: DimGroupSink, entity: Angular3PDimensionEntity, scale: number): void {
   sink(100, 'AcDb3PointAngularDimension');
   // AutoCAD DXF spec: ray1 = code13, ray2 = code14, vertex = code15, arc = code16.
-  emitPt(sink, 13, entity.defPoints[1] ?? ORIGIN, scale); // ray1End
-  emitPt(sink, 14, entity.defPoints[2] ?? ORIGIN, scale); // ray2End
-  emitPt(sink, 15, entity.defPoints[0] ?? ORIGIN, scale); // vertex
-  emitPt(sink, 16, entity.defPoints[3] ?? ORIGIN, scale); // arcPoint
+  emitPt(sink, 13, dimDefPoints(entity)[1] ?? ORIGIN, scale); // ray1End
+  emitPt(sink, 14, dimDefPoints(entity)[2] ?? ORIGIN, scale); // ray2End
+  emitPt(sink, 15, dimDefPoints(entity)[0] ?? ORIGIN, scale); // vertex
+  emitPt(sink, 16, dimDefPoints(entity)[3] ?? ORIGIN, scale); // arcPoint
 }
 
 function emitRadiusSubclass(sink: DimGroupSink, entity: RadiusDimensionEntity, scale: number): void {
   sink(100, 'AcDbRadialDimension');
-  emitPt(sink, 15, entity.defPoints[1] ?? ORIGIN, scale); // arcPoint
+  emitPt(sink, 15, dimDefPoints(entity)[1] ?? ORIGIN, scale); // arcPoint
 }
 
 function emitDiameterSubclass(sink: DimGroupSink, entity: DiameterDimensionEntity, scale: number): void {
   sink(100, 'AcDbDiametricDimension');
-  emitPt(sink, 15, entity.defPoints[1] ?? ORIGIN, scale); // side2
+  emitPt(sink, 15, dimDefPoints(entity)[1] ?? ORIGIN, scale); // side2
 }
 
 function emitOrdinateSubclass(sink: DimGroupSink, entity: OrdinateDimensionEntity, scale: number): void {
   sink(100, 'AcDbOrdinateDimension');
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale); // featurePoint
-  const leaderEnd = entity.textMidpoint ?? entity.defPoints[0] ?? ORIGIN;
+  emitPt(sink, 13, dimDefPoints(entity)[0] ?? ORIGIN, scale); // featurePoint
+  const leaderEnd = entity.textMidpoint ?? dimDefPoints(entity)[0] ?? ORIGIN;
   emitPt(sink, 14, leaderEnd, scale);
 }
 
 function emitArcLengthSubclass(sink: DimGroupSink, entity: ArcLengthDimensionEntity, scale: number): void {
   sink(100, 'AcDbArcDimension');
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale); // center
-  emitPt(sink, 14, entity.defPoints[1] ?? ORIGIN, scale); // arcStart
-  emitPt(sink, 15, entity.defPoints[2] ?? ORIGIN, scale); // arcEnd
+  emitPt(sink, 13, dimDefPoints(entity)[0] ?? ORIGIN, scale); // center
+  emitPt(sink, 14, dimDefPoints(entity)[1] ?? ORIGIN, scale); // arcStart
+  emitPt(sink, 15, dimDefPoints(entity)[2] ?? ORIGIN, scale); // arcEnd
 }
 
 function emitJoggedRadiusSubclass(sink: DimGroupSink, entity: JoggedRadiusDimensionEntity, scale: number): void {
   sink(100, 'AcDbRadialDimensionLarge');
-  emitPt(sink, 13, entity.defPoints[3] ?? ORIGIN, scale); // jogVertex
-  emitPt(sink, 15, entity.defPoints[1] ?? ORIGIN, scale); // arcPoint
-  emitPt(sink, 16, entity.defPoints[2] ?? ORIGIN, scale); // jogPoint
+  emitPt(sink, 13, dimDefPoints(entity)[3] ?? ORIGIN, scale); // jogVertex
+  emitPt(sink, 15, dimDefPoints(entity)[1] ?? ORIGIN, scale); // arcPoint
+  emitPt(sink, 16, dimDefPoints(entity)[2] ?? ORIGIN, scale); // jogPoint
 }
 
 function emitBaselineSubclass(sink: DimGroupSink, entity: BaselineDimensionEntity, scale: number): void {
   sink(100, 'AcDbAlignedDimension');
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale); // newExtOrigin
+  emitPt(sink, 13, dimDefPoints(entity)[0] ?? ORIGIN, scale); // newExtOrigin
 }
 
 function emitContinuedSubclass(sink: DimGroupSink, entity: ContinuedDimensionEntity, scale: number): void {
   sink(100, 'AcDbAlignedDimension');
-  emitPt(sink, 13, entity.defPoints[0] ?? ORIGIN, scale); // newExtOrigin
+  emitPt(sink, 13, dimDefPoints(entity)[0] ?? ORIGIN, scale); // newExtOrigin
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -281,22 +288,22 @@ function resolveRefPoint(entity: DimensionEntity): Point2D {
     entity.dimensionType === 'baseline' ||
     entity.dimensionType === 'continued'
   ) {
-    return entity.defPoints[2] ?? entity.defPoints[0] ?? { x: 0, y: 0 };
+    return dimDefPoints(entity)[2] ?? dimDefPoints(entity)[0] ?? { x: 0, y: 0 };
   }
   // Angular 2-line: code 10 = line2.a per DXF spec (line2 = code10 → code15).
   if (entity.dimensionType === 'angular2L') {
-    return entity.defPoints[2] ?? entity.defPoints[0] ?? { x: 0, y: 0 };
+    return dimDefPoints(entity)[2] ?? dimDefPoints(entity)[0] ?? { x: 0, y: 0 };
   }
   // Angular 3-point: code 10 = dim-line arc location (== arcPoint here).
   if (entity.dimensionType === 'angular3P') {
-    return entity.defPoints[3] ?? entity.defPoints[0] ?? { x: 0, y: 0 };
+    return dimDefPoints(entity)[3] ?? dimDefPoints(entity)[0] ?? { x: 0, y: 0 };
   }
   // Ordinate: datum is the reference origin (code 10/20)
   if (entity.dimensionType === 'ordinate') {
     return entity.datum;
   }
   // Everything else (radius, diameter, arcLength, joggedRadius): first defPoint
-  return entity.defPoints[0] ?? { x: 0, y: 0 };
+  return dimDefPoints(entity)[0] ?? { x: 0, y: 0 };
 }
 
 function resolveTextCode1(userText: string | undefined): string {

@@ -106,6 +106,42 @@ function applyRadialFit(
 }
 
 /**
+ * ADR-746 (Boy Scout, N.0.2) — το κοινό σχήμα `RadialDimGeometry` των **single-arrow** παραλλαγών
+ * (`radius` + `joggedRadius`). Ήταν δύο byte-ταυτόσημα return blocks 14 γραμμών· διέφεραν **μόνο**
+ * στη φορά που οδηγεί την περιστροφή κειμένου (`outward` vs `jogTailDir`) — και ακριβώς αυτή η
+ * διαφορά είναι που τα έκανε να μοιάζουν «διαφορετικά» και να αντιγραφούν.
+ *
+ * Εντοπίστηκε από το CHECK 3.28 (jscpd) όταν οι δύο συναρτήσεις βρέθηκαν στο ίδιο diff.
+ */
+function singleArrowRadialGeometry(
+  style: DimStyle,
+  fit: ReturnType<typeof applyRadialFit>,
+  geom: {
+    readonly center: Point2D;
+    readonly arcPoint: Point2D;
+    readonly arrowDir: Point2D;
+    /** Η φορά που ορίζει την περιστροφή του κειμένου — η ΜΟΝΗ διαφορά των δύο παραλλαγών. */
+    readonly textDir: Point2D;
+    readonly radius: number;
+  },
+): RadialDimGeometry {
+  return {
+    kind: 'radial',
+    isDiameter: false,
+    centerMarkExtent: style.dimcen,
+    centerPoint: geom.center,
+    leaderPath: fit.leaderPath,
+    arrowAnchor1: geom.arcPoint,
+    arrowAnchor2: geom.arcPoint,
+    arrowDirection1: geom.arrowDir,
+    arrowDirection2: ZERO_VEC,
+    textAnchor: fit.textAnchor,
+    textRotation: computeTextRotation(vectorAngle(geom.textDir), style.dimtih),
+    measurementValue: geom.radius,
+  };
+}
+
+/**
  * Radius dim — single-arrow leader from `arcPoint` extending outward by
  * `leaderLength` (or `style.dimasz * 3` default).
  */
@@ -131,20 +167,9 @@ export function buildRadiusGeometry(
     outsideLeaderPath: [arcPoint, leaderEnd],
     outwardDir: outward,
   });
-  return {
-    kind: 'radial',
-    isDiameter: false,
-    centerMarkExtent: style.dimcen,
-    centerPoint: center,
-    leaderPath: fit.leaderPath,
-    arrowAnchor1: arcPoint,
-    arrowAnchor2: arcPoint,
-    arrowDirection1: outward,
-    arrowDirection2: ZERO_VEC,
-    textAnchor: fit.textAnchor,
-    textRotation: computeTextRotation(vectorAngle(outward), style.dimtih),
-    measurementValue: radius,
-  };
+  return singleArrowRadialGeometry(style, fit, {
+    center, arcPoint, arrowDir: outward, textDir: outward, radius,
+  });
 }
 
 /**
@@ -297,18 +322,9 @@ export function buildJoggedRadiusGeometry(
     outsideLeaderPath: [arcPoint, jogVertex, jogPoint, leaderTail],
     outwardDir: jogTailDir,
   });
-  return {
-    kind: 'radial',
-    isDiameter: false,
-    centerMarkExtent: style.dimcen,
-    centerPoint: center,
-    leaderPath: fit.leaderPath,
-    arrowAnchor1: arcPoint,
-    arrowAnchor2: arcPoint,
-    arrowDirection1: outward,
-    arrowDirection2: ZERO_VEC,
-    textAnchor: fit.textAnchor,
-    textRotation: computeTextRotation(vectorAngle(jogTailDir), style.dimtih),
-    measurementValue: radius,
-  };
+  // ⚠️ Το βέλος δείχνει `outward`, το κείμενο περιστρέφεται κατά `jogTailDir` — η μόνη διαφορά
+  // από την `buildRadiusGeometry`, και ο λόγος που τα δύο blocks έμοιαζαν «διαφορετικά».
+  return singleArrowRadialGeometry(style, fit, {
+    center, arcPoint, arrowDir: outward, textDir: jogTailDir, radius,
+  });
 }

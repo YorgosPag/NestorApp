@@ -21,6 +21,8 @@ import {
   hitTestDimGeometry,
 } from '../../systems/dimensions/dim-hit-geometry';
 import { closestPointOnLine } from './hit-test-entity-tests';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../../systems/dimensions/dimension-def-points';
 
 // ===== TEXT / MTEXT =====
 
@@ -110,7 +112,7 @@ export function hitTestAngleMeasurement(entity: Entity, point: Point2D, toleranc
  *   4. defPoint proximity fallback (catch arrowhead-origin clicks)
  */
 export function hitTestDimension(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
-  const pts = entity.defPoints;
+  const pts = dimDefPoints(entity); // ADR-746
   if (!pts || pts.length === 0) return null;
 
   const hitGeom = computeDimHitGeometry(entity);
@@ -129,7 +131,7 @@ export function hitTestDimension(entity: DimensionEntity, point: Point2D, tolera
 /** defPoint proximity — last-resort hit on raw definition points (vertices,
  *  arrowhead origins). Shared by the per-variant path and the legacy fallback. */
 function hitTestDefPoints(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
-  for (const pt of entity.defPoints) {
+  for (const pt of dimDefPoints(entity)) { // ADR-746
     if (calculateDistance(point, pt) <= tolerance) {
       return { hitType: 'entity', hitPoint: pt };
     }
@@ -145,7 +147,7 @@ function hitTestStraightDim(
   hitGeom: { footStart: Point2D; footEnd: Point2D; textAnchor: Point2D },
 ): Partial<HitTestResult> | null {
   const { footStart, footEnd, textAnchor } = hitGeom;
-  const pts = entity.defPoints;
+  const pts = dimDefPoints(entity); // ADR-746
 
   if (calculateDistance(point, textAnchor) <= tolerance * 1.5) {
     return { hitType: 'entity', hitPoint: textAnchor };
@@ -170,7 +172,7 @@ function hitTestStraightDim(
 /** baseline/continued fallback — legacy defPoints-based approximation (these
  *  need a parent lookup the hit path does not carry, so no rendered geometry). */
 function hitTestLegacyDim(entity: DimensionEntity, point: Point2D, tolerance: number): Partial<HitTestResult> | null {
-  const pts = entity.defPoints;
+  const pts = dimDefPoints(entity); // ADR-746
   const textPt = entity.textMidpoint ?? (pts.length >= 2 ? { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 } : pts[0]);
   if (calculateDistance(point, textPt) <= tolerance * 1.5) {
     return { hitType: 'entity', hitPoint: textPt };

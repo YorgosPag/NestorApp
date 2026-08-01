@@ -84,6 +84,25 @@ interface LegacyDimMirrors {
   readonly textMidpoint?: unknown;
 }
 
+/**
+ * 🚀 Είναι ο πίνακας **ήδη άρτιος** (μη-κενός, κάθε σημείο πεπερασμένο);
+ *
+ * ⚠️ ΓΙΑΤΙ ΕΙΝΑΙ ΚΡΙΣΙΜΟ ΚΑΙ ΟΧΙ ΑΠΛΗ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ: χωρίς αυτόν τον έλεγχο ο αναγνώστης
+ * επιστρέφει **νέο πίνακα σε κάθε κλήση**, και καλείται σε ~40 σημεία — ανάμεσά τους:
+ *   · **hot path**: viewport culling, **ανά οντότητα, ανά καρέ** (~3.000×60/δευτ.) ⇒ σκουπίδια GC·
+ *   · **React memo deps** (`useDimensionGrips`) ⇒ νέα αναφορά = «άλλαξε» σε κάθε render.
+ * Είναι ακριβώς η κλάση «selector `?? []` ⇒ νέος πίνακας ⇒ ατέρμονος βρόγχος» (ADR-040/366) —
+ * θα αντικαθιστούσα ένα crash με μια σιωπηλή διαρροή επιδόσεων. **Το βρήκε test ταυτότητας
+ * αναφοράς** (`useDimensionGrips-diff`), όχι review.
+ *
+ * Στην κανονική διαδρομή: **μηδέν αλλοκάτωση**, O(n) με n ≤ 5.
+ */
+function isPristineDefPoints(raw: readonly unknown[]): boolean {
+  if (raw.length === 0) return false;
+  for (const p of raw) if (!isValidPointStrict(p)) return false;
+  return true;
+}
+
 /** Κρατά μόνο τα σημεία με πεπερασμένες συντεταγμένες· αναφέρει πόσα έπεσαν. */
 function keepFinitePoints(raw: readonly unknown[]): { points: Point2D[]; dropped: number } {
   const points: Point2D[] = [];
@@ -131,6 +150,10 @@ export function resolveDimDefPoints(
 
   const raw: unknown = (dim as { defPoints?: unknown }).defPoints;
   if (Array.isArray(raw)) {
+    // 🚀 FAST PATH — βλ. {@link isPristineDefPoints}: επιστρέφει την **ΙΔΙΑ αναφορά**.
+    if (isPristineDefPoints(raw)) {
+      return { points: raw as readonly Point2D[], source: 'canonical', dropped: 0 };
+    }
     const { points, dropped } = keepFinitePoints(raw);
     if (points.length > 0) return { points, source: 'canonical', dropped };
     // Πίνακας που υπάρχει αλλά δεν έδωσε ούτε ένα χρησιμοποιήσιμο σημείο → δοκίμασε επισκευή.
@@ -147,5 +170,10 @@ export function resolveDimDefPoints(
  * fallback για το κενό (π.χ. υπολογισμοί AABB). Ίδια εγγύηση: πάντα πίνακας, ποτέ throw.
  */
 export function dimDefPoints(dim: DimensionEntity | null | undefined): readonly Point2D[] {
+  // Ο fast path παρακάμπτει ΚΑΙ το wrapper αντικείμενο `{points, source, dropped}` — στην
+  // κανονική διαδρομή αυτή η συνάρτηση δεν αλλοκατώνει **τίποτα** και επιστρέφει την ίδια
+  // αναφορά που της δόθηκε. Βλ. {@link isPristineDefPoints} για το γιατί έχει σημασία.
+  const raw: unknown = dim ? (dim as { defPoints?: unknown }).defPoints : undefined;
+  if (Array.isArray(raw) && isPristineDefPoints(raw)) return raw as readonly Point2D[];
   return resolveDimDefPoints(dim).points;
 }

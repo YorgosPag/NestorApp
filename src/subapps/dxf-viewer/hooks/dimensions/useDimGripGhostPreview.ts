@@ -40,6 +40,8 @@ import type { GhostDrawFrame } from '../../systems/preview/ghost-preview-frame';
 import { paintActionAlignmentTracking } from './dim-alignment-tracking';
 import { getGripAlignmentTracking } from '../../systems/cursor/GripAlignmentTrackingStore';
 import { gripKindOf } from '../grip-kinds';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../../systems/dimensions/dimension-def-points';
 
 export interface UseDimGripGhostPreviewProps {
   /** Live grip-drag snapshot (carries `dimGripKind` only when a dim grip is dragged). */
@@ -73,7 +75,7 @@ export function useDimGripGhostPreview(props: UseDimGripGhostPreviewProps): void
 
     // gripPos = the grip world position at mouseDown (anchorPos) — matches the
     // commit's `grip.position` for the linear rotation handle (preview ≡ commit).
-    const gripPos = dragPreview.anchorPos ?? dimEntity.defPoints[0] ?? { x: 0, y: 0 };
+    const gripPos = dragPreview.anchorPos ?? dimDefPoints(dimEntity)[0] ?? { x: 0, y: 0 }; // ADR-746
     const newDim = applyDimensionGripDrag(dimKind, dimEntity, dragPreview.delta, gripPos);
 
     const sceneUnits = resolveSceneUnits(scene);

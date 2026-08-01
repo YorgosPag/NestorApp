@@ -30,6 +30,8 @@ import type {
   DimensionEntity,
   OrdinateDimensionEntity,
 } from '../../types/dimension';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../../systems/dimensions/dimension-def-points';
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -42,7 +44,7 @@ function patchDefPoint(
   index: number,
   delta: Point2D,
 ): DimensionEntity {
-  const pts = dimEntity.defPoints;
+  const pts = dimDefPoints(dimEntity); // ADR-746
   if (index >= pts.length) return dimEntity;
   const newPts = [...pts] as Point2D[];
   newPts[index] = translatePoint(pts[index], delta);
@@ -51,7 +53,7 @@ function patchDefPoint(
 
 function resolveTextMidpoint(dim: DimensionEntity): Point2D {
   if (dim.textMidpoint) return dim.textMidpoint;
-  const pts = dim.defPoints;
+  const pts = dimDefPoints(dim); // ADR-746
   if (pts.length >= 2) return midpt(pts[0], pts[1]);
   if (pts.length >= 1) return pts[0];
   return { x: 0, y: 0 };
@@ -63,7 +65,7 @@ function resolveTextMidpoint(dim: DimensionEntity): Point2D {
  * `getDimensionGrips`) and never reach here.
  */
 function extraGripPos(dim: DimensionEntity): Point2D | null {
-  const pts = dim.defPoints;
+  const pts = dimDefPoints(dim); // ADR-746
   switch (dim.dimensionType) {
     case 'radius':
     case 'diameter':
@@ -93,7 +95,7 @@ function extraGripPos(dim: DimensionEntity): Point2D | null {
  */
 export function getDimensionGrips(entity: DxfDimension): GripInfo[] {
   const dim = entity.dimensionEntity;
-  const pts = dim.defPoints;
+  const pts = dimDefPoints(dim); // ADR-746
   const id = entity.id;
   const grips: GripInfo[] = [];
 
@@ -199,7 +201,7 @@ export function getDimGripAlignmentAnchors(
   kind: DimensionGripKind,
   dim: DimensionEntity,
 ): Point2D[] | null {
-  const pts = dim.defPoints;
+  const pts = dimDefPoints(dim); // ADR-746
   switch (kind) {
     // Extension-line origins align to their partner origin (H/V/polar from the pair).
     case 'dim-defpoint-0': return pts.length >= 2 ? [pts[1]] : [];
@@ -275,9 +277,14 @@ export function diffDimEntity(
   const patch: DimGripPatch = {};
   const previous: DimGripPatch = {};
 
-  if (!defPointsEq(prev.defPoints, next.defPoints)) {
-    patch.defPoints = next.defPoints;
-    previous.defPoints = prev.defPoints;
+  // ADR-746 — το `defPointsEq` κάνει `a.length` ⇒ ωμό `prev.defPoints` θα έσκαγε το ίδιο.
+  // Παρενέργεια που είναι **θεραπεία**: ένα grip drag πάνω σε διάσταση Phase-A1 κανονικοποιεί
+  // τα σημεία της στην πορεία (ο patch γράφει πάντα πίνακα), αντί να διαιωνίζει το κενό πεδίο.
+  const prevPts = dimDefPoints(prev);
+  const nextPts = dimDefPoints(next);
+  if (!defPointsEq(prevPts, nextPts)) {
+    patch.defPoints = nextPts;
+    previous.defPoints = prevPts;
   }
   if (!pointOptEq(prev.textMidpoint, next.textMidpoint)) {
     patch.textMidpoint = next.textMidpoint;
@@ -303,7 +310,7 @@ function applyExtraGripDrag(
   delta: Point2D,
   gripPos: Point2D,
 ): DimensionEntity {
-  const pts = dimEntity.defPoints;
+  const pts = dimDefPoints(dimEntity); // ADR-746
   switch (dimEntity.dimensionType) {
     // ADR-362 §D9 — linear & aligned: the 5th grip is the 2nd dim-line endpoint
     // (footEnd). Both dim-line grips STRETCH the offset via defPoints[2] (AutoCAD

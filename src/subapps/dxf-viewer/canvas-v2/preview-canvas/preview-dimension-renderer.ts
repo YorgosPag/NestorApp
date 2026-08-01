@@ -52,6 +52,8 @@ import { CAD_UI_COLORS, OPACITY } from '../../config/color-config';
 import { LINE_DASH_PATTERNS } from '../../config/text-rendering-config';
 import { applyOverlayLineStyle } from './overlay-line-style';
 import { projectorScaleAt, type OverlayProjector } from './overlay-projector';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../../systems/dimensions/dimension-def-points';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public types
@@ -103,7 +105,7 @@ export interface PreviewDimensionRenderParams {
 /** Screen px ανά 1 world/scene unit: από τον projector (ADR-544) όταν υπάρχει, αλλιώς `transform.scale`. */
 function viewScaleOf(params: PreviewDimensionRenderParams): number {
   if (!params.project) return params.transform.scale;
-  return projectorScaleAt(params.project, params.entity.defPoints[0] ?? { x: 0, y: 0 });
+  return projectorScaleAt(params.project, dimDefPoints(params.entity)[0] ?? { x: 0, y: 0 }); // ADR-746
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -185,8 +187,8 @@ export function renderPreviewDimension(params: PreviewDimensionRenderParams): vo
   // polyline from the available defPoints so the user sees real-time feedback.
   // Explicit opts.helperPath always wins over auto-derived.
   const autoHelper: readonly Point2D[] | null =
-    !geometry && !opts.helperPath && scaledParams.entity.defPoints.length >= 2
-      ? scaledParams.entity.defPoints
+    !geometry && !opts.helperPath && dimDefPoints(scaledParams.entity).length >= 2 // ADR-746
+      ? dimDefPoints(scaledParams.entity)
       : null;
   const resolvedOpts: ResolvedOpts = autoHelper
     ? { ...opts, helperPath: autoHelper }

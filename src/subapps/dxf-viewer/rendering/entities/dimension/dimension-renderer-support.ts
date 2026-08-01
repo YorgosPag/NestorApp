@@ -44,6 +44,8 @@ import {
 } from '../../../systems/dimensions/dim-hit-geometry';
 import { pointToLineDistance } from '../shared/geometry-utils';
 import { calculateDistance } from '../shared/geometry-rendering-utils';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../../../systems/dimensions/dimension-def-points';
 
 export interface ResolvedDimensionRender {
   readonly entity: DimensionEntity;
@@ -85,7 +87,7 @@ export function dimensionEntityHitTest(entity: EntityModel, point: Point2D, tole
   const e = entity as Entity;
   if (!isDimensionEntity(e)) return false;
   const dim = e as DimensionEntity;
-  const pts = dim.defPoints;
+  const pts = dimDefPoints(dim); // ADR-746
   if (!pts || pts.length === 0) return false;
 
   const hitGeom = computeDimHitGeometry(dim);

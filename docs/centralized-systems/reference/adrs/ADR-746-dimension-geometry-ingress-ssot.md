@@ -129,6 +129,12 @@ sites αφαιρέθηκαν** ώστε να μην ξαναποκλίνουν.
 
 ---
 
+### Στρώμα 1β — 🚀 ταυτότητα αναφοράς: **§8.1** (fast path, μηδέν αλλοκάτωση)
+
+### Στρώμα 4 (πύλη) — **§8**: η μηχανική εγγύηση που χρειάστηκε μετά τη **δεύτερη** έκρηξη
+
+---
+
 ## 4. Γιατί η απομόνωση ΔΕΝ μπήκε στο `DxfRenderer.drawInOrder`
 
 Το «το draw μιας οντότητας πετάει» είναι **διαφορετική κλάση** και παραμένει **ανοιχτή**. Δεν
@@ -150,11 +156,33 @@ sites αφαιρέθηκαν** ώστε να μην ξαναποκλίνουν.
 | `rendering/hitTesting/bounds-primitives.ts` | ο τοπικός `?? []` → SSoT |
 | `rendering/hitTesting/entity-bounds-ssot.ts` | ο τοπικός `?.defPoints ?` φύλακας **αφαιρέθηκε** |
 
+**Σάρωση Β (2026-08-01, §8)** — οι υπόλοιποι **18** αναγνώστες + η πύλη:
+
+| Αρχείο | Αλλαγή |
+|--------|--------|
+| `systems/dimensions/__tests__/defpoints-ssot-gate.test.ts` | **ΝΕΟ** — §8, η πύλη |
+| `systems/dimensions/dimension-def-points.ts` | **fast path** — βλ. §8.1: στην κανονική διαδρομή επιστρέφει την **ΙΔΙΑ αναφορά**, μηδέν αλλοκάτωση |
+| `systems/dimensions/builders/{angular,chained,linear-aligned,ordinate,radial}-builder.ts` | οι ~15 destructuring αναγνώστες του §7/2· **+ de-dup** στο `radial-builder`: δύο return blocks 14 γραμμών (`radius` / `joggedRadius`) διέφεραν **μόνο** στη φορά περιστροφής κειμένου ⇒ `singleArrowRadialGeometry`. Το έπιασε το CHECK 3.28 (jscpd, N.18) όταν οι δύο συναρτήσεις βρέθηκαν στο **ίδιο diff** |
+| `systems/dimensions/{dim-association-service,dim-line-info,dim-snap-geometry,dim-space-engine}.ts` | SSoT |
+| `systems/properties/dimension-property-model.ts` | SSoT |
+| `utils/dxf-dimension-writer.ts` | 27 σημεία — τα `?? ORIGIN` φύλαγαν **λείπον στοιχείο**, όχι λείποντα πίνακα |
+| `rendering/hitTesting/hit-test-annotations.ts` · `rendering/entities/dimension/dimension-renderer-support.ts` | SSoT |
+| `canvas-v2/preview-canvas/preview-dimension-renderer.ts` | SSoT |
+| `core/commands/entity-commands/DimReassociateCommand.ts` | SSoT |
+| `hooks/dimensions/{useDimensionGrips,useDimGripGhostPreview}.ts` · `hooks/useDimensionModify.ts` | SSoT· το `diffDimEntity` **κανονικοποιεί** διάσταση Phase-A1 στην πορεία ενός grip drag |
+
 ## 6. Επαλήθευση
 
-- `npm run test:dimension-resilience` → **44 tests** (19 νέα SSoT + 25 culling)
+- `npm run test:dimension-resilience` → **51 tests / 3 suites** (SSoT + culling + πύλη §8) —
+  ήταν 44 στη Σάρωση Α· +4 πύλη, +3 ταυτότητας αναφοράς (§8.1)
 - Ευρύτερο regression: **731 tests / 54 suites** (`systems/dimensions` + `rendering/hitTesting` + `selection/shared`) — πράσινα
-- `npm run jscpd:diff <7 αρχεία>` (N.18) → **καθαρό, κανένα νέο clone**
+- `npm run jscpd:diff <19 αρχεία>` (N.18) → **καθαρό**. Η Σάρωση Β ανέδειξε **2 προϋπάρχοντα**
+  δίδυμα (δεν τα δημιούργησε — τα **έφερε στο ίδιο diff**, οπότε το CHECK 3.28 τα είδε):
+  · `DimReassociateCommand` `execute`/`undo` — το ίδιο preamble «φέρε τη διάσταση + τη συσχέτιση»
+    (7 γρ.) → `resolveTarget()`·
+  · `radial-builder` `radius`/`joggedRadius` — το ίδιο return block (14 γρ.), με **μοναδική
+    διαφορά** τη φορά περιστροφής κειμένου (`outward` vs `jogTailDir`) → `singleArrowRadialGeometry()`.
+  Διορθώθηκαν επί τόπου (Boy Scout, N.0.2), με τα 83 σχετικά tests πράσινα.
 - ⚠️ Δεν εκτελέστηκε `tsc` — **N.17** (τον κάνει ο Giorgio + το pre-commit hook)
 
 **Regression anchor που έχει σημασία:** το test `«η διάσταση διορθώνεται στη ΡΙΖΑ — δεν φτάνει καν
@@ -169,13 +197,73 @@ sites αφαιρέθηκαν** ώστε να μην ξαναποκλίνουν.
    σωστά ⇒ η πηγή είναι **σύνορο δεδομένων**, όχι δημιουργίας. Το πεδίο `source` το κάνει ορατό:
    `repaired-legacy` σε log ⇒ **δεδομένα προ-ADR-362**· επίμονο `degenerate` ⇒ άλλη, άγνωστη πηγή.
    Ο κώδικας δεν μαντεύει — **επισκευάζει ό,τι μπορεί και αναφέρει τι βρήκε**.
-2. **Οι ~15 destructuring αναγνώστες στους builders** (`const [a,b,c] = entity.defPoints`) δεν
-   άλλαξαν: τρέχουν **μετά** από `computeDimHitGeometry`/guards και δεν εμφανίστηκαν σε stack.
-   Boy-Scout στο επόμενο άγγιγμα (N.0.2).
+2. ~~**Οι ~15 destructuring αναγνώστες στους builders**~~ → ✅ **ΕΚΛΕΙΣΕ στη Σάρωση Β** (§8).
+   Το «Boy-Scout στο επόμενο άγγιγμα» **δεν έφτασε ποτέ**: το δεύτερο crash ήρθε σε λεπτά, όχι σε
+   commits. Γι' αυτό η Σάρωση Β δεν σταμάτησε στους builders — μετέτρεψε **όλους** τους αναγνώστες
+   και έβαλε πύλη ώστε να μη χρειάζεται τρίτη φορά.
 3. **Per-entity isolation στο draw loop** — §4.
+
+---
+
+## 8. Η πύλη — γιατί η πειθαρχία δεν αρκούσε
+
+Η πρώτη σάρωση διόρθωσε **τα δύο σημεία που έσκασαν** και άφησε τα υπόλοιπα ως «Boy-Scout αργότερα»
+(§7/2). Το «αργότερα» ήρθε σε **λίγα λεπτά**, από άλλη διαδρομή:
+
+| # | Σφάλμα | Διαδρομή | Πότε |
+|---|--------|----------|------|
+| 1 | `dim.defPoints is not iterable` | `dimension-cull-bounds` (bitmap cache) | Σάρωση Α |
+| 2 | `Cannot read properties of undefined` | `dim-snap-geometry` (μηχανή έλξης) | **μετά** τη «διόρθωση» |
+
+**Η αρχή:** μια συμφωνία που στηρίζεται σε **πειθαρχία** έχει ήδη σπάσει **τρεις** φορές
+(ADR-716 Φ7 → ADR-736 → ADR-746). Ό,τι πρέπει να ισχύει σε **κάθε νέο αρχείο** πρέπει να είναι
+**μηχανικά ελέγξιμο** — αλλιώς δεν είναι κανόνας, είναι ευχή.
+
+- **Τι μπλοκάρει**: μόνο τις μορφές **ανάγνωσης που όντως πετούν** — `x.defPoints[i]`,
+  `x.defPoints.length`, `[...x.defPoints]`, `for…of`, destructuring, `const pts = x.defPoints;`.
+- **Τι επιτρέπει**: κάθε **γραφή** (`patch.defPoints = …`, `defPoints: geom.defPoints`). Η πρώτη
+  εκδοχή («οτιδήποτε δεν είναι `defPoints:`») παρήγαγε **7 false positives** και θα είχε τη μοίρα
+  κάθε θορυβώδους πύλης: αγνόηση, μετά αφαίρεση. Πήχης N.12: ≤10% false positives.
+- **Allowlist — 4 εγγραφές, καθεμιά με λόγο** που δεν είναι «ξέρω ότι υπάρχει»: ο ίδιος ο SSoT·
+  το `scale-dimension` (το `e.defPoints && {…}` παραλείπει **σκόπιμα** το κλειδί — με `dimDefPoints`
+  θα έγραφε πάντα πίνακα, δηλαδή **αλλαγή σημασιολογίας** σε μετασχηματισμό)· το
+  `run-cutline-dimension` (plan object του ίδιου tick, όχι σύνορο δεδομένων)· το
+  `DimDefPointSnapEngine` (έχει ήδη ρητό `Array.isArray` guard).
+- **Self-test**: η πύλη ελέγχει **τον εαυτό της** — ότι πιάνει και τις 6 επικίνδυνες μορφές και ότι
+  δεν πιάνει τις 6 νόμιμες. Μια πύλη που δεν πιάνει τίποτα δεν είναι πύλη (ADR-587).
+
+### 8.1 Ο fast path — γιατί ένας SSoT αναγνώστης δεν επιτρέπεται να αλλοκατώνει
+
+Με ~40 καλούντες, ο αναγνώστης έγινε **hot path**. Χωρίς έλεγχο «είναι ήδη άρτιος;» επέστρεφε
+**νέο πίνακα σε κάθε κλήση** — και δύο από τους καλούντες τιμωρούν ακριβώς αυτό:
+
+| Καλών | Τι σπάει με νέα αναφορά |
+|-------|-------------------------|
+| viewport culling | ανά **οντότητα**, ανά **καρέ** (~3.000 × 60/δευτ.) ⇒ σκουπίδια GC στον βρόγχο σχεδίασης |
+| `useDimensionGrips` (React memo deps) | νέα αναφορά = «άλλαξε» σε **κάθε** render |
+
+Είναι η κλάση «selector `?? []` ⇒ νέος πίνακας ⇒ ατέρμονος βρόγχος» (ADR-040/366): θα
+αντικαθιστούσαμε ένα **crash** με μια **σιωπηλή διαρροή επιδόσεων** — χειρότερη ανταλλαγή, γιατί η
+δεύτερη δεν εμφανίζεται σε κανένα stack trace. Στην κανονική διαδρομή ο αναγνώστης επιστρέφει πλέον
+την **ίδια αναφορά** που του δόθηκε, παρακάμπτοντας και το wrapper `{points, source, dropped}`:
+**μηδέν αλλοκάτωση**, O(n) με n ≤ 5.
+
+⚠️ **Το βρήκε test ταυτότητας αναφοράς, όχι review.** Η ορθότητα ήταν άψογη και με τον αργό δρόμο —
+η ζημιά ήταν αμιγώς μη-λειτουργική. Αν αγγίξεις τον αναγνώστη, **κράτα τα anchors ταυτότητας
+αναφοράς**: είναι το μόνο όργανο που βλέπει αυτή την κλάση.
+
+**Ένα εύρημα που είναι θεραπεία**: στο `diffDimEntity` το `defPointsEq` έκανε ήδη `a.length` — ωμό
+`prev.defPoints` θα έσκαγε το ίδιο. Περνώντας από τον SSoT, **ένα grip drag πάνω σε διάσταση
+Phase-A1 κανονικοποιεί τα σημεία της στην πορεία** (ο patch γράφει πάντα πίνακα) αντί να διαιωνίζει
+το κενό πεδίο.
 
 ## Changelog
 
+- **2026-08-01 (β)** — **Σάρωση Β + πύλη §8.** Το §7/2 έκλεισε: **18 αρχεία** (5 builders, 4
+  `systems/dimensions`, writer με 27 σημεία, 2 hit-test, preview, command, 3 hooks, property model)
+  πέρασαν στον SSoT. Νέο anchor `defpoints-ssot-gate.test.ts` (**4 tests**, self-test +
+  αιτιολογημένο allowlist 4 εγγραφών) στο `test:dimension-resilience`. Αφορμή: **δεύτερο** crash
+  ίδιας κλάσης, άλλη διαδρομή, λεπτά μετά την «διόρθωση» της Σάρωσης Α.
 - **2026-08-01** — Δημιουργία. Ρίζα του ζωντανού `dim.defPoints is not iterable`: 5 ασύμβατες
   πολιτικές ανάγνωσης, καμία αρχή. Τρία στρώματα (ΕΝΑΣ αναγνώστης + αληθινό «never throws» +
   απομόνωση). Επισκευή Phase-A1 αντί απώλειας. 44 anchors· 731 tests πράσινα· jscpd καθαρό.

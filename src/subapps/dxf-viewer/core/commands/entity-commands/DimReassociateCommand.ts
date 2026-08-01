@@ -19,6 +19,8 @@ import type { DimensionEntity, DimensionAssociation } from '../../../types/dimen
 import type { Point2D } from '../../../rendering/types/Types';
 import { generateEntityId } from '../../../systems/entity-creation/utils';
 import { recomputeAssociatedDefPoint } from '../../../systems/dimensions/dim-association-service';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../../../systems/dimensions/dimension-def-points';
 
 export class DimReassociateCommand implements ICommand {
   readonly id: string;
@@ -39,15 +41,25 @@ export class DimReassociateCommand implements ICommand {
     this.timestamp = Date.now();
   }
 
-  execute(): void {
+  /**
+   * ADR-746 (Boy Scout, N.0.2) — το κοινό preamble των `execute`/`undo`: ανάκτηση της διάστασης
+   * από τη σκηνή + έλεγχος τύπου + ανάκτηση της συσχέτισης. Ήταν byte-ταυτόσημο δίδυμο 7 γραμμών
+   * (εντοπίστηκε από CHECK 3.28/jscpd). Ένα `null` σημαίνει «δεν υπάρχει τίποτα να κάνω».
+   */
+  private resolveTarget(): { dim: DimensionEntity; assoc: DimensionAssociation } | null {
     const dim = this.sceneManager.getEntity(this.dimId) as DimensionEntity | undefined;
-    if (!dim || dim.type !== 'dimension') return;
-
+    if (!dim || dim.type !== 'dimension') return null;
     const assoc = dim.associations?.[this.associationIndex];
-    if (!assoc) return;
+    return assoc ? { dim, assoc } : null;
+  }
+
+  execute(): void {
+    const target = this.resolveTarget();
+    if (!target) return;
+    const { dim, assoc } = target;
 
     this.previousGeometryId = assoc.geometryId;
-    this.previousDefPoint = dim.defPoints[assoc.defPointIndex] ?? null;
+    this.previousDefPoint = dimDefPoints(dim)[assoc.defPointIndex] ?? null; // ADR-746
 
     const geoEntity = this.sceneManager.getEntity(this.newGeometryId);
     const updatedAssoc: DimensionAssociation = { ...assoc, geometryId: this.newGeometryId };
@@ -60,7 +72,7 @@ export class DimReassociateCommand implements ICommand {
         })
       : null;
 
-    const newDefPoints = [...dim.defPoints] as Point2D[];
+    const newDefPoints = [...dimDefPoints(dim)] as Point2D[]; // ADR-746
     if (newPt) newDefPoints[assoc.defPointIndex] = newPt;
 
     const newAssociations = [...(dim.associations ?? [])] as DimensionAssociation[];
@@ -75,11 +87,9 @@ export class DimReassociateCommand implements ICommand {
   undo(): void {
     if (this.previousGeometryId === null) return;
 
-    const dim = this.sceneManager.getEntity(this.dimId) as DimensionEntity | undefined;
-    if (!dim || dim.type !== 'dimension') return;
-
-    const assoc = dim.associations?.[this.associationIndex];
-    if (!assoc) return;
+    const target = this.resolveTarget();
+    if (!target) return;
+    const { dim, assoc } = target;
 
     const restoredAssoc: DimensionAssociation = {
       ...assoc,
@@ -89,7 +99,7 @@ export class DimReassociateCommand implements ICommand {
     const newAssociations = [...(dim.associations ?? [])] as DimensionAssociation[];
     newAssociations[this.associationIndex] = restoredAssoc;
 
-    const newDefPoints = [...dim.defPoints] as Point2D[];
+    const newDefPoints = [...dimDefPoints(dim)] as Point2D[]; // ADR-746
     if (this.previousDefPoint) {
       newDefPoints[assoc.defPointIndex] = this.previousDefPoint;
     }
