@@ -113,6 +113,24 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-08-01 — Phase IX: το culling έγινε fail-soft (→ [ADR-746](./ADR-746-dimension-geometry-ingress-ssot.md))
+
+- **Τι έσπασε**: `getEntityBBox` πετούσε (`dim.defPoints is not iterable`). Η εξαίρεση ανέβαινε
+  μέχρι το `try` του `DxfBitmapCache.rebuild` ⇒ `cacheKey = null` ⇒ **κάθε καρέ** ξαναέχτιζε το
+  raster ΟΛΟΥ του σχεδίου και το ξαναπετούσε. **Μία** οντότητα ακύρωνε ολόκληρη τη σκηνή.
+- **Αλλαγή**: το `getEntityBBox` σπάει σε εσωτερικό `computeEntityBBox` + **εξαγόμενο fail-soft
+  wrapper**. Ο φύλακας μπήκε **μέσα** στη συνάρτηση επειδή οι καταναλωτές είναι **8** (culling,
+  `scale-preview-lod`, `dxf-selection-framing-bounds`, `dxf-wireframe-hit-test`, `focus-2d-order`
+  ×3, `DxfToThreeConverter`) — ένας φύλακας ανά call site είναι ακριβώς το λάθος που παρήγαγε το
+  σφάλμα. NEW `dxf-bbox-quarantine.ts`: κάθε οντότητα αναφέρεται **μία φορά**, όχι 60×/δευτ.
+- **`case 'dimension'`**: `unwrapDxfSubEntity` SSoT αντί για σκέτο `.dimensionEntity` — μια
+  διάσταση κυκλοφορεί σε **δύο** σχήματα (flat / wrapped) και δύο άλλοι καταναλωτές το ήξεραν ήδη.
+- ⚠️ **Fallback = `FULL_PLANE_BBOX` («πάντα ορατό»), ΠΟΤΕ κενό κουτί**: το culling απαντά στο
+  «μπορώ να το παραλείψω με ασφάλεια;» — άγνωστα όρια ⇒ **όχι**. Κενό κουτί = **σιωπηλή
+  εξαφάνιση**, δηλαδή το σφάλμα της κλάσης «αόρατο στο 2D αλλά ανάβει στο hover» (Phase IX).
+- **Κόστος**: μηδενικό στο steady state — το TurboFan βελτιστοποιεί `try` που δεν πετάει.
+- ❗ **ΔΕΝ** καλύφθηκε το «το **draw** μιας οντότητας πετάει» (άλλη κλάση, αγγίζει CHECK 6B/6D).
+
 ### 2026-08-01 — ADR-739 Φ.Δ β2: δρομέας κελιού πίνακα (άγγιξε CanvasSection + τον ζωγράφο)
 
 - **`CanvasSection.tsx`**: **καμία** νέα συνδρομή. Το prop του inline επεξεργαστή κελιού

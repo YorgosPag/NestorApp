@@ -713,6 +713,27 @@ A1 → A2 → A3 → B1 → B2 → B3 → C1 → C2 → D1 → D2 → D3 → E1 
 
 ## 7. Changelog
 
+- **2026-08-01 (R44 — το `defPoints` δεν ήταν ποτέ εγγυημένο· βλ. → [ADR-746](./ADR-746-dimension-geometry-ingress-ssot.md))**
+  - **Σύμπτωμα**: ζωντανό `TypeError: dim.defPoints is not iterable` μέσα στο `try` του
+    `DxfBitmapCache.rebuild` ⇒ `cacheKey = null` ⇒ **κάθε καρέ** ξαναέχτιζε και ξαναπετούσε το
+    raster **ολόκληρου** του σχεδίου. Μία κακοσχηματισμένη διάσταση κόστιζε τη σκηνή, μόνιμα.
+  - **Ρίζα**: ο τύπος δηλώνει `defPoints: readonly Point2D[]` (**υποχρεωτικό**) αλλά **κανένα
+    runtime σύνορο δεν το επιβάλλει**: ο guard είναι `isDimensionEntity = type === 'dimension'`
+    και **τίποτε άλλο**, και **δεν υπάρχει καμία migration/hydration** για τα @deprecated
+    `startPoint`/`endPoint`/`textPosition` κάτοπτρα της **Phase A1** (§«Legacy back-compat»).
+    Αποτέλεσμα: **~40 αναγνώστες με 5 ασύμβατες πολιτικές**, από `?? []` μέχρι σκέτο spread.
+  - **Λύση**: NEW `systems/dimensions/dimension-def-points.ts` — ο **ΕΝΑΣ** αναγνώστης
+    (`resolveDimDefPoints`), με **επισκευή** Phase-A1 (`repaired-legacy`) αντί απώλειας και
+    φίλτρο μη-πεπερασμένων. MOD `dim-hit-geometry.ts` (γρ. 65/93 — το **δεύτερο** σημείο στην
+    ίδια διαδρομή που θα έσκαγε), `dimension-cull-bounds.ts`, `bounds-primitives.ts`,
+    `entity-bounds-ssot.ts` (ο τοπικός φύλακας **αφαιρέθηκε**).
+  - 🔴 **Τρίτο επεισόδιο της ίδιας οικογένειας** μετά **ADR-716 Φ7** (η κλίμακα μετακινούσε μόνο
+    τα κάτοπτρα) και **ADR-736** (καθόλου κλάδος `dimension` στο `normalizeEntityPositions`).
+    Η προειδοποίηση του `mapDimensionPoints` («μια δεύτερη λίστα είναι η επόμενη σιωπηλή
+    απόκλιση») ίσχυε — απλώς για την **ανάγνωση**, όχι για τον μετασχηματισμό.
+  - **Ανοιχτό**: **ποιος** γεννά διάσταση χωρίς `defPoints`; Και οι 12 builders γράφουν σωστά ⇒
+    η πηγή είναι **σύνορο δεδομένων**, όχι δημιουργίας. Το πεδίο `source` το κάνει ορατό.
+
 - **2026-07-29 (R43 — `$DIMSCALE 0`: το ίδιο ιδίωμα, τρία χρόνια αργότερα, στο header)**
   - **Πλαίσιο**: η R42 (πιο κάτω) είχε ήδη διορθώσει το `parseFloat(v) || DEFAULT` για το **DIMSTYLE** `40` («ADR-362 R10: preserve 0 — annotative sentinel»). Το **ίδιο** ιδίωμα επιβίωνε στο `parseHeader` για το global `$DIMSCALE`: `parseFloat(value) || 1`. Η κλάση σφάλματος ήταν γνωστή· απλώς δεν είχε εφαρμοστεί στο δεύτερο σημείο. Εντοπίστηκε από το handoff #4 §4β (ADR-721) ως «ίδια κλάση με το `$MEASUREMENT`, άλλο domain» και εγκρίθηκε ρητά από τον Giorgio.
   - **Fix**: NEW `parseFloatSysvar` δίπλα στο υπάρχον `parseIntSysvar` (`utils/dxf-entity-parser.ts`) — **χωριστή** συνάρτηση, όχι υπερφόρτωση: ο ακέραιος reader θα έκοβε σιωπηλά το `'2.5'` σε `2`. `$DIMSCALE` → `parseFloatSysvar(value) ?? 1`. Boy Scout: `$PDMODE`/`$PDSIZE` πέρασαν στους ίδιους readers (εκεί το `0` ήταν **ήδη** και η νόμιμη τιμή και το default, άρα μηδενική αλλαγή συμπεριφοράς — αλλά έπαψε να στέκει ως πρότυπο αντιγραφής για την επόμενη μεταβλητή).
