@@ -77,5 +77,51 @@ export function extractEmailFromText(text: string): string | null {
   return match ? match[0].toLowerCase().trim() : null;
 }
 
+// ============================================================================
+// EXHAUSTIVE EXTRACTION (all occurrences — CAD title blocks, letterheads, OCR)
+// ============================================================================
+
+/**
+ * A run that could be a written phone number: digits plus the separators people type.
+ * Deliberately excludes `.` — `cleanPhoneNumber` does not strip it, so allowing it here
+ * would build candidates that can never validate.
+ */
+const PHONE_CANDIDATE_RUN = /[+\d][+\d\s\-()]*/g;
+
+/** Preserve first-seen order while removing repeats. */
+function distinct(values: readonly string[]): string[] {
+  return [...new Set(values)];
+}
+
+/**
+ * Every Greek phone number in free text, in order of appearance.
+ *
+ * Written phones carry separators the anchored validator rejects (`2310-788493`), so each
+ * candidate run is cleaned through {@link cleanPhoneNumber} before validation. When a run
+ * holds two numbers separated only by whitespace, the whole run fails and the run is retried
+ * per whitespace-separated part — otherwise both numbers would be lost together.
+ */
+export function extractAllPhonesFromText(text: string): string[] {
+  const found: string[] = [];
+  for (const match of text.matchAll(PHONE_CANDIDATE_RUN)) {
+    const whole = cleanPhoneNumber(match[0]);
+    if (isValidPhone(whole)) {
+      found.push(whole);
+      continue;
+    }
+    for (const part of match[0].split(/\s+/)) {
+      const cleaned = cleanPhoneNumber(part);
+      if (isValidPhone(cleaned)) found.push(cleaned);
+    }
+  }
+  return distinct(found);
+}
+
+/** Every email address in free text, lowercased, in order of appearance. */
+export function extractAllEmailsFromText(text: string): string[] {
+  const global = new RegExp(EMAIL_EXTRACT_REGEX.source, 'g');
+  return distinct([...text.matchAll(global)].map((m) => m[0].toLowerCase()));
+}
+
 /** Extract the first 9-digit VAT number from free text — re-exported from vat-validation.ts (SSoT) */
 export { extractVatFromText } from './vat-validation';
