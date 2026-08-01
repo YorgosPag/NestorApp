@@ -46,27 +46,35 @@
   · **Ποιος τις μεγάλωσε**: η ADR-739 Φ.Δ πρόσθεσε **+8 / +11** γραμμές (το εργαλείο «Πίνακας»). Το χρέος είναι **προϋπάρχον**· η φάση απλώς το επιδείνωσε και **παρέλειψε αυτή την καταγραφή** — ο N.0.2 την επέβαλλε.
   · **Γιατί καταγραφή και όχι διόρθωση τώρα**: 2 αρχεία αλλά **~40 εργαλεία σε 3+ domains** (2D primitives, BIM, annotation) ⇒ >1h, και το `dxf-viewer` δουλεύεται **παράλληλα** από άλλον agent. Εντολή μέτρησης: `awk 'NR>=96 && /^}/ {print NR-96+1; exit}' src/subapps/dxf-viewer/hooks/drawing/drawing-entity-builders.ts`.
 
-- 🟡 **ADR-742 — ΤΕΣΣΕΡΑ ΕΚΚΡΕΜΗ που άφησε η Ομάδα 6 (μετρημένα 2026-08-01).**
-  · 🔴 **Η παγίδα του κενού στο στρώμα ΥΠΗΡΕΣΙΩΝ — ~10 αρχεία, ΔΕΝ έγινε.**
-  Ο διευρυμένος ανιχνευτής βρήκε **21 αρχεία** με τη **γυμνή** μορφή
-  `data.companyId !== companyId` (`grep -rE '(\.companyId|\[FIELDS\.COMPANY_ID\])[[:space:]]*!==[[:space:]]*[A-Za-z_][A-Za-z0-9_.]*\b' src`).
-  Τα ~16 είναι **υπηρεσίες** με **σιωπηλή** πολιτική (`return null`) ή τυποποιημένο σφάλμα — δηλαδή
-  **σωστές** ως προς την αποκάλυψη (§3.4). Αυτό που τους λείπει είναι η **ασφαλής σύγκριση**:
-  σκέτο `!==` ⇒ κενό `companyId` ταιριάζει με χαλασμένο token (§4).
-  Ενδεικτικά: `saved-reports-service` · `AssignmentPolicyRepository` · `brokerage-server.service` ·
-  `communications-triage-actions` · `opportunities-server.service` · `floor-wipe-queries` ·
-  `boq-tenant-guard` · `attachment-handler` · `load-text-digest`.
-  ⛔ **ΜΗΝ το κάνεις `forbiddenPattern`**: η ίδια μορφή δίνει ψευδώς θετικά
-  (`input.companyId !== undefined`) και θα κατήγγειλε **σωστό** κώδικα υπηρεσιών.
-  ✅ Η διόρθωση είναι ανά αρχείο: `isPayloadOwnedByCompany(data, companyId)`. >1h, 4+ αρχεία ⇒ N.0.2.
-  · 🔴 **Το `resource-concealment-anchor` ΔΕΝ σαρώνει το `src/subapps/`.**
-  Περπατά μόνο `src/app/api`, `src/lib`, `src/server`, `src/services` (το `src/subapps` έχει **δικό
-  του** `node_modules` με σπασμένους συνδέσμους). Το `src/subapps/procurement/services/` όμως είναι
-  **κανονικός κώδικας υπηρεσιών** — δύο αρχεία του πυροδοτούν τα `forbiddenPatterns` (μόνο σε σχόλια,
-  allowlisted). **Το τυφλό σημείο καλύπτεται σήμερα ΜΟΝΟ από τον ratchet, όχι από το anchor.**
-  ✅ Λύση: επιλεκτικό walk στο `src/subapps/**` με `SKIP_DIRS` για `node_modules`, ή ξεχωριστό δέντρο.
-  · ⏳ **`npm run ssot:baseline` ΔΕΝ έτρεξε ΠΟΤΕ** μετά το Βήμα 7. ~20 λεπτά σε Windows και απαιτεί
-  **δικό μας** working tree (το δέντρο μοιράζεται με τον DXF/BIM πράκτορα). **Ρώτα τον Giorgio.**
+- 🟡 **ADR-742 — από τα τέσσερα εκκρεμή της Ομάδας 6 μένουν ΔΥΟ (ενημερώθηκε 2026-08-01).**
+  · ✅ **Η παγίδα του κενού στο στρώμα ΥΠΗΡΕΣΙΩΝ — ΕΓΙΝΕ· ήταν 13 αρχεία, όχι ~10** (§7duodecies.3).
+  Ο κατάλογος έλεγε ~10 γιατί κανείς δεν είχε μετρήσει τη **θετική** μορφή (`===`): έκρυβε
+  `org-structure-handler-utils`, `procurement-handler` και **δύο δημόσιες διαδρομές PDF με ανώνυμο
+  καλούντα**. ⛔ **ΕΞΩ** (δηλωμένα): `execute-admin-operations:71` — **χαρτογράφηση επιδιόρθωσης**
+  migration που **περιμένει** το κενό (`|| '<empty>'`), όχι φύλακας· και `user-settings-repository:90`
+  (δέσιμο **στιγμιοτύπου** cache, όχι ιδιοκτησία εγγράφου).
+  ⛔ Παραμένει ισχυρό: **ΜΗΝ το κάνεις `forbiddenPattern`** — ψευδώς θετικά (`!== undefined`).
+  · 🔴 **ΝΕΟ — 8 από τα 13 σημεία είναι ΣΩΣΤΑ αλλά ΑΝΑΠΟΔΕΙΚΤΑ** (μετρημένο 2026-08-01, §7duodecies.4).
+  Μετάλλαξη **στον ίδιο τον SSoT** (αφαίρεση των φρουρών κενού από το `isPayloadOwnedByCompany`) +
+  εκτέλεση μόνο των σχετικών σουιτών ⇒ κοκκινίζουν **μόνο** τα 5 σημεία του `saved-reports`, και
+  μόνο επειδή γράφτηκαν **νέα** tests. **Επιζεί** σε: `AssignmentPolicyRepository` (καμία σουίτα) ·
+  `opportunities-server.service` (**καμία**) · `communications-triage-actions` (**καμία**) ·
+  `brokerage-server.service` (**καμία**) · `load-text-digest` (**καμία**) · `boq-tenant-guard` ·
+  `floor-wipe-queries` · `attachment-handler` / `org-structure-handler-utils` / `procurement-handler`.
+  ✅ Το σχήμα του test υπάρχει έτοιμο στο `saved-reports-service.test.ts`: ζεύγος **κενό/κενό** ⇒
+  falsy **ΚΑΙ** `ref.update`/`ref.delete` **δεν κλήθηκαν** (η επιστροφή δεν αρκεί όταν είναι `void`).
+  ⚠️ Πέντε από αυτά **δεν έχουν καθόλου σουίτα** ⇒ >1h, νέα υποδομή ⇒ N.0.2 καταγραφή, όχι επιτόπου.
+  · ✅ **Το `resource-concealment-anchor` σαρώνει πλέον το `src/subapps/` — ΕΓΙΝΕ** (§7duodecies.2).
+  Ο δηλωμένος λόγος αποκλεισμού ήταν **μετρήσιμα ψευδής** (6.418 αρχεία, **μηδέν** αποτυχίες, +1,4s).
+  Μπήκαν μαζί 3 gates: `minFiles` ανά δέντρο · `DECLARED_UNREADABLE_PATHS` (ισότητα) · `TREE_WITNESSES`.
+  · ✅ **`ssot:baseline` — ΑΠΑΝΤΗΘΗΚΕ, και η απάντηση είναι «ΜΗΝ ΤΟ ΓΡΑΨΕΙΣ»** (§7duodecies.1).
+  Dry-run **28,2s** (τα «~20 λεπτά» ήταν του `ssot:audit`, **άλλης** εντολής)· **δεν** απαιτεί δικό
+  μας tree — dry αρχείο **και** cache είναι **gitignored** (`.gitignore:164-165`).
+  Τα 3 `forbiddenPatterns` του Βήματος 7 συνεισφέρουν **0**. Η απόκλιση 133→126 ανήκει σε **άλλους**:
+  **12 × `chart-card-shell`** + **11 παραβάσεις στο `UnifiedShareDialog`**. ⛔ **ΜΗΝ τρέξεις `--write`**:
+  θα **νομιμοποιούσε** νέο χρέος που ο ratchet οφείλει να μπλοκάρει.
+  ⚠️ **Ξεχωριστή εκκρεμότητα που αποκάλυψε**: οι **13 νέες** παραβάσεις των δύο άλλων modules είναι
+  πραγματικές και **αφύλακτες** — θέλουν διόρθωση στον κώδικα, όχι στη baseline.
   · ⏳ **JIT elevation** — ξεχωριστό, **απαιτεί απόφαση (N.8)**. Το standing `isRoleBypass` **είναι**
   το anti-pattern (Google ZSP · Atlassian TCS). Οι Ομάδες 3–6 **δεν** το υλοποίησαν — το έκαναν
   **εφικτό**: η bypass απόφαση είναι **ονομασμένη κατάσταση** (`'cross-tenant-bypass'`) σε **ένα**
