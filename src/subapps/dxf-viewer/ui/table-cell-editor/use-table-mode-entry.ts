@@ -40,6 +40,7 @@ import { useCallback, useEffect } from 'react';
 import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
 import { registerCommandAction } from '../../systems/command-line/CommandActionRegistry';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import { resolveTableCellEditTargetById } from '../../bim/table/table-cell-edit-session';
 import { tableFirstCursorPosition } from '../../bim/table/table-cell-navigation';
 import {
   getTableCellCursor,
@@ -79,11 +80,27 @@ export function useTableModeEntry(params: UseTableModeEntryParams): TableModeEnt
       const position = tableFirstCursorPosition(resolveTableModel(entity.model));
       if (!position) return false;
 
-      // Πρόχειρο `''` και σε `edit`: μπαίνεις σε **άδειο** πεδίο, όπως και με `Tab`. Το
-      // δεσμευμένο κείμενο το σπέρνει το `F2` **μέσα** στον επεξεργαστή (`setTableCellCursorMode`
-      // με `initialText`), και είναι σωστό να μένει εκεί — αλλιώς θα υπήρχαν δύο σημεία που
-      // ξέρουν «από πού ξεκινά το πρόχειρο», ένα εκ των οποίων χωρίς πρόσβαση στο κελί.
-      setTableCellCursor(entity.id, position, mode);
+      // 🔴 ΤΟ ΠΡΟΧΕΙΡΟ ΠΡΕΠΕΙ ΝΑ ΣΠΑΡΘΕΙ — αλλιώς το `F2` ΣΒΗΝΕΙ το κελί.
+      //
+      // Βρέθηκε στη **ζωντανή** επαλήθευση, όχι σε test: με `F2` πάνω στο κελί τίτλου
+      // «ΠΙΝΑΚΑΣ» ο επεξεργαστής άνοιγε **κενός**, και το επόμενο `Tab`/`Enter` θα έκανε
+      // `commit('')` — δηλαδή **απώλεια δεδομένων** από πάτημα πλοήγησης.
+      //
+      // Η αιτία ήταν λανθασμένη αναλογία: το `F2` **μέσα** στον πίνακα (`nav → edit`)
+      // σπέρνει το κείμενο στο `TableCellEditorOverlay` (`setTableCellCursorMode` με
+      // `initialText`), γιατί εκεί ο επεξεργαστής **υπάρχει ήδη** και ξέρει το κελί του.
+      // Ως **είσοδος** όμως δεν υπάρχει ακόμη επεξεργαστής: αν δεν σπαρθεί εδώ, δεν
+      // σπέρνεται πουθενά.
+      //
+      // ⚠️ Μόνο για `edit`. Η `nav` δεν έχει πρόχειρο **εξ ορισμού** — και δεν πρέπει να
+      // αποκτήσει: το `handleCommit` επιστρέφει νωρίς σε `nav` ακριβώς για να μη σβήνει
+      // κελιά όποιος περνά από πάνω τους (type-to-replace του Excel).
+      const draft = mode === 'edit'
+        ? (resolveTableCellEditTargetById(entity, position.rowId, position.colId)?.text ?? '')
+        : '';
+      // Κανένα `caretIndex`: το `F2` δεν έχει σημείο, άρα ο κέρσορας πάει στο **τέλος** —
+      // ίδια σημασιολογία με το `F2` του Excel και με το `Tab`.
+      setTableCellCursor(entity.id, position, mode, draft);
       return true;
     },
     [getSelectedEntityIds, levelManager],
