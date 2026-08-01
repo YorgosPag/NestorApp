@@ -2,6 +2,31 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **Το CHECK 3.10 είναι ΤΥΦΛΟ στο κυρίαρχο query idiom του repo (μετρημένο 2026-08-01, ADR-745 §9.5.4).**
+  Ο `check-firestore-companyid.sh` (γρ. 57-58) παίρνει block **12 γραμμών ΠΡΟΣ ΤΑ ΚΑΤΩ** από κάθε `query(`
+  και μαρκάρει παραβίαση μόνο αν το block περιέχει `where(` **χωρίς** `companyId`. Στο idiom
+  «χτίσε πίνακα `constraints`, πέρασέ τον με **spread** στο τέλος» το `query(...)` είναι η **τελευταία**
+  γραμμή και τα `where(…)` βρίσκονται **πιο πάνω** ⇒ το block δεν περιέχει κανένα `where(` ⇒
+  **μηδέν παραβιάσεις, πάντα**. Ο scanner βλέπει **μόνο** το inline `query(col, where(…))`.
+  · 📏 **Μέγεθος**: **19 αρχεία** χρησιμοποιούν το idiom — το χρησιμοποιεί και το ίδιο το
+    `firestoreQueryService`. Έτσι το `getAllContacts` έστελνε **ανφίλτραρο list** επί μήνες και η
+    αναζήτηση επαφών ήταν σπασμένη για **κάθε μη-super-admin** χωρίς καμία πύλη να μιλήσει.
+  · ⚠️ **Το `.firestore-companyid-baseline.json` λέει «0 violations / 0 files — fully cleaned».**
+    Είναι **τέταρτη** εμφάνιση του «**`0` = κανείς δεν κοίταξε**» (μετά i18n N.11 / ssot-discover N.12 /
+    CHECK 3.15). **ΜΗΝ το επικαλεστείς ως δείκτη υγείας.**
+  · ⬜ **Η πύλη που λείπει**: AST σάρωση (όχι grep γραμμών) — για κάθε `query(collectionRef, ...args)`
+    ακολούθησε τα spread ονόματα πίσω στη δήλωσή τους στο ίδιο scope και έλεγξε αν κάποιο
+    `constraints.push(where('companyId', …))` τα τροφοδοτεί· εναλλακτικά, μάρκαρε ως ύποπτο κάθε
+    αρχείο που κάνει direct `query(` σε tenant-scoped collection **χωρίς καμία** αναφορά
+    `companyId` / `resolveEffectiveCompanyId` / `firestoreQueryService`.
+  · 📌 **Μετρημένη αφετηρία**: από τα 19, **3** δεν αναφέρουν καθόλου `companyId` και **δεν εξετάστηκαν**
+    (μπορεί να είναι νόμιμα public/server): `src/services/notificationService.ts`,
+    `src/services/realtime/hooks/usePublicProperties.ts`,
+    `src/app/api/communications/webhooks/telegram/firebase/helpers-lazy.ts`.
+    **Μέτρησέ τα πρώτα, μετά διάλεξε ratchet ή zero-tol.**
+  · 🔗 Ίδια οικογένεια με το επόμενο item (Admin SDK): και τα δύο είναι «η πύλη κοιτά **σχήμα κειμένου**,
+    ο κώδικας γράφτηκε σε **άλλο σχήμα**». Λογικά λύνονται μαζί, με **έναν** AST scanner σε δύο κανόνες.
+
 - 🟠 **`rulesRange` στο `coverage-manifest.ts` παρσάρεται αλλά ΠΟΤΕ δεν συγκρίνεται (μετρημένο 2026-08-01, ADR-745 Φάση Β).**
   Το CHECK 3.16 (`check-firestore-rules-test-coverage.js:181`) διαβάζει το `rulesRange: [α, β]` κάθε entry
   σε δομή — και **δεν το χρησιμοποιεί πουθενά αλλού** (`grep '\.rulesRange'` ⇒ **μία** εμφάνιση, η ίδια η

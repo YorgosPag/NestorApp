@@ -25,6 +25,7 @@ import type { DocumentData } from 'firebase/firestore';
 import { generateContactId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+import { requireAuthContext, resolveEffectiveCompanyId } from '@/services/firestore/auth-context';
 
 const logger = createModuleLogger('ContactsQueryService');
 
@@ -69,6 +70,26 @@ async function buildContactsQuery(options?: {
   cursorId?: string | null;
 }) {
   const constraints: QueryConstraint[] = [];
+
+  // 🔒 ADR-745 — Tenant scope. ΠΡΩΤΟ constraint, γιατί ο κανόνας READ
+  // (`firestore.rules:1579-1589`) αποφασίζει με `resource.data.companyId` για κάθε
+  // μη-super-admin. Σε **list** ό,τι διαβάζει ο κανόνας και δεν το περιορίζει το
+  // query είναι `undefined` ⇒ ολόκληρο το query απορρίπτεται· «rules are not filters».
+  // Χωρίς αυτή τη γραμμή η αναζήτηση επαφών έσκαγε για ΚΑΘΕ πραγματικό χρήστη και
+  // δούλευε μόνο για super admin (ο `isSuperAdminOnly()` όρος αποδεικνύεται χωρίς
+  // `resource`) — γι' αυτό έμεινε αόρατη.
+  //
+  // ADR-356 SSoT: ο helper είναι υποχρεωτικός για κάθε direct query εκτός
+  // `firestoreQueryService` (βλ. docblock του `resolveEffectiveCompanyId`), και
+  // τιμά τον super-admin switcher. `null` = super admin χωρίς επιλογή ⇒ καμία
+  // εταιρεία, cross-tenant προβολή που ο κανόνας επιτρέπει ρητά.
+  // Indexes: ήδη υπάρχουν και για τους 4 συνδυασμούς — `firestore.indexes.json`
+  // contacts [0] `companyId+updatedAt`, [7] `+type`, [8] `+isFavorite`, [9] και τα δύο.
+  const ctx = await requireAuthContext();
+  const effectiveCompanyId = resolveEffectiveCompanyId(ctx);
+  if (effectiveCompanyId) {
+    constraints.push(where('companyId', '==', effectiveCompanyId));
+  }
 
   if (options?.type) constraints.push(where('type', '==', options.type));
   if (options?.onlyFavorites) constraints.push(where('isFavorite', '==', true));
