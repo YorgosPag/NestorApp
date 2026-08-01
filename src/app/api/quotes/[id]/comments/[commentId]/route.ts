@@ -10,13 +10,17 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { FieldValue } from 'firebase-admin/firestore';
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { isRoleBypass } from '@/lib/auth/roles';
+import {
+  editComment,
+  loadOwnedComment,
+  purgeComment,
+  softDeleteComment,
+} from '../../../_shared/quote-comments';
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -36,32 +40,16 @@ const EditCommentSchema = z.object({
 // HELPERS
 // ============================================================================
 
-interface StoredComment {
-  companyId: string;
-  authorId: string;
-  deletedAt: null | { seconds: number };
-}
-
-async function resolveComment(
-  quoteId: string,
-  commentId: string,
-  companyId: string,
-): Promise<
-  | { ok: true; ref: FirebaseFirestore.DocumentReference; data: StoredComment }
-  | { ok: false; status: number; error: string }
-> {
-  const db = getAdminFirestore();
-  const ref = db
-    .collection(COLLECTIONS.QUOTES)
-    .doc(quoteId)
-    .collection(SUBCOLLECTIONS.QUOTE_COMMENTS)
-    .doc(commentId);
-  const snap = await ref.get();
-  if (!snap.exists) return { ok: false, status: 404, error: 'Not found' };
-  const data = snap.data() as StoredComment;
-  if (data.companyId !== companyId) return { ok: false, status: 404, error: 'Not found' };
-  return { ok: true, ref, data };
-}
+/**
+ * 🔄 ADR-742 §7undecies — ο τοπικός `resolveComment` **μετακόμισε** στο
+ * `_shared/quote-comments` ως {@link loadOwnedComment}, με δύο διορθώσεις που
+ * δεν μπορούσαν να μείνουν εδώ:
+ *
+ * - **Ο έλεγχος του ΓΟΝΕΑ έλειπε**: ρωτούσε μόνο «ανήκει το σχόλιο;», ενώ οι
+ *   αδελφικές `comments/` ρωτούσαν «ανήκει η προσφορά;» — δύο δόγματα για τον
+ *   ίδιο πόρο (§7septies).
+ * - **Παγίδα του κενού**: σκέτο `!==` πάνω σε `as StoredComment` (§4).
+ */
 
 // ============================================================================
 // PATCH — edit comment text
@@ -78,9 +66,9 @@ async function handlePatch(
       const parsed = await safeJsonBody(EditCommentSchema, req);
       if (parsed.error) return parsed.error;
 
-      const result = await resolveComment(quoteId, commentId, ctx.companyId);
-      if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-      const { ref, data } = result;
+      const outcome = await loadOwnedComment({ quoteId, commentId, caller: ctx, action: 'comment-edit' });
+      if (outcome.refusal) return outcome.refusal;
+      const { ref, data } = outcome.comment;
 
       if (data.authorId !== ctx.uid) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -89,7 +77,7 @@ async function handlePatch(
         return NextResponse.json({ error: 'Comment is deleted' }, { status: 410 });
       }
 
-      await ref.update({ text: parsed.data.text, editedAt: FieldValue.serverTimestamp() });
+      await editComment(ref, parsed.data.text);
       logger.info('Comment edited', { quoteId, commentId });
       return NextResponse.json({ ok: true });
     },
@@ -109,19 +97,23 @@ async function handleDelete(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const result = await resolveComment(quoteId, commentId, ctx.companyId);
-      if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-      const { ref, data } = result;
+      const outcome = await loadOwnedComment({ quoteId, commentId, caller: ctx, action: 'comment-delete' });
+      if (outcome.refusal) return outcome.refusal;
+      const { ref, data } = outcome.comment;
 
-      const isSuperAdmin = (ctx as { globalRole?: string }).globalRole === 'super_admin';
+      // ADR-742 §7.4 — ήταν `(ctx as { globalRole?: string }).globalRole ===
+      // 'super_admin'`: **σύγκριση συμβολοσειράς πάνω σε `as`**. Ένας δεύτερος
+      // bypass ρόλος δεν θα μπορούσε να σβήσει σχόλιο, από κώδικα που διαβάζεται
+      // σωστός. Το `AuthContext` **έχει** `globalRole` — το cast ήταν περιττό.
+      const isSuperAdmin = isRoleBypass(ctx.globalRole);
       if (data.authorId !== ctx.uid && !isSuperAdmin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
       if (isSuperAdmin && data.authorId !== ctx.uid) {
-        await ref.delete();
+        await purgeComment(ref);
       } else {
-        await ref.update({ deletedAt: FieldValue.serverTimestamp() });
+        await softDeleteComment(ref);
       }
 
       logger.info('Comment deleted', { quoteId, commentId, soft: !isSuperAdmin });

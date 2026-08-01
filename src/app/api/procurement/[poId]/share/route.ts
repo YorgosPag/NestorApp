@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { defineRoute, ok, created, badRequest, notFound, httpError } from '@/lib/api/define-route';
 import { getPO } from '@/services/procurement';
 import { createPOShare, revokePOShare } from '@/services/procurement/po-share-service';
+import { ownedPO, poResource } from '../../_shared/po-ownership';
 
 const RevokeSchema = z.object({
   shareId: z.string().min(1),
@@ -28,8 +29,9 @@ export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
   handler: async ({ auth, params }) => {
     const { poId } = params;
 
-    const po = await getPO(poId);
-    if (!po || po.companyId !== auth.companyId) notFound('PO not found');
+    // ADR-742 §7undecies — δεύτερο σημείο που ήταν αόρατο λόγω `auth` vs `ctx`.
+    const po = ownedPO({ po: await getPO(poId), caller: auth, poId, action: 'share' });
+    if (!po) notFound(poResource.notFoundMessage);
 
     const result = await createPOShare(poId, auth.uid, auth.companyId);
 

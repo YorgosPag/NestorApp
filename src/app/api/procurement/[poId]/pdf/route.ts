@@ -12,6 +12,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { getPO } from '@/services/procurement';
+import { ownedPO, poResource } from '../../_shared/po-ownership';
 import { generatePurchaseOrderPdf } from '@/services/procurement/po-pdf-generator';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
@@ -28,10 +29,13 @@ async function handleGet(
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
-        const po = await getPO(poId);
-        if (!po || po.companyId !== ctx.companyId) {
+        // ADR-742 §7undecies — «δεν υπάρχει» και «δεν είναι δικό σου» ήταν ήδη
+        // **μία** απάντηση εδώ· αυτό που έλειπε ήταν η ασφαλής σύγκριση: σκέτο
+        // `!==` άφηνε PO με κενό `companyId` να ταιριάξει με χαλασμένο token (§4).
+        const po = ownedPO({ po: await getPO(poId), caller: ctx, poId, action: 'pdf' });
+        if (!po) {
           return NextResponse.json(
-            { success: false, error: 'PO not found' },
+            { success: false, error: poResource.notFoundMessage },
             { status: 404 }
           );
         }

@@ -28,8 +28,8 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
 import { sendReplyViaMailgun } from '@/services/ai-pipeline/shared/mailgun-sender';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { quoteNotFoundResponse, quoteResource } from '../../_shared/quote-ownership';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -68,6 +68,23 @@ async function handlePost(
 
       const { vendorEmail, template, subject, body, rfqId, customized } = parsed.data;
 
+      // 🔴 ADR-742 §7undecies — **Η ΣΕΙΡΑ ΗΤΑΝ ΤΟ ΣΦΑΛΜΑ.** Μέχρι τις 2026-08-01
+      // το email έφευγε **πρώτο** και ο φύλακας ιδιοκτησίας έτρεχε **μετά**:
+      // καλών με ξένο `quoteId` έπαιρνε `404`, αλλά το μήνυμα είχε **ήδη
+      // σταλεί** από τους διακομιστές του Νέστορα, με περιεχόμενο δικό του.
+      // Ο φύλακας *καλούνταν* — απλώς αργά, και κάθε test του θα έμενε πράσινο
+      // (§7.1). Φόρτωση+ύπαρξη+ιδιοκτησία είναι πλέον **μία** πράξη, **πριν**
+      // από κάθε παρενέργεια.
+      const db = getAdminFirestore();
+      const owned = await quoteResource.load({
+        docId: quoteId,
+        caller: ctx,
+        action: 'notify-vendor',
+        refusal: quoteNotFoundResponse,
+        db,
+      });
+      if (owned.refusal) return owned.refusal;
+
       const result = await sendReplyViaMailgun({ to: vendorEmail, subject, textBody: body });
 
       if (!result.success) {
@@ -76,14 +93,7 @@ async function handlePost(
       }
 
       // Write denormalized notification timestamp to quote document
-      const db = getAdminFirestore();
-      const quoteRef = db.collection(COLLECTIONS.QUOTES).doc(quoteId);
-      const quoteSnap = await quoteRef.get();
-      if (!quoteSnap.exists || (quoteSnap.data() as { companyId?: string })?.companyId !== ctx.companyId) {
-        return NextResponse.json({ error: 'Not found' }, { status: 404 });
-      }
-
-      await quoteRef.update({
+      await owned.doc.ref.update({
         lastNotifiedAt: FieldValue.serverTimestamp(),
         lastNotifiedTemplate: template,
         updatedAt: FieldValue.serverTimestamp(),

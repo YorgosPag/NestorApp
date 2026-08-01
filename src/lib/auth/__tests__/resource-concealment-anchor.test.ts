@@ -196,6 +196,37 @@ const REASON_NAMING_DENIAL =
   /(ApiError\([^)]*|error:\s*['"`]|reason:\s*['"`])[^\n]{0,120}(belongs to (a )?different company|from your company)/;
 
 /**
+ * 🔴🔴 **Η ΚΕΝΤΡΙΚΟΠΟΙΗΣΗ ΤΥΦΛΩΣΕ ΤΟΝ ΚΕΙΜΕΝΙΚΟ ΑΝΙΧΝΕΥΤΗ** — βρέθηκε από
+ * **επιζήσασα μετάλλαξη**, 2026-08-01 (ADR-742 §7undecies).
+ *
+ * Ο έλεγχος ομοιομορφίας ανά πόρο ψάχνει `403` **κοντά στο κυριολεκτικό
+ * κείμενο** (`403 … 'File not found'`). Δούλευε όσο κάθε διαδρομή έγραφε το
+ * κείμενο μόνη της. Μετά τη μετανάστευση, το κείμενο ζει **μία φορά** στη
+ * δήλωση του πόρου και οι διαδρομές το αναφέρουν **συμβολικά**:
+ *
+ * ```ts
+ * NextResponse.json({ error: fileResource.notFoundMessage }, { status: 403 })
+ * ```
+ *
+ * Η μετάλλαξη `404 → 403` σε **αυτή ακριβώς** τη γραμμή **επέζησε**: η φράση
+ * `File not found` δεν εμφανίζεται πουθενά στο αρχείο, οπότε ο ανιχνευτής δεν
+ * είχε τι να ταιριάξει. Κάθε μεταναστευμένος πόρος θα γινόταν σταδιακά
+ * **μονίμως πράσινος** — *«κανένας παραβάτης» και «καμία μέτρηση» δίνουν το
+ * ίδιο πράσινο* (μάθημα #14), αυτή τη φορά προκαλούμενο από την **ίδια τη
+ * διόρθωση**.
+ *
+ * ⇒ Το σήμα εδώ είναι **συμβολικό, όχι κειμενικό**: `403` δίπλα σε
+ * **οποιαδήποτε** αναφορά «δεν βρέθηκε». Δεν υπάρχει νόμιμη χρήση — αν κάτι
+ * δεν βρέθηκε, ο κωδικός είναι `404`· αν βρέθηκε αλλά απαγορεύεται, το κείμενο
+ * δεν λέει «δεν βρέθηκε».
+ *
+ * ⚠️ Πιάνει **και** τα παλιά, κυριολεκτικά ονόματα (`PROJECT_NOT_FOUND_MESSAGE`,
+ * `CONTACT_NOT_FOUND_MESSAGE`, …), άρα καλύπτει και τους πόρους των Ομάδων 3–5.
+ */
+const NOT_FOUND_SYMBOL_WITH_403 =
+  /(403[^\n]{0,80}(notFoundMessage|NOT_FOUND_MESSAGE|[Nn]otFound\()|(notFoundMessage|NOT_FOUND_MESSAGE|[Nn]otFound\()[^\n]{0,80}403)/;
+
+/**
  * Πόροι των οποίων η μεταμφίεση έχει **ολοκληρωθεί**. Ο κατάλογος **μεγαλώνει**
  * καθώς κλείνουν οι ομάδες της Φάσης Γ+Δ· δεν συρρικνώνεται ποτέ.
  */
@@ -223,6 +254,39 @@ const CONCEALED_RESOURCES = [
     dir: 'src/app/api/messages/',
     notFoundMessage: 'Message not found',
     minFiles: 6,
+  },
+  // ── Ομάδα 6 (2026-08-01, §7undecies) ──────────────────────────────────────
+  {
+    label: 'dxf-dimension-style',
+    dir: 'src/app/api/dxf-dimension-styles/',
+    notFoundMessage: 'DXF dimension style not found',
+    minFiles: 4,
+  },
+  {
+    label: 'dxf-level',
+    dir: 'src/app/api/dxf-levels/',
+    notFoundMessage: 'DXF level not found',
+    minFiles: 4,
+  },
+  {
+    label: 'floor',
+    dir: 'src/app/api/floors/',
+    notFoundMessage: 'Floor not found',
+    minFiles: 8,
+  },
+  {
+    // 🔴 Ο πόρος με τη **χειρότερη** εικόνα πριν την Ομάδα 6: δύο διαδρομές του
+    // (`download`, `excel-preview`) δεν είχαν **καθόλου** φύλακα ιδιοκτησίας.
+    label: 'file',
+    dir: 'src/app/api/files/',
+    notFoundMessage: 'File not found',
+    minFiles: 10,
+  },
+  {
+    label: 'purchase-order',
+    dir: 'src/app/api/procurement/',
+    notFoundMessage: 'PO not found',
+    minFiles: 20,
   },
   {
     // ⚠️ Το γνήσιο μήνυμα **παρεμβάλλει το id** (`Conversation {id} not found`),
@@ -416,17 +480,26 @@ describe('⚓ ο ΕΝΑΣ κοινός φύλακας δεν επιστρέφε�
 
 // ============================================================================
 describe('🔴 ΤΙ ΜΕΝΕΙ — το πράσινο ΔΕΝ σημαίνει «ο κώδικας δεν έχει μαντεία»', () => {
-  it.each(NOT_YET_MIGRATED)(
-    'ο πόρος «$label» έχει ΑΚΟΜΗ $handRolledHits χειρόγραφες συγκρίσεις — μετρημένες, όχι αγνοημένες',
-    ({ dir, handRolledHits }) => {
-      const hits = SRC_FILES.filter(
-        (f) => f.path.startsWith(dir) && HAND_ROLLED_OWNERSHIP.test(f.source),
-      );
-      // Ισότητα, όχι ανισότητα: **αύξηση** είναι νέα διαρροή· **μείωση**
-      // σημαίνει ότι η ομάδα προχώρησε και ο κατάλογος πρέπει να ενημερωθεί.
-      expect(hits.length).toBe(handRolledHits);
-    },
-  );
+  /**
+   * Ισότητα, όχι ανισότητα: **αύξηση** είναι νέα διαρροή· **μείωση** σημαίνει
+   * ότι η ομάδα προχώρησε και ο κατάλογος πρέπει να ενημερωθεί.
+   *
+   * ⚠️ **Ένα test με βρόχο, όχι `it.each`** — και αυτό είναι μετρημένο, όχι
+   * γούστο: με άδειο πίνακα το `it.each` **αποτυγχάνει το ίδιο** («Called with
+   * an empty Array»), δηλαδή η ολοκλήρωση της εκστρατείας θα εμφανιζόταν ως
+   * **κόκκινο** και ο επόμενος θα το «διόρθωνε» σβήνοντας τον φύλακα.
+   */
+  it('κάθε πόρος σε εξέλιξη έχει ΑΚΡΙΒΩΣ τις δηλωμένες χειρόγραφες συγκρίσεις', () => {
+    const measured = NOT_YET_MIGRATED.map(({ label, dir }) => ({
+      label,
+      hits: SRC_FILES.filter((f) => f.path.startsWith(dir) && HAND_ROLLED_OWNERSHIP.test(f.source))
+        .length,
+    }));
+
+    expect(measured).toEqual(
+      NOT_YET_MIGRATED.map(({ label, handRolledHits }) => ({ label, hits: handRolledHits })),
+    );
+  });
 
   /**
    * 🔴🔴 Το gate που **έλειπε**: καθολική ισότητα, όχι ανά φάκελο.
@@ -455,6 +528,40 @@ describe('🔴 ΤΙ ΜΕΝΕΙ — το πράσινο ΔΕΝ σημαίνει �
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * 🔴🔴 Ο έλεγχος που **έλειπε** και τον βρήκε επιζήσασα μετάλλαξη.
+   *
+   * Βλ. {@link NOT_FOUND_SYMBOL_WITH_403}: μετά τη μετανάστευση το κείμενο
+   * «δεν βρέθηκε» δεν γράφεται πια κυριολεκτικά στις διαδρομές, οπότε ο
+   * κειμενικός έλεγχος ομοιομορφίας τυφλώθηκε **από την ίδια τη διόρθωση**.
+   */
+  it('🔴🔴 πουθενά ένα «δεν βρέθηκε» δεν φεύγει με 403 — ούτε ΣΥΜΒΟΛΙΚΑ', () => {
+    const offenders = SRC_FILES.filter((f) => NOT_FOUND_SYMBOL_WITH_403.test(f.source)).map(
+      (f) => f.path,
+    );
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('…και ο συμβολικός ανιχνευτής θα πυροδοτούσε ΟΝΤΩΣ (η μετάλλαξη που επέζησε)', () => {
+    expect(
+      NOT_FOUND_SYMBOL_WITH_403.test(
+        'NextResponse.json({ error: fileResource.notFoundMessage }, { status: 403 });',
+      ),
+    ).toBe(true);
+    expect(
+      NOT_FOUND_SYMBOL_WITH_403.test("throw new ApiError(403, PROJECT_NOT_FOUND_MESSAGE);"),
+    ).toBe(true);
+    expect(
+      NOT_FOUND_SYMBOL_WITH_403.test('if (denied) throw contactNotFound();'),
+    ).toBe(false);
+    expect(
+      NOT_FOUND_SYMBOL_WITH_403.test(
+        'NextResponse.json({ error: fileResource.notFoundMessage }, { status: 404 });',
+      ),
+    ).toBe(false);
+  });
+
   it('…και ο ανιχνευτής του θα πυροδοτούσε ακόμη', () => {
     expect(
       REASON_NAMING_DENIAL.test(
@@ -479,9 +586,28 @@ describe('🔴 ΤΙ ΜΕΝΕΙ — το πράσινο ΔΕΝ σημαίνει �
     ).toBe(false);
   });
 
-  it('🔴 ο κατάλογος των ΜΗ μεταναστευμένων δεν είναι άδειος όσο υπάρχουν ομάδες', () => {
-    // Φύλακας κατά της σιωπηλής εκκένωσης: αν κάποιος «καθαρίσει» τον κατάλογο
-    // αντί να μεταναστεύσει τους πόρους, το πράσινο θα σήμαινε ξανά το τίποτα.
-    expect(NOT_YET_MIGRATED.length).toBeGreaterThan(0);
+  /**
+   * 🔴 Ο φύλακας κατά της **σιωπηλής εκκένωσης**, στη μορφή που έχει νόημα
+   * **μετά** το κλείσιμο της τελευταίας ομάδας (§7undecies).
+   *
+   * Μέχρι τις 2026-08-01 έλεγε `NOT_YET_MIGRATED.length > 0`: αν κάποιος
+   * «καθάριζε» τον κατάλογο αντί να μεταναστεύσει τους πόρους, το πράσινο θα
+   * σήμαινε ξανά το τίποτα. Τώρα που ο κατάλογος είναι **νόμιμα** κενός, ο ίδιος
+   * κίνδυνος μεταφέρεται στην καθολική απογραφή: ένα άδειο
+   * {@link HAND_ROLLED_INVENTORY} θα ήταν επίσης πράσινο — και **λάθος**, γιατί
+   * το `floorplan-overlays` **οφείλει** να είναι εκεί.
+   *
+   * ⇒ Ελέγχεται ότι ο ανιχνευτής **βρίσκει όντως** τη σύγκριση στο δηλωμένο
+   * αρχείο. Αν κάποιος μεταναστεύσει και αυτό, το test κοκκινίζει και τον
+   * αναγκάζει να **διαβάσει** τη §7ter.1 πριν αδειάσει τον κατάλογο.
+   */
+  it('🔴🔴 το δηλωμένο-ΕΞΩ αρχείο υπάρχει ΚΑΙ ο ανιχνευτής το βλέπει (όχι κενή μέτρηση)', () => {
+    expect(HAND_ROLLED_INVENTORY.length).toBeGreaterThan(0);
+
+    for (const declared of HAND_ROLLED_INVENTORY) {
+      const file = SRC_FILES.find((f) => f.path === declared);
+      expect(file).toBeDefined();
+      expect(HAND_ROLLED_OWNERSHIP.test(file!.source)).toBe(true);
+    }
   });
 });

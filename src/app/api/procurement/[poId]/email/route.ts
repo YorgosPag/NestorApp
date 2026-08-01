@@ -11,6 +11,7 @@ import 'server-only';
 import { z } from 'zod';
 import { defineRoute, ok, badRequest, notFound, httpError } from '@/lib/api/define-route';
 import { getPO } from '@/services/procurement';
+import { ownedPO, poResource } from '../../_shared/po-ownership';
 import { sendPurchaseOrderEmail } from '@/services/procurement/po-email-service';
 import { resolveContactDepartmentEmail } from '@/services/org-structure/org-routing-resolver';
 import { EntityAuditService } from '@/services/entity-audit.service';
@@ -40,8 +41,10 @@ export const POST = defineRoute<z.ZodTypeAny, { poId: string }>({
 
     const { recipientEmail: bodyEmail, recipientName, language } = body!;
 
-    const po = await getPO(poId);
-    if (!po || po.companyId !== auth.companyId) notFound('PO not found');
+    // ADR-742 §7undecies — ήταν **αόρατο** στον ανιχνευτή του anchor επειδή το
+    // `defineRoute` λέει τον καλούντα `auth` και όχι `ctx` (μάθημα #1).
+    const po = ownedPO({ po: await getPO(poId), caller: auth, poId, action: 'email' });
+    if (!po) notFound(poResource.notFoundMessage);
 
     // L2 org-structure resolver: supplier accounting dept takes priority (ADR-326 Phase 6.1)
     let recipientEmail = bodyEmail;

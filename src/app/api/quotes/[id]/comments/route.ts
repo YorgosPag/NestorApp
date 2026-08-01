@@ -15,12 +15,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import { safeJsonBody } from '@/lib/validation/shared-schemas';
 import { createModuleLogger } from '@/lib/telemetry';
 import { enterpriseIdService } from '@/services/enterprise-id.service';
 import { nowISO } from '@/lib/date-local';
+import { quoteCommentsCollection, refuseUnlessOwnedQuote } from '../../_shared/quote-comments';
 
 const logger = createModuleLogger('QuoteCommentsRoute');
 
@@ -40,13 +39,6 @@ const CreateCommentSchema = z.object({
 // HELPERS
 // ============================================================================
 
-async function verifyQuoteOwnership(quoteId: string, companyId: string): Promise<boolean> {
-  const db = getAdminFirestore();
-  const snap = await db.collection(COLLECTIONS.QUOTES).doc(quoteId).get();
-  if (!snap.exists) return false;
-  return (snap.data() as { companyId?: string })?.companyId === companyId;
-}
-
 // ============================================================================
 // GET
 // ============================================================================
@@ -59,16 +51,10 @@ async function handleGet(
 
   const handler = withAuth(
     async (_req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
-      const owned = await verifyQuoteOwnership(quoteId, ctx.companyId);
-      if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      const refusal = await refuseUnlessOwnedQuote(quoteId, ctx, 'comments-list');
+      if (refusal) return refusal;
 
-      const db = getAdminFirestore();
-      const snap = await db
-        .collection(COLLECTIONS.QUOTES)
-        .doc(quoteId)
-        .collection(SUBCOLLECTIONS.QUOTE_COMMENTS)
-        .orderBy('createdAt', 'asc')
-        .get();
+      const snap = await quoteCommentsCollection(quoteId).orderBy('createdAt', 'asc').get();
 
       const comments = snap.docs
         .map((d) => ({ id: d.id, ...d.data() }))
@@ -95,12 +81,11 @@ async function handlePost(
       const parsed = await safeJsonBody(CreateCommentSchema, req);
       if (parsed.error) return parsed.error;
 
-      const owned = await verifyQuoteOwnership(quoteId, ctx.companyId);
-      if (!owned) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      const refusal = await refuseUnlessOwnedQuote(quoteId, ctx, 'comment-create');
+      if (refusal) return refusal;
 
       const { text, authorName, mentionedUserIds } = parsed.data;
       const commentId = enterpriseIdService.generateCommentId();
-      const db = getAdminFirestore();
 
       const doc = {
         id: commentId,
@@ -115,12 +100,7 @@ async function handlePost(
         mentionedUserIds: mentionedUserIds ?? [],
       };
 
-      await db
-        .collection(COLLECTIONS.QUOTES)
-        .doc(quoteId)
-        .collection(SUBCOLLECTIONS.QUOTE_COMMENTS)
-        .doc(commentId)
-        .set(doc);
+      await quoteCommentsCollection(quoteId).doc(commentId).set(doc);
 
       logger.info('Comment created', { quoteId, commentId, authorId: ctx.uid });
       return NextResponse.json(
