@@ -23,6 +23,48 @@ import {
 } from '../executor-shared';
 import { classifyContactDocument } from './contact-document-classifier';
 import { nowISO } from '@/lib/date-local';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+
+// ============================================================================
+// ΟΙ ΔΥΟ ΦΩΤΟΓΡΑΦΙΕΣ — ΜΟΝΟ ΟΤΙ ΤΙΣ ΞΕΧΩΡΙΖΕΙ
+// ============================================================================
+
+/** Ό,τι διαφέρει ανάμεσα στις δύο προσαρτήσεις φωτογραφίας. Τίποτα άλλο. */
+interface PhotoAttachmentSpec {
+  /** Ο ρόλος του συνδέσμου αρχείου — και το `purpose` που γυρνά στον καλούντα. */
+  readonly purpose: Extract<AttachmentPurpose, 'profile_photo' | 'gallery_photo'>;
+  /** Η πράξη στο audit log του πράκτορα. */
+  readonly auditAction: string;
+  /** Ποιο πεδίο της επαφής δηλώνεται ως αλλαγμένο στο ADR-195 ίχνος. */
+  readonly auditedField: string;
+  /** Η ετικέτα που βλέπει ο χρήστης στο ιστορικό της επαφής. */
+  readonly changeLabel: string;
+  /**
+   * Θέτει **και** το `photoURL` της επαφής (κύρια φωτογραφία); Η μία διαφορά που
+   * δεν είναι ετικέτα: αλλάζει τι γράφεται, τι καταγράφεται και τι επιστρέφεται.
+   */
+  readonly setsPrimaryPhoto: boolean;
+  readonly logMessage: string;
+}
+
+const PHOTO_ATTACHMENTS = {
+  profile: {
+    purpose: 'profile_photo',
+    auditAction: 'attach_profile_photo',
+    auditedField: 'photoURL',
+    changeLabel: 'Φωτογραφία προφίλ',
+    setsPrimaryPhoto: true,
+    logMessage: 'Profile photo attached to contact',
+  },
+  gallery: {
+    purpose: 'gallery_photo',
+    auditAction: 'attach_gallery_photo',
+    auditedField: 'multiplePhotoURLs',
+    changeLabel: 'Φωτογραφία συλλογής',
+    setsPrimaryPhoto: false,
+    logMessage: 'Gallery photo attached to contact',
+  },
+} as const satisfies Record<string, PhotoAttachmentSpec>;
 
 // ============================================================================
 // HANDLER
@@ -78,7 +120,7 @@ export class AttachmentHandler implements ToolHandler {
     }
   }
 
-  // ── PROFILE PHOTO ──
+  // ── PHOTOS (profile + gallery: ΜΙΑ διαδικασία, δύο δηλώσεις) ──
 
   private async handleProfilePhoto(
     contactId: string,
@@ -87,48 +129,35 @@ export class AttachmentHandler implements ToolHandler {
     contactDisplayName: string,
     ctx: AgenticContext
   ): Promise<ToolResult> {
-    const db = getAdminFirestore();
-    const attribution = buildAttribution(ctx);
-
-    await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution, { alreadyPromoted: fileRecord.alreadyPromoted });
-    await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, 'profile_photo');
-
-    await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({
-      photoURL: fileRecord.downloadUrl,
-      multiplePhotoURLs: FieldValue.arrayUnion(fileRecord.downloadUrl),
-      updatedAt: FieldValue.serverTimestamp(),
-      lastModifiedBy: attribution,
-    });
-
-    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'attach_profile_photo', {
-      fileRecordId, photoURL: fileRecord.downloadUrl,
-    });
-    // ADR-195: canonical entity audit trail (SSoT)
-    await EntityAuditService.recordChange({
-      entityType: ENTITY_TYPES.CONTACT,
-      entityId: contactId,
-      entityName: contactDisplayName,
-      action: 'updated',
-      changes: [{ field: 'photoURL', oldValue: null, newValue: fileRecord.downloadUrl, label: 'Φωτογραφία προφίλ' }],
-      performedBy: ctx.channelSenderId || 'system',
-      performedByName: attribution,
-      companyId: ctx.companyId,
-    });
-    emitSyncSignalIfMapped(COLLECTIONS.CONTACTS, 'UPDATED', contactId, ctx.companyId);
-
-    logger.info('Profile photo attached to contact', {
-      contactId, fileRecordId, requestId: ctx.requestId,
-    });
-
-    return {
-      success: true,
-      data: { contactId, contactDisplayName, fileRecordId, photoURL: fileRecord.downloadUrl, purpose: 'profile_photo' },
-    };
+    return this.attachPhoto(PHOTO_ATTACHMENTS.profile, contactId, fileRecordId, fileRecord, contactDisplayName, ctx);
   }
 
-  // ── GALLERY PHOTO ──
-
   private async handleGalleryPhoto(
+    contactId: string,
+    fileRecordId: string,
+    fileRecord: FileRecordData,
+    contactDisplayName: string,
+    ctx: AgenticContext
+  ): Promise<ToolResult> {
+    return this.attachPhoto(PHOTO_ATTACHMENTS.gallery, contactId, fileRecordId, fileRecord, contactDisplayName, ctx);
+  }
+
+  /**
+   * Η **μία** διαδικασία προσάρτησης φωτογραφίας σε επαφή.
+   *
+   * 🔴 Οι δύο χειριστές ήταν **δομικά δίδυμα** (N.18): ίδια εξάδα βημάτων —
+   * προαγωγή αρχείου, σύνδεσμος, ενημέρωση επαφής, δύο καταγραφές ελέγχου, σήμα
+   * συγχρονισμού — με **τέσσερα literals** διαφορά. Το `jscpd` τα βρήκε μόλις ο
+   * έλεγχος ιδιοκτησίας του ADR-742 §4 πρόσθεσε δύο γραμμές· ήταν όμως δίδυμα
+   * **πριν** από αυτό. Ο κίνδυνος είναι συγκεκριμένος: αλλαγή στη σειρά ή στην
+   * καταγραφή ελέγχου έπρεπε να θυμηθεί **δύο** σημεία, και ένα από τα δύο
+   * (η γκαλερί) δεν είχε καν `logger.info` — απόκλιση που κανείς δεν επέλεξε.
+   *
+   * ⚠️ Ό,τι **όντως** διαφέρει ζει στο {@link PHOTO_ATTACHMENTS}, δηλωτικά: η
+   * διαφορά διαβάζεται σε πέντε γραμμές αντί να ψάχνεται σε δύο σώματα.
+   */
+  private async attachPhoto(
+    spec: PhotoAttachmentSpec,
     contactId: string,
     fileRecordId: string,
     fileRecord: FileRecordData,
@@ -139,16 +168,20 @@ export class AttachmentHandler implements ToolHandler {
     const attribution = buildAttribution(ctx);
 
     await promoteFileRecord(db, fileRecordId, contactId, 'photos', attribution, { alreadyPromoted: fileRecord.alreadyPromoted });
-    await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, 'gallery_photo');
+    await createFileLink(db, fileRecordId, contactId, ctx.companyId, attribution, spec.purpose);
 
     await db.collection(COLLECTIONS.CONTACTS).doc(contactId).update({
+      // Η φωτογραφία προφίλ γίνεται **και** μέλος της συλλογής· η φωτογραφία
+      // συλλογής δεν προάγεται ποτέ σε προφίλ από μόνη της.
+      ...(spec.setsPrimaryPhoto ? { photoURL: fileRecord.downloadUrl } : {}),
       multiplePhotoURLs: FieldValue.arrayUnion(fileRecord.downloadUrl),
       updatedAt: FieldValue.serverTimestamp(),
       lastModifiedBy: attribution,
     });
 
-    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, 'attach_gallery_photo', {
+    await auditWrite(ctx, COLLECTIONS.CONTACTS, contactId, spec.auditAction, {
       fileRecordId,
+      ...(spec.setsPrimaryPhoto ? { photoURL: fileRecord.downloadUrl } : {}),
     });
     // ADR-195: canonical entity audit trail (SSoT)
     await EntityAuditService.recordChange({
@@ -156,16 +189,24 @@ export class AttachmentHandler implements ToolHandler {
       entityId: contactId,
       entityName: contactDisplayName,
       action: 'updated',
-      changes: [{ field: 'multiplePhotoURLs', oldValue: null, newValue: fileRecord.downloadUrl, label: 'Φωτογραφία συλλογής' }],
+      changes: [{ field: spec.auditedField, oldValue: null, newValue: fileRecord.downloadUrl, label: spec.changeLabel }],
       performedBy: ctx.channelSenderId || 'system',
       performedByName: attribution,
       companyId: ctx.companyId,
     });
     emitSyncSignalIfMapped(COLLECTIONS.CONTACTS, 'UPDATED', contactId, ctx.companyId);
 
+    logger.info(spec.logMessage, {
+      contactId, fileRecordId, requestId: ctx.requestId,
+    });
+
     return {
       success: true,
-      data: { contactId, contactDisplayName, fileRecordId, purpose: 'gallery_photo' },
+      data: {
+        contactId, contactDisplayName, fileRecordId,
+        ...(spec.setsPrimaryPhoto ? { photoURL: fileRecord.downloadUrl } : {}),
+        purpose: spec.purpose,
+      },
     };
   }
 
@@ -275,7 +316,10 @@ async function getContact(contactId: string, companyId: string): Promise<Contact
   const snap = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
   if (!snap.exists) return null;
   const data = snap.data();
-  if (data?.companyId && data.companyId !== companyId) return null;
+  // 🔴 ADR-742 §4 — ρητή παγίδα κενού. Ο καλών εδώ είναι **πράκτορας ΤΝ**
+  // (ADR-734 §7): επαφή χωρίς `companyId` επέστρεφε `displayName` σε
+  // οποιονδήποτε — διαρροή **περιεχομένου**, όχι ύπαρξης.
+  if (!isPayloadOwnedByCompany(data, companyId)) return null;
   return { displayName: String(data?.displayName ?? 'Unknown') };
 }
 

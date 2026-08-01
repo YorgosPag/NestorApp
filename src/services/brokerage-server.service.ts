@@ -9,6 +9,16 @@
  * Replicates exclusivity validation from the client service to ensure
  * server-side enforcement (never trust client validation alone).
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ADR-742 §4 — οι **τρεις** έλεγχοι ιδιοκτησίας ρωτούν τον SSoT
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Μέχρι τις 2026-08-01 και οι τρεις έγραφαν σκέτο `!==` πάνω σε
+ * `snap.data() as BrokerageAgreement`: **ο τύπος υπόσχεται, η βάση δεν
+ * εγγυάται**. Συμφωνητικό αποθηκευμένο χωρίς `companyId` (ή με κενό) και καλών
+ * με χαλασμένο token ταίριαζαν. *Το κενό δεν είναι μισθωτής, είναι **απουσία**
+ * μισθωτή.* Η πολιτική αποκάλυψης (`'Access denied'` προς το route) είναι
+ * **σωστή και δεν άλλαξε** — άλλαξε μόνο η **σύγκριση** (§3.4).
+ *
  * @module services/brokerage-server.service
  * @enterprise ADR-252 - Security Audit (server-side write enforcement)
  */
@@ -17,6 +27,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { getErrorMessage } from '@/lib/error-utils';
 import { generateBrokerageId, generateCommissionId } from '@/services/enterprise-id.service';
 import { calculateCommission } from '@/types/brokerage';
@@ -45,6 +56,81 @@ function getDb() {
   const db = getAdminFirestore();
   if (!db) throw new Error('Admin Firestore unavailable');
   return db;
+}
+
+// ============================================================================
+// ΤΑ ΔΥΟ ΚΟΙΝΑ ΒΗΜΑΤΑ (N.18 / CHECK 3.28)
+// ============================================================================
+//
+// Τα δύο μπλοκ παρακάτω ήταν γραμμένα **δύο φορές** το καθένα. Δεν το είδε
+// κανείς όσο ήταν 11-12 γραμμές· φάνηκαν όταν ο έλεγχος ιδιοκτησίας του
+// ADR-742 §4 πρόσθεσε **δύο** γραμμές (import + σχόλιο) και τα έσπρωξε πάνω
+// από τα 50 tokens του jscpd. Το ADR-742 το έχει ήδη καταγράψει τρεις φορές:
+// *η κεντρικοποίηση γεννά κλώνο*. Η απάντηση είναι **εξαγωγή**, ποτέ χαλάρωση
+// κατωφλιού — αλλιώς ο επόμενος που αλλάξει τον έναν αδελφό αφήνει τον άλλο.
+
+/** Το αποτέλεσμα του {@link loadOwnedAgreement} — ή έγγραφο, ή άρνηση, ποτέ και τα δύο. */
+type AgreementLoad =
+  | {
+      readonly docRef: FirebaseFirestore.DocumentReference;
+      readonly current: BrokerageAgreement;
+      readonly refusal?: undefined;
+    }
+  | {
+      readonly refusal: { success: false; error: string };
+      readonly docRef?: undefined;
+      readonly current?: undefined;
+    };
+
+/**
+ * Φέρε το συμφωνητικό και **αμέσως** κρίνε το — μία αλυσίδα, δύο καλούντες.
+ *
+ * 🔴 Ο κίνδυνος δεν ήταν οι γραμμές· ήταν η **σειρά** (ADR-742 §7.1). Αντίγραφο
+ * που φορτώνει, δουλεύει, και ρωτά «δικό μου;» στο τέλος απαντά κανονικά — έχει
+ * όμως ήδη διαβάσει ξένο έγγραφο, και **κανένα test του φύλακα δεν το πιάνει**,
+ * γιατί ο φύλακας *κλήθηκε*, απλώς αργά. Ενωμένα, η σειρά παύει να είναι θέμα
+ * προσοχής.
+ *
+ * ⚠️ Η **πολιτική αποκάλυψης δεν άλλαξε**: τα δύο «όχι» μένουν διακριτά
+ * (`'Agreement not found'` vs `'Access denied'`), όπως το δηλώνει ρητά η κεφαλίδα
+ * αυτού του module. Εδώ ενοποιείται η **αλυσίδα**, όχι το λεξιλόγιο — αν κάποτε
+ * αποφασιστεί μεταμφίεση κατά §3.3, θα αλλάξει **αυτή** η συνάρτηση, μία φορά.
+ */
+async function loadOwnedAgreement(id: string, companyId: string): Promise<AgreementLoad> {
+  const docRef = getDb().collection(COLLECTIONS.BROKERAGE_AGREEMENTS).doc(id);
+  const snap = await docRef.get();
+
+  if (!snap.exists) {
+    return { refusal: { success: false, error: 'Agreement not found' } };
+  }
+
+  const current = { id: snap.id, ...snap.data() } as BrokerageAgreement;
+
+  if (!isPayloadOwnedByCompany(current, companyId)) {
+    return { refusal: { success: false, error: 'Access denied' } };
+  }
+
+  return { docRef, current };
+}
+
+/**
+ * Η **μία** μετάφραση «η επικύρωση αποκλειστικότητας είπε όχι» → απάντηση.
+ *
+ * Επιστρέφει `null` όταν η επικύρωση περνά, ώστε ο καλών να γράφει έναν έλεγχο
+ * αντί για δύο. Το `validation` ταξιδεύει **ολόκληρο** προς τα έξω: το UI δείχνει
+ * όλα τα ζητήματα, όχι μόνο το πρώτο σφάλμα που μπαίνει στο `error`.
+ */
+function exclusivityRefusal(
+  validation: ExclusivityValidationResult,
+): { success: false; error: string; validation: ExclusivityValidationResult } | null {
+  if (validation.canProceed) return null;
+
+  const firstError = validation.issues.find((i) => i.severity === 'error');
+  return {
+    success: false,
+    error: firstError?.messageKey ?? 'Exclusivity conflict',
+    validation,
+  };
 }
 
 // Exclusivity validation extracted to brokerage-exclusivity.helper.ts (Google SRP)
@@ -83,14 +169,8 @@ export class BrokerageServerService {
         },
         companyId
       );
-      if (!validation.canProceed) {
-        const firstError = validation.issues.find((i) => i.severity === 'error');
-        return {
-          success: false,
-          error: firstError?.messageKey ?? 'Exclusivity conflict',
-          validation,
-        };
-      }
+      const refusal = exclusivityRefusal(validation);
+      if (refusal) return refusal;
 
       const id = generateBrokerageId();
       const now = nowISO();
@@ -144,20 +224,9 @@ export class BrokerageServerService {
     updatedBy: string
   ): Promise<{ success: boolean; error?: string; validation?: ExclusivityValidationResult }> {
     try {
-      const db = getDb();
-      const docRef = db.collection(COLLECTIONS.BROKERAGE_AGREEMENTS).doc(id);
-      const snap = await docRef.get();
-
-      if (!snap.exists) {
-        return { success: false, error: 'Agreement not found' };
-      }
-
-      const current = { id: snap.id, ...snap.data() } as BrokerageAgreement;
-
-      // Tenant isolation check
-      if (current.companyId !== companyId) {
-        return { success: false, error: 'Access denied' };
-      }
+      const loaded = await loadOwnedAgreement(id, companyId);
+      if (loaded.refusal) return loaded.refusal;
+      const { docRef, current } = loaded;
 
       // If exclusivity, scope, or propertyId change → re-validate
       const needsValidation = updates.exclusivity !== undefined
@@ -180,14 +249,8 @@ export class BrokerageServerService {
           companyId
         );
 
-        if (!validation.canProceed) {
-          const firstError = validation.issues.find((i) => i.severity === 'error');
-          return {
-            success: false,
-            error: firstError?.messageKey ?? 'Exclusivity conflict',
-            validation,
-          };
-        }
+        const refusal = exclusivityRefusal(validation);
+        if (refusal) return refusal;
       }
 
       // Validate commission percentage if being updated
@@ -227,20 +290,9 @@ export class BrokerageServerService {
     terminatedBy: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      const db = getDb();
-      const docRef = db.collection(COLLECTIONS.BROKERAGE_AGREEMENTS).doc(id);
-      const snap = await docRef.get();
-
-      if (!snap.exists) {
-        return { success: false, error: 'Agreement not found' };
-      }
-
-      const current = snap.data() as BrokerageAgreement;
-
-      // Tenant isolation check
-      if (current.companyId !== companyId) {
-        return { success: false, error: 'Access denied' };
-      }
+      const loaded = await loadOwnedAgreement(id, companyId);
+      if (loaded.refusal) return loaded.refusal;
+      const { docRef } = loaded;
 
       const now = nowISO();
       await docRef.update({
@@ -352,7 +404,7 @@ export class BrokerageServerService {
       const current = snap.data() as CommissionRecord;
 
       // Tenant isolation check
-      if (current.companyId !== companyId) {
+      if (!isPayloadOwnedByCompany(current, companyId)) {
         return { success: false, error: 'Access denied' };
       }
 

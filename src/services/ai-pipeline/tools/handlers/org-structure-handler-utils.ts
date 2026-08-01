@@ -14,6 +14,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import {
   getOrgStructure,
   getContactOrgStructure,
@@ -147,7 +148,10 @@ export async function verifyContactBelongsToTenant(
       .get();
     if (!snap.exists) return false;
     const data = snap.data() as { companyId?: string } | undefined;
-    return data?.companyId === companyId;
+    // 🔴 ADR-742 §4 — η **θετική** μορφή της παγίδας: με σκέτο `===` επαφή χωρίς
+    // μισθωτή και πράκτορας με κενό `companyId` έδιναν `true`, δηλαδή η
+    // «επαλήθευση μισθωτή» **επιβεβαίωνε** πρόσβαση που δεν υπάρχει.
+    return isPayloadOwnedByCompany(data, companyId);
   } catch (err) {
     logger.error('org-structure-handler: tenant verification failed', { contactId, err });
     return false;
@@ -204,14 +208,38 @@ export function fuzzyFindMembers(
 
 // ─── Tree traversal ──────────────────────────────────────────────────────────
 
+/** Ένα εύρημα διάσχισης: πόσο μακριά από την αφετηρία, και ποιος. */
+type TraversalHit = { depth: number; member: SerializedMember };
+
+/**
+ * Η **κοινή αφετηρία** και των δύο διασχίσεων του οργανογράμματος.
+ *
+ * Οι δύο συναρτήσεις παρακάτω πάνε σε **αντίθετες κατευθύνσεις** (προς τα κάτω
+ * αναδρομικά, προς τα πάνω επαναληπτικά) — άρα τα *σώματά* τους σωστά διαφέρουν.
+ * Τα **τρία πρώτα βήματα** όμως ήταν αυτολεξεί ίδια, και το `jscpd` τα μέτρησε
+ * ως κλώνο (N.18). Το επικίνδυνο δεν είναι οι γραμμές: είναι το
+ * `visited` **αρχικοποιημένο με την αφετηρία**. Αν κάποιος το ξεχάσει στη μία
+ * από τις δύο, ο κόμβος-αφετηρία εμφανίζεται στα αποτελέσματά του — και σε
+ * κυκλικό `reportsTo` η διάσχιση δεν τερματίζει. Αρχικοποιείται **μία** φορά.
+ */
+function beginTraversal(org: OrgStructure, start: OrgMember): {
+  allMembers: OrgMember[];
+  collected: TraversalHit[];
+  visited: Set<string>;
+} {
+  return {
+    allMembers: org.departments.flatMap(d => d.members),
+    collected: [],
+    visited: new Set<string>([start.id]),
+  };
+}
+
 export function collectDescendants(
   org: OrgStructure,
   start: OrgMember,
   maxDepth: number,
-): Array<{ depth: number; member: SerializedMember }> {
-  const allMembers = org.departments.flatMap(d => d.members);
-  const collected: Array<{ depth: number; member: SerializedMember }> = [];
-  const visited = new Set<string>([start.id]);
+): TraversalHit[] {
+  const { allMembers, collected, visited } = beginTraversal(org, start);
 
   function walk(parentId: string, depth: number): void {
     if (depth > maxDepth) return;
@@ -232,10 +260,8 @@ export function collectAscendants(
   org: OrgStructure,
   start: OrgMember,
   maxDepth: number,
-): Array<{ depth: number; member: SerializedMember }> {
-  const allMembers = org.departments.flatMap(d => d.members);
-  const collected: Array<{ depth: number; member: SerializedMember }> = [];
-  const visited = new Set<string>([start.id]);
+): TraversalHit[] {
+  const { allMembers, collected, visited } = beginTraversal(org, start);
 
   let cursor: OrgMember | undefined = start;
   let depth = 1;
