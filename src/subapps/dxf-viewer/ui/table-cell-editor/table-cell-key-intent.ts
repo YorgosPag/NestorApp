@@ -69,9 +69,20 @@ export type TableCellKeyIntent =
    * της τελευταίας **επεξεργασίας κελιού**. Δες {@link undoRedoIntent} για το γιατί.
    */
   | { readonly kind: 'history'; readonly direction: 'undo' | 'redo' }
+  /**
+   * ADR-739 Φ.Δ βήμα 6 — «**κατάπιε το, μην κάνεις τίποτα**»: πλήκτρο που το πεδίο κειμένου
+   * θα εκτελούσε μόνο του με αποτέλεσμα που το μοντέλο δεν μπορεί να εκφράσει.
+   *
+   * Διαφέρει από το `passthrough` όσο διαφέρει η σιωπή από τη συγκατάθεση, και υπάρχει
+   * επειδή το βήμα 6 άλλαξε το στοιχείο σε `<textarea>`: μέχρι τότε το `<input>` **δεν είχε**
+   * δεύτερη γραμμή, οπότε το `Alt+Enter` του Excel δεν έκανε τίποτα από μόνο του και η σωστή
+   * απάντηση ήταν «μην το αγγίξεις». Τώρα θα έγραφε πραγματικό `\n` μέσα στην τιμή.
+   */
+  | { readonly kind: 'suppress' }
   | { readonly kind: 'passthrough' };
 
 const PASSTHROUGH: TableCellKeyIntent = { kind: 'passthrough' };
+const SUPPRESS: TableCellKeyIntent = { kind: 'suppress' };
 
 function move(m: TableCursorMove): TableCellKeyIntent {
   return { kind: 'move', move: m };
@@ -168,16 +179,29 @@ function f2Target(mode: TableCellCursorMode): TableCellCursorMode {
  * ({@link undoRedoIntent} — διάβασε εκεί γιατί η απόφαση αντιστράφηκε στο βήμα 4).
  * Το `Ctrl+C`/`Ctrl+X`/`Ctrl+V` και οι επιταχυντές της εφαρμογής μένουν ανέγγιχτοι.
  *
- * ⚠️ Το `Alt` περνά επίσης: στο Excel το `Alt+Enter` είναι αλλαγή γραμμής μέσα στο κελί.
- * Εδώ το `TableCell.value` είναι **απλό `string`** (τεκμηριωμένη απόφαση, ADR-739 Φ.Α),
- * άρα δεν το υλοποιούμε — αλλά ούτε το **κλέβουμε** για να σημαίνει κάτι άλλο.
+ * ⚠️ Το `Alt` περνά επίσης — με **μία** εξαίρεση, το `Alt+Enter`.
+ *
+ * ── ΓΙΑΤΙ ΤΟ `Alt+Enter` ΜΠΛΟΚΑΡΕΤΑΙ ΤΩΡΑ (ADR-739 Φ.Δ βήμα 6) ──
+ *
+ * Στο Excel είναι αλλαγή γραμμής μέσα στο κελί. Εδώ το `TableCell.value` είναι **απλό
+ * `string`** (τεκμηριωμένη απόφαση, ADR-739 Φ.Α), άρα δεν το υλοποιούμε. Μέχρι το βήμα 5
+ * αυτό αρκούσε ως «μην το αγγίξεις»: το στοιχείο ήταν `<input>`, που **δεν δέχεται** αλλαγή
+ * γραμμής — η μη-υλοποίηση ήταν δωρεάν.
+ *
+ * Το βήμα 6 το έκανε `<textarea>` (χρειάζεται δεύτερη οπτική γραμμή). Από εκείνη τη στιγμή
+ * η **ίδια** αδράνεια δίνει το **αντίθετο** αποτέλεσμα: ο browser γράφει πραγματικό `\n` στην
+ * τιμή, η διάταξη το μετρά σαν γράμμα και το DXF παίρνει χαρακτήρα ελέγχου μέσα σε κελί.
+ * Άρα η αρχή «μη λες ψέματα για το τι υποστηρίζεις» απαιτεί τώρα **ρητή** άρνηση.
+ *
+ * Δεν είναι μόνιμο: όταν έρθει το `overflow: 'wrap'` (Φ.Δ.10) η αναδίπλωση γίνεται υπαρκτή
+ * έννοια του μοντέλου και **εδώ** αλλάζει η μία γραμμή, σε ένα σημείο.
  */
 export function resolveTableCellKeyIntent(
   key: string,
   mod: TableCellKeyModifiers,
   mode: TableCellCursorMode,
 ): TableCellKeyIntent {
-  if (mod.altKey) return PASSTHROUGH;
+  if (mod.altKey) return key === 'Enter' ? SUPPRESS : PASSTHROUGH;
 
   const homeEnd = homeEndMove(key, mod);
   // Σε κατάσταση γραφής το Home/End ανήκουν στον **κέρσορα** του κειμένου, όχι στο πλέγμα:

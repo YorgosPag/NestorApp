@@ -61,7 +61,28 @@
  *
  * ## Τι ζωγραφίζει τον δρομέα
  * **Ο καμβάς**, όχι αυτό το κουτί (`stampTableCellCursor`): το πλαίσιο του τρέχοντος κελιού
- * πρέπει να φαίνεται και σε κατάσταση **πλοήγησης**, όπου αυτό το `<input>` είναι διαφανές.
+ * πρέπει να φαίνεται και σε κατάσταση **πλοήγησης**, όπου αυτό το πεδίο είναι διαφανές.
+ *
+ * ## 🔴 ADR-739 Φ.Δ βήμα 6 — γιατί `<textarea>` και όχι `<input>`
+ *
+ * Ο επεξεργαστής επεκτείνεται πέρα από το κελί (Excel) και, όταν φτάσει στην άκρη της
+ * οθόνης, **αναδιπλώνει σε δεύτερη γραμμή**. Ένα `<input>` δεν έχει δεύτερη γραμμή. Η
+ * αλλαγή είναι μικρότερη απ' όσο φαίνεται, και οι τρεις λόγοι γράφονται εδώ γιατί ο επόμενος
+ * θα υποψιαστεί ότι κάτι έσπασε:
+ *
+ *  1. **Η ιδιοκτησία πλήκτρων δεν κουνήθηκε.** Ο δομικός φύλακας ρωτά `isTextEntryTarget`,
+ *     που απαντά `true` για `INPUT` **και** `TEXTAREA` στην ίδια γραμμή (`keyboard-scope.ts`).
+ *     Και οι 43 window listeners παραιτούνται ακριβώς όπως πριν, με μηδέν αλλαγή.
+ *  2. **Η κατακόρυφη γεωμετρία δεν κουνήθηκε.** Το `<textarea>` στοιβάζει από την κορυφή
+ *     αντί να κεντράρει — αλλά με `line-height` ίσο με το content box οι δύο τοποθετήσεις
+ *     είναι **αριθμητικά ταυτόσημες** (η απόδειξη ζει στο `table-cell-editor-frame.ts`).
+ *  3. **Το `Enter` δεν έγινε αλλαγή γραμμής.** Το διεκδικεί ήδη το
+ *     {@link resolveTableCellKeyIntent} ως `move`, και ο χειριστής κάνει `preventDefault`
+ *     πριν προλάβει ο browser. Το `Alt+Enter` όμως **θα** έμπαινε — γι' αυτό μπλοκάρεται
+ *     ρητά εκεί, μαζί με το σκεπτικό.
+ *
+ * ⚠️ Η επέκταση είναι **αποκλειστικά κατάσταση διεπαφής**: δεν αγγίζει τη διάταξη, δεν
+ * αγγίζει το `TableCell.value`. Μετά το commit ο πίνακας ξαναδείχνει κομμένο (βήμα 5).
  *
  * @see ui/table-cell-editor/table-cell-editor-frame.ts — από sheet-mm σε px CSS
  * @see ui/table-cell-editor/table-cell-editor-vars.ts — το συμβόλαιο των custom properties
@@ -122,10 +143,20 @@ export interface TableCellEditorOverlayProps {
   readonly onHistory: (direction: 'undo' | 'redo') => void;
 }
 
+/**
+ * Κάθε αλλαγή γραμμής γίνεται **ένα κενό** — ποτέ δεν χάνεται λέξη.
+ *
+ * Το `\r\n` πιάνεται ως ένα, αλλιώς κείμενο από Windows θα άφηνε διπλά κενά. Οι διαδοχικές
+ * αλλαγές γραμμής επίσης συμπτύσσονται: μια κενή γραμμή στο πρωτότυπο δεν είναι περιεχόμενο.
+ */
+function flattenToSingleLine(value: string): string {
+  return value.replace(/[\r\n]+/gu, ' ');
+}
+
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
   const { mode, draft, initialText, caretIndex, anchor, onCommit, onMove, onClear, onHistory } = props;
   const { t } = useTranslation('dxf-viewer');
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Είσοδος με διπλό κλικ / F2: **ποτέ** επιλογή όλου του κειμένου — μπήκες για να
   // διορθώσεις, όχι για να ξαναγράψεις (αλλιώς η κατάσταση `edit` θα ήταν λειτουργικά ίδια
@@ -170,7 +201,7 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
   });
 
   const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const intent = resolveTableCellKeyIntent(event.key, event, mode);
       switch (intent.kind) {
         case 'move':
@@ -197,6 +228,11 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
           event.preventDefault();
           onHistory(intent.direction);
           return;
+        case 'suppress':
+          // ADR-739 Φ.Δ βήμα 6 — πλήκτρο που το `<textarea>` **θα** εκτελούσε και δεν πρέπει
+          // (σήμερα: `Alt+Enter`). Καταναλώνεται εδώ και δεν συμβαίνει τίποτα άλλο.
+          event.preventDefault();
+          return;
         case 'passthrough':
           // Το `Enter` το έχει ήδη διεκδικήσει η περίπτωση `move`, οπότε ο χειριστής του
           // SSoT δεν έχει τι να κάνει εδώ — καλείται παρ' όλα αυτά ώστε μια μελλοντική
@@ -208,8 +244,19 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
   );
 
   const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setTableCellCursorDraft(event.target.value);
+    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      // 🔴 ADR-739 Φ.Δ βήμα 6 — **ο φύλακας της μονής γραμμής.**
+      //
+      // Το `<input>` πετούσε τις αλλαγές γραμμής μόνο του: μια **επικόλληση** πολυγραμμικού
+      // κειμένου έμπαινε ισοπεδωμένη, δωρεάν. Το `<textarea>` τις κρατά — και θα έφταναν
+      // στο `TableCell.value`, που είναι **απλό `string`** (τεκμηριωμένη απόφαση, ADR-739
+      // Φ.Α): η διάταξη θα μετρούσε έναν χαρακτήρα ελέγχου σαν γράμμα και το DXF θα έγραφε
+      // κελί που κανένα άλλο πρόγραμμα δεν διαβάζει σωστά.
+      //
+      // Η ισοπέδωση γίνεται **εδώ και όχι στο commit**: ο χρήστης πρέπει να δει αμέσως τι
+      // μπήκε στο κελί του. Ένα «καθάρισμα» τη στιγμή της δέσμευσης θα άλλαζε το κείμενο
+      // κάτω από τα μάτια του, αφού το είχε ήδη εγκρίνει.
+      setTableCellCursorDraft(flattenToSingleLine(event.target.value));
       // Ο πρώτος χαρακτήρας πάνω σε επιλεγμένο κελί ανοίγει τη συνεδρία γραφής. Γίνεται
       // εδώ και όχι στο `keydown` επίτηδες: το `change` πυροδοτεί **μόνο** όταν όντως
       // μπήκε κείμενο, άρα καλύπτει IME/dead keys χωρίς λίστα «εκτυπώσιμων» πλήκτρων.
@@ -243,10 +290,16 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
 
   return (
     <TextEditorAnchorLayer {...anchor}>
-      <input
+      <textarea
         ref={inputRef}
-        type="text"
         autoFocus
+        // Το ύψος το ορίζει **το κουτί** (custom properties, ένα tick): ένα `rows` εδώ θα ήταν
+        // δεύτερη πηγή αλήθειας για το ίδιο νούμερο, και θα κέρδιζε στο πρώτο καρέ πριν
+        // προλάβει ο scheduler. Το `1` δηλώνει μόνο ότι το φυσικό ελάχιστο είναι μία γραμμή.
+        rows={1}
+        // Ο πίνακας είναι σχέδιο, όχι κείμενο πρόζας: κόκκινες κυματιστές γραμμές κάτω από
+        // κωδικούς υλικών είναι θόρυβος. Ίδια επιλογή με κάθε φύλλο υπολογισμού.
+        spellCheck={false}
         value={draft}
         // ADR-739 Φ.Δ βήμα 3 — **κανένα placeholder**: το πεδίο ΕΙΝΑΙ πλέον το κελί, και ένα
         // γκρίζο «πληκτρολογήστε…» μέσα σε άδειο κελί είναι κείμενο που δεν υπάρχει στο
@@ -259,11 +312,16 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        // ΚΑΜΙΑ γωνία, ΚΑΝΕΝΑ περίγραμμα, ΚΑΜΙΑ σκιά εστίασης: το κελί έχει ήδη πλαίσιο —
-        // το ζωγραφίζει ο καμβάς (`stampTableCellCursor`), στην περιστροφή του πίνακα. Ένα
-        // δεύτερο, ευθυγραμμισμένο στην οθόνη, θα κρεμόταν λοξά πάνω στο πρώτο.
+        // ΚΑΜΙΑ γωνία, ΚΑΝΕΝΑ περίγραμμα, ΚΑΜΙΑ σκιά εστίασης **όσο το κουτί είναι το κελί**:
+        // το κελί έχει ήδη πλαίσιο — το ζωγραφίζει ο καμβάς (`stampTableCellCursor`), στην
+        // περιστροφή του πίνακα. Ένα δεύτερο, ευθυγραμμισμένο στην οθόνη, θα κρεμόταν λοξά.
+        //
+        // ADR-739 Φ.Δ βήμα 6 — μόλις το κουτί **ξεπεράσει** το κελί, το περίγραμμα γίνεται
+        // απαραίτητο και εμφανίζεται ως `outline` μηδενικού πάχους→1px μέσω custom property
+        // (δες `table-cell-editor-vars.ts`). Γι' αυτό φεύγει το `outline-none` του Tailwind:
+        // θα κέρδιζε σε ειδικότητα και η ένδειξη δεν θα ζωγραφιζόταν ποτέ.
         className={cn(
-          'box-border border-0 outline-none',
+          'box-border border-0',
           writing
             ? 'bg-clip-padding'
             // Πλοήγηση: κρατά την ΕΣΤΙΑΣΗ (άρα και τα πλήκτρα), χάνει την όψη και το

@@ -99,6 +99,60 @@ export interface CellEditorExpansion {
 }
 
 /**
+ * Πόσο μακριά φτάνει μια ακτίνα από το `anchor` προς την κατεύθυνση `(dx, dy)` πριν βγει από
+ * το παράθυρο. Παράλληλη προς άξονα κατεύθυνση αγνοεί εκείνον τον άξονα (καμία τομή).
+ */
+function roomAlong(
+  anchor: { readonly x: number; readonly y: number },
+  dx: number,
+  dy: number,
+  viewport: { readonly width: number; readonly height: number },
+): number {
+  const EPS = 1e-6;
+  let t = Number.POSITIVE_INFINITY;
+  if (dx > EPS) t = Math.min(t, (viewport.width - anchor.x) / dx);
+  else if (dx < -EPS) t = Math.min(t, anchor.x / -dx);
+  if (dy > EPS) t = Math.min(t, (viewport.height - anchor.y) / dy);
+  else if (dy < -EPS) t = Math.min(t, anchor.y / -dy);
+  return Math.max(Number.isFinite(t) ? t : viewport.width, 0);
+}
+
+/**
+ * Πόσο πλατύ επιτρέπεται να γίνει το κουτί πριν αναγκαστεί να αναδιπλώσει — **μετρημένο κατά
+ * μήκος της γραμμής του πίνακα**, όχι οριζόντια στην οθόνη.
+ *
+ * 🔴 Η διάκριση είναι όλη η ουσία σε **στραμμένο** πίνακα: η κατεύθυνση επέκτασης είναι ο
+ * τοπικός άξονας x του κελιού, δηλαδή `(cos θ, sin θ)`. Ένας υπολογισμός «πλάτος παραθύρου
+ * μείον x» θα ήταν σωστός μόνο για γωνία μηδέν — και θα φαινόταν σωστός σε **κάθε** test που
+ * δεν στρίβει τον πίνακα.
+ *
+ * Η στοίχιση καθορίζει **ποια** απόσταση μετρά, γιατί αυτή καθορίζει και προς τα πού
+ * μεγαλώνει το κουτί (δες `growthOffsetPx`): δεξιά στοίχιση ξοδεύει τον χώρο **πίσω** από την
+ * άγκυρα, κεντρική ξοδεύει και από τις δύο μεριές, άρα περιορίζεται από τη **στενότερη**.
+ */
+export function editorGrowthCeilingPx(params: {
+  readonly anchor: { readonly x: number; readonly y: number } | null;
+  readonly rotationRad: number;
+  readonly cellWidthPx: number;
+  readonly growsFrom: 'left' | 'right' | 'center';
+  readonly viewport: { readonly width: number; readonly height: number };
+}): number {
+  const { anchor, rotationRad, cellWidthPx, growsFrom, viewport } = params;
+  // Χωρίς προβολή (άγκυρο εκτός οθόνης) το κουτί κρατιέται στην τελευταία έγκυρη θέση του:
+  // το πλάτος του παραθύρου είναι το μόνο τίμιο άνω φράγμα που ξέρουμε.
+  if (!anchor) return viewport.width;
+
+  const dx = Math.cos(rotationRad);
+  const dy = Math.sin(rotationRad);
+  const forward = roomAlong(anchor, dx, dy, viewport);
+  if (growsFrom === 'left') return forward;
+
+  const backward = roomAlong(anchor, -dx, -dy, viewport);
+  if (growsFrom === 'right') return cellWidthPx + backward;
+  return cellWidthPx + 2 * Math.min(backward, Math.max(forward - cellWidthPx, 0));
+}
+
+/**
  * Το μήκος του προθέματος που **θα τυπωθεί** — ο ίδιος κανόνας με το βήμα 5
  * (`clipWithEllipsis`), εκφρασμένος στον px μετρητή: τα αποσιωπητικά μπαίνουν **μέσα** στο
  * διαθέσιμο πλάτος, δεν προστίθενται μετά.

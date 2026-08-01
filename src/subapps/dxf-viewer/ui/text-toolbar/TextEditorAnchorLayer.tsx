@@ -69,7 +69,11 @@ export interface TextEditorAnchor {
    * που ανέφερε ο Giorgio (2026-08-01). Γι' αυτό είναι **επιλογή ανά καταναλωτή** και όχι
    * καθολική αλλαγή.
    */
-  readonly projectBox?: () => TextEditorAnchorBox | null;
+   * ADR-739 Φ.Δ βήμα 6 — δέχεται τη **θέση** του άγκυρου (client px) επειδή το μέγεθος
+   * μπορεί να εξαρτάται από αυτήν: ένα κουτί που μεγαλώνει με το περιεχόμενο πρέπει να ξέρει
+   * πόσος χώρος υπάρχει μέχρι την άκρη του παραθύρου. `null` όταν το άγκυρο δεν προβάλλεται.
+   */
+  readonly projectBox?: (anchor: { x: number; y: number } | null) => TextEditorAnchorBox | null;
 }
 
 /**
@@ -86,6 +90,17 @@ export interface TextEditorAnchorBox {
   readonly heightPx: number;
   /** CSS ακτίνια (θετικά δεξιόστροφα)· 0 ⇒ καμία κλίση. */
   readonly rotationRad: number;
+  /**
+   * ADR-739 Φ.Δ βήμα 6 — μετατόπιση κατά μήκος του **τοπικού** άξονα x του κουτιού, δηλαδή
+   * **μετά** την περιστροφή (px· αρνητική = προς τα αριστερά όπως το βλέπει το κουτί).
+   *
+   * 🔴 Γι' αυτό μπαίνει στο `transform` **μετά** το `rotate` και όχι στη θέση του άγκυρου:
+   * σε στραμμένο πίνακα το κουτί πρέπει να απλωθεί κατά μήκος της **γραμμής του πίνακα**, όχι
+   * οριζόντια στην οθόνη. Μια μετατόπιση σε άξονες οθόνης θα ξεκόλλαγε τον επεξεργαστή από
+   * το κελί του μόλις ο πίνακας γύριζε έστω λίγο — και θα φαινόταν σωστή σε κάθε test με
+   * γωνία μηδέν.
+   */
+  readonly offsetXPx?: number;
   /** Custom properties (`--…`) που γράφονται πάνω στο κουτί. */
   readonly cssVars?: Readonly<Record<string, string>>;
 }
@@ -142,28 +157,36 @@ export function TextEditorAnchorLayer(props: TextEditorAnchorLayerProps): React.
   // Το κουτί της **πρώτης** απόδοσης: χωρίς αυτό, ο επεξεργαστής θα ζωγραφιζόταν ένα καρέ
   // με σταθερές προεπιλογές πριν προλάβει το tick — ένα ορατό τίναγμα ακριβώς τη στιγμή
   // που ο χρήστης κάνει διπλό κλικ. Καθαρή ανάγνωση (κλίμακα + διάταξη), καμία παρενέργεια.
-  const initialBox = projectBox?.() ?? null;
+  const initialBox = projectBox?.(project()) ?? null;
 
   useEffect(() => {
     const reproject = (): void => {
       const el = ref.current;
       if (!el) return;
-      // Το ΜΕΓΕΘΟΣ πρώτα: το clamping παρακάτω το χρειάζεται ενημερωμένο, αλλιώς ένα κελί
-      // που μεγάλωσε με το zoom θα περιοριζόταν με το παλιό του πλάτος.
-      const box = boxRef.current?.() ?? null;
-      if (box) applyBox(el, box);
+      // 🔴 Και οι δύο **αναγνώσεις** πρώτα, οι **εγγραφές** μετά. Το `project()` διαβάζει
+      // γεωμετρία από το DOM· το `applyBox` γράφει. Ανάγνωση μετά από εγγραφή στο ίδιο tick
+      // αναγκάζει τον browser σε επιπλέον υπολογισμό διάταξης, 60 φορές το δευτερόλεπτο.
+      //
       // Το άγκυρο εκτός προβολής (πίσω από την κάμερα) ΔΕΝ κρύβει τον editor — θα έσβηνε
       // το κουτί κάτω από τα δάχτυλα του χρήστη μεσοπληκτρολόγησης. Κρατιέται στην
       // τελευταία έγκυρη θέση, περιορισμένο στο viewport.
       const p = project();
+      // Το ΜΕΓΕΘΟΣ πριν το clamping: αλλιώς ένα κελί που μεγάλωσε με το zoom θα περιοριζόταν
+      // με το παλιό του πλάτος. Παίρνει τη θέση γιατί μπορεί να εξαρτάται από αυτήν.
+      const box = boxRef.current?.(p) ?? null;
+      if (box) applyBox(el, box);
       if (!p) return;
       const clampSize = box ? { width: box.widthPx, height: box.heightPx } : sizeRef.current;
       const c = clampToViewport(p, clampSize, insetRef.current);
       // Η περιστροφή μπαίνει ΜΕΤΑ τη μετατόπιση, με αρχή την πάνω-αριστερή γωνία
       // (`origin-top-left`): το κουτί γέρνει γύρω από το σημείο αγκύρωσής του, όπως ακριβώς
       // ο πίνακας γέρνει γύρω από τη δική του άγκυρα.
+      //
+      // Και η **τοπική** μετατόπιση τελευταία, δηλαδή μέσα στο ήδη γυρισμένο σύστημα
+      // συντεταγμένων — δες {@link TextEditorAnchorBox.offsetXPx}.
       const rotate = box?.rotationRad ? ` rotate(${box.rotationRad}rad)` : '';
-      el.style.transform = `translate(${c.x}px, ${c.y}px)${rotate}`;
+      const slide = box?.offsetXPx ? ` translate(${box.offsetXPx}px, 0)` : '';
+      el.style.transform = `translate(${c.x}px, ${c.y}px)${rotate}${slide}`;
     };
     reproject();
     return subscribe(reproject);

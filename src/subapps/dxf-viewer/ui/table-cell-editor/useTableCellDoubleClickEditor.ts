@@ -64,6 +64,7 @@ import {
   cellTextStartPx,
   type TableCellEditorFrame,
 } from './table-cell-editor-frame';
+import { editorGrowthCeilingPx } from './table-cell-editor-expansion';
 import {
   cellCaretIndexAtPx,
   cellFontBandPx,
@@ -127,13 +128,26 @@ function cellEditorFrame(
   target: TableCellEditTarget,
   angleRad: number,
   backgroundHex: string,
+  expansion?: { readonly draft: string; readonly anchor: { x: number; y: number } | null },
 ): TableCellEditorFrame {
+  const pxPerMm = tablePxPerMm(tableMmToWorldLive(), getImmediateTransform().scale);
   return computeTableCellEditorFrame({
     target,
-    pxPerMm: tablePxPerMm(tableMmToWorldLive(), getImmediateTransform().scale),
+    pxPerMm,
     angleRad,
     resolveBand: cellFontBandPx,
     backgroundHex,
+    draft: expansion?.draft,
+    resolveWidth: expansion ? cellTextWidthPx : undefined,
+    maxWidthPx: expansion
+      ? editorGrowthCeilingPx({
+          anchor: expansion.anchor,
+          rotationRad: -angleRad,
+          cellWidthPx: target.rectMm.w * pxPerMm,
+          growsFrom: target.hAlign === 'right' || target.hAlign === 'center' ? target.hAlign : 'left',
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+        })
+      : undefined,
   });
 }
 
@@ -306,21 +320,37 @@ export function useTableCellDoubleClickEditor(
   // ένα ξένο κουτί σε px οθόνης, που δεν κληρονομούσε ούτε μέγεθος, ούτε γραμματοσειρά,
   // ούτε στοίχιση, ούτε χρώμα, ούτε την περιστροφή του πίνακα. Τη θέση τους παίρνει ένα
   // **ζωντανό** κουτί, παράγωγο της ίδιας διάταξης που ζωγραφίζει ο καμβάς.
+  //
+  // 🔴 ADR-739 Φ.Δ βήμα 6 — το `draft` μπαίνει στις εξαρτήσεις **επίτηδες**: το κουτί
+  // μεγαλώνει με το κείμενο, άρα αλλάζει σε κάθε πάτημα πλήκτρου. Ο `cursor` ήδη άλλαζε ανά
+  // πάτημα (το πρόχειρο ζει μέσα του), οπότε αυτό **δεν** προσθέτει καμία νέα απόδοση — απλώς
+  // κάνει ρητό ότι το κουτί εξαρτάται από αυτό.
+  //
+  // Σε **πλοήγηση** δεν περνά πρόχειρο: εκεί ο επεξεργαστής είναι διαφανής και το κουτί
+  // πρέπει να είναι ακριβώς το κελί (τον δρομέα τον ζωγραφίζει ο καμβάς πάνω σε αυτό).
+  const draft = cursor && cursor.mode !== 'nav' ? cursor.draft : undefined;
+
   const anchor = useMemo(() => {
     if (!target) return null;
     const { cell, angleRad } = target;
     // Το φόντο διαβάζεται ΜΙΑ φορά ανά συνεδρία — δες το σχόλιο του `cellEditorFrame`.
     const backgroundHex = resolveDxfCanvasBackgroundHex();
-    const projectBox = (): TextEditorAnchorBox => {
-      const frame = cellEditorFrame(cell, angleRad, backgroundHex);
+    const projectBox = (point: { x: number; y: number } | null): TextEditorAnchorBox => {
+      const frame = cellEditorFrame(
+        cell,
+        angleRad,
+        backgroundHex,
+        draft === undefined ? undefined : { draft, anchor: point },
+      );
       return {
         widthPx: frame.widthPx,
         heightPx: frame.heightPx,
         rotationRad: frame.rotationRad,
+        offsetXPx: frame.offsetXPx,
         cssVars: tableCellEditorCssVars(frame),
       };
     };
-    const initial = projectBox();
+    const initial = projectBox(null);
     return {
       ...createTextEditorAnchor2D({
         worldPoint: cell.anchorWorldPoint,
@@ -331,7 +361,7 @@ export function useTableCellDoubleClickEditor(
       }),
       projectBox,
     };
-  }, [target, containerRef]);
+  }, [target, containerRef, draft]);
 
   const overlay = useMemo<TableCellOverlayMount | null>(() => {
     if (!cursor || !target || !anchor) return null;

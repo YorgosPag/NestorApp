@@ -110,9 +110,31 @@ describe('τα πλήκτρα που το κελί ΔΕΝ κλέβει ποτέ'
     expect(resolveTableCellKeyIntent('Tab', CTRL, 'nav')).toEqual({ kind: 'passthrough' });
   });
 
-  it('Alt+Enter ⇒ passthrough — δεν το υλοποιούμε, αλλά ούτε το κλέβουμε', () => {
+  it.each(['ArrowDown', 'F2', 'a', 'Home'])(
+    'Alt+%s ⇒ passthrough — το Alt ανήκει στους επιταχυντές της εφαρμογής',
+    (key) => {
+      expect(resolveTableCellKeyIntent(key, { ...NO_MODS, altKey: true }, 'enter')).toEqual({
+        kind: 'passthrough',
+      });
+    },
+  );
+
+  // ── 🔴 ADR-739 Φ.Δ βήμα 6 — η ΜΙΑ εξαίρεση, και γιατί αντιστράφηκε ──
+  //
+  // Μέχρι το βήμα 5 αυτό ήταν `passthrough` με ρητή αιτιολογία: «δεν το υλοποιούμε, αλλά ούτε
+  // το κλέβουμε». Ήταν σωστό **όσο** το στοιχείο ήταν `<input>`, που δεν δέχεται αλλαγή
+  // γραμμής: η αδράνεια ήταν δωρεάν. Το βήμα 6 το έκανε `<textarea>` (δεύτερη οπτική γραμμή),
+  // οπότε η ΙΔΙΑ αδράνεια γράφει τώρα πραγματικό `\n` μέσα στο `TableCell.value` — που είναι
+  // απλό `string` (ADR-739 Φ.Α). Η αρχή δεν άλλαξε· άλλαξε ποια ενέργεια την υπηρετεί.
+  it('Alt+Enter ⇒ suppress — το <textarea> ΘΑ έγραφε \\n σε μοντέλο μονής γραμμής', () => {
     expect(resolveTableCellKeyIntent('Enter', { ...NO_MODS, altKey: true }, 'enter')).toEqual({
-      kind: 'passthrough',
+      kind: 'suppress',
+    });
+  });
+
+  it('Alt+Enter ⇒ suppress και σε πλοήγηση — καμία κατάσταση δεν γράφει αλλαγή γραμμής', () => {
+    expect(resolveTableCellKeyIntent('Enter', { ...NO_MODS, altKey: true }, 'nav')).toEqual({
+      kind: 'suppress',
     });
   });
 
