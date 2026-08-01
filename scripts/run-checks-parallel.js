@@ -70,6 +70,7 @@ const notifLocaleTriggers = parseList(process.env.STAGED_NOTIF_LOCALE_TRIGGERS);
 const auditCatalogsTrigger = parseList(process.env.STAGED_AUDIT_CATALOGS_TRIGGER);
 
 const ssotFull    = process.env.SSOT_DISCOVER_FULL === '1';
+const skipTenantScope = !!process.env.SKIP_FIRESTORE_TENANT_SCOPE;
 const skipI18nTypes = !!process.env.SKIP_I18N_TYPES;
 const skipShellSlice = !!process.env.SKIP_I18N_SHELL_SLICE;
 const skipTooltip = !!process.env.SKIP_NATIVE_TOOLTIP;
@@ -136,6 +137,13 @@ if (!skipShellSlice && shellSliceTriggers.length > 0)
 
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);
+
+// CHECK 3.35 — tenant scope (ADR-747). Ο διάδοχος του 3.10, με AST αντί για grep
+// γραμμών: πιάνει και το client spread idiom (στο οποίο το 3.10 είναι ΔΟΜΙΚΑ
+// τυφλό) και τις αλυσίδες του Admin SDK (τις οποίες δεν κοιτά καθόλου).
+// Layer 1 = μόνο τα staged· Layer 2 (`--all`, ~2 λεπτά) τρέχει στο CI.
+if (!skipTenantScope && srcTsFiles.length > 0)
+  addThread('3.35', 'Firestore tenant scope', 'scripts/check-firestore-tenant-scope.js', srcTsFiles);
 
 if (navTriggers.length > 0)
   addThread('3.11', 'Navigation labels', 'scripts/check-navigation-labels.js');

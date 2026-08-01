@@ -2,10 +2,10 @@
 
 **Status:** Active
 **Owner:** Γιώργος Παγώνης
-**Last updated:** 2026-07-31 (ADR-744 — προστέθηκε η CHECK 3.34)
+**Last updated:** 2026-08-02 (ADR-747 — προστέθηκε η CHECK 3.35)
 **Referenced from:** `CLAUDE.md` SOS N.11
 
-Full details for pre-commit checks CHECK 3.13 – CHECK 3.18, plus CHECK 3.22–3.25, 3.30, **3.33** and **3.34**. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
+Full details for pre-commit checks CHECK 3.13 – CHECK 3.18, plus CHECK 3.22–3.25, 3.30, **3.33**, **3.34** and **3.35**. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
 
 ⚠️ **Το hook είναι η αλήθεια, όχι αυτό το αρχείο.** Οι CHECK 3.26–3.29, 3.31 και 3.32 **λείπουν** από εδώ (ζουν στον πίνακα του `CLAUDE.md` N.11 και στο `scripts/git-hooks/pre-commit`). Πριν επικαλεστείς «ποιοι αριθμοί είναι πιασμένοι», άνοιξε το hook.
 
@@ -737,6 +737,114 @@ load-bearing (κοκκινίζουν στη *προφανή λάθος υλοπ�
 **Οι ίδιες οι δοκιμές έπιασαν 2 πραγματικά σφάλματα πριν το commit**: το `t('a.b', { ns: 'files' })`
 έχανε το namespace override, και τα λείποντα κλειδιά namespace με άδειο slice δεν αναφέρονταν
 καθόλου. **Πράσινο test δεν αποδεικνύει τίποτα μέχρι να δεις ότι μπορεί να κοκκινίσει.**
+
+---
+
+## CHECK 3.35 — Firestore Tenant Scope (ADR-747)
+
+### Rule
+Κάθε Firestore query σε **tenant-scoped** συλλογή πρέπει να φιλτράρει στο πεδίο μισθωτή που
+δηλώνει το `src/services/firestore/tenant-config.ts` — **ανά σημείο κλήσης**, όχι ανά αρχείο.
+Δύο κανόνες, ένας σαρωτής AST: **client SDK spread** (`query(col, ...constraints)`) και
+**Admin SDK αλυσίδα** (`db.collection(…).where(…)`, με παρακολούθηση επανανάθεσης).
+**RATCHET ανά αρχείο** — baseline `.firestore-tenant-scope-baseline.json`.
+
+### Γιατί υπάρχει
+**Η πύλη που έλειπε ανάμεσα σε δύο πύλες.** Το CHECK 3.15 δήλωνε γραπτά (γρ. 38-44) ότι το
+direct `query()` «το καλύπτει το CHECK 3.10». Το CHECK 3.10 (`check-firestore-companyid.sh`,
+γρ. 52-61) παίρνει block **12 γραμμών ΠΡΟΣ ΤΑ ΚΑΤΩ** από κάθε `query(` και μαρκάρει **μόνο** αν
+το block περιέχει `where(`. Στο κυρίαρχο idiom του repo:
+
+```ts
+const constraints: QueryConstraint[] = [];
+if (options?.type) constraints.push(where('type', '==', options.type));   // ← 16 γραμμές ΠΑΝΩ
+return query(getCol(CONTACTS_COLLECTION, contactConverter), ...constraints);  // ← ΤΕΛΕΥΤΑΙΑ γραμμή
+```
+
+το block **δεν περιέχει κανένα `where(`** ⇒ **μηδέν παραβιάσεις, πάντα**. Γι' αυτό η baseline του
+3.10 έγραφε «**0 violations / 0 files — fully cleaned**» ενώ το `getAllContacts` έστελνε
+**αφιλτράριστη** λίστα επαφών επί μήνες (ADR-745 §9.5). **Τέταρτο «0 = κανείς δεν κοίταξε»**
+μετά τα i18n (N.11), `ssot-discover` (N.12) και jscpd (ADR-584).
+
+### Enforcement (Defense in Depth)
+
+| Layer | Where | Mode | Speed |
+|-------|-------|------|-------|
+| **Layer 1 — pre-commit** | `scripts/run-checks-parallel.js` CHECK 3.35 (**Phase 1**, worker thread) | **μόνο τα staged** | **~1,5s** μετρημένα |
+| **Layer 2 — CI** | `.github/workflows/firestore-tenant-scope.yml` | `--all`, ~11.000 αρχεία | ~2 λεπτά |
+
+⚠️ **Το Layer 1 δεν βλέπει** νέο αρχείο που κληρονομεί παραβίαση από **μετακίνηση** — γι' αυτό
+υπάρχει το Layer 2. **Η δήλωση του κενού είναι το ζητούμενο** (ίδιο δόγμα με το 3.34).
+
+### Πέντε ρητές καταστάσεις — καμία σιωπηλή απόρριψη
+`violation` · `ok` · `unanalyzable` · `exempt` · `not-tenant-scoped`
+
+🔴 Η πρώτη εκδοχή είχε κατηγόρημα `violation: … && !!coll` — **ό,τι δεν αναγνώριζε,
+εξαφανιζόταν**. Ο σαρωτής που γράφτηκε για να λύσει το «0 = κανείς δεν κοίταξε» **το
+αναπαρήγαγε στον εαυτό του**. Ένα εύρημα που δεν κατατάσσεται είναι **δεδομένο που χάθηκε**,
+όχι «καθαρό».
+
+### SSoT που **καταναλώνονται** (δεν ξαναγράφονται)
+| Πηγή | Τι δίνει |
+|---|---|
+| `src/services/firestore/tenant-config.ts` | **η αυθεντία**: ποια συλλογή είναι tenant-scoped (23 overrides· ό,τι λείπει = `companyId`) |
+| `src/config/firestore-collections.ts` | KEY → φυσικό όνομα |
+| `src/config/firestore-field-constants.ts` | `FIELDS.COMPANY_ID` (ADR-245B) |
+| τοπικά ψευδώνυμα (`const X = COLLECTIONS.Y`) | ανάλυση μέσα στο αρχείο |
+
+⚠️ **Τα δύο τελευταία ΔΕΝ είναι πολυτέλεια**: χωρίς ψευδώνυμα το **65%** πεταγόταν σιωπηλά
+(μαζί με το ιστορικό σφάλμα)· χωρίς `FIELDS` το **61%** ήταν ψευδώς θετικά.
+Οι loaders ζουν στο κοινό `scripts/_shared/firestore-ast-loaders.js` — βγήκαν από το CHECK 3.15
+**πριν** γραφτεί δεύτερο αντίγραφο (N.0.2).
+
+### Ρητή εξαίρεση — με **υποχρεωτικό** λόγο
+```ts
+// tenant-scope-exempt: δημόσια αγγελία — το query ΕΙΝΑΙ ο κανόνας
+// Το firestore.rules:797 επιτρέπει ανώνυμη ανάγνωση ακριβώς όταν …
+const q = query(collection(db, COLLECTIONS.PROPERTIES), ...constraints);
+```
+`tenant-scope-exempt:` **χωρίς κείμενο δεν αναγνωρίζεται** (ίδιο δόγμα με
+`eslint-disable-next-line <rule> -- reason`). Σαρώνεται **ολόκληρο το συνεχόμενο μπλοκ
+σχολίων** — η πρώτη εκδοχή κοιτούσε μία γραμμή και έτσι **τιμωρούσε τη σοβαρή αιτιολογία**
+ενώ δεχόταν τη βιαστική μονόγραμμη.
+
+### Scope (pre-commit)
+- Script: `scripts/check-firestore-tenant-scope.js`
+- Triggers: staged `src/**/*.ts(x)`
+- Escape: `SKIP_FIRESTORE_TENANT_SCOPE=1` (justify to Giorgio)
+- Εντολές: `npm run firestore:tenant-scope` (αναφορά) · `:check` (`--all`) · `:baseline`
+
+### ⚠️ ΜΗΝ
+- **ΜΗΝ** το κάνεις zero-tolerance. Μετρήθηκε: ~1/3 των 145 είναι **νόμιμα εκ σχεδιασμού**
+  (public capability tokens, `__name__` batch, migrations, inbound webhooks) ⇒ ψευδώς θετικά
+  **πολύ πάνω** από τον πήχη ≤10% της Google για blocking analyzers.
+- **ΜΗΝ** διαβάσεις το **145** ως δείκτη υγείας — το `_meta.note` της baseline το δηλώνει ρητά.
+  Ένα ειλικρινές 145 είναι ασύγκριτα πιο χρήσιμο από ένα ψεύτικο 0.
+- **ΜΗΝ** βάλεις κριτήριο **επιπέδου αρχείου** («το αρχείο αναφέρει `resolveEffectiveCompanyId`»).
+  Το `contacts-query.service.ts` είχε **6** συναρτήσεις, **5 σωστές και 1 όχι** — το κριτήριο θα
+  έβαφε **πράσινη** τη σπασμένη επειδή οι γειτόνισσές της ήταν σωστές, δηλαδή η πύλη θα
+  **πιστοποιούσε** τη διαρροή. Regression anchor: `sibling-masking.ts.fixture` + 2 tests.
+
+### Relationship with other checks
+- **CHECK 3.10** (companyId, grep) → χονδροειδές δίχτυ, **δομικά τυφλό** στο spread idiom.
+  **Δεν καταργείται σε αυτό το ADR**· πρόταση αφαίρεσης μετά τον πρώτο κύκλο CI του 3.35.
+- **CHECK 3.15** (index coverage) → μόνο `firestoreQueryService.subscribe/.getAll`
+- **CHECK 3.16** (rules tests) → τι επιτρέπει ο **server**· το 3.35 κοιτά τι **ζητά ο client**
+- **CHECK 3.35** (αυτό) → **υπάρχει το φίλτρο μισθωτή, ανά σημείο κλήσης**
+
+### Test suite (Google presubmit-grade)
+`scripts/__tests__/check-firestore-tenant-scope.test.js` — **45 tests**, τρία είδη:
+1. **Διαφορικό στο πραγματικό σφάλμα** — fixtures με τον **αυτούσιο** κώδικα του `3d1339ce^`
+   (κόκκινο) και του `3d1339ce` (πράσινο, **για τον σωστό λόγο**), **συν** αναπαραγωγή του
+   αλγορίθμου του 3.10 στο ίδιο fixture ⇒ 0 flagged: η τυφλότητα αποδεικνύεται **εκτελεστικά**.
+2. **Αντι-θόρυβος** — κάθε idiom που μετρήθηκε ότι παρήγαγε ψευδώς θετικά.
+3. **Mutation testing — 5/5 σκοτωμένες** + **Μ0 meta-test**.
+
+🔴 **Χωρίς το Μ0 το «5/5» θα ήταν ψέμα.** Το `delete require.cache[…]` **δεν κάνει τίποτα στο
+Jest** (δικό του module registry): 4/5 μεταλλάξεις «περνούσαν» ενώ έτρεχε ο **παλιός** κώδικας —
+το αρχείο στον δίσκο άλλαζε, η συνάρτηση όχι. Θεραπεία: `jest.resetModules()` +
+`jest.isolateModules()` **και** meta-test που απαιτεί να δει ετικέτα κατάστασης στην έξοδο.
+Εντολή: `npm run test:firestore-tenant-scope`.
 
 ---
 

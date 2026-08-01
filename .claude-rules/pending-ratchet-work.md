@@ -2,6 +2,34 @@
 
 **STATUS: ACTIVE**
 
+- ✅ **Η ΠΥΛΗ ΠΟΥ ΕΛΕΙΠΕ — ΕΓΙΝΕ (2026-08-01, Opus 5, ADR-747 · CHECK 3.35 · `08c7f2b5`).**
+  Και τα **δύο** 🔴 items αυτής της οικογένειας (τυφλότητα 3.10 στο client spread idiom · καμία πύλη για
+  αλυσίδες Admin SDK) λύθηκαν όπως προβλεπόταν: **ένας** AST σαρωτής, δύο κανόνες, καμία νέα εξάρτηση,
+  κανένα νέο engine, καμία νέα λίστα συλλογών.
+  · **Νέα αρχεία**: `scripts/_shared/firestore-ast-loaders.js` (SSoT των 4 καταλόγων) ·
+    `scripts/_shared/firestore-tenant-scope-scan.js` (οι 2 κανόνες) ·
+    `scripts/check-firestore-tenant-scope.js` (CLI+ratchet) · `.firestore-tenant-scope-baseline.json` ·
+    `scripts/__tests__/check-firestore-tenant-scope.test.js` (45 tests) ·
+    `.github/workflows/firestore-tenant-scope.yml` (Layer 2).
+  · **Baseline: 145 παραβιάσεις / 90 αρχεία** — **ratchet, ΟΧΙ zero-tol**, γιατί μετρήθηκε ότι ~1/3 είναι
+    νόμιμα εκ σχεδιασμού (public tokens, `__name__` batch, migrations, webhooks) ⇒ ποσοστό ψευδώς θετικών
+    πάνω από τον πήχη ≤10% της Google. Η πύλη **γεννήθηκε πράσινη** (ADR-742 `b4ec47e2`).
+  · 🔴 **Και η baseline λέει «145», όχι ψεύτικο «0»** — αυτό ήταν όλο το ζητούμενο.
+  · **Απόδειξη**: διαφορικό στο πραγματικό ιστορικό σφάλμα (`3d1339ce^` κόκκινο / `3d1339ce` πράσινο,
+    fixtures με τον αυτούσιο κώδικα) + αναπαραγωγή της τυφλότητας του 3.10 **εκτελεστικά** + **5/5
+    μεταλλάξεις** με **Μ0 meta-test** (το `require.cache` δεν αγγίζει το registry του Jest — 4/5 μεταλλάξεις
+    «περνούσαν» ενώ έτρεχε ο παλιός κώδικας).
+  · **Boy Scout (N.0.2)**: οι 3 loaders βγήκαν από το `check-firestore-index-coverage.js` στο κοινό module
+    (710 → 604 γρ.), με **επαληθευμένα ταυτόσημη** συμπεριφορά του 3.15 (93 shapes / 49 unanalyzable).
+  · ⬜ **ΑΠΟΜΕΝΕΙ — απόφαση Γιώργου**: να **αφαιρεθεί** το CHECK 3.10 + η baseline του μόλις το 3.35 τρέξει
+    έναν κύκλο στο CI. Ένα gate που λέει μονίμως «0» δεν είναι απλώς άχρηστο — **παράγει ενεργά ψεύτικη
+    ασφάλεια**. Δεν το έκανα μόνος μου: αφαίρεση πύλης είναι δική του κρίση.
+  · ⬜ **ΑΠΟΜΕΝΕΙ**: τα **19 ai-pipeline** ευρήματα δείχνουν συλλογές που μάλλον θέλουν `mode:'none'` στο
+    `tenant-config.ts` (`ai_pipeline_audit`, `ai_pipeline_queue`, `ai_agent_feedback`, …). Αν είναι όντως
+    system-level, η δήλωση τα βγάζει από τη baseline **σωστά** αντί να τα κρύβει.
+
+<details><summary>Ιστορικό: η αρχική καταγραφή των δύο items (2026-08-01, πριν λυθούν)</summary>
+
 - 🔴 **Το CHECK 3.10 είναι ΤΥΦΛΟ στο κυρίαρχο query idiom του repo (μετρημένο 2026-08-01, ADR-745 §9.5.4).**
   Ο `check-firestore-companyid.sh` (γρ. 57-58) παίρνει block **12 γραμμών ΠΡΟΣ ΤΑ ΚΑΤΩ** από κάθε `query(`
   και μαρκάρει παραβίαση μόνο αν το block περιέχει `where(` **χωρίς** `companyId`. Στο idiom
@@ -63,6 +91,18 @@
   · **Γιατί καταγραφή και όχι διόρθωση τώρα**: 13 συλλογές + νέα πύλη + baseline = >1h σε 2+ τομείς (N.8),
     και το εύρος πέρα από το `contact_links` είναι **αμέτρητο** — δεν ισχυρίζομαι κάλυψη που δεν μέτρησα.
   · Εντολή ανίχνευσης: `grep -rn "\.collection(COLLECTIONS\." src --include=*.ts -A3 | grep -B1 "\.where(" | grep -v companyId`.
+
+</details>
+
+- 🟠 **13 `countDirectCollection(...)` μετρούν ΧΩΡΙΣ μισθωτή — ΑΝΟΙΧΤΟ (μεταφέρθηκε από το item του Admin SDK).**
+  `lib/firestore/project-mutation-impact-preview.service.ts:186-199` (buildings, properties, communications,
+  obligations, legal_contracts, ownership_tables, purchase_orders, attendance_events, employment_records,
+  accounting_invoices, files, boq_items, calendar_events). Το `countContactLinks` δίπλα τους διορθώθηκε στο
+  ADR-745 Φάση Α· τα υπόλοιπα **όχι**. Ο αριθμός τροφοδοτεί **απόφαση διαγραφής που βλέπει ο χρήστης** —
+  ίδια οικογένεια με τη διαρροή του ADR-742 §7octies (preview μετρούσε εγγραφές **όλων** των πελατών).
+  · ✅ **Πλέον ΕΙΝΑΙ ορατά**: το CHECK 3.35 τα βλέπει (3 στη baseline για αυτό το αρχείο). Δεν είναι πια
+    «αμέτρητα» — είναι **μετρημένα και καταγεγραμμένα**, απλώς όχι ακόμη διορθωμένα.
+  · **Γιατί όχι τώρα**: 13 συλλογές, >1h, 2+ τομείς (N.8). Όταν διορθωθούν → `npm run firestore:tenant-scope:baseline`.
 
 - 🟡 **Τρεις εναπομείναντες χειρόγραφοι union-find στο `dxf-viewer` (μετρημένο 2026-08-01, ADR-745 Φ1 κατά N.0.2).**
   Ο αλγόριθμος υπήρχε **τέσσερις** φορές· ο ένας κεντρικοποιήθηκε. Κανονικός SSoT:

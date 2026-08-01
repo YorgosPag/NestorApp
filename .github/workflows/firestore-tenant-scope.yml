@@ -1,0 +1,99 @@
+name: 🔐 Firestore Tenant Scope (CHECK 3.35)
+
+# =============================================================================
+# Layer 2 — η πλήρης σάρωση. Η πύλη που έλειπε ανάμεσα σε δύο πύλες.
+#
+# ΓΙΑΤΙ ΥΠΑΡΧΕΙ (ADR-747 · εύρημα του ADR-745 §9.5)
+# ------------------------------------------------
+# Το CHECK 3.15 δηλώνει γραπτά ότι το direct `query()` «το καλύπτει το CHECK 3.10».
+# Το CHECK 3.10 είναι grep γραμμών: παίρνει 12 γραμμές ΚΑΤΩ από κάθε `query(` και
+# απαιτεί `where(` μέσα σε αυτές. Στο κυρίαρχο idiom του έργου
+#
+#     const constraints = []; constraints.push(where(…)); query(col, ...constraints)
+#
+# το block δεν περιέχει κανένα `where(` ⇒ **μηδέν παραβιάσεις, πάντα**. Γι' αυτό
+# η baseline του 3.10 έλεγε «0 — fully cleaned» ενώ το `getAllContacts` έστελνε
+# αφιλτράριστη λίστα επαφών επί μήνες.
+#
+# ΓΙΑΤΙ ΔΥΟ ΣΤΡΩΜΑΤΑ
+# ------------------
+# Layer 1 (pre-commit, Phase 1): **μόνο τα staged** αρχεία. Γρήγορο, πιάνει ό,τι
+#   γράφεις τώρα. ΔΕΝ βλέπει: νέο αρχείο που κληρονομεί παραβίαση από μετακίνηση,
+#   ούτε μειώσεις που πρέπει να κλειδώσουν.
+# Layer 2 (εδώ): `--all` πάνω σε ~11.000 αρχεία (~2 λεπτά) και σύγκριση με ΟΛΗ
+#   τη baseline. Είναι το αυθεντικό.
+#
+# ΔΕΝ ΕΙΝΑΙ ZERO-TOLERANCE, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ
+# --------------------------------------------------
+# Απογραφή 2026-08-01: 145 παραβιάσεις σε 90 αρχεία, εκ των οποίων ~1/3 νόμιμες
+# εκ σχεδιασμού (public capability tokens, `__name__` batch από ήδη-scoped γονέα,
+# migrations super-admin, inbound webhooks). Ποσοστό ψευδώς θετικών πολύ πάνω από
+# τον πήχη ≤10% της Google για blocking analyzers ⇒ **ratchet ανά αρχείο**.
+# Η baseline λέει ειλικρινά **145**, όχι ψεύτικο **0**.
+#
+# Πρότυπο: .github/workflows/jscpd-ratchet.yml (CHECK 3.28)
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'scripts/check-firestore-tenant-scope.js'
+      - 'scripts/_shared/firestore-tenant-scope-scan.js'
+      - 'scripts/_shared/firestore-ast-loaders.js'
+      - '.firestore-tenant-scope-baseline.json'
+      - '.github/workflows/firestore-tenant-scope.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'scripts/check-firestore-tenant-scope.js'
+      - 'scripts/_shared/firestore-tenant-scope-scan.js'
+      - 'scripts/_shared/firestore-ast-loaders.js'
+      - '.firestore-tenant-scope-baseline.json'
+      - '.github/workflows/firestore-tenant-scope.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: firestore-tenant-scope-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tenant-scope:
+    name: 🔒 Tenant Scope Ratchet (CHECK 3.35)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (typescript)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Ο φύλακας ελέγχεται ΠΡΙΝ φυλάξει. Περιλαμβάνει το διαφορικό στο πραγματικό
+      # ιστορικό σφάλμα (3d1339ce^ κόκκινο / 3d1339ce πράσινο) και 5 μεταλλάξεις
+      # με επαλήθευση ότι έφτασαν στη μνήμη (το Jest έχει δικό του module registry).
+      - name: 🧪 Self-test της πύλης (45 tests, 5/5 μεταλλάξεις + Μ0)
+        run: npx jest scripts/__tests__/check-firestore-tenant-scope.test.js
+
+      - name: 🔐 CHECK 3.35 — πλήρης σάρωση tenant scope
+        run: node scripts/check-firestore-tenant-scope.js --all
+
+      - name: ✅ Σύνοψη
+        if: success()
+        run: |
+          echo "::notice title=Firestore Tenant Scope::Καμία νέα query χωρίς φίλτρο μισθωτή vs .firestore-tenant-scope-baseline.json"

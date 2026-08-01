@@ -24,6 +24,18 @@ export function usePublicProperties() {
       const constraints: QueryConstraint[] = [
         where('commercialStatus', 'in', LISTED_COMMERCIAL_STATUSES as unknown as string[]),
       ];
+      // tenant-scope-exempt: δημόσια αγγελία — το query ΕΙΝΑΙ ο κανόνας (CHECK 3.35 / ADR-747)
+      //
+      // Το `firestore.rules:797` επιτρέπει ανώνυμη ανάγνωση ακριβώς όταν
+      // `resource.data.commercialStatus in ['for-sale','for-rent','for-sale-and-rent']`,
+      // και το `LISTED_COMMERCIAL_STATUSES` είναι **η ίδια τριάδα**. Δηλαδή το φίλτρο
+      // εδώ δεν είναι «κάτι που ξεχάστηκε να γίνει tenant-scoped» — είναι η ακριβής
+      // αντιγραφή του δημόσιου κανόνα, όπως απαιτεί το συμβόλαιο των rules tests
+      // («a list test must send the same query the production client sends»).
+      //
+      // ⚠️ Αν αλλάξει το ένα, ΠΡΕΠΕΙ να αλλάξει και το άλλο: μια αγγελία που μπαίνει
+      // στη λίστα χωρίς να μπει στον κανόνα ⇒ ολόκληρο το query απορρίπτεται (τα rules
+      // ΔΕΝ είναι φίλτρα — ADR-745 §9.5).
       const q = query(collection(db, COLLECTIONS.PROPERTIES), ...constraints);
 
       const unsubscribe = onSnapshot(
