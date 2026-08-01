@@ -22,6 +22,7 @@ import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { EntityAuditService } from '@/services/entity-audit.service';
+import { createOwnershipDecision } from '@/lib/auth/resource-ownership-guard';
 import { createModuleLogger } from '@/lib/telemetry';
 import type { AuditEntityType, AuditAction, AuditFieldChange } from '@/types/audit-trail';
 // ADR-195 SSoT — entity→collection routing (εξήχθη ώστε να κλειδώνεται με regression test· βλ. module).
@@ -32,6 +33,25 @@ import {
 } from '@/config/audit-entity-collection-map';
 
 const logger = createModuleLogger('AuditTrailRecord');
+
+/**
+ * **Η απόφαση ιδιοκτησίας — από τον SSoT, όχι με το χέρι** (ADR-742 §7octies).
+ *
+ * Η πρώτη γραφή αυτής της διόρθωσης έλεγε inline `!isRoleBypass(ctx.globalRole)
+ * && !isPayloadOwnedByCompany(…)` και το CHECK 3.7 τη σταμάτησε — σωστά: το
+ * `tenant-query-scope` απαγορεύει το `isRoleBypass(…) &&` ακριβώς επειδή η
+ * σύζευξη **είναι** η διαδικασία απόφασης, και μια διαδικασία απόφασης
+ * ξαναγραμμένη ανά διαδρομή είναι αυτό που ξεχνιέται όταν αλλάξει το δόγμα
+ * (JIT elevation, §7ter.3). Η `createOwnershipDecision` κρατά τις **τρεις**
+ * ονομασμένες καταστάσεις — το `'cross-tenant-bypass'` παραμένει ορατό αντί να
+ * εκφυλιστεί σε boolean — και καταγράφει την απόπειρα χωρίς να το θυμάται η
+ * διαδρομή.
+ *
+ * `'Entity'` και όχι `'AuditEntity'`: η διαδρομή είναι **γενική για κάθε
+ * οντότητα** (`ENTITY_COLLECTION_MAP`), και τα πεδία log (`entityId`,
+ * `entityCompanyId`) διαβάζονται όπως το ίδιο το payload.
+ */
+const decideEntityAccess = createOwnershipDecision('Entity', 'entityId');
 
 // ============================================================================
 // VALIDATION
@@ -106,15 +126,34 @@ export const POST = withStandardRateLimit(
       // for the 'deleted' action and tag the audit row with the caller's
       // companyId — defense-in-depth: a malicious caller can only pollute
       // their own tenant's audit trail with fake IDs, never cross-tenant.
+      //
+      // 🔴 **ΕΝΑ** «δεν βρέθηκε» για **δύο** κλάδους (ADR-742 §7.1 · §7decies.4).
+      // Μέχρι τις 2026-08-01 η άρνηση ιδιοκτησίας εδώ ήταν
+      // `403 'Access denied: entity belongs to a different company'` — μήνυμα
+      // που **κατονομάζει τον λόγο**, άρα επιβεβαιώνει ότι το έγγραφο υπάρχει
+      // και ανήκει αλλού. Η διαδρομή είναι **γενική για κάθε οντότητα**
+      // (`ENTITY_COLLECTION_MAP`), οπότε ακύρωνε μόνη της τη μεταμφίεση κάθε
+      // μεταναστευμένου πόρου — §7septies: το μαντείο είναι ιδιότητα ΠΟΡΟΥ.
+      const entityNotFound = (): ApiError =>
+        new ApiError(404, `Entity not found: ${body.entityType}/${body.entityId}`);
+
       if (!entityDoc.exists) {
         if (body.action !== 'deleted') {
-          throw new ApiError(404, `Entity not found: ${body.entityType}/${body.entityId}`);
+          throw entityNotFound();
         }
-      } else {
-        const entityCompanyId = entityDoc.data()?.companyId as string | undefined;
-        if (ctx.globalRole !== 'super_admin' && entityCompanyId && entityCompanyId !== ctx.companyId) {
-          throw new ApiError(403, 'Access denied: entity belongs to a different company');
-        }
+      } else if (
+        // ⚠️ Δηλωμένη αυστηροποίηση: πριν ρωτούσε `entityCompanyId && …`, οπότε
+        // έγγραφο **χωρίς** `companyId` περνούσε για οποιονδήποτε (§4). Πλέον
+        // την ερώτηση τη ρωτά ο SSoT (`isPayloadOwnedByCompany` μέσα στην
+        // απόφαση): **το κενό δεν είναι tenant, είναι απουσία tenant.**
+        decideEntityAccess({
+          data: entityDoc.data(),
+          caller: ctx,
+          resourceId: body.entityId,
+          action: `audit:${body.action}`,
+        }) === 'denied'
+      ) {
+        throw entityNotFound();
       }
 
       // Record via EntityAuditService (server-side, fire-and-forget safe)

@@ -34,13 +34,15 @@ import {
   buildPdfData,
   deactivateShowcaseShares,
   deleteShowcaseShareRecord,
+  loadShowcaseSources,
+  uploadPdfToStorage,
+} from './helpers';
+import {
   loadShowcaseFloorplans,
   loadShowcaseLinkedSpaceFloorplans,
   loadShowcasePhotos,
   loadShowcasePropertyFloorFloorplans,
-  loadShowcaseSources,
-  uploadPdfToStorage,
-} from './helpers';
+} from './showcase-pdf-assets';
 import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
 
 const logger = createModuleLogger('PropertyShowcaseRoute');

@@ -15,37 +15,66 @@
 import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { ENTITY_TYPES, FILE_CATEGORIES } from '@/config/domain-constants';
+import { FILE_CATEGORIES } from '@/config/domain-constants';
 import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
-import {
-  countPropertyMedia,
-  downloadPropertyMedia,
-  downloadEntityMedia,
-  type PropertyMediaBuffer,
-} from '@/services/property-media/property-media.service';
+import { countPropertyMedia } from '@/services/property-media/property-media.service';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { resolveShowcaseCompanyBranding } from '@/services/company/company-branding-resolver';
 import {
   buildPropertyShowcaseSnapshot,
   loadShowcaseRelations,
-  pickFloorLabel,
-  resolveFloorId,
   type PropertyShowcaseContext,
 } from '@/services/property-showcase/snapshot-builder';
 import { loadShowcasePdfLabels } from '@/services/property-showcase/labels';
 import { createPropertyShowcasePdfService } from '@/services/pdf/PropertyShowcasePDFService';
+// Τα *bytes* του εγγράφου ζουν δίπλα (N.7.1 — αυτό το αρχείο πέρασε τις 500
+// γραμμές). Εδώ μένει ο **κύκλος ζωής**: πηγές, εγγραφή share, ανέβασμα.
+import {
+  loadShowcaseFloorplans,
+  loadShowcaseLinkedSpaceFloorplans,
+  loadShowcasePhotos,
+  loadShowcasePropertyFloorFloorplans,
+} from './showcase-pdf-assets';
 import type {
   PropertyFloorFloorplansPdfData,
   PropertyShowcasePDFData,
   ShowcasePhotoAsset,
 } from '@/services/pdf/renderers/PropertyShowcaseRenderer';
-import type {
-  LinkedSpaceFloorplansGroup,
-  LinkedSpaceFloorplansPdfData,
-} from '@/services/pdf/renderers/PropertyShowcaseSections';
+import type { LinkedSpaceFloorplansPdfData } from '@/services/pdf/renderers/PropertyShowcaseSections';
 
 const logger = createModuleLogger('PropertyShowcaseHelpers');
+
+/**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΑ ΔΥΟ «ΔΕΝ ΒΡΕΘΗΚΕ» ΑΥΤΟΥ ΤΟΥ ΑΡΧΕΙΟΥ (ADR-742 §7undecies)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Δύο ανεξάρτητα σημεία εδώ έλεγαν `404` για την **απουσία** και `403 'Access
+ * denied'` για την **ξένη ιδιοκτησία** — δηλαδή επιβεβαίωναν στον καλούντα ότι
+ * το id υπάρχει και ανήκει αλλού (§3.3). Και τα δύο ήταν **αόρατα** στον
+ * ανιχνευτή του anchor: το ένα συγκρίνει με **γυμνή παράμετρο** (`!== companyId`),
+ * το άλλο με **αντικείμενο παραμέτρων** (`!== params.companyId`) — καμία από τις
+ * δύο μορφές δεν ήταν `ctx.companyId` (μάθημα #1).
+ *
+ * Και τα δύο έγραφαν επίσης σκέτο `!==` πάνω σε `as { companyId?: string }`:
+ * **ο τύπος υπόσχεται, η βάση δεν εγγυάται** (§4, μάθημα #8).
+ *
+ * ⚠️ **Εδώ ΔΕΝ προστίθεται κλάδος bypass**, σε αντίθεση με τους υπόλοιπους
+ * πόρους της Ομάδας 6 — και αυτό είναι **επιλογή, όχι παράλειψη**: οι τρεις
+ * καλούντες περνούν `ctx.companyId`, δηλαδή έναν **tenant**, όχι έναν καλούντα.
+ * Ένας ρόλος που δεν υπάρχει στην υπογραφή δεν μπορεί να κριθεί, και το να
+ * «κατασκευαστεί» καλών εδώ θα ήταν χειρότερο από την απουσία του: θα έμοιαζε
+ * με απόφαση ενώ θα ήταν μαντεψιά.
+ */
+const PROPERTY_NOT_FOUND_MESSAGE = 'Property not found';
+const SHARE_NOT_FOUND_MESSAGE = 'Share not found';
+
+/** Το **ένα** «δεν βρέθηκε» του ακινήτου — και οι δύο κλάδοι, μηδέν ορίσματα (§7.1). */
+const propertyNotFound = (): ApiError => new ApiError(404, PROPERTY_NOT_FOUND_MESSAGE);
+
+/** Το **ένα** «δεν βρέθηκε» του share — και οι δύο κλάδοι, μηδέν ορίσματα (§7.1). */
+const shareNotFound = (): ApiError => new ApiError(404, SHARE_NOT_FOUND_MESSAGE);
 
 export interface ShowcaseSources {
   context: PropertyShowcaseContext;
@@ -60,11 +89,9 @@ export async function loadShowcaseSources(
   const adminDb = requireAdminFirestore();
 
   const propertyDoc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
-  if (!propertyDoc.exists) throw new ApiError(404, 'Property not found');
+  if (!propertyDoc.exists) throw propertyNotFound();
   const property = (propertyDoc.data() ?? {}) as Record<string, unknown>;
-  if ((property as { companyId?: string }).companyId !== companyId) {
-    throw new ApiError(403, 'Access denied');
-  }
+  if (!isPayloadOwnedByCompany(property, companyId)) throw propertyNotFound();
 
   const branding = await resolveShowcaseCompanyBranding({
     adminDb,
@@ -114,191 +141,6 @@ async function safeCount(
       error: err instanceof Error ? err.message : String(err),
     });
     return 0;
-  }
-}
-
-/**
- * Fetch up to `limit` property photos as embeddable PDF assets. Never
- * throws — a failure degrades gracefully to a text-only PDF.
- */
-export async function loadShowcasePhotos(
-  propertyId: string,
-  companyId: string,
-  limit = 6,
-): Promise<ShowcasePhotoAsset[]> {
-  try {
-    const buffers = await downloadPropertyMedia({
-      companyId, propertyId, category: FILE_CATEGORIES.PHOTOS, limit,
-    });
-    const assets = buffers.map(toShowcasePhotoAsset);
-    logger.info('Showcase photos ready for PDF embedding', {
-      propertyId,
-      count: assets.length,
-      totalBytes: assets.reduce((sum, a) => sum + a.bytes.byteLength, 0),
-      formats: assets.map((a) => a.format),
-    });
-    return assets;
-  } catch (err) {
-    logger.warn('Showcase photo embedding failed; PDF will render text-only', {
-      propertyId, error: err instanceof Error ? err.message : String(err),
-    });
-    return [];
-  }
-}
-
-/**
- * Fetch up to `limit` property floorplans (DXF raster thumbnails or native
- * JPEG/PNG) as embeddable PDF assets.
- */
-export async function loadShowcaseFloorplans(
-  propertyId: string,
-  companyId: string,
-  limit = 4,
-): Promise<ShowcasePhotoAsset[]> {
-  try {
-    const buffers = await downloadPropertyMedia({
-      companyId, propertyId, category: FILE_CATEGORIES.FLOORPLANS, limit,
-    });
-    const assets = buffers.map(toShowcasePhotoAsset);
-    logger.info('Showcase floorplans ready for PDF embedding', {
-      propertyId,
-      count: assets.length,
-      totalBytes: assets.reduce((sum, a) => sum + a.bytes.byteLength, 0),
-      formats: assets.map((a) => a.format),
-      fromThumbnailCount: buffers.filter((b) => b.fromThumbnail).length,
-    });
-    return assets;
-  } catch (err) {
-    logger.warn('Showcase floorplan embedding failed; PDF will omit the plan page', {
-      propertyId, error: err instanceof Error ? err.message : String(err),
-    });
-    return [];
-  }
-}
-
-function toShowcasePhotoAsset(m: PropertyMediaBuffer): ShowcasePhotoAsset {
-  return {
-    id: m.id,
-    bytes: m.bytes,
-    format: m.jsPdfFormat,
-    displayName: m.displayName,
-  };
-}
-
-function pickAllocationCode(doc: Record<string, unknown>): string | undefined {
-  const candidates = [doc.name, doc.number, doc.code, doc.allocationCode];
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim().length > 0) return c.trim();
-  }
-  return undefined;
-}
-
-/**
- * SSoT — download buffers for an entity's floorplan category. Thin wrapper
- * used by both property-floor and linked-space helpers below so every PDF
- * consumer goes through one codepath (raster fallback included).
- */
-async function downloadFloorplanBuffers(
-  companyId: string,
-  entityType: string,
-  entityId: string,
-  limit: number,
-): Promise<ShowcasePhotoAsset[]> {
-  const buffers = await downloadEntityMedia({
-    companyId, entityType, entityId, category: FILE_CATEGORIES.FLOORPLANS, limit,
-  });
-  return buffers.map(toShowcasePhotoAsset);
-}
-
-/**
- * Load buffers for the property's own κάτοψη ορόφου (Phase 7.5). The floor
- * is resolved via the SSoT `resolveFloorId()` using the preloaded
- * `context.floors` map — same rule used by the web showcase route.
- */
-export async function loadShowcasePropertyFloorFloorplans(
-  context: PropertyShowcaseContext,
-  companyId: string,
-  limit = 2,
-): Promise<PropertyFloorFloorplansPdfData | undefined> {
-  const floorId = resolveFloorId(context.property, context.floors);
-  if (!floorId) return undefined;
-  try {
-    const assets = await downloadFloorplanBuffers(companyId, ENTITY_TYPES.FLOOR, floorId, limit);
-    if (assets.length === 0) return undefined;
-    return { label: pickFloorLabel(context.floors.get(floorId)), assets };
-  } catch (err) {
-    logger.warn('Property floor floorplan buffer load failed; omitting page', {
-      floorId, error: err instanceof Error ? err.message : String(err),
-    });
-    return undefined;
-  }
-}
-
-/**
- * Download rasterised Κατόψεις (PNG thumbnails from DXFs) for every parking
- * spot and storage unit linked to the property. One Firestore + Storage read
- * per linked space; failures on a single space never fail the whole load.
- *
- * Phase 7.5 — also downloads each space's floor plan (κάτοψη ορόφου) via
- * `resolveFloorId()` so the PDF can stack space-κάτοψη + floor-κάτοψη.
- */
-export async function loadShowcaseLinkedSpaceFloorplans(
-  context: PropertyShowcaseContext,
-  companyId: string,
-  perSpaceLimit = 1,
-): Promise<LinkedSpaceFloorplansPdfData> {
-  const parkingTasks = Array.from(context.parkingSpots.entries()).map((entry) =>
-    loadLinkedSpaceGroupForPdf(context, companyId, entry, ENTITY_TYPES.PARKING_SPOT, perSpaceLimit, 'Parking floorplan buffer load failed; skipping space'),
-  );
-  const storageTasks = Array.from(context.storages.entries()).map((entry) =>
-    loadLinkedSpaceGroupForPdf(context, companyId, entry, ENTITY_TYPES.STORAGE, perSpaceLimit, 'Storage floorplan buffer load failed; skipping space'),
-  );
-
-  const [parkingResolved, storageResolved] = await Promise.all([
-    Promise.all(parkingTasks),
-    Promise.all(storageTasks),
-  ]);
-
-  const parking = parkingResolved.filter((g): g is LinkedSpaceFloorplansGroup => g !== null);
-  const storage = storageResolved.filter((g): g is LinkedSpaceFloorplansGroup => g !== null);
-
-  logger.info('Linked-space floorplans ready for PDF embedding', {
-    parkingGroupCount: parking.length,
-    storageGroupCount: storage.length,
-  });
-
-  return { parking, storage };
-}
-
-async function loadLinkedSpaceGroupForPdf(
-  context: PropertyShowcaseContext,
-  companyId: string,
-  [spaceId, doc]: [string, Record<string, unknown>],
-  entityType: string,
-  perSpaceLimit: number,
-  failMessage: string,
-): Promise<LinkedSpaceFloorplansGroup | null> {
-  try {
-    const assets = await downloadFloorplanBuffers(companyId, entityType, spaceId, perSpaceLimit);
-
-    const floorId = resolveFloorId(doc, context.floors);
-    const floorAssets = floorId
-      ? await downloadFloorplanBuffers(companyId, ENTITY_TYPES.FLOOR, floorId, perSpaceLimit).catch(() => [])
-      : [];
-    const floorLabel = floorId ? pickFloorLabel(context.floors.get(floorId)) : undefined;
-
-    if (assets.length === 0 && floorAssets.length === 0) return null;
-    return {
-      allocationCode: pickAllocationCode(doc),
-      assets,
-      floorAssets: floorAssets.length > 0 ? floorAssets : undefined,
-      floorLabel,
-    } satisfies LinkedSpaceFloorplansGroup;
-  } catch (err) {
-    logger.warn(failMessage, {
-      spaceId, error: err instanceof Error ? err.message : String(err),
-    });
-    return null;
   }
 }
 
@@ -400,12 +242,10 @@ export async function regeneratePdfForShare(params: {
 
   const shareRef = adminDb.collection(COLLECTIONS.FILE_SHARES).doc(params.shareId);
   const shareSnap = await shareRef.get();
-  if (!shareSnap.exists) throw new ApiError(404, 'Share not found');
+  if (!shareSnap.exists) throw shareNotFound();
   const share = shareSnap.data() ?? {};
 
-  if ((share as { companyId?: string }).companyId !== params.companyId) {
-    throw new ApiError(403, 'Access denied');
-  }
+  if (!isPayloadOwnedByCompany(share, params.companyId)) throw shareNotFound();
   if ((share as { showcaseMode?: boolean }).showcaseMode !== true) {
     throw new ApiError(400, 'Share is not a Property Showcase');
   }

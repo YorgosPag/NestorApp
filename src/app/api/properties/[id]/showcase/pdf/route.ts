@@ -22,14 +22,13 @@ import { createShowcasePdfRoute } from '@/services/showcase-core';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import { createPropertyShowcasePdfService } from '@/services/pdf/PropertyShowcasePDFService';
 import { loadBrandLogoAssets } from '@/services/property-showcase/brand-logo-assets';
+import { buildPdfData, loadShowcaseSources } from '../generate/helpers';
 import {
-  buildPdfData,
   loadShowcaseFloorplans,
   loadShowcaseLinkedSpaceFloorplans,
   loadShowcasePhotos,
   loadShowcasePropertyFloorFloorplans,
-  loadShowcaseSources,
-} from '../generate/helpers';
+} from '../generate/showcase-pdf-assets';
 import type { PropertyShowcasePDFData } from '@/services/pdf/PropertyShowcasePDFService';
 
 export const dynamic = 'force-dynamic';
