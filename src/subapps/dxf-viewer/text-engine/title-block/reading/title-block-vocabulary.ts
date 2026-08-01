@@ -94,7 +94,7 @@ export const GREEK_SURVEYOR_PROFILE: TitleBlockProfile = {
  * κανενός ελληνικού πεζού στον πίνακα — η βλάβη γίνεται μη αναστρέψιμη (ADR-745 §2.3 Γ).
  */
 export function normalizeForLabelMatch(text: string): string {
-  return normalizeForSearch(text);
+  return normalizeForSearch(normalizeGreekHomoglyphs(text));
 }
 
 /** Μέρος λέξης: γράμματα, ψηφία και η στίξη που το `normalizeForSearch` έτσι κι αλλιώς ρίχνει. */
