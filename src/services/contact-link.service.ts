@@ -26,6 +26,7 @@ import {
   limit as firestoreLimit,
   serverTimestamp,
 } from 'firebase/firestore';
+import type { DocumentReference, QueryConstraint } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { API_ROUTES } from '@/config/domain-constants';
@@ -52,10 +53,19 @@ const logger = createModuleLogger('ContactLinkService');
 
 export async function linkContactToEntity(input: CreateContactLinkInput): Promise<LinkResult> {
   try {
-    const { sourceWorkspaceId, sourceContactId, targetEntityType, targetEntityId, targetWorkspaceId, reason, role, createdBy, metadata } = input;
+    const { companyId, sourceWorkspaceId, sourceContactId, targetEntityType, targetEntityId, targetWorkspaceId, reason, role, createdBy, metadata } = input;
 
     if (!targetEntityType || !targetEntityId) {
       return { success: false, error: 'Target entity type and ID are required', errorCode: 'INVALID_TARGET' };
+    }
+
+    // 🔒 ADR-745 G7 — fail here rather than let the rules reject an unscoped write.
+    // The CREATE rule requires both, so a missing value is a bug, not a soft state.
+    if (!companyId) {
+      return { success: false, error: 'companyId is required', errorCode: 'MISSING_TENANT' };
+    }
+    if (!createdBy) {
+      return { success: false, error: 'createdBy is required', errorCode: 'MISSING_CREATOR' };
     }
 
     // Duplicate detection — direct reads, no composite indexes needed
@@ -100,6 +110,7 @@ export async function linkContactToEntity(input: CreateContactLinkInput): Promis
 
     const contactLink: ContactLink = {
       id: linkId,
+      companyId,
       sourceWorkspaceId,
       sourceContactId,
       targetWorkspaceId,
@@ -156,34 +167,40 @@ export async function getContactLinkById(linkId: string): Promise<ContactLink | 
   return snapshot.exists() ? snapshot.data() : null;
 }
 
-export async function listContactLinks(params: ListContactLinksParams = {}): Promise<ContactLink[]> {
-  const { sourceContactId, sourceWorkspaceId, targetWorkspaceId, targetEntityType, targetEntityId, status, limit: limitParam } = params;
+export async function listContactLinks(params: ListContactLinksParams): Promise<ContactLink[]> {
+  const { companyId, sourceContactId, sourceWorkspaceId, targetWorkspaceId, targetEntityType, targetEntityId, status, limit: limitParam } = params;
 
-  // 🔒 companyId: N/A — ContactLink legacy schema has no companyId field on
-  // documents. Firestore rules (firestore.rules:151-186) enforce tenant isolation
-  // via createdBy ownership fallback (rules:160-162) for docs without companyId.
-  // Adding where('companyId') would silently match zero documents. Real fix
-  // requires data migration across all existing contact_links — tracked as
-  // deferred debt (same pattern as Phase 10C.8 / FirestoreRelationshipAdapter).
-  let q = query(
+  // 🔒 ADR-745 G6 — tenant scope belongs in the QUERY, not only in the rule.
+  // Firestore rules are not filters: a list query that leaves `companyId`
+  // unconstrained is rejected whole, because the rule reads a field the query
+  // never pinned down. Leading equality field, so the composite indexes order
+  // companyId → … → createdAt.
+  if (!companyId) {
+    throw new Error('listContactLinks: companyId is required for tenant isolation');
+  }
+
+  const optional: QueryConstraint[] = [];
+  if (sourceContactId) optional.push(where('sourceContactId', '==', sourceContactId));
+  if (sourceWorkspaceId) optional.push(where('sourceWorkspaceId', '==', sourceWorkspaceId));
+  if (targetWorkspaceId) optional.push(where('targetWorkspaceId', '==', targetWorkspaceId));
+  if (targetEntityType) optional.push(where('targetEntityType', '==', targetEntityType));
+  if (targetEntityId) optional.push(where('targetEntityId', '==', targetEntityId));
+  if (status) optional.push(where('status', '==', status));
+  optional.push(orderBy('createdAt', 'desc'));
+  if (limitParam) optional.push(firestoreLimit(limitParam));
+
+  const q = query(
     collection(db, COLLECTIONS.CONTACT_LINKS).withConverter(contactLinkConverter),
-    orderBy('createdAt', 'desc')
-  ); // 🔒 companyId: N/A — legacy schema
-
-  if (sourceContactId) q = query(q, where('sourceContactId', '==', sourceContactId)); // 🔒 companyId: N/A — legacy schema
-  if (sourceWorkspaceId) q = query(q, where('sourceWorkspaceId', '==', sourceWorkspaceId)); // 🔒 companyId: N/A — legacy schema
-  if (targetWorkspaceId) q = query(q, where('targetWorkspaceId', '==', targetWorkspaceId)); // 🔒 companyId: N/A — legacy schema
-  if (targetEntityType) q = query(q, where('targetEntityType', '==', targetEntityType)); // 🔒 companyId: N/A — legacy schema
-  if (targetEntityId) q = query(q, where('targetEntityId', '==', targetEntityId)); // 🔒 companyId: N/A — legacy schema
-  if (status) q = query(q, where('status', '==', status)); // 🔒 companyId: N/A — legacy schema
-  if (limitParam) q = query(q, firestoreLimit(limitParam));
+    where('companyId', '==', companyId), // 🔒 tenant scope — always present, always first
+    ...optional,
+  );
 
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => d.data());
 }
 
-export async function getContactWithLinks(contactId: string): Promise<ContactWithLinks | null> {
-  const links = await listContactLinks({ sourceContactId: contactId, status: 'active' });
+export async function getContactWithLinks(contactId: string, companyId: string): Promise<ContactWithLinks | null> {
+  const links = await listContactLinks({ companyId, sourceContactId: contactId, status: 'active' });
   if (links.length === 0) return null;
 
   const linkedTo = links.map((link) => ({
@@ -205,16 +222,37 @@ export async function getContactWithLinks(contactId: string): Promise<ContactWit
 // UPDATE / DEACTIVATE
 // =============================================================================
 
+/**
+ * Load a link and its ref, or the caller's not-found result.
+ *
+ * Both mutations below opened with the same four lines; extracted 2026-08-01 so
+ * the "does it exist" answer has one shape instead of two copies (N.0.2 / N.18).
+ */
+async function loadLink(
+  linkId: string,
+): Promise<
+  | { readonly found: true; readonly ref: DocumentReference; readonly data: ContactLink }
+  | { readonly found: false; readonly result: LinkResult }
+> {
+  const ref = doc(db, COLLECTIONS.CONTACT_LINKS, linkId);
+  const snapshot = await getDoc(ref);
+
+  if (!snapshot.exists()) {
+    return {
+      found: false,
+      result: { success: false, error: 'Contact link not found', errorCode: 'LINK_NOT_FOUND' },
+    };
+  }
+
+  return { found: true, ref, data: snapshot.data() as ContactLink };
+}
+
 export async function unlinkContact(linkId: string, updatedBy: string): Promise<LinkResult> {
   try {
-    const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, linkId);
-    const snapshot = await getDoc(linkRef);
+    const loaded = await loadLink(linkId);
+    if (!loaded.found) return loaded.result;
 
-    if (!snapshot.exists()) {
-      return { success: false, error: 'Contact link not found', errorCode: 'LINK_NOT_FOUND' };
-    }
-
-    const linkData = snapshot.data() as ContactLink;
+    const { ref: linkRef, data: linkData } = loaded;
 
     await updateDoc(linkRef, { status: 'inactive', updatedBy, updatedAt: serverTimestamp() });
     logger.info(`Deactivated contact link: ${linkId}`);
@@ -264,14 +302,10 @@ export async function unlinkContact(linkId: string, updatedBy: string): Promise<
 
 export async function updateContactLinkRole(linkId: string, role: string, updatedBy: string): Promise<LinkResult> {
   try {
-    const linkRef = doc(db, COLLECTIONS.CONTACT_LINKS, linkId);
-    const snapshot = await getDoc(linkRef);
+    const loaded = await loadLink(linkId);
+    if (!loaded.found) return loaded.result;
 
-    if (!snapshot.exists()) {
-      return { success: false, error: 'Contact link not found', errorCode: 'LINK_NOT_FOUND' };
-    }
-
-    await updateDoc(linkRef, { role, updatedBy, updatedAt: serverTimestamp() });
+    await updateDoc(loaded.ref, { role, updatedBy, updatedAt: serverTimestamp() });
     logger.info(`Updated role for link ${linkId} → ${role}`);
 
     return { success: true, linkId, message: 'Role updated successfully' };

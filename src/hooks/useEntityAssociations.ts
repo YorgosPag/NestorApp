@@ -25,9 +25,9 @@ import {
   updateContactLinkRoleWithPolicy,
 } from '@/services/entity-linking/association-mutation-gateway';
 import { useAuth } from '@/auth/hooks/useAuth';
-import { RealtimeService } from '@/services/realtime';
+import { useCompanyId } from '@/hooks/useCompanyId';
+import { useContactLinkRealtimeRefresh } from '@/hooks/useContactLinkRealtimeRefresh';
 import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
-import type { ContactLinkCreatedPayload, ContactLinkDeletedPayload } from '@/services/realtime';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
@@ -79,6 +79,10 @@ export function useEntityContactLinks(
   options?: UseEntityContactLinksOptions
 ): UseEntityContactLinksReturn {
   const { user } = useAuth();
+  // 🔒 ADR-745 G6 — tenant scope for every read and write below. Centralized
+  // resolver (ADR-201): it also honours the super-admin company switcher, which
+  // a raw `user.companyId` would silently ignore.
+  const companyId = useCompanyId()?.companyId;
   const { info } = useNotifications();
   // ADR-300: Seed from module-level cache → zero flash on re-navigation
   const entityCacheKey = `${entityType}-${entityId ?? 'none'}-${options?.parentProjectId ?? 'none'}`;
@@ -94,7 +98,7 @@ export function useEntityContactLinks(
 
   // Fetch links + resolve contact names (+ inherited from parent project)
   useEffect(() => {
-    if (!entityId || !user) {
+    if (!entityId || !user || !companyId) {
       setLinks([]);
       setIsLoading(false);
       return;
@@ -111,6 +115,7 @@ export function useEntityContactLinks(
       try {
         // Fetch direct links for this entity
         const directLinksPromise = AssociationService.listContactLinks({
+          companyId,
           targetEntityType: entityType,
           targetEntityId: entityId,
           status: 'active',
@@ -119,6 +124,7 @@ export function useEntityContactLinks(
         // Fetch inherited links from parent project (if applicable)
         const inheritedLinksPromise = parentProjectId
           ? AssociationService.listContactLinks({
+              companyId,
               targetEntityType: 'project' as EntityType,
               targetEntityId: parentProjectId,
               status: 'active',
@@ -166,34 +172,25 @@ export function useEntityContactLinks(
 
     fetchLinks();
     return () => { cancelled = true; };
-  }, [entityType, entityId, parentProjectId, user, refreshKey]);
+  }, [entityType, entityId, parentProjectId, user, companyId, refreshKey]);
 
   // 🏢 ENTERPRISE: Event bus subscribers for cross-tab contact link sync (ADR-228 Tier 4)
-  useEffect(() => {
-    if (!entityId) return;
-
-    const handleLinkCreated = (payload: ContactLinkCreatedPayload) => {
-      if (payload.link.targetEntityType === entityType && payload.link.targetEntityId === entityId) {
-        refresh();
-      }
-    };
-
-    const handleLinkRemoved = (_payload: ContactLinkDeletedPayload) => {
-      refresh();
-    };
-
-    const unsub1 = RealtimeService.subscribe('CONTACT_LINK_CREATED', handleLinkCreated);
-    const unsub2 = RealtimeService.subscribe('CONTACT_LINK_REMOVED', handleLinkRemoved);
-
-    return () => { unsub1(); unsub2(); };
-  }, [entityType, entityId, refresh]);
+  useContactLinkRealtimeRefresh(
+    Boolean(entityId),
+    (payload) => payload.link.targetEntityType === entityType && payload.link.targetEntityId === entityId,
+    refresh,
+  );
 
   // Add a new contact link
   const addLink = useCallback(async (contactId: string, role: string): Promise<boolean> => {
-    if (!entityId || !user) return false;
+    // 🔒 ADR-745 G7 — no tenant, no write. The CREATE rule would reject it anyway;
+    // stopping here keeps the failure honest instead of a permission-denied toast.
+    if (!entityId || !user || !companyId) return false;
 
     const result = await linkContactToEntityWithPolicy({
       input: {
+        companyId,
+        // ⚠️ NOT the tenant — a legacy free-form label (ADR-745 §7, open debt).
         sourceWorkspaceId: 'default',
         sourceContactId: contactId,
         targetEntityType: entityType,
@@ -224,7 +221,7 @@ export function useEntityContactLinks(
 
     logger.error('Failed to add contact link', { error: result });
     return false;
-  }, [entityType, entityId, user, refresh, info]);
+  }, [entityType, entityId, user, companyId, refresh, info]);
 
   // Remove (deactivate) a contact link
   const removeLink = useCallback(async (linkId: string): Promise<boolean> => {
@@ -291,6 +288,8 @@ export function useContactEntityLinks(
   contactId: string | undefined
 ): UseContactEntityLinksReturn {
   const { user } = useAuth();
+  // 🔒 ADR-745 G6 — tenant scope for the list query (rules are not filters).
+  const companyId = useCompanyId()?.companyId;
   // ADR-300: Seed from module-level cache → zero flash on re-navigation
   const [grouped, setGrouped] = useState<GroupedContactEntityLinks>(
     contactEntityLinksCache.get(contactId ?? '') ?? { projects: [], buildings: [], properties: [] }
@@ -302,7 +301,7 @@ export function useContactEntityLinks(
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   useEffect(() => {
-    if (!contactId || !user) {
+    if (!contactId || !user || !companyId) {
       setGrouped({ projects: [], buildings: [], properties: [] });
       setIsLoading(false);
       return;
@@ -317,6 +316,7 @@ export function useContactEntityLinks(
 
       try {
         const rawLinks = await AssociationService.listContactLinks({
+          companyId,
           sourceContactId: contactId,
           status: 'active',
         });
@@ -367,27 +367,14 @@ export function useContactEntityLinks(
 
     fetchLinks();
     return () => { cancelled = true; };
-  }, [contactId, user, refreshKey]);
+  }, [contactId, user, companyId, refreshKey]);
 
   // 🏢 ENTERPRISE: Event bus subscribers for cross-tab contact link sync (ADR-228 Tier 4)
-  useEffect(() => {
-    if (!contactId) return;
-
-    const handleLinkCreated = (payload: ContactLinkCreatedPayload) => {
-      if (payload.link.sourceContactId === contactId) {
-        refresh();
-      }
-    };
-
-    const handleLinkRemoved = (_payload: ContactLinkDeletedPayload) => {
-      refresh();
-    };
-
-    const unsub1 = RealtimeService.subscribe('CONTACT_LINK_CREATED', handleLinkCreated);
-    const unsub2 = RealtimeService.subscribe('CONTACT_LINK_REMOVED', handleLinkRemoved);
-
-    return () => { unsub1(); unsub2(); };
-  }, [contactId, refresh]);
+  useContactLinkRealtimeRefresh(
+    Boolean(contactId),
+    (payload) => payload.link.sourceContactId === contactId,
+    refresh,
+  );
 
   return { grouped, isLoading, error, refresh };
 }

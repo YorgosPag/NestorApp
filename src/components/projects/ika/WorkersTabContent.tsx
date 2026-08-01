@@ -39,6 +39,7 @@ import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useLinkRemovalGuard } from '@/hooks/useLinkRemovalGuard';
 import { useAuth } from '@/auth/hooks/useAuth';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { useNotifications } from '@/providers/NotificationProvider';
 
 const logger = createModuleLogger('WorkersTabContent');
@@ -55,6 +56,8 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   const spacing = useSpacingTokens();
 
   const { user } = useAuth();
+  // 🔒 ADR-745 G6/G7 — tenant scope for the write below and for the workers read.
+  const companyId = useCompanyId()?.companyId;
   const { success: notifySuccess, error: notifyError } = useNotifications();
   const { workers, isLoading, error, refetch } = useProjectWorkers(projectId);
   const { confirm, dialogProps } = useConfirmDialog();
@@ -74,19 +77,24 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
   }, []);
 
   const handleAssign = useCallback(async () => {
-    if (!selectedContact || !projectId) return;
+    // 🔒 ADR-745 G7 — the CREATE rule now requires a tenant and `createdBy == uid`.
+    // Guard here so a missing identity fails visibly instead of sending a write
+    // that the rules would reject (the old `user?.uid ?? ''` wrote an empty string).
+    if (!selectedContact || !projectId || !companyId || !user?.uid) return;
 
     try {
       setIsAssigning(true);
 
       const result = await linkContactToEntityWithPolicy({
         input: {
+          companyId,
+          // ⚠️ NOT the tenant — a legacy free-form label (ADR-745 §7, open debt).
           sourceWorkspaceId: 'ws_office_directory',
           sourceContactId: selectedContact.id,
           targetEntityType: 'project',
           targetEntityId: projectId,
           reason: 'IKA worker assignment',
-          createdBy: user?.uid ?? '',
+          createdBy: user.uid,
         },
       });
 
@@ -105,7 +113,7 @@ export function WorkersTabContent({ projectId }: WorkersTabContentProps) {
     } finally {
       setIsAssigning(false);
     }
-  }, [selectedContact, projectId, user?.uid, refetch, notifySuccess, notifyError, t]);
+  }, [selectedContact, projectId, companyId, user?.uid, refetch, notifySuccess, notifyError, t]);
 
   const handleRemoveWorker = useCallback(async (worker: ProjectWorker) => {
     const confirmed = await confirm({

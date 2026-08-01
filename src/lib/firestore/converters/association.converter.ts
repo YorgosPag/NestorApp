@@ -48,6 +48,9 @@ export const contactLinkConverter: FirestoreDataConverter<ContactLink> = {
 
     return {
       id: contactLink.id,
+      // 🔒 ADR-745 G6 — the field `firestore.rules` reads for tenant isolation.
+      // Emitted unconditionally: an unscoped link is rejected by the CREATE rule.
+      companyId: contactLink.companyId,
       sourceWorkspaceId: contactLink.sourceWorkspaceId,
       sourceContactId: contactLink.sourceContactId,
       targetWorkspaceId: contactLink.targetWorkspaceId ?? null,
@@ -78,6 +81,7 @@ export const contactLinkConverter: FirestoreDataConverter<ContactLink> = {
 
     return {
       id: data.id,
+      companyId: data.companyId,
       sourceWorkspaceId: data.sourceWorkspaceId,
       sourceContactId: data.sourceContactId,
       targetWorkspaceId: data.targetWorkspaceId,

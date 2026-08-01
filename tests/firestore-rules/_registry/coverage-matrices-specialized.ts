@@ -6,8 +6,10 @@
  * per the Google SRP 500-line rule.
  *
  * Patterns covered:
- *   - contact_relationships / contact_links → contactRelationshipsMatrix()
+ *   - contact_relationships       → contactRelationshipsMatrix()
  *     (creator-only update/delete; any authenticated can create — no companyId gate)
+ *   - contact_links               → contactLinksMatrix() (ADR-745, 2026-08-01)
+ *     (tenant-gated everywhere; split OUT of contactRelationshipsMatrix)
  *   - relationships               → crmDirectMatrix() (re-export, not here)
  *   - relationship_audit          → systemGlobalMatrix() (re-export, not here)
  *   - employment_records          → employmentRecordsMatrix()
@@ -35,8 +37,13 @@ import { cell } from './coverage-matrices';
 // ---------------------------------------------------------------------------
 
 /**
- * Matrix for `contact_relationships` and `contact_links` — creator-ownership
- * update/delete with NO companyId gate on create.
+ * Matrix for `contact_relationships` — creator-ownership update/delete with NO
+ * companyId gate on create.
+ *
+ * ⚠️ `contact_links` NO LONGER shares this matrix (ADR-745, 2026-08-01) — see
+ * `contactLinksMatrix()` below. This one is left describing `contact_relationships`
+ * exactly as it is today; whether that collection has the same gap is UNMEASURED
+ * and deliberately not asserted here.
  *
  * Rule shape:
  *   - read:   isSuperAdminOnly() || (has companyId && belongsToCompany) || creator fallback
@@ -55,7 +62,7 @@ import { cell } from './coverage-matrices';
  * createdBy=same_tenant_user.uid so the creator path is exercised for
  * same_tenant_user × update/delete. super_admin passes via isSuperAdminOnly().
  *
- * Collections: `contact_relationships`, `contact_links`.
+ * Collections: `contact_relationships`.
  * See ADR-298 §4 Phase C.7 (2026-04-14).
  */
 export function contactRelationshipsMatrix(): readonly CoverageCell[] {
@@ -91,6 +98,72 @@ export function contactRelationshipsMatrix(): readonly CoverageCell[] {
     cell('same_tenant_admin', 'delete', 'deny', 'insufficient_role'),
     cell('same_tenant_user', 'delete', 'allow'),
     cell('cross_tenant_admin', 'delete', 'deny', 'insufficient_role'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// ADR-745 — contact links (split out of contactRelationshipsMatrix, 2026-08-01)
+// ---------------------------------------------------------------------------
+
+/**
+ * Matrix for `contact_links` — tenant-gated on every operation.
+ *
+ * Why this exists as its own matrix: until 2026-08-01 `contact_links` shared
+ * `contactRelationshipsMatrix()`. The measurement in ADR-745 (Q2) found that the
+ * rules asked for `companyId`, a field NOTHING wrote — so the tenant leg was
+ * structurally unreachable in production and CREATE had no tenant gate at all.
+ * Fixing the rules changes exactly one outcome, but the two collections cannot
+ * share a matrix any more: `contact_relationships` is UNMEASURED and must not be
+ * dragged along by an assertion about its neighbour.
+ *
+ * Rule shape (firestore.rules — `match /contact_links/{linkId}`):
+ *   - read/list: isSuperAdminOnly() || belongsToCompany(companyId)
+ *                — the old `createdBy == uid` fallback is GONE.
+ *   - create:    tenant-bound + `createdBy == request.auth.uid`
+ *   - update:    super_admin || (tenant + creator + companyId immutable)
+ *   - delete:    super_admin || (tenant + creator)
+ *
+ * 🔴 The one outcome that changed: `cross_tenant_admin × create` was **allow**
+ * — the old matrix commented it as "authenticated, no companyId check", i.e. the
+ * test *encoded the hole as expected behaviour*. It is now **deny**.
+ *
+ * Test contract: seed doc carries companyId=SAME_TENANT_COMPANY_ID and
+ * createdBy=same_tenant_user.uid; `createData` must be built per-persona so the
+ * `createdBy == uid` gate sees the acting identity.
+ *
+ * Collections: `contact_links`. See ADR-745 §4 G6/G7.
+ */
+export function contactLinksMatrix(): readonly CoverageCell[] {
+  return [
+    // Read/list: tenant membership only. same_tenant_admin is NOT the creator —
+    // it passes purely on companyId, which is what proves the fallback is gone.
+    cell('super_admin', 'read', 'allow'),
+    cell('super_admin', 'list', 'allow'),
+    cell('same_tenant_admin', 'read', 'allow'),
+    cell('same_tenant_admin', 'list', 'allow'),
+    cell('same_tenant_user', 'read', 'allow'),
+    cell('same_tenant_user', 'list', 'allow'),
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+    // Create: companyId must match the caller's claim (super_admin short-circuits).
+    cell('super_admin', 'create', 'allow'),
+    cell('same_tenant_admin', 'create', 'allow'),
+    cell('same_tenant_user', 'create', 'allow'),
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    // Update/delete: creator or super_admin, now also tenant-bound.
+    cell('super_admin', 'update', 'allow'),
+    cell('same_tenant_admin', 'update', 'deny', 'insufficient_role'),
+    cell('same_tenant_user', 'update', 'allow'),
+    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    cell('super_admin', 'delete', 'allow'),
+    cell('same_tenant_admin', 'delete', 'deny', 'insufficient_role'),
+    cell('same_tenant_user', 'delete', 'allow'),
+    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
   ];
 }

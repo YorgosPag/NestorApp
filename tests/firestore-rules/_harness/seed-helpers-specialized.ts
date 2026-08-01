@@ -61,9 +61,16 @@ export async function seedContactRelationship(
 /**
  * Seed a `contact_links` document.
  *
- * contactRelationshipsMatrix contract:
+ * contactLinksMatrix contract (ADR-745, 2026-08-01):
  *   - createdBy=same_tenant_user.uid → owner update/delete path exercised.
- *   - companyId=SAME_TENANT_COMPANY_ID → same-tenant read gate satisfied.
+ *   - companyId=SAME_TENANT_COMPANY_ID → tenant read gate satisfied.
+ *
+ * ⚠️ The shape below must stay a faithful copy of what production writes
+ * (`contactLinkConverter.toFirestore`). Before ADR-745 this seeder wrote
+ * `companyId` while the converter did not, so every read/list cell passed
+ * through a rule leg no real document could ever reach — a green suite over a
+ * dead twin. `sourceWorkspaceId` is included precisely because it is NOT the
+ * tenant field: keeping both present is what makes the distinction testable.
  */
 export async function seedContactLink(
   env: RulesTestEnvironment,
@@ -72,13 +79,21 @@ export async function seedContactLink(
 ): Promise<void> {
   await withSeedContext(env, async (ctx) => {
     await ctx.firestore().collection('contact_links').doc(docId).set({
+      id: docId,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      sourceWorkspaceId: 'ws_office_directory',
       sourceContactId: `contact-src-${docId}`,
+      targetWorkspaceId: null,
       targetEntityType: 'project',
       targetEntityId: `project-${docId}`,
+      reason: null,
+      role: 'worker',
       status: 'active',
-      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
       createdBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
       createdAt: new Date(),
+      updatedAt: null,
+      updatedBy: null,
+      metadata: null,
       ...opts?.overrides,
     });
   });

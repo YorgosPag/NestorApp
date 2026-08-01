@@ -14,6 +14,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { AssociationService } from '@/services/association.service';
+import { useCompanyId } from '@/hooks/useCompanyId';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -42,6 +43,12 @@ interface UseProjectWorkersReturn {
  * Enriches with contact details and relationship data.
  */
 export function useProjectWorkers(projectId: string | undefined): UseProjectWorkersReturn {
+  // 🔒 ADR-745 G6 — the list query must pin the tenant down (rules are not filters).
+  // Resolved here rather than passed in: four call sites would otherwise each have
+  // to thread the same value, and the centralized resolver (ADR-201) already
+  // handles the super-admin company switcher.
+  const companyId = useCompanyId()?.companyId;
+
   // ADR-300: Seed from module-level cache → zero flash on re-navigation
   const [workers, setWorkers] = useState<ProjectWorker[]>(projectWorkersCache.get(projectId ?? '') ?? []);
   const [isLoading, setIsLoading] = useState(!projectWorkersCache.hasLoaded(projectId ?? ''));
@@ -56,7 +63,7 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
     let mounted = true;
 
     async function loadWorkers() {
-      if (!projectId) {
+      if (!projectId || !companyId) {
         setWorkers([]);
         setIsLoading(false);
         return;
@@ -69,6 +76,7 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
 
         // 1. Get all contact links for this project
         const links = await AssociationService.listContactLinks({
+          companyId,
           targetEntityType: 'project',
           targetEntityId: projectId,
           status: 'active',
@@ -82,8 +90,8 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
           return;
         }
 
-        // 2. Batch fetch contacts
-        const contactIds = links.map((link) => link.sourceContactId);
+        // 2. Enrich each link with its contact (the loop below fetches per link;
+        // the old `contactIds` array was built and never read — removed 2026-08-01).
         const enrichedWorkers: ProjectWorker[] = [];
 
         for (const link of links) {
@@ -193,7 +201,7 @@ export function useProjectWorkers(projectId: string | undefined): UseProjectWork
 
     loadWorkers();
     return () => { mounted = false; };
-  }, [projectId, refreshKey]);
+  }, [projectId, companyId, refreshKey]);
 
   return { workers, isLoading, error, refetch };
 }

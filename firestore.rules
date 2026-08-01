@@ -145,43 +145,71 @@ service cloud.firestore {
     // =========================================================================
     // Links contacts to entities (projects, companies, units) via AssociationService
     // Used by: IKA Workers tab, contact association features
-    // Fields: sourceContactId, targetEntityType, targetEntityId, status, createdBy
-    // 📅 Updated: 2026-03-20 (ADR-252 FR-H3 — tenant isolation on READ)
+    // Fields: companyId, sourceContactId, targetEntityType, targetEntityId, status, createdBy
+    // 📅 Updated: 2026-08-01 (ADR-745 G6+G7 — real tenant isolation)
+    //
+    // 🔒 SECURITY (ADR-745, measured 2026-08-01): this block used to ask for
+    // `resource.data.companyId` — a field NOTHING wrote. The tenant lived under
+    // `sourceWorkspaceId` server-side and under hardcoded literals client-side, so
+    // the companyId leg was structurally unreachable and every real document fell
+    // through to a `createdBy == uid` fallback. Two consequences:
+    //   (a) CREATE had NO tenant gate at all — any authenticated user of any tenant
+    //       could plant a link, with a forged `createdBy`, against any project. That
+    //       matters more here than elsewhere because `contact_links` feeds RBAC
+    //       (contact-linker.ts: project roles + linkedPropertyIds).
+    //   (b) the `createdBy` fallback made a link invisible to a COLLEAGUE in the same
+    //       company, and since rules are not filters, one foreign document rejects the
+    //       whole list query.
+    // Fixed by making `companyId` a real written field (types + converter + all three
+    // writers) and gating on it here. The `createdBy` read fallback is DELETED, not
+    // relaxed: the collection held 0 documents, so there was no legacy data to carry.
+    // Shape mirrors `attendance_events` below, which closed the identical gap in
+    // ADR-298 §8 Phase B.2.
     // =========================================================================
     match /contact_links/{linkId} {
 
-      // 📖 READ: Tenant-scoped
-      // 🔒 SECURITY (ADR-252 FR-H3): Was `isAuthenticated()` → now tenant-scoped
+      // 📖 READ: Tenant-scoped, no ownership fallback.
       allow read: if isAuthenticated()
                   && (
                        isSuperAdminOnly()
-                       || (resource.data.keys().hasAny(['companyId'])
-                           && belongsToCompany(resource.data.companyId))
-                       || (!resource.data.keys().hasAny(['companyId'])
-                           && resource.data.keys().hasAny(['createdBy'])
-                           && resource.data.createdBy == request.auth.uid)
+                       || belongsToCompany(resource.data.companyId)
                      );
 
-      // ✍️ CREATE: Authenticated users with required fields
+      // ✍️ CREATE: Tenant-bound + no impersonation.
       allow create: if isAuthenticated()
                     && resource == null
-                    && request.resource.data.keys().hasAll(['sourceContactId', 'status', 'createdBy'])
+                    && request.resource.data.keys().hasAll([
+                         'companyId', 'sourceContactId', 'status', 'createdBy'
+                       ])
+                    && request.resource.data.companyId is string
                     && request.resource.data.sourceContactId is string
                     && request.resource.data.status is string
-                    && request.resource.data.createdBy is string;
-
-      // 📝 UPDATE: Creator or super admin (e.g., status → 'inactive')
-      allow update: if isAuthenticated()
+                    && request.resource.data.createdBy == request.auth.uid
                     && (
-                         resource.data.createdBy == request.auth.uid
-                         || isSuperAdminOnly()
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
                        );
 
-      // 🗑️ DELETE: Creator or super admin
+      // 📝 UPDATE: Creator or super admin (e.g., status → 'inactive'), tenant-bound,
+      // and `companyId` is immutable — an update must not move a link between tenants.
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              belongsToCompany(resource.data.companyId)
+                              && resource.data.createdBy == request.auth.uid
+                              && request.resource.data.companyId == resource.data.companyId
+                            )
+                       );
+
+      // 🗑️ DELETE: Same gate as update.
       allow delete: if isAuthenticated()
                     && (
-                         resource.data.createdBy == request.auth.uid
-                         || isSuperAdminOnly()
+                         isSuperAdminOnly()
+                         || (
+                              belongsToCompany(resource.data.companyId)
+                              && resource.data.createdBy == request.auth.uid
+                            )
                        );
     }
 

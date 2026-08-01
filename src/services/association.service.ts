@@ -32,12 +32,14 @@ export class AssociationService {
     return ContactLinkService.getContactLinkById(linkId);
   }
 
-  static listContactLinks(params: ListContactLinksParams = {}) {
+  // 🔒 ADR-745 G6: `params` lost its `= {}` default on purpose — `companyId` is
+  // required, so an argument-less call must not compile.
+  static listContactLinks(params: ListContactLinksParams) {
     return ContactLinkService.listContactLinks(params);
   }
 
-  static getContactWithLinks(contactId: string): Promise<ContactWithLinks | null> {
-    return ContactLinkService.getContactWithLinks(contactId);
+  static getContactWithLinks(contactId: string, companyId: string): Promise<ContactWithLinks | null> {
+    return ContactLinkService.getContactWithLinks(contactId, companyId);
   }
 
   static unlinkContact(linkId: string, updatedBy: string): Promise<LinkResult> {
@@ -70,8 +72,8 @@ export class AssociationService {
   }
 
   // Professional Snapshots (ADR-230)
-  static snapshotProfessionals(propertyId: string, roles?: LegalProfessionalRole[]): Promise<ProfessionalSnapshot[]> {
-    return snapshotProfessionals(propertyId, roles);
+  static snapshotProfessionals(propertyId: string, companyId: string, roles?: LegalProfessionalRole[]): Promise<ProfessionalSnapshot[]> {
+    return snapshotProfessionals(propertyId, companyId, roles);
   }
 }
 

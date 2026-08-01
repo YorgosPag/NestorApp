@@ -47,7 +47,20 @@ export interface ContactLink {
   /** Unique link ID */
   id: string;
 
-  /** Source workspace ID (where contact originates) */
+  /**
+   * Owning tenant — the field `firestore.rules` reads for isolation.
+   *
+   * 🔒 ADR-745 G6: the rules always asked for `companyId`, but nothing wrote it;
+   * the tenant lived under `sourceWorkspaceId` server-side and under hardcoded
+   * literals (`'default'`, `'ws_office_directory'`) client-side. Required — not
+   * optional — so a document that cannot be tenant-scoped cannot be constructed.
+   */
+  companyId: string;
+
+  /**
+   * Source workspace ID (where contact originates).
+   * ⚠️ NOT a tenant identifier — see `companyId`.
+   */
   sourceWorkspaceId: string;
 
   /** Source contact ID */
@@ -88,29 +101,25 @@ export interface ContactLink {
 }
 
 /**
- * Contact Link as stored in Firestore
+ * Contact Link as stored in Firestore.
+ *
+ * DERIVED from `ContactLink`, not restated: the two differ in exactly one way —
+ * on the wire the timestamps are Firestore `Timestamp`s, in the domain they may
+ * already be ISO strings. Spelling every field out twice made the two drift-prone
+ * twins (adding `companyId` for ADR-745 G6 meant editing both, and jscpd flagged
+ * the pair); stating only the delta means a new field can only ever be added once.
  */
-export interface ContactLinkFirestoreDoc {
-  id: string;
-  sourceWorkspaceId: string;
-  sourceContactId: string;
-  targetWorkspaceId?: string;
-  targetEntityType?: EntityType;
-  targetEntityId?: string;
-  reason?: string;
-  role?: string;
-  status: 'active' | 'inactive';
+export type ContactLinkFirestoreDoc = Omit<ContactLink, 'createdAt' | 'updatedAt'> & {
   createdAt: Timestamp;
-  createdBy: string;
   updatedAt?: Timestamp;
-  updatedBy?: string;
-  metadata?: Record<string, unknown>;
-}
+};
 
 /**
  * Input for creating a contact link
  */
 export interface CreateContactLinkInput {
+  /** 🔒 Owning tenant — required by the CREATE rule (ADR-745 G7). */
+  companyId: string;
   sourceWorkspaceId: string;
   sourceContactId: string;
   targetWorkspaceId?: string;
@@ -268,6 +277,15 @@ export interface CreateFileLinkInput {
  * Query parameters for listing contact links
  */
 export interface ListContactLinksParams {
+  /**
+   * 🔒 Owning tenant — REQUIRED, not a filter of convenience.
+   *
+   * Firestore rules are not filters: a list query that does not constrain the
+   * field the rule reads is rejected **whole**, not trimmed. So the tenant scope
+   * has to be in the query, not only in the rule (ADR-745 G6).
+   */
+  companyId: string;
+
   /** Filter by source contact ID */
   sourceContactId?: string;
 

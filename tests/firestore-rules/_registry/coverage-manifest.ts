@@ -77,6 +77,7 @@ import {
 import {
   auditLogMatrix,
   contactRelationshipsMatrix,
+  contactLinksMatrix,
   employmentRecordsMatrix,
   notificationsMatrix,
   searchDocumentsMatrix,
@@ -896,9 +897,12 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'contact_links',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/contact-links.rules.test.ts',
-    rulesRange: [151, 187],
-    // Same pattern as contact_relationships: open create, creator-only update/delete.
-    matrix: contactRelationshipsMatrix(),
+    rulesRange: [143, 213],
+    // ADR-745 (2026-08-01): no longer shares contactRelationshipsMatrix(). The
+    // pattern was declared `tenant_direct` while the tenant field was never
+    // written — nominally tenant-scoped, structurally unreachable. Now real:
+    // tenant-gated read/create/update/delete, creator-bound create.
+    matrix: contactLinksMatrix(),
   },
   {
     collection: 'relationships',

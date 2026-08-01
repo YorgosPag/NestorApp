@@ -18,6 +18,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { LegalContractService } from '@/services/legal-contract.service';
 import type { CreateContractInput, ContractPhase } from '@/types/legal-contracts';
+import { conflictIfFailed } from './_shared/contract-result-response';
 import { getErrorMessage } from '@/lib/error-utils';
 
 // =============================================================================
@@ -81,14 +82,10 @@ async function handlePost(request: NextRequest): Promise<NextResponse> {
           );
         }
 
-        const result = await LegalContractService.createContract(body, ctx.uid);
+        const result = await LegalContractService.createContract(body, ctx.uid, ctx.companyId);
 
-        if (!result.success) {
-          return NextResponse.json(
-            { success: false, error: result.error },
-            { status: 409 }
-          );
-        }
+        const conflict = conflictIfFailed(result);
+        if (conflict) return conflict;
 
         return NextResponse.json(
           { success: true, data: result.contract },

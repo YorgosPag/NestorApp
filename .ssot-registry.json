@@ -1044,7 +1044,8 @@
         "src/services/procurement/po-share-service.ts",
         "src/services/procurement/procurement-repository.ts",
         "src/services/measurements/boq-repository.ts",
-        "src/components/projects/ika/contracts.ts"
+        "src/components/projects/ika/contracts.ts",
+        "src/components/projects/ika/WorkersTabContent.tsx"
       ]
     },
     "_comment_tier6": "=== TIER 6: CONFIG CONSOLIDATION (bypass = config drift) ===",

@@ -77,6 +77,10 @@ export async function upsertPropertyContactLink(
   // Create new link
   await linkRef.set({
     id: linkId,
+    // 🔒 ADR-745 G6 — the field `firestore.rules` actually reads. `companyId` was
+    // already a parameter here but only ever landed in `sourceWorkspaceId`, a
+    // differently-named field the rules never look at.
+    companyId,
     sourceWorkspaceId: companyId,
     sourceContactId: contactId,
     targetEntityType: 'property',

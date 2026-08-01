@@ -42,11 +42,13 @@ const logger = createModuleLogger('ProfessionalSnapshotService');
  */
 export async function snapshotProfessionals(
   propertyId: string,
+  companyId: string,
   roles: LegalProfessionalRole[] = ['seller_lawyer', 'buyer_lawyer', 'notary']
 ): Promise<ProfessionalSnapshot[]> {
   try {
     // 1. Find active contact links for this unit with legal roles
     const links = await listContactLinks({
+      companyId,
       targetEntityType: 'property',
       targetEntityId: propertyId,
       status: 'active',

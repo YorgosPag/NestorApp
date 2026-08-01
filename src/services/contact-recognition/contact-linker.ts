@@ -172,8 +172,13 @@ export async function resolveContactFromTelegram(
     // Step 5: Fetch project roles from contact_links (RBAC)
     let projectRoles: ProjectRoleLink[] = [];
     try {
+      // 🔒 ADR-745 G6 — tenant-scoped. This query feeds RBAC (`projectRoles`) and
+      // `linkedPropertyIds`, so an unscoped read would hand out roles derived from
+      // another tenant's links. Admin SDK bypasses rules — the scope must be here.
+      // Same pattern as the contacts query below (SPEC-259B).
       const linksSnap = await db
         .collection(COLLECTIONS.CONTACT_LINKS)
+        .where('companyId', '==', getCompanyId())
         .where('sourceContactId', '==', contactId)
         .where('status', '==', 'active')
         .limit(20)

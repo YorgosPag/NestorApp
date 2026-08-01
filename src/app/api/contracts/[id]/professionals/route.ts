@@ -18,6 +18,7 @@ import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { LegalContractService } from '@/services/legal-contract.service';
 import type { LegalProfessionalRole } from '@/types/legal-contracts';
+import { conflictIfFailed } from '../../_shared/contract-result-response';
 import { getErrorMessage } from '@/lib/error-utils';
 
 type SegmentData = { params: Promise<{ id: string }> };
@@ -38,7 +39,7 @@ async function handlePatch(
   segmentData?: SegmentData
 ): Promise<NextResponse> {
   const handler = withAuth(
-    async (req: NextRequest, _ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
+    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache): Promise<NextResponse> => {
       try {
         const { id } = await segmentData!.params;
         const body = (await req.json()) as OverrideProfessionalBody;
@@ -53,15 +54,12 @@ async function handlePatch(
         const result = await LegalContractService.overrideProfessional(
           id,
           body.role,
-          body.contactId
+          body.contactId,
+          ctx.companyId
         );
 
-        if (!result.success) {
-          return NextResponse.json(
-            { success: false, error: result.error },
-            { status: 409 }
-          );
-        }
+        const conflict = conflictIfFailed(result);
+        if (conflict) return conflict;
 
         return NextResponse.json({ success: true, data: { snapshot: result.snapshot } });
       } catch (error) {

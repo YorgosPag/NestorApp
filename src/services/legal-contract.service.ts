@@ -68,7 +68,8 @@ export class LegalContractService {
    */
   static async createContract(
     input: CreateContractInput,
-    createdBy: string
+    createdBy: string,
+    companyId: string
   ): Promise<{ success: boolean; contract?: LegalContract; error?: string }> {
     try {
       // Validate prerequisites
@@ -90,7 +91,7 @@ export class LegalContractService {
       }
 
       // Snapshot professionals from property associations
-      const snapshots = await AssociationService.snapshotProfessionals(input.propertyId);
+      const snapshots = await AssociationService.snapshotProfessionals(input.propertyId, companyId);
       const sellerLawyer = snapshots.find((s) => s.role === 'seller_lawyer') ?? null;
       const buyerLawyer = snapshots.find((s) => s.role === 'buyer_lawyer') ?? null;
       const notary = snapshots.find((s) => s.role === 'notary') ?? null;
@@ -300,7 +301,8 @@ export class LegalContractService {
   static async overrideProfessional(
     contractId: string,
     role: LegalProfessionalRole,
-    contactId: string | null
+    contactId: string | null,
+    companyId: string
   ): Promise<{ success: boolean; snapshot?: ProfessionalSnapshot | null; error?: string }> {
     try {
       const contract = await this.getContractById(contractId);
@@ -322,6 +324,7 @@ export class LegalContractService {
         // Re-snapshot this specific professional
         const snapshots = await AssociationService.snapshotProfessionals(
           contract.propertyId,
+          companyId,
           [role]
         );
         snapshot = snapshots.find((s) => s.contactId === contactId) ?? null;
