@@ -4833,7 +4833,9 @@
         "src/app/api/projects/[projectId]/showcase/email/route.ts",
         "src/components/property-showcase/types.ts",
         "src/components/shared/pages/useSharedFilePageState.ts"
-      ]
+      ],
+      "addedDate": "2026-07-25",
+      "addedByAdr": "ADR-698"
     },
     "share-resolver-core": {
       "ssotFile": "src/services/sharing/resolver-core/share-resolver-primitives.ts",
@@ -4922,14 +4924,15 @@
     },
     "chart-card-shell": {
       "ssotFile": "src/components/ui/chart-card/index.ts",
-      "description": "ADR-710 — a chart with a plot is rendered through <ChartCard>, never by wiring recharts' responsive wrapper by hand. 26 of 28 chart files still import it directly, and each one therefore reimplements the card frame, the theming, the legend, the empty state and the accessible data table. That last one is not cosmetic: the measured --chart-* ramp puts two light-mode steps under 3:1 against the card surface and an adjacent pair at CVD dE 6.2 (dark mode fails outright), so the table view and the always-on legend are the relief the palette owes. jscpd never sees this duplication because every chart plots different data — the files share shape, not tokens. Compose ChartCard.Header / .Figure / .Tooltip / .Summary / .Editor instead; the single series description drives theming, legend, table and marks at once.",
+      "description": "ADR-710 — a chart with a plot is rendered through <ChartCard>, never by wiring recharts' responsive wrapper by hand. 26 of 28 chart files still import it directly, and each one therefore reimplements the card frame, the theming, the legend, the empty state and the accessible data table. That last one is not cosmetic: the measured --chart-* ramp puts two light-mode steps under 3:1 against the card surface and an adjacent pair at CVD dE 6.2 (dark mode fails outright), so the table view and the always-on legend are the relief the palette owes. jscpd never sees this duplication because every chart plots different data — the files share shape, not tokens. Compose ChartCard.Header / .Figure / .Tooltip / .Summary / .Editor instead; the single series description drives theming, legend, table and marks at once. ALLOWLIST NOTE (2026-08-01, ADR-742 §7quaterdecies): ReportSparkline.tsx is allowlisted, NOT deferred. Measured: ChartCardFigure offers three named heights (h-56/h-64/h-72 = 224-288px) and unconditionally emits ChartContainer + legend + empty state + a <details> data table. A sparkline is an 80x32px inline glyph beside a KPI number, with no axes, grid, tooltip or labels. This module governs \"a chart WITH A PLOT\"; a sparkline has no plot furniture at all, so forcing it through the shell would add a header, a legend and a data table to a trend squiggle. The other 12 files WERE migrated in the same pass (ADR-710 backlog closed) - this one is a category boundary, not remaining debt. If a sparkline-sized level of the shell is ever added, revisit.",
       "forbiddenPatterns": [
         "^[[:space:]]*ResponsiveContainer,?[[:space:]]*$",
         "import[^;]*ResponsiveContainer[^;]*from[^;]*recharts"
       ],
       "allowlist": [
         "src/components/ui/chart/ChartContainer.tsx",
-        "src/components/ui/chart-card/index.ts"
+        "src/components/ui/chart-card/index.ts",
+        "src/components/reports/core/ReportSparkline.tsx"
       ],
       "addedDate": "2026-07-26",
       "addedByAdr": "ADR-710",
