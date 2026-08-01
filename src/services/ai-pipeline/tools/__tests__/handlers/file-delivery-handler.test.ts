@@ -11,7 +11,7 @@ import '../setup';
 
 import { FileDeliveryHandler } from '../../handlers/file-delivery-handler';
 import { createCustomerContext, createAdminContext } from '../test-utils/context-factory';
-import { createMockFirestore } from '../test-utils/mock-firestore';
+import { createMockFirestore } from '@/test-utils/mock-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 jest.mock('@/config/firestore-collections', () => ({

@@ -15,7 +15,7 @@ import '../setup';
 
 import { OrgStructureHandler } from '../../handlers/org-structure-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '../test-utils/mock-firestore';
+import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 jest.mock('@/services/org-structure/org-structure-repository', () => ({

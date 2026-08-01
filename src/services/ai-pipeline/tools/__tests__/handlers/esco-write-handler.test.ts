@@ -14,7 +14,7 @@ import '../setup';
 
 import { executeSetContactEsco } from '../../handlers/esco-write-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '../test-utils/mock-firestore';
+import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 // ── Mocked ESCO enforcement ──

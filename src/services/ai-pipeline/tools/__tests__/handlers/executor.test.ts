@@ -18,7 +18,7 @@ jest.mock('@/services/procurement', () => ({
 
 import { AgenticToolExecutor } from '../../agentic-tool-executor';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '../test-utils/mock-firestore';
+import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 import { createAdminContext } from '../test-utils/context-factory';
 
 describe('AgenticToolExecutor', () => {

@@ -62,7 +62,7 @@ jest.mock('@/services/realtime/types', () => ({
   SYNC_SOURCE_AI_AGENT: 'ai_agent',
 }));
 
-import { createMockFirestore } from '../../tools/__tests__/test-utils/mock-firestore';
+import { createMockFirestore } from '@/test-utils/mock-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
   findContactByEmail,

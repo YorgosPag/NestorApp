@@ -76,7 +76,7 @@ import { sendWhatsAppMessage } from '@/app/api/communications/webhooks/whatsapp/
 import { sendMessengerMessage } from '@/app/api/communications/webhooks/messenger/messenger-client';
 import { sendInstagramMessage } from '@/app/api/communications/webhooks/instagram/instagram-client';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore } from '../../tools/__tests__/test-utils/mock-firestore';
+import { createMockFirestore } from '@/test-utils/mock-firestore';
 
 // ============================================================================
 // HELPERS

@@ -12,7 +12,7 @@ import '../setup';
 
 import { AttachmentHandler } from '../../handlers/attachment-handler';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
-import { createMockFirestore } from '../test-utils/mock-firestore';
+import { createMockFirestore } from '@/test-utils/mock-firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 
 jest.mock('@/config/firestore-collections', () => ({

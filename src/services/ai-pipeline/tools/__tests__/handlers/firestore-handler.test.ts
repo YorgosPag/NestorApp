@@ -17,7 +17,7 @@ import '../setup';
 
 import { FirestoreHandler } from '../../handlers/firestore-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '../test-utils/mock-firestore';
+import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 // ============================================================================

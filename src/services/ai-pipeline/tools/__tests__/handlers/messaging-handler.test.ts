@@ -13,7 +13,7 @@ import '../setup';
 
 import { MessagingHandler } from '../../handlers/messaging-handler';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { createMockFirestore, type MockFirestoreKit } from '../test-utils/mock-firestore';
+import { createMockFirestore, type MockFirestoreKit } from '@/test-utils/mock-firestore';
 import { createAdminContext, createCustomerContext } from '../test-utils/context-factory';
 
 const mockSendChannelReply = jest.requireMock(
