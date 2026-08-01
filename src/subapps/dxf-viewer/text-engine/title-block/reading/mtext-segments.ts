@@ -1,0 +1,113 @@
+/**
+ * @fileoverview MTEXT → πλαίσια κειμένου με σωρευτικό ύψος (Λ1, ADR-745 §2.2β)
+ *
+ * Ο τοπογράφος κωδικοποιεί τη **σημασία** στο μέγεθος: το όνομα του μελετητή γράφεται
+ * σε πλήρες ύψος, η ειδικότητά του από κάτω σε μικρότερο. Το αρχείο δηλώνει αυτή την
+ * ιεραρχία με `\H<factor>x;` — άρα διαβάζεται, δεν μαντεύεται.
+ *
+ * 🔴 Τα σχετικά ύψη **πολλαπλασιάζονται σωρευτικά**, δεν αντικαθιστούν το ένα το άλλο.
+ * Στο πραγματικό `G753_ergasia F.dxf` η ακολουθία είναι `\H0.5334x;` και μετά `\H1.875x;`:
+ * το δεύτερο **δεν** σημαίνει «1,875 φορές το βασικό» αλλά `0,5334 × 1,875 ≈ 1,0`, δηλαδή
+ * **επιστροφή** στο ύψος του ονόματος. Ανάγνωση του `\H` ως απόλυτου δίνει «ο δεύτερος
+ * μηχανικός είναι σχεδόν διπλάσιος από τον πρώτο», που είναι ορατά ψευδές.
+ *
+ * Δεν εφαρμόζεται καμία κανονικοποίηση εδώ: το κείμενο επιστρέφεται **όπως το γράφει το
+ * αρχείο**. Η ομογενοποίηση ομόγλυφων ανήκει στη σύγκριση ετικετών, όχι στην ανάγνωση —
+ * μια τιμή που θα δει ο χρήστης δεν πρέπει να έχει «διορθωθεί» σιωπηλά.
+ */
+
+import { tokenizeMtext } from '../../parser/mtext-tokenizer';
+
+/** Το ύψος που ισχύει όταν δεν έχει δηλωθεί κανένα `\H` — σχετικό προς το ύψος της οντότητας. */
+export const BASE_HEIGHT_FACTOR = 1;
+
+/** Ανοχή ισότητας ύψους. Οι συντελεστές του αρχείου είναι στρογγυλεμένοι (0,5334 × 1,875 = 1,000125). */
+export const HEIGHT_FACTOR_EPSILON = 0.01;
+
+/** Μία γραμμή MTEXT μαζί με το ύψος που ίσχυε όταν γράφτηκε. */
+export interface MtextSegment {
+  /** Το κείμενο της γραμμής, ωμό — χωρίς κωδικούς μορφοποίησης, χωρίς κανονικοποίηση. */
+  readonly text: string;
+  /** Σωρευτικός συντελεστής ύψους ως προς το ύψος της οντότητας (κωδ. 40). */
+  readonly heightFactor: number;
+}
+
+/**
+ * Σπάει ένα ωμό MTEXT σε γραμμές, κρατώντας το ενεργό ύψος καθεμιάς.
+ *
+ * Ο διαχωρισμός γίνεται στα `\P` (αλλαγή παραγράφου) και `\N` (αλλαγή γραμμής). Το ύψος
+ * μιας γραμμής είναι αυτό που ισχύει στην **αρχή** της· ένα `\H` στη μέση της γραμμής
+ * αγνοείται για τον χαρακτηρισμό της, γιατί μια γραμμή έχει μία σημασία.
+ */
+export function mtextToSegments(raw: string): MtextSegment[] {
+  const segments: MtextSegment[] = [];
+  let factor = BASE_HEIGHT_FACTOR;
+  let lineFactor = BASE_HEIGHT_FACTOR;
+  let buffer = '';
+
+  const flush = (): void => {
+    segments.push({ text: buffer, heightFactor: lineFactor });
+    buffer = '';
+    lineFactor = factor;
+  };
+
+  for (const token of tokenizeMtext(raw)) {
+    switch (token.kind) {
+      case 'text':
+        buffer += token.value;
+        break;
+      case 'height':
+        // Σχετικό ⇒ πολλαπλασιάζεται πάνω στο τρέχον. Απόλυτο ⇒ αντικαθιστά.
+        factor = token.relative ? factor * token.value : token.value;
+        if (buffer.length === 0) lineFactor = factor;
+        break;
+      case 'paragraphBreak':
+      case 'lineBreak':
+        flush();
+        break;
+      case 'nonBreakSpace':
+        buffer += ' ';
+        break;
+      case 'unicode':
+        buffer += String.fromCodePoint(token.codePoint);
+        break;
+      case 'degree':
+        buffer += '°';
+        break;
+      case 'diameter':
+        buffer += '⌀';
+        break;
+      case 'plusMinus':
+        buffer += '±';
+        break;
+      default:
+        // Μορφοποίηση χωρίς περιεχόμενο (γραμματοσειρά, χρώμα, υπογράμμιση, ομαδοποίηση).
+        break;
+    }
+  }
+  flush();
+
+  return segments;
+}
+
+/**
+ * Το πλήρες κείμενο ενός MTEXT ως μία γραμμή.
+ *
+ * 🔴 Αυτή είναι η **μόνη** επιτρεπτή είσοδος για αναγνώριση ετικέτας. Το ωμό MTEXT σπάει
+ * τις λέξεις σε κομμάτια όπου ο συντάκτης άλλαξε χρώμα ή γραμματοσειρά: στο πραγματικό
+ * αρχείο το «Π.Ε. 39» είναι `Π.Ε. 3` + `9` και το «1:200» είναι `1` + `:2` + `00`.
+ * Κάθε regex πάνω στο ωμό MTEXT διαβάζει το πρώτο κομμάτι και χάνει τα υπόλοιπα —
+ * **σιωπηλά, χωρίς σφάλμα** (ADR-745 §2.3 Παγίδα Α).
+ */
+export function mtextToPlainText(raw: string): string {
+  return mtextToSegments(raw)
+    .map(s => s.text)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Ίδιο ύψος εντός ανοχής — οι συντελεστές του αρχείου δεν είναι ακριβείς. */
+export function isSameHeight(a: number, b: number): boolean {
+  return Math.abs(a - b) <= HEIGHT_FACTOR_EPSILON;
+}

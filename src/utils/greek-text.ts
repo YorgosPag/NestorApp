@@ -124,6 +124,69 @@ export function toGreekTitleCase(text: string): string {
 }
 
 // ============================================================================
+// HOMOGLYPH NORMALIZATION (Latin letters masquerading as Greek)
+// ============================================================================
+
+/**
+ * Latin capitals that are visually identical to a Greek capital.
+ *
+ * Lowercase is deliberately limited to `o`: pairs like `a`/`α`, `v`/`ν` and
+ * `k`/`κ` differ in shape in most typefaces, so folding them would corrupt
+ * genuinely Latin words instead of repairing Greek ones.
+ */
+const LATIN_TO_GREEK_HOMOGLYPHS: ReadonlyMap<string, string> = new Map([
+  ['A', 'Α'], ['B', 'Β'], ['E', 'Ε'], ['Z', 'Ζ'], ['H', 'Η'],
+  ['I', 'Ι'], ['K', 'Κ'], ['M', 'Μ'], ['N', 'Ν'], ['O', 'Ο'],
+  ['P', 'Ρ'], ['T', 'Τ'], ['Y', 'Υ'], ['X', 'Χ'],
+  ['o', 'ο'],
+]);
+
+const GREEK_LETTER = /[Ͱ-Ͽἀ-῿]/;
+const LATIN_LETTER = /[A-Za-z]/;
+
+/** A run of letters/digits — the unit at which the Greek-context test is applied. */
+const WORD_RUN = /[\p{L}\p{N}]+/gu;
+
+/**
+ * Repair Greek words contaminated with visually identical Latin letters.
+ *
+ * CAD titleblocks, OCR output and text pasted through word processors routinely
+ * carry a Latin `H` inside `ΣΥΝΤΑΞΗ` or a Latin `O` inside `ΤΟΠΟΓΡΑΦΟΣ`: the glyph
+ * is identical on screen, the code point is not, and every string comparison
+ * fails with no visible cause.
+ *
+ * The fold is applied **per word** and only when the word is unambiguously Greek —
+ * it must contain at least one Greek letter, and every Latin letter it contains
+ * must be a homoglyph. That guard is what keeps genuinely Latin text intact:
+ * `www.nikolaou.com.gr`, `Arial` and `OTE` carry no Greek letter, so they are
+ * returned untouched.
+ *
+ * The reverse direction (a Latin word contaminated with Greek letters) is **not**
+ * handled — it needs the opposite guard and has no measured occurrence here.
+ *
+ * @example normalizeGreekHomoglyphs('ΣΥΝΤΑΞH') → 'ΣΥΝΤΑΞΗ'   // Latin H → Greek Η
+ * @example normalizeGreekHomoglyphs('www.nikolaou.com.gr') → unchanged
+ * @see ADR-745 §2.3 — measured in `G753_ergasia F.dxf`
+ */
+export function normalizeGreekHomoglyphs(text: string): string {
+  return text.replace(WORD_RUN, word => {
+    if (!GREEK_LETTER.test(word)) return word;
+
+    let folded = '';
+    for (const char of word) {
+      if (!LATIN_LETTER.test(char)) {
+        folded += char;
+        continue;
+      }
+      const greek = LATIN_TO_GREEK_HOMOGLYPHS.get(char);
+      if (greek === undefined) return word; // a non-homoglyph Latin letter — leave the word alone
+      folded += greek;
+    }
+    return folded;
+  });
+}
+
+// ============================================================================
 // SEARCH NORMALIZATION
 // ============================================================================
 
