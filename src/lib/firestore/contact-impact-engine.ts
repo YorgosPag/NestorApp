@@ -79,12 +79,12 @@ async function executeStandardQuery(
   db: FirestoreDb,
   query: Extract<ContactQueryStrategy, { type: 'standard' }>,
   contactId: string,
-  companyId?: string,
+  companyId: string,
 ): Promise<number> {
   let q = db.collection(query.collection)
     .where(query.foreignKey, query.queryType === 'equals' ? '==' : 'array-contains', contactId);
 
-  if (!query.skipCompanyFilter && companyId) {
+  if (!query.skipCompanyFilter) {
     q = q.where(FIELDS.COMPANY_ID, '==', companyId);
   }
 
@@ -96,13 +96,16 @@ async function executeSubcollectionQuery(
   db: FirestoreDb,
   query: Extract<ContactQueryStrategy, { type: 'subcollection' }>,
   contactId: string,
-  companyId?: string,
+  companyId: string,
 ): Promise<number> {
   // Step 1: Query parent documents
   let parentQuery = db.collection(query.parentCollection)
     .where(query.parentForeignKey, query.parentQueryType === 'equals' ? '==' : 'array-contains', contactId);
 
-  if (!query.skipCompanyFilter && companyId) {
+  // Ο tenant κόβεται **στον γονέα**: τα subcollection queries του βήματος 2
+  // κρέμονται από τα ids που επέστρεψε αυτό το query, άρα ό,τι δεν πέρασε από
+  // εδώ δεν φτάνει ποτέ στο fan-out.
+  if (!query.skipCompanyFilter) {
     parentQuery = parentQuery.where(FIELDS.COMPANY_ID, '==', companyId);
   }
 
@@ -127,7 +130,7 @@ async function executeCompoundQuery(
   db: FirestoreDb,
   query: Extract<ContactQueryStrategy, { type: 'compound' }>,
   contactId: string,
-  companyId?: string,
+  companyId: string,
 ): Promise<number> {
   let q = db.collection(query.collection)
     .where(query.foreignKey, query.queryType === 'equals' ? '==' : 'array-contains', contactId);
@@ -136,7 +139,7 @@ async function executeCompoundQuery(
     q = q.where(filter.field, filter.operator, filter.value);
   }
 
-  if (!query.skipCompanyFilter && companyId) {
+  if (!query.skipCompanyFilter) {
     q = q.where(FIELDS.COMPANY_ID, '==', companyId);
   }
 
@@ -153,7 +156,7 @@ async function executeDependencyQuery(
   dep: ContactDependencyDef,
   scenario: ContactImpactScenario,
   contactId: string,
-  companyId?: string,
+  companyId: string,
 ): Promise<DependencyCountResult> {
   const { query } = dep;
 
@@ -186,17 +189,42 @@ async function executeDependencyQuery(
 /**
  * Compute contact impact for a given scenario.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΤΟ `companyId` ΕΙΝΑΙ **ΥΠΟΧΡΕΩΤΙΚΟ** (ADR-742 §7octies)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Μέχρι τις 2026-08-01 η παράμετρος ήταν `companyId?` και οι τρεις εκτελεστές
+ * ρωτούσαν `if (!query.skipCompanyFilter && companyId)`. Η **δεύτερη συνθήκη**
+ * σήμαινε: *«αν δεν μου δώσεις tenant, μη φιλτράρεις καθόλου»*.
+ *
+ * Μετρήθηκε ότι **κανένας** από τους έξι καλούντες δεν τον έδινε ⇒ το φίλτρο
+ * tenant **δεν ενεργοποιήθηκε ποτέ, σε κανένα μονοπάτι**. Οι preview
+ * επέστρεφαν πλήθη εγγραφών **από όλους τους πελάτες**: όχι μαντείο ύπαρξης
+ * (ADR-742 §3.3) αλλά **διαρροή περιεχομένου**.
+ *
+ * 🔑 Η αδελφή μηχανή πάνω στο **ίδιο** registry το έκανε ήδη σωστά:
+ * `deletion-guard.ts` δηλώνει `companyId: string` και ρωτά **μόνο**
+ * `if (!dep.skipCompanyFilter)`. Δύο μηχανές, ένα registry, δύο δόγματα — και
+ * **κανένα gate δεν τις συνέκρινε**. Αυτό το αρχείο ευθυγραμμίζεται με την
+ * αυστηρότερη, δεν εφευρίσκει τρίτη.
+ *
+ * ⚠️ Το `skipCompanyFilter: true` παραμένει νόμιμο (6 συλλογές που **δεν
+ * φέρουν** `companyId`: `external_identities`, `employment_records`,
+ * `contact_relationships`, `accounting_invoices`, `accounting_apy_certificates`,
+ * `contact_links`). Η διαφορά είναι ότι η παράλειψη είναι πλέον **δηλωμένη ανά
+ * εξάρτηση**, όχι **παρενέργεια** του τι ξέχασε να περάσει ο καλών.
+ *
  * @param contactId - The contact being modified/deleted
  * @param scenario - Which operation (deletion, identityChange, etc.)
  * @param contactType - The contact's type (individual, company, service)
- * @param companyId - Tenant ID for isolation (optional for some queries)
+ * @param companyId - Tenant ID for isolation — **υποχρεωτικό**, βλ. παραπάνω
  * @param fieldCategories - Field categories that changed (for scenario-specific filtering)
+ * @see ADR-742 §7octies · `deletion-guard.ts` (η αδελφή μηχανή)
  */
 export async function computeContactImpact(
   contactId: string,
   scenario: ContactImpactScenario,
   contactType: ContactType,
-  companyId?: string,
+  companyId: string,
   fieldCategories?: ReadonlyArray<string>,
 ): Promise<ContactImpactResult> {
   const db = getAdminFirestore();

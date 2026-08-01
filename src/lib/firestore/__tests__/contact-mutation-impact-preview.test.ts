@@ -22,6 +22,13 @@ import type { ServiceIdentityFieldChange } from '@/utils/contactForm/service-ide
 
 const mockedGetAdminFirestore = getAdminFirestore as jest.MockedFunction<typeof getAdminFirestore>;
 
+/**
+ * Ο tenant του καλούντος. **Υποχρεωτικός** από την ADR-742 §7octies: μέχρι τότε
+ * η παράμετρος ήταν προαιρετική και **κανένας** από τους έξι καλούντες δεν την
+ * περνούσε, οπότε το φίλτρο εταιρείας του engine δεν έτρεχε ποτέ.
+ */
+const TENANT = 'company_test';
+
 interface MockSnapshot {
   size: number;
 }
@@ -73,7 +80,7 @@ describe('contact mutation impact preview services', () => {
     };
 
     it('returns allow without touching Firestore when there are no changes', async () => {
-      const result = await previewContactIdentityImpact('contact_1', []);
+      const result = await previewContactIdentityImpact('contact_1', TENANT, []);
 
       expect(result).toEqual({
         mode: 'allow',
@@ -94,7 +101,7 @@ describe('contact mutation impact preview services', () => {
         [COLLECTIONS.EMPLOYMENT_RECORDS]: [4],
       });
 
-      const result = await previewContactIdentityImpact('contact_1', [amkaChange]);
+      const result = await previewContactIdentityImpact('contact_1', TENANT, [amkaChange]);
 
       expect(result.mode).toBe('block');
       expect(result.dependencies).toEqual(expect.arrayContaining([
@@ -118,7 +125,7 @@ describe('contact mutation impact preview services', () => {
         })),
       } as never);
 
-      const result = await previewContactIdentityImpact('contact_1', [amkaChange]);
+      const result = await previewContactIdentityImpact('contact_1', TENANT, [amkaChange]);
 
       expect(result.mode).toBe('block');
       expect(result.dependencies).toEqual([]);
@@ -142,7 +149,7 @@ describe('contact mutation impact preview services', () => {
         [COLLECTIONS.CONTACT_RELATIONSHIPS]: [2, 3],
       });
 
-      const result = await previewServiceIdentityImpact('service_1', [serviceChange]);
+      const result = await previewServiceIdentityImpact('service_1', TENANT, [serviceChange]);
 
       expect(result.mode).toBe('warn');
       expect(result.dependencies).toEqual(expect.arrayContaining([
@@ -164,7 +171,7 @@ describe('contact mutation impact preview services', () => {
         })),
       } as never);
 
-      const result = await previewServiceIdentityImpact('service_1', [serviceChange]);
+      const result = await previewServiceIdentityImpact('service_1', TENANT, [serviceChange]);
 
       expect(result.mode).toBe('block');
       expect(result.dependencies).toEqual([]);
@@ -183,7 +190,7 @@ describe('contact mutation impact preview services', () => {
         [COLLECTIONS.ACCOUNTING_APY_CERTIFICATES]: [5],
       });
 
-      const result = await previewCompanyIdentityImpact('company_1');
+      const result = await previewCompanyIdentityImpact('company_1', TENANT);
 
       expect(result).toEqual({
         totalAffected: 6,
@@ -206,7 +213,7 @@ describe('contact mutation impact preview services', () => {
         })),
       } as never);
 
-      const result = await previewCompanyIdentityImpact('company_1');
+      const result = await previewCompanyIdentityImpact('company_1', TENANT);
 
       expect(result).toEqual({
         totalAffected: 0,

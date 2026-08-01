@@ -148,10 +148,11 @@ export interface NameCascadePreview {
  */
 export async function previewContactNameCascade(
   contactId: string,
+  companyId: string,
   contactType: ContactType = 'individual',
 ): Promise<NameCascadePreview> {
   try {
-    const result = await computeContactImpact(contactId, 'nameChange', contactType);
+    const result = await computeContactImpact(contactId, 'nameChange', contactType, companyId);
 
     return {
       totalAffected: result.totalAffected,

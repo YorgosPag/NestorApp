@@ -37,9 +37,10 @@ export interface CommunicationImpactPreview {
 
 export async function previewCommunicationImpact(
   contactId: string,
+  companyId: string,
   contactType: ContactType = 'company',
 ): Promise<CommunicationImpactPreview> {
-  const result = await computeContactImpact(contactId, 'communicationChange', contactType);
+  const result = await computeContactImpact(contactId, 'communicationChange', contactType, companyId);
 
   return {
     totalAffected: result.totalAffected,

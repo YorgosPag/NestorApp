@@ -31,8 +31,9 @@ export interface AddressImpactPreview {
 
 export async function previewAddressImpact(
   contactId: string,
+  companyId: string,
 ): Promise<AddressImpactPreview> {
-  const result = await computeContactImpact(contactId, 'addressChange', 'company');
+  const result = await computeContactImpact(contactId, 'addressChange', 'company', companyId);
 
   return {
     totalAffected: result.totalAffected,

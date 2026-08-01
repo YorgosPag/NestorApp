@@ -39,9 +39,10 @@ const ZEROED: CompanyIdentityImpactPreview = {
 
 export async function previewCompanyIdentityImpact(
   contactId: string,
+  companyId: string,
 ): Promise<CompanyIdentityImpactPreview> {
   try {
-    const result = await computeContactImpact(contactId, 'companyIdentityChange', 'company');
+    const result = await computeContactImpact(contactId, 'companyIdentityChange', 'company', companyId);
 
     return {
       totalAffected: result.totalAffected,
