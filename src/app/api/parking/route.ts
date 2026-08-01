@@ -14,6 +14,10 @@ import { guardParentScope } from '@/lib/api/tenant-scope-http';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import {
+  SPACE_COMMON_CREATE_FIELDS,
+  mapCommonSpaceCreateFields,
+} from '@/lib/api/space-entity-fields';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
@@ -31,21 +35,14 @@ const logger = createModuleLogger('ParkingRoute');
 /** Το μονοπάτι όπως καταγράφεται στο ίχνος ελέγχου — ήταν γραμμένο ως literal σε δύο σημεία. */
 const PARKING_PATH = '/api/parking';
 
+// ADR-696 + ADR-742 §7undecies — τα δέκα κοινά πεδία των δύο «χώρων» ήταν
+// αντιγραμμένα εδώ και στο `storages/route.ts` (το `jscpd` τα μέτρησε).
+// Ιδιαίτερα του parking: η **θέση** και η **ζώνη**.
 const CreateParkingSchema = z.object({
   number: z.string().min(1).max(50),
-  /** ADR-233: Entity coding system identifier */
-  code: z.string().max(50).optional(),
-  buildingId: z.string().max(128).optional(),
-  projectId: z.string().max(128).optional(),
-  type: z.string().max(50).optional(),
-  status: z.string().max(50).optional(),
   locationZone: z.enum(['pilotis', 'underground', 'open_space', 'rooftop', 'covered_outdoor']).optional(),
-  floor: z.string().max(50).optional(),
   location: z.string().max(200).optional(),
-  area: z.number().min(0).max(999_999).optional(),
-  price: z.number().min(0).max(999_999_999).optional(),
-  description: z.string().max(2000).optional(),
-  notes: z.string().max(5000).optional(),
+  ...SPACE_COMMON_CREATE_FIELDS,
 });
 
 const getHandler = async (request: NextRequest) => {
@@ -113,26 +110,26 @@ export const POST = withStandardRateLimit(
           }
         }
 
-        // Entity-specific fields (everything NOT handled by centralized service)
+        // Entity-specific fields (everything NOT handled by centralized service).
+        // Τα έξι κοινά με τα `storages` (floor/area/price/description/notes/code)
+        // έρχονται από τον SSoT — η σημασιολογία τους (`area > 0` αλλά
+        // `price >= 0`) περιγράφεται εκεί και **δεν** εξομαλύνεται.
         const entitySpecificFields: Record<string, unknown> = {
           number: body.number.trim(),
           buildingId: buildingId,
           type: body.type || 'standard',
           status: body.status || 'available',
+          ...mapCommonSpaceCreateFields(body),
         };
 
-        // projectId — auto-resolved from building by service, but may come from body
+        // ⚠️ ΟΧΙ από τον SSoT: εδώ το `projectId` είναι **ήδη επιλυμένο** και
+        // περασμένο από τον φύλακα ιδιοκτησίας γονέα παραπάνω — δεν διαβάζεται
+        // ωμό από το σώμα όπως στα `storages`.
         if (resolvedProjectId) entitySpecificFields.projectId = resolvedProjectId;
 
-        // Optional fields — only include if provided
+        // Ιδιαίτερα του parking
         if (body.locationZone) entitySpecificFields.locationZone = body.locationZone;
-        if (body.floor?.trim()) entitySpecificFields.floor = body.floor.trim();
         if (body.location?.trim()) entitySpecificFields.location = body.location.trim();
-        if (typeof body.area === 'number' && body.area > 0) entitySpecificFields.area = body.area;
-        if (typeof body.price === 'number' && body.price >= 0) entitySpecificFields.price = body.price;
-        if (body.description?.trim()) entitySpecificFields.description = body.description.trim();
-        if (body.notes?.trim()) entitySpecificFields.notes = body.notes.trim();
-        if (body.code?.trim()) entitySpecificFields.code = body.code.trim();
 
         logger.info('Creating parking spot', { number: body.number, buildingId, companyId: ctx.companyId });
 
