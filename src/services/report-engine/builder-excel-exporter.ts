@@ -17,6 +17,11 @@
 import type ExcelJS from 'exceljs';
 import { designTokens } from '@/styles/design-tokens';
 import { triggerBlobDownload } from '@/services/gantt-export/gantt-export-utils';
+// SSoT: δείκτης στήλης → γράμμα. Ζούσε εδώ ΚΑΙ στο `builder-excel-analysis.ts`,
+// byte-ταυτόσημο (ADR-739 §25 SSoT audit, N.0.2 Boy Scout).
+import { columnLetter as colLetter } from '@/lib/spreadsheet/column-letter';
+// Ίδια ιστορία, δεύτερο διπλότυπο: το `getExcelFormat` ζούσε κι εδώ κι εκεί, byte-ταυτόσημο.
+import { getExcelFormat } from './builder-excel-number-format';
 import { formatDateShort } from '@/lib/intl-utils';
 import type { BuilderExportParams } from './builder-export-types';
 import { buildFiltersText, buildExportFilename } from './builder-export-types';
@@ -96,23 +101,7 @@ function getRawValue(row: Record<string, unknown>, field: FieldDefinition): stri
   return String(val);
 }
 
-function colLetter(index: number): string {
-  let letter = '';
-  let n = index;
-  while (n >= 0) {
-    letter = String.fromCharCode((n % 26) + 65) + letter;
-    n = Math.floor(n / 26) - 1;
-  }
-  return letter;
-}
 
-function getExcelFormat(field: FieldDefinition): string | undefined {
-  if (field.type === 'currency' || field.format === 'currency') return '€#,##0.00';
-  if (field.type === 'percentage' || field.format === 'percentage') return '0.0"%"';
-  if (field.type === 'number' || field.format === 'number') return '#,##0';
-  if (field.type === 'date' || field.format === 'date') return 'DD/MM/YYYY';
-  return undefined;
-}
 
 // ============================================================================
 // SHEET 1: ΣΥΝΟΨΗ (Summary) — KPI formulas + metadata
