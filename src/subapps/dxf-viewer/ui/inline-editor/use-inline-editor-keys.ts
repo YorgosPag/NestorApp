@@ -48,8 +48,14 @@ export interface InlineEditorKeys {
   readonly commit: () => void;
   /** Ακύρωση (ESC). Ιδεμποτής, και δεν εκτελείται αν έχει ήδη γίνει commit. */
   readonly cancel: () => void;
-  /** Χειριστής για το `<input onKeyDown>` — Enter δεσμεύει· το ESC περνά από τον bus. */
-  readonly onKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  /**
+   * Χειριστής για το `onKeyDown` του πεδίου — Enter δεσμεύει· το ESC περνά από τον bus.
+   *
+   * Ο τύπος είναι `HTMLElement` και όχι `HTMLInputElement` επίτηδες: οι καταναλωτές είναι
+   * ήδη **και** `<input>` (info-tag) **και** `<textarea>` (κελί πίνακα, από το βήμα 6), και
+   * ο χειριστής δεν αγγίζει τίποτα ειδικό του στοιχείου — μόνο το `key`.
+   */
+  readonly onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
 }
 
 /**
@@ -87,7 +93,7 @@ export function useInlineEditorKeys({ id, onCommit, onCancel }: InlineEditorKeys
   });
 
   const onKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLInputElement>) => {
+    (event: KeyboardEvent<HTMLElement>) => {
       // Μόνο το Enter· το ESC ταξιδεύει από τον bus παραπάνω.
       if (event.key === 'Enter') {
         event.preventDefault();

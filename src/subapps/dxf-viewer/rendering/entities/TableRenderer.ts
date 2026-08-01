@@ -52,6 +52,11 @@ import {
   type StampTableContext,
   type TableCellRef,
 } from './table/stamp-table-layout';
+// ADR-739 Φ.Δ βήμα 7 — ο δείκτης πίνακα (AutoCAD `TABLEINDICATOR`) + η ονομασία των
+// υποδιαιρέσεών του. Η ονομασία ζει στο `bim/`, η ζωγραφική εδώ — ίδιος διαχωρισμός με
+// τη διάταξη και τον ζωγράφο της.
+import { stampTableIndicator } from './table/stamp-table-indicator';
+import { tableColumnTicks, tableRowTicks } from '../../bim/table/table-cell-reference';
 // ADR-739 Φ.Δ βήμα 2 — ο δρομέας διαβάζεται με getter τη στιγμή του καρέ (ADR-040), ποτέ
 // ως συνδρομή: ο ζωγράφος μένει καθαρό φύλλο.
 import { getTableCellCursor, type TableCellCursorState } from '../../state/table-cell-cursor-store';
@@ -133,6 +138,19 @@ export class TableRenderer extends BaseEntityRenderer {
       // Το ορθογώνιο είναι όλη η διάταξη από την τοπική αρχή (0,0) — οι ίδιες συντεταγμένες
       // φύλλου που χρησιμοποιούν τα κελιά, άρα καμία δεύτερη μετατροπή.
       stampTableModeOutline(rc, { x: 0, y: 0, w: layout.widthMm, h: layout.heightMm });
+      // ADR-739 Φ.Δ βήμα 7 — οι ζώνες `A B C` / `1 2 3` γύρω από τον πίνακα. Ζωγραφίζονται
+      // **έξω** από το ορθογώνιο της διάταξης (αρνητικές συντεταγμένες πλαισίου), οπότε
+      // δεν επικαλύπτουν κανένα κελί και η σειρά τους ως προς τον δρομέα είναι αδιάφορη.
+      //
+      // Οι γραμμές περνούν με το **ορατό** παράθυρο (`start`/`end`), το ίδιο που ήδη κόβει
+      // τα κελιά: ένας πίνακας 500 γραμμών δεν επιτρέπεται να ζωγραφίσει 500 αριθμούς ανά
+      // καρέ για να φανούν οι 12 (ADR-735).
+      stampTableIndicator(rc, {
+        columns: tableColumnTicks(layout.columns, cursor.position.colId),
+        rows: tableRowTicks(layout.rows, cursor.position.rowId, start, end),
+        widthMm: layout.widthMm,
+        heightMm: layout.heightMm,
+      });
       this.drawCellCursor(cursor, rc, index);
     }
   }

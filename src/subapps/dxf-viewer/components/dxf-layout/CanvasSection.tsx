@@ -484,6 +484,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         textEditorOverlay={textEditor.editingState ? { entityId: textEditor.editingState.entityId, initial: textEditor.editingState.initial, anchor: textEditor.editingState.anchor, onCommit: textEditor.onCommit, onCancel: textEditor.onCancel } : null}
         textCreationOverlay={textCreation.creatingState ? { entityId: textCreation.creatingState.entityId, initial: textCreation.creatingState.initial, anchor: textCreation.creatingState.anchor, onCommit: textCreation.onCommit, onCancel: textCreation.onCancel } : null}
         tableCellEditorOverlay={tableCellEditor.overlay}
+        tableFormulaBar={tableCellEditor.formulaBar}
         selectionCycling={{ onSelectEntity: handleCycleEntitySelect }}
       />
     </>

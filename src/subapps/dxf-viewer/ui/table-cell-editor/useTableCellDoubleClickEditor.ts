@@ -71,6 +71,10 @@ import {
   cellTextWidthPx,
 } from './table-cell-text-metrics';
 import { tableCellEditorCssVars } from './table-cell-editor-vars';
+import {
+  useTableFormulaBarMount,
+  type TableFormulaBarMount,
+} from './use-table-formula-bar-mount';
 import type { TableCellEditorOverlayProps } from './TableCellEditorOverlay';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
@@ -94,6 +98,12 @@ export interface TableCellOverlayMount {
 
 interface TableCellDoubleClickEditorApi {
   readonly overlay: TableCellOverlayMount | null;
+  /**
+   * ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων, αγκυρωμένη στον **πίνακα**. Ζει δίπλα στον
+   * επεξεργαστή και όχι μέσα του: είναι το δεύτερο πεδίο της **ίδιας** συνεδρίας, με
+   * διαφορετικό άγκυρο και διαφορετικό ρυθμό ανανέωσης.
+   */
+  readonly formulaBar: TableFormulaBarMount | null;
   readonly handleDoubleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
@@ -420,5 +430,21 @@ export function useTableCellDoubleClickEditor(
    */
   useModalKeyboardScope(overlay !== null);
 
-  return useMemo(() => ({ overlay, handleDoubleClick }), [overlay, handleDoubleClick]);
+  // ADR-739 Φ.Δ βήμα 7 — το **δεύτερο** πεδίο της συνεδρίας. Δέχεται τους ΙΔΙΟΥΣ χειριστές:
+  // καμία δεύτερη διαδρομή εγγραφής, καμία δεύτερη πλοήγηση, κανένα δεύτερο ιστορικό.
+  const formulaBar = useTableFormulaBarMount({
+    entity: liveEntity,
+    cursor,
+    initialText: target?.cell.text ?? '',
+    containerRef,
+    onCommit: commitText,
+    onMove: move,
+    onClear: clear,
+    onHistory: history,
+  });
+
+  return useMemo(
+    () => ({ overlay, formulaBar, handleDoubleClick }),
+    [overlay, formulaBar, handleDoubleClick],
+  );
 }

@@ -100,7 +100,11 @@ import {
   TABLE_CELL_EDITOR_INPUT_STYLE,
   TABLE_CELL_EDITOR_WRITING_STYLE,
 } from './table-cell-editor-vars';
-import { resolveTableCellKeyIntent } from './table-cell-key-intent';
+import { useTableCellSessionKeys } from './use-table-cell-session-keys';
+import {
+  TABLE_CELL_SESSION_MARKER,
+  useTableCellSessionBlur,
+} from './table-cell-session-focus';
 import {
   cancelTableCellCursorSession,
   closeTableCellCursor,
@@ -108,10 +112,10 @@ import {
   setTableCellCursorMode,
   type TableCellCursorMode,
 } from '../../state/table-cell-cursor-store';
-import type { TableCursorMove } from '../../bim/table/table-cell-navigation';
+import type { TableCellSessionHandlers } from './table-cell-session-types';
 import type { TableColumnId, TableRowId } from '../../types/table';
 
-export interface TableCellEditorOverlayProps {
+export interface TableCellEditorOverlayProps extends TableCellSessionHandlers {
   readonly entityId: string;
   /** Μαζί με το `sessionId` συνθέτουν το `key` του καλούντος — δες το store. */
   readonly rowId: TableRowId;
@@ -130,17 +134,6 @@ export interface TableCellEditorOverlayProps {
    */
   readonly caretIndex?: number;
   readonly anchor: TextEditorAnchor;
-  /** Γράψε το κείμενο στο μοντέλο (undoable). Καλείται **το πολύ μία φορά** ανά συνεδρία. */
-  readonly onCommit: (nextText: string) => void;
-  /** Πήγαινε στο κελί που ορίζει η κίνηση· ο καλών κατέχει το μοντέλο. */
-  readonly onMove: (move: TableCursorMove) => void;
-  /** `Delete` σε κατάσταση πλοήγησης — άδειασμα κελιού (Excel). */
-  readonly onClear: () => void;
-  /**
-   * ADR-739 Φ.Δ βήμα 4 — `Ctrl+Z`/`Ctrl+Y` σε **πλοήγηση**. Σε γραφή δεν καλείται ποτέ:
-   * εκεί το undo ανήκει στο `<input>` και το κάνει ο browser (δες `table-cell-key-intent`).
-   */
-  readonly onHistory: (direction: 'undo' | 'redo') => void;
 }
 
 /**
@@ -200,48 +193,20 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     onCancel: handleCancel,
   });
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      const intent = resolveTableCellKeyIntent(event.key, event, mode);
-      switch (intent.kind) {
-        case 'move':
-          event.preventDefault();
-          // Η σειρά είναι το συμβόλαιο: **πρώτα** δεσμεύεται το πρόχειρο (ιδεμποτής, ο
-          // φρουρός του SSoT κόβει το δεύτερο commit από το επακόλουθο blur), **μετά**
-          // μετακινείται ο δρομέας. Αντίστροφα θα γραφόταν το κείμενο στο νέο κελί.
-          commit();
-          onMove(intent.move);
-          return;
-        case 'mode':
-          event.preventDefault();
-          // `F2` από πλοήγηση: το πρόχειρο γεννιέται ΤΩΡΑ από το δεσμευμένο κείμενο του
-          // κελιού· από γραφή αλλάζει μόνο ποιος κατέχει τα βέλη (το «διπλό F2» του Excel).
-          setTableCellCursorMode(intent.to, mode === 'nav' ? initialText : undefined);
-          return;
-        case 'clear':
-          event.preventDefault();
-          onClear();
-          return;
-        case 'history':
-          // `preventDefault` απαραίτητο: χωρίς αυτό ο browser θα έτρεχε **και** το δικό του
-          // undo πάνω στο (κενό, αόρατο) πεδίο πλοήγησης — δύο ενέργειες για ένα πάτημα.
-          event.preventDefault();
-          onHistory(intent.direction);
-          return;
-        case 'suppress':
-          // ADR-739 Φ.Δ βήμα 6 — πλήκτρο που το `<textarea>` **θα** εκτελούσε και δεν πρέπει
-          // (σήμερα: `Alt+Enter`). Καταναλώνεται εδώ και δεν συμβαίνει τίποτα άλλο.
-          event.preventDefault();
-          return;
-        case 'passthrough':
-          // Το `Enter` το έχει ήδη διεκδικήσει η περίπτωση `move`, οπότε ο χειριστής του
-          // SSoT δεν έχει τι να κάνει εδώ — καλείται παρ' όλα αυτά ώστε μια μελλοντική
-          // επέκταση της κοινής σημασιολογίας να φτάσει και σε αυτόν τον καταναλωτή.
-          inlineKeyDown(event);
-      }
-    },
-    [mode, initialText, commit, onMove, onClear, onHistory, inlineKeyDown],
-  );
+  // ADR-739 Φ.Δ βήμα 7 — η εκτέλεση της σημασιολογίας μετακόμισε στο
+  // `useTableCellSessionKeys`, ώστε το **δεύτερο** πεδίο της συνεδρίας (η γραμμή τύπων) να
+  // μη γεννήσει αντίγραφο του ίδιου `switch`. Το `onPassthrough` παραμένει ο χειριστής του
+  // SSoT: το `Enter` το έχει ήδη διεκδικήσει η περίπτωση `move`, αλλά μια μελλοντική
+  // επέκταση της κοινής σημασιολογίας πρέπει να φτάσει και εδώ.
+  const handleKeyDown = useTableCellSessionKeys({
+    mode,
+    initialText,
+    commit,
+    onMove,
+    onClear,
+    onHistory,
+    onPassthrough: inlineKeyDown,
+  });
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -268,23 +233,12 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
   /**
    * Απώλεια εστίασης = δέσμευση, **και** πιθανή έξοδος από τον πίνακα.
    *
-   * Το «πιθανή» κρίνεται **ένα καρέ αργότερα** και όχι αμέσως, γιατί η μετακίνηση σε άλλο
-   * κελί περνά κι αυτή από blur: το παλιό `<input>` ξεφορτώνεται και το νέο παίρνει την
-   * εστίαση στο ίδιο commit του React. Άμεσο κλείσιμο θα σκότωνε **κάθε** `Tab`. Ο
-   * έλεγχος του `document.activeElement` μετά το καρέ ξεχωρίζει τα δύο: αν η εστίαση
-   * κάθεται σε άλλον δρομέα κελιού, ήταν μετακίνηση· αν πουθενά, ο χρήστης έφυγε.
-   * Το ίδιο μοτίβο «focus-within με περίοδο χάριτος» χρησιμοποιεί κάθε επαγγελματικό grid.
+   * ADR-739 Φ.Δ βήμα 7 — η απόφαση μετακόμισε στο {@link useTableCellSessionBlur}, γιατί
+   * από αυτό το βήμα η συνεδρία έχει **δύο** πεδία κειμένου (κελί + γραμμή τύπων) και το
+   * κριτήριο «έφυγα ή απλώς μετακινήθηκα;» οφείλει να είναι **ένα**. Διάβασε εκεί γιατί η
+   * μετακίνηση **μέσα** στη συνεδρία δεν κάνει commit.
    */
-  const handleBlur = useCallback(() => {
-    commit();
-    if (typeof requestAnimationFrame === 'undefined') return;
-    requestAnimationFrame(() => {
-      const active = document.activeElement;
-      if (!(active instanceof HTMLElement) || active.dataset.tableCellCursor !== 'true') {
-        closeTableCellCursor();
-      }
-    });
-  }, [commit]);
+  const handleBlur = useTableCellSessionBlur(commit, closeTableCellCursor);
 
   const writing = mode !== 'nav';
 
@@ -306,9 +260,10 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         // έγγραφο. Κανένα φύλλο υπολογισμού δεν το κάνει. Ο ρόλος δηλώνεται με `aria-label`,
         // που είναι και ο σωστός φορέας του (δεν ζωγραφίζεται).
         aria-label={t('table.cellEditor.cellAriaLabel')}
-        // Το σημάδι που διαβάζει το {@link handleBlur} για να ξεχωρίσει «μετακινήθηκα σε
-        // άλλο κελί» από «έφυγα από τον πίνακα». Δεν είναι στυλ — είναι ταυτότητα ρόλου.
-        data-table-cell-cursor="true"
+        // Το σημάδι που διαβάζει το {@link useTableCellSessionBlur} για να ξεχωρίσει
+        // «μετακινήθηκα μέσα στη συνεδρία» από «έφυγα από τον πίνακα». Δεν είναι στυλ —
+        // είναι ταυτότητα ρόλου, και ο ορισμός του ζει σε **ένα** σημείο.
+        {...TABLE_CELL_SESSION_MARKER}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}

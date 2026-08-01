@@ -54,14 +54,29 @@ describe('TextEditorAnchorLayer — το ζωντανό κουτί', () => {
 
   it('🔴 η ΤΟΠΙΚΗ μετατόπιση μπαίνει ΜΕΤΑ την περιστροφή — ποτέ πριν', () => {
     const transform = renderLayer({ rotationRad: 0.5, offsetXPx: -40 }).style.transform;
-    expect(transform).toBe('translate(200px, 150px) rotate(0.5rad) translate(-40px, 0)');
-    // Η σειρά είναι όλη η ουσία: αν το `translate(-40px, 0)` έμπαινε πριν το `rotate`, το
+    expect(transform).toBe('translate(200px, 150px) rotate(0.5rad) translate(-40px, 0px)');
+    // Η σειρά είναι όλη η ουσία: αν το `translate(-40px, 0px)` έμπαινε πριν το `rotate`, το
     // κουτί θα έφευγε οριζόντια στην οθόνη αντί κατά μήκος της γραμμής του πίνακα.
     expect(transform.indexOf('rotate')).toBeLessThan(transform.lastIndexOf('translate'));
   });
 
+  it('ADR-739 Φ.Δ βήμα 7 — η ΚΑΤΑΚΟΡΥΦΗ μετατόπιση ταξιδεύει στο ίδιο τοπικό σύστημα', () => {
+    // Γεννήθηκε για τη **γραμμή τύπων**: αγκυρώνεται στη γωνία του πίνακα και κάθεται πιο
+    // πάνω κατά ένα ύψος ζώνης δείκτη — απόσταση σε px οθόνης, άρα αδύνατη ως σημείο κόσμου.
+    const transform = renderLayer({ offsetXPx: -28, offsetYPx: -48 }).style.transform;
+    expect(transform).toBe('translate(200px, 150px) translate(-28px, -48px)');
+  });
+
+  it('🔴 ο ένας άξονας ΔΕΝ μηδενίζει σιωπηλά τον άλλο', () => {
+    // Αν το `slice` εκπεμπόταν μόνο όταν το x είναι μη-μηδενικό, ένα κουτί με μόνο
+    // κατακόρυφη μετατόπιση θα κολλούσε πάνω στο άγκυρό του — αόρατο σε κάθε test του x.
+    expect(renderLayer({ offsetYPx: -48 }).style.transform).toBe(
+      'translate(200px, 150px) translate(0px, -48px)',
+    );
+  });
+
   it('μηδενική μετατόπιση δεν μολύνει το transform', () => {
-    expect(renderLayer({ rotationRad: 0.5, offsetXPx: 0 }).style.transform).toBe(
+    expect(renderLayer({ rotationRad: 0.5, offsetXPx: 0, offsetYPx: 0 }).style.transform).toBe(
       'translate(200px, 150px) rotate(0.5rad)',
     );
   });

@@ -32,6 +32,9 @@ import { TextEditorOverlay } from '../../ui/text-toolbar/TextEditorOverlay';
 import { OpeningInfoTagEditorOverlay } from '../../ui/opening-info-tag/OpeningInfoTagEditorOverlay';
 // ADR-739 Φ.Δ βήμα 2 — inline table-cell text editor (prop-driven, mirrors TextEditorOverlay).
 import { TableCellEditorOverlay } from '../../ui/table-cell-editor/TableCellEditorOverlay';
+// ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων (fx) + η αναφορά κελιού. Δεύτερο πεδίο της ΙΔΙΑΣ
+// συνεδρίας, αγκυρωμένο στον πίνακα και όχι στο κελί.
+import { TableFormulaBar } from '../../ui/table-cell-editor/TableFormulaBar';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
 import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
@@ -48,6 +51,7 @@ type TextOverlayProps = React.ComponentProps<typeof TextEditorOverlay>;
 // φτάνει ποτέ στο component) γιατί περιέχει τον **αριθμό συνεδρίας** του δρομέα: `Escape`
 // πάνω σε πρόχειρο ξαναστήνει το `<input>` στο ΙΔΙΟ κελί, και μαζί του τον φρουρό δέσμευσης.
 type TableCellOverlayMount = { key: string; props: React.ComponentProps<typeof TableCellEditorOverlay> };
+type TableFormulaBarMount = { key: string; props: React.ComponentProps<typeof TableFormulaBar> };
 type CyclingProps = React.ComponentProps<typeof SelectionCyclingPopover>;
 
 export interface CanvasSectionOverlaysProps {
@@ -67,6 +71,8 @@ export interface CanvasSectionOverlaysProps {
   textCreationOverlay: TextOverlayProps | null;
   // ADR-739 Φ.Δ βήμα 2 — ο δρομέας κελιού πίνακα (null όταν δεν υπάρχει τρέχον κελί).
   tableCellEditorOverlay: TableCellOverlayMount | null;
+  // ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων (null με τον ίδιο ακριβώς όρο: κανένα τρέχον κελί).
+  tableFormulaBar: TableFormulaBarMount | null;
   selectionCycling: CyclingProps;
 }
 
@@ -96,6 +102,12 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
           κατάσταση πλοήγησης, και κατέχει το πληκτρολόγιο επειδή ΕΙΝΑΙ πεδίο κειμένου. */}
       {p.tableCellEditorOverlay && (
         <TableCellEditorOverlay key={p.tableCellEditorOverlay.key} {...p.tableCellEditorOverlay.props} />
+      )}
+      {/* ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων: δείχνει ΠΟΙΟ κελί και ΟΛΟΚΛΗΡΗ την τιμή του,
+          χωρίς να μπεις σε γραφή — και είναι το μόνο μέρος όπου τύπος και αποτέλεσμα
+          μπορούν να συνυπάρξουν (προϋπόθεση του Φ.Δ.11). */}
+      {p.tableFormulaBar && (
+        <TableFormulaBar key={p.tableFormulaBar.key} {...p.tableFormulaBar.props} />
       )}
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />

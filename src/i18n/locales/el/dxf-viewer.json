@@ -519,6 +519,12 @@
       "editorPlaceholder": "",
       "cellAriaLabel": "Κελί πίνακα"
     },
+    "formulaBar": {
+      "ariaLabel": "Γραμμή τύπων",
+      "referenceAriaLabel": "Αναφορά κελιού",
+      "valueAriaLabel": "Τιμή κελιού",
+      "symbol": "fx"
+    },
     "mode": {
       "label": "Πίνακας",
       "hint": "Esc για έξοδο",

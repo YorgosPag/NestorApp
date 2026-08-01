@@ -519,6 +519,12 @@
       "editorPlaceholder": "",
       "cellAriaLabel": "Table cell"
     },
+    "formulaBar": {
+      "ariaLabel": "Formula bar",
+      "referenceAriaLabel": "Cell reference",
+      "valueAriaLabel": "Cell value",
+      "symbol": "fx"
+    },
     "mode": {
       "label": "Table",
       "hint": "Esc to exit",

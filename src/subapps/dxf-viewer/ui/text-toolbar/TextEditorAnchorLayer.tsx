@@ -101,6 +101,17 @@ export interface TextEditorAnchorBox {
    * γωνία μηδέν.
    */
   readonly offsetXPx?: number;
+  /**
+   * ADR-739 Φ.Δ βήμα 7 — η κατακόρυφη αδελφή του {@link offsetXPx}, στο **ίδιο** τοπικό
+   * σύστημα (δηλαδή μετά την περιστροφή· αρνητική = προς τα πάνω).
+   *
+   * Γεννήθηκε για τη **γραμμή τύπων**, που αγκυρώνεται στην πάνω-αριστερή γωνία του πίνακα
+   * αλλά κάθεται **πιο πάνω** από αυτήν κατά ένα ύψος ζώνης δείκτη — και το ύψος αυτό είναι
+   * σε **px οθόνης**, άρα αλλάζει σε κάθε zoom. Ένα σημείο κόσμου δεν μπορεί να το
+   * εκφράσει: το `worldPoint` του άγκυρου υπολογίζεται μία φορά ανά συνεδρία, ενώ η
+   * μετατόπιση πρέπει να ξαναβγαίνει σε κάθε tick. Γι' αυτό ζει εδώ, δίπλα στο μέγεθος.
+   */
+  readonly offsetYPx?: number;
   /** Custom properties (`--…`) που γράφονται πάνω στο κουτί. */
   readonly cssVars?: Readonly<Record<string, string>>;
 }
@@ -185,7 +196,12 @@ export function TextEditorAnchorLayer(props: TextEditorAnchorLayerProps): React.
       // Και η **τοπική** μετατόπιση τελευταία, δηλαδή μέσα στο ήδη γυρισμένο σύστημα
       // συντεταγμένων — δες {@link TextEditorAnchorBox.offsetXPx}.
       const rotate = box?.rotationRad ? ` rotate(${box.rotationRad}rad)` : '';
-      const slide = box?.offsetXPx ? ` translate(${box.offsetXPx}px, 0)` : '';
+      // Οι δύο μετατοπίσεις εκπέμπονται **μαζί** ή καθόλου: ένα `translate` με έναν μόνο
+      // άξονα θα σήμαινε ότι ο άλλος επανέρχεται σιωπηλά στο μηδέν όταν η πρώτη τιμή
+      // μηδενιστεί — ακριβώς το είδος διαρροής κατάστασης που το tick δεν συγχωρεί.
+      const dx = box?.offsetXPx ?? 0;
+      const dy = box?.offsetYPx ?? 0;
+      const slide = dx || dy ? ` translate(${dx}px, ${dy}px)` : '';
       el.style.transform = `translate(${c.x}px, ${c.y}px)${rotate}${slide}`;
     };
     reproject();

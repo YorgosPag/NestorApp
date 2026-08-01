@@ -5796,3 +5796,52 @@ NEW ADR **`ADR-743-dxf-canvas-reraster-attribution.md`** (η πλήρης από
 
 ⚠️ `CanvasSection.tsx` = **491/500 γραμμές** (N.7.1). Η επόμενη προσθήκη στον orchestrator θα το
 σπάσει — **εξαγωγή, όχι περικοπή**, όπως η εγγραφή 2026-07-31 (α) παραπάνω.
+
+## 2026-08-01: ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων ως **δεύτερο overlay της ίδιας συνεδρίας** (CHECK 6B/6D stage)
+
+Η εγγραφή υπάρχει επειδή το `CanvasSection.tsx` είναι αρχείο του **CHECK 6B** και ο
+`TableRenderer.ts` του **CHECK 6D**, **όχι** επειδή άλλαξε η αρχιτεκτονική. Είναι η ακριβής
+επανάληψη του σχήματος της εγγραφής 2026-07-31 (β) παραπάνω, ένα overlay πιο πέρα.
+
+**Τι μπήκε στον orchestrator: μία γραμμή** — `tableFormulaBar={tableCellEditor.formulaBar}`, δίπλα
+στο ήδη υπάρχον `tableCellEditorOverlay`. Στο `CanvasSectionOverlays.tsx`: import, τύπος mount,
+prop, και ένα υπό συνθήκη mount — **ίδιο σχήμα** με τον `TableCellEditorOverlay` και τον
+`TextEditorOverlay` στο ίδιο σημείο προσάρτησης.
+
+⚠️ **Καμία νέα συνδρομή**: `grep useSyncExternalStore src/subapps/dxf-viewer/ui/table-cell-editor/`
+⇒ **μηδέν εμφανίσεις** σε ολόκληρο τον φάκελο. Η γραμμή τύπων είναι prop-driven, ζωντανή μόνο όσο
+υπάρχει τρέχον κελί (**ίδιος ακριβώς όρος** με τον δρομέα — ένα `null`, δύο mounts). CHECK 6C
+ασφαλές. Καμία αλλαγή σε cache key, σε high-freq store, ή στον χρόνο ζωγραφικής.
+
+**Ο τοποθετητής δεν ξαναγράφτηκε** (N.0.2 / N.18): η γραμμή περνά από τον **υπάρχοντα**
+`TextEditorAnchorLayer` + `createTextEditorAnchor2D` (ADR-344 Φ-3D, εγγραφή 2026-07-28) — imperative
+προβολή world→screen **εκτός React render**, άρα ακολουθεί pan/zoom **χωρίς κανένα re-render**.
+Δεύτερος προβολέας δεν γεννήθηκε.
+
+🔴 **Η μία επέκταση του κοινού SSoT — `TextEditorAnchorBox.offsetYPx`.** Η γραμμή αγκυρώνεται στην
+πάνω-αριστερή γωνία του **πίνακα**, αλλά κάθεται πιο πάνω κατά **ένα ύψος ζώνης δείκτη** — και αυτό
+το ύψος είναι σε **px οθόνης**, δηλαδή αλλάζει σε κάθε zoom. Σημείο κόσμου **δεν μπορεί** να το
+εκφράσει: το `worldPoint` του άγκυρου υπολογίζεται **μία φορά ανά συνεδρία**, ενώ η μετατόπιση
+πρέπει να ξαναβγαίνει **σε κάθε tick**. Γι' αυτό ζει δίπλα στο `offsetXPx`, στο ίδιο τοπικό
+(μετα-περιστροφικό) σύστημα. ⚠️ Οι δύο άξονες εκπέμπονται **μαζί ή καθόλου**: ένα `translate` με
+έναν μόνο άξονα σημαίνει ότι ο άλλος **επανέρχεται σιωπηλά στο μηδέν** μόλις μηδενιστεί ο πρώτος —
+διαρροή κατάστασης που το tick δεν συγχωρεί.
+
+**Ζωγραφική (6D)**: ο `TableRenderer` **καλεί** πλέον, δεν υπολογίζει — οι ζώνες `A B C` / `1 2 3`
+του `TABLEINDICATOR` βγήκαν στο `rendering/entities/table/stamp-table-indicator.ts`, και το **όνομα**
+του κελιού έρχεται από το `bim/table/table-cell-reference.ts` SSoT (commit `721b87d6`), ώστε η
+διεύθυνση στην οθόνη και η διεύθυνση στους τύπους να **μην μπορούν** να αποκλίνουν.
+
+**Δευτερεύον**: `useInlineEditorKeys.onKeyDown` πλάτυνε από `KeyboardEvent<HTMLInputElement>` σε
+`KeyboardEvent<HTMLElement>` — οι καταναλωτές είναι ήδη **και** `<input>` (info-tag) **και**
+`<textarea>` (κελί πίνακα, βήμα 6), και ο χειριστής διαβάζει **μόνο** το `key`.
+
+**Files**: MOD `components/dxf-layout/{CanvasSection.tsx,CanvasSectionOverlays.tsx}`,
+`rendering/entities/TableRenderer.ts`, `ui/text-toolbar/TextEditorAnchorLayer.tsx`,
+`ui/inline-editor/use-inline-editor-keys.ts`, `config/color-config.ts`· NEW
+`ui/table-cell-editor/{TableFormulaBar.tsx,table-formula-bar-frame.ts,use-table-formula-bar-mount.ts,table-cell-session-*.ts,use-table-cell-session-keys.ts}`,
+`rendering/entities/table/stamp-table-indicator.ts`. Πλήρης απόφαση: **ADR-739 §25**.
+
+⚠️ `CanvasSection.tsx` = **492/500 γραμμές** (N.7.1). Η προειδοποίηση της προηγούμενης εγγραφής
+ισχύει **ακέραιη** και έγινε πιο επείγουσα: απέμειναν **8 γραμμές**. Η επόμενη προσθήκη στον
+orchestrator κάνει **εξαγωγή**, όχι περικοπή.
