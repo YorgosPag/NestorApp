@@ -6,21 +6,24 @@
  * Drill-down: clicking a bar navigates to `/procurement/purchase-orders`
  * with `categoryCode` + current date range + active filter forwarding.
  *
- * @see ADR-331 §2.5, §4 D4, D5, D22, D23
+ * ⚠️ **ADR-710 (μετανάστευση 2026-08-01)**: το πλαίσιο κάρτας, η κενή κατάσταση
+ * και το `ResponsiveContainer` ζουν πλέον στο `<ChartCard>`. Το ύψος ήταν
+ * **δυναμικό** (`max(220, γραμμές × 32 + 40)`) και γίνεται το ονομασμένο βήμα
+ * `lg`: με 10 γραμμές — το ανώτατο που παράγει ο aggregator — η διαφορά είναι
+ * 288px έναντι 360px. Το ADR-710 απαιτεί **βήματα, όχι ελεύθερους αριθμούς**,
+ * ώστε οι κάρτες να ευθυγραμμίζονται μεταξύ τους στο πλέγμα.
+ *
+ * @see ADR-331 §2.5, §4 D4, D5, D22, D23 · ADR-710 (chart-card shell)
  */
 
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+  ChartCard,
+  seriesColorVar,
+  type ChartSeries,
+} from '@/components/ui/chart-card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrency } from '@/lib/intl-formatting';
 import { KpiChartSkeleton } from '@/components/projects/procurement/overview/skeleton/KpiSkeleton';
@@ -30,12 +33,10 @@ import type {
 } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
 import {
   buildPurchaseOrdersUrl,
-  CHART_FIGURE_CLASSES,
   formatEurShort,
   readClickedRowKey,
   truncateLabel,
 } from './chart-utils';
-import { ChartTooltip } from './chart-tooltip';
 
 interface SpendByCategoryChartProps {
   data: readonly CategoryPoint[];
@@ -49,9 +50,6 @@ interface CategoryRow {
   label: string;
   total: number;
 }
-
-const ROW_HEIGHT_PX = 32;
-const MIN_HEIGHT_PX = 220;
 
 export function SpendByCategoryChart({
   data,
@@ -72,61 +70,49 @@ export function SpendByCategoryChart({
     [data, t],
   );
 
+  const series = useMemo<readonly ChartSeries<CategoryRow>[]>(
+    () => [{ key: 'total', label: t('analytics.charts.byCategory.title') }],
+    [t],
+  );
+
   if (isLoading) return <KpiChartSkeleton />;
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('analytics.charts.byCategory.title')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {t('analytics.charts.byCategory.empty')}
-          </p>
-        ) : (
-          <figure aria-label={t('analytics.charts.byCategory.ariaLabel')} className={CHART_FIGURE_CLASSES}>
-            <ResponsiveContainer
-              width="100%"
-              height={Math.max(MIN_HEIGHT_PX, rows.length * ROW_HEIGHT_PX + 40)}
-            >
-              <BarChart
-                data={rows}
-                layout="vertical"
-                margin={{ top: 4, right: 16, left: 4, bottom: 4 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tickFormatter={formatEurShort} tick={{ fontSize: 11 }} />
-                <YAxis
-                  type="category"
-                  dataKey="label"
-                  tick={{ fontSize: 11 }}
-                  width={140}
-                />
-                <Tooltip
-                  content={<ChartTooltip formatter={(value) => formatCurrency(value, 'EUR')} />}
-                />
-                <Bar
-                  dataKey="total"
-                  fill="hsl(var(--chart-1))"
-                  radius={[0, 3, 3, 0]}
-                  cursor="pointer"
-                  onClick={(payload) => {
-                    const code = readClickedRowKey(payload, 'code');
-                    if (!code) return;
-                    router.push(
-                      buildPurchaseOrdersUrl(filters, { categoryCode: [code] }),
-                      { scroll: false },
-                    );
-                  }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </figure>
-        )}
-      </CardContent>
-    </Card>
+    <section className={className}>
+      <ChartCard
+        series={series}
+        data={rows}
+        categoryKey="label"
+        categoryLabel={t('analytics.charts.byCategory.categoryLabel')}
+        formatValue={(value) => formatCurrency(value, 'EUR')}
+      >
+        <ChartCard.Header title={t('analytics.charts.byCategory.title')} />
+        <ChartCard.Figure
+          emptyMessage={t('analytics.charts.byCategory.empty')}
+          size="lg"
+        >
+          <BarChart data={rows} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+            <XAxis type="number" tickFormatter={formatEurShort} tick={{ fontSize: 11 }} />
+            <YAxis type="category" dataKey="label" tick={{ fontSize: 11 }} width={140} />
+            <ChartCard.Tooltip />
+            <Bar
+              dataKey="total"
+              fill={seriesColorVar('total')}
+              radius={[0, 3, 3, 0]}
+              cursor="pointer"
+              onClick={(payload) => {
+                const code = readClickedRowKey(payload, 'code');
+                if (!code) return;
+                router.push(
+                  buildPurchaseOrdersUrl(filters, { categoryCode: [code] }),
+                  { scroll: false },
+                );
+              }}
+            />
+          </BarChart>
+        </ChartCard.Figure>
+      </ChartCard>
+    </section>
   );
 }
