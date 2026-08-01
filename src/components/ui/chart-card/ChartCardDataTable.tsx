@@ -28,6 +28,7 @@ import {
 import { InfoTableHead } from '@/components/ui/InfoLabel';
 import '@/lib/design-system';
 import { readChartField, readChartNumber, useChartCard } from './chart-card-context';
+import { seriesValueFormatter } from './chart-card-series';
 
 /** What a cell shows when the series has no value at that category. */
 const MISSING_VALUE = '—';
@@ -87,7 +88,9 @@ export function ChartCardDataTable({ caption }: ChartCardDataTableProps) {
                       plot draws nothing there, so the table says nothing there. */}
                   {readChartField(datum, entry.key) == null
                     ? MISSING_VALUE
-                    : formatValue(readChartNumber(datum, entry.key))}
+                    : seriesValueFormatter(entry, formatValue)(
+                        readChartNumber(datum, entry.key),
+                      )}
                 </TableCell>
               ))}
             </TableRow>

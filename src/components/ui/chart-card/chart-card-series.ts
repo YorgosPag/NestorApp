@@ -144,6 +144,39 @@ export interface ChartSeriesDescriptor {
    * leave unset for categorical series so ordering stays canonical.
    */
   readonly color?: string;
+  /**
+   * Renders **this** series' value as text, overriding the card's `formatValue`.
+   *
+   * ## Why the unit belongs to the series, not to the card (ADR-742 §7quaterdecies)
+   *
+   * A Pareto chart plots euros on the left axis and a cumulative percentage on the
+   * right. One card-level formatter cannot describe both, so before this existed the
+   * data table rendered `84.3%` as `84,30 €` — the table that the measured palette
+   * owes to CVD readers was the one surface that lied about the number.
+   *
+   * It is the same argument the shell already makes for {@link description}: a term
+   * — and a unit — means the same thing wherever the card names it, so it is part of
+   * the series description rather than a per-slot decoration. Adding a second
+   * card-level formatter prop would have put the choice back on the caller, which is
+   * the over-parameterised-factory trap this shell exists to avoid.
+   *
+   * Leave unset when every series shares the card's unit — which is the common case.
+   */
+  readonly formatValue?: (value: number) => string;
+}
+
+/**
+ * The formatter that applies to one series: its own, else the card's.
+ *
+ * The **one** resolution of that fallback. Written twice (tooltip and data table) it
+ * would be two places for the same rule to drift, and the drift would be invisible:
+ * a tooltip and a table showing different units for the same cell.
+ */
+export function seriesValueFormatter(
+  series: ChartSeriesDescriptor | undefined,
+  cardFormatValue: (value: number) => string,
+): (value: number) => string {
+  return series?.formatValue ?? cardFormatValue;
 }
 
 /**

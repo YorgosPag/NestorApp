@@ -58,6 +58,7 @@ import { useCallback, type ComponentProps, type ReactNode } from 'react';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { TooltipPayload, TooltipPayloadItem } from '@/components/ui/chart/tooltip/types';
 import { readChartField, useChartCard } from './chart-card-context';
+import { seriesValueFormatter } from './chart-card-series';
 
 export type ChartCardTooltipProps = ComponentProps<typeof ChartTooltip> & {
   /** Swatch shape beside each series row. */
@@ -65,11 +66,21 @@ export type ChartCardTooltipProps = ComponentProps<typeof ChartTooltip> & {
 };
 
 export function ChartCardTooltip({ indicator = 'dot', ...tooltipProps }: ChartCardTooltipProps) {
-  const { formatValue, formatCategory, categoryKey } = useChartCard();
+  const { formatValue, formatCategory, categoryKey, series } = useChartCard();
 
+  /**
+   * Η μονάδα διαβάζεται **ανά σειρά** (ADR-742 §7quaterdecies): σε Pareto το
+   * αριστερό μέγεθος είναι ευρώ και το δεξί ποσοστό, οπότε ένας μορφοποιητής
+   * καρτέλας θα έλεγε ψέματα για το ένα από τα δύο. Το `dataKey` του σημείου
+   * είναι το κλειδί της σειράς — η ίδια ταυτότητα που φέρει η δήλωση.
+   */
   const format = useCallback(
-    (value: number, _item: TooltipPayloadItem) => formatValue(value),
-    [formatValue],
+    (value: number, item: TooltipPayloadItem) => {
+      const key = String(item?.dataKey ?? '');
+      const entry = series.find((s) => s.key === key);
+      return seriesValueFormatter(entry, formatValue)(value);
+    },
+    [formatValue, series],
   );
 
   const formatLabel = useCallback(

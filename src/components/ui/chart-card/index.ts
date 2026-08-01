@@ -58,6 +58,7 @@ export {
   chartPolarityTone,
   chartSeriesColor,
   seriesColorVar,
+  seriesValueFormatter,
   toChartConfig,
   type ChartPolarity,
   type ChartSeries,
