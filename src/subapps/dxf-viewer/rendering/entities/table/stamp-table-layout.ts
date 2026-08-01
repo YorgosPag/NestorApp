@@ -26,7 +26,7 @@ import type {
   TableTextRun,
 } from '../../../bim/table/table-layout-types';
 import { buildUIFont } from '../../../config/text-rendering-config';
-import { TABLE_CELL_CURSOR } from '../../../config/color-config';
+import { TABLE_CELL_CURSOR, TABLE_CELL_SELECTION } from '../../../config/color-config';
 
 /** Κάτω από αυτό το ύψος κεφαλαίου στην οθόνη, το κείμενο κελιού δεν ζωγραφίζεται. */
 export const MIN_CELL_TEXT_SCREEN_PX = 5;
@@ -41,6 +41,14 @@ export interface StampTableContext {
   /** Px οθόνης ανά **sheet-mm** — για ύψη γραμματοσειράς και πάχη μολυβιού. */
   readonly pxPerMm: number;
   /**
+   * 🔴 ADR-739 Φ.Δ βήμα 8 — **η γωνία του πίνακα όπως τη βλέπει η οθόνη**, σε ακτίνια, με
+   * τη σύμβαση του `ctx.rotate` (θετική = δεξιόστροφη, γιατί ο y της οθόνης κοιτά κάτω).
+   *
+   * ⚠️ **ΠΟΤΕ μη τη θέσεις με το χέρι** — φτιάξε το πλαίσιο με το {@link createStampTableContext},
+   * που την **παράγει** από το ίδιο το `toScreen`. Δες εκεί γιατί.
+   */
+  readonly textAngleRad: number;
+  /**
    * Το χρώμα της τρέχουσας φάσης (hover / επιλογή). Όταν υπάρχει, **παρακάμπτει** τα
    * χρώματα του στυλ ώστε ολόκληρος ο πίνακας να φωτίζεται ομοιόμορφα — αλλιώς ένας
    * πίνακας με έγχρωμα κελιά θα φαινόταν μισο-επιλεγμένος.
@@ -48,6 +56,78 @@ export interface StampTableContext {
    * ⚠️ **Βάφει τη σιλουέτα, ΠΟΤΕ το κείμενο** — δες {@link stampRun}.
    */
   readonly phaseColor?: string;
+}
+
+/**
+ * 🔴 ADR-739 Φ.Δ βήμα 8 — **Ο ΕΝΑΣ ΤΟΠΟΣ ΟΠΟΥ ΓΕΝΝΙΕΤΑΙ Η ΓΩΝΙΑ ΤΟΥ ΚΕΙΜΕΝΟΥ.**
+ *
+ * Δεν είναι παράμετρος που περνά ο καλών, είναι **παράγωγο του `toScreen`**: προβάλλονται
+ * δύο σημεία πάνω στον άξονα `+u` του πλαισίου και μετριέται η διεύθυνσή τους στην οθόνη.
+ *
+ * ## Γιατί έτσι και όχι «πάρε το `entity.angleRad`»
+ * Το `angleRad` της οντότητας είναι γωνία **κόσμου**. Ανάμεσα σε αυτήν και την οθόνη
+ * παρεμβάλλεται η **αναστροφή του άξονα y** — άρα το πρόσημο αντιστρέφεται, και μαζί του
+ * κάθε μελλοντικός καθρεφτισμός ή περιστροφή προβολής. Ο επεξεργαστής κελιού πλήρωσε ήδη
+ * αυτόν τον λογαριασμό με το χέρι (`rotate(-angleRad)`). Παράγοντάς την από το `toScreen`
+ * — που **ήδη** κατέχει περιστροφή + κλίμακα + αναστροφή — το πρόσημο βγαίνει σωστό από
+ * μόνο του και δεν υπάρχει δεύτερος τύπος να αποκλίνει.
+ *
+ * Εκφυλισμένη προβολή (μηδενική κλίμακα ⇒ τα δύο σημεία συμπίπτουν) δίνει `atan2(0, 0) = 0`,
+ * δηλαδή «καμία στροφή» — η ασφαλής απάντηση, όχι `NaN`.
+ */
+export function frameScreenAngleRad(toScreen: (u: number, v: number) => Point2D): number {
+  const origin = toScreen(0, 0);
+  // Η απόσταση της δοκιμής είναι αδιάφορη: το `atan2` είναι αναλλοίωτο σε ομοιόμορφη
+  // κλίμακα, οπότε ένα χιλιοστό αρκεί εξίσου με χίλια.
+  const alongU = toScreen(1, 0);
+  return Math.atan2(alongU.y - origin.y, alongU.x - origin.x);
+}
+
+/**
+ * Το πλαίσιο ζωγραφικής, με τη γωνία **υπολογισμένη μία φορά ανά πέρασμα**.
+ *
+ * Δύο λόγοι ύπαρξης, και οι δύο μετρημένοι:
+ *  1. **SSoT** — αν κάθε ζωγράφος καλούσε μόνος του το {@link frameScreenAngleRad}, θα
+ *     υπήρχαν N σημεία που *μπορούν* να ξεχάσουν να το κάνουν. Εδώ η γωνία είναι πάντα
+ *     εκεί, γιατί ο τύπος την απαιτεί και το εργοστάσιο τη γεμίζει.
+ *  2. **ADR-735** — δύο επιπλέον προβολές **ανά καρέ**, όχι ανά κελί. Ένας πίνακας 500
+ *     γραμμών θα πλήρωνε 2.000 περιττές προβολές αν η γωνία υπολογιζόταν μέσα στο
+ *     {@link stampFrameText}· είναι ακριβώς το σχήμα που ο ADR-735 πλήρωσε σε παραγωγή.
+ */
+export function createStampTableContext(
+  base: Omit<StampTableContext, 'textAngleRad'>,
+): StampTableContext {
+  return { ...base, textAngleRad: frameScreenAngleRad(base.toScreen) };
+}
+
+// ── Η ΜΙΑ διαδρομή ορθογωνίου ────────────────────────────────────────────────
+
+/**
+ * 🔴 Χαράζει ένα ορθογώνιο **του πλαισίου** ως κλειστή διαδρομή, με τις **τέσσερις**
+ * γωνίες περασμένες χωριστά από το `toScreen`.
+ *
+ * ## Γιατί ποτέ `rect()` / `strokeRect()`
+ * Ο πίνακας μπορεί να είναι **περιστραμμένος**. Ένα ορθογώνιο σε άξονες οθόνης θα κρεμόταν
+ * λοξά πάνω από τα κελιά του — και θα φαινόταν σωστό σε κάθε πίνακα με `angleRad = 0`,
+ * δηλαδή σε όλους όσους δοκιμάζει κανείς πρώτους.
+ *
+ * ⚠️ ADR-739 Φ.Δ βήμα 8 — αυτό το σώμα ήταν γραμμένο **τρεις** φορές (γεμίσματα κελιών,
+ * χάρακας δεικτών, γέμισμα περιοχής). Το CHECK 3.28 (jscpd, N.18) το χαρακτηρίζει sibling
+ * clone **ανεξάρτητα ονόματος**, και σωστά: τρία αντίγραφα σημαίνουν τρεις ευκαιρίες να
+ * ξεχάσει κάποιος τη γωνία.
+ */
+export function traceRectMm(rc: StampTableContext, rectMm: TableRectMm): void {
+  const { x, y, w, h } = rectMm;
+  const corners = [
+    rc.toScreen(x, y),
+    rc.toScreen(x + w, y),
+    rc.toScreen(x + w, y + h),
+    rc.toScreen(x, y + h),
+  ];
+  rc.ctx.beginPath();
+  rc.ctx.moveTo(corners[0].x, corners[0].y);
+  for (let i = 1; i < corners.length; i++) rc.ctx.lineTo(corners[i].x, corners[i].y);
+  rc.ctx.closePath();
 }
 
 // ── Γεμίσματα ────────────────────────────────────────────────────────────────
@@ -58,19 +138,9 @@ export function stampTableFills(rc: StampTableContext, cells: readonly TableCell
   for (const cell of cells) {
     const fill = cell.style.fillColorHex;
     if (!fill) continue;
-    const { x, y, w, h } = cell.rect;
     ctx.save();
     ctx.fillStyle = rc.phaseColor ?? fill;
-    ctx.beginPath();
-    const p0 = rc.toScreen(x, y);
-    const p1 = rc.toScreen(x + w, y);
-    const p2 = rc.toScreen(x + w, y + h);
-    const p3 = rc.toScreen(x, y + h);
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.lineTo(p3.x, p3.y);
-    ctx.closePath();
+    traceRectMm(rc, cell.rect);
     ctx.fill();
     ctx.restore();
   }
@@ -121,6 +191,37 @@ export function stampTableBorders(
  */
 export function stampTableCellCursor(rc: StampTableContext, rectMm: TableRectMm): void {
   strokeRectMm(rc, rectMm, TABLE_CELL_CURSOR.colorHex, TABLE_CELL_CURSOR.lineWidthPx, []);
+}
+
+/**
+ * 🔴 ADR-739 Φ.Δ βήμα 8 — **η επιλεγμένη περιοχή**: ημιδιαφανές γέμισμα πάνω στα κελιά της
+ * + συμπαγές περίγραμμα γύρω από ολόκληρη.
+ *
+ * ## Γιατί ζωγραφίζεται ως **ένα** ορθογώνιο και όχι κελί-κελί
+ * Η περιοχή είναι ορθογώνια εξ ορισμού (και κουμπωμένη σε ολόκληρες συγχωνεύσεις), οπότε
+ * ένα `fill` αρκεί για οποιοδήποτε μέγεθος. Ένα γέμισμα ανά κελί θα πλήρωνε O(εμβαδόν)
+ * κλήσεις ανά καρέ για επιλογή 500 × 20 — το σχήμα που ο ADR-735 πλήρωσε σε παραγωγή. Και
+ * θα έδειχνε **χειρότερα**: τα ημιδιαφανή γεμίσματα των γειτονικών κελιών επικαλύπτονται
+ * στις κοινές ακμές και αφήνουν πιο σκούρες γραμμές, δηλαδή ένα φάντασμα πλέγμα.
+ *
+ * ⚠️ Ζωγραφίζεται **πριν** το κείμενο και τον δρομέα, όπως τα γεμίσματα κελιών: ένα
+ * ημιδιαφανές στρώμα πάνω από τα γράμματα θα τα θόλωνε — και η επιλογή υπάρχει ακριβώς για
+ * να **διαβάσεις** τι μάρκαρες.
+ */
+export function stampTableSelection(rc: StampTableContext, rectMm: TableRectMm): void {
+  const { ctx } = rc;
+  ctx.save();
+  ctx.fillStyle = TABLE_CELL_SELECTION.fillRgba;
+  traceRectMm(rc, rectMm);
+  ctx.fill();
+  ctx.restore();
+  strokeRectMm(
+    rc,
+    rectMm,
+    TABLE_CELL_SELECTION.outlineHex,
+    TABLE_CELL_SELECTION.outlineWidthPx,
+    [],
+  );
 }
 
 /**
@@ -176,22 +277,12 @@ function strokeRectMm(
   dashPx: readonly number[],
 ): void {
   const { ctx } = rc;
-  const { x, y, w, h } = rectMm;
   ctx.save();
   ctx.strokeStyle = colorHex;
   ctx.lineWidth = lineWidthPx;
   // `slice()`: το `setLineDash` δέχεται μεταβλητό πίνακα, και η σταθερά είναι κοινή.
   ctx.setLineDash(dashPx.slice());
-  ctx.beginPath();
-  const corners = [
-    rc.toScreen(x, y),
-    rc.toScreen(x + w, y),
-    rc.toScreen(x + w, y + h),
-    rc.toScreen(x, y + h),
-  ];
-  ctx.moveTo(corners[0].x, corners[0].y);
-  for (let i = 1; i < corners.length; i++) ctx.lineTo(corners[i].x, corners[i].y);
-  ctx.closePath();
+  traceRectMm(rc, rectMm);
   ctx.stroke();
   ctx.restore();
 }
@@ -215,6 +306,54 @@ function strokeRectMm(
  */
 export function tableCellFont(fontPx: number, bold: boolean): string {
   return buildUIFont(fontPx, 'arial', bold ? 'bold' : 'normal');
+}
+
+/**
+ * 🔴 ADR-739 Φ.Δ βήμα 8 — **Ο ΕΝΑΣ ΣΤΑΜΠΑΔΟΡΟΣ ΚΕΙΜΕΝΟΥ ΤΟΥ ΠΙΝΑΚΑ**, γερμένος όπως ο
+ * πίνακας. Τον καλούν **και** τα κείμενα των κελιών ({@link stampRun}) **και** οι ετικέτες
+ * των ζωνών `A B C` / `1 2 3` (`stamp-table-indicator.ts`).
+ *
+ * ## Τι διόρθωσε (μετρημένο, 2026-08-01)
+ * Ο πίνακας με `angleRad = 0.35` (≈20°) ζωγραφιζόταν **γερμένος** — πλέγμα, γεμίσματα,
+ * δρομέας, ζώνες, όλα περνούσαν από το `toScreen`. Τα **γράμματα** όμως έμεναν **ίσια στην
+ * οθόνη**, γιατί εδώ δεν υπήρχε καμία `ctx.rotate`. Στο εξαγόμενο DXF το ίδιο κείμενο
+ * βγήκε με `rot = 20,053523°` (διαβάστηκε από το αρχείο, και τα τρία `halign`).
+ *
+ * Άρα **δεν ήταν τεκμηριωμένη επιλογή — ήταν ασυμφωνία**: τέσσερις μηχανές απαντούσαν στην
+ * ίδια ερώτηση και **τρεις** συμφωνούσαν (εξαγωγή DXF, εξαγωγή PDF, επεξεργαστής κελιού με
+ * `rotate(-0.35rad)`). Ο ζωγράφος του καμβά ήταν ο **ένας** που διαφωνούσε, και το
+ * επιχείρημα της εξαγωγής («αλλιώς το κείμενο βγαίνει έξω από το κελί του») ισχύει
+ * **ακριβώς το ίδιο** στην οθόνη — φαινόταν με γυμνό μάτι.
+ *
+ * ## Γιατί το ίδιο ισχύει και για τις ζώνες δείκτη
+ * Θα μπορούσε να επιχειρηματολογήσει κανείς ότι οι ζώνες είναι **διεπαφή**, όχι σχέδιο,
+ * και άρα οφείλουν να μένουν ευανάγνωστες. Το επιχείρημα καταρρέει σε ένα σημείο: τα
+ * **ορθογώνια** των ζωνών ήδη γέρνουν (περνούν από το `toScreen`). Ένα ίσιο γράμμα μέσα σε
+ * γερμένο κουτί δεν είναι «αναγνωσιμότητα» — είναι γράμμα που σε αρκετή γωνία **δραπετεύει
+ * από το κουτί του**. Το να γέρνει και το κουτί και το γράμμα είναι το μόνο ζεύγος που
+ * παραμένει συνεπές σε κάθε γωνία, και είναι ό,τι κάνει ήδη ο επεξεργαστής κελιού δίπλα
+ * τους. Ένα ερώτημα, μία απάντηση, ένα σημείο αλλαγής.
+ *
+ * ## Τι ΔΕΝ κάνει: δεν «ορθώνει» ανάποδο κείμενο
+ * Σε γωνία > 90° το κείμενο γέρνει πέρα από την κατακόρυφο — και στην οθόνη **και** στο
+ * DXF, γιατί ο exporter γράφει το ωμό `rotationDeg` χωρίς αναστροφή. Μια «διόρθωση
+ * αναγνωσιμότητας» μόνο εδώ θα ξαναγεννούσε **ακριβώς** την ασυμφωνία που αυτό το βήμα
+ * έκλεισε. Αν κάποτε θελήσουμε όρθια γράμματα σε ανεστραμμένους πίνακες, ο κανόνας ανήκει
+ * στη **διάταξη** (κοινή σε ζωγράφο και exporter), όχι στο μελάνι.
+ *
+ * @param anchorScreen το σημείο **οθόνης** που ήδη υπολόγισε ο καλών μέσω `toScreen`
+ */
+export function stampFrameText(rc: StampTableContext, anchorScreen: Point2D, text: string): void {
+  const { ctx } = rc;
+  // Μετάθεση **πρώτα**, στροφή **μετά**: η στροφή γίνεται γύρω από την άγκυρα του κειμένου
+  // (τη γραμμή βάσης στη θέση στοίχισης), όχι γύρω από την αρχή του καμβά. Αντίστροφα, το
+  // κείμενο θα εκτοξευόταν κατά `|anchor| · sin(γωνία)` px μακριά από το κελί του.
+  ctx.translate(anchorScreen.x, anchorScreen.y);
+  ctx.rotate(rc.textAngleRad);
+  // Το `textAlign` / `textBaseline` που έθεσε ο καλών ισχύουν πλέον στο **στραμμένο**
+  // σύστημα — δηλαδή «δεξιά στοίχιση» σημαίνει «δεξιά μέσα στο κελί», που είναι ακριβώς η
+  // σημασία που ήδη ταξιδεύει στο DXF ως `halign` (μετρήθηκε: 0/1/2 για left/center/right).
+  ctx.fillText(text, 0, 0);
 }
 
 /** Ταυτότητα κελιού — το κλειδί με το οποίο ο καλών ζητά παράλειψη ζωγραφικής. */
@@ -284,6 +423,8 @@ function stampRun(
   ctx.font = tableCellFont(fontPx, run.bold);
   ctx.textAlign = run.hAlign;
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText(run.text, anchor.x, anchor.y);
+  // ADR-739 Φ.Δ βήμα 8 — γερμένο όπως ο πίνακας, όπως ήδη γέρνουν το DXF, το PDF και ο
+  // επεξεργαστής κελιού. Δες το {@link stampFrameText} για το γιατί άλλαξε.
+  stampFrameText(rc, anchor, run.text);
   ctx.restore();
 }

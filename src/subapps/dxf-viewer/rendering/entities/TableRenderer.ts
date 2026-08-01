@@ -42,16 +42,27 @@ import {
 } from '../../bim/table/table-render-index';
 import { hitTestTable } from '../../bim/table/table-entity-hit';
 import { getTableGrips } from '../../bim/table/table-entity-grips';
-import type { TableCellLayout } from '../../bim/table/table-layout-types';
+import type { TableCellLayout, TableRectMm } from '../../bim/table/table-layout-types';
 import {
+  createStampTableContext,
   stampTableBorders,
   stampTableCellCursor,
   stampTableModeOutline,
   stampTableFills,
+  stampTableSelection,
   stampTableText,
   type StampTableContext,
   type TableCellRef,
 } from './table/stamp-table-layout';
+// ADR-739 Φ.Δ βήμα 8 — ΠΟΙΑ κελιά είναι μαρκαρισμένα. Καθαρό SSoT, κοινό με την
+// αντιγραφή/επικόλληση και τη γραμμή κατάστασης: ο ζωγράφος δεν κρίνει, ρωτά.
+import {
+  resolveTableCellRange,
+  tableRangeMembership,
+  tableRangeRectMm,
+  type TableRangeMembership,
+} from '../../bim/table/table-cell-range';
+import { resolveTableModel } from '../../bim/table/table-model-helpers';
 // ADR-739 Φ.Δ βήμα 7 — ο δείκτης πίνακα (AutoCAD `TABLEINDICATOR`) + η ονομασία των
 // υποδιαιρέσεών του. Η ονομασία ζει στο `bim/`, η ζωγραφική εδώ — ίδιος διαχωρισμός με
 // τη διάταξη και τον ζωγράφο της.
@@ -111,7 +122,10 @@ export class TableRenderer extends BaseEntityRenderer {
       if (bucket) cells.push(...bucket);
     }
 
-    const rc = {
+    // ADR-739 Φ.Δ βήμα 8 — **εργοστάσιο, όχι κυριολεκτικό αντικείμενο**: η γωνία κειμένου
+    // παράγεται από το ίδιο το `toScreen` μέσα στο `createStampTableContext`, μία φορά ανά
+    // καρέ. Ο ζωγράφος δεν την **ξέρει** και άρα δεν μπορεί να αποκλίνει από την προβολή.
+    const rc = createStampTableContext({
       ctx: this.ctx,
       toScreen: (u: number, v: number): Point2D =>
         this.worldToScreen(tableFrameToWorld(e, u, v, geometry.mmToWorld)),
@@ -119,7 +133,7 @@ export class TableRenderer extends BaseEntityRenderer {
       // Η φάση (hover/επιλογή) έχει ήδη θέσει το `strokeStyle`· όταν είναι η κανονική
       // φάση, το `undefined` αφήνει τα χρώματα του στυλ να περάσουν αυτούσια.
       phaseColor: this.tablePhaseColor(),
-    };
+    });
 
     // ΕΝΑ σημείο απόφασης για τον δρομέα: και «ποιο κελί πλαισιώνεται» και «ποιο κελί δεν
     // ζωγραφίζεται» βγαίνουν από την ίδια ανάγνωση — δύο αναγνώσεις θα μπορούσαν να δουν
@@ -127,6 +141,11 @@ export class TableRenderer extends BaseEntityRenderer {
     const cursor = selected ? this.cursorOf(e.id) : null;
 
     stampTableFills(rc, cells);
+    // ADR-739 Φ.Δ βήμα 8 — η επιλογή **πάνω από τα γεμίσματα, κάτω από το πλέγμα και το
+    // κείμενο**: είναι ημιδιαφανής, οπότε ένα στρώμα πάνω από τα γράμματα θα τα θόλωνε —
+    // και η επιλογή υπάρχει ακριβώς για να διαβάσεις τι μάρκαρες.
+    const selection = cursor ? this.selectionOf(e, cursor) : null;
+    if (selection) stampTableSelection(rc, selection.rectMm);
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
     stampTableText(rc, cells, editedCellRef(cursor));
@@ -145,14 +164,47 @@ export class TableRenderer extends BaseEntityRenderer {
       // Οι γραμμές περνούν με το **ορατό** παράθυρο (`start`/`end`), το ίδιο που ήδη κόβει
       // τα κελιά: ένας πίνακας 500 γραμμών δεν επιτρέπεται να ζωγραφίσει 500 αριθμούς ανά
       // καρέ για να φανούν οι 12 (ADR-735).
+      // Οι ζώνες ανάβουν **ολόκληρη** την περιοχή όταν υπάρχει· αλλιώς μόνο τη στήλη/
+      // γραμμή του δρομέα. Το μονοσύνολο δεν είναι ειδική περίπτωση — είναι η ίδια
+      // ερώτηση με μία απάντηση (δες `TableIndicatorTick.active`).
+      const bands = selection?.membership ?? {
+        rowIds: new Set([cursor.position.rowId]),
+        colIds: new Set([cursor.position.colId]),
+      };
       stampTableIndicator(rc, {
-        columns: tableColumnTicks(layout.columns, cursor.position.colId),
-        rows: tableRowTicks(layout.rows, cursor.position.rowId, start, end),
+        columns: tableColumnTicks(layout.columns, bands.colIds),
+        rows: tableRowTicks(layout.rows, bands.rowIds, start, end),
         widthMm: layout.widthMm,
         heightMm: layout.heightMm,
       });
       this.drawCellCursor(cursor, rc, index);
     }
+  }
+
+  /**
+   * ADR-739 Φ.Δ βήμα 8 — η **επιλεγμένη περιοχή** αυτού του πίνακα, ως ορθογώνιο φύλλου
+   * + ιδιότητα μέλους ανά άξονα· `null` όταν δεν υπάρχει επιλογή.
+   *
+   * ## Γιατί `null` χωρίς `selection`, αντί για «περιοχή ενός κελιού»
+   * Το ένα κελί το δείχνει ήδη ο **δρομέας** — ένα ημιδιαφανές γέμισμα από κάτω του θα
+   * ήταν δεύτερη δήλωση του ίδιου πράγματος, και θα έκανε τον πίνακα να φαίνεται μονίμως
+   * «μαρκαρισμένος» από τη στιγμή που μπαίνεις μέσα του. «Καμία επιλογή» δεν είναι
+   * «επιλογή 1×1»: είναι άλλη κατάσταση, και φαίνεται αλλιώς.
+   *
+   * Το ορθογώνιο συντίθεται από τη **διάταξη** (θέσεις/πλάτη στηλών και γραμμών) — καμία
+   * δεύτερη γεωμετρία δεν γεννιέται εδώ.
+   */
+  private selectionOf(
+    e: TableEntity,
+    cursor: TableCellCursorState,
+  ): { readonly rectMm: TableRectMm; readonly membership: TableRangeMembership } | null {
+    if (!cursor.selection) return null;
+    const model = resolveTableModel(e.model);
+    const bounds = resolveTableCellRange(model, cursor.selection.from, cursor.selection.to);
+    if (!bounds) return null;
+    const layout = computeTableEntityGeometryLive(e, this._sceneUnits).layout;
+    const rectMm = tableRangeRectMm(layout, bounds);
+    return rectMm ? { rectMm, membership: tableRangeMembership(model, bounds) } : null;
   }
 
   /**

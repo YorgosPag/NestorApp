@@ -15,13 +15,19 @@
  * συντεταγμένες του πλαισίου του πίνακα, η ζώνη δεν έχει καμία σχέση με τη διάταξη: δεν
  * υπάρχει resize, δεν υπάρχει επαναϋπολογισμός προβολής, δεν κουνιέται τίποτα.
  *
- * ## Γιατί οι ζώνες γέρνουν με τον πίνακα, ενώ τα γράμματα μένουν ίσια
+ * ## Οι ζώνες γέρνουν με τον πίνακα — και τα γράμματά τους μαζί (ADR-739 Φ.Δ βήμα 8)
  * Τα ορθογώνια περνούν από το `toScreen` — άρα ακολουθούν την περιστροφή, όπως τα κελιά.
- * Τα **γράμματα** όμως ζωγραφίζονται οριζόντια, ακριβώς όπως ήδη κάνει το
- * {@link stampTableText} για το κείμενο των κελιών (`stampRun`: καμία `ctx.rotate`). Δεν
- * είναι δύο αποφάσεις — είναι **μία**, τηρημένη: ο πίνακας γέρνει, τα γράμματα διαβάζονται.
- * Ό,τι κι αν αποφασιστεί κάποτε για την περιστροφή κειμένου, θα αποφασιστεί σε **ένα**
- * σημείο και θα ισχύσει και για τα δύο.
+ * Τα **γράμματα** ζωγραφίζονταν οριζόντια, ακριβώς όπως έκανε τότε και το κείμενο των
+ * κελιών. Αυτό το αρχείο το δήλωνε ρητά ως «μία απόφαση, τηρημένη», και πρόσθετε: «ό,τι κι
+ * αν αποφασιστεί κάποτε για την περιστροφή κειμένου, θα αποφασιστεί σε **ένα** σημείο και
+ * θα ισχύσει και για τα δύο».
+ *
+ * 🔴 **Αυτό ακριβώς έγινε.** Το βήμα 8 μέτρησε ότι ο ζωγράφος ήταν ο **μόνος** από τέσσερις
+ * μηχανές που δεν έγερνε το κείμενο (DXF: `rot = 20,05°`· PDF: το ίδιο· επεξεργαστής κελιού:
+ * `rotate(-0.35rad)`), και το ένα σημείο είναι το `stampFrameText`. Και οι δύο ετικέτες —
+ * κελιού και ζώνης — περνούν από εκεί. Το επιχείρημα «η ζώνη είναι διεπαφή, ας μένει ίσια»
+ * εξετάστηκε και απορρίφθηκε: ένα ίσιο γράμμα μέσα σε **γερμένο** κουτί δραπετεύει από το
+ * κουτί του σε αρκετή γωνία. Το σκεπτικό ολόκληρο ζει στο `stampFrameText`.
  *
  * ## Όλα τα μεγέθη σε px οθόνης
  * Δες {@link TABLE_INDICATOR}: στοιχείο διεπαφής, όχι γεωμετρία σχεδίου. Η μετατροπή σε
@@ -37,7 +43,12 @@
 import type { TableIndicatorTick } from '../../../bim/table/table-cell-reference';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import { TABLE_INDICATOR } from '../../../config/color-config';
-import { tableCellFont, type StampTableContext } from './stamp-table-layout';
+import {
+  stampFrameText,
+  tableCellFont,
+  traceRectMm,
+  type StampTableContext,
+} from './stamp-table-layout';
 
 /**
  * Κάτω από αυτό το πλάτος **στην οθόνη**, η ετικέτα μιας υποδιαίρεσης παραλείπεται: ένα
@@ -97,31 +108,16 @@ function stampTick(rc: StampTableContext, tick: TableIndicatorTick, rect: TableR
   stampLabel(rc, tick, rect);
 }
 
-/** Οι τέσσερις γωνίες ενός ορθογωνίου πλαισίου, ήδη σε px οθόνης. */
-function cornersOf(rc: StampTableContext, rect: TableRectMm): readonly { x: number; y: number }[] {
-  const { x, y, w, h } = rect;
-  return [
-    rc.toScreen(x, y),
-    rc.toScreen(x + w, y),
-    rc.toScreen(x + w, y + h),
-    rc.toScreen(x, y + h),
-  ];
-}
-
-/** Χαράζει τη διαδρομή του ορθογωνίου. Τέσσερις γωνίες, γιατί ο πίνακας περιστρέφεται. */
-function tracePath(rc: StampTableContext, rect: TableRectMm): void {
-  const corners = cornersOf(rc, rect);
-  rc.ctx.beginPath();
-  rc.ctx.moveTo(corners[0].x, corners[0].y);
-  for (let i = 1; i < corners.length; i++) rc.ctx.lineTo(corners[i].x, corners[i].y);
-  rc.ctx.closePath();
-}
+// ⚠️ ADR-739 Φ.Δ βήμα 8 — εδώ ζούσε **δεύτερη** διαδρομή τεσσάρων γωνιών (`cornersOf` +
+// `tracePath`), ταυτόσημη με εκείνη του αδελφού ζωγράφου. Το CHECK 3.28 (jscpd, N.18) την
+// έπιασε ως sibling clone — σωστά: δύο αντίγραφα σημαίνουν δύο ευκαιρίες να ξεχάσει
+// κάποιος ότι ο πίνακας **περιστρέφεται**. Μία διαδρομή, δύο ζωγράφοι.
 
 function fillTick(rc: StampTableContext, rect: TableRectMm, active: boolean): void {
   const { ctx } = rc;
   ctx.save();
   ctx.fillStyle = active ? TABLE_INDICATOR.activeFillHex : TABLE_INDICATOR.fillHex;
-  tracePath(rc, rect);
+  traceRectMm(rc, rect);
   ctx.fill();
   ctx.restore();
 }
@@ -134,13 +130,13 @@ function strokeTick(rc: StampTableContext, rect: TableRectMm): void {
   // Ρητά συμπαγής: το `stampTableBorders` μπορεί να έχει αφήσει διακεκομμένο μοτίβο πάνω
   // στο ίδιο context — το `save/restore` προστατεύει τη ΔΙΚΗ μας κλήση, όχι την επόμενη.
   ctx.setLineDash([]);
-  tracePath(rc, rect);
+  traceRectMm(rc, rect);
   ctx.stroke();
   ctx.restore();
 }
 
 /**
- * Η ετικέτα, κεντραρισμένη στο ορθογώνιο και **οριζόντια στην οθόνη** — δες την κεφαλίδα.
+ * Η ετικέτα, κεντραρισμένη στο ορθογώνιο και **γερμένη με τον πίνακα** — δες την κεφαλίδα.
  *
  * Το κέντρο υπολογίζεται στο πλαίσιο (mm) και μετά προβάλλεται, ποτέ ως μέσος όρος
  * προβεβλημένων γωνιών: με περιστροφή τα δύο συμπίπτουν, αλλά η πρώτη διαδρομή είναι η ίδια
@@ -157,6 +153,9 @@ function stampLabel(rc: StampTableContext, tick: TableIndicatorTick, rect: Table
   ctx.font = tableCellFont(TABLE_INDICATOR.fontPx, tick.active);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(tick.label, center.x, center.y);
+  // ADR-739 Φ.Δ βήμα 8 — ο ΙΔΙΟΣ σταμπαδόρος με το κείμενο των κελιών. Δες την κεφαλίδα:
+  // ό,τι αποφασιστεί για τη στροφή κειμένου αποφασίζεται σε **ένα** σημείο και ισχύει και
+  // για τα δύο — αυτό ακριβώς είναι που έγινε εδώ.
+  stampFrameText(rc, center, tick.label);
   ctx.restore();
 }

@@ -25,7 +25,7 @@ import {
   MIN_CELL_TEXT_SCREEN_PX,
   type StampTableContext,
 } from '../stamp-table-layout';
-import { createPaintLog, createRc, type PaintLog } from './table-paint-recorder';
+import { createPaintLog, createRc, paintedInk, type PaintLog } from './table-paint-recorder';
 import { TABLE_CELL_CURSOR } from '../../../../config/color-config';
 import type { TableCellLayout } from '../../../../bim/table/table-layout-types';
 import type { TableCellStyle } from '../../../../bim/table/table-style';
@@ -71,7 +71,7 @@ function cell(
 describe('stamp-table-layout — το χρώμα φάσης βάφει τη σιλουέτα, όχι το μελάνι', () => {
   it('στο hover το ΓΕΜΙΣΜΑ παίρνει το χρώμα φάσης (ο πίνακας φωτίζεται ομοιόμορφα)', () => {
     const log: PaintLog = createPaintLog();
-    stampTableFills(createRc(log, PHASE), [cell('ΚΕΦΑΛΙΔΑ', FILL)]);
+    stampTableFills(createRc(log, { phaseColor: PHASE }), [cell('ΚΕΦΑΛΙΔΑ', FILL)]);
 
     expect(log.fills).toEqual([PHASE]);
   });
@@ -89,17 +89,17 @@ describe('stamp-table-layout — το χρώμα φάσης βάφει τη σι
    */
   it('στο hover το ΚΕΙΜΕΝΟ κελιού ΜΕ γέμισμα κρατά το δικό του χρώμα — δεν εξαφανίζεται', () => {
     const log: PaintLog = createPaintLog();
-    stampTableText(createRc(log, PHASE), [cell('Περιγραφή', FILL)]);
+    stampTableText(createRc(log, { phaseColor: PHASE }), [cell('Περιγραφή', FILL)]);
 
-    expect(log.texts).toEqual([{ text: 'Περιγραφή', color: INK }]);
+    expect(paintedInk(log)).toEqual([{ text: 'Περιγραφή', color: INK }]);
     expect(log.texts[0].color).not.toBe(PHASE);
   });
 
   it('στο hover το ΚΕΙΜΕΝΟ κελιού ΧΩΡΙΣ γέμισμα κρατά κι αυτό το χρώμα του', () => {
     const log: PaintLog = createPaintLog();
-    stampTableText(createRc(log, PHASE), [cell('ΑΣΔΦ')]);
+    stampTableText(createRc(log, { phaseColor: PHASE }), [cell('ΑΣΔΦ')]);
 
-    expect(log.texts).toEqual([{ text: 'ΑΣΔΦ', color: INK }]);
+    expect(paintedInk(log)).toEqual([{ text: 'ΑΣΔΦ', color: INK }]);
   });
 
   /**
@@ -108,18 +108,18 @@ describe('stamp-table-layout — το χρώμα φάσης βάφει τη σι
    */
   it('κελί με και χωρίς γέμισμα γράφονται με το ΙΔΙΟ μελάνι στην ίδια φάση', () => {
     const log: PaintLog = createPaintLog();
-    stampTableText(createRc(log, PHASE), [cell('ΜΕ', FILL), cell('ΧΩΡΙΣ')]);
+    stampTableText(createRc(log, { phaseColor: PHASE }), [cell('ΜΕ', FILL), cell('ΧΩΡΙΣ')]);
 
     expect(log.texts.map((t) => t.color)).toEqual([INK, INK]);
   });
 
   it('το LOD εξακολουθεί να κόβει το κείμενο κάτω από το κατώφλι — η διόρθωση δεν το ακύρωσε', () => {
     const log: PaintLog = createPaintLog();
-    const rc: StampTableContext = {
-      ...createRc(log, PHASE),
-      // 3mm × pxPerMm < MIN_CELL_TEXT_SCREEN_PX ⇒ κανένα glyph.
+    // 3mm × pxPerMm < MIN_CELL_TEXT_SCREEN_PX ⇒ κανένα glyph.
+    const rc = createRc(log, {
+      phaseColor: PHASE,
       pxPerMm: (MIN_CELL_TEXT_SCREEN_PX - 1) / 3 / 2,
-    };
+    });
 
     expect(stampTableText(rc, [cell('αόρατο', FILL)])).toBe(false);
     expect(log.texts).toEqual([]);
@@ -214,7 +214,7 @@ describe('stampTableCellCursor — το ορθογώνιο του τρέχοντ
   it('περνά και τις ΤΕΣΣΕΡΙΣ γωνίες από το `toScreen` — όχι `strokeRect` σε άξονες οθόνης', () => {
     const log: PaintLog = createPaintLog();
     // Στροφή 90°: αν ο ζωγράφος υπέθετε άξονες οθόνης, τα σημεία θα έμεναν ορθογώνια.
-    const rc: StampTableContext = { ...createRc(log), toScreen: (u, v) => ({ x: -v, y: u }) };
+    const rc = createRc(log, { toScreen: (u, v) => ({ x: -v, y: u }) });
     stampTableCellCursor(rc, RECT);
 
     expect(log.strokes[0].points).toEqual([
@@ -227,7 +227,7 @@ describe('stampTableCellCursor — το ορθογώνιο του τρέχοντ
 
   it('ΔΕΝ δέχεται το χρώμα φάσης — ο δρομέας είναι δείκτης διεπαφής, όχι κατάσταση οντότητας', () => {
     const log: PaintLog = createPaintLog();
-    stampTableCellCursor(createRc(log, PHASE), RECT);
+    stampTableCellCursor(createRc(log, { phaseColor: PHASE }), RECT);
 
     expect(log.strokes[0].color).toBe(TABLE_CELL_CURSOR.colorHex);
     expect(log.strokes[0].color).not.toBe(PHASE);
