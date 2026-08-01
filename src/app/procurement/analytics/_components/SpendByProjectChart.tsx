@@ -1,43 +1,32 @@
 'use client';
 
 /**
- * SpendByProjectChart — Top 10 projects vertical BarChart.
+ * SpendByProjectChart — τα 10 κορυφαία έργα σε **κατακόρυφες** στήλες. Τα
+ * ονόματα έργων λύνονται από το SSoT `useProjectsList` (με cache)· κλικ σε
+ * στήλη → λίστα εντολών αγοράς με `projectId`.
  *
- * Project names resolved from `useProjectsList` SSoT (cached). Bar click →
- * drill-down to PO list filtered by `projectId` + current filter forwarding.
+ * ⚠️ **ADR-710 (μετανάστευση 2026-08-01)**: πλαίσιο κάρτας, κενή κατάσταση και
+ * `ResponsiveContainer` ζουν στο `<ChartCard>`. Το ελεύθερο ύψος 280px γίνεται
+ * το ονομασμένο βήμα `md` (h-64 = 256px).
  *
- * @see ADR-331 §2.5, §4 D4, D5, D22, D23
+ * 🔴 **ADR-742 §7quaterdecies**: η σύνθεση recharts έφυγε στο `<SpendTopBarChart>`.
+ * Δικό της μένει **μόνο** η επίλυση ονομάτων έργου — και μαζί της ο λόγος που η
+ * κάρτα έχει **δεύτερη** πηγή φόρτωσης: το γράφημα δεν είναι έτοιμο όσο τα
+ * ονόματα λείπουν, αλλιώς θα ζωγράφιζε για μια στιγμή ωμά `projectId`.
+ *
+ * @see ADR-331 §2.5, §4 D4, D5, D22, D23 · ADR-710 · ADR-742 §7quaterdecies
  */
 
 import { useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useAuth } from '@/auth/contexts/AuthContext';
 import { useProjectsList } from '@/hooks/useProjectsList';
-import { formatCurrency } from '@/lib/intl-formatting';
-import { KpiChartSkeleton } from '@/components/projects/procurement/overview/skeleton/KpiSkeleton';
+import { SpendTopBarChart } from './SpendTopBarChart';
+import { truncateLabel } from './chart-utils';
 import type {
   ProjectPoint,
   SpendAnalyticsFilters,
 } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
-import {
-  buildPurchaseOrdersUrl,
-  CHART_FIGURE_CLASSES,
-  formatEurShort,
-  readClickedRowKey,
-  truncateLabel,
-} from './chart-utils';
-import { ChartTooltip } from './chart-tooltip';
 
 interface SpendByProjectChartProps {
   data: readonly ProjectPoint[];
@@ -59,9 +48,10 @@ export function SpendByProjectChart({
   className,
 }: SpendByProjectChartProps) {
   const { t } = useTranslation('procurement');
-  const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
-  const { projects, loading: projectsLoading } = useProjectsList({ enabled: !authLoading && isAuthenticated });
+  const { projects, loading: projectsLoading } = useProjectsList({
+    enabled: !authLoading && isAuthenticated,
+  });
 
   const rows = useMemo<ProjectRow[]>(() => {
     const nameById = new Map(projects.map((p) => [p.id, p.name]));
@@ -72,57 +62,18 @@ export function SpendByProjectChart({
     }));
   }, [data, projects]);
 
-  if (isLoading || projectsLoading) return <KpiChartSkeleton />;
-
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('analytics.charts.byProject.title')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {t('analytics.charts.byProject.empty')}
-          </p>
-        ) : (
-          <figure aria-label={t('analytics.charts.byProject.ariaLabel')} className={CHART_FIGURE_CLASSES}>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={rows} margin={{ top: 8, right: 16, left: 4, bottom: 16 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11 }}
-                  interval={0}
-                  angle={-25}
-                  textAnchor="end"
-                  height={56}
-                />
-                <YAxis tickFormatter={formatEurShort} tick={{ fontSize: 11 }} width={56} />
-                <Tooltip
-                  content={<ChartTooltip formatter={(value) => formatCurrency(value, 'EUR')} />}
-                />
-                <Bar
-                  dataKey="total"
-                  fill="hsl(var(--chart-1))"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={36}
-                  cursor="pointer"
-                  onClick={(payload) => {
-                    const projectId = readClickedRowKey(payload, 'projectId');
-                    if (!projectId) return;
-                    router.push(
-                      buildPurchaseOrdersUrl(filters, { projectId: [projectId] }),
-                      { scroll: false },
-                    );
-                  }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </figure>
-        )}
-      </CardContent>
-    </Card>
+    <SpendTopBarChart
+      className={className}
+      isLoading={isLoading || projectsLoading}
+      rows={rows}
+      categoryKey="label"
+      valueKey="total"
+      orientation="columns"
+      title={t('analytics.charts.byProject.title')}
+      emptyMessage={t('analytics.charts.byProject.empty')}
+      categoryLabel={t('analytics.charts.byProject.categoryLabel')}
+      drillDown={{ filters, rowKey: 'projectId', filterKey: 'projectId' }}
+    />
   );
 }

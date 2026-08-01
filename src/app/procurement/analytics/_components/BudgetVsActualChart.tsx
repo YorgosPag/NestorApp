@@ -8,7 +8,21 @@
  * category has no BOQ entry yet — labelled "Off-budget" with a warning
  * tooltip line per ADR-331 §4 D9.
  *
- * @see ADR-331 §2.5, §4 D4, D9, D22, D23
+ * ⚠️ **ADR-710 (μετανάστευση 2026-08-01)**: πλαίσιο κάρτας, υπόμνημα, κενή
+ * κατάσταση και `ResponsiveContainer` ζουν στο `<ChartCard>`· ελεύθερο ύψος
+ * 300px → βήμα `lg`. Τα χρώματα γίνονται **θεσιακά** (`--color-<key>` από τη
+ * δήλωση σειρών) αντί για χειρόγραφα `--chart-N`: η **σειρά** των slots είναι ο
+ * μηχανισμός διαχωρισμού CVD (CHECK 3.32), οπότε δεν την επιλέγει το κάθε
+ * γράφημα. Πρακτικά budget/committed ανταλλάσσουν απόχρωση — **σκόπιμο**.
+ *
+ * 🔑 **Το tooltip μένει χειρόγραφο, και δεν είναι παράλειψη.** Η γραμμή
+ * προειδοποίησης «εκτός προϋπολογισμού» είναι **ανά γραμμή δεδομένων**, ενώ η
+ * περιγραφή του shell μιλά ανά **σειρά**. Το `<ChartCard.Tooltip />` δεν μπορεί
+ * να την εκφράσει χωρίς να αποκτήσει prop για περιεχόμενο — δηλαδή χωρίς να
+ * ξαναγίνει η υπερ-παραμετροποιημένη fabrique που το ADR-710 απέφυγε. Το
+ * ADR-710 απαγορεύει το `ResponsiveContainer`, **όχι** το κατάλληλο tooltip.
+ *
+ * @see ADR-331 §2.5, §4 D4, D9, D22, D23 · ADR-710 (chart-card shell)
  */
 
 import { useMemo } from 'react';
@@ -16,19 +30,25 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
-  Legend,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
   type TooltipProps,
 } from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  seriesColorVar,
+  type ChartSeries,
+} from '@/components/ui/chart-card';
+import { SpendAnalyticsChart } from './SpendAnalyticsChart';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-formatting';
-import { KpiChartSkeleton } from '@/components/projects/procurement/overview/skeleton/KpiSkeleton';
 import type { BudgetVsActualPoint } from '@/services/procurement/aggregators/spendAnalyticsAggregator';
-import { CHART_FIGURE_CLASSES, formatEurShort, truncateLabel } from './chart-utils';
+import {
+  CHART_MARGIN,
+  EUR_VALUE_AXIS,
+  ROTATED_CATEGORY_AXIS,
+  formatEur,
+  truncateLabel,
+} from './chart-utils';
 
 interface BudgetVsActualChartProps {
   data: readonly BudgetVsActualPoint[];
@@ -64,9 +84,9 @@ function CustomTooltip({
   return (
     <section className="min-w-[140px] rounded-md border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
       <p className="mb-1 font-semibold">{label}</p>
-      <p>{`${messages.budget}: ${formatCurrency(row.budget, 'EUR')}`}</p>
-      <p>{`${messages.committed}: ${formatCurrency(row.committed, 'EUR')}`}</p>
-      <p>{`${messages.delivered}: ${formatCurrency(row.delivered, 'EUR')}`}</p>
+      <p>{`${messages.budget}: ${formatEur(row.budget)}`}</p>
+      <p>{`${messages.committed}: ${formatEur(row.committed)}`}</p>
+      <p>{`${messages.delivered}: ${formatEur(row.delivered)}`}</p>
       {row.isOffBudget && (
         <p className="mt-1 font-medium text-destructive">{messages.offBudgetWarning}</p>
       )}
@@ -101,69 +121,71 @@ export function BudgetVsActualChart({
     [data, t],
   );
 
-  if (isLoading) return <KpiChartSkeleton />;
+  const messages: OffBudgetTooltipMessages = useMemo(
+    () => ({
+      budget: t('analytics.charts.budgetVsActual.budget'),
+      committed: t('analytics.charts.budgetVsActual.committed'),
+      delivered: t('analytics.charts.budgetVsActual.delivered'),
+      offBudgetWarning: t('analytics.charts.budgetVsActual.offBudgetTooltip'),
+    }),
+    [t],
+  );
 
-  const messages: OffBudgetTooltipMessages = {
-    budget: t('analytics.charts.budgetVsActual.budget'),
-    committed: t('analytics.charts.budgetVsActual.committed'),
-    delivered: t('analytics.charts.budgetVsActual.delivered'),
-    offBudgetWarning: t('analytics.charts.budgetVsActual.offBudgetTooltip'),
-  };
+  const series = useMemo<readonly ChartSeries<BudgetRow>[]>(
+    () => [
+      { key: 'budget', label: messages.budget },
+      { key: 'committed', label: messages.committed },
+      { key: 'delivered', label: messages.delivered },
+    ],
+    [messages],
+  );
+
 
   return (
-    <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {t('analytics.charts.budgetVsActual.title')}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            {t('analytics.charts.budgetVsActual.empty')}
-          </p>
-        ) : (
-          <figure aria-label={t('analytics.charts.budgetVsActual.ariaLabel')} className={CHART_FIGURE_CLASSES}>
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={rows} margin={{ top: 8, right: 16, left: 4, bottom: 16 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tick={{ fontSize: 11 }}
-                  interval={0}
-                  angle={-25}
-                  textAnchor="end"
-                  height={64}
-                />
-                <YAxis tickFormatter={formatEurShort} tick={{ fontSize: 11 }} width={56} />
-                <Tooltip content={(props: TooltipProps<number, string>) => <CustomTooltip {...props} messages={messages} />} />
-                <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar
-                  dataKey="budget"
-                  name={messages.budget}
-                  fill="hsl(var(--chart-2))"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={28}
-                />
-                <Bar
-                  dataKey="committed"
-                  name={messages.committed}
-                  fill="hsl(var(--chart-1))"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={28}
-                />
-                <Bar
-                  dataKey="delivered"
-                  name={messages.delivered}
-                  fill="hsl(var(--chart-3))"
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={28}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </figure>
-        )}
-      </CardContent>
-    </Card>
+    <SpendAnalyticsChart
+      className={className}
+      isLoading={isLoading}
+      series={series}
+      data={rows}
+      categoryKey="label"
+      categoryLabel={t('analytics.charts.budgetVsActual.categoryLabel')}
+      formatValue={formatEur}
+      title={t('analytics.charts.budgetVsActual.title')}
+      emptyMessage={t('analytics.charts.budgetVsActual.empty')}
+      size="lg"
+    >
+          <ComposedChart data={rows} margin={CHART_MARGIN}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis
+              dataKey="label"
+              {...ROTATED_CATEGORY_AXIS}
+              height={64}
+            />
+            <YAxis {...EUR_VALUE_AXIS} />
+            <Tooltip
+              content={(props: TooltipProps<number, string>) => (
+                <CustomTooltip {...props} messages={messages} />
+              )}
+            />
+            <Bar
+              dataKey="budget"
+              fill={seriesColorVar('budget')}
+              radius={[3, 3, 0, 0]}
+              maxBarSize={28}
+            />
+            <Bar
+              dataKey="committed"
+              fill={seriesColorVar('committed')}
+              radius={[3, 3, 0, 0]}
+              maxBarSize={28}
+            />
+            <Bar
+              dataKey="delivered"
+              fill={seriesColorVar('delivered')}
+              radius={[3, 3, 0, 0]}
+              maxBarSize={28}
+            />
+          </ComposedChart>
+    </SpendAnalyticsChart>
   );
 }
