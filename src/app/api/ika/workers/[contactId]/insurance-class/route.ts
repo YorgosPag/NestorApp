@@ -26,6 +26,8 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import type { PersonaData } from '@/types/contacts/personas';
+import { checkContactAccess } from '@/app/api/contacts/_shared/contact-ownership';
+import { contactNotFoundResponse } from '@/app/api/contacts/_shared/contact-not-found-response';
 
 const UpdateInsuranceClassSchema = z.object({
   insuranceClassNumber: z.number().int().min(1).max(99),
@@ -49,14 +51,29 @@ async function handlePatch(
         const contactSnap = await contactRef.get();
 
         if (!contactSnap.exists) {
-          return NextResponse.json({ success: false, error: 'Contact not found' }, { status: 404 });
+          return contactNotFoundResponse(contactId);
         }
 
         const data = contactSnap.data() ?? {};
 
-        // Tenant isolation check
-        if (data.companyId !== ctx.companyId) {
-          return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        // ── TENANT ISOLATION (ADR-742 §7octies) ─────────────────────────────
+        // 🔴 Ο πόρος εδώ **είναι `contacts/{id}`** — απλώς η διαδρομή ζει σε
+        // άλλο δέντρο (`api/ika`). Απαντούσε `403 'Forbidden'` για ξένη επαφή
+        // ενώ ο γνήσιος κλάδος από πάνω λέει `404 'Contact not found'`:
+        // **τρίτο** σχήμα άρνησης για το ίδιο id, σε τρίτο φάκελο.
+        //
+        // Το μαντείο ύπαρξης είναι ιδιότητα του **πόρου**, όχι του φακέλου
+        // (§7septies) — γι' αυτό η διαδρομή δανείζεται τον φύλακα **των
+        // επαφών** αντί να κρατά δικό της κριτήριο.
+        if (
+          checkContactAccess({
+            contactData: data,
+            caller: ctx,
+            contactId,
+            action: 'ika-insurance-class',
+          }) === 'denied'
+        ) {
+          return contactNotFoundResponse(contactId);
         }
 
         const personas: PersonaData[] = (data.personas as PersonaData[] | undefined) ?? [];

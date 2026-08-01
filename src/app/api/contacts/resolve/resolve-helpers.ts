@@ -13,6 +13,7 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import { BankAccountsServerService } from '@/services/banking/bank-accounts-server.service';
 import type { CurrencyCode } from '@/types/contacts/banking';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
 const logger = createModuleLogger('ContactResolveRoute');
 
@@ -62,6 +63,83 @@ export function resolveDisplayName(doc: Record<string, unknown>): string {
   );
 }
 
+// ── Το άνοιγμα «δική μου επαφή;» ──────────────────────────────────────────────
+
+/**
+ * Ανοίγει την επαφή **μόνο αν ανήκει** στον καλούντα — αλλιώς `null`.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ΓΙΑΤΙ (ADR-742 §7octies · N.18)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Τρεις συναρτήσεις αυτού του αρχείου (`storeContactEmail`,
+ * `setContactLogoIfEmpty`, `ensureSupplierPersona`) έγραφαν **αυτολεξεί** την
+ * ίδια τριάδα:
+ *
+ * ```ts
+ * const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
+ * const snap = await docRef.get();
+ * if (!snap.exists || snap.data()?.companyId !== companyId) return;
+ * ```
+ *
+ * 🔴 **Και οι τρεις είχαν την παγίδα του κενού** (§4): σκέτο `!==` σημαίνει ότι
+ * καλών με χαλασμένο token (`companyId: ''`) **έγραφε** σε κάθε επαφή με κενό ή
+ * απόν `companyId` — και εδώ η ζημιά δεν είναι διαρροή αλλά **εγγραφή**:
+ * προσθήκη email, αλλαγή λογότυπου, προσθήκη ρόλου προμηθευτή σε ξένο έγγραφο.
+ *
+ * ⚠️ Η πολιτική παραμένει **σιωπηλή** (`null`, όχι ρίψη) — αυτές οι συναρτήσεις
+ * είναι βοηθητικά βήματα του `resolve`, όχι σύνορα HTTP, και το ADR-742 §7ter
+ * τις είχε ήδη ταξινομήσει ως **Δ** (σιωπούν ήδη). Αλλάζει ο **έλεγχος**, όχι η
+ * σημασιολογία της αστοχίας.
+ */
+async function openOwnedContact(
+  contactId: string,
+  companyId: string,
+): Promise<{ ref: FirebaseFirestore.DocumentReference; data: FirebaseFirestore.DocumentData } | null> {
+  const db = getAdminFirestore();
+  const ref = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
+  const snap = await ref.get();
+
+  if (!snap.exists) return null;
+
+  const data = snap.data();
+  if (!isPayloadOwnedByCompany(data, companyId)) {
+    logger.warn('Cross-tenant contact write blocked', { contactId, callerCompanyId: companyId });
+    return null;
+  }
+
+  return { ref, data: data! };
+}
+
+/**
+ * Καταγράφει **μία** αλλαγή πεδίου επαφής στο ημερολόγιο οντότητας.
+ *
+ * ⚠️ Εξήχθη επειδή το `jscpd` το μέτρησε ως κλώνο (10 γρ. / 57 tokens) ανάμεσα
+ * στο `storeContactEmail` και στο `ensureSupplierPersona` — **και ο κλώνος
+ * γεννήθηκε από τη ίδια αυτή δουλειά**: όσο τα δύο σημεία διάβαζαν το φορτίο με
+ * διαφορετικό τρόπο (`snap.data()` το καθένα) έμοιαζαν λιγότερο· μόλις το
+ * άνοιγμα ενοποιήθηκε στο {@link openOwnedContact}, οι δύο ουρές έγιναν
+ * **πανομοιότυπες**. Ακριβώς η αστοχία που προβλέπει ο N.18 — απλώς προέκυψε
+ * **ως συνέπεια** μιας σωστής κεντρικοποίησης, όχι πριν από αυτήν.
+ */
+async function recordContactChange(
+  contactId: string,
+  data: FirebaseFirestore.DocumentData,
+  uid: string,
+  companyId: string,
+  change: { field: string; newValue: string; label: string },
+): Promise<void> {
+  await EntityAuditService.recordChange({
+    entityType: ENTITY_TYPES.CONTACT,
+    entityId: contactId,
+    entityName: resolveDisplayName(data as Record<string, unknown>),
+    action: 'updated',
+    changes: [{ ...change, oldValue: null }],
+    performedBy: uid,
+    performedByName: uid,
+    companyId,
+  });
+}
+
 // ── Email storage ─────────────────────────────────────────────────────────────
 
 function inferEmailType(email: string): string {
@@ -79,11 +157,10 @@ export async function storeContactEmail(
   uid: string,
   email: string,
 ): Promise<void> {
-  const db = getAdminFirestore();
-  const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
-  const snap = await docRef.get();
-  if (!snap.exists || snap.data()?.companyId !== companyId) return;
-  const currentEmails = (snap.data()?.emails ?? []) as Array<{ email: string }>;
+  const owned = await openOwnedContact(contactId, companyId);
+  if (owned === null) return;
+  const { ref: docRef, data } = owned;
+  const currentEmails = (data.emails ?? []) as Array<{ email: string }>;
   const normalized = email.toLowerCase().trim();
   if (currentEmails.some((e) => e.email.toLowerCase() === normalized)) return;
   const emailType = inferEmailType(email);
@@ -92,15 +169,10 @@ export async function storeContactEmail(
     updatedAt: FieldValue.serverTimestamp(),
     lastModifiedBy: uid,
   });
-  await EntityAuditService.recordChange({
-    entityType: ENTITY_TYPES.CONTACT,
-    entityId: contactId,
-    entityName: resolveDisplayName(snap.data() as Record<string, unknown>),
-    action: 'updated',
-    changes: [{ field: 'emails', oldValue: null, newValue: `${normalized} (${emailType})`, label: 'Email' }],
-    performedBy: uid,
-    performedByName: uid,
-    companyId,
+  await recordContactChange(contactId, data, uid, companyId, {
+    field: 'emails',
+    newValue: `${normalized} (${emailType})`,
+    label: 'Email',
   });
 }
 
@@ -112,12 +184,10 @@ export async function setContactLogoIfEmpty(
   uid: string,
   logoUrl: string,
 ): Promise<void> {
-  const db = getAdminFirestore();
-  const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
-  const snap = await docRef.get();
-  if (!snap.exists || snap.data()?.companyId !== companyId) return;
-  if (snap.data()?.logoURL) return;
-  await docRef.update({ logoURL: logoUrl, updatedAt: FieldValue.serverTimestamp(), lastModifiedBy: uid });
+  const owned = await openOwnedContact(contactId, companyId);
+  if (owned === null) return;
+  if (owned.data.logoURL) return;
+  await owned.ref.update({ logoURL: logoUrl, updatedAt: FieldValue.serverTimestamp(), lastModifiedBy: uid });
 }
 
 // ── Supplier persona ──────────────────────────────────────────────────────────
@@ -129,11 +199,10 @@ export async function ensureSupplierPersona(
   companyId: string,
   uid: string,
 ): Promise<void> {
-  const db = getAdminFirestore();
-  const docRef = db.collection(COLLECTIONS.CONTACTS).doc(contactId);
-  const snap = await docRef.get();
-  if (!snap.exists || snap.data()?.companyId !== companyId) return;
-  const personaTypes = (snap.data()?.personaTypes ?? []) as string[];
+  const owned = await openOwnedContact(contactId, companyId);
+  if (owned === null) return;
+  const { ref: docRef, data } = owned;
+  const personaTypes = (data.personaTypes ?? []) as string[];
   if (personaTypes.includes('supplier')) return;
   await docRef.update({
     personas: FieldValue.arrayUnion(SUPPLIER_PERSONA),
@@ -141,15 +210,10 @@ export async function ensureSupplierPersona(
     updatedAt: FieldValue.serverTimestamp(),
     lastModifiedBy: uid,
   });
-  await EntityAuditService.recordChange({
-    entityType: ENTITY_TYPES.CONTACT,
-    entityId: contactId,
-    entityName: resolveDisplayName(snap.data() as Record<string, unknown>),
-    action: 'updated',
-    changes: [{ field: 'personaTypes', oldValue: null, newValue: 'supplier', label: 'Persona' }],
-    performedBy: uid,
-    performedByName: uid,
-    companyId,
+  await recordContactChange(contactId, data, uid, companyId, {
+    field: 'personaTypes',
+    newValue: 'supplier',
+    label: 'Persona',
   });
 }
 
