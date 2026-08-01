@@ -11,24 +11,17 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
-// Type alias for canonical response
-type MessagesCanonicalResponse = ApiSuccessResponse<MessagesListResponse>;
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
+import { loadOwnedConversation } from '../../_shared/conversation-owned-doc';
+import { readMessagesPage, type MessageListItem } from './conversation-messages-page';
+import { nowISO } from '@/lib/date-local';
 import { generateRequestId } from '@/services/enterprise-id.service';
-import { fieldToISO, nowISO } from '@/lib/date-local';
-import { getString, getObject } from '@/lib/firestore/field-extractors';
 import { EnterpriseAPICache } from '@/lib/cache/enterprise-api-cache';
-import { type MessageDirection, type DeliveryStatus } from '@/types/conversations';
-import { type CommunicationChannel } from '@/types/communications';
-import { type SenderType } from '@/config/domain-constants';
 import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('ConversationMessagesRoute');
@@ -36,33 +29,6 @@ const logger = createModuleLogger('ConversationMessagesRoute');
 // ============================================================================
 // TYPES
 // ============================================================================
-
-interface MessageListItem {
-  id: string;
-  conversationId: string;
-  direction: MessageDirection;
-  channel: CommunicationChannel;
-  senderId: string;
-  senderName: string;
-  senderType: SenderType;
-  content: {
-    text: string;
-    attachments?: Array<{
-      type: string;
-      url?: string;
-      filename?: string;
-    }>;
-  };
-  providerMessageId: string;
-  deliveryStatus: DeliveryStatus;
-  providerMetadata: {
-    platform?: string;
-    chatId?: string;
-    userName?: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface MessagesListResponse {
   messages: MessageListItem[];
@@ -148,8 +114,29 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE), 10)));
   const order = searchParams.get('order') === 'asc' ? 'asc' : 'desc';
 
-  // Build cache key
-  const cacheKey = `${CACHE_KEY_PREFIX}:${conversationId}:p${page}:s${pageSize}:${order}`;
+  // ──────────────────────────────────────────────────────────────────────────
+  // CRITICAL: Ownership validation — φόρτωσε **και** κρίνε σε μία πράξη.
+  //
+  // Ξένη συνομιλία είναι πλέον δυσδιάκριτη από ανύπαρκτη: πριν, το 403
+  // «You can only access conversations from your company» **περιέγραφε τον
+  // λόγο**, δηλαδή επιβεβαίωνε ότι το id υπάρχει (ADR-742 §7decies).
+  //
+  // 🔴🔴 Η ΣΕΙΡΑ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ ΑΣΦΑΛΕΙΑΣ, ΟΧΙ ΑΙΣΘΗΤΙΚΗ (ADR-742 §7decies.2):
+  // μέχρι τις 2026-08-01 ο έλεγχος ερχόταν **ΜΕΤΑ** την ανάγνωση της μνήμης, και
+  // το κλειδί **δεν περιείχε μισθωτή** ⇒ όποιος ζητούσε το ίδιο conversationId
+  // με τις ίδιες παραμέτρους σελίδας έπαιρνε **CACHE HIT** με τα μηνύματα ξένης
+  // εταιρείας, χωρίς να τρέξει ποτέ φύλακας. Διαρροή **περιεχομένου**, όχι
+  // ύπαρξης — το ίδιο είδος με τη §7octies.
+  await loadOwnedConversation({
+    conversationId,
+    caller: ctx,
+    action: 'list-messages',
+  });
+
+  // Build cache key — **με μισθωτή**: δεύτερη ζώνη, ώστε ακόμη κι αν κάποιος
+  // μετακινήσει ξανά τον φύλακα, οι εγγραφές δύο εταιρειών να μη μοιράζονται
+  // ποτέ θέση (belt-and-suspenders· N.7.2 #4).
+  const cacheKey = `${CACHE_KEY_PREFIX}:${ctx.companyId}:${conversationId}:p${page}:s${pageSize}:${order}`;
 
   // Check cache
   const cache = EnterpriseAPICache.getInstance();
@@ -164,75 +151,14 @@ async function handleListMessages(request: NextRequest, ctx: AuthContext, conver
 
   logger.info('[Messages/List] Cache miss - Fetching from Firestore');
 
-  // CRITICAL: Ownership validation - verify conversation belongs to user's company
-  const convDoc = await getAdminFirestore()
-    .collection(COLLECTIONS.CONVERSATIONS)
-    .doc(conversationId)
-    .get();
-
-  if (!convDoc.exists) {
-    throw new ApiError(404, `Conversation ${conversationId} not found`);
-  }
-
-  const convData = convDoc.data();
-  if (convData?.companyId !== ctx.companyId) {
-    logger.warn('[Messages/List] Unauthorized attempt', {
-      userId: ctx.uid,
-      userCompany: ctx.companyId,
-      conversationId,
-      conversationCompany: convData?.companyId
-    });
-    throw new ApiError(403, 'Unauthorized: You can only access conversations from your company');
-  }
-
-  // Build query
-  const query = getAdminFirestore()
-    .collection(COLLECTIONS.MESSAGES)
-    .where('conversationId', '==', conversationId)
-    .orderBy(FIELDS.CREATED_AT, order);
-
-  // Get total count
-  const countSnapshot = await query.count().get();
-  const totalCount = countSnapshot.data().count;
-
-  // Apply pagination
-  const offset = (page - 1) * pageSize;
-  const paginatedQuery = query.offset(offset).limit(pageSize);
-
-  // Execute query
-  const snapshot = await paginatedQuery.get();
-  logger.info('[Messages/List] Found messages', { count: snapshot.docs.length, totalCount });
-
-  // Map to response type
-  const messages: MessageListItem[] = snapshot.docs.map(doc => {
-    const data = doc.data() as Record<string, unknown>;
-
-    const content = getObject<Record<string, unknown>>(data, 'content', {});
-    const providerMetadata = getObject<Record<string, unknown>>(data, 'providerMetadata', {});
-
-    return {
-      id: doc.id,
-      conversationId: getString(data, 'conversationId') ?? conversationId,
-      direction: getString(data, 'direction', 'inbound') as MessageDirection,
-      channel: getString(data, 'channel', 'telegram') as CommunicationChannel,
-      senderId: getString(data, 'senderId') ?? '',
-      senderName: getString(data, 'senderName') ?? '',
-      senderType: getString(data, 'senderType', 'customer') as SenderType,
-      content: {
-        text: getString(content, 'text') ?? '',
-        attachments: content.attachments as MessageListItem['content']['attachments'],
-      },
-      providerMessageId: getString(data, 'providerMessageId') ?? '',
-      deliveryStatus: getString(data, 'deliveryStatus', 'sent') as DeliveryStatus,
-      providerMetadata: {
-        platform: getString(providerMetadata, 'platform'),
-        chatId: getString(providerMetadata, 'chatId'),
-        userName: getString(providerMetadata, 'userName'),
-      },
-      createdAt: fieldToISO(data, 'createdAt'),
-      updatedAt: fieldToISO(data, 'updatedAt'),
-    };
+  const { messages, totalCount, offset } = await readMessagesPage({
+    conversationId,
+    page,
+    pageSize,
+    order,
   });
+
+  logger.info('[Messages/List] Found messages', { count: messages.length, totalCount });
 
   // Build response
   const response: MessagesListResponse = {
