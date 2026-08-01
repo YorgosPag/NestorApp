@@ -7,6 +7,7 @@ import {
   FieldValue,
 } from '@/lib/firebaseAdmin';
 import { uploadPublicFile } from '@/services/storage-admin/public-upload.service';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   ENTITY_TYPES,
@@ -212,7 +213,10 @@ export async function handleGet(
       const fileSnap = await db.collection(COLLECTIONS.FILES).doc(background.fileId).get();
       if (fileSnap.exists) {
         const fdata = fileSnap.data() as { companyId?: string; downloadUrl?: string } | undefined;
-        if (fdata?.companyId === ctx.companyId) {
+        // ADR-742 §4 — ήταν σκέτο `===` πάνω σε `as`: αρχείο με κενό `companyId`
+        // και καλών με χαλασμένο token «ταίριαζαν». Ο εμπλουτισμός μένει
+        // **σιωπηλός** (ξένο ⇒ `fileRecord: null`), όπως και πριν.
+        if (isPayloadOwnedByCompany(fdata, ctx.companyId)) {
           fileRecord = { id: background.fileId, downloadUrl: fdata.downloadUrl ?? null };
         }
       }

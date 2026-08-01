@@ -21,6 +21,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth, logAuditEvent, requireProjectInTenant, TenantIsolationError } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { isRoleBypass } from '@/lib/auth/roles';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { getContactDisplayName, getPrimaryPhone, getPrimaryEmail } from '@/types/contacts';
 import type { Contact } from '@/types/contacts';
 import { COLLECTIONS, FIRESTORE_LIMITS } from '@/config/firestore-collections';
@@ -191,10 +192,9 @@ export const GET = withStandardRateLimit(async function GET(
         // Filter contacts to ensure tenant isolation (extra safety — skip for super admin)
         const tenantContacts = isSuperAdmin
           ? contactsSnapshot.docs
-          : contactsSnapshot.docs.filter(doc => {
-              const data = doc.data();
-              return data.companyId === ctx.companyId;
-            });
+          // ADR-742 §4 — σκέτο `===`: επαφή με κενό `companyId` και καλών με
+          // χαλασμένο token «ταίριαζαν». Φίλτρο λίστας, άρα **σιωπηλό** (§7ter.1).
+          : contactsSnapshot.docs.filter(doc => isPayloadOwnedByCompany(doc.data(), ctx.companyId));
 
         logger.info('Contacts found', { count: tenantContacts.length });
 
