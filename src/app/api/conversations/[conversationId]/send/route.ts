@@ -15,153 +15,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
+import { ApiError, apiSuccess } from '@/lib/api/ApiErrorHandler';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 
-// Type alias for canonical response
-type SendMessageCanonicalResponse = ApiSuccessResponse<SendMessageResponse>;
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { loadOwnedConversation } from '../../_shared/conversation-owned-doc';
 import { generateRequestId } from '@/services/enterprise-id.service';
-import { COMMUNICATION_CHANNELS } from '@/types/communications';
-import {
-  MESSAGE_DIRECTION,
-  DELIVERY_STATUS,
-  type MessageAttachment,
-} from '@/types/conversations';
-import {
-  BOT_IDENTITY,
-  SENDER_TYPES,
-  PLATFORMS,
-  CONVERSATION_PREVIEW_LENGTH,
-} from '@/config/domain-constants';
 import { sendTelegramMessage } from '@/app/api/communications/webhooks/telegram/telegram/client';
-import { generateMessageDocId } from '@/server/lib/id-generation';
-import type { MessageDocument } from '@/server/types/conversations.firestore';
+import { storeOutboundMessage } from './store-outbound-message';
+import type {
+  SendMessageRequest,
+  SendMessageResponse,
+  SendMessageCanonicalResponse,
+} from './types';
+import { COMMUNICATION_CHANNELS } from '@/types/communications';
+import type { MessageAttachment } from '@/types/conversations';
 import type { TelegramSendPayload } from '@/app/api/communications/webhooks/telegram/telegram/types';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ConversationSendRoute');
-
-// ============================================================================
-// TYPES (ADR-055 - Enterprise Attachment System)
-// ============================================================================
-
-/**
- * Attachment in request body (already uploaded to Storage)
- * @enterprise ADR-055 - Canonical attachment format
- */
-interface RequestAttachment {
-  type: 'image' | 'document' | 'audio' | 'video' | 'location' | 'contact';
-  url: string;
-  filename?: string;
-  mimeType?: string;
-  size?: number;
-}
-
-interface SendMessageRequest {
-  /** Text content (optional if attachments present) */
-  text?: string;
-  /** Reply to a specific message */
-  replyToMessageId?: string;
-  /** Parse mode for Telegram */
-  parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
-  /** 🏢 ENTERPRISE: Attachments (ADR-055) */
-  attachments?: RequestAttachment[];
-}
-
-interface SendMessageResponse {
-  success: boolean;
-  messageId: string | null;
-  providerMessageId: number | null;
-  conversationId: string;
-  sentAt: string;
-}
-
-// ============================================================================
-// STORE OUTBOUND MESSAGE - ENTERPRISE CONTRACTS
-// ============================================================================
-
-/**
- * Store outbound message with optional attachments
- * @enterprise ADR-055 - Enhanced for attachment support
- */
-async function storeOutboundMessage(
-  conversationId: string,
-  chatId: string,
-  text: string,
-  providerMessageId: number,
-  companyId: string, // 🏢 TENANT ISOLATION: Required for Firestore security rules
-  attachments?: MessageAttachment[] // 🏢 ADR-055: Optional attachments
-): Promise<string | null> {
-  try {
-    const messageDocId = generateMessageDocId(
-      COMMUNICATION_CHANNELS.TELEGRAM,
-      chatId,
-      String(providerMessageId)
-    );
-
-    const now = Timestamp.now();
-
-    // 🏢 ADR-055: Build content object with optional attachments
-    const content: { text?: string; attachments?: MessageAttachment[] } = {};
-    if (text) {
-      content.text = text;
-    }
-    if (attachments && attachments.length > 0) {
-      content.attachments = attachments;
-    }
-
-    // Store in MESSAGES collection - ENTERPRISE: Using satisfies for type safety
-    const messageData: MessageDocument = {
-      id: messageDocId,
-      companyId, // 🏢 CRITICAL: Tenant isolation field for Firestore security rules
-      conversationId,
-      direction: MESSAGE_DIRECTION.OUTBOUND,
-      channel: COMMUNICATION_CHANNELS.TELEGRAM,
-      senderId: BOT_IDENTITY.ID,
-      senderName: BOT_IDENTITY.DISPLAY_NAME,
-      senderType: SENDER_TYPES.BOT,
-      content,
-      providerMessageId: String(providerMessageId),
-      deliveryStatus: DELIVERY_STATUS.SENT,
-      providerMetadata: {
-        platform: PLATFORMS.TELEGRAM,
-        chatId,
-      },
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageDocId).set(messageData);
-
-    // Update conversation lastMessage - ENTERPRISE: Using constants
-    // For attachment-only messages, show "[Attachment]" as preview
-    const previewText = text
-      ? text.substring(0, CONVERSATION_PREVIEW_LENGTH)
-      : attachments && attachments.length > 0
-        ? `📎 ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}`
-        : '';
-
-    await getAdminFirestore().collection(COLLECTIONS.CONVERSATIONS).doc(conversationId).update({
-      'lastMessage.content': previewText,
-      'lastMessage.direction': MESSAGE_DIRECTION.OUTBOUND,
-      'lastMessage.timestamp': FieldValue.serverTimestamp(),
-      messageCount: FieldValue.increment(1),
-      'audit.updatedAt': FieldValue.serverTimestamp(),
-    });
-
-    logger.info('Outbound message stored', { messageDocId, attachmentCount: attachments?.length || 0 });
-    return messageDocId;
-
-  } catch (error) {
-    logger.error('Failed to store outbound message', { error: getErrorMessage(error) });
-    return null;
-  }
-}
 
 // ============================================================================
 // FORCE DYNAMIC
@@ -235,27 +110,15 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
     }
   }
 
-  // CRITICAL: Ownership validation - verify conversation belongs to user's company
-  const convDoc = await getAdminFirestore()
-    .collection(COLLECTIONS.CONVERSATIONS)
-    .doc(conversationId)
-    .get();
-
-  if (!convDoc.exists) {
-    throw new ApiError(404, `Conversation ${conversationId} not found`);
-  }
-
-  const convData = convDoc.data();
-
-  if (convData?.companyId !== ctx.companyId) {
-    logger.warn('[Send] Unauthorized attempt', {
-      userId: ctx.uid,
-      userCompany: ctx.companyId,
-      conversationId,
-      conversationCompany: convData?.companyId
-    });
-    throw new ApiError(403, 'Unauthorized: You can only send messages to conversations from your company');
-  }
+  // CRITICAL: Ownership validation — φόρτωσε **και** κρίνε σε μία πράξη.
+  // Πριν, το 403 «You can only send messages to conversations from your
+  // company» **περιέγραφε τον λόγο** της άρνησης, δηλαδή επιβεβαίωνε ότι το id
+  // υπάρχει· τώρα είναι δυσδιάκριτο από το γνήσιο «δεν βρέθηκε» (ADR-742 §7decies).
+  const { data: convData } = await loadOwnedConversation({
+    conversationId,
+    caller: ctx,
+    action: 'send',
+  });
 
   const channel = convData?.channel;
 
@@ -387,14 +250,14 @@ async function handleSendMessage(request: NextRequest, ctx: AuthContext, convers
   // Store in CRM (only if we have provider message ID)
   let storedMessageId: string | null = null;
   if (providerMessageId) {
-    storedMessageId = await storeOutboundMessage(
+    storedMessageId = await storeOutboundMessage({
       conversationId,
-      telegramChatId,
-      hasText ? body.text!.trim() : '',
+      chatId: telegramChatId,
+      text: hasText ? body.text!.trim() : '',
       providerMessageId,
-      messageCompanyId, // 🏢 CRITICAL: Pass companyId for Firestore security rules
-      messageAttachments // 🏢 ADR-055: Pass attachments
-    );
+      companyId: messageCompanyId, // 🏢 CRITICAL: Firestore security rules
+      attachments: messageAttachments, // 🏢 ADR-055
+    });
   }
 
   const duration = Date.now() - startTime;
