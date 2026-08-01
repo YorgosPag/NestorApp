@@ -16,6 +16,7 @@
   },
   "chart": {
     "title": "Cash Flow Projection",
+    "period": "Period",
     "inflow": "Inflows",
     "outflow": "Outflows",
     "balance": "Balance",

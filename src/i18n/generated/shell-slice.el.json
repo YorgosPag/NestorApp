@@ -221,9 +221,12 @@
         "fpsHistogram": "Κατανομή FPS",
         "fpsHistogramAxis": "FPS",
         "fpsHistogramCount": "Αναφορές",
+        "gpuTierLabel": "Κατηγορία GPU",
         "gpuTierPie": "Κατηγορίες GPU",
+        "modeLabel": "Λειτουργία",
         "modeUsageBar": "Χρήση λειτουργιών",
         "noData": "Δεν υπάρχουν δεδομένα",
+        "tierCount": "Αναφορές",
         "title": "Συγκεντρωτικά γραφήματα"
       },
       "description": "Διαχείριση και διαλογή των αναφορών απόδοσης από το 3D Viewer",

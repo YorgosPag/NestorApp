@@ -1301,7 +1301,10 @@
       "fpsHistogramCount": "Αναφορές",
       "gpuTierPie": "Κατηγορίες GPU",
       "modeUsageBar": "Χρήση λειτουργιών",
-      "noData": "Δεν υπάρχουν δεδομένα"
+      "noData": "Δεν υπάρχουν δεδομένα",
+      "gpuTierLabel": "Κατηγορία GPU",
+      "modeLabel": "Λειτουργία",
+      "tierCount": "Αναφορές"
     },
     "actions": {
       "exportCsv": "Εξαγωγή CSV",

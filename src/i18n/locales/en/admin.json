@@ -1301,7 +1301,10 @@
       "fpsHistogramCount": "Reports",
       "gpuTierPie": "GPU tiers",
       "modeUsageBar": "Mode usage",
-      "noData": "No data"
+      "noData": "No data",
+      "gpuTierLabel": "GPU tier",
+      "modeLabel": "Render mode",
+      "tierCount": "Reports"
     },
     "actions": {
       "exportCsv": "Export CSV",

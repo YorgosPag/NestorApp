@@ -347,18 +347,21 @@
       "byCategory": {
         "title": "Spend by ATOE Category",
         "ariaLabel": "Spend by ATOE category — top 10 horizontal bar chart",
-        "empty": "No category spend for the selected filters"
+        "empty": "No category spend for the selected filters",
+        "categoryLabel": "ATOE category"
       },
       "byVendor": {
         "title": "Spend by Vendor (Pareto)",
         "ariaLabel": "Pareto chart of vendor spend — top 10 with cumulative percentage",
         "empty": "No vendor spend for the selected filters",
-        "cumulative": "Cumulative %"
+        "cumulative": "Cumulative %",
+        "categoryLabel": "Vendor"
       },
       "byProject": {
         "title": "Spend by Project",
         "ariaLabel": "Spend by project — top 10 bar chart",
-        "empty": "No project spend for the selected filters"
+        "empty": "No project spend for the selected filters",
+        "categoryLabel": "Project"
       },
       "monthlyTrend": {
         "title": "Monthly Spend Trend",
@@ -366,7 +369,8 @@
         "empty": "No monthly data for the selected period",
         "currentLabel": "Current period",
         "previousLabel": "Previous period",
-        "previousPending": "Comparison with previous period will be added in a follow-up phase."
+        "previousPending": "Comparison with previous period will be added in a follow-up phase.",
+        "categoryLabel": "Month"
       },
       "budgetVsActual": {
         "title": "Budget vs Committed vs Delivered per Category",
@@ -376,7 +380,8 @@
         "committed": "Committed",
         "delivered": "Delivered",
         "offBudget": "Off-budget",
-        "offBudgetTooltip": "Category has spend but no matching BOQ entry — off-budget."
+        "offBudgetTooltip": "Category has spend but no matching BOQ entry — off-budget.",
+        "categoryLabel": "ATOE category"
       }
     }
   },
@@ -416,7 +421,8 @@
         "tooltip": "BOQ budget compared to committed PO spend per ATOE category",
         "noBoq": "No BOQ items — add measurements to see budget comparison",
         "budget": "Budget",
-        "committed": "Committed"
+        "committed": "Committed",
+        "categoryLabel": "ATOE category"
       },
       "boqCoverage": {
         "label": "BOQ Coverage",
