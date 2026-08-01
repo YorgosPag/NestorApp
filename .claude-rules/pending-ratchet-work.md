@@ -2,6 +2,19 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **Τρεις εναπομείναντες χειρόγραφοι union-find στο `dxf-viewer` (μετρημένο 2026-08-01, ADR-745 Φ1 κατά N.0.2).**
+  Ο αλγόριθμος υπήρχε **τέσσερις** φορές· ο ένας κεντρικοποιήθηκε. Κανονικός SSoT:
+  `src/subapps/dxf-viewer/utils/connected-components.ts` (`computeConnectedComponents` /
+  `groupIndicesByComponent`, με συμπίεση διαδρομής + ένωση κατά μέγεθος, 6 tests).
+  · ✅ `bim/thermal/sizing/pipe-network-graph.ts:computeComponents` → περιτύλιγμα (541 tests πράσινα).
+  · ⬜ `bim/mep-systems/mep-pipe-junctions.ts:129` — «Union-find root with path compression (mirrors network-derive)» — **το ίδιο το σχόλιο δηλώνει το clone**.
+  · ⬜ `bim/mep-systems/mep-pipe-network-derive.ts:115`.
+  · ⬜ `bim/foundations/auto-foundation-layout.ts:187-206` (grouping κολωνών).
+  · ⬜ `bim/walls/wall-trims-corner-resolve.ts:281` (ενσωματωμένο σε μεγαλύτερη ρουτίνα — θέλει προσοχή).
+  · **Γιατί καταγραφή και όχι διόρθωση τώρα**: 4 αρχεία σε 3 τομείς (MEP / θεμελιώσεις / τοίχοι), το καθένα με δικές του δοκιμές· >1h και το `dxf-viewer` δουλεύεται **παράλληλα** από άλλον agent.
+  · ⚠️ **ΜΗΝ προστεθεί εγγραφή στο `.ssot-registry.json` πριν μεταφερθούν και οι τρεις**: ένα `forbiddenPatterns` θα άναβε αμέσως στα εναπομείναντα αντίγραφα και θα απαιτούσε ανανέωση baseline σε κοινό working tree.
+  · Εντολή ελέγχου: `grep -rn "path compression\|Union-find\|union-find" src/subapps/dxf-viewer --include=*.ts | grep -v __tests__`.
+
 - 🟡 **ΔΥΟ παράλληλοι dispatchers πάνω στο ίδιο λεξιλόγιο εργαλείων, 367 + 305 γραμμές (μετρημένο 2026-07-31, κατά N.0.2 στον κύκλο ADR-739 Φ.Δ).**
   Όριο N.7.1 = **40 γραμμές**. `createEntityFromTool` (`hooks/drawing/drawing-entity-builders.ts:96-462`) = **367 γρ.** / `switch` με **27 `case`**· `generatePreviewEntity` (`hooks/drawing/drawing-preview-generator.ts:181-485`) = **305 γρ.** / αλυσίδα **42 `if (tool === …)`**. Και τα δύο **αρχεία** μένουν κάτω από το όριο των 500 (471 / 487) — γι' αυτό **κανένα gate δεν τα βλέπει**: το pre-commit ελέγχει μέγεθος **αρχείου**, όχι **συνάρτησης**.
   · 🔴 **Το πρόβλημα ΔΕΝ είναι το μήκος — είναι ότι είναι ΔΥΟ.** Κάθε νέο εργαλείο απαιτεί επεξεργασία **δύο** σημείων αποστολής (τι χτίζεται · τι φαίνεται ως ghost) που **δεν έχουν τίποτα να τα κρατά συγχρονισμένα**. Ο σωστός τύπος διόρθωσης είναι **μητρώο `tool → { build, preview }`** (ένα σημείο καταχώρησης, exhaustiveness από τον compiler), **όχι** «εξαγωγή helpers» — αυτή θα έφτιαχνε δύο *μικρότερους* dispatchers που εξακολουθούν να αποκλίνουν.
