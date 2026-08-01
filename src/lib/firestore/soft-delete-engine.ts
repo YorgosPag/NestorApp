@@ -74,7 +74,8 @@ function recordLifecycleAudit(
  * Does NOT delete data — only changes status.
  *
  * @throws ApiError(404) if document not found
- * @throws ApiError(403) if tenant mismatch
+ * @throws ApiError(404) if it belongs to another company — **σκόπιμα ίδιο με το
+ *   «δεν βρέθηκε»**: ξένο ≡ ανύπαρκτο στο σύρμα (ADR-742 §3.3 · §7decies.4)
  * @throws ApiError(409) if already in trash
  */
 export async function softDelete(
@@ -158,7 +159,7 @@ export async function softDelete(
  * Restore: brings entity back from trash to previous status.
  *
  * @throws ApiError(404) if not found
- * @throws ApiError(403) tenant isolation
+ * @throws ApiError(404) if it belongs to another company (ADR-742 §7decies.4)
  * @throws ApiError(409) if NOT in trash
  */
 export async function restoreFromTrash(
@@ -352,7 +353,8 @@ interface LifecycleTarget {
  *                     permanent-delete deliberately never bypass — preserved as
  *                     it shipped, not unified.
  * @throws ApiError(404) if the document does not exist
- * @throws ApiError(403) if it belongs to another company
+ * @throws ApiError(404) if it belongs to another company — **ίδιο** σφάλμα με το
+ *   «δεν βρέθηκε» (ADR-742 §7.1)
  */
 async function loadLifecycleTarget(
   db: FirebaseFirestore.Firestore,
