@@ -65,6 +65,41 @@ export function tenantScopeCompanyId(scope: AnyTenantScope): string | null {
 }
 
 /**
+ * Constrain a query to one **already-decided** company. Never skips.
+ *
+ * This is the one line that puts a tenant on the wire — `where(companyId, ==, x)`
+ * — and nothing more. It is deliberately the *unconditional* half: every caller
+ * that may legitimately end up with **no** filter states its own reason for that,
+ * in its own module, and the reasons stay apart.
+ *
+ * That separation is the whole point (ADR-742 §3.2). There are two unrelated
+ * reasons a tenant filter can be absent, and they must never share a branch:
+ *
+ * | reason | question | lives in |
+ * |---|---|---|
+ * | the caller may read **every** company | «what may this caller list?» | {@link scopeQueryToTenant} |
+ * | the collection has **no** `companyId` field | «does this collection carry a tenant?» | `dependency-tenant-scope.ts` |
+ *
+ * Merge them and an unscoped query stops being self-explaining: nobody can tell
+ * a deliberate super-admin read from a filter someone forgot to apply.
+ *
+ * ⚠️ Not an entry point for routes. A route must arrive here through a *resolved*
+ * scope — {@link tenantScopedCollection} or {@link scopeQueryToTenant} — because
+ * a raw `companyId` string is exactly what this module exists to stop people
+ * assembling by hand.
+ *
+ * @param query     Query to constrain
+ * @param companyId Effective tenant, already decided by a caller that is allowed to decide it
+ * @see ADR-742 §7novies — the registry rule that composes with this
+ */
+export function scopeQueryToCompany(
+  query: FirebaseFirestore.Query,
+  companyId: string,
+): FirebaseFirestore.Query {
+  return query.where(FIELDS.COMPANY_ID, '==', companyId);
+}
+
+/**
  * Apply a resolved scope to an existing query.
  *
  * Use when the query already exists — a collection group, or a collection
@@ -80,7 +115,7 @@ export function scopeQueryToTenant(
   scope: AnyTenantScope,
 ): FirebaseFirestore.Query {
   const companyId = tenantScopeCompanyId(scope);
-  return companyId === null ? query : query.where(FIELDS.COMPANY_ID, '==', companyId);
+  return companyId === null ? query : scopeQueryToCompany(query, companyId);
 }
 
 /**

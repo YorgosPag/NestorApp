@@ -14,15 +14,19 @@ import 'server-only';
 
 import {
   LINK_REMOVAL_REGISTRY,
-  DEPENDENCY_REMEDIATIONS,
   type EntityType,
   type CompoundDependencyDef,
   type DependencyCheckResult,
 } from '@/config/deletion-registry';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { FIELDS } from '@/config/firestore-field-constants';
-import { MAX_PREVIEW_IDS, getDefaultRemediation } from './deletion-common';
+import { tenantScopedDependencyQuery } from './dependency-tenant-scope';
+import {
+  MAX_PREVIEW_IDS,
+  summarizeDependencyCheck,
+  toDependencyOutcome,
+  unavailableDependencyOutcome,
+} from './deletion-common';
 
 const logger = createModuleLogger('LinkRemovalGuard');
 
@@ -49,25 +53,15 @@ export async function checkLinkRemovalDependencies(
     deps.map((dep) => checkCompoundDependency(db, dep, contactId, targetEntityId, companyId))
   );
 
-  const blocking = results.filter((r) => r.count !== 0);
-  const totalDependents = blocking.reduce((sum, r) => sum + Math.max(0, r.count), 0);
-
-  if (blocking.length === 0) {
-    return { allowed: true, dependencies: [], totalDependents: 0, message: 'Δεν υπάρχουν εξαρτήσεις. Η αφαίρεση επιτρέπεται.' };
-  }
-
-  const depLabels = blocking
-    .map((d) => d.count > 0 ? `${d.label} (${d.count})` : `${d.label} (έλεγχος μη διαθέσιμος)`)
-    .join(', ');
-
-  return {
-    allowed: false,
-    dependencies: blocking,
-    totalDependents,
-    message: totalDependents > 0
-      ? `Ο συνεργάτης δεν μπορεί να αφαιρεθεί. Εμπλέκεται σε ${totalDependents} εγγραφές: ${depLabels}.`
-      : `Ο συνεργάτης δεν μπορεί να αφαιρεθεί λόγω σφάλματος ελέγχου εξαρτήσεων: ${depLabels}. Δοκιμάστε ξανά.`,
-  };
+  // Ίδιος μηχανισμός με τον φύλακα διαγραφής, **άλλο** λεξιλόγιο: η αφαίρεση
+  // δεσμού δεν είναι διαγραφή (ADR-742 §7novies).
+  return summarizeDependencyCheck(results, {
+    allowed: 'Δεν υπάρχουν εξαρτήσεις. Η αφαίρεση επιτρέπεται.',
+    blocked: (total, labels) =>
+      `Ο συνεργάτης δεν μπορεί να αφαιρεθεί. Εμπλέκεται σε ${total} εγγραφές: ${labels}.`,
+    unavailable: (labels) =>
+      `Ο συνεργάτης δεν μπορεί να αφαιρεθεί λόγω σφάλματος ελέγχου εξαρτήσεων: ${labels}. Δοκιμάστε ξανά.`,
+  });
 }
 
 /**
@@ -81,11 +75,9 @@ async function checkCompoundDependency(
   companyId: string
 ): Promise<DependencyCheckResult['dependencies'][number]> {
   try {
-    let query: FirebaseFirestore.Query = db.collection(dep.collection);
-
-    if (!dep.skipCompanyFilter) {
-      query = query.where(FIELDS.COMPANY_ID, '==', companyId);
-    }
+    // Ο κανόνας του μητρώου («φέρει η συλλογή companyId;») ζει μία φορά:
+    // ADR-742 §7novies.
+    let query = tenantScopedDependencyQuery(db, dep.collection, dep, companyId);
 
     query = dep.contactQueryType === 'array-contains'
       ? query.where(dep.contactField, 'array-contains', contactId)
@@ -96,25 +88,12 @@ async function checkCompoundDependency(
       : query.where(dep.scopeField, '==', scopeEntityId);
 
     const snapshot = await query.limit(MAX_PREVIEW_IDS + 1).get();
-    const documentIds = snapshot.docs.slice(0, MAX_PREVIEW_IDS).map((doc) => doc.id);
 
-    return {
-      label: dep.label,
-      collection: dep.collection,
-      count: snapshot.size,
-      remediation: dep.remediation ?? getDefaultRemediation(dep.collection),
-      documentIds,
-    };
+    return toDependencyOutcome(dep, snapshot);
   } catch (err) {
     logger.error(`[LinkRemovalGuard] Failed to check ${dep.collection}`, {
       error: getErrorMessage(err), contactId, scopeEntityId,
     });
-    return {
-      label: dep.label,
-      collection: dep.collection,
-      count: -1,
-      remediation: DEPENDENCY_REMEDIATIONS.guardUnavailable,
-      documentIds: [],
-    };
+    return unavailableDependencyOutcome(dep);
   }
 }

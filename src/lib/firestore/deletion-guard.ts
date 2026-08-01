@@ -21,14 +21,18 @@ import {
   type DependencyDef,
   type CascadeDependencyDef,
   type DependencyCheckResult,
-  DEPENDENCY_REMEDIATIONS,
 } from '@/config/deletion-registry';
 import { EntityAuditService } from '@/services/entity-audit.service';
 import { ApiError } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
-import { FIELDS } from '@/config/firestore-field-constants';
-import { MAX_PREVIEW_IDS, getDefaultRemediation } from './deletion-common';
+import { tenantScopedDependencyQuery } from './dependency-tenant-scope';
+import {
+  MAX_PREVIEW_IDS,
+  summarizeDependencyCheck,
+  toDependencyOutcome,
+  unavailableDependencyOutcome,
+} from './deletion-common';
 import {
   executeStorageCleanup,
   type StorageCleanupResult,
@@ -91,33 +95,15 @@ export async function checkDeletionDependencies(
   );
 
   // ── Aggregate results ──
-  // count > 0: real blocking dependencies
-  // count < 0 (=== -1): query error — treat as blocking (safe default, better than allowing deletion)
-  const blocking = results.filter((r) => r.count !== 0);
-  // Exclude error cases (-1) from the count total to avoid showing misleading numbers
-  const totalDependents = blocking.reduce((sum, r) => sum + Math.max(0, r.count), 0);
-
-  if (blocking.length === 0) {
-    return {
-      allowed: true,
-      dependencies: [],
-      totalDependents: 0,
-      message: 'Δεν υπάρχουν εξαρτήσεις. Η διαγραφή επιτρέπεται.',
-    };
-  }
-
-  const depLabels = blocking
-    .map((d) => d.count > 0 ? `${d.label} (${d.count})` : `${d.label} (έλεγχος μη διαθέσιμος)`)
-    .join(', ');
-
-  return {
-    allowed: false,
-    dependencies: blocking,
-    totalDependents,
-    message: totalDependents > 0
-      ? `Η διαγραφή αποκλείεται. Υπάρχουν ${totalDependents} εξαρτώμενες εγγραφές: ${depLabels}. Διαγράψτε τες πρώτα.`
-      : `Η διαγραφή αποκλείεται λόγω σφάλματος ελέγχου εξαρτήσεων: ${depLabels}. Δοκιμάστε ξανά.`,
-  };
+  // Ο μηχανισμός (τι μπλοκάρει, πώς μετριέται) ζει μία φορά στο
+  // `deletion-common`· εδώ μένει μόνο το λεξιλόγιο της διαγραφής.
+  return summarizeDependencyCheck(results, {
+    allowed: 'Δεν υπάρχουν εξαρτήσεις. Η διαγραφή επιτρέπεται.',
+    blocked: (total, labels) =>
+      `Η διαγραφή αποκλείεται. Υπάρχουν ${total} εξαρτώμενες εγγραφές: ${labels}. Διαγράψτε τες πρώτα.`,
+    unavailable: (labels) =>
+      `Η διαγραφή αποκλείεται λόγω σφάλματος ελέγχου εξαρτήσεων: ${labels}. Δοκιμάστε ξανά.`,
+  });
 }
 
 // ============================================================================
@@ -158,15 +144,9 @@ async function executeCascadeDeletions(
 
   for (const dep of cascadeDeps) {
     try {
-      // Subcollection support: collectionGroup targets every subcollection
-      // with matching ID (e.g. `items` under `dxf_overlay_levels/*/items`).
-      let query: FirebaseFirestore.Query = dep.useCollectionGroup
-        ? db.collectionGroup(dep.collection)
-        : db.collection(dep.collection);
-
-      if (!dep.skipCompanyFilter) {
-        query = query.where(FIELDS.COMPANY_ID, '==', companyId);
-      }
+      // Subcollection support (`useCollectionGroup`) και το φίλτρο μισθωτή
+      // λύνονται μαζί, μία φορά: ADR-742 §7novies.
+      let query = tenantScopedDependencyQuery(db, dep.collection, dep, companyId);
 
       if (dep.queryType === 'array-contains') {
         query = query.where(dep.foreignKey, 'array-contains', entityId);
@@ -354,12 +334,9 @@ async function checkSingleDependency(
   companyId: string
 ): Promise<DependencyCheckResult['dependencies'][number]> {
   try {
-    let query: FirebaseFirestore.Query = db.collection(dep.collection);
-
-    // Tenant isolation — skip for collections without companyId (e.g. accounting_invoices)
-    if (!dep.skipCompanyFilter) {
-      query = query.where(FIELDS.COMPANY_ID, '==', companyId);
-    }
+    // Tenant isolation — skip only for collections without companyId
+    // (e.g. accounting_invoices). Ο κανόνας ζει μία φορά: ADR-742 §7novies.
+    let query = tenantScopedDependencyQuery(db, dep.collection, dep, companyId);
 
     // Apply optional normalizer: some foreign keys may be stored as a different
     // type in Firestore (e.g., legacy numeric projectId as number vs string).
@@ -375,17 +352,7 @@ async function checkSingleDependency(
     // Limit to MAX_PREVIEW_IDS + 1 to know if there are more
     const snapshot = await query.limit(MAX_PREVIEW_IDS + 1).get();
 
-    const documentIds = snapshot.docs
-      .slice(0, MAX_PREVIEW_IDS)
-      .map((doc) => doc.id);
-
-    return {
-      label: dep.label,
-      collection: dep.collection,
-      count: snapshot.size,
-      remediation: dep.remediation ?? getDefaultRemediation(dep.collection),
-      documentIds,
-    };
+    return toDependencyOutcome(dep, snapshot);
   } catch (err) {
     logger.error(`[DeletionGuard] Failed to check dependency ${dep.collection}.${dep.foreignKey}`, {
       error: getErrorMessage(err),
@@ -393,13 +360,7 @@ async function checkSingleDependency(
       companyId,
     });
     // On query failure → treat as blocking (safe default)
-    return {
-      label: dep.label,
-      collection: dep.collection,
-      count: -1,
-      remediation: DEPENDENCY_REMEDIATIONS.guardUnavailable,
-      documentIds: [],
-    };
+    return unavailableDependencyOutcome(dep);
   }
 }
 

@@ -18,8 +18,8 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { FIELDS } from '@/config/firestore-field-constants';
 import { createModuleLogger } from '@/lib/telemetry';
+import { tenantScopedDependencyQuery } from './dependency-tenant-scope';
 import {
   getDependenciesForScenario,
   getScenarioMode,
@@ -81,12 +81,8 @@ async function executeStandardQuery(
   contactId: string,
   companyId: string,
 ): Promise<number> {
-  let q = db.collection(query.collection)
+  const q = tenantScopedDependencyQuery(db, query.collection, query, companyId)
     .where(query.foreignKey, query.queryType === 'equals' ? '==' : 'array-contains', contactId);
-
-  if (!query.skipCompanyFilter) {
-    q = q.where(FIELDS.COMPANY_ID, '==', companyId);
-  }
 
   const snapshot = await q.select().get();
   return snapshot.size;
@@ -98,16 +94,12 @@ async function executeSubcollectionQuery(
   contactId: string,
   companyId: string,
 ): Promise<number> {
-  // Step 1: Query parent documents
-  let parentQuery = db.collection(query.parentCollection)
-    .where(query.parentForeignKey, query.parentQueryType === 'equals' ? '==' : 'array-contains', contactId);
-
+  // Step 1: Query parent documents.
   // Ο tenant κόβεται **στον γονέα**: τα subcollection queries του βήματος 2
   // κρέμονται από τα ids που επέστρεψε αυτό το query, άρα ό,τι δεν πέρασε από
   // εδώ δεν φτάνει ποτέ στο fan-out.
-  if (!query.skipCompanyFilter) {
-    parentQuery = parentQuery.where(FIELDS.COMPANY_ID, '==', companyId);
-  }
+  const parentQuery = tenantScopedDependencyQuery(db, query.parentCollection, query, companyId)
+    .where(query.parentForeignKey, query.parentQueryType === 'equals' ? '==' : 'array-contains', contactId);
 
   const parentSnapshot = await parentQuery.select().get();
   if (parentSnapshot.empty) return 0;
@@ -132,15 +124,11 @@ async function executeCompoundQuery(
   contactId: string,
   companyId: string,
 ): Promise<number> {
-  let q = db.collection(query.collection)
+  let q = tenantScopedDependencyQuery(db, query.collection, query, companyId)
     .where(query.foreignKey, query.queryType === 'equals' ? '==' : 'array-contains', contactId);
 
   for (const filter of query.additionalFilters) {
     q = q.where(filter.field, filter.operator, filter.value);
-  }
-
-  if (!query.skipCompanyFilter) {
-    q = q.where(FIELDS.COMPANY_ID, '==', companyId);
   }
 
   const snapshot = await q.select().get();
@@ -206,6 +194,10 @@ async function executeDependencyQuery(
  * `if (!dep.skipCompanyFilter)`. Δύο μηχανές, ένα registry, δύο δόγματα — και
  * **κανένα gate δεν τις συνέκρινε**. Αυτό το αρχείο ευθυγραμμίζεται με την
  * αυστηρότερη, δεν εφευρίσκει τρίτη.
+ *
+ * ⇒ Από τις 2026-08-01 (§7novies) **δεν υπάρχει τρίτη να εφευρεθεί**: ο κανόνας
+ * ζει μία φορά στο {@link tenantScopedDependencyQuery} και οι έξι εκτελεστές
+ * των δύο μηχανών τον **καλούν**, δεν τον ξαναγράφουν.
  *
  * ⚠️ Το `skipCompanyFilter: true` παραμένει νόμιμο (6 συλλογές που **δεν
  * φέρουν** `companyId`: `external_identities`, `employment_records`,
