@@ -20,8 +20,9 @@ import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
+import { loadOwnedContact } from '../../_shared/contact-owned-doc';
+import type { ContactAccessCaller } from '../../_shared/contact-ownership';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateExternalIdentityId } from '@/server/lib/id-generation';
@@ -121,19 +122,29 @@ function validateLinkRequest(body: unknown): LinkChannelRequest {
  * found» για ανύπαρκτη επαφή και 403 για επαφή άλλης εταιρείας. Αυτή η διάκριση
  * είναι **απαρίθμηση cross-tenant**: ο καλών μάθαινε ότι το `contactId` ΥΠΑΡΧΕΙ,
  * απλώς δεν είναι δικό του. Το DELETE απαντούσε ήδη 403 και στις δύο περιπτώσεις
- * — κρατιέται η αυστηρότερη από τις δύο συμπεριφορές, όχι η πιο ομιλητική.
- * Κανένας καταναλωτής δεν διέκρινε τα δύο status (μετρημένο: ο μόνος αναφορέας
- * της διαδρομής είναι ο path builder στο `domain-constants`).
+ * — κρατήθηκε η αυστηρότερη από τις δύο συμπεριφορές, όχι η πιο ομιλητική.
+ *
+ * 🔄 **ADR-742 §7octies (2026-08-01) — η ίδια απόφαση, ένα επίπεδο βαθύτερα.**
+ * Η παραπάνω ενοποίηση ήταν σωστή αλλά **τοπική**: έκανε τις δύο απαντήσεις
+ * *αυτής* της διαδρομής ίδιες μεταξύ τους, και τις άφησε **διαφορετικές από τον
+ * υπόλοιπο πόρο** — οι αδελφικές διαδρομές απαντούσαν `404 'Contact not found'`
+ * για το ίδιο id. Το μαντείο ύπαρξης είναι ιδιότητα του **πόρου**, όχι της
+ * διαδρομής (§7septies): μία που αποκλίνει τις ακυρώνει όλες.
+ *
+ * 🔴 **Και το grep της Ομάδας 4 δεν το είχε μετρήσει**: η σύγκριση ήταν γραμμένη
+ * `[FIELDS.COMPANY_ID] !== companyId`, δηλαδή με **σταθερά** αντί για
+ * κυριολεκτικό `.companyId`. Το μοτίβο `\.companyId !== ctx\.companyId` είναι
+ * τυφλό σε αυτή τη μορφή — και θα ήταν τυφλό και το κλείδωμα του Βήματος 7.
+ *
+ * Ο {@link loadOwnedContact} κρατά τη **σειρά** δομικά (φόρτωσε→υπάρχει;→δικό
+ * μου;) και ρίχνει το **ίδιο** «δεν βρέθηκε» με κάθε άλλη διαδρομή του πόρου.
  */
 async function assertContactInTenant(
   db: Firestore,
   contactId: string,
-  companyId: string,
+  caller: ContactAccessCaller,
 ): Promise<void> {
-  const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-  if (!contactDoc.exists || contactDoc.data()?.[FIELDS.COMPANY_ID] !== companyId) {
-    throw new ApiError(403, 'Access denied', 'FORBIDDEN');
-  }
+  await loadOwnedContact({ contactId, caller, action: 'link-channel', db });
 }
 
 /**
@@ -156,11 +167,11 @@ async function assertContactInTenant(
  */
 async function openChannelIdentity(
   contactId: string,
-  companyId: string,
+  caller: ContactAccessCaller,
   identity: UnlinkChannelRequest,
 ): Promise<{ identityId: string; ref: DocumentReference; existing: DocumentSnapshot }> {
   const db = requireAdminFirestore();
-  await assertContactInTenant(db, contactId, companyId);
+  await assertContactInTenant(db, contactId, caller);
 
   const identityId = generateExternalIdentityId(identity.provider, identity.externalUserId);
   const ref = db.collection(COLLECTIONS.EXTERNAL_IDENTITIES).doc(identityId);
@@ -187,7 +198,7 @@ async function handlePost(
       }
 
       const { identityId, ref: identityRef, existing } =
-        await openChannelIdentity(contactId, ctx.companyId, data);
+        await openChannelIdentity(contactId, ctx, data);
 
       if (existing.exists) {
         // Update contactId link if not already linked
@@ -245,7 +256,7 @@ async function handleDelete(
       const data = validateChannelIdentity(body);
 
       const { identityId, ref: identityRef, existing } =
-        await openChannelIdentity(contactId, ctx.companyId, data);
+        await openChannelIdentity(contactId, ctx, data);
 
       // Remove contactId link (keep identity for future auto-link)
       if (existing.exists) {

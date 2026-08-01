@@ -4,43 +4,25 @@
  * Dry-run preview: how many records would be affected by a name change.
  * Read-only — no Firestore writes. Used for confirmation dialogs.
  *
+ * ⚠️ Βλ. `address-impact-preview` — ίδια ιστορία: καμία άδεια, κανένας φύλακας,
+ * κανένας tenant στη μηχανή (ADR-742 §7octies). 💡 Ο τύπος επαφής έρχεται πλέον
+ * από το φορτίο του φύλακα· η διαδρομή έκανε **δεύτερο** `.get()` μόνο γι' αυτό.
+ *
+ * ⚠️ Το `fallbackType` είναι `'individual'` — **όχι** το `'company'` των
+ * αδελφών της. Ήταν η υπάρχουσα τιμή αυτής της διαδρομής και αλλάζει **ποιες**
+ * εξαρτήσεις μετρά η μηχανή, οπότε μένει ρητή.
+ *
  * @module api/contacts/[contactId]/name-cascade-preview
- * @enterprise ADR-249 — Name Cascade Safety, ADR-145 — Contact Dependency SSoT
+ * @enterprise ADR-249 — Name Cascade Safety, ADR-145 · ADR-742 §7octies
  */
 
-import { NextRequest } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { previewContactNameCascade } from '@/lib/firestore/cascade-contact-name.service';
-import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import type { NameCascadePreview } from '@/lib/firestore/cascade-contact-name.service';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import type { ContactType } from '@/types/contacts';
+import { contactPreviewRoute } from '../../_shared/contact-preview-route';
 
-// ============================================================================
-// GET — Preview name cascade impact
-// ============================================================================
-
-export const GET = withStandardRateLimit(
-  withAuth(
-    async (
-      _request: NextRequest,
-      _ctx: AuthContext,
-      _cache: PermissionCache,
-      segmentData?: { params: Promise<{ contactId: string }> }
-    ) => {
-      const { contactId } = await segmentData!.params;
-
-      // Fetch contact type for SSoT engine filtering
-      const db = getAdminFirestore();
-      const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-      const contactType = (contactDoc.data()?.type as ContactType) ?? 'individual';
-
-      const preview = await previewContactNameCascade(contactId, contactType);
-
-      return apiSuccess(preview);
-    }
-  )
-);
+export const GET = contactPreviewRoute<NameCascadePreview>({
+  action: 'name-cascade-preview',
+  fallbackType: 'individual',
+  preview: ({ contactId, companyId, contactType }) =>
+    previewContactNameCascade(contactId, companyId, contactType),
+});

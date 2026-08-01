@@ -7,43 +7,21 @@
  * Supports ALL contact types (individual, company, service).
  * The engine filters applicable dependencies per contact type.
  *
+ * ⚠️ Βλ. `address-impact-preview` — ίδια ιστορία: καμία άδεια, κανένας φύλακας,
+ * κανένας tenant στη μηχανή (ADR-742 §7octies). 💡 Ο τύπος επαφής έρχεται πλέον
+ * από το φορτίο του φύλακα· η διαδρομή έκανε **δεύτερο** `.get()` μόνο γι' αυτό.
+ *
  * @module api/contacts/[contactId]/communication-impact-preview
- * @enterprise ADR-280, ADR-145 — Contact Dependency SSoT
+ * @enterprise ADR-280, ADR-145 — Contact Dependency SSoT · ADR-742 §7octies
  */
 
-import { NextRequest } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { previewCommunicationImpact } from '@/lib/firestore/communication-impact-preview.service';
-import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import type { CommunicationImpactPreview } from '@/lib/firestore/communication-impact-preview.service';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import type { ContactType } from '@/types/contacts';
+import { contactPreviewRoute } from '../../_shared/contact-preview-route';
 
-// ============================================================================
-// GET — Preview communication impact
-// ============================================================================
-
-export const GET = withStandardRateLimit(
-  withAuth(
-    async (
-      _request: NextRequest,
-      _ctx: AuthContext,
-      _cache: PermissionCache,
-      segmentData?: { params: Promise<{ contactId: string }> }
-    ) => {
-      const { contactId } = await segmentData!.params;
-
-      // Fetch contact type for SSoT engine filtering
-      const db = getAdminFirestore();
-      const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-      const contactType = (contactDoc.data()?.type as ContactType) ?? 'company';
-
-      const preview = await previewCommunicationImpact(contactId, contactType);
-
-      return apiSuccess(preview);
-    }
-  )
-);
+export const GET = contactPreviewRoute<CommunicationImpactPreview>({
+  action: 'communication-impact-preview',
+  fallbackType: 'company',
+  preview: ({ contactId, companyId, contactType }) =>
+    previewCommunicationImpact(contactId, companyId, contactType),
+});

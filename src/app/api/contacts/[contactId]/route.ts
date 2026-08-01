@@ -19,6 +19,8 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import { mapFirestoreContactToResponse } from './contact-data-mapper';
 import { nowISO } from '@/lib/date-local';
+import { checkContactAccess } from '../_shared/contact-ownership';
+import { contactNotFoundResponse } from '../_shared/contact-not-found-response';
 
 const logger = createModuleLogger('ContactRoute');
 
@@ -65,17 +67,33 @@ export async function GET(
       .get();
 
     if (!contactDoc.exists) {
-      return NextResponse.json({ success: false, error: 'Contact not found', contactId }, { status: 404 });
+      return contactNotFoundResponse(contactId);
     }
 
-    const contactData = { id: contactDoc.id, ...contactDoc.data() } as FirestoreContactData;
+    const rawContactData = contactDoc.data();
 
-    // TENANT ISOLATION
-    if (contactData.companyId !== ctx.companyId) {
-      logger.warn('TENANT ISOLATION VIOLATION', { uid: ctx.uid, contactId });
-      return NextResponse.json({ success: false, error: 'Access denied - Contact not found', contactId }, { status: 403 });
+    // ── TENANT ISOLATION (ADR-742 §7octies) ─────────────────────────────────
+    // Η απόφαση είναι **ολική** (PDP) και επιβάλλεται εδώ με το σχήμα σύρματος
+    // αυτής της διαδρομής (PEP). Το «δεν βρέθηκε» βγαίνει από το **ίδιο**
+    // εργοστάσιο με τον γνήσιο κλάδο από πάνω, οπότε τα δύο «όχι» είναι
+    // πανομοιότυπα σε κωδικό, σώμα και μήνυμα.
+    //
+    // ⚠️ Ο φύλακας δέχεται το **ωμό** `contactDoc.data()`, όχι το
+    // `as FirestoreContactData`: ο τύπος υπόσχεται `companyId: string`, η βάση
+    // δεν το εγγυάται (§7.5). Καλών με χαλασμένο token (`companyId: ''`)
+    // περνούσε σε κάθε επαφή με κενό `companyId`.
+    if (
+      checkContactAccess({
+        contactData: rawContactData,
+        caller: ctx,
+        contactId,
+        action: 'view',
+      }) === 'denied'
+    ) {
+      return contactNotFoundResponse(contactId);
     }
 
+    const contactData = { id: contactDoc.id, ...rawContactData } as FirestoreContactData;
     const contact = mapFirestoreContactToResponse(contactData);
 
     logger.info('Contact loaded successfully', { displayName: contact.displayName, contactId });

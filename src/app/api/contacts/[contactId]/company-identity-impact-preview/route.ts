@@ -4,35 +4,18 @@
  * Read-only preview: how many records reference this contact.
  * Used for confirmation dialog before company identity field changes.
  *
+ * ⚠️ Βλ. `address-impact-preview` — ίδια ιστορία: καμία άδεια, κανένας φύλακας,
+ * κανένας tenant στη μηχανή (ADR-742 §7octies).
+ *
  * @module api/contacts/[contactId]/company-identity-impact-preview
- * @enterprise ADR-278 — Company Identity Field Guard
+ * @enterprise ADR-278 — Company Identity Field Guard · ADR-742 §7octies
  */
 
-import { NextRequest } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { previewCompanyIdentityImpact } from '@/lib/firestore/company-identity-impact-preview.service';
-import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import type { CompanyIdentityImpactPreview } from '@/lib/firestore/company-identity-impact-preview.service';
+import { contactPreviewRoute } from '../../_shared/contact-preview-route';
 
-// ============================================================================
-// GET — Preview company identity impact
-// ============================================================================
-
-export const GET = withStandardRateLimit(
-  withAuth(
-    async (
-      _request: NextRequest,
-      _ctx: AuthContext,
-      _cache: PermissionCache,
-      segmentData?: { params: Promise<{ contactId: string }> }
-    ) => {
-      const { contactId } = await segmentData!.params;
-
-      const preview = await previewCompanyIdentityImpact(contactId);
-
-      return apiSuccess(preview);
-    }
-  )
-);
+export const GET = contactPreviewRoute<CompanyIdentityImpactPreview>({
+  action: 'company-identity-impact-preview',
+  preview: ({ contactId, companyId }) => previewCompanyIdentityImpact(contactId, companyId),
+});

@@ -1,19 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+/**
+ * POST /api/contacts/[contactId]/identity-impact-preview
+ *
+ * ⚠️ Μέχρι τις 2026-08-01 απαντούσε `403 'Access denied - Contact not found'`
+ * στην άρνηση ιδιοκτησίας ενώ ο γνήσιος κλάδος απαντά `404 'Contact not found'`:
+ * η **μισογραμμένη μεταμφίεση** του ADR-742 §7sexies. Πλέον και τα δύο «όχι»
+ * βγαίνουν από το **ίδιο** εργοστάσιο (`contactNotFound`), και ο tenant φτάνει
+ * στη μηχανή (§7octies).
+ *
+ * @module api/contacts/[contactId]/identity-impact-preview
+ * @enterprise ADR-742 §7octies
+ */
+
 import { z } from 'zod';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { apiSuccess, ApiError, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { getAdminFirestore } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { isRoleBypass } from '@/lib/auth/roles';
 import { previewContactIdentityImpact } from '@/lib/firestore/contact-identity-impact-preview.service';
 import { INDIVIDUAL_IDENTITY_FIELDS } from '@/utils/contactForm/individual-identity-guard';
 import type { ContactIdentityImpactPreview } from '@/types/contact-identity-impact';
-import type { Contact } from '@/types/contacts';
+import { contactPreviewRouteWithBody } from '../../_shared/contact-preview-route';
 
 const IndividualIdentityFieldSchema = z.enum(INDIVIDUAL_IDENTITY_FIELDS);
-const IndividualIdentityFieldCategorySchema = z.enum(['display', 'identity', 'regulated', 'administrative']);
+const IndividualIdentityFieldCategorySchema = z.enum([
+  'display',
+  'identity',
+  'regulated',
+  'administrative',
+]);
 
 const ContactIdentityImpactRequestSchema = z.object({
   changes: z.array(z.object({
@@ -25,43 +35,14 @@ const ContactIdentityImpactRequestSchema = z.object({
   })),
 });
 
-async function handlePost(
-  request: NextRequest,
-  segmentData?: { params: Promise<{ contactId: string }> },
-): Promise<NextResponse> {
-  const { contactId } = await segmentData!.params;
-
-  const handler = withAuth<ApiSuccessResponse<ContactIdentityImpactPreview>>(
-    async (req: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
-      const parsed = ContactIdentityImpactRequestSchema.safeParse(await req.json());
-      if (!parsed.success) {
-        throw new ApiError(400, 'Validation failed');
-      }
-
-      const db = getAdminFirestore();
-      const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-      if (!contactDoc.exists) {
-        throw new ApiError(404, 'Contact not found');
-      }
-
-      const contact = { id: contactDoc.id, ...(contactDoc.data() ?? {}) } as Contact;
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-      if (!isSuperAdmin && contact.companyId !== ctx.companyId) {
-        throw new ApiError(403, 'Access denied - Contact not found');
-      }
-
-      if (contact.type !== 'individual') {
-        throw new ApiError(400, 'Identity impact preview is only available for individual contacts');
-      }
-
-      const preview = await previewContactIdentityImpact(contactId, parsed.data.changes);
-      return apiSuccess(preview);
-    },
-    { permissions: 'crm:contacts:update' },
-  );
-
-  return handler(request);
-}
-
-export const POST = withStandardRateLimit(handlePost);
+export const POST = contactPreviewRouteWithBody<
+  typeof ContactIdentityImpactRequestSchema,
+  ContactIdentityImpactPreview
+>({
+  schema: ContactIdentityImpactRequestSchema,
+  action: 'identity-impact-preview',
+  requireType: 'individual',
+  wrongTypeMessage: 'Identity impact preview is only available for individual contacts',
+  preview: ({ contactId, companyId, input }) =>
+    previewContactIdentityImpact(contactId, companyId, input.changes),
+});

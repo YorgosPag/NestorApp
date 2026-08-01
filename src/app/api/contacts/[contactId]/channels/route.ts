@@ -16,8 +16,8 @@ import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { FIELDS } from '@/config/firestore-field-constants';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
+import { loadOwnedContact } from '../../_shared/contact-owned-doc';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -157,18 +157,25 @@ async function handleGet(
 
       const db = requireAdminFirestore();
 
-      // 1. Load contact doc — verify tenant isolation
-      const contactDoc = await db.collection(COLLECTIONS.CONTACTS).doc(contactId).get();
-      if (!contactDoc.exists) {
-        throw new ApiError(404, 'Contact not found', 'NOT_FOUND');
-      }
+      // 1. Load contact doc — «υπάρχει;» + «δικό μου;» σε ΜΙΑ πράξη.
+      //
+      // ⚠️ ADR-742 §7octies: εδώ ζούσε μαντείο ύπαρξης που το grep της Ομάδας 4
+      // **δεν είχε μετρήσει**, επειδή η σύγκριση ήταν γραμμένη
+      // `contactData[FIELDS.COMPANY_ID] !== ctx.companyId` — δηλαδή με
+      // **σταθερά** αντί για κυριολεκτικό `.companyId`. Το μοτίβο του
+      // handoff (`\.companyId !== ctx\.companyId`) δεν την έπιανε.
+      //
+      // Η ανυπαρξία απαντούσε `404 'Contact not found'` και η ξένη επαφή
+      // `403 'Access denied'`: **δύο διακριτά σχήματα**, άρα ο καλών
+      // ξεχώριζε αμέσως το υπαρκτό ξένο id από το ανύπαρκτο.
+      const { data: contactData } = await loadOwnedContact({
+        contactId,
+        caller: ctx,
+        action: 'channels',
+        db,
+      });
 
-      const contactData = contactDoc.data()!;
-      if (contactData[FIELDS.COMPANY_ID] !== ctx.companyId) {
-        throw new ApiError(403, 'Access denied', 'FORBIDDEN');
-      }
-
-      const contactName = extractContactDisplayName(contactData);
+      const contactName = extractContactDisplayName(contactData!);
 
       // 2. Query external_identities WHERE contactId matches
       const identitiesSnap = await db

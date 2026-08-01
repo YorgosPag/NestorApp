@@ -4,35 +4,20 @@
  * Read-only preview: how many records reference this contact.
  * Used for confirmation dialog before HQ address changes.
  *
+ * ⚠️ Μέχρι τις 2026-08-01 η διαδρομή έτρεχε **χωρίς δικαίωμα και χωρίς φύλακα
+ * ιδιοκτησίας**, και περνούσε στη μηχανή **κανέναν** tenant — δηλαδή επέστρεφε
+ * πλήθη από **όλους** τους πελάτες. Και τα τρία τα επιβάλλει πλέον ο κοινός
+ * εκτελεστής, δομικά (ADR-742 §7octies).
+ *
  * @module api/contacts/[contactId]/address-impact-preview
- * @enterprise ADR-277 — Address Impact Guard
+ * @enterprise ADR-277 — Address Impact Guard · ADR-742 §7octies
  */
 
-import { NextRequest } from 'next/server';
-import { withAuth } from '@/lib/auth';
-import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { previewAddressImpact } from '@/lib/firestore/address-impact-preview.service';
-import { apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import type { AddressImpactPreview } from '@/lib/firestore/address-impact-preview.service';
+import { contactPreviewRoute } from '../../_shared/contact-preview-route';
 
-// ============================================================================
-// GET — Preview address impact
-// ============================================================================
-
-export const GET = withStandardRateLimit(
-  withAuth(
-    async (
-      _request: NextRequest,
-      _ctx: AuthContext,
-      _cache: PermissionCache,
-      segmentData?: { params: Promise<{ contactId: string }> }
-    ) => {
-      const { contactId } = await segmentData!.params;
-
-      const preview = await previewAddressImpact(contactId);
-
-      return apiSuccess(preview);
-    }
-  )
-);
+export const GET = contactPreviewRoute<AddressImpactPreview>({
+  action: 'address-impact-preview',
+  preview: ({ contactId, companyId }) => previewAddressImpact(contactId, companyId),
+});
