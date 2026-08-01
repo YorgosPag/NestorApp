@@ -22,6 +22,7 @@
  */
 
 import type { Entity } from '../../../types/entities';
+import { computeConnectedComponents } from '../../../utils/connected-components';
 import {
   getEntityConnectors,
   getConnectorHostPlanTransform,
@@ -128,21 +129,14 @@ export function buildAdjacency(
   return adj;
 }
 
-/** Union-find σε κόμβους μέσω ακμών → componentOf[node] (root index). */
+/**
+ * Union-find σε κόμβους μέσω ακμών → componentOf[node] (root index).
+ *
+ * Ο αλγόριθμος ζει στον κοινό SSoT `utils/connected-components` — εδώ μένει μόνο η
+ * μετάφραση «ακμή σωλήνα → ακμή γράφου», που είναι το μόνο κομμάτι που ξέρει από θέρμανση.
+ */
 export function computeComponents(nodeCount: number, edges: readonly GraphSegEdge[]): number[] {
-  const parent = Array.from({ length: nodeCount }, (_, i) => i);
-  const find = (i: number): number => {
-    let r = i;
-    while (parent[r] !== r) r = parent[r]!;
-    while (parent[i] !== r) {
-      const n = parent[i]!;
-      parent[i] = r;
-      i = n;
-    }
-    return r;
-  };
-  for (const e of edges) parent[find(e.a)] = find(e.b);
-  return parent.map((_, i) => find(i));
+  return computeConnectedComponents(nodeCount, edges);
 }
 
 // ─── Πηγές / ρίζες ───────────────────────────────────────────────────────────────
