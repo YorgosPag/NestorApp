@@ -20,6 +20,9 @@ import { StatusBarBlockSelectionLeaf } from './StatusBarBlockSelectionLeaf';
 import { StatusBarActiveGroupLeaf } from './StatusBarActiveGroupLeaf';
 // ADR-641 §3 — «Επεξεργασία μπλοκ «name» · Esc για έξοδο» + clickable Close while inside a BEDIT.
 import { StatusBarActiveBlockLeaf } from './StatusBarActiveBlockLeaf';
+// ADR-739 Φ.Δ βήμα 4 — «Πίνακας · <κατάσταση> · Esc για έξοδο»: η ορατή απόδειξη ότι το
+// πληκτρολόγιο ανήκει στον πίνακα και όχι στον καμβά. Τρίτο αδελφάκι των δύο από πάνω.
+import { StatusBarActiveTableLeaf } from './StatusBarActiveTableLeaf';
 // 🏢 ADR-418: real view-scale (1:N) micro-leaf
 import { useViewScale } from '../../systems/zoom/hooks/useViewScale';
 import type { ToolType } from './types';
@@ -195,6 +198,12 @@ export const ToolbarStatusBar: React.FC<ToolbarStatusBarProps> = ({
 
         {/* ADR-641 §3 — «Επεξεργασία μπλοκ «name» · Esc για έξοδο» + Close while inside a BEDIT. */}
         <StatusBarActiveBlockLeaf
+          className={colors.text.info}
+          separatorClassName={colors.text.muted}
+        />
+
+        {/* ADR-739 Φ.Δ βήμα 4 — «Πίνακας · Έτοιμο · Esc για έξοδο» όσο το πληκτρολόγιο ανήκει στον πίνακα. */}
+        <StatusBarActiveTableLeaf
           className={colors.text.info}
           separatorClassName={colors.text.muted}
         />

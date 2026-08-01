@@ -102,10 +102,6 @@ describe('Delete / Backspace', () => {
 // ── 🔴 Ό,τι ΔΕΝ επιτρέπεται να κλαπεί ──────────────────────────────────────
 
 describe('τα πλήκτρα που το κελί ΔΕΝ κλέβει ποτέ', () => {
-  it.each(ALL_MODES)('Ctrl+Z σε κατάσταση %s ⇒ passthrough (το undo παραμένει του χρήστη)', (mode) => {
-    expect(resolveTableCellKeyIntent('z', CTRL, mode)).toEqual({ kind: 'passthrough' });
-  });
-
   it('Ctrl+C ⇒ passthrough', () => {
     expect(resolveTableCellKeyIntent('c', CTRL, 'nav')).toEqual({ kind: 'passthrough' });
   });
@@ -130,5 +126,67 @@ describe('τα πλήκτρα που το κελί ΔΕΝ κλέβει ποτέ'
 
   it('«Dead» (νεκρός τόνος ελληνικού πληκτρολογίου) ⇒ passthrough', () => {
     expect(resolveTableCellKeyIntent('Dead', NO_MODS, 'nav')).toEqual({ kind: 'passthrough' });
+  });
+});
+
+// ── ADR-739 Φ.Δ βήμα 4 — Ctrl+Z / Ctrl+Y: η σημασιολογία του Excel ─────────
+
+/**
+ * 🔴 Η ΑΠΟΦΑΣΗ ΠΟΥ ΑΝΤΙΣΤΡΑΦΗΚΕ. Μέχρι το βήμα 3, το `Ctrl+Z` ήταν `passthrough` σε **κάθε**
+ * κατάσταση, με αιτιολογία «μη φας το undo του χρήστη». Στο βήμα 4 ο καμβάς μπήκε πίσω από
+ * τον δομικό φύλακα και **παραιτείται** μέσα σε λειτουργία πίνακα — οπότε η ίδια αρχή απαιτεί
+ * το αντίθετο: αν δεν το διεκδικήσει το κελί, το `Ctrl+Z` δεν κάνει **τίποτα**.
+ *
+ * Η γραμμή είναι η κατάσταση, όχι το πλήκτρο:
+ *   · πλοήγηση → αναίρεση της τελευταίας **επεξεργασίας κελιού** (ιστορικό εντολών)
+ *   · γραφή    → αναίρεση της **πληκτρολόγησης**, την οποία κάνει ο browser στο `<input>`
+ *                — άρα `passthrough`, γιατί κάθε συνθετικό undo θα έσπαγε τη στοίβα του πεδίου.
+ */
+describe('Ctrl+Z / Ctrl+Y — αναίρεση με σημασιολογία Excel', () => {
+  /** ⚠️ `code`, ΟΧΙ `key`: σε ελληνική διάταξη το `key` του ίδιου πλήκτρου είναι «ζ». */
+  const ctrlCode = (code: string, shiftKey = false) => ({ ...NO_MODS, ctrlKey: true, shiftKey, code });
+
+  it('Ctrl+Z σε πλοήγηση ⇒ αναίρεση', () => {
+    expect(resolveTableCellKeyIntent('z', ctrlCode('KeyZ'), 'nav')).toEqual({
+      kind: 'history', direction: 'undo',
+    });
+  });
+
+  it('🔴 ΕΛΛΗΝΙΚΗ ΔΙΑΤΑΞΗ: key=«ζ» με code=KeyZ ⇒ αναίρεση (θα χανόταν με έλεγχο στο key)', () => {
+    expect(resolveTableCellKeyIntent('ζ', ctrlCode('KeyZ'), 'nav')).toEqual({
+      kind: 'history', direction: 'undo',
+    });
+  });
+
+  it.each([
+    ['Ctrl+Y', ctrlCode('KeyY')],
+    ['Ctrl+Shift+Z', ctrlCode('KeyZ', true)],
+  ])('%s σε πλοήγηση ⇒ επανάληψη', (_label, mods) => {
+    expect(resolveTableCellKeyIntent('y', mods, 'nav')).toEqual({
+      kind: 'history', direction: 'redo',
+    });
+  });
+
+  it.each(['enter', 'edit'] as const)(
+    'Ctrl+Z σε κατάσταση %s ⇒ passthrough — το undo ανήκει στο <input> (Excel)',
+    (mode) => {
+      expect(resolveTableCellKeyIntent('z', ctrlCode('KeyZ'), mode)).toEqual({ kind: 'passthrough' });
+    },
+  );
+
+  it('χωρίς Ctrl, το «z» παραμένει εκτυπώσιμος χαρακτήρας', () => {
+    expect(resolveTableCellKeyIntent('z', { ...NO_MODS, code: 'KeyZ' }, 'nav')).toEqual({
+      kind: 'passthrough',
+    });
+  });
+
+  it('Ctrl+άλλο γράμμα (π.χ. Ctrl+B) ⇒ passthrough, δεν γίνεται κατά λάθος ιστορικό', () => {
+    expect(resolveTableCellKeyIntent('b', ctrlCode('KeyB'), 'nav')).toEqual({ kind: 'passthrough' });
+  });
+
+  it('Ctrl+Home παραμένει άκρη πλέγματος — προηγείται του ιστορικού', () => {
+    expect(resolveTableCellKeyIntent('Home', ctrlCode('Home'), 'nav')).toEqual({
+      kind: 'move', move: 'gridStart',
+    });
   });
 });

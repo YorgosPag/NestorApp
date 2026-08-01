@@ -16,7 +16,7 @@
  * r3 ·   [M ── M]
  */
 
-import { moveTableCursor, tableCursorAt } from '../table-cell-navigation';
+import { moveTableCursor, tableCursorAt, tableFirstCursorPosition } from '../table-cell-navigation';
 import { createTableModel } from '../table-model-helpers';
 import type { TableColumn, TableModel, TableRow } from '../../../types/table';
 
@@ -214,5 +214,67 @@ describe('moveTableCursor — μπαγιάτικος δρομέας', () => {
 describe('tableCursorAt', () => {
   it('ορίζει τη στήλη αγκύρωσης ΣΤΗ ΣΤΗΛΗ ΤΟΥ ΚΛΙΚ — νέα σειρά καταχώρισης', () => {
     expect(tableCursorAt('r2', 'c3')).toEqual({ rowId: 'r2', colId: 'c3', anchorColId: 'c3' });
+  });
+});
+
+// ── ADR-739 Φ.Δ βήμα 4 — η προσγείωση των εισόδων ΧΩΡΙΣ σημείο ─────────────
+
+/**
+ * `Enter` / `F2` / εντολή `TABLEDIT` δεν δείχνουν κελί, οπότε προσγειώνονται στο «πρώτο».
+ * Το ρίσκο είναι **ένα** και συγκεκριμένο: να επιστραφεί ωμά το `(0,0)` όταν εκείνο είναι
+ * **καλυμμένο** από συγχώνευση — δηλαδή να γεννηθεί δρομέας σε θέση όπου καμία άλλη κίνηση
+ * δεν μπορεί να τον φέρει. Ο τίτλος που πιάνει όλη την πρώτη γραμμή είναι ο συνηθέστερος
+ * πίνακας που θα φτιάξει ο χρήστης, άρα αυτό δεν είναι ακραία περίπτωση.
+ */
+describe('tableFirstCursorPosition — πού προσγειώνεσαι χωρίς να δείξεις κελί', () => {
+  it('απλό πλέγμα ⇒ το πάνω-αριστερά κελί, με δική του αγκύρωση', () => {
+    expect(tableFirstCursorPosition(plain)).toEqual({ rowId: 'r1', colId: 'c1', anchorColId: 'c1' });
+  });
+
+  it('το (0,0) είναι ΑΓΚΥΡΑ συγχώνευσης ⇒ επιστρέφεται αυτούσιο', () => {
+    const titleRow = createTableModel({
+      columns: COLUMNS,
+      rows: ROWS,
+      merges: [{ anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 1, colSpan: 3 }],
+    });
+    expect(tableFirstCursorPosition(titleRow)).toEqual({ rowId: 'r1', colId: 'c1', anchorColId: 'c1' });
+  });
+
+  /**
+   * ⚠️ Δεν υπάρχει περίπτωση «το (0,0) είναι ΚΑΛΥΜΜΕΝΟ»: με ορθογώνια spans αγκυρωμένα
+   * πάνω-αριστερά, ό,τι καλύπτει το (0,0) είναι αγκυρωμένο ΣΤΟ (0,0). Δες την προειδοποίηση
+   * κάλυψης στην πηγή — δεν προσποιούμαστε test που δεν μπορεί να υπάρξει.
+   *
+   * Αυτό που **μπορεί** και πρέπει να ελεγχθεί είναι το παρατηρήσιμο αποτέλεσμα: η θέση που
+   * επιστρέφεται πρέπει να σέβεται το **πλάτος** της συγχώνευσης, δηλαδή η επόμενη κίνηση
+   * δεξιά να την προσπερνά ολόκληρη αντί να μπαίνει μέσα της.
+   */
+  it('το (0,0) είναι άγκυρα συγχώνευσης 2×2 ⇒ η επόμενη κίνηση την ΠΡΟΣΠΕΡΝΑ ολόκληρη', () => {
+    const startsMerged = createTableModel({
+      columns: COLUMNS,
+      rows: ROWS,
+      merges: [{ anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 2, colSpan: 2 }],
+    });
+    const first = tableFirstCursorPosition(startsMerged);
+    expect(first).toEqual({ rowId: 'r1', colId: 'c1', anchorColId: 'c1' });
+    // c2 είναι καλυμμένο ⇒ το δεξί βέλος προσγειώνεται στο c3, όχι στο c2.
+    expect(moveTableCursor(startsMerged, first!, 'right')).toEqual({
+      rowId: 'r1', colId: 'c3', anchorColId: 'c3',
+    });
+  });
+
+  it('πίνακας χωρίς γραμμές ⇒ null (δεν υπάρχει κελί να δείξεις)', () => {
+    expect(tableFirstCursorPosition(createTableModel({ columns: COLUMNS, rows: [] }))).toBeNull();
+  });
+
+  it('πίνακας χωρίς στήλες ⇒ null', () => {
+    expect(tableFirstCursorPosition(createTableModel({ columns: [], rows: ROWS }))).toBeNull();
+  });
+
+  it('η θέση που επιστρέφει είναι ΕΓΚΥΡΗ αφετηρία κίνησης (δεν είναι μπαγιάτικη)', () => {
+    const first = tableFirstCursorPosition(merged);
+    expect(first).not.toBeNull();
+    // «Μπαγιάτικος δρομέας» ⇒ `moveTableCursor` επιστρέφει null. Εδώ πρέπει να κινείται.
+    expect(moveTableCursor(merged, first!, 'down')).not.toBeNull();
   });
 });

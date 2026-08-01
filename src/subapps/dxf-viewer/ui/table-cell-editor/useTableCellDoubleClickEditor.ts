@@ -31,11 +31,12 @@
 
 import { useCallback, useMemo } from 'react';
 import type React from 'react';
+// ADR-711 — το SSoT του «ποιος κατέχει το πληκτρολόγιο». ΜΗΝ γράψεις δεύτερο scope.
+import { useModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useCommandHistory } from '../../core/commands';
-import { isTableEntity } from '../../types/table-entity';
-import type { TableEntity } from '../../types/table-entity';
+import { resolveSelectedTable, resolveTableById } from './table-entity-lookup';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
   buildTableCellEditCommand,
@@ -93,24 +94,6 @@ export interface TableCellOverlayMount {
 interface TableCellDoubleClickEditorApi {
   readonly overlay: TableCellOverlayMount | null;
   readonly handleDoubleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
-}
-
-/** Η επιλεγμένη οντότητα, αν είναι ΑΚΡΙΒΩΣ μία και είναι πίνακας — αλλιώς `null`. */
-function resolveSelectedTable(
-  levelManager: LevelManagerLike,
-  getSelectedEntityIds: () => readonly string[],
-): TableEntity | null {
-  const ids = getSelectedEntityIds();
-  if (ids.length !== 1) return null;
-  return resolveTableById(levelManager, ids[0]);
-}
-
-/** Η οντότητα πίνακα με αυτό το id, διαβασμένη **τη στιγμή της κλήσης** (ποτέ στιγμιότυπο). */
-function resolveTableById(levelManager: LevelManagerLike, entityId: string): TableEntity | null {
-  const levelId = levelManager.currentLevelId;
-  const scene = levelId ? levelManager.getLevelScene(levelId) : null;
-  const entity = scene?.entities.find((e) => e.id === entityId);
-  return entity && isTableEntity(entity) ? entity : null;
 }
 
 /** Το σημείο κόσμου ενός mouse event, με την ίδια margin-aware αντιστροφή του renderer. */
@@ -171,7 +154,7 @@ export function useTableCellDoubleClickEditor(
   params: UseTableCellDoubleClickEditorParams,
 ): TableCellDoubleClickEditorApi {
   const { transformRef, containerRef, getSelectedEntityIds, levelManager } = params;
-  const { execute } = useCommandHistory();
+  const { execute, undo, redo } = useCommandHistory();
   const cursor = useTableCellCursor();
 
   const handleDoubleClick = useCallback(
@@ -252,19 +235,67 @@ export function useTableCellDoubleClickEditor(
 
   const clear = useCallback(() => commitText(''), [commitText]);
 
-  // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο σε κάθε απόδοση: κείμενο, όψη και
-  // αγκύρωση είναι **παράγωγα**, ποτέ αντίγραφα (γι' αυτό το store δεν κρατά κείμενο).
+  /**
+   * ADR-739 Φ.Δ βήμα 4 — `Ctrl+Z`/`Ctrl+Y` σε **πλοήγηση**, με σημασιολογία Excel.
+   *
+   * Δεν υπάρχει δεύτερο ιστορικό: είναι **το ίδιο** `CommandHistory` του καμβά. Και δεν
+   * χρειάζεται να είναι — κάθε δέσμευση κελιού είναι ήδη ένα `UpdateEntityCommand` σε
+   * αυτό ακριβώς το ιστορικό (δες {@link commitText}). Άρα «αναίρεσε την τελευταία
+   * επεξεργασία κελιού» **είναι** «αναίρεσε την τελευταία εντολή», όσο ο χρήστης είναι
+   * μέσα στον πίνακα και δεν έχει κάνει τίποτα άλλο. Ένα ξεχωριστό ιστορικό ανά πίνακα
+   * θα ήταν δεύτερη αλήθεια που θα αποκλίνει στο πρώτο undo από τη γραμμή εντολών.
+   */
+  const history = useCallback(
+    (direction: 'undo' | 'redo') => {
+      if (direction === 'undo') undo();
+      else redo();
+    },
+    [undo, redo],
+  );
+
+  /**
+   * 🔴 ADR-739 Φ.Δ βήμα 4 — Η ΖΩΝΤΑΝΗ ΟΝΤΟΤΗΤΑ, **έξω** από κάθε memo.
+   *
+   * ## Το σφάλμα που διορθώνει (μετρημένο, όχι υποθετικό)
+   * Το `target` παρακάτω ήταν `useMemo(..., [cursor, levelManager])` και **διάβαζε τη σκηνή**.
+   * Οι δύο εξαρτήσεις όμως **δεν αλλάζουν ποτέ** όταν αλλάζει η σκηνή:
+   *
+   *   - το `levelManager` είναι τιμή React context, και το `getLevelScene` του είναι
+   *     `useCallback(…, [])` πάνω σε **ref** (`LevelsSystem.tsx`) — άρα η ταυτότητα του
+   *     context μένει ίδια σε κάθε `setLevelScene`·
+   *   - ο `cursor` αλλάζει σε κάθε **πάτημα πλήκτρου** (το πρόχειρο ζει μέσα του).
+   *
+   * Το δεύτερο έκρυβε το πρώτο: όσο ο χρήστης πληκτρολογούσε, ο memo ξαναϋπολογιζόταν και
+   * όλα φαίνονταν σωστά. Σε αλλαγή σκηνής **χωρίς** αλλαγή δρομέα — δηλαδή ακριβώς σε
+   * **undo / διαγραφή του πίνακα / αλλαγή επιπέδου** — ο memo κρατούσε μπαγιάτικο `target`,
+   * άρα το `overlay` έμενε μονταρισμένο πάνω σε πίνακα **που δεν υπάρχει πια**, άρα το
+   * modal scope έμενε πατημένο: **ο viewer κλείδωνε μέχρι reload** (§5.1 του handoff).
+   *
+   * Το πιάνει το `__tests__/table-mode-keyboard-scope.test.tsx`, «ΔΡΟΜΟΣ 2/4».
+   *
+   * ## Γιατί η διόρθωση είναι εξάρτηση και όχι φύλακας
+   * Ο πειρασμός είναι ένα `useEffect` που κλείνει τον δρομέα όταν χαθεί ο στόχος. Αυτό
+   * θεραπεύει το σύμπτωμα και προσθέτει νέο κίνδυνο: μια **παροδικά** αποτυχημένη ανάγνωση
+   * σκηνής θα σκότωνε τη συνεδρία γραφής του χρήστη — η παλινδρόμηση που έλυσε το βήμα 3.
+   * Η αιτία δεν ήταν «λείπει φύλακας», ήταν **memo που δήλωνε εξαρτήσεις τις οποίες δεν
+   * διαβάζει**. Η ανάγνωση ανεβαίνει έξω· ο memo δηλώνει επιτέλους την αλήθεια.
+   *
+   * Κόστος: μία `Array.find` ανά απόδοση όταν υπάρχει δρομέας — δηλαδή ανά πάτημα πλήκτρου,
+   * όχι ανά καρέ.
+   */
+  const liveEntity = cursor ? resolveTableById(levelManager, cursor.entityId) : null;
+
+  // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο: κείμενο, όψη και αγκύρωση είναι
+  // **παράγωγα**, ποτέ αντίγραφα (γι' αυτό το store δεν κρατά κείμενο).
   //
   // Η γωνία ταξιδεύει μαζί επειδή ανήκει στην **οντότητα**, όχι στο κελί, και ο επεξεργαστής
-  // πρέπει να γείρει μαζί με τον πίνακα. Διαβασμένη εδώ, από την ίδια ανάγνωση σκηνής —
-  // μια δεύτερη ανάγνωση θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα.
+  // πρέπει να γείρει μαζί με τον πίνακα. Διαβασμένη από την **ίδια** αναφορά οντότητας —
+  // μια δεύτερη ανάγνωση σκηνής θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα.
   const target = useMemo(() => {
-    if (!cursor) return null;
-    const entity = resolveTableById(levelManager, cursor.entityId);
-    if (!entity) return null;
-    const cell = resolveTableCellEditTargetById(entity, cursor.position.rowId, cursor.position.colId);
-    return cell ? { cell, angleRad: entity.angleRad } : null;
-  }, [cursor, levelManager]);
+    if (!cursor || !liveEntity) return null;
+    const cell = resolveTableCellEditTargetById(liveEntity, cursor.position.rowId, cursor.position.colId);
+    return cell ? { cell, angleRad: liveEntity.angleRad } : null;
+  }, [cursor, liveEntity]);
 
   // Σταθερή ταυτότητα ανά κελί: το `TextEditorAnchorLayer` ξαναδένει τη συνδρομή του σε
   // κάθε νέο `anchor`, οπότε ένα φρέσκο αντικείμενο ανά απόδοση θα ξέδενε/ξανάδενε τον
@@ -319,9 +350,45 @@ export function useTableCellDoubleClickEditor(
         onCommit: commitText,
         onMove: move,
         onClear: clear,
+        onHistory: history,
       },
     };
-  }, [cursor, target, anchor, commitText, move, clear]);
+  }, [cursor, target, anchor, commitText, move, clear, history]);
+
+  /**
+   * 🔴 ADR-739 Φ.Δ βήμα 4 — **Η ΔΗΛΩΣΗ «ΕΙΜΑΙ ΜΕΣΑ ΣΤΟΝ ΠΙΝΑΚΑ»**.
+   *
+   * ## Γιατί ΔΕΝ υπάρχει τέταρτη κατάσταση
+   * Ο Giorgio ζήτησε ένα «τρίτο, εξωτερικό» επίπεδο πάνω από τα `nav`/`enter`/`edit`. Αυτό
+   * **υπάρχει ήδη** και είναι το `cursor !== null`: ο δρομέας γεννιέται όταν μπαίνεις στον
+   * πίνακα και πεθαίνει όταν βγαίνεις. Ένα νέο `isInTableMode` θα ήταν δεύτερη αλήθεια για
+   * το ίδιο γεγονός — και η πρώτη φορά που θα αποκλίνανε θα ήταν ένα κλειδωμένο πληκτρολόγιο.
+   *
+   * ## 🔴 Γιατί `overlay !== null` και ΟΧΙ `cursor !== null`
+   * Είναι **η γραμμή που αποφασίζει αν ο viewer μπορεί να κλειδώσει για πάντα** (§5.1 του
+   * handoff: ξεχασμένο release ⇒ κανένα πλήκτρο καμβά μέχρι reload).
+   *
+   * Το `overlay` είναι `null` όποτε λείπει **οτιδήποτε** από τα τρία — δρομέας, ζωντανός
+   * στόχος στο μοντέλο, αγκύρωση. Δηλαδή είναι ακριβώς η συνθήκη «υπάρχει εστιασμένο
+   * `<input>` που κατέχει τα πλήκτρα». Η ταύτιση **δεν είναι ευκολία, είναι το επιχείρημα
+   * ορθότητας**: δεν μπορεί να υπάρξει κατάσταση «scope πατημένο αλλά κανείς δεν ακούει»,
+   * γιατί η ίδια τιμή οδηγεί και τα δύο. Undo που σβήνει τον πίνακα, διαγραφή γραμμής,
+   * αλλαγή επιπέδου, ασύγχρονο ξαναστήσιμο σκηνής ⇒ `target` → `null` ⇒ `overlay` → `null`
+   * ⇒ **το scope απελευθερώνεται στο ίδιο commit**, χωρίς να χρειαστεί να το θυμηθεί κανείς.
+   *
+   * Με `cursor !== null` θα υπήρχε αυτό ακριβώς το παράθυρο: ο δρομέας επιβιώνει μιας
+   * αποτυχημένης ανάγνωσης σκηνής (**επίτηδες** — δες το σχόλιο του `draft` στο store, η
+   * πληκτρολόγηση χανόταν διαλείπουσα όταν δεν επιβίωνε), ενώ ο επεξεργαστής όχι.
+   *
+   * ⚠️ ΚΑΙ ΤΟ ΑΝΤΙΣΤΡΟΦΟ: **δεν** «διορθώνουμε» τη διαφορά κλείνοντας τον δρομέα όταν
+   * χαθεί ο στόχος. Ένας τέτοιος φύλακας θα σκότωνε τη συνεδρία του χρήστη σε κάθε
+   * παροδικά αποτυχημένη ανάγνωση σκηνής — η ίδια ακριβώς παλινδρόμηση που έλυσε το
+   * βήμα 3. Ο δρομέας χωρίς επεξεργαστή είναι **αδρανής**: δεν κατέχει πλήκτρα, δεν
+   * κρατά scope, και ξαναζωντανεύει σωστά αν η σκηνή επανέλθει.
+   *
+   * @see src/lib/a11y/keyboard-scope.ts — τι σημαίνει «modal κατέχει το πληκτρολόγιο»
+   */
+  useModalKeyboardScope(overlay !== null);
 
   return useMemo(() => ({ overlay, handleDoubleClick }), [overlay, handleDoubleClick]);
 }

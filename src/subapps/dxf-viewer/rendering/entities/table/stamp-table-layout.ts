@@ -120,12 +120,68 @@ export function stampTableBorders(
  * οντότητας — μια hovered επιλογή δεν αλλάζει ποιο κελί δέχεται την πληκτρολόγηση.
  */
 export function stampTableCellCursor(rc: StampTableContext, rectMm: TableRectMm): void {
+  strokeRectMm(rc, rectMm, TABLE_CELL_CURSOR.colorHex, TABLE_CELL_CURSOR.lineWidthPx, []);
+}
+
+/**
+ * ADR-739 Φ.Δ βήμα 4 — το περίγραμμα **ολόκληρου** του πίνακα όσο το πληκτρολόγιο του
+ * ανήκει (λειτουργία πίνακα).
+ *
+ * ## Γιατί δεύτερος δείκτης και όχι «αρκεί ο δρομέας κελιού»
+ * Ο δρομέας απαντά «ποιο κελί δέχεται ό,τι πληκτρολογήσω». Το ερώτημα του βήματος 4 είναι
+ * **άλλο**: «γιατί έπαψε να δουλεύει το `L` για γραμμή;». Είναι δύο διαφορετικά επίπεδα —
+ * κελί μέσα σε πίνακα, πίνακας μέσα σε καμβά — και ο χρήστης χρειάζεται να δει και τα δύο,
+ * ακριβώς όπως το Figma δείχνει **και** το επιλεγμένο κείμενο **και** το πλαίσιο που έχεις
+ * μπει μέσα του.
+ *
+ * ## Γιατί ίδιο χρώμα αλλά **διακεκομμένο**
+ * Και οι δύο είναι δείκτες **διεπαφής**, άρα ανήκουν στο ίδιο λεξιλόγιο — ένα τέταρτο
+ * χρώμα θα έσπαγε τη ρητή αιτιολόγηση του {@link TABLE_CELL_CURSOR}. Η **τάξη** τους όμως
+ * διαφέρει, και η διακεκομμένη γραμμή είναι ο καθιερωμένος τρόπος να ειπωθεί «περιέχον
+ * πλαίσιο» χωρίς νέο χρώμα: συμπαγές = εδώ πάει το πλήκτρο, διακεκομμένο = εδώ βρίσκεσαι.
+ *
+ * ⚠️ Ισχύουν αυτούσιοι οι δύο κανόνες του {@link stampTableCellCursor}: overlay pass μόνο
+ * (ADR-040 #3) και τέσσερις γωνίες από το `toScreen`, γιατί ο πίνακας περιστρέφεται.
+ */
+export function stampTableModeOutline(rc: StampTableContext, rectMm: TableRectMm): void {
+  strokeRectMm(
+    rc,
+    rectMm,
+    TABLE_CELL_CURSOR.colorHex,
+    TABLE_CELL_CURSOR.lineWidthPx,
+    TABLE_MODE_OUTLINE_DASH_PX,
+  );
+}
+
+/**
+ * Το διακεκομμένο μοτίβο του περιγράμματος λειτουργίας, σε **px οθόνης** — ίδια μονάδα με
+ * το `lineWidthPx` και για τον ίδιο λόγο: ο δείκτης πρέπει να φαίνεται ίδιος σε κάθε zoom.
+ * Σε sheet-mm το μοτίβο θα γινόταν συμπαγές σε zoom-out και αραιό σε zoom-in.
+ */
+const TABLE_MODE_OUTLINE_DASH_PX: readonly number[] = [6, 4];
+
+/**
+ * Ο **ένας** χάρακας ορθογωνίου σε συντεταγμένες φύλλου. Και οι δύο δείκτες περνούν από
+ * εδώ: το CHECK 3.28 (jscpd, N.18) θα χαρακτήριζε δύο ταυτόσημα σώματα 15 γραμμών ως
+ * sibling clone — σωστά, αφού διαφέρουν **μόνο** σε τρεις παραμέτρους στυλ.
+ *
+ * Οι τέσσερις γωνίες περνούν χωριστά από το `toScreen` (και όχι `strokeRect` σε δύο
+ * σημεία) επειδή ο πίνακας μπορεί να είναι **περιστραμμένος** — δες {@link stampTableFills}.
+ */
+function strokeRectMm(
+  rc: StampTableContext,
+  rectMm: TableRectMm,
+  colorHex: string,
+  lineWidthPx: number,
+  dashPx: readonly number[],
+): void {
   const { ctx } = rc;
   const { x, y, w, h } = rectMm;
   ctx.save();
-  ctx.strokeStyle = TABLE_CELL_CURSOR.colorHex;
-  ctx.lineWidth = TABLE_CELL_CURSOR.lineWidthPx;
-  ctx.setLineDash([]);
+  ctx.strokeStyle = colorHex;
+  ctx.lineWidth = lineWidthPx;
+  // `slice()`: το `setLineDash` δέχεται μεταβλητό πίνακα, και η σταθερά είναι κοινή.
+  ctx.setLineDash(dashPx.slice());
   ctx.beginPath();
   const corners = [
     rc.toScreen(x, y),

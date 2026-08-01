@@ -15,6 +15,10 @@ import { useOpeningInfoTagDoubleClick } from './use-opening-info-tag-double-clic
 // επειδή τον διαβάζει ΚΑΙ ο ζωγράφος του καμβά, που δεν βλέπει React — χαμηλή συχνότητα
 // (ένα πάτημα πλήκτρου), άρα ίδιο κόστος απόδοσης με το `useState` που αντικατέστησε.
 import { useTableCellDoubleClickEditor } from '../../ui/table-cell-editor/useTableCellDoubleClickEditor';
+// ADR-739 Φ.Δ βήμα 4 — οι είσοδοι ΧΩΡΙΣ σημείο: `Enter`/`F2` σε επιλεγμένο πίνακα (WAI-ARIA
+// APG «Grid» + Excel) και η εντολή `TABLEDIT` (AutoCAD). Το διπλό κλικ μένει στον οδηγό του,
+// γιατί μόνο εκείνο ξέρει ΠΟΙΟ κελί και ΠΟΙΟΝ χαρακτήρα έδειξε ο χρήστης.
+import { useTableModeEntry } from '../../ui/table-cell-editor/use-table-mode-entry';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
 import { useBathroomAutoArrangeMouseMove } from './useBathroomAutoArrangeMouseMove';
@@ -65,6 +69,7 @@ export function useCanvasSectionUI({
   const textEditor = useTextDoubleClickEditor({ transformRef, containerRef, executeCommand, getSelectedEntityIds });
   const openingTagEditor = useOpeningInfoTagDoubleClick({ transformRef, containerRef, getSelectedEntityIds });
   const tableCellEditor = useTableCellDoubleClickEditor({ transformRef, containerRef, getSelectedEntityIds, levelManager });
+  useTableModeEntry({ getSelectedEntityIds, levelManager });
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTool === 'select') {
       const ids = getSelectedEntityIds();

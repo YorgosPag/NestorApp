@@ -17,7 +17,14 @@ import {
   getMatchingAliases,
 } from '../../systems/command-line/CommandAliasRegistry';
 import { toolStateStore } from '../../stores/ToolStateStore';
-import { CommandAutocompleteList } from './CommandAutocompleteList';
+// ADR-739 Φ.Δ βήμα 4 — εντολές που ΔΕΝ οπλίζουν εργαλείο (π.χ. `TABLEDIT`): ενεργούν πάνω
+// στην τρέχουσα επιλογή. Δεύτερο μητρώο επίτηδες — δες την κεφαλίδα του.
+import {
+  resolveCommandAction,
+  runCommandAction,
+  getMatchingCommandActions,
+} from '../../systems/command-line/CommandActionRegistry';
+import { CommandAutocompleteList, type CommandSuggestion } from './CommandAutocompleteList';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
 
@@ -33,7 +40,13 @@ export function CommandLineInput() {
   const [input, setInput] = useState('');
   const [autocompleteIdx, setAutocompleteIdx] = useState(0);
 
-  const matches = getMatchingAliases(input, 8);
+  // Οι ενέργειες προηγούνται στη λίστα για τον ίδιο λόγο που προηγούνται και στην
+  // εκτέλεση: είναι λίγες και συγκεκριμένες, ενώ τα ~150 aliases εργαλείων είναι ο θόρυβος
+  // βάθους. Το συνολικό όριο μένει 8, ώστε το popover να μη μεγαλώνει.
+  const matches: readonly CommandSuggestion[] = [
+    ...getMatchingCommandActions(input, 8).map((e) => ({ alias: e.alias, detail: e.actionId })),
+    ...getMatchingAliases(input, 8).map((e) => ({ alias: e.alias, detail: e.toolId })),
+  ].slice(0, 8);
 
   // Focus input when store shows the widget (letter pressed on canvas).
   useEffect(() => {
@@ -67,10 +80,22 @@ export function CommandLineInput() {
       return;
     }
 
-    const toolId = resolveAlias(cmd);
-    if (toolId) {
-      CommandHistoryStore.push(cmd);
-      toolStateStore.selectTool(toolId);
+    // ADR-739 Φ.Δ βήμα 4 — οι ενέργειες ρωτιούνται ΠΡΩΤΕΣ. Τα δύο σύνολα ονομάτων είναι
+    // αποδεδειγμένα ξένα (`__tests__/command-alias-namespace.test.ts`), οπότε η σειρά δεν
+    // κρίνει ποιος κερδίζει — κρίνει τι θα συμβεί αν κάποιος **σπάσει** αυτή την απόδειξη:
+    // μια εντολή που δεν οπλίζει εργαλείο είναι πάντα η πιο συγκεκριμένη πρόθεση.
+    const actionId = resolveCommandAction(cmd);
+    if (actionId) {
+      // `runCommandAction` επιστρέφει `false` όταν η ενέργεια δεν έχει νόημα τώρα (καμία
+      // επιλογή, λάθος τύπος οντότητας). Τότε ΔΕΝ γράφεται στο ιστορικό: το ιστορικό
+      // εντολών είναι «τι έκανα», όχι «τι πληκτρολόγησα».
+      if (runCommandAction(actionId)) CommandHistoryStore.push(cmd);
+    } else {
+      const toolId = resolveAlias(cmd);
+      if (toolId) {
+        CommandHistoryStore.push(cmd);
+        toolStateStore.selectTool(toolId);
+      }
     }
 
     setInput('');

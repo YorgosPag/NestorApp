@@ -46,6 +46,7 @@ import type { TableCellLayout } from '../../bim/table/table-layout-types';
 import {
   stampTableBorders,
   stampTableCellCursor,
+  stampTableModeOutline,
   stampTableFills,
   stampTableText,
   type StampTableContext,
@@ -124,7 +125,16 @@ export class TableRenderer extends BaseEntityRenderer {
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
     stampTableText(rc, cells, editedCellRef(cursor));
-    if (cursor) this.drawCellCursor(cursor, rc, index);
+    if (cursor) {
+      // ADR-739 Φ.Δ βήμα 4 — ΠΡΩΤΑ το περίγραμμα λειτουργίας, ΜΕΤΑ ο δρομέας κελιού: όταν ο
+      // δρομέας κάθεται σε κελί της άκρης, οι δύο γραμμές εφάπτονται και πρέπει να νικά η
+      // **συμπαγής**. Το «ποιο πλήκτρο πάει πού» είναι πιο επείγον από το «πού βρίσκομαι».
+      //
+      // Το ορθογώνιο είναι όλη η διάταξη από την τοπική αρχή (0,0) — οι ίδιες συντεταγμένες
+      // φύλλου που χρησιμοποιούν τα κελιά, άρα καμία δεύτερη μετατροπή.
+      stampTableModeOutline(rc, { x: 0, y: 0, w: layout.widthMm, h: layout.heightMm });
+      this.drawCellCursor(cursor, rc, index);
+    }
   }
 
   /**

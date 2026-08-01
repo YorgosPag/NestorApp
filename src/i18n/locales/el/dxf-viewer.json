@@ -518,6 +518,13 @@
     "cellEditor": {
       "editorPlaceholder": "",
       "cellAriaLabel": "Κελί πίνακα"
+    },
+    "mode": {
+      "label": "Πίνακας",
+      "hint": "Esc για έξοδο",
+      "nav": "Έτοιμο",
+      "enter": "Καταχώριση",
+      "edit": "Επεξεργασία"
     }
   },
   "scene": {

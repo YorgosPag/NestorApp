@@ -23,7 +23,8 @@
  */
 
 import { useEffect, useRef } from 'react';
-import { isTextEntryFocused } from '@/lib/a11y/keyboard-scope';
+// ADR-711 — ο δομικός φύλακας· αντικατέστησε τον χειροκίνητο έλεγχο εστίασης (δες §Enter).
+import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
 import {
   attachedImageSelection,
   attachedImagePlacer,
@@ -60,14 +61,27 @@ function useCommitAtViewportCenter(tool: UseEntourageToolResult): void {
     if (!tool.isAwaitingPosition) return undefined;
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Enter' || event.defaultPrevented) return;
-      if (isTextEntryFocused()) return;
       const metrics = readViewportWorldMetrics();
       if (!metrics) return;
       event.preventDefault();
       toolRef.current.onCanvasClick(metrics.center);
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    // 🔴 ADR-739 Φ.Δ βήμα 4 — μετανάστευση στον δομικό φύλακα (Boy Scout, N.0.2).
+    //
+    // Ήταν ωμός listener που ρωτούσε **μία** ερώτηση, το `isTextEntryFocused()` — «γράφει ο
+    // χρήστης;» — και ποτέ τη δεύτερη: «κατέχει modal το πληκτρολόγιο;». Ακριβώς το ελάττωμα
+    // Ε1/Ε4 που γέννησε τον wrapper (ADR-711), σε νέα συσκευασία· ο ratchet του
+    // `keyboard/__tests__` το είχε ήδη κόκκινο, αζήτητο.
+    //
+    // Ο έλεγχος εστίασης **δεν χάθηκε**: το `shouldGlobalShortcutYield` ρωτά την ερώτηση 2
+    // ({@link consumesTypedCharacters}), που είναι γνήσιο **υπερσύνολο** της ερώτησης 1 —
+    // άρα ο φύλακας είναι αυστηρότερα ισχυρότερος, όχι απλώς ισοδύναμος.
+    //
+    // ⚠️ `capture: false`: ο listener ήταν σε φάση **bubble** και ελέγχει `defaultPrevented` —
+    // δηλαδή είναι εσκεμμένα **τελευταίος** στη σειρά για ένα από τα πιο διεκδικούμενα
+    // πλήκτρα του viewer. Ο wrapper προεπιλέγει capture· χωρίς αυτή τη γραμμή η μετανάστευση
+    // θα έκλεβε το `Enter` από κάθε ροή πολλών κλικ.
+    return addGlobalShortcutListener(onKeyDown, { capture: false });
   }, [tool.isAwaitingPosition]);
 }
 

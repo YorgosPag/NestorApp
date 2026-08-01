@@ -104,7 +104,10 @@ const PENDING_MIGRATION: ReadonlySet<string> = new Set([
   'bim-3d/viewport/use-bim3d-entity-clipboard.ts',
   'bim-3d/viewport/use-polygon-clipboard-shortcuts.ts',
   'components/dxf-layout/DistMeasureOverlayLeaf.tsx',
-  'core/commands/useCommandHistory.ts',
+  // ✅ ΜΕΤΑΝΑΣΤΕΥΣΑΝ (ADR-739 Φ.Δ βήμα 4) — μη τα ξαναπροσθέσεις:
+  //   · `core/commands/useCommandHistory.ts` — Ctrl+Z/Y· έκλεβε το undo μέσα από κελί πίνακα
+  //   · `hooks/drawing/attach-image-tool.ts` — Enter· ρωτούσε μόνο «γράφει ο χρήστης;»
+  //     (δεν ήταν καν σε αυτή τη λίστα: μπήκε με το ADR-736 και άφησε τον ratchet κόκκινο)
   'debug/layout-debug/coordinate-clipboard-copy.ts',
   'debug/layout-debug/LayoutMapper.tsx',
   'debug/useDebugToolbarShortcuts.ts',

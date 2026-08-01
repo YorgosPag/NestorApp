@@ -115,10 +115,15 @@ export interface TableCellEditorOverlayProps {
   readonly onMove: (move: TableCursorMove) => void;
   /** `Delete` σε κατάσταση πλοήγησης — άδειασμα κελιού (Excel). */
   readonly onClear: () => void;
+  /**
+   * ADR-739 Φ.Δ βήμα 4 — `Ctrl+Z`/`Ctrl+Y` σε **πλοήγηση**. Σε γραφή δεν καλείται ποτέ:
+   * εκεί το undo ανήκει στο `<input>` και το κάνει ο browser (δες `table-cell-key-intent`).
+   */
+  readonly onHistory: (direction: 'undo' | 'redo') => void;
 }
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
-  const { mode, draft, initialText, caretIndex, anchor, onCommit, onMove, onClear } = props;
+  const { mode, draft, initialText, caretIndex, anchor, onCommit, onMove, onClear, onHistory } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -186,6 +191,12 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
           event.preventDefault();
           onClear();
           return;
+        case 'history':
+          // `preventDefault` απαραίτητο: χωρίς αυτό ο browser θα έτρεχε **και** το δικό του
+          // undo πάνω στο (κενό, αόρατο) πεδίο πλοήγησης — δύο ενέργειες για ένα πάτημα.
+          event.preventDefault();
+          onHistory(intent.direction);
+          return;
         case 'passthrough':
           // Το `Enter` το έχει ήδη διεκδικήσει η περίπτωση `move`, οπότε ο χειριστής του
           // SSoT δεν έχει τι να κάνει εδώ — καλείται παρ' όλα αυτά ώστε μια μελλοντική
@@ -193,7 +204,7 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
           inlineKeyDown(event);
       }
     },
-    [mode, initialText, commit, onMove, onClear, inlineKeyDown],
+    [mode, initialText, commit, onMove, onClear, onHistory, inlineKeyDown],
   );
 
   const handleChange = useCallback(

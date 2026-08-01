@@ -18,6 +18,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+// ADR-711 / ADR-739 Φ.Δ βήμα 4 — ο δομικός φύλακας των global accelerators.
+import { addGlobalShortcutListener } from '../../keyboard/global-shortcut-listener';
 import { CommandHistory, getGlobalCommandHistory } from './CommandHistory';
 import type { ICommand, CommandHistoryEvent, CommandHistoryConfig } from './interfaces';
 
@@ -166,6 +168,27 @@ export function useCommandHistory(options: UseCommandHistoryOptions = {}): UseCo
 /**
  * Hook for keyboard shortcut integration
  * Call this in your main component to enable Ctrl+Z/Ctrl+Y
+ *
+ * ── ADR-739 Φ.Δ βήμα 4 — ΓΙΑΤΙ ΠΕΡΑΣΕ ΠΙΣΩ ΑΠΟ ΤΟΝ ΔΟΜΙΚΟ ΦΥΛΑΚΑ ──
+ *
+ * Ήταν ωμή εγγραφή keydown στο `window` με **κανέναν** φύλακα (η φράση γράφεται έτσι
+ * επίτηδες: το κυριολεκτικό literal θα έκανε αυτό το αρχείο να μετρηθεί ξανά ως παραβάτης
+ * από τον ratchet του `keyboard/__tests__`) — ένα από τα 20
+ * τέτοια που μέτρησε το audit του βήματος 4, και το **πρώτο θύμα** του: με ανοιχτό δρομέα
+ * κελιού, το `Ctrl+Z` του χρήστη ανέτρεπε την τελευταία εντολή **σχεδίασης** αντί για την
+ * πληκτρολόγησή του. Στο Excel το `Ctrl+Z` μέσα σε κελί ανήκει στο κελί.
+ *
+ * ⚠️ `capture: false` **επίτηδες**: ο προηγούμενος listener ήταν στη φάση **bubble**
+ * (η προεπιλογή του `addEventListener`), ενώ ο wrapper προεπιλέγει `capture`. Χωρίς αυτή
+ * τη γραμμή η μετατροπή θα άλλαζε σιωπηλά τη **σειρά** έναντι κάθε άλλου listener του
+ * viewer — δηλαδή θα ήταν αλλαγή συμπεριφοράς μεταμφιεσμένη σε καθαρισμό.
+ *
+ * ⚠️ Ο φύλακας κάνει το `Ctrl+Z` να παραιτείται και με **οποιοδήποτε** εστιασμένο πεδίο
+ * κειμένου (γραμμή εντολών, Dynamic Input, διάλογοι) — αυτό είναι διόρθωση, όχι απώλεια:
+ * μέχρι τώρα το undo σχεδίασης πυροδοτούσε ενώ ο χρήστης πληκτρολογούσε.
+ *
+ * @see subapps/dxf-viewer/keyboard/global-shortcut-listener.ts — ο φύλακας
+ * @see ui/table-cell-editor/table-cell-key-intent.ts — ποιος το διεκδικεί μέσα στον πίνακα
  */
 export function useCommandHistoryKeyboard(options: UseCommandHistoryOptions = {}): void {
   const { undo, redo, canUndo, canRedo } = useCommandHistory(options);
@@ -194,7 +217,6 @@ export function useCommandHistoryKeyboard(options: UseCommandHistoryOptions = {}
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return addGlobalShortcutListener(handleKeyDown, { capture: false });
   }, [undo, redo, canUndo, canRedo]);
 }

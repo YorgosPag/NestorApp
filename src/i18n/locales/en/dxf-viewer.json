@@ -518,6 +518,13 @@
     "cellEditor": {
       "editorPlaceholder": "",
       "cellAriaLabel": "Table cell"
+    },
+    "mode": {
+      "label": "Table",
+      "hint": "Esc to exit",
+      "nav": "Ready",
+      "enter": "Enter",
+      "edit": "Edit"
     }
   },
   "scene": {
