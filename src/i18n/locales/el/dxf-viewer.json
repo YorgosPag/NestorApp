@@ -531,6 +531,17 @@
       "nav": "Έτοιμο",
       "enter": "Καταχώριση",
       "edit": "Επεξεργασία"
+    },
+    "range": {
+      "size": "{rows, plural, one {# γραμμή} other {# γραμμές}} × {columns, plural, one {# στήλη} other {# στήλες}}"
+    },
+    "clipboard": {
+      "pasteClipped": "Δεν χώρεσαν όλα — χώρεσαν {detail}. Ο πίνακας δεν μεγαλώνει αυτόματα.",
+      "pasteClippedRows": "{fitted} από {offered, plural, one {# γραμμή} other {# γραμμές}}",
+      "pasteClippedColumns": "{fitted} από {offered, plural, one {# στήλη} other {# στήλες}}",
+      "pasteMergedSkipped": "{count, plural, one {# κελί παραλείφθηκε} other {# κελιά παραλείφθηκαν}} λόγω συγχώνευσης",
+      "pastePlainText": "Η επικόλληση από φύλλο υπολογισμού μπαίνει ως απλό κείμενο: μορφοποίηση και τύποι δεν μεταφέρονται — ένας τύπος μπαίνει ως η τιμή του.",
+      "pasteEmpty": "Το πρόχειρο δεν περιέχει κείμενο για επικόλληση"
     }
   },
   "scene": {

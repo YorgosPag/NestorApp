@@ -531,6 +531,17 @@
       "nav": "Ready",
       "enter": "Enter",
       "edit": "Edit"
+    },
+    "range": {
+      "size": "{rows, plural, one {# row} other {# rows}} × {columns, plural, one {# column} other {# columns}}"
+    },
+    "clipboard": {
+      "pasteClipped": "Not everything fitted — {detail} fitted. The table does not grow automatically.",
+      "pasteClippedRows": "{fitted} of {offered, plural, one {# row} other {# rows}}",
+      "pasteClippedColumns": "{fitted} of {offered, plural, one {# column} other {# columns}}",
+      "pasteMergedSkipped": "{count, plural, one {# cell was skipped} other {# cells were skipped}} because of a merge",
+      "pastePlainText": "Pasting from a spreadsheet inserts plain text: formatting and formulas are not carried over — a formula is pasted as its value.",
+      "pasteEmpty": "The clipboard has no text to paste"
     }
   },
   "scene": {
