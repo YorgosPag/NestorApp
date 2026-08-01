@@ -49,9 +49,10 @@ import type { SCurveDataPoint } from "@/services/report-engine/evm-calculator";
 // ─── Custom Tooltip ──────────────────────────────────────────────────────
 
 interface TooltipPayloadItem {
-  name: string;
   value: number;
   color: string;
+  dataKey?: string | number;
+  payload?: SCurveDataPoint;
 }
 
 interface SCurveTooltipProps {
@@ -63,6 +64,16 @@ interface SCurveTooltipProps {
   cvLabel: string;
 }
 
+/**
+ * 🔴 Τα τρία μεγέθη διαβάζονται από το **σημείο δεδομένων**, όχι από την
+ * ετικέτα της σειράς.
+ *
+ * Μέχρι τη μετανάστευση ADR-710 έψαχνε `payload.find(p => p.name === "PV")`,
+ * δηλαδή το `name` prop του `<Line>`. Μόλις η δήλωση σειρών ανέλαβε τα
+ * ονόματα, το `name` έγινε το `dataKey` και τα SV/CV θα υπολογίζονταν
+ * **σιωπηλά** ως `0 − 0` — σωστό σχήμα, λάθος αριθμός, καμία εξαίρεση.
+ * *Ταυτότητα με το κλειδί, ποτέ με την ετικέτα.*
+ */
 function SCurveTooltip({
   active,
   payload,
@@ -73,24 +84,35 @@ function SCurveTooltip({
 }: SCurveTooltipProps) {
   if (!active || !payload?.length) return null;
 
-  const pv = payload.find((p) => p.name === "PV")?.value ?? 0;
-  const ev = payload.find((p) => p.name === "EV")?.value ?? 0;
-  const ac = payload.find((p) => p.name === "AC")?.value ?? 0;
+  const point = payload[0]?.payload;
+  const pv = point?.plannedValue ?? 0;
+  const ev = point?.earnedValue ?? 0;
+  const ac = point?.actualCost ?? 0;
   const sv = ev - pv;
   const cv = ev - ac;
+
+  const SERIES_LABEL: Record<string, string> = {
+    plannedValue: "PV",
+    earnedValue: "EV",
+    actualCost: "AC",
+  };
 
   return (
     <div className="rounded-md border bg-popover p-3 shadow-md text-sm">
       <p className="font-medium mb-2">{label ? formatDateShort(label) : ""}</p>
-      {payload.map((entry) => (
-        <p key={entry.name} style={{ color: entry.color }}>
-          <span className="font-medium">{entry.name}</span>
-          <span className="text-muted-foreground text-xs ml-1">
-            {labelMap[entry.name] ?? ""}
-          </span>
-          : {formatCurrency(entry.value)}
-        </p>
-      ))}
+      {payload.map((entry) => {
+        const key = String(entry.dataKey ?? "");
+        const short = SERIES_LABEL[key] ?? key;
+        return (
+          <p key={key} style={{ color: entry.color }}>
+            <span className="font-medium">{short}</span>
+            <span className="text-muted-foreground text-xs ml-1">
+              {labelMap[short] ?? ""}
+            </span>
+            : {formatCurrency(entry.value)}
+          </p>
+        );
+      })}
       <hr className="my-1.5 border-border" />
       <p
         className={
