@@ -897,7 +897,10 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'contact_links',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/contact-links.rules.test.ts',
-    rulesRange: [143, 213],
+    // 169-242 since ADR-745 Φάση Β added the `resource == null` rationale block.
+    // ⚠️ `rulesRange` is parsed by CHECK 3.16 but never compared against
+    // firestore.rules, so a stale range fails nothing — keep it honest by hand.
+    rulesRange: [169, 242],
     // ADR-745 (2026-08-01): no longer shares contactRelationshipsMatrix(). The
     // pattern was declared `tenant_direct` while the tenant field was never
     // written — nominally tenant-scoped, structurally unreachable. Now real:
