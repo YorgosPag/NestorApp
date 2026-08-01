@@ -17,6 +17,7 @@
 import 'server-only';
 
 import { getAdminFirestore, getAdminStorage, FieldValue } from '@/lib/firebaseAdmin';
+import { scopeQueryToCompany } from '@/lib/firestore/tenant-scoped-query';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_TYPES, FILE_DOMAINS, FILE_CATEGORIES } from '@/config/domain-constants';
@@ -50,21 +51,38 @@ const logger = createModuleLogger('ATTENDANCE_SERVER');
  * Searches the contact_links collection for a worker linked to the project
  * whose contact document has a matching AMKA.
  *
+ * 🔴 ADR-745 §9.2 — this function could never return a worker. Three independent
+ * breaks in twelve lines, all invisible while `contact_links` held 0 documents:
+ *
+ * 1. it filtered on `entityId`/`entityType` (the generic {@link FIELDS} pair);
+ *    the collection stores `targetEntityId`/`targetEntityType`, so the query
+ *    matched nothing, ever — and a `FIELDS.` prefix is what made it read as correct;
+ * 2. it read `contactId` off each link; the field is `sourceContactId`, so even a
+ *    matching link yielded `undefined` ids;
+ * 3. no tenant filter, on the Admin SDK path where `firestore.rules` does not run.
+ *
+ * The caller resolves and validates `projectCompanyId` immediately above the call
+ * and then dropped it. It is now a parameter, so it cannot be dropped again.
+ *
  * @param projectId - The project to search within
+ * @param companyId - Tenant that owns the project (already validated by the caller)
  * @param amka - The worker's AMKA number
  * @returns Worker info or null if not found
  */
 export async function resolveWorkerForProject(
   projectId: string,
+  companyId: string,
   amka: string
 ): Promise<{ contactId: string; name: string } | null> {
   const db = getAdminFirestore();
 
   // Get all contact links for this project with role 'worker' or type 'contact'
-  const linksSnapshot = await db
-    .collection(COLLECTIONS.CONTACT_LINKS)
-    .where(FIELDS.ENTITY_ID, '==', projectId)
-    .where(FIELDS.ENTITY_TYPE, '==', 'project')
+  const linksSnapshot = await scopeQueryToCompany(
+    db.collection(COLLECTIONS.CONTACT_LINKS),
+    companyId,
+  )
+    .where('targetEntityId', '==', projectId)
+    .where('targetEntityType', '==', 'project')
     .get();
 
   if (linksSnapshot.empty) {
@@ -73,7 +91,7 @@ export async function resolveWorkerForProject(
   }
 
   // Extract contact IDs from links
-  const contactIds = linksSnapshot.docs.map((doc) => doc.data().contactId as string);
+  const contactIds = linksSnapshot.docs.map((doc) => doc.data().sourceContactId as string);
 
   // Search contacts for matching AMKA (batch in groups of 10 for Firestore 'in' limit)
   for (let i = 0; i < contactIds.length; i += 10) {
@@ -284,7 +302,7 @@ export async function processQrCheckIn(payload: QrCheckInPayload): Promise<QrChe
   }
 
   // Step 2: Resolve worker
-  const worker = await resolveWorkerForProject(projectId, payload.workerIdentifier);
+  const worker = await resolveWorkerForProject(projectId, projectCompanyId, payload.workerIdentifier);
   if (!worker) {
     logger.warn('QR check-in rejected: worker not found', { projectId });
     return failResponse('worker_not_found');

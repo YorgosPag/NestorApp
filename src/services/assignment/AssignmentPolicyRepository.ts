@@ -23,6 +23,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { ENTITY_STATUS } from '@/constants/entity-status-values';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import type { AssignmentPolicy } from '@/types/assignment-policy';
 
 // ============================================================================
@@ -85,7 +86,12 @@ export async function getProjectPolicyAdmin(
   }
 
   const policy = snapshot.docs[0].data() as AssignmentPolicy;
-  if (policy.companyId !== companyId) {
+  // 🔴 ADR-742 §4 — **ο τύπος υπόσχεται, η βάση δεν εγγυάται** (μάθημα #4). Το
+  // `as AssignmentPolicy` δηλώνει `companyId: string`, αλλά το `data()` του
+  // Firestore δεν το επιβεβαιώνει· με σκέτο `!==` πολιτική με κενό `companyId`
+  // περνούσε για καλούντα με χαλασμένο token. Το ερώτημα από πάνω είναι ήδη
+  // tenant-scoped — αυτό εδώ είναι η **δεύτερη ζώνη**, και οφείλει να ρωτά σωστά.
+  if (!isPayloadOwnedByCompany(policy, companyId)) {
     logger.warn('Tenant isolation violation: Policy belongs to different company', {
       policyId: policy.id,
       requestedCompanyId: companyId,

@@ -37,6 +37,7 @@
 import type { BOQItem } from '@/types/boq';
 import type { IBOQReadService } from '@/services/measurements/boq-read-contract';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { type CapabilityError, notFoundError } from '../../registry';
 
 const logger = createModuleLogger('BoqTenantGuard');
@@ -71,7 +72,9 @@ export async function fetchOwnedBoqItem(
   // Δεύτερη ζώνη: το συμβόλαιο λέει ότι εδώ φτάνει μόνο δική μας γραμμή. Αν μια
   // υλοποίηση αγνοήσει το `companyId`, ο πράκτορας ΔΕΝ θα δει ξένα δεδομένα —
   // θα δει `NOT_FOUND` και θα μείνει ίχνος με το `requestId`.
-  if (item.companyId !== companyId) {
+  // 🔴 ADR-742 §4 — η δεύτερη ζώνη ρωτά με τον SSoT, όχι με σκέτο `!==`: γραμμή
+  // **χωρίς** `companyId` και πράκτορας με κενό `companyId` ταίριαζαν.
+  if (!isPayloadOwnedByCompany(item, companyId)) {
     logger.error('Contract violation: getById returned a cross-tenant BOQ item', {
       itemId,
       requestId,

@@ -2,6 +2,30 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **Καμία πύλη δεν βλέπει tenant filter σε αλυσίδες Admin SDK (μετρημένο 2026-08-01, ADR-745 §9.2 Φάση Α).**
+  Το ADR-702/742 έφτιαξε το SSoT (`lib/firestore/tenant-scoped-query`) — αλλά **τίποτα δεν επιβάλλει τη χρήση του**.
+  Τρία σημεία στο `contact_links` έμειναν ασκόπιστα επί μήνες, εκ των οποίων **ένα ΕΓΓΡΑΦΗ**· διορθώθηκαν, με
+  8 anchor tests + 5/5 μεταλλάξεις (`src/services/__tests__/contact-links-admin-tenant-scope.test.ts`).
+  · 🔴 **Γιατί τα gates ήταν τυφλά — δύο ανεξάρτητοι λόγοι, και οι δύο μετρημένοι:**
+    **CHECK 3.10** ψάχνει τη συμβολοσειρά `companyId` γύρω από `query(` — το Admin SDK γράφει
+    `.collection(X).where(…)`, **άλλο σχήμα**, δεν το κοιτά καν.
+    **CHECK 3.15** (`check-firestore-index-coverage.js`, γρ. 40-44) **δηλώνει ρητά** ότι αναλύει μόνο κλήσεις
+    μέσω κεντρικού helper με literal `constraints: [...]`· direct `query()` + runtime-built πίνακες βγαίνουν
+    «unanalyzable» και **δεν μπλοκάρουν**. Το ✔ των «93 shapes / 49 skipped» **δεν κάλυπτε ούτε ένα**
+    query του `contact_links`. Άλλο ένα «`0` = κανείς δεν κοίταξε».
+  · ⬜ **Η πύλη που λείπει**: AST σάρωση για `.collection(<tenant-scoped collection>)` αλυσίδες χωρίς
+    `companyId` / `scopeQueryToCompany` / `tenantScopedCollection`, με ρητή λίστα εξαιρέσεων για συλλογές
+    **χωρίς** πεδίο μισθωτή (η διάκριση που το `dependency-tenant-scope.ts` ήδη κάνει — μην την ξαναφτιάξεις).
+    Ratchet με baseline, **όχι** zero-tol: το εύρος είναι άγνωστο μέχρι να τρέξει η πρώτη πλήρης σάρωση.
+  · ⬜ **13 `countDirectCollection(...)` στο `lib/firestore/project-mutation-impact-preview.service.ts:186-199`**
+    (buildings, properties, communications, obligations, legal_contracts, ownership_tables, purchase_orders,
+    attendance_events, employment_records, accounting_invoices, files, boq_items, calendar_events) μετρούν
+    **χωρίς μισθωτή**. Το `countContactLinks` δίπλα τους διορθώθηκε — τα υπόλοιπα **όχι**, γιατί καμία από
+    τις 13 συλλογές δεν μετρήθηκε. Ο αριθμός τροφοδοτεί **απόφαση διαγραφής** που βλέπει ο χρήστης.
+  · **Γιατί καταγραφή και όχι διόρθωση τώρα**: 13 συλλογές + νέα πύλη + baseline = >1h σε 2+ τομείς (N.8),
+    και το εύρος πέρα από το `contact_links` είναι **αμέτρητο** — δεν ισχυρίζομαι κάλυψη που δεν μέτρησα.
+  · Εντολή ανίχνευσης: `grep -rn "\.collection(COLLECTIONS\." src --include=*.ts -A3 | grep -B1 "\.where(" | grep -v companyId`.
+
 - 🟡 **Τρεις εναπομείναντες χειρόγραφοι union-find στο `dxf-viewer` (μετρημένο 2026-08-01, ADR-745 Φ1 κατά N.0.2).**
   Ο αλγόριθμος υπήρχε **τέσσερις** φορές· ο ένας κεντρικοποιήθηκε. Κανονικός SSoT:
   `src/subapps/dxf-viewer/utils/connected-components.ts` (`computeConnectedComponents` /

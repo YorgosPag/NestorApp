@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { scopeQueryToCompany } from '@/lib/firestore/tenant-scoped-query';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
 import type { Project, ProjectStatus } from '@/types/project';
 import type { ProjectUpdatePayload } from '@/services/projects-client.service';
@@ -132,9 +133,21 @@ async function countDirectCollection(collection: string, field: string, projectI
   return snapshot.size;
 }
 
-async function countContactLinks(projectId: string): Promise<number> {
+/**
+ * 🔒 ADR-745 G6 — scoped by company, unlike its `countDirectCollection` siblings.
+ *
+ * Admin SDK, so `firestore.rules` is not in the path and the query is the whole
+ * gate. An unscoped count reports another company's links as this project's
+ * dependencies — a number the user is asked to make a deletion decision on.
+ *
+ * The 13 `countDirectCollection` call sites above have the same gap and are
+ * deliberately *not* changed here: they are a different collection each, none of
+ * them measured. Logged in `.claude-rules/pending-ratchet-work.md` instead of
+ * being swept along with a change whose evidence covers only this one.
+ */
+async function countContactLinks(projectId: string, companyId: string): Promise<number> {
   const db = getAdminFirestore();
-  const snapshot = await db.collection(COLLECTIONS.CONTACT_LINKS)
+  const snapshot = await scopeQueryToCompany(db.collection(COLLECTIONS.CONTACT_LINKS), companyId)
     .where('targetEntityType', '==', 'project')
     .where('targetEntityId', '==', projectId)
     .where('status', '==', 'active')
@@ -164,7 +177,7 @@ async function countCalendarEvents(projectId: string): Promise<number> {
   return snapshot.size;
 }
 
-async function collectDependencyCounts(projectId: string): Promise<Record<ProjectMutationDependencyId, number>> {
+async function collectDependencyCounts(projectId: string, companyId: string): Promise<Record<ProjectMutationDependencyId, number>> {
   const [
     buildings,
     properties,
@@ -186,7 +199,7 @@ async function collectDependencyCounts(projectId: string): Promise<Record<Projec
     countDirectCollection(COLLECTIONS.BUILDINGS, 'projectId', projectId),
     countDirectCollection(COLLECTIONS.PROPERTIES, 'projectId', projectId),
     countProjectPaymentPlans(projectId),
-    countContactLinks(projectId),
+    countContactLinks(projectId, companyId),
     countDirectCollection(COLLECTIONS.COMMUNICATIONS, 'projectId', projectId),
     countDirectCollection(COLLECTIONS.OBLIGATIONS, 'projectId', projectId),
     countDirectCollection(COLLECTIONS.LEGAL_CONTRACTS, 'projectId', projectId),
@@ -342,7 +355,7 @@ export async function previewProjectMutationImpact(
 
     const mutationKinds = Array.from(new Set(changes.map((change) => change.kind)));
     const companyLinkChange = getCompanyLinkChangeType(changes);
-    const dependencyCounts = await collectDependencyCounts(project.id);
+    const dependencyCounts = await collectDependencyCounts(project.id, project.companyId);
     const { deps: dependencies, forcedWarn, messageKeyOverride } = buildDependencies(
       dependencyCounts,
       companyLinkChange,
