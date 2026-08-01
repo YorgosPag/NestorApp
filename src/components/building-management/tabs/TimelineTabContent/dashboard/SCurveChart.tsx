@@ -6,6 +6,25 @@
  *
  * Uses recharts LineChart with 3 lines + today marker.
  * Colors from useSemanticColors() — no hardcoded hex.
+ *
+ * ⚠️ **ADR-710 (μετανάστευση 2026-08-01)**: `<ChartPlot>`, **όχι** `<ChartCard>` —
+ * το `ReportSection` έχει ήδη ξοδέψει κάρτα και επικεφαλίδα, οπότε το `ChartCard`
+ * θα **έριχνε** και θα ονόμαζε τη διόρθωση (`surface-context.tsx`).
+ *
+ * 🔑 **Ο πίνακας `sr-only` αφαιρέθηκε.** Ήταν χειρόγραφος και **μόνο** για
+ * αναγνώστες οθόνης· το shell παράγει τον ίδιο πίνακα ως `<details>` ορατό σε
+ * **όλους** — που είναι το ζητούμενο του ADR-710 §10, αφού δύο βήματα της
+ * μετρημένης παλέτας πέφτουν κάτω από 3:1 σε light mode και ο πίνακας είναι η
+ * ανακούφιση που οφείλεται σε κάθε αναγνώστη, όχι μόνο στον τυφλό.
+ *
+ * 🔑 Τα χρώματα δηλώνονται **ρητά** (`ChartSeries.color`) και όχι θεσιακά: PV
+ * είναι **γραμμή βάσης** (σβησμένο, διακεκομμένο), AC είναι **δαπάνη**
+ * (`--destructive`). Είναι κωδικοποίηση **σημασίας**, ακριβώς η περίπτωση για
+ * την οποία υπάρχει το `color` override.
+ *
+ * ⚠️ Το tooltip μένει χειρόγραφο: υπολογίζει **παράγωγα** μεγέθη (SV = EV−PV,
+ * CV = EV−AC) που δεν είναι σειρές του γραφήματος, άρα δεν υπάρχουν στην
+ * περιγραφή που διαβάζει το ChartPlot.Tooltip.
  */
 
 import { useMemo } from "react";
@@ -16,11 +35,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ReferenceLine,
   Brush,
-  ResponsiveContainer,
 } from "recharts";
+import { ChartPlot, type ChartSeries } from "@/components/ui/chart-card";
 import { ReportSection } from "@/components/reports/core/ReportSection";
 import { ReportEmptyState } from "@/components/reports/core/ReportEmptyState";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
@@ -128,6 +146,31 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
   }, []);
 
+  /**
+   * Η **μία** δήλωση: θεματοποίηση, υπόμνημα, πίνακας δεδομένων και σήμανση
+   * διαβάζουν όλα από εδώ. Το υπόμνημα εμφανίζεται επειδή οι σειρές είναι
+   * **τρεις** — όχι επειδή κάποιος πέρασε `<Legend />`.
+   */
+  const series = useMemo<readonly ChartSeries<SCurveDataPoint>[]>(
+    () => [
+      {
+        key: "plannedValue",
+        label: "PV",
+        description: tt("pvShort"),
+        color: "hsl(var(--muted-foreground))",
+      },
+      { key: "earnedValue", label: "EV", description: tt("evShort") },
+      {
+        key: "actualCost",
+        label: "AC",
+        description: tt("acShort"),
+        color: "hsl(var(--destructive))",
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- το tt κλείνει πάνω στο t
+    [t],
+  );
+
   const isEmpty = data.length === 0;
 
   if (!loading && isEmpty) {
@@ -151,12 +194,19 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
       tooltip={t("tabs.timeline.dashboard.tooltips.sCurveTitle")}
       id="schedule-scurve"
     >
-      <figure
-        role="img"
-        aria-label={t("tabs.timeline.dashboard.sCurve.ariaLabel")}
+      <ChartPlot
+        series={series}
+        data={data}
+        categoryKey="date"
+        categoryLabel={t("tabs.timeline.dashboard.sCurve.colDate")}
+        formatValue={(v) => formatCurrency(v)}
+        formatCategory={(v) => formatDateShort(String(v ?? ""))}
       >
-        <div className="h-[350px] w-full sm:h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartPlot.Figure
+          caption={t("tabs.timeline.dashboard.sCurve.ariaLabel")}
+          emptyMessage={t("tabs.timeline.dashboard.empty.noBOQ")}
+          size="lg"
+        >
             <LineChart
               data={data}
               margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
@@ -181,8 +231,6 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
                   />
                 }
               />
-              <Legend />
-
               {/* Today marker */}
               <ReferenceLine
                 x={todayStr}
@@ -199,8 +247,7 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
               <Line
                 type="monotone"
                 dataKey="plannedValue"
-                name="PV"
-                stroke="hsl(var(--muted-foreground))"
+                stroke="var(--color-plannedValue)"
                 strokeDasharray="5 5"
                 strokeWidth={2}
                 dot={false}
@@ -211,8 +258,7 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
               <Line
                 type="monotone"
                 dataKey="earnedValue"
-                name="EV"
-                stroke="hsl(var(--chart-1))"
+                stroke="var(--color-earnedValue)"
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
@@ -222,8 +268,7 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
               <Line
                 type="monotone"
                 dataKey="actualCost"
-                name="AC"
-                stroke="hsl(var(--destructive))"
+                stroke="var(--color-actualCost)"
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 4 }}
@@ -238,32 +283,8 @@ export function SCurveChart({ data, loading, enableBrush }: SCurveChartProps) {
                 />
               )}
             </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Screen-reader data table */}
-        <table className="sr-only">
-          <caption>{t("tabs.timeline.dashboard.sCurve.title")}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t("tabs.timeline.dashboard.sCurve.colDate")}</th>
-              <th scope="col">{t("tabs.timeline.dashboard.sCurve.pv")}</th>
-              <th scope="col">{t("tabs.timeline.dashboard.sCurve.ev")}</th>
-              <th scope="col">{t("tabs.timeline.dashboard.sCurve.ac")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((point) => (
-              <tr key={point.date}>
-                <td>{formatDateShort(point.date)}</td>
-                <td>{formatCurrency(point.plannedValue)}</td>
-                <td>{formatCurrency(point.earnedValue)}</td>
-                <td>{formatCurrency(point.actualCost)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </figure>
+        </ChartPlot.Figure>
+      </ChartPlot>
     </ReportSection>
   );
 }
