@@ -79,13 +79,41 @@ export type TableCellKeyIntent =
    * απάντηση ήταν «μην το αγγίξεις». Τώρα θα έγραφε πραγματικό `\n` μέσα στην τιμή.
    */
   | { readonly kind: 'suppress' }
+  /**
+   * 🔴 ADR-739 Φ.Δ βήμα 8 — `Shift + βέλος/Home/End`: μεγάλωσε την **περιοχή**, μην
+   * μετακινήσεις τον δρομέα. Το ενεργό κελί μένει ακίνητο· κουνιέται μόνο το άλλο άκρο.
+   *
+   * Είναι **ίδια κίνηση, άλλος στόχος** — γι' αυτό κουβαλά το ίδιο {@link TableCursorMove}
+   * και όχι δικό της λεξιλόγιο: η απάντηση στο «ποιο είναι το επόμενο κελί;» είναι μία, και
+   * ζει στο `moveTableCursor`.
+   */
+  | { readonly kind: 'extend'; readonly move: TableCursorMove }
+  /** ADR-739 Φ.Δ βήμα 8 — `Ctrl+A` σε **πλοήγηση**: όλα τα κελιά **αυτού** του πίνακα. */
+  | { readonly kind: 'selectAll' }
   | { readonly kind: 'passthrough' };
 
 const PASSTHROUGH: TableCellKeyIntent = { kind: 'passthrough' };
 const SUPPRESS: TableCellKeyIntent = { kind: 'suppress' };
+const SELECT_ALL: TableCellKeyIntent = { kind: 'selectAll' };
 
 function move(m: TableCursorMove): TableCellKeyIntent {
   return { kind: 'move', move: m };
+}
+
+/**
+ * Η **ίδια** κίνηση, ερμηνευμένη ως μετακίνηση ή ως επέκταση περιοχής.
+ *
+ * Ο κανόνας του `Shift` ισχύει **μόνο σε πλοήγηση**: σε γραφή το `Shift+βέλος` ανήκει στην
+ * **επιλογή κειμένου** του πεδίου, όπως ακριβώς και το σκέτο βέλος σε κατάσταση `edit`.
+ * Ίδιο επιχείρημα με το `Ctrl+Z` (§`undoRedoIntent`): ό,τι κάνει ήδη σωστά ο browser πάνω
+ * σε εστιασμένο κείμενο, δεν το αγγίζουμε.
+ */
+function moveOrExtend(
+  m: TableCursorMove,
+  mod: TableCellKeyModifiers,
+  mode: TableCellCursorMode,
+): TableCellKeyIntent {
+  return mod.shiftKey && mode === 'nav' ? { kind: 'extend', move: m } : move(m);
 }
 
 /**
@@ -172,12 +200,43 @@ function f2Target(mode: TableCellCursorMode): TableCellCursorMode {
 }
 
 /**
+ * 🔴 ADR-739 Φ.Δ βήμα 8 — **ΠΟΙΟΣ ΚΑΤΕΧΕΙ ΤΟ ΠΡΟΧΕΙΡΟ**, ανά κατάσταση δρομέα.
+ *
+ * ## Γιατί δεν είναι `TableCellKeyIntent`
+ * Το `Ctrl+C`/`Ctrl+V` **δεν χρειάζεται να αναγνωριστεί ως πλήκτρο**: ο browser εκπέμπει
+ * ήδη πραγματικά συμβάντα `copy` / `paste` πάνω στο εστιασμένο πεδίο, με έτοιμο
+ * `clipboardData` — χωρίς άδεια, χωρίς `navigator.clipboard`, χωρίς χειρονομία χρήστη, και
+ * σωστά σε **κάθε διάταξη πληκτρολογίου** (το `Ctrl+C` σε ελληνική διάταξη έχει `key: 'ψ'`).
+ * Ένα συνθετικό `keydown` μονοπάτι θα ήταν χειρότερο σε τέσσερα μέτωπα ταυτόχρονα.
+ *
+ * Αυτό όμως που **πρέπει** να ζει σε ένα σημείο είναι η **απόφαση**: ποιος κατέχει το
+ * πρόχειρο σε κάθε κατάσταση. Ζει εδώ, δίπλα σε κάθε άλλη απόφαση πλήκτρου του πίνακα, και
+ * τη ρωτούν οι χειριστές `onCopy`/`onPaste` — αντί να ξαναγράψουν ο καθένας ένα
+ * `mode === 'nav'` που κάποτε θα αποκλίνει.
+ *
+ * ## Γιατί σε γραφή ανήκει στον browser — και καλώς
+ * Σε `enter`/`edit` ο χρήστης αντιγράφει **κείμενο μέσα στο κελί**. Ο browser το κάνει
+ * σωστά και δωρεάν· μια συνθετική αντιγραφή θα έσπαγε το IME και τους ελληνικούς τόνους —
+ * **ίδιο επιχείρημα** με το `Ctrl+Z` σε γραφή ({@link undoRedoIntent}). Άρα η αντιγραφή
+ * **περιοχής** ζει **μόνο** σε `nav`. Δεν είναι περιορισμός· είναι η ίδια διάκριση που ήδη
+ * κάνει το Excel.
+ */
+export type TableClipboardScope = 'range' | 'text';
+
+export function tableClipboardScope(mode: TableCellCursorMode): TableClipboardScope {
+  return mode === 'nav' ? 'range' : 'text';
+}
+
+/**
  * Η πρόθεση ενός πλήκτρου, δεδομένης της κατάστασης του δρομέα.
  *
- * ⚠️ **Τα `Ctrl`/`Meta` περνούν ανέγγιχτα**, με **δύο** ρητές εξαιρέσεις:
- * `Ctrl+Home`/`Ctrl+End` (άκρη πλέγματος) και `Ctrl+Z`/`Ctrl+Y` σε **πλοήγηση**
- * ({@link undoRedoIntent} — διάβασε εκεί γιατί η απόφαση αντιστράφηκε στο βήμα 4).
- * Το `Ctrl+C`/`Ctrl+X`/`Ctrl+V` και οι επιταχυντές της εφαρμογής μένουν ανέγγιχτοι.
+ * ⚠️ **Τα `Ctrl`/`Meta` περνούν ανέγγιχτα**, με **τρεις** ρητές εξαιρέσεις:
+ * `Ctrl+Home`/`Ctrl+End` (άκρη πλέγματος), `Ctrl+Z`/`Ctrl+Y` σε **πλοήγηση**
+ * ({@link undoRedoIntent} — διάβασε εκεί γιατί η απόφαση αντιστράφηκε στο βήμα 4), και
+ * `Ctrl+A` σε **πλοήγηση** (ADR-739 Φ.Δ βήμα 8 — «όλα τα κελιά», όχι «όλες οι οντότητες»).
+ * Το `Ctrl+C`/`Ctrl+X`/`Ctrl+V` και οι επιταχυντές της εφαρμογής μένουν ανέγγιχτοι **εδώ**:
+ * το πρόχειρο δεν περνά από πλήκτρα αλλά από τα φυσικά συμβάντα `copy`/`paste` του browser
+ * — δες {@link tableClipboardScope} για το ποιος το κατέχει και γιατί.
  *
  * ⚠️ Το `Alt` περνά επίσης — με **μία** εξαίρεση, το `Alt+Enter`.
  *
@@ -206,10 +265,29 @@ export function resolveTableCellKeyIntent(
   const homeEnd = homeEndMove(key, mod);
   // Σε κατάσταση γραφής το Home/End ανήκουν στον **κέρσορα** του κειμένου, όχι στο πλέγμα:
   // μόλις έγραψες κάτι, «αρχή» σημαίνει αρχή της λέξης σου.
-  if (homeEnd) return mode === 'nav' ? move(homeEnd) : PASSTHROUGH;
+  // ADR-739 Φ.Δ βήμα 8 — με `Shift` η ίδια κίνηση **μεγαλώνει την περιοχή** ως την άκρη
+  // της γραμμής (ή του πλέγματος με `Ctrl`), όπως σε κάθε φύλλο υπολογισμού.
+  if (homeEnd) return mode === 'nav' ? moveOrExtend(homeEnd, mod, mode) : PASSTHROUGH;
 
   const history = undoRedoIntent(mod, mode);
   if (history) return history;
+
+  // ADR-739 Φ.Δ βήμα 8 — `Ctrl+A` **πριν** τη γενική διέλευση των `Ctrl`: μέσα σε πίνακα
+  // σημαίνει «όλα τα **κελιά**», όχι «όλες οι **οντότητες** του σχεδίου».
+  //
+  // Η ιδιοκτησία δεν κερδίζεται με `if` στο `useKeyboardShortcuts` — το ίδιο το αρχείο το
+  // απαγορεύει («ο φύλακας είναι δομικός»). Κερδίζεται επειδή το εστιασμένο στοιχείο είναι
+  // πραγματικό πεδίο κειμένου: ο `useDxfToolbarShortcuts` παραιτείται από **κάθε**
+  // συντόμευση όταν ο στόχος είναι `INPUT`/`TEXTAREA`. Εδώ απλώς δηλώνουμε τι κάνουμε με το
+  // πλήκτρο που μας παραχωρήθηκε — και το `preventDefault` του καταναλωτή εμποδίζει τον
+  // browser να «επιλέξει όλο το κείμενο» ενός πεδίου που σε πλοήγηση είναι κενό.
+  // ⚠️ Ο έλεγχος γίνεται στη **ΦΥΣΙΚΗ ΘΕΣΗ** πλήκτρου (`code`), ποτέ στον χαρακτήρα: σε
+  // **ελληνική διάταξη** το `key` αυτού του πλήκτρου είναι `'α'`, οπότε ένα `key === 'a'`
+  // θα δούλευε μόνο σε λατινική διάταξη — δηλαδή ποτέ, για τον χρήστη αυτής της εφαρμογής.
+  // Είναι το ίδιο μάθημα που κωδικοποιεί ήδη το {@link undoRedoIntent} για το `Ctrl+Z`.
+  if ((mod.ctrlKey || mod.metaKey) && !mod.shiftKey && mod.code === 'KeyA' && mode === 'nav') {
+    return SELECT_ALL;
+  }
 
   if (mod.ctrlKey || mod.metaKey) return PASSTHROUGH;
 
@@ -220,7 +298,7 @@ export function resolveTableCellKeyIntent(
 
   const arrow = arrowMove(key);
   // Η ΜΙΑ γραμμή που κωδικοποιεί τη διάκριση Excel: σε `edit` ο κέρσορας κρατά τα βέλη.
-  if (arrow) return mode === 'edit' ? PASSTHROUGH : move(arrow);
+  if (arrow) return mode === 'edit' ? PASSTHROUGH : moveOrExtend(arrow, mod, mode);
 
   if ((key === 'Delete' || key === 'Backspace') && mode === 'nav') return { kind: 'clear' };
 

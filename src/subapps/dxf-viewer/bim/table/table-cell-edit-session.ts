@@ -183,7 +183,36 @@ export function buildTableCellEditCommand(
   nextText: string,
   sceneManager: ISceneManager,
 ): ICommand | null {
-  const nextModel = setPersistedCellText(entity.model, rowId, colId, nextText);
+  return buildTableModelCommand(entity, setPersistedCellText(entity.model, rowId, colId, nextText), sceneManager);
+}
+
+/**
+ * 🔴 ADR-739 Φ.Δ βήμα 8 — **Η ΜΙΑ ΔΙΑΔΡΟΜΗ COMMIT ΤΟΥ ΠΙΝΑΚΑ**: νέο μοντέλο → μία
+ * undoable εντολή, ή `null` όταν δεν άλλαξε τίποτα.
+ *
+ * ## Γιατί εξήχθη
+ * Το βήμα 8 έφερε **τρεις** ακόμη γραφείς πάνω στο ίδιο μοντέλο: επικόλληση περιοχής,
+ * άδειασμα περιοχής, και (Φ.Δ.9) η λαβή συμπλήρωσης. Αν ο καθένας έγραφε το δικό του
+ * `new UpdateEntityCommand(entity.id, { model }, sceneManager)`, θα υπήρχαν τέσσερα σημεία
+ * όπου μπορεί να ξεχαστεί ο έλεγχος ταυτότητας ή να αλλάξει το σχήμα του patch — ακριβώς ο
+ * structural clone που πιάνει το CHECK 3.28 (N.18), ανεξάρτητα ονόματος.
+ *
+ * ## Γιατί ΕΝΑ `UpdateEntityCommand` και όχι `CompositeCommand`
+ * Μια επικόλληση 20 κελιών πρέπει να αναιρείται με **ένα** `Ctrl+Z`. Υπάρχει έτοιμη υποδομή
+ * γι' αυτό (`executeAsAtomicBatch` / `CompositeCommand`, ADR-539) — και **δεν χρειάζεται**:
+ * το `setPersistedCellText` είναι καθαρό, οπότε οι 20 εγγραφές γίνονται **στη μνήμη** πάνω
+ * σε αμετάβλητα ενδιάμεσα και φτάνουν εδώ ως **ένα** τελικό μοντέλο. Η ατομικότητα βγαίνει
+ * δωρεάν από την καθαρότητα, αντί να χτιστεί από πάνω της.
+ *
+ * Ο έλεγχος «τίποτα δεν άλλαξε» είναι σύγκριση **ταυτότητας**, όχι περιεχομένου: το
+ * `setPersistedCellText` εγγυάται ίδια αναφορά όταν το κείμενο είναι ταυτόσημο (ADR-739 Φ.Δ
+ * βήμα 1), και μια αλυσίδα από καθαρές εφαρμογές διατηρεί αυτή την εγγύηση.
+ */
+export function buildTableModelCommand(
+  entity: TableEntity,
+  nextModel: TableEntity['model'],
+  sceneManager: ISceneManager,
+): ICommand | null {
   if (nextModel === entity.model) return null;
   return new UpdateEntityCommand(entity.id, { model: nextModel }, sceneManager);
 }

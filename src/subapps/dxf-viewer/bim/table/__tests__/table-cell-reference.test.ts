@@ -137,6 +137,11 @@ describe('parseTableCellReference — ο κλειστός κύκλος', () => {
   });
 });
 
+/** Οι ενεργές ταυτότητες ως σύνολο — η υπογραφή που δέχονται πλέον οι δύο ζώνες. */
+function activeIds<T extends string>(...ids: T[]): ReadonlySet<T> {
+  return new Set(ids);
+}
+
 describe('υποδιαιρέσεις ζωνών δείκτη', () => {
   const columns: TableColumnLayout[] = [
     { id: 'c1', xMm: 0, widthMm: 20 },
@@ -149,7 +154,7 @@ describe('υποδιαιρέσεις ζωνών δείκτη', () => {
   ];
 
   it('τα γράμματα ακολουθούν τα ΠΡΑΓΜΑΤΙΚΑ πλάτη στηλών', () => {
-    expect(tableColumnTicks(columns, 'c2')).toEqual([
+    expect(tableColumnTicks(columns, activeIds('c2'))).toEqual([
       { label: 'A', startMm: 0, sizeMm: 20, active: false },
       { label: 'B', startMm: 20, sizeMm: 30, active: true },
     ]);
@@ -158,12 +163,32 @@ describe('υποδιαιρέσεις ζωνών δείκτη', () => {
   it('το ορατό παράθυρο κόβει ΠΟΣΕΣ γραμμές, όχι ΠΩΣ αριθμούνται', () => {
     // Ο ADR-735 απαγορεύει δουλειά ανάλογη του zoom· ο αριθμός όμως μένει ο απόλυτος —
     // η γραμμή 3 λέγεται «3» και όταν είναι η πρώτη ορατή.
-    expect(tableRowTicks(rows, 'r3', 2, 3)).toEqual([
+    expect(tableRowTicks(rows, activeIds('r3'), 2, 3)).toEqual([
       { label: '3', startMm: 18, sizeMm: 8, active: true },
     ]);
   });
 
   it('παράθυρο εκτός ορίων δεν ρίχνει και δεν εφευρίσκει γραμμές', () => {
-    expect(tableRowTicks(rows, 'r1', -5, 99)).toHaveLength(3);
+    expect(tableRowTicks(rows, activeIds('r1'), -5, 99)).toHaveLength(3);
+  });
+
+  /**
+   * 🔴 ADR-739 Φ.Δ βήμα 8 — το `active` δέχεται **σύνολο**, ώστε μια επιλεγμένη περιοχή να
+   * ανάβει ολόκληρη. Χωρίς αυτό, οι ζώνες θα φώτιζαν ένα κελί ενώ ο καμβάς θα είχε
+   * μαρκάρει έξι — και οι ζώνες είναι το **μόνο** μέρος που λέει «ως εδώ», γιατί η γραμμή
+   * τύπων μένει σκόπιμα στο ενεργό κελί (§4.2).
+   */
+  it('🔴 ΠΟΛΛΑΠΛΕΣ ενεργές στήλες/γραμμές — η επιλογή περιοχής ανάβει ΟΛΟΚΛΗΡΗ τη ζώνη', () => {
+    // Ο πίνακας του fixture έχει **δύο** στήλες και **τρεις** γραμμές.
+    expect(tableColumnTicks(columns, activeIds('c1', 'c2')).map((t) => t.active)).toEqual([
+      true, true,
+    ]);
+    expect(tableRowTicks(rows, activeIds('r1', 'r2'), 0, 3).map((t) => t.active)).toEqual([
+      true, true, false,
+    ]);
+  });
+
+  it('κενό σύνολο ⇒ καμία φωτισμένη — «καμία επιλογή» δεν είναι «όλα»', () => {
+    expect(tableColumnTicks(columns, new Set()).some((t) => t.active)).toBe(false);
   });
 });

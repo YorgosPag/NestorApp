@@ -30,17 +30,26 @@
 import { useCallback, type KeyboardEvent } from 'react';
 import { resolveTableCellKeyIntent } from './table-cell-key-intent';
 import { setTableCellCursorMode, type TableCellCursorMode } from '../../state/table-cell-cursor-store';
-import type { TableCursorMove } from '../../bim/table/table-cell-navigation';
+import type { TableCellSessionHandlers } from './table-cell-session-types';
 
-export interface TableCellSessionKeyParams {
+/**
+ * 🔴 **Κληρονομεί, δεν ξαναδηλώνει.** Τα `onMove`/`onClear`/`onHistory`/`onExtend`/
+ * `onSelectAll` είναι **ακριβώς** το συμβόλαιο του {@link TableCellSessionHandlers}, και
+ * γραμμένα δεύτερη φορά εδώ ήταν sibling clone — το CHECK 3.28 (jscpd, N.18) το
+ * χαρακτήρισε έτσι (23 γραμμές / 55 tokens). Το ουσιώδες δεν είναι οι γραμμές: δύο
+ * αντίγραφα της ίδιας υπογραφής μπορούν να **αποκλίνουν**, δηλαδή το πλήκτρο να καλεί
+ * κάτι με άλλο σχήμα από αυτό που ο καλών παρέχει — ακριβώς ο κίνδυνος που περιγράφει η
+ * κεφαλίδα του `table-cell-session-types`.
+ *
+ * Το `onCommit` **εξαιρείται**: εκείνο δέχεται το νέο κείμενο (ο καλών γράφει στο μοντέλο),
+ * ενώ εδώ η δέσμευση είναι άνευ ορίσματος — το πεδίο κατέχει ήδη το πρόχειρό του.
+ */
+export interface TableCellSessionKeyParams extends Omit<TableCellSessionHandlers, 'onCommit'> {
   readonly mode: TableCellCursorMode;
   /** Το **δεσμευμένο** κείμενο του κελιού — ο σπόρος του προχείρου όταν το `F2` ανοίγει γραφή. */
   readonly initialText: string;
   /** Δέσμευσε ό,τι γράφτηκε. Καλείται **πριν** από κάθε μετακίνηση — δες την κεφαλίδα. */
   readonly commit: () => void;
-  readonly onMove: (move: TableCursorMove) => void;
-  readonly onClear: () => void;
-  readonly onHistory: (direction: 'undo' | 'redo') => void;
   /**
    * Τι γίνεται με ό,τι κανείς δεν διεκδίκησε. Απόν ⇒ τίποτα, που είναι το σωστό για ένα
    * πεδίο χωρίς δικό του κύκλο δέσμευσης: το συμβάν συνεχίζει τον φυσικό του δρόμο.
@@ -52,7 +61,8 @@ export interface TableCellSessionKeyParams {
 export function useTableCellSessionKeys(
   params: TableCellSessionKeyParams,
 ): (event: KeyboardEvent<HTMLElement>) => void {
-  const { mode, initialText, commit, onMove, onClear, onHistory, onPassthrough } = params;
+  const { mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough } =
+    params;
 
   return useCallback(
     (event: KeyboardEvent<HTMLElement>) => {
@@ -70,6 +80,21 @@ export function useTableCellSessionKeys(
           // `F2` από πλοήγηση: το πρόχειρο γεννιέται ΤΩΡΑ από το δεσμευμένο κείμενο του
           // κελιού· από γραφή αλλάζει μόνο ποιος κατέχει τα βέλη (το «διπλό F2» του Excel).
           setTableCellCursorMode(intent.to, mode === 'nav' ? initialText : undefined);
+          return;
+        case 'extend':
+          // 🔴 ΚΑΜΙΑ δέσμευση εδώ, σε αντίθεση με το `move`: η επέκταση περιοχής είναι
+          // κατάσταση **διεπαφής** και δεν αγγίζει το μοντέλο (§6.6). Ένα `commit()` θα
+          // έγραφε το πρόχειρο σε κάθε `Shift+βέλος` — και σε πλοήγηση το πρόχειρο είναι
+          // κενό, δηλαδή θα **έσβηνε** το κελί περνώντας από πάνω του.
+          event.preventDefault();
+          onExtend(intent.move);
+          return;
+        case 'selectAll':
+          // Το `preventDefault` είναι απαραίτητο: αλλιώς ο browser «επιλέγει όλο το
+          // κείμενο» του πεδίου — αόρατο σε πλοήγηση, αλλά αφήνει το πεδίο σε κατάσταση
+          // επιλογής που ο επόμενος χαρακτήρας θα αντικαθιστούσε.
+          event.preventDefault();
+          onSelectAll();
           return;
         case 'clear':
           event.preventDefault();
@@ -89,6 +114,6 @@ export function useTableCellSessionKeys(
           onPassthrough?.(event);
       }
     },
-    [mode, initialText, commit, onMove, onClear, onHistory, onPassthrough],
+    [mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough],
   );
 }

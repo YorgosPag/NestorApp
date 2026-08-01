@@ -198,12 +198,19 @@ export interface TableIndicatorTick {
   readonly startMm: number;
   readonly sizeMm: number;
   /**
-   * `true` για τη στήλη/γραμμή του δρομέα.
+   * `true` για κάθε στήλη/γραμμή που **δέχεται το πληκτρολόγιο**: του δρομέα, ή —
+   * ADR-739 Φ.Δ βήμα 8 — **ολόκληρης της επιλεγμένης περιοχής**.
    *
-   * ⚠️ Σε **συγχωνευμένο** κελί φωτίζεται μόνο η στήλη/γραμμή της **άγκυρας**, όχι όλο το
-   * εύρος. Δεν είναι παράλειψη: ο δρομέας κάθεται πάντα στην άγκυρα, και το εύρος το λέει
-   * ήδη ρητά η αναφορά της γραμμής τύπων (`B3:C4`). Φωτίζοντας και τις καλυμμένες θα
-   * λέγαμε δύο φορές το ίδιο, με το ρίσκο να διαφωνήσουν.
+   * ## Γιατί η περιοχή φωτίζει όλες, ενώ ο σκέτος δρομέας σε συγχώνευση φωτίζει μία
+   * Σε **συγχωνευμένο** κελί χωρίς επιλογή φωτίζεται μόνο η στήλη/γραμμή της **άγκυρας**:
+   * ο δρομέας κάθεται πάντα εκεί, και το εύρος το λέει **ήδη ρητά** η αναφορά της γραμμής
+   * τύπων (`B3:C4`) — φωτίζοντας και τις καλυμμένες θα λέγαμε δύο φορές το ίδιο, με το
+   * ρίσκο να διαφωνήσουν.
+   *
+   * Με **επιλογή περιοχής** το επιχείρημα αντιστρέφεται: η γραμμή τύπων μένει στο ενεργό
+   * κελί (τεκμηριωμένη απόφαση §4.2 — είναι πεδίο **γραφής**, και η απάντηση στο «ποιο
+   * αλλάζει;» πρέπει να είναι πάντα σαφής). Άρα οι ζώνες είναι το **μόνο** μέρος που
+   * μπορεί να πει «ως εδώ», και οφείλουν να το πουν ολόκληρο.
    */
   readonly active: boolean;
 }
@@ -211,16 +218,20 @@ export interface TableIndicatorTick {
 /**
  * Οι υποδιαιρέσεις της **πάνω** ζώνης: `A`, `B`, `C`… Όλες οι στήλες, πάντα — ένας πίνακας
  * έχει δεκάδες στήλες στη χειρότερη περίπτωση, ποτέ χιλιάδες (σε αντίθεση με τις γραμμές).
+ *
+ * ADR-739 Φ.Δ βήμα 8 — το `activeColIds` είναι **σύνολο** και όχι μία ταυτότητα, ώστε μια
+ * επιλεγμένη περιοχή να ανάβει ολόκληρη. Χωρίς επιλογή ο καλών περνά μονοσύνολο: η ίδια
+ * συνάρτηση, καμία ειδική περίπτωση, καμία δεύτερη διαδρομή ζωγραφικής.
  */
 export function tableColumnTicks(
   columns: readonly TableColumnLayout[],
-  activeColId: TableColumnId,
+  activeColIds: ReadonlySet<TableColumnId>,
 ): readonly TableIndicatorTick[] {
   return columns.map((column, index) => ({
     label: columnLetter(index),
     startMm: column.xMm,
     sizeMm: column.widthMm,
-    active: column.id === activeColId,
+    active: activeColIds.has(column.id),
   }));
 }
 
@@ -234,7 +245,7 @@ export function tableColumnTicks(
  */
 export function tableRowTicks(
   rows: readonly TableRowLayout[],
-  activeRowId: TableRowId,
+  activeRowIds: ReadonlySet<TableRowId>,
   from: number,
   to: number,
 ): readonly TableIndicatorTick[] {
@@ -245,7 +256,7 @@ export function tableRowTicks(
       label: String(i + 1),
       startMm: row.yMm,
       sizeMm: row.heightMm,
-      active: row.id === activeRowId,
+      active: activeRowIds.has(row.id),
     });
   }
   return ticks;
