@@ -11,7 +11,71 @@
  * pure, so it needs none of the `server-only` / Firebase Admin module graph.
  */
 
-import { mapCommonSpaceFields, resolveAllocationCodeChange } from '../space-entity-fields';
+import {
+  mapCommonSpaceCreateFields,
+  mapCommonSpaceFields,
+  resolveAllocationCodeChange,
+} from '../space-entity-fields';
+
+/**
+ * ⚓ Το **δεύτερο μισό** της ενοποίησης (ADR-742 §7undecies).
+ *
+ * Το ADR-696 ένωσε το `PATCH` και σταμάτησε εκεί· το `POST` των δύο χώρων έμεινε
+ * δίδυμο μέχρι που το `jscpd` το χτύπησε. Αυτά τα tests καρφώνουν τη
+ * σημασιολογία **που ήδη υπήρχε** στα δύο routes — ιδίως τη διαφορά
+ * `area > 0` / `price >= 0`, που ένα «καθάρισμα» θα εξομάλυνε και θα έσβηνε
+ * σιωπηλά κάθε μηδενική τιμή.
+ */
+describe('mapCommonSpaceCreateFields — τι γράφεται στη ΔΗΜΙΟΥΡΓΙΑ', () => {
+  it('άδειο σώμα ⇒ κανένα πεδίο (ποτέ `undefined` στο Firestore)', () => {
+    expect(mapCommonSpaceCreateFields({})).toEqual({});
+  });
+
+  it('περνά τα έξι κοινά πεδία, με trim', () => {
+    expect(
+      mapCommonSpaceCreateFields({
+        floor: ' 2 ',
+        area: 12.5,
+        price: 1000,
+        description: ' περιγραφή ',
+        notes: ' σημ ',
+        code: ' P-1 ',
+      }),
+    ).toEqual({
+      floor: '2',
+      area: 12.5,
+      price: 1000,
+      description: 'περιγραφή',
+      notes: 'σημ',
+      code: 'P-1',
+    });
+  });
+
+  it('🔴 `price: 0` ΓΡΑΦΕΤΑΙ — το μηδέν είναι έγκυρη τιμή', () => {
+    expect(mapCommonSpaceCreateFields({ price: 0 })).toEqual({ price: 0 });
+  });
+
+  it('🔴 `area: 0` ΔΕΝ γράφεται — μηδενικό εμβαδόν είναι κενή φόρμα', () => {
+    expect(mapCommonSpaceCreateFields({ area: 0 })).toEqual({});
+  });
+
+  it('κενές/λευκές συμβολοσειρές παραλείπονται, δεν γράφονται ως `null`', () => {
+    expect(
+      mapCommonSpaceCreateFields({ floor: '   ', description: '', notes: '  ', code: '' }),
+    ).toEqual({});
+  });
+
+  it('αρνητική τιμή ή μη-αριθμός αγνοείται', () => {
+    expect(mapCommonSpaceCreateFields({ price: -1, area: -5 })).toEqual({});
+    expect(mapCommonSpaceCreateFields({ price: '10', area: '10' })).toEqual({});
+  });
+
+  it('🔴 ΔΕΝ αγγίζει `projectId` / `type` / `status` — διαφέρουν ανά χώρο', () => {
+    expect(
+      mapCommonSpaceCreateFields({ projectId: 'prj_1', type: 'small', status: 'available' }),
+    ).toEqual({});
+  });
+});
 
 describe('mapCommonSpaceFields — provided vs omitted', () => {
   it('writes nothing for an empty body (no accidental null-wipes)', () => {

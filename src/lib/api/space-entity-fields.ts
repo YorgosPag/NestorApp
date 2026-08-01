@@ -59,6 +59,81 @@ export const SPACE_COMMON_UPDATE_FIELDS = {
   _v: z.number().int().optional(),
 } as const;
 
+/**
+ * Το ίδιο, για τη **ΔΗΜΙΟΥΡΓΙΑ** — και γιατί χρειάστηκε δεύτερο ζεύγος
+ * (ADR-742 §7undecies · N.0.2)
+ *
+ * 🔴 Το ADR-696 ενοποίησε το **PATCH** των δύο χώρων (`parking/[id]`,
+ * `storages/[id]`) και **σταμάτησε εκεί**. Το `POST` των `parking/route.ts` και
+ * `storages/route.ts` έμεινε **δίδυμο**: το `jscpd` το χτύπησε ως δύο κλώνους
+ * (84 + 99 tokens) τη στιγμή που η Ομάδα 6 άγγιξε και τα δύο αρχεία.
+ *
+ * Ακριβώς το σχήμα που προειδοποιεί ο N.18: *κεντρικοποιείς το Α και αφήνεις το
+ * Β δίδυμο*. Η μισή κεντρικοποίηση είναι η πιο επικίνδυνη — μοιάζει τελειωμένη.
+ *
+ * ⚠️ **Τι ΔΕΝ μπήκε εδώ, επίτηδες**: το `projectId`. Το `storages` το διαβάζει
+ * από το σώμα (`body.projectId?.trim()`), ενώ το `parking` το **έχει ήδη
+ * επιλύσει** νωρίτερα (`resolvedProjectId`, με έλεγχο ιδιοκτησίας γονέα). Ίδιο
+ * όνομα, **άλλη πηγή**. Εξομάλυνση θα άλλαζε σιωπηλά ποιο `projectId` γράφεται
+ * — δηλαδή θα «ενοποιούσε» δύο διαφορετικές αποφάσεις. Ομοίως το `type`/`status`:
+ * το `storages` τα **επικυρώνει** με `isValidStorageType`, το `parking` όχι.
+ */
+export const SPACE_COMMON_CREATE_FIELDS = {
+  /** ADR-233: Entity coding system identifier */
+  code: z.string().max(50).optional(),
+  buildingId: z.string().max(128).optional(),
+  projectId: z.string().max(128).optional(),
+  type: z.string().max(50).optional(),
+  status: z.string().max(50).optional(),
+  floor: z.string().max(50).optional(),
+  area: z.number().min(0).max(999_999).optional(),
+  price: z.number().min(0).max(999_999_999).optional(),
+  description: z.string().max(2000).optional(),
+  notes: z.string().max(5000).optional(),
+} as const;
+
+/**
+ * Τα **έξι** πεδία δημιουργίας που οι δύο χώροι έγραφαν με **πανομοιότυπη**
+ * σημασιολογία.
+ *
+ * 🔴 Η σημασιολογία **δεν** είναι ομοιόμορφη και **δεν πρέπει** να γίνει:
+ *
+ * | πεδίο | φρουρός | γιατί |
+ * |---|---|---|
+ * | `floor`, `description`, `notes`, `code` | κενό μετά από `trim()` ⇒ **παραλείπεται** | κενή συμβολοσειρά δεν είναι τιμή |
+ * | `area` | `> 0` | μηδενικό εμβαδόν δεν είναι δεδομένο, είναι κενή φόρμα |
+ * | `price` | `>= 0` | **το μηδέν είναι έγκυρη τιμή** (δωρεάν/συμπεριλαμβανόμενο) |
+ *
+ * Η διαφορά `area > 0` vs `price >= 0` ήταν ήδη εκεί, ίδια και στα δύο αρχεία.
+ * Γραμμένη δύο φορές, ένα «καθάρισμα» θα την εξομάλυνε και θα έσβηνε σιωπηλά
+ * κάθε μηδενική τιμή.
+ *
+ * Επιστρέφει **μόνο** τα παρόντα πεδία, ώστε ο καλών να το κάνει spread πάνω
+ * στα δικά του χωρίς να γράψει `undefined` στο Firestore.
+ */
+export function mapCommonSpaceCreateFields(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const fields: Record<string, unknown> = {};
+
+  const floor = trimmedOrNull(body.floor);
+  if (floor) fields.floor = floor;
+
+  if (typeof body.area === 'number' && body.area > 0) fields.area = body.area;
+  if (typeof body.price === 'number' && body.price >= 0) fields.price = body.price;
+
+  const description = trimmedOrNull(body.description);
+  if (description) fields.description = description;
+
+  const notes = trimmedOrNull(body.notes);
+  if (notes) fields.notes = notes;
+
+  const code = trimmedOrNull(body.code);
+  if (code) fields.code = code;
+
+  return fields;
+}
+
 /** `undefined` means «not provided» → the field is left untouched by the write. */
 function isProvided(value: unknown): boolean {
   return value !== undefined;

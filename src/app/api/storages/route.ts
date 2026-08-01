@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
+import { isRoleBypass } from '@/lib/auth/roles';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import type { Storage, StorageType, StorageStatus } from '@/types/storage/contracts';
@@ -10,26 +12,22 @@ import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErro
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
+import {
+  SPACE_COMMON_CREATE_FIELDS,
+  mapCommonSpaceCreateFields,
+} from '@/lib/api/space-entity-fields';
 import { mapStorageDoc, isValidStorageType, isValidStorageStatus } from '@/lib/firestore-mappers';
 import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import type { StoragesApiData } from '@/types/api/building-spaces.api.types';
 
+// ADR-696 + ADR-742 §7undecies — βλ. `parking/route.ts`: τα κοινά πεδία των δύο
+// «χώρων» ζουν πλέον στον SSoT. Ιδιαίτερα των storages: `floorId`, `building`.
 const CreateStorageSchema = z.object({
   name: z.string().min(1).max(200),
-  /** ADR-233: Entity coding system identifier */
-  code: z.string().max(50).optional(),
-  buildingId: z.string().max(128).optional(),
-  type: z.string().max(50).optional(),
-  status: z.string().max(50).optional(),
-  floor: z.string().max(50).optional(),
   floorId: z.string().max(128).optional(),
-  area: z.number().min(0).max(999_999).optional(),
-  price: z.number().min(0).max(999_999_999).optional(),
-  description: z.string().max(2000).optional(),
-  notes: z.string().max(5000).optional(),
-  projectId: z.string().max(128).optional(),
   building: z.string().max(200).optional(),
+  ...SPACE_COMMON_CREATE_FIELDS,
 });
 
 const logger = createModuleLogger('StoragesRoute');
@@ -175,9 +173,16 @@ async function handleGetStorages(request: NextRequest, ctx: AuthContext): Promis
       }
     });
 
-    // 🏢 ENTERPRISE: Tenant isolation — filter by companyId for buildingId queries
+    // 🏢 ENTERPRISE: Tenant isolation — filter by companyId for buildingId queries.
+    //
+    // 🔴 ADR-742 §4 — το `!s.companyId ||` **παρέκαμπτε επίτηδες** το φίλτρο για
+    // αποθήκες χωρίς tenant: τις έβλεπε **οποιοσδήποτε**. Το κενό δεν είναι
+    // tenant, είναι απουσία tenant. Ο υπεργραφέας συνεχίζει να τις βλέπει, αλλά
+    // επειδή το **δηλώνει** ο ρόλος του, όχι επειδή διαρρέουν.
     const storages = requestedBuildingId
-      ? allStorages.filter(s => !s.companyId || s.companyId === ctx.companyId)
+      ? allStorages.filter(
+          (s) => isRoleBypass(ctx.globalRole) || isPayloadOwnedByCompany(s, ctx.companyId),
+        )
       : allStorages;
 
     logger.info('Found storages', { count: storages.length });
@@ -242,23 +247,22 @@ export const POST = withStandardRateLimit(
         const buildingId = body.buildingId?.trim() || null;
 
         // Entity-specific fields (exclude common fields handled by createEntity)
+        // Τα έξι κοινά με τα `parking` έρχονται από τον SSoT· ο έλεγχος
+        // εγκυρότητας `type`/`status` μένει **εδώ** επίτηδες (τα parking δεν τον
+        // κάνουν — βλ. σχόλιο στον SSoT).
         const entitySpecificFields: Record<string, unknown> = {
           name: body.name.trim(),
           buildingId,
           type: isValidStorageType(body.type || 'small') ? body.type || 'small' : 'small',
           status: isValidStorageStatus(body.status || 'available') ? body.status || 'available' : 'available',
+          ...mapCommonSpaceCreateFields(body),
         };
 
-        // Optional fields
-        if (body.floor?.trim()) entitySpecificFields.floor = body.floor.trim();
+        // Ιδιαίτερα των storages — και το `projectId`, που εδώ διαβάζεται ωμό
+        // από το σώμα (στα parking είναι ήδη επιλυμένο και ελεγμένο).
         if (body.floorId?.trim()) entitySpecificFields.floorId = body.floorId.trim();
-        if (typeof body.area === 'number' && body.area > 0) entitySpecificFields.area = body.area;
-        if (typeof body.price === 'number' && body.price >= 0) entitySpecificFields.price = body.price;
-        if (body.description?.trim()) entitySpecificFields.description = body.description.trim();
-        if (body.notes?.trim()) entitySpecificFields.notes = body.notes.trim();
         if (body.projectId?.trim()) entitySpecificFields.projectId = body.projectId.trim();
         if (body.building?.trim()) entitySpecificFields.building = body.building.trim();
-        if (body.code?.trim()) entitySpecificFields.code = body.code.trim();
 
         logger.info('Creating storage unit', { name: body.name, buildingId, companyId: ctx.companyId });
 
