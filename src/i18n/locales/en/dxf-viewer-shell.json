@@ -5180,7 +5180,6 @@
       "attachImage": "Image",
       "attachImageTooltip": "Insert an image into the drawing — click to place, or Enter for the centre of the view",
       "pdfBackground": "PDF Background",
-      "exportDxf": "Export",
       "ifcExport": "Export IFC",
       "cursorSettings": "Cursor Settings",
       "runTests": "Run Tests",

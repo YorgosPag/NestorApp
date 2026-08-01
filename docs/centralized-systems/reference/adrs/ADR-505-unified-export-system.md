@@ -1,5 +1,6 @@
 # ADR-505 — Unified Export System (DXF / IFC4 / PDF, scope-filtered, multi-floor)
 
+**Status (σημεία εισόδου, §11):** ✅ **ΕΚΛΕΙΣΕ 2026-08-01** — μία εντολή, τρεις πόρτες· οι δύο ήταν σφραγισμένες (`Unknown action: export`) και **κανένα** στατικό εργαλείο δεν το έβλεπε. Ζωντανό anchor: `export-command-entry-points.test.ts` (6 tests)
 **Status:** ✅ BROWSER-VERIFIED (Τέκτονας/FESPA 2Δ + AutoCAD 2Δ/3Δ) · DXF πλήρες (active+zip+single, dual-mode polyline/lines, ACI χρώμα, generic BIM/Η-Μ, 3Δ extrusion) · IFC/PDF μέσω delegation — UNCOMMITTED 2026-06-20 · 🔴 ΜΟΝΟ commit (stage ADR-505, CHECK 6B/6D)
 **Status (finish/rebar phase, §C):** Τέκτονας ✅ (σοβάδες+οπλισμός) · AutoCAD ✅ (σοβάδες 3Δ, οπλισμός εμφανίζεται μετά το hardening: ASCII layers `FINISH`/`REBAR` + closed finish prism + degenerate-circle guard) · **+Phase D: 3Δ οπλισμός** (πραγματικός κλωβός σε AutoCAD/polyline mode· LINE με Z· Τέκτονας/lines=2Δ κάτοψη) — UNCOMMITTED 2026-06-20 · 🔴 re-verify AutoCAD 3Δ rebar + commit
 **Date:** 2026-06-20
@@ -56,6 +57,47 @@
 - BIM→DXF decomposition καλύπτει wall/column/slab/beam/foundation/opening/roof/furniture/floorplan-symbol + όλα τα Η/Μ (footprint/outline/polygon convention)· railing/stair (path/stringer) → skip+warning.
 - Y-axis convention: το DXF γράφει raw scene coords — αν φανεί mirrored σε CAD, one-line flip στον writer.
 
+## 11. Τα σημεία εισόδου — μία εντολή, τρεις πόρτες, καμία να μη δείχνει στο πουθενά
+
+**Μετρημένο ζωντανά 2026-08-01.** Ο διάλογος του §2 δούλευε — αλλά **δύο από τις τρεις πόρτες προς
+αυτόν ήταν σφραγισμένες**, και καμία δεν το έλεγε.
+
+| Πόρτα | Τι δήλωνε | Τι συνέβαινε |
+|-------|-----------|--------------|
+| Κουμπί «Εξαγωγή», καρτέλα **Ανάλυση** | `action: 'open-export-dialog'` | ✅ δούλευε |
+| Κουμπί «Εξαγωγή», καρτέλα **Εισαγωγή** | `action: 'export'` | ❌ `Unknown action: export` στην κονσόλα |
+| **Ctrl+E** (SSoT συντομεύσεων + επικάλυψη βοήθειας) | `action:export` | ❌ ίδια νεκρή συμβολοσειρά |
+
+Δύο κουμπιά με **byte-ταυτόσημη** ετικέτα, δίπλα-δίπλα, και το ένα δεν έκανε τίποτα. Το `Ctrl+E`
+**διαφημιζόταν** σε τρία σημεία και έπεφτε στο `default:` του `handleAction`.
+
+### 11.1 Γιατί κανένα στατικό εργαλείο δεν το είδε
+
+Το `'export'` είναι έγκυρο `string` σε πεδίο τύπου `string`. Ο compiler είναι ικανοποιημένος, ο
+linter επίσης, το knip το βλέπει ως **δεδομένο** και όχι ως export. Μια συμβολοσειρά-ενέργεια που
+δεν αντιστοιχεί σε χειριστή είναι **αόρατη σε ολόκληρο το static tooling** — ίδιο σχήμα με το
+i18n `0` του N.11: «κανείς δεν κοίταξε», όχι «καθαρό».
+
+Η **μόνη** απόδειξη ότι μια ενέργεια υπάρχει είναι να **εκτελεστεί ο πραγματικός dispatcher** και να
+απαντήσει «την ανέλαβα» (ADR-587: *ένα anchor χωρίς εκτέλεση είναι σχόλιο*). Το anchor
+`export-command-entry-points.test.ts` καλεί τον αληθινό `dispatchDxfSpecialAction` με τα αληθινά
+δεδομένα κορδέλας — και κρατά **ζεύγος** καρφιών: η ζωντανή ενέργεια επιστρέφει `true` **και** η
+παλιά νεκρή συμβολοσειρά επιστρέφει `false`. Χωρίς το δεύτερο, το πρώτο θα περνούσε ακόμα κι αν ο
+dispatcher απαντούσε `true` για τα πάντα.
+
+### 11.2 Και η ετικέτα ήταν λάθος
+
+Το κουμπί έλεγε `ribbon.commands.exportDxf` — «μόνο DXF», ενώ ο διάλογος εξάγει DXF **και** IFC
+**και** PDF. Ένα όνομα που λέει **λιγότερα** από όσα κάνει η εντολή είναι το ίδιο λάθος με μια
+συντόμευση που δεν κάνει τίποτα. Το κλειδί `exportDxf` **αφαιρέθηκε** (EL+EN + παραγόμενοι τύποι)·
+και οι δύο πόρτες δείχνουν πλέον στο `ribbon.commands.export`.
+
+**Αρχή:** μία εντολή = ένα `commandKey` = ένα `action` = μία ετικέτα = ένα `Ctrl+E`, σε **κάθε**
+σημείο εισόδου. Όποιος προσθέσει τέταρτο, ή μετονομάσει ένα μόνο από τα τρία, γίνεται κόκκινος στο
+anchor και όχι στην κονσόλα του Giorgio.
+
+---
+
 ## C. Εξαγωγή σοβάδων (finish) + οπλισμού (reinforcement) — overlay collector (Full SSoT)
 
 Σοβάδες + οπλισμός **ΔΕΝ είναι `scene.entities`** — είναι derived overlays (όπως τα διαγράμματα M/V/N) → ο βασικός pipeline (που διαβάζει `scene.entities`) δεν τα έπιανε. Λύση **full SSoT, μία πηγή γεωμετρίας → canvas + DXF**:
@@ -87,6 +129,7 @@
 - **Adapter**: ο collector παίρνει πλέον `colored` (body fill κληρονομεί resolved χρώμα)· register **μόνο** `usedCategoryLayerDefs(allEntities)` (ο writer δεν βγάζει LAYER table → χρειάζεται name resolution, αλλά μηδέν κενά layers). Συμβατό με `FLnn_` prefix στο all-single.
 
 ## Changelog
+- **2026-08-01 (n)** — **§11 Σημεία εισόδου.** Ο διάλογος δούλευε· **δύο από τις τρεις πόρτες προς αυτόν όχι**. Το κουμπί «Εξαγωγή» της καρτέλας «Εισαγωγή» και το διαφημιζόμενο `Ctrl+E` έδειχναν στη συμβολοσειρά `'export'`, που **κανείς δεν χειριζόταν** ⇒ `Unknown action: export` σε κάθε πάτημα. Δίπλα του, byte-ταυτόσημα ονομασμένο, ένα κουμπί που δούλευε. **Κανένα** στατικό εργαλείο δεν το έβλεπε (έγκυρο `string` σε πεδίο `string`· το knip το βλέπει ως δεδομένο) — μόνο η **εκτέλεση** του πραγματικού dispatcher το αποδεικνύει. Και τα τρία σημεία → `open-export-dialog`· η ετικέτα `exportDxf` **αφαιρέθηκε** (υποσχόταν «μόνο DXF» ενώ ο διάλογος βγάζει DXF+IFC+PDF) από EL/EN + παραγόμενους τύπους. NEW anchor `app/__tests__/export-command-entry-points.test.ts` — **6 tests**, με **ζεύγος** καρφιών (ζωντανή ενέργεια `true` **και** παλιά νεκρή `false`, ώστε το `true` να σημαίνει κάτι). **ΟΧΙ tsc (N.17).**
 - **2026-07-08 (m)** — **Draw-loop SSoT (§C ολοκλήρωση):** το phase-«j» εξήγαγε τη rebar plan **γεωμετρία** σε ΕΝΑ SSoT ανά μέλος, αλλά ο **ctx draw loop** (save→strokeStyle=REBAR_COLOR→paths stroke + dots fill→restore) έμενε αντιγραμμένος verbatim στους 4 renderers (`column-/footing-/slab-/linear-member-rebar-2d.ts`). NEW `bim/renderers/draw-rebar-plan-geometry.ts` — `drawRebarPlanGeometry(ctx, geo, pxPerMm, worldToScreen)` ενοποιεί το loop· οι 4 renderers → thin (resolve geo + own null-guard → κοινός loop). Behavior-preserving: οι 3 ανά-μέλος αποκλίσεις κωδικοποιούνται στα δεδομένα — `dots:[]` (μόνο κολώνα εκπέμπει), `path.dashed` (άνω σχάρα πλάκας), `path.closed:false` (σχάρες) → όλα no-op όπου δεν εφαρμόζονται. Σταθερές (`MIN_LINE_PX=0.6`/`MIN_BAR_RADIUS_PX=0.8`/`TOP_MESH_DASH=[6,4]`) + `REBAR_COLOR_HEX` import → στο shared file. `beam-rebar-2d.ts` αμετάβλητο (ήδη thin wrapper πάνω στο linear). Public signatures byte-identical → consumers (overlays/ghost) ανέπαφοι. **6 NEW jest GREEN** (`draw-rebar-plan-geometry.test.ts`: stroke/fill/closePath/dashed/lineWidth/dots-radius) · **jscpd CHECK 3.28 (diff) 0 new clones / 5 files**. **ΟΧΙ tsc (N.17).** TIER-B ratchet `rebar-2d-plan-path-stroke-loop`. 🔴 Giorgio commit: draw-rebar-plan-geometry.ts NEW + test NEW + 4 renderers + αυτό το ADR + pending-ratchet-work.md.
 - **2026-06-20 (l)** — **Phase E (§C): συμπαγές γέμισμα (βαμμένη επιφάνεια) + per-category layers.** Giorgio: εκτός από περίγραμμα, **γεμάτη επιφάνεια** για σοβάδες+κολώνες+δοκάρια+πλάκες+πέδιλα, κάθε κατηγορία σε δικό της layer + γέμισμα σε ξεχωριστό `_FILL`. Αποφάσεις: (1) **DXF `3DFACE` κατακόρυφη όψη 3Δ** (ΟΧΙ SOLID 2Δ plan poché)· (2) **re-layer ΟΛΩΝ των BIM** (όχι μόνο τα δομικά που γεμίζουμε). NEW `solid-fill-geometry.ts` (buildPrismFaces, reuse `THREE.ShapeUtils.triangulateShape` για καπάκια) + `dxf-category-layers.ts` (entity-type→layer SSoT, χρώματα ADR-445). Carrier = υπάρχον `HatchEntity`+`dxfFaces` (μηδέν νέος global τύπος)· writer `case 'hatch'`→`emit3DFace`. Collector: σοβάς fill (`FINISH_FILL`, gated plaster) + body fill (`<CAT>_FILL`, gated 'core', reuse exported `extractEntityFootprintRing`/`extractHeightMm`). bim-to-dxf-primitives re-layers bodies· adapter περνά `colored` + register μόνο used category layers. Boy-scout fix: latent type-error (Entity→ComponentVisibilityEntity) στο pre-existing reinforcement loop. **81 export jest, tsc clean.** 🔴 browser-verify AutoCAD (περίγραμμα+γεμάτο 3DFACE ανά κατηγορία· σβήσε `_FILL`→μένει περίγραμμα) + commit.
 - **2026-06-20 (k)** — **Phase D (§C): 3Δ οπλισμός.** AutoCAD hardening ✅ (σοβάδες+οπλισμός εμφανίζονται)· αλλά ο οπλισμός ήταν επίπεδος ενώ ο σοβάς 3Δ. Λύση: εξαγωγή πραγματικού 3Δ κλωβού (NEW `rebar-segments-3d-{linear,grid}.ts`, reuse 3Δ math SSoT· writer Z group 30/31· collector `lineMode` branch 3Δ-AutoCAD/2Δ-Τέκτονας). 36 jest (+writer Z), tsc clean. 🔴 re-verify AutoCAD 3Δ rebar + commit.

@@ -177,7 +177,10 @@ export function useDxfToolbarShortcuts(
       if (matchesShortcut(e, 'selectAll')) { e.preventDefault(); onAction('select-all'); return; }
       if (matchesShortcut(e, 'toggleLayers')) { e.preventDefault(); onAction('toggle-layers'); return; }
       if (matchesShortcut(e, 'toggleProperties')) { e.preventDefault(); onAction('toggle-properties'); return; }
-      if (matchesShortcut(e, 'export')) { e.preventDefault(); onAction('export'); return; }
+      // ADR-505 §11 — το `'export'` ήταν ΟΡΦΑΝΟ (κανένας χειριστής ⇒
+      // `Unknown action: export` σε κάθε Ctrl+E). Η εντολή είναι το `open-export-dialog`,
+      // η ίδια που εκτελούν και τα δύο κουμπιά «Εξαγωγή» της κορδέλας.
+      if (matchesShortcut(e, 'export')) { e.preventDefault(); onAction('open-export-dialog'); return; }
       // Note: S (select), C (circle), O (layering), W (wall) are now via bimDispatcher above.
       if (matchesShortcut(e, 'pan')) { e.preventDefault(); handleToolChange('pan'); return; }
       if (matchesShortcut(e, 'line')) { e.preventDefault(); handleToolChange('line'); return; }

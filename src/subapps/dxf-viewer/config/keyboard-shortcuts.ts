@@ -508,12 +508,19 @@ export const DXF_CTRL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     category: 'action',
   },
 
-  // Export
+  // Export — ADR-505: ανοίγει τον ΕΝΑ διάλογο εξαγωγής (DXF / IFC / PDF).
+  //
+  // ⚠️ Το `action` ήταν `'action:export'` μέχρι το ADR-505 §11: μια συμβολοσειρά
+  // χωρίς κανέναν χειριστή, που κατέληγε στο `default:` του `handleAction` και τύπωνε
+  // `Unknown action: export`. Η συντόμευση **διαφημιζόταν** (εδώ, στην επικάλυψη βοήθειας
+  // και στο κουμπί της κορδέλας) και δεν έκανε τίποτα — χειρότερο από καθόλου συντόμευση.
+  // Δείχνει πλέον στην ΙΔΙΑ εντολή με τα δύο κουμπιά της κορδέλας (`insert.export`,
+  // `analyze.export`): ένα όνομα εντολής, τρία σημεία εισόδου.
   export: {
     key: 'E',
     modifier: 'ctrl',
     descriptionKey: 'shortcuts.actions.export',
-    action: 'action:export',
+    action: 'action:open-export-dialog',
     category: 'action',
   },
 

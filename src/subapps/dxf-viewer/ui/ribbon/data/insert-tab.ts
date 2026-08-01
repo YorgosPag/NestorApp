@@ -421,15 +421,32 @@ export const INSERT_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
+            // ADR-505 §11 — **ΜΙΑ** εντολή εξαγωγής, **δύο** σημεία εισόδου
+            // (όπως το «Αποθήκευση ως» του Excel ζει και στο μενού «Αρχείο» και στη
+            // γραμμή γρήγορης πρόσβασης). Το κουμπί δείχνει στο ίδιο `open-export-dialog`
+            // με εκείνο της «Ανάλυσης» (`analyze-tab.ts`), και ο διάλογος είναι ο ίδιος.
+            //
+            // 🔴 ΤΙ ΗΤΑΝ ΠΡΙΝ (μετρημένο ζωντανά, 2026-08-01): `action: 'export'` — μια
+            // συμβολοσειρά που **κανείς δεν χειριζόταν**. Έπεφτε στο `default:` του
+            // `useDxfViewerState.handleAction` και τύπωνε `Unknown action: export` σε κάθε
+            // πάτημα. Ίδια μοίρα είχε και το διαφημιζόμενο `Ctrl+E`, που περνούσε από την
+            // ίδια νεκρή συμβολοσειρά (`useDxfToolbarShortcuts`). Δύο κουμπιά «Εξαγωγή» με
+            // **byte-ταυτόσημη** ετικέτα, και το ένα δεν έκανε τίποτα.
+            //
+            // Η ετικέτα είναι τώρα η **ίδια** (`ribbon.commands.export`): το `exportDxf`
+            // υποσχόταν «μόνο DXF», ενώ ο διάλογος του ADR-505 εξάγει DXF **και** IFC
+            // **και** PDF. Ένα όνομα που λέει λιγότερα από όσα κάνει η εντολή είναι το ίδιο
+            // λάθος με μια συντόμευση που δεν κάνει τίποτα.
             {
               type: 'simple',
               size: 'large',
               command: {
                 id: 'insert.export',
-                labelKey: 'ribbon.commands.exportDxf',
+                labelKey: 'ribbon.commands.export',
                 icon: 'export-dxf',
-                commandKey: 'export',
-                action: 'export',
+                commandKey: 'open-export-dialog',
+                action: 'open-export-dialog',
+                tooltipKey: 'ribbon.tooltips.export',
                 shortcut: 'Ctrl+E',
               },
             },

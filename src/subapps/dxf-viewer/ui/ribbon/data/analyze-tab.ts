@@ -160,6 +160,10 @@ export const EXPORT_PANEL: RibbonPanelDef = {
             commandKey: 'open-export-dialog',
             action: 'open-export-dialog',
             tooltipKey: 'ribbon.tooltips.export',
+            // ADR-505 §11 — η ΙΔΙΑ εντολή έχει την ίδια συντόμευση σε **κάθε** σημείο
+            // εισόδου. Το `insert.export` τη διαφήμιζε ήδη· εδώ έλειπε, οπότε ο χρήστης
+            // μάθαινε το `Ctrl+E` μόνο αν έτυχε να δει το άλλο κουμπί.
+            shortcut: 'Ctrl+E',
           },
         },
       ],
