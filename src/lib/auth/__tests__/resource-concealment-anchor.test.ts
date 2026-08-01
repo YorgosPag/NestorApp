@@ -156,10 +156,16 @@ const HAND_ROLLED_OWNERSHIP = /(\.companyId|\[FIELDS\.COMPANY_ID\])\s*!==\s*ctx\
  *
  * ⚠️ Δεν σαρώνει `logger.*` / audit metadata: εκεί η αλήθεια **πρέπει** να
  * επιβιώνει (§3.4). Γι' αυτό ο έλεγχος κοιτά μόνο κείμενο που φεύγει στο σύρμα
- * — `ApiError(...)`, `error:`, `reason:`.
+ * — `ApiError(...)` και **κυριολεκτικά** `error: '…'` / `reason: '…'`.
+ *
+ * 🔴 Η απαίτηση για **εισαγωγικό** μετά το `error:` δεν είναι λεπτομέρεια: χωρίς
+ * αυτήν, το `logger.error('…', { …, error: new Error('X belongs to a different
+ * company') })` του `communications-triage-actions` μετριόταν ως παράβαση —
+ * ενώ είναι ακριβώς το **ίχνος ελέγχου που οφείλει** να λέει την αλήθεια.
+ * Ένα gate που καταγγέλλει το σωστό το χαλαρώνει κάποιος.
  */
 const REASON_NAMING_DENIAL =
-  /(ApiError\([^)]*|error:\s*|reason:\s*)[^\n]{0,120}(belongs to (a )?different company|from your company)/;
+  /(ApiError\([^)]*|error:\s*['"`]|reason:\s*['"`])[^\n]{0,120}(belongs to (a )?different company|from your company)/;
 
 /**
  * Πόροι των οποίων η μεταμφίεση έχει **ολοκληρωθεί**. Ο κατάλογος **μεγαλώνει**
