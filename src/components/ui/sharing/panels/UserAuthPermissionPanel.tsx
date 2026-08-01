@@ -39,6 +39,10 @@ import type {
   EmailShareData,
   ShareData,
 } from '@/components/ui/email-sharing/EmailShareForm';
+import {
+  showcaseEmailEndpoint,
+  type ShowcaseContext,
+} from '@/services/sharing/showcase-surfaces';
 import { usePlatformShareController } from './user-auth/PlatformShareController';
 import { PhotoPickerStep } from './user-auth/PhotoPickerStep';
 
@@ -61,13 +65,12 @@ export interface UserAuthPermissionPanelProps {
    *   - `{ type: 'building', buildingId }` → ADR-320 building route
    *   - `{ type: 'storage',  storageId }`  → ADR-315 storage route
    *   - `{ type: 'parking',  parkingId }`  → ADR-315 parking route
+   *
+   * ⚠️ Ο τύπος **δεν** δηλώνεται πια εδώ: είναι ο ίδιος πίνακας που παράγει τη
+   * διαδρομή email, οπότε δύο δηλώσεις θα μπορούσαν να αποκλίνουν σιωπηλά
+   * (ADR-742 §7quaterdecies).
    */
-  showcaseContext?:
-    | { type: 'property'; propertyId: string }
-    | { type: 'project'; projectId: string }
-    | { type: 'building'; buildingId: string }
-    | { type: 'storage'; storageId: string }
-    | { type: 'parking'; parkingId: string };
+  showcaseContext?: ShowcaseContext;
   /**
    * Pre-fills `EmailShareForm`'s personal message field with the note already
    * typed in the link-creation dialog (ADR-312 Phase 9.5). Unifies the field
@@ -211,15 +214,7 @@ export function UserAuthPermissionPanel({
             messageId?: string;
             recipient: string;
           }
-          const endpoint = showcaseContext.type === 'project'
-            ? `/api/projects/${encodeURIComponent(showcaseContext.projectId)}/showcase/email`
-            : showcaseContext.type === 'building'
-              ? `/api/buildings/${encodeURIComponent(showcaseContext.buildingId)}/showcase/email`
-              : showcaseContext.type === 'storage'
-                ? `/api/storages/${encodeURIComponent(showcaseContext.storageId)}/showcase/email`
-                : showcaseContext.type === 'parking'
-                  ? `/api/parking/${encodeURIComponent(showcaseContext.parkingId)}/showcase/email`
-                  : `/api/properties/${encodeURIComponent(showcaseContext.propertyId)}/showcase/email`;
+          const endpoint = showcaseEmailEndpoint(showcaseContext);
           await Promise.all(
             emailData.recipients.map((recipient) =>
               apiClient.post<ShowcaseEmailResponse>(endpoint, {

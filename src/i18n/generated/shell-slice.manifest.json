@@ -38,7 +38,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "2a333d3ca3d916fdef41f0e7fbc1cd9ed512b7990e28ddaf69fa63b7135384e4",
+  "inputsSha256": "f1a42919acf6b0c3de3c66cd4e0a53e6556c437cd10119a03c09831734d294bf",
   "languages": [
     "el"
   ],
@@ -163,7 +163,7 @@
     "src/components/ui/separator.tsx": "c23dc73460d4e1ed17e0fb42e464886c3934693b77617001a8470121f23dbb6a",
     "src/components/ui/sharing/ShareStatusBanner.tsx": "e829058926ca3e77e3308989b66a7e60d0e6093c03abc94eaa8705e182d9b79f",
     "src/components/ui/sharing/ShareSurfaceShell.tsx": "a9252d4aedae334b8d40b653a744ecd8afa84fbaef3811c7ed3e9c5c94cab506",
-    "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx": "bc15a815f940c3d5ce3accf81c3f6e5f273b99ab5c256103c45abdbc3f14fb61",
+    "src/components/ui/sharing/panels/UserAuthPermissionPanel.tsx": "ff2597fa2e2db74b6969649243e9e1f2206a4b30dc58d0e0cc4ff5c694677485",
     "src/components/ui/sharing/panels/user-auth/PhotoPickerStep.tsx": "6fb2165b8e6a90b1c5bac31c334f1edba7976e0f7e058b36a9c6d5daa45514ee",
     "src/components/ui/sharing/panels/user-auth/PlatformShareController.tsx": "15767a90ef64f2fdd3a2b9a86d069c483fe88008c9951825772e8bab493bc5f6",
     "src/components/ui/sheet.tsx": "ede9cbde4477f930fd63b986ae9d96933987221e1c40d8e968a719279ffa22ac",
@@ -368,6 +368,7 @@
     "src/services/session/session-device-detection.ts": "dcb2b2b4a982fa0e1b28051190578a4f30627c885e8ca84199784f7f9a424138",
     "src/services/session/session-helpers.ts": "2a0255aba0dd13ee63552ecbdc23115f4eab7b88fe10404ec73f4dc122cae750",
     "src/services/session/session.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/services/sharing/showcase-surfaces.ts": "468902387af626019d2a1d395c41a60cfb604cc55ece512b4f0f8afbfdb4d8a0",
     "src/services/two-factor/EnterpriseTwoFactorService.ts": "cd74aab2a814b3b28f7557e39ab467732a309105645abac1b13d03cde94471ec",
     "src/services/two-factor/two-factor-helpers.ts": "a9b1fa5aa81d1b47512c7f1eec3f2480a928ef5dd3637c72653cab80d257a733",
     "src/services/two-factor/two-factor.types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -469,7 +470,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 393,
+    "shellFiles": 394,
     "sliceBytes": 184599
   },
   "unresolvableKeys": [

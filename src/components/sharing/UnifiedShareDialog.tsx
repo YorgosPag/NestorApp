@@ -50,6 +50,11 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { UnifiedSharingService } from '@/services/sharing/unified-sharing.service';
+import {
+  buildShowcaseContext,
+  findShowcaseSurface,
+  showcasePdfHref,
+} from '@/services/sharing/showcase-surfaces';
 // Side-effect import: registers file / contact / property_showcase resolvers
 import '@/services/sharing/resolvers';
 import type {
@@ -277,6 +282,16 @@ export function UnifiedShareDialog({
     [entityTitle, entitySubtitle, tShell],
   );
 
+  /**
+   * Η επιφάνεια showcase αυτού του share — `null` για `file` / `contact` /
+   * `vendor_rfq_invite`. Αντικαθιστά **τρεις** χειρόγραφες αλυσίδες τριαδικών
+   * που αποκλίναν ήδη (5 κλάδοι context vs 3 κλάδοι PDF, ADR-742 §7quaterdecies).
+   */
+  const showcaseSurface = findShowcaseSurface(entityType);
+
+  /** `null` = ή δεν είναι showcase, ή η επιφάνεια δεν έχει γεννήτρια PDF. */
+  const pdfHref = share === null ? null : showcasePdfHref(entityType, share.token);
+
   const shareDataForChannel: ShareData & { isPhoto?: boolean } = {
     title: contactShareContent?.title ?? entityTitle,
     text: contactShareContent?.text ?? '',
@@ -288,7 +303,7 @@ export function UnifiedShareDialog({
     // and append a text digest after the photo dispatch. Only set for the
     // `property_showcase` entity type; other shares keep `propertyId`
     // undefined so the digest step is skipped.
-    propertyId: entityType === 'property_showcase' ? entityId : undefined,
+    propertyId: showcaseSurface?.kind === 'property' ? entityId : undefined,
   };
 
   return (
@@ -317,27 +332,13 @@ export function UnifiedShareDialog({
             onCopySuccess={onCopySuccess}
             onShareSuccess={onShareSuccess}
             onShareError={onShareError}
-            showcaseContext={
-              entityType === 'property_showcase'
-                ? { type: 'property', propertyId: entityId }
-                : entityType === 'project_showcase'
-                  ? { type: 'project', projectId: entityId }
-                  : entityType === 'building_showcase'
-                    ? { type: 'building', buildingId: entityId }
-                    : entityType === 'storage_showcase'
-                      ? { type: 'storage', storageId: entityId }
-                      : entityType === 'parking_showcase'
-                        ? { type: 'parking', parkingId: entityId }
-                        : undefined
-            }
+            showcaseContext={buildShowcaseContext(entityType, entityId)}
             initialPersonalMessage={draft.note.trim() || undefined}
             dirtyPolicy={isDirty}
             onDirectEmailShare={onDirectEmailShare}
           />
 
-          {(entityType === 'property_showcase'
-            || entityType === 'project_showcase'
-            || entityType === 'building_showcase') && (
+          {pdfHref !== null && (
             <Button
               asChild
               variant="outline"
@@ -345,13 +346,7 @@ export function UnifiedShareDialog({
               aria-disabled={isDirty}
             >
               <a
-                href={
-                  entityType === 'project_showcase'
-                    ? `/api/project-showcase/${share.token}/pdf`
-                    : entityType === 'building_showcase'
-                      ? `/api/building-showcase/${share.token}/pdf`
-                      : `/api/showcase/${share.token}/pdf`
-                }
+                href={pdfHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 tabIndex={isDirty ? -1 : undefined}
