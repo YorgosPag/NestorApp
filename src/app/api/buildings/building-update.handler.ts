@@ -16,7 +16,7 @@ import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { loadOwnedBuilding } from './_shared/building-owned-doc';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { linkEntity } from '@/lib/firestore/entity-linking.service';
@@ -126,19 +126,14 @@ export const PATCH = withStandardRateLimit(
         throw new ApiError(400, 'Building ID is required');
       }
 
-      const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-
-      if (!buildingDoc.exists) {
-        throw new ApiError(404, 'Building not found');
-      }
-
-      const buildingData = buildingDoc.data();
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-      if (!isSuperAdmin && buildingData?.companyId !== ctx.companyId) {
-        logger.warn('[Buildings] Unauthorized update attempt', { email: ctx.email, buildingId });
-        throw new ApiError(403, 'Unauthorized: Building belongs to different company');
-      }
+      // 🔒 TENANT ISOLATION (ADR-742 §7octies) — βλ. `_shared/building-owned-doc`
+      // Φόρτωση **και** κρίση σε μία πράξη· η σειρά δεν ξαναγράφεται εδώ.
+      const { data: buildingData } = await loadOwnedBuilding({
+        buildingId,
+        caller: ctx,
+        action: 'update',
+        db: adminDb,
+      });
 
       const IMMUTABLE_FIELDS = ['companyId'];
       const cleanUpdates = Object.fromEntries(

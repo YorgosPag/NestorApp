@@ -1,10 +1,9 @@
 import { NextRequest } from 'next/server';
 import { requireAdminFirestore } from '@/lib/api/admin-db';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { withAuth, logAuditEvent } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { loadOwnedBuilding } from '../_shared/building-owned-doc';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { createModuleLogger } from '@/lib/telemetry';
 import { softDelete } from '@/lib/firestore/soft-delete-engine';
@@ -40,28 +39,16 @@ export const DELETE = withStandardRateLimit(
         throw new ApiError(400, 'Building ID is required');
       }
 
-      // Verify building exists and check ownership
-      const buildingDoc = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
-
-      if (!buildingDoc.exists) {
-        throw new ApiError(404, 'Building not found');
-      }
-
-      const buildingData = buildingDoc.data();
-      const isSuperAdmin = isRoleBypass(ctx.globalRole);
-
-      // 🔒 TENANT ISOLATION: Check ownership (unless super_admin)
-      if (!isSuperAdmin && buildingData?.companyId !== ctx.companyId) {
-        logger.warn('Unauthorized delete attempt — companyId mismatch', {
-          email: ctx.email,
-          buildingId,
-          ctxCompanyId: ctx.companyId,
-          ctxGlobalRole: ctx.globalRole,
-          buildingCompanyId: buildingData?.companyId ?? '(missing)',
-          isSuperAdmin,
-        });
-        throw new ApiError(403, 'Unauthorized: Building belongs to different company');
-      }
+      // 🔒 TENANT ISOLATION (ADR-742 §7octies)
+      // Φόρτωση **και** κρίση σε μία πράξη: η σειρά «υπάρχει; → δικό μου;» δεν
+      // ξαναγράφεται εδώ. Και τα δύο «όχι» βγαίνουν από το ίδιο εργοστάσιο, άρα
+      // η άρνηση ιδιοκτησίας είναι πανομοιότυπη με το γνήσιο «δεν βρέθηκε».
+      const { data: buildingData } = await loadOwnedBuilding({
+        buildingId,
+        caller: ctx,
+        action: 'delete',
+        db: adminDb,
+      });
 
       logger.info('Moving building to trash (soft-delete)', { buildingId, companyId: ctx.companyId });
 
