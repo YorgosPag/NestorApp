@@ -16,50 +16,28 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withAuth, logAuditEvent } from '@/lib/auth';
+import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withSensitiveRateLimit } from '@/lib/middleware/with-rate-limit';
-import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
-import { generateMemberId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { PROJECT_NOT_FOUND_MESSAGE } from '@/app/api/projects/_shared/project-ownership';
+import type { MemberDoc, UserProfileDoc, PostBody } from './types';
+import {
+  assignMember,
+  updateMember,
+  removeMember,
+  type MutationContext,
+} from './project-member-mutations';
 
 const logger = createModuleLogger('RoleManagement:ProjectMembers');
 
 // =============================================================================
-// TYPES
-// =============================================================================
-
-interface MemberDoc {
-  uid: string;
-  companyId: string;
-  projectId: string;
-  roleId: string;
-  permissionSetIds: string[];
-  effectivePermissions: string[];
-  addedAt: FirebaseFirestore.Timestamp | null;
-  addedBy: string;
-}
-
-interface UserProfileDoc {
-  email?: string;
-  displayName?: string;
-  photoURL?: string;
-}
-
-// =============================================================================
 // ZOD-LIKE VALIDATION (no extra deps)
 // =============================================================================
-
-interface PostBody {
-  action: 'assign' | 'update' | 'remove';
-  projectId: string;
-  uid: string;
-  roleId?: string;
-  permissionSetIds?: string[];
-  reason: string;
-}
 
 function validatePostBody(body: unknown): PostBody | null {
   if (!body || typeof body !== 'object') return null;
@@ -123,9 +101,22 @@ export const GET = withSensitiveRateLimit(
             .doc(projectId)
             .get();
 
-          if (!topLevelDoc.exists || topLevelDoc.data()?.companyId !== ctx.companyId) {
+          // ── ADR-742 §7octies ────────────────────────────────────────────
+          // Ο κωδικός ήταν **ήδη** 404 — αλλά το **μήνυμα** έλεγε
+          // `'Project not found or access denied'`, δηλαδή ανακοίνωνε ότι
+          // υπάρχει και δεύτερη περίπτωση. Η μεταμφίεση κρίνεται στο
+          // **ολόκληρο** σχήμα: κωδικός + σώμα + μήνυμα (§7.1). Ένα μήνυμα που
+          // απαριθμεί τους λόγους της άρνησης είναι το ίδιο μαντείο, απλώς πιο
+          // ευγενικό.
+          //
+          // 🔴 Και η σύγκριση είχε την **παγίδα του κενού** (§4): σκέτο `!==`
+          // πάνω σε `data()?.companyId`.
+          if (
+            !topLevelDoc.exists ||
+            !isPayloadOwnedByCompany(topLevelDoc.data(), ctx.companyId)
+          ) {
             return NextResponse.json(
-              { success: false, error: 'Project not found or access denied' },
+              { success: false, error: PROJECT_NOT_FOUND_MESSAGE },
               { status: 404 }
             );
           }
@@ -223,7 +214,7 @@ export const POST = withSensitiveRateLimit(
           );
         }
 
-        const { action, projectId, uid, roleId, permissionSetIds, reason } = validated;
+        const { action, projectId } = validated;
         const db = getAdminFirestore();
 
         // Enterprise pattern: members collection ref with query by uid field
@@ -234,122 +225,17 @@ export const POST = withSensitiveRateLimit(
           .doc(projectId)
           .collection(SUBCOLLECTIONS.PROJECT_MEMBERS);
 
-        // Helper: find existing member doc by uid field
-        const findMemberByUid = async () => {
-          const snap = await membersCol.where('uid', '==', uid).limit(1).get();
-          return snap.empty ? null : snap.docs[0];
-        };
+        const mutation: MutationContext = { membersCol, ctx, validated };
 
         switch (action) {
-          case 'assign': {
-            if (!roleId) {
-              return NextResponse.json(
-                { success: false, error: 'roleId is required for assign action' },
-                { status: 400 }
-              );
-            }
+          case 'assign':
+            return assignMember(mutation);
 
-            const existing = await findMemberByUid();
-            if (existing) {
-              return NextResponse.json(
-                { success: false, error: 'User is already a member of this project' },
-                { status: 409 }
-              );
-            }
+          case 'update':
+            return updateMember(mutation);
 
-            // Enterprise ID: setDoc() + generateMemberId() (ADR-017)
-            const memberId = generateMemberId();
-            await membersCol.doc(memberId).set({
-              uid,
-              companyId: ctx.companyId,
-              projectId,
-              roleId,
-              permissionSetIds: permissionSetIds ?? [],
-              effectivePermissions: [],
-              addedAt: FieldValue.serverTimestamp(),
-              addedBy: ctx.uid,
-            });
-
-            await logAuditEvent(ctx, 'member_added', uid, 'user', {
-              newValue: {
-                type: 'project_member',
-                value: { projectId, roleId, permissionSetIds: permissionSetIds ?? [], memberId },
-              },
-              metadata: { reason },
-            });
-
-            return NextResponse.json({
-              success: true,
-              data: { action: 'assign', projectId, uid, memberId },
-            });
-          }
-
-          case 'update': {
-            const existingDoc = await findMemberByUid();
-            if (!existingDoc) {
-              return NextResponse.json(
-                { success: false, error: 'User is not a member of this project' },
-                { status: 404 }
-              );
-            }
-
-            const prevData = existingDoc.data() as MemberDoc;
-            const updates: Record<string, unknown> = {};
-            if (roleId !== undefined) updates.roleId = roleId;
-            if (permissionSetIds !== undefined) updates.permissionSetIds = permissionSetIds;
-
-            if (Object.keys(updates).length === 0) {
-              return NextResponse.json(
-                { success: false, error: 'No fields to update' },
-                { status: 400 }
-              );
-            }
-
-            await existingDoc.ref.update(updates);
-
-            await logAuditEvent(ctx, 'member_updated', uid, 'user', {
-              previousValue: {
-                type: 'project_member',
-                value: { projectId, roleId: prevData.roleId, permissionSetIds: prevData.permissionSetIds },
-              },
-              newValue: {
-                type: 'project_member',
-                value: { projectId, ...updates },
-              },
-              metadata: { reason },
-            });
-
-            return NextResponse.json({
-              success: true,
-              data: { action: 'update', projectId, uid },
-            });
-          }
-
-          case 'remove': {
-            const existingDoc = await findMemberByUid();
-            if (!existingDoc) {
-              return NextResponse.json(
-                { success: false, error: 'User is not a member of this project' },
-                { status: 404 }
-              );
-            }
-
-            const prevData = existingDoc.data() as MemberDoc;
-            await existingDoc.ref.delete();
-
-            await logAuditEvent(ctx, 'member_removed', uid, 'user', {
-              previousValue: {
-                type: 'project_member',
-                value: { projectId, roleId: prevData.roleId, permissionSetIds: prevData.permissionSetIds },
-              },
-              metadata: { reason },
-            });
-
-            return NextResponse.json({
-              success: true,
-              data: { action: 'remove', projectId, uid },
-            });
-          }
+          case 'remove':
+            return removeMember(mutation);
 
           default:
             return NextResponse.json(
