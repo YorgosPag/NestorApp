@@ -1,0 +1,55 @@
+/**
+ * FIXTURE — ΤΟ ΙΔΙΟ ΑΡΧΕΙΟ, ΜΕΤΑ ΤΗ ΔΙΟΡΘΩΣΗ (commit `3d1339ce`).
+ *
+ * Η μόνη ουσιαστική διαφορά από το `historical-bug.pre-fix.ts.fixture` είναι οι
+ * τρεις γραμμές που περνούν από τον SSoT και **παράγουν** το φίλτρο μισθωτή.
+ *
+ * Το ζεύγος πριν/μετά είναι **διαφορικό τεστ**: η πύλη πρέπει να κοκκινίζει στο
+ * ένα και να πρασινίζει στο άλλο. Ένα gate που δεν ξεχωρίζει αυτά τα δύο αρχεία
+ * δεν μετρά τίποτα.
+ *
+ * ⚠️ Πρέπει να πρασινίζει επειδή **μετρήθηκε `where('companyId')` στο ίδιο το
+ * query** — ΟΧΙ επειδή το αρχείο «αναφέρει κάπου» `resolveEffectiveCompanyId`.
+ * Δες το test «ΔΕΝ δέχεται κριτήριο επιπέδου αρχείου».
+ */
+
+import { query, where, orderBy, limit, startAfter, type QueryConstraint } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { getCol, startAfterDocId } from '@/lib/firestore/utils';
+import { requireAuthContext, resolveEffectiveCompanyId } from '@/services/firestore/auth-context';
+
+const CONTACTS_COLLECTION = COLLECTIONS.CONTACTS;
+const BATCH_SIZE = 50;
+
+async function buildContactsQuery(options?: {
+  type?: string;
+  onlyFavorites?: boolean;
+  orderByField?: string;
+  orderDirection?: 'asc' | 'desc';
+  limitCount?: number;
+  cursorId?: string | null;
+}) {
+  const constraints: QueryConstraint[] = [];
+
+  const ctx = await requireAuthContext();
+  const companyId = resolveEffectiveCompanyId(ctx);
+  if (companyId) constraints.push(where('companyId', '==', companyId));
+
+  if (options?.type) constraints.push(where('type', '==', options.type));
+  if (options?.onlyFavorites) constraints.push(where('isFavorite', '==', true));
+
+  const orderField = options?.orderByField || 'updatedAt';
+  const orderDir = options?.orderDirection || 'desc';
+  constraints.push(orderBy(orderField, orderDir));
+
+  if (options?.cursorId) {
+    const snapRef = await startAfterDocId(CONTACTS_COLLECTION, options.cursorId);
+    if (snapRef) constraints.push(startAfter(snapRef));
+  }
+
+  constraints.push(limit(options?.limitCount || BATCH_SIZE));
+
+  return query(getCol(CONTACTS_COLLECTION, undefined), ...constraints);
+}
+
+export { buildContactsQuery };

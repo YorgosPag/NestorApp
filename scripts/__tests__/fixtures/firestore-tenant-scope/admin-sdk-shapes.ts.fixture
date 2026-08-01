@@ -1,0 +1,99 @@
+/**
+ * FIXTURE — τα σχήματα του Admin SDK που πρέπει να ξεχωρίζει η πύλη.
+ *
+ * Κάθε συνάρτηση είναι **ένα** σχήμα, και το όνομά της λέει τι περιμένουμε.
+ * Οι συλλογές επιλέχθηκαν ώστε να έχουν διαφορετικό tenant mode στο
+ * `tenant-config.ts` (companyId default · userId · none).
+ */
+
+import { getAdminFirestore } from '@/lib/firebase-admin';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { FIELDS } from '@/config/firestore-field-constants';
+import { scopeQueryToCompany } from '@/lib/firestore/tenant-scoped-query';
+
+/** ΠΑΡΑΒΙΑΣΗ — αλυσίδα σε company-scoped συλλογή χωρίς companyId. */
+export async function violation_plainChain(projectId: string) {
+  return getAdminFirestore()
+    .collection(COLLECTIONS.BUILDINGS)
+    .where('projectId', '==', projectId)
+    .get();
+}
+
+/** OK — literal 'companyId' στην αλυσίδα. */
+export async function ok_literalCompanyId(companyId: string, projectId: string) {
+  return getAdminFirestore()
+    .collection(COLLECTIONS.BUILDINGS)
+    .where('companyId', '==', companyId)
+    .where('projectId', '==', projectId)
+    .get();
+}
+
+/**
+ * OK — μέσω της σταθεράς `FIELDS.COMPANY_ID` (ADR-245B).
+ * Χωρίς ανάγνωση του `firestore-field-constants.ts` αυτό μετριόταν παραβίαση:
+ * **61%** των ωμών ευρημάτων του Admin SDK ήταν αυτή η μορφή.
+ */
+export async function ok_viaFieldConstant(companyId: string, projectId: string) {
+  return getAdminFirestore()
+    .collection(COLLECTIONS.BUILDINGS)
+    .where(FIELDS.COMPANY_ID, '==', companyId)
+    .where(FIELDS.PROJECT_ID, '==', projectId)
+    .get();
+}
+
+/**
+ * OK — το φίλτρο μπαίνει σε **ΑΛΛΗ ΕΝΤΟΛΗ** (υπό-συνθήκη super-admin bypass).
+ * Ο συντακτικός περιπατητής της αλυσίδας δεν το βλέπει ποτέ· χρειάζεται
+ * παρακολούθηση επανανάθεσης. Νόμιμος κώδικας που μετριόταν παραβίαση.
+ */
+export async function ok_conditionalReassignment(companyId: string, projectId: string, isSuperAdmin: boolean) {
+  let q = getAdminFirestore()
+    .collection(COLLECTIONS.BUILDINGS)
+    .where(FIELDS.PROJECT_ID, '==', projectId);
+  if (!isSuperAdmin) {
+    q = q.where(FIELDS.COMPANY_ID, '==', companyId);
+  }
+  return q.get();
+}
+
+/** OK — η αλυσίδα τυλίγεται στον SSoT του ADR-702/742. */
+export async function ok_wrappedInSsotHelper(companyId: string) {
+  const col = getAdminFirestore().collection(COLLECTIONS.PROPERTIES).where('status', '==', 'active');
+  return scopeQueryToCompany(col, companyId).get();
+}
+
+/**
+ * ΕΞΑΙΡΕΣΗ — δηλωμένη με λόγο στο σημείο χρήσης.
+ * Το token **είναι** η εξουσιοδότηση· δεν υπάρχει μισθωτής να φιλτραριστεί.
+ */
+export async function exempt_publicCapabilityToken(token: string) {
+  // tenant-scope-exempt: public showcase — ο δεσμός token ΕΙΝΑΙ η εξουσιοδότηση
+  return getAdminFirestore()
+    .collection(COLLECTIONS.SHARES)
+    .where('token', '==', token)
+    .where('isActive', '==', true)
+    .get();
+}
+
+/** ΕΚΤΟΣ ΕΜΒΕΛΕΙΑΣ — `CAD_FILES` έχει `mode:'none'` στο tenant-config. */
+export async function notScoped_modeNone(projectId: string) {
+  return getAdminFirestore()
+    .collection(COLLECTIONS.CAD_FILES)
+    .where('projectId', '==', projectId)
+    .get();
+}
+
+/** ΕΚΤΟΣ ΕΜΒΕΛΕΙΑΣ — χωρίς `where()` δεν είναι list query· το κρίνουν τα rules. */
+export async function notScoped_noWhere(id: string) {
+  return getAdminFirestore().collection(COLLECTIONS.BUILDINGS).doc(id).get();
+}
+
+/** ΜΗ ΑΝΑΛΥΣΙΜΟ — το όνομα της συλλογής προκύπτει σε χρόνο εκτέλεσης. */
+export async function unanalyzable_dynamicCollection(name: string, companyIdOrOther: string) {
+  return getAdminFirestore().collection(name).where('someField', '==', companyIdOrOther).get();
+}
+
+/** ΜΗ ΑΝΑΛΥΣΙΜΟ — δυναμικό όνομα πεδίου· η άγνοια ΔΕΝ είναι ενοχή. */
+export async function unanalyzable_dynamicField(field: string, value: string) {
+  return getAdminFirestore().collection(COLLECTIONS.BUILDINGS).where(field, '==', value).get();
+}

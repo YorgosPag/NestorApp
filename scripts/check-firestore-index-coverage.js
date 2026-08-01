@@ -69,14 +69,24 @@ const {
   suggestIndexJson,
 } = require('./_shared/firestore-index-matcher');
 
+// SSoT των καταλόγων του Firestore — κοινό με το CHECK 3.35 (ADR-747).
+// Οι τρεις loaders ζούσαν εδώ μέσα· βγήκαν έξω όταν εμφανίστηκε δεύτερος
+// καταναλωτής, ΠΡΙΝ γραφτεί δεύτερο αντίγραφο.
+//
+// ⚠️ `includeSubcollections` ΟΧΙ: το 3.15 είναι zero-tolerance και η διεύρυνση
+// της εμβέλειάς του είναι ξεχωριστή απόφαση, όχι παρενέργεια refactor.
+const {
+  loadCollectionsMap,
+  loadTenantOverrides,
+  resolveTenantFor,
+} = require('./_shared/firestore-ast-loaders');
+
 // ---------------------------------------------------------------------------
 // Paths & constants
 // ---------------------------------------------------------------------------
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const INDEXES_FILE = path.join(PROJECT_ROOT, 'firestore.indexes.json');
-const COLLECTIONS_FILE = path.join(PROJECT_ROOT, 'src', 'config', 'firestore-collections.ts');
-const TENANT_CONFIG_FILE = path.join(PROJECT_ROOT, 'src', 'services', 'firestore', 'tenant-config.ts');
 
 const SSOT_METHOD_NAMES = new Set(['subscribe', 'subscribeSubcollection', 'getAll']);
 const SSOT_IMPORT_HINTS = [
@@ -94,122 +104,6 @@ const c = {
   cyan:   (s) => (useColour ? `\x1b[36m${s}\x1b[0m` : s),
   bold:   (s) => (useColour ? `\x1b[1m${s}\x1b[0m` : s),
 };
-
-// ---------------------------------------------------------------------------
-// Loaders — collection name map + tenant config
-// ---------------------------------------------------------------------------
-
-/**
- * Parse COLLECTIONS object literal from firestore-collections.ts to extract
- * the KEY → physical collection name mapping. We only need the string
- * fallback in `process.env.X || 'collection_name'` (prod default).
- *
- * @returns {Map<string, string>} key → collection name
- */
-function loadCollectionsMap() {
-  const src = fs.readFileSync(COLLECTIONS_FILE, 'utf8');
-  const sf = ts.createSourceFile(COLLECTIONS_FILE, src, ts.ScriptTarget.Latest, true);
-  /** @type {Map<string, string>} */
-  const map = new Map();
-
-  /** @param {ts.Node} node */
-  function visit(node) {
-    if (
-      ts.isVariableDeclaration(node) &&
-      node.name.getText() === 'COLLECTIONS' &&
-      node.initializer &&
-      (ts.isObjectLiteralExpression(node.initializer) ||
-       (ts.isAsExpression(node.initializer) && ts.isObjectLiteralExpression(node.initializer.expression)))
-    ) {
-      const obj = ts.isAsExpression(node.initializer)
-        ? node.initializer.expression
-        : node.initializer;
-      for (const prop of obj.properties) {
-        if (!ts.isPropertyAssignment(prop)) continue;
-        const key = prop.name.getText();
-        const literal = extractFallbackString(prop.initializer);
-        if (literal) map.set(key, literal);
-      }
-    }
-    ts.forEachChild(node, visit);
-  }
-
-  /**
-   * Given an initializer like `process.env.X || 'name'` or `'name'`, return 'name'.
-   * @param {ts.Expression} expr
-   * @returns {string|null}
-   */
-  function extractFallbackString(expr) {
-    if (ts.isStringLiteral(expr)) return expr.text;
-    if (ts.isBinaryExpression(expr) && expr.operatorToken.kind === ts.SyntaxKind.BarBarToken) {
-      const right = expr.right;
-      if (ts.isStringLiteral(right)) return right.text;
-    }
-    return null;
-  }
-
-  visit(sf);
-  return map;
-}
-
-/**
- * Parse TENANT_OVERRIDES from tenant-config.ts to learn which collections
- * use companyId auto-injection (default), tenantId, userId, or none.
- *
- * @returns {Map<string, {mode: string, fieldName: string}>}
- */
-function loadTenantOverrides() {
-  const src = fs.readFileSync(TENANT_CONFIG_FILE, 'utf8');
-  const sf = ts.createSourceFile(TENANT_CONFIG_FILE, src, ts.ScriptTarget.Latest, true);
-  /** @type {Map<string, {mode: string, fieldName: string}>} */
-  const map = new Map();
-
-  /** @param {ts.Node} node */
-  function visit(node) {
-    if (
-      ts.isVariableDeclaration(node) &&
-      node.name.getText() === 'TENANT_OVERRIDES' &&
-      node.initializer
-    ) {
-      const obj = ts.isAsExpression(node.initializer)
-        ? node.initializer.expression
-        : node.initializer;
-      if (obj && ts.isObjectLiteralExpression(obj)) {
-        for (const prop of obj.properties) {
-          if (!ts.isPropertyAssignment(prop)) continue;
-          const key = prop.name.getText();
-          if (!ts.isObjectLiteralExpression(prop.initializer)) continue;
-          const entry = { mode: 'companyId', fieldName: 'companyId' };
-          for (const sub of prop.initializer.properties) {
-            if (!ts.isPropertyAssignment(sub)) continue;
-            const subKey = sub.name.getText();
-            if (ts.isStringLiteral(sub.initializer)) {
-              if (subKey === 'mode') entry.mode = sub.initializer.text;
-              else if (subKey === 'fieldName') entry.fieldName = sub.initializer.text;
-            }
-          }
-          map.set(key, entry);
-        }
-      }
-    }
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sf);
-  return map;
-}
-
-/**
- * Default tenant config matches firestoreQueryService — every collection key
- * NOT in TENANT_OVERRIDES is treated as `{ mode: 'companyId', fieldName: 'companyId' }`.
- *
- * @param {Map<string, {mode: string, fieldName: string}>} overrides
- * @param {string} key
- * @returns {{mode: string, fieldName: string}}
- */
-function resolveTenantFor(overrides, key) {
-  return overrides.get(key) || { mode: 'companyId', fieldName: 'companyId' };
-}
 
 // ---------------------------------------------------------------------------
 // AST walker — find subscribe/getAll calls on the SSoT

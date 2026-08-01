@@ -1,0 +1,50 @@
+/**
+ * FIXTURE — 🔴 Η ΠΑΓΙΔΑ ΠΟΥ ΠΑΡΑΛΙΓΟ ΝΑ ΨΗΘΕΙ ΜΕΣΑ ΣΤΗΝ ΙΔΙΑ ΤΗΝ ΠΥΛΗ.
+ *
+ * Το σχήμα του πραγματικού σφάλματος (ADR-745 §9.5): **ένα αρχείο, έξι
+ * συναρτήσεις, οι πέντε σωστές και μία όχι**. Η πρώτη εκδοχή του σαρωτή είχε
+ * κριτήριο **επιπέδου αρχείου** («το αρχείο αναφέρει `resolveEffectiveCompanyId`
+ * ⇒ εντάξει») — που θα έβαφε **πράσινη** τη σπασμένη συνάρτηση επειδή οι
+ * γειτόνισσές της ήταν σωστές.
+ *
+ * Δηλαδή η πύλη θα **πιστοποιούσε** ακριβώς τη διαρροή που γεννήθηκε για να πιάσει.
+ *
+ * ΤΟ TEST ΕΔΩ ΕΙΝΑΙ ΤΟ ΑΓΚΥΡΟΒΟΛΙΟ: όποιος ξαναβάλει ευρετική επιπέδου αρχείου
+ * θα δει αυτό το fixture να πρασινίζει — και θα ξέρει ότι έσπασε τον κανόνα.
+ */
+
+import { query, where, orderBy, type QueryConstraint } from 'firebase/firestore';
+import { COLLECTIONS } from '@/config/firestore-collections';
+import { getCol } from '@/lib/firestore/utils';
+import { requireAuthContext, resolveEffectiveCompanyId } from '@/services/firestore/auth-context';
+
+const CONTACTS = COLLECTIONS.CONTACTS;
+
+/** ✅ σωστή — περνά από τον SSoT */
+export async function scopedOne(type: string) {
+  const ctx = await requireAuthContext();
+  const constraints: QueryConstraint[] = [
+    where('companyId', '==', resolveEffectiveCompanyId(ctx)),
+    where('type', '==', type),
+  ];
+  return query(getCol(CONTACTS, undefined), ...constraints);
+}
+
+/** ✅ σωστή — περνά από τον SSoT */
+export async function scopedTwo(status: string) {
+  const ctx = await requireAuthContext();
+  const constraints: QueryConstraint[] = [];
+  constraints.push(where('companyId', '==', resolveEffectiveCompanyId(ctx)));
+  constraints.push(where('status', '==', status));
+  return query(getCol(CONTACTS, undefined), ...constraints);
+}
+
+/**
+ * 🔴 Η ΣΠΑΣΜΕΝΗ — ίδιο αρχείο, καμία αναφορά μισθωτή σε **αυτό** το query.
+ * ΠΡΕΠΕΙ να βγει `violation` παρότι οι δύο από πάνω είναι υποδειγματικές.
+ */
+export async function unscopedSibling() {
+  const constraints: QueryConstraint[] = [];
+  constraints.push(orderBy('updatedAt', 'desc'));
+  return query(getCol(CONTACTS, undefined), ...constraints);
+}
