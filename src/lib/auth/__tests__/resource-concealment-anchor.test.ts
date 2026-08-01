@@ -113,6 +113,32 @@ const SKIP_DIRS = new Set(['__tests__', 'node_modules', '.next', '__mocks__']);
  */
 const DECLARED_UNREADABLE_PATHS: readonly string[] = [];
 
+/**
+ * 🔴 **Ο μάρτυρας κάθε δέντρου** — ο φύλακας κατά της αφαίρεσης δέντρου.
+ *
+ * Τα κατώφλια `minFiles` φυλάνε από «το δέντρο άδειασε». **Δεν** φυλάνε από «το
+ * δέντρο διαγράφηκε από τη λίστα»: το `it.each` απλώς παύει να το τρέχει και
+ * **όλα μένουν πράσινα** — ίδιο σχήμα με τον φύλακα του {@link NOT_YET_MIGRATED}
+ * που χρειάστηκε αντιστροφή αντί διαγραφή.
+ *
+ * ⇒ Ένα **υπαρκτό, ονομασμένο** αρχείο ανά δέντρο πρέπει να βρίσκεται στο
+ * σαρωμένο σύνολο. Αφαίρεση δέντρου = κόκκινο με όνομα. Δεν είναι ταυτολογία:
+ * ο έλεγχος δείχνει σε πραγματικές διαδρομές, όχι στη λίστα του εαυτού του.
+ *
+ * ⚠️ Το `src/app/api` και το `src/lib` έχουν **ήδη** μάρτυρα αλλού
+ * ({@link HAND_ROLLED_INVENTORY} και ο έλεγχος του `tenant-isolation.ts`)· εδώ
+ * δηλώνονται μαζί με τα υπόλοιπα ώστε ο κανόνας να είναι **ένας**.
+ */
+const TREE_WITNESSES: readonly string[] = [
+  'src/app/api/floorplan-overlays/floorplan-overlays.handlers.ts',
+  'src/lib/auth/tenant-isolation.ts',
+  'src/server/admin/admin-guards.ts',
+  'src/services/entity-audit.service.ts',
+  // 🔴 Ο λόγος που μπήκε το `src/subapps` (§7undecies.5): κανονικός κώδικας
+  // υπηρεσιών που καλυπτόταν **μόνο** από τον ratchet, όχι από αυτό το anchor.
+  'src/subapps/procurement/services/procurement-owned-doc.ts',
+];
+
 const unreadablePaths: string[] = [];
 
 function listTypeScriptFiles(dir: string): string[] {
@@ -462,6 +488,10 @@ describe('⚓ ADR-742 — ο ανιχνευτής δουλεύει (regex που
    */
   it('🔴 καμία διαδρομή δεν παραλείφθηκε σιωπηλά από τη σάρωση', () => {
     expect([...unreadablePaths].sort()).toEqual([...DECLARED_UNREADABLE_PATHS].sort());
+  });
+
+  it.each(TREE_WITNESSES)('🔴 το σαρωμένο σύνολο περιέχει ΟΝΤΩΣ το «%s»', (witness) => {
+    expect(SRC_FILES.map((f) => f.path)).toContain(witness);
   });
 
   it('η μισογραμμένη μεταμφίεση αναγνωρίζεται ακόμη', () => {
