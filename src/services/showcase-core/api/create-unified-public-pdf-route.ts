@@ -34,6 +34,7 @@ import {
 } from './create-public-pdf-route';
 import { incrementPublicShareAccess, lookupPublicShowcaseShare } from './public-share-lookup';
 import { sanitizeShowcaseFilenameStem } from '../showcase-filename';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
 /** The minimum entity facts the PDF proxy needs: tenant check + filename. */
 interface ShowcasePdfEntityHeader {
@@ -107,7 +108,10 @@ export function createUnifiedPublicShowcasePdfRoute(
     loadEntityHeader: (entityId, adminDb) =>
       loadEntityHeader(entityCollection, entityId, adminDb, filenameFallback),
 
-    checkTenant: (header, companyId) => header.companyId === companyId,
+    // 🔴 ADR-742 §4 — ο καλών εδώ είναι **ανώνυμος** (δημόσιο token). Με σκέτο
+    // `===`, share **χωρίς** μισθωτή και οντότητα **χωρίς** μισθωτή ταίριαζαν,
+    // οπότε ο διασταυρούμενος έλεγχος επιβεβαίωνε ταύτιση που δεν υπάρχει.
+    checkTenant: (header, companyId) => isPayloadOwnedByCompany(header, companyId),
 
     buildFilename: header => {
       const stem = sanitizeShowcaseFilenameStem(header.name);
@@ -126,9 +130,15 @@ export function createUnifiedPublicShowcasePdfRoute(
  * Read the entity's `companyId` + `name`.
  *
  * Both originals defaulted a missing `companyId` to `''` rather than returning
- * `null`, which makes the tenant check fail closed (`'' !== share.companyId`)
- * and answer 403. Preserved: failing closed is correct, and changing it to a
- * 404 would alter the public response for a corrupt document.
+ * `null`, so the tenant check would fail closed and answer 403. Preserved:
+ * failing closed is correct, and changing it to a 404 would alter the public
+ * response for a corrupt document.
+ *
+ * 🔴 **Ο μηχανισμός όμως άλλαξε (ADR-742 §4, 2026-08-01).** Το «fail closed»
+ * στηριζόταν στο ότι `'' !== share.companyId` — δηλαδή στο ότι **ο άλλος**
+ * φέρει μισθωτή. Αν το share ήταν κι αυτό κενό, τα δύο κενά **ταίριαζαν** και
+ * ο έλεγχος άνοιγε. Πλέον το κλείσιμο δεν εξαρτάται από τον άλλον: το
+ * `isPayloadOwnedByCompany` απορρίπτει το κενό **και στις δύο** πλευρές.
  */
 async function loadEntityHeader(
   collection: string,

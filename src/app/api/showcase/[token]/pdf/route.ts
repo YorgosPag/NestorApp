@@ -15,6 +15,7 @@ import { createPublicShowcasePdfRoute } from '@/services/showcase-core';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import type { ResolvedPublicPdfShare } from '@/services/showcase-core';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
@@ -95,7 +96,9 @@ const route = createPublicShowcasePdfRoute<PropertyHeader>({
     };
   },
 
-  checkTenant: (header, companyId) => header.companyId === companyId,
+  // 🔴 ADR-742 §4 — ίδια παγίδα με το `create-unified-public-pdf-route`:
+  // ανώνυμος καλών, και το κενό δεν είναι μισθωτής.
+  checkTenant: (header, companyId) => isPayloadOwnedByCompany(header, companyId),
 
   buildFilename: (header) => {
     const code = sanitizeFilenameSegment(header.code);
