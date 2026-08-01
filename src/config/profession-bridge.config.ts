@@ -125,11 +125,15 @@ interface ProfessionAlias {
 /**
  * Compiles every spelling of every role **once**, at module load.
  *
- * Both fields of the entry count. `surveyor` is why: its `profession` reads «Τοπογράφος
- * Μηχανικός» while the ESCO label reads «Αγρονόμος Τοπογράφος Μηχανικός», and the measured
- * titleblock writes the second one. A resolver that consults a single field loses exactly
- * that role. Identical spellings (`architect`, whose two fields differ only in case) are
- * folded, so one role never answers twice for the same words.
+ * Both fields count, and identical spellings are folded so one role never answers twice for
+ * the same words (`architect`, whose two fields differ only in case).
+ *
+ * ⚠️ **Measured 2026-08-01: reading `escoLabel` changes no outcome today.** Under containment
+ * the shorter phrase matches wherever the longer one does, and every current ESCO label
+ * either equals its `profession` or contains it — «αγρονόμος **τοπογράφος μηχανικός**». The
+ * field is kept as insurance for the first entry whose ESCO label is a genuinely different
+ * phrase (say «μηχανικός χημικών διεργασιών» beside «Χημικός Μηχανικός»), and the invariant
+ * that makes it redundant is locked by a test that turns red the day it breaks.
  */
 function compileProfessionAliases(): readonly ProfessionAlias[] {
   const aliases: ProfessionAlias[] = [];
