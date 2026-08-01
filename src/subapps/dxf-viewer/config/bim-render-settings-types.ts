@@ -96,6 +96,19 @@ export interface BimRenderSettings {
   settingsVersion?: number;
   /** Annotation scale denominator (e.g. 100 → 1:100). */
   drawingScale: number;
+  /**
+   * ADR-739 §20.8 — the user DELIBERATELY picked {@link drawingScale} (View-ribbon
+   * widget), so no later auto fit-to-paper pass may overwrite it.
+   *
+   * ⚠️ This is persisted ON PURPOSE. It used to be session-only state, which made
+   * the guarantee its own doc comment promised ("a genuine re-import never
+   * overwrites a scale the user deliberately chose") false the moment the page
+   * reloaded: the flag came back `false` and the next auto pass was free to
+   * replace a hand-picked 1:100 with a bounds-derived 1:5000. A deliberate
+   * authoring choice must outlive the tab — that is the whole point of the
+   * annotation-scale contract (AutoCAD `CANNOSCALE`, Revit view scale).
+   */
+  drawingScaleUserSet?: boolean;
   /** Partial ViewRange override (mm). Absent keys fall back to DEFAULT_VIEW_RANGE. */
   viewRange?: Partial<ViewRange>;
   /** Partial ObjectStyles override. Absent categories fall back to DEFAULT_OBJECT_STYLES. */
@@ -244,6 +257,12 @@ export const DEFAULT_DXF_IMPORT_STYLE: DxfImportStyle = {
 
 export interface ResolvedBimSettings {
   drawingScale: number;
+  /**
+   * ADR-739 §20.8 — resolved «the user owns this scale» lock (default `false` =
+   * still AUTO). Only an explicit `true` counts, so pre-ADR-739 docs — which never
+   * carried the field — stay in AUTO exactly as before.
+   */
+  drawingScaleUserSet: boolean;
   viewRange: ViewRange;
   objectStyles: Record<BimCategory, ObjectStyle>;
   disciplineVisibility: Partial<Record<Discipline, boolean>>;
@@ -318,6 +337,9 @@ export function resolveBimSettings(s?: BimRenderSettings | null): ResolvedBimSet
   const axes = resolveVisualStyleAxes(visualStyle);
   return {
     drawingScale: Math.max(DRAWING_SCALE_MIN, Math.min(DRAWING_SCALE_MAX, Math.round(rawScale))),
+    // ADR-739 §20.8 — absent ⇒ AUTO. Strict `=== true` so a truthy-but-not-boolean
+    // legacy value can never silently lock a view out of the auto fit.
+    drawingScaleUserSet: s?.drawingScaleUserSet === true,
     viewRange: s?.viewRange ? { ...DEFAULT_VIEW_RANGE, ...s.viewRange } : DEFAULT_VIEW_RANGE,
     objectStyles: s?.objectStyles
       ? { ...DEFAULT_OBJECT_STYLES, ...s.objectStyles } as Record<BimCategory, ObjectStyle>

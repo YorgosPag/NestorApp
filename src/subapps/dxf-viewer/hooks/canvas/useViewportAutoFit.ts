@@ -47,7 +47,10 @@ import { readPersistedViewport } from '../../services/viewport-persistence';
 // ADR-375 Phase B.4 — fit-to-paper AUTO drawing scale. Runs alongside the
 // content fit (not on persisted-viewport restore) so a fresh import auto-frames
 // its annotations at a standard 1:N instead of the oversized fixed 1:100.
-import { computeFitToPaperScale } from '../../systems/dimensions/auto-drawing-scale';
+// ADR-739 §20.8 — the AUTOMATIC pass uses the CEILINGED variant: a scene whose
+// extent only fits A3 beyond the preset ladder (a 1.9 km survey ⇒ 1:5000) is site
+// extent, not drawing extent, and gets no silent opinion at all.
+import { computeAutoDrawingScale } from '../../systems/dimensions/auto-drawing-scale';
 import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
 import { MIN_VISIBLE_CONTENT_PX } from '../../config/transform-config';
 import {
@@ -155,12 +158,14 @@ export function useViewportAutoFit({
 
   // ADR-375 Phase B.4 — pick a standard fit-to-paper 1:N from the scene's bounds
   // (canonical mm) and apply it via the store, unless the user has manually set
-  // the scale this session (`applyAutoDrawingScale` guards that). Bounds are in mm
-  // by construction (ADR-462), matching the paper-mm reference.
+  // the scale (`applyAutoDrawingScale` guards that, and since ADR-739 §20.8 that
+  // lock is persisted). Bounds are in mm by construction (ADR-462), matching the
+  // paper-mm reference. A `null` scale = the guess has no opinion → leave the
+  // level's current scale alone.
   const autoFitDrawingScale = (): void => {
     const scene = sceneRef.current;
     if (!sceneHasEntities(scene) || !scene?.bounds) return;
-    const scale = computeFitToPaperScale(scene.bounds);
+    const scale = computeAutoDrawingScale(scene.bounds);
     if (scale != null) useBimRenderSettingsStore.getState().applyAutoDrawingScale(scale);
   };
 

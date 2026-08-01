@@ -39,10 +39,13 @@ export interface BimRenderSettingsState extends ResolvedBimSettings {
    */
   bimVisibilitySnapshot: Partial<Record<BimCategory, boolean>> | null;
   /**
-   * ADR-375 Phase B.4 — runtime-only flag: `true` once the user set the drawing
-   * scale MANUALLY (widget input/preset) this session. The fit-to-paper auto-fit
+   * ADR-375 Φ.B.4 / ADR-739 §20.8 — `true` once the user set the drawing scale
+   * MANUALLY (widget input/preset). The fit-to-paper auto-fit
    * (`applyAutoDrawingScale`) skips when set, so a genuine re-import never
    * overwrites a scale the user deliberately chose (Revit annotation-scale rule).
+   *
+   * ⚠️ PERSISTED per level (ADR-739 §20.8) — it was runtime-only until then, which
+   * silently voided the guarantee above on every page reload.
    */
   drawingScaleUserSet: boolean;
 

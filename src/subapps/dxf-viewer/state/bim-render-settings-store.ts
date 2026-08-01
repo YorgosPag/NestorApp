@@ -60,6 +60,10 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
       // (otherwise every load would needlessly re-run the idempotent migration).
       settingsVersion: BIM_SETTINGS_VERSION,
       drawingScale: state.drawingScale,
+      // ADR-739 §20.8 — persist the «user owns the scale» lock alongside the value
+      // it protects. Writing the value without the lock is what let a reload hand a
+      // hand-picked scale back to the auto fit-to-paper pass.
+      drawingScaleUserSet: state.drawingScaleUserSet,
       viewRange: state.viewRange,
       objectStyles: state.objectStyles,
       disciplineVisibility: state.disciplineVisibility,
@@ -103,9 +107,10 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
     currentLevelId: null,
     lastLocalMutationAt: 0,
     bimVisibilitySnapshot: null,
-    // ADR-375 Phase B.4 — session flag: user hasn't touched the scale yet, so the
-    // fit-to-paper auto-fit is free to set it on the first content / re-import.
-    drawingScaleUserSet: false,
+    // ADR-739 §20.8 — `drawingScaleUserSet` is NOT re-declared here on purpose: it
+    // now arrives through `...defaultResolved` like every other resolved field, so
+    // `resolveBimSettings` stays its single default. A literal after the spread
+    // would silently outrank the resolver the day that default changes.
 
     loadForLevel(levelId, settings) {
       // ADR-445 — one-time colour-refresh migration: old levels froze the FULL
@@ -118,6 +123,9 @@ export const useBimRenderSettingsStore = create<BimRenderSettingsState>((set, ge
         currentLevelId: levelId,
         rawSettings: migrated,
         drawingScale: resolved.drawingScale,
+        // ADR-739 §20.8 — restore the lock with the value. Switching levels must
+        // carry each level's own AUTO/MANUAL mode, not leak the previous level's.
+        drawingScaleUserSet: resolved.drawingScaleUserSet,
         viewRange: resolved.viewRange,
         objectStyles: resolved.objectStyles,
         disciplineVisibility: resolved.disciplineVisibility,
