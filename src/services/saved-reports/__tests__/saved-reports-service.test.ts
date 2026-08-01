@@ -6,6 +6,12 @@
  * CRUD operations + visibility rules + cross-tenant isolation.
  * Google Zanzibar-style permission matrix for security-critical paths.
  *
+ * ⚓ Καλύπτει τα **πέντε** σημεία ιδιοκτησίας του
+ * `services/saved-reports/saved-reports-service.ts` με το ζεύγος κενό/κενό
+ * (ADR-742 §4). Η πλήρης διαδρομή γράφεται εδώ αυτούσια επειδή ο anchor
+ * `ownership-callsite-coverage-anchor.test.ts` την αναζητά: αν σβηστεί το
+ * `describe('Cross-tenant isolation')`, θέλουμε να το μάθουμε (μάθημα #7).
+ *
  * @module __tests__/saved-reports-service
  * @see SPEC-011 §10 Q1, Q5
  */
