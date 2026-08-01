@@ -36,11 +36,35 @@
  * `display:none` / `visibility:hidden` — και τα δύο αφαιρούν την εστίαση, δηλαδή ακυρώνουν
  * ακριβώς τον λόγο ύπαρξής του. Μόνο `opacity`.
  *
- * ## Τι ζωγραφίζει τον δρομέα
- * **Ο καμβάς**, όχι αυτό το κουτί (`stampTableCellCursor`): ο πίνακας μπορεί να είναι
- * περιστραμμένος και το κελί αλλάζει μέγεθος με το zoom, ενώ το αγκυρωμένο DOM κουτί είναι
- * σκόπιμα σταθερό σε px οθόνης (ADR-344: «θέση από την προβολή, μέγεθος σε screen-space»).
+ * ## 🔴 ADR-739 Φ.Δ βήμα 3 — γιατί αυτό το κουτί ΔΕΝ είναι σταθερό σε px οθόνης
  *
+ * Μέχρι το βήμα 2 το `<input>` ήταν **140 × 24 px**, με χρώματα του θέματος της εφαρμογής,
+ * αγκυρωμένο στην πάνω-αριστερή γωνία του κελιού. Στην οθόνη αυτό είναι ένα **μαύρο
+ * κουτάκι μέσα στο κελί** με μικροσκοπικά γράμματα, ενώ από κάτω ο καμβάς εξακολουθεί να
+ * ζωγραφίζει το κείμενο σε κανονικό μέγεθος (Giorgio, 2026-08-01). Η αιτιολόγηση ήταν το
+ * δόγμα του ADR-344 — «θέση από την προβολή, **μέγεθος σε screen-space**», δανεισμένο από
+ * το AutoCAD `MTEXTFIXED = 2`.
+ *
+ * Το δόγμα είναι **σωστό για ελεύθερο κείμενο και λάθος για κελί**, και η διαφορά είναι
+ * ουσιαστική, όχι αισθητική:
+ *  - ένα MTEXT μπορεί να είναι μικροσκοπικό, τεράστιο ή ανάποδο· δεν υπάρχει «σωστό» κουτί
+ *    να μπεις μέσα του, γι' αυτό το AutoCAD σου δίνει ένα **ευανάγνωστο** κουτί από πάνω·
+ *  - ένα **κελί** έχει ήδη ορθογώνιο, γραμματοσειρά, στοίχιση, περιθώρια και χρώματα. Εκεί
+ *    το «σταθερό σε px» δεν είναι ουδέτερη επιλογή — είναι ένα **ξένο** κουτί πάνω στο κελί.
+ *
+ * Το Excel, το Google Sheets και το Glide Data Grid (canvas grid, MIT) κάνουν όλα το ίδιο:
+ * ένα πραγματικό εστιασμένο πεδίο **στο ορθογώνιο του κελιού**, με την τυπογραφία του
+ * κελιού. Εδώ πάμε ένα βήμα παραπέρα από τα δύο πρώτα: το κουτί ακολουθεί και την
+ * **περιστροφή** του πίνακα (κανένα φύλλο υπολογισμού δεν έχει στραμμένο πλέγμα) και
+ * ζουμάρει ζωντανά με τον καμβά, χωρίς **κανένα** re-render (ADR-040) — οι τιμές ταξιδεύουν
+ * ως CSS custom properties που γράφει επιτακτικά το `TextEditorAnchorLayer`.
+ *
+ * ## Τι ζωγραφίζει τον δρομέα
+ * **Ο καμβάς**, όχι αυτό το κουτί (`stampTableCellCursor`): το πλαίσιο του τρέχοντος κελιού
+ * πρέπει να φαίνεται και σε κατάσταση **πλοήγησης**, όπου αυτό το `<input>` είναι διαφανές.
+ *
+ * @see ui/table-cell-editor/table-cell-editor-frame.ts — από sheet-mm σε px CSS
+ * @see ui/table-cell-editor/table-cell-editor-vars.ts — το συμβόλαιο των custom properties
  * @see ui/table-cell-editor/table-cell-key-intent.ts — ποιο πλήκτρο τι σημαίνει
  * @see state/table-cell-cursor-store.ts — η κατάσταση του δρομέα
  * @see ui/inline-editor/use-inline-editor-keys.ts — ο φρουρός «μία φορά» + ο escape-bus
@@ -51,6 +75,10 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useInlineEditorKeys } from '../inline-editor/use-inline-editor-keys';
 import { TextEditorAnchorLayer, type TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
+import {
+  TABLE_CELL_EDITOR_INPUT_STYLE,
+  TABLE_CELL_EDITOR_WRITING_STYLE,
+} from './table-cell-editor-vars';
 import { resolveTableCellKeyIntent } from './table-cell-key-intent';
 import {
   cancelTableCellCursorSession,
@@ -75,6 +103,11 @@ export interface TableCellEditorOverlayProps {
   readonly draft: string;
   /** Το **δεσμευμένο** κείμενο του κελιού, διαβασμένο από το μοντέλο τη στιγμή της απόδοσης. */
   readonly initialText: string;
+  /**
+   * ADR-739 Φ.Δ βήμα 3 — ο χαρακτήρας στον οποίο στήνεται ο κέρσορας· `undefined` ⇒ τέλος.
+   * Το γεμίζει μόνο το διπλό κλικ (Excel: μπαίνεις εκεί που έδειξες).
+   */
+  readonly caretIndex?: number;
   readonly anchor: TextEditorAnchor;
   /** Γράψε το κείμενο στο μοντέλο (undoable). Καλείται **το πολύ μία φορά** ανά συνεδρία. */
   readonly onCommit: (nextText: string) => void;
@@ -85,17 +118,24 @@ export interface TableCellEditorOverlayProps {
 }
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
-  const { mode, draft, initialText, anchor, onCommit, onMove, onClear } = props;
+  const { mode, draft, initialText, caretIndex, anchor, onCommit, onMove, onClear } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Είσοδος με διπλό κλικ / F2: κέρσορας στο ΤΕΛΟΣ, όχι επιλογή όλου του κειμένου. Μπήκες
-  // για να διορθώσεις, όχι για να ξαναγράψεις — αλλιώς η κατάσταση `edit` θα ήταν
-  // λειτουργικά ίδια με την `enter` και το F2 δεν θα σήμαινε τίποτα.
+  // Είσοδος με διπλό κλικ / F2: **ποτέ** επιλογή όλου του κειμένου — μπήκες για να
+  // διορθώσεις, όχι για να ξαναγράψεις (αλλιώς η κατάσταση `edit` θα ήταν λειτουργικά ίδια
+  // με την `enter` και το F2 δεν θα σήμαινε τίποτα).
+  //
+  // ADR-739 Φ.Δ βήμα 3 — **πού** ακριβώς: στο γράμμα που έδειξε το διπλό κλικ, όπως στο
+  // Excel. `F2` και `Tab` δεν έχουν σημείο, άρα πέφτουν στο τέλος. Το `Math.min` δεν είναι
+  // παράνοια: ο δείκτης υπολογίστηκε πάνω στο **δεσμευμένο** κείμενο, ενώ εδώ διαβάζεται
+  // το πρόχειρο — μια ασύγχρονη ενημέρωση σκηνής ανάμεσα στα δύο θα έδινε δείκτη εκτός ορίων.
   useEffect(() => {
     if (mode === 'nav') return;
     const el = inputRef.current;
-    if (el) el.setSelectionRange(el.value.length, el.value.length);
+    if (!el) return;
+    const at = caretIndex === undefined ? el.value.length : Math.min(caretIndex, el.value.length);
+    el.setSelectionRange(at, at);
     // Μόνο στο στήσιμο της συνεδρίας: μεταγενέστερες πληκτρολογήσεις δεν μετακινούν κέρσορα.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -197,7 +237,10 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         type="text"
         autoFocus
         value={draft}
-        placeholder={t('table.cellEditor.editorPlaceholder')}
+        // ADR-739 Φ.Δ βήμα 3 — **κανένα placeholder**: το πεδίο ΕΙΝΑΙ πλέον το κελί, και ένα
+        // γκρίζο «πληκτρολογήστε…» μέσα σε άδειο κελί είναι κείμενο που δεν υπάρχει στο
+        // έγγραφο. Κανένα φύλλο υπολογισμού δεν το κάνει. Ο ρόλος δηλώνεται με `aria-label`,
+        // που είναι και ο σωστός φορέας του (δεν ζωγραφίζεται).
         aria-label={t('table.cellEditor.cellAriaLabel')}
         // Το σημάδι που διαβάζει το {@link handleBlur} για να ξεχωρίσει «μετακινήθηκα σε
         // άλλο κελί» από «έφυγα από τον πίνακα». Δεν είναι στυλ — είναι ταυτότητα ρόλου.
@@ -205,15 +248,22 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        // ΚΑΜΙΑ γωνία, ΚΑΝΕΝΑ περίγραμμα, ΚΑΜΙΑ σκιά εστίασης: το κελί έχει ήδη πλαίσιο —
+        // το ζωγραφίζει ο καμβάς (`stampTableCellCursor`), στην περιστροφή του πίνακα. Ένα
+        // δεύτερο, ευθυγραμμισμένο στην οθόνη, θα κρεμόταν λοξά πάνω στο πρώτο.
         className={cn(
-          'box-border rounded px-2 outline-none',
+          'box-border border-0 outline-none',
           writing
-            ? 'border border-primary bg-background text-foreground focus:ring-2 focus:ring-primary'
+            ? 'bg-clip-padding'
             // Πλοήγηση: κρατά την ΕΣΤΙΑΣΗ (άρα και τα πλήκτρα), χάνει την όψη και το
             // ποντίκι. Τον δρομέα τον ζωγραφίζει ο καμβάς — δες την κεφαλίδα.
-            : 'pointer-events-none border-0 bg-transparent text-transparent opacity-0',
+            : 'pointer-events-none bg-transparent text-transparent opacity-0',
         )}
-        style={{ width: anchor.size.width, height: anchor.size.height }}
+        style={
+          writing
+            ? { ...TABLE_CELL_EDITOR_INPUT_STYLE, ...TABLE_CELL_EDITOR_WRITING_STYLE }
+            : TABLE_CELL_EDITOR_INPUT_STYLE
+        }
       />
     </TextEditorAnchorLayer>
   );

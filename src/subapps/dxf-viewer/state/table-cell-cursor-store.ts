@@ -93,6 +93,19 @@ export interface TableCellCursorState {
    * παραμένει παράγωγο της οντότητας, πάντα.
    */
   readonly draft: string;
+
+  /**
+   * ADR-739 Φ.Δ βήμα 3 — σε ποιον **χαρακτήρα** στήνεται ο κέρσορας όταν ανοίγει η
+   * συνεδρία· `undefined` ⇒ στο τέλος του κειμένου.
+   *
+   * Το γεμίζει **μόνο** το διπλό κλικ, γιατί μόνο εκείνο έχει σημείο: το Excel βάζει τον
+   * κέρσορα εκεί που έδειξες, όχι μονίμως στο τέλος. `Tab` / βέλη / `F2` δεν έχουν σημείο
+   * και γι' αυτό αφήνουν το πεδίο κενό — δεν είναι παράλειψη, είναι η σωστή σημασιολογία.
+   *
+   * Καταναλώνεται **μία φορά**, στο στήσιμο του `<input>`. Επιβιώνει των `...current`
+   * ενημερώσεων (draft/mode) αβλαβώς: εκείνες δεν ξαναστήνουν το πεδίο.
+   */
+  readonly caretIndex?: number;
 }
 
 /**
@@ -112,6 +125,7 @@ const store = createExternalStore<TableCellCursorState | null>(null, {
     a?.mode === b?.mode &&
     a?.sessionId === b?.sessionId &&
     a?.draft === b?.draft &&
+    a?.caretIndex === b?.caretIndex &&
     a?.position.rowId === b?.position.rowId &&
     a?.position.colId === b?.position.colId &&
     a?.position.anchorColId === b?.position.anchorColId,
@@ -147,10 +161,11 @@ export function setTableCellCursor(
   position: TableCursorPosition,
   mode: TableCellCursorMode,
   draft = '',
+  caretIndex?: number,
 ): void {
   // Η μετακίνηση σε **άλλο** κελί ξαναστήνει ούτως ή άλλως το `<input>` (το row/col είναι
   // μέρος του React key), οπότε ο αριθμός συνεδρίας δεν χρειάζεται να αυξηθεί εδώ.
-  commit({ entityId, position, mode, draft, sessionId: store.get()?.sessionId ?? 0 });
+  commit({ entityId, position, mode, draft, caretIndex, sessionId: store.get()?.sessionId ?? 0 });
 }
 
 /**
@@ -192,7 +207,9 @@ export function setTableCellCursorMode(mode: TableCellCursorMode, seedDraft?: st
 export function cancelTableCellCursorSession(): void {
   const current = store.get();
   if (!current || current.mode === 'nav') return;
-  commit({ ...current, mode: 'nav', draft: '', sessionId: current.sessionId + 1 });
+  // Το `caretIndex` πέφτει μαζί με τη συνεδρία: ήταν «πού έδειξε **εκείνο** το κλικ», και
+  // το κλικ ακυρώθηκε. Ένα ξαναστημένο `<input>` δεν κληρονομεί σημείο που δεν ισχύει πια.
+  commit({ ...current, mode: 'nav', draft: '', caretIndex: undefined, sessionId: current.sessionId + 1 });
 }
 
 /** Κλείνει τη συνεδρία δρομέα (Esc σε `nav`, αποεπιλογή, σβήσιμο του πίνακα). Ιδεμποτής. */

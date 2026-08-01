@@ -13,15 +13,30 @@
  * `ImmediateTransformStore` (ADR-040: event-time read μέσω getter, ποτέ snapshot), οπότε ο
  * editor ακολουθεί τον καμβά όπως στο Figma/Miro.
  *
- * Η προβολή είναι η ίδια που κάνει το `CoordinateTransforms.worldToScreen`:
- *   screenX = world.x · scale + offsetX
- *   screenY = (ύψος καμβά) − world.y · scale − offsetY     ← ο άξονας Y του DXF κοιτά ΠΑΝΩ
+ * ## 🔴 Η προβολή ΔΕΝ ξαναγράφεται εδώ (διορθώθηκε 2026-08-01, ADR-739 Φ.Δ βήμα 3)
+ * Μέχρι τότε αυτό το αρχείο έγραφε **δική του** εκδοχή του τύπου:
+ *
+ *     screenX = rect.left + world.x · scale + offsetX
+ *     screenY = rect.top + (container.clientHeight − world.y · scale − offsetY)
+ *
+ * Είναι το `worldToScreen` **χωρίς τους χάρακες**. Η αρχή του κόσμου δεν κάθεται στην κάτω
+ * αριστερή γωνία του **container** αλλά της **περιοχής σχεδίασης** (`drawing-area.ts`), που
+ * είναι μικρότερη κατά `leftRulerWidth` οριζόντια και `bottomRulerHeight` κατακόρυφα. Το
+ * σφάλμα ήταν **σταθερή** μετατόπιση — αόρατη σε ένα ελεύθερα αιωρούμενο κουτί TipTap,
+ * **μετρήσιμη** μόλις το κουτί έπρεπε να καθίσει ακριβώς πάνω σε κελί πίνακα (μετρημένο
+ * ζωντανά: ≈ 30 px αριστερά, ≈ 23 px κάτω).
+ *
+ * Ήταν κλασικό διπλότυπο του N.18: η **αντίστροφη** διαδρομή (`eventWorldPoint` του διπλού
+ * κλικ) καλούσε ήδη το `CoordinateTransforms.screenToWorld`, δηλαδή τη σωστή, margin-aware
+ * μηχανή. Οι δύο κατευθύνσεις της ΙΔΙΑΣ προβολής είχαν διαφορετική άποψη για το πού είναι η
+ * αρχή. Τώρα και οι δύο περνούν από το ένα SSoT.
  *
  * Import-time καθαρό: μηδέν React, μηδέν THREE. Αγγίζει DOM μόνο μέσα στο `project()`
  * (getBoundingClientRect του container), δηλαδή τη στιγμή του tick.
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { getImmediateTransform, subscribeTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { TextEditorAnchor } from './TextEditorAnchorLayer';
 
@@ -54,12 +69,18 @@ export function createTextEditorAnchor2D(params: {
     project: () => {
       const container = getContainer();
       if (!container) return null;
-      const t = getImmediateTransform();
       const rect = container.getBoundingClientRect();
-      return {
-        x: rect.left + worldPoint.x * t.scale + t.offsetX,
-        y: rect.top + (container.clientHeight - worldPoint.y * t.scale - t.offsetY),
-      };
+      // Το viewport είναι **ολόκληρος** ο container — ποτέ σμικρυμένο κατά τους χάρακες
+      // (ρητή προειδοποίηση του `drawing-area.ts`: το inset ζει μέσα στο `worldToScreen`,
+      // και αφαιρώντας το δεύτερη φορά εδώ όλο το σχέδιο θα ανέβαινε κατά έναν χάρακα).
+      const local = CoordinateTransforms.worldToScreen(worldPoint, getImmediateTransform(), {
+        width: rect.width,
+        height: rect.height,
+      });
+      // Ο μετασχηματισμός δίνει συντεταγμένες **του container**· το κουτί ζει σε `position:
+      // fixed`, άρα προστίθεται η θέση του container στο παράθυρο. Ακριβώς η αντίστροφη
+      // πράξη από το `event.clientX - rect.left` του διπλού κλικ.
+      return { x: rect.left + local.x, y: rect.top + local.y };
     },
     subscribe: (reproject) => subscribeTransform(reproject),
   };

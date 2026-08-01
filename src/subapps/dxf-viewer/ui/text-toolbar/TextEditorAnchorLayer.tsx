@@ -57,6 +57,37 @@ export interface TextEditorAnchor {
   readonly subscribe: (reproject: () => void) => () => void;
   /** Ελάχιστες διαστάσεις του κουτιού (px) — για το clamping και το αρχικό layout. */
   readonly size: { readonly width: number; readonly height: number };
+  /**
+   * ADR-739 Φ.Δ βήμα 3 — **ζωντανό** κουτί: μέγεθος, κλίση και τυπογραφία που ζουμάρουν
+   * μαζί με τον καμβά, ανανεωμένα στον **ίδιο** χρόνο tick με τη θέση.
+   *
+   * Απόν ⇒ η ιστορική συμπεριφορά μένει **ακέραιη**: σταθερό κουτί σε px οθόνης, χωρίς
+   * κλίση (AutoCAD `MTEXTFIXED`, δες την κεφαλίδα). Αυτή είναι η σωστή απάντηση για
+   * **ελεύθερο** κείμενο, που μπορεί να είναι μικροσκοπικό ή ανάποδο. Ένα **κελί πίνακα**
+   * όμως έχει δικό του ορθογώνιο, δική του γραμματοσειρά και δική του στοίχιση: εκεί το
+   * «σταθερό σε px» σημαίνει «ένα ξένο κουτί πάνω στο κελί», που είναι ακριβώς το ελάττωμα
+   * που ανέφερε ο Giorgio (2026-08-01). Γι' αυτό είναι **επιλογή ανά καταναλωτή** και όχι
+   * καθολική αλλαγή.
+   */
+  readonly projectBox?: () => TextEditorAnchorBox | null;
+}
+
+/**
+ * Το ζωντανό κουτί ενός in-place editor σε px οθόνης.
+ *
+ * `cssVars` είναι ο δρόμος με τον οποίο **παιδικά** στοιχεία (το `<input>` / το TipTap)
+ * μαθαίνουν ζωντανά μεγέθη **χωρίς κανένα re-render**: το layer τις γράφει πάνω στο κουτί
+ * και το παιδί τις καταναλώνει με `var()`. Χωρίς αυτό, κάθε καρέ zoom θα ήταν ένα
+ * `setState` πάνω σε πεδίο κειμένου με ενεργό κέρσορα — ακριβώς το είδος συνδρομής που ο
+ * ADR-040 απαγορεύει.
+ */
+export interface TextEditorAnchorBox {
+  readonly widthPx: number;
+  readonly heightPx: number;
+  /** CSS ακτίνια (θετικά δεξιόστροφα)· 0 ⇒ καμία κλίση. */
+  readonly rotationRad: number;
+  /** Custom properties (`--…`) που γράφονται πάνω στο κουτί. */
+  readonly cssVars?: Readonly<Record<string, string>>;
 }
 
 export interface TextEditorAnchorLayerProps extends TextEditorAnchor {
@@ -81,8 +112,22 @@ function clampToViewport(
   };
 }
 
+/** Γράφει το ζωντανό κουτί πάνω στο στοιχείο — μηδέν React, ένα tick. */
+function applyBox(el: HTMLElement, box: TextEditorAnchorBox): void {
+  el.style.width = `${box.widthPx}px`;
+  el.style.height = `${box.heightPx}px`;
+  if (box.cssVars) {
+    for (const [name, value] of Object.entries(box.cssVars)) el.style.setProperty(name, value);
+  }
+}
+
+/** Το κουτί ως αρχικό React style — ίδιες τιμές με το {@link applyBox}, πριν το πρώτο tick. */
+function boxStyle(box: TextEditorAnchorBox): React.CSSProperties {
+  return { width: box.widthPx, height: box.heightPx, ...box.cssVars } as React.CSSProperties;
+}
+
 export function TextEditorAnchorLayer(props: TextEditorAnchorLayerProps): React.ReactElement {
-  const { project, subscribe, size, children } = props;
+  const { project, subscribe, size, projectBox, children } = props;
   const { keyboardInset } = useVisualViewport();
   const ref = useRef<HTMLDivElement | null>(null);
   // ADR-040 — το `keyboardInset` διαβάζεται ΜΕΣΑ στο tick μέσω ref, όχι ως dependency του
@@ -91,28 +136,51 @@ export function TextEditorAnchorLayer(props: TextEditorAnchorLayerProps): React.
   insetRef.current = keyboardInset;
   const sizeRef = useRef(size);
   sizeRef.current = size;
+  const boxRef = useRef(projectBox);
+  boxRef.current = projectBox;
+
+  // Το κουτί της **πρώτης** απόδοσης: χωρίς αυτό, ο επεξεργαστής θα ζωγραφιζόταν ένα καρέ
+  // με σταθερές προεπιλογές πριν προλάβει το tick — ένα ορατό τίναγμα ακριβώς τη στιγμή
+  // που ο χρήστης κάνει διπλό κλικ. Καθαρή ανάγνωση (κλίμακα + διάταξη), καμία παρενέργεια.
+  const initialBox = projectBox?.() ?? null;
 
   useEffect(() => {
     const reproject = (): void => {
       const el = ref.current;
       if (!el) return;
+      // Το ΜΕΓΕΘΟΣ πρώτα: το clamping παρακάτω το χρειάζεται ενημερωμένο, αλλιώς ένα κελί
+      // που μεγάλωσε με το zoom θα περιοριζόταν με το παλιό του πλάτος.
+      const box = boxRef.current?.() ?? null;
+      if (box) applyBox(el, box);
       // Το άγκυρο εκτός προβολής (πίσω από την κάμερα) ΔΕΝ κρύβει τον editor — θα έσβηνε
       // το κουτί κάτω από τα δάχτυλα του χρήστη μεσοπληκτρολόγησης. Κρατιέται στην
       // τελευταία έγκυρη θέση, περιορισμένο στο viewport.
       const p = project();
       if (!p) return;
-      const c = clampToViewport(p, sizeRef.current, insetRef.current);
-      el.style.transform = `translate(${c.x}px, ${c.y}px)`;
+      const clampSize = box ? { width: box.widthPx, height: box.heightPx } : sizeRef.current;
+      const c = clampToViewport(p, clampSize, insetRef.current);
+      // Η περιστροφή μπαίνει ΜΕΤΑ τη μετατόπιση, με αρχή την πάνω-αριστερή γωνία
+      // (`origin-top-left`): το κουτί γέρνει γύρω από το σημείο αγκύρωσής του, όπως ακριβώς
+      // ο πίνακας γέρνει γύρω από τη δική του άγκυρα.
+      const rotate = box?.rotationRad ? ` rotate(${box.rotationRad}rad)` : '';
+      el.style.transform = `translate(${c.x}px, ${c.y}px)${rotate}`;
     };
     reproject();
     return subscribe(reproject);
   }, [project, subscribe]);
 
+  // Με ζωντανό κουτί το `minWidth/minHeight` **αποκλείεται**: είναι στιγμιότυπο της στιγμής
+  // που άνοιξε ο editor, και σε zoom-out θα κρατούσε το κουτί μεγαλύτερο από το κελί —
+  // δηλαδή θα ακύρωνε ακριβώς αυτό που το ζωντανό κουτί υπάρχει για να λύσει.
+  const style = initialBox
+    ? boxStyle(initialBox)
+    : { minWidth: size.width, minHeight: size.height };
+
   return (
     <div
       ref={ref}
-      className="fixed left-0 top-0 z-40 will-change-transform"
-      style={{ minWidth: size.width, minHeight: size.height }}
+      className="fixed left-0 top-0 z-40 origin-top-left will-change-transform"
+      style={style}
     >
       {children}
     </div>

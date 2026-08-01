@@ -83,8 +83,17 @@ function anchorXMm(rect: TableRectMm, hAlign: TextAlign, marginHMm: number): num
  * `top` δίνει `rect.y + margin + textHeight`, δηλαδή ακριβώς τη σύμβαση που ήδη
  * χρησιμοποιεί ο ADR-622 (`rowTop + TEXT_MM`) — το κείμενο κρέμεται από την κορυφή της
  * γραμμής. `middle` κεντράρει το κεφαλαίο γράμμα γύρω από τον άξονα του κελιού.
+ *
+ * 🔴 **Εξαγόμενη** (ADR-739 Φ.Δ βήμα 3): ο in-cell επεξεργαστής πρέπει να τοποθετήσει τη
+ * γραμμή βάσης του `<input>` **ακριβώς** εκεί που τη ζωγραφίζει ο καμβάς. Μια δεύτερη
+ * διατύπωση του κανόνα θα σήμαινε ότι το κείμενο **αναπηδά** τη στιγμή που μπαίνεις στο
+ * κελί — δηλαδή το ίδιο ελάττωμα που λύνει το βήμα, σε πιο ύπουλη μορφή.
  */
-function baselineYMm(rect: TableRectMm, align: TableCellAlign, style: TableCellStyle): number {
+export function cellBaselineYMm(
+  rect: TableRectMm,
+  align: TableCellAlign,
+  style: TableCellStyle,
+): number {
   const band = verticalBand(align);
   if (band === 'top') return rect.y + style.margins.vMm + style.textHeightMm;
   if (band === 'bottom') return rect.y + rect.h - style.margins.vMm;
@@ -126,7 +135,7 @@ function placeText(
   return {
     position: {
       x: anchorXMm(rect, hAlign, style.margins.hMm),
-      y: baselineYMm(rect, align, style),
+      y: cellBaselineYMm(rect, align, style),
     },
     text,
     heightMm: style.textHeightMm,
@@ -169,6 +178,9 @@ export function placeCells(
         colId: column.id,
         rect,
         style: cellStyle,
+        // Η ΙΔΙΑ τιμή ταξιδεύει και στο κελί και στο run του: το κελί τη χρειάζεται για
+        // τον in-cell επεξεργαστή (που ανοίγει και σε **κενό** κελί, όπου run δεν υπάρχει).
+        hAlign,
         text: placeText(cellText(cell), rect, cellStyle.align, hAlign, cellStyle),
         rowSpan: span?.rowSpan ?? 1,
         colSpan: span?.colSpan ?? 1,

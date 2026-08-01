@@ -8,7 +8,11 @@
  *  2. Το «τίποτα δεν άλλαξε» να μην κόβεται πραγματικά, γεμίζοντας το undo stack με no-op.
  */
 
-import { resolveTableCellEditTarget, buildTableCellEditCommand } from '../table-cell-edit-session';
+import {
+  resolveTableCellEditTarget,
+  resolveTableCellEditTargetById,
+  buildTableCellEditCommand,
+} from '../table-cell-edit-session';
 import { computeTableEntityGeometry, tableFrameToWorld } from '../table-entity-geometry';
 import { createTableModel, toPersistedTableModel } from '../table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
@@ -111,6 +115,80 @@ describe('resolveTableCellEditTarget — ποιο κελί χτυπήθηκε', 
       expect(target?.anchorWorldPoint).toEqual(tableFrameToWorld(e, 40, 8, geo.mmToWorld));
       expect(target?.anchorWorldPoint).not.toEqual({ x: 140, y: 192 }); // η 1:1 τιμή ΔΕΝ ισχύει πια
     });
+  });
+});
+
+// ── ADR-739 Φ.Δ βήμα 3 — η ΟΨΗ του κελιού ταξιδεύει με τον στόχο ───────────
+
+/**
+ * Ο in-cell επεξεργαστής πρέπει να είναι **αόρατος ως κουτί**. Αυτό είναι δυνατό μόνο αν
+ * παίρνει την όψη από τη ΜΙΑ διάταξη· αν την ξαναέβρισκε μόνος του θα ήταν δεύτερη μηχανή
+ * που αποκλίνει σιωπηλά.
+ *
+ * Τα νούμερα είναι από το `standard` στυλ, υπολογισμένα στο χέρι:
+ *   header → ύψος κειμένου 3 mm, στοίχιση `MC` (μεσαία ζώνη), περιθώρια h2 / v1,5
+ *   data   → ύψος κειμένου 2,8 mm, στοίχιση `ML` (μεσαία ζώνη)
+ *   γραμμές 8 mm, στήλες 40 / 20 mm, στοίχιση στήλης `left`
+ */
+describe('TableCellEditTarget — η όψη έρχεται από τη διάταξη, όχι από τον επεξεργαστή', () => {
+  it('(r1,c1): ορθογώνιο, στυλ κεφαλίδας και στοίχιση στήλης', () => {
+    const target = resolveTableCellEditTarget(makeEntity(), { x: 110, y: 195 });
+    expect(target?.rectMm).toEqual({ x: 0, y: 0, w: 40, h: 8 });
+    expect(target?.style.textHeightMm).toBe(3);
+    expect(target?.style.bold).toBe(true);
+    expect(target?.style.fillColorHex).toBe('#EDEDED');
+    expect(target?.style.margins).toEqual({ hMm: 2, vMm: 1.5 });
+    // Η **στήλη** κερδίζει την οριζόντια συνιστώσα όταν το κελί δεν έχει δική του άποψη —
+    // παρότι η κλάση γραμμής λέει `MC` (κεντραρισμένη).
+    expect(target?.hAlign).toBe('left');
+  });
+
+  /**
+   * ⛔ Η γραμμή βάσης είναι το νούμερο που κάνει το κείμενο να **μην αναπηδά**. Μετριέται
+   * από την **κορυφή του κελιού**, όχι από την κορυφή του πίνακα: το (r2,c2) ξεκινά στα
+   * v = 8 mm, οπότε μια υλοποίηση που ξεχνά την αναγωγή θα έδινε 13,4 αντί για 5,4 —
+   * δηλαδή θα έδειχνε σωστά **μόνο** στην πρώτη γραμμή.
+   */
+  it('η γραμμή βάσης είναι ΣΧΕΤΙΚΗ με την κορυφή του κελιού', () => {
+    const header = resolveTableCellEditTarget(makeEntity(), { x: 110, y: 195 });
+    expect(header?.baselineFromTopMm).toBeCloseTo(8 / 2 + 3 / 2, 9); // 5,5
+
+    const data = resolveTableCellEditTarget(makeEntity(), { x: 145, y: 190 }); // (r2,c2)
+    expect(data?.rectMm).toEqual({ x: 40, y: 8, w: 20, h: 8 });
+    expect(data?.baselineFromTopMm).toBeCloseTo(8 / 2 + 2.8 / 2, 9); // 5,4 — ΟΧΙ 13,4
+    expect(data?.baselineFromTopMm).toBeLessThan(data!.rectMm.h);
+  });
+
+  it('η γραμμή βάσης είναι ΑΝΑΛΛΟΙΩΤΗ ως προς την κλίμακα σχεδίασης (μένει σε sheet-mm)', () => {
+    const at1 = resolveTableCellEditTarget(makeEntity(), { x: 110, y: 195 })?.baselineFromTopMm;
+    useDrawingScaleStore.setState({ drawingScale: 100 });
+    const e = makeEntity();
+    const geo = computeTableEntityGeometry(e, 100, 'mm');
+    const at100 = resolveTableCellEditTarget(
+      e,
+      tableFrameToWorld(e, 10, 4, geo.mmToWorld),
+    )?.baselineFromTopMm;
+    expect(at100).toBeCloseTo(at1!, 9);
+  });
+});
+
+describe('clickOffsetMm — «από πού μπήκες»', () => {
+  it('από κλικ: η οριζόντια απόσταση ΜΕΣΑ στο κελί, όχι από την αρχή του πίνακα', () => {
+    const e = makeEntity();
+    const target = resolveTableCellEditTarget(e, { x: 145, y: 190 }); // (r2,c2), u = 45
+    // Το κελί ξεκινά στο u = 40 ⇒ 5 mm μέσα του. Χωρίς την αναγωγή θα ήταν 45.
+    expect(target?.clickOffsetMm).toBeCloseTo(5, 9);
+  });
+
+  it('από ταυτότητα κελιού (Tab / F2): ΚΑΝΕΝΑ σημείο ⇒ κέρσορας στο τέλος', () => {
+    expect(resolveTableCellEditTargetById(makeEntity(), 'r2', 'c2')?.clickOffsetMm).toBeUndefined();
+  });
+
+  it('ο δρόμος του `Tab` δίνει ΤΗΝ ΙΔΙΑ όψη με τον δρόμο του κλικ — ένας τόπος συναρμολόγησης', () => {
+    const e = makeEntity();
+    const byClick = resolveTableCellEditTarget(e, { x: 145, y: 190 });
+    const byId = resolveTableCellEditTargetById(e, 'r2', 'c2');
+    expect({ ...byClick, clickOffsetMm: undefined }).toEqual({ ...byId, clickOffsetMm: undefined });
   });
 });
 

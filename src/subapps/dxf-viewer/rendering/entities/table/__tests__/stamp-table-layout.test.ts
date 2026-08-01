@@ -104,16 +104,21 @@ const style = (fillColorHex?: string): TableCellStyle => ({
   textColorHex: INK,
   fillColorHex,
   bold: false,
-  align: 'middleLeft',
-  margins: { leftMm: 1, rightMm: 1, topMm: 1, bottomMm: 1 },
+  align: 'ML',
+  margins: { hMm: 1, vMm: 1 },
 });
 
-function cell(text: string, fillColorHex?: string): TableCellLayout {
+function cell(
+  text: string,
+  fillColorHex?: string,
+  id: { rowId: string; colId: string } = { rowId: 'r1', colId: 'c1' },
+): TableCellLayout {
   return {
-    rowId: 'r1' as TableRowId,
-    colId: 'c1' as TableColumnId,
+    rowId: id.rowId as TableRowId,
+    colId: id.colId as TableColumnId,
     rect: { x: 0, y: 0, w: 40, h: 8 },
     style: style(fillColorHex),
+    hAlign: 'left',
     text: {
       position: { x: 1, y: 6 },
       text,
@@ -182,6 +187,66 @@ describe('stamp-table-layout — το χρώμα φάσης βάφει τη σι
 
     expect(stampTableText(rc, [cell('αόρατο', FILL)])).toBe(false);
     expect(log.texts).toEqual([]);
+  });
+});
+
+// ── ADR-739 Φ.Δ βήμα 3 — η παράλειψη του κελιού υπό επεξεργασία ────────────
+
+/**
+ * Το «διπλό κείμενο» του στιγμιότυπου (Giorgio 2026-08-01): με ανοιχτό επεξεργαστή, ο
+ * καμβάς εξακολουθούσε να ζωγραφίζει το **δεσμευμένο** κείμενο του κελιού, ενώ το
+ * `<input>` έδειχνε το **πρόχειρο** — δύο κείμενα, το ένα πάνω στο άλλο.
+ *
+ * Το κρίσιμο ρίσκο δεν είναι «παραλείπει;» αλλά **«παραλείπει ΜΟΝΟ αυτό;»**: μια
+ * υλοποίηση που συγκρίνει μόνο `rowId` (ή μόνο `colId`) περνά ένα αφελές test με ένα
+ * κελί και σβήνει **ολόκληρη τη γραμμή** στον πραγματικό πίνακα.
+ */
+describe('stampTableText — το κελί υπό επεξεργασία δεν ζωγραφίζεται', () => {
+  const A = { rowId: 'r1', colId: 'c1' };
+  const B = { rowId: 'r1', colId: 'c2' };
+  const C = { rowId: 'r2', colId: 'c1' };
+
+  it('χωρίς `skip` ζωγραφίζονται ΟΛΑ — η προϋπάρχουσα συμπεριφορά μένει ακέραιη', () => {
+    const log: PaintLog = { fills: [], texts: [], strokes: [] };
+    stampTableText(createRc(log), [cell('Α', undefined, A), cell('Β', undefined, B)]);
+
+    expect(log.texts.map((x) => x.text)).toEqual(['Α', 'Β']);
+  });
+
+  it('παραλείπει ΜΟΝΟ το κελί του `skip` — ίδια γραμμή και ίδια στήλη επιβιώνουν', () => {
+    const log: PaintLog = { fills: [], texts: [], strokes: [] };
+    stampTableText(
+      createRc(log),
+      [cell('Α', undefined, A), cell('Β', undefined, B), cell('Γ', undefined, C)],
+      A,
+    );
+
+    // Το «Β» μοιράζεται τη γραμμή, το «Γ» τη στήλη: αν έλειπε κάποιο, η σύγκριση θα ήταν
+    // μερική (μόνο rowId ή μόνο colId) και ο πίνακας θα άδειαζε κατά γραμμές/στήλες.
+    expect(log.texts.map((x) => x.text)).toEqual(['Β', 'Γ']);
+  });
+
+  it('`skip` σε κελί που δεν υπάρχει στο πέρασμα ⇒ καμία παράλειψη', () => {
+    const log: PaintLog = { fills: [], texts: [], strokes: [] };
+    stampTableText(createRc(log), [cell('Α', undefined, A)], { rowId: 'r9', colId: 'c9' });
+
+    expect(log.texts.map((x) => x.text)).toEqual(['Α']);
+  });
+
+  it('`null` ⇒ ίδιο με «κανένα skip» (η κατάσταση πλοήγησης)', () => {
+    const log: PaintLog = { fills: [], texts: [], strokes: [] };
+    stampTableText(createRc(log), [cell('Α', undefined, A)], null);
+
+    expect(log.texts.map((x) => x.text)).toEqual(['Α']);
+  });
+
+  it('το ΓΕΜΙΣΜΑ του κελιού υπό επεξεργασία ΔΕΝ παραλείπεται — παραλείπεται μόνο το μελάνι', () => {
+    const log: PaintLog = { fills: [], texts: [], strokes: [] };
+    stampTableFills(createRc(log), [cell('Α', FILL, A)]);
+
+    // Το κελί πρέπει να συνεχίσει να μοιάζει με κελί όσο το επεξεργάζεσαι· μόνο τα γράμματα
+    // αλλάζουν ιδιοκτήτη (από τον καμβά στο `<input>`).
+    expect(log.fills).toEqual([FILL]);
   });
 });
 

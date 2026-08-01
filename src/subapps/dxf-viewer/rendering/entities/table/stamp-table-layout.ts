@@ -143,20 +143,56 @@ export function stampTableCellCursor(rc: StampTableContext, rectMm: TableRectMm)
 // ── Κείμενο ──────────────────────────────────────────────────────────────────
 
 /**
+ * 🔴 ADR-739 Φ.Δ βήμα 3 — **Η ΜΙΑ γραμματοσειρά του κειμένου κελιού**, ως αλφαριθμητικό
+ * που δέχονται **και** το `ctx.font` του καμβά **και** το CSS `font` shorthand του DOM.
+ *
+ * Ο in-cell επεξεργαστής είναι ένα `<input>` πάνω ακριβώς από το κελί. Αν χρησιμοποιούσε
+ * *δική του* γραμματοσειρά, το κείμενο θα **αναπηδούσε** τη στιγμή του διπλού κλικ και ο
+ * κέρσορας θα έπεφτε σε άλλο γράμμα από αυτό που δείχνει ο χρήστης — γιατί ο υπολογισμός
+ * πλάτους θα γινόταν σε δύο διαφορετικές γραμματοσειρές. Με **κοινό** αλφαριθμητικό, οι
+ * δύο μετρήσεις είναι κυριολεκτικά η **ίδια** μέτρηση της ίδιας μηχανής του browser.
+ *
+ * ⚠️ Το `'arial'` είναι σκόπιμα καρφωμένο και **δεν** διαβάζει το `TableCellStyle.fontFamily`:
+ * αυτό το πεδίο τροφοδοτεί σήμερα μόνο τον **μετρητή διάταξης** (`measureTextAdvanceWorld`,
+ * opentype). Ο καμβάς πάντα ζωγράφιζε Arial. Η ενοποίηση των δύο είναι ξεχωριστό χρέος —
+ * μέχρι τότε ο επεξεργαστής οφείλει να ακολουθεί ό,τι **ζωγραφίζεται**, όχι ό,τι μετριέται.
+ */
+export function tableCellFont(fontPx: number, bold: boolean): string {
+  return buildUIFont(fontPx, 'arial', bold ? 'bold' : 'normal');
+}
+
+/** Ταυτότητα κελιού — το κλειδί με το οποίο ο καλών ζητά παράλειψη ζωγραφικής. */
+export interface TableCellRef {
+  readonly rowId: string;
+  readonly colId: string;
+}
+
+/**
  * Τα κείμενα των κελιών. Το `run.position.y` είναι η **γραμμή βάσης** (σύμβαση
  * `TableTextRun` / `TextPrimitive`), γι' αυτό `textBaseline = 'alphabetic'` — η
  * προεπιλογή. Ρητό `'middle'` εδώ θα μετατόπιζε κάθε γραμμή κατά μισό ύψος κεφαλαίου:
  * ακριβώς το σφάλμα του 1,5mm που η Φ.Β πλήρωσε επειδή μπέρδεψε τη γραμμή
  * περιεχομένου με την ακμή.
  *
+ * `skip` (ADR-739 Φ.Δ βήμα 3) = το κελί που έχει **ανοιχτή συνεδρία γραφής**: εκεί το
+ * κείμενο το κατέχει το `<input>` του επεξεργαστή. Χωρίς αυτό, το δεσμευμένο κείμενο και
+ * το πρόχειρο ζωγραφίζονται **ταυτόχρονα**, το ένα πάνω στο άλλο — το «διπλό κείμενο» που
+ * φαινόταν στο στιγμιότυπο του Giorgio (2026-08-01). Στο Excel το κελί που επεξεργάζεσαι
+ * δείχνει **μόνο** το πεδίο εισαγωγής.
+ *
  * Επιστρέφει `false` όταν το LOD έκοψε το κείμενο — ο καλών το χρειάζεται για tests.
  */
-export function stampTableText(rc: StampTableContext, cells: readonly TableCellLayout[]): boolean {
+export function stampTableText(
+  rc: StampTableContext,
+  cells: readonly TableCellLayout[],
+  skip?: TableCellRef | null,
+): boolean {
   const { ctx } = rc;
   let drewAny = false;
   for (const cell of cells) {
     const run = cell.text;
     if (!run) continue;
+    if (skip && cell.rowId === skip.rowId && cell.colId === skip.colId) continue;
     const fontPx = run.heightMm * rc.pxPerMm;
     if (fontPx < MIN_CELL_TEXT_SCREEN_PX) continue;
     stampRun(ctx, rc, run, fontPx);
@@ -189,7 +225,7 @@ function stampRun(
   const anchor = rc.toScreen(run.position.x, run.position.y);
   ctx.save();
   ctx.fillStyle = run.colorHex;
-  ctx.font = buildUIFont(fontPx, 'arial', run.bold ? 'bold' : 'normal');
+  ctx.font = tableCellFont(fontPx, run.bold);
   ctx.textAlign = run.hAlign;
   ctx.textBaseline = 'alphabetic';
   ctx.fillText(run.text, anchor.x, anchor.y);

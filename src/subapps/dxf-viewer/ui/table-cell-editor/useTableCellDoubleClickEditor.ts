@@ -1,7 +1,13 @@
 'use client';
 
 /**
- * ADR-739 Φάση Δ βήμα 2 — ο **οδηγός του δρομέα κελιού** στον 2D καμβά.
+ * ADR-739 Φάση Δ βήματα 2-3 — ο **οδηγός του δρομέα κελιού** στον 2D καμβά.
+ *
+ * Στο **βήμα 3** πήρε και έναν δεύτερο ρόλο: είναι ο τόπος όπου το κελί γίνεται **κουτί
+ * οθόνης**. Ταιριάζει εδώ για τον ίδιο λόγο που ταιριάζουν και τα υπόλοιπα — είναι το μόνο
+ * σημείο που βλέπει ταυτόχρονα το **μοντέλο** (διάταξη, στυλ, γωνία) και το **DOM**
+ * (container, προβολή). Ο υπολογισμός όμως δεν ζει εδώ: τον κάνει το καθαρό
+ * `table-cell-editor-frame.ts`· εδώ γίνεται μόνο η σύνδεση.
  *
  * Ήταν «ο ανοιχτήρας του διπλού κλικ»· τώρα είναι ο ένας τόπος που ξέρει **και** το
  * μοντέλο **και** το DOM, δηλαδή ο μόνος που μπορεί να απαντήσει στις τρεις ερωτήσεις του
@@ -35,6 +41,7 @@ import {
   buildTableCellEditCommand,
   resolveTableCellEditTarget,
   resolveTableCellEditTargetById,
+  type TableCellEditTarget,
 } from '../../bim/table/table-cell-edit-session';
 import {
   moveTableCursor,
@@ -47,13 +54,24 @@ import {
   useTableCellCursor,
 } from '../../state/table-cell-cursor-store';
 import { createTextEditorAnchor2D } from '../text-toolbar/text-editor-anchor-2d';
+import type { TextEditorAnchorBox } from '../text-toolbar/TextEditorAnchorLayer';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
+import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
+import { tableMmToWorldLive, tablePxPerMm } from '../../bim/table/table-entity-geometry';
+import {
+  computeTableCellEditorFrame,
+  cellTextStartPx,
+  type TableCellEditorFrame,
+} from './table-cell-editor-frame';
+import {
+  cellCaretIndexAtPx,
+  cellFontBandPx,
+  cellTextWidthPx,
+} from './table-cell-text-metrics';
+import { tableCellEditorCssVars } from './table-cell-editor-vars';
 import type { TableCellEditorOverlayProps } from './TableCellEditorOverlay';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
-
-/** Σταθερό μέγεθος κουτιού (px) — ένα απλό αλφαριθμητικό input, όχι TipTap αυτόματης μεγέθυνσης. */
-const CELL_EDITOR_WIDTH_PX = 140;
-const CELL_EDITOR_HEIGHT_PX = 24;
 
 interface UseTableCellDoubleClickEditorParams {
   readonly transformRef: React.RefObject<ViewTransform>;
@@ -110,6 +128,45 @@ function eventWorldPoint(
   );
 }
 
+/**
+ * ADR-739 Φ.Δ βήμα 3 — το κουτί του κελιού σε px οθόνης, **τη στιγμή της κλήσης**.
+ *
+ * Κάθε είσοδος διαβάζεται ζωντανά: η κλίμακα σχεδίασης από το SSoT της (`tableMmToWorldLive`)
+ * και το zoom από το `ImmediateTransformStore` — ADR-040 «event-time read μέσω getter, ποτέ
+ * στιγμιότυπο». Γι' αυτό ο επεξεργαστής **ζουμάρει μαζί** με τον καμβά αντί να καρφώνεται
+ * στο μέγεθος που είχε το κελί όταν έγινε το διπλό κλικ.
+ *
+ * Το `backgroundHex` έρχεται απ' έξω και **δεν** διαβάζεται εδώ: είναι `getComputedStyle`
+ * στο `documentElement`, δηλαδή αναγκαστικό style recalc — σε κάθε καρέ zoom θα ήταν
+ * μετρήσιμο κόστος για μια τιμή που αλλάζει μόνο σε αλλαγή θέματος.
+ */
+function cellEditorFrame(
+  target: TableCellEditTarget,
+  angleRad: number,
+  backgroundHex: string,
+): TableCellEditorFrame {
+  return computeTableCellEditorFrame({
+    target,
+    pxPerMm: tablePxPerMm(tableMmToWorldLive(), getImmediateTransform().scale),
+    angleRad,
+    resolveBand: cellFontBandPx,
+    backgroundHex,
+  });
+}
+
+/**
+ * Σε ποιον χαρακτήρα πέφτει το διπλό κλικ (Excel: ο κέρσορας μπαίνει **εκεί που έδειξες**).
+ *
+ * `undefined` όταν δεν υπάρχει σημείο κλικ — τότε ο επεξεργαστής βάζει τον κέρσορα στο
+ * τέλος, που είναι η σωστή συμπεριφορά για `Tab` / `F2`.
+ */
+function caretIndexOfClick(target: TableCellEditTarget, frame: TableCellEditorFrame): number | undefined {
+  if (target.clickOffsetMm === undefined || !target.text) return undefined;
+  const pxPerMm = frame.widthPx / target.rectMm.w;
+  const startPx = cellTextStartPx(frame, cellTextWidthPx(target.text, frame.font));
+  return cellCaretIndexAtPx(target.text, frame.font, target.clickOffsetMm * pxPerMm - startPx);
+}
+
 export function useTableCellDoubleClickEditor(
   params: UseTableCellDoubleClickEditorParams,
 ): TableCellDoubleClickEditorApi {
@@ -126,12 +183,21 @@ export function useTableCellDoubleClickEditor(
 
       const target = resolveTableCellEditTarget(entity, eventWorldPoint(event, container, transform));
       if (!target) return;
-      // Διπλό κλικ = «θέλω να διορθώσω ΑΥΤΟ το κελί» ⇒ κατάσταση `edit` (κέρσορας στο
-      // τέλος), όχι `enter`. Και **νέα** στήλη αγκύρωσης: το κλικ ξεκινά νέα σειρά
-      // καταχώρισης, άρα το επόμενο Enter επιστρέφει ΕΔΩ.
+      // Διπλό κλικ = «θέλω να διορθώσω ΑΥΤΟ το κελί» ⇒ κατάσταση `edit`, όχι `enter`. Και
+      // **νέα** στήλη αγκύρωσης: το κλικ ξεκινά νέα σειρά καταχώρισης, άρα το επόμενο Enter
+      // επιστρέφει ΕΔΩ.
       // Το πρόχειρο ξεκινά από το **δεσμευμένο** κείμενο του κελιού: μπήκες με διπλό κλικ
       // για να διορθώσεις, όχι για να ξαναγράψεις από την αρχή (η `enter` κάνει εκείνο).
-      setTableCellCursor(entity.id, tableCursorAt(target.rowId, target.colId), 'edit', target.text);
+      // Ο κέρσορας πάει στο γράμμα που έδειξες (Excel) — το κουτί υπολογίζεται εδώ γιατί
+      // μόνο **τώρα** υπάρχει σημείο κλικ.
+      const frame = cellEditorFrame(target, entity.angleRad, resolveDxfCanvasBackgroundHex());
+      setTableCellCursor(
+        entity.id,
+        tableCursorAt(target.rowId, target.colId),
+        'edit',
+        target.text,
+        caretIndexOfClick(target, frame),
+      );
     },
     [levelManager, getSelectedEntityIds, containerRef, transformRef],
   );
@@ -186,24 +252,54 @@ export function useTableCellDoubleClickEditor(
 
   const clear = useCallback(() => commitText(''), [commitText]);
 
-  // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο σε κάθε απόδοση: κείμενο και
+  // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο σε κάθε απόδοση: κείμενο, όψη και
   // αγκύρωση είναι **παράγωγα**, ποτέ αντίγραφα (γι' αυτό το store δεν κρατά κείμενο).
+  //
+  // Η γωνία ταξιδεύει μαζί επειδή ανήκει στην **οντότητα**, όχι στο κελί, και ο επεξεργαστής
+  // πρέπει να γείρει μαζί με τον πίνακα. Διαβασμένη εδώ, από την ίδια ανάγνωση σκηνής —
+  // μια δεύτερη ανάγνωση θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα.
   const target = useMemo(() => {
     if (!cursor) return null;
     const entity = resolveTableById(levelManager, cursor.entityId);
-    return entity ? resolveTableCellEditTargetById(entity, cursor.position.rowId, cursor.position.colId) : null;
+    if (!entity) return null;
+    const cell = resolveTableCellEditTargetById(entity, cursor.position.rowId, cursor.position.colId);
+    return cell ? { cell, angleRad: entity.angleRad } : null;
   }, [cursor, levelManager]);
 
   // Σταθερή ταυτότητα ανά κελί: το `TextEditorAnchorLayer` ξαναδένει τη συνδρομή του σε
   // κάθε νέο `anchor`, οπότε ένα φρέσκο αντικείμενο ανά απόδοση θα ξέδενε/ξανάδενε τον
   // scheduler σε κάθε πάτημα πλήκτρου.
+  //
+  // 🔴 ADR-739 Φ.Δ βήμα 3 — ΕΔΩ ζούσαν δύο σταθερές, `140 × 24 px`. Ήταν αυτές που έκαναν
+  // τον επεξεργαστή «μαύρο κουτάκι πάνω-αριστερά μέσα στο κελί» (Giorgio, 2026-08-01):
+  // ένα ξένο κουτί σε px οθόνης, που δεν κληρονομούσε ούτε μέγεθος, ούτε γραμματοσειρά,
+  // ούτε στοίχιση, ούτε χρώμα, ούτε την περιστροφή του πίνακα. Τη θέση τους παίρνει ένα
+  // **ζωντανό** κουτί, παράγωγο της ίδιας διάταξης που ζωγραφίζει ο καμβάς.
   const anchor = useMemo(() => {
     if (!target) return null;
-    return createTextEditorAnchor2D({
-      worldPoint: target.anchorWorldPoint,
-      getContainer: () => containerRef.current,
-      size: { width: CELL_EDITOR_WIDTH_PX, height: CELL_EDITOR_HEIGHT_PX },
-    });
+    const { cell, angleRad } = target;
+    // Το φόντο διαβάζεται ΜΙΑ φορά ανά συνεδρία — δες το σχόλιο του `cellEditorFrame`.
+    const backgroundHex = resolveDxfCanvasBackgroundHex();
+    const projectBox = (): TextEditorAnchorBox => {
+      const frame = cellEditorFrame(cell, angleRad, backgroundHex);
+      return {
+        widthPx: frame.widthPx,
+        heightPx: frame.heightPx,
+        rotationRad: frame.rotationRad,
+        cssVars: tableCellEditorCssVars(frame),
+      };
+    };
+    const initial = projectBox();
+    return {
+      ...createTextEditorAnchor2D({
+        worldPoint: cell.anchorWorldPoint,
+        getContainer: () => containerRef.current,
+        // Το στατικό μέγεθος μένει ως έσχατο δίχτυ του clamping· το ζωντανό κουτί το
+        // αντικαθιστά σε κάθε tick.
+        size: { width: initial.widthPx, height: initial.heightPx },
+      }),
+      projectBox,
+    };
   }, [target, containerRef]);
 
   const overlay = useMemo<TableCellOverlayMount | null>(() => {
@@ -217,7 +313,8 @@ export function useTableCellDoubleClickEditor(
         colId: position.colId,
         mode,
         draft: cursor.draft,
-        initialText: target.text,
+        initialText: target.cell.text,
+        caretIndex: cursor.caretIndex,
         anchor,
         onCommit: commitText,
         onMove: move,

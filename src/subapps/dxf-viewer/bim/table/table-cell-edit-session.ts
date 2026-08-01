@@ -26,16 +26,34 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { ICommand, ISceneManager } from '../../core/commands';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
+import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableColumnId, TableRowId } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
+import type { TableCellLayout, TableRectMm } from './table-layout-types';
+import { cellBaselineYMm } from './table-layout-place';
+import type { TableCellStyle } from './table-style';
 import {
   computeTableEntityGeometryLive,
   tableCellAtWorld,
   tableFrameToWorld,
+  tableWorldToFrame,
 } from './table-entity-geometry';
 import { getPersistedCellText, setPersistedCellText } from './table-model-helpers';
 
-/** Το κελί που χτυπήθηκε, έτοιμο να ανοίξει editor: ταυτότητα + τρέχον κείμενο + αγκύρωση. */
+/**
+ * Το κελί που χτυπήθηκε, έτοιμο να ανοίξει editor: ταυτότητα + τρέχον κείμενο + αγκύρωση
+ * **+ ολόκληρη η όψη του κελιού σε sheet-mm**.
+ *
+ * ## Γιατί κουβαλά την όψη (ADR-739 Φ.Δ βήμα 3)
+ * Ο επεξεργαστής πρέπει να είναι **αόρατος ως κουτί**: ίδιο ορθογώνιο, ίδια γραμματοσειρά,
+ * ίδια γραμμή βάσης, ίδια στοίχιση, ίδια χρώματα με το κείμενο που ήδη βλέπει ο χρήστης.
+ * Κάθε ένα από αυτά τα νούμερα υπάρχει **ήδη** στη διάταξη· αν ο επεξεργαστής τα ξαναέβρισκε
+ * μόνος του, θα ήταν μια δεύτερη μηχανή διάταξης που αποκλίνει σιωπηλά (N.18). Εδώ απλώς
+ * **προωθούνται** — καμία νέα γνώση δεν γεννιέται σε αυτό το αρχείο.
+ *
+ * Όλα σε **sheet-mm του πλαισίου του πίνακα** (η μονάδα της διάταξης). Η μετατροπή σε px
+ * οθόνης είναι δουλειά του καταναλωτή, με τον **έναν** πολλαπλασιαστή `tablePxPerMm`.
+ */
 export interface TableCellEditTarget {
   readonly rowId: TableRowId;
   readonly colId: TableColumnId;
@@ -48,6 +66,26 @@ export interface TableCellEditTarget {
    * κελιού στη ζωγραφική — ίδια σύμβαση με το `TableCellLayout.rect`.
    */
   readonly anchorWorldPoint: Point2D;
+  /** Το ορθογώνιο του κελιού σε sheet-mm (τοπικά στο πλαίσιο του πίνακα). */
+  readonly rectMm: TableRectMm;
+  /** Το τελικό στυλ του κελιού — τυπογραφία, χρώματα, περιθώρια (sheet-mm). */
+  readonly style: TableCellStyle;
+  /** Η επιλυμένη οριζόντια στοίχιση (κελί → στήλη → κλάση γραμμής). */
+  readonly hAlign: TextAlign;
+  /**
+   * Η **γραμμή βάσης** του κειμένου, σε sheet-mm **από την πάνω ακμή του κελιού**. Σχετική
+   * και όχι απόλυτη επίτηδες: ο καταναλωτής τοποθετεί μέσα σε ένα κουτί που ξεκινά στην
+   * `anchorWorldPoint`, άρα το απόλυτο `v` θα το ξαναφαιρούσε ούτως ή άλλως.
+   */
+  readonly baselineFromTopMm: number;
+  /**
+   * Πού έπεσε το κλικ **οριζόντια** μέσα στο κελί, σε sheet-mm από την αριστερή του ακμή.
+   *
+   * `undefined` όταν η συνεδρία **δεν** ξεκίνησε από κλικ (`Tab` / `F2` / βέλη): τότε ο
+   * κέρσορας πάει στο τέλος του κειμένου, όπως στο Excel. Δεν είναι γεωμετρία του κελιού —
+   * είναι «από πού μπήκες», και γι' αυτό είναι προαιρετικό.
+   */
+  readonly clickOffsetMm?: number;
 }
 
 /**
@@ -67,7 +105,12 @@ export function resolveTableCellEditTarget(
   const geometry = computeTableEntityGeometryLive(entity, sceneUnits);
   const hit = tableCellAtWorld(entity, worldPoint, geometry);
   if (!hit) return null;
-  return buildEditTarget(entity, geometry, hit.rowId, hit.colId, hit.rectMm);
+  const cell = findCell(geometry, hit.rowId, hit.colId);
+  if (!cell) return null;
+  // Η οριζόντια θέση του κλικ **μέσα** στο κελί — ο κέρσορας πέφτει στο γράμμα που
+  // δείχνει ο χρήστης (Excel), όχι πάντα στο τέλος. Ίδια, μοναδική αντιστροφή πλαισίου.
+  const frame = tableWorldToFrame(entity, worldPoint, geometry.mmToWorld);
+  return buildEditTarget(entity, geometry, cell, frame.u - cell.rect.x);
 }
 
 /**
@@ -87,24 +130,40 @@ export function resolveTableCellEditTargetById(
   sceneUnits: SceneUnits = 'mm',
 ): TableCellEditTarget | null {
   const geometry = computeTableEntityGeometryLive(entity, sceneUnits);
-  const cell = geometry.layout.cells.find((c) => c.rowId === rowId && c.colId === colId);
-  if (!cell) return null;
-  return buildEditTarget(entity, geometry, rowId, colId, cell.rect);
+  const cell = findCell(geometry, rowId, colId);
+  // Καμία `clickOffsetMm`: το `Tab` δεν έχει σημείο κλικ ⇒ κέρσορας στο τέλος (Excel).
+  return cell ? buildEditTarget(entity, geometry, cell) : null;
+}
+
+/** Το κελί της διάταξης με αυτή την ταυτότητα — `undefined` σε καλυμμένο/σβησμένο κελί. */
+function findCell(
+  geometry: ReturnType<typeof computeTableEntityGeometryLive>,
+  rowId: TableRowId,
+  colId: TableColumnId,
+): TableCellLayout | undefined {
+  return geometry.layout.cells.find((c) => c.rowId === rowId && c.colId === colId);
 }
 
 /** Ο ΕΝΑΣ τόπος όπου συναρμολογείται ο στόχος — και οι δύο είσοδοι καταλήγουν εδώ (N.18). */
 function buildEditTarget(
   entity: TableEntity,
   geometry: ReturnType<typeof computeTableEntityGeometryLive>,
-  rowId: TableRowId,
-  colId: TableColumnId,
-  rectMm: { readonly x: number; readonly y: number },
+  cell: TableCellLayout,
+  clickOffsetMm?: number,
 ): TableCellEditTarget {
+  const { rect, style } = cell;
   return {
-    rowId,
-    colId,
-    text: getPersistedCellText(entity.model, rowId, colId),
-    anchorWorldPoint: tableFrameToWorld(entity, rectMm.x, rectMm.y, geometry.mmToWorld),
+    rowId: cell.rowId,
+    colId: cell.colId,
+    text: getPersistedCellText(entity.model, cell.rowId, cell.colId),
+    anchorWorldPoint: tableFrameToWorld(entity, rect.x, rect.y, geometry.mmToWorld),
+    rectMm: rect,
+    style,
+    hAlign: cell.hAlign,
+    // Η γραμμή βάσης έρχεται από τη ΜΙΑ συνάρτηση που τη γνωρίζει (`table-layout-place`),
+    // ξαναβασισμένη στην κορυφή του κελιού.
+    baselineFromTopMm: cellBaselineYMm(rect, style.align, style) - rect.y,
+    clickOffsetMm,
   };
 }
 

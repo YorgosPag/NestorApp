@@ -31,6 +31,7 @@ import { isTableEntity } from '../../types/table-entity';
 import {
   computeTableEntityGeometryLive,
   tableFrameToWorld,
+  tablePxPerMm,
   tableWorldToFrame,
 } from '../../bim/table/table-entity-geometry';
 import { visibleRowRange } from '../../bim/table/table-layout';
@@ -48,13 +49,26 @@ import {
   stampTableFills,
   stampTableText,
   type StampTableContext,
+  type TableCellRef,
 } from './table/stamp-table-layout';
 // ADR-739 Φ.Δ βήμα 2 — ο δρομέας διαβάζεται με getter τη στιγμή του καρέ (ADR-040), ποτέ
 // ως συνδρομή: ο ζωγράφος μένει καθαρό φύλλο.
-import { getTableCellCursor } from '../../state/table-cell-cursor-store';
+import { getTableCellCursor, type TableCellCursorState } from '../../state/table-cell-cursor-store';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
+
+/**
+ * ADR-739 Φ.Δ βήμα 3 — ποιο κελί **δεν** ζωγραφίζει ο καμβάς.
+ *
+ * Μόνο σε κατάσταση γραφής (`enter` / `edit`). Σε `nav` το `<input>` είναι διαφανές και
+ * χωρίς κέρσορα — αν παραλείπαμε και τότε, το κελί θα φαινόταν **άδειο** μόλις πατούσες
+ * `Tab` πάνω του, δηλαδή θα «έσβηνε» κείμενο που κανείς δεν άλλαξε.
+ */
+function editedCellRef(cursor: TableCellCursorState | null): TableCellRef | null {
+  if (!cursor || cursor.mode === 'nav') return null;
+  return { rowId: cursor.position.rowId, colId: cursor.position.colId };
+}
 
 export class TableRenderer extends BaseEntityRenderer {
   /**
@@ -95,21 +109,26 @@ export class TableRenderer extends BaseEntityRenderer {
       ctx: this.ctx,
       toScreen: (u: number, v: number): Point2D =>
         this.worldToScreen(tableFrameToWorld(e, u, v, geometry.mmToWorld)),
-      pxPerMm: geometry.mmToWorld * this.transform.scale,
+      pxPerMm: tablePxPerMm(geometry.mmToWorld, this.transform.scale),
       // Η φάση (hover/επιλογή) έχει ήδη θέσει το `strokeStyle`· όταν είναι η κανονική
       // φάση, το `undefined` αφήνει τα χρώματα του στυλ να περάσουν αυτούσια.
       phaseColor: this.tablePhaseColor(),
     };
 
+    // ΕΝΑ σημείο απόφασης για τον δρομέα: και «ποιο κελί πλαισιώνεται» και «ποιο κελί δεν
+    // ζωγραφίζεται» βγαίνουν από την ίδια ανάγνωση — δύο αναγνώσεις θα μπορούσαν να δουν
+    // διαφορετική κατάσταση μέσα στο ίδιο καρέ.
+    const cursor = selected ? this.cursorOf(e.id) : null;
+
     stampTableFills(rc, cells);
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
-    stampTableText(rc, cells);
-    if (selected) this.drawCellCursor(e.id, rc, index);
+    stampTableText(rc, cells, editedCellRef(cursor));
+    if (cursor) this.drawCellCursor(cursor, rc, index);
   }
 
   /**
-   * ADR-739 Φ.Δ βήμα 2 — το ορθογώνιο του **τρέχοντος κελιού**.
+   * ADR-739 Φ.Δ βήμα 2 — ο δρομέας αυτής της οντότητας, ή `null`.
    *
    * ## Γιατί getter και όχι συνδρομή (ADR-040)
    * Ο ζωγράφος παραμένει καθαρό φύλλο: διαβάζει τον δρομέα **τη στιγμή του καρέ**, όπως
@@ -119,21 +138,26 @@ export class TableRenderer extends BaseEntityRenderer {
    * ## Γιατί ΜΟΝΟ σε φάση επιλογής — ADR-040 κανόνας #3
    * Το normal-state pass είναι αυτό που μπαίνει στο **bitmap cache**, και εκεί το
    * `selectedEntityIds` είναι πάντα κενό (`dxf-bitmap-cache`). Ο έλεγχος `selected`
-   * εγγυάται λοιπόν ότι ο δρομέας ζωγραφίζεται **μόνο** στο overlay pass, ποτέ ψημένος
-   * μέσα στο raster — αλλιώς κάθε `Tab` θα ζητούσε πλήρη ανακατασκευή N οντοτήτων και
-   * θα έμενε κιόλας ζωγραφισμένος στο παλιό κελί. Ο δρομέας υπάρχει ούτως ή άλλως μόνο
+   * εγγυάται λοιπόν ότι ο δρομέας — και η παράλειψη κειμένου που τον συνοδεύει —
+   * ζωγραφίζονται **μόνο** στο overlay pass, ποτέ ψημένα μέσα στο raster· αλλιώς κάθε
+   * `Tab` θα ζητούσε πλήρη ανακατασκευή N οντοτήτων. Ο δρομέας υπάρχει ούτως ή άλλως μόνο
    * όσο ο πίνακας είναι επιλεγμένος, άρα η συνθήκη δεν κρύβει τίποτα.
-   *
-   * Η αναζήτηση περνά από το **ήδη υπολογισμένο** ευρετήριο (`cellsByRowId`): O(στήλες)
-   * αντί για γραμμική σάρωση όλων των κελιών σε κάθε καρέ — το μάθημα του ADR-735.
+   */
+  private cursorOf(entityId: string): TableCellCursorState | null {
+    const cursor = getTableCellCursor();
+    return cursor && cursor.entityId === entityId ? cursor : null;
+  }
+
+  /**
+   * Το ορθογώνιο του τρέχοντος κελιού. Η αναζήτηση περνά από το **ήδη υπολογισμένο**
+   * ευρετήριο (`cellsByRowId`): O(στήλες) αντί για γραμμική σάρωση όλων των κελιών σε
+   * κάθε καρέ — το μάθημα του ADR-735.
    */
   private drawCellCursor(
-    entityId: string,
+    cursor: TableCellCursorState,
     rc: StampTableContext,
     index: TableRenderIndex,
   ): void {
-    const cursor = getTableCellCursor();
-    if (!cursor || cursor.entityId !== entityId) return;
     const bucket = index.cellsByRowId.get(cursor.position.rowId);
     const cell = bucket?.find((c) => c.colId === cursor.position.colId);
     if (cell) stampTableCellCursor(rc, cell.rect);
