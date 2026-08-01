@@ -206,7 +206,7 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
         }
 
         if (isCancellation) {
-          deactivatePropertyContactLinks(adminDb, id, ctx.uid).catch((err) => {
+          deactivatePropertyContactLinks(adminDb, id, ctx.companyId, ctx.uid).catch((err) => {
             logger.warn('SPEC-257A: Deactivate links failed (non-blocking)', {
               propertyId: id, error: getErrorMessage(err),
             });

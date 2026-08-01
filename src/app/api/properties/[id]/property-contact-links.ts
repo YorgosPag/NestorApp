@@ -11,6 +11,7 @@
 
 import { FieldValue } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { scopeQueryToCompany } from '@/lib/firestore/tenant-scoped-query';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateContactLinkId } from '@/lib/contact-link-id';
 import { createDefaultPersonaData, findActivePersona } from '@/types/contacts/personas';
@@ -123,13 +124,22 @@ export async function autoCreatePropertyContactLinks(
 /**
  * Deactivate all active property-level contact links for a property.
  * Called when a reservation/sale is cancelled (soft delete — audit trail).
+ *
+ * 🔒 ADR-745 G6 — `companyId` is a parameter, not an optional refinement.
+ * This runs on the Admin SDK, which bypasses `firestore.rules` by design, so the
+ * rule that rejects an unscoped *client* write is switched off on this path. The
+ * query is the only tenant gate there is: scoped by `propertyId` alone, a
+ * cancellation in one company deactivates another company's links for any
+ * property that shares the id. Its sibling {@link autoCreatePropertyContactLinks}
+ * already took the company — the write path had it and the un-write path did not.
  */
 export async function deactivatePropertyContactLinks(
   db: FirebaseFirestore.Firestore,
   propertyId: string,
+  companyId: string,
   userId: string,
 ): Promise<void> {
-  const linksSnap = await db.collection(COLLECTIONS.CONTACT_LINKS)
+  const linksSnap = await scopeQueryToCompany(db.collection(COLLECTIONS.CONTACT_LINKS), companyId)
     .where('targetEntityType', '==', 'property')
     .where('targetEntityId', '==', propertyId)
     .where('status', '==', 'active')
