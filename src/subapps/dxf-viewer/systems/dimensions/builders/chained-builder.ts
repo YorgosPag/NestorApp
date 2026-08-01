@@ -42,6 +42,8 @@ import type {
 } from '../dim-geometry-builder';
 import { buildLinearGeometry } from './linear-aligned-builder';
 import { perpendicularOf } from './shared-geometry-helpers';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../dimension-def-points';
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -87,14 +89,14 @@ function assembleChainFromAxis(
 }
 
 function resolveRootLinear(p: LinearDimensionEntity): ResolvedChain {
-  const [extOrigin1, extOrigin2, dimLineRef] = p.defPoints;
+  const [extOrigin1, extOrigin2, dimLineRef] = dimDefPoints(p); // ADR-746
   const rotRad = p.rotation * DEG_TO_RAD;
   const axis: Point2D = { x: Math.cos(rotRad), y: Math.sin(rotRad) };
   return assembleChainFromAxis(extOrigin1, extOrigin2, dimLineRef, axis);
 }
 
 function resolveRootAligned(p: AlignedDimensionEntity): ResolvedChain {
-  const [extOrigin1, extOrigin2, dimLineRef] = p.defPoints;
+  const [extOrigin1, extOrigin2, dimLineRef] = dimDefPoints(p); // ADR-746
   if (calculateDistance(extOrigin1, extOrigin2) === 0) {
     throw new Error(
       '[chained-builder] Root aligned dim has coincident ext origins.',
@@ -127,13 +129,13 @@ function resolveChain(
       const gp = resolveChain(parent.parentDimensionId, style, lookup);
       return {
         ...gp,
-        continueOrigin: parent.defPoints[0],
+        continueOrigin: dimDefPoints(parent)[0], // ADR-746
         parentDimLineOffset: gp.parentDimLineOffset + style.dimdli,
       };
     }
     case 'continued': {
       const gp = resolveChain(parent.parentDimensionId, style, lookup);
-      return { ...gp, continueOrigin: parent.defPoints[0] };
+      return { ...gp, continueOrigin: dimDefPoints(parent)[0] }; // ADR-746
     }
     default:
       throw new Error(
@@ -189,7 +191,7 @@ export function buildBaselineGeometry(
     );
   }
   const resolved = resolveChain(entity.parentDimensionId, style, lookup);
-  const newExtOrigin = entity.defPoints[0];
+  const newExtOrigin = dimDefPoints(entity)[0]; // ADR-746
   const newOffset = resolved.parentDimLineOffset + style.dimdli;
   const dimLineRef = scaledAlong(
     resolved.baselineOrigin,
@@ -219,7 +221,7 @@ export function buildContinuedGeometry(
     );
   }
   const resolved = resolveChain(entity.parentDimensionId, style, lookup);
-  const newExtOrigin = entity.defPoints[0];
+  const newExtOrigin = dimDefPoints(entity)[0]; // ADR-746
   const dimLineRef = scaledAlong(
     resolved.baselineOrigin,
     resolved.perpOutward,

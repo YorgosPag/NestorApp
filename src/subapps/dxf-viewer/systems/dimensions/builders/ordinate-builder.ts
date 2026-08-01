@@ -32,6 +32,8 @@ import {
 } from '../../../rendering/entities/shared/geometry-vector-utils';
 import type { LinearDimGeometry } from '../dim-geometry-builder';
 import { computeTextRotation } from './shared-geometry-helpers';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../dimension-def-points';
 
 const ZERO_VEC: Point2D = { x: 0, y: 0 };
 const DEFAULT_LEADER_FACTOR = 8;
@@ -55,7 +57,7 @@ export function buildOrdinateGeometry(
   entity: OrdinateDimensionEntity,
   style: DimStyle,
 ): LinearDimGeometry {
-  const [feature] = entity.defPoints;
+  const [feature] = dimDefPoints(entity); // ADR-746
   const measurementValue =
     entity.axis === 'x'
       ? Math.abs(feature.x - entity.datum.x)

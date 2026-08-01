@@ -48,6 +48,8 @@ import { projectBoundsOntoCutAxis } from './auto/cut-axis-projection';
 import { intersectLines } from './builders/shared-geometry-helpers';
 import { segmentIntersection } from '../../utils/geometry/GeometryUtils';
 import { unitVector } from '../../bim/grips/grip-math';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from './dimension-def-points';
 
 /**
  * Optional context for `recomputeAssociatedDefPoint` — only the `intersection`
@@ -296,7 +298,7 @@ export function applyAssociationUpdates(
     }
 
     const idx = assoc.defPointIndex;
-    const currentPt = dim.defPoints[idx];
+    const currentPt = dimDefPoints(dim)[idx]; // ADR-746
 
     const newPt = recomputeAssociatedDefPoint(assoc, geoEntity, {
       resolveEntity: getEntity,
@@ -307,7 +309,7 @@ export function applyAssociationUpdates(
     if (!currentPt || pointsEqual(currentPt, newPt)) continue;
 
     if (!newDefPoints) {
-      newDefPoints = [...dim.defPoints] as Point2D[];
+      newDefPoints = [...dimDefPoints(dim)] as Point2D[]; // ADR-746
     }
     newDefPoints[idx] = newPt;
   }

@@ -36,6 +36,8 @@ import { findClosestAci } from '../../settings/standards/aci';
 import { hexToTrueColor } from '../../utils/dxf-true-color';
 import { LINEWEIGHT_SPECIAL } from '../../config/lineweight-iso-catalog';
 import type { LineweightMm } from '../../types/entities';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../dimensions/dimension-def-points';
 
 const BYLAYER = 'ByLayer';
 
@@ -64,7 +66,7 @@ function readMeasurement(dim: DimensionEntity, style: DimStyle): string {
 
 /** «x, y» formatted coordinate for a def point, or '' when the point is absent. */
 function readPoint(dim: DimensionEntity, index: number, unit: DisplayUnit): string {
-  const p = dim.defPoints[index];
+  const p = dimDefPoints(dim)[index]; // ADR-746
   if (!p) return '';
   return `${formatCoordinateForDisplay(p.x, { unit })}, ${formatCoordinateForDisplay(p.y, { unit })}`;
 }

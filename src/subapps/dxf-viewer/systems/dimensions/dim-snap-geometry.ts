@@ -36,6 +36,8 @@ import type { DimensionEntity } from '../../types/dimension';
 import { pointOnCircle } from '../../rendering/entities/shared/geometry-vector-utils';
 import type { DimGeometry } from './dim-geometry-builder';
 import { buildVariantHitGeometry, computeDimHitGeometry } from './dim-hit-geometry';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των σημείων ορισμού (ποτέ δεν πετάει).
+import { dimDefPoints } from './dimension-def-points';
 
 /** Points closer than this (world units) are treated as the same snap target. */
 const SNAP_POINT_EPSILON = 1e-6;
@@ -92,7 +94,7 @@ function collectVariantSnapPoints(geom: DimGeometry, out: Point2D[]): void {
  * linear/aligned; `defPoints[0]` is the last resort.
  */
 function resolveFallbackRefPoint(entity: DimensionEntity): Point2D | null {
-  const dp = entity.defPoints;
+  const dp = dimDefPoints(entity); // ADR-746 — ωμό `entity.defPoints` ⇒ `undefined.length` (ζωντανό, 2026-08-01)
   if (dp.length > 2 && dp[2]) return { x: dp[2].x, y: dp[2].y };
   if (dp.length > 0 && dp[0]) return { x: dp[0].x, y: dp[0].y };
   return null;

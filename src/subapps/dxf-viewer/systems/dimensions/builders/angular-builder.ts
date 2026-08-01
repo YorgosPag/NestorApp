@@ -43,6 +43,8 @@ import {
   computeTextRotation,
   intersectLines,
 } from './shared-geometry-helpers';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../dimension-def-points';
 
 const TAU = Math.PI * 2;
 const HALF_PI = Math.PI / 2;
@@ -217,7 +219,7 @@ export function buildAngular2LGeometry(
   entity: Angular2LDimensionEntity,
   style: DimStyle,
 ): AngularDimGeometry {
-  const [line1a, line1b, line2a, line2b, arcPoint] = entity.defPoints;
+  const [line1a, line1b, line2a, line2b, arcPoint] = dimDefPoints(entity); // ADR-746
   const dir1 = subtractPoints(line1b, line1a);
   const dir2 = subtractPoints(line2b, line2a);
   const vertex = intersectLines(line1a, dir1, line2a, dir2);
@@ -243,7 +245,7 @@ export function buildAngular3PGeometry(
   entity: Angular3PDimensionEntity,
   style: DimStyle,
 ): AngularDimGeometry {
-  const [vertex, ray1End, ray2End, arcPoint] = entity.defPoints;
+  const [vertex, ray1End, ray2End, arcPoint] = dimDefPoints(entity); // ADR-746
   return assembleAngular(
     vertex,
     ray1End,

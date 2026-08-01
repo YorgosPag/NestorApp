@@ -11,6 +11,8 @@
 
 import type { DimensionEntity } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from './dimension-def-points';
 
 /** Dim-line frame extracted from a linear/aligned dim's `defPoints`. */
 export interface DimLineInfo {
@@ -31,7 +33,7 @@ export function extractDimLineInfo(dim: DimensionEntity): DimLineInfo | null {
   if (dim.dimensionType !== 'linear' && dim.dimensionType !== 'aligned') {
     return null;
   }
-  const pts = dim.defPoints;
+  const pts = dimDefPoints(dim); // ADR-746
   if (pts.length < 3) return null;
 
   const [originA, originB, dimLineRef] = pts;

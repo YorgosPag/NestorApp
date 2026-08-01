@@ -41,6 +41,8 @@ import {
   perpendicularOf,
   rotateVector,
 } from './shared-geometry-helpers';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../dimension-def-points';
 
 const DEG_TO_RAD = Math.PI / 180;
 
@@ -115,7 +117,7 @@ export function buildLinearGeometry(
   entity: LinearDimensionEntity,
   style: DimStyle,
 ): LinearDimGeometry {
-  const [extOrigin1, extOrigin2, dimLineRef] = entity.defPoints;
+  const [extOrigin1, extOrigin2, dimLineRef] = dimDefPoints(entity); // ADR-746
   const rotRad = entity.rotation * DEG_TO_RAD;
   const axis: Point2D = { x: Math.cos(rotRad), y: Math.sin(rotRad) };
   const perp = perpendicularOf(axis);
@@ -151,7 +153,7 @@ export function buildAlignedGeometry(
   entity: AlignedDimensionEntity,
   style: DimStyle,
 ): LinearDimGeometry {
-  const [extOrigin1, extOrigin2, dimLineRef] = entity.defPoints;
+  const [extOrigin1, extOrigin2, dimLineRef] = dimDefPoints(entity); // ADR-746
   const measurementValue = calculateDistance(extOrigin1, extOrigin2);
   if (measurementValue === 0) {
     throw new Error(

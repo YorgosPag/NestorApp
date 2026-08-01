@@ -40,6 +40,8 @@ import {
   resolveRadialTextFit,
   computeRadialPlacement,
 } from './radial-text-fit';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from '../dimension-def-points';
 
 const ZERO_VEC: Point2D = { x: 0, y: 0 };
 const HALF_PI = Math.PI / 2;
@@ -111,7 +113,7 @@ export function buildRadiusGeometry(
   entity: RadiusDimensionEntity,
   style: DimStyle,
 ): RadialDimGeometry {
-  const [center, arcPoint] = entity.defPoints;
+  const [center, arcPoint] = dimDefPoints(entity); // ADR-746
   const radius = calculateDistance(center, arcPoint);
   if (radius === 0) {
     throw new Error('[radial-builder] Degenerate radius dim: arcPoint coincides with center.');
@@ -153,7 +155,7 @@ export function buildDiameterGeometry(
   entity: DiameterDimensionEntity,
   style: DimStyle,
 ): RadialDimGeometry {
-  const [side1, side2] = entity.defPoints;
+  const [side1, side2] = dimDefPoints(entity); // ADR-746
   const measurementValue = calculateDistance(side1, side2);
   if (measurementValue === 0) {
     throw new Error('[radial-builder] Degenerate diameter dim: sides coincide.');
@@ -220,7 +222,7 @@ export function buildArcLengthGeometry(
   entity: ArcLengthDimensionEntity,
   style: DimStyle,
 ): RadialDimGeometry {
-  const [center, arcStart, arcEnd] = entity.defPoints;
+  const [center, arcStart, arcEnd] = dimDefPoints(entity); // ADR-746
   const radius = calculateDistance(center, arcStart);
   const radiusEnd = calculateDistance(center, arcEnd);
   if (radius < RADIUS_EQUAL_EPSILON) {
@@ -277,7 +279,7 @@ export function buildJoggedRadiusGeometry(
   entity: JoggedRadiusDimensionEntity,
   style: DimStyle,
 ): RadialDimGeometry {
-  const [center, arcPoint, jogPoint, jogVertex] = entity.defPoints;
+  const [center, arcPoint, jogPoint, jogVertex] = dimDefPoints(entity); // ADR-746
   const radius = calculateDistance(center, arcPoint);
   if (radius === 0) {
     throw new Error('[radial-builder] Degenerate joggedRadius dim: arcPoint coincides with center.');

@@ -24,6 +24,8 @@ import type { DimensionEntity, DimStyle } from '../../types/dimension';
 import type { Point2D } from '../../rendering/types/Types';
 // ADR-362 — dim-line frame SSoT (shared with dim-row-detect).
 import { extractDimLineInfo, dimLineOffset } from './dim-line-info';
+// ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (ποτέ δεν πετάει).
+import { dimDefPoints } from './dimension-def-points';
 
 // ── Public types ─────────────────────────────────────────────────────────────
 
@@ -126,7 +128,7 @@ function shiftDimLineRef(
   normal: Point2D,
   delta: number,
 ): readonly Point2D[] | null {
-  const pts = [...target.defPoints] as Point2D[];
+  const pts = [...dimDefPoints(target)] as Point2D[]; // ADR-746
   const dimLineRef = pts[2];
   pts[2] = {
     x: dimLineRef.x + delta * normal.x,
