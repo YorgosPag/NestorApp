@@ -157,11 +157,24 @@ function normalizedFontKey(font: string): string {
 const WIDTH_RATIO_CACHE = new Map<string, number>();
 const WIDTH_RATIO_CACHE_MAX = 512;
 
+/**
+ * Ο διαχωριστής γραμματοσειράς/κειμένου μέσα στο κλειδί.
+ *
+ * `U+0000` και όχι κενό: το αλφαριθμητικό γραμματοσειράς **περιέχει** κενά (`"bold 200px
+ * arial"`), οπότε ένα κενό ως διαχωριστής θα επέτρεπε σε δύο διαφορετικά ζεύγη να παράγουν
+ * το ίδιο κλειδί — δηλαδή λάθος πλάτος, σιωπηλά. Ο NUL δεν εμφανίζεται ποτέ σε κανένα από
+ * τα δύο.
+ */
+const CACHE_KEY_SEPARATOR = '\u0000';
+
 /** Πόσες φορές ρωτήθηκε **όντως** ο καμβάς — δες {@link __tableCellMeasureCallsForTests}. */
 let measureCalls = 0;
 
 function textWidthRatio(text: string, font: string): number {
-  const key = `${normalizedFontKey(font)} ${text}`;
+  // Ο διαχωριστής είναι γραμμένος ως **δραπέτευση** και όχι ως ωμό byte: ένας χαρακτήρας
+  // ελέγχου μέσα σε πηγαίο αρχείο είναι αόρατος στον αναγνώστη και κάνει το `grep` να
+  // θεωρήσει ολόκληρο το αρχείο δυαδικό — δηλαδή το βγάζει από κάθε αναζήτηση του repo.
+  const key = `${normalizedFontKey(font)}${CACHE_KEY_SEPARATOR}${text}`;
   const cached = WIDTH_RATIO_CACHE.get(key);
   if (cached !== undefined) return cached;
 
