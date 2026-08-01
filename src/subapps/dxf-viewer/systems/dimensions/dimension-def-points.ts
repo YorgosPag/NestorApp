@@ -33,7 +33,7 @@
  * 🏛️ ΑΡΧΗ (aggregate poisoning, ADR-510 Φ5): ένα `NaN`/`Infinity` σημείο είναι **χειρότερο**
  * από ένα crash — δεν πετάει, δηλητηριάζει το AABB (`Math.min/max` με NaN → NaN), το culling
  * απαντά σιωπηλά λάθος και η διάσταση εξαφανίζεται χωρίς κανένα σήμα. Φιλτράρονται εδώ, μέσω
- * του υπάρχοντος `isValidPointStrict` SSoT — δεν γράφεται δεύτερος έλεγχος πεπερασμένου.
+ * του υπάρχοντος `isFinitePoint` SSoT — δεν γράφεται δεύτερος έλεγχος πεπερασμένου.
  *
  * ΤΙ ΔΕΝ ΚΑΝΕΙ: δεν ξετυλίγει το `DxfDimension` wrapper — αυτό το ερώτημα έχει ήδη τη δική του
  * αρχή (`unwrapDxfSubEntity`, dxf-types.ts). Ένα ερώτημα, μία αρχή· δύο αρχές που ξέρουν και
@@ -46,8 +46,22 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
-// SSoT πεπερασμένου σημείου (NaN + Infinity) — ADR-161/ADR-510 Φ5. ΜΗΝ γράψεις δεύτερο.
-import { isValidPointStrict } from '../../rendering/entities/shared/entity-validation-utils';
+// SSoT πεπερασμένου σημείου (NaN + Infinity) — ADR-510 Φ5. ΜΗΝ γράψεις δεύτερο.
+//
+// ⚠️ ΓΙΑΤΙ ΑΠΟ ΤΟ `config/geometry-constants` ΚΑΙ ΟΧΙ ΑΠΟ ΤΟ `entity-validation-utils`
+// (`isValidPointStrict`, που είναι σημασιολογικά ο πιο φυσικός υποψήφιος):
+// το `entity-validation-utils` κάνει **runtime** import (`isLineEntity`, `isCircleEntity`, …)
+// από το `types/entities` — module που ζει μέσα σε **υπάρχοντα κύκλο** εισαγωγών
+// (types/entities → types/entity-bounds → entity-bounds-ssot → GeometryUtils → … → guides,
+// επιβεβαιωμένος σε worktree στο 15579c97: το `guide-commands-ssot.test.ts` έσπαγε **ήδη** με
+// `Cannot access 'BatchRotateGuidesCommand' before initialization` πριν από κάθε αλλαγή του
+// ADR-746 — **προϋπάρχον, όχι δικό μας**).
+// Επειδή όμως αυτός ο αναγνώστης εισάγεται πλέον από ~20 αρχεία, θα **μετέδιδε** εκείνη τη
+// βαριά ακμή σε όλο το δέντρο διαστάσεων χωρίς κανένα όφελος.
+// Το `config/geometry-constants` έχει **μόνο type import** ⇒ μηδενικό runtime βάρος.
+// 🔴 ΜΗΝ το γυρίσεις πίσω στο `isValidPointStrict` «για καθαρότητα»: ο έλεγχος είναι ο ίδιος
+// (`Number.isFinite` και στα δύο), το βάρος όχι.
+import { isFinitePoint } from '../../config/geometry-constants';
 
 /**
  * Από πού προέκυψαν τα σημεία — το **διαγνωστικό** που κάνει τη ρίζα ορατή αντί για μαντεψιά.
@@ -85,6 +99,21 @@ interface LegacyDimMirrors {
 }
 
 /**
+ * Είναι έγκυρο, **πεπερασμένο** σημείο; Type guard πάνω από `unknown`.
+ *
+ * Δεν διπλασιάζει τα μαθηματικά: ο έλεγχος πεπερασμένου παραμένει το `isFinitePoint` SSoT —
+ * εδώ προστίθεται μόνο το narrowing (null/object), που το SSoT δεν κάνει επειδή δέχεται ήδη
+ * τυποποιημένο `Point2D`. Το `Number.isFinite` **δεν κάνει coercion**, οπότε `{x:'a'}` πέφτει
+ * σωστά χωρίς χωριστό έλεγχο `typeof === 'number'`.
+ *
+ * Εξάγεται ώστε οι υπολογιστές ορίων διάστασης να ρωτούν **εδώ** αντί να εισάγουν το βαρύ
+ * `entity-validation-utils` (βλ. το σχόλιο του import πιο πάνω — μεταδίδει κύκλο).
+ */
+export function isFiniteDimPoint(p: unknown): p is Point2D {
+  return !!p && typeof p === 'object' && isFinitePoint(p as Point2D);
+}
+
+/**
  * 🚀 Είναι ο πίνακας **ήδη άρτιος** (μη-κενός, κάθε σημείο πεπερασμένο);
  *
  * ⚠️ ΓΙΑΤΙ ΕΙΝΑΙ ΚΡΙΣΙΜΟ ΚΑΙ ΟΧΙ ΑΠΛΗ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ: χωρίς αυτόν τον έλεγχο ο αναγνώστης
@@ -99,7 +128,7 @@ interface LegacyDimMirrors {
  */
 function isPristineDefPoints(raw: readonly unknown[]): boolean {
   if (raw.length === 0) return false;
-  for (const p of raw) if (!isValidPointStrict(p)) return false;
+  for (const p of raw) if (!isFiniteDimPoint(p)) return false;
   return true;
 }
 
@@ -108,7 +137,7 @@ function keepFinitePoints(raw: readonly unknown[]): { points: Point2D[]; dropped
   const points: Point2D[] = [];
   let dropped = 0;
   for (const candidate of raw) {
-    if (isValidPointStrict(candidate)) points.push(candidate);
+    if (isFiniteDimPoint(candidate)) points.push(candidate);
     else dropped++;
   }
   return { points, dropped };

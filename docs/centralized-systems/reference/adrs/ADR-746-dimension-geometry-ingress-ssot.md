@@ -185,6 +185,31 @@ sites αφαιρέθηκαν** ώστε να μην ξαναποκλίνουν.
   Διορθώθηκαν επί τόπου (Boy Scout, N.0.2), με τα 83 σχετικά tests πράσινα.
 - ⚠️ Δεν εκτελέστηκε `tsc` — **N.17** (τον κάνει ο Giorgio + το pre-commit hook)
 
+### 6.1 Το κόκκινο suite που ΔΕΝ είναι δικό μας (και πώς αποδείχθηκε)
+
+Το πλήρες regression (**871 suites**) ανέδειξε **1 κόκκινο**: `guide-commands-ssot.test.ts`, με
+`Cannot access 'BatchRotateGuidesCommand' before initialization` — **0 failing tests**, δηλαδή
+αστοχία **σε επίπεδο module** (κύκλος εισαγωγών, αόρατος σε κάθε στοχευμένο τρέξιμο).
+
+Ο κύκλος: `guide-command-base → guide-command-geometry → rotation-math → geometry-utils →
+geometry-rendering-utils → types/entities → types/entity-bounds → entity-bounds-ssot →
+GeometryUtils → entity-polylines → block-expander → … → guides/index → guides/commands/index →
+guide-rotate-commands → guide-command-base`.
+
+**Δύο ανεξάρτητες αποδείξεις ότι προϋπήρχε** (η υποψία ήταν εύλογη: το `entity-bounds-ssot` είναι
+στη μέση της αλυσίδας **και** το αγγίξαμε):
+1. **Στατική**: κάθε αρχείο του κύκλου έχει **ίδιο αριθμό imports** με το `15579c97` — καμία νέα
+   ακμή. Η αλλαγή μας στο `entity-bounds-ssot` ήταν **μόνο στο σώμα** μιας συνάρτησης.
+2. **Εκτελεστική**: `git worktree` στο `15579c97` (πριν από κάθε commit του ADR-746) → το suite
+   **έσπαγε ήδη**, με πανομοιότυπο stack.
+
+⚠️ **Το εύρημα που κρατάμε από αυτό**: ο αρχικός φύλακας πεπερασμένου ήταν το `isValidPointStrict`
+(`entity-validation-utils`), που κάνει **runtime** import από το `types/entities` — μέσα στον
+κύκλο. Δεν έσπασε τίποτα, αλλά με **~20 εισαγωγείς** ο αναγνώστης θα **μετέδιδε** εκείνη τη βαριά
+ακμή σε όλο το δέντρο διαστάσεων. Πέρασε στο `config/geometry-constants.isFinitePoint` (**μόνο
+type import**, ίδιο `Number.isFinite`), με τον object/null guard τοπικά ως `isFiniteDimPoint`.
+**Ίδιος έλεγχος, μηδενικό runtime βάρος.**
+
 **Regression anchor που έχει σημασία:** το test `«η διάσταση διορθώνεται στη ΡΙΖΑ — δεν φτάνει καν
 στο δίχτυ»` απαιτεί `quarantinedCount() === 0` για διάσταση χωρίς `defPoints`. Αν γίνει κόκκινο, η
 διόρθωση της ρίζας υποχώρησε και το πρόβλημα απλώς **κρύβεται** πίσω από το Στρώμα 3.

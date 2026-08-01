@@ -21,8 +21,7 @@ import { computeDimHitGeometry, buildVariantHitGeometry } from './dim-hit-geomet
 import type { DimGeometry } from './dim-geometry-builder';
 // ADR-746 — ο ΕΝΑΣ αναγνώστης των defPoints (parse-at-the-boundary + legacy repair +
 // φίλτρο μη-πεπερασμένων). Αντικαθιστά το ωμό `[...dim.defPoints]` που έριχνε ΟΛΟ το raster.
-import { resolveDimDefPoints } from './dimension-def-points';
-import { isValidPointStrict } from '../../rendering/entities/shared/entity-validation-utils';
+import { resolveDimDefPoints, isFiniteDimPoint } from './dimension-def-points';
 
 export interface DimWorldBounds {
   minX: number;
@@ -87,9 +86,9 @@ function collectGeometryPoints(g: DimGeometry, out: Point2D[]): void {
  */
 export function getDimensionWorldBounds(dim: DimensionEntity): DimWorldBounds | null {
   const pts: Point2D[] = [...resolveDimDefPoints(dim).points];
-  // `isValidPointStrict`: ένα NaN `textMidpoint` δηλητηριάζει όλο το AABB (Math.min/max → NaN)
+  // `isFiniteDimPoint`: ένα NaN `textMidpoint` δηλητηριάζει όλο το AABB (Math.min/max → NaN)
   // → το κουτί γίνεται μη-πεπερασμένο και το culling απαντά σιωπηλά λάθος (ADR-510 Φ5).
-  if (isValidPointStrict(dim?.textMidpoint)) pts.push(dim.textMidpoint as Point2D);
+  if (isFiniteDimPoint(dim?.textMidpoint)) pts.push(dim.textMidpoint as Point2D);
 
   const hit = computeDimHitGeometry(dim); // linear / aligned (pure, style-free)
   if (hit) {

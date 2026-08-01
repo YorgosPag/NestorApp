@@ -21,9 +21,9 @@ import { textBoxAABB } from '../../bim/text/text-box';
 // ADR-737 §18 — ο SSoT για το ύψος χαρακτήρα (διαβάζει ΠΡΩΤΑ το run του `textNode`).
 import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
 // ADR-746 — ο ΕΝΑΣ αναγνώστης των σημείων ορισμού διάστασης (+ φίλτρο μη-πεπερασμένων).
-import { dimDefPoints } from '../../systems/dimensions/dimension-def-points';
+import { dimDefPoints, isFiniteDimPoint } from '../../systems/dimensions/dimension-def-points';
 import type { DimensionEntity } from '../../types/dimension';
-import { isValidPointStrict } from '../entities/shared/entity-validation-utils';
+
 import type {
   EntityWithLine,
   EntityWithCircle,
@@ -121,7 +121,7 @@ export function calculateDimensionBounds(entity: EntityModel, tolerance: number)
   // raster της σκηνής. Ένα ερώτημα, μία αρχή — τώρα και οι δύο ρωτούν τον ίδιο αναγνώστη.
   const pts: { x: number; y: number }[] = [...dimDefPoints(entity as unknown as DimensionEntity)];
   const textMidpoint = (entity as { textMidpoint?: unknown }).textMidpoint;
-  if (isValidPointStrict(textMidpoint)) pts.push(textMidpoint);
+  if (isFiniteDimPoint(textMidpoint)) pts.push(textMidpoint);
   return pointsToBounds(pts, tolerance);
 }
 
