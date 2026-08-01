@@ -15,6 +15,7 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
+import { createCellRanker, indexById, insertionIndexFor } from './table-cell-order';
 import type {
   CellKey,
   CellSpan,
@@ -153,18 +154,13 @@ export function buildMergeIndex(model: TableModel): MergeIndex {
 }
 
 /**
- * Θέση → ταυτότητα, για O(1) αναζήτηση δείκτη από id.
- *
- * Εξαγόμενο (ADR-739 Φ.Δ βήμα 2): το χρειάζεται και η πλοήγηση δρομέα
- * (`table-cell-navigation.ts`), που μεταφράζει διαρκώς `rowId`/`colId` σε δείκτες για να
- * βηματίσει. Το CHECK 3.28 (jscpd) χαρακτήρισε **σωστά** ως clone το τοπικό αντίγραφο που
- * γεννήθηκε εκεί — η απάντηση σε αυτό είναι εξαγωγή, όχι δεύτερο δίδυμο.
+ * Θέση → ταυτότητα (ADR-739 Φ.Δ βήμα 2). **Ζει πλέον στο `table-cell-order`**, μαζί με την
+ * υπόλοιπη γνώση της σειράς γραμμή × στήλη· επανεξάγεται από εδώ επειδή τη ζητούν ήδη
+ * τέσσερις καλούντες (πλοήγηση, αναφορά κελιού, περιοχή, πρόχειρο) και μια μετακόμιση των
+ * import τους δεν θα πρόσθετε τίποτα — θα μετακινούσε την ίδια γραμμή σε τέσσερα αρχεία.
+ * Η κατεύθυνση της εισαγωγής είναι **μία** (helpers → order), άρα κανένας κύκλος (ADR-746).
  */
-export function indexById(items: readonly { readonly id: string }[]): ReadonlyMap<string, number> {
-  const map = new Map<string, number>();
-  for (let i = 0; i < items.length; i++) map.set(items[i].id, i);
-  return map;
-}
+export { indexById };
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Κατασκευή
@@ -362,18 +358,16 @@ export function resolveTableModel(persisted: PersistedTableModel): TableModel {
  * ενδιάμεσο στάδιο επεξεργασίας, όχι λόγος να χαθεί ολόκληρος ο πίνακας.
  */
 export function toPersistedTableModel(model: TableModel): PersistedTableModel {
-  const rowOrder = indexById(model.rows);
-  const colOrder = indexById(model.columns);
-  const ordered: { readonly r: number; readonly c: number; readonly entry: TableCellEntry }[] = [];
+  const rank = createCellRanker(model);
+  const ordered: { readonly rank: number; readonly entry: TableCellEntry }[] = [];
 
   for (const [key, cell] of model.cells) {
     const [rowId, colId] = splitCellKey(key);
-    const r = rowOrder.get(rowId);
-    const c = colOrder.get(colId);
-    if (r === undefined || c === undefined) continue;
-    ordered.push({ r, c, entry: [rowId, colId, cell] });
+    const cellRank = rank(rowId, colId);
+    if (cellRank === undefined) continue;
+    ordered.push({ rank: cellRank, entry: [rowId, colId, cell] });
   }
-  ordered.sort((a, b) => (a.r - b.r) || (a.c - b.c));
+  ordered.sort((a, b) => a.rank - b.rank);
 
   return {
     columns: model.columns,
@@ -386,45 +380,6 @@ export function toPersistedTableModel(model: TableModel): PersistedTableModel {
 // ──────────────────────────────────────────────────────────────────────────────
 // Αμετάβλητος εγγραφέας κειμένου κελιού (ADR-739 Φ.Δ βήμα 2)
 // ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * Θέση εισαγωγής ενός **νέου** κελιού ώστε το `cells` να μείνει στη σειρά **γραμμή ×
- * στήλη**, η ίδια σύμβαση με το {@link toPersistedTableModel}. Ένα `splice` στο τέλος
- * (ή στη σειρά εισαγωγής) θα έσπαζε ακριβώς τη ντετερμινιστική σειρά που εκείνη η
- * συνάρτηση εγγυάται — δύο ταυτόσημοι πίνακες θα κατέληγαν με διαφορετικό JSON ανάλογα
- * με τη **σειρά** με την οποία πληκτρολογήθηκαν τα κελιά τους.
- *
- * Κελιά με άγνωστη γραμμή/στήλη (ορφανές αναφορές — ίδια ανοχή με το
- * {@link buildMergeIndex}) αγνοούνται στη σύγκριση: δεν έχουν καθορισμένη θέση, άρα δεν
- * μπορούν να «σπρώξουν» το νέο κελί πουθενά. Το ίδιο ισχύει αν το ίδιο το νέο κελί
- * δείχνει σε γραμμή/στήλη που δεν υπάρχει στο μοντέλο — τότε δεν υπάρχει έγκυρη θέση και
- * η συνάρτηση απλώς προσθέτει στο τέλος αντί να ρίξει σφάλμα.
- */
-function insertionIndexFor(
-  model: PersistedTableModel,
-  entries: readonly TableCellEntry[],
-  targetRowId: TableRowId,
-  targetColId: TableColumnId,
-): number {
-  const rowOrder = indexById(model.rows);
-  const colOrder = indexById(model.columns);
-  const columnCount = model.columns.length;
-  const rank = (rowId: TableRowId, colId: TableColumnId): number | undefined => {
-    const r = rowOrder.get(rowId);
-    const c = colOrder.get(colId);
-    return r === undefined || c === undefined ? undefined : r * columnCount + c;
-  };
-
-  const targetRank = rank(targetRowId, targetColId);
-  if (targetRank === undefined) return entries.length;
-
-  for (let i = 0; i < entries.length; i++) {
-    const [rowId, colId] = entries[i];
-    const entryRank = rank(rowId, colId);
-    if (entryRank !== undefined && entryRank > targetRank) return i;
-  }
-  return entries.length;
-}
 
 /**
  * Το κείμενο ενός κελιού απευθείας από το **ταξιδεύον** σχήμα — χωρίς να περάσει από
@@ -456,11 +411,12 @@ export function getPersistedCellText(
  * 3. **Διατήρηση**: μόνο το `value` αλλάζει — `kind` / `formula` / `styleOverride` /
  *    `locked` ενός υπάρχοντος κελιού περνούν αυτούσια (spread). Νέο κελί παίρνει τα
  *    προεπιλεγμένα του module: `{ kind: 'text', value: text }`, χωρίς overrides.
- * 4. **Ταυτότητα**: αν το νέο κείμενο είναι ΙΔΙΟ με το σημερινό (`cellText` του
- *    υπάρχοντος κελιού), επιστρέφεται το **ίδιο** `model` by-reference. Χωρίς αυτό, κάθε
- *    πληκτρολόγηση χωρίς πραγματική αλλαγή θα γεννούσε νέο αντικείμενο μοντέλου —
- *    άκυρη είσοδο undo και ακύρωση του `resolveTableModel`/`resolveTableLayout` `WeakMap`
- *    (§ σχόλιο πάνω από το {@link resolveTableModel}) χωρίς λόγο.
+ * 4. **Ταυτότητα**: αν το νέο κείμενο είναι ΙΔΙΟ με το σημερινό, επιστρέφεται το **ίδιο**
+ *    `model` by-reference. Χωρίς αυτό, κάθε πληκτρολόγηση χωρίς πραγματική αλλαγή θα
+ *    γεννούσε νέο αντικείμενο μοντέλου — άκυρη είσοδο undo και ακύρωση του
+ *    `resolveTableModel`/`resolveTableLayout` `WeakMap` (§ σχόλιο πάνω από το
+ *    {@link resolveTableModel}) χωρίς λόγο. Ισχύει **και για το απόν κελί**: αραιός χάρτης
+ *    σημαίνει ότι «απών» **είναι** «κενός» — δες το σχόλιο στο σώμα.
  */
 export function setPersistedCellText(
   model: PersistedTableModel,
@@ -478,6 +434,20 @@ export function setPersistedCellText(
     cells[existingIndex] = [rowId, colId, { ...existingCell, value: text }];
     return { ...model, cells };
   }
+
+  // 🔴 ADR-739 Φ.Δ βήμα 8 — η **τέταρτη εγγύηση (ταυτότητα) ισχύει και για το κελί που ΔΕΝ
+  // ΥΠΑΡΧΕΙ.** Το `cells` είναι **αραιό**: απόν κελί σημαίνει ήδη κενό κείμενο (το
+  // `getPersistedCellText` επιστρέφει `''` γι' αυτό). Άρα «γράψε κενό σε απόν κελί» δεν
+  // αλλάζει τίποτα — αλλά χωρίς αυτή τη γραμμή γεννούσε **φάντασμα εγγραφή**
+  // `{ kind: 'text', value: '' }` και, μαζί της, νέο αντικείμενο μοντέλου.
+  //
+  // Οι δύο μετρημένες συνέπειες, και οι δύο ζωντανές πριν το βήμα 8:
+  //  1. **Βήμα undo για το τίποτα** — `Delete` πάνω σε ήδη κενό κελί παρήγαγε
+  //     `UpdateEntityCommand`, δηλαδή ένα `Ctrl+Z` που δεν αναιρεί τίποτα ορατό.
+  //  2. **Φούσκωμα + περιττό autosave** — ένα `Delete` πάνω σε μαρκαρισμένη περιοχή 500
+  //     κενών κελιών θα έγραφε 500 άχρηστες εγγραφές στη σκηνή και θα ακύρωνε τις μνήμες
+  //     `resolveTableModel` / `resolveTableLayout` χωρίς κανέναν λόγο.
+  if (text === '') return model;
 
   const insertAt = insertionIndexFor(model, model.cells, rowId, colId);
   const cells = model.cells.slice();

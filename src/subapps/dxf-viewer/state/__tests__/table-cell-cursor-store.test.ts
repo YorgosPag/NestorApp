@@ -52,6 +52,8 @@ describe('κύκλος ζωής', () => {
       position: { rowId: 'r1', colId: 'c2', anchorColId: 'c2' },
       mode: 'edit',
       draft: 'ήδη γραμμένο',
+      // ADR-739 Φ.Δ βήμα 8 — καμία περιοχή· μια τοποθέτηση ξεκινά πάντα από ένα κελί.
+      selection: null,
       sessionId: 0,
     });
   });
@@ -83,6 +85,7 @@ describe('αριθμός συνεδρίας — ο φρουρός της χαμ�
       mode: 'nav',
       // Η ακύρωση πετά ΚΑΙ το πρόχειρο: «Escape» σημαίνει «ξέχνα ό,τι έγραψα».
       draft: '',
+      selection: null,
       sessionId: 1,
     });
   });

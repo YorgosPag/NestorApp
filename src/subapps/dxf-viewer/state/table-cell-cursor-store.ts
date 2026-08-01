@@ -44,6 +44,7 @@ import { useSyncExternalStore } from 'react';
 import { createExternalStore } from '../stores/createExternalStore';
 import { markSystemsDirty } from '../rendering/core/frame-scheduler-api';
 import type { TableCursorPosition } from '../bim/table/table-cell-navigation';
+import type { TableCellRef } from '../bim/table/table-cell-range';
 
 /** Οι τρεις καταστάσεις του Excel — δες τον πίνακα στην κεφαλίδα. */
 export type TableCellCursorMode = 'nav' | 'enter' | 'edit';
@@ -106,6 +107,46 @@ export interface TableCellCursorState {
    * ενημερώσεων (draft/mode) αβλαβώς: εκείνες δεν ξαναστήνουν το πεδίο.
    */
   readonly caretIndex?: number;
+
+  /**
+   * 🔴 ADR-739 Φ.Δ βήμα 8 — **η επιλεγμένη περιοχή**, ως δύο γωνίες· `null` ⇒ καμία περιοχή
+   * (μόνο το ενεργό κελί).
+   *
+   * ## Γιατί ΕΔΩ και όχι μέσα στο `TableCursorPosition`
+   * Η θέση είναι **καθαρή θέση**: την παράγουν τέσσερις ανεξάρτητοι δρόμοι, ένας από τους
+   * οποίους είναι μια πληκτρολογημένη αναφορά `B3` στη γραμμή τύπων
+   * (`parseTableCellReference`) που δεν έχει καμία σχέση με επιλογή. Αν η έκταση ζούσε
+   * εκεί, και οι τέσσερις θα υποχρεώνονταν να αποφασίσουν γι' αυτήν. Δες την κεφαλίδα του
+   * `table-cell-range.ts` για ολόκληρο το σκεπτικό.
+   *
+   * ## 🔴 Γιατί ΔΥΟ γωνίες και όχι «ενεργό κελί + το άλλο άκρο»
+   * Ήταν η πρώτη σχεδίαση, και **το `Ctrl+A` τη διέψευσε**: στο Excel (και στα Sheets) η
+   * «επιλογή όλων» επιλέγει ολόκληρο το πλέγμα και **αφήνει το ενεργό κελί εκεί που ήταν**.
+   * Με ενεργό κελί το `C5`, η περιοχή είναι `A1:τέλος` — ένα ορθογώνιο που **δεν έχει το
+   * ενεργό κελί σε καμία γωνία του**. Ένα μοντέλο «ενεργό κελί + άκρο» δεν μπορεί να το
+   * εκφράσει, και η μόνη διέξοδός του θα ήταν να **μετακινήσει** τον δρομέα στο `A1` —
+   * δηλαδή το `Ctrl+A` να πλοηγεί, ενώ πρέπει μόνο να επιλέγει.
+   *
+   * Άρα: η περιοχή είναι **ανεξάρτητη** από τη θέση. Στη συνήθη περίπτωση το `from`
+   * **τυχαίνει** να είναι το ενεργό κελί (κάθε `Shift+…` ξεκινά από εκεί)· αυτό είναι
+   * αποτέλεσμα, όχι αναλλοίωτο, και ο τύπος δεν το επιβάλλει.
+   *
+   * ## Γιατί ΤΑΥΤΟΤΗΤΕΣ κελιών και όχι έτοιμο ορθογώνιο
+   * Το ορθογώνιο είναι **παράγωγο**: εξαρτάται από τις συγχωνεύσεις του μοντέλου (η περιοχή
+   * «κουμπώνει» ώστε να τις περικλείει ολόκληρες). Ένα αποθηκευμένο ορθογώνιο θα ήταν
+   * δεύτερη αλήθεια που παλιώνει σε κάθε συγχώνευση/αποσυγχώνευση — ακριβώς ο λόγος για τον
+   * οποίο αυτό το store δεν κρατά ούτε το **κείμενο** του κελιού.
+   *
+   * ⚠️ **ΟΡΟΛΟΓΙΑ**: «ενεργό κελί» = {@link position}. Καμία από τις δύο γωνίες δεν λέγεται
+   * «άγκυρα» — η λέξη ανήκει στις **συγχωνεύσεις** (`CellSpan.anchorRowId`).
+   */
+  readonly selection: TableCellSelection | null;
+}
+
+/** Οι δύο γωνίες μιας επιλογής, σε αυθαίρετη σειρά — η κανονικοποίηση ζει στο SSoT περιοχής. */
+export interface TableCellSelection {
+  readonly from: TableCellRef;
+  readonly to: TableCellRef;
 }
 
 /**
@@ -128,7 +169,14 @@ const store = createExternalStore<TableCellCursorState | null>(null, {
     a?.caretIndex === b?.caretIndex &&
     a?.position.rowId === b?.position.rowId &&
     a?.position.colId === b?.position.colId &&
-    a?.position.anchorColId === b?.position.anchorColId,
+    a?.position.anchorColId === b?.position.anchorColId &&
+    // ADR-739 Φ.Δ βήμα 8 — η περιοχή συγκρίνεται **κατά τιμή**: το `rangeEnd` είναι νέο
+    // αντικείμενο σε κάθε `Shift+βέλος`, οπότε μια σύγκριση αναφοράς θα δήλωνε «άλλαξε»
+    // ακόμα και όταν το βέλος χτύπησε στην άκρη και τίποτα δεν κουνήθηκε.
+    a?.selection?.from.rowId === b?.selection?.from.rowId &&
+    a?.selection?.from.colId === b?.selection?.from.colId &&
+    a?.selection?.to.rowId === b?.selection?.to.rowId &&
+    a?.selection?.to.colId === b?.selection?.to.colId,
 });
 
 /**
@@ -165,7 +213,35 @@ export function setTableCellCursor(
 ): void {
   // Η μετακίνηση σε **άλλο** κελί ξαναστήνει ούτως ή άλλως το `<input>` (το row/col είναι
   // μέρος του React key), οπότε ο αριθμός συνεδρίας δεν χρειάζεται να αυξηθεί εδώ.
-  commit({ entityId, position, mode, draft, caretIndex, sessionId: store.get()?.sessionId ?? 0 });
+  //
+  // ADR-739 Φ.Δ βήμα 8 — **η περιοχή πέφτει** (`rangeEnd: null`). Ένα σκέτο βέλος ή ένα
+  // κλικ ξεκινά καινούρια επιλογή, όπως σε κάθε φύλλο υπολογισμού: η επέκταση απαιτεί
+  // `Shift`, και ό,τι δεν το κρατά τη διαλύει. Χωρίς αυτό, μια περιοχή θα επιβίωνε
+  // αόρατα κάτω από τον δρομέα και το επόμενο `Ctrl+C` θα αντέγραφε κελιά που ο χρήστης
+  // δεν βλέπει πια μαρκαρισμένα.
+  commit({
+    entityId,
+    position,
+    mode,
+    draft,
+    caretIndex,
+    selection: null,
+    sessionId: store.get()?.sessionId ?? 0,
+  });
+}
+
+/**
+ * ADR-739 Φ.Δ βήμα 8 — θέτει το **δεύτερο άκρο** της περιοχής· `null` τη διαλύει.
+ *
+ * Το ενεργό κελί **δεν** κουνιέται: αυτή είναι όλη η διαφορά ανάμεσα σε `βέλος` και
+ * `Shift+βέλος`, και ο λόγος που η επιλογή δεν είναι κατάσταση αλλά έκταση.
+ *
+ * No-op χωρίς ενεργό δρομέα: δεν υπάρχει περιοχή χωρίς ενεργό κελί να την ορίζει.
+ */
+export function setTableCellSelection(selection: TableCellSelection | null): void {
+  const current = store.get();
+  if (!current) return;
+  commit({ ...current, selection });
 }
 
 /**
@@ -177,7 +253,18 @@ export function setTableCellCursor(
 export function setTableCellCursorDraft(draft: string): void {
   const current = store.get();
   if (!current) return;
-  commit({ ...current, draft, mode: current.mode === 'nav' ? 'enter' : current.mode });
+  // ADR-739 Φ.Δ βήμα 8 — **η γραφή διαλύει την περιοχή**, και είναι συνειδητή απόκλιση από
+  // το Excel. Εκεί το μαρκάρισμα επιβιώνει επειδή το `Enter` **περιφέρεται μέσα του** (η
+  // κλασική ροή «μαρκάρω μπλοκ, γράφω, Enter, γράφω…»). Εμείς **δεν** υλοποιούμε αυτή την
+  // περιφορά· κρατώντας μόνο το μαρκάρισμα θα λέγαμε ψέματα με το χρώμα: έξι φωτισμένα
+  // κελιά ενώ γράφεται **ένα**. Όταν έρθει η περιφορά, αυτή η γραμμή είναι το ένα σημείο
+  // που αλλάζει.
+  commit({
+    ...current,
+    draft,
+    selection: null,
+    mode: current.mode === 'nav' ? 'enter' : current.mode,
+  });
 }
 
 /**
@@ -190,7 +277,15 @@ export function setTableCellCursorDraft(draft: string): void {
 export function setTableCellCursorMode(mode: TableCellCursorMode, seedDraft?: string): void {
   const current = store.get();
   if (!current || current.mode === mode) return;
-  commit({ ...current, mode, draft: seedDraft ?? current.draft });
+  // ADR-739 Φ.Δ βήμα 8 — η είσοδος σε **γραφή** διαλύει την περιοχή, για τον ίδιο λόγο με
+  // το {@link setTableCellCursorDraft}: γράφεται ένα κελί, δεν επιτρέπεται να φωτίζονται
+  // έξι. Η επιστροφή σε `nav` δεν την ξαναγεννά — μια διαλυμένη επιλογή είναι διαλυμένη.
+  commit({
+    ...current,
+    mode,
+    draft: seedDraft ?? current.draft,
+    selection: mode === 'nav' ? current.selection : null,
+  });
 }
 
 /**
