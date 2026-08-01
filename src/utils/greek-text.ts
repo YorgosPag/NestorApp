@@ -203,3 +203,91 @@ export function normalizeGreekHomoglyphs(text: string): string {
 export function normalizeForSearch(text: string): string {
   return normalizeGreekText(text).replace(/[.\-_/\\()]/g, '');
 }
+
+// ============================================================================
+// WORD-SEQUENCE MATCHING (label / phrase recognition)
+// ============================================================================
+
+/**
+ * The form in which labels are **compared** — never the form that gets stored.
+ *
+ * Two steps, in this order: homoglyphs are folded first (the `ΣΥΝΤΑΞΗ` written into a
+ * CAD titleblock ends in a **Latin** `H`), then accents, case and punctuation drop.
+ * The reverse order does not work: `normalizeForSearch` has already lowercased the
+ * Latin `H` into `h`, which is the homoglyph of no Greek lowercase letter in the table
+ * above — the damage becomes irreversible (ADR-745 §2.3 Γ).
+ *
+ * @see ADR-745 §6.4 — promoted here from the titleblock reader so that `src/config`
+ *      can reach it: `src/subapps/dxf-viewer/**` is excluded from the root
+ *      `tsconfig.json`, so an import in the other direction would be type-unchecked.
+ */
+export function normalizeForLabelMatch(text: string): string {
+  return normalizeForSearch(normalizeGreekHomoglyphs(text));
+}
+
+/** A word part: letters, digits and the punctuation `normalizeForSearch` discards anyway. */
+const PHRASE_WORD_RUN = /[\p{L}\p{N}.\-_/\\()+]+/gu;
+
+/** One word of a text together with its position in the **original** string. */
+export interface TextWord {
+  readonly raw: string;
+  readonly normalized: string;
+  readonly start: number;
+  readonly end: number;
+}
+
+/**
+ * Split text into words with their positions — the positions are what make slicing possible.
+ *
+ * Runs that degenerate to the empty string after normalization (a lone `-`, `()`) are not
+ * words but separators, and are dropped: that is what lets `ΜΕΛΕΤΕΣ - ΕΦΑΡΜΟΓΕΣ` be
+ * compared without a third pass, and what makes `ΠΟΛΙΤΙΚΟΣ - ΜΗΧΑΝΙΚΟΣ` adjacent.
+ */
+export function splitIntoWords(text: string): TextWord[] {
+  const words: TextWord[] = [];
+  for (const match of text.matchAll(PHRASE_WORD_RUN)) {
+    const raw = match[0];
+    const normalized = normalizeForLabelMatch(raw);
+    if (normalized.length === 0) continue;
+    words.push({ raw, normalized, start: match.index, end: match.index + raw.length });
+  }
+  return words;
+}
+
+/**
+ * True when `phrase` sits exactly on the words that start at `from`.
+ *
+ * Matching is done word by word, never on substrings: `ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ` must not be read
+ * as containing `ΜΕΛΕΤΗ`, because `μελετη` ends in the middle of `μελετης`. Without the
+ * word boundary every prefix label poisons the longer one that contains it.
+ *
+ * Both sides must already be in `normalizeForLabelMatch` form.
+ */
+export function matchesWordSequenceAt(
+  words: readonly TextWord[],
+  from: number,
+  phrase: readonly string[],
+): boolean {
+  if (from + phrase.length > words.length) return false;
+  return phrase.every((word, k) => words[from + k].normalized === word);
+}
+
+/**
+ * True when `phrase` occurs as a **contiguous** run of words anywhere in `words`.
+ *
+ * Contiguity is the point. Plain set containment would read `ΠΟΛΙΤΙΚΟΣ ΥΠΑΛΛΗΛΟΣ ΚΑΙ
+ * ΜΗΧΑΝΙΚΟΣ ΑΥΤΟΚΙΝΗΤΩΝ` as «πολιτικός μηχανικός», because both words are present —
+ * just not next to each other.
+ *
+ * An empty phrase matches nothing: it is a compilation accident, not a wildcard.
+ */
+export function containsWordSequence(
+  words: readonly TextWord[],
+  phrase: readonly string[],
+): boolean {
+  if (phrase.length === 0) return false;
+  for (let i = 0; i + phrase.length <= words.length; i += 1) {
+    if (matchesWordSequenceAt(words, i, phrase)) return true;
+  }
+  return false;
+}

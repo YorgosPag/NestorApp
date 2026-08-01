@@ -2065,9 +2065,9 @@
     },
     "greek-text": {
       "ssotFile": "src/utils/greek-text.ts",
-      "description": "Greek text processing utilities — stripAccents, normalizeGreekText, toGreekTitleCase, normalizeForSearch. Canonical SSoT for Greek locale text ops. ai-pipeline/greek-text-utils.ts converted to re-export form (Phase C.5.46). normalizeForSearch excluded from patterns (also in file-display-name-utils, different domain). ADR-314 Phase D.3a.",
+      "description": "Greek text processing utilities — stripAccents, normalizeGreekText, toGreekTitleCase, normalizeForSearch, normalizeGreekHomoglyphs + word-sequence matching (normalizeForLabelMatch, splitIntoWords, matchesWordSequenceAt, containsWordSequence). Canonical SSoT for Greek locale text ops. ai-pipeline/greek-text-utils.ts converted to re-export form (Phase C.5.46). normalizeForSearch excluded from patterns (also in file-display-name-utils, different domain). The word-sequence matcher was promoted here from title-block-vocabulary.ts in ADR-745 Φ2: src/subapps/dxf-viewer/** is excluded from the root tsconfig, so src/config could not import it in the other direction without losing type-checking. ADR-314 Phase D.3a / ADR-745 §6.4.",
       "forbiddenPatterns": [
-        "export\\s+function\\s+(stripAccents|normalizeGreekText|toGreekTitleCase)\\b"
+        "export\\s+function\\s+(stripAccents|normalizeGreekText|toGreekTitleCase|normalizeGreekHomoglyphs|normalizeForLabelMatch|splitIntoWords|matchesWordSequenceAt|containsWordSequence)\\b"
       ],
       "allowlist": [
         "src/utils/greek-text.ts"

@@ -12,7 +12,21 @@
  * @see ADR-745 §6.3 — TitleBlockFieldKey
  */
 
-import { normalizeForSearch, normalizeGreekHomoglyphs } from '@/utils/greek-text';
+import {
+  matchesWordSequenceAt,
+  normalizeForLabelMatch,
+  splitIntoWords,
+  type TextWord,
+} from '@/utils/greek-text';
+
+/**
+ * Η κανονικοποίηση σύγκρισης και το σπάσιμο σε λέξεις **ζούσαν εδώ** μέχρι τη Φ2. Προάχθηκαν
+ * στο `@/utils/greek-text` γιατί τα χρειάστηκε και το `src/config/profession-bridge.config.ts`:
+ * το `src/subapps/dxf-viewer/**` **εξαιρείται** από το root `tsconfig.json`, άρα εισαγωγή προς
+ * τα εδώ από `src/config` θα ήταν τυφλή στον έλεγχο τύπων. Επανεξάγονται αυτούσια ώστε οι
+ * καταναλωτές της πινακίδας να μη γνωρίζουν τη μετακόμιση (ADR-745 §6.4).
+ */
+export { normalizeForLabelMatch, splitIntoWords, type TextWord };
 
 // ── Λεξιλόγιο πεδίων (SSoT) ───────────────────────────────────────────────────
 
@@ -83,47 +97,6 @@ export const GREEK_SURVEYOR_PROFILE: TitleBlockProfile = {
   contactMarkers: ['κιν', 'τηλ', 'fax', 'φαξ', 'site', 'e-mail', 'email', 'web'],
 };
 
-// ── Κανονικοποίηση σύγκρισης ──────────────────────────────────────────────────
-
-/**
- * Η μορφή με την οποία συγκρίνονται ετικέτες — **ποτέ** η μορφή που αποθηκεύεται.
- *
- * Δύο βήματα, με αυτή τη σειρά: πρώτα διπλώνονται τα ομόγλυφα (το `ΣΥΝΤΑΞΗ` του αρχείου
- * τελειώνει σε **λατινικό** `H`), μετά πέφτουν τόνοι/πεζά/στίξη. Ανάποδα δεν δουλεύει: το
- * `normalizeForSearch` έχει ήδη πεζώσει το λατινικό `H` σε `h`, που **δεν** είναι ομόγλυφο
- * κανενός ελληνικού πεζού στον πίνακα — η βλάβη γίνεται μη αναστρέψιμη (ADR-745 §2.3 Γ).
- */
-export function normalizeForLabelMatch(text: string): string {
-  return normalizeForSearch(normalizeGreekHomoglyphs(text));
-}
-
-/** Μέρος λέξης: γράμματα, ψηφία και η στίξη που το `normalizeForSearch` έτσι κι αλλιώς ρίχνει. */
-const WORD_RUN = /[\p{L}\p{N}.\-_/\\()+]+/gu;
-
-/** Μία λέξη του κειμένου με τη θέση της στο **πρωτότυπο** — η θέση είναι που επιτρέπει την κοπή. */
-export interface TextWord {
-  readonly raw: string;
-  readonly normalized: string;
-  readonly start: number;
-  readonly end: number;
-}
-
-/**
- * Σπάει κείμενο σε λέξεις με θέσεις. Οι «λέξεις» που εκφυλίζονται σε κενό μετά την
- * κανονικοποίηση (σκέτο `-`, `()`) δεν είναι λέξεις — είναι διαχωριστικά, και πετιούνται
- * ώστε ένα `ΜΕΛΕΤΕΣ - ΕΦΑΡΜΟΓΕΣ` να μη χρειάζεται τρίτο βήμα για να συγκριθεί.
- */
-export function splitIntoWords(text: string): TextWord[] {
-  const words: TextWord[] = [];
-  for (const match of text.matchAll(WORD_RUN)) {
-    const raw = match[0];
-    const normalized = normalizeForLabelMatch(raw);
-    if (normalized.length === 0) continue;
-    words.push({ raw, normalized, start: match.index, end: match.index + raw.length });
-  }
-  return words;
-}
-
 // ── Αναγνώριση ετικέτας ───────────────────────────────────────────────────────
 
 /** Μία ετικέτα σε κανονική μορφή, μαζί με το πόσες λέξεις πιάνει. */
@@ -161,18 +134,12 @@ export interface LabelOccurrence {
   readonly end: number;
 }
 
-/** Ταιριάζει μια μεταγλωττισμένη ετικέτα ακριβώς πάνω στις λέξεις που ξεκινούν στο `from`. */
-function labelMatchesAt(words: readonly TextWord[], from: number, label: CompiledLabel): boolean {
-  if (from + label.words.length > words.length) return false;
-  return label.words.every((w, k) => words[from + k].normalized === w);
-}
-
 /**
  * Όλες οι ετικέτες μέσα σε ένα κείμενο κελιού, από αριστερά προς τα δεξιά.
  *
- * Το ταίριασμα γίνεται σε **επίπεδο λέξης**, όχι υποσυμβολοσειράς: το `ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ`
- * δεν επιτρέπεται να θεωρηθεί ότι περιέχει το `ΜΕΛΕΤΗ`, γιατί το `μελετη` τελειώνει στη
- * μέση του `μελετης`. Χωρίς όριο λέξης, κάθε ετικέτα-πρόθεμα δηλητηριάζει τη μακρύτερή της.
+ * Το ταίριασμα γίνεται σε **επίπεδο λέξης**, όχι υποσυμβολοσειράς — ο λόγος ζει πλέον στο
+ * `matchesWordSequenceAt` (`@/utils/greek-text`), που είναι ο ίδιος μηχανισμός με τον οποίο
+ * ο αντίστροφος resolver επαγγέλματος αναγνωρίζει «ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ» (ADR-745 §6.4).
  */
 export function findLabelOccurrences(
   words: readonly TextWord[],
@@ -181,7 +148,7 @@ export function findLabelOccurrences(
   const found: LabelOccurrence[] = [];
   let i = 0;
   while (i < words.length) {
-    const hit = profile.find((label) => labelMatchesAt(words, i, label));
+    const hit = profile.find((label) => matchesWordSequenceAt(words, i, label.words));
     if (!hit) {
       i += 1;
       continue;

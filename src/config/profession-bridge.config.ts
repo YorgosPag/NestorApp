@@ -10,11 +10,17 @@
  * 2 roles (energy_inspector, supervising_engineer) are Greek TEE-specific
  * and have no exact ESCO equivalent — hardcoded without URI.
  *
+ * Since 2026-08-01 this module owns the bridge in **both** directions: the forward
+ * `role → profession` lookup and the reverse `profession text → role` resolver that reads
+ * what a surveyor typed into a DXF titleblock (ADR-745 §6.4, gap G1). One module, one
+ * vocabulary — a second file would be a sibling clone of the same table (N.12, N.18).
+ *
  * @module config/profession-bridge.config
  * @enterprise ADR-282 - Google Derived Roles Pattern
  */
 
-import type { ProjectRole } from '@/types/entity-associations';
+import { ENTITY_ASSOCIATION_ROLES, type ProjectRole } from '@/types/entity-associations';
+import { containsWordSequence, splitIntoWords } from '@/utils/greek-text';
 
 // ============================================================================
 // TYPES
@@ -35,7 +41,7 @@ export interface ProfessionBridgeEntry {
 // VERIFIED MAPPING (EU ESCO API, 2026-04-04)
 // ============================================================================
 
-export const PROJECT_ROLE_BRIDGE: Record<string, ProfessionBridgeEntry> = {
+export const PROJECT_ROLE_BRIDGE: Readonly<Record<ProjectRole, ProfessionBridgeEntry>> = {
   // ── ESCO-verified (5/7) ──────────────────────────────────────────────
   architect: {
     profession: 'Αρχιτέκτονας',
@@ -83,9 +89,109 @@ export const PROJECT_ROLE_BRIDGE: Record<string, ProfessionBridgeEntry> = {
   },
 };
 
+// ============================================================================
+// FORWARD DIRECTION — role → profession
+// ============================================================================
+
+/**
+ * Lookup by arbitrary string.
+ *
+ * A `Map` rather than indexing the record: callers hand this function whatever role string
+ * a document happens to carry, and `PROJECT_ROLE_BRIDGE['__proto__']` would answer with
+ * `Object.prototype` — a truthy value that `?? null` never sees. A `Map` has no inherited
+ * keys, so an unknown role is simply unknown.
+ */
+const BRIDGE_LOOKUP: ReadonlyMap<string, ProfessionBridgeEntry> = new Map(
+  Object.entries(PROJECT_ROLE_BRIDGE),
+);
+
 /**
  * Returns the bridge entry for a given project role, or null.
  */
 export function getBridgeEntry(role: string): ProfessionBridgeEntry | null {
-  return PROJECT_ROLE_BRIDGE[role] ?? null;
+  return BRIDGE_LOOKUP.get(role) ?? null;
+}
+
+// ============================================================================
+// REVERSE DIRECTION — profession text → role (ADR-745 §6.4, gap G1)
+// ============================================================================
+
+/** One spelling under which a role may appear in free text, in comparison form. */
+interface ProfessionAlias {
+  readonly role: ProjectRole;
+  readonly words: readonly string[];
+}
+
+/**
+ * Compiles every spelling of every role **once**, at module load.
+ *
+ * Both fields of the entry count. `surveyor` is why: its `profession` reads «Τοπογράφος
+ * Μηχανικός» while the ESCO label reads «Αγρονόμος Τοπογράφος Μηχανικός», and the measured
+ * titleblock writes the second one. A resolver that consults a single field loses exactly
+ * that role. Identical spellings (`architect`, whose two fields differ only in case) are
+ * folded, so one role never answers twice for the same words.
+ */
+function compileProfessionAliases(): readonly ProfessionAlias[] {
+  const aliases: ProfessionAlias[] = [];
+  for (const role of ENTITY_ASSOCIATION_ROLES.project) {
+    const entry = getBridgeEntry(role);
+    if (!entry) continue;
+
+    const seen = new Set<string>();
+    for (const spelling of [entry.profession, entry.escoLabel]) {
+      const words = splitIntoWords(spelling).map((word) => word.normalized);
+      const key = words.join(' ');
+      if (words.length === 0 || seen.has(key)) continue;
+      seen.add(key);
+      aliases.push({ role, words });
+    }
+  }
+  return aliases;
+}
+
+const PROFESSION_ALIASES = compileProfessionAliases();
+
+/**
+ * Every role whose name occurs in `text`, in bridge declaration order.
+ *
+ * **Containment, not equality.** «ΑΓΡΟΝΟΜΟΣ ΤΟΠΟΓΡΑΦΟΣ ΜΗΧΑΝΙΚΟΣ Α.Π.Θ.» carries the
+ * institution that awarded the degree, and the next drawing will carry `Ε.Μ.Π.`, `Δ.Π.Θ.`,
+ * `Α.Τ.Ε.Ι.`, `M.Sc.` or a title none of us has met yet. Stripping those would mean owning
+ * a list of every Greek school and academic rank — a list that is wrong the day it is
+ * written. Asking instead whether the role's own words are *present* makes the suffix
+ * irrelevant by construction: it is simply a word the role never claimed.
+ *
+ * The words must be **adjacent**, which is what stops «ΠΟΛΙΤΙΚΟΣ ΥΠΑΛΛΗΛΟΣ ΚΑΙ ΜΗΧΑΝΙΚΟΣ
+ * ΑΥΤΟΚΙΝΗΤΩΝ» from being read as a civil engineer.
+ *
+ * The returned order is the declaration order of `ENTITY_ASSOCIATION_ROLES.project` — it is
+ * **not** a ranking. Two roles here mean the text names two professions, and the caller is
+ * the one holding the context needed to choose (or to ask a human).
+ */
+export function resolveRoleCandidatesFromProfession(text: string): readonly ProjectRole[] {
+  const words = splitIntoWords(text);
+  const roles: ProjectRole[] = [];
+  for (const alias of PROFESSION_ALIASES) {
+    if (roles.includes(alias.role)) continue;
+    if (containsWordSequence(words, alias.words)) roles.push(alias.role);
+  }
+  return roles;
+}
+
+/**
+ * The single role named by `text`, or `null` when the text does not name exactly one.
+ *
+ * `null` covers two different failures on purpose, because both must not be written to the
+ * database: the text named no role, or it named more than one. The word «Μηχανικός» alone
+ * belongs to five of the seven roles — any «closest match» rule would pick one arbitrarily,
+ * and a wrong identification is worse than none: it records that a named engineer designed
+ * a project they never touched.
+ *
+ * A caller that needs to tell «unknown» from «ambiguous» — a review UI showing the human
+ * what to choose between — should call {@link resolveRoleCandidatesFromProfession}, whose
+ * length is the certainty: 0 unknown, 1 certain, more than 1 ambiguous.
+ */
+export function resolveRoleFromProfession(text: string): ProjectRole | null {
+  const candidates = resolveRoleCandidatesFromProfession(text);
+  return candidates.length === 1 ? candidates[0] : null;
 }
