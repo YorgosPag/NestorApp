@@ -5111,6 +5111,35 @@
         "src/services/measurements/"
       ],
       "tier": 3
+    },
+    "spreadsheet-column-letter": {
+      "ssotFile": "src/lib/spreadsheet/column-letter.ts",
+      "description": "Sole authority for spreadsheet column-index <-> column-letter conversion (bijective base-26: 0->A, 26->AA). Was byte-identical in builder-excel-analysis.ts AND builder-excel-exporter.ts; a third copy was about to be born for the DXF table formula bar. NOTE: the three structural-grid label helpers in systems/guides/ are deliberately NOT unified here - they are grid bubbles (user-overridable, standard may skip I/O/Q), not cell references. Homonyms, not synonyms.",
+      "forbiddenPatterns": [
+        "function\\s+colLetter\\s*\\(",
+        "function\\s+columnLetter\\s*\\("
+      ],
+      "allowlist": [
+        "src/lib/spreadsheet/column-letter.ts"
+      ],
+      "addedDate": "2026-08-01",
+      "addedByAdr": "ADR-739",
+      "tier": 2
+    },
+    "table-cell-reference": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/table/table-cell-reference.ts",
+      "description": "Sole authority for naming a table cell (A1 notation) and for labelling the TABLEINDICATOR bands. ADR-739 Phase D step 7. The formula engine adapter (ADR-739 s9.2) and the DXF ACAD_TABLE exporter both speak A1; a second naming would put a different address into the formulas than the one on screen.",
+      "forbiddenPatterns": [
+        "function\\s+tableCellReference\\s*\\(",
+        "function\\s+tableColumnLetter\\s*\\(",
+        "function\\s+tableRowNumber\\s*\\("
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/table/table-cell-reference.ts"
+      ],
+      "addedDate": "2026-08-01",
+      "addedByAdr": "ADR-739",
+      "tier": 2
     }
   }
 }
