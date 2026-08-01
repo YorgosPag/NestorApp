@@ -7,19 +7,25 @@
  * Shows per-reason breakdown (weather, materials, permits, subcontractor, other, unspecified).
  * Colors from design system CSS variables — no hardcoded hex.
  * Reason keys derive from DELAY_REASONS SSoT array.
+ *
+ * ⚠️ **ADR-710 (μετανάστευση 2026-08-01)**: ChartPlot, όχι ChartCard — το
+ * ReportSection έχει ήδη ξοδέψει κάρτα και επικεφαλίδα. Το REASON_COLORS
+ * καταργήθηκε: τα πέντε πρώτα ήταν ήδη τα θεσιακά slots 1..5, οπότε ήταν
+ * **δεύτερη δήλωση της παλέτας** — και η σειρά των slots ΕΙΝΑΙ ο μηχανισμός
+ * διαχωρισμού CVD (CHECK 3.32). Το «unspecified» κρατά ρητό color override
+ * επειδή σημαίνει **απουσία αιτίας**, όχι έκτη αιτία.
+ *
+ * 🔑 Ο χειρόγραφος πίνακας sr-only αφαιρέθηκε — το shell παράγει τον ίδιο
+ * ορατό σε όλους.
  */
 
 import { useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+  ChartPlot,
+  seriesColorVar,
+  type ChartSeries,
+} from "@/components/ui/chart-card";
 import { ReportSection } from "@/components/reports/core/ReportSection";
 import { ReportEmptyState } from "@/components/reports/core/ReportEmptyState";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
@@ -31,14 +37,14 @@ import type { DelayBreakdownDataPoint } from "./schedule-dashboard.types";
 
 const REASON_KEYS = [...DELAY_REASONS, "unspecified"] as const;
 
-const REASON_COLORS: Record<string, string> = {
-  weather: "hsl(var(--chart-1))",
-  materials: "hsl(var(--chart-2))",
-  permits: "hsl(var(--chart-3))",
-  subcontractor: "hsl(var(--chart-4))",
-  other: "hsl(var(--chart-5))",
-  unspecified: "hsl(var(--muted-foreground))",
-};
+/**
+ * «Απροσδιόριστη» δεν είναι έκτη αιτία — είναι **απουσία** αιτίας, οπότε δεν
+ * παίρνει slot της κατηγορικής παλέτας. Το μόνο ρητό χρώμα που επιβιώνει.
+ */
+const UNSPECIFIED_COLOR = "hsl(var(--muted-foreground))";
+
+/** Η γραμμή δεδομένων που φτάνει στο γράφημα: φάση + ένα πεδίο ανά αιτία. */
+type ReasonRow = { phaseCode: string } & Partial<Record<(typeof REASON_KEYS)[number], number>>;
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────
 
@@ -105,7 +111,7 @@ export function DelayBreakdownChart({
   // Flatten byReason into top-level keys for Recharts
   const chartData = useMemo(
     () =>
-      data.map((d) => ({
+      data.map<ReasonRow>((d) => ({
         phaseCode: d.phaseCode,
         ...d.byReason,
       })),
@@ -127,6 +133,21 @@ export function DelayBreakdownChart({
     );
   }
 
+  /**
+   * Η **μία** δήλωση σειρών: θεματοποίηση, υπόμνημα, πίνακας δεδομένων και
+   * σήμανση διαβάζουν όλα από εδώ. Το υπόμνημα βγαίνει επειδή οι σειρές είναι
+   * έξι — όχι επειδή κάποιος πέρασε Legend.
+   */
+  const series = useMemo<readonly ChartSeries<ReasonRow>[]>(
+    () =>
+      REASON_KEYS.map((reason) => ({
+        key: reason,
+        label: t(`tabs.timeline.dashboard.delayBreakdown.${reason}`),
+        ...(reason === "unspecified" ? { color: UNSPECIFIED_COLOR } : {}),
+      })),
+    [t],
+  );
+
   const rotateLabels = data.length > 6;
 
   return (
@@ -135,12 +156,19 @@ export function DelayBreakdownChart({
       tooltip={t("tabs.timeline.dashboard.tooltips.delayBreakdownTitle")}
       id="schedule-delay-breakdown"
     >
-      <figure
-        role="img"
-        aria-label={t("tabs.timeline.dashboard.delayBreakdown.ariaLabel")}
+      <ChartPlot
+        series={series}
+        data={chartData}
+        categoryKey="phaseCode"
+        categoryLabel={t("tabs.timeline.dashboard.variance.colName")}
+        formatValue={(v) => String(v)}
+        formatCategory={(v) => labelMap.get(String(v ?? "")) ?? String(v ?? "")}
       >
-        <div className="h-[300px] w-full sm:h-[350px]">
-          <ResponsiveContainer width="100%" height="100%">
+        <ChartPlot.Figure
+          caption={t("tabs.timeline.dashboard.delayBreakdown.ariaLabel")}
+          emptyMessage={t("tabs.timeline.dashboard.delayBreakdown.empty")}
+          size="lg"
+        >
             <BarChart
               data={chartData}
               margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
@@ -156,7 +184,6 @@ export function DelayBreakdownChart({
               />
               <YAxis allowDecimals={false} className="text-xs" width={40} />
               <Tooltip content={<ReasonTooltip labelMap={labelMap} t={t} />} />
-              <Legend />
 
               {REASON_KEYS.map((reason, idx) => (
                 <Bar
@@ -164,43 +191,15 @@ export function DelayBreakdownChart({
                   dataKey={reason}
                   name={t(`tabs.timeline.dashboard.delayBreakdown.${reason}`)}
                   stackId="reasons"
-                  fill={REASON_COLORS[reason]}
+                  fill={seriesColorVar(reason)}
                   radius={
                     idx === REASON_KEYS.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
                   }
                 />
               ))}
             </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Screen-reader data table */}
-        <table className="sr-only">
-          <caption>{t("tabs.timeline.dashboard.delayBreakdown.title")}</caption>
-          <thead>
-            <tr>
-              <th scope="col">
-                {t("tabs.timeline.dashboard.variance.colName")}
-              </th>
-              {REASON_KEYS.map((reason) => (
-                <th key={reason} scope="col">
-                  {t(`tabs.timeline.dashboard.delayBreakdown.${reason}`)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((d) => (
-              <tr key={d.phaseCode}>
-                <th scope="row">{d.phaseName}</th>
-                {REASON_KEYS.map((reason) => (
-                  <td key={reason}>{d.byReason[reason] ?? 0}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </figure>
+        </ChartPlot.Figure>
+      </ChartPlot>
     </ReportSection>
   );
 }

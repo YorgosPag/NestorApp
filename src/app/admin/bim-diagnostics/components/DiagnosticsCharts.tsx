@@ -5,7 +5,20 @@
  *
  * Aggregated visualizations computed client-side from the 30-day query
  * subscription: FPS histogram, GPU tier pie, render-mode usage bar.
- * Colors source from CSS variables `--chart-{1..5}` (ADR-365).
+ *
+ * ⚠️ **ADR-710 (μετανάστευση 2026-08-01)**: και τα τρία γραφήματα περνούν από
+ * `<ChartCard>`. Το αρχείο ήταν το πιο διδακτικό δείγμα του προβλήματος: **τρία**
+ * γραφήματα, **τρία** χειρόγραφα `ResponsiveContainer`, **τρία** ελεύθερα ύψη
+ * (180/180/160) και **μηδέν** πίνακες δεδομένων — σε οθόνη **διαγνωστικών**,
+ * όπου ο αριθμός είναι το προϊόν.
+ *
+ * 🔴 **Το `PIE_COLORS[idx % length]` ήταν σφάλμα, όχι στιλ.** Το `%` **τυλίγει**:
+ * με έξι κατηγορίες GPU, η έκτη έπαιρνε **το ίδιο** χρώμα με την πρώτη και οι
+ * δύο γίνονταν μία στο μάτι. Η μετρημένη παλέτα (ADR-710 §10) **δεν τυλίγει
+ * ποτέ** — πέρα από το `CHART_SERIES_LIMIT` επιστρέφει ουδέτερο, που διαβάζεται
+ * ως «αταξινόμητο» αντί να ψεύδεται. Ο πίνακας χρωματίζεται πλέον με
+ * `chartCategoryColor` πάνω σε **δηλωμένη** σειρά κατηγοριών: ένα φιλτράρισμα
+ * δεν μετακινεί πια το χρώμα κάθε κατηγορίας από κάτω του.
  *
  * @module admin/bim-diagnostics/components/DiagnosticsCharts
  */
@@ -16,15 +29,18 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Pie,
   PieChart,
-  ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import {
+  ChartCard,
+  chartCategoryColor,
+  seriesColorVar,
+  type ChartSeries,
+} from '@/components/ui/chart-card';
 import type { PerformanceDiagnostic } from '@/types/performance-diagnostic';
 
 interface DiagnosticsChartsProps {
@@ -32,7 +48,19 @@ interface DiagnosticsChartsProps {
 }
 
 const FPS_BINS = [0, 10, 20, 30, 40, 50, 60, 90, 120, 240] as const;
-const PIE_COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
+
+interface FpsRow {
+  bucket: string;
+  count: number;
+}
+interface TierRow {
+  name: string;
+  value: number;
+}
+interface ModeRow {
+  mode: string;
+  count: number;
+}
 
 function bucketFps(value: number): string {
   for (let i = FPS_BINS.length - 1; i >= 0; i -= 1) {
@@ -47,7 +75,7 @@ function bucketFps(value: number): string {
 export function DiagnosticsCharts({ rows }: DiagnosticsChartsProps) {
   const { t } = useTranslation('admin');
 
-  const fpsHistogram = useMemo(() => {
+  const fpsHistogram = useMemo<FpsRow[]>(() => {
     const counts = new Map<string, number>();
     for (const row of rows) {
       const fps = row.metrics?.fps;
@@ -62,7 +90,7 @@ export function DiagnosticsCharts({ rows }: DiagnosticsChartsProps) {
     });
   }, [rows]);
 
-  const gpuTierPie = useMemo(() => {
+  const gpuTierPie = useMemo<TierRow[]>(() => {
     const counts = new Map<string, number>();
     for (const row of rows) {
       const tier = row.metrics?.gpuTier;
@@ -72,7 +100,19 @@ export function DiagnosticsCharts({ rows }: DiagnosticsChartsProps) {
     return Array.from(counts.entries()).map(([name, value]) => ({ name, value }));
   }, [rows]);
 
-  const modeBar = useMemo(() => {
+  /**
+   * 🔑 Η **δηλωμένη** σειρά κατηγοριών, ταξινομημένη σταθερά — όχι η σειρά που
+   * έτυχε να έχουν τα δεδομένα. Διαβάζοντας τη σειρά από τις γραμμές, μια
+   * κατηγορία που έλειπε σε ένα παράθυρο 30 ημερών θα μετατόπιζε το χρώμα
+   * **όλων** των επόμενων: το ίδιο GPU tier θα άλλαζε χρώμα ανάμεσα σε δύο
+   * φορτώσεις της ίδιας οθόνης.
+   */
+  const gpuTierOrder = useMemo(
+    () => [...gpuTierPie.map((r) => r.name)].sort((a, b) => a.localeCompare(b)),
+    [gpuTierPie],
+  );
+
+  const modeBar = useMemo<ModeRow[]>(() => {
     const counts = new Map<string, number>();
     for (const row of rows) {
       const mode = row.renderMode || '?';
@@ -80,6 +120,21 @@ export function DiagnosticsCharts({ rows }: DiagnosticsChartsProps) {
     }
     return Array.from(counts.entries()).map(([mode, count]) => ({ mode, count }));
   }, [rows]);
+
+  const fpsSeries = useMemo<readonly ChartSeries<FpsRow>[]>(
+    () => [{ key: 'count', label: t('bimDiagnostics.charts.fpsHistogramCount') }],
+    [t],
+  );
+  const tierSeries = useMemo<readonly ChartSeries<TierRow>[]>(
+    () => [{ key: 'value', label: t('bimDiagnostics.charts.tierCount') }],
+    [t],
+  );
+  const modeSeries = useMemo<readonly ChartSeries<ModeRow>[]>(
+    () => [{ key: 'count', label: t('bimDiagnostics.charts.fpsHistogramCount') }],
+    [t],
+  );
+
+  const formatCount = (value: number) => String(value);
 
   if (rows.length === 0) {
     return (
@@ -93,46 +148,67 @@ export function DiagnosticsCharts({ rows }: DiagnosticsChartsProps) {
     <section className="space-y-6">
       <header className="text-sm font-semibold">{t('bimDiagnostics.charts.title')}</header>
 
-      <article>
-        <h3 className="text-xs font-medium mb-2">{t('bimDiagnostics.charts.fpsHistogram')}</h3>
-        <ResponsiveContainer width="100%" height={180}>
+      <ChartCard
+        series={fpsSeries}
+        data={fpsHistogram}
+        categoryKey="bucket"
+        categoryLabel={t('bimDiagnostics.charts.fpsHistogramAxis')}
+        formatValue={formatCount}
+      >
+        <ChartCard.Header title={t('bimDiagnostics.charts.fpsHistogram')} />
+        <ChartCard.Figure emptyMessage={t('bimDiagnostics.charts.noData')} size="sm">
           <BarChart data={fpsHistogram}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="bucket" fontSize={11} />
             <YAxis fontSize={11} />
-            <Tooltip />
-            <Bar dataKey="count" fill="hsl(var(--chart-1))" name={t('bimDiagnostics.charts.fpsHistogramCount')} />
+            <ChartCard.Tooltip />
+            <Bar dataKey="count" fill={seriesColorVar('count')} />
           </BarChart>
-        </ResponsiveContainer>
-      </article>
+        </ChartCard.Figure>
+      </ChartCard>
 
-      <article>
-        <h3 className="text-xs font-medium mb-2">{t('bimDiagnostics.charts.gpuTierPie')}</h3>
-        <ResponsiveContainer width="100%" height={180}>
+      <ChartCard
+        series={tierSeries}
+        data={gpuTierPie}
+        categoryKey="name"
+        categoryLabel={t('bimDiagnostics.charts.gpuTierLabel')}
+        categoryOrder={gpuTierOrder}
+        formatValue={formatCount}
+      >
+        <ChartCard.Header title={t('bimDiagnostics.charts.gpuTierPie')} />
+        <ChartCard.Figure emptyMessage={t('bimDiagnostics.charts.noData')} size="sm">
           <PieChart>
             <Pie data={gpuTierPie} dataKey="value" nameKey="name" outerRadius={70} label>
-              {gpuTierPie.map((entry, idx) => (
-                <Cell key={entry.name} fill={PIE_COLORS[idx % PIE_COLORS.length]} />
+              {gpuTierPie.map((entry) => (
+                <Cell
+                  key={entry.name}
+                  fill={chartCategoryColor(gpuTierOrder, entry.name)}
+                />
               ))}
             </Pie>
-            <Legend />
-            <Tooltip />
+            <ChartCard.Tooltip />
           </PieChart>
-        </ResponsiveContainer>
-      </article>
+        </ChartCard.Figure>
+      </ChartCard>
 
-      <article>
-        <h3 className="text-xs font-medium mb-2">{t('bimDiagnostics.charts.modeUsageBar')}</h3>
-        <ResponsiveContainer width="100%" height={160}>
+      <ChartCard
+        series={modeSeries}
+        data={modeBar}
+        categoryKey="mode"
+        categoryLabel={t('bimDiagnostics.charts.modeLabel')}
+        formatValue={formatCount}
+      >
+        <ChartCard.Header title={t('bimDiagnostics.charts.modeUsageBar')} />
+        <ChartCard.Figure emptyMessage={t('bimDiagnostics.charts.noData')} size="sm">
           <BarChart data={modeBar} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis type="number" fontSize={11} />
             <YAxis dataKey="mode" type="category" fontSize={11} width={80} />
-            <Tooltip />
-            <Bar dataKey="count" fill="hsl(var(--chart-3))" />
+            <ChartCard.Tooltip />
+            <Bar dataKey="count" fill={seriesColorVar('count')} />
           </BarChart>
-        </ResponsiveContainer>
-      </article>
+        </ChartCard.Figure>
+      </ChartCard>
     </section>
   );
 }

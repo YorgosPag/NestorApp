@@ -7,18 +7,24 @@
  * Stacked bar chart showing hours/week per resource.
  * Reference line at 40hrs (standard weekly capacity).
  * Follows DelayBreakdownChart pattern (raw Recharts + ReportSection).
+ *
+ * ⚠️ **ADR-710 (μετανάστευση 2026-08-01)**: ChartPlot, όχι ChartCard — το
+ * ReportSection έχει ήδη ξοδέψει κάρτα και επικεφαλίδα.
+ *
+ * 🔑 Το `chartConfig` **δεν** καταργείται: οι πόροι είναι **δυναμικοί** (ένας
+ * ανά συνεργείο) και το χρώμα τους το αποφασίζει ο υπολογιστής πάνω, όχι μια
+ * σταθερή λίστα. Άρα ταξιδεύει ως ρητό `ChartSeries.color` — που είναι
+ * ακριβώς η περίπτωση για την οποία υπάρχει το override. Ο ίδιος πίνακας
+ * δίνει και τις **ετικέτες**, οπότε δεν μένει δεύτερη δήλωση.
+ *
+ * 🔑 Ο χειρόγραφος πίνακας sr-only αφαιρέθηκε — το shell παράγει τον ίδιο,
+ * ορατό σε όλους. **Χάνεται η στήλη «Σύνολο»**: είναι **παράγωγο**, όχι σειρά
+ * του γραφήματος· εξακολουθεί να φαίνεται στο tooltip, όπου και ανήκει.
  */
 
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ReferenceLine,
-  ResponsiveContainer,
-} from "recharts";
+import { useMemo } from "react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ReferenceLine } from "recharts";
+import { ChartPlot, type ChartSeries } from "@/components/ui/chart-card";
 import { ReportSection } from "@/components/reports/core/ReportSection";
 import { ReportEmptyState } from "@/components/reports/core/ReportEmptyState";
 import { useTranslation } from "@/i18n/hooks/useTranslation";
@@ -104,6 +110,21 @@ export function ResourceHistogramChart({
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const tBase = "tabs.timeline.dashboard.resourceHistogram";
 
+  /**
+   * Η **μία** δήλωση. Το χρώμα κάθε πόρου έρχεται από το `chartConfig` επειδή
+   * οι πόροι είναι δυναμικοί — θεσιακή παλέτα θα άλλαζε απόχρωση σε κάθε
+   * φιλτράρισμα, δηλαδή η ταυτότητα θα μετακινούνταν κάτω από τον χρήστη.
+   */
+  const series = useMemo<readonly ChartSeries<ResourceHistogramBar>[]>(
+    () =>
+      resourceNames.map((name) => ({
+        key: name as Extract<keyof ResourceHistogramBar, string>,
+        label: chartConfig[name]?.label ?? name,
+        color: chartConfig[name]?.color ?? "hsl(var(--muted))",
+      })),
+    [resourceNames, chartConfig],
+  );
+
   if (!loading && data.length === 0) {
     return (
       <ReportSection
@@ -125,8 +146,18 @@ export function ResourceHistogramChart({
       tooltip={t("tabs.timeline.dashboard.tooltips.resourceHistogramTitle")}
       id="resource-histogram"
     >
-      <figure role="img" aria-label={t(`${tBase}.ariaLabel`)}>
-        <ResponsiveContainer width="100%" height={320}>
+      <ChartPlot
+        series={series}
+        data={data}
+        categoryKey="weekLabel"
+        categoryLabel={t(`${tBase}.colWeek`)}
+        formatValue={(v) => `${v}h`}
+      >
+        <ChartPlot.Figure
+          caption={t(`${tBase}.ariaLabel`)}
+          emptyMessage={t(`${tBase}.empty`)}
+          size="lg"
+        >
           <BarChart
             data={data}
             margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
@@ -151,8 +182,6 @@ export function ResourceHistogramChart({
             <Tooltip
               content={<CustomTooltip totalLabel={t(`${tBase}.total`)} />}
             />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-
             {/* Capacity reference line at 40hrs */}
             <ReferenceLine
               y={40}
@@ -171,7 +200,7 @@ export function ResourceHistogramChart({
                 key={name}
                 dataKey={name}
                 stackId="resources"
-                fill={chartConfig[name]?.color ?? "hsl(var(--muted))"}
+                fill={`var(--color-${name})`}
                 radius={
                   resourceNames.indexOf(name) === resourceNames.length - 1
                     ? [2, 2, 0, 0]
@@ -180,41 +209,8 @@ export function ResourceHistogramChart({
               />
             ))}
           </BarChart>
-        </ResponsiveContainer>
-
-        {/* Screen-reader data table */}
-        <table className="sr-only">
-          <caption>{t(`${tBase}.title`)}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{t(`${tBase}.colWeek`)}</th>
-              {resourceNames.map((name) => (
-                <th key={name} scope="col">
-                  {chartConfig[name]?.label ?? name}
-                </th>
-              ))}
-              <th scope="col">{t(`${tBase}.total`)}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((bar) => {
-              const total = resourceNames.reduce(
-                (sum, name) => sum + (Number(bar[name]) || 0),
-                0,
-              );
-              return (
-                <tr key={bar.weekLabel}>
-                  <th scope="row">{bar.weekLabel}</th>
-                  {resourceNames.map((name) => (
-                    <td key={name}>{bar[name] ?? 0}h</td>
-                  ))}
-                  <td>{Math.round(total * 10) / 10}h</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </figure>
+        </ChartPlot.Figure>
+      </ChartPlot>
     </ReportSection>
   );
 }
