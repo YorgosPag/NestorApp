@@ -16,7 +16,8 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { checkMessageAccess, MESSAGE_NOT_FOUND_MESSAGE } from '../_shared/message-ownership';
+import { readMessageDoc } from '../_shared/message-owned-doc';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
@@ -111,22 +112,30 @@ async function handleDeleteMessages(
 
   for (const messageId of body.messageIds) {
     try {
-      // Fetch message to verify ownership
-      const messageDoc = await getAdminFirestore()
-        .collection(COLLECTIONS.MESSAGES)
-        .doc(messageId)
-        .get();
+      // Fetch message to verify ownership. Η γνώση «πού ζει ένα μήνυμα»
+      // ανήκει στον πόρο, όχι σε αυτή τη διαδρομή.
+      const messageDoc = await readMessageDoc(messageId);
 
+      // Ο **γνήσιος** κλάδος παίρνει το κείμενο από την ίδια σταθερά με τον
+      // μεταμφιεσμένο: δεν υπάρχει τρόπος να αποκλίνουν (ADR-742 §7.1).
       if (!messageDoc.exists) {
         result.failed++;
-        result.errors.push({ messageId, reason: 'Message not found' });
+        result.errors.push({ messageId, reason: MESSAGE_NOT_FOUND_MESSAGE });
         continue;
       }
 
       const messageData = messageDoc.data();
 
-      // CRITICAL: Tenant isolation check
-      if (messageData?.companyId !== ctx.companyId) {
+      // CRITICAL: Tenant isolation check.
+      //
+      // 🔴 Η μεταμφίεση ακολουθεί **το σχήμα της διαδρομής** (ADR-742 §7.1 ·
+      // §7ter.5): εδώ η άρνηση είναι **στοιχείο πίνακα** μέσα σε απάντηση 200,
+      // όχι σφάλμα HTTP. Γι' αυτό καλείται η **ετυμηγορία** (PDP) και όχι ο
+      // εκτελεστής που ρίχνει — μια ρίψη θα ακύρωνε τη διαγραφή **όλης** της
+      // παρτίδας. Ο λόγος γίνεται ο **ίδιος** με του ανύπαρκτου μηνύματος·
+      // πριν έγραφε αυτολεξεί «belongs to different company».
+      if (checkMessageAccess({ messageData, caller: ctx, messageId, action: 'bulk-delete' }) === 'denied') {
+        // Το ίχνος ελέγχου κρατά την αλήθεια — η μεταμφίεση αφορά μόνο το σύρμα (§3.4).
         logger.warn('[Messages/Delete] Unauthorized delete attempt', {
           userId: ctx.uid,
           userCompany: ctx.companyId,
@@ -134,7 +143,7 @@ async function handleDeleteMessages(
           messageCompany: messageData?.companyId,
         });
         result.failed++;
-        result.errors.push({ messageId, reason: 'Unauthorized - message belongs to different company' });
+        result.errors.push({ messageId, reason: MESSAGE_NOT_FOUND_MESSAGE });
         continue;
       }
 

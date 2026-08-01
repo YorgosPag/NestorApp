@@ -6,15 +6,27 @@
  * Used by ExcelPreview component — avoids Microsoft Office Online Viewer
  * which cannot access Firebase Storage URLs.
  *
+ * 🔒 SECURITY (ADR-742 §7undecies): **μέχρι τις 2026-08-01 δεν υπήρχε ούτε
+ * δικαίωμα ούτε φύλακας ιδιοκτησίας.** Το `withAuth(handleGet)` καλούνταν χωρίς
+ * `permissions` — και το `_ctx` ήταν αχρησιμοποίητο. Δηλαδή **οποιοσδήποτε
+ * συνδεδεμένος χρήστης** απέδιδε **οποιοδήποτε** λογιστικό φύλλο του συστήματος
+ * σε HTML, δίνοντας μόνο το id. Ήταν η **χειρότερη** από τις τέσσερις διαδρομές
+ * του πόρου `file`: διαρροή περιεχομένου χωρίς κανένα φράγμα.
+ *
+ * Ο φύλακας ιδιοκτησίας μπαίνει εδώ. Το **δικαίωμα** ευθυγραμμίζεται με την
+ * αδελφική `download` (`dxf:files:view`): είναι το ίδιο ερώτημα — «επιτρέπεται
+ * να δεις το περιεχόμενο αυτού του αρχείου;» — και η προεπισκόπηση καλείται
+ * αποκλειστικά από οθόνες όπου ο χρήστης έχει ούτως ή άλλως πρόσβαση προβολής.
+ *
  * @module api/files/[fileId]/excel-preview
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
-import { getAdminFirestore, getAdminBucket } from '@/lib/firebaseAdmin';
-import { COLLECTIONS } from '@/config/firestore-collections';
+import { getAdminBucket } from '@/lib/firebaseAdmin';
 import { getErrorMessage } from '@/lib/error-utils';
+import { fileResource } from '../../_shared/file-ownership';
 import ExcelJS from 'exceljs';
 import { specByMime } from '@/config/file-types/classification-registry';
 
@@ -98,21 +110,32 @@ function buildHtml(workbook: ExcelJS.Workbook): string {
 </style></head><body>${sheets.join('')}</body></html>`;
 }
 
+/**
+ * Το **ένα** «δεν βρέθηκε» αυτής της διαδρομής — και οι δύο κλάδοι (ADR-742 §7.1).
+ */
+const fileNotFoundResponse = (): NextResponse =>
+  NextResponse.json({ error: fileResource.notFoundMessage }, { status: 404 });
+
 async function handleGet(
   _request: NextRequest,
-  _ctx: AuthContext,
+  ctx: AuthContext,
   _cache: PermissionCache,
   routeContext?: { params: Promise<{ fileId: string }> },
 ): Promise<NextResponse> {
   try {
     const { fileId } = await routeContext!.params;
 
-    const fileDoc = await getAdminFirestore().collection(COLLECTIONS.FILES).doc(fileId).get();
-    if (!fileDoc.exists) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    const owned = await fileResource.load({
+      docId: fileId,
+      caller: ctx,
+      action: 'excel-preview',
+      refusal: fileNotFoundResponse,
+    });
+    if (owned.refusal) {
+      return owned.refusal;
     }
 
-    const data = fileDoc.data();
+    const data = owned.doc.data;
     const contentType = data?.contentType as string | undefined;
     const storagePath = data?.storagePath as string | undefined;
 
@@ -143,5 +166,8 @@ async function handleGet(
   }
 }
 
-const authedHandler = withAuth(handleGet);
+// 🔴 Το `permissions` **έλειπε**: το `withAuth` ελέγχει δικαίωμα **μόνο αν του
+// δοθεί** (`middleware.ts`), οπότε η διαδρομή δεχόταν κάθε συνδεδεμένο χρήστη.
+// Ίδιο δικαίωμα με την αδελφική `download` — ίδιο ερώτημα, ίδια απάντηση.
+const authedHandler = withAuth(handleGet, { permissions: 'dxf:files:view' });
 export const GET = authedHandler;

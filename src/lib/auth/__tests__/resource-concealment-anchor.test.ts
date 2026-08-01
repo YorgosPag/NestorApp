@@ -133,10 +133,38 @@ const HALF_WRITTEN_DISGUISE = /Access denied - /;
  * `communications/share-to-channel`, πόρος `contact` σε **άλλο δέντρο** —
  * επέζησε ολόκληρης της Ομάδας 4 και βρέθηκε μόνο όταν η μορφή προστέθηκε εδώ.
  *
+ * 🔴🔴 **…και ΤΡΙΤΗ φορά, στην Ομάδα 6** (μετρημένο 2026-08-01, §7undecies). Ο
+ * ανιχνευτής απαιτούσε **κυριολεκτικά `ctx.companyId`** στο δεξί μέλος. Τρία
+ * αρχεία γράφουν τον καλούντα **αλλιώς** και ήταν **αόρατα**:
+ *
+ * | αρχείο | γραφή | γιατί χάθηκε |
+ * |---|---|---|
+ * | `procurement/[poId]/email` | `po.companyId !== auth.companyId` | `defineRoute` λέει τον καλούντα `auth` |
+ * | `procurement/[poId]/share` | `po.companyId !== auth.companyId` | ίδιο |
+ * | `showcase/generate/helpers` | `share.companyId !== params.companyId` | ο tenant ταξιδεύει μέσα σε αντικείμενο παραμέτρων |
+ *
+ * Ο κατάλογος «9 αρχεία» της Ομάδας 6 ήταν στην πραγματικότητα **12**. Το
+ * μάθημα #1 δεν είναι ρητό: κοστίζει **κάθε φορά** που δεν το θυμάσαι.
+ *
+ * ⇒ Το δεξί μέλος είναι πλέον **οποιοδήποτε αντικείμενο καλούντος**.
+ *
+ * ⚠️ **ΤΙ ΔΕΝ ΒΛΕΠΕΙ ΑΚΟΜΗ — δηλωμένο, μετρημένο, όχι παράλειψη.** Η γραφή με
+ * **γυμνό** δεξί μέλος (`data.companyId !== companyId`, όπου ο tenant είναι
+ * σκέτη παράμετρος) δίνει **21 αρχεία**, από τα οποία τα ~16 είναι **υπηρεσίες**
+ * με σιωπηλή πολιτική (`return null`) ή τυποποιημένο σφάλμα — δηλαδή ακριβώς ό,τι
+ * το §3.4 λέει ότι **οφείλει** να λέει την αλήθεια, συν καθαρά ψευδώς θετικά
+ * (`input.companyId !== undefined`). Ένα gate που μπλοκάρει το σωστό το χαλαρώνει
+ * κάποιος (§7decies.4). Τα **δύο** σημεία εκείνης της μορφής που ήταν όντως
+ * αποφάσεις αποκάλυψης (`showcase/generate/helpers:65`,
+ * `quotes/[id]/comments/[commentId]`) μεταναστεύθηκαν **με ανάγνωση**, όχι με
+ * grep. Η εκκαθάριση της παγίδας του κενού στο στρώμα υπηρεσιών είναι
+ * καταγεγραμμένη στο `pending-ratchet-work.md`.
+ *
  * *Το grep μετρά τη ΜΟΡΦΗ που έψαξες, όχι το φαινόμενο* (μάθημα #1) — και αυτό
  * ισχύει **και για το ίδιο το gate**.
  */
-const HAND_ROLLED_OWNERSHIP = /(\.companyId|\[FIELDS\.COMPANY_ID\])\s*!==\s*ctx\.companyId/;
+const HAND_ROLLED_OWNERSHIP =
+  /(\.companyId|\[FIELDS\.COMPANY_ID\])\s*!==\s*\w+(\.\w+)*\.companyId/;
 
 /**
  * **Άρνηση που ΚΑΤΟΝΟΜΑΖΕΙ τον λόγο** — η μεταμφίεση που δεν προσποιείται καν
@@ -223,17 +251,28 @@ const CONCEALED_RESOURCES = [
 /**
  * 🔴 Πόροι που **δεν** έχουν μεταναστεύσει, με **μετρημένο** αριθμό σημείων.
  *
- * Υπάρχει ώστε το πράσινο αυτού του αρχείου να μη διαβάζεται ποτέ ως «ο
- * κώδικας δεν έχει μαντεία». Όταν κλείσει η Ομάδα 4, ο αριθμός γίνεται 0 και
- * ο πόρος μετακομίζει στο {@link CONCEALED_RESOURCES}.
+ * Υπήρχε ώστε το πράσινο αυτού του αρχείου να μη διαβάζεται ποτέ ως «ο κώδικας
+ * δεν έχει μαντεία»: κάθε ομάδα σε εξέλιξη δήλωνε εδώ τα σημεία της με
+ * **ισότητα**, κι όταν έκλεινε, ο πόρος μετακόμιζε στο
+ * {@link CONCEALED_RESOURCES}.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ✅ **2026-08-01 — ΑΔΕΙΟΣ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΤΕΛΟΣ ΤΗΣ ΕΚΣΤΡΑΤΕΙΑΣ**
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Η Ομάδα 6 ήταν η τελευταία. Ο πίνακας μένει **δηλωμένα κενός** αντί να
+ * διαγραφεί, γιατί η επόμενη ομάδα (αν προκύψει νέος πόρος) γράφεται **εδώ**
+ * πριν γραφτεί ο κώδικας.
+ *
+ * ⚠️ Ο φύλακας «δεν είναι άδειος» **αντιστράφηκε** αντί να σβηστεί: όσο ο
+ * πίνακας είναι κενός, το βάρος πέφτει στο {@link HAND_ROLLED_INVENTORY}, που
+ * οφείλει να περιέχει **ακριβώς** τα δηλωμένα-εκτός. Ένα gate που απλώς
+ * διαγράφεται όταν βολεύει δεν είναι gate.
  */
-const NOT_YET_MIGRATED = [
-  { label: 'dxf level/style (Ομάδα 6)', dir: 'src/app/api/dxf-levels/', handRolledHits: 1 },
-  { label: 'floorplan (Ομάδα 6)', dir: 'src/app/api/floorplans/', handRolledHits: 2 },
-  // ⚠️ Μετρώνται **ΑΡΧΕΙΑ**, όχι σημεία: το `parking/route.ts` έχει δύο
-  // συγκρίσεις (γρ. 98 με bypass, γρ. 214 **χωρίς**) και προσμετράται ως ένα.
-  { label: 'parking (Ομάδα 6)', dir: 'src/app/api/parking/', handRolledHits: 1 },
-] as const;
+const NOT_YET_MIGRATED: ReadonlyArray<{
+  readonly label: string;
+  readonly dir: string;
+  readonly handRolledHits: number;
+}> = [];
 
 /**
  * 🔴🔴 Η **ΚΑΘΟΛΙΚΗ** απογραφή — και γιατί ο κατάλογος ανά φάκελο δεν αρκεί
@@ -249,20 +288,16 @@ const NOT_YET_MIGRATED = [
  * με **ισότητα**. Νέο αρχείο οπουδήποτε στα σαρωμένα δέντρα σπάει το gate,
  * ακόμη κι αν ο φάκελός του δεν ανήκει σε κανέναν δηλωμένο πόρο.
  *
- * Μετρημένο 2026-08-01 μετά την Ομάδα 5: **9 αρχεία, όλα Ομάδα 6**.
+ * 🔴 Μετρημένο 2026-08-01 **με τον διευρυμένο ανιχνευτή** (§7undecies): ο
+ * κατάλογος των «9 αρχείων» της Ομάδας 5 ήταν στην πραγματικότητα **12** — τα
+ * τρία ήταν αόρατα επειδή δεν έγραφαν `ctx.companyId`. Βλ.
+ * {@link HAND_ROLLED_OWNERSHIP}.
  */
 const HAND_ROLLED_INVENTORY = [
-  'src/app/api/dxf-dimension-styles/dxf-dimension-styles.handlers.ts',
-  'src/app/api/dxf-levels/dxf-levels.handlers.ts',
-  // ⛔ Δηλωμένα ΕΞΩ από τη μετανάστευση (§7ter.1): φίλτρο **λίστας** πάνω σε
-  // ήδη tenant-scoped ερώτημα — δεν είναι σημείο απόφασης αποκάλυψης.
+  // ⛔ Το **μόνο** που μένει, δηλωμένα ΕΞΩ από τη μετανάστευση (§7ter.1):
+  // φίλτρο **λίστας** πάνω σε ήδη tenant-scoped ερώτημα — δεν είναι σημείο
+  // απόφασης αποκάλυψης, δεν παράγει «όχι» και δεν μπορεί να διαρρεύσει ύπαρξη.
   'src/app/api/floorplan-overlays/floorplan-overlays.handlers.ts',
-  'src/app/api/floorplans/process/route.ts',
-  'src/app/api/floorplans/scene/route.ts',
-  'src/app/api/floors/floors.shared.ts',
-  'src/app/api/parking/route.ts',
-  'src/app/api/procurement/[poId]/pdf/route.ts',
-  'src/app/api/quotes/[id]/notify-vendor/route.ts',
 ] as const;
 
 // ============================================================================
@@ -279,6 +314,15 @@ describe('⚓ ADR-742 — ο ανιχνευτής δουλεύει (regex που
   it('η χειρόγραφη σύγκριση ιδιοκτησίας αναγνωρίζεται ακόμη', () => {
     expect(HAND_ROLLED_OWNERSHIP.test('if (!isSuperAdmin && p?.companyId !== ctx.companyId) {')).toBe(true);
     expect(HAND_ROLLED_OWNERSHIP.test('requireProjectAccess({ projectData, caller: ctx })')).toBe(false);
+  });
+
+  it('🔴 …και ΔΕΝ εξαρτάται πια από το πώς λέγεται ο καλών (§7undecies)', () => {
+    // Οι τρεις γραφές που ήταν αόρατες μέχρι τις 2026-08-01. Χωρίς αυτό το test,
+    // μια μελλοντική «απλοποίηση» του regex πίσω σε `ctx\.companyId` θα ξανάκρυβε
+    // τρία αρχεία και **κάθε άλλο test θα έμενε πράσινο**.
+    expect(HAND_ROLLED_OWNERSHIP.test("if (!po || po.companyId !== auth.companyId) notFound('PO not found');")).toBe(true);
+    expect(HAND_ROLLED_OWNERSHIP.test('if ((share as { companyId?: string }).companyId !== params.companyId) {')).toBe(true);
+    expect(HAND_ROLLED_OWNERSHIP.test('if (data?.[FIELDS.COMPANY_ID] !== caller.companyId) {')).toBe(true);
   });
 
   describe('🔴 ο μετρητής μετρά ΚΩΔΙΚΑ, όχι πρόζα (§7octies)', () => {

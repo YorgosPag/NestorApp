@@ -16,7 +16,6 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { buildRequestContext } from '@/lib/auth/auth-context';
-import { hasPermission, createPermissionCache } from '@/lib/auth/permissions';
 import { isAuthenticated } from '@/lib/auth/types';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -26,6 +25,7 @@ import {
   buildSceneResponse,
   getErrorMessage,
 } from './scene-fetcher';
+import { authorizeSceneAccess, sceneFileNotFound } from './scene-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,7 +53,9 @@ const getHandler = withStandardRateLimit(async (request: NextRequest): Promise<N
     // 1. Fetch file record (no auth needed)
     const file = await fetchFileRecord(fileId);
     if (!file) {
-      return NextResponse.json({ success: false, error: 'File not found' }, { status: 404 });
+      // Ο **γνήσιος** κλάδος «δεν βρέθηκε» — το ίδιο εργοστάσιο που καλεί και η
+      // άρνηση ιδιοκτησίας μέσα στο `authorizeSceneAccess` (ADR-742 §7.1).
+      return sceneFileNotFound();
     }
 
     // 2. Try optional auth
@@ -61,30 +63,16 @@ const getHandler = withStandardRateLimit(async (request: NextRequest): Promise<N
 
     // 3. Decide access
     if (!isAuthenticated(ctx)) {
-      // Anonymous — allowed only if project has public properties
-      const pub = await isFilePublic(file);
-      if (!pub) {
+      // Anonymous — allowed only if project has public properties. Άρνηση
+      // **ταυτότητας** (401), όχι εγγράφου: δεν μαρτυρά τίποτα για το id.
+      if (!(await isFilePublic(file))) {
         logger.warn('Anonymous access denied — no public properties in project', { fileId });
         return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
       }
       logger.info('Anonymous public access granted', { fileId });
     } else {
-      // Authenticated — tenant check first
-      if (file.companyId && file.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-        return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-      }
-
-      // Permission check — bypass for public projects
-      const cache = createPermissionCache();
-      const allowed = await hasPermission(ctx, 'floorplans:floorplans:process', {}, cache);
-      if (!allowed) {
-        const pub = await isFilePublic(file);
-        if (!pub) {
-          logger.warn('Permission denied', { email: ctx.email, fileId });
-          return NextResponse.json({ success: false, error: 'Permission denied' }, { status: 403 });
-        }
-        logger.info('Auth user with public project access granted', { email: ctx.email, fileId });
-      }
+      const refusal = await authorizeSceneAccess({ file, fileId, ctx });
+      if (refusal) return refusal;
     }
 
     // 4. Download scene

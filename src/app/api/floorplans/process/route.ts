@@ -26,6 +26,7 @@ import type {
   FirebaseAdminError,
 } from './floorplan-process.types';
 import { getFileType, downloadFile, processDxf, processPdf } from './floorplan-process.service';
+import { fileResource } from '../../files/_shared/file-ownership';
 import { nowISO } from '@/lib/date-local';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
 
@@ -33,6 +34,20 @@ const logger = createModuleLogger('FloorplanProcessRoute');
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
+
+/**
+ * Το **ένα** «δεν βρέθηκε» αυτής της διαδρομής — ADR-742 §7.1.
+ *
+ * Το καλούν **και οι δύο** κλάδοι: το αρχείο όντως λείπει, ή ανήκει αλλού και ο
+ * καλών δεν δικαιούται να το μάθει. Το `errorCode` κρατιέται γιατί ο **γνήσιος**
+ * κλάδος το έγραφε: μεταμφίεση που το παρέλειπε θα ξεχώριζε **στο σώμα**, δηλαδή
+ * θα μαρτυρούσε ακριβώς αυτό που υποτίθεται ότι κρύβει.
+ */
+const fileNotFoundResponse = (): NextResponse<ProcessFloorplanResponse> =>
+  NextResponse.json(
+    { success: false, error: fileResource.notFoundMessage, errorCode: 'FILE_NOT_FOUND' },
+    { status: 404 },
+  );
 
 /**
  * POST /api/floorplans/process
@@ -85,25 +100,24 @@ async function handleProcessFloorplan(
 
     const bucket = adminStorage.bucket(storageBucket);
 
-    // 3. FETCH FILE RECORD
-    const fileDoc = await adminDb.collection(COLLECTIONS.FILES).doc(fileId).get();
-
-    if (!fileDoc.exists) {
-      return NextResponse.json(
-        { success: false, error: 'File not found', errorCode: 'FILE_NOT_FOUND' },
-        { status: 404 }
-      );
+    // 3.+4. FETCH FILE RECORD **ΚΑΙ** TENANT ISOLATION — μία πράξη (ADR-742 §7.1)
+    //
+    // 🔄 Ήταν δύο βήματα με **δύο** ελαττώματα: το ξένο αρχείο απαντούσε
+    // `403 'Access denied'` ενώ το ανύπαρκτο `404` (μαντείο ύπαρξης, §3.3), και
+    // το `fileData.companyId &&` παρέκαμπτε **επίτηδες** τον έλεγχο για αρχεία
+    // χωρίς tenant — δηλαδή τα έδινε σε **οποιονδήποτε** (§4).
+    const owned = await fileResource.load({
+      docId: fileId,
+      caller: ctx,
+      action: 'process',
+      refusal: fileNotFoundResponse,
+      db: adminDb,
+    });
+    if (owned.refusal) {
+      return owned.refusal;
     }
 
-    const fileData = { id: fileDoc.id, ...fileDoc.data() } as FileRecordData;
-
-    // 4. TENANT ISOLATION
-    if (fileData.companyId && fileData.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      return NextResponse.json(
-        { success: false, error: 'Access denied', errorCode: 'TENANT_MISMATCH' },
-        { status: 403 }
-      );
-    }
+    const fileData = { id: owned.doc.id, ...owned.doc.data } as FileRecordData;
 
     // 5. CHECK ALREADY PROCESSED (fast path — no lock needed)
     if (fileData.processedData && !forceReprocess) {

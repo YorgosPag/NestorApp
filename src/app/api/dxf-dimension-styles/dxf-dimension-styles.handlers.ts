@@ -11,8 +11,12 @@
  * @see ADR-286 — DXF Level Creation Centralization (pattern parent)
  * @see ADR-238 — Entity Creation Centralization
  *
- * 🔒 SECURITY: tenant isolation via `companyId == ctx.companyId` (super_admin
- * bypass on read). All writes ownership-checked before mutation.
+ * 🔒 SECURITY (ADR-742 §7undecies): η ιδιοκτησία **δεν** ελέγχεται εδώ. Ο πόρος
+ * είναι **δήλωση** (`_shared/dxf-dim-style-ownership`) και οι δύο μεταλλακτικές
+ * διαδρομές φορτώνουν μέσω `dimStyleResource.load(...)`, που ενώνει
+ * φόρτωση→ύπαρξη→ιδιοκτησία σε **μία** πράξη. Ξένο στυλ και ανύπαρκτο στυλ
+ * απαντούν **πανομοιότυπα** (`404 'DXF dimension style not found'`) — ο καλών
+ * δεν μαθαίνει ότι το id υπάρχει.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -27,6 +31,7 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { safeParseBody } from '@/lib/validation/shared-schemas';
 import { generateDimStyleId } from '@/services/enterprise-id.service';
 import { DEFAULT_ACTIVE_DIM_STYLE_ID } from '@/subapps/dxf-viewer/systems/dimensions/dim-style-templates';
+import { dimStyleResource } from './_shared/dxf-dim-style-ownership';
 import {
   CreateDimStyleSchema,
   UpdateDimStyleSchema,
@@ -171,16 +176,17 @@ async function handleUpdateDxfDimStyle(
     const { _v: expectedVersion, styleId, ...body } = parsed.data;
 
     const db = getAdminFirestore();
-    const styleRef = db.collection(COLLECTIONS.DXF_DIMENSION_STYLES).doc(styleId);
-    const styleDoc = await styleRef.get();
-
-    if (!styleDoc.exists) {
-      return NextResponse.json({ success: false, error: 'DXF dimension style not found' }, { status: 404 });
-    }
-
-    const styleData = styleDoc.data();
-    if (styleData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
+    // Φόρτωση + ύπαρξη + ιδιοκτησία σε **μία** πράξη. Το `db` περνιέται ώστε το
+    // `withVersionCheck` παρακάτω να μη χρειάζεται δεύτερο στιγμιότυπο.
+    const owned = await dimStyleResource.load({
+      docId: styleId,
+      caller: ctx,
+      action: 'update',
+      refusal: dimStyleResource.notFoundResponse,
+      db,
+    });
+    if (owned.refusal) {
+      return owned.refusal as NextResponse<DxfDimStyleUpdateResponse>;
     }
 
     const updates: Record<string, unknown> = {};
@@ -322,20 +328,17 @@ export async function handleDeleteDxfDimStyle(
       return NextResponse.json({ success: false, error: 'Style ID is required' }, { status: 400 });
     }
 
-    const db = getAdminFirestore();
-    const styleRef = db.collection(COLLECTIONS.DXF_DIMENSION_STYLES).doc(styleId);
-    const styleDoc = await styleRef.get();
-
-    if (!styleDoc.exists) {
-      return NextResponse.json({ success: false, error: 'DXF dimension style not found' }, { status: 404 });
+    const owned = await dimStyleResource.load({
+      docId: styleId,
+      caller: ctx,
+      action: 'delete',
+      refusal: dimStyleResource.notFoundResponse,
+    });
+    if (owned.refusal) {
+      return owned.refusal as NextResponse<DxfDimStyleDeleteResponse>;
     }
 
-    const styleData = styleDoc.data();
-    if (styleData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
-
-    await styleRef.delete();
+    await owned.doc.ref.delete();
     logger.info('[DxfDimStyles/Delete] Style deleted', { styleId, userId: ctx.uid });
 
     return NextResponse.json({ success: true, message: `DXF dimension style "${styleId}" deleted` });

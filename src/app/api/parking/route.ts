@@ -4,11 +4,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
-import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
-import { requireBuildingInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
+import {
+  requireBuildingInTenant,
+  requireProjectInTenant,
+  TenantIsolationError,
+} from '@/lib/auth/tenant-isolation';
+import { guardParentScope } from '@/lib/api/tenant-scope-http';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
-import { requireAdminFirestore } from '@/lib/api/admin-db';
 import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import type { ParkingSpot as CanonicalParkingSpot } from '@/types/parking';
@@ -24,6 +27,9 @@ import {
 } from './_helpers';
 
 const logger = createModuleLogger('ParkingRoute');
+
+/** Το μονοπάτι όπως καταγράφεται στο ίχνος ελέγχου — ήταν γραμμένο ως literal σε δύο σημεία. */
+const PARKING_PATH = '/api/parking';
 
 const CreateParkingSchema = z.object({
   number: z.string().min(1).max(50),
@@ -87,16 +93,23 @@ export const POST = withStandardRateLimit(
         const body = parsed.data;
         const buildingId = body.buildingId?.trim() || null;
         const resolvedProjectId = body.projectId?.trim() || null;
-        // ADR-191: Open space parking (no buildingId) — verify project belongs to tenant
+        // ADR-191: Open space parking (no buildingId) — verify project belongs to tenant.
+        //
+        // 🔄 ADR-742 §7undecies: ήταν χειρόγραφο αντίγραφο του φύλακα έργου, με
+        // **δύο** ελαττώματα. (α) Ο ξένος γονέας απαντούσε `403 'Project does not
+        // belong to your company'` — άρνηση που **κατονομάζει τον λόγο**, δηλαδή
+        // επιβεβαιώνει ότι το έργο υπάρχει **και** ανήκει αλλού (§7decies.4).
+        // (β) Σκέτο `!==` ⇒ παγίδα του κενού (§4). Ρωτά πλέον τον ίδιο φύλακα με
+        // τη διαδρομή `buildingId` παρακάτω· και τα δύο «όχι» είναι `404
+        // 'Project not found'`.
         if (!buildingId && resolvedProjectId) {
-          const adminDb = requireAdminFirestore();
-          const projectDoc = await adminDb.collection(COLLECTIONS.PROJECTS).doc(resolvedProjectId).get();
-          if (!projectDoc.exists) {
-            throw new ApiError(404, 'Project not found');
-          }
-          const projectData = projectDoc.data() as Record<string, unknown>;
-          if (ctx.globalRole !== 'super_admin' && projectData.companyId !== ctx.companyId) {
-            throw new ApiError(403, 'Project does not belong to your company');
+          try {
+            await requireProjectInTenant({ ctx, projectId: resolvedProjectId, path: PARKING_PATH });
+          } catch (err) {
+            if (err instanceof TenantIsolationError) {
+              throw new ApiError(err.status, err.message);
+            }
+            throw err;
           }
         }
 
@@ -170,23 +183,14 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     // =========================================================================
 
     if (requestedBuildingId) {
-      // Direct building verification — O(1), no project chain needed
-      try {
-        await requireBuildingInTenant({
-          ctx,
-          buildingId: requestedBuildingId,
-          path: '/api/parking',
-        });
-      } catch (err) {
-        if (err instanceof TenantIsolationError) {
-          return NextResponse.json({
-            success: false,
-            error: err.code === 'NOT_FOUND' ? 'Building not found' : 'Access denied',
-            details: err.message,
-          }, { status: err.status });
-        }
-        throw err;
-      }
+      // Direct building verification — O(1), no project chain needed.
+      // Ο μετατροπέας άρνησης→απάντησης ήταν χειρόγραφο αντίγραφο του
+      // `tenantIsolationResponse` (ADR-742 §7undecies).
+      const refusal = await guardParentScope(
+        () => requireBuildingInTenant({ ctx, buildingId: requestedBuildingId, path: PARKING_PATH }),
+        'Building not found',
+      );
+      if (refusal) return refusal;
 
       logger.info('Building authorized via direct verification', { buildingId: requestedBuildingId });
 
@@ -205,15 +209,16 @@ async function handleGetParking(request: NextRequest, ctx: AuthContext): Promise
     // =========================================================================
 
     if (requestedProjectId) {
-      // Verify project belongs to tenant
-      const projectDoc = await requireAdminFirestore().collection(COLLECTIONS.PROJECTS).doc(requestedProjectId).get();
-      if (!projectDoc.exists) {
-        return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
-      }
-      const projectData = projectDoc.data() as Record<string, unknown>;
-      if (projectData.companyId !== ctx.companyId) {
-        return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-      }
+      // 🔄 ADR-742 §7undecies — **δύο δόγματα ζούσαν σε αυτό το αρχείο**: η
+      // διαδρομή POST παραπάνω είχε κλάδο bypass, αυτή **δεν είχε** — δηλαδή ο
+      // υπεργραφέας έβλεπε τα parking ενός ξένου κτηρίου αλλά όχι ενός ξένου
+      // έργου, χωρίς κανένα σημείο να δηλώνει την επιλογή. Τώρα και οι δύο
+      // ρωτούν τον **ίδιο** φύλακα, με το ίδιο 404 και για τα δύο «όχι».
+      const refusal = await guardParentScope(
+        () => requireProjectInTenant({ ctx, projectId: requestedProjectId, path: PARKING_PATH }),
+        'Project not found',
+      );
+      if (refusal) return refusal;
 
       // Get all parking with this projectId
       const parkingSpots = await fetchParkingSpotsWhere(FIELDS.PROJECT_ID, requestedProjectId);

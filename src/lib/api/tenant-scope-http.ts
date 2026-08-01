@@ -107,3 +107,40 @@ export function tenantIsolationResponse(
     { status: error.status },
   );
 }
+
+/**
+ * Τρέξε έναν φύλακα γονέα (`requireXInTenant`) και μετάτρεψε την άρνησή του σε
+ * απάντηση.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΜΕΣΑ ΣΤΟ ΚΑΘΕ ROUTE (ADR-742 §7undecies · N.0.2)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Το ίδιο `try { await guard() } catch (e) { if (e instanceof
+ * TenantIsolationError) return …; throw e }` ήταν γραμμένο **τρεις** φορές:
+ * δύο στο `floors.shared.ts` (κτήριο + έργο, ήδη ενοποιημένες μεταξύ τους) και
+ * μία στο `parking/route.ts` — όπου το σώμα του `catch` ήταν **χειρόγραφο
+ * αντίγραφο** του {@link tenantIsolationResponse}, `error.code === 'NOT_FOUND'
+ * ? … : 'Access denied'` και όλα.
+ *
+ * 🔴 Το `throw error` στο τέλος **δεν είναι διακόσμηση**: χωρίς αυτό, ένα
+ * σφάλμα βάσης θα γινόταν «δεν βρέθηκε» — δηλαδή αποτυχία που μοιάζει με
+ * κανονική απάντηση. Γραμμένο N φορές, αρκεί ένα αντίγραφο να το ξεχάσει.
+ *
+ * @param verify           Ο φύλακας — ρίχνει `TenantIsolationError` όταν αρνείται
+ * @param notFoundMessage  Τι λέμε όταν ο γονέας δεν υπάρχει **ή** δεν είναι δικός μας
+ * @returns `null` όταν ο καλών κατέχει τον γονέα, αλλιώς η απάντηση άρνησης
+ */
+export async function guardParentScope(
+  verify: () => Promise<unknown>,
+  notFoundMessage: string,
+): Promise<NextResponse<TenantIsolationErrorBody> | null> {
+  try {
+    await verify();
+    return null;
+  } catch (error) {
+    if (error instanceof TenantIsolationError) {
+      return tenantIsolationResponse(error, notFoundMessage);
+    }
+    throw error;
+  }
+}

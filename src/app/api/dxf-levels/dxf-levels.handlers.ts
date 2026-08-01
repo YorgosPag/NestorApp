@@ -23,6 +23,7 @@ import { safeParseBody } from '@/lib/validation/shared-schemas';
 // 🛡️ ADR-714 — ο ΙΔΙΟΣ pure κανόνας που επιβάλλει ο client (ADR-399). Dependency-free
 // (type-only imports), άρα ασφαλής για server bundle.
 import { isCrossFloorSceneLink } from '@/subapps/dxf-viewer/systems/levels/cross-floor-link';
+import { dxfLevelResource } from './_shared/dxf-level-ownership';
 import { CreateDxfLevelSchema, UpdateDxfLevelSchema } from './dxf-levels.schemas';
 import type {
   DxfLevelCreateResponse,
@@ -35,46 +36,31 @@ import type {
 const logger = createModuleLogger('DxfLevelsRoute');
 
 /**
- * Φόρτωσε τον όροφο ΚΑΙ βεβαιώσου ότι ανήκει στον καλούντα — η ΜΙΑ πύλη πριν από κάθε
- * τροποποίηση/διαγραφή. Ήταν αντιγραμμένη λέξη-προς-λέξη σε update + delete (N.0.2): δύο
- * αντίγραφα του ίδιου ελέγχου tenant isolation σημαίνει ότι μια μελλοντική διόρθωση μπορεί
- * να μπει στο ένα και να ξεχαστεί στο άλλο — και το ξεχασμένο είναι διαρροή δεδομένων.
+ * Φόρτωσε το επίπεδο ΚΑΙ βεβαιώσου ότι ανήκει στον καλούντα — η ΜΙΑ πύλη πριν από κάθε
+ * τροποποίηση/διαγραφή.
  *
- * Επιστρέφει είτε το `ref` (πέρασε) είτε έτοιμο `response` 404/403 (κόπηκε).
+ * 🔄 **2026-08-01 (ADR-742 §7undecies)**: το σώμα αυτής της συνάρτησης —
+ * `doc.get()` → `!exists ? 404 : ...` → σύγκριση `companyId` → `403` — ήταν
+ * **τρίτο αντίγραφο** της ίδιας αλυσίδας (τα άλλα δύο στο
+ * `dxf-dimension-styles.handlers.ts`). Τρία ελαττώματα έφυγαν **δομικά**:
+ * το ξένο επίπεδο απαντούσε **403** ενώ το ανύπαρκτο **404** (μαντείο ύπαρξης,
+ * §3.3)· η σύγκριση ήταν σκέτο `!==` (παγίδα του κενού, §4)· και ο bypass
+ * ρωτούσε **συμβολοσειρά** αντί για `isRoleBypass` (§7.4).
+ *
+ * Μένει ως λεπτό δέσιμο γιατί οι δύο καλούντες θέλουν διαφορετικό τύπο
+ * απάντησης· η **απόφαση** και η **σειρά** δεν ζουν πια εδώ.
  */
-async function loadOwnedLevelRef(
-  levelId: string,
-  ctx: AuthContext,
-): Promise<
-  | {
-      readonly ref: FirebaseFirestore.DocumentReference;
-      readonly data: FirebaseFirestore.DocumentData;
-      readonly response?: undefined;
-    }
-  | {
-      readonly ref?: undefined;
-      readonly data?: undefined;
-      readonly response: NextResponse<{ success: false; error: string }>;
-    }
-> {
-  const db = getAdminFirestore();
-  const levelRef = db.collection(COLLECTIONS.DXF_VIEWER_LEVELS).doc(levelId);
-  const levelDoc = await levelRef.get();
+async function loadOwnedLevelRef(levelId: string, ctx: AuthContext, action: string) {
+  const owned = await dxfLevelResource.load({
+    docId: levelId,
+    caller: ctx,
+    action,
+    refusal: dxfLevelResource.notFoundResponse,
+  });
 
-  if (!levelDoc.exists) {
-    return {
-      response: NextResponse.json({ success: false, error: 'DXF level not found' }, { status: 404 }),
-    };
-  }
-
-  const levelData = levelDoc.data();
-  if (levelData?.companyId !== ctx.companyId && ctx.globalRole !== 'super_admin') {
-    return {
-      response: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 }),
-    };
-  }
-
-  return { ref: levelRef, data: levelData ?? {} };
+  return owned.refusal
+    ? { response: owned.refusal, ref: undefined, data: undefined }
+    : { response: undefined, ref: owned.doc.ref, data: owned.doc.data ?? {} };
 }
 
 /**
@@ -249,7 +235,7 @@ export async function handleUpdateDxfLevel(
     }
     const { _v: expectedVersion, levelId, ...body } = parsed.data;
 
-    const owned = await loadOwnedLevelRef(levelId, ctx);
+    const owned = await loadOwnedLevelRef(levelId, ctx, 'update');
     if (owned.response) {
       return owned.response as NextResponse<DxfLevelUpdateResponse>;
     }
@@ -344,7 +330,7 @@ export async function handleDeleteDxfLevel(
       return NextResponse.json({ success: false, error: 'Level ID is required' }, { status: 400 });
     }
 
-    const owned = await loadOwnedLevelRef(levelId, ctx);
+    const owned = await loadOwnedLevelRef(levelId, ctx, 'delete');
     if (owned.response) {
       return owned.response as NextResponse<DxfLevelDeleteResponse>;
     }

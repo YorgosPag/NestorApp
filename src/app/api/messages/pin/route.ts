@@ -17,6 +17,7 @@ import { withAuth } from '@/lib/auth';
 import type { AuthContext, PermissionCache } from '@/lib/auth';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { loadOwnedMessage } from '../_shared/message-owned-doc';
 // 🔒 RATE LIMITING: STANDARD category (60 req/min)
 import { withStandardRateLimit } from '@/lib/middleware/with-rate-limit';
 import { generateRequestId } from '@/services/enterprise-id.service';
@@ -90,20 +91,13 @@ async function handlePinMessage(
     throw new ApiError(400, 'messageId and action (pin/unpin) required');
   }
 
-  // 2. Get message document
-  const messageRef = getAdminFirestore().collection(COLLECTIONS.MESSAGES).doc(messageId);
-  const messageDoc = await messageRef.get();
-
-  if (!messageDoc.exists) {
-    throw new ApiError(404, 'Message not found');
-  }
-
-  const messageData = messageDoc.data();
-
-  // 3. Validate tenant isolation
-  if (messageData?.companyId !== ctx.companyId) {
-    throw new ApiError(403, 'Access denied');
-  }
+  // 2+3. Φόρτωσε **και** κρίνε σε μία πράξη: ξένο μήνυμα είναι δυσδιάκριτο από
+  // ανύπαρκτο (ADR-742 §7decies).
+  const { ref: messageRef, data: messageData } = await loadOwnedMessage({
+    messageId,
+    caller: ctx,
+    action: 'pin',
+  });
 
   // 4. Get conversation reference
   const conversationId = messageData?.conversationId;

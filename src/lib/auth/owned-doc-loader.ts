@@ -43,8 +43,31 @@
  * πεδία που η βάση δεν εγγυάται (§7.5). Η στένωση γίνεται στον **καλούντα**,
  * ρητά και ορατά.
  *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ΔΥΟ ΜΟΡΦΕΣ ΕΠΙΒΟΛΗΣ, **ΕΝΑΣ** ΠΥΡΗΝΑΣ (ADR-742 §7undecies)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Μισές από τις διαδρομές της Ομάδας 6 **δεν ρίχνουν**: απαντούν
+ * `NextResponse.json(...)` και ο χειριστής τους πιάνει τα πάντα σε ένα `catch`
+ * που γυρίζει `500`. Ένα σφάλμα από εδώ θα γινόταν εκεί «κάτι έσπασε» αντί για
+ * «δεν βρέθηκε».
+ *
+ * ⇒ Υπάρχουν **δύο ονομασμένες** εξαγωγές — {@link loadOwnedDoc} (ρίχνει) και
+ * {@link loadOwnedDocOrRefusal} (επιστρέφει) — πάνω σε **έναν** πυρήνα
+ * ({@link fetchExistingDoc}). Η σειρά *φόρτωσε→υπάρχει;→δικό μου;* γράφεται
+ * **μία** φορά και ισχύει και στις δύο.
+ *
+ * ⚠️ **Δύο εξαγωγές, ΟΧΙ μία με σημαία.** Ένας φορτωτής που «ρίχνει ή
+ * επιστρέφει ανάλογα με boolean» θα ήταν ακριβώς η boolean σε κλήση ασφαλείας
+ * που απαγορεύει το §3.2 — και ο επόμενος συντάκτης θα την περνούσε λάθος.
+ * Ίδιο σκεπτικό με τα δύο exports του `contact-preview-route`.
+ *
+ * 🔴 Ούτε η **ετυμηγορία** εκφυλίζεται σε boolean: η μορφή που επιστρέφει
+ * δέχεται `decide()` που παράγει τις **τρεις ονομασμένες καταστάσεις**
+ * ({@link ResourceAccessVerdict}), ώστε το μελλοντικό JIT elevation να βλέπει
+ * το `'cross-tenant-bypass'` και από αυτό το μονοπάτι.
+ *
  * @module lib/auth/owned-doc-loader
- * @see ADR-742 §7.1 (η ταυτότητα είναι δομική) · §7sexies · §7octies
+ * @see ADR-742 §7.1 (η ταυτότητα είναι δομική) · §7sexies · §7octies · §7undecies
  */
 
 import 'server-only';
@@ -52,10 +75,17 @@ import 'server-only';
 import type { DocumentData, DocumentReference, Firestore } from 'firebase-admin/firestore';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import type { ResourceAccessVerdict } from './resource-ownership-guard';
 
 const logger = createModuleLogger('OwnedDocLoader');
 
-export interface LoadOwnedDocSpec {
+/**
+ * Πού ζει το έγγραφο — το κοινό μέρος **και των δύο** μορφών επιβολής.
+ *
+ * Δηλώνεται χωριστά ώστε ο πυρήνας ({@link fetchExistingDoc}) να μη γνωρίζει
+ * τίποτα για το τι συμβαίνει όταν η απάντηση είναι «όχι».
+ */
+export interface OwnedDocLocator {
   /** Η συλλογή του πόρου — πάντα από το `COLLECTIONS` SSoT του καλούντος. */
   readonly collection: string;
   readonly docId: string;
@@ -63,9 +93,18 @@ export interface LoadOwnedDocSpec {
   readonly action: string;
   /**
    * Ανθρώπινο όνομα πόρου για τα logs (π.χ. `'Contact'`). **Μόνο** για logs:
-   * ό,τι φεύγει στο σύρμα το παράγει το {@link LoadOwnedDocSpec.notFound}.
+   * ό,τι φεύγει στο σύρμα το παράγει το πεδίο ορισμού.
    */
   readonly resourceLabel: string;
+  /**
+   * Η ήδη ανοιγμένη σύνδεση, όταν ο καλών τη χρειάζεται **και** μετά (π.χ. ο
+   * χειριστής διαγραφής τη δίνει στη μηχανή soft-delete). Χωρίς αυτό θα
+   * άνοιγαν δύο στιγμιότυπα για το ίδιο αίτημα.
+   */
+  readonly db?: Firestore;
+}
+
+export interface LoadOwnedDocSpec extends OwnedDocLocator {
   /**
    * Το εργοστάσιο «δεν βρέθηκε» του πεδίου ορισμού. Καλείται **μόνο** όταν το
    * έγγραφο όντως λείπει· την άρνηση ιδιοκτησίας τη ρίχνει ο
@@ -80,12 +119,30 @@ export interface LoadOwnedDocSpec {
    * ώστε αυτό το module να μη γνωρίζει τίποτα για ταυτότητες.
    */
   readonly assertOwned: (data: DocumentData | undefined) => void;
+}
+
+/**
+ * Η μορφή για τις διαδρομές που **επιστρέφουν** την άρνηση αντί να τη ρίξουν.
+ *
+ * @typeParam R Ό,τι απαντά η διαδρομή — συνήθως `NextResponse<…>`. Το module
+ *   δεν το γνωρίζει· έτσι μένει καθαρό από `next/server`.
+ */
+export interface LoadOwnedDocRefusalSpec<R> extends OwnedDocLocator {
   /**
-   * Η ήδη ανοιγμένη σύνδεση, όταν ο καλών τη χρειάζεται **και** μετά (π.χ. ο
-   * χειριστής διαγραφής τη δίνει στη μηχανή soft-delete). Χωρίς αυτό θα
-   * άνοιγαν δύο στιγμιότυπα για το ίδιο αίτημα.
+   * **Η απόφαση (PDP)** του πεδίου ορισμού — ολική, χωρίς ρίψη. Τρεις
+   * ονομασμένες καταστάσεις· μόνο η `'denied'` κόβει.
+   *
+   * ⚠️ **Όχι boolean** (§3.2): η `'cross-tenant-bypass'` πρέπει να παραμείνει
+   * ορατή, γιατί είναι το σημείο εισόδου του μελλοντικού JIT elevation.
    */
-  readonly db?: Firestore;
+  readonly decide: (data: DocumentData | undefined) => ResourceAccessVerdict;
+  /**
+   * Το **ένα** «όχι» της διαδρομής. Το καλούν **και οι δύο** κλάδοι — γνήσια
+   * απουσία **και** άρνηση ιδιοκτησίας — με **μηδέν ορίσματα**: δεν υπάρχει
+   * τιμή που θα μπορούσε να τους διαφοροποιήσει, άρα δεν υπάρχει τρόπος να
+   * αποκλίνουν χωρίς να αλλάξει **αυτή** η γραμμή (ADR-742 §7.1).
+   */
+  readonly refusal: () => R;
 }
 
 /** Ό,τι έχει στα χέρια του ο καλών **αφού** ο φύλακας έχει αποφανθεί. */
@@ -98,11 +155,26 @@ export interface OwnedDoc {
 }
 
 /**
- * Διαβάζει το έγγραφο και **αμέσως** το κρίνει. Και τα δύο «όχι» — γνήσια
- * απουσία **και** άρνηση ιδιοκτησίας — βγαίνουν από το εργοστάσιο του πεδίου
- * ορισμού, οπότε ο καλών δεν μπορεί να τα ξεχωρίσει σε κανένα πεδίο του σύρματος.
+ * Το αποτέλεσμα της μορφής που **δεν** ρίχνει.
+ *
+ * Διακριτή ένωση, ώστε ο καλών να μην μπορεί να διαβάσει το έγγραφο χωρίς να
+ * έχει πρώτα απαντήσει στο `refusal`: το `doc` **δεν υπάρχει** στον τύπο του
+ * κλάδου άρνησης.
  */
-export async function loadOwnedDoc(spec: LoadOwnedDocSpec): Promise<OwnedDoc> {
+export type OwnedDocOutcome<R> =
+  | { readonly doc: OwnedDoc; readonly refusal?: undefined }
+  | { readonly doc?: undefined; readonly refusal: R };
+
+/**
+ * Ο **πυρήνας**: φέρε το έγγραφο, απάντησε «υπάρχει;».
+ *
+ * 🔴 **Ο έλεγχος ύπαρξης ΔΕΝ είναι πλεονασμός του φύλακα** (μάθημα #8): για
+ * μη-bypass καλούντα συμπίπτουν, αλλά για τον **υπεργραφέα** ο φύλακας λέει
+ * «πέρνα», οπότε **μόνο** αυτός ο έλεγχος τον σταματά — αλλιώς κατεβαίνει
+ * **φάντασμα εγγράφου** (`data: undefined`). Γι' αυτό ζει **εδώ**, πριν από
+ * κάθε μορφή επιβολής, και δεν παραμετροποιείται.
+ */
+async function fetchExistingDoc(spec: OwnedDocLocator): Promise<OwnedDoc | null> {
   const { collection, docId, action, resourceLabel } = spec;
 
   const ref = (spec.db ?? getAdminFirestore()).collection(collection).doc(docId);
@@ -110,11 +182,48 @@ export async function loadOwnedDoc(spec: LoadOwnedDocSpec): Promise<OwnedDoc> {
 
   if (!snap.exists) {
     logger.info(`${resourceLabel} not found`, { action, docId });
+    return null;
+  }
+
+  return { id: snap.id, ref, data: snap.data() };
+}
+
+/**
+ * Διαβάζει το έγγραφο και **αμέσως** το κρίνει. Και τα δύο «όχι» — γνήσια
+ * απουσία **και** άρνηση ιδιοκτησίας — βγαίνουν από το εργοστάσιο του πεδίου
+ * ορισμού, οπότε ο καλών δεν μπορεί να τα ξεχωρίσει σε κανένα πεδίο του σύρματος.
+ */
+export async function loadOwnedDoc(spec: LoadOwnedDocSpec): Promise<OwnedDoc> {
+  const found = await fetchExistingDoc(spec);
+
+  if (found === null) {
     throw spec.notFound();
   }
 
-  const data = snap.data();
-  spec.assertOwned(data);
+  spec.assertOwned(found.data);
 
-  return { id: snap.id, ref, data };
+  return found;
+}
+
+/**
+ * Η **ίδια** αλυσίδα για τις διαδρομές που απαντούν αντί να ρίχνουν.
+ *
+ * Η άρνηση δεν είναι σφάλμα εδώ — είναι **τιμή**: ο καλών γράφει
+ * `if (outcome.refusal) return outcome.refusal;` και ο τύπος τον υποχρεώνει να
+ * το κάνει πριν αγγίξει το `doc`.
+ */
+export async function loadOwnedDocOrRefusal<R>(
+  spec: LoadOwnedDocRefusalSpec<R>,
+): Promise<OwnedDocOutcome<R>> {
+  const found = await fetchExistingDoc(spec);
+
+  if (found === null) {
+    return { refusal: spec.refusal() };
+  }
+
+  if (spec.decide(found.data) === 'denied') {
+    return { refusal: spec.refusal() };
+  }
+
+  return { doc: found };
 }

@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import type { AuthContext } from '@/lib/auth';
-import { requireBuildingInTenant, requireProjectInTenant, TenantIsolationError } from '@/lib/auth/tenant-isolation';
-import { isRoleBypass } from '@/lib/auth/roles';
+import { requireBuildingInTenant, requireProjectInTenant } from '@/lib/auth/tenant-isolation';
 import {
   resolveTenantListScopeFromUrl,
   resolveTenantScopeFromUrl,
@@ -11,7 +10,8 @@ import {
   type TenantScope,
 } from '@/lib/auth/tenant-scope';
 import { tenantScopedCollection } from '@/lib/firestore/tenant-scoped-query';
-import { tenantIsolationResponse } from '@/lib/api/tenant-scope-http';
+import { guardParentScope } from '@/lib/api/tenant-scope-http';
+import { floorResource } from './_shared/floor-ownership';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { normalizeProjectIdForQuery } from '@/utils/firestore-helpers';
 import type { FloorDocument, FloorsListResponse } from './floors.types';
@@ -132,7 +132,17 @@ export interface LoadedFloor {
  * own tenant's floors by code that looked correct. One copy now, asking the
  * roles SSoT.
  *
- * The document is returned rather than re-fetched, so this costs no extra read.
+ * 🔄 **2026-08-01 (ADR-742 §7undecies)**: η αλυσίδα και η απόφαση μετακόμισαν
+ * στη **δήλωση** του πόρου ({@link floorResource}). Δύο πράγματα άλλαξαν στη
+ * συμπεριφορά:
+ *
+ * - Ο **ξένος** όροφος απαντά πλέον `404 'Floor not found'`, όχι
+ *   `403 'Unauthorized'` — ο καλών δεν ξεχωρίζει τον ξένο από τον ανύπαρκτο
+ *   (§3.3). Το ίχνος ελέγχου κρατά την αλήθεια (§3.4).
+ * - Όροφος **χωρίς** `companyId` δεν ανήκει σε κανέναν κανονικό χρήστη: η
+ *   σύγκριση περνά από `isPayloadOwnedByCompany` (§4).
+ *
+ * Η υπογραφή **δεν άλλαξε** — οι δύο χειριστές δεν αγγίχτηκαν.
  *
  * @returns the loaded floor, or the response to send instead
  */
@@ -141,41 +151,13 @@ export async function loadFloorInTenant(
   floorId: string,
   ctx: AuthContext,
 ): Promise<LoadedFloor | NextResponse> {
-  const ref = db.collection(COLLECTIONS.FLOORS).doc(floorId);
-  const snapshot = await ref.get();
+  const owned = await floorResource.load({
+    docId: floorId,
+    caller: ctx,
+    action: 'mutate',
+    refusal: floorResource.notFoundResponse,
+    db,
+  });
 
-  if (!snapshot.exists) {
-    return NextResponse.json({ success: false, error: 'Floor not found' }, { status: 404 });
-  }
-
-  const data = snapshot.data() ?? {};
-  if (data.companyId !== ctx.companyId && !isRoleBypass(ctx.globalRole)) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-  }
-
-  return { ref, data };
-}
-
-/**
- * Run a parent-ownership guard, converting its refusal into a response.
- *
- * One function for both parents: building and project differed only in which
- * guard ran and which noun the 404 used, and writing that twice is how the two
- * copies drift apart.
- *
- * @returns `null` when the caller owns the parent, a refusal response otherwise
- */
-async function guardParentScope(
-  verify: () => Promise<unknown>,
-  notFoundMessage: string,
-): Promise<NextResponse<FloorsListResponse> | null> {
-  try {
-    await verify();
-    return null;
-  } catch (error) {
-    if (error instanceof TenantIsolationError) {
-      return tenantIsolationResponse(error, notFoundMessage);
-    }
-    throw error;
-  }
+  return owned.refusal ?? { ref: owned.doc.ref, data: owned.doc.data ?? {} };
 }
