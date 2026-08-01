@@ -55,15 +55,33 @@ export const storage = getStorage(app);
 // When NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true, client SDK connects to local emulators.
 // This keeps production Firestore safe during QA test runs.
 // The Admin SDK auto-detects FIRESTORE_EMULATOR_HOST — no code needed there.
-if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+// ⚠️ ADR-745 Φάση Γ: κάθε σύνδεση σε **δικό της** try, και η αποτυχία **μιλάει**.
+// Πριν, οι τρεις κλήσεις ήταν σε ένα try με `catch {}` χωρίς κανένα log. Αν έσκαγε
+// η πρώτη (Firestore), η δεύτερη (**Auth**) δεν εκτελούνταν ποτέ — και ο client
+// συνέχιζε να μιλά στην **παραγωγή** ενώ το flag έλεγε «emulator». Το σύμπτωμα
+// έφτανε στον χρήστη ως «Λάθος κωδικός πρόσβασης» (ο demo χρήστης υπάρχει μόνο
+// στον emulator), δηλαδή ως λάθος **διαπιστευτηρίων** ενώ ήταν λάθος **προορισμού**.
+// Ένα dev flag που σιωπηλά γράφει στην παραγωγή δεν είναι θέμα άνεσης· είναι κίνδυνος.
+function connectEmulatorOrReport(label: string, connect: () => void): void {
   try {
-    connectFirestoreEmulator(db, 'localhost', 8080);
-    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
-    connectStorageEmulator(storage, 'localhost', 9199);
-    console.log('🔧 Firebase Emulators connected (Firestore:8080, Auth:9099, Storage:9199)');
-  } catch {
-    // Already connected — ignore (happens on HMR re-renders)
+    connect();
+    console.log(`🔧 Firebase ${label} emulator connected`);
+  } catch (error) {
+    // Το `already-connected` σε HMR είναι αναμενόμενο και ακίνδυνο — αλλά τυπώνεται
+    // κι αυτό. Καλύτερα ένας θόρυβος στο dev παρά μια σιωπή που δείχνει στην παραγωγή.
+    console.warn(
+      `⚠️ Firebase ${label} emulator NOT connected — ο client μιλά στην ΠΑΡΑΓΩΓΗ γι' αυτό το προϊόν.`,
+      error,
+    );
   }
+}
+
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
+  connectEmulatorOrReport('Firestore', () => connectFirestoreEmulator(db, 'localhost', 8080));
+  connectEmulatorOrReport('Auth', () =>
+    connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true }),
+  );
+  connectEmulatorOrReport('Storage', () => connectStorageEmulator(storage, 'localhost', 9199));
 }
 
 export default app;
