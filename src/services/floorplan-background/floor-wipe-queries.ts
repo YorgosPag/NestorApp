@@ -19,6 +19,7 @@ import type { Firestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
 const logger = createModuleLogger('FloorWipeQueries');
 
@@ -94,7 +95,10 @@ export async function loadFileRows(
       const snap = await db.collection(COLLECTIONS.FILES).doc(id).get();
       if (!snap.exists) return null;
       const data = snap.data() as { companyId?: string; storagePath?: string };
-      if (data.companyId !== companyId) {
+      // ADR-742 §4 — αρχείο **χωρίς** μισθωτή δεν ανήκει σε κανέναν, άρα δεν
+      // σβήνεται από κανέναν. Σε **wipe** η κατεύθυνση του σφάλματος έχει
+      // σημασία: fail-closed είναι παράλειψη, fail-open είναι απώλεια δεδομένων.
+      if (!isPayloadOwnedByCompany(data, companyId)) {
         logger.warn('Cross-tenant file skipped during wipe', { fileId: id });
         return null;
       }
@@ -145,7 +149,9 @@ export async function loadFloorProjectId(
     const snap = await db.collection(COLLECTIONS.FLOORS).doc(floorId).get();
     if (!snap.exists) return null;
     const data = snap.data() as { companyId?: string; projectId?: string };
-    if (data.companyId && data.companyId !== companyId) {
+    // 🔴 ADR-742 §4 — ρητή παγίδα κενού (`data.companyId && …`): όροφος χωρίς
+    // μισθωτή περνούσε για **οποιονδήποτε**, και το `projectId` του διέρρεε.
+    if (!isPayloadOwnedByCompany(data, companyId)) {
       logger.warn('Cross-tenant floor doc skipped during wipe', { floorId });
       return null;
     }

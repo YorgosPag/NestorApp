@@ -24,6 +24,7 @@ import { resolveShowcaseCompanyBranding } from '@/services/company/company-brand
 import { loadShowcaseRelations, buildPropertyShowcaseSnapshot } from './snapshot-builder';
 import { loadShowcasePdfLabels } from './labels';
 import { buildTelegramTextDigest } from './telegram-text-digest';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
 const logger = createModuleLogger('ShowcaseTextDigestLoader');
 
@@ -44,7 +45,9 @@ export async function loadShowcaseTextDigest(
   const propertyDoc = await adminDb.collection(COLLECTIONS.PROPERTIES).doc(propertyId).get();
   if (!propertyDoc.exists) return [];
   const property = (propertyDoc.data() ?? {}) as Record<string, unknown>;
-  if ((property as { companyId?: string }).companyId !== companyId) return [];
+  // ADR-742 §4 — το `as { companyId?: string }` είναι **ισχυρισμός**, όχι
+  // εγγύηση· η σιωπηλή πολιτική (`[]`) είναι σωστή, η σύγκριση δεν ήταν.
+  if (!isPayloadOwnedByCompany(property, companyId)) return [];
 
   const branding = await resolveShowcaseCompanyBranding({
     adminDb, propertyData: property, companyId,
