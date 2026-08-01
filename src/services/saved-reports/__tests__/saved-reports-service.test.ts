@@ -720,5 +720,60 @@ describe('SavedReportsService', () => {
         expect(result).toBeFalsy();
       },
     );
+
+    /**
+     * 🔴🔴 ADR-742 §4 — **η παγίδα του κενού**, και γιατί το test από πάνω
+     * ΔΕΝ την πιάνει (μετρημένο 2026-08-01 με μετάλλαξη που **επέζησε**).
+     *
+     * Το test από πάνω δίνει **υπαρκτό** ξένο μισθωτή (`comp_HACKER`). Με
+     * σκέτο `data?.companyId !== companyId` αυτό περνά — και περνούσε.
+     * Η **μόνη** είσοδος που ξεχωρίζει τις δύο εκδοχές είναι το ζεύγος
+     * **κενό/κενό**: αναφορά αποθηκευμένη χωρίς μισθωτή και καλών με
+     * χαλασμένο token (κενό `companyId`) **ταιριάζουν** στην αφελή σύγκριση.
+     * *Το κενό δεν είναι μισθωτής· είναι **απουσία** μισθωτή.*
+     *
+     * ⚠️ Ελέγχεται και η **παρενέργεια**, όχι μόνο η επιστροφή: το
+     * `trackReportRun` επιστρέφει `void`, άρα το `toBeFalsy()` του είναι
+     * **πάντα** πράσινο — η μόνη παρατηρήσιμη διαφορά είναι ότι δεν έγραψε.
+     * Ίδιο σχήμα με το μάθημα «κανένας παραβάτης» ≡ «καμία μέτρηση».
+     */
+    test.each(operations)(
+      '🔴 $name μπλοκάρει όταν ΚΑΝΕΝΑΣ από τους δύο δεν έχει μισθωτή (κενό ≠ μισθωτής)',
+      async ({ fn }) => {
+        const doc = makeSavedReport({ id: 'srpt_001', createdBy: 'user_A', companyId: '' });
+        const { ref } = setupSingleDocMock(doc);
+
+        const result = await fn('');
+
+        expect(result).toBeFalsy();
+        expect(ref.update).not.toHaveBeenCalled();
+        expect(ref.delete).not.toHaveBeenCalled();
+      },
+    );
+
+    /**
+     * 🔴 ADR-232 — έγγραφο **χωρίς** `companyId` δεν ανήκει σε κανέναν.
+     *
+     * Δεν σκοτώνει τη μετάλλαξη του σκέτου `!==` (εκείνο τυχαίνει να μπλοκάρει
+     * κι αυτό), αλλά καρφώνει τη **σωστή** συμπεριφορά απέναντι στη
+     * «βελτιστοποίηση» που έχει ήδη εμφανιστεί **τέσσερις φορές** μέσα σε αυτό
+     * το ADR: `data?.companyId && data.companyId !== companyId`, που αφήνει
+     * έγγραφο χωρίς μισθωτή να περάσει για **οποιονδήποτε** (§7quinquies,
+     * §7octies, §7decies.4).
+     */
+    test.each(operations)(
+      '🔴 $name μπλοκάρει αναφορά ΧΩΡΙΣ μισθωτή, ακόμη και σε κανονικό καλούντα',
+      async ({ fn }) => {
+        const doc = makeSavedReport({ id: 'srpt_001', createdBy: 'user_A' });
+        delete (doc as { companyId?: string }).companyId;
+        const { ref } = setupSingleDocMock(doc);
+
+        const result = await fn('comp_001');
+
+        expect(result).toBeFalsy();
+        expect(ref.update).not.toHaveBeenCalled();
+        expect(ref.delete).not.toHaveBeenCalled();
+      },
+    );
   });
 });

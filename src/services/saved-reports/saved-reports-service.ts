@@ -9,6 +9,8 @@
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
+import { loadOwnedDocOrRefusal, type OwnedDoc } from '@/lib/auth/owned-doc-loader';
 import { EnterpriseIdService } from '@/services/enterprise-id.service';
 import type {
   SavedReport,
@@ -19,6 +21,46 @@ import type {
 import { nowISO } from '@/lib/date-local';
 
 const idService = new EnterpriseIdService();
+
+/**
+ * 🔴 **Η αλυσίδα «φόρτωσε → υπάρχει; → δικό μου;», μία φορά** (N.18 · CHECK 3.28)
+ *
+ * Πέντε διαδρομές αυτού του αρχείου την έγραφαν χωριστά. Μόλις η σύγκριση
+ * ενοποιήθηκε στον SSoT (ADR-742 §4), οι δύο από αυτές έγιναν **κειμενικά
+ * ταυτόσημες** και το `jscpd` τις μέτρησε ως κλώνο **μέσα στο ίδιο diff** —
+ * *η κεντρικοποίηση γεννάει τον κλώνο*, πέμπτη μετρημένη φορά στην εκστρατεία
+ * (μάθημα #2). Η απάντηση είναι **πραγματική μείωση ευθύνης**, όχι χαλάρωση
+ * του gate.
+ *
+ * ⚠️ Χρησιμοποιεί τον **υπάρχοντα** SSoT ({@link loadOwnedDocOrRefusal}) και
+ * **όχι** δικό του αντίγραφο: ένας τοπικός φορτωτής θα ήταν ακριβώς το
+ * «δίδυμο κεντρικοποιητή» που ο ίδιος ο SSoT υπάρχει για να αποτρέψει.
+ *
+ * 🔑 **Γιατί ΟΧΙ `createOwnershipDecision`**: η υπογραφή αυτής της υπηρεσίας
+ * φέρει `companyId`, **όχι καλούντα** — δεν υπάρχει `globalRole` να κριθεί.
+ * *Ρόλος που δεν υπάρχει στην υπογραφή δεν κρίνεται* (ADR-742 §7undecies.3):
+ * κατασκευασμένος καλών θα έμοιαζε με απόφαση ενώ θα ήταν μαντεψιά. Άρα η
+ * ετυμηγορία εδώ έχει **δύο** καταστάσεις — ποτέ `'cross-tenant-bypass'`.
+ *
+ * Επιστρέφει `null` και για τις δύο αρνήσεις (ανύπαρκτο **και** ξένο): αυτή
+ * είναι η σιωπηλή πολιτική που το αρχείο είχε ήδη, και **δεν μαρτυρά ύπαρξη**.
+ */
+async function loadOwnedReport(
+  companyId: string,
+  reportId: string,
+  action: string,
+): Promise<OwnedDoc | null> {
+  const outcome = await loadOwnedDocOrRefusal<null>({
+    collection: COLLECTIONS.SAVED_REPORTS,
+    docId: reportId,
+    action,
+    resourceLabel: 'Saved report',
+    decide: (data) => (isPayloadOwnedByCompany(data, companyId) ? 'owned' : 'denied'),
+    refusal: () => null,
+  });
+
+  return outcome.doc ?? null;
+}
 
 // ============================================================================
 // CREATE
@@ -66,18 +108,13 @@ export async function getSavedReport(
   companyId: string,
   reportId: string,
 ): Promise<SavedReport | null> {
-  const db = getAdminFirestore();
-  const snap = await db
-    .collection(COLLECTIONS.SAVED_REPORTS)
-    .doc(reportId)
-    .get();
+  // 🔴 ADR-742 §4 — **η παγίδα του κενού**. Μέχρι τις 2026-08-01 η σύγκριση ήταν
+  // σκέτο `!==`: αναφορά **χωρίς** μισθωτή (ή με κενό) και καλών με χαλασμένο
+  // token **ταίριαζαν**. Το κενό δεν είναι μισθωτής, είναι **απουσία** μισθωτή.
+  const doc = await loadOwnedReport(companyId, reportId, 'getSavedReport');
+  if (doc === null) return null;
 
-  if (!snap.exists) return null;
-
-  const data = snap.data();
-  if (data?.companyId !== companyId) return null;
-
-  return docToSavedReport(data);
+  return docToSavedReport(doc.data);
 }
 
 /** List saved reports for a user (respecting visibility rules) */
@@ -138,15 +175,11 @@ export async function updateSavedReport(
   userId: string,
   input: UpdateSavedReportInput,
 ): Promise<SavedReport | null> {
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.SAVED_REPORTS).doc(reportId);
-  const snap = await ref.get();
+  const doc = await loadOwnedReport(companyId, reportId, 'updateSavedReport');
+  if (doc === null) return null;
 
-  if (!snap.exists) return null;
-
-  const data = snap.data();
-  if (data?.companyId !== companyId) return null;
-  if (data.createdBy !== userId && data.visibility !== 'system') return null;
+  const { ref, data } = doc;
+  if (data?.createdBy !== userId && data?.visibility !== 'system') return null;
 
   const updates: Record<string, unknown> = {
     updatedAt: nowISO(),
@@ -170,16 +203,11 @@ export async function toggleFavorite(
   reportId: string,
   userId: string,
 ): Promise<boolean> {
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.SAVED_REPORTS).doc(reportId);
-  const snap = await ref.get();
+  const doc = await loadOwnedReport(companyId, reportId, 'toggleFavorite');
+  if (doc === null) return false;
 
-  if (!snap.exists) return false;
-
-  const data = snap.data();
-  if (data?.companyId !== companyId) return false;
-
-  const favoritedBy: string[] = data.favoritedBy ?? [];
+  const { ref, data } = doc;
+  const favoritedBy: string[] = data?.favoritedBy ?? [];
   const isFavorited = favoritedBy.includes(userId);
 
   if (isFavorited) {
@@ -200,14 +228,11 @@ export async function trackReportRun(
   companyId: string,
   reportId: string,
 ): Promise<void> {
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.SAVED_REPORTS).doc(reportId);
-  const snap = await ref.get();
+  const doc = await loadOwnedReport(companyId, reportId, 'trackReportRun');
+  if (doc === null) return;
 
-  if (!snap.exists) return;
-  if (snap.data()?.companyId !== companyId) return;
-
-  const currentCount = (snap.data()?.runCount as number) ?? 0;
+  const { ref, data } = doc;
+  const currentCount = (data?.runCount as number) ?? 0;
   await ref.update({
     lastRunAt: nowISO(),
     runCount: currentCount + 1,
@@ -224,16 +249,16 @@ export async function deleteSavedReport(
   reportId: string,
   userId: string,
 ): Promise<boolean> {
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.SAVED_REPORTS).doc(reportId);
-  const snap = await ref.get();
+  // ⚠️ Boy Scout: η άρνηση ιδιοκτησίας εδώ επέστρεφε `null as unknown as boolean`
+  // — **ψέμα στον τύπο** (απαγορευμένο `as`, ενώ η υπογραφή υπόσχεται `boolean`).
+  // Ο μόνος καλών ρωτά `if (!success)` και το test ζητούσε ρητά `toBeFalsy()`,
+  // οπότε το `false` είναι **ισοδύναμο στη συμπεριφορά** και ειλικρινές στον τύπο.
+  const doc = await loadOwnedReport(companyId, reportId, 'deleteSavedReport');
+  if (doc === null) return false;
 
-  if (!snap.exists) return false;
-
-  const data = snap.data();
-  if (data?.companyId !== companyId) return null as unknown as boolean;
-  if (data.visibility === 'system') return false; // System reports cannot be deleted
-  if (data.createdBy !== userId) return false; // Only owner can delete
+  const { ref, data } = doc;
+  if (data?.visibility === 'system') return false; // System reports cannot be deleted
+  if (data?.createdBy !== userId) return false; // Only owner can delete
 
   await ref.delete();
   return true;

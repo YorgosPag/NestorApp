@@ -22,6 +22,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getCompanyWidePolicyAdmin, getProjectPolicyAdmin } from '@/services/assignment/AssignmentPolicyRepository';
 import { resolveTaskDueInHours } from '@/services/assignment/AssignmentPolicyService';
 import { logCommunicationApproved, logCommunicationRejected } from '@/lib/auth/audit';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 import { normalizeToISO, nowISO } from '@/lib/date-local';
 import type { AuthContext } from '@/lib/auth/types';
 
@@ -62,6 +63,66 @@ function buildActionErrorMetadata(params: {
   };
 }
 
+/**
+ * 🔴 **Άνοιξε την επικοινωνία — αν επιτρέπεται**: συμφραζόμενα → ύπαρξη →
+ * ιδιοκτησία, **μία φορά** για το approve και το reject (N.18 · CHECK 3.28)
+ *
+ * Boy Scout (N.0.2): οι δύο διαδρομές έγραφαν την ίδια **τετράδα** — έλεγχο
+ * συμφραζομένων, άνοιγμα εγγράφου, έλεγχο ύπαρξης, έλεγχο μισθωτή — με μόνη
+ * διαφορά το **όνομα της πράξης** μέσα στο μήνυμα καταγραφής. Προϋπάρχουσα
+ * διπλοτυπία που την αποκάλυψε το `jscpd` μόλις άλλαξε το αρχείο.
+ *
+ * 🔑 Το κέρδος δεν είναι οι γραμμές: με δύο αντίγραφα, **η σειρά** ύπαρξη →
+ * ιδιοκτησία μπορούσε να αποκλίνει σε ένα από τα δύο χωρίς κανένα test να το
+ * δει (ADR-742 §7.1 — *ο κίνδυνος δεν είναι οι γραμμές, είναι η ΣΕΙΡΑ*).
+ *
+ * ⚠️ Το ίχνος ελέγχου **κρατά την αλήθεια** («belongs to different company»):
+ * εκεί οφείλει (§3.4). Ό,τι φεύγει στον καλούντα είναι μόνο ο **κωδικός**.
+ */
+async function openOwnedCommunication(spec: {
+  readonly action: string;
+  readonly communicationId: string;
+  readonly companyId: string;
+  readonly adminUid: string;
+  readonly operationId?: string;
+  readonly errorId: string;
+}): Promise<
+  | { readonly ok: true; readonly snap: FirebaseFirestore.DocumentSnapshot }
+  | { readonly ok: false; readonly code: ActionErrorCode }
+> {
+  const { action, communicationId, companyId, adminUid, operationId, errorId } = spec;
+  const meta = (error: Error) =>
+    buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error });
+
+  if (!companyId || !adminUid) {
+    logger.error(`Invalid context for ${action}`, meta(new Error('Missing companyId or adminUid')));
+    return { ok: false, code: 'invalid_context' };
+  }
+
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.MESSAGES)
+    .doc(communicationId)
+    .get();
+
+  if (!snap.exists) {
+    logger.error(`Communication not found on ${action}`, meta(new Error('Communication not found')));
+    return { ok: false, code: 'not_found' };
+  }
+
+  // 🔴 ADR-742 §4 — και οι δύο διαδρομές έγραφαν σκέτο `!==` πάνω σε
+  // `as Communication`: **ο τύπος υπόσχεται, η βάση δεν εγγυάται**. Επικοινωνία
+  // χωρίς μισθωτή και διαχειριστής με χαλασμένο token ταίριαζαν.
+  if (!isPayloadOwnedByCompany(snap.data(), companyId)) {
+    logger.error(
+      `Tenant isolation violation on ${action}`,
+      meta(new Error('Communication belongs to different company')),
+    );
+    return { ok: false, code: 'tenant_mismatch' };
+  }
+
+  return { ok: true, snap };
+}
+
 // ============================================================================
 // APPROVE COMMUNICATION
 // ============================================================================
@@ -83,27 +144,14 @@ export async function approveCommunication(
 > {
   const errorId = randomUUID();
 
-  if (!companyId || !adminUid) {
-    logger.error(
-      'Invalid context for approveCommunication',
-      buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error: new Error('Missing companyId or adminUid') })
-    );
-    return { ok: false, errorId, code: 'invalid_context' };
-  }
-
   try {
-    const adminDb = getAdminFirestore();
-    const commDoc = await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).get();
+    const opened = await openOwnedCommunication({
+      action: 'approveCommunication', communicationId, companyId, adminUid, operationId, errorId,
+    });
+    if (!opened.ok) return { ok: false, errorId, code: opened.code };
 
-    if (!commDoc.exists) {
-      logger.error('Communication not found on approveCommunication',
-        buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error: new Error('Communication not found') })
-      );
-      return { ok: false, errorId, code: 'not_found' };
-    }
-
-    const data = commDoc.data()!;
-    const communication: Partial<Communication> & { id: string } = { id: commDoc.id };
+    const data = opened.snap.data()!;
+    const communication: Partial<Communication> & { id: string } = { id: opened.snap.id };
 
     for (const key in data) {
       const value = data[key];
@@ -111,13 +159,6 @@ export async function approveCommunication(
       (communication as Record<string, unknown>)[key] = iso ?? value;
     }
     const comm = communication as Communication;
-
-    if (comm.companyId !== companyId) {
-      logger.error('Tenant isolation violation on approveCommunication',
-        buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error: new Error('Communication belongs to different company') })
-      );
-      return { ok: false, errorId, code: 'tenant_mismatch' };
-    }
 
     // Idempotency: If already approved and has linkedTaskId, return existing
     if (comm.triageStatus === 'approved' && comm.linkedTaskId) {
@@ -132,7 +173,7 @@ export async function approveCommunication(
     const dueDate = AdminTimestamp.fromMillis(Date.now() + dueInHours * 60 * 60 * 1000);
 
     // Create CRM Task using Admin SDK
-    const tasksRef = adminDb.collection(COLLECTIONS.TASKS);
+    const tasksRef = getAdminFirestore().collection(COLLECTIONS.TASKS);
     const taskData = {
       title: comm.subject || `Follow-up: ${comm.from}`,
       description: comm.content,
@@ -152,8 +193,9 @@ export async function approveCommunication(
     const taskId = generateTaskId();
     await tasksRef.doc(taskId).set(taskData);
 
-    // Update communication with approval + linkedTaskId
-    await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).update({
+    // Update communication with approval + linkedTaskId — `snap.ref`, δηλαδή
+    // **το έγγραφο που κρίθηκε**, όχι δεύτερη αναζήτηση με το ίδιο id.
+    await opened.snap.ref.update({
       triageStatus: 'approved',
       linkedTaskId: taskId,
       updatedAt: AdminFieldValue.serverTimestamp()
@@ -220,33 +262,17 @@ export async function rejectCommunication(
 > {
   const errorId = randomUUID();
 
-  if (!companyId || !adminUid) {
-    logger.error('Invalid context for rejectCommunication',
-      buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error: new Error('Missing companyId or adminUid') })
-    );
-    return { ok: false, errorId, code: 'invalid_context' };
-  }
-
   try {
-    const adminDb = getAdminFirestore();
-    const commDoc = await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).get();
+    const opened = await openOwnedCommunication({
+      action: 'rejectCommunication', communicationId, companyId, adminUid, operationId, errorId,
+    });
+    if (!opened.ok) return { ok: false, errorId, code: opened.code };
 
-    if (!commDoc.exists) {
-      logger.error('Communication not found on rejectCommunication',
-        buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error: new Error('Communication not found') })
-      );
-      return { ok: false, errorId, code: 'not_found' };
-    }
+    const data = opened.snap.data() as Communication | undefined;
 
-    const data = commDoc.data() as Communication | undefined;
-    if (data?.companyId !== companyId) {
-      logger.error('Tenant isolation violation on rejectCommunication',
-        buildActionErrorMetadata({ errorId, companyId, communicationId, adminUid, operationId, error: new Error('Communication belongs to different company') })
-      );
-      return { ok: false, errorId, code: 'tenant_mismatch' };
-    }
-
-    await adminDb.collection(COLLECTIONS.MESSAGES).doc(communicationId).update({
+    // `snap.ref` αντί για ξαναχτίσιμο της διαδρομής: το έγγραφο **που κρίθηκε**
+    // είναι αυτό που ενημερώνεται — δεν υπάρχει δεύτερη αναζήτηση να αποκλίνει.
+    await opened.snap.ref.update({
       triageStatus: 'rejected',
       updatedAt: AdminFieldValue.serverTimestamp()
     });
