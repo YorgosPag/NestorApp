@@ -18,10 +18,14 @@
  * σημεία της Φάσης Γ αυτή η είσοδος είναι **απρόσιτη**, γιατί φύλακας
  * **ανάντη** απορρίπτει ήδη τον κενό μισθωτή:
  *
+ * ⚠️ Οι διαδρομές γράφονται **πλήρεις και σχετικές με το `src/`** επίτηδες: ο
+ * anchor `ownership-callsite-coverage-anchor.test.ts` απαιτεί να τις βρει
+ * αυτούσιες εδώ, ώστε η **αφαίρεση** γραμμής να κοκκινίζει (μάθημα #7).
+ *
  * | σημείο | ο ανάντη φύλακας |
  * |---|---|
- * | `communications-triage-actions.ts` | `if (!companyId \|\| !adminUid)` στην ίδια συνάρτηση |
- * | `showcase-core/api/create-unified-public-pdf-route.ts` | `lookupPublicShowcaseShare`: `if (!entityId \|\| !companyId \|\| !expiresAt) return null` |
+ * | `services/communications-triage-actions.ts` | `if (!companyId \|\| !adminUid)` στην ίδια συνάρτηση |
+ * | `services/showcase-core/api/create-unified-public-pdf-route.ts` | `lookupPublicShowcaseShare`: `if (!entityId \|\| !companyId \|\| !expiresAt) return null` |
  * | `app/api/showcase/[token]/pdf/route.ts` | `resolveShare` **και** `loadEntityHeader`: `if (!companyId) return null` |
  *
  * ⇒ Για κάθε **προσιτή** είσοδο ο SSoT είναι εκεί **αποδεδειγμένα ισοδύναμος**
