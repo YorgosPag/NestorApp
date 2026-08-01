@@ -18,11 +18,11 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { generateBankAccountId } from '@/services/enterprise-id.service';
+import { cleanIBAN, validateIBAN } from '@/types/contacts/banking';
 import {
-  validateIBAN,
-  cleanIBAN,
-  isCurrencyCode,
-} from '@/types/contacts/banking';
+  validateAccountInput,
+  validateAccountUpdate,
+} from './bank-account-validation';
 import type {
   BankAccountInput,
   BankAccountUpdate,
@@ -30,6 +30,7 @@ import type {
 } from '@/types/contacts/banking';
 import { getErrorMessage } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
+import { isPayloadOwnedByCompany } from '@/lib/auth/tenant-ownership';
 
 const logger = createModuleLogger('BankAccountsServerService');
 
@@ -72,6 +73,35 @@ const BANK_ACCOUNTS_SUBCOLLECTION = SUBCOLLECTIONS.BANK_ACCOUNTS;
 /**
  * Verify that the parent contact belongs to the requesting company.
  * Returns the contact data on success, or an error result.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * 🔴 ADR-742 §7octies — ΔΥΟ ΞΕΧΩΡΙΣΤΑ ΣΦΑΛΜΑΤΑ ΔΙΟΡΘΩΘΗΚΑΝ ΕΔΩ (2026-08-01)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * **1. Ανοιχτή πόρτα, όχι απλώς μαντείο.** Ο έλεγχος έγραφε:
+ *
+ * ```ts
+ * if (contactData?.companyId && contactData.companyId !== companyId)
+ * ```
+ *
+ * Το πρώτο σκέλος σημαίνει: *«αν η επαφή **δεν έχει** companyId, μη ρωτήσεις
+ * καν»*. Επαφή με κενό ή απόν `companyId` περνούσε ως **`success: true`** για
+ * **οποιονδήποτε** καλούντα — και από εδώ περνούν και οι τρεις μεταλλάξεις
+ * τραπεζικών λογαριασμών (`add`/`update`/`delete`), όχι μόνο αναγνώσεις. Είναι
+ * αυτολεξεί το σφάλμα που η §7quinquies είχε ήδη κλείσει στο `rfq-service.ts` —
+ * **ζωντανό σε δεύτερο αρχείο**, γιατί κανένα gate δεν συγκρίνει τα δύο.
+ * Ρωτά πλέον {@link isPayloadOwnedByCompany}: **το κενό δεν είναι tenant, είναι
+ * απουσία tenant** (§4).
+ *
+ * **2. Μαντείο ύπαρξης σε επίπεδο πόρου.** Η ανυπαρξία επέστρεφε
+ * `'Contact not found'` (→ **404**) και η ξένη επαφή `'Access denied'`
+ * (→ **403**), μέσω του `errorToStatus` των δύο διαδρομών. Δύο διακριτά σχήματα
+ * για το **ίδιο** `contacts/{id}` που οι υπόλοιπες διαδρομές του πόρου
+ * μεταμφιέζουν σε ενιαίο 404 ⇒ **μία διαδρομή που αποκλίνει τις ακυρώνει όλες**
+ * (§7septies). Επιστρέφει πλέον **το ίδιο** `'Contact not found'` και στις δύο
+ * περιπτώσεις· ο χάρτης `errorToStatus` το γυρίζει σε 404 χωρίς να αγγιχτεί.
+ *
+ * ⚠️ Το `'Access denied'` **δεν** χρησιμοποιείται πια από αυτή τη διαδρομή. Οι
+ * δύο χάρτες το κρατούν για συμβατότητα με άλλα σφάλματα της υπηρεσίας.
  */
 async function verifyContactTenant(
   contactId: string,
@@ -85,77 +115,49 @@ async function verifyContactTenant(
   }
 
   const contactData = contactSnap.data() as ContactDocData | undefined;
-  if (contactData?.companyId && contactData.companyId !== companyId) {
-    return { success: false, error: 'Access denied' };
+  if (!isPayloadOwnedByCompany(contactData, companyId)) {
+    return { success: false, error: 'Contact not found' };
   }
 
   return { success: true, data: contactData ?? {} };
 }
 
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
+const ACCOUNT_NOT_FOUND_MESSAGE = 'Bank account not found';
 
 /**
- * Validate bank account input fields.
- * @param skipChecksumValidation - When true (AI extraction flows), MOD97 failure is a soft warning
- *   rather than a hard block. Format/length errors still fail hard.
- * Returns null on success, or an error string.
+ * Ανοίγει τον λογαριασμό **αν υπάρχει** — αλλιώς την έτοιμη άρνηση.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * ΓΙΑΤΙ (N.18 · CHECK 3.28)
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Οι `updateAccount` και `deleteAccount` έγραφαν **αυτολεξεί** την ίδια τριάδα
+ * «χτίσε τη διαδρομή → διάβασε → 404 αν λείπει» (jscpd: 15 γρ. / 64 tokens,
+ * **μέσα στο ίδιο αρχείο**). Το πραγματικό ρίσκο δεν είναι οι γραμμές: είναι ότι
+ * η **διαδρομή** `contacts/{id}/bank_accounts/{id}` ήταν γραμμένη δύο φορές, άρα
+ * μπορούσε να αποκλίνει — και μια μετάλλαξη που γράφει σε λάθος υπο-συλλογή δεν
+ * αποτυγχάνει θορυβωδώς, δημιουργεί έγγραφο.
+ *
+ * ⚠️ **Δεν** περιλαμβάνει τον έλεγχο μισθωτή: οι δύο καλούντες τον κάνουν σε
+ * **διαφορετική σειρά** ως προς την επικύρωση εισόδου (`update` επικυρώνει
+ * ανάμεσα, `delete` δεν έχει τι να επικυρώσει). Ενώνοντάς τα εδώ θα άλλαζε ποιο
+ * σφάλμα βλέπει ο χρήστης όταν ισχύουν και τα δύο — σιωπηλή αλλαγή συμβολαίου.
  */
-function validateAccountInput(data: BankAccountInput, skipChecksumValidation = false): string | null {
-  if (!data.bankName || typeof data.bankName !== 'string' || data.bankName.trim().length === 0) {
-    return 'bankName is required';
+async function openExistingAccount(
+  contactId: string,
+  accountId: string,
+): Promise<{ ref: FirebaseFirestore.DocumentReference } | { failure: ErrorResult }> {
+  const ref = getAdminFirestore()
+    .collection(CONTACTS_COLLECTION)
+    .doc(contactId)
+    .collection(BANK_ACCOUNTS_SUBCOLLECTION)
+    .doc(accountId);
+
+  const snap = await ref.get();
+  if (!snap.exists) {
+    return { failure: { success: false, error: ACCOUNT_NOT_FOUND_MESSAGE } };
   }
 
-  if (!data.iban || typeof data.iban !== 'string') {
-    return 'iban is required';
-  }
-
-  const ibanResult = validateIBAN(data.iban);
-  if (!ibanResult.valid) {
-    const isLenientBypassable =
-      ibanResult.error === 'Μη έγκυρος αριθμός ελέγχου IBAN' ||
-      (typeof ibanResult.error === 'string' && ibanResult.error.startsWith('Το IBAN για ') && ibanResult.error.includes('χαρακτήρες'));
-    if (skipChecksumValidation && isLenientBypassable) {
-      // Allow through — caller annotates with ibanChecksumWarning flag
-    } else {
-      return ibanResult.error ?? 'Invalid IBAN';
-    }
-  }
-
-  if (!isCurrencyCode(data.currency)) {
-    return `Invalid currency: ${data.currency}`;
-  }
-
-  return null;
-}
-
-/**
- * Validate partial update fields.
- * Returns null on success, or an error string.
- */
-function validateAccountUpdate(data: BankAccountUpdate): string | null {
-  if (data.bankName !== undefined) {
-    if (typeof data.bankName !== 'string' || data.bankName.trim().length === 0) {
-      return 'bankName must be a non-empty string';
-    }
-  }
-
-  if (data.iban !== undefined) {
-    if (typeof data.iban !== 'string') {
-      return 'iban must be a string';
-    }
-    const ibanResult = validateIBAN(data.iban);
-    if (!ibanResult.valid) {
-      return ibanResult.error ?? 'Invalid IBAN';
-    }
-  }
-
-  if (data.currency !== undefined && !isCurrencyCode(data.currency)) {
-    return `Invalid currency: ${data.currency}`;
-  }
-
-  return null;
+  return { ref };
 }
 
 // ============================================================================
@@ -354,17 +356,11 @@ export const BankAccountsServerService = {
       }
 
       // 3. Verify account exists
-      const db = getAdminFirestore();
-      const accountRef = db
-        .collection(CONTACTS_COLLECTION)
-        .doc(contactId)
-        .collection(BANK_ACCOUNTS_SUBCOLLECTION)
-        .doc(accountId);
-
-      const accountSnap = await accountRef.get();
-      if (!accountSnap.exists) {
-        return { success: false, error: 'Bank account not found' };
+      const opened = await openExistingAccount(contactId, accountId);
+      if ('failure' in opened) {
+        return opened.failure;
       }
+      const { ref: accountRef } = opened;
 
       // 4. Duplicate IBAN check (if IBAN is being changed)
       if (data.iban !== undefined) {
@@ -430,17 +426,11 @@ export const BankAccountsServerService = {
       }
 
       // 2. Verify account exists
-      const db = getAdminFirestore();
-      const accountRef = db
-        .collection(CONTACTS_COLLECTION)
-        .doc(contactId)
-        .collection(BANK_ACCOUNTS_SUBCOLLECTION)
-        .doc(accountId);
-
-      const accountSnap = await accountRef.get();
-      if (!accountSnap.exists) {
-        return { success: false, error: 'Bank account not found' };
+      const opened = await openExistingAccount(contactId, accountId);
+      if ('failure' in opened) {
+        return opened.failure;
       }
+      const { ref: accountRef } = opened;
 
       // 3. Soft delete — set isActive to false
       await accountRef.update({
