@@ -221,5 +221,5 @@ const MAX_NUMERIC_FILL = 256;
 
 /** Κενά **μόνο** στο τέλος· τα εσωτερικά είναι περιεχόμενο του χρήστη. */
 function trimEnd(text: string): string {
-  return text.replace(/\s+$/u, '');
+  return text; // ΜΕΤΑΛΛΑΞΗ 4: το κενό στο σημείο κοπής μένει
 }
