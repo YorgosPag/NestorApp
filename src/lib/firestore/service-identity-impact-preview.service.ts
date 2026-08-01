@@ -12,6 +12,10 @@
 import 'server-only';
 
 import { computeContactImpact } from './contact-impact-engine';
+import {
+  allowIdentityImpact,
+  unavailableIdentityImpact,
+} from './contact-identity-impact-primitives';
 import type {
   ContactIdentityImpactDependency,
   ContactIdentityImpactPreview,
@@ -24,17 +28,15 @@ import type { ServiceIdentityFieldChange } from '@/utils/contactForm/service-ide
 
 export async function previewServiceIdentityImpact(
   contactId: string,
+  companyId: string,
   changes: ReadonlyArray<ServiceIdentityFieldChange>,
 ): Promise<ContactIdentityImpactPreview> {
   if (changes.length === 0) {
-    return {
-      mode: 'allow', changes, dependencies: [], affectedDomains: [],
-      messageKey: 'identityImpact.messages.allow', blockingCount: 0, warningCount: 0,
-    };
+    return allowIdentityImpact(changes);
   }
 
   try {
-    const result = await computeContactImpact(contactId, 'identityChange', 'service');
+    const result = await computeContactImpact(contactId, 'identityChange', 'service', companyId);
 
     const dependencies: ContactIdentityImpactDependency[] = result.dependencies.map((dep) => ({
       id: dep.id === 'contactRelationships' ? 'contactRelationships' as const : 'projectLinks' as const,
@@ -54,10 +56,6 @@ export async function previewServiceIdentityImpact(
       blockingCount: 0, warningCount,
     };
   } catch {
-    return {
-      mode: 'block', changes, dependencies: [],
-      affectedDomains: ['searchAndReporting', 'relationshipViews'],
-      messageKey: 'identityImpact.messages.unavailable', blockingCount: 0, warningCount: 0,
-    };
+    return unavailableIdentityImpact(changes, ['searchAndReporting', 'relationshipViews']);
   }
 }

@@ -12,6 +12,10 @@
 import 'server-only';
 
 import { computeContactImpact } from './contact-impact-engine';
+import {
+  allowIdentityImpact,
+  unavailableIdentityImpact,
+} from './contact-identity-impact-primitives';
 import type {
   ContactIdentityAffectedDomainId,
   ContactIdentityImpactDependency,
@@ -73,13 +77,11 @@ function extractFieldCategories(
 
 export async function previewContactIdentityImpact(
   contactId: string,
+  companyId: string,
   changes: ReadonlyArray<IndividualIdentityFieldChange>,
 ): Promise<ContactIdentityImpactPreview> {
   if (changes.length === 0) {
-    return {
-      mode: 'allow', changes, dependencies: [], affectedDomains: [],
-      messageKey: 'identityImpact.messages.allow', blockingCount: 0, warningCount: 0,
-    };
+    return allowIdentityImpact(changes);
   }
 
   const hasAmkaChange = changes.some((c) => c.field === 'amka');
@@ -87,7 +89,7 @@ export async function previewContactIdentityImpact(
 
   try {
     const result = await computeContactImpact(
-      contactId, 'identityChange', 'individual', undefined, fieldCategories,
+      contactId, 'identityChange', 'individual', companyId, fieldCategories,
     );
 
     // Map engine results to identity-specific dependency format
@@ -117,10 +119,7 @@ export async function previewContactIdentityImpact(
       messageKey: `identityImpact.messages.${mode}`, blockingCount, warningCount,
     };
   } catch {
-    return {
-      mode: 'block', changes, dependencies: [], affectedDomains: buildAffectedDomains(changes),
-      messageKey: 'identityImpact.messages.unavailable', blockingCount: 0, warningCount: 0,
-    };
+    return unavailableIdentityImpact(changes, buildAffectedDomains(changes));
   }
 }
 
