@@ -22,14 +22,34 @@
 
 import 'server-only';
 
-import type { Firestore } from 'firebase-admin/firestore';
+import type { DocumentSnapshot, Firestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { loadOwnedDoc, type OwnedDoc } from '@/lib/auth/owned-doc-loader';
 import {
   messageNotFound,
   requireMessageAccess,
   type MessageAccessCaller,
 } from './message-ownership';
+
+/**
+ * Το **ωμό** snapshot του μηνύματος — χωρίς κρίση, χωρίς ρίψη.
+ *
+ * Υπάρχει για τη **μία** διαδρομή που δεν επιτρέπεται να ρίξει: το μαζικό
+ * `messages/delete` κρίνει **ανά στοιχείο** και συνεχίζει (§7ter.5). Χωρίς αυτό,
+ * εκείνη η διαδρομή ξανάγραφε μόνη της «σε ποια συλλογή ζει ένα μήνυμα» — γνώση
+ * που ανήκει στον πόρο, όχι στον καλούντα.
+ *
+ * ⚠️ Ο καλών **οφείλει** να περάσει το φορτίο από το `checkMessageAccess` πριν
+ * το χρησιμοποιήσει· εδώ δεν υπάρχει φύλακας. Για κάθε **άλλη** χρήση διάλεξε
+ * το {@link loadOwnedMessage}, που δεν σου δίνει την επιλογή να ξεχάσεις.
+ */
+export function readMessageDoc(
+  messageId: string,
+  db?: Firestore,
+): Promise<DocumentSnapshot> {
+  return (db ?? getAdminFirestore()).collection(COLLECTIONS.MESSAGES).doc(messageId).get();
+}
 
 export interface LoadOwnedMessageSpec {
   readonly messageId: string;
