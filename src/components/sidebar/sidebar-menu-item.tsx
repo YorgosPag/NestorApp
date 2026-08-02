@@ -12,8 +12,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { SidebarBadge } from "@/components/sidebar/sidebar-badge"
+import { SidebarHiddenRow } from "@/components/sidebar/sidebar-hidden-row"
 import { cn } from "@/lib/utils"
 import type { MenuItem } from "@/types/sidebar"
+import type { JobRevealView } from "@/hooks/useJobFilteredNavigation"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
 import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy'
@@ -27,6 +29,62 @@ interface SidebarMenuItemProps {
   isExpanded: boolean
   isActive: boolean
   onToggleExpanded: (title: string) => void
+  /** ADR-748 Φάση 3.6 — τα επίπεδα 2 & 3 του δείκτη. Απόν ⇒ καμία αλλαγή. */
+  reveal?: JobRevealView
+}
+
+/**
+ * ADR-748 **Α-2 — υποβάθμιση πριν από εξαφάνιση** *(πρότυπο: το half-tone του
+ * Revit)*. Κατά την «Αποκάλυψη» το κρυμμένο στοιχείο ξαναμπαίνει **στη θέση
+ * του**, οπτικά υποχωρημένο αλλά **πλήρως λειτουργικό**: η δουλειά είναι
+ * ετικέτα ορατότητας, **ποτέ** πύλη (§14.5) — άρα απενεργοποίησή του θα
+ * προσποιούνταν περιορισμό που δεν υπάρχει (Ε14.ζ).
+ */
+const DEMOTED_CLASS = "opacity-50 saturate-50"
+
+function demotedClass(reveal: JobRevealView | undefined, href: string): string | false {
+  return reveal?.isRevealing === true && reveal.hiddenHrefs.has(href) && DEMOTED_CLASS
+}
+
+/**
+ * Το κοινό σώμα ενός στοιχείου πρώτου επιπέδου: **εικονίδιο · τίτλος · σήμα**.
+ *
+ * ⚠️ Εξήχθη επειδή το CHECK 3.28 (jscpd) το έπιασε ως **structural clone** μέσα
+ * στο ίδιο αρχείο: το ίδιο σώμα αποδιδόταν δύο φορές — μία στο κουμπί του
+ * γονιού-δοχείου και μία στο απλό στοιχείο. Ήταν οριακά κάτω από το κατώφλι
+ * και η Φάση 3.6 το έσπρωξε από πάνω. Η σωστή αντίδραση δεν είναι να χαλαρώσει
+ * το κατώφλι (N.18) — είναι να υπάρχει **ένα** σώμα: αλλιώς η επόμενη αλλαγή
+ * στην ετικέτα θα εφαρμοζόταν στο ένα από τα δύο, σιωπηλά.
+ */
+function SidebarItemLabel({
+  item,
+  isActive,
+  title,
+}: {
+  item: MenuItem
+  isActive: boolean
+  title: string
+}) {
+  const Icon = item.icon
+  return (
+    <>
+      <Icon
+        className={cn(
+          TRANSITION_PRESETS.STANDARD_ALL,
+          isActive && "text-primary"
+        )}
+      />
+      <span className="font-medium">{title}</span>
+      {item.badge && <SidebarBadge badge={item.badge} />}
+    </>
+  )
+}
+
+/** Πόσα υπο-στοιχεία λείπουν από **αυτό** το δοχείο (Επίπεδο 2). */
+function hiddenHereCount(reveal: JobRevealView | undefined, href: string): number {
+  // Στην «Αποκάλυψη» τα στοιχεία είναι ήδη ορατά — ο δείκτης θα ήταν αντιφατικός.
+  if (reveal === undefined || reveal.isRevealing) return 0
+  return reveal.hiddenSubItemCountByParent.get(href) ?? 0
 }
 
 export function SidebarMenuItem({
@@ -34,6 +92,7 @@ export function SidebarMenuItem({
   isExpanded,
   isActive,
   onToggleExpanded,
+  reveal,
 }: SidebarMenuItemProps) {
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
   const iconSizes = useIconSizes();
@@ -88,7 +147,8 @@ export function SidebarMenuItem({
               className={cn(
                 "group relative",
                 TRANSITION_PRESETS.STANDARD_ALL,
-                isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+                demotedClass(reveal, item.href)
               )}
               onMouseEnter={openPopover}
               onMouseLeave={closePopover}
@@ -128,7 +188,8 @@ export function SidebarMenuItem({
                   className={cn(
                     "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm",
                     "hover:bg-accent hover:text-accent-foreground",
-                    TRANSITION_PRESETS.FAST_ALL
+                    TRANSITION_PRESETS.FAST_ALL,
+                    demotedClass(reveal, subItem.href)
                   )}
                 >
                   <subItem.icon className={iconSizes.sm} />
@@ -141,6 +202,12 @@ export function SidebarMenuItem({
                   )}
                 </Link>
               ))}
+              {reveal !== undefined && (
+                <SidebarHiddenRow
+                  count={hiddenHereCount(reveal, item.href)}
+                  onReveal={reveal.onReveal}
+                />
+              )}
             </nav>
           </PopoverContent>
         </Popover>
@@ -197,17 +264,11 @@ export function SidebarMenuItem({
             className={cn(
               "group relative",
               TRANSITION_PRESETS.STANDARD_ALL,
-              isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+              isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+              demotedClass(reveal, item.href)
             )}
           >
-            <item.icon
-              className={cn(
-                TRANSITION_PRESETS.STANDARD_ALL,
-                isActive && "text-primary"
-              )}
-            />
-            <span className="font-medium">{translateTitle(item.title)}</span>
-            {item.badge && <SidebarBadge badge={item.badge} />}
+            <SidebarItemLabel item={item} isActive={isActive} title={translateTitle(item.title)} />
             {hasChildWarning && (
               <span
                 className="h-2 w-2 shrink-0 rounded-full bg-[hsl(var(--text-warning))]"
@@ -231,7 +292,8 @@ export function SidebarMenuItem({
                     isActive={isActive}
                     className={cn(
                       TRANSITION_PRESETS.STANDARD_ALL,
-                      isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                      isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+                      demotedClass(reveal, subItem.href)
                     )}
                   >
                     <Link
@@ -251,6 +313,14 @@ export function SidebarMenuItem({
                   </SidebarMenuSubButton>
                 </SidebarMenuSubItem>
               ))}
+              {reveal !== undefined && hiddenHereCount(reveal, item.href) > 0 && (
+                <SidebarMenuSubItem>
+                  <SidebarHiddenRow
+                    count={hiddenHereCount(reveal, item.href)}
+                    onReveal={reveal.onReveal}
+                  />
+                </SidebarMenuSubItem>
+              )}
             </SidebarMenuSub>
           )}
         </>
@@ -260,7 +330,8 @@ export function SidebarMenuItem({
           isActive={isActive}
           className={cn(
             `group relative ${TRANSITION_PRESETS.FAST_ALL}`,
-            isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+            isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+            demotedClass(reveal, item.href)
           )}
         >
           <Link
@@ -268,14 +339,7 @@ export function SidebarMenuItem({
             onClick={() => handleNavigationClick(item.href)}
             {...getHoverPrefetchHandlers(item.href)}
           >
-            <item.icon
-              className={cn(
-                TRANSITION_PRESETS.STANDARD_ALL,
-                isActive && "text-primary"
-              )}
-            />
-            <span className="font-medium">{translateTitle(item.title)}</span>
-            {item.badge && <SidebarBadge badge={item.badge} />}
+            <SidebarItemLabel item={item} isActive={isActive} title={translateTitle(item.title)} />
           </Link>
         </SidebarMenuButton>
       )}

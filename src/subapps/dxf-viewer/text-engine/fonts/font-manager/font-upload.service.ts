@@ -26,10 +26,14 @@ import {
 } from 'firebase/storage';
 import { generateCompanyFontId } from '@/services/enterprise-id.service';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { FONT_EXTENSION_FORMATS, fontFormatOfFileName, type FontFormat } from '../font-file-kind';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type FontFormat = 'ttf' | 'otf' | 'woff' | 'woff2' | 'shx';
+// ADR-739 Φ.Ε/Φ2 βήμα 4 — ο τύπος και ο κατάλογος επεκτάσεων προάχθηκαν σε **φύλλο** χωρίς
+// Firebase (`font-file-kind.ts`), ώστε να τα διαβάζει και η εξαγωγή DXF («SHX ή TrueType;»)
+// χωρίς να σύρει το Firestore SDK. Εδώ μένει μόνο η ανακοίνωση του τύπου προς τα έξω.
+export type { FontFormat };
 
 export interface CompanyFontRecord {
   id: string;
@@ -42,20 +46,16 @@ export interface CompanyFontRecord {
   size: number;
 }
 
-const ALLOWED_EXTENSIONS: Record<string, FontFormat> = {
-  '.ttf': 'ttf',
-  '.otf': 'otf',
-  '.woff': 'woff',
-  '.woff2': 'woff2',
-  '.shx': 'shx',
-};
-
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 function detectFormat(fileName: string): FontFormat {
-  const ext = fileName.slice(fileName.lastIndexOf('.')).toLowerCase();
-  const fmt = ALLOWED_EXTENSIONS[ext];
-  if (!fmt) throw new Error(`FontUploadService: unsupported format "${ext}"`);
+  const fmt = fontFormatOfFileName(fileName);
+  if (!fmt) {
+    throw new Error(
+      `FontUploadService: unsupported format "${fileName}" `
+      + `(allowed: ${Object.keys(FONT_EXTENSION_FORMATS).join(', ')})`,
+    );
+  }
   return fmt;
 }
 

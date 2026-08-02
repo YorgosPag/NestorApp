@@ -147,7 +147,12 @@ const NOTHING: VisibleCellText = { text: '', clipped: false };
 /** Ο μετρητής δεμένος στο στυλ αυτού του κελιού — μία έκφραση, ώστε να μη γραφτεί δεύτερη. */
 function boundMeasure(input: CellTextFitInput): TextWidthMeasure {
   const { measure, style } = input;
-  return (s) => measure(s, style.textHeightMm, { fontFamily: style.fontFamily, bold: style.bold });
+  return (s) =>
+    measure(s, style.textHeightMm, {
+      fontFamily: style.fontFamily,
+      bold: style.bold,
+      italic: style.italic,
+    });
 }
 
 /**

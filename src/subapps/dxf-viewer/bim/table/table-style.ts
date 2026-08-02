@@ -25,6 +25,7 @@
  */
 
 import type {
+  TableAxisStyleOverride,
   TableBorderSpec,
   TableCellAlign,
   TableCellStyleOverride,
@@ -66,6 +67,13 @@ export interface TableRowClassStyle {
   /** Γέμισμα φόντου κελιού· απόν ⇒ διαφανές (DXF 63/283 `fillColor` off). */
   readonly fillColorHex?: string;
   readonly bold: boolean;
+  /** Πλάγια γραφή — DXF: γωνία κλίσης (oblique) στο STYLE, group code 50. */
+  readonly italic: boolean;
+  /**
+   * Υπογράμμιση. Ζωγραφίζεται από το **ίδιο** SSoT διακοσμήσεων με κάθε άλλο κείμενο του
+   * θεατή (`TEXT_DECORATION_RATIOS`, ADR-733) — ποτέ με δικό της υπολογισμό θέσης.
+   */
+  readonly underline: boolean;
   /**
    * Οικογένεια γραμματοσειράς για **μέτρηση και ζωγραφική** — περνά αυτούσια στο
    * `measureTextAdvanceWorld` (`TextAdvanceStyle.fontFamily`), ώστε το πλάτος που
@@ -123,6 +131,8 @@ export interface TableCellStyle {
   readonly textColorHex: string;
   readonly fillColorHex?: string;
   readonly bold: boolean;
+  readonly italic: boolean;
+  readonly underline: boolean;
   readonly fontFamily?: string;
   readonly align: TableCellAlign;
   readonly margins: TableCellMargins;
@@ -135,6 +145,8 @@ export function baseCellStyle(rowStyle: TableRowClassStyle): TableCellStyle {
     textColorHex: rowStyle.textColorHex,
     fillColorHex: rowStyle.fillColorHex,
     bold: rowStyle.bold,
+    italic: rowStyle.italic,
+    underline: rowStyle.underline,
     fontFamily: rowStyle.fontFamily,
     align: rowStyle.align,
     margins: rowStyle.margins,
@@ -142,25 +154,80 @@ export function baseCellStyle(rowStyle: TableRowClassStyle): TableCellStyle {
 }
 
 /**
- * Κλάση γραμμής + παράκαμψη κελιού → τελικό στυλ. Η παράκαμψη είναι **αραιή**: κάθε
- * απόν πεδίο κληρονομείται. Ένα ρητό `fillColorHex: undefined` ΔΕΝ σβήνει το γέμισμα
- * της κλάσης (`in` έλεγχος θα το επέτρεπε, αλλά τότε το «απών» και το «ρητά κενό» θα
- * ήταν δυσδιάκριτα σε JSON round-trip· η αφαίρεση γεμίσματος γίνεται στο style, όχι
- * με μια τρύπα στο override).
+ * Οι τρεις παρακάμψεις που μπορεί να ισχύουν πάνω σε ένα κελί, **ονομασμένες**.
+ *
+ * 🔴 Αντικείμενο και όχι τρία θέσης-ορίσματα του ίδιου τύπου: `resolveCellStyle(rs, a, b, c)`
+ * με εναλλαγμένα το `row` και το `column` **μεταγλωττίζεται μια χαρά** και αντιστρέφει
+ * σιωπηλά την απόφαση Α6 (γραμμή > στήλη). Το σύμπτωμα θα ήταν μια γραμμή συνόλων που χάνει
+ * τα έντονά της μόνο μέσα σε βαμμένη στήλη — δηλαδή σφάλμα ορατό σε ένα κελί στα εκατό.
+ */
+export interface TableStyleOverrides {
+  readonly column?: TableAxisStyleOverride;
+  readonly row?: TableAxisStyleOverride;
+  readonly cell?: TableCellStyleOverride;
+}
+
+/**
+ * Η πρώτη **ρητή** απάντηση κατεβαίνοντας τα επίπεδα· κανένα ⇒ η βάση.
+ *
+ * Για πεδία που ο ζωγράφος απαιτεί **πάντα** (ύψος, χρώμα κειμένου, έντονα, στοίχιση): δεν
+ * υπάρχει «κανένα» να καθαριστεί σε, άρα ούτε `null` στον τύπο τους.
+ */
+function inherited<T>(levels: readonly (T | undefined)[], base: T): T {
+  for (const value of levels) if (value !== undefined) return value;
+  return base;
+}
+
+/**
+ * Ίδιο, αλλά με την **τρίτη κατάσταση**: `null` = «ρητά κανένα» και σταματά τον κατήφορο,
+ * σβήνοντας τη βάση. Μόνο για τα πεδία που το {@link TableCellStyle} δηλώνει προαιρετικά.
+ *
+ * Ο έλεγχος είναι `!== undefined` και **όχι** `??`: το `??` θα προσπερνούσε το `null`, δηλαδή
+ * θα εξαφάνιζε ακριβώς την κατάσταση που ο τύπος υπάρχει για να εκφράσει (§ ρίσκο 4).
+ */
+function clearable<T>(levels: readonly (T | null | undefined)[], base: T | undefined): T | undefined {
+  for (const value of levels) if (value !== undefined) return value ?? undefined;
+  return base;
+}
+
+/**
+ * Κλάση γραμμής + οι παρακάμψεις → **τελικό** στυλ κελιού. Το ΕΝΑ σημείο όπου επιλύεται η
+ * σειρά προτεραιότητας του §28.4 — ο ζωγράφος, ο μετρητής, ο επεξεργαστής και οι τρεις
+ * exporters καταναλώνουν το αποτέλεσμα και δεν ξαναρωτούν ποτέ.
+ *
+ * ```
+ *   1. κελί    (νικά τα πάντα)
+ *   2. γραμμή  (Α6: ο ειδικότερος ρόλος νικά τη στήλη)
+ *   3. στήλη
+ *   5. κλάση γραμμής = η βάση
+ * ```
+ * (Το επίπεδο 4 — η σημασιολογική `TableColumn.align` — αφορά **μόνο** την οριζόντια
+ * συνιστώσα και επιλύεται στο `table-layout-place.ts`, μαζί με τα υπόλοιπα της διάταξης.)
+ *
+ * Τα `margins` μένουν **ρητά εκτός**: είναι γεωμετρία της κλάσης γραμμής, και μια εσοχή που
+ * αλλάζει ανά κελί θα άλλαζε το φυσικό πλάτος της στήλης — δηλαδή θα έκανε τη μέτρηση να
+ * εξαρτάται από το περιεχόμενο δύο φορές. Ανοίγει με δική του φάση, όχι ως παρενέργεια.
  */
 export function resolveCellStyle(
   rowStyle: TableRowClassStyle,
-  override?: TableCellStyleOverride,
+  overrides?: TableStyleOverrides,
 ): TableCellStyle {
   const base = baseCellStyle(rowStyle);
-  if (!override) return base;
+  if (!overrides) return base;
+
+  // Η σειρά ΕΙΝΑΙ η προτεραιότητα: κελί → γραμμή → στήλη.
+  const { cell, row, column } = overrides;
+  if (!cell && !row && !column) return base;
+
   return {
-    textHeightMm: override.textHeightMm ?? base.textHeightMm,
-    textColorHex: override.textColorHex ?? base.textColorHex,
-    fillColorHex: override.fillColorHex ?? base.fillColorHex,
-    bold: override.bold ?? base.bold,
-    fontFamily: base.fontFamily,
-    align: override.align ?? base.align,
+    textHeightMm: inherited([cell?.textHeightMm, row?.textHeightMm, column?.textHeightMm], base.textHeightMm),
+    textColorHex: inherited([cell?.textColorHex, row?.textColorHex, column?.textColorHex], base.textColorHex),
+    fillColorHex: clearable([cell?.fillColorHex, row?.fillColorHex, column?.fillColorHex], base.fillColorHex),
+    bold: inherited([cell?.bold, row?.bold, column?.bold], base.bold),
+    italic: inherited([cell?.italic, row?.italic, column?.italic], base.italic),
+    underline: inherited([cell?.underline, row?.underline, column?.underline], base.underline),
+    fontFamily: clearable([cell?.fontFamily, row?.fontFamily, column?.fontFamily], base.fontFamily),
+    align: inherited([cell?.align, row?.align, column?.align], base.align),
     margins: base.margins,
   };
 }

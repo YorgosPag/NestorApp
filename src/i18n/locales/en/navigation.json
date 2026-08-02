@@ -238,7 +238,17 @@
       "tooltip": "What you are working on right now. Changes no permissions — only what is shown.",
       "restoreAll": "Show everything",
       "hiddenCount": "{count, plural, one {# hidden} other {# hidden}}",
+      "hiddenBreakdown": "{branches, plural, one {# branch} other {# branches}} · {subItems, plural, one {# sub-item} other {# sub-items}}",
       "unknownSource": "Not confirmed by the browser — your project role does not reach here."
+    },
+    "reveal": {
+      "hiddenHere": "{count, plural, one {+# hidden} other {+# hidden}}",
+      "show": "Show",
+      "showAriaLabel": "Reveal {count, plural, one {# hidden item} other {# hidden items}} in this section",
+      "bannerTitle": "Reveal hidden",
+      "bannerDescription": "Items hidden by the job appear in place, dimmed.",
+      "stop": "Done",
+      "demoted": "Hidden by the active job"
     }
   },
   "sidebar": {

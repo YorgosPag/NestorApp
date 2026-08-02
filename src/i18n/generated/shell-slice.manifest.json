@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "25915ba88839895374c3d33ed79c86951cd38341b75db6104afe13c820fe2a81"
+    "src/i18n/generated/shell-slice.el.json": "4e28995e75395145053fe08288d448423e39c673db134f942c28aa5596ca54f1"
   },
   "boundaries": {
     "dynamic": [
@@ -38,7 +38,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "4e9133f1ac318c2578b709ee659046250a4a3bc50b8d5114725664d068e147eb",
+  "inputsSha256": "b014693a254a8fa7cd2c15e28293d09442725ec6494e5a0c82ab484603d29d93",
   "languages": [
     "el"
   ],
@@ -85,9 +85,9 @@
     "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx": "6885abb33ef4bc225b52ecedc57236f460c244507146f0311b44277dfdcc033a",
     "src/components/admin/layout/AdminSidebar.tsx": "87dd25e552d47f892d6e252d8c76b5247601823baa35155e829543412d7d3384",
     "src/components/app-header.tsx": "ce7ac01d3dbe5d06dea0c29bc271f47d67f1f7855b3036f08d6bc4f3f26c3083",
-    "src/components/app-sidebar.tsx": "3d2919156649e4ec5de4b19aa30a2410211d99c7b5d95c84fe2f58b651292435",
+    "src/components/app-sidebar.tsx": "4869b4b75f490039bb26bed18a18433619a56c86cb4cb62957774f77275ae265",
     "src/components/core/AdvancedFilters/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/components/dashboard/DashboardHome.tsx": "f1801ba4a725ce7b7afe5bb16d7eecf1312b9f958ae05f485bfee3c27ced5a44",
+    "src/components/dashboard/DashboardHome.tsx": "8981a612d99c035e787f2d50ec4977399e9eb05388000193b36bc7098bab9973",
     "src/components/dashboard/DashboardWelcome.tsx": "664e054ae71015831d86ea4cf203f32bef47fccffdf4f7db1908158df9dd31bc",
     "src/components/dashboard/NavigationCard.tsx": "ec5f73e03e24670e836f64d80d4476078c28caeb6c32976c632d55fe1b941d14",
     "src/components/dashboard/NavigationGrid.tsx": "9df78c55920a239c3c5fd689a2d40e8eefacd7ef6770991d1dd7f529069b60d6",
@@ -101,7 +101,7 @@
     "src/components/header/theme-toggle.tsx": "e79b2e77973f3b547e0dacbf737c228c7db1dd6ea8fc1d0140dbae8984ece381",
     "src/components/header/user-menu.tsx": "3c63d6e79c8812e0c77a807a3ef938e12494336c40c47ad481cabbd22088e940",
     "src/components/header/voice-assistant-button.tsx": "c56a417da0fd30f53ba7046c5293b0f09395d03f3149675787f6d1ca109f9e05",
-    "src/components/job/HiddenItemsBadge.tsx": "7b3b3fcb9ff94a3fd12b2ccf2ce5ccde1e2289d350336ea51f187b6fa20a1a57",
+    "src/components/job/HiddenItemsBadge.tsx": "4a787cd073d257838351379574abe8e8dd222efca9c44e05fb0fdb3ff3e7b58d",
     "src/components/layout/ConditionalAppShell.tsx": "2d9d98812c342e090146b890ff33b66690df25d62c89d7f50f438ccfa9846839",
     "src/components/layout/GlobalFileUploadToast.tsx": "7cae2db1e766efa8e05167f60c4f91bc9452b08876818300e8dd556a9ff1224d",
     "src/components/layout/MainContentBridge.tsx": "e8121902acdf603283864771a1fc590ff1476ce6362b24959aa9ae88d5afdab6",
@@ -124,9 +124,11 @@
     "src/components/shared/files/hooks/useFileDownload.ts": "4680385f283b732c7b6cfeb4cecbec8aff682b22cb0bff96ca4cb9a08b5c094c",
     "src/components/sharing/fields/PersonalMessageField.tsx": "b2334018eef4ba7c8a72b82cde1fba2a028420adedb587d2510d8993562a93a7",
     "src/components/sidebar/sidebar-badge.tsx": "269baa7a33c29e10d15ad0713ede7cb63b45b93c1b6b8a704767f782786ff258",
+    "src/components/sidebar/sidebar-hidden-row.tsx": "f34d0930399338e834228f06f1fa210d3bd287d562898d5e740bd38e24db63a8",
     "src/components/sidebar/sidebar-logo.tsx": "85b01702d19d6acbd0d3e3e770633aec28433a73902ec25dfd98b99643b03eff",
-    "src/components/sidebar/sidebar-menu-item.tsx": "2f2d93b358c1d80427b42a319d551566806817bd5396412bcf06a485c5415e2a",
-    "src/components/sidebar/sidebar-menu-section.tsx": "af845bba2a3510a8f1325466231e2d619b3086738f11d9f98a9404f8e3beff8d",
+    "src/components/sidebar/sidebar-menu-item.tsx": "7c03d2837fc78d9be318bc1703788f27fd4cc07bd58a97391eccb82fa527710e",
+    "src/components/sidebar/sidebar-menu-section.tsx": "f35575e03fd8fe355bfaef36ed22e57435cad8a43d38515795db03e1e78af415",
+    "src/components/sidebar/sidebar-reveal-banner.tsx": "dd752d43459552ac84f59bda594c368d84d6031182003c2dec47fe7030c0fa69",
     "src/components/theme-provider.tsx": "b9a5f36934f8c5eef2c1da3a70f720e6f9b10568307b362cb1a70d8d7b61cf10",
     "src/components/ui/ProductTour/ProductTour.context.tsx": "7fdcc1d63d7a2ba715e43ec6ec7d5f59820ad8083e42b591a31c0338f2bb7076",
     "src/components/ui/ProductTour/ProductTour.tsx": "832a696d789a2059aad9992fe17758f436bec8a5ed8860004358df71d6c69f28",
@@ -191,6 +193,7 @@
     "src/config/iso19650-constants.ts": "9b52b8e6cd641328762db95ba0d1e280581845fe5827c8dead926531658349c3",
     "src/config/jobs-access.ts": "cd9ecbc9f56123a902b624b7ddd6cc52082dc2e7e7fc6b7116c853a86f799821",
     "src/config/jobs-registry.ts": "030b7091aeb5191bbd6abe3ccc9e23a1aa25f586cbed3fe226c07a4b6d9086b7",
+    "src/config/jobs-visibility.ts": "ab652f1d2a901b3411b15871f941beac2bb71950a0a2d15129f8bda65e4467ff",
     "src/config/navigation.ts": "9016242f8b53a5a8eb1cda81120884853f2ab46eda2e06e83f57d91fb59210bc",
     "src/config/notification-events.ts": "9f9a48c1ff56319e5aca60cb7ee7d279d4dca400e58221d229b81c49e01aca68",
     "src/config/notification-keys.ts": "d2e8d464ddc860d07e32c60966579815c9927c966a3dc86fdf70f76d45393c7e",
@@ -246,7 +249,7 @@
     "src/hooks/useHasBuildingsWithNoUnits.ts": "2cabeb87e1013037ccf8e73be1ff4060976ec6a8a0db8e77e9ff91b2fd3dde25",
     "src/hooks/useIconSizes.ts": "fbf97823babaf80ed36e89974f45744eb162ef33144fd91d14d0d6db8ed60e37",
     "src/hooks/useInterval.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/hooks/useJobFilteredNavigation.ts": "48ff11ffe5ef5f1abe4f0dff852f701da9f73dcc3e77a034a31e6900b6b03b79",
+    "src/hooks/useJobFilteredNavigation.ts": "fd4576719d7154f2be8c5d44b4e91ca471d1047b9931093f99c84f66dc8b08b3",
     "src/hooks/useLayoutClasses.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useMobile.tsx": "7e9a21ad70c199c41a5759f3f25d7b663b0d9e263604d22a408b979e118b39be",
     "src/hooks/useSemanticColors.ts": "a50d1f36d45d4ea776bf94ab787ad0bcfeebbe07716f7e8f0cd546572bcb85e5",
@@ -477,8 +480,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 401,
-    "sliceBytes": 186267
+    "shellFiles": 404,
+    "sliceBytes": 187137
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",
@@ -3446,9 +3449,16 @@
         "jobs.design.label",
         "jobs.finance.label",
         "jobs.procurement.label",
+        "jobs.reveal.bannerDescription",
+        "jobs.reveal.bannerTitle",
+        "jobs.reveal.hiddenHere",
+        "jobs.reveal.show",
+        "jobs.reveal.showAriaLabel",
+        "jobs.reveal.stop",
         "jobs.site.label",
         "jobs.switch.all",
         "jobs.switch.ariaLabel",
+        "jobs.switch.hiddenBreakdown",
         "jobs.switch.hiddenCount",
         "jobs.switch.restoreAll",
         "jobs.switch.tooltip",

@@ -57,16 +57,42 @@ export function paintedInk(log: PaintLog): ReadonlyArray<{ text: string; color: 
 }
 
 /** Καταγράφει κάθε `fillStyle` τη στιγμή που χρησιμοποιείται — όχι στο τέλος. */
+/**
+ * Ένα συμπαγές ορθογώνιο (`fillRect`) — ADR-739 Φ.Ε: η **υπογράμμιση**.
+ *
+ * Καταγράφεται με το σημείο **μετά** τον μετασχηματισμό, για τον ίδιο λόγο με το
+ * {@link TextRecord}: μέσα στη στροφή του `stampFrameText` τα ορίσματα είναι σχετικά, και
+ * ένας καταγραφέας που κοιτά μόνο αυτά θα ήταν πράσινος και για γραμμή που έμεινε οριζόντια
+ * κάτω από γερμένο κείμενο.
+ */
+export interface RectRecord {
+  readonly color: string;
+  readonly at: { readonly x: number; readonly y: number };
+  readonly widthPx: number;
+  readonly heightPx: number;
+  readonly angleRad: number;
+}
+
 export interface PaintLog {
   readonly fills: string[];
   readonly texts: TextRecord[];
   readonly strokes: StrokeRecord[];
+  readonly rects: RectRecord[];
 }
 
 /** Καθαρό ημερολόγιο — μία έκφραση, ώστε καμία σουίτα να μην ξεχάσει πεδίο. */
 export function createPaintLog(): PaintLog {
-  return { fills: [], texts: [], strokes: [] };
+  return { fills: [], texts: [], strokes: [], rects: [] };
 }
+
+/**
+ * Πλάτος χαρακτήρα του ψεύτικου `measureText`, σε px.
+ *
+ * Σταθερό και **ανεξάρτητο** από τη γραμματοσειρά: το jsdom δεν έχει μηχανή κειμένου, οπότε
+ * κάθε «ρεαλιστική» μέτρηση θα ήταν φαντασία με περισσότερα βήματα. Εκτεθειμένο ώστε τα
+ * tests να υπολογίζουν το αναμενόμενο πλάτος από τη **μία** πηγή.
+ */
+export const RECORDER_CHAR_PX = 6;
 
 /**
  * Ο ενεργός affine μετασχηματισμός `[a c e; b d f]`, με τη σύμβαση του καμβά:
@@ -165,6 +191,17 @@ export function createCtx(log: PaintLog): CanvasRenderingContext2D {
         angleRad: Math.atan2(transform.b, transform.a),
       });
     },
+    fillRect: (x: number, y: number, w: number, h: number): void => {
+      log.rects.push({
+        color: fillStyle,
+        at: applyTransform(transform, x, y),
+        widthPx: w,
+        heightPx: h,
+        angleRad: Math.atan2(transform.b, transform.a),
+      });
+    },
+    measureText: (text: string): TextMetrics =>
+      ({ width: text.length * RECORDER_CHAR_PX }) as TextMetrics,
   };
   return ctx as unknown as CanvasRenderingContext2D;
 }

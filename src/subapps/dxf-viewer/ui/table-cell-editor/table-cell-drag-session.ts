@@ -32,12 +32,24 @@
  * όχι της αλλαγής» που ο ADR-735 πλήρωσε σε παραγωγή. Ο φύλακας ζει **εδώ** και όχι στο
  * store, γιατί το συμβόλαιο του store είναι σωστό για τον καλούντα που είχε.
  *
+ * ## 🔴 ADR-739 §27.16 Ε1 — Η ΑΚΡΗ: **δύο** πηγές κίνησης, **μία** ερμηνεία
+ * Από εδώ και πέρα το κινούμενο άκρο ξαναλύνεται από **δύο** αφορμές: το `mousemove` (το
+ * χέρι κουνήθηκε) και το auto-pan (**ο κόσμος** κουνήθηκε κάτω από ακίνητο χέρι). Είναι η
+ * ίδια ερώτηση, άρα περνούν και οι δύο από την **ίδια** `applyAt` — μαζί με τον ίδιο φύλακα
+ * «γράψε μόνο όταν αλλάζει κελί». Δύο μονοπάτια εγγραφής θα ήταν δύο φύλακες που αποκλίνουν.
+ *
  * @module subapps/dxf-viewer/ui/table-cell-editor/table-cell-drag-session
  * @see ui/table-cell-editor/use-table-cell-pointer.ts — ποιος την ξεκινά, και με τι γεωμετρία
  * @see bim/table/table-cell-range.ts — τι σημαίνει η κάθε επιλογή (`TableSelectionKind`)
+ * @see systems/navigation/drag-edge-autopan.ts — η άκρη· γιατί δεν είναι scroll αλλά pan
  */
 
 import { setTableCellSelection } from '../../state/table-cell-cursor-store';
+import {
+  edgeAutoPanSample,
+  startDragEdgeAutoPan,
+  stopDragEdgeAutoPan,
+} from '../../systems/navigation/drag-edge-autopan';
 import type { TableCellRef, TableSelectionKind } from '../../bim/table/table-cell-range';
 
 /** Ό,τι χρειάζεται η χειρονομία για να ζήσει. Καμία γνώση γεωμετρίας — τη δίνει ο καλών. */
@@ -55,6 +67,14 @@ export interface TableCellDragStart {
    * του πίνακα και τη διάταξη. Καλείται **μία φορά ανά κίνηση**.
    */
   readonly resolveAt: (event: MouseEvent) => TableCellRef | null;
+  /**
+   * 🔴 §27.16 Ε1 — το δοχείο του καμβά· **η μόνη** γνώση που χρειάζεται η άκρη.
+   *
+   * **Υποχρεωτικό, χωρίς προεπιλογή**, με τον ίδιο λόγο που το `kind` είναι υποχρεωτικό
+   * (§27.15): ένας γραφέας που το ξεχνά θα έπαιρνε σιωπηλά σύρση **χωρίς** auto-pan — δηλαδή
+   * ακριβώς το κενό που κλείνει εδώ, ξαναγεννημένο χωρίς να το πει κανείς.
+   */
+  readonly container: HTMLElement;
 }
 
 /** Οι ακροατές της τρέχουσας σύρσης· `null` όταν δεν σέρνεται τίποτα. */
@@ -71,15 +91,21 @@ export function startTableCellDrag(start: TableCellDragStart): void {
   // Η αφετηρία: το ίδιο το κελί της άγκυρας. Ο φύλακας «άλλαξε κελί;» ξεκινά από εδώ, ώστε
   // η πρώτη κίνηση **μέσα** στο ίδιο κελί να μη γράψει τίποτα.
   let lastCell: TableCellRef = start.anchor;
+  /**
+   * Το τελευταίο συμβάν κίνησης — **η θέση του χεριού**, όχι η θέση στον κόσμο.
+   *
+   * §27.16 Ε1: το auto-pan το χρειάζεται επειδή ο δείκτης μπορεί να μένει **ακίνητος** πάνω
+   * στην άκρη επ' άπειρον, οπότε δεν έρχεται κανένα νέο `mousemove` — και ακριβώς τότε το
+   * κάδρο πρέπει να συνεχίσει. `null` πριν την πρώτη κίνηση: σκέτο πάτημα στην άκρη **δεν**
+   * μετακινεί τίποτα (Excel: η αυτόματη κύλιση ξεκινά όταν σέρνεις, όχι όταν πατάς).
+   */
+  let lastEvent: MouseEvent | null = null;
 
-  const onMove = (event: MouseEvent): void => {
-    // Το κουμπί αφέθηκε εκτός παραθύρου (ή το `mouseup` χάθηκε): τερμάτισε. Χωρίς αυτό, η
-    // επιλογή θα ακολουθούσε τον κέρσορα **χωρίς πατημένο κουμπί** — μια σύρση-φάντασμα που
-    // ο χρήστης δεν μπορεί να σταματήσει.
-    if ((event.buttons & 1) === 0) {
-      endTableCellDrag();
-      return;
-    }
+  /**
+   * «Πού φτάνει τώρα η επιλογή;» — ο **ΕΝΑΣ** δρόμος, για **δύο** αφορμές: κίνησε το χέρι,
+   * ή κίνησε ο κόσμος (auto-pan). Ο φύλακας ζει εδώ, άρα ισχύει και για τις δύο.
+   */
+  const applyAt = (event: MouseEvent): void => {
     const cell = start.resolveAt(event);
     // Έξω από το πλέγμα: η επιλογή **μένει** εκεί που έφτασε. Ίδια σύμβαση με το `Shift+βέλος`
     // στην άκρη — ποτέ αναδίπλωση, ποτέ σβήσιμο από παραδρομή του χεριού.
@@ -89,13 +115,34 @@ export function startTableCellDrag(start: TableCellDragStart): void {
     setTableCellSelection({ from: start.anchor, to: cell, kind: start.kind });
   };
 
+  const onMove = (event: MouseEvent): void => {
+    // Το κουμπί αφέθηκε εκτός παραθύρου (ή το `mouseup` χάθηκε): τερμάτισε. Χωρίς αυτό, η
+    // επιλογή θα ακολουθούσε τον κέρσορα **χωρίς πατημένο κουμπί** — μια σύρση-φάντασμα που
+    // ο χρήστης δεν μπορεί να σταματήσει.
+    if ((event.buttons & 1) === 0) {
+      endTableCellDrag();
+      return;
+    }
+    lastEvent = event;
+    applyAt(event);
+  };
+
   const onUp = (): void => endTableCellDrag();
 
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
+  // §27.16 Ε1 — η άκρη. Το auto-pan δεν ξέρει τίποτα για κελιά: του δίνουμε «πού είναι το
+  // χέρι» και μας λέει «το κάδρο μετακινήθηκε, ξαναρώτα».
+  startDragEdgeAutoPan({
+    sample: () => (lastEvent ? edgeAutoPanSample(lastEvent, start.container) : null),
+    onPanned: () => {
+      if (lastEvent) applyAt(lastEvent);
+    },
+  });
   activeTeardown = (): void => {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('mouseup', onUp);
+    stopDragEdgeAutoPan();
   };
 }
 

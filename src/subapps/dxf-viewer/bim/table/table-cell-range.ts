@@ -39,12 +39,15 @@
  *
  * @module subapps/dxf-viewer/bim/table/table-cell-range
  * @see bim/table/table-cell-navigation.ts — η κίνηση ενός κελιού (επαναχρησιμοποιείται εδώ)
- * @see bim/table/table-model-helpers.ts — `buildMergeIndex`, η ΜΙΑ γνώση συγχωνεύσεων
+ * @see bim/table/table-range-merge-snap.ts — ο ΜΗΧΑΝΙΣΜΟΣ του κουμπώματος σε συγχωνεύσεις
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §26
  */
 
 import type { TableColumnId, TableModel, TableRowId } from '../../types/table';
-import { buildMergeIndex, indexById } from './table-model-helpers';
+import { indexById } from './table-model-helpers';
+// ADR-739 §27.16 — ο ΜΗΧΑΝΙΣΜΟΣ του κουμπώματος ζει δίπλα· η ΑΠΟΦΑΣΗ «ποιος κουμπώνει»
+// μένει εδώ (§27.15), γιατί μόνο εδώ ζει η πρόθεση του χρήστη.
+import { snapToWholeMerges, type TableRectBounds } from './table-range-merge-snap';
 import { moveTableCursor, type TableCursorMove } from './table-cell-navigation';
 import type { TableLayout, TableRectMm } from './table-layout-types';
 
@@ -61,13 +64,12 @@ export interface TableCellRef {
  * Δείκτες και όχι ταυτότητες γιατί η έννοια «ορθογώνιο» **είναι** γεωμετρία θέσης: με
  * ταυτότητες, κάθε ερώτηση «είναι αυτό μέσα;» θα ήταν μια αναζήτηση. Οι ταυτότητες
  * επιστρέφονται από το {@link tableRangeMembership} για όποιον τις χρειάζεται.
+ *
+ * §27.16 — **ένας** ορισμός, δύο ονόματα: το σχήμα ζει δίπλα στην άλγεβρα που το χειρίζεται
+ * (`TableRectBounds`) και επανεξάγεται εδώ με το όνομα που ξέρουν ήδη 30+ καταναλωτές. Ένα
+ * δεύτερο `interface` με τα ίδια τέσσερα πεδία θα ήταν διπλότυπο που αποκλίνει σιωπηλά.
  */
-export interface TableCellRangeBounds {
-  readonly firstRow: number;
-  readonly lastRow: number;
-  readonly firstCol: number;
-  readonly lastCol: number;
-}
+export type TableCellRangeBounds = TableRectBounds;
 
 /** Πόσο μεγάλη είναι — αυτό που δείχνει η **γραμμή κατάστασης** (§4.2). */
 export interface TableRangeSize {
@@ -91,88 +93,6 @@ export interface TableRangeSize {
 export interface TableRangeMembership {
   readonly rowIds: ReadonlySet<TableRowId>;
   readonly colIds: ReadonlySet<TableColumnId>;
-}
-
-/** Το ορθογώνιο που καταλαμβάνει μια συγχώνευση, σε δείκτες — ή `null` αν είναι άκυρη. */
-function mergeBoundsOf(
-  model: TableModel,
-  rowIndex: ReadonlyMap<string, number>,
-  colIndex: ReadonlyMap<string, number>,
-  span: { anchorRowId: string; anchorColId: string; rowSpan: number; colSpan: number },
-): TableCellRangeBounds | null {
-  const r0 = rowIndex.get(span.anchorRowId);
-  const c0 = colIndex.get(span.anchorColId);
-  if (r0 === undefined || c0 === undefined) return null;
-  if (span.rowSpan < 1 || span.colSpan < 1) return null;
-  return {
-    firstRow: r0,
-    lastRow: Math.min(r0 + span.rowSpan, model.rows.length) - 1,
-    firstCol: c0,
-    lastCol: Math.min(c0 + span.colSpan, model.columns.length) - 1,
-  };
-}
-
-/** Τέμνονται δύο ορθογώνια (κλειστά διαστήματα); */
-function intersects(a: TableCellRangeBounds, b: TableCellRangeBounds): boolean {
-  return (
-    a.firstRow <= b.lastRow &&
-    b.firstRow <= a.lastRow &&
-    a.firstCol <= b.lastCol &&
-    b.firstCol <= a.lastCol
-  );
-}
-
-/** Το μικρότερο ορθογώνιο που περιέχει και τα δύο. */
-function union(a: TableCellRangeBounds, b: TableCellRangeBounds): TableCellRangeBounds {
-  return {
-    firstRow: Math.min(a.firstRow, b.firstRow),
-    lastRow: Math.max(a.lastRow, b.lastRow),
-    firstCol: Math.min(a.firstCol, b.firstCol),
-    lastCol: Math.max(a.lastCol, b.lastCol),
-  };
-}
-
-function sameBounds(a: TableCellRangeBounds, b: TableCellRangeBounds): boolean {
-  return (
-    a.firstRow === b.firstRow &&
-    a.lastRow === b.lastRow &&
-    a.firstCol === b.firstCol &&
-    a.lastCol === b.lastCol
-  );
-}
-
-/**
- * 🔴 **Το «κούμπωμα» στις συγχωνεύσεις** — ο κανόνας που κάνει την επιλογή να έχει νόημα.
- *
- * Μια ορθογώνια περιοχή που **κόβει** μια συγχώνευση στη μέση είναι ανερμήνευτη: το
- * περιεχόμενο ζει στην άγκυρα, οπότε «τα μισά ενός κελιού» δεν αντιγράφονται, δεν
- * σβήνονται και δεν γεμίζουν. Το Excel μεγαλώνει την επιλογή ώστε να **περικλείει
- * ολόκληρες** τις συγχωνεύσεις που αγγίζει (επιβεβαιώθηκε: επιλογή της γραμμής 5 σε φύλλο
- * με συγχώνευση `A1:A10` γίνεται `1:10`).
- *
- * Ο βρόχος **τερματίζει πάντα**: κάθε επανάληψη ή μεγαλώνει γνήσια το ορθογώνιο (και το
- * ορθογώνιο είναι φραγμένο από το πλέγμα) ή σταματά. Χειρότερη περίπτωση: όσες οι
- * συγχωνεύσεις.
- *
- * ⚠️ Καμία **δεύτερη** λογική συγχωνεύσεων δεν γεννιέται εδώ: το ορθογώνιο κάθε span το
- * δίνει το ίδιο `model.merges` που διαβάζει το {@link buildMergeIndex}, με την ίδια
- * περικοπή στα όρια του πλέγματος και την ίδια ανοχή σε άκυρα spans.
- */
-function snapToWholeMerges(model: TableModel, start: TableCellRangeBounds): TableCellRangeBounds {
-  if (model.merges.length === 0) return start;
-  const rowIndex = indexById(model.rows);
-  const colIndex = indexById(model.columns);
-
-  let bounds = start;
-  for (;;) {
-    let grown = bounds;
-    for (const span of model.merges) {
-      const spanBounds = mergeBoundsOf(model, rowIndex, colIndex, span);
-      if (spanBounds && intersects(grown, spanBounds)) grown = union(grown, spanBounds);
-    }
-    if (sameBounds(grown, bounds)) return bounds;
-    bounds = grown;
-  }
 }
 
 /**
@@ -264,6 +184,19 @@ export interface TableSelectionSpan {
 }
 
 /**
+ * «Ποιος άξονας, και ποιο μέλος του» — δηλαδή ό,τι χρειάζεται το {@link wholeAxisSelection}.
+ *
+ * ⚠️ Είναι **δομικά** το υποσύνολο του `TableIndicatorHit` (που κουβαλά επιπλέον `index`),
+ * ώστε ένα `hit` να περνά αυτούσιο **χωρίς** αυτό το αρχείο — καθαρή γνώση **μοντέλου** — να
+ * αποκτήσει εξάρτηση από τη **γεωμετρία σε mm** των ζωνών. Δεν είναι δεύτερο λεξιλόγιο: οι
+ * λέξεις `'column'`/`'row'` είναι κυριολεκτικά οι ίδιες, όπως ορίζει το
+ * {@link TableSelectionKind}.
+ */
+export type TableAxisTarget =
+  | { readonly axis: 'column'; readonly colId: TableColumnId }
+  | { readonly axis: 'row'; readonly rowId: TableRowId };
+
+/**
  * Τα όρια μιας επιλογής — **ο ΕΝΑΣ δρόμος** από «τι διάλεξε ο χρήστης» σε «ποια κελιά
  * είναι μέσα». Ό,τι ρωτά ο ζωγράφος, η αντιγραφή, το σβήσιμο και η γραμμή κατάστασης.
  *
@@ -277,6 +210,67 @@ export function resolveTableSelectionBounds(
   const bounds = normalizeBounds(model, selection.from, selection.to);
   if (!bounds) return null;
   return selection.kind === 'range' ? snapToWholeMerges(model, bounds) : bounds;
+}
+
+/**
+ * 🔴 ADR-739 §27.16 Ε2 — **Η ΜΙΑ ΕΠΕΚΤΑΣΗ.** Η άγκυρα μένει, το **είδος** μένει, κουνιέται
+ * μόνο το τέλος.
+ *
+ * ## Γιατί υπάρχει ως ονομασμένη συνάρτηση αντί για τρία object literals
+ * Ο κανόνας γεννήθηκε στο `Shift+βέλος` (§27.15) και ήταν **μία γραμμή** μέσα στο
+ * `use-table-range-actions`. Το `Shift+κλικ` σε γράμμα στήλης ζητά **τον ίδιο ακριβώς**
+ * κανόνα από άλλο αρχείο. Δύο αντίγραφα μιας γραμμής δεν πιάνονται από το jscpd (κάτω από
+ * τα 50 tokens) και **αποκλίνουν σιωπηλά**: αρκεί το ένα να ξεχάσει το `kind` για να
+ * ξανακουμπώσει η επιλογή στη συγχώνευση του τίτλου — δηλαδή να επιστρέψει ακριβώς το
+ * σφάλμα που έλυσε το §27.15, από την πίσω πόρτα.
+ *
+ * ⚠️ **Δεν κανονικοποιεί και δεν κουμπώνει**: παράγει την **πρόθεση**, όχι τα όρια. Η
+ * ερμηνεία είναι δουλειά του {@link resolveTableSelectionBounds} — ο ΕΝΑΣ δρόμος.
+ */
+export function extendTableSelectionTo(
+  current: TableSelectionSpan,
+  rangeEnd: TableCellRef,
+): TableSelectionSpan {
+  return { from: current.from, to: rangeEnd, kind: current.kind };
+}
+
+/**
+ * 🔴 ADR-739 §27.16 Ε2 — **Ο ΕΝΑΣ ΟΡΙΣΜΟΣ ΤΗΣ «ΟΛΟΚΛΗΡΗΣ ΣΤΗΛΗΣ/ΓΡΑΜΜΗΣ».**
+ *
+ * Κλικ στο «B» ⇒ `(πρώτη γραμμή, B) → (τελευταία γραμμή, B)`, είδος `'column'`. Το ενεργό
+ * κελί πάει στο `from`, όπως στο Excel: εκεί αρχίζει η πληκτρολόγηση αν συνεχίσεις να γράφεις.
+ *
+ * ## Γιατί εδώ και όχι στον χειριστή του ποντικιού
+ * Την **ίδια** απάντηση τη ζητούν ήδη **τρεις**: το κλικ στη ζώνη, το **κινούμενο άκρο** της
+ * σύρσης πάνω στη ζώνη, και τώρα το `Shift+κλικ` σε δεύτερο γράμμα. Πριν από αυτή τη
+ * συνάρτηση ήταν γραμμένη **δύο** φορές μέσα στον ίδιο χειριστή (`selectWholeAxis` και
+ * `axisEndAt`) με το ίδιο `rows[rows.length - 1]` — και ένας τρίτος καταναλωτής θα έκανε
+ * τρία. Το λεξιλόγιο (`'column'`/`'row'`) είναι **δανεικό** από το `TableIndicatorHit.axis`,
+ * ακριβώς όπως το ορίζει το {@link TableSelectionKind}: μία έννοια, ένα ζευγάρι λέξεων.
+ *
+ * ⚠️ Το είδος **δεν** είναι `'range'`, άρα το κούμπωμα **δεν** τρέχει — αυτή είναι ολόκληρη
+ * η διόρθωση του §27.15 και ζει τώρα στην **πηγή** της επιλογής άξονα, όχι στους καλούντες.
+ *
+ * `null` σε πίνακα χωρίς γραμμές ή χωρίς στήλες.
+ */
+export function wholeAxisSelection(
+  model: TableModel,
+  hit: TableAxisTarget,
+): TableSelectionSpan | null {
+  const { rows, columns } = model;
+  if (rows.length === 0 || columns.length === 0) return null;
+
+  return hit.axis === 'column'
+    ? {
+        from: { rowId: rows[0].id, colId: hit.colId },
+        to: { rowId: rows[rows.length - 1].id, colId: hit.colId },
+        kind: 'column',
+      }
+    : {
+        from: { rowId: hit.rowId, colId: columns[0].id },
+        to: { rowId: hit.rowId, colId: columns[columns.length - 1].id },
+        kind: 'row',
+      };
 }
 
 /**

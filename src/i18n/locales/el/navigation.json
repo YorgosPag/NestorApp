@@ -238,7 +238,17 @@
       "tooltip": "Τι δουλειά κάνεις τώρα. Δεν αλλάζει δικαιώματα — μόνο τι εμφανίζεται.",
       "restoreAll": "Εμφάνιση όλων",
       "hiddenCount": "{count, plural, one {# κρυμμένο} other {# κρυμμένα}}",
+      "hiddenBreakdown": "{branches, plural, one {# κλάδος} other {# κλάδοι}} · {subItems, plural, one {# υπο-στοιχείο} other {# υπο-στοιχεία}}",
       "unknownSource": "Δεν επιβεβαιώνεται από τον περιηγητή — ο ρόλος σου στο έργο δεν φτάνει εδώ."
+    },
+    "reveal": {
+      "hiddenHere": "{count, plural, one {+# κρυμμένο} other {+# κρυμμένα}}",
+      "show": "Εμφάνιση",
+      "showAriaLabel": "Αποκάλυψη {count, plural, one {# κρυμμένου στοιχείου} other {# κρυμμένων στοιχείων}} σε αυτή την ενότητα",
+      "bannerTitle": "Αποκάλυψη κρυμμένων",
+      "bannerDescription": "Τα κρυμμένα από τη δουλειά εμφανίζονται στη θέση τους, υποβαθμισμένα.",
+      "stop": "Τέλος",
+      "demoted": "Κρυμμένο από την ενεργή δουλειά"
     }
   },
   "sidebar": {

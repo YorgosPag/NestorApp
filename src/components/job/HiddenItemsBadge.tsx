@@ -29,12 +29,28 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 interface HiddenItemsBadgeProps {
   /** Πόσα έκρυψε η ενεργή δουλειά. Στο 0 δεν εμφανίζεται τίποτα. */
   count: number;
+  /**
+   * ΦΑΣΗ 3.6 — τα υπο-στοιχεία μέσα σε **ΟΡΑΤΟΥΣ** γονείς.
+   *
+   * 🔒 **ΔΕΝ προστίθεται στο `count`, ΠΟΤΕ.** Ζει μόνο στην ανάλυση του
+   * tooltip. Η πρόσθεσή του είναι κατά λέξη το ελάττωμα των 17:13 — ο δείκτης
+   * έλεγε **22** ενώ από το μενού έλειπαν **9**, και ο Γιώργος ρώτησε «είναι
+   * σωστό αυτό;». Ένας δείκτης που γεννά αμφιβολία έχει αποτύχει, ακόμη κι
+   * όταν είναι αριθμητικά αληθής. Ο αριθμός μένει **επαληθεύσιμος με το μάτι**
+   * (Α-3)· η ανάλυση απαντά «από τι αποτελείται» **μόνο** όταν τη ζητήσεις.
+   */
+  subItemCount?: number;
   /** Επαναφορά σε «Όλες οι δουλειές» — **ένα** κλικ, πάντα. */
   onRestore: () => void;
   className?: string;
 }
 
-export function HiddenItemsBadge({ count, onRestore, className }: HiddenItemsBadgeProps) {
+export function HiddenItemsBadge({
+  count,
+  subItemCount = 0,
+  onRestore,
+  className,
+}: HiddenItemsBadgeProps) {
   const { t } = useTranslation('navigation');
 
   // Ένα «0 κρυμμένα» θα ήταν θόρυβος: ο δείκτης υπάρχει μόνο όταν έχει νόημα.
@@ -56,7 +72,16 @@ export function HiddenItemsBadge({ count, onRestore, className }: HiddenItemsBad
           {t('jobs.switch.hiddenCount', { count })}
         </button>
       </TooltipTrigger>
-      <TooltipContent>{t('jobs.switch.restoreAll')}</TooltipContent>
+      <TooltipContent>
+        <span className="flex flex-col">
+          <span>{t('jobs.switch.restoreAll')}</span>
+          {subItemCount > 0 && (
+            <span className="text-muted-foreground">
+              {t('jobs.switch.hiddenBreakdown', { branches: count, subItems: subItemCount })}
+            </span>
+          )}
+        </span>
+      </TooltipContent>
     </Tooltip>
   );
 }

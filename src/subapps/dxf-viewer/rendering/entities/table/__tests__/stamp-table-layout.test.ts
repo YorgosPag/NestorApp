@@ -40,6 +40,8 @@ const style = (fillColorHex?: string): TableCellStyle => ({
   textColorHex: INK,
   fillColorHex,
   bold: false,
+  italic: false,
+  underline: false,
   align: 'ML',
   margins: { hMm: 1, vMm: 1 },
 });
@@ -62,6 +64,8 @@ function cell(
       colorHex: INK,
       hAlign: 'left',
       bold: false,
+      italic: false,
+      underline: false,
     },
     rowSpan: 1,
     colSpan: 1,

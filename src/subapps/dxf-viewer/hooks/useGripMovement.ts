@@ -53,6 +53,8 @@ import { createZeroPoint } from '../config/geometry-constants';
 import { snapToGrid as snapDeltaToGrid } from '../systems/grid/grid-snap';
 // 🏢 ADR-516: Timing SSoT + zero-lag throttle
 import { DXF_TIMING } from '../config/dxf-timing';
+// ADR-739 §27.16 Ε4 — η ΜΙΑ τιμή της οπής λαβής (ήταν γραμμένο δεύτερο σκέτο 8 εδώ).
+import { TOLERANCE_CONFIG } from '../config/tolerance-config';
 import { createRafCoalescedThrottle } from './raf-coalesced-throttle';
 // ============================================================================
 // 🏢 ENTERPRISE: Configuration Constants
@@ -64,8 +66,17 @@ import { createRafCoalescedThrottle } from './raf-coalesced-throttle';
 export const GRIP_CONFIG = {
   /** Minimum drag distance before grip operation starts (pixels) */
   MIN_DRAG_DISTANCE: 2,
-  /** Grip hit tolerance (pixels) */
-  HIT_TOLERANCE: 8,
+  /**
+   * Grip hit tolerance (pixels) — 🔴 ADR-739 §27.16 Ε4: **δεν είναι δικός μας αριθμός**.
+   *
+   * Ήταν σκέτο `8`, δίπλα σε ένα δεύτερο σκέτο `8` που λεγόταν `TOLERANCE_CONFIG.GRIP_APERTURE`
+   * — **δύο ονόματα της ίδιας ποσότητας** σε δύο αρχεία, χωρίς κανένα test να τα συγκρίνει.
+   * Είναι ακριβώς το σχήμα που κόστισε ήδη στο §27.13 (`…Px` vs `…Mm`): μια αναζήτηση
+   * διπλοτύπων βρίσκει **το ένα**, λέει «καθαρό», και τα δύο αποκλίνουν στην πρώτη ρύθμιση.
+   * Πλέον υπάρχει **μία** τιμή, στο `config/tolerance-config.ts`, και το `grip-aperture.ts`
+   * την καταναλώνει από εκεί χωρίς να περνά από αυτό το αρχείο (που σέρνει Firestore).
+   */
+  HIT_TOLERANCE: TOLERANCE_CONFIG.GRIP_APERTURE,
   /** Per-frame throttle for grip ghost updates (ms) - 60fps (ADR-516 SSoT) */
   DEBOUNCE_MS: DXF_TIMING.frame.THROTTLE_60,
   /** Command merge window for smooth drag (ms) - ADR-516 SSoT */

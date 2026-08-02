@@ -95,6 +95,8 @@ function standardRowClass(
     textColorHex: STANDARD_TEXT_HEX,
     fillColorHex,
     bold,
+    italic: false,
+    underline: false,
     align: 'MC',
     margins: STANDARD_MARGINS,
     borders: {
@@ -185,6 +187,8 @@ function detailSheetRowClass(
     textHeightMm: DETAIL_SHEET_TEXT_HEIGHT_MM,
     textColorHex: DETAIL_SHEET_TEXT_HEX,
     bold,
+    italic: false,
+    underline: false,
     // Το κείμενο κρέμεται από την ΚΟΡΥΦΗ της γραμμής (`rowTop + margin + TEXT_MM`), όχι
     // κεντραρισμένο — ακριβώς η σύμβαση του ADR-622. Οριζόντιο περιθώριο μηδέν: το κείμενο
     // αγκυρώνεται πάνω στην ίδια την ακμή της στήλης.

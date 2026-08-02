@@ -40,8 +40,13 @@ beforeAll(async () => {
     floorplanImport: { drawingUnits: { title: 'Μονάδες Σχεδίου DXF', auto: 'Αυτόματα' } },
   }, true, true);
   // Ομώνυμο κλειδί στο ΠΡΩΤΕΥΟΝ ns — για να αποδειχθεί ποιος κερδίζει.
+  // ADR-739 §27.16 Ε5 — πίνακας συμβουλών (returnObjects) + ΟΜΩΝΥΜΟ string σε άλλο ns.
+  instance.addResourceBundle('el', 'tool-hints', {
+    tools: { select: { name: 'Επιλογή', steps: ['Κάντε κλικ σε οντότητα για επιλογή'] } },
+  }, true, true);
   instance.addResourceBundle('el', 'dxf-viewer', {
     floorplanImport: { drawingUnits: { auto: 'ΠΡΩΤΕΥΟΝ' } },
+    tools: { select: { steps: 'ΛΑΘΟΣ — string σε ομώνυμο ns' } },
   }, true, true);
 });
 
@@ -99,5 +104,60 @@ describe('useTranslation — κλειδί σε ΜΗ πρωτεύον namespace �
   it('κλειδί ανύπαρκτο σε ΟΛΑ τα ns του πίνακα επιστρέφει το κλειδί — δεν εφευρίσκει', () => {
     const out = translate(['dxf-viewer', 'files-media'], 'floorplanImport.drawingUnits.nope');
     expect(out).toContain('nope');
+  });
+});
+
+/**
+ * 🔴 ADR-739 §27.16 Ε5 — **ΕΝΑΣ ΠΙΝΑΚΑΣ ΔΕΝ ΕΙΝΑΙ ΑΝΕΠΙΛΥΤΟ ΚΛΕΙΔΙ.**
+ *
+ * Ο έλεγχος επιτυχίας έλεγε «*ό,τι δεν είναι `string` είναι ανεπίλυτο*». Το `returnObjects:
+ * true` όμως επιστρέφει **πίνακα** ακριβώς όταν το κλειδί **βρέθηκε**. Άρα κάθε επιτυχής
+ * ανάγνωση πίνακα:
+ *
+ *  1. **έγραφε ψευδή συναγερμό** στην κονσόλα («*raw key reached the UI*») για κλειδί που
+ *     υπάρχει και στα δύο locale — μετρημένο: `tool-hints:tools.select.steps`, όπου τα
+ *     `steps` υπάρχουν **και** στο `el` **και** στο `en`. Ένας συναγερμός που χτυπά σε σωστό
+ *     κώδικα διδάσκει τον χρήστη να τον αγνοεί, και τότε χάνεται και ο **αληθινός**·
+ *  2. **έτρεχε ολόκληρο** το compat remap και τη σάρωση όλων των namespaces — δουλειά για το
+ *     τίποτα, σε **κάθε** κλήση·
+ *  3. 🔴 και το επικίνδυνο: αν κάποιο **άλλο** namespace είχε ομώνυμο κλειδί με τιμή
+ *     **string**, η σάρωση θα «πετύχαινε» και θα επέστρεφε **εκείνο** αντί για τον σωστό
+ *     πίνακα. Δηλαδή σιωπηλά **λάθος** δεδομένα, όχι απλώς θόρυβος.
+ *
+ * Ένα κλειδί που **όντως** λείπει επιστρέφει το ίδιο το κλειδί — **string** — άρα ο έλεγχος
+ * που μετράει δεν χάνεται.
+ */
+describe('🔴 §27.16 Ε5 — returnObjects: ο πίνακας είναι ΕΠΙΛΥΜΕΝΟ αποτέλεσμα', () => {
+  const translateObjects = (namespaces: string[], key: string): unknown => {
+    const { result } = renderHook(() => useTranslation(namespaces), { wrapper });
+    return (result.current.t as unknown as (k: string, o: object) => unknown)(key, {
+      returnObjects: true,
+    });
+  };
+
+  it('🔴 πίνακας συμβουλών επιστρέφεται ΑΥΤΟΥΣΙΟΣ, χωρίς να θεωρηθεί αστοχία', () => {
+    expect(translateObjects(['tool-hints'], 'tools.select.steps')).toEqual([
+      'Κάντε κλικ σε οντότητα για επιλογή',
+    ]);
+  });
+
+  it('🔴 ΔΕΝ διαρρέει σε ομώνυμο κλειδί άλλου namespace — το επικίνδυνο μισό', () => {
+    // Το `dxf-viewer` έχει ΟΜΩΝΥΜΟ `tools.select.steps` με τιμή **string**. Με τον παλιό
+    // έλεγχο, η σάρωση namespaces θα «πετύχαινε» εκεί και θα επέστρεφε ΛΑΘΟΣ τιμή.
+    expect(translateObjects(['tool-hints', 'dxf-viewer'], 'tools.select.steps')).toEqual([
+      'Κάντε κλικ σε οντότητα για επιλογή',
+    ]);
+  });
+
+  it('αντικείμενο (όχι πίνακας) επιστρέφεται κι αυτό αυτούσιο', () => {
+    expect(translateObjects(['tool-hints'], 'tools.select')).toMatchObject({
+      name: 'Επιλογή',
+    });
+  });
+
+  it('κλειδί που ΟΝΤΩΣ λείπει εξακολουθεί να αναγνωρίζεται ως αστοχία', () => {
+    const out = translateObjects(['tool-hints'], 'tools.doesNotExist.steps');
+    expect(typeof out).toBe('string');
+    expect(out).toContain('doesNotExist');
   });
 });

@@ -30,6 +30,11 @@ export const TABLE_CELL_EDITOR_VARS = {
   color: '--tce-color',
   background: '--tce-bg',
   textAlign: '--tce-text-align',
+  /**
+   * ADR-739 Φ.Ε — υπογράμμιση. Ταξιδεύει **χωριστά** από το {@link font} επειδή το CSS
+   * shorthand `font` δεν περιλαμβάνει το `text-decoration` — δεν είναι επιλογή μας.
+   */
+  decoration: '--tce-decoration',
   /** ADR-739 Φ.Δ βήμα 6 — πλάτος/ύψος της **ζώνης εκτύπωσης** μέσα στο επεκτεταμένο κουτί. */
   printWidth: '--tce-print-w',
   printHeight: '--tce-print-h',
@@ -75,6 +80,9 @@ export function tableCellEditorCssVars(frame: TableCellEditorFrame): Record<stri
     [V.color]: frame.colorHex,
     [V.background]: frame.backgroundHex,
     [V.textAlign]: frame.textAlign,
+    // `'none'` και όχι απουσία κλειδιού: ίδια αρχή με το πέπλο και τον δείκτη — ένας
+    // σταθερός κανόνας CSS, καμία εναλλαγή κλάσης, καμία δεύτερη διαδρομή απόδοσης.
+    [V.decoration]: frame.underline ? 'underline' : 'none',
     [V.printWidth]: `${printable?.widthPx ?? 0}px`,
     [V.printHeight]: `${printable?.heightPx ?? 0}px`,
     // Το πέπλο είναι το **μελάνι** του κελιού αραιωμένο, όχι τρίτο χρώμα: έτσι δουλεύει σωστά
@@ -119,6 +127,7 @@ export const TABLE_CELL_EDITOR_INPUT_STYLE: React.CSSProperties = {
   paddingBottom: `var(${TABLE_CELL_EDITOR_VARS.padBottom}, 0)`,
   paddingLeft: `var(${TABLE_CELL_EDITOR_VARS.padLeft}, 0)`,
   textAlign: `var(${TABLE_CELL_EDITOR_VARS.textAlign}, left)` as React.CSSProperties['textAlign'],
+  textDecoration: `var(${TABLE_CELL_EDITOR_VARS.decoration}, none)`,
   // ── ADR-739 Φ.Δ βήμα 6 — το `<textarea>` πρέπει να συμπεριφέρεται σαν κελί, όχι σαν φόρμα ──
   // Χειροκίνητη αλλαγή μεγέθους: **όχι** — το μέγεθος είναι παράγωγο του κειμένου και της
   // κλίμακας· μια λαβή στη γωνία θα υποσχόταν κάτι που το επόμενο tick θα ακύρωνε.

@@ -50,6 +50,7 @@ import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import { useTableModelCommit } from './use-table-model-commit';
 import {
   extendTableCellRangeEnd,
+  extendTableSelectionTo,
   resolveTableSelectionBounds,
   tableRangeSize,
   tableWholeGridRange,
@@ -162,7 +163,11 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
       // ADR-739 §27.15 — το είδος **διατηρείται**: `Shift+δεξί` πάνω σε επιλεγμένη στήλη
       // δίνει **δύο ολόκληρες στήλες** (Excel), όχι ορθογώνιο που ξαφνικά ξανακουμπώνει
       // στη συγχώνευση του τίτλου. Η επέκταση δεν αλλάζει **τι** διάλεξε ο χρήστης.
-      if (next) setTableCellSelection({ from: current.from, to: next, kind: current.kind });
+      //
+      // §27.16 Ε2 — ο κανόνας ζει πλέον σε **μία** συνάρτηση, γιατί το `Shift+κλικ` σε
+      // γράμμα στήλης τον ζητά από άλλο αρχείο. Δύο αντίγραφα μιας γραμμής δεν πιάνονται
+      // από κανένα εργαλείο και αποκλίνουν σιωπηλά.
+      if (next) setTableCellSelection(extendTableSelectionTo(current, next));
     },
     [cursor, entity],
   );

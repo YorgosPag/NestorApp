@@ -19,6 +19,7 @@
  */
 
 import { useCallback } from 'react';
+import { gripAperturePx } from '../../config/grip-aperture';
 import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 import type { Overlay } from '../../overlays/types';
 import type { VertexHoverInfo, EdgeHoverInfo, GripHoverThrottle } from './useCanvasMouse';
@@ -165,8 +166,10 @@ export function useLayerCanvasMouseMove(
             .map(id => currentOverlays.find(o => o.id === id))
             .filter((o): o is Overlay => o !== undefined);
 
-          // 🎯 CENTRALIZED: Tolerance from grip settings
-          const gripTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
+          // 🔴 ADR-739 §27.16 Ε4 — ο ΙΔΙΟΣ τύπος με το `useUnifiedGripInteraction`, από ΜΙΑ
+          // συνάρτηση. Εδώ έλειπε ο φραγμός `max(…, GRIP_APERTURE)`: με `gripSize` κάτω από 6
+          // ο δείκτης ΦΩΤΙΖΕ τη λαβή σε άλλη ακτίνα από αυτήν που την ΕΠΙΑΝΕ.
+          const gripTolerancePx = gripAperturePx(gripSettings);
           const gripToleranceWorld = gripTolerancePx / transform.scale;
 
           // Check grips on ALL selected overlays

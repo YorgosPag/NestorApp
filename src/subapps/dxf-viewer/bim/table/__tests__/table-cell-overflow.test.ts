@@ -35,6 +35,8 @@ const STYLE: TableCellStyle = {
   textHeightMm: HEIGHT_MM,
   textColorHex: '#111111',
   bold: false,
+  italic: false,
+  underline: false,
   align: 'ML',
   margins: { hMm: 0, vMm: 0 },
 };

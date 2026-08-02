@@ -20,6 +20,9 @@ import {
 import { tableColumnTicks, tableRowTicks } from '../table-cell-reference';
 import { TABLE_INDICATOR } from '../../../config/color-config';
 import { TOLERANCE_CONFIG } from '../../../config/tolerance-config';
+// ADR-739 §27.16 Ε4 — η ΜΙΑ συνάρτηση της οπής λαβής, και η προεπιλογή που την τροφοδοτεί.
+import { gripAperturePx } from '../../../config/grip-aperture';
+import { GRIP_SIZE_DEFAULT } from '../../../config/grip-size-default';
 import { getTableGrips } from '../table-entity-grips';
 import { buildTableEntity } from '../build-table-entity';
 import { computeTableEntityGeometryLive, tableWorldToFrame } from '../table-entity-geometry';
@@ -69,7 +72,11 @@ describe('tableIndicatorBandsMm', () => {
   it('🔴 §27.11 το κενό ΕΙΝΑΙ η οπή της λαβής — δεν είναι ανεξάρτητο νούμερο', () => {
     // Αν αύριο αλλάξει η οπή, το κενό ακολουθεί. Αυτό το test υπάρχει για να μη γεννηθεί
     // ποτέ δεύτερη σταθερά «κενό ζώνης» δίπλα στην πρώτη.
-    expect(TABLE_INDICATOR_GRIP_CLEARANCE_PX).toBe(TOLERANCE_CONFIG.GRIP_APERTURE);
+    // 🔴 §27.16 Ε4 — ΔΕΝ είναι πια η σταθερά `GRIP_APERTURE` (8): είναι η ΙΔΙΑ συνάρτηση που
+    // ανοίγει τη ζωντανή οπή, αποτιμημένη στις προεπιλογές ⇒ **9 px**. Ήταν 8 ενώ η λαβή
+    // έπιανε 9 — 1 px επικάλυψη που το §27.11 είχε καταγράψει ρητά ως εκκρεμές.
+    expect(TABLE_INDICATOR_GRIP_CLEARANCE_PX).toBe(gripAperturePx({ gripSize: GRIP_SIZE_DEFAULT }));
+    expect(TABLE_INDICATOR_GRIP_CLEARANCE_PX).toBeGreaterThan(TOLERANCE_CONFIG.GRIP_APERTURE);
     expect(BANDS.gapMm).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX / PX_PER_MM);
   });
 
@@ -161,7 +168,10 @@ describe('🔴 §27.11 — η ζώνη δεν διεκδικεί ούτε ένα
    * «**πιάνει** η ζώνη εκεί που πιάνει η λαβή;» — δηλαδή ακριβώς την ερώτηση που έβγαζε
    * δύο απαντήσεις για το ίδιο pixel.
    */
-  const apertureMm = TOLERANCE_CONFIG.GRIP_APERTURE / PX_PER_MM;
+  // 🔴 §27.16 Ε4 — αντλείται από το SSoT του κενού, ΟΧΙ από τη σταθερά .
+  // Ήταν το δεύτερο, και έδειχνε 8 px ενώ η ζωντανή οπή είναι 9: το test θα έβαφε πράσινη
+  // ακριβώς την 1-px επικάλυψη που μετρά — «δύο λεξιλόγια της ίδιας ποσότητας» (§27.13).
+  const apertureMm = TABLE_INDICATOR_GRIP_CLEARANCE_PX / PX_PER_MM;
 
   it('κάθε σημείο μέσα στην οπή, πάνω από ΚΑΘΕ όριο στήλης, ΔΕΝ είναι ζώνη', () => {
     // Τα εσωτερικά όρια στηλών είναι εκεί ακριβώς όπου κάθονται οι λαβές πλάτους.

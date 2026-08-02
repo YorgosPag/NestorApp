@@ -53,7 +53,7 @@ import {
   useTableCellSessionBlur,
 } from '../table-cell-session-focus';
 import { useTableCellPointer } from '../use-table-cell-pointer';
-import type { TableCellRef } from '../../../bim/table/table-cell-range';
+import { resolveTableSelectionBounds, type TableCellRef } from '../../../bim/table/table-cell-range';
 import type { TableEntity } from '../../../types/table-entity';
 import type { ViewTransform } from '../../../rendering/types/Types';
 
@@ -256,6 +256,118 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     expect(getTableCellCursor()).not.toBeNull();
     expect(getTableCellCursor()?.selection).not.toBeNull();
     expect(isTableCellSessionElement(document.activeElement)).toBe(true);
+  });
+
+  /**
+   * 🔴 ADR-739 §27.16 Ε2 — **`Shift+κλικ` σε δεύτερο γράμμα/αριθμό**.
+   *
+   * Excel: κλικ στο «A», `Shift+κλικ` στο «C» ⇒ **τρεις ολόκληρες στήλες**. Ελέγχεται στον
+   * **ζωντανό** χειριστή και όχι μόνο στην καθαρή συνάρτηση, γιατί ακριβώς εκεί κρύφτηκε το
+   * σφάλμα του §27.15: «το anchor που ελέγχει το store δεν ελέγχει τι βλέπει ο χρήστης».
+   * Γι' αυτό το κρίσιμο test ρωτά τα **ΟΡΙΑ** μέσα από τον ΕΝΑ δρόμο ερμηνείας.
+   */
+  describe('🔴 §27.16 Ε2 — Shift+κλικ σε δεύτερο γράμμα/αριθμό', () => {
+    /** Τα κελιά που πραγματικά θα μαρκαριστούν — η ερώτηση του **χρήστη**, όχι του store. */
+    function selectedBounds() {
+      const selection = getTableCellCursor()?.selection;
+      return selection ? resolveTableSelectionBounds(entity.model, selection) : null;
+    }
+
+    it('🔴 κλικ στο «A» → Shift+κλικ στο «C» ⇒ ΤΡΕΙΣ ολόκληρες στήλες', () => {
+      pressOn(canvas, columnBandScreenPoint(entity, 0));
+      nextFrame();
+      pressOn(canvas, columnBandScreenPoint(entity, 2), true);
+      nextFrame();
+
+      expect(selectedBounds()).toEqual({
+        firstRow: 0,
+        lastRow: entity.model.rows.length - 1,
+        firstCol: 0,
+        lastCol: 2,
+      });
+    });
+
+    it('🔴 προς τα ΠΙΣΩ: κλικ στο «C» → Shift+κλικ στο «A» ⇒ οι ίδιες τρεις στήλες', () => {
+      pressOn(canvas, columnBandScreenPoint(entity, 2));
+      nextFrame();
+      pressOn(canvas, columnBandScreenPoint(entity, 0), true);
+      nextFrame();
+
+      expect(selectedBounds()).toEqual({
+        firstRow: 0,
+        lastRow: entity.model.rows.length - 1,
+        firstCol: 0,
+        lastCol: 2,
+      });
+    });
+
+    it('🔴 το ΕΝΕΡΓΟ ΚΕΛΙ δεν κουνιέται και ΤΙΠΟΤΑ δεν δεσμεύεται — η επέκταση δεν είναι κίνηση', () => {
+      pressOn(canvas, columnBandScreenPoint(entity, 0));
+      nextFrame();
+      const anchorCell = getTableCellCursor()?.position;
+      onCommitPending.mockClear();
+
+      pressOn(canvas, columnBandScreenPoint(entity, 2), true);
+      nextFrame();
+
+      expect(getTableCellCursor()?.position).toEqual(anchorCell);
+      expect(onCommitPending).not.toHaveBeenCalled();
+    });
+
+    it('η ΑΓΚΥΡΑ μένει στην πρώτη στήλη που πατήθηκε, το είδος μένει `column`', () => {
+      pressOn(canvas, columnBandScreenPoint(entity, 0));
+      nextFrame();
+      pressOn(canvas, columnBandScreenPoint(entity, 2), true);
+      nextFrame();
+
+      const selection = getTableCellCursor()?.selection;
+      expect(selection?.from.colId).toBe(entity.model.columns[0].id);
+      expect(selection?.kind).toBe('column');
+    });
+
+    it('🔴 ΧΩΡΙΣ προηγούμενη επιλογή άξονα, το Shift+κλικ γίνεται σκέτο κλικ — καμία εφεύρεση', () => {
+      // Ο δρομέας ξεκινά σε **κελί** (καμία επιλογή στήλης). Ένα `Shift+κλικ` στο «C» δεν
+      // έχει άγκυρα ίδιου είδους να επεκτείνει ⇒ νέα επιλογή **μόνο** της στήλης C.
+      pressOn(canvas, columnBandScreenPoint(entity, 2), true);
+      nextFrame();
+
+      expect(selectedBounds()).toEqual({
+        firstRow: 0,
+        lastRow: entity.model.rows.length - 1,
+        firstCol: 2,
+        lastCol: 2,
+      });
+    });
+
+    it('🔴 επιλογή ΣΤΗΛΗΣ + Shift+κλικ σε ΑΡΙΘΜΟ γραμμής ⇒ σκέτο κλικ (άλλος άξονας, καμία ανάμειξη)', () => {
+      pressOn(canvas, columnBandScreenPoint(entity, 0));
+      nextFrame();
+      pressOn(canvas, tableBandScreenPoint(entity, 'row', 2), true);
+      nextFrame();
+
+      const selection = getTableCellCursor()?.selection;
+      expect(selection?.kind).toBe('row');
+      expect(selectedBounds()).toEqual({
+        firstRow: 2,
+        lastRow: 2,
+        firstCol: 0,
+        lastCol: entity.model.columns.length - 1,
+      });
+    });
+
+    it('γραμμές: κλικ στο «1» → Shift+κλικ στο «3» ⇒ τρεις ολόκληρες γραμμές', () => {
+      pressOn(canvas, tableBandScreenPoint(entity, 'row', 0));
+      nextFrame();
+      pressOn(canvas, tableBandScreenPoint(entity, 'row', 2), true);
+      nextFrame();
+
+      expect(selectedBounds()).toEqual({
+        firstRow: 0,
+        lastRow: 2,
+        firstCol: 0,
+        lastCol: entity.model.columns.length - 1,
+      });
+    });
   });
 
   describe('🔴 §27.14 — ΤΟ ΔΕΞΙ ΚΛΙΚ ΕΙΝΑΙ ΚΙ ΑΥΤΟ ΧΕΙΡΟΝΟΜΙΑ ΤΗΣ ΣΥΝΕΔΡΙΑΣ', () => {

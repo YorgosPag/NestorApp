@@ -14,7 +14,7 @@
  */
 import { useState, useCallback, useRef, useMemo, useEffect, useSyncExternalStore } from 'react';
 import type { Point2D } from '../../rendering/types/Types';
-import { GRIP_CONFIG } from '../useGripMovement';
+import { gripAperturePx, gripSizePx } from '../../config/grip-aperture';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import type {
   UnifiedGripInfo,
@@ -191,7 +191,12 @@ export function useUnifiedGripInteraction(
   // body sets state to its idle defaults: when no grip session is active these are
   // no-ops (React bails out → CanvasSection does NOT re-render), so only an active
   // grip session that gets a new selection forces the one reset re-render it needs.
-  const resetGripSessionOnSelectionChange = useCallback(() => {
+  // 🔴 ADR-739 §27.16 — ΕΝΑΣ μηδενισμός της συνεδρίας λαβών. Ήταν γραμμένος ΔΥΟ φορές μέσα στο ίδιο
+  // αρχείο (αλλαγή επιλογής + επιστροφή σε idle) με ελαφρώς διαφορετική σειρά — δηλαδή δίδυμα που
+  // αποκλίνουν σιωπηλά: ένα ref που προστίθεται στο ένα και ξεχνιέται στο άλλο αφήνει μπαγιάτικη
+  // κατάσταση λαβής σε ΕΝΑ μόνο από τα δύο μονοπάτια εξόδου. Οι δύο καλούντες κρατούν μόνο ό,τι
+  // είναι αποκλειστικά δικό τους.
+  const resetGripSessionCore = useCallback(() => {
     setPhase('idle');
     setHoveredGrip(null);
     setActiveGrip(null);
@@ -208,6 +213,14 @@ export function useUnifiedGripInteraction(
     hotGripAlignStartRef.current = null;
     hotGripRotateBaseRef.current = null;
     WallRotateHotGripStore.clear();
+    // ADR-397 Σ3 — κάθε λήξη συνεδρίας ακυρώνει και την πληκτρολογημένη γωνία.
+    rotateDdeRef.current.reset();
+    setTypedRotate(null);
+    // ADR-513 §rotation-ring — λήξη συνεδρίας ⇒ ξε-mount το rotation ring.
+    RotationRingStore.endSession();
+  }, []);
+  const resetGripSessionOnSelectionChange = useCallback(() => {
+    resetGripSessionCore();
     if (warmTimerRef.current) { clearTimeout(warmTimerRef.current); warmTimerRef.current = null; }
     // ADR-357 Phase 12 — selection change ends the grip-hot session: clear
     // all 4 grip-extras micro-leaf SSoT stores so the next session starts clean.
@@ -215,12 +228,7 @@ export function useUnifiedGripInteraction(
     GripCopyModeStore.clear();
     GripReferenceStore.clear();
     GripSessionUndoStore.clear();
-    // ADR-397 Σ3 — selection change ends any in-progress typed rotation angle.
-    rotateDdeRef.current.reset();
-    setTypedRotate(null);
-    // ADR-513 §rotation-ring — selection change ends the rotate-free session → ξε-mount το ring.
-    RotationRingStore.endSession();
-  }, []);
+  }, [resetGripSessionCore]);
   useEffect(
     () => subscribeSelection(resetGripSessionOnSelectionChange),
     [resetGripSessionOnSelectionChange],
@@ -240,25 +248,12 @@ export function useUnifiedGripInteraction(
   }, []);
   useEffect(() => () => { if (warmTimerRef.current) clearTimeout(warmTimerRef.current); }, []);
   // ── Hit tolerance ──
-  const hitTolerancePx = (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1.0) + 2;
-  const effectiveTolerance = Math.max(hitTolerancePx, GRIP_CONFIG.HIT_TOLERANCE);
+  // 🔴 ADR-739 §27.16 Ε4 — ο τύπος ζει σε ΜΙΑ συνάρτηση (`config/grip-aperture.ts`). Εδώ ήταν
+  // γραμμένος τρεις φορές μέσα στο ίδιο αρχείο, και ο φραγμός μόνο μία — δες την κεφαλίδα
+  // εκείνου για τις δύο μετρημένες συνέπειες.
+  const effectiveTolerance = gripAperturePx(gripSettings);
   const resetToIdle = useCallback(() => {
-    setPhase('idle');
-    setActiveGrip(null);
-    setHoveredGrip(null);
-    setCurrentWorldPos(null);
-    anchorRef.current = null;
-    clearGripStepAnchor();
-    hotGripAwaitingFirstReleaseRef.current = false;
-    hotGripMovedRef.current = false;
-    hotGripOpRef.current = null;
-    hotGripStepRef.current = 'tracking';
-    hotGripBaseRef.current = null;
-    hotGripRefStartRef.current = null;
-    hotGripRefEndRef.current = null;
-    hotGripAlignStartRef.current = null;
-    hotGripRotateBaseRef.current = null;
-    WallRotateHotGripStore.clear();
+    resetGripSessionCore();
     // ADR-397 — disarm the rotation snap targets (pivot ⊙ + grips) so the cursor
     // stops magnetising and the cyan grips revert once the rotation ends/cancels.
     getGlobalRotationSnapStore().clear();
@@ -269,14 +264,11 @@ export function useUnifiedGripInteraction(
     // flow does not leave a stale "click alignment point" prompt in the status bar.
     toolHintOverrideStore.setOverride(null);
     clearActiveDragGrip();
-    // ADR-397 Σ3 — drop any typed rotation angle so the next flow starts clean.
-    rotateDdeRef.current.reset();
-    setTypedRotate(null);
-    // ADR-513 §rotation-ring — commit / cancel / ESC ends the rotate-free session (ξε-mount το ring
-    // + καθάρισμα τυχόν πληκτρολογημένης γωνίας). ΤΟ ΙΔΙΟ commit path τρέχει και για το ring (synthetic
-    // canvas click → commitFreeRotate), οπότε το endSession εδώ καλύπτει και τις δύο πηγές.
-    RotationRingStore.endSession();
-  }, []);
+    // ADR-513 §rotation-ring — commit / cancel / ESC τερματίζει τη rotate-free συνεδρία (ξε-mount το
+    // ring + καθάρισμα τυχόν πληκτρολογημένης γωνίας): γίνεται στο `resetGripSessionCore`. ΤΟ ΙΔΙΟ
+    // commit path τρέχει και για το ring (synthetic canvas click → commitFreeRotate), οπότε καλύπτει
+    // και τις δύο πηγές.
+  }, [resetGripSessionCore]);
   // ADR-397 Φ2 — classify the cursor into a MOVE-glyph arm (entity WORLD frame) and
   // publish it to `MoveGlyphZoneStore`; repaint the DXF canvas only on change so the
   // per-arm highlight tracks the cursor. Clears (and repaints) for non-move grips.
@@ -287,7 +279,7 @@ export function useUnifiedGripInteraction(
         // ADR-532 B4: grip set read at event time from AllGripsStore (published by
         // GripRegistryPublisher) — never a render snapshot.
         isGripMode, allGrips: AllGripsStore.get(), phase, activeGrip, hoveredGrip, effectiveTolerance,
-        gripSizePx: (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1),
+        gripSizePx: gripSizePx(gripSettings),
         gripHoverThrottleRef, anchorRef, hotGripStepRef, hotGripMovedRef,
         hotGripRotateBaseRef, hotGripBaseRef, warmTimerRef,
         setCurrentWorldPos, setDragPreviewPosition, setHoveredGrip, setPhase,
@@ -309,7 +301,7 @@ export function useUnifiedGripInteraction(
         warmTimerRef, universalSelection, setDraggingVertices, setDragPreviewPosition,
         overlayStoreRef, currentOverlays, setDraggingEdgeMidpoint,
         // ADR-397 Φ2 — directional move-by-value: deps for the click→prompt→commit path.
-        dxfCommitDeps, gripSizePx: (gripSettings.gripSize ?? 5) * (gripSettings.dpiScale ?? 1),
+        dxfCommitDeps, gripSizePx: gripSizePx(gripSettings),
         markDragFinished,
       }),
     // ADR-040 XXII.A: scale removed from deps — SSoT read at event time.

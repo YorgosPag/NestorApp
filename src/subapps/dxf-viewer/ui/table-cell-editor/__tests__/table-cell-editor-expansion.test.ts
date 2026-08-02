@@ -183,6 +183,8 @@ function style(over: Partial<TableCellStyle> = {}): TableCellStyle {
     textHeightMm: 4,
     textColorHex: '#eeeeee',
     bold: false,
+    italic: false,
+    underline: false,
     align: 'ML' as TableCellAlign,
     margins: { hMm: 2, vMm: 1 },
     ...over,

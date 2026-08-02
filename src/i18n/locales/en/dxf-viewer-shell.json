@@ -4647,6 +4647,7 @@
           "railing": "Railing",
           "mep-wire": "Circuit Wire",
           "furniture": "Furniture",
+          "generic-solid": "Generic Solid",
           "duct": "Duct",
           "pipe": "Pipe",
           "fuel": "Fuel Supply",

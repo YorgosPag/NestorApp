@@ -9,6 +9,7 @@
 
 import {
   extendTableCellRangeEnd,
+  extendTableSelectionTo,
   isSingleCellRange,
   resolveTableCellRange,
   resolveTableSelectionBounds,
@@ -16,6 +17,7 @@ import {
   tableRangeMembership,
   tableRangeSize,
   tableWholeGridRange,
+  wholeAxisSelection,
 } from '../table-cell-range';
 import { createTableModel } from '../table-model-helpers';
 import { moveTableCursor } from '../table-cell-navigation';
@@ -352,5 +354,78 @@ describe('extendTableCellRangeEnd — Shift+βέλος κουνά ΤΟ ΤΕΛΟ�
     const start = { rowId: 'r1' as TableRowId, colId: 'c1' as TableColumnId };
     expect(moveTableCursor(model, { ...start, anchorColId: 'c1' as TableColumnId }, 'commitDown')?.colId).toBe('c1');
     expect(moveTableCursor(model, { ...start, anchorColId: 'c3' as TableColumnId }, 'commitDown')?.colId).toBe('c3');
+  });
+});
+
+// ── §27.16 Ε2 — ο ΕΝΑΣ επεκτατής και η ΜΙΑ επιλογή άξονα ────────────────────
+
+/**
+ * 🔴 ADR-739 §27.16 Ε2 — **`Shift+κλικ` σε δεύτερο γράμμα/αριθμό**.
+ *
+ * Το μισό υπήρχε ήδη (`Shift+βέλος` διατηρεί το είδος)· έλειπε η **είσοδος**. Ο κίνδυνος
+ * ήταν να γραφτεί **δεύτερος** επεκτατής για το ποντίκι. Αυτά τα tests κλειδώνουν ότι η
+ * επέκταση είναι **μία** συνάρτηση, και ότι η επιλογή ολόκληρου άξονα έχει **έναν** ορισμό
+ * τον οποίο μοιράζονται το κλικ, η σύρση και το `Shift+κλικ`.
+ */
+describe('🔴 §27.16 Ε2 — wholeAxisSelection: ο ΕΝΑΣ ορισμός της «ολόκληρης στήλης/γραμμής»', () => {
+  it('στήλη ⇒ από την ΠΡΩΤΗ ως την ΤΕΛΕΥΤΑΙΑ γραμμή, με είδος `column`', () => {
+    expect(wholeAxisSelection(modelWith(), { axis: 'column', colId: 'c1' as TableColumnId, index: 1 })).toEqual({
+      from: ref('r0', 'c1'),
+      to: ref('r3', 'c1'),
+      kind: 'column',
+    });
+  });
+
+  it('γραμμή ⇒ από την ΠΡΩΤΗ ως την ΤΕΛΕΥΤΑΙΑ στήλη, με είδος `row`', () => {
+    expect(wholeAxisSelection(modelWith(), { axis: 'row', rowId: 'r2' as TableRowId, index: 2 })).toEqual({
+      from: ref('r2', 'c0'),
+      to: ref('r2', 'c3'),
+      kind: 'row',
+    });
+  });
+
+  it('🔴 ΔΕΝ κουμπώνει σε συγχώνευση — το ίδιο το σφάλμα του §27.15, κλειδωμένο στην πηγή', () => {
+    const model = modelWith([TITLE_MERGE]);
+    const selection = wholeAxisSelection(model, { axis: 'column', colId: 'c1' as TableColumnId, index: 1 });
+    expect(resolveTableSelectionBounds(model, selection!)).toEqual({
+      firstRow: 0, lastRow: 3, firstCol: 1, lastCol: 1,
+    });
+  });
+
+  it('πίνακας χωρίς γραμμές ή χωρίς στήλες ⇒ null', () => {
+    const empty = createTableModel({ columns: [], rows: [], merges: [] });
+    expect(wholeAxisSelection(empty, { axis: 'column', colId: 'c0' as TableColumnId, index: 0 })).toBeNull();
+  });
+});
+
+describe('🔴 §27.16 Ε2 — extendTableSelectionTo: η ΜΙΑ σημασιολογία της επέκτασης', () => {
+  const COLUMN_A: import('../table-cell-range').TableSelectionSpan = {
+    from: ref('r0', 'c0'),
+    to: ref('r3', 'c0'),
+    kind: 'column',
+  };
+
+  it('η ΑΓΚΥΡΑ μένει ακίνητη — κουνιέται μόνο το τέλος', () => {
+    expect(extendTableSelectionTo(COLUMN_A, ref('r3', 'c2'))).toEqual({
+      from: ref('r0', 'c0'),
+      to: ref('r3', 'c2'),
+      kind: 'column',
+    });
+  });
+
+  it('🔴 το ΕΙΔΟΣ διατηρείται — αλλιώς τρεις στήλες θα ξανακουμπώνανε στη συγχώνευση του τίτλου', () => {
+    const model = modelWith([TITLE_MERGE]);
+    const three = extendTableSelectionTo(COLUMN_A, ref('r3', 'c2'));
+    expect(three.kind).toBe('column');
+    expect(resolveTableSelectionBounds(model, three)).toEqual({
+      firstRow: 0, lastRow: 3, firstCol: 0, lastCol: 2,
+    });
+  });
+
+  it('περιοχή μένει περιοχή — η επέκταση δεν προάγει ποτέ το είδος', () => {
+    const range: import('../table-cell-range').TableSelectionSpan = {
+      from: ref('r1', 'c1'), to: ref('r1', 'c1'), kind: 'range',
+    };
+    expect(extendTableSelectionTo(range, ref('r2', 'c2')).kind).toBe('range');
   });
 });

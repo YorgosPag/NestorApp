@@ -73,7 +73,13 @@ import {
   setTableCellSelection,
   type TableCellCursorState,
 } from '../../state/table-cell-cursor-store';
-import type { TableCellRef } from '../../bim/table/table-cell-range';
+// ADR-739 §27.16 Ε2 — ο ΕΝΑΣ ορισμός της «ολόκληρης στήλης/γραμμής» και ο ΕΝΑΣ επεκτατής.
+import {
+  extendTableSelectionTo,
+  wholeAxisSelection,
+  type TableCellRef,
+  type TableSelectionSpan,
+} from '../../bim/table/table-cell-range';
 import type { TableEntityGeometry } from '../../types/table-entity';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
@@ -163,6 +169,22 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
         // μενού ζώνης) τα κάνει ο δρομολογητής στο `contextmenu`, που τώρα βρίσκει
         // ζωντανό δρομέα.
         if (!primary) return;
+        // 🔴 §27.16 Ε2 — `Shift+κλικ` σε δεύτερο γράμμα/αριθμό: **επέκταση**, όχι νέα επιλογή.
+        // Δοκιμάζεται πρώτη γιατί είναι η πιο **ειδική** ερώτηση· όταν δεν ισχύει (καμία
+        // επιλογή, ή επιλογή άλλου είδους) επιστρέφει `null` και το πάτημα συνεχίζει στον
+        // κανονικό δρόμο — δηλαδή γίνεται σκέτο κλικ, χωρίς καμία εφεύρεση.
+        const shiftAnchor = event.shiftKey
+          ? extendWholeAxis(entity, bandHit, cursor.selection)
+          : null;
+        if (shiftAnchor) {
+          startTableCellDrag({
+            anchor: shiftAnchor,
+            kind: bandHit.axis,
+            container,
+            resolveAt: (moveEvent) => axisEndAt(moveEvent, entity, container, transformRef, bandHit.axis),
+          });
+          return;
+        }
         // Η ζώνη μετακινεί το ενεργό κελί στην αρχή του άξονα, άρα ισχύει το ίδιο συμβόλαιο
         // με το απλό κλικ: ό,τι γράφεται δεσμεύεται πρώτα.
         onCommitPending();
@@ -174,6 +196,7 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
           startTableCellDrag({
             anchor: axisAnchor,
             kind: bandHit.axis,
+            container,
             resolveAt: (moveEvent) => axisEndAt(moveEvent, entity, container, transformRef, bandHit.axis),
           });
         }
@@ -221,6 +244,9 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       startTableCellDrag({
         anchor: { rowId: hit.rowId, colId: hit.colId },
         kind: 'range',
+        // §27.16 Ε1 — το ίδιο δοχείο που δίνει τη γεωμετρία δίνει και την **άκρη**: μία
+        // μέτρηση, δύο ερωτήσεις («πού είμαι στον κόσμο;» / «πόσο κοντά στην άκρη;»).
+        container,
         resolveAt: (moveEvent) => cellEndAt(moveEvent, entity, container, transformRef),
       });
     };
@@ -278,6 +304,11 @@ function cellEndAt(
  * `B → D` συνεχίζει να επιλέγει στήλες ακόμα κι αν το χέρι ξεφύγει κατακόρυφα από τη
  * λωρίδα. Το άλλο άκρο καρφώνεται στο **τέλος** του πλέγματος, ώστε η στήλη/γραμμή να
  * μένει **ολόκληρη** σε κάθε καρέ της σύρσης.
+ *
+ * 🔴 §27.16 Ε2 — το «τέλος του πλέγματος» **δεν ξαναγράφεται εδώ**: είναι το `to` της
+ * {@link wholeAxisSelection}, δηλαδή η ίδια έκφραση που δίνει και το σκέτο κλικ. Πριν
+ * υπήρχε δεύτερη φορά, λίγες γραμμές πιο κάτω — δύο αντίγραφα που κανένα εργαλείο δεν
+ * θα έπιανε και που θα απέκλιναν στην πρώτη αλλαγή.
  */
 function axisEndAt(
   event: MouseEvent,
@@ -286,17 +317,23 @@ function axisEndAt(
   transformRef: RefObject<ViewTransform>,
   axis: 'column' | 'row',
 ): TableCellRef | null {
+  const tick = axisTickAt(event, entity, container, transformRef, axis);
+  return tick ? (wholeAxisSelection(entity.model, tick)?.to ?? null) : null;
+}
+
+/** Σε ποια στήλη/γραμμή δείχνει το συμβάν **κατά μήκος** του άξονα· `null` έξω από αυτόν. */
+function axisTickAt(
+  event: MouseEvent,
+  entity: TableEntity,
+  container: HTMLElement,
+  transformRef: RefObject<ViewTransform>,
+  axis: 'column' | 'row',
+): TableIndicatorHit | null {
   const world = eventWorldPoint(event, container, transformRef.current);
   if (!world) return null;
   const geometry = computeTableEntityGeometryLive(entity);
   const frame = tableWorldToFrame(entity, world, geometry.mmToWorld);
-  const tick = tableAxisTickAtFrame(geometry.layout, frame, axis);
-  if (!tick) return null;
-  const { rows, columns } = entity.model;
-  if (rows.length === 0 || columns.length === 0) return null;
-  return tick.axis === 'column'
-    ? { rowId: rows[rows.length - 1].id, colId: tick.colId }
-    : { rowId: tick.rowId, colId: columns[columns.length - 1].id };
+  return tableAxisTickAtFrame(geometry.layout, frame, axis);
 }
 
 /** Σε ποια υποδιαίρεση ζώνης έπεσε το κλικ· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */
@@ -329,23 +366,47 @@ function indicatorHitAt(
  * `null` σε πίνακα χωρίς γραμμές ή χωρίς στήλες.
  */
 function selectWholeAxis(entity: TableEntity, hit: TableIndicatorHit): TableCellRef | null {
-  const { rows, columns } = entity.model;
-  if (rows.length === 0 || columns.length === 0) return null;
+  // 🔴 ADR-739 §27.15/§27.16 — η πρόθεση ταξιδεύει μαζί με τις γωνίες, και τις **τρεις** τις
+  // παράγει ο ΕΝΑΣ ορισμός. Ο άξονας **δεν κουμπώνει** σε συγχωνεύσεις: ο πίνακας της
+  // σκηνής έχει τίτλο συγχωνευμένο σε όλες τις στήλες, και χωρίς αυτή τη λέξη το «κλικ στο
+  // B» μάρκαρε **ολόκληρο τον πίνακα** (Giorgio, 02/08).
+  const selection = wholeAxisSelection(entity.model, hit);
+  if (!selection) return null;
 
-  const from: TableCellRef =
-    hit.axis === 'column'
-      ? { rowId: rows[0].id, colId: hit.colId }
-      : { rowId: hit.rowId, colId: columns[0].id };
-  const to: TableCellRef =
-    hit.axis === 'column'
-      ? { rowId: rows[rows.length - 1].id, colId: hit.colId }
-      : { rowId: hit.rowId, colId: columns[columns.length - 1].id };
+  setTableCellCursor(entity.id, tableCursorAt(selection.from.rowId, selection.from.colId), 'nav');
+  setTableCellSelection(selection);
+  return selection.from;
+}
 
-  setTableCellCursor(entity.id, tableCursorAt(from.rowId, from.colId), 'nav');
-  // 🔴 ADR-739 §27.15 — η πρόθεση ταξιδεύει μαζί με τις γωνίες. Ο άξονας **δεν κουμπώνει**
-  // σε συγχωνεύσεις: ο πίνακας της σκηνής έχει τίτλο συγχωνευμένο σε όλες τις στήλες, και
-  // χωρίς αυτή τη λέξη το «κλικ στο B» μάρκαρε **ολόκληρο τον πίνακα** (Giorgio, 02/08).
-  // Οι λέξεις είναι οι ΙΔΙΕΣ του `hit.axis` — καμία μετάφραση, κανένα δεύτερο λεξιλόγιο.
-  setTableCellSelection({ from, to, kind: hit.axis });
-  return from;
+/**
+ * 🔴 ADR-739 §27.16 Ε2 — **`Shift+κλικ` σε δεύτερο γράμμα/αριθμό**.
+ *
+ * Excel: κλικ στο «A», `Shift+κλικ` στο «C» ⇒ **τρεις ολόκληρες στήλες**. Επιστρέφει την
+ * **άγκυρα** που μένει (για τη σύρση που μπορεί να ακολουθήσει), ή `null` όταν αυτό το
+ * πάτημα **δεν** είναι επέκταση και πρέπει να το χειριστεί ο κανονικός δρόμος.
+ *
+ * ## Επεκτείνει ΜΟΝΟ όταν η τρέχουσα επιλογή είναι του ΙΔΙΟΥ άξονα — και γιατί
+ * Αν η τρέχουσα επιλογή είναι **περιοχή** (ή ο άλλος άξονας) και ο χρήστης κάνει
+ * `Shift+κλικ` σε γράμμα στήλης, δεν υπάρχει σωστό `kind` για το αποτέλεσμα: κάθε επιλογή
+ * θα ήταν **εφεύρεση**. Το §27.15 έβγαλε ρητά την προεπιλογή από το `kind` ακριβώς για να
+ * μην μπορεί να συμβεί σιωπηλά αυτό. Άρα το πάτημα πέφτει πίσω στη συμπεριφορά του σκέτου
+ * κλικ — **νέα** επιλογή άξονα, ακριβώς αυτό που βλέπει ο χρήστης σε κάθε φύλλο υπολογισμού
+ * όταν αλλάζει είδος επιλογής.
+ *
+ * ## Καμία δέσμευση προχείρου — και είναι κανόνας, όχι παράλειψη
+ * Ο κανόνας που ισχύει παντού στη συνεδρία: **δεσμεύεις μόνο όταν κουνιέται το ενεργό
+ * κελί**. Η επέκταση δεν το κουνά (ίδια σύμβαση με `Shift+βέλος` και `Shift+κλικ` σε κελί).
+ */
+function extendWholeAxis(
+  entity: TableEntity,
+  hit: TableIndicatorHit,
+  selection: TableSelectionSpan | null | undefined,
+): TableCellRef | null {
+  if (!selection || selection.kind !== hit.axis) return null;
+  const target = wholeAxisSelection(entity.model, hit);
+  if (!target) return null;
+  // Ο ΕΝΑΣ επεκτατής — ο ίδιος που εξυπηρετεί το `Shift+βέλος` (§27.16 Ε2).
+  const extended = extendTableSelectionTo(selection, target.to);
+  setTableCellSelection(extended);
+  return extended.from;
 }

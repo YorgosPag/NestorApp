@@ -85,6 +85,23 @@ export interface TextPrimitive {
   readonly align: TextAlign;
   /** Bold weight (headings / values). */
   readonly bold?: boolean;
+  /**
+   * ADR-739 Φ.Ε/Φ2 βήμα 4 — **πλάγια γραφή**. Ίδια σύμβαση σχήματος με το {@link bold}:
+   * απόν = «δεν έχω άποψη για την τυπογραφία» (τα φύλλα οπλισμού του ADR-622 μένουν
+   * byte-identical), παρόν = «την κατέχω».
+   */
+  readonly italic?: boolean;
+  /**
+   * ADR-739 Φ.Ε/Φ2 βήμα 4 — η **τυπογραφική οικογένεια** (π.χ. `Arial`), όχι όνομα αρχείου.
+   * Το DXF χρειάζεται όνομα αρχείου στο group 3 και οικογένεια στο XDATA 1000· η μετάφραση
+   * ανήκει στον writer (`dxfFontFileFor`), όχι στο μοντέλο του φύλλου.
+   *
+   * ⚠️ **Η υπογράμμιση ΔΕΝ είναι εδώ**: ταξιδεύει ως ξεχωριστό `line` primitive (δες
+   * `table-layout-to-primitives`). Είναι γεωμετρία, όχι ιδιότητα γραμματοσειράς — γι' αυτό
+   * φτάνει σε **τέσσερα** backends, ενώ τα `bold`/`italic` σταματούν στα τρία που έχουν
+   * έννοια βάρους γραμμάτων.
+   */
+  readonly fontFamily?: string;
 }
 
 /**

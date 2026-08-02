@@ -249,7 +249,16 @@ export function insertTableRow(model: PersistedTableModel, atIndex: number): Per
 
   const at = clampIndex(atIndex, model.rows.length);
   const ids = model.rows.map((row) => row.id);
-  const row: TableRow = { id: nextAxisId(ids, 'row'), rowClass: 'data' };
+  const template = model.rows[Math.min(at, model.rows.length - 1)];
+  const row: TableRow = {
+    id: nextAxisId(ids, 'row'),
+    rowClass: 'data',
+    // ADR-739 Φ.Ε (Α2) — η μορφοποίηση κληρονομείται από τη γραμμή **αναφοράς**, όπως στο
+    // Excel. Το `heightMm` και το `borderTop` ΔΕΝ: το πρώτο είναι γεωμετρία που ο χρήστης
+    // ρύθμισε για συγκεκριμένο περιεχόμενο, το δεύτερο είναι ο δείκτης «εδώ αρχίζουν τα
+    // σύνολα» — αντιγραμμένος, θα ζωγράφιζε δεύτερη γραμμή συνόλων που δεν υπάρχει.
+    ...(template?.styleOverride ? { styleOverride: template.styleOverride } : {}),
+  };
 
   const rows = model.rows.slice();
   rows.splice(at, 0, row);
@@ -284,6 +293,11 @@ export function insertTableColumn(
     valueType: template.valueType,
     align: template.align,
     ...(template.overflow ? { overflow: template.overflow } : {}),
+    // ADR-739 Φ.Ε (Α2) — **ρίσκο 5 του §28.7**: αυτή η λίστα είναι ρητή, άρα ένα ξεχασμένο
+    // πεδίο δεν το πιάνει κανένας μεταγλωττιστής. Χωρίς το `styleOverride`, η πιο ορατή
+    // ακολουθία όλων — «βάφω τη στήλη → εισαγωγή δεξιά» — γεννά **άβαφη** στήλη, δηλαδή
+    // αποτυγχάνει ακριβώς ο λόγος που επιλέχθηκε το μοντέλο επιπέδου άξονα.
+    ...(template.styleOverride ? { styleOverride: template.styleOverride } : {}),
   };
 
   const columns = model.columns.slice();

@@ -32,6 +32,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { createModuleLogger } from '@/lib/telemetry';
 import { DXF_VERSION_NAMES, type DxfVersion } from '../../../types/dxf-export.types';
 import type { ExportRequest, ExportLengthUnit } from '../../../export/types';
+// ADR-364 §10.2 — ο ΕΝΑΣ δρόμος ιδιοκτησίας του ESC στον θεατή (§27.16 Ε7).
+import { useEscapeHandler, ESC_PRIORITY } from '../../../systems/escape-bus';
 import { useExportDialogState } from './useExportDialogState';
 
 const logger = createModuleLogger('DXF_EXPORT_DIALOG');
@@ -82,6 +84,39 @@ export function ExportDialog({ open, onOpenChange, onSubmit }: ExportDialogProps
       setBusy(false);
     }
   }, [onSubmit, state, onOpenChange]);
+
+  /**
+   * 🔴 ADR-364 §10.2 / ADR-739 §27.16 Ε7 — **ο ανοιχτός διάλογος ΟΦΕΙΛΕΙ να έχει slot στον bus.**
+   *
+   * ── ΤΟ ΕΥΡΗΜΑ ──
+   * Ζωντανά, με ανοιχτό αυτόν τον διάλογο, το dev audit φώναζε `[EscapeBus/audit] SHADOW-OWNER`
+   * σε **κάθε** `Escape`: «κανένας handler του bus δεν διεκδίκησε, αλλά κάποιος άλλος το
+   * κατανάλωσε». Ο «κάποιος άλλος» είναι το `DismissableLayer` του Radix, που ακούει σε
+   * **document** capture — δηλαδή **μετά** τον bus, που ακούει σε **window** capture.
+   *
+   * ── ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ «ΘΕΜΑ ΚΟΝΣΟΛΑΣ» ──
+   * Η σειρά ήταν **τυχαία, όχι δηλωμένη**. Μόλις κάποιος handler του bus διεκδικήσει, ο bus
+   * καλεί `stopImmediatePropagation()` και το Radix **δεν βλέπει ποτέ** το πλήκτρο. Το
+   * `canvas/fallback-deselect` (P400) απαντά «ναι» όποτε υπάρχει επιλεγμένη οντότητα και
+   * **δεν** έχει ασπίδα εστίασης για μη-κειμενικά στοιχεία — δηλαδή ο διάλογος θα έμενε
+   * **ανοιχτός** ενώ ο καμβάς από κάτω αποεπιλεγόταν. Ακριβώς αυτό μετρήθηκε με το μενού
+   * κεφαλίδας πίνακα (§27.7) και διορθώθηκε **με slot**, όχι με σιωπή.
+   *
+   * ── ΓΙΑΤΙ `MODAL_DIALOG` (P1000) ──
+   * Είναι hard-modal: όσο ζει, ο καμβάς είναι μπλοκαρισμένος. Ίδιο σκαλί με το
+   * `CommentAttachmentLightbox`, ο άλλος πραγματικά τροπικός καταναλωτής του θεατή.
+   *
+   * ── ΓΙΑΤΙ ΠΕΡΝΑ ΑΠΟ ΤΟ `onOpenChange` ──
+   * **Ένας** δρόμος κλεισίματος — ο ίδιος που καλεί το κουμπί «Άκυρο» και το Radix. Ένα
+   * δεύτερο μονοπάτι θα σήμαινε ότι η έξοδος με `Escape` αφήνει άλλη κατάσταση από την
+   * έξοδο με κλικ.
+   */
+  useEscapeHandler({
+    id: 'export/dialog',
+    priority: ESC_PRIORITY.MODAL_DIALOG,
+    canHandle: () => open,
+    handle: () => { onOpenChange(false); return true; },
+  });
 
   const isDxf = state.format === 'dxf';
   const isTek = state.format === 'tek';

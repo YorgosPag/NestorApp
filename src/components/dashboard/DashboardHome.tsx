@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';
-import { filterTilesByJob } from '@/config/jobs-access';
+import { filterTilesByJob } from '@/config/jobs-visibility';
 import { useActiveJob } from '@/contexts/ActiveJobContext';
 import { HiddenItemsBadge } from '@/components/job/HiddenItemsBadge';
 import { DashboardWelcome } from './DashboardWelcome';

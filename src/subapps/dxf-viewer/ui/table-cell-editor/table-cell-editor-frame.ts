@@ -106,6 +106,12 @@ export interface TableCellEditorFrame {
   readonly rotationRad: number;
   /** Πλήρες shorthand — ίδιο αλφαριθμητικό με το `ctx.font` του ζωγράφου. */
   readonly font: string;
+  /**
+   * ADR-739 Φ.Ε — υπογράμμιση, **εκτός** του {@link font}: το CSS shorthand `font` δεν
+   * περιλαμβάνει `text-decoration`, οπότε η μόνη εναλλακτική θα ήταν να μην ακολουθεί το
+   * πεδίο ό,τι ζωγραφίζεται — δηλαδή η υπογράμμιση να εξαφανίζεται στο διπλό κλικ.
+   */
+  readonly underline: boolean;
   readonly paddingTopPx: number;
   readonly paddingRightPx: number;
   readonly paddingBottomPx: number;
@@ -184,7 +190,11 @@ export function computeTableCellEditorFrame(params: {
   const { target, pxPerMm, angleRad, resolveBand, backgroundHex } = params;
   const { rectMm, style } = target;
 
-  const font = tableCellFont(style.textHeightMm * pxPerMm, style.bold);
+  // ADR-739 Φ.Ε (Α3) — **ΟΛΑ** τα τυπογραφικά, όχι μόνο τα έντονα: το πεδίο και ο καμβάς
+  // μοιράζονται το ίδιο αλφαριθμητικό, άρα κάθε πεδίο που ξεχνιέται εδώ γίνεται αναπήδηση
+  // κειμένου τη στιγμή του διπλού κλικ (η υπογράμμιση ταξιδεύει ξεχωριστά — δεν είναι μέρος
+  // του CSS `font` shorthand, βλ. `TABLE_CELL_EDITOR_VARS.decoration`).
+  const font = tableCellFont(style.textHeightMm * pxPerMm, style.bold, style.italic, style.fontFamily);
   const cellWidthPx = Math.max(rectMm.w * pxPerMm, MIN_CONTENT_PX);
   const cellHeightPx = Math.max(rectMm.h * pxPerMm, MIN_CONTENT_PX);
   const vertical = verticalPadding(cellHeightPx, target.baselineFromTopMm * pxPerMm, resolveBand(font));
@@ -215,6 +225,7 @@ export function computeTableCellEditorFrame(params: {
         : { widthPx: sidePx + growth.clipMarkerPx, heightPx: cellHeightPx },
     rotationRad: -angleRad,
     font,
+    underline: style.underline,
     paddingTopPx: vertical.topPx,
     paddingRightPx: sidePx,
     paddingBottomPx: vertical.bottomPx,

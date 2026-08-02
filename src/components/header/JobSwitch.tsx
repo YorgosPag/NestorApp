@@ -55,7 +55,7 @@ export function JobSwitch() {
   const { activeJob, setActiveJob, resetToAll } = useActiveJob();
   const permissionInput = useEffectivePermissions();
   // Ο ΙΔΙΟΣ υπολογισμός με το sidebar — ένα μονοπάτι, ένας αριθμός.
-  const { hiddenCount } = useJobFilteredNavigation();
+  const { hiddenCount, hiddenSubItemCount } = useJobFilteredNavigation();
 
   // Ε5.α — ΖΩΝΤΑΝΟΣ υπολογισμός σε κάθε render. Καμία αποθηκευμένη λίστα.
   const selectable = useMemo(
@@ -101,7 +101,11 @@ export function JobSwitch() {
         <TooltipContent>{t('jobs.switch.tooltip')}</TooltipContent>
       </Tooltip>
 
-      <HiddenItemsBadge count={hiddenCount} onRestore={resetToAll} />
+      <HiddenItemsBadge
+        count={hiddenCount}
+        subItemCount={hiddenSubItemCount}
+        onRestore={resetToAll}
+      />
     </span>
   );
 }

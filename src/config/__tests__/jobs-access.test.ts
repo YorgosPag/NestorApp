@@ -25,19 +25,23 @@ import {
 } from '../jobs-registry';
 import {
   JOB_ALL,
-  REPORTS_PARENT_ROUTE,
   decideJobAccess,
+  pickDefaultJob,
+  resolveAvailableJobs,
+  resolveJobAccess,
+  type JobAccessInput,
+} from '../jobs-access';
+// ΦΑΣΗ 3.6 — η **ορατότητα** χωρίστηκε από την **απόφαση**. Οι αναλλοίωτες
+// παρακάτω δεν άλλαξαν: μόνο η διαδρομή εισαγωγής τους.
+import {
+  REPORTS_PARENT_ROUTE,
   filterItemsByJob,
   filterTilesByJob,
   isReportSubItemVisibleForJob,
   isRouteVisibleForJob,
   isTileVisibleForJob,
-  pickDefaultJob,
-  resolveAvailableJobs,
-  resolveJobAccess,
   tileIdFromHref,
-  type JobAccessInput,
-} from '../jobs-access';
+} from '../jobs-visibility';
 
 /** Ο browser σήμερα: μόνο ο ρόλος οργανισμού απαντά (Π-15). */
 const CLIENT_SOURCES = ['globalRole'] as const;
@@ -228,7 +232,9 @@ describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ο�
     const branch = [
       { href: '/spaces', subItems: [{ href: '/spaces/properties' }, { href: '/spaces/parking' }] },
     ];
-    expect(filterItemsByJob(branch, 'finance')).toEqual({ visible: [], hiddenCount: 1 });
+    const removed = filterItemsByJob(branch, 'finance');
+    expect(removed.visible).toEqual([]);
+    expect(removed.hiddenCount).toBe(1);
     // …και στη δουλειά του, ο γονιός φέρνει ΟΛΑ τα παιδιά του (κληρονομιά).
     const kept = filterItemsByJob(branch, 'clients');
     expect(kept.visible[0]?.subItems).toHaveLength(2);

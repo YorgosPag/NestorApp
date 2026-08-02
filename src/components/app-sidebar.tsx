@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sidebar"
 import { SidebarLogo } from "@/components/sidebar/sidebar-logo"
 import { SidebarMenuSection } from "@/components/sidebar/sidebar-menu-section"
+import { SidebarRevealBanner } from "@/components/sidebar/sidebar-reveal-banner"
 // 🗑️ REMOVED (2026-01-11): SidebarUserFooter - User management moved to header dropdown only
 import { useJobFilteredNavigation } from "@/hooks/useJobFilteredNavigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
@@ -33,10 +34,13 @@ export function AppSidebar() {
     // (Ο inline υπολογισμός permissions που ζούσε εδώ μετακόμισε αυτούσιος στο
     //  `useEffectivePermissions` — ήταν ο μόνος του είδους του και η Φάση 3 του
     //  πρόσθετε δύο ακόμη καταναλωτές.)
+    // ADR-748 Φάση 3.6: το `reveal` κουβαλά τα επίπεδα 2 & 3 του δείκτη —
+    // «+Ν κρυμμένα» μέσα σε κάθε δοχείο και ο τρόπος «Αποκάλυψη κρυμμένων».
     const {
         mainMenuItems: jobFilteredMainItems,
         toolsMenuItems,
         settingsMenuItems,
+        reveal,
     } = useJobFilteredNavigation()
     const hasBuildingsWithNoUnits = useBuildingsNoUnits();
 
@@ -72,12 +76,21 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
+                {/* Πρώτο στοιχείο του περιεχομένου, πάνω από ΟΛΕΣ τις ενότητες:
+                    η κατάσταση αφορά ολόκληρο το μενού, όχι μία ομάδα του
+                    (το περίγραμμα του Revit περιβάλλει όλη την περιοχή). */}
+                <SidebarRevealBanner
+                    isRevealing={reveal.isRevealing}
+                    onStop={reveal.onStopRevealing}
+                />
+
                 <SidebarMenuSection
                     label={t('menu.main')}
                     items={mainMenuItems}
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}
                     isItemActive={isItemActive}
+                    reveal={reveal}
                 />
 
                 {/* Navigation Link */}
@@ -98,6 +111,7 @@ export function AppSidebar() {
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}
                     isItemActive={isItemActive}
+                    reveal={reveal}
                 />
 
                 <SidebarMenuSection
@@ -106,6 +120,7 @@ export function AppSidebar() {
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}
                     isItemActive={isItemActive}
+                    reveal={reveal}
                 />
             </SidebarContent>
 

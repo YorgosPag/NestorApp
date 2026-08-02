@@ -31,7 +31,11 @@ import type { TableTextMeasurer } from './table-layout-types';
 
 /** Ο προεπιλεγμένος μετρητής: το SSoT πλάτους κειμένου του renderer (ADR-557). */
 export const defaultTableTextMeasurer: TableTextMeasurer = (text, heightMm, style) =>
-  measureTextAdvanceWorld(text, heightMm, { fontFamily: style.fontFamily, bold: style.bold });
+  measureTextAdvanceWorld(text, heightMm, {
+    fontFamily: style.fontFamily,
+    bold: style.bold,
+    italic: style.italic,
+  });
 
 /**
  * Ο μετρητής **αυτής** της κλήσης διάταξης — η μία ανάγνωση της επιλογής.
@@ -72,12 +76,20 @@ function naturalCellWidthMm(
 ): number {
   const cell = model.cells.get(cellKey(row.id, column.id));
   const text = cellText(cell);
-  const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], cell?.styleOverride);
+  // 🔴 Οι ΙΔΙΕΣ τρεις παρακάμψεις με το `placeCells`. Αν εδώ έλειπε έστω μία, οι `hug` στήλες
+  // θα μετριούνταν με άλλο μέγεθος/έντονα/γραμματοσειρά από αυτά που ζωγραφίζονται — και το
+  // σύμπτωμα δεν θα ήταν «λάθος πλάτος», αλλά **κομμένο κείμενο** σε τυχαία κελιά.
+  const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], {
+    column: column.styleOverride,
+    row: row.styleOverride,
+    cell: cell?.styleOverride,
+  });
   const marginsMm = cellStyle.margins.hMm * 2;
   if (!text) return marginsMm;
   const textWidth = measure(text, cellStyle.textHeightMm, {
     fontFamily: cellStyle.fontFamily,
     bold: cellStyle.bold,
+    italic: cellStyle.italic,
   });
   return textWidth + marginsMm;
 }

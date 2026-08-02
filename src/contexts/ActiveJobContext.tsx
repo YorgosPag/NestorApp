@@ -49,6 +49,19 @@ interface ActiveJobContextValue {
   readonly setActiveJob: (job: JobSelection) => void;
   /** Α-3: επαναφορά με **ένα** κλικ, από παντού. */
   readonly resetToAll: () => void;
+  /**
+   * ΦΑΣΗ 3.6 / Επίπεδο 3 — «**Αποκάλυψη κρυμμένων**» *(πρότυπο: `Reveal Hidden
+   * Elements` του Revit)*: τα κρυμμένα επιστρέφουν **στη θέση τους**,
+   * υποβαθμισμένα και **πλήρως λειτουργικά**, με μόνιμη ένδειξη κατάστασης.
+   *
+   * ⚠️ **ΔΕΝ αποθηκεύεται — και είναι απόφαση.** Είναι *τρόπος λειτουργίας*,
+   * όχι προτίμηση: το Revit βγαίνει από τη λειτουργία μόνο του, ακριβώς για να
+   * μη μείνει κανείς μέσα της χωρίς να το ξέρει. Επιμονή στο localStorage θα
+   * γεννούσε την αντίστροφη σιωπηλή έκπληξη από αυτήν που το Α-3 απαγορεύει:
+   * ο χρήστης θα έβλεπε αύριο στοιχεία που **νομίζει** ότι έχει φιλτράρει.
+   */
+  readonly isRevealingHidden: boolean;
+  readonly setRevealingHidden: (next: boolean) => void;
 }
 
 const ActiveJobContext = createContext<ActiveJobContextValue | null>(null);
@@ -63,6 +76,7 @@ export function ActiveJobProvider({ children }: { children: React.ReactNode }) {
   // πρώτο render είναι server-rendered και δεν έχει localStorage — διαφορετική
   // αρχική τιμή ⇒ hydration mismatch.
   const [activeJob, setActiveJobState] = useState<JobSelection>(JOB_ALL);
+  const [isRevealingHidden, setRevealingHidden] = useState(false);
 
   useEffect(() => {
     const stored = safeGetItem(STORAGE_KEYS.ACTIVE_JOB, JOB_ALL as string);
@@ -71,14 +85,30 @@ export function ActiveJobProvider({ children }: { children: React.ReactNode }) {
 
   const setActiveJob = useCallback((job: JobSelection) => {
     setActiveJobState(job);
+    // 🔑 Αλλάζοντας δουλειά βγαίνεις από την «Αποκάλυψη». Ο τρόπος αφορά **ένα
+    // συγκεκριμένο** φιλτράρισμα· αν επιβίωνε της αλλαγής, ο χρήστης θα γύριζε
+    // τον διακόπτη και θα έβλεπε να μην αλλάζει τίποτα — δηλαδή ένας διακόπτης
+    // που δεν κάνει τίποτα. Το Revit κάνει το ίδιο σε αλλαγή όψης.
+    setRevealingHidden(false);
     safeSetItem(STORAGE_KEYS.ACTIVE_JOB, job);
   }, []);
 
   const resetToAll = useCallback(() => setActiveJob(JOB_ALL), [setActiveJob]);
 
+  // Χωρίς ενεργή δουλειά δεν κρύβεται τίποτα ⇒ δεν υπάρχει τι να αποκαλυφθεί.
+  // Ο υπολογισμός εδώ (και όχι στον καταναλωτή) κρατά **μία** πηγή αλήθειας:
+  // αλλιώς κάθε οθόνη θα ξανά-θυμόταν μόνη της αυτόν τον συνδυασμό.
+  const revealing = isRevealingHidden && activeJob !== JOB_ALL;
+
   const value = useMemo<ActiveJobContextValue>(
-    () => ({ activeJob, setActiveJob, resetToAll }),
-    [activeJob, setActiveJob, resetToAll],
+    () => ({
+      activeJob,
+      setActiveJob,
+      resetToAll,
+      isRevealingHidden: revealing,
+      setRevealingHidden,
+    }),
+    [activeJob, setActiveJob, resetToAll, revealing],
   );
 
   return <ActiveJobContext.Provider value={value}>{children}</ActiveJobContext.Provider>;
@@ -103,6 +133,8 @@ const FALLBACK_CONTEXT: ActiveJobContextValue = {
   activeJob: JOB_ALL,
   setActiveJob: NO_OP,
   resetToAll: NO_OP,
+  isRevealingHidden: false,
+  setRevealingHidden: NO_OP,
 };
 
 export type { JobId };

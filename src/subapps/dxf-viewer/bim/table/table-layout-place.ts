@@ -177,8 +177,21 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     colorHex: style.textColorHex,
     hAlign,
     bold: style.bold,
+    italic: style.italic,
+    underline: style.underline,
+    // Απόν όταν το στυλ δεν δηλώνει οικογένεια — ο μετρητής και ο ζωγράφος πέφτουν τότε στην
+    // ΙΔΙΑ προεπιλογή, που είναι ακριβώς το ζητούμενο (ένα `undefined`, όχι δύο defaults).
+    ...(style.fontFamily !== undefined && { fontFamily: style.fontFamily }),
     // Παρόν μόνο όταν αληθεύει — δες τη σημείωση σχήματος στο `TableTextRun.clipped`.
     ...(visible.clipped && { clipped: true as const }),
+    // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος μετριέται **μόνο** για υπογραμμισμένο κείμενο: είναι
+    // ο μόνος καταναλωτής του, και μια μέτρηση ανά κελί σε κάθε διάταξη θα ήταν κόστος που
+    // πληρώνει ο 99% των πινάκων για το 1%. Ο μετρητής είναι ο ΙΔΙΟΣ που μόλις αποφάσισε την
+    // περικοπή, και μετρά το **ορατό** κείμενο — άρα σε κομμένο κελί η γραμμή σταματά εκεί
+    // που σταματούν και τα γράμματα, όχι εκεί που θα σταματούσε το ακέραιο κείμενο.
+    ...(style.underline && {
+      advanceMm: input.measure(visible.text, style.textHeightMm, style),
+    }),
   };
 }
 
@@ -204,11 +217,19 @@ export function placeCells(
 
       const span = measurement.merges.anchors.get(key);
       const cell = model.cells.get(key);
-      const cellStyle = resolveCellStyle(rowStyle, cell?.styleOverride);
+      const overrides = {
+        column: column.styleOverride,
+        row: row.styleOverride,
+        cell: cell?.styleOverride,
+      };
+      const cellStyle = resolveCellStyle(rowStyle, overrides);
       const rect = cellRectMm(xEdges, yEdges, colIndex, rowIndex, span?.colSpan ?? 1, span?.rowSpan ?? 1);
-      // Η στήλη κερδίζει την οριζόντια συνιστώσα ΜΟΝΟ όταν το κελί δεν έχει δική του άποψη.
-      const hAlign = cell?.styleOverride?.align
-        ? H_BY_CELL_ALIGN[cell.styleOverride.align]
+      // Η **σημασιολογική** `TableColumn.align` (επίπεδο 4) κερδίζει μόνο όταν καμία ρητή
+      // παράκαμψη δεν έχει άποψη — γι' αυτό δεν μπορεί να μπει στο `resolveCellStyle`: εκεί
+      // θα ήταν βάση, ενώ εδώ είναι το **προτελευταίο** σκαλί, κάτω από κελί/γραμμή/στήλη.
+      const explicitAlign = overrides.cell?.align ?? overrides.row?.align ?? overrides.column?.align;
+      const hAlign = explicitAlign
+        ? H_BY_CELL_ALIGN[explicitAlign]
         : H_BY_COLUMN_ALIGN[column.align];
 
       out.push({

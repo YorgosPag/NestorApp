@@ -25,6 +25,9 @@ import type {
   TableRectMm,
   TableTextRun,
 } from '../../../bim/table/table-layout-types';
+import {
+  tableUnderlineGeometry, type TableUnderlineGeometry,
+} from '../../../bim/table/table-text-decoration';
 import { buildUIFont } from '../../../config/text-rendering-config';
 import { TABLE_CELL_CURSOR, TABLE_CELL_SELECTION } from '../../../config/color-config';
 
@@ -299,13 +302,30 @@ function strokeRectMm(
  * πλάτους θα γινόταν σε δύο διαφορετικές γραμματοσειρές. Με **κοινό** αλφαριθμητικό, οι
  * δύο μετρήσεις είναι κυριολεκτικά η **ίδια** μέτρηση της ίδιας μηχανής του browser.
  *
- * ⚠️ Το `'arial'` είναι σκόπιμα καρφωμένο και **δεν** διαβάζει το `TableCellStyle.fontFamily`:
- * αυτό το πεδίο τροφοδοτεί σήμερα μόνο τον **μετρητή διάταξης** (`measureTextAdvanceWorld`,
- * opentype). Ο καμβάς πάντα ζωγράφιζε Arial. Η ενοποίηση των δύο είναι ξεχωριστό χρέος —
- * μέχρι τότε ο επεξεργαστής οφείλει να ακολουθεί ό,τι **ζωγραφίζεται**, όχι ό,τι μετριέται.
+ * ## ✅ ADR-739 Φ.Ε (Α3) — το χρέος «πάντα Arial» ΕΚΛΕΙΣΕ
+ * Μέχρι τη Φ.Ε το `'arial'` ήταν καρφωμένο εδώ ενώ ο **μετρητής** διάβαζε το
+ * `TableCellStyle.fontFamily`: δύο απαντήσεις στην ίδια ερώτηση, με σύμπτωμα κείμενο που
+ * κόβεται ή αφήνει κενό — ορατό μόνο σε όποιον δήλωνε άλλη οικογένεια, δηλαδή σε κανέναν,
+ * μέχρι να βγει το χειριστήριο γραμματοσειράς. Τώρα η οικογένεια ταξιδεύει στο
+ * `TableTextRun` και τη διαβάζουν και οι δύο.
+ *
+ * 🔴 **Γιατί ΟΧΙ το `paintTextRun` του text-engine** (η προφανής «κεντρικοποίηση» που θα
+ * ήταν λάθος): εκείνο ζωγραφίζει **περιγράμματα glyph** μέσω opentype όταν βρει φορτωμένη
+ * γραμματοσειρά CAD. Ο in-cell επεξεργαστής είναι `<input>` — **δεν μπορεί** να ζωγραφίσει
+ * περιγράμματα. Θα ξαναγεννούσαμε ακριβώς την ασυμφωνία που αυτή η συνάρτηση υπάρχει για να
+ * λείπει, μόνο που τώρα ανάμεσα σε καμβά και πεδίο. Το κοινό αλφαριθμητικό είναι η
+ * **προϋπόθεση**, όχι η ευκολία — και το `measureTextAdvanceWorld` πέφτει στην ίδια
+ * `buildUIFont` στη 2η βαθμίδα του, άρα μέτρηση και ζωγραφική μένουν η ίδια μηχανή.
  */
-export function tableCellFont(fontPx: number, bold: boolean): string {
-  return buildUIFont(fontPx, 'arial', bold ? 'bold' : 'normal');
+export function tableCellFont(
+  fontPx: number,
+  bold: boolean,
+  italic = false,
+  fontFamily?: string,
+): string {
+  // Το ίδιο default με το `baseAdvanceWorld` του text-engine (`style?.fontFamily || 'arial'`):
+  // απούσα οικογένεια πρέπει να δίνει **μία** προεπιλογή, όχι μία εδώ και μία εκεί.
+  return buildUIFont(fontPx, fontFamily || 'arial', bold ? 'bold' : 'normal', italic);
 }
 
 /**
@@ -343,7 +363,12 @@ export function tableCellFont(fontPx: number, bold: boolean): string {
  *
  * @param anchorScreen το σημείο **οθόνης** που ήδη υπολόγισε ο καλών μέσω `toScreen`
  */
-export function stampFrameText(rc: StampTableContext, anchorScreen: Point2D, text: string): void {
+export function stampFrameText(
+  rc: StampTableContext,
+  anchorScreen: Point2D,
+  text: string,
+  underline?: TableUnderlineGeometry | null,
+): void {
   const { ctx } = rc;
   // Μετάθεση **πρώτα**, στροφή **μετά**: η στροφή γίνεται γύρω από την άγκυρα του κειμένου
   // (τη γραμμή βάσης στη θέση στοίχισης), όχι γύρω από την αρχή του καμβά. Αντίστροφα, το
@@ -354,6 +379,27 @@ export function stampFrameText(rc: StampTableContext, anchorScreen: Point2D, tex
   // σύστημα — δηλαδή «δεξιά στοίχιση» σημαίνει «δεξιά μέσα στο κελί», που είναι ακριβώς η
   // σημασία που ήδη ταξιδεύει στο DXF ως `halign` (μετρήθηκε: 0/1/2 για left/center/right).
   ctx.fillText(text, 0, 0);
+  // ADR-739 Φ.Ε — η υπογράμμιση ζωγραφίζεται **μέσα στην ίδια στροφή**: έξω από αυτήν θα
+  // έμενε οριζόντια κάτω από γερμένο κείμενο, δηλαδή το ίδιο ελάττωμα που το βήμα 8 έκλεισε
+  // για τα ίδια τα γράμματα.
+  if (underline) stampUnderline(ctx, underline);
+}
+
+/**
+ * Η γραμμή της υπογράμμισης, στο **ήδη στραμμένο** σύστημα του {@link stampFrameText}.
+ *
+ * 🔴 **Ο καμβάς δεν αποφασίζει πια πού πέφτει η γραμμή — τη ρωτά.** Η γεωμετρία έρχεται
+ * ολόκληρη από το {@link tableUnderlineGeometry} (ADR-739 Φ.Ε/Φ2 βήμα 4), το ΙΔΙΟ σημείο που
+ * ρωτά και η γέφυρα εξαγωγής για PDF/DXF/ΤΕΚ. Μέχρι το βήμα 4 εδώ ζούσε δεύτερος
+ * υπολογισμός — και ήταν **λάθος** κατά 0,2·em (το σκεπτικό, μετρημένο, στο ίδιο module).
+ *
+ * Το μόνο που μένει τοπικό είναι το **δάπεδο του ενός pixel**: είναι όρος **οθόνης** (μια
+ * γραμμή λεπτότερη από ένα pixel εξαφανίζεται σε μεγάλη σμίκρυνση), όχι σχεδιαστική
+ * ιδιότητα — σε χαρτί και σε DXF το πάχος οφείλει να μείνει το πραγματικό κλάσμα του `em`.
+ */
+function stampUnderline(ctx: CanvasRenderingContext2D, g: TableUnderlineGeometry): void {
+  if (!(g.width > 0)) return;
+  ctx.fillRect(g.x, g.y, g.width, Math.max(g.thickness, 1));
 }
 
 /** Ταυτότητα κελιού — το κλειδί με το οποίο ο καλών ζητά παράλειψη ζωγραφικής. */
@@ -411,6 +457,21 @@ export function stampTableText(
  * στυλ επιβιώνει σε **κάθε** φάση. Ίδια αρχή με το AutoCAD: το highlight αλλάζει τη
  * σιλουέτα της οντότητας, δεν την κάνει δυσανάγνωστη.
  */
+/**
+ * Η γεωμετρία υπογράμμισης ενός run σε **px οθόνης**, ή `null` όταν δεν υπογραμμίζεται.
+ *
+ * Το `advanceMm` το γεννά η διάταξη **μόνο** για υπογραμμισμένα run (δες `TableTextRun`),
+ * οπότε η απουσία του δεν είναι σφάλμα προς σιώπηση: είναι η ίδια η απάντηση «δεν έχει
+ * υπογράμμιση». Ο έλεγχος στο `run.underline` μένει ρητός ώστε ένα μελλοντικό `advanceMm`
+ * για άλλο λόγο να μη ζωγραφίσει κατά λάθος γραμμή.
+ */
+function underlineOf(
+  run: TableTextRun, fontPx: number, pxPerMm: number,
+): TableUnderlineGeometry | null {
+  if (!run.underline || run.advanceMm == null) return null;
+  return tableUnderlineGeometry(fontPx, run.advanceMm * pxPerMm, run.hAlign);
+}
+
 function stampRun(
   ctx: CanvasRenderingContext2D,
   rc: StampTableContext,
@@ -420,11 +481,15 @@ function stampRun(
   const anchor = rc.toScreen(run.position.x, run.position.y);
   ctx.save();
   ctx.fillStyle = run.colorHex;
-  ctx.font = tableCellFont(fontPx, run.bold);
+  ctx.font = tableCellFont(fontPx, run.bold, run.italic, run.fontFamily);
   ctx.textAlign = run.hAlign;
   ctx.textBaseline = 'alphabetic';
   // ADR-739 Φ.Δ βήμα 8 — γερμένο όπως ο πίνακας, όπως ήδη γέρνουν το DXF, το PDF και ο
   // επεξεργαστής κελιού. Δες το {@link stampFrameText} για το γιατί άλλαξε.
-  stampFrameText(rc, anchor, run.text);
+  //
+  // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος έρχεται από τη **διάταξη** (`advanceMm`), όχι από
+  // δεύτερο `ctx.measureText` σε κάθε καρέ: η ίδια μέτρηση που αποφάσισε τα πλάτη στηλών και
+  // την περικοπή ορίζει και την έκταση της γραμμής, σε καμβά **και** στην εξαγωγή.
+  stampFrameText(rc, anchor, run.text, underlineOf(run, fontPx, rc.pxPerMm));
   ctx.restore();
 }

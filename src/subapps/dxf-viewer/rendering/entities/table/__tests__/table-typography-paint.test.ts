@@ -1,0 +1,161 @@
+/**
+ * ADR-739 Φ.Ε (Α3) — **ο ζωγράφος ζωγραφίζει ό,τι λέει το στυλ**, και ό,τι μετρήθηκε.
+ *
+ * ## Τι κλείνει αυτή η σουίτα
+ * Μέχρι τη Φ.Ε ο καμβάς έγραφε καρφωτά `arial` ενώ η μηχανή διάταξης μετρούσε το
+ * `TableCellStyle.fontFamily`. Δύο απαντήσεις στην ίδια ερώτηση δεν δίνουν «λάθος
+ * γραμματοσειρά» — δίνουν **κείμενο που κόβεται ή αφήνει κενό**, και μόνο σε όποιον
+ * δηλώσει άλλη οικογένεια. Δηλαδή σφάλμα που γεννιέται τη μέρα που βγαίνει το χειριστήριο.
+ *
+ * 🔴 Η **υπογράμμιση** ελέγχεται μέσα στη **στροφή**: ένα `fillRect` γραμμένο έξω από το
+ * `translate`+`rotate` του `stampFrameText` θα έμενε οριζόντιο κάτω από γερμένο κείμενο —
+ * ακριβώς το ελάττωμα που το βήμα 8 έκλεισε για τα ίδια τα γράμματα, ξαναγεννημένο.
+ *
+ * @see rendering/entities/table/stamp-table-layout.ts
+ */
+
+import { stampTableText, tableCellFont } from '../stamp-table-layout';
+import {
+  createPaintLog,
+  createRc,
+  RECORDER_CHAR_PX,
+  type PaintLog,
+} from './table-paint-recorder';
+import { TEXT_DECORATION_RATIOS } from '../../../../config/text-rendering-config';
+import type { TableCellLayout } from '../../../../bim/table/table-layout-types';
+import type { TableCellStyle } from '../../../../bim/table/table-style';
+import type { TableColumnId, TableRowId } from '../../../../types/table';
+
+const INK = '#111111';
+const TEXT = 'ΑΒΓΔ';
+/** Το ίδιο `pxPerMm` με την προεπιλογή του καταγραφέα — ο ΕΝΑΣ αριθμός των υπολογισμών εδώ. */
+const PX_PER_MM = 10;
+const HEIGHT_MM = 3;
+const FONT_PX = HEIGHT_MM * PX_PER_MM;
+
+function style(over: Partial<TableCellStyle> = {}): TableCellStyle {
+  return {
+    textHeightMm: HEIGHT_MM,
+    textColorHex: INK,
+    bold: false,
+    italic: false,
+    underline: false,
+    align: 'ML',
+    margins: { hMm: 1, vMm: 1 },
+    ...over,
+  };
+}
+
+function cell(over: Partial<TableCellStyle> = {}): TableCellLayout {
+  const resolved = style(over);
+  return {
+    rowId: 'r1' as TableRowId,
+    colId: 'c1' as TableColumnId,
+    rect: { x: 0, y: 0, w: 40, h: 8 },
+    style: resolved,
+    hAlign: 'left',
+    text: {
+      position: { x: 1, y: 6 },
+      text: TEXT,
+      heightMm: resolved.textHeightMm,
+      colorHex: resolved.textColorHex,
+      hAlign: 'left',
+      bold: resolved.bold,
+      italic: resolved.italic,
+      underline: resolved.underline,
+      ...(resolved.fontFamily !== undefined && { fontFamily: resolved.fontFamily }),
+    },
+    rowSpan: 1,
+    colSpan: 1,
+  };
+}
+
+/**
+ * 🔴 Η γωνία δίνεται **ως προβολή**, ποτέ ως ξεχωριστό όρισμα: το `createStampTableContext`
+ * παράγει το `textAngleRad` από το `toScreen`, οπότε ένα test που τα δήλωνε χωριστά θα
+ * μπορούσε να ζητά «στραμμένο πίνακα» και να μετρά οριζόντιο κείμενο (δες την κεφαλίδα του
+ * `table-paint-recorder`).
+ */
+function rotatingProjection(angleRad: number) {
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+  return (u: number, v: number) => ({ x: u * cos - v * sin, y: u * sin + v * cos });
+}
+
+function paint(over: Partial<TableCellStyle> = {}, angleRad = 0): PaintLog {
+  const log: PaintLog = createPaintLog();
+  const rc = createRc(log, {
+    pxPerMm: PX_PER_MM,
+    ...(angleRad !== 0 && { toScreen: rotatingProjection(angleRad) }),
+  });
+  stampTableText(rc, [cell(over)]);
+  return log;
+}
+
+// ── Γραμματοσειρά (Α3) ──────────────────────────────────────────────────────
+
+describe('🔴 Α3 — ο καμβάς σταμάτησε να ζωγραφίζει «πάντα Arial»', () => {
+  it('η δηλωμένη οικογένεια φτάνει στο `ctx.font`', () => {
+    expect(paint({ fontFamily: 'verdana' }).texts[0].font).toBe(
+      tableCellFont(FONT_PX, false, false, 'verdana'),
+    );
+    expect(paint({ fontFamily: 'verdana' }).texts[0].font).toContain('verdana');
+  });
+
+  it('απούσα οικογένεια ⇒ arial — η ΙΔΙΑ προεπιλογή με τον μετρητή του text-engine', () => {
+    expect(paint().texts[0].font).toContain('arial');
+  });
+
+  it('τα πλάγια φτάνουν στο `ctx.font` ως προθεματικό `italic`', () => {
+    expect(paint({ italic: true }).texts[0].font).toMatch(/^italic /);
+    expect(paint().texts[0].font).not.toMatch(/^italic /);
+  });
+
+  it('έντονα και πλάγια συνυπάρχουν χωρίς να ακυρώνει το ένα το άλλο', () => {
+    const font = paint({ bold: true, italic: true }).texts[0].font;
+    expect(font).toContain('italic');
+    expect(font).toContain('bold');
+  });
+
+  it('🔴 το αλφαριθμητικό είναι ΤΟ ΙΔΙΟ που θα δώσει το `tableCellFont` στο `<input>`', () => {
+    // Αυτή είναι η εγγύηση «το κείμενο δεν αναπηδά στο διπλό κλικ»: μία συνάρτηση, δύο
+    // καταναλωτές. Αν ο ζωγράφος αποκτήσει δικό του υπολογισμό, εδώ σπάει.
+    const over = { bold: true, italic: true, fontFamily: 'calibri' };
+    expect(paint(over).texts[0].font).toBe(tableCellFont(FONT_PX, true, true, 'calibri'));
+  });
+});
+
+// ── Υπογράμμιση ─────────────────────────────────────────────────────────────
+
+describe('υπογράμμιση — γραμμή, όχι δεύτερη πηγή αριθμών', () => {
+  it('χωρίς υπογράμμιση δεν ζωγραφίζεται κανένα ορθογώνιο', () => {
+    expect(paint().rects).toHaveLength(0);
+  });
+
+  it('με υπογράμμιση ζωγραφίζεται ΕΝΑ ορθογώνιο, στο χρώμα του κειμένου', () => {
+    const log = paint({ underline: true });
+    expect(log.rects).toHaveLength(1);
+    expect(log.rects[0].color).toBe(INK);
+  });
+
+  it('το μήκος της είναι το μετρημένο πλάτος του κειμένου', () => {
+    expect(paint({ underline: true }).rects[0].widthPx).toBe(TEXT.length * RECORDER_CHAR_PX);
+  });
+
+  it('🔴 θέση και πάχος έρχονται από το TEXT_DECORATION_RATIOS, όχι από τοπικούς αριθμούς', () => {
+    const log = paint({ underline: true });
+    const text = log.texts[0];
+    const rect = log.rects[0];
+    // Η γραμμή πέφτει **κάτω** από τη γραμμή βάσης του κειμένου, στην απόσταση που ορίζει η
+    // κοινή σταθερά — η ίδια που χρησιμοποιεί ο `TextRenderer` και το explode κειμένου.
+    expect(rect.at.y - text.at.y).toBeCloseTo(FONT_PX * (TEXT_DECORATION_RATIOS.UNDERLINE_EM - 1), 6);
+    expect(rect.heightPx).toBeCloseTo(FONT_PX * TEXT_DECORATION_RATIOS.THICKNESS_EM, 6);
+  });
+
+  it('🔴 σε γερμένο πίνακα η γραμμή γέρνει ΜΑΖΙ με το κείμενο', () => {
+    const angleRad = 0.35;
+    const log = paint({ underline: true }, angleRad);
+    expect(log.rects[0].angleRad).toBeCloseTo(log.texts[0].angleRad, 9);
+    expect(Math.abs(log.rects[0].angleRad)).toBeGreaterThan(0.1);
+  });
+});

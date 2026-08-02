@@ -2,7 +2,7 @@
   "_meta": {
     "description": "SSoT Ratchet Registry — centralized module patterns (ADR-294)",
     "version": "2.0.0",
-    "lastUpdated": "2026-08-01",
+    "lastUpdated": "2026-08-02",
     "howToAdd": "Add module entry under 'modules', then run: npm run ssot:baseline"
   },
   "exemptPatterns": "(__tests__/|\\.test\\.|\\.spec\\.|\\.d\\.ts$|\\.config\\.|\\.stories\\.|\\.qa\\.|^docs/|/docs/|^adrs/|/adrs/|^scripts/|/scripts/|/i18n/locales/|node_modules/|^functions/|^tests/firestore-rules/)",
@@ -1781,13 +1781,26 @@
     "_comment_adr748_phase3": "=== ADR-748 ΦΑΣΗ 3 (2026-08-02): ο ζωντανός υπολογισμός δουλειών + το φίλτρο sidebar/dashboard ===",
     "jobs-access": {
       "ssotFile": "src/config/jobs-access.ts",
-      "description": "ADR-748 Φάση 3 — Ο ΖΩΝΤΑΝΟΣ υπολογισμός «ποιες δουλειές έχει ο Χ» (Ε5.α/Ε5.ζ) + το φίλτρο ορατότητας sidebar/dashboard. Καθαρή συνάρτηση, μηδέν I/O, πρότυπο decideAssetPackAccess (ADR-655). 🔴 Η απόφαση είναι ΤΡΙΩΝ καταστάσεων, όχι boolean: granted | unknown | none — γιατί από τις ΤΡΕΙΣ πηγές δικαιωμάτων (Π-15) στον browser φτάνει ΜΙΑ (μετρημένο: claims-handler.ts:159-164). ΚΡΥΒΕΤΑΙ ΜΟΝΟ ΤΟ none· το unknown ΠΟΤΕ — αλλιώς ο external_user με ρόλο μόνο σε έργο κοιτάζει άδεια οθόνη (Ε-5.1, το ελάττωμα του ACC). Οι αναφορές ΚΛΗΡΟΝΟΜΟΥΝ από την πηγή τους (Ε14.β) — ετικέτα ανά υπο-αναφορά = αντιγραφή ταξινόμησης = Υ-5. Δεύτερος υπολογισμός δουλειών ή δεύτερο φίλτρο ορατότητας αλλού = διπλότυπο που αποκλίνει σιωπηλά.",
+      "description": "ADR-748 Φάση 3 — Ο ΖΩΝΤΑΝΟΣ υπολογισμός «ποιες δουλειές έχει ο Χ» (Ε5.α/Ε5.ζ). Καθαρή συνάρτηση, μηδέν I/O, πρότυπο decideAssetPackAccess (ADR-655). 🔴 Η απόφαση είναι ΤΡΙΩΝ καταστάσεων, όχι boolean: granted | unknown | none — γιατί από τις ΤΡΕΙΣ πηγές δικαιωμάτων (Π-15) στον browser φτάνει ΜΙΑ (μετρημένο: claims-handler.ts:159-164). ΚΡΥΒΕΤΑΙ ΜΟΝΟ ΤΟ none· το unknown ΠΟΤΕ — αλλιώς ο external_user με ρόλο μόνο σε έργο κοιτάζει άδεια οθόνη (Ε-5.1, το ελάττωμα του ACC). Δεύτερος υπολογισμός δουλειών αλλού = διπλότυπο που αποκλίνει σιωπηλά. ⚠️ ΦΑΣΗ 3.6: η ΟΡΑΤΟΤΗΤΑ (φίλτρο sidebar/dashboard) χωρίστηκε στο jobs-visibility.ts — ήταν δεύτερη ερώτηση στο ίδιο αρχείο και το αρχείο είχε φτάσει 497/500. Η εξάρτηση είναι ΜΟΝΟΔΡΟΜΗ: ορατότητα → απόφαση → μητρώο.",
       "forbiddenPatterns": [
-        "export\\s+(function|const)\\s+(decideJobAccess|resolveJobAccess|resolveAvailableJobs|pickDefaultJob|isRouteVisibleForJob|isReportSubItemVisibleForJob|isTileVisibleForJob|filterItemsByJob|filterTilesByJob)\\b",
+        "export\\s+(function|const)\\s+(decideJobAccess|resolveJobAccess|resolveAvailableJobs|pickDefaultJob)\\b",
         "type\\s+Job(Selection|AccessDecision|AccessReason)\\s*="
       ],
       "allowlist": [
         "src/config/jobs-access.ts"
+      ],
+      "tier": 6
+    },
+    "jobs-visibility": {
+      "ssotFile": "src/config/jobs-visibility.ts",
+      "description": "ADR-748 Φάση 3.6 — SSoT της ΟΡΑΤΟΤΗΤΑΣ: «τι δείχνει η ενεργή δουλειά». Το ΜΟΝΟ φίλτρο για sidebar ΚΑΙ dashboard — δύο κανόνες για το ίδιο ερώτημα σημαίνει ότι η ίδια οθόνη λέει δύο διαφορετικά πράγματα για το ίδιο στοιχείο (μετρημένο: /legal-documents). Οι αναφορές ΚΛΗΡΟΝΟΜΟΥΝ από την πηγή τους (Ε14.β) — ετικέτα ανά υπο-αναφορά = αντιγραφή ταξινόμησης = Υ-5. 🔒 Το JobFilterResult γεννιέται ΜΟΝΟ από το buildResult ώστε το hiddenCount να ΕΙΝΑΙ hidden.length: το ελάττωμα των 17:13 (δείκτης 22 ενώ έλειπαν 9) ήταν δύο μονοπάτια που αύξαναν τον ίδιο μετρητή με διαφορετική μονάδα — τώρα η απόκλιση δεν είναι εκφράσιμη. Το φίλτρο ΔΕΝ πετάει ό,τι κόβει (hidden/hiddenSubItems): είναι το υλικό της «Αποκάλυψης» (Επίπεδο 3) και του ανά-δοχείο δείκτη (Επίπεδο 2). Δεύτερο φίλτρο ορατότητας ή δεύτερη σύνοψη κρυμμένων αλλού = διπλότυπο που αποκλίνει σιωπηλά.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(isRouteVisibleForJob|isReportSubItemVisibleForJob|isTileVisibleForJob|isCrossCuttingRoute|filterItemsByJob|filterTilesByJob|summarizeHidden|tileIdFromHref)\\b",
+        "export\\s+const\\s+REPORTS_PARENT_ROUTE\\b",
+        "type\\s+JobFilter(Result|ableItem)\\s*="
+      ],
+      "allowlist": [
+        "src/config/jobs-visibility.ts"
       ],
       "tier": 6
     },
@@ -5206,6 +5219,53 @@
       "addedDate": "2026-08-01",
       "addedByAdr": "ADR-739",
       "tier": 2
+    },
+    "table-selection-range": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/table/table-cell-range.ts",
+      "description": "ADR-739 §26/§27.15/§27.16 — Ο ΕΝΑΣ δρόμος από «τι διάλεξε ο χρήστης» σε «ποια κελιά είναι μέσα». Η επιλογή είναι ΔΥΟ ΓΩΝΙΕΣ + ΕΙΔΟΣ (`TableSelectionSpan` / `TableSelectionKind` = 'range'|'column'|'row'), και ΜΟΝΟ το `resolveTableSelectionBounds` την ερμηνεύει. ΤΟ ΡΙΣΚΟ, ΜΕΤΡΗΜΕΝΟ (§27.15): το κούμπωμα συγχωνεύσεων (`snapToWholeMerges`) είναι ΣΩΣΤΟ για περιοχή και ΛΑΘΟΣ για άξονα — έτρεχε και στα δύο, και «κλικ στο γράμμα B» μάρκαρε ΟΛΟΚΛΗΡΟ τον πίνακα, επειδή η γραμμή τίτλου είναι συγχωνευμένη σε όλες τις στήλες. 257 πράσινα tests το έχασαν γιατί ρωτούσαν τη συγχώνευση ΓΙΑ ΠΕΡΙΟΧΕΣ. Δεύτερος δρόμος ερμηνείας = το ίδιο σφάλμα, ξαναγεννημένο σιωπηλά. Επίσης ΕΝΑΣ επεκτατής (`extendTableSelectionTo`: η άγκυρα μένει, το είδος μένει) που τον μοιράζονται `Shift+βέλος` ΚΑΙ `Shift+κλικ` σε γράμμα/αριθμό, και ΕΝΑΣ ορισμός της «ολόκληρης στήλης/γραμμής» (`wholeAxisSelection`) που τον μοιράζονται το κλικ στη ζώνη, η σύρση στη ζώνη και η επέκταση: αντίγραφα μιας γραμμής ΔΕΝ πιάνονται από το jscpd (<50 tokens) και αποκλίνουν σιωπηλά. Νέο `TableSelectionKind`/`TableSelectionSpan`, νέα ερμηνεία ευρών ή νέο κούμπωμα συγχωνεύσεων εκτός αυτού του module = παράβαση. §27.16: ο ΜΗΧΑΝΙΣΜΟΣ του κουμπώματος μετακόμισε στο table-range-merge-snap.ts (καθαρή άλγεβρα ορθογωνίων· το αρχείο είχε φτάσει 495/500) — η ΑΠΟΦΑΣΗ «κουμπώνει η περιοχή, όχι ο άξονας» έμεινε ΕΔΩ, όπου ζει η πρόθεση. Ο κύκλος ζωής της χειρονομίας ζει στο `table-cell-drag-session.ts` (ΕΝΑ ενεργό drag, εγγραφή ΜΟΝΟ όταν αλλάζει κελί — ADR-735).",
+      "forbiddenPatterns": [
+        "function\\s+resolveTableSelectionBounds\b",
+        "function\\s+resolveTableCellRange\b",
+        "function\\s+snapToWholeMerges\b",
+        "function\\s+extendTableSelectionTo\b",
+        "function\\s+extendTableCellRangeEnd\b",
+        "function\\s+wholeAxisSelection\b",
+        "function\\s+tableRangeMembership\b",
+        "function\\s+tableRangeCellRefs\b",
+        "function\\s+tableWholeGridRange\b",
+        "function\\s+startTableCellDrag\b",
+        "type\\s+TableSelectionKind\b",
+        "interface\\s+TableSelectionSpan\b",
+        "interface\\s+TableCellRangeBounds\b",
+        "interface\\s+TableRectBounds\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/table/table-cell-range.ts",
+        "src/subapps/dxf-viewer/bim/table/table-range-merge-snap.ts",
+        "src/subapps/dxf-viewer/bim/table/table-range-clipboard.ts",
+        "src/subapps/dxf-viewer/ui/table-cell-editor/table-cell-drag-session.ts"
+      ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-739",
+      "tier": 2
+    },
+    "drag-edge-autopan": {
+      "ssotFile": "src/subapps/dxf-viewer/systems/navigation/drag-edge-autopan.ts",
+      "description": "ADR-739 §27.16 Ε1 — Ο ΕΝΑΣ μηχανισμός «σέρνω, φτάνω στην άκρη, το κάδρο συνεχίζει». ΔΕΝ είναι scroll: ο καμβάς ΜΕΤΑΚΙΝΕΙΤΑΙ (ένα view transform, οκτώ διαδρομές πλοήγησης κατά ADR-728), άρα είναι auto-PAN και διαπραγματεύεται με το pan του χρήστη. ΔΥΟ ΔΟΜΙΚΕΣ ΑΠΑΓΟΡΕΥΣΕΙΣ ΤΟΥ ADR-040 ΤΗΡΟΥΝΤΑΙ ΕΔΩ: (α) καμία εγγραφή transform — εκπέμπεται το ΥΠΑΡΧΟΝ `canvas-pan`, που καταλήγει στο `useViewportManager.setTransform`, έναν από τους δύο επιτρεπόμενους γραφείς· (β) κανένας δικός του rAF/setInterval — εγγραφή στον `UnifiedFrameScheduler`. Η ταχύτητα είναι σε px ΑΝΑ ΔΕΥΤΕΡΟΛΕΠΤΟ με τετραγωνική ράμπα βάθους (ΟΧΙ px/tick όπως το Konva, που γίνεται μισό στα 30fps). Ο ΦΥΛΑΚΑΣ ΑΠΟΔΟΣΗΣ (ADR-735) είναι μέρος του συμβολαίου: στη νεκρή ζώνη ΚΑΜΙΑ εκπομπή, άρα κανένα repaint και καμία ψευδής «χειρονομία πλοήγησης». Δεύτερη υλοποίηση auto-pan/auto-scroll άκρης (marquee, μετακίνηση οντότητας, σύρση λαβής) = structural clone (N.18 / CHECK 3.28) ΚΑΙ ένατη διαδρομή γραφής transform. Νέος υπολογισμός ταχύτητας άκρης ή νέος βρόχος καρέ γι' αυτό εκτός αυτού του module = παράβαση.",
+      "forbiddenPatterns": [
+        "function\\s+edgeAutoPanVelocity\b",
+        "function\\s+edgeAutoPanSample\b",
+        "function\\s+startDragEdgeAutoPan\b",
+        "function\\s+stopDragEdgeAutoPan\b",
+        "interface\\s+EdgeAutoPanSample\b",
+        "interface\\s+EdgeAutoPanVelocity\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/systems/navigation/drag-edge-autopan.ts"
+      ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-739",
+      "tier": 3
     }
   }
 }
