@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "89316da75824d580301ce61bf8ea5685a9cfd168251a57f5df1b51f71472f3b6"
+    "src/i18n/generated/shell-slice.el.json": "2893302bad2b5bca785c24dd987bb2323c4e54899768a6ae539811df34159e3f"
   },
   "boundaries": {
     "dynamic": [
@@ -38,7 +38,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "5165c35ca4f9fc4159f147619a748a751713544e48980dd3d6c74a60ed3edcbc",
+  "inputsSha256": "ef5d2a7cba52ba202e55c781be30c1e8f3c97cb2e35b7a00c3814ba807ec24ad",
   "languages": [
     "el"
   ],
@@ -471,7 +471,7 @@
     "matchedKeys": 138,
     "routeBoundaries": 0,
     "shellFiles": 394,
-    "sliceBytes": 184735
+    "sliceBytes": 185678
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",

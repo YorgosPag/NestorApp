@@ -35,6 +35,8 @@ import {
   type RibbonCommandsApi,
 } from '../context/RibbonCommandContext';
 import { useRibbonContextualTrigger } from '../context/RibbonContextualTabContext';
+// ADR-748 Φάση 2 — φίλτρο καρτελών ανά θέση του διακόπτη ειδικότητας.
+import { resolveVisibleTabIds } from '../data/ribbon-tab-specialties';
 import { CONTEXTUAL_TRIGGER_SEPARATOR } from '../data/contextual-multi-selection-tab';
 import type { RibbonTab } from '../types/ribbon-types';
 
@@ -90,10 +92,19 @@ const RibbonTabsRegion: React.FC<RibbonTabsRegionProps> = ({
 
   const orderedTabs = useMemo(() => {
     const base = reorderTabs(DEFAULT_RIBBON_TABS, state.tabOrder);
+    // ADR-748 Φάση 2 — ΤΟ ΦΙΛΤΡΟ ΕΙΔΙΚΟΤΗΤΑΣ. Είναι το ΜΟΝΟ σημείο όπου
+    // αφαιρούνται μόνιμες καρτέλες: εδώ παράγονται οι καρτέλες του ribbon και
+    // πουθενά αλλού. Τα contextual μπαίνουν ΜΕΤΑ το φίλτρο — μια καρτέλα που
+    // άνοιξε επειδή ο χρήστης επέλεξε οντότητα δεν φιλτράρεται ποτέ (θα σήμαινε
+    // «διάλεξες κάτι και δεν μπορείς να το επεξεργαστείς»).
+    const visibleIds = new Set(
+      resolveVisibleTabIds(base.map((tab) => tab.id), state.activeSpecialty),
+    );
+    const permanent = base.filter((tab) => visibleIds.has(tab.id));
     return visibleContextualTabs.length > 0
-      ? [...base, ...visibleContextualTabs]
-      : base;
-  }, [state.tabOrder, visibleContextualTabs]);
+      ? [...permanent, ...visibleContextualTabs]
+      : permanent;
+  }, [state.tabOrder, state.activeSpecialty, visibleContextualTabs]);
 
   // ADR-345 §5.4 — auto-activate contextual tab when it appears; revert
   // to last persistent tab when it disappears.
@@ -136,6 +147,8 @@ const RibbonTabsRegion: React.FC<RibbonTabsRegionProps> = ({
         onTabContextMenu={onContextMenu}
         onCycleMinimize={state.cycleMinimizeState}
         drag={drag}
+        activeSpecialty={state.activeSpecialty}
+        onSpecialtyChange={state.setActiveSpecialty}
       />
       <RibbonBody
         activeTab={activeTab}

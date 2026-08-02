@@ -276,6 +276,13 @@ export const RIBBON_LS_KEYS = {
   tabOrder: 'dxf-ribbon:tabOrder',
   pinnedPanelIds: 'dxf-ribbon:pinnedPanelIds',
   splitLastUsed: 'dxf-ribbon:splitLastUsed',
+  // ADR-748 Φάση 2 — θέση του διακόπτη ειδικότητας («ποια εργαλεία έχω»).
+  // Ζει ΕΔΩ και όχι σε δικό του μηχανισμό: η κατάσταση του ribbon έχει ήδη SSoT.
+  // ⚠️ Είναι ρύθμιση ΤΟΥ ΧΡΗΣΤΗ (πρότυπο Revit Options / AutoCAD profile), όχι
+  // του σχεδίου — γι' αυτό localStorage και όχι το `bim-render-settings-store`
+  // (που είναι per-drawing και γράφει Firestore). Το Υ-3 «το προφίλ ταξιδεύει
+  // στο cloud» αφορά ΟΛΑ τα κλειδιά μαζί, σε δική του φάση — όχι ένα από αυτά.
+  specialty: 'dxf-ribbon:specialty',
 } as const;
 
 export const RIBBON_NARROW_BREAKPOINT_PX = 900;

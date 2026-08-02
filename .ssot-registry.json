@@ -1752,6 +1752,32 @@
       ],
       "tier": 6
     },
+    "_comment_adr748_phase1": "=== ADR-748 ΦΑΣΗ 1 (2026-08-02): μητρώο δουλειών + ανάθεση ribbon καρτελών ανά ειδικότητα ===",
+    "jobs-registry": {
+      "ssotFile": "src/config/jobs-registry.ts",
+      "description": "ADR-748 Φάση 1 — SSoT των ΕΞΙ δουλειών (Σχέδιο/Εργοτάξιο/Πελάτες/Οικονομικά/Προμήθειες/Διαχείριση): ταυτότητα, i18n keys, τα permissions που τις γεννούν, ετικέτες ορατότητας sidebar/dashboard, και οι πηγές κληρονομιάς των αναφορών (REPORT_SOURCES). ΔΕΔΟΜΕΝΑ ΜΟΝΟ — ο ζωντανός υπολογισμός (Ε5.α/Ε5.ζ) διαβάζει από εδώ, δεν ζει εδώ. ⚠️ ΟΝΟΜΑΤΟΛΟΓΙΑ (Ε6.στ/Π-9): η δουλειά λέγεται Job — ΠΟΤΕ Workspace (= οργανισμός, ADR-032). Δεύτερη λίστα δουλειών/ετικετών ορατότητας αλλού = διπλότυπο που αποκλίνει σιωπηλά.",
+      "forbiddenPatterns": [
+        "(JOBS|JOB_ORDER|JOB_DEFINITIONS|REPORT_SOURCES|COMMON_SIDEBAR_ROUTES|COMMON_DASHBOARD_TILES)\\s*(=|:)\\s*(\\{|\\[|Record)",
+        "type\\s+JobId\\s*="
+      ],
+      "allowlist": [
+        "src/config/jobs-registry.ts"
+      ],
+      "tier": 6
+    },
+    "ribbon-tab-specialties": {
+      "ssotFile": "src/subapps/dxf-viewer/ui/ribbon/data/ribbon-tab-specialties.ts",
+      "description": "ADR-748 Φάση 2 — SSoT του διακόπτη ειδικότητας του DXF ribbon («ποια εργαλεία έχω», πρότυπο Revit Options → User Interface). Η ανάθεση είναι ΑΝΑ ΚΑΡΤΕΛΑ (RIBBON_TAB_SPECIALTIES), ολική πάνω στο DEFAULT_RIBBON_TAB_ORDER, ώστε νέα καρτέλα χωρίς ανάθεση να μπλοκάρει στο anchor test (Υ-4). Λίστα καρτελών ανά θέση διακόπτη = ΔΕΥΤΕΡΗ λίστα καρτελών δίπλα στο ribbon-default-tabs.ts — απαγορεύεται. ⚠️ ΔΕΝ είναι νέο λεξιλόγιο ειδικοτήτων: το SPECIALTY_DISCIPLINES γεφυρώνει με το Discipline του ADR-405 (bim/discipline/bim-discipline.ts). Διαφορετικό από το DisciplineVisibilityToggle (ADR-405 §4), που κρύβει ΟΝΤΟΤΗΤΕΣ, όχι καρτέλες — το Revit τα κρατά χωριστά.",
+      "forbiddenPatterns": [
+        "(RIBBON_TAB_SPECIALTIES|SPECIALTY_DISCIPLINES|RIBBON_SPECIALTY_ORDER|RIBBON_SPECIALTY_LABEL_KEY)\\s*(=|:)\\s*(\\{|\\[|Record)",
+        "type\\s+RibbonSpecialty(Id|Selection)\\s*=",
+        "export\\s+(function|const)\\s+(resolveVisibleTabIds|countHiddenTabs|isRibbonSpecialtySelection)\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/ui/ribbon/data/ribbon-tab-specialties.ts"
+      ],
+      "tier": 6
+    },
     "_comment_adr314_phaseD2c": "=== ADR-314 PHASE D.2c (2026-04-19): registry gap — unified-tabs-factory root ===",
     "unified-tabs-factory": {
       "ssotFile": "src/config/unified-tabs-factory.ts",

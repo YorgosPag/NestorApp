@@ -207,6 +207,32 @@
     "tools": "Tools",
     "settings": "Settings"
   },
+  "jobs": {
+    "design": {
+      "label": "Design",
+      "description": "Drawings, 3D models, topography"
+    },
+    "site": {
+      "label": "Site",
+      "description": "Progress, photos, project reports"
+    },
+    "clients": {
+      "label": "Clients",
+      "description": "Contacts, sales, communication"
+    },
+    "finance": {
+      "label": "Finance",
+      "description": "Invoices and accounting"
+    },
+    "procurement": {
+      "label": "Procurement",
+      "description": "Orders, deliveries, specifications"
+    },
+    "administration": {
+      "label": "Administration",
+      "description": "Users, roles, company settings"
+    }
+  },
   "sidebar": {
     "spaces": "Spaces",
     "sales": "Sales",

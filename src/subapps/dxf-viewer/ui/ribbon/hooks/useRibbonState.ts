@@ -14,9 +14,22 @@ import {
   type RibbonMinimizeState,
 } from '../types/ribbon-types';
 import { DEFAULT_RIBBON_TAB_ORDER } from '../data/ribbon-default-tabs';
+// ADR-748 Φάση 2 — διακόπτης ειδικότητας («ποια εργαλεία έχω»).
+import {
+  RIBBON_SPECIALTY_ALL,
+  isRibbonSpecialtySelection,
+  type RibbonSpecialtySelection,
+} from '../data/ribbon-tab-specialties';
 
 const DEFAULT_TAB_ID = 'home';
 const DEFAULT_MINIMIZE: RibbonMinimizeState = 'full';
+/**
+ * ADR-748 Φάση 2 — προεπιλογή «Όλα» = **ακριβώς η σημερινή συμπεριφορά**.
+ * Κανένας υπάρχων χρήστης δεν βλέπει αλλαγή μέχρι να γυρίσει ο ίδιος τον
+ * διακόπτη (Α-1: ο ρόλος προτείνει, δεν φυλακίζει· Ε7.δ: πάντα υπάρχει
+ * προεπιλογή, ποτέ μπλοκάρισμα — ο κανόνας του Revit).
+ */
+const DEFAULT_SPECIALTY: RibbonSpecialtySelection = RIBBON_SPECIALTY_ALL;
 
 function readLS<T>(key: string, fallback: T, parser: (raw: string) => T): T {
   if (typeof window === 'undefined') return fallback;
@@ -52,6 +65,10 @@ function parsePinnedPanelIds(raw: string): string[] {
   } catch {
     return [];
   }
+}
+
+function parseSpecialty(raw: string): RibbonSpecialtySelection {
+  return isRibbonSpecialtySelection(raw) ? raw : DEFAULT_SPECIALTY;
 }
 
 function parseTabOrder(raw: string): string[] {
@@ -90,6 +107,9 @@ export interface UseRibbonStateReturn {
   pinnedPanelIds: string[];
   togglePinPanel: (panelId: string) => void;
   isNarrow: boolean;
+  /** ADR-748 Φάση 2 — ενεργή θέση του διακόπτη ειδικότητας. */
+  activeSpecialty: RibbonSpecialtySelection;
+  setActiveSpecialty: (specialty: RibbonSpecialtySelection) => void;
 }
 
 export function useRibbonState(): UseRibbonStateReturn {
@@ -106,6 +126,10 @@ export function useRibbonState(): UseRibbonStateReturn {
   const [pinnedPanelIds, setPinnedPanelIdsState] = useState<string[]>(() =>
     readLS(RIBBON_LS_KEYS.pinnedPanelIds, [], parsePinnedPanelIds),
   );
+  const [activeSpecialty, setActiveSpecialtyState] =
+    useState<RibbonSpecialtySelection>(() =>
+      readLS(RIBBON_LS_KEYS.specialty, DEFAULT_SPECIALTY, parseSpecialty),
+    );
 
   const isNarrow = useNarrowViewport();
   const effectiveMinimizeState: RibbonMinimizeState = isNarrow
@@ -137,6 +161,14 @@ export function useRibbonState(): UseRibbonStateReturn {
     writeLS(RIBBON_LS_KEYS.tabOrder, JSON.stringify(order));
   }, []);
 
+  const setActiveSpecialty = useCallback(
+    (specialty: RibbonSpecialtySelection) => {
+      setActiveSpecialtyState(specialty);
+      writeLS(RIBBON_LS_KEYS.specialty, specialty);
+    },
+    [],
+  );
+
   const togglePinPanel = useCallback((panelId: string) => {
     setPinnedPanelIdsState((prev) => {
       const next = prev.includes(panelId)
@@ -159,5 +191,7 @@ export function useRibbonState(): UseRibbonStateReturn {
     pinnedPanelIds,
     togglePinPanel,
     isNarrow,
+    activeSpecialty,
+    setActiveSpecialty,
   };
 }

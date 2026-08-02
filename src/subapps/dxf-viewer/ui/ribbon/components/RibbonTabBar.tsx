@@ -8,6 +8,9 @@ import { RibbonTabItem } from './RibbonTabItem';
 import { RibbonMinimizeButton } from './RibbonMinimizeButton';
 import { RibbonHeaderToggleButton } from './RibbonHeaderToggleButton';
 import { RibbonUndoRedoButtons } from './RibbonUndoRedoButtons';
+// ADR-748 Φάση 2 — ο ορατός διακόπτης ειδικότητας + ο δείκτης «Χ κρυμμένες».
+import { RibbonSpecialtySwitch } from './RibbonSpecialtySwitch';
+import type { RibbonSpecialtySelection } from '../data/ribbon-tab-specialties';
 
 interface RibbonTabBarProps {
   tabs: RibbonTab[];
@@ -18,6 +21,8 @@ interface RibbonTabBarProps {
   onTabContextMenu: (e: React.MouseEvent) => void;
   onCycleMinimize: () => void;
   drag: TabDragHandlers;
+  activeSpecialty: RibbonSpecialtySelection;
+  onSpecialtyChange: (specialty: RibbonSpecialtySelection) => void;
 }
 
 export const RibbonTabBar: React.FC<RibbonTabBarProps> = ({
@@ -29,6 +34,8 @@ export const RibbonTabBar: React.FC<RibbonTabBarProps> = ({
   onTabContextMenu,
   onCycleMinimize,
   drag,
+  activeSpecialty,
+  onSpecialtyChange,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   return (
@@ -52,6 +59,10 @@ export const RibbonTabBar: React.FC<RibbonTabBarProps> = ({
           />
         ))}
       </div>
+      <RibbonSpecialtySwitch
+        activeSpecialty={activeSpecialty}
+        onSpecialtyChange={onSpecialtyChange}
+      />
       <RibbonMinimizeButton
         minimizeState={minimizeState}
         onCycle={onCycleMinimize}

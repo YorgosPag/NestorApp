@@ -2138,6 +2138,20 @@
       "showPanels": "Show Panels",
       "undock": "Undock"
     },
+    "specialty": {
+      "ariaLabel": "Tools by discipline",
+      "tooltip": "Which tools are shown. Changes no permissions and hides no drawing content — tabs only.",
+      "restoreAll": "Restore all tabs",
+      "hiddenCount": "{count, plural, one {# hidden} other {# hidden}}",
+      "names": {
+        "architectural": "Architectural",
+        "structural": "Structural",
+        "mep": "MEP",
+        "topographic": "Topographic",
+        "presentation": "Presentation",
+        "all": "All"
+      }
+    },
     "flyout": {
       "expand": "Expand panel",
       "pin": "Pin panel",

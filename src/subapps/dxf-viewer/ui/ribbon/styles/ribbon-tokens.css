@@ -165,6 +165,47 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   pointer-events: none;
 }
 
+/* ADR-748 Φάση 2 — διακόπτης ειδικότητας («ποια εργαλεία έχω») στη δεξιά άκρη
+   της γραμμής καρτελών, πριν το minimize. Πρότυπο: επιλογέας διάταξης πάνω
+   δεξιά (Cinema 4D) / διακόπτης Dev Mode (Figma) — δίπλα στο UI που αλλάζει,
+   ΟΧΙ κρυμμένος σε γρανάζι στη γραμμή κατάστασης (η αδυναμία Υ-2 του AutoCAD). */
+.dxf-ribbon-specialty-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 0 4px;
+  flex-shrink: 0;
+  color: var(--ribbon-text);
+}
+
+.dxf-ribbon-specialty-select {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Α-3 — ο μόνιμος δείκτης «Χ κρυμμένες» ΕΙΝΑΙ κουμπί: ένα κλικ επαναφέρει τα
+   πάντα. Ποτέ σιωπηλή απόκρυψη (μάθημα Office 2000). */
+.dxf-ribbon-specialty-hidden-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 18px;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--ribbon-btn-hover);
+  border: none;
+  border-radius: 9px;
+  color: var(--ribbon-text);
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+.dxf-ribbon-specialty-hidden-badge:hover {
+  opacity: 1;
+}
+
 .dxf-ribbon-minimize-button {
   display: inline-flex;
   align-items: center;
