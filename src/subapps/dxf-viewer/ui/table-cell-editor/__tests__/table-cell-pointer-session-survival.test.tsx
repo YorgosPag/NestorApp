@@ -179,11 +179,13 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     target: HTMLElement,
     point: { readonly x: number; readonly y: number },
     shiftKey = false,
+    /** ADR-739 §27.14 — `2` = δεξί πλήκτρο. Ίδια χειρονομία, ίδια συνέπεια στην εστίαση. */
+    button = 0,
   ): void {
     act(() => {
       target.dispatchEvent(
         new MouseEvent('mousedown', {
-          button: 0,
+          button,
           clientX: point.x,
           clientY: point.y,
           shiftKey,
@@ -193,6 +195,12 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     });
     blurActiveElement();
   }
+
+  /** Δεξί πάτημα — αυτό που προηγείται κάθε `contextmenu`. */
+  const rightPressOn = (
+    target: HTMLElement,
+    point: { readonly x: number; readonly y: number },
+  ): void => pressOn(target, point, false, 2);
 
   /** Το καρέ στο οποίο ο φύλακας παίρνει την απόφασή του. */
   function nextFrame(): void {
@@ -248,6 +256,60 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     expect(getTableCellCursor()).not.toBeNull();
     expect(getTableCellCursor()?.selection).not.toBeNull();
     expect(isTableCellSessionElement(document.activeElement)).toBe(true);
+  });
+
+  describe('🔴 §27.14 — ΤΟ ΔΕΞΙ ΚΛΙΚ ΕΙΝΑΙ ΚΙ ΑΥΤΟ ΧΕΙΡΟΝΟΜΙΑ ΤΗΣ ΣΥΝΕΔΡΙΑΣ', () => {
+    /**
+     * Ο Giorgio: «δεξί κλικ στις λωρίδες ⇒ εμφανίζεται το μενού του **καμβά**, όχι του Excel».
+     *
+     * Η ρίζα δεν είναι το μενού και δεν είναι η γεωμετρία (το `getHit` δοκιμάζεται πράσινο
+     * αλλού, με τα ίδια σημεία οθόνης). Είναι ότι το §26.15 έδωσε **δήλωση** μόνο στο
+     * αριστερό πλήκτρο: το δεξί πατούσε, ο browser μετέφερε την εστίαση, ο φύλακας δεν
+     * έβλεπε δήλωση και **έκλεινε τη συνεδρία** — οπότε όταν έφτανε το `contextmenu`, το
+     * `getHit` ρωτούσε έναν δρομέα που δεν υπήρχε πια και απαντούσε `null`. Ο δρομολογητής
+     * σωστά έπεφτε στο μενού οντότητας.
+     *
+     * Δηλαδή: **η σειρά `mousedown` → `focusout` → `contextmenu` ήταν το πραγματικό πεδίο**,
+     * όχι το «ποιο μενού ανοίγει». Ίδιο μάθημα με το §26.15: μέτρα την αλληλουχία.
+     */
+    it('🔴 δεξί κλικ στη ζώνη ⇒ η συνεδρία ΖΕΙ (αλλιώς το μενού βρίσκει κλειστό δρομέα)', () => {
+      rightPressOn(canvas, columnBandScreenPoint(entity, 1));
+      nextFrame();
+
+      expect(getTableCellCursor()).not.toBeNull();
+      expect(isTableCellSessionElement(document.activeElement)).toBe(true);
+    });
+
+    it('🔴 δεξί κλικ ΜΕΣΑ σε κελί ⇒ η συνεδρία ζει το ίδιο', () => {
+      rightPressOn(canvas, cellScreenPoint(entity, 3, 2));
+      nextFrame();
+
+      expect(getTableCellCursor()).not.toBeNull();
+      expect(isTableCellSessionElement(document.activeElement)).toBe(true);
+    });
+
+    it('🔴 ΜΟΝΟ δηλώνει: ο δρομέας ΔΕΝ μετακινείται και ΤΙΠΟΤΑ δεν δεσμεύεται', () => {
+      // Το μενού θα ανοίξει πάνω στο σημείο· μια μετακίνηση δρομέα εδώ θα άλλαζε το
+      // αντικείμενο της εντολής **κάτω από** το μενού που μόλις άνοιξε. Ο κανόνας
+      // «το δεξί δεν μετακινεί την επιλογή» μένει ακέραιος — προστίθεται μόνο η δήλωση.
+      const before = getTableCellCursor()?.position;
+      rightPressOn(canvas, cellScreenPoint(entity, 3, 2));
+      nextFrame();
+
+      expect(getTableCellCursor()?.position).toEqual(before);
+      expect(onCommitPending).not.toHaveBeenCalled();
+      expect(onSelectTo).not.toHaveBeenCalled();
+    });
+
+    it('δεξί κλικ ΕΞΩ από τον πίνακα ⇒ η συνεδρία κλείνει, όπως και το αριστερό', () => {
+      // Η δήλωση δεν επιτρέπεται να γίνει «κρατάω τη συνεδρία σε κάθε δεξί κλικ του
+      // σχεδίου»: αυτό ακριβώς απέρριψε το §26.15 για τον καμβά.
+      // Το ΙΔΙΟ σημείο με το αριστερό δίδυμο πιο κάτω — αλλιώς συγκρίνονται δύο πράγματα.
+      rightPressOn(canvas, { x: 1100, y: 700 });
+      nextFrame();
+
+      expect(getTableCellCursor()).toBeNull();
+    });
   });
 
   it('✅ κλικ ΕΞΩ από τον πίνακα ⇒ η συνεδρία ΚΛΕΙΝΕΙ (η μη-παλινδρόμηση)', () => {
