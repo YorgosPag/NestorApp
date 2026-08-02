@@ -20,8 +20,8 @@
 import { writeDxfAscii } from '../dxf-ascii-writer';
 import { extendedFontFlags } from '../dxf-ascii-tables-writer';
 import { collectTextStyles } from '../dxf-ascii-writer-helpers';
-import { textStyleName } from '../dxf-ascii-text-writer';
-import { makeText, makeLine } from '../neutral-primitive-factory';
+import { textStyleName, resolveExportFont } from '../dxf-ascii-text-writer';
+import { makeText, makeLine, makeSolidFill } from '../neutral-primitive-factory';
 import type { Entity } from '../../../types/entities';
 
 const LAYERS = { L: { name: 'TABLE' } };
@@ -130,5 +130,50 @@ describe('ADR-739 Φ1 — XDATA 1071: το έντονο ταξιδεύει στ�
     expect(textStyleName('Arial', false)).toBe('Arial');
     expect(textStyleName('', true)).toBe('STANDARD');
     expect(textStyleName(undefined, true)).toBe('STANDARD');
+  });
+
+  it('🔴 το group 3 είναι ΑΡΧΕΙΟ, όχι οικογένεια — γυμνό «Arial» = Arial.shx (ανύπαρκτο)', () => {
+    // Μετρημένο στο `Ισόγειο_Ισόγειο (5).dxf`: τα νέα styles έγραφαν σκέτο `Arial` ⇒ το
+    // AutoCAD ζητούσε `Arial.shx`, υποκαθιστούσε γραμματοσειρά, και το έντονο του 1071
+    // δεν μπορούσε καν να εφαρμοστεί.
+    expect(resolveExportFont('Arial')).toBe('Arial.ttf');
+    expect(resolveExportFont('arial')).toBe('Arial.ttf');
+    // Αμετάβλητα: ήδη-αρχείο, και ο ιστορικός κλάδος txt/standard.
+    expect(resolveExportFont('Arial.ttf')).toBe('Arial.ttf');
+    expect(resolveExportFont('txt')).toBe('Arial.ttf');
+    expect(resolveExportFont('romans')).toBe('romans');
+  });
+
+  it('και τα δύο STYLE records του πίνακα δείχνουν σε ΥΠΑΡΚΤΟ αρχείο γραμματοσειράς', () => {
+    const styles = collectTextStyles([cellText('Κεφαλίδα', true), cellText('δεδομένα', false)]);
+    for (const s of styles) expect(s.fontFile).toBe('Arial.ttf');
+  });
+});
+
+describe('ADR-739 Φ1 — το γέμισμα πρέπει να είναι ΟΡΑΤΟ σε 2D Wireframe', () => {
+  /** Το γέμισμα ενός κελιού: τετράπλευρο δαχτυλίδι, όπως το παράγει το `fillPrimitive`. */
+  const RECT = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 5 }, { x: 0, y: 5 }];
+
+  it('🔴 τετράπλευρο γέμισμα → native SOLID, ΟΧΙ 3DFACE', () => {
+    // Το `3DFACE` είναι επιφάνεια 3Δ: στα wireframe visual styles δείχνει μόνο ακμές. Ο
+    // μηχανικός σχεδιάζει σε 2D Wireframe ⇒ το γέμισμα ήταν αόρατο ακριβώς εκεί που υπάρχει.
+    const dxf = writeDxfAscii([makeSolidFill(SOURCE, 'f', RECT, '#EDEDED')], PRO);
+    expect(dxf).toContain('\nSOLID\n');
+    expect(dxf).not.toContain('\n3DFACE\n');
+  });
+
+  it('το SOLID κουβαλά το χρώμα του κελιού ως αληθινό χρώμα (420)', () => {
+    const dxf = writeDxfAscii([makeSolidFill(SOURCE, 'f', RECT, '#EDEDED')], PRO);
+    expect(dxf).toContain(`420\n${0xededed}\n`);
+  });
+
+  it('ring με >4 κορυφές μένει 3DFACE — το SOLID δέχεται το πολύ 4 γωνίες', () => {
+    const hexagon = [
+      { x: 0, y: 0 }, { x: 5, y: -2 }, { x: 10, y: 0 },
+      { x: 10, y: 5 }, { x: 5, y: 7 }, { x: 0, y: 5 },
+    ];
+    const fill = makeSolidFill(SOURCE, 'h', hexagon, '#EDEDED');
+    expect(fill.dxfSourceType).toBeUndefined();
+    expect(writeDxfAscii([fill], PRO)).toContain('\n3DFACE\n');
   });
 });
