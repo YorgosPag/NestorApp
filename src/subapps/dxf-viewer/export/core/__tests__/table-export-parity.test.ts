@@ -32,6 +32,7 @@ import type { TableStyle } from '../../../bim/table/table-style';
 import { decomposeTable } from '../table-to-primitives';
 import { alignFromTextEntity } from '../dxf-ascii-text-writer';
 import { hexToTrueColor } from '../../../utils/dxf-true-color';
+import { tableUnderlineGeometry } from '../../../bim/table/table-text-decoration';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Entity, HatchEntity, LineEntity, TextEntity } from '../../../types/entities';
@@ -218,5 +219,127 @@ describe('ADR-739 Φ1 — τυπογραφία κελιού → οντότητα
     const height = run && 'text' in run ? run.style?.height : undefined;
     expect(height).toBe(exportedText('Α/Α').height);
     expect(height).not.toBe(2.5);
+  });
+});
+
+// ── ΤΥΠΟΓΡΑΦΙΑ Φ2 ΒΗΜΑ 4: πλάγια · υπογράμμιση · γραμματοσειρά ────────────────
+
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — **το ίδιο συμβόλαιο, για τα ΝΕΑ πεδία.**
+ *
+ * Τα βήματα 1-3 έκαναν τα `italic` / `underline` / `fontFamily` να επιλύονται και να
+ * ζωγραφίζονται. Κανένα από τα τρία δεν έφτανε πουθενά στην εξαγωγή: ο `textPrimitive`
+ * αντέγραφε **μόνο** το `bold` και το `NeutralTextOptions` δεν είχε καν πεδία. Δηλαδή
+ * ακριβώς το σχήμα της Φ1, μια φάση αργότερα — γι' αυτό η απόφαση Α1 βάζει την εξαγωγή
+ * **πριν** τα κουμπιά.
+ *
+ * Το σενάριο δηλώνει και τα τρία σε **παράκαμψη γραμμής** (το μοντέλο του βήματος 2), όχι σε
+ * preset: έτσι ελέγχεται η ίδια διαδρομή που θα πατήσει ο χρήστης από το toolbar του βήματος 5.
+ */
+const TYPO_ROWS: TableRow[] = [
+  { id: 'rh', rowClass: 'header', styleOverride: { italic: true, underline: true, fontFamily: 'Calibri' } },
+  { id: 'rd', rowClass: 'data' },
+];
+
+function typoModel(): ReturnType<typeof createTableModel> {
+  return createTableModel({ columns: COLUMNS, rows: TYPO_ROWS, cells: CELLS });
+}
+
+const TYPO_ENTITY: TableEntity = {
+  ...ENTITY, id: 'ent_typo', model: toPersistedTableModel(typoModel()),
+} as TableEntity;
+
+/** Ο συντελεστής sheet-mm → world του σεναρίου (κλίμακα σχεδίου — ένας αριθμός, δύο κλήσεις). */
+const MM_TO_WORLD = 100;
+
+const TYPO_LAYOUT = layoutTable(typoModel(), STANDARD);
+const TYPO_EXPORTED: Entity[] = decomposeTable(TYPO_ENTITY, MM_TO_WORLD, 'mm');
+
+const typoHeaderRun = () => {
+  const cell = TYPO_LAYOUT.cells.find((c) => c.rowId === 'rh' && c.colId === 'c1');
+  if (!cell?.text) throw new Error('η διάταξη δεν έβγαλε κείμενο κεφαλίδας');
+  return cell.text;
+};
+
+function typoExportedText(content: string): TextEntity {
+  const found = TYPO_EXPORTED.find(
+    (e): e is TextEntity => e.type === 'text' && e.text === content,
+  );
+  if (!found) throw new Error(`δεν εξήχθη κείμενο «${content}»`);
+  return found;
+}
+
+function firstRunStyle(e: TextEntity) {
+  const run = e.textNode?.paragraphs[0]?.runs[0];
+  return run && 'text' in run ? run.style : undefined;
+}
+
+describe('ADR-739 Φ2/4 — πλάγια και γραμματοσειρά κελιού → run της οντότητας', () => {
+  it('η διάταξη ΟΝΤΩΣ διαφοροποιεί τις δύο γραμμές — αλλιώς το σενάριο δεν ελέγχει τίποτα', () => {
+    expect(typoHeaderRun().italic).toBe(true);
+    expect(typoHeaderRun().underline).toBe(true);
+    expect(typoHeaderRun().fontFamily).toBe('Calibri');
+  });
+
+  it('τα ΠΛΑΓΙΑ ταξιδεύουν· τα δεδομένα μένουν όρθια', () => {
+    expect(firstRunStyle(typoExportedText('Α/Α'))?.italic).toBe(true);
+    expect(firstRunStyle(typoExportedText('1'))?.italic).toBe(false);
+  });
+
+  it('🔴 η ΓΡΑΜΜΑΤΟΣΕΙΡΑ ταξιδεύει — αλλιώς το χειριστήριο ρυθμίζει κάτι που δεν τυπώνεται', () => {
+    expect(firstRunStyle(typoExportedText('Α/Α'))?.fontFamily).toBe('Calibri');
+  });
+
+  it('🔴 η υπογράμμιση ΔΕΝ διπλογράφεται στο run — έχει ήδη γίνει γεωμετρία', () => {
+    // Ένα `underline: true` και στο AST θα ζωγραφιζόταν **δεύτερη φορά** από τον επόμενο
+    // αναγνώστη του κόμβου, μισό χιλιοστό παραπέρα από τη γραμμή που μόλις παρήχθη.
+    expect(firstRunStyle(typoExportedText('Α/Α'))?.underline).toBe(false);
+  });
+});
+
+describe('ADR-739 Φ2/4 — η υπογράμμιση φτάνει ως ΓΡΑΜΜΗ, όχι ως κωδικός ελέγχου', () => {
+  /** Οι γραμμές που ΔΕΝ υπάρχουν στον ίδιο πίνακα χωρίς υπογράμμιση = οι υπογραμμίσεις. */
+  const underlines = () => {
+    const plain = decomposeTable(
+      { ...ENTITY, id: 'ent_typo' } as TableEntity, MM_TO_WORLD, 'mm',
+    ).filter((e) => e.type === 'line').length;
+    const all = TYPO_EXPORTED.filter((e): e is LineEntity => e.type === 'line');
+    return { extra: all.length - plain, all };
+  };
+
+  it('γεννιούνται ΤΡΕΙΣ επιπλέον γραμμές — μία ανά υπογραμμισμένο κελί κεφαλίδας', () => {
+    expect(underlines().extra).toBe(3);
+  });
+
+  it('🔴 ΚΑΝΕΝΑ %%u στο εξαγόμενο κείμενο — ο δικός μας importer δεν το αποκωδικοποιεί', () => {
+    for (const e of TYPO_EXPORTED) {
+      if (e.type === 'text') expect((e as TextEntity).text).not.toContain('%%');
+    }
+  });
+
+  it('🔴 η γραμμή κάθεται ΚΑΤΩ από τη γραμμή βάσης, στο χρώμα του κειμένου', () => {
+    const run = typoHeaderRun();
+    const g = tableUnderlineGeometry(run.heightMm, run.advanceMm, run.hAlign);
+    expect(g.y).toBeGreaterThan(0);
+    // Στον κόσμο ο άξονας y δείχνει **πάνω** (το φύλλο είναι y-κάτω), οπότε «κάτω από τη
+    // βάση» σημαίνει μικρότερο world y από το κείμενο του ίδιου κελιού.
+    const textY = typoExportedText('Α/Α').position.y;
+    // ⚠️ Η ανοχή είναι σε **world units**, όχι σε mm: το `decomposeTable` κλιμακώνει με το
+    // `mmToWorld` της κλίμακας σχεδίου. Ένα κατώφλι σε mm θα ήταν 100× πολύ μικρό εδώ.
+    const toleranceWorld = run.heightMm * MM_TO_WORLD;
+    const underline = underlines().all.find((l) => Math.abs(l.start.y - l.end.y) < 1e-9
+      && l.start.y < textY && Math.abs(l.start.y - textY) < toleranceWorld);
+    expect(underline).toBeDefined();
+    expect(underline?.color).toBe(run.colorHex);
+  });
+
+  it('η γραμμή είναι ΟΡΙΖΟΝΤΙΑ και έχει το μετρημένο πλάτος του κειμένου', () => {
+    const run = typoHeaderRun();
+    const g = tableUnderlineGeometry(run.heightMm, run.advanceMm, run.hAlign);
+    const found = underlines().all.find(
+      (l) => Math.abs(Math.abs(l.end.x - l.start.x) - g.width * MM_TO_WORLD) < 1e-6,
+    );
+    expect(found).toBeDefined();
+    expect(found?.start.y).toBeCloseTo(found?.end.y ?? NaN, 9);
   });
 });

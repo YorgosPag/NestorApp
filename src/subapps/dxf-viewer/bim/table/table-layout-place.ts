@@ -30,6 +30,7 @@ import type {
   TableRowLayout,
   TableTextMeasurer,
   TableTextRun,
+  TableTextRunBase,
 } from './table-layout-types';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -167,7 +168,7 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
   });
   if (!visible.text) return undefined;
 
-  return {
+  const base: TableTextRunBase = {
     position: {
       x: anchorXMm(rect, hAlign, style.margins.hMm),
       y: cellBaselineYMm(rect, align, style),
@@ -178,21 +179,21 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     hAlign,
     bold: style.bold,
     italic: style.italic,
-    underline: style.underline,
     // Απόν όταν το στυλ δεν δηλώνει οικογένεια — ο μετρητής και ο ζωγράφος πέφτουν τότε στην
     // ΙΔΙΑ προεπιλογή, που είναι ακριβώς το ζητούμενο (ένα `undefined`, όχι δύο defaults).
     ...(style.fontFamily !== undefined && { fontFamily: style.fontFamily }),
     // Παρόν μόνο όταν αληθεύει — δες τη σημείωση σχήματος στο `TableTextRun.clipped`.
     ...(visible.clipped && { clipped: true as const }),
-    // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος μετριέται **μόνο** για υπογραμμισμένο κείμενο: είναι
-    // ο μόνος καταναλωτής του, και μια μέτρηση ανά κελί σε κάθε διάταξη θα ήταν κόστος που
-    // πληρώνει ο 99% των πινάκων για το 1%. Ο μετρητής είναι ο ΙΔΙΟΣ που μόλις αποφάσισε την
-    // περικοπή, και μετρά το **ορατό** κείμενο — άρα σε κομμένο κελί η γραμμή σταματά εκεί
-    // που σταματούν και τα γράμματα, όχι εκεί που θα σταματούσε το ακέραιο κείμενο.
-    ...(style.underline && {
-      advanceMm: input.measure(visible.text, style.textHeightMm, style),
-    }),
   };
+
+  // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος μετριέται **μόνο** για υπογραμμισμένο κείμενο: είναι ο
+  // μόνος καταναλωτής του, και μια μέτρηση ανά κελί σε κάθε διάταξη θα ήταν κόστος που πληρώνει
+  // το 99% των πινάκων για το 1%. Ο μετρητής είναι ο ΙΔΙΟΣ που μόλις αποφάσισε την περικοπή,
+  // και μετρά το **ορατό** κείμενο — άρα σε κομμένο κελί η γραμμή σταματά εκεί που σταματούν
+  // και τα γράμματα, όχι εκεί που θα σταματούσε το ακέραιο κείμενο.
+  return style.underline
+    ? { ...base, underline: true, advanceMm: input.measure(visible.text, style.textHeightMm, style) }
+    : { ...base, underline: false };
 }
 
 /**

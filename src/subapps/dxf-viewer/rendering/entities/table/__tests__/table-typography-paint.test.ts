@@ -21,7 +21,7 @@ import {
   RECORDER_CHAR_PX,
   type PaintLog,
 } from './table-paint-recorder';
-import { TEXT_DECORATION_RATIOS } from '../../../../config/text-rendering-config';
+import { tableUnderlineGeometry } from '../../../../bim/table/table-text-decoration';
 import type { TableCellLayout } from '../../../../bim/table/table-layout-types';
 import type { TableCellStyle } from '../../../../bim/table/table-style';
 import type { TableColumnId, TableRowId } from '../../../../types/table';
@@ -62,8 +62,14 @@ function cell(over: Partial<TableCellStyle> = {}): TableCellLayout {
       hAlign: 'left',
       bold: resolved.bold,
       italic: resolved.italic,
-      underline: resolved.underline,
       ...(resolved.fontFamily !== undefined && { fontFamily: resolved.fontFamily }),
+      // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — το `advanceMm` **δεν είναι προαιρετικό** όταν υπάρχει
+      // υπογράμμιση: το `TableTextRun` είναι ένωση και ο μεταγλωττιστής το απαιτεί. Εδώ
+      // αναπαράγεται ό,τι θα μετρούσε ο `TableTextMeasurer` της διάταξης, με το πλάτος
+      // χαρακτήρα του καταγραφέα — άρα η δοκιμή ελέγχει τον ζωγράφο, όχι τη γραμματοσειρά.
+      ...(resolved.underline
+        ? { underline: true as const, advanceMm: TEXT.length * RECORDER_CHAR_PX / PX_PER_MM }
+        : { underline: false as const }),
     },
     rowSpan: 1,
     colSpan: 1,
@@ -146,10 +152,21 @@ describe('υπογράμμιση — γραμμή, όχι δεύτερη πηγ�
     const log = paint({ underline: true });
     const text = log.texts[0];
     const rect = log.rects[0];
-    // Η γραμμή πέφτει **κάτω** από τη γραμμή βάσης του κειμένου, στην απόσταση που ορίζει η
-    // κοινή σταθερά — η ίδια που χρησιμοποιεί ο `TextRenderer` και το explode κειμένου.
-    expect(rect.at.y - text.at.y).toBeCloseTo(FONT_PX * (TEXT_DECORATION_RATIOS.UNDERLINE_EM - 1), 6);
-    expect(rect.heightPx).toBeCloseTo(FONT_PX * TEXT_DECORATION_RATIOS.THICKNESS_EM, 6);
+    // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — η αναμονή **δεν ξαναγράφει τον τύπο**: ρωτά το ΙΔΙΟ SSoT με
+    // τον κώδικα. Η προηγούμενη εκδοχή αντέγραφε το `(UNDERLINE_EM − 1)` του ζωγράφου, οπότε
+    // κλείδωνε τη συμπεριφορά αντί να τη διασταυρώνει — και έτσι έμεινε πράσινη ενώ η γραμμή
+    // έπεφτε 0,2·em **πάνω** από τη βάση (δες `table-text-decoration.ts`).
+    const g = tableUnderlineGeometry(FONT_PX, TEXT.length * RECORDER_CHAR_PX, 'left');
+    expect(rect.at.y - text.at.y).toBeCloseTo(g.y, 6);
+    expect(rect.heightPx).toBeCloseTo(g.thickness, 6);
+  });
+
+  it('🔴 η γραμμή πέφτει ΚΑΤΩ από τη γραμμή βάσης — όχι πάνω από αυτήν', () => {
+    // Ο έλεγχος του πρόσημου χωριστά, γιατί ακριβώς αυτό ήταν το ελάττωμα: με άγκυρα τη
+    // γραμμή καθόδου (`− 1`) αντί τη γραμμή βάσης, η «υπογράμμιση» έβγαινε αρνητική, δηλαδή
+    // πάνω από τα γράμματα. Ένας έλεγχος που περνά από τον ίδιο τύπο δεν το βλέπει ποτέ.
+    const log = paint({ underline: true });
+    expect(log.rects[0].at.y - log.texts[0].at.y).toBeGreaterThan(0);
   });
 
   it('🔴 σε γερμένο πίνακα η γραμμή γέρνει ΜΑΖΙ με το κείμενο', () => {

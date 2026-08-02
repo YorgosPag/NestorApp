@@ -11,6 +11,7 @@ import type { AnnotationSymbolEntity } from '../../../types/annotation-symbol';
 import type { Point2D } from '../../../rendering/types/Types';
 import { emitSceneToPdf } from '../scene-vector-emitter';
 import { decomposeAnnotationEntity } from '../../../export/core/annotation-to-primitives';
+import { TEXT_OBLIQUE_ITALIC_DEG } from '../../../config/text-rendering-config';
 
 interface Call { fn: string; args: readonly unknown[]; }
 
@@ -22,7 +23,11 @@ interface Call { fn: string; args: readonly unknown[]; }
 function mockPdf(): { pdf: Record<string, unknown>; calls: Call[] } {
   const calls: Call[] = [];
   const rec = (fn: string) => (...args: unknown[]) => { calls.push({ fn, args }); };
+  // ADR-739 Φ.Ε/Φ2 βήμα 4 — τα έξι στοιχεία εκτίθενται ονομαστικά (`a`…`f`) ώστε ο έλεγχος
+  // του πίνακα κειμένου να ρωτά **τι σημαίνει** κάθε θέση, όχι να συγκρίνει συμβολοσειρά.
+  // Ίδια ονόματα με το `jsPDF.Matrix`, οπότε το mock παραμένει πιστό στο συμβόλαιο.
   const matrix = (...m: number[]) => ({
+    a: m[0], b: m[1], c: m[2], d: m[3], e: m[4], f: m[5],
     multiply: () => matrix(...m), toString: () => m.join(' '),
   });
   const pdf = {
@@ -500,14 +505,16 @@ describe('scene-vector-emitter — Φ3: backgroundColor (AutoCAD DXF 63)', () =>
 // ── ADR-739 Φ.Ε/Φ1 — «Ο,ΤΙ ΒΛΕΠΕΙΣ, ΒΓΑΙΝΕΙ» στη διαδρομή του χαρτιού ────────
 
 /** Κείμενο κελιού πίνακα, όπως το παράγει το `makeText` με δηλωμένη τυπογραφία. */
-function cellText(bold: boolean): Entity {
+function cellText(bold: boolean, italic = false, rotation = 0): Entity {
   return {
-    id: `t_${bold}`, type: 'text', layerId: '0', color: '#111111',
+    id: `t_${bold}_${italic}`, type: 'text', layerId: '0', color: '#111111',
     position: { x: 0, y: 0 }, text: 'Περιγραφή', height: 3,
-    alignment: 'left', rotation: 0, vBaseline: 'alphabetic',
+    alignment: 'left', rotation, vBaseline: 'alphabetic',
     textNode: {
-      paragraphs: [{ runs: [{ text: 'Περιγραφή', style: { fontFamily: 'Arial', bold, height: 3 } }] }],
-      attachment: 'BL', rotation: 0,
+      paragraphs: [{
+        runs: [{ text: 'Περιγραφή', style: { fontFamily: 'Arial', bold, italic, height: 3 } }],
+      }],
+      attachment: 'BL', rotation,
     },
   } as unknown as Entity;
 }
@@ -530,6 +537,49 @@ describe('scene-vector-emitter — ADR-739 Φ1: έντονο κείμενο στ
     const calls = emit([cellText(true)]);
     const widths = only(calls, 'setLineWidth').map((c) => c.args[0] as number);
     expect(widths[widths.length - 1]).toBeCloseTo(3 * 0.03, 6);
+  });
+});
+
+// ── ADR-739 Φ.Ε/Φ2 βήμα 4 — τα ΠΛΑΓΙΑ στο vector PDF ─────────────────────────
+
+/** Το `angle` που έφτασε στο `pdf.text` — αριθμός (στροφή) ή πίνακας (στροφή + κλίση). */
+function textAngle(entity: Entity): number | { a: number; b: number; c: number; d: number } {
+  const [call] = only(emit([entity]), 'text');
+  return (call.args[3] as { angle: number | { a: number; b: number; c: number; d: number } }).angle;
+}
+
+describe('scene-vector-emitter — ADR-739 Φ2/4: πλάγιο κείμενο στο vector PDF', () => {
+  it('🔴 χωρίς πλάγια περνά ΑΡΙΘΜΟΣ — μηδέν μεταβολή σε κάθε υπάρχουσα σελίδα', () => {
+    // Το jsPDF χτίζει τότε μόνο του τον πίνακα στροφής, ακριβώς όπως πριν το βήμα 4.
+    expect(typeof textAngle(cellText(false))).toBe('number');
+    expect(typeof textAngle(cellText(true))).toBe('number');
+  });
+
+  it('🔴 με πλάγια περνά ΠΙΝΑΚΑΣ — το `setFont(…,\'italic\')` δεν γέρνει τίποτα', () => {
+    // Ο `greek-font-loader` δηλώνει όλα τα ύφη πάνω στο ΙΔΙΟ regular TTF: ίδιο δομικό
+    // αδιέξοδο με το έντονο (§28.9.4), ίδια θεραπεία — συνθετική διάτμηση του text matrix.
+    const m = textAngle(cellText(false, true));
+    expect(typeof m).toBe('object');
+  });
+
+  it('🔴 σε μηδενική στροφή ο πίνακας είναι ΚΑΘΑΡΗ διάτμηση: [1, 0, tan(15°), 1]', () => {
+    const m = textAngle(cellText(false, true)) as { a: number; b: number; c: number; d: number };
+    expect(m.a).toBeCloseTo(1, 12);
+    expect(m.b).toBeCloseTo(0, 12);
+    expect(m.c).toBeCloseTo(Math.tan((TEXT_OBLIQUE_ITALIC_DEG * Math.PI) / 180), 12);
+    expect(m.d).toBeCloseTo(1, 12);
+  });
+
+  it('🔴 σε στραμμένο πίνακα η κλίση ΣΤΡΙΒΕΙ ΜΑΖΙ — δεν μένει κατακόρυφη', () => {
+    // Ο πίνακας πρέπει να είναι `Στροφή × Διάτμηση`: η κλίση εφαρμόζεται στο σύστημα του
+    // **κειμένου**. Με λάθος σειρά, ένα πλάγιο κελί σε γερμένο πίνακα θα έγερνε προς άλλη
+    // κατεύθυνση από τα ίδια του τα γράμματα.
+    const deg = 30;
+    const m = textAngle(cellText(false, true, deg)) as { a: number; b: number };
+    // Το `emitText` περνά `-rotation` (world CCW → page CW).
+    const rad = (-deg * Math.PI) / 180;
+    expect(m.a).toBeCloseTo(Math.cos(rad), 12);
+    expect(m.b).toBeCloseTo(Math.sin(rad), 12);
   });
 });
 

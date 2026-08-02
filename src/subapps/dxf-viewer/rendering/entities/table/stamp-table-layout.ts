@@ -460,15 +460,13 @@ export function stampTableText(
 /**
  * Η γεωμετρία υπογράμμισης ενός run σε **px οθόνης**, ή `null` όταν δεν υπογραμμίζεται.
  *
- * Το `advanceMm` το γεννά η διάταξη **μόνο** για υπογραμμισμένα run (δες `TableTextRun`),
- * οπότε η απουσία του δεν είναι σφάλμα προς σιώπηση: είναι η ίδια η απάντηση «δεν έχει
- * υπογράμμιση». Ο έλεγχος στο `run.underline` μένει ρητός ώστε ένα μελλοντικό `advanceMm`
- * για άλλο λόγο να μη ζωγραφίσει κατά λάθος γραμμή.
+ * Ο έλεγχος είναι μοναδικός — όχι διπλός — επειδή το `TableTextRun` είναι **ένωση**: μόλις
+ * στενέψει στο `underline: true`, ο μεταγλωττιστής **εγγυάται** το `advanceMm`.
  */
 function underlineOf(
   run: TableTextRun, fontPx: number, pxPerMm: number,
 ): TableUnderlineGeometry | null {
-  if (!run.underline || run.advanceMm == null) return null;
+  if (!run.underline) return null;
   return tableUnderlineGeometry(fontPx, run.advanceMm * pxPerMm, run.hAlign);
 }
 

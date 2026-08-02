@@ -22,6 +22,7 @@ import { extendedFontFlags } from '../dxf-ascii-tables-writer';
 import { collectTextStyles } from '../dxf-ascii-writer-helpers';
 import { textStyleName, resolveExportFont } from '../dxf-ascii-text-writer';
 import { makeText, makeLine, makeSolidFill } from '../neutral-primitive-factory';
+import { TEXT_OBLIQUE_ITALIC_DEG } from '../../../config/text-rendering-config';
 import type { Entity } from '../../../types/entities';
 
 const LAYERS = { L: { name: 'TABLE' } };
@@ -34,7 +35,9 @@ const SOURCE = {
   id: 'tbl', type: 'table', layerId: 'L', color: '#FF00FF', colorAci: 6, visible: true,
 } as unknown as Entity;
 
-function cellText(text: string, bold: boolean): Entity {
+function cellText(
+  text: string, bold: boolean, italic = false, fontFamily?: string,
+): Entity {
   return makeText(SOURCE, `t_${text}`, {
     position: { x: 0, y: 0 },
     text,
@@ -44,6 +47,9 @@ function cellText(text: string, bold: boolean): Entity {
     vBaseline: 'alphabetic',
     colorHex: '#111111',
     bold,
+    // ADR-739 Φ.Ε/Φ2 βήμα 4 — τα πλάγια και η οικογένεια ταξιδεύουν στο ίδιο run με το έντονο.
+    italic,
+    ...(fontFamily !== undefined && { fontFamily }),
   });
 }
 
@@ -92,12 +98,25 @@ describe('ADR-739 Φ1 — XDATA 1071: το έντονο ταξιδεύει στ�
     expect(new Set(styles.map((s) => s.fontFile)).size).toBe(1);
   });
 
-  it('μόνο το έντονο record κουβαλά XDATA — το κανονικό μένει byte-identical', () => {
+  it('🔴 ΚΑΘΕ TrueType record κουβαλά XDATA — και το κανονικό, με σημαίες 34', () => {
+    // ADR-739 Φ.Ε/Φ2 βήμα 4 — η Φ1 έγραφε XDATA μόνο στο έντονο («ένα 1071 = 34 δεν κερδίζει
+    // τίποτα»). Το κέρδος δεν είναι το `1071` — είναι το `1000`: το group 3 που γράφουμε είναι
+    // **εικασία ονόματος αρχείου** (`Times New Roman` → `times.ttf` στα Windows, όχι
+    // `Times New Roman.ttf`), και το XDATA είναι το **τυπογραφικό** όνομα που σώζει την όψη
+    // όταν το αρχείο αστοχήσει.
     const styles = collectTextStyles([cellText('Κεφαλίδα', true), cellText('δεδομένα', false)]);
     const bold = styles.find((s) => s.name === 'Arial-Bold');
     const plain = styles.find((s) => s.name === 'Arial');
     expect(bold?.extendedFont).toEqual({ family: 'Arial', bold: true, italic: false });
-    expect(plain?.extendedFont).toBeUndefined();
+    expect(plain?.extendedFont).toEqual({ family: 'Arial', bold: false, italic: false });
+  });
+
+  it('🔴 ένα SHX record ΔΕΝ κουβαλά ποτέ XDATA — θα ήταν ψέμα για τον τύπο', () => {
+    // Η παρουσία «extended font data» αφορά **εξ ορισμού** μόνο TrueType· είναι το κριτήριο
+    // με το οποίο οι αναγνώστες ξεχωρίζουν TTF από SHX style.
+    const styles = collectTextStyles([cellText('τίτλος', false, false, 'romans.shx')]);
+    expect(styles[0]?.fontFile).toBe('romans.shx');
+    expect(styles[0]?.extendedFont).toBeUndefined();
   });
 
   it('το αρχείο περιέχει 1001 ACAD / 1000 Arial / 1071 33554466, με αυτή τη σειρά', () => {
@@ -132,16 +151,56 @@ describe('ADR-739 Φ1 — XDATA 1071: το έντονο ταξιδεύει στ�
     expect(textStyleName(undefined, true)).toBe('STANDARD');
   });
 
+  it('🔴 textStyleName: ΤΕΣΣΕΡΙΣ παραλλαγές, όχι δύο — το DXF δηλώνει την κλίση στο style', () => {
+    expect(textStyleName('Arial', false, true)).toBe('Arial-Italic');
+    expect(textStyleName('Arial', true, true)).toBe('Arial-BoldItalic');
+    // Χωρίς οικογένεια δεν υπάρχει record να πάρει σημαίες ⇒ ούτε πλάγια παραλλαγή.
+    expect(textStyleName('', false, true)).toBe('STANDARD');
+  });
+
   it('🔴 το group 3 είναι ΑΡΧΕΙΟ, όχι οικογένεια — γυμνό «Arial» = Arial.shx (ανύπαρκτο)', () => {
     // Μετρημένο στο `Ισόγειο_Ισόγειο (5).dxf`: τα νέα styles έγραφαν σκέτο `Arial` ⇒ το
     // AutoCAD ζητούσε `Arial.shx`, υποκαθιστούσε γραμματοσειρά, και το έντονο του 1071
     // δεν μπορούσε καν να εφαρμοστεί.
     expect(resolveExportFont('Arial')).toBe('Arial.ttf');
-    expect(resolveExportFont('arial')).toBe('Arial.ttf');
     // Αμετάβλητα: ήδη-αρχείο, και ο ιστορικός κλάδος txt/standard.
     expect(resolveExportFont('Arial.ttf')).toBe('Arial.ttf');
     expect(resolveExportFont('txt')).toBe('Arial.ttf');
     expect(resolveExportFont('romans')).toBe('romans');
+  });
+
+  it('🔴 ΤΟ ΧΡΕΟΣ ΤΗΣ Φ1: κάθε γυμνή TrueType — όχι μόνο το Arial — παίρνει επέκταση', () => {
+    // Η Φ1 μπάλωσε ονομαστικά το Arial και κατέγραψε ρητά ότι το `Calibri` μένει σπασμένο.
+    // Το κατηγόρημα «SHX ή TrueType;» (`font-file-kind.ts`) το έκλεισε για όλες.
+    expect(resolveExportFont('Calibri')).toBe('Calibri.ttf');
+    expect(resolveExportFont('Times New Roman')).toBe('Times New Roman.ttf');
+    // Η πεζότητα διατηρείται: τα ονόματα αρχείων των Windows είναι case-insensitive, και μια
+    // «κανονικοποίηση» θα ήταν εικασία πάνω σε εικασία.
+    expect(resolveExportFont('arial')).toBe('arial.ttf');
+    // ⚠️ Η αντίστροφη κατεύθυνση παραμένει άθικτη: ένα γνωστό SHX **δεν** παίρνει `.ttf`.
+    expect(resolveExportFont('isocpeur')).toBe('isocpeur');
+    expect(resolveExportFont('simplex.shx')).toBe('simplex.shx');
+  });
+
+  it('🔴 πλάγια TrueType = σημαία 1071· πλάγια SHX = γωνία κλίσης 50 — ποτέ και τα δύο', () => {
+    const [ttf] = collectTextStyles([cellText('πλάγιο', false, true)]);
+    expect(ttf.extendedFont).toEqual({ family: 'Arial', bold: false, italic: true });
+    // Καμία γεωμετρική κλίση σε TrueType: το AutoCAD φορτώνει την ΠΡΑΓΜΑΤΙΚΗ πλάγια όψη, και
+    // ένα μη-μηδενικό oblique θα εμπόδιζε και την εξαγωγή του κειμένου ως κείμενο σε PDF.
+    expect(ttf.obliqueAngle).toBe(0);
+
+    const [shx] = collectTextStyles([cellText('πλάγιο', false, true, 'romans.shx')]);
+    expect(shx.obliqueAngle).toBe(TEXT_OBLIQUE_ITALIC_DEG);
+    expect(shx.extendedFont).toBeUndefined();
+  });
+
+  it('το αρχείο περιέχει 1071 = 16777250 για πλάγιο και 50331682 για έντονο+πλάγιο', () => {
+    // Οι ακέραιοι δεν είναι δικοί μας: είναι το σχόλιο-μέτρηση της ezdxf από πραγματικά αρχεία
+    // AutoCAD (34 · 34+0x1000000 · 34+0x2000000 · 34+0x3000000). ⚠️ Η ezdxf τα είχε **ανάποδα**
+    // μέχρι το commit `0e6a7532` («fix #776 swapped bold and italic flags»), οπότε μια πηγή
+    // πριν το 2022 θα έδινε πλάγιο εκεί που θέλουμε έντονο.
+    expect(writeDxfAscii([cellText('π', false, true)], PRO)).toContain('1071\n16777250\n');
+    expect(writeDxfAscii([cellText('επ', true, true)], PRO)).toContain('1071\n50331682\n');
   });
 
   it('και τα δύο STYLE records του πίνακα δείχνουν σε ΥΠΑΡΚΤΟ αρχείο γραμματοσειράς', () => {

@@ -105,7 +105,7 @@ function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitiv
  * μολύβι, όχι επιφάνεια.
  */
 function underlinePrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitive | null {
-  if (!run.underline || run.advanceMm == null) return null;
+  if (!run.underline) return null;
   const g = tableUnderlineGeometry(run.heightMm, run.advanceMm, run.hAlign);
   if (!(g.width > 0)) return null;
   const p = translate(run.position, origin);

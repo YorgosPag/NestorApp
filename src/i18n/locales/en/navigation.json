@@ -246,7 +246,7 @@
       "show": "Show",
       "showAriaLabel": "Reveal {count, plural, one {# hidden item} other {# hidden items}} in this section",
       "bannerTitle": "Reveal hidden",
-      "bannerDescription": "Items hidden by the job appear in place, dimmed.",
+      "bannerDescription": "In place, dimmed.",
       "stop": "Done",
       "demoted": "Hidden by the active job"
     }

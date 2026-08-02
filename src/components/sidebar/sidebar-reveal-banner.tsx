@@ -55,27 +55,45 @@ export function SidebarRevealBanner({ isRevealing, onStop }: SidebarRevealBanner
       // όχι συμβάν που τον διακόπτει — ο αναγνώστης οθόνης το ανακοινώνει
       // ευγενικά αντί να κόψει ό,τι διαβάζει.
       role="status"
-      className={cn(
-        'mx-2 mb-1 flex items-center gap-2 rounded-md px-2 py-1.5',
-        'border border-dashed border-primary/50 bg-primary/5 text-xs text-foreground',
-      )}
+      // 🔑 **STICKY — και είναι ο πυρήνας του προτύπου, όχι καλλωπισμός.**
+      // Το περίγραμμα του Revit περιβάλλει **μόνιμα** την περιοχή· μια μπάρα που
+      // κυλά έξω από το οπτικό πεδίο μόλις κατεβείς στο μενού κάνει **ακριβώς**
+      // αυτό που ο τρόπος ήρθε να αποτρέψει: κρυφή κατάσταση. Το `bg-sidebar`
+      // είναι αδιαφανές επίτηδες — αλλιώς το περιεχόμενο που κυλά φαίνεται από
+      // πίσω και η ένδειξη γίνεται δυσανάγνωστη ακριβώς όταν χρειάζεται.
+      className="sticky top-0 z-10 bg-sidebar px-2 pb-1"
     >
-      <Eye className={cn(iconSizes.sm, 'shrink-0 text-primary')} aria-hidden />
-      <span className="flex min-w-0 flex-col group-data-[collapsible=icon]:hidden">
-        <span className="font-medium">{t('jobs.reveal.bannerTitle')}</span>
-        <span className="text-muted-foreground">{t('jobs.reveal.bannerDescription')}</span>
-      </span>
-      <button
-        type="button"
-        onClick={onStop}
-        aria-label={t('jobs.reveal.bannerTitle')}
+      <div
         className={cn(
-          'ml-auto shrink-0 rounded-sm px-2 py-0.5 font-medium text-primary transition-colors',
-          'hover:bg-primary/10 group-data-[collapsible=icon]:hidden',
+          'rounded-md border border-dashed border-primary/50 bg-primary/5',
+          'px-2 py-1.5 text-xs text-foreground',
         )}
       >
-        {t('jobs.reveal.stop')}
-      </button>
+        <div className="flex items-center gap-2">
+          <Eye className={cn(iconSizes.sm, 'shrink-0 text-primary')} aria-hidden />
+          <span className="truncate font-medium group-data-[collapsible=icon]:hidden">
+            {t('jobs.reveal.bannerTitle')}
+          </span>
+          <button
+            type="button"
+            onClick={onStop}
+            aria-label={t('jobs.reveal.bannerTitle')}
+            className={cn(
+              'ml-auto shrink-0 rounded-sm px-2 py-0.5 font-medium text-primary transition-colors',
+              'hover:bg-primary/10 group-data-[collapsible=icon]:hidden',
+            )}
+          >
+            {t('jobs.reveal.stop')}
+          </button>
+        </div>
+        {/* Δεύτερη σειρά: η επεξήγηση **δεν** διεκδικεί πλάτος από το κουμπί
+            εξόδου. Στην πρώτη εκδοχή ήταν στην ίδια γραμμή και σε πλάτος
+            sidebar έσπαγε σε **τέσσερις** σειρές στριμώχνοντας το «Τέλος» —
+            μετρημένο στην οθόνη (21:56). */}
+        <p className="mt-0.5 text-muted-foreground group-data-[collapsible=icon]:hidden">
+          {t('jobs.reveal.bannerDescription')}
+        </p>
+      </div>
     </aside>
   );
 }
