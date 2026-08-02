@@ -53,10 +53,27 @@ export interface TextAlign {
  * `Standard` sentinel → `STANDARD` (implicit, no STYLE entry). Round-trips ADR-635 Φ C.5:
  * name → STYLE `fontFile` → `stripExtension` → the same family.
  */
-export function textStyleName(fontFamily: string | undefined): string {
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — το επίθημα της **έντονης** παραλλαγής.
+ *
+ * Το «έντονο» στο DXF είναι ιδιότητα του **text style**, όχι της οντότητας: το `TEXT` δείχνει
+ * σε ένα STYLE μέσω group 7, και το STYLE κουβαλά τις σημαίες TrueType στο XDATA 1071. Άρα
+ * μια γραμμή κεφαλίδας με έντονα και μια γραμμή δεδομένων χωρίς **χρειάζονται δύο styles**
+ * — ακριβώς όπως στο AutoCAD, όπου φτιάχνεις «Arial» και «Arial Bold» ξεχωριστά.
+ *
+ * Παύλα και όχι κενό: τα ονόματα STYLE ταξιδεύουν αυτούσια στο group 7, και ένα κενό μέσα σε
+ * όνομα συμβόλου είναι ρίσκο σε παλαιότερους parsers (ο δικός μας κόβει με `trim()` στα άκρα
+ * — ένα εσωτερικό κενό θα επιβίωνε, αλλά δεν κερδίζουμε τίποτα ρισκάροντας).
+ */
+const BOLD_STYLE_SUFFIX = '-Bold';
+
+export function textStyleName(fontFamily: string | undefined, bold = false): string {
   const f = fontFamily?.trim();
+  // Χωρίς οικογένεια δεν υπάρχει «παραλλαγή» να ονομαστεί: το STANDARD είναι σιωπηρό style του
+  // AutoCAD (κανένα record) και δεν μπορεί να αποκτήσει XDATA. Υποβάθμιση σε κανονικό βάρος —
+  // δεν συμβαίνει για πίνακες, που πάντα δηλώνουν οικογένεια μέσω του `textNode` τους.
   if (!f || f.toUpperCase() === DEFAULT_STYLE) return DEFAULT_STYLE;
-  return f;
+  return bold ? `${f}${BOLD_STYLE_SUFFIX}` : f;
 }
 
 /** ADR-644 (#8) — the Greek-capable TrueType the export falls back to. The AutoCAD SHX `txt`/`txt.shx`
@@ -75,12 +92,25 @@ export function resolveExportFont(fontFamily: string | undefined): string {
   return f;
 }
 
+/** The first real (text) run of a TEXT/MTEXT entity's `textNode`, when it has one. */
+function firstRun(e: Entity): TextRun | undefined {
+  const node = (e as TextEntity | MTextEntity).textNode;
+  const run = node?.paragraphs?.[0]?.runs?.[0];
+  return run && 'text' in run ? (run as TextRun) : undefined;
+}
+
 /** Read a TEXT/MTEXT entity's first-run font family off its `textNode` (absent → ''). */
 export function readTextEntityFamily(e: Entity): string {
-  const node = (e as TextEntity | MTextEntity).textNode;
-  return node?.paragraphs?.[0]?.runs?.[0] && 'text' in node.paragraphs[0].runs[0]
-    ? (node.paragraphs[0].runs[0] as TextRun).style?.fontFamily ?? ''
-    : '';
+  return firstRun(e)?.style?.fontFamily ?? '';
+}
+
+/**
+ * ADR-739 Φ.Ε/Φ1 — read the first-run **bold** flag (absent / no node → `false`).
+ * Sibling of {@link readTextEntityFamily} so the group-7 name, the STYLE-table record and
+ * its XDATA all derive the variant from the **same** run — three answers, one question.
+ */
+export function readTextEntityBold(e: Entity): boolean {
+  return firstRun(e)?.style?.bold === true;
 }
 
 /**
@@ -156,7 +186,8 @@ export function emitMText(
   const { content, entityType } = serializeDxfTextNode(node, { version });
   const charHeight = firstRunHeight(node) ?? geometry.fallbackHeight;
   // ADR-636 Φ2.4 (D.5) — real group 7 from the node's font (same derivation as the STYLE table).
-  const styleName = textStyleName(readTextEntityFamily(e));
+  // ADR-739 Φ.Ε/Φ1 — μαζί με τη **παραλλαγή** (έντονο), γιατί το βάρος ζει στο style.
+  const styleName = textStyleName(readTextEntityFamily(e), readTextEntityBold(e));
 
   if (entityType === 'TEXT') {
     // R12 downgrade — no MTEXT: emit the (space-joined) content as plain TEXT (style carried). R12 is

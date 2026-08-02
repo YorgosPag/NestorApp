@@ -123,11 +123,52 @@ function emitRecordHandle(
 }
 
 /**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **οι σημαίες «extended font data» (XDATA 1071).**
+ *
+ * Το DXF **δεν έχει** group code για «έντονο». Για TrueType styles το AutoCAD γράφει
+ * XDATA κάτω από το APPID `ACAD`:
+ * ```
+ *   1001  ACAD
+ *   1000  Arial          ← τυπογραφική οικογένεια
+ *   1071  33554466       ← σημαίες (32-bit signed long)
+ * ```
+ * Η τιμή είναι `BASE | (bold ? BOLD : 0) | (italic ? ITALIC : 0)`, όπου το `BASE = 34`
+ * κουβαλά τα bits οικογένειας/βήματος (`lfPitchAndFamily`: variable pitch + swiss) που το
+ * AutoCAD περιμένει για κάθε TTF.
+ *
+ * ## Οι αριθμοί είναι επαληθευμένοι, όχι εικασία
+ * - **ezdxf** (`entities/textstyle.py`, `set_extended_font_data`): `ITALIC = 0x1000000`
+ *   (16.777.216), `BOLD = 0x2000000` (33.554.432), αρχική τιμή `34`.
+ * - **QCAD FS#203**: ο αναφέρων επεξεργάστηκε DXF **στο χέρι** βάζοντας `1071 = 33554466`
+ *   (= 34 + 0x2000000) και **το AutoCAD εμφάνισε το κείμενο έντονο**. Δύο ανεξάρτητες πηγές,
+ *   ο ίδιος ακέραιος, με ζωντανή επιβεβαίωση στο ίδιο το AutoCAD.
+ *
+ * ## Τι ΔΕΝ υπόσχεται
+ * Η ίδια η τεκμηρίωση του ezdxf λέει ότι το extended font data «δεν είναι ευρέως
+ * υποστηριγμένο». Readers που το αγνοούν πέφτουν στην **κανονική** όψη της γραμματοσειράς —
+ * **υποβάθμιση, όχι αλλοίωση**. Γι' αυτό ΔΕΝ εφευρίσκουμε όνομα αρχείου τύπου `arialbd.ttf`
+ * στο group 3: ένα αρχείο που μπορεί να μην υπάρχει στο μηχάνημα του παραλήπτη είναι
+ * χειρότερο αποτέλεσμα από ένα μη-έντονο γράμμα.
+ */
+const XDATA_FONT_BASE = 34;
+const XDATA_FONT_BOLD = 0x2000000;
+const XDATA_FONT_ITALIC = 0x1000000;
+
+/** Οι σημαίες του 1071 για μια παραλλαγή TrueType. Bold-only ⇒ **33.554.466**. */
+export function extendedFontFlags(bold: boolean, italic: boolean): number {
+  return XDATA_FONT_BASE + (bold ? XDATA_FONT_BOLD : 0) + (italic ? XDATA_FONT_ITALIC : 0);
+}
+
+/**
  * Emit one `STYLE` table entry — the EXACT inverse of the import `groupCodesToEntry`
  * (`style-table-reader.ts`): 2 name / 70 flags / 40 fixed-height / 41 width-factor /
  * 50 oblique / 71 gen-flags / 3 font-file / 4 big-font. `height 0` = variable, so each
  * TEXT/MTEXT keeps its own group-40 height. Round-trips ADR-635 Φ C.5 (name → font file
  * → stripped family). ADR-644 (#9) — R2018 handle + subclass when an allocator is supplied.
+ *
+ * ADR-739 Φ.Ε/Φ1 — το προαιρετικό XDATA μπαίνει **τελευταίο**: τα `1001`+ ζεύγη ανήκουν στην
+ * εγγραφή μέχρι το επόμενο `0`, οπότε οτιδήποτε γραφόταν μετά θα προσαρτιόταν στο XDATA
+ * αντί για το STYLE. Το APPID `ACAD` δηλώνεται ήδη στο {@link EXPORT_APPID_NAMES}.
  */
 function emitTextStyle(
   pair: Pair, st: DxfStyleTableEntry, ownerHandle?: string, allocator?: HandleAllocator,
@@ -142,6 +183,12 @@ function emitTextStyle(
   pair(71, st.textGenerationFlags);
   pair(3, st.fontFile);
   pair(4, st.bigFontFile);
+  const ext = st.extendedFont;
+  if (ext) {
+    pair(1001, 'ACAD');
+    pair(1000, ext.family);
+    pair(1071, extendedFontFlags(ext.bold, ext.italic));
+  }
 }
 
 /**

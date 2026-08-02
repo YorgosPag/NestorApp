@@ -255,4 +255,28 @@ export interface DxfStyleTableEntry {
    * the writer omits handles (the minimal client writer is otherwise handle-less).
    */
   readonly handle?: string;
+  /**
+   * 🔴 ADR-739 Φ.Ε/Φ1 — **AutoCAD «extended font data»**: το ΜΟΝΟ σημείο του DXF όπου ένα
+   * text style δηλώνει **έντονο / πλάγιο** για TrueType. Ζει σε XDATA κάτω από το APPID
+   * `ACAD` (`1001 ACAD` → `1000 <οικογένεια>` → `1071 <σημαίες>`), όχι σε κανονικό group
+   * code — γι' αυτό λείπει από τον πίνακα ομάδων της τεκμηρίωσης STYLE.
+   *
+   * Απόν ⇒ κανένα XDATA ⇒ το record μένει byte-identical με πριν τη Φ1.
+   *
+   * @see export/core/dxf-ascii-tables-writer.ts — `emitTextStyle` (ο κωδικοποιητής + οι τιμές)
+   */
+  readonly extendedFont?: DxfStyleExtendedFont;
+}
+
+/**
+ * ADR-739 Φ.Ε/Φ1 — το περιεχόμενο του XDATA «extended font data» ενός STYLE record.
+ *
+ * Το `family` είναι το **όνομα τυπογραφικής οικογένειας** (π.χ. `Arial`), όχι όνομα αρχείου:
+ * το αρχείο ζει ήδη στο group 3. Τα δύο συνυπάρχουν εξ ορισμού στο AutoCAD — το 3 λέει «ποιο
+ * αρχείο», το 1000/1071 λένε «ποια παραλλαγή του».
+ */
+export interface DxfStyleExtendedFont {
+  readonly family: string;
+  readonly bold: boolean;
+  readonly italic: boolean;
 }

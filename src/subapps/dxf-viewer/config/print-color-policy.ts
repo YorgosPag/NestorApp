@@ -57,6 +57,22 @@ function isNearWhite(rgb: Rgb): boolean {
 }
 
 /**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **μελάνι ή φόντο;** Ο κανόνας «κοντά στο λευκό → μαύρο» δεν είναι
+ * καθολικός: είναι κανόνας **ορατότητας μελανιού** σε λευκό χαρτί.
+ *
+ * - `'ink'` (προεπιλογή) — γραμμές, κείμενο, βέλη. Ένα σχεδόν-λευκό μελάνι σε λευκό χαρτί
+ *   είναι **αόρατο**, άρα γίνεται μαύρο. Αυτή είναι η ιστορική, σωστή συμπεριφορά.
+ * - `'fill'` — συμπαγή γεμίσματα (γραμμοσκίαση solid, γέμισμα κελιού πίνακα). Εδώ ο ίδιος
+ *   κανόνας είναι **καταστροφικός**: ένα `#EDEDED` φόντο κεφαλίδας τυπωνόταν **συμπαγές
+ *   μαύρο** και κατάπινε τα ίδια του τα γράμματα. Ένα σχεδόν-λευκό φόντο σε λευκό χαρτί
+ *   *οφείλει* να είναι αδιόρατο — αυτό ζήτησε ο σχεδιαστής και αυτό βλέπει στην οθόνη.
+ *
+ * Το `monochrome` **δεν** εξαιρείται: εκεί ο χρήστης ζητά ρητά «όλα μαύρα» (AutoCAD
+ * `monochrome.ctb`), και ένα γεμισμένο πλακάκι είναι μέρος του «όλα».
+ */
+export type PlotColorRole = 'ink' | 'fill';
+
+/**
  * Map a resolved entity colour to a print-safe colour under the given policy.
  *
  * Always returns a concrete `#rrggbb` string (never null) so callers can feed it
@@ -66,20 +82,24 @@ function isNearWhite(rgb: Rgb): boolean {
  * @param colorHex resolved screen colour, or `null` (BIM neutral → canvas token).
  * @param colorAci ACI index when known (Track A raw DXF), else `null`.
  * @param policy   active print colour policy.
+ * @param role     ink (default, historic behaviour) vs solid fill — see {@link PlotColorRole}.
  */
 export function applyPlotColor(
   colorHex: string | null,
   colorAci: number | null,
   policy: PrintColorPolicy,
+  role: PlotColorRole = 'ink',
 ): string {
   if (policy.style === 'monochrome') return PRINT_BLACK;
 
   const rgb = colorHex ? parseHex(colorHex) : null;
-  // null colour (BIM neutral token) or ACI 7 (white pen) → always black ink.
-  const forcedWhite = rgb === null || colorAci === ACI_WHITE || isNearWhite(rgb);
+  // Άγνωστο χρώμα (BIM neutral token) → μαύρο σε ΚΑΘΕ ρόλο: δεν υπάρχει χρώμα να κρατηθεί.
+  if (rgb === null) return PRINT_BLACK;
+  // ACI 7 (white pen) or near-white → black INK. A fill keeps its colour (see PlotColorRole).
+  const forcedWhite = role === 'ink' && (colorAci === ACI_WHITE || isNearWhite(rgb));
 
   if (policy.style === 'grayscale') {
-    if (rgb === null || forcedWhite) return PRINT_BLACK;
+    if (forcedWhite) return PRINT_BLACK;
     const lum = luminance(rgb) * 255;
     return `#${toHex(lum)}${toHex(lum)}${toHex(lum)}`;
   }

@@ -31,6 +31,20 @@ import type {
   TextEntity,
   LineweightMm,
 } from '../../types/entities';
+// 🏢 Color-Conversion SSoT (ADR-573): hex → packed 0xRRGGBB for DXF group 420.
+import { hexToTrueColor } from '../../utils/dxf-true-color';
+// ADR-739 Φ.Ε/Φ1 — το ΥΠΑΡΧΟΝ λεξιλόγιο τυπογραφίας του text-engine. Δεύτερος καταναλωτής
+// μετά το `detail-primitives-to-entities.ts` (ADR-651), με το ΙΔΙΟ ιδίωμα: ένα run, ένα
+// paragraph, ένας κόμβος. Καμία νέα έννοια «έντονου» — αυτή είναι η μία που υπάρχει.
+import {
+  DEFAULT_RUN_STYLE,
+  makeNode,
+  makeParagraph,
+  makeRun,
+} from '../../text-engine/templates/defaults/template-helpers';
+// ADR-635 Φ C.25 — στοίχιση → σειρά **γραμμής βάσης** του πλέγματος 9 σημείων. Ο ΙΔΙΟΣ
+// χάρτης που διαβάζει ο importer· δες {@link makeText} για το γιατί είναι κρίσιμος.
+import { ALIGNMENT_TO_ATTACHMENT } from '../../utils/dxf-text-anchor';
 
 /**
  * Optional vertical-baseline hint the vector emitter honours for a decomposed
@@ -74,8 +88,61 @@ function inheritStyle(source: Entity): InheritedStyle {
   };
 }
 
-export function makeLine(source: Entity, id: string, start: Point2D, end: Point2D): LineEntity {
-  return { ...inheritStyle(source), id, type: 'line', start, end };
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **το ρητό μολύβι ενός primitive**, όταν το αποδομούμενο σχέδιο ορίζει
+ * δικό του χρώμα/πάχος ανά στοιχείο (ένας πίνακας: γκρίζα κεφαλίδα, χοντρό εξωτερικό
+ * πλαίσιο, λεπτοί εσωτερικοί διαχωριστές). Απόν ⇒ ισχύει ακέραιη η κληρονομιά του
+ * {@link inheritStyle} — τα σύμβολα σημείωσης και ο χάρακας κλίμακας δεν αλλάζουν byte.
+ */
+export interface NeutralPen {
+  /** `#rrggbb` — νικά το κληρονομημένο χρώμα της οντότητας-πηγής. */
+  readonly colorHex?: string;
+  /** Πάχος από τον κατάλογο ISO (`nearestIsoLineweight`) — νικά το κληρονομημένο. */
+  readonly lineweightMm?: LineweightMm;
+  /** Μοτίβο διακεκομμένης σε **world units**· το τιμούν καμβάς/preview (`BaseEntity.dashMm`). */
+  readonly dashMm?: readonly number[];
+}
+
+/**
+ * 🔴 **Ρητό χρώμα ⇒ ΣΒΗΝΕΙ το κληρονομημένο `colorAci`. Δεν είναι λεπτομέρεια.**
+ *
+ * Ο `resolveAci` (`dxf-ascii-writer-helpers.ts`) διαβάζει με σειρά προτεραιότητας
+ * `colorTrueColor > colorAci > color`. Το {@link inheritStyle} αντιγράφει το `colorAci` της
+ * οντότητας-πηγής, οπότε ένα `color: '#EDEDED'` γραμμένο **δίπλα** σε κληρονομημένο
+ * `colorAci` θα αγνοούνταν **σιωπηλά** — το primitive θα έβγαινε στο χρώμα ολόκληρου του
+ * πίνακα και το σφάλμα θα φαινόταν μόνο σε πίνακα που ο χρήστης είχε βάψει.
+ *
+ * Το `colorTrueColor` δεν είναι πλεονασμός: η παλέτα ACI έχει **έξι** γκρι, και το
+ * `#EDEDED` της κεφαλίδας πέφτει στο ACI **255 = καθαρό λευκό** (μετρημένο στο
+ * `settings/standards/aci.ts`). Χωρίς group 420 η γκρίζα κεφαλίδα βγαίνει **λευκή** —
+ * ακριβώς το σύμπτωμα που αυτή η φάση διορθώνει. Δες `emitEntityStyle`.
+ */
+function withPen(style: InheritedStyle, pen?: NeutralPen): InheritedStyle & {
+  readonly colorTrueColor?: number;
+  readonly dashMm?: readonly number[];
+} {
+  if (!pen) return style;
+  const colored = pen.colorHex
+    ? {
+      ...style,
+      color: pen.colorHex,
+      colorAci: undefined,
+      colorTrueColor: hexToTrueColor(pen.colorHex),
+    }
+    : style;
+  return {
+    ...colored,
+    ...(pen.lineweightMm !== undefined ? { lineweightMm: pen.lineweightMm } : {}),
+    // Το `dashMm` μπαίνει **μόνο** όταν υπάρχει (ίδιος κανόνας με το `borderPrimitive`):
+    // ρητό `undefined` αλλάζει το σχήμα του αντικειμένου και σπάει snapshots.
+    ...(pen.dashMm && pen.dashMm.length > 0 ? { dashMm: pen.dashMm } : {}),
+  };
+}
+
+export function makeLine(
+  source: Entity, id: string, start: Point2D, end: Point2D, pen?: NeutralPen,
+): LineEntity {
+  return { ...withPen(inheritStyle(source), pen), id, type: 'line', start, end };
 }
 
 export function makePolyline(
@@ -98,9 +165,17 @@ export function makeArc(
  * Solid fill → `hatch` carrying one planar `dxfFaces` face (z = 0). Boundary paths
  * mirror the ring so the DXF native-hatch fallback still has a loop; the vector
  * emitter fills the face directly.
+ *
+ * ⚠️ ADR-739 Φ.Ε/Φ1 — `colorHex` **δεν είναι προαιρετική διακόσμηση**: χωρίς αυτό το
+ * `fillColor` έπαιρνε το `style.color`, δηλαδή **κληρονομούσε** το ενιαίο χρώμα της
+ * οντότητας-πηγής. Ένα γέμισμα κελιού πίνακα έχει εξ ορισμού **δικό του** χρώμα (γκρίζα
+ * κεφαλίδα μέσα σε μαύρο πίνακα), οπότε ο μόνος τρόπος να χρησιμοποιηθεί σωστά είναι με
+ * ρητό χρώμα. Απόν ⇒ η ιστορική συμπεριφορά ακέραιη (σύμβολα σημείωσης, χάρακας κλίμακας).
  */
-export function makeSolidFill(source: Entity, id: string, ring: readonly Point2D[]): HatchEntity {
-  const style = inheritStyle(source);
+export function makeSolidFill(
+  source: Entity, id: string, ring: readonly Point2D[], colorHex?: string,
+): HatchEntity {
+  const style = withPen(inheritStyle(source), colorHex ? { colorHex } : undefined);
   const boundary = ring.map((p) => ({ x: p.x, y: p.y }));
   return {
     ...style,
@@ -127,11 +202,58 @@ export interface NeutralTextOptions {
   /** Rotation in degrees (0 = upright label). */
   readonly rotationDeg: number;
   readonly vBaseline: VectorTextBaselineHint['vBaseline'];
+  /**
+   * ADR-739 Φ.Ε/Φ1 — ρητό χρώμα μελανιού (`#rrggbb`)· απόν ⇒ κληρονομιά από την πηγή.
+   * Ίδιος κανόνας με το {@link NeutralPen}, ίδια υλοποίηση ({@link withPen}).
+   */
+  readonly colorHex?: string;
+  /**
+   * ADR-739 Φ.Ε/Φ1 — **έντονο**. `undefined` = «δεν έχω άποψη για την τυπογραφία» ⇒ καμία
+   * αλλαγή· `true`/`false` = «την κατέχω» ⇒ γεννιέται `textNode`. Δες {@link makeText}.
+   */
+  readonly bold?: boolean;
+}
+
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **ο κόμβος τυπογραφίας ενός αποδομημένου κειμένου.**
+ *
+ * ## Γιατί `textNode` και όχι ένα νέο πεδίο `bold` πάνω στην οντότητα
+ * Το `TextEntity` **δεν έχει** — και δεν πρέπει να αποκτήσει — flat `bold`. Το CAD
+ * λεξιλόγιο του έργου βάζει την ανά-run τυπογραφία στο AST (ADR-344), και **όλοι** οι
+ * αναγνώστες το ξέρουν ήδη: `extractFirstRunStyle` → `projectSceneTextToDxf().textStyle`
+ * (PDF), `readTextEntityFamily` → group 7 (DXF), `resolveTextHeight` (ύψος). Ένα δεύτερο,
+ * flat `bold` θα ήταν πέμπτο λεξιλόγιο που κανείς από αυτούς δεν διαβάζει.
+ *
+ * ## 🔴 Γιατί το `attachment` ΠΡΕΠΕΙ να είναι σειρά `B*` — και τι σπάει αλλιώς
+ * Ο exporter διαβάζει την κατακόρυφη στοίχιση με `alignFromTextEntity` →
+ * `attachmentToVJust(node.attachment)`, που δίνει **0 (γραμμή βάσης) μόνο** για `BL/BC/BR`
+ * (`T*` → 3, `M*` → 2). Το `position` ενός `TableTextRun` **ΕΙΝΑΙ** η γραμμή βάσης — αυτή
+ * είναι η ρητή σύμβαση του `TextPrimitive` και το σφάλμα των 1,5mm που πλήρωσε η Φ.Β.
+ * Ένα `attachment: 'TL'` (η προεπιλογή του `makeNode`!) θα έγραφε `73 = 3` και θα
+ * κρεμούσε **κάθε** κείμενο κελιού από την κορυφή του — δηλαδή θα μετακινούσε ολόκληρο
+ * τον πίνακα κατά ένα ύψος κεφαλαίου, ως «παρενέργεια» της προσθήκης του έντονου.
+ * Με τον {@link ALIGNMENT_TO_ATTACHMENT} (τον ΙΔΙΟ χάρτη που διαβάζει ο importer) το
+ * `v` μένει 0 και η εξαγόμενη γεωμετρία είναι **byte-identical** με πριν.
+ *
+ * ## Γιατί το ύψος μπαίνει ΚΑΙ στο run
+ * Ο `resolveTextHeight` ρωτά **πρώτα** το run και μόνο μετά τα flat πεδία. Ένας κόμβος
+ * χωρίς ύψος θα άφηνε την ISO προεπιλογή των 2,5 να νικήσει το πραγματικό ύψος του κελιού.
+ */
+function neutralTextNode(opts: NeutralTextOptions): TextEntity['textNode'] {
+  const run = makeRun(opts.text, {
+    ...DEFAULT_RUN_STYLE,
+    height: opts.height,
+    bold: opts.bold ?? false,
+  });
+  return makeNode([makeParagraph([run])], {
+    attachment: ALIGNMENT_TO_ATTACHMENT[opts.alignment],
+    rotation: opts.rotationDeg,
+  });
 }
 
 export function makeText(source: Entity, id: string, opts: NeutralTextOptions): NeutralTextEntity {
   return {
-    ...inheritStyle(source),
+    ...withPen(inheritStyle(source), opts.colorHex ? { colorHex: opts.colorHex } : undefined),
     id,
     type: 'text',
     position: opts.position,
@@ -140,6 +262,10 @@ export function makeText(source: Entity, id: string, opts: NeutralTextOptions): 
     alignment: opts.alignment,
     rotation: opts.rotationDeg,
     vBaseline: opts.vBaseline,
+    // Ο κόμβος γεννιέται **μόνο** όταν ο καλών δηλώνει άποψη για την τυπογραφία. Τα σύμβολα
+    // σημείωσης και ο χάρακας κλίμακας δεν δηλώνουν ⇒ μένουν χωρίς `textNode`, ακριβώς όπως
+    // πριν (group 7 = STANDARD, κανένα STYLE record, μηδέν μεταβολή στα byte τους).
+    ...(opts.bold !== undefined ? { textNode: neutralTextNode(opts) } : {}),
   };
 }
 

@@ -32,9 +32,10 @@ import { encodeDxf440 } from './dxf-transparency-440';
 const ARC_SEGMENT_DEG = 12;
 
 /**
- * The per-entity STYLE group codes a DXF entity carries in common: linetype name (6),
- * per-object linetype scale / CELTSCALE (48), lineweight (370) and transparency (440).
- * Every field is on `BaseEntity`, so an `Entity` satisfies this structurally.
+ * The per-entity STYLE group codes a DXF entity carries in common: true colour (420),
+ * linetype name (6), per-object linetype scale / CELTSCALE (48), lineweight (370) and
+ * transparency (440). Every field is on `BaseEntity`, so an `Entity` satisfies this
+ * structurally.
  */
 export interface EntityStyleCodes {
   readonly linetypeName?: string;
@@ -42,6 +43,11 @@ export interface EntityStyleCodes {
   readonly lineweightMm?: LineweightMm;
   /** AutoCAD object transparency % (0..90). DXF group 440· 0/undefined → κανένας κωδικός. */
   readonly transparency?: number;
+  /**
+   * 🔴 ADR-739 Φ.Ε/Φ1 — **24-bit αληθινό χρώμα** (DXF group 420, packed `0xRRGGBB`).
+   * Απόν ⇒ κανένας κωδικός ⇒ ισχύει το ACI του 62. Δες {@link emitEntityStyle}.
+   */
+  readonly colorTrueColor?: number | null;
 }
 
 /**
@@ -76,6 +82,24 @@ export interface EntityR2018 {
  * @see config/lineweight-iso-catalog — encodeDxfCode370 SSoT
  */
 export function emitEntityStyle(pair: Pair, style: EntityStyleCodes): void {
+  // 🔴 ADR-739 Φ.Ε/Φ1 — **420: το χρώμα που η παλέτα ACI δεν μπορεί να πει.**
+  //
+  // Ο writer έγραφε **μόνο** ACI (62), ενώ ο importer διάβαζε ήδη το 420
+  // (`dxf-converter-helpers.ts`) και ο LAYER writer το έγραφε ήδη
+  // (`dxf-layer-table-writer.ts`). Δηλαδή η ασυμμετρία ήταν **στο επίπεδο της οντότητας και
+  // μόνο εκεί**: κάθε εισαγόμενο αληθινό χρώμα ισοπεδωνόταν στις 255 θέσεις της παλέτας
+  // κατά την επανεξαγωγή, σιωπηλά.
+  //
+  // Το κόστος δεν είναι θεωρητικό. Η παλέτα έχει **έξι** γκρι· το `#EDEDED` μιας γκρίζας
+  // γραμμής κεφαλίδας απέχει 18 μονάδες από το ACI **255 (καθαρό λευκό)** και 47 από το ACI
+  // 254 — άρα κέρδιζε το λευκό. **Η γκρίζα κεφαλίδα έβγαινε λευκή**, και το ελάττωμα
+  // φαινόταν σαν «η εξαγωγή χάνει το γέμισμα» ενώ ήταν κβάντιση χρώματος.
+  //
+  // Το AutoCAD διαβάζει το 420 **πάνω** από το 62 όταν και τα δύο υπάρχουν, οπότε το 62
+  // μένει ως πιστό εφεδρικό για readers που αγνοούν το αληθινό χρώμα (Τέκτων, R12) —
+  // υποβάθμιση, όχι αλλοίωση. `& 0xFFFFFF`: το DXF θέλει καθαρά 24 bit, ίδια μάσκα με τον
+  // LAYER writer.
+  if (style.colorTrueColor != null) pair(420, style.colorTrueColor & 0xffffff);
   // ADR-644 — «0» is NOT a valid linetype name (a stray layer-ish token some imported entities carry
   // in group 6). No LTYPE record defines it → AutoCAD aborts «Bad linetype name 0». Treat it (and
   // blank) as ByLayer inherit → skip group 6. Every real name the export adapter collects IS defined

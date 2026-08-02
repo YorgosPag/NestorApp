@@ -30,7 +30,7 @@ import type { Entity, HatchEntity, TextEntity } from '../../types/entities';
 import type { VectorTextBaselineHint } from '../../export/core/annotation-to-primitives';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
-import { applyPlotColor, type PrintColorPolicy } from '../../config/print-color-policy';
+import { applyPlotColor, type PlotColorRole, type PrintColorPolicy } from '../../config/print-color-policy';
 import { parseHex, type Rgb } from '../../config/color-math';
 import { tessellateArcDegrees } from '../../rendering/entities/shared/geometry-arc-utils';
 import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
@@ -130,8 +130,18 @@ function emitEntity(
 
 // ─── Style (colour + lineweight) ──────────────────────────────────────────────
 
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — ο ρόλος **`'fill'`** για τη γραμμοσκίαση δεν είναι λεπτομέρεια στιλ.
+ *
+ * Ο κλάδος 1 του `emitHatch` (προ-υπολογισμένα `dxfFaces` — SOLID / poché / **γέμισμα κελιού
+ * πίνακα**) γεμίζει με το χρώμα που θέτει **αυτή εδώ** η συνάρτηση. Με ρόλο `'ink'` το
+ * `#EDEDED` μιας γκρίζας γραμμής κεφαλίδας περνούσε το κατώφλι «κοντά στο λευκό» (237 ≥ 234,6)
+ * και τυπωνόταν **συμπαγές μαύρο**, καταπίνοντας τα ίδια του τα γράμματα. Δες
+ * {@link PlotColorRole}.
+ */
 function applyEntityStyle(pdf: jsPDF, e: Entity, policy: PrintColorPolicy): void {
-  const hex = applyPlotColor(e.color ?? null, e.colorAci ?? null, policy);
+  const role: PlotColorRole = e.type === 'hatch' ? 'fill' : 'ink';
+  const hex = applyPlotColor(e.color ?? null, e.colorAci ?? null, policy, role);
   const rgb = parseHex(hex) ?? BLACK;
   pdf.setDrawColor(rgb.r, rgb.g, rgb.b);
   pdf.setFillColor(rgb.r, rgb.g, rgb.b);
@@ -146,6 +156,28 @@ function resolveLineWidthMm(e: Entity): number {
 
 // ─── Text (native jsPDF, selectable) ──────────────────────────────────────────
 
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **γιατί ΣΥΝΘΕΤΙΚΟ έντονο και όχι `setFont(…, 'bold')`.**
+ *
+ * Το `registerGreekFont` (`services/pdf/greek-font-loader.ts`) δηλώνει **και** το `'normal'`
+ * **και** το `'bold'` style πάνω στο **ΙΔΙΟ** `Roboto-Regular.ttf` — ρητά, με σχόλιο: η
+ * δεύτερη δήλωση υπάρχει μόνο για να μη γυρίσει το `jspdf-autotable` σε Helvetica και
+ * αχρηστεύσει το Identity-H (και μαζί τα ελληνικά). Άρα ένα `setFont('Roboto', 'bold')`
+ * επιλέγει **το ίδιο αρχείο γραμματοσειράς** και δεν παχαίνει ούτε ένα pixel: το έντονο του
+ * πίνακα θα «δούλευε» χωρίς να φαίνεται — η χειρότερη κατηγορία σφάλματος.
+ *
+ * Οι δύο πραγματικές επιλογές ήταν: (α) ενσωμάτωση του Roboto-Bold — **+~700KB σε κάθε
+ * τυπωμένη σελίδα**, για μια γραμμή κεφαλίδας· (β) συνθετικό πάχυνση με περίγραμμα, που
+ * είναι ο **καθιερωμένος** μηχανισμός των μηχανών απόδοσης (PDF `Tr 2` = fill-then-stroke·
+ * το ίδιο κάνουν οι browsers για synthetic bold). Το (β) δίνει έντονο σε **κάθε**
+ * γραμματοσειρά, ελληνική ή λατινική, με μηδέν byte.
+ *
+ * Ο συντελεστής **3% του ύψους** είναι η συνήθης τιμή για faux-bold: αρκετά για να διαβαστεί
+ * ως έντονο, αρκετά λίγο ώστε να μη γεμίσουν τα μετρίως κλειστά γράμματα (α, ε, θ) σε μικρά
+ * ύψη κειμένου πίνακα (2,6–3mm).
+ */
+const SYNTHETIC_BOLD_STROKE_RATIO = 0.03;
+
 function emitText(
   pdf: jsPDF, e: Entity, toPaper: (p: Point2D) => Point2D, scale: number,
 ): void {
@@ -153,7 +185,8 @@ function emitText(
   if (!t.text) return;
   const p = toPaper(t.position);
   const heightWorld = t.height || DEFAULT_TEXT_HEIGHT_WORLD;
-  pdf.setFontSize(heightWorld * scale * PT_PER_MM);
+  const fontSizePt = heightWorld * scale * PT_PER_MM;
+  pdf.setFontSize(fontSizePt);
   // A decomposed annotation label is marked by the `vBaseline` hint and its
   // `position` IS the alignment anchor → honour `alignment` + baseline (centred
   // glyph letters / scale-bar numerals land on their anchor). Scene text carries
@@ -161,9 +194,19 @@ function emitText(
   // text whose insertion-point semantics we don't own is never mis-placed.
   const baseline = (e as VectorTextBaselineHint).vBaseline;
   const align = baseline !== undefined ? mapHAlign((e as TextEntity).alignment) : 'left';
+  // Το `textStyle.bold` το προβάλλει ΗΔΗ ο `projectSceneTextToDxf` από το πρώτο run του
+  // `textNode` — καμία δεύτερη ανάγνωση του AST εδώ (`extractFirstRunStyle` είναι ο SSoT).
+  const bold = t.textStyle?.bold === true;
+  if (bold) pdf.setLineWidth((fontSizePt / PT_PER_MM) * SYNTHETIC_BOLD_STROKE_RATIO);
   // World rotation is CCW in a Y-up frame; on the Y-down page it reads as CW → negate.
   pdf.text(sanitizeText(t.text), p.x, p.y, {
-    align, baseline: baseline ?? 'alphabetic', angle: -(t.rotation ?? 0),
+    align,
+    baseline: baseline ?? 'alphabetic',
+    angle: -(t.rotation ?? 0),
+    // Το περίγραμμα χρησιμοποιεί το **draw colour**, που το `applyEntityStyle` έχει ήδη θέσει
+    // ίσο με το fill colour της ίδιας οντότητας ⇒ το συνθετικό πάχος βγαίνει στο χρώμα του
+    // γράμματος, ποτέ σε δεύτερο χρώμα.
+    ...(bold ? { renderingMode: 'fillThenStroke' as const } : {}),
   });
 }
 

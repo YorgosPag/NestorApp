@@ -31,6 +31,10 @@ function mockPdf(): { pdf: Record<string, unknown>; calls: Call[] } {
     setLineWidth: rec('setLineWidth'),
     setLineCap: rec('setLineCap'),
     setLineJoin: rec('setLineJoin'),
+    // 🐛 Το mock είχε μπαγιατέψει: το `emitBoundaryOutline` καλεί `setLineDashPattern` από το
+    // ADR-507 Φ3 (commit 480f5584), αλλά κανείς δεν το πρόσθεσε εδώ ⇒ **13 tests έσκαγαν με
+    // `TypeError: not a function`** σε κάθε διαδρομή γραμμοσκίασης που φτάνει στο περίγραμμα.
+    setLineDashPattern: rec('setLineDashPattern'),
     setFontSize: rec('setFontSize'),
     line: rec('line'),
     circle: rec('circle'),

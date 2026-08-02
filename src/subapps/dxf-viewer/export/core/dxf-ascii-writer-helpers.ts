@@ -15,7 +15,9 @@ import type { DxfStyleTableEntry } from '../../text-engine/types/text-ast.types'
 import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 // 🏢 Color-Conversion SSoT (ADR-573): int(0xRRGGBB)→hex via canonical `dxf-true-color`.
 import { trueColorToHex } from '../../utils/dxf-true-color';
-import { readTextEntityFamily, textStyleName, resolveExportFont } from './dxf-ascii-text-writer';
+import {
+  readTextEntityFamily, readTextEntityBold, textStyleName, resolveExportFont,
+} from './dxf-ascii-text-writer';
 import type { DxfWriteLayer } from './dxf-ascii-writer';
 
 const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
@@ -44,18 +46,32 @@ export function resolveAci(e: Entity, layer: DxfWriteLayer | undefined): number 
  * shares with the per-entity group-7 code, so table and entities agree); `fontFile` = the family
  * verbatim (import strips the extension on the way in, so no synthetic `.shx` is fabricated). The
  * always-present `STANDARD` needs no entry (AutoCAD implicit) so font-less text adds nothing.
+ *
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **ένα record ανά ΠΑΡΑΛΛΑΓΗ, όχι ανά οικογένεια.** Το DXF δηλώνει το
+ * βάρος στο text style (XDATA 1071), οπότε ένας πίνακας με έντονη κεφαλίδα και κανονικά
+ * δεδομένα παράγει **δύο** records — `Arial` και `Arial-Bold` — που δείχνουν στο **ίδιο**
+ * αρχείο γραμματοσειράς και διαφέρουν μόνο στις σημαίες. Ίδιο ιδίωμα με το AutoCAD, όπου
+ * «Arial» και «Arial Bold» είναι δύο ξεχωριστά text styles.
+ *
+ * Το κλειδί του dedup είναι το **όνομα του style** (που ήδη περιέχει την παραλλαγή), άρα
+ * παραμένει ένα record ανά διακριτό group 7 — καμία διπλοεγγραφή, κανένα ορφανό.
  */
 export function collectTextStyles(entities: readonly Entity[]): DxfStyleTableEntry[] {
   const byName = new Map<string, DxfStyleTableEntry>();
   for (const e of entities) {
     if (e.type !== 'text' && e.type !== 'mtext') continue;
     const family = readTextEntityFamily(e);
-    const name = textStyleName(family);
+    const bold = readTextEntityBold(e);
+    const name = textStyleName(family, bold);
     if (name === 'STANDARD' || byName.has(name)) continue;
     byName.set(name, {
       // ADR-644 (#8) — Greek-capable font (the SHX `txt` renders Greek as «?»).
       name, fontFile: resolveExportFont(family), bigFontFile: '',
       height: 0, widthFactor: 1, obliqueAngle: 0, flags: 0, textGenerationFlags: 0,
+      // ADR-739 Φ.Ε/Φ1 — το XDATA γράφεται **μόνο** για την έντονη παραλλαγή. Ένα «κανονικό»
+      // style δεν χρειάζεται σημαίες: η απουσία τους ΕΙΝΑΙ το κανονικό βάρος, και η προσθήκη
+      // ενός `1071 = 34` σε κάθε υπάρχον style θα άλλαζε byte χωρίς κανένα κέρδος.
+      ...(bold ? { extendedFont: { family, bold: true, italic: false } } : {}),
     });
   }
   return [...byName.values()];

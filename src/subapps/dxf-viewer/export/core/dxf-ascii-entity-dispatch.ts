@@ -33,7 +33,7 @@ import { tessellateSplinePoints } from '../../rendering/entities/shared/geometry
 import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
 import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 import {
-  emitText, emitMText, alignFromTextEntity, textStyleName, readTextEntityFamily,
+  emitText, emitMText, alignFromTextEntity, textStyleName, readTextEntityFamily, readTextEntityBold,
 } from './dxf-ascii-text-writer';
 import {
   emit3DFace,
@@ -126,7 +126,9 @@ export function writeEntity(
         e.position, e.text ?? '', resolveTextHeight(e), layer, aci, s, pair,
         explode ? 0 : (e.rotation ?? 0), explode ? undefined : alignFromTextEntity(e),
         // ADR-636 Φ2.4 (D.5) — real group 7 (AutoCAD path); Tekton `explode` → emitText default STANDARD.
-        explode ? undefined : textStyleName(readTextEntityFamily(e)), r2018,
+        // ADR-739 Φ.Ε/Φ1 — η παραλλαγή (έντονο) είναι μέρος του ονόματος: το DXF δηλώνει το
+        // βάρος στο STYLE (XDATA 1071), όχι στην οντότητα.
+        explode ? undefined : textStyleName(readTextEntityFamily(e), readTextEntityBold(e)), r2018,
       );
       break;
     case 'mtext':

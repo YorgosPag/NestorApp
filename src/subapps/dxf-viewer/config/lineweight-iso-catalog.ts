@@ -120,3 +120,44 @@ export function isIsoBaselineLineweight(lw: number): lw is ConcreteLineweightMm 
   }
   return false;
 }
+
+/**
+ * ADR-739 Φ.Ε/Φ1 — snap a **free** millimetre width to the nearest printable ISO pen.
+ *
+ * `LineweightMm` is a **closed union of 24 values**, but plenty of sources speak free
+ * numbers: a `TableBorderSpec.widthMm`, a `SheetStroke.widthMm`, a user-typed pen width.
+ * Without a snap those values simply cannot be assigned to `lineweightMm`, so the caller's
+ * only options were an `as` cast (N.2 forbids it, and the ratchet blocks it outside this
+ * file) or dropping the width entirely — which is exactly how a 0.5mm table frame exported
+ * as an undifferentiated hairline.
+ *
+ * ## Why `undefined` and not a default
+ * A non-positive / non-finite width is **not** «the thinnest pen» — it is «this edge has no
+ * pen» (an invisible border, a fill outline). Returning `undefined` lets the caller omit
+ * group 370 entirely, which DXF reads as ByLayer — the honest answer. A `0.05` default would
+ * silently invent a hairline where the author asked for nothing.
+ *
+ * ## Why the 0-value is excluded from the candidates
+ * `LINEWEIGHT_ISO_VALUES` starts at `0` (a legal DXF 370 code meaning «thinnest the device
+ * can plot»). Snapping to it would make every sub-0.025mm width vanish into a device
+ * default instead of the finest real pen, so the search runs over
+ * {@link LINEWEIGHT_CONCRETE_MM_VALUES} (the 23 positive pens).
+ *
+ * @param mm free width in millimetres
+ * @returns the nearest ISO pen, or `undefined` for a non-positive / non-finite input
+ */
+export function nearestIsoLineweight(mm: number): ConcreteLineweightMm | undefined {
+  if (!Number.isFinite(mm) || mm <= 0) return undefined;
+  let best = LINEWEIGHT_CONCRETE_MM_VALUES[0];
+  let bestDelta = Math.abs(best - mm);
+  for (const v of LINEWEIGHT_CONCRETE_MM_VALUES) {
+    const delta = Math.abs(v - mm);
+    // `<` (not `<=`) keeps the FIRST of two equidistant pens — the catalog is ascending, so
+    // a tie resolves to the thinner one. Deterministic beats «whichever came last».
+    if (delta < bestDelta) {
+      best = v;
+      bestDelta = delta;
+    }
+  }
+  return best;
+}

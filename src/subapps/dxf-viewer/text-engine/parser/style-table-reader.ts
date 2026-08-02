@@ -130,8 +130,32 @@ function collectGroupCodes(lines: string[], start: number): { codes: GroupCodeMa
   return { codes, next: i };
 }
 
+/**
+ * ADR-739 Φ.Ε/Φ1 — «extended font data» (XDATA `1000` οικογένεια + `1071` σημαίες).
+ *
+ * Ο writer τα γράφει (`emitTextStyle`)· χωρίς τον αντίστροφο δρόμο εδώ, ένα αρχείο που
+ * εξάγαμε με έντονη κεφαλίδα πίνακα θα ξαναδιαβαζόταν **κανονικό** — δηλαδή το έντονο θα
+ * επιβίωνε στο AutoCAD αλλά θα πέθαινε στην ίδια μας την εφαρμογή, το χειρότερο είδος
+ * ασυμμετρίας. Απόν XDATA (SHX styles, αρχεία άλλων προγραμμάτων) ⇒ `undefined`, δηλαδή
+ * ακριβώς το ίδιο σχήμα εγγραφής με πριν.
+ *
+ * Τιμές: `BOLD = 0x2000000`, `ITALIC = 0x1000000` — δες `emitTextStyle` για τις πηγές.
+ */
+function readExtendedFont(codes: GroupCodeMap): DxfStyleTableEntry['extendedFont'] {
+  const raw = codes.get('1071');
+  if (raw === undefined) return undefined;
+  const flags = parseInt(raw, 10);
+  if (!Number.isFinite(flags)) return undefined;
+  return {
+    family: codes.get('1000') ?? '',
+    bold: (flags & 0x2000000) !== 0,
+    italic: (flags & 0x1000000) !== 0,
+  };
+}
+
 function groupCodesToEntry(codes: GroupCodeMap): DxfStyleTableEntry {
   const handle = codes.get('5');
+  const extendedFont = readExtendedFont(codes);
   return {
     name: codes.get('2') ?? 'Standard',
     fontFile: codes.get('3') ?? '',
@@ -143,6 +167,8 @@ function groupCodesToEntry(codes: GroupCodeMap): DxfStyleTableEntry {
     textGenerationFlags: parseInt(codes.get('71') ?? '0', 10) || 0,
     // ADR-642 Φ2-B — DXF handle (group 5) for complex-linetype `340` resolution on import.
     ...(handle ? { handle } : {}),
+    // ADR-739 Φ.Ε/Φ1 — TrueType bold/italic (XDATA 1071), όταν το αρχείο τα δηλώνει.
+    ...(extendedFont ? { extendedFont } : {}),
   };
 }
 

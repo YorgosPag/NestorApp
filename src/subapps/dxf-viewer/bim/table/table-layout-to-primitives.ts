@@ -12,13 +12,17 @@
  * ## Η σειρά εξόδου — γιατί «ανά γραμμή: πρώτα η ακμή, μετά τα κελιά»
  * Σε καμβά και PDF η σειρά **είναι** το z-order. Η σειρά που παράγεται εδώ είναι:
  * ```
+ *   ΟΛΑ τα γεμίσματα κελιών                       (ADR-739 Φ.Ε/Φ1)
  *   για κάθε γραμμή r:  η ΠΑΝΩ ακμή της r  →  τα κελιά της r
  *   η κάτω ακμή του πίνακα
  *   όλες οι κατακόρυφες
  * ```
  * Δεν είναι αυθαίρετη: αναπαράγει **ακριβώς** τη σειρά που έβγαζε ο ADR-622 χειρόγραφα
  * (κεφαλίδα → γραμμή κάτω από την κεφαλίδα → δεδομένα → γραμμή πάνω από το σύνολο →
- * σύνολο). Η απορρόφηση έτσι διατηρεί και το z-order, όχι μόνο τη γεωμετρία.
+ * σύνολο). Η απορρόφηση έτσι διατηρεί και το z-order, όχι μόνο τη γεωμετρία. Τα γεμίσματα
+ * μπαίνουν **μπροστά από όλα** για τον ίδιο ακριβώς λόγο που ο ζωγράφος της οθόνης τα
+ * στοιβάζει πρώτα — δες {@link fillPrimitive}. Ο ADR-622 δεν έχει γεμίσματα, οπότε το
+ * πρόθεμα είναι κενό για τα φύλλα οπλισμού και κανένα snapshot τους δεν μετακινείται.
  *
  * @module subapps/dxf-viewer/bim/table/table-layout-to-primitives
  * @see ./table-layout.ts — η μηχανή που παράγει το `TableLayout`
@@ -54,6 +58,48 @@ function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitiv
     colorHex: run.colorHex,
     align: run.hAlign,
     bold: run.bold,
+  };
+}
+
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **το γέμισμα του κελιού, ως primitive**.
+ *
+ * Μέχρι τη Φ1 το `cell.style.fillColorHex` **δεν διαβαζόταν ποτέ** εδώ: ο καμβάς το
+ * ζωγράφιζε (`stampTableFills`) και τα primitives δεν το γνώριζαν καν. Άρα το γέμισμα δεν
+ * «χανόταν στην εξαγωγή» — **δεν γεννιόταν**. Η γκρίζα γραμμή κεφαλίδας έβγαινε λευκή σε
+ * PDF, DXF και TEK ταυτόχρονα, και σε κανένα από τα τρία δεν υπήρχε τι να χαθεί.
+ *
+ * ## Γιατί `polyline` + `fillHex` και ΟΧΙ νέο `kind: 'fill'`
+ * Το λεξιλόγιο **υπάρχει ήδη**: το `PolylinePrimitive.fillHex` (`detail-sheet-types.ts`) το
+ * τιμούν και οι **τρεις** ζωγράφοι του μοντέλου φύλλου — καμβάς (`detail-canvas-renderer`),
+ * PDF (`detail-pdf-primitives`, `'DF'`) και σκηνή (`detail-primitives-to-entities`). Ένα νέο
+ * kind θα υποχρέωνε **κάθε** `switch (prim.kind)` του repo να το μάθει, και όποιο ξεχνούσε
+ * θα το κατάπινε στο `default` — δηλαδή θα αναπαρήγαγε, σε νέα συσκευασία, ακριβώς το
+ * ελάττωμα που αυτή η φάση διορθώνει.
+ *
+ * ## Γιατί το `stroke` έχει το χρώμα του γεμίσματος και μηδενικό πάχος
+ * Το `stroke` είναι **υποχρεωτικό** στο `PolylinePrimitive` και οι ζωγράφοι χαράζουν πάντα
+ * (`'DF'` = draw+fill). Ένα περίγραμμα στο **ίδιο** χρώμα με το γέμισμα, πάνω στο δικό του
+ * περίγραμμα, είναι οπτικά ανύπαρκτο — ενώ ένα ξένο χρώμα θα ζωγράφιζε δεύτερο, αυθαίρετο
+ * πλέγμα πάνω από το κανονικό. Τα πραγματικά περιγράμματα του πίνακα έρχονται χωριστά, από
+ * το {@link borderPrimitive}, με τα δικά τους μολύβια.
+ */
+function fillPrimitive(cell: TableCellLayout, origin: TableOriginMm): DetailPrimitive | null {
+  const fillHex = cell.style.fillColorHex;
+  if (!fillHex) return null;
+  const { x, y, w, h } = cell.rect;
+  const points = [
+    translate({ x, y }, origin),
+    translate({ x: x + w, y }, origin),
+    translate({ x: x + w, y: y + h }, origin),
+    translate({ x, y: y + h }, origin),
+  ];
+  return {
+    kind: 'polyline',
+    points,
+    closed: true,
+    stroke: { colorHex: fillHex, widthMm: 0 },
+    fillHex,
   };
 }
 
@@ -102,9 +148,10 @@ function cellsByRow(cells: readonly TableCellLayout[]): ReadonlyMap<string, Tabl
 /**
  * Μετατρέπει μια διάταξη πίνακα σε primitives φύλλου, μετατοπισμένα στην `origin`.
  *
- * Δεν παράγεται τίποτα για κενά κελιά (η μηχανή δεν τους δίνει `text`) ούτε για αόρατες
- * ακμές (τις έχει ήδη απορρίψει το στάδιο περιγραμμάτων) — ώστε ένας πίνακας χωρίς πλέγμα
- * να βγάζει **μόνο** κείμενο, όπως ακριβώς τα σημερινά φύλλα οπλισμού.
+ * Δεν παράγεται τίποτα για κενά κελιά (η μηχανή δεν τους δίνει `text`), για κελιά χωρίς
+ * `fillColorHex`, ούτε για αόρατες ακμές (τις έχει ήδη απορρίψει το στάδιο περιγραμμάτων)
+ * — ώστε ένας πίνακας χωρίς πλέγμα και χωρίς γεμίσματα να βγάζει **μόνο** κείμενο, όπως
+ * ακριβώς τα σημερινά φύλλα οπλισμού.
  */
 export function tableLayoutToPrimitives(
   layout: TableLayout,
@@ -115,6 +162,16 @@ export function tableLayoutToPrimitives(
 
   const { horizontalByY, verticals } = splitBorders(layout.borders);
   const byRow = cellsByRow(layout.cells);
+
+  // 🔴 ADR-739 Φ.Ε/Φ1 — ΟΛΑ τα γεμίσματα ΠΡΩΤΑ, πριν από κάθε γραμμή και κάθε γράμμα.
+  // Σε καμβά και PDF η σειρά ΕΙΝΑΙ το z-order (βλ. την επικεφαλίδα αυτού του αρχείου): ένα
+  // γέμισμα που θα έβγαινε μετά θα σκέπαζε το πλέγμα και τα γράμματα του ίδιου του κελιού
+  // του. Ίδια σειρά με τον ζωγράφο της οθόνης (`stampTableFills` → `stampTableBorders` →
+  // `stampTableText`) — οι δύο διαδρομές δεν έχουν πλέον σημείο να διαφωνήσουν.
+  for (const cell of layout.cells) {
+    const fill = fillPrimitive(cell, origin);
+    if (fill) out.push(fill);
+  }
 
   const pushHorizontalAt = (y: number): void => {
     for (const segment of horizontalByY.get(y) ?? []) out.push(borderPrimitive(segment, origin));

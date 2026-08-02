@@ -38,7 +38,11 @@ import {
   computeTableEntityGeometry,
   tableFrameToWorld,
 } from '../../bim/table/table-entity-geometry';
-import { makeLine, makeText } from './neutral-primitive-factory';
+import { makeLine, makeText, makeSolidFill, type NeutralPen } from './neutral-primitive-factory';
+// ADR-739 Φ.Ε/Φ1 — ο ΕΝΑΣ κατάλογος πενών ISO (το ratchet `lineweight-iso-catalog`
+// απαγορεύει αριθμητικά ISO literals οπουδήποτε αλλού).
+import { nearestIsoLineweight } from '../../config/lineweight-iso-catalog';
+import type { SheetStroke } from '../../bim/structural/detail-sheet/detail-sheet-types';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -72,10 +76,42 @@ export function decomposeTable(
 }
 
 /**
- * Το `tableLayoutToPrimitives` παράγει **μόνο** `line` και `text` (η μηχανή δεν βγάζει
- * γεμίσματα σε αυτή τη φάση). Οι υπόλοιποι τύποι `DetailPrimitive` δεν αγνοούνται
- * σιωπηλά — απλώς δεν παράγονται· αν κάποτε παραχθούν, η ρητή `default` επιστροφή
- * κενού είναι το σημείο που θα φανεί η παράλειψη σε test, όχι στην εξαγωγή του χρήστη.
+ * 🔴 ADR-739 Φ.Ε/Φ1 — **σχεδιαστικό μολύβι φύλλου → μολύβι οντότητας.**
+ *
+ * ## Γιατί το `widthMm` ΔΕΝ κλιμακώνεται με το `mmToWorld`
+ * Το `SheetStroke.widthMm` είναι πάχος **χαρτιού** (ISO πένα), όχι μήκος του μοντέλου — και
+ * το DXF group 370 είναι κι αυτό πάχος χαρτιού. Άρα η αντιστοίχιση είναι 1:1. Ένα
+ * `× mmToWorld` εδώ θα έκανε το εξωτερικό πλαίσιο ενός πίνακα σε κλίμακα 1:50 να ζητήσει
+ * πένα 25mm — δηλαδή θα βρισκόταν εκτός καταλόγου και θα κόλλαγε στο 2,11mm, τυπώνοντας
+ * μαύρη μπάρα. Είναι η ίδια διάκριση που ο ADR-462 πλήρωσε αλλού: **μήκη** κλιμακώνονται,
+ * **πένες** όχι.
+ *
+ * ## Γιατί το `dashMm` κλιμακώνεται
+ * Αντίθετα, ένα μοτίβο διακεκομμένης είναι **μήκος πάνω στο σχέδιο**: 2mm γραμμή / 1mm κενό
+ * σε φύλλο 1:50 είναι 100/50 world units. Ίδια σύμβαση με κάθε άλλη συντεταγμένη εδώ.
+ */
+function penFor(stroke: SheetStroke, mmToWorld: number): NeutralPen {
+  return {
+    colorHex: stroke.colorHex,
+    lineweightMm: nearestIsoLineweight(stroke.widthMm),
+    ...(stroke.dashMm && stroke.dashMm.length > 0
+      ? { dashMm: stroke.dashMm.map((d) => d * mmToWorld) }
+      : {}),
+  };
+}
+
+/**
+ * Το `tableLayoutToPrimitives` παράγει **τρία** kinds: `polyline` (γεμίσματα κελιών, ADR-739
+ * Φ.Ε/Φ1), `line` (περιγράμματα) και `text` (περιεχόμενο κελιών). Οι υπόλοιποι τύποι
+ * `DetailPrimitive` δεν αγνοούνται σιωπηλά — απλώς δεν παράγονται· αν κάποτε παραχθούν, η
+ * ρητή `default` επιστροφή κενού είναι το σημείο που θα φανεί η παράλειψη σε test, όχι στην
+ * εξαγωγή του χρήστη.
+ *
+ * ⚠️ **Ό,τι κουβαλά το primitive, το κουβαλά και η οντότητα.** Μέχρι τη Φ1 αυτή η συνάρτηση
+ * κρατούσε **μόνο γεωμετρία** και πετούσε `stroke` / `colorHex` / `bold` — δεδομένα που η
+ * διάταξη παρήγαγε σωστά και κανείς δεν διάβαζε. Αποτέλεσμα: ο πίνακας έβγαινε σε PDF, DXF
+ * **και** TEK με ενιαίο χρώμα, ενιαίο πάχος και χωρίς έντονα, ενώ στην οθόνη ήταν σωστός.
+ * Κάθε νέο πεδίο του `DetailPrimitive` που μένει εκτός εδώ αναπαράγει το ίδιο ελάττωμα.
  */
 function mapTablePrimitive(
   prim: DetailPrimitive,
@@ -87,7 +123,18 @@ function mapTablePrimitive(
 ): Entity[] {
   switch (prim.kind) {
     case 'line':
-      return [makeLine(source, idFor(), toWorld(prim.a), toWorld(prim.b))];
+      return [makeLine(
+        source, idFor(), toWorld(prim.a), toWorld(prim.b), penFor(prim.stroke, mmToWorld),
+      )];
+    case 'polyline':
+      // Γέμισμα κελιού. Ο πίνακας παράγει **μόνο** γεμισμένα κλειστά polylines (δες
+      // `fillPrimitive`), και το περίγραμμά τους είναι εξ ορισμού ομόχρωμο με το γέμισμα —
+      // άρα ένα `makeSolidFill` αρκεί· ένα δεύτερο `makePolyline` θα πρόσθετε αόρατη
+      // γεωμετρία σε κάθε βαμμένο κελί. (Ο χάρακας κλίμακας κάνει το αντίθετο, και σωστά:
+      // εκεί το περίγραμμα του κελιού είναι ορατό και το θέλει ο Τέκτονας, ο οποίος δεν
+      // ζωγραφίζει solid fills.)
+      if (!prim.fillHex) return [];
+      return [makeSolidFill(source, idFor(), prim.points.map(toWorld), prim.fillHex)];
     case 'text':
       return [
         makeText(source, idFor(), {
@@ -100,6 +147,12 @@ function mapTablePrimitive(
           // δηλαδή η προεπιλογή `alphabetic` — αυτό ακριβώς ήταν το σφάλμα των 1,5mm
           // της Φ.Β: γραμμή περιεχομένου ≠ ακμή γραμμής.
           vBaseline: 'alphabetic',
+          colorHex: prim.colorHex,
+          // Πάντα δηλωμένο (ακόμα και `false`): ο πίνακας **κατέχει** την τυπογραφία των
+          // κελιών του, οπότε ο κόμβος πρέπει να γεννηθεί και για τα κανονικά κείμενα —
+          // αλλιώς η γραμμή δεδομένων και η γραμμή κεφαλίδας θα έβγαιναν με διαφορετικό
+          // text style (group 7) για λόγο άσχετο με τον σχεδιαστή.
+          bold: prim.bold ?? false,
         }),
       ];
     default:
