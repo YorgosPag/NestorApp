@@ -25,6 +25,10 @@ import type { Entity, MTextEntity, TextEntity } from '../../types/entities';
 import { isTextLikeEntity, readMTextGeometry } from '../../types/entities';
 import type { DxfTextNode, TextRun } from '../../text-engine/types';
 import { serializeDxfTextNode } from '../../text-engine/serializer';
+// ADR-739 Φ.Ε/Φ2 βήμα 4 — «SHX ή TrueType;». Εισάγεται από το **φύλλο**, όχι από το barrel
+// `text-engine/fonts`: εκείνο ανακοινώνει και τον `font-upload.service`, δηλαδή θα έσερνε
+// ολόκληρο το Firebase SDK μέσα σε έναν writer που πρέπει να τρέχει και σε worker.
+import { dxfFontFileFor } from '../../text-engine/fonts/font-file-kind';
 import { ensureTextNode } from '../../text-engine/edit/ensure-text-node';
 import { DxfDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import { alignmentToHJust } from '../../utils/dxf-converter-helpers';
@@ -65,15 +69,27 @@ export interface TextAlign {
  * όνομα συμβόλου είναι ρίσκο σε παλαιότερους parsers (ο δικός μας κόβει με `trim()` στα άκρα
  * — ένα εσωτερικό κενό θα επιβίωνε, αλλά δεν κερδίζουμε τίποτα ρισκάροντας).
  */
-const BOLD_STYLE_SUFFIX = '-Bold';
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — με τα πλάγια οι παραλλαγές γίνονται **τέσσερις** ανά οικογένεια
+ * (`Arial`, `Arial-Bold`, `Arial-Italic`, `Arial-BoldItalic`). Δεν είναι πληθωρισμός: στο
+ * AutoCAD «Arial», «Arial Bold» και «Arial Italic» **είναι** τρία ξεχωριστά text styles,
+ * γιατί το βάρος και η κλίση ζουν στο style και όχι στην οντότητα.
+ *
+ * Οι λέξεις ενώνονται χωρίς δεύτερη παύλα (`-BoldItalic`, όχι `-Bold-Italic`) — ίδια σύμβαση
+ * με τα ονόματα όψεων της ίδιας της τυπογραφίας («Arial Bold Italic»).
+ */
+const STYLE_VARIANT_SEPARATOR = '-';
 
-export function textStyleName(fontFamily: string | undefined, bold = false): string {
+export function textStyleName(
+  fontFamily: string | undefined, bold = false, italic = false,
+): string {
   const f = fontFamily?.trim();
   // Χωρίς οικογένεια δεν υπάρχει «παραλλαγή» να ονομαστεί: το STANDARD είναι σιωπηρό style του
   // AutoCAD (κανένα record) και δεν μπορεί να αποκτήσει XDATA. Υποβάθμιση σε κανονικό βάρος —
   // δεν συμβαίνει για πίνακες, που πάντα δηλώνουν οικογένεια μέσω του `textNode` τους.
   if (!f || f.toUpperCase() === DEFAULT_STYLE) return DEFAULT_STYLE;
-  return bold ? `${f}${BOLD_STYLE_SUFFIX}` : f;
+  const variant = `${bold ? 'Bold' : ''}${italic ? 'Italic' : ''}`;
+  return variant ? `${f}${STYLE_VARIANT_SEPARATOR}${variant}` : f;
 }
 
 /** ADR-644 (#8) — the Greek-capable TrueType the export falls back to. The AutoCAD SHX `txt`/`txt.shx`
@@ -89,25 +105,18 @@ export const GREEK_CAPABLE_FONT = 'Arial.ttf';
 export function resolveExportFont(fontFamily: string | undefined): string {
   const f = fontFamily?.trim();
   if (!f || /^(txt|standard)(\.shx)?$/i.test(f)) return GREEK_CAPABLE_FONT;
-  // 🔴 ADR-739 Φ.Ε/Φ1 — **γυμνό `Arial` δεν είναι γραμματοσειρά, είναι `Arial.shx`.**
+  // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — **το χρέος της Φ1 ΕΚΛΕΙΣΕ.**
   //
   // Το group 3 είναι όνομα **αρχείου**, και το AutoCAD θεωρεί ένα όνομα χωρίς επέκταση
-  // **SHX** (προσθέτει `.shx` μόνο του). Μέχρι τη Φ1 το κείμενο πίνακα δεν είχε `textNode`,
-  // άρα η οικογένεια ήταν `''` και έπαιρνε τον κλάδο από πάνω → `Arial.ttf`. Μόλις η Φ1
-  // άρχισε να δηλώνει τυπογραφία, η οικογένεια έγινε `'Arial'` και έπεφτε **εδώ**, γράφοντας
-  // `3 → Arial` — δηλαδή αίτημα για `Arial.shx`, που **δεν υπάρχει**. Μετρημένο στο
-  // `Ισόγειο_Ισόγειο (5).dxf`: το style `Standard` είχε `Arial.ttf`, τα νέα `Arial` /
-  // `Arial-Bold` είχαν σκέτο `Arial` — και το AutoCAD υποκατέστησε γραμματοσειρά, οπότε
-  // **ούτε το έντονο του XDATA 1071 μπορούσε να εφαρμοστεί**.
+  // **SHX** (προσθέτει `.shx` μόνο του). Η Φ1 το πλήρωσε ζωντανά: γυμνό `Arial` γράφτηκε ως
+  // αίτημα για `Arial.shx`, το AutoCAD υποκατέστησε γραμματοσειρά και **ούτε το έντονο του
+  // XDATA 1071 μπορούσε να εφαρμοστεί**. Η Φ1 μπάλωσε **μόνο** το Arial (`/^arial$/i`) και
+  // κατέγραψε ρητά ότι κάθε άλλη γυμνή TrueType — π.χ. `Calibri` — μένει σπασμένη, γιατί
+  // «θέλει κατηγόρημα SHX ή TrueType; που δεν υπάρχει».
   //
-  // Το ίδιο το module ήδη δηλώνει το `Arial.ttf` ως την κανονική Unicode-ικανή όψη του —
-  // εδώ απλώς αναγνωρίζεται και όταν ζητηθεί με το όνομα της **οικογένειας**.
-  if (/^arial$/i.test(f)) return GREEK_CAPABLE_FONT;
-  // ⚠️ Γνωστό κενό, ρητά: κάθε ΑΛΛΗ γυμνή οικογένεια TrueType (π.χ. `Calibri`) εξακολουθεί να
-  // γράφεται αυτούσια και άρα να διαβάζεται ως SHX. Δεν μπορεί να λυθεί με μαντεψιά ονόματος —
-  // θέλει να ρωτηθεί ο font resolver «SHX ή TrueType;», που σήμερα δεν εκθέτει τέτοιο
-  // κατηγόρημα. Ανήκει στο χρέος της γραμματοσειράς (απόφαση Α3, Φ3).
-  return f;
+  // Το κατηγόρημα υπάρχει πλέον (`font-file-kind.ts`) και το μπάλωμα του Arial έφυγε: το
+  // `Arial` είναι απλώς η **πρώτη** από τις άπειρες TrueType που παίρνουν σωστή επέκταση.
+  return dxfFontFileFor(f);
 }
 
 /** The first real (text) run of a TEXT/MTEXT entity's `textNode`, when it has one. */
@@ -129,6 +138,15 @@ export function readTextEntityFamily(e: Entity): string {
  */
 export function readTextEntityBold(e: Entity): boolean {
   return firstRun(e)?.style?.bold === true;
+}
+
+/**
+ * ADR-739 Φ.Ε/Φ2 βήμα 4 — read the first-run **italic** flag (absent / no node → `false`).
+ * Τρίτος αδελφός των {@link readTextEntityFamily} / {@link readTextEntityBold}: όνομα style,
+ * record του πίνακα STYLE και XDATA/oblique παράγονται όλα από το **ίδιο** run.
+ */
+export function readTextEntityItalic(e: Entity): boolean {
+  return firstRun(e)?.style?.italic === true;
 }
 
 /**
@@ -205,7 +223,9 @@ export function emitMText(
   const charHeight = firstRunHeight(node) ?? geometry.fallbackHeight;
   // ADR-636 Φ2.4 (D.5) — real group 7 from the node's font (same derivation as the STYLE table).
   // ADR-739 Φ.Ε/Φ1 — μαζί με τη **παραλλαγή** (έντονο), γιατί το βάρος ζει στο style.
-  const styleName = textStyleName(readTextEntityFamily(e), readTextEntityBold(e));
+  const styleName = textStyleName(
+    readTextEntityFamily(e), readTextEntityBold(e), readTextEntityItalic(e),
+  );
 
   if (entityType === 'TEXT') {
     // R12 downgrade — no MTEXT: emit the (space-joined) content as plain TEXT (style carried). R12 is

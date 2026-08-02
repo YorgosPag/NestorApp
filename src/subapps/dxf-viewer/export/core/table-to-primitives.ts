@@ -153,6 +153,11 @@ function mapTablePrimitive(
           // αλλιώς η γραμμή δεδομένων και η γραμμή κεφαλίδας θα έβγαιναν με διαφορετικό
           // text style (group 7) για λόγο άσχετο με τον σχεδιαστή.
           bold: prim.bold ?? false,
+          // ADR-739 Φ.Ε/Φ2 βήμα 4 — ίδιο σκεπτικό με το `bold`: πάντα δηλωμένο.
+          italic: prim.italic ?? false,
+          // Η οικογένεια περνά **μόνο όταν υπάρχει**: ένα ρητό `undefined` θα ήταν το ίδιο
+          // με την απουσία, αλλά ένα literal εδώ θα ξαναέφτιαχνε το καρφωτό Arial.
+          ...(prim.fontFamily !== undefined && { fontFamily: prim.fontFamily }),
         }),
       ];
     default:

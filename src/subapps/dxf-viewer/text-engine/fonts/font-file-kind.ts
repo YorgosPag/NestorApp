@@ -67,6 +67,19 @@ export function fontFormatOfFileName(fileName: string): FontFormat | undefined {
   return FONT_EXTENSION_FORMATS[extensionOf(fileName)];
 }
 
+/**
+ * Όνομα αρχείου → **τυπογραφική οικογένεια** (`Arial.ttf` → `Arial`).
+ *
+ * Η αντίστροφη πράξη του {@link dxfFontFileFor}, και ο λόγος που ζουν στο ίδιο αρχείο: ο
+ * importer τη χρησιμοποιεί για να παράγει την οικογένεια από το group 3, ο exporter για να
+ * παράγει το XDATA `1000` από το ίδιο group 3. Δύο άκρα, **μία** αφαίρεση επέκτασης — αν
+ * αποκλίνουν, ένα αρχείο δεν κάνει round-trip στην ίδια του την εφαρμογή.
+ */
+export function fontFamilyOfFileName(fileName: string): string {
+  const dot = fileName.lastIndexOf('.');
+  return dot > 0 ? fileName.slice(0, dot) : fileName;
+}
+
 /** Οι δύο κόσμοι γραμματοσειράς που ξεχωρίζει το DXF: διανυσματικά σχήματα vs περιγράμματα. */
 export type FontKind = 'shx' | 'truetype';
 

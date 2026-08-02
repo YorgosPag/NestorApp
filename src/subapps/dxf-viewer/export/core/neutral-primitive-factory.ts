@@ -229,6 +229,16 @@ export interface NeutralTextOptions {
    * αλλαγή· `true`/`false` = «την κατέχω» ⇒ γεννιέται `textNode`. Δες {@link makeText}.
    */
   readonly bold?: boolean;
+  /**
+   * ADR-739 Φ.Ε/Φ2 βήμα 4 — **πλάγια**. Ίδια σύμβαση με το {@link bold}: `undefined` = καμία
+   * άποψη ⇒ ο κόμβος δεν γεννιέται γι' αυτό τον λόγο.
+   */
+  readonly italic?: boolean;
+  /**
+   * ADR-739 Φ.Ε/Φ2 βήμα 4 — η **τυπογραφική οικογένεια**. Καταλήγει στο `RunStyle.fontFamily`,
+   * απ' όπου ο `readTextEntityFamily` την ανεβάζει σε group 7 + STYLE record.
+   */
+  readonly fontFamily?: string;
 }
 
 /**
@@ -261,6 +271,15 @@ function neutralTextNode(opts: NeutralTextOptions): TextEntity['textNode'] {
     ...DEFAULT_RUN_STYLE,
     height: opts.height,
     bold: opts.bold ?? false,
+    // ADR-739 Φ.Ε/Φ2 βήμα 4 — τα πλάγια μπαίνουν στο **run**, όπως τα έντονα: εκεί τα
+    // διαβάζουν και οι τρεις αναγνώστες (group 7 του DXF, `textStyle` του PDF, ύψος του ΤΕΚ)
+    // χωρίς κανείς να μάθει νέο πεδίο.
+    italic: opts.italic ?? false,
+    // ⚠️ Η **υπογράμμιση** ΔΕΝ μπαίνει εδώ, παρότι το `RunStyle` έχει το πεδίο: στην
+    // αποδομημένη διαδρομή έχει ήδη γίνει **γραμμή** στο επίπεδο των primitives (δες
+    // `table-layout-to-primitives`). Ένα δεύτερο `underline: true` στο run θα σήμαινε ότι ο
+    // επόμενος αναγνώστης του AST τη ζωγραφίζει **δεύτερη φορά**, μισό pixel παραπέρα.
+    ...(opts.fontFamily !== undefined && { fontFamily: opts.fontFamily }),
   });
   return makeNode([makeParagraph([run])], {
     attachment: ALIGNMENT_TO_ATTACHMENT[opts.alignment],
@@ -282,7 +301,14 @@ export function makeText(source: Entity, id: string, opts: NeutralTextOptions): 
     // Ο κόμβος γεννιέται **μόνο** όταν ο καλών δηλώνει άποψη για την τυπογραφία. Τα σύμβολα
     // σημείωσης και ο χάρακας κλίμακας δεν δηλώνουν ⇒ μένουν χωρίς `textNode`, ακριβώς όπως
     // πριν (group 7 = STANDARD, κανένα STYLE record, μηδέν μεταβολή στα byte τους).
-    ...(opts.bold !== undefined ? { textNode: neutralTextNode(opts) } : {}),
+    //
+    // ADR-739 Φ.Ε/Φ2 βήμα 4 — **οποιοδήποτε** από τα τρία αρκεί: μια οντότητα που δηλώνει
+    // μόνο οικογένεια (χωρίς άποψη για βάρος) οφείλει να πάρει το style της, αλλιώς το
+    // χειριστήριο γραμματοσειράς του βήματος 5 θα ρύθμιζε κάτι που δεν τυπώνεται — δηλαδή
+    // ακριβώς το ελάττωμα που η απόφαση Α1 βάζει αυτό το βήμα να προλάβει.
+    ...(opts.bold !== undefined || opts.italic !== undefined || opts.fontFamily !== undefined
+      ? { textNode: neutralTextNode(opts) }
+      : {}),
   };
 }
 

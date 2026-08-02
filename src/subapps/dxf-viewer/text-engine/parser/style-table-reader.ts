@@ -9,6 +9,9 @@
  */
 
 import type { DxfStyleTableEntry } from '../types/text-ast.types';
+// ADR-739 Φ.Ε/Φ2 βήμα 4 — η αφαίρεση επέκτασης προάχθηκε σε φύλλο: ο exporter παράγει το
+// XDATA `1000` με την ΙΔΙΑ πράξη με την οποία ο importer παράγει την οικογένεια.
+import { fontFamilyOfFileName } from '../fonts/font-file-kind';
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -48,7 +51,7 @@ export function styleEntryDefaults(entry: DxfStyleTableEntry): {
   obliqueAngle: number;
 } {
   return {
-    fontFamily: stripExtension(entry.fontFile) || 'Standard',
+    fontFamily: fontFamilyOfFileName(entry.fontFile) || 'Standard',
     height: entry.height,
     widthFactor: entry.widthFactor || 1.0,
     obliqueAngle: entry.obliqueAngle,
@@ -170,10 +173,4 @@ function groupCodesToEntry(codes: GroupCodeMap): DxfStyleTableEntry {
     // ADR-739 Φ.Ε/Φ1 — TrueType bold/italic (XDATA 1071), όταν το αρχείο τα δηλώνει.
     ...(extendedFont ? { extendedFont } : {}),
   };
-}
-
-function stripExtension(filename: string): string {
-  const dot = filename.lastIndexOf('.');
-  if (dot > 0) return filename.slice(0, dot);
-  return filename;
 }

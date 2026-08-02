@@ -36,6 +36,7 @@ import type {
   TableLayout,
   TableTextRun,
 } from './table-layout-types';
+import { tableUnderlineGeometry } from './table-text-decoration';
 
 /** Πού κάθεται η πάνω-αριστερή γωνία του πίνακα μέσα στο φύλλο (sheet-mm). */
 export interface TableOriginMm {
@@ -58,6 +59,65 @@ function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitiv
     colorHex: run.colorHex,
     align: run.hAlign,
     bold: run.bold,
+    // ADR-739 Φ.Ε/Φ2 βήμα 4 — τα πλάγια δηλώνονται **πάντα** (όπως τα έντονα από τη Φ1): ο
+    // πίνακας κατέχει την τυπογραφία των κελιών του, οπότε ένα ρητό `false` είναι δήλωση
+    // «κανονική όψη», όχι σιωπή — αλλιώς μια γραμμή δεδομένων θα κληρονομούσε το style μιας
+    // πλάγιας κεφαλίδας για λόγο άσχετο με τον σχεδιαστή.
+    italic: run.italic,
+    // Απούσα οικογένεια = «η προεπιλογή του μετρητή». Δεν γεμίζεται με literal εδώ: ένα
+    // `?? 'Arial'` θα ήταν ακριβώς το καρφωτό `arial` που το βήμα 3 (Α3) μόλις ξερίζωσε.
+    ...(run.fontFamily !== undefined && { fontFamily: run.fontFamily }),
+  };
+}
+
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — **η υπογράμμιση ταξιδεύει ως γεωμετρία, όχι ως κωδικός ελέγχου.**
+ *
+ * ## Γιατί ΟΧΙ το `%%u` του DXF
+ * Το `%%u` είναι ο κωδικός ελέγχου υπογράμμισης σε οντότητα `TEXT`, και η προφανής επιλογή —
+ * μέχρι να διαβαστούν τρία μετρημένα γεγονότα:
+ *
+ * 1. **Η ίδια η τεκμηρίωση της Autodesk** («Control Codes and Special Characters») λέει ότι
+ *    ο κωδικός δουλεύει «with standard AutoCAD text fonts (**SHX**) and Adobe PostScript
+ *    fonts». **Η TrueType δεν αναφέρεται** — και τα κελιά του πίνακα είναι TrueType (Α3).
+ * 2. **Ο δικός μας importer δεν αποκωδικοποιεί `%%u`**: ο tokenizer γνωρίζει `%%c`/`%%d`/`%%p`
+ *    και τα MTEXT `\L`/`\l`, τίποτε άλλο. Γράφοντας `%%u` θα εξάγαμε αρχείο που **η ίδια μας
+ *    η εφαρμογή** ξαναδιαβάζει ως το κυριολεκτικό κείμενο «%%uΣΥΝΟΛΟ».
+ * 3. Ο κωδικός **δεν ισχύει σε MTEXT** — δηλαδή θα πέθαινε στη native `ACAD_TABLE` διαδρομή
+ *    της Φ.Ε, που είναι MTEXT-based.
+ *
+ * ## Τι κερδίζει η γεωμετρία
+ * Ένα `line` primitive περνά από την **υπάρχουσα** διαδρομή και φτάνει σε **τέσσερα**
+ * backends χωρίς κώδικα ανά backend: καμβάς προεπισκόπησης, PDF, DXF **και ΤΕΚ** — ο
+ * Τέκτονας δεν έχει καμία έννοια υπογράμμισης, αλλά ζωγραφίζει γραμμές. Είναι το **μόνο**
+ * κομμάτι της τυπογραφίας αυτού του βήματος που φτάνει και στα τέσσερα.
+ *
+ * Και επειδή παράγεται στο πλαίσιο του **φύλλου**, η στροφή του πίνακα εφαρμόζεται πάνω της
+ * από την ίδια `tableFrameToWorld` με κάθε άλλη γραμμή — δηλαδή η υπογράμμιση **δεν μπορεί**
+ * να μείνει οριζόντια κάτω από γερμένο κείμενο. Στον καμβά αυτό χρειάστηκε ρητή προσοχή
+ * (§28.10.3)· εδώ είναι δομικά αδύνατο.
+ *
+ * ## Γιατί `line` με πένα και όχι γεμισμένο ορθογώνιο
+ * Ένα γεμισμένο ορθογώνιο (ό,τι κάνει το explode κειμένου) θα ήταν εξίσου ακριβές σε καμβά
+ * και PDF, αλλά **αόρατο στον Τέκτονα**, που δεν ζωγραφίζει solid fills (δες
+ * `mapTablePrimitive`). Η γραμμή με πάχος = το κλάσμα του `em` κουμπώνει στον κατάλογο ISO
+ * μέσω του υπάρχοντος `penFor` — και ένα υπογραμμισμένο σύνολο σε φύλλο εκτύπωσης **είναι**
+ * μολύβι, όχι επιφάνεια.
+ */
+function underlinePrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitive | null {
+  if (!run.underline || run.advanceMm == null) return null;
+  const g = tableUnderlineGeometry(run.heightMm, run.advanceMm, run.hAlign);
+  if (!(g.width > 0)) return null;
+  const p = translate(run.position, origin);
+  const y = p.y + g.y;
+  return {
+    kind: 'line',
+    a: { x: p.x + g.x, y },
+    b: { x: p.x + g.x + g.width, y },
+    // Το μελάνι της υπογράμμισης είναι το μελάνι του κειμένου — όπως στον καμβά, όπου το
+    // `fillRect` κληρονομεί το `ctx.fillStyle` του run, και όπως στο AutoCAD, όπου η γραμμή
+    // υπογράμμισης παίρνει το χρώμα του ίδιου του κειμένου.
+    stroke: { colorHex: run.colorHex, widthMm: g.thickness },
   };
 }
 
@@ -180,7 +240,13 @@ export function tableLayoutToPrimitives(
   for (const row of layout.rows) {
     pushHorizontalAt(row.yMm);
     for (const cell of byRow.get(row.id) ?? []) {
-      if (cell.text) out.push(textPrimitive(cell.text, origin));
+      if (!cell.text) continue;
+      out.push(textPrimitive(cell.text, origin));
+      // Η υπογράμμιση **μετά** το κείμενο του ίδιου κελιού: σε καμβά και PDF η σειρά είναι το
+      // z-order, και ο ζωγράφος της οθόνης τη βάζει κι αυτός μετά το `fillText` (μέσα στην
+      // ίδια στροφή). Ίδια σειρά ⇒ ίδιο αποτέλεσμα σε ημιδιαφανή μελάνια.
+      const underline = underlinePrimitive(cell.text, origin);
+      if (underline) out.push(underline);
     }
   }
 

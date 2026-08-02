@@ -25,13 +25,15 @@
  * @see docs/centralized-systems/reference/adrs/ADR-608-vector-pdf-export.md
  */
 
-import type { jsPDF } from 'jspdf';
+import type { jsPDF, Matrix } from 'jspdf';
 import type { Entity, HatchEntity, TextEntity } from '../../types/entities';
 import type { VectorTextBaselineHint } from '../../export/core/annotation-to-primitives';
 import type { Point2D } from '../../rendering/types/Types';
 import type { DimensionEntity } from '../../types/dimension';
 import { applyPlotColor, type PlotColorRole, type PrintColorPolicy } from '../../config/print-color-policy';
 import { parseHex, type Rgb } from '../../config/color-math';
+// ADR-739 Φ.Ε/Φ2 βήμα 4 — η ΜΙΑ γωνία κλίσης (ISO 3098), κοινή με το `obliqueAngle` του DXF.
+import { TEXT_OBLIQUE_ITALIC_DEG } from '../../config/text-rendering-config';
 import { tessellateArcDegrees } from '../../rendering/entities/shared/geometry-arc-utils';
 import { rectangleEntityVertices } from '../../rendering/entities/shared/geometry-utils';
 import {
@@ -178,6 +180,40 @@ function resolveLineWidthMm(e: Entity): number {
  */
 const SYNTHETIC_BOLD_STROKE_RATIO = 0.03;
 
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — **τα πλάγια στο PDF: ίδιο δομικό αδιέξοδο, ίδια θεραπεία.**
+ *
+ * Ο `registerGreekFont` δηλώνει **όλα** τα ύφη πάνω στο ίδιο `Roboto-Regular.ttf` (ώστε το
+ * `jspdf-autotable` να μη γυρίσει σε Helvetica), οπότε ένα `setFont(…, 'italic')` **δεν
+ * γέρνει τίποτα** — ακριβώς ό,τι συνέβαινε με το έντονο (§28.9.4). Η θεραπεία είναι επίσης
+ * η ίδια: **συνθετική** κλίση, με τον μηχανισμό που χρησιμοποιούν και οι browsers όταν λείπει
+ * η πλάγια όψη — **διάτμηση** (shear) του text matrix.
+ *
+ * Το jsPDF το επιτρέπει ρητά: το `options.angle` δέχεται `number | Matrix`, και όταν είναι
+ * `Matrix` το χρησιμοποιεί **αυτούσιο** ως πίνακα μετασχηματισμού κειμένου (`text()`,
+ * `angle instanceof Matrix → transformationMatrix = angle`). Άρα δεν παρακάμπτεται τίποτα
+ * και δεν γράφεται ωμό PDF operator.
+ *
+ * ⚠️ **Η γωνία δεν είναι τοπική**: είναι η ίδια `TEXT_OBLIQUE_ITALIC_DEG` (ISO 3098, 15°) που
+ * γράφει και το DXF ως `obliqueAngle` για SHX. Δεύτερος αριθμός εδώ θα σήμαινε ότι το ίδιο
+ * κελί γέρνει αλλιώς στο χαρτί και αλλιώς στο σχέδιο.
+ */
+const ITALIC_SHEAR = Math.tan((TEXT_OBLIQUE_ITALIC_DEG * Math.PI) / 180);
+
+/**
+ * Ο πίνακας κειμένου για γωνία `rotationDeg` (μοίρες, όπως τα δέχεται το jsPDF) με προαιρετική
+ * συνθετική κλίση. Αναπαράγει **ακριβώς** τον πίνακα που χτίζει το ίδιο το jsPDF για αριθμητικό
+ * `angle` (`cos, sin, −sin, cos`) — με μηδενική κλίση είναι byte-identical με πριν — και
+ * προ-πολλαπλασιάζει τη διάτμηση, ώστε η κλίση να εφαρμόζεται στο **σύστημα του κειμένου** και
+ * να στρίβει μαζί του. Ένας πίνακας [a b c d e f] απεικονίζει (x,y) → (a·x + c·y, b·x + d·y).
+ */
+function italicTextMatrix(pdf: jsPDF, rotationDeg: number): Matrix {
+  const a = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  return pdf.Matrix(cos, sin, cos * ITALIC_SHEAR - sin, sin * ITALIC_SHEAR + cos, 0, 0);
+}
+
 function emitText(
   pdf: jsPDF, e: Entity, toPaper: (p: Point2D) => Point2D, scale: number,
 ): void {
@@ -198,11 +234,16 @@ function emitText(
   // `textNode` — καμία δεύτερη ανάγνωση του AST εδώ (`extractFirstRunStyle` είναι ο SSoT).
   const bold = t.textStyle?.bold === true;
   if (bold) pdf.setLineWidth((fontSizePt / PT_PER_MM) * SYNTHETIC_BOLD_STROKE_RATIO);
+  // ADR-739 Φ.Ε/Φ2 βήμα 4 — τα πλάγια έρχονται από το ΙΔΙΟ πρώτο run με το έντονο.
+  const italic = t.textStyle?.italic === true;
   // World rotation is CCW in a Y-up frame; on the Y-down page it reads as CW → negate.
+  const angleDeg = -(t.rotation ?? 0);
   pdf.text(sanitizeText(t.text), p.x, p.y, {
     align,
     baseline: baseline ?? 'alphabetic',
-    angle: -(t.rotation ?? 0),
+    // Χωρίς πλάγια περνά ο **αριθμός**, όπως πάντα: το jsPDF χτίζει τότε μόνο του τον ίδιο
+    // πίνακα στροφής, και καμία υπάρχουσα σελίδα δεν αλλάζει ούτε κατά byte.
+    angle: italic ? italicTextMatrix(pdf, angleDeg) : angleDeg,
     // Το περίγραμμα χρησιμοποιεί το **draw colour**, που το `applyEntityStyle` έχει ήδη θέσει
     // ίσο με το fill colour της ίδιας οντότητας ⇒ το συνθετικό πάχος βγαίνει στο χρώμα του
     // γράμματος, ποτέ σε δεύτερο χρώμα.

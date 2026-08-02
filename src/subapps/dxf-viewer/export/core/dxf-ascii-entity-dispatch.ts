@@ -34,6 +34,7 @@ import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
 import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 import {
   emitText, emitMText, alignFromTextEntity, textStyleName, readTextEntityFamily, readTextEntityBold,
+  readTextEntityItalic,
 } from './dxf-ascii-text-writer';
 import {
   emit3DFace,
@@ -128,7 +129,11 @@ export function writeEntity(
         // ADR-636 Φ2.4 (D.5) — real group 7 (AutoCAD path); Tekton `explode` → emitText default STANDARD.
         // ADR-739 Φ.Ε/Φ1 — η παραλλαγή (έντονο) είναι μέρος του ονόματος: το DXF δηλώνει το
         // βάρος στο STYLE (XDATA 1071), όχι στην οντότητα.
-        explode ? undefined : textStyleName(readTextEntityFamily(e), readTextEntityBold(e)), r2018,
+        // ADR-739 Φ.Ε/Φ2 βήμα 4 — μαζί και τα **πλάγια**: ίδιος μηχανισμός, τέσσερις παραλλαγές.
+        explode
+          ? undefined
+          : textStyleName(readTextEntityFamily(e), readTextEntityBold(e), readTextEntityItalic(e)),
+        r2018,
       );
       break;
     case 'mtext':
