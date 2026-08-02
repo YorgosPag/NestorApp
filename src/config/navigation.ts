@@ -24,7 +24,9 @@ import type { LucideIcon } from 'lucide-react';
 
 // 🏢 BACKWARD COMPATIBILITY: Legacy imports maintained
 // Define MenuItem locally για compatibility fix
-interface MenuItem {
+// ADR-748 Φάση 3: εξάγεται ώστε το `useJobFilteredNavigation` να μιλά τον ίδιο
+// τύπο με το `AppSidebar` — αλλιώς ο ένας εκ των δύο θα τον ξαναδήλωνε.
+export interface MenuItem {
   title: string;
   icon: LucideIcon;
   href: string;

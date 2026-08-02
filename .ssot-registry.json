@@ -1778,6 +1778,31 @@
       ],
       "tier": 6
     },
+    "_comment_adr748_phase3": "=== ADR-748 ΦΑΣΗ 3 (2026-08-02): ο ζωντανός υπολογισμός δουλειών + το φίλτρο sidebar/dashboard ===",
+    "jobs-access": {
+      "ssotFile": "src/config/jobs-access.ts",
+      "description": "ADR-748 Φάση 3 — Ο ΖΩΝΤΑΝΟΣ υπολογισμός «ποιες δουλειές έχει ο Χ» (Ε5.α/Ε5.ζ) + το φίλτρο ορατότητας sidebar/dashboard. Καθαρή συνάρτηση, μηδέν I/O, πρότυπο decideAssetPackAccess (ADR-655). 🔴 Η απόφαση είναι ΤΡΙΩΝ καταστάσεων, όχι boolean: granted | unknown | none — γιατί από τις ΤΡΕΙΣ πηγές δικαιωμάτων (Π-15) στον browser φτάνει ΜΙΑ (μετρημένο: claims-handler.ts:159-164). ΚΡΥΒΕΤΑΙ ΜΟΝΟ ΤΟ none· το unknown ΠΟΤΕ — αλλιώς ο external_user με ρόλο μόνο σε έργο κοιτάζει άδεια οθόνη (Ε-5.1, το ελάττωμα του ACC). Οι αναφορές ΚΛΗΡΟΝΟΜΟΥΝ από την πηγή τους (Ε14.β) — ετικέτα ανά υπο-αναφορά = αντιγραφή ταξινόμησης = Υ-5. Δεύτερος υπολογισμός δουλειών ή δεύτερο φίλτρο ορατότητας αλλού = διπλότυπο που αποκλίνει σιωπηλά.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+(decideJobAccess|resolveJobAccess|resolveAvailableJobs|pickDefaultJob|isRouteVisibleForJob|isReportSubItemVisibleForJob|isTileVisibleForJob|filterItemsByJob|filterTilesByJob)\\b",
+        "type\\s+Job(Selection|AccessDecision|AccessReason)\\s*="
+      ],
+      "allowlist": [
+        "src/config/jobs-access.ts"
+      ],
+      "tier": 6
+    },
+    "effective-permissions-client": {
+      "ssotFile": "src/hooks/useEffectivePermissions.ts",
+      "description": "ADR-748 Φάση 3 — Η ΜΙΑ πηγή για «τι δικαιώματα βλέπει ο browser». Ζούσε inline μέσα στο app-sidebar.tsx (ο μόνος ζωντανός καλών του createNavigationConfig)· η Φάση 3 πρόσθεσε δύο ακόμη καταναλωτές ⇒ κεντρικοποιήθηκε πριν γεννηθεί τριπλότυπο (N.0.2). Δηλώνει ΡΗΤΑ ποιες πηγές απάντησαν (availableSources) — αυτό τροφοδοτεί τον κανόνα «το unknown δεν κρύβεται» του jobs-access. ⚠️ ΔΕΝ προσθέτει/αφαιρεί δικαίωμα: μεταφέρει αυτούσια τη συμπεριφορά (fallback admin_access ΜΟΝΟ για super_admin — ο company_admin ΔΕΝ μπαίνει, θα ήταν προσθήκη ορατότητας που το §10/Ε5.η απαγορεύει).",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+useEffectivePermissions\\b",
+        "CLIENT_AVAILABLE_PERMISSION_SOURCES\\s*(=|:)"
+      ],
+      "allowlist": [
+        "src/hooks/useEffectivePermissions.ts"
+      ],
+      "tier": 6
+    },
     "_comment_adr314_phaseD2c": "=== ADR-314 PHASE D.2c (2026-04-19): registry gap — unified-tabs-factory root ===",
     "unified-tabs-factory": {
       "ssotFile": "src/config/unified-tabs-factory.ts",

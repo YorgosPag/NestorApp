@@ -17,8 +17,13 @@ export const STORAGE_KEYS = {
   // Language / i18n
   PREFERRED_LANGUAGE: 'preferred-language',
 
-  // Workspace
+  // Workspace = ΟΡΓΑΝΙΣΜΟΣ (ADR-032). ⚠️ ΔΕΝ είναι η «δουλειά» — βλ. ACTIVE_JOB.
   ACTIVE_WORKSPACE: 'nestor_active_workspace_id',
+
+  // Job = ΔΟΥΛΕΙΑ (ADR-748 Ε6.στ/Π-9) — ο άξονας 3, ανεξάρτητος του οργανισμού.
+  // Ε5.β: από όλη τη λογική των δουλειών αποθηκεύεται **μόνο** ποια ήταν ενεργή·
+  // η λίστα των διαθέσιμων υπολογίζεται ΠΑΝΤΑ ζωντανά (Ε5.α — καμία αντιγραφή).
+  ACTIVE_JOB: 'nestor_active_job',
 
   // User type
   USER_TYPE: 'geo-alert-user-type',

@@ -231,6 +231,14 @@
     "administration": {
       "label": "Administration",
       "description": "Users, roles, company settings"
+    },
+    "switch": {
+      "all": "All jobs",
+      "ariaLabel": "Active job",
+      "tooltip": "What you are working on right now. Changes no permissions — only what is shown.",
+      "restoreAll": "Show everything",
+      "hiddenCount": "{count, plural, one {# hidden} other {# hidden}}",
+      "unknownSource": "Not confirmed by the browser — your project role does not reach here."
     }
   },
   "sidebar": {

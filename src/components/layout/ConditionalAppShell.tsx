@@ -45,6 +45,7 @@ import { SharedPropertiesProvider } from '@/contexts/SharedPropertiesProvider';
 import { CacheProvider } from '@/contexts/CacheProvider';
 import { WebSocketProvider } from '@/contexts/WebSocketContext';
 import { BuildingsNoUnitsProvider } from '@/contexts/BuildingsNoUnitsContext';
+import { ActiveJobProvider } from '@/contexts/ActiveJobContext';
 // 🏢 ENTERPRISE: Global components that need NotificationProvider
 import { NotificationDrawer } from '@/components/NotificationDrawer.enterprise';
 import { VoiceAIPanel } from '@/components/voice-ai/VoiceAIPanel';
@@ -160,6 +161,11 @@ function AppLayout({ children, sidebarDefaultOpen }: { children: React.ReactNode
                 <NavigationProvider>
                   <PhotoPreviewProvider>
                     <BuildingsNoUnitsProvider>
+                      {/* ADR-748 Φάση 3 — ο άξονας 3 (ΔΟΥΛΕΙΑ).
+                          ⚠️ ΔΕΝ είναι ο `WorkspaceProvider` από πάνω: εκείνος
+                          είναι ο ΟΡΓΑΝΙΣΜΟΣ (ADR-032, άξονας 1, Φάση 4). Δύο
+                          ανεξάρτητοι άξονες, δύο providers (Ε6.β/Ε6.στ). */}
+                      <ActiveJobProvider>
                       <SidebarProvider defaultOpen={sidebarDefaultOpen}>
                         <div className={layout.shellAppContainer}>
                           <AppSidebar />
@@ -171,6 +177,7 @@ function AppLayout({ children, sidebarDefaultOpen }: { children: React.ReactNode
                           </SidebarInset>
                         </div>
                       </SidebarProvider>
+                      </ActiveJobProvider>
                     </BuildingsNoUnitsProvider>
                   </PhotoPreviewProvider>
                 </NavigationProvider>

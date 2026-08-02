@@ -12,14 +12,13 @@ import {
 import { SidebarLogo } from "@/components/sidebar/sidebar-logo"
 import { SidebarMenuSection } from "@/components/sidebar/sidebar-menu-section"
 // 🗑️ REMOVED (2026-01-11): SidebarUserFooter - User management moved to header dropdown only
-import { getMainMenuItems, getToolsMenuItems, getSettingsMenuItems } from "@/config/navigation"
+import { useJobFilteredNavigation } from "@/hooks/useJobFilteredNavigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
 import { useBuildingsNoUnits } from "@/contexts/BuildingsNoUnitsContext"
 import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
 import { MapPin } from "lucide-react"
 import { useSidebar } from "@/components/ui/sidebar"
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects"
-import { useAuth } from "@/auth/contexts/AuthContext"
 import '@/lib/design-system';
 
 export function AppSidebar() {
@@ -27,30 +26,24 @@ export function AppSidebar() {
     const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
     const { t } = useTranslationLazy('navigation')
     const { isMobile, setOpenMobile } = useSidebar()
-    const { user } = useAuth()
 
-    // 🏢 ENTERPRISE: Build user permissions with role-based fallback
-    const userPermissions = React.useMemo(() => {
-        // Start with explicit permissions from custom claims
-        const permissions = user?.permissions ? [...user.permissions] : []
-
-        // 🏢 ENTERPRISE: Fallback - Admin users automatically get admin_access
-        // This handles cases where Firebase custom claims haven't been set yet
-        if (user?.globalRole === 'admin' || user?.globalRole === 'super_admin') {
-            if (!permissions.includes('admin_access')) {
-                permissions.push('admin_access')
-            }
-        }
-
-        return permissions
-    }, [user?.permissions, user?.globalRole])
+    // 🏢 ADR-748 Φάση 3: τα δύο διαδοχικά φίλτρα (δικαίωμα → ενεργή δουλειά)
+    // ζουν πλέον σε ΕΝΑΝ hook, κοινό με τον διακόπτη δουλειάς του header ώστε
+    // ο δείκτης «Χ κρυμμένα» να μετρά ό,τι ακριβώς λείπει από εδώ.
+    // (Ο inline υπολογισμός permissions που ζούσε εδώ μετακόμισε αυτούσιος στο
+    //  `useEffectivePermissions` — ήταν ο μόνος του είδους του και η Φάση 3 του
+    //  πρόσθετε δύο ακόμη καταναλωτές.)
+    const {
+        mainMenuItems: jobFilteredMainItems,
+        toolsMenuItems,
+        settingsMenuItems,
+    } = useJobFilteredNavigation()
     const hasBuildingsWithNoUnits = useBuildingsNoUnits();
 
     const mainMenuItems = React.useMemo(
         () => {
-            const items = getMainMenuItems(userPermissions);
-            if (!hasBuildingsWithNoUnits) return items;
-            return items.map(item => {
+            if (!hasBuildingsWithNoUnits) return jobFilteredMainItems;
+            return jobFilteredMainItems.map(item => {
                 if (!item.subItems) return item;
                 return {
                     ...item,
@@ -62,15 +55,7 @@ export function AppSidebar() {
                 };
             });
         },
-        [userPermissions, hasBuildingsWithNoUnits]
-    )
-    const toolsMenuItems = React.useMemo(
-        () => getToolsMenuItems(userPermissions),
-        [userPermissions]
-    )
-    const settingsMenuItem = React.useMemo(
-        () => getSettingsMenuItems(userPermissions),
-        [userPermissions]
+        [jobFilteredMainItems, hasBuildingsWithNoUnits]
     )
 
     // Handle navigation click with mobile sidebar auto-close
@@ -116,7 +101,7 @@ export function AppSidebar() {
                 />
 
                 <SidebarMenuSection
-                    items={settingsMenuItem}
+                    items={settingsMenuItems}
                     className="mt-auto"
                     expandedItems={expandedItems}
                     onToggleExpanded={toggleExpanded}

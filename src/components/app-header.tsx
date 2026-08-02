@@ -12,6 +12,7 @@ import { LanguageSwitcher } from "@/components/header/language-switcher"
 import { HelpButton } from "@/components/header/help-button"
 import { VoiceAssistantButton } from "@/components/header/voice-assistant-button"
 import { CompanySwitcher } from "@/components/header/CompanySwitcher"
+import { JobSwitch } from "@/components/header/JobSwitch"
 import { NotificationBell } from "@/components/NotificationBell.enterprise"
 import { useFirestoreNotifications } from "@/hooks/useFirestoreNotifications"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
@@ -96,6 +97,11 @@ export function AppHeader() {
         </button>
 
         <div className="flex items-center gap-2 px-2 flex-shrink-0">
+          {/* ADR-748 Ε6.β — η ΔΟΥΛΕΙΑ έχει δικό της, μόνιμα ορατό χειριστήριο,
+              ΕΞΩ από το μονοπάτι *οργανισμός › έργο* (πρότυπο: Figma Dev Mode).
+              Το μονοπάτι της Φάσης 4 θα χτιστεί ΑΡΙΣΤΕΡΑ — δεν αντικαθιστά
+              αυτό εδώ. ⚠️ Το `CompanySwitcher` δίπλα είναι ο ΟΡΓΑΝΙΣΜΟΣ. */}
+          <JobSwitch />
           <CompanySwitcher />
           <LanguageSwitcher />
           <Separator orientation="vertical" className="h-6 hidden sm:block" />

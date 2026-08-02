@@ -16,6 +16,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';
+import { filterTilesByJob } from '@/config/jobs-access';
+import { useActiveJob } from '@/contexts/ActiveJobContext';
+import { HiddenItemsBadge } from '@/components/job/HiddenItemsBadge';
 import { DashboardWelcome } from './DashboardWelcome';
 import { QuickActionsStrip } from './QuickActionsStrip';
 import { NavigationGrid, type NavigationTile } from './NavigationGrid';
@@ -132,22 +135,34 @@ function useToolsTiles(t: (key: string) => string): NavigationTile[] {
 export function DashboardHome() {
   const { user } = useAuth();
   const { t } = useTranslation('dashboard');
+  // ADR-748 Φάση 3 (§14.2): τα πλακίδια είναι πλέον **της ενεργής δουλειάς**.
+  // Οι ορισμοί παραμένουν εδώ επίτηδες — το μητρώο απαντά *ποια* πλακίδια, όχι
+  // *πώς* δείχνουν (εικονίδιο/χρώμα/περιγραφή). Δεύτερη λίστα εμφάνισης μέσα
+  // στο μητρώο θα ήταν διπλότυπο που αποκλίνει.
+  const { activeJob, resetToAll } = useActiveJob();
 
   const mainTiles = useMainMenuTiles(t);
   const toolsTiles = useToolsTiles(t);
+
+  const main = filterTilesByJob(mainTiles, activeJob);
+  const tools = filterTilesByJob(toolsTiles, activeJob);
+  const hiddenCount = main.hiddenCount + tools.hiddenCount;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
       <DashboardWelcome displayName={user?.displayName ?? null} />
       <OnboardingBanner />
       <QuickActionsStrip />
+      {/* Α-3 / NN/g: ο δείκτης στέκει **εκεί που λείπουν** τα πλακίδια — όχι
+          μόνο στο header, όπου μετρά τα στοιχεία του sidebar. */}
+      <HiddenItemsBadge count={hiddenCount} onRestore={resetToAll} className="mb-2 inline-block" />
       <NavigationGrid
         sectionLabel={t('home.sections.mainMenu')}
-        tiles={mainTiles}
+        tiles={[...main.visible]}
       />
       <NavigationGrid
         sectionLabel={t('home.sections.tools')}
-        tiles={toolsTiles}
+        tiles={[...tools.visible]}
       />
     </main>
   );
