@@ -495,6 +495,125 @@ describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η �
     });
   });
 
+  /**
+   * 🔴 ADR-739 §27.16 Ε6 — **Η ΣΥΡΣΗ ΠΡΕΠΕΙ ΝΑ ΕΠΙΒΙΩΝΕΙ ΤΩΝ ΔΙΚΩΝ ΤΗΣ ΕΓΓΡΑΦΩΝ.**
+   *
+   * Μετρημένο ζωντανά (02/08, raw-CDP σε πραγματικό Chrome, πίνακας `ent_1a7da856`):
+   * σύρση `A2 → C4` πάνω σε 7×3 πίνακα έδωσε **καμία επιλογή**· και όταν το πάτημα έπεφτε
+   * στο **ήδη ενεργό** κελί, η επιλογή **πάγωνε στο 2×2** — στο πρώτο κελί που διασχίστηκε.
+   * Ο δείκτης έφτανε αποδεδειγμένα ως το C4 (η ίδια η εφαρμογή δήλωνε `X: 6,0331`) και
+   * **14 `mousemove` με πατημένο κουμπί** έφταναν στο παράθυρο.
+   *
+   * ## Γιατί ΚΑΝΕΝΑ από τα 2.716 tests δεν το είδε — η ίδια κλάση, τρίτη φορά
+   * Ο κύκλος ζωής της σύρσης δοκιμαζόταν **μόνος του** (`table-cell-drag-session.test.ts`),
+   * με το store **mock-αρισμένο επίτηδες** — άρα το `setTableCellSelection` δεν παρήγαγε
+   * ποτέ νέο δρομέα και τίποτα δεν ξανα-αποδιδόταν. Ο ζωντανός χειριστής δοκιμαζόταν
+   * **μόνος του** εδώ — αλλά **δεν έσερνε ποτέ**. Το σφάλμα ζούσε αποκλειστικά στη
+   * **συνάντησή** τους, ακριβώς όπως το §26.15 που τεκμηριώνει η κεφαλίδα αυτού του αρχείου.
+   *
+   * ## Η αιτία, σε μία πρόταση
+   * Ο ακροατής ζει σε `useEffect` με εξάρτηση τον **δρομέα**, και το cleanup του καλεί
+   * `endTableCellDrag()`. Κάθε γραφή που κάνει **η ίδια η σύρση** (`setTableCellSelection`,
+   * και στο πρώτο πάτημα το `setTableCellCursor`) παράγει **νέο** αντικείμενο δρομέα ⇒ το
+   * effect ξανατρέχει ⇒ το cleanup **σκοτώνει τη σύρση που μόλις ξεκίνησε**. Η νέα εκτέλεση
+   * ξαναγράφει μόνο τον `mousedown`· τη σύρση δεν την ξαναστήνει κανείς.
+   *
+   * Τα tests ρωτούν την ερώτηση **του χρήστη** — «ποια κελιά είναι μαρκαρισμένα στο τέλος;»
+   * — και όχι «κλήθηκε το store;». Το δεύτερο ήταν πράσινο όλη την ώρα.
+   */
+  describe('🔴 §27.16 Ε6 — η σύρση επιλογής επιβιώνει των δικών της εγγραφών', () => {
+    /** Τα κελιά που πραγματικά μαρκαρίστηκαν — η ερώτηση του χρήστη, όχι του store. */
+    function selectedBounds() {
+      const selection = getTableCellCursor()?.selection;
+      return selection ? resolveTableSelectionBounds(entity.model, selection) : null;
+    }
+
+    /** Κίνηση με **πατημένο** κουμπί, στο `document` — ό,τι ακριβώς στέλνει ο browser. */
+    function dragOver(point: { readonly x: number; readonly y: number }): void {
+      act(() => {
+        document.dispatchEvent(
+          new MouseEvent('mousemove', {
+            buttons: 1,
+            bubbles: true,
+            clientX: point.x,
+            clientY: point.y,
+          }),
+        );
+      });
+    }
+
+    function releaseDrag(): void {
+      act(() => {
+        document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      });
+    }
+
+    it('🔴 σύρση από το ΕΝΕΡΓΟ κελί ⇒ η περιοχή φτάνει ως το ΤΕΛΕΥΤΑΙΟ κελί, όχι ως το πρώτο', () => {
+      // Ζωντανά: πάγωνε στο 2×2. Δύο ενδιάμεσες στάσεις **επίτηδες** — με μία μόνο κίνηση
+      // το test θα ήταν πράσινο ακόμη και με τη σπασμένη υλοποίηση.
+      pressOn(canvas, cellScreenPoint(entity, 2, 0));
+      nextFrame();
+
+      dragOver(cellScreenPoint(entity, 3, 1));
+      dragOver(cellScreenPoint(entity, 4, 2));
+      releaseDrag();
+
+      expect(selectedBounds()).toEqual({ firstRow: 2, lastRow: 4, firstCol: 0, lastCol: 2 });
+    });
+
+    it('🔴 σύρση από ΑΛΛΟ κελί (η συνηθισμένη περίπτωση) ⇒ σχηματίζεται περιοχή', () => {
+      // Ζωντανά αυτή έδινε **καμία** επιλογή: το `setTableCellCursor` του πατήματος σκότωνε
+      // τη σύρση πριν καν φτάσει η πρώτη κίνηση. Ο δρομέας ξεκινά στο (2,0)· πατάμε στο (2,1).
+      pressOn(canvas, cellScreenPoint(entity, 2, 1));
+      nextFrame();
+
+      dragOver(cellScreenPoint(entity, 3, 2));
+      dragOver(cellScreenPoint(entity, 4, 2));
+      releaseDrag();
+
+      expect(selectedBounds()).toEqual({ firstRow: 2, lastRow: 4, firstCol: 1, lastCol: 2 });
+    });
+
+    it('🔴 το ΕΝΕΡΓΟ ΚΕΛΙ μένει στην αφετηρία της σύρσης (σύμβαση Excel: A1→F1 αφήνει A1)', () => {
+      pressOn(canvas, cellScreenPoint(entity, 2, 0));
+      nextFrame();
+
+      dragOver(cellScreenPoint(entity, 4, 2));
+      releaseDrag();
+
+      expect(getTableCellCursor()?.position.rowId).toBe(entity.model.rows[2].id);
+      expect(getTableCellCursor()?.position.colId).toBe(entity.model.columns[0].id);
+    });
+
+    it('🔴 ΣΥΡΣΗ ΣΤΗ ΖΩΝΗ: από το «A» ως το «C» ⇒ ΤΡΕΙΣ ολόκληρες στήλες', () => {
+      // Σ2 του §27.16 — ίδιος κύκλος ζωής, άρα ίδιο σφάλμα: το `selectWholeAxis` γράφει
+      // δρομέα **και** επιλογή πριν ξεκινήσει η σύρση, δηλαδή τη σκοτώνει δύο φορές.
+      pressOn(canvas, columnBandScreenPoint(entity, 0));
+      nextFrame();
+
+      dragOver(columnBandScreenPoint(entity, 1));
+      dragOver(columnBandScreenPoint(entity, 2));
+      releaseDrag();
+
+      expect(selectedBounds()).toEqual({
+        firstRow: 0,
+        lastRow: entity.model.rows.length - 1,
+        firstCol: 0,
+        lastCol: 2,
+      });
+    });
+
+    it('σκέτο κλικ μένει σκέτο κλικ — καμία επιλογή 1×1 (η μη-παλινδρόμηση)', () => {
+      // Ρητή απόφαση του βήματος 8: «καμία επιλογή ≠ επιλογή 1×1». Μια διόρθωση που κρατά
+      // τη σύρση ζωντανή δεν επιτρέπεται να γεννήσει επιλογή εκεί που δεν κουνήθηκε τίποτα.
+      pressOn(canvas, cellScreenPoint(entity, 3, 1));
+      nextFrame();
+      releaseDrag();
+
+      expect(getTableCellCursor()?.selection ?? null).toBeNull();
+    });
+  });
+
   it('το κλικ πάνω στο ΙΔΙΟ το πεδίο της συνεδρίας δεν είναι κλικ «στον καμβά»', () => {
     // Σε γραφή το `<textarea>` σκεπάζει το κελί: το κλικ μέσα στο κείμενο που γράφεις είναι
     // **τοποθέτηση κέρσορα**. Ο ακροατής σύλληψης το βλέπει (ζει στο ίδιο δοχείο) και, χωρίς
