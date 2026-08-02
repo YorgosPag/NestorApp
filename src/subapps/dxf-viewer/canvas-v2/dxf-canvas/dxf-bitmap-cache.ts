@@ -34,8 +34,23 @@
  * `frame:dxf-canvas` p90 74,6ms). Structural invalidation, `invalidate()`, the idle
  * re-raster and the very first build are NOT suspended.
  *
- * ⚠️ This change only ever REMOVES inputs from the key. Adding any interactive state back
- *    in reintroduces the Phase D v1 freeze.
+ * ──────────────────────────────────────────────────────────────────────────────
+ * ADR-743 Φ1 (2026-08-03) — ΔΥΟ ΔΙΟΡΘΩΣΕΙΣ ΣΤΟ ΠΑΡΑΠΑΝΩ, ΑΠΟ ΜΕΤΡΗΣΗ
+ * ──────────────────────────────────────────────────────────────────────────────
+ * (α) **Ο idle re-raster ΠΑΡΕΚΑΜΠΤΕ τη Φ3.1.** Ο έλεγχος της εκκρεμότητας γίνεται ΠΡΙΝ από τον
+ *     gesture guard, και `RASTER_IDLE` (120ms) < `WHEEL_IDLE` (220ms) ⇒ κάθε ησυχία ≥120ms μέσα
+ *     σε ριπή ροδέλας πυροδοτούσε πλήρη ανακατασκευή. Μετρημένο: **43/43** των ανακατασκευών του
+ *     zoom, **78,2%** όλου του `frame:dxf-canvas`. Θεραπεία: ο χρονιστής **ρωτά** τον ιδιοκτήτη
+ *     της χειρονομίας πριν δηλώσει εκκρεμότητα → `dxf-bitmap-cache-idle-timer`.
+ *
+ * (β) **Το «ΩΣ ΕΧΕΙ» ήταν ΑΝΕΥ ΟΡΩΝ** — το `k` έμενε άφραγο σε εύρος κλίμακας 9 τάξεων μεγέθους.
+ *     Δεν φαινόταν επειδή το (α) ξανάχτιζε κάθε 120ms και το έκρυβε· κλείνοντας το (α), εκτίθεται.
+ *     Θεραπεία: **πάτωμα ποιότητας** εκφρασμένο αποκλειστικά στη μεγέθυνση (στο καθαρό pan
+ *     `k ≡ 1` ⇒ αποδεδειγμένα δεν αγγίζει το pan) → `dxf-bitmap-cache-anchor`.
+ *
+ * ⚠️ Το δομικό κλειδί (και ο κανόνας #3 του ADR-040) ζει πλέον στο `dxf-bitmap-cache-key`.
+ *    Οι αλλαγές του μόνο ΑΦΑΙΡΟΥΝ εισόδους· κάθε προσθήκη interactive κατάστασης επαναφέρει το
+ *    πάγωμα της Phase D v1.
  */
 
 import { DxfRenderer } from './DxfRenderer';
@@ -45,7 +60,6 @@ import { getDevicePixelRatio, toDevicePixels } from '../../systems/cursor/utils'
 // ADR-726 Φ3 — anchored-raster geometry + policy (pure, DOM-free, unit-tested).
 import {
   ANCHOR_PROBE_WORLD_POINT,
-  IDLE_RERASTER_MS,
   type AnchorTransform,
   type AnchoredBlitRect,
   computeAnchoredBlitRect,
@@ -53,10 +67,15 @@ import {
   isAnchoredBlitAcceptable,
   isAnchoredBlitUsable,
   isSameTransform,
+  isWithinGestureMagnificationBudget,
   magnification,
   overscannedRenderTransform,
   overscannedViewport,
 } from './dxf-bitmap-cache-anchor';
+// ADR-743 Φ1 — ο χρονιστής ηρεμίας ΡΩΤΑΕΙ το SSoT της χειρονομίας αντί να υποθέτει από τον δικό
+// του χρόνο. Δική του μονάδα γιατί ήταν ο μετρημένος ένοχος του zoom (43/43 ανακατασκευές) και
+// γιατί η σύγκλισή του θέλει δικούς της φύλακες με ψεύτικους χρονιστές.
+import { IdleRerasterTimer } from './dxf-bitmap-cache-idle-timer';
 // ADR-726 Φ3.1 — gesture-aware acceptance: while a navigation gesture is in flight the raster
 // is served AS-IS (quality criteria are rest-time criteria). Same SSoT the snap scheduler uses
 // (ADR-728 Φ1) — «is the user moving the view?» has exactly one owner.
@@ -68,13 +87,14 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 // ADR-726 Φ3 — the offscreen canvas is replaced whenever its size changes; its stubbed
 // bounds live in the shared bounds cache and must be evicted with it.
 import { canvasBoundsService } from '../../services/CanvasBoundsService';
-// 🏢 ADR-344 Phase 11: bitmap cache must invalidate on viewport annotation scale change
-import { getActiveScaleName } from '../../systems/viewport/ViewportStore';
-// 🏢 ADR-375 Phase B: BIM render settings (drawingScale + viewRange + objectStyles)
-//    affect per-entity line weight and cut-state — invalidate when they change.
-import { useBimRenderSettingsStore } from '../../state/bim-render-settings-store';
-// 🏢 ADR-376 Phase C.2: opening tag style mutations must bust the bitmap cache.
-import { getCurrentOpeningTagStyle } from '../../bim/services/opening-tag-style-service';
+// ADR-743 Φ1 (N.7.1) — «άλλαξε κάτι που αλλάζει τα ΙΔΙΑ ΤΑ PIXELS;» είναι άλλη ευθύνη από
+// «μπορούν αυτά τα pixels να σερβίρουν την τρέχουσα όψη;». Εκεί ζει και ο κανόνας #3 του ADR-040.
+import {
+  type BitmapCacheRenderInputs,
+  type CacheKey,
+  buildCacheKey,
+  isStructurallyStale,
+} from './dxf-bitmap-cache-key';
 import { createModuleLogger } from '@/lib/telemetry';
 // ADR-743 Φ0 — attribution: ΤΟ ΥΠΑΡΧΟΝ όργανο (ίδιο flag, ίδιος aggregator, μηδέν νέο σύστημα).
 import { withPerf, recordSample, isPerfEnabled } from '../../systems/cursor/mouse-handler-perf';
@@ -86,56 +106,9 @@ import {
 
 const logger = createModuleLogger('DxfBitmapCache');
 
-/** Normal-state render toggles that change the cached pixels (ADR-040 Phase D wiring). */
-export type BitmapCacheRenderInputs = Pick<DxfRenderOptions, 'showGrid' | 'showLayerNames' | 'wireframeMode'>;
-
-/**
- * STRUCTURAL cache key — inputs that change the cached PIXELS THEMSELVES.
- * ADR-726 Φ3: the view transform is deliberately absent — it is handled by the anchor
- * projection instead (a transform change re-uses the raster, it does not invalidate it).
- */
-interface CacheKey {
-  sceneRef: object | null;
-  width: number;
-  height: number;
-  dpr: number;
-  /** ADR-344 Phase 11: invalidate cache when viewport annotation scale changes. */
-  activeAnnotationScale: string;
-  /** ADR-375 Phase B.1: invalidate cache when annotation scale denominator changes. */
-  drawingScale: number;
-  /** ADR-375 Phase B.2: viewRange/objectStyles hash — JSON snapshot of small structs. */
-  bimSettingsHash: string;
-  /** ADR-040 Phase D wiring (2026-06-11): wireframe / layer-name / grid toggles
-   *  alter the cached normal-state pixels — they arrive via renderOptions, not a
-   *  store the cache subscribes to, so they must live in the key. */
-  showGrid: boolean;
-  showLayerNames: boolean;
-  wireframeMode: boolean;
-}
-
-function readBimCacheInputs(): { drawingScale: number; bimSettingsHash: string } {
-  const s = useBimRenderSettingsStore.getState();
-  return {
-    drawingScale: s.drawingScale,
-    // ADR-452 — `cpa` (cutPlaneActive) busts the cache when the cut-plane hide
-    // gate toggles; `viewRange.cutPlaneMm` (in `vr`) covers slider drag.
-    // ADR-455 — the vertical X/Y cuts are NOT in this key: the cut-away side is faded by a
-    // translucent overlay rect drawn ABOVE the bitmap (axis-cut-line-renderer), not baked
-    // into entity pixels, so the bitmap is identical regardless of cut position. The
-    // bim-render-settings subscription still marks the canvas dirty → the overlay repaints
-    // on drag/flip/toggle without an (expensive) full entity-bitmap rebuild.
-    // ADR-449/456 — `fs` (showFinishSkin) + `rebar` (showReinforcement) bust the cache:
-    // both overlays are baked into the cached normal-state bitmap (scene-level passes in
-    // `DxfRenderer.render`), so toggling them must rebuild it (they arrive via the store the
-    // cache does NOT subscribe to — they must live in the key, like the ADR-040 Phase D toggles).
-    // ADR-375 — `dxf` (dxfImport: «DXF Σχέδιο» V/G row) busts the cache: visibility +
-    // colour + lineweight overrides for every raw DXF entity are baked into the cached
-    // normal-state bitmap (DxfRenderer.isEntityLayerSkipped + resolveStyleForRender), so
-    // toggling/recolouring/reweighting the imported drawing must rebuild it. Same rule as
-    // fs/rebar — a per-view setting that alters normal-state pixels MUST live in the key.
-    bimSettingsHash: JSON.stringify({ vr: s.viewRange, cpa: s.cutPlaneActive, os: s.objectStyles, ts: getCurrentOpeningTagStyle(), fs: s.showFinishSkin, rebar: s.showReinforcement, dxf: s.dxfImport }),
-  };
-}
+// Το δομικό κλειδί ζει στο `dxf-bitmap-cache-key` — εδώ μόνο ξανα-εξάγεται ο τύπος που
+// καταναλώνει ο host renderer, ώστε η δημόσια επιφάνεια του cache να μείνει αμετάβλητη.
+export type { BitmapCacheRenderInputs };
 
 /** Wiring the cache needs from its host renderer (ADR-726 Φ3 idle re-raster). */
 export interface DxfBitmapCacheOptions {
@@ -158,11 +131,18 @@ export class DxfBitmapCache {
   private anchor: AnchorTransform | null = null;
   /** Overscan margin (CSS px per side) baked into the current raster. */
   private overscanPx = 0;
-  /** Set by the idle timer; forces ONE rebuild at the settled transform. */
-  private rerasterDue = false;
-  private idleTimerId: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * ADR-743 Φ1 — ο χρονιστής της ανακατασκευής ηρεμίας. Του δίνεται ο ΕΝΑΣ ιδιοκτήτης του
+   * «είμαστε σε χειρονομία;» ως εξάρτηση, ώστε να μη μπορεί ποτέ να χτυπήσει μέσα σε χειρονομία.
+   */
+  private readonly idleReraster: IdleRerasterTimer;
 
-  constructor(private readonly options: DxfBitmapCacheOptions = {}) {}
+  constructor(private readonly options: DxfBitmapCacheOptions = {}) {
+    this.idleReraster = new IdleRerasterTimer({
+      isGestureActive: isNavigationGesture,
+      requestRepaint: () => this.options.requestRepaint?.(),
+    });
+  }
 
   /**
    * True when the cache cannot serve this frame and must be rebuilt first.
@@ -197,34 +177,16 @@ export class DxfBitmapCache {
   ): RasterRebuildReason | null {
     if (!this.offscreenCanvas || !this.cacheKey || !this.anchor) return 'no-raster';
     // ADR-726 Φ3 — the settled-gesture re-raster: one rebuild at the live transform.
-    if (this.rerasterDue) return 'idle-due';
-    if (this.isStructurallyStale(scene, viewport, inputs)) return 'structural';
+    // ADR-743 Φ1 — αυτό ΔΕΝ μπορεί πλέον να είναι αληθές μέσα σε χειρονομία: ο χρονιστής ρωτά
+    // το `NavigationGestureStore` πριν δηλώσει εκκρεμότητα. Ο έλεγχος μένει ΠΡΩΤΟΣ (μια
+    // εκκρεμότητα ηρεμίας νικά κάθε ποιοτικό κριτήριο), αλλά δεν παρακάμπτει πια τίποτα.
+    if (this.idleReraster.isDue) return 'idle-due';
+    if (isStructurallyStale(this.cacheKey, scene, viewport, inputs, getDevicePixelRatio())) {
+      return 'structural';
+    }
     // Transform drift is NOT staleness: the raster is re-projected while it still
     // covers the viewport sharply enough. Only then does it need rebuilding.
     return this.resolveProjectionReason(transform, viewport);
-  }
-
-  /** Structural key comparison — everything that changes the cached pixels. */
-  private isStructurallyStale(
-    scene: DxfScene | null,
-    viewport: Viewport,
-    inputs: BitmapCacheRenderInputs,
-  ): boolean {
-    const key = this.cacheKey;
-    if (!key) return true;
-    const { drawingScale, bimSettingsHash } = readBimCacheInputs();
-    return (
-      key.sceneRef !== scene ||
-      key.width !== viewport.width ||
-      key.height !== viewport.height ||
-      key.dpr !== getDevicePixelRatio() ||
-      key.activeAnnotationScale !== getActiveScaleName() ||
-      key.drawingScale !== drawingScale ||
-      key.bimSettingsHash !== bimSettingsHash ||
-      key.showGrid !== !!inputs.showGrid ||
-      key.showLayerNames !== !!inputs.showLayerNames ||
-      key.wireframeMode !== !!inputs.wireframeMode
-    );
   }
 
   /**
@@ -275,13 +237,23 @@ export class DxfBitmapCache {
     // non-finite args) — rebuild regardless of any gesture.
     if (!isAnchoredBlitUsable(resolved.rect, resolved.k)) return 'unusable';
     // ADR-726 Φ3.1 — gesture-aware acceptance (Google Maps/Figma pattern): while a
-    // navigation gesture is in flight, serve the raster AS-IS (blurred / with holes —
-    // the browser paints background into the gaps). Sharpness/coverage are REST-TIME
-    // criteria; judging them mid-gesture is what caused the measured 75-185ms full
-    // re-rasters inside wheel-zoom (production, 2026-07-30). The idle re-raster
-    // (`rerasterDue`, checked BEFORE this in isDirty) restores exact pixels at rest,
-    // and structural staleness (also checked before this) is never suspended.
-    if (isNavigationGesture()) return null;
+    // navigation gesture is in flight, sharpness/coverage are NOT judged — they are REST-TIME
+    // criteria, and judging them mid-gesture is what caused the measured 75-185ms full
+    // re-rasters inside wheel-zoom (production, 2026-07-30).
+    //
+    // ADR-743 Φ1 — «ΩΣ ΕΧΕΙ» δεν σημαίνει «σε οποιαδήποτε κατάσταση»: εφαρμόζεται **πάτωμα**
+    // ποιότητας εκφρασμένο αποκλειστικά στη μεγέθυνση. Στο καθαρό pan `k ≡ 1`, άρα το πάτωμα
+    // αποδεδειγμένα δεν αγγίζει το pan (που μετρήθηκε compositing-bound με μηδέν ανακατασκευές).
+    // Το σκεπτικό και τα δύο παράγωγα όρια: `dxf-bitmap-cache-anchor`.
+    if (isNavigationGesture()) {
+      const withinBudget = isWithinGestureMagnificationBudget({
+        magnification: resolved.k,
+        dpr: key.dpr,
+        viewport,
+        overscanPx: this.overscanPx,
+      });
+      return withinBudget ? null : 'quality';
+    }
     const acceptable = isAnchoredBlitAcceptable({
       rect: resolved.rect,
       magnification: resolved.k,
@@ -301,7 +273,7 @@ export class DxfBitmapCache {
   invalidate(): void {
     this.cacheKey = null;
     this.anchor = null;
-    this.clearIdleTimer();
+    this.idleReraster.standDown();
   }
 
   /**
@@ -344,26 +316,12 @@ export class DxfBitmapCache {
         },
       );
 
-      const { drawingScale, bimSettingsHash } = readBimCacheInputs();
-      this.cacheKey = {
-        sceneRef: scene,
-        // The VISIBLE viewport — the raster's own (overscanned) size is derived from it.
-        width: viewport.width,
-        height: viewport.height,
-        dpr,
-        activeAnnotationScale: getActiveScaleName(),
-        drawingScale,
-        bimSettingsHash,
-        showGrid: !!baseOptions.showGrid,
-        showLayerNames: !!baseOptions.showLayerNames,
-        wireframeMode: !!baseOptions.wireframeMode,
-      };
+      this.cacheKey = buildCacheKey(scene, viewport, baseOptions, dpr);
       this.anchor = { scale: transform.scale, offsetX: transform.offsetX, offsetY: transform.offsetY };
       this.overscanPx = overscanPx;
       // A fresh raster IS the settled state — cancel any pending re-raster (idempotent:
       // rebuilding twice at the same transform leaves exactly this state).
-      this.rerasterDue = false;
-      this.clearIdleTimer();
+      this.idleReraster.standDown();
     } catch (error) {
       logger.error('Bitmap cache rebuild failed', { error });
       this.cacheKey = null;
@@ -402,32 +360,13 @@ export class DxfBitmapCache {
     targetCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     targetCtx.restore();
 
-    this.syncIdleReraster(transform);
-  }
-
-  /**
-   * Arm (or stand down) the settled-gesture re-raster. Re-armed on every drifted frame,
-   * so it fires exactly once — `IDLE_RERASTER_MS` after the gesture actually stops.
-   */
-  private syncIdleReraster(transform: ViewTransform): void {
+    // Η προβολή απέχει από την άγκυρα ⇒ υπάρχει κάτι να αποκατασταθεί όταν ησυχάσει η όψη.
     const anchor = this.anchor;
-    this.clearIdleTimer();
-    if (!anchor || isSameTransform(anchor, transform)) return;
-    this.idleTimerId = setTimeout(() => {
-      this.idleTimerId = null;
-      this.rerasterDue = true;
-      this.options.requestRepaint?.();
-    }, IDLE_RERASTER_MS);
-  }
-
-  private clearIdleTimer(): void {
-    if (this.idleTimerId === null) return;
-    clearTimeout(this.idleTimerId);
-    this.idleTimerId = null;
+    this.idleReraster.sync(anchor !== null && !isSameTransform(anchor, transform));
   }
 
   dispose(): void {
-    this.clearIdleTimer();
+    this.idleReraster.dispose();
     if (this.offscreenCanvas) canvasBoundsService.clearCache(this.offscreenCanvas);
     this.offscreenCanvas = null;
     this.offscreenRenderer = null;

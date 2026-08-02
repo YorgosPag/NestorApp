@@ -47,30 +47,33 @@
  *
  * @module subapps/dxf-viewer/ui/table-cell-editor/use-table-cell-pointer
  * @see ui/table-cell-editor/table-cell-session-focus.ts — η εγγύηση του ενός καρέ
- * @see bim/table/table-entity-geometry.ts — `tableCellAtWorld`, ΠΟΙΟ κελί χτυπήθηκε
+ * @see ui/table-cell-editor/table-pointer-axis-selection.ts — ΠΟΙΟ κελί/άξονας χτυπήθηκε
  */
 
 import { useEffect, type RefObject } from 'react';
 // 🔴 ADR-739 §27.16 Ε6 — ο ΕΝΑΣ σταθεροποιητής χειριστών του έργου (ADR-532 Στάδιο 4a.1),
 // ήδη σε χρήση από τρία σημεία του subapp. Δες παρακάτω γιατί είναι δομικά απαραίτητος εδώ.
 import { useEventCallback } from '@/hooks/useEventCallback';
+// ADR-739 §31.10 — η **γεωμετρία της σύρσης** (κινούμενο άκρο, επιλογή ολόκληρου άξονα)
+// μετακόμισε σε δικό της module όταν αυτό εδώ χτύπησε τις 500 γραμμές (N.7.1). Εξαγωγή, όχι
+// κόψιμο: καμία από τις συναρτήσεις δεν χρειάζεται τίποτα από το hook.
 import {
-  computeTableEntityGeometryLive,
-  tableCellAtWorld,
-  tableWorldToFrame,
-} from '../../bim/table/table-entity-geometry';
-// ADR-739 Φ.Δ βήμα 9 — οι ζώνες δείκτη είναι πλέον και **επιφάνεια επιλογής**, όχι μόνο
-// ένδειξη: το ίδιο SSoT γεωμετρίας που ζωγραφίζει τα κουτιά απαντά και «σε ποιο έπεσα».
-import {
-  tableAxisTickAtFrame,
-  type TableIndicatorHit,
-} from '../../bim/table/table-indicator-geometry';
+  axisEndAt,
+  cellEndAt,
+  extendWholeAxis,
+  selectWholeAxis,
+} from './table-pointer-axis-selection';
 // 🔴 ADR-739 §29 — η ΜΙΑ ερώτηση «πού έπεσε αυτό το συμβάν;», μοιρασμένη με τον φύλακα του
 // κλειδώματος. Δες την κεφαλίδα εκείνου του module: δύο αντίγραφα θα άφηναν νεκρή λωρίδα
 // στην άκρη του πίνακα, όπου ο φύλακας μπλοκάρει και ο pointer δεν δρα.
 import { tableEventWorldPoint, tablePointerHitAtWorld } from './table-cell-pointer-hit';
 // ADR-739 §27.15 — ο κύκλος ζωής της σύρσης ζει σε δικό του module· εδώ μένει η **γεωμετρία**.
 import { endTableCellDrag, startTableCellDrag } from './table-cell-drag-session';
+// ADR-739 §31.9 — η **δεύτερη** χειρονομία του πίνακα: σύρσιμο διαχωριστικού στηλών.
+import {
+  beginTableColumnResize,
+  endTableColumnResizeDrag,
+} from './table-column-resize-drag';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 // ADR-739 §26.15 — ο ΕΝΑΣ ορισμός του «ανήκω στη συνεδρία», και στις δύο μορφές του:
 // για **στοιχεία** (`isTableCellSessionElement`) και για **χειρονομίες** (`claim…`).
@@ -81,16 +84,9 @@ import {
 } from './table-cell-session-focus';
 import {
   setTableCellCursor,
-  setTableCellSelection,
   type TableCellCursorState,
 } from '../../state/table-cell-cursor-store';
-// ADR-739 §27.16 Ε2 — ο ΕΝΑΣ ορισμός της «ολόκληρης στήλης/γραμμής» και ο ΕΝΑΣ επεκτατής.
-import {
-  extendTableSelectionTo,
-  wholeAxisSelection,
-  type TableCellRef,
-  type TableSelectionSpan,
-} from '../../bim/table/table-cell-range';
+import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
 
@@ -120,10 +116,42 @@ export interface UseTableCellPointerParams {
    * δεσμεύεται το πρόχειρο, μετά μετακινείται ο δρομέας». Το ποντίκι απλώς του έλειπε.
    */
   readonly onCommitPending: () => void;
+  /**
+   * 🔴 ADR-739 §31.9 — **ζωντανή** προεπισκόπηση πλάτους στήλης, σε κάθε καρέ της σύρσης.
+   * Γράφει τη σκηνή **χωρίς** να καταγράψει αναίρεση — δες την κεφαλίδα του
+   * `table-column-resize-drag` για το γιατί ο διαχωρισμός ζει εδώ και όχι εκεί.
+   */
+  readonly onPreviewModel: (entity: TableEntity, model: TableEntity['model']) => void;
+  /** §31.9 — το τελικό πλάτος ως **μία** εντολή αναίρεσης, στο `mouseup`. */
+  readonly onCommitModel: (entity: TableEntity, model: TableEntity['model']) => void;
 }
 
 export function useTableCellPointer(params: UseTableCellPointerParams): void {
-  const { cursor, entity, containerRef, transformRef, onSelectTo, onCommitPending } = params;
+  const {
+    cursor, entity, containerRef, transformRef, onSelectTo, onCommitPending,
+    onPreviewModel, onCommitModel,
+  } = params;
+
+  /**
+   * 🔴 ADR-739 §31.9 — ξεκινά τη σύρση πλάτους στήλης από το διαχωριστικό.
+   *
+   * Ζει σε δικό του σταθεροποιημένο χειριστή για τον **ίδιο** λόγο με το `handleMouseDown`
+   * (§27.16 Ε6): διαβάζει τη ζωντανή οντότητα τη στιγμή του συμβάντος, όχι στιγμιότυπο —
+   * και η ίδια η σύρση γράφει το μοντέλο, δηλαδή παράγει νέα οντότητα σε κάθε καρέ.
+   */
+  const onResizeColumnEdge = useEventCallback((edgeIndex: number, container: HTMLElement): void => {
+    if (!entity) return;
+    // Ό,τι γράφεται στο κελί δεσμεύεται πρώτα: η σύρση αλλάζει τη διάταξη κάτω από τον δρομέα.
+    onCommitPending();
+    beginTableColumnResize({
+      entity,
+      edgeIndex,
+      container,
+      transformRef,
+      preview: onPreviewModel,
+      commit: onCommitModel,
+    });
+  });
 
   /**
    * 🔴 ADR-739 §27.16 Ε6 — **Ο ΧΕΙΡΙΣΤΗΣ ΕΧΕΙ ΣΤΑΘΕΡΗ ΤΑΥΤΟΤΗΤΑ, ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ.**
@@ -192,6 +220,21 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // ADR-739 Φ.Δ βήμα 9 — η **σειρά** (ζώνη πριν από κελί) ζει πλέον μέσα σε εκείνη τη
     // συνάρτηση: ένα κλικ στο `B` επιλέγει ολόκληρη τη στήλη, στο `3` ολόκληρη τη γραμμή.
     const pointerHit = tablePointerHitAtWorld(entity, worldPoint, transform.scale);
+
+    // 🔴 ADR-739 §31.9 — **το διαχωριστικό ανάμεσα σε δύο γράμματα**: σύρσιμο πλάτους, όχι
+    // επιλογή στήλης. Μπαίνει **πριν** από τη ζώνη γιατί είναι η πιο ειδική περίπτωση· η
+    // γεωμετρία της ζώνης έχει ήδη παραιτηθεί στα ίδια pixel, οπότε εδώ δεν υπάρχει
+    // διεκδίκηση — μόνο δρομολόγηση.
+    if (pointerHit?.where === 'column-edge') {
+      claimTableCellSessionPointerDown();
+      // §27.15 — και η χειρονομία: χωρίς αυτό το body-drag του ADR-560 armάρει στα 3px και
+      // το σύρσιμο του διαχωριστικού θα **μετακινούσε τον πίνακα**.
+      claimTableCellPointerGesture();
+      if (!primary) return;
+      onResizeColumnEdge(pointerHit.columnIndex, container);
+      return;
+    }
+
     if (pointerHit?.where === 'band') {
       const bandHit = pointerHit.band;
       claimTableCellSessionPointerDown();
@@ -321,118 +364,11 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // §27.15 — η συνεδρία έκλεισε (ή άλλαξε πίνακας) με το κουμπί ακόμα κάτω: οι ακροατές
       // της σύρσης ζουν στο `document` και **δεν** θα έφευγαν μόνοι τους.
       endTableCellDrag();
+      // §31.9 — **και οι δύο** χειρονομίες, στο ίδιο σημείο. Μία ξεχασμένη εδώ θα ήταν
+      // ακροατής `document` που επιζεί της συνεδρίας του — δηλαδή σύρσιμο πλάτους σε πίνακα
+      // που δεν επεξεργάζεται πια κανείς.
+      endTableColumnResizeDrag();
     };
   }, [hasSession, containerRef, handleMouseDown]);
 }
 
-/** Το κινούμενο άκρο μιας σύρσης **κελιών**· `null` έξω από το πλέγμα (η επιλογή μένει). */
-function cellEndAt(
-  event: MouseEvent,
-  entity: TableEntity,
-  container: HTMLElement,
-  transformRef: RefObject<ViewTransform>,
-): TableCellRef | null {
-  const world = tableEventWorldPoint(event, container, transformRef.current);
-  if (!world) return null;
-  const hit = tableCellAtWorld(entity, world, computeTableEntityGeometryLive(entity));
-  return hit ? { rowId: hit.rowId, colId: hit.colId } : null;
-}
-
-/**
- * Το κινούμενο άκρο μιας σύρσης **άξονα** (πάνω στα γράμματα ή στους αριθμούς).
- *
- * Η θέση κατά μήκος του άξονα είναι το μόνο που μετράει — όπως στο Excel, όπου η σύρση
- * `B → D` συνεχίζει να επιλέγει στήλες ακόμα κι αν το χέρι ξεφύγει κατακόρυφα από τη
- * λωρίδα. Το άλλο άκρο καρφώνεται στο **τέλος** του πλέγματος, ώστε η στήλη/γραμμή να
- * μένει **ολόκληρη** σε κάθε καρέ της σύρσης.
- *
- * 🔴 §27.16 Ε2 — το «τέλος του πλέγματος» **δεν ξαναγράφεται εδώ**: είναι το `to` της
- * {@link wholeAxisSelection}, δηλαδή η ίδια έκφραση που δίνει και το σκέτο κλικ. Πριν
- * υπήρχε δεύτερη φορά, λίγες γραμμές πιο κάτω — δύο αντίγραφα που κανένα εργαλείο δεν
- * θα έπιανε και που θα απέκλιναν στην πρώτη αλλαγή.
- */
-function axisEndAt(
-  event: MouseEvent,
-  entity: TableEntity,
-  container: HTMLElement,
-  transformRef: RefObject<ViewTransform>,
-  axis: 'column' | 'row',
-): TableCellRef | null {
-  const tick = axisTickAt(event, entity, container, transformRef, axis);
-  return tick ? (wholeAxisSelection(entity.model, tick)?.to ?? null) : null;
-}
-
-/** Σε ποια στήλη/γραμμή δείχνει το συμβάν **κατά μήκος** του άξονα· `null` έξω από αυτόν. */
-function axisTickAt(
-  event: MouseEvent,
-  entity: TableEntity,
-  container: HTMLElement,
-  transformRef: RefObject<ViewTransform>,
-  axis: 'column' | 'row',
-): TableIndicatorHit | null {
-  const world = tableEventWorldPoint(event, container, transformRef.current);
-  if (!world) return null;
-  const geometry = computeTableEntityGeometryLive(entity);
-  const frame = tableWorldToFrame(entity, world, geometry.mmToWorld);
-  return tableAxisTickAtFrame(geometry.layout, frame, axis);
-}
-
-/**
- * Επιλογή **ολόκληρης** στήλης ή γραμμής.
- *
- * Δεν χρειάζεται νέος τύπος επιλογής: η περιοχή είναι ήδη «δύο γωνίες», και μια ολόκληρη
- * στήλη είναι απλώς η γωνία (πρώτη γραμμή, αυτή η στήλη) ως την (τελευταία γραμμή, αυτή η
- * στήλη). Το ενεργό κελί πάει στην **αρχή** του άξονα, όπως στο Excel: εκεί αρχίζει η
- * πληκτρολόγηση αν συνεχίσεις να γράφεις.
- *
- * Η σειρά μετράει: το `setTableCellCursor` **διαλύει** κάθε υπάρχουσα περιοχή (τεκμηριωμένο
- * στο store), οπότε η επιλογή γράφεται μετά — αλλιώς θα έσβηνε τη στιγμή που γεννιέται.
- *
- * Επιστρέφει την **άγκυρα** (τη γωνία που μένει) για τη σύρση που μπορεί να ακολουθήσει·
- * `null` σε πίνακα χωρίς γραμμές ή χωρίς στήλες.
- */
-function selectWholeAxis(entity: TableEntity, hit: TableIndicatorHit): TableCellRef | null {
-  // 🔴 ADR-739 §27.15/§27.16 — η πρόθεση ταξιδεύει μαζί με τις γωνίες, και τις **τρεις** τις
-  // παράγει ο ΕΝΑΣ ορισμός. Ο άξονας **δεν κουμπώνει** σε συγχωνεύσεις: ο πίνακας της
-  // σκηνής έχει τίτλο συγχωνευμένο σε όλες τις στήλες, και χωρίς αυτή τη λέξη το «κλικ στο
-  // B» μάρκαρε **ολόκληρο τον πίνακα** (Giorgio, 02/08).
-  const selection = wholeAxisSelection(entity.model, hit);
-  if (!selection) return null;
-
-  setTableCellCursor(entity.id, tableCursorAt(selection.from.rowId, selection.from.colId), 'nav');
-  setTableCellSelection(selection);
-  return selection.from;
-}
-
-/**
- * 🔴 ADR-739 §27.16 Ε2 — **`Shift+κλικ` σε δεύτερο γράμμα/αριθμό**.
- *
- * Excel: κλικ στο «A», `Shift+κλικ` στο «C» ⇒ **τρεις ολόκληρες στήλες**. Επιστρέφει την
- * **άγκυρα** που μένει (για τη σύρση που μπορεί να ακολουθήσει), ή `null` όταν αυτό το
- * πάτημα **δεν** είναι επέκταση και πρέπει να το χειριστεί ο κανονικός δρόμος.
- *
- * ## Επεκτείνει ΜΟΝΟ όταν η τρέχουσα επιλογή είναι του ΙΔΙΟΥ άξονα — και γιατί
- * Αν η τρέχουσα επιλογή είναι **περιοχή** (ή ο άλλος άξονας) και ο χρήστης κάνει
- * `Shift+κλικ` σε γράμμα στήλης, δεν υπάρχει σωστό `kind` για το αποτέλεσμα: κάθε επιλογή
- * θα ήταν **εφεύρεση**. Το §27.15 έβγαλε ρητά την προεπιλογή από το `kind` ακριβώς για να
- * μην μπορεί να συμβεί σιωπηλά αυτό. Άρα το πάτημα πέφτει πίσω στη συμπεριφορά του σκέτου
- * κλικ — **νέα** επιλογή άξονα, ακριβώς αυτό που βλέπει ο χρήστης σε κάθε φύλλο υπολογισμού
- * όταν αλλάζει είδος επιλογής.
- *
- * ## Καμία δέσμευση προχείρου — και είναι κανόνας, όχι παράλειψη
- * Ο κανόνας που ισχύει παντού στη συνεδρία: **δεσμεύεις μόνο όταν κουνιέται το ενεργό
- * κελί**. Η επέκταση δεν το κουνά (ίδια σύμβαση με `Shift+βέλος` και `Shift+κλικ` σε κελί).
- */
-function extendWholeAxis(
-  entity: TableEntity,
-  hit: TableIndicatorHit,
-  selection: TableSelectionSpan | null | undefined,
-): TableCellRef | null {
-  if (!selection || selection.kind !== hit.axis) return null;
-  const target = wholeAxisSelection(entity.model, hit);
-  if (!target) return null;
-  // Ο ΕΝΑΣ επεκτατής — ο ίδιος που εξυπηρετεί το `Shift+βέλος` (§27.16 Ε2).
-  const extended = extendTableSelectionTo(selection, target.to);
-  setTableCellSelection(extended);
-  return extended.from;
-}

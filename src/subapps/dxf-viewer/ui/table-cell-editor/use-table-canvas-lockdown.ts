@@ -93,7 +93,9 @@
  * @see lib/a11y/use-modal-keyboard-scope.ts — το δίδυμο του πληκτρολογίου (ADR-711)
  */
 
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useSyncExternalStore, type RefObject } from 'react';
+import { createExternalStore } from '../../stores/createExternalStore';
+import { markSystemsDirty } from '../../rendering/core/frame-scheduler-api';
 import { tableEventWorldPoint, tablePointerHitAtWorld } from './table-cell-pointer-hit';
 import { isInsideTableCellSession } from './table-cell-session-focus';
 import type { TableEntity } from '../../types/table-entity';
@@ -102,24 +104,85 @@ import type { ViewTransform } from '../../rendering/types/Types';
 /**
  * 🔴 Το SSoT ερώτημα του §29: **κατέχει η λειτουργία πίνακα τον καμβά αυτή τη στιγμή;**
  *
- * Module-level και όχι store, με τον ίδιο λόγο που είναι module-level οι δύο δηλώσεις του
- * `table-cell-session-focus`: το ρωτούν χειριστές **εκτός React** (ο hot-path του
- * `mouse-handler-move`, ~60 φορές το δευτερόλεπτο) και μια συνδρομή εκεί θα ήταν ακριβώς η
- * κατηγορία που ο ADR-040 απαγορεύει.
+ * ## Γιατί **βάθος** και όχι δυαδικό
+ * Δύο φύλακες μπορούν να συνυπάρξουν για ένα καρέ (remount μέσα σε μετάβαση). Με δυαδικό, ο
+ * πρώτος που αποπροσαρτάται θα ξεκλείδωνε τον καμβά ενώ ο δεύτερος ζει ακόμα.
+ *
+ * ## 🔴 Γιατί έγινε store — και γιατί ο hot path ΔΕΝ πλήρωσε τίποτα (§29.12)
+ * Ήταν σκέτο `let`, και το σκεπτικό ήταν σωστό για τον έναν αναγνώστη που είχε: το ρωτούν
+ * χειριστές **εκτός React** (ο hot-path του `mouse-handler-move`, ~60 φορές το δευτερόλεπτο),
+ * όπου ο ADR-040 απαγορεύει συνδρομή. Το Δ3 πρόσθεσε **δεύτερο** αναγνώστη — το μητρώο λαβών,
+ * που ζει στη React — και μια δεύτερη σημαία «για τη React» θα ήταν ακριβώς ο δεύτερος κύκλος
+ * ζωής που αυτό το ίδιο module απαγορεύει ονομαστικά (δες την κεφαλίδα: «ο δεύτερος είναι
+ * πάντα αυτός που ξεχνιέται»).
+ *
+ * Άρα: **μία** αυθεντία, **δύο** τρόποι ανάγνωσης — ο getter για τον hot path (αμετάβλητος,
+ * μηδέν συνδρομή) και η συνδρομή για τα φύλλα. Ακριβώς το «ADR-040 dual-access invariant» που
+ * ήδη τηρεί το `AllGripsStore`. Ο ΕΝΑΣ primitive του έργου, καμία πλοήγηση χειροποίητη.
  */
-let canvasLockDepth = 0;
+const canvasLockDepthStore = createExternalStore<number>(0);
+
+/** Ο ζωγράφος που πρέπει να μάθει ότι άλλαξε ιδιοκτήτης — δες το {@link setCanvasLockDepth}. */
+const DXF_CANVAS_SYSTEM_ID = 'dxf-canvas';
 
 /**
- * Ρωτά ο hover στον `mouse-handler-move`. Ονομασμένο ερώτημα και όχι σύγκριση επί τόπου: ο
- * καλών δηλώνει **γιατί** παραιτείται, και η απάντηση αλλάζει σε ένα σημείο.
+ * 🔴 Ο **μοναδικός** γραφέας του βάθους — και ο λόγος που υπάρχει είναι το **καρέ**.
+ *
+ * Ο ζωγράφος ξαναβάφει μόνο όταν του το ζητήσουν (ADR-040 / ADR-119), και η αλλαγή
+ * ιδιοκτησίας συμβαίνει σε `useEffect`, δηλαδή **μετά** την τελευταία ζωγραφιά. Χωρίς ρητό
+ * αίτημα, οι λαβές θα έσβηναν «κάποια στιγμή αργότερα» — όταν κάτι **άλλο** τύχαινε να ζητήσει
+ * επαναβαφή. Ίδιο μοτίβο, ίδιο σκεπτικό με το `table-cell-cursor-store`.
+ *
+ * Το αίτημα μπαίνει **μόνο στην αλλαγή της απάντησης** (0↔1), όχι σε κάθε γραφή: μια
+ * φωλιασμένη ενεργοποίηση (1→2) δεν αλλάζει τίποτα στην οθόνη.
+ */
+function setCanvasLockDepth(next: number): void {
+  const wasLocked = isCanvasLockedByTableSession();
+  canvasLockDepthStore.set(Math.max(0, next));
+  if (isCanvasLockedByTableSession() !== wasLocked) markSystemsDirty([DXF_CANVAS_SYSTEM_ID]);
+}
+
+/**
+ * Ρωτά ο hover στον `mouse-handler-move`, οι πύλες χειρονομίας (§29.9/§29.11) και ο ζωγράφος
+ * λαβών τη στιγμή του καρέ (§29.12). Ονομασμένο ερώτημα και όχι σύγκριση επί τόπου: ο καλών
+ * δηλώνει **γιατί** παραιτείται, και η απάντηση αλλάζει σε ένα σημείο.
  */
 export function isCanvasLockedByTableSession(): boolean {
-  return canvasLockDepth > 0;
+  return canvasLockDepthStore.get() > 0;
+}
+
+/** Συνδρομή στην **αλλαγή ιδιοκτησίας**· επιστρέφει την αποδέσμευση. */
+export function subscribeCanvasLockedByTableSession(listener: () => void): () => void {
+  return canvasLockDepthStore.subscribe(listener);
+}
+
+/**
+ * React binding για **φύλλα χαμηλής συχνότητας** (το μητρώο λαβών).
+ *
+ * ⚠️ **ΠΟΤΕ σε orchestrator** (ADR-040 CHECK 6C): η τιμή αλλάζει δύο φορές ανά συνεδρία, αλλά
+ * ο κανόνας δεν είναι για τη συχνότητα — είναι για το **ποιος** επαναποδίδεται. Ο hot path
+ * διαβάζει με τον getter από πάνω, ποτέ από εδώ.
+ */
+export function useIsCanvasLockedByTableSession(): boolean {
+  return useSyncExternalStore(
+    canvasLockDepthStore.subscribe,
+    isCanvasLockedByTableSession,
+    isCanvasLockedByTableSession,
+  );
 }
 
 /** Test helper — μηδενισμός μεταξύ tests, ίδιο μοτίβο με τα stores και τις δηλώσεις. */
 export function __resetTableCanvasLockdownForTests(): void {
-  canvasLockDepth = 0;
+  canvasLockDepthStore.reset(0);
+}
+
+/**
+ * Test helper — οδηγεί την **πραγματική** κατάσταση (το ίδιο βάθος, τον ίδιο γραφέα), ώστε ένας
+ * καταναλωτής να δοκιμάζεται χωρίς να στηθεί ολόκληρος ο φύλακας με δοχείο και γεωμετρία.
+ * Δεύτερη, «δική του» σημαία για tests θα ήταν ακριβώς η απόκλιση που το store απέτρεψε.
+ */
+export function __setCanvasLockedByTableSessionForTests(locked: boolean): void {
+  setCanvasLockDepth(locked ? 1 : 0);
 }
 
 export interface UseTableCanvasLockdownParams {
@@ -154,7 +217,7 @@ export function useTableCanvasLockdown(params: UseTableCanvasLockdownParams): vo
   useEffect(() => {
     if (!active) return;
 
-    canvasLockDepth += 1;
+    setCanvasLockDepth(canvasLockDepthStore.get() + 1);
 
     const guard = (event: Event): void => {
       if (!(event instanceof MouseEvent)) return;
@@ -174,7 +237,7 @@ export function useTableCanvasLockdown(params: UseTableCanvasLockdownParams): vo
       for (const type of GUARDED_EVENTS) {
         document.removeEventListener(type, guard, { capture: true });
       }
-      canvasLockDepth = Math.max(0, canvasLockDepth - 1);
+      setCanvasLockDepth(canvasLockDepthStore.get() - 1);
     };
   }, [active, entity, containerRef, transformRef]);
 }

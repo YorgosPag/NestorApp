@@ -35,9 +35,9 @@ import { resolveBodyDragTarget } from '../drag/body-drag-target';
 // ADR-739 §27.15 — ο ΕΝΑΣ ορισμός του «αυτό το πάτημα ανήκει σε πίνακα υπό επεξεργασία».
 // Ίδια κατεύθυνση εισαγωγής με τα bridge stores που ήδη καταναλώνει το `mouse-handler-up`.
 import { isTableCellPointerGestureClaimed } from '../../ui/table-cell-editor/table-cell-session-focus';
-// ADR-739 §29 — ο ΕΝΑΣ ορισμός του «η λειτουργία πίνακα κατέχει τον καμβά» (§29.10: το λάσο).
+// ADR-739 §29 — ο ΕΝΑΣ ορισμός του «η λειτουργία πίνακα κατέχει τον καμβά» (§29.9: το λάσο).
 import { isCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
-// ADR-739 §29.10 — η πύλη του arm ως **καθαρή** συνάρτηση: πέντε όροι σε hot handler που δεν
+// ADR-739 §29.9 — η πύλη του arm ως **καθαρή** συνάρτηση: πέντε όροι σε hot handler που δεν
 // στήνεται σε test· εδώ δοκιμάζεται με έναν boolean, χωρίς DOM.
 import { shouldArmSelectDrag } from './select-gesture-gates';
 // ADR-642 §6.8 — Alt+press on a complex-linetype pattern snap (railway rail/sleeper) → whole-entity move.
@@ -294,7 +294,7 @@ export function useCentralizedMouseHandlers(
     // collecting lines; a plain click without drag still falls through to the
     // tool's pick pipeline). Never during pan / grip drag.
     //
-    // 🔴 ADR-739 §29.10 — ΚΑΙ ποτέ όσο η λειτουργία πίνακα κατέχει τον καμβά.
+    // 🔴 ADR-739 §29.9 — ΚΑΙ ποτέ όσο η λειτουργία πίνακα κατέχει τον καμβά.
     //
     // Ο φύλακας του §29 κόβει το πάτημα **έξω** από τον πίνακα· το πάτημα **μέσα** σε κελί
     // περνά επίτηδες (ο ακροατής του πίνακα είναι παθητικός, ώστε να μη σπάσουν λαβές και

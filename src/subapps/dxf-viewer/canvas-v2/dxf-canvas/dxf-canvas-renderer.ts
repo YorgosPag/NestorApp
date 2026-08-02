@@ -361,15 +361,22 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
       () => {
         const vp = refs.resolvedViewportRef.current;
         if (!refs.rendererRef.current || !vp.width || !vp.height) return;
+        // ADR-743 Φ0 §πείραμα οροφής — με `localStorage['dxf-perf-ceiling']='1'` αυτό το σύστημα
+        // δεν ζωγραφίζει καθόλου (η εικόνα παγώνει· ΔΙΑΓΝΩΣΤΙΚΟ). Η ίδια χειρονομία μετρά τότε
+        // `frame:INTERVAL` με ΜΗΔΕΝ JS από εδώ ⇒ το κατώφλι του software compositing.
+        //
+        // 🔴 Ο ΦΡΑΓΜΟΣ ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΖΕΙ ΣΤΟ `isDirty` PREDICATE — μετρημένο 2026-08-03:
+        // ο scheduler κρίνει `system.forceDirty || !system.isDirty || system.isDirty()`
+        // (`UnifiedFrameScheduler.ts:247`) και το `markSystemsDirty` του ImmediateTransformStore
+        // ανάβει `forceDirty` σε ΚΑΘΕ καρέ χειρονομίας (το `'dxf-canvas'` είναι στα
+        // `TRANSFORM_CANVAS_IDS`). Το `||` βραχυκυκλώνει ⇒ το predicate **δεν ρωτιέται ποτέ**
+        // ακριβώς στις χειρονομίες που θέλουμε να μετρήσουμε. Η πρώτη εκδοχή του πειράματος
+        // έμπαινε εκεί και κατέγραψε 549 ζωγραφιές ενώ όφειλε 0 — σιωπηλά άκυρη μέτρηση.
+        if (isCeilingProbeActive()) { isDirtyRef.current = false; return; }
         renderScene();
         isDirtyRef.current = false;
       },
-      // ADR-743 Φ0 §πείραμα οροφής — με `localStorage['dxf-perf-ceiling']='1'` αυτό το σύστημα
-      // δεν ζωγραφίζει καθόλου (η εικόνα παγώνει· ΔΙΑΓΝΩΣΤΙΚΟ). Η ίδια χειρονομία μετρά τότε
-      // `frame:INTERVAL` με ΜΗΔΕΝ JS από εδώ ⇒ το κατώφλι του software compositing, δηλαδή το
-      // ταβάνι κάθε βελτιστοποίησης JS. Μετρήθηκε ότι το 86,4% του καρέ στο pan ΔΕΝ είναι JS
-      // (ADR-735 §7.3· LoAF ADR-726 §4.Γ) — χωρίς αυτόν τον αριθμό η Φ1 σχεδιάζεται στα τυφλά.
-      () => isDirtyRef.current && !isCeilingProbeActive(),
+      () => isDirtyRef.current,
     );
     return unsubscribe;
   }, [renderScene, refs]);

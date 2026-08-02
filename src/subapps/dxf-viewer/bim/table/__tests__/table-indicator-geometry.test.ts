@@ -12,11 +12,13 @@ import {
   tableColumnTickRectMm,
   tableIndicatorBandsMm,
   tableIndicatorCornerRectMm,
+  tableIndicatorCursorRoleAtFrame,
   tableIndicatorHitAtFrame,
   tableRowTickRectMm,
   TABLE_INDICATOR_GRIP_CLEARANCE_PX,
   TABLE_INDICATOR_OUTER_PX,
 } from '../table-indicator-geometry';
+import { TABLE_COLUMN_KIND } from '../table-entity-grips';
 import { tableColumnTicks, tableRowTicks } from '../table-cell-reference';
 import { TABLE_INDICATOR } from '../../../config/color-config';
 import { TOLERANCE_CONFIG } from '../../../config/tolerance-config';
@@ -224,5 +226,116 @@ describe('🔴 §27.11 — η ζώνη δεν διεκδικεί ούτε ένα
     // Η γωνία ευθυγραμμίζεται και με τις δύο ζώνες — αλλιώς φαίνεται σκαλοπάτι.
     expect(cornerRect.x + cornerRect.w).toBeCloseTo(rowRect.x + rowRect.w);
     expect(cornerRect.y + cornerRect.h).toBeCloseTo(columnRect.y + columnRect.h);
+  });
+});
+
+describe('🔴 §31 tableIndicatorCursorRoleAtFrame — ο δείκτης δεν επιτρέπεται να ΨΕΥΔΕΤΑΙ', () => {
+  const apertureMm = TABLE_INDICATOR_GRIP_CLEARANCE_PX / PX_PER_MM;
+  const role = (u: number, v: number) => tableIndicatorCursorRoleAtFrame(LAYOUT, { u, v }, BANDS);
+
+  /**
+   * 🔴 ΤΟ ΟΥΣΙΩΔΕΣ TEST ΤΟΥ §31.
+   *
+   * Όλα τα υπόλοιπα είναι αριθμητική γύρω από μια υπόθεση· **αυτό** είναι η υπόθεση. Ο δείκτης
+   * υπόσχεται «εδώ σέρνεις» — αν η υπόσχεση δεν πέφτει πάνω στη ζωντανή λαβή, η διεπαφή λέει
+   * ψέματα και ο χρήστης το διαβάζει ως **σφάλμα της εφαρμογής**, όχι ως δικό του αστόχημα.
+   * Τρέχει τις **πραγματικές** λαβές, όχι στημένους αριθμούς.
+   */
+  it('🔴 ΚΑΘΕ ζωντανή λαβή ορίου στήλης ανακοινώνεται ως `column-resize`', () => {
+    const entity = buildTableEntity({ x: 0, y: 0 }, {}, 'tbl_cursor', 'lyr_test');
+    const { mmToWorld, layout } = computeTableEntityGeometryLive(entity);
+    const edges = getTableGrips(entity).filter((g) => g.gripKind?.kind === TABLE_COLUMN_KIND);
+
+    // Αν ο πίνακας πάψει να έχει λαβές ορίου, το test από κάτω θα ήταν κενός βρόχος = πράσινο.
+    expect(edges.length).toBeGreaterThan(0);
+    for (const grip of edges) {
+      const frame = tableWorldToFrame(entity, grip.position, mmToWorld);
+      expect(tableIndicatorCursorRoleAtFrame(layout, frame, BANDS)).toBe('column-resize');
+    }
+  });
+
+  it('η υπόσχεση σβήνει ακριβώς εκεί που σταματά να πιάνεται η λαβή', () => {
+    // Μέσα στην οπή (κλειστός δίσκος) ⇒ ναι· ένα pixel έξω ⇒ όχι πια σύρσιμο.
+    expect(role(40, 0)).toBe('column-resize');
+    expect(role(40, apertureMm)).toBe('column-resize');
+    expect(role(40 + apertureMm, 0)).toBe('column-resize');
+    expect(role(40, apertureMm + 1 / PX_PER_MM)).not.toBe('column-resize');
+    expect(role(40 + apertureMm + 1 / PX_PER_MM, 0)).not.toBe('column-resize');
+  });
+
+  it('🔴 §31.9 ΤΟ ΔΙΑΧΩΡΙΣΤΙΚΟ ΠΙΑΝΕΤΑΙ ΣΕ ΟΛΟ ΤΟ ΥΨΟΣ ΤΗΣ ΛΩΡΙΔΑΣ — εκεί το ψάχνει το χέρι', () => {
+    // 🔴 Αυτό το test ΑΝΤΙΣΤΡΕΦΕΙ την προηγούμενη προδιαγραφή, και η αντιστροφή είναι το θέμα:
+    // η πρώτη εκδοχή έδινε `col-resize` ΜΟΝΟ πάνω στη λαβή (`v ≈ 0`), με σωστό επιχείρημα
+    // («μέσα στη λωρίδα το πάτημα επιλέγει στήλη») και **ανεύρετο** αποτέλεσμα — ο ιδιοκτήτης
+    // δεν το βρήκε δύο φορές. Η λύση δεν ήταν να κρυφτεί ο δείκτης, αλλά να **πάψει να είναι
+    // ψέμα**: η ζώνη επιλογής παραιτείται εδώ και τη σύρση την αναλαμβάνει ο πίνακας (§31.9).
+    const topOfBand = -(apertureMm + BANDS.columnBandMm);
+    for (const v of [topOfBand, topOfBand + BANDS.columnBandMm / 2, -apertureMm, 0, apertureMm]) {
+      expect(role(40, v)).toBe('column-resize');
+    }
+    // Πάνω από την κορυφή της λωρίδας και βαθιά μέσα στο πλέγμα: τέλος.
+    expect(role(40, topOfBand - 1 / PX_PER_MM)).not.toBe('column-resize');
+    expect(role(40, apertureMm + 1 / PX_PER_MM)).not.toBe('column-resize');
+  });
+
+  it('🔴 ΤΟ ΣΩΜΑ του γράμματος παραμένει επιλογή — το διαχωριστικό δεν κατάπιε τη λωρίδα', () => {
+    // Ο αντίποδας του προηγούμενου: αν η ζώνη ανοχής ήταν πολύ πλατιά, η επιλογή στήλης θα
+    // γινόταν απλησίαστη. Στο **μέσο** κάθε στήλης η απάντηση πρέπει να μένει «επιλογή».
+    const insideBand = -(apertureMm + BANDS.columnBandMm / 2);
+    for (const column of COLUMNS) {
+      expect(role(column.xMm + column.widthMm / 2, insideBand)).toBe('column-select');
+    }
+  });
+
+  it('🔴 §31.9 ΕΝΑ pixel, ΜΙΑ ερώτηση: όπου υπόσχεται σύρσιμο, η ζώνη ΠΑΡΑΙΤΕΙΤΑΙ', () => {
+    // Η αρχή του §27.11 εφαρμοσμένη στη νέα ζώνη. Χωρίς αυτό, μια σύρση διαχωριστικού θα
+    // άφηνε πίσω της ΚΑΙ επιλεγμένη στήλη — δύο αποτελέσματα από μία χειρονομία.
+    const insideBand = -(apertureMm + BANDS.columnBandMm / 2);
+    expect(tableIndicatorHitAtFrame(LAYOUT, { u: 40, v: insideBand }, BANDS)).toBeNull();
+    // Και το συμπλήρωμα: μακριά από το όριο η ζώνη απαντά κανονικά.
+    expect(tableIndicatorHitAtFrame(LAYOUT, { u: 20, v: insideBand }, BANDS))
+      .toEqual({ axis: 'column', colId: 'c0', index: 0 });
+  });
+
+  it('🔴 η λωρίδα των αριθμών ΔΕΝ υπόσχεται ΠΟΤΕ σύρσιμο — δεν υπάρχει λαβή ύψους (§8)', () => {
+    // Δεν είναι παράλειψη: το `table-entity-grips` το τεκμηριώνει ως φράγμα απόδοσης (500
+    // γραμμές ⇒ 500 λαβές ανά καρέ). Δείκτης «⟷» εδώ θα σήμαινε σύρσιμο που δεν εκτελείται.
+    const insideBand = -(apertureMm + BANDS.rowBandMm / 2);
+    for (const row of ROWS) {
+      const v = row.yMm + row.heightMm / 2;
+      expect(role(insideBand, v)).toBe('row-select');
+    }
+    // Και πάνω ΑΚΡΙΒΩΣ στα όρια γραμμών — εκεί θα ήταν ο πειρασμός να μπει `row-resize`.
+    for (const row of ROWS) {
+      expect(role(insideBand, row.yMm)).toBe('row-select');
+    }
+  });
+
+  it('η άγκυρα και το δεξί πέρας ΔΕΝ είναι όρια στηλών — δεν έχουν λαβή, άρα ούτε υπόσχεση', () => {
+    // Το `getTableGrips` ξεκινά από `c = 1`: το αριστερό όριο το κινεί το MOVE και το δεξί
+    // **προκύπτει** από τα πλάτη. Αν ο δείκτης τα ανακοίνωνε, θα υποσχόταν δύο ανύπαρκτες λαβές.
+    expect(role(0, 0)).toBeNull();
+    expect(role(LAYOUT.widthMm, 0)).toBeNull();
+  });
+
+  it('μέσα στο πλέγμα, στη γωνία και εκτός πίνακα ⇒ κανένας ρόλος (μένει το σταυρόνημα)', () => {
+    expect(role(20, 6)).toBeNull();
+    expect(role(-(apertureMm + BANDS.rowBandMm / 2), -(apertureMm + BANDS.columnBandMm / 2)))
+      .toBeNull();
+    expect(role(LAYOUT.widthMm + 10, -(apertureMm + BANDS.columnBandMm / 2))).toBeNull();
+  });
+
+  it('🔴 συμφωνεί με το §30: όπου φωτίζεται υποδιαίρεση, υπάρχει και ρόλος επιλογής', () => {
+    // Τα δύο κανάλια γράφονται από τον ΙΔΙΟ ακροατή με μία σάρωση· αν αποκλίνουν, ο χρήστης
+    // βλέπει φωτισμένο γράμμα με σταυρόνημα από πάνω (ή το αντίστροφο) — δηλαδή τη μισή
+    // απάντηση. Η ζώνη της λαβής εξαιρείται: εκεί δεν φωτίζεται τίποτα, και σωστά.
+    for (const rect of [
+      tableColumnTickRectMm(tableColumnTicks(COLUMNS, new Set())[1], BANDS),
+      tableRowTickRectMm(tableRowTicks(ROWS, new Set(), 0, ROWS.length)[1], BANDS),
+    ]) {
+      const point = center(rect);
+      expect(tableIndicatorHitAtFrame(LAYOUT, point, BANDS)).not.toBeNull();
+      expect(tableIndicatorCursorRoleAtFrame(LAYOUT, point, BANDS)).not.toBeNull();
+    }
   });
 });

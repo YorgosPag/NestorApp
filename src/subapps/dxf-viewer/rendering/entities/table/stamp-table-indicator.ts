@@ -106,9 +106,19 @@ export function stampTableIndicator(rc: StampTableContext, bands: TableIndicator
   }
 }
 
-/** Μία υποδιαίρεση: γέμισμα → περίγραμμα → ετικέτα. Ίδια σειρά και για τις δύο ζώνες. */
+/**
+ * Μία υποδιαίρεση: γέμισμα → (πλύσιμο hover) → περίγραμμα → ετικέτα. Ίδια σειρά και για τις
+ * δύο ζώνες.
+ *
+ * 🔴 ADR-739 §30 — **η σειρά του πλυσίματος είναι η προδιαγραφή.** Μπαίνει **πάνω** από το
+ * γέμισμα (αλλιώς δεν θα φαινόταν καθόλου) και **κάτω** από το περίγραμμα και την ετικέτα:
+ * οι διαχωριστικές γραμμές πρέπει να μένουν συνεχείς κατά μήκος της λωρίδας — μια λωρίδα που
+ * σπάει οπτικά στο σημείο του δείκτη διαβάζεται ως σφάλμα ζωγραφικής — και το γράμμα δεν
+ * επιτρέπεται να θολώσει τη στιγμή ακριβώς που ο χρήστης το στοχεύει.
+ */
 function stampTick(rc: StampTableContext, tick: TableIndicatorTick, rect: TableRectMm): void {
   fillTick(rc, rect, tick.active);
+  if (tick.hovered) washTick(rc, rect);
   strokeTick(rc, rect);
   stampLabel(rc, tick, rect);
 }
@@ -122,6 +132,22 @@ function fillTick(rc: StampTableContext, rect: TableRectMm, active: boolean): vo
   const { ctx } = rc;
   ctx.save();
   ctx.fillStyle = active ? TABLE_INDICATOR.activeFillHex : TABLE_INDICATOR.fillHex;
+  traceRectMm(rc, rect);
+  ctx.fill();
+  ctx.restore();
+}
+
+/**
+ * ADR-739 §30 — το ημιδιαφανές στρώμα του hover, **πάνω σε ό,τι κι αν** έχει ήδη ζωγραφιστεί.
+ *
+ * Δεν ξέρει — και δεν επιτρέπεται να ξέρει — αν από κάτω είναι το ουδέτερο γκρι ή το ενεργό
+ * μπλε. Αυτή ακριβώς η άγνοια είναι που κάνει **έναν** κανόνα να απαντά και στις δύο
+ * καταστάσεις· δες το σκεπτικό στο {@link TABLE_INDICATOR.hoverWashRgba}.
+ */
+function washTick(rc: StampTableContext, rect: TableRectMm): void {
+  const { ctx } = rc;
+  ctx.save();
+  ctx.fillStyle = TABLE_INDICATOR.hoverWashRgba;
   traceRectMm(rc, rect);
   ctx.fill();
   ctx.restore();

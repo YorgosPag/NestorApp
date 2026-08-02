@@ -19,7 +19,7 @@ import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransfor
 import type { ViewTransform, Viewport } from '../../../rendering/types/Types';
 import type { DxfScene } from '../dxf-types';
 import { DxfBitmapCache, type BitmapCacheRenderInputs } from '../dxf-bitmap-cache';
-import { overscannedRenderTransform, overscannedViewport } from '../dxf-bitmap-cache-anchor';
+import { IDLE_RERASTER_MS, overscannedRenderTransform, overscannedViewport } from '../dxf-bitmap-cache-anchor';
 
 interface RenderCall {
   transform: ViewTransform;
@@ -292,10 +292,13 @@ describe('DxfBitmapCache — ADR-726 Φ3 anchored raster', () => {
     // Το μετρημένο σφάλμα (production 2026-07-30): στο wheel-zoom το k ξεπερνά το budget σε
     // 1-2 notches ⇒ full re-raster 2.909 οντοτήτων ΜΕΣΑ στη χειρονομία (p90 74,6ms, max 184,9ms).
     // Η θεραπεία: όσο διαρκεί η χειρονομία, τα ΠΟΙΟΤΙΚΑ κριτήρια (θολούρα/τρύπα) αναστέλλονται.
+    // ⚠️ ADR-743 Φ1: «εκτός budget ΗΡΕΜΙΑΣ» ΔΕΝ σημαίνει πια «σερβίρεται σε οποιαδήποτε
+    // κατάσταση». Εδώ μένουν όσα είναι εκτός των **αυστηρών** κριτηρίων αλλά **εντός του
+    // πατώματος** της χειρονομίας· το τρίτο σενάριο (zoom-out κάτω από το πάτωμα) μετακόμισε
+    // στο δικό του describe παρακάτω, γιατί άλλαξε πρόσημο **σκόπιμα**.
     const OUT_OF_BUDGET: ReadonlyArray<[string, ViewTransform]> = [
-      ['zoom-in πέρα από το magnification budget', { scale: 1.6, offsetX: 0, offsetY: 0 }],
-      ['pan πέρα από το overscan (τρύπα)', { scale: 1, offsetX: 200, offsetY: 0 }],
-      ['zoom-out που αφήνει το raster μικρότερο από το viewport', { scale: 0.6, offsetX: 0, offsetY: 0 }],
+      ['zoom-in πέρα από το magnification budget ΗΡΕΜΙΑΣ (1,25) αλλά εντός πατώματος (2,5)', { scale: 1.6, offsetX: 0, offsetY: 0 }],
+      ['pan πέρα από το overscan (τρύπα) — k ≡ 1, το πάτωμα ΔΕΝ αφορά το pan', { scale: 1, offsetX: 200, offsetY: 0 }],
     ];
 
     it.each(OUT_OF_BUDGET)('σερβίρει ΟΠΩΣ ΕΙΝΑΙ μέσα σε χειρονομία — %s ⇒ ΟΧΙ rebuild', (_label, transform) => {
@@ -341,15 +344,73 @@ describe('DxfBitmapCache — ADR-726 Φ3 anchored raster', () => {
       expect(cache.isDirty(SCENE, ANCHOR, VIEWPORT, BASE)).toBe(true);
     });
 
-    it('το idle re-raster (rerasterDue) ΔΕΝ αναστέλλεται — 120ms ησυχίας = πρακτική ηρεμία', () => {
-      // Το transform σταμάτησε να αλλάζει πριν 120ms αλλά το gesture idle παράθυρο (220ms)
-      // δεν έχει λήξει ακόμη: το settled rebuild πρέπει να τρέξει — αυτό αποκαθιστά τα pixels.
+    it('🔴 ADR-743 Φ1 — 120ms ησυχίας ΜΕΣΑ σε χειρονομία ΔΕΝ είναι ηρεμία', () => {
+      // ⚠️ ΑΥΤΟ ΤΟ TEST ΕΙΧΕ ΤΟ ΑΝΤΙΘΕΤΟ ΠΡΟΣΗΜΟ ΜΕΧΡΙ ΤΙΣ 2026-08-03, με τίτλο «120ms ησυχίας =
+      // πρακτική ηρεμία». Η υπόθεση εκείνη ΚΑΤΑΡΡΙΦΘΗΚΕ σε production: `RASTER_IDLE` (120ms) <
+      // `WHEEL_IDLE` (220ms) ⇒ **43 στις 43** ανακατασκευές του zoom (110,5ms η καθεμία, 78,2%
+      // όλου του `frame:dxf-canvas`) γίνονταν ΜΕΣΑ στη ριπή ροδέλας, παρακάμπτοντας ακριβώς τη
+      // Φ3.1 που φυλάει αυτό το describe. Δεν ήταν ρύθμιση — ήταν το ίδιο το σχήμα.
       mockGestureActive = true;
       const cache = freshCache();
       const drifted: ViewTransform = { scale: 1, offsetX: 45, offsetY: 0 };
       cache.blit(targetCtxStub().ctx, VIEWPORT, drifted);
       jest.advanceTimersByTime(150);
+      expect(cache.isDirty(SCENE, drifted, VIEWPORT, BASE)).toBe(false);
+    });
+
+    it('…και μόλις λήξει το παράθυρο χειρονομίας, η ανακατασκευή ηρεμίας τρέχει ΚΑΝΟΝΙΚΑ', () => {
+      // Η σύγκλιση: ο χρονιστής επαναοπλίστηκε μία φορά· ο επόμενος χτύπος βρίσκει τη
+      // χειρονομία λήξασα και επιβάλλει την ΜΙΑ ανακατασκευή που αποκαθιστά ακριβή pixels.
+      mockGestureActive = true;
+      const cache = freshCache();
+      const drifted: ViewTransform = { scale: 1, offsetX: 45, offsetY: 0 };
+      cache.blit(targetCtxStub().ctx, VIEWPORT, drifted);
+      jest.advanceTimersByTime(150);
+
+      mockGestureActive = false;               // endNavigationGesture() / λήξη idle παραθύρου
+      jest.advanceTimersByTime(IDLE_RERASTER_MS);
+
       expect(cache.isDirty(SCENE, drifted, VIEWPORT, BASE)).toBe(true);
+    });
+  });
+
+  describe('🔴 ADR-743 Φ1 — το ΠΑΤΩΜΑ ΠΟΙΟΤΗΤΑΣ της χειρονομίας', () => {
+    // Η Φ3.1 σέρβιρε ΑΝΕΥ ΟΡΩΝ μέσα σε χειρονομία, αφήνοντας το `k` άφραγο σε εύρος κλίμακας
+    // 9 τάξεων μεγέθους (`TRANSFORM_SCALE_LIMITS` 1e-4…1e5). Δεν φαινόταν επειδή ο idle
+    // re-raster ξανάχτιζε κάθε 120ms και το έκρυβε — κλείνοντας εκείνη τη διαρροή, εκτίθεται.
+    //
+    // Όρια για VIEWPORT 800×600 / OVERSCAN 120 (raster 1040×840), dpr 1:
+    //   άνω  = 2 × maxMagnification(1) = 2 × 1,25 = 2,5
+    //   κάτω = max(800/1040, 600/840)            = 0,769   (παράγωγο του overscan)
+
+    it('zoom-out κάτω από το πάτωμα ⇒ ΞΑΝΑΧΤΙΖΕΙ μέσα στη χειρονομία (κενό ≠ θολούρα)', () => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      expect(cache.isDirty(SCENE, { scale: 0.6, offsetX: 0, offsetY: 0 }, VIEWPORT, BASE)).toBe(true);
+    });
+
+    it('zoom-in πάνω από το πάτωμα ⇒ ΞΑΝΑΧΤΙΖΕΙ (το θόλωμα έχει οροφή, όχι άπειρο)', () => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      expect(cache.isDirty(SCENE, { scale: 3, offsetX: 0, offsetY: 0 }, VIEWPORT, BASE)).toBe(true);
+    });
+
+    it('ακριβώς ΠΑΝΩ στα δύο όρια ⇒ ακόμη αποδεκτό (το πάτωμα είναι κλειστό διάστημα)', () => {
+      mockGestureActive = true;
+      const cache = freshCache();
+      expect(cache.isDirty(SCENE, { scale: 2.5, offsetX: 0, offsetY: 0 }, VIEWPORT, BASE)).toBe(false);
+      expect(cache.isDirty(SCENE, { scale: 800 / 1040, offsetX: 0, offsetY: 0 }, VIEWPORT, BASE)).toBe(false);
+    });
+
+    it('🔑 ΤΟ PAN ΕΙΝΑΙ ΑΝΕΠΑΦΟ: k ≡ 1 ⇒ ΚΑΜΙΑ μετατόπιση δεν πιάνει το πάτωμα', () => {
+      // Ο λόγος που το budget εκφράστηκε στο `k` και όχι στην κάλυψη. Το pan μετρήθηκε
+      // (ADR-743 §6.1) με ΜΗΔΕΝ ανακατασκευές και 2,07% JS — είναι compositing-bound. Ένα
+      // κριτήριο κάλυψης θα του ξαναφόρτωνε ανακατασκευές 110ms που σήμερα δεν έχει.
+      mockGestureActive = true;
+      const cache = freshCache();
+      for (const offsetX of [0, 200, 5_000, -50_000]) {
+        expect(cache.isDirty(SCENE, { scale: 1, offsetX, offsetY: offsetX }, VIEWPORT, BASE)).toBe(false);
+      }
     });
   });
 

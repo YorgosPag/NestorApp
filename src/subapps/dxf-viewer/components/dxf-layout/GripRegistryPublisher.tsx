@@ -43,6 +43,16 @@ import { useLevelScene } from '../../systems/scene/useSceneSelectors';
 import { AllGripsStore } from '../../systems/grip/AllGripsStore';
 import { ArmableGripsStore } from '../../systems/grip/ArmableGripsStore';
 import { hotGripKindOf, isWallHotGripKind } from '../../hooks/grips/wall-hot-grip-fsm';
+// 🔴 ADR-739 §29.12 — η ΜΙΑ αυθεντία του «η λειτουργία πίνακα κατέχει τον καμβά», στη μορφή
+// συνδρομής (ο hot path διαβάζει την ΙΔΙΑ τιμή με getter — ADR-040 dual-access invariant).
+import { useIsCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
+import type { UnifiedGripInfo } from '../../hooks/grips/unified-grip-types';
+
+/**
+ * Σταθερή ταυτότητα: αλλιώς κάθε render θα ξαναδημοσίευε «κενό» και θα ξυπνούσε τα effects.
+ * Ίδιο σχήμα με το `EMPTY` του ίδιου του `AllGripsStore` — κανείς δεν το μεταλλάσσει ποτέ.
+ */
+const NO_GRIPS: UnifiedGripInfo[] = [];
 
 interface GripRegistryPublisherProps {
   /** Active level id — the reactive scene slice this leaf subscribes to (ADR-040). */
@@ -108,7 +118,29 @@ export const GripRegistryPublisher: React.FC<GripRegistryPublisherProps> = ({
     () => collectBlockEntities(effectiveScene?.entities),
     [effectiveScene],
   );
-  const allGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack, activeBlockEditId });
+  const computedGrips = useGripRegistry({ dxfScene: reactiveScene, selectedEntityIds, selectedOverlays, groupEntities, blockEntities, activeGroupStack, activeBlockEditId });
+  // 🔴 ADR-739 §29.12 — **Ο,ΤΙ ΔΕΝ ΦΑΙΝΕΤΑΙ, ΔΕΝ ΠΙΑΝΕΤΑΙ.**
+  //
+  // Ο ζωγράφος σταματά να δείχνει λαβές όσο η λειτουργία πίνακα κατέχει τον καμβά
+  // (`dxf-canvas-interactive-overlays`). Αν σταματούσε **μόνο** εκεί, θα γεννιόταν χειρότερο
+  // ελάττωμα από αυτό που διορθώνει: λαβές αόρατες αλλά **πιάσιμες**. Ο πίνακας έχει λαβές
+  // πάνω στην ακμή του και τα κελιά της πρώτης γραμμής την ακουμπούν — δηλαδή ένα κλικ σε
+  // κελί θα άρπαζε λαβή που ο χρήστης δεν βλέπει και θα άλλαζε τις διαστάσεις του πίνακα
+  // ενώ γράφει μέσα του. Το ίδιο το μητρώο δηλώνει τον κανόνα (ADR-559 §big-player, Revit /
+  // Figma / Cinema 4D): «visible ≡ editable is sacred» — εδώ ισχύει η αντίστροφη ανάγνωσή του.
+  //
+  // Η δήλωση μπαίνει στο **σύνολο** και όχι σε φύλακα του πατήματος: το `AllGripsStore`
+  // τροφοδοτεί επίσης το hover λαβών, τον `SelectedGripSnapEngine` και το `ArmableGripsStore`.
+  // Ίδιο επιχείρημα με το §29.9 («ο φύλακας μπαίνει στο arm, όχι στη ζωγραφική»): μία δήλωση
+  // — **δεν υπάρχουν λαβές τώρα** — αντί για τέσσερις φύλακες που θα αποκλίνουν.
+  //
+  // ⚠️ Συνδρομή σε **φύλλο** που αποδίδει `null`, όχι σε orchestrator (ADR-040 CHECK 6C), και
+  // σε τιμή που αλλάζει δύο φορές ανά συνεδρία. Το ΙΔΙΟ SSoT που διαβάζει ο hot path με getter.
+  const lockedByTableSession = useIsCanvasLockedByTableSession();
+  const allGrips = useMemo(
+    () => (lockedByTableSession ? NO_GRIPS : computedGrips),
+    [lockedByTableSession, computedGrips],
+  );
 
   // Publish the full grip set for event-time hit-testing.
   useEffect(() => { AllGripsStore.set(allGrips); }, [allGrips]);

@@ -32,7 +32,7 @@ import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
 // εισαγωγής με το `isTableCellPointerGestureClaimed` που καταναλώνει ήδη ο αδελφός χειριστής
 // του `mousedown` (`useCentralizedMouseHandlers`, §27.15).
 import { isCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
-// ADR-739 §29.10 — η πύλη των σημαδιών έλξης ως **καθαρή** συνάρτηση (δες την κεφαλίδα της:
+// ADR-739 §29.9 — η πύλη των σημαδιών έλξης ως **καθαρή** συνάρτηση (δες την κεφαλίδα της:
 // το `false` σημαίνει «σβήσε», όχι «άφησέ τα»).
 import { shouldDetectSnap } from './select-gesture-gates';
 // ADR-659 — overlap «⧉ N» badge: count the stack under the cursor at hover time.
@@ -299,7 +299,7 @@ export function useMouseMoveHandler({
     // The scheduler keeps the ~30fps snap throttle + the corner-snap (ADR-398) logic.
     // Grip-drag snap stays SYNCHRONOUS above (it needs a 1:1 ghost).
     //
-    // 🔴 ADR-739 §29.10 — **τα σημάδια έλξης σβήνουν όσο ο πίνακας είναι ανοιχτός** (ιδιοκτήτης:
+    // 🔴 ADR-739 §29.9 — **τα σημάδια έλξης σβήνουν όσο ο πίνακας είναι ανοιχτός** (ιδιοκτήτης:
     // «ούτε τα σημάδια έλξης των οντοτήτων που βρίσκονται μέσα στο καμβά»). Το κλείδωμα μπαίνει
     // στη **θετική** συνθήκη και όχι σε δικό του κλάδο: έτσι η ροή πέφτει μόνη της στο
     // `clearSnapDetection` από κάτω — δηλαδή τα σημάδια δεν «παύουν να ανανεώνονται», **σβήνουν**

@@ -71,6 +71,9 @@ import { tableColumnTicks, tableRowTicks } from '../../bim/table/table-cell-refe
 // ADR-739 Φ.Δ βήμα 2 — ο δρομέας διαβάζεται με getter τη στιγμή του καρέ (ADR-040), ποτέ
 // ως συνδρομή: ο ζωγράφος μένει καθαρό φύλλο.
 import { getTableCellCursor, type TableCellCursorState } from '../../state/table-cell-cursor-store';
+// ADR-739 §30 — η λωρίδα κάτω από το ποντίκι, με τον ΙΔΙΟ κανόνα: getter τη στιγμή του
+// καρέ, καμία συνδρομή. Ο γραφέας ζητά καρέ μόνο όταν αλλάζει υποδιαίρεση.
+import { getTableIndicatorHover } from '../../state/table-indicator-hover-store';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
@@ -171,9 +174,23 @@ export class TableRenderer extends BaseEntityRenderer {
         rowIds: new Set([cursor.position.rowId]),
         colIds: new Set([cursor.position.colId]),
       };
+      // ADR-739 §30 — και η λωρίδα **κάτω από το ποντίκι**, φιλτραρισμένη ως προς ΑΥΤΟΝ τον
+      // πίνακα: δύο πίνακες στην ίδια σκηνή δεν επιτρέπεται να μοιραστούν έναν δείκτη.
+      const hover = getTableIndicatorHover();
+      const hovered = hover?.entityId === e.id ? hover.hit : null;
       stampTableIndicator(rc, {
-        columns: tableColumnTicks(layout.columns, bands.colIds),
-        rows: tableRowTicks(layout.rows, bands.rowIds, start, end),
+        columns: tableColumnTicks(
+          layout.columns,
+          bands.colIds,
+          hovered?.axis === 'column' ? hovered.colId : null,
+        ),
+        rows: tableRowTicks(
+          layout.rows,
+          bands.rowIds,
+          start,
+          end,
+          hovered?.axis === 'row' ? hovered.rowId : null,
+        ),
         widthMm: layout.widthMm,
         heightMm: layout.heightMm,
       });

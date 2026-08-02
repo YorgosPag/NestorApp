@@ -97,6 +97,20 @@ const COVERAGE_EPSILON_PX = 0.5;
 /** Magnification floor on a dpr=1 display — some blur is tolerable for ~120ms. */
 const MIN_MAGNIFICATION_BUDGET = 1.25;
 
+/**
+ * Πόσο **πάνω από το όριο ηρεμίας** ανέχεται η ΧΕΙΡΟΝΟΜΙΑ (ADR-743 Φ1).
+ *
+ * Παράγωγο, όχι δεύτερος αριθμός: η χειρονομία και η ηρεμία απαντούν διαφορετικό ερώτημα
+ * («πάτωμα ενόσω κινείται» vs «τελειότητα όταν σταματήσει»), αλλά η **μονάδα** είναι η ίδια, άρα
+ * η μία τιμή προκύπτει από την άλλη. Αλλαγή στο `MIN_MAGNIFICATION_BUDGET` σέρνει και τις δύο.
+ *
+ * `2` σε dpr=1 ⇒ ανώτατο `k` = **2,5**, δηλαδή ~**5 εγκοπές** ροδέλας (`WHEEL_ZOOM_PER_NOTCH`
+ * = 1,20) πριν επιβληθεί ανακατασκευή. Η ίδια αρχή που εκμεταλλεύεται το dynamic resolution
+ * scaling των παιχνιδιών: **η κίνηση μειώνει την αντιληπτή ανάλυση**, άρα το θόλωμα κοστίζει
+ * λιγότερο όσο η εικόνα ταξιδεύει από ό,τι όταν στέκεται.
+ */
+const GESTURE_MAGNIFICATION_SLACK = 2;
+
 /** Overscan margin in CSS px for one side of the viewport. */
 export function computeOverscanPx(viewport: Viewport): number {
   const shortSide = Math.min(viewport.width, viewport.height);
@@ -217,6 +231,70 @@ export function isAnchoredBlitAcceptable(params: {
   if (!isAnchoredBlitUsable(rect, k)) return false;
   if (k > maxMagnification(dpr)) return false;
   return coversViewport(rect, physW, physH);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ΤΟ ΠΑΤΩΜΑ ΠΟΙΟΤΗΤΑΣ ΤΗΣ ΧΕΙΡΟΝΟΜΙΑΣ (ADR-743 Φ1)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// 🔴 ΤΟ ΚΕΝΟ ΠΟΥ ΚΛΕΙΝΕΙ. Η ADR-726 Φ3.1 σέρβιρε το raster **ΑΝΕΥ ΟΡΩΝ** μέσα σε χειρονομία
+// («τα ποιοτικά κριτήρια είναι κριτήρια ΗΡΕΜΙΑΣ»). Σωστό ως προς τον χρόνο καρέ — αλλά άφησε
+// το `k` **ΑΦΡΑΓΤΟ**, και το εύρος κλίμακας είναι `1e-4…1e5` (`TRANSFORM_SCALE_LIMITS`). Σε
+// παρατεταμένη ριπή ροδέλας το raster μπορούσε να προβληθεί σε **τάξεις μεγέθους** μεγέθυνσης:
+// τέσσερα γιγάντια θολά pixels, ή μια κουκκίδα μέσα σε άδειο φόντο. **Κανένα test και καμία
+// μέτρηση δεν το κάλυψε** — δεν φαινόταν επειδή ο idle re-raster ξανάχτιζε κάθε 120ms και το
+// έκρυβε. Κλείνοντας εκείνη τη διαρροή, το κενό **εκτίθεται**· γι' αυτό κλείνει μαζί της.
+//
+// 🔑 ΓΙΑΤΙ ΤΟ ΟΡΙΟ ΕΙΝΑΙ ΣΤΟ `k` ΚΑΙ ΟΧΙ ΣΤΗΝ ΚΑΛΥΨΗ — Η ΚΡΙΣΙΜΗ ΕΠΙΛΟΓΗ.
+// Στο **καθαρό pan το `k` είναι ταυτοτικά 1**, άρα ένα budget εκφρασμένο στο `k` **δεν μπορεί
+// να πυροδοτηθεί ποτέ στο pan**. Αυτό δεν είναι λεπτομέρεια: το pan μετρήθηκε (ADR-743 §6.1)
+// με **ΜΗΔΕΝ** ανακατασκευές και **2,07%** JS — είναι compositing-bound. Ένα κριτήριο κάλυψης
+// θα του ξαναφόρτωνε ανακατασκευές 110ms που σήμερα δεν έχει, δηλαδή θα «διόρθωνε» το zoom
+// σπάζοντας το pan. **Το `k` είναι ακριβώς ό,τι αλλάζει μόνο το zoom.**
+//
+// ⚠️ ΑΝΑΓΚΑΙΑ, ΟΧΙ ΙΚΑΝΗ — γι' αυτό λέγεται «πάτωμα». Φράζει τη συνεισφορά του **zoom** στις
+// τρύπες· τρύπες από **αποκέντρωση λόγω pan** μένουν ανεκτές μέσα στη χειρονομία **ακριβώς όπως
+// πριν**, εκ σχεδιασμού (βλ. παραπάνω). Το `coversViewport` παραμένει κριτήριο **ηρεμίας**.
+
+/** Το ανώτατο `k` που ανέχεται μια χειρονομία σε αυτό το dpr (θόλωμα από zoom-in). */
+export function maxGestureMagnification(dpr: number): number {
+  return GESTURE_MAGNIFICATION_SLACK * maxMagnification(dpr);
+}
+
+/**
+ * Το κατώτατο `k` κάτω από το οποίο το raster **δεν μπορεί** να καλύψει το viewport — ούτε καν
+ * τέλεια κεντραρισμένο (σμίκρυνση από zoom-out).
+ *
+ * **Παράγωγο της γεωμετρίας του overscan, όχι επιλεγμένος αριθμός:** το raster έχει πλάτος
+ * `W + 2M`, οπότε προβεβλημένο σε `k` καλύπτει `k(W + 2M)`. Η στοιχειώδης απαίτηση `k(W+2M) ≥ W`
+ * δίνει `k ≥ W/(W+2M)`, και το ίδιο κατά ύψος· κρατάμε το αυστηρότερο. Για 800×600 με M=120
+ * (raster 1040×840) ⇒ **0,769**.
+ */
+export function minGestureMagnification(viewport: Viewport, overscanPx: number): number {
+  const rasterW = viewport.width + 2 * overscanPx;
+  const rasterH = viewport.height + 2 * overscanPx;
+  // Εκφυλισμένος καμβάς: μόνο το 1:1 είναι ασφαλές — κάθε σμίκρυνση αφήνει κενό.
+  if (!(rasterW > 0) || !(rasterH > 0)) return 1;
+  return Math.max(viewport.width / rasterW, viewport.height / rasterH);
+}
+
+/**
+ * Μπορεί η προβολή να σερβιριστεί ΩΣ ΕΧΕΙ ενόσω ο χρήστης κινεί την όψη;
+ *
+ * ⚠️ **Διαφορετικό ερώτημα από το {@link isAnchoredBlitAcceptable}**, όχι χαλαρή εκδοχή του:
+ * εκείνο ρωτά «είναι ΤΕΛΕΙΟ;» (κριτήρια ηρεμίας), αυτό ρωτά «είναι ΑΡΚΕΤΑ ΚΑΛΟ ΓΙΑ ΚΙΝΗΣΗ;».
+ * Η χειρονομία αναστέλλει την **τελειότητα**, ποτέ την **ποιότητα**.
+ */
+export function isWithinGestureMagnificationBudget(params: {
+  magnification: number;
+  dpr: number;
+  viewport: Viewport;
+  overscanPx: number;
+}): boolean {
+  const { magnification: k, dpr, viewport, overscanPx } = params;
+  if (!Number.isFinite(k) || k <= 0) return false;
+  if (k > maxGestureMagnification(dpr)) return false;
+  return k >= minGestureMagnification(viewport, overscanPx);
 }
 
 /** True when `a` and `b` are the same view (drift check for the idle re-raster). */

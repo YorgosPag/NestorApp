@@ -28,8 +28,11 @@ import {
   isAnchoredBlitAcceptable,
   isAnchoredBlitUsable,
   isSameTransform,
+  isWithinGestureMagnificationBudget,
   magnification,
+  maxGestureMagnification,
   maxMagnification,
+  minGestureMagnification,
   overscannedRenderTransform,
   overscannedViewport,
 } from '../dxf-bitmap-cache-anchor';
@@ -272,5 +275,102 @@ describe('magnification + policy constants', () => {
   it('keeps the idle window short enough to feel instant after a gesture', () => {
     expect(IDLE_RERASTER_MS).toBeGreaterThan(0);
     expect(IDLE_RERASTER_MS).toBeLessThanOrEqual(200);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ADR-743 Φ1 — ΤΟ ΠΑΤΩΜΑ ΠΟΙΟΤΗΤΑΣ ΤΗΣ ΧΕΙΡΟΝΟΜΙΑΣ
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Η ADR-726 Φ3.1 σέρβιρε το raster ΑΝΕΥ ΟΡΩΝ μέσα σε χειρονομία, αφήνοντας το `k` άφραγο σε
+// εύρος κλίμακας 9 τάξεων μεγέθους. Οι φύλακες εδώ καρφώνουν ότι τα δύο όρια είναι **ΠΑΡΑΓΩΓΑ**
+// (από το budget ηρεμίας και από τη γεωμετρία του overscan) — όχι επιλεγμένοι αριθμοί που ο
+// επόμενος θα «στρογγυλέψει».
+
+describe('maxGestureMagnification — παράγωγο του budget ΗΡΕΜΙΑΣ', () => {
+  it.each([1, 1.5, 2, 3])('μένει αυστηρά πάνω από το όριο ηρεμίας σε dpr=%s', (dpr) => {
+    expect(maxGestureMagnification(dpr)).toBeGreaterThan(maxMagnification(dpr));
+  });
+
+  it('είναι ΑΚΡΙΒΩΣ πολλαπλάσιο — αλλαγή στο ένα σέρνει το άλλο, καμία απόκλιση', () => {
+    const ratio = maxGestureMagnification(1) / maxMagnification(1);
+    expect(maxGestureMagnification(2) / maxMagnification(2)).toBeCloseTo(ratio, 12);
+    expect(maxGestureMagnification(3) / maxMagnification(3)).toBeCloseTo(ratio, 12);
+  });
+
+  it('σε dpr=1 δίνει 2,5 ⇒ ~5 εγκοπές ροδέλας (1,20 ανά εγκοπή) πριν την ανακατασκευή', () => {
+    expect(maxGestureMagnification(1)).toBeCloseTo(2.5, 10);
+    expect(Math.log(2.5) / Math.log(1.2)).toBeGreaterThan(4.9);
+  });
+});
+
+describe('minGestureMagnification — παράγωγο της ΓΕΩΜΕΤΡΙΑΣ του overscan', () => {
+  it('είναι ακριβώς ο λόγος ορατού προς raster στον ΑΥΣΤΗΡΟΤΕΡΟ άξονα', () => {
+    // 800×600 με M=120 ⇒ raster 1040×840 ⇒ max(800/1040, 600/840) = 0,769…
+    expect(minGestureMagnification(VIEWPORT, 120)).toBeCloseTo(800 / 1040, 12);
+  });
+
+  it('🔑 ΕΙΝΑΙ ΤΟ ΣΗΜΕΙΟ ΟΠΟΥ ΧΑΝΕΤΑΙ Η ΚΑΛΥΨΗ — συμφωνεί με το coversViewport', () => {
+    // Ο λόγος που δεν είναι μαγικός αριθμός: ΠΑΝΩ από αυτό το k ένα κεντραρισμένο raster
+    // καλύπτει· ΚΑΤΩ από αυτό δεν μπορεί να καλύψει ΟΥΤΕ τέλεια κεντραρισμένο.
+    const overscanPx = computeOverscanPx(VIEWPORT);
+    const kMin = minGestureMagnification(VIEWPORT, overscanPx);
+    const rasterW = VIEWPORT.width + 2 * overscanPx;
+    const rasterH = VIEWPORT.height + 2 * overscanPx;
+    /** Κεντραρισμένη προβολή στο `k` (dpr 1). */
+    const centred = (k: number) => ({
+      dx: (VIEWPORT.width - k * rasterW) / 2,
+      dy: (VIEWPORT.height - k * rasterH) / 2,
+      dw: k * rasterW,
+      dh: k * rasterH,
+    });
+    expect(coversViewport(centred(kMin * 1.001), VIEWPORT.width, VIEWPORT.height)).toBe(true);
+    expect(coversViewport(centred(kMin * 0.99), VIEWPORT.width, VIEWPORT.height)).toBe(false);
+  });
+
+  it('χωρίς overscan κανένα zoom-out δεν είναι ανεκτό (κάτω όριο = 1)', () => {
+    expect(minGestureMagnification(VIEWPORT, 0)).toBe(1);
+  });
+
+  it('εκφυλισμένος καμβάς ⇒ 1 (ασφαλής προεπιλογή: μόνο το 1:1)', () => {
+    expect(minGestureMagnification({ width: 0, height: 0 }, 0)).toBe(1);
+  });
+});
+
+describe('isWithinGestureMagnificationBudget', () => {
+  const BUDGET = { dpr: 1, viewport: VIEWPORT, overscanPx: 120 };
+  const at = (magnification: number) => isWithinGestureMagnificationBudget({ magnification, ...BUDGET });
+
+  it('🔑 ΤΟ PAN ΕΙΝΑΙ ΑΝΕΠΑΦΟ — k ≡ 1 είναι ΠΑΝΤΑ εντός, σε κάθε dpr/overscan/viewport', () => {
+    // Αυτή είναι ΟΛΗ η αιτιολόγηση της επιλογής «budget στο k, όχι στην κάλυψη»: το pan
+    // μετρήθηκε compositing-bound με ΜΗΔΕΝ ανακατασκευές, και δεν επιτρέπεται να αποκτήσει.
+    for (const dpr of [1, 2, 3]) {
+      for (const overscanPx of [0, 96, 120, 256]) {
+        for (const viewport of [VIEWPORT, { width: 320, height: 240 }, { width: 3840, height: 2160 }]) {
+          expect(isWithinGestureMagnificationBudget({ magnification: 1, dpr, viewport, overscanPx })).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('δέχεται θόλωμα που η ΗΡΕΜΙΑ απορρίπτει — «αναστολή τελειότητας, όχι ποιότητας»', () => {
+    expect(at(1.6)).toBe(true);                                   // > maxMagnification(1) = 1,25
+    expect(isAnchoredBlitAcceptable({
+      rect: { dx: 0, dy: 0, dw: 10_000, dh: 10_000 }, magnification: 1.6,
+      dpr: 1, physW: VIEWPORT.width, physH: VIEWPORT.height,
+    })).toBe(false);
+  });
+
+  it.each([[2.5, true], [2.51, false], [3, false], [1e6, false]])(
+    'άνω όριο: k=%s ⇒ %s', (k, expected) => expect(at(k)).toBe(expected));
+
+  it.each([[0.7692307692307693, true], [0.76, false], [0.1, false]])(
+    'κάτω όριο: k=%s ⇒ %s', (k, expected) => expect(at(k)).toBe(expected));
+
+  it('μη-πεπερασμένο ή μη-θετικό k ⇒ ποτέ αποδεκτό (drawImage θα έκανε no-op)', () => {
+    expect(at(Number.NaN)).toBe(false);
+    expect(at(Number.POSITIVE_INFINITY)).toBe(false);
+    expect(at(0)).toBe(false);
+    expect(at(-1)).toBe(false);
   });
 });

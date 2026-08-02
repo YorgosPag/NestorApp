@@ -27,6 +27,10 @@ import { selectCircuitsInMarquee } from '../../bim/mep-systems/mep-wire-hit';
 // (orange) instead of selecting new entities (AutoCAD/Revit "hot grips").
 import { ArmableGripsStore } from '../grip/ArmableGripsStore';
 import { runGripMarqueeArm } from '../grip/grip-marquee-arm';
+// ADR-358 Q19 Φ3b — 2D «click-into»: 2nd click on the sole-selected stair → tread sub-select.
+import { handleStairClickInto2D } from '../../bim/stairs/stair-click-into-2d';
+// ADR-659 — ArchiCAD repeated-click overlap disambiguation (2nd click same point → cycle).
+import { resolveRepeatedClickCycle } from '../selection/resolve-repeated-click-cycle';
 
 export interface MarqueeContext {
   cursor: ReturnType<typeof import('./CursorSystem').useCursor>;
@@ -46,14 +50,52 @@ export interface MarqueeContext {
   overlayMode: CentralizedMouseHandlersProps['overlayMode'];
 }
 
+/**
+ * 🔴 N.18 (CHECK 3.28) — **Η ΜΙΑ κλήση του επιλογέα πλαισίου.**
+ *
+ * Υπήρχε **δύο** φορές σε αυτό το αρχείο, με τα ίδια έξι ορίσματα και μόνη διαφορά ένα σχόλιο:
+ * μία για το box-select των region εργαλείων και μία για την κανονική επιλογή. Ο token-based
+ * ανιχνευτής τις έπιανε ως clone **13 γραμμών** — και είχε δίκιο: δύο αντίγραφα της ίδιας
+ * παραμετροποίησης αποκλίνουν στην πρώτη αλλαγή ανοχής ή στο πρώτο νέο πεδίο επιλογών, και
+ * τότε το «ίδιο» πλαίσιο θα επέλεγε **άλλα** αντικείμενα ανάλογα με το εργαλείο.
+ *
+ * ⚠️ Το `ctx.cursor.position` / `selectionStart` διαβάζονται **εδώ**, τη στιγμή της κλήσης: ο
+ * καλών έχει ήδη επαληθεύσει ότι υπάρχουν (ο έλεγχος ζει στο `mouse-handler-up`, πριν καν
+ * κληθεί αυτό το module).
+ */
+function runMarqueeSelection(
+  ctx: MarqueeContext,
+  rect: Parameters<typeof UniversalMarqueeSelector.performSelection>[3],
+): ReturnType<typeof UniversalMarqueeSelector.performSelection> {
+  const { cursor, transform, colorLayers, scene } = ctx;
+  return UniversalMarqueeSelector.performSelection(
+    cursor.selectionStart!,
+    cursor.position!,
+    transform,
+    rect,
+    {
+      colorLayers: colorLayers ?? [],
+      // ADR-358 Phase 9D-5b-ii Sub-D — bridge cast: `SceneModel.entities: DxfEntityUnion[]` vs
+      // `Entity[]` expected by performSelection. Resolved at schema flip Phase 9D-5b-iii.
+      entities: (scene?.entities ?? []) as unknown as Entity[],
+      tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
+      enableDebugLogs: false,
+      onLayerSelected: undefined,
+      currentPosition: cursor.position!,
+    },
+  );
+}
+
 export function processMarqueeSelection(
   e: React.MouseEvent<HTMLCanvasElement>,
   ctx: MarqueeContext,
 ) {
-  const { cursor, transform, canvasRef, colorLayers, scene,
-    hitTestCallback, onEntitySelect, onCanvasClick,
+  // Boy Scout (N.0.2): τα `hitTestCallback` / `onEntitySelect` / `overlayMode` ήταν ήδη νεκρά
+  // εδώ (ταξιδεύουν μέσα στο `ctx` προς το `processPointClick`), και το `colorLayers` έγινε
+  // νεκρό με την εξαγωγή του `runMarqueeSelection`. Καμία αλλαγή συμπεριφοράς.
+  const { cursor, transform, canvasRef, scene, onCanvasClick,
     onLayerSelected, onMultiLayerSelected, onEntitiesSelected, onUnifiedMarqueeResult,
-    activeTool, overlayMode } = ctx;
+    activeTool } = ctx;
 
   const canvas = canvasRef?.current ?? null;
   const marqueeSnap = getPointerSnapshotFromElement(canvas);
@@ -79,20 +121,7 @@ export function processMarqueeSelection(
   // the wall tool via EventBus (in-region detects enclosed rectangles; outer-perimeter
   // analyses the faces → leg walls). MUST NOT mutate selection (mirrors crop-window).
   if (isRegionBoxSelectTool(activeTool) && marqueeSnap) {
-    const regionResult = UniversalMarqueeSelector.performSelection(
-      cursor.selectionStart!,
-      cursor.position!,
-      transform,
-      marqueeSnap.rect,
-      {
-        colorLayers: colorLayers ?? [],
-        entities: (scene?.entities ?? []) as unknown as Entity[],
-        tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
-        enableDebugLogs: false,
-        onLayerSelected: undefined,
-        currentPosition: cursor.position!,
-      },
-    );
+    const regionResult = runMarqueeSelection(ctx, marqueeSnap.rect);
     const entityIds = regionResult.breakdown?.entityIds ?? [];
     if (entityIds.length > 0) {
       EventBus.emit('bim:wall-region-box-select', { entityIds });
@@ -120,21 +149,7 @@ export function processMarqueeSelection(
 
   if (!marqueeSnap || !(hasUnifiedCallback || hasMultiCallback || hasSingleCallback || hasEntityCallback)) return;
 
-  const selectionResult = UniversalMarqueeSelector.performSelection(
-    cursor.selectionStart!,
-    cursor.position!,
-    transform,
-    marqueeSnap.rect,
-    {
-      colorLayers: colorLayers ?? [],
-      // ADR-358 Phase 9D-5b-ii Sub-D — bridge cast: `SceneModel.entities: DxfEntityUnion[]` vs `Entity[]` expected by performSelection. Resolved at schema flip Phase 9D-5b-iii.
-      entities: (scene?.entities ?? []) as unknown as Entity[],
-      tolerance: TOLERANCE_CONFIG.HIT_TEST_FALLBACK,
-      enableDebugLogs: false,
-      onLayerSelected: undefined,
-      currentPosition: cursor.position!,
-    }
-  );
+  const selectionResult = runMarqueeSelection(ctx, marqueeSnap.rect);
 
   // Small selection = point click, large empty selection = deselect.
   const selectionWidth = Math.abs(cursor.position!.x - cursor.selectionStart!.x);
@@ -232,5 +247,69 @@ export function processPointClick(
     if (onCanvasClick) onCanvasClick(worldPoint, e.shiftKey);
   } else if (onCanvasClick) {
     onCanvasClick(worldPoint, e.shiftKey);
+  }
+}
+
+/**
+ * Το **σκέτο κλικ** χωρίς πλαίσιο: τι επιλέγει, και πότε ξεκινά πλαίσιο δύο κλικ.
+ *
+ * Εξήχθη από το `mouse-handler-up` (N.7.1 — το αρχείο είχε φτάσει στις **491/500**) και ζει
+ * **εδώ**, όχι σε νέο αδελφό: η κεφαλίδα αυτού του module δηλώνει ήδη το «*single point
+ * hit-test*» στο πεδίο ευθύνης του, και το μπλοκ είναι κυριολεκτικά ο **άλλος κλάδος** του
+ * `if (marquee)` που ζει από πάνω — ίδιο συμβάν, ίδιο συμβόλαιο, ίδιο `MarqueeContext`. Ένα
+ * τρίτο αρχείο θα ήταν διπλότυπο ευθύνης (N.18), όχι διαχωρισμός.
+ *
+ * ⚠️ Το `return` εδώ σημαίνει «**η χειρονομία καταναλώθηκε**» — ήταν έξοδος του ίδιου του
+ * χειριστή, και είναι ισοδύναμο επειδή το μπλοκ ήταν η **τελευταία** εντολή του.
+ *
+ * @param wasPanning το pan κατέχει τη χειρονομία — δεν ξεκινά πλαίσιο στο τέλος του
+ */
+export function processSinglePointPick(
+  e: React.MouseEvent<HTMLCanvasElement>,
+  ctx: MarqueeContext,
+  { wasPanning }: { readonly wasPanning: boolean },
+): void {
+  const { cursor, transform, canvasRef, scene, hitTestCallback,
+    onEntitySelect, onEntitiesSelected, activeTool, overlayMode } = ctx;
+  if (!cursor.position || !hitTestCallback) return;
+  if (isInDrawingMode(activeTool, overlayMode)) return;
+
+  const hitSnap = getPointerSnapshotFromElement(canvasRef?.current ?? null);
+  if (!hitSnap) return;
+  const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
+  const additive = e.shiftKey || e.ctrlKey || e.metaKey;
+  // ADR-358 Q19 Φ3b — «click-into»: a 2nd plain click on the sole-selected stair, over a
+  // tread, enters that sub-element (host stays selected) and CONSUMES the click. Any other
+  // click clears a stale sub-selection. Mirror of the 3D `handleClick` gesture.
+  const worldClick = screenToWorldWithSnapshot(getScreenPosFromEvent(e, hitSnap), transform, hitSnap);
+  if (handleStairClickInto2D(hitResult, additive, worldClick, scene?.entities as unknown as readonly Entity[] | undefined)) {
+    return;
+  }
+  // ADR-659 — repeated-click overlap disambiguation: when the click lands on a stack
+  // (≥2 under cursor), a 2nd click on the SAME point cycles to the next candidate (opens
+  // the popover + canvas pre-highlight). The 1st click just arms and falls through to the
+  // normal top-1 selection below (fast path untouched). Skipped on empty space / additive.
+  // hitResult is the top-1 entity id (string) or null — NOT an object. A truthy id means
+  // an entity sits under the cursor; the resolver re-runs hitTestAll to read the full stack.
+  if (hitResult && !additive && onEntitiesSelected) {
+    const consumed = resolveRepeatedClickCycle({
+      screenPos: cursor.position,
+      clientX: e.clientX,
+      clientY: e.clientY,
+      transform,
+      viewport: hitSnap.viewport,
+      additive,
+      selectEntityById: (id) => onEntitiesSelected([id]),
+      // Bug fix (2026-07-17) — entity lookup so the popover can show a semantic
+      // label (slab role/thickness/elevation) instead of the raw entity-type +
+      // internal level id.
+      resolveEntity: (id) => scene?.entities?.find((en) => en.id === id) as Entity | undefined,
+    });
+    if (consumed) return;
+  }
+  if (onEntitySelect) onEntitySelect(hitResult, additive);
+  // No entity + select tool + clean left-click → start two-click selection (AutoCAD: click→move→click)
+  if (!hitResult && activeTool === 'select' && e.button === 0 && !wasPanning && !additive) {
+    cursor.startSelection(getScreenPosFromEvent(e, hitSnap));
   }
 }

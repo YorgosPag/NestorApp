@@ -213,6 +213,25 @@ export interface TableIndicatorTick {
    * μπορεί να πει «ως εδώ», και οφείλουν να το πουν ολόκληρο.
    */
   readonly active: boolean;
+
+  /**
+   * 🔴 ADR-739 §30 — `true` για τη **μία** υποδιαίρεση που βρίσκεται κάτω από το ποντίκι.
+   *
+   * ## Γιατί είναι ΞΕΧΩΡΙΣΤΟ πεδίο και δεν γίνεται `active`
+   * Οι δύο σημασίες δεν είναι εναλλακτικές του ίδιου πράγματος: το `active` απαντά «**πού
+   * πάει το πλήκτρο**», το `hovered` απαντά «**τι θα πάθει αν πατήσω**». Συνυπάρχουν
+   * κανονικά (hover πάνω στην ήδη ενεργή στήλη) και ο ζωγράφος τις δείχνει **σωρευτικά** —
+   * γέμισμα από το `active`, πλύσιμο από το `hovered`. Μια ενιαία «κατάσταση» με
+   * προτεραιότητα θα υποχρέωνε τη μία να κρύψει την άλλη, και θα έκανε το feedback του
+   * ποντικιού να **εξαφανίζεται** ακριβώς εκεί που ο χρήστης δουλεύει.
+   *
+   * ## Γιατί το γεννά ο ίδιος ΕΝΑΣ παραγωγός με το `active`
+   * Η εναλλακτική ήταν να διαβάζει ο ζωγράφος το store του hover μόνος του. Τότε θα υπήρχαν
+   * **δύο** αναγνώσεις κατάστασης μέσα στο ίδιο καρέ (μία εδώ, μία εκεί) και δύο ευκαιρίες
+   * να διαφωνήσουν για το ποια είναι η τρίτη στήλη. Ίδια αρχή με την ονομασία: μία ερώτηση,
+   * μία απάντηση, ο ζωγράφος **δεν κρίνει**.
+   */
+  readonly hovered: boolean;
 }
 
 /**
@@ -222,16 +241,24 @@ export interface TableIndicatorTick {
  * ADR-739 Φ.Δ βήμα 8 — το `activeColIds` είναι **σύνολο** και όχι μία ταυτότητα, ώστε μια
  * επιλεγμένη περιοχή να ανάβει ολόκληρη. Χωρίς επιλογή ο καλών περνά μονοσύνολο: η ίδια
  * συνάρτηση, καμία ειδική περίπτωση, καμία δεύτερη διαδρομή ζωγραφικής.
+ *
+ * ADR-739 §30 — το `hoveredColId` είναι αντίθετα **μία ταυτότητα ή καμία**, και αυτό είναι
+ * σημασιολογία, όχι ασυνέπεια: το ποντίκι είναι ένα, άρα η υποδιαίρεση κάτω από αυτό είναι
+ * το πολύ μία. Ένα σύνολο εδώ θα επέτρεπε να εκφραστεί κατάσταση που δεν μπορεί να συμβεί.
+ * Παραλείπεται νόμιμα (`null`): «καμία λωρίδα κάτω από το ποντίκι» είναι η **κανονική**
+ * κατάσταση κάθε καρέ, όχι σιωπηλή προεπιλογή που μπορεί να είναι λάθος.
  */
 export function tableColumnTicks(
   columns: readonly TableColumnLayout[],
   activeColIds: ReadonlySet<TableColumnId>,
+  hoveredColId: TableColumnId | null = null,
 ): readonly TableIndicatorTick[] {
   return columns.map((column, index) => ({
     label: columnLetter(index),
     startMm: column.xMm,
     sizeMm: column.widthMm,
     active: activeColIds.has(column.id),
+    hovered: column.id === hoveredColId,
   }));
 }
 
@@ -248,6 +275,7 @@ export function tableRowTicks(
   activeRowIds: ReadonlySet<TableRowId>,
   from: number,
   to: number,
+  hoveredRowId: TableRowId | null = null,
 ): readonly TableIndicatorTick[] {
   const ticks: TableIndicatorTick[] = [];
   for (let i = Math.max(from, 0); i < Math.min(to, rows.length); i++) {
@@ -257,6 +285,8 @@ export function tableRowTicks(
       startMm: row.yMm,
       sizeMm: row.heightMm,
       active: activeRowIds.has(row.id),
+      // §30 — η γραμμή κάτω από το ποντίκι. Συμμετρικά με τις στήλες· δες εκείνη.
+      hovered: row.id === hoveredRowId,
     });
   }
   return ticks;

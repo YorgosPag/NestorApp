@@ -41,7 +41,6 @@ import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
   buildTableCellEditCommand,
   resolveTableCellEditTarget,
-  resolveTableCellEditTargetById,
 } from '../../bim/table/table-cell-edit-session';
 import {
   moveTableCursor,
@@ -53,14 +52,14 @@ import {
   setTableCellCursor,
   useTableCellCursor,
 } from '../../state/table-cell-cursor-store';
-import { createTextEditorAnchor2D } from '../text-toolbar/text-editor-anchor-2d';
-import type { TextEditorAnchorBox } from '../text-toolbar/TextEditorAnchorLayer';
 import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
 // ADR-739 §26.15 — το **ζωντανό** κουτί του κελιού μετακόμισε σε δικό του module όταν αυτό
 // εδώ χτύπησε τις 500 γραμμές (N.7.1). Εξαγωγή, όχι κόψιμο: οι δύο συναρτήσεις δεν
 // χρειάζονται τίποτα από το hook.
 import { caretIndexOfClick, cellEditorFrameLive } from './table-cell-editor-frame-live';
-import { tableCellEditorCssVars } from './table-cell-editor-vars';
+// ADR-739 §31.10 — η **αλυσίδα προς την οθόνη** (κελί ⇒ κουτί ⇒ άγκυρο), εξαχθείσα για τον
+// ίδιο λόγο: αυτό το αρχείο ξαναχτύπησε τις 500 γραμμές.
+import { useTableCellAnchor } from './use-table-cell-anchor';
 import {
   useTableFormulaBarMount,
   type TableFormulaBarMount,
@@ -76,6 +75,13 @@ import { useTableCellPointer } from './use-table-cell-pointer';
 // ADR-739 §29 — το δίδυμο του modal keyboard scope για το ποντίκι: όσο ζει η λειτουργία
 // πίνακα, ο καμβάς δεν επιλέγει, δεν σέρνει και δεν κάνει hover σε οντότητες.
 import { useTableCanvasLockdown } from './use-table-canvas-lockdown';
+// ADR-739 §30 — ο hover των λωρίδων δείκτη (Excel). Παθητικός ακροατής `mousemove`, ο μόνος
+// που το κλείδωμα του §29 αφήνει να περάσει (το pan ζει πάνω του).
+import { useTableIndicatorHover } from './use-table-indicator-hover';
+// ADR-739 §31.9 — ο ΕΝΑΣ δεσμευτής «οντότητα + νέο μοντέλο ⇒ μία εντολή», κοινός με το μενού
+// ζωνών· η σύρση πλάτους τον καλεί **μία** φορά, στο `mouseup`.
+import { useTableModelCommit } from './use-table-model-commit';
+import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -282,6 +288,35 @@ export function useTableCellDoubleClickEditor(
     commitText(cursor.draft);
   }, [cursor, commitText]);
 
+  /**
+   * 🔴 ADR-739 §31.9 — **ΟΙ ΔΥΟ ΓΡΑΦΕΙΣ ΤΗΣ ΣΥΡΣΗΣ ΠΛΑΤΟΥΣ**, και γιατί δεν είναι ένας.
+   *
+   * Το `commitTableModel` παράγει **εντολή** — δηλαδή βήμα αναίρεσης. Καλεσμένο σε κάθε
+   * `mousemove`, ένα σύρσιμο θα γέμιζε τον σωρό με 60 βήματα και ένα `Ctrl+Z` θα γύριζε **ένα
+   * pixel** πίσω. Καλεσμένο μόνο στο τέλος, ο χρήστης θα έσερνε στα τυφλά.
+   *
+   * Άρα δύο δρόμοι: η προεπισκόπηση γράφει τη σκηνή **απευθείας** (φθηνή, χωρίς ιστορικό) και
+   * το τελικό πλάτος περνά **μία** φορά από την εντολή. Ο κύκλος ζωής της χειρονομίας δεν
+   * ξέρει τη διαφορά — δες την κεφαλίδα του `table-column-resize-drag`.
+   */
+  const commitTableModel = useTableModelCommit({ levelManager, execute });
+
+  const previewTableModel = useCallback(
+    (entity: TableEntity, model: TableEntity['model']): void => {
+      const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
+      if (!currentLevelId || !setLevelScene) return;
+      const scene = getLevelScene(currentLevelId);
+      if (!scene) return;
+      // Νέο αντικείμενο οντότητας ⇒ οι απομνημονεύσεις της διάταξης ακυρώνονται από μόνες
+      // τους (η ταυτότητα ΕΙΝΑΙ η έκδοση, δες `resizeTableColumnLeftOfEdge`).
+      setLevelScene(currentLevelId, {
+        ...scene,
+        entities: scene.entities.map((e) => (e.id === entity.id ? { ...entity, model } : e)),
+      });
+    },
+    [levelManager],
+  );
+
   useTableCellPointer({
     cursor,
     entity: liveEntity,
@@ -289,71 +324,15 @@ export function useTableCellDoubleClickEditor(
     transformRef,
     onSelectTo: rangeActions.selectTo,
     onCommitPending: commitPendingDraft,
+    onPreviewModel: previewTableModel,
+    onCommitModel: commitTableModel,
   });
 
-  // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο: κείμενο, όψη και αγκύρωση είναι
-  // **παράγωγα**, ποτέ αντίγραφα (γι' αυτό το store δεν κρατά κείμενο).
-  //
-  // Η γωνία ταξιδεύει μαζί επειδή ανήκει στην **οντότητα**, όχι στο κελί, και ο επεξεργαστής
-  // πρέπει να γείρει μαζί με τον πίνακα. Διαβασμένη από την **ίδια** αναφορά οντότητας —
-  // μια δεύτερη ανάγνωση σκηνής θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα.
-  const target = useMemo(() => {
-    if (!cursor || !liveEntity) return null;
-    const cell = resolveTableCellEditTargetById(liveEntity, cursor.position.rowId, cursor.position.colId);
-    return cell ? { cell, angleRad: liveEntity.angleRad } : null;
-  }, [cursor, liveEntity]);
-
-  // Σταθερή ταυτότητα ανά κελί: το `TextEditorAnchorLayer` ξαναδένει τη συνδρομή του σε
-  // κάθε νέο `anchor`, οπότε ένα φρέσκο αντικείμενο ανά απόδοση θα ξέδενε/ξανάδενε τον
-  // scheduler σε κάθε πάτημα πλήκτρου.
-  //
-  // 🔴 ADR-739 Φ.Δ βήμα 3 — ΕΔΩ ζούσαν δύο σταθερές, `140 × 24 px`. Ήταν αυτές που έκαναν
-  // τον επεξεργαστή «μαύρο κουτάκι πάνω-αριστερά μέσα στο κελί» (Giorgio, 2026-08-01):
-  // ένα ξένο κουτί σε px οθόνης, που δεν κληρονομούσε ούτε μέγεθος, ούτε γραμματοσειρά,
-  // ούτε στοίχιση, ούτε χρώμα, ούτε την περιστροφή του πίνακα. Τη θέση τους παίρνει ένα
-  // **ζωντανό** κουτί, παράγωγο της ίδιας διάταξης που ζωγραφίζει ο καμβάς.
-  //
-  // 🔴 ADR-739 Φ.Δ βήμα 6 — το `draft` μπαίνει στις εξαρτήσεις **επίτηδες**: το κουτί
-  // μεγαλώνει με το κείμενο, άρα αλλάζει σε κάθε πάτημα πλήκτρου. Ο `cursor` ήδη άλλαζε ανά
-  // πάτημα (το πρόχειρο ζει μέσα του), οπότε αυτό **δεν** προσθέτει καμία νέα απόδοση — απλώς
-  // κάνει ρητό ότι το κουτί εξαρτάται από αυτό.
-  //
-  // Σε **πλοήγηση** δεν περνά πρόχειρο: εκεί ο επεξεργαστής είναι διαφανής και το κουτί
-  // πρέπει να είναι ακριβώς το κελί (τον δρομέα τον ζωγραφίζει ο καμβάς πάνω σε αυτό).
-  const draft = cursor && cursor.mode !== 'nav' ? cursor.draft : undefined;
-
-  const anchor = useMemo(() => {
-    if (!target) return null;
-    const { cell, angleRad } = target;
-    // Το φόντο διαβάζεται ΜΙΑ φορά ανά συνεδρία — δες το σχόλιο του `cellEditorFrameLive`.
-    const backgroundHex = resolveDxfCanvasBackgroundHex();
-    const projectBox = (point: { x: number; y: number } | null): TextEditorAnchorBox => {
-      const frame = cellEditorFrameLive(
-        cell,
-        angleRad,
-        backgroundHex,
-        draft === undefined ? undefined : { draft, anchor: point },
-      );
-      return {
-        widthPx: frame.widthPx,
-        heightPx: frame.heightPx,
-        rotationRad: frame.rotationRad,
-        offsetXPx: frame.offsetXPx,
-        cssVars: tableCellEditorCssVars(frame),
-      };
-    };
-    const initial = projectBox(null);
-    return {
-      ...createTextEditorAnchor2D({
-        worldPoint: cell.anchorWorldPoint,
-        getContainer: () => containerRef.current,
-        // Το στατικό μέγεθος μένει ως έσχατο δίχτυ του clamping· το ζωντανό κουτί το
-        // αντικαθιστά σε κάθε tick.
-        size: { width: initial.widthPx, height: initial.heightPx },
-      }),
-      projectBox,
-    };
-  }, [target, containerRef, draft]);
+  // ADR-739 §31.10 — «πού είναι αυτό το κελί στην οθόνη;» ζει σε δικό του module από τη
+  // στιγμή που αυτό εδώ χτύπησε τις 500 γραμμές (N.7.1). Δέχεται τη **ζωντανή** οντότητα που
+  // μόλις διαβάστηκε παραπάνω, για τον ίδιο λόγο με τις ενέργειες περιοχής: μια δεύτερη
+  // ανάγνωση σκηνής θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα μέσα στο ίδιο render.
+  const { target, anchor } = useTableCellAnchor({ cursor, entity: liveEntity, containerRef });
 
   const overlay = useMemo<TableCellOverlayMount | null>(() => {
     if (!cursor || !target || !anchor) return null;
@@ -436,6 +415,24 @@ export function useTableCellDoubleClickEditor(
    * δεύτερος είναι πάντα αυτός που ξεχνιέται όταν αλλάξει ο πρώτος.
    */
   useTableCanvasLockdown({
+    active: overlay !== null,
+    entity: liveEntity,
+    containerRef,
+    transformRef,
+  });
+
+  /**
+   * 🔴 ADR-739 §30 — **η τρίτη χρήση της ίδιας τιμής**: ο hover των λωρίδων `A B C` / `1 2 3`.
+   *
+   * Ο ιδιοκτήτης (2026-08-03): «όταν ο κέρσορας κάνει hover πάνω από τις λωρίδες… θέλω να
+   * φωτίζονται τα **ξεχωριστά κομμάτια** της λωρίδας, όπως ακριβώς στο Excel».
+   *
+   * 🔑 Ίδιο `overlay !== null` — και δεν είναι συμμετρία για την ομορφιά: ο δείκτης
+   * **ζωγραφίζεται** μόνο όσο υπάρχει δρομέας, οπότε hover εκτός αυτής της συνθήκης θα ήταν
+   * κατάσταση που κανείς δεν αποδίδει. Τρεις μηχανισμοί (πληκτρολόγιο, ποντίκι, hover), μία
+   * τιμή, καμία δυνατότητα να μείνει ένας από τους τρεις ανοιχτός.
+   */
+  useTableIndicatorHover({
     active: overlay !== null,
     entity: liveEntity,
     containerRef,

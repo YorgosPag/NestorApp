@@ -123,16 +123,42 @@ describe('DxfBitmapCache — η αιτία του rebuild καταγράφετα
     expect(recordedCounters()).toEqual([rasterRebuildReasonCounter('structural', true)]);
   });
 
-  it('idle-due: ο idle timer χτυπά — και ο μετρητής δείχνει ότι έγινε ΜΕΣΑ σε χειρονομία', () => {
+  it('idle-due: ο idle timer χτυπά ΣΕ ΗΡΕΜΙΑ — εκεί ανήκει η ανακατασκευή', () => {
     const cache = seededCache();
     // Μια μετατοπισμένη προβολή οπλίζει τον idle timer μέσα από το blit (ADR-726 Φ3).
     const drifted: ViewTransform = { ...ANCHOR, offsetX: 40 };
     cache.blit(targetCtx(), VIEWPORT, drifted);
     resetPerf();
     jest.advanceTimersByTime(200);
-    mockGestureActive = true; // η ριπή ροδέλας συνεχίζεται (WHEEL_IDLE 220 > RASTER_IDLE 120)
     expect(cache.isDirty(SCENE, drifted, VIEWPORT, BASE)).toBe(true);
-    expect(recordedCounters()).toEqual([rasterRebuildReasonCounter('idle-due', true)]);
+    expect(recordedCounters()).toEqual([rasterRebuildReasonCounter('idle-due', false)]);
+  });
+
+  it('🔴 ADR-743 Φ1 — ο μετρητής `idle-due@gesture` είναι πλέον ΑΝΕΚΦΡΑΣΤΟΣ', () => {
+    // ⚠️ Η ΠΡΟΗΓΟΥΜΕΝΗ ΕΚΔΟΧΗ ΑΥΤΟΥ ΤΟΥ TEST ΑΝΑΜΕΝΕ ΑΚΡΙΒΩΣ ΤΟ ΑΝΤΙΘΕΤΟ — και ήταν ο λόγος
+    // ύπαρξης του διαχωρισμού @gesture/@rest: το πείραμα μέτρησε **43/43** ανακατασκευές του
+    // zoom σε αυτόν τον μετρητή. Τώρα που ο χρονιστής ρωτά τον ιδιοκτήτη, ο μετρητής **δεν
+    // μπορεί να γραφτεί**: όσο τρέχει χειρονομία, καμία εκκρεμότητα δεν δηλώνεται.
+    //
+    // ⚠️ Και η ΣΕΙΡΑ μετράει: το flag ανάβει ΠΡΙΝ περάσει ο χρόνος, γιατί ο χρονιστής ρωτά τη
+    // ΣΤΙΓΜΗ ΤΟΥ ΧΤΥΠΟΥ. Ένα test που το ανάβει μετά, δοκιμάζει σενάριο που δεν συμβαίνει.
+    const cache = seededCache();
+    const drifted: ViewTransform = { ...ANCHOR, offsetX: 40 };
+    cache.blit(targetCtx(), VIEWPORT, drifted);
+    resetPerf();
+    mockGestureActive = true; // η ριπή ροδέλας συνεχίζεται (WHEEL_IDLE 220 > RASTER_IDLE 120)
+    jest.advanceTimersByTime(200);
+    expect(cache.isDirty(SCENE, drifted, VIEWPORT, BASE)).toBe(false);
+    expect(recordedCounters()).toEqual([]);
+  });
+
+  it('quality@gesture: το ΠΑΤΩΜΑ της χειρονομίας έχει τον δικό του μετρητή — μετρήσιμο κόστος', () => {
+    // Το πάτωμα δεν είναι σιωπηλό: ό,τι επιβάλλει ανακατασκευή μέσα σε χειρονομία εμφανίζεται
+    // στον ίδιο πίνακα, ώστε η επόμενη μέτρηση να δείξει πόσο κοστίζει (ADR-743 §Φ1).
+    const cache = seededCache();
+    mockGestureActive = true;
+    expect(cache.isDirty(SCENE, { ...ANCHOR, scale: 0.5 }, VIEWPORT, BASE)).toBe(true);
+    expect(recordedCounters()).toEqual([rasterRebuildReasonCounter('quality', true)]);
   });
 
   it('unusable: μη-πεπερασμένη μεγέθυνση ⇒ rebuild ανεξαρτήτως χειρονομίας', () => {
@@ -149,6 +175,7 @@ describe('DxfBitmapCache — η αιτία του rebuild καταγράφετα
   });
 
   it('🔴 ΤΟ ΙΔΙΟ σενάριο ποιότητας ΜΕΣΑ σε χειρονομία δεν ξαναχτίζει καθόλου (ADR-726 Φ3.1)', () => {
+    // Μετατόπιση χωρίς αλλαγή κλίμακας ⇒ `k ≡ 1` ⇒ το πάτωμα του ADR-743 Φ1 δεν το αγγίζει.
     const cache = seededCache();
     mockGestureActive = true;
     expect(cache.isDirty(SCENE, { ...ANCHOR, offsetX: OVERSCAN * 4 }, VIEWPORT, BASE)).toBe(false);

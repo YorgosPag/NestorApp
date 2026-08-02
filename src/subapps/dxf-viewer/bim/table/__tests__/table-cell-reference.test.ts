@@ -155,8 +155,8 @@ describe('υποδιαιρέσεις ζωνών δείκτη', () => {
 
   it('τα γράμματα ακολουθούν τα ΠΡΑΓΜΑΤΙΚΑ πλάτη στηλών', () => {
     expect(tableColumnTicks(columns, activeIds('c2'))).toEqual([
-      { label: 'A', startMm: 0, sizeMm: 20, active: false },
-      { label: 'B', startMm: 20, sizeMm: 30, active: true },
+      { label: 'A', startMm: 0, sizeMm: 20, active: false, hovered: false },
+      { label: 'B', startMm: 20, sizeMm: 30, active: true, hovered: false },
     ]);
   });
 
@@ -164,7 +164,7 @@ describe('υποδιαιρέσεις ζωνών δείκτη', () => {
     // Ο ADR-735 απαγορεύει δουλειά ανάλογη του zoom· ο αριθμός όμως μένει ο απόλυτος —
     // η γραμμή 3 λέγεται «3» και όταν είναι η πρώτη ορατή.
     expect(tableRowTicks(rows, activeIds('r3'), 2, 3)).toEqual([
-      { label: '3', startMm: 18, sizeMm: 8, active: true },
+      { label: '3', startMm: 18, sizeMm: 8, active: true, hovered: false },
     ]);
   });
 
@@ -190,5 +190,50 @@ describe('υποδιαιρέσεις ζωνών δείκτη', () => {
 
   it('κενό σύνολο ⇒ καμία φωτισμένη — «καμία επιλογή» δεν είναι «όλα»', () => {
     expect(tableColumnTicks(columns, new Set()).some((t) => t.active)).toBe(false);
+  });
+
+  /**
+   * 🔴 ADR-739 §30 — ο hover των λωρίδων. Ο ιδιοκτήτης το ζήτησε ως «τα **ξεχωριστά
+   * κομμάτια** της λωρίδας, όπως στο Excel»: η προδιαγραφή είναι ότι φωτίζεται **ένα**.
+   */
+  describe('§30 — hover ανά υποδιαίρεση', () => {
+    it('ΜΟΝΟ η υποδιαίρεση κάτω από το ποντίκι — ποτέ ολόκληρη η λωρίδα', () => {
+      expect(tableColumnTicks(columns, new Set(), 'c2').map((t) => t.hovered)).toEqual([
+        false, true,
+      ]);
+      expect(tableRowTicks(rows, new Set(), 0, 3, 'r2').map((t) => t.hovered)).toEqual([
+        false, true, false,
+      ]);
+    });
+
+    it('χωρίς ποντίκι πάνω στη ζώνη ⇒ καμία — η κανονική κατάσταση κάθε καρέ', () => {
+      expect(tableColumnTicks(columns, activeIds('c1')).some((t) => t.hovered)).toBe(false);
+      expect(tableRowTicks(rows, activeIds('r1'), 0, 3).some((t) => t.hovered)).toBe(false);
+    });
+
+    /**
+     * 🔴 Η περίπτωση που κατέρρεε αν το hover γινόταν «κατάσταση με προτεραιότητα» αντί για
+     * ξεχωριστό πεδίο: hover πάνω στην **ήδη ενεργή** στήλη. Οι δύο απαντούν σε διαφορετικές
+     * ερωτήσεις («πού πάει το πλήκτρο» / «τι θα πάθει αν πατήσω»), άρα συνυπάρχουν — και ο
+     * χρήστης δεν χάνει το feedback του ποντικιού ακριβώς εκεί που δουλεύει.
+     */
+    it('🔴 ΣΥΝΥΠΑΡΧΟΥΝ: hover πάνω στην ενεργή στήλη κρατά ΚΑΙ τα δύο', () => {
+      const [, b] = tableColumnTicks(columns, activeIds('c2'), 'c2');
+      expect(b).toMatchObject({ label: 'B', active: true, hovered: true });
+    });
+
+    it('ταυτότητα εκτός διάταξης ⇒ καμία φωτισμένη, καμία εξαίρεση', () => {
+      expect(tableColumnTicks(columns, new Set(), 'c-fantasma').some((t) => t.hovered)).toBe(false);
+    });
+
+    /**
+     * Το ορατό παράθυρο κόβει γραμμές (ADR-735). Μια γραμμή **εκτός** παραθύρου δεν
+     * ζωγραφίζεται, άρα δεν μπορεί να είναι «κάτω από το ποντίκι» — και δεν εμφανίζεται.
+     */
+    it('γραμμή εκτός ορατού παραθύρου δεν γεννά tick, ούτε καν φωτισμένο', () => {
+      expect(tableRowTicks(rows, new Set(), 0, 1, 'r3')).toEqual([
+        { label: '1', startMm: 0, sizeMm: 10, active: false, hovered: false },
+      ]);
+    });
   });
 });

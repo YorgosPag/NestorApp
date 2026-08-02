@@ -6,7 +6,6 @@
 
 import { useCallback } from 'react';
 import {
-  CoordinateTransforms,
   getPointerSnapshotFromElement,
   getScreenPosFromEvent,
   screenToWorldWithSnapshot,
@@ -19,7 +18,12 @@ import type { CentralizedMouseHandlersProps, MouseHandlerRefs, SnapManagerAPI } 
 // ADR-358 Phase 9D-5b-ii Sub-D — Entity type bridge for performSelection narrow.
 import type { Entity } from '../../types/entities';
 // ADR-065 SRP split — marquee / point-click selection processing lives in a sibling module.
-import { processMarqueeSelection } from './mouse-handler-up-marquee';
+import { processMarqueeSelection, processSinglePointPick } from './mouse-handler-up-marquee';
+// 🔴 ADR-739 §29.11 — η ΤΡΙΤΗ πύλη ως **καθαρή** συνάρτηση, δίπλα στις δύο του §29.9. Ολόκληρο
+// το σκεπτικό (Δ1 πλαίσιο δύο κλικ · Δ2 οντότητα από κάτω) ζει στην κεφαλίδα της.
+import { shouldCanvasActOnRelease } from './select-gesture-gates';
+// ADR-739 §29 — ο ΕΝΑΣ ορισμός του «η λειτουργία πίνακα κατέχει τον καμβά».
+import { isCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
 // ADR-362 hotfix Round 3 (2026-05-19) — skip upstream click-snap on dim-line-offset
 // pick so committed defPoints[2] matches the cursor (not a nearby entity endpoint).
 // Round 1+2 gated snap only in the downstream `useDrawingHandlers.onDrawingPoint`,
@@ -65,10 +69,6 @@ import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
 import { applyOrthoToDelta } from '../../bim/grips/grip-move-constraints';
 // ADR-363 — F9/Q SNAP-MODE step layer for the body-drag COMMIT (WYSIWYG with the live ghost).
 import { applyGripStepSnap, isGripStepActive } from '../../bim/grips/grip-step-quantize';
-// ADR-358 Q19 Φ3b — 2D «click-into»: 2nd click on the sole-selected stair → tread sub-select.
-import { handleStairClickInto2D } from '../../bim/stairs/stair-click-into-2d';
-// ADR-659 — ArchiCAD repeated-click overlap disambiguation (2nd click same point → cycle).
-import { resolveRepeatedClickCycle } from '../selection/resolve-repeated-click-cycle';
 
 /** Min pointer travel (px) before a body-drag counts as a drag (else it's a click). */
 const BODY_DRAG_MIN_PX = 3;
@@ -134,6 +134,22 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       // ⚠️ ΣΕΙΡΑ: ΥΠΟΧΡΕΩΤΙΚΑ **ΜΕΤΑ** το `onTransformChange(pendingTransform)` από πάνω —
       // εκείνη η εγγραφή είναι αλλαγή transform και θα ξαναόπλιζε την αναστολή.
       endNavigationGesture();
+    }
+
+    // 🔴 ADR-739 §29.11 — ΤΡΙΤΗ ΠΥΛΗ: ο καμβάς **δεν ερμηνεύει** την απελευθέρωση όσο η
+    // λειτουργία πίνακα τον κατέχει. Κλείνει **δύο** ελαττώματα με μία ερώτηση: το πλαίσιο
+    // δύο κλικ που ξεκινούσε από κλικ στις ζώνες δείκτη (Δ1) και την επιλογή της οντότητας
+    // που βρίσκεται **κάτω** από το κελί (Δ2). Το πλήρες σκεπτικό ζει στην πύλη.
+    //
+    // ⚠️ ΣΕΙΡΑ: **ΜΕΤΑ** τον καθαρισμό του pan από πάνω. Το pan με μεσαίο/δεξί δουλεύει
+    // επίτηδες μέσα στη λειτουργία πίνακα (§29.10), άρα το `mouseup` του **πρέπει** να το
+    // τερματίζει — φύλακας πιο πάνω θα άφηνε τον viewer να σέρνει για πάντα.
+    if (!shouldCanvasActOnRelease({ lockedByTableSession: isCanvasLockedByTableSession() })) {
+      refs.lassoDownRef.current.buttonHeld = false;
+      // Πλαίσιο που είχε ξεκινήσει **πριν** ανοίξει η λειτουργία δεν επιτρέπεται να μείνει
+      // ζωντανό: το `isSelecting` σβήνει και το hover (`mouse-handler-move`).
+      if (cursor.isSelecting) cursor.endSelection();
+      return;
     }
 
     // Body-drag commit (grab body → MOVE; Ctrl+drag → COPY). Runs after pan
@@ -432,60 +448,23 @@ export function useMouseUpHandler({ props, cursor, refs, snap }: MouseUpHandlerD
       return;
     }
 
+    // Οι δύο κλάδοι της **ίδιας** απελευθέρωσης — με πλαίσιο ή χωρίς — μοιράζονται ένα και
+    // μόνο συμφραζόμενο: δύο ταυτόσημα literal 15 πεδίων θα ήταν διπλότυπο που αποκλίνει στην
+    // πρώτη προσθήκη πεδίου (και μόνο ο ένας κλάδος θα το έπαιρνε).
+    const selectionCtx = {
+      cursor, transform, viewport, canvasRef, colorLayers, scene,
+      hitTestCallback, onEntitySelect, onCanvasClick, onLayerSelected,
+      onMultiLayerSelected, onEntitiesSelected, onUnifiedMarqueeResult,
+      activeTool, overlayMode,
+    };
     // Marquee selection processing
     if (cursor.isSelecting && cursor.selectionStart && cursor.position) {
-      processMarqueeSelection(e, {
-        cursor, transform, viewport, canvasRef, colorLayers, scene,
-        hitTestCallback, onEntitySelect, onCanvasClick, onLayerSelected,
-        onMultiLayerSelected, onEntitiesSelected, onUnifiedMarqueeResult,
-        activeTool, overlayMode,
-      });
+      processMarqueeSelection(e, selectionCtx);
       cursor.endSelection();
-    } else if (cursor.position && hitTestCallback) {
-      // Single point hit-test (no marquee)
-      const isDrawing = isInDrawingMode(activeTool, overlayMode);
-      if (!isDrawing) {
-        const canvasForHit = canvasRef?.current ?? null;
-        const hitSnap = getPointerSnapshotFromElement(canvasForHit);
-        if (!hitSnap) return;
-        const hitResult = hitTestCallback(scene, cursor.position, transform, hitSnap.viewport);
-        const additive = e.shiftKey || e.ctrlKey || e.metaKey;
-        // ADR-358 Q19 Φ3b — «click-into»: a 2nd plain click on the sole-selected stair, over a
-        // tread, enters that sub-element (host stays selected) and CONSUMES the click. Any other
-        // click clears a stale sub-selection. Mirror of the 3D `handleClick` gesture.
-        const worldClick = screenToWorldWithSnapshot(getScreenPosFromEvent(e, hitSnap), transform, hitSnap);
-        if (handleStairClickInto2D(hitResult, additive, worldClick, scene?.entities as unknown as readonly Entity[] | undefined)) {
-          return;
-        }
-        // ADR-659 — repeated-click overlap disambiguation: when the click lands on a stack
-        // (≥2 under cursor), a 2nd click on the SAME point cycles to the next candidate (opens
-        // the popover + canvas pre-highlight). The 1st click just arms and falls through to the
-        // normal top-1 selection below (fast path untouched). Skipped on empty space / additive.
-        // hitResult is the top-1 entity id (string) or null — NOT an object. A truthy id means
-        // an entity sits under the cursor; the resolver re-runs hitTestAll to read the full stack.
-        if (hitResult && !additive && onEntitiesSelected) {
-          const consumed = resolveRepeatedClickCycle({
-            screenPos: cursor.position,
-            clientX: e.clientX,
-            clientY: e.clientY,
-            transform,
-            viewport: hitSnap.viewport,
-            additive,
-            selectEntityById: (id) => onEntitiesSelected([id]),
-            // Bug fix (2026-07-17) — entity lookup so the popover can show a semantic
-            // label (slab role/thickness/elevation) instead of the raw entity-type +
-            // internal level id. Same resolver shape as the connector-elevation lookup
-            // above (γρ. ~381); the entity resolution happens ONCE here, at click time.
-            resolveEntity: (id) => scene?.entities?.find((en) => en.id === id) as Entity | undefined,
-          });
-          if (consumed) return;
-        }
-        if (onEntitySelect) onEntitySelect(hitResult, additive);
-        // No entity + select tool + clean left-click → start two-click selection (AutoCAD: click→move→click)
-        if (!hitResult && activeTool === 'select' && e.button === 0 && !wasPanning && !additive) {
-          cursor.startSelection(getScreenPosFromEvent(e, hitSnap));
-        }
-      }
+    } else {
+      // Σκέτο κλικ χωρίς πλαίσιο — ο ΑΛΛΟΣ κλάδος του ίδιου συμβάντος, εξηγμένος στο αδελφό
+      // module μαζί με το marquee (N.7.1· δες την κεφαλίδα του `processSinglePointPick`).
+      processSinglePointPick(e, selectionCtx, { wasPanning });
     }
   }, [cursor, onTransformChange, viewport, hitTestCallback, scene, onEntitySelect, colorLayers, onLayerSelected, onMultiLayerSelected, canvasRef, onCanvasClick, activeTool, overlayMode, snapEnabled, findSnapPoint, onGripMouseUp, onEntitiesSelected, onUnifiedMarqueeResult, refs]);
 }

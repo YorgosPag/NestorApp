@@ -31,8 +31,14 @@ function fakeContext(pxPerMm: number) {
   };
 }
 
-function tick(label: string, startMm: number, sizeMm: number, active = false): TableIndicatorTick {
-  return { label, startMm, sizeMm, active };
+function tick(
+  label: string,
+  startMm: number,
+  sizeMm: number,
+  active = false,
+  hovered = false,
+): TableIndicatorTick {
+  return { label, startMm, sizeMm, active, hovered };
 }
 
 const COLUMNS = [tick('A', 0, 20), tick('B', 20, 30, true)];
@@ -90,5 +96,59 @@ describe('stampTableIndicator', () => {
     stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
     // 1 γωνία + 2 στήλες + 2 γραμμές = 5 γεμίσματα.
     expect(log.fills).toHaveLength(5);
+  });
+
+  /** 🔴 ADR-739 §30 — το ημιδιαφανές πλύσιμο της υποδιαίρεσης κάτω από το ποντίκι. */
+  describe('§30 — hover', () => {
+    it('ΕΝΑ επιπλέον γέμισμα, μόνο στην υποδιαίρεση κάτω από το ποντίκι', () => {
+      const { rc, log } = fakeContext(4);
+      stampTableIndicator(rc, {
+        columns: [tick('A', 0, 20, false, true), tick('B', 20, 30, true)],
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+      });
+      // 5 όπως πριν + 1 πλύσιμο = 6, και το πλύσιμο είναι το χρώμα του hover.
+      expect(log.fills).toHaveLength(6);
+      expect(log.fills.filter((f) => f === TABLE_INDICATOR.hoverWashRgba)).toHaveLength(1);
+    });
+
+    it('χωρίς hover ⇒ κανένα πλύσιμο (η κανονική κατάσταση κάθε καρέ)', () => {
+      const { rc, log } = fakeContext(4);
+      stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
+      expect(log.fills).not.toContain(TABLE_INDICATOR.hoverWashRgba);
+    });
+
+    /**
+     * 🔴 Η περίπτωση για την οποία επιλέχθηκε **πλύσιμο** αντί για τρίτο χρώμα γεμίσματος:
+     * hover πάνω στην ήδη ενεργή στήλη. Το ενεργό μπλε μένει — από πάνω του μπαίνει η σκιά.
+     * Ένα `hoverFillHex` εδώ ή θα έσβηνε τη δήλωση της ενεργής, ή δεν θα φαινόταν καθόλου.
+     */
+    it('🔴 hover ΠΑΝΩ ΣΤΗΝ ΕΝΕΡΓΗ: το ενεργό γέμισμα ΜΕΝΕΙ και η σκιά μπαίνει από πάνω', () => {
+      const { rc, log } = fakeContext(4);
+      stampTableIndicator(rc, {
+        columns: [tick('A', 0, 20), tick('B', 20, 30, true, true)],
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+      });
+      const activeAt = log.fills.indexOf(TABLE_INDICATOR.activeFillHex);
+      const washAt = log.fills.indexOf(TABLE_INDICATOR.hoverWashRgba);
+      expect(activeAt).toBeGreaterThanOrEqual(0);
+      expect(washAt).toBeGreaterThan(activeAt);
+      // Και η ετικέτα κρατά το **λευκό** της ενεργής: το hover δεν αλλάζει «πού πάει το πλήκτρο».
+      expect(log.texts.find((p) => p.text === 'B')?.color).toBe(TABLE_INDICATOR.activeTextHex);
+    });
+
+    it('🔴 LOD: κάτω από το κατώφλι δεν υπάρχει ούτε πλύσιμο — δεν φωτίζεται ό,τι δεν φαίνεται', () => {
+      const { rc, log } = fakeContext(0.2);
+      stampTableIndicator(rc, {
+        columns: [tick('A', 0, 20, false, true)],
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+      });
+      expect(log.fills).toHaveLength(0);
+    });
   });
 });

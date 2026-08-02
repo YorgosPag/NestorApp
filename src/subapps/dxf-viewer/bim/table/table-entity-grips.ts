@@ -138,9 +138,34 @@ function resizeColumnAtEdge(
   if (leftIndex < 0 || leftIndex >= layout.columns.length) return {};
 
   const newEdge = tableWorldToFrame(entity, translatePoint(gripWorldPos, delta), mmToWorld);
-  const leftEdgeMm = layout.columns[leftIndex].xMm;
-  const widthMm = Math.max(newEdge.u - leftEdgeMm, MIN_TABLE_COLUMN_WIDTH_MM);
+  const model = resizeTableColumnLeftOfEdge(entity, leftIndex + 1, newEdge.u);
+  return model ? { model } : {};
+}
 
+/**
+ * 🔴 ADR-739 §31.9 — **Η ΜΙΑ αριθμητική του «νέο πλάτος στήλης»**, από δείκτη ορίου + θέση `u`.
+ *
+ * Εξήχθη από το {@link resizeColumnAtEdge} τη στιγμή που απέκτησε **δεύτερο** καταναλωτή: τη
+ * σύρση του διαχωριστικού **μέσα στη λωρίδα**, που δεν περνά από λαβή και άρα δεν έχει ούτε
+ * `gripWorldPos` ούτε `delta`. Δύο αντίγραφα θα ήταν sibling clone του N.18 — και θα απέκλιναν
+ * ακριβώς εκεί που πονάει: στο **ελάχιστο πλάτος** και στο ποια στήλη «κρατά» το όριο.
+ *
+ * `edgeIndex` = ο δείκτης του **εσωτερικού ορίου** (1..N-1), δηλαδή η στήλη που ξεκινά εκεί·
+ * το πλάτος αλλάζει στη στήλη **αριστερά** του (`edgeIndex - 1`). Οι στήλες δεξιά ολισθαίνουν
+ * μαζί — δες την κεφαλίδα από πάνω για το γιατί δεν «κλέβουμε» πλάτος από τη διπλανή.
+ *
+ * `null` όταν ο δείκτης είναι εκτός εύρους: ο καλών δεν εφευρίσκει τίποτα.
+ */
+export function resizeTableColumnLeftOfEdge(
+  entity: TableEntity,
+  edgeIndex: number,
+  newEdgeUMm: number,
+): TableEntity['model'] | null {
+  const { layout } = computeTableEntityGeometryLive(entity);
+  const leftIndex = edgeIndex - 1;
+  if (leftIndex < 0 || leftIndex >= layout.columns.length) return null;
+
+  const widthMm = Math.max(newEdgeUMm - layout.columns[leftIndex].xMm, MIN_TABLE_COLUMN_WIDTH_MM);
   const columnId = layout.columns[leftIndex].id;
   const columns = entity.model.columns.map((col) =>
     col.id === columnId ? { ...col, sizing: { kind: 'fixed' as const, widthMm } } : col,
@@ -149,7 +174,7 @@ function resizeColumnAtEdge(
   // και στα δύο σχήματα, άρα το spread μένει ακριβώς όπως ήταν. Νέο αντικείμενο ⇒ οι δύο
   // απομνημονεύσεις ακυρώνονται από μόνες τους σε σειρά (`resolveTableModel` →
   // `resolveTableLayout`): η ταυτότητα ΕΙΝΑΙ η έκδοση.
-  return { model: { ...entity.model, columns } };
+  return { ...entity.model, columns };
 }
 
 /**

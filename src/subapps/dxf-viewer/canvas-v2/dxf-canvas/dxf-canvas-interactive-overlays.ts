@@ -36,6 +36,10 @@ import type { DxfRenderer } from './DxfRenderer';
 import type { DxfEntityUnion, DxfRenderOptions } from './dxf-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 import { isBimRegionOrPerimeterTool } from '../../systems/tools/region-tool-ids';
+// 🔴 ADR-739 §29.12 — ο ΕΝΑΣ ορισμός του «η λειτουργία πίνακα κατέχει τον καμβά». Ίδια
+// κατεύθυνση εισαγωγής με τους δύο χειριστές ποντικιού που τον καταναλώνουν ήδη (§29.5/§29.9):
+// είναι module **κατάστασης**, με getter χωρίς συνδρομή — ακριβώς ό,τι επιτρέπει εδώ ο ADR-040.
+import { isCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
 
 /** Ό,τι χρειάζεται ένα overlay pass — διαβασμένο από refs τη στιγμή του καρέ, ποτέ snapshot. */
 export interface InteractiveOverlayParams {
@@ -49,13 +53,38 @@ export interface InteractiveOverlayParams {
   readonly activeTool: string | undefined;
 }
 
+export interface GripsAllowedInput {
+  readonly activeTool: string | undefined;
+  /**
+   * 🔴 ADR-739 §29.12 — `isCanvasLockedByTableSession()`, διαβασμένο τη **στιγμή του καρέ**.
+   *
+   * Παράμετρος και όχι εσωτερική ανάγνωση module, για τον ίδιο λόγο με τις πύλες χειρονομίας
+   * του §29.9: η απόφαση μένει **καθαρή** συνάρτηση (δοκιμάσιμη με έναν boolean, χωρίς mock)
+   * και ο καλών δηλώνει ρητά ότι διαβάζει το SSoT τη στιγμή του συμβάντος — ADR-040, ποτέ
+   * στιγμιότυπο, ποτέ `useSyncExternalStore` σε αυτό το μονοπάτι.
+   */
+  readonly lockedByTableSession: boolean;
+}
+
 /**
  * AutoCAD parity: οι λαβές φαίνονται **μόνο** σε κατάσταση επιλογής (καμία ενεργή εντολή).
  * Με ενεργό εργαλείο (π.χ. Move) εξαφανίζονται — το εργαλείο έχει δικό του UX.
  * ADR-363 Phase 1J / ADR-419 — το `wall-on-entity` και τα region/perimeter εργαλεία δείχνουν
  * λαβές στις επιλογές τους, άρα εξαιρούνται ρητά.
+ *
+ * ## 🔴 ADR-739 §29.12 — η λειτουργία κελιών ΕΙΝΑΙ ενεργή εντολή
+ * Ζητούμενο (ιδιοκτήτης, 2026-08-03): «*οι λαβές θέλω να εμφανίζονται **μόνον όταν βγαίνω**
+ * από το edit mode*». Δεν προστίθεται κριτήριο — **συμπληρώνεται** το υπάρχον: η λειτουργία
+ * πίνακα κατέχει το πληκτρολόγιο (ADR-711) και, από το §29, και το ποντίκι. Είναι ο δεύτερος
+ * τρόπος με τον οποίο μια εντολή είναι ενεργή σε αυτόν τον viewer, και ο πρώτος (`activeTool`)
+ * δεν μπορούσε να τον εκφράσει: η λειτουργία πίνακα ζει **με το εργαλείο επιλογής ενεργό**.
+ *
+ * ⚠️ **Δεν αγγίζει το §27.16 Ε4** («σε αμφισβήτηση νικά η λαβή»): εκείνο απαντά «ποιος κερδίζει
+ * το χτύπημα;» ανάμεσα σε λαβή και ζώνη δείκτη. Εδώ η ερώτηση είναι «ζωγραφίζεται καθόλου;».
  */
-function areGripsAllowed(activeTool: string | undefined): boolean {
+export function areGripsAllowed(input: GripsAllowedInput): boolean {
+  if (input.lockedByTableSession) return false;
+  const { activeTool } = input;
   return (
     !activeTool ||
     activeTool === 'select' ||
@@ -66,7 +95,11 @@ function areGripsAllowed(activeTool: string | undefined): boolean {
 }
 
 /** Το hover pass: μία οντότητα, ή ΟΛΑ τα μέλη ενός group (ADR-575). */
-function paintHoverOverlay(p: InteractiveOverlayParams, selectedIds: ReadonlySet<string>): void {
+function paintHoverOverlay(
+  p: InteractiveOverlayParams,
+  selectedIds: ReadonlySet<string>,
+  gripsAllowed: boolean,
+): void {
   const hoveredId = p.renderOptions.hoveredEntityId;
   if (!hoveredId) return;
 
@@ -91,7 +124,7 @@ function paintHoverOverlay(p: InteractiveOverlayParams, selectedIds: ReadonlySet
   // το selection pass), και καμία λαβή όσο τρέχει εντολή.
   p.renderer.renderSingleEntity(ent, p.transform, p.viewport, 'hovered', {
     ...base,
-    suppressGrips: !areGripsAllowed(p.activeTool) || selectedIds.has(hoveredId),
+    suppressGrips: !gripsAllowed || selectedIds.has(hoveredId),
   });
 }
 
@@ -108,9 +141,8 @@ function isMovePreviewDimmed(id: string, o: DxfRenderOptions): boolean {
 }
 
 /** Το selection pass: κάθε επιλεγμένο id, ή ΟΛΑ τα μέλη του αν είναι group (ADR-575). */
-function paintSelectionOverlay(p: InteractiveOverlayParams): void {
+function paintSelectionOverlay(p: InteractiveOverlayParams, gripsAllowed: boolean): void {
   const o = p.renderOptions;
-  const gripsAllowed = areGripsAllowed(p.activeTool);
 
   for (const selId of o.selectedEntityIds) {
     const base = {
@@ -144,6 +176,13 @@ function paintSelectionOverlay(p: InteractiveOverlayParams): void {
  */
 export function paintInteractiveOverlays(params: InteractiveOverlayParams): void {
   const selectedIds = new Set(params.renderOptions.selectedEntityIds);
-  paintHoverOverlay(params, selectedIds);
-  paintSelectionOverlay(params);
+  // 🔴 ADR-739 §29.12 — **μία** ανάγνωση του SSoT ανά καρέ, μοιρασμένη στα δύο pass. Δύο
+  // ξεχωριστές αναγνώσεις θα ήταν δύο ευκαιρίες να αποκλίνουν μέσα στο ίδιο καρέ (hover με
+  // λαβές, selection χωρίς) — ακριβώς το είδος τρεμοπαίγματος που κανένα test δεν δείχνει.
+  const gripsAllowed = areGripsAllowed({
+    activeTool: params.activeTool,
+    lockedByTableSession: isCanvasLockedByTableSession(),
+  });
+  paintHoverOverlay(params, selectedIds, gripsAllowed);
+  paintSelectionOverlay(params, gripsAllowed);
 }
