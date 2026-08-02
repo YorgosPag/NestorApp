@@ -42,7 +42,6 @@ import {
   buildTableCellEditCommand,
   resolveTableCellEditTarget,
   resolveTableCellEditTargetById,
-  type TableCellEditTarget,
 } from '../../bim/table/table-cell-edit-session';
 import {
   moveTableCursor,
@@ -56,20 +55,11 @@ import {
 } from '../../state/table-cell-cursor-store';
 import { createTextEditorAnchor2D } from '../text-toolbar/text-editor-anchor-2d';
 import type { TextEditorAnchorBox } from '../text-toolbar/TextEditorAnchorLayer';
-import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
-import { tableMmToWorldLive, tablePxPerMm } from '../../bim/table/table-entity-geometry';
-import {
-  computeTableCellEditorFrame,
-  cellTextStartPx,
-  type TableCellEditorFrame,
-} from './table-cell-editor-frame';
-import { editorGrowthCeilingPx } from './table-cell-editor-expansion';
-import {
-  cellCaretIndexAtPx,
-  cellFontBandPx,
-  cellTextWidthPx,
-} from './table-cell-text-metrics';
+// ADR-739 §26.15 — το **ζωντανό** κουτί του κελιού μετακόμισε σε δικό του module όταν αυτό
+// εδώ χτύπησε τις 500 γραμμές (N.7.1). Εξαγωγή, όχι κόψιμο: οι δύο συναρτήσεις δεν
+// χρειάζονται τίποτα από το hook.
+import { caretIndexOfClick, cellEditorFrameLive } from './table-cell-editor-frame-live';
 import { tableCellEditorCssVars } from './table-cell-editor-vars';
 import {
   useTableFormulaBarMount,
@@ -129,58 +119,6 @@ function eventWorldPoint(
   );
 }
 
-/**
- * ADR-739 Φ.Δ βήμα 3 — το κουτί του κελιού σε px οθόνης, **τη στιγμή της κλήσης**.
- *
- * Κάθε είσοδος διαβάζεται ζωντανά: η κλίμακα σχεδίασης από το SSoT της (`tableMmToWorldLive`)
- * και το zoom από το `ImmediateTransformStore` — ADR-040 «event-time read μέσω getter, ποτέ
- * στιγμιότυπο». Γι' αυτό ο επεξεργαστής **ζουμάρει μαζί** με τον καμβά αντί να καρφώνεται
- * στο μέγεθος που είχε το κελί όταν έγινε το διπλό κλικ.
- *
- * Το `backgroundHex` έρχεται απ' έξω και **δεν** διαβάζεται εδώ: είναι `getComputedStyle`
- * στο `documentElement`, δηλαδή αναγκαστικό style recalc — σε κάθε καρέ zoom θα ήταν
- * μετρήσιμο κόστος για μια τιμή που αλλάζει μόνο σε αλλαγή θέματος.
- */
-function cellEditorFrame(
-  target: TableCellEditTarget,
-  angleRad: number,
-  backgroundHex: string,
-  expansion?: { readonly draft: string; readonly anchor: { x: number; y: number } | null },
-): TableCellEditorFrame {
-  const pxPerMm = tablePxPerMm(tableMmToWorldLive(), getImmediateTransform().scale);
-  return computeTableCellEditorFrame({
-    target,
-    pxPerMm,
-    angleRad,
-    resolveBand: cellFontBandPx,
-    backgroundHex,
-    draft: expansion?.draft,
-    resolveWidth: expansion ? cellTextWidthPx : undefined,
-    maxWidthPx: expansion
-      ? editorGrowthCeilingPx({
-          anchor: expansion.anchor,
-          rotationRad: -angleRad,
-          cellWidthPx: target.rectMm.w * pxPerMm,
-          growsFrom: target.hAlign === 'right' || target.hAlign === 'center' ? target.hAlign : 'left',
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-        })
-      : undefined,
-  });
-}
-
-/**
- * Σε ποιον χαρακτήρα πέφτει το διπλό κλικ (Excel: ο κέρσορας μπαίνει **εκεί που έδειξες**).
- *
- * `undefined` όταν δεν υπάρχει σημείο κλικ — τότε ο επεξεργαστής βάζει τον κέρσορα στο
- * τέλος, που είναι η σωστή συμπεριφορά για `Tab` / `F2`.
- */
-function caretIndexOfClick(target: TableCellEditTarget, frame: TableCellEditorFrame): number | undefined {
-  if (target.clickOffsetMm === undefined || !target.text) return undefined;
-  const pxPerMm = frame.widthPx / target.rectMm.w;
-  const startPx = cellTextStartPx(frame, cellTextWidthPx(target.text, frame.font));
-  return cellCaretIndexAtPx(target.text, frame.font, target.clickOffsetMm * pxPerMm - startPx);
-}
-
 export function useTableCellDoubleClickEditor(
   params: UseTableCellDoubleClickEditorParams,
 ): TableCellDoubleClickEditorApi {
@@ -204,7 +142,7 @@ export function useTableCellDoubleClickEditor(
       // για να διορθώσεις, όχι για να ξαναγράψεις από την αρχή (η `enter` κάνει εκείνο).
       // Ο κέρσορας πάει στο γράμμα που έδειξες (Excel) — το κουτί υπολογίζεται εδώ γιατί
       // μόνο **τώρα** υπάρχει σημείο κλικ.
-      const frame = cellEditorFrame(target, entity.angleRad, resolveDxfCanvasBackgroundHex());
+      const frame = cellEditorFrameLive(target, entity.angleRad, resolveDxfCanvasBackgroundHex());
       setTableCellCursor(
         entity.id,
         tableCursorAt(target.rowId, target.colId),
@@ -325,12 +263,29 @@ export function useTableCellDoubleClickEditor(
    */
   const rangeActions = useTableRangeActions({ cursor, entity: liveEntity, levelManager, execute });
 
+  /**
+   * 🔴 ADR-739 §26.15 — **ό,τι γράφεται δεσμεύεται πριν το κλικ μετακινήσει τον δρομέα.**
+   *
+   * Είναι το ταίρι του `commit()` που κάνει ήδη το πληκτρολόγιο πριν από κάθε `onMove`
+   * (`use-table-cell-session-keys`, `case 'move'`) — όχι δεύτερη διαδρομή εγγραφής: περνά
+   * από το **ίδιο** {@link commitText}, δηλαδή το ίδιο `buildTableCellEditCommand` και το
+   * ίδιο ιστορικό.
+   *
+   * Σε πλοήγηση σιωπά, με τον ίδιο λόγο που σιωπά και ο επεξεργαστής: εκεί το πρόχειρο είναι
+   * κενό, και μια δέσμευσή του θα **έσβηνε** το κελί περνώντας από πάνω του.
+   */
+  const commitPendingDraft = useCallback(() => {
+    if (!cursor || cursor.mode === 'nav') return;
+    commitText(cursor.draft);
+  }, [cursor, commitText]);
+
   useTableCellPointer({
     cursor,
     entity: liveEntity,
     containerRef,
     transformRef,
     onSelectTo: rangeActions.selectTo,
+    onCommitPending: commitPendingDraft,
   });
 
   // Το κελί του δρομέα, διαβασμένο από το ΖΩΝΤΑΝΟ μοντέλο: κείμενο, όψη και αγκύρωση είναι
@@ -367,10 +322,10 @@ export function useTableCellDoubleClickEditor(
   const anchor = useMemo(() => {
     if (!target) return null;
     const { cell, angleRad } = target;
-    // Το φόντο διαβάζεται ΜΙΑ φορά ανά συνεδρία — δες το σχόλιο του `cellEditorFrame`.
+    // Το φόντο διαβάζεται ΜΙΑ φορά ανά συνεδρία — δες το σχόλιο του `cellEditorFrameLive`.
     const backgroundHex = resolveDxfCanvasBackgroundHex();
     const projectBox = (point: { x: number; y: number } | null): TextEditorAnchorBox => {
-      const frame = cellEditorFrame(
+      const frame = cellEditorFrameLive(
         cell,
         angleRad,
         backgroundHex,

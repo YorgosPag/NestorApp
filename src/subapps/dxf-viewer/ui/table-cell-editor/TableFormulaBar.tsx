@@ -62,6 +62,7 @@ import { useTableCellSessionKeys } from './use-table-cell-session-keys';
 import { TABLE_CELL_SESSION_MARKER, useTableCellSessionBlur } from './table-cell-session-focus';
 import {
   closeTableCellCursor,
+  restartTableCellCursorSession,
   setTableCellCursorDraft,
   setTableCellCursorMode,
   type TableCellCursorMode,
@@ -135,7 +136,14 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
     onSelectAll,
   });
 
-  const handleBlur = useTableCellSessionBlur(handleCommit, closeTableCellCursor);
+  // ADR-739 §26.15 — κλικ από τη γραμμή τύπων πάνω σε κελί του **ίδιου** πίνακα: η συνεδρία
+  // δεν φεύγει, μετακομίζει. Το πληκτρολόγιο επιστρέφει στο πλέγμα (Excel), από τον ένα
+  // δρόμο ανάκτησης — τον ίδιο που περνά και ο επεξεργαστής κελιού.
+  const handleBlur = useTableCellSessionBlur(
+    handleCommit,
+    closeTableCellCursor,
+    restartTableCellCursorSession,
+  );
 
   return (
     <TextEditorAnchorLayer {...anchor}>

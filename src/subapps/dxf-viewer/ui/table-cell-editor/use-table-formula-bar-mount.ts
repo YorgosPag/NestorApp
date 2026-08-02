@@ -88,7 +88,7 @@ export function useTableFormulaBarMount(
         tableWidthMm: widthMm,
         tableHeightMm: heightMm,
         // Ζωντανή ανάγνωση κλίμακας τη στιγμή του tick (ADR-040: getter, ποτέ στιγμιότυπο)
-        // — ο ΙΔΙΟΣ δρόμος με το `cellEditorFrame` του επεξεργαστή κελιού.
+        // — ο ΙΔΙΟΣ δρόμος με το `cellEditorFrameLive` του επεξεργαστή κελιού.
         pxPerMm: tablePxPerMm(tableMmToWorldLive(), getImmediateTransform().scale),
         spaceAbovePx: spaceAbove(anchorPoint),
       });

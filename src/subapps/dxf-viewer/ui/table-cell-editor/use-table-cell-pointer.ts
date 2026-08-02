@@ -15,17 +15,21 @@
  * ADR-040 απαγορεύει να αποκτήσει συνδρομές — και δεν αλλάζει καμία υπάρχουσα διαδρομή
  * χειρισμού ποντικιού. Δεν είναι συμβιβασμός· είναι ο λόγος που η αλλαγή είναι ασφαλής.
  *
- * ## 🔴 Γιατί ο δρομέας ΔΕΝ κλείνει από το blur που ακολουθεί
- * Ένα κλικ στον καμβά βγάζει την εστίαση από το `<textarea>` της συνεδρίας. Ο φύλακας
- * (`useTableCellSessionBlur`) όμως **δεν κλείνει συγχρόνως**: όταν ο παραλήπτης της
- * εστίασης είναι `null` — ακριβώς η περίπτωση «κλικ στον καμβά» — αναβάλλει την απόφαση
- * κατά **ένα καρέ** και ρωτά τότε ποιος έχει την εστίαση. Μέχρι τότε το store έχει ήδη
- * μετακινήσει τον δρομέα, το React έχει στήσει **νέο** `<textarea autoFocus>` για το νέο
- * κελί, και ο έλεγχος βρίσκει μέλος της συνεδρίας ⇒ **δεν κλείνει**.
+ * ## 🔴 ADR-739 §26.15 — ΓΙΑΤΙ Ο ΔΡΟΜΕΑΣ ΔΕΝ ΚΛΕΙΝΕΙ ΑΠΟ ΤΟ BLUR ΠΟΥ ΑΚΟΛΟΥΘΕΙ
  *
- * Δεν είναι τύχη: το σχόλιο εκείνου του αρχείου ονομάζει ρητά αυτή την περίπτωση ως τον
- * λόγο που η απόφαση μένει ένα καρέ αργότερα. Χτίζουμε πάνω σε δηλωμένη εγγύηση, όχι σε
- * παρενέργεια.
+ * ⚠️ Εδώ έγραφε ότι «ο φύλακας αναβάλλει την απόφαση κατά ένα καρέ, και μέχρι τότε το React
+ * θα έχει στήσει νέο `<textarea autoFocus>` ⇒ δεν κλείνει· χτίζουμε πάνω σε **δηλωμένη
+ * εγγύηση**». Η εγγύηση **δεν υπήρχε**: ζωντανά, **11/11** κλικ μέσα στον πίνακα σκότωναν τη
+ * λειτουργία — και το κλικ στο **ίδιο** κελί επίσης, όπου δεν ξαναστήνεται τίποτα επειδή δεν
+ * αλλάζει κανένα κομμάτι του `key`. Το πλήρες σκεπτικό ζει στην κεφαλίδα του φύλακα· εδώ
+ * αρκεί το συμπέρασμα:
+ *
+ * **Ο καμβάς δεν μπορεί να φέρει το σημάδι συνεδρίας** (θα κρατούσε τη συνεδρία ζωντανή σε
+ * κάθε κλικ οπουδήποτε στο σχέδιο), άρα το κλικ πρέπει να **δηλωθεί**: όποτε αυτός ο
+ * ακροατής αναγνωρίζει ότι το πάτημα έπεσε μέσα στον δικό του πίνακα, το λέει στον φύλακα με
+ * το `claimTableCellSessionPointerDown()`. Ο φύλακας, ένα καρέ μετά, **ανακτά** το
+ * πληκτρολόγιο αντί να κλείσει τη συνεδρία. Η δήλωση είναι μία γραμμή και **δεν** αλλάζει
+ * τίποτα άλλο εδώ: ο ακροατής παραμένει απολύτως παθητικός.
  *
  * ## Γιατί `mousedown` και όχι `click`
  * Η επιλογή πρέπει να ακολουθεί το χέρι **αμέσως**, πριν ξεκινήσει οποιοδήποτε σύρσιμο —
@@ -54,6 +58,12 @@ import {
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
+// ADR-739 §26.15 — ο ΕΝΑΣ ορισμός του «ανήκω στη συνεδρία», και στις δύο μορφές του:
+// για **στοιχεία** (`isTableCellSessionElement`) και για **χειρονομίες** (`claim…`).
+import {
+  claimTableCellSessionPointerDown,
+  isTableCellSessionElement,
+} from './table-cell-session-focus';
 import {
   setTableCellCursor,
   setTableCellSelection,
@@ -72,10 +82,28 @@ export interface UseTableCellPointerParams {
   readonly transformRef: RefObject<ViewTransform>;
   /** `Shift+κλικ` — δεύτερη γωνία περιοχής, χωρίς να κουνηθεί το ενεργό κελί. */
   readonly onSelectTo: (cell: TableCellRef) => void;
+  /**
+   * 🔴 ADR-739 §26.15 — **δέσμευσε ό,τι γράφεται τώρα, πριν κουνηθεί ο δρομέας**. No-op σε
+   * πλοήγηση (δεν γράφεται τίποτα) και ιδεμποτής (μια δεύτερη κλήση με ίδιο κείμενο δεν
+   * παράγει εντολή — `buildTableCellEditCommand` επιστρέφει `null`).
+   *
+   * ## Γιατί δεν αρκεί το commit του `blur`
+   * Η σειρά του browser είναι αμείλικτη: ο ακροατής **σύλληψης** τρέχει **πριν** από τη
+   * μεταφορά εστίασης, άρα πριν από κάθε `blur`. Αν εδώ μετακινηθεί πρώτα ο δρομέας, το
+   * `setTableCellCursor` έχει ήδη **σβήσει το πρόχειρο** — και ο επεξεργαστής έχει
+   * ξαναστηθεί σε `nav`, όπου το commit είναι εξ ορισμού σιωπηλό (και σωστά: ένα «γράψε το
+   * άδειο πρόχειρο» θα **έσβηνε** το κελί). Αποτέλεσμα: η πληκτρολόγηση χάνεται χωρίς
+   * μήνυμα.
+   *
+   * Δεν είναι νέος κανόνας — είναι ο **ίδιος** που τηρεί ήδη το πληκτρολόγιο: δες
+   * `use-table-cell-session-keys`, `case 'move'`, «η σειρά είναι το συμβόλαιο: πρώτα
+   * δεσμεύεται το πρόχειρο, μετά μετακινείται ο δρομέας». Το ποντίκι απλώς του έλειπε.
+   */
+  readonly onCommitPending: () => void;
 }
 
 export function useTableCellPointer(params: UseTableCellPointerParams): void {
-  const { cursor, entity, containerRef, transformRef, onSelectTo } = params;
+  const { cursor, entity, containerRef, transformRef, onSelectTo, onCommitPending } = params;
 
   useEffect(() => {
     // Χωρίς ενεργό δρομέα δεν υπάρχει τίποτα να μετακινηθεί: το πρώτο κλικ σε πίνακα τον
@@ -89,6 +117,13 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // Αριστερό κουμπί μόνο: το δεξί ανοίγει το μενού συμφραζομένων και δεν επιτρέπεται
       // να μετακινήσει την επιλογή κάτω από το μενού που μόλις άνοιξε.
       if (event.button !== 0) return;
+      // ADR-739 §26.15 — το πάτημα έπεσε πάνω σε **πεδίο της ίδιας συνεδρίας**, όχι στον
+      // καμβά: σε γραφή το `<textarea>` σκεπάζει το κελί, και το κλικ μέσα στο κείμενο είναι
+      // **τοποθέτηση κέρσορα**. Ο ακροατής ζει στο ίδιο δοχείο και σε φάση σύλληψης, άρα το
+      // βλέπει· χωρίς αυτόν τον φύλακα θα το ερμήνευε ως «κλικ στο κελί» και θα γύριζε τη
+      // συνεδρία σε `nav` — δηλαδή θα σου έκοβε τη γραφή τη στιγμή που διορθώνεις ένα γράμμα.
+      // Ο ίδιος ΕΝΑΣ ορισμός του «ανήκω στη συνεδρία», καμία δεύτερη σύγκριση.
+      if (isTableCellSessionElement(event.target)) return;
       const transform = transformRef.current;
       if (!transform) return;
 
@@ -108,6 +143,10 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // είναι απλώς «η πιο ειδική ερώτηση πρώτη», χωρίς καμία διεκδίκηση.
       const bandHit = indicatorHitAt(entity, worldPoint, geometry, transform.scale);
       if (bandHit) {
+        claimTableCellSessionPointerDown();
+        // Η ζώνη μετακινεί το ενεργό κελί στην αρχή του άξονα, άρα ισχύει το ίδιο συμβόλαιο
+        // με το απλό κλικ: ό,τι γράφεται δεσμεύεται πρώτα.
+        onCommitPending();
         selectWholeAxis(entity, bandHit);
         return;
       }
@@ -118,10 +157,19 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       const hit = tableCellAtWorld(entity, worldPoint, geometry);
       if (!hit) return;
 
+      // ADR-739 §26.15 — από εδώ και κάτω το πάτημα **είναι** της συνεδρίας. Η δήλωση
+      // γίνεται ΠΡΙΝ από κάθε εγγραφή, ώστε να ισχύει και για τους δύο δρόμους που
+      // ακολουθούν: και το `Shift+κλικ` (που δεν μετακινεί δρομέα) πρέπει να κρατήσει το
+      // πληκτρολόγιο, αλλιώς φτιάχνεις περιοχή και μένεις χωρίς πίνακα.
+      claimTableCellSessionPointerDown();
+
       if (event.shiftKey) {
+        // ΚΑΜΙΑ δέσμευση εδώ, ακριβώς όπως στο `Shift+βέλος` (`case 'extend'`): η επέκταση
+        // περιοχής είναι κατάσταση **διεπαφής** και δεν αγγίζει το μοντέλο.
         onSelectTo({ rowId: hit.rowId, colId: hit.colId });
         return;
       }
+      onCommitPending();
       // Απλό κλικ: **νέα** στήλη αγκύρωσης (`tableCursorAt`) — ένα κλικ ξεκινά καινούρια
       // σειρά καταχώρισης, άρα το επόμενο `Enter` επιστρέφει ΕΔΩ. Κατάσταση `nav`: έδειξες
       // κελί, δεν άρχισες να γράφεις· η γραφή ξεκινά με τον πρώτο χαρακτήρα (Excel).
@@ -133,7 +181,7 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // κεφαλίδα.
     container.addEventListener('mousedown', handleMouseDown, { capture: true });
     return () => container.removeEventListener('mousedown', handleMouseDown, { capture: true });
-  }, [cursor, entity, containerRef, transformRef, onSelectTo]);
+  }, [cursor, entity, containerRef, transformRef, onSelectTo, onCommitPending]);
 }
 
 /** Σε ποια υποδιαίρεση ζώνης έπεσε το κλικ· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */

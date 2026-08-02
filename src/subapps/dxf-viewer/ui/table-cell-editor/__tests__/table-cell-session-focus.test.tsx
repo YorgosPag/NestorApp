@@ -20,6 +20,12 @@
  *   2. γραμμή τύπων → κελί (μέλος συνεδρίας)   ⇒ τίποτα (συμμετρικά)
  *   3. εστίαση αλλού (κουμπί κορδέλας)         ⇒ commit + κλείσιμο
  *   4. εστίαση πουθενά, αλλά ένα καρέ μετά την έχει άλλο κελί (`Tab`) ⇒ commit, ΟΧΙ κλείσιμο
+ *   5. εστίαση πουθενά **και** κανείς ένα καρέ μετά, αλλά το blur το προκάλεσε **κλικ μέσα
+ *      στη συνεδρία** (ADR-739 §26.15) ⇒ commit + **ανάκτηση**, ΟΧΙ κλείσιμο
+ *
+ * Ο πέμπτος δρόμος είναι ο μόνος που δεν απαντιέται από το DOM: το κλικ σε καμβά δεν αφήνει
+ * εστιασμένο στοιχείο να ρωτήσεις. Ελέγχεται εδώ ως **σύμβαση** του φύλακα· ότι ο pointer
+ * όντως τη δηλώνει στη σωστή στιγμή το αποδεικνύει το `table-cell-pointer-session-survival`.
  *
  * @see ui/table-cell-editor/table-cell-session-focus.ts
  */
@@ -27,6 +33,8 @@
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import {
+  __resetTableCellSessionFocusForTests,
+  claimTableCellSessionPointerDown,
   isTableCellSessionElement,
   TABLE_CELL_SESSION_MARKER,
   useTableCellSessionBlur,
@@ -73,23 +81,27 @@ describe('isTableCellSessionElement', () => {
   });
 });
 
-describe('useTableCellSessionBlur — οι τέσσερις δρόμοι', () => {
+describe('useTableCellSessionBlur — οι πέντε δρόμοι', () => {
   let commit: jest.Mock;
   let close: jest.Mock;
+  let reclaim: jest.Mock;
 
   beforeEach(() => {
     jest.useFakeTimers();
+    __resetTableCellSessionFocusForTests();
     commit = jest.fn();
     close = jest.fn();
+    reclaim = jest.fn();
   });
 
   afterEach(() => {
     jest.useRealTimers();
+    __resetTableCellSessionFocusForTests();
     document.body.innerHTML = '';
   });
 
   function blurTo(relatedTarget: HTMLElement | null): void {
-    const { result } = renderHook(() => useTableCellSessionBlur(commit, close));
+    const { result } = renderHook(() => useTableCellSessionBlur(commit, close, reclaim));
     act(() => {
       result.current({ relatedTarget } as unknown as React.FocusEvent<HTMLElement>);
     });
@@ -129,5 +141,52 @@ describe('useTableCellSessionBlur — οι τέσσερις δρόμοι', () =>
     act(() => { nextFrame(); });
     expect(commit).toHaveBeenCalledTimes(1);
     expect(close).toHaveBeenCalledTimes(1);
+    expect(reclaim).not.toHaveBeenCalled();
+  });
+
+  it('🔴 5. κλικ ΜΕΣΑ στη συνεδρία (καμβάς) ⇒ commit + ΑΝΑΚΤΗΣΗ, ποτέ κλείσιμο', () => {
+    // Ο pointer δηλώνει μόνο όσο η συνεδρία κρατά την εστίαση — αλλιώς δεν θα ακολουθούσε
+    // blur και η δήλωση θα έμενε ορφανή. Το στήνουμε όπως στην πραγματικότητα.
+    const field = sessionElement();
+    field.focus();
+    claimTableCellSessionPointerDown();
+    field.blur();
+
+    blurTo(null);
+    act(() => { nextFrame(); });
+
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(reclaim).toHaveBeenCalledTimes(1);
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('🔴 η δήλωση ισχύει για ΕΝΑ blur — το επόμενο κλείνει κανονικά', () => {
+    // Χωρίς την κατανάλωση, μια δήλωση θα κρατούσε τη συνεδρία ζωντανή για πάντα: ο χρήστης
+    // θα κλείδωνε μέσα στον πίνακα, που είναι χειρότερο από το αρχικό σφάλμα.
+    const field = sessionElement();
+    field.focus();
+    claimTableCellSessionPointerDown();
+    field.blur();
+
+    blurTo(null);
+    act(() => { nextFrame(); });
+    blurTo(null);
+    act(() => { nextFrame(); });
+
+    expect(reclaim).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('🔴 δήλωση χωρίς εστιασμένο μέλος ΔΕΝ γεννιέται — καμία μπαγιάτικη σημαία', () => {
+    // Ο κύκλος ζωής της σημαίας είναι δομικός, όχι χρονικός: αν κανένα πεδίο δεν έχει την
+    // εστίαση, κανένα blur δεν έρχεται να την καταναλώσει — άρα δεν πρέπει να υπάρχει.
+    outsiderElement().focus();
+    claimTableCellSessionPointerDown();
+
+    blurTo(null);
+    act(() => { nextFrame(); });
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(reclaim).not.toHaveBeenCalled();
   });
 });

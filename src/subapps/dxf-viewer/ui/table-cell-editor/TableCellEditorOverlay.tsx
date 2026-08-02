@@ -108,6 +108,7 @@ import {
 import {
   cancelTableCellCursorSession,
   closeTableCellCursor,
+  restartTableCellCursorSession,
   setTableCellCursorDraft,
   setTableCellCursorMode,
   type TableCellCursorMode,
@@ -251,8 +252,16 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
    * από αυτό το βήμα η συνεδρία έχει **δύο** πεδία κειμένου (κελί + γραμμή τύπων) και το
    * κριτήριο «έφυγα ή απλώς μετακινήθηκα;» οφείλει να είναι **ένα**. Διάβασε εκεί γιατί η
    * μετακίνηση **μέσα** στη συνεδρία δεν κάνει commit.
+   *
+   * ADR-739 §26.15 — η **τρίτη** έκβαση: κλικ μέσα στον ίδιο πίνακα ⇒ ανάκτηση του
+   * πληκτρολογίου. Ο ίδιος δρόμος που χρησιμοποιεί και το μενού κεφαλίδων στο κλείσιμό του
+   * (βήμα 9) — καμία δεύτερη μηχανική επαναφοράς εστίασης.
    */
-  const handleBlur = useTableCellSessionBlur(commit, closeTableCellCursor);
+  const handleBlur = useTableCellSessionBlur(
+    commit,
+    closeTableCellCursor,
+    restartTableCellCursorSession,
+  );
 
   const writing = mode !== 'nav';
 
