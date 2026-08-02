@@ -450,6 +450,9 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
     expect(cursor?.selection).toEqual({
       from: { rowId: model.rows[0].id, colId: model.columns[1].id },
       to: { rowId: model.rows[model.rows.length - 1].id, colId: model.columns[1].id },
+      // 🔴 ADR-739 §27.15 — **και η πρόθεση**, όχι μόνο οι γωνίες. Χωρίς αυτήν, οι ίδιες
+      // δύο γωνίες κουμπώνουν στη συγχώνευση του τίτλου και μαρκάρεται ΟΛΟΣ ο πίνακας.
+      kind: 'column',
     });
     // Το ενεργό κελί πάει στην ΑΡΧΗ του άξονα (Excel): εκεί αρχίζει η πληκτρολόγηση.
     expect(cursor?.position.rowId).toBe(model.rows[0].id);
@@ -465,6 +468,7 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
     expect(getTableCellCursor()?.selection).toEqual({
       from: { rowId: model.rows[2].id, colId: model.columns[0].id },
       to: { rowId: model.rows[2].id, colId: model.columns[model.columns.length - 1].id },
+      kind: 'row',
     });
   });
 

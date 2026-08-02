@@ -176,8 +176,37 @@ function snapToWholeMerges(model: TableModel, start: TableCellRangeBounds): Tabl
 }
 
 /**
- * Η περιοχή ανάμεσα σε δύο κελιά — **κανονικοποιημένη** (η σειρά των δύο άκρων δεν
- * μετράει) και **κουμπωμένη** σε ολόκληρες συγχωνεύσεις.
+ * Το **ακατέργαστο** ορθογώνιο δύο άκρων: κανονικοποιημένο, **χωρίς** κούμπωμα.
+ *
+ * `null` όταν κάποιο άκρο δεν υπάρχει στο μοντέλο — μπαγιάτικη επιλογή μετά από undo ή
+ * διαγραφή γραμμής. Ιδιωτικό: κανείς έξω από εδώ δεν χρειάζεται περιοχή χωρίς δηλωμένο
+ * είδος (δες {@link resolveTableSelectionBounds}).
+ */
+function normalizeBounds(
+  model: TableModel,
+  a: TableCellRef,
+  b: TableCellRef,
+): TableCellRangeBounds | null {
+  const rowIndex = indexById(model.rows);
+  const colIndex = indexById(model.columns);
+  const r0 = rowIndex.get(a.rowId);
+  const c0 = colIndex.get(a.colId);
+  const r1 = rowIndex.get(b.rowId);
+  const c1 = colIndex.get(b.colId);
+  if (r0 === undefined || c0 === undefined || r1 === undefined || c1 === undefined) return null;
+
+  return {
+    firstRow: Math.min(r0, r1),
+    lastRow: Math.max(r0, r1),
+    firstCol: Math.min(c0, c1),
+    lastCol: Math.max(c0, c1),
+  };
+}
+
+/**
+ * Η περιοχή ανάμεσα σε δύο κελιά — **κανονικοποιημένη** και **κουμπωμένη** σε ολόκληρες
+ * συγχωνεύσεις. Δηλαδή: η σημασιολογία της **περιοχής** ({@link TableSelectionKind}
+ * `'range'`), εκφρασμένη σε δύο σκέτες γωνίες.
  *
  * `null` όταν κάποιο από τα δύο άκρα δεν υπάρχει στο μοντέλο: μπαγιάτικη επιλογή μετά από
  * undo ή διαγραφή γραμμής. Ο καλών οφείλει να τη σβήσει, όχι να μαντέψει — ίδια σύμβαση
@@ -188,20 +217,66 @@ export function resolveTableCellRange(
   activeCell: TableCellRef,
   rangeEnd: TableCellRef,
 ): TableCellRangeBounds | null {
-  const rowIndex = indexById(model.rows);
-  const colIndex = indexById(model.columns);
-  const r0 = rowIndex.get(activeCell.rowId);
-  const c0 = colIndex.get(activeCell.colId);
-  const r1 = rowIndex.get(rangeEnd.rowId);
-  const c1 = colIndex.get(rangeEnd.colId);
-  if (r0 === undefined || c0 === undefined || r1 === undefined || c1 === undefined) return null;
+  const bounds = normalizeBounds(model, activeCell, rangeEnd);
+  return bounds ? snapToWholeMerges(model, bounds) : null;
+}
 
-  return snapToWholeMerges(model, {
-    firstRow: Math.min(r0, r1),
-    lastRow: Math.max(r0, r1),
-    firstCol: Math.min(c0, c1),
-    lastCol: Math.max(c0, c1),
-  });
+/**
+ * 🔴 ADR-739 §27.15 — **ΤΙ ΔΙΑΛΕΞΕ ο χρήστης**, όχι πόσο μεγάλο βγήκε.
+ *
+ * | είδος | πώς γεννιέται | κουμπώνει σε συγχωνεύσεις; |
+ * |---|---|---|
+ * | `range`  | `Shift+κλικ`, `Shift+βέλος`, σύρση κελιού→κελιού, `Ctrl+A` | **ΝΑΙ** |
+ * | `column` | κλικ/σύρση στη ζώνη με τα γράμματα | **ΟΧΙ** |
+ * | `row`    | κλικ/σύρση στη ζώνη με τους αριθμούς | **ΟΧΙ** |
+ *
+ * ## Γιατί οι δύο άξονες ΔΕΝ κουμπώνουν — και γιατί δεν είναι απόκλιση από τους μεγάλους
+ * Το κούμπωμα (§26.5) γεννήθηκε για την **περιοχή**, όπου είναι σωστό: μισό συγχωνευμένο
+ * κελί δεν αντιγράφεται, δεν σβήνεται και δεν γεμίζει. Πάνω σε **άξονα** όμως δίνει
+ * παράλογο αποτέλεσμα, και ο πίνακας της σκηνής το δείχνει ακριβώς: η γραμμή τίτλου είναι
+ * συγχωνευμένη σε **όλες** τις στήλες, οπότε «κλικ στο `B`» έδινε στήλη `B` → ένωση με τον
+ * τίτλο → **ολόκληρος ο πίνακας μαρκαρισμένος** (Giorgio, 2026-08-02).
+ *
+ * Το ίδιο ελάττωμα είχε το **Excel 2003** και το **διόρθωσε στο 2010**: κλικ στο γράμμα
+ * στήλης επιλέγει μόνο αυτή τη στήλη, ακόμα κι όταν συγχώνευση τη διασχίζει. Τα Google
+ * Sheets το κάνουν ακόμα — καταγεγραμμένο ως ενόχληση. Άρα δεν εφευρίσκουμε συμπεριφορά:
+ * **φτάνουμε το σημερινό Excel** και περνάμε τα Sheets.
+ *
+ * ## Γιατί το είδος ζει στην ΕΠΙΛΟΓΗ και όχι στον καλούντα
+ * Ο ζωγράφος βλέπει **μόνο** δύο γωνίες — δεν ξέρει, και δεν πρέπει να ξέρει, αν τις
+ * γέννησε κλικ σε γράμμα ή σύρση σε κελιά. Χωρίς το είδος αποθηκευμένο, η πρόθεση χάνεται
+ * τη στιγμή που γράφεται η επιλογή και **καμία** ανάκτησή της δεν είναι δυνατή («η περιοχή
+ * πιάνει όλες τις γραμμές» δεν σημαίνει «ο χρήστης διάλεξε στήλη»: μπορεί να την έσυρε).
+ *
+ * ⚠️ Το λεξιλόγιο είναι **δανεικό, όχι νέο**: `'column'`/`'row'` είναι ακριβώς οι λέξεις του
+ * `TableIndicatorHit.axis` — μία έννοια, ένα ζευγάρι λέξεων, κανένα τέταρτο λεξιλόγιο.
+ */
+export type TableSelectionKind = 'range' | 'column' | 'row';
+
+/**
+ * Μια επιλογή όπως τη γράφει ο χρήστης: **δύο γωνίες + η πρόθεση**. Ζει εδώ, δίπλα στον
+ * κανόνα που την ερμηνεύει· το store την κρατά αυτούσια ως κατάστασή του.
+ */
+export interface TableSelectionSpan {
+  readonly from: TableCellRef;
+  readonly to: TableCellRef;
+  readonly kind: TableSelectionKind;
+}
+
+/**
+ * Τα όρια μιας επιλογής — **ο ΕΝΑΣ δρόμος** από «τι διάλεξε ο χρήστης» σε «ποια κελιά
+ * είναι μέσα». Ό,τι ρωτά ο ζωγράφος, η αντιγραφή, το σβήσιμο και η γραμμή κατάστασης.
+ *
+ * Το κούμπωμα εφαρμόζεται **μόνο** στην περιοχή — δες {@link TableSelectionKind} για το
+ * γιατί. `null` με την ίδια σύμβαση: μπαγιάτικο άκρο ⇒ ο καλών σβήνει, δεν μαντεύει.
+ */
+export function resolveTableSelectionBounds(
+  model: TableModel,
+  selection: TableSelectionSpan,
+): TableCellRangeBounds | null {
+  const bounds = normalizeBounds(model, selection.from, selection.to);
+  if (!bounds) return null;
+  return selection.kind === 'range' ? snapToWholeMerges(model, bounds) : bounds;
 }
 
 /**

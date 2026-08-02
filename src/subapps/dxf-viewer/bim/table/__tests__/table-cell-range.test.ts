@@ -11,6 +11,7 @@ import {
   extendTableCellRangeEnd,
   isSingleCellRange,
   resolveTableCellRange,
+  resolveTableSelectionBounds,
   tableRangeCellRefs,
   tableRangeMembership,
   tableRangeSize,
@@ -141,6 +142,83 @@ describe('🔴 κούμπωμα — η περιοχή περικλείει ΟΛ�
       firstCol: 1,
       lastCol: 1,
     });
+  });
+});
+
+// ── Επιλογή ΑΞΟΝΑ — στήλη / γραμμή ──────────────────────────────────────────
+
+/**
+ * 🔴 ADR-739 §27.15 — **ο άξονας ΔΕΝ κουμπώνει**, η περιοχή κουμπώνει.
+ *
+ * Το κούμπωμα γεννήθηκε για την **περιοχή** («μισό συγχωνευμένο κελί δεν αντιγράφεται») και
+ * εκεί μένει ακέραιο. Πάνω σε **επιλογή άξονα** όμως δίνει παράλογο αποτέλεσμα: ο πίνακας
+ * της σκηνής έχει γραμμή τίτλου συγχωνευμένη σε **όλες** τις στήλες, οπότε «κλικ στο B»
+ * κατέληγε να μαρκάρει **ολόκληρο τον πίνακα**.
+ *
+ * Δεν είναι δική μας εφεύρεση: το Excel **2003** έκανε ακριβώς αυτό και το **διόρθωσε στο
+ * 2010** (κλικ στο γράμμα στήλης ⇒ μόνο αυτή η στήλη, ακόμα κι όταν συγχώνευση τη
+ * διασχίζει). Τα Google Sheets το κάνουν ακόμα, και είναι καταγεγραμμένη ενόχληση.
+ */
+describe('🔴 resolveTableSelectionBounds — ο ΑΞΟΝΑΣ δεν κουμπώνει (Excel 2010+)', () => {
+  /** Η **κατακόρυφη** αδελφή του τίτλου: `c0` × τρεις γραμμές. */
+  const SIDE_MERGE: CellSpan = { anchorRowId: 'r0', anchorColId: 'c0', rowSpan: 3, colSpan: 1 };
+
+  it('🔴 κλικ στο «B» με συγχωνευμένο τίτλο ⇒ ΜΟΝΟ η στήλη B, όχι ο πίνακας', () => {
+    expect(
+      resolveTableSelectionBounds(modelWith([TITLE_MERGE]), {
+        from: ref('r0', 'c1'),
+        to: ref('r3', 'c1'),
+        kind: 'column',
+      }),
+    ).toEqual({ firstRow: 0, lastRow: 3, firstCol: 1, lastCol: 1 });
+  });
+
+  it('🔴 κλικ στη γραμμή «2» με κατακόρυφη συγχώνευση ⇒ ΜΟΝΟ η γραμμή 2', () => {
+    expect(
+      resolveTableSelectionBounds(modelWith([SIDE_MERGE]), {
+        from: ref('r1', 'c0'),
+        to: ref('r1', 'c3'),
+        kind: 'row',
+      }),
+    ).toEqual({ firstRow: 1, lastRow: 1, firstCol: 0, lastCol: 3 });
+  });
+
+  it('🔴 Η ΙΔΙΑ περιοχή ως `range` ΚΟΥΜΠΩΝΕΙ — ο κανόνας δεν χαλάει, περιορίζεται', () => {
+    expect(
+      resolveTableSelectionBounds(modelWith([TITLE_MERGE]), {
+        from: ref('r0', 'c1'),
+        to: ref('r3', 'c1'),
+        kind: 'range',
+      }),
+    ).toEqual({ firstRow: 0, lastRow: 3, firstCol: 0, lastCol: 2 });
+  });
+
+  it('`range` είναι ΤΑΥΤΟΣΗΜΟ με το resolveTableCellRange — καμία δεύτερη αριθμητική', () => {
+    const model = modelWith([TITLE_MERGE]);
+    const from = ref('r0', 'c1');
+    const to = ref('r2', 'c2');
+    expect(resolveTableSelectionBounds(model, { from, to, kind: 'range' })).toEqual(
+      resolveTableCellRange(model, from, to),
+    );
+  });
+
+  it('χωρίς καμία συγχώνευση, ο άξονας δίνει ό,τι και η περιοχή', () => {
+    const model = modelWith();
+    const from = ref('r0', 'c1');
+    const to = ref('r3', 'c1');
+    expect(resolveTableSelectionBounds(model, { from, to, kind: 'column' })).toEqual(
+      resolveTableSelectionBounds(model, { from, to, kind: 'range' }),
+    );
+  });
+
+  it('άγνωστη ταυτότητα ⇒ null και στον άξονα — ίδια σύμβαση, καμία μαντεψιά', () => {
+    expect(
+      resolveTableSelectionBounds(modelWith([TITLE_MERGE]), {
+        from: ref('r0', 'c1'),
+        to: ref('r9', 'c1'),
+        kind: 'column',
+      }),
+    ).toBeNull();
   });
 });
 

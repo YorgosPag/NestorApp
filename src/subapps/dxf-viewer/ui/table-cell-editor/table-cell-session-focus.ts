@@ -153,7 +153,9 @@ let claimExpiryInstalled = false;
 function installClaimExpiry(): void {
   if (claimExpiryInstalled || typeof document === 'undefined') return;
   claimExpiryInstalled = true;
-  const expire = (): void => { pointerDownClaim = false; };
+  // §27.15 — **μία** λήξη για τις δύο σημαίες: ο κύκλος ζωής είναι ο ίδιος (η χειρονομία),
+  // και δύο ξεχωριστές λήξεις θα ήταν το μόνο σημείο όπου θα μπορούσαν να αποκλίνουν.
+  const expire = (): void => { pointerDownClaim = false; pointerGestureClaim = false; };
   document.addEventListener('mousedown', expire, { capture: true });
   document.addEventListener('keydown', expire, { capture: true });
 }
@@ -163,9 +165,51 @@ function hasPointerDownClaim(): boolean {
   return pointerDownClaim;
 }
 
+/**
+ * 🔴 ADR-739 §27.15 — «**η ΧΕΙΡΟΝΟΜΙΑ ανήκει σε αυτόν τον πίνακα**».
+ *
+ * ## Γιατί ΔΕΥΤΕΡΗ σημαία και όχι η ίδια με το {@link claimTableCellSessionPointerDown}
+ * Οι δύο απαντούν σε **διαφορετικές** ερωτήσεις, και η διαφορά είναι μετρήσιμη σε μία
+ * γραμμή: η πρώτη είναι **δεμένη με την εστίαση** (`document.activeElement`), επίτηδες —
+ * εκεί ακριβώς στηρίζεται η εγγύηση που την κάνει αδύνατο να μπαγιατέψει: γεννιέται μόνο
+ * όταν το `blur` που θα την καταναλώσει είναι **βέβαιο** ότι έρχεται.
+ *
+ * Η ερώτηση εδώ είναι άλλη: «θα επιτραπεί σε αυτό το πάτημα να **μετακινήσει την
+ * οντότητα**;». Η απάντηση δεν επιτρέπεται να εξαρτάται από το ποιος κρατά την εστίαση —
+ * ένα πάτημα μέσα στο πλέγμα δεν είναι μετακίνηση πίνακα **ποτέ**, ακόμα κι αν η εστίαση
+ * έχει περιπλανηθεί. Με κοινή σημαία, μια χαμένη εστίαση θα σήμαινε «ο πίνακας μετακινείται
+ * ενώ ο χρήστης σέρνει για να επιλέξει κελιά» — δηλαδή **αλλοίωση δεδομένων** από χειρονομία
+ * επιλογής.
+ *
+ * ⚠️ Δύο σημαίες, **μία λήξη** ({@link installClaimExpiry}): δεν μπορούν να αποκλίνουν στον
+ * κύκλο ζωής τους, που είναι το μόνο σημείο όπου δύο σημαίες θα ήταν επικίνδυνες.
+ */
+let pointerGestureClaim = false;
+
+/**
+ * Ο pointer δηλώνει ότι το τρέχον `mousedown` έπεσε μέσα στο πλέγμα ή στις ζώνες δείκτη
+ * **του δικού του** πίνακα. Χωρίς όρο εστίασης — δες το σκεπτικό παραπάνω.
+ */
+export function claimTableCellPointerGesture(): void {
+  installClaimExpiry();
+  pointerGestureClaim = true;
+}
+
+/**
+ * Ανήκει το τρέχον πάτημα σε πίνακα υπό επεξεργασία;
+ *
+ * Καταναλωτής: η πύλη body-drag του `useCentralizedMouseHandlers` (ADR-560). Είναι η **ίδια**
+ * μορφή φύλακα με τον grip-guard που ζει ήδη δίπλα της — «πάτημα σημαδεμένο αλλού δεν
+ * μετακινεί ποτέ ολόκληρο το σώμα» — απλώς για δεύτερο σημάδι.
+ */
+export function isTableCellPointerGestureClaimed(): boolean {
+  return pointerGestureClaim;
+}
+
 /** Test helper — μηδενισμός μεταξύ tests, ίδιο μοτίβο με τα stores. */
 export function __resetTableCellSessionFocusForTests(): void {
   pointerDownClaim = false;
+  pointerGestureClaim = false;
 }
 
 /**

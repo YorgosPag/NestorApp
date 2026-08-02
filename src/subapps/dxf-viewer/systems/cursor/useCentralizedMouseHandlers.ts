@@ -32,6 +32,9 @@ import { startAxisCutDrag, endAxisCutDrag } from '../axis-cut/axis-cut-drag-stor
 // Body-drag (grab entity body → move; Ctrl+drag → copy).
 import { EntityBodyDragStore } from '../drag/EntityBodyDragStore';
 import { resolveBodyDragTarget } from '../drag/body-drag-target';
+// ADR-739 §27.15 — ο ΕΝΑΣ ορισμός του «αυτό το πάτημα ανήκει σε πίνακα υπό επεξεργασία».
+// Ίδια κατεύθυνση εισαγωγής με τα bridge stores που ήδη καταναλώνει το `mouse-handler-up`.
+import { isTableCellPointerGestureClaimed } from '../../ui/table-cell-editor/table-cell-session-focus';
 // ADR-642 §6.8 — Alt+press on a complex-linetype pattern snap (railway rail/sleeper) → whole-entity move.
 import { tryArmComplexSnapAltMove } from '../drag/complex-snap-alt-move';
 import { getHoveredEntity } from '../hover/HoverStore';
@@ -249,6 +252,16 @@ export function useCentralizedMouseHandlers(
         hoveredEntityId: getHoveredEntity(),
         isSelected: (id) => SelectedEntitiesStore.isSelected(id),
         selectedIds: SelectedEntitiesStore.getIds(),
+        // 🔴 ADR-739 §27.15 — ΔΕΥΤΕΡΟΣ φύλακας, ίδιο σχήμα με τον grip-guard από κάτω: ένα
+        // πάτημα **σημαδεμένο σε κελί πίνακα** δεν μετακινεί ποτέ ολόκληρη την οντότητα.
+        // Χωρίς αυτό, η σύρση επιλογής κελιών (Excel) θα έσερνε **και τον πίνακα**: το
+        // body-drag armάρει με 3px και ο ακροατής του πίνακα είναι **παθητικός** επίτηδες,
+        // άρα δεν μπορεί —και δεν πρέπει— να καταναλώσει το συμβάν για να αμυνθεί.
+        //
+        // Δήλωση, όχι κατανάλωση: ο ακροατής του πίνακα τρέχει σε φάση **σύλληψης** στο
+        // δοχείο, δηλαδή **πριν** από αυτό εδώ, και αφήνει το σημάδι του. Ίδιο δόγμα με το
+        // §26.15 — και είναι ο ίδιος μηχανισμός λήξης, όχι δεύτερος.
+        claimedByCellEditor: isTableCellPointerGestureClaimed(),
       });
       if (target) {
         // ADR-560 §big-player grip-guard — a press AIMED at a selected object's grip must never

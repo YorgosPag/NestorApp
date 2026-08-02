@@ -23,13 +23,28 @@ export interface BodyDragTargetInput {
   readonly isSelected: (id: string) => boolean;
   /** All currently selected scene entity ids. */
   readonly selectedIds: readonly string[];
+  /**
+   * 🔴 ADR-739 §27.15 — an in-place cell editor has already claimed this press.
+   *
+   * A table under edit turns its own body into a **grid**: pressing inside it means "select
+   * cells", exactly as in Excel, and dragging means "extend the selection" — never "move the
+   * object". The claim is raised by the table's capture-phase listener, which runs *before*
+   * this gate, and expires with the gesture (`table-cell-session-focus.ts`).
+   *
+   * Same shape as the grip-guard at the call site: **a press aimed at something smaller than
+   * the body never moves the whole body**. Kept as an input (not a store read) so this file
+   * stays pure and unit-testable, exactly as its header promises.
+   */
+  readonly claimedByCellEditor?: boolean;
 }
 
 /**
  * Returns the entity ids to drag, or `null` when no body-drag should start.
  */
 export function resolveBodyDragTarget(input: BodyDragTargetInput): string[] | null {
-  const { hoveredEntityId, isSelected, selectedIds } = input;
+  const { hoveredEntityId, isSelected, selectedIds, claimedByCellEditor } = input;
+  // ADR-739 §27.15 — the press belongs to an in-place cell editor: never a body move.
+  if (claimedByCellEditor) return null;
   if (!hoveredEntityId) return null;
 
   // SELECT-FIRST (AutoCAD): only an ALREADY-selected body starts a drag. An

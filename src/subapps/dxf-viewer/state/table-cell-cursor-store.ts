@@ -44,7 +44,7 @@ import { useSyncExternalStore } from 'react';
 import { createExternalStore } from '../stores/createExternalStore';
 import { markSystemsDirty } from '../rendering/core/frame-scheduler-api';
 import type { TableCursorPosition } from '../bim/table/table-cell-navigation';
-import type { TableCellRef } from '../bim/table/table-cell-range';
+import type { TableSelectionSpan } from '../bim/table/table-cell-range';
 
 /** Οι τρεις καταστάσεις του Excel — δες τον πίνακα στην κεφαλίδα. */
 export type TableCellCursorMode = 'nav' | 'enter' | 'edit';
@@ -143,11 +143,16 @@ export interface TableCellCursorState {
   readonly selection: TableCellSelection | null;
 }
 
-/** Οι δύο γωνίες μιας επιλογής, σε αυθαίρετη σειρά — η κανονικοποίηση ζει στο SSoT περιοχής. */
-export interface TableCellSelection {
-  readonly from: TableCellRef;
-  readonly to: TableCellRef;
-}
+/**
+ * Οι δύο γωνίες μιας επιλογής **και η πρόθεση που τις γέννησε**, σε αυθαίρετη σειρά — η
+ * κανονικοποίηση και η ερμηνεία ζουν στο SSoT περιοχής.
+ *
+ * 🔴 ADR-739 §27.15 — το `kind` είναι **υποχρεωτικό**, χωρίς προεπιλογή. Μια σιωπηλή
+ * προεπιλογή `'range'` θα ήταν ακριβώς το σφάλμα που διορθώνει: ο γραφέας που ξεχνά να
+ * δηλώσει πρόθεση παίρνει κούμπωμα που δεν ζήτησε, και το μαθαίνει στην οθόνη. Τέσσερις
+ * γραφείς υπάρχουν συνολικά — ο καθένας τους ξέρει τι διάλεξε ο χρήστης.
+ */
+export type TableCellSelection = TableSelectionSpan;
 
 /**
  * Ο ζωγράφος του καμβά ξαναβάφει **μόνο** όταν το ζητήσει κάποιος (ADR-040 / ADR-119): ο
@@ -176,7 +181,12 @@ const store = createExternalStore<TableCellCursorState | null>(null, {
     a?.selection?.from.rowId === b?.selection?.from.rowId &&
     a?.selection?.from.colId === b?.selection?.from.colId &&
     a?.selection?.to.rowId === b?.selection?.to.rowId &&
-    a?.selection?.to.colId === b?.selection?.to.colId,
+    a?.selection?.to.colId === b?.selection?.to.colId &&
+    // 🔴 ADR-739 §27.15 — **και το είδος**: οι ίδιες δύο γωνίες σημαίνουν άλλα κελιά
+    // ανάλογα με την πρόθεση (η στήλη δεν κουμπώνει, η περιοχή κουμπώνει). Χωρίς αυτή τη
+    // γραμμή, μια μετάβαση «σύρσιμο περιοχής → κλικ στο γράμμα» με ταυτόσημες γωνίες θα
+    // απορριπτόταν ως «τίποτα δεν άλλαξε» και η οθόνη θα έμενε στην παλιά ερμηνεία.
+    a?.selection?.kind === b?.selection?.kind,
 });
 
 /**

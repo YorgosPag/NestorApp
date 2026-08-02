@@ -50,7 +50,7 @@ import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import { useTableModelCommit } from './use-table-model-commit';
 import {
   extendTableCellRangeEnd,
-  resolveTableCellRange,
+  resolveTableSelectionBounds,
   tableRangeSize,
   tableWholeGridRange,
   type TableCellRangeBounds,
@@ -131,8 +131,13 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
   const currentBounds = useCallback((): TableCellRangeBounds | null => {
     if (!cursor || !entity) return null;
     const model = resolveTableModel(entity.model);
-    const { from, to } = cursor.selection ?? { from: cursor.position, to: cursor.position };
-    return resolveTableCellRange(model, from, to);
+    // ADR-739 §27.15 — χωρίς επιλογή, το ενεργό κελί είναι **περιοχή**: εκεί το κούμπωμα
+    // είναι ακριβώς ο κανόνας που θέλουμε (σκέτο κελί μέσα σε συγχώνευση ⇒ ολόκληρη η
+    // συγχώνευση), και είναι η συμπεριφορά που τεκμηριώνεται από πάνω.
+    return resolveTableSelectionBounds(
+      model,
+      cursor.selection ?? { from: cursor.position, to: cursor.position, kind: 'range' },
+    );
   }, [cursor, entity]);
 
   // ADR-739 Φ.Δ βήμα 9 — η μία διαδρομή commit ζει πλέον σε δικό της module: την καλεί και
@@ -145,11 +150,19 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
       const model = resolveTableModel(entity.model);
       // Η γωνία που ΜΕΝΕΙ είναι το ενεργό κελί (ή το ήδη σταθερό `from` μιας ανοιχτής
       // επιλογής)· κουνιέται μόνο το `to`. Αυτή ΕΙΝΑΙ η διαφορά `βέλος` ↔ `Shift+βέλος`.
-      const current = cursor.selection ?? { from: cursor.position, to: cursor.position };
+      const current = cursor.selection ?? {
+        from: cursor.position,
+        to: cursor.position,
+        kind: 'range' as const,
+      };
       const next = extendTableCellRangeEnd(model, current.to, move);
       // `null` = άκρη πλέγματος. Η περιοχή **μένει** όπου είναι — ποτέ αναδίπλωση, ίδια
       // σύμβαση με τον δρομέα.
-      if (next) setTableCellSelection({ from: current.from, to: next });
+      //
+      // ADR-739 §27.15 — το είδος **διατηρείται**: `Shift+δεξί` πάνω σε επιλεγμένη στήλη
+      // δίνει **δύο ολόκληρες στήλες** (Excel), όχι ορθογώνιο που ξαφνικά ξανακουμπώνει
+      // στη συγχώνευση του τίτλου. Η επέκταση δεν αλλάζει **τι** διάλεξε ο χρήστης.
+      if (next) setTableCellSelection({ from: current.from, to: next, kind: current.kind });
     },
     [cursor, entity],
   );
@@ -160,7 +173,10 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
       // Η **σταθερή** γωνία είναι το ενεργό κελί, ακόμα κι αν υπάρχει ήδη επιλογή: ένα
       // `Shift+κλικ` στο Excel ξαναορίζει την περιοχή από την αφετηρία, δεν την προσθέτει
       // στην προηγούμενη.
-      setTableCellSelection({ from: cursor.position, to: cell });
+      // ADR-739 §27.15 — `Shift+κλικ` σε **κελί** ορίζει γωνίες με το χέρι ⇒ **περιοχή**,
+      // με το κούμπωμα ενεργό: εδώ είναι ακριβώς η περίπτωση όπου «μισό συγχωνευμένο
+      // κελί» θα ήταν ανερμήνευτο.
+      setTableCellSelection({ from: cursor.position, to: cell, kind: 'range' });
     },
     [cursor],
   );
@@ -176,6 +192,10 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
     setTableCellSelection({
       from: { rowId: model.rows[whole.firstRow].id, colId: model.columns[whole.firstCol].id },
       to: { rowId: model.rows[whole.lastRow].id, colId: model.columns[whole.lastCol].id },
+      // ADR-739 §27.15 — **περιοχή**, και το κούμπωμα είναι ταυτοτικό: όλες οι συγχωνεύσεις
+      // είναι ήδη μέσα εξ ορισμού (δες `tableWholeGridRange`). Δεν χρειάζεται τέταρτο είδος
+      // «όλα» για να ειπωθεί κάτι που το ορθογώνιο ήδη λέει.
+      kind: 'range',
     });
   }, [cursor, entity]);
 
@@ -310,10 +330,6 @@ export function resolveTableSelectionSize(
   entity: TableEntity | null,
 ): { readonly rows: number; readonly columns: number } | null {
   if (!cursor || !entity || !cursor.selection) return null;
-  const bounds = resolveTableCellRange(
-    resolveTableModel(entity.model),
-    cursor.selection.from,
-    cursor.selection.to,
-  );
+  const bounds = resolveTableSelectionBounds(resolveTableModel(entity.model), cursor.selection);
   return bounds ? tableRangeSize(bounds) : null;
 }

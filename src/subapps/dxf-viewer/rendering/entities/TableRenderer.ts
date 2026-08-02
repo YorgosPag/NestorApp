@@ -57,7 +57,7 @@ import {
 // ADR-739 Φ.Δ βήμα 8 — ΠΟΙΑ κελιά είναι μαρκαρισμένα. Καθαρό SSoT, κοινό με την
 // αντιγραφή/επικόλληση και τη γραμμή κατάστασης: ο ζωγράφος δεν κρίνει, ρωτά.
 import {
-  resolveTableCellRange,
+  resolveTableSelectionBounds,
   tableRangeMembership,
   tableRangeRectMm,
   type TableRangeMembership,
@@ -200,7 +200,9 @@ export class TableRenderer extends BaseEntityRenderer {
   ): { readonly rectMm: TableRectMm; readonly membership: TableRangeMembership } | null {
     if (!cursor.selection) return null;
     const model = resolveTableModel(e.model);
-    const bounds = resolveTableCellRange(model, cursor.selection.from, cursor.selection.to);
+    // ADR-739 §27.15 — ο ζωγράφος **δεν ερμηνεύει**: ρωτά τον ΕΝΑ δρόμο «τι διάλεξε ο
+    // χρήστης → ποια κελιά είναι μέσα», που ξέρει μόνος του πότε κουμπώνει.
+    const bounds = resolveTableSelectionBounds(model, cursor.selection);
     if (!bounds) return null;
     const layout = computeTableEntityGeometryLive(e, this._sceneUnits).layout;
     const rectMm = tableRangeRectMm(layout, bounds);

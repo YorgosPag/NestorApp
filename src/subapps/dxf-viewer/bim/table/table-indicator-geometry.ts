@@ -221,25 +221,49 @@ export function tableIndicatorHitAtFrame(
   // (`distance <= tolerance`). Με `≤` και στα δύο, το ένα pixel της ακμής θα απαντούσε
   // «ναι» σε αμφότερα — ακριβώς το σφάλμα που το κενό ήρθε να σβήσει.
   if (v < -bands.gapMm && v >= columnBandTopMm(bands) && u >= 0 && u <= layout.widthMm) {
+    return tableAxisTickAtFrame(layout, frame, 'column');
+  }
+
+  // Αριστερή ζώνη, συμμετρικά — ίδιο κενό, ίδια γνήσια ανισότητα.
+  if (u < -bands.gapMm && u >= rowBandLeftMm(bands) && v >= 0 && v <= layout.heightMm) {
+    return tableAxisTickAtFrame(layout, frame, 'row');
+  }
+
+  return null;
+}
+
+/**
+ * 🔴 ADR-739 §27.15 — **ΜΟΝΟ η θέση κατά μήκος του άξονα**, χωρίς καμία ερώτηση για ζώνη.
+ *
+ * Γεννήθηκε ως **εξαγωγή** από το {@link tableIndicatorHitAtFrame} — όχι ως νέα σάρωση —
+ * τη στιγμή που απέκτησε δεύτερο καταναλωτή: η **σύρση** πάνω στα γράμματα. Στο Excel, όταν
+ * σέρνεις από το `B` προς το `D`, η επιλογή ακολουθεί το `u` σου ακόμα κι αν το χέρι σου
+ * ξεφύγει κατακόρυφα από τη λωρίδα — δηλαδή η ερώτηση κατά τη σύρση είναι «**σε ποια στήλη
+ * είμαι**», όχι «είμαι μέσα στη ζώνη». Δύο αντίγραφα του βρόχου θα ήταν ακριβώς ο sibling
+ * clone του N.18· εδώ ο βρόχος είναι **ένας**, και το hit-test της ζώνης τον καλεί αφού
+ * απαντήσει πρώτο το δικό του ερώτημα.
+ *
+ * `null` όταν η θέση πέφτει έξω από το πλέγμα κατά μήκος του άξονα.
+ */
+export function tableAxisTickAtFrame(
+  layout: TableLayout,
+  frame: TableFramePoint,
+  axis: 'column' | 'row',
+): TableIndicatorHit | null {
+  if (axis === 'column') {
     for (let i = 0; i < layout.columns.length; i++) {
       const column = layout.columns[i];
-      if (u >= column.xMm && u <= column.xMm + column.widthMm) {
+      if (frame.u >= column.xMm && frame.u <= column.xMm + column.widthMm) {
         return { axis: 'column', colId: column.id, index: i };
       }
     }
     return null;
   }
-
-  // Αριστερή ζώνη, συμμετρικά — ίδιο κενό, ίδια γνήσια ανισότητα.
-  if (u < -bands.gapMm && u >= rowBandLeftMm(bands) && v >= 0 && v <= layout.heightMm) {
-    for (let i = 0; i < layout.rows.length; i++) {
-      const row = layout.rows[i];
-      if (v >= row.yMm && v <= row.yMm + row.heightMm) {
-        return { axis: 'row', rowId: row.id, index: i };
-      }
+  for (let i = 0; i < layout.rows.length; i++) {
+    const row = layout.rows[i];
+    if (frame.v >= row.yMm && frame.v <= row.yMm + row.heightMm) {
+      return { axis: 'row', rowId: row.id, index: i };
     }
-    return null;
   }
-
   return null;
 }
