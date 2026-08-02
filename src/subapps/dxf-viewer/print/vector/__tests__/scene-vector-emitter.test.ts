@@ -496,3 +496,71 @@ describe('scene-vector-emitter — Φ3: backgroundColor (AutoCAD DXF 63)', () =>
     expect(only(calls, 'lines').filter((c) => c.args[4] === 'F')).toHaveLength(0);
   });
 });
+
+// ── ADR-739 Φ.Ε/Φ1 — «Ο,ΤΙ ΒΛΕΠΕΙΣ, ΒΓΑΙΝΕΙ» στη διαδρομή του χαρτιού ────────
+
+/** Κείμενο κελιού πίνακα, όπως το παράγει το `makeText` με δηλωμένη τυπογραφία. */
+function cellText(bold: boolean): Entity {
+  return {
+    id: `t_${bold}`, type: 'text', layerId: '0', color: '#111111',
+    position: { x: 0, y: 0 }, text: 'Περιγραφή', height: 3,
+    alignment: 'left', rotation: 0, vBaseline: 'alphabetic',
+    textNode: {
+      paragraphs: [{ runs: [{ text: 'Περιγραφή', style: { fontFamily: 'Arial', bold, height: 3 } }] }],
+      attachment: 'BL', rotation: 0,
+    },
+  } as unknown as Entity;
+}
+
+describe('scene-vector-emitter — ADR-739 Φ1: έντονο κείμενο στο vector PDF', () => {
+  it('🔴 έντονο → renderingMode fillThenStroke (ΣΥΝΘΕΤΙΚΟ, όχι setFont)', () => {
+    // Το `registerGreekFont` δηλώνει το 'bold' style πάνω στο ΙΔΙΟ regular TTF, οπότε ένα
+    // `setFont('Roboto','bold')` δεν παχαίνει τίποτα. Δες `SYNTHETIC_BOLD_STROKE_RATIO`.
+    const [call] = only(emit([cellText(true)]), 'text');
+    expect((call.args[3] as { renderingMode?: string }).renderingMode).toBe('fillThenStroke');
+  });
+
+  it('κανονικό → καμία αλλαγή απόδοσης (μηδέν παλινδρόμηση σε κάθε άλλο κείμενο)', () => {
+    const [call] = only(emit([cellText(false)]), 'text');
+    expect((call.args[3] as { renderingMode?: string }).renderingMode).toBeUndefined();
+  });
+
+  it('το πάχος του συνθετικού περιγράμματος είναι ανάλογο του ύψους, όχι σταθερό', () => {
+    // Τελευταίο `setLineWidth` πριν το `text` = αυτό που ισχύει τη στιγμή της απόδοσης.
+    const calls = emit([cellText(true)]);
+    const widths = only(calls, 'setLineWidth').map((c) => c.args[0] as number);
+    expect(widths[widths.length - 1]).toBeCloseTo(3 * 0.03, 6);
+  });
+});
+
+describe('scene-vector-emitter — ADR-739 Φ1: το γέμισμα δεν είναι μελάνι', () => {
+  /** Γέμισμα κελιού κεφαλίδας, όπως το παράγει το `makeSolidFill`. */
+  function headerFill(hex: string): Entity {
+    return {
+      id: 'fill', type: 'hatch', layerId: '0', color: hex, fillColor: hex,
+      patternType: 'solid', patternName: 'SOLID',
+      boundaryPaths: [[{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 5 }, { x: 0, y: 5 }]],
+      dxfFaces: [[{ x: 0, y: 0, zMm: 0 }, { x: 10, y: 0, zMm: 0 }, { x: 10, y: 5, zMm: 0 }, { x: 0, y: 5, zMm: 0 }]],
+    } as unknown as Entity;
+  }
+
+  it('🔴 ανοιχτόχρωμο γέμισμα ΔΕΝ γίνεται μαύρο (θα κατάπινε τα γράμματά του)', () => {
+    // #EDEDED = 237 ≥ 234,6 (κατώφλι «κοντά στο λευκό») → με ρόλο 'ink' έβγαινε 0,0,0.
+    const [fill] = only(emit([headerFill('#EDEDED')]), 'setFillColor');
+    expect(fill.args).toEqual([0xed, 0xed, 0xed]);
+  });
+
+  it('γραμμή με το ΙΔΙΟ χρώμα εξακολουθεί να γίνεται μαύρη — ο ρόλος «μελάνι» μένει ακέραιος', () => {
+    const e = {
+      id: 'l', type: 'line', layerId: '0', color: '#EDEDED',
+      start: { x: 0, y: 0 }, end: { x: 1, y: 0 },
+    };
+    const [draw] = only(emit([e as unknown as Entity]), 'setDrawColor');
+    expect(draw.args).toEqual([0, 0, 0]);
+  });
+
+  it('monochrome: το γέμισμα ΓΙΝΕΤΑΙ μαύρο — ο χρήστης ζήτησε «όλα μαύρα»', () => {
+    const calls = emit([headerFill('#EDEDED')], { style: 'monochrome' as const, dpi: 150 });
+    expect(only(calls, 'setFillColor')[0].args).toEqual([0, 0, 0]);
+  });
+});

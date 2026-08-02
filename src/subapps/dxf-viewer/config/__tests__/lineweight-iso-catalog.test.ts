@@ -21,6 +21,7 @@ import {
   parseDxfCode370,
   encodeDxfCode370,
   isIsoBaselineLineweight,
+  nearestIsoLineweight,
 } from '../lineweight-iso-catalog';
 
 describe('LINEWEIGHT_ISO_VALUES', () => {
@@ -164,5 +165,55 @@ describe('isIsoBaselineLineweight', () => {
     expect(isIsoBaselineLineweight(0.123)).toBe(false);
     expect(isIsoBaselineLineweight(1.5)).toBe(false);
     expect(isIsoBaselineLineweight(-3)).toBe(false);
+  });
+});
+
+/**
+ * ADR-739 Φ.Ε/Φ1 — snap ελεύθερου mm στην πλησιέστερη ISO πένα.
+ *
+ * Διαφέρει από το `parseDxfCode370`, που είναι **αυστηρό** (ανοχή 0,005mm ⇒ εκτός καταλόγου
+ * = `-3`), γιατί απαντά σε **άλλη** ερώτηση: εκεί «τι έγραψε το DXF», εδώ «ποια πένα ζήτησε
+ * ο σχεδιαστής». Ένα `TableBorderSpec.widthMm` δεν προέρχεται από αρχείο — προέρχεται από
+ * στυλ, και ένα στυλ δικαιούται να πει 0,22.
+ */
+describe('nearestIsoLineweight (ADR-739 Φ1)', () => {
+  it('κρατά αυτούσια τα πάχη που ΟΝΤΩΣ χρησιμοποιούν τα presets πινάκων', () => {
+    // 0,25 = πλέγμα `standard`· 0,5 = πλαίσιο `standard`· 0,15 = γραμμή `detailSheet`.
+    expect(nearestIsoLineweight(0.25)).toBe(0.25);
+    expect(nearestIsoLineweight(0.5)).toBe(0.5);
+    expect(nearestIsoLineweight(0.15)).toBe(0.15);
+  });
+
+  it('στρογγυλοποιεί ένα εκτός-καταλόγου πάχος στην πλησιέστερη πένα', () => {
+    expect(nearestIsoLineweight(0.22)).toBe(0.2);   // |0,02| < |0,03|
+    expect(nearestIsoLineweight(0.24)).toBe(0.25);  // |0,01| < |0,04|
+    expect(nearestIsoLineweight(0.123)).toBe(0.13);
+  });
+
+  it('ισοπαλία → η ΛΕΠΤΟΤΕΡΗ πένα (ντετερμινιστικό, ο κατάλογος είναι αύξων)', () => {
+    // Μέσο 0,09 και 0,13 = 0,11 — ακριβώς ισαπέχον.
+    expect(nearestIsoLineweight(0.11)).toBe(0.09);
+  });
+
+  it('🔴 μη-θετικό ή μη-πεπερασμένο → undefined (ΟΧΙ «η λεπτότερη πένα»)', () => {
+    // Ένα `widthMm: 0` σημαίνει «αυτή η ακμή δεν έχει μολύβι» (αόρατο περίγραμμα, όριο
+    // γεμίσματος) — όχι «η πιο λεπτή γραμμή». Το `undefined` αφήνει τον writer να
+    // παραλείψει το group 370 ⇒ ByLayer, που είναι η τίμια απάντηση.
+    expect(nearestIsoLineweight(0)).toBeUndefined();
+    expect(nearestIsoLineweight(-1)).toBeUndefined();
+    expect(nearestIsoLineweight(NaN)).toBeUndefined();
+    expect(nearestIsoLineweight(Infinity)).toBeUndefined();
+  });
+
+  it('πάνω από τον κατάλογο → η παχύτερη πένα (κορεσμός, όχι undefined)', () => {
+    expect(nearestIsoLineweight(5)).toBe(2.11);
+  });
+
+  it('κάθε έξοδος ανήκει ΟΝΤΩΣ στον κατάλογο — καμία εφευρεμένη τιμή', () => {
+    for (let mm = 0.01; mm <= 2.5; mm += 0.01) {
+      const snapped = nearestIsoLineweight(mm);
+      expect(snapped).toBeDefined();
+      expect(isIsoBaselineLineweight(snapped as number)).toBe(true);
+    }
   });
 });

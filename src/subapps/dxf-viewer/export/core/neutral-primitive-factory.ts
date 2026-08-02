@@ -113,8 +113,9 @@ export interface NeutralPen {
  * πίνακα και το σφάλμα θα φαινόταν μόνο σε πίνακα που ο χρήστης είχε βάψει.
  *
  * Το `colorTrueColor` δεν είναι πλεονασμός: η παλέτα ACI έχει **έξι** γκρι, και το
- * `#EDEDED` της κεφαλίδας πέφτει στο ACI **255 = καθαρό λευκό** (μετρημένο στο
- * `settings/standards/aci.ts`). Χωρίς group 420 η γκρίζα κεφαλίδα βγαίνει **λευκή** —
+ * `#EDEDED` της κεφαλίδας πέφτει στο ACI **7 — την κανονική λευκή/μαύρη πένα** (μετρημένο
+ * στο `settings/standards/aci.ts`). Χωρίς group 420 η γκρίζα κεφαλίδα βγαίνει **λευκή** στο
+ * CAD και **μαύρη** στην εκτύπωση (το `applyPlotColor` κάνει ρητά το ACI 7 μαύρο μελάνι) —
  * ακριβώς το σύμπτωμα που αυτή η φάση διορθώνει. Δες `emitEntityStyle`.
  */
 function withPen(style: InheritedStyle, pen?: NeutralPen): InheritedStyle & {
