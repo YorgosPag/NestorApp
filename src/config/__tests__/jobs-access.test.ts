@@ -10,6 +10,8 @@
  *   Μ-3  Το φίλτρο ΔΕΝ προσθέτει ποτέ      — ο χρυσός κανόνας §5/Ε5.η
  *   Μ-4  Η αναφορά κληρονομεί, δεν ταξινομείται — Ε14.β / Υ-5
  *   Μ-5  Καμία διαδρομή χωρίς ανάθεση      — η πύλη Υ-4
+ *   Μ-6  Το δοχείο δεν παρασύρει το παιδί  — Ε14.θ/Ε14.ι/Ε14.ια, βρέθηκαν ΖΩΝΤΑΝΑ
+ *   Μ-7  Ο δείκτης είναι ΑΝΑΓΝΩΣΙΜΟΣ       — Ε14.ιβ, βρέθηκε ΖΩΝΤΑΝΑ (22 vs 9)
  */
 
 import { PERMISSIONS } from '@/lib/auth/types';
@@ -239,7 +241,9 @@ describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ο�
     ];
     const result = filterItemsByJob(branch, 'clients');
     expect(result.visible[0]?.subItems?.map((s) => s.href)).toEqual(['/crm/leads']);
-    expect(result.hiddenCount).toBe(1);
+    // Το παιδί ΚΛΑΔΕΥΤΗΚΕ (το `visible` το αποδεικνύει) αλλά ΔΕΝ μετρήθηκε: ο
+    // γονιός `/crm` είναι στη θέση του — από την οθόνη δεν λείπει τίποτα.
+    expect(result.hiddenCount).toBe(0);
   });
 
   it('ο δείκτης μετρά ΕΝΑ ανά κλάδο που φεύγει — όχι τα κλειστά υπο-στοιχεία', () => {
@@ -247,6 +251,24 @@ describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ο�
     // δείκτης δείχνει δεκάδες και παύει να σημαίνει κάτι.
     const branch = [{ href: '/crm', subItems: Array.from({ length: 11 }, (_, i) => ({ href: `/crm/x${i}` })) }];
     expect(filterItemsByJob(branch, 'finance').hiddenCount).toBe(1);
+  });
+
+  it('🔴 Ε14.ιβ — ο ΙΔΙΟΣ κανόνας και στα δύο επίπεδα: ορατός γονιός που έχασε παιδιά μετρά 0', () => {
+    // Βρέθηκε ΖΩΝΤΑΝΑ (2026-08-02 17:13): ο δείκτης έλεγε 22 ενώ από το μενού
+    // έλειπαν 9 κλάδοι· τα 13 της διαφοράς ήταν ΚΛΕΙΣΤΑ υπο-στοιχεία μέσα σε
+    // ΟΡΑΤΟΥΣ γονείς (7 στο /reports, 6 στο /settings). Το «ένα ανά κλάδο»
+    // είχε γραφτεί μόνο για τους κλάδους που φεύγουν. Ο δείκτης μετρά ό,τι
+    // λείπει από την ΟΘΟΝΗ — έναν ορατό γονιό δεν τον έχασε κανείς.
+    const tree = [
+      // ορατός γονιός, χάνει ταξινομημένο αλλού παιδί ⇒ 0
+      { href: '/crm', subItems: [{ href: '/crm/leads' }, { href: '/admin/ai-inbox' }] },
+      // κλάδος που φεύγει ολόκληρος ⇒ 1
+      { href: '/dxf/viewer', subItems: [{ href: '/dxf/viewer/x' }] },
+    ];
+    const result = filterItemsByJob(tree, 'clients');
+    expect(result.visible.map((i) => i.href)).toEqual(['/crm']);
+    expect(result.visible[0]?.subItems).toHaveLength(1);
+    expect(result.hiddenCount).toBe(1);
   });
 });
 
@@ -291,7 +313,10 @@ describe('Μ-4 — /reports: κληρονομιά από την πηγή, όχι
       '/reports/cash-flow',
       '/reports/projects',
     ]);
-    expect(result.hiddenCount).toBe(Object.keys(REPORT_SOURCES).length - 3);
+    // Κλαδεύτηκαν — αλλά **δεν** μετρήθηκαν στον δείκτη (Ε14.ιβ): το `/reports`
+    // στέκει στη θέση του. Η απόδειξη του κλαδέματος είναι η λίστα από πάνω.
+    expect(result.hiddenCount).toBe(0);
+    expect(Object.keys(REPORT_SOURCES).length).toBeGreaterThan(3);
   });
 
   it('κάθε υπο-αναφορά συμφωνεί με την πηγή της — καμία ανεξάρτητη τιμή', () => {
@@ -411,5 +436,51 @@ describe('Μ-5 — Υ-4: κάθε στοιχείο πλοήγησης ανήκε
     );
     const dangling = JOB_ORDER.flatMap((job) => JOBS[job].sidebar).filter((r) => !live.has(r));
     expect(dangling).toEqual([]);
+  });
+
+  // ==========================================================================
+  // Μ-7 — Ο ΔΕΙΚΤΗΣ ΕΙΝΑΙ ΑΝΑΓΝΩΣΙΜΟΣ (Ε14.ιβ, τρίτος γύρος 17:13)
+  //
+  // 🔴 Ο Γιώργος ρώτησε «είναι σωστό αυτό;» βλέποντας **22** ενώ από το μενού
+  // έλειπαν **9**. Ο δείκτης ήταν αριθμητικά αληθής και **επικοινωνιακά
+  // λάθος** — γέννησε αμφιβολία αντί για πληροφορία. Η αναλλοίωτη παρακάτω
+  // είναι η ίδια η διατύπωση του Ε14.ιβ, όχι ένα στιγμιότυπο αριθμών: μένει
+  // πράσινη όταν προστεθεί διαδρομή, κόκκινη μόνο αν αλλάξει ο **κανόνας**.
+  // ==========================================================================
+
+  const LIVE_MENUS = [createMainMenuItems, createToolsMenuItems, createSettingsMenuItems] as const;
+
+  it.each([...JOB_ORDER])(
+    '🔑 ο δείκτης ΙΣΟΥΤΑΙ με τους κλάδους που έφυγαν — ποτέ με τα κλαδεμένα παιδιά (%s)',
+    (job) => {
+      for (const buildMenu of LIVE_MENUS) {
+        const items = buildMenu('production', ALL_PERMISSIONS);
+        const result = filterItemsByJob(items, job);
+        expect(result.hiddenCount).toBe(items.length - result.visible.length);
+      }
+    },
+  );
+
+  it('🔑 …και το κλάδεμα των παιδιών ΣΥΜΒΑΙΝΕΙ — απλώς δεν μετριέται εκεί', () => {
+    // Χωρίς αυτόν τον έλεγχο, η παραπάνω ισότητα θα ήταν πράσινη και σε έναν
+    // κώδικα που σταμάτησε να κλαδεύει παιδιά — δηλαδή στο ελάττωμα των 16:58.
+    const main = filterItemsByJob(createMainMenuItems('production', ALL_PERMISSIONS), 'finance');
+    const reports = main.visible.find((item) => item.href === REPORTS_PARENT_ROUTE);
+    const liveReports = createMainMenuItems('production', ALL_PERMISSIONS).find(
+      (item) => item.href === REPORTS_PARENT_ROUTE,
+    );
+    expect(liveReports?.subItems?.length).toBeGreaterThan(reports?.subItems?.length ?? 0);
+  });
+
+  it('η μετρημένη τιμή των «Οικονομικών» είναι 9 — ο αριθμός του στιγμιότυπου', () => {
+    // Το ένα καρφωμένο νούμερο, επίτηδες: είναι ο αριθμός που ο Γιώργος είδε
+    // στην οθόνη (§14.6.2). Αν αλλάξει, κάποιος άλλαξε τη σύνθεση του μενού
+    // και το ADR πρέπει να ξαναμετρηθεί — δεν είναι θόρυβος, είναι το σήμα.
+    const total = LIVE_MENUS.reduce(
+      (sum, buildMenu) =>
+        sum + filterItemsByJob(buildMenu('production', ALL_PERMISSIONS), 'finance').hiddenCount,
+      0,
+    );
+    expect(total).toBe(9);
   });
 });
