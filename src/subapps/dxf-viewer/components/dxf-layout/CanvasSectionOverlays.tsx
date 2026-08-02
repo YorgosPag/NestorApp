@@ -35,6 +35,12 @@ import { TableCellEditorOverlay } from '../../ui/table-cell-editor/TableCellEdit
 // ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων (fx) + η αναφορά κελιού. Δεύτερο πεδίο της ΙΔΙΑΣ
 // συνεδρίας, αγκυρωμένο στον πίνακα και όχι στο κελί.
 import { TableFormulaBar } from '../../ui/table-cell-editor/TableFormulaBar';
+// ADR-739 Φ.Δ βήμα 9 — δεξί κλικ στα γράμματα στηλών / αριθμούς γραμμών: εισαγωγή & διαγραφή.
+// Ανοίγει imperative από τον δρομολογητή (`useCanvasContextMenu`, PRIORITY 1.4) μέσω θύρας.
+import {
+  TableHeaderContextMenu,
+  type TableHeaderContextMenuHandle,
+} from '../../ui/components/TableHeaderContextMenu';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
 import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
@@ -53,6 +59,10 @@ type TextOverlayProps = React.ComponentProps<typeof TextEditorOverlay>;
 type TableCellOverlayMount = { key: string; props: React.ComponentProps<typeof TableCellEditorOverlay> };
 type TableFormulaBarMount = { key: string; props: React.ComponentProps<typeof TableFormulaBar> };
 type CyclingProps = React.ComponentProps<typeof SelectionCyclingPopover>;
+type TableHeaderMenuMount = {
+  ref: React.RefObject<TableHeaderContextMenuHandle | null>;
+  props: Omit<React.ComponentProps<typeof TableHeaderContextMenu>, 'ref'>;
+};
 
 export interface CanvasSectionOverlaysProps {
   drawingMenuRef: React.RefObject<DrawingContextMenuHandle | null>;
@@ -73,6 +83,9 @@ export interface CanvasSectionOverlaysProps {
   tableCellEditorOverlay: TableCellOverlayMount | null;
   // ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων (null με τον ίδιο ακριβώς όρο: κανένα τρέχον κελί).
   tableFormulaBar: TableFormulaBarMount | null;
+  // ADR-739 Φ.Δ βήμα 9 — το μενού των ζωνών δείκτη: μονταρισμένο **πάντα** (ανοίγει imperative
+  // μέσω ref, όπως κάθε άλλο μενού συμφραζομένων), αόρατο όσο δεν έχει στόχο.
+  tableHeaderMenu: TableHeaderMenuMount;
   selectionCycling: CyclingProps;
 }
 
@@ -109,6 +122,12 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       {p.tableFormulaBar && (
         <TableFormulaBar key={p.tableFormulaBar.key} {...p.tableFormulaBar.props} />
       )}
+      {/* ADR-739 Φ.Δ βήμα 9 — εισαγωγή/διαγραφή γραμμής & στήλης από τις ζώνες δείκτη. Είναι
+          **μέλος της συνεδρίας** επεξεργασίας: δες την κεφαλίδα του component. */}
+      <TableHeaderContextMenu
+        ref={p.tableHeaderMenu.ref as React.Ref<TableHeaderContextMenuHandle>}
+        {...p.tableHeaderMenu.props}
+      />
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />
       {/* ADR-659 — overlap «⧉ N» badge (portal, micro-leaf, ADR-040) */}

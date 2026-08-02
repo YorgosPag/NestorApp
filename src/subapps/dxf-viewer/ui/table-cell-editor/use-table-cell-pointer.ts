@@ -42,13 +42,25 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import {
   computeTableEntityGeometryLive,
   tableCellAtWorld,
+  tablePxPerMm,
+  tableWorldToFrame,
 } from '../../bim/table/table-entity-geometry';
+// ADR-739 Φ.Δ βήμα 9 — οι ζώνες δείκτη είναι πλέον και **επιφάνεια επιλογής**, όχι μόνο
+// ένδειξη: το ίδιο SSoT γεωμετρίας που ζωγραφίζει τα κουτιά απαντά και «σε ποιο έπεσα».
+import {
+  isTableIndicatorVisible,
+  tableIndicatorBandsMm,
+  tableIndicatorHitAtFrame,
+  type TableIndicatorHit,
+} from '../../bim/table/table-indicator-geometry';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import {
   setTableCellCursor,
+  setTableCellSelection,
   type TableCellCursorState,
 } from '../../state/table-cell-cursor-store';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
+import type { TableEntityGeometry } from '../../types/table-entity';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -88,10 +100,22 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
         viewport,
       );
 
+      const geometry = computeTableEntityGeometryLive(entity);
+
+      // ADR-739 Φ.Δ βήμα 9 — **πρώτα οι ζώνες δείκτη**: ένα κλικ στο `B` επιλέγει ολόκληρη
+      // τη στήλη, στο `3` ολόκληρη τη γραμμή (Excel / Sheets). Προηγείται του κελιού επειδή
+      // οι δύο περιοχές δεν τέμνονται ποτέ — η ζώνη ζει σε **αρνητικά** mm — άρα η σειρά
+      // είναι απλώς «η πιο ειδική ερώτηση πρώτη», χωρίς καμία διεκδίκηση.
+      const bandHit = indicatorHitAt(entity, worldPoint, geometry, transform.scale);
+      if (bandHit) {
+        selectWholeAxis(entity, bandHit);
+        return;
+      }
+
       // Το κλικ πρέπει να πέσει μέσα στο πλέγμα **αυτού** του πίνακα. Έξω από αυτό —
       // αλλού στον καμβά, ή στα περιθώρια του πίνακα — δεν μας αφορά: ο καμβάς θα κάνει
       // ό,τι κάνει πάντα, και η συνεδρία θα κλείσει μόνη της από τον φύλακα εστίασης.
-      const hit = tableCellAtWorld(entity, worldPoint, computeTableEntityGeometryLive(entity));
+      const hit = tableCellAtWorld(entity, worldPoint, geometry);
       if (!hit) return;
 
       if (event.shiftKey) {
@@ -110,4 +134,47 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     container.addEventListener('mousedown', handleMouseDown, { capture: true });
     return () => container.removeEventListener('mousedown', handleMouseDown, { capture: true });
   }, [cursor, entity, containerRef, transformRef, onSelectTo]);
+}
+
+/** Σε ποια υποδιαίρεση ζώνης έπεσε το κλικ· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */
+function indicatorHitAt(
+  entity: TableEntity,
+  world: { readonly x: number; readonly y: number },
+  geometry: TableEntityGeometry,
+  viewScale: number,
+): TableIndicatorHit | null {
+  const pxPerMm = tablePxPerMm(geometry.mmToWorld, viewScale);
+  if (!isTableIndicatorVisible(geometry.layout.widthMm, geometry.layout.heightMm, pxPerMm)) {
+    return null;
+  }
+  const frame = tableWorldToFrame(entity, world, geometry.mmToWorld);
+  return tableIndicatorHitAtFrame(geometry.layout, frame, tableIndicatorBandsMm(pxPerMm));
+}
+
+/**
+ * Επιλογή **ολόκληρης** στήλης ή γραμμής.
+ *
+ * Δεν χρειάζεται νέος τύπος επιλογής: η περιοχή είναι ήδη «δύο γωνίες», και μια ολόκληρη
+ * στήλη είναι απλώς η γωνία (πρώτη γραμμή, αυτή η στήλη) ως την (τελευταία γραμμή, αυτή η
+ * στήλη). Το ενεργό κελί πάει στην **αρχή** του άξονα, όπως στο Excel: εκεί αρχίζει η
+ * πληκτρολόγηση αν συνεχίσεις να γράφεις.
+ *
+ * Η σειρά μετράει: το `setTableCellCursor` **διαλύει** κάθε υπάρχουσα περιοχή (τεκμηριωμένο
+ * στο store), οπότε η επιλογή γράφεται μετά — αλλιώς θα έσβηνε τη στιγμή που γεννιέται.
+ */
+function selectWholeAxis(entity: TableEntity, hit: TableIndicatorHit): void {
+  const { rows, columns } = entity.model;
+  if (rows.length === 0 || columns.length === 0) return;
+
+  const from: TableCellRef =
+    hit.axis === 'column'
+      ? { rowId: rows[0].id, colId: hit.colId }
+      : { rowId: hit.rowId, colId: columns[0].id };
+  const to: TableCellRef =
+    hit.axis === 'column'
+      ? { rowId: rows[rows.length - 1].id, colId: hit.colId }
+      : { rowId: hit.rowId, colId: columns[columns.length - 1].id };
+
+  setTableCellCursor(entity.id, tableCursorAt(from.rowId, from.colId), 'nav');
+  setTableCellSelection({ from, to });
 }

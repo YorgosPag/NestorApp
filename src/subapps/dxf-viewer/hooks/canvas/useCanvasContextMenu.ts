@@ -25,6 +25,10 @@ import { SelectedEntitiesStore } from '../../systems/selection/SelectedEntitiesS
 // (BimViewport3D) owns the right-click; this 2D capture-phase handler must yield so it does
 // not pre-empt it with the generic entity menu.
 import { usePolygonMode3DStore } from '../../bim-3d/stores/PolygonMode3DStore';
+// ADR-739 Φ.Δ βήμα 9 — οι ζώνες δείκτη πίνακα (γράμματα στηλών / αριθμοί γραμμών) διεκδικούν
+// το δεξί κλικ ΠΡΙΝ το μενού οντότητας. Ανάγνωση module τη στιγμή του συμβάντος — ίδιο μοτίβο
+// με το Polygon Mode 3D παραπάνω· δες την κεφαλίδα της θύρας για το γιατί όχι prop.
+import { getTableHeaderMenuPort } from '../../ui/table-cell-editor/table-header-menu-port';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import type { EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
@@ -218,6 +222,20 @@ export function useCanvasContextMenu({
         // 🏢 PERF: Imperative call — no setState, no parent re-render
         drawingMenuRef.current?.open(e.clientX, e.clientY);
         return;
+      }
+
+      // PRIORITY 1.4: ADR-739 Φ.Δ βήμα 9 — ζώνες δείκτη πίνακα (γράμματα στηλών / αριθμοί
+      // γραμμών). ΠΡΙΝ το μενού οντότητας: σε λειτουργία πίνακα ο πίνακας ΕΙΝΑΙ η επιλεγμένη
+      // οντότητα, οπότε το PRIORITY 2 θα άρπαζε κάθε δεξί κλικ πάνω του. Ο getter διαβάζει
+      // δρομέα + σκηνή τη στιγμή του συμβάντος και επιστρέφει null όταν το κλικ δεν πέφτει σε
+      // ζώνη — άρα το κανονικό μενού οντότητας δεν χάνεται πουθενά αλλού πάνω στον πίνακα.
+      const tableHeaderMenu = getTableHeaderMenuPort();
+      if (tableHeaderMenu) {
+        const headerHit = tableHeaderMenu.getHit(e.clientX, e.clientY);
+        if (headerHit) {
+          tableHeaderMenu.open(e.clientX, e.clientY, headerHit);
+          return;
+        }
       }
 
       // PRIORITY 1.5: ADR-362 Phase M1 — Dimension context menu (select mode, dims selected)

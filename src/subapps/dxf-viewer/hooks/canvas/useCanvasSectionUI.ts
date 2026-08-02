@@ -19,6 +19,11 @@ import { useTableCellDoubleClickEditor } from '../../ui/table-cell-editor/useTab
 // APG «Grid» + Excel) και η εντολή `TABLEDIT` (AutoCAD). Το διπλό κλικ μένει στον οδηγό του,
 // γιατί μόνο εκείνο ξέρει ΠΟΙΟ κελί και ΠΟΙΟΝ χαρακτήρα έδειξε ο χρήστης.
 import { useTableModeEntry } from '../../ui/table-cell-editor/use-table-mode-entry';
+// ADR-739 Φ.Δ βήμα 9 — το μενού των ζωνών δείκτη (γράμματα στηλών / αριθμοί γραμμών). Ζει
+// δίπλα στον οδηγό του δρομέα και όχι μέσα του: διαβάζει μόνο του δρομέα + σκηνή, και ο
+// οδηγός είναι ήδη στα όρια των 500 γραμμών (N.7.1). Δεν εγγράφει ακροατή — εκθέτει getter
+// που ρωτά ο ΕΝΑΣ δρομολογητής δεξιού κλικ (`useCanvasContextMenu`).
+import { useTableHeaderMenu } from '../../ui/table-cell-editor/use-table-header-menu';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
 import { useBathroomAutoArrangeMouseMove } from './useBathroomAutoArrangeMouseMove';
@@ -70,6 +75,7 @@ export function useCanvasSectionUI({
   const openingTagEditor = useOpeningInfoTagDoubleClick({ transformRef, containerRef, getSelectedEntityIds });
   const tableCellEditor = useTableCellDoubleClickEditor({ transformRef, containerRef, getSelectedEntityIds, levelManager });
   useTableModeEntry({ getSelectedEntityIds, levelManager });
+  const tableHeaderMenu = useTableHeaderMenu({ containerRef, transformRef, levelManager });
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTool === 'select') {
       const ids = getSelectedEntityIds();
@@ -115,5 +121,5 @@ export function useCanvasSectionUI({
   // region preview (τρέχει ΤΕΛΕΥΤΑΙΟ → οδηγεί το ΙΔΙΟ RegionPerimeterPreviewStore όταν
   // είναι ενεργό το εργαλείο μπάνιου· αλλιώς καθαρό passthrough).
   const { handleMouseMoveWithBathroomPreview } = useBathroomAutoArrangeMouseMove({ handleMouseMove: handleMouseMoveWithRegionPreview, activeTool, levelManager });
-  return { textEditor, tableCellEditor, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
+  return { textEditor, tableCellEditor, tableHeaderMenu, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
 }

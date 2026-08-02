@@ -535,6 +535,16 @@
     "range": {
       "size": "{rows, plural, one {# γραμμή} other {# γραμμές}} × {columns, plural, one {# στήλη} other {# στήλες}}"
     },
+    "headerMenu": {
+      "columnTitle": "Στήλη {label}",
+      "rowTitle": "Γραμμή {label}",
+      "insertRowAbove": "Εισαγωγή γραμμής πάνω",
+      "insertRowBelow": "Εισαγωγή γραμμής κάτω",
+      "deleteRow": "Διαγραφή γραμμής",
+      "insertColumnLeft": "Εισαγωγή στήλης αριστερά",
+      "insertColumnRight": "Εισαγωγή στήλης δεξιά",
+      "deleteColumn": "Διαγραφή στήλης"
+    },
     "clipboard": {
       "pasteClipped": "Δεν χώρεσαν όλα — χώρεσαν {detail}. Ο πίνακας δεν μεγαλώνει αυτόματα.",
       "pasteClippedRows": "{fitted} από {offered, plural, one {# γραμμή} other {# γραμμές}}",

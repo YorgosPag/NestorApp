@@ -1,0 +1,383 @@
+/**
+ * ADR-739 Φ.Δ βήμα 9 — **η ρητή εντολή που έλειπε**: εισαγωγή και διαγραφή γραμμής/στήλης.
+ * Καθαρές, αμετάβλητες, μηδέν React/DOM.
+ *
+ * Το `table-range-clipboard.ts` το είχε δηλώσει ρητά: «Ο πίνακας **ΔΕΝ** μεγαλώνει μόνος
+ * του… η προσθήκη γραμμών ανήκει σε **ρητή** εντολή». Αυτό είναι εκείνη η εντολή — ό,τι
+ * δεν χώρεσε σε μια επικόλληση, ο χρήστης το χωράει τώρα ο ίδιος, συνειδητά και με undo.
+ *
+ * ## Το σχήμα είναι το ΙΔΙΟ με τον εγγραφέα κειμένου
+ * Παίρνουν {@link PersistedTableModel}, δίνουν {@link PersistedTableModel}, και επιστρέφουν
+ * το **ίδιο αντικείμενο by-reference** όταν δεν αλλάζει τίποτα. Αυτή η τελευταία εγγύηση
+ * είναι που κάνει το `buildTableModelCommand` να μη γεννήσει εντολή για το τίποτα — δηλαδή
+ * κανένα `Ctrl+Z` που δεν αναιρεί τίποτα ορατό (δες `setPersistedCellText`, εγγύηση 4).
+ *
+ * ## 🔴 Οι τέσσερις αποφάσεις που δεν προκύπτουν από τον κώδικα
+ *
+ * ### 1. Νέα ταυτότητα: `r7`, όχι `r${θέση}`
+ * Οι ταυτότητες είναι **τοπικές στον πίνακα** (`r0…rN` / `c0…cN` — δες `build-table-entity.ts`
+ * για το γιατί ο N.6 δεν εφαρμόζεται εδώ). Το προφανές `r${atIndex}` **συγκρούεται**: μια
+ * εισαγωγή στη μέση θα γεννούσε δεύτερο `r2`, και ο αραιός χάρτης κελιών θα έδειχνε τα
+ * κελιά της παλιάς γραμμής στη νέα. Ο γεννήτορας παίρνει το **μέγιστο επίθεμα +1** και
+ * επαληθεύει σε `Set` — ντετερμινιστικός (σταθερό JSON, δοκιμάσιμο), καμία `crypto`.
+ *
+ * ### 2. Η εισαγωγή ΔΕΝ αγγίζει κανένα κελί
+ * Ούτε ένα. Ο αραιός χάρτης δείχνει σε ταυτότητες, άρα μια νέα γραμμή στη μέση δεν
+ * μετακινεί τίποτα — αυτός ακριβώς είναι ο λόγος που το μοντέλο διάλεξε id αντί για index
+ * (`types/table.ts`: «το AutoCAD τα κρατά με index — γι' αυτό εκεί οι τύποι σπάνε»).
+ *
+ * ### 3. Συγχωνεύσεις: ο κανόνας του Excel, με **μία** ρητή εξαίρεση
+ * Εισαγωγή **αυστηρά μέσα** σε ένα εύρος το μεγαλώνει· εισαγωγή δίπλα του όχι (Excel).
+ * Η εξαίρεση είναι η συγχώνευση που κάλυπτε **ολόκληρο** τον άξονα — η γραμμή τίτλου
+ * (`buildTitleMerge`). Το μοντέλο μας εκφράζει τον τίτλο ως merge ενώ το AutoCAD τον έχει
+ * ως **ιδιότητα κλάσης γραμμής**· χωρίς την εξαίρεση, η πιο συνηθισμένη πράξη όλων
+ * («εισαγωγή στήλης δεξιά») θα άφηνε τον τίτλο να σταματά μια στήλη πριν το τέλος. Δηλαδή
+ * η εξαίρεση δεν είναι χαλάρωση του κανόνα — είναι η μετάφραση μιας έννοιας που το δικό μας
+ * σχήμα δεν έχει.
+ *
+ * ### 4. Η διαγραφή άγκυρας ΜΕΤΑΦΕΡΕΙ το περιεχόμενο, δεν το σβήνει
+ * Ο χρήστης βλέπει **ένα** κελί «ΠΙΝΑΚΑΣ» απλωμένο σε τρεις στήλες· το ότι το κείμενο ζει
+ * τεχνικά στην πρώτη είναι εσωτερικό. Διαγραφή της πρώτης στήλης ⇒ η συγχώνευση
+ * ξανα-αγκυρώνεται στην επόμενη επιζώσα **μαζί με το περιεχόμενό της**. Η εναλλακτική είναι
+ * σιωπηλή απώλεια κειμένου που ο χρήστης δεν είχε τρόπο να προβλέψει.
+ *
+ * @module subapps/dxf-viewer/bim/table/table-row-column-ops
+ * @see bim/table/table-cell-edit-session.ts — η ΜΙΑ διαδρομή commit (ένα undo)
+ * @see bim/table/table-cell-order.ts — η σειρά γραμμή × στήλη (SSoT)
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §27.4
+ */
+
+import type {
+  CellSpan,
+  PersistedTableModel,
+  TableCellEntry,
+  TableColumn,
+  TableColumnId,
+  TableRow,
+  TableRowId,
+} from '../../types/table';
+import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT } from './build-table-entity';
+import { indexById, insertionIndexFor } from './table-cell-order';
+import { cellKey } from './table-model-helpers';
+
+/** Ο άξονας πάνω στον οποίο γίνεται η πράξη — μία υλοποίηση, δύο όψεις (N.18). */
+type TableAxis = 'row' | 'column';
+
+const ID_PREFIX: Readonly<Record<TableAxis, string>> = { row: 'r', column: 'c' };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Ταυτότητες
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Η επόμενη ελεύθερη ταυτότητα του άξονα — δες την Απόφαση 1 στην κεφαλίδα.
+ *
+ * Αγνοεί ταυτότητες που δεν ακολουθούν το μοτίβο (π.χ. τα `d0` του adapter του ADR-622):
+ * δεν χρειάζεται να τις κατανοήσει, μόνο να **μη συγκρουστεί** μαζί τους — γι' αυτό υπάρχει
+ * και ο τελικός βρόχος επαλήθευσης.
+ */
+function nextAxisId(existingIds: readonly string[], axis: TableAxis): string {
+  const prefix = ID_PREFIX[axis];
+  const taken = new Set(existingIds);
+  const pattern = new RegExp(`^${prefix}(\\d+)$`, 'u');
+
+  let next = 0;
+  for (const id of existingIds) {
+    const match = pattern.exec(id);
+    if (match) next = Math.max(next, Number.parseInt(match[1], 10) + 1);
+  }
+  // Το `while` δεν είναι διακοσμητικό: αν ο πίνακας κουβαλά ήδη ένα χειροποίητο `c9`
+  // **χωρίς** να έχει `c0…c8`, το μέγιστο+1 μπορεί να πέσει πάνω σε υπάρχον όνομα.
+  while (taken.has(`${prefix}${next}`)) next++;
+  return `${prefix}${next}`;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Συγχωνεύσεις — μία υλοποίηση για τους δύο άξονες
+// ──────────────────────────────────────────────────────────────────────────────
+
+function spanAnchorId(span: CellSpan, axis: TableAxis): string {
+  return axis === 'row' ? span.anchorRowId : span.anchorColId;
+}
+
+function spanSize(span: CellSpan, axis: TableAxis): number {
+  return axis === 'row' ? span.rowSpan : span.colSpan;
+}
+
+function withSpan(span: CellSpan, axis: TableAxis, anchorId: string, size: number): CellSpan {
+  return axis === 'row'
+    ? { ...span, anchorRowId: anchorId, rowSpan: size }
+    : { ...span, anchorColId: anchorId, colSpan: size };
+}
+
+/**
+ * Τα εύρη μετά από **εισαγωγή** στη θέση `atIndex` — Απόφαση 3 της κεφαλίδας.
+ *
+ * `ids` είναι η σειρά **πριν** την εισαγωγή: οι άγκυρες δείχνουν σε ταυτότητες, άρα
+ * μετακινούνται δωρεάν και το μόνο ερώτημα είναι αν το εύρος μεγαλώνει.
+ */
+function growSpansOnInsert(
+  spans: readonly CellSpan[],
+  axis: TableAxis,
+  ids: readonly string[],
+  atIndex: number,
+): readonly CellSpan[] {
+  const order = indexById(ids.map((id) => ({ id })));
+  return spans.map((span) => {
+    const anchorIndex = order.get(spanAnchorId(span, axis));
+    if (anchorIndex === undefined) return span;
+    const size = spanSize(span, axis);
+    const coversWholeAxis = anchorIndex === 0 && size >= ids.length;
+    const lastIndex = anchorIndex + size - 1;
+    const insertedInside = atIndex > anchorIndex && atIndex <= lastIndex;
+    // Η εξαίρεση: μια συγχώνευση ολόκληρου άξονα δέχεται και την εισαγωγή **ακριβώς μετά**
+    // το δεξί/κάτω άκρο της, γιατί «ολόκληρος ο άξονας» είναι η ιδιότητα που βλέπει ο χρήστης.
+    const appendedToWhole = coversWholeAxis && atIndex === lastIndex + 1;
+    if (!insertedInside && !appendedToWhole) return span;
+    return withSpan(span, axis, spanAnchorId(span, axis), size + 1);
+  });
+}
+
+/** Ένα εύρος που ξανα-αγκυρώθηκε: από ποιο κελί σε ποιο μετακομίζει το περιεχόμενο. */
+interface AnchorMove {
+  readonly fromRowId: TableRowId;
+  readonly fromColId: TableColumnId;
+  readonly toRowId: TableRowId;
+  readonly toColId: TableColumnId;
+}
+
+interface ShrinkResult {
+  readonly spans: readonly CellSpan[];
+  /** Απόφαση 4 — το περιεχόμενο ακολουθεί την άγκυρα. */
+  readonly anchorMoves: readonly AnchorMove[];
+}
+
+/**
+ * Τα εύρη μετά από **διαγραφή** της θέσης `removedIndex`.
+ *
+ * Τρεις καταστάσεις: εκτός εύρους (αμετάβλητο), μέσα στο εύρος (−1), πάνω στην άγκυρα
+ * (−1 **και** ξανα-αγκύρωση στην επόμενη επιζώσα + μετακόμιση περιεχομένου). Εύρος που
+ * εκφυλίζεται σε μηδέν παύει να υπάρχει· εύρος `1×1` επίσης — δεν είναι συγχώνευση
+ * (`buildMergeIndex` το αγνοεί ήδη, αλλά δεν αφήνουμε σκουπίδια στη σκηνή).
+ */
+function shrinkSpansOnDelete(
+  spans: readonly CellSpan[],
+  axis: TableAxis,
+  ids: readonly string[],
+  removedIndex: number,
+): ShrinkResult {
+  const order = indexById(ids.map((id) => ({ id })));
+  const kept: CellSpan[] = [];
+  const anchorMoves: AnchorMove[] = [];
+
+  for (const span of spans) {
+    const anchorIndex = order.get(spanAnchorId(span, axis));
+    if (anchorIndex === undefined) continue; // ορφανή άγκυρα — δεν επιβιώνει της πράξης
+    const size = spanSize(span, axis);
+    if (removedIndex < anchorIndex || removedIndex > anchorIndex + size - 1) {
+      kept.push(span);
+      continue;
+    }
+
+    const nextSize = size - 1;
+    if (nextSize < 1) continue;
+
+    if (removedIndex !== anchorIndex) {
+      kept.push(withSpan(span, axis, spanAnchorId(span, axis), nextSize));
+      continue;
+    }
+
+    // Η άγκυρα σβήνεται: η επόμενη θέση του άξονα γίνεται η νέα άγκυρα.
+    const nextAnchorId = ids[anchorIndex + 1];
+    if (nextAnchorId === undefined) continue;
+    const moved = withSpan(span, axis, nextAnchorId, nextSize);
+    if (moved.rowSpan === 1 && moved.colSpan === 1) continue;
+    kept.push(moved);
+    anchorMoves.push({
+      fromRowId: span.anchorRowId,
+      fromColId: span.anchorColId,
+      toRowId: moved.anchorRowId,
+      toColId: moved.anchorColId,
+    });
+  }
+
+  return { spans: kept, anchorMoves };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Φράγματα — τα ίδια όρια με το εργοστάσιο του πίνακα
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Γραμμές **δεδομένων**: ό,τι μετρά το {@link MAX_TABLE_DATA_ROW_COUNT}, και ό,τι γεννάμε. */
+function dataRowCount(model: PersistedTableModel): number {
+  return model.rows.reduce((count, row) => count + (row.rowClass === 'data' ? 1 : 0), 0);
+}
+
+export function canInsertTableRow(model: PersistedTableModel): boolean {
+  return dataRowCount(model) < MAX_TABLE_DATA_ROW_COUNT;
+}
+
+export function canInsertTableColumn(model: PersistedTableModel): boolean {
+  return model.columns.length < MAX_TABLE_COLUMN_COUNT;
+}
+
+/** Μηδέν γραμμές = πίνακας χωρίς ύψος = αόρατη οντότητα (ίδιο σκεπτικό με το `sanitizeCount`). */
+export function canDeleteTableRow(model: PersistedTableModel): boolean {
+  return model.rows.length > 1;
+}
+
+export function canDeleteTableColumn(model: PersistedTableModel): boolean {
+  return model.columns.length > 1;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Εισαγωγή
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Νέα γραμμή στη θέση `atIndex` (η υπάρχουσα εκεί κατεβαίνει). Ο δείκτης **κόβεται** στα
+ * όρια αντί να πετάει σφάλμα — ίδια στάση με το `sanitizeCount`.
+ *
+ * 🔴 **Πάντα `rowClass: 'data'`.** Οι κλάσεις `title`/`header` είναι δομικά μοναδικές στο
+ * μοντέλο του `ACAD_TABLE` (μία ζώνη τίτλου, μία κεφαλίδας) και το στυλ τις ζωγραφίζει ως
+ * τέτοιες· μια δεύτερη γραμμή τίτλου θα εμφανιζόταν ως τίτλος και ο χρήστης **δεν έχει
+ * σήμερα κανέναν τρόπο** να την ξαναχαρακτηρίσει. Χωρίς `heightMm` ⇒ το ύψος το δίνει το
+ * στυλ, όπως σε κάθε νέα γραμμή του εργοστασίου.
+ */
+export function insertTableRow(model: PersistedTableModel, atIndex: number): PersistedTableModel {
+  if (!canInsertTableRow(model)) return model;
+
+  const at = clampIndex(atIndex, model.rows.length);
+  const ids = model.rows.map((row) => row.id);
+  const row: TableRow = { id: nextAxisId(ids, 'row'), rowClass: 'data' };
+
+  const rows = model.rows.slice();
+  rows.splice(at, 0, row);
+
+  // Απόφαση 2: κανένα κελί δεν αγγίζεται — η σειρά γραμμή × στήλη διατηρείται αυτούσια,
+  // αφού η νέα γραμμή είναι κενή και οι υπόλοιπες κρατούν τη σχετική τους σειρά.
+  return { ...model, rows, merges: growSpansOnInsert(model.merges, 'row', ids, at) };
+}
+
+/**
+ * Νέα στήλη στη θέση `atIndex` (η υπάρχουσα εκεί μετακινείται δεξιά).
+ *
+ * Κληρονομεί `sizing` / `valueType` / `align` / `overflow` από τη στήλη **αναφοράς** (αυτή
+ * που πατήθηκε), όπως το Excel κληρονομεί τη μορφοποίηση του γείτονα: αλλιώς το πλάτος θα
+ * «πηδούσε» στο προεπιλεγμένο και ο χρήστης θα το ξαναέφτιαχνε κάθε φορά.
+ *
+ * ⚠️ Το `sourceKey` **ποτέ** δεν αντιγράφεται: είναι δεσμός δεδομένων (`bound`/`live` mode)
+ * και δύο στήλες που διαβάζουν το ίδιο κλειδί πηγής είναι πραγματικό σφάλμα, όχι διευκόλυνση.
+ */
+export function insertTableColumn(
+  model: PersistedTableModel,
+  atIndex: number,
+): PersistedTableModel {
+  if (!canInsertTableColumn(model)) return model;
+
+  const at = clampIndex(atIndex, model.columns.length);
+  const ids = model.columns.map((column) => column.id);
+  const template = model.columns[Math.min(at, model.columns.length - 1)];
+  const column: TableColumn = {
+    id: nextAxisId(ids, 'column'),
+    sizing: template.sizing,
+    valueType: template.valueType,
+    align: template.align,
+    ...(template.overflow ? { overflow: template.overflow } : {}),
+  };
+
+  const columns = model.columns.slice();
+  columns.splice(at, 0, column);
+
+  return { ...model, columns, merges: growSpansOnInsert(model.merges, 'column', ids, at) };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Διαγραφή
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Σβήνει τη γραμμή και **ό,τι ζούσε μέσα της**. Άγνωστη ταυτότητα ή τελευταία γραμμή ⇒ το
+ * ίδιο μοντέλο by-reference (καμία εντολή, κανένα βήμα undo).
+ */
+export function deleteTableRow(
+  model: PersistedTableModel,
+  rowId: TableRowId,
+): PersistedTableModel {
+  const at = model.rows.findIndex((row) => row.id === rowId);
+  if (at < 0 || !canDeleteTableRow(model)) return model;
+
+  const ids = model.rows.map((row) => row.id);
+  const { spans, anchorMoves } = shrinkSpansOnDelete(model.merges, 'row', ids, at);
+  const rows = model.rows.filter((row) => row.id !== rowId);
+  const next = { ...model, rows, merges: spans };
+
+  return {
+    ...next,
+    cells: rebuildCells(next, model.cells, (entry) => entry[0] !== rowId, anchorMoves),
+  };
+}
+
+/** Το ίδιο για στήλη — ίδιες τρεις εγγυήσεις (κελιά, εύρη, ταυτότητα by-reference). */
+export function deleteTableColumn(
+  model: PersistedTableModel,
+  colId: TableColumnId,
+): PersistedTableModel {
+  const at = model.columns.findIndex((column) => column.id === colId);
+  if (at < 0 || !canDeleteTableColumn(model)) return model;
+
+  const ids = model.columns.map((column) => column.id);
+  const { spans, anchorMoves } = shrinkSpansOnDelete(model.merges, 'column', ids, at);
+  const columns = model.columns.filter((column) => column.id !== colId);
+  const next = { ...model, columns, merges: spans };
+
+  return {
+    ...next,
+    cells: rebuildCells(next, model.cells, (entry) => entry[1] !== colId, anchorMoves),
+  };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Κοινά
+// ──────────────────────────────────────────────────────────────────────────────
+
+function clampIndex(value: number, length: number): number {
+  if (!Number.isFinite(value)) return length;
+  return Math.min(Math.max(Math.trunc(value), 0), length);
+}
+
+/**
+ * Τα κελιά μετά από διαγραφή: πετάει όσα ζούσαν στη σβησμένη γραμμή/στήλη και **μετακομίζει**
+ * όσα ήταν άγκυρες συγχωνεύσεων που επέζησαν (Απόφαση 4).
+ *
+ * Το φιλτράρισμα είναι ρητό και δεν αφήνεται στη σιωπηλή παράλειψη του
+ * `toPersistedTableModel`: αυτή η διαδρομή δεν περνά από εκεί, και ένα κελί-ζόμπι θα
+ * ξανα-εμφανιζόταν αν κάποτε ξαναγεννιόταν ταυτότητα με το ίδιο όνομα.
+ */
+function rebuildCells(
+  source: Pick<PersistedTableModel, 'rows' | 'columns'>,
+  cells: readonly TableCellEntry[],
+  survives: (entry: TableCellEntry) => boolean,
+  anchorMoves: readonly AnchorMove[],
+): readonly TableCellEntry[] {
+  // `cellKey` και όχι χειροποίητο αλφαριθμητικό: είναι η δηλωμένη **μόνη** νόμιμη πηγή
+  // κλειδιού, και μαζί της έρχεται η εγγύηση σειράς σκελών (γραμμή, στήλη) από τον compiler.
+  const moved = new Map<string, TableCellEntry>();
+  for (const move of anchorMoves) {
+    const found = cells.find(([r, c]) => r === move.fromRowId && c === move.fromColId);
+    if (found) moved.set(cellKey(move.toRowId, move.toColId), [move.toRowId, move.toColId, found[2]]);
+  }
+
+  // Τα κελιά που **επιζούν** κρατούν τη σειρά τους· η σχετική διάταξη γραμμή × στήλη δεν
+  // αλλάζει όταν αφαιρείται μια ολόκληρη γραμμή/στήλη.
+  const kept = cells.filter((entry) => survives(entry) && !moved.has(cellKey(entry[0], entry[1])));
+
+  let result = kept;
+  for (const entry of moved.values()) {
+    const at = insertionIndexFor(source, result, entry[0], entry[1]);
+    const withMoved = result.slice();
+    withMoved.splice(at, 0, entry);
+    result = withMoved;
+  }
+  return result;
+}

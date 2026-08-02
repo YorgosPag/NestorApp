@@ -41,6 +41,15 @@
  */
 
 import type { TableIndicatorTick } from '../../../bim/table/table-cell-reference';
+// ADR-739 Φ.Δ βήμα 9 — ΠΟΥ κάθεται η κάθε ζώνη: το ξέρει πλέον **ένα** module, γιατί το
+// ρωτά και το κλικ. Δες την κεφαλίδα εκείνου για το τι κοστίζει η δεύτερη απάντηση.
+import {
+  isTableIndicatorVisible,
+  tableColumnTickRectMm,
+  tableIndicatorBandsMm,
+  tableIndicatorCornerRectMm,
+  tableRowTickRectMm,
+} from '../../../bim/table/table-indicator-geometry';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import { TABLE_INDICATOR } from '../../../config/color-config';
 import {
@@ -56,15 +65,6 @@ import {
  * πρέπει να φαίνεται συνεχής, αλλιώς μοιάζει με σφάλμα ζωγραφικής.
  */
 const MIN_TICK_LABEL_PX = 10;
-
-/**
- * Κάτω από αυτό το μέγεθος του **πίνακα** στην οθόνη, ο δείκτης δεν ζωγραφίζεται καθόλου.
- *
- * Οι ζώνες έχουν σταθερό πάχος σε px· σε έντονο zoom-out θα ήταν **πλατύτερες από τον ίδιο
- * τον πίνακα**, δηλαδή ένα γκρίζο πλαίσιο γύρω από μια κουκκίδα. Ίδια λογική LOD με το
- * `MIN_CELL_TEXT_SCREEN_PX` του κειμένου κελιού.
- */
-const MIN_TABLE_SCREEN_PX = 48;
 
 /** Ό,τι χρειάζεται μια κλήση — ονομασμένες υποδιαιρέσεις + το μέγεθος του πίνακα. */
 export interface TableIndicatorBands {
@@ -82,22 +82,18 @@ export interface TableIndicatorBands {
  */
 export function stampTableIndicator(rc: StampTableContext, bands: TableIndicatorBands): void {
   const { pxPerMm } = rc;
-  if (bands.widthMm * pxPerMm < MIN_TABLE_SCREEN_PX) return;
-  if (bands.heightMm * pxPerMm < MIN_TABLE_SCREEN_PX) return;
+  if (!isTableIndicatorVisible(bands.widthMm, bands.heightMm, pxPerMm)) return;
 
-  const columnBandMm = TABLE_INDICATOR.columnBandPx / pxPerMm;
-  const rowBandMm = TABLE_INDICATOR.rowBandPx / pxPerMm;
+  const bandsMm = tableIndicatorBandsMm(pxPerMm);
 
-  // Η γωνία πρώτη: το κενό τετράγωνο πάνω-αριστερά που ενώνει τις δύο ζώνες. Χωρίς αυτό
-  // φαίνεται μια τρύπα ακριβώς εκεί που το μάτι περιμένει τη γωνία του πλέγματος (το Excel
-  // βάζει το γκρίζο τρίγωνο «επιλογή όλων»· εδώ δεν υπάρχει τέτοια εντολή, άρα μένει κενό).
-  fillTick(rc, { x: -rowBandMm, y: -columnBandMm, w: rowBandMm, h: columnBandMm }, false);
+  // Η γωνία πρώτη: το κενό τετράγωνο πάνω-αριστερά που ενώνει τις δύο ζώνες.
+  fillTick(rc, tableIndicatorCornerRectMm(bandsMm), false);
 
   for (const tick of bands.columns) {
-    stampTick(rc, tick, { x: tick.startMm, y: -columnBandMm, w: tick.sizeMm, h: columnBandMm });
+    stampTick(rc, tick, tableColumnTickRectMm(tick, bandsMm));
   }
   for (const tick of bands.rows) {
-    stampTick(rc, tick, { x: -rowBandMm, y: tick.startMm, w: rowBandMm, h: tick.sizeMm });
+    stampTick(rc, tick, tableRowTickRectMm(tick, bandsMm));
   }
 }
 

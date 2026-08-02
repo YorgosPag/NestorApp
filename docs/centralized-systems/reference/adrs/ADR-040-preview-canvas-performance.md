@@ -113,6 +113,26 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-08-02 — ADR-739 Φ.Δ β9: μενού ζωνών δείκτη πίνακα (άγγιξε CanvasSection, CHECK 6B)
+
+- **`CanvasSection.tsx`**: **καμία** νέα συνδρομή, **καμία** αναδιάταξη hooks. Μία γραμμή
+  προστέθηκε (mount του `TableHeaderContextMenu` μέσω `CanvasSectionOverlays`) — N.7.1: **494/500**.
+- 🔴 **Γιατί θύρα module και όχι prop**. Ο `useCanvasContextMenu` καλείται στη **γραμμή 283**, ενώ
+  ο κάτοχος του hit-test (`useCanvasSectionUI`) στη **423**. Ένα prop θα σήμαινε είτε **μετακίνηση
+  hook** μέσα στον orchestrator με τα ~40 hooks του, είτε ανάθεση σε ref μέσα στο render. Αντ'
+  αυτού ο δρομολογητής **διαβάζει module τη στιγμή του συμβάντος** — ακριβώς το ίδιο μοτίβο με την
+  παραχώρηση στο μενού όψεων του 3D (`usePolygonMode3DStore.getState().active`, ADR-539 Φ3f), που
+  ζει ήδη **στο ίδιο αρχείο**. Δηλώνει ρητά ό,τι ήδη ισχύει: **ένας ανοιχτός πίνακας τη φορά**.
+- **Ο νέος `useTableHeaderMenu` έχει ΜΗΔΕΝ `useSyncExternalStore`**. Δεν είναι μόνο κανόνας 1 —
+  είναι ορθότητα: οι σημαίες «μπορώ να διαγράψω;» απαντιούνται τη στιγμή που **ανοίγει** το μενού
+  (`resolveState(hit)`), όχι στο τελευταίο render· αλλιώς ένα ενδιάμεσο undo θα άφηνε item ενεργό
+  ενώ η πράξη δεν επιτρέπεται πια. Ίδια αρχή με τον κανόνα 2 (getter, ποτέ στιγμιότυπο).
+- **Το hit-test της ζώνης μοιράζεται το ΙΔΙΟ κατώφλι LOD με τον ζωγράφο**
+  (`table-indicator-geometry.ts`): ό,τι δεν ζωγραφίστηκε δεν πιάνεται. Δεύτερο αντίγραφο θα
+  απέκλινε **με το zoom** — το κουτί που πατάς δεν θα ήταν το κουτί που βλέπεις.
+- CHECK 6D: ο ζωγράφος `stamp-table-indicator.ts` άλλαξε (καταναλώνει το SSoT γεωμετρίας) — ADR-739
+  §27 στο ίδιο commit.
+
 ### 2026-08-01 — Phase IX: το culling έγινε fail-soft (→ [ADR-746](./ADR-746-dimension-geometry-ingress-ssot.md))
 
 - **Τι έσπασε**: `getEntityBBox` πετούσε (`dim.defPoints is not iterable`). Η εξαίρεση ανέβαινε
@@ -5863,3 +5883,52 @@ prop, και ένα υπό συνθήκη mount — **ίδιο σχήμα** με
 ⚠️ `CanvasSection.tsx` = **492/500 γραμμές** (N.7.1). Η προειδοποίηση της προηγούμενης εγγραφής
 ισχύει **ακέραιη** και έγινε πιο επείγουσα: απέμειναν **8 γραμμές**. Η επόμενη προσθήκη στον
 orchestrator κάνει **εξαγωγή**, όχι περικοπή.
+
+---
+
+## 2026-08-02: ADR-739 Φ.Δ βήμα 9 — το δεξί κλικ στις ζώνες δείκτη περνά από **θύρα module**, όχι από prop (CHECK 6B stage)
+
+Η εγγραφή υπάρχει επειδή τρία αρχεία του **CHECK 6B** άλλαξαν (`CanvasSection.tsx`,
+`CanvasSectionOverlays.tsx`, `useCanvasContextMenu.ts`). **Καμία αρχιτεκτονική αλλαγή** — αλλά
+**μία απόφαση δρομολόγησης** που αξίζει να γραφτεί, γιατί η προφανής εναλλακτική της ήταν
+αναδιάταξη hooks στον πιο ευαίσθητο orchestrator της εφαρμογής.
+
+**Τι μπήκε στον orchestrator: μία γραμμή** — `tableHeaderMenu={tableHeaderMenu}`, δίπλα στο ήδη
+υπάρχον `tableFormulaBar` (εγγραφή 2026-08-01). Στο `CanvasSectionOverlays.tsx`: import, τύπος
+mount, prop, και ένα **άνευ όρων** mount — το μενού είναι μονταρισμένο πάντα και ανοίγει
+imperative μέσω `ref`, **ίδιο σχήμα** με τον `DrawingContextMenu` και τον `EntityContextMenu` στο
+ίδιο σημείο προσάρτησης.
+
+🔴 **Γιατί θύρα module και όχι prop.** Ο `useCanvasContextMenu` καλείται στη **γραμμή 283** του
+`CanvasSection`· ο κάτοχος της απάντησης (`useCanvasSectionUI`) στη **γραμμή 423**. Ένα prop θα
+απαιτούσε είτε **αναδιάταξη hooks** στον orchestrator, είτε ανάθεση σε ref μέσα στο render — και
+τα δύο χειρότερα από το να δηλωθεί ρητά αυτό που **ήδη ισχύει**: υπάρχει το πολύ **ένας ανοιχτός
+πίνακας τη φορά**, όπως ακριβώς υπάρχει ένας δρομέας κελιού (`table-cell-cursor-store`). Το ίδιο
+μοτίβο χρησιμοποιεί **ήδη** ο δρομολογητής για να παραχωρήσει το δεξί κλικ στο μενού όψεων του 3D
+(`usePolygonMode3DStore.getState().active`, ADR-539 Φ3f): **ανάγνωση module τη στιγμή του
+συμβάντος**, όχι στιγμιότυπο σε κλείσιμο — δηλαδή ακριβώς ο κανόνας 2 του ADR-040, όχι εξαίρεσή
+του. Η θύρα κρατά **συναρτήσεις, όχι κατάσταση**: δεν υπάρχει τίποτα να παλιώσει.
+
+**PRIORITY 1.4 — και γιατί όχι μετά το μενού οντότητας.** Σε λειτουργία πίνακα ο πίνακας **ΕΙΝΑΙ**
+η επιλεγμένη οντότητα, οπότε το PRIORITY 2 θα άρπαζε **κάθε** δεξί κλικ πάνω του. Ο `getHit`
+επιστρέφει `null` όταν το κλικ δεν πέφτει σε ζώνη δείκτη ⇒ το κανονικό μενού οντότητας **δεν
+χάνεται πουθενά αλλού** πάνω στον πίνακα. Η προτεραιότητα είναι στενή by design, όχι ολική.
+
+⚠️ **Καμία νέα συνδρομή**: το μενού, το `use-table-header-menu` και ο επεξεργαστής μοντέλου είναι
+prop/ref-driven. CHECK 6C ασφαλές. Καμία αλλαγή σε cache key, σε high-freq store, ή στον χρόνο
+ζωγραφικής — η γεωμετρία των ζωνών (`bim/table/table-indicator-geometry.ts`) είναι **καθαρή
+συνάρτηση** που καταναλώνεται **και** από τον stamper (ζωγραφική) **και** από το hit-test (είσοδος),
+ώστε αυτό που βλέπεις και αυτό που χτυπάς να **μην μπορούν** να αποκλίνουν.
+
+**Files**: MOD `components/dxf-layout/{CanvasSection.tsx,CanvasSectionOverlays.tsx}`,
+`hooks/canvas/{useCanvasContextMenu.ts,useCanvasSectionUI.ts}`,
+`rendering/entities/table/stamp-table-indicator.ts`, `state/table-cell-cursor-store.ts`,
+`ui/table-cell-editor/{use-table-cell-pointer.ts,use-table-range-actions.ts}`· NEW
+`bim/table/{table-indicator-geometry.ts,table-row-column-ops.ts}` (+ 2 test suites),
+`ui/components/TableHeaderContextMenu.tsx`,
+`ui/table-cell-editor/{table-header-menu-port.ts,use-table-header-menu.ts,use-table-model-commit.ts}`
+(+ 1 test suite). Πλήρης απόφαση: **ADR-739 §27**.
+
+⚠️ `CanvasSection.tsx` = **494/500 γραμμές** (N.7.1). Απέμειναν **6 γραμμές**. Η προειδοποίηση
+των δύο προηγούμενων εγγραφών ισχύει **ακέραιη**: η επόμενη προσθήκη στον orchestrator κάνει
+**εξαγωγή**, όχι περικοπή.

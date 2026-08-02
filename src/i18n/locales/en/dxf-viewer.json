@@ -535,6 +535,16 @@
     "range": {
       "size": "{rows, plural, one {# row} other {# rows}} × {columns, plural, one {# column} other {# columns}}"
     },
+    "headerMenu": {
+      "columnTitle": "Column {label}",
+      "rowTitle": "Row {label}",
+      "insertRowAbove": "Insert row above",
+      "insertRowBelow": "Insert row below",
+      "deleteRow": "Delete row",
+      "insertColumnLeft": "Insert column left",
+      "insertColumnRight": "Insert column right",
+      "deleteColumn": "Delete column"
+    },
     "clipboard": {
       "pasteClipped": "Not everything fitted — {detail} fitted. The table does not grow automatically.",
       "pasteClippedRows": "{fitted} of {offered, plural, one {# row} other {# rows}}",

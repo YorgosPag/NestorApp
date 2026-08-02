@@ -46,9 +46,8 @@ import { useCallback, useMemo, type ClipboardEvent } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { formatTsv, parseTsv, rectangularizeTsvGrid } from '@/lib/spreadsheet/tsv';
-import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
-import { buildTableModelCommand } from '../../bim/table/table-cell-edit-session';
+import { useTableModelCommit } from './use-table-model-commit';
 import {
   extendTableCellRangeEnd,
   resolveTableCellRange,
@@ -136,19 +135,9 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
     return resolveTableCellRange(model, from, to);
   }, [cursor, entity]);
 
-  /** Η μία διαδρομή commit: νέο μοντέλο → μία εντολή (ή καμία, αν δεν άλλαξε τίποτα). */
-  const commitModel = useCallback(
-    (nextModel: TableEntity['model']): boolean => {
-      const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
-      if (!entity || !currentLevelId || !setLevelScene) return false;
-      const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
-      const command = buildTableModelCommand(entity, nextModel, sceneManager);
-      if (!command) return false;
-      execute(command);
-      return true;
-    },
-    [entity, levelManager, execute],
-  );
+  // ADR-739 Φ.Δ βήμα 9 — η μία διαδρομή commit ζει πλέον σε δικό της module: την καλεί και
+  // το μενού των ζωνών δείκτη. Δες την κεφαλίδα εκείνου για το γιατί δεν αντιγράφηκε.
+  const commitModel = useTableModelCommit({ levelManager, execute });
 
   const extend = useCallback(
     (move: TableCursorMove) => {
@@ -193,7 +182,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
   const clearSelection = useCallback(() => {
     const bounds = currentBounds();
     if (!bounds || !entity) return;
-    commitModel(clearTableRange(entity.model, bounds));
+    commitModel(entity, clearTableRange(entity.model, bounds));
   }, [currentBounds, entity, commitModel]);
 
   // ── Πρόχειρο ──────────────────────────────────────────────────────────────
@@ -303,7 +292,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
         return;
       }
       const result = pasteTsvIntoTable(entity.model, cursor.position, grid);
-      commitModel(result.model);
+      commitModel(entity, result.model);
       reportPaste(result);
     },
     [ownsClipboard, cursor, entity, commitModel, reportPaste, notifications, t],

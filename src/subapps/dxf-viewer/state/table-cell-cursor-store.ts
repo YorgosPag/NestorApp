@@ -307,6 +307,31 @@ export function cancelTableCellCursorSession(): void {
   commit({ ...current, mode: 'nav', draft: '', caretIndex: undefined, sessionId: current.sessionId + 1 });
 }
 
+/**
+ * ADR-739 Φ.Δ βήμα 9 — **ξαναστήνει** το πεδίο της συνεδρίας χωρίς να αλλάξει τίποτα άλλο.
+ *
+ * Ο δρομέας μένει στο ίδιο κελί, στην ίδια κατάσταση· αλλάζει **μόνο** ο
+ * {@link TableCellCursorState.sessionId}, δηλαδή το React `key` του επεξεργαστή — άρα το
+ * `<textarea autoFocus>` ξαναστήνεται και η **εστίαση επιστρέφει στο κελί**.
+ *
+ * ## Γιατί χρειάζεται
+ * Το μενού συμφραζομένων των ζωνών δείκτη παίρνει την εστίαση όσο είναι ανοιχτό (Radix). Στο
+ * κλείσιμό του η εστίαση επιστρέφει στον **κρυφό trigger** του, όχι στο κελί — και τότε η
+ * συνεδρία θα ήταν ζωντανή αλλά «κουφή»: κανένα πλήκτρο πίνακα δεν θα έφτανε πουθενά. Ο
+ * δομικός φύλακας `isTextEntryTarget` βλέπει **εστιασμένο πεδίο κειμένου**, όχι κατάσταση
+ * store· άρα η επαναφορά πρέπει να είναι πραγματική εστίαση, όχι δήλωση.
+ *
+ * Καθρέφτης του {@link cancelTableCellCursorSession}, με τη μία διαφορά που μετρά: **δεν**
+ * αγγίζει `mode`/`draft`. Δεν ακυρώνεις γραφή — ξαναπιάνεις το πληκτρολόγιο.
+ *
+ * No-op χωρίς δρομέα.
+ */
+export function restartTableCellCursorSession(): void {
+  const current = store.get();
+  if (!current) return;
+  commit({ ...current, sessionId: current.sessionId + 1 });
+}
+
 /** Κλείνει τη συνεδρία δρομέα (Esc σε `nav`, αποεπιλογή, σβήσιμο του πίνακα). Ιδεμποτής. */
 export function closeTableCellCursor(): void {
   if (store.get() === null) return;
