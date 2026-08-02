@@ -1,0 +1,165 @@
+/**
+ * ADR-739 Φ.Δ βήμα 9 — **Η ΜΙΑ προβολή «σημείο του πίνακα → pixel οθόνης» των tests.**
+ *
+ * ## Γιατί υπάρχει (SSoT audit 2026-08-02, N.18)
+ * Η αλυσίδα `πλαίσιο → κόσμος → οθόνη` ήταν γραμμένη **τρεις** φορές μέσα στα ίδια δύο
+ * αρχεία tests, με τρία διαφορετικά ονόματα:
+ *
+ *   - `bandScreenPoint`        (`table-header-menu.test.tsx`)      — ζώνη, δύο άξονες
+ *   - `columnBandScreenPoint`  (`table-cell-pointer-session-survival.test.tsx`) — ζώνη στήλης
+ *   - `cellScreenPoint`        (ίδιο αρχείο) + ένα **inline** αντίγραφο για κελί
+ *
+ * Το CHECK 3.28 (jscpd) τα χαρακτηρίζει sibling clones **ανεξάρτητα ονόματος**, και σωστά:
+ * είναι τρεις ευκαιρίες να ξεχάσει κάποιος ότι ο πίνακας **περιστρέφεται**. Ακριβώς αυτό
+ * είχε συμβεί — και τα τρία αντίγραφα καλούνταν μόνο με `angleRad = 0`, οπότε η γωνιακή
+ * διαδρομή έμενε **ανέλεγκτη**: ένα λάθος πρόσημο στο `tableWorldToFrame` είναι αόρατο σε
+ * `cos 0 = 1, sin 0 = 0` και σφάλλει **γραμμικά με τη γωνία**.
+ *
+ * ## Ένα πρωτόγονο, δύο ερωτήσεις από πάνω του
+ * Το {@link tableFrameScreenPoint} είναι η **μόνη** αλυσίδα· το κελί και η ζώνη διαφέρουν
+ * μόνο στο **ποιο** `(u, v)` ρωτούν. Η περιστροφή μπαίνει από το `tableFrameToWorld`, το
+ * ΙΔΙΟ SSoT που τρέφει τον ζωγράφο και τις λαβές — άρα ένα test δεν μπορεί να «συμφωνήσει»
+ * με τον εαυτό του πάνω σε λάθος γεωμετρία.
+ *
+ * ⚠️ **Δεν είναι σουίτα**: το `testMatch` του `jest.config.js` απαιτεί κατάληξη
+ * `.test.ts(x)` μέσα στο `__tests__`, οπότε ένας βοηθός χωρίς αυτήν δεν εκτελείται ποτέ ως
+ * suite — ίδιο μοτίβο με το `rendering/entities/table/__tests__/table-paint-recorder.ts`.
+ *
+ * @module subapps/dxf-viewer/ui/table-cell-editor/__tests__/table-screen-point
+ * @see bim/table/table-entity-geometry.ts — `tableFrameToWorld` (η μία περιστροφή)
+ * @see bim/table/table-indicator-geometry.ts — ΠΟΥ κάθεται η ζώνη (κοινό με ζωγράφο + κλικ)
+ */
+
+import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
+import {
+  computeTableEntityGeometryLive,
+  tableFrameToWorld,
+  tablePxPerMm,
+} from '../../../bim/table/table-entity-geometry';
+import {
+  tableColumnTickRectMm,
+  tableIndicatorBandsMm,
+  tableIndicatorCornerRectMm,
+  tableRowTickRectMm,
+} from '../../../bim/table/table-indicator-geometry';
+import { tableColumnTicks, tableRowTicks } from '../../../bim/table/table-cell-reference';
+import type { TableRectMm } from '../../../bim/table/table-layout-types';
+import type { TableEntity } from '../../../types/table-entity';
+import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/Types';
+
+/** Καμία ενεργή υποδιαίρεση: το «πού είναι» δεν εξαρτάται από το «τι είναι μαρκαρισμένο». */
+const NO_ACTIVE = new Set<never>();
+
+/** Το κέντρο ενός ορθογωνίου πλαισίου — η **μία** έκφραση, όπως και στο δίχτυ γεωμετρίας. */
+function rectCenterMm(rect: TableRectMm): { readonly u: number; readonly v: number } {
+  return { u: rect.x + rect.w / 2, v: rect.y + rect.h / 2 };
+}
+
+/** Ο μετασχηματισμός + το παράθυρο με τα οποία προβάλλεται το σημείο. */
+export interface TableTestView {
+  readonly transform: ViewTransform;
+  readonly viewport: Viewport;
+}
+
+/**
+ * Η προεπιλεγμένη προβολή των table tests: 1:1, χωρίς μετατόπιση, σε παράθυρο 1200×800.
+ *
+ * Είναι **προεπιλογή, όχι σταθερά του συστήματος** — ένα test που θέλει άλλο zoom περνά
+ * δικό του `view`. Ο λόγος που υπάρχει είναι ότι τα υπάρχοντα call-sites τη χρησιμοποιούν
+ * όλα, και τρία ταυτόσημα ζεύγη `VIEWPORT`/`TRANSFORM` είναι το ίδιο πρόβλημα σε μικρότερη
+ * κλίμακα.
+ */
+export const TABLE_TEST_VIEW: TableTestView = {
+  transform: { scale: 1, offsetX: 0, offsetY: 0 },
+  viewport: { width: 1200, height: 800 },
+};
+
+/**
+ * 🔴 **Η ΜΙΑ αλυσίδα**: σημείο πλαισίου `(u, v)` σε sheet-mm → μονάδες σκηνής → pixel.
+ *
+ * Το `tableFrameToWorld` κατέχει **και** την αναστροφή του y **και** την περιστροφή γύρω
+ * από την άγκυρα, οπότε ένας στραμμένος πίνακας δεν χρειάζεται τίποτα επιπλέον εδώ. Αυτό
+ * είναι και το νόημα: το test προβάλλει με τον **ίδιο** τρόπο που ζωγραφίζει η εφαρμογή,
+ * και μετά ζητά από το hit-test να κάνει τον δρόμο ανάποδα.
+ */
+export function tableFrameScreenPoint(
+  entity: TableEntity,
+  u: number,
+  v: number,
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const { mmToWorld } = computeTableEntityGeometryLive(entity);
+  const world = tableFrameToWorld(entity, u, v, mmToWorld);
+  return CoordinateTransforms.worldToScreen(world, view.transform, view.viewport);
+}
+
+/** Το σημείο οθόνης στο **κέντρο ενός κελιού** (δείκτες γραμμής/στήλης του μοντέλου). */
+export function tableCellScreenPoint(
+  entity: TableEntity,
+  rowIndex: number,
+  colIndex: number,
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const { layout } = computeTableEntityGeometryLive(entity);
+  const rowId = entity.model.rows[rowIndex].id;
+  const colId = entity.model.columns[colIndex].id;
+  const cell = layout.cells.find((c) => c.rowId === rowId && c.colId === colId);
+  if (!cell) throw new Error(`Το κελί ${rowIndex}/${colIndex} δεν υπάρχει στη διάταξη`);
+  return tableFrameScreenPoint(
+    entity,
+    cell.rect.x + cell.rect.w / 2,
+    cell.rect.y + cell.rect.h / 2,
+    view,
+  );
+}
+
+/**
+ * Το σημείο οθόνης στο **κέντρο της ζώνης δείκτη** — το γράμμα `B` ή ο αριθμός `3`.
+ *
+ * Οι ζώνες ζουν σε **αρνητικές** συντεταγμένες πλαισίου (πάνω/αριστερά από το πλέγμα) και
+ * το πάχος τους είναι σε **px οθόνης**, όχι mm χαρτιού — γι' αυτό περνά από το
+ * `tableIndicatorBandsMm`, το ίδιο SSoT που καταναλώνουν ο ζωγράφος και το κλικ.
+ *
+ * ## 🔴 ADR-739 §27.11 — γιατί ζητά το **ορθογώνιο** και δεν το ξαναφτιάχνει
+ * Η πρώτη γραφή αυτού του βοηθού υπολόγιζε μόνη της το κέντρο ως `-columnBandMm / 2`. Ήταν
+ * σωστό όσο η ζώνη ακουμπούσε το πλέγμα — και **έσπασε την ίδια μέρα** που η ζώνη απέκτησε
+ * κενό ώστε να μην ακουμπά τις λαβές: το «μέσο της ζώνης» έδειχνε πλέον **μέσα στο κενό**,
+ * και 18 tests έγιναν κόκκινα σε ένα αρχείο που δεν είχε αλλάξει. Δηλαδή ακριβώς το σφάλμα
+ * που περιγράφει η κεφαλίδα του — τέταρτο αντίγραφο της ίδιας αριθμητικής, με άλλο όνομα.
+ *
+ * Τώρα ρωτά το `tableColumnTickRectMm` / `tableRowTickRectMm`: **το κουτί που ζωγραφίζεται**.
+ * Ό,τι κι αν αποφασιστεί αύριο για τη θέση της ζώνης, ο βοηθός το μαθαίνει δωρεάν.
+ */
+export function tableBandScreenPoint(
+  entity: TableEntity,
+  axis: 'column' | 'row',
+  index: number,
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const geometry = computeTableEntityGeometryLive(entity);
+  const bands = tableIndicatorBandsMm(tablePxPerMm(geometry.mmToWorld, view.transform.scale));
+  const { columns, rows } = geometry.layout;
+
+  const rect = axis === 'column'
+    ? tableColumnTickRectMm(tableColumnTicks(columns, NO_ACTIVE)[index], bands)
+    : tableRowTickRectMm(tableRowTicks(rows, NO_ACTIVE, 0, rows.length)[index], bands);
+
+  const { u, v } = rectCenterMm(rect);
+  return tableFrameScreenPoint(entity, u, v, view);
+}
+
+/**
+ * Το κέντρο της **σκόπιμα νεκρής** γωνίας πάνω-αριστερά, εκεί που ενώνονται οι δύο ζώνες.
+ * Το Excel βάζει εκεί το «επιλογή όλων»· εδώ δεν υπάρχει τέτοια εντολή, άρα το hit-test
+ * οφείλει να επιστρέφει `null` — και **σε στραμμένο** πίνακα εξίσου.
+ */
+export function tableIndicatorCornerScreenPoint(
+  entity: TableEntity,
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const geometry = computeTableEntityGeometryLive(entity);
+  const bands = tableIndicatorBandsMm(tablePxPerMm(geometry.mmToWorld, view.transform.scale));
+  // Ίδιος κανόνας με το `tableBandScreenPoint`: το ΖΩΓΡΑΦΙΣΜΕΝΟ κουτί, όχι δεύτερη αριθμητική.
+  const { u, v } = rectCenterMm(tableIndicatorCornerRectMm(bands));
+  return tableFrameScreenPoint(entity, u, v, view);
+}

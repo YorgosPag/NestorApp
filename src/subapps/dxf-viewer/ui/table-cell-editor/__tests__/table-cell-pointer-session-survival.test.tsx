@@ -29,14 +29,14 @@
 
 import React, { useRef } from 'react';
 import { act, render } from '@testing-library/react';
-import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
 import { buildTableEntity } from '../../../bim/table/build-table-entity';
+// ADR-739 Φ.Δ βήμα 9 — η ΜΙΑ προβολή «σημείο πίνακα → pixel» των tests (N.18· δες την
+// κεφαλίδα του βοηθού για τα τρία αντίγραφα που αντικατέστησε).
 import {
-  computeTableEntityGeometryLive,
-  tableFrameToWorld,
-  tablePxPerMm,
-} from '../../../bim/table/table-entity-geometry';
-import { tableIndicatorBandsMm } from '../../../bim/table/table-indicator-geometry';
+  TABLE_TEST_VIEW,
+  tableBandScreenPoint,
+  tableCellScreenPoint,
+} from './table-screen-point';
 import { tableCursorAt } from '../../../bim/table/table-cell-navigation';
 import {
   __resetTableCellCursorStoreForTests,
@@ -57,8 +57,9 @@ import type { TableCellRef } from '../../../bim/table/table-cell-range';
 import type { TableEntity } from '../../../types/table-entity';
 import type { ViewTransform } from '../../../rendering/types/Types';
 
-const VIEWPORT = { width: 1200, height: 800 };
-const TRANSFORM: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
+// Η ΙΔΙΑ προβολή που χρησιμοποιεί ο βοηθός `table-screen-point` — δύο αντίγραφα εδώ θα
+// σήμαιναν ότι το test πατά αλλού απ' ό,τι υπολόγισε, χωρίς κανένα ίχνος.
+const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
 interface HarnessProps {
   readonly entity: TableEntity;
@@ -112,34 +113,11 @@ function TableSessionHarness(props: HarnessProps): React.ReactElement {
 }
 
 /** Το σημείο **οθόνης** στο κέντρο ενός κελιού — ολόκληρη η αλυσίδα frame → world → screen. */
-function cellScreenPoint(entity: TableEntity, rowIndex: number, colIndex: number) {
-  const geometry = computeTableEntityGeometryLive(entity);
-  const rowId = entity.model.rows[rowIndex].id;
-  const colId = entity.model.columns[colIndex].id;
-  const cell = geometry.layout.cells.find((c) => c.rowId === rowId && c.colId === colId);
-  if (!cell) throw new Error(`Το κελί ${rowIndex}/${colIndex} δεν υπάρχει στη διάταξη`);
-  const world = tableFrameToWorld(
-    entity,
-    cell.rect.x + cell.rect.w / 2,
-    cell.rect.y + cell.rect.h / 2,
-    geometry.mmToWorld,
-  );
-  return CoordinateTransforms.worldToScreen(world, TRANSFORM, VIEWPORT);
-}
+const cellScreenPoint = tableCellScreenPoint;
 
 /** Το σημείο **οθόνης** στο κέντρο της ζώνης δείκτη μιας στήλης (το γράμμα «B»). */
-function columnBandScreenPoint(entity: TableEntity, colIndex: number) {
-  const geometry = computeTableEntityGeometryLive(entity);
-  const bands = tableIndicatorBandsMm(tablePxPerMm(geometry.mmToWorld, TRANSFORM.scale));
-  const column = geometry.layout.columns[colIndex];
-  const world = tableFrameToWorld(
-    entity,
-    column.xMm + column.widthMm / 2,
-    -bands.columnBandMm / 2,
-    geometry.mmToWorld,
-  );
-  return CoordinateTransforms.worldToScreen(world, TRANSFORM, VIEWPORT);
-}
+const columnBandScreenPoint = (entity: TableEntity, colIndex: number) =>
+  tableBandScreenPoint(entity, 'column', colIndex);
 
 describe('🔴 ADR-739 §26.15 — το κλικ στον καμβά και η συνεδρία πίνακα', () => {
   let entity: TableEntity;

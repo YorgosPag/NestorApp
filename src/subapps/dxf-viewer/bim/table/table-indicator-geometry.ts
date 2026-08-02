@@ -22,21 +22,37 @@
  *
  * ## Το σύστημα συντεταγμένων — γιατί οι ζώνες ζουν σε ΑΡΝΗΤΙΚΑ mm
  * Η αρχή `(0,0)` είναι η πάνω-αριστερή γωνία του **πλέγματος**, `+v` προς τα κάτω. Οι ζώνες
- * είναι **έξω** από το πλέγμα, άρα:
+ * είναι **έξω** από το πλέγμα, άρα (με το κενό του {@link TABLE_INDICATOR_GRIP_CLEARANCE_PX}):
  *
- *     v ∈ [-columnBandMm, 0)  →  η πάνω ζώνη (γράμματα)
- *     u ∈ [-rowBandMm, 0)     →  η αριστερή ζώνη (αριθμοί)
+ *     v ∈ [-(gap + columnBandMm), -gap)  →  η πάνω ζώνη (γράμματα)
+ *     u ∈ [-(gap + rowBandMm), -gap)     →  η αριστερή ζώνη (αριθμοί)
  *
  * Αυτός είναι και ο λόγος που το `tableCellAtFrame` δεν τις έβλεπε ποτέ: ελέγχει μόνο
  * `u, v ≥ 0`. Δεν ήταν παράλειψη — ένα κελί **είναι** μη αρνητικό.
  *
+ * ## 🔴 ADR-739 §27.11 — ΤΟ ΚΕΝΟ: η ζώνη ΔΕΝ επιτρέπεται να ακουμπά τις λαβές
+ * Οι λαβές του πίνακα κάθονται **ακριβώς** πάνω στην ακμή `v = 0` (`table-entity-grips`:
+ * MOVE στην άγκυρα, ROTATION στο μέσο της πάνω ακμής, μία ανά **εσωτερικό όριο στήλης**).
+ * Με τη ζώνη κολλητά στο `v = 0`, το μισό κάθε λαβής ζωγραφιζόταν **μέσα** στη ζώνη και —
+ * χειρότερα — το ίδιο pixel απαντούσε σε **δύο** ερωτήσεις: «ποια στήλη επιλέγεται;» και
+ * «ποια λαβή πιάνεται;». Ο χρήστης στόχευε τη λαβή πλάτους στήλης και έπαιρνε επιλογή
+ * ολόκληρης στήλης — ή και τα δύο μαζί, αφού ο ακροατής του ποντικιού είναι **παθητικός**
+ * (δεν καταναλώνει το συμβάν· δες `use-table-cell-pointer`).
+ *
+ * Το κενό **δεν** είναι αισθητική επιλογή και **δεν** είναι «2-3 px που φαίνονται καλά»:
+ * είναι η **οπή σύλληψης της λαβής**. Γι' αυτό η τιμή του δεν γράφεται εδώ — **διαβάζεται**
+ * από το {@link TOLERANCE_CONFIG}. Αν αύριο μεγαλώσει η οπή, το κενό μεγαλώνει μαζί της
+ * χωρίς να το θυμηθεί κανείς.
+ *
  * @module subapps/dxf-viewer/bim/table/table-indicator-geometry
  * @see bim/table/table-cell-reference.ts — ΠΩΣ λέγεται η κάθε υποδιαίρεση (ονομασία SSoT)
+ * @see bim/table/table-entity-grips.ts — ΠΟΥ κάθονται οι λαβές που πρέπει να μείνουν ελεύθερες
  * @see rendering/entities/table/stamp-table-indicator.ts — ο ζωγράφος που καταναλώνει αυτά εδώ
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §27.3
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §27.3, §27.11
  */
 
 import { TABLE_INDICATOR } from '../../config/color-config';
+import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { TableColumnId, TableRowId } from '../../types/table';
 import type { TableFramePoint } from '../../types/table-entity';
 import type { TableIndicatorTick } from './table-cell-reference';
@@ -52,12 +68,44 @@ import type { TableLayout, TableRectMm } from './table-layout-types';
  */
 export const MIN_TABLE_SCREEN_PX = 48;
 
+/**
+ * Το **κενό** ανάμεσα στην ακμή του πλέγματος και την εσωτερική ακμή της ζώνης, σε px οθόνης.
+ *
+ * Δεν είναι διάκοσμος: είναι **ακριβώς** η οπή σύλληψης λαβής, ώστε η ζώνη να αρχίζει εκεί
+ * που η λαβή σταματά να πιάνεται. Δες την κεφαλίδα (§27.11) για το γιατί.
+ *
+ * ⚠️ **Ειλικρινές όριο, μετρημένο**: ο ζωντανός δρόμος (`useUnifiedGripInteraction`) ανοίγει
+ * την οπή σε `max(gripSize × dpiScale + 2, GRIP_CONFIG.HIT_TOLERANCE)` — με τις προεπιλογές
+ * (`GRIP_SIZE_DEFAULT = 7`, `dpi = 1`) βγαίνει **9 px**, δηλαδή **1 px** παραπάνω από το
+ * δηλωμένο δάπεδο των `8`. Αυτό το 1 px το κρατά η **λαβή**, όχι η ζώνη — κι έτσι το θέλουμε:
+ * σε αμφισβήτηση νικά η λαβή, γιατί η επιλογή στήλης έχει **δεύτερο** δρόμο (κλικ στο γράμμα,
+ * 18 px πιο πάνω) ενώ η λαβή δεν έχει κανέναν. Αν κάποιος ανεβάσει το `gripSize` στις
+ * ρυθμίσεις, η επικάλυψη μεγαλώνει αναλογικά — **δεν** θεραπεύεται από σταθερά· θέλει η οπή
+ * να γίνει συνάρτηση SSoT που θα καταναλώνουν και οι δύο. Καταγεγραμμένο, όχι σιωπηλό.
+ */
+export const TABLE_INDICATOR_GRIP_CLEARANCE_PX = TOLERANCE_CONFIG.GRIP_APERTURE;
+
 /** Το πάχος των δύο ζωνών σε **sheet-mm**, στην τρέχουσα κλίμακα οθόνης. */
 export interface TableIndicatorBandsMm {
   /** Ύψος της πάνω ζώνης (γράμματα). */
   readonly columnBandMm: number;
   /** Πλάτος της αριστερής ζώνης (αριθμοί) — πλατύτερη: χωρά τετραψήφια. */
   readonly rowBandMm: number;
+  /** Το κενό ως προς την ακμή του πλέγματος — δες {@link TABLE_INDICATOR_GRIP_CLEARANCE_PX}. */
+  readonly gapMm: number;
+}
+
+/**
+ * Η **εξωτερική** ακμή της πάνω ζώνης (πιο αρνητικό `v`). Μία έκφραση, τρεις καταναλωτές:
+ * το ορθογώνιο στήλης, το ορθογώνιο γωνίας και το hit-test.
+ */
+function columnBandTopMm(bands: TableIndicatorBandsMm): number {
+  return -(bands.gapMm + bands.columnBandMm);
+}
+
+/** Η **εξωτερική** ακμή της αριστερής ζώνης (πιο αρνητικό `u`) — συμμετρικά. */
+function rowBandLeftMm(bands: TableIndicatorBandsMm): number {
+  return -(bands.gapMm + bands.rowBandMm);
 }
 
 /**
@@ -69,6 +117,7 @@ export function tableIndicatorBandsMm(pxPerMm: number): TableIndicatorBandsMm {
   return {
     columnBandMm: TABLE_INDICATOR.columnBandPx / pxPerMm,
     rowBandMm: TABLE_INDICATOR.rowBandPx / pxPerMm,
+    gapMm: TABLE_INDICATOR_GRIP_CLEARANCE_PX / pxPerMm,
   };
 }
 
@@ -86,7 +135,7 @@ export function tableColumnTickRectMm(
   tick: TableIndicatorTick,
   bands: TableIndicatorBandsMm,
 ): TableRectMm {
-  return { x: tick.startMm, y: -bands.columnBandMm, w: tick.sizeMm, h: bands.columnBandMm };
+  return { x: tick.startMm, y: columnBandTopMm(bands), w: tick.sizeMm, h: bands.columnBandMm };
 }
 
 /** Το ορθογώνιο μιας υποδιαίρεσης της **αριστερής** ζώνης (αριθμός γραμμής). */
@@ -94,7 +143,7 @@ export function tableRowTickRectMm(
   tick: TableIndicatorTick,
   bands: TableIndicatorBandsMm,
 ): TableRectMm {
-  return { x: -bands.rowBandMm, y: tick.startMm, w: bands.rowBandMm, h: tick.sizeMm };
+  return { x: rowBandLeftMm(bands), y: tick.startMm, w: bands.rowBandMm, h: tick.sizeMm };
 }
 
 /**
@@ -105,7 +154,12 @@ export function tableRowTickRectMm(
  * επιστρέφει ρητά `null` γι' αυτό — δεν υπάρχει τέτοια εντολή, άρα δεν υπάρχει τέτοιο κλικ.
  */
 export function tableIndicatorCornerRectMm(bands: TableIndicatorBandsMm): TableRectMm {
-  return { x: -bands.rowBandMm, y: -bands.columnBandMm, w: bands.rowBandMm, h: bands.columnBandMm };
+  return {
+    x: rowBandLeftMm(bands),
+    y: columnBandTopMm(bands),
+    w: bands.rowBandMm,
+    h: bands.columnBandMm,
+  };
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -138,7 +192,12 @@ export function tableIndicatorHitAtFrame(
 
   // Πάνω ζώνη: πάνω από το πλέγμα, αλλά **μέσα** στο πλάτος του. Το `u` πρέπει να είναι
   // μη αρνητικό — αλλιώς είμαστε στη γωνία, που δεν είναι εντολή.
-  if (v < 0 && v >= -bands.columnBandMm && u >= 0 && u <= layout.widthMm) {
+  //
+  // 🔴 §27.11 — το εσωτερικό όριο είναι **γνήσια** ανισότητα (`v < -gapMm`, όχι `≤`): η
+  // λωρίδα του κενού ανήκει στις **λαβές** και η οπή τους είναι κλειστός δίσκος
+  // (`distance <= tolerance`). Με `≤` και στα δύο, το ένα pixel της ακμής θα απαντούσε
+  // «ναι» σε αμφότερα — ακριβώς το σφάλμα που το κενό ήρθε να σβήσει.
+  if (v < -bands.gapMm && v >= columnBandTopMm(bands) && u >= 0 && u <= layout.widthMm) {
     for (let i = 0; i < layout.columns.length; i++) {
       const column = layout.columns[i];
       if (u >= column.xMm && u <= column.xMm + column.widthMm) {
@@ -148,8 +207,8 @@ export function tableIndicatorHitAtFrame(
     return null;
   }
 
-  // Αριστερή ζώνη, συμμετρικά.
-  if (u < 0 && u >= -bands.rowBandMm && v >= 0 && v <= layout.heightMm) {
+  // Αριστερή ζώνη, συμμετρικά — ίδιο κενό, ίδια γνήσια ανισότητα.
+  if (u < -bands.gapMm && u >= rowBandLeftMm(bands) && v >= 0 && v <= layout.heightMm) {
     for (let i = 0; i < layout.rows.length; i++) {
       const row = layout.rows[i];
       if (v >= row.yMm && v <= row.yMm + row.heightMm) {

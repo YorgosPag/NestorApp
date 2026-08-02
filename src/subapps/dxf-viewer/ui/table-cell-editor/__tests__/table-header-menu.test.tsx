@@ -19,14 +19,16 @@
 
 import React from 'react';
 import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
-import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
 import { buildTableEntity } from '../../../bim/table/build-table-entity';
+import { computeTableEntityGeometryLive } from '../../../bim/table/table-entity-geometry';
+// ADR-739 Φ.Δ βήμα 9 — η ΜΙΑ προβολή «σημείο πίνακα → pixel» των tests (N.18: ήταν τρία
+// αντίγραφα με τρία ονόματα, και τα τρία καλούνταν μόνο με `angleRad = 0`).
 import {
-  computeTableEntityGeometryLive,
-  tableFrameToWorld,
-  tablePxPerMm,
-} from '../../../bim/table/table-entity-geometry';
-import { tableIndicatorBandsMm } from '../../../bim/table/table-indicator-geometry';
+  TABLE_TEST_VIEW,
+  tableBandScreenPoint,
+  tableFrameScreenPoint,
+  tableIndicatorCornerScreenPoint,
+} from './table-screen-point';
 import {
   __resetTableCellCursorStoreForTests,
   getTableCellCursor,
@@ -68,8 +70,9 @@ jest.mock('../../../core/commands', () => ({
 }));
 
 const LEVEL_ID = 'level-1';
-const VIEWPORT = { width: 1200, height: 800 };
-const TRANSFORM: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
+// Η ΙΔΙΑ προβολή που χρησιμοποιεί ο βοηθός `table-screen-point` — ένα ζεύγος τιμών, όχι δύο
+// που μπορούν να αποκλίνουν σιωπηλά (τότε το test θα πατούσε αλλού απ' ό,τι υπολόγισε).
+const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
 
 interface Harness {
   readonly entity: () => TableEntity;
@@ -78,8 +81,24 @@ interface Harness {
   readonly transformRef: { current: ViewTransform };
 }
 
-function createHarness(): Harness {
-  const table = buildTableEntity({ x: 0, y: 0 }, {}, 'table-1', 'layer-0');
+/**
+ * Ο ελάχιστος πιστός κόσμος: μία σκηνή με **έναν** πίνακα και ένα δοχείο με γνωστό rect.
+ *
+ * 🔴 ADR-739 Φ.Δ βήμα 9 — τα `angleRad` / `position` είναι **παράμετροι**, όχι σταθερές.
+ * Με καρφωμένο `angleRad = 0` (και άγκυρα στην αρχή των αξόνων) ολόκληρη η γωνιακή
+ * διαδρομή `screen → world → frame` έμενε ανέλεγκτη: το `tableWorldToFrame` πολλαπλασιάζει
+ * με `cos`/`sin`, οπότε **κάθε** πρόσημο περνά όταν η γωνία είναι μηδέν, και η μη μηδενική
+ * άγκυρα είναι το μόνο που ξεχωρίζει «στροφή γύρω από τον πίνακα» από «στροφή γύρω από την
+ * αρχή του κόσμου».
+ */
+function createHarness(
+  angleRad = 0,
+  position: { readonly x: number; readonly y: number } = { x: 0, y: 0 },
+): Harness {
+  const table: TableEntity = {
+    ...buildTableEntity(position, {}, 'table-1', 'layer-0'),
+    angleRad,
+  };
   let scene = { entities: [table] } as unknown as ReturnType<LevelManagerLike['getLevelScene']>;
 
   const container = document.createElement('div');
@@ -104,27 +123,6 @@ function createHarness(): Harness {
     containerRef: { current: container },
     transformRef: { current: TRANSFORM },
   };
-}
-
-/** Το σημείο **οθόνης** που πέφτει στο κέντρο της ζώνης μιας στήλης / γραμμής. */
-function bandScreenPoint(
-  entity: TableEntity,
-  axis: 'column' | 'row',
-  index: number,
-): { readonly x: number; readonly y: number } {
-  const geometry = computeTableEntityGeometryLive(entity);
-  const bands = tableIndicatorBandsMm(tablePxPerMm(geometry.mmToWorld, TRANSFORM.scale));
-  const { columns, rows } = geometry.layout;
-
-  const u = axis === 'column'
-    ? columns[index].xMm + columns[index].widthMm / 2
-    : -bands.rowBandMm / 2;
-  const v = axis === 'column'
-    ? -bands.columnBandMm / 2
-    : rows[index].yMm + rows[index].heightMm / 2;
-
-  const world = tableFrameToWorld(entity, u, v, geometry.mmToWorld);
-  return CoordinateTransforms.worldToScreen(world, TRANSFORM, VIEWPORT);
 }
 
 function mount(harness: Harness) {
@@ -165,14 +163,14 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
 
   it('χωρίς δρομέα δεν υπάρχει ζώνη: το δεξί κλικ ανήκει στον καμβά', () => {
     mount(harness);
-    const point = bandScreenPoint(harness.entity(), 'column', 1);
+    const point = tableBandScreenPoint(harness.entity(), 'column', 1);
     expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toBeNull();
   });
 
   it('🔴 βρίσκει τη ΣΩΣΤΗ στήλη από συντεταγμένες οθόνης (screen → world → frame → ζώνη)', () => {
     openCursor(harness);
     mount(harness);
-    const point = bandScreenPoint(harness.entity(), 'column', 1);
+    const point = tableBandScreenPoint(harness.entity(), 'column', 1);
     expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toEqual({
       axis: 'column',
       colId: harness.entity().model.columns[1].id,
@@ -183,7 +181,7 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
   it('🔴 βρίσκει τη ΣΩΣΤΗ γραμμή — η αριστερή ζώνη δεν συγχέεται με την πάνω', () => {
     openCursor(harness);
     mount(harness);
-    const point = bandScreenPoint(harness.entity(), 'row', 2);
+    const point = tableBandScreenPoint(harness.entity(), 'row', 2);
     expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toEqual({
       axis: 'row',
       rowId: harness.entity().model.rows[2].id,
@@ -267,6 +265,136 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
   });
 });
 
+/**
+ * 🔴 ADR-739 Φ.Δ βήμα 9 §27.9 — **Ο ΣΤΡΑΜΜΕΝΟΣ ΠΙΝΑΚΑΣ** (`angleRad ≠ 0`).
+ *
+ * ## Γιατί αυτό το μπλοκ δεν είναι «άλλη μια περίπτωση»
+ * Όλη η διαδρομή `screen → world → frame` περνά από το `tableWorldToFrame`, που εφαρμόζει
+ * **αντίστροφη περιστροφή**. Με `angleRad = 0` ισχύει `cos = 1, sin = 0`: κάθε όρος με
+ * `sin` **εξαφανίζεται**, οπότε ένα λάθος πρόσημο — ή μια υλοποίηση που αγνοεί εντελώς τη
+ * γωνία — δίνει **ακριβώς το ίδιο σωστό αποτέλεσμα**. Το σφάλμα μεγαλώνει **γραμμικά με τη
+ * γωνία** και είναι σιωπηλό: το μενού απλώς λέει «Στήλη A» εκεί που πάτησες το «C».
+ *
+ * Μέχρι σήμερα **κάθε** table test της Φ.Δ έχτιζε `buildTableEntity(...)`, που γεννά
+ * `angleRad: 0` — δηλαδή η γωνιακή συμπεριφορά ήταν δομικά ανέλεγκτη.
+ *
+ * ## Τι κάνει το test ΕΓΚΥΡΟ και όχι ταυτολογία
+ * Η προβολή του σημείου γίνεται με το `tableFrameToWorld` (εμπρός) και το hit-test τρέχει
+ * το `tableWorldToFrame` (αντίστροφο) — δύο διαφορετικές συναρτήσεις που **οφείλουν** να
+ * είναι αυστηρά αντίστροφες. Επιπλέον το τελευταίο test **αποδεικνύει ότι το μπλοκ
+ * διακρίνει τη στροφή**: το σημείο του **άστροφου** διδύμου, δοσμένο στον στραμμένο
+ * πίνακα, ΔΕΝ επιτρέπεται να δώσει την ίδια απάντηση. Χωρίς αυτό, μια υλοποίηση που αγνοεί
+ * τη γωνία θα έμενε πράσινη.
+ *
+ * ## Η άγκυρα ΔΕΝ είναι στην αρχή των αξόνων — επίτηδες
+ * Η στροφή γίνεται γύρω από το `position` του πίνακα. Με `position = (0,0)` μια υλοποίηση
+ * που ξέχασε τη μετάθεση (στρίβει γύρω από την αρχή του **κόσμου**) περνά αθόρυβα.
+ */
+describe('🔴 στραμμένος πίνακας — η γωνιακή διαδρομή που ήταν ανέλεγκτη', () => {
+  /** Μικρή γωνία, ορθή γωνία, αρνητική, και μία πάνω από 90° (ανάποδο κείμενο). */
+  const ANGLES = [0.35, Math.PI / 2, -1.2, 2.6];
+  /** Άγκυρα εκτός αρχής αξόνων, αλλά μέσα στο παράθυρο — δες την κεφαλίδα. */
+  const ANCHOR = { x: 300, y: 200 };
+
+  const created: Harness[] = [];
+
+  beforeEach(() => {
+    executed.length = 0;
+    __resetTableCellCursorStoreForTests();
+    __resetTableHeaderMenuPortForTests();
+  });
+
+  afterEach(() => {
+    for (const h of created) h.containerRef.current?.remove();
+    created.length = 0;
+  });
+
+  /** Πίνακας στραμμένος κατά `angleRad`, με ανοιχτή συνεδρία και δηλωμένη θύρα. */
+  function rotated(angleRad: number): Harness {
+    const harness = createHarness(angleRad, ANCHOR);
+    created.push(harness);
+    openCursor(harness);
+    mount(harness);
+    return harness;
+  }
+
+  it.each(ANGLES)('🔴 βρίσκει ΚΑΘΕ στήλη σε γωνία %f rad — καμία ολίσθηση γείτονα', (angleRad) => {
+    const harness = rotated(angleRad);
+    const columns = harness.entity().model.columns;
+
+    for (let index = 0; index < columns.length; index++) {
+      const point = tableBandScreenPoint(harness.entity(), 'column', index);
+      expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toEqual({
+        axis: 'column',
+        colId: columns[index].id,
+        index,
+      });
+    }
+  });
+
+  it.each(ANGLES)('🔴 βρίσκει ΚΑΘΕ γραμμή σε γωνία %f rad — η αριστερή ζώνη δεν γέρνει στην πάνω', (angleRad) => {
+    const harness = rotated(angleRad);
+    const rows = harness.entity().model.rows;
+
+    for (let index = 0; index < rows.length; index++) {
+      const point = tableBandScreenPoint(harness.entity(), 'row', index);
+      expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toEqual({
+        axis: 'row',
+        rowId: rows[index].id,
+        index,
+      });
+    }
+  });
+
+  it.each(ANGLES)('η σκόπιμα νεκρή γωνία μένει νεκρή σε %f rad — δεν υπάρχει τέτοια εντολή', (angleRad) => {
+    const harness = rotated(angleRad);
+    const point = tableIndicatorCornerScreenPoint(harness.entity());
+    expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toBeNull();
+  });
+
+  it.each(ANGLES)('κλικ ΜΕΣΑ στο πλέγμα σε %f rad ⇒ καμία ζώνη: ανήκει στο κελί', (angleRad) => {
+    const harness = rotated(angleRad);
+    const cell = computeTableEntityGeometryLive(harness.entity()).layout.cells[4];
+    const point = tableFrameScreenPoint(
+      harness.entity(),
+      cell.rect.x + cell.rect.w / 2,
+      cell.rect.y + cell.rect.h / 2,
+    );
+    expect(getTableHeaderMenuPort()?.getHit(point.x, point.y)).toBeNull();
+  });
+
+  /**
+   * 🔴 **Η απόδειξη ότι το μπλοκ μετράει τη στροφή** — δες την κεφαλίδα.
+   *
+   * Το σημείο υπολογίζεται πάνω στο **άστροφο** δίδυμο (ίδια άγκυρα, ίδιο μοντέλο) και
+   * δίνεται στον **στραμμένο** πίνακα. Αν το hit-test αγνοούσε τη γωνία, θα απαντούσε
+   * «στήλη 2» και όλα τα προηγούμενα tests θα ήταν ταυτολογίες.
+   */
+  it.each(ANGLES)('🔴 ΔΙΑΚΡΙΝΕΙ τη στροφή: το άστροφο σημείο ΔΕΝ δίνει την ίδια στήλη σε %f rad', (angleRad) => {
+    const straight = createHarness(0, ANCHOR);
+    created.push(straight);
+    const index = straight.entity().model.columns.length - 1;
+    const straightPoint = tableBandScreenPoint(straight.entity(), 'column', index);
+
+    const harness = rotated(angleRad);
+    expect(getTableHeaderMenuPort()?.getHit(straightPoint.x, straightPoint.y)).not.toEqual({
+      axis: 'column',
+      colId: harness.entity().model.columns[index].id,
+      index,
+    });
+  });
+
+  it('🔴 η ετικέτα του μενού είναι αυτή της στήλης που πατήθηκε — όχι της γειτονικής', () => {
+    const harness = rotated(0.35);
+    const columns = harness.entity().model.columns;
+    const point = tableBandScreenPoint(harness.entity(), 'column', 1);
+    const hit = getTableHeaderMenuPort()?.getHit(point.x, point.y);
+
+    expect(hit).not.toBeNull();
+    expect(hit).toEqual({ axis: 'column', colId: columns[1].id, index: 1 });
+  });
+});
+
 describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛΟΚΛΗΡΗΣ στήλης / γραμμής', () => {
   let harness: Harness;
 
@@ -315,7 +443,7 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
   it('🔴 κλικ στο γράμμα «B» ⇒ μαρκάρεται ΟΛΗ η στήλη, από την πρώτη ως την τελευταία γραμμή', () => {
     openCursor(harness);
     mountPointer();
-    clickAt(bandScreenPoint(harness.entity(), 'column', 1));
+    clickAt(tableBandScreenPoint(harness.entity(), 'column', 1));
 
     const model = harness.entity().model;
     const cursor = getTableCellCursor();
@@ -331,7 +459,7 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
   it('🔴 κλικ στον αριθμό «3» ⇒ μαρκάρεται ΟΛΗ η γραμμή', () => {
     openCursor(harness);
     mountPointer();
-    clickAt(bandScreenPoint(harness.entity(), 'row', 2));
+    clickAt(tableBandScreenPoint(harness.entity(), 'row', 2));
 
     const model = harness.entity().model;
     expect(getTableCellCursor()?.selection).toEqual({
@@ -343,15 +471,14 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
   it('κλικ ΜΕΣΑ στο πλέγμα μένει ό,τι ήταν: μετακίνηση κελιού, καμία περιοχή', () => {
     openCursor(harness);
     mountPointer();
-    const geometry = computeTableEntityGeometryLive(harness.entity());
-    const cell = geometry.layout.cells[4];
-    const world = tableFrameToWorld(
-      harness.entity(),
-      cell.rect.x + cell.rect.w / 2,
-      cell.rect.y + cell.rect.h / 2,
-      geometry.mmToWorld,
+    const cell = computeTableEntityGeometryLive(harness.entity()).layout.cells[4];
+    clickAt(
+      tableFrameScreenPoint(
+        harness.entity(),
+        cell.rect.x + cell.rect.w / 2,
+        cell.rect.y + cell.rect.h / 2,
+      ),
     );
-    clickAt(CoordinateTransforms.worldToScreen(world, TRANSFORM, VIEWPORT));
 
     expect(getTableCellCursor()?.selection).toBeNull();
     expect(getTableCellCursor()?.position.rowId).toBe(cell.rowId);
