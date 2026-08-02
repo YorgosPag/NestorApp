@@ -107,10 +107,14 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
       }
     }, [onClosed]);
 
-    /** Κάθε item: εκτέλεσε με τον **πατημένο** στόχο, μετά κλείσε. Ποτέ το ένα χωρίς το άλλο. */
+    /**
+     * Κάθε item εκτελεί με τον **πατημένο** στόχο και **δεν κλείνει μόνο του**: το κλείσιμο το
+     * ζητά το ίδιο το Radix (`onSelect` ⇒ `onOpenChange(false)`), δηλαδή περνά από τον **έναν**
+     * δρόμο του {@link handleOpenChange}. Δεύτερος δρόμος θα σήμαινε ότι μια έξοδος (κλικ σε
+     * item) επιστρέφει την εστίαση στο κελί και μια άλλη (Esc / κλικ έξω) όχι.
+     */
     const run = useCallback((action: TableHeaderAction) => {
       if (target) action(target.hit);
-      setIsOpen(false);
     }, [target]);
 
     if (!target) {

@@ -18,7 +18,7 @@
  */
 
 import React from 'react';
-import { act, render, renderHook } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen } from '@testing-library/react';
 import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
 import { buildTableEntity } from '../../../bim/table/build-table-entity';
 import {
@@ -369,6 +369,29 @@ describe('🔴 το μενού είναι ΜΕΛΟΣ της συνεδρίας �
     onClosed: noop,
     resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
   };
+
+  /**
+   * 🔴 **Ο ΕΝΑΣ δρόμος κλεισίματος.** Το item **δεν** κλείνει μόνο του — το ζητά το Radix
+   * (`onSelect` ⇒ `onOpenChange(false)`). Αν κάποτε προστεθεί δεύτερος δρόμος, μια έξοδος θα
+   * επιστρέφει την εστίαση στο κελί και μια άλλη όχι, **σιωπηλά**.
+   */
+  it('🔴 κλικ σε item ⇒ εκτελείται Η ΕΝΕΡΓΕΙΑ **και** κλείνει μέσω του ενός δρόμου', async () => {
+    const onInsertAfter = jest.fn();
+    const onClosed = jest.fn();
+    const ref = React.createRef<TableHeaderContextMenuHandle>();
+    const hit = { axis: 'column', colId: 'c1', index: 1 } as const;
+
+    render(<TableHeaderContextMenu ref={ref} {...menuProps} onInsertAfter={onInsertAfter} onClosed={onClosed} />);
+    await act(async () => { ref.current?.open(10, 10, hit); });
+
+    // Κατά θέση και όχι κατά κείμενο: η ετικέτα περνά από `t()`, που σε αυτό το περιβάλλον
+    // επιστρέφει το κλειδί. Σειρά items: [τίτλος (ανενεργό), πριν, μετά, διαγραφή].
+    const items = screen.getAllByRole('menuitem');
+    await act(async () => { fireEvent.click(items[2]); });
+
+    expect(onInsertAfter).toHaveBeenCalledWith(hit);
+    expect(onClosed).toHaveBeenCalledTimes(1);
+  });
 
   it('ο κρυφός trigger φέρει το σημάδι συνεδρίας', () => {
     render(<TableHeaderContextMenu {...menuProps} />);
