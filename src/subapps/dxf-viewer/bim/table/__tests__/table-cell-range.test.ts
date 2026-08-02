@@ -17,6 +17,7 @@ import {
   tableWholeGridRange,
 } from '../table-cell-range';
 import { createTableModel } from '../table-model-helpers';
+import { moveTableCursor } from '../table-cell-navigation';
 import type { CellSpan, TableColumn, TableColumnId, TableModel, TableRow, TableRowId } from '../../../types/table';
 
 const COLUMNS: TableColumn[] = ['c0', 'c1', 'c2', 'c3'].map((id) => ({
@@ -244,5 +245,34 @@ describe('extendTableCellRangeEnd — Shift+βέλος κουνά ΤΟ ΤΕΛΟ�
 
   it('μπαγιάτικο τέλος ⇒ null', () => {
     expect(extendTableCellRangeEnd(modelWith(), ref('r9', 'c9'), 'right')).toBeNull();
+  });
+
+  /**
+   * ⚠️ Ο έλεγχος μεταλλάξεων έδειξε ότι η **στήλη αγκύρωσης** της συνθετικής θέσης είναι
+   * αδιάφορη: αλλοιώνοντάς την, κανένα test δεν κοκκίνιζε. Δεν είναι κενό δικτύου — είναι
+   * **ιδιότητα**: μόνο τα `commitDown`/`commitUp` τη διαβάζουν, και αυτά αντιστοιχούν στο
+   * `Enter`, που χαρτογραφείται ρητά σε **κίνηση** και ποτέ σε επέκταση.
+   *
+   * Αυτό το test **κλειδώνει την ιδιότητα** αντί να την αφήσει σιωπηλή: αν κάποτε μια
+   * κάθετη-με-αγκύρωση κίνηση γίνει επεκτάσιμη, το `extendTableCellRangeEnd` θα αρχίσει
+   * να εξαρτάται από ένα πεδίο που κανείς δεν σκέφτηκε — και θα το πει εδώ.
+   */
+  it('🔴 οι ΕΠΕΚΤΑΣΙΜΕΣ κινήσεις δεν διαβάζουν στήλη αγκύρωσης — ίδιο αποτέλεσμα με κάθε τιμή', () => {
+    const model = modelWith();
+    const start = ref('r1', 'c1');
+    for (const move of ['left', 'right', 'up', 'down', 'rowStart', 'rowEnd', 'gridStart', 'gridEnd'] as const) {
+      const viaOwnColumn = moveTableCursor(model, { ...start, anchorColId: start.colId }, move);
+      const viaOtherColumn = moveTableCursor(model, { ...start, anchorColId: 'c3' as TableColumnId }, move);
+      expect({ move, at: viaOwnColumn }).toEqual({ move, at: viaOtherColumn });
+    }
+  });
+
+  it('ΑΝΤΙΘΕΤΑ, οι κάθετες-με-αγκύρωση κινήσεις ΤΗ ΔΙΑΒΑΖΟΥΝ — γι΄ αυτό μένουν κινήσεις', () => {
+    // Η απόδειξη ότι το προηγούμενο test λέει κάτι: με άλλη στήλη αγκύρωσης, το `commitDown`
+    // προσγειώνεται αλλού. Γι΄ αυτό ακριβώς το `Shift+Enter` ΔΕΝ έγινε επέκταση.
+    const model = modelWith();
+    const start = { rowId: 'r1' as TableRowId, colId: 'c1' as TableColumnId };
+    expect(moveTableCursor(model, { ...start, anchorColId: 'c1' as TableColumnId }, 'commitDown')?.colId).toBe('c1');
+    expect(moveTableCursor(model, { ...start, anchorColId: 'c3' as TableColumnId }, 'commitDown')?.colId).toBe('c3');
   });
 });

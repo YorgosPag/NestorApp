@@ -10,7 +10,7 @@
  *  2. Το κελί να καταβροχθίσει `Ctrl+Z` ⇒ ο χρήστης χάνει το undo όσο γράφει.
  */
 
-import { resolveTableCellKeyIntent } from '../table-cell-key-intent';
+import { resolveTableCellKeyIntent, tableClipboardScope } from '../table-cell-key-intent';
 import type { TableCellCursorMode } from '../../../state/table-cell-cursor-store';
 
 const NO_MODS = { shiftKey: false, ctrlKey: false, metaKey: false, altKey: false } as const;
@@ -210,5 +210,112 @@ describe('Ctrl+Z / Ctrl+Y — αναίρεση με σημασιολογία Exc
     expect(resolveTableCellKeyIntent('Home', ctrlCode('Home'), 'nav')).toEqual({
       kind: 'move', move: 'gridStart',
     });
+  });
+});
+
+
+// ── ADR-739 Φ.Δ βήμα 8: επιλογή περιοχής ─────────────────────────────────────
+
+/** `Ctrl` + φυσική θέση πλήκτρου — η μόνη ασφαλής αναγνώριση σε ελληνική διάταξη. */
+const ctrlAt = (code: string, shiftKey = false) => ({ ...NO_MODS, ctrlKey: true, shiftKey, code });
+
+describe('🔴 Shift + κίνηση — μεγαλώνει την ΠΕΡΙΟΧΗ, δεν μετακινεί τον δρομέα', () => {
+  it.each([
+    ['ArrowLeft', 'left'],
+    ['ArrowRight', 'right'],
+    ['ArrowUp', 'up'],
+    ['ArrowDown', 'down'],
+  ] as const)('Shift+%s σε πλοήγηση ⇒ extend (%s)', (key, move) => {
+    expect(resolveTableCellKeyIntent(key, SHIFT, 'nav')).toEqual({ kind: 'extend', move });
+  });
+
+  it('Shift+Home ⇒ επέκταση ως την αρχή της ΓΡΑΜΜΗΣ', () => {
+    expect(resolveTableCellKeyIntent('Home', SHIFT, 'nav')).toEqual({
+      kind: 'extend', move: 'rowStart',
+    });
+  });
+
+  it('Ctrl+Shift+End ⇒ επέκταση ως το τέλος του ΠΛΕΓΜΑΤΟΣ', () => {
+    expect(resolveTableCellKeyIntent('End', { ...SHIFT, ctrlKey: true }, 'nav')).toEqual({
+      kind: 'extend', move: 'gridEnd',
+    });
+  });
+
+  /**
+   * 🔴 Η αρνητική απόδειξη. Σε **γραφή** το `Shift+βέλος` ανήκει στην **επιλογή κειμένου**
+   * του πεδίου: ο χρήστης μαρκάρει γράμματα μέσα στο κελί του. Ένα `extend` εκεί θα
+   * μεγάλωνε αθέατα την περιοχή ενώ εκείνος νομίζει ότι διαλέγει χαρακτήρες.
+   */
+  it.each(['enter', 'edit'] as const)(
+    'Shift+βέλος σε κατάσταση %s ⇒ ΟΧΙ extend — η επιλογή κειμένου ανήκει στον browser',
+    (mode) => {
+      expect(resolveTableCellKeyIntent('ArrowRight', SHIFT, mode).kind).not.toBe('extend');
+    },
+  );
+
+  it('Shift+Tab μένει ΚΙΝΗΣΗ, όχι επέκταση — είναι πλοήγηση με άλλη φορά', () => {
+    expect(resolveTableCellKeyIntent('Tab', SHIFT, 'nav')).toEqual({
+      kind: 'move', move: 'previous',
+    });
+  });
+
+  it('Shift+Enter μένει ΚΙΝΗΣΗ — ίδιο επιχείρημα με το Shift+Tab', () => {
+    expect(resolveTableCellKeyIntent('Enter', SHIFT, 'nav')).toEqual({
+      kind: 'move', move: 'commitUp',
+    });
+  });
+});
+
+describe('🔴 Ctrl+A — «όλα τα ΚΕΛΙΑ», όχι «όλες οι ΟΝΤΟΤΗΤΕΣ»', () => {
+  it('σε πλοήγηση ⇒ selectAll', () => {
+    expect(resolveTableCellKeyIntent('a', ctrlAt('KeyA'), 'nav')).toEqual({ kind: 'selectAll' });
+  });
+
+  /**
+   * 🔴 ΤΟ ΚΡΙΣΙΜΟ: σε **ελληνική διάταξη** το `key` αυτού του πλήκτρου είναι `'α'`. Ένας
+   * έλεγχος χαρακτήρα θα δούλευε μόνο σε λατινική — δηλαδή ποτέ, για τον χρήστη αυτής της
+   * εφαρμογής. Το ίδιο μάθημα που κωδικοποιεί ήδη το `Ctrl+Z`.
+   */
+  it('🔴 δουλεύει σε ΕΛΛΗΝΙΚΗ διάταξη (key = «α», code = KeyA)', () => {
+    expect(resolveTableCellKeyIntent('α', ctrlAt('KeyA'), 'nav')).toEqual({ kind: 'selectAll' });
+  });
+
+  it('ΑΝΤΙΣΤΡΟΦΑ: λατινικό «a» σε πλήκτρο ΑΛΛΗΣ θέσης ΔΕΝ είναι επιλογή όλων', () => {
+    expect(resolveTableCellKeyIntent('a', ctrlAt('KeyQ'), 'nav')).toEqual({ kind: 'passthrough' });
+  });
+
+  it.each(['enter', 'edit'] as const)(
+    'σε κατάσταση %s ⇒ passthrough — εκεί «όλα» σημαίνει όλο το ΚΕΙΜΕΝΟ του κελιού',
+    (mode) => {
+      expect(resolveTableCellKeyIntent('a', ctrlAt('KeyA'), mode)).toEqual({ kind: 'passthrough' });
+    },
+  );
+
+  it('Ctrl+Shift+A ΔΕΝ είναι επιλογή όλων — άλλη συντόμευση, όχι παραλλαγή', () => {
+    expect(resolveTableCellKeyIntent('a', ctrlAt('KeyA', true), 'nav')).toEqual({
+      kind: 'passthrough',
+    });
+  });
+});
+
+describe('tableClipboardScope — ποιος κατέχει το πρόχειρο', () => {
+  it('πλοήγηση ⇒ η ΠΕΡΙΟΧΗ (TSV)', () => {
+    expect(tableClipboardScope('nav')).toBe('range');
+  });
+
+  it.each(['enter', 'edit'] as const)(
+    'κατάσταση %s ⇒ το ΚΕΙΜΕΝΟ (ο browser, με IME και τόνους)',
+    (mode) => {
+      expect(tableClipboardScope(mode)).toBe('text');
+    },
+  );
+
+  it('🔴 το Ctrl+C ΔΕΝ αναγνωρίζεται ως πλήκτρο — περνά ανέγγιχτο σε κάθε κατάσταση', () => {
+    // Η αντιγραφή ζει στο **φυσικό** συμβάν `copy` του browser. Αν κάποιος τη μετέφερε ποτέ
+    // σε `keydown`, θα έσπαγε σε ελληνική διάταξη (`key: 'ψ'`) και θα έχανε το δεξί κλικ.
+    for (const mode of ALL_MODES) {
+      expect(resolveTableCellKeyIntent('c', ctrlAt('KeyC'), mode)).toEqual({ kind: 'passthrough' });
+      expect(resolveTableCellKeyIntent('v', ctrlAt('KeyV'), mode)).toEqual({ kind: 'passthrough' });
+    }
   });
 });

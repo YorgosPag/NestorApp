@@ -24,6 +24,23 @@
 
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
+
+/**
+ * ADR-739 Φ.Δ βήμα 8 — ο οδηγός αποκτά ενέργειες περιοχής, που ενημερώνουν τον χρήστη για
+ * ό,τι **δεν χώρεσε** σε μια επικόλληση (`useNotifications`). Ο provider πετά σφάλμα εκτός
+ * δέντρου — σωστά, γιατί στην εφαρμογή ο viewer είναι **πάντα** μέσα του· εδώ όμως ο hook
+ * μοντάρεται απομονωμένος.
+ *
+ * Το mock είναι σκόπιμα **άπραγο**: αυτή η σουίτα μετρά ΕΝΑΝ αριθμό — το βάθος του σωρού
+ * πληκτρολογίου. Ένα toast δεν το αγγίζει, και μια πραγματική υλοποίηση θα πρόσθετε θόρυβο
+ * σε test που υπάρχει ακριβώς για να μη θολώνει.
+ */
+jest.mock('@/providers/NotificationProvider', () => ({
+  useNotifications: () => ({
+    success: jest.fn(), error: jest.fn(), info: jest.fn(), warning: jest.fn(),
+    notify: jest.fn(), loading: jest.fn(), showConfirmDialog: jest.fn(),
+  }),
+}));
 import {
   inspectModalKeyboardScope,
   __resetModalKeyboardScopeForTests,

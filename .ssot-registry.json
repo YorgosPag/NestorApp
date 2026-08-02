@@ -5126,6 +5126,21 @@
       "addedByAdr": "ADR-739",
       "tier": 2
     },
+    "spreadsheet-tsv": {
+      "ssotFile": "src/lib/spreadsheet/tsv.ts",
+      "description": "Sole authority for spreadsheet-clipboard TSV (text/plain) <-> rectangular text grid. Excel, Google Sheets, LibreOffice Calc and Numbers ALL put TSV on the OS clipboard as text/plain, so this is the lingua franca of cell copy/paste. Quote-aware by necessity (RFC 4180 with TAB delimiter): a cell containing a tab or a newline is written by Excel wrapped in double quotes with inner quotes doubled, and a naive split('\t')/split('\n') shifts every following column and destroys the grid silently. NOTE: DataImportService.parseCSVLine and csv-import-service.splitCSVLine are deliberately NOT unified here - they are LINE-based (lines[i]) and therefore structurally incapable of expressing a cell with an embedded newline, which is exactly the case that makes quoting necessary. This one scans the whole document as a character stream. Not a twin - the correct version; the two old ones are recorded debt in .claude-rules/pending-ratchet-work.md.",
+      "forbiddenPatterns": [
+        "function\\s+parseTsv\\s*\\(",
+        "function\\s+formatTsv\\s*\\(",
+        "function\\s+toTsv\\s*\\("
+      ],
+      "allowlist": [
+        "src/lib/spreadsheet/tsv.ts"
+      ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-739",
+      "tier": 2
+    },
     "table-cell-reference": {
       "ssotFile": "src/subapps/dxf-viewer/bim/table/table-cell-reference.ts",
       "description": "Sole authority for naming a table cell (A1 notation) and for labelling the TABLEINDICATOR bands. ADR-739 Phase D step 7. The formula engine adapter (ADR-739 s9.2) and the DXF ACAD_TABLE exporter both speak A1; a second naming would put a different address into the formulas than the one on screen.",
