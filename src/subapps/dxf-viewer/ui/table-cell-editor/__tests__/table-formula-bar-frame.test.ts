@@ -7,14 +7,14 @@
  */
 
 import { computeTableFormulaBarFrame } from '../table-formula-bar-frame';
-import { TABLE_INDICATOR } from '../../../config/color-config';
+import { TABLE_INDICATOR_OUTER_PX } from '../../../bim/table/table-indicator-geometry';
 
 describe('computeTableFormulaBarFrame', () => {
   it('η γραμμή απλώνεται όσο ο πίνακας ΣΥΝ τη ζώνη αριθμών', () => {
     // Ξεκινά από την αριστερή ακμή της ζώνης `1 2 3`, όπως το πλαίσιο ονόματος του Excel
     // κάθεται πάνω από τη στήλη των αριθμών γραμμής.
     const frame = computeTableFormulaBarFrame({ tableWidthMm: 100, tableHeightMm: 40, pxPerMm: 4, spaceAbovePx: 999 });
-    expect(frame.widthPx).toBe(400 + TABLE_INDICATOR.rowBandPx);
+    expect(frame.widthPx).toBe(400 + TABLE_INDICATOR_OUTER_PX.left);
   });
 
   it('στενός πίνακας ⇒ ελάχιστο πλάτος, ΠΛΑΤΥΤΕΡΟ από τον πίνακα', () => {
@@ -30,12 +30,19 @@ describe('computeTableFormulaBarFrame', () => {
     expect(huge.widthPx).toBeLessThanOrEqual(720);
   });
 
-  it('🔴 η μετατόπιση ανεβάζει τη γραμμή ΠΑΝΩ από τη ζώνη γραμμάτων', () => {
+  it('🔴 §27.13 Η ΚΑΤΩ ΑΚΜΗ της γραμμής μένει ΠΑΝΩ από τον δείκτη — όχι «κάπου πιο ψηλά»', () => {
     const frame = computeTableFormulaBarFrame({ tableWidthMm: 100, tableHeightMm: 40, pxPerMm: 4, spaceAbovePx: 999 });
-    // Αρνητικό y = προς τα πάνω· το μέτρο πρέπει να ξεπερνά τη ζώνη ΚΑΙ το ύψος της ίδιας
-    // της γραμμής, αλλιώς η γραμμή θα καθόταν πάνω στα γράμματα.
-    expect(frame.offsetYPx).toBeLessThan(-(TABLE_INDICATOR.columnBandPx + frame.heightPx));
-    expect(frame.offsetXPx).toBe(-TABLE_INDICATOR.rowBandPx);
+
+    // ⚠️ Εδώ έγραφε `offsetYPx < -(columnBandPx + heightPx)` — **γνήσια ανισότητα σε λάθος
+    // ποσότητα**. Έμενε αληθής όταν ο δείκτης απέκτησε κενό και η γραμμή δεν ακολούθησε,
+    // δηλαδή ήταν πράσινη ενώ η γραμμή **σκέπαζε** τα γράμματα (ο Giorgio το είδε στην
+    // οθόνη· κανένα test δεν το είπε). Η σωστή ερώτηση δεν είναι «πόσο ψηλά;» αλλά **«πού
+    // τελειώνει η γραμμή σε σχέση με το πού αρχίζει ο δείκτης;»**.
+    const barBottomPx = frame.offsetYPx + frame.heightPx;
+    expect(barBottomPx).toBeLessThanOrEqual(-TABLE_INDICATOR_OUTER_PX.top);
+
+    // Αριστερή ευθυγράμμιση: ακριβώς πάνω στην αριστερή ακμή της ζώνης αριθμών.
+    expect(frame.offsetXPx).toBe(-TABLE_INDICATOR_OUTER_PX.left);
   });
 
   it('οι μετατοπίσεις ΔΕΝ εξαρτώνται από το zoom — οι ζώνες είναι σταθερές σε px', () => {

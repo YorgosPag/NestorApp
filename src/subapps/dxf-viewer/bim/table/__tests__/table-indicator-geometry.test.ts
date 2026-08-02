@@ -15,6 +15,7 @@ import {
   tableIndicatorHitAtFrame,
   tableRowTickRectMm,
   TABLE_INDICATOR_GRIP_CLEARANCE_PX,
+  TABLE_INDICATOR_OUTER_PX,
 } from '../table-indicator-geometry';
 import { tableColumnTicks, tableRowTicks } from '../table-cell-reference';
 import { TABLE_INDICATOR } from '../../../config/color-config';
@@ -56,8 +57,13 @@ describe('tableIndicatorBandsMm', () => {
     expect(BANDS.rowBandMm).toBeCloseTo(TABLE_INDICATOR.rowBandPx / PX_PER_MM);
   });
 
-  it('η αριστερή ζώνη είναι πλατύτερη από την πάνω — χωρά τετραψήφιους αριθμούς', () => {
-    expect(BANDS.rowBandMm).toBeGreaterThan(BANDS.columnBandMm);
+  it('🔴 §27.13 ΕΝΑ πάχος, δύο ζώνες — η γωνία ένωσης είναι ΤΕΤΡΑΓΩΝΟ', () => {
+    // Giorgio 2026-08-02: το ύψος της πάνω ζώνης = το πλάτος της αριστερής. Οδηγός μένει η
+    // αριστερή (χωρά τετραψήφιο αριθμό γραμμής) — η πάνω απλώς τη διαβάζει, ώστε να μην
+    // μπορούν ποτέ να ξαναποκλίνουν σιωπηλά.
+    expect(BANDS.columnBandMm).toBeCloseTo(BANDS.rowBandMm);
+    const corner = tableIndicatorCornerRectMm(BANDS);
+    expect(corner.w).toBeCloseTo(corner.h);
   });
 
   it('🔴 §27.11 το κενό ΕΙΝΑΙ η οπή της λαβής — δεν είναι ανεξάρτητο νούμερο', () => {
@@ -70,6 +76,27 @@ describe('tableIndicatorBandsMm', () => {
   it('το κενό συρρικνώνεται με το zoom όπως και οι ζώνες — μένει σταθερό σε px', () => {
     const zoomed = tableIndicatorBandsMm(PX_PER_MM * 10);
     expect(zoomed.gapMm * (PX_PER_MM * 10)).toBeCloseTo(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
+  });
+});
+
+describe('🔴 §27.13 TABLE_INDICATOR_OUTER_PX — το ΕΝΑ εξωτερικό όριο', () => {
+  /**
+   * Γεννήθηκε από σφάλμα: η γραμμή τύπων πρόσθετε μόνη της «ζώνη + κενό» και σκέπασε τα
+   * γράμματα μόλις μπήκε το κενό. Εδώ κλειδώνεται ότι το άθροισμα ζει σε **ένα** σημείο.
+   */
+  it('είναι ΑΚΡΙΒΩΣ κενό + ζώνη, ανά άξονα', () => {
+    expect(TABLE_INDICATOR_OUTER_PX.top)
+      .toBe(TABLE_INDICATOR_GRIP_CLEARANCE_PX + TABLE_INDICATOR.columnBandPx);
+    expect(TABLE_INDICATOR_OUTER_PX.left)
+      .toBe(TABLE_INDICATOR_GRIP_CLEARANCE_PX + TABLE_INDICATOR.rowBandPx);
+  });
+
+  it('🔴 συμφωνεί με το ΖΩΓΡΑΦΙΣΜΕΝΟ κουτί — αλλιώς είναι δεύτερη απάντηση', () => {
+    // Η εξωτερική ακμή της ζώνης, όπως προκύπτει από τα ίδια τα ορθογώνια.
+    const columnRect = tableColumnTickRectMm(tableColumnTicks(COLUMNS, new Set())[0], BANDS);
+    const rowRect = tableRowTickRectMm(tableRowTicks(ROWS, new Set(), 0, ROWS.length)[0], BANDS);
+    expect(-columnRect.y * PX_PER_MM).toBeCloseTo(TABLE_INDICATOR_OUTER_PX.top);
+    expect(-rowRect.x * PX_PER_MM).toBeCloseTo(TABLE_INDICATOR_OUTER_PX.left);
   });
 });
 

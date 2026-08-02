@@ -9,11 +9,19 @@
  * ## Πού κάθεται
  * Το άγκυρο είναι η **πάνω-αριστερή γωνία του πίνακα** (πλαίσιο `0,0`). Από εκεί η γραμμή
  * μετατοπίζεται:
- *  - **αριστερά** κατά ένα πλάτος ζώνης αριθμών, ώστε η αριστερή της ακμή να ευθυγραμμιστεί
- *    με την αριστερή ακμή της ζώνης `1 2 3` — ακριβώς όπως το πλαίσιο ονόματος του Excel
- *    κάθεται πάνω από τη στήλη των αριθμών γραμμής·
- *  - **πάνω** κατά ένα ύψος ζώνης γραμμάτων + κενό + το δικό της ύψος, ώστε να καθίσει
- *    **πάνω από** τη ζώνη `A B C` χωρίς να την ακουμπά.
+ *  - **αριστερά** ως την αριστερή ακμή της ζώνης `1 2 3` — ακριβώς όπως το πλαίσιο ονόματος
+ *    του Excel κάθεται πάνω από τη στήλη των αριθμών γραμμής·
+ *  - **πάνω** ως πάνω από τη ζώνη `A B C`, συν κενό, συν το δικό της ύψος.
+ *
+ * ## 🔴 ADR-739 §27.13 — ΔΕΝ ΞΕΡΕΙ ΠΟΥ ΤΕΛΕΙΩΝΕΙ Ο ΔΕΙΚΤΗΣ· ΡΩΤΑΕΙ
+ * Εδώ έγραφε `TABLE_INDICATOR.columnBandPx + …` και `-TABLE_INDICATOR.rowBandPx`, δηλαδή
+ * **ξανάφτιαχνε** το εξωτερικό όριο του δείκτη από τα συστατικά του. Δούλευε όσο η ζώνη
+ * ακουμπούσε το πλέγμα· τη στιγμή που η ζώνη απέκτησε **κενό** (§27.11), η γραμμή έμεινε
+ * στην παλιά της θέση και **σκέπασε τα γράμματα των στηλών** — το ακριβώς αντίθετο από τον
+ * λόγο που υπάρχει.
+ *
+ * Τώρα καταναλώνει το `TABLE_INDICATOR_OUTER_PX`: **κενό + ζώνη, μετρημένα σε ένα σημείο**.
+ * Ό,τι κι αν αποφασιστεί αύριο για τη θέση ή το πάχος της ζώνης, η γραμμή το μαθαίνει δωρεάν.
  *
  * 🔴 Και οι δύο μετατοπίσεις είναι σε **px οθόνης**, άρα δεν μπορούν να ψηθούν στο σημείο
  * κόσμου: εκείνο υπολογίζεται μία φορά ανά συνεδρία, ενώ αυτές αλλάζουν σε κάθε zoom (οι
@@ -21,10 +29,10 @@
  * ζωντανού κουτιού — δες {@link TextEditorAnchorBox}.
  *
  * @module subapps/dxf-viewer/ui/table-cell-editor/table-formula-bar-frame
- * @see config/color-config.ts — `TABLE_INDICATOR`, τα πάχη των δύο ζωνών
+ * @see bim/table/table-indicator-geometry.ts — `TABLE_INDICATOR_OUTER_PX`, το ΕΝΑ όριο
  */
 
-import { TABLE_INDICATOR } from '../../config/color-config';
+import { TABLE_INDICATOR_OUTER_PX } from '../../bim/table/table-indicator-geometry';
 
 /** Ύψος της γραμμής σε px οθόνης — μία σειρά κειμένου + περιθώρια, σαν την μπάρα του Excel. */
 const BAR_HEIGHT_PX = 26;
@@ -62,10 +70,10 @@ export interface TableFormulaBarFrame {
 }
 
 /**
- * Πόσος κατακόρυφος χώρος χρειάζεται πάνω από τον πίνακα για να χωρέσει η γραμμή **και** η
- * ζώνη γραμμάτων από κάτω της.
+ * Πόσος κατακόρυφος χώρος χρειάζεται πάνω από τον πίνακα για να χωρέσει η γραμμή **και**
+ * ολόκληρος ο δείκτης από κάτω της (ζώνη γραμμάτων **συν** το κενό της προς το πλέγμα).
  */
-const SPACE_NEEDED_ABOVE_PX = TABLE_INDICATOR.columnBandPx + BAR_GAP_PX + BAR_HEIGHT_PX;
+const SPACE_NEEDED_ABOVE_PX = TABLE_INDICATOR_OUTER_PX.top + BAR_GAP_PX + BAR_HEIGHT_PX;
 
 /**
  * Το κουτί, δεδομένου του πλάτους του πίνακα και της ζωντανής κλίμακας.
@@ -91,7 +99,9 @@ export function computeTableFormulaBarFrame(params: {
 }): TableFormulaBarFrame {
   const { tableWidthMm, tableHeightMm, pxPerMm, spaceAbovePx } = params;
   const usable = Number.isFinite(pxPerMm) && pxPerMm > 0;
-  const spanPx = usable ? tableWidthMm * pxPerMm + TABLE_INDICATOR.rowBandPx : MIN_BAR_WIDTH_PX;
+  const spanPx = usable
+    ? tableWidthMm * pxPerMm + TABLE_INDICATOR_OUTER_PX.left
+    : MIN_BAR_WIDTH_PX;
 
   // 🔴 Το αναποδογύρισμα — βρέθηκε στη ΖΩΝΤΑΝΗ επαλήθευση, όχι σε test (2026-08-01).
   //
@@ -109,7 +119,7 @@ export function computeTableFormulaBarFrame(params: {
   return {
     widthPx: Math.min(Math.max(spanPx, MIN_BAR_WIDTH_PX), MAX_BAR_WIDTH_PX),
     heightPx: BAR_HEIGHT_PX,
-    offsetXPx: -TABLE_INDICATOR.rowBandPx,
+    offsetXPx: -TABLE_INDICATOR_OUTER_PX.left,
     offsetYPx: flipped ? belowPx : -SPACE_NEEDED_ABOVE_PX,
     flipped,
   };
