@@ -1763,6 +1763,8 @@
       "allowlist": [
         "src/config/jobs-registry.ts"
       ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-748",
       "tier": 6
     },
     "ribbon-tab-specialties": {
@@ -1776,6 +1778,8 @@
       "allowlist": [
         "src/subapps/dxf-viewer/ui/ribbon/data/ribbon-tab-specialties.ts"
       ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-748",
       "tier": 6
     },
     "_comment_adr748_phase3": "=== ADR-748 ΦΑΣΗ 3 (2026-08-02): ο ζωντανός υπολογισμός δουλειών + το φίλτρο sidebar/dashboard ===",
@@ -1789,6 +1793,8 @@
       "allowlist": [
         "src/config/jobs-access.ts"
       ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-748",
       "tier": 6
     },
     "jobs-visibility": {
@@ -1802,6 +1808,8 @@
       "allowlist": [
         "src/config/jobs-visibility.ts"
       ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-748",
       "tier": 6
     },
     "job-suggestion": {
@@ -1815,6 +1823,8 @@
       "allowlist": [
         "src/config/job-suggestion.ts"
       ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-748",
       "tier": 6
     },
     "effective-permissions-client": {
@@ -1827,6 +1837,8 @@
       "allowlist": [
         "src/hooks/useEffectivePermissions.ts"
       ],
+      "addedDate": "2026-08-02",
+      "addedByAdr": "ADR-748",
       "tier": 6
     },
     "_comment_adr314_phaseD2c": "=== ADR-314 PHASE D.2c (2026-04-19): registry gap — unified-tabs-factory root ===",
@@ -3229,7 +3241,7 @@
       "ssotFile": "src/components/ui/navigation/base-tabs.tsx",
       "description": "Tabs UI must use BaseTabs/StateTabs/RouteTabs from src/components/ui/navigation/. TabsContainer/ToolbarTabs/TabsOnlyTriggers (in TabsComponents.tsx) are deprecated aliases. AST-based ratchet CHECK 3.24 enforces this; this regex layer is a defense-in-depth grep against deprecated import lines (ADR-328).",
       "forbiddenPatterns": [
-        "import[[:space:]]+\\{[^}]*(TabsOnlyTriggers|TabsContainer|ToolbarTabs)[^}]*\\}[[:space:]]+from[[:space:]]+['\"]@/components/ui/navigation/TabsComponents['\"]"
+        "import\\s+\\{[^}]*(TabsOnlyTriggers|TabsContainer|ToolbarTabs)[^}]*\\}\\s+from\\s+['\"]@/components/ui/navigation/TabsComponents['\"]"
       ],
       "allowlist": [
         "src/components/ui/navigation/TabsComponents.tsx",
@@ -3241,7 +3253,7 @@
       "ssotFile": "src/lib/stale-cache.ts",
       "description": "Hooks fetching list data MUST use createStaleCache + silentInitialFetch (ADR-300). PageContents MUST NOT gate render on isNamespaceReady or bare `if (loading)` returning <Loader2> — sister pages prove the canonical pattern is `if (loading && data.length === 0) return <PageLoadingState/>`. Regex-based ratchet CHECK 3.25 enforces this; this registry layer is a defense-in-depth grep against the most distinctive flash trigger (ADR-267 Phase H+3).",
       "forbiddenPatterns": [
-        "if[[:space:]]*\\([[:space:]]*![[:space:]]*isNamespaceReady[[:space:]]*\\)"
+        "if\\s*\\(\\s*!\\s*isNamespaceReady\\s*\\)"
       ],
       "allowlist": [
         "src/lib/stale-cache.ts",
@@ -4852,8 +4864,8 @@
         "\\.companyId === user\\.companyId",
         "doc\\.data\\(\\) as Tenant",
         "includes\\('Cross-tenant'\\)",
-        "(\\.companyId|\\[FIELDS\\.COMPANY_ID\\])[[:space:]]*!==[[:space:]]*[A-Za-z_][A-Za-z0-9_.]*\\.companyId",
-        "(ApiError\\(|error:[[:space:]]*['\"`]|reason:[[:space:]]*['\"`]).*(belongs to a? ?different company|from your company)",
+        "(\\.companyId|\\[FIELDS\\.COMPANY_ID\\])\\s*!==\\s*[A-Za-z_][A-Za-z0-9_.]*\\.companyId",
+        "(ApiError\\(|error:\\s*['\"`]|reason:\\s*['\"`]).*(belongs to a? ?different company|from your company)",
         "(403.*(notFoundMessage|NOT_FOUND_MESSAGE)|(notFoundMessage|NOT_FOUND_MESSAGE).*403)"
       ],
       "allowlist": [
@@ -5003,7 +5015,7 @@
       "ssotFile": "src/components/ui/chart-card/index.ts",
       "description": "ADR-710 — a chart with a plot is rendered through <ChartCard>, never by wiring recharts' responsive wrapper by hand. 26 of 28 chart files still import it directly, and each one therefore reimplements the card frame, the theming, the legend, the empty state and the accessible data table. That last one is not cosmetic: the measured --chart-* ramp puts two light-mode steps under 3:1 against the card surface and an adjacent pair at CVD dE 6.2 (dark mode fails outright), so the table view and the always-on legend are the relief the palette owes. jscpd never sees this duplication because every chart plots different data — the files share shape, not tokens. Compose ChartCard.Header / .Figure / .Tooltip / .Summary / .Editor instead; the single series description drives theming, legend, table and marks at once. ALLOWLIST NOTE (2026-08-01, ADR-742 §7quaterdecies): ReportSparkline.tsx is allowlisted, NOT deferred. Measured: ChartCardFigure offers three named heights (h-56/h-64/h-72 = 224-288px) and unconditionally emits ChartContainer + legend + empty state + a <details> data table. A sparkline is an 80x32px inline glyph beside a KPI number, with no axes, grid, tooltip or labels. This module governs \"a chart WITH A PLOT\"; a sparkline has no plot furniture at all, so forcing it through the shell would add a header, a legend and a data table to a trend squiggle. The other 12 files WERE migrated in the same pass (ADR-710 backlog closed) - this one is a category boundary, not remaining debt. If a sparkline-sized level of the shell is ever added, revisit.",
       "forbiddenPatterns": [
-        "^[[:space:]]*ResponsiveContainer,?[[:space:]]*$",
+        "^\\s*ResponsiveContainer,?\\s*$",
         "import[^;]*ResponsiveContainer[^;]*from[^;]*recharts"
       ],
       "allowlist": [
@@ -5161,7 +5173,7 @@
       "ssotFile": "src/services/agent-capability/registry/capability-registry.ts",
       "description": "ADR-734 §5.2 — kathe nea dynatotita pou ektithetai se praktora AI orizetai MIA fora sto Capability Registry (name, description, params, valueSchema, policy, annotations, handler) kai ta schemas ton adapters PARAGONTAI apo ekei (toOpenAiToolDefinitions, kai o MCP adapter tis Fasis 3). Cheirografos orismos ergaleiou Chat Completions se NEO arxeio = triplotypo ana katanaloti (OpenAI + MCP + REST) kai parabiasi N.12/N.18. To allowlist periexei APOKLEISTIKA tis proyparxouses cheirografes epifaneies: tous 40 orismous tou agentic-tool-definitions.ts (ADR-171), ta 4 dxf-viewer ai-assistant tool definitions, ta wire/parse types kai ta 2 routes pou ta katanalonoun — kathos kai ton idio ton openai-adapter.ts, pou einai i genntria tous. Nea epifaneia ergaleion perna apo to registry.",
       "forbiddenPatterns": [
-        "type:[[:space:]]*'function'"
+        "type:\\s*'function'"
       ],
       "allowlist": [
         "src/services/agent-capability/adapters/openai-adapter.ts",

@@ -1,38 +1,36 @@
 /**
- * CHECK 3.7 — SSoT Imports Ratchet: Jest test suite.
+ * =============================================================================
+ * CHECK 3.7 — SSoT Imports Ratchet: σουίτα δοκιμών (ADR-749)
+ * =============================================================================
  *
- * All pure functions are unit-tested against synthetic fixtures.
- * Integration: CLI is smoke-tested via spawnSync.
+ * Δοκιμάζει τον **ενοποιημένο πυρήνα** (`lib/ssot/*`) και την πύλη που τον
+ * καταναλώνει. Καθεμία από τις ομάδες «🔴 ΠΕΡΙΣΤΑΤΙΚΟ» κωδικοποιεί σφάλμα που
+ * **συνέβη** και μετρήθηκε — όχι υποθετικό σενάριο.
  *
- * No subprocesses spawned for the core logic (all in-process).
+ * @see ADR-749 — SSoT violation engine unification
+ * @see ADR-294 — SSoT Ratchet Enforcement
  */
 
 'use strict';
 
-const fs   = require('node:fs');
-const os   = require('node:os');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const SCRIPT = path.resolve(__dirname, '..', 'check-ssot-imports.js');
 
 const {
-  parseFlatRegistry,
-  loadBaseline,
-  normalizePath,
-  isAllowlisted,
-  countViolations,
-  collectViolationDetails,
-  checkFile,
-  COMMENT_RE,
-  TS_EXT_RE,
-} = require(SCRIPT);
+  loadRegistry, compilePattern, findForeignDialect,
+  normalizePath, isAllowlisted, COMMENT_RE, TS_EXT_RE,
+} = require('../lib/ssot/registry');
+const { analyzeFile } = require('../lib/ssot/scan');
+const { loadBaseline, compareFile, writeBaseline, SCHEMA_VERSION } = require('../lib/ssot/baseline');
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Βοηθητικά
 // ---------------------------------------------------------------------------
 
-/** Strip ANSI from output for assertions. */
 function stripAnsi(s) {
   return s.replace(/\x1b\[[0-9;]*m/g, '');
 }
@@ -53,501 +51,378 @@ function write(dir, name, content) {
   return p;
 }
 
-beforeAll(() => {
-  tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ssot-imports-test-'));
-});
+/** Χτίζει modules χωρίς να αγγίζει τον δίσκο (μέσω του ΠΡΑΓΜΑΤΙΚΟΥ compiler). */
+function makeModules(spec) {
+  return Object.entries(spec).map(([name, m]) => ({
+    name,
+    patterns: (m.forbiddenPatterns || []).map((p, i) => compilePattern(name, i, p)),
+    allowlist: (m.allowlist || []).map(normalizePath),
+  }));
+}
 
-afterAll(() => {
-  fs.rmSync(tmpRoot, { recursive: true, force: true });
-});
+function countsOf(content, file, spec) {
+  return analyzeFile(content, file, makeModules(spec)).counts;
+}
 
-// ---------------------------------------------------------------------------
-// GROUP 1: normalizePath
-// ---------------------------------------------------------------------------
+beforeAll(() => { tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ssot-imports-test-')); });
+afterAll(() => { fs.rmSync(tmpRoot, { recursive: true, force: true }); });
 
+// ===========================================================================
+// ΟΜΑΔΑ 1 — βασικά εργαλεία διαδρομών
+// ===========================================================================
 describe('normalizePath', () => {
-  test('forward slashes unchanged', () => {
-    expect(normalizePath('src/foo/bar.ts')).toBe('src/foo/bar.ts');
-  });
-
-  test('backslashes converted', () => {
-    expect(normalizePath('src\\foo\\bar.ts')).toBe('src/foo/bar.ts');
-  });
-
-  test('mixed slashes', () => {
-    expect(normalizePath('src\\foo/bar\\baz.ts')).toBe('src/foo/bar/baz.ts');
-  });
+  test('οι forward slashes μένουν', () => expect(normalizePath('src/a/b.ts')).toBe('src/a/b.ts'));
+  test('τα backslashes γίνονται forward', () => expect(normalizePath('src\\a\\b.ts')).toBe('src/a/b.ts'));
+  test('μεικτά', () => expect(normalizePath('src\\a/b.ts')).toBe('src/a/b.ts'));
 });
 
-// ---------------------------------------------------------------------------
-// GROUP 2: COMMENT_RE and TS_EXT_RE constants
-// ---------------------------------------------------------------------------
-
-describe('COMMENT_RE', () => {
-  test.each([
-    ['// line comment',      true],
-    ['  // indented comment', true],
-    [' * jsdoc line',        true],
-    ['# shell comment',      true],
-    ['  # indented shell',   true],
-    ['const x = 1;',         false],
-    ['x.collection("name")', false],
-    ['',                     false],
-  ])('"%s" → isComment=%s', (line, expected) => {
-    expect(COMMENT_RE.test(line)).toBe(expected);
-  });
+describe('COMMENT_RE / TS_EXT_RE', () => {
+  test.each(['// σχόλιο', '  // εσοχή', ' * jsdoc', '# shell'])('«%s» είναι σχόλιο', l =>
+    expect(COMMENT_RE.test(l)).toBe(true));
+  test.each(['const x = 1;', 'a.b(); // τέλος γραμμής'])('«%s» δεν είναι σχόλιο', l =>
+    expect(COMMENT_RE.test(l)).toBe(false));
+  test.each(['a.ts', 'a.tsx'])('%s ελέγχεται', f => expect(TS_EXT_RE.test(f)).toBe(true));
+  test.each(['a.js', 'a.json', 'a.md', 'a.tsxx'])('%s δεν ελέγχεται', f =>
+    expect(TS_EXT_RE.test(f)).toBe(false));
 });
-
-describe('TS_EXT_RE', () => {
-  test.each([
-    ['foo.ts',   true],
-    ['foo.tsx',  true],
-    ['foo.js',   false],
-    ['foo.ts.bak', false],
-    ['foo.d.ts', true],
-  ])('"%s" → match=%s', (file, expected) => {
-    expect(TS_EXT_RE.test(file)).toBe(expected);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// GROUP 3: isAllowlisted
-// ---------------------------------------------------------------------------
 
 describe('isAllowlisted', () => {
-  const allowlist = [
-    'src/config/firestore-collections.ts',
-    'src/config/',
-    'functions/',
-  ];
+  const allow = ['src/a/exact.ts', 'src/b/'];
+  test('ακριβής διαδρομή', () => expect(isAllowlisted('src/a/exact.ts', allow)).toBe(true));
+  test('πρόθεμα φακέλου', () => expect(isAllowlisted('src/b/deep/x.ts', allow)).toBe(true));
+  test('άσχετο αρχείο', () => expect(isAllowlisted('src/c/x.ts', allow)).toBe(false));
+  test('κενό allowlist', () => expect(isAllowlisted('src/a.ts', [])).toBe(false));
+});
 
-  test('exact match → true', () => {
-    expect(isAllowlisted('src/config/firestore-collections.ts', allowlist)).toBe(true);
+// ===========================================================================
+// ΟΜΑΔΑ 2 — 🔴 ΠΕΡΙΣΤΑΤΙΚΟ: κλείδωμα διαλέκτου (6 νεκρά patterns, 2026-08-03)
+// ===========================================================================
+describe('🔴 κλείδωμα διαλέκτου — ένα pattern δεν επιτρέπεται να είναι σιωπηλά νεκρό', () => {
+  test('POSIX κλάση απορρίπτεται κατά τη μεταγλώττιση', () => {
+    expect(() => compilePattern('m', 0, "type:[[:space:]]*'function'")).toThrow(/δεν είναι ECMAScript/);
   });
 
-  test('prefix match (dir) → true', () => {
-    expect(isAllowlisted('src/config/other.ts', allowlist)).toBe(true);
+  test('το μήνυμα λέει ΤΙ να γράψει ο συντάκτης', () => {
+    expect(() => compilePattern('m', 0, 'a[[:space:]]b')).toThrow(/Γράψε \\s/);
   });
 
-  test('prefix match (nested) → true', () => {
-    expect(isAllowlisted('functions/src/index.ts', allowlist)).toBe(true);
+  test('έγκυρο ECMAScript περνάει', () => {
+    expect(() => compilePattern('m', 0, "e\\.key\\s*===\\s*'Escape'")).not.toThrow();
   });
 
-  test('no match → false', () => {
-    expect(isAllowlisted('src/services/foo.ts', allowlist)).toBe(false);
+  test('lookahead/lookbehind είναι εγγενή ECMAScript και επιτρέπονται', () => {
+    expect(findForeignDialect('X(?![^\'"]*Y)')).toEqual([]);
+    expect(findForeignDialect('(?<=a)b')).toEqual([]);
   });
 
-  test('empty allowlist → false', () => {
-    expect(isAllowlisted('src/foo.ts', [])).toBe(false);
+  test('άκυρη σύνταξη απορρίπτεται με όνομα module και δείκτη', () => {
+    expect(() => compilePattern('mymod', 3, '(unclosed')).toThrow(/\[mymod\] forbiddenPatterns\[3\]/);
+  });
+
+  // Η ΑΠΟΔΕΙΞΗ: το ίδιο pattern, πριν και μετά τη μετάφραση.
+  test('το [[:space:]] σε JS ΔΕΝ σημαίνει κενό — γι᾽ αυτό απαγορεύεται', () => {
+    const posixAsJs = new RegExp("type:[[:space:]]*'function'");
+    const ecma = new RegExp("type:\\s*'function'");
+    const realLine = "  type: 'function',";
+    expect(posixAsJs.test(realLine)).toBe(false);   // νεκρός φρουρός
+    expect(ecma.test(realLine)).toBe(true);         // ζωντανός
   });
 });
 
-// ---------------------------------------------------------------------------
-// GROUP 4: parseFlatRegistry
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// ΟΜΑΔΑ 3 — 🔴 ΠΕΡΙΣΤΑΤΙΚΟ: μονάδα μέτρησης (103 έναντι 86, 2026-08-03)
+// ===========================================================================
+describe('🔴 μονάδα μέτρησης — μία γραμμή, ένα module, ΜΙΑ παραβίαση', () => {
+  const OVERLAPPING = {
+    'escape-command-bus': {
+      forbiddenPatterns: ["e\\.key\\s*===\\s*['\"]Escape['\"]", "key\\s*===\\s*['\"]Escape['\"]"],
+    },
+  };
 
-describe('parseFlatRegistry', () => {
-  const FLAT = `
-EXEMPT:(__tests__/|\\.test\\.|node_modules/)
-MODULE:firestore-collections
-SSOT:src/config/firestore-collections.ts
-PATTERN:\\.(collection|doc)\\(['"][a-z_]+['"]\\)
-ALLOW:src/config/firestore-collections.ts
-MODULE:enterprise-id
-SSOT:src/services/enterprise-id.service.ts
-PATTERN:crypto\\.randomUUID\\(\\)
-ALLOW:src/services/enterprise-id.service.ts
-MODULE:no-patterns
-`.trim();
-
-  let parsed;
-
-  beforeAll(() => {
-    parsed = parseFlatRegistry(FLAT);
+  test('γραμμή που πιάνεται από ΔΥΟ patterns του ίδιου module μετράει 1', () => {
+    const counts = countsOf("if (e.key === 'Escape') {", 'src/a.ts', OVERLAPPING);
+    expect(counts.get('escape-command-bus')).toBe(1);
   });
 
-  test('exemptRe parsed', () => {
-    expect(parsed.exemptRe).toBeInstanceOf(RegExp);
-    expect(parsed.exemptRe.test('src/__tests__/foo.ts')).toBe(true);
-    expect(parsed.exemptRe.test('src/services/foo.ts')).toBe(false);
+  test('δύο διαφορετικές γραμμές μετρούν 2', () => {
+    const counts = countsOf("if (e.key === 'Escape') {\nif (e.key === 'Escape') {", 'src/a.ts', OVERLAPPING);
+    expect(counts.get('escape-command-bus')).toBe(2);
   });
 
-  test('modules count (no-patterns module has no re → still parsed)', () => {
-    // no-patterns has no PATTERN lines → re=null → still in array
-    expect(parsed.modules.length).toBe(3);
+  test('γραμμή που παραβιάζει ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΑ modules μετράει 1 σε καθένα', () => {
+    const counts = countsOf('crypto.randomUUID();', 'src/a.ts', {
+      'enterprise-id': { forbiddenPatterns: ['crypto\\.randomUUID'] },
+      'no-inline-uuid': { forbiddenPatterns: ['randomUUID\\('] },
+    });
+    expect(counts.get('enterprise-id')).toBe(1);
+    expect(counts.get('no-inline-uuid')).toBe(1);
   });
 
-  test('firestore-collections module', () => {
-    const mod = parsed.modules.find(m => m.name === 'firestore-collections');
-    expect(mod).toBeDefined();
-    expect(mod.re).toBeInstanceOf(RegExp);
-    expect(mod.re.test(".collection('users')")).toBe(true);
-    expect(mod.re.test(".doc('projects')")).toBe(true);
-    expect(mod.re.test('someOtherCode()')).toBe(false);
-    expect(mod.allowlist).toContain('src/config/firestore-collections.ts');
+  test('τα σχόλια δεν μετρούν', () => {
+    const counts = countsOf('// crypto.randomUUID();\n * crypto.randomUUID();', 'src/a.ts', {
+      m: { forbiddenPatterns: ['crypto\\.randomUUID'] },
+    });
+    expect(counts.size).toBe(0);
   });
 
-  test('enterprise-id module', () => {
-    const mod = parsed.modules.find(m => m.name === 'enterprise-id');
-    expect(mod).toBeDefined();
-    expect(mod.re.test('crypto.randomUUID()')).toBe(true);
-    expect(mod.re.test('someOtherFn()')).toBe(false);
+  test('τα allowlisted αρχεία παραλείπονται', () => {
+    const counts = countsOf('crypto.randomUUID();', 'src/ok.ts', {
+      m: { forbiddenPatterns: ['crypto\\.randomUUID'], allowlist: ['src/ok.ts'] },
+    });
+    expect(counts.size).toBe(0);
   });
 
-  test('no-patterns module has null re', () => {
-    const mod = parsed.modules.find(m => m.name === 'no-patterns');
-    expect(mod.re).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// GROUP 5: loadBaseline
-// ---------------------------------------------------------------------------
-
-describe('loadBaseline', () => {
-  test('valid baseline file', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'baseline.json', JSON.stringify({
-      _meta: { description: 'test' },
-      files: { 'src/foo.ts': 2, 'src/bar.ts': 1 },
-    }));
-    const result = loadBaseline(p);
-    expect(result.files['src/foo.ts']).toBe(2);
-    expect(result.files['src/bar.ts']).toBe(1);
+  // Η πύλη τρέχει `re.test(line)` ανά γραμμή. Το παλιό golden test έτρεχε
+  // `re.test(ολόκληρο κείμενο)` με σημαία `m` — ΔΕΝ είναι ισοδύναμο.
+  test('τα ^ και $ αγκυρώνουν στη ΓΡΑΜΜΗ, όχι στο αρχείο', () => {
+    const counts = countsOf('foo\n  ResponsiveContainer,\nbar', 'src/a.ts', {
+      'chart-card-shell': { forbiddenPatterns: ['^\\s*ResponsiveContainer,?\\s*$'] },
+    });
+    expect(counts.get('chart-card-shell')).toBe(1);
   });
 
-  test('missing file → empty files', () => {
-    const result = loadBaseline('/nonexistent/path.json');
-    expect(result.files).toEqual({});
+  test('τα findings καταγράφουν αριθμό γραμμής και module', () => {
+    const modules = makeModules({ m: { forbiddenPatterns: ['bad'] } });
+    const { findings } = analyzeFile('ok\nbad\nok', 'src/a.ts', modules, { collect: true });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ module: 'm', line: 2, text: 'bad' });
   });
 
-  test('malformed JSON → empty files', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'bad.json', 'not json {{{');
-    const result = loadBaseline(p);
-    expect(result.files).toEqual({});
-  });
-
-  test('missing files property → empty files', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'nofiles.json', JSON.stringify({ _meta: {} }));
-    const result = loadBaseline(p);
-    expect(result.files).toEqual({});
+  test('η ζωντάνια καταγράφει ΚΑΘΕ pattern που πιάνει, όχι μόνο το πρώτο', () => {
+    const patternHits = new Map();
+    analyzeFile("if (e.key === 'Escape') {", 'src/a.ts', makeModules(OVERLAPPING), { patternHits });
+    expect(patternHits.get('escape-command-bus#0')).toBe(1);
+    expect(patternHits.get('escape-command-bus#1')).toBe(1);
   });
 });
 
-// ---------------------------------------------------------------------------
-// GROUP 6: countViolations
-// ---------------------------------------------------------------------------
-
-describe('countViolations', () => {
-  const modules = parseFlatRegistry(`
-MODULE:firestore-collections
-PATTERN:\\.(collection|doc)\\(['"][a-z_]+['"]\\)
-ALLOW:src/config/firestore-collections.ts
-MODULE:enterprise-id
-PATTERN:crypto\\.randomUUID\\(\\)
-`.trim()).modules;
-
-  test('no violations → 0', () => {
-    const lines = ['const x = 1;', 'const y = doSomething();'];
-    expect(countViolations(lines, 'src/foo.ts', modules)).toBe(0);
+// ===========================================================================
+// ΟΜΑΔΑ 4 — 🔴 ΠΕΡΙΣΤΑΤΙΚΟ: ανταλλαγή παραβιάσεων (σχήμα v1)
+// ===========================================================================
+describe('🔴 ratchet ανά module — η ανταλλαγή δεν περνάει', () => {
+  test('ίδιο σύνολο αλλά άλλο module ⇒ ΜΠΛΟΚ', () => {
+    const current = new Map([['date-local', 2]]);
+    const verdict = compareFile('src/a.ts', current, { 'escape-command-bus': 2 });
+    expect(verdict.kind).toBe('blocked');
+    expect(verdict.current).toBe(2);
+    expect(verdict.baseline).toBe(2);          // το v1 θα έλεγε «καμία αλλαγή»
+    expect(verdict.regressions).toEqual([{ module: 'date-local', current: 2, baseline: 0 }]);
   });
 
-  test('one firestore violation', () => {
-    const lines = ["db.collection('users').get()"];
-    expect(countViolations(lines, 'src/foo.ts', modules)).toBe(1);
+  test('ένα module ανεβαίνει ενώ άλλο πέφτει ⇒ ΜΠΛΟΚ (ακόμη κι αν το σύνολο πέφτει)', () => {
+    const verdict = compareFile('src/a.ts', new Map([['a', 1], ['b', 2]]), { a: 5, b: 0 });
+    expect(verdict.kind).toBe('blocked');
+    expect(verdict.current).toBeLessThan(verdict.baseline);
   });
 
-  test('two violations in two modules from same line', () => {
-    // Line matches both firestore-collections AND is also a randomUUID
-    const lines = ["db.collection('users').doc('x'); crypto.randomUUID()"];
-    expect(countViolations(lines, 'src/foo.ts', modules)).toBe(2);
+  test('όλα πέφτουν ⇒ ratchet-down', () => {
+    expect(compareFile('src/a.ts', new Map([['a', 1]]), { a: 3 }).kind).toBe('ratchet-down');
   });
 
-  test('comment lines excluded', () => {
-    const lines = [
-      "// db.collection('users')",
-      " * db.collection('users')",
-      '# crypto.randomUUID()',
-    ];
-    expect(countViolations(lines, 'src/foo.ts', modules)).toBe(0);
+  test('αμετάβλητο ⇒ same', () => {
+    expect(compareFile('src/a.ts', new Map([['a', 3]]), { a: 3 }).kind).toBe('same');
   });
 
-  test('allowlisted file → 0', () => {
-    const lines = ["db.collection('users').get()"];
-    expect(countViolations(lines, 'src/config/firestore-collections.ts', modules)).toBe(0);
+  test('καθαρό και στα δύο ⇒ clean', () => {
+    expect(compareFile('src/a.ts', new Map(), {}).kind).toBe('clean');
   });
 
-  test('multiple violations in same file, same module', () => {
-    const lines = [
-      "db.collection('users').get()",
-      "db.collection('projects').get()",
-      'crypto.randomUUID()',
-    ];
-    expect(countViolations(lines, 'src/foo.ts', modules)).toBe(3);
-  });
-
-  test('allowlist prefix match skips module', () => {
-    const mods = parseFlatRegistry(`
-MODULE:storage-upload
-PATTERN:\\.makePublic\\(\\)
-ALLOW:src/services/storage-admin/
-`.trim()).modules;
-    const lines = ['bucket.makePublic()'];
-    // In allowlist via prefix → no violation
-    expect(countViolations(lines, 'src/services/storage-admin/upload.ts', mods)).toBe(0);
-    // Not in allowlist → violation
-    expect(countViolations(lines, 'src/services/other.ts', mods)).toBe(1);
+  test('νέο αρχείο με παραβίαση ⇒ ΜΠΛΟΚ, μηδενική ανοχή', () => {
+    const verdict = compareFile('src/new.ts', new Map([['a', 1]]), undefined);
+    expect(verdict.kind).toBe('blocked');
+    expect(verdict.inBaseline).toBe(false);
   });
 });
 
-// ---------------------------------------------------------------------------
-// GROUP 7: collectViolationDetails
-// ---------------------------------------------------------------------------
-
-describe('collectViolationDetails', () => {
-  const modules = parseFlatRegistry(`
-MODULE:enterprise-id
-PATTERN:crypto\\.randomUUID\\(\\)
-`.trim()).modules;
-
-  test('returns formatted lines with line numbers', () => {
-    const lines = ['const x = 1;', 'const id = crypto.randomUUID();', 'return id;'];
-    const details = collectViolationDetails(lines, 'src/foo.ts', modules);
-    expect(details).toHaveLength(1);
-    expect(details[0]).toContain('[enterprise-id]');
-    expect(details[0]).toContain('2:'); // line number
-    expect(details[0]).toContain('crypto.randomUUID');
+// ===========================================================================
+// ΟΜΑΔΑ 5 — baseline: fail-closed
+// ===========================================================================
+describe('baseline — fail-closed', () => {
+  test('baseline σχήματος v1 απορρίπτεται (δεν διαβάζεται υποβαθμισμένα)', () => {
+    const dir = tmpDir();
+    const p = write(dir, 'b.json', JSON.stringify({ _meta: {}, files: { 'src/a.ts': 4 } }));
+    expect(() => loadBaseline(p)).toThrow(/σχήμα 1, αναμένεται 2/);
   });
 
-  test('comment lines not included', () => {
-    const lines = ['// crypto.randomUUID()', 'crypto.randomUUID()'];
-    const details = collectViolationDetails(lines, 'src/foo.ts', modules);
-    expect(details).toHaveLength(1);
-    expect(details[0]).toContain('2:');
+  test('baseline που λείπει ⇒ εξαίρεση', () => {
+    expect(() => loadBaseline(path.join(tmpDir(), 'δεν-υπάρχει.json'))).toThrow(/δεν βρέθηκε/);
   });
 
-  test('allowlisted file → empty', () => {
-    const mods = parseFlatRegistry(`
-MODULE:enterprise-id
-PATTERN:crypto\\.randomUUID\\(\\)
-ALLOW:src/services/enterprise-id.service.ts
-`.trim()).modules;
-    const lines = ['crypto.randomUUID()'];
-    expect(collectViolationDetails(lines, 'src/services/enterprise-id.service.ts', mods)).toHaveLength(0);
+  test('κατεστραμμένο JSON ⇒ εξαίρεση που ονομάζει το αρχείο', () => {
+    const dir = tmpDir();
+    const p = write(dir, 'b.json', '{ not json');
+    expect(() => loadBaseline(p)).toThrow(/δεν διαβάζεται/);
+  });
+
+  test('έγκυρο v2 διαβάζεται', () => {
+    const dir = tmpDir();
+    const p = path.join(dir, 'b.json');
+    writeBaseline(p, { 'src/a.ts': { m: 2 } });
+    const loaded = loadBaseline(p);
+    expect(loaded.schema).toBe(SCHEMA_VERSION);
+    expect(loaded.files['src/a.ts']).toEqual({ m: 2 });
+  });
+
+  test('το baseline γράφεται με ταξινομημένα κλειδιά (σταθερό diff)', () => {
+    const dir = tmpDir();
+    const p = path.join(dir, 'b.json');
+    writeBaseline(p, { 'src/z.ts': { m: 1 }, 'src/a.ts': { m: 1 } });
+    const keys = Object.keys(JSON.parse(fs.readFileSync(p, 'utf8')).files);
+    expect(keys).toEqual(['src/a.ts', 'src/z.ts']);
+  });
+
+  test('τα σύνολα του _meta υπολογίζονται, δεν δηλώνονται', () => {
+    const dir = tmpDir();
+    const p = path.join(dir, 'b.json');
+    const res = writeBaseline(p, { 'src/a.ts': { m: 2, n: 1 }, 'src/b.ts': { m: 1 } });
+    expect(res).toEqual({ totalFiles: 2, totalViolations: 4 });
   });
 });
 
-// ---------------------------------------------------------------------------
-// GROUP 8: checkFile
-// ---------------------------------------------------------------------------
-
-describe('checkFile', () => {
-  const modules = parseFlatRegistry(`
-MODULE:enterprise-id
-PATTERN:crypto\\.randomUUID\\(\\)
-ALLOW:src/services/enterprise-id.service.ts
-`.trim()).modules;
-  const exemptRe = /(__tests__|\.test\.)/;
-
-  test('non-existent file → null', () => {
-    expect(checkFile('/nonexistent.ts', modules, {}, null)).toBeNull();
+// ===========================================================================
+// ΟΜΑΔΑ 6 — το ΠΡΑΓΜΑΤΙΚΟ μητρώο του έργου
+// ===========================================================================
+describe('το πραγματικό .ssot-registry.json', () => {
+  test('φορτώνεται χωρίς εξαίρεση (καμία ξένη διάλεκτος, καμία άκυρη σύνταξη)', () => {
+    expect(() => loadRegistry(path.resolve(__dirname, '..', '..', '.ssot-registry.json'))).not.toThrow();
   });
 
-  test('non-TS file → null', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'foo.js', 'crypto.randomUUID()');
-    expect(checkFile(p, modules, {}, null)).toBeNull();
-  });
-
-  test('exempt file → null', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'foo.test.ts', 'crypto.randomUUID()');
-    expect(checkFile(p, modules, {}, exemptRe)).toBeNull();
-  });
-
-  test('clean file, not in baseline → clean', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'clean.ts', 'const x = 1;');
-    const r = checkFile(p, modules, {}, null);
-    expect(r.kind).toBe('clean');
-    expect(r.current).toBe(0);
-  });
-
-  test('new file with violation → blocked (zero tolerance)', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'new.ts', 'const id = crypto.randomUUID();');
-    const r = checkFile(p, modules, {}, null);
-    expect(r.kind).toBe('blocked');
-    expect(r.inBaseline).toBe(false);
-    expect(r.current).toBe(1);
-    expect(r.baseline).toBe(0);
-  });
-
-  test('existing baseline file, same count → same', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'legacy.ts', 'crypto.randomUUID()');
-    const norm = normalizePath(p);
-    const r = checkFile(p, modules, { [norm]: 1 }, null);
-    expect(r.kind).toBe('same');
-  });
-
-  test('existing file, count decreased → ratchet-down', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'improved.ts', 'const x = 1;'); // 0 violations
-    const norm = normalizePath(p);
-    const r = checkFile(p, modules, { [norm]: 2 }, null);
-    expect(r.kind).toBe('ratchet-down');
-    expect(r.current).toBe(0);
-    expect(r.baseline).toBe(2);
-  });
-
-  test('existing file, count increased → blocked (inBaseline=true)', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'worse.ts', [
-      'crypto.randomUUID()',
-      'crypto.randomUUID()',
-    ].join('\n'));
-    const norm = normalizePath(p);
-    const r = checkFile(p, modules, { [norm]: 1 }, null);
-    expect(r.kind).toBe('blocked');
-    expect(r.inBaseline).toBe(true);
-    expect(r.current).toBe(2);
-    expect(r.baseline).toBe(1);
-  });
-
-  test('details populated on block', () => {
-    const dir = tmpDir();
-    const p = write(dir, 'blocked.ts', 'const id = crypto.randomUUID();');
-    const r = checkFile(p, modules, {}, null);
-    expect(r.details).toBeDefined();
-    expect(r.details.length).toBeGreaterThan(0);
-    expect(r.details[0]).toContain('[enterprise-id]');
+  test('τα modules χωρίς patterns παραλείπονται (τα _comment_* κλειδιά)', () => {
+    const { modules } = loadRegistry(path.resolve(__dirname, '..', '..', '.ssot-registry.json'));
+    expect(modules.every(m => m.patterns.length > 0)).toBe(true);
   });
 });
 
-// ---------------------------------------------------------------------------
-// GROUP 9: CLI integration (spawnSync)
-// ---------------------------------------------------------------------------
-
-describe('CLI integration', () => {
+// ===========================================================================
+// ΟΜΑΔΑ 7 — CLI από άκρη σε άκρη
+// ===========================================================================
+describe('CLI', () => {
   function runCLI(args, cwd) {
     return spawnSync('node', [SCRIPT, ...args], { cwd, encoding: 'utf8' });
   }
 
-  /** Write a `.ssot-registry.json` — the file the CLI actually reads. */
   function writeRegistry(dir, modules, exemptPatterns = '__tests__') {
     return write(dir, '.ssot-registry.json', JSON.stringify({ exemptPatterns, modules }));
   }
 
-  const ENTERPRISE_ID = {
-    'enterprise-id': { forbiddenPatterns: ['crypto\\.randomUUID\\(\\)'] },
-  };
+  function writeV2Baseline(dir, files = {}) {
+    return write(dir, '.ssot-violations-baseline.json',
+      JSON.stringify({ _meta: { schema: SCHEMA_VERSION }, files }));
+  }
 
-  test('no args → exit 0', () => {
-    const result = spawnSync('node', [SCRIPT], { encoding: 'utf8' });
-    expect(result.status).toBe(0);
+  const ENTERPRISE_ID = { 'enterprise-id': { forbiddenPatterns: ['crypto\\.randomUUID\\(\\)'] } };
+
+  test('χωρίς ορίσματα ⇒ exit 0', () => {
+    expect(spawnSync('node', [SCRIPT], { encoding: 'utf8' }).status).toBe(0);
   });
 
-  test('missing registry → exit 1 (fails CLOSED, never silently disabled)', () => {
+  test('μητρώο που λείπει ⇒ exit 1 (fail CLOSED)', () => {
     const dir = tmpDir();
     const f = write(dir, 'foo.ts', 'const x = 1;');
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(1);
-    expect(stripAnsi(result.stdout)).toContain('SSoT registry not found');
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(1);
+    expect(stripAnsi(r.stdout)).toContain('δεν βρέθηκε το SSoT μητρώο');
   });
 
-  test('missing baseline → exit 1 (fails CLOSED)', () => {
+  test('baseline που λείπει ⇒ exit 1 (fail CLOSED)', () => {
     const dir = tmpDir();
-    writeRegistry(dir, { m: { forbiddenPatterns: ['x'] } });
+    writeRegistry(dir, ENTERPRISE_ID);
     const f = write(dir, 'foo.ts', 'const x = 1;');
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(1);
-    expect(stripAnsi(result.stdout)).toContain('SSoT baseline not found');
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(1);
+    expect(stripAnsi(r.stdout)).toContain('δεν βρέθηκε το SSoT baseline');
   });
 
-  test('unparseable registry → exit 1, names the file', () => {
+  test('μη αναγνώσιμο μητρώο ⇒ exit 1', () => {
     const dir = tmpDir();
     write(dir, '.ssot-registry.json', '{ not json');
-    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
+    writeV2Baseline(dir);
     const f = write(dir, 'foo.ts', 'const x = 1;');
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(1);
-    expect(stripAnsi(result.stdout)).toContain('.ssot-registry.json is unreadable');
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(1);
+    expect(stripAnsi(r.stdout)).toContain('δεν μπορεί να τρέξει');
   });
 
-  // The regression that started all this: the gate read a gitignored, hand-kept
-  // flat file. It must now enforce with that file absent — and must ignore a
-  // stale one entirely rather than trusting it (ADR-294, 2026-07-16).
-  test('no flat file on disk → still enforces from the JSON registry', () => {
+  // 🔴 ΠΕΡΙΣΤΑΤΙΚΟ: pattern σε ξένη διάλεκτο δεν επιτρέπεται να περάσει σιωπηλά.
+  test('μητρώο με POSIX pattern ⇒ exit 1, ονομάζει το module', () => {
     const dir = tmpDir();
-    writeRegistry(dir, ENTERPRISE_ID);
-    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
-    const f = write(dir, 'bad.ts', 'const id = crypto.randomUUID();');
-    expect(fs.existsSync(path.join(dir, '.ssot-registry-flat.txt'))).toBe(false);
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(1);
-    expect(stripAnsi(result.stdout)).toContain('COMMIT BLOCKED');
+    writeRegistry(dir, { 'tabs-primitive': { forbiddenPatterns: ['import[[:space:]]+X'] } });
+    writeV2Baseline(dir);
+    const f = write(dir, 'foo.ts', 'const x = 1;');
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(1);
+    expect(stripAnsi(r.stdout)).toContain('tabs-primitive');
   });
 
-  test('stale flat file is ignored — JSON registry wins', () => {
+  test('καθαρό αρχείο ⇒ exit 0, καμία έξοδος', () => {
     const dir = tmpDir();
     writeRegistry(dir, ENTERPRISE_ID);
-    // A flat file that knows about no patterns at all — the exact stale state
-    // that let 10 registered modules enforce nothing.
-    write(dir, '.ssot-registry-flat.txt', 'EXEMPT:__tests__\n');
-    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
-    const f = write(dir, 'bad.ts', 'const id = crypto.randomUUID();');
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(1);
-    expect(stripAnsi(result.stdout)).toContain('COMMIT BLOCKED');
-  });
-
-  test('clean file → exit 0, no output', () => {
-    const dir = tmpDir();
-    writeRegistry(dir, ENTERPRISE_ID);
-    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
+    writeV2Baseline(dir);
     const f = write(dir, 'clean.ts', 'const x = 1;');
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(0);
-    expect(stripAnsi(result.stdout).trim()).toBe('');
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(0);
+    expect(stripAnsi(r.stdout).trim()).toBe('');
   });
 
-  test('new file with violation → exit 1, BLOCKED message', () => {
+  test('νέο αρχείο με παραβίαση ⇒ exit 1 + ΝΕΟ ΑΡΧΕΙΟ', () => {
     const dir = tmpDir();
     writeRegistry(dir, ENTERPRISE_ID);
-    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
+    writeV2Baseline(dir);
     const f = write(dir, 'bad.ts', 'const id = crypto.randomUUID();');
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(1);
-    expect(stripAnsi(result.stdout)).toContain('COMMIT BLOCKED');
-    expect(stripAnsi(result.stdout)).toContain('NEW FILE');
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(1);
+    expect(stripAnsi(r.stdout)).toContain('ΜΠΛΟΚΑΡΙΣΤΗΚΕ');
+    expect(stripAnsi(r.stdout)).toContain('ΝΕΟ ΑΡΧΕΙΟ');
+    expect(stripAnsi(r.stdout)).toContain('[enterprise-id]');
   });
 
-  test('allowlisted file → exit 0 (allowlist survives the JSON path)', () => {
+  test('allowlisted αρχείο ⇒ exit 0', () => {
     const dir = tmpDir();
+    const f = write(dir, 'allowed.ts', 'const id = crypto.randomUUID();');
     writeRegistry(dir, {
       'enterprise-id': {
         forbiddenPatterns: ['crypto\\.randomUUID\\(\\)'],
-        allowlist: [normalizePath(path.join(dir, 'allowed.ts'))],
+        allowlist: [normalizePath(f)],
       },
     });
-    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: {} }));
-    const f = write(dir, 'allowed.ts', 'const id = crypto.randomUUID();');
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(0);
+    writeV2Baseline(dir);
+    expect(runCLI([f], dir).status).toBe(0);
   });
 
-  test('ratchet-down → exit 0, shows progress', () => {
+  test('ratchet-down ⇒ exit 0 και δείχνει την πρόοδο ανά module', () => {
     const dir = tmpDir();
     writeRegistry(dir, ENTERPRISE_ID);
-    const f = write(dir, 'improved.ts', 'const x = 1;'); // 0 violations
-    const normalized = normalizePath(f);
-    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ files: { [normalized]: 3 } }));
-    const result = runCLI([f], dir);
-    expect(result.status).toBe(0);
-    expect(stripAnsi(result.stdout)).toContain('RATCHET DOWN');
-    expect(stripAnsi(result.stdout)).toContain('3 → 0 (-3)');
+    const f = write(dir, 'improved.ts', 'const x = 1;');
+    writeV2Baseline(dir, { [normalizePath(f)]: { 'enterprise-id': 3 } });
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(0);
+    const out = stripAnsi(r.stdout);
+    expect(out).toContain('RATCHET DOWN');
+    expect(out).toContain('3 → 0 (-3)');
+    expect(out).toContain('[enterprise-id] 3 → 0');
+  });
+
+  // 🔴 ΠΕΡΙΣΤΑΤΙΚΟ: το v1 baseline επέτρεπε ανταλλαγή — από άκρη σε άκρη.
+  test('ανταλλαγή παραβίασης μεταξύ modules ⇒ ΜΠΛΟΚ', () => {
+    const dir = tmpDir();
+    writeRegistry(dir, {
+      'enterprise-id': { forbiddenPatterns: ['crypto\\.randomUUID\\(\\)'] },
+      'date-local': { forbiddenPatterns: ['new Date\\(\\)\\.toLocaleDateString'] },
+    });
+    const f = write(dir, 'swap.ts', 'const d = new Date().toLocaleDateString();');
+    writeV2Baseline(dir, { [normalizePath(f)]: { 'enterprise-id': 1 } });
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(1);
+    expect(stripAnsi(r.stdout)).toContain('[date-local]');
+  });
+
+  test('baseline v1 στον δίσκο ⇒ exit 1 με οδηγία διόρθωσης', () => {
+    const dir = tmpDir();
+    writeRegistry(dir, ENTERPRISE_ID);
+    write(dir, '.ssot-violations-baseline.json', JSON.stringify({ _meta: {}, files: { 'a.ts': 3 } }));
+    const f = write(dir, 'foo.ts', 'const x = 1;');
+    const r = runCLI([f], dir);
+    expect(r.status).toBe(1);
+    expect(stripAnsi(r.stdout)).toContain('npm run ssot:baseline');
   });
 });

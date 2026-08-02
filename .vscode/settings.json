@@ -1,0 +1,65 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────
+  // File watchers — CPU/I/O στο μηχάνημα ανάπτυξης (i5-4440S, 4 πυρήνες)
+  //
+  // ΤΙ ΚΑΝΕΙ: σταματά το VS Code να παρακολουθεί για αλλαγές φακέλους που
+  // είναι build artifacts / caches / assets. Τα αρχεία ΥΠΑΡΧΟΥΝ κανονικά —
+  // git, pre-commit hooks, jest, ripgrep και οι πράκτορες τα βλέπουν όλα.
+  //
+  // ΤΙ ΔΕΝ ΚΑΝΕΙ: δεν αποκλείει src/, docs/, scripts/, adrs/, HANDOFFS/,
+  // .claude-rules/ — τύφλωση εκεί θα υπονόμευε την ποιότητα (grep/αναζήτηση).
+  // ─────────────────────────────────────────────────────────────────────────
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/.next/**": true,
+    "**/dist/**": true,
+    "**/coverage/**": true,
+    "**/.npm-cache/**": true,
+    "**/.jscpd-tmp/**": true,
+    "**/jscpd-report/**": true,
+    "**/playwright-report/**": true,
+    "**/test-results/**": true,
+    "**/migration-reports/**": true,
+    "**/reports/**": true,
+    "**/report/**": true,
+    "**/backups/**": true,
+    "**/recovery/**": true,
+    "**/_backup_patches/**": true,
+    "**/__diag__/**": true,
+    "**/.pseudo-proof/**": true,
+    "**/.vercel/**": true,
+    "**/ngrok-bin/**": true,
+    "**/.furn-thumbs/**": true,
+    "**/.light-lib/**": true,
+    "**/.sofa-lib/**": true,
+    "**/.tbl-lib/**": true,
+    "**/.tex-lib/**": true,
+    "**/images/**": true,
+    "**/images_2/**": true,
+    "**/images_3/**": true,
+    "**/images_4/**": true,
+    "**/images_5/**": true,
+    "**/images_6/**": true
+  },
+
+  // Αναζήτηση (Ctrl+Shift+F) — ΜΟΝΟ build artifacts. Το src/ μένει πλήρως
+  // αναζητήσιμο. (Δεν επηρεάζει τα εργαλεία των πρακτόρων — τρέχουν ripgrep.)
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/coverage": true,
+    "**/.npm-cache": true,
+    "**/.jscpd-tmp": true,
+    "**/jscpd-report": true,
+    "**/playwright-report": true,
+    "**/test-results": true,
+    "**/backups": true,
+    "**/_backup_patches": true
+  },
+
+  // Το repo έχει ήδη ρητή διαμόρφωση — μην αφήσεις το VS Code να την παρακάμψει
+  "files.trimTrailingWhitespace": false,
+  "files.insertFinalNewline": false
+}

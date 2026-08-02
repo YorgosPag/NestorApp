@@ -2,369 +2,235 @@
 /**
  * CHECK 3.7 — SSoT Import Violations (Centralized Module Ratchet)
  *
- * Zero subprocess spawning → 5-10× faster on Windows (no MSYS2 overhead).
- * Sole enforcer: the bash original was deleted 2026-07-16 once it had been
- * dead for months (nothing invoked it) — two implementations of one gate is how
- * gates silently diverge.
+ * =============================================================================
+ * ΑΥΤΟ ΤΟ SCRIPT ΕΙΝΑΙ Η ΠΥΛΗ **ΚΑΙ** Ο ΓΕΝΝΗΤΟΡΑΣ ΤΟΥ BASELINE (ADR-749)
+ * =============================================================================
  *
- * Google-style ratchet: counts can only decrease. New files = zero tolerance.
+ * Η μέτρηση ζει σε ΕΝΑ σημείο: `scripts/lib/ssot/scan.js`. Εδώ υπάρχει μόνο
+ * το ratchet (σύγκριση με baseline) και η παρουσίαση.
+ *
+ * ⚠️ ΓΙΑΤΙ ΤΟ `--generate-baseline` ΕΙΝΑΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΔΙΚΟ ΤΟΥ SCRIPT:
+ *
+ * Μέχρι τις 2026-08-03 το baseline το παρήγαγε **άλλο πρόγραμμα**
+ * (`ssot-baseline-engine.js`) που μετρούσε **ανά pattern**, ενώ η πύλη
+ * μετρούσε **ανά module**. Το ratchet συνέκρινε λοιπόν `τρέχον(μηχανή Α)` με
+ * `baseline(μηχανή Β)`, με το Β **69% φουσκωμένο**: 103 έναντι 61 στο ίδιο
+ * δέντρο. Ένα αρχείο μπορούσε να **κερδίσει** παραβιάσεις και να περάσει.
+ *
+ * Όλα τα σοβαρά εργαλεία της κατηγορίας το λύνουν με τον ίδιο τρόπο — το
+ * baseline είναι **σημαία του ίδιου εκτελέσιμου**, ποτέ ξεχωριστό πρόγραμμα:
+ *   PHPStan  `--generate-baseline`
+ *   detekt   `--create-baseline`
+ *   ESLint   `--suppress-all`
+ *
+ * ⚠️ ΜΗΝ ΞΑΝΑΦΤΙΑΞΕΙΣ ΔΕΥΤΕΡΟ ΜΕΤΡΗΤΗ. Η κεφαλίδα αυτού του αρχείου
+ * προειδοποιούσε γι' αυτό ήδη από τις 2026-07-16 — *«two implementations of one
+ * gate is how gates silently diverge»* — και μέσα σε τρεις εβδομάδες υπήρχαν
+ * **τέσσερις**.
  *
  * CLI:
- *   node scripts/check-ssot-imports.js [files...]
+ *   node scripts/check-ssot-imports.js [files...]     έλεγχος (pre-commit)
+ *   node scripts/check-ssot-imports.js --generate-baseline
  *
  * Exit codes:
- *   0 — no new violations
- *   1 — new violations found (commit blocked)
+ *   0 — καμία νέα παραβίαση / το baseline γράφτηκε
+ *   1 — νέες παραβιάσεις (commit μπλοκαρισμένο) ή σφάλμα ρύθμισης
+ *
+ * @see ADR-749 — SSoT violation engine unification
+ * @see ADR-294 — SSoT Ratchet Enforcement
  */
 
 'use strict';
 
-const fs   = require('node:fs');
-const path = require('node:path');
+const fs = require('node:fs');
 
-const { renderFlatRegistry } = require('./generate-ssot-flat-registry');
+const { loadRegistry, normalizePath, TS_EXT_RE, REGISTRY_FILE } = require('./lib/ssot/registry');
+const { analyzeFile } = require('./lib/ssot/scan');
+const { BASELINE_FILE, loadBaseline, compareFile, writeBaseline } = require('./lib/ssot/baseline');
 
 // ---------------------------------------------------------------------------
-// ANSI (matches bash original)
+// ANSI
 // ---------------------------------------------------------------------------
-const RED    = '\x1b[0;31m';
-const GREEN  = '\x1b[0;32m';
+const RED = '\x1b[0;31m';
+const GREEN = '\x1b[0;32m';
 const YELLOW = '\x1b[1;33m';
-const CYAN   = '\x1b[0;36m';
-const NC     = '\x1b[0m';
+const CYAN = '\x1b[0;36m';
+const NC = '\x1b[0m';
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-/**
- * The registry is read straight from the tracked JSON — never from the derived
- * `.ssot-registry-flat.txt`. That file is gitignored and was hand-maintained, so
- * for 3 days it silently under-reported the registry and 10 modules enforced
- * nothing (found 2026-07-16, ADR-294). A gate must not read a derived artifact
- * that can drift; the flat file now exists only for `ssot-audit.sh` (bash).
- */
-const REGISTRY_FILE = '.ssot-registry.json';
-const BASELINE_FILE = '.ssot-violations-baseline.json';
-
-/** Lines starting with these are comment lines (excluded from violation count). */
-const COMMENT_RE = /^\s*(\/\/|\*|#)/;
-
-/** Only these file extensions are checked. */
-const TS_EXT_RE = /\.(ts|tsx)$/;
-
-// ---------------------------------------------------------------------------
-// Pure: flat registry parser
+// Έλεγχος ενός αρχείου
 // ---------------------------------------------------------------------------
 
 /**
- * Parse `.ssot-registry-flat.txt` into structured modules.
- * @param {string} text — raw file content
- * @returns {{ exemptRe: RegExp|null, modules: Module[] }}
+ * Ελέγχει ένα αρχείο απέναντι στο ratchet.
+ * Καθαρή: δεν τυπώνει και δεν καλεί process.exit().
  *
- * @typedef {{ name: string, re: RegExp|null, allowlist: string[] }} Module
+ * @param {string} file
+ * @param {import('./lib/ssot/registry').SsotModule[]} modules
+ * @param {Record<string, Record<string, number>>} baselineFiles
+ * @param {RegExp} exemptRe
+ * @returns {import('./lib/ssot/baseline').FileVerdict|null} null = παραλείπεται
  */
-function parseFlatRegistry(text) {
-  let exemptRe = null;
-  /** @type {Module[]} */
-  const modules = [];
-  let cur = null;
+function checkFile(file, modules, baselineFiles, exemptRe) {
+  if (!fs.existsSync(file)) return null;
+  if (!TS_EXT_RE.test(file)) return null;
 
-  for (const raw of text.split('\n')) {
-    const line = raw.trimEnd();
-    if (!line) continue;
+  const normalized = normalizePath(file);
+  if (exemptRe.test(normalized)) return null;
 
-    if (line.startsWith('EXEMPT:')) {
-      exemptRe = new RegExp(line.slice(7));
-    } else if (line.startsWith('MODULE:')) {
-      if (cur) modules.push(_compileModule(cur));
-      cur = { name: line.slice(7), rawPatterns: [], allowlist: [] };
-    } else if (line.startsWith('PATTERN:') && cur) {
-      cur.rawPatterns.push(line.slice(8));
-    } else if (line.startsWith('ALLOW:') && cur) {
-      cur.allowlist.push(normalizePath(line.slice(6)));
-    }
-    // SSOT: lines are informational metadata — skip
-  }
-  if (cur) modules.push(_compileModule(cur));
+  const content = fs.readFileSync(file, 'utf8');
+  // `collect` μόνο όταν χρειάζεται εμφάνιση — αλλά η ανάλυση είναι ένα πέρασμα,
+  // οπότε τη μαζεύουμε πάντα: τα staged αρχεία είναι λίγα.
+  const { counts, findings } = analyzeFile(content, normalized, modules, { collect: true });
 
-  return { exemptRe, modules };
+  const verdict = compareFile(normalized, counts, baselineFiles[normalized]);
+  verdict.findings = findings;
+  return verdict;
+}
+
+// ---------------------------------------------------------------------------
+// Παρουσίαση
+// ---------------------------------------------------------------------------
+
+/** @param {import('./lib/ssot/baseline').FileVerdict[]} results */
+function renderOutput(results) {
+  const ratchetDown = results.filter(r => r.kind === 'ratchet-down');
+  const blocked = results.filter(r => r.kind === 'blocked');
+
+  if (ratchetDown.length > 0) renderRatchetDown(ratchetDown);
+  if (blocked.length > 0) renderBlocked(blocked);
 }
 
 /** @internal */
-function _compileModule(cur) {
-  let re = null;
-  if (cur.rawPatterns.length > 0) {
-    const combined = cur.rawPatterns.map(p => `(?:${p})`).join('|');
-    try {
-      re = new RegExp(combined);
-    } catch {
-      // Fallback: compile individually, skip broken patterns
-      const valid = cur.rawPatterns
-        .map(p => { try { return new RegExp(p); } catch { return null; } })
-        .filter(Boolean);
-      re = valid.length > 0 ? new RegExp(valid.map(r => r.source).join('|')) : null;
+function renderRatchetDown(results) {
+  console.log('');
+  console.log(`${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
+  console.log(`${GREEN}  🎯 RATCHET DOWN — πρόοδος στην κεντρικοποίηση SSoT${NC}`);
+  console.log(`${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
+  for (const r of results) {
+    console.log(`${GREEN}  ✅ ${r.file}: ${r.baseline} → ${r.current} (-${r.baseline - r.current})${NC}`);
+    for (const imp of r.improvements) {
+      console.log(`${GREEN}        [${imp.module}] ${imp.baseline} → ${imp.current}${NC}`);
     }
   }
-  return { name: cur.name, re, allowlist: cur.allowlist };
+  console.log('');
+  console.log(`${CYAN}  Μετά το commit: npm run ssot:baseline${NC}`);
+  console.log('');
 }
 
-// ---------------------------------------------------------------------------
-// Pure: registry loading
-// ---------------------------------------------------------------------------
-
-/**
- * Load `.ssot-registry.json` and compile it into the structured modules the
- * checker runs on.
- *
- * Routes through `renderFlatRegistry` + `parseFlatRegistry` deliberately: that
- * is byte-for-byte the pipeline that produced the flat file the checker used to
- * read, so behaviour is identical — only the staleness window is gone.
- *
- * @param {string} filePath
- * @returns {{ exemptRe: RegExp|null, modules: Module[] }}
- */
-function loadRegistry(filePath) {
-  const registry = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  return parseFlatRegistry(renderFlatRegistry(registry));
+/** @internal */
+function renderBlocked(results) {
+  console.log('');
+  console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
+  console.log(`${RED}  🚫 COMMIT ΜΠΛΟΚΑΡΙΣΤΗΚΕ — παραβίαση SSoT ratchet${NC}`);
+  console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
+  for (const r of results) renderBlockedFile(r);
+  console.log('');
+  console.log(`${YELLOW}  Διόρθωση: χρησιμοποίησε το κεντρικό module αντί για inline κώδικα.${NC}`);
+  console.log(`${YELLOW}  Μητρώο: .ssot-registry.json (δες τα description των modules)${NC}`);
+  console.log(`${YELLOW}  Αναφορά: npm run ssot:audit${NC}`);
+  console.log('');
 }
 
-// ---------------------------------------------------------------------------
-// Pure: baseline helpers
-// ---------------------------------------------------------------------------
-
 /**
- * Load and parse the violations baseline file.
- * Returns `{ files: {} }` (empty) on any parse failure.
- * @param {string} filePath
- * @returns {{ files: Record<string, number> }}
+ * @internal
+ * Εμφανίζονται **ΟΛΕΣ** οι παραβιάσεις των modules που ανέβηκαν — όχι μόνο «οι
+ * νέες». Δεν υπάρχει αξιόπιστος τρόπος να ξεχωρίσεις ποια γραμμή πρόσθεσε
+ * αυτό το commit, και το μάντεμα κρύβει πραγματικά ευρήματα (πολιτική ESLint).
  */
-function loadBaseline(filePath) {
-  try {
-    const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return { files: raw.files && typeof raw.files === 'object' ? raw.files : {} };
-  } catch {
-    return { files: {} };
+function renderBlockedFile(r) {
+  if (r.inBaseline) {
+    console.log(`${RED}\n  ❌ ${r.file}${NC}`);
+  } else {
+    console.log(`${RED}\n  ❌ ${r.file} (ΝΕΟ ΑΡΧΕΙΟ — μηδενική ανοχή)${NC}`);
+  }
+
+  const regressed = new Set(r.regressions.map(x => x.module));
+  for (const reg of r.regressions) {
+    const was = r.inBaseline ? `${reg.baseline} → ${reg.current}` : `${reg.current}`;
+    console.log(`${RED}     [${reg.module}] ${was} (+${reg.current - reg.baseline})${NC}`);
+  }
+  for (const f of r.findings || []) {
+    if (regressed.has(f.module)) console.log(`${RED}        [${f.module}] ${f.line}:${f.text}${NC}`);
   }
 }
 
 // ---------------------------------------------------------------------------
-// Pure: path normalization
+// Λειτουργία: παραγωγή baseline (ίδιο εκτελέσιμο — πρότυπο PHPStan)
 // ---------------------------------------------------------------------------
 
-/** Normalize path separators to forward slashes. */
-function normalizePath(p) {
-  return p.replace(/\\/g, '/');
+async function generateBaseline() {
+  const { scanAll } = require('./lib/ssot/full-scan');
+
+  console.log('🔍 Πλήρης σάρωση του src/ με τη μηχανή της πύλης…');
+  const started = Date.now();
+  const { files, scanned, workers } = await scanAll();
+  const { totalFiles, totalViolations } = writeBaseline(BASELINE_FILE, files);
+
+  const elapsed = ((Date.now() - started) / 1000).toFixed(1);
+  console.log(`  Αρχεία που σαρώθηκαν:   ${scanned}`);
+  console.log(`  Αρχεία με παραβιάσεις:  ${totalFiles}`);
+  console.log(`  Σύνολο παραβιάσεων:     ${totalViolations}`);
+  console.log(`\n✅ Γράφτηκε το ${BASELINE_FILE}  (${elapsed}s, ${workers} νήματα)`);
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
-// Pure: allowlist check
+// Είσοδος
 // ---------------------------------------------------------------------------
 
-/**
- * Returns true if `normalizedFile` is in the module's allowlist.
- * Allowlist entry can be an exact file path OR a directory prefix.
- * @param {string} normalizedFile
- * @param {string[]} allowlist
- */
-function isAllowlisted(normalizedFile, allowlist) {
-  return allowlist.some(a => normalizedFile === a || normalizedFile.startsWith(a));
-}
+async function main() {
+  const argv = process.argv.slice(2);
 
-// ---------------------------------------------------------------------------
-// Pure: violation counting
-// ---------------------------------------------------------------------------
-
-/**
- * Count SSoT violations in file content across all modules.
- * Mirrors bash `count_violations()` logic:
- *   - Per module, scan non-comment lines for pattern matches
- *   - Sum across modules (a line can count for multiple modules)
- *
- * @param {string[]} lines   — file content split by newline
- * @param {string}   file    — normalized file path (for allowlist check)
- * @param {Module[]} modules
- * @returns {number}
- */
-function countViolations(lines, file, modules) {
-  let total = 0;
-  for (const mod of modules) {
-    if (!mod.re) continue;
-    if (isAllowlisted(file, mod.allowlist)) continue;
-    for (const line of lines) {
-      if (COMMENT_RE.test(line)) continue;
-      if (mod.re.test(line)) total++;
-    }
-  }
-  return total;
-}
-
-/**
- * Collect per-line violation details for display (blocked commit output).
- * Returns array of formatted strings: `"        [module] linenum:content"`
- *
- * @param {string[]} lines
- * @param {string}   file    — normalized file path
- * @param {Module[]} modules
- * @returns {string[]}
- */
-function collectViolationDetails(lines, file, modules) {
-  const out = [];
-  for (const mod of modules) {
-    if (!mod.re) continue;
-    if (isAllowlisted(file, mod.allowlist)) continue;
-    lines.forEach((line, idx) => {
-      if (COMMENT_RE.test(line)) return;
-      if (mod.re.test(line)) out.push(`        [${mod.name}] ${idx + 1}:${line}`);
-    });
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// Pure: check a single file
-// ---------------------------------------------------------------------------
-
-/**
- * @typedef {{ kind: 'clean'|'ratchet-down'|'same'|'blocked', file: string,
- *             current: number, baseline: number, details?: string[] }} FileResult
- */
-
-/**
- * Check one file against the ratchet rules.
- * Pure: does not write output or call process.exit().
- *
- * @param {string}   file        — original (possibly Windows) path
- * @param {Module[]} modules
- * @param {Record<string,number>} baselineFiles
- * @param {RegExp|null} exemptRe
- * @returns {FileResult|null}   null = skip (non-TS, exempt, deleted)
- */
-function checkFile(file, modules, baselineFiles, exemptRe) {
-  if (!fs.existsSync(file))          return null;
-  if (!TS_EXT_RE.test(file))         return null;
-
-  const normalized = normalizePath(file);
-  if (exemptRe && exemptRe.test(normalized)) return null;
-
-  const lines   = fs.readFileSync(file, 'utf8').split('\n');
-  const current = countViolations(lines, normalized, modules);
-  const baseline = baselineFiles[normalized] ?? 0;
-  const inBaseline = Object.prototype.hasOwnProperty.call(baselineFiles, normalized);
-
-  if (current === 0 && baseline === 0) return { kind: 'clean',        file, current, baseline };
-  if (current < baseline)              return { kind: 'ratchet-down', file, current, baseline };
-  if (current === baseline)            return { kind: 'same',         file, current, baseline };
-
-  // Increased
-  const details = collectViolationDetails(lines, normalized, modules);
-  return { kind: 'blocked', file, current, baseline, inBaseline, details };
-}
-
-// ---------------------------------------------------------------------------
-// Output rendering (side-effectful, isolated for testability)
-// ---------------------------------------------------------------------------
-
-/** @param {FileResult[]} results */
-function renderOutput(results) {
-  const ratchetDown = results.filter(r => r.kind === 'ratchet-down');
-  const blocked     = results.filter(r => r.kind === 'blocked');
-
-  if (ratchetDown.length > 0) {
-    console.log('');
-    console.log(`${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
-    console.log(`${GREEN}  🎯 RATCHET DOWN — Progress on SSoT centralization${NC}`);
-    console.log(`${GREEN}═══════════════════════════════════════════════════════════════${NC}`);
-    for (const r of ratchetDown) {
-      const diff = r.baseline - r.current;
-      console.log(`${GREEN}  ✅ ${r.file}: ${r.baseline} → ${r.current} (-${diff})${NC}`);
-    }
-    console.log('');
-    console.log(`${CYAN}  Run after commit: npm run ssot:baseline${NC}`);
-    console.log(`${CYAN}  (to persist the new lower counts into baseline file)${NC}`);
-    console.log('');
+  if (argv.includes('--generate-baseline')) {
+    process.exit(await generateBaseline());
   }
 
-  if (blocked.length > 0) {
-    console.log('');
-    console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
-    console.log(`${RED}  🚫 COMMIT BLOCKED — SSoT Ratchet Violation${NC}`);
-    console.log(`${RED}  Centralized module bypass detected${NC}`);
-    console.log(`${RED}═══════════════════════════════════════════════════════════════${NC}`);
-    for (const r of blocked) {
-      const diff = r.current - r.baseline;
-      if (r.inBaseline) {
-        console.log(`${RED}\n  ❌ ${r.file}${NC}`);
-        console.log(`${RED}     Baseline: ${r.baseline} → Current: ${r.current} (+${diff} new violation(s))${NC}`);
-      } else {
-        console.log(`${RED}\n  ❌ ${r.file} (NEW FILE — zero tolerance)${NC}`);
-        console.log(`${RED}     Found ${r.current} SSoT violation(s)${NC}`);
-      }
-      for (const d of (r.details || [])) console.log(`${RED}${d}${NC}`);
-    }
-    console.log('');
-    console.log(`${YELLOW}  Fix: Use the centralized module instead of inline code.${NC}`);
-    console.log(`${YELLOW}  Registry: .ssot-registry.json (see module descriptions)${NC}`);
-    console.log(`${YELLOW}  Audit: npm run ssot:audit${NC}`);
-    console.log('');
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Main entry point
-// ---------------------------------------------------------------------------
-
-function main() {
-  const files = process.argv.slice(2);
+  const files = argv.filter(a => !a.startsWith('--'));
   if (files.length === 0) process.exit(0);
 
-  // Fail CLOSED: both inputs are tracked files. Absent = broken checkout or
-  // wrong cwd, never a legitimate "nothing to enforce". The old code warned and
-  // exited 0 here, which silently disabled all 62+ modules.
-  for (const [file, label] of [[REGISTRY_FILE, 'registry'], [BASELINE_FILE, 'baseline']]) {
+  // Fail CLOSED: και τα δύο είναι tracked αρχεία. Η απουσία τους σημαίνει
+  // χαλασμένο checkout ή λάθος cwd — ποτέ «δεν υπάρχει τίποτα να επιβληθεί».
+  // Ο παλιός κώδικας προειδοποιούσε κι έβγαινε με 0, απενεργοποιώντας σιωπηλά
+  // και τα 420 modules (ADR-294, 2026-07-16).
+  for (const [file, label] of [[REGISTRY_FILE, 'μητρώο'], [BASELINE_FILE, 'baseline']]) {
     if (!fs.existsSync(file)) {
-      console.log(`${RED}  ❌ CHECK 3.7 cannot run — SSoT ${label} not found: ${file}${NC}`);
-      console.log(`${YELLOW}     It is tracked in git; restore it rather than bypassing this check.${NC}`);
+      console.log(`${RED}  ❌ Το CHECK 3.7 δεν μπορεί να τρέξει — δεν βρέθηκε το SSoT ${label}: ${file}${NC}`);
+      console.log(`${YELLOW}     Είναι tracked στο git· επανάφερέ το αντί να παρακάμψεις τον έλεγχο.${NC}`);
       process.exit(1);
     }
   }
 
-  let exemptRe, modules;
+  let exemptRe, modules, baselineFiles;
   try {
     ({ exemptRe, modules } = loadRegistry(REGISTRY_FILE));
+    ({ files: baselineFiles } = loadBaseline(BASELINE_FILE));
   } catch (err) {
-    console.log(`${RED}  ❌ CHECK 3.7 cannot run — ${REGISTRY_FILE} is unreadable: ${err.message}${NC}`);
+    console.log(`${RED}  ❌ Το CHECK 3.7 δεν μπορεί να τρέξει — ${err.message}${NC}`);
     process.exit(1);
   }
-
-  const { files: baselineFiles } = loadBaseline(BASELINE_FILE);
 
   const results = files
     .map(f => checkFile(f, modules, baselineFiles, exemptRe))
     .filter(Boolean);
 
   renderOutput(results);
-
-  const hasBlock = results.some(r => r.kind === 'blocked');
-  process.exit(hasBlock ? 1 : 0);
+  process.exit(results.some(r => r.kind === 'blocked') ? 1 : 0);
 }
 
 // ---------------------------------------------------------------------------
-// Exports (for tests)
+// Εξαγωγές (για tests)
 // ---------------------------------------------------------------------------
 module.exports = {
-  parseFlatRegistry,
-  loadRegistry,
-  loadBaseline,
-  normalizePath,
-  isAllowlisted,
-  countViolations,
-  collectViolationDetails,
   checkFile,
   renderOutput,
   REGISTRY_FILE,
   BASELINE_FILE,
-  COMMENT_RE,
-  TS_EXT_RE,
 };
 
-if (require.main === module) main();
+if (require.main === module) {
+  main().catch(err => {
+    console.error(`${RED}  ❌ CHECK 3.7: ${err.stack || err.message}${NC}`);
+    process.exit(1);
+  });
+}
