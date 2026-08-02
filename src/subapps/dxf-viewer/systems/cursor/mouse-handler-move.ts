@@ -32,6 +32,9 @@ import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
 // εισαγωγής με το `isTableCellPointerGestureClaimed` που καταναλώνει ήδη ο αδελφός χειριστής
 // του `mousedown` (`useCentralizedMouseHandlers`, §27.15).
 import { isCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
+// ADR-739 §29.10 — η πύλη των σημαδιών έλξης ως **καθαρή** συνάρτηση (δες την κεφαλίδα της:
+// το `false` σημαίνει «σβήσε», όχι «άφησέ τα»).
+import { shouldDetectSnap } from './select-gesture-gates';
 // ADR-659 — overlap «⧉ N» badge: count the stack under the cursor at hover time.
 // Uses the LIVE registry hit-testing instance (fed by the render loop's updateScene),
 // the SAME one the top-1 `hitTestCallback` uses — NOT the zombie exported singleton.
@@ -302,7 +305,15 @@ export function useMouseMoveHandler({
     // `clearSnapDetection` από κάτω — δηλαδή τα σημάδια δεν «παύουν να ανανεώνονται», **σβήνουν**
     // κιόλας, μαζί με το ghost του column. Ένας ξεχωριστός early-return θα άφηνε στην οθόνη το
     // τελευταίο σημάδι πριν ανοίξει ο πίνακας.
-    if (snapEnabled && findSnapPoint && !isGripDragging && !isCanvasLockedByTableSession()) {
+    if (
+      shouldDetectSnap({
+        snapEnabled,
+        hasResolver: Boolean(findSnapPoint),
+        isGripDragging,
+        lockedByTableSession: isCanvasLockedByTableSession(),
+      }) &&
+      findSnapPoint
+    ) {
       // ADR-398 §3.10 — το column face-snap υπολογίζεται πλέον σύγχρονα στο preview/commit από
       // τους pre-collected στόχους (`columnPreviewStore`)· ο scheduler δεν χρειάζεται entities.
       requestSnapDetection({ worldPos, activeTool, findSnapPoint, setSnapResults });

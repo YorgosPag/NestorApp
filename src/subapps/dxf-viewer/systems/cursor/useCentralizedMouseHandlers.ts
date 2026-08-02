@@ -37,6 +37,9 @@ import { resolveBodyDragTarget } from '../drag/body-drag-target';
 import { isTableCellPointerGestureClaimed } from '../../ui/table-cell-editor/table-cell-session-focus';
 // ADR-739 §29 — ο ΕΝΑΣ ορισμός του «η λειτουργία πίνακα κατέχει τον καμβά» (§29.10: το λάσο).
 import { isCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
+// ADR-739 §29.10 — η πύλη του arm ως **καθαρή** συνάρτηση: πέντε όροι σε hot handler που δεν
+// στήνεται σε test· εδώ δοκιμάζεται με έναν boolean, χωρίς DOM.
+import { shouldArmSelectDrag } from './select-gesture-gates';
 // ADR-642 §6.8 — Alt+press on a complex-linetype pattern snap (railway rail/sleeper) → whole-entity move.
 import { tryArmComplexSnapAltMove } from '../drag/complex-snap-alt-move';
 import { getHoveredEntity } from '../hover/HoverStore';
@@ -302,10 +305,14 @@ export function useCentralizedMouseHandlers(
     // καταναλωτές στο `mouse-handler-move` (λάσο, region box, marquee). Ένας φύλακας στη
     // ζωγραφική θα έπρεπε να γραφτεί τρεις φορές και θα ξεχνούσε τον τέταρτο.
     if (
-      e.button === 0 &&
-      !isGripDragging &&
-      !isCanvasLockedByTableSession() &&
-      ((activeTool === 'select' && !isToolInteractive) || isRectMarqueeDragTool(activeTool))
+      shouldArmSelectDrag({
+        button: e.button,
+        isGripDragging,
+        activeTool,
+        isToolInteractive,
+        // ADR-040 — ανάγνωση του SSoT **τη στιγμή του πατήματος**, ποτέ στιγμιότυπο.
+        lockedByTableSession: isCanvasLockedByTableSession(),
+      })
     ) {
       lassoDownRef.current = { pos: screenPos, buttonHeld: true };
     }
