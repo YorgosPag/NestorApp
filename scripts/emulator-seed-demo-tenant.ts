@@ -196,7 +196,30 @@ async function seedTenantDocuments(db: Firestore, uid: string): Promise<void> {
   await db.collection('contacts').doc(DEMO.contactId).set(
     {
       ...base,
-      contactType: 'individual',
+      /**
+       * 🔴 `type`, ΟΧΙ `contactType` — μετρημένο 2026-08-02 (ADR-745 Δουλειά Α).
+       *
+       * Ο `Contact` είναι **discriminated union** και ο διαχωριστής του δηλώνεται
+       * στο `src/types/contacts/contracts.ts:13` ως `type: ContactType`.
+       *
+       * Ο seeder έγραφε `contactType` και η επαφή ήταν **αόρατη στην αναζήτηση
+       * εργαζομένων**, χωρίς κανένα μήνυμα λάθους. Η αλυσίδα σιωπής:
+       *
+       *   WorkersTabContent → allowedContactTypes={['individual']}
+       *   ContactSearchManager:176 → allowedContactTypes.includes(contact.type)
+       *   contact-name-resolver-mapper:146 → type: contact.type
+       *   toContact() → {...raw}  ⇒  raw.type === undefined
+       *   ['individual'].includes(undefined) === false  ⇒  σιωπηλή απόρριψη
+       *
+       * Το έγγραφο **έφτανε** στον client (το tenant φίλτρο δούλευε), απλώς
+       * κοβόταν στο τελευταίο βήμα — γι' αυτό η οθόνη έλεγε «Δεν βρέθηκαν
+       * αποτελέσματα» αντί για σφάλμα.
+       *
+       * ⚠️ Το `contactType` **υπάρχει** στον κώδικα ~114 φορές — αλλά ως όνομα
+       * παραμέτρου/πεδίου interface (ai-pipeline), **ποτέ** ως πεδίο εγγράφου
+       * Firestore. Μην ξαναμπερδευτείς από το πλήθος.
+       */
+      type: 'individual',
       firstName: DEMO.contactFirstName,
       lastName: DEMO.contactLastName,
       displayName: `${DEMO.contactFirstName} ${DEMO.contactLastName}`,
