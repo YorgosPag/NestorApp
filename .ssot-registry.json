@@ -1797,7 +1797,7 @@
       "forbiddenPatterns": [
         "export\\s+(function|const)\\s+(isRouteVisibleForJob|isReportSubItemVisibleForJob|isTileVisibleForJob|isCrossCuttingRoute|filterItemsByJob|filterTilesByJob|summarizeHidden|tileIdFromHref)\\b",
         "export\\s+const\\s+REPORTS_PARENT_ROUTE\\b",
-        "(type|interface)\\s+JobFilter(Result|ableItem)\\b"
+        "(interface\\s+JobFilter(Result|ableItem)\\s*[<{]|type\\s+JobFilter(Result|ableItem)\\s*[<=])"
       ],
       "allowlist": [
         "src/config/jobs-visibility.ts"
@@ -1810,7 +1810,7 @@
       "forbiddenPatterns": [
         "export\\s+(function|const)\\s+computeJobSuggestion\\b",
         "export\\s+const\\s+MIN_JOBS_FOR_SUGGESTION\\b",
-        "(type|interface)\\s+JobSuggestion(Input|Outcome)\\b"
+        "(interface\\s+JobSuggestion(Input|Outcome)\\s*[<{]|type\\s+JobSuggestion(Input|Outcome)\\s*[<=])"
       ],
       "allowlist": [
         "src/config/job-suggestion.ts"
