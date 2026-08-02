@@ -73,6 +73,9 @@ import { useTableRangeActions } from './use-table-range-actions';
 // ADR-739 Φ.Δ βήμα 8 — απλό κλικ μετακινεί το ενεργό κελί, `Shift+κλικ` απλώνει την
 // περιοχή. **Παθητικός** ακροατής: δεν καταναλώνει το συμβάν, δεν αγγίζει τον καμβά.
 import { useTableCellPointer } from './use-table-cell-pointer';
+// ADR-739 §29 — το δίδυμο του modal keyboard scope για το ποντίκι: όσο ζει η λειτουργία
+// πίνακα, ο καμβάς δεν επιλέγει, δεν σέρνει και δεν κάνει hover σε οντότητες.
+import { useTableCanvasLockdown } from './use-table-canvas-lockdown';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -416,6 +419,28 @@ export function useTableCellDoubleClickEditor(
    * @see src/lib/a11y/keyboard-scope.ts — τι σημαίνει «modal κατέχει το πληκτρολόγιο»
    */
   useModalKeyboardScope(overlay !== null);
+
+  /**
+   * 🔴 ADR-739 §29 — **το δίδυμο του παραπάνω, για το ΠΟΝΤΙΚΙ.**
+   *
+   * Ο ιδιοκτήτης (2026-08-02): «όταν μπαίνω σε edit mode στους πίνακες, να μην μπορώ να
+   * κάνω κλικ έξω από τους πίνακες μέσα στον καμβά για να επιλέξω και να τροποποιήσω
+   * οντότητες, αν πρώτα δεν βγω με κάποιον τρόπο από το edit». Μέχρι εδώ ο καμβάς
+   * εξακολουθούσε να κάνει hover, να επιλέγει στο κλικ, και να **σκοτώνει τη συνεδρία** με
+   * την ίδια κίνηση.
+   *
+   * 🔑 **Η ίδια συνθήκη, στην ίδια γραμμή θέασης.** Ολόκληρο το επιχείρημα ορθότητας του
+   * σχολίου από πάνω — «μία τιμή οδηγεί και τα δύο, άρα δεν μπορεί να υπάρξει scope
+   * πατημένο χωρίς κανέναν να ακούει» — ισχύει **αυτούσιο** εδώ, και μόνο επειδή περνιέται
+   * το ίδιο `overlay !== null`. Δύο διαφορετικές συνθήκες θα ήταν δύο κύκλοι ζωής, και ο
+   * δεύτερος είναι πάντα αυτός που ξεχνιέται όταν αλλάξει ο πρώτος.
+   */
+  useTableCanvasLockdown({
+    active: overlay !== null,
+    entity: liveEntity,
+    containerRef,
+    transformRef,
+  });
 
   // ADR-739 Φ.Δ βήμα 7 — το **δεύτερο** πεδίο της συνεδρίας. Δέχεται τους ΙΔΙΟΥΣ χειριστές:
   // καμία δεύτερη διαδρομή εγγραφής, καμία δεύτερη πλοήγηση, κανένα δεύτερο ιστορικό.

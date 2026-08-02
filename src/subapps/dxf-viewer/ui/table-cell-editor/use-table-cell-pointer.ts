@@ -15,6 +15,15 @@
  * ADR-040 απαγορεύει να αποκτήσει συνδρομές — και δεν αλλάζει καμία υπάρχουσα διαδρομή
  * χειρισμού ποντικιού. Δεν είναι συμβιβασμός· είναι ο λόγος που η αλλαγή είναι ασφαλής.
  *
+ * 🔴 ADR-739 §29 — **Η ΠΑΘΗΤΙΚΟΤΗΤΑ ΕΔΩ ΙΣΧΥΕΙ ΑΚΕΡΑΙΗ, ΚΑΙ ΤΩΡΑ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.**
+ * Ο ιδιοκτήτης ζήτησε ο καμβάς να **μη** δέχεται επιλογή όσο ο πίνακας είναι ανοιχτός. Ο
+ * πειρασμός ήταν να καταναλωθεί το συμβάν **εδώ**, στο `if (δεν βρήκα κελί)` — μια γραμμή,
+ * φαινομενικά το ίδιο πράγμα. Θα ήταν λάθος σε δύο επίπεδα: (α) η επιλογή οντότητας
+ * γεννιέται στο **`mouseup`**, συμβάν που αυτό το αρχείο δεν ακούει καν· (β) αυτός ο
+ * ακροατής ζει στο **δοχείο**, ενώ ο ανταγωνιστής του (`useCanvasContextMenu`) εγγράφεται
+ * στο ίδιο δοχείο **νωρίτερα** — δηλαδή θα έχανε πάντα τη σειρά. Το κλείδωμα ζει σε δικό
+ * του module, σε σύλληψη στο `document`. Δες `use-table-canvas-lockdown`.
+ *
  * ## 🔴 ADR-739 §26.15 — ΓΙΑΤΙ Ο ΔΡΟΜΕΑΣ ΔΕΝ ΚΛΕΙΝΕΙ ΑΠΟ ΤΟ BLUR ΠΟΥ ΑΚΟΛΟΥΘΕΙ
  *
  * ⚠️ Εδώ έγραφε ότι «ο φύλακας αναβάλλει την απόφαση κατά ένα καρέ, και μέχρι τότε το React
@@ -45,22 +54,21 @@ import { useEffect, type RefObject } from 'react';
 // 🔴 ADR-739 §27.16 Ε6 — ο ΕΝΑΣ σταθεροποιητής χειριστών του έργου (ADR-532 Στάδιο 4a.1),
 // ήδη σε χρήση από τρία σημεία του subapp. Δες παρακάτω γιατί είναι δομικά απαραίτητος εδώ.
 import { useEventCallback } from '@/hooks/useEventCallback';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {
   computeTableEntityGeometryLive,
   tableCellAtWorld,
-  tablePxPerMm,
   tableWorldToFrame,
 } from '../../bim/table/table-entity-geometry';
 // ADR-739 Φ.Δ βήμα 9 — οι ζώνες δείκτη είναι πλέον και **επιφάνεια επιλογής**, όχι μόνο
 // ένδειξη: το ίδιο SSoT γεωμετρίας που ζωγραφίζει τα κουτιά απαντά και «σε ποιο έπεσα».
 import {
-  isTableIndicatorVisible,
   tableAxisTickAtFrame,
-  tableIndicatorBandsMm,
-  tableIndicatorHitAtFrame,
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
+// 🔴 ADR-739 §29 — η ΜΙΑ ερώτηση «πού έπεσε αυτό το συμβάν;», μοιρασμένη με τον φύλακα του
+// κλειδώματος. Δες την κεφαλίδα εκείνου του module: δύο αντίγραφα θα άφηναν νεκρή λωρίδα
+// στην άκρη του πίνακα, όπου ο φύλακας μπλοκάρει και ο pointer δεν δρα.
+import { tableEventWorldPoint, tablePointerHitAtWorld } from './table-cell-pointer-hit';
 // ADR-739 §27.15 — ο κύκλος ζωής της σύρσης ζει σε δικό του module· εδώ μένει η **γεωμετρία**.
 import { endTableCellDrag, startTableCellDrag } from './table-cell-drag-session';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
@@ -83,9 +91,8 @@ import {
   type TableCellRef,
   type TableSelectionSpan,
 } from '../../bim/table/table-cell-range';
-import type { TableEntityGeometry } from '../../types/table-entity';
 import type { TableEntity } from '../../types/table-entity';
-import type { ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { ViewTransform } from '../../rendering/types/Types';
 
 export interface UseTableCellPointerParams {
   readonly cursor: TableCellCursorState | null;
@@ -172,19 +179,21 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // συνεδρία σε `nav` — δηλαδή θα σου έκοβε τη γραφή τη στιγμή που διορθώνεις ένα γράμμα.
     // Ο ίδιος ΕΝΑΣ ορισμός του «ανήκω στη συνεδρία», καμία δεύτερη σύγκριση.
     if (isTableCellSessionElement(event.target)) return;
-    const worldPoint = eventWorldPoint(event, container, transformRef.current);
-    if (!worldPoint) return;
     const transform = transformRef.current;
-    if (!transform) return;
+    const worldPoint = tableEventWorldPoint(event, container, transform);
+    if (!worldPoint || !transform) return;
 
-    const geometry = computeTableEntityGeometryLive(entity);
-
-    // ADR-739 Φ.Δ βήμα 9 — **πρώτα οι ζώνες δείκτη**: ένα κλικ στο `B` επιλέγει ολόκληρη
-    // τη στήλη, στο `3` ολόκληρη τη γραμμή (Excel / Sheets). Προηγείται του κελιού επειδή
-    // οι δύο περιοχές δεν τέμνονται ποτέ — η ζώνη ζει σε **αρνητικά** mm — άρα η σειρά
-    // είναι απλώς «η πιο ειδική ερώτηση πρώτη», χωρίς καμία διεκδίκηση.
-    const bandHit = indicatorHitAt(entity, worldPoint, geometry, transform.scale);
-    if (bandHit) {
+    // 🔴 ADR-739 §29 — **η ΜΙΑ ερώτηση «πού έπεσε;»**, η ίδια ακριβώς που ρωτά ο φύλακας
+    // του κλειδώματος (`use-table-canvas-lockdown`). Ήταν δύο κλήσεις εδώ (ζώνη, μετά
+    // κελί) με τη γεωμετρία υπολογισμένη τοπικά· εξήχθη ώστε να μην μπορεί να αποκλίνει
+    // από την ερώτηση που αποφασίζει **αν** το συμβάν φτάνει καν εδώ. Δες την κεφαλίδα του
+    // `table-cell-pointer-hit` για το τι θα σήμαινε μια απόκλιση έστω κατά ένα pixel.
+    //
+    // ADR-739 Φ.Δ βήμα 9 — η **σειρά** (ζώνη πριν από κελί) ζει πλέον μέσα σε εκείνη τη
+    // συνάρτηση: ένα κλικ στο `B` επιλέγει ολόκληρη τη στήλη, στο `3` ολόκληρη τη γραμμή.
+    const pointerHit = tablePointerHitAtWorld(entity, worldPoint, transform.scale);
+    if (pointerHit?.where === 'band') {
+      const bandHit = pointerHit.band;
       claimTableCellSessionPointerDown();
       // 🔴 ADR-739 §27.15 — και η **χειρονομία** δηλώνεται: χωρίς αυτό, το body-drag του
       // ADR-560 armάρει στα 3px και η σύρση επιλογής θα μετακινούσε τον πίνακα.
@@ -227,11 +236,21 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       return;
     }
 
-    // Το κλικ πρέπει να πέσει μέσα στο πλέγμα **αυτού** του πίνακα. Έξω από αυτό —
-    // αλλού στον καμβά, ή στα περιθώρια του πίνακα — δεν μας αφορά: ο καμβάς θα κάνει
-    // ό,τι κάνει πάντα, και η συνεδρία θα κλείσει μόνη της από τον φύλακα εστίασης.
-    const hit = tableCellAtWorld(entity, worldPoint, geometry);
-    if (!hit) return;
+    // Το κλικ πρέπει να πέσει μέσα στο πλέγμα **αυτού** του πίνακα.
+    //
+    // 🔴 ADR-739 §29 — **ΤΟ ΣΧΟΛΙΟ ΕΔΩ ΕΛΕΓΕ ΤΟ ΑΝΤΙΘΕΤΟ ΚΑΙ ΗΤΑΝ ΣΩΣΤΟ ΤΟΤΕ.** Έγραφε:
+    // «έξω από αυτό — αλλού στον καμβά, ή στα περιθώρια του πίνακα — δεν μας αφορά: ο
+    // καμβάς θα κάνει ό,τι κάνει πάντα, και η συνεδρία θα κλείσει μόνη της από τον φύλακα
+    // εστίασης». Αυτή ήταν η μισή προδιαγραφή του §26.15, ρητά επαληθευμένη ζωντανά. Ο
+    // ιδιοκτήτης την **άλλαξε**: το κλικ έξω δεν είναι πια τρόπος εξόδου.
+    //
+    // Η αλλαγή **δεν** έγινε εδώ, και ο λόγος είναι δομικός: αυτός ο ακροατής ζει στο
+    // δοχείο και τρέχει **μετά** από τους ακροατές σύλληψης του `document`, ενώ η επιλογή
+    // οντότητας γεννιέται στο `mouseup` — δηλαδή σε συμβάν που αυτό το αρχείο δεν ακούει
+    // καθόλου. Το «έξω» το κόβει πλέον ο φύλακας του §29, **πριν** φτάσει οπουδήποτε.
+    // Εδώ μένει η αρχική, ακέραιη σημασία: «δεν είναι δικό μου, δεν το αγγίζω».
+    if (pointerHit === null) return;
+    const hit = pointerHit.cell;
 
     // ADR-739 §26.15 — από εδώ και κάτω το πάτημα **είναι** της συνεδρίας. Η δήλωση
     // γίνεται ΠΡΙΝ από κάθε εγγραφή, ώστε να ισχύει και για τους δύο δρόμους που
@@ -306,26 +325,6 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
   }, [hasSession, containerRef, handleMouseDown]);
 }
 
-/**
- * Σημείο συμβάντος → σημείο **κόσμου**, με τη ζωντανή προβολή. Ο ΕΝΑΣ δρόμος: τον περνούν
- * και το πάτημα και **κάθε κίνηση** της σύρσης (ADR-040 — ανάγνωση τη στιγμή του συμβάντος,
- * ποτέ στιγμιότυπο: ο χρήστης μπορεί να ζουμάρει με τον τροχό ενώ σέρνει).
- */
-function eventWorldPoint(
-  event: MouseEvent,
-  container: HTMLElement,
-  transform: ViewTransform | null,
-): { readonly x: number; readonly y: number } | null {
-  if (!transform) return null;
-  const rect = container.getBoundingClientRect();
-  const viewport: Viewport = { width: rect.width, height: rect.height };
-  return CoordinateTransforms.screenToWorld(
-    { x: event.clientX - rect.left, y: event.clientY - rect.top },
-    transform,
-    viewport,
-  );
-}
-
 /** Το κινούμενο άκρο μιας σύρσης **κελιών**· `null` έξω από το πλέγμα (η επιλογή μένει). */
 function cellEndAt(
   event: MouseEvent,
@@ -333,7 +332,7 @@ function cellEndAt(
   container: HTMLElement,
   transformRef: RefObject<ViewTransform>,
 ): TableCellRef | null {
-  const world = eventWorldPoint(event, container, transformRef.current);
+  const world = tableEventWorldPoint(event, container, transformRef.current);
   if (!world) return null;
   const hit = tableCellAtWorld(entity, world, computeTableEntityGeometryLive(entity));
   return hit ? { rowId: hit.rowId, colId: hit.colId } : null;
@@ -371,26 +370,11 @@ function axisTickAt(
   transformRef: RefObject<ViewTransform>,
   axis: 'column' | 'row',
 ): TableIndicatorHit | null {
-  const world = eventWorldPoint(event, container, transformRef.current);
+  const world = tableEventWorldPoint(event, container, transformRef.current);
   if (!world) return null;
   const geometry = computeTableEntityGeometryLive(entity);
   const frame = tableWorldToFrame(entity, world, geometry.mmToWorld);
   return tableAxisTickAtFrame(geometry.layout, frame, axis);
-}
-
-/** Σε ποια υποδιαίρεση ζώνης έπεσε το κλικ· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */
-function indicatorHitAt(
-  entity: TableEntity,
-  world: { readonly x: number; readonly y: number },
-  geometry: TableEntityGeometry,
-  viewScale: number,
-): TableIndicatorHit | null {
-  const pxPerMm = tablePxPerMm(geometry.mmToWorld, viewScale);
-  if (!isTableIndicatorVisible(geometry.layout.widthMm, geometry.layout.heightMm, pxPerMm)) {
-    return null;
-  }
-  const frame = tableWorldToFrame(entity, world, geometry.mmToWorld);
-  return tableIndicatorHitAtFrame(geometry.layout, frame, tableIndicatorBandsMm(pxPerMm));
 }
 
 /**

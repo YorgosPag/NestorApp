@@ -78,6 +78,16 @@
 import { useCallback, type FocusEvent } from 'react';
 
 /**
+ * Το όνομα του `data-*` γνωρίσματος, ως attribute — η **πηγή** και των δύο μορφών του.
+ *
+ * Δηλώνεται πρώτο και τροφοδοτεί το {@link TABLE_CELL_SESSION_MARKER}, ώστε το
+ * `data-table-cell-cursor` να γράφεται **μία** φορά σε ολόκληρο το έργο: μια δεύτερη γραφή
+ * (για το `closest` του §29) θα ήταν ακριβώς το είδος διπλότυπου που κανένα εργαλείο δεν
+ * πιάνει και που αποκλίνει σιωπηλά στην πρώτη μετονομασία.
+ */
+const SESSION_MARKER_ATTRIBUTE = 'data-table-cell-cursor';
+
+/**
  * Το `data-*` γνώρισμα που δηλώνει «ανήκω στη συνεδρία επεξεργασίας κελιού». Απλώνεται σε
  * **κάθε** εστιάσιμο στοιχείο της συνεδρίας.
  *
@@ -85,7 +95,7 @@ import { useCallback, type FocusEvent } from 'react';
  * θα ήταν καθαρότερη στα λόγια και θα κόστιζε μια σιωπηλή παλινδρόμηση αν κάποιο σημείο
  * έμενε πίσω. Η σημασία τεκμηριώνεται εδώ· ο ορισμός είναι ένας.
  */
-export const TABLE_CELL_SESSION_MARKER = { 'data-table-cell-cursor': 'true' } as const;
+export const TABLE_CELL_SESSION_MARKER = { [SESSION_MARKER_ATTRIBUTE]: 'true' } as const;
 
 /** Το κλειδί του ίδιου γνωρίσματος όπως το βλέπει το `dataset` — ο ΕΝΑΣ ορισμός. */
 const SESSION_DATASET_KEY = 'tableCellCursor';
@@ -93,6 +103,28 @@ const SESSION_DATASET_KEY = 'tableCellCursor';
 /** Ανήκει αυτό το στοιχείο στη συνεδρία επεξεργασίας κελιού; */
 export function isTableCellSessionElement(target: EventTarget | null): boolean {
   return target instanceof HTMLElement && target.dataset[SESSION_DATASET_KEY] === 'true';
+}
+
+/**
+ * 🔴 ADR-739 §29 — **ΤΡΙΤΗ μορφή της ίδιας έννοιας: «είμαι ΜΕΣΑ σε μέλος της συνεδρίας».**
+ *
+ * Το {@link isTableCellSessionElement} ρωτά «είναι **ΤΟ** πεδίο;» και είναι σωστό εκεί που
+ * το χρησιμοποιεί ο φύλακας εστίασης: το `relatedTarget` ενός `blur` **είναι** το πεδίο που
+ * παίρνει την εστίαση, ποτέ ένα παιδί του.
+ *
+ * Ο φύλακας του §29 όμως ρωτά για **σημεία κλικ**, και εκεί το target είναι ό,τι βρίσκεται
+ * κάτω από το δάχτυλο: ένα `<button>` **μέσα** στο μενού ζωνών, ένα `<span>` μέσα σε ετικέτα.
+ * Το μενού φέρει το σημάδι στο `DxfMenuContent` (§27.7) — στον **γονέα**, όχι στο κουμπί που
+ * πατάς. Με την πρώτη μορφή, κάθε επιλογή μενού θα φαινόταν «ξένη» και ο φύλακας θα έτρωγε
+ * το κλικ του **ίδιου του πίνακα**.
+ *
+ * Ο ορισμός παραμένει **ΕΝΑΣ** — το ίδιο `data-*` γνώρισμα, το ίδιο κλειδί, ένα αρχείο. Αυτό
+ * που αλλάζει είναι η **εμβέλεια** της ερώτησης, και γι' αυτό είναι δύο ονομασμένες
+ * συναρτήσεις αντί για μια παράμετρο: ο καλών δηλώνει τι ρωτά.
+ */
+export function isInsideTableCellSession(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.closest(`[${SESSION_MARKER_ATTRIBUTE}="true"]`) !== null;
 }
 
 /**

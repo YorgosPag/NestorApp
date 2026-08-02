@@ -192,12 +192,33 @@ export function collectDimStylesForExport(entities: readonly Entity[]): DimStyle
 }
 
 /**
- * Render a built DXF request to a `.dxf` Blob, fully client-side (no backend).
- * Coordinates are scaled from the scene's drawing units to the chosen DXF unit
- * (e.g. scene metres → DXF metres = ×1; scene mm → DXF metres = ×0.001), so the
- * file is dimensionally correct in Tekton/AutoCAD.
+ * Ό,τι ακριβώς μπαίνει μέσα στο `.dxf` — `string` όταν το αρχείο είναι UTF-8 (2007+) και
+ * `Uint8Array` όταν έχει ήδη κωδικοποιηθεί σε Windows-1253 (pre-Unicode εκδόσεις).
+ *
+ * Και οι δύο μορφές γράφονται σωστά ως έχουν, είτε σε `Blob` είτε σε `fs.writeFileSync`:
+ * το string πάει utf-8, ο πίνακας bytes πάει αυτούσιος.
  */
-export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLineMode): Blob {
+export type DxfPayload = string | Uint8Array;
+
+/**
+ * ADR-739 Φ.Ε/Φ2 βήμα 4 — **το περιεχόμενο του αρχείου, χωρίς τη συσκευασία του.**
+ *
+ * 🔴 Υπάρχει επειδή το `Blob` **τυφλώνει**: το jsdom δεν υλοποιεί `Blob.text()`, οπότε η
+ * ίδια η σουίτα του adapter μπορούσε να συγκρίνει μόνο **μεγέθη** («jsdom's Blob has no
+ * .text(), so we compare sizes»). Όποιος ήθελε τα πραγματικά bytes του **επαγγελματικού
+ * μονοπατιού** έπρεπε να **αντιγράψει με το χέρι** τις ~20 επιλογές του `writeDxfAscii` —
+ * δηλαδή ακριβώς το sibling clone που το CHECK 3.28 (N.18) υπάρχει για να σκοτώσει, και η
+ * πιο εύκολη λάθος διάγνωση της Φ1: **χωρίς `acadVer`/`layersById` ο writer δεν γράφει
+ * καθόλου ενότητα `TABLES`** ⇒ κανένα STYLE record, κανένα XDATA 1071, και το αρχείο
+ * μοιάζει σπασμένο ενώ ο κώδικας είναι σωστός.
+ *
+ * Η συνάρτηση δεν προσθέτει συμπεριφορά: ο `renderDxfBlob` είναι πλέον **η συσκευασία**
+ * του αποτελέσματός της, byte προς byte.
+ */
+export function renderDxfPayload(
+  request: DxfExportSceneRequest,
+  lineMode?: DxfLineMode,
+): DxfPayload {
   // ADR-636 Στάδιο 2 Φ2.1 — full LAYER table only on the AutoCAD (POLYLINE) path. The Tekton
   // dialect (`lines`) flattens/ignores tables → keep it minimal (bare, per its parser).
   const professionalTables = lineMode !== 'lines';
@@ -238,10 +259,19 @@ export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLine
   // writes the JS string as-is; a pre-Unicode target (cp1253) re-encodes the WHOLE string to
   // Windows-1253 bytes (ASCII structure 1:1, Greek → single codepage bytes) so the file matches
   // its own `$DWGCODEPAGE=ANSI_1253` and opens correctly in legacy AutoCAD/Tekton.
-  const bytes = request.settings.encoding === 'cp1253'
+  return request.settings.encoding === 'cp1253'
     ? encodingService.encodeWindows1253(dxf)
     : dxf;
-  return new Blob([bytes], { type: 'application/dxf' });
+}
+
+/**
+ * Render a built DXF request to a `.dxf` Blob, fully client-side (no backend).
+ * Coordinates are scaled from the scene's drawing units to the chosen DXF unit
+ * (e.g. scene metres → DXF metres = ×1; scene mm → DXF metres = ×0.001), so the
+ * file is dimensionally correct in Tekton/AutoCAD.
+ */
+export function renderDxfBlob(request: DxfExportSceneRequest, lineMode?: DxfLineMode): Blob {
+  return new Blob([renderDxfPayload(request, lineMode)], { type: 'application/dxf' });
 }
 
 /**

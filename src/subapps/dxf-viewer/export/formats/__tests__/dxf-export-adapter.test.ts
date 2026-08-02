@@ -11,6 +11,7 @@ import {
   mergeFloorsToSingleDxfScene,
   buildFloorFilename,
   renderDxfBlob,
+  renderDxfPayload,
   resolveUnicodeSafeAcadVer,
   encodingToCodepage,
   collectCustomLinetypesForExport,
@@ -115,6 +116,19 @@ describe('ADR-636 Στάδιο 1 — professional HEADER', () => {
     expect(blob.size).toBeGreaterThan(0);
     expect(blob.type).toBe('application/dxf');
   });
+
+  it('🔴 ADR-739 Φ2/4 — το Blob είναι Η ΣΥΣΚΕΥΑΣΙΑ του payload, ούτε ένα byte παραπάνω', () => {
+    // Ο διαχωρισμός `renderDxfPayload` / `renderDxfBlob` υπάρχει ώστε τα tests (και ο
+    // παραγωγός δειγματολογίου) να βλέπουν τα ΠΡΑΓΜΑΤΙΚΑ bytes του επαγγελματικού
+    // μονοπατιού — το jsdom Blob δεν έχει `.text()`. Αν κάποιος προσθέσει κάτι στη
+    // συσκευασία (BOM, τερματικό newline), το αρχείο του χρήστη θα έπαυε να είναι αυτό που
+    // τα tests ελέγχουν, **σιωπηλά**.
+    const realLine = { id: 'l', type: 'line', layerId: 'lyr_a', start: { x: 0, y: 0 }, end: { x: 1, y: 1 } } as unknown as Entity;
+    const { request } = buildDxfExportRequest(scene([realLine]), { entityScope: 'dxf-only' });
+    const payload = renderDxfPayload(request);
+    expect(typeof payload).toBe('string');
+    expect(renderDxfBlob(request).size).toBe(new Blob([payload]).size);
+  });
 });
 
 describe('ADR-636 Στάδιο 2 Φ2.1 — professional LAYER table', () => {
@@ -125,9 +139,12 @@ describe('ADR-636 Στάδιο 2 Φ2.1 — professional LAYER table', () => {
   // the Tekton (lines) blob does not. jsdom's Blob has no .text(), so we compare sizes.
   it('AutoCAD (polyline) path carries a LAYER table; Tekton (lines) stays minimal', () => {
     const { request } = buildDxfExportRequest(scene([realLine]), { entityScope: 'dxf-only' });
-    const polyline = renderDxfBlob(request);          // default lineMode → professional tables
-    const tekton = renderDxfBlob(request, 'lines');   // gated out
-    expect(polyline.size).toBeGreaterThan(tekton.size);
+    // ADR-739 Φ.Ε/Φ2 βήμα 4 — το `renderDxfPayload` ξετύφλωσε αυτόν τον έλεγχο: ρωτιέται
+    // πλέον το **περιεχόμενο**, όχι το μέγεθος. Ο πίνακας LAYER είτε υπάρχει είτε όχι.
+    const polyline = renderDxfPayload(request);          // default lineMode → professional tables
+    const tekton = renderDxfPayload(request, 'lines');   // gated out
+    expect(polyline).toContain('TABLE\n2\nLAYER\n');
+    expect(tekton).not.toContain('TABLE\n2\nLAYER\n');
   });
 
   it('collectCustomLinetypesForExport skips ISO baseline + undefined linetypes', () => {

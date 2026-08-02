@@ -28,6 +28,10 @@ import { setSnapDrawingMode } from './SnapDrawingModeStore';
 import { getGlobalGuideStore } from '../../systems/guides/guide-store';
 import { projectPointOntoGuide, isGuideEditTool, GUIDE_HIT_TOLERANCE_PX } from '../../systems/guides/guide-types';
 import { setHoveredEntity, setHoveredOverlay } from '../hover/HoverStore';
+// ADR-739 §29 — ο ΕΝΑΣ ορισμός του «η λειτουργία πίνακα κατέχει τον καμβά». Ίδια κατεύθυνση
+// εισαγωγής με το `isTableCellPointerGestureClaimed` που καταναλώνει ήδη ο αδελφός χειριστής
+// του `mousedown` (`useCentralizedMouseHandlers`, §27.15).
+import { isCanvasLockedByTableSession } from '../../ui/table-cell-editor/use-table-canvas-lockdown';
 // ADR-659 — overlap «⧉ N» badge: count the stack under the cursor at hover time.
 // Uses the LIVE registry hit-testing instance (fed by the render loop's updateScene),
 // the SAME one the top-1 `hitTestCallback` uses — NOT the zombie exported singleton.
@@ -301,7 +305,16 @@ export function useMouseMoveHandler({
 
     // Unified hover highlighting — DXF entities > overlay priority
     // Suppress hover entirely while grip is hovered/dragged — only snap indicators show
-    if (isGripDragging) {
+    //
+    // 🔴 ADR-739 §29 — ΚΑΙ όσο η λειτουργία πίνακα κατέχει τον καμβά. Ο ιδιοκτήτης το είδε
+    // ως «κάνει hover πάνω σε οντότητες ενώ γράφω»: το tooltip ΕΠΙΠΕΔΟ/ΧΡΩΜΑ/ΤΥΠΟΣ ΓΡΑΜΜΗΣ
+    // άναβε πίσω από τον ανοιχτό πίνακα. Μπαίνει στον **ίδιο** κλάδο και όχι σε δικό του:
+    // εδώ ζει ήδη ο πλήρης καθαρισμός (hover + overlay + sub-element + badge), και ένας
+    // δεύτερος δρόμος σβησίματος θα ξεχνούσε ένα από τα τέσσερα στην πρώτη προσθήκη.
+    //
+    // ⚠️ Το `mousemove` ΔΕΝ μπλοκάρεται από τον φύλακα του §29 — το pan ζει πάνω του, και ο
+    // ιδιοκτήτης ζήτησε ρητά να κρατηθεί. Γι' αυτό το hover παραιτείται εδώ, στην πηγή.
+    if (isGripDragging || isCanvasLockedByTableSession()) {
       setHoveredEntity(null);
       setHoveredOverlay(null);
       setStairSubElementHover(null);
