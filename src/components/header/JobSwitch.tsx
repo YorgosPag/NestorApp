@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { HiddenItemsBadge } from '@/components/job/HiddenItemsBadge';
+import { JobSuggestion } from '@/components/job/JobSuggestion';
 import { JOBS } from '@/config/jobs-registry';
 import { JOB_ALL, resolveJobAccess } from '@/config/jobs-access';
 import { useActiveJob, isJobSelection } from '@/contexts/ActiveJobContext';
@@ -106,6 +107,13 @@ export function JobSwitch() {
         subItemCount={hiddenSubItemCount}
         onRestore={resetToAll}
       />
+
+      {/* ΦΑΣΗ 3.5α / Υ-12 — η πρόταση ζει **πάνω στο χειριστήριο** που την
+          εκτελεί, όχι σε modal πρώτης εκκίνησης. Ο Revit ρωτά αλλού και σε
+          βάζει να διορθώσεις αλλού· γι' αυτό υπάρχει άρθρο «How to disable».
+          ⓘ Οι δύο δείκτες **δεν συνυπάρχουν ποτέ**: η πρόταση ζητά
+          `activeJob === JOB_ALL`, όπου το `hiddenCount` είναι εξ ορισμού 0. */}
+      <JobSuggestion />
     </span>
   );
 }

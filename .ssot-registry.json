@@ -1804,6 +1804,19 @@
       ],
       "tier": 6
     },
+    "job-suggestion": {
+      "ssotFile": "src/config/job-suggestion.ts",
+      "description": "ADR-748 Φάση 3.5α — SSoT της ΠΡΟΤΑΣΗΣ δουλειάς: «πότε μιλάμε, τι προτείνουμε, πόσα θα δει». Καθαρές συναρτήσεις, μηδέν React (σε hook θα ήταν αδοκίμαστες χωρίς render — ίδιος λόγος με το jobs-visibility). 🔴 ΔΕΝ ΡΩΤΑΜΕ, ΠΡΟΤΕΙΝΟΥΜΕ (§6.14, έβδομη έρευνα): 2 στους 3 CAD δεν ρωτούν, και ο ένας που ρωτά (Revit 2022 «Hello There!») έχει αίτημα απενεργοποίησης + επίσημο άρθρο «How to disable»· ο Revit ρωτά επειδή ΔΕΝ ΞΕΡΕΙ, εμείς υπολογίζουμε από 13 ρόλους (active user paradox, NN/g). 🔒 Ο αριθμός «Χ από Υ» παράγεται από το ΙΔΙΟ filterItemsByJob/summarizeHidden που κάνει το πραγματικό φιλτράρισμα — δεύτερος μετρητής = το ελάττωμα των 17:13. ⚠️ Η πρόταση απαιτεί decision === 'granted', ΠΟΤΕ unknown: «δεν το κρύβω» ≠ «το προτείνω» (αλλιώς ο τυφλός υπολογισμός του Π-15 προτείνει την πρώτη κατά JOB_ORDER ως γνώση). Δεύτερος κανόνας «πότε προτείνουμε» αλλού = διπλότυπο που αποκλίνει σιωπηλά.",
+      "forbiddenPatterns": [
+        "export\\s+(function|const)\\s+computeJobSuggestion\\b",
+        "export\\s+const\\s+MIN_JOBS_FOR_SUGGESTION\\b",
+        "type\\s+JobSuggestion(Input|Outcome)\\s*="
+      ],
+      "allowlist": [
+        "src/config/job-suggestion.ts"
+      ],
+      "tier": 6
+    },
     "effective-permissions-client": {
       "ssotFile": "src/hooks/useEffectivePermissions.ts",
       "description": "ADR-748 Φάση 3 — Η ΜΙΑ πηγή για «τι δικαιώματα βλέπει ο browser». Ζούσε inline μέσα στο app-sidebar.tsx (ο μόνος ζωντανός καλών του createNavigationConfig)· η Φάση 3 πρόσθεσε δύο ακόμη καταναλωτές ⇒ κεντρικοποιήθηκε πριν γεννηθεί τριπλότυπο (N.0.2). Δηλώνει ΡΗΤΑ ποιες πηγές απάντησαν (availableSources) — αυτό τροφοδοτεί τον κανόνα «το unknown δεν κρύβεται» του jobs-access. ⚠️ ΔΕΝ προσθέτει/αφαιρεί δικαίωμα: μεταφέρει αυτούσια τη συμπεριφορά (fallback admin_access ΜΟΝΟ για super_admin — ο company_admin ΔΕΝ μπαίνει, θα ήταν προσθήκη ορατότητας που το §10/Ε5.η απαγορεύει).",

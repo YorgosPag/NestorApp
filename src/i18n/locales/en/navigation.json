@@ -249,6 +249,16 @@
       "bannerDescription": "In place, dimmed.",
       "stop": "Done",
       "demoted": "Hidden by the active job"
+    },
+    "suggestion": {
+      "trigger": "{job}?",
+      "triggerAriaLabel": "Suggestion: show only the {job} job",
+      "title": "Do you work in {job}?",
+      "reason": "Based on your permissions, this job fits you best.",
+      "preview": "You will see {visible} of {total} menu sections.",
+      "reversible": "Return to “All jobs” with one click, whenever you want.",
+      "accept": "Try it",
+      "decline": "No thanks"
     }
   },
   "sidebar": {

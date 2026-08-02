@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "03ddcd863bfee5fcbf4fe351fc6b65ca1053d96f6fc0a083508e9d3504237b7c"
+    "src/i18n/generated/shell-slice.el.json": "8ed6d64aea4e9020f1605a8a57020a182c5bb78439acec318bb0b8186f9f8228"
   },
   "boundaries": {
     "dynamic": [
@@ -38,7 +38,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "77976ee24d3a57be1f2407d24bc6229b1ca55dd4e68fed100028b5a5442cad3c",
+  "inputsSha256": "26ec19b4385f3494f8b8a524dedb6af6193b5fc59dd3a59074b10a9acd019375",
   "languages": [
     "el"
   ],
@@ -95,13 +95,14 @@
     "src/components/dashboard/QuickActionsStrip.tsx": "edfff798102974e14020632ddffa89504be8a98038b2272a3d080766e1304efc",
     "src/components/generic/config/photo-config/styling/colors.ts": "49664378ba12496215630613e47937572e59891b2f75d71303162187e99d7105",
     "src/components/header/CompanySwitcher.tsx": "15b046266274446df4faf2e090b8f11b443fb5686d8372e71a81d42db0dd3875",
-    "src/components/header/JobSwitch.tsx": "bf13325af9f964e87489b375fb6457b5a941b2330b1705da0f6eb9b6e17484a8",
+    "src/components/header/JobSwitch.tsx": "90a57871b1795ee1211f960408fc1559aed466a649ef58c0ea6f0a7a846c6e5c",
     "src/components/header/help-button.tsx": "5befc435bbfe0af77b02d289be4828d66a700d5d6913a4a845c5a68ed02c35f2",
     "src/components/header/language-switcher.tsx": "3e7ec1812796275e8bee346903085cae1b8c6291ef22b068dc92015fed3b2e32",
     "src/components/header/theme-toggle.tsx": "e79b2e77973f3b547e0dacbf737c228c7db1dd6ea8fc1d0140dbae8984ece381",
     "src/components/header/user-menu.tsx": "3c63d6e79c8812e0c77a807a3ef938e12494336c40c47ad481cabbd22088e940",
     "src/components/header/voice-assistant-button.tsx": "c56a417da0fd30f53ba7046c5293b0f09395d03f3149675787f6d1ca109f9e05",
     "src/components/job/HiddenItemsBadge.tsx": "4a787cd073d257838351379574abe8e8dd222efca9c44e05fb0fdb3ff3e7b58d",
+    "src/components/job/JobSuggestion.tsx": "bdd9cb6b23c4638221afe6dbf1bab3c0d46ab7fe51cf07bb56a72be1ded45b8d",
     "src/components/layout/ConditionalAppShell.tsx": "2d9d98812c342e090146b890ff33b66690df25d62c89d7f50f438ccfa9846839",
     "src/components/layout/GlobalFileUploadToast.tsx": "7cae2db1e766efa8e05167f60c4f91bc9452b08876818300e8dd556a9ff1224d",
     "src/components/layout/MainContentBridge.tsx": "e8121902acdf603283864771a1fc590ff1476ce6362b24959aa9ae88d5afdab6",
@@ -191,6 +192,7 @@
     "src/config/firestore-collections.ts": "74021a8dd79894f87da8b8f309ddd058e4ba1901ca34c24cedc4ea4aa70ee674",
     "src/config/individual-config.ts": "8a2a4f81ae215b752ff71e21d929d09a893d3d14335e7faa00c99e6dab0367bc",
     "src/config/iso19650-constants.ts": "9b52b8e6cd641328762db95ba0d1e280581845fe5827c8dead926531658349c3",
+    "src/config/job-suggestion.ts": "5f9b926d736393f104be8cef5ff45187bfb324b372e148f00e02d7636208e2e2",
     "src/config/jobs-access.ts": "cd9ecbc9f56123a902b624b7ddd6cc52082dc2e7e7fc6b7116c853a86f799821",
     "src/config/jobs-registry.ts": "030b7091aeb5191bbd6abe3ccc9e23a1aa25f586cbed3fe226c07a4b6d9086b7",
     "src/config/jobs-visibility.ts": "ab652f1d2a901b3411b15871f941beac2bb71950a0a2d15129f8bda65e4467ff",
@@ -249,7 +251,7 @@
     "src/hooks/useHasBuildingsWithNoUnits.ts": "2cabeb87e1013037ccf8e73be1ff4060976ec6a8a0db8e77e9ff91b2fd3dde25",
     "src/hooks/useIconSizes.ts": "fbf97823babaf80ed36e89974f45744eb162ef33144fd91d14d0d6db8ed60e37",
     "src/hooks/useInterval.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
-    "src/hooks/useJobFilteredNavigation.ts": "fd4576719d7154f2be8c5d44b4e91ca471d1047b9931093f99c84f66dc8b08b3",
+    "src/hooks/useJobFilteredNavigation.ts": "579842f5e5a243ebc4ff3d9f8f2b4a1bcd9f7f4abf775b7943d5d2bf6b6b2265",
     "src/hooks/useLayoutClasses.ts": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
     "src/hooks/useMobile.tsx": "7e9a21ad70c199c41a5759f3f25d7b663b0d9e263604d22a408b979e118b39be",
     "src/hooks/useSemanticColors.ts": "a50d1f36d45d4ea776bf94ab787ad0bcfeebbe07716f7e8f0cd546572bcb85e5",
@@ -309,7 +311,7 @@
     "src/lib/social-sharing/SocialSharingPlatforms.tsx": "0fbec2423b4140ef043cb7375a7fc39473b87aae1153ac349a8581196a58872f",
     "src/lib/stale-cache.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/state/createExternalStore.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/lib/storage/safe-storage.ts": "19345d1b05cbd28c0bfc73c13f7946562ff72f64f19b18b84b226c23df9f0094",
+    "src/lib/storage/safe-storage.ts": "ae8892f405739c6f2efe3f70dce3ce9856f7471d7dcd159d923b2b1eb13a46e0",
     "src/lib/telegram/chat-id-validator.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/telemetry/Logger.ts": "8cea2ea4dca81ce41893b77846b2b927e64552429df5d13b1f77c6e758dc518d",
     "src/lib/telemetry/log-outputs.ts": "8b97eba8e9086103ebb6feaf7ab49f6d4afa12b736ed541472ace15dd4154b97",
@@ -480,8 +482,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 404,
-    "sliceBytes": 187063
+    "shellFiles": 406,
+    "sliceBytes": 187745
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",
@@ -3456,6 +3458,14 @@
         "jobs.reveal.showAriaLabel",
         "jobs.reveal.stop",
         "jobs.site.label",
+        "jobs.suggestion.accept",
+        "jobs.suggestion.decline",
+        "jobs.suggestion.preview",
+        "jobs.suggestion.reason",
+        "jobs.suggestion.reversible",
+        "jobs.suggestion.title",
+        "jobs.suggestion.trigger",
+        "jobs.suggestion.triggerAriaLabel",
         "jobs.switch.all",
         "jobs.switch.ariaLabel",
         "jobs.switch.hiddenBreakdown",

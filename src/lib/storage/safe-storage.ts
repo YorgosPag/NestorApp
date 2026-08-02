@@ -25,6 +25,14 @@ export const STORAGE_KEYS = {
   // η λίστα των διαθέσιμων υπολογίζεται ΠΑΝΤΑ ζωντανά (Ε5.α — καμία αντιγραφή).
   ACTIVE_JOB: 'nestor_active_job',
 
+  // ADR-748 Φάση 3.5α — «μου το πρότεινες, είπα όχι» (prefix — append uid).
+  // ⚠️ Ανά **χρήστη**, όχι καθολικό: σε κοινό μηχάνημα η άρνηση του ενός δεν
+  // κλείνει το στόμα της εφαρμογής για τον επόμενο. Ίδιο μοτίβο με το
+  // AUTH_PROFILE_COMPLETE_PREFIX παρακάτω.
+  // Γνωστό όριο: ζει **ανά συσκευή**, όπως ΟΛΟ το Ε5.β σήμερα (ACTIVE_JOB).
+  // Η μετακίνηση σε λογαριασμό ανήκει στη Φάση 4 — μαζί, όχι μόνο του.
+  JOB_SUGGESTION_DISMISSED_PREFIX: 'nestor_job_suggestion_dismissed_',
+
   // User type
   USER_TYPE: 'geo-alert-user-type',
 

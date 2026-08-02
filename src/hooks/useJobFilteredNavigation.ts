@@ -48,8 +48,33 @@ import {
 } from '@/config/navigation';
 import type { MenuItem } from '@/config/navigation';
 import { filterItemsByJob, summarizeHidden } from '@/config/jobs-visibility';
+import { computeJobSuggestion, type JobSuggestionOutcome } from '@/config/job-suggestion';
 import { useActiveJob } from '@/contexts/ActiveJobContext';
 import { useEffectivePermissions } from '@/hooks/useEffectivePermissions';
+
+/** Τα τρία δέντρα του sidebar, περασμένα **μόνο** από το φίλτρο δικαιωμάτων. */
+export interface JobMenus {
+  readonly main: MenuItem[];
+  readonly tools: MenuItem[];
+  readonly settings: MenuItem[];
+}
+
+/**
+ * 🔒 **ΤΟ ΜΟΝΑΔΙΚΟ ΣΗΜΕΙΟ ΠΟΥ ΧΤΙΖΕΙ ΤΑ ΤΡΙΑ ΔΕΝΤΡΑ.**
+ *
+ * Δύο καταναλωτές: ο φιλτραρισμένος hook (τι βλέπεις **τώρα**) και η πρόταση
+ * της Φάσης 3.5α (τι θα έβλεπες **αν** δεχτείς). Αν καθένας τα έχτιζε μόνος
+ * του, ο αριθμός της πρότασης θα μπορούσε να μετρά **άλλο δέντρο** από αυτό
+ * που βάφει η οθόνη — η ίδια οικογένεια ελαττώματος με το «22 αντί για 9».
+ */
+export function buildJobMenus(permissions: readonly string[]): JobMenus {
+  const permissionList = [...permissions];
+  return {
+    main: getMainMenuItems(permissionList),
+    tools: getToolsMenuItems(permissionList),
+    settings: getSettingsMenuItems(permissionList),
+  };
+}
 
 /**
  * Ό,τι χρειάζεται η **οθόνη** για τα επίπεδα 2 και 3 — ένα αντικείμενο, ώστε να
@@ -93,12 +118,7 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
   const { activeJob, isRevealingHidden, setRevealingHidden } = useActiveJob();
 
   const computed = useMemo(() => {
-    const permissionList = [...permissions];
-    const menus = {
-      main: getMainMenuItems(permissionList),
-      tools: getToolsMenuItems(permissionList),
-      settings: getSettingsMenuItems(permissionList),
-    };
+    const menus = buildJobMenus(permissions);
     const results = {
       main: filterItemsByJob(menus.main, activeJob),
       tools: filterItemsByJob(menus.tools, activeJob),
@@ -134,4 +154,31 @@ export function useJobFilteredNavigation(): JobFilteredNavigation {
       },
     };
   }, [computed, isRevealingHidden, onReveal, onStopRevealing]);
+}
+
+/**
+ * ADR-748 Φάση 3.5α — η **πρόταση** δουλειάς, ή `null` όταν δεν υπάρχει λόγος.
+ *
+ * ΓΙΑΤΙ ΣΤΟ ΙΔΙΟ ΑΡΧΕΙΟ με τον φιλτραρισμένο hook: μοιράζονται το
+ * `buildJobMenus` και απαντούν **δύο όψεις της ίδιας ερώτησης** — «τι βλέπω
+ * τώρα» και «τι θα έβλεπα αν δεχτώ». Χωριστό αρχείο θα ήταν δεύτερο σπίτι για
+ * την ίδια γνώση, με δική του ευκαιρία να αποκλίνει.
+ *
+ * ⚠️ Η **απόρριψη** έρχεται απ' έξω ως `dismissed` και δεν διαβάζεται εδώ: η
+ * αποθήκευση είναι πλευρική ενέργεια του component, ενώ αυτός ο hook μένει
+ * καθαρός υπολογισμός πάνω σε ζωντανά δεδομένα (Ε5.α).
+ */
+export function useJobSuggestion(dismissed: boolean): JobSuggestionOutcome | null {
+  const access = useEffectivePermissions();
+  const { activeJob } = useActiveJob();
+
+  return useMemo(() => {
+    const menus = buildJobMenus(access.permissions);
+    return computeJobSuggestion({
+      access,
+      activeJob,
+      dismissed,
+      menus: [menus.main, menus.tools, menus.settings],
+    });
+  }, [access, activeJob, dismissed]);
 }
