@@ -128,6 +128,6 @@ function styleEntryFor(
     // υποκαθιστά με `Arial.ttf` επειδή το SHX `txt` δεν έχει ελληνικά γλυφά, οπότε ένα
     // `1000 txt.shx` θα δήλωνε ως τυπογραφική οικογένεια ένα **όνομα αρχείου SHX** πάνω σε
     // TrueType record — αντίφαση που ο πρώτος αναγνώστης θα την έλυνε όπως ήθελε.
-    extendedFont: { family: fontFamilyOfFileName(fontFile), bold, italic },
+    ...(trueType ? { extendedFont: { family: fontFamilyOfFileName(fontFile), bold, italic } } : {}),
   };
 }
