@@ -119,14 +119,48 @@ let pointerDownClaim = false;
  */
 export function claimTableCellSessionPointerDown(): void {
   if (!isTableCellSessionElement(document.activeElement)) return;
+  installClaimExpiry();
   pointerDownClaim = true;
 }
 
-/** Διάβασε-και-σβήσε: η δήλωση ισχύει για **ένα** blur, ποτέ για το επόμενο. */
-function consumePointerDownClaim(): boolean {
-  const claimed = pointerDownClaim;
-  pointerDownClaim = false;
-  return claimed;
+/**
+ * 🔴 Η δήλωση ζει όσο **η χειρονομία**, όχι όσο ένα συμβάν.
+ *
+ * Ήταν «διάβασε-και-σβήσε» — μια γραμμή που φαινόταν αυστηρότερη και ήταν **λάθος**.
+ * Μετρημένο ζωντανά (καταγραφή συμβάντων, 2026-08-02): ένα κλικ σε κελί παράγει **δύο**
+ * `focusout`, όχι ένα —
+ *
+ *   `mousedown` → `focusout` (Α) → `focusin` → `focusout` (Β) → `mouseup`
+ *
+ * το (Α) από το ξαναστήσιμο του πεδίου και το (Β) από τη μεταφορά εστίασης του browser, που
+ * είναι **προεπιλεγμένη ενέργεια** και έρχεται τελευταία. Η δήλωση καταναλωνόταν από το (Α)
+ * και το (Β) έμενε ορφανό: η συνεδρία επιβίωνε αλλά **έχανε το πληκτρολόγιο** — «ζωντανή
+ * αλλά κουφή», διαλείπουσα, 2 στα 3 τρεξίματα.
+ *
+ * Πλέον λήγει με **νέα είσοδο του χρήστη**, όχι με την πρώτη ανάγνωση:
+ *  - **επόμενο `mousedown`** — άλλη χειρονομία ποντικιού, όπου κι αν γίνει· γι' αυτό το κλικ
+ *    **έξω** από τον πίνακα εξακολουθεί να κλείνει τη συνεδρία, ακόμα κι αν έγινε σε στοιχείο
+ *    που δεν φτάνει ποτέ στον ακροατή του καμβά (κορδέλα, πλευρικός πίνακας)·
+ *  - **επόμενο `keydown`** — αλλιώς ένα `Tab` έξω, μετά από κλικ σε κελί, θα ανακτούσε το
+ *    πληκτρολόγιο και ο χρήστης **δεν θα μπορούσε να βγει από τον πίνακα**.
+ *
+ * Φάση **σύλληψης** στο `document`: τρέχει πάντα **πριν** από τον ακροατή του πίνακα (που ζει
+ * βαθύτερα, στον καμβά), άρα η σειρά είναι αναλλοίωτα «λήξη → ίσως νέα δήλωση». Δύο ακροατές
+ * χαμηλής συχνότητας, μηδέν συνδρομές React, καμία χρονική σταθερά.
+ */
+let claimExpiryInstalled = false;
+
+function installClaimExpiry(): void {
+  if (claimExpiryInstalled || typeof document === 'undefined') return;
+  claimExpiryInstalled = true;
+  const expire = (): void => { pointerDownClaim = false; };
+  document.addEventListener('mousedown', expire, { capture: true });
+  document.addEventListener('keydown', expire, { capture: true });
+}
+
+/** Ισχύει η δήλωση αυτή τη στιγμή; Δεν καταναλώνεται — δες το {@link installClaimExpiry}. */
+function hasPointerDownClaim(): boolean {
+  return pointerDownClaim;
 }
 
 /** Test helper — μηδενισμός μεταξύ tests, ίδιο μοτίβο με τα stores. */
@@ -171,9 +205,9 @@ export function useTableCellSessionBlur(
   return useCallback(
     (event: FocusEvent<HTMLElement>) => {
       if (isTableCellSessionElement(event.relatedTarget)) return;
-      // Καταναλώνεται **συγχρόνως**, μέσα στην ίδια αποστολή συμβάντος που τη γέννησε: έτσι η
-      // δήλωση δεν μπορεί να ταξιδέψει σε επόμενο blur, ούτε καν αν το καρέ αργήσει.
-      const reclaimable = consumePointerDownClaim();
+      // Διαβάζεται **συγχρόνως** (η κατάσταση μπορεί να αλλάξει μέχρι το καρέ) αλλά **δεν**
+      // καταναλώνεται: ένα κλικ παράγει δύο `focusout`, και η λήξη ανήκει στη χειρονομία.
+      const reclaimable = hasPointerDownClaim();
       onCommit();
       if (typeof requestAnimationFrame === 'undefined') return;
       requestAnimationFrame(() => {

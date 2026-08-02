@@ -38,6 +38,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import { useVisualViewport } from './responsive';
 
 /** Πόσα px του editor μένουν υποχρεωτικά ορατά όταν το άγκυρο φεύγει εκτός οθόνης. */
@@ -118,6 +119,27 @@ export interface TextEditorAnchorBox {
 
 export interface TextEditorAnchorLayerProps extends TextEditorAnchor {
   readonly children: React.ReactNode;
+  /**
+   * 🔴 ADR-739 §26.15 — **το κέλυφος δεν αρπάζει το ποντίκι.**
+   *
+   * Το κουτί είναι `position: fixed` πάνω από τον καμβά. Ένα παιδί που δηλώνει
+   * `pointer-events-none` (ο επεξεργαστής κελιού σε **πλοήγηση**, ώστε «τα κλικ να περνούν
+   * στον καμβά από κάτω») **δεν αρκεί**: το κέλυφος εξακολουθεί να είναι στόχος, και το κλικ
+   * σταματά εκεί.
+   *
+   * ── Πώς φάνηκε (μετρημένο ζωντανά, 2026-08-02) ──
+   * Καταγραφή συμβάντων γύρω από δύο διαδοχικά κλικ στο **ίδιο σημείο**:
+   *   1ο κλικ (ο δρομέας αλλού): `mousedown` → **CANVAS** ⇒ όλα σωστά·
+   *   2ο κλικ (ο δρομέας ΕΚΕΙ):  `mousedown` → **DIV**   ⇒ ο ακροατής του πίνακα δεν έβλεπε
+   *      ποτέ το πάτημα, καμία δήλωση, και η συνεδρία έκλεινε από το `focusout`.
+   *
+   * Δηλαδή το **ενεργό** κελί ήταν πάντα σκεπασμένο από το ίδιο του το κέλυφος — γι' αυτό το
+   * κλικ στο ίδιο κελί αποτύγχανε **11/11**, με μηδενική διακύμανση.
+   *
+   * Είναι **επιλογή ανά καταναλωτή** και όχι καθολική: η γραμμή τύπων και ο επεξεργαστής
+   * ελεύθερου κειμένου **πρέπει** να δέχονται κλικ. Απόν ⇒ καμία αλλαγή συμπεριφοράς.
+   */
+  readonly transparentToPointer?: boolean;
 }
 
 /**
@@ -153,7 +175,7 @@ function boxStyle(box: TextEditorAnchorBox): React.CSSProperties {
 }
 
 export function TextEditorAnchorLayer(props: TextEditorAnchorLayerProps): React.ReactElement {
-  const { project, subscribe, size, projectBox, children } = props;
+  const { project, subscribe, size, projectBox, transparentToPointer, children } = props;
   const { keyboardInset } = useVisualViewport();
   const ref = useRef<HTMLDivElement | null>(null);
   // ADR-040 — το `keyboardInset` διαβάζεται ΜΕΣΑ στο tick μέσω ref, όχι ως dependency του
@@ -218,7 +240,12 @@ export function TextEditorAnchorLayer(props: TextEditorAnchorLayerProps): React.
   return (
     <div
       ref={ref}
-      className="fixed left-0 top-0 z-40 origin-top-left will-change-transform"
+      className={cn(
+        'fixed left-0 top-0 z-40 origin-top-left will-change-transform',
+        // Δες {@link TextEditorAnchorLayerProps.transparentToPointer}: χωρίς αυτό, το ίδιο το
+        // κέλυφος του επεξεργαστή σκεπάζει το κελί που επεξεργάζεσαι.
+        transparentToPointer && 'pointer-events-none',
+      )}
       style={style}
     >
       {children}

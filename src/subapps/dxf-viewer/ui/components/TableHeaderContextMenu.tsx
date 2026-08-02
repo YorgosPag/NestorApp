@@ -33,6 +33,8 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { useEscapeHandler } from '../../systems/escape-bus/useEscapeHandler';
+import { ESC_PRIORITY } from '../../systems/escape-bus/escape-priority';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -106,6 +108,47 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
         onClosed();
       }
     }, [onClosed]);
+
+    /**
+     * 🔴 ADR-364 — το ανοιχτό μενού ΟΦΕΙΛΕΙ να έχει slot στον escape-bus.
+     *
+     * ── ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΚΛΕΙΝΕΙ (ζωντανή επαλήθευση 2026-08-02, 3/3 επαναλήψεις, δύο άξονες) ──
+     *
+     * Ο bus είναι ο **πρώτος** window-capture listener και, μόλις κάποιος handler διεκδικήσει,
+     * καλεί `stopImmediatePropagation()`. Το `DismissableLayer` του Radix ακούει σε **document**
+     * capture, δηλαδή **μετά** — άρα ό,τι καταναλωθεί στον bus δεν φτάνει ποτέ σ' αυτό.
+     *
+     * Χωρίς εγγραφή εδώ, το πρώτο `Escape` το άρπαζε το `canvas/fallback-deselect` (P400):
+     * το `canHandle` του είναι «υπάρχει επιλεγμένη οντότητα;» και σε λειτουργία πίνακα ο
+     * πίνακας **είναι** η επιλεγμένη οντότητα, άρα αληθές πάντα. Δεν έχει `allowWhenEditable`,
+     * οπότε η ασπίδα «editable focus» θα το έκοβε αν η εστίαση ήταν στο `<textarea>` του
+     * κελιού — αλλά με ανοιχτό μενού η εστίαση είναι στο `<div role="menu">` του Radix, που
+     * **δεν** είναι πεδίο κειμένου. Περνούσε, και έκανε τρία κακά με ένα πάτημα:
+     *   1. το μενού **δεν έκλεινε** (το Radix δεν είδε ποτέ το ESC),
+     *   2. ο πίνακας **αποεπιλεγόταν** (`clearEntitySelection`),
+     *   3. άρα ο ζωγράφος σταματούσε να βγάζει δρομέα και ζώνες (`TableRenderer`: `selected
+     *      ? cursorOf(...) : null`) ⇒ **τα γράμματα και οι αριθμοί εξαφανίζονταν** ενώ η
+     *      γραμμή τύπων και η γραμμή κατάστασης έδειχναν ζωντανή συνεδρία. Κατάσταση-φάντασμα:
+     *      «είμαι σε λειτουργία πίνακα» χωρίς τίποτα να πατήσεις.
+     *
+     * Το ίδιο το dev audit το φώναζε (`SHADOW-OWNER … ανήκει σε slot του ESC_PRIORITY`).
+     *
+     * ── ΓΙΑΤΙ `POPOVER_DROPDOWN` ──
+     * Το ίδιο σκαλί με κάθε άλλο dropdown του θεατή (ribbon split, layer-state, quick
+     * properties — 14 καταναλωτές), και **πάνω** από το P400 του fallback. Δεν χρειάζεται
+     * ψηλότερα: το μόνο που έπρεπε να νικηθεί είναι η αποεπιλογή.
+     *
+     * ── ΓΙΑΤΙ ΠΕΡΝΑ ΑΠΟ ΤΟ `handleOpenChange` ──
+     * §27.7: **ένας** δρόμος κλεισίματος. Ένα σκέτο `setIsOpen(false)` εδώ θα ήταν δεύτερος —
+     * και η έξοδος με `Escape` δεν θα επέστρεφε την εστίαση στο κελί, ενώ η έξοδος με κλικ
+     * σε item θα την επέστρεφε. Ακριβώς η ασυμμετρία που ο ένας δρόμος υπάρχει για να λείπει.
+     */
+    useEscapeHandler({
+      id: 'table/header-menu',
+      priority: ESC_PRIORITY.POPOVER_DROPDOWN,
+      canHandle: () => isOpen,
+      handle: () => { handleOpenChange(false); return true; },
+    });
 
     /**
      * Κάθε item εκτελεί με τον **πατημένο** στόχο και **δεν κλείνει μόνο του**: το κλείσιμο το

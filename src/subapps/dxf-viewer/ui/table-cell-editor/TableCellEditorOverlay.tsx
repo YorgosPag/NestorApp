@@ -266,7 +266,12 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
   const writing = mode !== 'nav';
 
   return (
-    <TextEditorAnchorLayer {...anchor}>
+    // 🔴 ADR-739 §26.15 — σε **πλοήγηση** ολόκληρος ο επεξεργαστής είναι διάφανος στο ποντίκι,
+    // όχι μόνο το πεδίο: το κέλυφος αγκύρωσης είναι `position: fixed` πάνω από τον καμβά και,
+    // χωρίς αυτό, **σκεπάζει ακριβώς το κελί στο οποίο βρίσκεσαι** — μετρημένο ζωντανά, ο
+    // στόχος του `mousedown` γινόταν `DIV` αντί για `CANVAS` και ο ακροατής του πίνακα δεν
+    // έβλεπε ποτέ το πάτημα. Σε γραφή το κουτί **πρέπει** να δέχεται κλικ (τοποθέτηση κέρσορα).
+    <TextEditorAnchorLayer {...anchor} transparentToPointer={!writing}>
       <textarea
         ref={inputRef}
         autoFocus

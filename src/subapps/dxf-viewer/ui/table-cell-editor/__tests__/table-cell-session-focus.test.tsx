@@ -160,9 +160,11 @@ describe('useTableCellSessionBlur — οι πέντε δρόμοι', () => {
     expect(close).not.toHaveBeenCalled();
   });
 
-  it('🔴 η δήλωση ισχύει για ΕΝΑ blur — το επόμενο κλείνει κανονικά', () => {
-    // Χωρίς την κατανάλωση, μια δήλωση θα κρατούσε τη συνεδρία ζωντανή για πάντα: ο χρήστης
-    // θα κλείδωνε μέσα στον πίνακα, που είναι χειρότερο από το αρχικό σφάλμα.
+  it('🔴 η δήλωση επιβιώνει ΔΕΥΤΕΡΟΥ blur της ίδιας χειρονομίας', () => {
+    // Μετρημένο ζωντανά: ένα κλικ σε κελί παράγει **δύο** `focusout` — ένα από το ξαναστήσιμο
+    // του πεδίου και ένα από τη μεταφορά εστίασης του browser. Μια «διάβασε-και-σβήσε»
+    // δήλωση καταναλωνόταν από το πρώτο και άφηνε το δεύτερο ορφανό: η συνεδρία επιβίωνε
+    // αλλά **έχανε το πληκτρολόγιο**, διαλείπουσα σε 2 από 3 τρεξίματα.
     const field = sessionElement();
     field.focus();
     claimTableCellSessionPointerDown();
@@ -173,8 +175,44 @@ describe('useTableCellSessionBlur — οι πέντε δρόμοι', () => {
     blurTo(null);
     act(() => { nextFrame(); });
 
-    expect(reclaim).toHaveBeenCalledTimes(1);
+    expect(reclaim).toHaveBeenCalledTimes(2);
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('🔴 η δήλωση ΛΗΓΕΙ στο επόμενο `mousedown` — αλλιώς δεν βγαίνεις ποτέ από τον πίνακα', () => {
+    const field = sessionElement();
+    field.focus();
+    claimTableCellSessionPointerDown();
+    field.blur();
+
+    // Νέα χειρονομία, οπουδήποτε — ακόμα και σε στοιχείο που δεν φτάνει ποτέ στον ακροατή
+    // του καμβά (κουμπί κορδέλας). Η λήξη ζει στο `document`, σε φάση σύλληψης.
+    act(() => {
+      document.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+
+    blurTo(null);
+    act(() => { nextFrame(); });
+
     expect(close).toHaveBeenCalledTimes(1);
+    expect(reclaim).not.toHaveBeenCalled();
+  });
+
+  it('🔴 η δήλωση ΛΗΓΕΙ και σε `keydown` — το `Tab` έξω πρέπει να βγάζει', () => {
+    const field = sessionElement();
+    field.focus();
+    claimTableCellSessionPointerDown();
+    field.blur();
+
+    act(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    });
+
+    blurTo(null);
+    act(() => { nextFrame(); });
+
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(reclaim).not.toHaveBeenCalled();
   });
 
   it('🔴 δήλωση χωρίς εστιασμένο μέλος ΔΕΝ γεννιέται — καμία μπαγιάτικη σημαία', () => {

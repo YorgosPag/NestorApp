@@ -40,6 +40,8 @@ import {
 import { useTableHeaderMenu } from '../use-table-header-menu';
 import { useTableCellPointer } from '../use-table-cell-pointer';
 import { isTableCellSessionElement } from '../table-cell-session-focus';
+import { escapeBus, type EscapeDispatchResult } from '../../../systems/escape-bus/EscapeCommandBus';
+import { ESC_PRIORITY } from '../../../systems/escape-bus/escape-priority';
 import {
   TableHeaderContextMenu,
   type TableHeaderContextMenuHandle,
@@ -415,6 +417,94 @@ describe('🔴 το μενού είναι ΜΕΛΟΣ της συνεδρίας �
     // trigger + περιεχόμενο μενού: **δύο** σημαδεμένα στοιχεία, όχι ένα.
     expect(marked.length).toBeGreaterThanOrEqual(2);
     expect(marked.every((el) => isTableCellSessionElement(el))).toBe(true);
+  });
+});
+
+/**
+ * 🔴 ADR-364 — ΤΟ ESCAPE ΚΛΕΙΝΕΙ ΤΟ ΜΕΝΟΥ, ΚΑΙ ΤΙΠΟΤΑ ΑΛΛΟ.
+ *
+ * ── ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΚΛΕΙΔΩΝΕΤΑΙ ΕΔΩ (ζωντανή επαλήθευση 2026-08-02, 3/3, δύο άξονες) ──
+ *
+ * Το μενού δεν είχε slot στον escape-bus. Ο bus είναι ο **πρώτος** window-capture listener
+ * και σφραγίζει ό,τι καταναλωθεί με `stopImmediatePropagation()`· το `DismissableLayer` του
+ * Radix ακούει σε **document** capture, δηλαδή μετά. Άρα το πρώτο `Escape` το άρπαζε το
+ * `canvas/fallback-deselect` (P400) — του οποίου το `canHandle` είναι «υπάρχει επιλεγμένη
+ * οντότητα;», και σε λειτουργία πίνακα ο πίνακας **είναι** η επιλεγμένη οντότητα.
+ *
+ * Αποτέλεσμα, με ένα πάτημα: το μενού **δεν έκλεινε**, ο πίνακας **αποεπιλεγόταν**, και ο
+ * ζωγράφος (`TableRenderer`: `selected ? cursorOf(...) : null`) σταματούσε να βγάζει δρομέα
+ * **και ζώνες** — τα γράμματα και οι αριθμοί εξαφανίζονταν ενώ η γραμμή τύπων έδειχνε
+ * ζωντανή συνεδρία. Δηλαδή «είμαι σε λειτουργία πίνακα» χωρίς τίποτα να πατήσεις.
+ */
+describe('🔴 το Escape κλείνει το μενού — και δεν το αρπάζει η αποεπιλογή του καμβά', () => {
+  const noop = (): void => {};
+  const menuProps = {
+    onInsertBefore: noop,
+    onInsertAfter: noop,
+    onDelete: noop,
+    onClosed: noop,
+    resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
+  };
+  const hit = { axis: 'column', colId: 'c1', index: 1 } as const;
+  const pressEscape = (): EscapeDispatchResult =>
+    escapeBus.__dispatchForTests(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+
+  it('🔴 ΚΛΕΙΣΤΟ μενού ⇒ ΔΕΝ διεκδικεί — αλλιώς θα έκλεβε κάθε ESC της εφαρμογής', () => {
+    // Ο κρυφός trigger είναι πάντα mountαρισμένος, άρα και η εγγραφή. Ένα `canHandle: true`
+    // εδώ θα ήταν η παλινδρόμηση §10.12 του ADR-364 σε νέα συσκευασία: ένα αόρατο μενού που
+    // καταπίνει το «ακύρωση εντολής / αποεπιλογή», το συχνότερο πλήκτρο του καμβά.
+    render(<TableHeaderContextMenu {...menuProps} />);
+    expect(escapeBus.inspect().handlers.map((h) => h.id)).toContain('table/header-menu');
+    expect(pressEscape()).toEqual({ consumed: false, consumedBy: null });
+  });
+
+  it('🔴 ΑΝΟΙΧΤΟ μενού ⇒ το ESC το κλείνει μέσω του ΕΝΟΣ δρόμου (άρα γυρίζει η εστίαση)', async () => {
+    const onClosed = jest.fn();
+    const ref = React.createRef<TableHeaderContextMenuHandle>();
+    render(<TableHeaderContextMenu ref={ref} {...menuProps} onClosed={onClosed} />);
+    await act(async () => { ref.current?.open(10, 10, hit); });
+    expect(screen.getAllByRole('menuitem').length).toBeGreaterThan(0);
+
+    let result: EscapeDispatchResult | null = null;
+    await act(async () => { result = pressEscape(); });
+
+    expect(result).toEqual({ consumed: true, consumedBy: 'table/header-menu' });
+    // Ο **ένας** δρόμος: το κλείσιμο περνά από το `handleOpenChange`, που είναι και ο μόνος
+    // που καλεί το `onClosed` ⇒ `restartTableCellCursorSession`. Ένα σκέτο `setIsOpen(false)`
+    // θα περνούσε το «έκλεισε» και θα άφηνε τη συνεδρία κουφή, σιωπηλά.
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+  });
+
+  it('🔴 ΝΙΚΑΕΙ την αποεπιλογή του καμβά — η ακριβής αναπαραγωγή του σφάλματος', async () => {
+    // Δίδυμο του `canvas/fallback-deselect`: ίδιο σκαλί (P400 = DRAFT_POLYGON), ίδιο
+    // «διεκδικώ όσο υπάρχει επιλογή». Αν το μενού δεν έχει δικό του slot, ΑΥΤΟ τρέχει, ο
+    // πίνακας αποεπιλέγεται και οι ζώνες σβήνουν.
+    const fallbackDeselect = jest.fn(() => true);
+    const unregister = escapeBus.register({
+      id: 'canvas/fallback-deselect',
+      priority: ESC_PRIORITY.DRAFT_POLYGON,
+      canHandle: () => true,
+      handle: fallbackDeselect,
+    });
+    try {
+      const ref = React.createRef<TableHeaderContextMenuHandle>();
+      render(<TableHeaderContextMenu ref={ref} {...menuProps} />);
+      await act(async () => { ref.current?.open(10, 10, hit); });
+
+      let result: EscapeDispatchResult | null = null;
+      await act(async () => { result = pressEscape(); });
+
+      expect(result).toEqual({ consumed: true, consumedBy: 'table/header-menu' });
+      expect(fallbackDeselect).not.toHaveBeenCalled();   // ← ο πίνακας ΜΕΝΕΙ επιλεγμένος
+
+      // …και μόλις κλείσει το μενού, το ΕΠΟΜΕΝΟ ESC ανήκει ξανά στον καμβά: η σκάλα εξόδου
+      // δεν καταργείται, απλώς αποκτά ένα σκαλί ακόμη.
+      await act(async () => { pressEscape(); });
+      expect(fallbackDeselect).toHaveBeenCalledTimes(1);
+    } finally {
+      unregister();
+    }
   });
 });
 
