@@ -266,6 +266,40 @@ const CLASSIFIED_SIDEBAR_ROUTES: ReadonlySet<string> = new Set(
 );
 
 /**
+ * Ρητά δηλωμένο **ορατό παντού**: κοινό ή εγκάρσιο.
+ *
+ * ⚠️ ΔΕΝ είναι το ίδιο με «αταξινόμητο». Η διαφορά είναι όλο το νόημα του
+ * Ε14.ι: **μόνο** ένα ρητά κοινό παιδί κρατά ζωντανό έναν γονιό που ανήκει
+ * αλλού. Αν αρκούσε ένα *αταξινόμητο* παιδί, κάθε γονιός με υπο-μενού θα
+ * επιβίωνε πάντα και το φίλτρο θα ήταν διακοσμητικό — μετρημένο ζωντανά
+ * (2026-08-02 16:58): τα «Χώροι · Πωλήσεις · CRM» έμειναν στα Οικονομικά
+ * επειδή τα 4+5+11 παιδιά τους δεν έχουν δική τους ετικέτα.
+ */
+function isAlwaysVisibleRoute(route: string): boolean {
+  return COMMON_SIDEBAR_ROUTES.includes(route) || isCrossCuttingRoute(route);
+}
+
+/**
+ * Ορατότητα **υπο-στοιχείου** — και εδώ ζει η γενίκευση του Ε14.β.
+ *
+ * 🔑 **ΤΟ ΠΑΙΔΙ ΧΩΡΙΣ ΔΙΚΗ ΤΟΥ ΤΑΞΙΝΟΜΗΣΗ ΔΕΝ ΕΙΝΑΙ «ΑΤΑΞΙΝΟΜΗΤΟ» —
+ * ΚΛΗΡΟΝΟΜΕΙ ΤΟΝ ΓΟΝΙΟ ΤΟΥ.** Η πηγή του είναι ο γονιός· ακριβώς όπως η
+ * αναφορά κληρονομεί τη διαδρομή-πηγή της αντί να φέρει ετικέτα (Υ-5).
+ * Άρα φτάνει εδώ **μόνο** όταν ο γονιός έχει ήδη κριθεί ορατός, και τότε:
+ *
+ *   • ρητά κοινό/εγκάρσιο  ⇒ ορατό πάντα
+ *   • έχει δική του ετικέτα ⇒ κρίνεται μόνο του *(π.χ. τα `/admin/*` μέσα στο
+ *     `/crm` και στο `/settings` — §14.1/11 και §14.1/15)*
+ *   • αλλιώς               ⇒ **κληρονομεί** ⇒ ορατό μαζί με τον γονιό
+ */
+function isSubItemVisibleForJob(subRoute: string, active: JobSelection): boolean {
+  if (active === JOB_ALL) return true;
+  if (isAlwaysVisibleRoute(subRoute)) return true;
+  if (!CLASSIFIED_SIDEBAR_ROUTES.has(subRoute)) return true;
+  return JOBS[active].sidebar.includes(subRoute);
+}
+
+/**
  * Τα **εγκάρσια**: μένουν ορατά σε **κάθε** δουλειά (Ε14.α).
  *
  * 🔴 Μετρημένος λόγος να ΜΗΝ φιλτράρεται ο γονιός `/reports`: το
@@ -341,33 +375,41 @@ export function filterItemsByJob<T extends JobFilterableItem & { readonly subIte
 
   for (const item of items) {
     const subItems = item.subItems;
-    const keptSubItems =
-      subItems === undefined
-        ? undefined
-        : subItems.filter((sub) =>
-            item.href === REPORTS_PARENT_ROUTE
-              ? isReportSubItemVisibleForJob(sub.href, active)
-              : isRouteVisibleForJob(sub.href, active),
-          );
+    const isReportsParent = item.href === REPORTS_PARENT_ROUTE;
 
-    // 🔑 Ο ΓΟΝΙΟΣ ΕΙΝΑΙ ΔΟΧΕΙΟ: κρύβεται μόνο αν δεν ανήκει ΟΥΤΕ Ο ΙΔΙΟΣ ΟΥΤΕ
-    // ΚΑΝΕΝΑ ΠΑΙΔΙ ΤΟΥ. Χωρίς αυτό, ένα κρυμμένο δοχείο παρασύρει ό,τι έχει
-    // μέσα — μετρημένο ζωντανά (2026-08-02): το `/obligations` δηλώνεται
-    // **κοινό σε όλες** τις δουλειές, αλλά ζει αποκλειστικά ως παιδί του
-    // `/legal-documents`, οπότε εξαφανιζόταν μαζί του. Το φίλτρο έκρυβε κάτι
-    // που το ίδιο το μητρώο δηλώνει ορατό παντού.
+    // 🔑 Ο ΓΟΝΙΟΣ ΕΙΝΑΙ ΔΟΧΕΙΟ — αλλά **ΜΟΝΟ ρητά κοινό παιδί** τον κρατά
+    // ζωντανό όταν ο ίδιος ανήκει αλλού (Ε14.ι). Το `/obligations` δηλώνεται
+    // κοινό σε όλες τις δουλειές και ζει αποκλειστικά μέσα στο
+    // `/legal-documents`: χωρίς αυτόν τον κανόνα εξαφανίζεται μαζί του.
     const selfVisible = isRouteVisibleForJob(item.href, active);
-    if (!selfVisible && (keptSubItems === undefined || keptSubItems.length === 0)) {
-      hiddenCount += 1 + (subItems?.length ?? 0);
+    const rescuedByChild =
+      !selfVisible &&
+      subItems !== undefined &&
+      subItems.some((sub) => isAlwaysVisibleRoute(sub.href));
+
+    if (!selfVisible && !rescuedByChild) {
+      // Ο κλάδος φεύγει ολόκληρος. Μετριέται **ένα**: ο χρήστης έχασε ένα
+      // στοιχείο από το μενού του, όχι δεκατρία — τα υπο-στοιχεία ενός
+      // κλειστού μενού δεν ήταν ορατά ούτως ή άλλως. Ο δείκτης οφείλει να
+      // μετρά ό,τι όντως έλειψε από την οθόνη (Α-3), αλλιώς γίνεται θόρυβος.
+      hiddenCount += 1;
       continue;
     }
 
-    if (keptSubItems === undefined) {
+    if (subItems === undefined) {
       visible.push(item);
       continue;
     }
 
-    hiddenCount += (subItems?.length ?? 0) - keptSubItems.length;
+    const keptSubItems = subItems.filter((sub) => {
+      if (isReportsParent) return isReportSubItemVisibleForJob(sub.href, active);
+      // Ο γονιός σώθηκε χάρη σε κοινό παιδί ⇒ κρατάμε **μόνο** τα κοινά:
+      // τα υπόλοιπα κληρονομούν τον γονιό, που δεν ανήκει εδώ.
+      if (rescuedByChild) return isAlwaysVisibleRoute(sub.href);
+      return isSubItemVisibleForJob(sub.href, active);
+    });
+
+    hiddenCount += subItems.length - keptSubItems.length;
     // `Object.assign` και όχι object literal με spread: το `{ ...item }` πάνω σε
     // generic `T` ΔΕΝ είναι εκχωρήσιμο στο `T` (γνωστός περιορισμός TS) και θα
     // απαιτούσε assertion. Το `Object.assign` δίνει `T & {...}`, που είναι.

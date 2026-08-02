@@ -213,15 +213,40 @@ describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ο�
     expect(isRouteVisibleForJob('/dxf/viewer', 'design')).toBe(true);
   });
 
-  it('γονιός που ανήκει αλλού κρατιέται ΜΟΝΟ με τα ορατά παιδιά του', () => {
+  it('γονιός που ανήκει αλλού σώζεται ΜΟΝΟ από ρητά κοινό παιδί, και κρατά μόνο αυτό', () => {
     const branch = [{ href: '/dxf/viewer', subItems: [{ href: '/settings' }, { href: '/geo/canvas' }] }];
     const result = filterItemsByJob(branch, 'finance');
     expect(result.visible[0]?.subItems?.map((s) => s.href)).toEqual(['/settings']);
   });
 
-  it('όταν φεύγει ολόκληρος κλάδος, μετριούνται ΚΑΙ τα παιδιά του (Α-3)', () => {
-    const branch = [{ href: '/dxf/viewer', subItems: [{ href: '/geo/canvas' }] }];
-    expect(filterItemsByJob(branch, 'finance')).toEqual({ visible: [], hiddenCount: 2 });
+  it('🔴 ΑΤΑΞΙΝΟΜΗΤΟ παιδί ΔΕΝ σώζει γονιό που ανήκει αλλού — αλλιώς το φίλτρο ακυρώνεται', () => {
+    // Βρέθηκε ΖΩΝΤΑΝΑ (2026-08-02 16:58): «Χώροι · Πωλήσεις · CRM» έμειναν
+    // στα Οικονομικά επειδή τα 4+5+11 παιδιά τους δεν έχουν δική τους ετικέτα.
+    // Το παιδί χωρίς ταξινόμηση ΚΛΗΡΟΝΟΜΕΙ τον γονιό — δεν είναι ελεύθερο.
+    const branch = [
+      { href: '/spaces', subItems: [{ href: '/spaces/properties' }, { href: '/spaces/parking' }] },
+    ];
+    expect(filterItemsByJob(branch, 'finance')).toEqual({ visible: [], hiddenCount: 1 });
+    // …και στη δουλειά του, ο γονιός φέρνει ΟΛΑ τα παιδιά του (κληρονομιά).
+    const kept = filterItemsByJob(branch, 'clients');
+    expect(kept.visible[0]?.subItems).toHaveLength(2);
+    expect(kept.hiddenCount).toBe(0);
+  });
+
+  it('παιδί με ΔΙΚΗ ΤΟΥ ετικέτα κρίνεται μόνο του (§14.1/11: admin μέσα στο /crm)', () => {
+    const branch = [
+      { href: '/crm', subItems: [{ href: '/crm/leads' }, { href: '/admin/ai-inbox' }] },
+    ];
+    const result = filterItemsByJob(branch, 'clients');
+    expect(result.visible[0]?.subItems?.map((s) => s.href)).toEqual(['/crm/leads']);
+    expect(result.hiddenCount).toBe(1);
+  });
+
+  it('ο δείκτης μετρά ΕΝΑ ανά κλάδο που φεύγει — όχι τα κλειστά υπο-στοιχεία', () => {
+    // Ο χρήστης έχασε ένα στοιχείο από το μενού, όχι δεκατρία. Αλλιώς ο
+    // δείκτης δείχνει δεκάδες και παύει να σημαίνει κάτι.
+    const branch = [{ href: '/crm', subItems: Array.from({ length: 11 }, (_, i) => ({ href: `/crm/x${i}` })) }];
+    expect(filterItemsByJob(branch, 'finance').hiddenCount).toBe(1);
   });
 });
 
@@ -356,6 +381,22 @@ describe('Μ-5 — Υ-4: κάθε στοιχείο πλοήγησης ανήκε
   it('🔴 καμία διαδρομή πρώτου επιπέδου δεν είναι αταξινόμητη', () => {
     const orphans = liveTopLevelRoutes.filter((href) => !CLASSIFIED.has(href));
     expect(orphans).toEqual([]);
+  });
+
+  it('🔴 Η ΖΩΝΤΑΝΗ ΜΕΤΡΗΣΗ: τι μένει όρθιο στα «Οικονομικά»', () => {
+    // Το test που θα είχε πιάσει το ελάττωμα των 16:58 πριν φτάσει στην οθόνη:
+    // τρέχει πάνω στην ΠΡΑΓΜΑΤΙΚΗ πλοήγηση, όχι σε πλασματικά items.
+    const main = filterItemsByJob(createMainMenuItems('production', ALL_PERMISSIONS), 'finance');
+    const survivors = main.visible.map((item) => item.href);
+
+    // Τα κοινά + το εγκάρσιο + η διαδρομή της δουλειάς. Τίποτα άλλο.
+    expect(survivors).toContain('/accounting');
+    expect(survivors).toContain(REPORTS_PARENT_ROUTE);
+    expect(survivors).toContain('/projects');
+    // Ό,τι ανήκει ρητά σε ΑΛΛΗ δουλειά ΔΕΝ επιβιώνει — ούτε ως άδειο δοχείο.
+    for (const route of ['/spaces', '/sales', '/crm', '/contacts', '/buildings']) {
+      expect(survivors).not.toContain(route);
+    }
   });
 
   it('και αντίστροφα: κάθε διαδρομή του μητρώου υπάρχει στην πλοήγηση', () => {
