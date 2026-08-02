@@ -244,8 +244,26 @@ export function isRouteVisibleForJob(route: string, active: JobSelection): boole
   if (active === JOB_ALL) return true;
   if (COMMON_SIDEBAR_ROUTES.includes(route)) return true;
   if (isCrossCuttingRoute(route)) return true;
+  // 🔴 ΑΤΑΞΙΝΟΜΗΤΟ ⇒ ΟΡΑΤΟ. Φίλτρο θορύβου, όχι πύλη (Ε14.ζ).
+  //
+  // Η αντίστροφη επιλογή («δεν το ξέρω ⇒ κρύψ' το») είναι **fail-closed σε
+  // φίλτρο UX** — ακριβώς το λάθος που το Ε5.ι απαγορεύει, και το ίδιο που
+  // κάνει ήδη σωστά το `isReportSubItemVisibleForJob`. Το κόστος του
+  // μετρήθηκε ζωντανά στην οθόνη (2026-08-02): έκρυβε το `/legal-documents`
+  // — που το **Ε14.στ ρητά απαγορεύει να κρυφτεί** όσο είναι ανεπίβλητο
+  // (OWASP A01: απόκρυψη χωρίς προστασία κάνει το πρόβλημα αόρατο).
+  //
+  // Η προστασία από «όλα αταξινόμητα ⇒ φίλτρο που δεν κάνει τίποτα» ΔΕΝ είναι
+  // αυτή η γραμμή — είναι το anchor test Μ-5 (η πύλη Υ-4), που κοκκινίζει με
+  // την πρώτη διαδρομή χωρίς ανάθεση.
+  if (!CLASSIFIED_SIDEBAR_ROUTES.has(route)) return true;
   return JOBS[active].sidebar.includes(route);
 }
+
+/** Κάθε διαδρομή που **κάποια** δουλειά διεκδικεί. Υπολογίζεται μία φορά. */
+const CLASSIFIED_SIDEBAR_ROUTES: ReadonlySet<string> = new Set(
+  JOB_ORDER.flatMap((job) => JOBS[job].sidebar),
+);
 
 /**
  * Τα **εγκάρσια**: μένουν ορατά σε **κάθε** δουλειά (Ε14.α).
@@ -322,19 +340,34 @@ export function filterItemsByJob<T extends JobFilterableItem & { readonly subIte
   const visible: T[] = [];
 
   for (const item of items) {
-    if (!isRouteVisibleForJob(item.href, active)) {
-      hiddenCount += 1;
+    const subItems = item.subItems;
+    const keptSubItems =
+      subItems === undefined
+        ? undefined
+        : subItems.filter((sub) =>
+            item.href === REPORTS_PARENT_ROUTE
+              ? isReportSubItemVisibleForJob(sub.href, active)
+              : isRouteVisibleForJob(sub.href, active),
+          );
+
+    // 🔑 Ο ΓΟΝΙΟΣ ΕΙΝΑΙ ΔΟΧΕΙΟ: κρύβεται μόνο αν δεν ανήκει ΟΥΤΕ Ο ΙΔΙΟΣ ΟΥΤΕ
+    // ΚΑΝΕΝΑ ΠΑΙΔΙ ΤΟΥ. Χωρίς αυτό, ένα κρυμμένο δοχείο παρασύρει ό,τι έχει
+    // μέσα — μετρημένο ζωντανά (2026-08-02): το `/obligations` δηλώνεται
+    // **κοινό σε όλες** τις δουλειές, αλλά ζει αποκλειστικά ως παιδί του
+    // `/legal-documents`, οπότε εξαφανιζόταν μαζί του. Το φίλτρο έκρυβε κάτι
+    // που το ίδιο το μητρώο δηλώνει ορατό παντού.
+    const selfVisible = isRouteVisibleForJob(item.href, active);
+    if (!selfVisible && (keptSubItems === undefined || keptSubItems.length === 0)) {
+      hiddenCount += 1 + (subItems?.length ?? 0);
       continue;
     }
-    const subItems = item.subItems;
-    if (subItems === undefined || item.href !== REPORTS_PARENT_ROUTE) {
+
+    if (keptSubItems === undefined) {
       visible.push(item);
       continue;
     }
-    const keptSubItems = subItems.filter((sub) =>
-      isReportSubItemVisibleForJob(sub.href, active),
-    );
-    hiddenCount += subItems.length - keptSubItems.length;
+
+    hiddenCount += (subItems?.length ?? 0) - keptSubItems.length;
     // `Object.assign` και όχι object literal με spread: το `{ ...item }` πάνω σε
     // generic `T` ΔΕΝ είναι εκχωρήσιμο στο `T` (γνωστός περιορισμός TS) και θα
     // απαιτούσε assertion. Το `Object.assign` δίνει `T & {...}`, που είναι.
@@ -364,23 +397,37 @@ export function tileIdFromHref(href: string): string {
   return href.startsWith('/') ? href.slice(1) : href;
 }
 
-/** Ανήκει το πλακίδιο στην ενεργή δουλειά; (§14.2) */
+/** Κάθε πλακίδιο που **κάποια** δουλειά διεκδικεί. Υπολογίζεται μία φορά. */
+const CLASSIFIED_TILES: ReadonlySet<string> = new Set(
+  JOB_ORDER.flatMap((job) => JOBS[job].dashboardTiles),
+);
+
+/**
+ * Ανήκει το πλακίδιο στην ενεργή δουλειά; (§14.2)
+ *
+ * ⚠️ **Ο ΙΔΙΟΣ κανόνας με τις διαδρομές**, όχι παρόμοιος: αταξινόμητο ⇒ ορατό.
+ * Δύο κανόνες για το ίδιο ερώτημα σημαίνει ότι το `/legal-documents` θα έμενε
+ * στο sidebar και θα εξαφανιζόταν από την αρχική — η ίδια οθόνη να λέει δύο
+ * διαφορετικά πράγματα για το ίδιο στοιχείο.
+ */
 export function isTileVisibleForJob(href: string, active: JobSelection): boolean {
   if (active === JOB_ALL) return true;
   const tileId = tileIdFromHref(href);
   if (COMMON_DASHBOARD_TILES.includes(tileId)) return true;
+  if (!CLASSIFIED_TILES.has(tileId)) return true;
   return JOBS[active].dashboardTiles.includes(tileId);
 }
 
 /**
  * Το ίδιο συμβόλαιο με το `filterItemsByJob`, για τα πλακίδια.
  *
- * 🔴 ΚΑΤΑΓΕΓΡΑΜΜΕΝΗ ΣΥΝΕΠΕΙΑ: το `DashboardHome` έχει σήμερα πλακίδιο
- * `/legal-documents`, το οποίο οδηγεί σε **404** (`LEGAL_DOCUMENTS_STATUS`,
- * Ε14.ε). Επειδή δεν ανήκει σε καμία δουλειά ούτε στα κοινά, θα **κρύβεται**
- * μόλις ο χρήστης επιλέξει δουλειά — και θα μετριέται κανονικά στο «Χ κρυμμένα»
- * (Α-3: τίποτα δεν φεύγει σιωπηλά). Στην προεπιλογή «Όλα» **δεν αλλάζει τίποτα**.
- * ⚠️ Αυτό ΔΕΝ είναι η διόρθωση του σφάλματος — είναι η μη-απόκρυψή του.
+ * 🔴 ΤΟ `/legal-documents` **ΜΕΝΕΙ ΟΡΑΤΟ** — και είναι απόφαση, όχι παράλειψη.
+ * Το πλακίδιό του οδηγεί σε **404** (`LEGAL_DOCUMENTS_STATUS`, Ε14.ε) και τα
+ * `legal:*` είναι **ανεπίβλητα** (Π-13). Απόκρυψή του θα έκρυβε **το σφάλμα**,
+ * όχι τα δεδομένα: ο εργάτης και ο προμηθευτής θα συνέχιζαν να διαβάζουν τα
+ * συμβόλαια από το API. Κατά λέξη το **Ε14.στ** *(OWASP A01: «reliance on
+ * client-side access check enforcement»)*. Όταν επιβληθεί το δικαίωμα, η
+ * απόκρυψη θα έρθει **δωρεάν** από το φίλτρο permissions — πρότυπο Procore.
  */
 export function filterTilesByJob<T extends { readonly href: string }>(
   tiles: readonly T[],

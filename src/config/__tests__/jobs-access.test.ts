@@ -176,6 +176,56 @@ describe('Μ-3 — §5/Ε5.η: η δουλειά ΠΟΤΕ δεν προσθέτ�
 });
 
 // ============================================================================
+// Μ-6 — ΤΟ ΔΟΧΕΙΟ ΔΕΝ ΠΑΡΑΣΥΡΕΙ ΤΟ ΠΕΡΙΕΧΟΜΕΝΟ
+//
+// 🔴 Βρέθηκε ΖΩΝΤΑΝΑ στην οθόνη (2026-08-02), όχι από test: το `/obligations`
+// δηλώνεται ΚΟΙΝΟ σε όλες τις δουλειές, αλλά ζει αποκλειστικά ως παιδί του
+// `/legal-documents` (smart-navigation-factory.ts:605-617) — και εξαφανιζόταν
+// μαζί του. Το φίλτρο έκρυβε κάτι που το ίδιο το μητρώο δηλώνει ορατό παντού.
+// ============================================================================
+
+describe('Μ-6 — κρυμμένος γονιός δεν παρασύρει ορατό παιδί', () => {
+  const legalBranch = [
+    { href: LEGAL_DOCUMENTS_STATUS.route, subItems: [{ href: LEGAL_DOCUMENTS_STATUS.livingChildRoute }] },
+  ];
+
+  it.each([...JOB_ORDER])('το /obligations επιβιώνει σε κάθε δουλειά (%s)', (job) => {
+    const result = filterItemsByJob(legalBranch, job);
+    const survivors = result.visible.flatMap((i) => i.subItems?.map((s) => s.href) ?? []);
+    expect(survivors).toContain(LEGAL_DOCUMENTS_STATUS.livingChildRoute);
+  });
+
+  it('🔴 το /legal-documents ΔΕΝ κρύβεται — Ε14.στ: απόκρυψη χωρίς επιβολή = OWASP A01', () => {
+    // Είναι ανεπίβλητο (Π-13): rules tenant-only, /api/contracts χωρίς
+    // permission. Απόκρυψη θα έκρυβε το ΣΦΑΛΜΑ, όχι τα δεδομένα.
+    expect(LEGAL_DOCUMENTS_STATUS.enforced).toBe(false);
+    for (const job of JOB_ORDER) {
+      expect(isRouteVisibleForJob(LEGAL_DOCUMENTS_STATUS.route, job)).toBe(true);
+    }
+  });
+
+  it('αταξινόμητη διαδρομή ⇒ ορατή (φίλτρο θορύβου, όχι πύλη)', () => {
+    expect(isRouteVisibleForJob('/kapoia-nea-diadromi', 'finance')).toBe(true);
+  });
+
+  it('…αλλά ταξινομημένη σε ΑΛΛΗ δουλειά ⇒ κρύβεται κανονικά', () => {
+    expect(isRouteVisibleForJob('/dxf/viewer', 'finance')).toBe(false);
+    expect(isRouteVisibleForJob('/dxf/viewer', 'design')).toBe(true);
+  });
+
+  it('γονιός που ανήκει αλλού κρατιέται ΜΟΝΟ με τα ορατά παιδιά του', () => {
+    const branch = [{ href: '/dxf/viewer', subItems: [{ href: '/settings' }, { href: '/geo/canvas' }] }];
+    const result = filterItemsByJob(branch, 'finance');
+    expect(result.visible[0]?.subItems?.map((s) => s.href)).toEqual(['/settings']);
+  });
+
+  it('όταν φεύγει ολόκληρος κλάδος, μετριούνται ΚΑΙ τα παιδιά του (Α-3)', () => {
+    const branch = [{ href: '/dxf/viewer', subItems: [{ href: '/geo/canvas' }] }];
+    expect(filterItemsByJob(branch, 'finance')).toEqual({ visible: [], hiddenCount: 2 });
+  });
+});
+
+// ============================================================================
 // Μ-4 — Η ΑΝΑΦΟΡΑ ΚΛΗΡΟΝΟΜΕΙ (Ε14.α–Ε14.δ)
 // ============================================================================
 
@@ -250,14 +300,30 @@ describe('§14.2 — πλακίδια της ενεργής δουλειάς', (
 
   it('οι Προμήθειες δεν έχουν κανένα δικό τους πλακίδιο (Ε4.στ, §14.4/3)', () => {
     expect(JOBS.procurement.dashboardTiles).toHaveLength(0);
-    expect(isTileVisibleForJob('/procurement', 'procurement')).toBe(false);
+    // Συνέπεια: στη δουλειά «Προμήθειες» ΚΑΘΕ ταξινομημένο πλακίδιο φεύγει —
+    // μένουν μόνο τα κοινά. Είναι η «αληθινή αλλά ανώριμη» δουλειά, ορατή.
+    const classified = JOB_ORDER.flatMap((job) => JOBS[job].dashboardTiles);
+    expect(classified.length).toBeGreaterThan(0);
+    for (const tile of classified) {
+      expect(isTileVisibleForJob(tile, 'procurement')).toBe(false);
+    }
   });
 
-  it('🔴 το /legal-documents δεν ανήκει πουθενά — και ΜΕΤΡΙΕΤΑΙ όταν κρύβεται', () => {
+  it('🔴 ΕΝΑΣ κανόνας για διαδρομές ΚΑΙ πλακίδια — αλλιώς η ίδια οθόνη λέει δύο πράγματα', () => {
+    // Το `/legal-documents` είναι το ακριβές σημείο όπου δύο κανόνες θα
+    // αποκλίνανε: ορατό στο sidebar, εξαφανισμένο από την αρχική.
     expect(LEGAL_DOCUMENTS_STATUS.hasPage).toBe(false);
-    const tiles = [{ href: '/legal-documents' }, { href: '/files' }];
+    for (const job of JOB_ORDER) {
+      expect(isTileVisibleForJob(LEGAL_DOCUMENTS_STATUS.route, job)).toBe(
+        isRouteVisibleForJob(LEGAL_DOCUMENTS_STATUS.route, job),
+      );
+    }
+  });
+
+  it('ταξινομημένο πλακίδιο άλλης δουλειάς κρύβεται και ΜΕΤΡΙΕΤΑΙ', () => {
+    const tiles = [{ href: '/dxf/viewer' }, { href: '/files' }];
     expect(filterTilesByJob(tiles, JOB_ALL).hiddenCount).toBe(0);
-    const filtered = filterTilesByJob(tiles, 'design');
+    const filtered = filterTilesByJob(tiles, 'finance');
     expect(filtered.visible.map((t) => t.href)).toEqual(['/files']);
     expect(filtered.hiddenCount).toBe(1);
   });
