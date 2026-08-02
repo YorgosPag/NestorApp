@@ -295,7 +295,14 @@ export function useMouseMoveHandler({
     // the crosshair compositor frame is never blocked by snap work → cursor 1:1.
     // The scheduler keeps the ~30fps snap throttle + the corner-snap (ADR-398) logic.
     // Grip-drag snap stays SYNCHRONOUS above (it needs a 1:1 ghost).
-    if (snapEnabled && findSnapPoint && !isGripDragging) {
+    //
+    // 🔴 ADR-739 §29.10 — **τα σημάδια έλξης σβήνουν όσο ο πίνακας είναι ανοιχτός** (ιδιοκτήτης:
+    // «ούτε τα σημάδια έλξης των οντοτήτων που βρίσκονται μέσα στο καμβά»). Το κλείδωμα μπαίνει
+    // στη **θετική** συνθήκη και όχι σε δικό του κλάδο: έτσι η ροή πέφτει μόνη της στο
+    // `clearSnapDetection` από κάτω — δηλαδή τα σημάδια δεν «παύουν να ανανεώνονται», **σβήνουν**
+    // κιόλας, μαζί με το ghost του column. Ένας ξεχωριστός early-return θα άφηνε στην οθόνη το
+    // τελευταίο σημάδι πριν ανοίξει ο πίνακας.
+    if (snapEnabled && findSnapPoint && !isGripDragging && !isCanvasLockedByTableSession()) {
       // ADR-398 §3.10 — το column face-snap υπολογίζεται πλέον σύγχρονα στο preview/commit από
       // τους pre-collected στόχους (`columnPreviewStore`)· ο scheduler δεν χρειάζεται entities.
       requestSnapDetection({ worldPos, activeTool, findSnapPoint, setSnapResults });

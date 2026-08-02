@@ -28,7 +28,8 @@ import { serializeDxfTextNode } from '../../text-engine/serializer';
 // ADR-739 Φ.Ε/Φ2 βήμα 4 — «SHX ή TrueType;». Εισάγεται από το **φύλλο**, όχι από το barrel
 // `text-engine/fonts`: εκείνο ανακοινώνει και τον `font-upload.service`, δηλαδή θα έσερνε
 // ολόκληρο το Firebase SDK μέσα σε έναν writer που πρέπει να τρέχει και σε worker.
-import { dxfFontFileFor } from '../../text-engine/fonts/font-file-kind';
+import { dxfFontFileFor, fontKindOf } from '../../text-engine/fonts/font-file-kind';
+import { TEXT_OBLIQUE_ITALIC_DEG } from '../../config/text-rendering-config';
 import { ensureTextNode } from '../../text-engine/edit/ensure-text-node';
 import { DxfDocumentVersion } from '../../text-engine/types/text-toolbar.types';
 import { alignmentToHJust } from '../../utils/dxf-converter-helpers';
@@ -119,6 +120,38 @@ export function resolveExportFont(fontFamily: string | undefined): string {
   return dxfFontFileFor(f);
 }
 
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 (ζωντανή επαλήθευση) — **η γωνία κλίσης ενός SHX run, σε μοίρες.**
+ *
+ * Είναι το **ένα** σημείο που απαντά «γέρνει αυτό το κείμενο, και πόσο;». Το ρωτούν **δύο**
+ * καταναλωτές που πρέπει να συμφωνούν πάντα: το `STYLE` record (group **50**) και η ίδια η
+ * οντότητα `TEXT` (group **51**).
+ *
+ * ## Γιατί ΚΑΙ ΤΑ ΔΥΟ — το ελάττωμα που βρήκε μόνο το άνοιγμα του αρχείου
+ * Το βήμα 4 έγραφε την κλίση **μόνο** στο STYLE record. Στο AutoCAD 2021 η γραμμή βγήκε
+ * **όρθια**, ενώ το αρχείο έλεγε `50 = 15`. Ο λόγος είναι τεκμηριωμένος από την **ίδια την
+ * Autodesk**: «Changing text height, width factor, and **oblique angle** does **not** change
+ * existing text but does change subsequently created text objects.» Δηλαδή η κλίση είναι
+ * ιδιότητα **της οντότητας**· το style δίνει μόνο την **αρχική τιμή για νέο** κείμενο. Το
+ * ίδιο λέει και η ezdxf για το group 51: «Text oblique angle … **the default value is 0**».
+ *
+ * Ένα `TEXT` χωρίς group 51 διαβάζεται λοιπόν ως **0 μοίρες**, ό,τι κι αν λέει το style του.
+ * Το STYLE μένει κι αυτό σωστό (η κλίση **είναι** χαρακτηριστικό της παραλλαγής, και νέο
+ * κείμενο που θα φτιάξει ο παραλήπτης σε αυτό το style πρέπει να γέρνει), αλλά **δεν αρκεί**.
+ *
+ * ⚠️ Το ίδιο σχήμα με το §28.9.8: **τα δεδομένα ήταν όλα μέσα και τίποτα δεν φαινόταν** — και
+ * τα 2.115 + 19 tests ήταν πράσινα, γιατί ελέγχουν *τι γράφτηκε*, όχι *τι αποδίδεται*.
+ *
+ * Οι TrueType επιστρέφουν **πάντα 0**: εκεί η κλίση ζει στη σημαία `ITALIC` του XDATA 1071
+ * (§28.11.1) και μια γεωμετρική κλίση θα ήταν **χειρότερη**, όχι απλώς περιττή.
+ */
+export function exportObliqueAngleDeg(fontFamily: string | undefined, italic: boolean): number {
+  if (!italic) return 0;
+  // Το ερώτημα τίθεται στο **αρχείο που θα γραφτεί**, όχι στην οικογένεια που ζητήθηκε: ένα
+  // εισαγόμενο `txt.shx` υποκαθίσταται από `Arial.ttf` (ADR-644 #8) και είναι πλέον TrueType.
+  return fontKindOf(resolveExportFont(fontFamily)) === 'shx' ? TEXT_OBLIQUE_ITALIC_DEG : 0;
+}
+
 /** The first real (text) run of a TEXT/MTEXT entity's `textNode`, when it has one. */
 function firstRun(e: Entity): TextRun | undefined {
   const node = (e as TextEntity | MTextEntity).textNode;
@@ -171,6 +204,7 @@ export function alignFromTextEntity(e: TextEntity): TextAlign | undefined {
 export function emitText(
   p: Point2D, text: string, height: number | undefined, layer: string, aci: number, s: number, pair: Pair,
   rotationDeg = 0, align?: TextAlign, styleName: string = DEFAULT_STYLE, r2018?: EntityR2018,
+  obliqueDeg = 0,
 ): void {
   pair(0, 'TEXT');
   // ADR-644 (#9e) — R2018 TEXT: AcDbEntity common block, then `100 AcDbText`, then a SECOND
@@ -182,6 +216,11 @@ export function emitText(
   pair(1, sanitizeText(text));
   pair(50, rotationDeg); // rotation (CCW degrees)
   pair(41, 1);           // width factor
+  // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — γωνία κλίσης ΤΗΣ ΟΝΤΟΤΗΤΑΣ (SHX πλάγια· δες
+  // `exportObliqueAngleDeg`). Γράφεται **μόνο** όταν είναι μη-μηδενική, ώστε κάθε υπάρχον
+  // αρχείο να μένει byte-identical — και στη θέση που ορίζει η προδιαγραφή, ανάμεσα στο 41
+  // και στο 7.
+  if (obliqueDeg !== 0) pair(51, obliqueDeg);
   pair(7, styleName);    // text style (group 7) — round-trips the STYLE table (ADR-636 D.5)
   if (r2018) {
     pair(72, align?.h ?? 0);

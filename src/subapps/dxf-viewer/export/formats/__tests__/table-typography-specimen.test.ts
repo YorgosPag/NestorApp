@@ -415,6 +415,24 @@ describe('ADR-739 Φ2/4 — τα πλάγια SHX είναι ΓΕΩΜΕΤΡΙΑ,
     expect(hasCode(rec, 1000)).toBe(false);
     expect(hasCode(rec, 1001)).toBe(false);
   });
+
+  it('🔴🔴 Η ΚΛΙΣΗ ΖΕΙ ΚΑΙ ΣΤΗΝ ΟΝΤΟΤΗΤΑ (group 51) — το style ΔΕΝ αρκεί', () => {
+    // ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΒΡΗΚΕ ΜΟΝΟ ΤΟ ΑΝΟΙΓΜΑ ΤΟΥ ΑΡΧΕΙΟΥ (AutoCAD 2021, 02/08): η γραμμή 7
+    // βγήκε **όρθια**, ενώ το STYLE record έλεγε `50 = 15`. Τεκμηριωμένο από την Autodesk:
+    // «Changing … oblique angle does **not** change existing text but does change subsequently
+    // created text objects» ⇒ η κλίση είναι ιδιότητα ΤΗΣ ΟΝΤΟΤΗΤΑΣ· το style δίνει μόνο την
+    // αρχική τιμή για **νέο** κείμενο. Και η ezdxf: group 51 «default value is 0».
+    //
+    // Το βήμα 4 ήταν πράσινο σε 2.115 + 19 tests γιατί όλα ρωτούσαν το **STYLE**. Κανένα δεν
+    // ρωτούσε την οντότητα — και ακριβώς εκεί κοιτάει το AutoCAD.
+    expect(group(textRecord(SPECIMENS[6].sample), 51)).toBe(TEXT_OBLIQUE_ITALIC_DEG);
+  });
+
+  it('🔴 καμία TrueType οντότητα δεν παίρνει group 51 — ούτε καν μηδενικό', () => {
+    // Zero regression: ένα ρητό `51 0` θα άλλαζε bytes σε **κάθε** υπάρχον αρχείο χωρίς καμία
+    // οπτική διαφορά — το ίδιο σχήμα με το `italic: false` που μετακίνησε 5 snapshots (§28.11.6).
+    for (const s of SPECIMENS.slice(0, 6)) expect(hasCode(textRecord(s.sample), 51)).toBe(false);
+  });
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -476,7 +494,21 @@ describe('ADR-739 Φ2/4 — παραγωγή του αρχείου για τη �
     // «πράσινο test, κανένα αρχείο» — ακριβώς το σχήμα σιωπηλής απώλειας που κυνηγάμε.
     fs.mkdirSync(dir, { recursive: true });
     const file = path.join(dir, 'nestor_adr739_typography_specimen.dxf');
-    fs.writeFileSync(file, DXF, 'utf-8');
+    try {
+      fs.writeFileSync(file, DXF, 'utf-8');
+    } catch (err) {
+      // ⚠️ Το AutoCAD **κλειδώνει** το ανοιχτό σχέδιο (`EBUSY`). Συμβαίνει σε **κάθε** γύρο
+      // επαλήθευσης, γιατί ο φυσικός ρυθμός είναι «άνοιξε → βρες ελάττωμα → διόρθωσε →
+      // ξαναπαρήγαγε». Ένα ωμό `EBUSY` θα διαβαζόταν ως σφάλμα του βήματος· είναι οδηγία.
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'EBUSY' || code === 'EPERM') {
+        throw new Error(
+          `Το «${file}» είναι ΑΝΟΙΧΤΟ σε άλλο πρόγραμμα (AutoCAD· κωδικός ${code}). `
+          + 'Κλείσε το σχέδιο και ξανατρέξε την ίδια εντολή — το αρχείο ΔΕΝ ενημερώθηκε.',
+        );
+      }
+      throw err;
+    }
     expect(fs.statSync(file).size).toBeGreaterThan(0);
   });
 });

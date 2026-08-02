@@ -17,11 +17,11 @@ import { hexToAci } from '../../ui/text-toolbar/controls/aci-palette';
 import { trueColorToHex } from '../../utils/dxf-true-color';
 import {
   readTextEntityFamily, readTextEntityBold, readTextEntityItalic, textStyleName, resolveExportFont,
+  exportObliqueAngleDeg,
 } from './dxf-ascii-text-writer';
 // ADR-739 Φ.Ε/Φ2 βήμα 4 — «SHX ή TrueType;» + όνομα αρχείου → οικογένεια. Από το φύλλο, όχι
 // από το barrel `text-engine/fonts` (που θα έσερνε το Firebase SDK του font manager).
 import { fontKindOf, fontFamilyOfFileName } from '../../text-engine/fonts/font-file-kind';
-import { TEXT_OBLIQUE_ITALIC_DEG } from '../../config/text-rendering-config';
 import type { DxfWriteLayer } from './dxf-ascii-writer';
 
 const DEFAULT_ACI = 7; // white/black (ByLayer-ish fallback)
@@ -122,7 +122,12 @@ function styleEntryFor(
     height: 0, widthFactor: 1, flags: 0, textGenerationFlags: 0,
     // Η γεωμετρική κλίση αφορά **μόνο** τα SHX (δες τον πίνακα παραπάνω). Για TrueType μένει
     // 0 — byte-identical με πριν για κάθε υπάρχον style.
-    obliqueAngle: !trueType && italic ? TEXT_OBLIQUE_ITALIC_DEG : 0,
+    //
+    // 🔴 Ίδιο σημείο απόφασης με την **οντότητα** (group 51): το `exportObliqueAngleDeg` είναι ο
+    // ΕΝΑΣ που απαντά «γέρνει, και πόσο;». Δύο ξεχωριστά ternaries θα ήταν δύο απαντήσεις που
+    // μπορούν κάποτε να διαφωνήσουν — και η διαφωνία τους είναι **αόρατη** σε κάθε test που
+    // κοιτά μόνο το ένα από τα δύο group codes.
+    obliqueAngle: exportObliqueAngleDeg(family, italic),
     // 🔴 Η οικογένεια του XDATA παράγεται από το **αρχείο που γράφτηκε**, όχι από το αρχείο
     // που ζητήθηκε. Η διαφορά φαίνεται σε ένα εισαγόμενο `txt.shx`: το ADR-644 (#8) το
     // υποκαθιστά με `Arial.ttf` επειδή το SHX `txt` δεν έχει ελληνικά γλυφά, οπότε ένα

@@ -34,7 +34,7 @@ import { emitDimensionEntity } from '../../utils/dxf-dimension-writer';
 import { emitHatch, type Pair } from './dxf-ascii-hatch-writer';
 import {
   emitText, emitMText, alignFromTextEntity, textStyleName, readTextEntityFamily, readTextEntityBold,
-  readTextEntityItalic,
+  readTextEntityItalic, exportObliqueAngleDeg,
 } from './dxf-ascii-text-writer';
 import {
   emit3DFace,
@@ -134,6 +134,10 @@ export function writeEntity(
           ? undefined
           : textStyleName(readTextEntityFamily(e), readTextEntityBold(e), readTextEntityItalic(e)),
         r2018,
+        // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 (ζωντανή επαλήθευση) — η κλίση των SHX πλαγίων ζει ΚΑΙ στην
+        // οντότητα (group 51): το AutoCAD ΔΕΝ εφαρμόζει την κλίση του style σε **υπάρχον**
+        // κείμενο. Ο Τέκτων δεν έχει έννοια κλίσης ⇒ `explode` μένει byte-identical.
+        explode ? 0 : exportObliqueAngleDeg(readTextEntityFamily(e), readTextEntityItalic(e)),
       );
       break;
     case 'mtext':
