@@ -13,18 +13,19 @@ import {
   stepAxisTextHeight,
 } from '../table-text-height-scale';
 import { resolveAxisNumericRange, setAxisStyleField } from '../table-axis-style-ops';
-import { BUILTIN_TABLE_STYLE_IDS, BUILTIN_TABLE_STYLES } from '../table-style-presets';
-import type { TableStyle } from '../table-style';
+import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
 import type { PersistedTableModel } from '../../../types/table';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
-function styleById(id: string): TableStyle {
-  const style = BUILTIN_TABLE_STYLES.find((s) => s.id === id);
-  if (!style) throw new Error(`missing preset: ${id}`);
-  return style;
-}
-const STANDARD = styleById(BUILTIN_TABLE_STYLE_IDS.STANDARD);
+/**
+ * Το `standard` **με** την ιστορική ιεραρχία γραμμών (τίτλος 4mm έντονος · κεφαλίδα 3mm
+ * έντονη με γέμισμα · δεδομένα 2,8mm κανονικά). Από την 2026-08-04 το ίδιο το preset είναι
+ * ουδέτερο — κάθε κελί ισάξιο — οπότε δείγμα «μεικτής σειράς» δεν υπάρχει πια εκεί. Το
+ * ερώτημα αυτής της ομάδας είναι η μηχανή, όχι το preset· με ομοιόμορφο δείγμα θα έμενε
+ * πράσινη χωρίς να ρωτά τίποτα.
+ */
+const HIERARCHICAL = hierarchicalTableStyle();
 
 /**
  * Τίτλος (4mm, έντονος) + κεφαλίδα (3mm, έντονη) + δεδομένα (2.8mm) × δύο στήλες.
@@ -111,20 +112,20 @@ describe('nextTextHeightStepMm — ένα σκαλί προς μια κατεύ�
 
 describe('stepAxisTextHeight — 🔴 από ποια τιμή ξεκινά σε μεικτή σειρά', () => {
   it('«μεγάλωσε» σε στήλη τίτλου(4)/κεφαλίδας(3)/δεδομένων(2.8) ξεκινά από το ΜΕΓΙΣΤΟ (4 → 5), όχι από το 2.8', () => {
-    const next = stepAxisTextHeight(model(), STANDARD, 'column', 'c0', 1);
+    const next = stepAxisTextHeight(model(), HIERARCHICAL, 'column', 'c0', 1);
     expect(next.columns[0].styleOverride).toEqual({ textHeightMm: 5 });
   });
 
   it('«μίκρυνε» στην ΙΔΙΑ στήλη ξεκινά από το ΕΛΑΧΙΣΤΟ (2.8 → 2.5), όχι από το 4', () => {
-    const next = stepAxisTextHeight(model(), STANDARD, 'column', 'c0', -1);
+    const next = stepAxisTextHeight(model(), HIERARCHICAL, 'column', 'c0', -1);
     expect(next.columns[0].styleOverride).toEqual({ textHeightMm: 2.5 });
   });
 
   it('🔴 το «μεγάλωσε» ΔΕΝ μικραίνει ΚΑΝΕΝΑ κελί της σειράς — νικά ακόμα και τον τίτλο, το ήδη μεγαλύτερο κελί', () => {
-    const beforeTitle = STANDARD.rowClasses.title.textHeightMm; // 4 — το ήδη μεγαλύτερο κελί
-    const beforeHeader = STANDARD.rowClasses.header.textHeightMm; // 3
-    const beforeData = STANDARD.rowClasses.data.textHeightMm; // 2.8
-    const next = stepAxisTextHeight(model(), STANDARD, 'column', 'c0', 1);
+    const beforeTitle = HIERARCHICAL.rowClasses.title.textHeightMm; // 4 — το ήδη μεγαλύτερο κελί
+    const beforeHeader = HIERARCHICAL.rowClasses.header.textHeightMm; // 3
+    const beforeData = HIERARCHICAL.rowClasses.data.textHeightMm; // 2.8
+    const next = stepAxisTextHeight(model(), HIERARCHICAL, 'column', 'c0', 1);
     const after = next.columns[0].styleOverride?.textHeightMm as number;
     // Η αντίθετη επιλογή (ξεκίνα πάντα από το ελάχιστο) θα έδινε 2.8 → 3.5, δηλαδή θα
     // ΣΥΡΡΙΚΝΩΝΕ τον τίτλο από 4mm σε 3.5mm — το κουμπί «μεγάλωσε» να μικραίνει κελί.
@@ -134,10 +135,10 @@ describe('stepAxisTextHeight — 🔴 από ποια τιμή ξεκινά σε
   });
 
   it('🔴 το «μίκρυνε» ΔΕΝ μεγαλώνει ΚΑΝΕΝΑ κελί της σειράς — νικά ακόμα και τα δεδομένα, το ήδη μικρότερο κελί', () => {
-    const beforeTitle = STANDARD.rowClasses.title.textHeightMm; // 4
-    const beforeHeader = STANDARD.rowClasses.header.textHeightMm; // 3
-    const beforeData = STANDARD.rowClasses.data.textHeightMm; // 2.8 — το ήδη μικρότερο κελί
-    const next = stepAxisTextHeight(model(), STANDARD, 'column', 'c0', -1);
+    const beforeTitle = HIERARCHICAL.rowClasses.title.textHeightMm; // 4
+    const beforeHeader = HIERARCHICAL.rowClasses.header.textHeightMm; // 3
+    const beforeData = HIERARCHICAL.rowClasses.data.textHeightMm; // 2.8 — το ήδη μικρότερο κελί
+    const next = stepAxisTextHeight(model(), HIERARCHICAL, 'column', 'c0', -1);
     const after = next.columns[0].styleOverride?.textHeightMm as number;
     expect(after).toBeLessThanOrEqual(beforeTitle);
     expect(after).toBeLessThanOrEqual(beforeHeader);
@@ -148,19 +149,19 @@ describe('stepAxisTextHeight — 🔴 από ποια τιμή ξεκινά σε
     const top = TABLE_TEXT_HEIGHT_SCALE_MM[TABLE_TEXT_HEIGHT_SCALE_MM.length - 1];
     // Η παράκαμψη στήλης ισοπεδώνει ΟΛΗ τη στήλη στο `top` ⇒ min === max === top.
     const atTop = setAxisStyleField(model(), 'column', 'c0', 'textHeightMm', top);
-    expect(resolveAxisNumericRange(atTop, STANDARD, 'column', 'c0', 'textHeightMm'))
+    expect(resolveAxisNumericRange(atTop, HIERARCHICAL, 'column', 'c0', 'textHeightMm'))
       .toEqual({ min: top, max: top });
-    expect(stepAxisTextHeight(atTop, STANDARD, 'column', 'c0', 1)).toBe(atTop);
+    expect(stepAxisTextHeight(atTop, HIERARCHICAL, 'column', 'c0', 1)).toBe(atTop);
   });
 
   it('ομοιόμορφη σειρά στο ΚΑΤΩ άκρο ⇒ ΤΟ ΙΔΙΟ μοντέλο by-reference (κανένα βήμα undo)', () => {
     const bottom = TABLE_TEXT_HEIGHT_SCALE_MM[0];
     const atBottom = setAxisStyleField(model(), 'column', 'c0', 'textHeightMm', bottom);
-    expect(stepAxisTextHeight(atBottom, STANDARD, 'column', 'c0', -1)).toBe(atBottom);
+    expect(stepAxisTextHeight(atBottom, HIERARCHICAL, 'column', 'c0', -1)).toBe(atBottom);
   });
 
   it('άγνωστη ταυτότητα ⇒ ΤΟ ΙΔΙΟ μοντέλο, καμία εντολή', () => {
     const start = model();
-    expect(stepAxisTextHeight(start, STANDARD, 'column', 'ΔΕΝ_ΥΠΑΡΧΕΙ', 1)).toBe(start);
+    expect(stepAxisTextHeight(start, HIERARCHICAL, 'column', 'ΔΕΝ_ΥΠΑΡΧΕΙ', 1)).toBe(start);
   });
 });

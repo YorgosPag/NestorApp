@@ -19,18 +19,19 @@ import {
   setAxisStyleField,
 } from '../table-axis-style-ops';
 import { insertTableColumn, insertTableRow } from '../table-row-column-ops';
-import { BUILTIN_TABLE_STYLE_IDS, BUILTIN_TABLE_STYLES } from '../table-style-presets';
-import type { TableStyle } from '../table-style';
+import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
 import type { PersistedTableModel } from '../../../types/table';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
-function styleById(id: string): TableStyle {
-  const style = BUILTIN_TABLE_STYLES.find((s) => s.id === id);
-  if (!style) throw new Error(`missing preset: ${id}`);
-  return style;
-}
-const STANDARD = styleById(BUILTIN_TABLE_STYLE_IDS.STANDARD);
+/**
+ * Το `standard` **με** την ιστορική ιεραρχία γραμμών (τίτλος 4mm έντονος · κεφαλίδα 3mm
+ * έντονη με γέμισμα · δεδομένα 2,8mm κανονικά). Από την 2026-08-04 το ίδιο το preset είναι
+ * ουδέτερο — κάθε κελί ισάξιο — οπότε δείγμα «μεικτής σειράς» δεν υπάρχει πια εκεί. Το
+ * ερώτημα αυτής της ομάδας είναι η μηχανή, όχι το preset· με ομοιόμορφο δείγμα θα έμενε
+ * πράσινη χωρίς να ρωτά τίποτα.
+ */
+const HIERARCHICAL = hierarchicalTableStyle();
 
 /** Κεφαλίδα (έντονη από το στυλ) + δύο γραμμές δεδομένων (όχι έντονες) × δύο στήλες. */
 function model(): PersistedTableModel {
@@ -167,23 +168,23 @@ describe('🔴 κληρονομιά σε εισαγωγή — ο λόγος ύπ
 
 describe('resolveAxisFormat — τι δείχνει το χειριστήριο', () => {
   it('🔴 στήλη που περνά από κεφαλίδα (έντονη) και δεδομένα (όχι) ⇒ ΜΕΙΚΤΗ', () => {
-    const state = resolveAxisFormat(model(), STANDARD, 'column', 'c0', 'bold');
+    const state = resolveAxisFormat(model(), HIERARCHICAL, 'column', 'c0', 'bold');
     expect(state).toEqual({ value: undefined, mixed: true, overridden: false });
   });
 
   it('γραμμή δεδομένων χωρίς παράκαμψη ⇒ όχι έντονη, κληρονομημένη', () => {
-    expect(resolveAxisFormat(model(), STANDARD, 'row', 'r1', 'bold'))
+    expect(resolveAxisFormat(model(), HIERARCHICAL, 'row', 'r1', 'bold'))
       .toEqual({ value: false, mixed: false, overridden: false });
   });
 
   it('γραμμή κεφαλίδας ⇒ έντονη ΑΠΟ ΤΟ ΣΤΥΛ — τιμή ναι, παράκαμψη όχι', () => {
-    expect(resolveAxisFormat(model(), STANDARD, 'row', 'r0', 'bold'))
+    expect(resolveAxisFormat(model(), HIERARCHICAL, 'row', 'r0', 'bold'))
       .toEqual({ value: true, mixed: false, overridden: false });
   });
 
   it('παράκαμψη στήλης ισοπεδώνει τη μεικτή κατάσταση και δηλώνεται ως ρητή', () => {
     const bold = setAxisStyleField(model(), 'column', 'c0', 'bold', true);
-    expect(resolveAxisFormat(bold, STANDARD, 'column', 'c0', 'bold'))
+    expect(resolveAxisFormat(bold, HIERARCHICAL, 'column', 'c0', 'bold'))
       .toEqual({ value: true, mixed: false, overridden: true });
   });
 
@@ -193,7 +194,7 @@ describe('resolveAxisFormat — τι δείχνει το χειριστήριο'
       ...bold,
       cells: [['r1', 'c0', { kind: 'text', value: 'x', styleOverride: { bold: false } }]],
     };
-    const state = resolveAxisFormat(withCell, STANDARD, 'column', 'c0', 'bold');
+    const state = resolveAxisFormat(withCell, HIERARCHICAL, 'column', 'c0', 'bold');
     expect(state?.mixed).toBe(true);
     // …αλλά η ΠΑΡΑΚΑΜΨΗ του άξονα εξακολουθεί να υπάρχει: δύο ορθογώνιες ερωτήσεις.
     expect(state?.overridden).toBe(true);
@@ -201,17 +202,17 @@ describe('resolveAxisFormat — τι δείχνει το χειριστήριο'
 
   it('`overridden` βλέπει ΤΟ ΣΥΓΚΕΚΡΙΜΕΝΟ πεδίο, όχι «έχει κάποια παράκαμψη»', () => {
     const italic = setAxisStyleField(model(), 'row', 'r1', 'italic', true);
-    expect(resolveAxisFormat(italic, STANDARD, 'row', 'r1', 'bold')?.overridden).toBe(false);
-    expect(resolveAxisFormat(italic, STANDARD, 'row', 'r1', 'italic')?.overridden).toBe(true);
+    expect(resolveAxisFormat(italic, HIERARCHICAL, 'row', 'r1', 'bold')?.overridden).toBe(false);
+    expect(resolveAxisFormat(italic, HIERARCHICAL, 'row', 'r1', 'italic')?.overridden).toBe(true);
   });
 
   it('άγνωστη ταυτότητα ⇒ `null`, ποτέ ψεύτικη κατάσταση', () => {
-    expect(resolveAxisFormat(model(), STANDARD, 'row', 'ΔΕΝ_ΥΠΑΡΧΕΙ', 'bold')).toBeNull();
+    expect(resolveAxisFormat(model(), HIERARCHICAL, 'row', 'ΔΕΝ_ΥΠΑΡΧΕΙ', 'bold')).toBeNull();
   });
 
   it('διαβάζει και μη-δίτιμα πεδία με το ίδιο σχήμα', () => {
     const sized = setAxisStyleField(model(), 'column', 'c1', 'textHeightMm', 5);
-    expect(resolveAxisFormat(sized, STANDARD, 'column', 'c1', 'textHeightMm'))
+    expect(resolveAxisFormat(sized, HIERARCHICAL, 'column', 'c1', 'textHeightMm'))
       .toEqual({ value: 5, mixed: false, overridden: true });
   });
 });
@@ -239,13 +240,13 @@ describe('nextBooleanFormat — ο κανόνας του πατήματος', ()
 describe('resolveAxisNumericRange — τα άκρα μιας αριθμητικής ιδιότητας κατά μήκος του άξονα', () => {
   it('🔴 μεικτή στήλη (κεφαλίδα 3mm έντονη + δύο γραμμές δεδομένων 2.8mm) ⇒ σωστά min/max', () => {
     // Ο ίδιος λόγος που υπάρχει η συνάρτηση: καμία στήλη δεν είναι ομοιόμορφη σε ύψος
-    // κειμένου, γιατί περνά από κεφαλίδα (STANDARD: 3mm) και δεδομένα (STANDARD: 2.8mm).
-    expect(resolveAxisNumericRange(model(), STANDARD, 'column', 'c0', 'textHeightMm'))
+    // κειμένου, γιατί περνά από κεφαλίδα (HIERARCHICAL: 3mm) και δεδομένα (HIERARCHICAL: 2.8mm).
+    expect(resolveAxisNumericRange(model(), HIERARCHICAL, 'column', 'c0', 'textHeightMm'))
       .toEqual({ min: 2.8, max: 3 });
   });
 
   it('άγνωστη ταυτότητα ⇒ null', () => {
-    expect(resolveAxisNumericRange(model(), STANDARD, 'row', 'ΔΕΝ_ΥΠΑΡΧΕΙ', 'textHeightMm')).toBeNull();
+    expect(resolveAxisNumericRange(model(), HIERARCHICAL, 'row', 'ΔΕΝ_ΥΠΑΡΧΕΙ', 'textHeightMm')).toBeNull();
   });
 
   it('αγνοεί μη-αριθμητικά (NaN σε παράκαμψη κελιού) χωρίς να χαλάει το εύρος των υπολοίπων', () => {
@@ -256,7 +257,7 @@ describe('resolveAxisNumericRange — τα άκρα μιας αριθμητικ�
       cells: [['r0', 'c0', { kind: 'text', value: 'x', styleOverride: { textHeightMm: NaN } }]],
     };
     // Μένουν μόνο οι δύο γραμμές δεδομένων (2.8mm) — ομοιόμορφο εύρος.
-    expect(resolveAxisNumericRange(withNaN, STANDARD, 'column', 'c0', 'textHeightMm'))
+    expect(resolveAxisNumericRange(withNaN, HIERARCHICAL, 'column', 'c0', 'textHeightMm'))
       .toEqual({ min: 2.8, max: 2.8 });
   });
 });
@@ -284,7 +285,7 @@ describe('🔴 regression — resolveAxisFormat και resolveAxisNumericRange �
     );
     // r0 (κεφαλίδα) + r2 (δεδομένα) ακολουθούν τη στήλη (9)· η r1 έχει ΔΙΚΗ ΤΗΣ παράκαμψη
     // γραμμής (1.5) που νικά τη στήλη — αν το εύρος δεν το έβλεπε, θα ήταν {min:9,max:9}.
-    expect(resolveAxisNumericRange(withBoth, STANDARD, 'column', 'c0', 'textHeightMm'))
+    expect(resolveAxisNumericRange(withBoth, HIERARCHICAL, 'column', 'c0', 'textHeightMm'))
       .toEqual({ min: 1.5, max: 9 });
   });
 
@@ -296,6 +297,6 @@ describe('🔴 regression — resolveAxisFormat και resolveAxisNumericRange �
     // Αν το resolveAxisFormat χρησιμοποιούσε δικό του βρόχο θα μπορούσε να δει `bold: true`
     // παντού (μόνο τη στήλη) και να χάσει ότι η r1 νικά με `false` — δηλαδή θα έλεγε ψευδώς
     // «δεν είναι μεικτό».
-    expect(resolveAxisFormat(withBoth, STANDARD, 'column', 'c0', 'bold')?.mixed).toBe(true);
+    expect(resolveAxisFormat(withBoth, HIERARCHICAL, 'column', 'c0', 'bold')?.mixed).toBe(true);
   });
 });

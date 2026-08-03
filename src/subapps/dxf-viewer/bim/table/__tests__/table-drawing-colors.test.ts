@@ -9,19 +9,21 @@
  */
 
 import { collectDrawingColors, DRAWING_COLORS_LIMIT } from '../table-drawing-colors';
-import { BUILTIN_TABLE_STYLE_IDS, BUILTIN_TABLE_STYLES } from '../table-style-presets';
+import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
 import type { TableStyle } from '../table-style';
 import type { PlotColorRole } from '../../../config/print-color-policy';
 import type { PersistedTableModel } from '../../../types/table';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
-function styleById(id: string): TableStyle {
-  const style = BUILTIN_TABLE_STYLES.find((s) => s.id === id);
-  if (!style) throw new Error(`missing preset: ${id}`);
-  return style;
-}
-const STANDARD = styleById(BUILTIN_TABLE_STYLE_IDS.STANDARD);
+/**
+ * Το `standard` **με** την ιστορική ιεραρχία γραμμών (τίτλος 4mm έντονος · κεφαλίδα 3mm
+ * έντονη με γέμισμα · δεδομένα 2,8mm κανονικά). Από την 2026-08-04 το ίδιο το preset είναι
+ * ουδέτερο — κάθε κελί ισάξιο — οπότε δείγμα «μεικτής σειράς» δεν υπάρχει πια εκεί. Το
+ * ερώτημα αυτής της ομάδας είναι η μηχανή, όχι το preset· με ομοιόμορφο δείγμα θα έμενε
+ * πράσινη χωρίς να ρωτά τίποτα.
+ */
+const HIERARCHICAL = hierarchicalTableStyle();
 
 function model(): PersistedTableModel {
   return {
@@ -46,7 +48,7 @@ function collect(
   }> = {},
 ): readonly string[] {
   return collectDrawingColors({
-    style: STANDARD,
+    style: HIERARCHICAL,
     model: overrides.model ?? model(),
     layerColors: overrides.layerColors ?? [],
     role: overrides.role,
