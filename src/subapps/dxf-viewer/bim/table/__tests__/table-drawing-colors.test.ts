@@ -193,11 +193,11 @@ describe('collectDrawingColors — ο ρόλος αλλάζει ΚΑΙ το πε
     // για το γέμισμα είναι η κανονικότητα. Ένα στυλ χωρίς κανένα `fillColorHex` δεν είναι
     // παθολογία — είναι ένας καθαρός πίνακας πριν τον βάψει κανείς.
     const bare: TableStyle = {
-      ...STANDARD,
+      ...HIERARCHICAL,
       rowClasses: {
-        title: { ...STANDARD.rowClasses.title, fillColorHex: undefined },
-        header: { ...STANDARD.rowClasses.header, fillColorHex: undefined },
-        data: { ...STANDARD.rowClasses.data, fillColorHex: undefined },
+        title: { ...HIERARCHICAL.rowClasses.title, fillColorHex: undefined },
+        header: { ...HIERARCHICAL.rowClasses.header, fillColorHex: undefined },
+        data: { ...HIERARCHICAL.rowClasses.data, fillColorHex: undefined },
       },
     };
     expect(collectDrawingColors({ style: bare, model: model(), layerColors: [], role: 'fill' }))

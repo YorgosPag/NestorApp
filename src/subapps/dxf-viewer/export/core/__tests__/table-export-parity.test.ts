@@ -56,8 +56,23 @@ const COLUMNS: TableColumn[] = [
   { id: 'c2', sizing: { kind: 'fixed', widthMm: 60 }, valueType: 'text', align: 'left' },
   { id: 'c3', sizing: { kind: 'fixed', widthMm: 25 }, valueType: 'text', align: 'left' },
 ];
+/**
+ * ⚠️ Το γέμισμα και τα έντονα της κεφαλίδας είναι **παράκαμψη γραμμής**, όχι κληρονομιά του
+ * preset. Ήταν κληρονομιά μέχρι την 2026-08-04, οπότε το `standard` έγινε **ουδέτερο**
+ * (απόφαση Giorgio: κάθε κελί ισάξιο — ο χρήστης του καμβά φτιάχνει τον δικό του πίνακα).
+ * Το σενάριο δεν εξασθένησε· έγινε **πιο κοντά στην πραγματικότητα**: σήμερα το γέμισμα
+ * φτάνει στο DXF επειδή το **έβαψε ο χρήστης**, και ακριβώς αυτό το μονοπάτι πρέπει να
+ * ελέγχεται. Χωρίς την παράκαμψη δεν θα γεννιόταν ΚΑΝΕΝΑ hatch και έξι έλεγχοι θα
+ * «περνούσαν» χωρίς να ρωτούν τίποτα.
+ */
+export const HEADER_FILL_HEX = '#EDEDED';
+
 const ROWS: TableRow[] = [
-  { id: 'rh', rowClass: 'header' },
+  {
+    id: 'rh',
+    rowClass: 'header',
+    styleOverride: { fillColorHex: HEADER_FILL_HEX, bold: true },
+  },
   { id: 'rd', rowClass: 'data' },
 ];
 
