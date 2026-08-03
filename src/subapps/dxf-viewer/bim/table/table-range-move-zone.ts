@@ -1,5 +1,5 @@
 /**
- * 🔴 ADR-739 §35 — **ΠΟΥ ΤΕΛΕΙΩΝΕΙ ΤΟ «ΜΕΣΑ ΣΤΟ ΚΕΛΙ» ΚΑΙ ΑΡΧΙΖΕΙ ΤΟ «ΠΑΝΩ ΣΤΟ
+ * 🔴 ADR-739 §36 — **ΠΟΥ ΤΕΛΕΙΩΝΕΙ ΤΟ «ΜΕΣΑ ΣΤΟ ΚΕΛΙ» ΚΑΙ ΑΡΧΙΖΕΙ ΤΟ «ΠΑΝΩ ΣΤΟ
  * ΠΕΡΙΓΡΑΜΜΑ»**. Καθαρή γεωμετρία — μηδέν DOM, μηδέν store, μηδέν React.
  *
  * Ο ιδιοκτήτης το έθεσε ως parity: «*στο Excel, μέσα σε κελί ο κέρσορας γίνεται σταυρός,
@@ -45,7 +45,7 @@
  * @see bim/table/table-cell-range.ts — `tableRangeRectMm`: ΠΟΙΟ είναι το ορθογώνιο
  * @see bim/table/table-indicator-geometry.ts — ΠΟΙΟΣ ρόλος δείκτη οφείλεται πού
  * @see config/grip-aperture.ts — η ΜΙΑ οπή σύλληψης του έργου
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §35
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §36
  */
 
 import type { TableFramePoint } from '../../types/table-entity';
@@ -62,7 +62,7 @@ import type { TableRectMm } from './table-layout-types';
 export const MAX_INSIDE_REACH_FRACTION = 0.25;
 
 /**
- * 🔴 §35 — **ΤΙ ΖΗΤΑ Ο ΧΡΗΣΤΗΣ ΜΕ ΤΑ ΠΛΗΚΤΡΑ ΤΟΥ**, τη στιγμή της χειρονομίας.
+ * 🔴 §36 — **ΤΙ ΖΗΤΑ Ο ΧΡΗΣΤΗΣ ΜΕ ΤΑ ΠΛΗΚΤΡΑ ΤΟΥ**, τη στιγμή της χειρονομίας.
  *
  * ## Γιατί ΔΥΟ ανεξάρτητα boolean και όχι απαρίθμηση τεσσάρων καταστάσεων
  * Ο πειρασμός είναι `'move' | 'copy' | 'insert' | 'copy-insert'`. Θα ήταν **λάθος μοντέλο**:
@@ -153,7 +153,7 @@ export function signedDistanceToRectOutlineMm(rectMm: TableRectMm, u: number, v:
 }
 
 /**
- * 🔴 §35 — **ΕΙΜΑΙ ΠΑΝΩ ΣΤΟ ΠΕΡΙΓΡΑΜΜΑ ΤΗΣ ΕΠΙΛΟΓΗΣ;** Η μία ερώτηση, ο ένας ορισμός.
+ * 🔴 §36 — **ΕΙΜΑΙ ΠΑΝΩ ΣΤΟ ΠΕΡΙΓΡΑΜΜΑ ΤΗΣ ΕΠΙΛΟΓΗΣ;** Η μία ερώτηση, ο ένας ορισμός.
  *
  * Η ζώνη **διαστέλλεται εκατέρωθεν** της γραμμής, όπως στο Excel και στα Sheets: το χέρι
  * πλησιάζει το περίγραμμα από **έξω** (έρχεται από το γειτονικό κελί) ή από **μέσα** (έρχεται
