@@ -49,12 +49,21 @@ import {
   resizeTableRowAboveEdge,
 } from '../../bim/table/table-entity-grips';
 import { tableEventWorldPoint } from './table-cell-pointer-hit';
+// 🔴 Giorgio 2026-08-04 — η **ζωντανή ένδειξη μεγέθους** («Πλάτος: 14,14 (104 pixel)»).
+import { tableResizeReadoutText } from '../../bim/table/table-resize-readout';
+import {
+  hideTableResizeReadout,
+  showTableResizeReadout,
+} from '../../state/table-resize-readout-store';
+import { tablePxPerMm } from '../../bim/table/table-entity-geometry';
 import type { RefObject } from 'react';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
+import type { TableResizeAxis } from '../../bim/table/table-resize-axis';
 
-/** Ο άξονας της χειρονομίας — το **μόνο** που διαφέρει ανάμεσα στις δύο σύρσεις. */
-export type TableResizeAxis = 'column' | 'row';
+// Ο άξονας ζει στο `bim/` και **επανεξάγεται** εδώ: τον χρειάζεται και η καθαρή ένδειξη
+// μεγέθους, που δεν επιτρέπεται να εισάγει από το `ui/`.
+export type { TableResizeAxis } from '../../bim/table/table-resize-axis';
 
 /** Ό,τι χρειάζεται η χειρονομία για να ζήσει. Καμία γνώση γεωμετρίας — τη δίνει ο καλών. */
 export interface TableAxisResizeStart {
@@ -161,12 +170,25 @@ export function beginTableAxisResize(
       : resizeTableRowAboveEdge(entity, edgeIndex, edgeMm);
 
   startTableAxisResizeDrag({
-    resolveEdgeMm: (moveEvent) => edgeAlongAxisAt(moveEvent, axis, entity, container, transformRef),
+    resolveEdgeMm: (moveEvent) => {
+      // Η ένδειξη γράφεται **εδώ** και όχι στο `preview`, γιατί χρειάζεται το ίδιο το συμβάν:
+      // η θέση της ακολουθεί το χέρι, όχι τον πίνακα. Το `preview` παίρνει μόνο αριθμούς.
+      const edgeMm = edgeAlongAxisAt(moveEvent, axis, entity, container, transformRef);
+      if (edgeMm !== null) {
+        showResizeReadout({
+          axis, entity, edgeIndex, edgeMm, event: moveEvent, container, transformRef,
+        });
+      }
+      return edgeMm;
+    },
     preview: (edgeMm) => {
       const model = modelAt(edgeMm);
       if (model) preview(entity, model);
     },
     commit: (edgeMm) => {
+      // Η ένδειξη σβήνει **πάντα**, ακόμα κι όταν δεν γράφεται εντολή (σκέτο πάτημα): η
+      // χειρονομία τελείωσε, άρα δεν υπάρχει τίποτα ζωντανό να ανακοινωθεί.
+      hideTableResizeReadout();
       // Σκέτο πάτημα χωρίς κίνηση ⇒ **καμία** εντολή. Ίδια αρχή με το «σκέτο κλικ δεν γράφει
       // επιλογή» (§27.15): χειρονομία που δεν άλλαξε τίποτα δεν γεμίζει τον σωρό αναίρεσης
       // με βήμα που ο χρήστης δεν αναγνωρίζει.
@@ -199,4 +221,48 @@ function edgeAlongAxisAt(
   const geometry = computeTableEntityGeometryLive(entity);
   const frame = tableWorldToFrame(entity, world, geometry.mmToWorld);
   return axis === 'column' ? frame.u : frame.v;
+}
+
+/**
+ * Γράφει την ένδειξη μεγέθους στη θέση του χεριού.
+ *
+ * Το **μέγεθος του κελιού** (όχι η θέση του ορίου) είναι αυτό που ενδιαφέρει τον χρήστη:
+ * `edgeMm` μείον την αρχή της μονάδας που κρατά την αλλαγή. Το ίδιο νούμερο που θα γραφτεί
+ * στο μοντέλο — διαβασμένο από την **ίδια** διάταξη, ώστε η ένδειξη να μην μπορεί να πει
+ * άλλα από όσα κάνει η σύρση.
+ */
+interface ResizeReadoutInput {
+  readonly axis: TableResizeAxis;
+  readonly entity: TableEntity;
+  readonly edgeIndex: number;
+  readonly edgeMm: number;
+  readonly event: MouseEvent;
+  readonly container: HTMLElement;
+  readonly transformRef: RefObject<ViewTransform>;
+}
+
+function showResizeReadout(input: ResizeReadoutInput): void {
+  const { axis, entity, edgeIndex, edgeMm, event, container, transformRef } = input;
+  const { layout, mmToWorld } = computeTableEntityGeometryLive(entity);
+  const start = axis === 'column'
+    ? layout.columns[edgeIndex - 1]?.xMm
+    : layout.rows[edgeIndex - 1]?.yMm;
+  if (start === undefined) return;
+
+  // Η ΙΔΙΑ ζωντανή προβολή που διαβάζει και η γεωμετρία της σύρσης (ADR-040: ανάγνωση τη
+  // στιγμή του συμβάντος — ο χρήστης μπορεί να ζουμάρει με τον τροχό ενώ σέρνει).
+  const transform = transformRef.current;
+  if (!transform) return;
+
+  const rect = container.getBoundingClientRect();
+  showTableResizeReadout(
+    tableResizeReadoutText({
+      axis,
+      sizeMm: edgeMm - start,
+      pxPerMm: tablePxPerMm(mmToWorld, transform.scale),
+      mmToWorld,
+    }),
+    event.clientX - rect.left,
+    event.clientY - rect.top,
+  );
 }

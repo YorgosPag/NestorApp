@@ -7371,6 +7371,11 @@
     "dropPreviewRight": "Αγκύρωση δεξιά κατά την απόθεση"
   },
   "table": {
+    "resize": {
+      "width": "Πλάτος",
+      "height": "Ύψος",
+      "pixels": "pixel"
+    },
     "defaults": {
       "title": "ΠΙΝΑΚΑΣ",
       "columnNo": "Α/Α",

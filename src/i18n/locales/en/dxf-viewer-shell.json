@@ -7371,6 +7371,11 @@
     "dropPreviewRight": "Dock right on drop"
   },
   "table": {
+    "resize": {
+      "width": "Width",
+      "height": "Height",
+      "pixels": "pixel"
+    },
     "defaults": {
       "title": "TABLE",
       "columnNo": "No.",
