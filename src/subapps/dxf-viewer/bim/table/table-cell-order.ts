@@ -31,8 +31,13 @@ import type { TableCellEntry, TableColumnId, TableRowId } from '../../types/tabl
  * Ό,τι χρειάζεται η κατάταξη — και **μόνο** αυτό. Δέχεται τόσο `TableModel` όσο και
  * `PersistedTableModel` επειδή τα δύο σχήματα διαφέρουν μόνο στα `cells`, που εδώ δεν
  * διαβάζονται καθόλου.
+ *
+ * Εξαγόμενο (ADR-750 Φ1): την **ίδια** στενή όψη χρειάζεται και η μετάφραση θέσης πλέγματος
+ * σε ταυτότητα ακμής (`table-edge-model.ts`). Δεύτερη δήλωση των δύο αξόνων θα ήταν το
+ * ακριβές σχήμα που πιάνει το CHECK 3.28 — και, χειρότερα, δεύτερη απάντηση στο «τι είναι
+ * το ελάχιστο σχήμα πίνακα».
  */
-interface CellOrderSource {
+export interface CellOrderSource {
   readonly rows: readonly { readonly id: string }[];
   readonly columns: readonly { readonly id: string }[];
 }

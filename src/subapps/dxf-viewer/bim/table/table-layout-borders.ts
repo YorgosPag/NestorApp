@@ -11,20 +11,36 @@
  *    κελιών αλλά μόνο ~510 πραγματικές γραμμές. Η ένωση γίνεται εδώ, μία φορά, στο
  *    memoized αποτέλεσμα — όχι σε κάθε ζωγραφική (§6 / το μάθημα του ADR-735).
  *
- * ## Ποιο μολύβι κερδίζει σε μια εσωτερική οριζόντια ακμή
+ * ## Ποιο μολύβι κερδίζει σε μια εσωτερική οριζόντια ακμή — **τέσσερα επίπεδα** (ADR-750 §6.5)
  * Με σειρά προτεραιότητας:
- *  1. `TableRow.borderTop` της **κάτω** γραμμής — η ρητή παράκαμψη (γραμμή-σύνολο).
- *  2. Όταν οι δύο γραμμές είναι **διαφορετικής κλάσης**: το `bottom` της πάνω κλάσης.
+ *  1. **Η ρητή ακμή** (`TableModel.edges`) — η μόνη που μιλά για **μία** ακμή ενός κελιού.
+ *  2. `TableRow.borderTop` της **κάτω** γραμμής — η παράκαμψη ολόκληρου πλάτους (γραμμή-σύνολο).
+ *  3. Όταν οι δύο γραμμές είναι **διαφορετικής κλάσης**: το `bottom` της πάνω κλάσης.
  *     Έτσι η «γραμμή κάτω από την κεφαλίδα» είναι ιδιότητα της κεφαλίδας — εκεί την
  *     περιμένει κανείς να τη ρυθμίσει, και εκεί τη βάζει και το AutoCAD.
- *  3. Αλλιώς (ίδια κλάση): το `insideH` της κλάσης.
+ *  4. Αλλιώς (ίδια κλάση): το `insideH` της κλάσης.
+ *
+ * 🔑 **Μηδέν tie-break**, και αυτό είναι ολόκληρη η διαφορά από το Excel: το επίπεδο 1 έχει
+ * **έναν** ιδιοκτήτη εξ ορισμού (μια ακμή έχει ένα όνομα), οπότε δεν υπάρχει «ισοπαλία» να
+ * λυθεί. Το OOXML χρειάζεται **έξι** επίπεδα — με κριτήριο τη **φωτεινότητα `R+B+2G`** — και
+ * το Excel απαντά «ό,τι εφαρμόστηκε πιο πρόσφατα», δηλαδή κανόνα που δεν είναι καν
+ * αποφασίσιμος από το ίδιο το αρχείο (ADR-750 §4).
+ *
+ * ## ⚠️ Η ρητή ακμή ΔΕΝ ξαναγεννά τις εσωτερικές ακμές μιας συγχώνευσης
+ * Η ερώτηση «υπάρχει εδώ ακμή;» απαντιέται **πριν** από την «με τι μολύβι;»: το
+ * {@link sameMerge} κόβει τη διαδρομή νωρίτερα. Αν το επίπεδο 1 μπορούσε να την επαναφέρει,
+ * το πλέγμα θα φαινόταν **μέσα** από το συγχωνευμένο κελί και η συγχώνευση θα ήταν οπτικά
+ * ανύπαρκτη — δηλαδή μια μορφοποίηση θα ακύρωνε μια δομική πράξη.
  *
  * @module subapps/dxf-viewer/bim/table/table-layout-borders
+ * @see bim/table/table-edge-model.ts — η ταυτότητα της ακμής (επίπεδο 1)
  */
 
 import type { CellKey, TableBorderSpec, TableModel } from '../../types/table';
+import type { TableEdgeOrientation } from '../../types/table-edges';
 import { cellKey } from './table-model-helpers';
 import type { MergeIndex } from './table-model-helpers';
+import { sameBorderSpec, tableEdgeKeyAt } from './table-edge-model';
 import type { TableStyle } from './table-style';
 import type { TableBorderSegment } from './table-layout-types';
 
@@ -46,8 +62,44 @@ function sameMerge(merges: MergeIndex, a: CellKey, b: CellKey): boolean {
   return ownerA !== undefined && ownerA === merges.ownerByCell.get(b);
 }
 
-/** Το μολύβι μιας οριζόντιας ακμής στον δείκτη `r` (0 = κορυφή, `rows.length` = βάση). */
-function horizontalSpec(model: TableModel, style: TableStyle, r: number): TableBorderSpec {
+/**
+ * **Επίπεδο 1** — η ρητή ακμή αυτής ακριβώς της θέσης πλέγματος, ή `undefined` αν δεν
+ * υπάρχει (τότε αποφασίζουν τα επίπεδα 2–4).
+ *
+ * Ο έλεγχος `size === 0` δεν είναι μικροβελτιστοποίηση: ο **συνηθέστερος** πίνακας δεν έχει
+ * καμία ρητή ακμή, και χωρίς αυτόν θα συνθέταμε ~8.500 κλειδιά για έναν 8×500 μόνο για να
+ * αστοχήσουν όλα. Η διάταξη απομνημονεύεται, άρα το κόστος δεν είναι ανά καρέ — είναι όμως
+ * ανά αλλαγή μοντέλου, δηλαδή ανά πληκτρολόγηση.
+ */
+function explicitSpec(
+  model: TableModel,
+  orientation: TableEdgeOrientation,
+  r: number,
+  c: number,
+): TableBorderSpec | undefined {
+  if (model.edges.size === 0) return undefined;
+  const key = tableEdgeKeyAt(model, orientation, r, c);
+  return key === undefined ? undefined : model.edges.get(key);
+}
+
+/**
+ * Το μολύβι της οριζόντιας ακμής στη θέση `(r, c)` — `r` = 0 κορυφή, `rows.length` βάση.
+ *
+ * 🔴 Παίρνει **και** τη στήλη, σε αντίθεση με πριν: μέχρι το ADR-750 μια οριζόντια ακμή
+ * είχε αναγκαστικά το ίδιο μολύβι σε όλο το πλάτος (η πηγή ήταν πάντα η γραμμή ή η κλάση
+ * της), οπότε η στήλη ήταν πράγματι άσχετη. Η ρητή ακμή είναι η πρώτη πηγή που μπορεί να
+ * πει κάτι διαφορετικό **ανά στήλη** — δηλαδή είναι ακριβώς αυτό που κάνει το «περίγραμμα σε
+ * μεμονωμένο κελί» εκφράσιμο.
+ */
+function horizontalSpec(
+  model: TableModel,
+  style: TableStyle,
+  r: number,
+  c: number,
+): TableBorderSpec {
+  const explicit = explicitSpec(model, 'H', r, c);
+  if (explicit) return explicit;
+
   const rows = model.rows;
   if (r === 0) return style.rowClasses[rows[0].rowClass].borders.top;
   if (r === rows.length) return style.rowClasses[rows[rows.length - 1].rowClass].borders.bottom;
@@ -61,19 +113,13 @@ function horizontalSpec(model: TableModel, style: TableStyle, r: number): TableB
 
 /** Το μολύβι μιας κατακόρυφης ακμής στον δείκτη `c`, για τη γραμμή `r`. */
 function verticalSpec(model: TableModel, style: TableStyle, r: number, c: number): TableBorderSpec {
+  const explicit = explicitSpec(model, 'V', r, c);
+  if (explicit) return explicit;
+
   const borders = style.rowClasses[model.rows[r].rowClass].borders;
   if (c === 0) return borders.left;
   if (c === model.columns.length) return borders.right;
   return borders.insideV;
-}
-
-/** Ίδιο μολύβι ⇒ τα τμήματα μπορούν να ενωθούν (το `dashMm` συγκρίνεται στοιχείο-προς-στοιχείο). */
-function sameSpec(a: TableBorderSpec, b: TableBorderSpec): boolean {
-  if (a === b) return true;
-  if (a.visible !== b.visible || a.colorHex !== b.colorHex || a.widthMm !== b.widthMm) return false;
-  const da = a.dashMm ?? [];
-  const db = b.dashMm ?? [];
-  return da.length === db.length && da.every((v, i) => v === db[i]);
 }
 
 /**
@@ -85,7 +131,7 @@ function coalesce(pieces: readonly EdgePiece[]): EdgePiece[] {
   for (const piece of pieces) {
     if (!piece.spec.visible) continue;
     const last = out[out.length - 1];
-    if (last && last.to === piece.from && sameSpec(last.spec, piece.spec)) {
+    if (last && last.to === piece.from && sameBorderSpec(last.spec, piece.spec)) {
       out[out.length - 1] = { spec: last.spec, from: last.from, to: piece.to };
       continue;
     }
@@ -105,16 +151,16 @@ function horizontalSegments(
   const out: TableBorderSegment[] = [];
 
   for (let r = 0; r <= model.rows.length; r++) {
-    const spec = horizontalSpec(model, style, r);
     const pieces: EdgePiece[] = [];
     for (let c = 0; c < model.columns.length; c++) {
-      // Εσωτερική ακμή συγχώνευσης: δεν υπάρχει γραμμή εκεί.
+      // Εσωτερική ακμή συγχώνευσης: δεν υπάρχει γραμμή εκεί. Ο έλεγχος μένει **πριν** από
+      // κάθε ερώτηση μολυβιού — ούτε η ρητή ακμή δεν την επαναφέρει (δες την κεφαλίδα).
       if (r > 0 && r < model.rows.length) {
         const above = cellKey(model.rows[r - 1].id, model.columns[c].id);
         const below = cellKey(model.rows[r].id, model.columns[c].id);
         if (sameMerge(merges, above, below)) continue;
       }
-      pieces.push({ spec, from: c, to: c + 1 });
+      pieces.push({ spec: horizontalSpec(model, style, r, c), from: c, to: c + 1 });
     }
     const y = yEdges[r];
     for (const piece of coalesce(pieces)) {

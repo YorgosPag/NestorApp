@@ -21,10 +21,15 @@
  * κελιά της παλιάς γραμμής στη νέα. Ο γεννήτορας παίρνει το **μέγιστο επίθεμα +1** και
  * επαληθεύει σε `Set` — ντετερμινιστικός (σταθερό JSON, δοκιμάσιμο), καμία `crypto`.
  *
- * ### 2. Η εισαγωγή ΔΕΝ αγγίζει κανένα κελί
+ * ### 2. Η εισαγωγή ΔΕΝ αγγίζει κανένα κελί — **ούτε καμία ακμή**
  * Ούτε ένα. Ο αραιός χάρτης δείχνει σε ταυτότητες, άρα μια νέα γραμμή στη μέση δεν
  * μετακινεί τίποτα — αυτός ακριβώς είναι ο λόγος που το μοντέλο διάλεξε id αντί για index
  * (`types/table.ts`: «το AutoCAD τα κρατά με index — γι' αυτό εκεί οι τύποι σπάνε»).
+ *
+ * Το ίδιο ισχύει αυτούσιο για τις ρητές ακμές του ADR-750: περνούν από το spread **χωρίς
+ * να τις κοιτάξει κανείς**, και αυτό δεν είναι παράλειψη — είναι το παραδοτέο. Το
+ * τεκμηριωμένο παράπονο Π5 του Excel («η εισαγωγή γραμμής καταστρέφει τα περιγράμματα»)
+ * είναι εδώ **μη εκφράσιμο**, χωρίς καμία γραμμή κώδικα συντήρησης.
  *
  * ### 3. Συγχωνεύσεις: ο κανόνας του Excel, με **μία** ρητή εξαίρεση
  * Εισαγωγή **αυστηρά μέσα** σε ένα εύρος το μεγαλώνει· εισαγωγή δίπλα του όχι (Excel).
@@ -58,6 +63,7 @@ import type {
 } from '../../types/table';
 import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT } from './build-table-entity';
 import { indexById, insertionIndexFor } from './table-cell-order';
+import { rebuildTableEdgesOnDelete } from './table-edge-model';
 import { cellKey } from './table-model-helpers';
 
 /** Ο άξονας πάνω στον οποίο γίνεται η πράξη — μία υλοποίηση, δύο όψεις (N.18). */
@@ -313,6 +319,11 @@ export function insertTableColumn(
 /**
  * Σβήνει τη γραμμή και **ό,τι ζούσε μέσα της**. Άγνωστη ταυτότητα ή τελευταία γραμμή ⇒ το
  * ίδιο μοντέλο by-reference (καμία εντολή, κανένα βήμα undo).
+ *
+ * Οι ρητές ακμές ακολουθούν τον **ίδιο** κανόνα με το περιεχόμενο (Απόφαση 4): το σύνορο
+ * μετακομίζει στην επόμενη επιζώσα γραμμή αντί να εξαφανιστεί — αλλιώς η διαγραφή της
+ * πρώτης γραμμής θα έσβηνε το **πάνω πλαίσιο του πίνακα**. Ο κανόνας ζει ολόκληρος στο
+ * `table-edge-model.ts`.
  */
 export function deleteTableRow(
   model: PersistedTableModel,
@@ -329,10 +340,11 @@ export function deleteTableRow(
   return {
     ...next,
     cells: rebuildCells(next, model.cells, (entry) => entry[0] !== rowId, anchorMoves),
+    edges: rebuildTableEdgesOnDelete(next, model.edges, 'row', rowId, model.rows[at + 1]?.id),
   };
 }
 
-/** Το ίδιο για στήλη — ίδιες τρεις εγγυήσεις (κελιά, εύρη, ταυτότητα by-reference). */
+/** Το ίδιο για στήλη — ίδιες τέσσερις εγγυήσεις (κελιά, εύρη, ακμές, ταυτότητα by-reference). */
 export function deleteTableColumn(
   model: PersistedTableModel,
   colId: TableColumnId,
@@ -348,6 +360,13 @@ export function deleteTableColumn(
   return {
     ...next,
     cells: rebuildCells(next, model.cells, (entry) => entry[1] !== colId, anchorMoves),
+    edges: rebuildTableEdgesOnDelete(
+      next,
+      model.edges,
+      'column',
+      colId,
+      model.columns[at + 1]?.id,
+    ),
   };
 }
 

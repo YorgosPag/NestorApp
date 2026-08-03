@@ -13,8 +13,9 @@
  * νέα γνώση γεωμετρίας ή σειριοποίησης δεν γεννιέται εδώ):
  *   - `tableCellAtWorld` (ADR-739 Φ.Γ)     — ΠΟΙΟ κελί χτυπήθηκε
  *   - `tableFrameToWorld` (ADR-739 Φ.Γ)    — η γωνία του κελιού σε μονάδες σκηνής
- *   - `getPersistedCellText` / `setPersistedCellText` (ADR-739 Φ.Δ βήμα 1) — ανάγνωση/
- *     εγγραφή του αμετάβλητου κειμένου
+ *   - `cellInputText` / `writeCellInput` (ADR-739 Φ.Ζ) — ανάγνωση/εγγραφή του περιεχομένου
+ *     κελιού, με τη **μία** διακλάδωση `=` (τύπος ή κείμενο) και τον επαναϋπολογισμό μέσα
+ *     στην ίδια εντολή· από κάτω τους ζουν αυτούσιοι οι αμετάβλητοι γραφείς της Φ.Δ βήμα 1
  *
  * @module subapps/dxf-viewer/bim/table/table-cell-edit-session
  * @see ui/table-cell-editor/useTableCellDoubleClickEditor.ts — ο 2D καταναλωτής
@@ -38,7 +39,12 @@ import {
   tableFrameToWorld,
   tableWorldToFrame,
 } from './table-entity-geometry';
-import { getPersistedCellText, setPersistedCellText } from './table-model-helpers';
+import { cellKey } from './table-model-helpers';
+import {
+  cellInputText,
+  recalculateTableModel,
+  writeCellInput,
+} from './formula/table-formula-engine';
 
 /**
  * Το κελί που χτυπήθηκε, έτοιμο να ανοίξει editor: ταυτότητα + τρέχον κείμενο + αγκύρωση
@@ -57,7 +63,11 @@ import { getPersistedCellText, setPersistedCellText } from './table-model-helper
 export interface TableCellEditTarget {
   readonly rowId: TableRowId;
   readonly colId: TableColumnId;
-  /** Το τρέχον κείμενο του κελιού (`getPersistedCellText` — κενό κελί ⇒ κενό αλφαριθμητικό). */
+  /**
+   * Ό,τι **επεξεργάζεται** ο χρήστης (`cellInputText`): το πηγαίο `=…` σε κελί τύπου, το
+   * κείμενο σε κάθε άλλο· κενό κελί ⇒ κενό αλφαριθμητικό. **Δεν** είναι ό,τι ζωγραφίζεται —
+   * στον καμβά φαίνεται το αποτέλεσμα.
+   */
   readonly text: string;
   /**
    * Η **πάνω-αριστερή** γωνία του κελιού σε μονάδες σκηνής — το ίδιο σημείο αγκύρωσης
@@ -155,7 +165,10 @@ function buildEditTarget(
   return {
     rowId: cell.rowId,
     colId: cell.colId,
-    text: getPersistedCellText(entity.model, cell.rowId, cell.colId),
+    // ADR-739 Φ.Ζ — **πηγαίο** σε κελί τύπου, κείμενο σε κάθε άλλο. Ό,τι επιστρέφεται εδώ
+    // το δείχνουν **και** ο επεξεργαστής μέσα στο κελί **και** η γραμμή τύπων (μέσω του
+    // `initialText`): μία ερώτηση, μία απάντηση, καμία πιθανότητα να διαφωνήσουν.
+    text: cellInputText(entity.model, cell.rowId, cell.colId),
     anchorWorldPoint: tableFrameToWorld(entity, rect.x, rect.y, geometry.mmToWorld),
     rectMm: rect,
     style,
@@ -171,10 +184,11 @@ function buildEditTarget(
  * Το commit ενός κελιού → ένα undoable `UpdateEntityCommand` πάνω στο `model` της
  * οντότητας, ή `null` όταν δεν άλλαξε τίποτα.
  *
- * Το «τίποτα δεν άλλαξε» ΔΕΝ ελέγχεται εδώ με δεύτερη σύγκριση: το `setPersistedCellText`
- * ήδη επιστρέφει το ΙΔΙΟ μοντέλο by-reference όταν το κείμενο είναι ταυτόσημο (ADR-739
- * Φ.Δ βήμα 1) — αρκεί μια σύγκριση `===` πάνω σε αυτή την εγγύηση, όχι re-implementation
- * της λογικής ισότητας.
+ * Το «τίποτα δεν άλλαξε» ΔΕΝ ελέγχεται εδώ με δεύτερη σύγκριση: **και οι τρεις** καθαρές
+ * συναρτήσεις της αλυσίδας (`writeCellInput` → `recalculateTableModel` →
+ * `buildTableModelCommand`) επιστρέφουν το ΙΔΙΟ μοντέλο by-reference όταν δεν άλλαξε τίποτα
+ * (ADR-739 Φ.Δ βήμα 1, εγγύηση 4· Φ.Ζ την επεκτείνει σε τύπους και αποτελέσματα) — αρκεί μια
+ * σύγκριση `===` πάνω σε αυτή την εγγύηση, όχι re-implementation της λογικής ισότητας.
  */
 export function buildTableCellEditCommand(
   entity: TableEntity,
@@ -183,7 +197,14 @@ export function buildTableCellEditCommand(
   nextText: string,
   sceneManager: ISceneManager,
 ): ICommand | null {
-  return buildTableModelCommand(entity, setPersistedCellText(entity.model, rowId, colId, nextText), sceneManager);
+  // 🔴 ADR-739 Φ.Ζ — **η γραφή και ο επαναϋπολογισμός είναι ΕΝΑΣ μετασχηματισμός**, μέσα
+  // στην ίδια εντολή. Δεν είναι λεπτομέρεια υλοποίησης: αν ο επαναϋπολογισμός γινόταν σε
+  // δεύτερη εντολή, ένα `Ctrl+Z` θα ανέτρεπε τα αποτελέσματα αφήνοντας τον τύπο — ή το
+  // αντίστροφο. Η ατομικότητα βγαίνει δωρεάν από την **καθαρότητα** των δύο συναρτήσεων,
+  // ακριβώς όπως η επικόλληση 20 κελιών γίνεται ένα βήμα (δες `buildTableModelCommand`).
+  const written = writeCellInput(entity.model, rowId, colId, nextText);
+  const recalculated = recalculateTableModel(written, [cellKey(rowId, colId)]);
+  return buildTableModelCommand(entity, recalculated, sceneManager);
 }
 
 /**

@@ -16,6 +16,9 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { createCellRanker, indexById, insertionIndexFor } from './table-cell-order';
+import { buildTableEdgeIndex, toPersistedTableEdges } from './table-edge-model';
+import type { TableEdgeEntry } from '../../types/table-edges';
+import type { TableFormula } from '../../types/table-formula';
 import type {
   CellKey,
   CellSpan,
@@ -72,22 +75,12 @@ export function getCell(
 }
 
 /**
- * Το κείμενο ενός κελιού για **μέτρηση και ζωγραφική**, χωρίς μορφοποίηση τύπου.
- *
- * Η μορφοποίηση κατά `valueType` (mm→m, m², τεμάχια…) ανήκει στους formatters του
- * ADR-363 (`bim/schedule/exporters/value-formatters.ts`) και εφαρμόζεται ΠΡΙΝ μπει η
- * τιμή στο μοντέλο — όπως ακριβώς κάνει σήμερα το `survey-sheet.ts`. Η μηχανή διάταξης
- * δεν μορφοποιεί: αν μορφοποιούσε, θα υπήρχαν δύο απαντήσεις στο «πώς δείχνει αυτός ο
- * αριθμός» (η δική της και των exporters) και θα απέκλιναν.
- *
- * `null` ⇒ κενό αλφαριθμητικό: κενό κελί δεν είναι το κείμενο «null».
+ * ADR-739 Φ.Ζ — το {@link cellText} μετακόμισε στο `table-cell-content.ts` μαζί με τους
+ * γραφείς, ώστε το αρχείο να μείνει κάτω από τις 500 γραμμές (N.7.1) **χωρίς κύκλο
+ * εισαγωγών**: ο γραφέας το χρειάζεται, οπότε αν έμενε εδώ η εξάρτηση θα ήταν αμφίδρομη.
+ * Επανεξάγεται αυτούσιο — καμία υπάρχουσα διαδρομή εισαγωγής δεν αλλάζει.
  */
-export function cellText(cell: TableCell | undefined): string {
-  if (!cell) return '';
-  const { value } = cell;
-  if (value === null || value === undefined) return '';
-  return typeof value === 'string' ? value : String(value);
-}
+export { cellText } from './table-cell-content';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Συγχωνεύσεις
@@ -173,9 +166,14 @@ export interface CreateTableModelInput {
   /** Μόνο τα μη-κενά κελιά — ο χάρτης μένει αραιός (§4). */
   readonly cells?: readonly TableCellEntry[];
   readonly merges?: readonly CellSpan[];
+  /** ADR-750 Φ1 — μόνο οι **ρητές** ακμές· ίδια αραιή σύμβαση με τα κελιά. */
+  readonly edges?: readonly TableEdgeEntry[];
 }
 
-/** Κατασκευή μοντέλου με σωστά κλειδιά — ο καλών δεν συνθέτει ποτέ `CellKey` μόνος του. */
+/**
+ * Κατασκευή μοντέλου με σωστά κλειδιά — ο καλών δεν συνθέτει ποτέ `CellKey` (ούτε
+ * `TableEdgeKey`) μόνος του.
+ */
 export function createTableModel(input: CreateTableModelInput): TableModel {
   const cells = new Map<CellKey, TableCell>();
   for (const [rowId, colId, cell] of normalizeCellEntries(input.cells)) {
@@ -186,6 +184,8 @@ export function createTableModel(input: CreateTableModelInput): TableModel {
     rows: asSequence<TableRow>(input.rows, 'rows'),
     cells,
     merges: asSequence<CellSpan>(input.merges, 'merges'),
+    // Το δίχτυ ζει στο `table-edge-model`: εκεί είναι η μόνη γνώση του σχήματος ακμής.
+    edges: buildTableEdgeIndex(input.edges),
   };
 }
 
@@ -339,6 +339,7 @@ export function resolveTableModel(persisted: PersistedTableModel): TableModel {
     rows: persisted.rows,
     cells: persisted.cells,
     merges: persisted.merges,
+    edges: persisted.edges,
   });
   RESOLVED_MODEL_CACHE.set(persisted, model);
   return model;
@@ -368,89 +369,32 @@ export function toPersistedTableModel(model: TableModel): PersistedTableModel {
     ordered.push({ rank: cellRank, entry: [rowId, colId, cell] });
   }
   ordered.sort((a, b) => a.rank - b.rank);
+  const edges = toPersistedTableEdges(model, model.edges);
 
   return {
     columns: model.columns,
     rows: model.rows,
     cells: ordered.map((o) => o.entry),
     merges: model.merges,
+    // ADR-750 Φ1 — **παραλείπεται όταν είναι κενό**, όχι `edges: []`. Ένα κενό πεδίο θα
+    // ταξίδευε σε κάθε αποθηκευμένο πίνακα του κόσμου και θα εμφανιζόταν σε κάθε diff ως
+    // «αλλαγή» — και, χειρότερα, θα έσπαγε το `persisted → runtime → persisted ταυτοτικό`
+    // για κάθε πίνακα γραμμένο πριν από αυτή τη φάση.
+    ...(edges.length > 0 ? { edges } : {}),
   };
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Αμετάβλητος εγγραφέας κειμένου κελιού (ADR-739 Φ.Δ βήμα 2)
-// ──────────────────────────────────────────────────────────────────────────────
-
 /**
- * Το κείμενο ενός κελιού απευθείας από το **ταξιδεύον** σχήμα — χωρίς να περάσει από
- * `resolveTableModel` (που θα έχτιζε/κρατούσε `Map` απομνημόνευσης άσκοπα για μία απλή
- * ανάγνωση). Ίδια σημασιολογία με {@link cellText}: κενό κελί ⇒ κενό αλφαριθμητικό.
- */
-export function getPersistedCellText(
-  model: PersistedTableModel,
-  rowId: TableRowId,
-  colId: TableColumnId,
-): string {
-  const entry = model.cells.find(([r, c]) => r === rowId && c === colId);
-  return cellText(entry?.[2]);
-}
-
-/**
- * Ο **αμετάβλητος** εγγραφέας κειμένου κελιού πάνω στο {@link PersistedTableModel}.
- * Ό,τι επεξεργάζεται κείμενο πίνακα (inline editor, μελλοντικό undo command) περνά από
- * εδώ — ποτέ `model.cells[i] = …` με το χέρι, που θα μετάλλασσε την ακολουθία που
- * κρατά η στοίβα undo.
+ * ADR-739 Φ.Ζ — ο **γραφέας** μετακόμισε στο `table-cell-writer.ts` όταν ο δεύτερος γραφέας
+ * (τύποι) πέρασε το αρχείο τις 500 γραμμές (N.7.1). Επανεξάγεται αυτούσιος: **καμία** από τις
+ * υπάρχουσες διαδρομές εισαγωγής δεν αλλάζει — ίδιο μοτίβο με το `types/table.ts`, που
+ * επανεξάγει τις ταυτότητες του `table-ids.ts`.
  *
- * ## Οι τέσσερις εγγυήσεις
- * 1. **Καθαρή**: το `model` εισόδου (ο πίνακας `cells`, κάθε κελί μέσα του) δεν
- *    αγγίζεται ποτέ — κάθε κλάδος επιστρέφει νέο `cells` (`slice` + αντικατάσταση/`splice`,
- *    ποτέ in-place `[i] =` πάνω στον ίδιο πίνακα).
- * 2. **Ντετερμινιστική σειρά**: κελί που υπάρχει ήδη αντικαθίσταται **στην ίδια θέση**
- *    (ίδιος δείκτης)· κελί που δεν υπάρχει μπαίνει στη θέση που υπαγορεύει η σειρά
- *    γραμμή × στήλη ({@link insertionIndexFor}), όχι στο τέλος.
- * 3. **Διατήρηση**: μόνο το `value` αλλάζει — `kind` / `formula` / `styleOverride` /
- *    `locked` ενός υπάρχοντος κελιού περνούν αυτούσια (spread). Νέο κελί παίρνει τα
- *    προεπιλεγμένα του module: `{ kind: 'text', value: text }`, χωρίς overrides.
- * 4. **Ταυτότητα**: αν το νέο κείμενο είναι ΙΔΙΟ με το σημερινό, επιστρέφεται το **ίδιο**
- *    `model` by-reference. Χωρίς αυτό, κάθε πληκτρολόγηση χωρίς πραγματική αλλαγή θα
- *    γεννούσε νέο αντικείμενο μοντέλου — άκυρη είσοδο undo και ακύρωση του
- *    `resolveTableModel`/`resolveTableLayout` `WeakMap` (§ σχόλιο πάνω από το
- *    {@link resolveTableModel}) χωρίς λόγο. Ισχύει **και για το απόν κελί**: αραιός χάρτης
- *    σημαίνει ότι «απών» **είναι** «κενός» — δες το σχόλιο στο σώμα.
+ * Η τομή είναι σημασιολογική, όχι μετρική: εδώ ζει «**τι λέει** αυτό το μοντέλο» (κλειδιά,
+ * συγχωνεύσεις, ανάλυση, σειριοποίηση), εκεί «**πώς αλλάζει**».
  */
-export function setPersistedCellText(
-  model: PersistedTableModel,
-  rowId: TableRowId,
-  colId: TableColumnId,
-  text: string,
-): PersistedTableModel {
-  const existingIndex = model.cells.findIndex(([r, c]) => r === rowId && c === colId);
-
-  if (existingIndex >= 0) {
-    const existingCell = model.cells[existingIndex][2];
-    if (cellText(existingCell) === text) return model;
-
-    const cells = model.cells.slice();
-    cells[existingIndex] = [rowId, colId, { ...existingCell, value: text }];
-    return { ...model, cells };
-  }
-
-  // 🔴 ADR-739 Φ.Δ βήμα 8 — η **τέταρτη εγγύηση (ταυτότητα) ισχύει και για το κελί που ΔΕΝ
-  // ΥΠΑΡΧΕΙ.** Το `cells` είναι **αραιό**: απόν κελί σημαίνει ήδη κενό κείμενο (το
-  // `getPersistedCellText` επιστρέφει `''` γι' αυτό). Άρα «γράψε κενό σε απόν κελί» δεν
-  // αλλάζει τίποτα — αλλά χωρίς αυτή τη γραμμή γεννούσε **φάντασμα εγγραφή**
-  // `{ kind: 'text', value: '' }` και, μαζί της, νέο αντικείμενο μοντέλου.
-  //
-  // Οι δύο μετρημένες συνέπειες, και οι δύο ζωντανές πριν το βήμα 8:
-  //  1. **Βήμα undo για το τίποτα** — `Delete` πάνω σε ήδη κενό κελί παρήγαγε
-  //     `UpdateEntityCommand`, δηλαδή ένα `Ctrl+Z` που δεν αναιρεί τίποτα ορατό.
-  //  2. **Φούσκωμα + περιττό autosave** — ένα `Delete` πάνω σε μαρκαρισμένη περιοχή 500
-  //     κενών κελιών θα έγραφε 500 άχρηστες εγγραφές στη σκηνή και θα ακύρωνε τις μνήμες
-  //     `resolveTableModel` / `resolveTableLayout` χωρίς κανέναν λόγο.
-  if (text === '') return model;
-
-  const insertAt = insertionIndexFor(model, model.cells, rowId, colId);
-  const cells = model.cells.slice();
-  cells.splice(insertAt, 0, [rowId, colId, { kind: 'text', value: text }]);
-  return { ...model, cells };
-}
+export {
+  getPersistedCellText,
+  setPersistedCellFormula,
+  setPersistedCellText,
+} from './table-cell-content';

@@ -27,6 +27,7 @@
  */
 
 import type { TableBorderSpec, TableRowClass } from '../../types/table';
+import { HIDDEN_TABLE_EDGE } from './table-edge-model';
 import type { TableBorders, TableRowClassStyle, TableStyle } from './table-style';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -49,7 +50,15 @@ const NAME_KEY_PREFIX = 'ribbon.commands.tableStyleNames';
 // Βοηθοί κατασκευής
 // ──────────────────────────────────────────────────────────────────────────────
 
-const NO_BORDER: TableBorderSpec = { visible: false, colorHex: '#000000', widthMm: 0 };
+/**
+ * ADR-750 Φ2 — **μία** απάντηση στο «ακμή που δεν ζωγραφίζεται», κοινή με τη ρητή παράκαμψη.
+ *
+ * Ήταν ιδιωτική σταθερά εδώ· η Φ2 χρειάστηκε την ίδια ακριβώς τιμή για το «Χωρίς περίγραμμα»
+ * και δύο ταυτόσημα literals θα ήταν σιωπηλά αποκλίνον διπλότυπο **κάτω** από το κατώφλι του
+ * jscpd (N.18). Με ένα αντικείμενο, το `sameBorderSpec` απαντά «ίδιο» για το αόρατο της
+ * κλάσης και το αόρατο του χρήστη — δηλαδή η ένωση συνεχόμενων τμημάτων δεν σπάει άσκοπα.
+ */
+const NO_BORDER: TableBorderSpec = HIDDEN_TABLE_EDGE;
 
 function border(colorHex: string, widthMm: number): TableBorderSpec {
   return { visible: true, colorHex, widthMm };
