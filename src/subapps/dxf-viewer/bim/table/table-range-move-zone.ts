@@ -84,6 +84,20 @@ export interface TableRangeDragIntent {
 export const PLAIN_TABLE_RANGE_DRAG: TableRangeDragIntent = { copy: false, insert: false };
 
 /**
+ * 🔴 §36 ΦΑΣΗ 3 — **ΤΑ ΠΛΗΚΤΡΑ ΠΟΥ ΑΛΛΑΖΟΥΝ ΤΗΝ ΥΠΟΣΧΕΣΗ**, ονομαστικά.
+ *
+ * Δύο ανεξάρτητοι ακροατές ξαναρωτούν την ίδια ερώτηση όταν πατηθεί ή αφεθεί ένα από αυτά,
+ * **χωρίς να κουνηθεί το χέρι**: ο δείκτης πριν τη σύρση (`use-table-indicator-hover`) και η
+ * ίδια η σύρση (`table-range-transfer-drag`). Δύο σύνολα θα ήταν δύο ευκαιρίες να ξεχαστεί το
+ * `Meta` — και το σύμπτωμα θα ήταν «*στο Mac η αντιγραφή δεν αναγγέλλεται*», δηλαδή απουσία
+ * λειτουργίας, όχι σφάλμα. Ζει εδώ γιατί εδώ ζει και η **σημασία** τους
+ * ({@link tableRangeDragIntentOf}).
+ *
+ * Κάθε άλλο πλήκτρο αγνοείται: θα ξανα-σάρωνε γεωμετρία για απάντηση που δεν αλλάζει.
+ */
+export const TABLE_RANGE_MODIFIER_KEYS: ReadonlySet<string> = new Set(['Control', 'Meta', 'Shift']);
+
+/**
  * Τα πλήκτρα του συμβάντος → πρόθεση.
  *
  * ⚠️ Το `metaKey` δεν είναι ευγένεια προς macOS: ο **ίδιος** κώδικας τρέχει σε Mac, όπου το
