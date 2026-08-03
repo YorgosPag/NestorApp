@@ -41,7 +41,7 @@ import {
   type TableRenderIndex,
 } from '../../bim/table/table-render-index';
 import { hitTestTable } from '../../bim/table/table-entity-hit';
-import { getTableGrips } from '../../bim/table/table-entity-grips';
+import { getTableGrips, tableGripCustomColor } from '../../bim/table/table-entity-grips';
 import type { TableCellLayout, TableRectMm } from '../../bim/table/table-layout-types';
 import {
   createStampTableContext,
@@ -315,11 +315,20 @@ export class TableRenderer extends BaseEntityRenderer {
 
   // ── Αλληλεπίδραση ──────────────────────────────────────────────────────────
 
-  /** Οι λαβές, από το ΙΔΙΟ SSoT που καταναλώνει η αλληλεπίδραση (render ≡ interaction). */
+  /**
+   * Οι λαβές, από το ΙΔΙΟ SSoT που καταναλώνει η αλληλεπίδραση (render ≡ interaction).
+   *
+   * Το **σχήμα** και η **ταυτότητα χρώματος** αποφασίζονται και τα δύο από το grip kind,
+   * μέσω των αντίστοιχων SSoT (`gripGlyphShape` / `tableGripCustomColor`) — ο ζωγράφος δεν
+   * παίρνει καμία δική του απόφαση εμφάνισης, μόνο τις διοχετεύει.
+   */
   getGrips(entity: EntityModel): GripInfo[] {
     if (!isTableEntity(entity as Entity)) return [];
     const e = entity as unknown as TableEntity;
-    return getTableGrips(e).map((g) => toRenderGripInfo(g, gripGlyphShape(gripKindOf(g, 'table'))));
+    return getTableGrips(e).map((g) => {
+      const kind = gripKindOf(g, 'table');
+      return toRenderGripInfo(g, gripGlyphShape(kind), tableGripCustomColor(kind));
+    });
   }
 
   /** Ακριβής επιλογή — delegate στο `hitTestTable` SSoT (N.18, κοινό με τη στενή φάση). */

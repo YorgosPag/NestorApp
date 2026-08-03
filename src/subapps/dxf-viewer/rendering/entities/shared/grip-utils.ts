@@ -124,6 +124,7 @@ export function createArcGripPattern(
 export function toRenderGripInfo(
   grip: { entityId: string; gripIndex: number; type: GripInfo['type']; position: Point2D },
   shape: GripInfo['shape'],
+  customColor?: string,
 ): GripInfo {
   return {
     id: `${grip.entityId}-grip-${grip.gripIndex}`,
@@ -133,5 +134,14 @@ export function toRenderGripInfo(
     position: grip.position,
     isVisible: true,
     shape,
+    // ADR-047 / ADR-637 / ADR-739 — προαιρετική ταυτότητα χρώματος **ανά λαβή** (φούξια
+    // πλατύσκαλο, λεβάντα λαβές πλάτους στήλης). Παραλείπεται όταν απούσα ώστε το σχήμα του
+    // αντικειμένου να μένει byte-ταυτόσημο για κάθε υπάρχοντα καλούντα.
+    //
+    // ⚠️ Είναι **χρώμα ανά λαβή**, ΟΧΙ κανόνας type→χρώμα: ο δεύτερος απαγορεύεται (ADR-048
+    // v2.3) επειδή το κλειδί παρτίδας του `renderGripSetBatched` **δεν** περιέχει το `type`
+    // και θα έβαφε ολόκληρη την ομάδα από τον αντιπρόσωπό της. Το `customColor` **είναι**
+    // στο κλειδί, άρα αυτή η διαδρομή είναι ασφαλής εξ ορισμού.
+    ...(customColor ? { customColor } : {}),
   };
 }

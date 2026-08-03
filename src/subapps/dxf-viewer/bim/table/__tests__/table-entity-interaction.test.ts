@@ -17,10 +17,17 @@ import {
   TABLE_MOVE_KIND,
   TABLE_ROTATION_KIND,
 } from '../table-entity-grips';
-import { computeTableEntityGeometry, tableFrameToWorld } from '../table-entity-geometry';
+import {
+  computeTableEntityGeometry,
+  tableFrameToWorld,
+  tableWorldToFrame,
+} from '../table-entity-geometry';
 import { createTableModel, toPersistedTableModel } from '../table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
-import { MIN_TABLE_COLUMN_WIDTH_MM } from '../../../types/table-entity';
+import {
+  MIN_TABLE_COLUMN_WIDTH_MM,
+  MIN_TABLE_ROW_HEIGHT_MM,
+} from '../../../types/table-entity';
 import { useDrawingScaleStore } from '../../../state/drawing-scale-store';
 import type { TableColumn, TableRow } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
@@ -147,22 +154,41 @@ describe('calculateTableBounds', () => {
 // ── Λαβές ───────────────────────────────────────────────────────────────────
 
 describe('getTableGrips', () => {
-  it('MOVE στην άγκυρα, ROTATION στο μέσο της πάνω ακμής, μία λαβή ανά ΕΣΩΤΕΡΙΚΟ όριο', () => {
+  /** Πίνακας 60×16 στο (100,200): οι θέσεις παρακάτω είναι υπολογισμένες στο χέρι. */
+  it('MOVE λίγο μέσα από την ΠΑ γωνία, ROTATION από την ΠΔ, 8 περιμετρικές, μία ανά όριο', () => {
     const grips = getTableGrips(makeEntity());
-    expect(grips).toHaveLength(3); // move + rotation + 1 εσωτερικό όριο (2 στήλες)
+    expect(grips).toHaveLength(11); // 2 (move+rotation) + 8 περιμετρικές + 1 εσωτερικό όριο
     expect(grips[0]).toMatchObject({
-      position: { x: 100, y: 200 },
+      position: { x: 106, y: 200 }, // εσοχή 6mm από την άγκυρα (x=100), ΠΑΝΩ στην ακμή
       movesEntity: true,
       gripKind: { on: 'table', kind: TABLE_MOVE_KIND },
     });
     expect(grips[1]).toMatchObject({
-      position: { x: 130, y: 200 }, // μέσο του πλάτους 60mm
+      position: { x: 154, y: 200 }, // εσοχή 6mm από τη δεξιά ακμή (x=160)
       gripKind: { on: 'table', kind: TABLE_ROTATION_KIND },
     });
-    expect(grips[2]).toMatchObject({
-      position: { x: 140, y: 200 }, // το όριο c1|c2 στα 40mm
+    expect(grips[10]).toMatchObject({
+      position: { x: 140, y: 200 }, // το όριο c1|c2 στα 40mm — ΤΕΛΕΥΤΑΙΟ πλέον
       gripKind: { on: 'table', kind: TABLE_COLUMN_KIND },
     });
+  });
+
+  it('οι 4 γωνίες και τα 4 μέσα ακμών στις σωστές θέσεις, με τον σωστό τύπο λαβής', () => {
+    const byKind = new Map(
+      getTableGrips(makeEntity()).map((g) => [g.gripKind?.kind, g]),
+    );
+    // Ο πίνακας απλώνεται από (100,200) δεξιά 60mm και ΚΑΤΩ 16mm ⇒ y: 200 → 184.
+    expect(byKind.get('table-corner-nw')?.position).toEqual({ x: 100, y: 200 }); // η ΑΓΚΥΡΑ
+    expect(byKind.get('table-corner-ne')?.position).toEqual({ x: 160, y: 200 });
+    expect(byKind.get('table-corner-se')?.position).toEqual({ x: 160, y: 184 });
+    expect(byKind.get('table-corner-sw')?.position).toEqual({ x: 100, y: 184 });
+    expect(byKind.get('table-edge-n')?.position).toEqual({ x: 130, y: 200 });
+    expect(byKind.get('table-edge-e')?.position).toEqual({ x: 160, y: 192 });
+    expect(byKind.get('table-edge-s')?.position).toEqual({ x: 130, y: 184 });
+    expect(byKind.get('table-edge-w')?.position).toEqual({ x: 100, y: 192 });
+    // Γωνίες = δομικές (επιβιώνουν τα grip-type toggles)· ακμές = midpoints (gated).
+    expect(byKind.get('table-corner-ne')?.type).toBe('corner');
+    expect(byKind.get('table-edge-n')?.type).toBe('midpoint');
   });
 
   it('ΤΟ ΚΡΙΣΙΜΟ: το πλήθος λαβών ΔΕΝ μεγαλώνει με τις γραμμές — μόνο με τις στήλες', () => {
@@ -174,14 +200,90 @@ describe('getTableGrips', () => {
         })),
       }),
     });
-    // 500 γραμμές ⇒ ΑΚΟΜΑ 3 λαβές. Με λαβές γραμμής θα ήταν 503, ζωγραφισμένες και
+    // 500 γραμμές ⇒ ΑΚΟΜΑ 11 λαβές. Με λαβές γραμμής θα ήταν 511, ζωγραφισμένες και
     // hit-tested σε ΚΑΘΕ καρέ — το σχήμα «δουλειά ανάλογη των δεδομένων» του ADR-735.
-    expect(getTableGrips(manyRows)).toHaveLength(3);
+    // Οι 8 περιμετρικές είναι ΣΤΑΘΕΡΕΣ: κλιμακώνουν όλα τα ύψη, δεν τα απαριθμούν.
+    expect(getTableGrips(manyRows)).toHaveLength(11);
   });
 
   it('άδειος πίνακας ⇒ ΜΟΝΟ η λαβή μετακίνησης (τίποτα να περιστραφεί ή να διασταλεί)', () => {
     const empty = makeEntity({ model: persistedModel({ columns: [], rows: [] }) });
-    expect(getTableGrips(empty)).toHaveLength(1);
+    const grips = getTableGrips(empty);
+    expect(grips).toHaveLength(1);
+    // Χωρίς κουτί, ο σταυρός επιστρέφει στην ΑΓΚΥΡΑ — δεν υπάρχει «¼ του μηδενός».
+    expect(grips[0]).toMatchObject({ position: { x: 100, y: 200 }, movesEntity: true });
+  });
+
+  /**
+   * 🔴 Η ΥΠΟΘΕΣΗ ΠΟΥ ΠΡΟΣΤΑΤΕΥΕΙ ΤΟ §27.11.
+   *
+   * Οι ζώνες του δείκτη ζουν σε **αρνητικά** mm (`v < 0` τα γράμματα, `u < 0` οι αριθμοί) και
+   * η οπή που τις κρατά μακριά από τις λαβές είναι σχεδιασμένη γι' αυτό ακριβώς. Λαβή που θα
+   * γεννιόταν σε αρνητικό `u`/`v` θα ζωγραφιζόταν **μέσα** στη ζώνη και το ίδιο pixel θα
+   * απαντούσε σε δύο ερωτήσεις — το ελάττωμα που το §27.11 έκλεισε με κόπο.
+   */
+  it('🔴 ΚΑΜΙΑ λαβή δεν μπαίνει στον χώρο των ζωνών του δείκτη (u ≥ 0 και v ≥ 0)', () => {
+    const entity = makeEntity();
+    const geo = computeTableEntityGeometry(entity, 1, 'mm');
+    const frames = getTableGrips(entity).map((g) =>
+      tableWorldToFrame(entity, g.position, geo.mmToWorld),
+    );
+    expect(frames).toHaveLength(11);
+    for (const { u, v } of frames) {
+      expect(u).toBeGreaterThanOrEqual(-1e-9);
+      expect(v).toBeGreaterThanOrEqual(-1e-9);
+    }
+  });
+
+  /**
+   * 🔴 Η ΠΕΡΙΠΤΩΣΗ ΠΟΥ ΟΔΗΓΗΣΕ ΣΤΗ ΣΗΜΕΡΙΝΗ ΤΟΠΟΘΕΤΗΣΗ.
+   *
+   * Οι λαβές ορίων στηλών μοιράζονται την πάνω ακμή με τον σταυρό, το τόξο και τη
+   * μεσοπλευρική — αλλά κάθονται όπου λένε τα **δεδομένα**. Όσο ο σταυρός/τόξο ήταν
+   * **κλάσματα** του πλάτους (¼ και ¾), 4 ισοπλατείς στήλες τα έριχναν και τα τρία πάνω σε
+   * όριο ταυτόχρονα. Η **σταθερή εσοχή από τις γωνίες** το λύνει: η εσοχή δεν ακολουθεί τα
+   * δεδομένα, άρα δεν μπορεί να τα «κυνηγήσει».
+   *
+   * Ό,τι **μένει** γνωστό: η `table-edge-n` κάθεται εξ ορισμού στο μέσο, άρα σε **ζυγό**
+   * πλήθος ισοπλατών στηλών συμπίπτει με το μεσαίο όριο. Καρφώνεται εδώ ρητά, ώστε να είναι
+   * ορατό αντί για έκπληξη.
+   */
+  it('🔴 με 4 ισοπλατείς στήλες σταυρός/τόξο ΔΕΝ συμπίπτουν με όριο — μόνο το μέσο', () => {
+    const four = makeEntity({
+      model: persistedModel({
+        columns: Array.from({ length: 4 }, (_, i) => ({
+          id: `c${i}`, sizing: { kind: 'fixed' as const, widthMm: 15 },
+          valueType: 'text' as const, align: 'left' as const,
+        })),
+        rows: ROWS,
+      }),
+    });
+    const grips = getTableGrips(four);
+    const at = (kind: string) => grips.find((g) => g.gripKind?.kind === kind)!.position.x;
+    const edges = grips.filter((g) => g.gripKind?.kind === TABLE_COLUMN_KIND).map((g) => g.position.x);
+
+    expect(edges).toEqual([115, 130, 145]); // 15 / 30 / 45 mm από την άγκυρα στο x=100
+    expect(at(TABLE_MOVE_KIND)).toBe(106);     // εσοχή 6mm — ΜΑΚΡΙΑ από το όριο στο 115
+    expect(at(TABLE_ROTATION_KIND)).toBe(154); // εσοχή 6mm — ΜΑΚΡΙΑ από το όριο στο 145
+    expect(at('table-edge-n')).toBe(130);      // ΓΝΩΣΤΗ σύμπτωση: το μέσο ΕΙΝΑΙ όριο εδώ
+  });
+
+  it('ΣΤΕΝΟΣ πίνακας: η εσοχή φράσσεται ώστε σταυρός και τόξο να μη διασταυρωθούν', () => {
+    // Πλάτος 16mm ⇒ η εσοχή των 6mm θα έβαζε τον σταυρό στο 6 και το τόξο στο 10, δηλαδή
+    // ΚΑΙ ΤΑ ΔΥΟ πέρα από το μέσο (8) όπου κάθεται η μεσοπλευρική. Το φράγμα στο ¼ τα
+    // κρατά στο 4 και στο 12 — ένα σε κάθε μισό, όπως ορίζει η γεωμετρία τους.
+    const narrow = makeEntity({
+      model: persistedModel({
+        columns: [{ id: 'c1', sizing: { kind: 'fixed', widthMm: 16 }, valueType: 'text', align: 'left' }],
+        rows: ROWS,
+      }),
+    });
+    const grips = getTableGrips(narrow);
+    const at = (kind: string) => grips.find((g) => g.gripKind?.kind === kind)!.position.x;
+
+    expect(at(TABLE_MOVE_KIND)).toBe(104);     // 100 + 16/4
+    expect(at(TABLE_ROTATION_KIND)).toBe(112); // 116 − 16/4
+    expect(at('table-edge-n')).toBe(108);      // το μέσο, ανάμεσά τους
   });
 });
 
@@ -239,5 +341,117 @@ describe('applyTableGripDrag', () => {
     );
     expect(patch.model).not.toBe(e.model);
     expect(e.model.columns[0].sizing).toEqual({ kind: 'fixed', widthMm: 40 }); // αμετάβλητο
+  });
+});
+
+// ── Οι 8 περιμετρικές λαβές (ADR-739 Φ.Γ, Giorgio 2026-08-03) ────────────────
+
+describe('applyTableGripDrag — λαβές κουτιού (γωνίες + μέσα ακμών)', () => {
+  /** Το σύνολο πλάτους/ύψους που προκύπτει από ένα patch — ό,τι θα ζωγραφιστεί πραγματικά. */
+  const sizeOf = (e: TableEntity, patch: Partial<TableEntity>) => {
+    const next = { ...e, ...patch };
+    const { layout } = computeTableEntityGeometry(next, 1, 'mm');
+    return { widthMm: layout.widthMm, heightMm: layout.heightMm };
+  };
+
+  /**
+   * 🔴 Η ΙΔΙΟΤΗΤΑ ΠΟΥ ΟΡΙΖΕΙ ΤΗ ΓΩΝΙΑΚΗ ΛΑΒΗ — όλα τα υπόλοιπα είναι αριθμητική γύρω της.
+   * Αν η αντίθετη γωνία κουνιέται, ο πίνακας «γλιστράει» κάτω από τον κέρσορα και η λαβή
+   * γίνεται αδύνατο να στοχευτεί.
+   */
+  it('🔴 γωνία: η ΑΝΤΙΘΕΤΗ γωνία μένει ακίνητη — και οι ΔΥΟ διαστάσεις αλλάζουν', () => {
+    const e = makeEntity(); // 60 × 16 στο (100,200)· nw (η άγκυρα) = (100,200)
+    const patch = applyTableGripDrag('table-corner-se', e, { x: 160, y: 184 }, { x: 12, y: -8 });
+
+    expect(patch.position).toEqual({ x: 100, y: 200 }); // η αντίθετη γωνία ΔΕΝ κουνήθηκε
+    expect(sizeOf(e, patch)).toEqual({ widthMm: 72, heightMm: 24 }); // ×1.2 και ×1.5
+    // Η κλιμάκωση είναι ΑΝΑΛΟΓΙΚΗ, όχι «όλο στην τελευταία στήλη».
+    expect(patch.model?.columns.map((c) => c.sizing)).toEqual([
+      { kind: 'fixed', widthMm: 48 }, // 40 × 1.2
+      { kind: 'fixed', widthMm: 24 }, // 20 × 1.2
+    ]);
+    expect(patch.model?.rows.map((r) => r.heightMm)).toEqual([12, 12]); // 8 × 1.5
+  });
+
+  it('γωνία ΠΑΝΩ-ΑΡΙΣΤΕΡΑ: μετακινεί την άγκυρα, κρατώντας ακίνητη την κάτω-δεξιά', () => {
+    const e = makeEntity();
+    const patch = applyTableGripDrag('table-corner-nw', e, { x: 100, y: 200 }, { x: -10, y: 4 });
+    // Το κάτω-δεξιά (160, 184) πρέπει να μείνει: το νέο πλάτος 70 και ύψος 20 το επιβεβαιώνουν
+    // μαζί με τη νέα άγκυρα (90, 204).
+    expect(patch.position).toEqual({ x: 90, y: 204 });
+    expect(sizeOf(e, patch)).toEqual({ widthMm: 70, heightMm: 20 });
+  });
+
+  it('🔴 μεσοπλευρική: ΜΟΝΟ μία διάσταση — η κάθετη συνιστώσα αγνοείται εντελώς', () => {
+    const e = makeEntity();
+    const patch = applyTableGripDrag('table-edge-e', e, { x: 160, y: 192 }, { x: 12, y: 999 });
+
+    expect(patch.position).toEqual({ x: 100, y: 200 }); // η αντίθετη (δυτική) ακμή κρατά
+    expect(sizeOf(e, patch)).toEqual({ widthMm: 72, heightMm: 16 }); // ύψος ΑΘΙΚΤΟ
+    // ΚΑΙ, κρίσιμο: οι γραμμές δεν αποκτούν καν ρητό ύψος — δεν τις άγγιξε κανείς.
+    expect(patch.model?.rows).toEqual(e.model.rows);
+  });
+
+  it('μεσοπλευρική κάτω: αλλάζει μόνο το ύψος, οι στήλες μένουν ως έχουν', () => {
+    const e = makeEntity();
+    const patch = applyTableGripDrag('table-edge-s', e, { x: 130, y: 184 }, { x: 999, y: -8 });
+
+    expect(sizeOf(e, patch)).toEqual({ widthMm: 60, heightMm: 24 });
+    expect(patch.model?.columns).toEqual(e.model.columns);
+  });
+
+  /**
+   * 🔴 Ο ΛΟΓΟΣ ΠΛΕΥΡΩΝ ΕΙΝΑΙ ΑΝΤΙΣΤΡΟΦΑ ΑΠΟ ΤΗΝ ΕΙΚΟΝΑ — και είναι απόφαση, όχι λάθος:
+   * ο πίνακας είναι Excel/AutoCAD (ελεύθερος), η εικόνα φωτογραφία (κλειδωμένη).
+   */
+  it('🔴 Shift ΚΛΕΙΔΩΝΕΙ τον λόγο πλευρών· χωρίς Shift είναι ελεύθερος', () => {
+    const e = makeEntity();
+    const drag = { x: 12, y: 0 }; // καθαρά οριζόντιο σύρσιμο γωνίας
+
+    const free = applyTableGripDrag('table-corner-se', e, { x: 160, y: 184 }, drag);
+    expect(sizeOf(e, free)).toEqual({ widthMm: 72, heightMm: 16 }); // ύψος ΑΜΕΤΑΒΛΗΤΟ
+
+    const locked = applyTableGripDrag('table-corner-se', e, { x: 160, y: 184 }, drag, undefined, true);
+    const size = sizeOf(e, locked);
+    expect(size.widthMm).toBeCloseTo(72);
+    expect(size.heightMm).toBeCloseTo(19.2); // 16 × 1.2 — ο λόγος 60:16 διατηρήθηκε
+  });
+
+  it('συρρίκνωση: ΚΑΜΙΑ στήλη/γραμμή δεν πέφτει κάτω από το ελάχιστό της', () => {
+    const e = makeEntity();
+    const patch = applyTableGripDrag('table-corner-se', e, { x: 160, y: 184 }, { x: -500, y: 500 });
+
+    for (const col of patch.model!.columns) {
+      expect(col.sizing).toMatchObject({ kind: 'fixed' });
+      expect((col.sizing as { widthMm: number }).widthMm)
+        .toBeGreaterThanOrEqual(MIN_TABLE_COLUMN_WIDTH_MM);
+    }
+    for (const row of patch.model!.rows) {
+      expect(row.heightMm).toBeGreaterThanOrEqual(MIN_TABLE_ROW_HEIGHT_MM);
+    }
+  });
+
+  it('ΣΤΡΑΜΜΕΝΟΣ πίνακας: το σύρσιμο μετριέται στο πλαίσιο, όχι στην οθόνη', () => {
+    const e = makeEntity({ angleRad: Math.PI / 2 });
+    // Στις 90° ο άξονας +u της σελίδας δείχνει +y στη σκηνή ⇒ «12mm δεξιά στο χαρτί» = (0, 12).
+    const patch = applyTableGripDrag('table-edge-e', e, { x: 100, y: 260 }, { x: 0, y: 12 });
+    expect(sizeOf(e, patch)).toEqual({ widthMm: 72, heightMm: 16 });
+  });
+
+  it('η κλιμάκωση δίνει ΡΗΤΟ ύψος και σε γραμμή που το κληρονομούσε από την κλάση της', () => {
+    // `heightMm` απόν ⇒ το ύψος έρχεται από το στυλ· η κλιμάκωση πρέπει να ξεκινά από την
+    // ΕΠΙΛΥΜΕΝΗ τιμή της διάταξης, αλλιώς θα πολλαπλασίαζε το `undefined`.
+    const e = makeEntity({
+      model: persistedModel({
+        columns: COLUMNS,
+        rows: [{ id: 'r1', rowClass: 'data' }, { id: 'r2', rowClass: 'data' }],
+      }),
+    });
+    const before = computeTableEntityGeometry(e, 1, 'mm').layout.heightMm;
+    const patch = applyTableGripDrag('table-edge-s', e, { x: 130, y: 200 - before }, { x: 0, y: -before });
+
+    expect(e.model.rows[0].heightMm).toBeUndefined(); // η αφετηρία ήταν όντως κληρονομημένη
+    for (const row of patch.model!.rows) expect(row.heightMm).toBeGreaterThan(0);
+    expect(sizeOf(e, patch).heightMm).toBeCloseTo(before * 2);
   });
 });

@@ -31,6 +31,19 @@ export const GRIP_SNAPPABLE_COLOR = '#00BCD4' as const; // Cyan — snappable-du
 // stair grips. Deliberately NOT the warm magenta #ff00ff (hover) — a redder fuchsia so a
 // STATIC landing grip never reads as a hovered one. Applied as a per-grip `customColor`.
 export const GRIP_REST_LANDING_COLOR = '#E4007C' as const; // Fuchsia — stair rest-landing grips
+// ADR-739 Φ.Γ — ταυτότητα των λαβών **πλάτους στήλης** πίνακα (Giorgio 2026-08-03: «ξεχώρισε
+// το χρώμα των λαβών που αλλάζουν το πλάτος των στηλών»). Ίδιος μηχανισμός με το πλατύσκαλο
+// (ADR-637): per-grip `customColor`, ΟΧΙ κανόνας type→χρώμα μέσα στον `GripColorManager` — ο
+// ADR-048 v2.3 τον απαγορεύει ρητά, και το ελάττωμα που τον γέννησε ήταν ΑΚΡΙΒΩΣ σε αυτές τις
+// λαβές («edge + cold → πράσινο» έβαφε ολόκληρη τη στήλη μέσω του αντιπροσώπου της παρτίδας).
+//
+// Η επιλογή της απόχρωσης δεν είναι γούστο — είναι **αποκλεισμός**: κατειλημμένα στο κανάλι
+// λαβών είναι το σιέλ #007FFF (ηρεμία), το magenta #ff00ff (hover), το κόκκινο #FF0000 (σύρσιμο),
+// το πορτοκαλί #FF6A00 (οπλισμένη), το κυανό #00BCD4 (στόχος έλξης) και το φούξια #E4007C
+// (πλατύσκαλο)· το **πράσινο** αποκλείεται ξεχωριστά, γιατί στο AutoCAD σημαίνει hover και μια
+// λαβή σε ηρεμία θα διαβαζόταν ως «είσαι πάνω της» (ο λόγος που αφαιρέθηκε το #00ff80).
+// Μένει η **λεβάντα**: φωτεινή σε σκούρο καμβά, σαφώς μη-magenta.
+export const GRIP_TABLE_COLUMN_EDGE_COLOR = '#B388FF' as const; // Lavender — λαβές πλάτους στήλης
 
 /**
  * Resolved grip colors — all fields are non-null strings, ready for rendering.

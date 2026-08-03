@@ -136,6 +136,14 @@ export const GRIP_GLYPH_REGISTRY: Readonly<Record<string, GripShape>> = {
   // (area/polyline parity); the boundary vertex / edge-midpoint / gradient grips render 'square'.
   'hatch-move': 'move',
   'hatch-rotation': 'rotation',
+  // Πίνακας (ADR-739 Φ.Γ) — οι δύο λαβές ΥΠΗΡΧΑΝ από τη Φ.Γ αλλά ΕΛΕΙΠΑΝ από αυτό το μητρώο,
+  // οπότε ζωγραφίζονταν ως απλά τετράγωνα: ο χρήστης έβλεπε «άλλη μια λαβή» εκεί που έπρεπε να
+  // δει σταυρό μετακίνησης και τόξο περιστροφής (Giorgio 2026-08-03). Το ίδιο σιωπηλό σχήμα με
+  // το προ-ADR-397 κενό της κολόνας — απούσα εγγραφή δεν σπάει, απλώς πέφτει στο default.
+  // Οι 4 γωνιακές (`table-corner-*`) + 4 μεσοπλευρικές (`table-edge-*`) + οι λαβές ορίων στηλών
+  // (`table-column-edge`) render το default 'square' (εικόνα / block parity).
+  'table-move': 'move',
+  'table-rotation': 'rotation',
 } as const;
 
 /**

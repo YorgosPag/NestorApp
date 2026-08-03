@@ -66,6 +66,25 @@ export function rgbToHex(rgb: Rgb): string {
   return `#${channelToHex(rgb.r)}${channelToHex(rgb.g)}${channelToHex(rgb.b)}`;
 }
 
+/**
+ * ADR-739 Φ.Ε/Φ4 — κανονική μορφή hex: `#rrggbb`, **πεζά**· ό,τι δεν αναγνωρίζεται γυρίζει
+ * κουρεμένο και πεζό, ποτέ σφάλμα.
+ *
+ * Υπάρχει επειδή η **σύγκριση** χρωμάτων γίνεται σε δύο στρώματα ταυτόχρονα: το μοντέλο μπορεί
+ * να κρατά `#FF0000` (γραμμένο από παλιό στυλ ή από εισαγωγή) ενώ μια παλέτα `#ff0000`, και ένα
+ * ωμό `===` θα απαντούσε «δεν είναι επιλεγμένο» για το χρώμα που **βλέπει** ο χρήστης. Ένας
+ * κανόνας, ένα σημείο — αλλιώς κάθε καταναλωτής συνθέτει μόνος του `rgbToHex(parseHex(x))` και
+ * η πρώτη διαφορά στη μεταχείριση του άκυρου γίνεται σφάλμα που δεν αναπαράγεται.
+ *
+ * ℹ️ Το `ui/color/utils.normalizeHex` είναι ο ίδιος υπολογισμός στη **διάλεκτο του `ui/color`**
+ * (δέχεται `FormatOptions`, πετά σε άκυρο και το πιάνει). Αυτό εδώ είναι η ουδέτερη ως προς
+ * στρώμα εκδοχή, ώστε να τη μοιράζονται `bim/` και `ui/` χωρίς να δανείζεται το ένα από το άλλο.
+ */
+export function normalizeHexColor(hex: string): string {
+  const rgb = parseHex(hex);
+  return rgb ? rgbToHex(rgb) : hex.trim().toLowerCase();
+}
+
 /** Perceptual luminance (ITU-R BT.601 weights), 0..1. (print path) */
 export function luminance601(rgb: Rgb): number {
   return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
