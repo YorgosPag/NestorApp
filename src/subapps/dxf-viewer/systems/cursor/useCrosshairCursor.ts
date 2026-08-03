@@ -31,7 +31,7 @@ import { getDevicePixelRatio } from './utils';
 // boolean. Ζει εδώ γιατί εδώ είναι ο ΕΝΑΣ γραφέας: κάθε αλλαγή σχήματος δείκτη περνά από αυτό
 // το `apply()`, άρα μία μέτρηση εδώ είναι **πλήρης** εξ ορισμού.
 import { noteCursorApply, type CursorApplyBranch } from './cursor-apply-audit';
-import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-geometry';
+import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-cursor-role';
 
 /**
  * Σταθερή διάσταση (CSS px) του κεντρικού τετραγωνιδίου (pickbox) στο σταυρόνημα — αίτημα Giorgio.
@@ -72,6 +72,10 @@ function tableIndicatorCursorValue(role: TableIndicatorCursorRole): string {
   switch (role) {
     case 'column-resize':
       return 'col-resize';
+    // Το κάτοπτρο (Giorgio 2026-08-04): `row-resize` είναι λέξη-κλειδί CSS όπως το `col-resize`,
+    // άρα ο νέος ρόλος πληρώνει **μηδέν** — καμία εικόνα, κανένα από τα τίμημα του §31.11.
+    case 'row-resize':
+      return 'row-resize';
     case 'column-select':
       return buildTableArrowCursorValue('down');
     case 'row-select':

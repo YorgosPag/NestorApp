@@ -81,9 +81,10 @@ import {
 import { endTableCellDrag, startTableCellDrag } from './table-cell-drag-session';
 // ADR-739 §31.9 — η **δεύτερη** χειρονομία του πίνακα: σύρσιμο διαχωριστικού στηλών.
 import {
-  beginTableColumnResize,
-  endTableColumnResizeDrag,
-} from './table-column-resize-drag';
+  beginTableAxisResize,
+  endTableAxisResizeDrag,
+  type TableResizeAxis,
+} from './table-axis-resize-drag';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 // ADR-739 §26.15 — ο ΕΝΑΣ ορισμός του «ανήκω στη συνεδρία», και στις δύο μορφές του:
 // για **στοιχεία** (`isTableCellSessionElement`) και για **χειρονομίες** (`claim…`).
@@ -129,7 +130,7 @@ export interface UseTableCellPointerParams {
   /**
    * 🔴 ADR-739 §31.9 — **ζωντανή** προεπισκόπηση πλάτους στήλης, σε κάθε καρέ της σύρσης.
    * Γράφει τη σκηνή **χωρίς** να καταγράψει αναίρεση — δες την κεφαλίδα του
-   * `table-column-resize-drag` για το γιατί ο διαχωρισμός ζει εδώ και όχι εκεί.
+   * `table-axis-resize-drag` για το γιατί ο διαχωρισμός ζει εδώ και όχι εκεί.
    */
   readonly onPreviewModel: (entity: TableEntity, model: TableEntity['model']) => void;
   /** §31.9 — το τελικό πλάτος ως **μία** εντολή αναίρεσης, στο `mouseup`. */
@@ -143,17 +144,25 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
   } = params;
 
   /**
-   * 🔴 ADR-739 §31.9 — ξεκινά τη σύρση πλάτους στήλης από το διαχωριστικό.
+   * 🔴 ADR-739 §31.9 — ξεκινά τη σύρση μεγέθους από το διαχωριστικό, σε **όποιον** άξονα.
    *
    * Ζει σε δικό του σταθεροποιημένο χειριστή για τον **ίδιο** λόγο με το `handleMouseDown`
    * (§27.16 Ε6): διαβάζει τη ζωντανή οντότητα τη στιγμή του συμβάντος, όχι στιγμιότυπο —
    * και η ίδια η σύρση γράφει το μοντέλο, δηλαδή παράγει νέα οντότητα σε κάθε καρέ.
+   *
+   * ⚠️ **Ένας** χειριστής για τους δύο άξονες, όχι δύο σχεδόν-ίδιοι (Giorgio 2026-08-04): το
+   * μόνο που αλλάζει είναι η παράμετρος `axis`, και δύο `useEventCallback` με ταυτόσημο σώμα
+   * θα ήταν sibling clone — μαζί με το ρίσκο να ξεχαστεί το `onCommitPending()` στον έναν.
    */
-  const onResizeColumnEdge = useEventCallback((edgeIndex: number, container: HTMLElement): void => {
+  const onResizeAxisEdge = useEventCallback((
+    axis: TableResizeAxis,
+    edgeIndex: number,
+    container: HTMLElement,
+  ): void => {
     if (!entity) return;
     // Ό,τι γράφεται στο κελί δεσμεύεται πρώτα: η σύρση αλλάζει τη διάταξη κάτω από τον δρομέα.
     onCommitPending();
-    beginTableColumnResize({
+    beginTableAxisResize(axis, {
       entity,
       edgeIndex,
       container,
@@ -235,13 +244,17 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // επιλογή στήλης. Μπαίνει **πριν** από τη ζώνη γιατί είναι η πιο ειδική περίπτωση· η
     // γεωμετρία της ζώνης έχει ήδη παραιτηθεί στα ίδια pixel, οπότε εδώ δεν υπάρχει
     // διεκδίκηση — μόνο δρομολόγηση.
-    if (pointerHit?.where === 'column-edge') {
+    if (pointerHit?.where === 'column-edge' || pointerHit?.where === 'row-edge') {
       claimTableCellSessionPointerDown();
       // §27.15 — και η χειρονομία: χωρίς αυτό το body-drag του ADR-560 armάρει στα 3px και
       // το σύρσιμο του διαχωριστικού θα **μετακινούσε τον πίνακα**.
       claimTableCellPointerGesture();
       if (!primary) return;
-      onResizeColumnEdge(pointerHit.columnIndex, container);
+      if (pointerHit.where === 'column-edge') {
+        onResizeAxisEdge('column', pointerHit.columnIndex, container);
+      } else {
+        onResizeAxisEdge('row', pointerHit.rowIndex, container);
+      }
       return;
     }
 
@@ -402,7 +415,7 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // §31.9 — **και οι τρεις** χειρονομίες, στο ίδιο σημείο. Μία ξεχασμένη εδώ θα ήταν
       // ακροατής `document` που επιζεί της συνεδρίας του — δηλαδή σύρσιμο πλάτους σε πίνακα
       // που δεν επεξεργάζεται πια κανείς.
-      endTableColumnResizeDrag();
+      endTableAxisResizeDrag();
       // §36 ΦΑΣΗ 3 — και το **φάντασμα** σβήνει μαζί: ζει σε store που ο ζωγράφος διαβάζει με
       // getter, άρα θα επιβίωνε της συνεδρίας του ως προεπισκόπηση χωρίς σύρση.
       endTableRangeTransferDrag();

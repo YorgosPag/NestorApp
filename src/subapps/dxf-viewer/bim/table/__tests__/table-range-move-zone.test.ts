@@ -17,7 +17,8 @@ import {
   MAX_INSIDE_REACH_FRACTION,
   PLAIN_TABLE_RANGE_DRAG,
 } from '../table-range-move-zone';
-import { tableIndicatorBandsMm, tableIndicatorCursorRoleAtFrame } from '../table-indicator-geometry';
+import { tableIndicatorBandsMm } from '../table-indicator-geometry';
+import { tableIndicatorCursorRoleAtFrame } from '../table-indicator-cursor-role';
 import type { TableLayout, TableRectMm } from '../table-layout-types';
 
 /** Ένα άνετο ορθογώνιο: 40×20 mm, ώστε το φράγμα του ¼ να μη δεσμεύει στις προεπιλογές. */

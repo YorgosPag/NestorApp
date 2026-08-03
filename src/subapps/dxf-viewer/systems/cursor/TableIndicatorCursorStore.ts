@@ -30,7 +30,7 @@
  */
 
 import { createExternalStore } from '../../stores/createExternalStore';
-import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-geometry';
+import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-cursor-role';
 
 // `equals: Object.is` — ο ρόλος είναι string ένωση, οπότε η ταυτότητα **είναι** η ισότητα. Ο
 // γραφέας τρέχει σε κάθε `mousemove`· χωρίς αυτό, κάθε pixel θα ξανα-ρασταροποιούσε PNG δείκτη.

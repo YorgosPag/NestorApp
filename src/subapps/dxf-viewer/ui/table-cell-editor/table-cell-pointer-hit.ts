@@ -36,13 +36,16 @@ import {
 import {
   isTableIndicatorVisible,
   tableColumnEdgeAtFrame,
+  tableRowEdgeAtFrame,
   tableIndicatorBandsMm,
-  tableIndicatorCursorRoleAtFrame,
   tableIndicatorHitAtFrame,
   type TableIndicatorBandsMm,
-  type TableIndicatorCursorRole,
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
+import {
+  tableIndicatorCursorRoleAtFrame,
+  type TableIndicatorCursorRole,
+} from '../../bim/table/table-indicator-cursor-role';
 // 🔴 ADR-739 §36 — ο ΕΝΑΣ δρόμος «τι διάλεξε ο χρήστης → ποιο ορθογώνιο», κοινός με τον
 // ζωγράφο: ο χρήστης πιάνει το περίγραμμα **που βλέπει**.
 import {
@@ -80,6 +83,8 @@ export type TablePointerHit =
    *  - ο pointer πρέπει να **μην** επιλέξει στήλη εδώ — αν ήταν `band`, θα το έκανε σιωπηλά.
    */
   | { readonly where: 'column-edge'; readonly columnIndex: number }
+  /** Το κάτοπτρο για τις γραμμές (2026-08-04) — ίδιοι δύο λόγοι, στον άλλο άξονα. */
+  | { readonly where: 'row-edge'; readonly rowIndex: number }
   | { readonly where: 'band'; readonly band: TableIndicatorHit }
   | { readonly where: 'cell'; readonly cell: TableCellHit };
 
@@ -127,6 +132,8 @@ export function tablePointerHitAtWorld(
   // και για το **κελί**, ώστε το διαχωριστικό να μη γίνεται «κλικ στην πρώτη γραμμή».
   const edge = columnEdgeAt(entity, world, geometry, viewScale);
   if (edge !== null) return { where: 'column-edge', columnIndex: edge };
+  const rowEdge = rowEdgeAt(entity, world, geometry, viewScale);
+  if (rowEdge !== null) return { where: 'row-edge', rowIndex: rowEdge };
   const band = indicatorHitAt(entity, world, geometry, viewScale);
   if (band) return { where: 'band', band };
   const cell = tableCellAtWorld(entity, world, geometry);
@@ -142,6 +149,17 @@ function columnEdgeAt(
 ): number | null {
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
   return probe && tableColumnEdgeAtFrame(geometry.layout, probe.frame, probe.bands);
+}
+
+/** Ποιο εσωτερικό όριο γραμμής είναι κάτω από το σημείο· `null` κάτω από το LOD ή αλλού. */
+function rowEdgeAt(
+  entity: TableEntity,
+  world: Point2D,
+  geometry: TableEntityGeometry,
+  viewScale: number,
+): number | null {
+  const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
+  return probe && tableRowEdgeAtFrame(geometry.layout, probe.frame, probe.bands);
 }
 
 /**

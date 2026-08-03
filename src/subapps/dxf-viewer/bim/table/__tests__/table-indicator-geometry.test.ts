@@ -12,12 +12,12 @@ import {
   tableColumnTickRectMm,
   tableIndicatorBandsMm,
   tableIndicatorCornerRectMm,
-  tableIndicatorCursorRoleAtFrame,
   tableIndicatorHitAtFrame,
   tableRowTickRectMm,
   TABLE_INDICATOR_GRIP_CLEARANCE_PX,
   TABLE_INDICATOR_OUTER_PX,
 } from '../table-indicator-geometry';
+import { tableIndicatorCursorRoleAtFrame } from '../table-indicator-cursor-role';
 import { TABLE_COLUMN_KIND } from '../table-entity-grips';
 import { tableColumnTicks, tableRowTicks } from '../table-cell-reference';
 import { TABLE_INDICATOR } from '../../../config/color-config';
@@ -313,17 +313,24 @@ describe('🔴 §31 tableIndicatorCursorRoleAtFrame — ο δείκτης δεν
       .toEqual({ axis: 'column', colId: 'c0', index: 0 });
   });
 
-  it('🔴 η λωρίδα των αριθμών ΔΕΝ υπόσχεται ΠΟΤΕ σύρσιμο — δεν υπάρχει λαβή ύψους (§8)', () => {
-    // Δεν είναι παράλειψη: το `table-entity-grips` το τεκμηριώνει ως φράγμα απόδοσης (500
-    // γραμμές ⇒ 500 λαβές ανά καρέ). Δείκτης «⟷» εδώ θα σήμαινε σύρσιμο που δεν εκτελείται.
+  it('🔴 η λωρίδα των αριθμών: ΜΕΣΑ στη γραμμή επιλογή, ΠΑΝΩ στο όριο σύρσιμο ύψους', () => {
+    // ⚠️ ΑΥΤΟ ΤΟ TEST ΕΛΕΓΕ ΤΟ ΑΝΤΙΘΕΤΟ («δεν υπόσχεται ΠΟΤΕ σύρσιμο — δεν υπάρχει λαβή
+    // ύψους»), και ήταν σωστό τότε: δείκτης «⇕» χωρίς λαβή από πίσω θα υποσχόταν ενέργεια που
+    // δεν εκτελείται. Ο Giorgio ζήτησε τις λαβές ύψους (2026-08-04), το `table-entity-grips`
+    // τις έχει, άρα ο δείκτης **έπαψε να ψεύδεται** — δεν χαλάρωσε ο κανόνας, ικανοποιήθηκε
+    // η προϋπόθεσή του. Ο ίδιος ο κανόνας ελέγχεται τώρα ΠΙΟ αυστηρά, γιατί ξεχωρίζει τα δύο.
     const insideBand = -(apertureMm + BANDS.rowBandMm / 2);
+
+    // ΜΕΣΑ στο σώμα της γραμμής (μακριά από τα όρια) ⇒ επιλογή, όπως πάντα.
     for (const row of ROWS) {
-      const v = row.yMm + row.heightMm / 2;
-      expect(role(insideBand, v)).toBe('row-select');
+      expect(role(insideBand, row.yMm + row.heightMm / 2)).toBe('row-select');
     }
-    // Και πάνω ΑΚΡΙΒΩΣ στα όρια γραμμών — εκεί θα ήταν ο πειρασμός να μπει `row-resize`.
-    for (const row of ROWS) {
-      expect(role(insideBand, row.yMm)).toBe('row-select');
+
+    // ΠΑΝΩ ΑΚΡΙΒΩΣ στα **εσωτερικά** όρια ⇒ σύρσιμο ύψους. Το πρώτο (`ROWS[0].yMm` = η πάνω
+    // ακμή του πίνακα) ΔΕΝ είναι εσωτερικό όριο — δεν έχει λαβή, άρα μένει επιλογή.
+    expect(role(insideBand, ROWS[0].yMm)).toBe('row-select');
+    for (const row of ROWS.slice(1)) {
+      expect(role(insideBand, row.yMm)).toBe('row-resize');
     }
   });
 

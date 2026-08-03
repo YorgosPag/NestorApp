@@ -297,7 +297,7 @@ export function useTableCellDoubleClickEditor(
    *
    * Άρα δύο δρόμοι: η προεπισκόπηση γράφει τη σκηνή **απευθείας** (φθηνή, χωρίς ιστορικό) και
    * το τελικό πλάτος περνά **μία** φορά από την εντολή. Ο κύκλος ζωής της χειρονομίας δεν
-   * ξέρει τη διαφορά — δες την κεφαλίδα του `table-column-resize-drag`.
+   * ξέρει τη διαφορά — δες την κεφαλίδα του `table-axis-resize-drag`.
    */
   const commitTableModel = useTableModelCommit({ levelManager, execute });
 

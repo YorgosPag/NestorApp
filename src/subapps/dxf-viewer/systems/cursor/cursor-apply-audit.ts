@@ -54,10 +54,8 @@
 
 import { nowISO } from '@/lib/date-local';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
-import type {
-  TableIndicatorCursorRole,
-  TableIndicatorHit,
-} from '../../bim/table/table-indicator-geometry';
+import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-cursor-role';
+import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
 
 /** Ποιον κλάδο του `apply()` πήρε η εγγραφή — η **σειρά προτεραιότητας** του §31.3(α). */
 export type CursorApplyBranch = 'navwheel' | 'table' | 'crosshair-off' | 'crosshair';

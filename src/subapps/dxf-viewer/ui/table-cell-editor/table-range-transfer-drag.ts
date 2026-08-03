@@ -4,7 +4,7 @@
  * 🔴 ADR-739 §36 (ΦΑΣΗ 3) — **Η ΧΕΙΡΟΝΟΜΙΑ ΤΗΣ ΜΕΤΑΦΟΡΑΣ**: πιάσε το περίγραμμα, σύρε, άσε.
  *
  * Η **τρίτη** χειρονομία του πίνακα, με το **σκόπιμα ίδιο** σχήμα με τις δύο πρώτες
- * (`table-cell-drag-session`, `table-column-resize-drag`): ακροατές στο `document`, ένας
+ * (`table-cell-drag-session`, `table-axis-resize-drag`): ακροατές στο `document`, ένας
  * ενεργός κύκλος τη φορά, ρητό `end…` στην αποπροσάρτηση. **Καμία τέταρτη κλάση drag
  * controller** — το SSoT audit (02/08) μέτρησε ήδη τρεις ανεξάρτητες κλάσεις `idle → dragging`
  * και **κανέναν** γενικό SSoT· μια τέταρτη θα ήταν ακριβώς ο structural clone του CHECK 3.28.
@@ -74,7 +74,7 @@ import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import { tableEventWorldPoint } from './table-cell-pointer-hit';
 import type { RefObject } from 'react';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
-import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-geometry';
+import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-cursor-role';
 import type { TableRangeTransferPlan } from '../../bim/table/table-range-transfer-types';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
