@@ -264,6 +264,25 @@ describe('η πρόθεση αλλάζει ΜΕΣΑ στη σύρση', () => {
     expect(getTableRangeTransferPreview()?.insertAxis).toBe('down');
   });
 
+  it('🔴 ο ΓΡΑΦΕΑΣ του δείκτη διαβάζει την ΕΝΗΜΕΡΩΜΕΝΗ απάντηση, όχι την προηγούμενη', () => {
+    // Το βρήκε **η οθόνη**: ο γραφέας (`use-table-indicator-hover`) ακούει κι αυτός
+    // `keydown`/`keyup` στο `window`, εγγεγραμμένος στην **προσάρτηση** — δηλαδή πριν από τη
+    // σύρση. Σε αναπήδηση οι ακροατές τρέχουν με σειρά εγγραφής, άρα ρωτούσε **πριν** η σύρση
+    // ενημερώσει την απάντηση: ο δείκτης έλεγε «μετακίνηση» για ένα συμβάν αφότου η απόθεση
+    // είχε γίνει άρνηση. Το test μιμείται **ακριβώς** αυτή τη σειρά.
+    const seen: (string | null)[] = [];
+    const writer = (): void => void seen.push(activeTableRangeTransferCursor());
+    window.addEventListener('keydown', writer); // αναπήδηση, ΠΡΙΝ τη σύρση — όπως ο γραφέας
+    try {
+      startDrag();
+      moveTo(50, 25);
+      modifierKey('keydown', 'Control', { ctrlKey: true });
+      expect(seen).toEqual(['range-copy']);
+    } finally {
+      window.removeEventListener('keydown', writer);
+    }
+  });
+
   it('πλήκτρο που δεν είναι τροποποιητής αγνοείται (καμία περιττή σάρωση)', () => {
     startDrag();
     moveTo(50, 25);

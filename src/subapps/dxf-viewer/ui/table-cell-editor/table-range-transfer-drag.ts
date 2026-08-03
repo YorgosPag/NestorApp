@@ -175,8 +175,20 @@ export function beginTableRangeTransfer(start: TableRangeTransferStart): void {
   // Παθητικοί: **μόνο** ξαναρωτούν την ίδια ερώτηση. Στο `window`, γιατί το πληκτρολόγιο δεν
   // έχει θέση και η εστίαση ανήκει στο `<textarea>` της συνεδρίας — ακροατής στο δοχείο δεν
   // θα έβλεπε ποτέ το πλήκτρο (ίδιο σκεπτικό με τον δείκτη, §36).
-  window.addEventListener('keydown', onModifier, { passive: true });
-  window.addEventListener('keyup', onModifier, { passive: true });
+  //
+  // 🔴 **ΣΥΛΛΗΨΗ, ΚΑΙ ΤΟ ΒΡΗΚΕ Η ΟΘΟΝΗ.** Ο γραφέας του δείκτη (`use-table-indicator-hover`)
+  // ακούει **κι αυτός** `keydown`/`keyup` στο `window`, εγγεγραμμένος στην **προσάρτηση** —
+  // δηλαδή **πριν** από εδώ. Σε φάση αναπήδησης οι ακροατές του `window` τρέχουν με σειρά
+  // εγγραφής, οπότε ο γραφέας ρωτούσε το {@link activeTableRangeTransferCursor} **πριν** αυτό
+  // εδώ το ενημερώσει: με το χέρι ακίνητο, ένα `Shift` που κάνει την απόθεση παράνομη άφηνε
+  // τον δείκτη να λέει «μετακίνηση» ενώ το φάντασμα είχε ήδη σβήσει. Ο δείκτης έλεγε **ψέματα**
+  // κατά ένα συμβάν (§31: *ο δείκτης δεν επιτρέπεται να ψεύδεται*).
+  //
+  // Η **σύλληψη** το λύνει ντετερμινιστικά: το `window` είναι η κορυφή της διαδρομής, άρα οι
+  // ακροατές σύλληψης εδώ τρέχουν **πριν** από κάθε ακροατή αναπήδησης — ανεξάρτητα από το
+  // ποιος εγγράφηκε πρώτος. Ίδια θεραπεία με το `mousemove` παραπάνω, ίδιος λόγος.
+  window.addEventListener('keydown', onModifier, { capture: true, passive: true });
+  window.addEventListener('keyup', onModifier, { capture: true, passive: true });
   // §27.16 Ε1 — η άκρη: ο κόσμος κουνιέται κάτω από ακίνητο χέρι, η ερώτηση είναι η ίδια.
   startDragEdgeAutoPan({
     sample: () => (lastEvent ? edgeAutoPanSample(lastEvent, start.container) : null),
@@ -188,8 +200,8 @@ export function beginTableRangeTransfer(start: TableRangeTransferStart): void {
   activeTeardown = (): void => {
     document.removeEventListener('mousemove', onMove, { capture: true });
     document.removeEventListener('mouseup', onUp, { capture: true });
-    window.removeEventListener('keydown', onModifier);
-    window.removeEventListener('keyup', onModifier);
+    window.removeEventListener('keydown', onModifier, { capture: true });
+    window.removeEventListener('keyup', onModifier, { capture: true });
     stopDragEdgeAutoPan();
   };
 }

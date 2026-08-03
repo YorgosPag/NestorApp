@@ -217,6 +217,57 @@ describe('⚠️ ρητή ακμή ΜΕΣΑ σε συγχώνευση — δεν
   });
 });
 
+// ── Α24: η διπλή γραμμή αποσυντίθεται ΣΤΗ ΔΙΑΤΑΞΗ, με μετρήσιμη απόσταση ────
+
+/**
+ * ADR-750 Φ5 (Α24) — **η γεωμετρία της διπλής, μετρημένη σε mm διάταξης**.
+ *
+ * Το κενό εντοπίστηκε στη ζωντανή επαλήθευση της Φ5 (§19.8 βήμα 4): τα 44 tests της φάσης
+ * κάλυπταν **ποιο** `doubleGapMm` παράγει το μολύβι (`table-border-pencil.test.ts`) και **ποια**
+ * ακμή το κρατά (`table-range-border-ops.test.ts`) — αλλά **κανένα** δεν ρωτούσε αν το
+ * `pushBorder` βγάζει όντως **δύο** τμήματα και **πόσο** απέχουν. Δηλαδή η μοναδική απόφαση
+ * που κάνει τη διπλή *διπλή* ήταν αμέτρητη: μια αποσύνθεση που παρήγαγε δύο ταυτόσημα
+ * τμήματα θα περνούσε όλη τη σουίτα και θα ζωγράφιζε **μία** γραμμή στην οθόνη.
+ */
+describe('Α24 — η διπλή βγάζει ΔΥΟ τμήματα, σε απόσταση `doubleGapMm` κέντρο-προς-κέντρο', () => {
+  const GAP = 3;
+  const DOUBLE: TableBorderSpec = { visible: true, colorHex: '#ff00ff', widthMm: 1, doubleGapMm: GAP };
+
+  it('οριζόντια ακμή ⇒ δύο τμήματα μετατοπισμένα κατά ±gap/2 στον άξονα y', () => {
+    const segments = borders(DETAIL_SHEET, rows('data', 'data'), [['H', 'r2', 'c1', DOUBLE]]);
+
+    expect(segments).toHaveLength(2);
+    const ys = segments.map((s) => s.a.y).sort((a, b) => a - b);
+    // Και τα δύο τμήματα είναι οριζόντια — η μετατόπιση είναι καθαρά κατά y.
+    for (const s of segments) expect(s.a.y).toBeCloseTo(s.b.y, 10);
+    expect(ys[0]).toBeCloseTo(H - GAP / 2, 10);
+    expect(ys[1]).toBeCloseTo(H + GAP / 2, 10);
+    // 🔑 Η μετρήσιμη ιδιότητα: η απόσταση ΕΙΝΑΙ το `doubleGapMm`, όχι κλάσμα ή πολλαπλάσιό του.
+    expect(ys[1] - ys[0]).toBeCloseTo(GAP, 10);
+  });
+
+  it('κατακόρυφη ακμή ⇒ η μετατόπιση γυρίζει στον άξονα x, με την ίδια απόσταση', () => {
+    const segments = borders(DETAIL_SHEET, rows('data', 'data'), [['V', 'r1', 'c1', DOUBLE]]);
+
+    expect(segments).toHaveLength(2);
+    for (const s of segments) expect(s.a.x).toBeCloseTo(s.b.x, 10);
+    const xs = segments.map((s) => s.a.x).sort((a, b) => a - b);
+    expect(xs[1] - xs[0]).toBeCloseTo(GAP, 10);
+  });
+
+  it('κανένα από τα δύο τμήματα δεν κουβαλά πια το `doubleGapMm` — ο ζωγράφος δεν το μαθαίνει', () => {
+    const segments = borders(DETAIL_SHEET, rows('data', 'data'), [['H', 'r2', 'c1', DOUBLE]]);
+    for (const s of segments) expect(s.spec.doubleGapMm).toBeUndefined();
+    // Ό,τι άλλο κρατούσε το μολύβι επιβιώνει αυτούσιο.
+    for (const s of segments) expect(s.spec.widthMm).toBe(1);
+  });
+
+  it('χωρίς `doubleGapMm` βγαίνει ΕΝΑ τμήμα — η αποσύνθεση δεν τρέχει «πάντα»', () => {
+    const single: TableBorderSpec = { visible: true, colorHex: '#ff00ff', widthMm: 1 };
+    expect(borders(DETAIL_SHEET, rows('data', 'data'), [['H', 'r2', 'c1', single]])).toHaveLength(1);
+  });
+});
+
 // ── Ουδετερότητα: πίνακας χωρίς ρητές ακμές δεν αλλάζει ούτε κατά ένα τμήμα ─
 
 describe('μηδέν ρητές ακμές ⇒ ΤΑΥΤΟΣΗΜΗ έξοδος με πριν το ADR-750', () => {
