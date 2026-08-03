@@ -67,22 +67,17 @@ import {
 // `useCrosshairCursor` ζει το **ΑΠΟΤΕΛΕΣΜΑ** (τι γράφτηκε στο `style.cursor`). Χωρίς το πρώτο
 // δεν ξεχωρίζεις «ο ρόλος άλλαξε» από «κάποιος άλλος ξαναέγραψε» — δύο διαφορετικές θεραπείες.
 import { noteCursorProbe } from '../../systems/cursor/cursor-apply-audit';
-// 🔴 ADR-739 §35 — η επιλογή (ΤΙ πιάνεται) και τα πλήκτρα (ΤΙ θα γίνει αν το πιάσεις).
+// 🔴 ADR-739 §36 — η επιλογή (ΤΙ πιάνεται) και τα πλήκτρα (ΤΙ θα γίνει αν το πιάσεις).
 import { getTableCellCursor } from '../../state/table-cell-cursor-store';
-import { tableRangeDragIntentOf } from '../../bim/table/table-range-move-zone';
+import {
+  TABLE_RANGE_MODIFIER_KEYS,
+  tableRangeDragIntentOf,
+} from '../../bim/table/table-range-move-zone';
+// 🔴 ADR-739 §36 ΦΑΣΗ 3 — όσο σέρνεται περιοχή, η **χειρονομία** ξέρει τι οφείλει ο δείκτης·
+// η σάρωση θέσης δεν το ξέρει και δεν μπορεί να το μάθει (χρειάζεται ολόκληρο το σχέδιο).
+import { activeTableRangeTransferCursor } from './table-range-transfer-drag';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
-
-/**
- * 🔴 ADR-739 §35 — τα πλήκτρα που **αλλάζουν την υπόσχεση** χωρίς να κουνηθεί το χέρι.
- *
- * Μόνο αυτά: κάθε άλλο πλήκτρο θα ξανα-σάρωνε γεωμετρία για απάντηση που δεν αλλάζει. Το
- * `Shift` είναι μέσα παρότι **δεν** αλλάζει το σχήμα του δείκτη σήμερα (η εισαγωγή δείχνει
- * κι αυτή `move`, όπως στο Excel) — γιατί αλλάζει την **πρόθεση** που καταγράφει το όργανο
- * του §31.11, και μια καταγραφή που δεν βλέπει το `Shift` δεν μπορεί να διαγνώσει σύρση που
- * εισήγαγε ενώ ο χρήστης περίμενε αντικατάσταση.
- */
-const MODIFIER_KEYS: ReadonlySet<string> = new Set(['Control', 'Meta', 'Shift']);
 
 /**
  * Ο **ένας** καθαρισμός και των δύο καναλιών, με **σταθερή** ταυτότητα.
@@ -117,7 +112,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
   const { active, entity, containerRef, transformRef } = params;
 
   /**
-   * 🔴 §35 — **ΠΟΥ ΣΤΕΚΕΤΑΙ ΤΟ ΧΕΡΙ**, ώστε το `Ctrl` να μπορεί να ξαναρωτήσει χωρίς κίνηση.
+   * 🔴 §36 — **ΠΟΥ ΣΤΕΚΕΤΑΙ ΤΟ ΧΕΡΙ**, ώστε το `Ctrl` να μπορεί να ξαναρωτήσει χωρίς κίνηση.
    *
    * Ίδιο σχήμα με το `lastEvent` της σύρσης (`table-cell-drag-session` §27.16 Ε1) και για
    * τον ίδιο ακριβώς λόγο: υπάρχουν **δύο** αφορμές να ξαναλυθεί η ίδια ερώτηση — κινήθηκε το
@@ -128,8 +123,30 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
    */
   const lastMoveRef = useRef<MouseEvent | null>(null);
 
-  const handleMouseMove = useEventCallback((event: MouseEvent): void => {
+  /**
+   * 🔴 §36 ΦΑΣΗ 3 — τα πλήκτρα διαβάζονται από **ξεχωριστό** αντικείμενο, όχι πάντα από το
+   * `MouseEvent`: τα `ctrlKey`/`shiftKey` του είναι **παγωμένο στιγμιότυπο** της στιγμής που
+   * γεννήθηκε. Ο ακροατής πλήκτρων επαναλαμβάνει την τελευταία **θέση** αλλά περνά τη **δική
+   * του** πρόθεση — αλλιώς ένα `Ctrl` με ακίνητο χέρι θα ξαναρωτούσε με την **παλιά**
+   * κατάσταση πλήκτρων, δηλαδή ο δείκτης δεν θα άλλαζε μέχρι την επόμενη κίνηση: ακριβώς η
+   * συμπεριφορά που ο ακροατής υπάρχει για να καταργήσει.
+   */
+  const handleMouseMove = useEventCallback((
+    event: MouseEvent,
+    modifiers: Pick<MouseEvent, 'ctrlKey' | 'metaKey' | 'shiftKey'> = event,
+  ): void => {
     lastMoveRef.current = event;
+    // 🔴 §36 ΦΑΣΗ 3 — **η σύρση μεταφοράς έχει προτεραιότητα**: όσο ζει, ο δείκτης λέει τι
+    // κρατά το χέρι (`move`/`copy`/`not-allowed`), όχι τι υπάρχει από κάτω. Χωρίς αυτό, η
+    // σάρωση θα απαντούσε «μέσα σε κελί ⇒ σταυρός» μόλις το χέρι φύγει από το περίγραμμα.
+    // Παράπλευρο κέρδος: μηδέν σάρωση γεωμετρίας στα 60-120 συμβάντα/δευτ. της σύρσης.
+    const dragging = activeTableRangeTransferCursor();
+    if (dragging) {
+      noteCursorProbe('ok', dragging, null, event.clientX, event.clientY);
+      setTableIndicatorHover(null);
+      setTableIndicatorCursor(dragging);
+      return;
+    }
     const container = containerRef.current;
     const transform = transformRef.current;
     if (!container || !entity || !transform) {
@@ -145,7 +162,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       clearTableIndicatorFeedback();
       return;
     }
-    // 🔴 ADR-739 §35 — η **επιλογή** διαβάζεται με getter τη στιγμή του συμβάντος, ποτέ ως
+    // 🔴 ADR-739 §36 — η **επιλογή** διαβάζεται με getter τη στιγμή του συμβάντος, ποτέ ως
     // στιγμιότυπο κλεισμένο στο hook. Είναι ο ρητός κανόνας του ADR-040 («event handlers MUST
     // receive getters, not snapshot values»), και εδώ έχει **ορατό** σύμπτωμα αν παραβιαστεί:
     // ο χρήστης μεγαλώνει την περιοχή με `Shift+βέλος` χωρίς να κουνήσει το χέρι, και το
@@ -162,10 +179,10 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       world,
       transform.scale,
       selection,
-      // §35 — τα πλήκτρα **του συμβάντος**, όχι κατάσταση που κρατά κάποιος: το `Ctrl` μπορεί
-      // να πατηθεί ή να αφεθεί με το χέρι ακίνητο πάνω στο περίγραμμα. Η ανανέωση του δείκτη
-      // σε αυτή την περίπτωση έρχεται από το `keydown`/`keyup` — δες παρακάτω.
-      tableRangeDragIntentOf(event),
+      // §36 — τα πλήκτρα **της στιγμής**, όχι κατάσταση που κρατά κάποιος: το `Ctrl` μπορεί
+      // να πατηθεί ή να αφεθεί με το χέρι ακίνητο πάνω στο περίγραμμα. Τότε τα δίνει το
+      // **`keydown`/`keyup`** μέσω του `modifiers` — δες την κεφαλίδα του χειριστή.
+      tableRangeDragIntentOf(modifiers),
     );
     // 🔬 §31.11 — η **αιτία**, με τις συντεταγμένες του συμβάντος: αν ο ρόλος ταλαντώνεται ενώ
     // το `y` μένει σταθερό, φταίει όριο κατά τον **οριζόντιο** άξονα (διαχωριστικά στηλών)·
@@ -176,7 +193,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
   });
 
   /**
-   * 🔴 §35 — το ποντίκι έφυγε: σβήσε **και** το σημείο, όχι μόνο την ανάδραση.
+   * 🔴 §36 — το ποντίκι έφυγε: σβήσε **και** το σημείο, όχι μόνο την ανάδραση.
    *
    * Χωρίς το πρώτο, ένα `Ctrl` πατημένο ενώ το χέρι είναι στην κορδέλα θα ξανα-σάρωνε την
    * **τελευταία θέση μέσα στον καμβά** και θα άναβε δείκτη μετακίνησης για περίγραμμα που
@@ -189,7 +206,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
   });
 
   /**
-   * 🔴 §35 — **Η ΠΡΟΘΕΣΗ ΑΛΛΑΞΕ ΧΩΡΙΣ ΝΑ ΚΟΥΝΗΘΕΙ ΤΟ ΧΕΡΙ.**
+   * 🔴 §36 — **Η ΠΡΟΘΕΣΗ ΑΛΛΑΞΕ ΧΩΡΙΣ ΝΑ ΚΟΥΝΗΘΕΙ ΤΟ ΧΕΡΙ.**
    *
    * Στο Excel κρατάς το χέρι στο περίγραμμα και πατάς `Ctrl`: ο δείκτης αποκτά «+» **αμέσως**,
    * πριν αρχίσει η σύρση. Αυτή είναι όλη η αξία του — μαθαίνεις ότι θα **αντιγράψεις** αντί να
@@ -203,9 +220,10 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
    * έβλεπε ποτέ** το πλήκτρο.
    */
   const handleModifierChange = useEventCallback((event: KeyboardEvent): void => {
-    if (!MODIFIER_KEYS.has(event.key)) return;
+    if (!TABLE_RANGE_MODIFIER_KEYS.has(event.key)) return;
     const last = lastMoveRef.current;
-    if (last) handleMouseMove(last);
+    // Η **θέση** από την τελευταία κίνηση, η **πρόθεση** από το πλήκτρο που μόλις άλλαξε.
+    if (last) handleMouseMove(last, event);
   });
 
   useEffect(() => {
@@ -219,7 +237,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // Το ποντίκι βγήκε από τον καμβά: καμία λωρίδα δεν είναι πια «κάτω από τον δείκτη».
     // Χωρίς αυτό, το γράμμα θα έμενε αναμμένο ενώ το χέρι είναι στην κορδέλα.
     container.addEventListener('mouseleave', handleMouseLeave);
-    // §35 — παθητικοί και οι δύο: **μόνο** ξαναρωτούν την ίδια ερώτηση. Καμία διεκδίκηση
+    // §36 — παθητικοί και οι δύο: **μόνο** ξαναρωτούν την ίδια ερώτηση. Καμία διεκδίκηση
     // πλήκτρου — το `Ctrl`/`Shift` ανήκουν σε όποιον τα διεκδικεί αλλού (αντιγραφή, επέκταση).
     window.addEventListener('keydown', handleModifierChange, { passive: true });
     window.addEventListener('keyup', handleModifierChange, { passive: true });

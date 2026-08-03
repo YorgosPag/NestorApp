@@ -56,7 +56,10 @@ import {
   tableRangeDroppedRect,
 } from '../../bim/table/table-range-transfer-plan';
 import { applyTableRangeTransfer } from '../../bim/table/table-range-transfer';
-import { tableRangeDropRequest } from '../../bim/table/table-range-drop-target';
+import {
+  tableRangeDropRequest,
+  type TableRangeGrab,
+} from '../../bim/table/table-range-drop-target';
 import {
   TABLE_RANGE_MODIFIER_KEYS,
   tableRangeDragIntentOf,
@@ -72,7 +75,6 @@ import { tableEventWorldPoint } from './table-cell-pointer-hit';
 import type { RefObject } from 'react';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-geometry';
-import type { TableRangeGrab } from '../../bim/table/table-range-drop-target';
 import type { TableRangeTransferPlan } from '../../bim/table/table-range-transfer-types';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
@@ -81,7 +83,7 @@ import type { ViewTransform } from '../../rendering/types/Types';
 export interface TableRangeTransferStart {
   /** Η οντότητα τη στιγμή του πατήματος — ίδια σύμβαση με το `beginTableColumnResize`. */
   readonly entity: TableEntity;
-  /** Η περιοχή που πιάστηκε από το περίγραμμά της (§35 / `tableRangeGrabAtWorld`). */
+  /** Η περιοχή που πιάστηκε από το περίγραμμά της (§36 / `tableRangeGrabAtWorld`). */
   readonly source: TableCellRangeBounds;
   /** Πού μέσα της έπεσε το χέρι — υπολογισμένο **μία** φορά, στην αρχή (§36). */
   readonly grab: TableRangeGrab;
@@ -172,7 +174,7 @@ export function beginTableRangeTransfer(start: TableRangeTransferStart): void {
   document.addEventListener('mouseup', onUp, { capture: true });
   // Παθητικοί: **μόνο** ξαναρωτούν την ίδια ερώτηση. Στο `window`, γιατί το πληκτρολόγιο δεν
   // έχει θέση και η εστίαση ανήκει στο `<textarea>` της συνεδρίας — ακροατής στο δοχείο δεν
-  // θα έβλεπε ποτέ το πλήκτρο (ίδιο σκεπτικό με τον δείκτη, §35).
+  // θα έβλεπε ποτέ το πλήκτρο (ίδιο σκεπτικό με τον δείκτη, §36).
   window.addEventListener('keydown', onModifier, { passive: true });
   window.addEventListener('keyup', onModifier, { passive: true });
   // §27.16 Ε1 — η άκρη: ο κόσμος κουνιέται κάτω από ακίνητο χέρι, η ερώτηση είναι η ίδια.
@@ -307,7 +309,7 @@ function refusedFrame(
 /**
  * 🔴 Η επιλογή **ακολουθεί** την περιοχή στη νέα της θέση (Excel/Sheets parity).
  *
- * Χωρίς αυτό, μετά από μια μετακίνηση η επιλογή —και μαζί της η **ζώνη σύλληψης** (§35)— θα
+ * Χωρίς αυτό, μετά από μια μετακίνηση η επιλογή —και μαζί της η **ζώνη σύλληψης** (§36)— θα
  * έμενε πάνω στα κελιά που μόλις άδειασαν: ο χρήστης θα έβλεπε μαρκαρισμένο κενό και θα
  * μπορούσε να «μεταφέρει» αμέσως μετά το **τίποτα**. Το ενεργό κελί πάει στην πάνω-αριστερή
  * γωνία, όπως ακριβώς μετά από επικόλληση.

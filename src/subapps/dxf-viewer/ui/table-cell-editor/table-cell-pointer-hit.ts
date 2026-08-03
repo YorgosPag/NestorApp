@@ -43,7 +43,7 @@ import {
   type TableIndicatorCursorRole,
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
-// 🔴 ADR-739 §35 — ο ΕΝΑΣ δρόμος «τι διάλεξε ο χρήστης → ποιο ορθογώνιο», κοινός με τον
+// 🔴 ADR-739 §36 — ο ΕΝΑΣ δρόμος «τι διάλεξε ο χρήστης → ποιο ορθογώνιο», κοινός με τον
 // ζωγράφο: ο χρήστης πιάνει το περίγραμμα **που βλέπει**.
 import {
   resolveTableSelectionBounds,
@@ -169,7 +169,7 @@ export function tableIndicatorProbeAtWorld(
   entity: TableEntity,
   world: Point2D,
   viewScale: number,
-  // 🔴 ADR-739 §35 — η **ενεργή επιλογή** και τα **πλήκτρα**, τη στιγμή του συμβάντος.
+  // 🔴 ADR-739 §36 — η **ενεργή επιλογή** και τα **πλήκτρα**, τη στιγμή του συμβάντος.
   //
   // Έρχονται ως ορίσματα και δεν διαβάζονται εδώ, παρότι και τα δύο θα ήταν προσβάσιμα: η
   // επιλογή ζει σε store με getter, τα πλήκτρα στο `MouseEvent`. Ο λόγος είναι ο ίδιος που
@@ -194,7 +194,7 @@ export function tableIndicatorProbeAtWorld(
 }
 
 /**
- * 🔴 ADR-739 §35 — **ΤΟ ΟΡΘΟΓΩΝΙΟ ΠΟΥ ΠΙΑΝΕΤΑΙ**: η ενεργή επιλογή σε sheet-mm· `null` όταν
+ * 🔴 ADR-739 §36 — **ΤΟ ΟΡΘΟΓΩΝΙΟ ΠΟΥ ΠΙΑΝΕΤΑΙ**: η ενεργή επιλογή σε sheet-mm· `null` όταν
  * δεν υπάρχει επιλογή ή όταν έχει παλιώσει.
  *
  * ## Γιατί ΔΕΝ υπάρχει εδώ δεύτερη αλήθεια για το «ποια κελιά είναι μέσα»
@@ -233,17 +233,23 @@ function activeTableRange(
  * ο δείκτης υπόσχεται μετακίνηση και το πάτημα δεν πιάνει τίποτα — δηλαδή ακριβώς το «δεν
  * δουλεύει» που περιγράφει η κεφαλίδα του {@link activeTableRange}, από την πίσω πόρτα.
  *
- * ## 🔴 ΤΟ ΣΗΜΕΙΟ **ΠΕΡΙΟΡΙΖΕΤΑΙ ΜΕΣΑ** ΣΤΟ ΟΡΘΟΓΩΝΙΟ ΠΡΙΝ ΡΩΤΗΘΕΙ ΤΟ ΚΕΛΙ
- * Η ζώνη σύλληψης διαστέλλεται **εκατέρωθεν** της γραμμής (§35): πιάνοντας την πάνω πλευρά, το
- * χέρι είναι συχνά πάνω στο **γειτονικό** κελί, έξω από την περιοχή. Χωρίς τον περιορισμό, η
- * μετατόπιση σύλληψης θα έβγαινε αρνητική — δηλαδή η περιοχή θα προσγειωνόταν **ένα κελί πιο
- * κάτω** από εκεί που δείχνει το χέρι, σε **κάθε** κίνηση της σύρσης. Ο περιορισμός εγγυάται
- * επίσης ότι το κελί υπάρχει: ένα σημείο μέσα στο ορθογώνιο της επιλογής **είναι** κελί.
+ * ## 🔴 Η ΜΕΤΑΤΟΠΙΣΗ ΣΥΛΛΗΨΗΣ **ΠΕΡΙΟΡΙΖΕΤΑΙ ΜΕΣΑ** ΣΤΗΝ ΠΕΡΙΟΧΗ
+ * Η ζώνη σύλληψης διαστέλλεται **εκατέρωθεν** της γραμμής (§36): πιάνοντας την πάνω πλευρά, το
+ * χέρι είναι συχνά πάνω στο **γειτονικό** κελί, έξω από την περιοχή. Χωρίς τον περιορισμό η
+ * μετατόπιση θα έβγαινε **αρνητική**, δηλαδή η περιοχή θα προσγειωνόταν ένα κελί παρακάτω από
+ * εκεί που δείχνει το χέρι — σε **κάθε** κίνηση της σύρσης.
  *
- * Ο φύλακας «είμαστε μέσα στο πλέγμα;» γίνεται με το **ασυμπίεστο** σημείο, και περνά από τον
- * ΕΝΑ δρόμο (`tableCellAtFrame`) αντί για δεύτερη σύγκριση ορίων: η επιλογή μπορεί να ακουμπά
- * την πάνω γραμμή, οπότε η εξωτερική εμβέλεια βγαίνει σε αρνητικά mm — όπου ζουν οι **λαβές**
- * (§27.11, «ένα pixel, μία ερώτηση») και δεν πιάνεται περιοχή.
+ * ⚠️ Ο περιορισμός γίνεται σε **δείκτες** και όχι στο σημείο, και ο λόγος βρέθηκε γράφοντας:
+ * ένα σημείο περιορισμένο πάνω στην ακμή του ορθογωνίου πέφτει **ακριβώς πάνω σε γραμμή του
+ * πλέγματος**, όπου το `tableCellAtFrame` (κλειστά διαστήματα) απαντά το **προηγούμενο** κελί —
+ * δηλαδή ξαναγεννά την αρνητική μετατόπιση από την πίσω πόρτα. Στους δείκτες δεν υπάρχει
+ * αμφισημία ακμής. Καλύπτει επίσης τη **συγχώνευση** που ξεπερνά την περιοχή: εκείνη επιστρέφει
+ * την **άγκυρά** της, που μπορεί να κάθεται έξω.
+ *
+ * Ο φύλακας «είμαστε μέσα στο πλέγμα;» περνά από τον **ΕΝΑ** δρόμο (`tableCellAtFrame`) αντί
+ * για δεύτερη σύγκριση ορίων: η επιλογή μπορεί να ακουμπά την πάνω γραμμή, οπότε η εξωτερική
+ * εμβέλεια βγαίνει σε αρνητικά mm — όπου ζουν οι **λαβές** (§27.11, «ένα pixel, μία ερώτηση»)
+ * και δεν πιάνεται περιοχή.
  */
 export function tableRangeGrabAtWorld(
   entity: TableEntity,
@@ -256,19 +262,23 @@ export function tableRangeGrabAtWorld(
   if (!probe) return null;
   const range = activeTableRange(entity, geometry, selection);
   if (!range) return null;
-  if (!tableCellAtFrame(geometry.layout, probe.frame)) return null;
-  if (!isOnTableRangeBorder(range.rectMm, probe.frame, probe.bands)) return null;
+  // ⚠️ `gapMm` — **η ίδια** οπή που ρωτά και ο ρόλος δείκτη (`tableIndicatorCursorRoleAtFrame`),
+  // δηλαδή η `gripAperturePx` του §27.16 Ε4. Κανένας δεύτερος αριθμός.
+  if (!isOnTableRangeBorder(range.rectMm, probe.frame, probe.bands.gapMm)) return null;
 
-  const inside = clampToRectMm(range.rectMm, probe.frame);
-  const hit = tableCellAtFrame(geometry.layout, inside);
+  const hit = tableCellAtFrame(geometry.layout, probe.frame);
   if (!hit) return null;
   const row = indexById(entity.model.rows).get(hit.rowId);
   const col = indexById(entity.model.columns).get(hit.colId);
   if (row === undefined || col === undefined) return null;
 
+  const { firstRow, lastRow, firstCol, lastCol } = range.bounds;
   return {
     source: range.bounds,
-    grab: { dRow: row - range.bounds.firstRow, dCol: col - range.bounds.firstCol },
+    grab: {
+      dRow: clampToSpan(row, firstRow, lastRow) - firstRow,
+      dCol: clampToSpan(col, firstCol, lastCol) - firstCol,
+    },
   };
 }
 
@@ -280,12 +290,9 @@ export interface TableRangeGrabHit {
   readonly grab: TableRangeGrab;
 }
 
-/** Το σημείο, φερμένο μέσα στο ορθογώνιο. Δες {@link tableRangeGrabAtWorld} για το γιατί. */
-function clampToRectMm(rectMm: TableRectMm, frame: TableFramePoint): TableFramePoint {
-  return {
-    u: Math.min(Math.max(frame.u, rectMm.x), rectMm.x + rectMm.w),
-    v: Math.min(Math.max(frame.v, rectMm.y), rectMm.y + rectMm.h),
-  };
+/** Ο δείκτης, φερμένος μέσα στο κλειστό διάστημα. Δες {@link tableRangeGrabAtWorld} για το γιατί. */
+function clampToSpan(index: number, first: number, last: number): number {
+  return Math.min(Math.max(index, first), last);
 }
 
 /** Ό,τι ξέρει ο hover για το σημείο κάτω από το ποντίκι — δες {@link tableIndicatorProbeAtWorld}. */

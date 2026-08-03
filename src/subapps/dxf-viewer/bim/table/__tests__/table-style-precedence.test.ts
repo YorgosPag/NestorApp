@@ -156,6 +156,35 @@ describe('resolveCellStyle — `null` = ρητά ΚΑΝΕΝΑ (η δοκτρίν
     expect(resolveCellStyle(BASE, { row: { fontFamily: null } }).fontFamily).toBeUndefined();
   });
 
+  /**
+   * 🔴 Το κενό που άφησαν τα δύο από πάνω: το `fillColorHex: null` δοκιμαζόταν σε **στήλη**
+   * και σε **κελί**, ποτέ σε **γραμμή** — κι όμως η γραμμή είναι το επίπεδο που ο χρήστης
+   * αγγίζει πρώτο («Κανένα γέμισμα» σε κεφαλίδα). Ίδιο σχήμα με το §35.8: το επίπεδο που
+   * κανείς δεν δοκίμασε ήταν το κανονικό, όχι το εξεζητημένο.
+   *
+   * Οι δύο ισχυρισμοί εδώ είναι διαφορετικοί και **και οι δύο** χρειάζονται: η γραμμή πρέπει
+   * να σβήνει (α) τη **βάση** (το γέμισμα της κλάσης κεφαλίδας) και (β) το γέμισμα μιας
+   * **στήλης** που περνά από κάτω της — αλλιώς μια βαμμένη στήλη θα επιβίωνε μέσα σε γραμμή
+   * που ο χρήστης μόλις καθάρισε.
+   */
+  it('🔴 `row: { fillColorHex: null }` σβήνει και τη ΒΑΣΗ και το γέμισμα ΣΤΗΛΗΣ', () => {
+    expect(resolveCellStyle(BASE, { row: { fillColorHex: null } }).fillColorHex).toBeUndefined();
+
+    const overColumn = resolveCellStyle(BASE, {
+      row: { fillColorHex: null },
+      column: { fillColorHex: '#ff00ff' },
+    });
+    expect(overColumn.fillColorHex).toBeUndefined();
+  });
+
+  it('🔴 το ρητό γέμισμα ΚΕΛΙΟΥ επιβιώνει της καθαρισμένης γραμμής (η σειρά δεν αντιστράφηκε)', () => {
+    const resolved = resolveCellStyle(BASE, {
+      cell: { fillColorHex: '#00ff00' },
+      row: { fillColorHex: null },
+    });
+    expect(resolved.fillColorHex).toBe('#00ff00');
+  });
+
   it('🔴 το `null` ενός ΑΝΩΤΕΡΟΥ επιπέδου νικά την τιμή ενός κατώτερου', () => {
     // Αυτό είναι το ρίσκο 4 ολόκληρο: με `??` αντί για `!== undefined`, το `null` του κελιού
     // θα προσπερνιόταν και θα κέρδιζε το γέμισμα της στήλης — «Κανένα γέμισμα» που δεν σβήνει.

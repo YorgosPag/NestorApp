@@ -66,7 +66,17 @@ import {
 // 🔴 ADR-739 §29 — η ΜΙΑ ερώτηση «πού έπεσε αυτό το συμβάν;», μοιρασμένη με τον φύλακα του
 // κλειδώματος. Δες την κεφαλίδα εκείνου του module: δύο αντίγραφα θα άφηναν νεκρή λωρίδα
 // στην άκρη του πίνακα, όπου ο φύλακας μπλοκάρει και ο pointer δεν δρα.
-import { tableEventWorldPoint, tablePointerHitAtWorld } from './table-cell-pointer-hit';
+import {
+  tableEventWorldPoint,
+  tablePointerHitAtWorld,
+  tableRangeGrabAtWorld,
+} from './table-cell-pointer-hit';
+// 🔴 ADR-739 §36 ΦΑΣΗ 3 — η **τρίτη** χειρονομία του πίνακα: μεταφορά περιοχής από το
+// περίγραμμά της. Ίδιο σχήμα με τις δύο πρώτες, δικό της module (η γεωμετρία μένει εδώ).
+import {
+  beginTableRangeTransfer,
+  endTableRangeTransferDrag,
+} from './table-range-transfer-drag';
 // ADR-739 §27.15 — ο κύκλος ζωής της σύρσης ζει σε δικό του module· εδώ μένει η **γεωμετρία**.
 import { endTableCellDrag, startTableCellDrag } from './table-cell-drag-session';
 // ADR-739 §31.9 — η **δεύτερη** χειρονομία του πίνακα: σύρσιμο διαχωριστικού στηλών.
@@ -310,6 +320,31 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // δηλαδή ακριβώς την κατάσταση-φάντασμα που κατέγραψε το §27.10.
     if (!primary) return;
 
+    // 🔴 ADR-739 §36 ΦΑΣΗ 3 — **ΤΟ ΠΑΤΗΜΑ ΕΠΕΣΕ ΣΤΟ ΠΕΡΙΓΡΑΜΜΑ ΤΗΣ ΕΠΙΛΟΓΗΣ**: μεταφορά, όχι
+    // επιλογή. Η ερώτηση είναι **η ίδια** που ήδη απάντησε ο δείκτης (`range-move`/`range-copy`)
+    // και περνά από το ίδιο module — ο χρήστης πιάνει το περίγραμμα **που βλέπει** (§36).
+    //
+    // Μπαίνει **πριν** από το `Shift+κλικ` επειδή είναι η πιο **ειδική** ερώτηση, και εδώ η
+    // σειρά λύνει πραγματική διεκδίκηση: `Shift+πάτημα` **μέσα** στο πλέγμα επεκτείνει την
+    // περιοχή, `Shift+σύρσιμο` **πάνω στο περίγραμμα** εισάγει & ολισθαίνει. Στο Excel τα
+    // ξεχωρίζει ακριβώς το **πού**, όχι το πλήκτρο.
+    const grabbed = tableRangeGrabAtWorld(entity, worldPoint, transform.scale, cursor.selection);
+    if (grabbed) {
+      // Ό,τι γράφεται δεσμεύεται πρώτα: η μεταφορά αλλάζει κελιά κάτω από τον δρομέα.
+      onCommitPending();
+      beginTableRangeTransfer({
+        entity,
+        source: grabbed.source,
+        grab: grabbed.grab,
+        container,
+        transformRef,
+        // §4.6 — η **ΜΙΑ** διαδρομή commit· το `applyTableRangeTransfer` τηρεί την εγγύηση
+        // ταυτότητας, άρα «τίποτα δεν άλλαξε» ⇒ καμία εντολή, κανένα βήμα undo.
+        commit: onCommitModel,
+      });
+      return;
+    }
+
     if (event.shiftKey) {
       // ΚΑΜΙΑ δέσμευση εδώ, ακριβώς όπως στο `Shift+βέλος` (`case 'extend'`): η επέκταση
       // περιοχής είναι κατάσταση **διεπαφής** και δεν αγγίζει το μοντέλο.
@@ -364,10 +399,13 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // §27.15 — η συνεδρία έκλεισε (ή άλλαξε πίνακας) με το κουμπί ακόμα κάτω: οι ακροατές
       // της σύρσης ζουν στο `document` και **δεν** θα έφευγαν μόνοι τους.
       endTableCellDrag();
-      // §31.9 — **και οι δύο** χειρονομίες, στο ίδιο σημείο. Μία ξεχασμένη εδώ θα ήταν
+      // §31.9 — **και οι τρεις** χειρονομίες, στο ίδιο σημείο. Μία ξεχασμένη εδώ θα ήταν
       // ακροατής `document` που επιζεί της συνεδρίας του — δηλαδή σύρσιμο πλάτους σε πίνακα
       // που δεν επεξεργάζεται πια κανείς.
       endTableColumnResizeDrag();
+      // §36 ΦΑΣΗ 3 — και το **φάντασμα** σβήνει μαζί: ζει σε store που ο ζωγράφος διαβάζει με
+      // getter, άρα θα επιβίωνε της συνεδρίας του ως προεπισκόπηση χωρίς σύρση.
+      endTableRangeTransferDrag();
     };
   }, [hasSession, containerRef, handleMouseDown]);
 }
