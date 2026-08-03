@@ -125,6 +125,33 @@ function createHarness(
   };
 }
 
+/**
+ * Συγχώνευση τίτλου σε όλο το πλάτος — ό,τι κάνει ο χρήστης με το χέρι.
+ *
+ * Ο νέος πίνακας γεννιόταν με αυτήν έως την 2026-08-04· τώρα γεννιέται ασυγχώνευτος, οπότε
+ * όποιο test ρωτά «τι παθαίνει η συγχώνευση όταν μπαίνει στήλη;» πρέπει να τη **βάλει**.
+ */
+function seedTitleMerge(harness: Harness): void {
+  const table = harness.entity();
+  const merged: TableEntity = {
+    ...table,
+    model: {
+      ...table.model,
+      merges: [{
+        anchorRowId: table.model.rows[0].id,
+        anchorColId: table.model.columns[0].id,
+        rowSpan: 1,
+        colSpan: table.model.columns.length,
+      }],
+    },
+  };
+  const scene = harness.levelManager.getLevelScene(LEVEL_ID);
+  harness.levelManager.setLevelScene(LEVEL_ID, {
+    ...scene,
+    entities: [merged],
+  } as NonNullable<ReturnType<LevelManagerLike['getLevelScene']>>);
+}
+
 function mount(harness: Harness) {
   return renderHook(() =>
     useTableHeaderMenu({
@@ -190,6 +217,12 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
   });
 
   it('🔴 «Εισαγωγή στήλης δεξιά» ⇒ ΜΙΑ εντολή, νέα στήλη στη σωστή θέση, τίτλος ακέραιος', () => {
+    // Η συγχώνευση τίτλου μπαίνει **από το test**: από την 2026-08-04 ο νέος πίνακας
+    // γεννιέται ασυγχώνευτος (απόφαση Giorgio — η ζώνη τίτλου είναι πράξη του χρήστη).
+    // Ο έλεγχος όμως αφορά τη ΣΥΝΕΠΕΙΑ της εισαγωγής πάνω σε υπάρχουσα συγχώνευση, οπότε
+    // πρέπει να υπάρχει μία — αλλιώς το `merges[0]` θα ήταν `undefined` και το ερώτημα
+    // «μένει ο τίτλος ακέραιος;» δεν θα ρωτιόταν καθόλου.
+    seedTitleMerge(harness);
     openCursor(harness);
     const view = mount(harness);
     const before = harness.entity().model;
