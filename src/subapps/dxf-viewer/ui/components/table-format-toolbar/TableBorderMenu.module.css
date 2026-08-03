@@ -68,3 +68,72 @@
   margin: 4px 2px;
   background-color: var(--color-border, rgba(255, 255, 255, 0.12));
 }
+
+/* ── ADR-750 Φ5 — η ζώνη «Σχεδίαση περιγραμμάτων» ────────────────────────────
+ *
+ * Θέση Excel (οι επιλογείς μολυβιού ζουν στο **ίδιο** dropdown με τις εντολές, στο τέλος),
+ * περιεχόμενο AutoCAD (χρώμα + τύπος + πάχος + διπλή — ο διάλογος *Cell Border Properties*).
+ * Το Excel κρύβει τύπο και χρώμα σε modal `Ctrl+1`· εδώ είναι ένα κλικ μακριά, χωρίς να χαθεί
+ * το συμφραζόμενο της επιλογής.
+ */
+
+.sectionLabel {
+  margin: 4px 8px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  opacity: 0.65;
+}
+
+/* Η ετικέτα σπρώχνει την προεπισκόπηση και το βελάκι στο δεξί άκρο της γραμμής. */
+.rowLabel {
+  flex: 1 1 auto;
+}
+
+.rowValue {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+/*
+ * Το δείγμα χρώματος: περίγραμμα σε **χρώμα κειμένου με διαφάνεια**, ώστε ένα λευκό δείγμα σε
+ * ανοιχτό θέμα (και ένα μαύρο σε σκούρο) να μη γίνεται αόρατο. Το ίδιο κάνει η παλέτα.
+ */
+.swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.25));
+}
+
+/*
+ * Το πτυσσόμενο βγαίνει **δίπλα** και όχι από κάτω: το πάνελ των εντολών είναι ήδη ψηλό
+ * (13 + 4 + 4 γραμμές) και ένα κάτω-πτυσσόμενο θα έσπρωχνε τη λίστα εκτός οθόνης. Μένει
+ * **μέσα** στο ίδιο δοχείο — δεύτερο portal θα μετρούσε ως «κλικ έξω» για τον φύλακα
+ * `keepOpenOnToolbar` και το `onClick` δεν θα έτρεχε ποτέ (δες την κεφαλίδα του αρχείου).
+ */
+.flyout {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 4px);
+  z-index: 2;
+  min-width: 176px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Το πλέγμα χρωμάτων θέλει το φυσικό του πλάτος, χωρίς κύλιση κατά x. */
+.flyoutWide {
+  min-width: max-content;
+}
+
+/* Η γραμμή προεπισκόπησης ενός τύπου/πάχους — γεμίζει το πλάτος του στοιχείου. */
+.linePreview {
+  flex: 1 1 auto;
+  min-width: 56px;
+  height: 14px;
+}

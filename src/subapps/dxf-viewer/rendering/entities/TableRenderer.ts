@@ -151,6 +151,11 @@ export class TableRenderer extends BaseEntityRenderer {
     if (selection) stampTableSelection(rc, selection.rectMm);
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
+    // ADR-750 Φ5 (Α2) — οι **διαγώνιοι** κρέμονται από τα κελιά, όχι από το πλέγμα: ταξιδεύουν
+    // στο `TableCellLayout` και άρα είναι ήδη κομμένες στο ορατό παράθυρο μαζί με τα κελιά
+    // τους. Ζωγραφίζονται **πριν** το κείμενο, όπως κάθε άλλη γραμμή του πίνακα, ώστε ένα
+    // «Ν/Α» πάνω σε διαγραμμένο κελί να παραμένει αναγνώσιμο.
+    for (const cell of cells) if (cell.diagonals) stampTableBorders(rc, cell.diagonals);
     stampTableText(rc, cells, editedCellRef(cursor));
     if (cursor) {
       // ADR-739 Φ.Δ βήμα 4 — ΠΡΩΤΑ το περίγραμμα λειτουργίας, ΜΕΤΑ ο δρομέας κελιού: όταν ο
