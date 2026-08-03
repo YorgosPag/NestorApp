@@ -37,27 +37,17 @@ import type {
   ScheduleColumnAlign,
   ScheduleColumnValueType,
 } from '../bim/schedule/types';
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Ταυτότητες — γιατί id και ΟΧΙ index
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * Σταθερή ταυτότητα στήλης. Τα merges, οι τύποι και τα overrides δείχνουν **εδώ**,
- * ποτέ σε θέση πίνακα: εισαγωγή στήλης στη μέση δεν επιτρέπεται να τα σπάσει.
- * (Το AutoCAD τα κρατά με index — γι' αυτό εκεί οι τύποι σπάνε.)
- */
-export type TableColumnId = string;
-
-/** Σταθερή ταυτότητα γραμμής — ίδιο σκεπτικό με το {@link TableColumnId}. */
-export type TableRowId = string;
+import type { CellKey, TableColumnId, TableRowId } from './table-ids';
+import type { TableBorderSpec, TableEdgeEntry, TableEdgeIndex } from './table-edges';
+import type { TableFormula } from './table-formula';
 
 /**
- * Κλειδί κελιού στον αραιό χάρτη `TableModel.cells`. **Branded**: η ΜΟΝΗ νόμιμη πηγή
- * είναι το `cellKey(rowId, colId)` του `table-model-helpers.ts`, ώστε να μην μπορεί
- * ποτέ να μπει γυμνό string με λάθος σειρά σκελών.
+ * ADR-750 Φ1 — οι ταυτότητες και το μολύβι ακμής **μετακόμισαν** στα κάτω στρώματα
+ * (`table-ids.ts` / `table-edges.ts`) ώστε η αλυσίδα `ids → ακμές → μοντέλο` να μείνει
+ * αλυσίδα και να μη γίνει κύκλος — δες την κεφαλίδα του `table-ids.ts`. Επανεξάγονται
+ * αυτούσια εδώ: **καμία** υπάρχουσα διαδρομή εισαγωγής δεν αλλάζει.
  */
-export type CellKey = string & { readonly __cellKeyBrand: unique symbol };
+export type { CellKey, TableBorderSpec, TableColumnId, TableRowId };
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Στήλες — Figma Auto Layout αντί για χειροκίνητα πλάτη
@@ -141,24 +131,6 @@ export interface TableColumn {
  */
 export type TableRowClass = 'title' | 'header' | 'data';
 
-/**
- * Μία ακμή περιγράμματος. `visible: false` ⇒ δεν ζωγραφίζεται καθόλου (DXF: group code
- * 288 `borderVisible`), που είναι διαφορετικό από «ζωγραφίζεται με μηδενικό πάχος» — το
- * δεύτερο θα άφηνε hairline σε κάποια backends.
- *
- * Ζει στο μοντέλο (και όχι μόνο στο στυλ) επειδή το χρειάζονται **και τα δύο**: το στυλ
- * για τις κλάσεις γραμμής, το μοντέλο για τη γραμμή-σύνολο ({@link TableRow.borderTop}).
- * Ένας ορισμός· το `table-style.ts` τον επανεξάγει.
- */
-export interface TableBorderSpec {
-  readonly visible: boolean;
-  readonly colorHex: string;
-  /** Πάχος γραμμής σε sheet-mm (ISO πένες: 0.13 / 0.15 / 0.25 / 0.50). */
-  readonly widthMm: number;
-  /** Μοτίβο διακεκομμένης σε sheet-mm· απόν ⇒ συνεχής. */
-  readonly dashMm?: readonly number[];
-}
-
 export interface TableRow {
   readonly id: TableRowId;
   readonly rowClass: TableRowClass;
@@ -175,6 +147,10 @@ export interface TableRow {
    * γραμμή-σύνολο, καθολικό μοτίβο κάθε πίνακα ποσοτήτων (το AutoCAD το λύνει με
    * per-cell border overrides· μία παράκαμψη ανά γραμμή είναι απλούστερη και αρκεί).
    * Απούσα ⇒ ισχύει ό,τι λέει η κλάση γραμμής.
+   *
+   * ADR-750 Φ1: **επίπεδο 2** της σειράς προτεραιότητας ακμών — νικιέται από τη ρητή ακμή
+   * ({@link PersistedTableModel.edges}), που είναι η μόνη που μπορεί να μιλήσει για **ένα**
+   * κελί αντί για ολόκληρο το πλάτος.
    */
   readonly borderTop?: TableBorderSpec;
   /**
@@ -209,8 +185,19 @@ export interface TableCell {
   readonly kind: CellKind;
   /** ΕΠΑΝΑΧΡΗΣΗ ADR-363 — `string | number | null`. */
   readonly value: ScheduleCellValue;
-  /** Πηγαίο κείμενο τύπου, π.χ. `'=SUM(C2:C9)'`. Μόνο όταν `kind === 'formula'` (Φ.Ζ). */
-  readonly formula?: string;
+  /**
+   * ADR-739 Φ.Ζ — ο τύπος του κελιού, **δεμένος σε ταυτότητες**. Μόνο όταν
+   * `kind === 'formula'`· το {@link value} κρατά τότε το **αποτέλεσμα** (ή τον κωδικό
+   * σφάλματος), ώστε ζωγράφος, μετρητής και εξαγωγή να μη μάθουν ποτέ ότι υπάρχουν τύποι.
+   *
+   * 🔴 **Δέντρο, όχι το κείμενο `'=SUM(C2:C9)'`** — όπως δήλωνε αυτή η γραμμή πριν γραφτεί η
+   * φάση. Το `C2` είναι **θέση**: αποθηκευμένο ως κείμενο, μια εισαγωγή γραμμής στη μέση θα
+   * άλλαζε σιωπηλά το τι σημαίνει, και η μόνη διόρθωση θα ήταν να ξαναγράφει κάθε δομική
+   * πράξη όλους τους τύπους του πίνακα. Εδώ η αναφορά **είναι** το `rowId`/`colId`, και το
+   * `C2` της γραμμής τύπων παράγεται κατ' απαίτηση — η υπόσχεση του §11 #7 γίνεται δομική
+   * αντί για υποχρέωση που κάποιος πρέπει να θυμάται.
+   */
+  readonly formula?: TableFormula;
   /**
    * Παράκαμψη στυλ **αυτού** του κελιού πάνω από την κλάση γραμμής. Ο τύπος ζει στο
    * `bim/table/table-style.ts` και εισάγεται εκεί ως `Partial<TableCellStyle>` — εδώ
@@ -337,6 +324,13 @@ export interface TableModel {
    */
   readonly cells: ReadonlyMap<CellKey, TableCell>;
   readonly merges: readonly CellSpan[];
+  /**
+   * ADR-750 Φ1 — το ευρετήριο των **ρητών** ακμών, παράγωγο του
+   * {@link PersistedTableModel.edges}. Πάντα παρόν (ενδεχομένως κενό): ένα προαιρετικό
+   * πεδίο εδώ θα σήμαινε ότι κάθε αναγνώστης πρέπει να θυμηθεί το `?.`, δηλαδή θα γεννούσε
+   * δύο απαντήσεις στο «έχει ρητές ακμές;» — απούσα και κενή.
+   */
+  readonly edges: TableEdgeIndex;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -381,6 +375,17 @@ export interface PersistedTableModel {
   /** Μόνο τα μη-κενά κελιά, σε **ντετερμινιστική** σειρά γραμμής → στήλης (§4). */
   readonly cells: readonly TableCellEntry[];
   readonly merges: readonly CellSpan[];
+  /**
+   * ADR-750 Φ1 — οι **ρητές** ακμές περιγράμματος, σε ντετερμινιστική σειρά (ίδια αρχή με
+   * τα κελιά). Ο χάρτης είναι αραιός: μόνο ό,τι όρισε ο χρήστης· τα υπόλοιπα προκύπτουν
+   * από τη γραμμή-σύνολο και τις κλάσεις γραμμής.
+   *
+   * **Προαιρετικό επίτηδες**: κάθε ήδη αποθηκευμένος πίνακας παραμένει έγκυρος χωρίς
+   * κανένα migration — η ρητή στρατηγική του σχολίου στο `TableCellOverflow` («απόν πεδίο
+   * ⇒ προεπιλογή»). Δεν γράφεται καν όταν είναι κενό, ώστε πίνακας χωρίς ρητές ακμές να
+   * παράγει **byte-ταυτόσημο** JSON με πριν.
+   */
+  readonly edges?: readonly TableEdgeEntry[];
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

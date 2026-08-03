@@ -4027,6 +4027,40 @@
       "addedByAdr": "ADR-376",
       "tier": 3
     },
+    "table-formula-engine": {
+      "ssotFile": "src/subapps/dxf-viewer/bim/table/formula/table-formula-engine.ts",
+      "description": "ADR-739 Φ.Ζ (2026-08-03) — Η ΜΙΑ μηχανή τύπων κελιού του repo: λεξικογράφος → αναλυτής → δέντρο δεμένο σε ταυτότητες → αξιολογητής → γράφος εξαρτήσεων, πίσω από το interface TableFormulaEngine που είχε δεσμευτεί το §9.2 μήνες νωρίτερα. ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΩΣ ΦΡΟΥΡΟΣ: η φάση γεννήθηκε από απόφαση που ΑΝΑΤΡΑΠΗΚΕ — το §14.4 είχε επιλέξει το `fast-formula-parser`, και η επαλήθευση βρήκε ότι είναι αδημοσίευτο από 26/11/2020, ότι ο πίνακας εξαρτήσεων του ADR είχε τις εκδόσεις του διαδόχου, και ότι ο διάδοχος `@sheetxl/formulas` δηλώνει ΑΚΟΜΗ `SEE LICENSE IN <LICENSE>` (N.5: ασαφές → ΡΩΤΑ). Γι' αυτό τρία από τα patterns φρουρούν ΕΙΣΑΓΩΓΕΣ: το `hyperformula` είναι GPLv3 (θα υποχρέωνε όλο το NESTOR σε open source), το `fast-formula-parser` και το `@sheetxl/*` απορρίφθηκαν με τεκμηρίωση. ΤΙ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΒΑΣΗ: το `numeric-expression.ts` (ADR-706, module `numeric-field`) απαντά ΑΛΛΗ ερώτηση — «τι αριθμό πληκτρολόγησε ο χρήστης σε πεδίο» — όπου το `2,4` ΕΙΝΑΙ 2.4 (parseLocaleNumber/ADR-576), ενώ σε τύπο φύλλου το `SUM(2,4)` είναι 6. Ομώνυμα, όχι συνώνυμα: κοινός λεξικογράφος θα σήμαινε ότι μια αλλαγή για τον πίνακα αλλάζει σιωπηλά κάθε πεδίο δεκαδικού της εφαρμογής. Επαναχρησιμοποιείται όμως ακριβώς εκεί που η ερώτηση ΕΙΝΑΙ η ίδια: το περιεχόμενο κελιού περνά από τον parseLocaleNumber, πίσω από πύλη αυστηρότητας (χωρίς αυτήν το `Δοκός 12` θα συνεισέφερε 12 σε άθροισμα). ΕΠΕΚΤΑΣΗ ΧΩΡΙΣ ΔΕΥΤΕΡΗ ΜΗΧΑΝΗ: περισσότερες συναρτήσεις = εγγραφές στο `table-formula-functions.ts` (ή σύνδεση MIT βιβλιοθήκης ΣΥΝΑΡΤΗΣΕΩΝ όπως το @formulajs/formulajs μέσα στο ίδιο μητρώο) — ποτέ δεύτερος αναλυτής. ΚΑΙ ΠΟΤΕ `eval`/`new Function`: το repo έχει μηδέν και αυτή η μηχανή δεν έγινε το πρώτο.",
+      "forbiddenPatterns": [
+        "function\\s+parseTableFormula\\b",
+        "function\\s+printTableFormula\\b",
+        "function\\s+tokenizeFormula\\b",
+        "function\\s+evaluateTableFormula",
+        "function\\s+recalculateTableModel\\b",
+        "function\\s+writeCellInput\\b",
+        "function\\s+setPersistedCellFormula\\b",
+        "interface\\s+TableFormulaEngine\\b",
+        "type\\s+TableFormulaNode\\b",
+        "from\\s+['\"]hyperformula['\"]",
+        "from\\s+['\"]fast-formula-parser['\"]",
+        "from\\s+['\"]@sheetxl/"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-engine.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-lex.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-parse.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-print.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-value.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-functions.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-eval.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-recalc.ts",
+        "src/subapps/dxf-viewer/types/table-formula.ts",
+        "src/subapps/dxf-viewer/bim/table/table-cell-content.ts",
+        "src/subapps/dxf-viewer/bim/table/table-model-helpers.ts"
+      ],
+      "addedDate": "2026-08-03",
+      "addedByAdr": "ADR-739",
+      "tier": 3
+    },
     "table-layout-engine": {
       "ssotFile": "src/subapps/dxf-viewer/bim/table/table-layout.ts",
       "description": "ADR-739 Φάση Α: ΜΙΑ μηχανή διάταξης πίνακα για όλο το repo. `layoutTable(model, style)` (τρία στάδια: `measureTable` → `placeCells` → `buildTableBorders`) βγάζει γεωμετρία σε sheet-mm που τροφοδοτεί και τα τέσσερα backends (canvas 2D preview / PDF / entities σκηνής / DXF ACAD_TABLE) — «οθόνη === PDF === DXF === σκηνή». ΤΟ ΡΙΣΚΟ (ADR-739 §1): υπάρχουν ΗΔΗ δύο μηχανές διάταξης πίνακα στο repo (`buildScheduleTable` του ADR-622 και ο React `SchedulePreviewTable.tsx`)· τρίτη υλοποίηση = sibling clone (N.18 / CHECK 3.28). Ο ADR-622 ΑΠΟΡΡΟΦΑΤΑΙ ως thin adapter στη Φάση Β — δεν μιμείται. Νέος «table renderer» / `layoutTable` / `TableLayout` / `measureTable` εκτός αυτού του φακέλου = παράβαση. Η μέτρηση πλάτους κειμένου έρχεται ΑΠΟΚΛΕΙΣΤΙΚΑ από το `measureTextAdvanceWorld` (ADR-557) — ποτέ δεύτερος measurer. Οι CellKey συντίθενται ΜΟΝΟ από το `cellKey()` του `table-model-helpers.ts`. ΦΑΣΗ Γ (2026-07-31): ο πίνακας έγινε οντότητα σκηνής. Προστέθηκαν ΤΡΙΑ ακόμη SSoT στην ίδια οικογένεια, και το καθένα έχει ΕΝΑΝ λόγο ύπαρξης: (1) `table-entity-geometry.ts` κατέχει τις τρεις μετατροπές — sheet-mm→μονάδες σκηνής (ΑΠΟΚΛΕΙΣΤΙΚΑ μέσω `paperHeightToModel`, ADR-739 §4.1), την ΑΝΑΣΤΡΟΦΗ y (η διάταξη μετρά +v κάτω, η σκηνή +y πάνω) και την περιστροφή γύρω από την άγκυρα· δεύτερο αντίγραφο της αναστροφής = η μισή εφαρμογή ζωγραφίζει τον πίνακα ανάποδα. (2) `table-entity-hit.ts` κατέχει το hit-test/όρια που μοιράζονται ΤΡΕΙΣ καταναλωτές (`TableRenderer.hitTest`, `performDetailedHitTest`, `BoundsCalculator`) — αν αποκλίνουν, ο πίνακας ζωγραφίζεται αλλού και πιάνεται αλλού. (3) `table-entity-grips.ts` κατέχει θέσεις λαβών ΚΑΙ τον καθαρό μετασχηματισμό σύρσιμου, που τρέχουν ΚΑΙ το commit ΚΑΙ το ζωντανό φάντασμα ⇒ preview ≡ commit κατά ταυτότητα. Ο `TableRenderer` ΔΕΝ υπολογίζει διάταξη: καλεί `computeTableEntityGeometryLive` (απομνημονευμένο) και ζωγραφίζει. Νέος υπολογισμός γεωμετρίας πίνακα εκτός αυτού του φακέλου = παράβαση.",

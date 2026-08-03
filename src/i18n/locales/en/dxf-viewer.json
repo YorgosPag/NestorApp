@@ -553,9 +553,67 @@
       "underline": "Underline",
       "increaseSize": "Increase font size",
       "decreaseSize": "Decrease font size",
-      "resetToStyle": "Reset to style",
+      "resetFormatting": "Reset formatting",
       "mixedHint": "Mixed value across the run",
       "explicitHint": "Explicit value (not inherited)"
+    },
+    "borders": {
+      "trigger": "Borders",
+      "menuLabel": "Cell borders",
+      "rangeMenuTitle": "Borders — {label}",
+      "resetBorders": "Reset borders",
+      "commands": {
+        "bottom": "Bottom border",
+        "top": "Top border",
+        "left": "Left border",
+        "right": "Right border",
+        "none": "No border",
+        "all": "All borders",
+        "outside": "Outside borders",
+        "thickOutside": "Thick outside borders",
+        "doubleBottom": "Bottom double border",
+        "thickBottom": "Thick bottom border",
+        "topAndBottom": "Top and bottom border",
+        "topAndThickBottom": "Top and thick bottom border",
+        "topAndDoubleBottom": "Top and double bottom border"
+      }
+    },
+    "textColor": {
+      "trigger": "Text colour",
+      "openMenu": "Text colour palette",
+      "menuLabel": "Text colour",
+      "automatic": "Automatic",
+      "automaticHint": "Inherited from the table style",
+      "drawingColors": "Drawing colours",
+      "basicColors": "Basic colours",
+      "moreColors": "More colours…",
+      "dialogTitle": "Text colour",
+      "swatchAci": "{hue} {shade} · ACI {index}",
+      "swatchHex": "Colour {color}",
+      "black": "Black",
+      "hue": {
+        "neutral": "Neutral",
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "chartreuse": "Chartreuse",
+        "green": "Green",
+        "springGreen": "Spring green",
+        "cyan": "Cyan",
+        "azure": "Azure",
+        "blue": "Blue",
+        "violet": "Violet",
+        "magenta": "Magenta",
+        "rose": "Rose"
+      },
+      "shade": {
+        "light": "light",
+        "base": "base",
+        "dark1": "dark 1",
+        "dark2": "dark 2",
+        "dark3": "dark 3",
+        "dark4": "dark 4"
+      }
     },
     "clipboard": {
       "pasteClipped": "Not everything fitted — {detail} fitted. The table does not grow automatically.",

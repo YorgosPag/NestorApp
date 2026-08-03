@@ -272,6 +272,13 @@ function makeRealTableEntity(): TableEntity {
           ['r2', 'c2', { kind: 'text', value: 12.5 }],
         ],
         merges: [{ anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 1, colSpan: 2 }],
+        // ADR-750 Φ1 — οι ρητές ακμές μπαίνουν στο fixture ΕΠΙΤΗΔΕΣ: το `edges` είναι το
+        // δεύτερο πεδίο που ζει ως `Map` στη μνήμη, άρα ο γενικός ανιχνευτής πρέπει να το
+        // περνά από την ίδια δοκιμασία με τα κελιά — αλλιώς ο φρουρός θα φύλαγε τη μισή πόρτα.
+        edges: [
+          ['H', 'r2', 'c1', { visible: true, colorHex: '#ff00ff', widthMm: 0.5 }],
+          ['V', 'r2', '$end', { visible: true, colorHex: '#00aa00', widthMm: 0.13, dashMm: [1, 1] }],
+        ],
       }),
     ),
   };
@@ -316,20 +323,24 @@ describe('ΠΙΝΑΚΑΣ — με το ΠΡΑΓΜΑΤΙΚΟ σχήμα της ο
     expect(findJsonUnsafePaths(makeRealTableEntity(), 'table')).toEqual([]);
   });
 
-  it('round-trip + deepClone ταυτοτικά, με ΓΕΜΑΤΑ κελιά (4/4)', () => {
+  it('round-trip + deepClone ταυτοτικά, με ΓΕΜΑΤΑ κελιά (4/4) ΚΑΙ ρητές ακμές (2/2)', () => {
     const entity = makeRealTableEntity();
     expect(entity.model.cells).toHaveLength(4);
+    expect(entity.model.edges).toHaveLength(2);
     expect(findRoundTripDivergences(entity, JSON.parse(JSON.stringify(entity)), 'table')).toEqual([]);
     expect(findRoundTripDivergences(entity, deepClone(entity), 'table')).toEqual([]);
   });
 
   it('ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΦΡΟΥΡΕΙ: το ευρετήριο μνήμης (`TableModel`) ΠΙΑΝΕΤΑΙ ως ένοχο', () => {
     // Αν κάποιος «απλοποιήσει» βάζοντας πάλι το runtime μοντέλο στην οντότητα, ο ανιχνευτής
-    // δείχνει ακριβώς πού: `table.model.cells → Map`.
+    // δείχνει ακριβώς πού. Τα **δύο** ευρετήρια ονομάζονται χωριστά επίτηδες: μια σκέτη
+    // μέτρηση («ένα ένοχο μονοπάτι») θα έμενε πράσινη αν κάποτε το `edges` γινόταν πάλι
+    // απλό αντικείμενο — δηλαδή ο φρουρός θα σιωπούσε ακριβώς όταν χανόταν κάτι.
     const withRuntimeModel = { ...makeRealTableEntity(), model: createTableModel({ columns: [], rows: [] }) };
     const paths = findJsonUnsafePaths(withRuntimeModel, 'table');
-    expect(paths).toHaveLength(1);
-    expect(paths[0]).toContain('table.model.cells → Map');
+    expect(paths).toHaveLength(2);
+    expect(paths.some((p) => p.includes('table.model.cells → Map'))).toBe(true);
+    expect(paths.some((p) => p.includes('table.model.edges → Map'))).toBe(true);
   });
 });
 
