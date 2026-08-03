@@ -35,6 +35,9 @@ import { TableCellEditorOverlay } from '../../ui/table-cell-editor/TableCellEdit
 // ADR-739 Φ.Δ βήμα 7 — η γραμμή τύπων (fx) + η αναφορά κελιού. Δεύτερο πεδίο της ΙΔΙΑΣ
 // συνεδρίας, αγκυρωμένο στον πίνακα και όχι στο κελί.
 import { TableFormulaBar } from '../../ui/table-cell-editor/TableFormulaBar';
+// 🔴 Giorgio 2026-08-04 — η ζωντανή ένδειξη μεγέθους της σύρσης. Χωρίς props **επίτηδες**:
+// διαβάζει μόνη της από store, ώστε η συνδρομή υψηλής συχνότητας να μην ανέβει εδώ (ADR-040).
+import { TableResizeReadoutOverlay } from '../../ui/table-cell-editor/TableResizeReadoutOverlay';
 // ADR-739 Φ.Δ βήμα 9 — δεξί κλικ στα γράμματα στηλών / αριθμούς γραμμών: εισαγωγή & διαγραφή.
 // Ανοίγει imperative από τον δρομολογητή (`useCanvasContextMenu`, PRIORITY 1.4) μέσω θύρας.
 import {
@@ -134,6 +137,9 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       {p.tableFormulaBar && (
         <TableFormulaBar key={p.tableFormulaBar.key} {...p.tableFormulaBar.props} />
       )}
+      {/* Giorgio 2026-08-04 — «Πλάτος: 14,14 (104 pixel)» όσο σέρνεται ένα διαχωριστικό.
+          Φύλλο χωρίς props: δες την κεφαλίδα του για το γιατί (ADR-040). */}
+      <TableResizeReadoutOverlay />
       {/* ADR-739 Φ.Δ βήμα 9 — εισαγωγή/διαγραφή γραμμής & στήλης από τις ζώνες δείκτη. Είναι
           **μέλος της συνεδρίας** επεξεργασίας: δες την κεφαλίδα του component. */}
       <TableHeaderContextMenu
