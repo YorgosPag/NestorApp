@@ -9,7 +9,8 @@
  *   1             → ROTATION  @ λίγο μέσα από την ΠΑΝΩ-ΔΕΞΙΑ γωνία, πάνω στην ακμή
  *   2 .. 5        → CORNER    @ οι 4 γωνίες (ne=ΠΔ, nw=ΠΑ/άγκυρα, sw=ΚΑ, se=ΚΔ)
  *   6 .. 9        → EDGE      @ τα 4 μέσα ακμών (n, e, s, w)
- *   10 .. 10+N-1  → COLUMN    @ τα εσωτερικά όρια στηλών, πάνω στην ΠΑΝΩ ακμή
+ *   10 .. 10+N-2  → COLUMN    @ τα εσωτερικά όρια στηλών, πάνω στην ΠΑΝΩ ακμή
+ *   μετά          → ROW       @ τα εσωτερικά όρια γραμμών, πάνω στην ΑΡΙΣΤΕΡΗ ακμή
  * ```
  *
  * ## 🔴 Γιατί το MOVE και το ROTATION μετακινήθηκαν
@@ -25,18 +26,24 @@
  * **δομικά αδύνατη** — εκεί ζει η ζώνη γραμμάτων του §27.11, με πάχος σε **px**, οπότε καμία
  * σταθερή απόσταση σε **mm** δεν μένει έξω της σε κάθε zoom. Βλ. `tableHandleInsetMm`.
  *
- * ## Γιατί ΔΕΝ υπάρχουν λαβές ύψους ΑΝΑ γραμμή (και πότε θα υπάρξουν)
- * Δεν είναι παράλειψη — είναι φράγμα απόδοσης. Ο αριθμός των λαβών **δεν επιτρέπεται** να
- * είναι ανάλογος των δεδομένων: ένας πίνακας 500 γραμμών θα παρήγαγε 500 λαβές, που
- * ζωγραφίζονται **και** ελέγχονται για hit **σε κάθε καρέ** — το ίδιο σχήμα «δουλειά
- * ανάλογη του μεγέθους, όχι της ανάγκης» που ο ADR-735 πλήρωσε σε παραγωγή. Οι στήλες
- * είναι δομικά λίγες (μονοψήφιες)· οι γραμμές δεν είναι.
+ * ## Λαβές ύψους ΑΝΑ γραμμή — υπάρχουν από 2026-08-04, **με φράγμα**
+ * Ο Giorgio τις ζήτησε ρητά («όπως υπάρχουν αντίστοιχα λαβές που ρυθμίζουν το πλάτος των
+ * στηλών»). Μέχρι τότε αυτό το σχόλιο τις **απαγόρευε**, και ο λόγος ήταν σωστός: ο αριθμός
+ * των λαβών δεν επιτρέπεται να είναι ανάλογος των δεδομένων — πίνακας 500 γραμμών θα
+ * παρήγαγε 500 λαβές, που ζωγραφίζονται **και** ελέγχονται για hit **σε κάθε καρέ** (το ίδιο
+ * σχήμα «δουλειά ανάλογη του μεγέθους, όχι της ανάγκης» που ο ADR-735 πλήρωσε σε παραγωγή).
  *
- * Οι 8 περιμετρικές λαβές **δεν** παραβιάζουν τον κανόνα: είναι σταθερές σε πλήθος και
- * κλιμακώνουν **όλα** τα ύψη αναλογικά. Το ύψος **μιας** γραμμής εξακολουθεί να αλλάζει από
- * τον επεξεργαστή κελιού της **Φ.Δ** (όπου υπάρχει επιλεγμένη γραμμή, άρα **μία** λαβή τη
- * φορά) — ίδιο μοτίβο με το Excel/Figma, που δείχνουν λαβή ορίου μόνο στη γραμμή κάτω από
- * τον δείκτη.
+ * 🔑 Η λύση δεν ήταν να διαλέξουμε ανάμεσα στα δύο: το φράγμα **δεν ήταν ποτέ για τις
+ * γραμμές** — ήταν για το **πλήθος**. Και το ίδιο επιχείρημα ίσχυε ήδη, ασυζήτητα, για τις
+ * στήλες: το `MAX_TABLE_COLUMN_COUNT` είναι **256**, οπότε η αιτιολόγηση «οι στήλες είναι
+ * δομικά λίγες» ήταν εμπειρική παρατήρηση που περνούσε για εγγύηση. Τώρα υπάρχει ένα
+ * {@link MAX_AXIS_EDGE_GRIPS} και ισχύει **και στους δύο** άξονες: πάνω από αυτό, οι λαβές
+ * του άξονα παραλείπονται συνολικά (ποτέ μερικώς — μισές λαβές είναι χειρότερες από καμία,
+ * γιατί ο χρήστης δεν μπορεί να μαντέψει ποιες λείπουν).
+ *
+ * Οι 8 περιμετρικές λαβές **δεν** μπαίνουν ποτέ στο φράγμα: είναι σταθερές σε πλήθος και
+ * κλιμακώνουν **όλα** τα ύψη αναλογικά — δηλαδή σε τεράστιο πίνακα μένουν η διαθέσιμη
+ * χειρονομία, μαζί με τα μενού ζωνών του §27.
  *
  * @module subapps/dxf-viewer/bim/table/table-entity-grips
  * @see bim/table/table-box-grips.ts — η μηχανή των 8 περιμετρικών λαβών
@@ -50,6 +57,7 @@ import type { TableGripKind } from '../../hooks/grip-kinds-primitives';
 import type { TableEntity } from '../../types/table-entity';
 import {
   MIN_TABLE_COLUMN_WIDTH_MM,
+  MIN_TABLE_ROW_HEIGHT_MM,
   tableHandleInsetMm,
 } from '../../types/table-entity';
 import {
@@ -66,11 +74,30 @@ import {
 } from './table-box-grips';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 import { rotateEntityGripDrag } from '../grips/grip-math';
-import { GRIP_TABLE_COLUMN_EDGE_COLOR } from '../../config/color-config';
+import {
+  GRIP_TABLE_COLUMN_EDGE_COLOR,
+  GRIP_TABLE_ROW_EDGE_COLOR,
+} from '../../config/color-config';
 
 export const TABLE_MOVE_KIND: TableGripKind = 'table-move';
 export const TABLE_ROTATION_KIND: TableGripKind = 'table-rotation';
 export const TABLE_COLUMN_KIND: TableGripKind = 'table-column-edge';
+export const TABLE_ROW_KIND: TableGripKind = 'table-row-edge';
+
+/**
+ * 🔴 **Το φράγμα πλήθους**, κοινό και στους δύο άξονες (βλ. κεφαλίδα module).
+ *
+ * Το `64` δεν είναι στρογγυλός αριθμός για την ομορφιά του: είναι το σημείο όπου η **ίδια η
+ * λαβή** παύει να είναι χρήσιμη πριν καν μετρήσει η απόδοση. Με 64 όρια πάνω στην ίδια ακμή,
+ * δύο γειτονικές λαβές απέχουν λιγότερο από το μέγεθος ζωγραφίσματος της λαβής σε τυπικό
+ * zoom — δηλαδή ο χρήστης βλέπει μια συμπαγή γραμμή από τετραγωνάκια και δεν μπορεί να
+ * στοχεύσει καμία. Πάνω από εκεί, η σωστή χειρονομία είναι το **μενού ζώνης** (§27) και οι
+ * 8 περιμετρικές, όχι μια λαβή που δεν πιάνεται.
+ *
+ * ⚠️ Ισχύει **ανά άξονα και συνολικά**: πίνακας με 3 στήλες και 900 γραμμές κρατά τις λαβές
+ * στηλών του και χάνει μόνο τις λαβές γραμμών.
+ */
+export const MAX_AXIS_EDGE_GRIPS = 64;
 
 /**
  * Η **ταυτότητα χρώματος** μιας λαβής πίνακα — `undefined` για όσες μένουν στο κανάλι
@@ -99,7 +126,11 @@ export const TABLE_COLUMN_KIND: TableGripKind = 'table-column-edge';
  * γίνεται `column-resize` (↔) όταν την πλησιάζεις (§31). Ο χρήστης δεν μένει χωρίς σήμα.
  */
 export function tableGripCustomColor(kind: TableGripKind | undefined): string | undefined {
-  return kind === TABLE_COLUMN_KIND ? GRIP_TABLE_COLUMN_EDGE_COLOR : undefined;
+  if (kind === TABLE_COLUMN_KIND) return GRIP_TABLE_COLUMN_EDGE_COLOR;
+  // Ίδιο χρώμα, γιατί είναι η ίδια **εμβέλεια** (ένα κελί-πλάτος, όχι όλος ο πίνακας) — τον
+  // άξονα τον λένε ήδη η θέση και ο δείκτης. Βλ. `GRIP_TABLE_ROW_EDGE_COLOR`.
+  if (kind === TABLE_ROW_KIND) return GRIP_TABLE_ROW_EDGE_COLOR;
+  return undefined;
 }
 
 /**
@@ -172,15 +203,38 @@ export function getTableGrips(entity: TableEntity): GripInfo[] {
   });
 
   // Εσωτερικά όρια = οι αριστερές ακμές των στηλών 1..N-1 (η στήλη 0 ξεκινά στην άγκυρα).
-  for (let c = 1; c < layout.columns.length; c++) {
-    grips.push({
-      entityId: entity.id,
-      gripIndex: FIRST_COLUMN_GRIP_INDEX + c - 1,
-      type: 'vertex',
-      position: tableFrameToWorld(entity, layout.columns[c].xMm, 0, mmToWorld),
-      movesEntity: false,
-      gripKind: { on: 'table', kind: TABLE_COLUMN_KIND },
-    });
+  if (layout.columns.length - 1 <= MAX_AXIS_EDGE_GRIPS) {
+    for (let c = 1; c < layout.columns.length; c++) {
+      grips.push({
+        entityId: entity.id,
+        gripIndex: FIRST_COLUMN_GRIP_INDEX + c - 1,
+        type: 'vertex',
+        position: tableFrameToWorld(entity, layout.columns[c].xMm, 0, mmToWorld),
+        movesEntity: false,
+        gripKind: { on: 'table', kind: TABLE_COLUMN_KIND },
+      });
+    }
+  }
+
+  // Και συμμετρικά για τις γραμμές, πάνω στην **αριστερή** ακμή (`u = 0`) — εκεί όπου ο
+  // χρήστης ήδη πηγαίνει το χέρι του για τη ζώνη αριθμών, όπως στο Excel.
+  //
+  // ⚠️ Ο δείκτης ξεκινά μετά τις λαβές στηλών **που όντως μπήκαν** (`grips.length`), όχι από
+  // υπολογισμένο άθροισμα: με φράγμα ενεργό στον έναν άξονα, ένα σταθερό offset θα άφηνε
+  // τρύπα στους δείκτες — και ο δείκτης λαβής είναι το κλειδί με το οποίο ο engine ταιριάζει
+  // ζωγραφισμένη λαβή με πιασμένη λαβή.
+  if (layout.rows.length - 1 <= MAX_AXIS_EDGE_GRIPS) {
+    const firstRowGripIndex = grips.length;
+    for (let r = 1; r < layout.rows.length; r++) {
+      grips.push({
+        entityId: entity.id,
+        gripIndex: firstRowGripIndex + r - 1,
+        type: 'vertex',
+        position: tableFrameToWorld(entity, 0, layout.rows[r].yMm, mmToWorld),
+        movesEntity: false,
+        gripKind: { on: 'table', kind: TABLE_ROW_KIND },
+      });
+    }
   }
 
   return grips;
@@ -194,6 +248,9 @@ export function getTableGrips(entity: TableEntity): GripInfo[] {
  *  - `rotation`    → κοινό swept-angle SSoT με scale-bar / opening-info-tag: τροχιά γύρω
  *                    από επιλεγμένο κέντρο όταν υπάρχει, αλλιώς στροφή περί την άγκυρα.
  *  - `column-edge` → η στήλη **αριστερά** του ορίου παίρνει νέο ρητό πλάτος (`fixed`).
+ *  - `row-edge`    → η γραμμή **πάνω** από το όριο παίρνει νέο ρητό ύψος. Ακριβώς κατοπτρικό:
+ *                    η ίδια σύμβαση «η μονάδα πριν το όριο κρατά την αλλαγή, οι επόμενες
+ *                    ολισθαίνουν» που εφαρμόζουν Excel και AutoCAD και στους δύο άξονες.
  *  - `corner-*` / `edge-*` → αναλογική κλιμάκωση όλου του πίνακα μέσω του κοινού
  *                    `rect-grip-engine` (βλ. `table-box-grips.ts`). Το `shiftHeld`
  *                    **κλειδώνει** τον λόγο πλευρών — αντίστροφα από την εικόνα, επίτηδες.
@@ -219,6 +276,8 @@ export function applyTableGripDrag(
       return rotateEntityGripDrag(entity, gripWorldPos, delta, rotate);
     case 'table-column-edge':
       return resizeColumnAtEdge(entity, gripWorldPos, delta);
+    case 'table-row-edge':
+      return resizeRowAtEdge(entity, gripWorldPos, delta);
   }
 }
 
@@ -284,6 +343,60 @@ export function resizeTableColumnLeftOfEdge(
 }
 
 /**
+ * Νέο ύψος για τη γραμμή **πάνω** από το συρόμενο όριο — το κάτοπτρο του
+ * {@link resizeColumnAtEdge}, με τον άξονα `v` στη θέση του `u`.
+ *
+ * ⚠️ Δεν είναι αντιγραφή του αδελφού του (N.18): οι δύο συναρτήσεις μοιράζονται **σχήμα**, όχι
+ * σώμα — διαφορετικός άξονας πλαισίου, διαφορετικό πεδίο μοντέλου (`sizing.widthMm` vs
+ * `heightMm`), διαφορετικό ελάχιστο. Ό,τι ήταν πράγματι κοινό — «ποιο όριο πιάστηκε;» — ζει
+ * σε **μία** γενικευμένη {@link nearestEdgeIndex}.
+ */
+function resizeRowAtEdge(
+  entity: TableEntity,
+  gripWorldPos: Point2D,
+  delta: Point2D,
+): Partial<TableEntity> {
+  const { layout, mmToWorld } = computeTableEntityGeometryLive(entity);
+  const { v } = tableWorldToFrame(entity, gripWorldPos, mmToWorld);
+  const edgeIndex = nearestEdgeIndex(layout.rows.map((row) => row.yMm), v);
+  if (edgeIndex <= 0) return {};
+
+  const newEdge = tableWorldToFrame(entity, translatePoint(gripWorldPos, delta), mmToWorld);
+  const model = resizeTableRowAboveEdge(entity, edgeIndex, newEdge.v);
+  return model ? { model } : {};
+}
+
+/**
+ * 🔴 **Η ΜΙΑ αριθμητική του «νέο ύψος γραμμής»** — αδελφή της {@link resizeTableColumnLeftOfEdge}.
+ *
+ * Εξάγεται από την πρώτη στιγμή, όχι όταν εμφανιστεί δεύτερος καταναλωτής: ο αδελφός της
+ * χρειάστηκε ακριβώς αυτή την εξαγωγή όταν ήρθε η σύρση του διαχωριστικού (§31.9), και η
+ * σύρση της **ζώνης αριθμών** είναι το προφανές επόμενο βήμα του ίδιου σχήματος. Ένα
+ * ιδιωτικό σώμα εδώ θα ξαναγραφόταν εκεί — δηλαδή sibling clone με αποκλίνον ελάχιστο ύψος.
+ *
+ * `edgeIndex` = ο δείκτης του **εσωτερικού ορίου** (1..N-1), δηλαδή η γραμμή που ξεκινά εκεί·
+ * το ύψος αλλάζει στη γραμμή **από πάνω** (`edgeIndex - 1`). `null` εκτός εύρους.
+ */
+export function resizeTableRowAboveEdge(
+  entity: TableEntity,
+  edgeIndex: number,
+  newEdgeVMm: number,
+): TableEntity['model'] | null {
+  const { layout } = computeTableEntityGeometryLive(entity);
+  const aboveIndex = edgeIndex - 1;
+  if (aboveIndex < 0 || aboveIndex >= layout.rows.length) return null;
+
+  const heightMm = Math.max(newEdgeVMm - layout.rows[aboveIndex].yMm, MIN_TABLE_ROW_HEIGHT_MM);
+  const rowId = layout.rows[aboveIndex].id;
+  const rows = entity.model.rows.map((row) =>
+    row.id === rowId ? { ...row, heightMm } : row,
+  );
+  // Νέο αντικείμενο ⇒ οι δύο απομνημονεύσεις ακυρώνονται σε σειρά (`resolveTableModel` →
+  // `resolveTableLayout`): η ταυτότητα ΕΙΝΑΙ η έκδοση. Ίδια σύμβαση με τις στήλες.
+  return { ...entity.model, rows };
+}
+
+/**
  * Ο δείκτης του ορίου στηλών που αντιστοιχεί στη γραμμένη θέση λαβής (πλησιέστερο `xMm`).
  * Επιστρέφει `0` όταν δεν υπάρχουν στήλες — ο καλών το απορρίπτει ως εκτός εύρους.
  */
@@ -294,13 +407,26 @@ function grabbedColumnEdgeIndex(
   mmToWorld: number,
 ): number {
   const { u } = tableWorldToFrame(entity, gripWorldPos, mmToWorld);
+  return nearestEdgeIndex(columns.map((column) => column.xMm), u);
+}
+
+/**
+ * «Ποιο **εσωτερικό** όριο είναι πιο κοντά στη θέση `along`;» — ένας άξονας, καμία γνώση
+ * γεωμετρίας πίνακα.
+ *
+ * Ήταν το σώμα του {@link grabbedColumnEdgeIndex}· γενικεύτηκε μόλις οι γραμμές απέκτησαν
+ * λαβές, γιατί αυτό ακριβώς ήταν το **κοινό** κομμάτι των δύο αξόνων (N.18: γενίκευση, όχι
+ * κλώνος). Το `0` δεν είναι έγκυρο όριο — είναι η άγκυρα — και επιστρέφεται ως «τίποτα δεν
+ * βρέθηκε», όπως το διάβαζε ήδη ο καλών.
+ */
+function nearestEdgeIndex(starts: readonly number[], along: number): number {
   let best = 0;
   let bestDistance = Infinity;
-  for (let c = 1; c < columns.length; c++) {
-    const distance = Math.abs(columns[c].xMm - u);
+  for (let i = 1; i < starts.length; i++) {
+    const distance = Math.abs(starts[i] - along);
     if (distance < bestDistance) {
       bestDistance = distance;
-      best = c;
+      best = i;
     }
   }
   return best;

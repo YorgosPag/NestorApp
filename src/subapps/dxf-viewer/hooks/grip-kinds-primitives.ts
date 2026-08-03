@@ -285,6 +285,7 @@ export type TableGripKind =
   | 'table-move'
   | 'table-rotation'
   | 'table-column-edge'
+  | 'table-row-edge'
   | 'table-corner-ne'
   | 'table-corner-nw'
   | 'table-corner-sw'

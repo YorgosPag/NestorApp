@@ -46,6 +46,18 @@ export const GRIP_REST_LANDING_COLOR = '#E4007C' as const; // Fuchsia — stair 
 export const GRIP_TABLE_COLUMN_EDGE_COLOR = '#B388FF' as const; // Lavender — λαβές πλάτους στήλης
 
 /**
+ * Οι λαβές **ύψους γραμμής** μοιράζονται το ΙΔΙΟ χρώμα με τις λαβές πλάτους στήλης — μία
+ * σταθερά, όχι δύο (Giorgio 2026-08-04: «όπως υπάρχουν αντίστοιχα λαβές που ρυθμίζουν το
+ * πλάτος των στηλών»).
+ *
+ * Το χρώμα δεν κωδικοποιεί **άξονα** — κωδικοποιεί **εμβέλεια**: «αυτή η λαβή αλλάζει ένα
+ * κελί-πλάτος, όχι ολόκληρο τον πίνακα». Ο άξονας τον λέει ήδη η θέση (πάνω ακμή vs
+ * αριστερή) και ο δείκτης (↔ vs ↕) — δύο κανάλια που δεν χρειάζονται τρίτο. Δεύτερο χρώμα
+ * θα υπαινισσόταν διαφορά **είδους** που δεν υπάρχει.
+ */
+export const GRIP_TABLE_ROW_EDGE_COLOR = GRIP_TABLE_COLUMN_EDGE_COLOR;
+
+/**
  * Resolved grip colors — all fields are non-null strings, ready for rendering.
  * Consumers that received GripColors (with nullable cold) should call
  * resolveGripColors() ONCE and then use this type exclusively.
