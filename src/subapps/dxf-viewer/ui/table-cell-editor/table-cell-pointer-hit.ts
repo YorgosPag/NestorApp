@@ -42,6 +42,19 @@ import {
   type TableIndicatorCursorRole,
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
+// 🔴 ADR-739 §35 — ο ΕΝΑΣ δρόμος «τι διάλεξε ο χρήστης → ποιο ορθογώνιο», κοινός με τον
+// ζωγράφο: ο χρήστης πιάνει το περίγραμμα **που βλέπει**.
+import {
+  resolveTableSelectionBounds,
+  tableRangeRectMm,
+} from '../../bim/table/table-cell-range';
+import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import {
+  PLAIN_TABLE_RANGE_DRAG,
+  type TableRangeDragIntent,
+} from '../../bim/table/table-range-move-zone';
+import type { TableCellSelection } from '../../state/table-cell-cursor-store';
+import type { TableRectMm } from '../../bim/table/table-layout-types';
 import type {
   TableCellHit,
   TableEntity,
@@ -152,14 +165,55 @@ export function tableIndicatorProbeAtWorld(
   entity: TableEntity,
   world: Point2D,
   viewScale: number,
+  // 🔴 ADR-739 §35 — η **ενεργή επιλογή** και τα **πλήκτρα**, τη στιγμή του συμβάντος.
+  //
+  // Έρχονται ως ορίσματα και δεν διαβάζονται εδώ, παρότι και τα δύο θα ήταν προσβάσιμα: η
+  // επιλογή ζει σε store με getter, τα πλήκτρα στο `MouseEvent`. Ο λόγος είναι ο ίδιος που
+  // κρατά αυτό το module καθαρό από την αρχή — απαντά «**πού** έπεσε αυτό;», όχι «**τι**
+  // κατάσταση έχει η εφαρμογή». Ο ΕΝΑΣ ακροατής κίνησης ξέρει και τα δύο και τα δίνει.
+  selection: TableCellSelection | null = null,
+  intent: TableRangeDragIntent = PLAIN_TABLE_RANGE_DRAG,
 ): TableIndicatorProbe {
   const geometry = computeTableEntityGeometryLive(entity);
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
   if (!probe) return EMPTY_PROBE;
   return {
     hit: tableIndicatorHitAtFrame(geometry.layout, probe.frame, probe.bands),
-    cursor: tableIndicatorCursorRoleAtFrame(geometry.layout, probe.frame, probe.bands),
+    cursor: tableIndicatorCursorRoleAtFrame(
+      geometry.layout,
+      probe.frame,
+      probe.bands,
+      activeTableRangeRectMm(entity, geometry, selection),
+      intent,
+    ),
   };
+}
+
+/**
+ * 🔴 ADR-739 §35 — **ΤΟ ΟΡΘΟΓΩΝΙΟ ΠΟΥ ΠΙΑΝΕΤΑΙ**: η ενεργή επιλογή σε sheet-mm· `null` όταν
+ * δεν υπάρχει επιλογή ή όταν έχει παλιώσει.
+ *
+ * ## Γιατί ΔΕΝ υπάρχει εδώ δεύτερη αλήθεια για το «ποια κελιά είναι μέσα»
+ * Περνά από τον **ΕΝΑ** δρόμο (`resolveTableSelectionBounds` → `tableRangeRectMm`), τον ίδιο
+ * ακριβώς που ρωτά ο ζωγράφος στο `TableRenderer.selectionOf`. Αυτό **είναι** η απαίτηση, όχι
+ * ευπρέπεια: ο χρήστης πιάνει το περίγραμμα **που βλέπει**. Αν ο δείκτης ρωτούσε δική του
+ * γεωμετρία, θα υπήρχε ζώνη όπου το μάτι βλέπει τη γραμμή και το χέρι δεν πιάνει τίποτα —
+ * και ο χρήστης θα το διάβαζε ως «δεν δουλεύει», ποτέ ως «ένα pixel διαφορά».
+ *
+ * ⚠️ Το κόστος ανά κίνηση ποντικιού **μετρήθηκε πριν γραφτεί** και είναι ο λόγος που το
+ * `indexById` απέκτησε απομνημόνευση (δες την κεφαλίδα του `table-cell-order`): χωρίς εκείνη,
+ * αυτή η γραμμή θα χτίζε δύο `Map` μεγέθους «όσες οι γραμμές» **60 φορές το δευτερόλεπτο**.
+ */
+function activeTableRangeRectMm(
+  entity: TableEntity,
+  geometry: TableEntityGeometry,
+  selection: TableCellSelection | null,
+): TableRectMm | null {
+  if (!selection) return null;
+  const bounds = resolveTableSelectionBounds(resolveTableModel(entity.model), selection);
+  // Μπαγιάτικο άκρο (undo / διαγραφή γραμμής) ⇒ καμία υπόσχεση. Ίδια σύμβαση με κάθε άλλον
+  // καταναλωτή της επιλογής: ο καλών **δεν μαντεύει**.
+  return bounds ? tableRangeRectMm(geometry.layout, bounds) : null;
 }
 
 /** Ό,τι ξέρει ο hover για το σημείο κάτω από το ποντίκι — δες {@link tableIndicatorProbeAtWorld}. */

@@ -61,3 +61,40 @@ export function useTableModelCommit(params: UseTableModelCommitParams): TableMod
     [levelManager, execute],
   );
 }
+
+/**
+ * ADR-750 Φ3 — **καθαρός μετασχηματισμός πάνω στον ζωντανό πίνακα**, το ένα επίπεδο πιο πάνω.
+ *
+ * Το {@link useTableModelCommit} απαντά «πώς γράφεται»· αυτό απαντά «πάνω σε τι». Η ακολουθία
+ * *ζωντανή οντότητα → μετασχηματισμός → φύλακας ταυτότητας → commit* ήταν γραμμένη **δύο** φορές
+ * (μορφοποίηση άξονα, εντολές περιγράμματος) και το CHECK 3.28 τη μέτρησε ως sibling clone στο
+ * ίδιο commit — δηλαδή το ίδιο ακριβώς σχήμα που γέννησε το `useTableModelCommit`, ένα επίπεδο
+ * ψηλότερα. Η επανάληψη σταματά εδώ.
+ *
+ * 🔴 Ο έλεγχος `next === live.model` **δεν είναι βελτιστοποίηση**: οι καθαρές πράξεις του
+ * ADR-750 επιστρέφουν το ίδιο αντικείμενο by-reference όταν καμία τιμή δεν αλλάζει, και ένα
+ * commit εκεί θα έγραφε βήμα undo που δεν αναιρεί τίποτα — «πάτησα δεύτερη φορά το ίδιο κουμπί
+ * και τώρα το `Ctrl+Z` δεν κάνει τίποτα».
+ *
+ * ⚠️ Δεν αγγίζει τον **δρομέα**, επίτηδες: η μορφοποίηση δεν προσθέτει ούτε αφαιρεί γραμμές,
+ * άρα η θέση παραμένει έγκυρη — και ένα γράψιμο δρομέα θα ζητούσε πίσω την εστίαση από το
+ * κουμπί που μόλις πατήθηκε (το πρώτο «Β» θα δούλευε, το δεύτερο θα έπεφτε στο κενό). Οι
+ * **δομικές** πράξεις που όντως μετακινούν τον δρομέα κρατούν δική τους διαδρομή.
+ */
+export function useLiveTableMutation(
+  params: UseTableModelCommitParams & { readonly liveTable: () => TableEntity | null },
+): (mutate: (model: TableEntity['model']) => TableEntity['model']) => void {
+  const { levelManager, execute, liveTable } = params;
+  const commitModel = useTableModelCommit({ levelManager, execute });
+
+  return useCallback(
+    (mutate) => {
+      const live = liveTable();
+      if (!live) return;
+      const nextModel = mutate(live.model);
+      if (nextModel === live.model) return;
+      commitModel(live, nextModel);
+    },
+    [liveTable, commitModel],
+  );
+}

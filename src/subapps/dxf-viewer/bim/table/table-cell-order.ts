@@ -77,10 +77,40 @@ export function createCellRanker(source: CellOrderSource): CellRanker {
  * γεννήθηκε εκεί — η απάντηση σε αυτό είναι εξαγωγή, όχι δεύτερο δίδυμο.
  */
 export function indexById(items: readonly { readonly id: string }[]): ReadonlyMap<string, number> {
+  const cached = indexByIdCache.get(items);
+  if (cached) return cached;
   const map = new Map<string, number>();
   for (let i = 0; i < items.length; i++) map.set(items[i].id, i);
+  indexByIdCache.set(items, map);
   return map;
 }
+
+/**
+ * 🔴 ADR-739 §35 / ADR-735 — **ΤΟ ΕΥΡΕΤΗΡΙΟ ΧΤΙΖΕΤΑΙ ΜΙΑ ΦΟΡΑ ΑΝΑ ΠΙΝΑΚΑ, ΟΧΙ ΑΝΑ ΕΡΩΤΗΣΗ.**
+ *
+ * ## Δεν είναι προληπτική βελτιστοποίηση — το κόστος ήταν ήδη πληρωμένο, ανά καρέ
+ * Το `TableRenderer.selectionOf` καλεί `resolveTableSelectionBounds` σε **κάθε καρέ** όσο
+ * υπάρχει επιλογή, και εκείνο καλεί `indexById` **δύο** φορές (γραμμές + στήλες), συν άλλη
+ * μία ζευγαρωτή μέσα στο `snapToWholeMerges` και άλλη μέσα στο `tableRangeMembership`. Σε
+ * πίνακα 500 γραμμών αυτό ήταν ~2.000 εισαγωγές σε `Map` ανά καρέ, για ευρετήριο που **δεν
+ * αλλάζει** όσο δεν αλλάζει το μοντέλο. Ακριβώς το σχήμα «δουλειά ανάλογη του **χρόνου**,
+ * όχι της **αλλαγής**» που ο ADR-735 πλήρωσε σε παραγωγή.
+ *
+ * Ο §35 το έκανε **ορατό** αντί για νέο: ο δείκτης του περιγράμματος ρωτά την ίδια αλυσίδα σε
+ * κάθε `mousemove` (60-120/δευτ.), δηλαδή θα διπλασίαζε μια δαπάνη που ήδη υπήρχε.
+ *
+ * ## 🔴 Η ΠΡΟΫΠΟΘΕΣΗ, ΡΗΤΑ: ΟΙ ΠΙΝΑΚΕΣ ΕΙΝΑΙ ΑΜΕΤΑΒΛΗΤΟΙ
+ * Το κλειδί είναι η **ταυτότητα του πίνακα**, άρα η ορθότητα στηρίζεται σε αναλλοίωτο που το
+ * μοντέλο ήδη δηλώνει στους τύπους του (`readonly TableRow[]`, `readonly TableColumn[]`) και
+ * τηρεί στην πράξη: κάθε γραφέας (`setPersistedCellText`, `insertTableRow`, `deleteTableColumn`)
+ * παράγει **νέο** πίνακα. Ένα `push`/`splice` επί τόπου θα έδινε μπαγιάτικο ευρετήριο —
+ * γι' αυτό γράφεται εδώ αντί να υπονοείται.
+ *
+ * `WeakMap` και όχι `Map`: το κλειδί είναι το ίδιο το αντικείμενο, οπότε η μνήμη ελευθερώνεται
+ * μαζί με το μοντέλο. Ίδιο μοτίβο με τα `resolveTableModel` / `resolveTableLayout`, που ήδη
+ * απομνημονεύουν με τον ίδιο τρόπο για τον ίδιο λόγο.
+ */
+const indexByIdCache = new WeakMap<readonly { readonly id: string }[], ReadonlyMap<string, number>>();
 
 /**
  * Θέση εισαγωγής ενός **νέου** κελιού ώστε η ακολουθία `cells` να μείνει στη σειρά γραμμή ×

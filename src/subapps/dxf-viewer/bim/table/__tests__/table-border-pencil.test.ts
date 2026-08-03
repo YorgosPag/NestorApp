@@ -89,3 +89,73 @@ describe('Α20 — το μολύβι παράγεται από το στυλ, δ
     }
   });
 });
+
+// ── Α23: η επιλογή του χρήστη πάνω στο στυλ ─────────────────────────────────
+
+/**
+ * 🔑 Η ουσία της Α23 δεν είναι «η παράμετρος περνάει»: είναι ότι η κληρονομιά είναι **ανά
+ * πεδίο**. Ένα μολύβι που κρατούσε *ολόκληρη* την προηγούμενη κατάσταση θα πάγωνε και τα
+ * τέσσερα πεδία με το πρώτο κλικ σε ένα από αυτά — και ο πίνακας θα έπαυε σιωπηλά να
+ * ακολουθεί το στυλ του σχεδίου, που είναι ακριβώς ό,τι η Α20 υπάρχει για να αποτρέψει.
+ */
+describe('Α23 — η επιλογή του χρήστη είναι παράκαμψη ΑΝΑ ΠΕΔΙΟ', () => {
+  const AUTO = resolveTableBorderPencil(STANDARD);
+
+  it('χωρίς επιλογή, δίνει ΤΟ ΙΔΙΟ με την Α20 — καμία αλλαγή συμπεριφοράς', () => {
+    expect(resolveTableBorderPencil(STANDARD, {})).toEqual(AUTO);
+    expect(resolveTableBorderPencil(STANDARD)).toEqual(AUTO);
+  });
+
+  it('🔑 χρώμα μόνο ⇒ αλλάζει ΜΟΝΟ το χρώμα· το πάχος μένει του στυλ', () => {
+    const pencil = resolveTableBorderPencil(STANDARD, { colorHex: '#ff00ff' });
+    expect(pencil.colorHex).toBe('#ff00ff');
+    expect(pencil.widthMm).toBe(AUTO.widthMm);
+  });
+
+  it('🔑 πάχος μόνο ⇒ αλλάζει ΜΟΝΟ το πάχος· το χρώμα μένει του στυλ', () => {
+    const pencil = resolveTableBorderPencil(STANDARD, { widthMm: 1 });
+    expect(pencil.widthMm).toBe(1);
+    expect(pencil.colorHex).toBe(AUTO.colorHex);
+  });
+
+  it('ελεύθερο πάχος ΚΟΥΜΠΩΝΕΙ στην κλίμακα ISO — καμία δεύτερη κλίμακα πένας', () => {
+    const pencil = resolveTableBorderPencil(STANDARD, { widthMm: 0.44 });
+    expect(LINEWEIGHT_CONCRETE_MM_VALUES).toContain(pencil.widthMm);
+    expect(pencil.widthMm).toBe(0.4);
+  });
+
+  it('πάχος εκτός κλίμακας (0 / αρνητικό) πέφτει πίσω στο στυλ αντί να εφευρεθεί πένα', () => {
+    expect(resolveTableBorderPencil(STANDARD, { widthMm: 0 }).widthMm).toBe(AUTO.widthMm);
+    expect(resolveTableBorderPencil(STANDARD, { widthMm: -3 }).widthMm).toBe(AUTO.widthMm);
+  });
+
+  it('🔴 ΚΕΝΟ μοτίβο είναι επιλογή («Συνεχής»), όχι απουσία επιλογής', () => {
+    // Με έλεγχο μήκους αντί για `??`, ο χρήστης που διαλέγει ρητά συνεχή γραμμή θα
+    // κληρονομούσε τη διακεκομμένη του στυλ.
+    const dashed = resolveTableBorderPencil(STANDARD, { dashMm: [4, -2] });
+    expect(dashed.dashMm).toEqual([4, -2]);
+    const solid = resolveTableBorderPencil(STANDARD, { dashMm: [] });
+    expect(solid.dashMm).toBeUndefined();
+  });
+
+  it('🔑 Α24 — η διπλή δίνει απόσταση 3× την ΤΕΛΙΚΗ πένα, όχι την πένα του στυλ', () => {
+    // Η σειρά μετράει: αν η απόσταση υπολογιζόταν πριν το κούμπωμα του πάχους, μια διπλή με
+    // επιλεγμένο πάχος 1 mm θα έπαιρνε την απόσταση των 0,25 mm του στυλ.
+    const pencil = resolveTableBorderPencil(STANDARD, { widthMm: 1, double: true });
+    expect(pencil.widthMm).toBe(1);
+    expect(pencil.doubleGapMm).toBeCloseTo(3, 10);
+  });
+
+  it('χωρίς «διπλή», το πεδίο ΛΕΙΠΕΙ — ποτέ ρητό `undefined` (ταυτότητα σχήματος)', () => {
+    const pencil = resolveTableBorderPencil(STANDARD, { colorHex: '#ff00ff' });
+    expect('doubleGapMm' in pencil).toBe(false);
+    expect('dashMm' in pencil).toBe(false);
+  });
+
+  it('παραμένει ντετερμινιστικό: ίδια επιλογή ⇒ ίδιο αποτέλεσμα (Α15, μηδέν κρυφή κατάσταση)', () => {
+    const choice = { colorHex: '#00aa00', widthMm: 0.5, double: true };
+    expect(resolveTableBorderPencil(STANDARD, choice)).toEqual(
+      resolveTableBorderPencil(STANDARD, choice),
+    );
+  });
+});
