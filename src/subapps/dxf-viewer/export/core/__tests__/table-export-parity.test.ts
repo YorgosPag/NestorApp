@@ -34,6 +34,7 @@ import { alignFromTextEntity } from '../dxf-ascii-text-writer';
 import { hexToTrueColor } from '../../../utils/dxf-true-color';
 import { tableUnderlineGeometry } from '../../../bim/table/table-text-decoration';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
+import type { TableEdgeEntry } from '../../../types/table-edges';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Entity, HatchEntity, LineEntity, TextEntity } from '../../../types/entities';
 
@@ -87,8 +88,22 @@ const CELLS: Array<[string, string, TableCell]> = [
   ['rd', 'c3', text('12,50')],
 ];
 
+/**
+ * Μια **ρητή παχιά ακμή** κάτω από την κεφαλίδα — ό,τι πατά ο χρήστης με «Παχιά κάτω γραμμή».
+ *
+ * ⚠️ Χωρίς αυτήν ο πίνακας έχει **ένα** πάχος παντού: από την 2026-08-04 το `standard` δίνει
+ * την ίδια πένα σε κάθε ακμή (Giorgio: «κάθε περίγραμμα ίδιο πάχος»). Ο έλεγχος «το πάχος
+ * κάθε γραμμής ταξιδεύει ως την εξαγωγή» θα περνούσε τότε ακόμη κι από μεταφραστή που πετά
+ * το πάχος και γράφει σταθερά — γιατί όλα τα αναμενόμενα θα ήταν το ίδιο νούμερο.
+ */
+const THICK_EDGE_MM = 0.5;
+
+const EDGES: readonly TableEdgeEntry[] = [
+  ['H', 'rd', 'c1', { visible: true, colorHex: '#666666', widthMm: THICK_EDGE_MM }],
+];
+
 function model(): ReturnType<typeof createTableModel> {
-  return createTableModel({ columns: COLUMNS, rows: ROWS, cells: CELLS });
+  return createTableModel({ columns: COLUMNS, rows: ROWS, cells: CELLS, edges: EDGES });
 }
 
 const ENTITY: TableEntity = {
@@ -178,7 +193,7 @@ describe('ADR-739 Φ1 — το γέμισμα του κελιού φτάνει �
 
 describe('ADR-739 Φ1 — το μολύβι του περιγράμματος φτάνει στην εξαγωγή', () => {
   it('το πάχος κάθε γραμμής ισούται με το πάχος του τμήματος που τη γέννησε', () => {
-    // Το `standard` έχει ΔΥΟ πάχη: πλαίσιο 0,5mm και εσωτερικοί διαχωριστές 0,25mm. Αν ο
+    // Δύο πάχη: η ομοιόμορφη πένα του `standard` και η ρητή παχιά ακμή του χρήστη. Αν ο
     // μεταφραστής πετούσε το πάχος, το σύνολο θα κατέρρεε σε ΕΝΑ (ή σε κανένα).
     const specWidths = new Set(
       LAYOUT.borders.filter((b) => b.spec.visible).map((b) => b.spec.widthMm),
@@ -257,7 +272,9 @@ const TYPO_ROWS: TableRow[] = [
 ];
 
 function typoModel(): ReturnType<typeof createTableModel> {
-  return createTableModel({ columns: COLUMNS, rows: TYPO_ROWS, cells: CELLS });
+  // Οι ΙΔΙΕΣ ακμές με το βασικό μοντέλο: η ομάδα της υπογράμμισης μετρά **διαφορά** γραμμών
+  // ανάμεσα στα δύο, οπότε κάθε ακμή που υπάρχει μόνο στο ένα θα μετρούσε ως υπογράμμιση.
+  return createTableModel({ columns: COLUMNS, rows: TYPO_ROWS, cells: CELLS, edges: EDGES });
 }
 
 const TYPO_ENTITY: TableEntity = {

@@ -88,9 +88,17 @@ function uniformBorders(colorHex: string, widthMm: number): TableBorders {
 // ──────────────────────────────────────────────────────────────────────────────
 
 const STANDARD_GRID_HEX = '#666666';
-const STANDARD_GRID_MM = 0.25;
-/** Το εξωτερικό περίγραμμα είναι χοντρότερο από τους εσωτερικούς διαχωριστές (ISO 128). */
-const STANDARD_FRAME_MM = 0.5;
+/**
+ * **Ένα πάχος για κάθε ακμή** — πλαίσιο και εσωτερικοί διαχωριστές ίδιοι (Giorgio,
+ * 2026-08-04). Ήταν 0,25mm πλέγμα με 0,5mm πλαίσιο (ιεραρχία ISO 128, το ίδιο σκεπτικό με
+ * την τυπογραφική ιεραρχία που έφυγε λίγο νωρίτερα).
+ *
+ * Το **0,13mm** δεν είναι αυθαίρετο «πολύ λεπτό»: είναι η **λεπτότερη πένα της σειράς
+ * ISO 128** — κάτω από αυτό, ένα plot 1:1 σε χαρτί δεν εγγυάται συνεχή γραμμή και ένας
+ * εκτυπωτής μπορεί να την ισοπεδώσει σε τίποτα. Λεπτότερο θα ήταν λεπτότερο μόνο στην
+ * οθόνη, όχι στο σχέδιο.
+ */
+const STANDARD_GRID_MM = 0.13;
 const STANDARD_TEXT_HEX = '#111111';
 const STANDARD_MARGINS = { hMm: 2, vMm: 1.5 } as const;
 /** Ένα ύψος για όλα τα κελιά — ό,τι ήταν το ύψος των δεδομένων. */
@@ -109,11 +117,11 @@ const STANDARD_TEXT_MM = 2.8;
  * την ίδια απάντηση. Το `detailSheet` ΔΕΝ αγγίζεται: εκεί η ιεραρχία είναι δεδομένη
  * (φύλλα οπλισμού, ADR-622) — ουδετερότητα εκεί θα ήταν οπτική παλινδρόμηση.
  *
- * ⚠️ Το εξωτερικό πλαίσιο μένει χοντρότερο από τους εσωτερικούς διαχωριστές: αυτό είναι
- * ιδιότητα του **πίνακα** (ISO 128), όχι διαφοροποίηση κελιού από κελί.
+ * Και οι **έξι** ακμές έχουν το ίδιο μολύβι: το πλαίσιο έπαψε να ξεχωρίζει από τους
+ * εσωτερικούς διαχωριστές — γι' αυτό το `uniformBorders` επιστρέφεται πλέον **ως έχει**,
+ * χωρίς παρακάμψεις πλαισίου από πάνω.
  */
 function standardRowClass(): TableRowClassStyle {
-  const grid = uniformBorders(STANDARD_GRID_HEX, STANDARD_GRID_MM);
   return {
     textHeightMm: STANDARD_TEXT_MM,
     textColorHex: STANDARD_TEXT_HEX,
@@ -123,13 +131,7 @@ function standardRowClass(): TableRowClassStyle {
     underline: false,
     align: 'ML',
     margins: STANDARD_MARGINS,
-    borders: {
-      ...grid,
-      top: border(STANDARD_GRID_HEX, STANDARD_FRAME_MM),
-      bottom: border(STANDARD_GRID_HEX, STANDARD_FRAME_MM),
-      left: border(STANDARD_GRID_HEX, STANDARD_FRAME_MM),
-      right: border(STANDARD_GRID_HEX, STANDARD_FRAME_MM),
-    },
+    borders: uniformBorders(STANDARD_GRID_HEX, STANDARD_GRID_MM),
   };
 }
 
