@@ -29,6 +29,7 @@ import { usePolygonMode3DStore } from '../../bim-3d/stores/PolygonMode3DStore';
 // το δεξί κλικ ΠΡΙΝ το μενού οντότητας. Ανάγνωση module τη στιγμή του συμβάντος — ίδιο μοτίβο
 // με το Polygon Mode 3D παραπάνω· δες την κεφαλίδα της θύρας για το γιατί όχι prop.
 import { getTableHeaderMenuPort } from '../../ui/table-cell-editor/table-header-menu-port';
+import { getTableRangeMenuPort } from '../../ui/table-cell-editor/table-range-menu-port';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import type { EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
@@ -237,6 +238,13 @@ export function useCanvasContextMenu({
           return;
         }
       }
+
+      // PRIORITY 1.45: ADR-750 Φ4 — περιγράμματα κελιών πίνακα (δεξί κλικ **μέσα** στο πλέγμα).
+      // ΜΕΤΑ τις ζώνες δείκτη (1.4), γιατί εκείνες είναι η πιο ειδική ερώτηση και οι δύο
+      // περιοχές δεν τέμνονται· ΠΡΙΝ το μενού οντότητας (2), για τον ίδιο ακριβώς λόγο με το
+      // 1.4: σε λειτουργία πίνακα ο πίνακας ΕΙΝΑΙ η επιλεγμένη οντότητα. Η θύρα απαντά `false`
+      // όταν το κλικ δεν πέφτει σε κελί, οπότε το κανονικό μενού οντότητας δεν χάνεται πουθενά.
+      if (getTableRangeMenuPort()?.open(e.clientX, e.clientY)) return;
 
       // PRIORITY 1.5: ADR-362 Phase M1 — Dimension context menu (select mode, dims selected)
       if (

@@ -41,6 +41,10 @@ import {
   TableHeaderContextMenu,
   type TableHeaderContextMenuHandle,
 } from '../../ui/components/TableHeaderContextMenu';
+import {
+  TableRangeContextMenu,
+  type TableRangeContextMenuHandle,
+} from '../../ui/components/TableRangeContextMenu';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
 import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
@@ -59,6 +63,11 @@ type TextOverlayProps = React.ComponentProps<typeof TextEditorOverlay>;
 type TableCellOverlayMount = { key: string; props: React.ComponentProps<typeof TableCellEditorOverlay> };
 type TableFormulaBarMount = { key: string; props: React.ComponentProps<typeof TableFormulaBar> };
 type CyclingProps = React.ComponentProps<typeof SelectionCyclingPopover>;
+type TableRangeMenuMount = {
+  ref: React.RefObject<TableRangeContextMenuHandle | null>;
+  props: Omit<React.ComponentProps<typeof TableRangeContextMenu>, 'ref'>;
+};
+
 type TableHeaderMenuMount = {
   ref: React.RefObject<TableHeaderContextMenuHandle | null>;
   props: Omit<React.ComponentProps<typeof TableHeaderContextMenu>, 'ref'>;
@@ -86,6 +95,9 @@ export interface CanvasSectionOverlaysProps {
   // ADR-739 Φ.Δ βήμα 9 — το μενού των ζωνών δείκτη: μονταρισμένο **πάντα** (ανοίγει imperative
   // μέσω ref, όπως κάθε άλλο μενού συμφραζομένων), αόρατο όσο δεν έχει στόχο.
   tableHeaderMenu: TableHeaderMenuMount;
+  // ADR-750 Φ4 — το μενού περιγραμμάτων του δεξιού κλικ σε κελιά· ίδια σύμβαση με το παραπάνω:
+  // μονταρισμένο πάντα, ανοίγει imperative μέσω ref, αόρατο όσο δεν έχει στόχο.
+  tableRangeMenu: TableRangeMenuMount;
   selectionCycling: CyclingProps;
 }
 
@@ -127,6 +139,12 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       <TableHeaderContextMenu
         ref={p.tableHeaderMenu.ref as React.Ref<TableHeaderContextMenuHandle>}
         {...p.tableHeaderMenu.props}
+      />
+      {/* ADR-750 Φ4 — δεξί κλικ ΜΕΣΑ στο πλέγμα: οι 13 εντολές περιγράμματος του Excel, με
+          στόχο την επιλογή όταν το κελί ανήκει σε αυτήν και το κελί μόνο του αλλιώς (Α22). */}
+      <TableRangeContextMenu
+        ref={p.tableRangeMenu.ref as React.Ref<TableRangeContextMenuHandle>}
+        {...p.tableRangeMenu.props}
       />
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />

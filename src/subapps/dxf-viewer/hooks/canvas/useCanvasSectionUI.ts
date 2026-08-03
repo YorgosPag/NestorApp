@@ -24,6 +24,7 @@ import { useTableModeEntry } from '../../ui/table-cell-editor/use-table-mode-ent
 // οδηγός είναι ήδη στα όρια των 500 γραμμών (N.7.1). Δεν εγγράφει ακροατή — εκθέτει getter
 // που ρωτά ο ΕΝΑΣ δρομολογητής δεξιού κλικ (`useCanvasContextMenu`).
 import { useTableHeaderMenu } from '../../ui/table-cell-editor/use-table-header-menu';
+import { useTableRangeMenu } from '../../ui/table-cell-editor/use-table-range-menu';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
 import { useBathroomAutoArrangeMouseMove } from './useBathroomAutoArrangeMouseMove';
@@ -76,6 +77,8 @@ export function useCanvasSectionUI({
   const tableCellEditor = useTableCellDoubleClickEditor({ transformRef, containerRef, getSelectedEntityIds, levelManager });
   useTableModeEntry({ getSelectedEntityIds, levelManager });
   const tableHeaderMenu = useTableHeaderMenu({ containerRef, transformRef, levelManager });
+  // ADR-750 Φ4 — δεύτερη θύρα δεξιού κλικ (PRIORITY 1.45): περιγράμματα σε επιλογή κελιών.
+  const tableRangeMenu = useTableRangeMenu({ containerRef, transformRef, levelManager });
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTool === 'select') {
       const ids = getSelectedEntityIds();
@@ -121,5 +124,5 @@ export function useCanvasSectionUI({
   // region preview (τρέχει ΤΕΛΕΥΤΑΙΟ → οδηγεί το ΙΔΙΟ RegionPerimeterPreviewStore όταν
   // είναι ενεργό το εργαλείο μπάνιου· αλλιώς καθαρό passthrough).
   const { handleMouseMoveWithBathroomPreview } = useBathroomAutoArrangeMouseMove({ handleMouseMove: handleMouseMoveWithRegionPreview, activeTool, levelManager });
-  return { textEditor, tableCellEditor, tableHeaderMenu, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
+  return { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
 }

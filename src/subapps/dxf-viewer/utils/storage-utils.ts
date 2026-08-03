@@ -37,6 +37,19 @@ export const STORAGE_KEYS = {
   // Colors
   RECENT_COLORS: 'dxf-viewer:recent-colors',
 
+  // Το **τελευταίο** χρώμα κειμένου πίνακα (ADR-739 Φ.Ε/Φ4) — αυτό που εφαρμόζει το κύριο μισό
+  // του split button χωρίς να ανοίξει μενού. **Ξεχωριστό κλειδί** από τα `RECENT_COLORS`, και
+  // δεν είναι λεπτομέρεια: εκείνα είναι καθολικό LRU **όλου** του subapp, οπότε μια επιλογή
+  // χρώματος περιγράμματος ή layer θα άλλαζε μόνη της το κουμπί «Α». Το Excel κρατά ένα
+  // «τελευταίο» **ανά εντολή**, ακριβώς γι' αυτόν τον λόγο.
+  TABLE_TEXT_COLOR: 'dxf-viewer:table-text-color:v1',
+
+  // Το ίδιο για το **γέμισμα** (ADR-739 Φ.Ε/Φ4β). 🔴 Δεύτερο κλειδί και ΟΧΙ ένα κοινό JSON
+  // `{text, fill}`: οι δύο τιμές γράφονται από **διαφορετικές χειρονομίες** (ίδιο σκεπτικό με
+  // `WORKSPACE_DOCK_WIDTH` / `WORKSPACE_DOCK_MODE`), και σε κοινό κλειδί μια αλλοιωμένη ή
+  // μισογραμμένη τιμή θα σκότωνε **και τα δύο** χειριστήρια αντί για το ένα.
+  TABLE_FILL_COLOR: 'dxf-viewer:table-fill-color:v1',
+
   // Settings (used by LocalStorageDriver)
   DXF_SETTINGS: 'dxf-settings-v2',
   CURSOR_SETTINGS: 'autocad_cursor_settings',
