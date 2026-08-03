@@ -31,7 +31,12 @@
 import type React from 'react';
 import { useTableResizeReadoutStore } from '../../state/table-resize-readout-store';
 
-/** Μετατόπιση από τον δείκτη, σε CSS px: δεξιά και λίγο πάνω, όπως το Excel. */
+/**
+ * Μετατόπιση από τον δείκτη, σε CSS px: δεξιά και λίγο πάνω, όπως το Excel.
+ *
+ * Οι συντεταγμένες είναι **client** (viewport) και η πινακίδα `fixed`: ο host των
+ * επικαλύψεων είναι fragment, άρα ένα `absolute` δεν έχει εγγυημένο positioned ancestor.
+ */
 const READOUT_OFFSET_X_PX = 16;
 const READOUT_OFFSET_Y_PX = -28;
 
@@ -56,7 +61,7 @@ export function TableResizeReadoutOverlay(): React.ReactElement | null {
       // ενέργεια του χρήστη» — η σημασιολογία που ορίζει η προδιαγραφή HTML γι' αυτό ακριβώς
       // το στοιχείο, και ταυτόχρονα live region για αναγνώστες οθόνης χωρίς `aria-*`.
       aria-live="polite"
-      className="pointer-events-none absolute left-[var(--trr-x)] top-[var(--trr-y)] z-50 whitespace-nowrap rounded-sm border border-border bg-background/95 px-2 py-0.5 text-xs text-foreground shadow-sm backdrop-blur-sm"
+      className="pointer-events-none fixed left-[var(--trr-x)] top-[var(--trr-y)] z-50 whitespace-nowrap rounded-sm border border-border bg-background/95 px-2 py-0.5 text-xs text-foreground shadow-sm backdrop-blur-sm"
       style={{
         [READOUT_VARS.x]: `${x + READOUT_OFFSET_X_PX}px`,
         [READOUT_VARS.y]: `${y + READOUT_OFFSET_Y_PX}px`,

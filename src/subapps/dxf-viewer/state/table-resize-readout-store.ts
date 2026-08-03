@@ -24,12 +24,19 @@
 import { create } from 'zustand';
 // 🔴 Η θέση ΔΕΝ έρχεται από τον καλούντα: ο δρομέας έχει ήδη SSoT σε px οθόνης, και οι δύο
 // χειρονομίες (λαβή / λωρίδα) θα τον μετέφραζαν αλλιώς η καθεμιά. Δες `show…` παρακάτω.
-import { getImmediatePosition } from '../systems/cursor/ImmediatePositionStore';
+import { getClientPosition } from '../systems/cursor/ImmediatePositionStore';
 
 export interface TableResizeReadoutState {
   /** Το έτοιμο κείμενο, ή `null` όταν δεν σέρνεται τίποτα. */
   readonly text: string | null;
-  /** Θέση σε **CSS px του δοχείου του καμβά** — εκεί ακριβώς όπου βρίσκεται το χέρι. */
+  /**
+   * Θέση σε **client px** (viewport), όχι σε px δοχείου.
+   *
+   * ⚠️ Δεν είναι λεπτομέρεια: η πινακίδα ζωγραφίζεται με `position: fixed`, γιατί ο host των
+   * επικαλύψεων είναι **fragment** — δεν υπάρχει positioned ancestor να αγκυρωθεί ένα
+   * `absolute`, οπότε θα κρεμόταν από όποιο στοιχείο τύχαινε να έχει `position` πιο πάνω.
+   * Το `fixed` δεν έχει αυτή την εξάρτηση, και ζητά ακριβώς client συντεταγμένες.
+   */
   readonly x: number;
   readonly y: number;
   show(text: string, x: number, y: number): void;
@@ -50,7 +57,7 @@ export const useTableResizeReadoutStore = create<TableResizeReadoutState>((set) 
  * Event-time γραφή, χωρίς hook — η χειρονομία ζει έξω από το React.
  *
  * 🔴 **Ο καλών δίνει ΜΟΝΟ κείμενο.** Η θέση διαβάζεται από το SSoT του δρομέα
- * (`getImmediatePosition`, ήδη σε px του καμβά), για δύο λόγους:
+ * (`getClientPosition`, ήδη σε client px), για δύο λόγους:
  *  - υπάρχουν **δύο** χειρονομίες (σύρση λαβής, σύρση διαχωριστικού) και η μία δεν έχει καν
  *    `MouseEvent` στο σημείο που γεννά την ένδειξη — θα ανάγκαζε τον ένα δρόμο να μεταφέρει
  *    συντεταγμένες μέσα από τρία επίπεδα μόνο για να τις ξαναμεταφράσει·
@@ -61,7 +68,7 @@ export const useTableResizeReadoutStore = create<TableResizeReadoutState>((set) 
  * καμία πινακίδα.
  */
 export function showTableResizeReadout(text: string): void {
-  const at = getImmediatePosition();
+  const at = getClientPosition();
   if (!at) return;
   useTableResizeReadoutStore.getState().show(text, at.x, at.y);
 }
