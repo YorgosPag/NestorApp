@@ -173,7 +173,7 @@ export function setPersistedCellFormula(
  */
 export function writePersistedCells(
   model: PersistedTableModel,
-  targets: readonly { readonly rowId: TableRowId; readonly colId: TableColumnId }[],
+  targets: readonly CellWriteTarget[],
   write: CellWrite,
 ): PersistedTableModel {
   if (targets.length === 0) return model;
@@ -181,15 +181,17 @@ export function writePersistedCells(
   // Το κλειδί είναι **τοπικό** — ζει και πεθαίνει μέσα σε αυτή τη συνάρτηση — γι' αυτό δεν
   // περνά από το branded `cellKey()`: εκείνο υπάρχει για να μη διαρρέει χειροποίητο string σε
   // καλούντες, και εδώ δεν διαρρέει πουθενά.
-  const pending = new Map<string, { readonly rowId: TableRowId; readonly colId: TableColumnId }>();
+  const pending = new Map<string, CellWriteTarget>();
   for (const target of targets) pending.set(`${target.rowId} ${target.colId}`, target);
 
   let changed = false;
   const kept: TableCellEntry[] = model.cells.map((entry) => {
     const [rowId, colId, cell] = entry;
     const key = `${rowId} ${colId}`;
-    if (!pending.delete(key)) return entry;
-    const next = write.update(cell);
+    const target = pending.get(key);
+    if (target === undefined) return entry;
+    pending.delete(key);
+    const next = write.update(cell, target);
     if (next === null) return entry;
     changed = true;
     return [rowId, colId, next] as TableCellEntry;
@@ -197,7 +199,7 @@ export function writePersistedCells(
 
   const created: TableCellEntry[] = [];
   for (const target of pending.values()) {
-    const cell = write.create();
+    const cell = write.create(target);
     if (cell === null) continue;
     changed = true;
     created.push([target.rowId, target.colId, cell]);
@@ -241,9 +243,28 @@ function mergeByRank(
  */
 export interface CellWrite {
   /** Το κελί υπάρχει: τι γίνεται τώρα; `null` ⇒ μείνε ως έχεις. */
-  readonly update: (existing: TableCell) => TableCell | null;
+  readonly update: (existing: TableCell, target: CellWriteTarget) => TableCell | null;
   /** Το κελί δεν υπάρχει: τι μπαίνει; `null` ⇒ μη γεννήσεις εγγραφή-φάντασμα. */
-  readonly create: () => TableCell | null;
+  readonly create: (target: CellWriteTarget) => TableCell | null;
+}
+
+/**
+ * 🔴 ADR-739 §36 — **ΠΟΙΟ** κελί γράφεται τώρα.
+ *
+ * ## Γιατί προστέθηκε (και γιατί ΟΧΙ δεύτερος μαζικός γραφέας)
+ * Οι δύο πρώτοι καταναλωτές του {@link writePersistedCells} (διαγώνιοι, περιγράμματα) γράφουν
+ * **την ίδια** τιμή σε κάθε κελί της περιοχής, οπότε δεν χρειάζονταν να ξέρουν πού βρίσκονται.
+ * Η **μεταφορά περιοχής** γράφει σε κάθε κελί **διαφορετικό** περιεχόμενο — αυτό που κουβαλά
+ * από την πηγή του. Χωρίς αυτή την παράμετρο η μόνη διέξοδος θα ήταν δεύτερος μαζικός γραφέας
+ * με δική του τοποθέτηση και ταξινόμηση: ακριβώς ο structural clone που πιάνει το CHECK 3.28
+ * (N.18) και, χειρότερα, **δεύτερη** απάντηση στο «πού μπαίνει ένα νέο κελί».
+ *
+ * Η επέκταση είναι **καθαρά προσθετική**: μια συνάρτηση επιστροφής που αγνοεί το όρισμα
+ * παραμένει έγκυρη, οπότε κανένας υπάρχων καλών δεν αλλάζει ούτε κατά έναν χαρακτήρα.
+ */
+export interface CellWriteTarget {
+  readonly rowId: TableRowId;
+  readonly colId: TableColumnId;
 }
 
 /**
@@ -262,16 +283,17 @@ function writePersistedCell(
   write: CellWrite,
 ): PersistedTableModel {
   const existingIndex = model.cells.findIndex(([r, c]) => r === rowId && c === colId);
+  const target: CellWriteTarget = { rowId, colId };
 
   if (existingIndex >= 0) {
-    const next = write.update(model.cells[existingIndex][2]);
+    const next = write.update(model.cells[existingIndex][2], target);
     if (next === null) return model;
     const cells = model.cells.slice();
     cells[existingIndex] = [rowId, colId, next];
     return { ...model, cells };
   }
 
-  const created = write.create();
+  const created = write.create(target);
   if (created === null) return model;
   const cells = model.cells.slice();
   cells.splice(insertionIndexFor(model, model.cells, rowId, colId), 0, [rowId, colId, created]);

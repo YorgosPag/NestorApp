@@ -122,7 +122,21 @@ export interface TableBorderCommand {
 // ──────────────────────────────────────────────────────────────────────────────
 
 const PERIMETER: readonly TableBorderSide[] = ['top', 'bottom', 'left', 'right'];
-const EVERY_SIDE: readonly TableBorderSide[] = [...PERIMETER, 'insideH', 'insideV'];
+
+/**
+ * Οι **έξι** πλευρές, δηλαδή «όλες οι ακμές μιας περιοχής» — και η αναλλοίωτη ότι είναι ανά
+ * δύο ξένες (δες {@link tableBorderSideCrossings}).
+ *
+ * ## Γιατί δημόσια (ADR-739 §36)
+ * Τη ρωτά και η **μεταφορά περιοχής**: για να ταξιδέψουν οι ρητές ακμές μαζί με τα κελιά
+ * πρέπει να απαριθμηθεί ακριβώς αυτό το σύνολο, στην ίδια σειρά, για πηγή και προορισμό. Μια
+ * δεύτερη χειρόγραφη λίστα εκεί θα ήταν το κλασικό σιωπηλό διπλότυπο: την ημέρα που θα
+ * αποκτούσε το μοντέλο έβδομη πλευρά, η μεταφορά θα την **άφηνε πίσω** χωρίς κανένα test να
+ * το δει.
+ */
+export const TABLE_BORDER_EVERY_SIDE: readonly TableBorderSide[] = [...PERIMETER, 'insideH', 'insideV'];
+
+const EVERY_SIDE = TABLE_BORDER_EVERY_SIDE;
 
 /**
  * Οι 13 εντολές, **στη σειρά του Excel** — η σειρά είναι μέρος των δεδομένων: το dropdown
