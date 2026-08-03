@@ -302,19 +302,28 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
         if (!target) return;
         applyFormat((m) => setAxisStyleField(m, target.axis, target.id, 'fillColorHex', value));
       },
-      // ADR-750 Φ3 — μπαγιάτικα όρια (undo που έσβησε τη γραμμή ενόσω ήταν ανοιχτό το μενού)
-      // σημαίνουν «καμία πράξη», ποτέ μαντεψιά για το ποιον άξονα εννοούσε ο χρήστης.
-      onApplyBorder: (hit, commandId) => {
-        const bounds = axisBounds(hit);
-        if (bounds) borderActions.applyCommand(bounds, commandId);
-      },
-      onResetBorders: (hit) => {
-        const bounds = axisBounds(hit);
-        if (bounds) borderActions.resetBorders(bounds);
-      },
-      resolveCanResetBorders: (hit) => {
-        const bounds = axisBounds(hit);
-        return bounds ? borderActions.canReset(bounds) : false;
+      /**
+       * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων σε μία απάντηση.
+       *
+       * ⚠️ Τα όρια ξαναρωτιούνται μέσα σε **κάθε** χειριστή και ποτέ δεν παγώνουν εδώ: ένα undo
+       * που έσβησε τη γραμμή ενόσω το μενού ήταν ανοιχτό σημαίνει «καμία πράξη», ποτέ μαντεψιά
+       * για το ποιον άξονα εννοούσε ο χρήστης. Οι δύο σημαίες (`canReset`) είναι στιγμιότυπα
+       * **επίτηδες**: απαντιούνται στο άνοιγμα και μετά από κάθε πράξη, όχι σε κάθε απόδοση —
+       * διατρέχουν τις ακμές της περιοχής.
+       */
+      resolveBorderMenu: (hit) => {
+        const opened = axisBounds(hit);
+        return {
+          canReset: opened ? borderActions.canReset(opened) : false,
+          canClearDiagonals: opened ? borderActions.canClearDiagonals(opened) : false,
+          onApply: (id) => { const b = axisBounds(hit); if (b) borderActions.applyCommand(b, id); },
+          onReset: () => { const b = axisBounds(hit); if (b) borderActions.resetBorders(b); },
+          onApplyDiagonal: (id) => {
+            const b = axisBounds(hit);
+            if (b) borderActions.applyDiagonal(b, id);
+          },
+          resolvePencil: borderActions.resolvePencil,
+        };
       },
       // Το μενού έκλεισε — με ή χωρίς ενέργεια. Η εστίαση επιστρέφει στο κελί, αλλιώς η
       // συνεδρία μένει ζωντανή αλλά κουφή (δες την κεφαλίδα).

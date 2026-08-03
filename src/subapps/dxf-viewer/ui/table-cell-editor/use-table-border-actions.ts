@@ -50,6 +50,7 @@ import {
 import { useLiveTableMutation } from './use-table-model-commit';
 import { useCommandHistory } from '../../core/commands';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
+import type { TableBorderSpec } from '../../types/table-edges';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 
@@ -75,6 +76,17 @@ export interface TableBorderActions {
   ) => void;
   /** Υπάρχει διαγώνιος να σβηστεί; — το `canReset` της «Χωρίς διαγώνιες». */
   readonly canClearDiagonals: (bounds: TableCellRangeBounds) => boolean;
+  /**
+   * 🔑 Το μολύβι **που θα εφαρμοστεί τώρα** — για την προεπισκόπηση της ζώνης σχεδίασης.
+   *
+   * Συνάρτηση και όχι τιμή, γιατί ο ADR-040 κανόνας #2 ισχύει αυτούσιος: το πάνελ μπορεί να
+   * άλλαξε πάχος χωρίς ο γονέας να ξαναποδοθεί, και ένα παγωμένο στιγμιότυπο θα έδειχνε το
+   * προηγούμενο μολύβι — δηλαδή η προεπισκόπηση θα έλεγε ψέματα ακριβώς στο χειριστήριο που
+   * μόλις πείραξε ο χρήστης.
+   *
+   * `null` όταν δεν υπάρχει ζωντανός πίνακας (μπαγιάτικο μενού μετά από undo).
+   */
+  readonly resolvePencil: () => TableBorderSpec | null;
 }
 
 export function useTableBorderActions(params: UseTableBorderActionsParams): TableBorderActions {
@@ -110,6 +122,11 @@ export function useTableBorderActions(params: UseTableBorderActionsParams): Tabl
       canClearDiagonals: (bounds) => {
         const live = liveTable();
         return live ? hasTableRangeDiagonals(live.model, bounds) : false;
+      },
+      resolvePencil: () => {
+        const live = liveTable();
+        if (!live) return null;
+        return resolveTableBorderPencil(resolveTableStyle(live), tableBorderPencilChoice());
       },
     }),
     [liveTable, runOnLive],

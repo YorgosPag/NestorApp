@@ -507,7 +507,7 @@ const noop = (): void => {};
 const NO_FORMAT = { active: false, mixed: false, explicit: false } as const;
 const NO_COLOR = {
   current: undefined, mixed: false, explicit: false,
-  inheritedColor: undefined, drawingColors: [],
+  inheritedColor: undefined, inheritedMixed: false, drawingColors: [],
 } as const;
 const menuProps = {
   onInsertBefore: noop,
@@ -532,9 +532,21 @@ const menuProps = {
   onSetFillColor: noop,
   // ADR-750 Φ3 — οι εντολές περιγράμματος του ίδιου toolbar· αδρανείς εδώ, δοκιμάζονται στο
   // `table-border-menu-items.test.ts` και στο `table-border-icon.test.tsx`.
-  onApplyBorder: noop,
-  onResetBorders: noop,
-  resolveCanResetBorders: () => false,
+  /**
+   * ADR-750 Φ5 — το dropdown περιγραμμάτων ως **μία** απάντηση (Φ3/Φ5 refactor).
+   *
+   * `resolvePencil: () => null` ⇒ η ζώνη σχεδίασης δεν αποδίδεται καθόλου: αυτές οι σουίτες
+   * δοκιμάζουν τη γραμμή μορφοποίησης, όχι το μολύβι, και μια ζώνη με εφευρημένο μολύβι θα
+   * ήταν θόρυβος σε κάθε `getByRole` τους. Το μολύβι έχει δική του σουίτα.
+   */
+  resolveBorderMenu: () => ({
+    canReset: false,
+    canClearDiagonals: false,
+    onApply: noop,
+    onReset: noop,
+    onApplyDiagonal: noop,
+    resolvePencil: () => null,
+  }),
 };
 
 describe('🔴 το μενού είναι ΜΕΛΟΣ της συνεδρίας επεξεργασίας', () => {

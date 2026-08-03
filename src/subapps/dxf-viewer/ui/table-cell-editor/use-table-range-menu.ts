@@ -101,7 +101,12 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       );
       if (!bounds) return null;
 
-      return { bounds, label: rangeLabel(bounds), canReset: borderActions.canReset(bounds) };
+      return {
+        bounds,
+        label: rangeLabel(bounds),
+        canReset: borderActions.canReset(bounds),
+        canClearDiagonals: borderActions.canClearDiagonals(bounds),
+      };
     },
     [liveTable, containerRef, transformRef, borderActions],
   );
@@ -127,6 +132,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
     () => ({
       onApplyBorder: (bounds, commandId) => borderActions.applyCommand(bounds, commandId),
       onResetBorders: (bounds) => borderActions.resetBorders(bounds),
+      onApplyDiagonal: (bounds, commandId) => borderActions.applyDiagonal(bounds, commandId),
       // Το μενού έκλεισε — η εστίαση επιστρέφει στο κελί, αλλιώς η συνεδρία μένει ζωντανή στο
       // store αλλά κουφή στην οθόνη (ίδια σύμβαση με το μενού των ζωνών).
       onClosed: restartTableCellCursorSession,

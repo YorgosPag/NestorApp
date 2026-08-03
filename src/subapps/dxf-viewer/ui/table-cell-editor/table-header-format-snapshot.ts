@@ -64,6 +64,7 @@ const EMPTY_COLOR: TableAxisColorState = {
   mixed: false,
   explicit: false,
   inheritedColor: undefined,
+  inheritedMixed: false,
   drawingColors: [],
 };
 
@@ -115,9 +116,22 @@ export function resolveAxisFormatSnapshot(target: FormatTarget | null): TableAxi
  * «μεικτό» **και** «ρητά κανένα» **και** «κληρονομεί κενό». Δες
  * `table-color-menu-selection.ts` για το τι σπάει αν συγχυστούν.
  *
- * ⚠️ Σε **μεικτό** άξονα (ο τίτλος βάφεται αλλιώς από τα δεδομένα) δεν υπάρχει ένα χρώμα να
- * δειχθεί: πέφτουμε στην κλάση `data`, που είναι η πολυπληθέστερη σε κάθε πίνακα. Δηλωμένη
- * προσέγγιση, όχι σφάλμα.
+ * ## 🔴 ΓΙΑΤΙ Η ΚΛΗΡΟΝΟΜΙΑ ΔΗΛΩΝΕΤΑΙ ΜΕΙΚΤΗ ΑΝΤΙ ΝΑ ΠΕΣΕΙ ΣΤΗΝ ΚΛΑΣΗ `data`
+ * ── ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΒΡΗΚΕ Η ΟΘΟΝΗ, ΟΧΙ ΤΑ TESTS (ζωντανή επαλήθευση 2026-08-03) ──
+ *
+ * Εδώ έγραφε `inherited?.value ?? style.rowClasses.data[key]`. Σε **μεικτό** άξονα το
+ * `inherited.value` είναι `undefined`, οπότε η κλάση `data` γινόταν η απάντηση. Για το
+ * **κείμενο** ήταν αβλαβές — η `data` δηλώνει πάντα χρώμα και η υπόδειξη ήταν γενική.
+ *
+ * Για το **γέμισμα** η ίδια γραμμή **αντιστρέφει το νόημα**: η `data` του `standard` **δεν
+ * βάφει**, άρα μια **κεφαλίδα** (`#EDEDED`) που περνά πάνω από στήλη με ρητό γέμισμα δήλωνε
+ * «Κληρονομεί «κανένα γέμισμα» από το στυλ» — ψέμα, στο χειριστήριο που υπάρχει για να λέει
+ * την αλήθεια για την κληρονομιά. Το Revit απαντά την ίδια ερώτηση με `<varies>`: **μη-δήλωση**,
+ * όχι λάθος δήλωση.
+ *
+ * ⚠️ Η πτώση στην `data` **μένει** για την περίπτωση «άξονας που δεν βρέθηκε» (`inherited`
+ * είναι `null`, όχι μεικτό) — εκεί δεν υπάρχει τίποτα να ρωτήσεις, και η γραμμή δεν
+ * εμφανίζεται καν.
  */
 function axisColorStateOf(
   target: FormatTarget,
@@ -133,7 +147,8 @@ function axisColorStateOf(
     current: state?.value,
     mixed: state?.mixed ?? false,
     explicit: state?.overridden ?? false,
-    inheritedColor: inherited?.value ?? style.rowClasses.data[key],
+    inheritedColor: inherited === null ? style.rowClasses.data[key] : inherited.value,
+    inheritedMixed: inherited?.mixed ?? false,
     drawingColors: collectDrawingColors({ style, model, layerColors, role }),
   };
 }
