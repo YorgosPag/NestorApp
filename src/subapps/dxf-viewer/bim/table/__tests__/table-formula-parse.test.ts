@@ -1,0 +1,128 @@
+/**
+ * ADR-739 Φ.Ζ — **ανάλυση, εκτύπωση και το ταξίδι σε JSON**.
+ *
+ * Το κεντρικό test της φάσης είναι το `round-trip`: `κείμενο → δέντρο → κείμενο`. Αν
+ * αναλυτής και εκτυπωτής αποκλίνουν έστω σε μία παρένθεση, ο χρήστης θα έβλεπε στη γραμμή
+ * τύπων **άλλον** τύπο από αυτόν που έγραψε — και θα τον διόρθωνε, γράφοντας τρίτο.
+ */
+
+import { createTableModel } from '../table-model-helpers';
+import type { TableColumn, TableModel, TableRow } from '../../../types/table';
+import { parseTableFormula, isFormulaInput } from '../formula/table-formula-parse';
+import { printTableFormula } from '../formula/table-formula-print';
+
+const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3'].map((id) => ({
+  id,
+  sizing: { kind: 'fixed', widthMm: 20 },
+  valueType: 'number',
+  align: 'right',
+}));
+
+const ROWS: TableRow[] = ['r1', 'r2', 'r3'].map((id) => ({ id, rowClass: 'data', heightMm: 8 }));
+
+const MODEL: TableModel = createTableModel({ columns: COLUMNS, rows: ROWS, cells: [] });
+
+/** `κείμενο → δέντρο → κείμενο`, σε μία κίνηση. */
+function reprint(text: string): string | null {
+  const formula = parseTableFormula(MODEL, text);
+  return formula === null ? null : printTableFormula(MODEL, formula);
+}
+
+describe('isFormulaInput — τι είναι δήλωση τύπου', () => {
+  it.each(['=1+1', '  =SUM(A1:A3)', '='])('«%s» ξεκινά τύπο', (text) => {
+    expect(isFormulaInput(text)).toBe(true);
+  });
+
+  it.each(['1+1', 'Δοκός Δ1', '', '−=5'])('«%s» ΔΕΝ ξεκινά τύπο', (text) => {
+    expect(isFormulaInput(text)).toBe(false);
+  });
+});
+
+describe('ανάλυση + εκτύπωση — round-trip', () => {
+  it.each([
+    // Το αίτημα του ιδιοκτήτη, αυτούσιο.
+    ['=(2*5)/2', '=(2*5)/2'],
+    ['=1+2*3', '=1+2*3'],
+    // 🔑 Οι παρενθέσεις του χρήστη **δεν πειράζονται**, ακόμη κι όταν η προτεραιότητα
+    // συμφωνεί χωρίς αυτές: το εργαλείο δεν ξαναγράφει ό,τι έγραψε ο μηχανικός.
+    ['=(1+2)+3', '=(1+2)+3'],
+    ['=(1+2)*3', '=(1+2)*3'],
+    ['=1-(2-3)', '=1-(2-3)'],
+    ['=10/(2*5)', '=10/(2*5)'],
+    ['=2^3^2', '=2^3^2'],
+    ['=-A1', '=-A1'],
+    ['=SUM(A1:A3)', '=SUM(A1:A3)'],
+    ['=SUM(A1:A3,B1)', '=SUM(A1:A3,B1)'],
+    ['=IF(A1>0,"ναι","όχι")', '=IF(A1>0,"ναι","όχι")'],
+    ['=A1&" τεμ."', '=A1&" τεμ."'],
+    // Κανονικοποίηση: πεζά και κενά είναι γραφή, όχι νόημα — όπως σε Excel/AutoCAD.
+    ['=sum( a1 : a3 )', '=SUM(A1:A3)'],
+    ['=1e3', '=1000'],
+  ])('«%s» → «%s»', (input, expected) => {
+    expect(reprint(input)).toBe(expected);
+  });
+
+  it('η δεύτερη ανάλυση δίνει ταυτόσημο κείμενο (σταθερό σημείο)', () => {
+    const once = reprint('=sum(a1:a3)*(1+b2)');
+    expect(once).not.toBeNull();
+    expect(reprint(once as string)).toBe(once);
+  });
+});
+
+describe('συντακτική αποτυχία ⇒ `null` (ο καλών κρατά ΚΕΙΜΕΝΟ)', () => {
+  it.each(['=1+', '=SUM(', '=(1+2', '=1++', '=', '=@3', '=SUM(A1;A2)', '="ανοιχτό'])(
+    '«%s» δεν είναι τύπος',
+    (text) => {
+      expect(parseTableFormula(MODEL, text)).toBeNull();
+    },
+  );
+
+  it('κείμενο χωρίς `=` δεν αναλύεται ποτέ ως τύπος', () => {
+    expect(parseTableFormula(MODEL, '1+1')).toBeNull();
+  });
+
+  it('ελληνικό όνομα συνάρτησης μένει ΚΕΙΜΕΝΟ — η γραμματική είναι λατινική, όπως το DXF', () => {
+    // Δεν είναι παράλειψη i18n: το `ACAD_TABLE` γράφει `=Sum(A1:A5)` και τα ελληνικά Excel
+    // χρησιμοποιούν επίσης τα αγγλικά ονόματα. Ό,τι δεν αναλύεται μένει ορατό, όχι `#NAME?`.
+    expect(parseTableFormula(MODEL, '=ΑΘΡΟΙΣΜΑ(A1:A3)')).toBeNull();
+  });
+});
+
+describe('δέσιμο αναφορών', () => {
+  it('το `A1` γίνεται ταυτότητες, όχι κείμενο', () => {
+    const formula = parseTableFormula(MODEL, '=A1');
+    expect(formula?.root).toEqual({ kind: 'ref', cell: { rowId: 'r1', colId: 'c1' } });
+  });
+
+  it('τα πεζά είναι ίδια αναφορά με τα κεφαλαία', () => {
+    expect(parseTableFormula(MODEL, '=b3')).toEqual(parseTableFormula(MODEL, '=B3'));
+  });
+
+  it('αναφορά εκτός πλέγματος παγώνει ως `#REF!` — ο τύπος ΔΕΝ απορρίπτεται', () => {
+    expect(parseTableFormula(MODEL, '=A99')?.root).toEqual({ kind: 'error', code: '#REF!' });
+  });
+
+  it('εύρος με άκρο εκτός πλέγματος είναι ολόκληρο `#REF!`', () => {
+    expect(parseTableFormula(MODEL, '=SUM(A1:A99)')?.root).toEqual({
+      kind: 'call',
+      name: 'SUM',
+      args: [{ kind: 'error', code: '#REF!' }],
+    });
+  });
+});
+
+describe('όρια', () => {
+  it('υπερβολικό φώλιασμα απορρίπτεται αντί να εξαντλήσει τη στοίβα', () => {
+    const deep = `=${'('.repeat(200)}1${')'.repeat(200)}`;
+    expect(parseTableFormula(MODEL, deep)).toBeNull();
+  });
+});
+
+describe('JSON — ο τύπος ταξιδεύει ακέραιος', () => {
+  it('επιβιώνει σε `JSON.parse(JSON.stringify(...))` χωρίς απώλεια', () => {
+    const formula = parseTableFormula(MODEL, '=SUM(A1:A3)/COUNT(A1:A3)');
+    const travelled = JSON.parse(JSON.stringify(formula));
+    expect(travelled).toEqual(formula);
+    expect(printTableFormula(MODEL, travelled)).toBe('=SUM(A1:A3)/COUNT(A1:A3)');
+  });
+});
