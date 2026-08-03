@@ -42,6 +42,7 @@ import { columnLetter } from '@/lib/spreadsheet/column-letter';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {
   computeTableEntityGeometryLive,
+  resolveTableStyle,
   tablePxPerMm,
   tableWorldToFrame,
 } from '../../bim/table/table-entity-geometry';
@@ -61,6 +62,15 @@ import {
   insertTableColumn,
   insertTableRow,
 } from '../../bim/table/table-row-column-ops';
+import {
+  clearAxisStyleOverride,
+  hasAxisStyleOverride,
+  nextBooleanFormat,
+  resolveAxisFormat,
+  setAxisStyleField,
+  type TableStyleAxis,
+} from '../../bim/table/table-axis-style-ops';
+import { stepAxisTextHeight } from '../../bim/table/table-text-height-scale';
 import { tableCursorAt, type TableCursorPosition } from '../../bim/table/table-cell-navigation';
 import {
   getTableCellCursor,
@@ -83,6 +93,12 @@ import type {
   TableHeaderMenuProps,
   TableHeaderMenuState,
 } from '../components/TableHeaderContextMenu';
+import type {
+  TableAxisFormatSnapshot,
+  TableToggleFormatKey,
+  TableToggleFormatState,
+} from '../components/table-format-toolbar/TableFormatToolbar';
+import type { TableStyle } from '../../bim/table/table-style';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -178,6 +194,41 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
     [liveTable, commitModel],
   );
 
+  /**
+   * Η διαδρομή των πράξεων **μορφοποίησης** — ίδιο commit, αλλά **χωρίς** να αγγίζει τον δρομέα.
+   *
+   * 🔴 Δεν περνά από το {@link apply} επίτηδες. Εκείνο τελειώνει με `setTableCellCursor`, που
+   * υπάρχει επειδή μια **διαγραφή** μπορεί να σβήσει τη γραμμή κάτω από τον δρομέα. Η
+   * μορφοποίηση δεν προσθέτει ούτε αφαιρεί ποτέ γραμμές, άρα η θέση παραμένει έγκυρη — και το
+   * γράψιμο του δρομέα θα ζητούσε πίσω την **εστίαση** στο κελί, κλέβοντάς την από το κουμπί
+   * που μόλις πάτησε ο χρήστης: το πρώτο «Β» θα δούλευε και το δεύτερο θα έπεφτε στο κενό.
+   */
+  const applyFormat = useCallback(
+    (mutate: (model: PersistedTableModel) => PersistedTableModel) => {
+      const live = liveTable();
+      if (!live) return;
+      const nextModel = mutate(live.model);
+      if (nextModel === live.model) return;
+      commitModel(live, nextModel);
+    },
+    [liveTable, commitModel],
+  );
+
+  /** Ο άξονας + το στυλ + το μοντέλο, τη στιγμή της κλήσης· `null` χωρίς ζωντανό πίνακα. */
+  const formatTarget = useCallback(
+    (hit: TableIndicatorHit): FormatTarget | null => {
+      const live = liveTable();
+      if (!live) return null;
+      return {
+        model: live.model,
+        style: resolveTableStyle(live),
+        axis: hit.axis,
+        id: hit.axis === 'row' ? hit.rowId : hit.colId,
+      };
+    },
+    [liveTable],
+  );
+
   const props = useMemo<TableHeaderMenuProps>(
     () => ({
       onInsertBefore: (hit) =>
@@ -193,11 +244,29 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
           ? apply((m) => deleteTableRow(m, hit.rowId), { rowIndex: hit.index })
           : apply((m) => deleteTableColumn(m, hit.colId), { colIndex: hit.index }),
       resolveState: (hit) => resolveHeaderState(liveTable()?.model ?? null, hit),
+      resolveFormat: (hit) => resolveAxisFormatSnapshot(formatTarget(hit)),
+      onToggleFormat: (hit, key) => {
+        const target = formatTarget(hit);
+        if (!target) return;
+        const { model, style, axis, id } = target;
+        const next = nextBooleanFormat(resolveAxisFormat(model, style, axis, id, key));
+        applyFormat((m) => setAxisStyleField(m, axis, id, key, next));
+      },
+      onStepTextHeight: (hit, direction) => {
+        const target = formatTarget(hit);
+        if (!target) return;
+        applyFormat((m) => stepAxisTextHeight(m, target.style, target.axis, target.id, direction));
+      },
+      onResetFormat: (hit) => {
+        const target = formatTarget(hit);
+        if (!target) return;
+        applyFormat((m) => clearAxisStyleOverride(m, target.axis, target.id));
+      },
       // Το μενού έκλεισε — με ή χωρίς ενέργεια. Η εστίαση επιστρέφει στο κελί, αλλιώς η
       // συνεδρία μένει ζωντανή αλλά κουφή (δες την κεφαλίδα).
       onClosed: restartTableCellCursorSession,
     }),
-    [apply, liveTable],
+    [apply, liveTable, applyFormat, formatTarget],
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);
@@ -206,6 +275,49 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
 // ──────────────────────────────────────────────────────────────────────────────
 // Καθαροί βοηθοί
 // ──────────────────────────────────────────────────────────────────────────────
+
+/** Ό,τι χρειάζεται μια πράξη μορφοποίησης, διαβασμένο **τη στιγμή** του συμβάντος. */
+interface FormatTarget {
+  readonly model: PersistedTableModel;
+  readonly style: TableStyle;
+  readonly axis: TableStyleAxis;
+  readonly id: string;
+}
+
+/** Άξονας που δεν βρέθηκε: όλα σβηστά και τίποτα να επαναφερθεί — ποτέ μαντεψιά. */
+const EMPTY_TOGGLE: TableToggleFormatState = { active: false, mixed: false, explicit: false };
+
+/**
+ * Η κατάσταση και των τριών δίτιμων χειριστηρίων + αν υπάρχει τι να επαναφερθεί.
+ *
+ * Υπολογίζεται **μία φορά ανά άνοιγμα ή πάτημα**, όχι σε κάθε απόδοση: κάθε κλήση διατρέχει
+ * όλα τα κελιά του άξονα τρεις φορές (μία ανά πεδίο), και το μενού δεν είναι θέση για βρόχο
+ * που τρέχει με τον ρυθμό της απόδοσης.
+ */
+export function resolveAxisFormatSnapshot(target: FormatTarget | null): TableAxisFormatSnapshot {
+  if (!target) {
+    return { bold: EMPTY_TOGGLE, italic: EMPTY_TOGGLE, underline: EMPTY_TOGGLE, canReset: false };
+  }
+  return {
+    bold: toggleStateOf(target, 'bold'),
+    italic: toggleStateOf(target, 'italic'),
+    underline: toggleStateOf(target, 'underline'),
+    canReset: hasAxisStyleOverride(target.model, target.axis, target.id),
+  };
+}
+
+/**
+ * Οι **δύο** ερωτήσεις του `TableAxisFormatState` μεταφρασμένες στη γλώσσα του κουμπιού.
+ *
+ * Το `active` διαβάζεται από την **επιλυμένη** τιμή (τι βλέπει ο χρήστης), το `explicit` από
+ * την **παράκαμψη** (ποιος το είπε). Διαβάζοντας και τα δύο από το ίδιο σημείο, το κουμπί θα
+ * έλεγε «όχι έντονα» για στήλη που το στυλ της γράφει έντονη — ψέμα για ό,τι είναι στην οθόνη.
+ */
+function toggleStateOf(target: FormatTarget, key: TableToggleFormatKey): TableToggleFormatState {
+  const state = resolveAxisFormat(target.model, target.style, target.axis, target.id, key);
+  if (!state) return EMPTY_TOGGLE;
+  return { active: state.value === true, mixed: state.mixed, explicit: state.overridden };
+}
 
 /** Ποιον άξονα καρφώνει η πράξη· ο άλλος κληρονομείται από τον τρέχοντα δρομέα. */
 interface SurvivorPick {

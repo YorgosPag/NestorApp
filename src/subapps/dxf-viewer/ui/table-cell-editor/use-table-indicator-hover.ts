@@ -63,6 +63,10 @@ import {
   clearTableIndicatorCursor,
   setTableIndicatorCursor,
 } from '../../systems/cursor/TableIndicatorCursorStore';
+// 🔬 ADR-739 §31.11 — το όργανο. Εδώ ζει η **ΑΙΤΙΑ** (τι απάντησε η σάρωση), ενώ στο
+// `useCrosshairCursor` ζει το **ΑΠΟΤΕΛΕΣΜΑ** (τι γράφτηκε στο `style.cursor`). Χωρίς το πρώτο
+// δεν ξεχωρίζεις «ο ρόλος άλλαξε» από «κάποιος άλλος ξαναέγραψε» — δύο διαφορετικές θεραπείες.
+import { noteCursorProbe } from '../../systems/cursor/cursor-apply-audit';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
 
@@ -76,6 +80,11 @@ import type { ViewTransform } from '../../rendering/types/Types';
  * εξόδου, η πρώτη προσθήκη τρίτου καναλιού θα ξεχνούσε ένα από αυτά.
  */
 const clearTableIndicatorFeedback = (): void => {
+  // 🔬 §31.11 — καταγράφεται **κάθε** σβήσιμο, γιατί το σιωπηλό σβήσιμο είναι ακριβώς το
+  // γεγονός που δεν αφήνει ίχνος. Οι δύο πρόωροι έξοδοι του χειριστή σημειώνουν πρώτα τον
+  // **λόγο** τους, οπότε ένα σκέτο `leave` χωρίς προηγούμενο λόγο σημαίνει γνήσιο `mouseleave`
+  // ή αποπροσάρτηση — και αυτό ακριβώς είναι το διακριτικό που ψάχνουμε.
+  noteCursorProbe('leave', null, null, -1, -1);
   clearTableIndicatorHover();
   clearTableIndicatorCursor();
 };
@@ -97,6 +106,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     const container = containerRef.current;
     const transform = transformRef.current;
     if (!container || !entity || !transform) {
+      noteCursorProbe('no-entity', null, null, event.clientX, event.clientY);
       clearTableIndicatorFeedback();
       return;
     }
@@ -104,12 +114,17 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // χρήστης μπορεί να ζουμάρει με τον τροχό ενώ το χέρι του στέκεται πάνω στη λωρίδα.
     const world = tableEventWorldPoint(event, container, transform);
     if (!world) {
+      noteCursorProbe('no-world', null, null, event.clientX, event.clientY);
       clearTableIndicatorFeedback();
       return;
     }
     // ΜΙΑ ανάγνωση γεωμετρίας, δύο απαντήσεις — δες την κεφαλίδα του `tableIndicatorProbeAtWorld`
     // για το γιατί δεν είναι δύο κλήσεις (θα ήταν δύο υπολογισμοί ανά κίνηση ποντικιού).
     const { hit, cursor } = tableIndicatorProbeAtWorld(entity, world, transform.scale);
+    // 🔬 §31.11 — η **αιτία**, με τις συντεταγμένες του συμβάντος: αν ο ρόλος ταλαντώνεται ενώ
+    // το `y` μένει σταθερό, φταίει όριο κατά τον **οριζόντιο** άξονα (διαχωριστικά στηλών)·
+    // αν ταλαντώνεται με το `y` να κινείται 1-2 px, φταίει το **χείλος** της λωρίδας.
+    noteCursorProbe('ok', cursor, hit, event.clientX, event.clientY);
     setTableIndicatorHover(hit ? { entityId: entity.id, hit } : null);
     setTableIndicatorCursor(cursor);
   });

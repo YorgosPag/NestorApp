@@ -545,6 +545,18 @@
       "insertColumnRight": "Εισαγωγή στήλης δεξιά",
       "deleteColumn": "Διαγραφή στήλης"
     },
+    "formatToolbar": {
+      "columnLabel": "Μορφοποίηση στήλης {label}",
+      "rowLabel": "Μορφοποίηση γραμμής {label}",
+      "bold": "Έντονα",
+      "italic": "Πλάγια",
+      "underline": "Υπογράμμιση",
+      "increaseSize": "Αύξηση μεγέθους γραμματοσειράς",
+      "decreaseSize": "Μείωση μεγέθους γραμματοσειράς",
+      "resetToStyle": "Επαναφορά στο στυλ",
+      "mixedHint": "Μεικτή τιμή στη σειρά",
+      "explicitHint": "Ρητή τιμή (δεν κληρονομείται)"
+    },
     "clipboard": {
       "pasteClipped": "Δεν χώρεσαν όλα — χώρεσαν {detail}. Ο πίνακας δεν μεγαλώνει αυτόματα.",
       "pasteClippedRows": "{fitted} από {offered, plural, one {# γραμμή} other {# γραμμές}}",

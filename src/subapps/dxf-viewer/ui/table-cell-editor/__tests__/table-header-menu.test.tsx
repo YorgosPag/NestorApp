@@ -497,15 +497,29 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
  * αργότερα** — δηλαδή οι ζώνες εξαφανίζονται τη στιγμή ακριβώς που τις πάτησες. Ελέγχεται
  * με τον **ίδιο** ελεγκτή που χρησιμοποιεί ο φύλακας, όχι με σύγκριση αλφαριθμητικού.
  */
+/**
+ * Τα props του μενού με **αδρανείς** χειριστές — η κοινή βάση κάθε απόδοσης εδώ.
+ *
+ * Ήταν δύο ταυτόσημα αντίγραφα σε δύο `describe`· ενοποιήθηκαν όταν η Φ.Ε βήμα 5 πρόσθεσε τα
+ * χειριστήρια μορφοποίησης, ώστε το επόμενο νέο prop να γράφεται **μία** φορά (N.18).
+ */
+const noop = (): void => {};
+const NO_FORMAT = { active: false, mixed: false, explicit: false } as const;
+const menuProps = {
+  onInsertBefore: noop,
+  onInsertAfter: noop,
+  onDelete: noop,
+  onClosed: noop,
+  resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
+  resolveFormat: () => ({
+    bold: NO_FORMAT, italic: NO_FORMAT, underline: NO_FORMAT, canReset: false,
+  }),
+  onToggleFormat: noop,
+  onStepTextHeight: noop,
+  onResetFormat: noop,
+};
+
 describe('🔴 το μενού είναι ΜΕΛΟΣ της συνεδρίας επεξεργασίας', () => {
-  const noop = (): void => {};
-  const menuProps = {
-    onInsertBefore: noop,
-    onInsertAfter: noop,
-    onDelete: noop,
-    onClosed: noop,
-    resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
-  };
 
   /**
    * 🔴 **Ο ΕΝΑΣ δρόμος κλεισίματος.** Το item **δεν** κλείνει μόνο του — το ζητά το Radix
@@ -568,14 +582,6 @@ describe('🔴 το μενού είναι ΜΕΛΟΣ της συνεδρίας �
  * ζωντανή συνεδρία. Δηλαδή «είμαι σε λειτουργία πίνακα» χωρίς τίποτα να πατήσεις.
  */
 describe('🔴 το Escape κλείνει το μενού — και δεν το αρπάζει η αποεπιλογή του καμβά', () => {
-  const noop = (): void => {};
-  const menuProps = {
-    onInsertBefore: noop,
-    onInsertAfter: noop,
-    onDelete: noop,
-    onClosed: noop,
-    resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
-  };
   const hit = { axis: 'column', colId: 'c1', index: 1 } as const;
   const pressEscape = (): EscapeDispatchResult =>
     escapeBus.__dispatchForTests(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));

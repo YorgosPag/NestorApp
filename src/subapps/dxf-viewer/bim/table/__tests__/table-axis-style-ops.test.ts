@@ -12,8 +12,10 @@
 
 import {
   clearAxisStyleOverride,
+  hasAxisStyleOverride,
   nextBooleanFormat,
   resolveAxisFormat,
+  resolveAxisNumericRange,
   setAxisStyleField,
 } from '../table-axis-style-ops';
 import { insertTableColumn, insertTableRow } from '../table-row-column-ops';
@@ -229,5 +231,71 @@ describe('nextBooleanFormat — ο κανόνας του πατήματος', ()
 
   it('άγνωστη κατάσταση ⇒ ναι', () => {
     expect(nextBooleanFormat(null)).toBe(true);
+  });
+});
+
+// ── Το εύρος — από πού ξεκινά ένα βήμα μεγέθους (ADR-739 Φ.Ε βήμα 5) ────────────
+
+describe('resolveAxisNumericRange — τα άκρα μιας αριθμητικής ιδιότητας κατά μήκος του άξονα', () => {
+  it('🔴 μεικτή στήλη (κεφαλίδα 3mm έντονη + δύο γραμμές δεδομένων 2.8mm) ⇒ σωστά min/max', () => {
+    // Ο ίδιος λόγος που υπάρχει η συνάρτηση: καμία στήλη δεν είναι ομοιόμορφη σε ύψος
+    // κειμένου, γιατί περνά από κεφαλίδα (STANDARD: 3mm) και δεδομένα (STANDARD: 2.8mm).
+    expect(resolveAxisNumericRange(model(), STANDARD, 'column', 'c0', 'textHeightMm'))
+      .toEqual({ min: 2.8, max: 3 });
+  });
+
+  it('άγνωστη ταυτότητα ⇒ null', () => {
+    expect(resolveAxisNumericRange(model(), STANDARD, 'row', 'ΔΕΝ_ΥΠΑΡΧΕΙ', 'textHeightMm')).toBeNull();
+  });
+
+  it('αγνοεί μη-αριθμητικά (NaN σε παράκαμψη κελιού) χωρίς να χαλάει το εύρος των υπολοίπων', () => {
+    // Η κεφαλίδα (r0) παίρνει ΜΗ-πεπερασμένη παράκαμψη κελιού· ο βρόχος πρέπει να την
+    // προσπεράσει σιωπηλά (`Number.isFinite`) αντί να επιστρέψει `NaN` ή να σκάσει.
+    const withNaN: PersistedTableModel = {
+      ...model(),
+      cells: [['r0', 'c0', { kind: 'text', value: 'x', styleOverride: { textHeightMm: NaN } }]],
+    };
+    // Μένουν μόνο οι δύο γραμμές δεδομένων (2.8mm) — ομοιόμορφο εύρος.
+    expect(resolveAxisNumericRange(withNaN, STANDARD, 'column', 'c0', 'textHeightMm'))
+      .toEqual({ min: 2.8, max: 2.8 });
+  });
+});
+
+describe('hasAxisStyleOverride — έχει ο άξονας κάτι να σβήσει;', () => {
+  it('true όταν ο άξονας δηλώνει ρητά τουλάχιστον ένα πεδίο', () => {
+    const bold = setAxisStyleField(model(), 'column', 'c0', 'bold', true);
+    expect(hasAxisStyleOverride(bold, 'column', 'c0')).toBe(true);
+  });
+
+  it('false όταν ο άξονας δεν έχει καμία παράκαμψη (τίποτα να καθαρίσει)', () => {
+    expect(hasAxisStyleOverride(model(), 'column', 'c0')).toBe(false);
+  });
+
+  it('false για άγνωστη ταυτότητα — όχι σφάλμα, όχι ψευδές true', () => {
+    expect(hasAxisStyleOverride(model(), 'row', 'ΔΕΝ_ΥΠΑΡΧΕΙ')).toBe(false);
+  });
+});
+
+describe('🔴 regression — resolveAxisFormat και resolveAxisNumericRange μοιράζονται ΤΟΝ ΙΔΙΟ βρόχο (Α6)', () => {
+  it('σύγκρουση στήλης/γραμμής στο ΙΔΙΟ αριθμητικό πεδίο ⇒ η γραμμή νικά — ένας δεύτερος βρόχος με άλλη σειρά merge θα έδινε {min:9, max:9}', () => {
+    const withBoth = setAxisStyleField(
+      setAxisStyleField(model(), 'column', 'c0', 'textHeightMm', 9),
+      'row', 'r1', 'textHeightMm', 1.5,
+    );
+    // r0 (κεφαλίδα) + r2 (δεδομένα) ακολουθούν τη στήλη (9)· η r1 έχει ΔΙΚΗ ΤΗΣ παράκαμψη
+    // γραμμής (1.5) που νικά τη στήλη — αν το εύρος δεν το έβλεπε, θα ήταν {min:9,max:9}.
+    expect(resolveAxisNumericRange(withBoth, STANDARD, 'column', 'c0', 'textHeightMm'))
+      .toEqual({ min: 1.5, max: 9 });
+  });
+
+  it('η ΙΔΙΑ ακριβώς σύγκρουση σε δίτιμο πεδίο, μέσα από το resolveAxisFormat, δίνει μεικτή κατάσταση — ίδιο σχήμα προτεραιότητας', () => {
+    const withBoth = setAxisStyleField(
+      setAxisStyleField(model(), 'column', 'c0', 'bold', true),
+      'row', 'r1', 'bold', false,
+    );
+    // Αν το resolveAxisFormat χρησιμοποιούσε δικό του βρόχο θα μπορούσε να δει `bold: true`
+    // παντού (μόνο τη στήλη) και να χάσει ότι η r1 νικά με `false` — δηλαδή θα έλεγε ψευδώς
+    // «δεν είναι μεικτό».
+    expect(resolveAxisFormat(withBoth, STANDARD, 'column', 'c0', 'bold')?.mixed).toBe(true);
   });
 });

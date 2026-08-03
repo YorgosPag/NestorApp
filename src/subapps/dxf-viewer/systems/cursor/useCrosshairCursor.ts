@@ -26,6 +26,11 @@ import { buildCrosshairCursorValue } from './crosshair-cursor-image';
 import { getTableIndicatorCursor, subscribeTableIndicatorCursor } from './TableIndicatorCursorStore';
 import { buildTableArrowCursorValue } from './table-indicator-cursor-image';
 import { subscribeDevicePixelRatio } from './device-pixel-ratio';
+import { getDevicePixelRatio } from './utils';
+// 🔬 ADR-739 §31.11 — το όργανο. Σβηστό εξ ορισμού· κόστος όταν είναι σβηστό = μία σύγκριση
+// boolean. Ζει εδώ γιατί εδώ είναι ο ΕΝΑΣ γραφέας: κάθε αλλαγή σχήματος δείκτη περνά από αυτό
+// το `apply()`, άρα μία μέτρηση εδώ είναι **πλήρης** εξ ορισμού.
+import { noteCursorApply, type CursorApplyBranch } from './cursor-apply-audit';
 import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-geometry';
 
 /**
@@ -95,12 +100,29 @@ export function useCrosshairCursor(
     let unsubTable: () => void = () => {};
 
     const apply = (): void => {
-      if (!el) return;
+      const target = el;
+      if (!target) return;
       const cross = getCursorSettings().crosshair;
+      // Ο ρόλος διαβάζεται **μία** φορά, πριν από κάθε κλάδο: τον χρειάζεται και η απόφαση
+      // παρακάτω και η καταγραφή κάθε κλάδου (ένα «NavWheel ενώ ο πίνακας ζητούσε βέλος»
+      // είναι διάγνωση, όχι θόρυβος). Καθαρή ανάγνωση store — καμία παρενέργεια.
+      const tableCursor = getTableIndicatorCursor();
+      /**
+       * 🔴 Ο ΕΝΑΣ γραφέας γράφει από **ΕΝΑ** σημείο.
+       *
+       * Οι τέσσερις κλάδοι έγραφαν ο καθένας μόνος του στο `style.cursor`. Ήταν σωστό, αλλά
+       * κάθε μελλοντικό πράγμα που πρέπει να συμβαίνει «σε κάθε εγγραφή» (εδώ: η μέτρηση)
+       * θα χρειαζόταν **τέσσερα** αντίγραφα — δηλαδή τρεις ευκαιρίες να ξεχαστεί ένα.
+       * Ίδια αρχή με τον ΕΝΑΝ καθαρισμό του §31.4.
+       */
+      const write = (branch: CursorApplyBranch, value: string): void => {
+        noteCursorApply(branch, tableCursor, value, getDevicePixelRatio());
+        target.style.cursor = value;
+      };
       // ADR-513 — πάνω στα πλήκτρα του «Δαχτυλιδιού Εντολών» (NavWheel) δείξε κανονικό δείκτη
       // ώστε ο χρήστης να μπορεί να κλικάρει τα πλήκτρα (το σταυρόνημα «εξαφανίζεται»).
       if (isCrosshairSuppressed()) {
-        el.style.cursor = 'default';
+        write('navwheel', 'default');
         return;
       }
       // ADR-739 §31 — η λωρίδα δείκτη του πίνακα. Μπαίνει **μετά** το NavWheel και **πριν** τον
@@ -110,13 +132,12 @@ export function useCrosshairCursor(
       //   • πριν το `cross.enabled`, γιατί ο δείκτης της λωρίδας δεν είναι σχεδιαστικό εργαλείο:
       //     ένας χρήστης με κλειστό σταυρόνημα θα έπαιρνε `cursor: none` πάνω από τα γράμματα,
       //     δηλαδή **καθόλου** δείκτη — η χειρότερη δυνατή απάντηση στο «τι πατιέται εδώ».
-      const tableCursor = getTableIndicatorCursor();
       if (tableCursor) {
-        el.style.cursor = tableIndicatorCursorValue(tableCursor);
+        write('table', tableIndicatorCursorValue(tableCursor));
         return;
       }
       if (!cross?.enabled) {
-        el.style.cursor = 'none';
+        write('crosshair-off', 'none');
         return;
       }
       // Κεντρικό τετραγωνάκι σταθερά 7×7 px· κρύβεται όταν `showAperture` = false.
@@ -129,14 +150,14 @@ export function useCrosshairCursor(
       const gap = pickbox > 0
         ? pickbox / 2
         : (cross.use_cursor_gap ? (cross.center_gap_px ?? 6) : 6);
-      el.style.cursor = buildCrosshairCursorValue({
+      write('crosshair', buildCrosshairCursorValue({
         color: color ?? cross.color ?? '#ffffff',
         lineWidth: lineWidth ?? (cross.line_width || 1),
         gap,
         pickbox,
         opacity: cross.opacity ?? 1,
         size,
-      });
+      }));
     };
 
     // The target element may not exist yet: the host returns null until its viewport becomes visible

@@ -545,6 +545,18 @@
       "insertColumnRight": "Insert column right",
       "deleteColumn": "Delete column"
     },
+    "formatToolbar": {
+      "columnLabel": "Format column {label}",
+      "rowLabel": "Format row {label}",
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "increaseSize": "Increase font size",
+      "decreaseSize": "Decrease font size",
+      "resetToStyle": "Reset to style",
+      "mixedHint": "Mixed value across the run",
+      "explicitHint": "Explicit value (not inherited)"
+    },
     "clipboard": {
       "pasteClipped": "Not everything fitted — {detail} fitted. The table does not grow automatically.",
       "pasteClippedRows": "{fitted} of {offered, plural, one {# row} other {# rows}}",

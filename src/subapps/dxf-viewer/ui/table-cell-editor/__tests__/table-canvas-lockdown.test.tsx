@@ -62,9 +62,11 @@ function outsidePoint(table: TableEntity): { readonly x: number; readonly y: num
 }
 
 interface HarnessProps {
+  /**
+   * 🔴 §29.15 — ο **μοναδικός** διακόπτης, ίδιος με την παραγωγή (`liveEntity`). Το `active`
+   * έπαψε να είναι παράμετρος: «κλειδωμένο χωρίς οντότητα» δεν είναι πλέον εκφράσιμο.
+   */
   readonly entity: TableEntity | null;
-  /** Το ίδιο `overlay !== null` της παραγωγής. */
-  readonly active: boolean;
 }
 
 function LockdownHarness(props: HarnessProps): React.ReactElement {
@@ -72,7 +74,6 @@ function LockdownHarness(props: HarnessProps): React.ReactElement {
   const transformRef = useRef<ViewTransform>(TRANSFORM);
 
   useTableCanvasLockdown({
-    active: props.active,
     entity: props.entity,
     containerRef,
     transformRef,
@@ -142,7 +143,7 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
 
   describe('με ανοιχτή λειτουργία πίνακα', () => {
     beforeEach(() => {
-      mountHarness({ entity, active: true });
+      mountHarness({ entity });
     });
 
     it('⛔ αριστερό πάτημα ΕΞΩ από τον πίνακα δεν φτάνει ποτέ στον καμβά', () => {
@@ -224,8 +225,8 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
   });
 
   describe('χωρίς λειτουργία πίνακα — καμία παρενέργεια', () => {
-    it('όλα περνούν όταν το `active` είναι false', () => {
-      mountHarness({ entity, active: false });
+    it('όλα περνούν όταν δεν υπάρχει λειτουργία πίνακα', () => {
+      mountHarness({ entity: null });
 
       dispatchAt('mousedown', outsidePoint(entity));
       dispatchAt('mouseup', outsidePoint(entity));
@@ -240,7 +241,7 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
      * μέχρι reload» (§5.1). Το πληκτρολόγιο το πλήρωσε ήδη· το ποντίκι δεν θα το ξαναπληρώσει.
      */
     it('🔴 το ξεμοντάρισμα ΞΕΚΛΕΙΔΩΝΕΙ — κανένα κρεμασμένο κλείδωμα', () => {
-      mountHarness({ entity, active: true });
+      mountHarness({ entity });
       expect(isCanvasLockedByTableSession()).toBe(true);
 
       act(() => { unmount(); });
@@ -253,15 +254,25 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
       expect(seen).toEqual(['mousedown']);
     });
 
-    it('χαμένος πίνακας (undo / διαγραφή) ⇒ καμία απόφαση μπλοκαρίσματος', () => {
-      // Ο δρομέας επιβιώνει επίτηδες μιας αποτυχημένης ανάγνωσης σκηνής· το κλείδωμα ΔΕΝ
-      // επιτρέπεται να επιβιώσει μαζί του, αλλιώς ο καμβάς μένει κλειστός χωρίς κανέναν να
-      // ακούει. Εδώ το `entity` λείπει ενώ το `active` λέει ναι — το χειρότερο σενάριο.
-      mountHarness({ entity: null, active: true });
+    /**
+     * 🔴 §29.15 — Η ΕΓΓΥΗΣΗ ΠΟΥ ΕΝΙΣΧΥΘΗΚΕ: **ούτε το ΒΑΘΟΣ** επιβιώνει χαμένου πίνακα.
+     *
+     * Πριν, αυτό το test έλεγχε μόνο ότι κανένα συμβάν δεν μπλοκάρεται — και περνούσε, ενώ
+     * το βάθος έμενε `1`. Δηλαδή ο φύλακας άφηνε τα συμβάντα να περάσουν, αλλά οι **τρεις
+     * πύλες** του §29.9/§29.11 και ο ζωγράφος λαβών, που ρωτούν σκέτο
+     * `isCanvasLockedByTableSession()` και **δεν** βλέπουν οντότητα, κρατούσαν τον καμβά
+     * κλειστό: καμία επιλογή, καμία λαβή, μέχρι reload. Ήταν λανθάνον μόνο επειδή ο ένας
+     * καλών περνούσε συνθήκη που συνεπαγόταν οντότητα.
+     *
+     * Τώρα το «κλειδωμένο χωρίς οντότητα» δεν είναι εκφράσιμο, και αυτή η γραμμή το φυλάει.
+     */
+    it('🔴 χαμένος πίνακας (undo / διαγραφή) ⇒ ούτε μπλοκάρισμα, ΟΥΤΕ κλείδωμα', () => {
+      mountHarness({ entity: null });
 
       dispatchAt('mousedown', outsidePoint(entity));
 
       expect(seenByCanvas).toEqual(['mousedown']);
+      expect(isCanvasLockedByTableSession()).toBe(false);
     });
   });
 });

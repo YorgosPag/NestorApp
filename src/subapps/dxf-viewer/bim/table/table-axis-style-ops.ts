@@ -52,6 +52,23 @@ export type TableAxisStyleKey = keyof TableAxisStyleOverride & keyof TableCellSt
 /** Ό,τι κρατά ένας άξονας — το κοινό σχήμα γραμμής και στήλης, όσο αφορά το στυλ. */
 type AxisItem = TableColumn | TableRow;
 
+/**
+ * Τα πεδία του {@link TableAxisStyleKey} που ο ζωγράφος επιλύει σε **αριθμό**.
+ *
+ * Παράγεται από τον ίδιο τον τύπο του επιλυμένου στυλ αντί για χειρόγραφη ένωση ονομάτων:
+ * την ημέρα που ένα πεδίο αλλάξει τύπο, ο μεταγλωττιστής το λέει εδώ — μια λίστα
+ * `'textHeightMm' | …` θα έμενε πίσω σιωπηλά.
+ */
+export type TableAxisNumericKey = {
+  [K in TableAxisStyleKey]: TableCellStyle[K] extends number ? K : never;
+}[TableAxisStyleKey];
+
+/** Τα άκρα μιας αριθμητικής ιδιότητας κατά μήκος ενός άξονα. */
+export interface TableAxisNumericRange {
+  readonly min: number;
+  readonly max: number;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Εγγραφή
 // ──────────────────────────────────────────────────────────────────────────────
@@ -113,6 +130,18 @@ export function clearAxisStyleOverride(
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
+ * Δηλώνει ο άξονας **οτιδήποτε** ρητά; Η ερώτηση του «Επαναφορά στο στυλ»: χωρίς παράκαμψη,
+ * το κουμπί δεν έχει τι να σβήσει και το λέει (ανενεργό) αντί να είναι σιωπηλό no-op.
+ */
+export function hasAxisStyleOverride(
+  model: PersistedTableModel,
+  axis: TableStyleAxis,
+  id: string,
+): boolean {
+  return axisItems(model, axis).find((item) => item.id === id)?.styleOverride !== undefined;
+}
+
+/**
  * Τι δείχνει ένα χειριστήριο του toolbar. **Δύο ορθογώνιες** ερωτήσεις, όχι μία.
  *
  * Το Excel απαντά μόνο την πρώτη, και γι' αυτό δεν μπορεί ποτέ να σου πει αν τα έντονα που
@@ -145,40 +174,61 @@ export function resolveAxisFormat<K extends TableAxisStyleKey>(
   id: string,
   key: K,
 ): TableAxisFormatState<TableCellStyle[K]> | null {
-  const resolved = resolveTableModel(model);
   const anchor = axisItems(model, axis).find((item) => item.id === id);
   if (!anchor) return null;
-
-  const rows = axis === 'row' ? resolved.rows.filter((r) => r.id === id) : resolved.rows;
-  const columns = axis === 'column' ? resolved.columns.filter((c) => c.id === id) : resolved.columns;
-  if (rows.length === 0 || columns.length === 0) return null;
 
   let value: TableCellStyle[K] | undefined;
   let seen = false;
   let mixed = false;
 
-  for (const row of rows) {
-    for (const column of columns) {
-      const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], {
-        column: column.styleOverride,
-        row: row.styleOverride,
-        cell: resolved.cells.get(cellKey(row.id, column.id))?.styleOverride,
-      });
-      const current = cellStyle[key];
-      if (!seen) {
-        value = current;
-        seen = true;
-      } else if (current !== value) {
-        mixed = true;
-      }
+  const visited = forEachAxisCellStyle(model, style, axis, id, (cellStyle) => {
+    const current = cellStyle[key];
+    if (!seen) {
+      value = current;
+      seen = true;
+    } else if (current !== value) {
+      mixed = true;
     }
-  }
+  });
+  if (!visited) return null;
 
   return {
     value: mixed ? undefined : value,
     mixed,
     overridden: anchor.styleOverride?.[key] !== undefined,
   };
+}
+
+/**
+ * Τα άκρα μιας **αριθμητικής** ιδιότητας κατά μήκος του άξονα — `null` αν ο άξονας δεν
+ * υπάρχει ή δεν έχει κελιά.
+ *
+ * 🔴 Γιατί χρειάζεται χωριστά από το {@link resolveAxisFormat}: εκείνο απαντά «συμφωνούν;»
+ * και σε μεικτή σειρά επιστρέφει `value: undefined` — σωστό για ένα δίτιμο κουμπί, **άχρηστο**
+ * για ένα βήμα μεγέθους, που πρέπει να ξέρει *από πού* ξεκινά. Και η μεικτή σειρά **δεν είναι
+ * η εξαίρεση εδώ**: κάθε στήλη περνά από γραμμή τίτλου (4mm), κεφαλίδας (3mm) και δεδομένων
+ * (2.8mm), άρα το ύψος είναι μεικτό **σχεδόν πάντα**. Ένα βήμα που δεν το χειρίζεται ρητά θα
+ * ήταν βήμα που δεν λειτουργεί ποτέ στην πράξη.
+ */
+export function resolveAxisNumericRange(
+  model: PersistedTableModel,
+  style: TableStyle,
+  axis: TableStyleAxis,
+  id: string,
+  key: TableAxisNumericKey,
+): TableAxisNumericRange | null {
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+
+  const visited = forEachAxisCellStyle(model, style, axis, id, (cellStyle) => {
+    const current = cellStyle[key];
+    if (!Number.isFinite(current)) return;
+    if (current < min) min = current;
+    if (current > max) max = current;
+  });
+  if (!visited || !Number.isFinite(min)) return null;
+
+  return { min, max };
 }
 
 /**
@@ -198,6 +248,39 @@ export function nextBooleanFormat(state: TableAxisFormatState<boolean> | null): 
 
 function axisItems(model: PersistedTableModel, axis: TableStyleAxis): readonly AxisItem[] {
   return axis === 'row' ? model.rows : model.columns;
+}
+
+/**
+ * Ο **ΕΝΑΣ** βρόχος πάνω στα επιλυμένα στυλ των κελιών ενός άξονα· `false` όταν ο άξονας
+ * δεν έχει κελιά να επισκεφθεί.
+ *
+ * Δύο αναγνώστες ρωτούν διαφορετικά πράγματα για την **ίδια** διαδρομή («συμφωνούν;» και
+ * «ποια τα άκρα;»). Δύο αντίγραφα του διπλού βρόχου θα ήταν ακριβώς το structural clone που
+ * πιάνει το CHECK 3.28 (N.18) — και, χειρότερα, δύο σημεία που μπορούν κάποτε να μάθουν
+ * διαφορετικό κανόνα προτεραιότητας (Α6) για το ίδιο κελί.
+ */
+function forEachAxisCellStyle(
+  model: PersistedTableModel,
+  style: TableStyle,
+  axis: TableStyleAxis,
+  id: string,
+  visit: (cellStyle: TableCellStyle) => void,
+): boolean {
+  const resolved = resolveTableModel(model);
+  const rows = axis === 'row' ? resolved.rows.filter((r) => r.id === id) : resolved.rows;
+  const columns = axis === 'column' ? resolved.columns.filter((c) => c.id === id) : resolved.columns;
+  if (rows.length === 0 || columns.length === 0) return false;
+
+  for (const row of rows) {
+    for (const column of columns) {
+      visit(resolveCellStyle(style.rowClasses[row.rowClass], {
+        column: column.styleOverride,
+        row: row.styleOverride,
+        cell: resolved.cells.get(cellKey(row.id, column.id))?.styleOverride,
+      }));
+    }
+  }
+  return true;
 }
 
 /**

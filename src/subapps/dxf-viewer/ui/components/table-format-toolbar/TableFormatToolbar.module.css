@@ -1,0 +1,103 @@
+/**
+ * ADR-739 Φ.Ε βήμα 5 — η **ξεκομμένη** πλωτή επιφάνεια του mini toolbar (απόφαση Α7).
+ *
+ * Εδώ ζει ΜΟΝΟ η γεωμετρία. Το χρώμα, το περίγραμμα και η σκιά έρχονται από τις ΙΔΙΕΣ
+ * utility classes που φοράει το `DropdownMenuContent` (`border border-border rounded-lg
+ * bg-popover text-popover-foreground shadow-md`), ώστε οι δύο επιφάνειες να είναι οπτικά
+ * αδέρφια και να ακολουθούν μαζί το θέμα (φωτεινό/σκοτεινό). Αντιγραφή των τιμών εδώ θα
+ * σήμαινε δύο πηγές για την ίδια απόφαση σχεδίασης.
+ */
+
+.toolbar {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  /* Πάνω από το μενού (9999): όταν το clamp της κορυφής τα φέρει να ακουμπούν, το toolbar
+     είναι αυτό που ο χρήστης μόλις στόχευσε. */
+  z-index: 10000;
+
+  /**
+   * 🔴 ΟΧΙ διακόσμηση — ΧΩΡΙΣ ΑΥΤΟ ΤΑ ΚΟΥΜΠΙΑ ΔΕΝ ΠΑΤΙΟΥΝΤΑΙ ΚΑΘΟΛΟΥ.
+   *
+   * Το Radix `DropdownMenu` είναι **modal** εξ ορισμού: όσο είναι ανοιχτό, γράφει
+   * `pointer-events: none` στο `body` και το επαναφέρει **μόνο** μέσα στο δικό του δέντρο.
+   * Το toolbar ζει σε **δικό του** portal (το απαιτεί η Α7 — μόνο έτσι κάθεται πάνω από το
+   * μενού με κενό), άρα κληρονομεί το `none` και γίνεται **ορατό αλλά νεκρό**.
+   *
+   * Βρέθηκε στη **ζωντανή επαλήθευση**, όχι στα tests: σε jsdom δεν υπάρχει hit-testing, άρα
+   * ένα `fireEvent.click` πετυχαίνει πάντα — το test «πάτησα Β και δεν έκλεισε το μενού»
+   * ήταν **πράσινο ενώ το κουμπί ήταν απάτητο**.
+   */
+  pointer-events: auto;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  /* Η ένδειξη «ρητή τιμή» είναι απόλυτα τοποθετημένη μέσα στο κουμπί. */
+  position: relative;
+}
+
+.button:hover,
+.button:focus-visible {
+  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+}
+
+/* Πατημένο = η τιμή ισχύει σε ΟΛΗ τη σειρά. */
+.buttonActive {
+  background-color: var(--color-accent, rgba(255, 255, 255, 0.18));
+}
+
+/**
+ * Μεικτή σειρά: ούτε πατημένο ούτε ελεύθερο. Το Excel αφήνει το κουμπί ελεύθερο και λέει
+ * ψέματα· εδώ φαίνεται ότι η απάντηση δεν είναι μία (Figma «Mixed», Revit «<varies>»).
+ */
+.buttonMixed {
+  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+  box-shadow: inset 0 0 0 1px var(--color-border, rgba(255, 255, 255, 0.25));
+}
+
+.button[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.button[aria-disabled='true']:hover {
+  background-color: transparent;
+}
+
+/**
+ * Η κουκκίδα «ο άξονας το δηλώνει ΡΗΤΑ» — δεν το κληρονομεί από το στυλ.
+ *
+ * Είναι η δεύτερη, ορθογώνια ερώτηση του `TableAxisFormatState`: το πατημένο κουμπί λέει *τι
+ * ισχύει*, η κουκκίδα λέει *ποιος το είπε*. Χωρίς αυτήν, ο μηχανικός δεν μπορεί να ξεχωρίσει
+ * τα έντονα που ζήτησε ο ίδιος από αυτά που ορίζει το στυλ του σχεδίου — και το «Επαναφορά
+ * στο στυλ» μοιάζει να μην κάνει τίποτα.
+ */
+.explicitDot {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0.85;
+}
+
+.separator {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 3px;
+  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
+}

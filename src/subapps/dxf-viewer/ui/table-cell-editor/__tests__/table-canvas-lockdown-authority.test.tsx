@@ -45,9 +45,11 @@ const markDirtyMock = markSystemsDirty as jest.MockedFunction<typeof markSystems
 const { transform: TRANSFORM } = TABLE_TEST_VIEW;
 
 interface HarnessProps {
+  /**
+   * 🔴 §29.15 — ο **μοναδικός** διακόπτης. Το `active` έπαψε να είναι παράμετρος: «κλειδωμένο
+   * χωρίς οντότητα» δεν είναι πλέον εκφράσιμο, ούτε καν σε test.
+   */
   readonly entity: TableEntity | null;
-  /** Το ίδιο `overlay !== null` της παραγωγής. */
-  readonly active: boolean;
 }
 
 function LockdownHarness(props: HarnessProps): React.ReactElement {
@@ -72,21 +74,21 @@ describe('🔴 ADR-739 §29.12 — το κλείδωμα ζητά καρέ ότ�
 
   it('βάση: χωρίς ενεργή λειτουργία πίνακα ο καμβάς δεν είναι κλειδωμένος και δεν ζητιέται καρέ', () => {
     // Χωρίς αυτό, ένα «ζήτα καρέ πάντα» θα ήταν πράσινο σε όλα τα υπόλοιπα.
-    const view = render(<LockdownHarness entity={entity} active={false} />);
+    const view = render(<LockdownHarness entity={null} />);
     expect(isCanvasLockedByTableSession()).toBe(false);
     expect(markDirtyMock).not.toHaveBeenCalled();
     view.unmount();
   });
 
   it('🔴 Δ3 — το ΚΛΕΙΔΩΜΑ ζητά καρέ: αλλιώς οι λαβές μένουν ζωγραφισμένες', () => {
-    const view = render(<LockdownHarness entity={entity} active />);
+    const view = render(<LockdownHarness entity={entity} />);
     expect(isCanvasLockedByTableSession()).toBe(true);
     expect(markDirtyMock).toHaveBeenCalledWith(['dxf-canvas']);
     view.unmount();
   });
 
   it('🔴 και το ΞΕΚΛΕΙΔΩΜΑ ζητά καρέ: αλλιώς οι λαβές δεν ξαναγυρίζουν στην έξοδο', () => {
-    const view = render(<LockdownHarness entity={entity} active />);
+    const view = render(<LockdownHarness entity={entity} />);
     markDirtyMock.mockClear();
     act(() => { view.unmount(); });
     expect(isCanvasLockedByTableSession()).toBe(false);
@@ -96,9 +98,9 @@ describe('🔴 ADR-739 §29.12 — το κλείδωμα ζητά καρέ ότ�
   it('η φωλιασμένη ενεργοποίηση ΔΕΝ ξαναζητά καρέ — η ιδιοκτησία δεν άλλαξε', () => {
     // Δύο ταυτόχρονοι φύλακες (π.χ. remount μέσα σε μετάβαση): το βάθος πάει 1→2, αλλά η
     // απάντηση «κατέχει ο πίνακας τον καμβά;» μένει ίδια. Ένα καρέ ανά **αλλαγή**, όχι ανά set.
-    const first = render(<LockdownHarness entity={entity} active />);
+    const first = render(<LockdownHarness entity={entity} />);
     markDirtyMock.mockClear();
-    const second = render(<LockdownHarness entity={entity} active />);
+    const second = render(<LockdownHarness entity={entity} />);
     expect(markDirtyMock).not.toHaveBeenCalled();
     expect(isCanvasLockedByTableSession()).toBe(true);
     act(() => { second.unmount(); });
@@ -110,12 +112,38 @@ describe('🔴 ADR-739 §29.12 — το κλείδωμα ζητά καρέ ότ�
     expect(markDirtyMock).toHaveBeenCalledWith(['dxf-canvas']);
   });
 
+  /**
+   * 🔴 §29.15 — **Η ΤΑΥΤΟΤΗΤΑ ΤΗΣ ΟΝΤΟΤΗΤΑΣ ΔΕΝ ΕΙΝΑΙ ΑΛΛΑΓΗ ΙΔΙΟΚΤΗΣΙΑΣ.**
+   *
+   * Η οντότητα είναι **νέο αντικείμενο** σε κάθε αλλαγή σκηνής — δηλαδή σε κάθε δέσμευση
+   * κελιού, δηλαδή σε κάθε πάτημα πλήκτρου. Όσο το βάθος ήταν δεμένο στην ταυτότητά της, ο
+   * ίδιος effect έκανε `cleanup → setup` ⇒ `1 → 0 → 1` ⇒ **δύο** αλλαγές ιδιοκτησίας ⇒ **δύο
+   * περιττές επαναβαφές ολόκληρου του `dxf-canvas` ανά πλήκτρο**, ενώ στην οθόνη δεν άλλαζε
+   * τίποτα.
+   *
+   * Το §29.12 το είχε γράψει ρητά («το αίτημα μπαίνει **μόνο στην αλλαγή της απάντησης**»)
+   * και η σύζευξη με την οντότητα το παραβίαζε **σιωπηλά** — καμία δοκιμή δεν το ρωτούσε.
+   * Τώρα το ρωτά αυτή.
+   */
+  it('🔴 νέα ΤΑΥΤΟΤΗΤΑ ίδιας οντότητας (κάθε πάτημα πλήκτρου) ΔΕΝ ξαναζητά καρέ', () => {
+    const view = render(<LockdownHarness entity={entity} />);
+    expect(markDirtyMock).toHaveBeenCalledTimes(1);
+    markDirtyMock.mockClear();
+
+    // Ό,τι κάνει ένα commit κελιού: ίδιος πίνακας, **άλλο** αντικείμενο.
+    act(() => { view.rerender(<LockdownHarness entity={{ ...entity }} />); });
+
+    expect(isCanvasLockedByTableSession()).toBe(true);
+    expect(markDirtyMock).not.toHaveBeenCalled();
+    view.unmount();
+  });
+
   it('🔴 οι συνδρομητές ειδοποιούνται — το μητρώο λαβών ζει στη React και πρέπει να μάθει', () => {
     const seen: boolean[] = [];
     const unsubscribe = subscribeCanvasLockedByTableSession(() => {
       seen.push(isCanvasLockedByTableSession());
     });
-    const view = render(<LockdownHarness entity={entity} active />);
+    const view = render(<LockdownHarness entity={entity} />);
     act(() => { view.unmount(); });
     unsubscribe();
     expect(seen).toEqual([true, false]);
