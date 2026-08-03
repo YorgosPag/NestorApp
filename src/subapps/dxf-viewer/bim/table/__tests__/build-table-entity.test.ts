@@ -18,23 +18,6 @@
  *    mapping σε δεύτερο σημείο (N.18), η ομάδα 4 σπάει.
  */
 
-// i18n: ο πίνακας γεννιέται με **παγωμένο** κείμενο σχεδίου — ο builder το επιλύει μία
-// φορά. `language` υπάρχει γιατί μπαίνει στο κλειδί της μνήμης του μοντέλου.
-jest.mock('@/i18n', () => ({
-  i18n: {
-    t: (key: string): string => {
-      const map: Record<string, string> = {
-        'table.defaults.title': 'ΠΙΝΑΚΑΣ',
-        'table.defaults.columnNo': 'Α/Α',
-        'table.defaults.columnDesc': 'Περιγραφή',
-        'table.defaults.columnQty': 'Ποσότητα',
-      };
-      return map[key] ?? key;
-    },
-    language: 'el',
-  },
-}));
-
 import {
   DEFAULT_TABLE_COLUMN_COUNT,
   DEFAULT_TABLE_COLUMN_WIDTH_MM,
@@ -66,6 +49,24 @@ function makeTable(): TableEntity {
   return buildTableEntity(ORIGIN, {}, 'tbl_test', 'lyr_test');
 }
 
+/**
+ * Ο πίνακας **γράφεται** με κείμενο πριν ταξιδέψει.
+ *
+ * ⚠️ Χωρίς αυτό η ομάδα 2 θα ήταν **κενή τελετή**: από την 2026-08-04 ο νέος πίνακας
+ * γεννιέται χωρίς κανένα κελί, και «0 κελιά πριν → 0 κελιά μετά» το επιβεβαιώνει εξίσου
+ * καλά κι ένας `Map` που έγινε σιωπηλά `{}` στο `JSON.stringify` — δηλαδή ακριβώς το
+ * σφάλμα που η ομάδα υπάρχει για να πιάσει. Το ταξίδι ρωτιέται μόνο με φορτίο.
+ */
+function withCells(entity: TableEntity): TableEntity {
+  const cells: PersistedTableModel['cells'] = [
+    ['r0', 'c0', { kind: 'text', value: 'ΠΙΝΑΚΑΣ' }],
+    ['r1', 'c0', { kind: 'text', value: 'Α/Α' }],
+    ['r1', 'c1', { kind: 'text', value: 'Περιγραφή' }],
+    ['r1', 'c2', { kind: 'text', value: 'Ποσότητα' }],
+  ];
+  return { ...entity, model: { ...entity.model, cells } };
+}
+
 /** Τα κελιά ως λεξικό «γραμμή/στήλη → κείμενο» — συγκρίσιμο πριν και μετά το ταξίδι. */
 function cellTextMap(model: PersistedTableModel): Record<string, string> {
   const out: Record<string, string> = {};
@@ -85,12 +86,12 @@ const EXPECTED_CELLS: Record<string, string> = {
 // ── 1. Το σχήμα του νέου πίνακα ─────────────────────────────────────────────
 
 describe('ADR-739 Φ.Δ — σχήμα προεπιλεγμένου πίνακα', () => {
-  it('5 γραμμές × 3 στήλες με 4 σπαρμένα κελιά', () => {
+  it('5 γραμμές × 3 στήλες, ΚΑΝΕΝΑ σπαρμένο κελί', () => {
     const { model } = makeTable();
     expect(model.rows).toHaveLength(1 + 1 + DEFAULT_TABLE_DATA_ROW_COUNT);
     expect(model.rows).toHaveLength(5);
     expect(model.columns).toHaveLength(DEFAULT_TABLE_COLUMN_COUNT);
-    expect(model.cells).toHaveLength(4);
+    expect(model.cells).toHaveLength(0);
   });
 
   it('1 title + 1 header + 3 data — η σειρά της τεκμηρίωσης του ACAD_TABLE', () => {
@@ -107,15 +108,15 @@ describe('ADR-739 Φ.Δ — σχήμα προεπιλεγμένου πίνακα
     }
   });
 
-  it('τα σπαρμένα κελιά είναι ο τίτλος + οι 3 κεφαλίδες, στα σωστά κελιά', () => {
-    expect(cellTextMap(makeTable().model)).toEqual(EXPECTED_CELLS);
+  it('🔴 ΚΑΝΕΝΑ κείμενο — ο χρήστης γράφει τα δικά του δεδομένα, δεν σβήνει τα δικά μας', () => {
+    // Ο πίνακας γεννιόταν με «ΠΙΝΑΚΑΣ» + «Α/Α · Περιγραφή · Ποσότητα». Σε σχεδιαστικό
+    // καμβά αυτό δεν είναι διευκόλυνση: είναι εικασία για το τι πίνακα φτιάχνει ο χρήστης
+    // (υπόμνημα; ποσότητες; καρτέλα έργου;) και δουλειά σβησίματος πριν την πρώτη εγγραφή.
+    expect(cellTextMap(makeTable().model)).toEqual({});
   });
 
-  it('ο τίτλος απλώνεται σε όλο το πλάτος (μία συγχώνευση)', () => {
-    const { model } = makeTable();
-    expect(model.merges).toEqual([
-      { anchorRowId: 'r0', anchorColId: 'c0', rowSpan: 1, colSpan: 3 },
-    ]);
+  it('🔴 ΚΑΜΙΑ συγχώνευση — η ζώνη τίτλου είναι πράξη του χρήστη, όχι δώρο', () => {
+    expect(makeTable().model.merges).toEqual([]);
   });
 
   it('το κλικ είναι η πάνω-αριστερή γωνία, όρθιος, με το built-in standard στυλ', () => {
@@ -141,24 +142,22 @@ describe('ADR-739 Φ.Δ — σχήμα προεπιλεγμένου πίνακα
 
 describe('ADR-739 Φ.Δ — ο πίνακας επιβιώνει το ταξίδι', () => {
   it('JSON round-trip (αποθήκευση / πρόχειρο / λανθάνουσα μνήμη): ΟΛΑ τα κελιά', () => {
-    const entity = makeTable();
+    const entity = withCells(makeTable());
     const revived: TableEntity = JSON.parse(JSON.stringify(entity));
     expect(revived.model.cells).toHaveLength(4);
     expect(cellTextMap(revived.model)).toEqual(EXPECTED_CELLS);
     expect(revived.model.rows).toHaveLength(5);
     expect(revived.model.columns).toHaveLength(3);
-    expect(revived.model.merges).toHaveLength(1);
   });
 
   it('deepClone (το μονοπάτι του undo): ΟΛΑ τα κελιά', () => {
-    const entity = makeTable();
-    const cloned = deepClone(entity);
+    const cloned = deepClone(withCells(makeTable()));
     expect(cloned.model.cells).toHaveLength(4);
     expect(cellTextMap(cloned.model)).toEqual(EXPECTED_CELLS);
   });
 
   it('μετά το ταξίδι το μοντέλο ξαναγίνεται δουλεύσιμος Map με τα ίδια κελιά', () => {
-    const revived: TableEntity = JSON.parse(JSON.stringify(makeTable()));
+    const revived: TableEntity = JSON.parse(JSON.stringify(withCells(makeTable())));
     const resolved = resolveTableModel(revived.model);
     // Ο αριθμός των κελιών του χάρτη είναι το σημείο όπου ένα `{}` θα φαινόταν ως 0.
     expect(resolved.cells.size).toBe(4);
@@ -272,10 +271,11 @@ describe('ADR-739 Φ.Δ — ζωντανές επιλογές του εργαλ�
     expect(model.rows).toHaveLength(12); // title + header + 10 data
   });
 
-  it('επιπλέον στήλες μένουν χωρίς κεφαλίδα (καμία εφευρετική «Στήλη 4»)', () => {
+  it('πλατύτερος πίνακας μένει εξίσου κενός — το πλήθος στηλών δεν γεννά περιεχόμενο', () => {
     const { model } = buildTableEntity(ORIGIN, { columnCount: 5 }, 'tbl_wide', 'lyr_test');
-    expect(model.cells).toHaveLength(4);
-    expect(model.merges[0].colSpan).toBe(5);
+    expect(model.columns).toHaveLength(5);
+    expect(model.cells).toHaveLength(0);
+    expect(model.merges).toHaveLength(0);
   });
 
   it('εκφυλισμένες επιλογές δεν παράγουν αόρατο πίνακα', () => {
@@ -287,7 +287,7 @@ describe('ADR-739 Φ.Δ — ζωντανές επιλογές του εργαλ�
     );
     expect(model.columns).toHaveLength(1);
     expect(model.rows).toHaveLength(2); // title + header, μηδέν δεδομένα
-    expect(model.merges).toHaveLength(0); // μονόστηλος ⇒ καμία συγχώνευση
+    expect(model.merges).toHaveLength(0);
     const width = model.columns[0].sizing;
     expect(width.kind === 'fixed' && width.widthMm >= 4).toBe(true);
   });
