@@ -242,6 +242,14 @@ export function tableLayoutToPrimitives(
     for (const segment of horizontalByY.get(y) ?? []) out.push(borderPrimitive(segment, origin));
   };
 
+  // ADR-750 Φ5 (Α2) — οι **διαγώνιοι**, αμέσως μετά τα γεμίσματα και **πριν** από κάθε γραμμή
+  // πλέγματος και κάθε γράμμα. Η ίδια σειρά με τον ζωγράφο της οθόνης, όπου ζωγραφίζονται
+  // επίσης πριν το κείμενο: ένα «Ν/Α» πάνω σε διαγραμμένο κελί οφείλει να μένει αναγνώσιμο σε
+  // χαρτί όσο και στην οθόνη.
+  for (const cell of layout.cells) {
+    for (const segment of cell.diagonals ?? []) out.push(borderPrimitive(segment, origin));
+  }
+
   for (const row of layout.rows) {
     pushHorizontalAt(row.yMm);
     for (const cell of byRow.get(row.id) ?? []) {

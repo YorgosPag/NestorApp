@@ -11,6 +11,7 @@
 import { collectDrawingColors, DRAWING_COLORS_LIMIT } from '../table-drawing-colors';
 import { BUILTIN_TABLE_STYLE_IDS, BUILTIN_TABLE_STYLES } from '../table-style-presets';
 import type { TableStyle } from '../table-style';
+import type { PlotColorRole } from '../../../config/print-color-policy';
 import type { PersistedTableModel } from '../../../types/table';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
@@ -38,12 +39,17 @@ function model(): PersistedTableModel {
 }
 
 function collect(
-  overrides: Partial<{ model: PersistedTableModel; layerColors: readonly string[] }> = {},
+  overrides: Partial<{
+    model: PersistedTableModel;
+    layerColors: readonly string[];
+    role: PlotColorRole;
+  }> = {},
 ): readonly string[] {
   return collectDrawingColors({
     style: STANDARD,
     model: overrides.model ?? model(),
     layerColors: overrides.layerColors ?? [],
+    role: overrides.role,
   });
 }
 
@@ -122,5 +128,81 @@ describe('collectDrawingColors — διπλότυπα και όριο', () => {
   it('δεν ξεπερνά ποτέ το όριο, όσα layers κι αν έχει το σχέδιο', () => {
     const many = Array.from({ length: 200 }, (_, i) => `#${(i + 1).toString(16).padStart(6, '0')}`);
     expect(collect({ layerColors: many })).toHaveLength(DRAWING_COLORS_LIMIT);
+  });
+});
+
+/**
+ * ADR-739 Φ.Ε/Φ4β — ο **δεύτερος ρόλος**.
+ *
+ * 🔴 Η ασυμμετρία δεν είναι λεπτομέρεια υλοποίησης, είναι η ουσία: ο ίδιος κανόνας που σώζει το
+ * κείμενο («τίποτα σχεδόν λευκό») **καταστρέφει** το γέμισμα — το `print-color-policy` το λέει
+ * ρητά, και το `#EDEDED` της κεφαλίδας είναι το ζωντανό παράδειγμα.
+ */
+describe('collectDrawingColors — ο ρόλος αλλάζει ΚΑΙ το πεδίο ΚΑΙ το φίλτρο', () => {
+  it('`role: fill` διαβάζει `fillColorHex`, ΟΧΙ `textColorHex`', () => {
+    // Το `standard` βάφει μόνο την κεφαλίδα (#EDEDED)· το κείμενό του είναι #111111. Αν το
+    // πεδίο δεν άλλαζε, εδώ θα ερχόταν το #111111 — δηλαδή ο επιλογέας γεμίσματος θα πρότεινε
+    // χρώματα μελανιού.
+    expect(collect({ role: 'fill' })).toEqual(['#ededed']);
+    expect(collect({ role: 'ink' })).toEqual(['#111111']);
+  });
+
+  it('🔴 `role: fill` ΔΕΝ κόβει το λευκό layer — εκεί το λευκό είναι αδιαφανές φόντο', () => {
+    // Ίδιο ακριβώς input, αντίθετο αποτέλεσμα: αυτό είναι το test της ασυμμετρίας.
+    expect(collect({ role: 'ink', layerColors: ['#ffffff'] })).not.toContain('#ffffff');
+    expect(collect({ role: 'fill', layerColors: ['#ffffff'] })).toContain('#ffffff');
+  });
+
+  it('🔴 το ρητό «κανένα γέμισμα» (`null`) ΔΕΝ γίνεται δείγμα — δεν είναι χρώμα', () => {
+    // Η άρνηση χρώματος έχει δική της γραμμή στο μενού. Ένα δείγμα γι' αυτήν εδώ θα ήταν
+    // δεύτερος δρόμος προς την ίδια κατάσταση, μέσα σε ζώνη που λέει «χρώματα που υπάρχουν».
+    const withNull: PersistedTableModel = {
+      ...model(),
+      columns: [
+        { ...model().columns[0], styleOverride: { fillColorHex: null } },
+        model().columns[1],
+      ],
+    };
+    const out = collect({ role: 'fill', model: withNull });
+    expect(out).toEqual(['#ededed']);
+    expect(out).not.toContain(null);
+  });
+
+  it('μαζεύει ρητά γεμίσματα από στήλη, γραμμή και κελί — ίδιες τρεις πηγές', () => {
+    const painted: PersistedTableModel = {
+      ...model(),
+      columns: [
+        { ...model().columns[0], styleOverride: { fillColorHex: '#ff0000' } },
+        model().columns[1],
+      ],
+      rows: [
+        { ...model().rows[0], styleOverride: { fillColorHex: '#00ff00' } },
+        model().rows[1],
+      ],
+      cells: [['r1', 'c1', { text: 'x', styleOverride: { fillColorHex: '#0000ff' } }]],
+    };
+    const out = collect({ role: 'fill', model: painted });
+    // Στυλ πρώτα, μετά ο πίνακας — στήλη, γραμμή, κελί.
+    expect(out).toEqual(['#ededed', '#ff0000', '#00ff00', '#0000ff']);
+  });
+
+  it('🔴 στυλ που δεν βάφει τίποτα ⇒ ΚΕΝΗ ζώνη — και ο καλών οφείλει να το χειριστεί', () => {
+    // Για το κείμενο αυτό δεν συμβαίνει σχεδόν ποτέ (οι τρεις κλάσεις πάντα δηλώνουν χρώμα)·
+    // για το γέμισμα είναι η κανονικότητα. Ένα στυλ χωρίς κανένα `fillColorHex` δεν είναι
+    // παθολογία — είναι ένας καθαρός πίνακας πριν τον βάψει κανείς.
+    const bare: TableStyle = {
+      ...STANDARD,
+      rowClasses: {
+        title: { ...STANDARD.rowClasses.title, fillColorHex: undefined },
+        header: { ...STANDARD.rowClasses.header, fillColorHex: undefined },
+        data: { ...STANDARD.rowClasses.data, fillColorHex: undefined },
+      },
+    };
+    expect(collectDrawingColors({ style: bare, model: model(), layerColors: [], role: 'fill' }))
+      .toEqual([]);
+  });
+
+  it('η προεπιλογή είναι `ink` — ο υπάρχων καλών δεν αλλάζει συμπεριφορά', () => {
+    expect(collect()).toEqual(collect({ role: 'ink' }));
   });
 });

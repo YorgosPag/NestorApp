@@ -776,3 +776,116 @@ describe('πλοήγηση στο πλέγμα χρωμάτων (WAI-ARIA grid)'
     expect(document.activeElement).toBe(cells[25]);
   });
 });
+
+/**
+ * ADR-739 Φ.Ε/Φ4β — **το χρώμα γεμίσματος**: το ίδιο component, δεύτερος ρόλος.
+ *
+ * 🔴 Δύο πράγματα εδώ δεν είναι διακοσμητικά:
+ *  1. το «Κανένα γέμισμα» γράφει **ακριβώς `null`** — αν κάπου γινόταν `?? undefined`, η εντολή
+ *     θα μεταφραζόταν σιωπηλά σε «Αυτόματο» και μια βαμμένη κεφαλίδα δεν θα καθάριζε ποτέ·
+ *  2. το χρώμα **κειμένου** ΔΕΝ προσφέρει «Κανένα» — το μοντέλο δεν το δέχεται, και μια
+ *     διεπαφή που το πρόσφερε θα υποσχόταν κατάσταση που δεν μπορεί να αποδοθεί.
+ */
+describe('ADR-739 Φ.Ε/Φ4β — χρώμα γεμίσματος, ο δεύτερος ρόλος του ίδιου μενού', () => {
+  function openFillMenu(overrides: Partial<TableFormatToolbarProps> = {}) {
+    const utils = renderToolbar(overrides);
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων γεμίσματος' }));
+    return utils;
+  }
+
+  it('η γραμμή έχει ΔΙΚΟ ΤΗΣ split button για το γέμισμα, δίπλα σε εκείνο του κειμένου', () => {
+    renderToolbar();
+    expect(screen.getByRole('button', { name: 'Χρώμα γεμίσματος' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Παλέτα χρωμάτων γεμίσματος' })).toBeInTheDocument();
+  });
+
+  it('🔴 «Κανένα γέμισμα» γράφει ΑΚΡΙΒΩΣ `null` — ποτέ `undefined`', () => {
+    // Αυτό είναι ΤΟ test της τρίτης κατάστασης. `null` = ρητά διαφανές (σταματά τον κατήφορο
+    // στο `clearable`)· `undefined` = κληρονομιά. Ένα `??` οπουδήποτε στη διαδρομή τα ισοπεδώνει.
+    const { onSetFillColor } = openFillMenu();
+
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Κανένα γέμισμα/ }));
+
+    expect(onSetFillColor).toHaveBeenCalledTimes(1);
+    expect(onSetFillColor.mock.calls[0]).toEqual([null]);
+  });
+
+  it('🔴 το μενού ΚΕΙΜΕΝΟΥ δεν προσφέρει «Κανένα» — το μοντέλο δεν το δέχεται', () => {
+    renderToolbar();
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων κειμένου' }));
+    expect(screen.queryByRole('menuitemradio', { name: /Κανένα/ })).toBeNull();
+  });
+
+  it('«Αυτόματο» του γεμίσματος γράφει `undefined`, ΟΧΙ `null` — δύο διαφορετικές εντολές', () => {
+    const { onSetFillColor } = openFillMenu();
+
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }));
+
+    expect(onSetFillColor.mock.calls[0]).toEqual([undefined]);
+  });
+
+  it('🔴 ρητά «κανένα» ⇒ ενεργό το «Κανένα γέμισμα»· κληρονομιά ⇒ ενεργό το «Αυτόματο»', () => {
+    // Οι δύο γραμμές ζωγραφίζουν ολόιδιο δείγμα (και οι δύο «τίποτα»). Η διάκριση ζει στο
+    // `aria-checked`, δηλαδή εκεί όπου τη διαβάζει και ο αναγνώστης οθόνης.
+    openFillMenu({
+      format: { ...SAMPLE_FORMAT, fillColor: { ...INHERITED_NO_FILL, explicit: true } },
+    });
+    expect(screen.getByRole('menuitemradio', { name: /Κανένα γέμισμα/ }))
+      .toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }))
+      .toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('🔴 μεικτός άξονας ⇒ ΚΑΜΙΑ από τις δύο γραμμές ενεργή', () => {
+    openFillMenu({
+      format: { ...SAMPLE_FORMAT, fillColor: { ...INHERITED_NO_FILL, mixed: true, explicit: true } },
+    });
+    for (const name of [/Κανένα γέμισμα/, /Αυτόματο/]) {
+      expect(screen.getByRole('menuitemradio', { name })).toHaveAttribute('aria-checked', 'false');
+    }
+  });
+
+  it('🔴 το πλέγμα του γεμίσματος ΕΧΕΙ λευκό — αυτό που το πλέγμα κειμένου κόβει', () => {
+    openFillMenu();
+    const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
+    const cells = within(grid).getAllByRole('gridcell');
+    // Πρώτη σειρά, πρώτη στήλη = η κορυφή της ουδέτερης στήλης.
+    expect(cells[0].getAttribute('aria-label')).toContain('ACI 255');
+  });
+
+  it('το πλέγμα ΚΕΙΜΕΝΟΥ στην ίδια θέση δεν έχει λευκό — η ασυμμετρία, στην οθόνη', () => {
+    renderToolbar();
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων κειμένου' }));
+    const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
+    const cells = within(grid).getAllByRole('gridcell');
+    expect(cells[0].getAttribute('aria-label')).toContain('ACI 254');
+  });
+
+  it('κλικ σε δείγμα του πλέγματος γεμίσματος γράφει το hex και κλείνει το μενού', () => {
+    const { onSetFillColor } = openFillMenu();
+    const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
+
+    fireEvent.click(within(grid).getAllByRole('gridcell')[13 + 1]);
+
+    expect(onSetFillColor).toHaveBeenCalledWith('#ff0000');
+    expect(screen.queryByRole('menu', { name: 'Χρώμα γεμίσματος' })).toBeNull();
+  });
+
+  it('🔴 το κύριο μισό εφαρμόζει το τελευταίο χρώμα ΧΩΡΙΣ μενού — και ποτέ `null`', () => {
+    const { onSetFillColor } = renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Χρώμα γεμίσματος' }));
+
+    expect(onSetFillColor).toHaveBeenCalledTimes(1);
+    expect(onSetFillColor.mock.calls[0][0]).toMatch(/^#[0-9a-f]{6}$/);
+    expect(screen.queryByRole('menu', { name: 'Χρώμα γεμίσματος' })).toBeNull();
+  });
+
+  it('τα δύο μενού είναι ανεξάρτητα — το ένα δεν ανοίγει το άλλο', () => {
+    renderToolbar();
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων γεμίσματος' }));
+
+    expect(screen.getByRole('menu', { name: 'Χρώμα γεμίσματος' })).toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Χρώμα κειμένου' })).toBeNull();
+  });
+});

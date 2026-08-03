@@ -18,12 +18,13 @@
 
 import type { ScheduleColumnAlign } from '../schedule/types';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TableCellAlign, TableCellOverflow, TableModel } from '../../types/table';
+import type { TableCell, TableCellAlign, TableCellOverflow, TableModel } from '../../types/table';
 import { cellKey, cellText } from './table-model-helpers';
 import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overflow';
 import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
 import type { TableMeasurement } from './table-layout-measure';
 import type {
+  TableBorderSegment,
   TableCellLayout,
   TableColumnLayout,
   TableRectMm,
@@ -254,11 +255,56 @@ export function placeCells(
         }),
         rowSpan: span?.rowSpan ?? 1,
         colSpan: span?.colSpan ?? 1,
+        ...diagonalsOf(cell, rect),
       });
     });
   });
 
   return out;
+}
+
+/**
+ * ADR-750 Φ5 (Α2) — οι **διαγώνιες** του κελιού ως έτοιμα τμήματα, στο ορθογώνιο που
+ * πραγματικά καταλαμβάνει.
+ *
+ * ## 🔑 Το `rect` καλύπτει ΟΛΗ τη συγχώνευση — και γι' αυτό η διαγώνιος μπαίνει εδώ
+ * Το `cellRectMm` έχει ήδη πολλαπλασιάσει τα spans, άρα μια διαγώνιος σε συγχωνευμένο κελί
+ * 3×2 διασχίζει ολόκληρη τη συγχώνευση, όπως στο Excel. Υπολογισμένη οπουδήποτε αλλού θα
+ * χρειαζόταν δεύτερη ανάγνωση του ευρετηρίου συγχωνεύσεων — δηλαδή δεύτερη απάντηση στο «πόσο
+ * μεγάλο είναι αυτό το κελί».
+ *
+ * Τα **καλυμμένα** κελιά δεν φτάνουν καν εδώ (κόβονται στην αρχή του `placeCells`), οπότε η
+ * απόφαση «γράφονται όλα, η δομή αποφασίζει τι φαίνεται» (Α16) εκτελείται χωρίς κανέναν
+ * έλεγχο: η διαγώνιος ενός καλυμμένου κελιού απλώς δεν παράγει τμήμα.
+ *
+ * Οι δύο διευθύνσεις έχουν τα ονόματα του OOXML: `down` = ↘ (πάνω-αριστερά → κάτω-δεξιά),
+ * `up` = ↗ (κάτω-αριστερά → πάνω-δεξιά). Ο άξονας `y` του πλαισίου δείχνει **προς τα κάτω**
+ * (`table-layout-types.ts`), άρα το «up» τελειώνει στο **μικρότερο** `y` — γραμμένο ρητά,
+ * γιατί είναι ακριβώς το σημείο όπου μια εικασία δίνει καθρεφτισμένο σχέδιο.
+ */
+function diagonalsOf(
+  cell: TableCell | undefined,
+  rect: TableRectMm,
+): { readonly diagonals?: readonly TableBorderSegment[] } {
+  const diagonal = cell?.diagonal;
+  if (!diagonal) return {};
+
+  const left = rect.x;
+  const right = rect.x + rect.w;
+  const top = rect.y;
+  const bottom = rect.y + rect.h;
+
+  const segments: TableBorderSegment[] = [];
+  if (diagonal.down) {
+    segments.push({ a: { x: left, y: top }, b: { x: right, y: bottom }, spec: diagonal.down });
+  }
+  if (diagonal.up) {
+    segments.push({ a: { x: left, y: bottom }, b: { x: right, y: top }, spec: diagonal.up });
+  }
+  // Το πεδίο **λείπει** όταν δεν υπάρχει τμήμα, ποτέ κενός πίνακας: ένα ρητό `[]` θα άλλαζε το
+  // σχήμα κάθε κελιού του έργου (και κάθε χαρακτηρισμένο στιγμιότυπο) για μηδέν διαφορά —
+  // η ίδια αρχή με το `clipped` και το `dashMm`.
+  return segments.length > 0 ? { diagonals: segments } : {};
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
