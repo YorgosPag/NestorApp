@@ -7,11 +7,17 @@
  * από κάτω το μενού εισαγωγής/διαγραφής. Ακριβώς όπως το Excel, και όπως το ζήτησε ρητά ο
  * ιδιοκτήτης: «ξεκομμένο … πάνω από το μενού προσθήκης».
  *
- * ## 🔴 Γιατί σκέτα `<button>` και ΟΧΙ `DxfMenuItem` (ρίσκο 1 του §28.7)
- * Το `DxfMenuItem` είναι Radix `menuitem`: το `onSelect` του καλεί `onOpenChange(false)`.
- * Δηλαδή **το πρώτο πάτημα στο «Β» θα έκλεινε το μενού** — και η μορφοποίηση είναι κατεξοχήν
- * επαναλαμβανόμενη πράξη (έντονα, μετά πλάγια, μετά ένα μέγεθος πάνω). Εδώ τα κουμπιά είναι
- * σκέτα `<button>` μέσα σε `role="toolbar"` με δικό του roving tabindex.
+ * ## 🔴 Γιατί σκέτα `<button>` και ΟΧΙ `DxfMenuItem`
+ * ⚠️ **Η αιτιολόγηση άλλαξε στις 2026-08-03 — το συμπέρασμα όχι.** Έγραφε: «το `onSelect` του
+ * `DxfMenuItem` καλεί `onOpenChange(false)`, άρα το πρώτο «Β» θα έκλεινε το μενού, και η
+ * μορφοποίηση είναι κατεξοχήν επαναλαμβανόμενη πράξη». Ο ιδιοκτήτης ανέτρεψε ακριβώς αυτό:
+ * το μενού **οφείλει** πλέον να κλείνει στο πρώτο πάτημα, όπως στο Excel.
+ *
+ * Τα σκέτα `<button>` παραμένουν σωστά για **άλλον** λόγο, που δεν άλλαξε: το `DxfMenuItem`
+ * είναι Radix `menuitem` και δουλεύει **μόνο μέσα** στο δέντρο του `Menu.Content`. Αυτή εδώ η
+ * επιφάνεια ζει σε δικό της portal (το απαιτεί η Α7), δηλαδή δεν είναι — και δεν επιτρέπεται
+ * να είναι — μέρος του μενού. Το κλείσιμο το κάνει ρητά ο γονέας (`runFormat`), **μετά** την
+ * εκτέλεση της πράξης.
  *
  * ## 🔴 Γιατί ζει σε portal και όχι μέσα στο `DxfMenuContent`
  * Το Radix τοποθετεί το περιεχόμενο του μενού μόνο του· ένα παιδί του δεν μπορεί να καθίσει
@@ -42,6 +48,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
 import { useRovingToolbar, type RovingItemProps } from './use-roving-toolbar';
+import { TableBorderMenu, type TableBorderMenuProps } from './TableBorderMenu';
+import { TableAxisColorMenu } from './TableAxisColorMenu';
+import type { TableAxisColorState } from './table-color-menu-selection';
 import styles from './TableFormatToolbar.module.css';
 import type { TextHeightStepDirection } from '../../../bim/table/table-text-height-scale';
 
@@ -65,6 +74,17 @@ export interface TableAxisFormatSnapshot {
   readonly bold: TableToggleFormatState;
   readonly italic: TableToggleFormatState;
   readonly underline: TableToggleFormatState;
+  /**
+   * ADR-739 Φ.Ε/Φ4 — το **χρώμα κειμένου** κατά μήκος του άξονα.
+   *
+   * Δεν είναι δίτιμο, άρα δεν χωρά στο {@link TableToggleFormatState}: αντί για «πατημένο /
+   * ελεύθερο» απαντά «**ποιο** χρώμα». Ο τύπος ζει στο `table-color-menu-selection` μαζί με
+   * την ανάγνωσή του — η κατάσταση και ο κανόνας «ποια γραμμή είναι ενεργή» είναι μία απόφαση,
+   * και χωρισμένα σε δύο αρχεία θα αποκλίνουν.
+   */
+  readonly textColor: TableAxisColorState;
+  /** ADR-739 Φ.Ε/Φ4β — το **γέμισμα**: ίδιο σχήμα, τρεις καταστάσεις αντί για δύο. */
+  readonly fillColor: TableAxisColorState;
   /** Ο άξονας δηλώνει **οτιδήποτε** ρητά — αλλιώς η «Επαναφορά στο στυλ» δεν έχει τι να κάνει. */
   readonly canReset: boolean;
 }
@@ -82,12 +102,40 @@ export interface TableFormatToolbarProps {
   readonly onToggle: (key: TableToggleFormatKey) => void;
   readonly onStepSize: (direction: TextHeightStepDirection) => void;
   readonly onReset: () => void;
+  /**
+   * ADR-739 Φ.Ε/Φ4 — το χρώμα **κειμένου** του άξονα, σε **μία** εντολή:
+   * `hex` ρητό χρώμα · `undefined` «Αυτόματο» (αφαίρεση του πεδίου ⇒ κληρονομιά).
+   *
+   * Το `null` δεν είναι εκφράσιμο εδώ και σωστά — το `textColorHex` του μοντέλου δεν το δέχεται:
+   * κείμενο χωρίς χρώμα δεν είναι κατάσταση που μπορεί να αποδώσει κανείς.
+   */
+  readonly onSetTextColor: (value: string | undefined) => void;
+  /**
+   * ADR-739 Φ.Ε/Φ4β — το **γέμισμα**, με την τρίτη κατάσταση:
+   * `hex` ρητό · `null` **ρητά κανένα** (διαφανές, ακόμη κι αν το στυλ βάφει) · `undefined`
+   * «Αυτόματο».
+   *
+   * Ένα prop και όχι τρία: είναι η δοκτρίνα που το ίδιο το `types/table.ts` γράφει για το
+   * μοντέλο («**ένα** πεδίο, τρεις απαντήσεις — ποτέ δεύτερο παράλληλο boolean»), εφαρμοσμένη
+   * ένα επίπεδο ψηλότερα. Τρεις εντολές θα ήταν τρεις δρόμοι προς την ίδια εγγραφή.
+   */
+  readonly onSetFillColor: (value: string | null | undefined) => void;
+  /**
+   * ADR-750 Φ3 — το dropdown περιγραμμάτων· **απόν ⇒ η γραμμή δεν το δείχνει καθόλου**.
+   *
+   * Προαιρετικό και όχι υποχρεωτικό, ώστε ο μόνος σημερινός καλών να μην αλλάξει υπογραφή: η
+   * μορφοποίηση κειμένου (Β/Ι/Υ) είναι πράξη **άξονα**, τα περιγράμματα πράξη **περιοχής**.
+   * Είναι δύο ορθογώνια επίπεδα που τυχαίνει να μοιράζονται γραμμή εργαλείων — όχι ένα.
+   */
+  readonly borders?: Omit<TableBorderMenuProps, 'roving'>;
 }
 
 /** Απόσταση από το σημείο κλικ — το «ξεκομμένο» της Α7, σε px. */
 const GAP_PX = 6;
 /** Ελάχιστη απόσταση από την άκρη του παραθύρου. */
 const EDGE_PAD_PX = 4;
+/** Κάθε split button χρώματος είναι **δύο** εστιάσιμα μισά, όχι ένα. */
+const COLOR_SLOTS = 2;
 
 const TOGGLES: readonly {
   readonly key: TableToggleFormatKey;
@@ -100,11 +148,32 @@ const TOGGLES: readonly {
 ];
 
 export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactElement | null {
-  const { anchorX, anchorY, axis, label, format, surfaceRef, onToggle, onStepSize, onReset } = props;
+  const {
+    anchorX, anchorY, axis, label, format, surfaceRef, onToggle, onStepSize, onReset, borders,
+    onSetTextColor, onSetFillColor,
+  } = props;
   const { t } = useTranslation('dxf-viewer');
-  const roving = useRovingToolbar(TOGGLES.length + 3);
+  /**
+   * 🔴 Οι θέσεις roving **παράγονται με τη σειρά εμφάνισης**, ποτέ γραμμένες ως σταθερές.
+   *
+   * Το πλήθος ακολουθεί την **παρουσία** κάθε προαιρετικού χειριστηρίου: με σταθερό μέγεθος, ο
+   * δείκτης θα έδειχνε σε κουμπί που δεν υπάρχει και η γραμμή θα έμενε χωρίς στάση `Tab` (δες
+   * `use-roving-toolbar`).
+   *
+   * Και οι **δείκτες** παράγονται για τον ίδιο λόγο, ένα επίπεδο πιο πέρα: κάθε νέο χειριστήριο
+   * στη μέση της γραμμής μετακινεί όλα τα επόμενα. Γραμμένοι με το χέρι (`TOGGLES.length + 3`)
+   * είναι μια σιωπηλή εξάρτηση που σπάει στην **επόμενη** προσθήκη — και δύο ταυτόχρονες
+   * προσθήκες σε κοινό working tree θα έδιναν δύο διαφορετικούς αριθμούς για την ίδια θέση.
+   */
+  const textColorBase = TOGGLES.length;
+  const fillColorBase = textColorBase + COLOR_SLOTS;
+  const sizeBase = fillColorBase + COLOR_SLOTS;
+  const resetIndex = sizeBase + 2;
+  const bordersIndex = resetIndex + 1;
+  const roving = useRovingToolbar(bordersIndex + (borders ? 1 : 0));
 
   useToolbarPlacement(surfaceRef, anchorX, anchorY);
+  useAriaHiddenGuard(surfaceRef);
 
   if (typeof document === 'undefined') return null;
 
@@ -153,17 +222,44 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
         </ToolbarButton>
       ))}
 
+      {/*
+        ADR-739 Φ.Ε/Φ4 + Φ4β — τα δύο χρώματα κάθονται **αμέσως μετά τα Β/Ι/Υ**, χωρίς
+        διαχωριστή: είναι η ίδια οικογένεια εντολών (μορφοποίηση του **άξονα**) και αυτή ακριβώς
+        είναι η θέση τους στη σειρά 1 του Excel — και εκεί το γέμισμα κάθεται **δίπλα** στο
+        χρώμα γραμματοσειράς, με το γέμισμα πρώτο. Εδώ η σειρά είναι αντίστροφη επίτηδες: το
+        χρώμα κειμένου γράφτηκε πρώτο και η μνήμη χεριού του χρήστη έχει ήδη δεθεί με τη θέση
+        του (§34), οπότε το νέο χειριστήριο μπαίνει **μετά** — μια μετακίνηση υπάρχοντος
+        κουμπιού κοστίζει περισσότερο από μια απόκλιση διάταξης που κανείς δεν μετράει.
+
+        Ο διαχωριστής μπαίνει **μετά** και από τα δύο, εκεί που αλλάζει η φύση της πράξης
+        (μέγεθος), όχι ανάμεσα σε συγγενικές εντολές.
+      */}
+      <TableAxisColorMenu
+        role="ink"
+        rovingApply={roving.itemProps(textColorBase)}
+        rovingMenu={roving.itemProps(textColorBase + 1)}
+        state={format.textColor}
+        onSet={onSetTextColor}
+      />
+      <TableAxisColorMenu
+        role="fill"
+        rovingApply={roving.itemProps(fillColorBase)}
+        rovingMenu={roving.itemProps(fillColorBase + 1)}
+        state={format.fillColor}
+        onSet={onSetFillColor}
+      />
+
       <span className={styles.separator} aria-hidden="true" />
 
       <ToolbarButton
-        roving={roving.itemProps(TOGGLES.length)}
+        roving={roving.itemProps(sizeBase)}
         title={t('table.formatToolbar.increaseSize')}
         onActivate={() => onStepSize(1)}
       >
         <AArrowUp size={16} />
       </ToolbarButton>
       <ToolbarButton
-        roving={roving.itemProps(TOGGLES.length + 1)}
+        roving={roving.itemProps(sizeBase + 1)}
         title={t('table.formatToolbar.decreaseSize')}
         onActivate={() => onStepSize(-1)}
       >
@@ -173,13 +269,25 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
       <span className={styles.separator} aria-hidden="true" />
 
       <ToolbarButton
-        roving={roving.itemProps(TOGGLES.length + 2)}
-        title={t('table.formatToolbar.resetToStyle')}
+        roving={roving.itemProps(resetIndex)}
+        title={t('table.formatToolbar.resetFormatting')}
         disabled={!format.canReset}
         onActivate={onReset}
       >
         <RotateCcw size={15} />
       </ToolbarButton>
+
+      {/*
+        ADR-750 Φ3 — τα περιγράμματα σε **δικό τους** διαμέρισμα, μετά τη μορφοποίηση κειμένου.
+        Ο διαχωριστής δεν είναι διακόσμηση: σηματοδοτεί ότι από εδώ και πέρα η πράξη αφορά την
+        **περιοχή**, όχι τον άξονα — η ίδια διάκριση που κάνει και η Α19 στις δύο «Επαναφορές».
+      */}
+      {borders ? (
+        <>
+          <span className={styles.separator} aria-hidden="true" />
+          <TableBorderMenu roving={roving.itemProps(bordersIndex)} {...borders} />
+        </>
+      ) : null}
     </div>
     </TooltipProvider>,
     document.body,
@@ -287,18 +395,51 @@ function useToolbarPlacement(
     const maxLeft = Math.max(EDGE_PAD_PX, window.innerWidth - width - EDGE_PAD_PX);
     el.style.left = `${Math.min(Math.max(EDGE_PAD_PX, anchorX), maxLeft)}px`;
     el.style.top = `${Math.max(EDGE_PAD_PX, anchorY - GAP_PX - height)}px`;
-
-    /**
-     * 🔴 Το δεύτερο μισό του ίδιου προβλήματος με το `pointer-events` του CSS.
-     *
-     * Το modal Radix menu καλεί `hideOthers()` και σημαδεύει `aria-hidden="true"` **κάθε**
-     * sibling του `body` εκτός του δικού του δέντρου — δηλαδή και αυτό εδώ. Το CSS επανέφερε
-     * το **ποντίκι**· αυτό επαναφέρει τον **αναγνώστη οθόνης**, αλλιώς η γραμμή εργαλείων
-     * δουλεύει για όλους εκτός από όποιον τη χρειάζεται περισσότερο.
-     *
-     * Γίνεται εδώ και όχι με `modal={false}` στο μενού: εκείνο θα ξεκλείδωνε και τα outside
-     * pointer events, αλλάζοντας συμπεριφορά που δεν ζήτησε κανείς.
-     */
-    el.removeAttribute('aria-hidden');
   }, [surfaceRef, anchorX, anchorY]);
+}
+
+/**
+ * Κρατά τη γραμμή **έξω** από το `aria-hidden` που απλώνει το modal μενού — και **μετά**.
+ *
+ * ## 🔴 ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΚΛΕΙΝΕΙ (ζωντανή μέτρηση 2026-08-03)
+ * Εδώ υπήρχε σκέτο `el.removeAttribute('aria-hidden')` μέσα στο `useLayoutEffect` της θέσης.
+ * Ήταν **νεκρή εγγραφή**: μετρήθηκε στον browser `aria-hidden="true"` σε **κάθε** άνοιγμα.
+ *
+ * Η αιτία είναι **σειρά**, όχι λογική. Το `hideOthers()` (πακέτο `aria-hidden`, το καλεί το
+ * modal `DropdownMenu`) διατρέχει τα παιδιά του `body` **τη στιγμή που τρέχει το δικό του
+ * effect** — και το περιεχόμενο του Radix mount-άρει **μετά** από αυτό εδώ το portal. Δηλαδή
+ * η σειρά ήταν πάντα: αφαιρώ → με προσπερνά → μου το ξαναγράφει. Ένα `removeAttribute` που
+ * τρέχει **πριν** από τον γραφέα δεν μπορεί να νικήσει ποτέ, όσο σωστό κι αν είναι.
+ *
+ * Ο παρατηρητής δεν εξαρτάται από σειρά mount: όποτε κι αν γραφτεί το attribute, φεύγει.
+ * Δεν βρόχεται — το `removeAttribute` γεννά νέα μεταβολή, αλλά τότε το `hasAttribute` είναι
+ * ήδη ψευδές και ο φύλακας δεν ξαναγράφει.
+ *
+ * ## Γιατί ΟΧΙ οι δύο «προφανείς» εναλλακτικές
+ * · `modal={false}` στο μενού — ξεκλειδώνει και τα outside pointer events, αλλάζοντας
+ *   συμπεριφορά που δεν ζήτησε κανείς (και θα έσπαγε τον φύλακα `keepOpenOnToolbar`).
+ * · `aria-live` στο δοχείο — είναι το **επίσημο** escape hatch της `hideOthers()` (εξαιρεί
+ *   ρητά `[aria-live], script`), αλλά θα δήλωνε τη γραμμή ως live region: ο αναγνώστης θα
+ *   ανακοίνωνε **ολόκληρη** τη γραμμή σε κάθε αλλαγή `aria-pressed`. Θεραπεία χειρότερη από
+ *   την ασθένεια — δανειζόμαστε σημασιολογία που δεν ισχύει, για να πετύχουμε παρενέργεια.
+ *
+ * ⚠️ Αυτό επαναφέρει τον **αναγνώστη οθόνης** (browse mode), όχι την **εστίαση**: όσο το
+ * μενού είναι modal, το `FocusScope` του Radix επαναφέρει κάθε εστίαση πίσω στο `role="menu"`,
+ * άρα τα βέλη του {@link useRovingToolbar} δεν είναι προσπελάσιμα με πληκτρολόγιο. Μετρημένο
+ * ζωντανά (και με `Tab`, και με άμεσο `focus()`) — δες ADR-739 §28.12.
+ */
+function useAriaHiddenGuard(surfaceRef: RefObject<HTMLDivElement | null>): void {
+  useLayoutEffect(() => {
+    const el = surfaceRef.current;
+    if (!el) return;
+
+    const strip = (): void => {
+      if (el.hasAttribute('aria-hidden')) el.removeAttribute('aria-hidden');
+    };
+
+    strip();
+    const observer = new MutationObserver(strip);
+    observer.observe(el, { attributes: true, attributeFilter: ['aria-hidden'] });
+    return () => { observer.disconnect(); };
+  }, [surfaceRef]);
 }

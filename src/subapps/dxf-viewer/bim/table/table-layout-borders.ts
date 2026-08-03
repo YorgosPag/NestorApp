@@ -36,6 +36,7 @@
  * @see bim/table/table-edge-model.ts — η ταυτότητα της ακμής (επίπεδο 1)
  */
 
+import type { Point2D } from '../../rendering/types/Types';
 import type { CellKey, TableBorderSpec, TableModel } from '../../types/table';
 import type { TableEdgeOrientation } from '../../types/table-edges';
 import { cellKey } from './table-model-helpers';
@@ -140,6 +141,57 @@ function coalesce(pieces: readonly EdgePiece[]): EdgePiece[] {
   return out;
 }
 
+/**
+ * 🔴 ADR-750 Φ5 (Α24) — **εδώ, και μόνο εδώ, αποσυντίθεται η διπλή γραμμή.**
+ *
+ * Ένα μολύβι με `doubleGapMm` βγάζει **δύο** τμήματα, μετατοπισμένα κατά ±μισή απόσταση πάνω
+ * στην κάθετη του τμήματος, και **χωρίς** το πεδίο. Δηλαδή ο καμβάς, το PDF, το DXF και ο ΤΕΚ
+ * βλέπουν δύο συνηθισμένες γραμμές και κανένας τους δεν μαθαίνει τη λέξη «διπλή».
+ *
+ * ## Γιατί στη διάταξη και όχι στον ζωγράφο
+ * Ο ζωγράφος είναι **τέσσερις** ζωγράφοι. Μια «διπλή» υλοποιημένη στον καμβά θα ήταν μια
+ * γραμμή στην οθόνη και **καμία** στην εξαγωγή — ακριβώς η κατηγορία ασυμφωνίας που ο ADR-739
+ * §3 υπάρχει για να αποκλείσει, και που η ίδια αυτή διαδρομή πλήρωσε ήδη μία φορά με το
+ * γερμένο κείμενο (`stamp-table-layout.ts`: τρεις μηχανές συμφωνούσαν, μία όχι).
+ *
+ * ## Γιατί η κάθετη έρχεται ως παράμετρος και δεν παράγεται από τη γεωμετρία
+ * Θα ήταν εύκολο να ρωτηθεί το ίδιο το τμήμα («ίδιο `y` ⇒ οριζόντιο»). Θα ήταν όμως **δεύτερη**
+ * πηγή για τον προσανατολισμό, δίπλα στην {@link tableBorderSideOrientation} που τον ξέρει ήδη
+ * — και θα σιωπούσε σε εκφυλισμένο τμήμα μηδενικού μήκους, όπου ίδιο `y` **και** ίδιο `x`.
+ * Ο παραγωγός ξέρει τον άξονά του· τον λέει.
+ *
+ * ⚠️ Η διπλή στο **εξωτερικό** σύνορο ξεπερνά το πλαίσιο κατά μισή απόσταση — σκόπιμα: το ίδιο
+ * κάνει το AutoCAD, γιατί η διπλή είναι **μία** γραμμή που πάχυνε, όχι δύο που μετακόμισαν.
+ */
+function pushBorder(
+  out: TableBorderSegment[],
+  a: Point2D,
+  b: Point2D,
+  spec: TableBorderSpec,
+  normal: Point2D,
+): void {
+  const gap = spec.doubleGapMm;
+  if (gap === undefined) {
+    out.push({ a, b, spec });
+    return;
+  }
+
+  const { doubleGapMm: _drop, ...single } = spec;
+  for (const sign of [-1, 1]) {
+    const dx = (normal.x * gap * sign) / 2;
+    const dy = (normal.y * gap * sign) / 2;
+    out.push({
+      a: { x: a.x + dx, y: a.y + dy },
+      b: { x: b.x + dx, y: b.y + dy },
+      spec: single,
+    });
+  }
+}
+
+/** Η κάθετη μιας οριζόντιας ακμής δείχνει κατά `y`· μιας κατακόρυφης κατά `x`. */
+const NORMAL_OF_HORIZONTAL: Point2D = { x: 0, y: 1 };
+const NORMAL_OF_VERTICAL: Point2D = { x: 1, y: 0 };
+
 /** Οι οριζόντιες γραμμές του πλέγματος, ενωμένες ανά ακμή. */
 function horizontalSegments(
   model: TableModel,
@@ -164,7 +216,13 @@ function horizontalSegments(
     }
     const y = yEdges[r];
     for (const piece of coalesce(pieces)) {
-      out.push({ a: { x: xEdges[piece.from], y }, b: { x: xEdges[piece.to], y }, spec: piece.spec });
+      pushBorder(
+        out,
+        { x: xEdges[piece.from], y },
+        { x: xEdges[piece.to], y },
+        piece.spec,
+        NORMAL_OF_HORIZONTAL,
+      );
     }
   }
 
@@ -193,7 +251,13 @@ function verticalSegments(
     }
     const x = xEdges[c];
     for (const piece of coalesce(pieces)) {
-      out.push({ a: { x, y: yEdges[piece.from] }, b: { x, y: yEdges[piece.to] }, spec: piece.spec });
+      pushBorder(
+        out,
+        { x, y: yEdges[piece.from] },
+        { x, y: yEdges[piece.to] },
+        piece.spec,
+        NORMAL_OF_VERTICAL,
+      );
     }
   }
 

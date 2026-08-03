@@ -22,7 +22,6 @@ import {
   applyTableBorderCommand,
   clearTableRangeBorders,
   hasExplicitTableRangeBorders,
-  isTableBorderCommandAvailable,
   tableRangeSideEdges,
 } from '../table-range-border-ops';
 import type { TableBorderCommandId, TableBorderSide } from '../table-range-border-ops';
@@ -161,9 +160,39 @@ describe('το μητρώο των 13 — δεδομένα, όχι δεκατρ�
     }
   });
 
-  it('οι δύο διπλές γραμμές δηλώνονται μη διαθέσιμες — και ΜΟΝΟ αυτές (Α17)', () => {
-    const unavailable = TABLE_BORDER_COMMANDS.filter((c) => !isTableBorderCommandAvailable(c.id));
-    expect(unavailable.map((c) => c.id)).toEqual(['doubleBottom', 'topAndDoubleBottom']);
+  it('✅ Φ5 — ΚΑΜΙΑ εντολή δεν αφήνει το μοντέλο αμετάβλητο (η τρύπα της Α17 έκλεισε)', () => {
+    // Μέχρι τη Φ5 οι δύο διπλές επέστρεφαν το μοντέλο by-reference. Η πύλη διαθεσιμότητας
+    // διαγράφηκε, άρα η μόνη τίμια απόδειξη είναι να **εκτελεστούν** και οι 13.
+    for (const command of TABLE_BORDER_COMMANDS) {
+      const before = persisted(3, 3);
+      const after = apply(before, bounds(1, 1, 1, 1), command.id);
+      expect(after).not.toBe(before);
+      expect((after.edges ?? []).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('🔑 Α24 — η διπλή γραμμή γράφει απόσταση 3× πένα, όχι σημαία', () => {
+    const next = apply(persisted(3, 3), bounds(1, 1, 1, 1), 'doubleBottom');
+    const specs = (next.edges ?? []).map(([, , , spec]) => spec);
+    expect(specs).toHaveLength(1);
+    expect(specs[0].doubleGapMm).toBeCloseTo(PEN.widthMm * 3, 10);
+    // Το χρώμα και η πένα μένουν του χρήστη — η διπλή δεν είναι άλλο μολύβι, είναι το ίδιο δύο φορές.
+    expect(specs[0].colorHex).toBe(PEN.colorHex);
+    expect(specs[0].widthMm).toBe(PEN.widthMm);
+  });
+
+  it('🔑 «Επάνω και διπλό κάτω»: ΜΟΝΟ η κάτω ακμή είναι διπλή', () => {
+    const next = apply(persisted(3, 3), bounds(1, 1, 1, 1), 'topAndDoubleBottom');
+    const doubles = (next.edges ?? []).filter(([, , , spec]) => spec.doubleGapMm !== undefined);
+    expect(doubles).toHaveLength(1);
+    // Η κάτω πλευρά μιας περιοχής κάθεται στο `lastRow + 1` — εδώ η γραμμή `r3`.
+    expect(doubles[0][1]).toBe('r3');
+  });
+
+  it('η διπλή σέβεται απόσταση που ΗΔΗ κουβαλά το μολύβι του χρήστη', () => {
+    const wide: TableBorderSpec = { ...PEN, doubleGapMm: 2 };
+    const next = apply(persisted(3, 3), bounds(1, 1, 1, 1), 'doubleBottom', wide);
+    expect((next.edges ?? [])[0][3].doubleGapMm).toBe(2);
   });
 });
 
@@ -372,19 +401,65 @@ describe('το μολύβι', () => {
   });
 });
 
-// ── Α17: η διπλή γραμμή δεν προσποιείται ────────────────────────────────────
+// ── Α17 → Α24: η διπλή γραμμή, από την εντολή ως τα τμήματα που ζωγραφίζονται ──
 
-describe('🔴 Α17 — η διπλή γραμμή περιμένει τη Φ5, χωρίς να ψεύδεται', () => {
-  it('επιστρέφει το ΙΔΙΟ μοντέλο by-reference — καμία μερική εγγραφή', () => {
+describe('✅ Α24 — η διπλή γραμμή έπαψε να είναι τρύπα (Φ5)', () => {
+  it('«Επάνω και διπλό κάτω» γράφει ΚΑΙ τα δύο σκέλη', () => {
+    // Μέχρι τη Φ5 αυτή η εντολή επέστρεφε το μοντέλο αυτούσιο («όλα ή τίποτα» της Α17, όπου
+    // στην πράξη ίσχυε πάντα το «τίποτα»).
     const model = persisted(2, 2);
-    expect(apply(model, bounds(0, 1, 0, 1), 'doubleBottom')).toBe(model);
+    const next = apply(model, bounds(0, 1, 0, 1), 'topAndDoubleBottom');
+    expect(next).not.toBe(model);
+    const doubles = (next.edges ?? []).filter(([, , , s]) => s.doubleGapMm !== undefined);
+    const singles = (next.edges ?? []).filter(([, , , s]) => s.doubleGapMm === undefined);
+    expect(doubles.length).toBeGreaterThan(0);
+    expect(singles.length).toBeGreaterThan(0);
   });
 
-  it('«Επάνω και διπλό κάτω» δεν γράφει ΟΥΤΕ την επάνω — όλα ή τίποτα', () => {
-    // Το σκέλος «επάνω» είναι εκτελέσιμο· αν γραφόταν, ο χρήστης θα έπαιρνε μισή εντολή
-    // χωρίς να το ζητήσει και χωρίς να το μάθει.
-    const model = persisted(2, 2);
-    expect(apply(model, bounds(0, 1, 0, 1), 'topAndDoubleBottom')).toBe(model);
+  it('🔑 η ΔΙΑΤΑΞΗ βγάζει δύο παράλληλα τμήματα — ο ζωγράφος δεν μαθαίνει τη λέξη «διπλή»', () => {
+    // Η απόδειξη που μετράει: όχι «το πεδίο γράφτηκε» αλλά «δύο γραμμές θα φανούν», μέσω της
+    // ίδιας διαδρομής που τροφοδοτεί καμβά / PDF / DXF.
+    const next = apply(persisted(2, 2), bounds(1, 1, 0, 1), 'doubleBottom');
+    const mine = paint(next).filter((s) => s.spec.colorHex === PEN.colorHex);
+
+    expect(mine).toHaveLength(2);
+    // Καμία δεν κουβαλά πια το πεδίο: τα τέσσερα backends βλέπουν συνηθισμένες γραμμές.
+    for (const segment of mine) expect(segment.spec.doubleGapMm).toBeUndefined();
+
+    // Συμμετρικά εκατέρωθεν της ακμής (y = 2 γραμμές × 6 mm = 12), κατά ±μισή απόσταση.
+    const half = (PEN.widthMm * 3) / 2;
+    expect(mine.map((s) => s.a.y).sort((p, q) => p - q)).toEqual([12 - half, 12 + half]);
+    // …και ταυτόσημες κατά μήκος: ίδιο ξεκίνημα και ίδιο τέλος στον άξονα x.
+    for (const segment of mine) {
+      expect(segment.a.y).toBe(segment.b.y);
+      expect([segment.a.x, segment.b.x]).toEqual([0, 2 * W]);
+    }
+  });
+
+  it('🔑 η ΚΑΤΑΚΟΡΥΦΗ διπλή μετατοπίζεται κατά x, όχι κατά y', () => {
+    // Ο προσανατολισμός έρχεται από τον παραγωγό, όχι από εικασία πάνω στη γεωμετρία.
+    const next = apply(persisted(2, 2), bounds(0, 1, 0, 0), 'doubleBottom');
+    expect(paint(next).filter((s) => s.spec.colorHex === PEN.colorHex)).toHaveLength(2);
+
+    const withLeft = apply(persisted(2, 2), bounds(0, 1, 0, 0), 'left', {
+      ...PEN,
+      doubleGapMm: 1,
+    });
+    const mine = paint(withLeft).filter((s) => s.spec.colorHex === PEN.colorHex);
+    expect(mine).toHaveLength(2);
+    expect(mine.map((s) => s.a.x).sort((p, q) => p - q)).toEqual([-0.5, 0.5]);
+    for (const segment of mine) expect(segment.a.x).toBe(segment.b.x);
+  });
+
+  it('🔴 μονή και διπλή με ίδιο χρώμα/πένα ΔΕΝ ενώνονται σε ένα τμήμα', () => {
+    // Χωρίς το `doubleGapMm` μέσα στο `sameBorderSpec`, η ένωση (που τρέχει ΠΡΙΝ την
+    // αποσύνθεση) θα κατάπινε τη διπλή στη μισή διαδρομή — και το αποτέλεσμα θα ήταν ακόμη
+    // μια απολύτως νόμιμη γραμμή, δηλαδή σιωπηλή απώλεια.
+    let model = apply(persisted(1, 2), bounds(0, 0, 0, 0), 'doubleBottom');
+    model = apply(model, bounds(0, 0, 1, 1), 'bottom');
+    const mine = paint(model).filter((s) => s.spec.colorHex === PEN.colorHex);
+    // 2 (η διπλή στην πρώτη στήλη) + 1 (η μονή στη δεύτερη) = 3, ποτέ 1.
+    expect(mine).toHaveLength(3);
   });
 });
 

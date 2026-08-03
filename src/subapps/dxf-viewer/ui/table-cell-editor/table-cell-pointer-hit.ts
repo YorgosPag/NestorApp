@@ -74,7 +74,11 @@ export type TablePointerHit =
  * ζουμάρει με τον τροχό ενώ σέρνει).
  */
 export function tableEventWorldPoint(
-  event: MouseEvent,
+  // ADR-750 Φ4 — **μόνο οι δύο συντεταγμένες**, όχι ολόκληρο `MouseEvent`: ο δρομολογητής δεξιού
+  // κλικ παραδίδει `clientX`/`clientY` στη θύρα (`table-range-menu-port`), και ένα ψεύτικο
+  // `MouseEvent` για να ικανοποιηθεί μια υπογραφή θα ήταν θόρυβος. Κάθε υπάρχων καλών περνά
+  // αυτούσιος: το `MouseEvent` **είναι** ήδη αυτό το σχήμα.
+  event: { readonly clientX: number; readonly clientY: number },
   container: HTMLElement,
   transform: ViewTransform | null,
 ): Point2D | null {

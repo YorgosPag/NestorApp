@@ -40,6 +40,7 @@ import elDxfViewer from '@/i18n/locales/el/dxf-viewer.json';
 import {
   TableFormatToolbar,
   type TableAxisFormatSnapshot,
+  type TableAxisTextColorState,
   type TableFormatToolbarProps,
   type TableToggleFormatState,
 } from '../TableFormatToolbar';
@@ -83,11 +84,20 @@ function fmt(active: boolean, mixed: boolean, explicit: boolean): TableToggleFor
   return { active, mixed, explicit };
 }
 
+/** ADR-739 Φ.Ε/Φ4 — άξονας χωρίς ρητό χρώμα: ενεργό είναι το «Αυτόματο». */
+const INHERITED_TEXT_COLOR: TableAxisTextColorState = {
+  current: '#111111',
+  explicit: false,
+  inheritedColor: '#111111',
+  drawingColors: ['#111111', '#0000ff'],
+};
+
 /** bold: ενεργό+ρητό· italic: μεικτό (όχι ρητό)· underline: τίποτα. */
 const SAMPLE_FORMAT: TableAxisFormatSnapshot = {
   bold: fmt(true, false, true),
   italic: fmt(false, true, false),
   underline: fmt(false, false, false),
+  textColor: INHERITED_TEXT_COLOR,
   canReset: true,
 };
 
@@ -96,6 +106,8 @@ function renderToolbar(overrides: Partial<TableFormatToolbarProps> = {}) {
   const onToggle = jest.fn();
   const onStepSize = jest.fn();
   const onReset = jest.fn();
+  const onPickTextColor = jest.fn();
+  const onAutomaticTextColor = jest.fn();
 
   const utils = render(
     <TableFormatToolbar
@@ -108,21 +120,46 @@ function renderToolbar(overrides: Partial<TableFormatToolbarProps> = {}) {
       onToggle={onToggle}
       onStepSize={onStepSize}
       onReset={onReset}
+      onPickTextColor={onPickTextColor}
+      onAutomaticTextColor={onAutomaticTextColor}
       {...overrides}
     />,
     wrapper,
   );
 
-  return { ...utils, surfaceRef, onToggle, onStepSize, onReset };
+  return {
+    ...utils, surfaceRef, onToggle, onStepSize, onReset, onPickTextColor, onAutomaticTextColor,
+  };
 }
 
-/** Τα ΕΞΙ κουμπιά της γραμμής, με τη σειρά του DOM: Β, Π, Υ, Α↑, Α↓, ↺. */
+/**
+ * Τα ΟΚΤΩ κουμπιά της γραμμής, με τη σειρά του DOM: Β, Π, Υ, **Α (χρώμα), ▾**, Α↑, Α↓, ↺.
+ *
+ * ⚠️ Το χρώμα είναι **δύο** κουμπιά, όχι ένα: είναι split button — το κύριο μισό εφαρμόζει το
+ * τελευταίο χρώμα χωρίς μενού, το βελάκι ανοίγει την παλέτα (πρότυπο Excel).
+ */
 function getToolbarButtons(): HTMLButtonElement[] {
   const toolbar = screen.getByRole('toolbar');
   return within(toolbar).getAllByRole('button') as HTMLButtonElement[];
 }
 
-describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ — ρίσκο 1 του §28.7: πάτημα «Β» ΔΕΝ κλείνει το μενού', () => {
+/**
+ * 🔴 ΑΝΑΤΡΟΠΗ ΙΔΙΟΚΤΗΤΗ (2026-08-03): πάτημα ⇒ ΕΚΤΕΛΕΙ, φεύγει **ΜΟΝΟ το μενού**, η γραμμή ΜΕΝΕΙ.
+ *
+ * Αυτό το describe έλεγε «πάτημα «Β» ΔΕΝ κλείνει το μενού» και κλείδωνε το ρίσκο 1 του §28.7.
+ * Ο ιδιοκτήτης το ανέτρεψε σε **δύο** βήματα, μέσα στην ίδια συνεδρία:
+ *   1. «να κλείνει το κάτω μενού, όπως στο Excel»
+ *   2. «**δεν** θέλω να εξαφανίζονται και τα δύο — **μόνον το μενού**»
+ * Το (2) είναι το τελικό συμβόλαιο και είναι πιστότερο στο Excel: μία εντολή διώχνει το
+ * context menu, η γραμμή μορφοποίησης μένει για την επόμενη.
+ *
+ * ⚠️ **Ο έλεγχος ΔΕΝ έγινε ευκολότερος — έγινε τριπλός.** Κάθε test εδώ απαιτεί, μαζί:
+ * η πράξη **κλήθηκε** · το μενού **έφυγε** · η γραμμή **έμεινε**. Καθένα μόνο του περνάει και
+ * με σπασμένη υλοποίηση — π.χ. αν σβήσει ο φύλακας `keepOpenOnToolbar`, το Radix κλείνει ήδη
+ * στο `pointerdown` και το μενού «σωστά» εξαφανίζεται, αλλά το `onClick` δεν τρέχει ποτέ και
+ * η εντολή χάνεται σιωπηλά.
+ */
+describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελεί, φεύγει ΜΟΝΟ το μενού, η γραμμή ΜΕΝΕΙ', () => {
   const noop = (): void => {};
   const NO_FORMAT: TableToggleFormatState = { active: false, mixed: false, explicit: false };
   /** Ό,τι χρειάζεται το `TableHeaderContextMenu` με αδρανείς χειριστές — βλ. sibling test. */
@@ -132,13 +169,26 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ — ρίσκο 1 του §28.7: πά�
     onDelete: noop,
     resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
     resolveFormat: (): TableAxisFormatSnapshot => ({
-      bold: NO_FORMAT, italic: NO_FORMAT, underline: NO_FORMAT, canReset: false,
+      bold: NO_FORMAT,
+      italic: NO_FORMAT,
+      underline: NO_FORMAT,
+      textColor: {
+        current: '#111111', explicit: false, inheritedColor: '#111111', drawingColors: [],
+      },
+      canReset: false,
     }),
     onStepTextHeight: noop,
     onResetFormat: noop,
+    // ADR-739 Φ.Ε/Φ4 — δες το σχόλιο στο sibling test.
+    onPickTextColor: noop,
+    onAutomaticTextColor: noop,
+    // ADR-750 Φ3 — δες το σχόλιο στο sibling test.
+    onApplyBorder: noop,
+    onResetBorders: noop,
+    resolveCanResetBorders: () => false,
   };
 
-  it('🔴 «Β»: onToggleFormat(hit, "bold") κλήθηκε, onClosed ΔΕΝ κλήθηκε, το μενού μένει στο DOM', async () => {
+  it('🔴 «Β»: onToggleFormat(hit,"bold") κλήθηκε ΚΑΙ ΜΕΤΑ onClosed — το μενού φεύγει από το DOM', async () => {
     const onToggleFormat = jest.fn();
     const onClosed = jest.fn();
     const ref = React.createRef<TableHeaderContextMenuHandle>();
@@ -161,16 +211,23 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ — ρίσκο 1 του §28.7: πά�
     // ακόμη κι αν ο φύλακας λείπει εντελώς (μηδενική κάλυψη κρυμμένη πίσω από πράσινο).
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 
-    // 🔴 ΕΥΡΗΜΑ (boy scout, N.0.2): το `DropdownMenu` του Radix είναι `modal` από προεπιλογή
-    // και καλεί `hideOthers()` (πακέτο `aria-hidden`) στο mount — σημαδεύει `aria-hidden="true"`
-    // ΚΑΘΕ sibling κάτω από το `document.body` που δεν ανήκει στο δικό του δέντρο. Το toolbar
-    // ζει σε ΔΙΚΟ ΤΟΥ portal (απόφαση Α7), άρα θεωρείται «άσχετο υπόβαθρο» και κρύβεται από
-    // την προσβασιμότητα ΟΣΟ το μενού είναι ανοιχτό — πιθανό πραγματικό a11y κενό σε παραγωγή
-    // (screen reader user δεν βλέπει καθόλου το toolbar), ΕΚΤΟΣ του σκοπού αυτού του task
-    // (ρίσκο 1 §28.7 = το κλείσιμο του μενού, όχι η έκθεση σε assistive tech). Το
-    // `{ hidden: true }` παρακάτω είναι επίτηδες: ζητά το ΚΟΥΜΠΙ που στ' αλήθεια υπάρχει στο
-    // DOM και δέχεται συμβάντα ποντικιού, όχι αυτό που βλέπει ένας screen reader.
-    const boldButton = screen.getByRole('button', { name: 'Έντονα', hidden: true });
+    // 🔴 ΧΩΡΙΣ `{ hidden: true }` — και αυτό ΕΙΝΑΙ ο έλεγχος (ζωντανή μέτρηση 2026-08-03).
+    //
+    // Το `DropdownMenu` του Radix είναι `modal` από προεπιλογή και καλεί `hideOthers()`
+    // (πακέτο `aria-hidden`) στο mount: σημαδεύει `aria-hidden="true"` ΚΑΘΕ sibling κάτω από
+    // το `document.body` που δεν ανήκει στο δικό του δέντρο. Το toolbar ζει σε ΔΙΚΟ ΤΟΥ portal
+    // (απόφαση Α7), άρα το τρώει κι αυτό.
+    //
+    // Μέχρι τις 2026-08-03 αυτή η γραμμή έγραφε `{ hidden: true }` και το σχόλιό της
+    // χαρακτήριζε το κενό «εκτός σκοπού». Δηλαδή το test **επικύρωνε το ελάττωμα** — ενώ ο
+    // κώδικας δίπλα του (`removeAttribute` στο effect της θέσης) **προσπαθούσε** να το
+    // διορθώσει και αποτύγχανε σιωπηλά, γιατί το `hideOthers()` τρέχει ΜΕΤΑ. Πράσινο test +
+    // καλοπροαίρετος κώδικας + σπασμένη παραγωγή, ταυτόχρονα.
+    //
+    // Τώρα ο φύλακας είναι `MutationObserver` ({@link useAriaHiddenGuard}) και η απουσία του
+    // `hidden: true` είναι η απόδειξη: αν ο φύλακας πεθάνει, το `getByRole` δεν βρίσκει
+    // τίποτα και το test κοκκινίζει.
+    const boldButton = screen.getByRole('button', { name: 'Έντονα' });
 
     // Πραγματική χειρονομία ποντικιού: `pointerdown` (αυτό ενεργοποιεί τον φύλακα Radix) →
     // `pointerup` → `click` (αυτό καλεί το `onActivate` του κουμπιού).
@@ -180,11 +237,130 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ — ρίσκο 1 του §28.7: πά�
       fireEvent.click(boldButton);
     });
 
+    // 🔴 Και τα τρία, ΜΕ ΣΕΙΡΑ. Το «έκλεισε» μόνο του δεν αποδεικνύει τίποτα: αν λείψει ο
+    // φύλακας `keepOpenOnToolbar`, το Radix κλείνει ήδη στο `pointerdown` και το μενού
+    // εξαφανίζεται — αλλά η εντολή ΔΕΝ έχει εκτελεστεί. Η μόνη διάκριση είναι η σειρά.
     expect(onToggleFormat).toHaveBeenCalledWith(hit, 'bold');
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    expect(onToggleFormat.mock.invocationCallOrder[0])
+      .toBeLessThan(onClosed.mock.invocationCallOrder[0]);
+
+    // Το μενού φεύγει…
+    expect(screen.queryAllByRole('menuitem')).toHaveLength(0);
+    // …η γραμμή ΜΕΝΕΙ. Αυτή η γραμμή είναι η δεύτερη διόρθωση του ιδιοκτήτη.
+    expect(screen.getByRole('toolbar')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Έντονα' })).toBeInTheDocument();
+  });
+
+  /**
+   * 🔴 Η γραμμή δέχεται **ΔΕΥΤΕΡΗ** εντολή αφού το μενού έχει ήδη φύγει.
+   *
+   * Είναι ο λόγος ύπαρξης της απόφασης: «η μορφοποίηση είναι κατεξοχήν επαναλαμβανόμενη
+   * πράξη». Ένα test που σταματά στο πρώτο πάτημα δεν αποδεικνύει ότι η γραμμή είναι
+   * **λειτουργική** μετά — μόνο ότι είναι **ορατή**.
+   *
+   * Ελέγχει επίσης ότι το `onClosed` **δεν** ξανακαλείται: ο φρουρός `if (!isOpen) return` του
+   * `closeMenuKeepToolbar` υπάρχει ακριβώς γι' αυτό — χωρίς αυτόν κάθε επόμενο κλικ θα
+   * ξανα-εκκινούσε τη συνεδρία δρομέα.
+   */
+  it('🔴 ΔΕΥΤΕΡΗ εντολή με το μενού ήδη κλειστό: εκτελείται, και το onClosed ΔΕΝ ξανακαλείται', async () => {
+    const onToggleFormat = jest.fn();
+    const onClosed = jest.fn();
+    const ref = React.createRef<TableHeaderContextMenuHandle>();
+    const hit = { axis: 'column', colId: 'c1', index: 1 } as const;
+
+    render(
+      <TableHeaderContextMenu
+        ref={ref}
+        {...menuProps}
+        onToggleFormat={onToggleFormat}
+        onClosed={onClosed}
+      />,
+      wrapper,
+    );
+    await act(async () => { ref.current?.open(10, 10, hit); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+
+    const press = async (name: string): Promise<void> => {
+      const button = screen.getByRole('button', { name });
+      await act(async () => {
+        fireEvent.pointerDown(button, { pointerId: 1, isPrimary: true, button: 0 });
+        fireEvent.pointerUp(button, { pointerId: 1, isPrimary: true, button: 0 });
+        fireEvent.click(button);
+      });
+    };
+
+    await press('Έντονα');   // διώχνει το μενού, κρατά τη γραμμή
+    await press('Πλάγια');   // 🔴 πάνω σε γραμμή που ζει ΜΟΝΗ της
+
+    expect(onToggleFormat).toHaveBeenNthCalledWith(1, hit, 'bold');
+    expect(onToggleFormat).toHaveBeenNthCalledWith(2, hit, 'italic');
+    expect(onClosed).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('toolbar')).toBeInTheDocument();
+  });
+
+  /**
+   * 🔴 Ο ΦΥΛΑΚΑΣ ΠΑΡΑΜΕΝΕΙ ΑΠΑΡΑΙΤΗΤΟΣ — ονομαστικά, ώστε να μη «σβηστεί ως περιττός».
+   *
+   * Μετά την ανατροπή, η προφανής σκέψη είναι «αφού θέλουμε να κλείνει, βγάλε τον
+   * `keepOpenOnToolbar` και άσε το Radix». Αυτό σπάει την **εντολή**: το `DismissableLayer`
+   * κλείνει στο `pointerdown`, το toolbar ξεμοντάρει, και το `click` δεν φτάνει ποτέ.
+   *
+   * Εδώ στέλνεται **μόνο** `pointerdown` — καμία ολοκληρωμένη χειρονομία. Αν ο φύλακας ζει,
+   * τίποτα δεν έχει συμβεί ακόμα. Αν λείπει, το μενού έχει ήδη κλείσει **χωρίς πράξη**.
+   */
+  it('🔴 σκέτο pointerdown στο κουμπί ΔΕΝ κλείνει τίποτα — το κλείσιμο ανήκει στο click', async () => {
+    const onToggleFormat = jest.fn();
+    const onClosed = jest.fn();
+    const ref = React.createRef<TableHeaderContextMenuHandle>();
+
+    render(
+      <TableHeaderContextMenu
+        ref={ref}
+        {...menuProps}
+        onToggleFormat={onToggleFormat}
+        onClosed={onClosed}
+      />,
+      wrapper,
+    );
+    await act(async () => { ref.current?.open(10, 10, { axis: 'column', colId: 'c1', index: 1 }); });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+
+    const boldButton = screen.getByRole('button', { name: 'Έντονα' });
+    await act(async () => {
+      fireEvent.pointerDown(boldButton, { pointerId: 1, isPrimary: true, button: 0 });
+    });
+
     expect(onClosed).not.toHaveBeenCalled();
-    expect(screen.getAllByRole('menuitem').length).toBeGreaterThan(0);
-    // `hidden: true` για τον ίδιο λόγο με το `boldButton` παραπάνω — δες το σχόλιο εκεί.
-    expect(screen.getByRole('toolbar', { hidden: true })).toBeInTheDocument();
+    expect(onToggleFormat).not.toHaveBeenCalled();
+    expect(screen.getByRole('toolbar')).toBeInTheDocument();
+  });
+
+  /**
+   * 🔴 Ο φύλακας πρέπει να επιβιώνει εγγραφής που έρχεται **ΜΕΤΑ** το mount.
+   *
+   * Το προηγούμενο test αποδεικνύει ότι το toolbar είναι ορατό στον a11y tree μετά το
+   * `hideOthers()` του Radix. Αυτό εδώ κλείνει την **κατηγορία**: ένα σκέτο `removeAttribute`
+   * στο mount θα περνούσε το προηγούμενο μόνο κατά τύχη (αν η σειρά των effects άλλαζε), ενώ
+   * εδώ η εγγραφή είναι ρητά μεταγενέστερη και **καμία** στιγμιαία διόρθωση δεν τη νικά.
+   *
+   * Είναι ακριβώς η μετάλλαξη που η ζωντανή οθόνη βρήκε και τα 830 πράσινα tests δεν είδαν.
+   */
+  it('🔴 aria-hidden γραμμένο ΜΕΤΑ το mount αφαιρείται κι αυτό (ο φύλακας δεν είναι one-shot)', async () => {
+    const ref = React.createRef<TableHeaderContextMenuHandle>();
+    render(<TableHeaderContextMenu ref={ref} {...menuProps} />, wrapper);
+    await act(async () => { ref.current?.open(10, 10, { axis: 'column', colId: 'c1', index: 1 }); });
+
+    const toolbar = screen.getByRole('toolbar');
+
+    // Ό,τι ακριβώς κάνει το `hideOthers()`, αλλά με βεβαιωμένα ύστερο χρονισμό.
+    await act(async () => {
+      toolbar.setAttribute('aria-hidden', 'true');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(toolbar).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('button', { name: 'Έντονα' })).toBeInTheDocument();
   });
 });
 
@@ -215,7 +391,8 @@ describe('roving tabindex (WAI-ARIA APG toolbar)', () => {
   it('μόνο ΕΝΑ κουμπί έχει tabIndex 0 στην αρχή — το πρώτο', () => {
     renderToolbar();
     const buttons = getToolbarButtons();
-    expect(buttons).toHaveLength(6);
+    // Β, Π, Υ, **Α, ▾**, Α↑, Α↓, ↺ — το χρώμα είναι split button, δηλαδή δύο θέσεις roving.
+    expect(buttons).toHaveLength(8);
     expect(buttons[0]).toHaveAttribute('tabindex', '0');
     for (const button of buttons.slice(1)) {
       expect(button).toHaveAttribute('tabindex', '-1');
@@ -319,10 +496,10 @@ describe('σημάδι συνεδρίας: ΚΑΘΕ κουμπί, όχι μόν�
   });
 });
 
-describe('«Επαναφορά στο στυλ»', () => {
+describe('«Επαναφορά μορφοποίησης» (ADR-750 Α19 — η ετικέτα ονομάζει το αντικείμενό της)', () => {
   it('canReset:false ⇒ aria-disabled="true" ΚΑΙ το κλικ είναι no-op', () => {
     const { onReset } = renderToolbar({ format: { ...SAMPLE_FORMAT, canReset: false } });
-    const reset = screen.getByRole('button', { name: 'Επαναφορά στο στυλ' });
+    const reset = screen.getByRole('button', { name: 'Επαναφορά μορφοποίησης' });
     expect(reset).toHaveAttribute('aria-disabled', 'true');
 
     fireEvent.click(reset);
@@ -331,7 +508,7 @@ describe('«Επαναφορά στο στυλ»', () => {
 
   it('canReset:true ⇒ ενεργό, χωρίς aria-disabled, και το κλικ καλεί onReset', () => {
     const { onReset } = renderToolbar({ format: { ...SAMPLE_FORMAT, canReset: true } });
-    const reset = screen.getByRole('button', { name: 'Επαναφορά στο στυλ' });
+    const reset = screen.getByRole('button', { name: 'Επαναφορά μορφοποίησης' });
     expect(reset).not.toHaveAttribute('aria-disabled');
 
     fireEvent.click(reset);
@@ -386,5 +563,190 @@ describe('role="toolbar" + aria-orientation + aria-label με την ετικέ�
     renderToolbar({ axis: 'row', label: '3' });
     const toolbar = screen.getByRole('toolbar');
     expect(toolbar.getAttribute('aria-label')).toContain('3');
+  });
+});
+
+// ─── ADR-739 Φ.Ε/Φ4 — χρώμα κειμένου ──────────────────────────────────────────
+
+/**
+ * Το split button: **δύο** χειρονομίες με διαφορετικό κόστος.
+ *
+ * Το κύριο μισό είναι ολόκληρος ο λόγος ύπαρξης του μοτίβου — «ξαναβάψε με το ίδιο» χωρίς να
+ * ανοίξει τίποτα. Αν το πάτημά του άνοιγε μενού, το χειριστήριο θα ήταν απλώς ένα dropdown με
+ * περίεργο εικονίδιο.
+ */
+describe('split button χρώματος: το «Α» εφαρμόζει, το βελάκι ανοίγει', () => {
+  it('κλικ στο «Α» εφαρμόζει χρώμα ΧΩΡΙΣ να ανοίξει μενού', () => {
+    const { onPickTextColor } = renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Χρώμα κειμένου' }));
+
+    expect(onPickTextColor).toHaveBeenCalledTimes(1);
+    expect(onPickTextColor.mock.calls[0][0]).toMatch(/^#[0-9a-f]{6}$/);
+    expect(screen.queryByRole('menu', { name: 'Χρώμα κειμένου' })).toBeNull();
+  });
+
+  it('κλικ στο βελάκι ανοίγει το μενού ΧΩΡΙΣ να εφαρμόσει τίποτα', () => {
+    const { onPickTextColor } = renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων κειμένου' }));
+
+    expect(onPickTextColor).not.toHaveBeenCalled();
+    expect(screen.getByRole('menu', { name: 'Χρώμα κειμένου' })).toBeInTheDocument();
+  });
+
+  it('το βελάκι δηλώνει την κατάστασή του με aria-expanded', () => {
+    renderToolbar();
+    const arrow = screen.getByRole('button', { name: 'Παλέτα χρωμάτων κειμένου' });
+
+    expect(arrow).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(arrow);
+    expect(arrow).toHaveAttribute('aria-expanded', 'true');
+  });
+});
+
+describe('οι τέσσερις ζώνες του μενού χρώματος', () => {
+  function openColorMenu(overrides: Partial<TableFormatToolbarProps> = {}) {
+    const utils = renderToolbar(overrides);
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων κειμένου' }));
+    return utils;
+  }
+
+  it('«Αυτόματο» καλεί onAutomaticTextColor, ΠΟΤΕ onPickTextColor με το χρώμα του στυλ', () => {
+    // 🔴 Η διάκριση είναι όλη η δουλειά: «Αυτόματο» = **αφαίρεση** του πεδίου. Αν έγραφε το
+    // κληρονομημένο χρώμα ως ρητή τιμή, ο άξονας θα φαινόταν καθαρός ενώ θα ήταν καρφωμένος —
+    // και μια αλλαγή στυλ δεν θα τον άγγιζε ποτέ ξανά.
+    const { onAutomaticTextColor, onPickTextColor } = openColorMenu();
+
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }));
+
+    expect(onAutomaticTextColor).toHaveBeenCalledTimes(1);
+    expect(onPickTextColor).not.toHaveBeenCalled();
+  });
+
+  it('«Αυτόματο» είναι το ενεργό όταν ο άξονας ΔΕΝ δηλώνει ρητό χρώμα', () => {
+    openColorMenu();
+    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }))
+      .toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('«Αυτόματο» ΔΕΝ είναι ενεργό όταν ο άξονας δηλώνει ρητό χρώμα', () => {
+    openColorMenu({
+      format: {
+        ...SAMPLE_FORMAT,
+        textColor: { ...INHERITED_TEXT_COLOR, current: '#ff0000', explicit: true },
+      },
+    });
+    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }))
+      .toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('η ζώνη «Χρώματα του σχεδίου» δείχνει ό,τι της δόθηκε', () => {
+    openColorMenu();
+    expect(screen.getByRole('button', { name: /#0000ff/ })).toBeInTheDocument();
+  });
+
+  it('🔴 κενή λίστα ⇒ η ζώνη ΔΕΝ εμφανίζεται καθόλου — ποτέ επικεφαλίδα πάνω από τίποτα', () => {
+    openColorMenu({
+      format: { ...SAMPLE_FORMAT, textColor: { ...INHERITED_TEXT_COLOR, drawingColors: [] } },
+    });
+    expect(screen.queryByText('Χρώματα του σχεδίου')).toBeNull();
+  });
+
+  it('το πλέγμα «Βασικά χρώματα» είναι grid με 13×6 δείγματα', () => {
+    openColorMenu();
+    const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
+    expect(within(grid).getAllByRole('row')).toHaveLength(6);
+    expect(within(grid).getAllByRole('gridcell')).toHaveLength(78);
+  });
+
+  it('κλικ σε δείγμα του πλέγματος εφαρμόζει ΑΚΡΙΒΩΣ το χρώμα του και κλείνει το μενού', () => {
+    const { onPickTextColor } = openColorMenu();
+    const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
+
+    // Δεύτερη σειρά, δεύτερη στήλη = η **βάση** του κόκκινου, ACI 10.
+    const cells = within(grid).getAllByRole('gridcell');
+    fireEvent.click(cells[13 + 1]);
+
+    expect(onPickTextColor).toHaveBeenCalledWith('#ff0000');
+    expect(screen.queryByRole('menu', { name: 'Χρώμα κειμένου' })).toBeNull();
+  });
+
+  it('το τρέχον χρώμα είναι σημαδεμένο στο πλέγμα με aria-selected', () => {
+    openColorMenu({
+      format: {
+        ...SAMPLE_FORMAT,
+        textColor: { ...INHERITED_TEXT_COLOR, current: '#ff0000', explicit: true },
+      },
+    });
+    const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
+    const selected = within(grid).getAllByRole('gridcell')
+      .filter((cell) => cell.getAttribute('aria-selected') === 'true');
+
+    expect(selected).toHaveLength(1);
+    expect(selected[0].getAttribute('aria-label')).toContain('ACI 10');
+  });
+
+  it('🔴 μεικτή σειρά ⇒ ΚΑΝΕΝΑ δείγμα σημαδεμένο — δεν διαλέγουμε εμείς ποιο «κέρδισε»', () => {
+    openColorMenu({
+      format: {
+        ...SAMPLE_FORMAT,
+        textColor: { ...INHERITED_TEXT_COLOR, current: undefined, explicit: true },
+      },
+    });
+    const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
+    expect(within(grid).getAllByRole('gridcell')
+      .filter((cell) => cell.getAttribute('aria-selected') === 'true')).toHaveLength(0);
+  });
+
+  it('υπάρχει διέξοδος «Περισσότερα χρώματα…» προς τον πλήρη διάλογο', () => {
+    openColorMenu();
+    expect(screen.getByRole('menuitem', { name: /Περισσότερα χρώματα/ })).toBeInTheDocument();
+  });
+});
+
+/**
+ * Η πλοήγηση **δύο αξόνων** μέσα στο πλέγμα.
+ *
+ * Χωρίς αυτήν, το `↓` δεν κάνει τίποτα και μια σειρά κάτω απέχει δεκατρία `→`. Το `↑/↓`
+ * κυκλώνει **μέσα στη στήλη** επίτηδες: η στήλη είναι η ίδια απόχρωση σε έξι φωτεινότητες, και
+ * ένα ξεχείλισμα στη διπλανή απόχρωση θα έσπαγε ακριβώς τη σχέση που η στήλη δείχνει.
+ */
+describe('πλοήγηση στο πλέγμα χρωμάτων (WAI-ARIA grid)', () => {
+  function gridCells(): HTMLElement[] {
+    renderToolbar();
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων κειμένου' }));
+    return within(screen.getByRole('grid', { name: 'Βασικά χρώματα' })).getAllByRole('gridcell');
+  }
+
+  it('ArrowDown κατεβαίνει ΜΙΑ σειρά στην ίδια στήλη', () => {
+    const cells = gridCells();
+    act(() => { cells[0].focus(); });
+    fireEvent.keyDown(cells[0], { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(cells[13]);
+  });
+
+  it('ArrowUp στην ΠΡΩΤΗ σειρά κυκλώνει στην τελευταία της ΙΔΙΑΣ στήλης', () => {
+    const cells = gridCells();
+    act(() => { cells[2].focus(); });
+    fireEvent.keyDown(cells[2], { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(cells[5 * 13 + 2]);
+  });
+
+  it('ArrowRight στο τέλος μιας σειράς συνεχίζει στην ΑΡΧΗ της επόμενης', () => {
+    const cells = gridCells();
+    act(() => { cells[12].focus(); });
+    fireEvent.keyDown(cells[12], { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(cells[13]);
+  });
+
+  it('Home/End πάνε στα άκρα ΤΗΣ ΣΕΙΡΑΣ, όχι όλου του πλέγματος', () => {
+    const cells = gridCells();
+    act(() => { cells[20].focus(); });
+    fireEvent.keyDown(cells[20], { key: 'Home' });
+    expect(document.activeElement).toBe(cells[13]);
+
+    fireEvent.keyDown(cells[13], { key: 'End' });
+    expect(document.activeElement).toBe(cells[25]);
   });
 });

@@ -30,11 +30,8 @@
  * @see ui/components/dxf-context-menu/DxfContextMenu.tsx — το SSoT της οπτικής γλώσσας
  */
 
-import React, {
-  forwardRef, useCallback, useImperativeHandle, useLayoutEffect, useRef, useState,
-} from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Trash2 } from 'lucide-react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { useClickOutside } from '@/hooks/useClickOutside';
 import { useEscapeHandler } from '../../systems/escape-bus/useEscapeHandler';
 import { ESC_PRIORITY } from '../../systems/escape-bus/escape-priority';
 import {
@@ -42,12 +39,10 @@ import {
   DropdownMenuTrigger,
   DxfMenuContent,
   DxfMenuHiddenTrigger,
-  DxfMenuIcon,
-  DxfMenuItem,
-  DxfMenuLabel,
-  DxfMenuSeparator,
 } from './dxf-context-menu/DxfContextMenu';
+import { useAnchoredHiddenTrigger } from './dxf-context-menu/use-anchored-hidden-trigger';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
+import { TableHeaderMenuItems, type TableHeaderMenuState } from './TableHeaderMenuItems';
 import {
   TableFormatToolbar,
   type TableAxisFormatSnapshot,
@@ -55,6 +50,7 @@ import {
 } from './table-format-toolbar/TableFormatToolbar';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
+import type { TableBorderCommandId } from '../../bim/table/table-range-border-ops';
 
 /** Ένα item δέχεται πάντα **ποια** υποδιαίρεση πατήθηκε — ποτέ κρυφή κατάσταση. */
 type TableHeaderAction = (hit: TableIndicatorHit) => void;
@@ -74,14 +70,6 @@ interface OutsideInteraction {
   preventDefault: () => void;
 }
 
-/** Ό,τι απαντιέται **τη στιγμή που ανοίγει** το μενού, όχι στο τελευταίο render. */
-export interface TableHeaderMenuState {
-  /** `A` / `3` — η ίδια ονομασία με τη ζώνη. */
-  readonly label: string;
-  readonly canInsert: boolean;
-  readonly canDelete: boolean;
-}
-
 export interface TableHeaderMenuProps {
   readonly onInsertBefore: TableHeaderAction;
   readonly onInsertAfter: TableHeaderAction;
@@ -92,6 +80,29 @@ export interface TableHeaderMenuProps {
   readonly onToggleFormat: (hit: TableIndicatorHit, key: TableToggleFormatKey) => void;
   readonly onStepTextHeight: (hit: TableIndicatorHit, direction: TextHeightStepDirection) => void;
   readonly onResetFormat: TableHeaderAction;
+  /**
+   * ADR-739 Φ.Ε/Φ4 — το χρώμα **κειμένου** του άξονα: `hex` ρητό · `undefined` «Αυτόματο»
+   * (αφαιρεί την παράκαμψη· δεν γράφει ποτέ το χρώμα του στυλ ως ρητή τιμή).
+   *
+   * Περνά από το **ίδιο** {@link runFormat} με τα Β/Ι/Υ, όχι από δικό του δρόμο: είναι πράξη
+   * άξονα, άρα οφείλει να κλείνει το μενού και να αφήνει τη γραμμή ακριβώς όπως εκείνα (§28.13).
+   */
+  readonly onSetTextColor: (hit: TableIndicatorHit, value: string | undefined) => void;
+  /**
+   * ADR-739 Φ.Ε/Φ4β — το **γέμισμα**, με την τρίτη κατάσταση: `hex` ρητό · `null` ρητά κανένα ·
+   * `undefined` «Αυτόματο». Δες `TableFormatToolbar` για το γιατί είναι ένα prop και όχι τρία.
+   */
+  readonly onSetFillColor: (hit: TableIndicatorHit, value: string | null | undefined) => void;
+  /**
+   * ADR-750 Φ3 — οι εντολές περιγράμματος του άξονα που πατήθηκε.
+   *
+   * Ζουν δίπλα στη μορφοποίηση κειμένου αλλά είναι **άλλο επίπεδο**: εκείνη γράφει στυλ άξονα,
+   * αυτές γράφουν ρητές ακμές πλέγματος. Γι' αυτό έχουν και δική τους «Επαναφορά» (Α19).
+   */
+  readonly onApplyBorder: (hit: TableIndicatorHit, commandId: TableBorderCommandId) => void;
+  readonly onResetBorders: TableHeaderAction;
+  /** Υπάρχει ρητή ακμή στον άξονα; Ξαναρωτιέται **μετά από κάθε** πράξη περιγράμματος. */
+  readonly resolveCanResetBorders: (hit: TableIndicatorHit) => boolean;
   /** Το μενού έκλεισε — με ή χωρίς ενέργεια. Εδώ επιστρέφει η εστίαση στο κελί. */
   readonly onClosed: () => void;
 }
@@ -104,14 +115,17 @@ export interface TableHeaderContextMenuHandle {
 /**
  * Στόχος + κατάσταση, παγωμένα μαζί στο άνοιγμα: δεν μπορούν να αποκλίνουν μεταξύ τους.
  *
- * Το `format` είναι το **μόνο** πεδίο που ανανεώνεται όσο το μενού μένει ανοιχτό — και οφείλει
- * να ανανεώνεται: τα κουμπιά μορφοποίησης δεν κλείνουν το μενού, άρα ένα «Β» που δεν φώτιζε
- * μετά το πάτημα θα έδειχνε ότι η πράξη απέτυχε ενώ έχει ήδη εφαρμοστεί στον καμβά.
+ * Το `format` είναι το **μόνο** πεδίο που ανανεώνεται όσο ζει η επιφάνεια — και οφείλει να
+ * ανανεώνεται: μετά την απόφαση του ιδιοκτήτη (2026-08-03) το πάτημα διώχνει το μενού αλλά
+ * **αφήνει τη γραμμή στην οθόνη**, οπότε ένα «Β» που δεν φώτιζε θα έδειχνε ότι η πράξη
+ * απέτυχε ενώ έχει ήδη εφαρμοστεί στον καμβά. Δες {@link closeMenuKeepToolbar}.
  */
 interface OpenTarget {
   readonly hit: TableIndicatorHit;
   readonly state: TableHeaderMenuState;
   readonly format: TableAxisFormatSnapshot;
+  /** ADR-750 Φ3 — ανανεώνεται μαζί με το `format`, για τον ίδιο ακριβώς λόγο. */
+  readonly canResetBorders: boolean;
   /** Το σημείο του δεξιού κλικ — το toolbar κάθεται από πάνω του. */
   readonly anchor: { readonly x: number; readonly y: number };
 }
@@ -119,9 +133,10 @@ interface OpenTarget {
 const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, TableHeaderMenuProps>(
   ({
     onInsertBefore, onInsertAfter, onDelete, resolveState,
-    resolveFormat, onToggleFormat, onStepTextHeight, onResetFormat, onClosed,
+    resolveFormat, onToggleFormat, onStepTextHeight, onResetFormat,
+    onSetTextColor, onSetFillColor,
+    onApplyBorder, onResetBorders, resolveCanResetBorders, onClosed,
   }, ref) => {
-    const { t } = useTranslation('dxf-viewer');
     const triggerRef = useRef<HTMLSpanElement>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
     const [isOpen, setIsOpen] = useState(false);
@@ -130,46 +145,39 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     /**
      * 🔴 Η θέση του κρυφού trigger γράφεται από το **state**, όχι μέσα στο `open()`.
      *
-     * ── ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΚΛΕΙΝΕΙ (ζωντανή επαλήθευση 2026-08-03) ──
-     * Το `open()` έγραφε `style.left/top` **πριν** το `setTarget`, δηλαδή πάνω στο `<span>` της
-     * **προηγούμενης** απόδοσης. Δούλευε όσο τα δύο σχήματα απόδοσης (με και χωρίς `target`)
-     * ήταν πανομοιότυπα και το React επαναχρησιμοποιούσε το ίδιο DOM node. Μόλις το βήμα 5
-     * τύλιξε τον έναν κλάδο σε `<>…</>` για να χωρέσει το toolbar, τα σχήματα **έπαψαν να
-     * ταιριάζουν**: το React ξαναέχτισε το `<span>`, τα inline styles χάθηκαν, ο trigger
-     * έπεσε στη **στατική** του θέση και το μενού άνοιξε στη γωνία του καμβά — μετρημένο,
-     * `style.left` **κενό**.
-     *
-     * Η θεραπεία δεν είναι να ξανακάνουμε τα σχήματα ίδια (εύθραυστο συμβόλαιο που κανένα
-     * test δεν φυλάει): είναι **μία πηγή αλήθειας** για τη θέση — το `anchor` του
-     * {@link OpenTarget} — και δύο καταναλωτές που τη διαβάζουν, ο trigger εδώ και το toolbar
-     * από το prop του. Ό,τι κι αν κάνει το reconciliation, το effect ξαναγράφει τη θέση.
+     * ⚠️ Ο μηχανισμός (και η ζωντανή μέτρηση του σφάλματος που τον γέννησε) μετακόμισε στο
+     * {@link useAnchoredHiddenTrigger}: το ίδιο ακριβώς ζητά και το μενού περιγραμμάτων
+     * (ADR-750 Φ4), και το CHECK 3.28 μέτρησε την αντιγραφή ως sibling clone. Εδώ μένει **μία
+     * πηγή αλήθειας** για τη θέση — το `anchor` του {@link OpenTarget} — με δύο καταναλωτές που
+     * τη διαβάζουν: ο trigger και το toolbar (από το prop του).
      */
-    const placeTrigger = useCallback((x: number, y: number) => {
-      const trigger = triggerRef.current;
-      if (!trigger) return;
-      trigger.style.left = `${x}px`;
-      trigger.style.top = `${y}px`;
-    }, []);
-
-    // Δύο διαδρομές, όχι από υπερβολή: τα effects των **παιδιών** τρέχουν πριν του γονέα, άρα
-    // το Radix μετρά τον trigger πριν φτάσει εδώ η σειρά μας. Το γράψιμο μέσα στο `open()`
-    // (παρακάτω) προλαβαίνει τη **μέτρηση**· αυτό εδώ επιβιώνει της **ανακατασκευής**.
-    useLayoutEffect(() => {
-      if (target) placeTrigger(target.anchor.x, target.anchor.y);
-    }, [target, placeTrigger]);
+    const placeTrigger = useAnchoredHiddenTrigger(triggerRef, target?.anchor ?? null);
 
     useImperativeHandle(ref, () => ({
       open: (x: number, y: number, hit: TableIndicatorHit) => {
         placeTrigger(x, y);
-        setTarget({ hit, state: resolveState(hit), format: resolveFormat(hit), anchor: { x, y } });
+        setTarget({
+          hit,
+          state: resolveState(hit),
+          format: resolveFormat(hit),
+          canResetBorders: resolveCanResetBorders(hit),
+          anchor: { x, y },
+        });
         setIsOpen(true);
       },
       close: () => {
         setIsOpen(false);
         setTarget(null);
       },
-    }), [resolveState, resolveFormat, placeTrigger]);
+    }), [resolveState, resolveFormat, resolveCanResetBorders, placeTrigger]);
 
+    /**
+     * **Ολόκληρη** η επιφάνεια φεύγει — μενού **και** γραμμή εργαλείων.
+     *
+     * Αυτός είναι ο ένας δρόμος του §27.7 για την «έξοδο»: `Escape`, κλικ έξω, επιλογή δομικού
+     * item. Ο άλλος ({@link closeMenuKeepToolbar}) **δεν** είναι δεύτερη έξοδος — είναι
+     * διαφορετικό γεγονός: το μενού υποχωρεί ενώ η επιφάνεια συνεχίζει να ζει.
+     */
     const handleOpenChange = useCallback((open: boolean) => {
       setIsOpen(open);
       if (!open) {
@@ -177,6 +185,49 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
         onClosed();
       }
     }, [onClosed]);
+
+    /**
+     * 🔴 Φεύγει **ΜΟΝΟ** το μενού· η γραμμή εργαλείων μένει ζωντανή — ΑΠΟΦΑΣΗ ΙΔΙΟΚΤΗΤΗ.
+     *
+     * «Θέλω να εξαφανίζεται **μόνον το μενού** όταν κάνω κλικ πάνω σε εντολές του mini
+     * toolbar» (2026-08-03). Είναι ακριβώς το Excel: μία εντολή διώχνει το context menu, αλλά
+     * η γραμμή μορφοποίησης παραμένει για την **επόμενη** εντολή — και η μορφοποίηση είναι
+     * κατεξοχήν επαναλαμβανόμενη (έντονα, μετά πλάγια, μετά ένα μέγεθος πάνω).
+     *
+     * 🔑 **Η παρενέργεια είναι κέρδος, όχι τυχαία**: μόλις φύγει το modal μενού, το Radix
+     * ξετυλίγει το `hideOthers()` **και** το `FocusScope`. Δηλαδή η γραμμή παύει να είναι
+     * «άσχετο υπόβαθρο» και γίνεται **προσπελάσιμη με πληκτρολόγιο** — το roving tabindex και
+     * το tooltip-on-focus, που το §28.12.9(β) μέτρησε ως απροσπέλαστα όσο το μενού ήταν
+     * ανοιχτό, ζωντανεύουν από αυτή την αλλαγή.
+     *
+     * ⚠️ Το `onClosed()` καλείται κανονικά: επιστρέφει την εστίαση στο κελί, που είναι το
+     * σωστό — η γραμμή δεν χρειάζεται εστίαση για να πατηθεί με ποντίκι, και ο δρομέας του
+     * κελιού πρέπει να μείνει ζωντανός για να έχει νόημα η επόμενη εντολή.
+     *
+     * Ο φρουρός `if (!isOpen) return` δεν είναι διακοσμητικός: το δεύτερο, τρίτο, τέταρτο
+     * πάτημα στη γραμμή περνούν κι αυτά από εδώ με το μενού **ήδη** κλειστό — χωρίς αυτόν θα
+     * ξανα-εκκινούσαν τη συνεδρία δρομέα σε κάθε κλικ.
+     */
+    const closeMenuKeepToolbar = useCallback(() => {
+      if (!isOpen) return;
+      setIsOpen(false);
+      onClosed();
+    }, [isOpen, onClosed]);
+
+    /**
+     * Όσο ζει **μόνη** της η γραμμή, το «κλικ έξω» είναι δική μας ευθύνη.
+     *
+     * Με ανοιχτό μενού το αναλαμβάνει το `DismissableLayer` του Radix (και ο φύλακας
+     * {@link keepOpenOnToolbar} εξαιρεί τη γραμμή). Μόλις το μενού φύγει, εκείνο το στρώμα
+     * ξεμοντάρει και η γραμμή θα έμενε **για πάντα** στην οθόνη. Γι' αυτό ο ακροατής είναι
+     * ενεργός **ακριβώς** στο διάστημα `target && !isOpen` — ποτέ και τα δύο μαζί, που θα
+     * σήμαινε δύο μηχανές να απαντούν την ίδια ερώτηση.
+     *
+     * `useClickOutside` = το κεντρικό SSoT του έργου (N.0.2), όχι δεύτερος `document` ακροατής.
+     */
+    useClickOutside(toolbarRef, () => { handleOpenChange(false); }, {
+      enabled: target !== null && !isOpen,
+    });
 
     /**
      * 🔴 ADR-364 — το ανοιχτό μενού ΟΦΕΙΛΕΙ να έχει slot στον escape-bus.
@@ -212,10 +263,40 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
      * και η έξοδος με `Escape` δεν θα επέστρεφε την εστίαση στο κελί, ενώ η έξοδος με κλικ
      * σε item θα την επέστρεφε. Ακριβώς η ασυμμετρία που ο ένας δρόμος υπάρχει για να λείπει.
      */
+    /**
+     * ── ΔΥΟ ΑΛΛΑΓΕΣ ΠΟΥ ΤΙΣ ΕΠΙΒΑΛΛΕΙ Η ΕΠΙΒΙΩΣΗ ΤΗΣ ΓΡΑΜΜΗΣ (ζωντανή μέτρηση 2026-08-03) ──
+     *
+     * **`target !== null` αντί για `isOpen`**: η γραμμή ζει πλέον και μετά το μενού, και ένα
+     * `Escape` πάνω σε **σκέτη** γραμμή πρέπει να τη διώχνει. Με `isOpen` το ESC θα έπεφτε στο
+     * `canvas/fallback-deselect` (P400) — που αποεπιλέγει τον πίνακα και εξαφανίζει ζώνες και
+     * δρομέα, ακριβώς το σφάλμα που περιγράφεται παραπάνω.
+     *
+     * **`allowWhenEditable: true`**: μετά το πάτημα μιας εντολής, το `onClosed()`
+     * (`restartTableCellCursorSession`) επιστρέφει την εστίαση στο `<textarea>` του κελιού —
+     * μετρημένο, `focusAt: "textarea.box-border…"`. Χωρίς τη σημαία, η ασπίδα «editable focus»
+     * του bus θα παρέκαμπτε τον handler σιωπηλά. Δεν φαινόταν πριν επειδή ο handler ζούσε μόνο
+     * με **ανοιχτό** μενού, όπου η εστίαση ήταν πάντα στο `<div role="menu">` του Radix.
+     *
+     * ⚠️ **ΤΙ ΔΕΝ ΛΥΝΕΙ ΑΥΤΟ — μετρημένο, μην το διαβάσεις ως «το Escape κλείνει τη γραμμή»:**
+     * ο επεξεργαστής κελιού (`table-cell-editor/table-cell-cursor`) είναι `MODAL_DIALOG` (1000)
+     * με `canHandle: () => !settled`, δηλαδή **πάντα αληθές** όσο υπάρχει ζωντανή συνεδρία —
+     * και το 1000 είναι **πάνω** από το 800 εδώ. Άρα το **πρώτο** `Escape` το παίρνει εκείνος
+     * (ακυρώνει την επεξεργασία), και μόνο ένα **δεύτερο** φτάνει χαμηλότερα. Αυτή η ιεραρχία
+     * είναι **σωστή** (το βαθύτερο πράγμα ακυρώνεται πρώτο) και **δεν** αναδιατάχθηκε.
+     *
+     * Οι πραγματικές, επαληθευμένες έξοδοι της γραμμής είναι:
+     *   · **κλικ σε άλλο κελί** — ζωντανά επαληθευμένο, η γραμμή φεύγει, η συνεδρία ζει
+     *   · **νέο δεξί κλικ σε λωρίδα** — το `open()` αντικαθιστά το `target`
+     *   · **Escape ×2**
+     * ➖ Κλικ σε **κενό καμβά** δεν τη διώχνει: ο καμβάς είναι σκόπιμα κλειδωμένος όσο ζει η
+     *   λειτουργία κελιών (§29, `useTableCanvasLockdown`), άρα το συμβάν δεν φτάνει ποτέ στο
+     *   `document`. Είναι συνέπεια εκείνης της απόφασης, όχι κενό εδώ.
+     */
     useEscapeHandler({
       id: 'table/header-menu',
       priority: ESC_PRIORITY.POPOVER_DROPDOWN,
-      canHandle: () => isOpen,
+      allowWhenEditable: true,
+      canHandle: () => target !== null,
       handle: () => { handleOpenChange(false); return true; },
     });
 
@@ -230,26 +311,77 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     }, [target]);
 
     /**
-     * Μια πράξη μορφοποίησης: εκτελείται και **μετά** ξαναρωτιέται η κατάσταση.
+     * Μια πράξη μορφοποίησης: εκτελείται και **μετά κλείνει ολόκληρη η επιφάνεια**.
+     *
+     * ## 🔴 ΑΝΑΤΡΟΠΗ ΤΟΥ ΡΙΣΚΟΥ 1 — ΑΠΟΦΑΣΗ ΙΔΙΟΚΤΗΤΗ (2026-08-03)
+     * Μέχρι σήμερα εδώ γινόταν `setTarget({ …target, format: resolveFormat(…) })`: η πράξη
+     * εκτελούνταν, η κατάσταση των κουμπιών ανανεωνόταν, και **το μενού έμενε ανοιχτό**. Ήταν
+     * σχεδιασμένο, όχι τυχαίο — το §28.7 το ονομάζει «ρίσκο 1» και ολόκληρος ο φύλακας
+     * {@link keepOpenOnToolbar} γράφτηκε γι' αυτό, με επιχείρημα ότι «η μορφοποίηση είναι
+     * κατεξοχήν επαναλαμβανόμενη πράξη».
+     *
+     * Ο ιδιοκτήτης το ανέτρεψε ρητά: «όταν κάνω κλικ πάνω σε εντολές του toolbar **το κάτω
+     * μενού να κλείνει**, όπως στο Excel». Και το Excel πράγματι κλείνει **και τις δύο**
+     * επιφάνειες μετά από μία εντολή. Καταγράφεται ως ανατροπή ώστε να μη «διορθωθεί» πίσω
+     * από κάποιον που θα διαβάσει μόνο το §28.7 ή τα παλιά σχόλια του toolbar.
+     *
+     * ## 🔴 ΤΟ ΜΗ ΠΡΟΦΑΝΕΣ: ο φύλακας ΔΕΝ αφαιρείται — γίνεται ΠΡΟΫΠΟΘΕΣΗ
+     * Η «προφανής» υλοποίηση είναι να σβήσει κανείς τον `keepOpenOnToolbar` και να αφήσει το
+     * Radix να κλείσει μόνο του. **Θα έσπαγε την ίδια την εντολή**: το `DismissableLayer`
+     * κλείνει στο `pointerdown`, δηλαδή **πριν** το `click`. Το toolbar θα ξεμόνταρε ενδιάμεσα
+     * και το `onClick` του κουμπιού **δεν θα έτρεχε ποτέ** — μενού που κλείνει χωρίς να έχει
+     * γίνει τίποτα, η χειρότερη δυνατή εκδοχή.
+     *
+     * Άρα η σειρά είναι ρητή και αντίστροφη από τη διαίσθηση:
+     * `pointerdown` ⇒ ο φύλακας **κρατά** ανοιχτό · `click` ⇒ εκτελείται η πράξη ⇒ **μετά**
+     * κλείνουμε εμείς. Το κλείσιμο περνά από το {@link handleOpenChange} (§27.7: **ένας**
+     * δρόμος), άρα η εστίαση επιστρέφει στο κελί ακριβώς όπως και στα δομικά items.
+     *
+     * ## 🔴 Η κατάσταση των κουμπιών ΞΑΝΑΡΩΤΙΕΤΑΙ — γιατί η γραμμή ΔΕΝ φεύγει
+     * Ο ιδιοκτήτης διόρθωσε το εύρος μέσα στην ίδια συνεδρία: φεύγει **μόνο** το μενού. Άρα η
+     * γραμμή μένει στην οθόνη και ένα «Β» που δεν φώτιζε μετά το πάτημα θα έδειχνε ότι η πράξη
+     * απέτυχε ενώ έχει ήδη εφαρμοστεί στον καμβά.
      *
      * 🔴 Η ανανέωση γίνεται εδώ, **έξω** από τον updater του `setTarget`. Ένα
      * `setTarget(prev => { action(prev.hit); … })` θα εκτελούσε την πράξη **δύο φορές** σε
-     * StrictMode (ο updater καλείται δύο φορές επίτηδες) — δηλαδή δύο εντολές, δύο βήματα
-     * undo, και ένα «Β» που ανάβει και σβήνει μόνο του.
+     * StrictMode (ο updater καλείται δύο φορές επίτηδες) — δύο εντολές, δύο βήματα undo, και
+     * ένα «Β» που ανάβει και σβήνει μόνο του.
      */
     const runFormat = useCallback((action: TableHeaderAction) => {
       if (!target) return;
       action(target.hit);
       setTarget({ ...target, format: resolveFormat(target.hit) });
-    }, [target, resolveFormat]);
+      closeMenuKeepToolbar();
+    }, [target, resolveFormat, closeMenuKeepToolbar]);
 
     /**
-     * 🔴 Το toolbar είναι «έξω» για το Radix — και δεν επιτρέπεται να κλείνει το μενού.
+     * ADR-750 Φ3 — μια εντολή περιγράμματος: **ίδια σειρά** με το {@link runFormat}.
+     *
+     * Ξεχωριστός χειριστής και όχι κοινός, επειδή ανανεώνεται **άλλη** ερώτηση: η μορφοποίηση
+     * ξαναρωτά το στυλ του άξονα, το περίγραμμα ξαναρωτά τις ρητές ακμές. Ένας χειριστής που
+     * ξαναρωτούσε και τα δύο θα διέτρεχε όλα τα κελιά του άξονα **και** όλες τις ακμές της
+     * περιοχής σε κάθε πάτημα — διπλάσια δουλειά, με τη μισή να απαντά σε ερώτηση που κανείς
+     * δεν έκανε.
+     */
+    const runBorder = useCallback((action: TableHeaderAction) => {
+      if (!target) return;
+      action(target.hit);
+      setTarget({ ...target, canResetBorders: resolveCanResetBorders(target.hit) });
+      closeMenuKeepToolbar();
+    }, [target, resolveCanResetBorders, closeMenuKeepToolbar]);
+
+    /**
+     * 🔴 Το toolbar είναι «έξω» για το Radix — και δεν επιτρέπεται να κλείνει το μενού **ΕΔΩ**.
      *
      * Ζει σε δικό του portal (μόνο έτσι κάθεται **πάνω** από το μενού με κενό, απόφαση Α7),
-     * άρα κάθε πάτημα κουμπιού φτάνει εδώ ως `pointerDownOutside`. Χωρίς αυτόν τον φύλακα, το
-     * πρώτο «Β» θα εξαφάνιζε το μενού από κάτω — ακριβώς το ρίσκο 1 του §28.7, μετατοπισμένο
-     * από το `onSelect` στο `DismissableLayer`.
+     * άρα κάθε πάτημα κουμπιού φτάνει εδώ ως `pointerDownOutside`.
+     *
+     * ⚠️ **Ο φύλακας ΔΕΝ έγινε περιττός όταν ο ιδιοκτήτης ζήτησε «να κλείνει το μενού»** — έγινε
+     * **προϋπόθεση** για να δουλέψει αυτό ακριβώς. Το `DismissableLayer` κλείνει στο
+     * `pointerdown`, δηλαδή **πριν** το `click`: αν το αφήναμε, το toolbar θα ξεμόνταρε
+     * ενδιάμεσα και το `onClick` του κουμπιού **δεν θα έτρεχε ποτέ**. Θα κλείναμε το μενού
+     * χωρίς να έχει γίνει η εντολή. Το κλείσιμο ανήκει στο {@link runFormat}, **μετά** την
+     * πράξη — δες την τεκμηρίωσή του για τη σειρά.
      *
      * Ο έλεγχος γίνεται στο `originalEvent.target`: το `target` του συνθετικού συμβάντος είναι
      * το ίδιο το περιεχόμενο του μενού, όχι ό,τι πάτησε ο χρήστης.
@@ -272,11 +404,19 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     }
 
     const isColumn = target.hit.axis === 'column';
-    const { label, canInsert, canDelete } = target.state;
+    // Μόνο η ετικέτα χρειάζεται εδώ: οι σημαίες `canInsert`/`canDelete` ταξιδεύουν ολόκληρες
+    // στο {@link TableHeaderMenuItems}, που είναι και το μόνο που τις καταναλώνει.
+    const { label } = target.state;
 
     return (
       <>
-      {isOpen ? (
+      {/*
+        ⚠️ Κρέμεται από το `target`, ΟΧΙ από το `isOpen` — εδώ ζει η απόφαση του ιδιοκτήτη.
+        Με `isOpen` η γραμμή θα εξαφανιζόταν μαζί με το μενού στο πρώτο πάτημα· με `target`
+        επιβιώνει και φεύγει μόνο με `Escape` / κλικ έξω / νέο δεξί κλικ — δες
+        {@link closeMenuKeepToolbar}.
+      */}
+      {target ? (
         <TableFormatToolbar
           anchorX={target.anchor.x}
           anchorY={target.anchor.y}
@@ -287,6 +427,13 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           onToggle={(key) => runFormat((hit) => onToggleFormat(hit, key))}
           onStepSize={(direction) => runFormat((hit) => onStepTextHeight(hit, direction))}
           onReset={() => runFormat(onResetFormat)}
+          onSetTextColor={(value) => runFormat((hit) => onSetTextColor(hit, value))}
+          onSetFillColor={(value) => runFormat((hit) => onSetFillColor(hit, value))}
+          borders={{
+            canReset: target.canResetBorders,
+            onApply: (commandId) => runBorder((hit) => onApplyBorder(hit, commandId)),
+            onReset: () => runBorder(onResetBorders),
+          }}
         />
       ) : null}
 
@@ -300,37 +447,13 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           onPointerDownOutside={keepOpenOnToolbar}
           onFocusOutside={keepOpenOnToolbar}
         >
-          <DxfMenuItem disabled>
-            <DxfMenuLabel>
-              {isColumn
-                ? t('table.headerMenu.columnTitle', { label })
-                : t('table.headerMenu.rowTitle', { label })}
-            </DxfMenuLabel>
-          </DxfMenuItem>
-          <DxfMenuSeparator />
-
-          <DxfMenuItem disabled={!canInsert} onClick={() => run(onInsertBefore)}>
-            <DxfMenuIcon>{isColumn ? <ArrowLeft size={16} /> : <ArrowUp size={16} />}</DxfMenuIcon>
-            <DxfMenuLabel>
-              {isColumn ? t('table.headerMenu.insertColumnLeft') : t('table.headerMenu.insertRowAbove')}
-            </DxfMenuLabel>
-          </DxfMenuItem>
-
-          <DxfMenuItem disabled={!canInsert} onClick={() => run(onInsertAfter)}>
-            <DxfMenuIcon>{isColumn ? <ArrowRight size={16} /> : <ArrowDown size={16} />}</DxfMenuIcon>
-            <DxfMenuLabel>
-              {isColumn ? t('table.headerMenu.insertColumnRight') : t('table.headerMenu.insertRowBelow')}
-            </DxfMenuLabel>
-          </DxfMenuItem>
-
-          <DxfMenuSeparator />
-
-          <DxfMenuItem destructive disabled={!canDelete} onClick={() => run(onDelete)}>
-            <DxfMenuIcon><Trash2 size={16} /></DxfMenuIcon>
-            <DxfMenuLabel>
-              {isColumn ? t('table.headerMenu.deleteColumn') : t('table.headerMenu.deleteRow')}
-            </DxfMenuLabel>
-          </DxfMenuItem>
+          <TableHeaderMenuItems
+            isColumn={isColumn}
+            state={target.state}
+            onInsertBefore={() => run(onInsertBefore)}
+            onInsertAfter={() => run(onInsertAfter)}
+            onDelete={() => run(onDelete)}
+          />
         </DxfMenuContent>
       </DropdownMenu>
       </>

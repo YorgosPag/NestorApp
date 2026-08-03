@@ -64,41 +64,44 @@ import {
 } from '../../bim/table/table-row-column-ops';
 import {
   clearAxisStyleOverride,
-  hasAxisStyleOverride,
   nextBooleanFormat,
   resolveAxisFormat,
   setAxisStyleField,
-  type TableStyleAxis,
 } from '../../bim/table/table-axis-style-ops';
+import {
+  resolveAxisFormatSnapshot,
+  type FormatTarget,
+} from './table-header-format-snapshot';
+import { getAllLayers } from '../../stores/LayerStore';
 import { stepAxisTextHeight } from '../../bim/table/table-text-height-scale';
+import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import {
+  resolveTableSelectionBounds,
+  wholeAxisSelection,
+  type TableCellRangeBounds,
+} from '../../bim/table/table-cell-range';
+import { useTableBorderActions } from './use-table-border-actions';
 import { tableCursorAt, type TableCursorPosition } from '../../bim/table/table-cell-navigation';
 import {
   getTableCellCursor,
   restartTableCellCursorSession,
   setTableCellCursor,
 } from '../../state/table-cell-cursor-store';
-import { resolveTableById } from './table-entity-lookup';
+import { useLiveTable } from './use-live-table';
 import {
   getTableHeaderMenuPort,
   setTableHeaderMenuPort,
   type TableHeaderMenuPort,
 } from './table-header-menu-port';
-import { useTableModelCommit } from './use-table-model-commit';
+import { useLiveTableMutation, useTableModelCommit } from './use-table-model-commit';
 import { useCommandHistory } from '../../core/commands';
 import type { PersistedTableModel } from '../../types/table';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
-import type { TableEntity } from '../../types/table-entity';
 import type {
   TableHeaderContextMenuHandle,
   TableHeaderMenuProps,
-  TableHeaderMenuState,
 } from '../components/TableHeaderContextMenu';
-import type {
-  TableAxisFormatSnapshot,
-  TableToggleFormatKey,
-  TableToggleFormatState,
-} from '../components/table-format-toolbar/TableFormatToolbar';
-import type { TableStyle } from '../../bim/table/table-style';
+import type { TableHeaderMenuState } from '../components/TableHeaderMenuItems';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -119,10 +122,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
   const menuRef = useRef<TableHeaderContextMenuHandle | null>(null);
 
   /** Ο πίνακας του δρομέα, **τη στιγμή της κλήσης**· `null` χωρίς δρομέα ή σβησμένο πίνακα. */
-  const liveTable = useCallback((): TableEntity | null => {
-    const cursor = getTableCellCursor();
-    return cursor ? resolveTableById(levelManager, cursor.entityId) : null;
-  }, [levelManager]);
+  const liveTable = useLiveTable(levelManager);
 
   // Η ΙΔΙΑ διαδρομή commit με το πρόχειρο· η οντότητα περνά ως όρισμα κλήσης, γιατί εδώ
   // διαβάζεται με getter τη στιγμή της ενέργειας.
@@ -202,16 +202,37 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
    * μορφοποίηση δεν προσθέτει ούτε αφαιρεί ποτέ γραμμές, άρα η θέση παραμένει έγκυρη — και το
    * γράψιμο του δρομέα θα ζητούσε πίσω την **εστίαση** στο κελί, κλέβοντάς την από το κουμπί
    * που μόλις πάτησε ο χρήστης: το πρώτο «Β» θα δούλευε και το δεύτερο θα έπεφτε στο κενό.
+   *
+   * ⚠️ Το σώμα μετακόμισε στο `use-table-model-commit` ως {@link useLiveTableMutation}: οι
+   * εντολές περιγράμματος (ADR-750 Φ3) ζητούν **την ίδια ακριβώς** ακολουθία, και το CHECK 3.28
+   * τη μέτρησε ως sibling clone μέσα στο ίδιο commit. Το σκεπτικό μένει εδώ γιατί εδώ γεννήθηκε.
    */
-  const applyFormat = useCallback(
-    (mutate: (model: PersistedTableModel) => PersistedTableModel) => {
+  const applyFormat = useLiveTableMutation({ levelManager, execute, liveTable });
+
+  const borderActions = useTableBorderActions({ levelManager, liveTable });
+
+  /**
+   * ADR-750 Φ3 — τα **όρια** που αντιστοιχούν σε μια ζώνη δείκτη: ολόκληρη η στήλη ή γραμμή.
+   *
+   * 🔑 Περνά υποχρεωτικά από το {@link wholeAxisSelection}, που είναι **ο ΕΝΑΣ ορισμός** της
+   * «ολόκληρης στήλης/γραμμής» (ADR-739 §27.16 Ε2). Ο πειρασμός εδώ είναι μια γραμμή αριθμητικής
+   * (`firstRow: 0, lastRow: rows.length - 1`) — που θα ήταν **τέταρτος** ορισμός της ίδιας
+   * έννοιας και θα έχανε σιωπηλά ό,τι μάθει κάποτε ο πρώτος.
+   *
+   * ⚠️ Το **resolved** μοντέλο και όχι το `live.model`: οι συναρτήσεις περιοχής δηλώνουν
+   * `TableModel` (κελιά ως `Map`), ενώ η οντότητα κρατά `PersistedTableModel` (κελιά ως
+   * ακολουθία). Το `resolveTableModel` είναι cached σε `WeakMap` πάνω στο ίδιο το persisted
+   * αντικείμενο, άρα η μετατροπή κοστίζει μία αναζήτηση.
+   */
+  const axisBounds = useCallback(
+    (hit: TableIndicatorHit): TableCellRangeBounds | null => {
       const live = liveTable();
-      if (!live) return;
-      const nextModel = mutate(live.model);
-      if (nextModel === live.model) return;
-      commitModel(live, nextModel);
+      if (!live) return null;
+      const model = resolveTableModel(live.model);
+      const selection = wholeAxisSelection(model, hit);
+      return selection ? resolveTableSelectionBounds(model, selection) : null;
     },
-    [liveTable, commitModel],
+    [liveTable],
   );
 
   /** Ο άξονας + το στυλ + το μοντέλο, τη στιγμή της κλήσης· `null` χωρίς ζωντανό πίνακα. */
@@ -224,6 +245,10 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
         style: resolveTableStyle(live),
         axis: hit.axis,
         id: hit.axis === 'row' ? hit.rowId : hit.colId,
+        // ADR-739 Φ.Ε/Φ4 — τα χρώματα του σχεδίου διαβάζονται με **getter τη στιγμή του
+        // συμβάντος** (ADR-040 κανόνας #2), ποτέ με συνδρομή: αυτό το hook καλείται μέσα από
+        // τον `CanvasSection`, όπου κάθε συνδρομή γίνεται re-render του orchestrator.
+        layerColors: getAllLayers().map((layer) => layer.color),
       };
     },
     [liveTable],
@@ -262,11 +287,40 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
         if (!target) return;
         applyFormat((m) => clearAxisStyleOverride(m, target.axis, target.id));
       },
+      // ADR-739 Φ.Ε/Φ4 + Φ4β — ρητό χρώμα, «Αυτόματο» και «Κανένα γέμισμα» είναι η **ίδια**
+      // πράξη με άλλο όρισμα: `hex` γράφει, `undefined` αφαιρεί το πεδίο (κληρονομιά), `null`
+      // γράφει «ρητά κανένα». Ξεχωριστές συναρτήσεις («clearTextColor», «setNoFill») θα ήταν
+      // δεύτερος και τρίτος δρόμος για την ίδια εγγραφή — και κάποιος από αυτούς θα ξεχνούσε
+      // κάποτε το no-op by-reference που κρατά καθαρό το ιστορικό αναιρέσεων.
+      onSetTextColor: (hit, value) => {
+        const target = formatTarget(hit);
+        if (!target) return;
+        applyFormat((m) => setAxisStyleField(m, target.axis, target.id, 'textColorHex', value));
+      },
+      onSetFillColor: (hit, value) => {
+        const target = formatTarget(hit);
+        if (!target) return;
+        applyFormat((m) => setAxisStyleField(m, target.axis, target.id, 'fillColorHex', value));
+      },
+      // ADR-750 Φ3 — μπαγιάτικα όρια (undo που έσβησε τη γραμμή ενόσω ήταν ανοιχτό το μενού)
+      // σημαίνουν «καμία πράξη», ποτέ μαντεψιά για το ποιον άξονα εννοούσε ο χρήστης.
+      onApplyBorder: (hit, commandId) => {
+        const bounds = axisBounds(hit);
+        if (bounds) borderActions.applyCommand(bounds, commandId);
+      },
+      onResetBorders: (hit) => {
+        const bounds = axisBounds(hit);
+        if (bounds) borderActions.resetBorders(bounds);
+      },
+      resolveCanResetBorders: (hit) => {
+        const bounds = axisBounds(hit);
+        return bounds ? borderActions.canReset(bounds) : false;
+      },
       // Το μενού έκλεισε — με ή χωρίς ενέργεια. Η εστίαση επιστρέφει στο κελί, αλλιώς η
       // συνεδρία μένει ζωντανή αλλά κουφή (δες την κεφαλίδα).
       onClosed: restartTableCellCursorSession,
     }),
-    [apply, liveTable, applyFormat, formatTarget],
+    [apply, liveTable, applyFormat, formatTarget, axisBounds, borderActions],
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);
@@ -275,49 +329,10 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
 // ──────────────────────────────────────────────────────────────────────────────
 // Καθαροί βοηθοί
 // ──────────────────────────────────────────────────────────────────────────────
-
-/** Ό,τι χρειάζεται μια πράξη μορφοποίησης, διαβασμένο **τη στιγμή** του συμβάντος. */
-interface FormatTarget {
-  readonly model: PersistedTableModel;
-  readonly style: TableStyle;
-  readonly axis: TableStyleAxis;
-  readonly id: string;
-}
-
-/** Άξονας που δεν βρέθηκε: όλα σβηστά και τίποτα να επαναφερθεί — ποτέ μαντεψιά. */
-const EMPTY_TOGGLE: TableToggleFormatState = { active: false, mixed: false, explicit: false };
-
-/**
- * Η κατάσταση και των τριών δίτιμων χειριστηρίων + αν υπάρχει τι να επαναφερθεί.
- *
- * Υπολογίζεται **μία φορά ανά άνοιγμα ή πάτημα**, όχι σε κάθε απόδοση: κάθε κλήση διατρέχει
- * όλα τα κελιά του άξονα τρεις φορές (μία ανά πεδίο), και το μενού δεν είναι θέση για βρόχο
- * που τρέχει με τον ρυθμό της απόδοσης.
- */
-export function resolveAxisFormatSnapshot(target: FormatTarget | null): TableAxisFormatSnapshot {
-  if (!target) {
-    return { bold: EMPTY_TOGGLE, italic: EMPTY_TOGGLE, underline: EMPTY_TOGGLE, canReset: false };
-  }
-  return {
-    bold: toggleStateOf(target, 'bold'),
-    italic: toggleStateOf(target, 'italic'),
-    underline: toggleStateOf(target, 'underline'),
-    canReset: hasAxisStyleOverride(target.model, target.axis, target.id),
-  };
-}
-
-/**
- * Οι **δύο** ερωτήσεις του `TableAxisFormatState` μεταφρασμένες στη γλώσσα του κουμπιού.
- *
- * Το `active` διαβάζεται από την **επιλυμένη** τιμή (τι βλέπει ο χρήστης), το `explicit` από
- * την **παράκαμψη** (ποιος το είπε). Διαβάζοντας και τα δύο από το ίδιο σημείο, το κουμπί θα
- * έλεγε «όχι έντονα» για στήλη που το στυλ της γράφει έντονη — ψέμα για ό,τι είναι στην οθόνη.
- */
-function toggleStateOf(target: FormatTarget, key: TableToggleFormatKey): TableToggleFormatState {
-  const state = resolveAxisFormat(target.model, target.style, target.axis, target.id, key);
-  if (!state) return EMPTY_TOGGLE;
-  return { active: state.value === true, mixed: state.mixed, explicit: state.overridden };
-}
+//
+// ⚠️ Η **κατάσταση των χειριστηρίων** μετακόμισε στο `table-header-format-snapshot.ts`: δεν
+// είναι hook τίποτα από εκείνα (μηδέν `use*`, μηδέν store, μηδέν render) και το αρχείο είχε
+// φτάσει τις 481/500 γραμμές. Εξαγωγή, ποτέ trim — δες την κεφαλίδα εκείνου του module.
 
 /** Ποιον άξονα καρφώνει η πράξη· ο άλλος κληρονομείται από τον τρέχοντα δρομέα. */
 interface SurvivorPick {

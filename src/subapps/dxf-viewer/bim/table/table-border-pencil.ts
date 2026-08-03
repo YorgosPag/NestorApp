@@ -150,9 +150,11 @@ export function resolveTableBorderPencil(
   const widthMm = choice.widthMm === undefined
     ? auto.widthMm
     : nearestIsoLineweight(choice.widthMm) ?? auto.widthMm;
-  const dashMm = choice.dashMm !== undefined && choice.dashMm.length > 0
-    ? choice.dashMm
-    : auto.dashMm;
+  // 🔑 `??` και όχι «αν έχει μήκος»: το **κενό** μοτίβο είναι επιλογή («Συνεχής»), όχι απουσία
+  // επιλογής. Με έλεγχο μήκους, ο χρήστης που διαλέγει ρητά συνεχή γραμμή θα κληρονομούσε τη
+  // διακεκομμένη του στυλ — δηλαδή το χειριστήριο θα αγνοούσε ακριβώς μία από τις εννέα τιμές
+  // του, και μόνο σε στυλ που κανένα preset δεν παράγει σήμερα (άρα αόρατα για πάντα).
+  const dashMm = choice.dashMm ?? auto.dashMm;
 
   return {
     visible: true,

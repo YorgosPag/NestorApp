@@ -517,6 +517,11 @@ const menuProps = {
   onToggleFormat: noop,
   onStepTextHeight: noop,
   onResetFormat: noop,
+  // ADR-750 Φ3 — οι εντολές περιγράμματος του ίδιου toolbar· αδρανείς εδώ, δοκιμάζονται στο
+  // `table-border-menu-items.test.ts` και στο `table-border-icon.test.tsx`.
+  onApplyBorder: noop,
+  onResetBorders: noop,
+  resolveCanResetBorders: () => false,
 };
 
 describe('🔴 το μενού είναι ΜΕΛΟΣ της συνεδρίας επεξεργασίας', () => {
