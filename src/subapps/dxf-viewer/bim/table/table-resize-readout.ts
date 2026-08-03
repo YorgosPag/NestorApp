@@ -28,7 +28,10 @@
 
 import { i18n } from '@/i18n';
 import { formatSceneLengthForDisplay } from '../../config/display-length-format';
+import { computeTableEntityGeometryLive, tablePxPerMm } from './table-entity-geometry';
+import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import type { SceneUnits } from '../../utils/scene-units';
+import type { TableEntity } from '../../types/table-entity';
 import type { TableResizeAxis } from './table-resize-axis';
 
 const NS = 'dxf-viewer-shell';
@@ -66,4 +69,66 @@ export function tableResizeReadoutText(input: TableResizeReadoutInput): string {
   const pixels = i18n.t('table.resize.pixels', { ns: NS });
 
   return `${label}: ${size} (${px} ${pixels})`;
+}
+
+/**
+ * 🔴 **Η ένδειξη για μια σύρση ΛΑΒΗΣ** — από το μοντέλο **πριν** και το μοντέλο **μετά**.
+ *
+ * ## Γιατί σύγκριση μοντέλων και όχι δεύτερος υπολογισμός
+ * Η σύρση της λαβής δεν περνά από τη χειρονομία της λωρίδας: περνά από το κοινό grip engine,
+ * που δίνει `delta` και παράγει patch μέσω του `applyTableGripDrag`. Ένας δεύτερος
+ * υπολογισμός «τι μέγεθος βγαίνει από αυτό το delta» θα ήταν **τρίτο** αντίγραφο της ίδιας
+ * αριθμητικής (μετά τη λαβή και τη λωρίδα) — και θα απέκλινε ακριβώς εκεί που πονάει: στο
+ * φράγμα ελάχιστου μεγέθους, όπου το `Math.max` κόβει και η ένδειξη θα συνέχιζε να μετρά.
+ *
+ * Η σύγκριση των δύο μοντέλων δεν έχει αυτό το πρόβλημα **εξ ορισμού**: διαβάζει το νούμερο
+ * που γράφτηκε. Ό,τι δείχνει η ένδειξη είναι ό,τι δείχνει το φάντασμα, χωρίς εγγύηση που
+ * πρέπει να συντηρηθεί.
+ *
+ * `null` όταν δεν άλλαξε κανένα μέγεθος (η λαβή ήταν άλλου είδους, ή το σύρσιμο κόπηκε στο
+ * όριο και το μοντέλο βγήκε ταυτόσημο) — ο καλών απλώς δεν δείχνει τίποτα.
+ */
+export function tableResizeReadoutForModels(
+  before: TableEntity,
+  afterModel: TableEntity['model'],
+  sceneUnits: SceneUnits = 'mm',
+): string | null {
+  const changed = changedAxisSize(before.model, afterModel);
+  if (!changed) return null;
+
+  const { mmToWorld } = computeTableEntityGeometryLive(before);
+  return tableResizeReadoutText({
+    axis: changed.axis,
+    sizeMm: changed.sizeMm,
+    pxPerMm: tablePxPerMm(mmToWorld, getImmediateTransform().scale),
+    mmToWorld,
+    sceneUnits,
+  });
+}
+
+/**
+ * Ποιο μέγεθος άλλαξε ανάμεσα στα δύο μοντέλα — **το πρώτο** που βρίσκεται.
+ *
+ * «Το πρώτο» αρκεί επειδή μια σύρση λαβής αλλάζει **ακριβώς μία** μονάδα: η λαβή είναι μία
+ * και το `applyTableGripDrag` γράφει ένα πεδίο. Σάρωση για «όλα όσα άλλαξαν» θα υπονοούσε
+ * σενάριο που η ίδια η χειρονομία δεν μπορεί να παραγάγει.
+ */
+function changedAxisSize(
+  before: TableEntity['model'],
+  after: TableEntity['model'],
+): { readonly axis: TableResizeAxis; readonly sizeMm: number } | null {
+  for (let i = 0; i < after.columns.length; i++) {
+    const next = after.columns[i]?.sizing;
+    const prev = before.columns[i]?.sizing;
+    if (next?.kind === 'fixed' && (prev?.kind !== 'fixed' || prev.widthMm !== next.widthMm)) {
+      return { axis: 'column', sizeMm: next.widthMm };
+    }
+  }
+  for (let i = 0; i < after.rows.length; i++) {
+    const next = after.rows[i]?.heightMm;
+    if (next !== undefined && next !== before.rows[i]?.heightMm) {
+      return { axis: 'row', sizeMm: next };
+    }
+  }
+  return null;
 }

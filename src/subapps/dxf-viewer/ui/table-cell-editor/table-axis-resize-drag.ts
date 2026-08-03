@@ -174,11 +174,7 @@ export function beginTableAxisResize(
       // Η ένδειξη γράφεται **εδώ** και όχι στο `preview`, γιατί χρειάζεται το ίδιο το συμβάν:
       // η θέση της ακολουθεί το χέρι, όχι τον πίνακα. Το `preview` παίρνει μόνο αριθμούς.
       const edgeMm = edgeAlongAxisAt(moveEvent, axis, entity, container, transformRef);
-      if (edgeMm !== null) {
-        showResizeReadout({
-          axis, entity, edgeIndex, edgeMm, event: moveEvent, container, transformRef,
-        });
-      }
+      if (edgeMm !== null) showResizeReadout({ axis, entity, edgeIndex, edgeMm, transformRef });
       return edgeMm;
     },
     preview: (edgeMm) => {
@@ -236,13 +232,11 @@ interface ResizeReadoutInput {
   readonly entity: TableEntity;
   readonly edgeIndex: number;
   readonly edgeMm: number;
-  readonly event: MouseEvent;
-  readonly container: HTMLElement;
   readonly transformRef: RefObject<ViewTransform>;
 }
 
 function showResizeReadout(input: ResizeReadoutInput): void {
-  const { axis, entity, edgeIndex, edgeMm, event, container, transformRef } = input;
+  const { axis, entity, edgeIndex, edgeMm, transformRef } = input;
   const { layout, mmToWorld } = computeTableEntityGeometryLive(entity);
   const start = axis === 'column'
     ? layout.columns[edgeIndex - 1]?.xMm
@@ -254,15 +248,10 @@ function showResizeReadout(input: ResizeReadoutInput): void {
   const transform = transformRef.current;
   if (!transform) return;
 
-  const rect = container.getBoundingClientRect();
-  showTableResizeReadout(
-    tableResizeReadoutText({
-      axis,
-      sizeMm: edgeMm - start,
-      pxPerMm: tablePxPerMm(mmToWorld, transform.scale),
-      mmToWorld,
-    }),
-    event.clientX - rect.left,
-    event.clientY - rect.top,
-  );
+  showTableResizeReadout(tableResizeReadoutText({
+    axis,
+    sizeMm: edgeMm - start,
+    pxPerMm: tablePxPerMm(mmToWorld, transform.scale),
+    mmToWorld,
+  }));
 }

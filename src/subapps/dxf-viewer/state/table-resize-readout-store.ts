@@ -22,6 +22,9 @@
  */
 
 import { create } from 'zustand';
+// 🔴 Η θέση ΔΕΝ έρχεται από τον καλούντα: ο δρομέας έχει ήδη SSoT σε px οθόνης, και οι δύο
+// χειρονομίες (λαβή / λωρίδα) θα τον μετέφραζαν αλλιώς η καθεμιά. Δες `show…` παρακάτω.
+import { getImmediatePosition } from '../systems/cursor/ImmediatePositionStore';
 
 export interface TableResizeReadoutState {
   /** Το έτοιμο κείμενο, ή `null` όταν δεν σέρνεται τίποτα. */
@@ -43,9 +46,24 @@ export const useTableResizeReadoutStore = create<TableResizeReadoutState>((set) 
   hide: () => set((s) => (s.text === null ? s : { ...s, text: null })),
 }));
 
-/** Event-time γραφή, χωρίς hook — η χειρονομία ζει έξω από το React. */
-export function showTableResizeReadout(text: string, x: number, y: number): void {
-  useTableResizeReadoutStore.getState().show(text, x, y);
+/**
+ * Event-time γραφή, χωρίς hook — η χειρονομία ζει έξω από το React.
+ *
+ * 🔴 **Ο καλών δίνει ΜΟΝΟ κείμενο.** Η θέση διαβάζεται από το SSoT του δρομέα
+ * (`getImmediatePosition`, ήδη σε px του καμβά), για δύο λόγους:
+ *  - υπάρχουν **δύο** χειρονομίες (σύρση λαβής, σύρση διαχωριστικού) και η μία δεν έχει καν
+ *    `MouseEvent` στο σημείο που γεννά την ένδειξη — θα ανάγκαζε τον ένα δρόμο να μεταφέρει
+ *    συντεταγμένες μέσα από τρία επίπεδα μόνο για να τις ξαναμεταφράσει·
+ *  - η πινακίδα πρέπει να κάθεται εκεί που είναι **το χέρι**, και αυτό το ξέρει ήδη ένα
+ *    σημείο στο έργο. Δεύτερη μετάφραση = δεύτερη ευκαιρία να αποκλίνει κατά ένα καρέ.
+ *
+ * Χωρίς γνωστή θέση δρομέα δεν γράφεται τίποτα: πινακίδα στο `(0,0)` είναι χειρότερη από
+ * καμία πινακίδα.
+ */
+export function showTableResizeReadout(text: string): void {
+  const at = getImmediatePosition();
+  if (!at) return;
+  useTableResizeReadoutStore.getState().show(text, at.x, at.y);
 }
 
 export function hideTableResizeReadout(): void {

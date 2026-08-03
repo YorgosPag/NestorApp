@@ -40,6 +40,7 @@ import {
   commitOverlayBodyDrag,
 } from './overlay-grip-commit-adapters';
 import { GripModeStore } from '../../systems/grip/GripModeStore';
+import { hideTableResizeReadout } from '../../state/table-resize-readout-store';
 import { GripBasePointStore } from '../../systems/grip/GripBasePointStore';
 import { isActiveGripAltMove } from '../../systems/cursor/GripDragStore';
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
@@ -201,6 +202,12 @@ export async function runGripMouseUp(worldPos: Point2D, ctx: GripMouseUpCtx): Pr
   } = ctx;
   if (mouseUpInProgressRef.current) return false;
   mouseUpInProgressRef.current = true;
+  // 🔴 Giorgio 2026-08-04 — η ένδειξη μεγέθους πίνακα σβήνει με το που φεύγει το χέρι, όποιο
+  // κι αν ήταν το είδος της λαβής. Άνευ όρων **επίτηδες**: το `hide` είναι ιδεμποτής και ο
+  // εναλλακτικός έλεγχος «ήταν λαβή πίνακα;» θα ήταν τέταρτο σημείο που πρέπει να ξέρει τι
+  // είναι λαβή πίνακα — δηλαδή τέταρτο σημείο που μπορεί να ξεχαστεί και να αφήσει την
+  // πινακίδα κολλημένη στην οθόνη.
+  hideTableResizeReadout();
   try {
     // ADR-363 Phase 1G — wall hot-grip release. 1st-click release arms (stays hot);
     // subsequent deliberate (moved) clicks advance the pick steps; the terminal

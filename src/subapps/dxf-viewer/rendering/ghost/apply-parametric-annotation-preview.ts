@@ -26,6 +26,9 @@ import { applyOpeningInfoTagGripDrag } from '../../bim/opening-info-tag/opening-
 import type { OpeningInfoTagEntity } from '../../types/opening-info-tag';
 import { applyTableGripDrag } from '../../bim/table/table-entity-grips';
 import type { TableEntity } from '../../types/table-entity';
+// 🔴 Giorgio 2026-08-04 — η ζωντανή ένδειξη μεγέθους («Πλάτος: 14,14 (104 pixel)»).
+import { tableResizeReadoutForModels } from '../../bim/table/table-resize-readout';
+import { showTableResizeReadout } from '../../state/table-resize-readout-store';
 import { applyImageGripDrag } from '../../bim/image/image-grips';
 import type { ImageEntity } from '../../types/image';
 import { ShiftKeyTracker } from '../../keyboard/ShiftKeyTracker';
@@ -84,12 +87,44 @@ export function applyParametricAnnotationPreview(
     // είναι patch παραμέτρων και το φάντασμα ξαναϋπολογίζει. Χωρίς αυτό, το σύρσιμο ορίου
     // στήλης δεν θα έδειχνε **τίποτα** μέχρι το commit — ακριβώς η ασυμμετρία που ο ADR-662
     // §13 έκλεισε για την τοπογραφική επιφάνεια όταν εκείνη απέκτησε λαβές.
-    parametricGhost<'table', TableEntity>(
-      entity, preview, 'table', 'table-rotation', applyTableGripDrag,
-    ) ??
+    tableGhostWithReadout(entity, preview) ??
     // ── ADR-654 — raster image (move / rotation / 4 corner resize) ──
     parametricGhost<'image', ImageEntity>(
       entity, preview, 'image', 'image-rotation', applyImageGripDrag,
     )
   );
+}
+
+/**
+ * 🔴 Το φάντασμα του πίνακα **και** η ένδειξη μεγέθους, στην ίδια αναπνοή.
+ *
+ * ## Γιατί η ένδειξη γεννιέται ΕΔΩ και όχι στον χειριστή του ποντικιού
+ * Ο χειριστής της λαβής (`grip-mouse-move-handler`) έχει `worldPos` και `activeGrip`, αλλά
+ * **δεν έχει την οντότητα** — θα έπρεπε να ψάξει τη σκηνή με το `entityId` και μετά να
+ * ξαναϋπολογίσει μόνος του το νέο μέγεθος από το `delta`. Δηλαδή τρίτο αντίγραφο της ίδιας
+ * αριθμητικής, που θα απέκλινε στο φράγμα ελάχιστου μεγέθους.
+ *
+ * Εδώ υπάρχουν και τα δύο μοντέλα — πριν και μετά — άρα η ένδειξη **διαβάζει** το νούμερο
+ * που μόλις γράφτηκε: ό,τι δείχνει το φάντασμα δείχνει και η πινακίδα, χωρίς εγγύηση προς
+ * συντήρηση. Το φάντασμα τρέχει ήδη σε κάθε καρέ της σύρσης, οπότε δεν προστίθεται πέρασμα.
+ *
+ * ⚠️ **Καμία απόκρυψη εδώ**: το φάντασμα δεν ξέρει πότε τελειώνει η σύρση (απλώς παύει να
+ * καλείται). Το σβήσιμο ζει στο `mouseup` του grip engine και στο commit της χειρονομίας
+ * λωρίδας — δηλαδή στα δύο σημεία που **ξέρουν** ότι η χειρονομία τελείωσε.
+ */
+function tableGhostWithReadout(
+  entity: DxfEntityUnion,
+  preview: EntityPreviewTransform,
+): DxfEntityUnion | null {
+  const ghost = parametricGhost<'table', TableEntity>(
+    entity, preview, 'table', 'table-rotation', applyTableGripDrag,
+  );
+  if (!ghost) return null;
+
+  const readout = tableResizeReadoutForModels(
+    entity as TableEntity,
+    (ghost as TableEntity).model,
+  );
+  if (readout) showTableResizeReadout(readout);
+  return ghost;
 }
