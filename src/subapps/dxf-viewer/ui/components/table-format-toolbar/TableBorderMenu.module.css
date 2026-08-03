@@ -1,0 +1,70 @@
+/**
+ * ADR-750 Φ3 — το πάνελ των εντολών περιγράμματος, **μέσα** στο δοχείο του mini toolbar.
+ *
+ * 🔴 Γιατί εδώ και όχι σε δικό του portal: το `TableFormatToolbar` ζει ήδη σε portal στο `body`,
+ * και ο γονέας κρατά `surfaceRef` για να αναγνωρίζει «κλικ πάνω μου» στο `onInteractOutside` του
+ * modal μενού (`keepOpenOnToolbar`). Ένα δεύτερο portal θα ήταν, για εκείνον τον φύλακα, «ξένο
+ * στοιχείο»: κάθε πάτημα εντολής θα έκλεινε το μενού από κάτω **πριν** τρέξει το `onClick`, και
+ * θα κληρονομούσε ολόκληρη την ιστορία του `aria-hidden` (δες `useAriaHiddenGuard`). Μέσα στο
+ * δοχείο, και τα δύο προβλήματα είναι ήδη λυμένα από αλλού.
+ */
+
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1;
+  min-width: 232px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  /* Το ίδιο ανώτατο ύψος με τα μενού του subapp: πάνω από αυτό, κύλιση αντί για έξοδο οθόνης. */
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.item:hover,
+.item:focus-visible {
+  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+}
+
+.item[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.item[aria-disabled='true']:hover {
+  background-color: transparent;
+}
+
+.itemIcon {
+  flex: none;
+  display: inline-flex;
+}
+
+.separator {
+  height: 1px;
+  margin: 4px 2px;
+  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
+}

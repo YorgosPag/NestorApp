@@ -142,10 +142,16 @@ export function tableEdgeKeyAt(
  *
  * Το `dashMm` συγκρίνεται στοιχείο-προς-στοιχείο: δύο ίσοι πίνακες είναι διαφορετικές
  * αναφορές, και μια σύγκριση αναφοράς θα έλεγε «διαφορετικά» για ταυτόσημα μολύβια.
+ *
+ * ⚠️ ADR-750 Φ5 — το `doubleGapMm` μπαίνει στη σύγκριση **επειδή** η ένωση τρέχει **πριν** την
+ * αποσύνθεση της διπλής (`table-layout-borders.ts`). Χωρίς αυτό, μια μονή και μια διπλή γραμμή
+ * με ίδιο χρώμα/πάχος θα ενώνονταν σε ένα τμήμα και η διπλή θα **εξαφανιζόταν** στο μισό της
+ * διαδρομής — σιωπηλά, γιατί το αποτέλεσμα θα ήταν ακόμη μια νόμιμη γραμμή.
  */
 export function sameBorderSpec(a: TableBorderSpec, b: TableBorderSpec): boolean {
   if (a === b) return true;
   if (a.visible !== b.visible || a.colorHex !== b.colorHex || a.widthMm !== b.widthMm) return false;
+  if (a.doubleGapMm !== b.doubleGapMm) return false;
   const da = a.dashMm ?? [];
   const db = b.dashMm ?? [];
   return da.length === db.length && da.every((v, i) => v === db[i]);

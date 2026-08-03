@@ -19,22 +19,33 @@
  * κοιτάς μπαίνει πρώτο, γιατί εκεί πέφτει το μάτι και εκεί είναι πιθανότερη η επόμενη επιλογή.
  *
  * ## 🔴 Δύο κανόνες που ΔΕΝ είναι φιλτράρισμα καλλωπισμού
- * - **Ό,τι δεν επιβιώνει ως μελάνι, δεν προσφέρεται.** Το προεπιλεγμένο layer `0` ενός DXF
- *   είναι λευκό (σύμβαση σκοτεινού φόντου του AutoCAD)· χωρίς αυτόν τον κανόνα η ζώνη θα
- *   πρόσφερε **λευκό κείμενο σε λευκό φύλλο** στο πρώτο κιόλας σχέδιο. Το κατώφλι δεν
- *   αντιγράφεται — ρωτιέται το `survivesAsInk` του `print-color-policy`, ώστε επιλογέας και
- *   εκτυπωτής να απαντούν **το ίδιο** πράγμα.
+ * - **Ό,τι δεν επιβιώνει ως μελάνι, δεν προσφέρεται** — *στον ρόλο του μελανιού*. Το
+ *   προεπιλεγμένο layer `0` ενός DXF είναι λευκό (σύμβαση σκοτεινού φόντου του AutoCAD)· χωρίς
+ *   αυτόν τον κανόνα η ζώνη θα πρόσφερε **λευκό κείμενο σε λευκό φύλλο** στο πρώτο κιόλας
+ *   σχέδιο. Το κατώφλι δεν αντιγράφεται — ρωτιέται το `survivesAsInk` του `print-color-policy`,
+ *   ώστε επιλογέας και εκτυπωτής να απαντούν **το ίδιο** πράγμα.
  * - **Ανώτατο όριο.** Ένα εισαγόμενο σχέδιο έχει άνετα 200 layers. Μια ζώνη «εγγράφου» με 200
  *   δείγματα δεν είναι συντόμευση, είναι δεύτερος κατάλογος — και θα έσπρωχνε το πλέγμα ACI
  *   εκτός οθόνης. Το Figma κόβει με τον ίδιο τρόπο.
  *
+ * ## 🔴 Ο ρόλος είναι **ΕΝΑ** όρισμα, όχι δύο (ADR-739 Φ.Ε/Φ4β)
+ * Το γέμισμα ρωτά την ίδια ερώτηση για **άλλο πεδίο** (`fillColorHex`) και **χωρίς** το φίλτρο
+ * λευκού — εκεί ο κανόνας του μελανιού είναι καταστροφικός, όπως λέει ρητά το
+ * {@link PlotColorRole}: ένα `#EDEDED` φόντο κεφαλίδας τυπωνόταν συμπαγές μαύρο.
+ *
+ * Δύο ανεξάρτητες παράμετροι («ποιο πεδίο;» + «να φιλτράρω;») θα επέτρεπαν **τέσσερις**
+ * συνδυασμούς εκ των οποίων οι δύο είναι ανοησία (γέμισμα με φίλτρο μελανιού, κείμενο χωρίς).
+ * Το σωστό όρισμα είναι ένα — και **υπάρχει ήδη**: ο `PlotColorRole` είναι ακριβώς ο τύπος που
+ * κωδικοποιεί αυτή τη διάκριση στο έργο. Καμία νέα έννοια, καμία δεύτερη συνάρτηση.
+ *
  * @module subapps/dxf-viewer/bim/table/table-drawing-colors
  * @see ui/color/aci-color-grid.ts — η **καθολική** ζώνη (σταθερή σε κάθε σχέδιο)
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §28.14
+ * @see config/print-color-policy.ts — `PlotColorRole`: γιατί το λευκό είναι θεμιτό στο γέμισμα
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §28.14, §35
  */
 
 import { normalizeHexColor } from '../../config/color-math';
-import { survivesAsInk } from '../../config/print-color-policy';
+import { survivesAsInk, type PlotColorRole } from '../../config/print-color-policy';
 import type { TableStyle } from './table-style';
 import type { PersistedTableModel, TableRowClass } from '../../types/table';
 
@@ -57,6 +68,13 @@ export interface DrawingColorSources {
   readonly model: PersistedTableModel;
   /** Τα χρώματα των layers της σκηνής, στη σειρά τους. */
   readonly layerColors: readonly string[];
+  /**
+   * Μελάνι ή φόντο; Αποφασίζει **και** ποιο πεδίο διαβάζεται **και** αν ισχύει το φίλτρο
+   * λευκού — δες την κεφαλίδα για το γιατί είναι ένα όρισμα και όχι δύο.
+   *
+   * Προεπιλογή `'ink'`: η ιστορική συμπεριφορά ακέραιη για τον υπάρχοντα καλούντα.
+   */
+  readonly role?: PlotColorRole;
 }
 
 const ROW_CLASS_ORDER: readonly TableRowClass[] = ['title', 'header', 'data'];
@@ -65,29 +83,44 @@ const ROW_CLASS_ORDER: readonly TableRowClass[] = ['title', 'header', 'data'];
  * Τα χρώματα του σχεδίου, κανονικοποιημένα, χωρίς διπλότυπα, το πολύ
  * {@link DRAWING_COLORS_LIMIT}.
  *
- * Ποτέ κενή στην πράξη: οι τρεις κλάσεις γραμμής **πάντα** δηλώνουν `textColorHex`. Ο καλών
- * οφείλει παρ' όλα αυτά να χειρίζεται το κενό — ένα στυλ μπορεί κάποτε να έχει και τις τρεις
- * κλάσεις σχεδόν λευκές, και μια επικεφαλίδα πάνω από τίποτα είναι χειρότερη από καθόλου ζώνη.
+ * Ποτέ κενή στην πράξη **για το μελάνι**: οι τρεις κλάσεις γραμμής πάντα δηλώνουν
+ * `textColorHex`. **Συχνά κενή για το γέμισμα**, και αυτό είναι φυσιολογικό — το στυλ `plain`
+ * δεν βάφει τίποτα, οπότε ένα καθαρό σχέδιο δεν έχει κανένα γέμισμα να προσφέρει μέχρι να
+ * διαλέξει ο χρήστης το πρώτο. Ο καλών οφείλει να χειρίζεται το κενό: μια επικεφαλίδα πάνω από
+ * τίποτα είναι χειρότερη από καθόλου ζώνη.
  */
 export function collectDrawingColors(sources: DrawingColorSources): readonly string[] {
-  const { style, model, layerColors } = sources;
+  const { style, model, layerColors, role = 'ink' } = sources;
   const seen = new Set<string>();
   const out: string[] = [];
 
-  const offer = (raw: string | undefined): void => {
-    if (raw === undefined || out.length >= DRAWING_COLORS_LIMIT) return;
+  const offer = (raw: string | null | undefined): void => {
+    // 🔴 Το `null` πέφτει έξω μαζί με το `undefined`, και όχι κατά λάθος: «ρητά κανένα γέμισμα»
+    // **δεν είναι χρώμα** — είναι η άρνηση χρώματος, και έχει δική της γραμμή στο μενού. Ένα
+    // δείγμα γι' αυτό εδώ θα ήταν δεύτερος δρόμος προς την ίδια κατάσταση, σε ζώνη που ο
+    // χρήστης διαβάζει ως «χρώματα που ήδη υπάρχουν στο σχέδιο».
+    if (raw === undefined || raw === null || out.length >= DRAWING_COLORS_LIMIT) return;
     const hex = normalizeHexColor(raw);
-    if (seen.has(hex) || !survivesAsInk(hex)) return;
+    if (seen.has(hex) || (role === 'ink' && !survivesAsInk(hex))) return;
     seen.add(hex);
     out.push(hex);
   };
 
-  for (const rowClass of ROW_CLASS_ORDER) offer(style.rowClasses[rowClass].textColorHex);
-  for (const column of model.columns) offer(column.styleOverride?.textColorHex);
-  for (const row of model.rows) offer(row.styleOverride?.textColorHex);
+  const fieldOf = (
+    override: { readonly textColorHex?: string; readonly fillColorHex?: string | null } | undefined,
+  ): string | null | undefined =>
+    role === 'fill' ? override?.fillColorHex : override?.textColorHex;
+
+  for (const rowClass of ROW_CLASS_ORDER) offer(fieldOf(style.rowClasses[rowClass]));
+  for (const column of model.columns) offer(fieldOf(column.styleOverride));
+  for (const row of model.rows) offer(fieldOf(row.styleOverride));
   // `TableCellEntry` είναι **τριάδα** `[rowId, colId, cell]` (η Λύση Α του §19.2 — λίστα στο
   // αρχείο, ευρετήριο στη μνήμη), όχι αντικείμενο με πεδία.
-  for (const [, , cell] of model.cells) offer(cell.styleOverride?.textColorHex);
+  for (const [, , cell] of model.cells) offer(fieldOf(cell.styleOverride));
+  // Τα χρώματα των layers είναι το **λεξιλόγιο** του σχεδίου (ArchiCAD Pen Set) και προσφέρονται
+  // και στους δύο ρόλους — ακριβώς όπως το Excel δείχνει τα ίδια «χρώματα θέματος» σε
+  // γραμματοσειρά και γέμισμα. Στο γέμισμα περνά και το λευκό layer `0`, και σωστά: εκεί το
+  // λευκό είναι αδιαφανές φόντο, όχι αόρατο μελάνι.
   for (const layerColor of layerColors) offer(layerColor);
 
   return out;

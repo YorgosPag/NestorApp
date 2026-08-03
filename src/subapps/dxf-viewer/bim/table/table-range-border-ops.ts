@@ -29,6 +29,7 @@
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { nearestIsoLineweight } from '../../config/lineweight-iso-catalog';
+import { tableBorderDoubleGapMm } from './table-border-pencil';
 import type { TableBorderSpec, TableEdgeKey, TableEdgeOrientation } from '../../types/table-edges';
 import type { PersistedTableModel } from '../../types/table';
 import type { CellOrderSource } from './table-cell-order';
@@ -165,23 +166,6 @@ const COMMANDS_BY_ID: ReadonlyMap<TableBorderCommandId, TableBorderCommand> = ne
   TABLE_BORDER_COMMANDS.map((command) => [command.id, command]),
 );
 
-/**
- * Μπορεί να **εκτελεστεί** σήμερα η εντολή; `false` μόνο για τις δύο διπλές γραμμές.
- *
- * 🔴 Δεν είναι διαρροή υλοποίησης — είναι το αντίθετο της σιωπής. Η διπλή γραμμή **δεν**
- * γράφεται με `dashMm` (εκείνο είναι μοτίβο **κατά μήκος**, η διπλή είναι δύο παράλληλες
- * **εγκάρσια**) και **δεν** επιτρέπεται να γεννήσει `'double'` enum: ο μηχανισμός υπάρχει
- * ήδη στο `config/linetype-compound-presets.ts` (ADR-642 Φ5) και το ADR-750 §6.4 το δηλώνει
- * ρητά. Η σύνδεση είναι δουλειά της Φ5.
- *
- * Μέχρι τότε το dropdown της Φ3 **ρωτά** και δεν προσφέρει νεκρό κουμπί. Ένα κουμπί που
- * φαίνεται ενεργό και δεν κάνει τίποτα είναι χειρότερο από ένα που λείπει.
- */
-export function isTableBorderCommandAvailable(commandId: TableBorderCommandId): boolean {
-  const command = COMMANDS_BY_ID.get(commandId);
-  return command !== undefined && command.parts.every((part) => part.pen !== 'double');
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Οι πράξεις
 // ──────────────────────────────────────────────────────────────────────────────
@@ -194,9 +178,9 @@ export function isTableBorderCommandAvailable(commandId: TableBorderCommandId): 
  * συναρτήσεις, και ποιος κρατά το τρέχον μολύβι είναι απόφαση του toolbar (Φ3). Ένα store
  * εδώ θα έκανε την πράξη μη δοκιμάσιμη χωρίς στήσιμο και θα την έδενε με το React.
  *
- * Άγνωστη ή μη διαθέσιμη εντολή ⇒ το μοντέλο **αυτούσιο**, με ίχνος: ο μόνος νόμιμος
- * καλών ρωτά πρώτα το {@link isTableBorderCommandAvailable}, οπότε αυτό το μονοπάτι
- * σημαίνει σφάλμα καλωδίωσης — και τα σφάλματα καλωδίωσης δεν πρέπει να είναι σιωπηλά.
+ * Άγνωστη εντολή ⇒ το μοντέλο **αυτούσιο**, με ίχνος: κάθε ταυτότητα του τύπου
+ * {@link TableBorderCommandId} υπάρχει στο μητρώο, οπότε αυτό το μονοπάτι σημαίνει σφάλμα
+ * καλωδίωσης — και τα σφάλματα καλωδίωσης δεν πρέπει να είναι σιωπηλά.
  */
 export function applyTableBorderCommand(
   model: PersistedTableModel,
@@ -213,13 +197,6 @@ export function applyTableBorderCommand(
   const patches = new Map<TableEdgeKey, TableBorderSpec | null>();
   for (const part of command.parts) {
     const spec = resolvePen(pencil, part.pen);
-    if (spec === undefined) {
-      logger.error('Εντολή περιγράμματος χωρίς διαθέσιμο μολύβι — απαιτεί ADR-750 Φ5', {
-        commandId,
-        pen: part.pen,
-      });
-      return model;
-    }
     for (const side of part.sides) {
       for (const key of tableRangeSideEdges(model, bounds, side)) patches.set(key, spec);
     }
@@ -334,7 +311,7 @@ export function tableRangeSideEdges(
 const THICK_PEN_RATIO = 2;
 
 /**
- * Το μολύβι μιας πλευράς· `undefined` όταν ο τροποποιητής απαιτεί μηχανισμό που δεν υπάρχει.
+ * Το μολύβι μιας πλευράς — **ολικό**: κάθε τροποποιητής έχει απάντηση.
  *
  * 🔑 Το `'thick'` **παράγεται** από τον κατάλογο ISO ({@link nearestIsoLineweight}), δεν
  * ταμπελώνεται: `0.13→0.25 · 0.18→0.35 · 0.25→0.50 · 0.35→0.70 · 0.50→1.00 · 0.70→1.40 ·
@@ -344,8 +321,17 @@ const THICK_PEN_RATIO = 2;
  *
  * Μολύβι χωρίς πάχος (μη πεπερασμένο ή ≤ 0) δεν έχει «διπλάσιο»: εκεί ο κατάλογος απαντά
  * `undefined` και κρατάμε το μολύβι αυτούσιο, αντί να εφεύρουμε πένα που ο χρήστης δεν ζήτησε.
+ *
+ * ## ✅ ADR-750 Φ5 — το `'double'` έπαψε να είναι τρύπα (Α17 → Α24)
+ * Μέχρι τη Φ5 αυτό το σκέλος επέστρεφε `undefined` και οι δύο διπλές εντολές δηλώνονταν **μη
+ * διαθέσιμες**. Τώρα δίνει το ίδιο μολύβι με απόσταση διπλής ({@link tableBorderDoubleGapMm}) —
+ * και ο ζωγράφος δεν έμαθε τίποτα, γιατί η διάταξη αποσυνθέτει τη διπλή σε **δύο** τμήματα.
+ *
+ * ⚠️ Το `?? tableBorderDoubleGapMm(...)` δεν είναι δίχτυ: σέβεται μια απόσταση που **ήδη**
+ * κουβαλά το μολύβι του χρήστη (τσεκαρισμένο «Διπλή γραμμή»), ώστε η εντολή «Κάτω διπλό
+ * περίγραμμα» να μη γράψει *άλλη* διπλή από αυτήν που δείχνει η προεπισκόπηση δίπλα της.
  */
-function resolvePen(base: TableBorderSpec, pen: TableBorderPen): TableBorderSpec | undefined {
+function resolvePen(base: TableBorderSpec, pen: TableBorderPen): TableBorderSpec {
   switch (pen) {
     case 'base':
       return base;
@@ -356,7 +342,10 @@ function resolvePen(base: TableBorderSpec, pen: TableBorderPen): TableBorderSpec
       return thicker === undefined ? base : { ...base, widthMm: thicker };
     }
     case 'double':
-      return undefined;
+      return {
+        ...base,
+        doubleGapMm: base.doubleGapMm ?? tableBorderDoubleGapMm(base.widthMm),
+      };
   }
 }
 
