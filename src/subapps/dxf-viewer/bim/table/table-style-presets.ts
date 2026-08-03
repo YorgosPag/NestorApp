@@ -3,8 +3,9 @@
  *
  * Δύο στυλ, με ρητά διαφορετικό σκοπό:
  *
- * - **`standard`** — ο γενικός πίνακας του χρήστη: πλήρες πλέγμα, ζώνη τίτλου, γκρι
- *   κεφαλίδα. Το ανάλογο του AutoCAD «Standard» TABLESTYLE.
+ * - **`standard`** — ο γενικός πίνακας του χρήστη: πλήρες πλέγμα και **τίποτα άλλο**. Από
+ *   την 2026-08-04 είναι **ουδέτερο**: όλα τα κελιά ισάξια, χωρίς γέμισμα, χωρίς έντονα,
+ *   ένα ύψος κειμένου, μία στοίχιση (βλ. `standardRowClass`).
  * - **`detailSheet`** — **ακριβώς** οι σημερινές τιμές του `buildScheduleTable`
  *   (ADR-622): `ROW_H_MM 7.5`, `TEXT_MM 2.6`, κείμενο `#222222`, γραμμές `#999999`
  *   στα `0.15mm`, περιθώριο `4mm`. Καμία κάθετη γραμμή, κανένα πλαίσιο, κανένα γέμισμα
@@ -92,21 +93,35 @@ const STANDARD_GRID_MM = 0.25;
 const STANDARD_FRAME_MM = 0.5;
 const STANDARD_TEXT_HEX = '#111111';
 const STANDARD_MARGINS = { hMm: 2, vMm: 1.5 } as const;
+/** Ένα ύψος για όλα τα κελιά — ό,τι ήταν το ύψος των δεδομένων. */
+const STANDARD_TEXT_MM = 2.8;
 
-function standardRowClass(
-  textHeightMm: number,
-  bold: boolean,
-  fillColorHex: string | undefined,
-): TableRowClassStyle {
+/**
+ * **Ουδέτερο κελί — καμία παράμετρος** (απόφαση Giorgio, 2026-08-04).
+ *
+ * Ήταν `standardRowClass(textHeightMm, bold, fillColorHex)` και παρήγαγε τρία διαφορετικά
+ * κελιά: τίτλος 4mm έντονος, κεφαλίδα 3mm έντονη με γέμισμα `#EDEDED`, δεδομένα 2.8mm
+ * κανονικά. Η ιεραρχία αυτή είναι σωστή για πίνακα **που ξέρεις τι περιέχει** — και ο νέος
+ * πίνακας του καμβά δεν ξέρει: υπόμνημα, ποσότητες, καρτέλα έργου, τυχαία λίστα. Κάθε
+ * προκαθορισμένη έμφαση ήταν εικασία που ο χρήστης έπρεπε πρώτα να αναιρέσει.
+ *
+ * Οι **τρεις κλάσεις παραμένουν** στο συμβόλαιο (`title` / `header` / `data`) και δίνουν
+ * την ίδια απάντηση. Το `detailSheet` ΔΕΝ αγγίζεται: εκεί η ιεραρχία είναι δεδομένη
+ * (φύλλα οπλισμού, ADR-622) — ουδετερότητα εκεί θα ήταν οπτική παλινδρόμηση.
+ *
+ * ⚠️ Το εξωτερικό πλαίσιο μένει χοντρότερο από τους εσωτερικούς διαχωριστές: αυτό είναι
+ * ιδιότητα του **πίνακα** (ISO 128), όχι διαφοροποίηση κελιού από κελί.
+ */
+function standardRowClass(): TableRowClassStyle {
   const grid = uniformBorders(STANDARD_GRID_HEX, STANDARD_GRID_MM);
   return {
-    textHeightMm,
+    textHeightMm: STANDARD_TEXT_MM,
     textColorHex: STANDARD_TEXT_HEX,
-    fillColorHex,
-    bold,
+    fillColorHex: undefined,
+    bold: false,
     italic: false,
     underline: false,
-    align: 'MC',
+    align: 'ML',
     margins: STANDARD_MARGINS,
     borders: {
       ...grid,
@@ -124,11 +139,11 @@ const STANDARD_STYLE: TableStyle = {
   isBuiltIn: true,
   defaultRowHeightMm: 8,
   minColumnWidthMm: 6,
+  // Τρεις κλάσεις, μία εμφάνιση: κάθε κελί ισάξιο, καμία έμφαση, κανένα γέμισμα.
   rowClasses: {
-    // Ο τίτλος καταλαμβάνει όλο το πλάτος (μία συγχώνευση) — μεγαλύτερος, χωρίς γέμισμα.
-    title: standardRowClass(4, true, undefined),
-    header: standardRowClass(3, true, '#EDEDED'),
-    data: { ...standardRowClass(2.8, false, undefined), align: 'ML' },
+    title: standardRowClass(),
+    header: standardRowClass(),
+    data: standardRowClass(),
   },
 };
 

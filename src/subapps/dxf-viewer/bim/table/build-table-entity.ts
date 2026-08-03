@@ -11,17 +11,23 @@
  * προς τα κάτω-δεξιά καθώς προστίθενται γραμμές, οπότε άγκυρα στο κέντρο θα τον
  * μετακινούσε σε **κάθε** νέα γραμμή — ακριβώς ό,τι δεν κάνει κανένα CAD.
  *
- * ## Γιατί ο νέος πίνακας ΔΕΝ γεννιέται εντελώς κενός (διαφορά από το AutoCAD)
- * Το AutoCAD δίνει κενό πλέγμα και ζητά από τον χρήστη να γράψει ο ίδιος τίτλο και
- * κεφαλίδες πριν κάνει οτιδήποτε άλλο — περιττό βήμα σε **κάθε** εισαγωγή. Excel, Google
- * Sheets και Revit δίνουν πάντα κεφαλίδες. Σπέρνουμε λοιπόν **4 κελιά από τα 15**
- * (τίτλος + 3 κεφαλίδες): αρκετά για να είναι ο πίνακας αμέσως χρήσιμος, αρκετά αραιά
- * ώστε να μένει ειλικρινές δείγμα του §4 («μόνο τα μη-κενά κελιά ταξιδεύουν»).
+ * ## Ο νέος πίνακας γεννιέται ΕΝΤΕΛΩΣ ΚΕΝΟΣ και ΟΥΔΕΤΕΡΟΣ (απόφαση Giorgio, 2026-08-04)
+ * Προηγουμένως σπέρναμε 4 κελιά (τίτλος + 3 κεφαλίδες) με το επιχείρημα «Excel/Sheets/Revit
+ * δίνουν πάντα κεφαλίδες». Το επιχείρημα ήταν λάθος για **αυτόν** τον καμβά: εδώ ο πίνακας
+ * δεν είναι φύλλο εργασίας, είναι **σχεδιαστικό αντικείμενο**, και ο χρήστης φτιάχνει τον
+ * δικό του πίνακα με τα δικά του δεδομένα — υπόμνημα, ποσότητες, στοιχεία έργου, καρτέλα.
+ * Κάθε προσυμπληρωμένο κελί ήταν **δουλειά σβησίματος** πριν την πρώτη πραγματική εγγραφή.
  *
- * Το περιεχόμενο είναι **παγωμένο κείμενο σχεδίου** τη στιγμή της δημιουργίας, όχι
- * ζωντανή ετικέτα UI: μεταφράζεται **μία** φορά εδώ (`i18n.t`, το ίδιο event-time
- * μοτίβο με το `bim/mep-boilers/mep-boiler-tag.ts`) και μετά ανήκει στο σχέδιο. Αλλαγή
- * γλώσσας δεν ξαναγράφει σχέδια που ήδη σώθηκαν — όπως ακριβώς σε κάθε CAD.
+ * Τρεις συνέπειες, όλες σκόπιμες:
+ * - **Κανένα κείμενο** (`cells: []`) — δεν μαντεύουμε τι πίνακα θέλει ο χρήστης.
+ * - **Καμία συγχώνευση** (`merges: []`) — ο τίτλος-σε-όλο-το-πλάτος ήταν απόφαση για
+ *   λογαριασμό του χρήστη· η συγχώνευση είναι πια δική **του** πράξη, όποτε τη θέλει.
+ * - **Καμία οπτική διαφοροποίηση κελιού** — το γκρι γέμισμα / τα έντονα / τα μεγέθη της
+ *   κεφαλίδας έφυγαν από το ίδιο το στυλ `standard` (βλ. `table-style-presets.ts`).
+ *
+ * Η δομή γραμμών (`title` / `header` / `data`) **μένει**: είναι το συμβόλαιο του μοντέλου
+ * και η λαβή με την οποία ένα άλλο στυλ (π.χ. `detailSheet`) ξαναδίνει ιεραρχία. Ουδέτερος
+ * σημαίνει «καμία διαφορά στην οθόνη», όχι «πέταξε τη σημασιολογία».
  *
  * ## Το `model` είναι απλό JSON — ΠΟΤΕ `Map` (Λύση Α, §4)
  * Χτίζεται μέσω `createTableModel` (η **μόνη** νόμιμη πηγή `CellKey`) και σειριοποιείται
@@ -35,13 +41,9 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §4, §4.1, §18
  */
 
-import { i18n } from '@/i18n';
 import type { Point2D } from '../../rendering/types/Types';
 import type {
-  CellSpan,
   PersistedTableModel,
-  TableCell,
-  TableCellEntry,
   TableColumn,
   TableRow,
 } from '../../types/table';
@@ -49,8 +51,6 @@ import type { TableEntity } from '../../types/table-entity';
 import { MIN_TABLE_COLUMN_WIDTH_MM } from '../../types/table-entity';
 import { createTableModel, toPersistedTableModel } from './table-model-helpers';
 import { BUILTIN_TABLE_STYLE_IDS } from './table-style-presets';
-
-const NS = 'dxf-viewer-shell';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Προεπιλογές — AutoCAD parity (1 γραμμή Title, 1 Header, οι υπόλοιπες Data)
@@ -212,51 +212,6 @@ function buildRows(shape: TableShape): TableRow[] {
   return rows;
 }
 
-function textCell(value: string): TableCell {
-  return { kind: 'text', value };
-}
-
-/**
- * Τα 4 σπαρμένα κελιά. Οι ετικέτες κεφαλίδας είναι **τρεις** — όσες και οι προεπιλεγμένες
- * στήλες. Αν ο χρήστης ζητήσει περισσότερες, οι επιπλέον κεφαλίδες μένουν **κενές**: δεν
- * υπάρχει γενικό όνομα για μια τέταρτη στήλη, και μια αυτόματη «Στήλη 4» θα ήταν θόρυβος
- * που ο χρήστης θα έπρεπε να σβήσει.
- */
-function seedCells(shape: TableShape): TableCellEntry[] {
-  const headers = [
-    i18n.t('table.defaults.columnNo', { ns: NS }),
-    i18n.t('table.defaults.columnDesc', { ns: NS }),
-    i18n.t('table.defaults.columnQty', { ns: NS }),
-  ];
-  const cells: TableCellEntry[] = [
-    [
-      rowId(TITLE_ROW_INDEX),
-      columnId(0),
-      textCell(i18n.t('table.defaults.title', { ns: NS })),
-    ],
-  ];
-  for (let i = 0; i < Math.min(shape.columnCount, headers.length); i++) {
-    cells.push([rowId(HEADER_ROW_INDEX), columnId(i), textCell(headers[i])]);
-  }
-  return cells;
-}
-
-/**
- * Η γραμμή τίτλου καταλαμβάνει **όλο** το πλάτος — μία συγχώνευση, ακριβώς όπως το
- * περιγράφει το ίδιο το `standard` preset («ο τίτλος καταλαμβάνει όλο το πλάτος»). Χωρίς
- * αυτήν, το πλέγμα θα έκοβε τον τίτλο σε N κομμάτια και η ζώνη τίτλου θα ήταν οπτικά
- * ανύπαρκτη. Μονόστηλος πίνακας ⇒ καμία συγχώνευση (το 1×1 δεν είναι συγχώνευση).
- */
-function buildTitleMerge(shape: TableShape): CellSpan[] {
-  if (shape.columnCount < 2) return [];
-  return [{
-    anchorRowId: rowId(TITLE_ROW_INDEX),
-    anchorColId: columnId(0),
-    rowSpan: 1,
-    colSpan: shape.columnCount,
-  }];
-}
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Το μοντέλο — απομνημονευμένο ανά σχήμα
 // ──────────────────────────────────────────────────────────────────────────────
@@ -278,16 +233,19 @@ let memoModel: PersistedTableModel | null = null;
  */
 export function buildTableModel(opts: BuildTableOptions = {}): PersistedTableModel {
   const shape = resolveShape(opts);
-  // Η γλώσσα μπαίνει στο κλειδί: τα σπαρμένα κελιά είναι μεταφρασμένο κείμενο, άρα ένας
-  // πίνακας που δημιουργείται μετά από αλλαγή γλώσσας πρέπει να γεννηθεί στη νέα γλώσσα.
-  const key = `${shape.columnCount}|${shape.dataRowCount}|${shape.columnWidthMm}|${i18n.language}`;
+  // Το κλειδί είναι **μόνο** το σχήμα. Η γλώσσα έφυγε από εδώ μαζί με τα σπαρμένα κελιά:
+  // ένας πίνακας χωρίς κείμενο δεν έχει τίποτα να μεταφραστεί, οπότε αλλαγή γλώσσας δεν
+  // παράγει διαφορετικό μοντέλο — και ένα κλειδί που κουβαλά κάτι που δεν επηρεάζει το
+  // αποτέλεσμα είναι απλώς αστοχία μνήμης χωρίς αντάλλαγμα.
+  const key = `${shape.columnCount}|${shape.dataRowCount}|${shape.columnWidthMm}`;
   if (memoModel && memoKey === key) return memoModel;
 
   const model = toPersistedTableModel(createTableModel({
     columns: buildColumns(shape),
     rows: buildRows(shape),
-    cells: seedCells(shape),
-    merges: buildTitleMerge(shape),
+    // Κενός και ασυγχώνευτος — βλ. την επικεφαλίδα του module.
+    cells: [],
+    merges: [],
   }));
   memoKey = key;
   memoModel = model;

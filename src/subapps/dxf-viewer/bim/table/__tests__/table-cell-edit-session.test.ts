@@ -125,21 +125,25 @@ describe('resolveTableCellEditTarget — ποιο κελί χτυπήθηκε', 
  * παίρνει την όψη από τη ΜΙΑ διάταξη· αν την ξαναέβρισκε μόνος του θα ήταν δεύτερη μηχανή
  * που αποκλίνει σιωπηλά.
  *
- * Τα νούμερα είναι από το `standard` στυλ, υπολογισμένα στο χέρι:
- *   header → ύψος κειμένου 3 mm, στοίχιση `MC` (μεσαία ζώνη), περιθώρια h2 / v1,5
- *   data   → ύψος κειμένου 2,8 mm, στοίχιση `ML` (μεσαία ζώνη)
+ * Τα νούμερα είναι από το `standard` στυλ, υπολογισμένα στο χέρι. Από την **2026-08-04** το
+ * `standard` είναι **ουδέτερο** (απόφαση Giorgio: κάθε κελί ισάξιο), οπότε κεφαλίδα και
+ * δεδομένα δίνουν την ΙΔΙΑ όψη:
+ *   κάθε κλάση → ύψος κειμένου 2,8 mm, χωρίς έντονα, χωρίς γέμισμα, `ML`, περιθώρια h2 / v1,5
  *   γραμμές 8 mm, στήλες 40 / 20 mm, στοίχιση στήλης `left`
+ *
+ * ⚠️ Το ερώτημα της ομάδας παραμένει ακέραιο: ελέγχει ότι ο επεξεργαστής **διαβάζει** την
+ * όψη από τη διάταξη, όχι ότι το στυλ διαφοροποιεί γραμμές. Η προτεραιότητα
+ * στυλ/στήλης/κελιού ζει στο `table-style-precedence.test.ts`, με δικά του στυλ.
  */
 describe('TableCellEditTarget — η όψη έρχεται από τη διάταξη, όχι από τον επεξεργαστή', () => {
-  it('(r1,c1): ορθογώνιο, στυλ κεφαλίδας και στοίχιση στήλης', () => {
+  it('(r1,c1): ορθογώνιο, ουδέτερο στυλ και στοίχιση στήλης', () => {
     const target = resolveTableCellEditTarget(makeEntity(), { x: 110, y: 195 });
     expect(target?.rectMm).toEqual({ x: 0, y: 0, w: 40, h: 8 });
-    expect(target?.style.textHeightMm).toBe(3);
-    expect(target?.style.bold).toBe(true);
-    expect(target?.style.fillColorHex).toBe('#EDEDED');
+    expect(target?.style.textHeightMm).toBe(2.8);
+    expect(target?.style.bold).toBe(false);
+    expect(target?.style.fillColorHex).toBeUndefined();
     expect(target?.style.margins).toEqual({ hMm: 2, vMm: 1.5 });
-    // Η **στήλη** κερδίζει την οριζόντια συνιστώσα όταν το κελί δεν έχει δική του άποψη —
-    // παρότι η κλάση γραμμής λέει `MC` (κεντραρισμένη).
+    // Η **στήλη** δίνει την οριζόντια συνιστώσα όταν το κελί δεν έχει δική του άποψη.
     expect(target?.hAlign).toBe('left');
   });
 
@@ -151,7 +155,7 @@ describe('TableCellEditTarget — η όψη έρχεται από τη διάτ�
    */
   it('η γραμμή βάσης είναι ΣΧΕΤΙΚΗ με την κορυφή του κελιού', () => {
     const header = resolveTableCellEditTarget(makeEntity(), { x: 110, y: 195 });
-    expect(header?.baselineFromTopMm).toBeCloseTo(8 / 2 + 3 / 2, 9); // 5,5
+    expect(header?.baselineFromTopMm).toBeCloseTo(8 / 2 + 2.8 / 2, 9); // 5,4
 
     const data = resolveTableCellEditTarget(makeEntity(), { x: 145, y: 190 }); // (r2,c2)
     expect(data?.rectMm).toEqual({ x: 40, y: 8, w: 20, h: 8 });
