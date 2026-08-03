@@ -90,6 +90,38 @@ export interface TableBorderIconProps {
  */
 export function TableBorderIcon({ command, size = 16 }: TableBorderIconProps): React.ReactElement {
   return (
+    <TableIconFrame size={size}>
+      {/*
+        🔑 Το κλειδί είναι **μόνο** η θέση, χωρίς δείκτη πίνακα — και αυτό είναι εγγύηση, όχι
+        αισιοδοξία: οι έξι πλευρές είναι **ανά δύο ξένες** (`table-range-border-ops.ts`,
+        αναλλοίωτη που η Φ2 έκανε άμεσα ελέγξιμη με το `tableRangeSideEdges`). Δύο σκέλη της
+        ίδιας εντολής δεν μπορούν να διεκδικήσουν την ίδια γραμμή, άρα δύο ίδια κλειδιά δεν
+        είναι εκφράσιμα.
+      */}
+      {commandLines(command).map((line) => (
+        <React.Fragment key={`${line.orientation}${line.at}`}>{strokesOf(line)}</React.Fragment>
+      ))}
+    </TableIconFrame>
+  );
+}
+
+/** Η πλευρά του τετράγωνου πλέγματος 2×2 σε μονάδες viewBox — το «κελί» κάθε εικονιδίου. */
+export const TABLE_ICON_BOX = { x: PAD, y: PAD, w: VIEW - 2 * PAD, h: VIEW - 2 * PAD } as const;
+
+/**
+ * ADR-750 Φ5 — **το κοινό καρέ κάθε εικονιδίου του μενού**: το `<svg>` και το διάστικτο
+ * πλέγμα 2×2 του συμφραζομένου. Τα «ενεργά» στοιχεία τα δίνει ο καλών.
+ *
+ * Εξήχθη όταν προστέθηκαν τα εικονίδια των **διαγωνίων**: εκείνα χρειάζονται ακριβώς το ίδιο
+ * πλέγμα και το ίδιο viewBox, και ένα δεύτερο αντίγραφο θα ήταν sibling clone (CHECK 3.28) —
+ * αλλά κυρίως θα ήταν **δεύτερο πλέγμα**, που θα μπορούσε κάποτε να έχει άλλο βήμα ή άλλη
+ * διάστιξη από το πρώτο. Δύο εικονίδια δίπλα-δίπλα με διαφορετικό πλέγμα διαβάζονται ως δύο
+ * διαφορετικά πράγματα.
+ */
+export function TableIconFrame({
+  size = 16, children,
+}: { readonly size?: number; readonly children: React.ReactNode }): React.ReactElement {
+  return (
     <svg
       width={size}
       height={size}
@@ -104,18 +136,7 @@ export function TableBorderIcon({ command, size = 16 }: TableBorderIconProps): R
           <line key={`${orientation}${at}`} {...segment(orientation, at)} />
         ))}
       </g>
-      {/*
-        🔑 Το κλειδί είναι **μόνο** η θέση, χωρίς δείκτη πίνακα — και αυτό είναι εγγύηση, όχι
-        αισιοδοξία: οι έξι πλευρές είναι **ανά δύο ξένες** (`table-range-border-ops.ts`,
-        αναλλοίωτη που η Φ2 έκανε άμεσα ελέγξιμη με το `tableRangeSideEdges`). Δύο σκέλη της
-        ίδιας εντολής δεν μπορούν να διεκδικήσουν την ίδια γραμμή, άρα δύο ίδια κλειδιά δεν
-        είναι εκφράσιμα.
-      */}
-      <g className={styles.active}>
-        {commandLines(command).map((line) => (
-          <React.Fragment key={`${line.orientation}${line.at}`}>{strokesOf(line)}</React.Fragment>
-        ))}
-      </g>
+      <g className={styles.active}>{children}</g>
     </svg>
   );
 }

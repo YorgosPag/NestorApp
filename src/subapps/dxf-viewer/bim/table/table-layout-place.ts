@@ -21,6 +21,7 @@ import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableCell, TableCellAlign, TableCellOverflow, TableModel } from '../../types/table';
 import { cellKey, cellText } from './table-model-helpers';
 import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overflow';
+import { tableDiagonalCorners } from './table-cell-diagonal-ops';
 import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
 import type { TableMeasurement } from './table-layout-measure';
 import type {
@@ -289,17 +290,10 @@ function diagonalsOf(
   const diagonal = cell?.diagonal;
   if (!diagonal) return {};
 
-  const left = rect.x;
-  const right = rect.x + rect.w;
-  const top = rect.y;
-  const bottom = rect.y + rect.h;
-
   const segments: TableBorderSegment[] = [];
-  if (diagonal.down) {
-    segments.push({ a: { x: left, y: top }, b: { x: right, y: bottom }, spec: diagonal.down });
-  }
-  if (diagonal.up) {
-    segments.push({ a: { x: left, y: bottom }, b: { x: right, y: top }, spec: diagonal.up });
+  for (const direction of ['down', 'up'] as const) {
+    const spec = diagonal[direction];
+    if (spec) segments.push({ ...tableDiagonalCorners(direction, rect), spec });
   }
   // Το πεδίο **λείπει** όταν δεν υπάρχει τμήμα, ποτέ κενός πίνακας: ένα ρητό `[]` θα άλλαζε το
   // σχήμα κάθε κελιού του έργου (και κάθε χαρακτηρισμένο στιγμιότυπο) για μηδέν διαφορά —
