@@ -236,21 +236,21 @@ describe('🔑 η γεωμετρία που φτάνει στους τέσσερ
   });
 
   it('🔑 σε ΣΥΓΧΩΝΕΥΜΕΝΟ κελί, η διαγώνιος διασχίζει ΟΛΗ τη συγχώνευση', () => {
-    const merged = persisted(2, 2, [{ rowId: 'r1', colId: 'c1', rowSpan: 2, colSpan: 2 }]);
+    const merged = persisted(2, 2, [{ anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 2, colSpan: 2 }]);
     const segments = paintedDiagonals(apply(merged, bounds(0, 0, 0, 0), 'down'));
     expect(segments).toHaveLength(1);
     expect(segments[0].b).toEqual({ x: 2 * W, y: 2 * H });
   });
 
   it('🔴 Α16 — τα ΚΑΛΥΜΜΕΝΑ κελιά γράφονται αλλά ΔΕΝ ζωγραφίζονται…', () => {
-    const merged = persisted(2, 2, [{ rowId: 'r1', colId: 'c1', rowSpan: 2, colSpan: 2 }]);
+    const merged = persisted(2, 2, [{ anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 2, colSpan: 2 }]);
     const next = apply(merged, bounds(0, 1, 0, 1), 'down');
     expect(next.cells).toHaveLength(4);
     expect(paintedDiagonals(next)).toHaveLength(1);
   });
 
   it('…και ΕΜΦΑΝΙΖΟΝΤΑΙ μόλις λυθεί η συγχώνευση', () => {
-    const merged = persisted(2, 2, [{ rowId: 'r1', colId: 'c1', rowSpan: 2, colSpan: 2 }]);
+    const merged = persisted(2, 2, [{ anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 2, colSpan: 2 }]);
     const next = apply(merged, bounds(0, 1, 0, 1), 'down');
     const unmerged: PersistedTableModel = { ...next, merges: [] };
     expect(paintedDiagonals(unmerged)).toHaveLength(4);

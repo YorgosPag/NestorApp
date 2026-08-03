@@ -53,10 +53,40 @@ import { sameBorderSpec } from './table-edge-model';
 export type TableDiagonalCommandId = 'down' | 'up' | 'cross' | 'clear';
 
 /** Ποιες διαγώνιοι μένουν μετά την εντολή· `clear` σβήνει και τις δύο. */
-interface DiagonalCommand {
+export interface TableDiagonalCommand {
   readonly id: TableDiagonalCommandId;
   readonly down: boolean;
   readonly up: boolean;
+}
+
+/** Οι δύο διευθύνσεις, με τα ονόματα του OOXML. */
+export type TableDiagonalDirection = 'down' | 'up';
+
+/**
+ * 🔑 **Πού ακριβώς περνά μια διαγώνιος μέσα σε ένα ορθογώνιο** — η μία απάντηση.
+ *
+ * Τη ρωτούν **δύο** ανεξάρτητοι καλούντες: η διάταξη (με το ορθογώνιο του κελιού) και το
+ * **εικονίδιο** του μενού (με το πλέγμα 2×2 του viewBox). Ίδιο σκεπτικό με τα εικονίδια
+ * περιγράμματος: το εικονίδιο δεν **μιμείται** την εντολή, εκτελεί την **ίδια** συνάρτηση με
+ * άλλα όρια — άρα «το εικονίδιο δείχνει ↘ και η εντολή ζωγραφίζει ↗» δεν είναι απίθανο,
+ * είναι **μη εκφράσιμο**.
+ *
+ * ⚠️ Ο άξονας `y` δείχνει **προς τα κάτω** (σύμβαση `table-layout-types.ts` **και** viewBox
+ * του SVG — τυχαία η ίδια, αλλά και οι δύο ισχύουν). Άρα η `up` (↗) **τελειώνει** στο
+ * μικρότερο `y`. Γραμμένο μία φορά, εδώ, γιατί είναι ακριβώς το σημείο όπου μια εικασία δίνει
+ * καθρεφτισμένο σχέδιο.
+ */
+export function tableDiagonalCorners(
+  direction: TableDiagonalDirection,
+  rect: { readonly x: number; readonly y: number; readonly w: number; readonly h: number },
+): { readonly a: { x: number; y: number }; readonly b: { x: number; y: number } } {
+  const left = rect.x;
+  const right = rect.x + rect.w;
+  const top = rect.y;
+  const bottom = rect.y + rect.h;
+  return direction === 'down'
+    ? { a: { x: left, y: top }, b: { x: right, y: bottom } }
+    : { a: { x: left, y: bottom }, b: { x: right, y: top } };
 }
 
 /**
@@ -64,14 +94,14 @@ interface DiagonalCommand {
  * Excel), μετά ο συνδυασμός, τελευταία η αφαίρεση — η **ίδια** δραματουργία με τις 13 του
  * πλέγματος, όπου το «Χωρίς περίγραμμα» δεν κάθεται ποτέ πρώτο.
  */
-export const TABLE_DIAGONAL_COMMANDS: readonly DiagonalCommand[] = [
+export const TABLE_DIAGONAL_COMMANDS: readonly TableDiagonalCommand[] = [
   { id: 'down', down: true, up: false },
   { id: 'up', down: false, up: true },
   { id: 'cross', down: true, up: true },
   { id: 'clear', down: false, up: false },
 ];
 
-const COMMANDS_BY_ID: ReadonlyMap<TableDiagonalCommandId, DiagonalCommand> = new Map(
+const COMMANDS_BY_ID: ReadonlyMap<TableDiagonalCommandId, TableDiagonalCommand> = new Map(
   TABLE_DIAGONAL_COMMANDS.map((command) => [command.id, command]),
 );
 
@@ -163,7 +193,7 @@ function cellsInBounds(
  * ποτέ διαγώνιο — diff, βήμα undo και αποθήκευση, για μηδενική οπτική διαφορά.
  */
 function buildDiagonals(
-  command: DiagonalCommand,
+  command: TableDiagonalCommand,
   pencil: TableBorderSpec,
 ): TableCellDiagonals | undefined {
   if (!command.down && !command.up) return undefined;
