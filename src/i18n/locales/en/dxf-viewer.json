@@ -576,18 +576,37 @@
         "topAndBottom": "Top and bottom border",
         "topAndThickBottom": "Top and thick bottom border",
         "topAndDoubleBottom": "Top and double bottom border"
+      },
+      "diagonals": {
+        "section": "Diagonal lines",
+        "down": "Diagonal down",
+        "up": "Diagonal up",
+        "cross": "Diagonal cross",
+        "clear": "No diagonals"
+      },
+      "pencil": {
+        "section": "Draw borders",
+        "color": "Line colour",
+        "style": "Line style",
+        "weight": "Line weight",
+        "double": "Double line",
+        "doubleHint": "Two parallel rules — the grand-total convention",
+        "automatic": "Automatic",
+        "automaticHint": "From the table style",
+        "colorMenuLabel": "Border line colour",
+        "styleMenuLabel": "Border line style",
+        "weightMenuLabel": "Border line weight",
+        "weightValue": "{mm} mm",
+        "colorDialogTitle": "Border line colour",
+        "basicColors": "Basic colours",
+        "moreColors": "More colours…",
+        "preview": "The pen that will be applied"
       }
     },
-    "textColor": {
-      "trigger": "Text colour",
-      "openMenu": "Text colour palette",
-      "menuLabel": "Text colour",
-      "automatic": "Automatic",
-      "automaticHint": "Inherited from the table style",
+    "colorMenu": {
       "drawingColors": "Drawing colours",
       "basicColors": "Basic colours",
       "moreColors": "More colours…",
-      "dialogTitle": "Text colour",
       "swatchAci": "{hue} {shade} · ACI {index}",
       "swatchHex": "Colour {color}",
       "black": "Black",
@@ -613,7 +632,30 @@
         "dark2": "dark 2",
         "dark3": "dark 3",
         "dark4": "dark 4"
-      }
+      },
+      "greyLighter": "Neutral lightest",
+      "greyLight": "Neutral lighter"
+    },
+    "textColor": {
+      "trigger": "Text colour",
+      "openMenu": "Text colour palette",
+      "menuLabel": "Text colour",
+      "automatic": "Automatic",
+      "automaticHint": "Inherited from the table style",
+      "automaticMixedHint": "Inheritance varies per cell",
+      "dialogTitle": "Text colour"
+    },
+    "fillColor": {
+      "trigger": "Fill colour",
+      "openMenu": "Fill colour palette",
+      "menuLabel": "Fill colour",
+      "automatic": "Automatic",
+      "automaticHint": "Inherits the fill of the table style",
+      "automaticMixedHint": "Inheritance varies per cell",
+      "automaticNoneHint": "Inherits “no fill” from the style",
+      "none": "No fill",
+      "noneHint": "Explicitly transparent — does not inherit",
+      "dialogTitle": "Fill colour"
     },
     "clipboard": {
       "pasteClipped": "Not everything fitted — {detail} fitted. The table does not grow automatically.",

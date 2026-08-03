@@ -15,12 +15,12 @@
  *
  * @module subapps/dxf-viewer/rendering/entities/table/stamp-table-layout
  * @see bim/table/table-layout-types.ts — τα σχήματα που δέχεται
+ * @see rendering/entities/table/stamp-table-borders.ts — το πλέγμα (εξήχθη, ADR-750 Φ5)
  * @see rendering/entities/TableRenderer.ts — ο καλών
  */
 
 import type { Point2D } from '../../types/Types';
 import type {
-  TableBorderSegment,
   TableCellLayout,
   TableRectMm,
   TableTextRun,
@@ -33,9 +33,6 @@ import { TABLE_CELL_CURSOR, TABLE_CELL_SELECTION } from '../../../config/color-c
 
 /** Κάτω από αυτό το ύψος κεφαλαίου στην οθόνη, το κείμενο κελιού δεν ζωγραφίζεται. */
 export const MIN_CELL_TEXT_SCREEN_PX = 5;
-
-/** Ελάχιστο πάχος γραμμής στην οθόνη — hairline αντί για αόρατη γραμμή. */
-const MIN_BORDER_SCREEN_PX = 0.5;
 
 export interface StampTableContext {
   readonly ctx: CanvasRenderingContext2D;
@@ -145,32 +142,6 @@ export function stampTableFills(rc: StampTableContext, cells: readonly TableCell
     ctx.fillStyle = rc.phaseColor ?? fill;
     traceRectMm(rc, cell.rect);
     ctx.fill();
-    ctx.restore();
-  }
-}
-
-// ── Πλέγμα ───────────────────────────────────────────────────────────────────
-
-/** Τα τμήματα περιγράμματος, το καθένα με το δικό του μολύβι (χρώμα/πάχος/διακεκομμένη). */
-export function stampTableBorders(
-  rc: StampTableContext,
-  segments: readonly TableBorderSegment[],
-): void {
-  const { ctx } = rc;
-  for (const segment of segments) {
-    if (!segment.spec.visible) continue;
-    const a = rc.toScreen(segment.a.x, segment.a.y);
-    const b = rc.toScreen(segment.b.x, segment.b.y);
-    ctx.save();
-    ctx.strokeStyle = rc.phaseColor ?? segment.spec.colorHex;
-    ctx.lineWidth = Math.max(segment.spec.widthMm * rc.pxPerMm, MIN_BORDER_SCREEN_PX);
-    if (segment.spec.dashMm) {
-      ctx.setLineDash(segment.spec.dashMm.map((d) => d * rc.pxPerMm));
-    }
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
     ctx.restore();
   }
 }
@@ -491,3 +462,13 @@ function stampRun(
   stampFrameText(rc, anchor, run.text, underlineOf(run, fontPx, rc.pxPerMm));
   ctx.restore();
 }
+
+/**
+ * 🔴 ADR-750 Φ5 — **επανεξαγωγή**, ώστε καμία υπάρχουσα διαδρομή εισαγωγής να μην αλλάξει.
+ *
+ * Το πλέγμα μετακόμισε στο {@link stamp-table-borders} όταν αυτό το αρχείο πέρασε τις 500
+ * γραμμές (N.7.1): η Φ5 του πρόσθεσε το SSoT της διακεκομμένης και το σκεπτικό της. Η τομή
+ * δεν είναι αυθαίρετη — το πλέγμα είναι το **μόνο** μέρος που ρωτά τον κατάλογο τύπων γραμμής,
+ * ενώ τα υπόλοιπα (γεμίσματα, δείκτες, κείμενο) μιλούν μόνο τη γλώσσα του καμβά.
+ */
+export { stampTableBorders } from './stamp-table-borders';

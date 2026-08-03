@@ -22,6 +22,15 @@ export interface StrokeRecord {
   readonly color: string;
   readonly lineWidth: number;
   readonly points: ReadonlyArray<{ readonly x: number; readonly y: number }>;
+  /**
+   * ADR-750 Φ5 — το μοτίβο διακεκομμένης **σε px**, όπως θα το δεχόταν ο καμβάς.
+   *
+   * Ήταν `setLineDash: () => undefined`, δηλαδή ο καταγραφέας **κατάπινε** ακριβώς την
+   * πληροφορία που κρύβει το ελάττωμα: ένα μοτίβο με αρνητικά μήκη κάνει τον καμβά να αγνοήσει
+   * ολόκληρη την κλήση και να ζωγραφίσει συμπαγή γραμμή — **χωρίς σφάλμα πουθενά**. Ένα
+   * κατάπιε-και-προχώρα stub δεν είναι ουδέτερο· είναι πράσινο και για τις δύο υλοποιήσεις.
+   */
+  readonly dashPx: readonly number[];
 }
 
 /**
@@ -139,7 +148,11 @@ export function createCtx(log: PaintLog): CanvasRenderingContext2D {
   // παραγωγικό κώδικα θα ήταν **αόρατο** στα tests — και είναι ακριβώς το είδος διαρροής
   // που βάφει λοξά κάθε επόμενη οντότητα της σκηνής.
   let transform: Affine = IDENTITY;
-  const stack: Affine[] = [];
+  let dashPx: readonly number[] = [];
+  // Το `setLineDash` επαναφέρεται από το `restore()` όπως κάθε άλλη ιδιότητα σχεδίασης, οπότε
+  // ταξιδεύει μαζί με τη μήτρα στη στοίβα — αλλιώς η πρώτη διακεκομμένη θα «έβαφε» και κάθε
+  // επόμενη συμπαγή γραμμή του ίδιου περάσματος.
+  const stack: Array<{ readonly transform: Affine; readonly dashPx: readonly number[] }> = [];
   const ctx = {
     get fillStyle() {
       return fillStyle;
@@ -153,10 +166,12 @@ export function createCtx(log: PaintLog): CanvasRenderingContext2D {
     textBaseline: 'alphabetic' as CanvasTextBaseline,
     lineWidth: 1,
     save: (): void => {
-      stack.push(transform);
+      stack.push({ transform, dashPx });
     },
     restore: (): void => {
-      transform = stack.pop() ?? IDENTITY;
+      const previous = stack.pop();
+      transform = previous?.transform ?? IDENTITY;
+      dashPx = previous?.dashPx ?? [];
     },
     translate: (tx: number, ty: number): void => {
       transform = translated(transform, tx, ty);
@@ -175,9 +190,16 @@ export function createCtx(log: PaintLog): CanvasRenderingContext2D {
       path.push(applyTransform(transform, x, y));
     },
     stroke: (): void => {
-      log.strokes.push({ color: ctx.strokeStyle, lineWidth: ctx.lineWidth, points: [...path] });
+      log.strokes.push({
+        color: ctx.strokeStyle,
+        lineWidth: ctx.lineWidth,
+        points: [...path],
+        dashPx: [...dashPx],
+      });
     },
-    setLineDash: (): void => undefined,
+    setLineDash: (segments: readonly number[]): void => {
+      dashPx = [...segments];
+    },
     fill: (): void => {
       log.fills.push(fillStyle);
     },

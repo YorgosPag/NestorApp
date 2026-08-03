@@ -19,12 +19,15 @@
  */
 
 import {
+  stampTableBorders,
   stampTableCellCursor,
   stampTableFills,
   stampTableText,
   MIN_CELL_TEXT_SCREEN_PX,
   type StampTableContext,
 } from '../stamp-table-layout';
+import { LINETYPE_ISO_CATALOG } from '../../../../config/linetype-iso-catalog';
+import type { TableBorderSegment } from '../../../../bim/table/table-layout-types';
 import { createPaintLog, createRc, paintedInk, type PaintLog } from './table-paint-recorder';
 import { TABLE_CELL_CURSOR } from '../../../../config/color-config';
 import type { TableCellLayout } from '../../../../bim/table/table-layout-types';
@@ -235,5 +238,71 @@ describe('stampTableCellCursor — το ορθογώνιο του τρέχοντ
 
     expect(log.strokes[0].color).toBe(TABLE_CELL_CURSOR.colorHex);
     expect(log.strokes[0].color).not.toBe(PHASE);
+  });
+});
+
+/**
+ * 🔴 ADR-750 Φ5 — **η διακεκομμένη περνά από το SSoT, όχι από δεύτερο πολλαπλασιασμό.**
+ *
+ * Το ελάττωμα ήταν λανθάνον με τον ακριβή τρόπο που ο N.11/N.12 ονομάζουν «0 = κανείς δεν
+ * κοίταξε»: το `stampTableBorders` μετέτρεπε μόνο του `dashMm → px` με σκέτο πολλαπλασιασμό,
+ * και **κανένα** preset δεν παρήγαγε ποτέ `dashMm` — άρα η γραμμή δεν εκτελέστηκε ούτε μία
+ * φορά σε πραγματικά δεδομένα. Μόλις η Φ5 έδωσε στον χρήστη επιλογέα στυλ γραμμής, το μοτίβο
+ * άρχισε να έρχεται από τον κατάλογο, όπου **τα κενά είναι αρνητικά**.
+ *
+ * Η συνέπεια δεν θα ήταν σφάλμα: το `setLineDash` με έστω ένα αρνητικό μήκος **αγνοεί ολόκληρη
+ * την κλήση**, οπότε η «διακεκομμένη» θα ζωγραφιζόταν συμπαγής και ο χρήστης θα έβλεπε την
+ * επιλογή του να μην κάνει τίποτα, σιωπηλά.
+ */
+describe('🔴 stampTableBorders — το μοτίβο διακεκομμένης (ADR-750 Φ5)', () => {
+  const PEN_COLOR = '#ff00ff';
+
+  function segment(dashMm?: readonly number[]): TableBorderSegment {
+    return {
+      a: { x: 0, y: 0 },
+      b: { x: 40, y: 0 },
+      spec: { visible: true, colorHex: PEN_COLOR, widthMm: 0.5, ...(dashMm ? { dashMm } : {}) },
+    };
+  }
+
+  it('🔑 μοτίβο καταλόγου (κενά ΑΡΝΗΤΙΚΑ) φτάνει στον καμβά ΟΛΟ θετικό', () => {
+    const log: PaintLog = createPaintLog();
+    const pattern = LINETYPE_ISO_CATALOG.Dashed.pattern;
+    // Η προϋπόθεση του test: ο κατάλογος όντως μιλά με πρόσημα. Αν πάψει, το test το λέει.
+    expect(pattern.some((v) => v < 0)).toBe(true);
+
+    stampTableBorders(createRc(log, { pxPerMm: 2 }), [segment(pattern)]);
+
+    expect(log.strokes).toHaveLength(1);
+    expect(log.strokes[0].dashPx).toEqual(pattern.map((v) => Math.abs(v) * 2));
+    for (const px of log.strokes[0].dashPx) expect(px).toBeGreaterThan(0);
+  });
+
+  it('η κουκκίδα (μήκος 0) ανυψώνεται σε ορατό μήκος αντί να εξαφανιστεί', () => {
+    const log: PaintLog = createPaintLog();
+    stampTableBorders(createRc(log, { pxPerMm: 2 }), [segment(LINETYPE_ISO_CATALOG.Dot.pattern)]);
+
+    for (const px of log.strokes[0].dashPx) expect(px).toBeGreaterThan(0);
+  });
+
+  it('χωρίς `dashMm` η γραμμή μένει συμπαγής — και ΔΕΝ κληρονομεί το μοτίβο της προηγούμενης', () => {
+    // Ο έλεγχος της διαρροής: το `save`/`restore` του ζωγράφου πρέπει να επαναφέρει το μοτίβο.
+    const log: PaintLog = createPaintLog();
+    stampTableBorders(createRc(log, { pxPerMm: 2 }), [
+      segment(LINETYPE_ISO_CATALOG.Dashed.pattern),
+      segment(),
+    ]);
+
+    expect(log.strokes).toHaveLength(2);
+    expect(log.strokes[1].dashPx).toEqual([]);
+  });
+
+  it('η αόρατη ακμή δεν χαράσσεται καθόλου (ποτέ «γραμμή μηδενικού πάχους»)', () => {
+    const log: PaintLog = createPaintLog();
+    stampTableBorders(createRc(log), [
+      { a: { x: 0, y: 0 }, b: { x: 1, y: 0 }, spec: { visible: false, colorHex: PEN_COLOR, widthMm: 0 } },
+    ]);
+
+    expect(log.strokes).toEqual([]);
   });
 });
