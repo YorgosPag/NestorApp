@@ -15,7 +15,21 @@ import { initReactI18next, I18nextProvider } from 'react-i18next';
 import elDxfViewer from '@/i18n/locales/el/dxf-viewer.json';
 import { TableFormatToolbar } from '../TableFormatToolbar';
 import { tableBorderMenuItems } from '../table-border-menu-items';
+import { TABLE_DIAGONAL_COMMANDS } from '@/subapps/dxf-viewer/bim/table/table-cell-diagonal-ops';
+import {
+  resetTableBorderPencilForTest,
+} from '@/subapps/dxf-viewer/state/table-border-pencil-store';
+import {
+  tableBorderPencilChoice,
+} from '@/subapps/dxf-viewer/state/table-border-pencil-store';
+import { resolveTableBorderPencil } from '@/subapps/dxf-viewer/bim/table/table-border-pencil';
+import {
+  BUILTIN_TABLE_STYLES,
+  BUILTIN_TABLE_STYLE_IDS,
+} from '@/subapps/dxf-viewer/bim/table/table-style-presets';
+import { tableBorderLinetypeNames, tableBorderWeightsMm } from '../table-border-pencil-options';
 import type { TableAxisFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
+import type { TableBorderSpec } from '@/subapps/dxf-viewer/types/table-edges';
 
 // Ίδιο μοτίβο με το αδελφό `table-format-toolbar.test.tsx`: πραγματικό i18next με το **ίδιο**
 // locale αρχείο που φορτώνει η παραγωγή. Τα ονόματα των 13 εντολών είναι το αντικείμενο του
@@ -52,7 +66,7 @@ const NO_FORMAT: TableToggleFormatState = { active: false, mixed: false, explici
  */
 const NO_COLOR = {
   current: undefined, mixed: false, explicit: false,
-  inheritedColor: undefined, drawingColors: [],
+  inheritedColor: undefined, inheritedMixed: false, drawingColors: [],
 } as const;
 const FORMAT: TableAxisFormatSnapshot = {
   bold: NO_FORMAT,
@@ -63,13 +77,33 @@ const FORMAT: TableAxisFormatSnapshot = {
   canReset: false,
 };
 
+/**
+ * 🔴 ADR-750 Φ5 — η προεπισκόπηση περνά από την **αληθινή** αλυσίδα, όχι από σταθερά.
+ *
+ * Ένα σταθερό μολύβι εδώ θα ήταν πράσινο ό,τι κι αν έκανε ο χρήστης: η γραμμή «Πάχος γραμμής»
+ * θα έδειχνε την ίδια τιμή πριν και μετά την επιλογή, και το test θα επαλήθευε **τον εαυτό
+ * του**. Με τη ζωντανή `resolveTableBorderPencil` πάνω στο πραγματικό store, ο δεσμός
+ * «επιλογή → προεπισκόπηση» είναι αυτό που πράγματι δοκιμάζεται.
+ */
+const PREVIEW_STYLE = (() => {
+  const style = BUILTIN_TABLE_STYLES.find((s) => s.id === BUILTIN_TABLE_STYLE_IDS.STANDARD);
+  if (!style) throw new Error('missing preset: standard');
+  return style;
+})();
+
+const resolvePreviewPencil = (): TableBorderSpec =>
+  resolveTableBorderPencil(PREVIEW_STYLE, tableBorderPencilChoice());
+
 function renderToolbar(borders?: {
   canReset?: boolean;
+  canClearDiagonals?: boolean;
   onApply?: jest.Mock;
   onReset?: jest.Mock;
+  onApplyDiagonal?: jest.Mock;
 }) {
   const onApply = borders?.onApply ?? jest.fn();
   const onReset = borders?.onReset ?? jest.fn();
+  const onApplyDiagonal = borders?.onApplyDiagonal ?? jest.fn();
   const surfaceRef = React.createRef<HTMLDivElement>();
   const noop = (): void => {};
 
@@ -86,11 +120,18 @@ function renderToolbar(borders?: {
       onReset={noop}
       onSetTextColor={noop}
       onSetFillColor={noop}
-      borders={{ canReset: borders?.canReset ?? true, onApply, onReset }}
+      borders={{
+        canReset: borders?.canReset ?? true,
+        onApply,
+        onReset,
+        onApplyDiagonal,
+        canClearDiagonals: borders?.canClearDiagonals ?? true,
+        resolvePencil: resolvePreviewPencil,
+      }}
     />,
     wrapper,
   );
-  return { onApply, onReset };
+  return { onApply, onReset, onApplyDiagonal };
 }
 
 /** Ανοίγει το πάνελ πατώντας τον trigger. */
@@ -122,11 +163,12 @@ describe('ADR-750 Φ3 — το dropdown στο toolbar', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('ανοίγει με κλικ και δείχνει τις 11 διαθέσιμες εντολές + την επαναφορά', () => {
+  it('ανοίγει με κλικ και δείχνει ΟΛΕΣ τις γραμμές του πάνελ, παραγόμενες από τα μητρώα', () => {
     renderToolbar();
     const panel = openPanel();
-    const items = panel.querySelectorAll('[role="menuitem"]');
-    expect(items).toHaveLength(tableBorderMenuItems().length + 1);
+    // 13 εντολές + «Επαναφορά» + 4 διαγώνιοι + 3 γραμμές μολυβιού (η «Διπλή» είναι checkbox).
+    const expected = tableBorderMenuItems().length + 1 + TABLE_DIAGONAL_COMMANDS.length + 3;
+    expect(panel.querySelectorAll('[role="menuitem"]')).toHaveLength(expected);
     expect(screen.getByRole('button', { name: 'Περιγράμματα' })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -185,7 +227,8 @@ describe('ADR-750 Φ3 — το dropdown στο toolbar', () => {
     renderToolbar();
     const panel = openPanel();
     // 2 από τις ομάδες του μητρώου + 1 πριν την επαναφορά (άλλο επίπεδο πράξης).
-    expect(panel.querySelectorAll('[role="separator"]')).toHaveLength(3);
+    // 2 αλλαγές ομάδας στις 13 + πριν την «Επαναφορά» + πριν τις διαγωνίους + πριν το μολύβι.
+    expect(panel.querySelectorAll('[role="separator"]')).toHaveLength(5);
   });
 
   it('🔴 `Escape` κλείνει ΜΟΝΟ το πάνελ — ένα Escape, ένα επίπεδο', () => {
@@ -212,5 +255,130 @@ describe('ADR-750 Φ3 — το dropdown στο toolbar', () => {
     for (const svg of Array.from(panel.querySelectorAll('svg'))) {
       expect(svg).toHaveAttribute('aria-hidden', 'true');
     }
+  });
+});
+
+// ── ADR-750 Φ5 ──────────────────────────────────────────────────────────────
+
+describe('✅ Φ5 (Α2) — οι διαγώνιοι είναι δική τους ομάδα, όχι 14η εντολή', () => {
+  it('δείχνει και τις τέσσερις, με τα ονόματά τους', () => {
+    renderToolbar();
+    openPanel();
+    for (const name of [
+      'Διαγώνιος προς τα κάτω',
+      'Διαγώνιος προς τα επάνω',
+      'Διαγώνιος σταυρός',
+      'Χωρίς διαγώνιες',
+    ]) {
+      expect(screen.getByRole('menuitem', { name })).toBeInTheDocument();
+    }
+  });
+
+  it('κλικ σε διαγώνιο: καλεί `onApplyDiagonal` με τη ΣΩΣΤΗ ταυτότητα και κλείνει', () => {
+    const { onApplyDiagonal } = renderToolbar();
+    openPanel();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Διαγώνιος σταυρός' }));
+    expect(onApplyDiagonal).toHaveBeenCalledWith('cross');
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('🔴 ΜΟΝΟ η αφαίρεση μπορεί να είναι ανενεργή — οι τρεις άλλες γράφουν πάντα', () => {
+    renderToolbar({ canClearDiagonals: false });
+    openPanel();
+    expect(screen.getByRole('menuitem', { name: 'Χωρίς διαγώνιες' }))
+      .toHaveAttribute('aria-disabled', 'true');
+    for (const name of ['Διαγώνιος προς τα κάτω', 'Διαγώνιος σταυρός']) {
+      expect(screen.getByRole('menuitem', { name })).not.toHaveAttribute('aria-disabled');
+    }
+  });
+
+  it('η ανενεργή αφαίρεση είναι ΕΣΤΙΑΣΙΜΗ και το κλικ της είναι no-op', () => {
+    const { onApplyDiagonal } = renderToolbar({ canClearDiagonals: false });
+    openPanel();
+    const clear = screen.getByRole('menuitem', { name: 'Χωρίς διαγώνιες' });
+    fireEvent.click(clear);
+    expect(onApplyDiagonal).not.toHaveBeenCalled();
+    expect(clear).not.toHaveAttribute('disabled');
+  });
+});
+
+describe('✅ Φ5 (Α23) — η ζώνη «Σχεδίαση περιγραμμάτων»', () => {
+  beforeEach(() => {
+    // Το μολύβι είναι **store με persistence**: χωρίς καθάρισμα, το πρώτο test που διαλέγει
+    // πάχος θα άλλαζε σιωπηλά την αφετηρία κάθε επόμενου.
+    resetTableBorderPencilForTest();
+  });
+
+  it('δείχνει τις τέσσερις γραμμές του μολυβιού, με τη «Διπλή» ως διακόπτη', () => {
+    renderToolbar();
+    openPanel();
+    for (const name of ['Χρώμα γραμμής', 'Στυλ γραμμής', 'Πάχος γραμμής']) {
+      expect(screen.getByRole('menuitem', { name })).toHaveAttribute('aria-haspopup', 'true');
+    }
+    // 🔑 Η «Διπλή γραμμή» ΔΕΝ είναι `menuitem`: είναι κατάσταση δύο τιμών, όχι εντολή (Α21).
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Διπλή γραμμή' }))
+      .toHaveAttribute('aria-checked', 'false');
+  });
+
+  it('🔑 τα πτυσσόμενα είναι ΚΛΕΙΣΤΑ αρχικά — το πάνελ δεν ξεκινά ξεδιπλωμένο', () => {
+    renderToolbar();
+    openPanel();
+    expect(screen.getByRole('menuitem', { name: 'Πάχος γραμμής' }))
+      .toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+  });
+
+  it('🔑 «Πάχος γραμμής» ανοίγει `radiogroup` με ΟΛΕΣ τις πένες ISO + «Αυτόματο»', () => {
+    // Αμοιβαία αποκλειόμενα ⇒ `menuitemradio`, όχι `menuitem` (§9.2). Και η λίστα είναι η
+    // **ίδια** που βλέπει κάθε άλλο χειριστήριο πάχους του subapp — καμία δεύτερη κλίμακα.
+    renderToolbar();
+    openPanel();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Πάχος γραμμής' }));
+
+    const group = screen.getByRole('radiogroup', { name: 'Πάχος γραμμής περιγράμματος' });
+    expect(group.querySelectorAll('[role="menuitemradio"]'))
+      .toHaveLength(tableBorderWeightsMm().length + 1);
+    expect(screen.getByRole('menuitemradio', { name: 'Αυτόματο' }))
+      .toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('🔑 «Στυλ γραμμής» καταναλώνει το μητρώο τύπων — καμία χειρόγραφη λίστα', () => {
+    renderToolbar();
+    openPanel();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Στυλ γραμμής' }));
+
+    const group = screen.getByRole('radiogroup', { name: 'Στυλ γραμμής περιγράμματος' });
+    expect(group.querySelectorAll('[role="menuitemradio"]'))
+      .toHaveLength(tableBorderLinetypeNames().length + 1);
+    // Το `ByLayer` **δεν** προσφέρεται: η κληρονομιά λέγεται ήδη «Αυτόματο» (Α19).
+    expect(screen.queryByRole('menuitemradio', { name: 'ByLayer' })).toBeNull();
+  });
+
+  it('🔑 επιλογή πάχους γράφεται στο store και φαίνεται ως `aria-checked`', () => {
+    renderToolbar();
+    openPanel();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Πάχος γραμμής' }));
+    const pen = tableBorderWeightsMm()[3];
+    act(() => {
+      fireEvent.click(screen.getByRole('menuitemradio', { name: `${pen.toFixed(2)} mm` }));
+    });
+
+    // Το πτυσσόμενο κλείνει με την επιλογή· η γραμμή δείχνει πλέον τη νέα τιμή.
+    expect(screen.queryByRole('radiogroup')).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Πάχος γραμμής' }))
+      .toHaveTextContent(`${pen.toFixed(2)} mm`);
+  });
+
+  it('🔑 η «Διπλή γραμμή» εναλλάσσεται και ΔΕΝ κλείνει το πάνελ', () => {
+    // Είναι ρύθμιση του μολυβιού, όχι εντολή: κλείσιμο εδώ θα ανάγκαζε τον χρήστη να
+    // ξανανοίξει το μενού για να εφαρμόσει το περίγραμμα που μόλις ρύθμισε.
+    renderToolbar();
+    openPanel();
+    const toggle = screen.getByRole('menuitemcheckbox', { name: 'Διπλή γραμμή' });
+    act(() => { fireEvent.click(toggle); });
+
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Διπλή γραμμή' }))
+      .toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menu', { name: 'Περιγράμματα κελιών' })).toBeInTheDocument();
   });
 });

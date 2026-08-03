@@ -21,7 +21,7 @@ function state(patch: Partial<TableAxisColorState> = {}): TableAxisColorState {
     current: undefined,
     mixed: false,
     explicit: false,
-    inheritedColor: undefined,
+    inheritedColor: undefined, inheritedMixed: false,
     drawingColors: [],
     ...patch,
   };

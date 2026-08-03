@@ -50,7 +50,16 @@ import {
 } from './table-format-toolbar/TableFormatToolbar';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
-import type { TableBorderCommandId } from '../../bim/table/table-range-border-ops';
+import type { TableBorderMenuProps } from './table-format-toolbar/TableBorderMenu';
+
+/**
+ * ADR-750 Φ5 — το dropdown περιγραμμάτων **όπως το βλέπει ο ξενιστής**: όλα τα props του
+ * πάνελ εκτός από τη θέση roving, που την ξέρει μόνο η γραμμή εργαλείων.
+ *
+ * Ονομασμένος τύπος και όχι inline `Omit<…>`: τον χρειάζονται **τρία** αρχεία (το prop, το
+ * `OpenTarget`, ο ξενιστής της Φ4) και τρία inline `Omit` είναι τρεις ευκαιρίες να αποκλίνουν.
+ */
+export type TableBorderMenuHostProps = Omit<TableBorderMenuProps, 'roving'>;
 
 /** Ένα item δέχεται πάντα **ποια** υποδιαίρεση πατήθηκε — ποτέ κρυφή κατάσταση. */
 type TableHeaderAction = (hit: TableIndicatorHit) => void;
@@ -94,15 +103,18 @@ export interface TableHeaderMenuProps {
    */
   readonly onSetFillColor: (hit: TableIndicatorHit, value: string | null | undefined) => void;
   /**
-   * ADR-750 Φ3 — οι εντολές περιγράμματος του άξονα που πατήθηκε.
+   * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων του άξονα που πατήθηκε, σε μία ερώτηση.
    *
-   * Ζουν δίπλα στη μορφοποίηση κειμένου αλλά είναι **άλλο επίπεδο**: εκείνη γράφει στυλ άξονα,
-   * αυτές γράφουν ρητές ακμές πλέγματος. Γι' αυτό έχουν και δική τους «Επαναφορά» (Α19).
+   * Ζει δίπλα στη μορφοποίηση κειμένου αλλά είναι **άλλο επίπεδο**: εκείνη γράφει στυλ άξονα,
+   * αυτό γράφει ρητές ακμές πλέγματος και διαγωνίους κελιών. Γι' αυτό έχει και δική του
+   * «Επαναφορά» (Α19).
+   *
+   * 🔑 **Μία** ερώτηση και όχι πέντε props (εντολή / επαναφορά / canReset / διαγώνιος /
+   * μολύβι): το πάνελ μεγάλωσε από 2 σε 5 ικανότητες στη Φ5, και κάθε επόμενη θα πρόσθετε
+   * ακόμη ένα prop σε **τρία** αρχεία. Εδώ ο τύπος του πάνελ **είναι** το συμβόλαιο — μια νέα
+   * ικανότητα εμφανίζεται μόνη της, και ο μεταγλωττιστής δείχνει το ένα σημείο που τη γεμίζει.
    */
-  readonly onApplyBorder: (hit: TableIndicatorHit, commandId: TableBorderCommandId) => void;
-  readonly onResetBorders: TableHeaderAction;
-  /** Υπάρχει ρητή ακμή στον άξονα; Ξαναρωτιέται **μετά από κάθε** πράξη περιγράμματος. */
-  readonly resolveCanResetBorders: (hit: TableIndicatorHit) => boolean;
+  readonly resolveBorderMenu: (hit: TableIndicatorHit) => TableBorderMenuHostProps;
   /** Το μενού έκλεισε — με ή χωρίς ενέργεια. Εδώ επιστρέφει η εστίαση στο κελί. */
   readonly onClosed: () => void;
 }
@@ -124,8 +136,8 @@ interface OpenTarget {
   readonly hit: TableIndicatorHit;
   readonly state: TableHeaderMenuState;
   readonly format: TableAxisFormatSnapshot;
-  /** ADR-750 Φ3 — ανανεώνεται μαζί με το `format`, για τον ίδιο ακριβώς λόγο. */
-  readonly canResetBorders: boolean;
+  /** ADR-750 Φ3/Φ5 — ανανεώνεται μαζί με το `format`, για τον ίδιο ακριβώς λόγο. */
+  readonly borders: TableBorderMenuHostProps;
   /** Το σημείο του δεξιού κλικ — το toolbar κάθεται από πάνω του. */
   readonly anchor: { readonly x: number; readonly y: number };
 }
@@ -135,7 +147,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     onInsertBefore, onInsertAfter, onDelete, resolveState,
     resolveFormat, onToggleFormat, onStepTextHeight, onResetFormat,
     onSetTextColor, onSetFillColor,
-    onApplyBorder, onResetBorders, resolveCanResetBorders, onClosed,
+    resolveBorderMenu, onClosed,
   }, ref) => {
     const triggerRef = useRef<HTMLSpanElement>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
@@ -160,7 +172,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           hit,
           state: resolveState(hit),
           format: resolveFormat(hit),
-          canResetBorders: resolveCanResetBorders(hit),
+          borders: resolveBorderMenu(hit),
           anchor: { x, y },
         });
         setIsOpen(true);
@@ -169,7 +181,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
         setIsOpen(false);
         setTarget(null);
       },
-    }), [resolveState, resolveFormat, resolveCanResetBorders, placeTrigger]);
+    }), [resolveState, resolveFormat, resolveBorderMenu, placeTrigger]);
 
     /**
      * **Ολόκληρη** η επιφάνεια φεύγει — μενού **και** γραμμή εργαλείων.
@@ -366,9 +378,9 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     const runBorder = useCallback((action: TableHeaderAction) => {
       if (!target) return;
       action(target.hit);
-      setTarget({ ...target, canResetBorders: resolveCanResetBorders(target.hit) });
+      setTarget({ ...target, borders: resolveBorderMenu(target.hit) });
       closeMenuKeepToolbar();
-    }, [target, resolveCanResetBorders, closeMenuKeepToolbar]);
+    }, [target, resolveBorderMenu, closeMenuKeepToolbar]);
 
     /**
      * 🔴 Το toolbar είναι «έξω» για το Radix — και δεν επιτρέπεται να κλείνει το μενού **ΕΔΩ**.
@@ -430,9 +442,14 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           onSetTextColor={(value) => runFormat((hit) => onSetTextColor(hit, value))}
           onSetFillColor={(value) => runFormat((hit) => onSetFillColor(hit, value))}
           borders={{
-            canReset: target.canResetBorders,
-            onApply: (commandId) => runBorder((hit) => onApplyBorder(hit, commandId)),
-            onReset: () => runBorder(onResetBorders),
+            ...target.borders,
+            // Κάθε **εντολή** περνά από τον χειριστή: εφαρμογή → ξαναρώτημα → κλείσιμο μενού.
+            // Οι ρυθμίσεις του μολυβιού (χρώμα/τύπος/πάχος/διπλή) **δεν** περνούν: δεν είναι
+            // εντολές, και ένα κλείσιμο εκεί θα ανάγκαζε τον χρήστη να ξανανοίξει το μενού για
+            // να εφαρμόσει το περίγραμμα που μόλις ρύθμισε.
+            onApply: (id) => runBorder(() => target.borders.onApply(id)),
+            onReset: () => runBorder(() => target.borders.onReset()),
+            onApplyDiagonal: (id) => runBorder(() => target.borders.onApplyDiagonal(id)),
           }}
         />
       ) : null}

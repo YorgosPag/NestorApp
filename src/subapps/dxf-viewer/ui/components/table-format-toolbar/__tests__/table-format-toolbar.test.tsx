@@ -89,7 +89,7 @@ const INHERITED_TEXT_COLOR: TableAxisColorState = {
   current: '#111111',
   mixed: false,
   explicit: false,
-  inheritedColor: '#111111',
+  inheritedColor: '#111111', inheritedMixed: false,
   drawingColors: ['#111111', '#0000ff'],
 };
 
@@ -104,7 +104,7 @@ const INHERITED_NO_FILL: TableAxisColorState = {
   current: undefined,
   mixed: false,
   explicit: false,
-  inheritedColor: undefined,
+  inheritedColor: undefined, inheritedMixed: false,
   drawingColors: ['#ededed'],
 };
 
@@ -191,11 +191,11 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελε
       italic: NO_FORMAT,
       underline: NO_FORMAT,
       textColor: {
-        current: '#111111', mixed: false, explicit: false, inheritedColor: '#111111',
+        current: '#111111', mixed: false, explicit: false, inheritedColor: '#111111', inheritedMixed: false,
         drawingColors: [],
       },
       fillColor: {
-        current: undefined, mixed: false, explicit: false, inheritedColor: undefined,
+        current: undefined, mixed: false, explicit: false, inheritedColor: undefined, inheritedMixed: false,
         drawingColors: [],
       },
       canReset: false,
@@ -206,9 +206,21 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελε
     onSetTextColor: noop,
     onSetFillColor: noop,
     // ADR-750 Φ3 — δες το σχόλιο στο sibling test.
-    onApplyBorder: noop,
-    onResetBorders: noop,
-    resolveCanResetBorders: () => false,
+    /**
+     * ADR-750 Φ5 — το dropdown περιγραμμάτων ως **μία** απάντηση (Φ3/Φ5 refactor).
+     *
+     * `resolvePencil: () => null` ⇒ η ζώνη σχεδίασης δεν αποδίδεται καθόλου: αυτές οι σουίτες
+     * δοκιμάζουν τη γραμμή μορφοποίησης, όχι το μολύβι, και μια ζώνη με εφευρημένο μολύβι θα
+     * ήταν θόρυβος σε κάθε `getByRole` τους. Το μολύβι έχει δική του σουίτα.
+     */
+    resolveBorderMenu: () => ({
+      canReset: false,
+      canClearDiagonals: false,
+      onApply: noop,
+      onReset: noop,
+      onApplyDiagonal: noop,
+      resolvePencil: () => null,
+    }),
   };
 
   it('🔴 «Β»: onToggleFormat(hit,"bold") κλήθηκε ΚΑΙ ΜΕΤΑ onClosed — το μενού φεύγει από το DOM', async () => {
@@ -887,5 +899,63 @@ describe('ADR-739 Φ.Ε/Φ4β — χρώμα γεμίσματος, ο δεύτε
 
     expect(screen.getByRole('menu', { name: 'Χρώμα γεμίσματος' })).toBeInTheDocument();
     expect(screen.queryByRole('menu', { name: 'Χρώμα κειμένου' })).toBeNull();
+  });
+});
+
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ4β — **ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΒΡΗΚΕ Η ΟΘΟΝΗ, ΟΧΙ ΤΑ TESTS** (ζωντανή επαλήθευση).
+ *
+ * Όλα τα fixtures παραπάνω έχουν **μη μεικτή** κληρονομιά, άρα κανένα δεν περνούσε από τη
+ * γραμμή που έσπαγε. Στην πραγματική οθόνη: **κεφαλίδα** (`#EDEDED` από το στυλ) που περνά
+ * πάνω από στήλη με ρητό ματζέντα ⇒ η κληρονομιά είναι **δύο πράγματα**, το `inherited.value`
+ * βγαίνει `undefined`, και το παλιό `?? style.rowClasses.data[key]` έπεφτε στην κλάση `data`
+ * — που δεν βάφει. Αποτέλεσμα: «Κληρονομεί **«κανένα γέμισμα»** από το στυλ», **ψέμα**.
+ *
+ * Δεν ήταν λογικό σφάλμα· ήταν **θετικός ισχυρισμός βγαλμένος από fallback**. Το Revit απαντά
+ * την ίδια ερώτηση με `<varies>` — μη-δήλωση, όχι λάθος δήλωση.
+ */
+describe('🔴 μεικτή ΚΛΗΡΟΝΟΜΙΑ: το «Αυτόματο» δεν ισχυρίζεται ό,τι δεν ξέρει', () => {
+  const MIXED_INHERITANCE: TableAxisColorState = {
+    ...INHERITED_NO_FILL,
+    inheritedColor: undefined,
+    inheritedMixed: true,
+  };
+
+  function openFill(fillColor: TableAxisColorState) {
+    renderToolbar({ format: { ...SAMPLE_FORMAT, fillColor } });
+    fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων γεμίσματος' }));
+  }
+
+  it('🔴 ΔΕΝ λέει «κληρονομεί κανένα γέμισμα» όταν η κληρονομιά είναι μεικτή', () => {
+    openFill(MIXED_INHERITANCE);
+    const automatic = screen.getByRole('menuitemradio', { name: /Αυτόματο/ });
+    expect(automatic.textContent).not.toContain('κανένα γέμισμα');
+    expect(automatic.textContent).toContain('διαφέρει ανά κελί');
+  });
+
+  it('εξακολουθεί να το λέει όταν όντως κληρονομεί κενό — η διάκριση, όχι η σιωπή', () => {
+    // Το test από πάνω μόνο του θα περνούσε και με «ποτέ μη λες τίποτα». Η αξία είναι ότι η
+    // αληθινή δήλωση **παραμένει** εκεί που είναι αληθινή.
+    openFill(INHERITED_NO_FILL);
+    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }).textContent)
+      .toContain('κανένα γέμισμα');
+  });
+
+  it('και δηλώνει το χρώμα όταν κληρονομεί ένα και μόνο ένα', () => {
+    openFill({ ...INHERITED_NO_FILL, inheritedColor: '#ededed' });
+    const text = screen.getByRole('menuitemradio', { name: /Αυτόματο/ }).textContent ?? '';
+    expect(text).not.toContain('κανένα γέμισμα');
+    expect(text).not.toContain('διαφέρει ανά κελί');
+  });
+
+  it('🔴 το δείγμα ΔΕΝ φοράει το γλυφό «κανένα» σε μεικτή κληρονομιά', () => {
+    // Το γλυφό λευκό+κόκκινη-διαγώνιος **είναι** ισχυρισμός («δεν θα βαφτεί τίποτα»). Σε
+    // μεικτή κληρονομιά ο ισχυρισμός είναι ψευδής — άρα άλλο γλυφό, όχι απλώς άλλο κείμενο.
+    openFill(MIXED_INHERITANCE);
+    const swatch = screen.getByRole('menuitemradio', { name: /Αυτόματο/ })
+      .querySelector('span');
+    const none = screen.getByRole('menuitemradio', { name: /Κανένα γέμισμα/ })
+      .querySelector('span');
+    expect(swatch?.className).not.toBe(none?.className);
   });
 });

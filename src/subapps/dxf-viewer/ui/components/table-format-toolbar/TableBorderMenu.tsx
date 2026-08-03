@@ -35,7 +35,17 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
 import type { TableBorderCommandId } from '../../../bim/table/table-range-border-ops';
+import {
+  TABLE_DIAGONAL_COMMANDS,
+  type TableDiagonalCommandId,
+} from '../../../bim/table/table-cell-diagonal-ops';
+import type { TableBorderSpec } from '../../../types/table-edges';
 import { TableBorderIcon } from './TableBorderIcon';
+import { TableDiagonalIcon } from './TableDiagonalIcon';
+import {
+  TABLE_PENCIL_ROW_COUNT,
+  TableBorderPencilPanel,
+} from './TableBorderPencilPanel';
 import { tableBorderMenuItems } from './table-border-menu-items';
 import { useRovingToolbar, type RovingItemProps } from './use-roving-toolbar';
 import panel from './TableBorderMenu.module.css';
@@ -48,17 +58,35 @@ export interface TableBorderMenuProps {
   readonly onReset: () => void;
   /** Υπάρχει ρητή ακμή να διαγραφεί; Αλλιώς η «Επαναφορά περιγραμμάτων» δεν έχει τι να κάνει. */
   readonly canReset: boolean;
+  /** ADR-750 Φ5 (Α2) — οι διαγώνιοι· άλλο μητρώο, άλλο μοντέλο, ίδιο μολύβι. */
+  readonly onApplyDiagonal: (commandId: TableDiagonalCommandId) => void;
+  /** Υπάρχει διαγώνιος να σβηστεί; Αλλιώς η «Χωρίς διαγώνιες» δεν έχει τι να κάνει. */
+  readonly canClearDiagonals: boolean;
+  /** ADR-750 Φ5 (Α23) — το μολύβι που θα εφαρμοστεί, για τη ζώνη σχεδίασης. */
+  readonly resolvePencil: () => TableBorderSpec | null;
 }
 
-export function TableBorderMenu({
-  roving, onApply, onReset, canReset,
-}: TableBorderMenuProps): React.ReactElement {
+export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement {
+  const {
+    roving, onApply, onReset, canReset, onApplyDiagonal, canClearDiagonals, resolvePencil,
+  } = props;
   const { t } = useTranslation('dxf-viewer');
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
   const items = tableBorderMenuItems();
-  const roving2 = useRovingToolbar(items.length + 1, 'vertical');
+
+  /**
+   * 🔴 Οι θέσεις roving **παράγονται με τη σειρά εμφάνισης**, ποτέ γραμμένες ως σταθερές.
+   *
+   * Η ίδια απόφαση που ο ιδιοκτήτης της γραμμής εργαλείων πήρε ένα επίπεδο πιο πάνω, και για
+   * τον ίδιο λόγο: κάθε νέα ομάδα στη μέση μετακινεί όλες τις επόμενες. Εδώ το πλήρωσε ήδη η
+   * Φ5 δύο φορές — οι εντολές πέρασαν από 11 σε **13** και μπήκαν άλλες 4 + 4 γραμμές.
+   */
+  const resetIndex = items.length;
+  const diagonalBase = resetIndex + 1;
+  const pencilBase = diagonalBase + TABLE_DIAGONAL_COMMANDS.length;
+  const roving2 = useRovingToolbar(pencilBase + TABLE_PENCIL_ROW_COUNT, 'vertical');
 
   /**
    * Κάθε εντολή **κλείνει** το πάνελ — η ίδια απόφαση του ιδιοκτήτη που έκανε το μενού ζωνών να
@@ -128,11 +156,37 @@ export function TableBorderMenu({
 
           <span className={panel.separator} role="separator" />
           <MenuItem
-            roving={roving2.itemProps(items.length)}
+            roving={roving2.itemProps(resetIndex)}
             label={t('table.borders.resetBorders')}
             icon={<RotateCcw size={15} aria-hidden="true" />}
             disabled={!canReset}
             onActivate={() => runAndClose(onReset)}
+          />
+
+          {/*
+            ADR-750 Φ5 (Α2) — οι **διαγώνιοι** σε δική τους ομάδα, με δικό της τίτλο.
+            Δεν ανακατεύονται με τις 13: εκείνες μιλούν για ακμές που **μοιράζονται** με τον
+            γείτονα, αυτές για γραμμές που ανήκουν σε **ένα** κελί (§6.3). Ο τίτλος υπάρχει
+            γιατί ένα σκέτο διαχωριστικό θα έλεγε «άλλη ομάδα» χωρίς να πει **ποια**.
+          */}
+          <span className={panel.separator} role="separator" />
+          <h4 className={panel.sectionLabel}>{t('table.borders.diagonals.section')}</h4>
+          {TABLE_DIAGONAL_COMMANDS.map((command, index) => (
+            <MenuItem
+              key={command.id}
+              roving={roving2.itemProps(diagonalBase + index)}
+              label={t(`table.borders.diagonals.${command.id}`)}
+              icon={<TableDiagonalIcon command={command} />}
+              // Μόνο η αφαίρεση μπορεί να μην έχει τι να κάνει· οι τρεις άλλες γράφουν πάντα.
+              disabled={command.id === 'clear' && !canClearDiagonals}
+              onActivate={() => runAndClose(() => onApplyDiagonal(command.id))}
+            />
+          ))}
+
+          <span className={panel.separator} role="separator" />
+          <TableBorderPencilPanel
+            rovingOf={(index) => roving2.itemProps(pencilBase + index)}
+            resolvePencil={resolvePencil}
           />
         </div>
       ) : null}

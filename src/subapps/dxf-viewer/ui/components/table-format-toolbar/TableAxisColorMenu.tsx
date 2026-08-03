@@ -82,11 +82,8 @@ import { Baseline, ChevronDown, PaintBucket, Palette } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
-import { ColorDialogShell } from '../../color/ColorDialogShell';
-import { EnterpriseColorPicker } from '../../color/EnterpriseColorPicker';
 import { getRecentColorsStore } from '../../color/RecentColorsStore';
 import { normalizeHexColor } from '../../../config/color-math';
-import type { PlotColorRole } from '../../../config/print-color-policy';
 import { toolbarColorStoreFor } from '../../../state/table-toolbar-color-store';
 import { colorGridFor } from '../../color/aci-color-grid';
 import {
@@ -94,43 +91,13 @@ import {
   selectedSwatchHex,
   type TableAxisColorState,
 } from './table-color-menu-selection';
+import { automaticHintKey, colorMenuKeys } from './table-color-menu-roles';
 import { TableColorSwatchGrid } from './TableColorSwatchGrid';
 import { useRovingToolbar, type RovingItemProps } from './use-roving-toolbar';
-import { PANEL_LAYOUT } from '../../../config/panel-tokens';
+import { TableColorDialog } from './TableColorDialog';
 import styles from './TableAxisColorMenu.module.css';
 import toolbar from './TableFormatToolbar.module.css';
 
-/**
- * Τα κλειδιά που **διαφέρουν** ανά ρόλο, γραμμένα ρητά.
- *
- * Ένα δυναμικό κλειδί (`table.${role}Color.trigger`) είναι αόρατο σε κάθε στατικό εργαλείο του
- * έργου (CHECK 3.8 «λείπον κλειδί», 3.33 φρεσκάδα τύπων, 3.34 shell slice) — δηλαδή μια
- * ορθογραφία που λείπει από τα locales θα εμφανιζόταν ως **ωμό κλειδί στην οθόνη** με όλες τις
- * πύλες πράσινες. Ο ρητός χάρτης ελέγχεται εξαντλητικά και από τον μεταγλωττιστή. Ίδιο μοτίβο
- * με τον `HUE_LABEL_KEY` του πλέγματος.
- *
- * Ό,τι **δεν** διαφέρει (αποχρώσεις, «Βασικά χρώματα», «Περισσότερα χρώματα…») ζει στο
- * `table.colorMenu.*` και δηλώνεται **μία** φορά — δύο αντίγραφα της ίδιας ελληνικής λέξης σε
- * δύο κλειδιά είναι δύο πράγματα να ξεχάσεις να αλλάξεις μαζί.
- */
-const ROLE_KEYS: Readonly<Record<PlotColorRole, Readonly<Record<string, string>>>> = {
-  ink: {
-    trigger: 'table.textColor.trigger',
-    openMenu: 'table.textColor.openMenu',
-    menuLabel: 'table.textColor.menuLabel',
-    automatic: 'table.textColor.automatic',
-    automaticHint: 'table.textColor.automaticHint',
-    dialogTitle: 'table.textColor.dialogTitle',
-  },
-  fill: {
-    trigger: 'table.fillColor.trigger',
-    openMenu: 'table.fillColor.openMenu',
-    menuLabel: 'table.fillColor.menuLabel',
-    automatic: 'table.fillColor.automatic',
-    automaticHint: 'table.fillColor.automaticHint',
-    dialogTitle: 'table.fillColor.dialogTitle',
-  },
-};
 
 interface TableAxisColorMenuBase {
   /** Roving του **κύριου** μισού (εφαρμόζει το τελευταίο χρώμα). */
@@ -172,7 +139,7 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const panelId = useId();
 
-  const keys = ROLE_KEYS[role];
+  const keys = colorMenuKeys(role);
   const isFill = role === 'fill';
   const store = toolbarColorStoreFor(role);
 
@@ -286,17 +253,21 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
           )}
           {...TABLE_CELL_SESSION_MARKER}
         >
+          {/*
+            🔑 Η υπόδειξη λέει **τι** κληρονομείς. Όταν το γέμισμα κληρονομεί κενό, οι δύο
+            γραμμές ζωγραφίζουν ολόιδια — και αυτή η φράση είναι η διάκριση.
+
+            🔴 Και όταν η κληρονομιά **δεν είναι μία** (μεικτός άξονας), δεν δηλώνεται τίποτα:
+            το ελάττωμα που βρήκε η οθόνη ήταν ακριβώς μια θετική δήλωση βγαλμένη από fallback.
+            Δες `table-header-format-snapshot.ts` για τη μέτρηση.
+          */}
           <CommandRow
-            swatchHex={state.inheritedColor}
+            swatch={
+              state.inheritedMixed ? 'varies' : (state.inheritedColor ?? 'none')
+            }
             active={selection.kind === 'automatic'}
             label={t(keys.automatic)}
-            hint={
-              // 🔑 Η υπόδειξη λέει **τι** κληρονομείς. Όταν το γέμισμα κληρονομεί κενό, οι δύο
-              // γραμμές ζωγραφίζουν ολόιδια — και αυτή η φράση είναι η διάκριση.
-              state.inheritedColor === undefined
-                ? t('table.fillColor.automaticNoneHint')
-                : t(keys.automaticHint)
-            }
+            hint={t(automaticHintKey(state, keys))}
             onActivate={chooseAutomatic}
           />
 
@@ -309,7 +280,7 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
           */}
           {isFill ? (
             <CommandRow
-              swatchHex={undefined}
+              swatch="none"
               active={selection.kind === 'none'}
               label={t('table.fillColor.none')}
               hint={t('table.fillColor.noneHint')}
@@ -353,34 +324,16 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
         </div>
       ) : null}
 
-      {dialogDraft !== null ? (
-        <ColorDialogShell
-          isOpen
-          onClose={() => setDialogDraft(null)}
-          title={t(keys.dialogTitle)}
-          dimBackdrop={false}
-          maxWidthClass={PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MAX_WIDTH_XL}
-          showFooter
-          onCancel={() => setDialogDraft(null)}
-          onApply={() => {
-            const chosen = dialogDraft;
-            setDialogDraft(null);
-            pick(chosen);
-          }}
-        >
-          {/* Ο SSoT επιλογέας — ίδιες παλέτες/λειτουργίες με τη γραμμή κειμένου (ADR-344). */}
-          <EnterpriseColorPicker
-            value={dialogDraft}
-            onChange={setDialogDraft}
-            alpha={false}
-            modes={['hex', 'rgb', 'hsl']}
-            palettes={['dxf', 'semantic', 'material']}
-            recent
-            orientation="horizontal"
-            className="border-0"
-          />
-        </ColorDialogShell>
-      ) : null}
+      <TableColorDialog
+        draft={dialogDraft}
+        title={t(keys.dialogTitle)}
+        onDraftChange={setDialogDraft}
+        onCancel={() => setDialogDraft(null)}
+        onApply={(chosen) => {
+          setDialogDraft(null);
+          pick(chosen);
+        }}
+      />
     </span>
   );
 }
@@ -390,8 +343,15 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
 // ──────────────────────────────────────────────────────────────────────────────
 
 interface CommandRowProps {
-  /** Το δείγμα· `undefined` ⇒ ζωγραφίζεται το γλυφό «κανένα» (λευκό + κόκκινη διαγώνιος). */
-  readonly swatchHex: string | undefined;
+  /**
+   * Τι δείχνει το δείγμα — **τρία** πράγματα, όχι δύο:
+   * `hex` το χρώμα · `'none'` το γλυφό «κανένα» (λευκό + κόκκινη διαγώνιος) · `'varies'` η
+   * **μη-δήλωση** για μεικτή κληρονομιά (`<varies>` του Revit).
+   *
+   * 🔴 Το `'varies'` δεν είναι καλλωπισμός: το γλυφό «κανένα» είναι **θετικός ισχυρισμός**
+   * («δεν θα βαφτεί τίποτα»), και σε μεικτό άξονα αυτός ο ισχυρισμός είναι ψευδής.
+   */
+  readonly swatch: string | 'none' | 'varies';
   readonly active: boolean;
   readonly label: string;
   readonly hint: string;
@@ -412,8 +372,12 @@ interface CommandRowProps {
  * `role` — δηλαδή δύο διαφορετικές απαντήσεις στον αναγνώστη οθόνης για την ίδια ομάδα radio.
  */
 function CommandRow({
-  swatchHex, active, label, hint, onActivate,
+  swatch, active, label, hint, onActivate,
 }: CommandRowProps): React.ReactElement {
+  const glyph = swatch === 'none' ? styles.swatchNone
+    : swatch === 'varies' ? styles.swatchVaries
+      : undefined;
+
   return (
     <button
       type="button"
@@ -423,15 +387,11 @@ function CommandRow({
       onClick={onActivate}
       {...TABLE_CELL_SESSION_MARKER}
     >
-      {swatchHex === undefined ? (
-        <span className={cn(styles.swatch, styles.commandSwatch, styles.swatchNone)} aria-hidden="true" />
-      ) : (
-        <span
-          className={cn(styles.swatch, styles.commandSwatch)}
-          style={{ backgroundColor: swatchHex }}
-          aria-hidden="true"
-        />
-      )}
+      <span
+        className={cn(styles.swatch, styles.commandSwatch, glyph)}
+        style={glyph ? undefined : { backgroundColor: swatch }}
+        aria-hidden="true"
+      />
       <span className={styles.commandText}>
         {label}
         <span className={styles.commandHint}>{hint}</span>
