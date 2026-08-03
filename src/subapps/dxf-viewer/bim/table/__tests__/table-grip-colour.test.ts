@@ -84,23 +84,24 @@ function distance(a: string, b: string): number {
 }
 
 describe('tableGripCustomColor — ποιες λαβές παίρνουν ταυτότητα χρώματος', () => {
-  it('🔴 ΜΟΝΟ οι λαβές πλάτους στήλης — αν τη βάφαμε παντού, καμία δεν θα ξεχώριζε', () => {
+  it('🔴 ΜΟΝΟ οι λαβές ορίων (στήλης + γραμμής) — αν τη βάφαμε παντού, καμία δεν θα ξεχώριζε', () => {
     // Τρέχει τις **ΠΡΑΓΜΑΤΙΚΕΣ** λαβές, όχι στημένη λίστα kinds: αν αύριο μια νέα λαβή
     // γεννηθεί με kind που αρχίζει από `table-column`, εδώ θα φανεί.
     const coloured = getTableGrips(entity)
       .map((g) => tableGripCustomColor(g.gripKind?.kind as never))
       .filter((c) => c !== undefined);
 
-    // 3 στήλες ⇒ 2 εσωτερικά όρια. Ακριβές πλήθος: αν κάποιος αφαιρέσει τις λαβές ορίου,
+    // 3 στήλες ⇒ 2 εσωτερικά όρια· 2 γραμμές ⇒ 1 (Giorgio 2026-08-04: λαβές ύψους γραμμής,
+    // ίδιο χρώμα — ίδια **εμβέλεια**). Ακριβές πλήθος: αν κάποιος αφαιρέσει τις λαβές ορίου,
     // το test δεν γίνεται σιωπηλά πράσινο με κενή λίστα.
-    expect(coloured).toHaveLength(2);
+    expect(coloured).toHaveLength(3);
     for (const c of coloured) expect(c).toBe(GRIP_TABLE_COLUMN_EDGE_COLOR);
   });
 
   it('οι υπόλοιπες δέκα μένουν στο κανάλι ΚΑΤΑΣΤΑΣΗΣ (σιέλ σε ηρεμία, θερμαίνονται)', () => {
     const grips = getTableGrips(entity);
     const uncoloured = grips.filter((g) => tableGripCustomColor(g.gripKind?.kind as never) === undefined);
-    expect(grips).toHaveLength(12); // σταυρός + τόξο + 8 περιμετρικές + 2 όρια
+    expect(grips).toHaveLength(13); // σταυρός + τόξο + 8 περιμετρικές + 2 όρια στηλών + 1 γραμμών
     expect(uncoloured).toHaveLength(10);
   });
 

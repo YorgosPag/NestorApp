@@ -14,6 +14,7 @@ import {
   applyTableGripDrag,
   getTableGrips,
   TABLE_COLUMN_KIND,
+  TABLE_ROW_KIND,
   TABLE_MOVE_KIND,
   TABLE_ROTATION_KIND,
 } from '../table-entity-grips';
@@ -157,7 +158,8 @@ describe('getTableGrips', () => {
   /** Πίνακας 60×16 στο (100,200): οι θέσεις παρακάτω είναι υπολογισμένες στο χέρι. */
   it('MOVE λίγο μέσα από την ΠΑ γωνία, ROTATION από την ΠΔ, 8 περιμετρικές, μία ανά όριο', () => {
     const grips = getTableGrips(makeEntity());
-    expect(grips).toHaveLength(11); // 2 (move+rotation) + 8 περιμετρικές + 1 εσωτερικό όριο
+    // 2 (move+rotation) + 8 περιμετρικές + 1 όριο στηλών + 1 όριο γραμμών (Giorgio 2026-08-04).
+    expect(grips).toHaveLength(12);
     expect(grips[0]).toMatchObject({
       position: { x: 106, y: 200 }, // εσοχή 6mm από την άγκυρα (x=100), ΠΑΝΩ στην ακμή
       movesEntity: true,
@@ -168,8 +170,13 @@ describe('getTableGrips', () => {
       gripKind: { on: 'table', kind: TABLE_ROTATION_KIND },
     });
     expect(grips[10]).toMatchObject({
-      position: { x: 140, y: 200 }, // το όριο c1|c2 στα 40mm — ΤΕΛΕΥΤΑΙΟ πλέον
+      position: { x: 140, y: 200 }, // το όριο c1|c2 στα 40mm
       gripKind: { on: 'table', kind: TABLE_COLUMN_KIND },
+    });
+    expect(grips[11]).toMatchObject({
+      // Το όριο r1|r2 στα 8mm κάτω από την πάνω ακμή, πάνω στην ΑΡΙΣΤΕΡΗ ακμή (u = 0).
+      position: { x: 100, y: 192 },
+      gripKind: { on: 'table', kind: TABLE_ROW_KIND },
     });
   });
 
@@ -228,7 +235,7 @@ describe('getTableGrips', () => {
     const frames = getTableGrips(entity).map((g) =>
       tableWorldToFrame(entity, g.position, geo.mmToWorld),
     );
-    expect(frames).toHaveLength(11);
+    expect(frames).toHaveLength(12);
     for (const { u, v } of frames) {
       expect(u).toBeGreaterThanOrEqual(-1e-9);
       expect(v).toBeGreaterThanOrEqual(-1e-9);
