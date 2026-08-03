@@ -28,6 +28,7 @@
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {
   computeTableEntityGeometryLive,
+  tableCellAtFrame,
   tableCellAtWorld,
   tablePxPerMm,
   tableWorldToFrame,
@@ -48,12 +49,15 @@ import {
   resolveTableSelectionBounds,
   tableRangeRectMm,
 } from '../../bim/table/table-cell-range';
-import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import { indexById, resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
+  isOnTableRangeBorder,
   PLAIN_TABLE_RANGE_DRAG,
   type TableRangeDragIntent,
 } from '../../bim/table/table-range-move-zone';
 import type { TableCellSelection } from '../../state/table-cell-cursor-store';
+import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
+import type { TableRangeGrab } from '../../bim/table/table-range-drop-target';
 import type { TableRectMm } from '../../bim/table/table-layout-types';
 import type {
   TableCellHit,
@@ -183,7 +187,7 @@ export function tableIndicatorProbeAtWorld(
       geometry.layout,
       probe.frame,
       probe.bands,
-      activeTableRangeRectMm(entity, geometry, selection),
+      activeTableRange(entity, geometry, selection)?.rectMm ?? null,
       intent,
     ),
   };
@@ -204,16 +208,84 @@ export function tableIndicatorProbeAtWorld(
  * `indexById` απέκτησε απομνημόνευση (δες την κεφαλίδα του `table-cell-order`): χωρίς εκείνη,
  * αυτή η γραμμή θα χτίζε δύο `Map` μεγέθους «όσες οι γραμμές» **60 φορές το δευτερόλεπτο**.
  */
-function activeTableRangeRectMm(
+function activeTableRange(
   entity: TableEntity,
   geometry: TableEntityGeometry,
   selection: TableCellSelection | null,
-): TableRectMm | null {
+): { readonly bounds: TableCellRangeBounds; readonly rectMm: TableRectMm } | null {
   if (!selection) return null;
   const bounds = resolveTableSelectionBounds(resolveTableModel(entity.model), selection);
   // Μπαγιάτικο άκρο (undo / διαγραφή γραμμής) ⇒ καμία υπόσχεση. Ίδια σύμβαση με κάθε άλλον
   // καταναλωτή της επιλογής: ο καλών **δεν μαντεύει**.
-  return bounds ? tableRangeRectMm(geometry.layout, bounds) : null;
+  if (!bounds) return null;
+  const rectMm = tableRangeRectMm(geometry.layout, bounds);
+  return rectMm ? { bounds, rectMm } : null;
+}
+
+/**
+ * 🔴 ADR-739 §36 ΦΑΣΗ 3 — **ΠΙΑΣΤΗΚΕ ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΤΗΣ ΕΠΙΛΟΓΗΣ;** — και, αν ναι, **από πού**.
+ * `null` παντού αλλού.
+ *
+ * ## Γιατί ζει εδώ και όχι στη χειρονομία
+ * Είναι η **ίδια** ερώτηση που απαντά ο δείκτης (`range-move` / `range-copy`), από την **ίδια**
+ * γεωμετρία: το ίδιο LOD ({@link indicatorProbeBasis}), το ίδιο ορθογώνιο
+ * ({@link activeTableRange}), την ίδια οπή (`bands.gapMm`). Δύο αντίγραφα θα σήμαιναν ζώνη όπου
+ * ο δείκτης υπόσχεται μετακίνηση και το πάτημα δεν πιάνει τίποτα — δηλαδή ακριβώς το «δεν
+ * δουλεύει» που περιγράφει η κεφαλίδα του {@link activeTableRange}, από την πίσω πόρτα.
+ *
+ * ## 🔴 ΤΟ ΣΗΜΕΙΟ **ΠΕΡΙΟΡΙΖΕΤΑΙ ΜΕΣΑ** ΣΤΟ ΟΡΘΟΓΩΝΙΟ ΠΡΙΝ ΡΩΤΗΘΕΙ ΤΟ ΚΕΛΙ
+ * Η ζώνη σύλληψης διαστέλλεται **εκατέρωθεν** της γραμμής (§35): πιάνοντας την πάνω πλευρά, το
+ * χέρι είναι συχνά πάνω στο **γειτονικό** κελί, έξω από την περιοχή. Χωρίς τον περιορισμό, η
+ * μετατόπιση σύλληψης θα έβγαινε αρνητική — δηλαδή η περιοχή θα προσγειωνόταν **ένα κελί πιο
+ * κάτω** από εκεί που δείχνει το χέρι, σε **κάθε** κίνηση της σύρσης. Ο περιορισμός εγγυάται
+ * επίσης ότι το κελί υπάρχει: ένα σημείο μέσα στο ορθογώνιο της επιλογής **είναι** κελί.
+ *
+ * Ο φύλακας «είμαστε μέσα στο πλέγμα;» γίνεται με το **ασυμπίεστο** σημείο, και περνά από τον
+ * ΕΝΑ δρόμο (`tableCellAtFrame`) αντί για δεύτερη σύγκριση ορίων: η επιλογή μπορεί να ακουμπά
+ * την πάνω γραμμή, οπότε η εξωτερική εμβέλεια βγαίνει σε αρνητικά mm — όπου ζουν οι **λαβές**
+ * (§27.11, «ένα pixel, μία ερώτηση») και δεν πιάνεται περιοχή.
+ */
+export function tableRangeGrabAtWorld(
+  entity: TableEntity,
+  world: Point2D,
+  viewScale: number,
+  selection: TableCellSelection | null,
+): TableRangeGrabHit | null {
+  const geometry = computeTableEntityGeometryLive(entity);
+  const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
+  if (!probe) return null;
+  const range = activeTableRange(entity, geometry, selection);
+  if (!range) return null;
+  if (!tableCellAtFrame(geometry.layout, probe.frame)) return null;
+  if (!isOnTableRangeBorder(range.rectMm, probe.frame, probe.bands)) return null;
+
+  const inside = clampToRectMm(range.rectMm, probe.frame);
+  const hit = tableCellAtFrame(geometry.layout, inside);
+  if (!hit) return null;
+  const row = indexById(entity.model.rows).get(hit.rowId);
+  const col = indexById(entity.model.columns).get(hit.colId);
+  if (row === undefined || col === undefined) return null;
+
+  return {
+    source: range.bounds,
+    grab: { dRow: row - range.bounds.firstRow, dCol: col - range.bounds.firstCol },
+  };
+}
+
+/** Ό,τι χρειάζεται η χειρονομία για να ξεκινήσει — δες {@link tableRangeGrabAtWorld}. */
+export interface TableRangeGrabHit {
+  /** Η περιοχή που πιάστηκε, σε δείκτες γραμμής/στήλης. */
+  readonly source: TableCellRangeBounds;
+  /** Πόσο μέσα της έπεσε το χέρι — η μετατόπιση που κρατά το σχήμα κάτω από το δάχτυλο. */
+  readonly grab: TableRangeGrab;
+}
+
+/** Το σημείο, φερμένο μέσα στο ορθογώνιο. Δες {@link tableRangeGrabAtWorld} για το γιατί. */
+function clampToRectMm(rectMm: TableRectMm, frame: TableFramePoint): TableFramePoint {
+  return {
+    u: Math.min(Math.max(frame.u, rectMm.x), rectMm.x + rectMm.w),
+    v: Math.min(Math.max(frame.v, rectMm.y), rectMm.y + rectMm.h),
+  };
 }
 
 /** Ό,τι ξέρει ο hover για το σημείο κάτω από το ποντίκι — δες {@link tableIndicatorProbeAtWorld}. */

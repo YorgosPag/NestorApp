@@ -242,8 +242,14 @@ const TABLE_MODE_OUTLINE_DASH_PX: readonly number[] = [6, 4];
  *
  * Οι τέσσερις γωνίες περνούν χωριστά από το `toScreen` (και όχι `strokeRect` σε δύο
  * σημεία) επειδή ο πίνακας μπορεί να είναι **περιστραμμένος** — δες {@link stampTableFills}.
+ *
+ * 🔴 ADR-739 §36 ΦΑΣΗ 3 — **έγινε δημόσιο** όταν απέκτησε τρίτο καταναλωτή (το φάντασμα
+ * προορισμού, `stamp-table-range-ghost`). Δεν μετακόμισε: εδώ ζουν όλα τα ορθογώνια του
+ * πίνακα και το `traceRectMm` που καταναλώνει. Ένα τέταρτο αντίγραφο του σώματος —
+ * `save`/`strokeStyle`/`lineWidth`/`setLineDash`/`trace`/`stroke`/`restore` — είναι ακριβώς
+ * το sibling clone που πιάνει το CHECK 3.28 (N.18), **ανεξάρτητα ονόματος**.
  */
-function strokeRectMm(
+export function strokeRectMm(
   rc: StampTableContext,
   rectMm: TableRectMm,
   colorHex: string,
