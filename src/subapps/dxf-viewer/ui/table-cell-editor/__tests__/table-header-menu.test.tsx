@@ -505,6 +505,10 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
  */
 const noop = (): void => {};
 const NO_FORMAT = { active: false, mixed: false, explicit: false } as const;
+const NO_COLOR = {
+  current: undefined, mixed: false, explicit: false,
+  inheritedColor: undefined, drawingColors: [],
+} as const;
 const menuProps = {
   onInsertBefore: noop,
   onInsertAfter: noop,
@@ -512,11 +516,20 @@ const menuProps = {
   onClosed: noop,
   resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
   resolveFormat: () => ({
-    bold: NO_FORMAT, italic: NO_FORMAT, underline: NO_FORMAT, canReset: false,
+    bold: NO_FORMAT,
+    italic: NO_FORMAT,
+    underline: NO_FORMAT,
+    // ADR-739 Φ.Ε/Φ4 + Φ4β — τα δύο χρώματα αποδίδονται πάντα από τη γραμμή, άρα πρέπει να
+    // υπάρχουν ακόμη κι εδώ που το θέμα είναι η συνεδρία εστίασης και ο escape-bus.
+    textColor: NO_COLOR,
+    fillColor: NO_COLOR,
+    canReset: false,
   }),
   onToggleFormat: noop,
   onStepTextHeight: noop,
   onResetFormat: noop,
+  onSetTextColor: noop,
+  onSetFillColor: noop,
   // ADR-750 Φ3 — οι εντολές περιγράμματος του ίδιου toolbar· αδρανείς εδώ, δοκιμάζονται στο
   // `table-border-menu-items.test.ts` και στο `table-border-icon.test.tsx`.
   onApplyBorder: noop,

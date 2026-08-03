@@ -28,10 +28,11 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §33
  */
 
-import { insertionIndexFor } from './table-cell-order';
+import { createCellRanker, insertionIndexFor } from './table-cell-order';
 import type {
   PersistedTableModel,
   TableCell,
+  TableCellEntry,
   TableColumnId,
   TableRowId,
 } from '../../types/table';
@@ -156,10 +157,89 @@ export function setPersistedCellFormula(
 }
 
 /**
+ * 🔴 ADR-750 Φ5 — **ο μαζικός αδελφός**: ο ίδιος γραφέας πάνω σε **πολλά** κελιά, με ένα πέρασμα.
+ *
+ * ## Γιατί όχι απλώς βρόχος πάνω στο {@link writePersistedCell}
+ * Ο μονός γραφέας κάνει `findIndex` **και** `slice()` ολόκληρου του `cells` **ανά κελί**. Για
+ * μια εντολή διαγωνίου πάνω σε επιλογή 500 × 8 αυτό είναι ~16 εκατομμύρια συγκρίσεις και
+ * άλλα τόσα αντίγραφα στοιχείων — δηλαδή **ακριβώς** το εμπόδιο που ανάγκασε τη Φ2 να γράψει
+ * τον μαζικό εγγραφέα ακμών (`setTableEdges`, ADR-750 §17.3) αντί για βρόχο. Εδώ η ίδια
+ * απάντηση: ένα πέρασμα για τα υπάρχοντα, μία ταξινόμηση για τα νέα, μία συγχώνευση.
+ *
+ * ## Οι τέσσερις εγγυήσεις ισχύουν αυτούσιες
+ * Καθαρότητα, ντετερμινιστική σειρά (μέσω {@link createCellRanker}, η **ίδια** που χρησιμοποιεί
+ * ο μονός γραφέας), διατήρηση των υπολοίπων πεδίων, και ταυτότητα by-reference: αν **κανένα**
+ * κελί δεν άλλαξε, επιστρέφεται το ίδιο μοντέλο και δεν γεννιέται βήμα undo.
+ */
+export function writePersistedCells(
+  model: PersistedTableModel,
+  targets: readonly { readonly rowId: TableRowId; readonly colId: TableColumnId }[],
+  write: CellWrite,
+): PersistedTableModel {
+  if (targets.length === 0) return model;
+
+  // Το κλειδί είναι **τοπικό** — ζει και πεθαίνει μέσα σε αυτή τη συνάρτηση — γι' αυτό δεν
+  // περνά από το branded `cellKey()`: εκείνο υπάρχει για να μη διαρρέει χειροποίητο string σε
+  // καλούντες, και εδώ δεν διαρρέει πουθενά.
+  const pending = new Map<string, { readonly rowId: TableRowId; readonly colId: TableColumnId }>();
+  for (const target of targets) pending.set(`${target.rowId} ${target.colId}`, target);
+
+  let changed = false;
+  const kept: TableCellEntry[] = model.cells.map((entry) => {
+    const [rowId, colId, cell] = entry;
+    const key = `${rowId} ${colId}`;
+    if (!pending.delete(key)) return entry;
+    const next = write.update(cell);
+    if (next === null) return entry;
+    changed = true;
+    return [rowId, colId, next] as TableCellEntry;
+  });
+
+  const created: TableCellEntry[] = [];
+  for (const target of pending.values()) {
+    const cell = write.create();
+    if (cell === null) continue;
+    changed = true;
+    created.push([target.rowId, target.colId, cell]);
+  }
+
+  if (!changed) return model;
+  return { ...model, cells: created.length === 0 ? kept : mergeByRank(model, kept, created) };
+}
+
+/**
+ * Συγχωνεύει τα νέα κελιά μέσα στα υπάρχοντα, **σε σειρά γραμμή × στήλη**.
+ *
+ * Τα δύο σκέλη είναι ήδη ταξινομημένα (το `kept` το κληρονομεί από το μοντέλο, το `created`
+ * ταξινομείται εδώ), οπότε αρκεί μία γραμμική συγχώνευση. Κελί χωρίς έγκυρη κατάταξη
+ * (ορφανή αναφορά) πηγαίνει στο τέλος — ίδια ανοχή με το {@link insertionIndexFor}.
+ */
+function mergeByRank(
+  source: PersistedTableModel,
+  kept: readonly TableCellEntry[],
+  created: TableCellEntry[],
+): TableCellEntry[] {
+  const rank = createCellRanker(source);
+  const rankOf = (entry: TableCellEntry): number =>
+    rank(entry[0], entry[1]) ?? Number.POSITIVE_INFINITY;
+
+  created.sort((a, b) => rankOf(a) - rankOf(b));
+
+  const out: TableCellEntry[] = [];
+  let i = 0;
+  for (const entry of kept) {
+    while (i < created.length && rankOf(created[i]) < rankOf(entry)) out.push(created[i++]);
+    out.push(entry);
+  }
+  while (i < created.length) out.push(created[i++]);
+  return out;
+}
+
+/**
  * Τι κάνει ένας γραφέας κελιού στις **δύο** καταστάσεις που μπορεί να συναντήσει. Και οι δύο
  * επιστρέφουν `null` για «τίποτα δεν άλλαξε» — η τέταρτη εγγύηση, εκφρασμένη ως τύπος.
  */
-interface CellWrite {
+export interface CellWrite {
   /** Το κελί υπάρχει: τι γίνεται τώρα; `null` ⇒ μείνε ως έχεις. */
   readonly update: (existing: TableCell) => TableCell | null;
   /** Το κελί δεν υπάρχει: τι μπαίνει; `null` ⇒ μη γεννήσεις εγγραφή-φάντασμα. */

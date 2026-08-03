@@ -1,0 +1,194 @@
+/**
+ * ADR-739 Φ.Ε/Φ4 + Φ4β — το πάνελ χρώματος (κειμένου **και** γεμίσματος: ένα component, δύο
+ * ρόλοι), **μέσα** στο δοχείο του mini toolbar.
+ *
+ * 🔴 Η απόφαση «μέσα στο δοχείο, όχι σε δικό του portal» είναι η ΙΔΙΑ με το πάνελ
+ * περιγραμμάτων, και ο λόγος τεκμηριώνεται εκεί (`TableBorderMenu.module.css`): ο γονέας κρατά
+ * `surfaceRef` για να αναγνωρίζει «κλικ πάνω μου» στο `onInteractOutside` του modal μενού
+ * (`keepOpenOnToolbar`)· ένα δεύτερο portal θα ήταν για εκείνον «ξένο στοιχείο» και το `onClick`
+ * δεν θα έτρεχε ποτέ.
+ *
+ * ⚠️ Τα δύο πάνελ μοιράζονται σήμερα τη γεωμετρία (`anchor` / `panel` / `separator`) σε δύο
+ * αρχεία. Μένουν χωριστά **μόνο** επειδή το ADR-750 γράφεται παράλληλα στο ίδιο working tree·
+ * μόλις κλείσει, τα κοινά μέρη ανήκουν σε ένα `table-toolbar-panel.module.css`. Καταγράφεται
+ * ρητά ώστε να είναι χρέος, όχι παράλειψη.
+ *
+ * Το χρώμα/περίγραμμα/σκιά **δεν** ορίζονται εδώ: έρχονται από τις ίδιες utility classes με το
+ * `DropdownMenuContent`, ώστε οι επιφάνειες να ακολουθούν μαζί το θέμα.
+ */
+
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Τα δύο μισά του split button διαβάζονται ως ΕΝΑ χειριστήριο: μηδέν κενό, κοινό hover ύψος. */
+.split {
+  display: inline-flex;
+  align-items: center;
+}
+
+.applyButton {
+  width: 26px;
+  /* Χώρος για την έγχρωμη μπάρα κάτω από το γράμμα. */
+  padding-bottom: 4px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.arrowButton {
+  width: 14px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/**
+ * Η μπάρα ΕΙΝΑΙ η πληροφορία «τι θα εφαρμόσει αυτό το κλικ» — γι' αυτό είναι πλήρους πλάτους
+ * και όχι διακριτική κουκκίδα: το Excel τη βάζει ακριβώς έτσι, και είναι το μόνο σημείο όπου
+ * φαίνεται το τρέχον «τελευταίο χρώμα» χωρίς να ανοίξεις μενού.
+ */
+.colorBar {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 3px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.separator {
+  height: 1px;
+  margin: 6px 2px;
+  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
+}
+
+.sectionLabel {
+  margin: 0 0 4px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gridRow {
+  display: flex;
+  gap: 2px;
+}
+
+.swatch {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.swatch:hover,
+.swatch:focus-visible {
+  /* Μεγέθυνση χωρίς reflow: το `transform` δεν μετακινεί τα διπλανά δείγματα, άρα ο στόχος
+     κάτω από τον δείκτη δεν αλλάζει την ώρα που τον στοχεύεις. */
+  transform: scale(1.35);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-background, #000), 0 0 0 2px currentColor;
+}
+
+/**
+ * 🔴 ADR-739 Φ.Ε/Φ4β — το γλυφό «**κανένα γέμισμα**»: λευκό τετράγωνο με κόκκινη διαγώνιο.
+ *
+ * Δεν είναι δική μας επινόηση — είναι το `[None]` του InDesign/Illustrator και το εικονίδιο του
+ * «No Fill» του Office. Δύο ανεξάρτητοι κλάδοι, ίδια απάντηση.
+ *
+ * ⚠️ **ΟΧΙ σκακιέρα.** Σε κάθε εργαλείο που τη χρησιμοποιεί (Photoshop, Figma, GIMP) η σκακιέρα
+ * σημαίνει **κανάλι άλφα** — δηλαδή θα υποσχόταν μερική διαφάνεια που το μοντέλο δεν έχει: το
+ * `fillColorHex: null` είναι «καμία βαφή», όχι «βαφή με άλφα 0».
+ *
+ * Το λευκό φόντο είναι **ρητό** και όχι `transparent`: σε σκοτεινό θέμα ένα διαφανές τετράγωνο
+ * θα έδειχνε το σκούρο πάνελ από πίσω, δηλαδή θα διαβαζόταν ως «μαύρο γέμισμα» — ακριβώς το
+ * αντίθετο νόημα. Το ίδιο το γλυφό δηλώνει «τίποτα»· δεν το αφήνουμε στην τύχη του θέματος.
+ *
+ * Η διαγώνιος ζωγραφίζεται με `linear-gradient` και όχι με ψευδο-στοιχείο: το δείγμα είναι
+ * `<span>` μέσα σε κουμπί, και ένα `::after` με `transform: rotate()` θα ξέφευγε από το
+ * `border-radius` του πλαισίου στις γωνίες.
+ */
+.swatchNone {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 1px),
+    #e11d48 calc(50% - 1px),
+    #e11d48 calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+}
+
+/* Το τρέχον χρώμα, **πλαισιωμένο** — ίδια σημασιολογία με το πορτοκαλί πλαίσιο του Excel. */
+.swatchSelected {
+  box-shadow: 0 0 0 1px var(--color-background, #000), 0 0 0 2px var(--color-primary, #0088cb);
+}
+
+/**
+ * Η ένδειξη ονόματος κάτω από την παλέτα (ιδίωμα «Index Color» του AutoCAD).
+ * Κρατά ύψος και όταν είναι κενή — αλλιώς το μενού πηδά τη στιγμή που μπαίνει ο δείκτης.
+ */
+.readout {
+  margin: 4px 0 0 2px;
+  min-height: 1.2em;
+  font-size: 11px;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.command:hover,
+.command:focus-visible {
+  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+}
+
+.commandSwatch {
+  cursor: inherit;
+}
+
+.commandText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.commandHint {
+  font-size: 11px;
+  opacity: 0.65;
+}

@@ -40,10 +40,10 @@ import elDxfViewer from '@/i18n/locales/el/dxf-viewer.json';
 import {
   TableFormatToolbar,
   type TableAxisFormatSnapshot,
-  type TableAxisTextColorState,
   type TableFormatToolbarProps,
   type TableToggleFormatState,
 } from '../TableFormatToolbar';
+import type { TableAxisColorState } from '../table-color-menu-selection';
 import {
   TableHeaderContextMenu,
   type TableHeaderContextMenuHandle,
@@ -85,11 +85,27 @@ function fmt(active: boolean, mixed: boolean, explicit: boolean): TableToggleFor
 }
 
 /** ADR-739 Φ.Ε/Φ4 — άξονας χωρίς ρητό χρώμα: ενεργό είναι το «Αυτόματο». */
-const INHERITED_TEXT_COLOR: TableAxisTextColorState = {
+const INHERITED_TEXT_COLOR: TableAxisColorState = {
   current: '#111111',
+  mixed: false,
   explicit: false,
   inheritedColor: '#111111',
   drawingColors: ['#111111', '#0000ff'],
+};
+
+/**
+ * ADR-739 Φ.Ε/Φ4β — ο **προεπιλεγμένος** άξονας γεμίσματος: κληρονομεί, και κληρονομεί **κενό**.
+ *
+ * Δεν είναι εξεζητημένη περίπτωση — είναι η πιο συνηθισμένη: το στυλ `standard` βάφει μόνο την
+ * κεφαλίδα, οπότε μια στήλη δεδομένων ξεκινά ακριβώς από εδώ. Και είναι η κατάσταση που
+ * ζωγραφίζει **ολόιδια** με το «Κανένα γέμισμα».
+ */
+const INHERITED_NO_FILL: TableAxisColorState = {
+  current: undefined,
+  mixed: false,
+  explicit: false,
+  inheritedColor: undefined,
+  drawingColors: ['#ededed'],
 };
 
 /** bold: ενεργό+ρητό· italic: μεικτό (όχι ρητό)· underline: τίποτα. */
@@ -98,6 +114,7 @@ const SAMPLE_FORMAT: TableAxisFormatSnapshot = {
   italic: fmt(false, true, false),
   underline: fmt(false, false, false),
   textColor: INHERITED_TEXT_COLOR,
+  fillColor: INHERITED_NO_FILL,
   canReset: true,
 };
 
@@ -106,8 +123,8 @@ function renderToolbar(overrides: Partial<TableFormatToolbarProps> = {}) {
   const onToggle = jest.fn();
   const onStepSize = jest.fn();
   const onReset = jest.fn();
-  const onPickTextColor = jest.fn();
-  const onAutomaticTextColor = jest.fn();
+  const onSetTextColor = jest.fn();
+  const onSetFillColor = jest.fn();
 
   const utils = render(
     <TableFormatToolbar
@@ -120,22 +137,23 @@ function renderToolbar(overrides: Partial<TableFormatToolbarProps> = {}) {
       onToggle={onToggle}
       onStepSize={onStepSize}
       onReset={onReset}
-      onPickTextColor={onPickTextColor}
-      onAutomaticTextColor={onAutomaticTextColor}
+      onSetTextColor={onSetTextColor}
+      onSetFillColor={onSetFillColor}
       {...overrides}
     />,
     wrapper,
   );
 
   return {
-    ...utils, surfaceRef, onToggle, onStepSize, onReset, onPickTextColor, onAutomaticTextColor,
+    ...utils, surfaceRef, onToggle, onStepSize, onReset, onSetTextColor, onSetFillColor,
   };
 }
 
 /**
- * Τα ΟΚΤΩ κουμπιά της γραμμής, με τη σειρά του DOM: Β, Π, Υ, **Α (χρώμα), ▾**, Α↑, Α↓, ↺.
+ * Τα ΔΕΚΑ κουμπιά της γραμμής, με τη σειρά του DOM:
+ * Β, Π, Υ, **Α (κείμενο), ▾**, **🪣 (γέμισμα), ▾**, Α↑, Α↓, ↺.
  *
- * ⚠️ Το χρώμα είναι **δύο** κουμπιά, όχι ένα: είναι split button — το κύριο μισό εφαρμόζει το
+ * ⚠️ Κάθε χρώμα είναι **δύο** κουμπιά, όχι ένα: split button — το κύριο μισό εφαρμόζει το
  * τελευταίο χρώμα χωρίς μενού, το βελάκι ανοίγει την παλέτα (πρότυπο Excel).
  */
 function getToolbarButtons(): HTMLButtonElement[] {
@@ -173,15 +191,20 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελε
       italic: NO_FORMAT,
       underline: NO_FORMAT,
       textColor: {
-        current: '#111111', explicit: false, inheritedColor: '#111111', drawingColors: [],
+        current: '#111111', mixed: false, explicit: false, inheritedColor: '#111111',
+        drawingColors: [],
+      },
+      fillColor: {
+        current: undefined, mixed: false, explicit: false, inheritedColor: undefined,
+        drawingColors: [],
       },
       canReset: false,
     }),
     onStepTextHeight: noop,
     onResetFormat: noop,
-    // ADR-739 Φ.Ε/Φ4 — δες το σχόλιο στο sibling test.
-    onPickTextColor: noop,
-    onAutomaticTextColor: noop,
+    // ADR-739 Φ.Ε/Φ4 + Φ4β — δες το σχόλιο στο sibling test.
+    onSetTextColor: noop,
+    onSetFillColor: noop,
     // ADR-750 Φ3 — δες το σχόλιο στο sibling test.
     onApplyBorder: noop,
     onResetBorders: noop,
@@ -391,8 +414,8 @@ describe('roving tabindex (WAI-ARIA APG toolbar)', () => {
   it('μόνο ΕΝΑ κουμπί έχει tabIndex 0 στην αρχή — το πρώτο', () => {
     renderToolbar();
     const buttons = getToolbarButtons();
-    // Β, Π, Υ, **Α, ▾**, Α↑, Α↓, ↺ — το χρώμα είναι split button, δηλαδή δύο θέσεις roving.
-    expect(buttons).toHaveLength(8);
+    // Β, Π, Υ, **Α, ▾**, **🪣, ▾**, Α↑, Α↓, ↺ — κάθε χρώμα είναι split button, δύο θέσεις roving.
+    expect(buttons).toHaveLength(10);
     expect(buttons[0]).toHaveAttribute('tabindex', '0');
     for (const button of buttons.slice(1)) {
       expect(button).toHaveAttribute('tabindex', '-1');
@@ -577,21 +600,21 @@ describe('role="toolbar" + aria-orientation + aria-label με την ετικέ�
  */
 describe('split button χρώματος: το «Α» εφαρμόζει, το βελάκι ανοίγει', () => {
   it('κλικ στο «Α» εφαρμόζει χρώμα ΧΩΡΙΣ να ανοίξει μενού', () => {
-    const { onPickTextColor } = renderToolbar();
+    const { onSetTextColor } = renderToolbar();
 
     fireEvent.click(screen.getByRole('button', { name: 'Χρώμα κειμένου' }));
 
-    expect(onPickTextColor).toHaveBeenCalledTimes(1);
-    expect(onPickTextColor.mock.calls[0][0]).toMatch(/^#[0-9a-f]{6}$/);
+    expect(onSetTextColor).toHaveBeenCalledTimes(1);
+    expect(onSetTextColor.mock.calls[0][0]).toMatch(/^#[0-9a-f]{6}$/);
     expect(screen.queryByRole('menu', { name: 'Χρώμα κειμένου' })).toBeNull();
   });
 
   it('κλικ στο βελάκι ανοίγει το μενού ΧΩΡΙΣ να εφαρμόσει τίποτα', () => {
-    const { onPickTextColor } = renderToolbar();
+    const { onSetTextColor } = renderToolbar();
 
     fireEvent.click(screen.getByRole('button', { name: 'Παλέτα χρωμάτων κειμένου' }));
 
-    expect(onPickTextColor).not.toHaveBeenCalled();
+    expect(onSetTextColor).not.toHaveBeenCalled();
     expect(screen.getByRole('menu', { name: 'Χρώμα κειμένου' })).toBeInTheDocument();
   });
 
@@ -612,16 +635,19 @@ describe('οι τέσσερις ζώνες του μενού χρώματος', 
     return utils;
   }
 
-  it('«Αυτόματο» καλεί onAutomaticTextColor, ΠΟΤΕ onPickTextColor με το χρώμα του στυλ', () => {
+  it('«Αυτόματο» γράφει ΑΚΡΙΒΩΣ `undefined`, ΠΟΤΕ το χρώμα του στυλ ως ρητή τιμή', () => {
     // 🔴 Η διάκριση είναι όλη η δουλειά: «Αυτόματο» = **αφαίρεση** του πεδίου. Αν έγραφε το
     // κληρονομημένο χρώμα ως ρητή τιμή, ο άξονας θα φαινόταν καθαρός ενώ θα ήταν καρφωμένος —
     // και μια αλλαγή στυλ δεν θα τον άγγιζε ποτέ ξανά.
-    const { onAutomaticTextColor, onPickTextColor } = openColorMenu();
+    //
+    // Το `toHaveBeenCalledWith(undefined)` **δεν** αρκεί μόνο του (θα περνούσε και με μηδέν
+    // ορίσματα): ελέγχεται και το πλήθος των ορισμάτων.
+    const { onSetTextColor } = openColorMenu();
 
     fireEvent.click(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }));
 
-    expect(onAutomaticTextColor).toHaveBeenCalledTimes(1);
-    expect(onPickTextColor).not.toHaveBeenCalled();
+    expect(onSetTextColor).toHaveBeenCalledTimes(1);
+    expect(onSetTextColor.mock.calls[0]).toEqual([undefined]);
   });
 
   it('«Αυτόματο» είναι το ενεργό όταν ο άξονας ΔΕΝ δηλώνει ρητό χρώμα', () => {
@@ -661,14 +687,14 @@ describe('οι τέσσερις ζώνες του μενού χρώματος', 
   });
 
   it('κλικ σε δείγμα του πλέγματος εφαρμόζει ΑΚΡΙΒΩΣ το χρώμα του και κλείνει το μενού', () => {
-    const { onPickTextColor } = openColorMenu();
+    const { onSetTextColor } = openColorMenu();
     const grid = screen.getByRole('grid', { name: 'Βασικά χρώματα' });
 
     // Δεύτερη σειρά, δεύτερη στήλη = η **βάση** του κόκκινου, ACI 10.
     const cells = within(grid).getAllByRole('gridcell');
     fireEvent.click(cells[13 + 1]);
 
-    expect(onPickTextColor).toHaveBeenCalledWith('#ff0000');
+    expect(onSetTextColor).toHaveBeenCalledWith('#ff0000');
     expect(screen.queryByRole('menu', { name: 'Χρώμα κειμένου' })).toBeNull();
   });
 

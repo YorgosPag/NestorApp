@@ -46,7 +46,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §30
  */
 
-import { useEffect, type RefObject } from 'react';
+import { useEffect, useRef, type RefObject } from 'react';
 // ADR-739 §27.16 Ε6 — σταθερή ταυτότητα χειριστή + ανάγνωση των **τελευταίων** τιμών τη
 // στιγμή του συμβάντος. Χωρίς αυτό, το effect θα ξαναέγραφε τον ακροατή σε κάθε αλλαγή
 // οντότητας — δηλαδή σε κάθε πάτημα πλήκτρου μέσα στον πίνακα.
@@ -67,8 +67,22 @@ import {
 // `useCrosshairCursor` ζει το **ΑΠΟΤΕΛΕΣΜΑ** (τι γράφτηκε στο `style.cursor`). Χωρίς το πρώτο
 // δεν ξεχωρίζεις «ο ρόλος άλλαξε» από «κάποιος άλλος ξαναέγραψε» — δύο διαφορετικές θεραπείες.
 import { noteCursorProbe } from '../../systems/cursor/cursor-apply-audit';
+// 🔴 ADR-739 §35 — η επιλογή (ΤΙ πιάνεται) και τα πλήκτρα (ΤΙ θα γίνει αν το πιάσεις).
+import { getTableCellCursor } from '../../state/table-cell-cursor-store';
+import { tableRangeDragIntentOf } from '../../bim/table/table-range-move-zone';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
+
+/**
+ * 🔴 ADR-739 §35 — τα πλήκτρα που **αλλάζουν την υπόσχεση** χωρίς να κουνηθεί το χέρι.
+ *
+ * Μόνο αυτά: κάθε άλλο πλήκτρο θα ξανα-σάρωνε γεωμετρία για απάντηση που δεν αλλάζει. Το
+ * `Shift` είναι μέσα παρότι **δεν** αλλάζει το σχήμα του δείκτη σήμερα (η εισαγωγή δείχνει
+ * κι αυτή `move`, όπως στο Excel) — γιατί αλλάζει την **πρόθεση** που καταγράφει το όργανο
+ * του §31.11, και μια καταγραφή που δεν βλέπει το `Shift` δεν μπορεί να διαγνώσει σύρση που
+ * εισήγαγε ενώ ο χρήστης περίμενε αντικατάσταση.
+ */
+const MODIFIER_KEYS: ReadonlySet<string> = new Set(['Control', 'Meta', 'Shift']);
 
 /**
  * Ο **ένας** καθαρισμός και των δύο καναλιών, με **σταθερή** ταυτότητα.
@@ -102,7 +116,20 @@ export interface UseTableIndicatorHoverParams {
 export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): void {
   const { active, entity, containerRef, transformRef } = params;
 
+  /**
+   * 🔴 §35 — **ΠΟΥ ΣΤΕΚΕΤΑΙ ΤΟ ΧΕΡΙ**, ώστε το `Ctrl` να μπορεί να ξαναρωτήσει χωρίς κίνηση.
+   *
+   * Ίδιο σχήμα με το `lastEvent` της σύρσης (`table-cell-drag-session` §27.16 Ε1) και για
+   * τον ίδιο ακριβώς λόγο: υπάρχουν **δύο** αφορμές να ξαναλυθεί η ίδια ερώτηση — κινήθηκε το
+   * χέρι, ή άλλαξε η **πρόθεση** κάτω από ακίνητο χέρι. Μία απάντηση, δύο αφορμές.
+   *
+   * `null` πριν την πρώτη κίνηση: ένα `Ctrl` χωρίς προηγούμενο hover δεν έχει σημείο να
+   * ρωτήσει, και δεν επιτρέπεται να εφεύρει ένα.
+   */
+  const lastMoveRef = useRef<MouseEvent | null>(null);
+
   const handleMouseMove = useEventCallback((event: MouseEvent): void => {
+    lastMoveRef.current = event;
     const container = containerRef.current;
     const transform = transformRef.current;
     if (!container || !entity || !transform) {
@@ -118,15 +145,67 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       clearTableIndicatorFeedback();
       return;
     }
+    // 🔴 ADR-739 §35 — η **επιλογή** διαβάζεται με getter τη στιγμή του συμβάντος, ποτέ ως
+    // στιγμιότυπο κλεισμένο στο hook. Είναι ο ρητός κανόνας του ADR-040 («event handlers MUST
+    // receive getters, not snapshot values»), και εδώ έχει **ορατό** σύμπτωμα αν παραβιαστεί:
+    // ο χρήστης μεγαλώνει την περιοχή με `Shift+βέλος` χωρίς να κουνήσει το χέρι, και το
+    // περίγραμμα που «πιάνεται» θα έμενε αυτό της **προηγούμενης** επιλογής.
+    //
+    // Φιλτραρισμένη ως προς ΑΥΤΟΝ τον πίνακα: δύο πίνακες στη σκηνή δεν μοιράζονται δρομέα —
+    // ο ίδιος έλεγχος που κάνει ήδη ο ζωγράφος (`TableRenderer.cursorOf`).
+    const cursorState = getTableCellCursor();
+    const selection = cursorState?.entityId === entity.id ? cursorState.selection : null;
     // ΜΙΑ ανάγνωση γεωμετρίας, δύο απαντήσεις — δες την κεφαλίδα του `tableIndicatorProbeAtWorld`
     // για το γιατί δεν είναι δύο κλήσεις (θα ήταν δύο υπολογισμοί ανά κίνηση ποντικιού).
-    const { hit, cursor } = tableIndicatorProbeAtWorld(entity, world, transform.scale);
+    const { hit, cursor } = tableIndicatorProbeAtWorld(
+      entity,
+      world,
+      transform.scale,
+      selection,
+      // §35 — τα πλήκτρα **του συμβάντος**, όχι κατάσταση που κρατά κάποιος: το `Ctrl` μπορεί
+      // να πατηθεί ή να αφεθεί με το χέρι ακίνητο πάνω στο περίγραμμα. Η ανανέωση του δείκτη
+      // σε αυτή την περίπτωση έρχεται από το `keydown`/`keyup` — δες παρακάτω.
+      tableRangeDragIntentOf(event),
+    );
     // 🔬 §31.11 — η **αιτία**, με τις συντεταγμένες του συμβάντος: αν ο ρόλος ταλαντώνεται ενώ
     // το `y` μένει σταθερό, φταίει όριο κατά τον **οριζόντιο** άξονα (διαχωριστικά στηλών)·
     // αν ταλαντώνεται με το `y` να κινείται 1-2 px, φταίει το **χείλος** της λωρίδας.
     noteCursorProbe('ok', cursor, hit, event.clientX, event.clientY);
     setTableIndicatorHover(hit ? { entityId: entity.id, hit } : null);
     setTableIndicatorCursor(cursor);
+  });
+
+  /**
+   * 🔴 §35 — το ποντίκι έφυγε: σβήσε **και** το σημείο, όχι μόνο την ανάδραση.
+   *
+   * Χωρίς το πρώτο, ένα `Ctrl` πατημένο ενώ το χέρι είναι στην κορδέλα θα ξανα-σάρωνε την
+   * **τελευταία θέση μέσα στον καμβά** και θα άναβε δείκτη μετακίνησης για περίγραμμα που
+   * κανείς δεν δείχνει. Το σημείο και η ανάδραση γεννιούνται μαζί, άρα σβήνουν μαζί — η ίδια
+   * αρχή που έκανε τον καθαρισμό των δύο καναλιών **έναν**.
+   */
+  const handleMouseLeave = useEventCallback((): void => {
+    lastMoveRef.current = null;
+    clearTableIndicatorFeedback();
+  });
+
+  /**
+   * 🔴 §35 — **Η ΠΡΟΘΕΣΗ ΑΛΛΑΞΕ ΧΩΡΙΣ ΝΑ ΚΟΥΝΗΘΕΙ ΤΟ ΧΕΡΙ.**
+   *
+   * Στο Excel κρατάς το χέρι στο περίγραμμα και πατάς `Ctrl`: ο δείκτης αποκτά «+» **αμέσως**,
+   * πριν αρχίσει η σύρση. Αυτή είναι όλη η αξία του — μαθαίνεις ότι θα **αντιγράψεις** αντί να
+   * **μετακινήσεις** ενώ ακόμα μπορείς να αλλάξεις γνώμη. Χωρίς αυτόν τον ακροατή, ο δείκτης
+   * θα έλεγε «μετακίνηση» μέχρι το επόμενο pixel κίνησης — δηλαδή θα **ψευδόταν** ακριβώς τη
+   * στιγμή που ο χρήστης ρωτά, και ο §31 έχει όνομα γι' αυτό: *ο δείκτης δεν επιτρέπεται να
+   * ψεύδεται*.
+   *
+   * Ζει στο `window` και όχι στο δοχείο: το πληκτρολόγιο δεν έχει «θέση», και η εστίαση την
+   * ώρα του hover ανήκει στο `<textarea>` της συνεδρίας — ένας ακροατής στο δοχείο **δεν θα
+   * έβλεπε ποτέ** το πλήκτρο.
+   */
+  const handleModifierChange = useEventCallback((event: KeyboardEvent): void => {
+    if (!MODIFIER_KEYS.has(event.key)) return;
+    const last = lastMoveRef.current;
+    if (last) handleMouseMove(last);
   });
 
   useEffect(() => {
@@ -139,10 +218,17 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     container.addEventListener('mousemove', handleMouseMove, { passive: true });
     // Το ποντίκι βγήκε από τον καμβά: καμία λωρίδα δεν είναι πια «κάτω από τον δείκτη».
     // Χωρίς αυτό, το γράμμα θα έμενε αναμμένο ενώ το χέρι είναι στην κορδέλα.
-    container.addEventListener('mouseleave', clearTableIndicatorFeedback);
+    container.addEventListener('mouseleave', handleMouseLeave);
+    // §35 — παθητικοί και οι δύο: **μόνο** ξαναρωτούν την ίδια ερώτηση. Καμία διεκδίκηση
+    // πλήκτρου — το `Ctrl`/`Shift` ανήκουν σε όποιον τα διεκδικεί αλλού (αντιγραφή, επέκταση).
+    window.addEventListener('keydown', handleModifierChange, { passive: true });
+    window.addEventListener('keyup', handleModifierChange, { passive: true });
     return () => {
       container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('mouseleave', clearTableIndicatorFeedback);
+      container.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('keydown', handleModifierChange);
+      window.removeEventListener('keyup', handleModifierChange);
+      lastMoveRef.current = null;
       // Η λειτουργία έκλεισε με το ποντίκι ακόμα πάνω στη λωρίδα: ο δείκτης παύει να
       // ζωγραφίζεται, αλλά η κατάσταση θα επιβίωνε και θα άναβε λάθος γράμμα στο επόμενο
       // άνοιγμα. Ίδια λογική με το `endTableCellDrag` του pointer.
@@ -153,5 +239,5 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       // υπόσχεται επιλογή στήλης σε καμβά που δεν έχει πια πίνακα ανοιχτό.
       clearTableIndicatorFeedback();
     };
-  }, [active, containerRef, handleMouseMove]);
+  }, [active, containerRef, handleMouseMove, handleMouseLeave, handleModifierChange]);
 }
