@@ -2251,7 +2251,23 @@
       "openingInfoTag": "Πινακίδα Ανοίγματος",
       "openingInfoTagTooltip": "Τοποθέτηση πινακίδας ανοίγματος με ένα κλικ (Μήκος/Ποδιά/Ύψος)",
       "table": "Πίνακας",
-      "tableTooltip": "Τοποθέτηση πίνακα με ένα κλικ (πάνω-αριστερή γωνία)",
+      "tableTooltip": "Επιλογή μεγέθους πίνακα, μετά ένα κλικ στον καμβά (πάνω-αριστερή γωνία)",
+      "tableMenu": {
+        "caption": "Πίνακας {columns}×{rows}",
+        "gridLabel": "Επιλογή μεγέθους πίνακα",
+        "cellLabel": "{columns} στήλες επί {rows} γραμμές",
+        "columnWidth": "Πλάτος στήλης",
+        "columnWidthUnit": "mm",
+        "insertDialog": "Εισαγωγή πίνακα…",
+        "dialogTitle": "Εισαγωγή πίνακα",
+        "dialogDescription": "Δηλώστε το μέγεθος του πίνακα. Μετά την επιβεβαίωση, κάντε κλικ στον καμβά για να τον τοποθετήσετε.",
+        "dialogColumns": "Αριθμός στηλών",
+        "dialogRows": "Αριθμός γραμμών",
+        "dialogRowsHint": "Ελάχιστο {min}: η γραμμή τίτλου και η κεφαλίδα υπάρχουν πάντα.",
+        "dialogColumnWidth": "Πλάτος στήλης (mm)",
+        "dialogConfirm": "Εισαγωγή",
+        "dialogCancel": "Άκυρο"
+      },
       "xlineModeSelector": "Λειτουργία",
       "bim": {
         "wall": {

@@ -2251,7 +2251,23 @@
       "openingInfoTag": "Opening Info Tag",
       "openingInfoTagTooltip": "Place an opening info tag with a single click (Length/Sill/Height)",
       "table": "Table",
-      "tableTooltip": "Place a table with a single click (top-left corner)",
+      "tableTooltip": "Pick the table size, then a single click on the canvas (top-left corner)",
+      "tableMenu": {
+        "caption": "Table {columns}×{rows}",
+        "gridLabel": "Pick table size",
+        "cellLabel": "{columns} columns by {rows} rows",
+        "columnWidth": "Column width",
+        "columnWidthUnit": "mm",
+        "insertDialog": "Insert table…",
+        "dialogTitle": "Insert table",
+        "dialogDescription": "Set the table size. After confirming, click on the canvas to place it.",
+        "dialogColumns": "Number of columns",
+        "dialogRows": "Number of rows",
+        "dialogRowsHint": "Minimum {min}: the title row and the header row always exist.",
+        "dialogColumnWidth": "Column width (mm)",
+        "dialogConfirm": "Insert",
+        "dialogCancel": "Cancel"
+      },
       "xlineModeSelector": "Mode",
       "bim": {
         "wall": {
