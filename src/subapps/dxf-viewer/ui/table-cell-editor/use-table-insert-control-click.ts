@@ -55,8 +55,6 @@ import type { PersistedTableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 
 export interface UseTableInsertControlClickParams {
-  /** Το **ίδιο** `active` με τον hover: χωρίς πίνακα δεν υπάρχει τίποτα να πατηθεί. */
-  readonly active: boolean;
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly levelManager: LevelManagerLike;
 }
@@ -74,14 +72,13 @@ export interface UseTableInsertControlClickParams {
  * ποτέ προς την αιτία. Εδώ μένει **μόνο** ό,τι είναι του ⊕: ποιο store, και ποια πράξη.
  */
 export function useTableInsertControlClick(params: UseTableInsertControlClickParams): void {
-  const { active, containerRef, levelManager } = params;
+  const { containerRef, levelManager } = params;
   const { execute } = useCommandHistory();
   // Η ΙΔΙΑ διαδρομή commit με το μενού ζωνών και την επεξεργασία κελιού: ένα
   // `UpdateEntityCommand`, ένα `Ctrl+Z`, καμία δεύτερη διαδρομή εγγραφής (§6.6).
   const commitModel = useTableModelCommit({ levelManager, execute });
 
   useTableArmedControlClick<TableInsertControlState>({
-    active,
     containerRef,
     levelManager,
     // Η φάση ελέγχεται **εδώ**: είναι γνώση του ⊕, όχι του ακροατή. Στη φάση `nearby` το

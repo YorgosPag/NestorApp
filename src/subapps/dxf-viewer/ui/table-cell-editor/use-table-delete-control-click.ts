@@ -54,20 +54,17 @@ import { useTableAxisActionApply } from './use-table-axis-action-apply';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 
 export interface UseTableDeleteControlClickParams {
-  /** Το **ίδιο** `active` με τον hover: χωρίς πίνακα δεν υπάρχει τίποτα να πατηθεί. */
-  readonly active: boolean;
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly levelManager: LevelManagerLike;
 }
 
 /** Εκτελεί τη διαγραφή που υπόσχεται το οπλισμένο ⊖, όσο υπάρχει πίνακας στο προσκήνιο. */
 export function useTableDeleteControlClick(params: UseTableDeleteControlClickParams): void {
-  const { active, containerRef, levelManager } = params;
+  const { containerRef, levelManager } = params;
   const { execute } = useCommandHistory();
   const applyAxisAction = useTableAxisActionApply({ levelManager, execute });
 
   useTableArmedControlClick<TableDeleteControlState>({
-    active,
     containerRef,
     levelManager,
     // Η φάση ελέγχεται **εδώ**: είναι γνώση του ⊖, όχι του ακροατή. Στη φάση `nearby` το συμβάν

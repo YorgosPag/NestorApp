@@ -125,7 +125,7 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
 /**
  * Η **πηγή** της συμπλήρωσης: η επιλογή αν υπάρχει, αλλιώς το ενεργό κελί.
  *
- * 🔴 **ADR-754 §15 — η απόφαση δεν γράφεται πια εδώ.** Εδώ ζούσε η **δεύτερη** διατύπωσή της
+ * 🔴 **ADR-754 §14 — η απόφαση δεν γράφεται πια εδώ.** Εδώ ζούσε η **δεύτερη** διατύπωσή της
  * (`if (cursor.selection) return resolveTableSelectionBounds(...)`), δίπλα στην πρώτη του
  * ζωγράφου (`selectionBounds ?? ενεργό κελί`) — και οι δύο **διαφωνούσαν** όταν η επιλογή ήταν
  * μπαγιάτικη: ο ζωγράφος ζωγράφιζε λαβή στο ενεργό κελί, αυτός εδώ αρνιόταν να την πιάσει.
@@ -143,7 +143,7 @@ function fillSourceBounds(model: TableModel, cursor: TableCellCursorState): Tabl
 
 /**
  * Έπεσε το πάτημα πάνω στη λαβή; Η γεωμετρία περνά από τον **έναν** δρόμο — τον ίδιο
- * `tableFillHandleHitAtFrame` που απαντά και στον **δείκτη** (§15). Ο χρήστης πιάνει ό,τι του
+ * `tableFillHandleHitAtFrame` που απαντά και στον **δείκτη** (§14). Ο χρήστης πιάνει ό,τι του
  * υπόσχεται ο λεπτός σταυρός, στο ίδιο ακριβώς pixel.
  */
 function isOnHandle(press: TableFillHandlePress, source: TableCellRangeBounds): boolean {

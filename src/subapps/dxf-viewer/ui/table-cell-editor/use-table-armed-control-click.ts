@@ -68,7 +68,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §40.8, §42
  */
 
-import { type RefObject } from 'react';
+import { useRef, type RefObject } from 'react';
 import { useEventCallback } from '@/hooks/useEventCallback';
 // 🔴 §40.8 — ο ΕΝΑΣ ορισμός του «το πάτημα έπεσε μέσα στη συνεδρία» (§26.15), κοινός με τον pointer.
 import { claimTableCellSessionPointerDown } from './table-cell-session-focus';
@@ -159,6 +159,13 @@ export function useTableArmedControlClick<S extends ArmedControlState>(
     // το ξαναστήσιμο του πεδίου όταν η πράξη αλλάξει τη διάταξη κάτω από τον δρομέα
     // (`focusout` (Α) του §26.15, που δεν είναι προεπιλεγμένη ενέργεια και δεν αναιρείται).
     claimTableCellSessionPointerDown();
+    // 🔴 §40.9 — **και το ζευγάρι του πατήματος**, πριν τρέξει η πράξη. Η σειρά είναι η ίδια
+    // αρχή με την «κατανάλωση πριν το αποτέλεσμα» από πάνω: η χειρονομία ανήκει στο κουμπί
+    // επειδή το κουμπί ήταν οπλισμένο, όχι επειδή η πράξη πέτυχε. Στο όριο πλήθους
+    // (`canInsert*`/`canDelete*` → «όχι») το `run` δεν κάνει τίποτα — και το `mouseup` οφείλει
+    // να μείνει κομμένο ακριβώς το ίδιο, αλλιώς το άκαρπο πάτημα **αποεπιλέγει** τον πίνακα.
+    pendingMouseUpRef.current?.();
+    pendingMouseUpRef.current = claimNextMouseUp();
 
     run(live, armed);
   });
@@ -167,5 +174,30 @@ export function useTableArmedControlClick<S extends ArmedControlState>(
   // container. Ο **ίδιος** ένας τρόπος προσάρτησης με τον pointer (§40.8, N.18): η σειρά
   // εγγραφής ακροατών δεν είναι συμβόλαιο, η φάση είναι, και δύο αντίγραφα της φάσης είναι
   // δύο ευκαιρίες να αποκλίνει.
-  useTableContainerMouseDown({ active, containerRef, onMouseDown: handleMouseDown });
+  useTableContainerMouseDown({
+    /**
+     * 🔴 §40.9 — **ΣΤΑΘΕΡΑ ΠΡΟΣΑΡΤΗΜΕΝΟΣ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ Η ΔΙΟΡΘΩΣΗ.**
+     *
+     * Εδώ περνιόταν το `isTableModeActive` του καλούντος — τιμή υπολογισμένη **την ώρα της
+     * απόδοσης**. Ο κάτοχός της (`CanvasSection`) όμως **δεν αποδίδει ποτέ σε αλλαγή επιλογής**
+     * (ADR-532 B4, δηλωμένο ρητά σε τρία σημεία), οπότε η επιλογή ενός πίνακα δεν μπορούσε να
+     * την κάνει `true`: ο ακροατής **δεν γεννιόταν καθόλου** και το ⊕ ήταν κουμπί χωρίς πάτημα.
+     *
+     * 🔑 Η συνθήκη δεν χάθηκε — **μετακόμισε εκεί που έχει απάντηση**: το `resolveArmed()` από
+     * πάνω επιστρέφει `null` όποτε δεν υπάρχει οπλισμένο χειριστήριο, και τίποτα δεν μπορεί να
+     * είναι οπλισμένο αν δεν το έγραψε ο hover — πράγμα που απαιτεί **ζωντανό πίνακα**. Δηλαδή
+     * ο φρουρός ήταν ήδη εκεί, δύο φορές· εκείνος που έλειπε ήταν αυτός που παρακολουθεί.
+     *
+     * Κόστος όταν δεν υπάρχει πίνακας: ένας έλεγχος κουμπιού + ένα `store.get()` ανά πάτημα.
+     */
+    active: true,
+    containerRef,
+    onMouseDown: handleMouseDown,
+    // §40.9 — αποπροσάρτηση με το κουμπί ακόμα κάτω: ο ακροατής του `document` **δεν** θα έφευγε
+    // μόνος του. Ίδιος λόγος με το `onDetach` της σύρσης κελιού (§27.15).
+    onDetach: () => {
+      pendingMouseUpRef.current?.();
+      pendingMouseUpRef.current = null;
+    },
+  });
 }
