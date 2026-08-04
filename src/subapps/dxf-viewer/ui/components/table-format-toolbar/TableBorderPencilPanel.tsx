@@ -35,6 +35,7 @@ import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
 import { getRecentColorsStore } from '../../color/RecentColorsStore';
 import { normalizeHexColor } from '../../../config/color-math';
+import { colorGridFor } from '../../color/aci-color-grid';
 import { resolveLinetypePatternMm } from '../../../rendering/linetype-dash-resolver';
 import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
 import {
@@ -127,6 +128,7 @@ export function TableBorderPencilPanel({
           />
           <span className={panel.separator} role="separator" />
           <TableColorSwatchGrid
+            grid={colorGridFor('ink')}
             selected={selection.colorHex}
             onPick={pickColor}
             label={t('table.borders.pencil.basicColors')}
