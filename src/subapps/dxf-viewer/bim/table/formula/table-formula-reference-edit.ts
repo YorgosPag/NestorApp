@@ -21,11 +21,18 @@
 
 import type { TableModel } from '../../../types/table';
 import {
+  RANGE_SEPARATOR,
   tableCellReference,
   tableRangeReference,
   type TableCellAddress,
 } from '../table-cell-reference';
+import {
+  cycleAbsoluteReference,
+  rewriteAbsoluteReference,
+  splitAbsoluteReference,
+} from './table-formula-absolute';
 import type { FormulaPointState } from './table-formula-point-state';
+import { tableFormulaReferenceSpans } from './table-formula-reference-spans';
 
 /** Το κείμενο του επεξεργαστή μετά την υπόδειξη, μαζί με το πού πρέπει να πάει ο δρομέας. */
 export interface PointedReferenceEdit {
@@ -79,4 +86,71 @@ export function applyPointedReference(
     draft: draft.slice(0, from) + reference + draft.slice(to),
     caretIndex: from + reference.length,
   };
+}
+
+/**
+ * 🔴 ADR-754 **Γ3** — **το `F4`**: κλειδώνει και ξεκλειδώνει την αναφορά όπου κάθεται ο
+ * δρομέας, κυκλικά (`A1` → `$A$1` → `A$1` → `$A1` → `A1`).
+ *
+ * `null` όταν ο δρομέας δεν βρίσκεται πάνω σε αναφορά — και τότε ο καλών οφείλει να **μην
+ * καταναλώσει** το πλήκτρο, ώστε το `F4` να συνεχίσει να σημαίνει ό,τι σήμαινε αλλού.
+ *
+ * ## 🔑 Ποια αναφορά «είναι» του δρομέα — και γιατί ΔΕΝ γράφτηκε νέος σαρωτής
+ * Η ερώτηση «ποιες αναφορές περιέχει αυτό το κείμενο, και πού ακριβώς;» έχει **ήδη**
+ * απάντηση: το `tableFormulaReferenceSpans` της Φάσης Β1, που τη δίνει με `start`/`end` σε
+ * δείκτες του **πλήρους** προχείρου — δηλαδή στο σύστημα συντεταγμένων του `selectionStart`.
+ * Γράφτηκε για τα χρωματιστά περιγράμματα και τα offsets ήταν «δώρο για το Β2»· εδώ
+ * αποδεικνύεται ότι ήταν η **σωστή** μονάδα, γιατί ένα εύρος (`A1:B5`) επιστρέφεται ως **μία**
+ * εγγραφή — και το `F4` οφείλει να το κλειδώσει **ολόκληρο**, όπως το Excel.
+ *
+ * Ένας δεύτερος «ελαφρύς» σαρωτής εδώ θα ήταν τρίτη γραμματική (N.18) και θα διαφωνούσε με τα
+ * περιγράμματα που βλέπει ο χρήστης: θα κλείδωνε αναφορά **άλλη** από εκείνη που είναι
+ * φωτισμένη μπροστά του.
+ *
+ * ## Ο δρομέας «πάνω» σημαίνει ΚΑΙ στο δεξί άκρο
+ * Μόλις πληκτρολογηθεί ή μπει με υπόδειξη μια αναφορά, ο δρομέας κάθεται **αμέσως μετά** από
+ * αυτήν (§4). Αν το `F4` απαιτούσε αυστηρά «μέσα», η συνηθέστερη χρήση όλων — γράφω `=A1` και
+ * πατώ `F4` — δεν θα δούλευε. Γι' αυτό το διάστημα είναι **κλειστό** και στα δύο άκρα.
+ */
+export function toggleFormulaReferenceAbsolute(
+  model: TableModel,
+  draft: string,
+  caretIndex: number,
+): PointedReferenceEdit | null {
+  const span = tableFormulaReferenceSpans(model, draft).find(
+    (candidate) => caretIndex >= candidate.start && caretIndex <= candidate.end,
+  );
+  if (!span) return null;
+
+  const rewritten = cycleReferenceText(draft.slice(span.start, span.end));
+  if (rewritten === null) return null;
+
+  return {
+    draft: draft.slice(0, span.start) + rewritten + draft.slice(span.end),
+    // Ο δρομέας μένει **στο τέλος** της αναφοράς: το μήκος της αλλάζει σε κάθε πάτημα, οπότε
+    // μια «διατήρηση της θέσης» θα τον έριχνε άλλοτε μέσα στα δολάρια και άλλοτε έξω από τη
+    // λέξη. Στο τέλος είναι η μία θέση που σημαίνει το ίδιο πράγμα και στις τέσσερις μορφές —
+    // και είναι εκεί που ο χρήστης συνεχίζει να γράφει.
+    caretIndex: span.start + rewritten.length,
+  };
+}
+
+/**
+ * Το κείμενο μιας αναφοράς με τα δολάρια στην **επόμενη** μορφή του κύκλου. `null` όταν δεν
+ * είναι διεύθυνση.
+ *
+ * ⚠️ Ένα **εύρος** αλλάζει ως **ένα**: η μορφή διαβάζεται από το πρώτο άκρο και εφαρμόζεται σε
+ * όλα. Έτσι το `F4` πάνω σε `A1:B5` δίνει `$A$1:$B$5` — ποτέ μισοκλειδωμένο εύρος, που θα
+ * ήταν κατάσταση αδύνατη να παραχθεί με τα ίδια πατήματα στο Excel.
+ */
+function cycleReferenceText(text: string): string | null {
+  const parts = text.split(RANGE_SEPARATOR);
+  const head = splitAbsoluteReference(parts[0]);
+  if (head === null) return null;
+
+  const next = cycleAbsoluteReference(head);
+  const rewritten = parts.map((part) => rewriteAbsoluteReference(part, next));
+  return rewritten.every((part): part is string => part !== null)
+    ? rewritten.join(RANGE_SEPARATOR)
+    : null;
 }

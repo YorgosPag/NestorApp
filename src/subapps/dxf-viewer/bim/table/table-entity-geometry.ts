@@ -247,6 +247,9 @@ export function computeTableEntityGeometry(
     worldHeight: layout.heightMm * mmToWorld,
     worldCorners,
     bbox: bboxOfCorners(worldCorners),
+    // 🔴 ADR-739 §41 — η **ίδια** τιμή που μόλις έφτιαξε τα χρώματα της διάταξης, όχι δεύτερη
+    // ανάγνωση: δες `TableEntityGeometry.surfaceHex` για το γιατί δεν επιτρέπεται να ξαναζητηθεί.
+    surfaceHex,
   };
 }
 

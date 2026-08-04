@@ -22,22 +22,23 @@
  * και μάλιστα με μία μόνο απεικόνιση, γιατί ο κανόνας δεν ξεχωρίζει «μέσα» από «έξω»: η
  * απεικόνιση περιέχει **ό,τι μετακόμισε**, όπου κι αν ζούσε ο τύπος που το διαβάζει.
  *
- * ## 🔴 Η ΑΝΤΙΓΡΑΦΗ **ΔΕΝ** ΠΕΡΝΑ ΑΠΟ ΕΔΩ — ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΗ ΑΠΟΚΛΙΣΗ
+ * ## 🔴 Η ΑΝΤΙΓΡΑΦΗ **ΔΕΝ** ΠΕΡΝΑ ΑΠΟ ΕΔΩ — ✅ ΚΑΙ ΤΩΡΑ ΕΧΕΙ ΔΙΚΟ ΤΗΣ ΣΠΙΤΙ (ADR-754 Γ1)
  * Στο Excel η **αντιγραφή** ολισθαίνει τις **σχετικές** αναφορές (`=B1` αντιγραμμένο μια
- * γραμμή κάτω γίνεται `=B2`) και αφήνει ακέραιες τις **απόλυτες** (`=$B$1`). Το δικό μας
- * `TableFormulaCellRef` **δεν έχει** τη διάκριση: κάθε αναφορά είναι ταυτότητα, δηλαδή
- * συμπεριφέρεται ως **απόλυτη**. Άρα:
+ * γραμμή κάτω γίνεται `=B2`) και αφήνει ακέραιες τις **απόλυτες** (`=$B$1`). Αυτή η γραμμή
+ * έγραφε μέχρι το ADR-754 ότι «το `TableFormulaCellRef` **δεν έχει** τη διάκριση, άρα κάθε
+ * αναφορά συμπεριφέρεται ως απόλυτη» — και προέβλεπε ρητά ότι η θεραπεία θα ήταν σημαία
+ * απολυτότητας ανά άξονα, σε **δική της φάση**. Αυτό ακριβώς έγινε:
  *
- * - Αντιγραφή τύπου ⇒ **ίδιες** αναφορές. Σωστό για ό,τι θα ήταν `$B$1`, **λάθος** για ό,τι
- *   θα ήταν `B1`.
- * - Η θεραπεία **δεν** είναι να ολισθαίνουμε τα πάντα: αυτό θα έσπαγε την άλλη μισή πρόθεση,
- *   και μάλιστα σιωπηλά. Είναι να αποκτήσει ο τύπος σημαία απολυτότητας ανά άξονα
- *   (`$` στο `table-formula-lex/parse/print`) — **δική της φάση**, όχι λαθρεπιβάτης εδώ.
- *
- * Καταγράφεται ρητά αντί να περάσει ως parity, και **καρφώνεται με test** ώστε η μέρα που θα
- * αλλάξει να είναι απόφαση, όχι ατύχημα.
+ * - **Το `$` ζει τώρα στην αναφορά** (`absoluteRow`/`absoluteCol`, ADR-754 Γ2).
+ * - **Η ολίσθηση ζει στο `table-formula-offset.ts`**, όχι εδώ — δες τον πίνακα των δύο
+ *   ασύμβατων σημασιολογιών στο `table-formula-rewrite.ts`.
+ * - **Εδώ το `$` παραμένει αδιάφορο**, και αυτό είναι Excel parity, όχι παράλειψη: *«όταν
+ *   μετακινείς μια επιλογή, το Excel ενημερώνει τις αναφορές προς αυτήν, **ανεξάρτητα από το
+ *   αν είναι σχετικές ή απόλυτες**»*. Η μόνη υποχρέωση αυτού του αρχείου απέναντι στο `$`
+ *   είναι να **μην το σβήσει** — δες {@link remapRef}.
  *
  * @module subapps/dxf-viewer/bim/table/formula/table-formula-remap
+ * @see table-formula-offset.ts — η ΑΛΛΗ πράξη: αντιγραφή, όπου το `$` αποφασίζει
  * @see bim/table/table-range-transfer.ts — ο μοναδικός καλών (η μεταφορά περιοχής)
  * @see types/table-formula.ts — γιατί δέντρο και όχι κείμενο
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §36
@@ -46,6 +47,7 @@
 import type { CellKey, PersistedTableModel, TableCellEntry } from '../../../types/table';
 import type { TableFormulaCellRef, TableFormulaNode } from '../../../types/table-formula';
 import { cellKey } from '../table-model-helpers';
+import { rewriteTableFormulaRefs } from './table-formula-rewrite';
 
 /**
  * «Ποιο κελί πήγε πού» — κλειδί το κελί **πηγή**, τιμή ο **προορισμός**.
@@ -87,40 +89,39 @@ export function remapTableFormulaRefs(
 
 /**
  * Ο κόμβος με τις αναφορές του ενημερωμένες — **το ίδιο αντικείμενο** όταν τίποτα από κάτω
- * δεν άλλαξε, ώστε η εγγύηση ταυτότητας να ανεβαίνει από τα φύλλα ως τη ρίζα.
+ * δεν άλλαξε.
  *
- * Ο `switch` είναι **εξαντλητικός** πάνω στη διακριτή ένωση επίτηδες: ένας νέος τύπος κόμβου
- * αύριο σπάει τη μεταγλώττιση εδώ αντί να ξεχαστεί και να αφήσει αναφορές που δεν ακολουθούν
- * — ακριβώς ο λόγος που το `types/table-formula.ts` επέλεξε διακριτή ένωση.
+ * Η **κάθοδος** (και μαζί της η εγγύηση ταυτότητας) ζει από το ADR-754 Γ1 στο
+ * `table-formula-rewrite.ts`: την ίδια ακριβώς αναδρομή τη χρειάστηκε και η **αντιγραφή**
+ * τύπου, και δύο αντίγραφα θα ήταν ο structural clone του CHECK 3.28 — και δύο θέσεις όπου
+ * ένα νέο είδος κόμβου μπορεί να ξεχαστεί στη μία. Εδώ μένει **μόνο** η σημασιολογία των
+ * φύλλων, που είναι και το μόνο που διαφέρει ανάμεσα στις δύο πράξεις.
  */
 function remapNode(node: TableFormulaNode, moved: TableFormulaRefRelocation): TableFormulaNode {
-  switch (node.kind) {
-    case 'ref': {
-      const next = moved.get(cellKey(node.cell.rowId, node.cell.colId));
-      return next === undefined ? node : { kind: 'ref', cell: next };
-    }
-    case 'range':
-      return remapRange(node, moved);
-    case 'group': {
-      const inner = remapNode(node.inner, moved);
-      return inner === node.inner ? node : { kind: 'group', inner };
-    }
-    case 'unary': {
-      const operand = remapNode(node.operand, moved);
-      return operand === node.operand ? node : { ...node, operand };
-    }
-    case 'binary': {
-      const left = remapNode(node.left, moved);
-      const right = remapNode(node.right, moved);
-      return left === node.left && right === node.right ? node : { ...node, left, right };
-    }
-    case 'call': {
-      const args = node.args.map((arg) => remapNode(arg, moved));
-      return args.every((arg, i) => arg === node.args[i]) ? node : { ...node, args };
-    }
-    default:
-      return node;
-  }
+  return rewriteTableFormulaRefs(node, (leaf) =>
+    leaf.kind === 'ref' ? remapRef(leaf, moved) : remapRange(leaf, moved),
+  );
+}
+
+/**
+ * 🔴 **Η μετακόμιση αλλάζει ΤΑΥΤΟΤΗΤΑ, όχι ΠΡΟΘΕΣΗ** — γι' αυτό οι σημαίες `$` επιβιώνουν.
+ *
+ * Η προηγούμενη γραφή ήταν `{ kind: 'ref', cell: next }`, δηλαδή **επίπεδη αντικατάσταση**:
+ * κρατούσε ό,τι ήξερε το `TableFormulaRefRelocation` και **πετούσε σιωπηλά κάθε άλλο πεδίο**
+ * της αναφοράς. Ήταν σωστό όσο η αναφορά ήταν σκέτο ζεύγος ταυτοτήτων· από τη στιγμή που
+ * απέκτησε `absoluteRow`/`absoluteCol` (ADR-754 Γ2) θα σήμαινε ότι **κάθε** μετακίνηση
+ * περιοχής, κάθε εισαγωγή γραμμής, ξεκλειδώνει τα δολάρια του χρήστη — και ο έλεγχος τύπων
+ * **δεν το πιάνει** (προαιρετικά πεδία + δομικός τύπος: το `{rowId, colId}` είναι απολύτως
+ * έγκυρο `TableFormulaCellRef`).
+ *
+ * Το `spread` το κάνει αδύνατο να εκφραστεί: ό,τι δεν ξέρει η απεικόνιση, μένει.
+ */
+function remapRef(
+  node: Extract<TableFormulaNode, { kind: 'ref' }>,
+  moved: TableFormulaRefRelocation,
+): TableFormulaNode {
+  const next = moved.get(cellKey(node.cell.rowId, node.cell.colId));
+  return next === undefined ? node : { kind: 'ref', cell: { ...node.cell, ...next } };
 }
 
 /**
@@ -144,5 +145,7 @@ function remapRange(
   const from = moved.get(cellKey(node.from.rowId, node.from.colId));
   const to = moved.get(cellKey(node.to.rowId, node.to.colId));
   if (from === undefined || to === undefined) return node;
-  return { kind: 'range', from, to };
+  // `spread` και εδώ, για τον λόγο του {@link remapRef}: κάθε άκρο κρατά **τις δικές του**
+  // σημαίες `$` — το `$A$1:B5` έχει κλειδωμένη μόνο την αρχή, και αυτό πρέπει να επιβιώσει.
+  return { kind: 'range', from: { ...node.from, ...from }, to: { ...node.to, ...to } };
 }

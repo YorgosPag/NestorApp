@@ -100,7 +100,8 @@ function printNode(model: TableModel, node: TableFormulaNode): string {
 function printRef(model: TableModel, cell: TableFormulaCellRef): string {
   const letter = tableColumnLetter(model, cell.colId);
   const number = tableRowNumber(model, cell.rowId);
-  return letter === '' || number === 0 ? REF_ERROR : formatAbsoluteReference(letter, number, cell);
+  if (letter === '' || number === 0) return REF_ERROR;
+  return formatAbsoluteReference(letter, String(number), cell);
 }
 
 /**

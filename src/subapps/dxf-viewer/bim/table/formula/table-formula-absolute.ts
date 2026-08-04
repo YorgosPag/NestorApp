@@ -61,6 +61,14 @@ export interface TableFormulaAbsoluteFlags {
 export interface SplitAbsoluteReference {
   /** Η διεύθυνση **χωρίς** `$` — ό,τι καταλαβαίνει ο μεταφραστής (`'A1'`). */
   readonly plain: string;
+  /**
+   * Τα δύο μέρη χωριστά (`'A'` και `'1'`) — για τον **επεξεργαστή**, που ξαναγράφει τη
+   * διεύθυνση με άλλα δολάρια (`F4`) και οφείλει να την ξαναδώσει **αυτούσια**. Επιστρέφονται
+   * ως κείμενο και όχι ως αριθμός επίτηδες: ένα `A007` που περνούσε από `parseInt` θα
+   * ξαναγραφόταν `A7`, δηλαδή το `F4` θα άλλαζε σιωπηλά ό,τι πληκτρολόγησε ο χρήστης.
+   */
+  readonly letters: string;
+  readonly digits: string;
   readonly absoluteRow: boolean;
   readonly absoluteCol: boolean;
 }
@@ -96,6 +104,8 @@ export function splitAbsoluteReference(text: string): SplitAbsoluteReference | n
   if (!match) return null;
   return {
     plain: match[2] + match[4],
+    letters: match[2],
+    digits: match[4],
     absoluteCol: match[1] === ABSOLUTE_MARKER,
     absoluteRow: match[3] === ABSOLUTE_MARKER,
   };
@@ -104,15 +114,30 @@ export function splitAbsoluteReference(text: string): SplitAbsoluteReference | n
 /**
  * Η αντίστροφη πράξη: γράμμα + αριθμός + σημαίες → `'$A$1'`. Το ένα σημείο που **γράφει**
  * δολάρια, ώστε ο εκτυπωτής και ο επεξεργαστής να μη μαντεύουν σειρά.
+ *
+ * Ο αριθμός γραμμής δίνεται ως **κείμενο** ώστε ο επεξεργαστής να μπορεί να ξαναγράψει
+ * αυτούσιο ό,τι πληκτρολογήθηκε — δες {@link SplitAbsoluteReference.digits}.
  */
 export function formatAbsoluteReference(
   letter: string,
-  rowNumber: number,
+  rowNumber: string,
   flags: TableFormulaAbsoluteFlags,
 ): string {
   const col = flags.absoluteCol ? ABSOLUTE_MARKER : '';
   const row = flags.absoluteRow ? ABSOLUTE_MARKER : '';
   return `${col}${letter}${row}${rowNumber}`;
+}
+
+/**
+ * `'A1'` + νέες σημαίες → `'$A$1'`. Η **μία** ξαναγραφή δολαρίων πάνω σε κείμενο, για το `F4`.
+ * `null` όταν το κείμενο δεν είναι διεύθυνση.
+ */
+export function rewriteAbsoluteReference(
+  text: string,
+  flags: TableFormulaAbsoluteFlags,
+): string | null {
+  const split = splitAbsoluteReference(text);
+  return split === null ? null : formatAbsoluteReference(split.letters, split.digits, flags);
 }
 
 /**
