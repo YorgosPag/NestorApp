@@ -78,6 +78,10 @@ import { getTableCellCursor, type TableCellCursorState } from '../../state/table
 // ADR-739 §30 — η λωρίδα κάτω από το ποντίκι, με τον ΙΔΙΟ κανόνα: getter τη στιγμή του
 // καρέ, καμία συνδρομή. Ο γραφέας ζητά καρέ μόνο όταν αλλάζει υποδιαίρεση.
 import { getTableIndicatorHover } from '../../state/table-indicator-hover-store';
+// 🔴 ADR-739 §40 — το ⊕ της εισαγωγής (Word parity): ζωγραφίζεται σε **επιλογή** και σε
+// λειτουργία πίνακα, γι' αυτό ζει έξω από το `if (cursor)`.
+import { getTableInsertControl } from '../../state/table-insert-control-store';
+import { stampTableInsertControl } from './table/stamp-table-insert-control';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
@@ -220,6 +224,35 @@ export class TableRenderer extends BaseEntityRenderer {
       // καρέ (ADR-040), και **μόνο** σε φάση επιλογής ⇒ ποτέ ψημένο στο bitmap cache (#3).
       const transfer = getTableRangeTransferPreview();
       if (transfer?.entityId === e.id) stampTableRangeGhost(rc, layout, transfer);
+    }
+
+    // 🔴 ADR-739 §40 — **ΤΟ ⊕ ΤΗΣ ΕΙΣΑΓΩΓΗΣ, ΕΞΩ ΑΠΟ ΤΟ `if (cursor)`.**
+    //
+    // Η θέση αυτού του μπλοκ **είναι** η προδιαγραφή, όχι λεπτομέρεια στοίβαξης. Ο Giorgio το
+    // ζήτησε ως full parity με το Word (04/08), όπου το ⊕ εμφανίζεται μόλις αγγίξεις τον
+    // πίνακα — χωρίς να μπεις μέσα του. Μέσα στο `if (cursor)` θα ζωγραφιζόταν **μόνο** μετά
+    // από διπλό κλικ, δηλαδή θα το έβρισκε μόνο όποιος ήδη ξέρει ότι υπάρχει: ακριβώς η
+    // αστοχία ανακάλυψης που το §31.8 μέτρησε ζωντανά δύο φορές.
+    //
+    // Ο φύλακας είναι το `selected` — το ίδιο που ήδη φυλά τον δρομέα λίγες γραμμές πιο πάνω.
+    // Καλύπτει **και τις δύο** καταστάσεις με μία συνθήκη, γιατί σε λειτουργία πίνακα η
+    // οντότητα είναι επιλεγμένη ούτως ή άλλως (`const cursor = selected ? … : null`). Ποια από
+    // τις δύο τρέχει το ξέρει η **γεωμετρία** (`TableInsertControlMode`), όχι ο ζωγράφος: εδώ
+    // ζωγραφίζεται ό,τι απάντησε η σάρωση, στη θέση που εκείνη υπολόγισε.
+    //
+    // Τελευταίο σε ολόκληρη τη διαδρομή, και μετά το φάντασμα: κάθεται **έξω** από το πλέγμα,
+    // άρα δεν σκεπάζει δεδομένα — αλλά τίποτα δεν επιτρέπεται να σκεπάσει **αυτό**, γιατί
+    // είναι το μόνο στοιχείο του πίνακα που λειτουργεί ως κουμπί.
+    if (selected) {
+      const insert = getTableInsertControl();
+      // Φιλτραρισμένο ως προς ΑΥΤΟΝ τον πίνακα: δύο πίνακες στη σκηνή δεν μοιράζονται
+      // χειριστήριο — ο ίδιος έλεγχος που κάνει ήδη ο hover των ζωνών και ο δρομέας.
+      if (insert?.entityId === e.id) {
+        stampTableInsertControl(rc, insert.control, {
+          widthMm: layout.widthMm,
+          heightMm: layout.heightMm,
+        });
+      }
     }
   }
 

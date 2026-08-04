@@ -1,10 +1,10 @@
 /**
- * ADR-739 §38 — **ΤΑ ΣΥΝΟΡΑ ΕΝΟΣ ΑΞΟΝΑ**: πού τελειώνει η μία γραμμή/στήλη και αρχίζει η
+ * ADR-739 §40 — **ΤΑ ΣΥΝΟΡΑ ΕΝΟΣ ΑΞΟΝΑ**: πού τελειώνει η μία γραμμή/στήλη και αρχίζει η
  * επόμενη, και ποιο από αυτά τα σύνορα είναι πιο κοντά σε ένα σημείο. Καθαρή αριθμητική —
  * μηδέν DOM, μηδέν store, μηδέν React, καμία γνώση για το τι θα γίνει στο σύνορο.
  *
  * ## Γιατί υπάρχει ως ξεχωριστό module
- * Γεννήθηκε ως **εξαγωγή** από το `table-range-insert-boundary.ts` (§38, χειριστήριο ⊕
+ * Γεννήθηκε ως **εξαγωγή** από το `table-range-insert-boundary.ts` (§40, χειριστήριο ⊕
  * Word-parity) τη στιγμή που η ερώτηση «*ποιο σύνορο είναι πιο κοντά;*» απέκτησε **δεύτερο**
  * καταναλωτή — και η εξαγωγή έγινε **πριν** γραφτεί ο δεύτερος, όχι αφού. Ο πρώτος τη ρωτά
  * για τη **σύρση περιοχής** (πού προσγειώνεται ό,τι κρατά το χέρι), ο δεύτερος για την
@@ -25,8 +25,8 @@
  *
  * @module subapps/dxf-viewer/bim/table/table-axis-boundary
  * @see bim/table/table-range-insert-boundary.ts — ο πρώτος καταναλωτής (σύρση περιοχής)
- * @see bim/table/table-insert-control.ts — ο δεύτερος (το ⊕ του §38)
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §36, §38
+ * @see bim/table/table-insert-control.ts — ο δεύτερος (το ⊕ του §40)
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §36, §40
  */
 
 import type { TableLayout } from './table-layout-types';
