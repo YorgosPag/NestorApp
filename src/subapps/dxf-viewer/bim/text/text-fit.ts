@@ -34,6 +34,22 @@
 export type TextWidthMeasure = (text: string) => number;
 
 /**
+ * 🔴 ADR-753 Φ2 — **το πλάτος ενός προθέματος δοσμένου του ΜΗΚΟΥΣ του**, όχι του κειμένου του.
+ *
+ * Η γενίκευση δεν είναι αφαίρεση για την αφαίρεση: ο δυαδικός βρόχος **ποτέ** δεν κοίταξε το
+ * περιεχόμενο του string — μόνο `measure(text.slice(0, k))` για διάφορα `k`. Όσο το κείμενο
+ * είχε **ένα** στυλ, «πρόθεμα» και «`slice` + μετρητής» ήταν το ίδιο πράγμα. Με μορφοποίηση
+ * ανά χαρακτήρα παύουν να είναι: το πρόθεμα διασχίζει τμήματα με **διαφορετικά** μετρικά, άρα
+ * δεν υπάρχει ένας μετρητής να του δώσεις.
+ *
+ * Ο τύπος το λέει ρητά ώστε να μη γραφτεί ποτέ ο πειρασμός — ένας `TextWidthMeasure` που
+ * αγνοεί το όρισμά του και κοιτά μόνο το `.length` του. Θα δούλευε **κατά σύμπτωση** εδώ
+ * (η συνάρτηση περνά μόνο προθέματα) και θα έλεγε ψέματα σε κάθε άλλον καλούντα —
+ * συμπεριλαμβανομένου του `clipWithEllipsis`, που μετρά τα **αποσιωπητικά**.
+ */
+export type PrefixWidth = (length: number) => number;
+
+/**
  * Οι τρεις περιπτώσεις που απαντιούνται **χωρίς καμία αναζήτηση** — κοινές και στις δύο
  * πολιτικές κοπής. `null` σημαίνει «χρειάζεται πραγματική αναζήτηση».
  *
@@ -45,45 +61,60 @@ export type TextWidthMeasure = (text: string) => number;
  * ⚠️ Το `!(available > 0)` και όχι `available <= 0`: πιάνει και το `NaN`, που αλλιώς θα
  * περνούσε σε δυαδική αναζήτηση με ασαφή τερματισμό.
  */
-function trivialFit(text: string, available: number, measure: TextWidthMeasure): number | null {
-  if (!text) return 0;
+function trivialFit(length: number, available: number, prefixWidth: PrefixWidth): number | null {
+  if (length <= 0) return 0;
   if (!(available > 0)) return 0;
-  if (measure(text) <= available) return text.length;
+  if (prefixWidth(length) <= available) return length;
   return null;
+}
+
+/**
+ * Το **μεγαλύτερο μήκος προθέματος** που χωρά σε `available` — η μία δυαδική αναζήτηση.
+ *
+ * `0` όταν δεν χωρά ούτε ένας χαρακτήρας (ή `available ≤ 0`)· `length` όταν χωρά όλο.
+ *
+ * ⚠️ **ΚΟΣΤΟΣ — ο λόγος που είναι δυαδική αναζήτηση.** Μια αφελής σάρωση χαρακτήρα-χαρακτήρα
+ * κάνει O(n) μετρήσεις **ανά κλήση** ⇒ O(n²) για μια παράγραφο 2.800 χαρακτήρων, σε **κάθε**
+ * υπολογισμό κουτιού/απόδοσης. Η μέτρηση είναι το ακριβό μέρος (μετρικά γραμματοσειράς), όχι
+ * η αριθμητική: ελαχιστοποιούμε τις **κλήσεις της**, O(log n).
+ *
+ * Η μονοτονία που κάνει τη δυαδική αναζήτηση σωστή — «πιο μακρύ πρόθεμα ⇒ ≥ πλάτος» — ισχύει
+ * για κάθε λογικό μετρητή προόδου πένας (και για τα δύο σημερινά μονοπάτια: opentype advance
+ * και CSS `measureText`). Παραμένει αληθής και με **ετερογενή** τμήματα, γιατί κάθε επιπλέον
+ * χαρακτήρας προσθέτει το δικό του μη αρνητικό advance ό,τι στυλ κι αν έχει. Αρνητικά kerning
+ * άκρων δεν σπάνε το αποτέλεσμα οπτικά, μόνο το καθιστούν κατά έναν χαρακτήρα συντηρητικό.
+ */
+export function fittingPrefixLengthByWidth(
+  length: number,
+  available: number,
+  prefixWidth: PrefixWidth,
+): number {
+  const trivial = trivialFit(length, available, prefixWidth);
+  if (trivial !== null) return trivial;
+
+  let lo = 0;
+  let hi = length;
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (prefixWidth(mid) <= available) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
 }
 
 /**
  * Το μήκος του **μεγαλύτερου προθέματος** του `text` που χωρά σε `available` — σε επίπεδο
  * **χαρακτήρα**, χωρίς καμία γνώση λέξεων.
  *
- * `0` όταν δεν χωρά ούτε ένας χαρακτήρας (ή `available ≤ 0`)· `text.length` όταν χωρά όλο.
- *
- * ⚠️ **ΚΟΣΤΟΣ — ο λόγος που είναι δυαδική αναζήτηση.** Μια αφελής σάρωση χαρακτήρα-χαρακτήρα
- * κάνει O(n) μετρήσεις **ανά κλήση** ⇒ O(n²) για μια παράγραφο 2.800 χαρακτήρων, σε **κάθε**
- * υπολογισμό κουτιού/απόδοσης. Το `measure` είναι το ακριβό μέρος (μετρικά γραμματοσειράς),
- * όχι η αριθμητική: ελαχιστοποιούμε τις **κλήσεις του**, O(log n).
- *
- * Η μονοτονία που κάνει τη δυαδική αναζήτηση σωστή — «πιο μακρύ πρόθεμα ⇒ ≥ πλάτος» — ισχύει
- * για κάθε λογικό μετρητή προόδου πένας (και για τα δύο σημερινά μονοπάτια: opentype advance
- * και CSS `measureText`). Αρνητικά kerning άκρων δεν σπάνε το αποτέλεσμα οπτικά, μόνο το
- * καθιστούν κατά έναν χαρακτήρα συντηρητικό.
+ * Ο προσαρμογέας για την **ομοιογενή** περίπτωση: ένα στυλ ⇒ «πρόθεμα» = `slice` + μετρητής.
+ * Όλη η λογική ζει στο {@link fittingPrefixLengthByWidth} — ένας βρόχος, ποτέ δύο (N.18).
  */
 export function fittingPrefixLengthByChar(
   text: string,
   available: number,
   measure: TextWidthMeasure,
 ): number {
-  const trivial = trivialFit(text, available, measure);
-  if (trivial !== null) return trivial;
-
-  let lo = 0;
-  let hi = text.length;
-  while (lo < hi) {
-    const mid = Math.ceil((lo + hi) / 2);
-    if (measure(text.slice(0, mid)) <= available) lo = mid;
-    else hi = mid - 1;
-  }
-  return lo;
+  return fittingPrefixLengthByWidth(text.length, available, (n) => measure(text.slice(0, n)));
 }
 
 /**
@@ -110,7 +141,7 @@ export function fittingPrefixLengthByWord(
   available: number,
   measure: TextWidthMeasure,
 ): number {
-  const trivial = trivialFit(text, available, measure);
+  const trivial = trivialFit(text.length, available, (n) => measure(text.slice(0, n)));
   if (trivial !== null) return trivial;
 
   let lastWordEnd = 0;

@@ -173,7 +173,7 @@ export interface TableStyleOverrides {
  * Για πεδία που ο ζωγράφος απαιτεί **πάντα** (ύψος, χρώμα κειμένου, έντονα, στοίχιση): δεν
  * υπάρχει «κανένα» να καθαριστεί σε, άρα ούτε `null` στον τύπο τους.
  */
-function inherited<T>(levels: readonly (T | undefined)[], base: T): T {
+export function inherited<T>(levels: readonly (T | undefined)[], base: T): T {
   for (const value of levels) if (value !== undefined) return value;
   return base;
 }
@@ -184,8 +184,13 @@ function inherited<T>(levels: readonly (T | undefined)[], base: T): T {
  *
  * Ο έλεγχος είναι `!== undefined` και **όχι** `??`: το `??` θα προσπερνούσε το `null`, δηλαδή
  * θα εξαφάνιζε ακριβώς την κατάσταση που ο τύπος υπάρχει για να εκφράσει (§ ρίσκο 4).
+ *
+ * 🔴 ADR-753 Φ2 — **εξάγονται** επειδή απέκτησαν δεύτερο επίπεδο: το run ενός κελιού
+ * (`table-cell-styled-spans.ts`) κληρονομεί από το **επιλυμένο** στυλ του κελιού με ακριβώς
+ * την ίδια δοκτρίνα δύο/τριών καταστάσεων. Δεύτερο σώμα θα ήταν sibling clone (N.18) — και,
+ * χειρότερα, δύο σημεία που θα μπορούσαν κάποτε να διαφωνήσουν για το τι σημαίνει `null`.
  */
-function clearable<T>(levels: readonly (T | null | undefined)[], base: T | undefined): T | undefined {
+export function clearable<T>(levels: readonly (T | null | undefined)[], base: T | undefined): T | undefined {
   for (const value of levels) if (value !== undefined) return value ?? undefined;
   return base;
 }

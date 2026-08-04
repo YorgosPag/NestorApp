@@ -36,15 +36,31 @@ const flat = (s: string): number => s.length;
  */
 const kerned = (s: string): number => s.length - (s.match(/ 2/g)?.length ?? 0) * 0.3;
 
-const baseInput = (over: Partial<CellLinkSpansInput> = {}): CellLinkSpansInput => ({
-  fullText: 'Τηλ: 2310788493',
-  visibleText: 'Τηλ: 2310788493',
-  clipped: false,
-  numeric: false,
-  hAlign: 'left',
-  measure: flat,
-  ...over,
-});
+/**
+ * 🔴 ADR-753 Φ2 — ο τοποθετητής δέχεται πλέον **πλάτη προθεμάτων**, όχι μετρητή: με
+ * μορφοποίηση ανά χαρακτήρα δεν υπάρχει ένας μετρητής για ολόκληρο το κείμενο.
+ *
+ * Τα tests κρατούν τον ίδιο τρόπο σκέψης — δίνουν `measure` — και ο βοηθός το μεταφράζει σε
+ * προθέματα **του ορατού κειμένου**. Έτσι ο μη αθροιστικός `kerned` εξακολουθεί να είναι ο
+ * φύλακας που ήταν: μια «απλοποίηση» σε άθροισμα τμημάτων δίνει ακόμη άλλο νούμερο.
+ */
+const baseInput = (
+  over: Partial<Omit<CellLinkSpansInput, 'prefixWidthMm'>> & {
+    readonly measure?: (s: string) => number;
+  } = {},
+): CellLinkSpansInput => {
+  const { measure = flat, ...rest } = over;
+  const visibleText = rest.visibleText ?? 'Τηλ: 2310788493';
+  return {
+    fullText: 'Τηλ: 2310788493',
+    clipped: false,
+    numeric: false,
+    hAlign: 'left',
+    ...rest,
+    visibleText,
+    prefixWidthMm: (index) => measure(visibleText.slice(0, index)),
+  };
+};
 
 // ── Οι δοκιμασίες ───────────────────────────────────────────────────────────
 

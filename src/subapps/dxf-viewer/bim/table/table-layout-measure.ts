@@ -25,6 +25,7 @@
 
 import { measureTextAdvanceWorld } from '../../text-engine/fonts/text-advance';
 import type { TableColumn, TableModel, TableRow } from '../../types/table';
+import { resolveCellStyledSpans, styledSpansWidthMm } from './table-cell-styled-spans';
 import { buildMergeIndex, cellKey, cellText, type MergeIndex } from './table-model-helpers';
 import { resolveCellStyle, type TableStyle } from './table-style';
 import type { TableTextMeasurer } from './table-layout-types';
@@ -86,12 +87,12 @@ function naturalCellWidthMm(
   });
   const marginsMm = cellStyle.margins.hMm * 2;
   if (!text) return marginsMm;
-  const textWidth = measure(text, cellStyle.textHeightMm, {
-    fontFamily: cellStyle.fontFamily,
-    bold: cellStyle.bold,
-    italic: cellStyle.italic,
-  });
-  return textWidth + marginsMm;
+  // 🔴 ADR-753 Φ2 — άθροισμα **ετερογενών** τμημάτων, όχι μία μέτρηση. Χωρίς `runs` παράγεται
+  // ένα τμήμα και η πράξη είναι η ταυτόσημη σημερινή· με έντονα γράμματα στη μέση, μια ενιαία
+  // μέτρηση θα έλεγε τη στήλη **στενότερη** απ' όσο χρειάζεται — και το σύμπτωμα δεν θα ήταν
+  // «λάθος πλάτος» αλλά κομμένο κείμενο, ακριβώς όπως όταν έλειπε μία από τις παρακάμψεις.
+  const spans = resolveCellStyledSpans({ text, runs: cell?.runs, style: cellStyle, measure });
+  return styledSpansWidthMm(spans) + marginsMm;
 }
 
 /**

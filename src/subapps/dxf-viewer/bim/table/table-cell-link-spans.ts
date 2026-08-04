@@ -31,6 +31,17 @@
  * ολόκληρο ένα e-mail έχει **ένα** τμήμα, άρα κανένα όριο, άρα η ζωγραφική είναι byte-για-byte
  * η ίδια με πριν το ADR-751.
  *
+ * 🔴 **Διόρθωση, ADR-753 Φ2 (μετρημένο στον κώδικα, όχι συμπερασμένο):** ούτε στο **μικτό**
+ * κελί χάνεται ζεύγος. Ο καμβάς δεν ζωγραφίζει τα τμήματα χωριστά — ξαναγράφει **ολόκληρο**
+ * το string μέσα σε αποκοπή (`stamp-table-text.ts`), και το χαρτί βγάζει **ένα** primitive
+ * κειμένου (`table-layout-to-primitives.ts`). Όλα τα περάσματα παράγουν ταυτόσημες θέσεις
+ * glyph, ακριβώς επειδή ο σύνδεσμος αλλάζει **μόνο χρώμα** — μετρικά ουδέτερο. Άρα η μέτρηση
+ * προθεμάτων εδώ είναι **ακριβής**, όχι προσεγγιστική.
+ *
+ * Αυτό είναι και η γραμμή που χωρίζει τα δύο επίπεδα τμημάτων: το rich text του ADR-753
+ * αλλάζει **μετρικά**, οπότε η αποκοπή παύει να είναι δυνατή και τα τμήματα ζωγραφίζονται
+ * διαδοχικά. Γι' αυτό το `prefixWidthMm` έγινε παράμετρος — βλ. `table-cell-styled-spans.ts`.
+ *
  * @module subapps/dxf-viewer/bim/table/table-cell-link-spans
  * @see lib/validation/text-link-segments.ts — ο ανιχνευτής (ποιοι χαρακτήρες)
  * @see bim/table/table-text-decoration.ts — η γεωμετρία της γραμμής (πόσο κάτω από τη βάση)
@@ -42,7 +53,6 @@ import {
   type TextLinkSegment,
 } from '@/lib/validation/text-link-segments';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TextWidthMeasure } from '../text/text-fit';
 import type { TableTextLinkSpan } from './table-layout-types';
 
 /**
@@ -71,8 +81,18 @@ export interface CellLinkSpansInput {
   readonly numeric: boolean;
   /** Η στοίχιση: καθορίζει από ποια μεριά της άγκυρας απλώνεται το κείμενο. */
   readonly hAlign: TextAlign;
-  /** Ο μετρητής **της διάταξης**, ήδη δεμένος στο στυλ του κελιού. */
-  readonly measure: TextWidthMeasure;
+  /**
+   * 🔴 ADR-753 Φ2 — **το πλάτος των πρώτων `k` χαρακτήρων του ορατού κειμένου.**
+   *
+   * Ήταν `measure(text)` και έγινε συνάρτηση **του δείκτη**, επειδή με μορφοποίηση ανά
+   * χαρακτήρα δεν υπάρχει πια ένας μετρητής για ολόκληρο το κείμενο: το πρόθεμα διασχίζει
+   * τμήματα με διαφορετικά μετρικά. Ο καλών ξέρει τα τμήματα· εδώ δεν χρειάζεται να τα ξέρει
+   * κανείς — αυτό το αρχείο **ποτέ** δεν ήθελε γραμματοσειρές, μόνο πλάτη προθεμάτων.
+   *
+   * Δηλαδή η γενίκευση αφαίρεσε γνώση αντί να προσθέσει: το ADR-751 δεν έμαθε τι είναι τα
+   * runs, και δεν μπορεί να διαφωνήσει μαζί τους.
+   */
+  readonly prefixWidthMm: (index: number) => number;
 }
 
 /**
@@ -95,13 +115,13 @@ export interface CellLinkSpansInput {
  * με το πού δείχνει ο υπερσύνδεσμος.
  */
 export function resolveCellLinkSpans(input: CellLinkSpansInput): readonly TableTextLinkSpan[] {
-  const { fullText, visibleText, clipped, numeric, hAlign, measure } = input;
+  const { fullText, visibleText, clipped, numeric, hAlign, prefixWidthMm } = input;
   if (!fullText || !visibleText) return [];
 
   const links = linksIn(fullText, numeric);
   if (links.length === 0) return [];
 
-  const totalMm = measure(visibleText);
+  const totalMm = prefixWidthMm(visibleText.length);
   const textStartMm = anchorOffsetMm(hAlign, totalMm);
 
   if (clipped) {
@@ -112,9 +132,10 @@ export function resolveCellLinkSpans(input: CellLinkSpansInput): readonly TableT
   }
 
   return links.map((link) => {
-    // Προθέματα του ΙΔΙΟΥ string — δες την ενότητα kerning στην κεφαλίδα.
-    const beforeMm = link.start === 0 ? 0 : measure(fullText.slice(0, link.start));
-    const throughMm = link.end === fullText.length ? totalMm : measure(fullText.slice(0, link.end));
+    // Προθέματα του ΙΔΙΟΥ string — δες την ενότητα kerning στην κεφαλίδα. Οι δείκτες αφορούν
+    // το `fullText`, που εδώ (μη περικομμένο) **είναι** το ορατό κείμενο.
+    const beforeMm = prefixWidthMm(link.start);
+    const throughMm = prefixWidthMm(link.end);
     return {
       text: link.text,
       kind: link.kind,

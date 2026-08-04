@@ -53,9 +53,14 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §23
  */
 
-import type { TableCellOverflow } from '../../types/table';
+import type { TableCellOverflow, TableCellTextRun } from '../../types/table';
 import { fittingPrefixLengthByChar, type TextWidthMeasure } from '../text/text-fit';
-import type { TableTextMeasurer } from './table-layout-types';
+import {
+  fittingPrefixLengthAcrossSpans,
+  resolveCellStyledSpans,
+  styledSpansWidthMm,
+} from './table-cell-styled-spans';
+import type { TableTextMeasurer, TableTextStyleSpan } from './table-layout-types';
 import type { TableCellStyle } from './table-style';
 
 /**
@@ -131,6 +136,15 @@ export interface CellTextFitInput {
    * ανοησία: η κεφαλίδα είναι κείμενο ό,τι κι αν λέει η στήλη για τα δεδομένα της.
    */
   readonly numeric: boolean;
+  /**
+   * 🔴 ADR-753 Φ2 — η μορφοποίηση **ανά χαρακτήρα** του κελιού. Απούσα ⇒ ομοιογενές κείμενο
+   * και η μέτρηση είναι ταυτόσημη με πριν το ADR-753.
+   *
+   * Δεν είναι διακοσμητική για την περικοπή: με έντονα γράμματα στη μέση, το «πού τελειώνει
+   * ό,τι χωράει» **αλλάζει** — και ένας χάρακας που τα αγνοούσε θα έκοβε συστηματικά αργά,
+   * δηλαδή θα ζωγράφιζε πάνω στο περίγραμμα ακριβώς όπως πριν υπάρξει αυτό το αρχείο.
+   */
+  readonly runs?: readonly TableCellTextRun[];
   /** Ο μετρητής **της διάταξης** — ο ίδιος που αποφάσισε τα πλάτη στηλών (βλ. κεφαλίδα). */
   readonly measure: TableTextMeasurer;
 }
@@ -140,9 +154,18 @@ export interface VisibleCellText {
   /** Ό,τι ζωγραφίζεται — **ποτέ** ό,τι αποθηκεύεται. */
   readonly text: string;
   readonly clipped: boolean;
+  /**
+   * 🔴 ADR-753 Φ2 — τα ομοιογενή τμήματα **του ορατού** κειμένου, πάντα παρόντα (ένα, όταν
+   * δεν υπάρχει μορφοποίηση ανά χαρακτήρα).
+   *
+   * Γεννιούνται **εδώ** και όχι στον καλούντα επειδή μόνο εδώ είναι γνωστό **πού κόπηκε** το
+   * κείμενο: τα τμήματα του ακέραιου κειμένου δεν περιγράφουν το ορατό, και μια δεύτερη
+   * παραγωγή τους στον `placeText` θα ήταν δεύτερη απάντηση στο «ποιοι χαρακτήρες φαίνονται».
+   */
+  readonly spans: readonly TableTextStyleSpan[];
 }
 
-const NOTHING: VisibleCellText = { text: '', clipped: false };
+const NOTHING: VisibleCellText = { text: '', clipped: false, spans: [] };
 
 /** Ο μετρητής δεμένος στο στυλ αυτού του κελιού — μία έκφραση, ώστε να μη γραφτεί δεύτερη. */
 function boundMeasure(input: CellTextFitInput): TextWidthMeasure {
@@ -163,23 +186,51 @@ export function resolveVisibleCellText(input: CellTextFitInput): VisibleCellText
   if (!input.text) return NOTHING;
   // Μηδενικό ή αρνητικό ωφέλιμο πλάτος (στήλη στενότερη από τα περιθώριά της): τίποτα δεν
   // χωρά, και είναι **περικοπή** — ο καλών πρέπει να το ξέρει, δεν είναι κενό κελί.
-  if (!(input.availableWidthMm > 0)) return { text: '', clipped: true };
+  if (!(input.availableWidthMm > 0)) return { text: '', clipped: true, spans: [] };
 
-  const measure = boundMeasure(input);
-  if (measure(input.text) <= input.availableWidthMm) return { text: input.text, clipped: false };
+  const spans = spansOf(input, input.text, input.text.length);
+  if (styledSpansWidthMm(spans) <= input.availableWidthMm) {
+    return { text: input.text, clipped: false, spans };
+  }
 
   // Σήμερα υπάρχει ΜΙΑ λειτουργία. Ο διακόπτης γράφεται ρητά και **χωρίς `default`** ώστε η
   // προσθήκη μέλους στο union να σπάει τη ΜΕΤΑΓΛΩΤΤΙΣΗ εδώ — δηλαδή να μην μπορεί να
   // προστεθεί τιμή χωρίς τη μηχανή της (βλ. `TableCellOverflow`).
   switch (input.overflow) {
-    case 'clip':
-      return {
-        text: input.numeric
-          ? numericFill(input.availableWidthMm, measure)
-          : clipWithEllipsis(input.text, input.availableWidthMm, measure),
-        clipped: true,
-      };
+    case 'clip': {
+      const cut = input.numeric
+        ? numericCut(input.availableWidthMm, boundMeasure(input))
+        : ellipsisCut(input, spans);
+      return { text: cut.text, clipped: true, spans: spansOf(input, cut.text, cut.runsLimit) };
+    }
   }
+}
+
+/**
+ * Το κομμένο κείμενο **μαζί με το πόσο του ανήκει στον χρήστη**.
+ *
+ * Ο δεύτερος αριθμός δεν είναι λογιστική: είναι η γραμμή που χωρίζει το περιεχόμενο από το
+ * **σημάδι του πίνακα**. Δες το `runsLimit` στο `table-cell-styled-spans.ts` για το γιατί το
+ * «…» δεν κληρονομεί ποτέ τα έντονα του τελευταίου γράμματος.
+ */
+interface ClippedCellText {
+  readonly text: string;
+  readonly runsLimit: number;
+}
+
+/** Τα ομοιογενή τμήματα μιας **συγκεκριμένης** ορατής συμβολοσειράς — η μία διατύπωση. */
+function spansOf(
+  input: CellTextFitInput,
+  text: string,
+  runsLimit: number,
+): readonly TableTextStyleSpan[] {
+  return resolveCellStyledSpans({
+    text,
+    runs: input.runs,
+    runsLimit,
+    style: input.style,
+    measure: input.measure,
+  });
 }
 
 /**
@@ -196,12 +247,29 @@ export function resolveVisibleCellText(input: CellTextFitInput): VisibleCellText
  * Όταν δεν χωρά **ούτε ο δείκτης**, γίνεται σκέτη κοπή χαρακτήρα: ένα μισό γράμμα λέει
  * περισσότερα από ένα κενό κελί, και η στήλη είναι τόσο στενή που καμία ένδειξη δεν θα
  * ήταν αναγνώσιμη ούτως ή άλλως.
+ *
+ * 🔴 ADR-753 Φ2 — **δύο μετρητές, σκόπιμα διαφορετικοί**: το περιεχόμενο μετριέται με τα
+ * τμήματά του (ετερογενές), ο **δείκτης** με το στυλ του κελιού. Ο δείκτης δεν είναι κείμενο
+ * του χρήστη, άρα δεν έχει τμήμα να κληρονομήσει — και το `####`, που αντικαθιστά ολόκληρο
+ * τον αριθμό, δεν θα είχε καν από πού.
  */
-function clipWithEllipsis(text: string, availableMm: number, measure: TextWidthMeasure): string {
-  const budgetMm = availableMm - measure(CELL_CLIP_ELLIPSIS);
-  if (!(budgetMm > 0)) return trimEnd(text.slice(0, fittingPrefixLengthByChar(text, availableMm, measure)));
-  const head = trimEnd(text.slice(0, fittingPrefixLengthByChar(text, budgetMm, measure)));
-  return head + CELL_CLIP_ELLIPSIS;
+function ellipsisCut(
+  input: CellTextFitInput,
+  spans: readonly TableTextStyleSpan[],
+): ClippedCellText {
+  const { text, availableWidthMm, measure } = input;
+  const budgetMm = availableWidthMm - boundMeasure(input)(CELL_CLIP_ELLIPSIS);
+  if (!(budgetMm > 0)) {
+    const bare = trimEnd(text.slice(0, fittingPrefixLengthAcrossSpans(spans, availableWidthMm, measure)));
+    return { text: bare, runsLimit: bare.length };
+  }
+  const head = trimEnd(text.slice(0, fittingPrefixLengthAcrossSpans(spans, budgetMm, measure)));
+  return { text: head + CELL_CLIP_ELLIPSIS, runsLimit: head.length };
+}
+
+/** Το `####` του Excel — **αντικαθιστά** την τιμή, άρα κανένας χαρακτήρας δεν είναι του χρήστη. */
+function numericCut(availableMm: number, measure: TextWidthMeasure): ClippedCellText {
+  return { text: numericFill(availableMm, measure), runsLimit: 0 };
 }
 
 /**

@@ -17,15 +17,26 @@ import {
   DEFAULT_TABLE_CELL_OVERFLOW,
   resolveCellOverflow,
   resolveVisibleCellText,
+  type VisibleCellText,
 } from '../table-cell-overflow';
 import type { TableTextMeasurer } from '../table-layout-types';
 import type { TableCellStyle } from '../table-style';
-import type { TableCellOverflow } from '../../../types/table';
+import type { TableCellOverflow, TableCellTextRun } from '../../../types/table';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────
 
-/** Ντετερμινιστικός μετρητής: κάθε χαρακτήρας 0.6 × ύψος· bold δεν αλλάζει πλάτος. */
-const measure: TableTextMeasurer = (text, heightMm) => text.length * heightMm * 0.6;
+/**
+ * Ντετερμινιστικός μετρητής: κάθε χαρακτήρας `0.6 × ύψος`, **και τα έντονα διπλάσια**.
+ *
+ * 🔴 ADR-753 Φ2 — ο πολλαπλασιαστής των έντονων δεν είναι διακόσμηση: χωρίς αυτόν κάθε test
+ * μορφοποίησης ανά χαρακτήρα θα ήταν **πράσινο κατά σύμπτωση**, γιατί ομοιογενής και
+ * ετερογενής μέτρηση θα έδιναν τον ίδιο αριθμό. Ακριβώς το σχήμα των δύο μεταλλάξεων που
+ * επέζησαν στη Φ1 (§8): δείγμα που δεν **διακρίνει** τις εκδοχές δεν είναι φύλακας.
+ *
+ * Τα υπάρχοντα tests δεν περνούν ποτέ `bold: true`, άρα μένουν αριθμητικά αμετάβλητα.
+ */
+const measure: TableTextMeasurer = (text, heightMm, style) =>
+  text.length * heightMm * 0.6 * (style.bold === true ? 2 : 1);
 
 const HEIGHT_MM = 10;
 /** Πλάτος ενός χαρακτήρα με τον παραπάνω μετρητή — ο ΕΝΑΣ αριθμός των υπολογισμών εδώ. */
@@ -41,19 +52,41 @@ const STYLE: TableCellStyle = {
   margins: { hMm: 0, vMm: 0 },
 };
 
+/** Ό,τι δίνει η μηχανή, ακέραιο — μαζί με τα τμήματα του ADR-753 Φ2. */
+function visibleFull(
+  text: string,
+  availableWidthMm: number,
+  extra?: {
+    readonly numeric?: boolean;
+    readonly overflow?: TableCellOverflow;
+    readonly runs?: readonly TableCellTextRun[];
+    readonly style?: TableCellStyle;
+  },
+): VisibleCellText {
+  return resolveVisibleCellText({
+    text,
+    availableWidthMm,
+    style: extra?.style ?? STYLE,
+    overflow: extra?.overflow ?? DEFAULT_TABLE_CELL_OVERFLOW,
+    numeric: extra?.numeric ?? false,
+    runs: extra?.runs,
+    measure,
+  });
+}
+
+/**
+ * Μόνο η **απόφαση περικοπής**, χωρίς τα τμήματα.
+ *
+ * Τα τμήματα (ADR-753 Φ2) είναι πάντα παρόντα και δοκιμάζονται χωριστά· εδώ θα ήταν θόρυβος
+ * σε κάθε `toEqual` και θα έκρυβαν το ερώτημα που αυτά τα tests φυλάνε — «τι φαίνεται».
+ */
 function visible(
   text: string,
   availableWidthMm: number,
   extra?: { readonly numeric?: boolean; readonly overflow?: TableCellOverflow },
 ): { readonly text: string; readonly clipped: boolean } {
-  return resolveVisibleCellText({
-    text,
-    availableWidthMm,
-    style: STYLE,
-    overflow: extra?.overflow ?? DEFAULT_TABLE_CELL_OVERFLOW,
-    numeric: extra?.numeric ?? false,
-    measure,
-  });
+  const { text: shown, clipped } = visibleFull(text, availableWidthMm, extra);
+  return { text: shown, clipped };
 }
 
 /** Το πλάτος ενός αποτελέσματος, με τον ίδιο μετρητή — για τον καθολικό έλεγχο «δεν ξεχειλίζει». */

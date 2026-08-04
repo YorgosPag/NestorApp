@@ -18,10 +18,21 @@
 
 import type { ScheduleColumnAlign } from '../schedule/types';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TableCell, TableCellAlign, TableCellOverflow, TableModel } from '../../types/table';
+import type {
+  TableCell,
+  TableCellAlign,
+  TableCellOverflow,
+  TableCellTextRun,
+  TableModel,
+} from '../../types/table';
 import { cellKey, cellText } from './table-model-helpers';
 import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overflow';
 import { resolveCellLinkSpans } from './table-cell-link-spans';
+import {
+  hasStyledSpans,
+  styledPrefixWidthMm,
+  styledSpansWidthMm,
+} from './table-cell-styled-spans';
 import { tableDiagonalCorners } from './table-cell-diagonal-ops';
 import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
 import { resolveTableCellStyleInk } from './table-ink';
@@ -141,6 +152,8 @@ interface PlaceTextInput {
   readonly overflow: TableCellOverflow;
   /** `typeof cell.value === 'number'` — βλ. `CellTextFitInput.numeric` για το γιατί. */
   readonly numeric: boolean;
+  /** 🔴 ADR-753 — η μορφοποίηση ανά χαρακτήρα του κελιού· απούσα στα σχεδόν όλα. */
+  readonly runs?: readonly TableCellTextRun[];
   readonly measure: TableTextMeasurer;
 }
 
@@ -168,9 +181,15 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     style,
     overflow: input.overflow,
     numeric: input.numeric,
+    runs: input.runs,
     measure: input.measure,
   });
   if (!visible.text) return undefined;
+
+  // 🔴 ADR-753 Φ2 — η **μία** απάντηση στο «πόσο πλατιοί είναι οι πρώτοι k χαρακτήρες», για
+  // όποιον τη χρειαστεί. Με ένα τμήμα εκφυλίζεται στο σημερινό `measure(text.slice(0, k))`.
+  const prefixWidthMm = (index: number): number =>
+    styledPrefixWidthMm(visible.spans, index, input.measure);
 
   // 🔴 ADR-751 — οι διευθύνσεις εντοπίζονται **εδώ**, στο ίδιο σημείο που γεννιέται το ορατό
   // κείμενο, και με τον **ίδιο** μετρητή που μόλις αποφάσισε την περικοπή. Αν τις έβρισκε ο
@@ -182,7 +201,7 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     clipped: visible.clipped,
     numeric: input.numeric,
     hAlign,
-    measure: (s) => input.measure(s, style.textHeightMm, style),
+    prefixWidthMm,
   });
 
   const base: TableTextRunBase = {
@@ -203,6 +222,10 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     ...(visible.clipped && { clipped: true as const }),
     // Ίδια σύμβαση: απόν στα κελιά χωρίς διεύθυνση, δηλαδή στα σχεδόν όλα.
     ...(links.length > 0 && { links }),
+    // 🔴 ADR-753 Φ2 — ίδια σύμβαση, τρίτη φορά: ένα μόνο τμήμα δεν λέει τίποτα που το ίδιο το
+    // run δεν λέει ήδη (`bold`/`italic`/`heightMm`/`colorHex`/`fontFamily`), οπότε το πεδίο
+    // **λείπει** και κάθε πίνακας που υπάρχει σήμερα παράγει byte-ταυτόσημη διάταξη.
+    ...(hasStyledSpans(visible.spans) && { spans: visible.spans }),
   };
 
   // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος μετριέται **μόνο** για υπογραμμισμένο κείμενο: είναι ο
@@ -210,8 +233,11 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
   // το 99% των πινάκων για το 1%. Ο μετρητής είναι ο ΙΔΙΟΣ που μόλις αποφάσισε την περικοπή,
   // και μετρά το **ορατό** κείμενο — άρα σε κομμένο κελί η γραμμή σταματά εκεί που σταματούν
   // και τα γράμματα, όχι εκεί που θα σταματούσε το ακέραιο κείμενο.
+  //
+  // ADR-753 Φ2 — το πλάτος έρχεται από τα ίδια τμήματα που μόλις τοποθετήθηκαν: με ένα τμήμα
+  // είναι η ταυτόσημη σημερινή μέτρηση, με πολλά είναι το **μόνο** σωστό άθροισμα.
   return style.underline
-    ? { ...base, underline: true, advanceMm: input.measure(visible.text, style.textHeightMm, style) }
+    ? { ...base, underline: true, advanceMm: styledSpansWidthMm(visible.spans) }
     : { ...base, underline: false };
 }
 
@@ -280,6 +306,7 @@ export function placeCells(
           // Ίδια σειρά προτεραιότητας με τη στοίχιση: κελί → στήλη → προεπιλογή.
           overflow: resolveCellOverflow(cell?.styleOverride?.overflow, column.overflow),
           numeric: typeof cell?.value === 'number',
+          runs: cell?.runs,
           measure,
         }),
         rowSpan: span?.rowSpan ?? 1,
