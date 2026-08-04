@@ -54,7 +54,11 @@ import {
   maxContrastInk,
   MIN_ENTITY_CONTRAST,
 } from '../../config/adaptive-entity-color';
-import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
+import {
+  resolveDxfCanvasBackgroundHex,
+  TABLE_CELL_SELECTION,
+} from '../../config/color-config';
+import { hexToRgba } from '../../config/color-math';
 import { getPrintColorPolicy } from '../../config/print-color-policy';
 import type { TableBorderSpec } from '../../types/table-edges';
 import type { TableCellStyle } from './table-style';
@@ -237,4 +241,43 @@ export function resolveTableBorderInk(
  */
 export function liveTableSurfaceHex(): string {
   return getPrintColorPolicy() ? TABLE_PAPER_HEX : resolveDxfCanvasBackgroundHex();
+}
+
+/**
+ * 🔴 ADR-739 §41 — **Η ΣΚΙΑΣΗ ΤΗΣ ΕΠΙΛΕΓΜΕΝΗΣ ΠΕΡΙΟΧΗΣ** (Excel parity).
+ *
+ * Ουδέτερο ημιδιαφανές στρώμα — λευκό ή μαύρο κατά την επιφάνεια — με το ποσοστό
+ * {@link TABLE_CELL_SELECTION.washAlpha} που μετρήθηκε από στιγμιότυπο του Excel.
+ *
+ * ## 🔴 Γιατί ΟΥΔΕΤΕΡΟ και όχι το `INDICATOR_BLUE` που ήταν μέχρι τις 04/08
+ * Δεν είναι αισθητική επιλογή· είναι **λειτουργική**, και είναι ο λόγος που το Excel το κάνει
+ * κι εκείνο (μετρημένο: `#C6C6C6` σε λευκό ⇒ `R = G = B` **ακριβώς**, δηλαδή μηδενική απόχρωση).
+ *
+ * Τα κελιά έχουν **δικό τους γέμισμα** (`TableCellStyle.fillColorHex`). Ένα *χρωματιστό*
+ * στρώμα δεν σκιάζει το γέμισμα — το **βάφει άλλο χρώμα**: μπλε 22% πάνω σε κίτρινο κελί
+ * δίνει πράσινο, και ο χρήστης χάνει την πληροφορία που ο ίδιος έβαλε στο κελί, ακριβώς τη
+ * στιγμή που το μαρκάρει για να το επεξεργαστεί. Ουδέτερο στρώμα **μόνο σκουραίνει ή
+ * φωτίζει**: κάθε γέμισμα παραμένει αναγνωρίσιμο ως ο εαυτός του.
+ *
+ * Είναι το **ίδιο** ελάττωμα που το §19.8 έχει ήδη πληρώσει μία φορά με το `phaseColor`
+ * («όποιο κελί έχει γέμισμα, χάνει το κείμενο») — σε γέμισμα αντί σε μελάνι.
+ *
+ * ## Γιατί συνάρτηση και όχι σταθερά στο `color-config.ts`
+ * Δύο λόγοι, και ο δεύτερος είναι δομικός:
+ *  1. **Δεν υπάρχει μία απάντηση.** Μαύρο 22% σε χαρτί δίνει το `#C6C6C6` του Excel· το ίδιο
+ *     μαύρο στο προεπιλεγμένο `#1d283a` του καμβά δίνει `#161f2d` — μια σκίαση **αόρατη**
+ *     πάνω σε ήδη σκούρο φόντο, δηλαδή επιλογή που δεν φαίνεται. Η κατεύθυνση της σκίασης
+ *     είναι **ερώτημα προς την επιφάνεια**, και το έργο έχει ήδη τον έναν κανόνα που το
+ *     απαντά ({@link maxContrastInk}, ACI 7).
+ *  2. **Κυκλική εξάρτηση.** Το `adaptive-entity-color.ts` εισάγει από το `color-config.ts`
+ *     (`resolveDxfCanvasBackgroundHex`), οπότε το `color-config.ts` **δεν μπορεί** να καλέσει
+ *     το `maxContrastInk`. Ο διαχωρισμός δεν είναι παράκαμψη — είναι ο ίδιος που ισχύει ήδη
+ *     για τον δείκτη λειτουργίας: **το χρώμα** στο `color-config`, **ο υπολογισμός** δίπλα
+ *     στα δεδομένα του (εκεί `tableModeOutlineRectMm`, εδώ η επιφάνεια).
+ *
+ * @param surfaceHex η επιφάνεια κάτω από τον πίνακα — `TableEntityGeometry.surfaceHex`, ποτέ
+ *   δεύτερη ανάγνωση του {@link liveTableSurfaceHex}.
+ */
+export function tableSelectionWashRgba(surfaceHex: string): string {
+  return hexToRgba(maxContrastInk(surfaceHex), TABLE_CELL_SELECTION.washAlpha);
 }

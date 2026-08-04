@@ -174,7 +174,8 @@ export function flattenToSingleLine(value: string): string {
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
   const {
     mode, draft, initialText, caretIndex, caretRevision, anchor,
-    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onCopy, onCut, onPaste, onOpenLink,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
+    onCopy, onCut, onPaste, onOpenLink,
   } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -230,6 +231,7 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     onHistory,
     onExtend,
     onSelectAll,
+    onToggleAbsoluteRef,
     onOpenLink,
     onPassthrough: inlineKeyDown,
   });

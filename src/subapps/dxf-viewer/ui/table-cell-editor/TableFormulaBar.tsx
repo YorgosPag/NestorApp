@@ -95,7 +95,7 @@ export interface TableFormulaBarProps extends TableCellSessionHandlers {
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
   const {
     reference, mode, draft, initialText, caretIndex, caretRevision, anchor,
-    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
   } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -148,6 +148,7 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
     onHistory,
     onExtend,
     onSelectAll,
+    onToggleAbsoluteRef,
   });
 
   // ADR-739 §26.15 — κλικ από τη γραμμή τύπων πάνω σε κελί του **ίδιου** πίνακα: η συνεδρία

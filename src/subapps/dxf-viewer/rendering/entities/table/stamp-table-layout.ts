@@ -35,6 +35,10 @@ import {
 // το μελάνι. Ίδιος διαχωρισμός με τις ζώνες δείκτη (`stamp-table-indicator` ↔
 // `table-indicator-geometry`): εδώ το «πώς φαίνεται», εκεί το «πού».
 import { tableModeOutlineRectMm } from '../../../bim/table/table-indicator-geometry';
+// 🔴 ADR-739 §41 — **ΤΟ ΧΡΩΜΑ** της σκίασης δεν είναι σταθερά: εξαρτάται από την επιφάνεια.
+// Ίδιος διαχωρισμός με τον δείκτη λειτουργίας ακριβώς από πάνω — εδώ το «πώς φαίνεται», εκεί
+// το «τι υπάρχει από κάτω».
+import { tableSelectionWashRgba } from '../../../bim/table/table-ink';
 
 export interface StampTableContext {
   readonly ctx: CanvasRenderingContext2D;
@@ -50,6 +54,16 @@ export interface StampTableContext {
    * που την **παράγει** από το ίδιο το `toScreen`. Δες εκεί γιατί.
    */
   readonly textAngleRad: number;
+  /**
+   * 🔴 ADR-739 §41 — **τι υπάρχει κάτω από τον πίνακα**: φόντο καμβά στην οθόνη, χαρτί στην
+   * εκτύπωση. Έρχεται **αυτούσιο** από το `TableEntityGeometry.surfaceHex`, δηλαδή από την
+   * ίδια ανάγνωση που έφτιαξε τα χρώματα της διάταξης.
+   *
+   * Ο ζωγράφος δεν το **ερμηνεύει**: το δίνει στο `tableSelectionWashRgba`, που κατέχει τον
+   * κανόνα. Χωρίς αυτό, η σκίαση επιλογής θα ήταν σταθερό χρώμα — δηλαδή αόρατη στο μισό
+   * από τα δέκα θέματα καμβά (δες εκεί τη μέτρηση).
+   */
+  readonly surfaceHex: string;
   /**
    * Το χρώμα της τρέχουσας φάσης (hover / επιλογή). Όταν υπάρχει, **παρακάμπτει** τα
    * χρώματα του στυλ ώστε ολόκληρος ο πίνακας να φωτίζεται ομοιόμορφα — αλλιώς ένας
@@ -119,6 +133,25 @@ export function createStampTableContext(
  * ξεχάσει κάποιος τη γωνία.
  */
 export function traceRectMm(rc: StampTableContext, rectMm: TableRectMm): void {
+  rc.ctx.beginPath();
+  appendRectSubpath(rc, rectMm);
+}
+
+/**
+ * 🔴 ADR-739 §41 — το ίδιο ορθογώνιο, **χωρίς `beginPath`**: προσαρτάται ως *επιπλέον*
+ * υποδιαδρομή σε διαδρομή που ήδη τρέχει.
+ *
+ * ## Γιατί χρειάστηκε να χωριστεί από το {@link traceRectMm}
+ * Η επιλεγμένη περιοχή του Excel είναι **δύο** ορθογώνια σε **μία** διαδρομή: η περιοχή και η
+ * τρύπα του ενεργού κελιού, γεμισμένα με `evenodd` (δες {@link stampTableSelection}). Ένα
+ * `beginPath` στη μέση θα πετούσε το πρώτο ορθογώνιο και το γέμισμα θα έβαφε **μόνο το ενεργό
+ * κελί** — δηλαδή ακριβώς το αντίστροφο του ζητούμενου, χωρίς κανένα σφάλμα πουθενά.
+ *
+ * Δεν είναι δεύτερο σώμα: το {@link traceRectMm} **είναι** πλέον `beginPath` + αυτή η κλήση,
+ * ώστε οι τέσσερις γωνίες να περνούν από το `toScreen` σε **ένα** σημείο (ο πίνακας
+ * περιστρέφεται — δες την προειδοποίηση του {@link traceRectMm}).
+ */
+export function appendRectSubpath(rc: StampTableContext, rectMm: TableRectMm): void {
   const { x, y, w, h } = rectMm;
   const corners = [
     rc.toScreen(x, y),
@@ -126,7 +159,6 @@ export function traceRectMm(rc: StampTableContext, rectMm: TableRectMm): void {
     rc.toScreen(x + w, y + h),
     rc.toScreen(x, y + h),
   ];
-  rc.ctx.beginPath();
   rc.ctx.moveTo(corners[0].x, corners[0].y);
   for (let i = 1; i < corners.length; i++) rc.ctx.lineTo(corners[i].x, corners[i].y);
   rc.ctx.closePath();
@@ -170,8 +202,30 @@ export function stampTableCellCursor(rc: StampTableContext, rectMm: TableRectMm)
 }
 
 /**
- * 🔴 ADR-739 Φ.Δ βήμα 8 — **η επιλεγμένη περιοχή**: ημιδιαφανές γέμισμα πάνω στα κελιά της
- * + συμπαγές περίγραμμα γύρω από ολόκληρη.
+ * 🔴 ADR-739 Φ.Δ βήμα 8 / §41 — **η επιλεγμένη περιοχή**: ημιδιαφανής σκίαση πάνω στα κελιά
+ * της, **τρύπα στο ενεργό κελί**, συμπαγές περίγραμμα γύρω από ολόκληρη.
+ *
+ * ## 🔴 §41 — ΤΟ ΕΝΕΡΓΟ ΚΕΛΙ ΔΕΝ ΒΑΦΕΤΑΙ. Αυτή **είναι** η προδιαγραφή.
+ * Μετρημένο από στιγμιότυπο του Excel (04/08, επιλογή `B10:C13` με ενεργό το `B10`):
+ *
+ * ```
+ *   ενεργό κελί B10 → #FFFFFF   (καθαρό φόντο φύλλου, σε ΟΛΟ το εσωτερικό του)
+ *   κάθε άλλο κελί → #C6C6C6   (σκιασμένο)
+ *   ακμή B10|C10   → #ADADAD   (γραμμή πλέγματος, ΟΧΙ δεύτερο περίγραμμα)
+ * ```
+ *
+ * Η **τρίτη** μέτρηση είναι αυτή που κλείνει το θέμα: το Excel **δεν** ζωγραφίζει πλαίσιο
+ * γύρω από το ενεργό κελί όσο η επιλογή είναι πολυκελιακή. Ο μόνος δείκτης του είναι η
+ * **απουσία σκίασης** — και ακριβώς γι' αυτό η τρύπα δεν είναι διακόσμηση: αν βαφτεί, ο
+ * χρήστης χάνει το «πού θα πάει ό,τι πληκτρολογήσω και πού επιστρέφει το `Enter`», που είναι
+ * η μισή σημασία μιας επιλογής σε φύλλο.
+ *
+ * ## Γιατί `evenodd` και όχι δεύτερο γέμισμα «από πάνω»
+ * Η προφανής εναλλακτική — ξαναβάψε το ενεργό κελί με το χρώμα της επιφάνειας — είναι
+ * **λάθος** για τον ίδιο λόγο που η σκίαση είναι ημιδιαφανής: θα έσβηνε ό,τι υπάρχει από
+ * κάτω (γέμισμα κελιού, γραμμές πλέγματος, διαγώνιος). Το `evenodd` σε **μία** διαδρομή δεν
+ * βάφει ποτέ το εσωτερικό ορθογώνιο, άρα δεν έχει τίποτα να σβήσει· και κοστίζει **ένα**
+ * `fill`, όπως πριν.
  *
  * ## Γιατί ζωγραφίζεται ως **ένα** ορθογώνιο και όχι κελί-κελί
  * Η περιοχή είναι ορθογώνια εξ ορισμού (και κουμπωμένη σε ολόκληρες συγχωνεύσεις), οπότε
@@ -183,13 +237,28 @@ export function stampTableCellCursor(rc: StampTableContext, rectMm: TableRectMm)
  * ⚠️ Ζωγραφίζεται **πριν** το κείμενο και τον δρομέα, όπως τα γεμίσματα κελιών: ένα
  * ημιδιαφανές στρώμα πάνω από τα γράμματα θα τα θόλωνε — και η επιλογή υπάρχει ακριβώς για
  * να **διαβάσεις** τι μάρκαρες.
+ *
+ * @param activeCellRectMm το ορθογώνιο του **ενεργού** κελιού (ολόκληρη η συγχώνευση, αν
+ *   είναι συγχωνευμένο). Παραλείπεται μόνο όταν δεν υπάρχει — τότε σκιάζεται όλη η περιοχή.
+ *   Όταν η επιλογή είναι 1×1 τα δύο ορθογώνια **ταυτίζονται** και η σκίαση μηδενίζεται από
+ *   μόνη της: το μονοσύνολο δεν είναι ειδική περίπτωση, είναι το ίδιο ερώτημα με μία
+ *   απάντηση — ακριβώς όπως στο Excel, όπου ένα επιλεγμένο κελί δείχνει μόνο περίγραμμα.
  */
-export function stampTableSelection(rc: StampTableContext, rectMm: TableRectMm): void {
+export function stampTableSelection(
+  rc: StampTableContext,
+  rectMm: TableRectMm,
+  activeCellRectMm?: TableRectMm,
+): void {
   const { ctx } = rc;
   ctx.save();
-  ctx.fillStyle = TABLE_CELL_SELECTION.fillRgba;
-  traceRectMm(rc, rectMm);
-  ctx.fill();
+  ctx.fillStyle = tableSelectionWashRgba(rc.surfaceHex);
+  ctx.beginPath();
+  appendRectSubpath(rc, rectMm);
+  if (activeCellRectMm) appendRectSubpath(rc, activeCellRectMm);
+  // `evenodd`: σημείο μέσα σε **δύο** υποδιαδρομές μένει άβαφο. Το ενεργό κελί είναι πάντα
+  // μέσα στην περιοχή (το εγγυάται το `resolveTableSelectionBounds`), άρα η δεύτερη
+  // υποδιαδρομή είναι πάντα τρύπα και ποτέ δεύτερο σχήμα.
+  ctx.fill('evenodd');
   ctx.restore();
   strokeRectMm(
     rc,

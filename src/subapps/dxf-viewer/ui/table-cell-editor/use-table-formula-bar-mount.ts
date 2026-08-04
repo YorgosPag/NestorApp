@@ -53,7 +53,7 @@ export function useTableFormulaBarMount(
 ): TableFormulaBarMount | null {
   const {
     entity, cursor, initialText, containerRef,
-    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
   } = params;
 
   /**
@@ -142,7 +142,11 @@ export function useTableFormulaBarMount(
         onHistory,
         onExtend,
         onSelectAll,
+        onToggleAbsoluteRef,
       },
     };
-  }, [entity, cursor, anchor, initialText, onCommit, onMove, onClear, onHistory, onExtend, onSelectAll]);
+  }, [
+    entity, cursor, anchor, initialText,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
+  ]);
 }

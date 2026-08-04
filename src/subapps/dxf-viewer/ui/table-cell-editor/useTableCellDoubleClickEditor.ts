@@ -41,6 +41,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useCommandHistory } from '../../core/commands';
 import { resolveSelectedTable, resolveTableById } from './table-entity-lookup';
+import { toggleTableFormulaAbsoluteRef } from './table-point-mode-keys';
 import { useLiveTable } from './use-live-table';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
@@ -361,6 +362,19 @@ export function useTableCellDoubleClickEditor(
     }
   }, [liveEntity, cursor]);
 
+  /**
+   * 🔴 ADR-754 Γ3 — `F4`: κλείδωσε/ξεκλείδωσε την αναφορά του δρομέα.
+   *
+   * Δηλώνεται **εδώ** και όχι μέσα στα δύο πεδία επειδή εδώ ζει η **οντότητα**, και επειδή τα
+   * δύο πεδία οφείλουν να κάνουν το ίδιο πράγμα: δύο κατασκευές του ίδιου χειριστή θα ήταν
+   * sibling clone (CHECK 3.28) και δύο ευκαιρίες να αποκλίνουν. Ίδια στάση με το `onCommit`,
+   * το `onMove` και κάθε άλλη ενέργεια της συνεδρίας.
+   */
+  const toggleAbsoluteRef = useCallback(() => {
+    if (!liveEntity || !cursor) return;
+    toggleTableFormulaAbsoluteRef(liveEntity, cursor.draft);
+  }, [liveEntity, cursor]);
+
   const overlay = useMemo<TableCellOverlayMount | null>(() => {
     if (!cursor || !target || !anchor) return null;
     const { entityId, position, mode, sessionId } = cursor;
@@ -386,13 +400,17 @@ export function useTableCellDoubleClickEditor(
         onHistory: history,
         onExtend: rangeActions.extend,
         onSelectAll: rangeActions.selectAll,
+        onToggleAbsoluteRef: toggleAbsoluteRef,
         onCopy: rangeActions.onCopy,
         onCut: rangeActions.onCut,
         onPaste: rangeActions.onPaste,
         onOpenLink: openCursorCellLink,
       },
     };
-  }, [cursor, target, anchor, commitText, move, history, rangeActions, openCursorCellLink]);
+  }, [
+    cursor, target, anchor, commitText, move, history, rangeActions, openCursorCellLink,
+    toggleAbsoluteRef,
+  ]);
 
   /**
    * 🔴 ADR-739 Φ.Δ βήμα 4 — **Η ΔΗΛΩΣΗ «ΕΙΜΑΙ ΜΕΣΑ ΣΤΟΝ ΠΙΝΑΚΑ»**.
@@ -463,6 +481,7 @@ export function useTableCellDoubleClickEditor(
     onHistory: history,
     onExtend: rangeActions.extend,
     onSelectAll: rangeActions.selectAll,
+    onToggleAbsoluteRef: toggleAbsoluteRef,
   });
 
   return useMemo(

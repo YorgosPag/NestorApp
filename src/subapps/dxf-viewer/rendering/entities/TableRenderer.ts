@@ -103,6 +103,31 @@ function editedCellRef(cursor: TableCellCursorState | null): TableCellRef | null
   return { rowId: cursor.position.rowId, colId: cursor.position.colId };
 }
 
+/**
+ * 🔴 ADR-739 §41 — **το ορθογώνιο του ενεργού κελιού**, σε sheet-mm· `undefined` όταν ο
+ * δρομέας δείχνει κελί εκτός του ορατού παραθύρου.
+ *
+ * Η αναζήτηση περνά από το **ήδη υπολογισμένο** ευρετήριο (`cellsByRowId`): O(στήλες) αντί
+ * για γραμμική σάρωση όλων των κελιών σε κάθε καρέ — το μάθημα του ADR-735.
+ *
+ * ## Γιατί έπαψε να είναι μέθοδος που **ζωγραφίζει**
+ * Ήταν `drawCellCursor`, δηλαδή «βρες το κελί **και** βάψ' το». Από τη στιγμή που το ίδιο
+ * ορθογώνιο έγινε **και** η τρύπα της σκίασης (`stampTableSelection`), το «βρες» απέκτησε
+ * δεύτερο καταναλωτή — και μια δεύτερη αναζήτηση θα ήταν ακριβώς το sibling clone που πιάνει
+ * το CHECK 3.28 (N.18), με το επιπλέον ρίσκο να απαντήσει **αλλιώς** μέσα στο ίδιο καρέ.
+ * Καθαρή συνάρτηση, όχι μέθοδος: δεν αγγίζει τίποτα του `this`.
+ *
+ * Το `undefined` (αντί `null`) είναι σκόπιμο — ταιριάζει με την **προαιρετική** παράμετρο
+ * του `stampTableSelection`, όπου «δεν υπάρχει ενεργό κελί» σημαίνει «σκίασε τα πάντα».
+ */
+function activeCellRectOf(
+  cursor: TableCellCursorState,
+  index: TableRenderIndex,
+): TableRectMm | undefined {
+  const bucket = index.cellsByRowId.get(cursor.position.rowId);
+  return bucket?.find((c) => c.colId === cursor.position.colId)?.rect;
+}
+
 export class TableRenderer extends BaseEntityRenderer {
   /**
    * Το σύστημα μονάδων της σκηνής — ο πίνακας είναι **annotative**, όπως το πάχος του
@@ -146,6 +171,10 @@ export class TableRenderer extends BaseEntityRenderer {
       toScreen: (u: number, v: number): Point2D =>
         this.worldToScreen(tableFrameToWorld(e, u, v, geometry.mmToWorld)),
       pxPerMm: tablePxPerMm(geometry.mmToWorld, this.transform.scale),
+      // 🔴 ADR-739 §41 — από τη **γεωμετρία**, ποτέ δεύτερη κλήση `liveTableSurfaceHex()`: η
+      // διάταξη μόλις έβαψε τα κελιά με αυτή την επιφάνεια και η σκίαση επιλογής οφείλει να
+      // δει την ίδια. Δεύτερη ανάγνωση = δεύτερο `getComputedStyle` ανά πίνακα ανά καρέ.
+      surfaceHex: geometry.surfaceHex,
       // Η φάση (hover/επιλογή) έχει ήδη θέσει το `strokeStyle`· όταν είναι η κανονική
       // φάση, το `undefined` αφήνει τα χρώματα του στυλ να περάσουν αυτούσια.
       phaseColor: this.tablePhaseColor(),
@@ -155,13 +184,17 @@ export class TableRenderer extends BaseEntityRenderer {
     // ζωγραφίζεται» βγαίνουν από την ίδια ανάγνωση — δύο αναγνώσεις θα μπορούσαν να δουν
     // διαφορετική κατάσταση μέσα στο ίδιο καρέ.
     const cursor = selected ? this.cursorOf(e.id) : null;
+    // 🔴 ADR-739 §41 — **ΜΙΑ** αναζήτηση του ενεργού κελιού, **δύο** καταναλωτές: η τρύπα της
+    // σκίασης και ο δρομέας. Δύο αναζητήσεις θα ήταν δύο ευκαιρίες να απαντήσουν αλλιώς μέσα
+    // στο ίδιο καρέ — δηλαδή σκίαση που τρυπά ένα κελί ενώ το πλαίσιο στέκεται σε άλλο.
+    const activeCellRect = cursor ? activeCellRectOf(cursor, index) : undefined;
 
     stampTableFills(rc, cells);
     // ADR-739 Φ.Δ βήμα 8 — η επιλογή **πάνω από τα γεμίσματα, κάτω από το πλέγμα και το
     // κείμενο**: είναι ημιδιαφανής, οπότε ένα στρώμα πάνω από τα γράμματα θα τα θόλωνε —
     // και η επιλογή υπάρχει ακριβώς για να διαβάσεις τι μάρκαρες.
     const selection = cursor ? this.selectionOf(e, cursor, layout) : null;
-    if (selection) stampTableSelection(rc, selection.rectMm);
+    if (selection) stampTableSelection(rc, selection.rectMm, activeCellRect);
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
     // ADR-750 Φ5 (Α2) — οι **διαγώνιοι** κρέμονται από τα κελιά, όχι από το πλέγμα: ταξιδεύουν
@@ -221,7 +254,17 @@ export class TableRenderer extends BaseEntityRenderer {
         widthMm: layout.widthMm,
         heightMm: layout.heightMm,
       });
-      this.drawCellCursor(cursor, rc, index);
+      // 🔴 ADR-739 §41 — **ο δρομέας σιωπά όσο υπάρχει επιλογή** (Excel parity, μετρημένο: η
+      // ακμή `B10|C10` μέσα σε επιλεγμένο `B10:C13` είναι γραμμή πλέγματος `#ADADAD`, όχι
+      // περίγραμμα). Το ενεργό κελί το δείχνει ήδη η **τρύπα** στη σκίαση, και μάλιστα με το
+      // ίδιο ακριβώς ορθογώνιο — δύο δηλώσεις του ίδιου πράγματος, η μία εκ των οποίων
+      // (συμπαγές μπλε πλαίσιο) θα διαβαζόταν ως *δεύτερη* επιλογή μέσα στην πρώτη.
+      //
+      // Δεν χάνεται κατάσταση: χωρίς επιλογή ο δρομέας ζωγραφίζεται όπως πάντα, και με
+      // επιλογή 1×1 το περίγραμμα **της περιοχής** έχει ήδη το ίδιο χρώμα και πάχος
+      // (`TABLE_CELL_SELECTION.outlineWidthPx` = `TABLE_CELL_CURSOR.lineWidthPx`) πάνω στο
+      // ίδιο ορθογώνιο — δηλαδή η εικόνα του δρομέα, γραμμένη μία φορά.
+      if (!selection && activeCellRect) stampTableCellCursor(rc, activeCellRect);
       // 🔴 ADR-754 Β1 — **μετά** τον δρομέα, ώστε ένα χρωματιστό περίγραμμα να μη χάνεται
       // κάτω από το συμπαγές μπλε όταν τα δύο εφάπτονται.
       //
@@ -324,21 +367,6 @@ export class TableRenderer extends BaseEntityRenderer {
   private cursorOf(entityId: string): TableCellCursorState | null {
     const cursor = getTableCellCursor();
     return cursor && cursor.entityId === entityId ? cursor : null;
-  }
-
-  /**
-   * Το ορθογώνιο του τρέχοντος κελιού. Η αναζήτηση περνά από το **ήδη υπολογισμένο**
-   * ευρετήριο (`cellsByRowId`): O(στήλες) αντί για γραμμική σάρωση όλων των κελιών σε
-   * κάθε καρέ — το μάθημα του ADR-735.
-   */
-  private drawCellCursor(
-    cursor: TableCellCursorState,
-    rc: StampTableContext,
-    index: TableRenderIndex,
-  ): void {
-    const bucket = index.cellsByRowId.get(cursor.position.rowId);
-    const cell = bucket?.find((c) => c.colId === cursor.position.colId);
-    if (cell) stampTableCellCursor(rc, cell.rect);
   }
 
   /**

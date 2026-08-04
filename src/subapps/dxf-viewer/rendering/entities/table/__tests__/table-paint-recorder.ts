@@ -94,8 +94,31 @@ export interface ClipRecord {
   readonly angleRad: number;
 }
 
+/**
+ * 🔴 ADR-739 §41 — μια **γεμισμένη διαδρομή**: με τι μελάνι, σε ποιες υποδιαδρομές και με
+ * ποιον κανόνα περιτύλιξης.
+ *
+ * ## Γιατί δεν αρκούσε το `fills: string[]`
+ * Ο καταγραφέας κρατούσε **μόνο το χρώμα** κάθε `fill()`. Η τρύπα του ενεργού κελιού όμως
+ * δεν αλλάζει χρώμα — αλλάζει **γεωμετρία** (δεύτερη υποδιαδρομή) και **κανόνα** (`evenodd`).
+ * Ένα test πάνω στο παλιό σχήμα θα ήταν **πράσινο και για τη σωστή και για τη λάθος**
+ * υλοποίηση: ακριβώς το «κατάπιε-και-προχώρα» stub που το {@link StrokeRecord.dashPx}
+ * τεκμηριώνει ως ελάττωμα — δεύτερη φορά, σε άλλη ιδιότητα.
+ *
+ * Το `fills` **μένει** και γεμίζει όπως πάντα: πέντε σουίτες το διαβάζουν και δεν έχουν
+ * λόγο να μάθουν γεωμετρία που δεν τις αφορά.
+ */
+export interface FillPathRecord {
+  readonly color: string;
+  /** Μία εγγραφή ανά `moveTo`, σε px **οθόνης** (μετά τον ενεργό μετασχηματισμό). */
+  readonly subpaths: ReadonlyArray<ReadonlyArray<Point2D>>;
+  /** Ό,τι ζητήθηκε στο `fill(rule)`· `'nonzero'` όταν δεν δόθηκε, όπως ο καμβάς. */
+  readonly rule: CanvasFillRule;
+}
+
 export interface PaintLog {
   readonly fills: string[];
+  readonly fillPaths: FillPathRecord[];
   readonly texts: TextRecord[];
   readonly strokes: StrokeRecord[];
   readonly rects: RectRecord[];
@@ -104,7 +127,7 @@ export interface PaintLog {
 
 /** Καθαρό ημερολόγιο — μία έκφραση, ώστε καμία σουίτα να μην ξεχάσει πεδίο. */
 export function createPaintLog(): PaintLog {
-  return { fills: [], texts: [], strokes: [], rects: [], clips: [] };
+  return { fills: [], fillPaths: [], texts: [], strokes: [], rects: [], clips: [] };
 }
 
 /**
@@ -156,7 +179,10 @@ function rotated(m: Affine, angleRad: number): Affine {
 
 export function createCtx(log: PaintLog): CanvasRenderingContext2D {
   let fillStyle = '';
-  let path: Array<{ x: number; y: number }> = [];
+  // 🔴 ADR-739 §41 — **υποδιαδρομές, όχι μία επίπεδη λίστα σημείων.** Ένα `moveTo` ξεκινά νέα:
+  // αυτό ακριβώς ξεχωρίζει «ορθογώνιο με τρύπα» από «ορθογώνιο», και ένας καταγραφέας που τα
+  // συγχώνευε δεν μπορούσε να δει τη διαφορά.
+  let subpaths: Array<Array<{ x: number; y: number }>> = [];
   /** Η λωρίδα που δήλωσε το τελευταίο `rect`, μέχρι να τη ζητήσει ένα `clip`. */
   let pendingRect: Omit<ClipRecord, 'angleRad'> | null = null;
   // Η στοίβα του `save`/`restore`. Χωρίς αυτήν, ένα `restore()` που ξεχάστηκε στον
@@ -195,28 +221,38 @@ export function createCtx(log: PaintLog): CanvasRenderingContext2D {
       transform = rotated(transform, angleRad);
     },
     beginPath: (): void => {
-      path = [];
+      subpaths = [];
     },
     closePath: (): void => undefined,
     moveTo: (x: number, y: number): void => {
-      path.push(applyTransform(transform, x, y));
+      subpaths.push([applyTransform(transform, x, y)]);
     },
     lineTo: (x: number, y: number): void => {
-      path.push(applyTransform(transform, x, y));
+      // `lineTo` χωρίς προηγούμενο `moveTo` ξεκινά διαδρομή στον καμβά· ίδια συμπεριφορά εδώ,
+      // ώστε ένα παραλειπόμενο `moveTo` να μη ρίχνει το test με άσχετο σφάλμα.
+      const current = subpaths[subpaths.length - 1] ?? (subpaths.push([]), subpaths[0]);
+      current.push(applyTransform(transform, x, y));
     },
     stroke: (): void => {
       log.strokes.push({
         color: ctx.strokeStyle,
         lineWidth: ctx.lineWidth,
-        points: [...path],
+        // Επίπεδο, όπως πάντα: κάθε χαραγμένη διαδρομή του πίνακα είναι **μία** υποδιαδρομή,
+        // οπότε καμία υπάρχουσα προσδοκία δεν αλλάζει.
+        points: subpaths.flat(),
         dashPx: [...dashPx],
       });
     },
     setLineDash: (segments: readonly number[]): void => {
       dashPx = [...segments];
     },
-    fill: (): void => {
+    fill: (rule?: CanvasFillRule): void => {
       log.fills.push(fillStyle);
+      log.fillPaths.push({
+        color: fillStyle,
+        subpaths: subpaths.map((s) => [...s]),
+        rule: rule ?? 'nonzero',
+      });
     },
     fillText: (text: string, x: number, y: number): void => {
       log.texts.push({
@@ -264,7 +300,23 @@ export interface PaintRecorderOptions {
   readonly pxPerMm?: number;
   /** Πλαίσιο → οθόνη. Προεπιλογή: ταυτοτική. */
   readonly toScreen?: (u: number, v: number) => Point2D;
+  /**
+   * 🔴 ADR-739 §41 — η επιφάνεια κάτω από τον πίνακα. Προεπιλογή: {@link RECORDER_DARK_SURFACE}.
+   *
+   * **Είναι επιλογή και όχι σταθερά** για τον ίδιο λόγο που το `maxContrastInk` παίρνει το
+   * φόντο ως όρισμα: μια σουίτα που δοκιμάζει μόνο τη σκούρα επιφάνεια είναι πράσινη με
+   * σπασμένη τη φωτεινή. Τα tests parity με Excel περνούν ρητά `TABLE_PAPER_HEX`.
+   */
+  readonly surfaceHex?: string;
 }
+
+/**
+ * Η **προεπιλεγμένη σκούρα** επιφάνεια των tests — το `nestorApp1`, ό,τι βλέπει ο χρήστης
+ * χωρίς να αλλάξει θέμα καμβά. Γραμμένη ρητά (και όχι διαβασμένη από το CSS) επειδή στο jsdom
+ * το `getComputedStyle` δεν έχει τις μεταβλητές του θέματος και θα επέστρεφε πάντα το ίδιο
+ * fallback — δηλαδή μια «ζωντανή» ανάγνωση που δεν είναι ζωντανή.
+ */
+export const RECORDER_DARK_SURFACE = '#1d283a';
 
 /**
  * Το πλαίσιο ζωγραφικής των tests — **από το ίδιο εργοστάσιο με τον παραγωγικό κώδικα**.
@@ -277,6 +329,17 @@ export interface PaintRecorderOptions {
  * ίδιο εργοστάσιο, το ζεύγος «προβολή ↔ γωνία» δεν μπορεί να ξεσυγχρονιστεί σε κανένα test.
  */
 export function createRc(log: PaintLog, options: PaintRecorderOptions = {}): StampTableContext {
-  const { phaseColor, pxPerMm = 10, toScreen = (u, v) => ({ x: u, y: v }) } = options;
-  return createStampTableContext({ ctx: createCtx(log), toScreen, pxPerMm, phaseColor });
+  const {
+    phaseColor,
+    pxPerMm = 10,
+    toScreen = (u, v) => ({ x: u, y: v }),
+    surfaceHex = RECORDER_DARK_SURFACE,
+  } = options;
+  return createStampTableContext({
+    ctx: createCtx(log),
+    toScreen,
+    pxPerMm,
+    surfaceHex,
+    phaseColor,
+  });
 }
