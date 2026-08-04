@@ -36,17 +36,25 @@ beforeEach(() => {
 
 /** Νέο αντικείμενο κάθε φορά — ακριβώς όπως το παράγει το hit-test. */
 function overColumn(colId: string, entityId = 'tbl-1') {
-  return { entityId, hit: { axis: 'column', colId, index: 0 } } as const;
+  return { entityId, target: { kind: 'tick', hit: { axis: 'column', colId, index: 0 } } } as const;
 }
 
 function overRow(rowId: string, entityId = 'tbl-1') {
-  return { entityId, hit: { axis: 'row', rowId, index: 0 } } as const;
+  return { entityId, target: { kind: 'tick', hit: { axis: 'row', rowId, index: 0 } } } as const;
+}
+
+/** 🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας: **μία** ανά πίνακα, χωρίς ταυτότητα. */
+function overSelectAll(entityId = 'tbl-1') {
+  return { entityId, target: { kind: 'select-all' } } as const;
 }
 
 describe('table-indicator-hover-store', () => {
   it('κρατά την υποδιαίρεση και ζητά ΕΝΑ καρέ', () => {
     setTableIndicatorHover(overColumn('c2'));
-    expect(getTableIndicatorHover()?.hit).toMatchObject({ axis: 'column', colId: 'c2' });
+    expect(getTableIndicatorHover()?.target).toMatchObject({
+      kind: 'tick',
+      hit: { axis: 'column', colId: 'c2' },
+    });
     expect(repaints).toHaveBeenCalledTimes(1);
     expect(repaints).toHaveBeenCalledWith(['dxf-canvas']);
   });
@@ -75,7 +83,7 @@ describe('table-indicator-hover-store', () => {
     setTableIndicatorHover(overColumn('x1'));
     repaints.mockClear();
     setTableIndicatorHover(overRow('x1'));
-    expect(getTableIndicatorHover()?.hit.axis).toBe('row');
+    expect(getTableIndicatorHover()?.target).toMatchObject({ hit: { axis: 'row' } });
     expect(repaints).toHaveBeenCalledTimes(1);
   });
 
@@ -99,5 +107,33 @@ describe('table-indicator-hover-store', () => {
   it('σβήσιμο σε άδειο store ⇒ κανένα καρέ (mouseleave χωρίς προηγούμενο hover)', () => {
     clearTableIndicatorHover();
     expect(repaints).not.toHaveBeenCalled();
+  });
+
+  /**
+   * 🔴 ADR-739 §43 — η γωνία είναι **τρίτο είδος** κομματιού, όχι υποδιαίρεση άξονα. Ο φύλακας
+   * ισότητας πρέπει να τη διακρίνει από κάθε γράμμα/αριθμό — αλλιώς μια κίνηση από το `A` προς
+   * τη γωνία θα φαινόταν «τίποτα δεν άλλαξε» και το τρίγωνο δεν θα άναβε ποτέ.
+   */
+  it('🔴 από υποδιαίρεση προς τη ΓΩΝΙΑ ⇒ ακριβώς ένα καρέ', () => {
+    setTableIndicatorHover(overColumn('c1'));
+    repaints.mockClear();
+    setTableIndicatorHover(overSelectAll());
+    expect(getTableIndicatorHover()?.target).toEqual({ kind: 'select-all' });
+    expect(repaints).toHaveBeenCalledTimes(1);
+  });
+
+  it('ΙΔΙΑ γωνία, ΝΕΟ αντικείμενο ⇒ ΚΑΝΕΝΑ δεύτερο καρέ', () => {
+    setTableIndicatorHover(overSelectAll());
+    repaints.mockClear();
+    for (let i = 0; i < 10; i++) setTableIndicatorHover(overSelectAll());
+    expect(repaints).not.toHaveBeenCalled();
+  });
+
+  it('η γωνία ΑΛΛΟΥ πίνακα είναι άλλο κομμάτι (δύο πίνακες, μία σκηνή)', () => {
+    setTableIndicatorHover(overSelectAll('tbl-1'));
+    repaints.mockClear();
+    setTableIndicatorHover(overSelectAll('tbl-2'));
+    expect(getTableIndicatorHover()?.entityId).toBe('tbl-2');
+    expect(repaints).toHaveBeenCalledTimes(1);
   });
 });

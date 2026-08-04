@@ -177,6 +177,31 @@ describe('§42 — το κατώφλι πλάτους: σε αμφισβήτησ
     expect(discLeftEdge).toBeGreaterThanOrEqual(labelRightEdge);
   });
 
+  it('🔴 ΟΙ ΓΡΑΜΜΕΣ ΕΧΟΥΝ ΜΙΚΡΟΤΕΡΟ ΚΑΤΩΦΛΙ — η ετικέτα εκτείνεται κατά ΥΨΟΣ, όχι πλάτος', () => {
+    // Ελάττωμα μετρημένο ζωντανά (Giorgio, 04/08): «στις στήλες εμφανίζεται, στις γραμμές
+    // ήθελε zoom». Το φράγμα ήταν το **πάχος της ζώνης** (28 px) και στις γραμμές δεν
+    // φρουρούσε τίποτα — ο αριθμός `12` πιάνει κατά μήκος του άξονα μόνο το **ύψος** του.
+    const PX = 8;
+    const bands = bandsAt(PX);
+    const columnBound = tableDeleteControlMinTickMm(bands.columnBandMm, PX);
+    const rowBound = tableDeleteControlMinTickMm(TABLE_INDICATOR.fontPx / PX, PX);
+
+    expect(rowBound).toBeLessThan(columnBound);
+
+    // Γραμμή 8 mm στα 8 px/mm = **64 px**: κάτω από το κατώφλι στηλών (74), πάνω από των
+    // γραμμών (57). Με το παλιό, κοινό φράγμα το ⊖ **δεν υπήρχε** εδώ.
+    const r1SizeMm = 8;
+    expect(r1SizeMm).toBeLessThan(columnBound);
+    expect(r1SizeMm).toBeGreaterThan(rowBound);
+
+    const inset = (TABLE_INDICATOR_GRIP_CLEARANCE_PX + TABLE_DELETE_CONTROL_RADIUS_PX) / PX;
+    const point = { u: -(bands.gapMm + bands.rowBandMm / 2), v: 20 - inset };
+    const hit = tableDeleteControlAtFrame(LAYOUT, point, bands, PX);
+
+    expect(hit?.phase).toBe('armed');
+    expect(hit?.hit).toEqual({ axis: 'row', rowId: 'r1', index: 1 });
+  });
+
   it('το κενό του δίσκου είναι **η οπή σύλληψης**, όχι νέος αριθμός', () => {
     // Αν κάποιος «στρογγυλέψει» το κενό, ο δίσκος ξαναμπαίνει στη ζώνη του διαχωριστικού.
     expect(TABLE_INDICATOR_GRIP_CLEARANCE_PX).toBeGreaterThanOrEqual(

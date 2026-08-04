@@ -30,6 +30,14 @@ import {
 } from '../../bim/table/table-indicator-geometry';
 import { tableEventWorldPoint } from './table-cell-pointer-hit';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
+// ADR-739 §26.15/§27.15 — ο ΕΝΑΣ ορισμός του «αυτό το πάτημα είναι της συνεδρίας μου», και
+// στις δύο μορφές του (εστίαση / χειρονομία).
+import {
+  claimTableCellPointerGesture,
+  claimTableCellSessionPointerDown,
+} from './table-cell-session-focus';
+// ADR-739 §27.15 — ο κύκλος ζωής της σύρσης· εδώ ζει μόνο η **έναρξή** της.
+import { startTableCellDrag } from './table-cell-drag-session';
 import {
   setTableCellCursor,
   setTableCellSelection,
@@ -154,4 +162,65 @@ export function extendWholeAxis(
   const extended = extendTableSelectionTo(selection, target.to);
   setTableCellSelection(extended);
   return extended.from;
+}
+
+/**
+ * 🔴 ADR-739 §27.16 — **ΤΟ ΠΑΤΗΜΑ ΕΠΕΣΕ ΣΕ ΖΩΝΗ** (γράμμα στήλης / αριθμό γραμμής): μαρκάρεται
+ * ολόκληρος ο άξονας, και η σύρση από εκεί μαρκάρει πολλούς.
+ *
+ * Ήρθε εδώ από το `use-table-cell-pointer` όταν εκείνο ξαναχτύπησε τις 500 γραμμές (N.7.1).
+ * **Εξαγωγή, όχι κόψιμο**: ο κλάδος καλούσε ήδη **και τις τρεις** συναρτήσεις αυτού του module
+ * ({@link extendWholeAxis}, {@link selectWholeAxis}, {@link axisEndAt}) και **τίποτα άλλο** από
+ * το hook πέρα από τη δέσμευση προχείρου — δηλαδή ήταν η δρομολόγηση της ίδιας γεωμετρίας,
+ * γραμμένη ένα αρχείο πιο πέρα από αυτήν.
+ *
+ * ⚠️ Η **σειρά** μέσα του είναι η προδιαγραφή, όχι στυλ: δήλωση συνεδρίας **και** χειρονομίας
+ * πριν από κάθε έξοδο (αλλιώς το δεξί κλικ αφήνει «πίνακας χωρίς δρομέα», §27.14, και το
+ * body-drag του ADR-560 armάρει στα 3 px, §27.15) · `Shift` πριν από το σκέτο κλικ (η πιο
+ * **ειδική** ερώτηση πρώτη) · δέσμευση προχείρου **μόνο** στον δρόμο που κουνά το ενεργό κελί.
+ *
+ * @param primary `true` για το αριστερό πλήκτρο· το δεξί **δηλώνει και παραδίδεται**.
+ * @param commitPending Δέσμευση ό,τι γράφεται, πριν κουνηθεί ο δρομέας (§26.15).
+ */
+export function handleTableBandMouseDown(params: {
+  readonly entity: TableEntity;
+  readonly hit: TableIndicatorHit;
+  readonly selection: TableSelectionSpan | null | undefined;
+  readonly container: HTMLElement;
+  readonly transformRef: RefObject<ViewTransform>;
+  readonly primary: boolean;
+  readonly shiftKey: boolean;
+  readonly commitPending: () => void;
+}): void {
+  const { entity, hit, selection, container, transformRef, primary, shiftKey } = params;
+  claimTableCellSessionPointerDown();
+  claimTableCellPointerGesture();
+  // §27.14 — το δεξί σταματά **εδώ**: δήλωσε και παραδώσου. Τα υπόλοιπα (άνοιγμα μενού ζώνης)
+  // τα κάνει ο δρομολογητής στο `contextmenu`, που τώρα βρίσκει ζωντανό δρομέα.
+  if (!primary) return;
+  const startDrag = (anchor: TableCellRef): void => {
+    startTableCellDrag({
+      anchor,
+      kind: hit.axis,
+      container,
+      // Το κινούμενο άκρο ακολουθεί μόνο τη θέση **κατά μήκος** του άξονα — γι' αυτό το
+      // `tableAxisTickAtFrame` μέσα στο `axisEndAt` αγνοεί τη ζώνη.
+      resolveAt: (moveEvent) => axisEndAt(moveEvent, entity, container, transformRef, hit.axis),
+    });
+  };
+  // 🔴 §27.16 Ε2 — `Shift+κλικ` σε δεύτερο γράμμα/αριθμό: **επέκταση**, όχι νέα επιλογή.
+  // Δοκιμάζεται πρώτη γιατί είναι η πιο **ειδική** ερώτηση· όταν δεν ισχύει (καμία επιλογή, ή
+  // επιλογή άλλου είδους) επιστρέφει `null` και το πάτημα συνεχίζει στον κανονικό δρόμο —
+  // δηλαδή γίνεται σκέτο κλικ, χωρίς καμία εφεύρεση.
+  const shiftAnchor = shiftKey ? extendWholeAxis(entity, hit, selection) : null;
+  if (shiftAnchor) {
+    startDrag(shiftAnchor);
+    return;
+  }
+  // Η ζώνη μετακινεί το ενεργό κελί στην αρχή του άξονα, άρα ισχύει το ίδιο συμβόλαιο με το
+  // απλό κλικ: ό,τι γράφεται δεσμεύεται πρώτα.
+  params.commitPending();
+  // Σύρση **πάνω στα γράμματα/αριθμούς** = πολλές ολόκληρες στήλες/γραμμές (Excel).
+  const axisAnchor = selectWholeAxis(entity, hit);
+  if (axisAnchor) startDrag(axisAnchor);
 }

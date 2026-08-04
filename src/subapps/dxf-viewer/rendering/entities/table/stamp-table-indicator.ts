@@ -58,7 +58,12 @@ import {
   tableIndicatorBandsMm,
   tableIndicatorCornerRectMm,
   tableRowTickRectMm,
+  type TableIndicatorBandsMm,
 } from '../../../bim/table/table-indicator-geometry';
+// 🔴 ADR-739 §43 — το σχήμα του κουμπιού «επιλογή όλων». Ο ζωγράφος **ρωτά**, δεν το ξέρει:
+// την ίδια γεωμετρία καταναλώνει και το hit-test, άρα το μελάνι δεν μπορεί να αποκλίνει από
+// τον στόχο που πατιέται.
+import { tableSelectAllTriangleMm } from '../../../bim/table/table-select-all-corner';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import { TABLE_INDICATOR } from '../../../config/color-config';
 import {
@@ -75,6 +80,23 @@ import {
  */
 const MIN_TICK_LABEL_PX = 10;
 
+/**
+ * 🔴 ADR-739 §43 — **οι δύο καταστάσεις του κουμπιού «επιλογή όλων»**.
+ *
+ * Ίδιο ακριβώς ζεύγος με το {@link TableIndicatorTick} (`active` + `hovered`), και **αυτό
+ * είναι η προδιαγραφή**, όχι σύμπτωση: η γωνία είναι μια υποδιαίρεση της οποίας η ετικέτα
+ * τυχαίνει να είναι τρίγωνο αντί για γράμμα. Ό,τι κανόνας ισχύει για το `B`, ισχύει και εδώ —
+ * το ίδιο γέμισμα, το ίδιο πλύσιμο, το ίδιο μελάνι.
+ *
+ * Δεν κουβαλά ταυτότητα: η γωνία είναι **μία** ανά πίνακα.
+ */
+export interface TableSelectAllCornerState {
+  /** Καλύπτει η επιλογή ολόκληρο το πλέγμα; **Παράγωγο** — ποτέ σημαία σε store. */
+  readonly active: boolean;
+  /** Στέκεται το χέρι από πάνω; Ίδιο κανάλι hover με τα γράμματα (§30). */
+  readonly hovered: boolean;
+}
+
 /** Ό,τι χρειάζεται μια κλήση — ονομασμένες υποδιαιρέσεις + το μέγεθος του πίνακα. */
 export interface TableIndicatorBands {
   readonly columns: readonly TableIndicatorTick[];
@@ -82,6 +104,8 @@ export interface TableIndicatorBands {
   readonly rows: readonly TableIndicatorTick[];
   readonly widthMm: number;
   readonly heightMm: number;
+  /** §43 — το τετραγωνάκι της συμβολής, με τις δύο καταστάσεις του. */
+  readonly corner: TableSelectAllCornerState;
 }
 
 /**
@@ -95,8 +119,8 @@ export function stampTableIndicator(rc: StampTableContext, bands: TableIndicator
 
   const bandsMm = tableIndicatorBandsMm(pxPerMm);
 
-  // Η γωνία πρώτη: το κενό τετράγωνο πάνω-αριστερά που ενώνει τις δύο ζώνες.
-  fillTick(rc, tableIndicatorCornerRectMm(bandsMm), false);
+  // Η γωνία πρώτη: το τετράγωνο πάνω-αριστερά που ενώνει τις δύο ζώνες.
+  stampSelectAllCorner(rc, bandsMm, bands.corner);
 
   for (const tick of bands.columns) {
     stampTick(rc, tick, tableColumnTickRectMm(tick, bandsMm));
@@ -121,6 +145,66 @@ function stampTick(rc: StampTableContext, tick: TableIndicatorTick, rect: TableR
   if (tick.hovered) washTick(rc, rect);
   strokeTick(rc, rect);
   stampLabel(rc, tick, rect);
+}
+
+/**
+ * 🔴 ADR-739 §43 — **ΤΟ ΚΟΥΜΠΙ «ΕΠΙΛΟΓΗ ΟΛΩΝ»**: γέμισμα → (πλύσιμο hover) → περίγραμμα →
+ * τρίγωνο.
+ *
+ * 🔑 **Οι τρεις πρώτες κλήσεις είναι ΟΙ ΙΔΙΕΣ με του {@link stampTick}**, με την ίδια σειρά και
+ * για τους ίδιους λόγους (§30). Αυτό δεν είναι εξοικονόμηση γραμμών — είναι η μετάφραση της
+ * μέτρησης: στο Excel το κουτί της γωνίας βάφεται **σαν κεφαλίδα** όταν όλα είναι επιλεγμένα
+ * (στιγμιότυπο 04/08: ίδιο ανοιχτό πράσινο `#D5EFD6` με τα γράμματα, τρίγωνο στο accent). Ο
+ * Νέστωρ έχει άλλη παλέτα — και γι' αυτό ακριβώς δεν αντιγράφουμε τα hex του: αντιγράφουμε τον
+ * **κανόνα** «η γωνία φοράει ό,τι φοράει μια ενεργή υποδιαίρεση» (§41.7), και τα χρώματα
+ * βγαίνουν μόνα τους από το {@link TABLE_INDICATOR}.
+ *
+ * ## ⚠️ Το περίγραμμα είναι ΝΕΟ, και είναι απόφαση
+ * Μέχρι το §43 η γωνία ζωγραφιζόταν με σκέτο `fillTick(..., false)` — χωρίς `strokeTick`. Ήταν
+ * σωστό όσο ήταν **διακοσμητικό γέμισμα**: ένα κενό τετράγωνο δεν χρειάζεται να δηλώσει όρια.
+ * Από τη στιγμή που έγινε **κουμπί** χρειάζεται: το τετράγωνο κάθεται μόνο του, με κενό
+ * `gapMm` και από τις δύο ζώνες (δες `tableIndicatorCornerRectMm`), και χωρίς περίγραμμα το
+ * μάτι δεν διαβάζει πού τελειώνει ο στόχος που πρέπει να πατήσει.
+ */
+function stampSelectAllCorner(
+  rc: StampTableContext,
+  bandsMm: TableIndicatorBandsMm,
+  corner: TableSelectAllCornerState,
+): void {
+  const rect = tableIndicatorCornerRectMm(bandsMm);
+  fillTick(rc, rect, corner.active);
+  if (corner.hovered) washTick(rc, rect);
+  strokeTick(rc, rect);
+  stampSelectAllTriangle(rc, bandsMm, corner.active);
+}
+
+/**
+ * Το τρίγωνο ◢, με το **ίδιο μελάνι που θα είχε ένα γράμμα** στην ίδια κατάσταση.
+ *
+ * Οι τρεις κορυφές γεννιούνται στο πλαίσιο (mm) και προβάλλονται μία-μία με το `toScreen` —
+ * ποτέ ως μετασχηματισμός του καμβά. Ίδια αρχή με το {@link traceRectMm}: ο πίνακας
+ * **περιστρέφεται**, και ένα τρίγωνο ζωγραφισμένο σε συντεταγμένες οθόνης θα έμενε ίσιο μέσα σε
+ * γερμένο κουτί — δηλαδή θα δραπέτευε από το κουτί του σε αρκετή γωνία, ακριβώς το ελάττωμα
+ * που το βήμα 8 έκλεισε για τις ετικέτες.
+ */
+function stampSelectAllTriangle(
+  rc: StampTableContext,
+  bandsMm: TableIndicatorBandsMm,
+  active: boolean,
+): void {
+  const [a, b, c] = tableSelectAllTriangleMm(bandsMm);
+  const { ctx } = rc;
+  ctx.save();
+  ctx.fillStyle = active ? TABLE_INDICATOR.activeTextHex : TABLE_INDICATOR.textHex;
+  ctx.beginPath();
+  for (const [index, point] of [a, b, c].entries()) {
+    const screen = rc.toScreen(point.u, point.v);
+    if (index === 0) ctx.moveTo(screen.x, screen.y);
+    else ctx.lineTo(screen.x, screen.y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 
 // ⚠️ ADR-739 Φ.Δ βήμα 8 — εδώ ζούσε **δεύτερη** διαδρομή τεσσάρων γωνιών (`cornersOf` +

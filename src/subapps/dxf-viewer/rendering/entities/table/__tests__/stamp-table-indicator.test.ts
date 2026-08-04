@@ -44,16 +44,19 @@ function tick(
 const COLUMNS = [tick('A', 0, 20), tick('B', 20, 30, true)];
 const ROWS = [tick('1', 0, 10), tick('2', 10, 8, true)];
 
+/** ADR-739 §43 — το τετραγωνάκι της γωνίας σε ηρεμία· οι σουίτες αυτές ρωτούν τις ζώνες. */
+const NO_CORNER = { active: false, hovered: false } as const;
+
 describe('stampTableIndicator', () => {
   it('ζωγραφίζει γράμματα στηλών ΚΑΙ αριθμούς γραμμών', () => {
     const { rc, log } = fakeContext(4);
-    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
+    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 , corner: NO_CORNER });
     expect(log.texts.map((p) => p.text)).toEqual(['A', 'B', '1', '2']);
   });
 
   it('η ενεργή στήλη/γραμμή παίρνει το χρώμα του ΔΡΟΜΕΑ — ίδια ερώτηση, ίδιο λεξιλόγιο', () => {
     const { rc, log } = fakeContext(4);
-    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
+    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 , corner: NO_CORNER });
     const b = log.texts.find((p) => p.text === 'B');
     const a = log.texts.find((p) => p.text === 'A');
     expect(b?.color).toBe(TABLE_INDICATOR.activeTextHex);
@@ -63,7 +66,7 @@ describe('stampTableIndicator', () => {
 
   it('η ενεργή ετικέτα είναι έντονη — η διαφορά διαβάζεται και σε ασπρόμαυρη εκτύπωση', () => {
     const { rc, log } = fakeContext(4);
-    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
+    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 , corner: NO_CORNER });
     expect(log.texts.find((p) => p.text === 'B')?.font).toContain('bold');
     expect(log.texts.find((p) => p.text === 'A')?.font).not.toContain('bold');
   });
@@ -72,7 +75,7 @@ describe('stampTableIndicator', () => {
     // Οι ζώνες έχουν σταθερό πάχος σε px· σε έντονο zoom-out θα ήταν πλατύτερες από τον
     // ίδιο τον πίνακα — ένα γκρίζο πλαίσιο γύρω από το τίποτα.
     const { rc, log } = fakeContext(0.2);
-    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
+    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 , corner: NO_CORNER });
     expect(log.texts).toHaveLength(0);
     expect(log.fills).toHaveLength(0);
   });
@@ -85,6 +88,7 @@ describe('stampTableIndicator', () => {
       rows: [tick('1', 0, 30), tick('2', 30, 30, true)],
       widthMm: 62,
       heightMm: 60,
+      corner: NO_CORNER,
     });
     expect(log.texts.map((p) => p.text)).not.toContain('A');
     expect(log.texts.map((p) => p.text)).toContain('B');
@@ -93,9 +97,10 @@ describe('stampTableIndicator', () => {
 
   it('ζωγραφίζει και τη γωνία που ενώνει τις δύο ζώνες', () => {
     const { rc, log } = fakeContext(4);
-    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
-    // 1 γωνία + 2 στήλες + 2 γραμμές = 5 γεμίσματα.
-    expect(log.fills).toHaveLength(5);
+    stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 , corner: NO_CORNER });
+    // 🔴 ADR-739 §43 — **ΗΤΑΝ 5, ΕΓΙΝΑΝ 6.** Η γωνία έπαψε να είναι κενό τετράγωνο: κουτί +
+    // **τρίγωνο**. 1 κουτί γωνίας + 1 τρίγωνο + 2 στήλες + 2 γραμμές = 6 γεμίσματα.
+    expect(log.fills).toHaveLength(6);
   });
 
   /** 🔴 ADR-739 §30 — το ημιδιαφανές πλύσιμο της υποδιαίρεσης κάτω από το ποντίκι. */
@@ -107,15 +112,16 @@ describe('stampTableIndicator', () => {
         rows: ROWS,
         widthMm: 50,
         heightMm: 18,
+        corner: NO_CORNER,
       });
-      // 5 όπως πριν + 1 πλύσιμο = 6, και το πλύσιμο είναι το χρώμα του hover.
-      expect(log.fills).toHaveLength(6);
+      // 6 όπως πριν (§43: κουτί γωνίας + τρίγωνο) + 1 πλύσιμο = 7· το πλύσιμο είναι το hover.
+      expect(log.fills).toHaveLength(7);
       expect(log.fills.filter((f) => f === TABLE_INDICATOR.hoverWashRgba)).toHaveLength(1);
     });
 
     it('χωρίς hover ⇒ κανένα πλύσιμο (η κανονική κατάσταση κάθε καρέ)', () => {
       const { rc, log } = fakeContext(4);
-      stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 });
+      stampTableIndicator(rc, { columns: COLUMNS, rows: ROWS, widthMm: 50, heightMm: 18 , corner: NO_CORNER });
       expect(log.fills).not.toContain(TABLE_INDICATOR.hoverWashRgba);
     });
 
@@ -131,6 +137,7 @@ describe('stampTableIndicator', () => {
         rows: ROWS,
         widthMm: 50,
         heightMm: 18,
+        corner: NO_CORNER,
       });
       const activeAt = log.fills.indexOf(TABLE_INDICATOR.activeFillHex);
       const washAt = log.fills.indexOf(TABLE_INDICATOR.hoverWashRgba);
@@ -147,6 +154,7 @@ describe('stampTableIndicator', () => {
         rows: ROWS,
         widthMm: 50,
         heightMm: 18,
+        corner: NO_CORNER,
       });
       expect(log.fills).toHaveLength(0);
     });

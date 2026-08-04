@@ -67,10 +67,8 @@ import { useEventCallback } from '@/hooks/useEventCallback';
 // μετακόμισε σε δικό της module όταν αυτό εδώ χτύπησε τις 500 γραμμές (N.7.1). Εξαγωγή, όχι
 // κόψιμο: καμία από τις συναρτήσεις δεν χρειάζεται τίποτα από το hook.
 import {
-  axisEndAt,
   cellEndAt,
-  extendWholeAxis,
-  selectWholeAxis,
+  handleTableBandMouseDown,
 } from './table-pointer-axis-selection';
 // 🔴 ADR-739 §29 — η ΜΙΑ ερώτηση «πού έπεσε αυτό το συμβάν;», μοιρασμένη με τον φύλακα του
 // κλειδώματος. Δες την κεφαλίδα εκείνου του module: δύο αντίγραφα θα άφηναν νεκρή λωρίδα
@@ -129,6 +127,19 @@ export interface UseTableCellPointerParams {
   /** `Shift+κλικ` — δεύτερη γωνία περιοχής, χωρίς να κουνηθεί το ενεργό κελί. */
   readonly onSelectTo: (cell: TableCellRef) => void;
   /**
+   * 🔴 ADR-739 §43 — **κλικ στο τετραγωνάκι της γωνίας**: όλα τα κελιά αυτού του πίνακα.
+   *
+   * Είναι **κυριολεκτικά** ο ίδιος χειριστής με το `Ctrl+A` (`rangeActions.selectAll`), και
+   * αυτό είναι όλη η προδιαγραφή: *η γωνία είναι δεύτερη πόρτα στην ίδια εντολή*. Ένα δεύτερο
+   * `setTableCellSelection` εδώ θα ήταν sibling clone (N.18) — και, χειρότερα, δεύτερη άποψη
+   * για το τι σημαίνει «όλα» τη μέρα που ο ορισμός αλλάξει.
+   *
+   * ⚠️ **Υποχρεωτικό, όχι προαιρετικό με no-op**: μια προεπιλογή θα έκανε το κουμπί να
+   * ζωγραφίζεται, να δίνει δείκτη `pointer` και να μην κάνει τίποτα — δηλαδή ακριβώς το
+   * ελάττωμα που ήρθε να διορθώσει, αλλά αυτή τη φορά με πράσινα tests από πάνω του.
+   */
+  readonly onSelectAll: () => void;
+  /**
    * 🔴 ADR-739 §26.15 — **δέσμευσε ό,τι γράφεται τώρα, πριν κουνηθεί ο δρομέας**. No-op σε
    * πλοήγηση (δεν γράφεται τίποτα) και ιδεμποτής (μια δεύτερη κλήση με ίδιο κείμενο δεν
    * παράγει εντολή — `buildTableCellEditCommand` επιστρέφει `null`).
@@ -158,8 +169,8 @@ export interface UseTableCellPointerParams {
 
 export function useTableCellPointer(params: UseTableCellPointerParams): void {
   const {
-    cursor, entity, liveTable, containerRef, transformRef, onSelectTo, onCommitPending,
-    onPreviewModel, onCommitModel,
+    cursor, entity, liveTable, containerRef, transformRef, onSelectTo, onSelectAll,
+    onCommitPending, onPreviewModel, onCommitModel,
   } = params;
 
   /**
@@ -307,47 +318,38 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       return;
     }
 
+    // 🔴 ADR-739 §27.16 — **γράμμα στήλης / αριθμός γραμμής**: ολόκληρος ο άξονας. Όλη η
+    // δρομολόγηση ζει στο module της γεωμετρίας άξονα — ο κλάδος καλούσε ήδη **και τις τρεις**
+    // συναρτήσεις του και τίποτα άλλο από το hook πέρα από τη δέσμευση προχείρου.
     if (pointerHit?.where === 'band') {
-      const bandHit = pointerHit.band;
+      handleTableBandMouseDown({
+        entity,
+        hit: pointerHit.band,
+        selection: cursor.selection,
+        container,
+        transformRef,
+        primary,
+        shiftKey: event.shiftKey,
+        commitPending: onCommitPending,
+      });
+      return;
+    }
+
+    // 🔴 ADR-739 §43 — **ΤΟ ΤΕΤΡΑΓΩΝΑΚΙ ΤΗΣ ΓΩΝΙΑΣ**: όλα τα κελιά, με ένα κλικ (Excel parity).
+    if (pointerHit?.where === 'select-all-corner') {
       claimTableCellSessionPointerDown();
-      // 🔴 ADR-739 §27.15 — και η **χειρονομία** δηλώνεται: χωρίς αυτό, το body-drag του
-      // ADR-560 armάρει στα 3px και η σύρση επιλογής θα μετακινούσε τον πίνακα.
+      // §27.15 — και η χειρονομία, για τον ίδιο λόγο με τη ζώνη: χωρίς αυτό το body-drag του
+      // ADR-560 armάρει στα 3 px και ένα κλικ με μικροκίνηση θα **μετακινούσε τον πίνακα**.
       claimTableCellPointerGesture();
-      // §27.14 — το δεξί σταματά **εδώ**: δήλωσε και παραδώσου. Τα υπόλοιπα (άνοιγμα
-      // μενού ζώνης) τα κάνει ο δρομολογητής στο `contextmenu`, που τώρα βρίσκει
-      // ζωντανό δρομέα.
+      // §27.14 — το δεξί δηλώνει και παραδίδεται· το μενού το ανοίγει ο δρομολογητής στο
+      // `contextmenu` (δες `use-table-range-menu`), που τώρα βρίσκει ζωντανό δρομέα.
       if (!primary) return;
-      // 🔴 §27.16 Ε2 — `Shift+κλικ` σε δεύτερο γράμμα/αριθμό: **επέκταση**, όχι νέα επιλογή.
-      // Δοκιμάζεται πρώτη γιατί είναι η πιο **ειδική** ερώτηση· όταν δεν ισχύει (καμία
-      // επιλογή, ή επιλογή άλλου είδους) επιστρέφει `null` και το πάτημα συνεχίζει στον
-      // κανονικό δρόμο — δηλαδή γίνεται σκέτο κλικ, χωρίς καμία εφεύρεση.
-      const shiftAnchor = event.shiftKey
-        ? extendWholeAxis(entity, bandHit, cursor.selection)
-        : null;
-      if (shiftAnchor) {
-        startTableCellDrag({
-          anchor: shiftAnchor,
-          kind: bandHit.axis,
-          container,
-          resolveAt: (moveEvent) => axisEndAt(moveEvent, entity, container, transformRef, bandHit.axis),
-        });
-        return;
-      }
-      // Η ζώνη μετακινεί το ενεργό κελί στην αρχή του άξονα, άρα ισχύει το ίδιο συμβόλαιο
-      // με το απλό κλικ: ό,τι γράφεται δεσμεύεται πρώτα.
-      onCommitPending();
-      const axisAnchor = selectWholeAxis(entity, bandHit);
-      // Σύρση **πάνω στα γράμματα/αριθμούς** = πολλές ολόκληρες στήλες/γραμμές (Excel).
-      // Η άγκυρα είναι η αρχή του άξονα· το κινούμενο άκρο ακολουθεί μόνο τη θέση κατά
-      // μήκος του άξονα, γι' αυτό και το `tableAxisTickAtFrame` αγνοεί τη ζώνη.
-      if (axisAnchor) {
-        startTableCellDrag({
-          anchor: axisAnchor,
-          kind: bandHit.axis,
-          container,
-          resolveAt: (moveEvent) => axisEndAt(moveEvent, entity, container, transformRef, bandHit.axis),
-        });
-      }
+      // 🔑 **ΚΑΜΙΑ δέσμευση προχείρου εδώ** — και είναι μετρημένο, όχι παράλειψη: το `Ctrl+A`
+      // δεν δεσμεύει (`use-table-cell-session-keys`, `case 'selectAll'`), γιατί η επιλογή είναι
+      // κατάσταση **διεπαφής** και δεν αγγίζει το μοντέλο (§6.6) — ούτε μετακινεί τον δρομέα,
+      // άρα το πρόχειρο μένει εκεί που το άφησε ο χρήστης. Ένα `onCommitPending()` εδώ θα έκανε
+      // τη γωνία να συμπεριφέρεται **αλλιώς από το ίδιο της το πλήκτρο**.
+      onSelectAll();
       return;
     }
 

@@ -31,14 +31,19 @@ import {
   tableCellAtWorld,
 } from '../../bim/table/table-entity-geometry';
 import {
-  tableColumnEdgeAtFrame,
-  tableRowEdgeAtFrame,
   tableIndicatorHitAtFrame,
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
+import {
+  tableColumnEdgeAtFrame,
+  tableRowEdgeAtFrame,
+} from '../../bim/table/table-axis-edge-probe';
 // 🔴 §31.9 / N.7.1 — η κοινή βάση και το πιάσιμο περιοχής μετακόμισαν σε δικά τους αρχεία· δες
 // τις κεφαλίδες τους για το κριτήριο του κοψίματος (δεν ήταν οι γραμμές).
 import { indicatorProbeBasis } from './table-indicator-probe-basis';
+// 🔴 ADR-739 §43 — το κουμπί «επιλογή όλων» της γωνίας: **μία** ερώτηση περιοχής, κοινή με τον
+// ρόλο δείκτη και τον ζωγράφο.
+import { isTableSelectAllCornerAtFrame } from '../../bim/table/table-select-all-corner';
 import { activeTableRange } from './table-range-grab';
 import {
   tableIndicatorCursorRoleAtFrame,
@@ -61,7 +66,7 @@ import {
   PLAIN_TABLE_RANGE_DRAG,
   type TableRangeDragIntent,
 } from '../../bim/table/table-range-move-zone';
-// 🔴 ADR-754 §15 — η λαβή συμπλήρωσης: **πέμπτο κανάλι της ίδιας σάρωσης**, με τον ίδιο δρόμο
+// 🔴 ADR-754 §14 — η λαβή συμπλήρωσης: **πέμπτο κανάλι της ίδιας σάρωσης**, με τον ίδιο δρόμο
 // που ρωτά και ο φρουρός του πατήματος (`table-fill-handle-drag`).
 import {
   tableFillHandleHitAtFrame,
@@ -127,6 +132,25 @@ export type TablePointerHit =
    * κάθεται μέσα στη ζώνη, που ήταν **ήδη** μη-`null` απάντηση. Το `mousedown` περνούσε ήδη.
    */
   | { readonly where: 'delete-control'; readonly control: TableDeleteControlHit }
+  /**
+   * 🔴 §43 — **ΤΟ ΤΕΤΡΑΓΩΝΑΚΙ ΤΗΣ ΓΩΝΙΑΣ**: το κουμπί «επιλογή όλων» του Excel (2026-08-04).
+   *
+   * ## Γιατί εδώ και ΟΧΙ τρίτη περίπτωση στο `TableIndicatorHit`
+   * Ο πειρασμός είναι μια `{ axis: 'corner' }` δίπλα στο `'column'`/`'row'`. Το `axis` όμως
+   * είναι **δανεικό λεξιλόγιο**: το μοιράζονται ήδη τουλάχιστον τέσσερα σχήματα
+   * (`TableAxisTarget`, `TableSelectionKind`, `table-axis-action-target`, το μενού κεφαλίδας),
+   * και τα περισσότερα το διαβάζουν ως `if (axis === 'column') … else …` — δηλαδή το `else` θα
+   * κατάπινε σιωπηλά τη γωνία **ως γραμμή**, χωρίς ο tsc να πει τίποτα.
+   *
+   * Η γωνία είναι ό,τι το ⊕ και το ⊖: **χειριστήριο που δεν είναι ούτε κελί ούτε ζώνη**. Άρα
+   * παίρνει ακριβώς ό,τι πήραν κι εκείνα — δική της περίπτωση στο `where`.
+   *
+   * 🔑 **Δεν κουβαλά φορτίο**, και είναι η μόνη περίπτωση εδώ που δεν κουβαλά: η ερώτηση «ποια
+   * κελιά;» έχει **μία** απάντηση (`tableWholeGridRange`) και την ξέρει ήδη το `selectAll()`.
+   * Ένα πεδίο `bounds` εδώ θα ήταν δεύτερος υπολογισμός του «όλα» — δηλαδή δεύτερη ευκαιρία να
+   * διαφωνήσει με το `Ctrl+A` για το τι σημαίνει «όλα».
+   */
+  | { readonly where: 'select-all-corner' }
   | { readonly where: 'band'; readonly band: TableIndicatorHit }
   | { readonly where: 'cell'; readonly cell: TableCellHit };
 
@@ -188,8 +212,31 @@ export function tablePointerHitAtWorld(
   if (remove) return { where: 'delete-control', control: remove };
   const band = indicatorHitAt(entity, world, geometry, viewScale);
   if (band) return { where: 'band', band };
+  // 🔴 §43 — **η γωνία μετά τις ζώνες**, και η σειρά εδώ **δεν** λύνει διεκδίκηση: η γωνία είναι
+  // ξένη προς κάθε άλλη περιοχή αυτής της συνάρτησης (η απόδειξη — τρεις δομικοί λόγοι, όχι
+  // σύμπτωση — ζει στην κεφαλίδα του `table-select-all-corner`). Μπαίνει **μετά** τη ζώνη γιατί
+  // είναι η **λιγότερο** ειδική ερώτηση της οικογένειας του δείκτη: ρωτά ένα σκέτο ορθογώνιο,
+  // ενώ όλες οι από πάνω ρωτούν «ποιο **από** τα Ν».
+  if (selectAllCornerAt(entity, world, geometry, viewScale)) return { where: 'select-all-corner' };
   const cell = tableCellAtWorld(entity, world, geometry);
   return cell ? { where: 'cell', cell } : null;
+}
+
+/**
+ * 🔴 §43 — πάτησε το χέρι το κουμπί «επιλογή όλων»· `null` κάτω από το LOD.
+ *
+ * Το LOD δεν ξαναρωτιέται εδώ — το απαντά το {@link indicatorProbeBasis}, όπως για κάθε άλλη
+ * ερώτηση δείκτη. Χωρίς αυτό, ένα κλικ στο κενό γύρω από μια κουκκίδα θα μάρκαρε ολόκληρο
+ * πίνακα που **δεν έχει καν ζωγραφισμένη γωνία**.
+ */
+function selectAllCornerAt(
+  entity: TableEntity,
+  world: Point2D,
+  geometry: TableEntityGeometry,
+  viewScale: number,
+): boolean {
+  const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
+  return probe !== null && isTableSelectAllCornerAtFrame(probe.frame, probe.bands);
 }
 
 /** Ποιο εσωτερικό όριο στήλης είναι κάτω από το σημείο· `null` κάτω από το LOD ή αλλού. */
@@ -303,7 +350,7 @@ export function tableIndicatorProbeAtWorld(
   // 🔴 §40 — σε ποια κατάσταση ρωτάμε. Προεπιλογή η λειτουργία πίνακα, ώστε οι δεκάδες
   // υπάρχουσες κλήσεις/tests να μη χρειαστεί να μάθουν μια έννοια που δεν τους αφορά.
   mode: TableInsertControlMode = 'table-mode',
-  // 🔴 ADR-754 §15 — **το ενεργό κελί, ΟΤΑΝ Η ΛΑΒΗ ΖΕΙ**· `null` = καμία λαβή.
+  // 🔴 ADR-754 §14 — **το ενεργό κελί, ΟΤΑΝ Η ΛΑΒΗ ΖΕΙ**· `null` = καμία λαβή.
   //
   // Ένα όρισμα, δύο σιωπές: «κανένας δρομέας σε αυτόν τον πίνακα» και «ο χρήστης πληκτρολογεί»
   // (§13.5 — η λαβή σιωπά σε γραφή, Excel parity). Και οι δύο σημαίνουν το ίδιο εδώ, και ο
@@ -326,12 +373,12 @@ export function tableIndicatorProbeAtWorld(
       ? tableDeleteControlAtFrame(geometry.layout, probe.frame, probe.bands, probe.pxPerMm)
       : null;
   // 🔴 ADR-739 §36 — **ΜΙΑ** ανάλυση της επιλογής, **δύο** καταναλωτές: το ορθογώνιο που
-  // πιάνεται (`range-move`) και η πηγή της λαβής (ADR-754 §15). Εδώ έγραφε
+  // πιάνεται (`range-move`) και η πηγή της λαβής (ADR-754 §14). Εδώ έγραφε
   // `activeTableRange(...)?.rectMm ?? null` μέσα στην κλήση· με δεύτερο καταναλωτή, η ίδια
   // γραμμή θα έτρεχε **δύο φορές ανά κίνηση ποντικιού** — και το `resolveTableSelectionBounds`
   // κουμπώνει σε συγχωνεύσεις, δηλαδή δεν είναι φθηνό.
   const range = activeTableRange(entity, geometry, selection);
-  // 🔴 ADR-754 §15 — **ο ΕΝΑΣ δρόμος**: η ίδια `tableFillSourceBounds` που ρωτούν ο ζωγράφος
+  // 🔴 ADR-754 §14 — **ο ΕΝΑΣ δρόμος**: η ίδια `tableFillSourceBounds` που ρωτούν ο ζωγράφος
   // και ο φρουρός του πατήματος, η ίδια `tableFillHandleHitAtFrame` που ρωτά το πάτημα. Ο
   // χρήστης δείχνει με τον δείκτη **αυτό που θα πιάσει**.
   const fill = fillAnchor
@@ -362,6 +409,16 @@ export function tableIndicatorProbeAtWorld(
     ),
     insert,
     remove,
+    // 🔴 §43 — **πέμπτο κανάλι της ίδιας σάρωσης**: το τετραγωνάκι της γωνίας κάτω από το χέρι.
+    //
+    // Μόνο σε λειτουργία πίνακα, με τον **ίδιο** φύλακα και για τον ίδιο λόγο με το `hit` από
+    // πάνω: σε απλή επιλογή δεν υπάρχουν ζώνες, άρα δεν υπάρχει ούτε γωνία να φωτιστεί.
+    //
+    // ⚠️ Δεν είναι δεύτερη σάρωση: το `probe.frame`/`probe.bands` έχουν ήδη υπολογιστεί μία
+    // φορά παραπάνω, και η ερώτηση είναι μια σύγκριση ορθογωνίου — δες
+    // `isTableSelectAllCornerAtFrame`.
+    selectAll:
+      mode === 'table-mode' && isTableSelectAllCornerAtFrame(probe.frame, probe.bands),
   };
 }
 
@@ -375,6 +432,14 @@ export interface TableIndicatorProbe {
   readonly insert: TableInsertControlHit | null;
   /** §42 — ποιο ⊖ διαγραφής ζωγραφίζεται και αν πατιέται· `null` = κανένα. */
   readonly remove: TableDeleteControlHit | null;
+  /**
+   * §43 — στέκεται το χέρι πάνω στο τετραγωνάκι «επιλογή όλων»;
+   *
+   * **Σκέτο `boolean`** και όχι αντικείμενο, σε αντίθεση με τα τέσσερα από πάνω: η γωνία είναι
+   * **μία** και δεν έχει ούτε ταυτότητα (ποια;) ούτε φάση (πατιέται;). Ένα αντικείμενο εδώ θα
+   * ήταν σχήμα που υπόσχεται διακρίσεις οι οποίες δεν υπάρχουν.
+   */
+  readonly selectAll: boolean;
 }
 
 /**
@@ -382,7 +447,13 @@ export interface TableIndicatorProbe {
  * αντικείμενο ώστε η συχνότερη διαδρομή (ποντίκι εκτός πίνακα) να μην κατανέμει μνήμη 60 φορές
  * το δευτερόλεπτο.
  */
-const EMPTY_PROBE: TableIndicatorProbe = { hit: null, cursor: null, insert: null, remove: null };
+const EMPTY_PROBE: TableIndicatorProbe = {
+  hit: null,
+  cursor: null,
+  insert: null,
+  remove: null,
+  selectAll: false,
+};
 
 /** Σε ποια υποδιαίρεση ζώνης έπεσε το συμβάν· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */
 function indicatorHitAt(

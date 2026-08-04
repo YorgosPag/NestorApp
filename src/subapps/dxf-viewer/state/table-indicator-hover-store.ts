@@ -44,10 +44,31 @@ import { createExternalStore } from '../stores/createExternalStore';
 import { markSystemsDirty } from '../rendering/core/frame-scheduler-api';
 import type { TableIndicatorHit } from '../bim/table/table-indicator-geometry';
 
-/** Η υποδιαίρεση κάτω από τον δείκτη, μαζί με τον πίνακα στον οποίο ανήκει. */
+/**
+ * 🔴 ADR-739 §43 — **ΠΟΙΟ ΚΟΜΜΑΤΙ ΤΟΥ ΔΕΙΚΤΗ** είναι κάτω από το ποντίκι.
+ *
+ * ## Γιατί το πεδίο έπαψε να είναι σκέτο `TableIndicatorHit`
+ * Μέχρι το §43 ο δείκτης είχε **μόνο** υποδιαιρέσεις άξονα, οπότε «ποιο κομμάτι;» και «ποια
+ * υποδιαίρεση;» ήταν η ίδια ερώτηση. Με το κουμπί της γωνίας δεν είναι πια: η γωνία φωτίζεται
+ * με τον **ίδιο** κανόνα hover (§30) αλλά **δεν είναι άξονας** — δες την κεφαλίδα του
+ * `table-select-all-corner` για το τι κοστίζει ένα `{ axis: 'corner' }`.
+ *
+ * 🔑 **Και γιατί ΔΕΝ έγινε πέμπτο store.** Τα τέσσερα αδέλφια (`insert`, `delete`, hover,
+ * δείκτης ΟΣ) έχουν ήδη ταυτόσημο σκελετό — ένα πέμπτο με φορτίο **μόνο** ένα `entityId` θα
+ * ήταν sibling clone που το CHECK 3.28 (jscpd, N.18) πιάνει, και θα ήταν και **λάθος τοποθεσία**:
+ * η γωνία δεν είναι νέο χειριστήριο με δικό του κύκλο ζωής, είναι το τρίτο κομμάτι του **ίδιου**
+ * δείκτη. Ένα πεδίο που διαβάζουν οι ίδιοι δύο, στο ίδιο καρέ.
+ */
+export type TableIndicatorHoverTarget =
+  /** Ένα γράμμα στήλης ή ένας αριθμός γραμμής (§30). */
+  | { readonly kind: 'tick'; readonly hit: TableIndicatorHit }
+  /** Το τετραγωνάκι της συμβολής — το κουμπί «επιλογή όλων» (§43). */
+  | { readonly kind: 'select-all' };
+
+/** Το κομμάτι του δείκτη κάτω από το ποντίκι, μαζί με τον πίνακα στον οποίο ανήκει. */
 export interface TableIndicatorHoverState {
   readonly entityId: string;
-  readonly hit: TableIndicatorHit;
+  readonly target: TableIndicatorHoverTarget;
 }
 
 /**
@@ -59,15 +80,22 @@ const DXF_CANVAS_SYSTEM_ID = 'dxf-canvas';
 
 const store = createExternalStore<TableIndicatorHoverState | null>(null);
 
-/** Η ταυτότητα της υποδιαίρεσης, ανεξάρτητα από άξονα — η **μία** έκφραση της σύγκρισης. */
-function tickIdOf(hit: TableIndicatorHit): string {
-  return hit.axis === 'column' ? hit.colId : hit.rowId;
+/**
+ * Η ταυτότητα του κομματιού, ανεξάρτητα από είδος — η **μία** έκφραση της σύγκρισης.
+ *
+ * Η γωνία είναι **μία** ανά πίνακα, άρα σταθερή ταυτότητα: το `entityId` του καλούντος αρκεί
+ * για να ξεχωρίσει δύο πίνακες στην ίδια σκηνή. Το πρόθεμα κρατά το χώρο ονομάτων ξένο προς
+ * κάθε `colId`/`rowId` που θα μπορούσε να λέγεται τυχαία το ίδιο.
+ */
+function targetIdOf(target: TableIndicatorHoverTarget): string {
+  if (target.kind === 'select-all') return 'select-all';
+  return target.hit.axis === 'column' ? `col:${target.hit.colId}` : `row:${target.hit.rowId}`;
 }
 
-/** Ίδια υποδιαίρεση του ίδιου πίνακα; Δες την κεφαλίδα: κατά **ταυτότητα**, ποτέ κατά αναφορά. */
+/** Ίδιο κομμάτι του ίδιου πίνακα; Δες την κεφαλίδα: κατά **ταυτότητα**, ποτέ κατά αναφορά. */
 function sameHover(a: TableIndicatorHoverState | null, b: TableIndicatorHoverState | null): boolean {
   if (a === null || b === null) return a === b;
-  return a.entityId === b.entityId && a.hit.axis === b.hit.axis && tickIdOf(a.hit) === tickIdOf(b.hit);
+  return a.entityId === b.entityId && targetIdOf(a.target) === targetIdOf(b.target);
 }
 
 /** Καθαρή ανάγνωση — ο getter που καλεί ο `TableRenderer` τη στιγμή του καρέ. */

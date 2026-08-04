@@ -58,6 +58,8 @@ import {
 // γεννήθηκε· η ποσότητα είναι του **ΧΕΙΡΙΣΤΗΡΙΟΥ**, όχι της πράξης. Ένας δεύτερος αριθμός εδώ
 // θα σήμαινε δύο δίσκους που μοιάζουν ίδιοι μέχρι τη μέρα που κάποιος αλλάξει τον έναν.
 import { TABLE_INSERT_CONTROL_RADIUS_PX } from './table-insert-control';
+// 🔴 §42 — το **ύψος κεφαλαίου** της ετικέτας ζώνης: το φράγμα του άξονα των **γραμμών**.
+import { TABLE_INDICATOR } from '../../config/color-config';
 import type { TableFramePoint } from '../../types/table-entity';
 import type { TableLayout, TableRectMm } from './table-layout-types';
 
@@ -107,20 +109,52 @@ export interface TableDeleteControlHit {
  *     μισό πλάτος ≥ κενό + διάμετρος + μισή ετικέτα
  *     ⇒ πλάτος ≥ 2 · (inset + 2·radius + ετικέτα/2)
  *
- * Η **ετικέτα** δεν μετριέται εδώ (καθαρή γεωμετρία, μηδέν context καμβά): φράσσεται από το
- * **πάχος της ζώνης**, που είναι η ήδη υπάρχουσα δήλωση του έργου για «πόσο τόπο θέλει μια
- * ετικέτα άξονα» — το `rowBandPx` είναι ρητά διαστασιολογημένο ώστε να **χωρά τετραψήφια**.
+ * Η **ετικέτα** δεν μετριέται εδώ (καθαρή γεωμετρία, μηδέν context καμβά) — φράσσεται, και το
+ * φράγμα είναι **διαφορετικό ανά άξονα**: δες {@link labelExtentAlongAxisMm}.
  *
- * ⚠️ Είναι **συντηρητικό για τις στήλες** (τα γράμματα είναι στενότερα από τετραψήφιο αριθμό)
- * και αυτό είναι η **σωστή κατεύθυνση**: σε αμφισβήτηση κρύβουμε το ⊖ αντί να σκεπάσουμε την
- * ταυτότητα της στήλης ακριβώς τη στιγμή που ο χρήστης πάει να τη σβήσει. Ίδια στάση με το
- * «σε αμφισβήτηση νικά η λαβή» του §27.16 Ε4. Χαμένος δρόμος δεν υπάρχει: το δεξί κλικ στη
- * ζώνη δουλεύει ούτως ή άλλως.
+ * ⚠️ Είναι **συντηρητικό** και αυτό είναι η **σωστή κατεύθυνση**: σε αμφισβήτηση κρύβουμε το ⊖
+ * αντί να σκεπάσουμε την ταυτότητα του άξονα ακριβώς τη στιγμή που ο χρήστης πάει να τον
+ * σβήσει. Ίδια στάση με το «σε αμφισβήτηση νικά η λαβή» του §27.16 Ε4. Χαμένος δρόμος δεν
+ * υπάρχει: το δεξί κλικ στη ζώνη δουλεύει ούτως ή άλλως.
+ *
+ * @param labelAlongMm το άνοιγμα της ετικέτας **κατά μήκος του άξονα** — όχι το πάχος της ζώνης.
  */
-export function tableDeleteControlMinTickMm(bandMm: number, pxPerMm: number): number {
+export function tableDeleteControlMinTickMm(labelAlongMm: number, pxPerMm: number): number {
   const insetMm = TABLE_DELETE_CONTROL_INSET_PX / pxPerMm;
   const radiusMm = TABLE_DELETE_CONTROL_RADIUS_PX / pxPerMm;
-  return 2 * (insetMm + 2 * radiusMm + bandMm / 2);
+  return 2 * (insetMm + 2 * radiusMm + labelAlongMm / 2);
+}
+
+/**
+ * 🔴 **ΠΟΣΟ ΠΙΑΝΕΙ Η ΕΤΙΚΕΤΑ ΚΑΤΑ ΜΗΚΟΣ ΤΟΥ ΑΞΟΝΑ** — και οι δύο απαντήσεις **δεν** είναι η ίδια.
+ *
+ * ## Το ελάττωμα που γέννησε αυτή τη συνάρτηση (Giorgio, 04/08, ζωντανά)
+ * Ο ιδιοκτήτης ανέφερε «*στις στήλες εμφανίζεται, στις γραμμές όχι*» και αμέσως μετά το
+ * διόρθωσε — **εμφανιζόταν, απλώς ήθελε περισσότερο zoom**. Η πρώτη εντύπωση ήταν το εύρημα:
+ * το κατώφλι ζητούσε από τις γραμμές **17 px παραπάνω** από όσο δικαιολογείται.
+ *
+ * Η αιτία ήταν **σημασιολογική, όχι αριθμητική**: το φράγμα ήταν το **πάχος της ζώνης** (28 px,
+ * ρητά διαστασιολογημένο ώστε να «χωρά τετραψήφια») και για τις **στήλες** είναι σωστό — το
+ * γράμμα `AB` απλώνεται κατά **πλάτος** πάνω στον άξονα των στηλών. Στις **γραμμές** όμως ο
+ * αριθμός `12` απλώνεται πάνω στον άξονα κατά **ΥΨΟΣ**: το πλάτος του πέφτει **κάθετα** στον
+ * άξονα, εκεί που δεν υπάρχει δίσκος να το σκεπάσει. Δηλαδή εφαρμοζόταν σημασιολογία **πλάτους
+ * σε ύψος** — ένα φράγμα που δεν φρουρούσε τίποτα, με κόστος ορατότητας.
+ *
+ * | άξονας | η ετικέτα εκτείνεται κατά… | φράγμα |
+ * |---|---|---|
+ * | **στήλη** | **πλάτος** (`A`, `AB`) | πάχος ζώνης — «χωρά τετραψήφια» |
+ * | **γραμμή** | **ύψος** (`12`, `100`) | {@link TABLE_INDICATOR.fontPx} — το ύψος κεφαλαίου |
+ *
+ * 🔑 Ο ζωγράφος τα γράφει και τα δύο με το **ίδιο** `fontPx`, κεντραρισμένα
+ * (`stamp-table-indicator`: `textAlign: 'center'`, `textBaseline: 'middle'`) — άρα το ύψος
+ * είναι **γνωστό ακριβώς**, ενώ το πλάτος όχι· γι' αυτό το ένα φράσσεται και το άλλο μετριέται.
+ */
+function labelExtentAlongAxisMm(
+  axis: 'column' | 'row',
+  bands: TableIndicatorBandsMm,
+  pxPerMm: number,
+): number {
+  return axis === 'column' ? bands.columnBandMm : TABLE_INDICATOR.fontPx / pxPerMm;
 }
 
 /**
@@ -153,7 +187,10 @@ export function tableDeleteControlAtFrame(
   if (!span) return null;
 
   const bandMm = hit.axis === 'column' ? bands.columnBandMm : bands.rowBandMm;
-  if (span.sizeMm < tableDeleteControlMinTickMm(bandMm, pxPerMm)) return null;
+  // 🔴 **Το φράγμα της ετικέτας είναι ΑΝΑ ΑΞΟΝΑ** — δες {@link labelExtentAlongAxisMm} για το
+  // ελάττωμα που το γέννησε (ο ιδιοκτήτης το μέτρησε ζωντανά: «στις γραμμές ήθελε zoom»).
+  const labelAlongMm = labelExtentAlongAxisMm(hit.axis, bands, pxPerMm);
+  if (span.sizeMm < tableDeleteControlMinTickMm(labelAlongMm, pxPerMm)) return null;
 
   const insetMm = TABLE_DELETE_CONTROL_INSET_PX / pxPerMm;
   const radiusMm = TABLE_DELETE_CONTROL_RADIUS_PX / pxPerMm;
