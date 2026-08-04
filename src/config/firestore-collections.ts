@@ -77,6 +77,10 @@ export const COLLECTIONS = {
   // 🔗 ASSOCIATIONS (ADR-032: Linking Model - ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
   CONTACT_LINKS: process.env.NEXT_PUBLIC_CONTACT_LINKS_COLLECTION || 'contact_links',
   FILE_LINKS: process.env.NEXT_PUBLIC_FILE_LINKS_COLLECTION || 'file_links',
+  // ADR-745 Φ3β — provenance ανά κελί πινακίδας: «αυτό το κελί αυτού του σχεδίου, εγκεκριμένο
+  // από αυτόν τον άνθρωπο, δείχνει σε αυτή την οντότητα». Ποτέ γραμμένο χωρίς ρητό κλικ (§5.1).
+  TITLE_BLOCK_BINDINGS:
+    process.env.NEXT_PUBLIC_TITLE_BLOCK_BINDINGS_COLLECTION || 'title_block_bindings',
 
   // 📋 FORMS & SURVEYS
   FORMS: process.env.NEXT_PUBLIC_FORMS_COLLECTION || 'forms',
