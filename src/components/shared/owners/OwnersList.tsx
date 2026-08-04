@@ -51,6 +51,15 @@ export interface OwnersListProps {
   allowEmpty?: boolean;
   /** Async guard before removal — return false to cancel. Used for dependency checks. */
   onBeforeRemove?: (index: number, owner: PropertyOwnerEntry) => Promise<boolean>;
+  /**
+   * Domain-specific control rendered inside each row, between the percentage input
+   * and the remove button. Return `null` to render nothing for that row.
+   *
+   * Deliberately a slot and **not** a field on `PropertyOwnerEntry`: the landowner
+   * acquisition status (ADR-745 Φ3α) must not leak into the sales domain, where the
+   * same entry type describes buyers. This component stays domain-neutral.
+   */
+  renderRowExtra?: (owner: PropertyOwnerEntry, index: number) => React.ReactNode;
   /** Context-aware labels (override defaults for different domains) */
   labels?: {
     /** Label for single owner (default: "Αγοραστής") */
@@ -99,6 +108,7 @@ export function OwnersList({
   readOnly = false,
   allowEmpty = false,
   onBeforeRemove,
+  renderRowExtra,
   labels,
 }: OwnersListProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
@@ -258,6 +268,12 @@ export function OwnersList({
                   className="text-right text-sm"
                   disabled={disabled || owners.length === 1}
                 />
+              </section>
+            )}
+
+            {renderRowExtra && (
+              <section className="shrink-0">
+                {renderRowExtra(owner, index)}
               </section>
             )}
 

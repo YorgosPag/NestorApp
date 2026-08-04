@@ -43,6 +43,15 @@ interface LandownerRemovalDialogProps {
   blockingDeps: UnlinkDependency[];
   warningDeps: UnlinkDependency[];
   onConfirm: () => void;
+  /**
+   * Extra caller-supplied note, shown in **any** variant.
+   *
+   * Exists because the `warning` variant carries its own fixed note about the
+   * ownership table — reusing that variant to warn about something else (e.g. a
+   * landowner whose acquisition is `secured`, ADR-745 Φ3α) would print the wrong
+   * sentence. The caller passes finished text; this component stays domain-neutral.
+   */
+  extraNote?: string;
 }
 
 // ============================================================================
@@ -57,6 +66,7 @@ export function LandownerRemovalDialog({
   blockingDeps,
   warningDeps,
   onConfirm,
+  extraNote,
 }: LandownerRemovalDialogProps) {
   const { t } = useTranslation(COMMON_NAMESPACES);
   const iconSizes = useIconSizes();
@@ -76,6 +86,12 @@ export function LandownerRemovalDialog({
           <AlertDialogDescription asChild>
             <section className="space-y-3">
               <p>{getBodyText(variant, contactName, rg)}</p>
+
+              {extraNote && (
+                <p className="text-sm text-[hsl(var(--text-warning))]">
+                  {extraNote}
+                </p>
+              )}
 
               {/* Dependencies list */}
               {(variant === 'warning' || variant === 'blocked') && (

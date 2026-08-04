@@ -24,7 +24,7 @@ export const FIRESTORE_SCHEMA_MAP: Record<string, CollectionSchema> = {
       progress: 'number (0-100)',
       type: 'string?',
       // ADR-244: Οικοπεδούχοι — αποθηκεύονται ΜΕΣΑ στο project document
-      'landowners': 'array? (οικοπεδούχοι — κάθε στοιχείο: {contactId, name, landOwnershipPct, allocatedShares})',
+      'landowners': 'array? (οικοπεδούχοι — κάθε στοιχείο: {contactId, name, landOwnershipPct, allocatedShares, acquisitionStatus?}) — acquisitionStatus: prospective|under_contract|secured|withdrawn· ΑΠΟΥΣΙΑ σημαίνει «δεν δηλώθηκε», ΟΧΙ prospective (ADR-745 Φ3α)',
       'bartexPercentage': 'number? (ποσοστό αντιπαροχής %)',
       'landownerContactIds': 'string[]? (IDs οικοπεδούχων για queries)',
       linkedCompanyId: 'string? (ID εταιρείας-εργολάβου)',

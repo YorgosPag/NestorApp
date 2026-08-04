@@ -365,7 +365,9 @@ const PROJECT_COLLECTION_DEFS: Record<string, CollectionDef> = {
     label: 'landowners',
     keyBy: 'contactId',
     labelFields: ['name'],
-    trackSubFields: ['name', 'landOwnershipPct', 'allocatedShares'],
+    // ADR-745 Φ3α: χωρίς το `acquisitionStatus` εδώ, το audit trail δεν καταγράφει
+    // ΠΟΤΕ ποιος άλλαξε στάδιο κτήσης — σιωπηλό κενό ιστορικού, χωρίς σφάλμα.
+    trackSubFields: ['name', 'landOwnershipPct', 'allocatedShares', 'acquisitionStatus'],
   },
 };
 
