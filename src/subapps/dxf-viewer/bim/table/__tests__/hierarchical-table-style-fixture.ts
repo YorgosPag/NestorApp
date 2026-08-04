@@ -33,6 +33,25 @@ import { BUILTIN_TABLE_STYLES, BUILTIN_TABLE_STYLE_IDS } from '../table-style-pr
 /** Το γέμισμα κεφαλίδας που είχε ιστορικά το `standard` — και που τα tests χρειάζονται. */
 export const FIXTURE_HEADER_FILL_HEX = '#EDEDED';
 
+/**
+ * 🔴 Το **ρητό** χρώμα κειμένου του δείγματος — ADR-739 §38.
+ *
+ * ## Η διαρροή που απέδειξε ότι η προειδοποίηση από πάνω δεν ήταν εκτελεσμένη
+ * Η κεφαλίδα αυτού του αρχείου έγραφε ήδη «οι τιμές είναι **παγωμένες επίτηδες**… αν το
+ * `standard` αλλάξει ξανά, αυτό το αρχείο **δεν** πρέπει να το ακολουθήσει». Ίσχυε όμως μόνο
+ * για ό,τι δηλωνόταν **ρητά**: το `textColorHex` περνούσε αυτούσιο από το `{ ...data }`, άρα
+ * ήταν κρυφό αντίγραφο του preset — ακριβώς αυτό που η προειδοποίηση απαγόρευε.
+ *
+ * Τη στιγμή που το `standard` πήρε αυτόματο μελάνι, **επτά** tests του
+ * `table-drawing-colors.test.ts` κοκκίνισαν — και για **λάθος λόγο**: δεν δοκιμάζουν το preset,
+ * δοκιμάζουν τι μαζεύει η ζώνη «Χρώματα του σχεδίου» όταν οι κλάσεις διαφέρουν. Ένα δίχτυ
+ * ασφαλείας που σπάει επειδή άλλαξε κάτι που δεν παρακολουθεί είναι θόρυβος, όχι σήμα.
+ *
+ * Η τιμή είναι η ιστορική (`#111111`) και μένει **ρητή**: αν αλλάξει ξανά το preset, εδώ δεν
+ * αλλάζει τίποτα.
+ */
+export const FIXTURE_TEXT_HEX = '#111111';
+
 export const FIXTURE_TITLE_TEXT_MM = 4;
 export const FIXTURE_HEADER_TEXT_MM = 3;
 export const FIXTURE_DATA_TEXT_MM = 2.8;
@@ -54,15 +73,28 @@ export function hierarchicalTableStyle(): TableStyle {
   return {
     ...base,
     rowClasses: {
-      title: { ...title, textHeightMm: FIXTURE_TITLE_TEXT_MM, bold: true, align: 'MC' },
+      title: {
+        ...title,
+        textHeightMm: FIXTURE_TITLE_TEXT_MM,
+        textColorHex: FIXTURE_TEXT_HEX,
+        bold: true,
+        align: 'MC',
+      },
       header: {
         ...header,
         textHeightMm: FIXTURE_HEADER_TEXT_MM,
+        textColorHex: FIXTURE_TEXT_HEX,
         bold: true,
         align: 'MC',
         fillColorHex: FIXTURE_HEADER_FILL_HEX,
       },
-      data: { ...data, textHeightMm: FIXTURE_DATA_TEXT_MM, bold: false, align: 'ML' },
+      data: {
+        ...data,
+        textHeightMm: FIXTURE_DATA_TEXT_MM,
+        textColorHex: FIXTURE_TEXT_HEX,
+        bold: false,
+        align: 'ML',
+      },
     },
   };
 }

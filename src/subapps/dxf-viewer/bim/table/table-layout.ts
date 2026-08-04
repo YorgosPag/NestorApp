@@ -46,6 +46,7 @@ import type { TableStyle } from './table-style';
 import { measureTable, resolveTableTextMeasurer } from './table-layout-measure';
 import { columnEdgesMm, placeCells, placeColumns, placeRows, rowEdgesMm } from './table-layout-place';
 import { buildTableBorders } from './table-layout-borders';
+import { TABLE_PAPER_HEX } from './table-ink';
 import type { TableLayout, TableLayoutOptions } from './table-layout-types';
 
 /** Άδειος πίνακας — μηδενικές διαστάσεις, καμία γεωμετρία. Ποτέ `null`. */
@@ -80,7 +81,20 @@ export function layoutTable(
     rows: placeRows(model, measurement.rowHeightsMm, yEdges),
     // Ο ΙΔΙΟΣ μετρητής που έκρινε τα πλάτη στηλών κρίνει και την περικοπή (Φ.Δ βήμα 5) —
     // αλλιώς «χωράει;» και «κόβεται;» απαντιούνται από δύο διαφορετικά όργανα.
-    cells: placeCells(model, style, measurement, xEdges, yEdges, resolveTableTextMeasurer(options)),
+    //
+    // 🔴 ADR-739 §38 — η **επιφάνεια** μπαίνει εδώ και πουθενά αλλού: το `placeCells` είναι το
+    // σημείο όπου το αυτόματο μελάνι (`AUTOMATIC_TABLE_INK`) γίνεται πραγματικό hex. Η
+    // προεπιλογή είναι το **χαρτί** — δες `TableLayoutOptions.surfaceHex` για το γιατί η
+    // αποτυχία πρέπει να δείχνει προς τα εκεί.
+    cells: placeCells(
+      model,
+      style,
+      measurement,
+      xEdges,
+      yEdges,
+      resolveTableTextMeasurer(options),
+      options?.surfaceHex ?? TABLE_PAPER_HEX,
+    ),
     borders: buildTableBorders(model, style, measurement.merges, xEdges, yEdges),
   };
 }

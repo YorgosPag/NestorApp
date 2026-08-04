@@ -54,6 +54,7 @@
 
 import type { TextAlign } from '../../bim/structural/detail-sheet/detail-sheet-types';
 import type { TableCellEditTarget } from '../../bim/table/table-cell-edit-session';
+import { tableCellBackdrop } from '../../bim/table/table-ink';
 import { tableCellFont } from '../../rendering/entities/table/stamp-table-layout';
 import type { CellFontBandPx } from './table-cell-text-metrics';
 import {
@@ -189,6 +190,13 @@ export function computeTableCellEditorFrame(params: {
 }): TableCellEditorFrame {
   const { target, pxPerMm, angleRad, resolveBand, backgroundHex } = params;
   const { rectMm, style } = target;
+  // 🔴 ADR-739 §38 — «τι υπάρχει πίσω από το κείμενο του κελιού» είναι **ένας** κανόνας, και ζει
+  // στο `table-ink.ts`. Ήταν γραμμένος εδώ ως `style.fillColorHex ?? backgroundHex` και ο ίδιος
+  // κανόνας χρειάστηκε μετά και από τη διάταξη (το αυτόματο μελάνι ρωτά ακριβώς αυτό). Δύο
+  // σώματα θα ήταν sibling clone — αυτό που πιάνει το CHECK 3.28 ανεξάρτητα ονόματος (N.18) —
+  // και, χειρότερα, δύο σημεία που θα αποκλίνουν στην πρώτη αλλαγή: τότε ο επεξεργαστής θα
+  // υπολόγιζε το μελάνι του πάνω σε **άλλο** φόντο από αυτό που ζωγραφίζει.
+  const backdropHex = tableCellBackdrop(style.fillColorHex, backgroundHex);
 
   // ADR-739 Φ.Ε (Α3) — **ΟΛΑ** τα τυπογραφικά, όχι μόνο τα έντονα: το πεδίο και ο καμβάς
   // μοιράζονται το ίδιο αλφαριθμητικό, άρα κάθε πεδίο που ξεχνιέται εδώ γίνεται αναπήδηση
@@ -239,8 +247,13 @@ export function computeTableCellEditorFrame(params: {
     // Η στοίχιση του κελιού δεν χάνεται· μεταφέρεται στο {@link offsetXPx}, όπου ανήκει:
     // αυτή αποφασίζει προς τα πού μεγαλώνει το κουτί.
     textAlign: growth.expanded ? 'left' : target.hAlign,
+    // 🔴 ADR-739 §38 — το `textColorHex` φτάνει εδώ **ήδη επιλυμένο**: το `placeCells` έχει
+    // σκοτώσει το σεντινέλι πάνω στο `TableCellLayout.style`, με την **ίδια** επιφάνεια που
+    // περνά και εδώ ως `backgroundHex` (και οι δύο διαδρομές διαβάζουν το ζωντανό φόντο του
+    // καμβά). Γι' αυτό δεν υπάρχει δεύτερη επίλυση εδώ — θα υπονοούσε ότι η διάταξη δεν είναι
+    // αξιόπιστη, δηλαδή θα ακύρωνε το επιχείρημα του εγκλωβισμού.
     colorHex: style.textColorHex,
-    backgroundHex: style.fillColorHex ?? backgroundHex,
+    backgroundHex: backdropHex,
   };
 }
 

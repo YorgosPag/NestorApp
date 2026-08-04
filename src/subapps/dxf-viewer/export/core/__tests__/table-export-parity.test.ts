@@ -32,6 +32,8 @@ import type { TableStyle } from '../../../bim/table/table-style';
 import { decomposeTable } from '../table-to-primitives';
 import { alignFromTextEntity } from '../dxf-ascii-text-writer';
 import { hexToTrueColor } from '../../../utils/dxf-true-color';
+import { isAutomaticTableInk } from '../../../bim/table/table-ink';
+import { parseHex } from '../../../config/color-math';
 import { tableUnderlineGeometry } from '../../../bim/table/table-text-decoration';
 import type { TableCell, TableColumn, TableRow } from '../../../types/table';
 import type { TableEdgeEntry } from '../../../types/table-edges';
@@ -249,6 +251,45 @@ describe('ADR-739 Φ1 — τυπογραφία κελιού → οντότητα
     const height = run && 'text' in run ? run.style?.height : undefined;
     expect(height).toBe(exportedText('Α/Α').height);
     expect(height).not.toBe(2.5);
+  });
+});
+
+/**
+ * 🔴 ADR-739 §38 — **ΕΓΚΥΡΟΤΗΤΑ, όχι ισότητα: η ερώτηση που η ισοτιμία ΔΕΝ μπορεί να κάνει.**
+ *
+ * Κάθε test παραπάνω διαβάζει τη διάταξη ως *αναμενόμενο* και τη συγκρίνει με την εξαγωγή.
+ * Αυτό είναι σωστό για τον μεταφραστή — και **δομικά ανίκανο** για το αυτόματο μελάνι: αν το
+ * σεντινέλι διέρρεε, και οι δύο πλευρές θα έλεγαν `'auto'`, η σύγκριση θα ήταν
+ * `'auto' === 'auto'` και ολόκληρο το suite θα έμενε **πράσινο** ενώ κανένα από τα τέσσερα
+ * backends δεν θα ζωγράφιζε σωστά. Ένα test ισοτιμίας δεν μπορεί να πιάσει σφάλμα που είναι
+ * **κοινό** και στις δύο πλευρές.
+ *
+ * Η μόνη ερώτηση που το πιάνει δεν ρωτά «είναι ίδιο;» αλλά «**είναι αυτό χρώμα;**».
+ */
+describe('🔴 ADR-739 §38 — καμία εξαγόμενη οντότητα δεν φοράει σεντινέλι', () => {
+  it('κάθε χρώμα κειμένου είναι πραγματικό hex — και ο DXF writer το δέχεται', () => {
+    expect(texts().length).toBeGreaterThan(0);
+    for (const t of texts()) {
+      expect(t.color).toBeTruthy();
+      expect(isAutomaticTableInk(t.color ?? '')).toBe(false);
+      expect(parseHex(t.color ?? '')).not.toBeNull();
+    }
+  });
+
+  it('🔴 και το ίδιο ισχύει ΜΕΣΑ στη διάταξη — και στα δύο πεδία χρώματος', () => {
+    // Δύο πεδία, όχι ένα: το `TableTextRun.colorHex` το διαβάζει ο ζωγράφος και η εξαγωγή,
+    // το `TableCellLayout.style.textColorHex` ο in-cell επεξεργαστής — που ανοίγει και σε
+    // **κενό** κελί, όπου run δεν υπάρχει καθόλου.
+    for (const cell of LAYOUT.cells) {
+      expect(parseHex(cell.style.textColorHex)).not.toBeNull();
+      if (cell.text) expect(parseHex(cell.text.colorHex)).not.toBeNull();
+    }
+  });
+
+  it('σε ΧΑΡΤΙ το αυτόματο μελάνι είναι μαύρο — όχι το λευκό της οθόνης', () => {
+    // Η εξαγωγή περνά από το `computeTableEntityGeometry` **χωρίς** επιφάνεια ⇒ χαρτί. Αν η
+    // προεπιλογή γύριζε ποτέ στην οθόνη, εδώ θα έβγαινε `#ffffff` σε λευκή σελίδα.
+    expect(exportedText('Α/Α').color).toBe('#000000');
   });
 });
 

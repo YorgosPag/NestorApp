@@ -24,6 +24,7 @@ import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overfl
 import { resolveCellLinkSpans } from './table-cell-link-spans';
 import { tableDiagonalCorners } from './table-cell-diagonal-ops';
 import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
+import { resolveTableCellStyleInk } from './table-ink';
 import type { TableMeasurement } from './table-layout-measure';
 import type {
   TableBorderSegment,
@@ -225,6 +226,12 @@ export function placeCells(
   xEdges: readonly number[],
   yEdges: readonly number[],
   measure: TableTextMeasurer,
+  /**
+   * 🔴 ADR-739 §38 — η επιφάνεια κάτω από τον πίνακα (φόντο καμβά ή χαρτί). **Υποχρεωτική**,
+   * χωρίς προεπιλογή: η μοναδική προεπιλογή ζει στο `layoutTable`, ώστε να μην υπάρχουν δύο
+   * απαντήσεις στο «τι εννοούμε όταν δεν το λέει κανείς».
+   */
+  surfaceHex: string,
 ): TableCellLayout[] {
   const out: TableCellLayout[] = [];
 
@@ -241,7 +248,12 @@ export function placeCells(
         row: row.styleOverride,
         cell: cell?.styleOverride,
       };
-      const cellStyle = resolveCellStyle(rowStyle, overrides);
+      // 🔴 ADR-739 §38 — **εδώ πεθαίνει το σεντινέλι.** Το `AUTOMATIC_TABLE_INK` επιτρέπεται να
+      // ζει μόνο στο στυλ· από αυτή τη γραμμή και κάτω το `textColorHex` είναι εγγυημένα
+      // πραγματικό hex, για **όλα** τα backends. Δες `table-ink.ts` για το γιατί ο εγκλωβισμός
+      // εδώ κάνει τις πέντε σιωπηλές διαρροές (καμβάς, CSS, DXF, PDF, δίσκος) **μη εκφράσιμες**
+      // αντί για «φυλαγμένες».
+      const cellStyle = resolveTableCellStyleInk(resolveCellStyle(rowStyle, overrides), surfaceHex);
       const rect = cellRectMm(xEdges, yEdges, colIndex, rowIndex, span?.colSpan ?? 1, span?.rowSpan ?? 1);
       // Η **σημασιολογική** `TableColumn.align` (επίπεδο 4) κερδίζει μόνο όταν καμία ρητή
       // παράκαμψη δεν έχει άποψη — γι' αυτό δεν μπορεί να μπει στο `resolveCellStyle`: εκεί

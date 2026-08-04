@@ -25,8 +25,11 @@
  *
  * @module subapps/dxf-viewer/ui/components/table-format-toolbar/table-color-menu-selection
  * @see bim/table/table-axis-style-ops.ts — `resolveAxisFormat`, από όπου έρχονται οι σημαίες
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §35
+ * @see bim/table/table-ink.ts — `AUTOMATIC_TABLE_INK`: το **ρητό** αυτόματο, όχι η κληρονομιά
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §35, §38
  */
+
+import { isAutomaticTableInk } from '../../../bim/table/table-ink';
 
 /**
  * Η κατάσταση ενός πεδίου χρώματος κατά μήκος του άξονα, όπως τη διαβάζει το μενού.
@@ -82,10 +85,25 @@ export interface TableAxisColorState {
 export type TableColorMenuSelection =
   /** Μεικτή σειρά — καμία γραμμή ενεργή. Το Figma δείχνει «Mixed» ακριβώς έτσι: τίποτα επιλεγμένο. */
   | { readonly kind: 'mixed' }
-  /** Κληρονομιά από το στυλ — η γραμμή «Αυτόματο». */
+  /** Κληρονομιά από το στυλ — η γραμμή «Από το στυλ». */
   | { readonly kind: 'automatic' }
   /** Ρητά **καμία** βαφή (`null` στο μοντέλο) — η γραμμή «Κανένα γέμισμα». */
   | { readonly kind: 'none' }
+  /**
+   * 🔴 ADR-739 §38 — **ρητά** αυτόματο μελάνι (`AUTOMATIC_TABLE_INK` στο μοντέλο) — η γραμμή
+   * «Αυτόματο».
+   *
+   * ## Γιατί πέμπτο μέλος και όχι επαναχρησιμοποίηση του `'automatic'`
+   * Τα δύο μοιάζουν στα ελληνικά και είναι **αντίθετα** στη σημασιολογία: το `'automatic'`
+   * σημαίνει «**δεν** το είπε ο χρήστης, ρώτα το στυλ» (το πεδίο **λείπει**), ενώ αυτό σημαίνει
+   * «ο χρήστης **το ζήτησε ρητά**» (το πεδίο **υπάρχει** και κρατά το σεντινέλι). Ένα μενού που
+   * τα συγχέει θα έδειχνε «κληρονομεί» σε άξονα που ο χρήστης άλλαξε — δηλαδή θα έλεγε ότι δεν
+   * πήρε μια απόφαση που πήρε, το ίδιο ακριβώς ελάττωμα που η Φ4β διόρθωσε για το «Κανένα».
+   *
+   * Χωρίς αυτό, το σεντινέλι θα έπεφτε στο `'color'` με `hex: 'auto'` και **κανένα** δείγμα δεν
+   * θα φορούσε πλαίσιο: το μενού θα φαινόταν «χωρίς επιλογή» σε κατάσταση απολύτως ορισμένη.
+   */
+  | { readonly kind: 'autoContrast' }
   /** Ρητό χρώμα — το δείγμα με αυτό το hex φοράει το πλαίσιο. */
   | { readonly kind: 'color'; readonly hex: string };
 
@@ -98,11 +116,15 @@ export type TableColorMenuSelection =
  *    αυτή είναι η ερώτηση που το Excel δεν απαντά ποτέ.
  * 3. Το `current` **τελευταίο**, γιατί μόνο τότε ξέρουμε ότι το `undefined` του σημαίνει
  *    «ρητά κανένα» και όχι κάτι από τα προηγούμενα δύο.
+ * 4. 🔴 ADR-739 §38 — και **μέσα** στο ρητό, το σεντινέλι πριν από το hex: το
+ *    {@link AUTOMATIC_TABLE_INK} δεν είναι `#rrggbb` και δεν αντιστοιχεί σε κανένα δείγμα.
  */
 export function resolveColorMenuSelection(state: TableAxisColorState): TableColorMenuSelection {
   if (state.mixed) return { kind: 'mixed' };
   if (!state.explicit) return { kind: 'automatic' };
-  return state.current === undefined ? { kind: 'none' } : { kind: 'color', hex: state.current };
+  if (state.current === undefined) return { kind: 'none' };
+  if (isAutomaticTableInk(state.current)) return { kind: 'autoContrast' };
+  return { kind: 'color', hex: state.current };
 }
 
 /**

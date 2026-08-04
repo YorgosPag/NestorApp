@@ -45,6 +45,7 @@ import type {
 } from '../../types/table-entity';
 import type { TableLayout } from './table-layout-types';
 import { layoutTable } from './table-layout';
+import { liveTableSurfaceHex, TABLE_PAPER_HEX } from './table-ink';
 import { resolveTableModel } from './table-model-helpers';
 import type { TableStyle } from './table-style';
 import { getTableStyleRegistry } from './table-style-registry';
@@ -140,24 +141,44 @@ export function tableWorldToFrame(
 // Απομνημονευμένη διάταξη
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** `TableModel` → (styleId → διάταξη). Το μοντέλο είναι immutable ⇒ ταυτότητα = έκδοση. */
+/**
+ * `TableModel` → (κλειδί διάταξης → διάταξη). Το μοντέλο είναι immutable ⇒ ταυτότητα = έκδοση.
+ *
+ * 🔴 ADR-739 §38 — το κλειδί είναι `styleId|surfaceHex`, **όχι** σκέτο `styleId`. Από τη στιγμή
+ * που το αυτόματο μελάνι επιλύεται μέσα στη διάταξη, η διάταξη **εξαρτάται από το θέμα** — και
+ * μια μνήμη με κλειδί μόνο το στυλ θα πάγωνε το χρώμα για **όλη τη ζωή του μοντέλου**: αλλαγή
+ * θέματος ⇒ ίδιο κλειδί ⇒ cache hit ⇒ το παλιό μελάνι για πάντα.
+ *
+ * ⚠️ Το bitmap cache **δεν** είναι το πρόβλημα εδώ: εκείνο ακυρώνεται σωστά σε αλλαγή φόντου
+ * (`useDxfCanvasCacheInvalidation`, ADR-608). Θα ξαναζωγράφιζε λοιπόν πιστά — τα **μπαγιάτικα**
+ * χρώματα. Δύο μνήμες, μία μόνο ακυρωνόταν.
+ */
 const LAYOUT_CACHE = new WeakMap<TableModel, Map<string, TableLayout>>();
 
 /**
- * Η διάταξη ενός μοντέλου με δεδομένο στυλ, υπολογισμένη **το πολύ μία φορά**. Ίδιο
- * μοντέλο + ίδιο στυλ ⇒ **η ίδια αναφορά** (προϋπόθεση για να μπορεί ο ζωγράφος να
- * συγκρίνει με `===` χωρίς βαθιά σύγκριση).
+ * Η διάταξη ενός μοντέλου με δεδομένο στυλ **και επιφάνεια**, υπολογισμένη **το πολύ μία φορά**.
+ * Ίδιες είσοδοι ⇒ **η ίδια αναφορά** (προϋπόθεση για να μπορεί ο ζωγράφος να συγκρίνει με `===`
+ * χωρίς βαθιά σύγκριση).
+ *
+ * Οθόνη και εξαγωγή συνυπάρχουν ως **δύο** εγγραφές του ίδιου μοντέλου — και αυτό είναι το
+ * ζητούμενο, όχι σπατάλη: η μία κρατά λευκό μελάνι για τον σκούρο καμβά, η άλλη μαύρο για το
+ * χαρτί, και καμία δεν ακυρώνει την άλλη κατά την εκτύπωση.
  */
-export function resolveTableLayout(model: TableModel, style: TableStyle): TableLayout {
-  let byStyle = LAYOUT_CACHE.get(model);
-  if (!byStyle) {
-    byStyle = new Map<string, TableLayout>();
-    LAYOUT_CACHE.set(model, byStyle);
+export function resolveTableLayout(
+  model: TableModel,
+  style: TableStyle,
+  surfaceHex: string,
+): TableLayout {
+  let byKey = LAYOUT_CACHE.get(model);
+  if (!byKey) {
+    byKey = new Map<string, TableLayout>();
+    LAYOUT_CACHE.set(model, byKey);
   }
-  const cached = byStyle.get(style.id);
+  const key = `${style.id}|${surfaceHex}`;
+  const cached = byKey.get(key);
   if (cached) return cached;
-  const layout = layoutTable(model, style);
-  byStyle.set(style.id, layout);
+  const layout = layoutTable(model, style, { surfaceHex });
+  byKey.set(key, layout);
   return layout;
 }
 
@@ -197,11 +218,17 @@ export function computeTableEntityGeometry(
   entity: TableEntity,
   drawingScale: number,
   sceneUnits: SceneUnits = 'mm',
+  /**
+   * 🔴 ADR-739 §38 — η επιφάνεια κάτω από τον πίνακα. **Προεπιλογή: χαρτί**, γιατί αυτή είναι η
+   * μη-ζωντανή εκδοχή — την καλεί η **εξαγωγή** (`table-to-primitives.ts`), που καταλήγει σε
+   * λευκή σελίδα. Η οθόνη περνά από το {@link computeTableEntityGeometryLive}.
+   */
+  surfaceHex: string = TABLE_PAPER_HEX,
 ): TableEntityGeometry {
   const style = resolveTableStyle(entity);
   // Το entity κρατά απλό JSON (Φ.Δ Λύση Α)· ο `Map` είναι παράγωγος και απομνημονευμένος,
   // οπότε οι δύο WeakMaps αλυσιδώνονται: ίδιο persisted ⇒ ίδιο μοντέλο ⇒ ίδια διάταξη.
-  const layout = resolveTableLayout(resolveTableModel(entity.model), style);
+  const layout = resolveTableLayout(resolveTableModel(entity.model), style, surfaceHex);
   const mmToWorld = tableMmToWorld(drawingScale, sceneUnits);
 
   // TL → TR → BR → BL (δεξιόστροφα στο πλαίσιο του χαρτιού· η αναστροφή y τα κάνει
@@ -223,7 +250,18 @@ export function computeTableEntityGeometry(
   };
 }
 
-/** Με το ζωντανό `drawingScale` SSoT (getter τη στιγμή της κλήσης, ADR-040). */
+/**
+ * Με το ζωντανό `drawingScale` SSoT (getter τη στιγμή της κλήσης, ADR-040).
+ *
+ * 🔴 ADR-739 §38 — «ζωντανό» σημαίνει **και** ζωντανή επιφάνεια ({@link liveTableSurfaceHex}),
+ * όχι μόνο ζωντανή κλίμακα. Δεν είναι διακοσμητικό: από αυτή τη διαδρομή περνούν **όλοι** οι
+ * καταναλωτές οθόνης — ο ζωγράφος, το hit-test, οι λαβές και ο **in-cell επεξεργαστής**. Αν η
+ * προεπιλογή έμενε «χαρτί», το `<textarea>` θα άνοιγε με **μαύρα** γράμματα πάνω στο σκούρο
+ * κελί που ο καμβάς μόλις ζωγράφισε λευκά — δηλαδή ακριβώς η αναπήδηση που η Φ.Δ βήμα 3 υπάρχει
+ * για να μην υπάρχει, σε χρώμα αντί σε θέση.
+ *
+ * Μία ανάγνωση `getComputedStyle` ανά κλήση — ποτέ ανά κελί (δες {@link liveTableSurfaceHex}).
+ */
 export function computeTableEntityGeometryLive(
   entity: TableEntity,
   sceneUnits: SceneUnits = 'mm',
@@ -232,6 +270,7 @@ export function computeTableEntityGeometryLive(
     entity,
     useDrawingScaleStore.getState().drawingScale,
     sceneUnits,
+    liveTableSurfaceHex(),
   );
 }
 

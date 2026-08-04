@@ -22,6 +22,8 @@ import {
   DETAIL_SHEET_TEXT_HEIGHT_MM,
   DETAIL_SHEET_TEXT_HEX,
 } from '../table-style-presets';
+import { AUTOMATIC_TABLE_INK, isAutomaticTableInk } from '../table-ink';
+import { parseHex } from '../../../config/color-math';
 
 describe('TableStyleRegistry — σπορά built-in', () => {
   let registry: TableStyleRegistry;
@@ -124,6 +126,42 @@ describe('TableStyleRegistry — στιγμιότυπο για useSyncExternalSt
     __setTableStyleRegistryForTests(null);
     expect(getTableStyleSnapshot()).toBe(getTableStyleRegistry().getSnapshot());
     __setTableStyleRegistryForTests(null);
+  });
+});
+
+/**
+ * 🔴 ADR-739 §38 — **ο αδελφός που έλειπε.**
+ *
+ * Μέχρι την 2026-08-04 **κανένα** test δεν κάρφωνε την τιμή του `standard`: το
+ * `describe('preset «detailSheet» … αναλλοίωτες')` από κάτω δεν είχε ταίρι, και το
+ * `STANDARD_TEXT_HEX` εμφανιζόταν σε **δύο** σημεία, αμφότερα μέσα στο ίδιο αρχείο πηγής.
+ * Δηλαδή η προεπιλογή που βλέπει **κάθε** χρήστης σε **κάθε** νέο πίνακα ήταν η μόνη τιμή του
+ * υποσυστήματος χωρίς δίχτυ — και μια σιωπηλή αλλαγή της δεν θα κοκκίνιζε τίποτα.
+ */
+describe('preset «standard» — το αυτόματο μελάνι, αναλλοίωτο', () => {
+  const style = BUILTIN_TABLE_STYLES.find((s) => s.id === BUILTIN_TABLE_STYLE_IDS.STANDARD)!;
+
+  it('και οι τρεις κλάσεις γράφουν με ΑΥΤΟΜΑΤΟ μελάνι — όχι με σταθερό hex', () => {
+    for (const rowClass of ['title', 'header', 'data'] as const) {
+      expect(style.rowClasses[rowClass].textColorHex).toBe(AUTOMATIC_TABLE_INK);
+    }
+  });
+
+  it('🔴 το σεντινέλι ΔΕΝ είναι έγκυρο hex — αυτό το κάνει ασφαλές', () => {
+    // Αν γινόταν ποτέ `#rrggbb`, θα έτρωγε μια πραγματική τιμή από το πεδίο **και** θα
+    // περνούσε αθόρυβα από κάθε καταναλωτή που σήμερα το απορρίπτει ρητά.
+    expect(parseHex(AUTOMATIC_TABLE_INK)).toBeNull();
+    expect(isAutomaticTableInk(AUTOMATIC_TABLE_INK)).toBe(true);
+  });
+
+  it('🔴 ο πίνακας οπλισμών ΔΕΝ παρασύρθηκε — κρατά το ρητό του χρώμα', () => {
+    // Ρητή εντολή Giorgio (04/08): το `detailSheet` δεν αγγίζεται. Το `DETAIL_SHEET_TEXT_HEX`
+    // καταναλώνεται και **εκτός** του συστήματος στυλ (`detail-sheet-schedule-table.ts`), όπου
+    // δεν υπάρχει διάταξη να επιλύσει σεντινέλι.
+    const detail = BUILTIN_TABLE_STYLES.find((s) => s.id === BUILTIN_TABLE_STYLE_IDS.DETAIL_SHEET)!;
+    for (const rowClass of ['title', 'header', 'data'] as const) {
+      expect(isAutomaticTableInk(detail.rowClasses[rowClass].textColorHex)).toBe(false);
+    }
   });
 });
 
