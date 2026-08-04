@@ -109,6 +109,25 @@ export function continuesLexeme(char: string | undefined): boolean {
 }
 
 /**
+ * Η θέση **μετά** το `=`, ή `null` όταν το κείμενο δεν είναι δήλωση τύπου.
+ *
+ * Δεν καλεί το `isFormulaInput`: εκείνο απαντά «ναι/όχι» ενώ εδώ χρειάζεται και **πού** — και
+ * τα αρχικά κενά μετρούν, γιατί ο καταναλωτής μετρά δείκτες πάνω στο **ακατέργαστο** κείμενο
+ * του πεδίου (θέση δρομέα, θέση αναφοράς).
+ *
+ * Ζει εδώ, δίπλα στο {@link FORMULA_PREFIX}, για τον ίδιο λόγο με το {@link continuesLexeme}:
+ * η απάντηση **είναι** η σταθερά αυτού του αρχείου. Δύο καταναλωτές τη ρωτούν ήδη — «τι
+ * σημαίνει το κλικ;» (`table-formula-point-state`) και «ποιες αναφορές περιέχει ο τύπος;»
+ * (`table-formula-reference-spans`) — και ένα αντίγραφο στον δεύτερο θα ήταν δεύτερος ορισμός
+ * του «πού αρχίζει ο τύπος» (N.18).
+ */
+export function formulaBodyStart(draft: string): number | null {
+  const firstVisible = draft.search(/\S/u);
+  if (firstVisible === -1) return null;
+  return draft[firstVisible] === FORMULA_PREFIX ? firstVisible + 1 : null;
+}
+
+/**
  * Κείμενο τύπου (**χωρίς** το `=`) → μονάδες, ή `null` αν υπάρχει χαρακτήρας εκτός
  * γραμματικής ή αλφαριθμητικό που δεν κλείνει.
  *

@@ -35,7 +35,7 @@ import type { TableModel } from '../../../types/table';
 import { parseTableCellReference } from '../table-cell-reference';
 import {
   continuesLexeme,
-  FORMULA_PREFIX,
+  formulaBodyStart,
   tokenizeFormula,
   type TableFormulaToken,
 } from './table-formula-lex';
@@ -60,18 +60,6 @@ const OFF: FormulaPointState = { kind: 'off' };
  * επίτηδες: μετά το `A1:` το επόμενο κλικ ορίζει το **άλλο άκρο** του εύρους.
  */
 const OPERAND_EXPECTING_PUNCT: readonly string[] = ['(', ',', ':'];
-
-/**
- * Η θέση **μετά** το `=`, ή `null` όταν το κείμενο δεν είναι δήλωση τύπου.
- *
- * Δεν καλεί το `isFormulaInput`: εκείνο απαντά «ναι/όχι» ενώ εδώ χρειάζεται και **πού** —
- * και τα αρχικά κενά μετρούν, γιατί ο δρομέας μετριέται πάνω στο ακατέργαστο κείμενο.
- */
-function formulaBodyStart(draft: string): number | null {
-  const firstVisible = draft.search(/\S/u);
-  if (firstVisible === -1) return null;
-  return draft[firstVisible] === FORMULA_PREFIX ? firstVisible + 1 : null;
-}
 
 /** True όταν μετά από αυτή τη μονάδα η γραμματική περιμένει τελεστέο. */
 function expectsOperand(token: TableFormulaToken): boolean {

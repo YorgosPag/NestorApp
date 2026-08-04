@@ -54,6 +54,9 @@ import {
 } from '@/lib/validation/text-link-segments';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableTextLinkSpan } from './table-layout-types';
+// 🔴 ADR-753 Φ3 — η στοίχιση ως μετατόπιση έχει **ένα** σώμα στο `bim/table`. Ήταν τοπικό
+// `anchorOffsetMm` εδώ, ταυτόσημο με το `x` του `tableUnderlineGeometry`.
+import { tableAnchorOffsetMm } from './table-text-decoration';
 
 /**
  * Τα είδη που ψάχνονται σε **αριθμητικό** κελί.
@@ -122,7 +125,7 @@ export function resolveCellLinkSpans(input: CellLinkSpansInput): readonly TableT
   if (links.length === 0) return [];
 
   const totalMm = prefixWidthMm(visibleText.length);
-  const textStartMm = anchorOffsetMm(hAlign, totalMm);
+  const textStartMm = tableAnchorOffsetMm(hAlign, totalMm);
 
   if (clipped) {
     const whole = wholeTextLink(links, fullText);
@@ -183,17 +186,6 @@ function linksIn(text: string, numeric: boolean): readonly LinkSegment[] {
 function wholeTextLink(links: readonly LinkSegment[], fullText: string): LinkSegment | null {
   const only = links.length === 1 ? links[0] : null;
   return only !== null && only.start === 0 && only.end === fullText.length ? only : null;
-}
-
-/**
- * Από ποιο mm ξεκινούν τα γράμματα, σχετικά με την άγκυρα.
- *
- * Ίδια σύμβαση —και ίδια τριάδα περιπτώσεων— με το `tableUnderlineGeometry`: το `ctx.textAlign`
- * του καμβά και το `anchorXMm` της διάταξης συμφωνούν ήδη εδώ, οπότε ένα τμήμα τοποθετημένο με
- * αυτόν τον όρο ακολουθεί τη στοίχιση χωρίς δεύτερη απόφαση σε κανέναν καταναλωτή.
- */
-function anchorOffsetMm(hAlign: TextAlign, totalMm: number): number {
-  return hAlign === 'right' ? -totalMm : hAlign === 'center' ? -totalMm / 2 : 0;
 }
 
 /** Το σκέλος της ένωσης που έχει προορισμό — ο φύλακας που κάνει το `href` προσβάσιμο. */

@@ -99,10 +99,21 @@ export interface TableRangeMembership {
  * Το **ακατέργαστο** ορθογώνιο δύο άκρων: κανονικοποιημένο, **χωρίς** κούμπωμα.
  *
  * `null` όταν κάποιο άκρο δεν υπάρχει στο μοντέλο — μπαγιάτικη επιλογή μετά από undo ή
- * διαγραφή γραμμής. Ιδιωτικό: κανείς έξω από εδώ δεν χρειάζεται περιοχή χωρίς δηλωμένο
- * είδος (δες {@link resolveTableSelectionBounds}).
+ * διαγραφή γραμμής.
+ *
+ * ## 🔴 ADR-754 Β1 — γιατί έπαψε να είναι ιδιωτικό
+ * Έγραφε εδώ «κανείς έξω δεν χρειάζεται περιοχή χωρίς δηλωμένο είδος», και ήταν σωστό όσο ο
+ * μόνος καταναλωτής ήταν η **επιλογή** του χρήστη. Μια **αναφορά τύπου** είναι άλλο πράγμα:
+ * το `=SUM(A1:B2)` διαβάζει **ακριβώς** τα τέσσερα κελιά που ονομάζει — αν κάποιο από αυτά
+ * είναι μέρος συγχώνευσης, ο τύπος **δεν** μεγαλώνει για να την περικλείσει. Άρα το
+ * περίγραμμα που δείχνει «τι διαβάζει αυτός ο τύπος» οφείλει να **μην** κουμπώνει· ένα
+ * κουμπωμένο ορθογώνιο θα έδειχνε περιοχή μεγαλύτερη από όση αθροίζεται, δηλαδή θα έλεγε
+ * ψέματα με το χρώμα.
+ *
+ * Η εναλλακτική ήταν έξι πανομοιότυπες γραμμές `indexById` + `Math.min/max` στο νέο module —
+ * δηλαδή **δεύτερος ορισμός του «τι είναι ορθογώνιο κελιών»** (N.18). Εξαγωγή, όχι δίδυμο.
  */
-function normalizeBounds(
+export function rawTableCellRangeBounds(
   model: TableModel,
   a: TableCellRef,
   b: TableCellRef,
@@ -137,7 +148,7 @@ export function resolveTableCellRange(
   activeCell: TableCellRef,
   rangeEnd: TableCellRef,
 ): TableCellRangeBounds | null {
-  const bounds = normalizeBounds(model, activeCell, rangeEnd);
+  const bounds = rawTableCellRangeBounds(model, activeCell, rangeEnd);
   return bounds ? snapToWholeMerges(model, bounds) : null;
 }
 
@@ -207,7 +218,7 @@ export function resolveTableSelectionBounds(
   model: TableModel,
   selection: TableSelectionSpan,
 ): TableCellRangeBounds | null {
-  const bounds = normalizeBounds(model, selection.from, selection.to);
+  const bounds = rawTableCellRangeBounds(model, selection.from, selection.to);
   if (!bounds) return null;
   return selection.kind === 'range' ? snapToWholeMerges(model, bounds) : bounds;
 }
