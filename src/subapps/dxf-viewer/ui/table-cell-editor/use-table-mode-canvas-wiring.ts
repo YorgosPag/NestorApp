@@ -47,8 +47,6 @@ export interface UseTableModeCanvasWiringParams {
    * σκηνής θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα μέσα στο **ίδιο** render.
    */
   readonly entity: TableEntity | null;
-  /** `overlay !== null` του γονιού — «υπάρχει εστιασμένο `<input>` που κατέχει τα πλήκτρα». */
-  readonly hasEditorOverlay: boolean;
   readonly levelManager: LevelManagerLike;
   readonly getSelectedEntityIds: () => readonly string[];
   readonly containerRef: React.RefObject<HTMLDivElement | null>;
@@ -60,21 +58,14 @@ export interface UseTableModeCanvasWiringParams {
  * παράγουν γράφεται σε stores που διαβάζει ο ζωγράφος, όχι σε React state.
  */
 export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams): void {
-  const {
-    entity,
-    hasEditorOverlay,
-    levelManager,
-    getSelectedEntityIds,
-    containerRef,
-    transformRef,
-  } = params;
+  const { entity, levelManager, getSelectedEntityIds, containerRef, transformRef } = params;
 
   /**
    * 🔴 §39 — ο **επιλεγμένος** πίνακας, διαβασμένος τη στιγμή της κλήσης.
    *
-   * Ο ίδιος getter εξυπηρετεί δύο ερωτήσεις με διαφορετικό ρυθμό: το `active` παρακάτω τον
-   * ρωτά **ανά απόδοση** (χρειάζεται μόνο «υπάρχει;»), ο ακροατής κίνησης **ανά συμβάν**
-   * (χρειάζεται τη ζωντανή οντότητα). Μία πηγή, καμία δυνατότητα να διαφωνήσουν.
+   * §40.9 — είχε **δύο** καταναλωτές με διαφορετικό ρυθμό· τώρα έχει **έναν**, και είναι ο
+   * σωστός: ο ακροατής κίνησης, **ανά συμβάν**. Ο δεύτερος (το `active`, ανά **απόδοση**) ήταν
+   * το ίδιο το ελάττωμα — δες το μπλοκ παρακάτω.
    */
   const resolveSelectedTableEntity = useCallback(
     () => resolveSelectedTable(levelManager, getSelectedEntityIds),
@@ -82,15 +73,55 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
   );
 
   /**
-   * 🔴 §39 — **Η ΣΥΝΘΗΚΗ ΖΩΗΣ ΤΟΥ ⊕, ΓΡΑΜΜΕΝΗ ΜΙΑ ΦΟΡΑ.**
+   * 🔴🔴 §40.9 — **ΕΔΩ ΖΟΥΣΕ Η ΑΙΤΙΑ, ΚΑΙ ΤΟ ΕΠΙΧΕΙΡΗΜΑ ΟΡΘΟΤΗΤΑΣ ΗΤΑΝ ΣΩΣΤΟ ΩΣ ΤΟ ΤΕΛΟΣ.**
    *
-   * Τη μοιράζονται ο hover (τι **βάφεται**) και το κλικ (τι **πατιέται**), και η ταύτιση
-   * είναι το επιχείρημα ορθότητας: δεν επιτρέπεται να γίνει ποτέ πατήσιμο κάτι που δεν
-   * ζωγραφίζεται, ούτε να ζωγραφιστεί κάτι που δεν πατιέται. Δύο αντίγραφα της έκφρασης θα
-   * μπορούσαν να αποκλίνουν σε μία μόνο επεξεργασία — γι' αυτό ζει σε μεταβλητή, όχι σε δύο
-   * κλήσεις.
+   * Μέχρι τις 04/08 εδώ υπολογιζόταν:
+   *
+   * ```ts
+   * const isTableModeActive = hasEditorOverlay || resolveSelectedTableEntity() !== null;
+   * ```
+   *
+   * και περνιόταν και στους τρεις ακροατές, με ρητό επιχείρημα: «*μία συνθήκη, καμία δυνατότητα
+   * να γίνει πατήσιμο κάτι που δεν βάφεται*». **Το επιχείρημα ήταν σωστό· ο τόπος ήταν λάθος.**
+   *
+   * Η έκφραση αποτιμάται **την ώρα της απόδοσης**, και ο κάτοχός της είναι ο `CanvasSection` —
+   * ο οποίος **δεν αποδίδει ποτέ σε αλλαγή επιλογής**. Δεν είναι παράλειψη· είναι ρητή, μετρημένη
+   * απόφαση, δηλωμένη σε **τρία** ανεξάρτητα σημεία:
+   *
+   * - `CanvasSection.tsx` — «*ADR-532 B4 — NON-reactive selection facade: no re-render on
+   *   dxf-entity selection*»
+   * - `SelectionSystem.tsx` — «*the host component does NOT re-render on dxf-entity selection
+   *   changes*»
+   * - `use-selection-cycling.ts` — «*no `useSyncExternalStore`, so CanvasSection never re-renders*»
+   *
+   * ⇒ Επιλογή πίνακα από καθαρή αρχή ⇒ **καμία απόδοση** ⇒ το `active` έμενε `false` ⇒ **δεν
+   * γεννιόταν ούτε ακροατής κίνησης**. Το ⊕ δεν ήταν «άφταστο» όπως στο §40.8· ήταν **αόρατο**,
+   * ενώ και οι πέντε στρώσεις από κάτω (γεωμετρία, σάρωση, hover, ζωγράφος, πάτημα) υποστηρίζουν
+   * ρητά την κατάσταση `'selection'` από το §40.
+   *
+   * ## 🔑 Γιατί οι δύο αναφορές του ιδιοκτήτη έμοιαζαν αντιφατικές — και ήταν η ΙΔΙΑ αιτία
+   * Το §40.8 κατέγραψε «*δουλεύει μόνον **έξω** από το edit mode*»· το §40.9 «*πρέπει να **μπω**
+   * σε edit mode*». Και τα δύο βγαίνουν από αυτή τη γραμμή: ο δρομέας **είναι** συνδρομή
+   * (`useTableCellCursor`), άρα το **κλείσιμό** του προκαλεί απόδοση — και σε εκείνη την απόδοση
+   * το `resolveSelectedTableEntity()` βρίσκει τον πίνακα ακόμα επιλεγμένο και μανταλώνει
+   * `active = true`. Δηλαδή η απλή επιλογή δούλευε **μόνο ως υπόλειμμα** μιας συνεδρίας που μόλις
+   * έκλεισε. Πρώτη επιλογή σε καθαρή σελίδα: τίποτα.
+   *
+   * ## Η θεραπεία: η συνθήκη δεν διαγράφηκε — ΜΕΤΑΚΟΜΙΣΕ ΕΚΕΙ ΠΟΥ ΕΧΕΙ ΑΠΑΝΤΗΣΗ
+   * Και οι τρεις ακροατές λύνουν **ήδη** τα πάντα με getter τη στιγμή του συμβάντος: ο hover με
+   * `entity ?? resolveSelected()`, το κλικ με `resolveArmed()` + `resolveTableById()`. Είναι ο
+   * ρητός κανόνας 2 του ADR-040 («*event handlers MUST receive getters, not snapshot values*»),
+   * και το `active` ήταν ακριβώς το στιγμιότυπο που ο κανόνας απαγορεύει — μεταμφιεσμένο σε
+   * φρουρό απόδοσης.
+   *
+   * ⚠️ **ΜΗΝ το «διορθώσεις» με συνδρομή στην επιλογή** (`useSyncExternalStore` εδώ ή στον
+   * γονιό). Θα ξανάφερνε την απόδοση του `CanvasSection` σε **κάθε κλικ** — ακριβώς αυτό που το
+   * ADR-532 B6 αφαίρεσε μετρημένα. Η σωστή απάντηση δεν είναι «κάν' το αντιδραστικό», είναι
+   * «**σταμάτα να το φωτογραφίζεις**».
+   *
+   * @see ui/table-cell-editor/use-table-indicator-hover.ts — η πύλη, σε χρόνο συμβάντος
+   * @see ui/table-cell-editor/use-table-armed-control-click.ts — η δεύτερη πύλη (`resolveArmed`)
    */
-  const isTableModeActive = hasEditorOverlay || resolveSelectedTableEntity() !== null;
 
   /**
    * 🔴 ADR-739 §29 — **το δίδυμο του modal keyboard scope, για το ΠΟΝΤΙΚΙ.**
@@ -118,19 +149,6 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
   useTableCanvasLockdown({ entity, containerRef, transformRef });
 
   useTableIndicatorHover({
-    /**
-     * 🔴 §39 — **ΕΔΩ Η ΤΙΜΗ ΑΠΟΚΛΙΝΕΙ ΑΠΟ ΤΟ ΠΛΗΚΤΡΟΛΟΓΙΟ, ΚΑΙ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ.**
-     *
-     * Μέχρι το §39 εδώ περνιόταν σκέτο `overlay !== null`, με το επιχείρημα «ο δείκτης
-     * ζωγραφίζεται μόνο όσο υπάρχει δρομέας, οπότε hover εκτός αυτής της συνθήκης θα ήταν
-     * κατάσταση που κανείς δεν αποδίδει». Ίσχυε ακέραιο **μέχρι** να αποκτήσει ο πίνακας
-     * χειριστήριο που ζωγραφίζεται και **χωρίς** δρομέα: το ⊕ της εισαγωγής. Ο κανόνας δεν
-     * χαλάρωσε — η προϋπόθεσή του άλλαξε, όπως ακριβώς είχε συμβεί με το `row-resize` του §31.
-     *
-     * ⚠️ Ο έλεγχος είναι **μηδενικού κόστους στη συνηθισμένη περίπτωση**: το
-     * `resolveSelectedTable` βγαίνει αμέσως όταν τα επιλεγμένα δεν είναι ακριβώς ένα.
-     */
-    active: isTableModeActive,
     entity,
     resolveSelected: resolveSelectedTableEntity,
     containerRef,
@@ -145,7 +163,6 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
    * ακροατή. Η **ίδια** συνθήκη ζωής, ώστε να μη γίνεται ποτέ πατήσιμο κάτι που δεν βάφεται.
    */
   useTableInsertControlClick({
-    active: isTableModeActive,
     containerRef,
     levelManager,
   });
@@ -155,12 +172,14 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
    * και δύο διαφορετικές πράξεις — μοιράζονται μόνο τη **διαδρομή του συμβάντος**, που ζει
    * ήδη σε ένα σημείο (`useTableArmedControlClick`).
    *
-   * Η **ίδια** συνθήκη ζωής με τον hover και το ⊕, ώστε να μη γίνεται ποτέ πατήσιμο κάτι που
-   * δεν βάφεται — και, εδώ ειδικά, να μην υπάρχει ακροατής που σβήνει στήλες όταν δεν υπάρχει
-   * λειτουργία πίνακα.
+   * §40.9 — **δεν έχει πια συνθήκη προσάρτησης, και για το ⊖ το διακύβευμα είναι μεγαλύτερο.**
+   * Ο φόβος «*ακροατής που σβήνει στήλες όταν δεν υπάρχει λειτουργία πίνακα*» δεν λύνεται από
+   * φρουρό απόδοσης: λύνεται από το `resolveArmed()`, που επιστρέφει `null` όποτε δεν υπάρχει
+   * **οπλισμένο** ⊖ — και το ⊖ οπλίζεται μόνο μέσα στη ζώνη, η οποία υπάρχει μόνο σε λειτουργία
+   * πίνακα (`tableIndicatorProbeAtWorld`: `remove` είναι `null` όταν `mode !== 'table-mode'`).
+   * Δηλαδή ο φρουρός που μετράει ήταν πάντα **δύο στρώσεις πιο κάτω**, στη γεωμετρία.
    */
   useTableDeleteControlClick({
-    active: isTableModeActive,
     containerRef,
     levelManager,
   });

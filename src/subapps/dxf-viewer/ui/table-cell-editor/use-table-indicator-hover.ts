@@ -126,14 +126,6 @@ const clearTableIndicatorFeedback = (): void => {
 };
 
 export interface UseTableIndicatorHoverParams {
-  /**
-   * Προσαρτώνται οι ακροατές; §40: **όχι** πια σκέτο `overlay !== null` — αληθές και όταν
-   * υπάρχει απλώς **επιλεγμένος** πίνακας, γιατί το ⊕ της εισαγωγής ζει και στις δύο
-   * καταστάσεις. Μένει prop και δεν υπολογίζεται εδώ ώστε ο ακροατής να **μην** υπάρχει καν
-   * όταν δεν υπάρχει πίνακας: αλλιώς κάθε κίνηση ποντικιού σε ολόκληρη την εφαρμογή θα
-   * πλήρωνε μια ερώτηση που η απάντησή της είναι πάντα «κανένας πίνακας».
-   */
-  readonly active: boolean;
   /** Η **ζωντανή** οντότητα του δρομέα· `null` όταν ο πίνακας χάθηκε από κάτω του. */
   readonly entity: TableEntity | null;
   /**
@@ -152,7 +144,7 @@ export interface UseTableIndicatorHoverParams {
 
 /** Ανάβει την υποδιαίρεση ζώνης κάτω από το ποντίκι, όσο ζει η λειτουργία πίνακα. */
 export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): void {
-  const { active, entity, resolveSelected, containerRef, transformRef } = params;
+  const { entity, resolveSelected, containerRef, transformRef } = params;
 
   /**
    * 🔴 §36 — **ΠΟΥ ΣΤΕΚΕΤΑΙ ΤΟ ΧΕΡΙ**, ώστε το `Ctrl` να μπορεί να ξαναρωτήσει χωρίς κίνηση.
@@ -335,8 +327,41 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     if (last) handleMouseMove(last, event);
   });
 
+  /**
+   * 🔴 §40.9 — **ΤΟ ΣΒΗΣΙΜΟ ΤΗΣ ΕΞΟΔΟΥ, ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΗΝ ΠΡΟΣΑΡΤΗΣΗ.**
+   *
+   * Ζούσε στο cleanup του ακροατή, όσο εκείνος γεννιόταν και πέθαινε μαζί με τη λειτουργία.
+   * Τώρα ο ακροατής είναι σταθερός (δες παρακάτω), οπότε το σβήσιμο χρειάζεται **δικό του**
+   * κύκλο ζωής — αλλιώς ένα `Escape` με το χέρι ακίνητο πάνω στη ζώνη θα άφηνε **παχύ βέλος
+   * πάνω από σχέδιο**: ο δείκτης του ΟΣ ζει στο `style.cursor`, όχι σε καρέ που παύει να
+   * ζωγραφίζεται (§31), άρα δεν σβήνει μόνος του όπως τα άλλα τρία κανάλια.
+   *
+   * ⚠️ Η εξάρτηση είναι **δυαδική** και όχι η οντότητα: εκείνη είναι νέο αντικείμενο σε κάθε
+   * πάτημα πλήκτρου, άρα θα καθάριζε τον δείκτη ενώ ο χρήστης γράφει. Ίδιο μοτίβο, ίδιος λόγος
+   * με το `hasSession` του pointer (§27.16 Ε6) και το βάθος του κλειδώματος (§29.12).
+   */
+  const hasCursorEntity = entity !== null;
   useEffect(() => {
-    if (!active) return;
+    if (!hasCursorEntity) return;
+    return clearTableIndicatorFeedback;
+  }, [hasCursorEntity]);
+
+  /**
+   * 🔴 §40.9 — **ΣΤΑΘΕΡΑ ΠΡΟΣΑΡΤΗΜΕΝΟΣ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ Η ΔΙΟΡΘΩΣΗ.**
+   *
+   * Εδώ υπήρχε `if (!active) return;` με το `active` υπολογισμένο **την ώρα της απόδοσης** από
+   * τον `CanvasSection`. Εκείνος όμως **δεν αποδίδει ποτέ σε αλλαγή επιλογής** (ADR-532 B4),
+   * οπότε η επιλογή ενός πίνακα δεν μπορούσε να προσαρτήσει τον ακροατή: **το ⊕ δεν
+   * ζωγραφιζόταν καν** σε απλή επιλογή, παρότι και οι πέντε στρώσεις από κάτω το υποστηρίζουν.
+   *
+   * 🔑 Το παλιό σχόλιο δικαιολογούσε το prop ως εξοικονόμηση («*αλλιώς κάθε κίνηση ποντικιού σε
+   * ολόκληρη την εφαρμογή θα πλήρωνε μια ερώτηση*»). Η ερώτηση όμως είναι
+   * `getSelectedEntityIds().length !== 1` — έξοδος στην **πρώτη** σύγκριση, όπως δηλώνει ήδη ο
+   * ίδιος ο καλών. Δηλαδή ο φρουρός αγόραζε **μηδέν** και πλήρωνε **ολόκληρη** την κατάσταση
+   * `'selection'`. Η πραγματική πύλη είναι το `if (!container || !target || !transform)` του
+   * χειριστή, που λύνεται **τη στιγμή του συμβάντος** — εκεί που η απάντηση είναι πάντα φρέσκια.
+   */
+  useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
@@ -356,15 +381,10 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       window.removeEventListener('keydown', handleModifierChange);
       window.removeEventListener('keyup', handleModifierChange);
       lastMoveRef.current = null;
-      // Η λειτουργία έκλεισε με το ποντίκι ακόμα πάνω στη λωρίδα: ο δείκτης παύει να
-      // ζωγραφίζεται, αλλά η κατάσταση θα επιβίωνε και θα άναβε λάθος γράμμα στο επόμενο
-      // άνοιγμα. Ίδια λογική με το `endTableCellDrag` του pointer.
-      //
-      // 🔴 §31 — για τον **δείκτη του ΟΣ** αυτό δεν είναι υγιεινή, είναι υποχρέωση: το σχήμα ζει
-      // στο `style.cursor` του καμβά, όχι σε καρέ που παύει να ζωγραφίζεται. Χωρίς τον καθαρισμό,
-      // ένα `Esc` με το χέρι πάνω στο γράμμα θα άφηνε **παχύ βέλος πάνω από σχέδιο** — δείκτη που
-      // υπόσχεται επιλογή στήλης σε καμβά που δεν έχει πια πίνακα ανοιχτό.
+      // Ο καμβάς ξηλώνεται: ό,τι έμεινε βαμμένο ή γραμμένο στο `style.cursor` δεν έχει πια
+      // ιδιοκτήτη. Η **έξοδος από τη λειτουργία** (το συχνό σενάριο) καθαρίζεται από τον
+      // δυαδικό effect παραπάνω — δες εκεί για το γιατί δεν αρκεί αυτό εδώ.
       clearTableIndicatorFeedback();
     };
-  }, [active, containerRef, handleMouseMove, handleMouseLeave, handleModifierChange]);
+  }, [containerRef, handleMouseMove, handleMouseLeave, handleModifierChange]);
 }
