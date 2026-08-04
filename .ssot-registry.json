@@ -5179,7 +5179,7 @@
       "ssotFile": "src/subapps/dxf-viewer/systems/topography/topo-point-elevation.ts",
       "description": "ADR-720 - the ONE owner of `does this survey point carry a measured elevation, and what follows from the answer?`. `TopoPoint.z` is OPTIONAL: a shot with a position but no Z is ordinary survey data (LandXML `CgPoint` = a 2D or 3D Point; OGC SF `Point` vs `PointZ`; Civil 3D elevation = optional property with an `<unused>` column value; Carlson `Non-Surface`). Measured 2026-07-28 on a real survey: 7 of the 9 parcel corners were CSV points matching the boundary to 2-6 mm and NOT ONE had an elevation, so the importer's `z === null -> return null` deleted the parcel itself and kept the neighbours' spot heights. The regression this guards is a SECOND answer to the question. `surfacePointsOf` is THE surface filter and is called at the top of `buildTin`, the single door into the triangulation, so eight derived products (contours, 3D terrain, cut/fill volumes, plan footprint, cut cap, areas, deliverable tables, QA) inherit the exclusion without a line changing in any of them - the same reasoning that puts the ADR-718 crop in `topo-surface` and not in its consumers. A private re-implementation in one consumer makes that consumer disagree with the other seven about what the ground IS. NOT GUARDED BY REGEX, GUARDED BY REVIEW: `point.z ?? 0` / `point.z || 0` on a TopoPoint. A fabricated 0 is indistinguishable from a measured sea-level shot, triangulates into a crater, and the crater is priced as excavation. It is deliberately NOT a forbiddenPattern because `.z ?? 0` is a legitimate 2D->3D promotion idiom with 125 valid occurrences elsewhere in the repo; blocking it globally would be ~125 false positives and would fail Google's <=10% false-positive bar for a blocking check (same trap as the N.12 note on CHECK 3.18). Use `hasElevation` to narrow to `TopoPoint3D`; NEVER substitute a value.",
       "forbiddenPatterns": [
-        "export\\s+(function|const)\\s+hasElevation\b",
+        "export\\s+(function|const)\\s+hasElevation\\b",
         "(function|const)\\s+\\w*(surfacePointsOf|describeElevationCoverage)\\w*\\s*[(<=]"
       ],
       "allowlist": [
@@ -5283,20 +5283,20 @@
       "ssotFile": "src/subapps/dxf-viewer/bim/table/table-cell-range.ts",
       "description": "ADR-739 §26/§27.15/§27.16 — Ο ΕΝΑΣ δρόμος από «τι διάλεξε ο χρήστης» σε «ποια κελιά είναι μέσα». Η επιλογή είναι ΔΥΟ ΓΩΝΙΕΣ + ΕΙΔΟΣ (`TableSelectionSpan` / `TableSelectionKind` = 'range'|'column'|'row'), και ΜΟΝΟ το `resolveTableSelectionBounds` την ερμηνεύει. ΤΟ ΡΙΣΚΟ, ΜΕΤΡΗΜΕΝΟ (§27.15): το κούμπωμα συγχωνεύσεων (`snapToWholeMerges`) είναι ΣΩΣΤΟ για περιοχή και ΛΑΘΟΣ για άξονα — έτρεχε και στα δύο, και «κλικ στο γράμμα B» μάρκαρε ΟΛΟΚΛΗΡΟ τον πίνακα, επειδή η γραμμή τίτλου είναι συγχωνευμένη σε όλες τις στήλες. 257 πράσινα tests το έχασαν γιατί ρωτούσαν τη συγχώνευση ΓΙΑ ΠΕΡΙΟΧΕΣ. Δεύτερος δρόμος ερμηνείας = το ίδιο σφάλμα, ξαναγεννημένο σιωπηλά. Επίσης ΕΝΑΣ επεκτατής (`extendTableSelectionTo`: η άγκυρα μένει, το είδος μένει) που τον μοιράζονται `Shift+βέλος` ΚΑΙ `Shift+κλικ` σε γράμμα/αριθμό, και ΕΝΑΣ ορισμός της «ολόκληρης στήλης/γραμμής» (`wholeAxisSelection`) που τον μοιράζονται το κλικ στη ζώνη, η σύρση στη ζώνη και η επέκταση: αντίγραφα μιας γραμμής ΔΕΝ πιάνονται από το jscpd (<50 tokens) και αποκλίνουν σιωπηλά. Νέο `TableSelectionKind`/`TableSelectionSpan`, νέα ερμηνεία ευρών ή νέο κούμπωμα συγχωνεύσεων εκτός αυτού του module = παράβαση. §27.16: ο ΜΗΧΑΝΙΣΜΟΣ του κουμπώματος μετακόμισε στο table-range-merge-snap.ts (καθαρή άλγεβρα ορθογωνίων· το αρχείο είχε φτάσει 495/500) — η ΑΠΟΦΑΣΗ «κουμπώνει η περιοχή, όχι ο άξονας» έμεινε ΕΔΩ, όπου ζει η πρόθεση. Ο κύκλος ζωής της χειρονομίας ζει στο `table-cell-drag-session.ts` (ΕΝΑ ενεργό drag, εγγραφή ΜΟΝΟ όταν αλλάζει κελί — ADR-735).",
       "forbiddenPatterns": [
-        "function\\s+resolveTableSelectionBounds\b",
-        "function\\s+resolveTableCellRange\b",
-        "function\\s+snapToWholeMerges\b",
-        "function\\s+extendTableSelectionTo\b",
-        "function\\s+extendTableCellRangeEnd\b",
-        "function\\s+wholeAxisSelection\b",
-        "function\\s+tableRangeMembership\b",
-        "function\\s+tableRangeCellRefs\b",
-        "function\\s+tableWholeGridRange\b",
-        "function\\s+startTableCellDrag\b",
-        "type\\s+TableSelectionKind\b",
-        "interface\\s+TableSelectionSpan\b",
-        "interface\\s+TableCellRangeBounds\b",
-        "interface\\s+TableRectBounds\b"
+        "function\\s+resolveTableSelectionBounds\\b",
+        "function\\s+resolveTableCellRange\\b",
+        "function\\s+snapToWholeMerges\\b",
+        "function\\s+extendTableSelectionTo\\b",
+        "function\\s+extendTableCellRangeEnd\\b",
+        "function\\s+wholeAxisSelection\\b",
+        "function\\s+tableRangeMembership\\b",
+        "function\\s+tableRangeCellRefs\\b",
+        "function\\s+tableWholeGridRange\\b",
+        "function\\s+startTableCellDrag\\b",
+        "type\\s+TableSelectionKind\\b",
+        "interface\\s+TableSelectionSpan\\b",
+        "interface\\s+TableCellRangeBounds\\b",
+        "interface\\s+TableRectBounds\\b"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/bim/table/table-cell-range.ts",
@@ -5312,18 +5312,37 @@
       "ssotFile": "src/subapps/dxf-viewer/systems/navigation/drag-edge-autopan.ts",
       "description": "ADR-739 §27.16 Ε1 — Ο ΕΝΑΣ μηχανισμός «σέρνω, φτάνω στην άκρη, το κάδρο συνεχίζει». ΔΕΝ είναι scroll: ο καμβάς ΜΕΤΑΚΙΝΕΙΤΑΙ (ένα view transform, οκτώ διαδρομές πλοήγησης κατά ADR-728), άρα είναι auto-PAN και διαπραγματεύεται με το pan του χρήστη. ΔΥΟ ΔΟΜΙΚΕΣ ΑΠΑΓΟΡΕΥΣΕΙΣ ΤΟΥ ADR-040 ΤΗΡΟΥΝΤΑΙ ΕΔΩ: (α) καμία εγγραφή transform — εκπέμπεται το ΥΠΑΡΧΟΝ `canvas-pan`, που καταλήγει στο `useViewportManager.setTransform`, έναν από τους δύο επιτρεπόμενους γραφείς· (β) κανένας δικός του rAF/setInterval — εγγραφή στον `UnifiedFrameScheduler`. Η ταχύτητα είναι σε px ΑΝΑ ΔΕΥΤΕΡΟΛΕΠΤΟ με τετραγωνική ράμπα βάθους (ΟΧΙ px/tick όπως το Konva, που γίνεται μισό στα 30fps). Ο ΦΥΛΑΚΑΣ ΑΠΟΔΟΣΗΣ (ADR-735) είναι μέρος του συμβολαίου: στη νεκρή ζώνη ΚΑΜΙΑ εκπομπή, άρα κανένα repaint και καμία ψευδής «χειρονομία πλοήγησης». Δεύτερη υλοποίηση auto-pan/auto-scroll άκρης (marquee, μετακίνηση οντότητας, σύρση λαβής) = structural clone (N.18 / CHECK 3.28) ΚΑΙ ένατη διαδρομή γραφής transform. Νέος υπολογισμός ταχύτητας άκρης ή νέος βρόχος καρέ γι' αυτό εκτός αυτού του module = παράβαση.",
       "forbiddenPatterns": [
-        "function\\s+edgeAutoPanVelocity\b",
-        "function\\s+edgeAutoPanSample\b",
-        "function\\s+startDragEdgeAutoPan\b",
-        "function\\s+stopDragEdgeAutoPan\b",
-        "interface\\s+EdgeAutoPanSample\b",
-        "interface\\s+EdgeAutoPanVelocity\b"
+        "function\\s+edgeAutoPanVelocity\\b",
+        "function\\s+edgeAutoPanSample\\b",
+        "function\\s+startDragEdgeAutoPan\\b",
+        "function\\s+stopDragEdgeAutoPan\\b",
+        "interface\\s+EdgeAutoPanSample\\b",
+        "interface\\s+EdgeAutoPanVelocity\\b"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/systems/navigation/drag-edge-autopan.ts"
       ],
       "addedDate": "2026-08-02",
       "addedByAdr": "ADR-739",
+      "tier": 3
+    },
+    "text-link-detection": {
+      "ssotFile": "src/lib/validation/text-link-segments.ts",
+      "description": "ADR-751 — Ο ΕΝΑΣ δρόμος από «ελεύθερο κείμενο» σε «διεύθυνση που ανοίγει»: ανίχνευση (e-mail / ιστοσελίδα / τηλέφωνο), κατασκευή του `href`, άνοιγμα και αντιγραφή. ΤΟ ΜΕΤΡΗΜΕΝΟ ΡΙΣΚΟ ΔΕΝ ΕΙΝΑΙ ΤΟ ΔΙΠΛΟΤΥΠΟ, ΕΙΝΑΙ Η ΚΑΝΟΝΙΚΟΠΟΙΗΣΗ: το χειροποίητο `tel:${value}` βάζει το ΩΜΟ κείμενο στο href, δηλαδή κενά, παύλες και παρενθέσεις («2310-788493 (γραφείο)») καταλήγουν στον τηλεφωνητή — υπαρκτό ελάττωμα στο `UniversalClickableField`, και ο λόγος που 26 γραμμές σε 16 αρχεία μπαίνουν σε baseline αντί για μηδενική ανοχή. Ο SSoT καθαρίζει ΑΝΑΝΤΗ, στον ανιχνευτή, οπότε κάθε καταναλωτής το παίρνει δωρεάν. Το `openCellLink` είναι ο ΕΝΑΣ δρόμος ανοίγματος (φρουρός σχημάτων = άμυνα σε βάθος: το κείμενο έρχεται από αρχείο τρίτου και ένα μελλοντικό χαλάρωμα του regex ΔΕΝ επιτρέπεται να γίνει διαδρομή εκτέλεσης κώδικα) και το `linkClipboardText` ο ΕΝΑΣ κανόνας για το τι μπαίνει στο πρόχειρο (πρακτική Chrome: `mailto:`/`tel:` ΑΦΑΙΡΟΥΝΤΑΙ, το `https://` ΜΕΝΕΙ — αλλιώς η επικόλληση σε πεδίο παραλήπτη είναι σκουπίδι). Δεύτερος ανιχνευτής, δεύτερος κατασκευαστής href ή δεύτερος δρόμος ανοίγματος = παράβαση. ΠΡΟΣΟΧΗ ΣΤΗ ΜΕΤΑΝΑΣΤΕΥΣΗ: η baseline ΔΕΝ σημαίνει «εγκεκριμένο» — σημαίνει «υπάρχον». Οι 26 γραμμές μεταναστεύουν στο `openCellLink` με χωριστή εντολή (N.0.2: >1h / 4+ αρχεία ⇒ καταγραφή, όχι αυτοσχέδια εξαγωγή).",
+      "forbiddenPatterns": [
+        "(?:mailto|tel):\\$\\{",
+        "[\"'`](?:mailto|tel):[\"'`]\\s*\\+",
+        "export\\s+(?:async\\s+)?function\\s+(?:splitTextIntoLinkSegments|openCellLink|copyCellLinkAddress|collectTableCellLinks|linkClipboardText)\\b",
+        "export\\s+const\\s+(?:LINK_ACTION_KEY|LINK_COPY_KEY)\\b"
+      ],
+      "allowlist": [
+        "src/lib/validation/text-link-segments.ts",
+        "src/subapps/dxf-viewer/bim/table/table-link-interaction-2d.ts",
+        "src/subapps/dxf-viewer/bim/table/table-link-labels.ts",
+        "src/subapps/dxf-viewer/bim/table/table-cell-link-index.ts"
+      ],
+      "addedDate": "2026-08-04",
+      "addedByAdr": "ADR-751",
       "tier": 3
     }
   }

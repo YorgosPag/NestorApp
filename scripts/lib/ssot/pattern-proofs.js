@@ -427,4 +427,75 @@ const step = Math.floor(worldX / majorGridStep);
 const items = new Map<string, SpatialItem>();
 const byId = new Map<number, Point2D>();`,
   },
+
+  // ADR-739 §26/§27.15 — Tier 3. Added here by ADR-751 for a reason worth recording:
+  // all 14 of this module's patterns ended in a JSON "\b", which the JSON parser reads as
+  // BACKSPACE (U+0008), NOT the regex word boundary. They matched NOTHING — 14 guards that
+  // looked alive in the registry and enforced nothing. The escapes are fixed; these fixtures
+  // are what proves they now fire, and stop the same typo from passing review again.
+  'table-selection-range': {
+    shouldMatch: `// A second body for "what did the user select, and which cells are inside":
+export function resolveTableSelectionBounds(model, span) {}
+function resolveTableCellRange(model, span) {}
+function snapToWholeMerges(model, bounds) {}
+export function extendTableSelectionTo(span, cell) {}
+function extendTableCellRangeEnd(range, to) {}
+function wholeAxisSelection(model, kind, id) {}
+function tableRangeMembership(bounds, cell) {}
+function tableRangeCellRefs(model, bounds) {}
+function tableWholeGridRange(model) {}
+export function startTableCellDrag(session) {}
+export type TableSelectionKind = 'range' | 'column' | 'row';
+export interface TableSelectionSpan { from: TableCellRef; to: TableCellRef }
+export interface TableCellRangeBounds { firstRow: number; lastRow: number }
+interface TableRectBounds { x: number; y: number; w: number; h: number }`,
+    shouldSkip: `// Canonical usage — by import, never re-declared:
+import { resolveTableSelectionBounds, type TableSelectionSpan } from './table-cell-range';
+import type { TableCellRangeBounds, TableSelectionKind } from '../table-cell-range';
+const bounds = resolveTableSelectionBounds(model, cursor.selection);
+const refs = tableRangeCellRefs(model, bounds);
+if (tableRangeMembership(bounds, cell)) paint(cell);
+startTableCellDrag({ entityId, from });
+
+// Local variables and properties that merely MENTION the names:
+const resolveTableSelectionBoundsResult = bounds;
+const kind: TableSelectionKind = 'column';
+let span: TableSelectionSpan | null = null;
+props.onExtend = extendTableSelectionTo;`,
+  },
+
+  // ADR-751 — Tier 3. Proof matters MORE than usual here: two of the four patterns
+  // currently match ZERO lines in src/ (hand-rolled concatenation, and re-declaring
+  // the SSoT functions). Without an executed proof they would be dormant guards —
+  // and CLAUDE.md N.12 records that 606 of 671 patterns already are. These fixtures
+  // are what makes the difference between "clean" and "nobody looked".
+  'text-link-detection': {
+    shouldMatch: `// (a) hand-rolled href interpolation — the raw phone lands in the href,
+// so spaces / dashes / parentheses reach the dialer (real defect, UniversalClickableField):
+const mail = \`mailto:\${contact.email}\`;
+window.open(\`tel:\${phone}\`, '_self');
+// (b) the same thing by concatenation:
+const href = "mailto:" + contact.email;
+const dial = 'tel:' + rawNumber;
+// (c) a second body for a question the SSoT already answers:
+export function openCellLink(href: string): void {}
+export async function copyCellLinkAddress(kind, href) {}
+export const LINK_ACTION_KEY = { email: 'x' };`,
+    shouldSkip: `// Canonical usage — by import, never re-built:
+import { splitTextIntoLinkSegments } from '@/lib/validation/text-link-segments';
+import { openCellLink, copyCellLinkAddress } from './table-link-interaction-2d';
+import { LINK_ACTION_KEY, linkClipboardText } from './table-link-labels';
+openCellLink(hit.span.href);
+void copyCellLinkAddress(target.kind, target.href);
+const action = t(LINK_ACTION_KEY[span.kind]);
+const payload = linkClipboardText(kind, href);
+
+// Other schemes interpolated legitimately — only mailto/tel carry the normalisation risk:
+const page = \`https://\${host}/\${slug}\`;
+const asset = \`blob:\${objectUrl}\`;
+
+// Mentioning the scheme without building a destination:
+if (href.startsWith('mailto:')) return openInClient(href);
+const ALLOWED = ['mailto:', 'tel:', 'https://'];`,
+  },
 };

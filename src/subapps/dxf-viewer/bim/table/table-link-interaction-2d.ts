@@ -24,11 +24,14 @@
  * @see state/table-cell-link-hover-store.ts — πού ζει η απάντηση του hover
  */
 
+import type { TextLinkKind } from '@/lib/validation/text-link-segments';
 import type { Point2D } from '../../rendering/types/Types';
 import type { Entity } from '../../types/entities';
-import { isTableEntity } from '../../types/table-entity';
+import { isTableEntity, type TableEntity } from '../../types/table-entity';
 import { setHoveredCellLink } from '../../state/table-cell-link-hover-store';
 import { resolveTableCellLinkAtWorld } from './table-cell-link-hit';
+import { tableCellLinksAt, type TableCellLinkEntry } from './table-cell-link-index';
+import { linkClipboardText } from './table-link-labels';
 
 /**
  * Τα μόνα σχήματα που επιτρέπεται να ανοίξουν.
@@ -106,7 +109,7 @@ export function handleTableLinkClick2D(
  * ανάντη, στον ανιχνευτή.
  */
 export function openCellLink(href: string): void {
-  if (!ALLOWED_SCHEMES.some((scheme) => href.startsWith(scheme))) return;
+  if (!isAllowedLinkHref(href)) return;
   if (typeof window === 'undefined') return;
 
   if (href.startsWith('mailto:') || href.startsWith('tel:')) {
@@ -114,4 +117,79 @@ export function openCellLink(href: string): void {
     return;
   }
   window.open(href, '_blank', 'noopener,noreferrer');
+}
+
+/**
+ * ADR-751 Φ8.β — **αντιγραφή της διεύθυνσης στο πρόχειρο**. `true` σε επιτυχία.
+ *
+ * ## 🔴 Γιατί ΕΔΩ χρησιμοποιείται το `navigator.clipboard`, ενώ ο πίνακας το αποφεύγει
+ * Το `use-table-range-actions.ts` τεκμηριώνει ρητά ότι το πρόχειρο του πίνακα **δεν** περνά
+ * από `navigator.clipboard` αλλά από τα φυσικά συμβάντα `copy`/`paste` του browser — και έχει
+ * δίκιο για τη δουλειά του: εκεί ο χρήστης πατά `Ctrl+C`, οπότε υπάρχει έτοιμο `clipboardData`
+ * χωρίς άδεια και χωρίς εξάρτηση από διάταξη πληκτρολογίου.
+ *
+ * Εδώ **δεν υπάρχει συμβάν `copy`**: ο χρήστης διάλεξε εντολή από μενού. Το κλικ στο μενού
+ * **είναι** η χειρονομία που απαιτεί το `writeText`, οπότε η προϋπόθεση ικανοποιείται στην
+ * πηγή. Δεν είναι ασυνέπεια — είναι **άλλη ερώτηση**: «αντέγραψε ό,τι διάλεξα» αντί για
+ * «τι στέλνω στο συμβάν που μόλις συνέβη».
+ *
+ * ⚠️ Μια μελλοντική «ενοποίηση για συνέπεια» προς οποιαδήποτε κατεύθυνση σπάει το ένα από τα
+ * δύο: το `Ctrl+C` σε ελληνική διάταξη (`key: 'ψ'`) ή την εντολή του μενού, που δεν έχει
+ * συμβάν να καβαλήσει.
+ *
+ * Επιστρέφει `boolean` και δεν καταπίνει την αποτυχία: το πρόχειρο μπορεί να απορριφθεί από
+ * την πολιτική του browser, και ο χρήστης πρέπει να **μάθει** ότι δεν αντιγράφηκε αντί να
+ * επικολλήσει κάτι παλιό νομίζοντας ότι πέτυχε.
+ */
+export async function copyCellLinkAddress(kind: TextLinkKind, href: string): Promise<boolean> {
+  if (!isAllowedLinkHref(href)) return false;
+  if (typeof navigator === 'undefined' || !navigator.clipboard) return false;
+  try {
+    await navigator.clipboard.writeText(linkClipboardText(kind, href));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Ο φρουρός σχημάτων, σε **ένα** σημείο — τον ρωτούν και το άνοιγμα και η αντιγραφή. */
+function isAllowedLinkHref(href: string): boolean {
+  return ALLOWED_SCHEMES.some((scheme) => href.startsWith(scheme));
+}
+
+/**
+ * Τι συνέβη όταν ζητήθηκε άνοιγμα συνδέσμου **κελιού** (χωρίς ποντίκι).
+ *
+ * Η `ambiguous` δεν είναι σφάλμα — είναι **ερώτηση προς τον χρήστη**. Ένα κελί μπορεί κάλλιστα
+ * να γράφει `a@nestor.gr · b@nestor.gr`, και τότε το «άνοιξε τον σύνδεσμο» δεν έχει μία
+ * απάντηση. Το να ανοίγαμε τον **πρώτο** θα ήταν σιωπηλή επιλογή εκ μέρους του: θα καλούσε
+ * λάθος άνθρωπο χωρίς να το μάθει ποτέ. Τα Google Sheets ρωτούν επίσης όταν το κελί έχει
+ * πολλαπλούς συνδέσμους — η επιλογή ανήκει σε αυτόν που ξέρει ποιον ήθελε.
+ */
+export type CellLinkActivation =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'opened'; readonly href: string }
+  | { readonly kind: 'ambiguous'; readonly links: readonly TableCellLinkEntry[] };
+
+/**
+ * ADR-751 Φ8.γ — **άνοιξε τον σύνδεσμο ΑΥΤΟΥ του κελιού** (`Alt+Enter`, πρότυπο Google
+ * Sheets). Καμία συντεταγμένη οθόνης: ο στόχος είναι το κελί του δρομέα.
+ *
+ * Ο καλών παίρνει **αποτέλεσμα** αντί για `void` γιατί οι τρεις εκβάσεις θέλουν τρεις
+ * διαφορετικές αντιδράσεις στη διεπαφή, και καμία δεν αποφασίζεται εδώ: το `none` είναι
+ * σιωπή (το κελί απλώς δεν έχει διεύθυνση), το `opened` τετέλεσται, το `ambiguous` πρέπει να
+ * γίνει **ερώτηση**.
+ */
+export function activateTableCellLink(
+  entity: TableEntity,
+  rowId: string,
+  colId: string,
+): CellLinkActivation {
+  const links = tableCellLinksAt(entity, rowId, colId);
+  if (links.length === 0) return { kind: 'none' };
+  if (links.length > 1) return { kind: 'ambiguous', links };
+
+  const href = links[0]!.span.href;
+  openCellLink(href);
+  return { kind: 'opened', href };
 }

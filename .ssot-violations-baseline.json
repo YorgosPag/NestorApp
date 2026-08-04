@@ -2,9 +2,9 @@
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet, ανά αρχείο ΚΑΙ module)",
     "schema": 2,
-    "generated": "2026-08-02T23:11:37Z",
-    "totalViolations": 86,
-    "totalFiles": 73,
+    "generated": "2026-08-04T10:04:08Z",
+    "totalViolations": 110,
+    "totalFiles": 87,
     "rule": "Κανένα module δεν ανεβαίνει σε κανένα αρχείο. Νέο αρχείο = μηδενική ανοχή.",
     "registry": ".ssot-registry.json",
     "engine": "scripts/lib/ssot/scan.js (ΜΙΑ μηχανή — ADR-749)"
@@ -28,8 +28,17 @@
     "src/components/building-management/tabs/TimelineTabContent/gantt/useGanttContextMenu.ts": {
       "escape-command-bus": 1
     },
+    "src/components/compositions/ContactCard/ContactCard.tsx": {
+      "text-link-detection": 1
+    },
+    "src/components/contacts/relationships/RelationshipCard.tsx": {
+      "text-link-detection": 1
+    },
     "src/components/contacts/toolbar/ContactsToolbar.tsx": {
       "tabs-primitive": 1
+    },
+    "src/components/crm/leads/lead-detail/QuickActions.tsx": {
+      "text-link-detection": 1
     },
     "src/components/crm/tasks/TaskDetailPanel.tsx": {
       "escape-command-bus": 1
@@ -67,8 +76,29 @@
     "src/components/projects/tabs/FloorplanViewerTab.tsx": {
       "entity-layer-id-canonical": 2
     },
+    "src/components/properties/tabs/CustomerProfileSection.tsx": {
+      "text-link-detection": 2
+    },
+    "src/components/properties/tabs/PropertyCustomerTab.tsx": {
+      "text-link-detection": 1
+    },
+    "src/components/property-showcase/EmailProviderPicker.tsx": {
+      "text-link-detection": 1
+    },
+    "src/components/property-showcase/ShowcaseHeader.tsx": {
+      "text-link-detection": 1
+    },
     "src/components/shared/addresses/editor/components/AddressSuggestionsPanel.tsx": {
       "escape-command-bus": 1
+    },
+    "src/components/shared/customer-info/components/CustomerActionButtons.tsx": {
+      "text-link-detection": 2
+    },
+    "src/components/shared/customer-info/components/CustomerInfoCompact.tsx": {
+      "text-link-detection": 3
+    },
+    "src/components/shared/customer-info/components/PropertyCustomerDisplay.tsx": {
+      "text-link-detection": 3
     },
     "src/components/shared/files/CommentsPanel.tsx": {
       "escape-command-bus": 1
@@ -94,8 +124,17 @@
     "src/components/shared/files/media/measure-snap-bridge.ts": {
       "snap-engine": 1
     },
+    "src/components/shared/pages/SharedContactPageContent.tsx": {
+      "text-link-detection": 2
+    },
+    "src/components/ui/ErrorBoundary/email-compose.ts": {
+      "text-link-detection": 1
+    },
     "src/components/ui/enterprise-portal/EnterprisePortalSystem.tsx": {
       "escape-command-bus": 1
+    },
+    "src/components/ui/form/UniversalClickableField.tsx": {
+      "text-link-detection": 1
     },
     "src/components/ui/search/HeaderSearch.tsx": {
       "escape-command-bus": 1
@@ -129,6 +168,9 @@
     },
     "src/services/dxf-raster/svg-from-dxf-scene.ts": {
       "entity-layer-id-canonical": 1
+    },
+    "src/services/email-templates/base-email-template.ts": {
+      "text-link-detection": 4
     },
     "src/services/thumbnail-generator.ts": {
       "entity-layer-id-canonical": 1
