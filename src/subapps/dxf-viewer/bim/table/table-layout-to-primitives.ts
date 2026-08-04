@@ -40,6 +40,15 @@ import { tableUnderlineGeometry } from './table-text-decoration';
 // 🔴 Η ΙΔΙΑ ερώτηση με τον ζωγράφο του καμβά, από το ΙΔΙΟ σημείο: αν οθόνη και χαρτί
 // απαντούσαν χωριστά «είναι ΟΛΟ το κελί σύνδεσμος;», θα μπορούσαν κάποτε να διαφωνήσουν.
 import { wholeRunLink } from './table-cell-link-spans';
+// 🔴 ADR-753 Φ3 — **τι ζωγραφίζεται και πού** απαντιέται σε ΕΝΑ σημείο, κοινό με τον ζωγράφο
+// του καμβά. Από αυτή τη γέφυρα κρέμονται PDF, DXF, σκηνή **και** ΤΕΚ: ό,τι μπει εδώ φτάνει
+// και στα τέσσερα χωρίς κώδικα ανά backend.
+import {
+  tablePieceInkHex,
+  tablePieceLinkStrips,
+  tableTextPieces,
+  type TableTextPiece,
+} from './table-text-pieces';
 import { TABLE_CELL_LINK } from '../../config/color-config';
 
 /** Πού κάθεται η πάνω-αριστερή γωνία του πίνακα μέσα στο φύλλο (sheet-mm). */
@@ -54,18 +63,38 @@ function translate(p: Point2D, origin: TableOriginMm): Point2D {
   return { x: p.x + origin.xMm, y: p.y + origin.yMm };
 }
 
-function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitive {
+/**
+ * 🔴 ADR-753 Φ3 — **ένα primitive ανά ομοιογενές κομμάτι.**
+ *
+ * ## Γιατί το σπάσιμο επιτρέπεται εδώ, ενώ για τους συνδέσμους δεν επιτρεπόταν
+ * Το {@link linkUnderlinePrimitives} εξηγεί γιατί το κείμενο **δεν** σπάει για να βαφτεί ένας
+ * σύνδεσμος: θα έχανε το ζεύγος kerning στο όριο, σε τέσσερα backends ταυτόχρονα, για χρώμα
+ * που είναι μετρικά ουδέτερο. **Για τα τμήματα δεν ισχύει τίποτα από αυτά**: το ζεύγος πάνω
+ * στο όριο στυλ έχει **ήδη** χαθεί στη μέτρηση (ADR-753 §11 — καμία υλοποίηση δεν μπορεί να
+ * το ανακτήσει, γιατί δύο γραμματοσειρές δεν έχουν κοινό ζεύγος), οπότε το σπάσιμο δεν κοστίζει
+ * τίποτα· κοστίζει μόνο αν **δεν** γίνει, γιατί τότε το χαρτί βγάζει με ένα στυλ ό,τι η οθόνη
+ * δείχνει με πολλά.
+ *
+ * Το `align` έρχεται από το **κομμάτι** και όχι από το run: τα τμήματα είναι
+ * αριστερά-αγκυρωμένα με τη στοίχιση ήδη διπλωμένη στο `offsetMm` τους, ενώ το μονό κομμάτι
+ * κρατά τη στοίχιση του run — δηλαδή παράγει το **ταυτόσημο** primitive με πριν τη Φ3.
+ */
+function textPrimitive(
+  run: TableTextRun,
+  piece: TableTextPiece,
+  origin: TableOriginMm,
+): DetailPrimitive {
   return {
     kind: 'text',
-    position: translate(run.position, origin),
-    text: run.text,
-    heightMm: run.heightMm,
+    position: translate(offsetPosition(run, piece), origin),
+    text: piece.text,
+    heightMm: piece.heightMm,
     // ADR-751 — κελί που είναι ΟΛΟ διεύθυνση βγαίνει μπλε **και σε χαρτί**: ο σύνδεσμος είναι
     // περιεχόμενο, όχι διεπαφή, και ένα τυπωμένο φύλλο ποσοτήτων οφείλει να δείχνει ποια
     // κελιά είναι στοιχεία επικοινωνίας. Δες `TABLE_CELL_LINK` για το γιατί άλλο μπλε.
-    colorHex: wholeRunLink(run) ? TABLE_CELL_LINK.colorHex : run.colorHex,
-    align: run.hAlign,
-    bold: run.bold,
+    colorHex: tablePieceInkHex(run, piece, TABLE_CELL_LINK.colorHex),
+    align: piece.align,
+    bold: piece.bold,
     // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — **παρόν μόνο όταν αληθεύει**, όπως το `clipped` και το
     // `dashMm`. Ένα ρητό `italic: false` θα άλλαζε το **σχήμα** κάθε primitive κειμένου του
     // repo — και μαζί τα snapshots χαρακτηρισμού του ADR-622, που υπάρχουν για να αποδεικνύουν
@@ -75,11 +104,23 @@ function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitiv
     // Δεν χάνεται τίποτα: ο `mapTablePrimitive` γράφει `italic: prim.italic ?? false` προς την
     // οντότητα, οπότε το DXF/PDF/ΤΕΚ δηλώνουν πάντα την όψη — απλώς η προεπιλογή ζει στο ΕΝΑ
     // σημείο που μεταφράζει, όχι σε κάθε primitive που ταξιδεύει.
-    ...(run.italic && { italic: true as const }),
+    ...(piece.italic && { italic: true as const }),
     // Απούσα οικογένεια = «η προεπιλογή του μετρητή». Δεν γεμίζεται με literal εδώ: ένα
     // `?? 'Arial'` θα ήταν ακριβώς το καρφωτό `arial` που το βήμα 3 (Α3) μόλις ξερίζωσε.
-    ...(run.fontFamily !== undefined && { fontFamily: run.fontFamily }),
+    ...(piece.fontFamily !== undefined && { fontFamily: piece.fontFamily }),
   };
+}
+
+/**
+ * Η θέση ενός κομματιού στο πλαίσιο του φύλλου — η άγκυρα του run συν το `offsetMm` του.
+ *
+ * Το πλαίσιο εδώ είναι **αστρόφιστο** (τη στροφή του πίνακα την εφαρμόζει αργότερα, μία φορά,
+ * η `tableFrameToWorld`), άρα το `offsetMm` προστίθεται ωμά στο `x`. Στον καμβά το ίδιο βήμα
+ * χρειάζεται ρητή περιστροφή της μετατόπισης, γιατί εκεί η στροφή έχει **ήδη** εφαρμοστεί.
+ */
+function offsetPosition(run: TableTextRun, piece: TableTextPiece): Point2D {
+  if (piece.offsetMm === 0) return run.position;
+  return { x: run.position.x + piece.offsetMm, y: run.position.y };
 }
 
 /**
@@ -116,9 +157,16 @@ function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitiv
  * μέσω του υπάρχοντος `penFor` — και ένα υπογραμμισμένο σύνολο σε φύλλο εκτύπωσης **είναι**
  * μολύβι, όχι επιφάνεια.
  */
-function underlinePrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitive | null {
-  if (!run.underline) return null;
-  return underlineLine(run, origin, run.hAlign, run.advanceMm, 0, run.colorHex);
+function underlinePrimitive(
+  run: TableTextRun,
+  piece: TableTextPiece,
+  origin: TableOriginMm,
+): DetailPrimitive | null {
+  // Το `advanceMm` συνοδεύει **πάντα** το `underline: true` — στο μονό κομμάτι το εγγυάται η
+  // ένωση `TableTextRun`, στα τμήματα το μέτρησε η Φ2. Ο έλεγχος υπάρχει για να στενέψει ο
+  // τύπος, όχι επειδή αναμένεται να αποτύχει.
+  if (!piece.underline || piece.advanceMm === undefined) return null;
+  return underlineLine(run, piece, origin, piece.align, piece.advanceMm, piece.offsetMm, piece.colorHex);
 }
 
 /**
@@ -139,17 +187,28 @@ function underlinePrimitive(run: TableTextRun, origin: TableOriginMm): DetailPri
  * Άρα η οθόνη είναι πιο εκφραστική από το χαρτί εδώ **κατά σχεδιασμό**, και το χαρτί δεν λέει
  * ποτέ ψέματα: η υπογράμμιση δείχνει ακριβώς ποιο κομμάτι είναι η διεύθυνση.
  */
-function linkUnderlinePrimitives(run: TableTextRun, origin: TableOriginMm): DetailPrimitive[] {
-  const links = run.links;
-  if (!links?.length) return [];
-  // Το στυλ υπογραμμίζει ήδη ΟΛΟ το κελί — δεύτερη γραμμή στο ίδιο `y` είναι η ίδια γραμμή.
-  if (run.underline && wholeRunLink(run)) return [];
+function linkUnderlinePrimitives(
+  run: TableTextRun,
+  piece: TableTextPiece,
+  origin: TableOriginMm,
+): DetailPrimitive[] {
+  const whole = piece.whole ? wholeRunLink(run) : null;
+  if (whole !== null) {
+    // Ο σύνδεσμος καλύπτει ΟΛΟ το κελί. Το στυλ, αν υπογραμμίζει, έχει ήδη βάλει τη γραμμή στο
+    // ίδιο `y` — δεύτερη γραμμή εκεί είναι η ίδια γραμμή, μόνο κόστος. Αλλιώς τη βάζει ο
+    // σύνδεσμος, με τη στοίχιση **του κομματιού** ώστε να ταυτιστεί με τα γράμματά του.
+    if (piece.underline) return [];
+    const line = underlineLine(
+      run, piece, origin, piece.align, whole.advanceMm, piece.offsetMm, TABLE_CELL_LINK.colorHex,
+    );
+    return line ? [line] : [];
+  }
 
   const out: DetailPrimitive[] = [];
-  for (const span of links) {
-    // `'left'`: η στοίχιση είναι ήδη διπλωμένη μέσα στο `offsetMm` (δες `table-cell-link-spans`).
+  for (const strip of tablePieceLinkStrips(run, piece)) {
+    // `'left'`: η στοίχιση είναι ήδη διπλωμένη μέσα στο `offsetMm` της λωρίδας.
     const line = underlineLine(
-      run, origin, 'left', span.advanceMm, span.offsetMm, TABLE_CELL_LINK.colorHex,
+      run, piece, origin, 'left', strip.advanceMm, strip.offsetMm, TABLE_CELL_LINK.colorHex,
     );
     if (line) out.push(line);
   }
@@ -162,16 +221,22 @@ function linkUnderlinePrimitives(run: TableTextRun, origin: TableOriginMm): Deta
  * Εξήχθη όταν απέκτησε δεύτερο καλούντα (ADR-751): δύο σώματα που μεταφράζουν
  * `tableUnderlineGeometry` σε `line` primitive θα ήταν sibling clone (N.18 / CHECK 3.28),
  * και — χειρότερα — δύο σημεία που θα μπορούσαν να διαφωνήσουν για το πού πέφτει η γραμμή.
+ *
+ * 🔴 ADR-753 Φ3 — το `em` έρχεται από το **κομμάτι**, όχι από το run: μια γραμμή κάτω από
+ * μεγαλύτερα γράμματα οφείλει να πέσει χαμηλότερα και να είναι παχύτερη, αλλιώς η υπογράμμιση
+ * ενός `A↑` τμήματος θα έκοβε τα ίδια τα γράμματα που υπογραμμίζει. Με ένα κομμάτι είναι
+ * κυριολεκτικά το `run.heightMm`.
  */
 function underlineLine(
   run: TableTextRun,
+  piece: TableTextPiece,
   origin: TableOriginMm,
   hAlign: TableTextRun['hAlign'],
   advanceMm: number,
   offsetMm: number,
   colorHex: string,
 ): DetailPrimitive | null {
-  const g = tableUnderlineGeometry(run.heightMm, advanceMm, hAlign);
+  const g = tableUnderlineGeometry(piece.heightMm, advanceMm, hAlign);
   if (!(g.width > 0)) return null;
   const p = translate(run.position, origin);
   const y = p.y + g.y;
@@ -314,15 +379,25 @@ export function tableLayoutToPrimitives(
   for (const row of layout.rows) {
     pushHorizontalAt(row.yMm);
     for (const cell of byRow.get(row.id) ?? []) {
-      if (!cell.text) continue;
-      out.push(textPrimitive(cell.text, origin));
-      // Η υπογράμμιση **μετά** το κείμενο του ίδιου κελιού: σε καμβά και PDF η σειρά είναι το
-      // z-order, και ο ζωγράφος της οθόνης τη βάζει κι αυτός μετά το `fillText` (μέσα στην
-      // ίδια στροφή). Ίδια σειρά ⇒ ίδιο αποτέλεσμα σε ημιδιαφανή μελάνια.
-      const underline = underlinePrimitive(cell.text, origin);
-      if (underline) out.push(underline);
-      // ADR-751 — και οι γραμμές των διευθύνσεων, με την ίδια λογική σειράς (μετά το κείμενο).
-      out.push(...linkUnderlinePrimitives(cell.text, origin));
+      const run = cell.text;
+      if (!run) continue;
+      // 🔴 ADR-753 Φ3 — **ένα** κομμάτι σε κάθε πίνακα που υπάρχει σήμερα (το ίδιο το run), Ν
+      // όταν το κελί έχει μορφοποίηση ανά χαρακτήρα. Ίδιο SSoT με τον ζωγράφο της οθόνης, άρα
+      // δεν υπάρχει σημείο όπου χαρτί και οθόνη να διαφωνήσουν για το πού κάθεται ένα τμήμα.
+      //
+      // Η σειρά είναι **ανά κομμάτι** (κείμενο → υπογραμμίσεις του), όχι «όλα τα κείμενα μετά
+      // όλες οι γραμμές»: σε καμβά και PDF η σειρά είναι το z-order, και μια υπογράμμιση
+      // οφείλει να πέφτει πάνω στα δικά της γράμματα, όχι πάνω στα επόμενα.
+      for (const piece of tableTextPieces(run)) {
+        out.push(textPrimitive(run, piece, origin));
+        // Η υπογράμμιση **μετά** το κείμενο του ίδιου κομματιού: ο ζωγράφος της οθόνης τη βάζει
+        // κι αυτός μετά το `fillText` (μέσα στην ίδια στροφή). Ίδια σειρά ⇒ ίδιο αποτέλεσμα σε
+        // ημιδιαφανή μελάνια.
+        const underline = underlinePrimitive(run, piece, origin);
+        if (underline) out.push(underline);
+        // ADR-751 — και οι γραμμές των διευθύνσεων, με την ίδια λογική σειράς (μετά το κείμενο).
+        out.push(...linkUnderlinePrimitives(run, piece, origin));
+      }
     }
   }
 

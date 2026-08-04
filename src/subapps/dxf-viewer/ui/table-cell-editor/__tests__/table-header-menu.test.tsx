@@ -271,7 +271,9 @@ describe('🔴 μενού ζωνών δείκτη — από το δεξί κλ�
       colId: harness.entity().model.columns[0].id,
       index: 0,
     });
-    expect(state).toEqual({ label: 'A', canInsert: true, canDelete: true });
+    // Το `count: 1` δεν είναι διακοσμητικό: είναι η ίδια τιμή που εκτελεί η πράξη και που
+    // γράφει η ετικέτα (§27.17) — χωρίς επιλογή, ο στόχος είναι **ένας** άξονας.
+    expect(state).toEqual({ label: 'A', axisLabel: 'A', count: 1, canInsert: true, canDelete: true });
   });
 
   it('η ετικέτα γραμμής είναι 1-based — ίδια ονομασία με τη ζώνη', () => {
@@ -547,7 +549,7 @@ const menuProps = {
   onInsertAfter: noop,
   onDelete: noop,
   onClosed: noop,
-  resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
+  resolveState: () => ({ label: 'B', axisLabel: 'B', count: 1, canInsert: true, canDelete: true }),
   resolveFormat: () => ({
     bold: NO_FORMAT,
     italic: NO_FORMAT,
@@ -713,3 +715,179 @@ function openCursor(harness: Harness): void {
   const model = harness.entity().model;
   setTableCellCursor('table-1', tableCursorAt(model.rows[0].id, model.columns[0].id), 'nav');
 }
+
+/**
+ * 🔴 ADR-739 §27.17 — **ΤΟ ΣΦΑΛΜΑ ΤΗΣ 04/08, ΑΠΟ ΤΗΝ ΕΠΙΛΟΓΗ ΩΣ ΤΟ ΜΟΝΤΕΛΟ.**
+ *
+ * Ο ιδιοκτήτης μάρκαρε πολλές στήλες από τη ζώνη με τα γράμματα, πάτησε «Διαγραφή στήλης»,
+ * και έσβηνε **μία** — με τις υπόλοιπες να μένουν φωτισμένες στην οθόνη (στιγμιότυπο).
+ *
+ * ## Γιατί ΔΕΝ αρκούσαν τα καθαρά tests
+ * Το `resolveTableAxisActionTarget` και το `deleteTableColumns` έχουν τις δικές τους σουίτες
+ * και θα ήταν **και τα δύο πράσινα** ακόμα κι αν κανείς δεν τα καλούσε ποτέ από το μενού. Το
+ * ελάττωμα δεν ήταν σε καμία συνάρτηση: ήταν στο ότι το μενού **δεν ρωτούσε** την επιλογή.
+ * Άρα το anchor οφείλει να περάσει από την πραγματική διαδρομή του χρήστη — κλικ στη ζώνη,
+ * `Shift+κλικ` σε δεύτερο γράμμα, `getHit` από συντεταγμένες οθόνης, `onDelete`.
+ */
+describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακολουθεί ΟΣΑ μάρκαρε ο χρήστης', () => {
+  let harness: Harness;
+
+  beforeEach(() => {
+    executed.length = 0;
+    __resetTableCellCursorStoreForTests();
+    __resetTableHeaderMenuPortForTests();
+    harness = createHarness();
+  });
+
+  afterEach(() => {
+    harness.containerRef.current?.remove();
+  });
+
+  /**
+   * Ο δρομέας διαβάζεται **μέσα** στην απόδοση: το `Shift+κλικ` χρειάζεται την επιλογή που
+   * γέννησε το πρώτο κλικ, και ο pointer hook δέχεται τον δρομέα ως prop (τεκμηριωμένο εκεί:
+   * `useEventCallback` ακριβώς για να μη γίνει μπαγιάτικος). Χωρίς το `rerender` ανάμεσα, το
+   * test θα μετρούσε μπαγιάτικη κατάσταση — δηλαδή θα έλεγε ψέματα και προς τις δύο μεριές.
+   */
+  function mountPointer() {
+    return renderHook(() =>
+      useTableCellPointer({
+        cursor: getTableCellCursor(),
+        entity: harness.entity(),
+        containerRef: harness.containerRef,
+        transformRef: harness.transformRef,
+        onSelectTo: jest.fn(),
+        onCommitPending: jest.fn(),
+      }),
+    );
+  }
+
+  function clickBand(axis: 'column' | 'row', index: number, shiftKey = false): void {
+    const point = tableBandScreenPoint(harness.entity(), axis, index);
+    act(() => {
+      harness.containerRef.current?.dispatchEvent(
+        new MouseEvent('mousedown', {
+          button: 0, clientX: point.x, clientY: point.y, shiftKey, bubbles: true,
+        }),
+      );
+    });
+  }
+
+  /** Το `hit` όπως το παράγει ο **δρομολογητής**, από συντεταγμένες οθόνης. */
+  function hitAt(axis: 'column' | 'row', index: number) {
+    const point = tableBandScreenPoint(harness.entity(), axis, index);
+    const hit = getTableHeaderMenuPort()?.getHit(point.x, point.y);
+    expect(hit).not.toBeNull();
+    return hit!;
+  }
+
+  /** Μαρκάρει `A`→`B` με κλικ + `Shift+κλικ`, όπως ακριβώς ο χρήστης. */
+  function selectColumnsAtoB(): void {
+    const pointer = mountPointer();
+    clickBand('column', 0);
+    pointer.rerender();
+    clickBand('column', 1, true);
+    expect(getTableCellCursor()?.selection?.kind).toBe('column');
+  }
+
+  it('🔴 δύο μαρκαρισμένες στήλες ⇒ η ΔΙΑΓΡΑΦΗ σβήνει ΚΑΙ ΤΙΣ ΔΥΟ, με ΜΙΑ εντολή', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+
+    const before = harness.entity().model;
+    expect(before.columns).toHaveLength(3);
+    const doomed = [before.columns[0].id, before.columns[1].id];
+
+    act(() => { view.result.current.props.onDelete(hitAt('column', 1)); });
+
+    const after = harness.entity().model;
+    expect(after.columns.map((c) => c.id)).toEqual([before.columns[2].id]);
+    expect(after.columns.some((c) => doomed.includes(c.id))).toBe(false);
+    // Ένα βήμα undo για μια πράξη του χρήστη — όχι δύο επειδή έτυχε να είναι δύο στήλες.
+    expect(executed).toHaveLength(1);
+  });
+
+  it('🔴 ο δρομέας μένει σε κελί που ΥΠΑΡΧΕΙ μετά τη διαγραφή πολλών στηλών', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+
+    act(() => { view.result.current.props.onDelete(hitAt('column', 1)); });
+
+    const after = harness.entity().model;
+    const cursor = getTableCellCursor();
+    expect(after.columns.some((c) => c.id === cursor?.position.colId)).toBe(true);
+    expect(after.rows.some((r) => r.id === cursor?.position.rowId)).toBe(true);
+  });
+
+  it('🔴 η ετικέτα λέει ΤΗΝ ΑΛΗΘΕΙΑ: «A:B» και πλήθος 2 — όχι «Στήλη B»', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+
+    expect(view.result.current.props.resolveState(hitAt('column', 1)))
+      // Το `axisLabel` είναι **η στήλη που πατήθηκε** (`B`) — η γραμμή μορφοποίησης δρα
+      // ακόμη σε έναν άξονα και το προσβάσιμο όνομά της δεν επιτρέπεται να πει «A:B».
+      .toEqual({ label: 'A:B', axisLabel: 'B', count: 2, canInsert: true, canDelete: true });
+  });
+
+  it('🔴 «Εισαγωγή αριστερά» με 2 μαρκαρισμένες βάζει 2 — ο κανόνας του Excel', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+    const before = harness.entity().model.columns.length;
+
+    act(() => { view.result.current.props.onInsertBefore(hitAt('column', 1)); });
+
+    expect(harness.entity().model.columns).toHaveLength(before + 2);
+    expect(executed).toHaveLength(1);
+  });
+
+  it('🔴 ΟΛΕΣ οι στήλες μαρκαρισμένες ⇒ η διαγραφή είναι ΑΝΕΝΕΡΓΗ (ποτέ μερική)', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    const pointer = mountPointer();
+    clickBand('column', 0);
+    pointer.rerender();
+    clickBand('column', 2, true);
+
+    const state = view.result.current.props.resolveState(hitAt('column', 1));
+    expect(state).toMatchObject({ label: 'A:C', count: 3, canDelete: false });
+
+    act(() => { view.result.current.props.onDelete(hitAt('column', 1)); });
+    expect(harness.entity().model.columns).toHaveLength(3);
+    expect(executed).toHaveLength(0);
+  });
+
+  it('δεξί κλικ ΕΞΩ από την επιλογή ⇒ μόνο η στήλη που πατήθηκε (Α22)', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+    const before = harness.entity().model;
+
+    act(() => { view.result.current.props.onDelete(hitAt('column', 2)); });
+
+    expect(harness.entity().model.columns.map((c) => c.id))
+      .toEqual([before.columns[0].id, before.columns[1].id]);
+  });
+
+  it('🔴 μαρκαρισμένες ΓΡΑΜΜΕΣ ⇒ ο ίδιος κανόνας, χωρίς δεύτερη υλοποίηση', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    const pointer = mountPointer();
+    clickBand('row', 1);
+    pointer.rerender();
+    clickBand('row', 3, true);
+
+    const before = harness.entity().model;
+    const doomed = before.rows.slice(1, 4).map((r) => r.id);
+
+    act(() => { view.result.current.props.onDelete(hitAt('row', 2)); });
+
+    const after = harness.entity().model;
+    expect(after.rows).toHaveLength(before.rows.length - 3);
+    expect(after.rows.some((r) => doomed.includes(r.id))).toBe(false);
+    expect(executed).toHaveLength(1);
+  });
+});
