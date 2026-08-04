@@ -74,8 +74,12 @@ import { getTableRangeTransferPreview } from '../../state/table-range-transfer-s
 // 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των αναφορών του τύπου που γράφεται. **Κανένα
 // νέο store**: οι αναφορές είναι παράγωγο του προχείρου, που ταξιδεύει ήδη μέσα στον δρομέα
 // (δες την κεφαλίδα του `table-formula-reference-spans`).
-import { tableFormulaReferenceSpans } from '../../bim/table/formula/table-formula-reference-spans';
-import { stampTableFormulaReferences } from './table/stamp-table-formula-references';
+// 🔴 ADR-754 — οι δύο επικαλύψεις των τύπων (Β1 περιγράμματα, Γ4 λαβή). Ζουν χωριστά γιατί
+// είναι οι μόνες που ρωτούν **μοντέλο και δρομέα μαζί** — δες την κεφαλίδα τους.
+import {
+  stampTableFillHandleOverlay,
+  stampTableFormulaReferenceOverlay,
+} from './table/table-formula-overlays';
 import { tableColumnTicks, tableRowTicks } from '../../bim/table/table-cell-reference';
 // ADR-739 Φ.Δ βήμα 2 — ο δρομέας διαβάζεται με getter τη στιγμή του καρέ (ADR-040), ποτέ
 // ως συνδρομή: ο ζωγράφος μένει καθαρό φύλλο.
@@ -274,7 +278,7 @@ export class TableRenderer extends BaseEntityRenderer {
       // επεξεργαστή είναι **DOM πάνω από τον καμβά** και κανένας κανόνας στοίβαξης εδώ δεν
       // τον φτάνει. Καταγράφεται ως όριο, όχι ως ελάττωμα: το κελί που γράφεις το δείχνει ήδη
       // ο δρομέας, και η κυκλική αναφορά είναι σφάλμα που ο χρήστης φτιάχνει κατά λάθος.
-      this.drawFormulaReferences(e, cursor, rc, layout);
+      stampTableFormulaReferenceOverlay(rc, layout, e, cursor);
       // 🔴 ADR-739 §36 ΦΑΣΗ 3 — **το φάντασμα προορισμού, τελευταίο**: απαντά «*πού θα πάει*»
       // και δεν επιτρέπεται να κρυφτεί κάτω από τα δεδομένα του προορισμού — σε αντίθεση με την
       // επιλογή, που απαντά «*τι μάρκαρα*» και μπαίνει **κάτω** από το κείμενο. Γι' αυτό το
@@ -282,6 +286,9 @@ export class TableRenderer extends BaseEntityRenderer {
       // καρέ (ADR-040), και **μόνο** σε φάση επιλογής ⇒ ποτέ ψημένο στο bitmap cache (#3).
       const transfer = getTableRangeTransferPreview();
       if (transfer?.entityId === e.id) stampTableRangeGhost(rc, layout, transfer);
+      // 🔴 ADR-754 Γ4 — η λαβή συμπλήρωσης, **τελευταία μέσα στο πλέγμα**: είναι το μόνο
+      // στοιχείο εδώ που λειτουργεί ως χερούλι, άρα τίποτα δεν επιτρέπεται να τη σκεπάσει.
+      stampTableFillHandleOverlay(rc, layout, e, cursor, selection?.bounds);
     }
 
     // 🔴 ADR-739 §40 — **ΤΟ ⊕ ΤΗΣ ΕΙΣΑΓΩΓΗΣ, ΕΞΩ ΑΠΟ ΤΟ `if (cursor)`.**
@@ -337,7 +344,13 @@ export class TableRenderer extends BaseEntityRenderer {
      * recalc ανά πίνακα ανά καρέ για μηδέν πληροφορία.
      */
     layout: TableLayout,
-  ): { readonly rectMm: TableRectMm; readonly membership: TableRangeMembership } | null {
+  ): {
+    readonly rectMm: TableRectMm;
+    readonly membership: TableRangeMembership;
+    /** 🔴 ADR-754 Γ4 — τα ίδια όρια, για τη **λαβή συμπλήρωσης**: δεύτερος υπολογισμός τους
+     *  θα ήταν δεύτερη απάντηση στο «τι μάρκαρε ο χρήστης», μέσα στο ίδιο καρέ. */
+    readonly bounds: TableCellRangeBounds;
+  } | null {
     if (!cursor.selection) return null;
     const model = resolveTableModel(e.model);
     // ADR-739 §27.15 — ο ζωγράφος **δεν ερμηνεύει**: ρωτά τον ΕΝΑ δρόμο «τι διάλεξε ο
@@ -345,7 +358,7 @@ export class TableRenderer extends BaseEntityRenderer {
     const bounds = resolveTableSelectionBounds(model, cursor.selection);
     if (!bounds) return null;
     const rectMm = tableRangeRectMm(layout, bounds);
-    return rectMm ? { rectMm, membership: tableRangeMembership(model, bounds) } : null;
+    return rectMm ? { rectMm, membership: tableRangeMembership(model, bounds), bounds } : null;
   }
 
   /**
@@ -367,30 +380,6 @@ export class TableRenderer extends BaseEntityRenderer {
   private cursorOf(entityId: string): TableCellCursorState | null {
     const cursor = getTableCellCursor();
     return cursor && cursor.entityId === entityId ? cursor : null;
-  }
-
-  /**
-   * 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των κελιών που **διαβάζει** ο τύπος που
-   * γράφεται αυτή τη στιγμή.
-   *
-   * ## Γιατί ΔΕΝ ελέγχεται εδώ αν το πρόχειρο είναι τύπος
-   * Θα ήταν δεύτερος ορισμός του «τι είναι τύπος», δίπλα στον έναν που ζει στον λεξικογράφο
-   * (`formulaBodyStart`) — και θα απέκλινε την πρώτη φορά που ο πρώτος δεχτεί κάτι παραπάνω
-   * (αρχικά κενά, άλλο πρόθεμα). Η **κενή** απάντηση είναι νόμιμη και φθηνή.
-   *
-   * Ο μόνος φρουρός είναι «γράφεται κάτι;» — που δεν είναι γραμματική ερώτηση αλλά ο κανόνας
-   * που ήδη διέπει κάθε επεξεργασία εδώ: σε πλοήγηση το πρόχειρο είναι `''` εξ ορισμού, και
-   * αυτή είναι η **συνήθης** κατάσταση κάθε καρέ.
-   */
-  private drawFormulaReferences(
-    e: TableEntity,
-    cursor: TableCellCursorState,
-    rc: StampTableContext,
-    layout: TableLayout,
-  ): void {
-    if (!cursor.draft) return;
-    const model = resolveTableModel(e.model);
-    stampTableFormulaReferences(rc, layout, tableFormulaReferenceSpans(model, cursor.draft));
   }
 
   /**

@@ -582,6 +582,11 @@ const menuProps = {
     onApplyDiagonal: noop,
     resolvePencil: () => null,
   }),
+  // ADR-755 — το split button συγχώνευσης· ίδιο σχήμα «μία απάντηση» με τα περιγράμματα.
+  resolveMergeMenu: () => ({
+    state: { merged: false, canMerge: true },
+    onApply: noop,
+  }),
 };
 
 describe('🔴 το μενού είναι ΜΕΛΟΣ της συνεδρίας επεξεργασίας', () => {
