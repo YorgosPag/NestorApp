@@ -22,6 +22,7 @@
 
 import type { Entity, TextEntity } from '../../../types/entities';
 import { isTextEntity } from '../../../types/entities';
+import { resolveTextHeight } from '../../../hooks/canvas/dxf-text-style-extractor';
 import type { SceneLayer } from '../../../types/scene-types';
 import type { TitleBlockReading, TitleBlockSourceCell } from '@/types/title-block-reading';
 import { serializeDxfTextNode } from '../../serializer/mtext-serializer';
@@ -95,9 +96,12 @@ export function sceneCellFromTextEntity(entity: TextEntity): TitleBlockSourceCel
     handle: entity.id,
     x: entity.position.x,
     y: entity.position.y,
-    // Ο κωδ. 40 είναι η **μονάδα** των απόλυτων `\H` που εκπέμπει ο serializer. Το `fontSize`
-    // είναι εφεδρεία για οντότητες που το `height` τους δεν επιβίωσε (προ-ADR-635 στιγμιότυπα).
-    height: entity.height > 0 ? entity.height : entity.fontSize,
+    // 🔑 **Η μονάδα των απόλυτων `\H`** που εκπέμπει ο serializer — και ο SSoT της είναι ο
+    // `resolveTextHeight`, όχι το flat `entity.height` (και τα δύο flat πεδία είναι
+    // **προαιρετικά** και το `fontSize` ρητά `@deprecated`). Ο resolver προτιμά το ζωντανό
+    // ύψος του πρώτου run, που είναι ακριβώς η βάση από την οποία ο serializer ξεκινά να
+    // μετρά διαφορές — δηλαδή η **σωστή** απάντηση, όχι απλώς μια διαθέσιμη.
+    height: resolveTextHeight(entity),
     raw,
   };
 }
