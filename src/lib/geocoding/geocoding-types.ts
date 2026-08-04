@@ -260,6 +260,15 @@ export type AddressSourceType =
   | 'manual'     // Typed without geocoding
   | 'derived'    // Inherited from a parent record (ADR-318)
   | 'imported'   // External import (CSV, API, etc.)
+  /**
+   * ADR-745 §6.4 — εγκρίθηκε από **πινακίδα τοπογραφικού DXF**, ανά κελί.
+   *
+   * Χωριστό από το `'imported'` επίτηδες: το G2 του ADR («καμία καταγραφή προέλευσης σε επίπεδο
+   * κελιού») δεν κλείνει με μια γενική ετικέτα εισαγωγής. Μια διεύθυνση από πινακίδα έχει
+   * **ανθρώπινη έγκριση**, ένα `TitleBlockBinding` που δείχνει σε ποιο κελί ποιου αρχείου, και
+   * `snapshotValue` για ανίχνευση απόκλισης — τίποτε από αυτά δεν ισχύει για εισαγωγή CSV.
+   */
+  | 'titleblock'
   | 'unknown';   // Pre-ADR-332 records without provenance metadata
 
 // =============================================================================
