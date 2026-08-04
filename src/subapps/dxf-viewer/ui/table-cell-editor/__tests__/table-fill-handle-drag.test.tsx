@@ -40,14 +40,11 @@
  *   ίδιο σχήμα harness για την **τέταρτη** χειρονομία (υπόδειξη κελιού μέσα σε τύπο)
  */
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { act, render } from '@testing-library/react';
 import { buildTableEntity } from '../../../bim/table/build-table-entity';
-import {
-  TABLE_TEST_VIEW,
-  tableCellScreenPoint,
-  tableFillHandleScreenPoint,
-} from './table-screen-point';
+import { tableCellScreenPoint, tableFillHandleScreenPoint } from './table-screen-point';
+import { TablePointerHarness, stubHarnessRect } from './table-pointer-harness';
 import { tableCursorAt } from '../../../bim/table/table-cell-navigation';
 import { writeCellInput } from '../../../bim/table/formula/table-formula-engine';
 import { getPersistedCellText } from '../../../bim/table/table-model-helpers';
@@ -56,60 +53,17 @@ import {
   getTableCellCursor,
   setTableCellCursor,
   setTableCellSelection,
-  useTableCellCursor,
 } from '../../../state/table-cell-cursor-store';
-import {
-  __resetTableCellSessionFocusForTests,
-  TABLE_CELL_SESSION_MARKER,
-} from '../table-cell-session-focus';
-import { useTableCellPointer } from '../use-table-cell-pointer';
+import { __resetTableCellSessionFocusForTests } from '../table-cell-session-focus';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { PersistedTableModel } from '../../../types/table';
 import type { TableEntity } from '../../../types/table-entity';
-import type { Point2D, ViewTransform } from '../../../rendering/types/Types';
-
-const { transform: TRANSFORM, viewport: VIEWPORT } = TABLE_TEST_VIEW;
-
-interface HarnessProps {
-  readonly entity: TableEntity;
-  readonly onCommitModel: (entity: TableEntity, model: PersistedTableModel) => void;
-}
+import type { Point2D } from '../../../rendering/types/Types';
 
 /**
- * Ο ελάχιστος πιστός κόσμος: το δοχείο του καμβά με τον **πραγματικό** ακροατή, και από πάνω του
- * το πεδίο της συνεδρίας — που στην παραγωγή υπάρχει και σε `nav`, άρα οφείλει να υπάρχει κι εδώ.
+ * 🔴 §36.9 — **ο harness μετακόμισε** στο `table-pointer-harness.tsx` όταν η μετακίνηση
+ * περιγράμματος θα ήταν το **τρίτο** αντίγραφό του (N.18). Δες την κεφαλίδα εκείνου του αρχείου.
  */
-function FillHandleHarness(props: HarnessProps): React.ReactElement {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const transformRef = useRef<ViewTransform>(TRANSFORM);
-  const cursor = useTableCellCursor();
-
-  useTableCellPointer({
-    cursor,
-    entity: props.entity,
-    liveTable: () => props.entity,
-    containerRef,
-    transformRef,
-    onSelectTo: () => undefined,
-    onSelectAll: () => undefined,
-    onCommitPending: () => undefined,
-    onPreviewModel: () => undefined,
-    onCommitModel: props.onCommitModel,
-  });
-
-  return (
-    <div ref={containerRef} data-testid="canvas">
-      {cursor ? (
-        <textarea
-          key={`${cursor.entityId}:${cursor.position.rowId}:${cursor.position.colId}:${cursor.sessionId}`}
-          value={cursor.draft}
-          onChange={() => undefined}
-          {...TABLE_CELL_SESSION_MARKER}
-        />
-      ) : null}
-    </div>
-  );
-}
 
 describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από το πάτημα ως το μοντέλο', () => {
   let entity: TableEntity;
@@ -188,10 +142,9 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
    * γίνεται **μία** φορά ανά test.
    */
   function mount(): void {
-    const view = render(<FillHandleHarness entity={entity} onCommitModel={onCommitModel} />);
+    const view = render(<TablePointerHarness entity={entity} onCommitModel={onCommitModel} />);
     canvas = view.getByTestId('canvas');
-    canvas.getBoundingClientRect = () =>
-      ({ left: 0, top: 0, width: VIEWPORT.width, height: VIEWPORT.height }) as DOMRect;
+    stubHarnessRect(canvas);
   }
 
   beforeEach(() => {

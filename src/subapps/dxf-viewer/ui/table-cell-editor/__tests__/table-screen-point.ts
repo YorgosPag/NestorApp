@@ -56,7 +56,8 @@ import {
 } from '../../../bim/table/table-axis-boundary';
 // 🔴 ADR-754 §14 — το ΙΔΙΟ τετράγωνο που ζωγραφίζεται και που ρωτούν ο δείκτης και το πάτημα.
 import { tableFillHandleRectMm } from '../../../bim/table/table-fill-handle';
-import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
+// 🔴 ADR-739 §36 — το ΙΔΙΟ ορθογώνιο περιοχής που ζωγραφίζεται και που πιάνεται.
+import { tableRangeRectMm, type TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/Types';
@@ -235,6 +236,33 @@ export function tableFillHandleScreenPoint(
   if (!rect) throw new Error('Η περιοχή δεν τέμνει τη διάταξη — δεν υπάρχει λαβή να σημαδευτεί');
   const { u, v } = rectCenterMm(rect);
   return tableFrameScreenPoint(entity, u, v, view);
+}
+
+/**
+ * 🔴 ADR-739 §36 — το σημείο οθόνης **πάνω στο περίγραμμα** μιας περιοχής (ή ενός κελιού): το
+ * **μέσο** της κάτω πλευράς της, ακριβώς πάνω στη γραμμή.
+ *
+ * ## Γιατί το ΜΕΣΟ της κάτω πλευράς, και όχι μια γωνία
+ * Τρεις ανεξάρτητοι λόγοι, και ο καθένας μόνος του θα αρκούσε:
+ *  - η **κάτω-δεξιά** γωνία ανήκει στη λαβή συμπλήρωσης (ADR-754 §14.4, η λαβή νικά)·
+ *  - η **αριστερή** λωρίδα πλάτους ~`gapMm` ανήκει στη λαβή ύψους γραμμής (`row-resize`,
+ *    §31.9) — μετρημένο: σάρωση της κάτω πλευράς δίνει `row-resize` στα πρώτα ~9 px·
+ *  - το μέσο είναι το μόνο σημείο που μένει «περίγραμμα» σε **κάθε** κλίμακα, όση κι αν
+ *    γίνει η οπή.
+ *
+ * Ρωτά το `tableRangeRectMm` — **το ίδιο** ορθογώνιο που ζωγραφίζεται και που ρωτούν ο δείκτης
+ * και το πάτημα. Ίδιο επιχείρημα με τους τρεις βοηθούς από πάνω: μια δεύτερη αριθμητική εδώ θα
+ * σήμαινε test που συμφωνεί με τον εαυτό του πάνω σε λάθος γεωμετρία.
+ */
+export function tableRangeBorderScreenPoint(
+  entity: TableEntity,
+  bounds: TableCellRangeBounds,
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const { layout } = computeTableEntityGeometryLive(entity);
+  const rect = tableRangeRectMm(layout, bounds);
+  if (!rect) throw new Error('Η περιοχή δεν τέμνει τη διάταξη — δεν υπάρχει περίγραμμα');
+  return tableFrameScreenPoint(entity, rect.x + rect.w / 2, rect.y + rect.h, view);
 }
 
 export function tableIndicatorCornerScreenPoint(
