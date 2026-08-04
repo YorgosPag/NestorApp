@@ -17,7 +17,7 @@
  * two places.
  *
  * Needs a real `.next` production build → heavy → CI only (N.17). The workflow
- * runs `pnpm run build` first, then this script (a pure consumer of `.next`;
+ * runs `pnpm run build:ci` first, then this script (a pure consumer of `.next`;
  * it never triggers a build itself). Baseline seeded via CI seed dispatch.
  *
  * CLI:
