@@ -117,6 +117,25 @@ function compareSchemas(referenceData, candidateData) {
   };
 }
 
+/**
+ * Πετά τα `//` σχόλια μιας γραμμής, αφήνοντας άθικτο ό,τι είναι μέσα σε εισαγωγικά.
+ *
+ * 🔴 ADR-752: χωρίς αυτό, ένα **σχόλιο** μέσα στο μπλοκ ήταν αρκετό για να γεννήσει φάντασμα
+ * namespace — ένα παράδειγμα κλειδιού σε μονά εισαγωγικά μετρήθηκε ως καταχώριση και ο
+ * validator κοκκίνισε με «Extra: …». Ο parser διάβαζε **κείμενο**, όχι δηλώσεις.
+ */
+function stripLineComments(block) {
+  return block
+    .split('\n')
+    .map((line) => {
+      const commentIndex = line.indexOf('//');
+      if (commentIndex === -1) return line;
+      const quotesBefore = (line.slice(0, commentIndex).match(/'/g) || []).length;
+      return quotesBefore % 2 === 0 ? line.slice(0, commentIndex) : line;
+    })
+    .join('\n');
+}
+
 function parseConstArray(filePath, exportName) {
   const source = readText(filePath);
   const pattern = new RegExp(`export const ${exportName} = \\[(.*?)\\] as const;`, 's');
@@ -126,7 +145,41 @@ function parseConstArray(filePath, exportName) {
     return [];
   }
 
-  return [...match[1].matchAll(/'([^']+)'/g)].map((entry) => entry[1]);
+  return [...stripLineComments(match[1]).matchAll(/'([^']+)'/g)].map((entry) => entry[1]);
+}
+
+/** Ποια συνάρτηση του `namespace-loaders.ts` σερβίρει ποια γλώσσα. */
+const LOADER_FUNCTIONS = { el: 'getElLoader', en: 'getEnLoader' };
+
+const LOADER_CASE_PATTERN =
+  /case\s+'([^']+)':\s*return\s+\(\)\s*=>\s*import\('\.\/locales\/([^/']+)\/([^']+)\.json'\)/g;
+
+/**
+ * Διαβάζει το `namespace-loaders.ts` ως **δηλώσεις**: ανά γλώσσα, ποια `case` υπάρχουν και σε
+ * ποιο αρχείο δείχνει η καθεμιά.
+ *
+ * Αυτό είναι το ερώτημα που δεν έκανε ΚΑΝΕΝΑΣ έλεγχος (ADR-752): το CHECK 3.8 ρωτά «υπάρχει το
+ * κλειδί;», το 3.33 «είναι φρέσκοι οι τύποι;», ο `validate-i18n-config` «ξέρει ο τύπος το
+ * namespace;». Ένα namespace μπορούσε να περάσει και τα τρία και να είναι **αφόρτωτο** στην
+ * οθόνη — γιατί το `loadTranslations` γυρίζει σιωπηλά `{}` όταν λείπει το `case`.
+ *
+ * @returns {{ el: Array<{namespace: string, dir: string, file: string}>, en: Array }}
+ */
+function parseNamespaceLoaders(filePath) {
+  const source = readText(filePath);
+  const result = {};
+
+  for (const [language, functionName] of Object.entries(LOADER_FUNCTIONS)) {
+    const start = source.indexOf(`function ${functionName}(`);
+    const end = start === -1 ? -1 : source.indexOf('\n}', start);
+    const block = start === -1 || end === -1 ? '' : source.slice(start, end);
+
+    result[language] = [...block.matchAll(LOADER_CASE_PATTERN)].map(
+      ([, namespace, dir, file]) => ({ namespace, dir, file }),
+    );
+  }
+
+  return result;
 }
 
 function parseTranslationNamespaceUnion(filePath) {
@@ -250,7 +303,10 @@ module.exports = {
   getSourceFiles,
   listJsonFiles,
   parseConstArray,
+  parseNamespaceLoaders,
   parseTranslationNamespaceUnion,
+  stripLineComments,
+  LOADER_FUNCTIONS,
   readJson,
   readText,
   scanHardcodedStringPatterns,

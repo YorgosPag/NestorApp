@@ -111,6 +111,19 @@ export const SUPPORTED_NAMESPACES = [
   'settings',               // 🏢 App settings pages (shortcuts, etc.)
   'textToolbar',            // 🏢 DXF text toolbar / Properties panel (ADR-344)
   'textFindReplace',        // 🏢 DXF text Find & Replace dialog (ADR-344 Phase 9)
+  // 🔴 ADR-752 — τα έξι από κάτω είχαν αρχεία locale (el + en) και καταναλωτές, αλλά ΚΑΝΕΝΑ
+  // loader: το `loadTranslations` έπεφτε στο `default: null` και κατέγραφε **άδειο** bundle,
+  // οπότε κάθε κλειδί με πρόθεμα ns ζωγραφιζόταν ωμό ενώ η μετάφραση υπήρχε στον δίσκο.
+  // ⚠️ ΜΗΝ γράψεις παράδειγμα κλειδιού σε μονά εισαγωγικά εδώ μέσα: το `parseConstArray` του
+  // `validate-i18n-config.js` είναι regex πάνω στο μπλοκ και θα το μετρήσει ως namespace.
+  // Δεν το έπιασε το CHECK 3.8 (ρωτά «υπάρχει το κλειδί;» — υπήρχε), ούτε το 3.33 (ρωτά «είναι
+  // φρέσκοι οι τύποι;» — ήταν). Το ερώτημα «φορτώνεται το namespace;» είναι πλέον το CHECK 3.36.
+  'textTemplates',          // 🏢 DXF text templates + placeholder labels (ADR-344 Phase 7.C)
+  'textSpell',              // 🏢 DXF spell-check / custom dictionary UI (ADR-344)
+  'textFonts',              // 🏢 DXF font manager / missing-font banner (ADR-344)
+  'textDraft',              // 🏢 DXF text draft recovery banner (ADR-344)
+  'textAi',                 // 🏢 DXF text AI assistant panel (ADR-344)
+  'dxf-viewer-dimensions',  // 🏢 DXF dimension panel/ribbon/units (ADR-362)
   'bim3d',                  // 🏢 BIM 3D Viewer (ADR-366)
   'bim-3d-aria',            // 🏢 BIM 3D ARIA entity descriptions (ADR-366 Phase 8.1)
   'bim-materials',          // 🏢 BIM Material Library editor UI (ADR-363 Phase 6.5)

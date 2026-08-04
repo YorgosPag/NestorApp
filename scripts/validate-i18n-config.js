@@ -8,11 +8,13 @@ const {
   SUPPORTED_LANGUAGES,
   getNamespacesForLocale,
   parseConstArray,
+  parseNamespaceLoaders,
   parseTranslationNamespaceUnion,
   readText,
 } = require('./_shared/i18n-governance');
 
 const lazyConfigPath = path.join(__dirname, '..', 'src', 'i18n', 'lazy-config.ts');
+const namespaceLoadersPath = path.join(__dirname, '..', 'src', 'i18n', 'namespace-loaders.ts');
 const runtimeConfigPath = path.join(__dirname, '..', 'src', 'i18n', 'config.ts');
 const generatedTypesPath = path.join(__dirname, '..', 'src', 'types', 'i18n.ts');
 
@@ -31,42 +33,22 @@ function compareSets(reference, candidate) {
   };
 }
 
-function main() {
+function driftError(label, diff) {
+  if (diff.missing.length === 0 && diff.extra.length === 0) {
+    return [];
+  }
+
+  return [
+    `${label}. Missing: ${diff.missing.join(', ') || '-'} | Extra: ${diff.extra.join(', ') || '-'}`,
+  ];
+}
+
+// ADR-666: το pseudo παράγεται runtime από το el μέσω postProcessor.
+// Δεν επιτρέπονται pseudo resource αρχεία ή static imports τους — θα ξανα-τύλιγαν
+// ήδη τυλιγμένο κείμενο και θα ξανάφερναν το drift που κατάργησε το ADR-666.
+function collectRuntimeConfigErrors(runtimeConfig) {
   const errors = [];
-  const warnings = [];
 
-  const configuredLanguages = parseConstArray(lazyConfigPath, 'SUPPORTED_LANGUAGES');
-  const configuredNamespaces = parseConstArray(lazyConfigPath, 'SUPPORTED_NAMESPACES');
-  const primaryNamespaces = getNamespacesForLocale('el');
-  const generatedNamespaces = parseTranslationNamespaceUnion(generatedTypesPath);
-  const runtimeConfig = readText(runtimeConfigPath);
-
-  // ADR-666: το lazy-config δηλώνει ΓΛΩΣΣΕΣ (incl. pseudo = runtime transform),
-  // όχι locales-με-αρχεία. Σύγκριση με SUPPORTED_LANGUAGES, όχι SUPPORTED_LOCALES.
-  const languageDiff = compareSets(SUPPORTED_LANGUAGES, configuredLanguages);
-  if (languageDiff.missing.length > 0 || languageDiff.extra.length > 0) {
-    errors.push(
-      `SUPPORTED_LANGUAGES drift. Missing: ${languageDiff.missing.join(', ') || '-'} | Extra: ${languageDiff.extra.join(', ') || '-'}`
-    );
-  }
-
-  const namespaceDiff = compareSets(primaryNamespaces, configuredNamespaces);
-  if (namespaceDiff.missing.length > 0 || namespaceDiff.extra.length > 0) {
-    errors.push(
-      `SUPPORTED_NAMESPACES drift vs ${LOCALES_DIR}\\el. Missing: ${namespaceDiff.missing.join(', ') || '-'} | Extra: ${namespaceDiff.extra.join(', ') || '-'}`
-    );
-  }
-
-  const generatedDiff = compareSets(primaryNamespaces, generatedNamespaces);
-  if (generatedDiff.missing.length > 0 || generatedDiff.extra.length > 0) {
-    errors.push(
-      `Generated TranslationNamespace drift. Missing: ${generatedDiff.missing.join(', ') || '-'} | Extra: ${generatedDiff.extra.join(', ') || '-'}`
-    );
-  }
-
-  // ADR-666: το pseudo παράγεται runtime από το el μέσω postProcessor.
-  // Δεν επιτρέπονται pseudo resource αρχεία ή static imports τους — θα ξανα-τύλιγαν
-  // ήδη τυλιγμένο κείμενο και θα ξανάφερναν το drift που κατάργησε το ADR-666.
   if (/locales\/pseudo\//.test(runtimeConfig)) {
     errors.push(
       'Runtime config imports pseudo locale files. ADR-666: pseudo is a runtime transform ' +
@@ -78,16 +60,77 @@ function main() {
     errors.push('Runtime config no longer registers the pseudo postProcessor (ADR-666).');
   }
 
-  SUPPORTED_LOCALES.forEach((locale) => {
-    const namespaces = getNamespacesForLocale(locale);
-    const diff = compareSets(primaryNamespaces, namespaces);
+  return errors;
+}
 
-    if (diff.missing.length > 0 || diff.extra.length > 0) {
-      errors.push(
-        `${locale} locale namespace drift. Missing: ${diff.missing.join(', ') || '-'} | Extra: ${diff.extra.join(', ') || '-'}`
-      );
+function collectLocaleParityErrors(primaryNamespaces) {
+  return SUPPORTED_LOCALES.flatMap((locale) =>
+    driftError(`${locale} locale namespace drift`, compareSets(primaryNamespaces, getNamespacesForLocale(locale)))
+  );
+}
+
+/**
+ * 🔴 ADR-752 — ΤΟ ΕΡΩΤΗΜΑ ΠΟΥ ΔΕΝ ΕΚΑΝΕ ΚΑΝΕΙΣ: **φορτώνεται** το namespace;
+ *
+ * Έξι namespaces (`textTemplates`, `textSpell`, `textFonts`, `textDraft`, `textAi`,
+ * `dxf-viewer-dimensions`) είχαν αρχεία σε el **και** en, καταχωρίσεις στους παραγόμενους τύπους
+ * και ~20 αρχεία καταναλωτές — αλλά **κανένα `case` στο `namespace-loaders.ts`**. Το
+ * `loadTranslations` έπεφτε στο `default: null`, κατέγραφε **άδειο** bundle, και κάθε `t()`
+ * ζωγράφιζε ωμό κλειδί. Το βρήκε άνθρωπος σε στιγμιότυπο οθόνης, όχι πύλη.
+ *
+ * Τρεις **ρητές** καταστάσεις — καμία σιωπηλή απόρριψη:
+ *   - `no-loader`   : αρχείο locale χωρίς `case` ⇒ άδειο bundle, ωμά κλειδιά (το αρχικό σφάλμα).
+ *   - `orphan`      : `case` χωρίς αρχείο ⇒ σφάλμα δυναμικής εισαγωγής στον browser.
+ *   - `wrong-target`: το `case` δείχνει σε άλλη γλώσσα ή άλλο αρχείο ⇒ σιωπηλά **λάθος** κείμενο,
+ *                     που είναι χειρότερο από ωμό κλειδί: μοιάζει σωστό.
+ */
+function collectLoaderErrors() {
+  const loaders = parseNamespaceLoaders(namespaceLoadersPath);
+
+  return SUPPORTED_LOCALES.flatMap((locale) => {
+    const entries = loaders[locale] ?? [];
+    const declared = entries.map((entry) => entry.namespace);
+    const errors = driftError(
+      `${locale} namespace loader drift in ${path.basename(namespaceLoadersPath)} ` +
+        '(no-loader ⇒ empty bundle ⇒ raw keys on screen — ADR-752)',
+      compareSets(getNamespacesForLocale(locale), declared)
+    );
+
+    const wrongTarget = entries
+      .filter((entry) => entry.dir !== locale || entry.file !== entry.namespace)
+      .map((entry) => `${entry.namespace} → ./locales/${entry.dir}/${entry.file}.json`);
+
+    if (wrongTarget.length > 0) {
+      errors.push(`${locale} loader points at the wrong file: ${wrongTarget.join(', ')}`);
     }
+
+    return errors;
   });
+}
+
+function main() {
+  const warnings = [];
+
+  const primaryNamespaces = getNamespacesForLocale('el');
+  const errors = [
+    // ADR-666: το lazy-config δηλώνει ΓΛΩΣΣΕΣ (incl. pseudo = runtime transform),
+    // όχι locales-με-αρχεία. Σύγκριση με SUPPORTED_LANGUAGES, όχι SUPPORTED_LOCALES.
+    ...driftError(
+      'SUPPORTED_LANGUAGES drift',
+      compareSets(SUPPORTED_LANGUAGES, parseConstArray(lazyConfigPath, 'SUPPORTED_LANGUAGES'))
+    ),
+    ...driftError(
+      `SUPPORTED_NAMESPACES drift vs ${LOCALES_DIR}\\el`,
+      compareSets(primaryNamespaces, parseConstArray(lazyConfigPath, 'SUPPORTED_NAMESPACES'))
+    ),
+    ...driftError(
+      'Generated TranslationNamespace drift',
+      compareSets(primaryNamespaces, parseTranslationNamespaceUnion(generatedTypesPath))
+    ),
+    ...collectRuntimeConfigErrors(readText(runtimeConfigPath)),
+    ...collectLocaleParityErrors(primaryNamespaces),
+    ...collectLoaderErrors(),
+  ];
 
   warnings.forEach((message) => printFinding('warn', message));
   errors.forEach((message) => printFinding('error', message));

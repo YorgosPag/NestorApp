@@ -110,6 +110,12 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'settings': return () => import('./locales/el/settings.json');
     case 'textToolbar': return () => import('./locales/el/textToolbar.json');
     case 'textFindReplace': return () => import('./locales/el/textFindReplace.json');
+    case 'textTemplates': return () => import('./locales/el/textTemplates.json');
+    case 'textSpell': return () => import('./locales/el/textSpell.json');
+    case 'textFonts': return () => import('./locales/el/textFonts.json');
+    case 'textDraft': return () => import('./locales/el/textDraft.json');
+    case 'textAi': return () => import('./locales/el/textAi.json');
+    case 'dxf-viewer-dimensions': return () => import('./locales/el/dxf-viewer-dimensions.json');
     case 'bim3d': return () => import('./locales/el/bim3d.json');
     case 'bim-3d-aria': return () => import('./locales/el/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/el/bim-materials.json');
@@ -213,6 +219,12 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'settings': return () => import('./locales/en/settings.json');
     case 'textToolbar': return () => import('./locales/en/textToolbar.json');
     case 'textFindReplace': return () => import('./locales/en/textFindReplace.json');
+    case 'textTemplates': return () => import('./locales/en/textTemplates.json');
+    case 'textSpell': return () => import('./locales/en/textSpell.json');
+    case 'textFonts': return () => import('./locales/en/textFonts.json');
+    case 'textDraft': return () => import('./locales/en/textDraft.json');
+    case 'textAi': return () => import('./locales/en/textAi.json');
+    case 'dxf-viewer-dimensions': return () => import('./locales/en/dxf-viewer-dimensions.json');
     case 'bim3d': return () => import('./locales/en/bim3d.json');
     case 'bim-3d-aria': return () => import('./locales/en/bim-3d-aria.json');
     case 'bim-materials': return () => import('./locales/en/bim-materials.json');

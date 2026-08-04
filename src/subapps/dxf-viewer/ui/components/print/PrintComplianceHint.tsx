@@ -40,7 +40,12 @@ export function PrintComplianceHint({
   fitMode,
   scaleDenominator,
 }: PrintComplianceHintProps): React.JSX.Element | null {
-  const { t, i18n } = useTranslation('dxf-viewer-shell');
+  // 🔴 ADR-752 — **δύο** namespaces, όχι ένα. Οι ετικέτες των πεδίων είναι τα `labelI18nKey` του
+  // `PLACEHOLDER_REGISTRY`, δηλαδή `textTemplates:placeholders.*`. Ένα κλειδί με ρητό πρόθεμα ns
+  // επιλύεται μόνο αν το bundle **έχει φορτωθεί** — και το `useTranslation` φορτώνει ΜΟΝΟ όσα του
+  // δηλώσεις. Με μόνο το `dxf-viewer-shell` η επίλυση εξαρτιόταν από το αν ο χρήστης είχε ανοίξει
+  // νωρίτερα τον διαχειριστή προτύπων: τυχαία σωστό. Το δηλώνουμε ρητά.
+  const { t, i18n, isNamespaceReady } = useTranslation(['dxf-viewer-shell', 'textTemplates']);
 
   const issues = React.useMemo(() => {
     if (!includeTitleBlock) return [];
@@ -51,6 +56,12 @@ export function PrintComplianceHint({
   }, [includeTitleBlock, fitMode, scaleDenominator, i18n.language]);
 
   if (issues.length === 0) return null;
+
+  // Το `textTemplates` φορτώνεται τεμπέλικα· ώσπου να έρθει, το `t()` θα επέστρεφε ωμό κλειδί.
+  // Ο διάλογος **δεν** έχει loading boundary (ανοίγει χωρίς αλλαγή διαδρομής, ADR-279 §9), οπότε
+  // ο φραγμός είναι εδώ: μια προειδοποίηση που εμφανίζεται ένα καρέ αργότερα είναι ασήμαντη —
+  // ένα ωμό κλειδί μέσα σε «έλεγχο πληρότητας για κατάθεση» δεν είναι.
+  if (!isNamespaceReady) return null;
 
   const emptyValues = issueLabelKeys(issues, 'empty-value').map((key) => t(key));
   const absentFields = issueLabelKeys(issues, 'absent-field').map((key) => t(key));
