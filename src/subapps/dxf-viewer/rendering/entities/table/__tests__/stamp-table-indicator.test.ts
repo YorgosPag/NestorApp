@@ -159,4 +159,86 @@ describe('stampTableIndicator', () => {
       expect(log.fills).toHaveLength(0);
     });
   });
+
+  /**
+   * 🔴 ADR-739 §43 — **ΤΟ ΚΟΥΜΠΙ «ΕΠΙΛΟΓΗ ΟΛΩΝ»**.
+   *
+   * Ελέγχεται το **σχήμα** και όχι μόνο το χρώμα: ένα τρίγωνο που ζωγραφίζεται με τη σωστή
+   * μπογιά αλλά τέσσερις κορυφές (δηλαδή ορθογώνιο) θα περνούσε κάθε έλεγχο χρώματος και θα
+   * έδειχνε ένα συμπαγές τετράγωνο στην οθόνη.
+   */
+  describe('§43 — η γωνία «επιλογή όλων»', () => {
+    /** Η **τελευταία** διαδρομή με ακριβώς 3 κορυφές — το τρίγωνο, ό,τι κι αν έχει βαφτεί πριν. */
+    const triangleOf = (log: PaintLog) =>
+      log.fillPaths.find((f) => f.subpaths.length === 1 && f.subpaths[0].length === 3);
+
+    it('🔴 ζωγραφίζει ΤΡΙΓΩΝΟ — τρεις κορυφές, μία υποδιαδρομή', () => {
+      const { rc, log } = fakeContext(4);
+      stampTableIndicator(rc, {
+        columns: COLUMNS,
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+        corner: NO_CORNER,
+      });
+      expect(triangleOf(log)).toBeDefined();
+    });
+
+    /**
+     * ⚠️ §41.7 — **δεν αντιγράφουμε το πράσινο `#217346` του Excel**: αντιγράφουμε τον κανόνα
+     * «η γωνία φοράει ό,τι φοράει μια υποδιαίρεση». Άρα το μελάνι του τριγώνου οφείλει να είναι
+     * **κυριολεκτικά** το ίδιο με το μελάνι ενός γράμματος — όχι ένα τέταρτο hex που τυχαίνει
+     * να ταιριάζει σήμερα.
+     */
+    it('🔴 σε ηρεμία: κουτί ουδέτερο + τρίγωνο στο ΙΔΙΟ μελάνι με ένα γράμμα', () => {
+      const { rc, log } = fakeContext(4);
+      stampTableIndicator(rc, {
+        columns: COLUMNS,
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+        corner: NO_CORNER,
+      });
+      expect(log.fills[0]).toBe(TABLE_INDICATOR.fillHex);
+      expect(triangleOf(log)?.color).toBe(TABLE_INDICATOR.textHex);
+    });
+
+    it('🔴 όλα επιλεγμένα: κουτί ΕΝΕΡΓΟ + τρίγωνο στο μελάνι της ενεργής ετικέτας', () => {
+      const { rc, log } = fakeContext(4);
+      stampTableIndicator(rc, {
+        columns: COLUMNS,
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+        corner: { active: true, hovered: false },
+      });
+      expect(log.fills[0]).toBe(TABLE_INDICATOR.activeFillHex);
+      expect(triangleOf(log)?.color).toBe(TABLE_INDICATOR.activeTextHex);
+    });
+
+    it('hover ⇒ το ΙΔΙΟ πλύσιμο με τις υποδιαιρέσεις, ούτε τρίτο χρώμα ούτε δεύτερος κανόνας', () => {
+      const { rc, log } = fakeContext(4);
+      stampTableIndicator(rc, {
+        columns: COLUMNS,
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+        corner: { active: false, hovered: true },
+      });
+      expect(log.fills.filter((f) => f === TABLE_INDICATOR.hoverWashRgba)).toHaveLength(1);
+    });
+
+    it('κάτω από το LOD δεν ζωγραφίζεται ΤΙΠΟΤΑ — ούτε το κουμπί', () => {
+      const { rc, log } = fakeContext(0.5);
+      stampTableIndicator(rc, {
+        columns: COLUMNS,
+        rows: ROWS,
+        widthMm: 50,
+        heightMm: 18,
+        corner: { active: true, hovered: true },
+      });
+      expect(log.fills).toHaveLength(0);
+    });
+  });
+
 });

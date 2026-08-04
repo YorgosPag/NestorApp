@@ -39,6 +39,23 @@
  * το πάτημα του κουμπιού θα μετακινούσε τον πίνακα. Γι' αυτό, **και μόνο όταν το χειριστήριο
  * είναι οπλισμένο**, το συμβάν σταματά εδώ.
  *
+ * ## 🔴 §40.9 — ΤΟ ΚΟΥΜΠΙ ΚΑΤΑΠΙΝΕΙ ΤΗ ΧΕΙΡΟΝΟΜΙΑ ΤΟΥ, ΟΧΙ ΜΙΣΗ
+ * Το `mousedown` δεν είναι ολόκληρη η χειρονομία. Η **επιλογή οντότητας** του καμβά γεννιέται
+ * στο `mouseup` (`mouse-handler-up.ts` → `onCanvasClick`), και ο έλεγχος εκεί δεν ρωτά ποτέ αν
+ * είδε το αντίστοιχο `mousedown` — άρα ένα κουμπί που καταναλώνει μόνο το πάτημα παραδίδει το
+ * **σήκωμα** στον καμβά. Το ⊕ κάθεται **έξω** από τον πίνακα, οπότε ο καμβάς το διαβάζει ως
+ * «κλικ στο κενό» ⇒ **αποεπιλογή**: ο χρήστης εισάγει στήλη και χάνει τον πίνακα με την ίδια
+ * κίνηση.
+ *
+ * 🔑 Σε **λειτουργία πίνακα** αυτό δεν συνέβαινε ποτέ, και γι' αυτό δεν είχε βρεθεί: το
+ * κλείδωμα του §29 κόβει ήδη το `mouseup` (§40.8 — «η ασυμμετρία είναι η προδιαγραφή:
+ * `mousedown` ναι, τίποτε άλλο»). Σε **απλή επιλογή** το κλείδωμα δεν υπάρχει καθόλου (οδηγείται
+ * από τη ζωντανή οντότητα του δρομέα), οπότε το `mouseup` περνά ελεύθερο. Η ασυμμετρία του §40.8
+ * ήταν σωστή — απλώς ζούσε σε **έναν** από τους δύο δρόμους.
+ *
+ * Θεραπεία: όταν το πάτημα καταναλωθεί, ο ακροατής διεκδικεί **και το ζευγάρι του** — μία φορά,
+ * στο `document` σε σύλληψη. Δες το {@link claimNextMouseUp}.
+ *
  * ⚠️ Στη φάση `nearby` το συμβάν **περνά ανέγγιχτο** — ο καλών απλώς δεν επιστρέφει τίποτα από
  * το {@link UseTableArmedControlClickParams.resolveArmed}. Μια σιωπηλή κατανάλωση εκεί θα
  * σήμαινε ότι ο χρήστης χάνει κλικ σε ολόκληρη περιοχή χωρίς να συμβαίνει τίποτα — η χειρότερη
@@ -69,9 +86,32 @@ export interface ArmedControlState {
   readonly entityId: string;
 }
 
+/**
+ * 🔴 §40.9 — **Η ΔΙΕΚΔΙΚΗΣΗ ΤΟΥ ΖΕΥΓΑΡΙΟΥ**: το `mouseup` που ακολουθεί το καταναλωμένο πάτημα.
+ *
+ * Στο `document` σε **σύλληψη**, για τον ίδιο δομικό λόγο που το §29 διάλεξε το `document`: ο
+ * ακροατής επιλογής του καμβά ζει στο δοχείο, και «πρόγονος ⇒ πάντα πρώτος στη σύλληψη» είναι
+ * η μόνη σειρά που δεν εξαρτάται από τη σειρά **εγγραφής**.
+ *
+ * **One-shot, όχι κατάσταση.** Το κουμπί διεκδικεί **μία** χειρονομία· μια σημαία που ζει ώσπου
+ * να τη σβήσει κάποιος θα ήταν τρίτος κύκλος ζωής να ξεχαστεί ανοιχτός. Το `once: true` το κάνει
+ * ο ίδιος ο browser — και ο disposer επιστρέφεται ώστε μια αποπροσάρτηση **πριν** έρθει το
+ * `mouseup` (κλείσιμο viewer με το κουμπί ακόμα κάτω) να μην αφήσει ακροατή να επιζεί.
+ *
+ * ⚠️ **ΠΟΤΕ `stopImmediatePropagation`** (§29): στο ίδιο `document` ζει η λήξη των δηλώσεων του
+ * §26.15/§27.15. Το `stopPropagation` δεν αγγίζει συνακροατές του ίδιου κόμβου, άρα σε λειτουργία
+ * πίνακα — όπου ο φύλακας του §29 έχει ήδη κόψει το ίδιο συμβάν — αυτό εδώ είναι απλώς ιδεμποτές.
+ */
+function claimNextMouseUp(): () => void {
+  const swallow = (event: Event): void => {
+    if (event instanceof MouseEvent && event.button !== 0) return;
+    event.stopPropagation();
+  };
+  document.addEventListener('mouseup', swallow, { capture: true, once: true });
+  return () => document.removeEventListener('mouseup', swallow, { capture: true });
+}
+
 export interface UseTableArmedControlClickParams<S extends ArmedControlState> {
-  /** Χωρίς πίνακα δεν υπάρχει τίποτα να πατηθεί — το **ίδιο** `active` με τον hover. */
-  readonly active: boolean;
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly levelManager: LevelManagerLike;
   /**
@@ -96,7 +136,10 @@ export interface UseTableArmedControlClickParams<S extends ArmedControlState> {
 export function useTableArmedControlClick<S extends ArmedControlState>(
   params: UseTableArmedControlClickParams<S>,
 ): void {
-  const { active, containerRef, levelManager, resolveArmed, run } = params;
+  const { containerRef, levelManager, resolveArmed, run } = params;
+
+  /** Ο disposer της τρέχουσας διεκδίκησης `mouseup`· `null` όσο δεν εκκρεμεί καμία. */
+  const pendingMouseUpRef = useRef<(() => void) | null>(null);
 
   const handleMouseDown = useEventCallback((event: MouseEvent): void => {
     // Μόνο το κύριο κουμπί: το δεξί κλικ ανήκει στον δρομολογητή μενού, το μεσαίο στο pan.

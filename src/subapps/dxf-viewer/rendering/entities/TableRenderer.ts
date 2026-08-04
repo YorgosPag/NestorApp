@@ -35,14 +35,10 @@ import {
   tableWorldToFrame,
 } from '../../bim/table/table-entity-geometry';
 import { visibleRowRange } from '../../bim/table/table-layout';
-import {
-  tableRenderIndex,
-  visibleHorizontals,
-  type TableRenderIndex,
-} from '../../bim/table/table-render-index';
+import { tableRenderIndex, visibleHorizontals } from '../../bim/table/table-render-index';
 import { hitTestTable } from '../../bim/table/table-entity-hit';
 import { getTableGrips, tableGripCustomColor } from '../../bim/table/table-entity-grips';
-import type { TableCellLayout, TableLayout, TableRectMm } from '../../bim/table/table-layout-types';
+import type { TableCellLayout } from '../../bim/table/table-layout-types';
 import {
   createStampTableContext,
   stampTableBorders,
@@ -52,21 +48,21 @@ import {
   stampTableSelection,
   stampTableText,
   type StampTableContext,
-  type TableCellRef,
 } from './table/stamp-table-layout';
-// ADR-739 Φ.Δ βήμα 8 — ΠΟΙΑ κελιά είναι μαρκαρισμένα. Καθαρό SSoT, κοινό με την
-// αντιγραφή/επικόλληση και τη γραμμή κατάστασης: ο ζωγράφος δεν κρίνει, ρωτά.
-import {
-  resolveTableSelectionBounds,
-  tableRangeMembership,
-  tableRangeRectMm,
-  type TableRangeMembership,
-} from '../../bim/table/table-cell-range';
-import { resolveTableModel } from '../../bim/table/table-model-helpers';
+// ⛏️ N.7.1 (2026-08-04) — η ερμηνεία της επιλογής (`resolveTableSelectionBounds`,
+// `tableRangeMembership`, `tableRangeRectMm`, `isTableWholeGridRange`) μετακόμισε ολόκληρη στο
+// `table-frame-cursor-view`. Ο ζωγράφος δεν ρωτά πια «ποια κελιά είναι μέσα» — του το λένε.
 // ADR-739 Φ.Δ βήμα 7 — ο δείκτης πίνακα (AutoCAD `TABLEINDICATOR`) + η ονομασία των
 // υποδιαιρέσεών του. Η ονομασία ζει στο `bim/`, η ζωγραφική εδώ — ίδιος διαχωρισμός με
 // τη διάταξη και τον ζωγράφο της.
 import { stampTableIndicator } from './table/stamp-table-indicator';
+// 🔴 N.7.1 (2026-08-04, §43) — **τι σημαίνει ο δρομέας και η επιλογή για αυτό το καρέ**: τρεις
+// καθαρές ερωτήσεις που δεν αγγίζουν καμβά. Εξαγωγή, όχι κόψιμο — δες την κεφαλίδα εκείνου.
+import {
+  activeCellRectOf,
+  editedCellRef,
+  tableFrameSelectionView,
+} from './table/table-frame-cursor-view';
 // 🔴 ADR-739 §36 ΦΑΣΗ 3 — η προεπισκόπηση της μεταφοράς περιοχής. Ίδιος κανόνας με τον δρομέα
 // και το hover: getter τη στιγμή του καρέ (ADR-040), καμία συνδρομή.
 import { stampTableRangeGhost } from './table/stamp-table-range-ghost';
@@ -99,43 +95,6 @@ import { tableIndicatorBandsMm } from '../../bim/table/table-indicator-geometry'
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
-
-/**
- * ADR-739 Φ.Δ βήμα 3 — ποιο κελί **δεν** ζωγραφίζει ο καμβάς.
- *
- * Μόνο σε κατάσταση γραφής (`enter` / `edit`). Σε `nav` το `<input>` είναι διαφανές και
- * χωρίς κέρσορα — αν παραλείπαμε και τότε, το κελί θα φαινόταν **άδειο** μόλις πατούσες
- * `Tab` πάνω του, δηλαδή θα «έσβηνε» κείμενο που κανείς δεν άλλαξε.
- */
-function editedCellRef(cursor: TableCellCursorState | null): TableCellRef | null {
-  if (!cursor || cursor.mode === 'nav') return null;
-  return { rowId: cursor.position.rowId, colId: cursor.position.colId };
-}
-
-/**
- * 🔴 ADR-739 §41 — **το ορθογώνιο του ενεργού κελιού**, σε sheet-mm· `undefined` όταν ο
- * δρομέας δείχνει κελί εκτός του ορατού παραθύρου.
- *
- * Η αναζήτηση περνά από το **ήδη υπολογισμένο** ευρετήριο (`cellsByRowId`): O(στήλες) αντί
- * για γραμμική σάρωση όλων των κελιών σε κάθε καρέ — το μάθημα του ADR-735.
- *
- * ## Γιατί έπαψε να είναι μέθοδος που **ζωγραφίζει**
- * Ήταν `drawCellCursor`, δηλαδή «βρες το κελί **και** βάψ' το». Από τη στιγμή που το ίδιο
- * ορθογώνιο έγινε **και** η τρύπα της σκίασης (`stampTableSelection`), το «βρες» απέκτησε
- * δεύτερο καταναλωτή — και μια δεύτερη αναζήτηση θα ήταν ακριβώς το sibling clone που πιάνει
- * το CHECK 3.28 (N.18), με το επιπλέον ρίσκο να απαντήσει **αλλιώς** μέσα στο ίδιο καρέ.
- * Καθαρή συνάρτηση, όχι μέθοδος: δεν αγγίζει τίποτα του `this`.
- *
- * Το `undefined` (αντί `null`) είναι σκόπιμο — ταιριάζει με την **προαιρετική** παράμετρο
- * του `stampTableSelection`, όπου «δεν υπάρχει ενεργό κελί» σημαίνει «σκίασε τα πάντα».
- */
-function activeCellRectOf(
-  cursor: TableCellCursorState,
-  index: TableRenderIndex,
-): TableRectMm | undefined {
-  const bucket = index.cellsByRowId.get(cursor.position.rowId);
-  return bucket?.find((c) => c.colId === cursor.position.colId)?.rect;
-}
 
 export class TableRenderer extends BaseEntityRenderer {
   /**
@@ -202,7 +161,7 @@ export class TableRenderer extends BaseEntityRenderer {
     // ADR-739 Φ.Δ βήμα 8 — η επιλογή **πάνω από τα γεμίσματα, κάτω από το πλέγμα και το
     // κείμενο**: είναι ημιδιαφανής, οπότε ένα στρώμα πάνω από τα γράμματα θα τα θόλωνε —
     // και η επιλογή υπάρχει ακριβώς για να διαβάσεις τι μάρκαρες.
-    const selection = cursor ? this.selectionOf(e, cursor, layout) : null;
+    const selection = cursor ? tableFrameSelectionView(e, cursor, layout) : null;
     if (selection) stampTableSelection(rc, selection.rectMm, activeCellRect);
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
@@ -245,8 +204,12 @@ export class TableRenderer extends BaseEntityRenderer {
       };
       // ADR-739 §30 — και η λωρίδα **κάτω από το ποντίκι**, φιλτραρισμένη ως προς ΑΥΤΟΝ τον
       // πίνακα: δύο πίνακες στην ίδια σκηνή δεν επιτρέπεται να μοιραστούν έναν δείκτη.
+      // 🔴 §43 — το φιλτράρισμα γίνεται **μία** φορά, και οι δύο αναγνώστες (γράμματα, γωνία)
+      // διαβάζουν το ίδιο αποτέλεσμα: δύο ξεχωριστές συγκρίσεις `entityId` θα ήταν δύο ευκαιρίες
+      // να ξεχάσει κάποιος τη μία, δηλαδή γωνία που ανάβει σε **άλλον** πίνακα.
       const hover = getTableIndicatorHover();
-      const hovered = hover?.entityId === e.id ? hover.hit : null;
+      const hoverTarget = hover?.entityId === e.id ? hover.target : null;
+      const hovered = hoverTarget?.kind === 'tick' ? hoverTarget.hit : null;
       stampTableIndicator(rc, {
         columns: tableColumnTicks(
           layout.columns,
@@ -262,6 +225,9 @@ export class TableRenderer extends BaseEntityRenderer {
         ),
         widthMm: layout.widthMm,
         heightMm: layout.heightMm,
+        // 🔴 ADR-739 §43 — το κουμπί «επιλογή όλων». Και οι δύο καταστάσεις είναι **παράγωγα**:
+        // η μία της επιλογής (δες `tableFrameSelectionView`), η άλλη του ίδιου hover των γραμμάτων.
+        corner: { active: selection?.whole ?? false, hovered: hoverTarget?.kind === 'select-all' },
       });
       // 🔴 ADR-739 §41 — **ο δρομέας σιωπά όσο υπάρχει επιλογή** (Excel parity, μετρημένο: η
       // ακμή `B10|C10` μέσα σε επιλεγμένο `B10:C13` είναι γραμμή πλέγματος `#ADADAD`, όχι
@@ -348,46 +314,6 @@ export class TableRenderer extends BaseEntityRenderer {
         });
       }
     }
-  }
-
-  /**
-   * ADR-739 Φ.Δ βήμα 8 — η **επιλεγμένη περιοχή** αυτού του πίνακα, ως ορθογώνιο φύλλου
-   * + ιδιότητα μέλους ανά άξονα· `null` όταν δεν υπάρχει επιλογή.
-   *
-   * ## Γιατί `null` χωρίς `selection`, αντί για «περιοχή ενός κελιού»
-   * Το ένα κελί το δείχνει ήδη ο **δρομέας** — ένα ημιδιαφανές γέμισμα από κάτω του θα
-   * ήταν δεύτερη δήλωση του ίδιου πράγματος, και θα έκανε τον πίνακα να φαίνεται μονίμως
-   * «μαρκαρισμένος» από τη στιγμή που μπαίνεις μέσα του. «Καμία επιλογή» δεν είναι
-   * «επιλογή 1×1»: είναι άλλη κατάσταση, και φαίνεται αλλιώς.
-   *
-   * Το ορθογώνιο συντίθεται από τη **διάταξη** (θέσεις/πλάτη στηλών και γραμμών) — καμία
-   * δεύτερη γεωμετρία δεν γεννιέται εδώ.
-   */
-  private selectionOf(
-    e: TableEntity,
-    cursor: TableCellCursorState,
-    /**
-     * 🔴 ADR-739 §38 — η διάταξη **περνά ως όρισμα** αντί να ξαναζητηθεί. Ήταν δεύτερη κλήση
-     * `computeTableEntityGeometryLive` μέσα στο ίδιο καρέ: η ίδια διάταξη (απομνημονευμένη),
-     * αλλά **δεύτερη ανάγνωση `getComputedStyle`** για την επιφάνεια — δηλαδή διπλάσιο style
-     * recalc ανά πίνακα ανά καρέ για μηδέν πληροφορία.
-     */
-    layout: TableLayout,
-  ): {
-    readonly rectMm: TableRectMm;
-    readonly membership: TableRangeMembership;
-    /** 🔴 ADR-754 Γ4 — τα ίδια όρια, για τη **λαβή συμπλήρωσης**: δεύτερος υπολογισμός τους
-     *  θα ήταν δεύτερη απάντηση στο «τι μάρκαρε ο χρήστης», μέσα στο ίδιο καρέ. */
-    readonly bounds: TableCellRangeBounds;
-  } | null {
-    if (!cursor.selection) return null;
-    const model = resolveTableModel(e.model);
-    // ADR-739 §27.15 — ο ζωγράφος **δεν ερμηνεύει**: ρωτά τον ΕΝΑ δρόμο «τι διάλεξε ο
-    // χρήστης → ποια κελιά είναι μέσα», που ξέρει μόνος του πότε κουμπώνει.
-    const bounds = resolveTableSelectionBounds(model, cursor.selection);
-    if (!bounds) return null;
-    const rectMm = tableRangeRectMm(layout, bounds);
-    return rectMm ? { rectMm, membership: tableRangeMembership(model, bounds), bounds } : null;
   }
 
   /**

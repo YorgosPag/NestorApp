@@ -285,7 +285,11 @@ describe('stampTableModeOutline — ο δείκτης «βρίσκεσαι μέ�
     const thin: PaintLog = createPaintLog();
     const thick: PaintLog = createPaintLog();
     stampTableModeOutline(createRc(thin), GRID, PEN_MM);
-    stampTableModeOutline(createRc(thick), GRID, 1);
+    // ⚠️ ADR-756 — η χοντρή πένα πρέπει να είναι **πάνω** από τη θέση ανάπαυσης του δείκτη.
+    // Ήταν `1` mm: όσο το πάχος κλιμακωνόταν με το zoom, στα 10 px/mm έδινε 10 px και
+    // κέρδιζε άνετα· με σταθερό πάχος 1 mm = 3,8 px, δηλαδή ο δακτύλιος λαβών εξακολουθεί
+    // να νικά και η σύγκριση θα ήταν **κενή** (και οι δύο πλευρές ίδιες).
+    stampTableModeOutline(createRc(thick), GRID, 2);
 
     expect(Math.min(...thick.strokes[0].points.map((p) => p.x))).toBeLessThan(
       Math.min(...thin.strokes[0].points.map((p) => p.x)),

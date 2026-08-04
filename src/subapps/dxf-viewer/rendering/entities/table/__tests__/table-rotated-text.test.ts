@@ -193,6 +193,9 @@ describe('🔴 stampTableText — τα ΓΡΑΜΜΑΤΑ γέρνουν, όχι �
 
 // ── 3. Οι ζώνες A B C / 1 2 3 — ΕΝΑ σημείο, δύο καταναλωτές ────────────────
 
+/** ADR-739 §43 — το τετραγωνάκι της γωνίας σε ηρεμία· οι σουίτες αυτές ρωτούν τις ζώνες. */
+const NO_CORNER = { active: false, hovered: false } as const;
+
 describe('🔴 stampTableIndicator — οι ετικέτες των ζωνών ακολουθούν ΤΟΝ ΙΔΙΟ κανόνα', () => {
   it('τα γράμματα των ζωνών γέρνουν με την ίδια γωνία που γέρνει το κείμενο κελιού', () => {
     const entity = makeEntity(TILT_RAD);
@@ -204,6 +207,7 @@ describe('🔴 stampTableIndicator — οι ετικέτες των ζωνών �
       rows: [{ label: '1', startMm: 0, sizeMm: 8, active: true }],
       widthMm: 60,
       heightMm: 8,
+      corner: NO_CORNER,
     });
 
     expect(log.texts.map((p) => p.text)).toEqual(['A', '1']);
