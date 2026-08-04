@@ -1,0 +1,49 @@
+/**
+ * ADR-755 — το πτυσσόμενο των εντολών συγχώνευσης, **μέσα** στο δοχείο του mini toolbar.
+ *
+ * 🔴 Γιατί εδώ και όχι σε δικό του portal: ο ίδιος λόγος με τα άλλα δύο πάνελ — ο γονέας κρατά
+ * `surfaceRef` για να αναγνωρίζει «κλικ πάνω μου» στο `onInteractOutside` του modal μενού
+ * (`keepOpenOnSurface`)· ένα δεύτερο portal θα ήταν γι' αυτόν «ξένο στοιχείο» και το `onClick`
+ * της εντολής δεν θα έτρεχε ποτέ.
+ *
+ * Ό,τι είναι κοινό με τα άλλα δύο έρχεται με `composes` από το `table-toolbar-panel.module.css`
+ * — ο κανόνας ζει μία φορά. Εδώ μένει μόνο το πλάτος, που είναι δικό του.
+ */
+
+.anchor {
+  composes: anchor from './table-toolbar-panel.module.css';
+}
+
+.split {
+  composes: split from './table-toolbar-panel.module.css';
+}
+
+.mainButton {
+  composes: splitMain from './table-toolbar-panel.module.css';
+}
+
+.arrowButton {
+  composes: splitArrow from './table-toolbar-panel.module.css';
+}
+
+.item {
+  composes: item from './table-toolbar-panel.module.css';
+}
+
+.itemIcon {
+  composes: itemIcon from './table-toolbar-panel.module.css';
+}
+
+.separator {
+  composes: separator from './table-toolbar-panel.module.css';
+}
+
+/*
+ * Σταθερό πλάτος για την πιο μακριά ετικέτα («Κατάργηση συγχώνευσης κελιών»): με `min-width:
+ * auto` το μενού θα άλλαζε πλάτος ανά γλώσσα, και η θέση των τεσσάρων εντολών κάτω από τον
+ * δείκτη θα μετακινούνταν μαζί.
+ */
+.panel {
+  composes: panel from './table-toolbar-panel.module.css';
+  min-width: 224px;
+}

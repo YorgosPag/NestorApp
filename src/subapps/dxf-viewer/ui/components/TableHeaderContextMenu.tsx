@@ -41,118 +41,36 @@ import {
   DxfMenuHiddenTrigger,
 } from './dxf-context-menu/DxfContextMenu';
 import { useAnchoredHiddenTrigger } from './dxf-context-menu/use-anchored-hidden-trigger';
+import { useKeepOpenOnSurface } from './dxf-context-menu/use-keep-open-on-surface';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
-import { TableHeaderMenuItems, type TableHeaderMenuState } from './TableHeaderMenuItems';
-import {
-  TableFormatToolbar,
-  type TableAxisFormatSnapshot,
-  type TableToggleFormatKey,
-} from './table-format-toolbar/TableFormatToolbar';
-import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
-import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
-import type { TableBorderMenuProps } from './table-format-toolbar/TableBorderMenu';
+import { TableHeaderMenuItems } from './TableHeaderMenuItems';
+import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
+import type {
+  TableHeaderAction,
+  TableHeaderContextMenuHandle,
+  TableHeaderMenuProps,
+  TableHeaderOpenTarget,
+} from './table-header-menu-types';
 
-/**
- * ADR-750 Φ5 — το dropdown περιγραμμάτων **όπως το βλέπει ο ξενιστής**: όλα τα props του
- * πάνελ εκτός από τη θέση roving, που την ξέρει μόνο η γραμμή εργαλείων.
- *
- * Ονομασμένος τύπος και όχι inline `Omit<…>`: τον χρειάζονται **τρία** αρχεία (το prop, το
- * `OpenTarget`, ο ξενιστής της Φ4) και τρία inline `Omit` είναι τρεις ευκαιρίες να αποκλίνουν.
- */
-export type TableBorderMenuHostProps = Omit<TableBorderMenuProps, 'roving'>;
-
-/** Ένα item δέχεται πάντα **ποια** υποδιαίρεση πατήθηκε — ποτέ κρυφή κατάσταση. */
-type TableHeaderAction = (hit: TableIndicatorHit) => void;
-
-/**
- * Το σχήμα ενός συμβάντος «αλληλεπίδραση **έξω** από το μενού» του Radix, στο ελάχιστο που
- * χρειαζόμαστε.
- *
- * Δηλώνεται τοπικά αντί να εισαχθεί ο τύπος του `DismissableLayer`: εκείνος δεν εξάγεται από
- * το wrapper μας, και η μόνη εναλλακτική θα ήταν `any` — απαγορευμένο (N.2). Η παράμετρος
- * είναι σκόπιμα **ευρύτερη** από την πραγματική (`Event` αντί `PointerEvent`), ώστε να δέχεται
- * και τα δύο συμβάντα (`pointerDownOutside` και `focusOutside`) με έναν φύλακα.
- */
-interface OutsideInteraction {
-  readonly detail: { readonly originalEvent: Event };
-  readonly target: EventTarget | null;
-  preventDefault: () => void;
-}
-
-export interface TableHeaderMenuProps {
-  readonly onInsertBefore: TableHeaderAction;
-  readonly onInsertAfter: TableHeaderAction;
-  readonly onDelete: TableHeaderAction;
-  readonly resolveState: (hit: TableIndicatorHit) => TableHeaderMenuState;
-  /** Η κατάσταση των χειριστηρίων μορφοποίησης — ξαναρωτιέται **μετά από κάθε** πάτημα. */
-  readonly resolveFormat: (hit: TableIndicatorHit) => TableAxisFormatSnapshot;
-  readonly onToggleFormat: (hit: TableIndicatorHit, key: TableToggleFormatKey) => void;
-  readonly onStepTextHeight: (hit: TableIndicatorHit, direction: TextHeightStepDirection) => void;
-  readonly onResetFormat: TableHeaderAction;
-  /**
-   * ADR-739 Φ.Ε/Φ4 — το χρώμα **κειμένου** του άξονα: `hex` ρητό · `undefined` «Αυτόματο»
-   * (αφαιρεί την παράκαμψη· δεν γράφει ποτέ το χρώμα του στυλ ως ρητή τιμή).
-   *
-   * Περνά από το **ίδιο** {@link runFormat} με τα Β/Ι/Υ, όχι από δικό του δρόμο: είναι πράξη
-   * άξονα, άρα οφείλει να κλείνει το μενού και να αφήνει τη γραμμή ακριβώς όπως εκείνα (§28.13).
-   */
-  readonly onSetTextColor: (hit: TableIndicatorHit, value: string | undefined) => void;
-  /**
-   * ADR-739 Φ.Ε/Φ4β — το **γέμισμα**, με την τρίτη κατάσταση: `hex` ρητό · `null` ρητά κανένα ·
-   * `undefined` «Αυτόματο». Δες `TableFormatToolbar` για το γιατί είναι ένα prop και όχι τρία.
-   */
-  readonly onSetFillColor: (hit: TableIndicatorHit, value: string | null | undefined) => void;
-  /**
-   * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων του άξονα που πατήθηκε, σε μία ερώτηση.
-   *
-   * Ζει δίπλα στη μορφοποίηση κειμένου αλλά είναι **άλλο επίπεδο**: εκείνη γράφει στυλ άξονα,
-   * αυτό γράφει ρητές ακμές πλέγματος και διαγωνίους κελιών. Γι' αυτό έχει και δική του
-   * «Επαναφορά» (Α19).
-   *
-   * 🔑 **Μία** ερώτηση και όχι πέντε props (εντολή / επαναφορά / canReset / διαγώνιος /
-   * μολύβι): το πάνελ μεγάλωσε από 2 σε 5 ικανότητες στη Φ5, και κάθε επόμενη θα πρόσθετε
-   * ακόμη ένα prop σε **τρία** αρχεία. Εδώ ο τύπος του πάνελ **είναι** το συμβόλαιο — μια νέα
-   * ικανότητα εμφανίζεται μόνη της, και ο μεταγλωττιστής δείχνει το ένα σημείο που τη γεμίζει.
-   */
-  readonly resolveBorderMenu: (hit: TableIndicatorHit) => TableBorderMenuHostProps;
-  /** Το μενού έκλεισε — με ή χωρίς ενέργεια. Εδώ επιστρέφει η εστίαση στο κελί. */
-  readonly onClosed: () => void;
-}
-
-export interface TableHeaderContextMenuHandle {
-  open: (x: number, y: number, hit: TableIndicatorHit) => void;
-  close: () => void;
-}
-
-/**
- * Στόχος + κατάσταση, παγωμένα μαζί στο άνοιγμα: δεν μπορούν να αποκλίνουν μεταξύ τους.
- *
- * Το `format` είναι το **μόνο** πεδίο που ανανεώνεται όσο ζει η επιφάνεια — και οφείλει να
- * ανανεώνεται: μετά την απόφαση του ιδιοκτήτη (2026-08-03) το πάτημα διώχνει το μενού αλλά
- * **αφήνει τη γραμμή στην οθόνη**, οπότε ένα «Β» που δεν φώτιζε θα έδειχνε ότι η πράξη
- * απέτυχε ενώ έχει ήδη εφαρμοστεί στον καμβά. Δες {@link closeMenuKeepToolbar}.
- */
-interface OpenTarget {
-  readonly hit: TableIndicatorHit;
-  readonly state: TableHeaderMenuState;
-  readonly format: TableAxisFormatSnapshot;
-  /** ADR-750 Φ3/Φ5 — ανανεώνεται μαζί με το `format`, για τον ίδιο ακριβώς λόγο. */
-  readonly borders: TableBorderMenuHostProps;
-  /** Το σημείο του δεξιού κλικ — το toolbar κάθεται από πάνω του. */
-  readonly anchor: { readonly x: number; readonly y: number };
-}
+// Επανεξαγωγή: οι καλούντες εισάγουν το συμβόλαιο από **ένα** σημείο, όπως και πριν τη
+// διάσπαση του ADR-755 — καμία υπάρχουσα διαδρομή εισαγωγής δεν αλλάζει.
+export type {
+  TableBorderMenuHostProps,
+  TableHeaderContextMenuHandle,
+  TableHeaderMenuProps,
+} from './table-header-menu-types';
 
 const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, TableHeaderMenuProps>(
   ({
     onInsertBefore, onInsertAfter, onDelete, resolveState,
     resolveFormat, onToggleFormat, onStepTextHeight, onResetFormat,
     onSetTextColor, onSetFillColor,
-    resolveBorderMenu, onClosed,
+    resolveBorderMenu, resolveMergeMenu, onClosed,
   }, ref) => {
     const triggerRef = useRef<HTMLSpanElement>(null);
     const toolbarRef = useRef<HTMLDivElement>(null);
     const [isOpen, setIsOpen] = useState(false);
-    const [target, setTarget] = useState<OpenTarget | null>(null);
+    const [target, setTarget] = useState<TableHeaderOpenTarget | null>(null);
 
     /**
      * 🔴 Η θέση του κρυφού trigger γράφεται από το **state**, όχι μέσα στο `open()`.
@@ -160,7 +78,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
      * ⚠️ Ο μηχανισμός (και η ζωντανή μέτρηση του σφάλματος που τον γέννησε) μετακόμισε στο
      * {@link useAnchoredHiddenTrigger}: το ίδιο ακριβώς ζητά και το μενού περιγραμμάτων
      * (ADR-750 Φ4), και το CHECK 3.28 μέτρησε την αντιγραφή ως sibling clone. Εδώ μένει **μία
-     * πηγή αλήθειας** για τη θέση — το `anchor` του {@link OpenTarget} — με δύο καταναλωτές που
+     * πηγή αλήθειας** για τη θέση — το `anchor` του {@link TableHeaderOpenTarget} — με δύο καταναλωτές που
      * τη διαβάζουν: ο trigger και το toolbar (από το prop του).
      */
     const placeTrigger = useAnchoredHiddenTrigger(triggerRef, target?.anchor ?? null);
@@ -173,6 +91,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           state: resolveState(hit),
           format: resolveFormat(hit),
           borders: resolveBorderMenu(hit),
+          merge: resolveMergeMenu(hit),
           anchor: { x, y },
         });
         setIsOpen(true);
@@ -181,7 +100,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
         setIsOpen(false);
         setTarget(null);
       },
-    }), [resolveState, resolveFormat, resolveBorderMenu, placeTrigger]);
+    }), [resolveState, resolveFormat, resolveBorderMenu, resolveMergeMenu, placeTrigger]);
 
     /**
      * **Ολόκληρη** η επιφάνεια φεύγει — μενού **και** γραμμή εργαλείων.
@@ -383,25 +302,37 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     }, [target, resolveBorderMenu, closeMenuKeepToolbar]);
 
     /**
+     * 🔴 ADR-755 — μια εντολή **συγχώνευσης**: ίδια σειρά, με **μία** αναγκαστική αντιστροφή.
+     *
+     * Εδώ το μενού κλείνει **πριν** την πράξη, όχι μετά — και είναι το μοναδικό σημείο όπου
+     * σπάει το μοτίβο των {@link runFormat} / {@link runBorder}. Ο λόγος είναι μετρήσιμος: η
+     * συγχώνευση μπορεί να ανοίξει **modal διάλογο** («θα κρατηθεί μόνο η επάνω αριστερή
+     * τιμή»). Με το μενού ακόμη ανοιχτό, ο διάλογος θα γεννιόταν κάτω από ένα Radix
+     * `FocusScope` που επαναφέρει κάθε εστίαση στο `role="menu"` — δηλαδή ο χρήστης θα έβλεπε
+     * ερώτηση που **δεν μπορεί να απαντήσει με πληκτρολόγιο**.
+     *
+     * Η ανανέωση της κατάστασης γίνεται **μετά** το `await`, με updater: το κουμπί οφείλει να
+     * δείξει πατημένο μόλις η συγχώνευση γραφτεί, αλλά η γραμμή μπορεί στο μεταξύ να έχει
+     * φύγει (`Escape`) — γι' αυτό ο έλεγχος `prev` και όχι κλεισμένο `target`.
+     */
+    const runMerge = useCallback((action: () => void | Promise<void>) => {
+      if (!target) return;
+      closeMenuKeepToolbar();
+      void Promise.resolve(action()).then(() => {
+        setTarget((prev) => (prev ? { ...prev, merge: resolveMergeMenu(prev.hit) } : prev));
+      });
+    }, [target, resolveMergeMenu, closeMenuKeepToolbar]);
+
+    /**
      * 🔴 Το toolbar είναι «έξω» για το Radix — και δεν επιτρέπεται να κλείνει το μενού **ΕΔΩ**.
      *
-     * Ζει σε δικό του portal (μόνο έτσι κάθεται **πάνω** από το μενού με κενό, απόφαση Α7),
-     * άρα κάθε πάτημα κουμπιού φτάνει εδώ ως `pointerDownOutside`.
-     *
-     * ⚠️ **Ο φύλακας ΔΕΝ έγινε περιττός όταν ο ιδιοκτήτης ζήτησε «να κλείνει το μενού»** — έγινε
-     * **προϋπόθεση** για να δουλέψει αυτό ακριβώς. Το `DismissableLayer` κλείνει στο
-     * `pointerdown`, δηλαδή **πριν** το `click`: αν το αφήναμε, το toolbar θα ξεμόνταρε
-     * ενδιάμεσα και το `onClick` του κουμπιού **δεν θα έτρεχε ποτέ**. Θα κλείναμε το μενού
-     * χωρίς να έχει γίνει η εντολή. Το κλείσιμο ανήκει στο {@link runFormat}, **μετά** την
-     * πράξη — δες την τεκμηρίωσή του για τη σειρά.
-     *
-     * Ο έλεγχος γίνεται στο `originalEvent.target`: το `target` του συνθετικού συμβάντος είναι
-     * το ίδιο το περιεχόμενο του μενού, όχι ό,τι πάτησε ο χρήστης.
+     * ⚠️ **ADR-755** — ο μηχανισμός (και ολόκληρη η αιτιολόγησή του: γιατί ο φύλακας ΔΕΝ έγινε
+     * περιττός όταν ο ιδιοκτήτης ζήτησε «να κλείνει το μενού», αλλά **προϋπόθεση**) μετακόμισε
+     * στο {@link useKeepOpenOnSurface}: το ίδιο ζητά πλέον και το μενού των **κελιών**, που
+     * απέκτησε κι εκείνο mini toolbar από πάνω. Το κλείσιμο ανήκει στο {@link runFormat},
+     * **μετά** την πράξη — δες την τεκμηρίωσή του για τη σειρά.
      */
-    const keepOpenOnToolbar = useCallback((event: OutsideInteraction) => {
-      const node = (event.detail.originalEvent.target ?? event.target) as Node | null;
-      if (node && toolbarRef.current?.contains(node)) event.preventDefault();
-    }, []);
+    const keepOpenOnToolbar = useKeepOpenOnSurface(toolbarRef);
 
     if (!target) {
       // Κλειστό μενού χωρίς στόχο: ο trigger πρέπει να υπάρχει (το `open` τον τοποθετεί),
@@ -437,15 +368,22 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
         <TableFormatToolbar
           anchorX={target.anchor.x}
           anchorY={target.anchor.y}
-          axis={target.hit.axis}
+          scope={target.hit.axis}
           label={axisLabel}
-          format={target.format}
           surfaceRef={toolbarRef}
-          onToggle={(key) => runFormat((hit) => onToggleFormat(hit, key))}
-          onStepSize={(direction) => runFormat((hit) => onStepTextHeight(hit, direction))}
-          onReset={() => runFormat(onResetFormat)}
-          onSetTextColor={(value) => runFormat((hit) => onSetTextColor(hit, value))}
-          onSetFillColor={(value) => runFormat((hit) => onSetFillColor(hit, value))}
+          axisFormat={{
+            format: target.format,
+            onToggle: (key) => runFormat((hit) => onToggleFormat(hit, key)),
+            onStepSize: (direction) => runFormat((hit) => onStepTextHeight(hit, direction)),
+            onReset: () => runFormat(onResetFormat),
+            onSetTextColor: (value) => runFormat((hit) => onSetTextColor(hit, value)),
+            onSetFillColor: (value) => runFormat((hit) => onSetFillColor(hit, value)),
+          }}
+          merge={{
+            ...target.merge,
+            // Ίδια σειρά με κάθε άλλη εντολή: εφαρμογή → ξαναρώτημα → κλείσιμο μενού.
+            onApply: (id) => runMerge(() => target.merge.onApply(id)),
+          }}
           borders={{
             ...target.borders,
             // Κάθε **εντολή** περνά από τον χειριστή: εφαρμογή → ξαναρώτημα → κλείσιμο μενού.
