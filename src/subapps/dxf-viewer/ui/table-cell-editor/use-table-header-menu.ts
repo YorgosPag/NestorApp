@@ -34,11 +34,11 @@
  *
  * @module subapps/dxf-viewer/ui/table-cell-editor/use-table-header-menu
  * @see bim/table/table-indicator-geometry.ts — ΠΟΥ είναι η ζώνη (SSoT, κοινό με τον ζωγράφο)
- * @see bim/table/table-row-column-ops.ts — ΤΙ κάνει η κάθε εντολή (καθαρό)
+ * @see bim/table/table-axis-action-target.ts — ΠΟΙΟΥΣ άξονες αφορά το πάτημα (§27.17)
+ * @see ui/table-cell-editor/table-header-axis-actions.ts — ΤΙ κάνει η κάθε εντολή (καθαρό)
  */
 
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
-import { columnLetter } from '@/lib/spreadsheet/column-letter';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {
   computeTableEntityGeometryLive,
@@ -52,16 +52,19 @@ import {
   tableIndicatorHitAtFrame,
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
+// ADR-739 §27.17 — η πράξη ακολουθεί την **επιλογή**, όχι μόνο το γράμμα που πατήθηκε.
 import {
-  canDeleteTableColumn,
-  canDeleteTableRow,
-  canInsertTableColumn,
-  canInsertTableRow,
-  deleteTableColumn,
-  deleteTableRow,
-  insertTableColumn,
-  insertTableRow,
-} from '../../bim/table/table-row-column-ops';
+  resolveTableAxisActionTarget,
+  type TableAxisActionTarget,
+} from '../../bim/table/table-axis-action-target';
+import {
+  deleteAxisTarget,
+  insertAt,
+  resolveHeaderState,
+  survivingCursor,
+  type AxisActionPlanner,
+  type SurvivorPick,
+} from './table-header-axis-actions';
 import {
   clearAxisStyleOverride,
   nextBooleanFormat,
@@ -81,7 +84,6 @@ import {
   type TableCellRangeBounds,
 } from '../../bim/table/table-cell-range';
 import { useTableBorderActions } from './use-table-border-actions';
-import { tableCursorAt, type TableCursorPosition } from '../../bim/table/table-cell-navigation';
 import {
   getTableCellCursor,
   restartTableCellCursorSession,
@@ -96,12 +98,10 @@ import {
 import { useLiveTableMutation, useTableModelCommit } from './use-table-model-commit';
 import { useCommandHistory } from '../../core/commands';
 import type { PersistedTableModel } from '../../types/table';
-import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type {
   TableHeaderContextMenuHandle,
   TableHeaderMenuProps,
 } from '../components/TableHeaderContextMenu';
-import type { TableHeaderMenuState } from '../components/TableHeaderMenuItems';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform, Viewport } from '../../rendering/types/Types';
 
@@ -195,6 +195,45 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
   );
 
   /**
+   * 🔴 ADR-739 §27.17 — **ΠΟΙΟΥΣ ΑΞΟΝΕΣ ΑΦΟΡΑ ΤΟ ΠΑΤΗΜΑ**: τον έναν, ή ολόκληρη την επιλογή.
+   *
+   * Η επιλογή διαβάζεται με **getter τη στιγμή του συμβάντος** (ADR-040 κανόνας #2), ποτέ με
+   * συνδρομή: αυτό το hook ζει μέσα στον `CanvasSection`. Και είναι και **ορθότητα**, όχι μόνο
+   * απόδοση — ο κανόνας πρέπει να απαντηθεί με ό,τι φωτίζει στην οθόνη **τώρα**, όχι με ό,τι
+   * ίσχυε στο τελευταίο render.
+   */
+  const axisTarget = useCallback(
+    (hit: TableIndicatorHit): TableAxisActionTarget | null => {
+      const live = liveTable();
+      if (!live) return null;
+      return resolveTableAxisActionTarget(
+        resolveTableModel(live.model),
+        hit,
+        getTableCellCursor()?.selection,
+      );
+    },
+    [liveTable],
+  );
+
+  /**
+   * Η **μία** διαδρομή κάθε δομικής πράξης: στόχος → σχέδιο (μεταβολή + πού πάει ο δρομέας)
+   * → το υπάρχον {@link apply}.
+   *
+   * Τα τρία items δεν έχουν πια από έναν δικό τους δρόμο με δικό του `hit.index`: εκείνο ήταν
+   * το σημείο όπου η επιλογή του χρήστη χανόταν σιωπηλά. Ο διαχωρισμός «τι κάνει» (καθαροί
+   * σχεδιαστές, παρακάτω) από «ποιος το εκτελεί» (εδώ) κρατά τη γνώση της πράξης δοκιμάσιμη
+   * χωρίς store, χωρίς React και χωρίς στημένο δρομέα.
+   */
+  const runAxisAction = useCallback(
+    (target: TableAxisActionTarget | null, planner: AxisActionPlanner) => {
+      if (!target) return;
+      const { mutate, pick } = planner(target);
+      apply(mutate, pick);
+    },
+    [apply],
+  );
+
+  /**
    * Η διαδρομή των πράξεων **μορφοποίησης** — ίδιο commit, αλλά **χωρίς** να αγγίζει τον δρομέα.
    *
    * 🔴 Δεν περνά από το {@link apply} επίτηδες. Εκείνο τελειώνει με `setTableCellCursor`, που
@@ -256,19 +295,10 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
 
   const props = useMemo<TableHeaderMenuProps>(
     () => ({
-      onInsertBefore: (hit) =>
-        hit.axis === 'row'
-          ? apply((m) => insertTableRow(m, hit.index), { rowIndex: hit.index })
-          : apply((m) => insertTableColumn(m, hit.index), { colIndex: hit.index }),
-      onInsertAfter: (hit) =>
-        hit.axis === 'row'
-          ? apply((m) => insertTableRow(m, hit.index + 1), { rowIndex: hit.index + 1 })
-          : apply((m) => insertTableColumn(m, hit.index + 1), { colIndex: hit.index + 1 }),
-      onDelete: (hit) =>
-        hit.axis === 'row'
-          ? apply((m) => deleteTableRow(m, hit.rowId), { rowIndex: hit.index })
-          : apply((m) => deleteTableColumn(m, hit.colId), { colIndex: hit.index }),
-      resolveState: (hit) => resolveHeaderState(liveTable()?.model ?? null, hit),
+      onInsertBefore: (hit) => runAxisAction(axisTarget(hit), insertAt('before')),
+      onInsertAfter: (hit) => runAxisAction(axisTarget(hit), insertAt('after')),
+      onDelete: (hit) => runAxisAction(axisTarget(hit), deleteAxisTarget),
+      resolveState: (hit) => resolveHeaderState(liveTable()?.model ?? null, axisTarget(hit)),
       resolveFormat: (hit) => resolveAxisFormatSnapshot(formatTarget(hit)),
       onToggleFormat: (hit, key) => {
         const target = formatTarget(hit);
@@ -329,7 +359,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       // συνεδρία μένει ζωντανή αλλά κουφή (δες την κεφαλίδα).
       onClosed: restartTableCellCursorSession,
     }),
-    [apply, liveTable, applyFormat, formatTarget, axisBounds, borderActions],
+    [runAxisAction, axisTarget, liveTable, applyFormat, formatTarget, axisBounds, borderActions],
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);
@@ -339,57 +369,8 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
 // Καθαροί βοηθοί
 // ──────────────────────────────────────────────────────────────────────────────
 //
-// ⚠️ Η **κατάσταση των χειριστηρίων** μετακόμισε στο `table-header-format-snapshot.ts`: δεν
-// είναι hook τίποτα από εκείνα (μηδέν `use*`, μηδέν store, μηδέν render) και το αρχείο είχε
-// φτάσει τις 481/500 γραμμές. Εξαγωγή, ποτέ trim — δες την κεφαλίδα εκείνου του module.
-
-/** Ποιον άξονα καρφώνει η πράξη· ο άλλος κληρονομείται από τον τρέχοντα δρομέα. */
-interface SurvivorPick {
-  readonly rowIndex?: number;
-  readonly colIndex?: number;
-}
-
-/** Οι σημαίες + η ετικέτα, απαντημένες τη στιγμή που ανοίγει το μενού. */
-export function resolveHeaderState(
-  model: PersistedTableModel | null,
-  hit: TableIndicatorHit,
-): TableHeaderMenuState {
-  const label = tableHeaderLabel(hit);
-  if (!model) return { label, canInsert: false, canDelete: false };
-  return hit.axis === 'row'
-    ? { label, canInsert: canInsertTableRow(model), canDelete: canDeleteTableRow(model) }
-    : { label, canInsert: canInsertTableColumn(model), canDelete: canDeleteTableColumn(model) };
-}
-
-/**
- * Το κελί όπου κάθεται ο δρομέας **μετά** την πράξη.
- *
- * Ο δείκτης κόβεται στα νέα όρια: διαγραφή της τελευταίας γραμμής αφήνει δείκτη εκτός
- * πλέγματος, και ο δρομέας πρέπει να πέσει στη νέα τελευταία — όπως σε κάθε φύλλο
- * υπολογισμού. Το `-1` του `findIndex` (η γραμμή του δρομέα ήταν αυτή που σβήστηκε) περνά
- * από το ίδιο κόψιμο και καταλήγει στην πρώτη.
- */
-export function survivingCursor(
-  model: PersistedTableModel,
-  current: TableCellRef,
-  pick: SurvivorPick,
-): TableCursorPosition | null {
-  if (model.rows.length === 0 || model.columns.length === 0) return null;
-  const rowIndex = pick.rowIndex ?? model.rows.findIndex((row) => row.id === current.rowId);
-  const colIndex = pick.colIndex ?? model.columns.findIndex((col) => col.id === current.colId);
-  const row = model.rows[clampIndex(rowIndex, model.rows.length)];
-  const column = model.columns[clampIndex(colIndex, model.columns.length)];
-  return tableCursorAt(row.id, column.id);
-}
-
-function clampIndex(index: number, length: number): number {
-  return Math.min(Math.max(index, 0), length - 1);
-}
-
-/**
- * `A` / `B` για στήλη, `1` / `2` για γραμμή — **η ίδια ονομασία** που ζωγραφίζει η ζώνη
- * (`tableColumnTicks` / `tableRowTicks`), από το ίδιο SSoT γράμματος.
- */
-export function tableHeaderLabel(hit: TableIndicatorHit): string {
-  return hit.axis === 'column' ? columnLetter(hit.index) : String(hit.index + 1);
-}
+// ⚠️ Η **κατάσταση των χειριστηρίων** μετακόμισε στο `table-header-format-snapshot.ts` και οι
+// **δομικές πράξεις** (σχέδιο, σημαίες, ετικέτες, επιζών δρομέας) στο
+// `table-header-axis-actions.ts`: κανένα από τα δύο δεν είναι hook (μηδέν `use*`, μηδέν store,
+// μηδέν render) και το αρχείο είχε φτάσει τις 510/500 γραμμές. **Εξαγωγή, ποτέ trim** — δες
+// τις κεφαλίδες εκείνων των modules.

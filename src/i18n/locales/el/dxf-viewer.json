@@ -559,13 +559,21 @@
     },
     "headerMenu": {
       "columnTitle": "Στήλη {label}",
+      "columnsTitle": "Στήλες {label}",
       "rowTitle": "Γραμμή {label}",
+      "rowsTitle": "Γραμμές {label}",
       "insertRowAbove": "Εισαγωγή γραμμής πάνω",
+      "insertRowsAbove": "Εισαγωγή {count} γραμμών πάνω",
       "insertRowBelow": "Εισαγωγή γραμμής κάτω",
+      "insertRowsBelow": "Εισαγωγή {count} γραμμών κάτω",
       "deleteRow": "Διαγραφή γραμμής",
+      "deleteRows": "Διαγραφή {count} γραμμών",
       "insertColumnLeft": "Εισαγωγή στήλης αριστερά",
+      "insertColumnsLeft": "Εισαγωγή {count} στηλών αριστερά",
       "insertColumnRight": "Εισαγωγή στήλης δεξιά",
-      "deleteColumn": "Διαγραφή στήλης"
+      "insertColumnsRight": "Εισαγωγή {count} στηλών δεξιά",
+      "deleteColumn": "Διαγραφή στήλης",
+      "deleteColumns": "Διαγραφή {count} στηλών"
     },
     "formatToolbar": {
       "columnLabel": "Μορφοποίηση στήλης {label}",

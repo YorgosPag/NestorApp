@@ -219,21 +219,32 @@ function dataRowCount(model: PersistedTableModel): number {
   return model.rows.reduce((count, row) => count + (row.rowClass === 'data' ? 1 : 0), 0);
 }
 
-export function canInsertTableRow(model: PersistedTableModel): boolean {
-  return dataRowCount(model) < MAX_TABLE_DATA_ROW_COUNT;
+/**
+ * ADR-739 §27.17 — το `count` είναι **το πλήθος της πράξης**, όχι διακοσμητικό.
+ *
+ * Με τρεις στήλες μαρκαρισμένες, η ερώτηση δεν είναι «χωράει άλλη μία;» αλλά «χωρούν και οι
+ * τρεις;». Το φράγμα ρωτιέται **μία** φορά, πριν από την πρώτη μεταβολή (δες
+ * `table-row-column-bulk-ops.ts`: όλα ή τίποτα) — αλλιώς μια εισαγωγή θα σταματούσε στη μέση
+ * και θα άφηνε βήμα undo που δεν αναιρεί αυτό που ζήτησε ο χρήστης.
+ *
+ * Η προεπιλογή `1` κρατά **αναλλοίωτους** τους δύο υπάρχοντες καλούντες (μενού ζωνών με έναν
+ * άξονα, χειριστήριο «+»): ο ίδιος ορισμός, με ρητό πλήθος όταν χρειάζεται.
+ */
+export function canInsertTableRow(model: PersistedTableModel, count = 1): boolean {
+  return count >= 1 && dataRowCount(model) + count <= MAX_TABLE_DATA_ROW_COUNT;
 }
 
-export function canInsertTableColumn(model: PersistedTableModel): boolean {
-  return model.columns.length < MAX_TABLE_COLUMN_COUNT;
+export function canInsertTableColumn(model: PersistedTableModel, count = 1): boolean {
+  return count >= 1 && model.columns.length + count <= MAX_TABLE_COLUMN_COUNT;
 }
 
 /** Μηδέν γραμμές = πίνακας χωρίς ύψος = αόρατη οντότητα (ίδιο σκεπτικό με το `sanitizeCount`). */
-export function canDeleteTableRow(model: PersistedTableModel): boolean {
-  return model.rows.length > 1;
+export function canDeleteTableRow(model: PersistedTableModel, count = 1): boolean {
+  return count >= 1 && model.rows.length > count;
 }
 
-export function canDeleteTableColumn(model: PersistedTableModel): boolean {
-  return model.columns.length > 1;
+export function canDeleteTableColumn(model: PersistedTableModel, count = 1): boolean {
+  return count >= 1 && model.columns.length > count;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

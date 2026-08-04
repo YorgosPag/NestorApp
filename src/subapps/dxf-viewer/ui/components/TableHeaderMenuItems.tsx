@@ -39,8 +39,14 @@ import {
 
 /** Ό,τι απαντιέται **τη στιγμή που ανοίγει** το μενού, όχι στο τελευταίο render. */
 export interface TableHeaderMenuState {
-  /** `A` / `3` — η ίδια ονομασία με τη ζώνη. */
+  /** `A` / `3` για έναν άξονα· `A:C` / `2:5` για πολλούς — η ίδια ονομασία με τη ζώνη. */
   readonly label: string;
+  /**
+   * ADR-739 §27.17 — **πόσους** άξονες αφορά η πράξη: έναν, ή ολόκληρη την επιλογή όταν το
+   * δεξί κλικ έπεσε μέσα της. Είναι το ίδιο πλήθος που εκτελείται και που **γράφεται** — μία
+   * τιμή, δύο χρήσεις, καμία πιθανότητα η ετικέτα να πει «3» και η πράξη να κάνει «1».
+   */
+  readonly count: number;
   readonly canInsert: boolean;
   readonly canDelete: boolean;
 }
@@ -63,40 +69,81 @@ export function TableHeaderMenuItems({
   isColumn, state, onInsertBefore, onInsertAfter, onDelete,
 }: TableHeaderMenuItemsProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer');
-  const { label, canInsert, canDelete } = state;
+  const { label, count, canInsert, canDelete } = state;
+
+  /**
+   * 🔴 ADR-739 §27.17 — **η ετικέτα λέει το πλήθος**, γιατί η πράξη το εκτελεί.
+   *
+   * Ο πληθυντικός δεν είναι φιλολογία: το item είναι η **τελευταία** στιγμή πριν χαθούν
+   * δεδομένα, και «Διαγραφή στήλης» πάνω σε τρεις μαρκαρισμένες στήλες θα ήταν ψέμα σε
+   * επικίνδυνο σημείο. Ο τίτλος από πάνω γράφει ήδη *ποιες* (`A:C`).
+   *
+   * Δύο κλειδιά και όχι ICU `plural`: το πλήθος εδώ είναι **πάντα ≥ 2** στον έναν κλάδο και
+   * **πάντα 1** στον άλλο, οπότε ένας κανόνας πληθυντικού θα ήταν μηχανισμός που δεν
+   * χρησιμοποιείται ποτέ — και ένα ακόμη σημείο να αποκλίνουν οι δύο γλώσσες.
+   */
+  /**
+   * ⚠️ Κάθε κλειδί γράφεται **κυριολεκτικά** μέσα στην `t(...)`, ποτέ ως τριαδική έκφραση
+   * κλειδιού: ολόκληρη η στατική διακυβέρνηση i18n του έργου (CHECK 3.8 ανύπαρκτα κλειδιά,
+   * 3.34 φρεσκάδα shell slice) διαβάζει **γραμμένα** κλειδιά. Ένα `t(many ? 'α' : 'β')` είναι
+   * αόρατο σε αυτά — δηλαδή δύο κλειδιά που κανένας φύλακας δεν επαληθεύει ποτέ ότι υπάρχουν.
+   */
+  const many = count > 1;
+
+  const title = isColumn
+    ? (many
+        ? t('table.headerMenu.columnsTitle', { label })
+        : t('table.headerMenu.columnTitle', { label }))
+    : (many
+        ? t('table.headerMenu.rowsTitle', { label })
+        : t('table.headerMenu.rowTitle', { label }));
+
+  const insertBeforeLabel = isColumn
+    ? (many
+        ? t('table.headerMenu.insertColumnsLeft', { count })
+        : t('table.headerMenu.insertColumnLeft'))
+    : (many
+        ? t('table.headerMenu.insertRowsAbove', { count })
+        : t('table.headerMenu.insertRowAbove'));
+
+  const insertAfterLabel = isColumn
+    ? (many
+        ? t('table.headerMenu.insertColumnsRight', { count })
+        : t('table.headerMenu.insertColumnRight'))
+    : (many
+        ? t('table.headerMenu.insertRowsBelow', { count })
+        : t('table.headerMenu.insertRowBelow'));
+
+  const deleteLabel = isColumn
+    ? (many
+        ? t('table.headerMenu.deleteColumns', { count })
+        : t('table.headerMenu.deleteColumn'))
+    : (many
+        ? t('table.headerMenu.deleteRows', { count })
+        : t('table.headerMenu.deleteRow'));
 
   return (
     <>
       <DxfMenuItem disabled>
-        <DxfMenuLabel>
-          {isColumn
-            ? t('table.headerMenu.columnTitle', { label })
-            : t('table.headerMenu.rowTitle', { label })}
-        </DxfMenuLabel>
+        <DxfMenuLabel>{title}</DxfMenuLabel>
       </DxfMenuItem>
       <DxfMenuSeparator />
 
       <DxfMenuItem disabled={!canInsert} onClick={onInsertBefore}>
         <DxfMenuIcon>{isColumn ? <ArrowLeft size={16} /> : <ArrowUp size={16} />}</DxfMenuIcon>
-        <DxfMenuLabel>
-          {isColumn ? t('table.headerMenu.insertColumnLeft') : t('table.headerMenu.insertRowAbove')}
-        </DxfMenuLabel>
+        <DxfMenuLabel>{insertBeforeLabel}</DxfMenuLabel>
       </DxfMenuItem>
 
       <DxfMenuItem disabled={!canInsert} onClick={onInsertAfter}>
         <DxfMenuIcon>{isColumn ? <ArrowRight size={16} /> : <ArrowDown size={16} />}</DxfMenuIcon>
-        <DxfMenuLabel>
-          {isColumn ? t('table.headerMenu.insertColumnRight') : t('table.headerMenu.insertRowBelow')}
-        </DxfMenuLabel>
+        <DxfMenuLabel>{insertAfterLabel}</DxfMenuLabel>
       </DxfMenuItem>
 
       <DxfMenuSeparator />
 
       <DxfMenuItem destructive disabled={!canDelete} onClick={onDelete}>
         <DxfMenuIcon><Trash2 size={16} /></DxfMenuIcon>
-        <DxfMenuLabel>
-          {isColumn ? t('table.headerMenu.deleteColumn') : t('table.headerMenu.deleteRow')}
-        </DxfMenuLabel>
+        <DxfMenuLabel>{deleteLabel}</DxfMenuLabel>
       </DxfMenuItem>
     </>
   );

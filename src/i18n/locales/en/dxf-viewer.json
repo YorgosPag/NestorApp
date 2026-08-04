@@ -559,13 +559,21 @@
     },
     "headerMenu": {
       "columnTitle": "Column {label}",
+      "columnsTitle": "Columns {label}",
       "rowTitle": "Row {label}",
+      "rowsTitle": "Rows {label}",
       "insertRowAbove": "Insert row above",
+      "insertRowsAbove": "Insert {count} rows above",
       "insertRowBelow": "Insert row below",
+      "insertRowsBelow": "Insert {count} rows below",
       "deleteRow": "Delete row",
+      "deleteRows": "Delete {count} rows",
       "insertColumnLeft": "Insert column left",
+      "insertColumnsLeft": "Insert {count} columns left",
       "insertColumnRight": "Insert column right",
-      "deleteColumn": "Delete column"
+      "insertColumnsRight": "Insert {count} columns right",
+      "deleteColumn": "Delete column",
+      "deleteColumns": "Delete {count} columns"
     },
     "formatToolbar": {
       "columnLabel": "Format column {label}",
