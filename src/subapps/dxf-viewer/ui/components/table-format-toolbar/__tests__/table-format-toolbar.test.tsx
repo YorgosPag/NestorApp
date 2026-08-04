@@ -118,7 +118,20 @@ const SAMPLE_FORMAT: TableAxisFormatSnapshot = {
   canReset: true,
 };
 
-function renderToolbar(overrides: Partial<TableFormatToolbarProps> = {}) {
+/**
+ * ADR-755 — τα οκτώ props μορφοποίησης άξονα ταξιδεύουν πλέον ως **ένα** αντικείμενο
+ * (`axisFormat`), ώστε το τμήμα να μπορεί να λείπει ολόκληρο στην υποδοχή της περιοχής.
+ *
+ * Ο helper δέχεται και τις **παλιές** συντομεύσεις (`format`, `axis`) και τις μεταφράζει: οι
+ * είκοσι υπάρχουσες δοκιμές ρωτούν «τι κάνει αυτό το κουμπί», όχι «πώς συσκευάζονται τα props»,
+ * και μια μαζική επανεγγραφή τους θα άλλαζε είκοσι σημεία για μηδέν επιπλέον απόδειξη.
+ */
+type ToolbarOverrides = Partial<TableFormatToolbarProps> & {
+  readonly format?: TableAxisFormatSnapshot;
+  readonly axis?: TableFormatToolbarProps['scope'];
+};
+
+function renderToolbar(overrides: ToolbarOverrides = {}) {
   const surfaceRef = React.createRef<HTMLDivElement>();
   const onToggle = jest.fn();
   const onStepSize = jest.fn();
@@ -126,20 +139,24 @@ function renderToolbar(overrides: Partial<TableFormatToolbarProps> = {}) {
   const onSetTextColor = jest.fn();
   const onSetFillColor = jest.fn();
 
+  const { format, axis, axisFormat, ...rest } = overrides;
+
   const utils = render(
     <TableFormatToolbar
       anchorX={100}
       anchorY={200}
-      axis="column"
+      scope={axis ?? 'column'}
       label="A"
-      format={SAMPLE_FORMAT}
       surfaceRef={surfaceRef}
-      onToggle={onToggle}
-      onStepSize={onStepSize}
-      onReset={onReset}
-      onSetTextColor={onSetTextColor}
-      onSetFillColor={onSetFillColor}
-      {...overrides}
+      axisFormat={axisFormat ?? {
+        format: format ?? SAMPLE_FORMAT,
+        onToggle,
+        onStepSize,
+        onReset,
+        onSetTextColor,
+        onSetFillColor,
+      }}
+      {...rest}
     />,
     wrapper,
   );
@@ -220,6 +237,11 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελε
       onReset: noop,
       onApplyDiagonal: noop,
       resolvePencil: () => null,
+    }),
+    // ADR-755 — το split button συγχώνευσης· ίδιο σχήμα «μία απάντηση» με τα περιγράμματα.
+    resolveMergeMenu: () => ({
+      state: { merged: false, canMerge: true },
+      onApply: noop,
     }),
   };
 

@@ -47,6 +47,7 @@ import {
 } from '../../state/table-cell-cursor-store';
 import { useLiveTable } from './use-live-table';
 import { useTableBorderActions } from './use-table-border-actions';
+import { useTableMergeActions } from './use-table-merge-actions';
 import {
   getTableRangeMenuPort,
   setTableRangeMenuPort,
@@ -77,6 +78,34 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
   const menuRef = useRef<TableRangeContextMenuHandle | null>(null);
   const liveTable = useLiveTable(levelManager);
   const borderActions = useTableBorderActions({ levelManager, liveTable });
+  const mergeActions = useTableMergeActions({ levelManager, liveTable });
+
+  /**
+   * 🔑 Ό,τι ξέρει το μενού για μια περιοχή, σε **μία** ερώτηση.
+   *
+   * Ξεχωριστό από το {@link resolveTarget} επειδή το ζητούν **δύο** διαφορετικά γεγονότα: το
+   * άνοιγμα (που πρώτα πρέπει να βρει *ποια* περιοχή) και η **ανανέωση μετά από εντολή** (που
+   * την ξέρει ήδη). Χωρίς τον διαχωρισμό, η ανανέωση θα ξανάκανε hit-test σε συντεταγμένες που
+   * δεν έχει — ή θα αντέγραφε το σώμα, δηλαδή δύο απαντήσεις στο «τι δείχνει το κουμπί».
+   */
+  const describeTarget = useCallback(
+    (bounds: TableCellRangeBounds): TableRangeMenuTarget => ({
+      bounds,
+      label: rangeLabel(bounds),
+      canReset: borderActions.canReset(bounds),
+      canClearDiagonals: borderActions.canClearDiagonals(bounds),
+      merge: mergeActions.resolveState(bounds),
+      borders: {
+        canReset: borderActions.canReset(bounds),
+        canClearDiagonals: borderActions.canClearDiagonals(bounds),
+        onApply: (id) => borderActions.applyCommand(bounds, id),
+        onReset: () => borderActions.resetBorders(bounds),
+        onApplyDiagonal: (id) => borderActions.applyDiagonal(bounds, id),
+        resolvePencil: borderActions.resolvePencil,
+      },
+    }),
+    [borderActions, mergeActions],
+  );
 
   /** Ο στόχος του δεξιού κλικ· `null` όταν δεν έπεσε σε κελί ζωντανού πίνακα. */
   const resolveTarget = useCallback(
@@ -101,14 +130,9 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       );
       if (!bounds) return null;
 
-      return {
-        bounds,
-        label: rangeLabel(bounds),
-        canReset: borderActions.canReset(bounds),
-        canClearDiagonals: borderActions.canClearDiagonals(bounds),
-      };
+      return describeTarget(bounds);
     },
-    [liveTable, containerRef, transformRef, borderActions],
+    [liveTable, containerRef, transformRef, describeTarget],
   );
 
   useEffect(() => {
@@ -133,11 +157,15 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       onApplyBorder: (bounds, commandId) => borderActions.applyCommand(bounds, commandId),
       onResetBorders: (bounds) => borderActions.resetBorders(bounds),
       onApplyDiagonal: (bounds, commandId) => borderActions.applyDiagonal(bounds, commandId),
+      // ADR-755 — επιστρέφει `Promise`: η συγχώνευση ρωτά πριν πετάξει περιεχόμενο, και ο
+      // καλών περιμένει την απάντηση πριν ξαναρωτήσει την κατάσταση του κουμπιού.
+      onApplyMerge: (bounds, commandId) => mergeActions.applyCommand(bounds, commandId),
+      resolveTarget: describeTarget,
       // Το μενού έκλεισε — η εστίαση επιστρέφει στο κελί, αλλιώς η συνεδρία μένει ζωντανή στο
       // store αλλά κουφή στην οθόνη (ίδια σύμβαση με το μενού των ζωνών).
       onClosed: restartTableCellCursorSession,
     }),
-    [borderActions],
+    [borderActions, mergeActions, describeTarget],
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);

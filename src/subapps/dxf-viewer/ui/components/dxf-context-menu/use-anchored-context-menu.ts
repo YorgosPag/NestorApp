@@ -28,8 +28,10 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  type Dispatch,
   type Ref,
   type RefObject,
+  type SetStateAction,
 } from 'react';
 import { useAnchoredHiddenTrigger } from './use-anchored-hidden-trigger';
 
@@ -50,6 +52,32 @@ export interface AnchoredMenuState<T> {
   readonly target: T | null;
   /** Ο **ΕΝΑΣ** δρόμος εξόδου: `Escape`, κλικ έξω, επιλογή item. */
   readonly onOpenChange: (next: boolean) => void;
+  /**
+   * ADR-755 — το σημείο του δεξιού κλικ, για όποιον θέλει να **αγκυρώσει και δεύτερη
+   * επιφάνεια** εκεί (mini toolbar πάνω από το μενού, απόφαση Α7 του ADR-739).
+   *
+   * `null` όσο δεν έχει ανοίξει ποτέ. Το κρατούσε ήδη το hook για τον κρυφό trigger· απλώς
+   * δεν το έδειχνε — και ο δεύτερος καταναλωτής του θα το ξαναϋπολόγιζε από δικό του state,
+   * δηλαδή δύο πηγές για τη θέση της ίδιας χειρονομίας.
+   */
+  readonly anchor: { readonly x: number; readonly y: number } | null;
+  /**
+   * ADR-755 — ανανέωση του παγωμένου στόχου **χωρίς** να ξανανοίξει το μενού.
+   *
+   * Το χρειάζεται όποιος κρατά τη γραμμή εργαλείων ζωντανή μετά την εντολή: η κατάσταση των
+   * κουμπιών («είναι συγχωνευμένο;») οφείλει να ξαναρωτηθεί, αλλιώς το κουμπί δείχνει ότι η
+   * πράξη απέτυχε ενώ έχει ήδη εφαρμοστεί στον καμβά.
+   */
+  readonly setTarget: Dispatch<SetStateAction<T | null>>;
+  /**
+   * ADR-755 — φεύγει **μόνο** το μενού· ο στόχος (άρα και η γραμμή εργαλείων) μένει ζωντανός.
+   *
+   * Δεν είναι δεύτερος δρόμος εξόδου: είναι **άλλο γεγονός**. Ο ένας δρόμος
+   * ({@link onOpenChange}) σβήνει ολόκληρη την επιφάνεια· αυτό εδώ υποχωρεί το ένα από τα δύο
+   * στρώματα. Ο φρουρός `isOpen` δεν είναι διακοσμητικός: το δεύτερο και τρίτο πάτημα στη
+   * γραμμή περνούν κι αυτά από εδώ με το μενού **ήδη** κλειστό.
+   */
+  readonly closeMenuKeepTarget: () => void;
 }
 
 /**
@@ -99,5 +127,11 @@ export function useAnchoredContextMenu<T>(
     [onClosed],
   );
 
-  return { triggerRef, isOpen, target, onOpenChange };
+  const closeMenuKeepTarget = useCallback(() => {
+    if (!isOpen) return;
+    setIsOpen(false);
+    onClosed?.();
+  }, [isOpen, onClosed]);
+
+  return { triggerRef, isOpen, target, onOpenChange, anchor, setTarget, closeMenuKeepTarget };
 }

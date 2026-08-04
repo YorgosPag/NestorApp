@@ -87,6 +87,7 @@ import {
   type TableCellRangeBounds,
 } from '../../bim/table/table-cell-range';
 import { useTableBorderActions } from './use-table-border-actions';
+import { useTableMergeActions } from './use-table-merge-actions';
 import {
   getTableCellCursor,
   restartTableCellCursorSession,
@@ -252,6 +253,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
   const applyFormat = useLiveTableMutation({ levelManager, execute, liveTable });
 
   const borderActions = useTableBorderActions({ levelManager, liveTable });
+  const mergeActions = useTableMergeActions({ levelManager, liveTable });
 
   /**
    * ADR-750 Φ3 — τα **όρια** που αντιστοιχούν σε μια ζώνη δείκτη: ολόκληρη η στήλη ή γραμμή.
@@ -395,11 +397,31 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
           resolvePencil: borderActions.resolvePencil,
         };
       },
+      /**
+       * ADR-755 — η **συγχώνευση ολόκληρου άξονα**. Ίδια σύμβαση με τα περιγράμματα: τα όρια
+       * ξαναρωτιούνται μέσα στον χειριστή (undo μπορεί να έσβησε τη γραμμή), η κατάσταση είναι
+       * στιγμιότυπο του ανοίγματος και ξαναρωτιέται μετά από κάθε πράξη.
+       */
+      resolveMergeMenu: (hit) => {
+        const opened = axisBounds(hit);
+        return {
+          state: opened
+            ? mergeActions.resolveState(opened)
+            : { merged: false, canMerge: false },
+          onApply: (id) => {
+            const b = axisBounds(hit);
+            if (b) void mergeActions.applyCommand(b, id);
+          },
+        };
+      },
       // Το μενού έκλεισε — με ή χωρίς ενέργεια. Η εστίαση επιστρέφει στο κελί, αλλιώς η
       // συνεδρία μένει ζωντανή αλλά κουφή (δες την κεφαλίδα).
       onClosed: restartTableCellCursorSession,
     }),
-    [runAxisAction, axisTarget, liveTable, applyFormat, formatTarget, axisBounds, borderActions],
+    [
+      runAxisAction, axisTarget, liveTable, applyFormat, formatTarget, axisBounds,
+      borderActions, mergeActions,
+    ],
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);
