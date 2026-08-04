@@ -53,7 +53,7 @@
 
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableTextLinkSpan, TableTextRun } from './table-layout-types';
-import { tableAnchorOffsetMm } from './table-text-decoration';
+import { anchorOffset } from '../../text-engine/fonts/text-horizontal-anchor';
 import { wholeRunLink } from './table-cell-link-spans';
 
 /**
@@ -138,7 +138,7 @@ export function tableTextPieces(run: TableTextRun): readonly TableTextPiece[] {
   // `offsetMm` **είναι** ήδη το τρέχον άθροισμα, και μια δεύτερη πρόσθεση των ίδιων αριθμών σε
   // άλλη σειρά μπορεί να δώσει άλλο τελευταίο bit — δηλαδή δύο απαντήσεις στο «πόσο πλατύ».
   const last = spans[spans.length - 1];
-  const textStartMm = tableAnchorOffsetMm(run.hAlign, last.offsetMm + last.advanceMm);
+  const textStartMm = anchorOffset(run.hAlign, last.offsetMm + last.advanceMm);
 
   return spans.map((span) => ({
     text: span.text,

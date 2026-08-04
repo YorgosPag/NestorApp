@@ -56,7 +56,7 @@ import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableTextLinkSpan } from './table-layout-types';
 // 🔴 ADR-753 Φ3 — η στοίχιση ως μετατόπιση έχει **ένα** σώμα στο `bim/table`. Ήταν τοπικό
 // `anchorOffsetMm` εδώ, ταυτόσημο με το `x` του `tableUnderlineGeometry`.
-import { tableAnchorOffsetMm } from './table-text-decoration';
+import { anchorOffset } from '../../text-engine/fonts/text-horizontal-anchor';
 
 /**
  * Τα είδη που ψάχνονται σε **αριθμητικό** κελί.
@@ -125,7 +125,7 @@ export function resolveCellLinkSpans(input: CellLinkSpansInput): readonly TableT
   if (links.length === 0) return [];
 
   const totalMm = prefixWidthMm(visibleText.length);
-  const textStartMm = tableAnchorOffsetMm(hAlign, totalMm);
+  const textStartMm = anchorOffset(hAlign, totalMm);
 
   if (clipped) {
     const whole = wholeTextLink(links, fullText);
