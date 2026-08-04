@@ -45,6 +45,8 @@ import { setOverlapBadge, clearOverlapBadge } from '../selection/OverlapBadgeSto
 // (component mode). Shares the Φ3b click-into gate; clears itself otherwise.
 import { updateStairSubElementHover2D } from '../../bim/stairs/stair-sub-element-hover-2d';
 import { setStairSubElementHover } from '../../bim/stairs/stair-sub-element-selection-store';
+import { updateTableLinkHover2D } from '../../bim/table/table-link-interaction-2d';
+import { setHoveredCellLink } from '../../state/table-cell-link-hover-store';
 import { withPerf, perfTick } from './mouse-handler-perf';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { dperf } from '../../debug';
@@ -336,6 +338,10 @@ export function useMouseMoveHandler({
       setHoveredEntity(null);
       setHoveredOverlay(null);
       setStairSubElementHover(null);
+      // ADR-751 — το πέμπτο, στον ΕΝΑ δρόμο σβησίματος που η από πάνω σημείωση ζητά ρητά:
+      // χωρίς αυτό, ο δείκτης θα έμενε χεράκι πάνω από πίνακα που έχει ήδη κλειδώσει σε
+      // συνεδρία ή σε σύρσιμο λαβής, δηλαδή θα υποσχόταν κλικ που δεν θα γινόταν δεκτό.
+      setHoveredCellLink(null);
       clearOverlapBadge(); // ADR-659 — no overlap badge while a grip is being manipulated.
     } else if ((activeTool === 'select' || entityPickingActive) && !refs.panStateRef.current.isPanning && !cursor.isSelecting) {
       const hoverNow = performance.now();
@@ -360,6 +366,15 @@ export function useMouseMoveHandler({
           // ADR-358 Q19 Φ3c — resolve the per-tread pre-highlight (no-op unless the
           // hovered entity is the sole-selected stair; skip-if-unchanged inside).
           updateStairSubElementHover2D(hitEntityId, worldPos, scene?.entities as readonly Entity[] | undefined);
+          // ADR-751 — resolve the cell link under the cursor so the pointer can turn into a
+          // hand. Same shape as the line above: bails on the first comparison unless the
+          // hovered entity is a table; skip-if-unchanged inside the store.
+          updateTableLinkHover2D(
+            hitEntityId,
+            worldPos,
+            scene?.entities as readonly Entity[] | undefined,
+            { clientX: e.clientX, clientY: e.clientY },
+          );
           if (onHoverEntity) {
             withPerf('hover-entity-callback', () => onHoverEntity(hitEntityId));
           }

@@ -32,6 +32,11 @@ import { getDevicePixelRatio } from './utils';
 // το `apply()`, άρα μία μέτρηση εδώ είναι **πλήρης** εξ ορισμού.
 import { noteCursorApply, type CursorApplyBranch } from './cursor-apply-audit';
 import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-cursor-role';
+// 🔴 ADR-751 — το χεράκι πάνω σε διεύθυνση κελιού. Δύο ανεξάρτητα σκέλη, δύο συνδρομές:
+// το `CtrlKeyTracker` είναι ο SSoT του modifier (ADR-363) και μέχρι τώρα δεν είχε κανέναν
+// καταναλωτή στη διαδρομή δείκτη — εδώ αποκτά τον πρώτο.
+import { getHoveredCellLink, subscribeHoveredCellLink } from '../../state/table-cell-link-hover-store';
+import { CtrlKeyTracker } from '../../keyboard/CtrlKeyTracker';
 
 /**
  * Σταθερή διάσταση (CSS px) του κεντρικού τετραγωνιδίου (pickbox) στο σταυρόνημα — αίτημα Giorgio.
@@ -134,6 +139,8 @@ export function useCrosshairCursor(
     let unsubDpr: () => void = () => {};
     let unsubGrip: () => void = () => {};
     let unsubTable: () => void = () => {};
+    let unsubCellLink: () => void = () => {};
+    let unsubCtrl: () => void = () => {};
 
     const apply = (): void => {
       const target = el;
@@ -159,6 +166,18 @@ export function useCrosshairCursor(
       // ώστε ο χρήστης να μπορεί να κλικάρει τα πλήκτρα (το σταυρόνημα «εξαφανίζεται»).
       if (isCrosshairSuppressed()) {
         write('navwheel', 'default');
+        return;
+      }
+      // 🔴 ADR-751 — το χεράκι πάνω σε διεύθυνση μέσα σε κελί. Απαιτεί **και τα δύο**: σύνδεσμο
+      // κάτω από τον δείκτη **και** Ctrl πατημένο — δηλαδή δείχνει ακριβώς όταν το κλικ θα
+      // ανοίξει κάτι, ποτέ νωρίτερα. Ένα μόνιμο χεράκι πάνω σε κάθε e-mail θα υποσχόταν κλικ
+      // που το σκέτο κλικ **δεν** κάνει (εκείνο επιλέγει τον πίνακα, όπως πάντα).
+      //
+      // Θέση: **πριν** τη λωρίδα του πίνακα. Οι δύο μπορούν να συνυπάρξουν μέσα σε ανοιχτή
+      // συνεδρία (η λωρίδα δίνει το σταυρουδάκι κελιού), και τότε νικά η πιο **ρητή** πρόθεση:
+      // ο χρήστης κρατά modifier, δεν περιπλανιέται.
+      if (CtrlKeyTracker.getSnapshot() && getHoveredCellLink()) {
+        write('cell-link', 'pointer');
         return;
       }
       // ADR-739 §31 — η λωρίδα δείκτη του πίνακα. Μπαίνει **μετά** το NavWheel και **πριν** τον
@@ -218,6 +237,13 @@ export function useCrosshairCursor(
       // χέρι στέκεται πάνω στο γράμμα και ο χρήστης κλείνει τον πίνακα με `Esc`. Χωρίς αυτό, το
       // παχύ βέλος θα έμενε στην οθόνη ως το επόμενο τυχαίο `apply()`.
       unsubTable = subscribeTableIndicatorCursor(apply);
+      // 🔴 ADR-751 — **δύο** συνδρομές, γιατί η συνθήκη έχει δύο σκέλη που αλλάζουν χωριστά:
+      //   • ο σύνδεσμος κάτω από τον δείκτη (αλλάζει με την κίνηση)·
+      //   • το Ctrl (αλλάζει **χωρίς καμία κίνηση** — ο χρήστης στέκεται πάνω στο e-mail και
+      //     πατά το πλήκτρο). Χωρίς τη δεύτερη, το χεράκι θα εμφανιζόταν μόνο αν κουνούσε το
+      //     ποντίκι μετά το Ctrl, δηλαδή θα έμοιαζε σπασμένο ακριβώς στη σωστή χειρονομία.
+      unsubCellLink = subscribeHoveredCellLink(apply);
+      unsubCtrl = CtrlKeyTracker.subscribe(apply);
     };
     attach();
 
@@ -228,6 +254,8 @@ export function useCrosshairCursor(
       unsubDpr();
       unsubGrip();
       unsubTable();
+      unsubCellLink();
+      unsubCtrl();
       if (el) el.style.cursor = ''; // restore (class-defined cursor takes over again)
     };
   }, [targetRef, enabled, size, color, lineWidth]);

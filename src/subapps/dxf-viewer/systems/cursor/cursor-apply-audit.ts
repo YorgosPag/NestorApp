@@ -58,7 +58,7 @@ import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-c
 import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
 
 /** Ποιον κλάδο του `apply()` πήρε η εγγραφή — η **σειρά προτεραιότητας** του §31.3(α). */
-export type CursorApplyBranch = 'navwheel' | 'table' | 'crosshair-off' | 'crosshair';
+export type CursorApplyBranch = 'navwheel' | 'cell-link' | 'table' | 'crosshair-off' | 'crosshair';
 
 /**
  * Γιατί ο ακροατής κίνησης κατέληξε σε αυτή την απάντηση.

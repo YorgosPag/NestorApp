@@ -12,11 +12,12 @@
  */
 
 import type { TableBorderSegment } from '../../../bim/table/table-layout-types';
+// 🔴 ADR-739 §37 — το πάχος στην οθόνη **δεν** υπολογίζεται πια εδώ: το ρωτά και ο δείκτης
+// λειτουργίας, που πρέπει να μείνει έξω από αυτό το μολύβι. Δύο αντίγραφα του κανόνα θα
+// σήμαιναν δείκτη που νομίζει ότι απομακρύνθηκε ενώ η γραμμή μεγάλωσε.
+import { tableBorderScreenPx } from '../../../bim/table/table-border-pen';
 import { dashMmToScreenPx } from '../../linetype-dash-resolver';
 import type { StampTableContext } from './stamp-table-layout';
-
-/** Ελάχιστο πάχος γραμμής στην οθόνη — hairline αντί για αόρατη γραμμή. */
-const MIN_BORDER_SCREEN_PX = 0.5;
 
 /**
  * Το LTSCALE ενός περιγράμματος πίνακα. Δες {@link stampTableBorders} για το γιατί είναι
@@ -56,7 +57,7 @@ export function stampTableBorders(
     const b = rc.toScreen(segment.b.x, segment.b.y);
     ctx.save();
     ctx.strokeStyle = rc.phaseColor ?? segment.spec.colorHex;
-    ctx.lineWidth = Math.max(segment.spec.widthMm * rc.pxPerMm, MIN_BORDER_SCREEN_PX);
+    ctx.lineWidth = tableBorderScreenPx(segment.spec.widthMm, rc.pxPerMm);
     if (segment.spec.dashMm) {
       ctx.setLineDash(dashMmToScreenPx(segment.spec.dashMm, rc.pxPerMm, SHEET_LINETYPE_SCALE));
     }

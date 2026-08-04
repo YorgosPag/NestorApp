@@ -29,6 +29,7 @@ import { ArmableGripsStore } from '../grip/ArmableGripsStore';
 import { runGripMarqueeArm } from '../grip/grip-marquee-arm';
 // ADR-358 Q19 Φ3b — 2D «click-into»: 2nd click on the sole-selected stair → tread sub-select.
 import { handleStairClickInto2D } from '../../bim/stairs/stair-click-into-2d';
+import { handleTableLinkClick2D } from '../../bim/table/table-link-interaction-2d';
 // ADR-659 — ArchiCAD repeated-click overlap disambiguation (2nd click same point → cycle).
 import { resolveRepeatedClickCycle } from '../selection/resolve-repeated-click-cycle';
 
@@ -282,6 +283,15 @@ export function processSinglePointPick(
   // tread, enters that sub-element (host stays selected) and CONSUMES the click. Any other
   // click clears a stale sub-selection. Mirror of the 3D `handleClick` gesture.
   const worldClick = screenToWorldWithSnapshot(getScreenPosFromEvent(e, hitSnap), transform, hitSnap);
+  // 🔴 ADR-751 — Ctrl+κλικ πάνω σε e-mail / ιστοσελίδα / τηλέφωνο μέσα σε κελί πίνακα ανοίγει
+  // τον προορισμό και ΚΑΤΑΝΑΛΩΝΕΙ το κλικ. Μπαίνει **πριν** από κάθε άλλη διαδρομή επειδή
+  // είναι η πιο **ρητή** πρόθεση που μπορεί να εκφράσει ο χρήστης εδώ (modifier + ακριβές
+  // κείμενο). Διαβάζει `e.ctrlKey` και όχι το `additive` της επόμενης γραμμής: το `additive`
+  // περιλαμβάνει Shift και ⌘, που σημαίνουν πολλαπλή επιλογή και πρέπει να συνεχίσουν να τη
+  // σημαίνουν. Επιστρέφει `true` **μόνο** όταν υπάρχει πράγματι σύνδεσμος κάτω από τον δείκτη.
+  if (handleTableLinkClick2D(hitResult, e.ctrlKey, worldClick, scene?.entities as unknown as readonly Entity[] | undefined)) {
+    return;
+  }
   if (handleStairClickInto2D(hitResult, additive, worldClick, scene?.entities as unknown as readonly Entity[] | undefined)) {
     return;
   }
