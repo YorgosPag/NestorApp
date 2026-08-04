@@ -50,7 +50,11 @@ import {
   startDragEdgeAutoPan,
   stopDragEdgeAutoPan,
 } from '../../systems/navigation/drag-edge-autopan';
-import type { TableCellRef, TableSelectionKind } from '../../bim/table/table-cell-range';
+import type {
+  TableCellRef,
+  TableSelectionKind,
+  TableSelectionSpan,
+} from '../../bim/table/table-cell-range';
 
 /** Ό,τι χρειάζεται η χειρονομία για να ζήσει. Καμία γνώση γεωμετρίας — τη δίνει ο καλών. */
 export interface TableCellDragStart {
@@ -75,6 +79,28 @@ export interface TableCellDragStart {
    * ακριβώς το κενό που κλείνει εδώ, ξαναγεννημένο χωρίς να το πει κανείς.
    */
   readonly container: HTMLElement;
+
+  /**
+   * 🔴 ADR-754 §5 — **τι γράφεται σε κάθε αλλαγή κελιού**· προεπιλογή: η επιλογή του δρομέα.
+   *
+   * ## Γιατί έγινε παράμετρος — γενίκευση, όχι δεύτερη μηχανή
+   * Η **υπόδειξη κελιού** (`=` + σύρσιμο ⇒ `=SUM(A1:B5`) είναι η **ίδια ακριβώς χειρονομία**:
+   * κουμπί κάτω, ακολούθα το χέρι, γράψε μόνο όταν αλλάζει κελί, συνέχισε στην άκρη με
+   * auto-pan, τερμάτισε στο `mouseup` **όπου κι αν γίνει**. Ένας δεύτερος βρόχος `mousemove`
+   * γι' αυτήν θα ήταν structural clone ολόκληρου του κύκλου ζωής (N.18 / CHECK 3.28) — και,
+   * χειρότερα, δεύτερος φύλακας «γράψε μόνο όταν αλλάζει κελί», δηλαδή δεύτερη ευκαιρία να
+   * ξαναγεννηθεί το κόστος του ADR-735.
+   *
+   * Αλλάζει **μόνο ο παραλήπτης**: εκεί μαρκάρονται κελιά, εδώ γράφονται χαρακτήρες μέσα σε
+   * τύπο. Η υπόδειξη **δεν επιτρέπεται** να γράψει επιλογή δρομέα: θα φώτιζε κελιά που ο
+   * χρήστης δεν διάλεξε και θα άλλαζε σιωπηλά το αντικείμενο του επόμενου `Ctrl+C`.
+   *
+   * ⚠️ **Προαιρετική, με ρητή προεπιλογή** — σε αντίθεση με τα υποχρεωτικά `kind`/`container`
+   * από πάνω, και η διαφορά είναι μετρήσιμη: εκεί ο γραφέας που ξεχνά παίρνει **λάθος**
+   * συμπεριφορά (κούμπωμα που δεν ζήτησε, σύρση χωρίς άκρη)· εδώ παίρνει την **ιστορική και
+   * σωστή** συμπεριφορά, που είναι αυτό που θέλουν και οι τρεις υπάρχουσες χειρονομίες.
+   */
+  readonly write?: (span: TableSelectionSpan) => void;
 }
 
 /** Οι ακροατές της τρέχουσας σύρσης· `null` όταν δεν σέρνεται τίποτα. */
@@ -91,6 +117,8 @@ export function startTableCellDrag(start: TableCellDragStart): void {
   // Η αφετηρία: το ίδιο το κελί της άγκυρας. Ο φύλακας «άλλαξε κελί;» ξεκινά από εδώ, ώστε
   // η πρώτη κίνηση **μέσα** στο ίδιο κελί να μη γράψει τίποτα.
   let lastCell: TableCellRef = start.anchor;
+  /** ADR-754 §5 — ο παραλήπτης, λυμένος **μία** φορά· δες το {@link TableCellDragStart.write}. */
+  const write = start.write ?? setTableCellSelection;
   /**
    * Το τελευταίο συμβάν κίνησης — **η θέση του χεριού**, όχι η θέση στον κόσμο.
    *
@@ -112,7 +140,8 @@ export function startTableCellDrag(start: TableCellDragStart): void {
     if (!cell) return;
     if (cell.rowId === lastCell.rowId && cell.colId === lastCell.colId) return;
     lastCell = cell;
-    setTableCellSelection({ from: start.anchor, to: cell, kind: start.kind });
+    // ADR-754 §5 — ο **ίδιος** φύλακας και ο ίδιος κύκλος ζωής για δύο παραλήπτες.
+    write({ from: start.anchor, to: cell, kind: start.kind });
   };
 
   const onMove = (event: MouseEvent): void => {

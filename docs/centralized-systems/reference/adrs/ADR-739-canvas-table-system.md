@@ -63,6 +63,14 @@
 - **Date**: 2026-07-31
 - **Category**: DXF Viewer / Annotation / Documentation / Data Binding / Research
 - **Σχετικά**:
+  - 🆕 **ADR-754** (Point mode) — **θυγατρικό**. Γράφω `=` σε κελί, κάνω κλικ σε άλλο, μπαίνει
+    η διεύθυνσή του στον τύπο (Excel parity). Καταναλώνει τον λεξικογράφο της **Φ.Ζ** (που
+    απέκτησε **θέσεις** μονάδων), την ονομασία `A1` του **βήματος 7**, και τη μηχανή σύρσης
+    του **§27.15** (που απέκτησε παράμετρο `write` — δεύτερος παραλήπτης, όχι δεύτερος
+    βρόχος). Ο δρομέας απέκτησε `caretRevision` + `setTableCellCursorDraftAt`.
+    🔑 Η υπόδειξη **δεν είναι τέταρτη τιμή του `TableCellCursorMode`** — είναι **παράγωγο**
+    του `(πρόχειρο, θέση κέρσορα)`, γι' αυτό `Enter`/`Escape`/`F2`/πληκτρολόγηση δεν
+    χρειάστηκαν **καμία** γραμμή.
   - **ADR-622** (Structural Detail-Sheet SSoT) — `buildScheduleTable` / `buildFieldBlock` / τα **3 backends**. **Το θεμέλιο.**
   - **ADR-651** (Auto Title Block) — πρώτος καταναλωτής του «χάρτινο layout → in-scene block»
   - **ADR-650 M7** (Τοπογραφικά παραδοτέα) — δεύτερος καταναλωτής· `ExportableTable` SSoT

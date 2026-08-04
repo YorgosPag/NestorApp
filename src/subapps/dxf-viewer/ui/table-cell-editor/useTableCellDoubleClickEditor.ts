@@ -374,6 +374,8 @@ export function useTableCellDoubleClickEditor(
         draft: cursor.draft,
         initialText: target.cell.text,
         caretIndex: cursor.caretIndex,
+        // ADR-754 §4 — η **αφορμή** για να ξαναμπεί ο κέρσορας εκεί· δες το store.
+        caretRevision: cursor.caretRevision,
         anchor,
         onCommit: commitText,
         onMove: move,
