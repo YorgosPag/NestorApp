@@ -10,8 +10,8 @@
  */
 
 import { isAcquisitionStatus } from '@/lib/ownership/landowner-acquisition';
+import { allocateMillesimalsFromPercentages } from '@/lib/ownership/millesimal-apportionment';
 import {
-  TOTAL_SHARES_TARGET,
   type AcquisitionStatus,
   type LandownerEntry,
   type PropertyOwnerEntry,
@@ -48,18 +48,27 @@ export function toPropertyOwners(entries: readonly LandownerEntry[]): PropertyOw
  *
  * The status key is omitted entirely when undeclared — absence is the signal
  * (ADR-745 Φ3α), and `stripUndefinedDeep` would drop an explicit `undefined` anyway.
+ *
+ * 🔴 `allocatedShares` is apportioned across the WHOLE list in one pass, never
+ * row by row. Rounding each row on its own turned three siblings holding a third
+ * each into 333 + 333 + 333 = 999‰ — a mismatch nobody typed, written straight
+ * into Firestore. The apportionment itself is shared with the ownership tables
+ * (`lib/ownership/millesimal-apportionment`), which is also where it is spelled
+ * out why the target must follow the declared total instead of being pinned at
+ * 1000: an incomplete declaration has to stay incomplete.
  */
 export function toLandownerEntries(
   owners: readonly PropertyOwnerEntry[],
   statuses: AcquisitionStatusMap,
 ): LandownerEntry[] {
-  return owners.map(o => {
+  const shares = allocateMillesimalsFromPercentages(owners.map(o => o.ownershipPct));
+  return owners.map((o, index) => {
     const status = statuses[o.contactId];
     return {
       contactId: o.contactId,
       name: o.name,
       landOwnershipPct: o.ownershipPct,
-      allocatedShares: Math.round((o.ownershipPct / 100) * TOTAL_SHARES_TARGET),
+      allocatedShares: shares[index],
       ...(status ? { acquisitionStatus: status } : {}),
     };
   });

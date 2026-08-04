@@ -23,6 +23,7 @@ import type {
   LandownerEntry,
   CategorySummary,
 } from '@/types/ownership-table';
+import { apportionLargestRemainder } from '@/lib/ownership/millesimal-apportionment';
 import {
   FLOOR_COEFFICIENTS_TABLE_A,
   FLOOR_COEFFICIENTS_TABLE_B,
@@ -80,54 +81,30 @@ function getFloorCoefficient(
 // ============================================================================
 
 /**
- * Largest Remainder Method — Εγγυάται σύνολο = target (1000)
+ * Ownership-table apportionment: Hamilton + the per-row floor.
  *
- * 1. Υπολόγισε raw shares (δεκαδικά)
- * 2. Floor κάθε share
- * 3. Κατάνειμε τα υπόλοιπα στις γραμμές με το μεγαλύτερο δεκαδικό υπόλοιπο
+ * The algorithm itself lives in `lib/ownership/millesimal-apportionment` — it is
+ * shared with the landowners tab, which asks the same arithmetic question with a
+ * different target (see that module for why the two must not be merged).
+ *
+ * What stays here is this domain's own policy: **every participating property
+ * owns at least `MIN_SHARES_PER_ROW`**, even one whose area rounds down to
+ * nothing, and the lift is paid for out of the largest rows so the total holds.
  */
 export function roundWithLargestRemainder(
   rawShares: ReadonlyArray<number>,
   target: number = TOTAL_SHARES_TARGET,
 ): number[] {
-  if (rawShares.length === 0) return [];
+  const allocated = apportionLargestRemainder(rawShares, target);
 
+  // The floor exists for rows that were rounded DOWN to nothing. Where no row
+  // carries any weight the target was split evenly and nothing was rounded away,
+  // so lifting would only push the total past the target for no reason.
   const totalRaw = rawShares.reduce((sum, s) => sum + s, 0);
-  if (totalRaw === 0) {
-    // Distribute equally
-    const base = Math.floor(target / rawShares.length);
-    const remainder = target - base * rawShares.length;
-    return rawShares.map((_, i) => base + (i < remainder ? 1 : 0));
-  }
-
-  // Scale to target
-  const scaled = rawShares.map(s => (s / totalRaw) * target);
-
-  // Floor each
-  const floored = scaled.map(s => Math.floor(s));
-
-  // Calculate remainders
-  const remainders = scaled.map((s, i) => ({
-    index: i,
-    remainder: s - floored[i],
-  }));
-
-  // How many extra units to distribute
-  const currentTotal = floored.reduce((sum, s) => sum + s, 0);
-  let toDistribute = target - currentTotal;
-
-  // Sort by remainder descending
-  remainders.sort((a, b) => b.remainder - a.remainder);
-
-  // Distribute
-  for (const entry of remainders) {
-    if (toDistribute <= 0) break;
-    floored[entry.index] += 1;
-    toDistribute -= 1;
-  }
+  if (totalRaw === 0) return allocated;
 
   // Ensure minimum shares
-  const result = floored.map(s => Math.max(s, MIN_SHARES_PER_ROW));
+  const result = allocated.map(s => Math.max(s, MIN_SHARES_PER_ROW));
 
   // If enforcing minimums pushed total over, reduce from largest
   let total = result.reduce((sum, s) => sum + s, 0);

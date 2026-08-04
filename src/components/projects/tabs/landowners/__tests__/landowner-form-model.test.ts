@@ -17,6 +17,7 @@ import {
   toPropertyOwners,
   type AcquisitionStatusMap,
 } from '@/components/projects/tabs/landowners/landowner-form-model';
+import { allocateMillesimalsFromPercentages } from '@/lib/ownership/millesimal-apportionment';
 import type { LandownerEntry, PropertyOwnerEntry } from '@/types/ownership-table';
 
 function owner(contactId: string, pct: number, name = contactId): PropertyOwnerEntry {
@@ -32,7 +33,9 @@ function stored(
     contactId,
     name: contactId,
     landOwnershipPct: pct,
-    allocatedShares: Math.round((pct / 100) * 1000),
+    // Through the SSoT, not a copy of its formula: a fixture that claims a value
+    // the writer would never produce is a fixture that proves the wrong thing.
+    allocatedShares: allocateMillesimalsFromPercentages([pct])[0],
     ...(acquisitionStatus ? { acquisitionStatus } : {}),
   };
 }
@@ -173,6 +176,33 @@ describe('converters', () => {
   it('computes millesimals from the shared SSoT target', () => {
     const [written] = toLandownerEntries([owner('a', 33.33)], {});
     expect(written.allocatedShares).toBe(333);
+  });
+
+  it('THE 999 CASE: a list adding up to 100% is stored as a full 1000‰', () => {
+    // Millesimals are apportioned across the whole list, not row by row. Three
+    // thirds rounded independently wrote 999‰ into Firestore.
+    const written = toLandownerEntries(
+      [owner('a', 33.33), owner('b', 33.33), owner('c', 33.34)],
+      {},
+    );
+    expect(written.reduce((total, e) => total + e.allocatedShares, 0)).toBe(1000);
+  });
+
+  it('gives each landowner THEIR OWN millesimals, in their own row', () => {
+    // Apportioning over the list means the shares arrive as a parallel array;
+    // reading it off by the wrong index would hand one owner another's stake
+    // while every total still added up perfectly.
+    const written = toLandownerEntries(
+      [owner('a', 20), owner('b', 30), owner('c', 50)],
+      {},
+    );
+    expect(written.map(e => [e.contactId, e.allocatedShares]))
+      .toEqual([['a', 200], ['b', 300], ['c', 500]]);
+  });
+
+  it('does not hand a millesimal to an owner who declared nothing', () => {
+    const written = toLandownerEntries([owner('a', 100), owner('b', 0)], {});
+    expect(written[1].allocatedShares).toBe(0);
   });
 
   it('ignores a status whose contact is not in the list', () => {
