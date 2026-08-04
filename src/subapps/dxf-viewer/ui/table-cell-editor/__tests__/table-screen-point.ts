@@ -43,6 +43,17 @@ import {
   tableRowTickRectMm,
 } from '../../../bim/table/table-indicator-geometry';
 import { tableColumnTicks, tableRowTicks } from '../../../bim/table/table-cell-reference';
+// 🔴 §40 — τα ΙΔΙΑ SSoT που ρωτά ο ζωγράφος και το hit-test του ⊕.
+import {
+  TABLE_INSERT_CONTROL_RADIUS_PX,
+  tableInsertControlOuterPx,
+  type TableInsertControlMode,
+} from '../../../bim/table/table-insert-control';
+import {
+  tableAxisBoundaryMm,
+  tableColumnBoundaryView,
+  tableRowBoundaryView,
+} from '../../../bim/table/table-axis-boundary';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/Types';
@@ -146,6 +157,45 @@ export function tableBandScreenPoint(
 
   const { u, v } = rectCenterMm(rect);
   return tableFrameScreenPoint(entity, u, v, view);
+}
+
+/**
+ * 🔴 ADR-739 §40 — το σημείο οθόνης **πάνω στον δίσκο** του ⊕ ενός συνόρου, δηλαδή εκεί όπου
+ * το χειριστήριο είναι **οπλισμένο** και το πάτημα δρα.
+ *
+ * ## Γιατί ζει εδώ και όχι στο test που το χρειάστηκε πρώτο
+ * Ίδιο επιχείρημα με ολόκληρο το module (δες την κεφαλίδα): είναι τέταρτη έκφραση της
+ * αλυσίδας `πλαίσιο → κόσμος → οθόνη`, και μάλιστα η πιο εύθραυστη — η θέση του ⊕ **εξαρτάται
+ * από την κατάσταση** (§40: σε λειτουργία πίνακα βγαίνει έξω από τη ζώνη γραμμάτων). Ένα
+ * αντίγραφο σε αρχείο test θα ήταν το δεύτερο σημείο που πρέπει να θυμηθεί κάποιος όταν
+ * παχύνει η ζώνη — ακριβώς το ελάττωμα του §27.13, τρίτη φορά.
+ *
+ * Και τα δύο σκέλη ρωτούν **τα ίδια** SSoT με την παραγωγή: το `tableInsertControlOuterPx`
+ * για το «πόσο έξω» και το `tableAxisBoundaryMm` για το «ποιο σύνορο» — άρα ένα test δεν
+ * μπορεί να στοχεύσει σημείο που ο ζωγράφος δεν βάφει.
+ */
+export function tableInsertControlScreenPoint(
+  entity: TableEntity,
+  axis: 'column' | 'row',
+  line: number,
+  mode: TableInsertControlMode = 'table-mode',
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const geometry = computeTableEntityGeometryLive(entity);
+  const pxPerMm = tablePxPerMm(geometry.mmToWorld, view.transform.scale);
+  const outer = tableInsertControlOuterPx(mode);
+  // Το **κέντρο** του δίσκου: το `outer` μετρά ως την εξωτερική ακμή του, άρα μία ακτίνα πίσω.
+  // Οι ζώνες ζουν σε αρνητικά mm (πάνω/αριστερά από το πλέγμα), όπως και στο `tableBandScreenPoint`.
+  const acrossMm = -(outer[axis === 'column' ? 'top' : 'left'] - TABLE_INSERT_CONTROL_RADIUS_PX)
+    / pxPerMm;
+  const boundaryView = axis === 'column'
+    ? tableColumnBoundaryView(geometry.layout)
+    : tableRowBoundaryView(geometry.layout);
+  const alongMm = tableAxisBoundaryMm(boundaryView, line);
+
+  return axis === 'column'
+    ? tableFrameScreenPoint(entity, alongMm, acrossMm, view)
+    : tableFrameScreenPoint(entity, acrossMm, alongMm, view);
 }
 
 /**

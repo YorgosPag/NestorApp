@@ -3478,6 +3478,20 @@
       "addedByAdr": "ADR-344",
       "tier": 4
     },
+    "text-horizontal-anchor": {
+      "ssotFile": "src/subapps/dxf-viewer/text-engine/fonts/text-horizontal-anchor.ts",
+      "description": "ADR-753 §21 — Ο ΕΝΑΣ κανόνας «από ποιο σημείο, σχετικά με την άγκυρα, ξεκινούν τα γράμματα» (`anchorOffset`), μαζί με τη ΜΙΑ απάντηση για το `'justify'` (`entityAlignmentToAnchor`). Η ίδια τριάδα περιπτώσεων ζούσε ΠΕΝΤΕ φορές, σε τρία πλαίσια συντεταγμένων (px / κόσμος / mm): TextRenderer.paintLayoutLines, explode-text, clip-entity, glyph-run-draw, table-text-decoration — και η στένωση `'justify'`→αριστερά άλλες δύο (clip-entity, scene-vector-emitter, δηλαδή οθόνη ΚΑΙ εξαγωγή PDF). ΤΟ ΜΕΤΡΗΜΕΝΟ ΡΙΣΚΟ ΔΕΝ ΕΙΝΑΙ ΤΟ ΚΟΣΤΟΣ ΓΡΑΜΜΩΝ: πέντε σώματα που μπορούν να διαφωνήσουν για το πού αρχίζει ένα κεντραρισμένο κείμενο είναι ακριβώς η κατηγορία «οθόνη ≠ αρχείο» που το έργο πλήρωσε στο ADR-739 Φ.Δ βήμα 8 (τέσσερις μηχανές, τρεις συμφωνούσαν, ο ζωγράφος του καμβά όχι — αόρατο σε κάθε test, γιατί κάθε μηχανή ήταν ΕΣΩΤΕΡΙΚΑ συνεπής). ⚠️ ΤΟ jscpd ΕΙΝΑΙ ΤΥΦΛΟ ΕΔΩ: το σώμα είναι μονόγραμμο ternary, πολύ κάτω από το κατώφλι των 50 tokens του CHECK 3.28 — το διπλότυπο το βρήκε ΑΝΑΓΝΩΣΗ, καμία πύλη. Γι' αυτό υπάρχει αυτό το module. ⚠️ ΓΙΑΤΙ ΔΕΝ ΥΠΑΡΧΕΙ PATTERN ΓΙΑ ΤΟ «right»: μετρήθηκε — το `=== 'right' ? -<αναγνωριστικό>` δίνει 6 ΨΕΥΔΩΣ ΘΕΤΙΚΑ σε όλο το src (φορά στροφής σκάλας, φύλλο πόρτας, στοίχιση τοίχου), δηλαδή αστοχία στον ≤10% πήχη για blocking checks — το ίδιο λάθος που κάνει το CHECK 3.18 μονίμως πράσινο. Το «center» pattern δίνει 0 ευρήματα στο src και πιάνει ΚΑΙ τις δύο σειρές γραφής της τριάδας (κέντρο-πρώτα και δεξιά-πρώτα), γιατί το `-<πλάτος> / 2` εμφανίζεται μόνο στο κεντράρισμα. ⚠️ Ο ΤΥΠΟΣ `HorizontalTextAnchor` ΕΙΝΑΙ ΣΚΟΠΙΜΑ ΣΤΕΝΟΤΕΡΟΣ ΤΟΥ `CanvasTextAlign`: τα πέντε σώματα έριχναν σιωπηλά και το `'end'` στο 0, δηλαδή ΑΡΙΣΤΕΡΑ, ενώ σε LTR σημαίνει ΔΕΞΙΑ. Μην πλατύνεις τον τύπο για να «περάσει» ένας καλών — η πλάτυνση είναι απόφαση συμπεριφοράς και θέλει δική της εντολή.",
+      "forbiddenPatterns": [
+        "===\\s*['\"]center['\"]\\s*\\?\\s*-\\s*[\\w.]+\\s*/\\s*2",
+        "export\\s+function\\s+(?:anchorOffset|entityAlignmentToAnchor)\\b"
+      ],
+      "allowlist": [
+        "src/subapps/dxf-viewer/text-engine/fonts/text-horizontal-anchor.ts"
+      ],
+      "addedDate": "2026-08-04",
+      "addedByAdr": "ADR-753",
+      "tier": 4
+    },
     "shx-parser": {
       "ssotFile": "src/subapps/dxf-viewer/text-engine/fonts/shx-parser/",
       "description": "SHP stroke-vector playback for SHX font files (ADR-344 Layer 2, Q3). ~400-line TypeScript implementation of AutoCAD SHP format. Reimplementing parseShp/playbackShp inline produces glyph drift and breaks ISOCPEUR/romans rendering parity.",

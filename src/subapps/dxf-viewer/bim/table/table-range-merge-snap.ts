@@ -46,6 +46,20 @@ export interface TableRectBounds {
 }
 
 /**
+ * Το **μέγεθος** ενός πλέγματος πίνακα — ό,τι ακριβώς χρειάζεται η περικοπή στα όρια.
+ *
+ * Δομικός τύπος και όχι `TableModel`, επειδή το ίδιο ερώτημα το κάνουν και οι δύο μορφές του
+ * μοντέλου: ο {@link TableModel} (με `Map` κελιών, μέσα στη μηχανή διάταξης) και ο
+ * `PersistedTableModel` (με ακολουθία, στους γραφείς του ADR-755). Ζητώντας συγκεκριμένα το
+ * `TableModel` θα ανάγκαζε τον δεύτερο σε ένα `resolveTableModel` — δηλαδή στο χτίσιμο ενός
+ * ολόκληρου `Map` κελιών για να διαβαστούν **δύο μήκη**.
+ */
+export interface TableGridExtent {
+  readonly rows: { readonly length: number };
+  readonly columns: { readonly length: number };
+}
+
+/**
  * Το ορθογώνιο που καταλαμβάνει μια συγχώνευση, σε δείκτες — ή `null` αν είναι άκυρη.
  *
  * 🔴 **Εξάγεται** (ADR-755): τη ζητά και ο **γραφέας** των συγχωνεύσεων
@@ -54,11 +68,11 @@ export interface TableRectBounds {
  * φτάνει μια συγχώνευση»: η περικοπή στα όρια του πλέγματος (`Math.min(... , length)`) και η
  * ανοχή σε άκυρο span είναι **αποφάσεις**, όχι αριθμητική, και θα απέκλιναν στην πρώτη αλλαγή.
  *
- * Ο πίνακας `model` χρειάζεται μόνο για τα **μήκη** των αξόνων· τα ευρετήρια περνούν ως
- * ορίσματα ώστε ο καλών να τα χτίζει **μία** φορά έξω από τον βρόχο του.
+ * Το `grid` χρειάζεται μόνο για τα **μήκη** των αξόνων (δες {@link TableGridExtent})· τα
+ * ευρετήρια περνούν ως ορίσματα ώστε ο καλών να τα χτίζει **μία** φορά έξω από τον βρόχο του.
  */
 export function mergeSpanBounds(
-  model: TableModel,
+  grid: TableGridExtent,
   rowIndex: ReadonlyMap<string, number>,
   colIndex: ReadonlyMap<string, number>,
   span: { anchorRowId: string; anchorColId: string; rowSpan: number; colSpan: number },
@@ -69,9 +83,9 @@ export function mergeSpanBounds(
   if (span.rowSpan < 1 || span.colSpan < 1) return null;
   return {
     firstRow: r0,
-    lastRow: Math.min(r0 + span.rowSpan, model.rows.length) - 1,
+    lastRow: Math.min(r0 + span.rowSpan, grid.rows.length) - 1,
     firstCol: c0,
-    lastCol: Math.min(c0 + span.colSpan, model.columns.length) - 1,
+    lastCol: Math.min(c0 + span.colSpan, grid.columns.length) - 1,
   };
 }
 

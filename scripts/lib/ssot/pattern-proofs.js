@@ -469,6 +469,35 @@ props.onExtend = extendTableSelectionTo;`,
   // the SSoT functions). Without an executed proof they would be dormant guards —
   // and CLAUDE.md N.12 records that 606 of 671 patterns already are. These fixtures
   // are what makes the difference between "clean" and "nobody looked".
+  'text-horizontal-anchor': {
+    shouldMatch: `// (a) η τριάδα ξαναγραμμένη με το ΚΕΝΤΡΟ πρώτο (μορφή renderer / explode / clip):
+const xOff = align === 'center' ? -lineWidthPx / 2 : align === 'right' ? -lineWidthPx : 0;
+const xLine = align === 'center' ? -line.widthWorld / 2 : align === 'right' ? -line.widthWorld : 0;
+// (b) η ΙΔΙΑ τριάδα με τα ΔΕΞΙΑ πρώτα (η παλιά μορφή του bim/table) — πιάνεται στο ίδιο σκέλος:
+return hAlign === 'right' ? -advance : hAlign === 'center' ? -advance / 2 : 0;
+// (γ) δεύτερο σώμα για ερώτημα που ο SSoT ήδη απαντά:
+export function anchorOffset(a, w) {}
+export function entityAlignmentToAnchor(alignment) {}`,
+    shouldSkip: `// Κανονική χρήση — με εισαγωγή, ποτέ ξαναγραμμένη:
+import { anchorOffset, entityAlignmentToAnchor } from '../../text-engine/fonts/text-horizontal-anchor';
+const xOff = anchorOffset(align, lineWidthPx) + line.xOffsetWorld * worldToPx;
+const localStart = anchorOffset(entityAlignmentToAnchor(e.alignment), totalW);
+
+// 🔴 ΤΑ ΕΞΙ ΨΕΥΔΩΣ ΘΕΤΙΚΑ ΠΟΥ ΕΠΙΒΑΛΑΝ ΝΑ ΜΗΝ ΥΠΑΡΧΕΙ PATTERN ΓΙΑ ΤΟ «right» (μετρημένα σε όλο
+// το src): «δεξιά» σημαίνει φορά, όχι στοίχιση κειμένου, σε τέσσερις άσχετους τομείς.
+const turnAngleDeg = variant.turnDirection === 'right' ? -90 : 90;
+const turnSign = variant.turnDirection === 'right' ? -1 : 1;
+const dir = opening.params.handing === 'right' ? -1 : 1;
+const sign = justification === 'right' ? -1 : 1;
+
+// Κεντράρισμα που ΔΕΝ είναι αγκύρωση κειμένου: μισό πλάτος χωρίς άγκυρα άκρου.
+const cx = (rect.widthPx - textWidthPx) / 2;
+if (frame.textAlign === 'center') return (frame.widthPx - textWidthPx) / 2;
+
+// Αναφορά στον κανόνα χωρίς δεύτερη υλοποίηση:
+const isCentred = anchor === 'center';`,
+  },
+
   'text-link-detection': {
     shouldMatch: `// (a) hand-rolled href interpolation — the raw phone lands in the href,
 // so spaces / dashes / parentheses reach the dialer (real defect, UniversalClickableField):
