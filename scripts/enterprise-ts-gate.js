@@ -17,9 +17,9 @@
  * @enterprise ADR-027 - TypeScript Error Budget Gate
  */
 
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const tsc = require('./lib/tsc-runner');
 
 // ============================================================================
 // CONFIGURATION - LOADED FROM CENTRAL CONFIG (SSoT)
@@ -70,27 +70,37 @@ const ALLOWED_REGRESSION = POLICY_CONFIG.policy.allowedRegression;
 // ============================================================================
 
 /**
- * Count TypeScript errors by running tsc --noEmit
+ * Count TypeScript errors by running tsc --noEmit.
+ *
+ * 🔴 FAIL CLOSED — this function used to be a structural false green.
+ * The old shape was `try { execSync(...); return 0 } catch { count 'error TS'
+ * lines }`. A compiler that CRASHES (OOM, killed, binary missing) emits no
+ * "error TS" lines, so the catch returned **zero errors** and the gate printed
+ * "✅ GATE PASSED: TypeScript errors DECREASED! Delta: -3005 (you fixed 3005
+ * errors!)" — the loudest possible green for a measurement that never happened.
+ * That is the house failure mode "0 = nobody looked" (CLAUDE.md N.11/N.12) with
+ * a celebration attached. A crash must never be reported as a clean tree.
  */
 function countTsErrors() {
-  try {
-    // Run tsc and capture output
-    execSync('npx tsc --noEmit 2>&1', {
-      cwd: path.join(__dirname, '..'),
-      encoding: 'utf8',
-      stdio: 'pipe',
-    });
-    // If no errors, tsc exits with 0
-    return { count: 0, errors: [] };
-  } catch (error) {
-    // tsc exits with non-zero on errors
-    const output = error.stdout || error.stderr || '';
-    const lines = output.split('\n').filter(line => line.includes('error TS'));
-    return {
-      count: lines.length,
-      errors: lines.slice(0, 20), // Keep first 20 for reporting
-    };
+  const run = tsc.runTsc({ args: ['--noEmit'], cwd: path.join(__dirname, '..') });
+  const lines = run.combined.split('\n').filter(line => line.includes('error TS'));
+
+  if (run.outcome !== tsc.TSC_OUTCOME.RAN) {
+    throw new Error('\n' + tsc.formatTscFailure(run));
   }
+  // tsc exits non-zero when it finds errors — so a non-zero exit with NO
+  // parseable diagnostic is the compiler failing, not a tree with 0 errors.
+  if (lines.length === 0 && run.status !== 0) {
+    throw new Error('\n' + tsc.formatTscFailure({
+      ...run,
+      outcome: tsc.TSC_OUTCOME.NO_DIAGNOSTICS,
+      detail: `tsc exited ${run.status} without emitting one "error TS" line — refusing to report 0 errors.`,
+    }));
+  }
+  return {
+    count: lines.length,
+    errors: lines.slice(0, 20), // Keep first 20 for reporting
+  };
 }
 
 /**
@@ -279,5 +289,14 @@ function main() {
   console.log('');
 }
 
-// Run main function
-main();
+// Run main function. A measurement that could not happen is reported as UNKNOWN
+// and fails closed — never as a stack trace, and never as "0 errors".
+try {
+  main();
+} catch (e) {
+  console.error('');
+  console.error('❌ ENTERPRISE GATE FAILURE (ADR-027) — no measurement was taken.');
+  console.error(e.message);
+  console.error('');
+  process.exit(1);
+}

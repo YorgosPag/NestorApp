@@ -4,7 +4,8 @@
   "policy": {
     "tolerancePct": 3,
     "warnThreshold": 5,
-    "criticalThreshold": 10
+    "criticalThreshold": 10,
+    "heapWarnPct": 80
   },
   "baseline": {
     "file": ".type-complexity-baseline.json"
@@ -12,6 +13,10 @@
   "metric": {
     "primary": "instantiations",
     "secondary": "types",
+    "observed": "memoryUsedKB",
     "source": "tsc --extendedDiagnostics --noEmit"
+  },
+  "notes": {
+    "heapWarnPct": "ADR-757 ΦΑΣΗ Β — warn (never block) when tsc's own reported memory reaches this share of the heap ceiling in force. The ceiling itself is NOT a policy knob: it is derived from host RAM in scripts/lib/tsc-runner.js, because --max-old-space-size is a ceiling, not a reservation, and a number copy-pasted between machines is how this gate died silently."
   }
 }

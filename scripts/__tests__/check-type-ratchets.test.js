@@ -193,7 +193,10 @@ describe('G14 type-complexity: parseExtendedDiagnostics', () => {
     'Check time:                    12.3s',
   ].join('\n');
   test('extracts Instantiations and Types', () => {
-    expect(parseExtendedDiagnostics(SAMPLE)).toEqual({ instantiations: 1048576, types: 204800 });
+    // memoryUsedKB joined the contract in ADR-757 ΦΑΣΗ Β; this sample carries no
+    // "Memory used" line, so 0 is the correct — and explicit — reading.
+    // (Memory parsing itself is covered in scripts/__tests__/tsc-runner.test.js.)
+    expect(parseExtendedDiagnostics(SAMPLE)).toEqual({ instantiations: 1048576, types: 204800, memoryUsedKB: 0 });
   });
   test('Types defaults to 0 when absent', () => {
     expect(parseExtendedDiagnostics('Instantiations: 42').types).toBe(0);

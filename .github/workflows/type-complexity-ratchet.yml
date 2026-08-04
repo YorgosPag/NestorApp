@@ -73,6 +73,19 @@ jobs:
       - name: 📦 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ⚠️ NO `NODE_OPTIONS` HERE — deliberately, and it is not an omission.
+      #
+      # This step used to set `--max-old-space-size=6144`. Whether that ceiling
+      # was the cause of the 9-day red (2026-07-28 → 08-05) could never be
+      # established, because the gate discarded tsc's output: 13 consecutive runs
+      # said only "no Instantiations line". The heap for the CHILD tsc process is
+      # now owned by scripts/lib/tsc-runner.js, derived from host RAM and echoed
+      # on every run — one number, in one place, that the log always states.
+      #
+      # Setting it here again would be worse than useless: it would silently
+      # cap the parent only, re-creating exactly the ADR-598 (2026-08-04) trap
+      # where a workflow declared 12288 while the process ran at 8192 for four
+      # weeks. Override for a one-off investigation with TSC_HEAP_MB instead.
       - name: 🧮 Type-complexity ratchet (seed or check)
         run: |
           if [ "${{ inputs.seed }}" = "true" ]; then
@@ -80,8 +93,6 @@ jobs:
           else
             node scripts/check-type-complexity-ratchet.js --check
           fi
-        env:
-          NODE_OPTIONS: --max-old-space-size=6144
 
       - name: 📤 Upload seeded baseline (seed mode only)
         if: ${{ inputs.seed == true }}

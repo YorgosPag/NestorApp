@@ -55,14 +55,21 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const tsc = require('./lib/tsc-runner');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_BASELINE_FILE = path.join(PROJECT_ROOT, '.dxf-tsc-baseline.json');
 const DEFAULT_PROJECT = 'src/subapps/dxf-viewer/tsconfig.json';
 
-/** `tsc` needs a raised heap for this project — it OOMs at the default 4GB. */
-const TSC_HEAP_MB = 8192;
+/**
+ * `tsc` needs a raised heap — it OOMs at the default ~4 GB (ADR-598).
+ *
+ * This used to be a private `8192` here while the type-complexity gate ran at
+ * 6144 and a comment in a third workflow claimed they "mirror" each other. They
+ * never did. The ceiling now comes from the ONE place that derives it from host
+ * RAM, so it can no longer drift per gate (ADR-757 ΦΑΣΗ Β).
+ */
+const TSC_HEAP_MB = tsc.resolveHeapMb();
 
 /** A file whose errors do not count toward the source total (still ratcheted). */
 const TEST_FILE_RE = /(__tests__|\.test\.|\.spec\.)/;
@@ -126,23 +133,26 @@ function isTestFile(file) {
  * parseable output combined with a non-zero exit is what we treat as failure.
  */
 function runTsc(project = getProject()) {
-  const result = spawnSync('npx', ['tsc', '--noEmit', '-p', project], {
+  const run = tsc.runTsc({
+    args: ['--noEmit', '-p', project],
     cwd: PROJECT_ROOT,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    shell: true,
-    env: { ...process.env, NODE_OPTIONS: `--max-old-space-size=${TSC_HEAP_MB}` },
+    heapMb: TSC_HEAP_MB,
+    maxBufferMb: 64,
   });
-  const stdout = result.stdout || '';
-  const stderr = result.stderr || '';
-  // No diagnostics AND a failure exit ⇒ tsc itself broke (bad project path, OOM,
-  // missing binary). Fail closed rather than reporting a triumphant zero errors.
-  if (!TSC_ERROR_RE.test(stdout) && result.status !== 0) {
-    const detail = (stderr || stdout || `exit ${result.status}`).toString().slice(0, 800);
-    throw new Error(`tsc could not run over ${project}: ${detail}`);
+  if (run.outcome !== tsc.TSC_OUTCOME.RAN) {
+    throw new Error('\n' + tsc.formatTscFailure(run));
   }
-  return stdout;
+  // The process survived, but survival is not a measurement: no diagnostics AND
+  // a failure exit ⇒ tsc itself broke (bad project path, missing binary). Fail
+  // closed rather than reporting a triumphant zero errors.
+  if (!TSC_ERROR_RE.test(run.stdout) && run.status !== 0) {
+    throw new Error('\n' + tsc.formatTscFailure({
+      ...run,
+      outcome: tsc.TSC_OUTCOME.NO_DIAGNOSTICS,
+      detail: `tsc exited ${run.status} over ${project} without emitting a single parseable diagnostic line.`,
+    }));
+  }
+  return run.stdout;
 }
 
 /** Parse tsc output → per-file error counts + source/test totals. */
@@ -227,7 +237,13 @@ function compare(baseline, current) {
   return { regressions, cleaned };
 }
 
-function runFull() {
+/**
+ * Load the baseline or fail closed. Shared by runFull() and runSmoke(), which
+ * carried it twice verbatim (found by jscpd 2026-08-05 — CHECK 3.28 never sees
+ * it, because .jscpdrc.json scans only `typescript`/`tsx`, so the whole
+ * scripts/*.js tooling layer is outside the clone gate).
+ */
+function requireBaseline() {
   const baselineFile = getBaselineFile();
   const baseline = loadBaseline(baselineFile);
   if (!baseline || baseline.__invalid) {
@@ -237,6 +253,11 @@ function runFull() {
     console.error(`   Run: npm run dxf:tsc:baseline`);
     process.exit(1);
   }
+  return baseline;
+}
+
+function runFull() {
+  const baseline = requireBaseline();
 
   const t0 = Date.now();
   let current;
@@ -279,15 +300,7 @@ function runFull() {
 }
 
 function runSmoke() {
-  const baselineFile = getBaselineFile();
-  const baseline = loadBaseline(baselineFile);
-  if (!baseline || baseline.__invalid) {
-    console.error(
-      `❌ CHECK 3.29 — baseline ${baseline ? baseline.__invalid : 'missing'}: ${path.relative(PROJECT_ROOT, baselineFile)}`,
-    );
-    console.error(`   Run: npm run dxf:tsc:baseline`);
-    process.exit(1);
-  }
+  const baseline = requireBaseline();
   console.log(
     `✅ CHECK 3.29 smoke — baseline OK (errors:${baseline.totalErrors}, source:${baseline.sourceErrors}).` +
       ` Full type-check runs in CI / DXF_TSC_FULL=1.`,
