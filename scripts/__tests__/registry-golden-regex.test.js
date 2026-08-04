@@ -273,7 +273,9 @@ describe('Κάλυψη αποδείξεων', () => {
    * pre-commit. Την **τομή** (ούτε δήλωση ούτε ευρήματα) — που είναι το
    * κοφτερό σήμα — τη δίνει το `npm run ssot:audit -- --dormant`.
    */
-  const UNPROVEN_CEILING = 622;
+  // 2026-08-04 (ADR-749 §6): 622 → 615, όταν τα `bim-to-boq-bridge` και
+  // `xline-mode-store` ξαναγράφτηκαν και **έφεραν την απόδειξή τους μαζί**.
+  const UNPROVEN_CEILING = 615;
 
   it(`τα patterns χωρίς δηλωμένη απόδειξη δεν ξεπερνούν τα ${UNPROVEN_CEILING}`, () => {
     const proven = provenPatternKeys(modules);

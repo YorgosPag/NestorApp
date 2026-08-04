@@ -4334,17 +4334,16 @@
     },
     "xline-mode-store": {
       "ssotFile": "src/subapps/dxf-viewer/systems/tools/xline-mode-store.ts",
-      "description": "XLine construction mode SSoT (ADR-359 Phase 2): XLineModeStore owns mode, angleValue, offsetDistance, sourceEntityId, bisect points. Three surfaces (keyboard/status-bar/context-menu) all read/write via getMode()/setMode()/subscribe(). Forbids direct xlineMode state access outside the store.",
+      "description": "XLine construction mode SSoT (ADR-359 Φάση 2). Ο store κατέχει mode/angleValue/offsetDistance/sourceEntityId/bisect points σε createExternalStore (WAVE 2.6)· τρεις επιφάνειες (keyboard/status-bar/context-menu) διαβάζουν και γράφουν ΜΟΝΟ μέσω getMode()/getXLineModeState()/setMode()/subscribe(). Τα patterns φυλάνε τη ΔΙΠΛΑΣΙΑΣΗ της κατάστασης: δεύτερο αντίγραφο σε React state/ref, δεύτερος store, απευθείας πρόσβαση στο κλειδί localStorage (παρακάμπτει persistMode/loadPersistedMode ⇒ μνήμη και δίσκος αποκλίνουν), ή ξαναδηλωμένη ένωση XLineMode που θα αποκλίνει σιωπηλά. ⚠️ ΤΑ ΠΑΛΙΑ PATTERNS ΗΤΑΝ ΝΕΚΡΑ (2026-08-04, ADR-749 §6): φύλαγαν xlineMode.mode / .angleValue / .offsetDistance — idiom που ΔΕΝ ΥΠΑΡΧΕΙ ΠΟΥΘΕΝΑ. Το ADR-359 §1051 τα σχεδίασε για την ιδιωτική μεταβλητή _xlineMode, που εξαφανίστηκε όταν ο store μετακόμισε σε createExternalStore. ⚠️ ΤΟ ALLOWLIST ΣΤΕΝΕΨΕ ΕΠΙΤΗΔΕΣ: οι τρεις επιφάνειες ΔΕΝ εξαιρούνται πλέον. Τα παλιά patterns φύλαγαν την ΑΝΑΓΝΩΣΗ (άρα οι επιφάνειες έπρεπε να εξαιρεθούν)· τα νέα φυλάνε τη ΔΙΠΛΑΣΙΑΣΗ, άρα οι επιφάνειες είναι ακριβώς τα ΣΗΜΕΙΑ ΚΙΝΔΥΝΟΥ. Μετρημένο: 0 ευρήματα εκτός store.",
       "forbiddenPatterns": [
-        "xlineMode\\.mode(?!Store)",
-        "xlineMode\\.angleValue(?!Store)",
-        "xlineMode\\.offsetDistance(?!Store)"
+        "useState<XLineMode",
+        "useRef<XLineMode",
+        "createExternalStore<XLineModeState>",
+        "type XLineMode\\s*=",
+        "dxf:xlineMode\\.lastUsed"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/systems/tools/xline-mode-store.ts",
-        "src/subapps/dxf-viewer/ui/status-bar/StatusBarXLineModeSlot.tsx",
-        "src/subapps/dxf-viewer/ui/canvas/context-menus/XLineToolContextMenu.tsx",
-        "src/subapps/dxf-viewer/hooks/canvas/useKeyboardShortcuts.ts"
+        "src/subapps/dxf-viewer/systems/tools/xline-mode-store.ts"
       ],
       "addedDate": "2026-05-18",
       "addedByAdr": "ADR-359",
@@ -4366,15 +4365,13 @@
       "tier": 3
     },
     "bim-to-boq-bridge": {
-      "ssotFile": "src/subapps/dxf-viewer/bim/services/BimToBoqBridge.ts",
-      "description": "BIM→BOQ auto-feed bridge (ADR-363 Phase 6+): all BIM entity saves must trigger BimToBoqBridge.upsertBoqItem() — no direct boqService.upsertItem() calls from BIM entity handlers, no inline BIM→ATOE mapping tables outside BimToBoqBridge.",
+      "ssotFile": "src/subapps/dxf-viewer/bim/config/bim-to-atoe-mapping.ts",
+      "description": "BIM→BOQ auto-feed (ADR-363 Φάση 6+). Ο πίνακας αντιστοίχισης BIM→ΑΤΟΕ ζει στο bim/config/bim-to-atoe-mapping.ts και προσπελαύνεται ΜΟΝΟ μέσω resolveAtoeMapping() — 10+ services τον καταναλώνουν έτσι, και η ίδια η BimToBoqBridge.ts ΔΕΝ αγγίζει ποτέ τον ωμό πίνακα. Απαγορεύεται inline αντίγραφο ή απευθείας ανάγνωση του πίνακα οπουδήποτε αλλού. ⚠️ ΣΚΟΠΙΜΟ ΜΗ-GUARD (2026-08-04, ADR-749 §6): το «καμία απευθείας εγγραφή BOQ από BIM» ΔΕΝ φυλάσσεται εδώ. Το παλιό pattern boqService\\.upsertItem\\( ονόμαζε ΜΕΘΟΔΟ ΠΟΥ ΔΕΝ ΥΠΑΡΧΕΙ (το API είναι create/update/delete) ⇒ ήταν νεκρό από τη γέννησή του. Δεν υπάρχει αντικαταστάτης: η παράβαση είναι ΑΠΟΥΣΙΑ κλήσης (δεν γίνεται grep), και κάθε υποψήφια υπογραφή είτε χτυπά 11 νόμιμους καταναλωτές εκτός dxf-viewer (repo-wide scope του CHECK 3.7) είτε 8 αδελφικές υπηρεσίες (boq_bim_). Μετρημένο: ΜΗΔΕΝ αρχεία του dxf-viewer αγγίζουν boqService ή boq-mutation-gateway. Ίδιο σκεπτικό με scalar-clamp/point-translate-helpers. ΠΡΟΤΑΣΗ: χωριστό module boq-mutation-gateway (ADR-234) — το gateway είναι ο ΜΟΝΑΔΙΚΟΣ καλών των boqService.create/update/delete, άρα allowlist ΕΝΟΣ αρχείου.",
       "forbiddenPatterns": [
-        "boqService\\.upsertItem\\([^)]*bim",
-        "BIM_TO_ATOE_MAPPING(?![^'\"]*BimToBoqBridge)"
+        "BIM_TO_ATOE_MAPPING"
       ],
       "allowlist": [
-        "src/subapps/dxf-viewer/bim/services/BimToBoqBridge.ts",
-        "src/subapps/dxf-viewer/bim/services/__tests__/"
+        "src/subapps/dxf-viewer/bim/config/bim-to-atoe-mapping.ts"
       ],
       "addedDate": "2026-05-17",
       "addedByAdr": "ADR-363",

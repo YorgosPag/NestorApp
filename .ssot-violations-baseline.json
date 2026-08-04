@@ -2,9 +2,9 @@
   "_meta": {
     "description": "SSoT centralized-module violations baseline (ratchet, ανά αρχείο ΚΑΙ module)",
     "schema": 2,
-    "generated": "2026-08-04T10:04:08Z",
-    "totalViolations": 110,
-    "totalFiles": 87,
+    "generated": "2026-08-04T13:24:38Z",
+    "totalViolations": 108,
+    "totalFiles": 86,
     "rule": "Κανένα module δεν ανεβαίνει σε κανένα αρχείο. Νέο αρχείο = μηδενική ανοχή.",
     "registry": ".ssot-registry.json",
     "engine": "scripts/lib/ssot/scan.js (ΜΙΑ μηχανή — ADR-749)"
@@ -186,9 +186,6 @@
     },
     "src/subapps/dxf-viewer/bim-3d/comments/bim-comments.service.ts": {
       "firestore-realtime": 1
-    },
-    "src/subapps/dxf-viewer/bim/config/bim-to-atoe-mapping.ts": {
-      "bim-to-boq-bridge": 2
     },
     "src/subapps/dxf-viewer/config/keyboard-shortcuts.ts": {
       "escape-command-bus": 1

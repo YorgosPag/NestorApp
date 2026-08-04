@@ -498,4 +498,55 @@ const asset = \`blob:\${objectUrl}\`;
 if (href.startsWith('mailto:')) return openInClient(href);
 const ALLOWED = ['mailto:', 'tel:', 'https://'];`,
   },
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // ADR-749 §6 — δύο modules που είχαν ΝΕΚΡΟΥΣ φρουρούς, ξαναγραμμένα 2026-08-04.
+  // Και τα δύο απέκτησαν απόδειξη ζωής ΤΗΝ ΙΔΙΑ ΣΤΙΓΜΗ που άλλαξαν τα patterns
+  // τους — αυτός είναι ο κανόνας του ADR-749 §5, όχι εξαίρεση.
+  // ───────────────────────────────────────────────────────────────────────────
+
+  'bim-to-boq-bridge': {
+    // Ο πίνακας BIM→ΑΤΟΕ ζει στο bim/config/bim-to-atoe-mapping.ts και
+    // προσπελαύνεται ΜΟΝΟ μέσω resolveAtoeMapping(). Ο ωμός πίνακας δεν
+    // διαβάζεται και δεν αντιγράφεται πουθενά αλλού.
+    shouldMatch: `// Απευθείας ανάγνωση ή αντιγραφή του πίνακα εκτός του σπιτιού του:
+import { BIM_TO_ATOE_MAPPING } from '../config/bim-to-atoe-mapping';
+const typeMap = BIM_TO_ATOE_MAPPING[entityType];
+export const BIM_TO_ATOE_MAPPING = { wall: {}, slab: {} };
+const code = BIM_TO_ATOE_MAPPING.wall[kind].atoeCode;`,
+    shouldSkip: `// Κανονική χρήση — μέσω του accessor, ποτέ του ωμού πίνακα:
+import { resolveAtoeMapping, deriveAtoeQuantity } from '../config/bim-to-atoe-mapping';
+import type { AtoeMappingEntry, BimEntityType } from '../config/bim-to-atoe-mapping';
+const mapping = resolveAtoeMapping(entityType, entity.kind, category);
+const parentMapping = resolveAtoeMapping('wall', entity.kind, category);
+void bimToBoqBridge.upsertBoqItemForBim(entityType, entity, context, action);
+const quantity = deriveAtoeQuantity(mapping, geometry);`,
+  },
+
+  'xline-mode-store': {
+    // Ο store κατέχει την κατάσταση σε createExternalStore. Οι φρουροί πιάνουν
+    // ΔΙΠΛΑΣΙΑΣΗ — δεύτερο αντίγραφο, δεύτερο store, παράκαμψη persistence,
+    // ξαναδηλωμένη ένωση.
+    shouldMatch: `// Κάθε γραμμή είναι δεύτερη πηγή αλήθειας για το ίδιο πράγμα:
+const [mode, setLocalMode] = useState<XLineMode>('through');
+const lastMode = useRef<XLineMode>('horizontal');
+const store = createExternalStore<XLineModeState>({ ...DEFAULT_STATE });
+type XLineMode = 'through' | 'horizontal' | 'vertical';
+localStorage.setItem('dxf:xlineMode.lastUsed', 'vertical');`,
+    shouldSkip: `// Κανονική χρήση — τα πάντα μέσω της δημόσιας API του store:
+import { getMode, setMode, subscribe, getXLineModeState } from '@/subapps/dxf-viewer/systems/tools/xline-mode-store';
+import type { XLineMode, XLineModeState } from '@/subapps/dxf-viewer/systems/tools/xline-mode-store';
+const mode = getMode();
+const state = useSyncExternalStore(subscribe, getXLineModeState, getXLineModeState);
+setMode('angle', { angleValue: 45 });
+setMode(nextMode);
+
+// Παγίδες που ΔΕΝ πρέπει να πυροδοτήσουν:
+type XLineModeState = { readonly mode: XLineMode };
+interface XLineModeParams { angleValue?: number | null }
+const [angleValue, setAngleValue] = useState<number | null>(null);
+const rowRef = useRef<HTMLDivElement | null>(null);
+const other = createExternalStore<SnapModeState>({ mode: 'off' });
+const label = t('dxf.xlineMode.angle');`,
+  },
 };
