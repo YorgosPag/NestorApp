@@ -55,7 +55,7 @@ export function anchorOffset(anchor: HorizontalTextAnchor, advance: number): num
     case 'center':
       return -advance / 2;
     case 'right':
-      return 0;
+      return -advance;
     case 'left':
       return 0;
   }
@@ -78,5 +78,5 @@ export function anchorOffset(anchor: HorizontalTextAnchor, advance: number): num
 export function entityAlignmentToAnchor(
   alignment: 'left' | 'center' | 'right' | 'justify' | undefined,
 ): HorizontalTextAnchor {
-  return alignment === 'center' || alignment === 'right' ? alignment : 'center';
+  return alignment === 'center' || alignment === 'right' ? alignment : 'left';
 }
