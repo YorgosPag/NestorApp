@@ -46,6 +46,7 @@
 
 import { normalizeHexColor } from '../../config/color-math';
 import { survivesAsInk, type PlotColorRole } from '../../config/print-color-policy';
+import { isAutomaticTableInk } from './table-ink';
 import type { TableStyle } from './table-style';
 import type { PersistedTableModel, TableRowClass } from '../../types/table';
 
@@ -100,6 +101,16 @@ export function collectDrawingColors(sources: DrawingColorSources): readonly str
     // δείγμα γι' αυτό εδώ θα ήταν δεύτερος δρόμος προς την ίδια κατάσταση, σε ζώνη που ο
     // χρήστης διαβάζει ως «χρώματα που ήδη υπάρχουν στο σχέδιο».
     if (raw === undefined || raw === null || out.length >= DRAWING_COLORS_LIMIT) return;
+    // 🔴 ADR-739 §38 — το **αυτόματο μελάνι δεν είναι χρώμα**, είναι κανόνας: δεν έχει δείγμα να
+    // δείξει (θα ήταν λευκό ή μαύρο ανάλογα με το πού πέφτει) και έχει **ήδη** δική του γραμμή
+    // στη ζώνη 0 του μενού. Ένα δείγμα εδώ θα ήταν δεύτερος δρόμος προς την ίδια κατάσταση —
+    // ο ίδιος λόγος για τον οποίο πέφτει έξω και το ρητό `null` του γεμίσματος, δύο γραμμές πάνω.
+    //
+    // ⚠️ Ο έλεγχος είναι **ρητός** αν και το `survivesAsInk('auto')` ήδη επιστρέφει `false`
+    // (μη-hex ⇒ `parseHex` → `null`). Η σιωπηλή απόρριψη ήταν σύμπτωση δύο βημάτων: αν κάποτε
+    // το φίλτρο μελανιού χαλαρώσει ή ο ρόλος γίνει `'fill'`, το σεντινέλι θα έφτανε στο DOM ως
+    // `background-color: auto` — έγκυρη CSS δήλωση που **δεν σπάει**, απλώς δεν βάφει τίποτα.
+    if (isAutomaticTableInk(raw)) return;
     const hex = normalizeHexColor(raw);
     if (seen.has(hex) || (role === 'ink' && !survivesAsInk(hex))) return;
     seen.add(hex);

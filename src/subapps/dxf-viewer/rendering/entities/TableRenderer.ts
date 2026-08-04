@@ -42,7 +42,7 @@ import {
 } from '../../bim/table/table-render-index';
 import { hitTestTable } from '../../bim/table/table-entity-hit';
 import { getTableGrips, tableGripCustomColor } from '../../bim/table/table-entity-grips';
-import type { TableCellLayout, TableRectMm } from '../../bim/table/table-layout-types';
+import type { TableCellLayout, TableLayout, TableRectMm } from '../../bim/table/table-layout-types';
 import {
   createStampTableContext,
   stampTableBorders,
@@ -151,7 +151,7 @@ export class TableRenderer extends BaseEntityRenderer {
     // ADR-739 Φ.Δ βήμα 8 — η επιλογή **πάνω από τα γεμίσματα, κάτω από το πλέγμα και το
     // κείμενο**: είναι ημιδιαφανής, οπότε ένα στρώμα πάνω από τα γράμματα θα τα θόλωνε —
     // και η επιλογή υπάρχει ακριβώς για να διαβάσεις τι μάρκαρες.
-    const selection = cursor ? this.selectionOf(e, cursor) : null;
+    const selection = cursor ? this.selectionOf(e, cursor, layout) : null;
     if (selection) stampTableSelection(rc, selection.rectMm);
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
@@ -239,6 +239,13 @@ export class TableRenderer extends BaseEntityRenderer {
   private selectionOf(
     e: TableEntity,
     cursor: TableCellCursorState,
+    /**
+     * 🔴 ADR-739 §38 — η διάταξη **περνά ως όρισμα** αντί να ξαναζητηθεί. Ήταν δεύτερη κλήση
+     * `computeTableEntityGeometryLive` μέσα στο ίδιο καρέ: η ίδια διάταξη (απομνημονευμένη),
+     * αλλά **δεύτερη ανάγνωση `getComputedStyle`** για την επιφάνεια — δηλαδή διπλάσιο style
+     * recalc ανά πίνακα ανά καρέ για μηδέν πληροφορία.
+     */
+    layout: TableLayout,
   ): { readonly rectMm: TableRectMm; readonly membership: TableRangeMembership } | null {
     if (!cursor.selection) return null;
     const model = resolveTableModel(e.model);
@@ -246,7 +253,6 @@ export class TableRenderer extends BaseEntityRenderer {
     // χρήστης → ποια κελιά είναι μέσα», που ξέρει μόνος του πότε κουμπώνει.
     const bounds = resolveTableSelectionBounds(model, cursor.selection);
     if (!bounds) return null;
-    const layout = computeTableEntityGeometryLive(e, this._sceneUnits).layout;
     const rectMm = tableRangeRectMm(layout, bounds);
     return rectMm ? { rectMm, membership: tableRangeMembership(model, bounds) } : null;
   }

@@ -10,6 +10,8 @@ import { resolveTableBorderPencil } from '../table-border-pencil';
 import { applyTableBorderCommand } from '../table-range-border-ops';
 import { BUILTIN_TABLE_STYLE_IDS, BUILTIN_TABLE_STYLES } from '../table-style-presets';
 import { LINEWEIGHT_CONCRETE_MM_VALUES } from '../../../config/lineweight-iso-catalog';
+import { AUTOMATIC_TABLE_INK, isAutomaticTableInk } from '../table-ink';
+import { parseHex } from '../../../config/color-math';
 import type { TableStyle } from '../table-style';
 import type { PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
 
@@ -90,6 +92,34 @@ describe('Α20 — το μολύβι παράγεται από το στυλ, δ
     expect(pencil.visible).toBe(true);
     expect(pencil.colorHex).toBe(blank.rowClasses.data.textColorHex);
     expect(pencil.widthMm).toBeGreaterThan(0);
+  });
+
+  /**
+   * 🔴 ADR-739 §38 — **ο ΕΝΑΣ υποχρεωτικός φρουρός**, και ο λόγος δεν είναι η ορατότητα.
+   *
+   * Αυτή η τιμή **γράφεται στη βάση** ως χρώμα ακμής, και το `isBorderSpec` δέχεται **κάθε**
+   * string: ένα σεντινέλι εδώ επιβιώνει σε reload και **δεν διορθώνεται με rollback κώδικα**.
+   * Το `standard` δεν φτάνει ποτέ σε αυτόν τον κλάδο (έχει πλήρες πλέγμα) — τον φτάνει ένα
+   * **προσαρμοσμένο** στυλ που κληρονόμησε το αυτόματο μελάνι και έσβησε τις γραμμές του,
+   * δηλαδή ακριβώς η διαδρομή που κανείς δεν δοκιμάζει με το χέρι.
+   */
+  it('🔴 στυλ με ΑΥΤΟΜΑΤΟ μελάνι και καμία γραμμή: ΠΟΤΕ σεντινέλι στη βάση', () => {
+    const blank = styleById(BUILTIN_TABLE_STYLE_IDS.DETAIL_SHEET);
+    const auto: TableStyle = {
+      ...blank,
+      rowClasses: {
+        title: { ...blank.rowClasses.title, textColorHex: AUTOMATIC_TABLE_INK },
+        header: { ...blank.rowClasses.header, textColorHex: AUTOMATIC_TABLE_INK },
+        data: { ...blank.rowClasses.data, textColorHex: AUTOMATIC_TABLE_INK },
+      },
+    };
+    const pencil = resolveTableBorderPencil(auto);
+    expect(isAutomaticTableInk(pencil.colorHex ?? '')).toBe(false);
+    expect(parseHex(pencil.colorHex ?? '')).not.toBeNull();
+    // Επιλύεται προς το **χαρτί** και όχι προς το ζωντανό θέμα: ό,τι γράφεται στον δίσκο
+    // οφείλει να είναι ανεξάρτητο από το θέμα της στιγμής, αλλιώς η ίδια εντολή θα έδινε
+    // μαύρη γραμμή το πρωί και λευκή το βράδυ.
+    expect(pencil.colorHex).toBe('#000000');
   });
 
   it('είναι ντετερμινιστικό — δύο κλήσεις, ίδια τιμή (καμία κρυφή κατάσταση, Α15)', () => {

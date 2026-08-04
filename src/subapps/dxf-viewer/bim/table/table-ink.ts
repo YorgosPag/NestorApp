@@ -50,6 +50,9 @@
  */
 
 import { maxContrastInk } from '../../config/adaptive-entity-color';
+import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
+import { getPrintColorPolicy } from '../../config/print-color-policy';
+import type { TableCellStyle } from './table-style';
 
 /**
  * Η δεσμευμένη τιμή του `textColorHex` που σημαίνει «**υπολόγισέ με από το φόντο**».
@@ -110,4 +113,52 @@ export function tableCellBackdrop(
  */
 export function resolveTableInk(colorHex: string, backdropHex: string): string {
   return isAutomaticTableInk(colorHex) ? maxContrastInk(backdropHex) : colorHex;
+}
+
+/**
+ * 🔴 **Ο ΕΝΑΣ κόμβος όπου το σεντινέλι παύει να υπάρχει.**
+ *
+ * Καλείται από το `placeCells` πάνω στο **επιλυμένο** στυλ κάθε κελιού, δηλαδή αφού έχουν ήδη
+ * πέσει οι παρακάμψεις κελιού/γραμμής/στήλης. Από εκεί και πέρα **ούτε** το
+ * `TableCellLayout.style.textColorHex` **ούτε** το `TableTextRun.colorHex` μπορούν να κρατούν
+ * το {@link AUTOMATIC_TABLE_INK}.
+ *
+ * ## Γιατί στο ΣΤΥΛ και όχι μόνο στο run
+ * Το `TableTextRun` γεννιέται μόνο για **γεμάτα** κελιά. Ο in-cell επεξεργαστής όμως ανοίγει και
+ * σε **κενό** κελί, και διαβάζει το χρώμα του από το `TableCellLayout.style` — δηλαδή από άλλο
+ * πεδίο. Επίλυση μόνο στο run θα άφηνε το σεντινέλι να φτάσει ως το CSS `color` του `<textarea>`,
+ * όπου είναι **κληρονομούμενη** ιδιότητα και άρα δεν σπάει: το κείμενο θα έπαιρνε απλώς το χρώμα
+ * του γονέα, χωρίς κανένα σφάλμα πουθενά. Ένα πεδίο, ένας κόμβος επίλυσης.
+ *
+ * Μη-σεντινέλι ⇒ επιστρέφεται **η ίδια αναφορά**: το `TableCellStyle` ταξιδεύει σε κάθε κελί
+ * κάθε καρέ και ένα νέο αντικείμενο ανά κελί θα ήταν δέσμευση χωρίς αντίκρισμα.
+ */
+export function resolveTableCellStyleInk(
+  style: TableCellStyle,
+  surfaceHex: string,
+): TableCellStyle {
+  if (!isAutomaticTableInk(style.textColorHex)) return style;
+  return {
+    ...style,
+    textColorHex: maxContrastInk(tableCellBackdrop(style.fillColorHex, surfaceHex)),
+  };
+}
+
+/**
+ * **Η επιφάνεια κάτω από τον πίνακα, τώρα** — φόντο καμβά, ή {@link TABLE_PAPER_HEX} όταν τρέχει
+ * εκτύπωση.
+ *
+ * 🔴 Ο έλεγχος της πολιτικής εκτύπωσης **δεν είναι προαιρετικός**. Η raster εκτύπωση δεν έχει
+ * δικό της ζωγράφο: ξαναχρησιμοποιεί το παραγωγικό pipeline (`capture-2d.ts` → `TableRenderer`)
+ * πάνω σε **offscreen** καμβά που μένει επίτηδες **διάφανος** ⇒ η σελίδα βγαίνει λευκή, ενώ το
+ * `getComputedStyle` του `:root` εξακολουθεί να λέει «σκούρο». Χωρίς αυτόν τον έλεγχο, ο χρήστης
+ * θα τύπωνε **λευκά γράμματα σε λευκό χαρτί** — και θα το ανακάλυπτε στον πελάτη.
+ *
+ * ⚠️ **ΜΙΑ ανάγνωση ανά κλήση διάταξης, ποτέ ανά κελί.** Το
+ * {@link resolveDxfCanvasBackgroundHex} είναι `getComputedStyle` (style recalc)· ανά κελί θα ήταν
+ * ακριβώς το σχήμα O(zoom²) που ο ADR-735 πλήρωσε σε παραγωγή. Γι' αυτό η τιμή μπαίνει ως
+ * **όρισμα** στη διάταξη και δεν διαβάζεται από μέσα της.
+ */
+export function liveTableSurfaceHex(): string {
+  return getPrintColorPolicy() ? TABLE_PAPER_HEX : resolveDxfCanvasBackgroundHex();
 }

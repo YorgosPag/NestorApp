@@ -80,7 +80,8 @@
     },
     "actions": {
       "copy": "Αντιγραφή στο πρόχειρο",
-      "paste": "Επικόλληση στον τρέχοντα όροφο"
+      "paste": "Επικόλληση στον τρέχοντα όροφο",
+      "openTableLinks": "Άνοιγμα εντοπισμένου συνδέσμου…"
     }
   },
   "calibration": {
@@ -422,7 +423,21 @@
     "url": "Άνοιγμα ιστοσελίδας",
     "phone": "Κλήση",
     "hint": "Ctrl+κλικ",
-    "ariaLabel": "{action}: {target}. Ctrl+κλικ για άνοιγμα."
+    "ariaLabel": "{action}: {target}. Ctrl+κλικ για άνοιγμα.",
+    "copyEmail": "Αντιγραφή διεύθυνσης e-mail",
+    "copyPhone": "Αντιγραφή αριθμού",
+    "copyUrl": "Αντιγραφή διεύθυνσης",
+    "copied": "Η διεύθυνση αντιγράφηκε",
+    "copyFailed": "Δεν ήταν δυνατή η αντιγραφή",
+    "pickerTitle": "Σύνδεσμοι πίνακα",
+    "pickerTitleCell": "Σύνδεσμοι κελιού {cell}",
+    "pickerCount": "{count, plural, one {# σύνδεσμος} other {# σύνδεσμοι}}",
+    "pickerPlaceholder": "Αναζήτηση συνδέσμου…",
+    "pickerEmpty": "Αυτός ο πίνακας δεν έχει συνδέσμους",
+    "pickerNoMatch": "Κανένας σύνδεσμος δεν ταιριάζει",
+    "regionLabel": "Σύνδεσμοι πίνακα",
+    "focusHint": "{count, plural, one {# σύνδεσμος} other {# σύνδεσμοι}} · Ctrl+Shift+K",
+    "itemLabel": "{action}: {target}, κελί {cell}"
   },
   "selectionCycling": {
     "label": "Επιλογή οντότητας",
@@ -598,7 +613,7 @@
         "weight": "Πάχος γραμμής",
         "double": "Διπλή γραμμή",
         "doubleHint": "Δύο παράλληλες — η σύμβαση του γενικού συνόλου",
-        "automatic": "Αυτόματο",
+        "automatic": "Από το στυλ",
         "automaticHint": "Από το στυλ του πίνακα",
         "colorMenuLabel": "Χρώμα γραμμής περιγράμματος",
         "styleMenuLabel": "Στυλ γραμμής περιγράμματος",
@@ -647,16 +662,18 @@
       "trigger": "Χρώμα κειμένου",
       "openMenu": "Παλέτα χρωμάτων κειμένου",
       "menuLabel": "Χρώμα κειμένου",
-      "automatic": "Αυτόματο",
+      "automatic": "Από το στυλ",
       "automaticHint": "Κληρονομείται από το στυλ του πίνακα",
       "automaticMixedHint": "Η κληρονομιά διαφέρει ανά κελί",
+      "autoContrast": "Αυτόματο",
+      "autoContrastHint": "Λευκό ή μαύρο — ό,τι ξεχωρίζει από το φόντο",
       "dialogTitle": "Χρώμα κειμένου"
     },
     "fillColor": {
       "trigger": "Χρώμα γεμίσματος",
       "openMenu": "Παλέτα χρωμάτων γεμίσματος",
       "menuLabel": "Χρώμα γεμίσματος",
-      "automatic": "Αυτόματο",
+      "automatic": "Από το στυλ",
       "automaticHint": "Κληρονομεί το γέμισμα του στυλ του πίνακα",
       "automaticMixedHint": "Η κληρονομιά διαφέρει ανά κελί",
       "automaticNoneHint": "Κληρονομεί «κανένα γέμισμα» από το στυλ",

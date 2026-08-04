@@ -80,7 +80,8 @@
     },
     "actions": {
       "copy": "Copy to clipboard",
-      "paste": "Paste to current floor"
+      "paste": "Paste to current floor",
+      "openTableLinks": "Open detected link…"
     }
   },
   "calibration": {
@@ -422,7 +423,21 @@
     "url": "Open website",
     "phone": "Call",
     "hint": "Ctrl+click",
-    "ariaLabel": "{action}: {target}. Ctrl+click to open."
+    "ariaLabel": "{action}: {target}. Ctrl+click to open.",
+    "copyEmail": "Copy e-mail address",
+    "copyPhone": "Copy phone number",
+    "copyUrl": "Copy link address",
+    "copied": "Address copied",
+    "copyFailed": "Could not copy",
+    "pickerTitle": "Table links",
+    "pickerTitleCell": "Links in cell {cell}",
+    "pickerCount": "{count, plural, one {# link} other {# links}}",
+    "pickerPlaceholder": "Search link…",
+    "pickerEmpty": "This table has no links",
+    "pickerNoMatch": "No link matches",
+    "regionLabel": "Table links",
+    "focusHint": "{count, plural, one {# link} other {# links}} · Ctrl+Shift+K",
+    "itemLabel": "{action}: {target}, cell {cell}"
   },
   "selectionCycling": {
     "label": "Select entity",
@@ -598,7 +613,7 @@
         "weight": "Line weight",
         "double": "Double line",
         "doubleHint": "Two parallel rules — the grand-total convention",
-        "automatic": "Automatic",
+        "automatic": "From the style",
         "automaticHint": "From the table style",
         "colorMenuLabel": "Border line colour",
         "styleMenuLabel": "Border line style",
@@ -647,16 +662,18 @@
       "trigger": "Text colour",
       "openMenu": "Text colour palette",
       "menuLabel": "Text colour",
-      "automatic": "Automatic",
+      "automatic": "From the style",
       "automaticHint": "Inherited from the table style",
       "automaticMixedHint": "Inheritance varies per cell",
+      "autoContrast": "Automatic",
+      "autoContrastHint": "White or black — whichever stands out against the background",
       "dialogTitle": "Text colour"
     },
     "fillColor": {
       "trigger": "Fill colour",
       "openMenu": "Fill colour palette",
       "menuLabel": "Fill colour",
-      "automatic": "Automatic",
+      "automatic": "From the style",
       "automaticHint": "Inherits the fill of the table style",
       "automaticMixedHint": "Inheritance varies per cell",
       "automaticNoneHint": "Inherits “no fill” from the style",
