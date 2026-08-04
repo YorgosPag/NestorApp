@@ -144,6 +144,34 @@ export function adaptColorToBackground(
 const _cache = new Map<string, string>();
 
 /**
+ * 🔴 **Η ΙΔΙΑ προσαρμογή, με την επιφάνεια ως ΡΗΤΟ ΟΡΙΣΜΑ** — ADR-739 §38.11.
+ *
+ * Ήταν το σώμα της {@link adaptEntityColorForCanvas} και δεν άλλαξε ούτε γραμμή: το κλειδί του
+ * memo περιείχε **ήδη** το φόντο (`χρώμα|φόντο|κατώφλι`), οπότε η μόνη διαφορά των δύο εισόδων
+ * είναι **ποιος απαντά «ποια επιφάνεια»**. Μία μνήμη, δύο πόρτες — ακριβώς το σχήμα
+ * `resolveDxfCanvasBackgroundHex()` (οθόνη) vs `liveTableSurfaceHex()` (οθόνη **ή χαρτί**).
+ *
+ * ## 🔴 Γιατί δεν αρκούσε η {@link adaptEntityColorForCanvas} για τον πίνακα
+ * Εκείνη ρωτά **μόνη της** το ζωντανό CSS. Η raster **εκτύπωση** όμως ξαναχρησιμοποιεί το
+ * παραγωγικό pipeline πάνω σε **διάφανο** offscreen καμβά, ενώ το `getComputedStyle` του `:root`
+ * εξακολουθεί να λέει «σκούρο» ⇒ ένα πλέγμα που ρωτούσε εκείνη θα ζωγραφιζόταν **λευκό σε λευκό
+ * χαρτί**: η γραμμική εκδοχή ακριβώς του ελαττώματος που το §38 έκλεισε για το κείμενο.
+ * Ο μόνος τρόπος να μην ξανασυμβεί είναι η επιφάνεια να **μη μπορεί** να μαντευτεί από μέσα.
+ */
+export function adaptColorForSurface(
+  colorHex: string,
+  surfaceHex: string,
+  minContrast: number = MIN_ENTITY_CONTRAST,
+): string {
+  const key = `${colorHex}|${surfaceHex}|${minContrast}`;
+  const hit = _cache.get(key);
+  if (hit !== undefined) return hit;
+  const out = adaptColorToBackground(colorHex, surfaceHex, minContrast);
+  _cache.set(key, out);
+  return out;
+}
+
+/**
  * Προσαρμόζει ένα χρώμα οντότητας στο **ζωντανό** 2D canvas background. Memoized ανά
  * `χρώμα|φόντο|κατώφλι`. Καλείται από τους 2D renderers ΑΚΡΙΒΩΣ πριν το `ctx.strokeStyle`/
  * `fillStyle`. Το `minContrast` επιτρέπει σε συγκεκριμένες οντότητες (π.χ. wall outline +
@@ -153,13 +181,7 @@ export function adaptEntityColorForCanvas(
   colorHex: string,
   minContrast: number = MIN_ENTITY_CONTRAST,
 ): string {
-  const bg = resolveDxfCanvasBackgroundHex();
-  const key = `${colorHex}|${bg}|${minContrast}`;
-  const hit = _cache.get(key);
-  if (hit !== undefined) return hit;
-  const out = adaptColorToBackground(colorHex, bg, minContrast);
-  _cache.set(key, out);
-  return out;
+  return adaptColorForSurface(colorHex, resolveDxfCanvasBackgroundHex(), minContrast);
 }
 
 // ============================================================================

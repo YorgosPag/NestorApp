@@ -73,6 +73,11 @@ export function layoutTable(
   const measurement = measureTable(model, style, options);
   const xEdges = columnEdgesMm(measurement.columnWidthsMm);
   const yEdges = rowEdgesMm(measurement.rowHeightsMm);
+  // 🔴 ADR-739 §38 / §38.11 — **μία** ανάγνωση της επιφάνειας για ΟΛΗ τη διάταξη. Δύο εκφράσεις
+  // `options?.surfaceHex ?? TABLE_PAPER_HEX` (μία για τα κελιά, μία για τις ακμές) θα ήταν δύο
+  // σημεία που αποκλίνουν στην πρώτη αλλαγή — δηλαδή κείμενο και πλέγμα να απαντούν διαφορετικά
+  // στο ίδιο ερώτημα «πάνω σε τι ζωγραφίζω;».
+  const surfaceHex = options?.surfaceHex ?? TABLE_PAPER_HEX;
 
   return {
     widthMm: xEdges[xEdges.length - 1],
@@ -93,9 +98,9 @@ export function layoutTable(
       xEdges,
       yEdges,
       resolveTableTextMeasurer(options),
-      options?.surfaceHex ?? TABLE_PAPER_HEX,
+      surfaceHex,
     ),
-    borders: buildTableBorders(model, style, measurement.merges, xEdges, yEdges),
+    borders: buildTableBorders(model, style, measurement.merges, xEdges, yEdges, surfaceHex),
   };
 }
 

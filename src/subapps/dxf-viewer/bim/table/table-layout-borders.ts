@@ -42,6 +42,7 @@ import type { TableEdgeOrientation } from '../../types/table-edges';
 import { cellKey } from './table-model-helpers';
 import type { MergeIndex } from './table-model-helpers';
 import { sameBorderSpec, tableEdgeKeyAt } from './table-edge-model';
+import { resolveTableBorderInk } from './table-ink';
 import type { TableStyle } from './table-style';
 import type { TableBorderSegment } from './table-layout-types';
 
@@ -97,6 +98,24 @@ function horizontalSpec(
   style: TableStyle,
   r: number,
   c: number,
+  surfaceHex: string,
+): TableBorderSpec {
+  return resolveTableBorderInk(rawHorizontalSpec(model, style, r, c), surfaceHex);
+}
+
+/**
+ * Τα **τέσσερα επίπεδα** αυτούσια — η πηγή του μολυβιού, πριν από κάθε προσαρμογή οθόνης.
+ *
+ * Ξεχωριστή συνάρτηση ώστε η {@link resolveTableBorderInk} να τυλίγει **ΕΝΑ** σημείο ανά
+ * προσανατολισμό: με την προσαρμογή σκορπισμένη στα `return` της κληρονομιάς, το πέμπτο επίπεδο
+ * που θα προστεθεί κάποτε θα την ξεχνούσε — και θα ήταν αόρατο, γιατί μια αχνή γραμμή δεν
+ * πετάει σφάλμα.
+ */
+function rawHorizontalSpec(
+  model: TableModel,
+  style: TableStyle,
+  r: number,
+  c: number,
 ): TableBorderSpec {
   const explicit = explicitSpec(model, 'H', r, c);
   if (explicit) return explicit;
@@ -113,7 +132,23 @@ function horizontalSpec(
 }
 
 /** Το μολύβι μιας κατακόρυφης ακμής στον δείκτη `c`, για τη γραμμή `r`. */
-function verticalSpec(model: TableModel, style: TableStyle, r: number, c: number): TableBorderSpec {
+function verticalSpec(
+  model: TableModel,
+  style: TableStyle,
+  r: number,
+  c: number,
+  surfaceHex: string,
+): TableBorderSpec {
+  return resolveTableBorderInk(rawVerticalSpec(model, style, r, c), surfaceHex);
+}
+
+/** Τα τέσσερα επίπεδα της κατακόρυφης, αυτούσια — δες {@link rawHorizontalSpec}. */
+function rawVerticalSpec(
+  model: TableModel,
+  style: TableStyle,
+  r: number,
+  c: number,
+): TableBorderSpec {
   const explicit = explicitSpec(model, 'V', r, c);
   if (explicit) return explicit;
 
@@ -192,14 +227,34 @@ function pushBorder(
 const NORMAL_OF_HORIZONTAL: Point2D = { x: 0, y: 1 };
 const NORMAL_OF_VERTICAL: Point2D = { x: 1, y: 0 };
 
+/**
+ * Ό,τι χρειάζεται **ένα πέρασμα** του πλέγματος, σε ΕΝΑ σχήμα.
+ *
+ * 🔴 ADR-584/N.18 — δεν είναι καλλωπισμός: οι δύο περάσεις (οριζόντιο · κατακόρυφο) είναι
+ * **συμμετρικά** εξ ορισμού, οπότε κάθε παράμετρος που προστίθεται στο ένα προστίθεται και στο
+ * άλλο. Με θετικές παραμέτρους η υπογραφή γραφόταν **δύο φορές**, και το CHECK 3.28 το έπιασε τη
+ * στιγμή που το `surfaceHex` (§38.11) την πέρασε τα 50 tokens. Με το σχήμα, η επόμενη ερώτηση
+ * «τι χρειάζεται ένα πέρασμα;» έχει **ΕΝΑ** σημείο να απαντηθεί — άρα ο δίδυμος δεν είναι πια
+ * εκφράσιμος.
+ */
+interface GridPass {
+  model: TableModel;
+  style: TableStyle;
+  merges: MergeIndex;
+  xEdges: readonly number[];
+  yEdges: readonly number[];
+  surfaceHex: string;
+}
+
 /** Οι οριζόντιες γραμμές του πλέγματος, ενωμένες ανά ακμή. */
-function horizontalSegments(
-  model: TableModel,
-  style: TableStyle,
-  merges: MergeIndex,
-  xEdges: readonly number[],
-  yEdges: readonly number[],
-): TableBorderSegment[] {
+function horizontalSegments({
+  model,
+  style,
+  merges,
+  xEdges,
+  yEdges,
+  surfaceHex,
+}: GridPass): TableBorderSegment[] {
   const out: TableBorderSegment[] = [];
 
   for (let r = 0; r <= model.rows.length; r++) {
@@ -212,7 +267,7 @@ function horizontalSegments(
         const below = cellKey(model.rows[r].id, model.columns[c].id);
         if (sameMerge(merges, above, below)) continue;
       }
-      pieces.push({ spec: horizontalSpec(model, style, r, c), from: c, to: c + 1 });
+      pieces.push({ spec: horizontalSpec(model, style, r, c, surfaceHex), from: c, to: c + 1 });
     }
     const y = yEdges[r];
     for (const piece of coalesce(pieces)) {
@@ -229,14 +284,15 @@ function horizontalSegments(
   return out;
 }
 
-/** Οι κατακόρυφες γραμμές του πλέγματος, ενωμένες ανά ακμή. */
-function verticalSegments(
-  model: TableModel,
-  style: TableStyle,
-  merges: MergeIndex,
-  xEdges: readonly number[],
-  yEdges: readonly number[],
-): TableBorderSegment[] {
+/** Οι κατακόρυφες γραμμές του πλέγματος, ενωμένες ανά ακμή — δες {@link GridPass}. */
+function verticalSegments({
+  model,
+  style,
+  merges,
+  xEdges,
+  yEdges,
+  surfaceHex,
+}: GridPass): TableBorderSegment[] {
   const out: TableBorderSegment[] = [];
 
   for (let c = 0; c <= model.columns.length; c++) {
@@ -247,7 +303,7 @@ function verticalSegments(
         const right = cellKey(model.rows[r].id, model.columns[c].id);
         if (sameMerge(merges, left, right)) continue;
       }
-      pieces.push({ spec: verticalSpec(model, style, r, c), from: r, to: r + 1 });
+      pieces.push({ spec: verticalSpec(model, style, r, c, surfaceHex), from: r, to: r + 1 });
     }
     const x = xEdges[c];
     for (const piece of coalesce(pieces)) {
@@ -267,6 +323,11 @@ function verticalSegments(
 /**
  * Όλα τα τμήματα περιγράμματος του πίνακα. Άδειος πίνακας ⇒ κανένα τμήμα (ούτε
  * εξωτερικό πλαίσιο: πλαίσιο χωρίς περιεχόμενο είναι ορθογώνιο, όχι πίνακας).
+ *
+ * 🔴 ADR-739 §38.11 — το `surfaceHex` είναι **υποχρεωτικό**, ακριβώς όπως στο αδελφό
+ * `placeCells`. Προεπιλογή θα σήμαινε ότι ο επόμενος καλών μπορεί να **μην απαντήσει** «πάνω σε
+ * τι ζωγραφίζω;» — και η σιωπηλή απάντηση «χαρτί» δίνει πλέγμα που εξαφανίζεται στον σκούρο
+ * καμβά, χωρίς κανένα σφάλμα πουθενά. Το ερώτημα δεν έχει ασφαλή προεπιλογή· έχει **ιδιοκτήτη**.
  */
 export function buildTableBorders(
   model: TableModel,
@@ -274,10 +335,9 @@ export function buildTableBorders(
   merges: MergeIndex,
   xEdges: readonly number[],
   yEdges: readonly number[],
+  surfaceHex: string,
 ): TableBorderSegment[] {
   if (model.rows.length === 0 || model.columns.length === 0) return [];
-  return [
-    ...horizontalSegments(model, style, merges, xEdges, yEdges),
-    ...verticalSegments(model, style, merges, xEdges, yEdges),
-  ];
+  const pass: GridPass = { model, style, merges, xEdges, yEdges, surfaceHex };
+  return [...horizontalSegments(pass), ...verticalSegments(pass)];
 }
