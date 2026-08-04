@@ -12,11 +12,14 @@
 
 import {
   clearAxisStyleOverride,
+  hasAnyAxisStyleOverride,
   hasAxisStyleOverride,
   nextBooleanFormat,
+  resolveAxesFormat,
   resolveAxisFormat,
   resolveAxisNumericRange,
   setAxisStyleField,
+  writeEachAxis,
 } from '../table-axis-style-ops';
 import { insertTableColumn, insertTableRow } from '../table-row-column-ops';
 import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
@@ -298,5 +301,89 @@ describe('🔴 regression — resolveAxisFormat και resolveAxisNumericRange �
     // παντού (μόνο τη στήλη) και να χάσει ότι η r1 νικά με `false` — δηλαδή θα έλεγε ψευδώς
     // «δεν είναι μεικτό».
     expect(resolveAxisFormat(withBoth, HIERARCHICAL, 'column', 'c0', 'bold')?.mixed).toBe(true);
+  });
+});
+
+// ── Πολλοί άξονες (§27.17) ──────────────────────────────────────────────────
+
+/**
+ * 🔴 ADR-739 §27.17 — **η ίδια ερώτηση, ένα επίπεδο πάνω.**
+ *
+ * Η συνάθροιση δεν είναι κοσμητική: από αυτήν βγαίνει η **επόμενη τιμή** του `nextBooleanFormat`
+ * («μεικτό ⇒ όλα ναι»). Αν απαντούσε λάθος, το «Β» πάνω σε δύο έντονες και μία απλή στήλη θα
+ * **αντέστρεφε** τη μία αντί να τις ορίσει όλες — δηλαδή το κουμπί θα έκανε το αντίθετο από το
+ * όνομά του, ακριβώς στην περίπτωση που η πολλαπλή επιλογή υπάρχει για να εξυπηρετήσει.
+ */
+describe('resolveAxesFormat — η συνάθροιση πάνω από άξονες', () => {
+  const bolded = (ids: readonly string[]): PersistedTableModel =>
+    ids.reduce((m, id) => setAxisStyleField(m, 'column', id, 'bold', true), model());
+
+  it('συμφωνία ⇒ η κοινή τιμή, καθόλου μεικτό', () => {
+    // Και οι δύο στήλες ρητά έντονες σε **όλα** τα κελιά τους ⇒ μία απάντηση.
+    const next = bolded(['c0', 'c1']);
+    expect(resolveAxesFormat(next, HIERARCHICAL, 'column', ['c0', 'c1'], 'bold'))
+      .toEqual({ value: true, mixed: false, overridden: true });
+  });
+
+  it('🔴 διαφωνία ΜΕΤΑΞΥ αξόνων ⇒ μεικτό, χωρίς τιμή — ακόμα κι όταν ο καθένας είναι ομοιόμορφος', () => {
+    const next = setAxisStyleField(bolded(['c0']), 'column', 'c1', 'bold', false);
+    expect(resolveAxesFormat(next, HIERARCHICAL, 'column', ['c0', 'c1'], 'bold'))
+      .toEqual({ value: undefined, mixed: true, overridden: true });
+  });
+
+  it('ένας μεικτός μολύνει το σύνολο — μία διαφωνία αρκεί', () => {
+    // Το `c1` δεν δηλώνει τίποτα ⇒ κληρονομεί κεφαλίδα (έντονη) + δεδομένα (όχι) ⇒ μεικτό.
+    const state = resolveAxesFormat(bolded(['c0']), HIERARCHICAL, 'column', ['c0', 'c1'], 'bold');
+    expect(state?.mixed).toBe(true);
+  });
+
+  it('🔴 `overridden` = ΟΛΟΙ ρητά — ο δείκτης λέει «το ζήτησες εσύ», όχι «κάποιος το ζήτησε»', () => {
+    const next = bolded(['c0']);
+    expect(resolveAxesFormat(next, HIERARCHICAL, 'column', ['c0', 'c1'], 'bold')?.overridden)
+      .toBe(false);
+  });
+
+  it('ένας άξονας ⇒ ταυτόσημη απάντηση με το `resolveAxisFormat` (καμία αλλαγή συμπεριφοράς)', () => {
+    const next = bolded(['c0']);
+    expect(resolveAxesFormat(next, HIERARCHICAL, 'column', ['c0'], 'bold'))
+      .toEqual(resolveAxisFormat(next, HIERARCHICAL, 'column', 'c0', 'bold'));
+  });
+
+  it('μπαγιάτικη ταυτότητα προσπερνιέται· κενή λίστα ⇒ `null`, ποτέ μαντεψιά', () => {
+    const next = bolded(['c0']);
+    expect(resolveAxesFormat(next, HIERARCHICAL, 'column', ['c0', 'c9'], 'bold')?.value).toBe(true);
+    expect(resolveAxesFormat(next, HIERARCHICAL, 'column', [], 'bold')).toBeNull();
+    expect(resolveAxesFormat(next, HIERARCHICAL, 'column', ['c9'], 'bold')).toBeNull();
+  });
+
+  it('🔴 τροφοδοτεί σωστά τον κανόνα του πατήματος: μεικτό ⇒ ΟΛΑ ΝΑΙ', () => {
+    const mixedState = resolveAxesFormat(bolded(['c0']), HIERARCHICAL, 'column', ['c0', 'c1'], 'bold');
+    expect(nextBooleanFormat(mixedState)).toBe(true);
+
+    const allBold = resolveAxesFormat(bolded(['c0', 'c1']), HIERARCHICAL, 'column', ['c0', 'c1'], 'bold');
+    expect(nextBooleanFormat(allBold)).toBe(false);
+  });
+});
+
+describe('writeEachAxis / hasAnyAxisStyleOverride — η εγγραφή και το «τι θα σβήσει»', () => {
+  it('γράφει σε όλους τους ζητούμενους άξονες με μία κλήση', () => {
+    const next = writeEachAxis(model(), ['c0', 'c1'], (m, id) =>
+      setAxisStyleField(m, 'column', id, 'bold', true));
+    expect(next.columns.map((c) => c.styleOverride)).toEqual([{ bold: true }, { bold: true }]);
+  });
+
+  it('🔴 κανένας άξονας δεν άλλαξε ⇒ ΤΟ ΙΔΙΟ μοντέλο by-reference (κανένα βήμα undo)', () => {
+    const before = writeEachAxis(model(), ['c0', 'c1'], (m, id) =>
+      setAxisStyleField(m, 'column', id, 'bold', true));
+    const again = writeEachAxis(before, ['c0', 'c1'], (m, id) =>
+      setAxisStyleField(m, 'column', id, 'bold', true));
+    expect(again).toBe(before);
+  });
+
+  it('🔴 «υπάρχει τι να επαναφερθεί;» = `some`: ένας στους τρεις αρκεί', () => {
+    const next = setAxisStyleField(model(), 'column', 'c1', 'bold', true);
+    expect(hasAnyAxisStyleOverride(next, 'column', ['c0', 'c1'])).toBe(true);
+    expect(hasAnyAxisStyleOverride(next, 'column', ['c0'])).toBe(false);
+    expect(hasAnyAxisStyleOverride(next, 'column', [])).toBe(false);
   });
 });

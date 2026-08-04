@@ -891,3 +891,182 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
     expect(executed).toHaveLength(1);
   });
 });
+
+/**
+ * 🔴 ADR-739 §27.17 (Φ2) — **Η ΜΟΡΦΟΠΟΙΗΣΗ ΑΚΟΛΟΥΘΕΙ ΚΙ ΑΥΤΗ ΤΗΝ ΕΠΙΛΟΓΗ.**
+ *
+ * Η πρώτη φάση διόρθωσε τα **δομικά** items (διαγραφή/εισαγωγή) και άφησε ρητά πίσω τη γραμμή
+ * μορφοποίησης: έντονα, χρώματα, μέγεθος και περιγράμματα έδρασαν στον έναν άξονα που
+ * πατήθηκε. Εδώ μετριέται η υπόλοιπη υπόσχεση — και μετριέται από την **πραγματική** διαδρομή
+ * (κλικ στη ζώνη → `Shift+κλικ` → `getHit` → χειριστής), γιατί ακριβώς εκεί χανόταν η επιλογή.
+ */
+describe('🔴 πολλαπλή επιλογή άξονα — ΚΑΙ η μορφοποίηση ακολουθεί', () => {
+  let harness: Harness;
+
+  beforeEach(() => {
+    executed.length = 0;
+    __resetTableCellCursorStoreForTests();
+    __resetTableHeaderMenuPortForTests();
+    harness = createHarness();
+  });
+
+  afterEach(() => {
+    harness.containerRef.current?.remove();
+  });
+
+  function mountPointer() {
+    return renderHook(() =>
+      useTableCellPointer({
+        cursor: getTableCellCursor(),
+        entity: harness.entity(),
+        containerRef: harness.containerRef,
+        transformRef: harness.transformRef,
+        onSelectTo: jest.fn(),
+        onCommitPending: jest.fn(),
+      }),
+    );
+  }
+
+  function clickBand(axis: 'column' | 'row', index: number, shiftKey = false): void {
+    const point = tableBandScreenPoint(harness.entity(), axis, index);
+    act(() => {
+      harness.containerRef.current?.dispatchEvent(
+        new MouseEvent('mousedown', {
+          button: 0, clientX: point.x, clientY: point.y, shiftKey, bubbles: true,
+        }),
+      );
+    });
+  }
+
+  function hitAt(axis: 'column' | 'row', index: number) {
+    const point = tableBandScreenPoint(harness.entity(), axis, index);
+    const hit = getTableHeaderMenuPort()?.getHit(point.x, point.y);
+    expect(hit).not.toBeNull();
+    return hit!;
+  }
+
+  function selectColumnsAtoB(): void {
+    const pointer = mountPointer();
+    clickBand('column', 0);
+    pointer.rerender();
+    clickBand('column', 1, true);
+    expect(getTableCellCursor()?.selection?.kind).toBe('column');
+  }
+
+  const columns = () => harness.entity().model.columns;
+
+  it('🔴 «Β» με δύο μαρκαρισμένες στήλες ⇒ ΚΑΙ ΟΙ ΔΥΟ έντονες, με ΜΙΑ εντολή', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+
+    act(() => { view.result.current.props.onToggleFormat(hitAt('column', 1), 'bold'); });
+
+    expect(columns()[0].styleOverride?.bold).toBe(true);
+    expect(columns()[1].styleOverride?.bold).toBe(true);
+    // Η τρίτη είναι έξω από την επιλογή — δεν την αγγίζει κανείς.
+    expect(columns()[2].styleOverride).toBeUndefined();
+    expect(executed).toHaveLength(1);
+  });
+
+  it('🔴 ΜΕΙΚΤΟ ⇒ ΟΛΑ ΝΑΙ: με μία ήδη έντονη, το πάτημα ΔΕΝ την αντιστρέφει', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    // Πρώτα μόνο η «A», χωρίς επιλογή — ο στόχος είναι ο ένας άξονας.
+    act(() => { view.result.current.props.onToggleFormat(hitAt('column', 0), 'bold'); });
+    expect(columns()[0].styleOverride?.bold).toBe(true);
+
+    selectColumnsAtoB();
+    act(() => { view.result.current.props.onToggleFormat(hitAt('column', 1), 'bold'); });
+
+    // Αν κάθε άξονας αποφάσιζε μόνος του, η «A» θα έσβηνε και η «B» θα άναβε.
+    expect(columns()[0].styleOverride?.bold).toBe(true);
+    expect(columns()[1].styleOverride?.bold).toBe(true);
+  });
+
+  it('όλες ήδη έντονες ⇒ το πάτημα τις σβήνει όλες (ο κανόνας κλείνει και προς τα πίσω)', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+
+    act(() => { view.result.current.props.onToggleFormat(hitAt('column', 1), 'bold'); });
+    act(() => { view.result.current.props.onToggleFormat(hitAt('column', 1), 'bold'); });
+
+    expect(columns()[0].styleOverride?.bold).toBe(false);
+    expect(columns()[1].styleOverride?.bold).toBe(false);
+  });
+
+  it('🔴 η ΚΑΤΑΣΤΑΣΗ των κουμπιών λέει «μεικτό» όταν οι επιλεγμένες διαφωνούν', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    act(() => { view.result.current.props.onToggleFormat(hitAt('column', 0), 'bold'); });
+    selectColumnsAtoB();
+
+    const format = view.result.current.props.resolveFormat(hitAt('column', 1));
+    expect(format.bold.mixed).toBe(true);
+    // Και υπάρχει τι να επαναφερθεί, παρότι μόνο η μία δηλώνει κάτι ρητά (`some`).
+    expect(format.canReset).toBe(true);
+  });
+
+  it('«Επαναφορά στο στυλ» καθαρίζει ΟΛΕΣ τις επιλεγμένες', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+    act(() => { view.result.current.props.onToggleFormat(hitAt('column', 1), 'bold'); });
+
+    act(() => { view.result.current.props.onResetFormat(hitAt('column', 1)); });
+
+    expect(columns()[0].styleOverride).toBeUndefined();
+    expect(columns()[1].styleOverride).toBeUndefined();
+  });
+
+  it('το χρώμα κειμένου γράφεται σε ΟΛΕΣ τις επιλεγμένες', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+
+    act(() => { view.result.current.props.onSetTextColor(hitAt('column', 1), '#FF0000'); });
+
+    expect(columns()[0].styleOverride?.textColorHex).toBe('#FF0000');
+    expect(columns()[1].styleOverride?.textColorHex).toBe('#FF0000');
+    expect(columns()[2].styleOverride).toBeUndefined();
+  });
+
+  it('🔴 το ΜΕΓΕΘΟΣ ανεβαίνει σε όλες — και η καθεμιά ξεκινά από ΤΟ ΔΙΚΟ ΤΗΣ σκαλί', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    // Η «A» πάει πρώτα ένα σκαλί πάνω, μόνη της: έτσι οι δύο στήλες ΔΕΝ είναι ισοϋψείς.
+    act(() => { view.result.current.props.onStepTextHeight(hitAt('column', 0), 1); });
+    const soloA = columns()[0].styleOverride?.textHeightMm;
+    expect(typeof soloA).toBe('number');
+
+    selectColumnsAtoB();
+    act(() => { view.result.current.props.onStepTextHeight(hitAt('column', 1), 1); });
+
+    const [a, b] = [columns()[0].styleOverride?.textHeightMm, columns()[1].styleOverride?.textHeightMm];
+    expect(typeof a).toBe('number');
+    expect(typeof b).toBe('number');
+    // Και οι δύο μεγάλωσαν, αλλά ΔΕΝ ισοπεδώθηκαν στην ίδια τιμή: η «A» ξεκίνησε πιο ψηλά.
+    expect(a as number).toBeGreaterThan(soloA as number);
+    expect(a as number).toBeGreaterThan(b as number);
+  });
+
+  it('🔴 τα ΠΕΡΙΓΡΑΜΜΑΤΑ βλέπουν ΕΝΑ ορθογώνιο: η ακμή ΑΝΑΜΕΣΑ στις δύο μένει άβαφη', () => {
+    openCursor(harness);
+    const view = mount(harness);
+    selectColumnsAtoB();
+    const [colA, colB] = [columns()[0].id, columns()[1].id];
+
+    act(() => { view.result.current.props.resolveBorderMenu(hitAt('column', 1)).onApply('outside'); });
+
+    const edges = harness.entity().model.edges ?? [];
+    const verticalAt = (colId: string) =>
+      edges.some(([orientation, , col]) => orientation === 'V' && col === colId);
+
+    // Αριστερή ακμή της «A» = εξωτερικό σύνορο ⇒ βάφεται.
+    expect(verticalAt(colA)).toBe(true);
+    // Αριστερή ακμή της «B» = **εσωτερική** του ενιαίου ορθογωνίου ⇒ ΔΕΝ βάφεται. Με στόχο
+    // μία μόνο στήλη θα ήταν σύνορο, δηλαδή αυτό ακριβώς το test θα ήταν κόκκινο.
+    expect(verticalAt(colB)).toBe(false);
+  });
+});
