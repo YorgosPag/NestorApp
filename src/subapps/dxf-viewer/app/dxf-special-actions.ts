@@ -37,6 +37,7 @@ import { usePerformanceHUDStore } from '../bim-3d/performance/PerformanceHUDStor
 // ADR-723 — άνοιγμα της παλέτας «Διαχειριστής Στρώσεων» μέσω του store SSoT
 import { LayerManagerPaletteStore } from '../stores/LayerManagerPaletteStore';
 import { ExternalReferencesPaletteStore } from '../stores/ExternalReferencesPaletteStore';
+import { TitleBlockBindingPaletteStore } from '../stores/TitleBlockBindingPaletteStore';
 import { ImportedMeshBoqDialogStore } from '../stores/ImportedMeshBoqDialogStore';
 import { ImportedMeshMaterialMapDialogStore } from '../stores/ImportedMeshMaterialMapDialogStore';
 import {
@@ -139,6 +140,12 @@ export function dispatchDxfSpecialAction(action: string, deps: DxfSpecialActionD
   // Revit *Manage Links*). Παλέτα και όχι βήμα wizard: ένας σύνδεσμος σπάει και ΜΕΤΑ την εισαγωγή.
   if (action === 'open-external-references') {
     ExternalReferencesPaletteStore.open();
+    return true;
+  }
+  // ADR-745 Φ3β: άνοιγμα της παλέτας «Σύνδεση Πινακίδας». Η πινακίδα του τοπογράφου γίνεται
+  // **πρόταση προς έγκριση** — καμία εγγραφή στη βάση χωρίς ρητό κλικ ανθρώπου (§5.1).
+  if (action === 'open-title-block-binding') {
+    TitleBlockBindingPaletteStore.open();
     return true;
   }
   // ADR-563: «Αυτόματη Διαστασιολόγηση» — open options dialog, then auto-place

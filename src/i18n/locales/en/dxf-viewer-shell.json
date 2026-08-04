@@ -5221,6 +5221,7 @@
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",
       "importTek": "Import Tekton (.tek)",
+      "titleBlockBinding": "Title Block Binding",
       "externalReferences": "External References",
       "attachImage": "Image",
       "attachImageTooltip": "Insert an image into the drawing — click to place, or Enter for the centre of the view",
@@ -6262,6 +6263,54 @@
   },
   "layerManagerPalette": {
     "title": "Layer Manager"
+  },
+  "titleBlockBinding": {
+    "title": "Title Block Binding",
+    "description": "The surveyor's title block was read. Each suggestion is written to the database ONLY if you approve it.",
+    "empty": "No title block was found on any layer of this drawing.",
+    "loading": "Reading title block…",
+    "layerLabel": "Title block layer",
+    "summary_one": "{count} title block · {fields} fields",
+    "summary_other": "{count} title blocks · {fields} fields",
+    "skipped_one": "{count} layer was not examined (too large)",
+    "skipped_other": "{count} layers were not examined (too large)",
+    "proposalValue": "The title block reads",
+    "proposalTarget": "Suggested binding",
+    "moreCandidates_one": "{count} more candidate",
+    "moreCandidates_other": "{count} more candidates",
+    "fields": {
+      "employer": "Employer",
+      "projectTitle": "Project",
+      "location": "Location",
+      "designers": "Designer",
+      "studyType": "Study",
+      "drawingType": "Drawing",
+      "drawingNumber": "Drawing no.",
+      "scale": "Scale",
+      "studyDate": "Study date",
+      "drawnBy": "Drawn by",
+      "signature": "Signature"
+    },
+    "evidence": {
+      "email": "e-mail matches",
+      "phone": "phone matches",
+      "name-exact": "name matches",
+      "name-abbrev": "name matches an abbreviation",
+      "name-fuzzy": "name is a close match"
+    },
+    "blocked": {
+      "no-project": "This drawing is not linked to a project — there is nowhere to write.",
+      "unsupported-field": "Read successfully, but it maps to no database field.",
+      "no-match": "No matching record was found in the database.",
+      "role-undecided": "The person was found, but the profession does not resolve to a single role."
+    },
+    "target": {
+      "contact": "Project contact",
+      "landowner": "Landowner",
+      "project-address": "Project address",
+      "project-field": "Project detail",
+      "drawing-meta": "Drawing detail"
+    }
   },
   "externalReferencesPalette": {
     "title": "External References",

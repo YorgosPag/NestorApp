@@ -5221,6 +5221,7 @@
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",
       "importTek": "Εισαγωγή Τέκτονα (.tek)",
+      "titleBlockBinding": "Σύνδεση Πινακίδας",
       "externalReferences": "Εξωτερικές Αναφορές",
       "attachImage": "Εικόνα",
       "attachImageTooltip": "Εισαγωγή εικόνας στο σχέδιο — τοποθέτηση με κλικ, ή Enter για το κέντρο της προβολής",
@@ -6262,6 +6263,54 @@
   },
   "layerManagerPalette": {
     "title": "Διαχειριστής Στρώσεων"
+  },
+  "titleBlockBinding": {
+    "title": "Σύνδεση Πινακίδας",
+    "description": "Η πινακίδα του τοπογράφου διαβάστηκε. Κάθε πρόταση συνδέεται με τη βάση ΜΟΝΟ αν την εγκρίνεις.",
+    "empty": "Δεν βρέθηκε πινακίδα σε κανένα layer αυτού του σχεδίου.",
+    "loading": "Ανάγνωση πινακίδας…",
+    "layerLabel": "Layer πινακίδας",
+    "summary_one": "{count} πινακίδα · {fields} πεδία",
+    "summary_other": "{count} πινακίδες · {fields} πεδία",
+    "skipped_one": "{count} layer δεν εξετάστηκε (πολύ μεγάλο)",
+    "skipped_other": "{count} layers δεν εξετάστηκαν (πολύ μεγάλα)",
+    "proposalValue": "Η πινακίδα γράφει",
+    "proposalTarget": "Πρόταση σύνδεσης",
+    "moreCandidates_one": "{count} ακόμη υποψήφιος",
+    "moreCandidates_other": "{count} ακόμη υποψήφιοι",
+    "fields": {
+      "employer": "Εργοδότης",
+      "projectTitle": "Έργο",
+      "location": "Θέση",
+      "designers": "Μελετητής",
+      "studyType": "Μελέτη",
+      "drawingType": "Σχέδιο",
+      "drawingNumber": "Αρ. σχεδίου",
+      "scale": "Κλίμακα",
+      "studyDate": "Χρόνος μελέτης",
+      "drawnBy": "Σύνταξη",
+      "signature": "Υπογραφή"
+    },
+    "evidence": {
+      "email": "ταιριάζει το e-mail",
+      "phone": "ταιριάζει το τηλέφωνο",
+      "name-exact": "ταιριάζει το όνομα",
+      "name-abbrev": "το όνομα ταιριάζει σε συντομογραφία",
+      "name-fuzzy": "το όνομα ταιριάζει κατά προσέγγιση"
+    },
+    "blocked": {
+      "no-project": "Το σχέδιο δεν είναι δεμένο σε έργο — δεν υπάρχει πού να γραφτεί.",
+      "unsupported-field": "Διαβάστηκε, αλλά δεν αντιστοιχεί σε πεδίο της βάσης.",
+      "no-match": "Δεν βρέθηκε αντίστοιχη εγγραφή στη βάση.",
+      "role-undecided": "Βρέθηκε το πρόσωπο, αλλά η ειδικότητα δεν δίνει έναν συγκεκριμένο ρόλο."
+    },
+    "target": {
+      "contact": "Επαφή έργου",
+      "landowner": "Οικοπεδούχος",
+      "project-address": "Διεύθυνση έργου",
+      "project-field": "Στοιχείο έργου",
+      "drawing-meta": "Στοιχείο σχεδίου"
+    }
   },
   "externalReferencesPalette": {
     "title": "Εξωτερικές Αναφορές",

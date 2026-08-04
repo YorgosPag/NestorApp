@@ -88,6 +88,21 @@ export const INSERT_TAB: RibbonTab = {
                 action: 'open-external-references',
               },
             },
+            // ADR-745 Φ3β — «Σύνδεση Πινακίδας»: το ξερό κείμενο της πινακίδας του τοπογράφου
+            // γίνεται πρόταση σύνδεσης με τις πραγματικές οντότητες του έργου. Κάθεται δίπλα
+            // στις «Εξωτερικές Αναφορές» για τον ίδιο λόγο που εκείνη κάθεται εδώ: και οι δύο
+            // απαντούν «τι δηλώνει αυτό το σχέδιο για τον κόσμο έξω από τη γεωμετρία του».
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'insert.title-block-binding',
+                labelKey: 'ribbon.commands.titleBlockBinding',
+                icon: 'external-references',
+                commandKey: 'title-block-binding',
+                action: 'open-title-block-binding',
+              },
+            },
           ],
         },
       ],

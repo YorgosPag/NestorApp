@@ -14,7 +14,6 @@
  * @module lib/title-block/resolve-people
  */
 
-import { cleanPhoneNumber } from '@/lib/validation/phone-validation';
 import { resolveRoleCandidatesFromProfession } from '@/config/profession-bridge.config';
 import { personNameMatch } from '@/utils/greek-person-name';
 import type {
@@ -56,8 +55,18 @@ const normalizeEmail = (email: string): string => email.trim().toLowerCase();
  */
 const NATIONAL_DIGITS = 10;
 
+/**
+ * ⚠️ **Δεν καλείται ο `cleanPhoneNumber`, και δεν είναι παράλειψη.** Εκείνος αφαιρεί κενά, παύλες
+ * και παρενθέσεις — δηλαδή **υποσύνολο** του «κράτα μόνο ψηφία» που κάνει η επόμενη γραμμή. Δεν
+ * υπάρχει διπλότυπο εδώ: υπάρχει μια πράξη που τον **περιέχει**.
+ *
+ * Ο λόγος που μετράει: το `phone-validation.ts` **επανεξάγει** από το `vat-validation.ts`, το
+ * οποίο εισάγει `@/lib/firebase` — άρα μια εισαγωγή για μία γραμμή regex θα έσερνε **ολόκληρο το
+ * Firestore** μέσα στον καθαρό Λ2. Το βρήκε η άγκυρα καθαρότητας, όχι ανάγνωση. Η ίδια η σύζευξη
+ * είναι πραγματικό χρέος άλλου τομέα και καταγράφηκε — δεν τη «διόρθωσα» εν παρόδω.
+ */
 function phoneKey(phone: string): string {
-  const digits = cleanPhoneNumber(phone).replace(/\D/g, '');
+  const digits = phone.replace(/\D/g, '');
   return digits.length > NATIONAL_DIGITS ? digits.slice(-NATIONAL_DIGITS) : digits;
 }
 

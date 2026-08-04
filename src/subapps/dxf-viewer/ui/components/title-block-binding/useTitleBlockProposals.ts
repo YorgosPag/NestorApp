@@ -1,0 +1,123 @@
+'use client';
+
+/**
+ * @fileoverview Η ζωντανή διαδρομή: σκηνή → Λ1 → στιγμιότυπο βάσης → Λ2 (ADR-745 Φ3β).
+ *
+ * 🔴 **Διαβάζει. Δεν γράφει — ποτέ, με κανέναν τρόπο.** Το `getAllContacts` είναι ανάγνωση, και
+ * είναι η **μόνη** επαφή αυτού του hook με το Firestore. Η εγγραφή ζει αποκλειστικά πίσω από το
+ * κουμπί έγκρισης· ένα `useEffect` που θα «προ-εφάρμοζε» μια βέβαιη πρόταση θα ήταν παραβίαση της
+ * θεμελιώδους αρχής του ADR (§5.1) και το πιάνει ο κατάσκοπος εγγραφής, όχι αυτό το σχόλιο.
+ *
+ * @module subapps/dxf-viewer/ui/components/title-block-binding/useTitleBlockProposals
+ */
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { getAllContacts } from '@/services/contacts-query.service';
+import { resolveContactDisplayName } from '@/services/contacts/ContactNameResolver';
+import { resolveTitleBlockProposals } from '@/lib/title-block/title-block-proposals';
+import type { ContactSnapshotEntry } from '@/lib/title-block/resolve-people';
+import type { BindingProposal } from '@/types/title-block-binding';
+import {
+  scanTitleBlockLayers,
+  type TitleBlockLayerScan,
+} from '../../../text-engine/title-block/reading/scene-title-block-cells';
+import { useLevelScene } from '../../../systems/scene/useSceneSelectors';
+
+/**
+ * Ανώτατο πλήθος επαφών του στιγμιότυπου.
+ *
+ * ⚠️ Το `getAllContacts` **δεν έχει κανένα εξ ορισμού όριο**: χωρίς αυτό, μια ανάγνωση πινακίδας
+ * θα κατέβαζε ολόκληρη τη συλλογή επαφών του μισθωτή. Το όριο **δηλώνεται** στο αποτέλεσμα
+ * (`truncated`) ώστε ένα «δεν βρέθηκε» να μην μπορεί να σημαίνει σιωπηλά «δεν κοίταξα όλους».
+ */
+const CONTACT_SNAPSHOT_LIMIT = 1000;
+
+export interface TitleBlockProposalsState {
+  readonly loading: boolean;
+  readonly scan: TitleBlockLayerScan | null;
+  /** Το layer που εξετάζεται — ο πρώτος υποψήφιος, ή ό,τι διάλεξε ο άνθρωπος. */
+  readonly selectedLayerId: string | null;
+  readonly proposals: readonly BindingProposal[];
+  /** Το στιγμιότυπο κόπηκε στο όριο ⇒ «δεν βρέθηκε» δεν είναι εξαντλητικό. */
+  readonly truncated: boolean;
+  readonly error: string | null;
+}
+
+/** `Contact` → η ελάχιστη προβολή που χρειάζεται το ταίριασμα. */
+function toSnapshot(contact: { id: string }): ContactSnapshotEntry {
+  const raw = contact as Record<string, unknown>;
+  const phones = (raw.phones as { number?: string }[] | undefined) ?? [];
+  const emails = (raw.emails as { email?: string }[] | undefined) ?? [];
+  return {
+    id: contact.id,
+    displayName: resolveContactDisplayName(contact as never) ?? '',
+    phones: phones.map((p) => p.number ?? '').filter(Boolean),
+    emails: emails.map((e) => e.email ?? '').filter(Boolean),
+  };
+}
+
+export interface UseTitleBlockProposalsParams {
+  readonly levelId: string | null;
+  readonly projectId?: string;
+  /** Ζητείται μόνο όταν η παλέτα είναι ανοιχτή — κλειστή παλέτα δεν διαβάζει τη βάση. */
+  readonly enabled: boolean;
+}
+
+export function useTitleBlockProposals(
+  params: UseTitleBlockProposalsParams,
+): TitleBlockProposalsState & { selectLayer: (layerId: string) => void } {
+  const { levelId, projectId, enabled } = params;
+  const scene = useLevelScene(levelId);
+
+  const [contacts, setContacts] = useState<readonly ContactSnapshotEntry[] | null>(null);
+  const [truncated, setTruncated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [chosenLayerId, setChosenLayerId] = useState<string | null>(null);
+  const requestSeq = useRef(0);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const seq = ++requestSeq.current;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await getAllContacts({ limitCount: CONTACT_SNAPSHOT_LIMIT });
+        if (cancelled || seq !== requestSeq.current) return;
+        setContacts(result.contacts.map(toSnapshot));
+        setTruncated(result.contacts.length >= CONTACT_SNAPSHOT_LIMIT);
+        setError(null);
+      } catch (cause) {
+        if (cancelled || seq !== requestSeq.current) return;
+        // Η αποτυχία **μιλάει**: σιωπηλό `catch` εδώ θα εμφανιζόταν ως «δεν βρέθηκε καμία
+        // επαφή» — δηλαδή λάθος συμπέρασμα με σωστή μορφή (ADR-745 §9.5, ίδιο σχήμα).
+        setError(cause instanceof Error ? cause.message : String(cause));
+        setContacts([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [enabled]);
+
+  const scan = useMemo(() => {
+    if (!enabled || !scene) return null;
+    return scanTitleBlockLayers(scene.entities, scene.layersById);
+  }, [enabled, scene]);
+
+  const selectedLayerId = chosenLayerId ?? scan?.candidates[0]?.layerId ?? null;
+
+  const proposals = useMemo(() => {
+    if (!scan || !contacts || !levelId) return [];
+    const layer = scan.candidates.find((c) => c.layerId === selectedLayerId);
+    if (!layer) return [];
+    return resolveTitleBlockProposals(layer.readings, { projectId, levelId, contacts });
+  }, [scan, contacts, levelId, projectId, selectedLayerId]);
+
+  return {
+    loading: enabled && (contacts === null || scan === null),
+    scan,
+    selectedLayerId,
+    proposals,
+    truncated,
+    error,
+    selectLayer: setChosenLayerId,
+  };
+}
