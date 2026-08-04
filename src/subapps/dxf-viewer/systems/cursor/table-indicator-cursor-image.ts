@@ -1,10 +1,19 @@
 /**
- * ADR-739 §31 — **ΤΑ ΔΥΟ ΠΑΧΙΑ ΒΕΛΗ** του δείκτη πίνακα, ως δείκτες υλικού (⬇ και ➡).
+ * ADR-739 §31 / ADR-754 §15 — **ΟΙ ΖΩΓΡΑΦΙΣΜΕΝΟΙ ΔΕΙΚΤΕΣ** του πίνακα, ως δείκτες υλικού:
+ * τα δύο παχιά βέλη επιλογής άξονα (⬇ ➡) και ο **λεπτός μαύρος σταυρός** της λαβής
+ * συμπλήρωσης (✛).
  *
  * Το Excel δηλώνει «αυτή η στήλη επιλέγεται ολόκληρη» με ένα παχύ βέλος προς τα κάτω πάνω από
  * το γράμμα, και «αυτή η γραμμή» με βέλος προς τα δεξιά πάνω από τον αριθμό. Είναι το μοναδικό
  * κομμάτι του §31 που **δεν** υπάρχει ως λέξη-κλειδί CSS: το `col-resize` / `row-resize` τα
  * ζωγραφίζει ο ΟΣ, τα βέλη επιλογής **όχι**. Άρα ζωγραφίζονται εδώ.
+ *
+ * ## 🔴 ADR-754 §15 — Ο ΤΡΙΤΟΣ ΕΝΟΙΚΟΣ ΜΠΗΚΕ ΓΙΑ ΑΛΛΟΝ ΛΟΓΟ ΑΠΟ ΤΟΥΣ ΔΥΟ ΠΡΩΤΟΥΣ
+ * Τα βέλη ζωγραφίζονται επειδή **δεν υπάρχει** λέξη-κλειδί γι' αυτά σε καμία πλατφόρμα. Ο
+ * σταυρός της λαβής ζωγραφίζεται επειδή η λέξη-κλειδί **υπάρχει και είναι πιασμένη**: το
+ * `cursor: crosshair` θα ήταν οπτικά ταυτόσημο με το σταυρόνημα CAD που ο Νέστωρ δείχνει ήδη σε
+ * ολόκληρο τον καμβά (ADR-549 Φ8), δηλαδή ταυτόσημο με το «κανένας ρόλος». Δύο διαφορετικοί
+ * δρόμοι, ίδιο συμπέρασμα — και το τίμημα από κάτω πληρώνεται και για τους τρεις.
  *
  * ## 🔴 PNG, ΟΧΙ SVG — και δεν είναι προτίμηση
  * Ο **Chrome απορρίπτει SVG data-URL δείκτες** (δουλεύουν σε Firefox· επαληθεύτηκε σε browser
@@ -49,8 +58,18 @@ import { getDevicePixelRatio, toDevicePixels } from './utils';
  */
 const MAX_CURSOR_DEVICE_PX = 32;
 
-/** Ζητούμενη πλευρά σε CSS px· συρρικνώνεται αυτόματα ώστε το φυσικό μέγεθος να μένει υπό όριο. */
-const CURSOR_CSS_PX = 20;
+/** Ζητούμενη πλευρά **του βέλους** σε CSS px· συρρικνώνεται ώστε το φυσικό να μένει υπό όριο. */
+const ARROW_CSS_PX = 20;
+
+/**
+ * Ζητούμενη πλευρά **του σταυρού συμπλήρωσης** σε CSS px.
+ *
+ * Μικρότερη από του βέλους, και είναι μέτρηση όχι γούστο: ο σταυρός του Excel είναι ~13 px στο
+ * 100% και η μικρότητά του **είναι** το μήνυμα — «λεπτός», σε αντιδιαστολή με τον παχύ λευκό
+ * σταυρό της επιλογής (`cursor: cell`) που ζει δίπλα του, ένα κελί μακριά. Ένας σταυρός 20 px
+ * θα διαβαζόταν ως «άλλος παχύς σταυρός».
+ */
+const FILL_CROSS_CSS_PX = 14;
 
 /** Μικρότερη πλευρά που ζωγραφίζουμε ποτέ (κρατά το βέλος αναγνωρίσιμο σε ακραίο dpr). */
 const MIN_CURSOR_CSS_PX = 10;
@@ -95,40 +114,40 @@ function traceArrow(ctx: CanvasRenderingContext2D, size: number, direction: Tabl
 }
 
 /**
- * Χτίζει τιμή CSS `cursor`: PNG του παχιού βέλους με σημείο ενέργειας στο **κέντρο** του, συν
- * λέξη-κλειδί εφεδρείας. Εφαρμογή: `element.style.cursor = buildTableArrowCursorValue('down')`.
+ * 🔴 **Ο ΕΝΑΣ ΡΑΣΤΑΡΟΠΟΙΗΤΗΣ** — και οι **τρεις** παγίδες της κεφαλίδας, γραμμένες μία φορά.
  *
- * Επιστρέφει τη γυμνή λέξη-κλειδί όταν δεν υπάρχει canvas (SSR / περιβάλλον test): ο δείκτης
- * υποβαθμίζεται σε κάτι λογικό αντί να πετάξει.
+ * Εξήχθη όταν γεννήθηκε ο **δεύτερος** καταναλωτής (ο σταυρός συμπλήρωσης, ADR-754 §15): η
+ * αλληλουχία «dpr ⇒ συρρίκνωση CSS ⇒ φράγμα συσκευής ⇒ canvas ⇒ `toDataURL` ⇒ σημείο ενέργειας
+ * ⇒ `image-set` ή `url`» είναι ~20 γραμμές που **δεν** επιτρέπεται να υπάρχουν δύο φορές: το
+ * CHECK 3.28 (jscpd, N.18) τις χαρακτηρίζει sibling clone, και —πολύ χειρότερα— η μία θα
+ * ξεχνούσε τη διόρθωση του `emittedCssSize` σε `dpr < 1` και ο δείκτης της θα διάβαζε λάθος
+ * pixel, **σιωπηλά**.
+ *
+ * Ό,τι μένει στον καλούντα είναι **μόνο το μελάνι** — και ο μετασχηματισμός του, επίτηδες: το
+ * βέλος θέλει συντεταγμένες **CSS px** (το πάχος του φωτοστέφανου είναι σχεδιαστικό μέγεθος),
+ * ο σταυρός θέλει **pixel συσκευής** (η ευκρίνειά του είναι όλο του το νόημα). Ένας
+ * επιβεβλημένος κοινός μετασχηματισμός θα ακύρωνε το ένα από τα δύο.
  */
-export function buildTableArrowCursorValue(direction: TableArrowDirection): string {
-  // `pointer` ως εφεδρεία: δηλώνει «πατιέται», που είναι ακριβώς το μήνυμα του βέλους. Ένα
-  // `default` θα έλεγε το αντίθετο, και είναι η τιμή που πραγματικά εμφανίζεται αν το PNG
-  // απορριφθεί — δηλαδή η εφεδρεία ΔΕΝ είναι διακοσμητική.
-  if (typeof document === 'undefined') return 'pointer';
+function rasterizeCursorValue(
+  requestedCssPx: number,
+  fallback: string,
+  draw: (ctx: CanvasRenderingContext2D, cssSize: number, devicePx: number, dpr: number) => void,
+): string {
+  // Χωρίς canvas (SSR / περιβάλλον test): ο δείκτης υποβαθμίζεται σε κάτι λογικό αντί να πετάξει.
+  if (typeof document === 'undefined') return fallback;
 
   const dpr = getDevicePixelRatio();
   const maxCssForDevice = MAX_CURSOR_DEVICE_PX / dpr;
-  const cssSize = Math.max(MIN_CURSOR_CSS_PX, Math.min(CURSOR_CSS_PX, maxCssForDevice));
+  const cssSize = Math.max(MIN_CURSOR_CSS_PX, Math.min(requestedCssPx, maxCssForDevice));
   const devicePx = Math.min(toDevicePixels(cssSize, dpr), MAX_CURSOR_DEVICE_PX);
 
   const canvas = document.createElement('canvas');
   canvas.width = devicePx;
   canvas.height = devicePx;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return 'pointer';
+  if (!ctx) return fallback;
 
-  // Ζωγραφίζουμε σε συντεταγμένες CSS px πάνω σε φυσικό backing store → ευκρινές σε HiDPI.
-  ctx.scale(devicePx / cssSize, devicePx / cssSize);
-  traceArrow(ctx, cssSize, direction);
-  // Φωτοστέφανο πρώτο και πλατύτερο· το γέμισμα από πάνω το κόβει στη μέση — δες την κεφαλίδα.
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = OUTLINE_CSS_PX;
-  ctx.stroke();
-  ctx.fillStyle = '#000000';
-  ctx.fill();
+  draw(ctx, cssSize, devicePx, dpr);
 
   const dataUrl = canvas.toDataURL('image/png');
   // Το εμφανιζόμενο μέγεθος διαφέρει ανά διαδρομή εκπομπής, και το σημείο ενέργειας δηλώνεται σε
@@ -139,6 +158,81 @@ export function buildTableArrowCursorValue(direction: TableArrowDirection): stri
   const hot = Math.round(emittedCssSize / 2);
 
   return dpr > 1
-    ? `image-set(url("${dataUrl}") ${dpr}x) ${hot} ${hot}, pointer`
-    : `url("${dataUrl}") ${hot} ${hot}, pointer`;
+    ? `image-set(url("${dataUrl}") ${dpr}x) ${hot} ${hot}, ${fallback}`
+    : `url("${dataUrl}") ${hot} ${hot}, ${fallback}`;
+}
+
+/**
+ * Χτίζει τιμή CSS `cursor`: PNG του παχιού βέλους με σημείο ενέργειας στο **κέντρο** του, συν
+ * λέξη-κλειδί εφεδρείας. Εφαρμογή: `element.style.cursor = buildTableArrowCursorValue('down')`.
+ */
+export function buildTableArrowCursorValue(direction: TableArrowDirection): string {
+  // `pointer` ως εφεδρεία: δηλώνει «πατιέται», που είναι ακριβώς το μήνυμα του βέλους. Ένα
+  // `default` θα έλεγε το αντίθετο, και είναι η τιμή που πραγματικά εμφανίζεται αν το PNG
+  // απορριφθεί — δηλαδή η εφεδρεία ΔΕΝ είναι διακοσμητική.
+  return rasterizeCursorValue(ARROW_CSS_PX, 'pointer', (ctx, cssSize, devicePx) => {
+    // Ζωγραφίζουμε σε συντεταγμένες CSS px πάνω σε φυσικό backing store → ευκρινές σε HiDPI.
+    ctx.scale(devicePx / cssSize, devicePx / cssSize);
+    traceArrow(ctx, cssSize, direction);
+    // Φωτοστέφανο πρώτο και πλατύτερο· το γέμισμα από πάνω το κόβει στη μέση — δες την κεφαλίδα.
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = OUTLINE_CSS_PX;
+    ctx.stroke();
+    ctx.fillStyle = '#000000';
+    ctx.fill();
+  });
+}
+
+/**
+ * 🔴 **ADR-754 §15 — Ο ΛΕΠΤΟΣ ΜΑΥΡΟΣ ΣΤΑΥΡΟΣ ΤΗΣ ΛΑΒΗΣ ΣΥΜΠΛΗΡΩΣΗΣ** (Excel parity).
+ *
+ * ## 🔑 Γιατί ζωγραφίζεται σε **pixel συσκευής** και όχι σε CSS px — πιο ευκρινής κι από το Excel
+ * Το βέλος από πάνω ζωγραφίζεται με `stroke()` σε CSS px, και του αρκεί: είναι παχύ σχήμα, όπου
+ * μισό pixel εξομάλυνσης δεν φαίνεται. Ο σταυρός είναι το αντίθετο — **μία ράβδος πάχους ενός
+ * pixel**. Μια γραμμή 1 CSS px κεντραρισμένη σε ακέραια συντεταγμένη απλώνεται σε **δύο**
+ * pixel μισής έντασης: γκρίζος, θολός σταυρός, δηλαδή ακριβώς το αντίθετο του «λεπτός και
+ * μαύρος».
+ *
+ * Γι' αυτό εδώ δεν υπάρχει `scale()` και δεν υπάρχει `stroke()`: οι ράβδοι είναι **γεμισμένα
+ * ορθογώνια σε ακέραια pixel συσκευής**, με πάχος που μεγαλώνει κατά ένα ολόκληρο pixel ανά
+ * βήμα dpr — ο ίδιος κανόνας που ακολουθούν οι δείκτες του ίδιου του λειτουργικού. Το
+ * αποτέλεσμα είναι **απόλυτα ευκρινές σε κάθε dpr**, κάτι που ο δείκτης του Excel (σταθερό
+ * bitmap που ο ΟΣ κλιμακώνει) δεν επιτυγχάνει σε μη ακέραιες κλιμακώσεις.
+ *
+ * ## Λευκό φωτοστέφανο, υποχρεωτικά
+ * Ο ίδιος λόγος με το βέλος, αλλά **οξύτερος**: η λαβή είναι μπλε (`TABLE_FILL_HANDLE`) και
+ * κάθεται πάνω στη μπλε γραμμή της επιλογής, μέσα σε σκούρο θέμα. Ένας σκέτος μαύρος σταυρός
+ * εκεί πάνω θα ήταν αόρατος ακριβώς στο ένα pixel όπου πρέπει να φαίνεται.
+ *
+ * ## ⚠️ Η εφεδρεία είναι `crosshair`, και είναι δηλωμένος συμβιβασμός
+ * Αν ο ΟΣ απορρίψει το PNG, εμφανίζεται η λέξη-κλειδί — και η **σημασιολογικά** σωστή είναι το
+ * `crosshair` (έτσι το λύνουν και τα φύλλα υπολογισμού του ιστού). Στον Νέστορα όμως εκείνη
+ * είναι οπτικά ταυτόσημη με το σταυρόνημα CAD, άρα η εφεδρεία **δεν διακρίνεται**. Δεν υπάρχει
+ * καλύτερη: το `cell` είναι ο παχύς σταυρός της **επιλογής** και θα έλεγε λάθος πράγμα. Το ότι
+ * το ράστερ έφτασε στην οθόνη το απαντά το όργανο του §31.11 (`fingerprintCursorValue`).
+ */
+export function buildTableFillCursorValue(): string {
+  return rasterizeCursorValue(FILL_CROSS_CSS_PX, 'crosshair', (ctx, _cssSize, devicePx, dpr) => {
+    // Πάχος **σε pixel συσκευής**: 1 στο 100%, 2 στο 200%, 3 στο 300%. Ποτέ κλάσμα — δες την
+    // κεφαλίδα για το γιατί το κλάσμα είναι όλο το πρόβλημα.
+    const bar = Math.max(1, Math.round(dpr));
+    const halo = Math.max(1, Math.round(dpr));
+    // Η αρχή της ράβδου, καρφωμένη στο πλέγμα της συσκευής. Το κέντρο της πέφτει στο κέντρο της
+    // εικόνας — που είναι, εξ ορισμού του ρασταροποιητή, το **σημείο ενέργειας**.
+    const start = Math.round((devicePx - bar) / 2);
+    const thick = bar + 2 * halo;
+
+    // Φωτοστέφανο πρώτο, από άκρη σε άκρη: έτσι σκεπάζει και τα **άκρα** των ράβδων, που αλλιώς
+    // θα ακουμπούσαν γυμνά πάνω στο μπλε.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, start - halo, devicePx, thick);
+    ctx.fillRect(start - halo, 0, thick, devicePx);
+    // Οι μαύρες ράβδοι από πάνω, κομμένες κατά `halo` σε κάθε άκρο ώστε το φωτοστέφανο να τις
+    // κλείνει και στις τέσσερις αιχμές.
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(halo, start, devicePx - 2 * halo, bar);
+    ctx.fillRect(start, halo, bar, devicePx - 2 * halo);
+  });
 }

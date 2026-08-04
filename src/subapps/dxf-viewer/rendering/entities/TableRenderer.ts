@@ -91,6 +91,11 @@ import { getTableIndicatorHover } from '../../state/table-indicator-hover-store'
 // λειτουργία πίνακα, γι' αυτό ζει έξω από το `if (cursor)`.
 import { getTableInsertControl } from '../../state/table-insert-control-store';
 import { stampTableInsertControl } from './table/stamp-table-insert-control';
+// 🔴 ADR-739 §42 — το ⊖ της διαγραφής: ο ζωγράφος, ο στόχος του, και το ορθογώνιο που θα φύγει.
+import { stampTableDeleteControl } from './table/stamp-table-delete-control';
+import { getTableDeleteControl } from '../../state/table-delete-control-store';
+import { tableDeleteSpanRectMm } from '../../bim/table/table-delete-control';
+import { tableIndicatorBandsMm } from '../../bim/table/table-indicator-geometry';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
@@ -309,6 +314,30 @@ export class TableRenderer extends BaseEntityRenderer {
     // άρα δεν σκεπάζει δεδομένα — αλλά τίποτα δεν επιτρέπεται να σκεπάσει **αυτό**, γιατί
     // είναι το μόνο στοιχείο του πίνακα που λειτουργεί ως κουμπί.
     if (selected) {
+      // 🔴 ADR-739 §42 — **το ⊖ της διαγραφής, ΠΡΙΝ το ⊕.**
+      //
+      // Η σειρά δεν λύνει επικάλυψη (το ⊕ ζει έξω από τη ζώνη, το ⊖ μέσα της) — δηλώνει
+      // **στοίβαξη του πλυσίματος**: η κόκκινη προεπισκόπηση καλύπτει ζώνη + κενό + πλέγμα,
+      // και τίποτα δεν επιτρέπεται να την αφήσει να περάσει πάνω από το ⊕. Με αντίστροφη
+      // σειρά, ένα ⊖ οπλισμένο στην πρώτη στήλη θα ξέπλενε τον δίσκο της εισαγωγής από δίπλα.
+      //
+      // ⚠️ Το ορθογώνιο υπολογίζεται **εδώ** από τον στόχο που κουβαλά το store, ποτέ από τη
+      // λωρίδα κάτω από το ποντίκι: με τρεις στήλες μαρκαρισμένες φεύγουν τρεις (§27.17), και
+      // η προεπισκόπηση οφείλει να βάψει ό,τι ακριβώς θα σβήσει το πάτημα.
+      const remove = getTableDeleteControl();
+      if (remove?.entityId === e.id) {
+        stampTableDeleteControl(
+          rc,
+          remove.control,
+          tableDeleteSpanRectMm(
+            layout,
+            remove.target.axis,
+            remove.target.firstIndex,
+            remove.target.lastIndex,
+            tableIndicatorBandsMm(rc.pxPerMm),
+          ),
+        );
+      }
       const insert = getTableInsertControl();
       // Φιλτραρισμένο ως προς ΑΥΤΟΝ τον πίνακα: δύο πίνακες στη σκηνή δεν μοιράζονται
       // χειριστήριο — ο ίδιος έλεγχος που κάνει ήδη ο hover των ζωνών και ο δρομέας.

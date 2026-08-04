@@ -25,8 +25,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-754-table-point-mode.md §11, §13
  */
 
-import { rawTableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import { tableFormulaReferenceSpans } from '../../../bim/table/formula/table-formula-reference-spans';
+import { tableFillSourceBounds } from '../../../bim/table/table-fill-handle';
 import { resolveTableModel } from '../../../bim/table/table-model-helpers';
 import { getTableFillPreview } from '../../../state/table-fill-preview-store';
 import { stampTableFillHandle, stampTableFillPreview } from './stamp-table-fill-handle';
@@ -92,8 +92,15 @@ export function stampTableFillHandleOverlay(
   }
   if (cursor.mode !== 'nav') return;
 
+  // 🔴 ADR-754 §15 — **ο ΕΝΑΣ ορισμός** του «ποια περιοχή έχει λαβή». Εδώ έγραφε
+  // `selectionBounds ?? rawTableCellRangeBounds(...)` με το χέρι· η ίδια πρόταση ζούσε και στον
+  // φρουρό του πατήματος, **διαφορετικά διατυπωμένη** — και ο δείκτης θα ήταν ο τρίτος. Δες
+  // την κεφαλίδα της `tableFillSourceBounds` για την απόκλιση που είχαν ήδη.
   const cell = { rowId: cursor.position.rowId, colId: cursor.position.colId };
-  const bounds =
-    selectionBounds ?? rawTableCellRangeBounds(resolveTableModel(entity.model), cell, cell);
+  const bounds = tableFillSourceBounds(
+    resolveTableModel(entity.model),
+    cell,
+    selectionBounds ?? null,
+  );
   if (bounds) stampTableFillHandle(rc, layout, bounds);
 }

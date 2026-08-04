@@ -25,12 +25,15 @@
  * @module subapps/dxf-viewer/bim/table/table-fill-handle
  * @see bim/table/table-fill-apply.ts — τι ΓΙΝΕΤΑΙ το μοντέλο όταν αφεθεί η λαβή
  * @see bim/table/table-cell-range.ts — ο ΕΝΑΣ ορισμός του «ορθογώνιο κελιών»
- * @see docs/centralized-systems/reference/adrs/ADR-754-table-point-mode.md §13
+ * @see bim/table/table-indicator-cursor-role.ts — ο **11ος ρόλος** δείκτη, που ρωτά από εδώ
+ * @see docs/centralized-systems/reference/adrs/ADR-754-table-point-mode.md §13, §15
  */
 
-import type { TableCellRangeBounds } from './table-cell-range';
-import { tableRangeRectMm } from './table-cell-range';
+import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
+import { rawTableCellRangeBounds, tableRangeRectMm } from './table-cell-range';
 import type { TableLayout, TableRectMm } from './table-layout-types';
+import type { TableModel } from '../../types/table';
+import type { TableFramePoint } from '../../types/table-entity';
 
 /**
  * Η **πλευρά** του τετραγώνου σε px οθόνης.
@@ -105,6 +108,67 @@ export function isOnTableFillHandle(
     point.v >= rect.y - padMm &&
     point.v <= rect.y + rect.h + padMm
   );
+}
+
+/**
+ * 🔑 **Η ΜΙΑ ΑΠΑΝΤΗΣΗ «ποια περιοχή έχει λαβή»**: η επιλογή· χωρίς επιλογή —ή με **μπαγιάτικη**
+ * επιλογή— το ενεργό κελί. `null` μόνο όταν το ίδιο το ενεργό κελί δεν υπάρχει πια στο μοντέλο.
+ *
+ * ## 🔴 Γιατί βγήκε εδώ: ΤΡΕΙΣ ρωτούσαν, ΔΥΟ απαντούσαν — και διαφορετικά
+ * Ο ζωγράφος (`stampTableFillHandleOverlay`) και ο φρουρός του πατήματος
+ * (`tryTableFillHandleMouseDown`) έγραφαν ο καθένας τη δική του εκδοχή της ίδιας πρότασης, και
+ * ο **δείκτης** θα ήταν ο τρίτος. Δύο αντίγραφα των έξι tokens «`selection ?? ενεργό κελί`»
+ * **δεν** πιάνονται από το jscpd (κάτω από τα 50 tokens του `.jscpdrc.json`) — ακριβώς το σχήμα
+ * που περιγράφει το §14 του ADR-754 για το `cellPairIndices`.
+ *
+ * ⚠️ **Και είχαν ήδη αποκλίνει.** Ο ζωγράφος έγραφε `selectionBounds ?? ενεργό κελί`, ο φρουρός
+ * `if (selection) return resolveTableSelectionBounds(...)` — δηλαδή με **μπαγιάτικη** επιλογή
+ * (undo / διαγραμμένη γραμμή) ο ένας ζωγράφιζε λαβή στο ενεργό κελί και ο άλλος **αρνιόταν να
+ * την πιάσει**: «λαβή που φαίνεται αλλά δεν πιάνεται», η ακριβής αστοχία που το §13.5
+ * απαγορεύει ονομαστικά. Νικά η εκδοχή του ζωγράφου — μια επιλογή που δεν λύνεται **είναι**
+ * καμία επιλογή, ενώ το ενεργό κελί είναι πάντα υπαρκτό.
+ *
+ * Τα όρια της επιλογής ζητούνται **ήδη λυμένα** και δεν λύνονται εδώ: ο ζωγράφος τα έχει
+ * υπολογίσει για το περίγραμμα του **ίδιου καρέ**, και ένας δεύτερος υπολογισμός θα ήταν
+ * δεύτερη απάντηση στο «τι μάρκαρε ο χρήστης» — δηλαδή λαβή που κάθεται αλλού από το
+ * περίγραμμα που υποτίθεται ότι συνοδεύει.
+ */
+export function tableFillSourceBounds(
+  model: TableModel,
+  active: TableCellRef,
+  selectionBounds: TableCellRangeBounds | null,
+): TableCellRangeBounds | null {
+  return selectionBounds ?? rawTableCellRangeBounds(model, active, active);
+}
+
+/** Τι βρήκε η σάρωση πάνω στη λαβή· `null` παντού αλλού. */
+export interface TableFillHandleHit {
+  /** Το τετράγωνο που βρέθηκε — ο καλών δεν το ξαναϋπολογίζει για να το ζωγραφίσει. */
+  readonly rectMm: TableRectMm;
+}
+
+/**
+ * 🔴 **ΕΠΕΣΕ ΤΟ ΧΕΡΙ ΠΑΝΩ ΣΤΗ ΛΑΒΗ;** — ο **ΕΝΑΣ** δρόμος, για τον δείκτη και για το πάτημα.
+ *
+ * Ίδιο σχήμα με το `tableInsertControlAtFrame` (⊕) και το `tableDeleteControlAtFrame` (⊖): μια
+ * σάρωση απαντά, και η **ίδια** απάντηση ταξιδεύει σε όποιον τη χρειάζεται. Ο λόγος είναι ο
+ * ρητός κανόνας του ADR-739 §31 — *ο δείκτης δεν ψεύδεται*: αν ο δείκτης ρωτούσε δική του
+ * γεωμετρία, θα υπήρχε ζώνη όπου το βέλος υπόσχεται συμπλήρωση και το πάτημα δεν πιάνει τίποτα.
+ *
+ * `source === null` ⇒ **καμία λαβή**. Είναι η γραμμή που κωδικοποιεί το «η λαβή σιωπά σε γραφή»
+ * (§13.5): ο καλών δίνει `null` όσο ο χρήστης πληκτρολογεί, και δεν χρειάζεται δεύτερος έλεγχος
+ * κατάστασης μέσα σε καθαρή γεωμετρία.
+ */
+export function tableFillHandleHitAtFrame(
+  layout: TableLayout,
+  frame: TableFramePoint,
+  pxPerMm: number,
+  source: TableCellRangeBounds | null,
+): TableFillHandleHit | null {
+  if (!source) return null;
+  const rectMm = tableFillHandleRectMm(layout, source, pxPerMm);
+  if (!rectMm || !isOnTableFillHandle(frame, rectMm, pxPerMm)) return null;
+  return { rectMm };
 }
 
 /**
