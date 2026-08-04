@@ -159,6 +159,28 @@ describe('Π — το μήνυμα κουβαλά την απόδειξη', () =
     expect(formatTscFailure({ ...failure, output: '' })).toMatch(/no output at all/);
   });
 
+  test('🔴 ΟΛΟΚΛΗΡΩΣΗ — το ΠΡΑΓΜΑΤΙΚΟ σχήμα του runTsc() δίνει την έξοδο', () => {
+    // Ο runTsc() επιστρέφει `combined`, όχι `output`. Όταν οι πύλες κάνουν
+    // formatTscFailure(run), αν η συνάρτηση διάβαζε ΜΟΝΟ το `output` θα τύπωνε
+    // «no output at all» ΚΡΑΤΩΝΤΑΣ την απόδειξη στο διπλανό πεδίο — ακριβώς το
+    // ελάττωμα που υποτίθεται ότι θεραπεύει. Πιάστηκε πριν το commit επειδή το
+    // test τροφοδοτείται με το σχήμα της παραγωγής, όχι με χειροποίητο object.
+    const asRunTscReturns = {
+      outcome: TSC_OUTCOME.OUT_OF_MEMORY,
+      detail: 'V8 exhausted the JS heap',
+      heapMb: 12288,
+      command: 'npx tsc --noEmit',
+      status: null,
+      signal: 'SIGABRT',
+      stdout: '',
+      stderr: REAL_V8_OOM,
+      combined: `\n${REAL_V8_OOM}`,
+    };
+    const text = formatTscFailure(asRunTscReturns);
+    expect(text).toContain('JavaScript heap out of memory');
+    expect(text).not.toMatch(/no output at all/);
+  });
+
   test('η ουρά κόβεται αλλά κρατά το ΤΕΛΟΣ (εκεί είναι το fatal)', () => {
     const noise = 'x'.repeat(5000);
     const tail = tsc.outputTail(`${noise}\nFATAL ERROR: boom`, 200);

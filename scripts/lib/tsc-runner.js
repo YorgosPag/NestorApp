@@ -151,7 +151,12 @@ function outputTail(text, limit = 2000) {
  * UNKNOWN so nobody reads it as "the metric regressed" — and it always carries
  * the ceiling that was in force plus tsc's own last words.
  */
-function formatTscFailure({ outcome, detail, command, heapMb, status, signal, output }) {
+function formatTscFailure({ outcome, detail, command, heapMb, status, signal, output, combined }) {
+  // `combined` is what runTsc() returns; `output` is the explicit form. Accept
+  // BOTH — reading only one of them is how this function would have gone on
+  // printing "no output at all" while holding the evidence in the other field,
+  // i.e. the exact defect it exists to prevent (caught 2026-08-05 before commit).
+  const evidence = output === undefined ? combined : output;
   const lines = [
     `⚠️  UNKNOWN — the measurement did not happen (state: ${outcome}).`,
     `   This is NOT a regression: nothing was measured. Fix the run, then read the number.`,
@@ -160,7 +165,7 @@ function formatTscFailure({ outcome, detail, command, heapMb, status, signal, ou
     `   heap:    --max-old-space-size=${heapMb} MB${process.env.TSC_HEAP_MB ? ' (from TSC_HEAP_MB)' : ' (derived from host RAM)'}`,
     `   exit:    status=${status === undefined ? 'n/a' : status} signal=${signal || 'none'}`,
     `   ── tsc output (tail) ─────────────────────────────────────────────`,
-    outputTail(output) || '   (tsc produced no output at all)',
+    outputTail(evidence) || '   (tsc produced no output at all)',
   ];
   return lines.join('\n');
 }
