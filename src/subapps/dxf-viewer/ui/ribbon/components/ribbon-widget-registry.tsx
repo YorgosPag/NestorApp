@@ -109,6 +109,9 @@ import { LineEditLinePatternWidget } from './LineEditLinePatternWidget';
 import { MultiSelectionCommonPropertiesPanel } from './MultiSelectionCommonPropertiesPanel';
 import { MultiSelectionFilterPanel } from './MultiSelectionFilterPanel';
 import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPicker';
+// ADR-739 §39 — το κουμπί «Πίνακας» ανοίγει επιλογέα μεγέθους (μοτίβο Word) αντί να οπλίζει
+// αμέσως το εργαλείο· ο γραφέας που έλειπε από το `table-options-store`.
+import { RibbonTableMenuWidget } from './table/RibbonTableMenuWidget';
 
 /** Ένα widget όπως το ζητά το ribbon: χωρίς props, με σταθερό `key`. */
 type WidgetFactory = () => React.ReactNode;
@@ -129,6 +132,7 @@ const CORE_WIDGETS: Readonly<Record<string, WidgetFactory>> = {
   'visibility-graphics': () => <VisibilityGraphicsPanel key="visibility-graphics-widget" />,
   'current-layer-picker': () => <CurrentLayerPicker key="current-layer-picker-widget" variant="ribbon" />,
   'insert-tokens': () => <RibbonInsertTokenWidget key="insert-tokens-widget" />,
+  'table-menu': () => <RibbonTableMenuWidget key="table-menu-widget" />,
   'visual-style-select': () => <VisualStyleSelect key="visual-style-select-widget" />,
   'glass-quality-select': () => <GlassQualitySelect key="glass-quality-select-widget" />,
   'mesh-wire-mode-select': () => <MeshWireModeSelect key="mesh-wire-mode-select-widget" />,
