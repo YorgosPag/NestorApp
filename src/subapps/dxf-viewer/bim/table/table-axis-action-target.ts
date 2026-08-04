@@ -104,6 +104,22 @@ export function resolveTableAxisActionTarget(
 }
 
 /**
+ * Ο **ένας** άξονας του στόχου σε θέση `index`, στο λεξιλόγιο που δέχονται οι συναρτήσεις
+ * επιλογής ({@link TableAxisTarget}).
+ *
+ * Υπάρχει ώστε ο καλών να μη γράφει `axis === 'column' ? { axis, colId: id } : { axis, rowId: id }`
+ * — μια έκφραση αθώα από μόνη της, που όμως θα ξαναγραφόταν σε **κάθε** σημείο που μεταφράζει
+ * στόχο σε επιλογή. Εδώ ζει μία φορά, δίπλα στον τύπο που παράγει.
+ *
+ * Δείκτης εκτός ορίων ⇒ ο πρώτος/τελευταίος του στόχου (κόψιμο, ποτέ `undefined` ταυτότητα).
+ */
+export function axisTargetAt(target: TableAxisActionTarget, index: number): TableAxisTarget {
+  const at = Math.min(Math.max(index, 0), target.ids.length - 1);
+  const id = target.ids[at];
+  return target.axis === 'column' ? { axis: 'column', colId: id } : { axis: 'row', rowId: id };
+}
+
+/**
  * Το διάστημα της τρέχουσας επιλογής **κατά μήκος του άξονα που πατήθηκε**, ή `null` όταν η
  * επιλογή δεν είναι του ίδιου είδους (δες το φράγμα στην κεφαλίδα).
  *

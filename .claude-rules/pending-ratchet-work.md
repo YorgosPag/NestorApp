@@ -2,6 +2,25 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **Η στοίχιση ως μετατόπιση απαντιέται σε **5** σημεία, σε 3 πλαίσια συντεταγμένων**
+  (μετρημένο 2026-08-04, ADR-753 Φ3, κατά N.0.2). Η ίδια τριάδα περιπτώσεων —
+  `right → -w · center → -w/2 · left → 0` — ζει σε:
+  `rendering/entities/TextRenderer.ts:303` (px) · `systems/explode/explode-text.ts:307` (κόσμος) ·
+  `services/clip/clip-entity.ts:164` (κόσμος) · `text-engine/fonts/glyph-run-draw.ts:88` (px) ·
+  `bim/table/table-text-decoration.ts` → `tableAnchorOffsetMm` (mm).
+  ✅ **Το `bim/table` ενοποιήθηκε στη Φ3** (ήταν δύο σώματα: `tableUnderlineGeometry` +
+  `anchorOffsetMm` στο `table-cell-link-spans.ts`) — αυτό ήταν το «μικρό» κομμάτι και έγινε επί
+  τόπου. Τα υπόλοιπα **4** είναι σε τρία υποσυστήματα (MTEXT renderer, explode, clip, text-engine)
+  και σε **διαφορετικές μονάδες**, άρα η ένωση απαιτεί απόφαση για το πού ζει ο κοινός τύπος και
+  ποιος μετατρέπει ⇒ **>1h / 4+ αρχεία** κατά N.0.2, όχι δουλειά που γίνεται παρεμπιπτόντως.
+  ⚠️ **Το jscpd ΔΕΝ τα πιάνει** (min-tokens 50· είναι μονόγραμμα ternary), άρα το «καθαρό
+  CHECK 3.28» δεν σημαίνει «δεν υπάρχει διπλότυπο» — το βρήκε ανάγνωση, όχι πύλη.
+  **Θεραπεία**: ένας κοινός `anchorOffset(align, advance)` στο `text-engine` (το μόνο σημείο που
+  ήδη το εισάγουν και οι τέσσερις), με τους πέντε καταναλωτές να τον καλούν στις δικές τους
+  μονάδες. **Κίνδυνος αν μείνει**: πέντε σημεία που μπορούν να διαφωνήσουν για το πού αρχίζει ένα
+  κεντραρισμένο κείμενο — ακριβώς η κατηγορία απόκλισης «οθόνη ≠ αρχείο» που το ADR-739 Φ.Δ βήμα 8
+  πλήρωσε μία φορά ήδη.
+
 - 🟡 **`namespace-manifest.json`: 17 namespaces χωρίς εγγραφή governance** (μετρημένο 2026-08-04,
   ADR-752 §7, κατά N.0.2). Ο `scripts/validate-i18n-manifest.js` βγάζει **3 σφάλματα** —
   `Manifest/locales drift`, `Manifest/lazy-config drift`, `Manifest/generated-types drift` — και

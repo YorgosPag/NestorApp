@@ -107,6 +107,25 @@ export function setAxisStyleField<K extends TableAxisStyleKey>(
 }
 
 /**
+ * 🔴 ADR-739 §27.17 — **η ίδια εγγραφή σε ΟΛΟΥΣ τους επιλεγμένους άξονες**, ως μία μεταβολή.
+ *
+ * Καμία δεύτερη υλοποίηση: αναδίπλωση πάνω σε ό,τι γράφει έναν άξονα. Οι ταυτότητες δεν
+ * αλλάζουν όταν γράφεται ο γείτονας, άρα η σειρά είναι αδιάφορη.
+ *
+ * 🔑 **Η εγγύηση by-reference επιβιώνει και στον πληθυντικό**: αν κανένας άξονας δεν αλλάξει
+ * (πατάς «Β» σε τρεις ήδη έντονες στήλες), κάθε βήμα επιστρέφει το ίδιο αντικείμενο και το
+ * τελικό αποτέλεσμα είναι **ταυτοτικά** το αρχικό μοντέλο ⇒ καμία εντολή, κανένα βήμα undo.
+ * Μια υλοποίηση με `map`/`slice` θα την είχε καταστρέψει σιωπηλά.
+ */
+export function writeEachAxis(
+  model: PersistedTableModel,
+  ids: readonly string[],
+  write: (model: PersistedTableModel, id: string) => PersistedTableModel,
+): PersistedTableModel {
+  return ids.reduce((next, id) => write(next, id), model);
+}
+
+/**
  * Σβήνει **ολόκληρη** την παράκαμψη ενός άξονα — το «Επαναφορά στο στυλ» του toolbar.
  *
  * Είναι το `ByLayer` του AutoCAD και το «By Category» του Revit σε κουμπί: το Excel δεν έχει
@@ -139,6 +158,26 @@ export function hasAxisStyleOverride(
   id: string,
 ): boolean {
   return axisItems(model, axis).find((item) => item.id === id)?.styleOverride !== undefined;
+}
+
+/**
+ * ADR-739 §27.17 — το ίδιο για **πολλούς**: `some`, όχι `every`.
+ *
+ * Η ερώτηση του κουμπιού είναι «**υπάρχει τι να επαναφερθεί;**». Με τρεις στήλες όπου μόνο η
+ * μία δηλώνει κάτι ρητά, η απάντηση είναι **ναι** — και το πάτημα θα την καθαρίσει. Ένα
+ * `every` θα άφηνε το κουμπί ανενεργό πάνω σε πίνακα που έχει σαφώς παρακάμψεις, δηλαδή θα
+ * έκρυβε τη μόνη διέξοδο επιστροφής στο στυλ.
+ *
+ * ⚠️ Είναι **άλλη** ερώτηση από το `overridden` του {@link resolveAxesFormat} (εκεί: `every`
+ * — «το βλέπεις επειδή το ζήτησες **εσύ**»). Δύο ερωτήσεις, δύο απαντήσεις, καμία σύγχυση:
+ * η μία οδηγεί **ενέργεια**, η άλλη **ένδειξη**.
+ */
+export function hasAnyAxisStyleOverride(
+  model: PersistedTableModel,
+  axis: TableStyleAxis,
+  ids: readonly string[],
+): boolean {
+  return ids.some((id) => hasAxisStyleOverride(model, axis, id));
 }
 
 /**
@@ -197,6 +236,56 @@ export function resolveAxisFormat<K extends TableAxisStyleKey>(
     mixed,
     overridden: anchor.styleOverride?.[key] !== undefined,
   };
+}
+
+/**
+ * 🔴 ADR-739 §27.17 — **η ίδια ερώτηση για ΟΛΟΥΣ τους επιλεγμένους άξονες.**
+ *
+ * Το `TableAxisFormatState` απαντούσε ήδη «συμφωνούν τα κελιά **ενός** άξονα;». Με τρεις
+ * στήλες μαρκαρισμένες η ερώτηση γίνεται «συμφωνούν τα κελιά **και οι τρεις μεταξύ τους**;» —
+ * και είναι **η ίδια** ερώτηση, ένα επίπεδο πάνω. Γι' αυτό δεν υπάρχει δεύτερος τύπος: η
+ * συνάθροιση παράγει ένα κανονικό `TableAxisFormatState`, που το toolbar ήδη ξέρει να δείχνει
+ * (`mixed` = Figma «Mixed», Revit «<varies>»).
+ *
+ * ## Οι τρεις κανόνες
+ * | πεδίο | κανόνας | γιατί |
+ * |---|---|---|
+ * | `value` | κοινή τιμή, αλλιώς `undefined` | ό,τι βλέπει ο χρήστης, μόνο αν το βλέπει παντού |
+ * | `mixed` | **οποιοσδήποτε** μεικτός ή διαφωνία | μία διαφωνία αρκεί για να μην υπάρχει «η» τιμή |
+ * | `overridden` | **όλοι** το δηλώνουν ρητά | ο δείκτης λέει «το ζήτησες **εσύ**» — με έναν στους τρεις, δεν ισχύει |
+ *
+ * ⚠️ Το `overridden` είναι `every` ενώ το {@link hasAnyAxisStyleOverride} είναι `some`, και
+ * **δεν** είναι ασυνέπεια: το πρώτο απαντά «τι βλέπω», το δεύτερο «τι θα σβήσει το κουμπί».
+ *
+ * Άξονες που δεν βρέθηκαν **προσπερνιούνται** (μπαγιάτικη ταυτότητα μετά από undo) αντί να
+ * μηδενίσουν την απάντηση· `null` μόνο όταν δεν επιβίωσε **κανείς** — ίδια σύμβαση με το
+ * {@link resolveAxisFormat}, ώστε ο καλών να μη μάθει δεύτερο κανόνα.
+ */
+export function resolveAxesFormat<K extends TableAxisStyleKey>(
+  model: PersistedTableModel,
+  style: TableStyle,
+  axis: TableStyleAxis,
+  ids: readonly string[],
+  key: K,
+): TableAxisFormatState<TableCellStyle[K]> | null {
+  let combined: TableAxisFormatState<TableCellStyle[K]> | null = null;
+
+  for (const id of ids) {
+    const state = resolveAxisFormat(model, style, axis, id, key);
+    if (!state) continue;
+    if (!combined) {
+      combined = state;
+      continue;
+    }
+    const agree = !combined.mixed && !state.mixed && combined.value === state.value;
+    combined = {
+      value: agree ? combined.value : undefined,
+      mixed: !agree,
+      overridden: combined.overridden && state.overridden,
+    };
+  }
+
+  return combined;
 }
 
 /**

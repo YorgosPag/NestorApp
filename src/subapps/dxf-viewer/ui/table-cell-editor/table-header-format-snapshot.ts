@@ -1,6 +1,13 @@
 /**
- * ADR-739 Φ.Ε — **τι δείχνει το mini toolbar** για έναν άξονα: η κατάσταση κάθε χειριστηρίου,
- * απαντημένη μία φορά ανά άνοιγμα ή πάτημα. Καθαρές συναρτήσεις, μηδέν React, μηδέν DOM.
+ * ADR-739 Φ.Ε — **τι δείχνει το mini toolbar** για τους επιλεγμένους άξονες: η κατάσταση κάθε
+ * χειριστηρίου, απαντημένη μία φορά ανά άνοιγμα ή πάτημα. Καθαρές συναρτήσεις, μηδέν React,
+ * μηδέν DOM.
+ *
+ * ## 🔴 §27.17 — ΠΟΛΛΟΙ άξονες, Η ΙΔΙΑ ερώτηση
+ * Κάθε ανάγνωση εδώ ρωτούσε **έναν** άξονα (`id`)· τώρα ρωτά **όλους τους επιλεγμένους**
+ * (`ids`). Δεν χρειάστηκε νέος τύπος: η συνάθροιση (`resolveAxesFormat`) παράγει το ίδιο
+ * `TableAxisFormatState`, όπου το `mixed` σημαίνει πλέον «δεν συμφωνούν τα κελιά **όλων**» —
+ * ακριβώς ό,τι ήξερε ήδη να δείχνει το toolbar (Figma «Mixed», Revit «varies»).
  *
  * ## Γιατί ξεχωριστό αρχείο
  * Ζούσαν μέσα στο `use-table-header-menu.ts` ως «Καθαροί βοηθοί». Δεν είναι hook τίποτα από
@@ -22,9 +29,10 @@
  */
 
 import {
-  hasAxisStyleOverride,
-  resolveAxisFormat,
+  hasAnyAxisStyleOverride,
+  resolveAxesFormat,
   setAxisStyleField,
+  writeEachAxis,
   type TableStyleAxis,
 } from '../../bim/table/table-axis-style-ops';
 import { collectDrawingColors } from '../../bim/table/table-drawing-colors';
@@ -43,7 +51,14 @@ export interface FormatTarget {
   readonly model: PersistedTableModel;
   readonly style: TableStyle;
   readonly axis: TableStyleAxis;
-  readonly id: string;
+  /**
+   * 🔴 ADR-739 §27.17 — **όλοι** οι επιλεγμένοι άξονες, όχι μόνο αυτός που πατήθηκε.
+   *
+   * Στην πράξη ποτέ κενός (τον γεννά το `TableAxisActionTarget`, που έχει πάντα τουλάχιστον
+   * τον έναν), αλλά οι αναγνώσεις το αντέχουν: κενή λίστα ⇒ `null` ⇒ σβηστά χειριστήρια,
+   * ποτέ μαντεψιά.
+   */
+  readonly ids: readonly string[];
   /** Τα χρώματα των layers της σκηνής — η τρίτη πηγή των «χρωμάτων του σχεδίου». */
   readonly layerColors: readonly string[];
 }
@@ -92,7 +107,7 @@ export function resolveAxisFormatSnapshot(target: FormatTarget | null): TableAxi
     underline: toggleStateOf(target, 'underline'),
     textColor: axisColorStateOf(target, 'textColorHex', 'ink'),
     fillColor: axisColorStateOf(target, 'fillColorHex', 'fill'),
-    canReset: hasAxisStyleOverride(target.model, target.axis, target.id),
+    canReset: hasAnyAxisStyleOverride(target.model, target.axis, target.ids),
   };
 }
 
@@ -138,10 +153,14 @@ function axisColorStateOf(
   key: 'textColorHex' | 'fillColorHex',
   role: PlotColorRole,
 ): TableAxisColorState {
-  const { model, style, axis, id, layerColors } = target;
-  const state = resolveAxisFormat(model, style, axis, id, key);
-  const withoutOverride = setAxisStyleField(model, axis, id, key, undefined);
-  const inherited = resolveAxisFormat(withoutOverride, style, axis, id, key);
+  const { model, style, axis, ids, layerColors } = target;
+  const state = resolveAxesFormat(model, style, axis, ids, key);
+  // 🔴 §27.17 — η παράκαμψη αφαιρείται από **όλους** τους επιλεγμένους, όχι από έναν: το
+  // δείγμα δίπλα στο «Αυτόματο» δείχνει **τι θα συμβεί αν πατηθεί**, και το πάτημα καθαρίζει
+  // τους πάντες. Με έναν μόνο, η πρόβλεψη θα ήταν λάθος για τους υπόλοιπους.
+  const withoutOverride = writeEachAxis(model, ids, (next, axisId) =>
+    setAxisStyleField(next, axis, axisId, key, undefined));
+  const inherited = resolveAxesFormat(withoutOverride, style, axis, ids, key);
 
   return {
     current: state?.value,
@@ -161,7 +180,7 @@ function axisColorStateOf(
  * έλεγε «όχι έντονα» για στήλη που το στυλ της γράφει έντονη — ψέμα για ό,τι είναι στην οθόνη.
  */
 function toggleStateOf(target: FormatTarget, key: TableToggleFormatKey): TableToggleFormatState {
-  const state = resolveAxisFormat(target.model, target.style, target.axis, target.id, key);
+  const state = resolveAxesFormat(target.model, target.style, target.axis, target.ids, key);
   if (!state) return EMPTY_TOGGLE;
   return { active: state.value === true, mixed: state.mixed, explicit: state.overridden };
 }
