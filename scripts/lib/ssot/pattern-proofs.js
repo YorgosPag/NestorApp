@@ -469,6 +469,34 @@ props.onExtend = extendTableSelectionTo;`,
   // the SSoT functions). Without an executed proof they would be dormant guards —
   // and CLAUDE.md N.12 records that 606 of 671 patterns already are. These fixtures
   // are what makes the difference between "clean" and "nobody looked".
+  'millesimal-apportionment': {
+    shouldMatch: `// (α) Η ΑΝΑ-ΓΡΑΜΜΗ μετατροπή ποσοστού σε χιλιοστά — αυτή ακριβώς έγραφε 999‰:
+allocatedShares: Math.round((o.ownershipPct / 100) * TOTAL_SHARES_TARGET),
+const shares = Math.round((pct / 100) * 1000);
+const m = Math.round( entry.landOwnershipPct / 100 * 1000 );
+// (β) δεύτερο σώμα για ερώτημα που ο SSoT ήδη απαντά:
+export function apportionLargestRemainder(values, target) {}
+export function allocateMillesimalsFromPercentages(percentages) {}`,
+    shouldSkip: `// Κανονική χρήση — με εισαγωγή, ποτέ ξαναγραμμένη:
+import { allocateMillesimalsFromPercentages } from '@/lib/ownership/millesimal-apportionment';
+const shares = allocateMillesimalsFromPercentages(owners.map(o => o.ownershipPct));
+const [only] = allocateMillesimalsFromPercentages([pct]);
+
+// 🔑 Ο ΝΟΜΙΜΟΣ ΚΑΤΑΝΑΛΩΤΗΣ: η μηχανή πινάκων προσθέτει ΜΟΝΟ την πολιτική του ελαχίστου
+// πάνω στον κοινό πυρήνα — δεν ξαναγράφει τον αλγόριθμο, άρα δεν πρέπει να πιάνεται.
+const allocated = apportionLargestRemainder(rawShares, target);
+const result = allocated.map(s => Math.max(s, MIN_SHARES_PER_ROW));
+
+// Στρογγυλοποιήσεις ποσοστών που ΔΕΝ είναι χιλιοστά: άλλος παρονομαστής, άλλη ερώτηση.
+const pctRounded = Math.round((value / 100) * 10) / 10;
+const bytes = Math.round((used / 100) * quotaMb);
+const progress = Math.round((done / total) * 100);
+const asPercent = Math.round(ratio * 100);
+
+// Αναφορά στον κανόνα χωρίς δεύτερη υλοποίηση:
+const isFullyDeclared = sum(shares) === TOTAL_SHARES_TARGET;`,
+  },
+
   'text-horizontal-anchor': {
     shouldMatch: `// (a) η τριάδα ξαναγραμμένη με το ΚΕΝΤΡΟ πρώτο (μορφή renderer / explode / clip):
 const xOff = align === 'center' ? -lineWidthPx / 2 : align === 'right' ? -lineWidthPx : 0;

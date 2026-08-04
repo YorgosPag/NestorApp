@@ -180,6 +180,46 @@
 
 > **Largest Remainder Method** (μέθοδος Hamilton): Εξασφαλίζει δίκαιη κατανομή στρογγυλοποίησης. Χρησιμοποιείται και σε εκλογικά συστήματα (αναλογική εκπροσώπηση).
 
+#### 4.2.1 Πού ζει ο αλγόριθμος — και γιατί οι δύο πολιτικές δεν ενώνονται (2026-08-05)
+
+**SSoT**: `src/lib/ownership/millesimal-apportionment.ts`
+- `apportionLargestRemainder(values, target)` — ο κοινός αλγόριθμος Hamilton.
+- `allocateMillesimalsFromPercentages(percentages)` — η πολιτική των **οικοπεδούχων**.
+
+Η `roundWithLargestRemainder` της μηχανής **δεν** είναι διπλότυπο: είναι ο καταναλωτής του
+πυρήνα **συν** την πολιτική `MIN_SHARES_PER_ROW`. Το όνομα, η υπογραφή και η συμπεριφορά της
+μένουν αμετάβλητα.
+
+**Δύο ερωτήσεις που μοιάζουν ίδιες και δεν είναι** — αυτή είναι η ουσία της παραγράφου:
+
+| | Ερώτηση | Το σύνολο | Ελάχιστο ανά γραμμή |
+|---|---|---|---|
+| Πίνακας ιδιοκτησίας | «μοίρασε **αυτά τα 1000‰** στις οριζόντιες ιδιοκτησίες» | **δίνεται** (οι εισροές είναι τ.μ. / αξίες, δεν κουβαλούν σύνολο) ⇒ η κανονικοποίηση είναι το ζητούμενο | **ναι** — κάθε συμμετέχουσα ιδιοκτησία κατέχει ≥1‰ |
+| Οικοπεδούχοι | «σε πόσα ‰ αντιστοιχεί το ποσοστό που **δήλωσε ο χρήστης**» | **δεν δίνεται** — είναι η δήλωση ⇒ κανονικοποίηση = **εφεύρεση δεδομένων** | **όχι** — 0% σημαίνει 0‰ |
+
+🔴 **Η προφανής «διόρθωση» είναι λάθος και μετρήθηκε.** Το να καλέσει ο γραφέας των οικοπεδούχων
+`roundWithLargestRemainder(raw, 1000)` κάνει **έναν** οικοπεδούχο με 33,33% ιδιοκτήτη **ολόκληρου**
+του οικοπέδου (1000‰). Η γραμμή είναι προσβάσιμη: το `isOwnersValid` (`lib/ownership/owner-utils.ts`)
+περνά μονό ιδιοκτήτη **χωρίς να κοιτάξει καθόλου το ποσοστό**, και το `OwnersList` με `allowEmpty`
+δείχνει το πεδίο % ακόμη και σε μονή γραμμή. Ημιτελής δήλωση (50% + 30%) οφείλει να μένει **800‰**·
+η πληρότητα είναι δήλωση του χρήστη, όχι δική μας.
+
+**Η εγγύηση που το άθροισμα ΔΕΝ δίνει**: στρογγυλοποίηση κάθε γραμμής στο *πλησιέστερο* (αντί για
+`floor` + υπόλοιπα) πέφτει κι αυτή στα 1000‰ αφού κοπεί η υπέρβαση — αφαιρώντας όμως **2‰ από έναν
+ιδιοκτήτη** (έξι ίσα έκτα ⇒ `165/167/167/167/167/167`). Γι' αυτό η **δικαιοσύνη** ελέγχεται χωριστά
+από το σύνολο: *δύο ίσες εισροές δεν διαφέρουν ποτέ πάνω από 1‰.* Το βρήκε μετάλλαξη, όχι ανάγνωση.
+
+**Ισοπαλίες**: σπάνε ρητά προς τη **μικρότερη θέση**, όχι με εμπιστοσύνη στη σταθερότητα του
+`Array.prototype.sort` — τα νούμερα τυπώνονται σε συμβολαιογραφική πράξη, άρα η ίδια είσοδος πρέπει
+να δίνει την ίδια πράξη σε κάθε εκτέλεση.
+
+**Δίχτυ**: `src/services/ownership/__tests__/round-with-largest-remainder.test.ts` (18 —
+χαρακτηρισμός της μηχανής **πριν** την εξαγωγή, μένει αναλλοίωτο ⇒ αποδεικνύει μηδενική αλλαγή
+συμπεριφοράς) + `src/lib/ownership/__tests__/millesimal-apportionment.test.ts` (17 αξιώσεις τιμής).
+Επαληθευμένο με μεταλλάξεις: **6/6** στη μηχανή, **7/7** στον νέο κώδικα, M0 πράσινο.
+Φρουρός: module `millesimal-apportionment` στο `.ssot-registry.json` (μηδενική ανοχή, με
+απόδειξη ζωής στο `scripts/lib/ssot/pattern-proofs.js`· μετρημένα **0 ψευδώς θετικά** σε όλο το `src`).
+
 ---
 
 ## 5. Συντελεστές Κατανομής
@@ -716,3 +756,4 @@ ownership_tables/
 | 2026-03-15 | Initial ADR creation — Documentation only | Claude Code + Γιώργος |
 | 2026-04-07 | Enterprise ID SSoT: Migrated ID generation from inline `ownership_{projectId}` to centralized `generateOwnershipTableId()` + `generateOwnershipRevisionId()` in `enterprise-id.service.ts`. Prefix `owntbl` registered. ADR-017 compliance. | Claude Code |
 | 2026-03-16 | Phase 1+2 IMPLEMENTED: Types, Calculation Engine (3 methods + Largest Remainder), Firestore CRUD service, Hook, UI Tab with auto-populate, inline edit, finalize/unlock, revision history. New files: `src/types/ownership-table.ts`, `src/services/ownership/` (3 files), `src/hooks/ownership/useOwnershipTable.ts`, `src/components/projects/tabs/OwnershipTableTab.tsx`. Modified: `firestore-collections.ts`, `project-tabs-config.ts`, `projectMappings.ts`, `property-statuses-enterprise.ts`, i18n (el+en). | Claude Code |
+| 2026-08-05 | **§4.2.1 — ΣΦΑΛΜΑ ΤΙΜΗΣ: 999‰ αντί 1000‰ στους οικοπεδούχους.** Το `toLandownerEntries` στρογγυλοποιούσε `Math.round(pct/100*1000)` **ανά γραμμή**, οπότε τρία αδέλφια με ένα τρίτο το καθένα γράφονταν στο Firestore ως 333+333+333 = **999‰**. Ο αλγόριθμος Hamilton **εξήχθη** από την `roundWithLargestRemainder` στη νέα SSoT `src/lib/ownership/millesimal-apportionment.ts` (`apportionLargestRemainder` = πυρήνας· `allocateMillesimalsFromPercentages` = πολιτική οικοπεδούχων). Η μηχανή κρατά **μόνο** την πολιτική `MIN_SHARES_PER_ROW` — όνομα, υπογραφή και συμπεριφορά αμετάβλητα, αποδεδειγμένα από 18 tests χαρακτηρισμού γραμμένα **πριν** το refactor. ⚠️ Η θεραπεία που πρότεινε το `pending-ratchet-work.md` («κάλεσε τον υπάρχοντα `roundWithLargestRemainder`») **απορρίφθηκε μετά από μέτρηση**: θα έκανε έναν οικοπεδούχο με 33,33% ιδιοκτήτη ολόκληρου του οικοπέδου. Νέα αρχεία: `lib/ownership/millesimal-apportionment.ts` + 2 σουίτες (35 tests). Μητρώο SSoT: module `millesimal-apportionment` με απόδειξη ζωής. Μεταλλάξεις 6/6 + 7/7, M0 πράσινο. **Δεν χρειάζεται μετανάστευση δεδομένων**: το `allocatedShares` είναι παράγωγο, κανένας κώδικας εκτέλεσης δεν το διαβάζει (επαληθεύτηκε· η `calculateBartexSummary` δεν καλείται από πουθενά) και ξαναγράφεται σε κάθε αποθήκευση. | Claude Opus 5 |

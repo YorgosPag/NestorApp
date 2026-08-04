@@ -10,6 +10,7 @@ import {
   isAcquisitionStatus,
   summarizeAcquisition,
 } from '@/lib/ownership/landowner-acquisition';
+import { allocateMillesimalsFromPercentages } from '@/lib/ownership/millesimal-apportionment';
 import { ACQUISITION_STATUSES, type LandownerEntry } from '@/types/ownership-table';
 
 function entry(
@@ -21,7 +22,8 @@ function entry(
     contactId,
     name: contactId,
     landOwnershipPct: pct,
-    allocatedShares: Math.round((pct / 100) * 1000),
+    // Through the SSoT, not a copy of its formula (see millesimal-apportionment).
+    allocatedShares: allocateMillesimalsFromPercentages([pct])[0],
     ...(acquisitionStatus ? { acquisitionStatus } : {}),
   };
 }
