@@ -37,6 +37,10 @@ import type {
   TableTextRun,
 } from './table-layout-types';
 import { tableUnderlineGeometry } from './table-text-decoration';
+// 🔴 Η ΙΔΙΑ ερώτηση με τον ζωγράφο του καμβά, από το ΙΔΙΟ σημείο: αν οθόνη και χαρτί
+// απαντούσαν χωριστά «είναι ΟΛΟ το κελί σύνδεσμος;», θα μπορούσαν κάποτε να διαφωνήσουν.
+import { wholeRunLink } from './table-cell-link-spans';
+import { TABLE_CELL_LINK } from '../../config/color-config';
 
 /** Πού κάθεται η πάνω-αριστερή γωνία του πίνακα μέσα στο φύλλο (sheet-mm). */
 export interface TableOriginMm {
@@ -56,7 +60,10 @@ function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitiv
     position: translate(run.position, origin),
     text: run.text,
     heightMm: run.heightMm,
-    colorHex: run.colorHex,
+    // ADR-751 — κελί που είναι ΟΛΟ διεύθυνση βγαίνει μπλε **και σε χαρτί**: ο σύνδεσμος είναι
+    // περιεχόμενο, όχι διεπαφή, και ένα τυπωμένο φύλλο ποσοτήτων οφείλει να δείχνει ποια
+    // κελιά είναι στοιχεία επικοινωνίας. Δες `TABLE_CELL_LINK` για το γιατί άλλο μπλε.
+    colorHex: wholeRunLink(run) ? TABLE_CELL_LINK.colorHex : run.colorHex,
     align: run.hAlign,
     bold: run.bold,
     // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — **παρόν μόνο όταν αληθεύει**, όπως το `clipped` και το
@@ -111,18 +118,72 @@ function textPrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitiv
  */
 function underlinePrimitive(run: TableTextRun, origin: TableOriginMm): DetailPrimitive | null {
   if (!run.underline) return null;
-  const g = tableUnderlineGeometry(run.heightMm, run.advanceMm, run.hAlign);
+  return underlineLine(run, origin, run.hAlign, run.advanceMm, 0, run.colorHex);
+}
+
+/**
+ * 🔴 ADR-751 — οι γραμμές των **συνδέσμων** ενός κελιού, σε sheet-mm.
+ *
+ * ## Τι φτάνει στο χαρτί και τι όχι — ρητά
+ * Κελί που είναι **ολόκληρο** διεύθυνση φτάνει πλήρες: μπλε γράμματα (δες `textPrimitive`)
+ * **και** μπλε υπογράμμιση. Σε **μικτό** κείμενο («Τηλ: 2310788493») φτάνει η υπογράμμιση
+ * του τμήματος, αλλά τα γράμματα μένουν στο χρώμα του στυλ.
+ *
+ * Ο περιορισμός είναι πραγματικός και δηλώνεται αντί να κρυφτεί: το `DetailPrimitive` με
+ * `kind: 'text'` κουβαλά **ένα** `colorHex` για όλη τη συμβολοσειρά, και το να σπάσει το
+ * κείμενο σε Ν primitives θα σήμαινε Ν χωριστές κλήσεις σχεδίασης σε **τέσσερα** backends —
+ * δηλαδή θα έχανε το ζεύγος kerning σε κάθε όριο, σε PDF, DXF και ΤΕΚ ταυτόχρονα, για να
+ * κερδίσει χρώμα σε μια περίπτωση που **καμία** εφαρμογή αναφοράς δεν υποστηρίζει: στο Excel
+ * ο υπερσύνδεσμος είναι ιδιότητα **ολόκληρου** του κελιού, ποτέ υποσυμβολοσειράς.
+ *
+ * Άρα η οθόνη είναι πιο εκφραστική από το χαρτί εδώ **κατά σχεδιασμό**, και το χαρτί δεν λέει
+ * ποτέ ψέματα: η υπογράμμιση δείχνει ακριβώς ποιο κομμάτι είναι η διεύθυνση.
+ */
+function linkUnderlinePrimitives(run: TableTextRun, origin: TableOriginMm): DetailPrimitive[] {
+  const links = run.links;
+  if (!links?.length) return [];
+  // Το στυλ υπογραμμίζει ήδη ΟΛΟ το κελί — δεύτερη γραμμή στο ίδιο `y` είναι η ίδια γραμμή.
+  if (run.underline && wholeRunLink(run)) return [];
+
+  const out: DetailPrimitive[] = [];
+  for (const span of links) {
+    // `'left'`: η στοίχιση είναι ήδη διπλωμένη μέσα στο `offsetMm` (δες `table-cell-link-spans`).
+    const line = underlineLine(
+      run, origin, 'left', span.advanceMm, span.offsetMm, TABLE_CELL_LINK.colorHex,
+    );
+    if (line) out.push(line);
+  }
+  return out;
+}
+
+/**
+ * Η ΜΙΑ κατασκευή γραμμής υπογράμμισης — του στυλ και των συνδέσμων.
+ *
+ * Εξήχθη όταν απέκτησε δεύτερο καλούντα (ADR-751): δύο σώματα που μεταφράζουν
+ * `tableUnderlineGeometry` σε `line` primitive θα ήταν sibling clone (N.18 / CHECK 3.28),
+ * και — χειρότερα — δύο σημεία που θα μπορούσαν να διαφωνήσουν για το πού πέφτει η γραμμή.
+ */
+function underlineLine(
+  run: TableTextRun,
+  origin: TableOriginMm,
+  hAlign: TableTextRun['hAlign'],
+  advanceMm: number,
+  offsetMm: number,
+  colorHex: string,
+): DetailPrimitive | null {
+  const g = tableUnderlineGeometry(run.heightMm, advanceMm, hAlign);
   if (!(g.width > 0)) return null;
   const p = translate(run.position, origin);
   const y = p.y + g.y;
+  const x = p.x + g.x + offsetMm;
   return {
     kind: 'line',
-    a: { x: p.x + g.x, y },
-    b: { x: p.x + g.x + g.width, y },
+    a: { x, y },
+    b: { x: x + g.width, y },
     // Το μελάνι της υπογράμμισης είναι το μελάνι του κειμένου — όπως στον καμβά, όπου το
     // `fillRect` κληρονομεί το `ctx.fillStyle` του run, και όπως στο AutoCAD, όπου η γραμμή
     // υπογράμμισης παίρνει το χρώμα του ίδιου του κειμένου.
-    stroke: { colorHex: run.colorHex, widthMm: g.thickness },
+    stroke: { colorHex, widthMm: g.thickness },
   };
 }
 
@@ -260,6 +321,8 @@ export function tableLayoutToPrimitives(
       // ίδια στροφή). Ίδια σειρά ⇒ ίδιο αποτέλεσμα σε ημιδιαφανή μελάνια.
       const underline = underlinePrimitive(cell.text, origin);
       if (underline) out.push(underline);
+      // ADR-751 — και οι γραμμές των διευθύνσεων, με την ίδια λογική σειράς (μετά το κείμενο).
+      out.push(...linkUnderlinePrimitives(cell.text, origin));
     }
   }
 

@@ -82,16 +82,29 @@ export interface RectRecord {
   readonly angleRad: number;
 }
 
+/**
+ * ADR-751 — μια **λωρίδα αποκοπής** (`rect` + `clip`): το εύρος μέσα στο οποίο επιτρέπεται
+ * να βγει το επόμενο μελάνι. Ο σύνδεσμος μέσα σε μικτό κείμενο είναι ο μόνος σημερινός
+ * παραγωγός.
+ */
+export interface ClipRecord {
+  readonly at: { readonly x: number; readonly y: number };
+  readonly widthPx: number;
+  readonly heightPx: number;
+  readonly angleRad: number;
+}
+
 export interface PaintLog {
   readonly fills: string[];
   readonly texts: TextRecord[];
   readonly strokes: StrokeRecord[];
   readonly rects: RectRecord[];
+  readonly clips: ClipRecord[];
 }
 
 /** Καθαρό ημερολόγιο — μία έκφραση, ώστε καμία σουίτα να μην ξεχάσει πεδίο. */
 export function createPaintLog(): PaintLog {
-  return { fills: [], texts: [], strokes: [], rects: [] };
+  return { fills: [], texts: [], strokes: [], rects: [], clips: [] };
 }
 
 /**
@@ -144,6 +157,8 @@ function rotated(m: Affine, angleRad: number): Affine {
 export function createCtx(log: PaintLog): CanvasRenderingContext2D {
   let fillStyle = '';
   let path: Array<{ x: number; y: number }> = [];
+  /** Η λωρίδα που δήλωσε το τελευταίο `rect`, μέχρι να τη ζητήσει ένα `clip`. */
+  let pendingRect: Omit<ClipRecord, 'angleRad'> | null = null;
   // Η στοίβα του `save`/`restore`. Χωρίς αυτήν, ένα `restore()` που ξεχάστηκε στον
   // παραγωγικό κώδικα θα ήταν **αόρατο** στα tests — και είναι ακριβώς το είδος διαρροής
   // που βάφει λοξά κάθε επόμενη οντότητα της σκηνής.
@@ -221,6 +236,17 @@ export function createCtx(log: PaintLog): CanvasRenderingContext2D {
         heightPx: h,
         angleRad: Math.atan2(transform.b, transform.a),
       });
+    },
+    // ADR-751 — το ζεύγος `rect` + `clip` της ζωγραφικής συνδέσμων. Η αποκοπή **δεν**
+    // προσομοιώνεται (ο καταγραφέας δεν έχει καμβά να κόψει· τα `fillText` καταγράφονται
+    // ούτως ή άλλως): καταγράφεται η **λωρίδα που ζητήθηκε**, που είναι το πράγμα υπό
+    // δοκιμή — αν βγει λάθος εύρος, ο σύνδεσμος βάφεται πάνω σε γράμματα που δεν είναι.
+    rect: (x: number, y: number, w: number, h: number): void => {
+      pendingRect = { at: applyTransform(transform, x, y), widthPx: w, heightPx: h };
+    },
+    clip: (): void => {
+      if (pendingRect) log.clips.push({ ...pendingRect, angleRad: Math.atan2(transform.b, transform.a) });
+      pendingRect = null;
     },
     measureText: (text: string): TextMetrics =>
       ({ width: text.length * RECORDER_CHAR_PX }) as TextMetrics,

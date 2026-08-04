@@ -21,15 +21,19 @@
 import {
   stampTableBorders,
   stampTableCellCursor,
+  stampTableModeOutline,
   stampTableFills,
   stampTableText,
   MIN_CELL_TEXT_SCREEN_PX,
   type StampTableContext,
 } from '../stamp-table-layout';
+// ADR-739 §37 — η ΘΕΣΗ του δείκτη έρχεται από τη γεωμετρία· εδώ επαληθεύεται ότι το μελάνι
+// τη ρωτά αντί να τη γράψει δεύτερη φορά.
+import { tableModeOutlineRectMm } from '../../../../bim/table/table-indicator-geometry';
 import { LINETYPE_ISO_CATALOG } from '../../../../config/linetype-iso-catalog';
 import type { TableBorderSegment } from '../../../../bim/table/table-layout-types';
 import { createPaintLog, createRc, paintedInk, type PaintLog } from './table-paint-recorder';
-import { TABLE_CELL_CURSOR } from '../../../../config/color-config';
+import { TABLE_CELL_CURSOR, TABLE_MODE_OUTLINE } from '../../../../config/color-config';
 import type { TableCellLayout } from '../../../../bim/table/table-layout-types';
 import type { TableCellStyle } from '../../../../bim/table/table-style';
 import type { TableColumnId, TableRowId } from '../../../../types/table';
@@ -237,6 +241,84 @@ describe('stampTableCellCursor — το ορθογώνιο του τρέχοντ
     stampTableCellCursor(createRc(log, { phaseColor: PHASE }), RECT);
 
     expect(log.strokes[0].color).toBe(TABLE_CELL_CURSOR.colorHex);
+    expect(log.strokes[0].color).not.toBe(PHASE);
+  });
+});
+
+/**
+ * 🔴 ADR-739 §37 — **ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΛΕΙΤΟΥΡΓΙΑΣ ΔΕΝ ΠΑΤΑ ΠΑΝΩ ΣΤΟΝ ΠΙΝΑΚΑ.**
+ *
+ * Ο δείκτης είχε **μηδέν** tests μέχρι τις 04/08 — και ήταν ακριβώς αυτός που έκρυβε την
+ * περίμετρο. Το ρίσκο που πιάνει το πρώτο test είναι το μόνο που μετρά: κάποιος να
+ * «απλοποιήσει» ξαναδίνοντας στον ζωγράφο το ωμό ορθογώνιο του πλέγματος.
+ *
+ * ⚠️ Η **θέση** δοκιμάζεται εξαντλητικά στο `table-mode-outline-geometry.test.ts` (πένα ×
+ * zoom). Εδώ ελέγχεται μόνο ότι το μελάνι **ρωτά** τη γεωμετρία και δεν την ξαναγράφει.
+ */
+describe('stampTableModeOutline — ο δείκτης «βρίσκεσαι μέσα σε αυτόν τον πίνακα»', () => {
+  const GRID = { x: 0, y: 0, w: 40, h: 16 };
+  const PEN_MM = 0.13;
+
+  it('🔴 χαράσσει ΕΞΩ από το πλέγμα — ποτέ πάνω στην περίμετρό του', () => {
+    const log: PaintLog = createPaintLog();
+    stampTableModeOutline(createRc(log), GRID, PEN_MM);
+
+    const xs = log.strokes[0].points.map((p) => p.x);
+    const ys = log.strokes[0].points.map((p) => p.y);
+    expect(Math.min(...xs)).toBeLessThan(GRID.x);
+    expect(Math.min(...ys)).toBeLessThan(GRID.y);
+    expect(Math.max(...xs)).toBeGreaterThan(GRID.x + GRID.w);
+    expect(Math.max(...ys)).toBeGreaterThan(GRID.y + GRID.h);
+  });
+
+  it('🔴 ρωτά τη ΓΕΩΜΕΤΡΙΑ — δεν ξαναγράφει τη μετατόπιση', () => {
+    const log: PaintLog = createPaintLog();
+    const rc = createRc(log);
+    stampTableModeOutline(rc, GRID, PEN_MM);
+
+    const expected = tableModeOutlineRectMm(GRID, rc.pxPerMm, PEN_MM);
+    expect(Math.min(...log.strokes[0].points.map((p) => p.x))).toBeCloseTo(expected.x);
+    expect(Math.min(...log.strokes[0].points.map((p) => p.y))).toBeCloseTo(expected.y);
+  });
+
+  it('παχύτερο μολύβι περιμέτρου ⇒ ΜΕΓΑΛΥΤΕΡΟ ορθογώνιο (η κλάση, όχι το δείγμα)', () => {
+    const thin: PaintLog = createPaintLog();
+    const thick: PaintLog = createPaintLog();
+    stampTableModeOutline(createRc(thin), GRID, PEN_MM);
+    stampTableModeOutline(createRc(thick), GRID, 1);
+
+    expect(Math.min(...thick.strokes[0].points.map((p) => p.x))).toBeLessThan(
+      Math.min(...thin.strokes[0].points.map((p) => p.x)),
+    );
+  });
+
+  it('είναι ΔΙΑΚΕΚΟΜΜΕΝΟ και στο χρώμα/πάχος του δρομέα — «εδώ βρίσκεσαι» vs «εδώ πάει το πλήκτρο»', () => {
+    const log: PaintLog = createPaintLog();
+    stampTableModeOutline(createRc(log), GRID, PEN_MM);
+
+    expect(log.strokes[0].dashPx).toEqual([...TABLE_MODE_OUTLINE.dashPx]);
+    expect(log.strokes[0].color).toBe(TABLE_CELL_CURSOR.colorHex);
+    expect(log.strokes[0].lineWidth).toBe(TABLE_CELL_CURSOR.lineWidthPx);
+  });
+
+  it('περνά και τις ΤΕΣΣΕΡΙΣ γωνίες από το `toScreen` — ο πίνακας περιστρέφεται', () => {
+    const log: PaintLog = createPaintLog();
+    const rc = createRc(log, { toScreen: (u, v) => ({ x: -v, y: u }) });
+    stampTableModeOutline(rc, GRID, PEN_MM);
+
+    const r = tableModeOutlineRectMm(GRID, rc.pxPerMm, PEN_MM);
+    expect(log.strokes[0].points).toEqual([
+      { x: -r.y, y: r.x },
+      { x: -r.y, y: r.x + r.w },
+      { x: -(r.y + r.h), y: r.x + r.w },
+      { x: -(r.y + r.h), y: r.x },
+    ]);
+  });
+
+  it('ΔΕΝ δέχεται το χρώμα φάσης — δείκτης διεπαφής, όχι κατάσταση οντότητας', () => {
+    const log: PaintLog = createPaintLog();
+    stampTableModeOutline(createRc(log, { phaseColor: PHASE }), GRID, PEN_MM);
+
     expect(log.strokes[0].color).not.toBe(PHASE);
   });
 });

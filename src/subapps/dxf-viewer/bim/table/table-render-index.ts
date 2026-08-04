@@ -36,6 +36,37 @@ export interface TableRenderIndex {
   readonly verticals: readonly TableBorderSegment[];
   /** Κελιά ομαδοποιημένα κατά ταυτότητα γραμμής — O(1) από το εύρος ορατών γραμμών. */
   readonly cellsByRowId: ReadonlyMap<string, readonly TableCellLayout[]>;
+  /**
+   * 🔴 ADR-739 §37 — το πάχος του **παχύτερου ορατού** μολυβιού πάνω στην **περίμετρο**, σε
+   * sheet-mm· `0` όταν καμία εξωτερική ακμή δεν ζωγραφίζεται.
+   *
+   * Το καταναλώνει ο δείκτης λειτουργίας, που πρέπει να καθίσει **έξω** από αυτό το μολύβι
+   * ({@link tableModeOutlineOffsetPx}). Ζει εδώ και όχι στον ζωγράφο για δύο λόγους:
+   *
+   *  1. **Κόστος μηδέν.** Το ευρετήριο χτίζεται το πολύ **μία φορά ανά διάταξη** (WeakMap),
+   *     και η μέτρηση χωρά στο πέρασμα που ήδη γίνεται — καμία δεύτερη σάρωση ανά καρέ.
+   *     Ένας πίνακας 500 γραμμών θα πλήρωνε αλλιώς 500 συγκρίσεις × καρέ για μία απάντηση
+   *     που δεν αλλάζει· ακριβώς το σχήμα που ο ADR-735 πλήρωσε σε παραγωγή.
+   *  2. **Μόνο τα ορατά μετράνε.** Ένα αόρατο μολύβι δεν βάφει τίποτα, άρα δεν υπάρχει
+   *     τίποτα να αποφύγει ο δείκτης. Ο έλεγχος `spec.visible` είναι ο **ίδιος** που κάνει
+   *     ο ζωγράφος — μία ερώτηση, μία απάντηση.
+   */
+  readonly perimeterMaxWidthMm: number;
+}
+
+/**
+ * Ανοχή ταύτισης με τις ακμές της διάταξης, σε **sheet-mm**.
+ *
+ * Οι συντεταγμένες της περιμέτρου γεννιούνται από αθροίσεις πλατών/υψών, οπότε μια ωμή
+ * σύγκριση `=== widthMm` μπορεί να αστοχήσει σε ένα ulp — και η αστοχία θα ήταν **σιωπηλή
+ * και επικίνδυνη**: ο δείκτης θα υπολόγιζε «καμία περίμετρος» και θα ξανακάθονταν πάνω στη
+ * γραμμή. Ένα νανόμετρο είναι ασύγκριτα μικρότερο από κάθε εσωτερικό όριο που μπορεί να
+ * υπάρξει, άρα δεν μπορεί να μπερδέψει εσωτερική γραμμή με ακμή.
+ */
+const PERIMETER_EPSILON_MM = 1e-6;
+
+function isOnEdge(value: number, extent: number): boolean {
+  return Math.abs(value) <= PERIMETER_EPSILON_MM || Math.abs(value - extent) <= PERIMETER_EPSILON_MM;
 }
 
 const INDEX_CACHE = new WeakMap<TableLayout, TableRenderIndex>();
@@ -47,9 +78,20 @@ export function tableRenderIndex(layout: TableLayout): TableRenderIndex {
 
   const horizontals: TableBorderSegment[] = [];
   const verticals: TableBorderSegment[] = [];
+  let perimeterMaxWidthMm = 0;
   for (const segment of layout.borders) {
-    if (segment.a.y === segment.b.y) horizontals.push(segment);
+    const horizontal = segment.a.y === segment.b.y;
+    if (horizontal) horizontals.push(segment);
     else verticals.push(segment);
+    // ADR-739 §37 — η μέτρηση της περιμέτρου χωρά στο πέρασμα που ήδη γίνεται. Οριζόντια
+    // ακμή = πάνω/κάτω πλευρά· κατακόρυφη = αριστερή/δεξιά.
+    if (!segment.spec.visible) continue;
+    const onPerimeter = horizontal
+      ? isOnEdge(segment.a.y, layout.heightMm)
+      : isOnEdge(segment.a.x, layout.widthMm);
+    if (onPerimeter && segment.spec.widthMm > perimeterMaxWidthMm) {
+      perimeterMaxWidthMm = segment.spec.widthMm;
+    }
   }
   // Το στάδιο περιγραμμάτων τα εκπέμπει ήδη αύξοντα, αλλά η ταξινόμηση εδώ κάνει το
   // συμβόλαιο **τοπικό**: η δυαδική αναζήτηση παρακάτω δεν εξαρτάται από τη σειρά
@@ -63,7 +105,7 @@ export function tableRenderIndex(layout: TableLayout): TableRenderIndex {
     else cellsByRowId.set(cell.rowId, [cell]);
   }
 
-  const index: TableRenderIndex = { horizontals, verticals, cellsByRowId };
+  const index: TableRenderIndex = { horizontals, verticals, cellsByRowId, perimeterMaxWidthMm };
   INDEX_CACHE.set(layout, index);
   return index;
 }
