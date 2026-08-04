@@ -72,7 +72,7 @@ export interface TableUnderlineGeometry {
  * το `ctx.textAlign` του καμβά **και** με το `anchorXMm` της διάταξης, ώστε η γραμμή να
  * ακολουθεί τη στοίχιση χωρίς δεύτερο ternary σε κάθε καταναλωτή. Το «πού ξεκινούν τα
  * γράμματα» το απαντά το {@link anchorOffset} — το ΙΔΙΟ SSoT με τον renderer, το explode και
- * το clip (ADR-753 Φ4). Εδώ ζούσε ως ιδιωτικό `tableAnchorOffsetMm`: η Φ3 ένωσε τα δύο
+ * το clip (ADR-753 §21). Εδώ ζούσε ως ιδιωτικό `tableAnchorOffsetMm`: η Φ3 ένωσε τα δύο
  * σώματα του `bim/table`, η Φ4 τα ένωσε και με τα τέσσερα έξω από αυτό.
  */
 export function tableUnderlineGeometry(

@@ -54,7 +54,7 @@ import {
 import {
   anchorBandFraction, baselineOffsetFromAnchor, measureTextGlyphInk,
 } from '../../text-engine/fonts/text-vertical-metrics';
-// ADR-753 Φ4 — ΤΟ ΙΔΙΟ βήμα με το `paintLayoutLines`: η γεωμετρία που παράγει το explode
+// ADR-753 §21 — ΤΟ ΙΔΙΟ βήμα με το `paintLayoutLines`: η γεωμετρία που παράγει το explode
 // οφείλει να ξεκινά στο ίδιο σημείο με τα γράμματα που βλέπει ο χρήστης.
 import { anchorOffset } from '../../text-engine/fonts/text-horizontal-anchor';
 import { TEXT_DECORATION_RATIOS } from '../../config/text-rendering-config';

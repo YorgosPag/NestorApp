@@ -10,7 +10,7 @@
  * (screen px, world units, sheet mm). ⚠️ It does NOT convert: a caller holding mm and drawing
  * in px multiplies at ITS OWN boundary, exactly as before.
  *
- * WHY (ADR-753 Φ4): the identical case triad — `right → -advance · center → -advance/2 ·
+ * WHY (ADR-753 §21): the identical case triad — `right → -advance · center → -advance/2 ·
  * left → 0` — existed FIVE times, in three frames and two type vocabularies:
  * `TextRenderer.paintLayoutLines` (px), `explode-text.explodeTextEntity` (world),
  * `clip-entity.clipText` (world), `glyph-run-draw.drawGlyphRunToCanvas` (px) and

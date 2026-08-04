@@ -70,9 +70,7 @@ import { resolveMultilineExtentsFromExtra, verticalAnchorToRow } from '../../bim
 // ADR-635 Φ C.26 — decoration rules are calibrated as fractions DOWN from the ascent line, so
 // they must be re-based for the anchor through the same SSoT that places the baseline.
 import { anchorBandFraction, measureTextGlyphInk } from '../../text-engine/fonts/text-vertical-metrics';
-// ADR-753 Φ4 — «πού ξεκινούν τα γράμματα σχετικά με την άγκυρα»: το ΙΔΙΟ SSoT που καλεί το
-// explode, το clip και ο πίνακας, ώστε η οθόνη και το αρχείο να μη διαφωνούν για το πού
-// αρχίζει ένα κεντραρισμένο κείμενο.
+// ADR-753 §21 — «πού ξεκινούν τα γράμματα σχετικά με την άγκυρα»: ΤΟ ΙΔΙΟ SSoT με explode/clip/πίνακα.
 import { anchorOffset, type HorizontalTextAnchor } from '../../text-engine/fonts/text-horizontal-anchor';
 // ADR-557 — the oblique shear SSoT. The box (`text-box.ts`) reads the SAME map (world y-up);
 // this screen-y-DOWN path negates it ONCE (below) — the only place the y-flip lives.

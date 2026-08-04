@@ -31,7 +31,7 @@ import type { ResolvedFont } from './font-resolver';
 // ADR-635 Φ C.26 — the ONE anchor→baseline rule (world y-up), shared with the text box so the
 // glyphs and the rectangle that must hug them cannot answer the question differently.
 import { baselineOffsetFromAnchor } from './text-vertical-metrics';
-// ADR-753 Φ4 — the ONE anchor→left-edge rule, shared with the renderer / explode / clip / table
+// ADR-753 §21 — the ONE anchor→left-edge rule, shared with the renderer / explode / clip / table
 // so «where does a centred string begin» has a single answer across px, world and mm.
 import { anchorOffset, type HorizontalTextAnchor } from './text-horizontal-anchor';
 

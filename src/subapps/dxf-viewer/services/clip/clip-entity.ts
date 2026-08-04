@@ -31,7 +31,7 @@ import type { Point2D } from '../../rendering/types/Types';
 // ADR-737 §18 — SSoT ύψους χαρακτήρα (κουβαλά και το `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE`,
 // γι' αυτό ο τοπικός import της σταθεράς έφυγε μαζί με το αντίγραφο της λογικής).
 import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
-// ADR-753 Φ4 — το ΙΔΙΟ «πού ξεκινούν τα γράμματα» που ρωτούν ο renderer και το explode: ο
+// ADR-753 §21 — το ΙΔΙΟ «πού ξεκινούν τα γράμματα» που ρωτούν ο renderer και το explode: ο
 // αποκοπτόμενος χαρακτήρας πρέπει να είναι εκείνος που φαίνεται μέσα στην περιοχή.
 import { anchorOffset, entityAlignmentToAnchor } from '../../text-engine/fonts/text-horizontal-anchor';
 import type { ClipRegion } from './clip-region';

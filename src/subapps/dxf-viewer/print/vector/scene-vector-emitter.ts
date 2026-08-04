@@ -230,7 +230,7 @@ function emitText(
   // no hint → keep the exact previous behaviour (left / alphabetic), so imported
   // text whose insertion-point semantics we don't own is never mis-placed.
   const baseline = (e as VectorTextBaselineHint).vBaseline;
-  // ADR-753 Φ4 — η ΙΔΙΑ στένωση με το `clip-entity`: το εξαγόμενο PDF και η αποκοπή στην οθόνη
+  // ADR-753 §21 — η ΙΔΙΑ στένωση με το `clip-entity`: το εξαγόμενο PDF και η αποκοπή στην οθόνη
   // δεν επιτρέπεται να διαφωνούν για το από ποια ακμή απλώνεται ένα κείμενο.
   const align = baseline !== undefined ? entityAlignmentToAnchor((e as TextEntity).alignment) : 'left';
   // Το `textStyle.bold` το προβάλλει ΗΔΗ ο `projectSceneTextToDxf` από το πρώτο run του
