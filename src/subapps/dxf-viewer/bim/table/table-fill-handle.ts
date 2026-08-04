@@ -26,7 +26,7 @@
  * @see bim/table/table-fill-apply.ts — τι ΓΙΝΕΤΑΙ το μοντέλο όταν αφεθεί η λαβή
  * @see bim/table/table-cell-range.ts — ο ΕΝΑΣ ορισμός του «ορθογώνιο κελιών»
  * @see bim/table/table-indicator-cursor-role.ts — ο **11ος ρόλος** δείκτη, που ρωτά από εδώ
- * @see docs/centralized-systems/reference/adrs/ADR-754-table-point-mode.md §13, §15
+ * @see docs/centralized-systems/reference/adrs/ADR-754-table-point-mode.md §13, §14
  */
 
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
@@ -119,7 +119,7 @@ export function isOnTableFillHandle(
  * (`tryTableFillHandleMouseDown`) έγραφαν ο καθένας τη δική του εκδοχή της ίδιας πρότασης, και
  * ο **δείκτης** θα ήταν ο τρίτος. Δύο αντίγραφα των έξι tokens «`selection ?? ενεργό κελί`»
  * **δεν** πιάνονται από το jscpd (κάτω από τα 50 tokens του `.jscpdrc.json`) — ακριβώς το σχήμα
- * που περιγράφει το §14 του ADR-754 για το `cellPairIndices`.
+ * που περιγράφει το §15 του ADR-754 για το `cellPairIndices`.
  *
  * ⚠️ **Και είχαν ήδη αποκλίνει.** Ο ζωγράφος έγραφε `selectionBounds ?? ενεργό κελί`, ο φρουρός
  * `if (selection) return resolveTableSelectionBounds(...)` — δηλαδή με **μπαγιάτικη** επιλογή

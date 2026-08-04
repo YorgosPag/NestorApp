@@ -25,7 +25,7 @@ import {
   isOnTableFillHandle,
   TABLE_FILL_HANDLE_PX,
 } from '../table-fill-handle';
-// 🔴 ADR-754 §15 — ο **11ος ρόλος** δείκτη ζει στο διπλανό module, αλλά η προδιαγραφή του είναι
+// 🔴 ADR-754 §14 — ο **11ος ρόλος** δείκτη ζει στο διπλανό module, αλλά η προδιαγραφή του είναι
 // αυτής της φάσης: δοκιμάζεται εδώ, πάνω στο **ίδιο** 5×5 πλέγμα με τη γεωμετρία που τον τρέφει.
 import { tableIndicatorCursorRoleAtFrame } from '../table-indicator-cursor-role';
 import { tableIndicatorBandsMm } from '../table-indicator-geometry';
@@ -161,6 +161,134 @@ describe('η λαβή κάθεται στην κάτω δεξιά γωνία', (
     expect(isOnTableFillHandle({ u: 20 + 2.5, v: 8 }, handle, PX_PER_MM)).toBe(true);
     // Μακριά: όχι.
     expect(isOnTableFillHandle({ u: 30, v: 8 }, handle, PX_PER_MM)).toBe(false);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🔴 ADR-754 §14 — ο ΕΝΑΣ δρόμος: ποια περιοχή έχει λαβή, και πότε πιάνεται
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Το μοντέλο εργασίας (5×5) — το ζητά μόνο η `tableFillSourceBounds`, για τις ταυτότητες. */
+const MODEL = createTableModel({ columns: COLUMNS, rows: ROWS, cells: [] });
+const cellRef = (row: number, col: number) => ({ rowId: ROWS[row].id, colId: COLUMNS[col].id });
+
+describe('🔴 tableFillSourceBounds — μία απάντηση για ζωγράφο, πάτημα και δείκτη', () => {
+  it('με επιλογή ⇒ τα όρια της επιλογής, αυτούσια', () => {
+    const selection = rect(1, 2, 1, 3);
+    expect(tableFillSourceBounds(MODEL, cellRef(0, 0), selection)).toBe(selection);
+  });
+
+  it('χωρίς επιλογή ⇒ το ενεργό κελί, ως περιοχή 1×1', () => {
+    expect(tableFillSourceBounds(MODEL, cellRef(2, 3), null)).toEqual(rect(2, 2, 3, 3));
+  });
+
+  /**
+   * 🔴 **Η ΑΠΟΚΛΙΣΗ ΠΟΥ ΕΚΛΕΙΣΕ.** Πριν την κεντρικοποίηση, ο ζωγράφος έπεφτε στο ενεργό κελί
+   * όταν η επιλογή δεν λυνόταν (undo / διαγραμμένη γραμμή), ενώ ο φρουρός του πατήματος
+   * επέστρεφε `null` — δηλαδή **λαβή που φαίνεται και δεν πιάνεται**, η ακριβής αστοχία που το
+   * §13.5 απαγορεύει ονομαστικά. Νικά ο ζωγράφος: επιλογή που δεν λύνεται **είναι** καμία
+   * επιλογή, ενώ το ενεργό κελί υπάρχει πάντα.
+   */
+  it('🔴 ΜΠΑΓΙΑΤΙΚΗ επιλογή (άλυτη ⇒ `null`) ⇒ πέφτει στο ενεργό κελί, ΔΕΝ σιωπά', () => {
+    expect(tableFillSourceBounds(MODEL, cellRef(4, 4), null)).toEqual(rect(4, 4, 4, 4));
+  });
+
+  it('ενεργό κελί που δεν υπάρχει πια στο μοντέλο ⇒ null (κανείς δεν μαντεύει)', () => {
+    expect(tableFillSourceBounds(MODEL, { rowId: 'φάντασμα', colId: 'c1' }, null)).toBeNull();
+  });
+});
+
+describe('🔴 tableFillHandleHitAtFrame — ο δείκτης και το πάτημα ρωτούν το ΙΔΙΟ', () => {
+  const SOURCE = rect(0, 0, 0, 0); // το κελί A1 ⇒ λαβή στην κορυφή (20, 8)
+
+  it('πάνω στη λαβή ⇒ χτύπημα, με το ΙΔΙΟ ορθογώνιο που ζωγραφίζεται', () => {
+    const hit = tableFillHandleHitAtFrame(LAYOUT, { u: 20, v: 8 }, PX_PER_MM, SOURCE);
+    expect(hit?.rectMm).toEqual(tableFillHandleRectMm(LAYOUT, SOURCE, PX_PER_MM));
+  });
+
+  it('μέσα στην οπή αλλά έξω από τη ζωγραφιά ⇒ χτύπημα (WCAG 2.5.8)', () => {
+    expect(tableFillHandleHitAtFrame(LAYOUT, { u: 22.5, v: 8 }, PX_PER_MM, SOURCE)).not.toBeNull();
+  });
+
+  it('μακριά ⇒ null', () => {
+    expect(tableFillHandleHitAtFrame(LAYOUT, { u: 30, v: 8 }, PX_PER_MM, SOURCE)).toBeNull();
+  });
+
+  /** 🔑 Η μία γραμμή που κωδικοποιεί το «η λαβή σιωπά σε γραφή» (§13.5, Excel parity). */
+  it('🔑 χωρίς πηγή ⇒ null — καμία λαβή, καμία γεωμετρία', () => {
+    expect(tableFillHandleHitAtFrame(LAYOUT, { u: 20, v: 8 }, PX_PER_MM, null)).toBeNull();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🔴 ADR-754 §14 — ο 11ος ρόλος δείκτη: ο λεπτός μαύρος σταυρός
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('🔴 §14 ο δείκτης της λαβής — και η ΣΕΙΡΑ που τον κάνει ορατό', () => {
+  const BANDS = tableIndicatorBandsMm(PX_PER_MM);
+  const SOURCE = rect(0, 0, 0, 0);
+  /** Η λαβή του A1, ήδη απαντημένη — όπως ακριβώς τη δίνει ο `tableIndicatorProbeAtWorld`. */
+  const hitAt = (u: number, v: number, source: TableCellRangeBounds | null = SOURCE) =>
+    tableFillHandleHitAtFrame(LAYOUT, { u, v }, PX_PER_MM, source);
+
+  it('πάνω στη λαβή ⇒ `fill-handle`', () => {
+    expect(
+      tableIndicatorCursorRoleAtFrame(
+        LAYOUT, { u: 20, v: 8 }, BANDS, null, undefined, null, 'table-mode', null, hitAt(20, 8),
+      ),
+    ).toBe('fill-handle');
+  });
+
+  /**
+   * 🔴 **ΠΡΑΓΜΑΤΙΚΗ ΔΙΕΚΔΙΚΗΣΗ, ΟΧΙ ΔΗΛΩΣΗ.** Η λαβή κάθεται πάνω στην κορυφή του περιγράμματος
+   * της επιλογής, δηλαδή **μέσα** στη ζώνη σύλληψής του. Το ίδιο σημείο, χωρίς την απάντηση της
+   * λαβής, δίνει `range-move` — άρα χωρίς την προτεραιότητα ο χρήστης θα έβλεπε δείκτη
+   * μετακίνησης πάνω σε χερούλι συμπλήρωσης: ο δείκτης θα έλεγε **λάθος** πράγμα, όχι απλώς
+   * τίποτα.
+   */
+  it('🔴 νικά το `range-move` στο ΙΔΙΟ pixel — αλλιώς ο δείκτης λέει λάθος πράγμα', () => {
+    const rangeRect = { x: 0, y: 0, w: 20, h: 8 };
+    const args = [LAYOUT, { u: 20, v: 8 }, BANDS, rangeRect] as const;
+    expect(tableIndicatorCursorRoleAtFrame(...args)).toBe('range-move');
+    expect(
+      tableIndicatorCursorRoleAtFrame(...args, undefined, null, 'table-mode', null, hitAt(20, 8)),
+    ).toBe('fill-handle');
+  });
+
+  /**
+   * 🔴 **ΠΑΝΩ ΑΠΟ ΤΟΝ ΦΥΛΑΚΑ `insideGrid`, ΚΑΙ ΕΙΝΑΙ ΟΥΣΙΩΔΕΣ.** Η λαβή είναι κεντραρισμένη στην
+   * κορυφή, άρα **μισή έξω** από το πλέγμα εξ ορισμού· όταν η επιλογή αγγίζει την τελευταία
+   * στήλη —η συνηθέστερη συμπλήρωση όλων— το μισό αυτό πέφτει έξω από το `widthMm`. Ο φρουρός
+   * του πατήματος δεν ρωτά πλέγμα· αν ο δείκτης ρωτούσε, θα σιωπούσε ακριβώς στη μισή λαβή που
+   * το κλικ πιάνει κανονικά.
+   */
+  it('🔴 ΕΞΩ από το πλέγμα (τελευταία στήλη) ⇒ πάλι `fill-handle`', () => {
+    const last = rect(4, 4, 4, 4); // E5 ⇒ λαβή στην κορυφή (100, 40) = η γωνία του πίνακα
+    const outside = { u: 101, v: 41 }; // μέσα στην οπή, έξω από το πλέγμα
+    expect(tableIndicatorCursorRoleAtFrame(LAYOUT, outside, BANDS)).toBeNull();
+    expect(
+      tableIndicatorCursorRoleAtFrame(
+        LAYOUT, outside, BANDS, null, undefined, null, 'table-mode', null,
+        hitAt(outside.u, outside.v, last),
+      ),
+    ).toBe('fill-handle');
+  });
+
+  it('εκτός λειτουργίας πίνακα ⇒ καμία λαβή, ό,τι κι αν βρήκε η σάρωση', () => {
+    expect(
+      tableIndicatorCursorRoleAtFrame(
+        LAYOUT, { u: 20, v: 8 }, BANDS, null, undefined, null, 'selection', null, hitAt(20, 8),
+      ),
+    ).toBeNull();
+  });
+
+  it('το οπλισμένο ⊖ της διαγραφής κρατά την προτεραιότητά του', () => {
+    const remove = { phase: 'armed', hit: { axis: 'column', index: 0, colId: 'c1' } } as never;
+    expect(
+      tableIndicatorCursorRoleAtFrame(
+        LAYOUT, { u: 20, v: 8 }, BANDS, null, undefined, null, 'table-mode', remove, hitAt(20, 8),
+      ),
+    ).toBe('delete-control');
   });
 });
 

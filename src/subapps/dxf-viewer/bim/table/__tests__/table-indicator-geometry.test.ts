@@ -17,6 +17,8 @@ import {
   TABLE_INDICATOR_GRIP_CLEARANCE_PX,
   TABLE_INDICATOR_OUTER_PX,
 } from '../table-indicator-geometry';
+// 🔴 ADR-739 §43 — η ερώτηση που ΑΝΤΙΚΑΤΕΣΤΗΣΕ το «δεν υπάρχει τέτοια εντολή».
+import { isTableSelectAllCornerAtFrame } from '../table-select-all-corner';
 import { tableIndicatorCursorRoleAtFrame } from '../table-indicator-cursor-role';
 import { TABLE_COLUMN_KIND } from '../table-entity-grips';
 import { tableColumnTicks, tableRowTicks } from '../table-cell-reference';
@@ -137,8 +139,18 @@ describe('tableIndicatorHitAtFrame', () => {
     });
   });
 
-  it('η γωνία δεν είναι εντολή — ο ζωγράφος την αφήνει κενή, το κλικ επιστρέφει null', () => {
-    expect(tableIndicatorHitAtFrame(LAYOUT, center(tableIndicatorCornerRectMm(BANDS)), BANDS)).toBeNull();
+  it('🔴 §43 η γωνία δεν είναι ΑΞΟΝΑΣ — γι΄ αυτό `null` εδώ, όχι επειδή δεν είναι εντολή', () => {
+    // ⚠️ Ο τίτλος έγραφε «*η γωνία δεν είναι εντολή — ο ζωγράφος την αφήνει κενή*». Η αξίωση
+    // μένει η ίδια, ο **λόγος** άλλαξε ριζικά: η γωνία είναι πλέον το κουμπί «επιλογή όλων»
+    // (§43) και έχει και ρόλο δείκτη και πάτημα. Αυτή η συνάρτηση όμως απαντά «ποια
+    // **υποδιαίρεση άξονα**;» — μια τρίτη περίπτωση `{ axis: 'corner' }` θα υποχρέωνε κάθε
+    // `switch` πάνω στο `axis` να απαντήσει «ποιο πλάτος έχει η γωνία;».
+    const cornerCenter = center(tableIndicatorCornerRectMm(BANDS));
+    expect(tableIndicatorHitAtFrame(LAYOUT, cornerCenter, BANDS)).toBeNull();
+    // 🔑 …και η **θετική** πλευρά, στην ίδια αναπνοή. Χωρίς αυτή τη γραμμή το `null` από πάνω
+    // ξαναδιαβάζεται με την **παλιά** του σημασία («δεν υπάρχει τίποτα εδώ») — που ήταν ακριβώς
+    // η αιτιολόγηση που ανατράπηκε. Το κουμπί απαντά· απλώς όχι από αυτή τη συνάρτηση.
+    expect(isTableSelectAllCornerAtFrame(cornerCenter, BANDS)).toBe(true);
   });
 
   it('μέσα στο πλέγμα δεν είναι ζώνη — εκεί απαντά το `tableCellAtFrame`', () => {
@@ -357,15 +369,38 @@ describe('🔴 §31 tableIndicatorCursorRoleAtFrame — ο δείκτης δεν
     expect(role(20, 6)).toBe('cell-select');
   });
 
-  it('§36 το ΕΞΩ από το πλέγμα μένει ακέραιο — η γωνία και ο έξω χώρος δεν απέκτησαν ρόλο', () => {
+  it('§36 το ΕΞΩ από το πλέγμα μένει ακέραιο — το `cell-select` ΔΕΝ διαρρέει σε αρνητικά mm', () => {
     // Ο αντίποδας του προηγούμενου, και ο φύλακας του §27.11: το `cell-select` **δεν**
     // επιτρέπεται να διαρρεύσει σε αρνητικά mm, όπου ζουν οι ζώνες και οι λαβές.
-    expect(role(-(apertureMm + BANDS.rowBandMm / 2), -(apertureMm + BANDS.columnBandMm / 2)))
-      .toBeNull();
+    //
+    // 🔴 ADR-739 §43 — ΕΔΩ Ο ΤΙΤΛΟΣ ΕΛΕΓΕ «η γωνία […] δεν απέκτησε ρόλο» ΚΑΙ Η ΓΩΝΙΑ ΗΤΑΝ
+    // ΜΕΣΑ ΣΤΙΣ ΑΞΙΩΣΕΙΣ. Δεν είναι πια: η γωνία **είναι** κουμπί («επιλογή όλων»). Η αξίωση
+    // που το test **εννοούσε** — «το εσωτερικό δεν διαρρέει έξω» — μένει ακέραιη και ελέγχεται
+    // παρακάτω· η γωνία μετακόμισε στο δικό της test, ρητά. Η διαφορά έχει σημασία: ένα
+    // `toBeNull()` που περνά επειδή **κανείς δεν διεκδικεί ακόμα** το pixel είναι σύμπτωση,
+    // όχι φύλακας — το ίδιο λάθος που καταγράφηκε δύο tests πιο πάνω (§36).
     expect(role(LAYOUT.widthMm + 10, -(apertureMm + BANDS.columnBandMm / 2))).toBeNull();
     // Και καθαρά δεξιά/κάτω από το πλέγμα, μακριά από κάθε ζώνη.
     expect(role(LAYOUT.widthMm + 10, 6)).toBeNull();
     expect(role(20, LAYOUT.heightMm + 10)).toBeNull();
+    // Ο φύλακας του `cell-select`: όπου δεν είναι κελί, δεν λέγεται κελί — ούτε στη γωνία.
+    expect(role(-(apertureMm + BANDS.rowBandMm / 2), -(apertureMm + BANDS.columnBandMm / 2)))
+      .not.toBe('cell-select');
+  });
+
+  it('🔴 §43 Η ΓΩΝΙΑ ΑΠΕΚΤΗΣΕ ΡΟΛΟ — `select-all`, εκεί που πριν ήταν ρητά `null`', () => {
+    // 🔴 ΑΝΤΙΣΤΡΟΦΗ, ΟΧΙ ΠΡΟΣΘΗΚΗ. Το προηγούμενο test απαιτούσε `toBeNull()` σε **αυτό
+    // ακριβώς** το σημείο, με αιτιολόγηση «δεν υπάρχει τέτοια εντολή». Η αιτιολόγηση ήταν
+    // λάθος τη στιγμή που γράφτηκε: η εντολή υπήρχε και λέγεται `Ctrl+A` — αυτό που έλειπε
+    // ήταν δεύτερη πόρτα προς αυτήν. Ο ιδιοκτήτης το μέτρησε στην οθόνη (04/08).
+    //
+    // ⚠️ Το {@link tableIndicatorHitAtFrame} εξακολουθεί να επιστρέφει `null` εδώ — και σωστά:
+    // απαντά «ποια **υποδιαίρεση άξονα**;» και η γωνία δεν είναι άξονας. Το ένα pixel έχει
+    // **ρόλο** χωρίς να έχει **άξονα**, και τα δύο κανάλια το λένε χωρίς να αντιφάσκουν.
+    const cornerU = -(apertureMm + BANDS.rowBandMm / 2);
+    const cornerV = -(apertureMm + BANDS.columnBandMm / 2);
+    expect(role(cornerU, cornerV)).toBe('select-all');
+    expect(tableIndicatorHitAtFrame(LAYOUT, { u: cornerU, v: cornerV }, BANDS)).toBeNull();
   });
 
   it('🔴 συμφωνεί με το §30: όπου φωτίζεται υποδιαίρεση, υπάρχει και ρόλος επιλογής', () => {

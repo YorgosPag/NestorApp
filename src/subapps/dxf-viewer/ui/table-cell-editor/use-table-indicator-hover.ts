@@ -224,7 +224,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     const liveCursor = getTableCellCursor();
     const cursorState = liveCursor?.entityId === target.id ? liveCursor : null;
     const selection = cursorState?.selection ?? null;
-    // 🔴 ADR-754 §15 — **Η ΛΑΒΗ ΖΕΙ ΜΟΝΟ ΣΕ ΠΛΟΗΓΗΣΗ.** Ο ίδιος φρουρός που έχουν ήδη ο
+    // 🔴 ADR-754 §14 — **Η ΛΑΒΗ ΖΕΙ ΜΟΝΟ ΣΕ ΠΛΟΗΓΗΣΗ.** Ο ίδιος φρουρός που έχουν ήδη ο
     // ζωγράφος (`stampTableFillHandleOverlay`) και το πάτημα (`tryTableFillHandleMouseDown`):
     // όσο ο χρήστης πληκτρολογεί, η λαβή ούτε ζωγραφίζεται ούτε πιάνεται (Excel parity, §13.5)
     // — άρα ο δείκτης **οφείλει** να σιωπά κι αυτός. Τρίτος φρουρός με διαφορετική άποψη θα
@@ -235,7 +235,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
         : null;
     // ΜΙΑ ανάγνωση γεωμετρίας, δύο απαντήσεις — δες την κεφαλίδα του `tableIndicatorProbeAtWorld`
     // για το γιατί δεν είναι δύο κλήσεις (θα ήταν δύο υπολογισμοί ανά κίνηση ποντικιού).
-    const { hit, cursor, insert, remove } = tableIndicatorProbeAtWorld(
+    const { hit, cursor, insert, remove, selectAll } = tableIndicatorProbeAtWorld(
       target,
       world,
       transform.scale,
@@ -251,7 +251,17 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // το `y` μένει σταθερό, φταίει όριο κατά τον **οριζόντιο** άξονα (διαχωριστικά στηλών)·
     // αν ταλαντώνεται με το `y` να κινείται 1-2 px, φταίει το **χείλος** της λωρίδας.
     noteCursorProbe('ok', cursor, hit, event.clientX, event.clientY);
-    setTableIndicatorHover(hit ? { entityId: target.id, hit } : null);
+    // 🔴 §43 — **ένα** πεδίο, δύο κομμάτια: η υποδιαίρεση **ή** η γωνία. Η σειρά δεν λύνει
+    // διεκδίκηση (τα δύο είναι γεωμετρικά ξένα — δες `table-select-all-corner`), αλλά γράφεται
+    // ρητά ώστε να μην μπορεί ποτέ να προκύψει κατάσταση «και τα δύο», που δεν έχει νόημα:
+    // ο δείκτης φωτίζει **ένα** πράγμα κάθε στιγμή.
+    setTableIndicatorHover(
+      hit
+        ? { entityId: target.id, target: { kind: 'tick', hit } }
+        : selectAll
+          ? { entityId: target.id, target: { kind: 'select-all' } }
+          : null,
+    );
     setTableIndicatorCursor(cursor);
     // §40 — το τρίτο κανάλι της **ίδιας** σάρωσης. Ο φύλακας «άλλαξε κάτι;» ζει μέσα στον
     // γραφέα, όπως και στα άλλα δύο — εδώ δεν επαναλαμβάνεται.

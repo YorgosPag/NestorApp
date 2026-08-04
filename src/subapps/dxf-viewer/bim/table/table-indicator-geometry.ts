@@ -53,12 +53,17 @@
  */
 
 import { TABLE_INDICATOR, TABLE_MODE_OUTLINE } from '../../config/color-config';
-// 🔴 ADR-739 §37 — ο ΕΝΑΣ κανόνας «πόσο παχύ φαίνεται ένα μολύβι πίνακα», κοινός με τον
-// ζωγράφο του πλέγματος. Ο δείκτης λειτουργίας πρέπει να μείνει έξω από **αυτό** το πάχος.
-import { tableBorderScreenPx } from './table-border-pen';
+// 🔴 ADR-739 §37 / ADR-756 — ο ΕΝΑΣ κανόνας «πόσο παχιά φαίνεται μια γραμμή στην οθόνη»,
+// κοινός με τον ζωγράφο του πλέγματος (και με κάθε άλλη γραμμή του σχεδίου). Ο δείκτης
+// λειτουργίας πρέπει να μείνει έξω από **αυτό** το πάχος — άρα οφείλει να το ρωτά, ποτέ να
+// το υπολογίζει.
+import { lineweightDisplayPx } from '../../config/lineweight-display-px';
 // ADR-739 §27.16 Ε4 — η ΜΙΑ συνάρτηση της οπής λαβής (αντικατέστησε τη σταθερά).
 import { gripAperturePx } from '../../config/grip-aperture';
 import { GRIP_SIZE_DEFAULT } from '../../config/grip-size-default';
+// ⛏️ N.7.1 — τα probe εσωτερικού ορίου ζουν σε δικό τους module (δες τη σημείωση των εξαγωγών
+// πιο κάτω). Το hit-test της ζώνης τα καλεί για να **παραιτηθεί**, όχι για να αποφασίσει.
+import { tableColumnEdgeAtFrame, tableRowEdgeAtFrame } from './table-axis-edge-probe';
 import type { TableColumnId, TableRowId } from '../../types/table';
 import type { TableFramePoint } from '../../types/table-entity';
 import type { TableIndicatorTick } from './table-cell-reference';
@@ -153,8 +158,16 @@ const MODE_OUTLINE_MIN_SEPARATION_PX = 1;
  *     περίμετρος = max(0,13 × pxPerMm · 0,5)  →  **1,3 px** στα 10 px/mm
  *     δείκτης    = 2 px σταθερά               →  **καλύπτει ολόκληρη τη γραμμή**
  *
- * Το ισοζύγιο γυρίζει μόνο πάνω από **15,4 px/mm** — μεγέθυνση όπου ένας πίνακας 120 mm
+ * Το ισοζύγιο γύριζε μόνο πάνω από **15,4 px/mm** — μεγέθυνση όπου ένας πίνακας 120 mm
  * πιάνει 1.850 px. Δηλαδή, πρακτικά, **πάντα**.
+ *
+ * ## 🔴 ADR-756 — γιατί η συνάρτηση έπαψε να δέχεται `pxPerMm`
+ * Η παραπάνω αριθμητική είχε **δεύτερο** θύμα, που δεν φαινόταν εδώ: το πάχος της περιμέτρου
+ * μεγάλωνε με το zoom, άρα ο δείκτης απομακρυνόταν όλο και περισσότερο όσο πλησίαζες. Από τη
+ * στιγμή που το πάχος έγινε **σταθερό σε px** (κοινός κανόνας με κάθε γραμμή του σχεδίου,
+ * `lineweightDisplayPx`), η μετατόπιση δεν έχει **κανέναν** όρο που να εξαρτάται από την
+ * κλίμακα: και οι δύο όροι της ήταν ήδη σε px διεπαφής. Η παράμετρος έμενε ως ψεύτικη
+ * εξάρτηση — δηλαδή ως πρόσκληση σε κάποιον να ξαναγράψει έναν όρο επί `pxPerMm`.
  *
  * ## Γιατί μετατόπιση και όχι κάτι άλλο
  * Είναι η απάντηση που έχει ήδη τυποποιηθεί: το CSS έχει `outline` **χωριστά** από το
@@ -186,10 +199,10 @@ const MODE_OUTLINE_MIN_SEPARATION_PX = 1;
  *   sheet-mm (`TableRenderIndex.perimeterMaxWidthMm`). `0` όταν η περίμετρος είναι αόρατη —
  *   τότε νικά ούτως ή άλλως η θέση ανάπαυσης.
  */
-export function tableModeOutlineOffsetPx(pxPerMm: number, perimeterPenMm: number): number {
+export function tableModeOutlineOffsetPx(perimeterPenMm: number): number {
   const restingPx = TABLE_INDICATOR_GRIP_CLEARANCE_PX / 2;
   const clearingPx =
-    tableBorderScreenPx(perimeterPenMm, pxPerMm) / 2 +
+    lineweightDisplayPx(perimeterPenMm) / 2 +
     TABLE_MODE_OUTLINE.lineWidthPx / 2 +
     MODE_OUTLINE_MIN_SEPARATION_PX;
   return Math.max(restingPx, clearingPx);
@@ -215,7 +228,7 @@ export function tableModeOutlineRectMm(
   perimeterPenMm: number,
 ): TableRectMm {
   if (!(pxPerMm > 0) || !Number.isFinite(pxPerMm)) return gridRectMm;
-  const offsetMm = tableModeOutlineOffsetPx(pxPerMm, perimeterPenMm) / pxPerMm;
+  const offsetMm = tableModeOutlineOffsetPx(perimeterPenMm) / pxPerMm;
   return {
     x: gridRectMm.x - offsetMm,
     y: gridRectMm.y - offsetMm,
@@ -286,11 +299,27 @@ export function tableRowTickRectMm(
 }
 
 /**
- * Το κενό τετράγωνο πάνω-αριστερά που **ενώνει** τις δύο ζώνες.
+ * Το τετράγωνο πάνω-αριστερά που **ενώνει** τις δύο ζώνες.
  *
  * Χωρίς αυτό φαίνεται μια τρύπα ακριβώς εκεί που το μάτι περιμένει τη γωνία του πλέγματος.
- * Το Excel βάζει εκεί το γκρίζο τρίγωνο «επιλογή όλων»· εδώ μένει **κενό** και το hit-test
- * επιστρέφει ρητά `null` γι' αυτό — δεν υπάρχει τέτοια εντολή, άρα δεν υπάρχει τέτοιο κλικ.
+ *
+ * ## 🔴 2026-08-04 (ADR-739 §43) — ΕΔΩ ΕΓΡΑΦΕ ΟΤΙ Η ΓΩΝΙΑ ΕΙΝΑΙ ΚΕΝΗ. ΔΕΝ ΕΙΝΑΙ ΠΙΑ
+ * Το κείμενο ήταν: «*Το Excel βάζει εκεί το γκρίζο τρίγωνο "επιλογή όλων"· εδώ μένει **κενό**
+ * και το hit-test επιστρέφει ρητά `null` γι' αυτό — **δεν υπάρχει τέτοια εντολή, άρα δεν
+ * υπάρχει τέτοιο κλικ***».
+ *
+ * 🔑 **Η αιτιολόγηση ήταν λάθος τη στιγμή που γράφτηκε.** Η εντολή υπήρχε ήδη και λέγεται
+ * `Ctrl+A` ({@link tableWholeGridRange} → `selectAll()`)· αυτό που έλειπε ήταν **δεύτερη
+ * πόρτα** προς αυτήν. Ο ιδιοκτήτης το μέτρησε στην οθόνη (04/08) και την ανέτρεψε.
+ *
+ * ⚠️ **Το `tableIndicatorHitAtFrame` εξακολουθεί να επιστρέφει `null` εδώ — και είναι σωστό.**
+ * Ο λόγος όμως άλλαξε ριζικά: όχι «δεν υπάρχει εντολή», αλλά **λάθος τύπος**. Εκείνη η
+ * συνάρτηση απαντά «*ποια **υποδιαίρεση άξονα**;*» και η γωνία **δεν είναι άξονας** — μια
+ * τρίτη περίπτωση `{ axis: 'corner' }` θα υποχρέωνε κάθε `switch` πάνω στο `axis` να απαντήσει
+ * «ποιο πλάτος έχει η γωνία;». Την ερώτηση «είμαι στη γωνία;» την απαντά το
+ * `table-select-all-corner`, που είναι και ο κάτοχος ολόκληρης της έννοιας.
+ *
+ * @see bim/table/table-select-all-corner.ts — ΤΟ ΚΟΥΜΠΙ (hit-test + τρίγωνο), ADR-739 §43
  */
 export function tableIndicatorCornerRectMm(bands: TableIndicatorBandsMm): TableRectMm {
   return {
@@ -340,7 +369,8 @@ export function tableIndicatorHitAtFrame(
   if (tableRowEdgeAtFrame(layout, frame, bands) !== null) return null;
 
   // Πάνω ζώνη: πάνω από το πλέγμα, αλλά **μέσα** στο πλάτος του. Το `u` πρέπει να είναι
-  // μη αρνητικό — αλλιώς είμαστε στη γωνία, που δεν είναι εντολή.
+  // μη αρνητικό — αλλιώς είμαστε στη γωνία, που **είναι εντολή αλλά όχι άξονας** (§43): την
+  // απαντά το `table-select-all-corner`, δες την κεφαλίδα του `tableIndicatorCornerRectMm`.
   //
   // 🔴 §27.11 — το εσωτερικό όριο είναι **γνήσια** ανισότητα (`v < -gapMm`, όχι `≤`): η
   // λωρίδα του κενού ανήκει στις **λαβές** και η οπή τους είναι κλειστός δίσκος
@@ -359,95 +389,20 @@ export function tableIndicatorHitAtFrame(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Ακμές αξόνων (ADR-739 §31.9)
+// ⛏️ ΔΥΟ ΕΞΑΓΩΓΕΣ ΕΓΙΝΑΝ ΑΠΟ ΕΔΩ (N.7.1) — Η ΤΟΜΗ ΕΙΝΑΙ Η ΙΔΙΑ ΚΑΙ ΣΤΙΣ ΔΥΟ
 // ──────────────────────────────────────────────────────────────────────────────
-
-// ⛏️ 2026-08-04 (N.7.1, 521→όριο 500) — οι **ρόλοι δείκτη** (§31/§36: `TableIndicatorCursorRole`
-// + `tableIndicatorCursorRoleAtFrame`) μετακόμισαν στο `table-indicator-cursor-role.ts`. Η τομή
-// είναι αυτή που ήδη έγραφε η κεφαλίδα: εδώ «**πού** κάθεται η ζώνη», εκεί «**τι οφείλεται**».
-// Μαζί τους έφυγε και η εξάρτηση από το `table-range-move-zone` — η έννοια «επιλεγμένη περιοχή»
-// δεν έχει δουλειά μέσα σε καθαρή γεωμετρία ζωνών. Η εξάρτηση είναι **μονόδρομη**: μην την
-// αντιστρέψεις, η γεωμετρία δεν μαθαίνει ποτέ τι είναι δείκτης.
-
-/**
- * 🔴 ADR-739 §31.9 — **ΤΟ ΔΙΑΧΩΡΙΣΤΙΚΟ ΜΕΣΑ ΣΤΗ ΛΩΡΙΔΑ**: ποιο εσωτερικό όριο στήλης είναι
- * κάτω από τον δείκτη· `null` παντού αλλού.
- *
- * Κατακόρυφη λωρίδα ανοχής γύρω από κάθε εσωτερικό όριο, που εκτείνεται από την **κορυφή της
- * ζώνης γραμμάτων** ως λίγο **μέσα στο πλέγμα** — δηλαδή ακριβώς η περιοχή που το μάτι
- * διαβάζει ως «η γραμμή που χωρίζει το A από το B».
- *
- * ## 🔴 Γιατί ΔΕΝ έμεινε στη λαβή (§31.8, μετρημένο στην οθόνη ΔΥΟ φορές)
- * Η πρώτη εκδοχή έδινε `col-resize` **μόνο** πάνω στη λαβή (`v ≈ 0`), με το επιχείρημα «μέσα
- * στη λωρίδα το πάτημα επιλέγει στήλη, άρα θα ήταν ψέμα». Το επιχείρημα ήταν σωστό και το
- * αποτέλεσμα **ανεύρετο**: ο ιδιοκτήτης δεν το βρήκε ούτε ψάχνοντας, δύο φορές. Η λύση δεν
- * ήταν να μη δείξουμε δείκτη — ήταν **να πάψει να είναι ψέμα**: το `tableIndicatorHitAtFrame`
- * παραιτείται εδώ (η ζώνη δεν διεκδικεί πια αυτά τα pixel) και τη σύρση την αναλαμβάνει ο
- * ίδιος ο πίνακας. **Ένα pixel, μία ερώτηση** — η ίδια αρχή που γέννησε το κενό του §27.11.
- *
- * ⚠️ Η ανοχή είναι **το ίδιο** `gapMm`, δηλαδή η `gripAperturePx` του §27.16 Ε4. Όχι νέος
- * αριθμός: η οπή σύλληψης του έργου είναι **μία**, και όποιος τη μεγαλώσει τη μεγαλώνει παντού.
- */
-export function tableColumnEdgeAtFrame(
-  layout: TableLayout,
-  frame: TableFramePoint,
-  bands: TableIndicatorBandsMm,
-): number | null {
-  return axisEdgeAtFrame(
-    layout.columns.map((column) => column.xMm),
-    frame.u,
-    frame.v,
-    bands.gapMm,
-    bands.columnBandMm,
-  );
-}
-
-/**
- * 🔴 **Το κάτοπτρο για τις ΓΡΑΜΜΕΣ** (Giorgio 2026-08-04): ποιο εσωτερικό όριο γραμμής είναι
- * κάτω από τον δείκτη, με τον ρόλο του `u` και του `v` αντεστραμμένο.
- *
- * Υπάρχει επειδή υπάρχει πλέον **λαβή** ύψους γραμμής (`table-row-edge`). Μέχρι τότε ένα
- * τέτοιο hit-test θα ήταν ακριβώς αυτό που το §31 απαγορεύει: δείκτης που υπόσχεται
- * χειρονομία η οποία δεν εκτελείται. Τώρα η χειρονομία υπάρχει, άρα ο δείκτης λέει αλήθεια.
- */
-export function tableRowEdgeAtFrame(
-  layout: TableLayout,
-  frame: TableFramePoint,
-  bands: TableIndicatorBandsMm,
-): number | null {
-  return axisEdgeAtFrame(
-    layout.rows.map((row) => row.yMm),
-    frame.v,
-    frame.u,
-    bands.gapMm,
-    bands.rowBandMm,
-  );
-}
-
-/**
- * Η **μία** γεωμετρία «είμαι πάνω σε εσωτερικό όριο;», σε αδιάφορο άξονα.
- *
- * `along` = η συντεταγμένη **κατά μήκος** του άξονα των ορίων· `across` = η κάθετη, που
- * περιορίζεται στη ζώνη. Δύο αντίγραφα (ένα ανά άξονα) θα ήταν sibling clone με δύο ανοχές
- * που αποκλίνουν σιωπηλά — ακριβώς το σχήμα που ο N.18 απαγορεύει.
- *
- * Το εύρος κατά την `across`: από την κορυφή της ζώνης ως μία οπή **μέσα** στο πλέγμα. Το
- * εσωτερικό άκρο κρατά πιαστή και την **ορατή λαβή** στο μηδέν, ώστε ο δείκτης να μη σβήνει
- * τη στιγμή που το χέρι φτάνει πάνω της.
- */
-function axisEdgeAtFrame(
-  starts: readonly number[],
-  along: number,
-  across: number,
-  gapMm: number,
-  bandMm: number,
-): number | null {
-  if (across < -(gapMm + bandMm) || across > gapMm) return null;
-  for (let i = 1; i < starts.length; i++) {
-    if (Math.abs(along - starts[i]) <= gapMm) return i;
-  }
-  return null;
-}
+//
+// 2026-08-04 (521→500): οι **ρόλοι δείκτη** (§31/§36: `TableIndicatorCursorRole` +
+// `tableIndicatorCursorRoleAtFrame`) → `table-indicator-cursor-role.ts`. Μαζί τους έφυγε και η
+// εξάρτηση από το `table-range-move-zone` — η έννοια «επιλεγμένη περιοχή» δεν έχει δουλειά μέσα
+// σε καθαρή γεωμετρία ζωνών.
+//
+// 2026-08-04 (503→500): τα **probe εσωτερικού ορίου** (§31.9: `tableColumnEdgeAtFrame` /
+// `tableRowEdgeAtFrame` + ο κοινός βρόχος) → `table-axis-edge-probe.ts`.
+//
+// Η τομή είναι αυτή που ήδη έγραφε η κεφαλίδα: **εδώ «πού κάθεται η ζώνη», αλλού «τι οφείλεται»
+// και «πού τελειώνει η υποδιαίρεση»**. Και οι δύο εξαρτήσεις είναι **μονόδρομες**: μην τις
+// αντιστρέψεις — η γεωμετρία των ζωνών δεν μαθαίνει ποτέ τι είναι δείκτης ούτε τι είναι σύρση.
 
 /**
  * 🔴 ADR-739 §27.15 — **ΜΟΝΟ η θέση κατά μήκος του άξονα**, χωρίς καμία ερώτηση για ζώνη.
