@@ -59,7 +59,7 @@
  * @see ui/table-cell-editor/table-pointer-axis-selection.ts — ΠΟΙΟ κελί/άξονας χτυπήθηκε
  */
 
-import { useEffect, type RefObject } from 'react';
+import { type RefObject } from 'react';
 // 🔴 ADR-739 §27.16 Ε6 — ο ΕΝΑΣ σταθεροποιητής χειριστών του έργου (ADR-532 Στάδιο 4a.1),
 // ήδη σε χρήση από τρία σημεία του subapp. Δες παρακάτω γιατί είναι δομικά απαραίτητος εδώ.
 import { useEventCallback } from '@/hooks/useEventCallback';
@@ -88,6 +88,8 @@ import {
 } from './table-range-transfer-drag';
 // ADR-739 §27.15 — ο κύκλος ζωής της σύρσης ζει σε δικό του module· εδώ μένει η **γεωμετρία**.
 import { endTableCellDrag, startTableCellDrag } from './table-cell-drag-session';
+// 🔴 §40.8 — ο ΕΝΑΣ τρόπος προσάρτησης ακροατή σύλληψης στο δοχείο (κοινός με το ⊕, N.18).
+import { useTableContainerMouseDown } from './use-table-container-mousedown';
 // 🔴 ADR-754 §3 — η **τέταρτη** χειρονομία του πίνακα: υπόδειξη κελιού μέσα σε τύπο. Ίδιο
 // σχήμα με τις τρεις πρώτες — όλη η λογική σε δικό της module, εδώ μόνο ο φρουρός.
 import { tryTablePointModeMouseDown } from './table-point-mode-pointer';
@@ -344,7 +346,13 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // οντότητας γεννιέται στο `mouseup` — δηλαδή σε συμβάν που αυτό το αρχείο δεν ακούει
     // καθόλου. Το «έξω» το κόβει πλέον ο φύλακας του §29, **πριν** φτάσει οπουδήποτε.
     // Εδώ μένει η αρχική, ακέραιη σημασία: «δεν είναι δικό μου, δεν το αγγίζω».
-    if (pointerHit === null) return;
+    // 🔴 §40.8 — ο έλεγχος έγινε «**είναι κελί;**» από «είναι κάτι;» (2026-08-04). Οι δύο
+    // διατυπώσεις ήταν ισοδύναμες όσο οι μη-κελί απαντήσεις τελείωναν όλες σε `return` από
+    // πάνω· το ⊕ της εισαγωγής είναι η πρώτη που **δεν** μας αφορά καθόλου εδώ (ο ακροατής του
+    // §40 την εκτελεί), και με την παλιά διατύπωση θα συνέχιζε ως κελί — δηλαδή `undefined`
+    // κάτω από όνομα που υπόσχεται κελί. Η θετική διατύπωση κάνει την επόμενη προσθήκη
+    // περίπτωσης **αδύνατο** να πέσει εδώ κατά λάθος.
+    if (pointerHit?.where !== 'cell') return;
     const hit = pointerHit.cell;
 
     // ADR-739 §26.15 — από εδώ και κάτω το πάτημα **είναι** της συνεδρίας. Η δήλωση
@@ -430,17 +438,14 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
    */
   const hasSession = Boolean(cursor && entity);
 
-  useEffect(() => {
-    if (!hasSession) return;
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Φάση **σύλληψης**: ο δρομέας μετακινείται πριν ο καμβάς ερμηνεύσει τη χειρονομία, ώστε
-    // ο ζωγράφος να δει τη νέα θέση στο ίδιο καρέ. Καμία κατανάλωση του συμβάντος — δες την
-    // κεφαλίδα.
-    container.addEventListener('mousedown', handleMouseDown, { capture: true });
-    return () => {
-      container.removeEventListener('mousedown', handleMouseDown, { capture: true });
+  // Φάση **σύλληψης** (μέσα στο hook): ο δρομέας μετακινείται πριν ο καμβάς ερμηνεύσει τη
+  // χειρονομία, ώστε ο ζωγράφος να δει τη νέα θέση στο ίδιο καρέ. Καμία κατανάλωση του
+  // συμβάντος — δες την κεφαλίδα.
+  useTableContainerMouseDown({
+    active: hasSession,
+    containerRef,
+    onMouseDown: handleMouseDown,
+    onDetach: () => {
       // §27.15 — η συνεδρία έκλεισε (ή άλλαξε πίνακας) με το κουμπί ακόμα κάτω: οι ακροατές
       // της σύρσης ζουν στο `document` και **δεν** θα έφευγαν μόνοι τους.
       endTableCellDrag();
@@ -451,7 +456,7 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // §36 ΦΑΣΗ 3 — και το **φάντασμα** σβήνει μαζί: ζει σε store που ο ζωγράφος διαβάζει με
       // getter, άρα θα επιβίωνε της συνεδρίας του ως προεπισκόπηση χωρίς σύρση.
       endTableRangeTransferDrag();
-    };
-  }, [hasSession, containerRef, handleMouseDown]);
+    },
+  });
 }
 

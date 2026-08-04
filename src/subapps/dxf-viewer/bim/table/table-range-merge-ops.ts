@@ -44,6 +44,7 @@ import type { TableRectBounds } from './table-range-merge-snap';
 import { mergeSpanBounds, tableRectsIntersect } from './table-range-merge-snap';
 import { cellText, clearPersistedCells, writePersistedCells } from './table-cell-content';
 import { indexById } from './table-model-helpers';
+import { resolveCellStyle, type TableStyle } from './table-style';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Το μητρώο
@@ -109,6 +110,37 @@ export interface TableMergeState {
   readonly merged: boolean;
   /** Η περιοχή έχει ≥ 2 κελιά ⇒ η **συγχώνευση** έχει τι να κάνει. */
   readonly canMerge: boolean;
+}
+
+/**
+ * 🔑 Η στοίχιση που **ισχύει σήμερα** στο κελί-άγκυρα — το μόνο που χρειάζεται η
+ * «Συγχώνευση και κεντράρισμα» για να μην πετάξει την κάθετη ζώνη (δες {@link centeredAlign}).
+ *
+ * Ζει εδώ και όχι στον καλούντα, γιατί είναι **απόφαση**, όχι ανάγνωση: ποια από τις τρεις
+ * παρακάμψεις (κελί → γραμμή → στήλη) νικά, και ποια είναι η βάση όταν καμία δεν μιλά. Η
+ * απάντηση δίνεται από το ΕΝΑ σημείο που την ξέρει ({@link resolveCellStyle}) — μια δεύτερη
+ * υλοποίηση στο UI θα ήταν το κλασικό «το κουμπί λέει άλλα από τον ζωγράφο».
+ *
+ * ⚠️ Επιστρέφει τη στοίχιση του {@link TableCellStyle}, όχι το `hAlign` της διάταξης: εκείνο
+ * περιλαμβάνει και τη **σημασιολογική** `TableColumn.align` (επίπεδο 4), που είναι *προτελευταίο*
+ * σκαλί και δεν γράφεται ποτέ ως ρητή παράκαμψη. Εδώ ρωτάμε «τι θα κρατήσω», όχι «τι φαίνεται».
+ */
+export function tableMergeAnchorAlign(
+  model: PersistedTableModel,
+  style: TableStyle,
+  bounds: TableCellRangeBounds,
+): TableCellAlign {
+  const rect = clampToGrid(model, bounds);
+  if (!rect) return style.rowClasses.data.align;
+
+  const row = model.rows[rect.firstRow];
+  const column = model.columns[rect.firstCol];
+  const cell = model.cells.find(([r, c]) => r === row.id && c === column.id)?.[2];
+  return resolveCellStyle(style.rowClasses[row.rowClass], {
+    cell: cell?.styleOverride,
+    row: row.styleOverride,
+    column: column.styleOverride,
+  }).align;
 }
 
 /** Η κατάσταση του χειριστηρίου για μια περιοχή. Απαντιέται στο **άνοιγμα**, όχι σε κάθε απόδοση. */

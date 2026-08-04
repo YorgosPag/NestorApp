@@ -34,7 +34,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §40
  */
 
-import { useEffect, type RefObject } from 'react';
+import { type RefObject } from 'react';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useCommandHistory } from '../../core/commands';
 import {
@@ -44,6 +44,10 @@ import {
   insertTableRow,
 } from '../../bim/table/table-row-column-ops';
 import { getTableInsertControl } from '../../state/table-insert-control-store';
+// 🔴 §40.8 — ο ΕΝΑΣ ορισμός του «το πάτημα έπεσε μέσα στη συνεδρία» (§26.15), κοινός με τον pointer.
+import { claimTableCellSessionPointerDown } from './table-cell-session-focus';
+// 🔴 §40.8 — ο ΕΝΑΣ τρόπος προσάρτησης ακροατή σύλληψης στο δοχείο (κοινός με τον pointer, N.18).
+import { useTableContainerMouseDown } from './use-table-container-mousedown';
 import { useTableModelCommit } from './use-table-model-commit';
 import { resolveTableById } from './table-entity-lookup';
 import type { TableInsertControlTarget } from '../../bim/table/table-insert-control';
@@ -77,31 +81,38 @@ export function useTableInsertControlClick(params: UseTableInsertControlClickPar
     const live = resolveTableById(levelManager, state.entityId);
     if (!live) return;
 
+    // 🔴 §40.8 — **Η ΚΑΤΑΝΑΛΩΣΗ ΠΡΟΗΓΕΙΤΑΙ ΤΟΥ ΑΠΟΤΕΛΕΣΜΑΤΟΣ** (2026-08-04, ήταν από κάτω).
+    //
+    // Το κλικ ανήκει στο ⊕ επειδή το ⊕ είναι **οπλισμένο**, όχι επειδή η εισαγωγή πέτυχε. Ένα
+    // απενεργοποιημένο κουμπί εξακολουθεί να καταπίνει το πάτημά του — δεν το παραδίδει σε ό,τι
+    // βρίσκεται από πίσω. Με την παλιά σειρά, στο **όριο πλήθους** (`canInsert*` → «όχι») το
+    // `mousedown` συνέχιζε τη διαδρομή του και ο καμβάς έπαιρνε τη μεταφορά εστίασης: δηλαδή
+    // `blur` στο `<textarea>` της συνεδρίας ⇒ **η λειτουργία πίνακα έκλεινε** επειδή ο χρήστης
+    // πάτησε ένα κουμπί που δεν είχε τίποτα να κάνει. Δες την κεφαλίδα για το γιατί η φάση
+    // `nearby` εξακολουθεί να μη διεκδικεί απολύτως τίποτα.
+    event.preventDefault();
+    event.stopPropagation();
+    // 🔴 §40.8 — **δίχτυ, όχι πρωτεύων δρόμος** (N.7.2 #4). Ο πρωτεύων είναι το `preventDefault`
+    // από πάνω: χωρίς μεταφορά εστίασης δεν γεννιέται `blur`, άρα δεν υπάρχει τίποτα να
+    // σκοτώσει τη συνεδρία. Η δήλωση καλύπτει τον **δεύτερο** δρόμο προς το ίδιο `focusout` —
+    // το ξαναστήσιμο του πεδίου όταν η εισαγωγή αλλάξει τη διάταξη κάτω από τον δρομέα
+    // (`focusout` (Α) του §26.15, που δεν είναι προεπιλεγμένη ενέργεια και δεν αναιρείται).
+    // Ο ΙΔΙΟΣ ένας ορισμός του «δεν έφυγα» με τον pointer, καμία δεύτερη έννοια.
+    claimTableCellSessionPointerDown();
+
     const nextModel = applyInsert(live.model, state.control.target);
     // Το φράγμα πλήθους (`canInsert*`) απάντησε «όχι» ⇒ καμία εντολή, κανένα ιστορικό. Η
     // ταυτότητα κατά αναφορά είναι η ΙΔΙΑ σύμβαση no-op που χρησιμοποιεί ήδη το μενού ζωνών.
     if (nextModel === live.model) return;
 
-    // Από εδώ και πέρα το κλικ **μας ανήκει**: αν το αφήναμε να περάσει, ο καμβάς θα ξεκινούσε
-    // σύρση του πίνακα που μόλις μεγάλωσε. Δες την κεφαλίδα για το γιατί η κατανάλωση γίνεται
-    // εδώ και όχι νωρίτερα (η φάση `nearby` δεν διεκδικεί τίποτα).
-    event.preventDefault();
-    event.stopPropagation();
     commitModel(live, nextModel);
   });
 
-  useEffect(() => {
-    if (!active) return;
-    const container = containerRef.current;
-    if (!container) return;
-    // Σύλληψη: πρέπει να προλάβει τον χειριστή επιλογής/σύρσης του καμβά, που ζει στο ίδιο
-    // container. Ίδια επιλογή φάσης με το `use-table-cell-pointer` και για τον ίδιο λόγο — η
-    // σειρά εγγραφής ακροατών δεν είναι συμβόλαιο, η φάση είναι.
-    container.addEventListener('mousedown', handleMouseDown, { capture: true });
-    return () => {
-      container.removeEventListener('mousedown', handleMouseDown, { capture: true });
-    };
-  }, [active, containerRef, handleMouseDown]);
+  // Σύλληψη: πρέπει να προλάβει τον χειριστή επιλογής/σύρσης του καμβά, που ζει στο ίδιο
+  // container. Ίδια επιλογή φάσης με το `use-table-cell-pointer` — και πλέον ο **ίδιος** ένας
+  // τρόπος προσάρτησης (§40.8, N.18): η σειρά εγγραφής ακροατών δεν είναι συμβόλαιο, η φάση
+  // είναι, και δύο αντίγραφα της φάσης είναι δύο ευκαιρίες να αποκλίνει.
+  useTableContainerMouseDown({ active, containerRef, onMouseDown: handleMouseDown });
 }
 
 /**

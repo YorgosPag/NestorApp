@@ -32,6 +32,7 @@ import {
   tableBandScreenPoint,
   tableCellScreenPoint,
   tableFrameScreenPoint,
+  tableInsertControlScreenPoint,
 } from './table-screen-point';
 import { computeTableEntityGeometryLive } from '../../../bim/table/table-entity-geometry';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-session-focus';
@@ -221,6 +222,63 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
 
     it('το hover παραιτείται: ο ΕΝΑΣ ορισμός απαντά «κλειδωμένος»', () => {
       expect(isCanvasLockedByTableSession()).toBe(true);
+    });
+
+    /**
+     * 🔴 ADR-739 §40.8 — **ΤΟ ⊕ ΤΗΣ ΕΙΣΑΓΩΓΗΣ ΜΕΣΑ ΣΕ EDIT MODE** (ιδιοκτήτης, 2026-08-04).
+     *
+     * ## Το ελάττωμα, όπως το είδε στην οθόνη
+     * «Η προσθήκη στηλών και γραμμών λειτουργεί σωστά **μόνον έξω** από το edit mode· όταν
+     * μπαίνω σε edit mode δεν λειτουργεί σωστά.» Με στιγμιότυπα: το ⊕ **φαινόταν** και στις
+     * δύο καταστάσεις, στη σωστή θέση, με τον δείκτη να γίνεται κουμπί.
+     *
+     * ## Γιατί ΚΑΝΕΝΑ υπάρχον test δεν το έπιασε — και είναι το μάθημα εδώ
+     * Το §40 δοκιμάστηκε ολόκληρο ως **γεωμετρία** (19 anchors: φάσεις, θέση ανά κατάσταση,
+     * δείκτης συνόρου) και η γεωμετρία ήταν **σωστή σε όλα**. Το ελάττωμα ζούσε μία στρώση πιο
+     * κάτω: το `mousedown` κοβόταν από τον φύλακα του §29 στο `document` σε **σύλληψη**, πριν
+     * φτάσει στον ακροατή του δοχείου. Δηλαδή **σωστός ζωγράφος + σωστό hit-test + άφταστο
+     * κουμπί** — η ακριβής μορφή του «τα tests είναι πράσινα και ο χρήστης βλέπει το αντίθετο».
+     *
+     * Γι' αυτό τα anchors εδώ ρωτούν **«το είδε ο καμβάς;»** και όχι «τι απάντησε η γεωμετρία;».
+     */
+    describe('🔴 §40.8 — το ⊕ της εισαγωγής είναι ΚΟΥΜΠΙ, όχι περιοχή του καμβά', () => {
+      it('🔴 ✅ το `mousedown` πάνω στον ΟΠΛΙΣΜΕΝΟ δίσκο ΦΤΑΝΕΙ — αλλιώς το κουμπί δεν πατιέται ποτέ', () => {
+        // Το ακριβές ελάττωμα του ιδιοκτήτη: εδώ ήταν `[]`, δηλαδή ο ακροατής της εισαγωγής
+        // (που ζει στο ΔΟΧΕΙΟ, άρα πιο κάτω από τον φύλακα του `document`) δεν καλούνταν ποτέ.
+        dispatchAt('mousedown', tableInsertControlScreenPoint(entity, 'column', 1));
+        expect(seenByCanvas).toEqual(['mousedown']);
+      });
+
+      it('🔴 ⛔ το `mouseup` στο ΙΔΙΟ σημείο ΔΕΝ φτάνει — εκεί γεννιέται η επιλογή οντότητας', () => {
+        // Η ασυμμετρία **είναι** η προδιαγραφή. Μια συμμετρική «άσ' τα όλα να περάσουν» θα
+        // διόρθωνε την εισαγωγή και θα αποεπέλεγε τον πίνακα με την ίδια κίνηση
+        // (`mouse-handler-up.ts` → `onCanvasClick`, που τρέχει ΚΑΙ χωρίς προηγούμενο mousedown).
+        dispatchAt('mouseup', tableInsertControlScreenPoint(entity, 'column', 1));
+        expect(seenByCanvas).toEqual([]);
+      });
+
+      it('⛔ ούτε `click` / `dblclick` / `contextmenu` πάνω στον δίσκο', () => {
+        const point = tableInsertControlScreenPoint(entity, 'row', 1);
+        dispatchAt('click', point);
+        dispatchAt('dblclick', point);
+        dispatchAt('contextmenu', point, { button: 2 });
+        expect(seenByCanvas).toEqual([]);
+      });
+
+      it('🔴 ⛔ η λωρίδα `nearby` ΜΕΝΕΙ κλειδωμένη — αλλιώς επιστρέφει το lasso του §29', () => {
+        // Η λωρίδα είναι γενναιόδωρη επίτηδες ώστε το ⊕ να **βρεθεί** (§31.8) και τυλίγει
+        // ολόκληρη την ακμή του πίνακα. Αν μετρούσε κι εκείνη ως «πάνω στον πίνακα», ο καμβάς
+        // θα ξαναποκτούσε ζώνη 14 px γύρω από κάθε πίνακα — δηλαδή περίγραμμα επιλογής μέσα σε
+        // edit mode, ακριβώς το ελάττωμα που έκλεισε το §29.
+        //
+        // Το σημείο: το ίδιο «πόσο έξω», αλλά στη **μέση μιας στήλης** — μακριά από κάθε
+        // σύνορο, άρα `nearby` και ποτέ `armed`.
+        const armed = tableInsertControlScreenPoint(entity, 'column', 1);
+        const nextBoundary = tableInsertControlScreenPoint(entity, 'column', 2);
+        const midway = { x: (armed.x + nextBoundary.x) / 2, y: (armed.y + nextBoundary.y) / 2 };
+        dispatchAt('mousedown', midway);
+        expect(seenByCanvas).toEqual([]);
+      });
     });
   });
 
