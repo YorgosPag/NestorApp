@@ -29,6 +29,7 @@
  */
 
 import { createCellRanker, insertionIndexFor } from './table-cell-order';
+import { remapCellTextRuns } from './table-cell-run-ops';
 import type {
   PersistedTableModel,
   TableCell,
@@ -133,6 +134,16 @@ export function setPersistedCellText(
  * κελί που δεν πειράχτηκε να μη γεννά βήμα undo. Η σύγκριση είναι δομική μέσω `JSON`, και
  * είναι ασφαλής **επειδή** τα δέντρα είναι απλά δεδομένα φτιαγμένα πάντα από τον ίδιο
  * αναλυτή — άρα ίδια σειρά κλειδιών (δες το συμβόλαιο του `types/table-formula.ts`).
+ *
+ * ## 🔴 ADR-753 Φ1 — τα `runs` **φεύγουν** όταν το κελί γίνεται τύπος
+ * Η τιμή μπαίνει κενή και τη γράφει ο επαναϋπολογισμός, οπότε runs που επιβίωναν θα έδειχναν
+ * σε κείμενο **μηδενικού μήκους** και θα ξαναζωντάνευαν πάνω σε ένα αποτέλεσμα που κανείς δεν
+ * έβαψε. Είναι και η συμπεριφορά του Excel: το αποτέλεσμα ενός τύπου έχει **ενιαία**
+ * μορφοποίηση — δεν υπάρχει «βάψε τα τρία πρώτα ψηφία του αθροίσματος», γιατί δεν υπάρχει
+ * κανείς να πει ποια θα είναι αυτά μετά τον επόμενο υπολογισμό.
+ *
+ * Η μορφοποίηση **του κελιού** (`styleOverride`) μένει ανέπαφη — εκείνη δεν δείχνει σε
+ * χαρακτήρες.
  */
 export function setPersistedCellFormula(
   model: PersistedTableModel,
@@ -140,12 +151,13 @@ export function setPersistedCellFormula(
   colId: TableColumnId,
   formula: TableFormula,
 ): PersistedTableModel {
-  const formulaCell = (existing?: TableCell): TableCell => ({
-    ...existing,
-    kind: 'formula',
-    formula,
-    value: '',
-  });
+  const formulaCell = (existing?: TableCell): TableCell => {
+    const merged: TableCell = { ...existing, kind: 'formula', formula, value: '' };
+    // Αφαίρεση **του πεδίου**, όχι `runs: undefined`: το δεύτερο επιβιώνει σε `Object.keys`
+    // και σε diff — ίδια αιτιολογία με το `formula` του {@link asTextCell}.
+    const { runs: _dropped, ...withoutRuns } = merged;
+    return withoutRuns;
+  };
 
   return writePersistedCell(model, rowId, colId, {
     update: (existing) =>
@@ -313,8 +325,19 @@ function writePersistedCell(
  * Το `formula` **αφαιρείται** αντί να τεθεί `undefined`: ένα πεδίο με τιμή `undefined`
  * επιβιώνει σε `Object.keys` και σε diff, και θα εμφανιζόταν σε κάθε αποθηκευμένη σκηνή ως
  * αλλαγή που κανείς δεν έκανε.
+ *
+ * ## 🔴 ADR-753 Φ1 — γιατί τα `runs` ΔΕΝ περνούν αυτούσια με το spread
+ * Η εγγύηση 3 λέει ότι τα υπόλοιπα πεδία διατηρούνται. Για τα {@link TableCell.runs} η
+ * «διατήρηση» θα ήταν **ελάττωμα**: δείχνουν σε **θέσεις χαρακτήρων** του κειμένου που μόλις
+ * άλλαξε. Ένα `Α` πληκτρολογημένο στην αρχή μετακινεί κάθε γράμμα κατά ένα, και runs που
+ * έμεναν ακίνητα θα έβαφαν σιωπηλά **άλλα** γράμματα — με το ελάττωμα να εμφανίζεται μία
+ * πληκτρολόγηση **μετά** την αιτία του.
+ *
+ * *Μια εγγύηση είναι σωστή για το σύνολο πεδίων που υπήρχε όταν γράφτηκε* — το ίδιο μάθημα
+ * που πλήρωσε ακριβώς από πάνω το `kind`/`formula` στη Φ.Ζ.
  */
 function asTextCell(cell: TableCell, text: string): TableCell {
-  const { formula: _dropped, ...rest } = cell;
-  return { ...rest, kind: 'text', value: text };
+  const { formula: _dropped, runs: previous, ...rest } = cell;
+  const runs = remapCellTextRuns(previous, cellText(cell), text);
+  return { ...rest, kind: 'text', value: text, ...(runs === undefined ? {} : { runs }) };
 }

@@ -31,6 +31,15 @@
  */
 
 import type { TableFramePoint } from '../../types/table-entity';
+// 🔴 §38 — η αριθμητική «ποιο σύνορο είναι πιο κοντά» **μετακόμισε** σε δικό της module τη
+// στιγμή που απέκτησε δεύτερο καταναλωτή (το ⊕ της εισαγωγής). Δες την κεφαλίδα εκείνου για
+// το γιατί δύο αντίγραφα θα έσπαγαν την ισοπαλία αλλιώς — δηλαδή θα ζωγράφιζαν σε άλλο
+// σύνορο από εκείνο όπου προσγειώνεται η σύρση, στην ίδια θέση ποντικιού.
+import {
+  nearestTableAxisBoundary,
+  tableColumnBoundaryView,
+  tableRowBoundaryView,
+} from './table-axis-boundary';
 import type { TableLayout, TableRectMm } from './table-layout-types';
 import type { TableRangeShiftAxis } from './table-range-axis-view';
 
@@ -65,8 +74,8 @@ export function tableRangeInsertBoundaryAtFrame(
   const columns = layout.columns;
   if (rows.length === 0 || columns.length === 0) return null;
 
-  const horizontal = nearestBoundary(rows.length, (i) => rows[i].yMm, layout.heightMm, frame.v);
-  const vertical = nearestBoundary(columns.length, (i) => columns[i].xMm, layout.widthMm, frame.u);
+  const horizontal = nearestTableAxisBoundary(tableRowBoundaryView(layout), frame.v);
+  const vertical = nearestTableAxisBoundary(tableColumnBoundaryView(layout), frame.u);
 
   return horizontal.distanceMm <= vertical.distanceMm
     ? { axis: 'down', line: horizontal.line }
@@ -92,47 +101,7 @@ export function tableRangeInsertCaretMm(
   return axis === 'down' ? { x, y, w, h: 0 } : { x, y, w: 0, h };
 }
 
-/**
- * Το πλησιέστερο σύνορο ενός άξονα, με την απόστασή του.
- *
- * Δυαδική αναζήτηση και **όχι** γραμμική σάρωση: η ερώτηση γίνεται σε **κάθε κίνηση ποντικιού**
- * μιας σύρσης (60-120/δευτ.) και ένας πίνακας 500 γραμμών θα πλήρωνε 500 συγκρίσεις κάθε φορά —
- * ακριβώς το «δουλειά ανάλογη του μεγέθους, όχι της αλλαγής» που ο **ADR-735** πλήρωσε σε
- * παραγωγή. Ίδιο μοτίβο με το `visibleRowRange`, σε **έναν** βρόχο αντί για δύο.
- *
- * Ο προσπελαστής είναι συνάρτηση αντί για πίνακα αριθμών ώστε να μη χτίζεται πίνακας `n`
- * στοιχείων ανά κίνηση — και ώστε ο **ίδιος** κώδικας να εξυπηρετεί γραμμές (`yMm`) και στήλες
- * (`xMm`), που έχουν διαφορετικά ονόματα πεδίων.
- *
- * ⚠️ Στο **ακριβές μέσο** μιας γραμμής τα δύο σύνορά της απέχουν εξίσου· νικά το **επόμενο**
- * (`<` και όχι `<=`). Η επιλογή είναι αδιάφορη ως προς την ορθότητα και καθοριστική ως προς τη
- * **σταθερότητα**: το πάνω μισό δίνει αυστηρά το πάνω σύνορο και το υπόλοιπο το κάτω, χωρίς
- * ζώνη όπου η απάντηση κρίνεται από αριθμητικό σφάλμα.
- */
-function nearestBoundary(
-  count: number,
-  startMm: (index: number) => number,
-  endMm: number,
-  atMm: number,
-): { readonly line: number; readonly distanceMm: number } {
-  const boundaryMm = (line: number): number => (line < count ? startMm(line) : endMm);
-
-  // Το πρώτο σύνορο που δεν είναι πριν από το σημείο. Τα σύνορα είναι αύξοντα εξ ορισμού της
-  // διάταξης (`yMm`/`xMm` αύξοντα, μη αρνητικά ύψη/πλάτη).
-  let lo = 0;
-  let hi = count;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (boundaryMm(mid) < atMm) lo = mid + 1;
-    else hi = mid;
-  }
-
-  const after = boundaryMm(lo);
-  const afterDistance = Math.abs(after - atMm);
-  if (lo === 0) return { line: 0, distanceMm: afterDistance };
-
-  const beforeDistance = Math.abs(atMm - boundaryMm(lo - 1));
-  return beforeDistance < afterDistance
-    ? { line: lo - 1, distanceMm: beforeDistance }
-    : { line: lo, distanceMm: afterDistance };
-}
+// ⛏️ §38 — εδώ ζούσε το ιδιωτικό `nearestBoundary`. Μετακόμισε **αυτούσιο** στο
+// `table-axis-boundary.ts` όταν το ⊕ της εισαγωγής χρειάστηκε την ίδια ακριβώς απάντηση.
+// Εξαγωγή, ποτέ αντιγραφή: το σκεπτικό της δυαδικής αναζήτησης και του σπασίματος της
+// ισοπαλίας ταξίδεψε μαζί της και ζει πλέον σε **ένα** σημείο.

@@ -334,3 +334,56 @@ describe('🔴 §36 ΕΝΑ undo ανά χειρονομία — ΕΝΑ μοντ�
     expect(next).toBe(model);
   });
 });
+
+// ── ADR-753: η μορφοποίηση χαρακτήρων ταξιδεύει μαζί με το κείμενό της ─────────
+
+/**
+ * 🔴 ADR-753 Φ1 — **ο φύλακας της απαρίθμησης πεδίων.**
+ *
+ * Τρία σημεία αυτού του αρχείου απαριθμούν τα πεδία του `TableCell` με το χέρι
+ * (`transferredCell`, `isBlankCell`, `sameTransferredCell`). Κανένας μεταγλωττιστής δεν
+ * επιβάλλει την πληρότητά τους: ένα νέο πεδίο που ξεχνιέται εκεί δεν σπάει το build — **σβήνει
+ * σιωπηλά δεδομένα του χρήστη**. Το `runs` ήταν ακριβώς τέτοιο πεδίο, και αυτά τα τρία tests
+ * είναι ο λόγος που δεν έμεινε ξεχασμένο.
+ */
+describe('🔴 ADR-753 τα `runs` ταξιδεύουν αδιαίρετα με το `value`', () => {
+  const withRuns = (rowId: string, colId: string, value: string): TableCellEntry => [
+    rowId as TableRowId,
+    colId as TableColumnId,
+    { kind: 'text', value, runs: [{ start: 0, end: 2, style: { bold: true } }] },
+  ];
+
+  const runsAt = (model: PersistedTableModel, rowId: string, colId: string) =>
+    model.cells.find(([r, c]) => r === rowId && c === colId)?.[2].runs;
+
+  it('η μετακίνηση κουβαλά τη μορφοποίηση — αλλιώς η περιοχή ξεβάφεται σιωπηλά', () => {
+    const model = persisted([withRuns('r0', 'c0', 'ΤΕΣΤ')]);
+    const next = transfer(model, move({ firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 }, ref('r1', 'c1')));
+
+    expect(getPersistedCellText(next, 'r1' as TableRowId, 'c1' as TableColumnId)).toBe('ΤΕΣΤ');
+    expect(runsAt(next, 'r1', 'c1')).toEqual([{ start: 0, end: 2, style: { bold: true } }]);
+    // Η πηγή αδειάζει ΟΛΟΚΛΗΡΗ — κείμενο και μορφοποίηση μαζί.
+    expect(runsAt(next, 'r0', 'c0')).toBeUndefined();
+  });
+
+  it('κελί με ΜΟΝΟ runs δεν κρίνεται κενό — δεν πετιέται η εγγραφή του', () => {
+    // Κείμενο κενό, μορφοποίηση υπαρκτή: αν το `isBlankCell` δεν κοιτάξει τα `runs`, η
+    // εγγραφή χάνεται και μαζί της ό,τι είχε δηλωθεί.
+    const only: TableCellEntry = [
+      'r0' as TableRowId, 'c0' as TableColumnId,
+      { kind: 'text', value: '', runs: [{ start: 0, end: 1, style: { italic: true } }] },
+    ];
+    const next = transfer(persisted([only]), move({ firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 }, ref('r2', 'c2')));
+    expect(runsAt(next, 'r2', 'c2')).toBeDefined();
+  });
+
+  it('περιοχές που διαφέρουν ΜΟΝΟ στα runs δεν κρίνονται ίδιες', () => {
+    // Ίδιο κείμενο εκατέρωθεν, άλλη μορφοποίηση: χωρίς το `runs` στη σύγκριση, η μεταφορά
+    // θα θεωρούνταν «τίποτα δεν άλλαξε» και δεν θα γραφόταν ποτέ.
+    const model = persisted([withRuns('r0', 'c0', 'ΤΕΣΤ'), text('r1', 'c0', 'ΤΕΣΤ')]);
+    const next = transfer(model, move({ firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 }, ref('r1', 'c0')));
+
+    expect(next).not.toBe(model);
+    expect(runsAt(next, 'r1', 'c0')).toEqual([{ start: 0, end: 2, style: { bold: true } }]);
+  });
+});

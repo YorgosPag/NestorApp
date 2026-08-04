@@ -147,6 +147,11 @@ function transferContent(
  * παράκαμψη στυλ και διαγώνιοι. Είναι η σημασιολογία της **μετακίνησης**, όχι του `Delete`: στο
  * Excel, σέρνοντας ένα βαμμένο κελί αλλού, πίσω μένει κελί **χωρίς** το χρώμα. (Το `Delete` πάνω
  * σε περιοχή κάνει άλλο πράγμα και ζει αλλού — `clearTableRange`.)
+ *
+ * ## 🔴 ADR-753 Φ1 — γιατί τα `runs` ταξιδεύουν **μαζί με το `value`**, πάντα
+ * Οι δείκτες τους δείχνουν σε θέσεις **αυτού** του κειμένου. Το κείμενο και η μορφοποίησή του
+ * είναι ένα αδιαίρετο ζεύγος: αντιγραμμένο το πρώτο χωρίς το δεύτερο, η μετακίνηση μιας
+ * βαμμένης περιοχής θα την ξέβαφε **σιωπηλά** — απώλεια δεδομένων χωρίς μήνυμα.
  */
 function transferredCell(source: TableCell | undefined, existing: TableCell | undefined): TableCell {
   const locked = existing?.locked;
@@ -158,18 +163,27 @@ function transferredCell(source: TableCell | undefined, existing: TableCell | un
     value: source.value,
     ...(source.formula === undefined ? {} : { formula: source.formula }),
     ...(source.styleOverride === undefined ? {} : { styleOverride: source.styleOverride }),
+    ...(source.runs === undefined ? {} : { runs: source.runs }),
     ...(source.diagonal === undefined ? {} : { diagonal: source.diagonal }),
     ...lockedField,
   };
 }
 
-/** Κελί χωρίς τίποτα να πει — δεν αξίζει εγγραφή στη σκηνή. */
+/**
+ * Κελί χωρίς τίποτα να πει — δεν αξίζει εγγραφή στη σκηνή.
+ *
+ * ⚠️ **Κάθε πεδίο του `TableCell` οφείλει να απαριθμείται εδώ.** Ένα ξεχασμένο πεδίο δεν
+ * δίνει σφάλμα μεταγλώττισης — δίνει **διαγραφή δεδομένων**: το κελί κρίνεται κενό και η
+ * εγγραφή του πετιέται μαζί με ό,τι κουβαλούσε στο πεδίο που κανείς δεν κοίταξε. Η ίδια
+ * προειδοποίηση είναι ήδη γραμμένη στο `table-row-column-ops.ts` για τον ίδιο λόγο.
+ */
 function isBlankCell(cell: TableCell): boolean {
   return (
     cell.kind === 'text' &&
     cell.value === '' &&
     cell.formula === undefined &&
     cell.styleOverride === undefined &&
+    cell.runs === undefined &&
     cell.diagonal === undefined &&
     cell.locked === undefined
   );
@@ -191,6 +205,9 @@ function sameTransferredCell(a: TableCell, b: TableCell): boolean {
     a.locked === b.locked &&
     sameJson(a.formula, b.formula) &&
     sameJson(a.styleOverride, b.styleOverride) &&
+    // ADR-753 Φ1 — ξεχασμένο εδώ, μια περιοχή που διαφέρει **μόνο** στη μορφοποίηση
+    // χαρακτήρων θα κρινόταν «ίδια» και η μεταφορά της δεν θα γραφόταν ποτέ.
+    sameJson(a.runs, b.runs) &&
     sameJson(a.diagonal, b.diagonal)
   );
 }
