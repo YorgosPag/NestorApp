@@ -156,6 +156,52 @@ function mergedRangeA1(model: TableModel, rowId: TableRowId, colId: TableColumnI
 }
 
 /**
+ * Η θέση ενός κελιού ως **ζεύγος ταυτοτήτων** — ό,τι χρειάζεται μια ονομασία, τίποτα άλλο.
+ *
+ * Δομικά συμβατό τόσο με τον δρομέα ({@link TableCursorPosition}, που κουβαλά επιπλέον την
+ * άγκυρα στήλης) όσο και με την αναφορά τύπου (`TableFormulaCellRef`). Ορίζεται εδώ ώστε η
+ * ονομασία να **μη χρειάζεται** καμία από τις δύο: ένα module που απαντά «πώς λέγεται αυτό
+ * το κελί» δεν έχει λόγο να ξέρει τι είναι δρομέας ή τι είναι τύπος.
+ */
+export interface TableCellAddress {
+  readonly rowId: TableRowId;
+  readonly colId: TableColumnId;
+}
+
+/**
+ * Η ονομασία του **ορθογωνίου** ανάμεσα σε δύο γωνίες: `'A1:B5'`.
+ *
+ * Κανονικοποιεί: σύρσιμο από κάτω-δεξιά προς πάνω-αριστερά δίνει την **ίδια** ονομασία, όπως
+ * σε κάθε φύλλο υπολογισμού. Η αναφορά ονομάζει μια **περιοχή**, όχι μια χειρονομία — δύο
+ * κείμενα για το ίδιο ορθογώνιο θα σήμαιναν ότι ο τύπος θυμάται προς τα πού κινήθηκε το
+ * ποντίκι.
+ *
+ * Όταν οι δύο γωνίες είναι το ίδιο κελί επιστρέφεται **σκέτη** η αναφορά (`'A1'`), όχι
+ * `'A1:A1'`: το σύρσιμο που δεν κινήθηκε είναι κλικ, και ο χρήστης δεν ζήτησε εύρος.
+ *
+ * `null` μόνο όταν κάποια ταυτότητα δεν υπάρχει στο μοντέλο — ίδια συντηρητική στάση με το
+ * {@link tableCellReference}: καλύτερα τίποτα παρά μαντεψιά.
+ */
+export function tableRangeReference(
+  model: TableModel,
+  from: TableCellAddress,
+  to: TableCellAddress,
+): string | null {
+  const rowIndex = indexById(model.rows);
+  const colIndex = indexById(model.columns);
+  const fromRow = rowIndex.get(from.rowId);
+  const toRow = rowIndex.get(to.rowId);
+  const fromCol = colIndex.get(from.colId);
+  const toCol = colIndex.get(to.colId);
+  if (fromRow === undefined || toRow === undefined) return null;
+  if (fromCol === undefined || toCol === undefined) return null;
+
+  const start = `${columnLetter(Math.min(fromCol, toCol))}${Math.min(fromRow, toRow) + 1}`;
+  const end = `${columnLetter(Math.max(fromCol, toCol))}${Math.max(fromRow, toRow) + 1}`;
+  return start === end ? start : `${start}${RANGE_SEPARATOR}${end}`;
+}
+
+/**
  * Η αντίστροφη διαδρομή: `'B3'` → θέση δρομέα. `null` όταν η αναφορά δεν είναι έγκυρη ή
  * δείχνει εκτός πλέγματος.
  *
