@@ -36,6 +36,7 @@ import {
   buildMergeIndex,
   cellKey,
   cellText,
+  clearPersistedCells,
   getCell,
   indexById,
   resolveTableModel,
@@ -169,6 +170,13 @@ export function pasteTsvIntoTable(
  *
  * Τα **καλυμμένα** κελιά παραλείπονται όπως και στην επικόλληση: δεν κρατούν περιεχόμενο,
  * άρα δεν έχουν τι να χάσουν.
+ *
+ * ⚠️ **ADR-755 — ένα πέρασμα, όχι βρόχος ανά κελί.** Εδώ υπήρχε `setPersistedCellText` μέσα
+ * σε βρόχο, δηλαδή `findIndex` + `slice()` ολόκληρου του `cells` για **κάθε** κελί: ένα
+ * `Ctrl+A` + `Delete` σε πίνακα 500 × 8 έκανε 4.000 τέτοια περάσματα. Ο μαζικός γραφέας
+ * ({@link clearPersistedCells}) υπήρχε ήδη για ακριβώς αυτό το μέγεθος — απλώς ο πρώτος
+ * καταναλωτής του ήταν οι διαγώνιοι. Η σημασιολογία είναι **ταυτόσημη**, γιατί το άδειασμα
+ * περνά από το ίδιο `asTextCell`.
  */
 export function clearTableRange(
   persisted: PersistedTableModel,
@@ -176,12 +184,10 @@ export function clearTableRange(
 ): PersistedTableModel {
   const model = resolveTableModel(persisted);
   const covered = buildMergeIndex(model).covered;
-  let next = persisted;
-  for (const ref of tableRangeCellRefs(model, bounds)) {
-    if (covered.has(cellKey(ref.rowId, ref.colId))) continue;
-    next = setPersistedCellText(next, ref.rowId, ref.colId, '');
-  }
-  return next;
+  const targets = tableRangeCellRefs(model, bounds).filter(
+    (ref) => !covered.has(cellKey(ref.rowId, ref.colId)),
+  );
+  return clearPersistedCells(persisted, targets);
 }
 
 /** Πού αρχίζει η επικόλληση, σε δείκτες· `null` για μπαγιάτικο ενεργό κελί. */

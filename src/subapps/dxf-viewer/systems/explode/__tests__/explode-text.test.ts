@@ -146,6 +146,50 @@ describe('ADR-733 — explodeTextEntity: glyph contours', () => {
   });
 });
 
+describe('ADR-753 Φ4 — οριζόντια αγκύρωση: η γεωμετρία ξεκινά εκεί που ξεκινούν τα γράμματα', () => {
+  // 🔴 Γιατί γράφτηκε: μεταλλάσσοντας το πρόσημο του `anchorOffset` (τον ΕΝΑ κανόνα που
+  // μοιράζονται renderer / explode / clip / πίνακας), οι σουίτες του `glyph-run-draw` και του
+  // `bim/table` κοκκίνισαν — το `explode` έμεινε **πράσινο**. Το explode οφείλει να παράγει
+  // γεωμετρία ταυτόσημη με ό,τι βλέπει ο χρήστης· χωρίς αυτό το δίχτυ, μια μετατόπιση κατά
+  // ολόκληρο το πλάτος της λέξης δεν θα φαινόταν πουθενά.
+  //
+  // Οι αξιώσεις είναι **σχέσεις**, όχι απόλυτοι αριθμοί: το `line.widthWorld` βγαίνει από το
+  // monospace tier του `measureTextAdvanceWorld` (κενό fontCache σε jest), οπότε ένας απόλυτος
+  // αριθμός θα κλείδωνε τον μετρητή, όχι την αγκύρωση.
+  const startX = (textAlign: 'left' | 'center' | 'right'): number => {
+    const out = explodeTextEntity(mkText('AB', { textStyle: { textAlign } })) as LWPolylineEntity[];
+    return out[0].vertices[0].x;
+  };
+
+  it("'left': το πρώτο γράμμα ξεκινά ΠΑΝΩ στο σημείο εισαγωγής (μηδενική μετατόπιση)", () => {
+    expect(startX('left')).toBeCloseTo(10, 6); // position.x του mkText
+  });
+
+  it('διάταξη LTR: δεξιά < κέντρο < αριστερά — αντιστροφή προσήμου το σπάει', () => {
+    expect(startX('right')).toBeLessThan(startX('center'));
+    expect(startX('center')).toBeLessThan(startX('left'));
+  });
+
+  it('το κέντρο μετατοπίζει ΑΚΡΙΒΩΣ το μισό του δεξιά — «/2» που έγινε «/1» το σπάει', () => {
+    expect(2 * (startX('left') - startX('center'))).toBeCloseTo(startX('left') - startX('right'), 6);
+  });
+
+  it('η αγκύρωση είναι ΚΑΘΑΡΗ ΜΕΤΑΤΟΠΙΣΗ: ίδια γεωμετρία, ίδιο y, μόνο το x ολισθαίνει', () => {
+    const shape = (a: 'left' | 'right'): LWPolylineEntity[] =>
+      explodeTextEntity(mkText('AB', { textStyle: { textAlign: a } })) as LWPolylineEntity[];
+    const [l, r] = [shape('left'), shape('right')];
+    expect(r).toHaveLength(l.length);
+    const dx = l[0].vertices[0].x - r[0].vertices[0].x;
+    expect(dx).toBeGreaterThan(0);
+    l.forEach((glyph, gi) => {
+      glyph.vertices.forEach((v, vi) => {
+        expect(v.x - r[gi].vertices[vi].x).toBeCloseTo(dx, 6); // ίδιο Δx παντού
+        expect(v.y).toBeCloseTo(r[gi].vertices[vi].y, 6);      // το y δεν αγγίζεται
+      });
+    });
+  });
+});
+
 describe('ADR-733 — όρια: unresolved font / κενό κείμενο', () => {
   it('span χωρίς φορτωμένη outline γραμματοσειρά → null (no-op, όχι λάθος γεωμετρία)', () => {
     mockResolve.mockReturnValue(null);

@@ -45,8 +45,19 @@ export interface TableRectBounds {
   readonly lastCol: number;
 }
 
-/** Το ορθογώνιο που καταλαμβάνει μια συγχώνευση, σε δείκτες — ή `null` αν είναι άκυρη. */
-function mergeBoundsOf(
+/**
+ * Το ορθογώνιο που καταλαμβάνει μια συγχώνευση, σε δείκτες — ή `null` αν είναι άκυρη.
+ *
+ * 🔴 **Εξάγεται** (ADR-755): τη ζητά και ο **γραφέας** των συγχωνεύσεων
+ * (`table-range-merge-ops.ts`), για να βρει ποια υπάρχοντα spans τέμνει η νέα εντολή. Ένα
+ * δεύτερο σώμα εκεί θα ήταν sibling clone (N.18) — και, το σοβαρό, δεύτερη απάντηση στο «πού
+ * φτάνει μια συγχώνευση»: η περικοπή στα όρια του πλέγματος (`Math.min(... , length)`) και η
+ * ανοχή σε άκυρο span είναι **αποφάσεις**, όχι αριθμητική, και θα απέκλιναν στην πρώτη αλλαγή.
+ *
+ * Ο πίνακας `model` χρειάζεται μόνο για τα **μήκη** των αξόνων· τα ευρετήρια περνούν ως
+ * ορίσματα ώστε ο καλών να τα χτίζει **μία** φορά έξω από τον βρόχο του.
+ */
+export function mergeSpanBounds(
   model: TableModel,
   rowIndex: ReadonlyMap<string, number>,
   colIndex: ReadonlyMap<string, number>,
@@ -64,8 +75,15 @@ function mergeBoundsOf(
   };
 }
 
-/** Τέμνονται δύο ορθογώνια (κλειστά διαστήματα); */
-function intersects(a: TableRectBounds, b: TableRectBounds): boolean {
+/**
+ * Τέμνονται δύο ορθογώνια (κλειστά διαστήματα);
+ *
+ * Εξάγεται μαζί με το {@link mergeSpanBounds} και για τον ίδιο λόγο: ο γραφέας του ADR-755
+ * ρωτά **ακριβώς** αυτό («ποιες συγχωνεύσεις αγγίζει η εντολή;»). Τέσσερις συγκρίσεις με
+ * `<=` σε **κλειστό** διάστημα είναι το κλασικό σημείο όπου ένα αντίγραφο γράφει `<` και
+ * χάνει σιωπηλά τις εφαπτόμενες περιπτώσεις.
+ */
+export function tableRectsIntersect(a: TableRectBounds, b: TableRectBounds): boolean {
   return (
     a.firstRow <= b.lastRow &&
     b.firstRow <= a.lastRow &&
@@ -120,8 +138,8 @@ export function snapToWholeMerges(model: TableModel, start: TableRectBounds): Ta
   for (;;) {
     let grown = bounds;
     for (const span of model.merges) {
-      const spanBounds = mergeBoundsOf(model, rowIndex, colIndex, span);
-      if (spanBounds && intersects(grown, spanBounds)) grown = union(grown, spanBounds);
+      const spanBounds = mergeSpanBounds(model, rowIndex, colIndex, span);
+      if (spanBounds && tableRectsIntersect(grown, spanBounds)) grown = union(grown, spanBounds);
     }
     if (sameBounds(grown, bounds)) return bounds;
     bounds = grown;

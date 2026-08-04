@@ -394,6 +394,7 @@ export function toPersistedTableModel(model: TableModel): PersistedTableModel {
  * συγχωνεύσεις, ανάλυση, σειριοποίηση), εκεί «**πώς αλλάζει**».
  */
 export {
+  clearPersistedCells,
   getPersistedCellText,
   setPersistedCellFormula,
   setPersistedCellText,

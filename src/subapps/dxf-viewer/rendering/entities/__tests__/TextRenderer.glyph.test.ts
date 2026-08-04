@@ -94,3 +94,73 @@ describe('TextRenderer.paintText → shared paintTextRun SSoT (ADR-557 Φάση 
     });
   });
 });
+
+/**
+ * ADR-753 Φ4 — **πού ξεκινά η γραμμή στην οθόνη**: ο `paintLayoutLines` περνά από τον ΕΝΑ
+ * κανόνα αγκύρωσης (`anchorOffset`) που μοιράζεται με explode / clip / πίνακα.
+ *
+ * 🔴 Γιατί γράφτηκε: μεταλλάσσοντας το πρόσημο του `anchorOffset`, οι σουίτες του
+ * `glyph-run-draw` και του `bim/table` κοκκίνισαν — και οι **44 σουίτες / 542 tests** του
+ * `rendering/entities` έμειναν πράσινες. Ο ζωγράφος της οθόνης, δηλαδή το πιο ορατό από τα
+ * πέντε σημεία, ήταν ΑΚΑΛΥΠΤΟΣ: κάθε κεντραρισμένο MTEXT θα ζωγραφιζόταν μια ολόκληρη λέξη
+ * μακριά χωρίς κανένα test να το δει. Ακριβώς το σχήμα του ADR-739 Φ.Δ βήμα 8.
+ *
+ * Το `text-horizontal-anchor` ΔΕΝ mock-άρεται (άλλη διαδρομή από το mock του barrel), οπότε
+ * εδώ τρέχει ο πραγματικός κανόνας.
+ */
+describe('ADR-753 Φ4 — paintLayoutLines: η αγκύρωση τοποθετεί ολόκληρο το μπλοκ', () => {
+  const WORLD_TO_PX = 2;
+  const LINE_W = 20;                       // κόσμος ⇒ 40 px
+  const ORIGIN_X = 100;
+
+  const mkSpan = () => ({
+    text: 'AB', xWorld: 0, widthWorld: LINE_W, heightWorld: 10,
+    style: {}, decoration: {}, yOffsetWorld: 0,
+  });
+
+  const mkLine = (xOffsetWorld = 0) => ({
+    spans: [mkSpan()], widthWorld: LINE_W, xOffsetWorld, spacingRatio: 1,
+  });
+
+  /** Το `originX` που έφτασε στον ζωγράφο για τη δοσμένη αγκύρωση. */
+  function paintedX(align: 'left' | 'center' | 'right', xOffsetWorld = 0): number {
+    (paintTextRun as jest.Mock).mockClear();
+    const ctx = makeCtx();
+    (new TextRenderer(ctx) as unknown as {
+      paintLayoutLines: (...a: unknown[]) => void;
+    }).paintLayoutLines(ORIGIN_X, 50, [mkLine(xOffsetWorld)], {
+      firstOffsetPx: 0, screenHeight: 10, worldToPx: WORLD_TO_PX, align,
+      baseline: 'top', fontMemo: new Map(), fallbackFill: '#ffffff',
+    });
+    return ((paintTextRun as jest.Mock).mock.calls[0][2] as { originX: number }).originX;
+  }
+
+  it("'left': η γραμμή ξεκινά ΠΑΝΩ στο σημείο εισαγωγής", () => {
+    expect(paintedX('left')).toBeCloseTo(ORIGIN_X, 9);
+  });
+
+  it("'right': η γραμμή ΤΕΛΕΙΩΝΕΙ στο σημείο εισαγωγής (μετατόπιση = όλο το πλάτος σε px)", () => {
+    expect(paintedX('right')).toBeCloseTo(ORIGIN_X - LINE_W * WORLD_TO_PX, 9);
+  });
+
+  it("'center': μετατόπιση ΑΚΡΙΒΩΣ το μισό πλάτος", () => {
+    expect(paintedX('center')).toBeCloseTo(ORIGIN_X - (LINE_W * WORLD_TO_PX) / 2, 9);
+  });
+
+  it('διάταξη LTR: δεξιά < κέντρο < αριστερά — αντιστροφή προσήμου το σπάει', () => {
+    expect(paintedX('right')).toBeLessThan(paintedX('center'));
+    expect(paintedX('center')).toBeLessThan(paintedX('left'));
+  });
+
+  it('🔴 δύο ΑΝΕΞΑΡΤΗΤΕΣ στοιχίσεις: η στοίχιση παραγράφου (\\pxq) προστίθεται, δεν αντικαθιστά', () => {
+    // Παγίδα ADR-753 Φ4 §5.3: το `xOffsetWorld` ΔΕΝ είναι μέρος της αγκύρωσης. Κεντρικοποιείται
+    // μόνο η πρώτη· αν κάποιος τη «μαζέψει» κι αυτή μέσα στον κανόνα, η διαφορά ανάμεσα στις
+    // αγκυρώσεις θα άλλαζε με το `\pxq` — εδώ οφείλει να μείνει ίδια.
+    const PARA = 5; // κόσμος ⇒ +10 px σε ΚΑΘΕ αγκύρωση
+    for (const a of ['left', 'center', 'right'] as const) {
+      expect(paintedX(a, PARA)).toBeCloseTo(paintedX(a) + PARA * WORLD_TO_PX, 9);
+    }
+    expect(paintedX('left', PARA) - paintedX('right', PARA))
+      .toBeCloseTo(paintedX('left') - paintedX('right'), 9);
+  });
+});
