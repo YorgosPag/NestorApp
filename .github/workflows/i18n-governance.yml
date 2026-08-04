@@ -109,12 +109,24 @@ jobs:
       # other's gap. This became gateable only after ADR-666 deleted the 80
       # committed pseudo JSON files that kept it at EXIT 1 with 693 lines of rot.
       #
-      # Scoped deliberately to `validate:i18n` alone. Do NOT swap this for the
-      # `i18n:check` npm script: it bundles validate:i18n-config (2 pre-existing
-      # errors) and validate:i18n-manifest (3), which would red the workflow on
-      # day one for reasons unrelated to translation completeness.
+      # Scoped deliberately. Do NOT swap this for the `i18n:check` npm script: it
+      # still bundles validate:i18n-manifest, which carries 3 pre-existing errors
+      # (17 namespaces absent from namespace-manifest.json — governance metadata,
+      # tracked separately in .claude-rules/pending-ratchet-work.md). That would
+      # red the workflow for reasons unrelated to translation completeness.
+      # validate:i18n-config is no longer in that category — see the step below.
       - name: 🔍 validate:i18n — EL↔EN translation completeness (ADR-666)
         run: node scripts/validate-translations.js
+
+      # CHECK 3.36 (ADR-752) — namespace reachability. Layer 1 is the pre-commit
+      # hook (staged-triggered); this step is unconditional, so a commit made with
+      # --no-verify or on a machine without core.hooksPath cannot land a namespace
+      # that has locale files but no loader — the exact shape of the ADR-752 bug,
+      # which sat in main with every other CHECK green until a human saw raw keys
+      # in a screenshot. The validator itself is older than the gate: it had been
+      # red for six namespaces, unread, because nothing ran it.
+      - name: 🔍 CHECK 3.36 — i18n namespace reachability (ADR-752)
+        run: node scripts/validate-i18n-config.js
 
       # Note: CHECK 3.8 (missing i18n keys) and CHECK 3.12 (option-label
       # integrity) are per-file scanners driven by staged filenames; they do
@@ -131,3 +143,4 @@ jobs:
           echo "CHECK 3.13 (resolver reachability): PASS"
           echo "CHECK 3.14 (audit catalogs parity): PASS"
           echo "validate:i18n (EL/EN completeness): PASS"
+          echo "CHECK 3.36 (namespace reachability): PASS"

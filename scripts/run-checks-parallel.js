@@ -26,6 +26,7 @@
  *   SKIP_NATIVE_TOOLTIP / SKIP_TABS_IMPORT / SKIP_NO_FLASH  bypass specific checks
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
+ *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -73,6 +74,7 @@ const ssotFull    = process.env.SSOT_DISCOVER_FULL === '1';
 const skipTenantScope = !!process.env.SKIP_FIRESTORE_TENANT_SCOPE;
 const skipI18nTypes = !!process.env.SKIP_I18N_TYPES;
 const skipShellSlice = !!process.env.SKIP_I18N_SHELL_SLICE;
+const skipNamespaceWiring = !!process.env.SKIP_I18N_NAMESPACE_WIRING;
 const skipTooltip = !!process.env.SKIP_NATIVE_TOOLTIP;
 const skipTabs    = !!process.env.SKIP_TABS_IMPORT;
 const skipFlash   = !!process.env.SKIP_NO_FLASH;
@@ -134,6 +136,20 @@ const shellSliceTriggers = [
 ];
 if (!skipShellSlice && shellSliceTriggers.length > 0)
   addThread('3.34', 'i18n shell slice', 'scripts/check-i18n-shell-slice.js', tsFiles);
+
+// CHECK 3.36 (ADR-752) — «φορτώνεται» το namespace; Έξι namespaces είχαν αρχεία
+// locale, τύπους και καταναλωτές αλλά κανένα `case` στο namespace-loaders.ts:
+// άδειο bundle ⇒ ωμά κλειδιά στην οθόνη, με ΟΛΕΣ τις άλλες CHECK πράσινες. Ο
+// validator υπήρχε ήδη (validate-i18n-config.js) και ήταν ΚΟΚΚΙΝΟΣ — απλώς δεν
+// τον έτρεχε καμία πύλη· ένα anchor χωρίς gate δεν είναι anchor, είναι σχόλιο.
+// Καθαρό in-memory Node (2 parse + 100 readdir, ~60ms), άρα Phase 1 δίπλα στα
+// 3.33/3.34. ΔΕΝ είναι ratchet — καμία baseline, ποτέ: μια δήλωση υπάρχει ή όχι.
+const namespaceWiringTriggers = [
+  ...localeFiles,
+  ...allFiles.filter(f => f.startsWith('src/i18n/') || f === 'src/types/i18n.ts'),
+];
+if (!skipNamespaceWiring && namespaceWiringTriggers.length > 0)
+  addThread('3.36', 'i18n namespace reachability', 'scripts/validate-i18n-config.js');
 
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);
