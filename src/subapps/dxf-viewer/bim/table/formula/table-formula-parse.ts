@@ -33,10 +33,9 @@ import type { TableModel } from '../../../types/table';
 import type {
   TableFormula,
   TableFormulaBinaryOp,
-  TableFormulaCellRef,
   TableFormulaNode,
 } from '../../../types/table-formula';
-import { parseTableCellReference } from '../table-cell-reference';
+import { resolveWrittenCellRef } from './table-formula-absolute';
 import {
   FORMULA_PREFIX,
   tokenizeFormula,
@@ -220,27 +219,24 @@ function parseCall(reader: Reader, name: string): TableFormulaNode | null {
   return { kind: 'call', name: name.toUpperCase(), args };
 }
 
-/** `A1` ή `A1:B5` → κόμβος δεμένος σε ταυτότητες· `#REF!` όταν δείχνει εκτός πλέγματος. */
+/**
+ * `A1`, `$A$1` ή `A1:B5` → κόμβος δεμένος σε ταυτότητες· `#REF!` όταν δείχνει εκτός πλέγματος.
+ *
+ * Το δέσιμο **δεν** γράφεται εδώ: το ζητά από το `table-formula-absolute.ts`, που είναι ο ένας
+ * ιδιοκτήτης του «τι σημαίνει μια γραμμένη διεύθυνση» — πεζά, bijective base-26, όρια
+ * πλέγματος και, από το ADR-754 Γ2, η αποκόλληση του `$`.
+ */
 function parseReference(reader: Reader, name: string): TableFormulaNode {
-  const from = resolveCellRef(reader.model, name);
+  const from = resolveWrittenCellRef(reader.model, name);
 
   if (peekPunct(reader) === ':') {
     const next = reader.tokens[reader.at + 1];
     if (next?.kind !== 'name') return { kind: 'error', code: '#REF!' };
     reader.at += 2;
-    const to = resolveCellRef(reader.model, next.value);
+    const to = resolveWrittenCellRef(reader.model, next.value);
     if (from === null || to === null) return { kind: 'error', code: '#REF!' };
     return { kind: 'range', from, to };
   }
 
   return from === null ? { kind: 'error', code: '#REF!' } : { kind: 'ref', cell: from };
-}
-
-/**
- * Το ένα σημείο όπου το `A1` γίνεται ταυτότητες. Δανείζεται **ολόκληρη** τη σημασιολογία
- * (πεζά δεκτά, όρια πλέγματος, bijective base-26) από τον υπάρχοντα μεταφραστή.
- */
-function resolveCellRef(model: TableModel, text: string): TableFormulaCellRef | null {
-  const position = parseTableCellReference(model, text);
-  return position === null ? null : { rowId: position.rowId, colId: position.colId };
 }

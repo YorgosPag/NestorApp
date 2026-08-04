@@ -32,7 +32,7 @@
  */
 
 import type { TableModel } from '../../../types/table';
-import { parseTableCellReference } from '../table-cell-reference';
+import { resolveWrittenCellRef } from './table-formula-absolute';
 import {
   continuesLexeme,
   formulaBodyStart,
@@ -67,9 +67,13 @@ function expectsOperand(token: TableFormulaToken): boolean {
   return token.kind === 'punct' && OPERAND_EXPECTING_PUNCT.includes(token.value);
 }
 
-/** True όταν η μονάδα είναι όνομα που ονομάζει υπαρκτό κελί του μοντέλου. */
+/**
+ * True όταν η μονάδα είναι όνομα που ονομάζει υπαρκτό κελί του μοντέλου — **μαζί με τις
+ * απόλυτες μορφές** (`$A$1`), γιατί μια κλειδωμένη αναφορά είναι εξίσου ζωντανή: ο χρήστης
+ * που πάτησε `F4` και μετά κάνει κλικ αλλού θέλει **αντικατάσταση**, όχι δεύτερη αναφορά.
+ */
 function isCellName(model: TableModel, token: TableFormulaToken | undefined): boolean {
-  return token?.kind === 'name' && parseTableCellReference(model, token.value) !== null;
+  return token?.kind === 'name' && resolveWrittenCellRef(model, token.value) !== null;
 }
 
 /**

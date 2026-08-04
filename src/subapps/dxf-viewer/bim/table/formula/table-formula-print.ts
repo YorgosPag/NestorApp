@@ -31,6 +31,7 @@ import type {
   TableFormulaNode,
 } from '../../../types/table-formula';
 import { tableColumnLetter, tableRowNumber } from '../table-cell-reference';
+import { formatAbsoluteReference } from './table-formula-absolute';
 import { FORMULA_PREFIX } from './table-formula-lex';
 
 /** Ο κωδικός που τυπώνεται όταν μια ταυτότητα δεν υπάρχει πια στο πλέγμα. */
@@ -89,11 +90,17 @@ function printNode(model: TableModel, node: TableFormulaNode): string {
   }
 }
 
-/** `A1` — ή `#REF!` όταν η γραμμή/στήλη δεν υπάρχει πια. */
+/**
+ * `A1` — ή `$A$1` όταν ο χρήστης κλείδωσε άξονα (ADR-754 Γ2), ή `#REF!` όταν η γραμμή/στήλη
+ * δεν υπάρχει πια.
+ *
+ * Τα δολάρια δεν γράφονται εδώ: τα συνθέτει ο ένας ιδιοκτήτης τους, ώστε η σειρά
+ * `$στήλη$γραμμή` να μην υπάρχει ως γνώση σε δύο αρχεία.
+ */
 function printRef(model: TableModel, cell: TableFormulaCellRef): string {
   const letter = tableColumnLetter(model, cell.colId);
   const number = tableRowNumber(model, cell.rowId);
-  return letter === '' || number === 0 ? REF_ERROR : `${letter}${number}`;
+  return letter === '' || number === 0 ? REF_ERROR : formatAbsoluteReference(letter, number, cell);
 }
 
 /**

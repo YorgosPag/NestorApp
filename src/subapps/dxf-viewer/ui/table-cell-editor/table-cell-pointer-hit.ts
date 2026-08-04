@@ -91,6 +91,29 @@ export type TablePointerHit =
   | { readonly where: 'column-edge'; readonly columnIndex: number }
   /** Το κάτοπτρο για τις γραμμές (2026-08-04) — ίδιοι δύο λόγοι, στον άλλο άξονα. */
   | { readonly where: 'row-edge'; readonly rowIndex: number }
+  /**
+   * 🔴 §40.1 — **ΤΟ ⊕ ΤΗΣ ΕΙΣΑΓΩΓΗΣ, ΟΠΛΙΣΜΕΝΟ** (2026-08-04).
+   *
+   * ## Το ελάττωμα που το γέννησε — «δουλεύει έξω από το edit mode, μέσα όχι»
+   * Ο ιδιοκτήτης το μέτρησε στην οθόνη: **εκτός** λειτουργίας πίνακα το ⊕ εισάγει κανονικά·
+   * **μέσα** ζωγραφίζεται, ο δείκτης γίνεται κουμπί, και το πάτημα δεν κάνει τίποτα.
+   *
+   * Η αιτία ήταν ακριβώς **η απουσία αυτής της περίπτωσης**. Ο φύλακας του §29 ρωτά αυτή τη
+   * συνάρτηση «ανήκει το σημείο στον πίνακα;» και η απάντηση ήταν `null` — γιατί το ⊕ κάθεται
+   * **πιο έξω από όλα** όσα ήξερε να ονομάσει (πιο έξω και από τη ζώνη γραμμάτων, §40). Άρα ο
+   * φύλακας έκοβε το `mousedown` στο `document` σε **σύλληψη**, δηλαδή δομικά **πριν** τον
+   * ακροατή του δοχείου που εκτελεί την εισαγωγή. Το ⊕ ήταν ορατό, οπλισμένο και άφταστο.
+   *
+   * 🔑 Η διόρθωση **δεν** είναι εξαίρεση στον φύλακα: είναι ότι η ερώτηση «πού έπεσε;»
+   * απαντούσε λάθος. Ο φύλακας ήταν σωστός· του έλειπε **λέξη** για να ονομάσει το ⊕.
+   *
+   * ⚠️ **ΜΟΝΟ σε φάση `armed`** — δηλαδή μόνο ο δίσκος των 14 px, ποτέ η λωρίδα `nearby`. Η
+   * λωρίδα είναι γενναιόδωρη επίτηδες ώστε το ⊕ να **βρεθεί** (§40, §31.8) και τυλίγει
+   * ολόκληρη την ακμή του πίνακα· αν την ονομάζαμε κι εκείνη «πάνω στον πίνακα», ο καμβάς θα
+   * ξαναποκτούσε δικαίωμα σε μια ζώνη πλάτους 14 px γύρω από κάθε πίνακα — δηλαδή lasso μέσα
+   * σε edit mode, ακριβώς το ελάττωμα που το §29 έκλεισε.
+   */
+  | { readonly where: 'insert-control'; readonly control: TableInsertControlHit }
   | { readonly where: 'band'; readonly band: TableIndicatorHit }
   | { readonly where: 'cell'; readonly cell: TableCellHit };
 
@@ -132,6 +155,12 @@ export function tablePointerHitAtWorld(
   viewScale: number,
 ): TablePointerHit | null {
   const geometry = computeTableEntityGeometryLive(entity);
+  // 🔴 §40.1 — **το ⊕ πριν από όλα**, και η σειρά εδώ δεν λύνει διεκδίκηση: ο οπλισμένος
+  // δίσκος ζει έξω από κάθε άλλη περιοχή αυτής της συνάρτησης (πιο έξω και από τη ζώνη
+  // γραμμάτων), οπότε οι υπόλοιπες τέσσερις απαντούν ούτως ή άλλως `null` εκεί. Μπαίνει πρώτο
+  // γιατί είναι η **πιο ειδική** ερώτηση — ίδιο κριτήριο με το διαχωριστικό από κάτω.
+  const control = armedInsertControlAt(entity, world, geometry, viewScale);
+  if (control) return { where: 'insert-control', control };
   // 🔴 §31.9 — το διαχωριστικό **πρώτο**: είναι η πιο ειδική ερώτηση, και είναι η μόνη που
   // τέμνει τις άλλες δύο (η ζώνη ανοχής ζει μέσα στη λωρίδα ΚΑΙ μπαίνει μία οπή στο πλέγμα).
   // Η γεωμετρία της ζώνης παραιτείται ήδη στα ίδια pixel· η σειρά εδώ κρατά την ίδια απάντηση
@@ -155,6 +184,34 @@ function columnEdgeAt(
 ): number | null {
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
   return probe && tableColumnEdgeAtFrame(geometry.layout, probe.frame, probe.bands);
+}
+
+/**
+ * 🔴 §40.1 — το ⊕ **που πατιέται** κάτω από το σημείο· `null` σε φάση `nearby`, κάτω από το
+ * LOD, ή οπουδήποτε αλλού. Δες την περίπτωση `'insert-control'` για το γιατί μόνο `armed`.
+ *
+ * ## Γιατί η κατάσταση είναι σταθερά `'table-mode'` και δεν γίνεται παράμετρος
+ * Και οι τρεις καλούντες αυτής της συνάρτησης (ο φύλακας του §29, ο pointer, ο δρομολογητής
+ * μενού) ζουν **μόνο** όσο υπάρχει ζωντανός δρομέας — δηλαδή είναι εξ ορισμού σε λειτουργία
+ * πίνακα. Μια παράμετρος εδώ θα ήταν τιμή που κανείς δεν μπορεί να δώσει διαφορετική, δηλαδή
+ * μια ακόμα ευκαιρία να δοθεί λάθος. Ο **hover** — ο μόνος που όντως ρωτά και για την απλή
+ * επιλογή — ρωτά από αλλού ({@link tableIndicatorProbeAtWorld}) και **περνά** την κατάστασή του.
+ */
+function armedInsertControlAt(
+  entity: TableEntity,
+  world: Point2D,
+  geometry: TableEntityGeometry,
+  viewScale: number,
+): TableInsertControlHit | null {
+  const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
+  if (!probe) return null;
+  const control = tableInsertControlAtFrame(
+    geometry.layout,
+    probe.frame,
+    probe.pxPerMm,
+    'table-mode',
+  );
+  return control?.phase === 'armed' ? control : null;
 }
 
 /** Ποιο εσωτερικό όριο γραμμής είναι κάτω από το σημείο· `null` κάτω από το LOD ή αλλού. */

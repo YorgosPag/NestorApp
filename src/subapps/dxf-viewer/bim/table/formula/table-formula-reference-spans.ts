@@ -40,7 +40,7 @@ import {
   type TableCellRangeBounds,
   type TableCellRef,
 } from '../table-cell-range';
-import { parseTableCellReference } from '../table-cell-reference';
+import { resolveWrittenCellRef } from './table-formula-absolute';
 import {
   formulaBodyStart,
   tokenizeFormula,
@@ -199,5 +199,8 @@ function cellRefOf(
   const next = tokens[at + 1];
   if (next?.kind === 'punct' && next.value === '(') return null;
 
-  return parseTableCellReference(model, token.value);
+  // ADR-754 Γ2 — το `$A$1` δείχνει **στα ίδια** κελιά με το `A1`: η απολυτότητα αφορά την
+  // αντιγραφή, όχι το τι διαβάζεται τώρα. Άρα το περίγραμμα είναι το ίδιο, και η αποκόλληση
+  // του δείκτη γίνεται από τον έναν ιδιοκτήτη του, όχι με regex εδώ.
+  return resolveWrittenCellRef(model, token.value);
 }
