@@ -569,6 +569,29 @@
       "saveError": "Save error",
       "save": "Save",
       "noChanges": "No changes",
+      "acquisition": {
+        "label": "Acquisition status",
+        "selectAria": "Acquisition status for {name}",
+        "notDeclared": "Not declared",
+        "status": {
+          "prospective": "In discussion",
+          "under_contract": "Signed",
+          "secured": "Finalised",
+          "withdrawn": "Fell through"
+        },
+        "hint": {
+          "prospective": "Talking — nothing signed yet",
+          "under_contract": "Preliminary contract or land-exchange agreement",
+          "secured": "Final deed signed and registered",
+          "withdrawn": "Did not go ahead — history is kept"
+        },
+        "summary": {
+          "none": "No acquisition status recorded",
+          "partial": "{pct}% secured — {missing, plural, one {# landowner not declared} other {# landowners not declared}}",
+          "complete": "{pct}% secured"
+        },
+        "removalNote": "\"{name}\" is marked as Finalised. Removing them discards that record too."
+      },
       "removalGuard": {
         "confirmTitle": "Remove Landowner",
         "confirmBody": "You are about to remove \"{name}\" from the project landowners. The contact will not be deleted.",

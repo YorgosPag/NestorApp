@@ -21,6 +21,7 @@ import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableCell, TableCellAlign, TableCellOverflow, TableModel } from '../../types/table';
 import { cellKey, cellText } from './table-model-helpers';
 import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overflow';
+import { resolveCellLinkSpans } from './table-cell-link-spans';
 import { tableDiagonalCorners } from './table-cell-diagonal-ops';
 import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
 import type { TableMeasurement } from './table-layout-measure';
@@ -170,6 +171,19 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
   });
   if (!visible.text) return undefined;
 
+  // 🔴 ADR-751 — οι διευθύνσεις εντοπίζονται **εδώ**, στο ίδιο σημείο που γεννιέται το ορατό
+  // κείμενο, και με τον **ίδιο** μετρητή που μόλις αποφάσισε την περικοπή. Αν τις έβρισκε ο
+  // ζωγράφος, τα άλλα τρία backends (PDF, DXF, ΤΕΚ) δεν θα τις είχαν καθόλου — το ίδιο σχήμα
+  // «ο καμβάς ξέρει κάτι που το αρχείο αγνοεί» που η Φ.Ε πλήρωσε με το `advanceMm`.
+  const links = resolveCellLinkSpans({
+    fullText: input.text,
+    visibleText: visible.text,
+    clipped: visible.clipped,
+    numeric: input.numeric,
+    hAlign,
+    measure: (s) => input.measure(s, style.textHeightMm, style),
+  });
+
   const base: TableTextRunBase = {
     position: {
       x: anchorXMm(rect, hAlign, style.margins.hMm),
@@ -186,6 +200,8 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     ...(style.fontFamily !== undefined && { fontFamily: style.fontFamily }),
     // Παρόν μόνο όταν αληθεύει — δες τη σημείωση σχήματος στο `TableTextRun.clipped`.
     ...(visible.clipped && { clipped: true as const }),
+    // Ίδια σύμβαση: απόν στα κελιά χωρίς διεύθυνση, δηλαδή στα σχεδόν όλα.
+    ...(links.length > 0 && { links }),
   };
 
   // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος μετριέται **μόνο** για υπογραμμισμένο κείμενο: είναι ο

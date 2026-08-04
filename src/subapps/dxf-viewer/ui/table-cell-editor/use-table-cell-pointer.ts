@@ -105,6 +105,13 @@ export interface UseTableCellPointerParams {
   readonly cursor: TableCellCursorState | null;
   /** Η **ζωντανή** οντότητα του δρομέα· `null` όταν ο πίνακας χάθηκε από κάτω του. */
   readonly entity: TableEntity | null;
+  /**
+   * 🔴 ADR-739 §36 ΦΑΣΗ 4 — ο **αναγνώστης** της ίδιας οντότητας, για όποιον τη χρειάζεται
+   * **αργότερα** από τώρα. Το {@link entity} είναι η τιμή αυτού του render· η μεταφορά περιοχής
+   * μπορεί να ρωτήσει τον χρήστη πριν γράψει, και ανάμεσα στην ερώτηση και στην απάντηση ο
+   * κόσμος αλλάζει (`Ctrl+Z`, διαγραφή πίνακα, αλλαγή ορόφου). Δες `table-range-transfer-drop`.
+   */
+  readonly liveTable: () => TableEntity | null;
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly transformRef: RefObject<ViewTransform>;
   /** `Shift+κλικ` — δεύτερη γωνία περιοχής, χωρίς να κουνηθεί το ενεργό κελί. */
@@ -139,7 +146,7 @@ export interface UseTableCellPointerParams {
 
 export function useTableCellPointer(params: UseTableCellPointerParams): void {
   const {
-    cursor, entity, containerRef, transformRef, onSelectTo, onCommitPending,
+    cursor, entity, liveTable, containerRef, transformRef, onSelectTo, onCommitPending,
     onPreviewModel, onCommitModel,
   } = params;
 
@@ -347,6 +354,9 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       onCommitPending();
       beginTableRangeTransfer({
         entity,
+        // §36 ΦΑΣΗ 4 — η μεταφορά μπορεί να **ρωτήσει** πριν γράψει· ο αναγνώστης δίνει τη σκηνή
+        // τη στιγμή της **απάντησης**, όχι τη στιγμή του πατήματος.
+        liveTable,
         source: grabbed.source,
         grab: grabbed.grab,
         container,

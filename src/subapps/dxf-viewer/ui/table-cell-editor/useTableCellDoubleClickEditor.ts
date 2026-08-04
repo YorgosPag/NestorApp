@@ -37,6 +37,7 @@ import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms'
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useCommandHistory } from '../../core/commands';
 import { resolveSelectedTable, resolveTableById } from './table-entity-lookup';
+import { useLiveTable } from './use-live-table';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
   buildTableCellEditCommand,
@@ -264,6 +265,14 @@ export function useTableCellDoubleClickEditor(
   const liveEntity = cursor ? resolveTableById(levelManager, cursor.entityId) : null;
 
   /**
+   * 🔴 ADR-739 §36 ΦΑΣΗ 4 — **η ίδια ανάγνωση, αλλά σε χρόνο χειριστή.** Το {@link liveEntity}
+   * απαντά «τι βλέπει αυτό το render»· ο διάλογος επικάλυψης της μεταφοράς ρωτά «τι ισχύει
+   * **τώρα** που ο χρήστης απάντησε», δηλαδή μετά από αόριστο χρόνο ανθρώπου. Ο ΕΝΑΣ getter
+   * του subapp — καμία τέταρτη αντιγραφή των τριών γραμμών (δες την κεφαλίδα του module).
+   */
+  const liveTable = useLiveTable(levelManager);
+
+  /**
    * ADR-739 Φ.Δ βήμα 8 — επέκταση / επιλογή όλων / άδειασμα / πρόχειρο.
    *
    * Δέχεται τη **ζωντανή** οντότητα που μόλις διαβάστηκε παραπάνω: μια δεύτερη ανάγνωση
@@ -320,6 +329,7 @@ export function useTableCellDoubleClickEditor(
   useTableCellPointer({
     cursor,
     entity: liveEntity,
+    liveTable,
     containerRef,
     transformRef,
     onSelectTo: rangeActions.selectTo,

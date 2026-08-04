@@ -84,6 +84,8 @@ export const DxfSymbolDetectConfirmDialog = React.lazy(() => import('../ui/dialo
 export const ColumnPromoteConfirmDialog = React.lazy(() => import('../ui/dialogs/ColumnPromoteConfirmDialog').then(mod => ({ default: mod.ColumnPromoteConfirmDialog })));
 // ADR-507 Φ3 — «η περιοχή έχει ήδη γραμμοσκίαση» confirm dialog (warn+allow, self-subscribing)
 export const HatchOverlapConfirmDialog = React.lazy(() => import('../ui/dialogs/HatchOverlapConfirmDialog').then(mod => ({ default: mod.HatchOverlapConfirmDialog })));
+// ADR-739 §36.22 — «υπάρχουν ήδη δεδομένα εδώ» (μεταφορά περιοχής πίνακα).
+export const TableRangeOverwriteConfirmDialog = React.lazy(() => import('../ui/dialogs/TableRangeOverwriteConfirmDialog').then(mod => ({ default: mod.TableRangeOverwriteConfirmDialog })));
 export const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 export const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 export const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));

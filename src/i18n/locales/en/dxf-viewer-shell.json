@@ -401,6 +401,13 @@
     "proceedButton": "Proceed",
     "cancel": "Cancel"
   },
+  "tableRangeOverwrite": {
+    "title": "There's already data here",
+    "message": "{count, plural, one {# destination cell already has content and will be replaced.} other {# destination cells already have content and will be replaced.}}",
+    "undoNote": "You can undo this with Ctrl+Z.",
+    "replaceButton": "Replace",
+    "cancel": "Cancel"
+  },
   "hatchOverlap": {
     "title": "Region already hatched",
     "message": "This region already has a hatch. Add another one on top?",
