@@ -48,6 +48,11 @@ import {
   TableRangeContextMenu,
   type TableRangeContextMenuHandle,
 } from '../../ui/components/TableRangeContextMenu';
+import {
+  TableCellLinkContextMenu,
+  type TableCellLinkContextMenuHandle,
+} from '../../ui/components/TableCellLinkContextMenu';
+import { TableLinkPicker } from '../../ui/components/TableLinkPicker';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
 import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
@@ -77,6 +82,13 @@ type TableHeaderMenuMount = {
   props: Omit<React.ComponentProps<typeof TableHeaderContextMenu>, 'ref'>;
 };
 
+// ADR-751 Φ8.β — τρίτο μενού δεξιού κλικ πίνακα, ίδιο συμβόλαιο μονταρίσματος με τα δύο
+// από πάνω: ref για την επιτακτική εντολή `open`, props για τις ενέργειες.
+type TableLinkMenuMount = {
+  ref: React.RefObject<TableCellLinkContextMenuHandle | null>;
+  props: Omit<React.ComponentProps<typeof TableCellLinkContextMenu>, 'ref'>;
+};
+
 export interface CanvasSectionOverlaysProps {
   drawingMenuRef: React.RefObject<DrawingContextMenuHandle | null>;
   guideMenuRef: React.RefObject<GuideContextMenuHandle | null>;
@@ -102,6 +114,7 @@ export interface CanvasSectionOverlaysProps {
   // ADR-750 Φ4 — το μενού περιγραμμάτων του δεξιού κλικ σε κελιά· ίδια σύμβαση με το παραπάνω:
   // μονταρισμένο πάντα, ανοίγει imperative μέσω ref, αόρατο όσο δεν έχει στόχο.
   tableRangeMenu: TableRangeMenuMount;
+  tableLinkMenu: TableLinkMenuMount;
   selectionCycling: CyclingProps;
 }
 
@@ -153,6 +166,13 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
         ref={p.tableRangeMenu.ref as React.Ref<TableRangeContextMenuHandle>}
         {...p.tableRangeMenu.props}
       />
+      {/* 🔴 ADR-751 Φ8.β — δεξί κλικ πάνω σε **διεύθυνση** μέσα σε κελί: άνοιγμα + αντιγραφή.
+          Δύο εντολές, όχι οι τέσσερις του Excel — ο σύνδεσμός μας παράγεται από το κείμενο,
+          άρα «επεξεργασία/αφαίρεση» δεν έχουν αντικείμενο (δες την κεφαλίδα του component). */}
+      <TableCellLinkContextMenu
+        ref={p.tableLinkMenu.ref as React.Ref<TableCellLinkContextMenuHandle>}
+        {...p.tableLinkMenu.props}
+      />
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />
       {/* ADR-659 — overlap «⧉ N» badge (portal, micro-leaf, ADR-040) */}
@@ -161,6 +181,10 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
           στον αδελφό της (ίδιο portal, ίδιο micro-leaf συμβόλαιο): χωρίς προπ, όλη η
           κατάσταση έρχεται από το χαμηλόσυχνο store της. */}
       <TableCellLinkTooltip />
+      {/* 🔴 ADR-751 Φ8.γ — «Άνοιγμα εντοπισμένου συνδέσμου…» (μοτίβο VS Code): οι διευθύνσεις
+          του πίνακα χωρίς ποντίκι. Χωρίς προπ, όπως το tooltip: όλη η κατάσταση έρχεται από
+          το χαμηλόσυχνο store της, άρα ο orchestrator δεν αποκτά συνδρομή (ADR-040). */}
+      <TableLinkPicker />
     </>
   );
 };

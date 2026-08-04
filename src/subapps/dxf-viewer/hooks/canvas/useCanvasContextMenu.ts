@@ -30,6 +30,9 @@ import { usePolygonMode3DStore } from '../../bim-3d/stores/PolygonMode3DStore';
 // με το Polygon Mode 3D παραπάνω· δες την κεφαλίδα της θύρας για το γιατί όχι prop.
 import { getTableHeaderMenuPort } from '../../ui/table-cell-editor/table-header-menu-port';
 import { getTableRangeMenuPort } from '../../ui/table-cell-editor/table-range-menu-port';
+// ADR-751 Φ8.β — ο σύνδεσμος κελιού διεκδικεί το δεξί κλικ ΠΡΙΝ από τα περιγράμματα· δες τη
+// θύρα για το γιατί η σειρά είναι 1.44 → 1.45 και όχι το αντίστροφο.
+import { getTableLinkMenuPort } from '../../ui/table-cell-editor/table-link-menu-port';
 import type { OverlayEditorMode } from '../../overlays/types';
 import type { DrawingContextMenuHandle } from '../../ui/components/DrawingContextMenu';
 import type { EntityContextMenuHandle } from '../../ui/components/EntityContextMenu';
@@ -238,6 +241,13 @@ export function useCanvasContextMenu({
           return;
         }
       }
+
+      // PRIORITY 1.44: ADR-751 Φ8.β — **σύνδεσμος** μέσα σε κελί (e-mail / ιστοσελίδα /
+      // τηλέφωνο). ΠΡΙΝ τα περιγράμματα (1.45) γιατί είναι η **πιο ειδική** ερώτηση: «αυτά τα
+      // γράμματα» αντί για «αυτό το κελί». Στην πράξη οι δύο δεν συναντιούνται — το 1.45
+      // απαιτεί ζωντανό δρομέα, ενώ ο σύνδεσμος σβήνεται όσο ο καμβάς είναι κλειδωμένος σε
+      // συνεδρία — αλλά η σειρά γράφεται ρητά ώστε η ειδικότερη να κερδίζει αν ποτέ τμηθούν.
+      if (getTableLinkMenuPort()?.open(e.clientX, e.clientY)) return;
 
       // PRIORITY 1.45: ADR-750 Φ4 — περιγράμματα κελιών πίνακα (δεξί κλικ **μέσα** στο πλέγμα).
       // ΜΕΤΑ τις ζώνες δείκτη (1.4), γιατί εκείνες είναι η πιο ειδική ερώτηση και οι δύο

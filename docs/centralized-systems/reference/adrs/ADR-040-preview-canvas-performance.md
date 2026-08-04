@@ -113,6 +113,32 @@ SSoT γεωμετρίας: `canvas-v2/dxf-canvas/dxf-bitmap-cache-anchor.ts` (κ
 
 ## Changelog
 
+### 2026-08-04 — ADR-751 Φ8: η **τρίτη** θύρα δεξιού κλικ + ο επιλογέας συνδέσμων (CHECK 6B)
+
+- **`CanvasSection.tsx`**: **+2 γραμμές, καμία νέα συνδρομή** — ένα ακόμη πεδίο (`tableLinkMenu`)
+  στην αποδόμηση του `useCanvasSectionUI` και το ίδιο πεδίο παρακάτω ως prop στο
+  `CanvasSectionOverlays`. Αυτό είναι **ολόκληρη** η αλλαγή στον orchestrator: το `tableLinkMenu`
+  είναι `{ ref, props }` — **επιτακτική** λαβή μονταρίσματος, όχι κατάσταση. Ίδιο συμβόλαιο με τα
+  `tableHeaderMenu` (ADR-739 Φ.Δ β9) και `tableRangeMenu` (ADR-750 Φ4), για τον ίδιο λόγο: ένα ref
+  δεν αλλάζει ποτέ ταυτότητα, άρα ο `CanvasSection` **δεν** ξαναρενδάρει όταν ανοίγει το μενού.
+- **`CanvasSectionOverlays.tsx`**: **+2 φύλλα** — το `<TableCellLinkContextMenu>` (με ref+props,
+  όπως τα δύο αδέλφια του από πάνω) και το `<TableLinkPicker />` **χωρίς καμία prop**. Η απουσία
+  των props στο δεύτερο **είναι** ο μηχανισμός, ακριβώς όπως στο `TableCellLinkTooltip` (Φ7) και
+  στο `TableResizeReadoutOverlay` από κάτω: όλη η κατάσταση έρχεται από το χαμηλόσυχνο
+  `table-link-picker-store`, άρα η συνδρομή μένει **μέσα** στο φύλλο και δεν ανεβαίνει ποτέ στον
+  orchestrator (κανόνας 1).
+- **`hooks/canvas/useCanvasContextMenu.ts`**: **+1 θύρα σε PRIORITY 1.44**, πριν το 1.45 των
+  περιγραμμάτων. 🔑 Ο στόχος **δεν ξαναϋπολογίζεται**: διαβάζεται από το
+  `table-cell-link-hover-store` — το **ίδιο** store που βάφει το χεράκι και τροφοδοτεί το tooltip.
+  Άρα το μενού **δεν μπορεί δομικά** να διαφωνήσει με ό,τι βλέπει ο χρήστης, και κληρονομεί δωρεάν
+  κάθε υπάρχουσα πύλη (εργαλείο · pan · κλείδωμα συνεδρίας). Καμία ανάγνωση snapshot — η θύρα
+  ρωτά τη στιγμή του συμβάντος (κανόνας 2).
+- **`hooks/canvas/useCanvasSectionUI.ts`**: `useTableLinkMenu()` (χωρίς παραμέτρους, επίτηδες) +
+  `useTableLinkShortcut(...)` (χωρίς επιστρεφόμενη τιμή — η επιφάνειά του είναι micro-leaf πάνω σε
+  store, όχι μονταρισμένο ref).
+- **Μηδέν άγγιγμα** σε cache key, hot path σύρσης ή high-freq store. Πλήρες σκεπτικό: **ADR-751
+  §13**. 🟡 Ανεπαλήθευτο ζωντανά (ADR-751 §13.9).
+
 ### 2026-08-04 — ADR-739: η πινακίδα σύρσης — νέο **φύλλο** στο `CanvasSectionOverlays` (CHECK 6B)
 
 - **`CanvasSectionOverlays.tsx`**: **+2 γραμμές** — ένα `<TableResizeReadoutOverlay />` **χωρίς
