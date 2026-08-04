@@ -18,11 +18,17 @@ import { getPersistedCellText } from '../table-model-helpers';
 import { applyTableFill } from '../table-fill-apply';
 import {
   resolveTableFillTarget,
+  tableFillHandleHitAtFrame,
   tableFillHandleRectMm,
   tableFillPreviewBounds,
+  tableFillSourceBounds,
   isOnTableFillHandle,
   TABLE_FILL_HANDLE_PX,
 } from '../table-fill-handle';
+// 🔴 ADR-754 §15 — ο **11ος ρόλος** δείκτη ζει στο διπλανό module, αλλά η προδιαγραφή του είναι
+// αυτής της φάσης: δοκιμάζεται εδώ, πάνω στο **ίδιο** 5×5 πλέγμα με τη γεωμετρία που τον τρέφει.
+import { tableIndicatorCursorRoleAtFrame } from '../table-indicator-cursor-role';
+import { tableIndicatorBandsMm } from '../table-indicator-geometry';
 import type { TableCellRangeBounds } from '../table-cell-range';
 import type { TableLayout } from '../table-layout-types';
 
@@ -118,22 +124,22 @@ describe('🔴 ΕΝΑΣ άξονας, ποτέ δύο', () => {
 // Η γεωμετρία της λαβής
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe('η λαβή κάθεται στην κάτω δεξιά γωνία', () => {
-  /**
-   * Διάταξη γραμμένη με το χέρι, **επίτηδες**: το υπό δοκιμή είναι η γεωμετρία της λαβής, όχι
-   * ο μετρητής. Στήλες 20 mm, γραμμές 8 mm — αριθμοί που κάνουν κάθε προσδοκία παρακάτω
-   * αναγνώσιμη χωρίς αριθμητική.
-   */
-  const LAYOUT: TableLayout = {
-    widthMm: 100,
-    heightMm: 40,
-    columns: COLUMNS.map((column, i) => ({ id: column.id, xMm: i * 20, widthMm: 20 })),
-    rows: ROWS.map((row, i) => ({ id: row.id, yMm: i * 8, heightMm: 8 })),
-    cells: [],
-    borders: [],
-  };
-  const PX_PER_MM = 2;
+/**
+ * Διάταξη γραμμένη με το χέρι, **επίτηδες**: το υπό δοκιμή είναι η γεωμετρία της λαβής, όχι
+ * ο μετρητής. Στήλες 20 mm, γραμμές 8 mm — αριθμοί που κάνουν κάθε προσδοκία παρακάτω
+ * αναγνώσιμη χωρίς αριθμητική.
+ */
+const LAYOUT: TableLayout = {
+  widthMm: 100,
+  heightMm: 40,
+  columns: COLUMNS.map((column, i) => ({ id: column.id, xMm: i * 20, widthMm: 20 })),
+  rows: ROWS.map((row, i) => ({ id: row.id, yMm: i * 8, heightMm: 8 })),
+  cells: [],
+  borders: [],
+};
+const PX_PER_MM = 2;
 
+describe('η λαβή κάθεται στην κάτω δεξιά γωνία', () => {
   it('κεντραρισμένη στην κορυφή — μισή μέσα, μισή έξω', () => {
     const handle = tableFillHandleRectMm(LAYOUT, rect(0, 0, 0, 0), PX_PER_MM)!;
     const sideMm = TABLE_FILL_HANDLE_PX / PX_PER_MM;

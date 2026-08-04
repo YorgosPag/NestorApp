@@ -38,16 +38,15 @@ import type { RefObject } from 'react';
 import { computeTableEntityGeometryLive, tablePxPerMm, tableWorldToFrame } from '../../bim/table/table-entity-geometry';
 import { tableMmToWorldLive } from '../../bim/table/table-entity-geometry';
 import {
-  rawTableCellRangeBounds,
   resolveTableSelectionBounds,
   type TableCellRangeBounds,
   type TableCellRef,
 } from '../../bim/table/table-cell-range';
 import {
-  isOnTableFillHandle,
   resolveTableFillTarget,
-  tableFillHandleRectMm,
+  tableFillHandleHitAtFrame,
   tableFillPreviewBounds,
+  tableFillSourceBounds,
 } from '../../bim/table/table-fill-handle';
 import { applyTableFill } from '../../bim/table/table-fill-apply';
 import { indexById, resolveTableModel } from '../../bim/table/table-model-helpers';
@@ -88,7 +87,7 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
   const model = resolveTableModel(press.entity.model);
   const source = fillSourceBounds(model, press.cursor);
   if (!source) return false;
-  if (!isOnHandle(press, model, source)) return false;
+  if (!isOnHandle(press, source)) return false;
 
   claimTableCellSessionPointerDown();
   claimTableCellPointerGesture();
@@ -126,28 +125,32 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
 /**
  * Η **πηγή** της συμπλήρωσης: η επιλογή αν υπάρχει, αλλιώς το ενεργό κελί.
  *
- * Ο ίδιος κανόνας με τον ζωγράφο, και επίτηδες η **ίδια** συνάρτηση απάντησης
- * (`resolveTableSelectionBounds`): αν οι δύο απαντούσαν χωριστά, η λαβή θα ζωγραφιζόταν στη
- * γωνία της μιας περιοχής και θα γέμιζε από την άλλη.
+ * 🔴 **ADR-754 §15 — η απόφαση δεν γράφεται πια εδώ.** Εδώ ζούσε η **δεύτερη** διατύπωσή της
+ * (`if (cursor.selection) return resolveTableSelectionBounds(...)`), δίπλα στην πρώτη του
+ * ζωγράφου (`selectionBounds ?? ενεργό κελί`) — και οι δύο **διαφωνούσαν** όταν η επιλογή ήταν
+ * μπαγιάτικη: ο ζωγράφος ζωγράφιζε λαβή στο ενεργό κελί, αυτός εδώ αρνιόταν να την πιάσει.
+ * Τώρα ρωτούν οι τρεις (ζωγράφος, πάτημα, **δείκτης**) την ίδια `tableFillSourceBounds`.
+ *
+ * ⚠️ Η ανάλυση της επιλογής μένει εδώ και δεν μετακόμισε μέσα της: εκείνη τη ζητά ο ζωγράφος
+ * **ήδη λυμένη** για το περίγραμμα του ίδιου καρέ, και μια δεύτερη ανάλυση εκεί θα ήταν δεύτερη
+ * απάντηση στο «τι μάρκαρε ο χρήστης» μέσα στο ίδιο καρέ.
  */
 function fillSourceBounds(model: TableModel, cursor: TableCellCursorState): TableCellRangeBounds | null {
-  if (cursor.selection) return resolveTableSelectionBounds(model, cursor.selection);
   const cell: TableCellRef = { rowId: cursor.position.rowId, colId: cursor.position.colId };
-  return rawTableCellRangeBounds(model, cell, cell);
+  const selected = cursor.selection ? resolveTableSelectionBounds(model, cursor.selection) : null;
+  return tableFillSourceBounds(model, cell, selected);
 }
 
-/** Έπεσε το πάτημα πάνω στη λαβή; Η γεωμετρία περνά από τον **έναν** δρόμο του ζωγράφου. */
-function isOnHandle(
-  press: TableFillHandlePress,
-  model: TableModel,
-  source: TableCellRangeBounds,
-): boolean {
+/**
+ * Έπεσε το πάτημα πάνω στη λαβή; Η γεωμετρία περνά από τον **έναν** δρόμο — τον ίδιο
+ * `tableFillHandleHitAtFrame` που απαντά και στον **δείκτη** (§15). Ο χρήστης πιάνει ό,τι του
+ * υπόσχεται ο λεπτός σταυρός, στο ίδιο ακριβώς pixel.
+ */
+function isOnHandle(press: TableFillHandlePress, source: TableCellRangeBounds): boolean {
   const geometry = computeTableEntityGeometryLive(press.entity);
   const pxPerMm = tablePxPerMm(tableMmToWorldLive(), press.transform.scale);
-  const rect = tableFillHandleRectMm(geometry.layout, source, pxPerMm);
-  if (!rect) return false;
   const frame = tableWorldToFrame(press.entity, press.worldPoint.x, press.worldPoint.y, geometry.mmToWorld);
-  return isOnTableFillHandle(frame, rect, pxPerMm);
+  return tableFillHandleHitAtFrame(geometry.layout, frame, pxPerMm, source) !== null;
 }
 
 /** Το κελί κάτω από το χέρι, μεταφρασμένο σε **δείκτες**, και από εκεί σε υπόσχεση. */

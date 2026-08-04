@@ -69,6 +69,17 @@ import {
   setTableInsertControl,
 } from '../../state/table-insert-control-store';
 import type { TableInsertControlMode } from '../../bim/table/table-insert-control';
+// 🔴 ADR-739 §42 — το **τέταρτο** κανάλι της ίδιας σάρωσης: το ⊖ της διαγραφής.
+import {
+  clearTableDeleteControl,
+  setTableDeleteControl,
+} from '../../state/table-delete-control-store';
+// 🔴 §42/§27.17 — «ποιους άξονες αφορά η πράξη». Απαντιέται **εδώ**, τη στιγμή της σάρωσης,
+// ώστε ο ζωγράφος να βάψει ακριβώς όσους θα σβήσει το πάτημα — δες την κεφαλίδα του store.
+import { resolveTableAxisActionTarget } from '../../bim/table/table-axis-action-target';
+import { resolveTableModel } from '../../bim/table/table-model-helpers';
+// 🔴 §42 — η ΜΙΑ έκφραση «επιτρέπεται η διαγραφή;», κοινή με το μενού ζωνών.
+import { canDeleteAxisTarget } from './table-header-axis-actions';
 // 🔬 ADR-739 §31.11 — το όργανο. Εδώ ζει η **ΑΙΤΙΑ** (τι απάντησε η σάρωση), ενώ στο
 // `useCrosshairCursor` ζει το **ΑΠΟΤΕΛΕΣΜΑ** (τι γράφτηκε στο `style.cursor`). Χωρίς το πρώτο
 // δεν ξεχωρίζεις «ο ρόλος άλλαξε» από «κάποιος άλλος ξαναέγραψε» — δύο διαφορετικές θεραπείες.
@@ -107,6 +118,11 @@ const clearTableIndicatorFeedback = (): void => {
   // άλλο». Η προσθήκη του τρίτου είναι η επαλήθευση — ένα σημείο άλλαξε, και τα τέσσερα
   // σημεία εξόδου το πήραν.
   clearTableInsertControl();
+  // §42 — **τέταρτο κανάλι, ίδιος καθαρισμός.** Η πρόβλεψη της κεφαλίδας («η προσθήκη του
+  // τρίτου είναι η επαλήθευση») κρατά και για το τέταρτο: ένα σημείο άλλαξε, και τα τέσσερα
+  // σημεία εξόδου το πήραν. Εδώ έχει και **βάρος**: ένα ξεχασμένο ⊖ θα άφηνε κόκκινη στήλη
+  // βαμμένη σε πίνακα που δεν έχει πια χειριστήριο από πάνω του.
+  clearTableDeleteControl();
 };
 
 export interface UseTableIndicatorHoverParams {
@@ -202,11 +218,24 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     //
     // Φιλτραρισμένη ως προς ΑΥΤΟΝ τον πίνακα: δύο πίνακες στη σκηνή δεν μοιράζονται δρομέα —
     // ο ίδιος έλεγχος που κάνει ήδη ο ζωγράφος (`TableRenderer.cursorOf`).
-    const cursorState = getTableCellCursor();
-    const selection = cursorState?.entityId === target.id ? cursorState.selection : null;
+    // Φιλτραρισμένος ως προς ΑΥΤΟΝ τον πίνακα, **μία φορά**: δύο πίνακες στη σκηνή δεν
+    // μοιράζονται δρομέα, και η ερώτηση «είναι δικός μου;» δεν επιτρέπεται να απαντηθεί δύο
+    // φορές με δύο διατυπώσεις (εδώ ζητούνται πλέον **τρία** πεδία του: επιλογή, θέση, μορφή).
+    const liveCursor = getTableCellCursor();
+    const cursorState = liveCursor?.entityId === target.id ? liveCursor : null;
+    const selection = cursorState?.selection ?? null;
+    // 🔴 ADR-754 §15 — **Η ΛΑΒΗ ΖΕΙ ΜΟΝΟ ΣΕ ΠΛΟΗΓΗΣΗ.** Ο ίδιος φρουρός που έχουν ήδη ο
+    // ζωγράφος (`stampTableFillHandleOverlay`) και το πάτημα (`tryTableFillHandleMouseDown`):
+    // όσο ο χρήστης πληκτρολογεί, η λαβή ούτε ζωγραφίζεται ούτε πιάνεται (Excel parity, §13.5)
+    // — άρα ο δείκτης **οφείλει** να σιωπά κι αυτός. Τρίτος φρουρός με διαφορετική άποψη θα
+    // έδινε «λεπτός σταυρός πάνω σε λαβή που δεν υπάρχει».
+    const fillAnchor =
+      cursorState?.mode === 'nav'
+        ? { rowId: cursorState.position.rowId, colId: cursorState.position.colId }
+        : null;
     // ΜΙΑ ανάγνωση γεωμετρίας, δύο απαντήσεις — δες την κεφαλίδα του `tableIndicatorProbeAtWorld`
     // για το γιατί δεν είναι δύο κλήσεις (θα ήταν δύο υπολογισμοί ανά κίνηση ποντικιού).
-    const { hit, cursor, insert } = tableIndicatorProbeAtWorld(
+    const { hit, cursor, insert, remove } = tableIndicatorProbeAtWorld(
       target,
       world,
       transform.scale,
@@ -216,6 +245,7 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       // **`keydown`/`keyup`** μέσω του `modifiers` — δες την κεφαλίδα του χειριστή.
       tableRangeDragIntentOf(modifiers),
       mode,
+      fillAnchor,
     );
     // 🔬 §31.11 — η **αιτία**, με τις συντεταγμένες του συμβάντος: αν ο ρόλος ταλαντώνεται ενώ
     // το `y` μένει σταθερό, φταίει όριο κατά τον **οριζόντιο** άξονα (διαχωριστικά στηλών)·
@@ -226,6 +256,39 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // §40 — το τρίτο κανάλι της **ίδιας** σάρωσης. Ο φύλακας «άλλαξε κάτι;» ζει μέσα στον
     // γραφέα, όπως και στα άλλα δύο — εδώ δεν επαναλαμβάνεται.
     setTableInsertControl(insert ? { entityId: target.id, control: insert } : null);
+    // 🔴 §42 — το τέταρτο κανάλι, **με τον στόχο του**.
+    //
+    // Ο στόχος λύνεται εδώ και όχι στη γεωμετρία, γιατί είναι γνώση **μοντέλου + επιλογής**
+    // (§27.17: «η επιλογή μετράει μόνο αν το πάτημα έπεσε μέσα της»), ενώ το
+    // `tableIndicatorProbeAtWorld` απαντά ρητά «**πού** έπεσε αυτό», όχι «τι κατάσταση έχει η
+    // εφαρμογή» — δες την κεφαλίδα του. Η **ίδια** `selection` που ήδη διαβάστηκε από πάνω με
+    // getter: μία ανάγνωση, δύο καταναλωτές.
+    //
+    // ⚠️ `null` και όταν ο στόχος δεν λύνεται (μπαγιάτικη ταυτότητα μετά από undo): τότε δεν
+    // υπάρχει τίποτα έγκυρο να βαφτεί κόκκινο, και ένα ⊖ χωρίς στόχο θα ήταν κουμπί που δεν
+    // ξέρει τι σβήνει.
+    const removeTarget = remove
+      ? resolveTableAxisActionTarget(resolveTableModel(target.model), remove.hit, selection)
+      : null;
+    setTableDeleteControl(
+      // 🔴 §42 — **ΚΑΝΕΝΑ ⊖ ΟΤΑΝ Η ΔΙΑΓΡΑΦΗ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ.**
+      //
+      // Το μενού ζωνών γκριζάρει το item (`resolveHeaderState`)· ένα σηματάκι στον καμβά δεν
+      // έχει «ανενεργή» όψη που να διαβάζεται αξιόπιστα, οπότε η ειλικρινής απάντηση είναι να
+      // **μην υπάρχει**. Ο κανόνας του §31 («ο δείκτης δεν ψεύδεται») εφαρμοσμένος στο ίδιο το
+      // χειριστήριο: ό,τι φαίνεται, δρα.
+      //
+      // ⚠️ **Δίχτυ, όχι πρωτεύων δρόμος** (N.7.2 #4): το φράγμα υπάρχει ήδη μέσα στη μηχανή
+      // (`deleteTableRows/Columns` επιστρέφουν το ίδιο μοντέλο by-reference). Εδώ μπαίνει
+      // επειδή αλλιώς ο χρήστης θα έβλεπε κόκκινο κουμπί σε πίνακα μιας στήλης και θα πατούσε
+      // στο κενό — το ακριβές σύμπτωμα που κόστισε το §40.8.
+      //
+      // Οι **ίδιες** δύο συναρτήσεις που ρωτά το μενού, με το **πλήθος του στόχου** και όχι με
+      // `1` (§27.17): με τέσσερις στήλες μαρκαρισμένες σε πίνακα τεσσάρων, το ⊖ δεν υπάρχει.
+      remove && removeTarget && canDeleteAxisTarget(target.model, removeTarget)
+        ? { entityId: target.id, control: remove, target: removeTarget }
+        : null,
+    );
   });
 
   /**
