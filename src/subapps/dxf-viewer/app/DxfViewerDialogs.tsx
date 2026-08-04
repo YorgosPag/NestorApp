@@ -36,7 +36,7 @@ import {
   TestsModal, CreditsDialog, FloorplanBackgroundPanel, ReplaceConfirmDialog, CalibrationDialog,
   DxfImportModal, SimpleProjectDialog, FloorplanImportWizard, ConstructionLayerScaffoldDialog,
   DxfFindReplaceHost, DxfSymbolPickerHost, RenumberOpeningsHost, OpeningTagStyleHost,
-  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost,
+  OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost, TitleBlockBindingPalette,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
   DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
@@ -280,6 +280,11 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       <React.Suspense fallback={hiddenFallback}><AdminLayerManagerPalette projectId={levelManager.saveContext?.projectId ?? null} /></React.Suspense>
       {/* ADR-736 Φ4 — μητρώο συνημμένων· modeless, ανοίγει από Insert > Εξωτερικές Αναφορές. */}
       <React.Suspense fallback={hiddenFallback}><ExternalReferencesPalette /></React.Suspense>
+      {/* ADR-745 Φ3β — η πινακίδα του τοπογράφου ως πρόταση σύνδεσης. Modeless: η βάση αλλάζει
+          ενόσω το σχέδιο είναι ανοιχτό, οπότε η ίδια ερώτηση αξίζει να ξαναγίνει. */}
+      <React.Suspense fallback={hiddenFallback}>
+        <TitleBlockBindingPalette levelId={levelManager.currentLevelId ?? null} projectId={projectId} />
+      </React.Suspense>
       {/* ADR-736 §5 — η ΑΥΤΟΜΑΤΗ επίλυση συνημμένων. Ξεχωριστό host γιατί η παλέτα από πάνω
           αποδίδει `null` όσο είναι κλειστή: μέσα της, το «αυτόματα» σήμαινε στην πράξη «μόλις
           ο χρήστης ανοίξει το μητρώο». Ζωγραφίζει τίποτα· υπάρχει μόνο για να είναι mounted. */}

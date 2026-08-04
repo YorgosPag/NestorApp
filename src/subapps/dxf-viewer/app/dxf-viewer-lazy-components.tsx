@@ -50,6 +50,9 @@ export const SlabDetailHost = React.lazy(() => import('../ui/components/slab-det
 export const AdminLayerManagerPalette = React.lazy(() => import('../ui/components/AdminLayerManagerPalette').then(mod => ({ default: mod.AdminLayerManagerPalette })));
 // ADR-736 Φ4 — modeless παλέτα «Εξωτερικές Αναφορές» (αδελφή της παραπάνω, ίδιο κέλυφος).
 export const ExternalReferencesPalette = React.lazy(() => import('../ui/components/ExternalReferencesPalette').then(mod => ({ default: mod.ExternalReferencesPalette })));
+// ADR-745 Φ3β — «Σύνδεση Πινακίδας»: lazy όπως κάθε παλέτα, ώστε ο Λ2 και το στιγμιότυπο επαφών
+// να μην μπαίνουν καν στο πακέτο εκκίνησης του θεατή.
+export const TitleBlockBindingPalette = React.lazy(() => import('../ui/components/TitleBlockBindingPalette').then(mod => ({ default: mod.TitleBlockBindingPalette })));
 // ADR-736 §5 — ΠΑΝΤΑ mounted, ζωγραφίζει `null`: η αυτόματη επίλυση δεν επιτρέπεται να κρέμεται
 // από την παλέτα (που είναι κλειστή σχεδόν πάντα). Βλ. το αρχείο για το μετρημένο περιστατικό.
 export const ExternalReferencesAutoResolveHost = React.lazy(() => import('../ui/components/ExternalReferencesAutoResolveHost').then(mod => ({ default: mod.ExternalReferencesAutoResolveHost })));
