@@ -54,6 +54,9 @@ import {
 import {
   anchorBandFraction, baselineOffsetFromAnchor, measureTextGlyphInk,
 } from '../../text-engine/fonts/text-vertical-metrics';
+// ADR-753 Φ4 — ΤΟ ΙΔΙΟ βήμα με το `paintLayoutLines`: η γεωμετρία που παράγει το explode
+// οφείλει να ξεκινά στο ίδιο σημείο με τα γράμματα που βλέπει ο χρήστης.
+import { anchorOffset } from '../../text-engine/fonts/text-horizontal-anchor';
 import { TEXT_DECORATION_RATIOS } from '../../config/text-rendering-config';
 import { degToRad } from '../../rendering/entities/shared/geometry-utils';
 import { flattenOtCommands } from '../../utils/geometry/ot-path-flatten';
@@ -304,8 +307,7 @@ export function explodeTextEntity(entity: TextEntity | MTextEntity): Entity[] | 
     if (i > 0) y += line.spacingRatio * height;
     // Στοίχιση γραμμής (αγκύρωση L/C/R) + στοίχιση παραγράφου (`xOffsetWorld`) — η ίδια
     // σειρά εφαρμογής με το `paintLayoutLines` του renderer.
-    const xLine = (align === 'center' ? -line.widthWorld / 2 : align === 'right' ? -line.widthWorld : 0)
-      + line.xOffsetWorld;
+    const xLine = anchorOffset(align, line.widthWorld) + line.xOffsetWorld;
     for (const span of line.spans) {
       // ADR-737 §11-2 — ΤΟ ΙΔΙΟ βήμα με το `paintLayoutLines`: το `\A#;` μετακινεί το span μέσα
       // στη γραμμή. SSoT σε κόσμο y-πάνω, τοπικό πλαίσιο y-κάτω ⇒ αφαίρεση. Χωρίς αυτό, το

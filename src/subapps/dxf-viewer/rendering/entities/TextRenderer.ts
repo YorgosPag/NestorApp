@@ -70,6 +70,10 @@ import { resolveMultilineExtentsFromExtra, verticalAnchorToRow } from '../../bim
 // ADR-635 Φ C.26 — decoration rules are calibrated as fractions DOWN from the ascent line, so
 // they must be re-based for the anchor through the same SSoT that places the baseline.
 import { anchorBandFraction, measureTextGlyphInk } from '../../text-engine/fonts/text-vertical-metrics';
+// ADR-753 Φ4 — «πού ξεκινούν τα γράμματα σχετικά με την άγκυρα»: το ΙΔΙΟ SSoT που καλεί το
+// explode, το clip και ο πίνακας, ώστε η οθόνη και το αρχείο να μη διαφωνούν για το πού
+// αρχίζει ένα κεντραρισμένο κείμενο.
+import { anchorOffset, type HorizontalTextAnchor } from '../../text-engine/fonts/text-horizontal-anchor';
 // ADR-557 — the oblique shear SSoT. The box (`text-box.ts`) reads the SAME map (world y-up);
 // this screen-y-DOWN path negates it ONCE (below) — the only place the y-flip lives.
 import { obliqueShearFromAngle } from '../../bim/text/text-oblique';
@@ -101,7 +105,7 @@ interface LayoutPaintOptions {
   readonly screenHeight: number;
   /** World → screen px factor (`transform.scale`) — span offsets arrive in world units. */
   readonly worldToPx: number;
-  readonly align: CanvasTextAlign;
+  readonly align: HorizontalTextAnchor;
   readonly baseline: CanvasTextBaseline;
   /**
    * Per-render memo for `resolveEntityFont` — a real MTEXT has ~140 spans over a handful of
@@ -300,8 +304,7 @@ export class TextRenderer extends BaseEntityRenderer {
       // Δύο ΑΝΕΞΑΡΤΗΤΕΣ στοιχίσεις, με αυτή τη σειρά (AutoCAD): πρώτα η στοίχιση **παραγράφου**
       // μέσα στη στήλη (`\pxqc`/`\pxqr` → `xOffsetWorld`, ADR-635 Φ C.21), μετά η **αγκύρωση**
       // της οντότητας (κωδ. 71 → `align`) που τοποθετεί ολόκληρο το μπλοκ.
-      const xOff = (align === 'center' ? -lineWidthPx / 2 : align === 'right' ? -lineWidthPx : 0)
-        + line.xOffsetWorld * worldToPx;
+      const xOff = anchorOffset(align, lineWidthPx) + line.xOffsetWorld * worldToPx;
       for (const span of line.spans) {
         // ADR-737 §11-2 — `\A#;`: το span μπορεί να κάθεται ψηλότερα/χαμηλότερα ΜΕΣΑ στη γραμμή
         // όταν η γραμμή έχει ανάμεικτα ύψη. Το SSoT μιλά **κόσμο y-πάνω**, η οθόνη είναι
@@ -377,7 +380,7 @@ export class TextRenderer extends BaseEntityRenderer {
    */
   private paintText(
     originX: number, originY: number, text: string, screenHeight: number,
-    align: CanvasTextAlign, baseline: CanvasTextBaseline, resolved: ResolvedFont | null,
+    align: HorizontalTextAnchor, baseline: CanvasTextBaseline, resolved: ResolvedFont | null,
     tracking = 1,
   ): number {
     // ADR-635 Φ C.22 — `screenHeight` is a DXF TEXT HEIGHT (group 40 / `\H`, scaled to px), and the

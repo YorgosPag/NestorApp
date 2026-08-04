@@ -31,6 +31,9 @@ import type { Point2D } from '../../rendering/types/Types';
 // ADR-737 §18 — SSoT ύψους χαρακτήρα (κουβαλά και το `TEXT_SIZE_LIMITS.DEFAULT_FONT_SIZE`,
 // γι' αυτό ο τοπικός import της σταθεράς έφυγε μαζί με το αντίγραφο της λογικής).
 import { resolveTextHeight } from '../../hooks/canvas/dxf-text-style-extractor';
+// ADR-753 Φ4 — το ΙΔΙΟ «πού ξεκινούν τα γράμματα» που ρωτούν ο renderer και το explode: ο
+// αποκοπτόμενος χαρακτήρας πρέπει να είναι εκείνος που φαίνεται μέσα στην περιοχή.
+import { anchorOffset, type HorizontalTextAnchor } from '../../text-engine/fonts/text-horizontal-anchor';
 import type { ClipRegion } from './clip-region';
 import { DEG, normAngle, arcSweepDeg, ptEq, boundsOfPoints } from './clip-geometry';
 import { clipHatchLoops, bboxCullEntity } from './clip-entity-helpers';
@@ -159,9 +162,15 @@ function clipText(e: TextEntity | MTextEntity, region: ClipRegion): Entity[] {
   const chars = [...plainText];
   if (chars.length === 0) return [];
 
-  const align = e.alignment ?? 'left';
+  // ADR-753 Φ4 — το `MTextEntity.alignment` κουβαλά μια ΤΕΤΑΡΤΗ τιμή που ο τύπος αγκύρωσης
+  // σκόπιμα δεν έχει: `'justify'`. Αντιστοιχεί σε ΑΡΙΣΤΕΡΑ, επειδή το πλήρως στοιχισμένο
+  // κείμενο γεμίζει τη στήλη του **από την αριστερή ακμή** — αυτή είναι η άγκυρα. Η στένωση
+  // γίνεται ΕΔΩ, στον μοναδικό καλούντα που μπορεί να την παραγάγει: αυτό ακριβώς εξυπηρετεί
+  // ο στενός τύπος, να απαντιέται η ερώτηση εκεί που κάποιος ξέρει την απάντηση.
+  const align: HorizontalTextAnchor =
+    e.alignment === 'center' || e.alignment === 'right' ? e.alignment : 'left';
   const totalW = chars.length * charW;
-  const localStart = align === 'center' ? -totalW / 2 : align === 'right' ? -totalW : 0;
+  const localStart = anchorOffset(align, totalW);
   const rotRad = ((e.rotation ?? 0) * Math.PI) / 180;
   const cosR = Math.cos(rotRad), sinR = Math.sin(rotRad);
   const px = e.position.x, py = e.position.y;

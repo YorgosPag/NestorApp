@@ -42,6 +42,7 @@
 
 import { TEXT_DECORATION_RATIOS, TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import { anchorBandFraction } from '../../text-engine/fonts/text-vertical-metrics';
+import { anchorOffset } from '../../text-engine/fonts/text-horizontal-anchor';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 
 /**
@@ -65,38 +66,20 @@ export interface TableUnderlineGeometry {
 }
 
 /**
- * 🔴 **Από ποιο σημείο, σχετικά με την άγκυρα, ξεκινούν τα γράμματα** — η μία τριάδα
- * περιπτώσεων που εκφράζει τη στοίχιση ως μετατόπιση.
- *
- * Εξήχθη στο ADR-753 Φ3 όταν απέκτησε **τρίτο** καλούντα (ο ζωγράφος τμημάτων): μέχρι τότε
- * ζούσε δύο φορές μέσα στο `bim/table` — εδώ, και ως `anchorOffsetMm` στο
- * `table-cell-link-spans.ts` — με **ταυτόσημη** έκφραση. Δεν ήταν κόστος γραμμών: η
- * υπογράμμιση, τα τμήματα-σύνδεσμοι και τα ομοιογενή τμήματα οφείλουν να ξεκινούν στο
- * **ίδιο** mm, και δύο σώματα είναι δύο σημεία που μπορούν κάποτε να διαφωνήσουν για το πού
- * αρχίζει ένα κεντραρισμένο κείμενο.
- *
- * ⚠️ Το ερώτημα το απαντούν **άλλες τέσσερις** φορές έξω από το `bim/table`
- * (`TextRenderer.paintLayoutLines`, `explode-text`, `clip-entity`, `glyph-run-draw`), σε
- * τρία διαφορετικά πλαίσια συντεταγμένων (px / κόσμος / mm). Η ένωσή τους είναι πραγματική
- * δουλειά κεντρικοποίησης και **δεν** γίνεται παρεμπιπτόντως εδώ — καταγράφηκε στο
- * `.claude-rules/pending-ratchet-work.md`.
- */
-export function tableAnchorOffsetMm(hAlign: TextAlign, advance: number): number {
-  return hAlign === 'right' ? -advance : hAlign === 'center' ? -advance / 2 : 0;
-}
-
-/**
  * Η γραμμή υπογράμμισης για ένα run με μέγεθος `em` και μετρημένο πλάτος `advance`.
  *
  * Το `hAlign` καθορίζει από ποια μεριά της άγκυρας απλώνεται το κείμενο — ίδια σύμβαση με
  * το `ctx.textAlign` του καμβά **και** με το `anchorXMm` της διάταξης, ώστε η γραμμή να
- * ακολουθεί τη στοίχιση χωρίς δεύτερο ternary σε κάθε καταναλωτή.
+ * ακολουθεί τη στοίχιση χωρίς δεύτερο ternary σε κάθε καταναλωτή. Το «πού ξεκινούν τα
+ * γράμματα» το απαντά το {@link anchorOffset} — το ΙΔΙΟ SSoT με τον renderer, το explode και
+ * το clip (ADR-753 Φ4). Εδώ ζούσε ως ιδιωτικό `tableAnchorOffsetMm`: η Φ3 ένωσε τα δύο
+ * σώματα του `bim/table`, η Φ4 τα ένωσε και με τα τέσσερα έξω από αυτό.
  */
 export function tableUnderlineGeometry(
   em: number, advance: number, hAlign: TextAlign,
 ): TableUnderlineGeometry {
   return {
-    x: tableAnchorOffsetMm(hAlign, advance),
+    x: anchorOffset(hAlign, advance),
     y: em * (TEXT_DECORATION_RATIOS.UNDERLINE_EM - TABLE_BASELINE_BAND_FRACTION),
     width: advance,
     thickness: em * TEXT_DECORATION_RATIOS.THICKNESS_EM,

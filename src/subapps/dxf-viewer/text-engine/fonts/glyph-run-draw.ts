@@ -31,6 +31,9 @@ import type { ResolvedFont } from './font-resolver';
 // ADR-635 Φ C.26 — the ONE anchor→baseline rule (world y-up), shared with the text box so the
 // glyphs and the rectangle that must hug them cannot answer the question differently.
 import { baselineOffsetFromAnchor } from './text-vertical-metrics';
+// ADR-753 Φ4 — the ONE anchor→left-edge rule, shared with the renderer / explode / clip / table
+// so «where does a centred string begin» has a single answer across px, world and mm.
+import { anchorOffset, type HorizontalTextAnchor } from './text-horizontal-anchor';
 
 /** A 2D context that may expose the (recent-browser) `letterSpacing` property. */
 type SpacingCtx = CanvasRenderingContext2D & { letterSpacing: string };
@@ -80,12 +83,12 @@ export function drawGlyphRunToCanvas(
   originX: number,
   originY: number,
   emSize: number,
-  align: CanvasTextAlign,
+  align: HorizontalTextAnchor,
   baseline: CanvasTextBaseline,
 ): number {
   const s = emSize / GLYPH_REFERENCE_SIZE;
   const widthPx = run.metrics.width * s;
-  const xOff = align === 'center' ? -widthPx / 2 : align === 'right' ? -widthPx : 0;
+  const xOff = anchorOffset(align, widthPx);
   // Glyph paths are baseline-anchored. The anchor→baseline rule is the SSoT's (world y-up);
   // screen y is DOWN, so this is the ONE place the sign flips.
   // ⚠️ ADR-635 Φ C.26 — `'alphabetic'` used to fall into the `'top'` default here and drop the
@@ -113,7 +116,7 @@ export interface PaintTextRunOptions {
    * `emSizeForTextHeight()` first (ADR-635 Φ C.22).
    */
   readonly emSize: number;
-  readonly align: CanvasTextAlign;
+  readonly align: HorizontalTextAnchor;
   readonly baseline: CanvasTextBaseline;
   /** A loaded opentype font, or null → CSS `ctx.fillText` on the caller-set `ctx.font`. */
   readonly resolved: ResolvedFont | null;
