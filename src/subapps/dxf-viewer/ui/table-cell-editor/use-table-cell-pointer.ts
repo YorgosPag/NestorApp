@@ -398,7 +398,23 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // σειρά λύνει πραγματική διεκδίκηση: `Shift+πάτημα` **μέσα** στο πλέγμα επεκτείνει την
     // περιοχή, `Shift+σύρσιμο` **πάνω στο περίγραμμα** εισάγει & ολισθαίνει. Στο Excel τα
     // ξεχωρίζει ακριβώς το **πού**, όχι το πλήκτρο.
-    const grabbed = tableRangeGrabAtWorld(entity, worldPoint, transform.scale, cursor.selection);
+    //
+    // 🔴 §36.9 — **ΚΑΙ ΤΟ ΣΚΕΤΟ ΕΝΕΡΓΟ ΚΕΛΙ**, όχι μόνο η επιλογή: ο ιδιοκτήτης ζήτησε ρητά «το
+    // περίγραμμα **ενός κελιού** ή μιας επιλεγμένης περιοχής». Ο φύλακας `nav` είναι ο **ίδιος**
+    // που έχουν ήδη ο ζωγράφος της λαβής και ο φρουρός του πατήματός της: όσο ο χρήστης
+    // πληκτρολογεί, το ενεργό κελί δεν είναι χειριστήριο (Excel parity, ADR-754 §13.5). Η
+    // **επιλογή** περνά αυτούσια και στις δύο καταστάσεις — συμπεριφορά αμετάβλητη.
+    const grabAnchor: TableCellRef | null =
+      cursor.mode === 'nav'
+        ? { rowId: cursor.position.rowId, colId: cursor.position.colId }
+        : null;
+    const grabbed = tableRangeGrabAtWorld(
+      entity,
+      worldPoint,
+      transform.scale,
+      cursor.selection,
+      grabAnchor,
+    );
     if (grabbed) {
       // Ό,τι γράφεται δεσμεύεται πρώτα: η μεταφορά αλλάζει κελιά κάτω από τον δρομέα.
       onCommitPending();

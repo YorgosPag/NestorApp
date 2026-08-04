@@ -23,16 +23,17 @@
  * και τεράστιο σε zoom-in.
  *
  * @module subapps/dxf-viewer/bim/table/table-fill-handle
+ * @see bim/table/table-effective-range.ts — **ποια** περιοχή έχει λαβή (η ερώτηση μετακόμισε
+ *   εκεί όταν απέκτησε **τέταρτο** καταναλωτή που δεν αφορά λαβή: τη μετακίνηση του §36)
  * @see bim/table/table-fill-apply.ts — τι ΓΙΝΕΤΑΙ το μοντέλο όταν αφεθεί η λαβή
  * @see bim/table/table-cell-range.ts — ο ΕΝΑΣ ορισμός του «ορθογώνιο κελιών»
  * @see bim/table/table-indicator-cursor-role.ts — ο **11ος ρόλος** δείκτη, που ρωτά από εδώ
  * @see docs/centralized-systems/reference/adrs/ADR-754-table-point-mode.md §13, §14
  */
 
-import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
-import { rawTableCellRangeBounds, tableRangeRectMm } from './table-cell-range';
+import type { TableCellRangeBounds } from './table-cell-range';
+import { tableRangeRectMm } from './table-cell-range';
 import type { TableLayout, TableRectMm } from './table-layout-types';
-import type { TableModel } from '../../types/table';
 import type { TableFramePoint } from '../../types/table-entity';
 
 /**
@@ -176,37 +177,6 @@ export function isOnTableFillHandle(
     point.v >= rect.y &&
     point.v <= rect.y + rect.h + outwardMm
   );
-}
-
-/**
- * 🔑 **Η ΜΙΑ ΑΠΑΝΤΗΣΗ «ποια περιοχή έχει λαβή»**: η επιλογή· χωρίς επιλογή —ή με **μπαγιάτικη**
- * επιλογή— το ενεργό κελί. `null` μόνο όταν το ίδιο το ενεργό κελί δεν υπάρχει πια στο μοντέλο.
- *
- * ## 🔴 Γιατί βγήκε εδώ: ΤΡΕΙΣ ρωτούσαν, ΔΥΟ απαντούσαν — και διαφορετικά
- * Ο ζωγράφος (`stampTableFillHandleOverlay`) και ο φρουρός του πατήματος
- * (`tryTableFillHandleMouseDown`) έγραφαν ο καθένας τη δική του εκδοχή της ίδιας πρότασης, και
- * ο **δείκτης** θα ήταν ο τρίτος. Δύο αντίγραφα των έξι tokens «`selection ?? ενεργό κελί`»
- * **δεν** πιάνονται από το jscpd (κάτω από τα 50 tokens του `.jscpdrc.json`) — ακριβώς το σχήμα
- * που περιγράφει το §15 του ADR-754 για το `cellPairIndices`.
- *
- * ⚠️ **Και είχαν ήδη αποκλίνει.** Ο ζωγράφος έγραφε `selectionBounds ?? ενεργό κελί`, ο φρουρός
- * `if (selection) return resolveTableSelectionBounds(...)` — δηλαδή με **μπαγιάτικη** επιλογή
- * (undo / διαγραμμένη γραμμή) ο ένας ζωγράφιζε λαβή στο ενεργό κελί και ο άλλος **αρνιόταν να
- * την πιάσει**: «λαβή που φαίνεται αλλά δεν πιάνεται», η ακριβής αστοχία που το §13.5
- * απαγορεύει ονομαστικά. Νικά η εκδοχή του ζωγράφου — μια επιλογή που δεν λύνεται **είναι**
- * καμία επιλογή, ενώ το ενεργό κελί είναι πάντα υπαρκτό.
- *
- * Τα όρια της επιλογής ζητούνται **ήδη λυμένα** και δεν λύνονται εδώ: ο ζωγράφος τα έχει
- * υπολογίσει για το περίγραμμα του **ίδιου καρέ**, και ένας δεύτερος υπολογισμός θα ήταν
- * δεύτερη απάντηση στο «τι μάρκαρε ο χρήστης» — δηλαδή λαβή που κάθεται αλλού από το
- * περίγραμμα που υποτίθεται ότι συνοδεύει.
- */
-export function tableFillSourceBounds(
-  model: TableModel,
-  active: TableCellRef,
-  selectionBounds: TableCellRangeBounds | null,
-): TableCellRangeBounds | null {
-  return selectionBounds ?? rawTableCellRangeBounds(model, active, active);
 }
 
 /** Τι βρήκε η σάρωση πάνω στη λαβή· `null` παντού αλλού. */

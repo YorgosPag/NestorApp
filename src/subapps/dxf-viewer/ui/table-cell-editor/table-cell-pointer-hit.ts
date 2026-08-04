@@ -68,11 +68,7 @@ import {
 } from '../../bim/table/table-range-move-zone';
 // 🔴 ADR-754 §14 — η λαβή συμπλήρωσης: **πέμπτο κανάλι της ίδιας σάρωσης**, με τον ίδιο δρόμο
 // που ρωτά και ο φρουρός του πατήματος (`table-fill-handle-drag`).
-import {
-  tableFillHandleHitAtFrame,
-  tableFillSourceBounds,
-} from '../../bim/table/table-fill-handle';
-import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import { tableFillHandleHitAtFrame } from '../../bim/table/table-fill-handle';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableCellSelection } from '../../state/table-cell-cursor-store';
 import type { TableCellHit, TableEntity, TableEntityGeometry } from '../../types/table-entity';
@@ -372,22 +368,22 @@ export function tableIndicatorProbeAtWorld(
     mode === 'table-mode'
       ? tableDeleteControlAtFrame(geometry.layout, probe.frame, probe.bands, probe.pxPerMm)
       : null;
-  // 🔴 ADR-739 §36 — **ΜΙΑ** ανάλυση της επιλογής, **δύο** καταναλωτές: το ορθογώνιο που
+  // 🔴 ADR-739 §36 — **ΜΙΑ** ανάλυση της εμβέλειας, **δύο** καταναλωτές: το ορθογώνιο που
   // πιάνεται (`range-move`) και η πηγή της λαβής (ADR-754 §14). Εδώ έγραφε
   // `activeTableRange(...)?.rectMm ?? null` μέσα στην κλήση· με δεύτερο καταναλωτή, η ίδια
   // γραμμή θα έτρεχε **δύο φορές ανά κίνηση ποντικιού** — και το `resolveTableSelectionBounds`
   // κουμπώνει σε συγχωνεύσεις, δηλαδή δεν είναι φθηνό.
-  const range = activeTableRange(entity, geometry, selection);
-  // 🔴 ADR-754 §14 — **ο ΕΝΑΣ δρόμος**: η ίδια `tableFillSourceBounds` που ρωτούν ο ζωγράφος
-  // και ο φρουρός του πατήματος, η ίδια `tableFillHandleHitAtFrame` που ρωτά το πάτημα. Ο
-  // χρήστης δείχνει με τον δείκτη **αυτό που θα πιάσει**.
+  //
+  // 🔴 §36.9 — το `fillAnchor` περνά **και εδώ**, και έτσι έπαψαν να είναι δύο ερωτήσεις: το
+  // ορθογώνιο της μετακίνησης και η πηγή της λαβής είναι πλέον **το ίδιο αντικείμενο**. Πριν,
+  // η `tableFillSourceBounds` καλούνταν χωριστά ακριβώς από κάτω — δηλαδή ο κανόνας «χωρίς
+  // επιλογή, το ενεργό κελί» ίσχυε για τη λαβή και **όχι** για το περίγραμμα, μέσα στο ίδιο
+  // καρέ και για τον ίδιο χρήστη.
+  const range = activeTableRange(entity, geometry, selection, fillAnchor);
+  // 🔴 ADR-754 §14 — η ίδια `tableFillHandleHitAtFrame` που ρωτά το πάτημα, πάνω στα **ίδια**
+  // όρια. Ο χρήστης δείχνει με τον δείκτη **αυτό που θα πιάσει**.
   const fill = fillAnchor
-    ? tableFillHandleHitAtFrame(
-        geometry.layout,
-        probe.frame,
-        probe.pxPerMm,
-        tableFillSourceBounds(resolveTableModel(entity.model), fillAnchor, range?.bounds ?? null),
-      )
+    ? tableFillHandleHitAtFrame(geometry.layout, probe.frame, probe.pxPerMm, range?.bounds ?? null)
     : null;
   return {
     // §40 — σε απλή επιλογή δεν υπάρχουν ζώνες να φωτιστούν. Ο φύλακας ζει εδώ και όχι στον

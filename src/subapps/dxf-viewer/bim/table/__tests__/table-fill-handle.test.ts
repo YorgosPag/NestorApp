@@ -21,7 +21,6 @@ import {
   tableFillHandleHitAtFrame,
   tableFillHandleRectMm,
   tableFillPreviewBounds,
-  tableFillSourceBounds,
   isOnTableFillHandle,
   TABLE_FILL_HANDLE_PX,
   TABLE_FILL_HANDLE_OUTWARD_APERTURE_PX,
@@ -259,35 +258,12 @@ describe('🔴 §13.8 η οπή της λαβής ΔΕΝ κλέβει pixel απ
 // 🔴 ADR-754 §14 — ο ΕΝΑΣ δρόμος: ποια περιοχή έχει λαβή, και πότε πιάνεται
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Το μοντέλο εργασίας (5×5) — το ζητά μόνο η `tableFillSourceBounds`, για τις ταυτότητες. */
-const MODEL = createTableModel({ columns: COLUMNS, rows: ROWS, cells: [] });
-const cellRef = (row: number, col: number) => ({ rowId: ROWS[row].id, colId: COLUMNS[col].id });
-
-describe('🔴 tableFillSourceBounds — μία απάντηση για ζωγράφο, πάτημα και δείκτη', () => {
-  it('με επιλογή ⇒ τα όρια της επιλογής, αυτούσια', () => {
-    const selection = rect(1, 2, 1, 3);
-    expect(tableFillSourceBounds(MODEL, cellRef(0, 0), selection)).toBe(selection);
-  });
-
-  it('χωρίς επιλογή ⇒ το ενεργό κελί, ως περιοχή 1×1', () => {
-    expect(tableFillSourceBounds(MODEL, cellRef(2, 3), null)).toEqual(rect(2, 2, 3, 3));
-  });
-
-  /**
-   * 🔴 **Η ΑΠΟΚΛΙΣΗ ΠΟΥ ΕΚΛΕΙΣΕ.** Πριν την κεντρικοποίηση, ο ζωγράφος έπεφτε στο ενεργό κελί
-   * όταν η επιλογή δεν λυνόταν (undo / διαγραμμένη γραμμή), ενώ ο φρουρός του πατήματος
-   * επέστρεφε `null` — δηλαδή **λαβή που φαίνεται και δεν πιάνεται**, η ακριβής αστοχία που το
-   * §13.5 απαγορεύει ονομαστικά. Νικά ο ζωγράφος: επιλογή που δεν λύνεται **είναι** καμία
-   * επιλογή, ενώ το ενεργό κελί υπάρχει πάντα.
-   */
-  it('🔴 ΜΠΑΓΙΑΤΙΚΗ επιλογή (άλυτη ⇒ `null`) ⇒ πέφτει στο ενεργό κελί, ΔΕΝ σιωπά', () => {
-    expect(tableFillSourceBounds(MODEL, cellRef(4, 4), null)).toEqual(rect(4, 4, 4, 4));
-  });
-
-  it('ενεργό κελί που δεν υπάρχει πια στο μοντέλο ⇒ null (κανείς δεν μαντεύει)', () => {
-    expect(tableFillSourceBounds(MODEL, { rowId: 'φάντασμα', colId: 'c1' }, null)).toBeNull();
-  });
-});
+/**
+ * 🔴 ADR-739 §36.9 — **Η ΣΟΥΙΤΑ ΤΗΣ `tableFillSourceBounds` ΜΕΤΑΚΟΜΙΣΕ** μαζί με τη συνάρτηση,
+ * που πλέον λέγεται `tableEffectiveRangeBounds` και ζει στο `table-effective-range.ts`: απέκτησε
+ * **τέταρτο** καταναλωτή που δεν αφορά λαβή (τη μετακίνηση περιγράμματος του §36). Δες
+ * `__tests__/table-effective-range.test.ts` — **μετακόμιση, όχι αντίγραφο**.
+ */
 
 describe('🔴 tableFillHandleHitAtFrame — ο δείκτης και το πάτημα ρωτούν το ΙΔΙΟ', () => {
   const SOURCE = rect(0, 0, 0, 0); // το κελί A1 ⇒ λαβή στην κορυφή (20, 8)

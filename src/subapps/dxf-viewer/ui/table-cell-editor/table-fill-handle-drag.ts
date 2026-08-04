@@ -46,8 +46,10 @@ import {
   resolveTableFillTarget,
   tableFillHandleHitAtFrame,
   tableFillPreviewBounds,
-  tableFillSourceBounds,
 } from '../../bim/table/table-fill-handle';
+// 🔴 ADR-739 §36.9 — η ερώτηση «ποια περιοχή εννοεί ο χρήστης» μετακόμισε σε δικό της module
+// όταν απέκτησε **τέταρτο** καταναλωτή που δεν αφορά λαβή: τη μετακίνηση περιγράμματος.
+import { tableEffectiveRangeBounds } from '../../bim/table/table-effective-range';
 import { applyTableFill } from '../../bim/table/table-fill-apply';
 import { indexById, resolveTableModel } from '../../bim/table/table-model-helpers';
 import { startTableCellDrag } from './table-cell-drag-session';
@@ -147,7 +149,7 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
 function fillSourceBounds(model: TableModel, cursor: TableCellCursorState): TableCellRangeBounds | null {
   const cell: TableCellRef = { rowId: cursor.position.rowId, colId: cursor.position.colId };
   const selected = cursor.selection ? resolveTableSelectionBounds(model, cursor.selection) : null;
-  return tableFillSourceBounds(model, cell, selected);
+  return tableEffectiveRangeBounds(model, cell, selected);
 }
 
 /**

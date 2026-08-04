@@ -12,9 +12,9 @@
 import {
   isOnTableRangeBorder,
   signedDistanceToRectOutlineMm,
-  tableRangeBorderInsideReachMm,
+  tableRangeBorderReachMm,
   tableRangeDragIntentOf,
-  MAX_INSIDE_REACH_FRACTION,
+  MAX_BORDER_REACH_FRACTION,
   PLAIN_TABLE_RANGE_DRAG,
 } from '../table-range-move-zone';
 import { tableIndicatorBandsMm } from '../table-indicator-geometry';
@@ -51,10 +51,10 @@ describe('🔴 §36 signedDistanceToRectOutlineMm — αρνητική ΜΕΣΑ,
   });
 });
 
-describe('🔴 §36 tableRangeBorderInsideReachMm — ΤΟ ΕΣΩΤΕΡΙΚΟ ΔΕΝ ΕΞΑΦΑΝΙΖΕΤΑΙ ΠΟΤΕ', () => {
+describe('🔴 §36 tableRangeBorderReachMm — ΚΑΝΕΝΑ ΣΩΜΑ ΚΕΛΙΟΥ ΔΕΝ ΕΞΑΦΑΝΙΖΕΤΑΙ', () => {
   it('σε άνετο ορθογώνιο η εμβέλεια είναι ΟΛΗ η οπή — το φράγμα δεν δεσμεύει', () => {
     // Μικρότερη πλευρά 20 mm ⇒ φράγμα 5 mm· η οπή (2 mm) είναι μικρότερη, άρα περνά αυτούσια.
-    expect(tableRangeBorderInsideReachMm(RECT, 2)).toBeCloseTo(2);
+    expect(tableRangeBorderReachMm(RECT, 2)).toBeCloseTo(2);
   });
 
   it('🔴 ΤΟ ΟΥΣΙΩΔΕΣ: σε στενό ορθογώνιο η οπή ΦΡΑΣΣΕΤΑΙ στο ¼ της μικρότερης πλευράς', () => {
@@ -62,14 +62,14 @@ describe('🔴 §36 tableRangeBorderInsideReachMm — ΤΟ ΕΣΩΤΕΡΙΚΟ Δ
     // 9 mm προς τα μέσα σε ορθογώνιο ύψους 4 — δηλαδή **ολόκληρο** το κελί θα ήταν
     // «περίγραμμα» και το `cell-select` δεν θα υπήρχε πουθενά.
     const narrow: TableRectMm = { x: 0, y: 0, w: 40, h: 4 };
-    expect(tableRangeBorderInsideReachMm(narrow, 9)).toBeCloseTo(4 * MAX_INSIDE_REACH_FRACTION);
+    expect(tableRangeBorderReachMm(narrow, 9)).toBeCloseTo(4 * MAX_BORDER_REACH_FRACTION);
     // Και η συνέπεια που πράγματι μετρά: μένει συνεκτικό εσωτερικό στο μέσο.
     expect(isOnTableRangeBorder(narrow, { u: 20, v: 2 }, 9)).toBe(false);
   });
 
   it('εκφυλισμένο ορθογώνιο ή μη θετική οπή ⇒ καμία ζώνη, ποτέ υπόσχεση χωρίς αντίκρισμα', () => {
-    expect(tableRangeBorderInsideReachMm({ x: 0, y: 0, w: 0, h: 0 }, 9)).toBe(0);
-    expect(tableRangeBorderInsideReachMm(RECT, 0)).toBe(0);
+    expect(tableRangeBorderReachMm({ x: 0, y: 0, w: 0, h: 0 }, 9)).toBe(0);
+    expect(tableRangeBorderReachMm(RECT, 0)).toBe(0);
     expect(isOnTableRangeBorder(RECT, { u: 30, v: 10 }, 0)).toBe(false);
   });
 });
@@ -92,14 +92,50 @@ describe('🔴 §36 isOnTableRangeBorder — η ζώνη διαστέλλετα�
     expect(isOnTableRangeBorder(RECT, { u: 30, v: 20 }, APERTURE)).toBe(false);
   });
 
-  it('🔴 ΟΙ ΔΥΟ ΕΜΒΕΛΕΙΕΣ ΕΙΝΑΙ ΑΣΥΜΜΕΤΡΕΣ ΟΤΑΝ ΤΟ ΦΡΑΓΜΑ ΔΕΣΜΕΥΕΙ — και είναι σκόπιμο', () => {
-    // Προς τα έξω δεν υπάρχει τίποτα να καταπιεί (τα γειτονικά κελιά έχουν ολόκληρο το σώμα
-    // τους)· προς τα μέσα υπάρχει. Ασύμμετρο πρόβλημα, ασύμμετρη θεραπεία.
+  /**
+   * 🔴🔴 **ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΒΡΗΚΕ Η ΜΕΤΡΗΣΗ (§36.9), ΚΛΕΙΔΩΜΕΝΟ.**
+   *
+   * Εδώ έγραφε «*οι δύο εμβέλειες είναι **ασύμμετρες**· προς τα έξω δεν υπάρχει τίποτα να
+   * καταπιεί, τα γειτονικά κελιά έχουν ολόκληρο το σώμα τους*» — και περίμενε `true` για
+   * σημείο **8 mm έξω** από ορθογώνιο ύψους **4 mm**. Δηλαδή το ίδιο το test κωδικοποιούσε
+   * ότι η ζώνη φτάνει **δύο φορές πιο μακριά από το ύψος του γείτονα**.
+   *
+   * Η μέτρηση (2026-08-06) το ποσοτικοποίησε: με οπή 9 px, το ορθογώνιο διεκδικεί **56%** της
+   * γειτονικής γραμμής στα 2 px/mm και **100%** στο 1 px/mm. Το «έχουν ολόκληρο το σώμα τους»
+   * ήταν απλώς **ανεξέλεγκτο**: κανείς δεν είχε ρωτήσει «πόσο, σε px;».
+   *
+   * ⚠️ Ανεκτό όσο απαιτούσε **εκούσια** επιλογή· απαγορευτικό από τη στιγμή που το **ενεργό
+   * κελί** αποκτά ορθογώνιο (§36.9), γιατί εκείνο υπάρχει **πάντα**.
+   */
+  it('🔴 §36.9 Η ΖΩΝΗ ΔΕΝ ΤΡΩΕΙ ΤΟΝ ΓΕΙΤΟΝΑ — το φράγμα ισχύει ΚΑΙ προς τα έξω', () => {
     const narrow: TableRectMm = { x: 0, y: 0, w: 40, h: 4 };
-    // Έξω: ολόκληρη η οπή των 9 mm.
-    expect(isOnTableRangeBorder(narrow, { u: 20, v: -8 }, 9)).toBe(true);
-    // Μέσα: μόνο 1 mm (= ¼ × 4).
+    // 8 mm έξω από ορθογώνιο ύψους 4 mm: **δύο φορές** το ύψος του γείτονα. Ήταν `true`.
+    expect(isOnTableRangeBorder(narrow, { u: 20, v: -8 }, 9)).toBe(false);
+    // Μέσα, όπως πάντα: μόνο 1 mm (= ¼ × 4).
     expect(isOnTableRangeBorder(narrow, { u: 20, v: 1.5 }, 9)).toBe(false);
+  });
+
+  it('🔑 §36.9 ΣΥΜΜΕΤΡΙΑ: η ίδια εμβέλεια εκατέρωθεν — δικό μας σώμα μέσα, του γείτονα έξω', () => {
+    const narrow: TableRectMm = { x: 0, y: 0, w: 40, h: 4 };
+    const reach = tableRangeBorderReachMm(narrow, 9); // = 1 mm
+    expect(reach).toBeCloseTo(1);
+    // Ακριβώς πάνω στο φράγμα, και από τις δύο μεριές της πάνω γραμμής.
+    expect(isOnTableRangeBorder(narrow, { u: 20, v: -reach }, 9)).toBe(true);
+    expect(isOnTableRangeBorder(narrow, { u: 20, v: reach }, 9)).toBe(true);
+    // Ένα νύχι πιο πέρα, και από τις δύο.
+    expect(isOnTableRangeBorder(narrow, { u: 20, v: -reach - 0.01 }, 9)).toBe(false);
+    expect(isOnTableRangeBorder(narrow, { u: 20, v: reach + 0.01 }, 9)).toBe(false);
+  });
+
+  /**
+   * 🔑 **ΤΟ ΦΡΑΓΜΑ ΔΑΓΚΩΝΕΙ ΜΟΝΟ ΣΤΑ ΜΙΚΡΑ — η σημερινή συμπεριφορά μένει.** Χωρίς αυτό το
+   * test, η διόρθωση από πάνω θα μπορούσε να είχε συρρικνώσει σιωπηλά **κάθε** ζώνη, δηλαδή να
+   * είχε κάνει δυσπρόσιτη τη μετακίνηση μεγάλων επιλογών για να σώσει τη μικρή περίπτωση.
+   */
+  it('🔑 σε ΑΝΕΤΟ ορθογώνιο η εξωτερική εμβέλεια μένει ΟΛΗ η οπή — καμία απώλεια', () => {
+    // RECT: 40×20 mm ⇒ φράγμα 5 mm > οπή 2 mm ⇒ το φράγμα δεν δεσμεύει πουθενά.
+    expect(isOnTableRangeBorder(RECT, { u: 30, v: 10 - 2 }, 2)).toBe(true);
+    expect(isOnTableRangeBorder(RECT, { u: 30, v: 30 + 2 }, 2)).toBe(true);
   });
 });
 

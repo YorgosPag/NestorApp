@@ -26,7 +26,7 @@
  */
 
 import { tableFormulaReferenceSpans } from '../../../bim/table/formula/table-formula-reference-spans';
-import { tableFillSourceBounds } from '../../../bim/table/table-fill-handle';
+import { tableEffectiveRangeBounds } from '../../../bim/table/table-effective-range';
 import { resolveTableModel } from '../../../bim/table/table-model-helpers';
 import { getTableFillPreview } from '../../../state/table-fill-preview-store';
 import { stampTableFillHandle, stampTableFillPreview } from './stamp-table-fill-handle';
@@ -95,9 +95,9 @@ export function stampTableFillHandleOverlay(
   // 🔴 ADR-754 §14 — **ο ΕΝΑΣ ορισμός** του «ποια περιοχή έχει λαβή». Εδώ έγραφε
   // `selectionBounds ?? rawTableCellRangeBounds(...)` με το χέρι· η ίδια πρόταση ζούσε και στον
   // φρουρό του πατήματος, **διαφορετικά διατυπωμένη** — και ο δείκτης θα ήταν ο τρίτος. Δες
-  // την κεφαλίδα της `tableFillSourceBounds` για την απόκλιση που είχαν ήδη.
+  // την κεφαλίδα της `tableEffectiveRangeBounds` για την απόκλιση που είχαν ήδη.
   const cell = { rowId: cursor.position.rowId, colId: cursor.position.colId };
-  const bounds = tableFillSourceBounds(
+  const bounds = tableEffectiveRangeBounds(
     resolveTableModel(entity.model),
     cell,
     selectionBounds ?? null,
