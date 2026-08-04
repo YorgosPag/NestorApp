@@ -70,19 +70,42 @@ export function isConcreteLineweight(
   return lw >= 0;
 }
 
+/** Millimetres per inch — the definition, not a setting. */
+const MM_PER_INCH = 25.4;
+
+/**
+ * The **screen** DPI: the CSS reference pixel (96 dpi).
+ *
+ * Lives here — next to the mm→px formula it feeds — because it was written as a bare `96`
+ * in three places (`lineweightToPx` default, the render-style resolver's `dpiForMm`, and
+ * every ad-hoc caller). Three copies of one number diverge, and they diverge silently.
+ */
+export const SCREEN_DPI = 96;
+
+/**
+ * **The ONE millimetres → display-pixels formula.** `px = mm × dpi / 25.4`.
+ *
+ * Takes a *free* millimetre value, unlike {@link lineweightToPx}, which is gated on the
+ * closed `LineweightMm` union. Plenty of pen widths in this app are free numbers — a
+ * `TableBorderSpec.widthMm`, a `SheetStroke.widthMm` — and their only alternatives were an
+ * `as LineweightMm` cast (N.2 forbids it, and the ratchet blocks it outside this file) or a
+ * hand-rolled second copy of the same division. Both happened.
+ */
+export function mmToDisplayPx(mm: number, dpi: number = SCREEN_DPI): number {
+  return (mm * dpi) / MM_PER_INCH;
+}
+
 /**
  * Convert a concrete lineweight (mm) to display pixels at the given DPI.
  * Returns 0 for special sentinels — callers must resolve those first
  * (see `default-lineweight-resolver.ts` and ByLayer/ByBlock cascade).
- *
- * Formula: 1 inch = 25.4 mm, so px = mm × dpi / 25.4.
  */
 export function lineweightToPx(
   lw: LineweightMm | null | undefined,
-  dpi = 96,
+  dpi = SCREEN_DPI,
 ): number {
   if (!isConcreteLineweight(lw)) return 0;
-  return (lw * dpi) / 25.4;
+  return mmToDisplayPx(lw, dpi);
 }
 
 /**

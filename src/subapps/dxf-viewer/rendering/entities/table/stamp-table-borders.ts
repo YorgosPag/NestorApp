@@ -8,14 +8,17 @@
  *
  * @module subapps/dxf-viewer/rendering/entities/table/stamp-table-borders
  * @see rendering/linetype-dash-resolver.ts — ο ΕΝΑΣ μεταφραστής mm → `setLineDash`
+ * @see config/lineweight-display-px.ts — ο ΕΝΑΣ μεταφραστής mm → `ctx.lineWidth` (ADR-756)
  * @see docs/centralized-systems/reference/adrs/ADR-750-table-cell-borders.md §19.2
  */
 
 import type { TableBorderSegment } from '../../../bim/table/table-layout-types';
-// 🔴 ADR-739 §37 — το πάχος στην οθόνη **δεν** υπολογίζεται πια εδώ: το ρωτά και ο δείκτης
-// λειτουργίας, που πρέπει να μείνει έξω από αυτό το μολύβι. Δύο αντίγραφα του κανόνα θα
-// σήμαιναν δείκτη που νομίζει ότι απομακρύνθηκε ενώ η γραμμή μεγάλωσε.
-import { tableBorderScreenPx } from '../../../bim/table/table-border-pen';
+// 🔴 ADR-739 §37 / ADR-756 — το πάχος στην οθόνη **δεν** υπολογίζεται εδώ. Δύο λόγοι, και οι
+// δύο μετρημένοι: (α) το ρωτά και ο δείκτης λειτουργίας, που πρέπει να μείνει **έξω** από
+// αυτό το μολύβι· (β) ήταν `widthMm * rc.pxPerMm`, δηλαδή το πλέγμα **φούσκωνε με το zoom**
+// ενώ κάθε άλλη γραμμή του σχεδίου έμενε σταθερή (ADR-510 Φ2G). Το `pxPerMm` κλιμακώνει τη
+// **γεωμετρία**, ποτέ το **μολύβι**.
+import { lineweightDisplayPx } from '../../../config/lineweight-display-px';
 import { dashMmToScreenPx } from '../../linetype-dash-resolver';
 import type { StampTableContext } from './stamp-table-layout';
 
@@ -57,7 +60,7 @@ export function stampTableBorders(
     const b = rc.toScreen(segment.b.x, segment.b.y);
     ctx.save();
     ctx.strokeStyle = rc.phaseColor ?? segment.spec.colorHex;
-    ctx.lineWidth = tableBorderScreenPx(segment.spec.widthMm, rc.pxPerMm);
+    ctx.lineWidth = lineweightDisplayPx(segment.spec.widthMm);
     if (segment.spec.dashMm) {
       ctx.setLineDash(dashMmToScreenPx(segment.spec.dashMm, rc.pxPerMm, SHEET_LINETYPE_SCALE));
     }

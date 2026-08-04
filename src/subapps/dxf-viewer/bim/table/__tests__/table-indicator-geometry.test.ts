@@ -416,4 +416,54 @@ describe('🔴 §31 tableIndicatorCursorRoleAtFrame — ο δείκτης δεν
       expect(tableIndicatorCursorRoleAtFrame(LAYOUT, point, BANDS)).not.toBeNull();
     }
   });
+
+  /**
+   * 🔴 ADR-739 §43 — **το τετραγωνάκι της γωνίας είναι ΚΟΥΜΠΙ**, και ο δείκτης το λέει.
+   *
+   * Περνά τον αναλλοίωτο του §31 χωρίς έκπτωση: πίσω από τον ρόλο υπάρχει χειρονομία που όντως
+   * εκτελείται (το ίδιο `selectAll()` του `Ctrl+A`) — δες `table-select-all-corner-click`.
+   */
+  it('🔴 §43 — πάνω στη γωνία ο δείκτης λέει `select-all`', () => {
+    const corner = tableIndicatorCornerRectMm(BANDS);
+    expect(role(corner.x + corner.w / 2, corner.y + corner.h / 2)).toBe('select-all');
+  });
+
+  /**
+   * ⚠️ Ο ρόλος **δεν** επιτρέπεται να διαρρεύσει στις γειτονικές λωρίδες: εκεί το πάτημα
+   * επιλέγει **έναν** άξονα, και ένα `pointer` θα υποσχόταν «όλα». Η γεωμετρία το εγγυάται
+   * (δες `table-select-all-corner.test`), αλλά ο ρόλος έχει **δική του** σειρά ελέγχου — και
+   * μια λάθος σειρά θα το έσπαγε χωρίς να αγγίξει τη γεωμετρία.
+   */
+  it('🔴 §43 — δεν διαρρέει: στα γράμματα/αριθμούς μένει η επιλογή άξονα', () => {
+    for (const tick of tableColumnTicks(COLUMNS, new Set())) {
+      const r = tableColumnTickRectMm(tick, BANDS);
+      expect(role(r.x + r.w / 2, r.y + r.h / 2)).toBe('column-select');
+    }
+    for (const tick of tableRowTicks(ROWS, new Set(), 0, ROWS.length)) {
+      const r = tableRowTickRectMm(tick, BANDS);
+      expect(role(r.x + r.w / 2, r.y + r.h / 2)).toBe('row-select');
+    }
+  });
+
+  /**
+   * §40 — **εκτός λειτουργίας πίνακα δεν οφείλεται τίποτε**: σε απλή επιλογή δεν υπάρχουν ζώνες,
+   * άρα ούτε γωνία. Χωρίς αυτόν τον έλεγχο, ένας απλά **επιλεγμένος** πίνακας θα έδινε δείκτη
+   * κουμπιού πάνω από κενό σχέδιο — δηλαδή ακριβώς το ψέμα που ο §31 απαγορεύει.
+   */
+  it('🔴 §43 — σε απλή επιλογή (όχι λειτουργία πίνακα) η γωνία σιωπά', () => {
+    const corner = tableIndicatorCornerRectMm(BANDS);
+    const center = { u: corner.x + corner.w / 2, v: corner.y + corner.h / 2 };
+    expect(
+      tableIndicatorCursorRoleAtFrame(
+        LAYOUT,
+        center,
+        BANDS,
+        null,
+        undefined,
+        null,
+        'selection',
+      ),
+    ).toBeNull();
+  });
+
 });

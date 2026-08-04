@@ -20,9 +20,13 @@ import { resolveEntityStyle, entityToStyleInput } from '../../systems/properties
 // SSoT — id-first/name-fallback επίλυση owning layer (κοινή με το ribbon color swatch).
 import { resolveEntityLayer } from '../../systems/properties/resolve-entity-color';
 import { lineweightToPx, isConcreteLineweight } from '../../config/lineweight-iso-catalog';
-// ADR-510 Φ2G — global "Show Lineweight" toggle (AutoCAD LWDISPLAY). The single
-// gate lives here so BOTH the LINE batch path and the per-entity path honour it.
-import { getShowLineweight } from '../../stores/LineweightDisplayStore';
+// ADR-510 Φ2G / ADR-756 — the global "Show Lineweight" toggle (AutoCAD LWDISPLAY) + the
+// active mm→px DPI, as ONE reading. Both the LINE batch path and the per-entity path honour
+// it through the same gate — and so does every non-entity pen (table grid, sheet strokes).
+import {
+  lineweightDisplayState,
+  HAIRLINE_DISPLAY_PX,
+} from '../../config/lineweight-display-px';
 // ADR-362 — ONE name→pattern SSoT (Unified catalog ∪ runtime registry customs),
 // shared with the dim stroke resolver + linetype thumbnail. Was `resolveAnyDashMm`
 // (catalog-only) → the no-layer fallback silently rendered user-created custom
@@ -88,16 +92,18 @@ export function resolveEntityRenderStyle(
 ): ResolvedRenderStyle {
   // ADR-454 — active only during offscreen print render (null otherwise).
   const printPolicy = getPrintColorPolicy();
-  // ADR-510 Φ2G — screen LWDISPLAY toggle. Print/plot ALWAYS renders real weights
-  // (AutoCAD parity), so a print policy forces the gate open. When closed, every
-  // stroke collapses to a 1px hairline (zoom-independent, big-player LWT-off).
-  const showLineweight = printPolicy !== null || getShowLineweight();
-  const gatePx = (px: number): number => (showLineweight ? Math.max(1, px) : 1);
+  // ADR-510 Φ2G / ADR-756 — screen LWDISPLAY toggle + the mm→px DPI, read from the ONE
+  // SSoT. Print/plot ALWAYS renders real weights (AutoCAD parity), so a print policy forces
+  // the gate open. When closed, every stroke collapses to a hairline (zoom-independent,
+  // big-player LWT-off). Was two hand-written lines here; the table grid grew its own,
+  // different answer (see `config/lineweight-display-px.ts` for what that cost).
+  const { dpi: dpiForMm, show: showLineweight } = lineweightDisplayState();
+  const gatePx = (px: number): number =>
+    showLineweight ? Math.max(HAIRLINE_DISPLAY_PX, px) : HAIRLINE_DISPLAY_PX;
   // ADR-510 Φ2G — even without a layer/cascade context, the entity's OWN concrete
   // lineweight (mm) must still paint (mirror of the `resolveAnyDashMm` linetype
   // fallback below). A freshly-drawn line whose layer isn't in `layersById` would
   // otherwise ignore the "Πάχος" field entirely and fall back to legacy px.
-  const dpiForMm = printPolicy ? printPolicy.dpi : 96;
   const ownLineweightPx = isConcreteLineweight(entity.lineweightMm)
     ? lineweightToPx(entity.lineweightMm, dpiForMm)
     : 0;
