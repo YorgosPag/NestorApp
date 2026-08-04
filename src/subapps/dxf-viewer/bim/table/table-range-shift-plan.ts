@@ -26,7 +26,7 @@
  *
  * ## Ο πίνακας δεν μεγαλώνει μόνος του
  * Η ουρά **κόβεται** στο μήκος του άξονα — ίδιο επιχείρημα με το `table-range-clipboard.ts`. Ό,τι
- * κόπηκε το αναφέρει το `tableRangeTransferOverwrites`, ώστε ο χρήστης να **ρωτηθεί πριν** συμβεί
+ * κόπηκε το αναφέρει το `tableRangeOverwrittenCells`, ώστε ο χρήστης να **ρωτηθεί πριν** συμβεί
  * (Φάση 4) αντί να το ανακαλύψει μετά.
  *
  * @module subapps/dxf-viewer/bim/table/table-range-shift-plan

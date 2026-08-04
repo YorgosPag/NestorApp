@@ -27,7 +27,8 @@
  * ⚠️ Αυτό **δεν** καταργεί την ανθρώπινη ταυτοχρονία: όποιος αφήσει το `Shift` κλάσματα πριν
  * το ποντίκι θα δει το φάντασμα να αλλάζει και **μετά** θα πάρει σκέτη μετακίνηση. Η διαφορά
  * είναι ότι θα το **δει**. Η τελευταία υπεράσπιση κατά της σιωπηλής καταστροφής είναι ούτως ή
- * άλλως η **Φάση 4** (*«υπάρχουν ήδη δεδομένα εδώ»*), που τροφοδοτείται από το ίδιο σχέδιο.
+ * άλλως η **Φάση 4** (*«υπάρχουν ήδη δεδομένα εδώ»*), που τροφοδοτείται από το ίδιο σχέδιο και
+ * ζει στο `table-range-transfer-drop.ts` — **όχι** εδώ: αυτό το αρχείο τελειώνει σύγχρονα.
  *
  * ## 🔴 ΓΡΑΦΕΙ ΜΟΝΟ ΟΤΑΝ ΑΛΛΑΖΕΙ Η ΑΠΑΝΤΗΣΗ — ADR-735
  * Η σύρση είναι 60-120 συμβάντα το δευτερόλεπτο· η υπόσχεση αλλάζει μερικές φορές. Ο φύλακας
@@ -38,6 +39,7 @@
  * @module subapps/dxf-viewer/ui/table-cell-editor/table-range-transfer-drag
  * @see bim/table/table-range-drop-target.ts — τι ζητά αυτό το σημείο
  * @see bim/table/table-range-transfer-plan.ts — αν γίνεται, και τι ακριβώς
+ * @see ui/table-cell-editor/table-range-transfer-drop.ts — ΦΑΣΗ 4: η ερώτηση και η γραφή
  * @see state/table-range-transfer-store.ts — πού ζει η υπόσχεση για τον ζωγράφο
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §36
  */
@@ -55,7 +57,10 @@ import {
   planTableRangeTransfer,
   tableRangeDroppedRect,
 } from '../../bim/table/table-range-transfer-plan';
-import { applyTableRangeTransfer } from '../../bim/table/table-range-transfer';
+import {
+  completeTableRangeTransfer,
+  type TableRangeDropTarget,
+} from './table-range-transfer-drop';
 import {
   tableRangeDropRequest,
   type TableRangeGrab,
@@ -66,11 +71,10 @@ import {
 } from '../../bim/table/table-range-move-zone';
 import {
   clearTableRangeTransferPreview,
+  getTableRangeTransferPreview,
   setTableRangeTransferPreview,
   type TableRangeTransferPreview,
 } from '../../state/table-range-transfer-store';
-import { setTableCellCursor, setTableCellSelection } from '../../state/table-cell-cursor-store';
-import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import { tableEventWorldPoint } from './table-cell-pointer-hit';
 import type { RefObject } from 'react';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
@@ -79,10 +83,14 @@ import type { TableRangeTransferPlan } from '../../bim/table/table-range-transfe
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
 
-/** Ό,τι χρειάζεται η χειρονομία για να ζήσει — τη γεωμετρία τη διαβάζει μόνη της, ζωντανά. */
-export interface TableRangeTransferStart {
-  /** Η οντότητα τη στιγμή του πατήματος — ίδια σύμβαση με το `beginTableColumnResize`. */
-  readonly entity: TableEntity;
+/**
+ * Ό,τι χρειάζεται η χειρονομία για να ζήσει — τη γεωμετρία τη διαβάζει μόνη της, ζωντανά.
+ *
+ * Επεκτείνει το {@link TableRangeDropTarget}: ό,τι αφορά τη **γραφή** (οντότητα, commit, ζωντανός
+ * αναγνώστης) ορίζεται **μία** φορά, εκεί που ζει και η γραφή. Δεύτερη δήλωση των ίδιων τριών
+ * πεδίων θα ήταν το σχήμα που αποκλίνει την πρώτη μέρα που θα προστεθεί τέταρτο.
+ */
+export interface TableRangeTransferStart extends TableRangeDropTarget {
   /** Η περιοχή που πιάστηκε από το περίγραμμά της (§36 / `tableRangeGrabAtWorld`). */
   readonly source: TableCellRangeBounds;
   /** Πού μέσα της έπεσε το χέρι — υπολογισμένο **μία** φορά, στην αρχή (§36). */
@@ -90,8 +98,6 @@ export interface TableRangeTransferStart {
   /** Το δοχείο του καμβά: γεωμετρία **και** η άκρη του auto-pan (§27.16 Ε1). */
   readonly container: HTMLElement;
   readonly transformRef: RefObject<ViewTransform>;
-  /** Η **ΜΙΑ** διαδρομή commit του πίνακα — δες `use-table-model-commit`. */
-  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
 }
 
 /** Η κατάσταση ενός καρέ: τι δείχνει ο δείκτης, τι το φάντασμα, τι θα εκτελεστεί. */
@@ -162,12 +168,19 @@ export function beginTableRangeTransfer(start: TableRangeTransferStart): void {
     // Η σειρά είναι το συμβόλαιο (§31.9): **πρώτα** σβήνουν οι ακροατές και το φάντασμα, μετά
     // γράφεται το μοντέλο. Το commit αλλάζει τη σκηνή, δηλαδή παράγει συμβάντα· ακροατής που
     // ζει ακόμα θα τα έβλεπε ως συνέχεια της σύρσης που μόλις τελείωσε.
+    //
+    // 🔴 §36 ΦΑΣΗ 4 — το συμβόλαιο **δεν** χαλαρώνει επειδή μπορεί να μεσολαβήσει ερώτηση: οι
+    // ακροατές σβήνουν εδώ, σύγχρονα, **πάντα**. Ό,τι επιζεί ταξιδεύει σε τοπικές μεταβλητές
+    // αυτού του κλεισίματος — καμία «εν αναμονή» κατάσταση σε επίπεδο module, δηλαδή τίποτα που
+    // να μπορεί να επιβιώσει της συνεδρίας του (το σχήμα που η Φάση 3 απέκλεισε ρητά).
     const plan = pendingPlan;
-    const { entity, commit } = start;
+    // Το τελευταίο καρέ **πριν** σβηστεί: αν ακολουθήσει ερώτηση, ο χρήστης πρέπει να συνεχίσει
+    // να βλέπει **πού** προσγειώνεται αυτό που θα εγκρίνει. Δες `table-range-transfer-drop`.
+    const lastFrame = getTableRangeTransferPreview();
+    const target = start;
     endTableRangeTransferDrag();
     if (!plan) return;
-    commit(entity, applyTableRangeTransfer(entity.model, plan));
-    selectTransferred(entity, plan.destination);
+    completeTableRangeTransfer(target, plan, lastFrame);
   };
 
   document.addEventListener('mousemove', onMove, { capture: true });
@@ -318,31 +331,3 @@ function refusedFrame(
   };
 }
 
-/**
- * 🔴 Η επιλογή **ακολουθεί** την περιοχή στη νέα της θέση (Excel/Sheets parity).
- *
- * Χωρίς αυτό, μετά από μια μετακίνηση η επιλογή —και μαζί της η **ζώνη σύλληψης** (§36)— θα
- * έμενε πάνω στα κελιά που μόλις άδειασαν: ο χρήστης θα έβλεπε μαρκαρισμένο κενό και θα
- * μπορούσε να «μεταφέρει» αμέσως μετά το **τίποτα**. Το ενεργό κελί πάει στην πάνω-αριστερή
- * γωνία, όπως ακριβώς μετά από επικόλληση.
- *
- * Η σειρά είναι υποχρεωτική: το `setTableCellCursor` **διαλύει** την επιλογή by design (ένα
- * κλικ ξεκινά καινούρια), οπότε η περιοχή γράφεται **μετά**.
- */
-function selectTransferred(entity: TableEntity, destination: TableCellRangeBounds): void {
-  const { rows, columns } = entity.model;
-  // Η μεταφορά **δεν** προσθέτει ούτε αφαιρεί γραμμές/στήλες (§36.5: μετάθεση θέσεων, όχι
-  // αλλαγή πλήθους), οπότε οι ταυτότητες του αρχικού μοντέλου ισχύουν ακέραιες στο νέο.
-  const firstRow = rows[destination.firstRow];
-  const lastRow = rows[destination.lastRow];
-  const firstCol = columns[destination.firstCol];
-  const lastCol = columns[destination.lastCol];
-  if (!firstRow || !lastRow || !firstCol || !lastCol) return;
-
-  setTableCellCursor(entity.id, tableCursorAt(firstRow.id, firstCol.id), 'nav');
-  setTableCellSelection({
-    from: { rowId: firstRow.id, colId: firstCol.id },
-    to: { rowId: lastRow.id, colId: lastCol.id },
-    kind: 'range',
-  });
-}

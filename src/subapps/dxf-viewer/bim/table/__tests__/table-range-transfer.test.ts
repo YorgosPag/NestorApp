@@ -4,7 +4,7 @@
  * Εδώ κλειδώνουν ως **εκτελέσιμη προδιαγραφή** οι τρεις αποφάσεις του Giorgio (03/08) και οι
  * αποφάσεις που χρειάστηκε να παρθούν για να υλοποιηθούν:
  *
- *  - «**ρωτά πριν σβήσει**» ⇒ {@link tableRangeTransferOverwrites}, ορισμένο **δομικά**
+ *  - «**ρωτά πριν σβήσει**» ⇒ {@link tableRangeOverwrittenCells}, ορισμένο **δομικά**
  *  - «**κείμενο + μορφοποίηση + ακμές**» ⇒ και τα τρία ταξιδεύουν· η **απόκλιση** του
  *    επιπέδου 2/3 (η μορφοποίηση του άξονα ΔΕΝ ταξιδεύει) είναι **καρφωμένη**, όχι σιωπηλή
  *  - «**Ctrl ΚΑΙ Shift**» ⇒ αντιγραφή χωρίς άδειασμα· ολίσθηση ως **μετάθεση**
@@ -12,7 +12,7 @@
  *    μοντέλο by-reference όταν δεν αλλάζει τίποτα
  */
 
-import { planTableRangeTransfer, tableRangeTransferOverwrites } from '../table-range-transfer-plan';
+import { planTableRangeTransfer, tableRangeOverwrittenCells } from '../table-range-transfer-plan';
 import type {
   TableRangeTransferPlan,
   TableRangeTransferRequest,
@@ -272,21 +272,32 @@ describe('🔴 §36 εισαγωγή & ολίσθηση — ΜΕΤΑΘΕΣΗ θ�
 
 // ── Το κατηγόρημα της Φάσης 4 ─────────────────────────────────────────────────
 
-describe('🔴 §36 tableRangeTransferOverwrites — «θα χαθεί κάτι;», ορισμένο ΔΟΜΙΚΑ', () => {
+describe('🔴 §36 tableRangeOverwrittenCells — «πόσα θα χαθούν;», ορισμένο ΔΟΜΙΚΑ', () => {
   it('στόχος με δεδομένα ⇒ ναι· στόχος κενός ⇒ όχι', () => {
     const model = persisted([text('r0', 'c0', 'Α'), text('r2', 'c0', 'ΠΑΛΙΟ')]);
     const onto = move({ firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 }, ref('r2', 'c0'));
     const empty = move({ firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 }, ref('r3', 'c3'));
 
-    expect(tableRangeTransferOverwrites(model, planOf(model, onto))).toBe(true);
-    expect(tableRangeTransferOverwrites(model, planOf(model, empty))).toBe(false);
+    expect(tableRangeOverwrittenCells(model, planOf(model, onto))).toBe(1);
+    expect(tableRangeOverwrittenCells(model, planOf(model, empty))).toBe(0);
+  });
+
+  it('🔑 ΦΑΣΗ 4 — μετρά ΠΟΣΑ, όχι «ναι/όχι»: ο διάλογος λέει αριθμό (NN/g «Delete 3 issues?»)', () => {
+    const model = persisted([
+      text('r0', 'c0', 'Α'), text('r0', 'c1', 'Β'),
+      text('r2', 'c0', 'Χ'), text('r2', 'c1', 'Ψ'), text('r3', 'c0', 'Ω'),
+    ]);
+    // Περιοχή 2×2 (r0..r1 × c0..c1) πάνω σε προορισμό όπου κατοικούν **τρία** κελιά.
+    const onto = move({ firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 }, ref('r2', 'c0'));
+
+    expect(tableRangeOverwrittenCells(model, planOf(model, onto))).toBe(3);
   });
 
   it('🔑 μορφοποίηση ΧΩΡΙΣ κείμενο ΔΕΝ είναι «δεδομένα» (Excel: «There is already data here»)', () => {
     const model = persisted([text('r0', 'c0', 'Α'), styled('r2', 'c0', '', { fillColorHex: '#eeeeee' })]);
     const onto = move({ firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 }, ref('r2', 'c0'));
 
-    expect(tableRangeTransferOverwrites(model, planOf(model, onto))).toBe(false);
+    expect(tableRangeOverwrittenCells(model, planOf(model, onto))).toBe(0);
   });
 
   it('🔑 η ΟΛΙΣΘΗΣΗ δεν σβήνει ό,τι απλώς σπρώχνει — αλλά ΤΟ ΛΕΕΙ όταν κόβεται η ουρά', () => {
@@ -294,8 +305,8 @@ describe('🔴 §36 tableRangeTransferOverwrites — «θα χαθεί κάτι;
     const packed = persisted([text('r0', 'c0', 'Α'), text('r3', 'c1', 'Δ')]);
     const request = { source: { firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 }, to: ref('r2', 'c1'), intent: { copy: true, insert: true }, shiftAxis: 'down' } as const;
 
-    expect(tableRangeTransferOverwrites(roomy, planOf(roomy, request))).toBe(false);
-    expect(tableRangeTransferOverwrites(packed, planOf(packed, request))).toBe(true);
+    expect(tableRangeOverwrittenCells(roomy, planOf(roomy, request))).toBe(0);
+    expect(tableRangeOverwrittenCells(packed, planOf(packed, request))).toBe(1);
   });
 });
 

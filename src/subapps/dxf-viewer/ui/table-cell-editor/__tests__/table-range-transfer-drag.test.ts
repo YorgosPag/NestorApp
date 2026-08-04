@@ -27,6 +27,10 @@ import {
   getTableRangeTransferPreview,
 } from '../../../state/table-range-transfer-store';
 import { __resetTableCellCursorStoreForTests } from '../../../state/table-cell-cursor-store';
+import {
+  getTableRangeOverwriteState,
+  resolveTableRangeOverwrite,
+} from '../../../bim/table/table-range-overwrite-confirm-store';
 import { markSystemsDirty } from '../../../rendering/core/frame-scheduler-api';
 import { tableFrameScreenPoint, TABLE_TEST_VIEW } from './table-screen-point';
 import {
@@ -122,11 +126,36 @@ const SOURCE = { firstRow: 1, lastRow: 1, firstCol: 1, lastCol: 1 };
 const GRAB = { dRow: 0, dCol: 0 };
 
 let entity = makeEntity();
+/** §36 ΦΑΣΗ 4 — ό,τι βλέπει ο **κόσμος** τώρα· τα tests το αλλάζουν για να μιμηθούν undo. */
+let liveEntity: TableEntity | null = entity;
 let commit: jest.Mock<void, [TableEntity, TableEntity['model']]>;
 
 /** Ξεκινά τη χειρονομία με την ίδια γεωμετρία σε κάθε test. */
 function startDrag(): void {
-  beginTableRangeTransfer({ entity, source: SOURCE, grab: GRAB, container: CONTAINER, transformRef, commit });
+  beginTableRangeTransfer({
+    entity,
+    liveTable: () => liveEntity,
+    source: SOURCE,
+    grab: GRAB,
+    container: CONTAINER,
+    transformRef,
+    commit,
+  });
+}
+
+/**
+ * 🔴 §36 ΦΑΣΗ 4 — η απόθεση πάνω σε κελί **με περιεχόμενο** ρωτά πριν γράψει.
+ *
+ * Τα tests της Φάσης 3 που προσγειώνονται στο `Z` απαντούν εδώ «Αντικατάσταση»: το ζητούμενό
+ * τους είναι **τι γράφτηκε**, όχι ο διάλογος — αυτόν τον κλειδώνει το
+ * `table-range-transfer-drop.test.ts`. Ο έλεγχος `open` **δεν** είναι διακοσμητικός: αν η
+ * ερώτηση έπαυε να εμφανίζεται, εδώ θα φαινόταν αμέσως αντί να περάσει σιωπηλά.
+ */
+async function answerReplace(): Promise<void> {
+  expect(getTableRangeOverwriteState().open).toBe(true);
+  resolveTableRangeOverwrite('replace');
+  await Promise.resolve();
+  await Promise.resolve();
 }
 
 /** Κίνηση με **πατημένο** αριστερό κουμπί, σε σημείο του πλαισίου (sheet-mm). */
@@ -160,11 +189,15 @@ function committedText(rowId: string, colId: string): string {
 
 beforeEach(() => {
   entity = makeEntity();
+  liveEntity = entity;
   commit = jest.fn();
   frames.mockClear();
 });
 
 afterEach(() => {
+  // §36 ΦΑΣΗ 4 — ο διάλογος ζει σε module store: ερώτηση που έμεινε ανοιχτή θα διέρρεε στο
+  // επόμενο test. Το «Άκυρο» δεν γράφει ποτέ τίποτα, άρα είναι ασφαλής μηδενισμός.
+  resolveTableRangeOverwrite('cancel');
   endTableRangeTransferDrag();
   __resetTableRangeTransferPreviewForTests();
   __resetTableCellCursorStoreForTests();
@@ -192,10 +225,11 @@ describe('beginTableRangeTransfer — σύρση, φάντασμα, απόθεσ
     expect(activeTableRangeTransferCursor()).toBe('range-move');
   });
 
-  it('απόθεση ⇒ **ΜΙΑ** εγγραφή μοντέλου, με το περιεχόμενο μετακομισμένο', () => {
+  it('απόθεση ⇒ **ΜΙΑ** εγγραφή μοντέλου, με το περιεχόμενο μετακομισμένο', async () => {
     startDrag();
     moveTo(30, 25); // (r2, c1) — εκεί κάθεται το `Z`
     release();
+    await answerReplace();
     expect(committedText('r2', 'c1')).toBe('A');
     expect(committedText('r1', 'c1')).toBe('');
   });
@@ -250,10 +284,11 @@ describe('η πρόθεση αλλάζει ΜΕΣΑ στη σύρση', () => {
     expect(activeTableRangeTransferCursor()).toBe('range-move');
   });
 
-  it('`Ctrl` κρατημένο στην απόθεση ⇒ η πηγή **ΜΕΝΕΙ**', () => {
+  it('`Ctrl` κρατημένο στην απόθεση ⇒ η πηγή **ΜΕΝΕΙ**', async () => {
     startDrag();
     moveTo(30, 25, { ctrlKey: true });
     release();
+    await answerReplace();
     expect(committedText('r2', 'c1')).toBe('A');
     expect(committedText('r1', 'c1')).toBe('A');
   });
@@ -295,24 +330,26 @@ describe('η πρόθεση αλλάζει ΜΕΣΑ στη σύρση', () => {
 // ── 3. 🔴 Το drop εκτελεί ό,τι ΕΔΕΙΞΕ, όχι ό,τι διαβάζει ξανά ───────────────
 
 describe('🔴 η απόθεση ΔΕΝ ξαναδιαβάζει πλήκτρα — parity ΑΡΝΗΘΗΚΕ επίτηδες', () => {
-  it('`Shift` στο ΙΔΙΟ το `mouseup` δεν αλλάζει την πράξη: εκτελείται η προεπισκόπηση', () => {
+  it('`Shift` στο ΙΔΙΟ το `mouseup` δεν αλλάζει την πράξη: εκτελείται η προεπισκόπηση', async () => {
     // Το Excel διαβάζει την πρόθεση **τη στιγμή του `mouseup`**: «άσε πρώτα το ποντίκι, μετά
     // το `Shift`» — δηλαδή η σειρά που χαλαρώνουν δύο δάχτυλα αποφασίζει αν θα εισαχθούν
     // δεδομένα ή θα σβηστούν. Εδώ το `mouseup` δεν διαβάζει τίποτα.
     startDrag();
     moveTo(30, 25); // σκέτη μετακίνηση: το `Z` του (r2, c1) **αντικαθίσταται**
     release({ shiftKey: true });
+    await answerReplace();
     expect(committedText('r2', 'c1')).toBe('A');
     // Αν το `mouseup` είχε διαβάσει το `Shift`, το `Z` θα είχε σπρωχτεί και θα επιζούσε.
     expect(committedText('r3', 'c1')).toBe('');
   });
 
-  it('`Shift` αφημένο ΠΡΙΝ την απόθεση ⇒ σκέτη μετακίνηση, όπως έδειχνε το φάντασμα', () => {
+  it('`Shift` αφημένο ΠΡΙΝ την απόθεση ⇒ σκέτη μετακίνηση, όπως έδειχνε το φάντασμα', async () => {
     startDrag();
     moveTo(30, 25, { shiftKey: true });
     modifierKey('keyup', 'Shift', { shiftKey: false });
     expect(getTableRangeTransferPreview()?.insertAxis).toBeNull();
     release();
+    await answerReplace();
     expect(committedText('r2', 'c1')).toBe('A');
   });
 });

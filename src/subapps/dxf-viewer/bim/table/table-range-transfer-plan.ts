@@ -27,7 +27,7 @@
  *    εφαρμοστής — καμία τριπλή ουρά στο `apply`.
  * 2. Το κατηγόρημα «θα χαθούν δεδομένα;» βγαίνει **δωρεάν και σωστά** για τις τρεις: χάνεται
  *    ό,τι είναι **στόχος** χωρίς να είναι **πηγή** κάπου αλλού
- *    ({@link tableRangeTransferOverwrites}). Με τρεις λίστες, η ολίσθηση θα δήλωνε ψευδώς ότι
+ *    ({@link tableRangeOverwrittenCells}). Με τρεις λίστες, η ολίσθηση θα δήλωνε ψευδώς ότι
  *    σβήνει τα κελιά που απλώς **σπρώχνει**.
  * 3. Η απεικόνιση των τύπων («ποια αναφορά ακολουθεί πού») **είναι** αυτή η λίστα, χωρίς δεύτερη
  *    παραγωγή — δες `formula/table-formula-remap.ts`.
@@ -93,7 +93,16 @@ export function planTableRangeTransfer(
 }
 
 /**
- * 🔴 **ΘΑ ΧΑΘΕΙ ΚΑΤΙ ΑΝ ΤΟ ΑΦΗΣΩ ΕΔΩ;** — το κατηγόρημα που τροφοδοτεί τον διάλογο της Φάσης 4.
+ * 🔴 **ΠΟΣΑ ΚΕΛΙΑ ΜΕ ΠΕΡΙΕΧΟΜΕΝΟ ΘΑ ΧΑΘΟΥΝ ΑΝ ΤΟ ΑΦΗΣΩ ΕΔΩ;** — το κατηγόρημα που τροφοδοτεί
+ * τον διάλογο της Φάσης 4. Το `0` **είναι** η απάντηση «καμία ερώτηση».
+ *
+ * ## Γιατί αριθμός και όχι `boolean` (Φάση 4, 04/08)
+ * Γεννήθηκε ως `boolean` και ήταν σωστό — αλλά ο διάλογος που το κατανάλωσε πρέπει να **πει
+ * πόσα**: *«Delete 3 issues?» και όχι «Are you sure?»* είναι ρητή οδηγία της Nielsen Norman για
+ * καταστροφικές επιβεβαιώσεις, και ο μόνος τρόπος να τη σεβαστείς είναι να έχεις τον αριθμό.
+ * Δεν είναι **δεύτερο** κατηγόρημα: είναι το **ίδιο** σώμα με μετρητή αντί για πρόωρη έξοδο, και
+ * το «θα χαθεί κάτι;» παραμένει εκφράσιμο ως `> 0`. Δύο εξαγωγές —μία boolean, μία αριθμητική—
+ * θα ήταν δύο απαντήσεις στην ίδια ερώτηση, δηλαδή ακριβώς το σχήμα που ο §36.2 απέκλεισε.
  *
  * Ο ορισμός είναι **δομικός**, όχι λίστα περιπτώσεων: χάνεται το περιεχόμενο ενός κελιού που
  * είναι **στόχος** κάποιου γεμίσματος χωρίς να είναι **πηγή** κάποιου άλλου. Από αυτόν τον έναν
@@ -111,21 +120,22 @@ export function planTableRangeTransfer(
  * προορισμού πράγματι αντικαθίσταται· αυτό είναι μέρος της απόφασης «τι ταξιδεύει» και είναι
  * **ορατό** στο φάντασμα της Φάσης 3, όχι κρυφό.
  */
-export function tableRangeTransferOverwrites(
+export function tableRangeOverwrittenCells(
   model: PersistedTableModel,
   plan: TableRangeTransferPlan,
-): boolean {
+): number {
   const relocated = new Set<string>();
   for (const fill of plan.fills) {
     if (fill.from !== null) relocated.add(refKey(fill.from));
   }
 
   const resolved = resolveTableModel(model);
+  let doomed = 0;
   for (const fill of plan.fills) {
     if (relocated.has(refKey(fill.at))) continue;
-    if (hasCellContent(resolved, fill.at)) return true;
+    if (hasCellContent(resolved, fill.at)) doomed++;
   }
-  return false;
+  return doomed;
 }
 
 /**
