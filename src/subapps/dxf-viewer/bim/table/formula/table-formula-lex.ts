@@ -36,17 +36,40 @@ import type { TableFormulaBinaryOp } from '../../../types/table-formula';
 export type TableFormulaPunct = '(' | ')' | ',' | ':';
 
 /**
- * Μια λεκτική μονάδα. Το `name` καλύπτει **και** τα ονόματα συναρτήσεων **και** τις αναφορές
- * κελιών (`SUM`, `A1`): λεξικά είναι το ίδιο πράγμα — γράμματα και ψηφία — και τα ξεχωρίζει
- * μόνο το τι ακολουθεί. Η απόφαση ανήκει στον αναλυτή, που βλέπει το επόμενο σύμβολο· ο
- * λεξικογράφος **δεν κρίνει**.
+ * Μια λεκτική μονάδα **χωρίς θέση** — ό,τι αναγνωρίζει ένας σαρωτής. Το `name` καλύπτει
+ * **και** τα ονόματα συναρτήσεων **και** τις αναφορές κελιών (`SUM`, `A1`): λεξικά είναι το
+ * ίδιο πράγμα — γράμματα και ψηφία — και τα ξεχωρίζει μόνο το τι ακολουθεί. Η απόφαση ανήκει
+ * στον αναλυτή, που βλέπει το επόμενο σύμβολο· ο λεξικογράφος **δεν κρίνει**.
  */
-export type TableFormulaToken =
+export type TableFormulaLexeme =
   | { readonly kind: 'number'; readonly value: number }
   | { readonly kind: 'text'; readonly value: string }
   | { readonly kind: 'name'; readonly value: string }
   | { readonly kind: 'op'; readonly value: TableFormulaBinaryOp }
   | { readonly kind: 'punct'; readonly value: TableFormulaPunct };
+
+/**
+ * Η μονάδα **με τη θέση της** στο κείμενο που σαρώθηκε: `[start, end)` σε δείκτες χαρακτήρα.
+ *
+ * ## Γιατί ο λεξικογράφος κουβαλά θέσεις
+ * Ο αναλυτής **δεν τις χρειάζεται** — παράγει δέντρο δεμένο σε ταυτότητες (§9.3). Τις
+ * χρειάζεται ο **επεξεργαστής**: για να απαντήσει «τι υπάρχει αριστερά του δρομέα;»
+ * (ADR-754 — υπόδειξη κελιού με το ποντίκι) πρέπει να αντιστοιχίσει θέση δρομέα σε μονάδα.
+ * Η εναλλακτική ήταν δεύτερος, «ελαφρύς» σαρωτής στον επεξεργαστή — δηλαδή δύο γραμματικές
+ * που αποκλίνουν σιωπηλά την πρώτη φορά που κάποια αλλάξει (N.18).
+ *
+ * Δεν κοστίζει τίποτα: οι θέσεις **υπάρχουν ήδη** μέσα στον βρόχο του {@link tokenizeFormula}
+ * (`at` και `next`) και απλώς έπαυαν να αναφέρονται. Γι' αυτό μπαίνουν σε **ένα** σημείο και
+ * κανένας σαρωτής δεν άλλαξε.
+ *
+ * ⚠️ Οι δείκτες είναι σχετικοί με το **κείμενο που δόθηκε** στον λεξικογράφο — δηλαδή
+ * **χωρίς** το `=`. Ο καταναλωτής που μετρά πάνω στο πλήρες κείμενο του κελιού προσθέτει
+ * μόνος του τη μετατόπιση του προθέματος.
+ */
+export type TableFormulaToken = TableFormulaLexeme & {
+  readonly start: number;
+  readonly end: number;
+};
 
 /** Το πρόθεμα που δηλώνει «αυτό είναι τύπος» — Excel, Google Sheets, AutoCAD, DXF. */
 export const FORMULA_PREFIX = '=';
@@ -69,6 +92,23 @@ const NAME_PART = /[A-Za-z0-9_.]/u;
 const QUOTE = '"';
 
 /**
+ * True όταν ο χαρακτήρας μπορεί να **συνεχίσει** ένα `name` ή `number` που ήδη ξεκίνησε.
+ *
+ * Απαντά σε μία μόνο ερώτηση, και τη ρωτά ο επεξεργαστής (ADR-754): «ο δρομέας κάθεται στη
+ * **μέση** μιας μονάδας;». Το `=A12` με τον δρομέα ανάμεσα στο `1` και στο `2` σαρώνεται
+ * αριστερά ως τέλειο `A1` — δηλαδή θα φαινόταν έγκυρη αναφορά ενώ ο χρήστης απλώς γράφει
+ * ακόμη. Χωρίς αυτόν τον έλεγχο, ένα κλικ εκεί θα **έσβηνε μισή λέξη** που πληκτρολογείται.
+ *
+ * Ζει εδώ και όχι στον καταναλωτή επειδή η απάντηση **είναι** τα `NAME_PART`/`NUMBER_START`
+ * αυτού του αρχείου. Αντιγραμμένη μία φορά, θα ήταν δεύτερος ορισμός του «τι είναι όνομα» —
+ * και θα απέκλινε την πρώτη φορά που η γραμματική δεχτεί νέο χαρακτήρα (N.18).
+ */
+export function continuesLexeme(char: string | undefined): boolean {
+  if (char === undefined) return false;
+  return NAME_PART.test(char) || NUMBER_START.test(char);
+}
+
+/**
  * Κείμενο τύπου (**χωρίς** το `=`) → μονάδες, ή `null` αν υπάρχει χαρακτήρας εκτός
  * γραμματικής ή αλφαριθμητικό που δεν κλείνει.
  *
@@ -89,7 +129,8 @@ export function tokenizeFormula(source: string): readonly TableFormulaToken[] | 
 
     const scanned = scanToken(source, at);
     if (scanned === null) return null;
-    tokens.push(scanned.token);
+    // Η **μία** θέση όπου η μονάδα αποκτά θέση — δες {@link TableFormulaToken}.
+    tokens.push({ ...scanned.token, start: at, end: scanned.next });
     at = scanned.next;
   }
 
@@ -98,7 +139,7 @@ export function tokenizeFormula(source: string): readonly TableFormulaToken[] | 
 
 /** Ό,τι διάβασε ένας σαρωτής: η μονάδα και η θέση **μετά** από αυτήν. */
 interface Scanned {
-  readonly token: TableFormulaToken;
+  readonly token: TableFormulaLexeme;
   readonly next: number;
 }
 

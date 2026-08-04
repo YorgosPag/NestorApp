@@ -46,6 +46,12 @@ import {
   tableIndicatorCursorRoleAtFrame,
   type TableIndicatorCursorRole,
 } from '../../bim/table/table-indicator-cursor-role';
+// 🔴 ADR-739 §40 — το ⊕ της εισαγωγής (Word parity): μία σάρωση, τρεις καταναλωτές.
+import {
+  tableInsertControlAtFrame,
+  type TableInsertControlHit,
+  type TableInsertControlMode,
+} from '../../bim/table/table-insert-control';
 // 🔴 ADR-739 §36 — ο ΕΝΑΣ δρόμος «τι διάλεξε ο χρήστης → ποιο ορθογώνιο», κοινός με τον
 // ζωγράφο: ο χρήστης πιάνει το περίγραμμα **που βλέπει**.
 import {
@@ -195,19 +201,35 @@ export function tableIndicatorProbeAtWorld(
   // κατάσταση έχει η εφαρμογή». Ο ΕΝΑΣ ακροατής κίνησης ξέρει και τα δύο και τα δίνει.
   selection: TableCellSelection | null = null,
   intent: TableRangeDragIntent = PLAIN_TABLE_RANGE_DRAG,
+  // 🔴 §40 — σε ποια κατάσταση ρωτάμε. Προεπιλογή η λειτουργία πίνακα, ώστε οι δεκάδες
+  // υπάρχουσες κλήσεις/tests να μη χρειαστεί να μάθουν μια έννοια που δεν τους αφορά.
+  mode: TableInsertControlMode = 'table-mode',
 ): TableIndicatorProbe {
   const geometry = computeTableEntityGeometryLive(entity);
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
   if (!probe) return EMPTY_PROBE;
+  // 🔴 §40 — **μία** σάρωση του χειριστηρίου, **τρεις** καταναλωτές: ο ζωγράφος (ποιο ⊕
+  // βάφεται), ο δείκτης του ΟΣ (γίνεται κουμπί;) και το κλικ (τι εισάγεται). Δύο κλήσεις θα
+  // πλήρωναν τη γεωμετρία δύο φορές ανά κίνηση ποντικιού — και θα άφηναν περιθώριο να
+  // ζωγραφιστεί ⊕ σε άλλο σύνορο από εκείνο που θα εισήγαγε το πάτημα.
+  const insert = tableInsertControlAtFrame(geometry.layout, probe.frame, probe.pxPerMm, mode);
   return {
-    hit: tableIndicatorHitAtFrame(geometry.layout, probe.frame, probe.bands),
+    // §40 — σε απλή επιλογή δεν υπάρχουν ζώνες να φωτιστούν. Ο φύλακας ζει εδώ και όχι στον
+    // καλούντα, ώστε ένας δεύτερος καταναλωτής αύριο να μην μπορεί να τον ξεχάσει.
+    hit:
+      mode === 'table-mode'
+        ? tableIndicatorHitAtFrame(geometry.layout, probe.frame, probe.bands)
+        : null,
     cursor: tableIndicatorCursorRoleAtFrame(
       geometry.layout,
       probe.frame,
       probe.bands,
       activeTableRange(entity, geometry, selection)?.rectMm ?? null,
       intent,
+      insert,
+      mode,
     ),
+    insert,
   };
 }
 
@@ -319,13 +341,16 @@ export interface TableIndicatorProbe {
   readonly hit: TableIndicatorHit | null;
   /** §31 — ποιο σχήμα οφείλει ο δείκτης του ΟΣ· `null` = κανένα (μένει το σταυρόνημα). */
   readonly cursor: TableIndicatorCursorRole | null;
+  /** §40 — ποιο ⊕ εισαγωγής ζωγραφίζεται και αν πατιέται· `null` = κανένα. */
+  readonly insert: TableInsertControlHit | null;
 }
 
 /**
- * Κάτω από το LOD δεν υπάρχει τίποτα — ούτε φωτισμός ούτε δείκτης. Σταθερό αντικείμενο ώστε
- * η συχνότερη διαδρομή (ποντίκι εκτός πίνακα) να μην κατανέμει μνήμη 60 φορές το δευτερόλεπτο.
+ * Κάτω από το LOD δεν υπάρχει τίποτα — ούτε φωτισμός, ούτε δείκτης, ούτε χειριστήριο. Σταθερό
+ * αντικείμενο ώστε η συχνότερη διαδρομή (ποντίκι εκτός πίνακα) να μην κατανέμει μνήμη 60 φορές
+ * το δευτερόλεπτο.
  */
-const EMPTY_PROBE: TableIndicatorProbe = { hit: null, cursor: null };
+const EMPTY_PROBE: TableIndicatorProbe = { hit: null, cursor: null, insert: null };
 
 /** Σε ποια υποδιαίρεση ζώνης έπεσε το συμβάν· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */
 function indicatorHitAt(
@@ -353,7 +378,12 @@ function indicatorProbeBasis(
   world: Point2D,
   geometry: TableEntityGeometry,
   viewScale: number,
-): { readonly frame: TableFramePoint; readonly bands: TableIndicatorBandsMm } | null {
+): {
+  readonly frame: TableFramePoint;
+  readonly bands: TableIndicatorBandsMm;
+  /** §40 — η κλίμακα ταξιδεύει μαζί: το ⊕ τη ζητά και δεν επιτρέπεται να την ξαναβγάλει. */
+  readonly pxPerMm: number;
+} | null {
   const pxPerMm = tablePxPerMm(geometry.mmToWorld, viewScale);
   if (!isTableIndicatorVisible(geometry.layout.widthMm, geometry.layout.heightMm, pxPerMm)) {
     return null;
@@ -361,5 +391,6 @@ function indicatorProbeBasis(
   return {
     frame: tableWorldToFrame(entity, world, geometry.mmToWorld),
     bands: tableIndicatorBandsMm(pxPerMm),
+    pxPerMm,
   };
 }

@@ -63,6 +63,12 @@ import {
   clearTableIndicatorCursor,
   setTableIndicatorCursor,
 } from '../../systems/cursor/TableIndicatorCursorStore';
+// 🔴 ADR-739 §40 — το **τρίτο** κανάλι της ίδιας σάρωσης: το ⊕ της εισαγωγής (Word parity).
+import {
+  clearTableInsertControl,
+  setTableInsertControl,
+} from '../../state/table-insert-control-store';
+import type { TableInsertControlMode } from '../../bim/table/table-insert-control';
 // 🔬 ADR-739 §31.11 — το όργανο. Εδώ ζει η **ΑΙΤΙΑ** (τι απάντησε η σάρωση), ενώ στο
 // `useCrosshairCursor` ζει το **ΑΠΟΤΕΛΕΣΜΑ** (τι γράφτηκε στο `style.cursor`). Χωρίς το πρώτο
 // δεν ξεχωρίζεις «ο ρόλος άλλαξε» από «κάποιος άλλος ξαναέγραψε» — δύο διαφορετικές θεραπείες.
@@ -96,20 +102,41 @@ const clearTableIndicatorFeedback = (): void => {
   noteCursorProbe('leave', null, null, -1, -1);
   clearTableIndicatorHover();
   clearTableIndicatorCursor();
+  // §40 — **τρίτο κανάλι, ίδιος καθαρισμός.** Ο λόγος που ο καθαρισμός είναι ένας γράφτηκε
+  // πριν υπάρξει αυτή η γραμμή: «δεν υπάρχει δρόμος να καθαριστεί το ένα κανάλι χωρίς το
+  // άλλο». Η προσθήκη του τρίτου είναι η επαλήθευση — ένα σημείο άλλαξε, και τα τέσσερα
+  // σημεία εξόδου το πήραν.
+  clearTableInsertControl();
 };
 
 export interface UseTableIndicatorHoverParams {
-  /** Το **ίδιο** `overlay !== null` που παίρνει το κλείδωμα — δες την κεφαλίδα. */
+  /**
+   * Προσαρτώνται οι ακροατές; §40: **όχι** πια σκέτο `overlay !== null` — αληθές και όταν
+   * υπάρχει απλώς **επιλεγμένος** πίνακας, γιατί το ⊕ της εισαγωγής ζει και στις δύο
+   * καταστάσεις. Μένει prop και δεν υπολογίζεται εδώ ώστε ο ακροατής να **μην** υπάρχει καν
+   * όταν δεν υπάρχει πίνακας: αλλιώς κάθε κίνηση ποντικιού σε ολόκληρη την εφαρμογή θα
+   * πλήρωνε μια ερώτηση που η απάντησή της είναι πάντα «κανένας πίνακας».
+   */
   readonly active: boolean;
   /** Η **ζωντανή** οντότητα του δρομέα· `null` όταν ο πίνακας χάθηκε από κάτω του. */
   readonly entity: TableEntity | null;
+  /**
+   * 🔴 §40 — ο **επιλεγμένος** πίνακας, όταν δεν υπάρχει δρομέας.
+   *
+   * Συνάρτηση και όχι τιμή, και ο λόγος είναι γραμμένος ολόκληρος στην κεφαλίδα του
+   * `table-entity-lookup`: η σκηνή ανανεώνεται **ασύγχρονα** (autosave / εξωτερική
+   * ενημέρωση), και μια αναφορά οντότητας κλεισμένη σε prop γίνεται μπαγιάτικη χωρίς κανένα
+   * ορατό σημάδι. Καλείται **μόνο** όταν δεν υπάρχει δρομέας — δηλαδή το κόστος της σάρωσης
+   * σκηνής πληρώνεται μόνο τη στιγμή που υπάρχει όντως επιλεγμένος πίνακας.
+   */
+  readonly resolveSelected: () => TableEntity | null;
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly transformRef: RefObject<ViewTransform>;
 }
 
 /** Ανάβει την υποδιαίρεση ζώνης κάτω από το ποντίκι, όσο ζει η λειτουργία πίνακα. */
 export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): void {
-  const { active, entity, containerRef, transformRef } = params;
+  const { active, entity, resolveSelected, containerRef, transformRef } = params;
 
   /**
    * 🔴 §36 — **ΠΟΥ ΣΤΕΚΕΤΑΙ ΤΟ ΧΕΡΙ**, ώστε το `Ctrl` να μπορεί να ξαναρωτήσει χωρίς κίνηση.
@@ -149,7 +176,12 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     }
     const container = containerRef.current;
     const transform = transformRef.current;
-    if (!container || !entity || !transform) {
+    // 🔴 §40 — **ΠΟΙΟΣ ΠΙΝΑΚΑΣ, ΚΑΙ ΣΕ ΠΟΙΑ ΚΑΤΑΣΤΑΣΗ.** Ο δρομέας νικά πάντα: όσο υπάρχει,
+    // ο χρήστης είναι **μέσα** στον πίνακα και ο επιλεγμένος είναι ο ίδιος ούτως ή άλλως. Ο
+    // resolver τρέχει μόνο στο `else` — δες το σκεπτικό του prop για το γιατί δεν είναι τιμή.
+    const target: TableEntity | null = entity ?? resolveSelected();
+    const mode: TableInsertControlMode = entity ? 'table-mode' : 'selection';
+    if (!container || !target || !transform) {
       noteCursorProbe('no-entity', null, null, event.clientX, event.clientY);
       clearTableIndicatorFeedback();
       return;
@@ -171,11 +203,11 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // Φιλτραρισμένη ως προς ΑΥΤΟΝ τον πίνακα: δύο πίνακες στη σκηνή δεν μοιράζονται δρομέα —
     // ο ίδιος έλεγχος που κάνει ήδη ο ζωγράφος (`TableRenderer.cursorOf`).
     const cursorState = getTableCellCursor();
-    const selection = cursorState?.entityId === entity.id ? cursorState.selection : null;
+    const selection = cursorState?.entityId === target.id ? cursorState.selection : null;
     // ΜΙΑ ανάγνωση γεωμετρίας, δύο απαντήσεις — δες την κεφαλίδα του `tableIndicatorProbeAtWorld`
     // για το γιατί δεν είναι δύο κλήσεις (θα ήταν δύο υπολογισμοί ανά κίνηση ποντικιού).
-    const { hit, cursor } = tableIndicatorProbeAtWorld(
-      entity,
+    const { hit, cursor, insert } = tableIndicatorProbeAtWorld(
+      target,
       world,
       transform.scale,
       selection,
@@ -183,13 +215,17 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       // να πατηθεί ή να αφεθεί με το χέρι ακίνητο πάνω στο περίγραμμα. Τότε τα δίνει το
       // **`keydown`/`keyup`** μέσω του `modifiers` — δες την κεφαλίδα του χειριστή.
       tableRangeDragIntentOf(modifiers),
+      mode,
     );
     // 🔬 §31.11 — η **αιτία**, με τις συντεταγμένες του συμβάντος: αν ο ρόλος ταλαντώνεται ενώ
     // το `y` μένει σταθερό, φταίει όριο κατά τον **οριζόντιο** άξονα (διαχωριστικά στηλών)·
     // αν ταλαντώνεται με το `y` να κινείται 1-2 px, φταίει το **χείλος** της λωρίδας.
     noteCursorProbe('ok', cursor, hit, event.clientX, event.clientY);
-    setTableIndicatorHover(hit ? { entityId: entity.id, hit } : null);
+    setTableIndicatorHover(hit ? { entityId: target.id, hit } : null);
     setTableIndicatorCursor(cursor);
+    // §40 — το τρίτο κανάλι της **ίδιας** σάρωσης. Ο φύλακας «άλλαξε κάτι;» ζει μέσα στον
+    // γραφέα, όπως και στα άλλα δύο — εδώ δεν επαναλαμβάνεται.
+    setTableInsertControl(insert ? { entityId: target.id, control: insert } : null);
   });
 
   /**

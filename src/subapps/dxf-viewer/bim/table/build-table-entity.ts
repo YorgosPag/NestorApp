@@ -58,6 +58,20 @@ import { BUILTIN_TABLE_STYLE_IDS } from './table-style-presets';
 
 export const DEFAULT_TABLE_COLUMN_COUNT = 3;
 export const DEFAULT_TABLE_DATA_ROW_COUNT = 3;
+
+/**
+ * Οι γραμμές που ο builder προσθέτει **πάντα**, πάνω από τις γραμμές δεδομένων: 1 `title` +
+ * 1 `header` (βλ. {@link buildRows}). Άρα οι **συνολικές** γραμμές ενός νέου πίνακα είναι
+ * `TABLE_FIXED_ROW_COUNT + dataRowCount`, και ποτέ λιγότερες από 2.
+ *
+ * **Γιατί εξάγεται**: ο επιλογέας μεγέθους της κορδέλας (ADR-739 §39) μιλά **σύνολα** —
+ * «Πίνακας 5×2» σημαίνει 2 γραμμές στην οθόνη, όπως στο Word. Ο μετασχηματισμός
+ * «σύνολο ⇄ δεδομένα» χρειάζεται αυτόν τον αριθμό, και το «+1+1» είναι γεγονός **αυτού**
+ * του module: αν το UI τον ξαναδήλωνε, θα υπήρχαν δύο αλήθειες για την ίδια δομή.
+ *
+ * @see ui/ribbon/components/table/table-size-menu-model.ts — ο μοναδικός καταναλωτής
+ */
+export const TABLE_FIXED_ROW_COUNT = 2;
 /** Πλάτος στήλης σε **sheet-mm** (§4.1: ό,τι είναι διάταξη είναι χαρτί, ποτέ κόσμος). */
 export const DEFAULT_TABLE_COLUMN_WIDTH_MM = 40;
 
@@ -206,8 +220,10 @@ function buildRows(shape: TableShape): TableRow[] {
     { id: rowId(TITLE_ROW_INDEX), rowClass: 'title' },
     { id: rowId(HEADER_ROW_INDEX), rowClass: 'header' },
   ];
+  // Οι γραμμές δεδομένων ξεκινούν ακριβώς μετά τις σταθερές — ο ίδιος αριθμός με τον οποίο
+  // η κορδέλα μετατρέπει «σύνολο» σε «δεδομένα» (TABLE_FIXED_ROW_COUNT), όχι δεύτερο «+1+1».
   for (let i = 0; i < shape.dataRowCount; i++) {
-    rows.push({ id: rowId(HEADER_ROW_INDEX + 1 + i), rowClass: 'data' });
+    rows.push({ id: rowId(TABLE_FIXED_ROW_COUNT + i), rowClass: 'data' });
   }
   return rows;
 }
