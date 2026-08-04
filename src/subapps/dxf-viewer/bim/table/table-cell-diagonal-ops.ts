@@ -30,10 +30,8 @@ import type {
   PersistedTableModel,
   TableCell,
   TableCellDiagonals,
-  TableColumnId,
-  TableRowId,
 } from '../../types/table';
-import type { TableCellRangeBounds } from './table-cell-range';
+import { tableRangeCellRefs, type TableCellRangeBounds } from './table-cell-range';
 import { writePersistedCells } from './table-cell-content';
 import { sameBorderSpec } from './table-edge-model';
 
@@ -61,6 +59,34 @@ export interface TableDiagonalCommand {
 
 /** Οι δύο διευθύνσεις, με τα ονόματα του OOXML. */
 export type TableDiagonalDirection = 'down' | 'up';
+
+/**
+ * Οι δύο διευθύνσεις **ως δεδομένα**, στη σειρά του Excel (η ↘ πρώτη).
+ *
+ * Δημόσια επειδή τη ρωτά και ο διάλογος «Περισσότερα περιγράμματα» (Φ6), όπου οι διαγώνιοι
+ * είναι **δύο ανεξάρτητες θέσεις** του widget και όχι τέσσερις εντολές. Μια δεύτερη
+ * χειρόγραφη `['down', 'up']` εκεί θα ήταν το κλασικό σιωπηλό διπλότυπο: τα δύο μέρη θα
+ * μπορούσαν να απαριθμήσουν με άλλη σειρά, και το widget θα ζωγράφιζε τις θέσεις ανάποδα από
+ * το μενού χωρίς κανένα test να τα συγκρίνει.
+ */
+export const TABLE_DIAGONAL_DIRECTIONS: readonly TableDiagonalDirection[] = ['down', 'up'];
+
+/**
+ * Μια δέσμη αλλαγών διαγωνίων. **Τρεις** τιμές ανά διεύθυνση, ρητά διακριτές στον τύπο:
+ *
+ * ```
+ *   TableBorderSpec  →  βάλε αυτή τη διαγώνιο με αυτό το μολύβι
+ *   null             →  σβήσε την
+ *   απόν πεδίο       →  μην την αγγίξεις (ό,τι ίσχυε, ισχύει)
+ * ```
+ *
+ * Η **τρίτη** είναι ο λόγος ύπαρξης του τύπου: χωρίς αυτήν, ο διάλογος της Φ6 δεν θα μπορούσε
+ * να ανάψει τη ↗ χωρίς να σβήσει τη ↘ που ο χρήστης είχε ήδη βάλει.
+ */
+export interface TableDiagonalPatch {
+  readonly down?: TableBorderSpec | null;
+  readonly up?: TableBorderSpec | null;
+}
 
 /**
  * 🔑 **Πού ακριβώς περνά μια διαγώνιος μέσα σε ένα ορθογώνιο** — η μία απάντηση.
@@ -129,13 +155,48 @@ export function applyTableDiagonalCommand(
   const command = COMMANDS_BY_ID.get(commandId);
   if (!command) return model;
 
-  const next = buildDiagonals(command, pencil);
-  return writePersistedCells(model, cellsInBounds(model, bounds), {
-    update: (existing) => (sameDiagonals(existing.diagonal, next) ? null : withDiagonals(existing, next)),
+  // Κάθε εντολή ονομάζει **και τις δύο** διευθύνσεις (γι' αυτό υπάρχουν τέσσερις και όχι δύο),
+  // οπότε η μετάφραση σε δέσμη είναι ολική: ό,τι δεν κρατά η εντολή, σβήνεται ρητά.
+  return setTableRangeDiagonals(model, bounds, {
+    down: command.down ? pencil : null,
+    up: command.up ? pencil : null,
+  });
+}
+
+/**
+ * ADR-750 Φ6 — **μία διεύθυνση τη φορά**, για τον διάλογο «Περισσότερα περιγράμματα».
+ *
+ * Απόν πεδίο ⇒ «μην αγγίξεις αυτή τη διαγώνιο»· `null` ⇒ «σβήσε την»· μολύβι ⇒ «βάλ' την».
+ *
+ * ## Γιατί η δέσμη είναι η πρωτόγονη πράξη και οι τέσσερις εντολές παράγωγό της
+ * Το μενού των Φ3/Φ5 λέει πάντα και για τις δύο («↘» σημαίνει *και* «όχι ↗»), ο διάλογος όμως
+ * έχει **δύο ανεξάρτητους διακόπτες**: πατώντας ↗ δεν επιτρέπεται να χαθεί μια ↘ που ο χρήστης
+ * είχε ήδη βάλει. Ένας δεύτερος γραφέας για την ανεξάρτητη περίπτωση θα ήταν sibling clone
+ * (CHECK 3.28 / N.18) — και, χειρότερα, δύο απαντήσεις στο «πότε μένει κελί χωρίς πεδίο
+ * `diagonal`». Εδώ η γενικότερη πράξη είναι η **μία**, και οι εντολές τη ζητούν ολικά.
+ *
+ * Οι εγγυήσεις του {@link writePersistedCells} μένουν αυτούσιες: ένα πέρασμα, ντετερμινιστική
+ * σειρά, και το **ίδιο** μοντέλο by-reference όταν καμία τιμή δεν αλλάζει.
+ */
+export function setTableRangeDiagonals(
+  model: PersistedTableModel,
+  bounds: TableCellRangeBounds,
+  patch: TableDiagonalPatch,
+): PersistedTableModel {
+  if (patch.down === undefined && patch.up === undefined) return model;
+
+  return writePersistedCells(model, tableRangeCellRefs(model, bounds), {
+    update: (existing) => {
+      const next = patchDiagonals(existing.diagonal, patch);
+      return sameDiagonals(existing.diagonal, next) ? null : withDiagonals(existing, next);
+    },
     // Κελί που **δεν υπάρχει** δεν αποκτά εγγραφή για να μείνει χωρίς διαγώνιο: η απουσία
     // εγγραφής ΕΙΝΑΙ ήδη «καμία διαγώνιος». Χωρίς αυτό, το «Χωρίς διαγώνιες» πάνω σε καθαρή
     // περιοχή 500×8 θα γεννούσε 4.000 φαντάσματα και ένα βήμα undo για το τίποτα.
-    create: () => (next === undefined ? null : { kind: 'text', value: '', diagonal: next }),
+    create: () => {
+      const next = patchDiagonals(undefined, patch);
+      return next === undefined ? null : { kind: 'text', value: '', diagonal: next };
+    },
   });
 }
 
@@ -150,7 +211,7 @@ export function hasTableRangeDiagonals(
   model: PersistedTableModel,
   bounds: TableCellRangeBounds,
 ): boolean {
-  const inside = new Set(cellsInBounds(model, bounds).map((ref) => `${ref.rowId} ${ref.colId}`));
+  const inside = new Set(tableRangeCellRefs(model, bounds).map((ref) => `${ref.rowId} ${ref.colId}`));
   if (inside.size === 0) return false;
 
   for (const [rowId, colId, cell] of model.cells) {
@@ -164,43 +225,32 @@ export function hasTableRangeDiagonals(
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
- * Τα κελιά της περιοχής, κουμπωμένα στα πραγματικά όρια του πίνακα.
- *
- * Μπαγιάτικα όρια (π.χ. μετά από undo που έσβησε γραμμές) **κόβονται** αντί να ρίξουν σφάλμα:
- * ο χρήστης δεν πρέπει να χάσει τον πίνακα επειδή η επιλογή του έδειχνε σε σβησμένη γραμμή —
- * η ίδια ανοχή με το `tableRangeSideEdges`.
- */
-function cellsInBounds(
-  model: PersistedTableModel,
-  bounds: TableCellRangeBounds,
-): readonly { readonly rowId: TableRowId; readonly colId: TableColumnId }[] {
-  const out: { rowId: TableRowId; colId: TableColumnId }[] = [];
-  const lastRow = Math.min(bounds.lastRow, model.rows.length - 1);
-  const lastCol = Math.min(bounds.lastCol, model.columns.length - 1);
-  for (let r = Math.max(bounds.firstRow, 0); r <= lastRow; r++) {
-    for (let c = Math.max(bounds.firstCol, 0); c <= lastCol; c++) {
-      out.push({ rowId: model.rows[r].id, colId: model.columns[c].id });
-    }
-  }
-  return out;
-}
-
-/**
- * Το `TableCellDiagonals` της εντολής· `undefined` για την «Χωρίς διαγώνιες».
+ * Οι διαγώνιοι **μετά** τη δέσμη· `undefined` όταν δεν μένει καμία.
  *
  * Η αφαίρεση δίνει `undefined` και **όχι** `{}`: ένα κενό αντικείμενο θα επιβίωνε σε κάθε
  * `JSON.stringify`, δηλαδή ένας πίνακας που «καθαρίστηκε» θα διέφερε από έναν που δεν είχε
  * ποτέ διαγώνιο — diff, βήμα undo και αποθήκευση, για μηδενική οπτική διαφορά.
  */
-function buildDiagonals(
-  command: TableDiagonalCommand,
-  pencil: TableBorderSpec,
+function patchDiagonals(
+  current: TableCellDiagonals | undefined,
+  patch: TableDiagonalPatch,
 ): TableCellDiagonals | undefined {
-  if (!command.down && !command.up) return undefined;
+  const down = pickDiagonal(current?.down, patch.down);
+  const up = pickDiagonal(current?.up, patch.up);
+  if (down === undefined && up === undefined) return undefined;
   return {
-    ...(command.down ? { down: pencil } : {}),
-    ...(command.up ? { up: pencil } : {}),
+    ...(down !== undefined ? { down } : {}),
+    ...(up !== undefined ? { up } : {}),
   };
+}
+
+/** Απόν σκέλος ⇒ ό,τι ίσχυε· `null` ⇒ τίποτα· μολύβι ⇒ το μολύβι. Τρεις είσοδοι, μία έξοδος. */
+function pickDiagonal(
+  current: TableBorderSpec | undefined,
+  requested: TableBorderSpec | null | undefined,
+): TableBorderSpec | undefined {
+  if (requested === undefined) return current;
+  return requested ?? undefined;
 }
 
 /** Το κελί με τις νέες διαγωνίους — το πεδίο **αφαιρείται** όταν δεν υπάρχουν. */

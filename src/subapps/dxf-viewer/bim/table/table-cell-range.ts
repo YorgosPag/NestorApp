@@ -44,7 +44,7 @@
  */
 
 import type { TableColumnId, TableModel, TableRowId } from '../../types/table';
-import { cellPairIndices } from './table-cell-order';
+import { cellPairIndices, type CellOrderSource } from './table-cell-order';
 // ADR-739 §27.16 — ο ΜΗΧΑΝΙΣΜΟΣ του κουμπώματος ζει δίπλα· η ΑΠΟΦΑΣΗ «ποιος κουμπώνει»
 // μένει εδώ (§27.15), γιατί μόνο εδώ ζει η πρόθεση του χρήστη.
 import { snapToWholeMerges, type TableRectBounds } from './table-range-merge-snap';
@@ -371,9 +371,17 @@ export function tableRangeMembership(
  * ολισθαίνουν αριστερά και ο πίνακας που επικολλάται στο Excel βγαίνει στραβός. Το κενό
  * έρχεται δωρεάν: το `cells` είναι **αραιό** και μόνο η άγκυρα κρατά εγγραφή, οπότε το
  * `getPersistedCellText` ενός καλυμμένου κελιού επιστρέφει ήδη κενό αλφαριθμητικό.
+ *
+ * ## Γιατί δέχεται {@link CellOrderSource} και όχι `TableModel` (ADR-750 Φ6, N.18)
+ * Διαβάζει **μόνο** τους δύο άξονες — ποτέ `cells`/`merges`. Η στενότερη όψη δέχεται και το
+ * `PersistedTableModel`, και αυτό **δεν** είναι ευκολία: το `table-cell-diagonal-ops.ts`
+ * κρατούσε ιδιωτικό `cellsInBounds` **ταυτόσημο σώμα 12 γραμμών**, γεννημένο αποκλειστικά
+ * επειδή η υπογραφή εδώ ζητούσε `TableModel`. Δύο σώματα για την ίδια ερώτηση σημαίνουν δύο
+ * απαντήσεις στο «τι γίνεται με μπαγιάτικα όρια» — και το ένα από τα δύο θα το μάθαινε αργά.
+ * Η διεύρυνση είναι καθαρά προσθετική: κάθε `TableModel` **είναι** ήδη `CellOrderSource`.
  */
 export function tableRangeCellRefs(
-  model: TableModel,
+  model: CellOrderSource,
   bounds: TableCellRangeBounds,
 ): readonly TableCellRef[] {
   const refs: TableCellRef[] = [];
