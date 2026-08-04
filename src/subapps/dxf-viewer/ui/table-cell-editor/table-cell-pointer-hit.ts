@@ -61,6 +61,14 @@ import {
   PLAIN_TABLE_RANGE_DRAG,
   type TableRangeDragIntent,
 } from '../../bim/table/table-range-move-zone';
+// 🔴 ADR-754 §15 — η λαβή συμπλήρωσης: **πέμπτο κανάλι της ίδιας σάρωσης**, με τον ίδιο δρόμο
+// που ρωτά και ο φρουρός του πατήματος (`table-fill-handle-drag`).
+import {
+  tableFillHandleHitAtFrame,
+  tableFillSourceBounds,
+} from '../../bim/table/table-fill-handle';
+import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableCellSelection } from '../../state/table-cell-cursor-store';
 import type { TableCellHit, TableEntity, TableEntityGeometry } from '../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
@@ -295,6 +303,13 @@ export function tableIndicatorProbeAtWorld(
   // 🔴 §40 — σε ποια κατάσταση ρωτάμε. Προεπιλογή η λειτουργία πίνακα, ώστε οι δεκάδες
   // υπάρχουσες κλήσεις/tests να μη χρειαστεί να μάθουν μια έννοια που δεν τους αφορά.
   mode: TableInsertControlMode = 'table-mode',
+  // 🔴 ADR-754 §15 — **το ενεργό κελί, ΟΤΑΝ Η ΛΑΒΗ ΖΕΙ**· `null` = καμία λαβή.
+  //
+  // Ένα όρισμα, δύο σιωπές: «κανένας δρομέας σε αυτόν τον πίνακα» και «ο χρήστης πληκτρολογεί»
+  // (§13.5 — η λαβή σιωπά σε γραφή, Excel parity). Και οι δύο σημαίνουν το ίδιο εδώ, και ο
+  // καλών είναι ο **μόνος** που ξέρει να τις διακρίνει — δες τη σύμβαση του `selection` από
+  // πάνω: αυτό το module απαντά «**πού** έπεσε αυτό;», ποτέ «τι κατάσταση έχει η εφαρμογή».
+  fillAnchor: TableCellRef | null = null,
 ): TableIndicatorProbe {
   const geometry = computeTableEntityGeometryLive(entity);
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
@@ -310,6 +325,23 @@ export function tableIndicatorProbeAtWorld(
     mode === 'table-mode'
       ? tableDeleteControlAtFrame(geometry.layout, probe.frame, probe.bands, probe.pxPerMm)
       : null;
+  // 🔴 ADR-739 §36 — **ΜΙΑ** ανάλυση της επιλογής, **δύο** καταναλωτές: το ορθογώνιο που
+  // πιάνεται (`range-move`) και η πηγή της λαβής (ADR-754 §15). Εδώ έγραφε
+  // `activeTableRange(...)?.rectMm ?? null` μέσα στην κλήση· με δεύτερο καταναλωτή, η ίδια
+  // γραμμή θα έτρεχε **δύο φορές ανά κίνηση ποντικιού** — και το `resolveTableSelectionBounds`
+  // κουμπώνει σε συγχωνεύσεις, δηλαδή δεν είναι φθηνό.
+  const range = activeTableRange(entity, geometry, selection);
+  // 🔴 ADR-754 §15 — **ο ΕΝΑΣ δρόμος**: η ίδια `tableFillSourceBounds` που ρωτούν ο ζωγράφος
+  // και ο φρουρός του πατήματος, η ίδια `tableFillHandleHitAtFrame` που ρωτά το πάτημα. Ο
+  // χρήστης δείχνει με τον δείκτη **αυτό που θα πιάσει**.
+  const fill = fillAnchor
+    ? tableFillHandleHitAtFrame(
+        geometry.layout,
+        probe.frame,
+        probe.pxPerMm,
+        tableFillSourceBounds(resolveTableModel(entity.model), fillAnchor, range?.bounds ?? null),
+      )
+    : null;
   return {
     // §40 — σε απλή επιλογή δεν υπάρχουν ζώνες να φωτιστούν. Ο φύλακας ζει εδώ και όχι στον
     // καλούντα, ώστε ένας δεύτερος καταναλωτής αύριο να μην μπορεί να τον ξεχάσει.
@@ -321,11 +353,12 @@ export function tableIndicatorProbeAtWorld(
       geometry.layout,
       probe.frame,
       probe.bands,
-      activeTableRange(entity, geometry, selection)?.rectMm ?? null,
+      range?.rectMm ?? null,
       intent,
       insert,
       mode,
       remove,
+      fill,
     ),
     insert,
     remove,

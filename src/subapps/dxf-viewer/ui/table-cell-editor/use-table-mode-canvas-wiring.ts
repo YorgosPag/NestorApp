@@ -34,6 +34,8 @@ import { useTableCanvasLockdown } from './use-table-canvas-lockdown';
 import { useTableIndicatorHover } from './use-table-indicator-hover';
 // ADR-739 §39 — το **πάτημα** του ⊕, δίδυμο του hover με αντίθετη σύμβαση συμβάντος.
 import { useTableInsertControlClick } from './use-table-insert-control-click';
+// 🔴 ADR-739 §42 — το ⊖ της διαγραφής: ίδια διαδρομή συμβάντος, άλλο store, άλλη πράξη.
+import { useTableDeleteControlClick } from './use-table-delete-control-click';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
@@ -143,6 +145,21 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
    * ακροατή. Η **ίδια** συνθήκη ζωής, ώστε να μη γίνεται ποτέ πατήσιμο κάτι που δεν βάφεται.
    */
   useTableInsertControlClick({
+    active: isTableModeActive,
+    containerRef,
+    levelManager,
+  });
+
+  /**
+   * 🔴 §42 — το **πάτημα** του ⊖. Δίπλα στο ⊕ και όχι μέσα του: είναι δύο διαφορετικά stores
+   * και δύο διαφορετικές πράξεις — μοιράζονται μόνο τη **διαδρομή του συμβάντος**, που ζει
+   * ήδη σε ένα σημείο (`useTableArmedControlClick`).
+   *
+   * Η **ίδια** συνθήκη ζωής με τον hover και το ⊕, ώστε να μη γίνεται ποτέ πατήσιμο κάτι που
+   * δεν βάφεται — και, εδώ ειδικά, να μην υπάρχει ακροατής που σβήνει στήλες όταν δεν υπάρχει
+   * λειτουργία πίνακα.
+   */
+  useTableDeleteControlClick({
     active: isTableModeActive,
     containerRef,
     levelManager,

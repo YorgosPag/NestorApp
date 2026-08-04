@@ -21,7 +21,7 @@ import {
   endTableRangeTransferDrag,
   isTableRangeTransferDragging,
 } from '../table-range-transfer-drag';
-import { tableRangeGrabAtWorld } from '../table-cell-pointer-hit';
+import { tableRangeGrabAtWorld } from '../table-range-grab';
 import {
   __resetTableRangeTransferPreviewForTests,
   getTableRangeTransferPreview,

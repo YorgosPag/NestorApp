@@ -75,11 +75,8 @@ import {
 // 🔴 ADR-739 §29 — η ΜΙΑ ερώτηση «πού έπεσε αυτό το συμβάν;», μοιρασμένη με τον φύλακα του
 // κλειδώματος. Δες την κεφαλίδα εκείνου του module: δύο αντίγραφα θα άφηναν νεκρή λωρίδα
 // στην άκρη του πίνακα, όπου ο φύλακας μπλοκάρει και ο pointer δεν δρα.
-import {
-  tableEventWorldPoint,
-  tablePointerHitAtWorld,
-  tableRangeGrabAtWorld,
-} from './table-cell-pointer-hit';
+import { tableEventWorldPoint, tablePointerHitAtWorld } from './table-cell-pointer-hit';
+import { tableRangeGrabAtWorld } from './table-range-grab';
 // 🔴 ADR-739 §36 ΦΑΣΗ 3 — η **τρίτη** χειρονομία του πίνακα: μεταφορά περιοχής από το
 // περίγραμμά της. Ίδιο σχήμα με τις δύο πρώτες, δικό της module (η γεωμετρία μένει εδώ).
 import {

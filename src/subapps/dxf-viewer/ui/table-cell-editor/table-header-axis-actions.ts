@@ -91,6 +91,27 @@ export function insertAt(side: 'before' | 'after'): AxisActionPlanner {
   };
 }
 
+/**
+ * 🔴 ADR-739 §42 — **ΕΠΙΤΡΕΠΕΤΑΙ Η ΔΙΑΓΡΑΦΗ ΑΥΤΟΥ ΤΟΥ ΣΤΟΧΟΥ;** — η μία έκφραση, δύο
+ * καταναλωτές: το μενού ζωνών (γκριζάρει το item) και το **⊖** (δεν εμφανίζεται καθόλου).
+ *
+ * Ρωτά με το **πλήθος του στόχου** και όχι με `1` — δες το {@link resolveHeaderState}: με
+ * τέσσερις στήλες μαρκαρισμένες σε πίνακα τεσσάρων η απάντηση είναι «όχι», γιατί μια μερική
+ * διαγραφή θα ήταν χειρότερη από καμία (`table-row-column-bulk-ops`: όλα ή τίποτα).
+ *
+ * Εξήχθη τη στιγμή που απέκτησε δεύτερο καταναλωτή: δύο αντίγραφα του τριαδικού θα ήταν δύο
+ * ευκαιρίες να απαντήσει το ένα «ναι» και το άλλο «όχι» για τον ίδιο στόχο — δηλαδή ⊖ ορατό
+ * πάνω σε πράξη που το μενού δηλώνει αδύνατη.
+ */
+export function canDeleteAxisTarget(
+  model: PersistedTableModel,
+  target: TableAxisActionTarget,
+): boolean {
+  return target.axis === 'row'
+    ? canDeleteTableRow(model, target.count)
+    : canDeleteTableColumn(model, target.count);
+}
+
 function survivorAt(axis: 'row' | 'column', index: number): SurvivorPick {
   return axis === 'row' ? { rowIndex: index } : { colIndex: index };
 }
@@ -114,21 +135,18 @@ export function resolveHeaderState(
   const axisLabel = axisName(target, target.hitIndex);
   const { count } = target;
   if (!model) return { label, axisLabel, count, canInsert: false, canDelete: false };
-  return target.axis === 'row'
-    ? {
-        label,
-        axisLabel,
-        count,
-        canInsert: canInsertTableRow(model, count),
-        canDelete: canDeleteTableRow(model, count),
-      }
-    : {
-        label,
-        axisLabel,
-        count,
-        canInsert: canInsertTableColumn(model, count),
-        canDelete: canDeleteTableColumn(model, count),
-      };
+  return {
+    label,
+    axisLabel,
+    count,
+    canInsert:
+      target.axis === 'row'
+        ? canInsertTableRow(model, count)
+        : canInsertTableColumn(model, count),
+    // §42 — **η ίδια** έκφραση που ρωτά και το ⊖, ώστε τα δύο χειριστήρια να μη μπορούν να
+    // διαφωνήσουν για το αν η πράξη επιτρέπεται.
+    canDelete: canDeleteAxisTarget(model, target),
+  };
 }
 
 /**
