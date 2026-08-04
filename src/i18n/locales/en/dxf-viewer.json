@@ -585,7 +585,20 @@
       "decreaseSize": "Decrease font size",
       "resetFormatting": "Reset formatting",
       "mixedHint": "Mixed value across the run",
-      "explicitHint": "Explicit value (not inherited)"
+      "explicitHint": "Explicit value (not inherited)",
+      "rangeLabel": "Format range {label}"
+    },
+    "merge": {
+      "trigger": "Merge and center",
+      "menuLabel": "Merge cells",
+      "rangeMenuTitle": "Merge {label}",
+      "mergedHint": "The range is already merged — pressing this unmerges it",
+      "commands": {
+        "mergeCenter": "Merge and center",
+        "mergeAcross": "Merge across",
+        "merge": "Merge cells",
+        "unmerge": "Unmerge cells"
+      }
     },
     "borders": {
       "trigger": "Borders",

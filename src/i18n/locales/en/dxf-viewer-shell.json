@@ -408,6 +408,13 @@
     "replaceButton": "Replace",
     "cancel": "Cancel"
   },
+  "tableMergeDiscard": {
+    "title": "Only the upper-left value will be kept",
+    "message": "{count, plural, one {# cell in the range has content that will be discarded.} other {# cells in the range have content that will be discarded.}}",
+    "undoNote": "You can undo this with Ctrl+Z.",
+    "mergeButton": "Merge",
+    "cancel": "Cancel"
+  },
   "hatchOverlap": {
     "title": "Region already hatched",
     "message": "This region already has a hatch. Add another one on top?",
