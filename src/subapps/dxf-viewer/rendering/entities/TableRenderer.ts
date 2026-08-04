@@ -71,6 +71,11 @@ import { stampTableIndicator } from './table/stamp-table-indicator';
 // και το hover: getter τη στιγμή του καρέ (ADR-040), καμία συνδρομή.
 import { stampTableRangeGhost } from './table/stamp-table-range-ghost';
 import { getTableRangeTransferPreview } from '../../state/table-range-transfer-store';
+// 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των αναφορών του τύπου που γράφεται. **Κανένα
+// νέο store**: οι αναφορές είναι παράγωγο του προχείρου, που ταξιδεύει ήδη μέσα στον δρομέα
+// (δες την κεφαλίδα του `table-formula-reference-spans`).
+import { tableFormulaReferenceSpans } from '../../bim/table/formula/table-formula-reference-spans';
+import { stampTableFormulaReferences } from './table/stamp-table-formula-references';
 import { tableColumnTicks, tableRowTicks } from '../../bim/table/table-cell-reference';
 // ADR-739 Φ.Δ βήμα 2 — ο δρομέας διαβάζεται με getter τη στιγμή του καρέ (ADR-040), ποτέ
 // ως συνδρομή: ο ζωγράφος μένει καθαρό φύλλο.
@@ -217,6 +222,11 @@ export class TableRenderer extends BaseEntityRenderer {
         heightMm: layout.heightMm,
       });
       this.drawCellCursor(cursor, rc, index);
+      // 🔴 ADR-754 Β1 — **μετά** τον δρομέα: το συμπαγές μπλε ορθογώνιο απαντά «εδώ πάει το
+      // πλήκτρο» και δεν επιτρέπεται να το σκεπάσει μια αναφορά. Όταν ένα κελί είναι και τα
+      // δύο (`=A1` γραμμένο **μέσα** στο A1 — κυκλική αναφορά που ο χρήστης φτιάχνει κατά
+      // λάθος), νικά το χρωματιστό: αυτό ακριβώς είναι η πληροφορία που λείπει εκείνη τη στιγμή.
+      this.drawFormulaReferences(e, cursor, rc, layout);
       // 🔴 ADR-739 §36 ΦΑΣΗ 3 — **το φάντασμα προορισμού, τελευταίο**: απαντά «*πού θα πάει*»
       // και δεν επιτρέπεται να κρυφτεί κάτω από τα δεδομένα του προορισμού — σε αντίθεση με την
       // επιλογή, που απαντά «*τι μάρκαρα*» και μπαίνει **κάτω** από το κείμενο. Γι' αυτό το
@@ -324,6 +334,30 @@ export class TableRenderer extends BaseEntityRenderer {
     const bucket = index.cellsByRowId.get(cursor.position.rowId);
     const cell = bucket?.find((c) => c.colId === cursor.position.colId);
     if (cell) stampTableCellCursor(rc, cell.rect);
+  }
+
+  /**
+   * 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των κελιών που **διαβάζει** ο τύπος που
+   * γράφεται αυτή τη στιγμή.
+   *
+   * ## Γιατί ΔΕΝ ελέγχεται εδώ αν το πρόχειρο είναι τύπος
+   * Θα ήταν δεύτερος ορισμός του «τι είναι τύπος», δίπλα στον έναν που ζει στον λεξικογράφο
+   * (`formulaBodyStart`) — και θα απέκλινε την πρώτη φορά που ο πρώτος δεχτεί κάτι παραπάνω
+   * (αρχικά κενά, άλλο πρόθεμα). Η **κενή** απάντηση είναι νόμιμη και φθηνή.
+   *
+   * Ο μόνος φρουρός είναι «γράφεται κάτι;» — που δεν είναι γραμματική ερώτηση αλλά ο κανόνας
+   * που ήδη διέπει κάθε επεξεργασία εδώ: σε πλοήγηση το πρόχειρο είναι `''` εξ ορισμού, και
+   * αυτή είναι η **συνήθης** κατάσταση κάθε καρέ.
+   */
+  private drawFormulaReferences(
+    e: TableEntity,
+    cursor: TableCellCursorState,
+    rc: StampTableContext,
+    layout: TableLayout,
+  ): void {
+    if (!cursor.draft) return;
+    const model = resolveTableModel(e.model);
+    stampTableFormulaReferences(rc, layout, tableFormulaReferenceSpans(model, cursor.draft));
   }
 
   /**

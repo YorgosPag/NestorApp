@@ -33,12 +33,21 @@
 import type { Point2D } from '../../types/Types';
 import type {
   TableCellLayout,
-  TableTextLinkSpan,
   TableTextRun,
 } from '../../../bim/table/table-layout-types';
 import {
   tableUnderlineGeometry, type TableUnderlineGeometry,
 } from '../../../bim/table/table-text-decoration';
+// 🔴 ADR-753 Φ3 — **τι ζωγραφίζεται και πού** απαντιέται σε ΕΝΑ σημείο, κοινό με τη γέφυρα
+// primitives (PDF/DXF/σκηνή/ΤΕΚ). Δεύτερο σώμα εδώ θα ήταν structural clone (N.18) και, το
+// σοβαρό, δεύτερο σημείο που μπορεί να διαφωνήσει για το πού κάθεται ένα έντονο τμήμα.
+import {
+  tablePieceInkHex,
+  tablePieceLinkStrips,
+  tableTextPieces,
+  type TableTextPiece,
+  type TableTextStripMm,
+} from '../../../bim/table/table-text-pieces';
 import { buildUIFont } from '../../../config/text-rendering-config';
 import { TABLE_CELL_LINK } from '../../../config/color-config';
 // 🔴 Η ερώτηση «είναι ΟΛΟ το κελί σύνδεσμος;» απαντιέται σε ΕΝΑ σημείο — δες εκεί γιατί
@@ -232,14 +241,47 @@ function stampRun(
   fontPx: number,
 ): void {
   const anchor = rc.toScreen(run.position.x, run.position.y);
-  const whole = wholeRunLink(run);
+  // 🔴 ADR-753 Φ3 — **ένα** κομμάτι σε κάθε πίνακα που υπάρχει σήμερα (το ίδιο το run), Ν όταν
+  // το κελί έχει μορφοποίηση ανά χαρακτήρα. Ο βρόχος είναι ο ίδιος και στις δύο περιπτώσεις:
+  // η γενική μορφή **εκφυλίζεται** στη σημερινή, δεν συνυπάρχει μαζί της.
+  for (const piece of tableTextPieces(run)) {
+    stampPiece(ctx, rc, run, piece, anchor, fontPx);
+  }
+}
+
+/**
+ * 🔴 ADR-753 Φ3 — **ΕΝΑ ομοιογενές κομμάτι**: δικό του `ctx.font`, δικό του μελάνι, δική του
+ * υπογράμμιση, και μετά οι λωρίδες συνδέσμων που πέφτουν μέσα του.
+ *
+ * ## Το ύψος του κομματιού, όχι του run
+ * Το `fontPx` του καλούντος είναι το ύψος του **κελιού**· ένα τμήμα μπορεί να έχει άλλο
+ * (`A↑`/`A↓` του §16.5). Ξαναϋπολογίζεται από το `piece.heightMm` ώστε γραμματοσειρά,
+ * υπογράμμιση και λωρίδα αποκοπής να μιλούν όλες για το **ίδιο** em. Με ένα κομμάτι είναι
+ * κυριολεκτικά ο ίδιος αριθμός (`piece.heightMm === run.heightMm`).
+ *
+ * ⚠️ Το κατώφλι LOD μένει στο **run** ({@link stampTableText}) και δεν επαναλαμβάνεται εδώ:
+ * είναι ερώτημα «αξίζει να ζωγραφιστεί αυτό το κελί;», και μια απάντηση ανά τμήμα θα
+ * εξαφάνιζε **μέρος** μιας λέξης σε ενδιάμεσο zoom — δηλαδή θα έδειχνε στον χρήστη
+ * ακρωτηριασμένο κείμενο αντί για κανένα.
+ */
+function stampPiece(
+  ctx: CanvasRenderingContext2D,
+  rc: StampTableContext,
+  run: TableTextRun,
+  piece: TableTextPiece,
+  anchor: Point2D,
+  runFontPx: number,
+): void {
+  const fontPx = piece.whole ? runFontPx : piece.heightMm * rc.pxPerMm;
+  const inkHex = tablePieceInkHex(run, piece, TABLE_CELL_LINK.colorHex);
+  const alreadyBlue = inkHex !== piece.colorHex;
 
   ctx.save();
-  // ADR-751 — όταν ΟΛΟ το κελί είναι ο σύνδεσμος, το μελάνι ξεκινά μπλε και δεν χρειάζεται
-  // κανένα δεύτερο πέρασμα: ίδιος αριθμός `fillText` με πριν, ίδια ακριβώς glyph.
-  ctx.fillStyle = whole ? TABLE_CELL_LINK.colorHex : run.colorHex;
-  ctx.font = tableCellFont(fontPx, run.bold, run.italic, run.fontFamily);
-  ctx.textAlign = run.hAlign;
+  // ADR-751 / ADR-753 Φ3 — όταν ΟΛΟ το κελί είναι ο σύνδεσμος, το μελάνι ξεκινά μπλε και δεν
+  // χρειάζεται κανένα δεύτερο πέρασμα: ίδιος αριθμός `fillText` με πριν, ίδια ακριβώς glyph.
+  ctx.fillStyle = inkHex;
+  ctx.font = tableCellFont(fontPx, piece.bold, piece.italic, piece.fontFamily);
+  ctx.textAlign = piece.align;
   ctx.textBaseline = 'alphabetic';
   // ADR-739 Φ.Δ βήμα 8 — γερμένο όπως ο πίνακας, όπως ήδη γέρνουν το DXF, το PDF και ο
   // επεξεργαστής κελιού. Δες το {@link stampFrameText} για το γιατί άλλαξε.
@@ -247,70 +289,108 @@ function stampRun(
   // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος έρχεται από τη **διάταξη** (`advanceMm`), όχι από
   // δεύτερο `ctx.measureText` σε κάθε καρέ: η ίδια μέτρηση που αποφάσισε τα πλάτη στηλών και
   // την περικοπή ορίζει και την έκταση της γραμμής, σε καμβά **και** στην εξαγωγή.
-  stampFrameText(rc, anchor, run.text, underlineOf(run, whole, fontPx, rc.pxPerMm));
+  stampFrameText(rc, offsetAnchor(anchor, piece.offsetMm * rc.pxPerMm, rc.textAngleRad),
+    piece.text, underlineOf(run, piece, fontPx, rc.pxPerMm));
   ctx.restore();
 
-  // Μικτό κείμενο: τα τμήματα χρειάζονται δικό τους πέρασμα με αποκοπή. Δες την κεφαλίδα.
-  if (!whole && run.links) stampLinkSpans(rc, anchor, run, fontPx);
+  // Μικτό κείμενο: οι σύνδεσμοι χρειάζονται δικό τους πέρασμα με αποκοπή. Δες την κεφαλίδα.
+  if (!alreadyBlue) {
+    stampLinkStrips(rc, anchor, piece, fontPx, tablePieceLinkStrips(run, piece));
+  }
 }
 
 /**
- * Η γεωμετρία υπογράμμισης ενός run σε **px οθόνης**, ή `null` όταν δεν υπογραμμίζεται.
+ * Η άγκυρα ενός κομματιού που κάθεται `xPx` δεξιότερα, στο **στραμμένο** σύστημα του πίνακα.
  *
- * Δύο πηγές, με σαφή σειρά: η υπογράμμιση του **στυλ** (ένωση `TableTextRun` — μόλις
- * στενέψει στο `underline: true`, ο μεταγλωττιστής εγγυάται το `advanceMm`) και, όταν αυτή
- * λείπει, η υπογράμμιση που φέρνει ο **σύνδεσμος**. Δεν αθροίζονται: δύο γραμμές στο ίδιο
- * `y` είναι μία γραμμή, και το να ζωγραφιστεί δεύτερη φορά μόνο κόστος έχει.
+ * 🔴 Η μετατόπιση περιστρέφεται **πριν** προστεθεί, όχι μετά: το `offsetMm` είναι μήκος κατά
+ * μήκος της **γραμμής βάσης**, και η γραμμή βάσης είναι γερμένη κατά `textAngleRad`. Μια ωμή
+ * πρόσθεση στο `x` της οθόνης θα άπλωνε τα τμήματα **οριζόντια** κάτω από γερμένο κείμενο —
+ * το ίδιο σχήμα ελαττώματος που η Φ.Ε έκλεισε για την υπογράμμιση (§28.10.3), και ορατό με
+ * γυμνό μάτι σε κάθε στραμμένο πίνακα. Με `xPx = 0` (μονό κομμάτι) επιστρέφει την άγκυρα
+ * αυτούσια, χωρίς καμία πράξη κινητής υποδιαστολής.
+ */
+function offsetAnchor(anchor: Point2D, xPx: number, angleRad: number): Point2D {
+  if (xPx === 0) return anchor;
+  return {
+    x: anchor.x + xPx * Math.cos(angleRad),
+    y: anchor.y + xPx * Math.sin(angleRad),
+  };
+}
+
+/**
+ * Η γεωμετρία υπογράμμισης ενός κομματιού σε **px οθόνης**, ή `null` όταν δεν υπογραμμίζεται.
+ *
+ * Δύο πηγές, με σαφή σειρά: η υπογράμμιση του **στυλ** (`piece.underline` — για το μονό
+ * κομμάτι η ένωση `TableTextRun` εγγυάται τότε το `advanceMm`) και, όταν αυτή λείπει, η
+ * υπογράμμιση που φέρνει ο **σύνδεσμος**. Δεν αθροίζονται: δύο γραμμές στο ίδιο `y` είναι μία
+ * γραμμή, και το να ζωγραφιστεί δεύτερη φορά μόνο κόστος έχει.
+ *
+ * Το `x` βγαίνει πάντα με τη στοίχιση **του κομματιού**, γιατί η γραμμή απλώνεται από την ίδια
+ * μεριά της ίδιας άγκυρας με τα γράμματα που υπογραμμίζει — και η μετατόπιση `offsetMm` έχει
+ * ήδη μπει στην άγκυρα από το {@link offsetAnchor}.
  */
 function underlineOf(
   run: TableTextRun,
-  whole: TableTextLinkSpan | null,
+  piece: TableTextPiece,
   fontPx: number,
   pxPerMm: number,
 ): TableUnderlineGeometry | null {
-  if (run.underline) return tableUnderlineGeometry(fontPx, run.advanceMm * pxPerMm, run.hAlign);
-  if (whole) return tableUnderlineGeometry(fontPx, whole.advanceMm * pxPerMm, run.hAlign);
+  if (piece.underline && piece.advanceMm !== undefined) {
+    return tableUnderlineGeometry(fontPx, piece.advanceMm * pxPerMm, piece.align);
+  }
+  // Ο σύνδεσμος που καλύπτει ολόκληρο το run — μόνο για το μονό κομμάτι, όπου το `wholeRunLink`
+  // είναι ορισμένο. Στα τμήματα η γραμμή έρχεται από τις λωρίδες ({@link stampLinkStrips}).
+  const whole = piece.whole ? wholeRunLink(run) : null;
+  if (whole) return tableUnderlineGeometry(fontPx, whole.advanceMm * pxPerMm, piece.align);
   return null;
 }
 
 /**
- * Τα τμήματα-σύνδεσμοι μέσα σε **μικτό** κείμενο: μπλε γράμματα + υπογράμμιση, μόνο στη
- * λωρίδα τους.
+ * Οι λωρίδες-σύνδεσμοι μέσα σε **ένα κομμάτι**: μπλε γράμματα + υπογράμμιση, μόνο εκεί.
  *
- * Το κείμενο ζωγραφίζεται **ολόκληρο ξανά** μέσα σε αποκοπή αντί να ζωγραφιστεί το τμήμα
- * μόνο του — δες την ενότητα «γιατί με αποκοπή» στην κεφαλίδα του module. Η στροφή και η
- * στοίχιση επαναλαμβάνονται αυτούσιες, ώστε το δεύτερο πέρασμα να πέφτει **ακριβώς** πάνω
- * στο πρώτο· γι' αυτό και το `textAlign` παραμένει αυτό του run και το `x` του τμήματος
- * είναι ήδη εκφρασμένο ως προς την ίδια άγκυρα (`offsetMm`).
+ * Το κείμενο του κομματιού ζωγραφίζεται **ολόκληρο ξανά** μέσα σε αποκοπή αντί να ζωγραφιστεί
+ * η υποσυμβολοσειρά μόνη της — δες την ενότητα «γιατί με αποκοπή» στην κεφαλίδα του module.
+ * Η στροφή και η στοίχιση επαναλαμβάνονται αυτούσιες, ώστε το δεύτερο πέρασμα να πέφτει
+ * **ακριβώς** πάνω στο πρώτο· γι' αυτό το `textAlign` παραμένει αυτό του κομματιού και οι
+ * λωρίδες είναι ήδη εκφρασμένες ως προς την **ίδια** άγκυρα.
+ *
+ * 🔴 ADR-753 Φ3 — η μονάδα της αποκοπής είναι πλέον το **κομμάτι**, όχι το run. Μέσα σε
+ * ομοιογενές κομμάτι τα δύο περάσματα παράγουν ταυτόσημες θέσεις glyph, που είναι ακριβώς η
+ * προϋπόθεση υπό την οποία δουλεύει το τέχνασμα (ADR-753 §11) — και ο λόγος που το χρώμα δεν
+ * επιτρέπεται να ορίσει όριο τμηματοποίησης.
  */
-function stampLinkSpans(
+function stampLinkStrips(
   rc: StampTableContext,
   anchorScreen: Point2D,
-  run: TableTextRun,
+  piece: TableTextPiece,
   fontPx: number,
+  strips: readonly TableTextStripMm[],
 ): void {
   const { ctx } = rc;
-  const links = run.links;
-  if (!links) return;
+  if (strips.length === 0) return;
 
   ctx.save();
   ctx.translate(anchorScreen.x, anchorScreen.y);
   ctx.rotate(rc.textAngleRad);
   ctx.fillStyle = TABLE_CELL_LINK.colorHex;
-  ctx.font = tableCellFont(fontPx, run.bold, run.italic, run.fontFamily);
-  ctx.textAlign = run.hAlign;
+  ctx.font = tableCellFont(fontPx, piece.bold, piece.italic, piece.fontFamily);
+  ctx.textAlign = piece.align;
   ctx.textBaseline = 'alphabetic';
 
-  for (const span of links) {
-    const xPx = span.offsetMm * rc.pxPerMm;
-    const widthPx = span.advanceMm * rc.pxPerMm;
+  // Το κείμενο του κομματιού ζωγραφίζεται στη **δική** του θέση, ενώ οι λωρίδες μετρώνται από
+  // την άγκυρα του run — γι' αυτό η αποκοπή και η γραφή έχουν χωριστά x.
+  const pieceXPx = piece.offsetMm * rc.pxPerMm;
+
+  for (const strip of strips) {
+    const xPx = strip.offsetMm * rc.pxPerMm;
+    const widthPx = strip.advanceMm * rc.pxPerMm;
     if (!(widthPx > 0)) continue;
 
     ctx.save();
     ctx.beginPath();
     ctx.rect(xPx, -fontPx * LINK_CLIP_ABOVE_EM, widthPx, fontPx * (LINK_CLIP_ABOVE_EM + LINK_CLIP_BELOW_EM));
     ctx.clip();
-    ctx.fillText(run.text, 0, 0);
+    ctx.fillText(piece.text, pieceXPx, 0);
     ctx.restore();
 
     // Η γραμμή ζητιέται με `'left'` — το `x` της στοίχισης το έχει ήδη λύσει το `offsetMm` —
