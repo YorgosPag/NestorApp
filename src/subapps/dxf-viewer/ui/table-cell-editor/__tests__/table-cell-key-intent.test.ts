@@ -342,3 +342,35 @@ describe('tableClipboardScope — ποιος κατέχει το πρόχειρ�
     }
   });
 });
+
+/**
+ * 🔴 ADR-754 Γ3 — **το `F4` έχει ΔΥΟ σημασίες στο Excel και τις ξεχωρίζει η ΚΑΤΑΣΤΑΣΗ.**
+ *
+ * Σε γραφή είναι η εναλλαγή απολυτότητας· σε πλοήγηση είναι «επανάλαβε την τελευταία
+ * ενέργεια». Τη δεύτερη **δεν την έχουμε** — και δεν την εφευρίσκουμε: το πλήκτρο μένει
+ * `passthrough` σε `nav`, δηλαδή **ελεύθερο** για τη μέρα που θα υπάρξει. Ίδιο σχήμα με το
+ * `Alt+Enter`, που είναι το άλλο πλήκτρο δύο σημασιών αυτού του αρχείου.
+ */
+describe('🔴 F4 — απόλυτη αναφορά, ΜΟΝΟ σε γραφή', () => {
+  it.each(['enter', 'edit'] as const)('F4 σε κατάσταση %s ⇒ absoluteRef', (mode) => {
+    expect(resolveTableCellKeyIntent('F4', NO_MODS, mode)).toEqual({ kind: 'absoluteRef' });
+  });
+
+  it('🔴 F4 σε πλοήγηση ⇒ passthrough — δεν προσποιούμαστε «επανάλαβε την ενέργεια»', () => {
+    expect(resolveTableCellKeyIntent('F4', NO_MODS, 'nav')).toEqual({ kind: 'passthrough' });
+  });
+
+  it('Ctrl+F4 δεν είναι δικό μας — κλείσιμο καρτέλας, περνά ανέγγιχτο', () => {
+    expect(resolveTableCellKeyIntent('F4', CTRL, 'edit')).toEqual({ kind: 'passthrough' });
+  });
+
+  it('Alt+F4 δεν είναι δικό μας — κλείσιμο παραθύρου, περνά ανέγγιχτο', () => {
+    expect(resolveTableCellKeyIntent('F4', { ...NO_MODS, altKey: true }, 'edit')).toEqual({
+      kind: 'passthrough',
+    });
+  });
+
+  it('🔑 το F4 ΔΕΝ έκλεψε το F2 — το «διπλό F2» δουλεύει αυτούσιο', () => {
+    expect(resolveTableCellKeyIntent('F2', NO_MODS, 'edit')).toEqual({ kind: 'mode', to: 'enter' });
+  });
+});

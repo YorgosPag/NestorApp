@@ -73,8 +73,10 @@ export interface TableCellSessionKeyParams extends Omit<TableCellSessionHandlers
 export function useTableCellSessionKeys(
   params: TableCellSessionKeyParams,
 ): (event: KeyboardEvent<HTMLElement>) => void {
-  const { mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough, onOpenLink } =
-    params;
+  const {
+    mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll,
+    onToggleAbsoluteRef, onPassthrough, onOpenLink,
+  } = params;
 
   return useCallback(
     (event: KeyboardEvent<HTMLElement>) => {
@@ -124,6 +126,14 @@ export function useTableCellSessionKeys(
           event.preventDefault();
           onOpenLink?.();
           return;
+        case 'absoluteRef':
+          // 🔴 ADR-754 Γ3 — `preventDefault` **πάντα**, ακόμη κι όταν δεν υπάρχει αναφορά να
+          // κλειδωθεί: το `F4` είναι συντόμευση του **browser** (εστίαση στη γραμμή
+          // διευθύνσεων). Χωρίς αυτό, ένα `F4` πάνω σε σκέτο κείμενο θα πετούσε τον χρήστη
+          // έξω από τον πίνακα — δηλαδή η «καμία ενέργεια» θα ήταν η χειρότερη ενέργεια.
+          event.preventDefault();
+          onToggleAbsoluteRef();
+          return;
         case 'suppress':
           // Πλήκτρο που το `<textarea>` **θα** εκτελούσε και δεν πρέπει: σήμερα `Alt+Enter`
           // **σε γραφή**, όπου η αλλαγή γραμμής του Excel μένει δεσμευμένη για τη Φ.Δ.10.
@@ -133,6 +143,9 @@ export function useTableCellSessionKeys(
           onPassthrough?.(event);
       }
     },
-    [mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough, onOpenLink],
+    [
+      mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll,
+      onToggleAbsoluteRef, onPassthrough, onOpenLink,
+    ],
   );
 }

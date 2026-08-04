@@ -116,12 +116,27 @@ export type TableCellKeyIntent =
   | { readonly kind: 'extend'; readonly move: TableCursorMove }
   /** ADR-739 Φ.Δ βήμα 8 — `Ctrl+A` σε **πλοήγηση**: όλα τα κελιά **αυτού** του πίνακα. */
   | { readonly kind: 'selectAll' }
+  /**
+   * 🔴 ADR-754 Γ3 — `F4` σε **γραφή**: κλείδωσε/ξεκλείδωσε την αναφορά του δρομέα
+   * (`A1` → `$A$1` → `A$1` → `$A1` → `A1`).
+   *
+   * ## Γιατί ΜΟΝΟ σε γραφή — και τι σημαίνει το `F4` αλλού
+   * Στο Excel το `F4` έχει **δύο** σημασίες που τις ξεχωρίζει η κατάσταση, ακριβώς όπως το
+   * `Alt+Enter` ({@link openLink}): σε γραφή είναι η εναλλαγή απολυτότητας, σε πλοήγηση είναι
+   * «**επανάλαβε την τελευταία ενέργεια**». Τη δεύτερη **δεν την έχουμε** — δεν υπάρχει έννοια
+   * «τελευταία ενέργεια προς επανάληψη» σε αυτή την εφαρμογή — και δεν εφευρίσκεται εδώ.
+   *
+   * Άρα σε `nav` το πλήκτρο μένει `passthrough`: δεν προσποιούμαστε λειτουργία που δεν
+   * υπάρχει, και το πλήκτρο μένει **ελεύθερο** για τη μέρα που θα υπάρξει.
+   */
+  | { readonly kind: 'absoluteRef' }
   | { readonly kind: 'passthrough' };
 
 const PASSTHROUGH: TableCellKeyIntent = { kind: 'passthrough' };
 const SUPPRESS: TableCellKeyIntent = { kind: 'suppress' };
 const OPEN_LINK: TableCellKeyIntent = { kind: 'openLink' };
 const SELECT_ALL: TableCellKeyIntent = { kind: 'selectAll' };
+const ABSOLUTE_REF: TableCellKeyIntent = { kind: 'absoluteRef' };
 
 function move(m: TableCursorMove): TableCellKeyIntent {
   return { kind: 'move', move: m };
@@ -334,6 +349,11 @@ export function resolveTableCellKeyIntent(
   if (universal) return move(universal);
 
   if (key === 'F2') return { kind: 'mode', to: f2Target(mode) };
+
+  // 🔴 ADR-754 Γ3 — το `F4` έχει **δύο** σημασίες στο Excel και τις ξεχωρίζει η κατάσταση.
+  // Έχουμε **μόνο** την πρώτη· δες το `absoluteRef` του union για το γιατί η δεύτερη
+  // («επανάλαβε την τελευταία ενέργεια») δεν εφευρίσκεται εδώ.
+  if (key === 'F4' && mode !== 'nav') return ABSOLUTE_REF;
 
   const arrow = arrowMove(key);
   // Η ΜΙΑ γραμμή που κωδικοποιεί τη διάκριση Excel: σε `edit` ο κέρσορας κρατά τα βέλη.
