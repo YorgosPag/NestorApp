@@ -27,9 +27,54 @@ import {
   rgbToHex,
   saturation,
   srgbRelativeLuminance,
+  type Rgb,
   type RgbaColor,
 } from './color-math';
 import { resolveDxfCanvasBackgroundHex } from './color-config';
+
+// ============================================================================
+// MAX-CONTRAST INK — το «άκρο», όχι η ελάχιστη ανάμειξη
+// ============================================================================
+
+/**
+ * Οι **δύο** τιμές που μπορεί να πάρει ένα αυτόματο μελάνι. Λευκό ή μαύρο — τίποτε ενδιάμεσο:
+ * είναι η σημασιολογία του **AutoCAD ACI 7** («white/black»), όχι μια προσαρμογή απόχρωσης.
+ */
+export type MaxContrastInk = '#ffffff' | '#000000';
+
+/**
+ * 🔴 **Το άκρο μέγιστης αντίθεσης για ένα φόντο** — ο ΕΝΑΣ τύπος, πρώην γραμμένος **δύο φορές**.
+ *
+ * Ήταν αυτούσιος στο {@link adaptColorToBackground} («στόχος ανάμειξης») και στο
+ * {@link computeAdaptedFillTint} («endpoint»). Δύο σώματα του ίδιου κανόνα είναι sibling clone
+ * που το CHECK 3.28 (jscpd, token-based) πιάνει **ανεξάρτητα ονόματος** — και, χειρότερα, δύο
+ * σημεία που θα αποκλίνουν στην πρώτη ρύθμιση του `0.5`.
+ *
+ * ⚠️ **Δεν είναι το ίδιο με το {@link adaptColorToBackground}, και η διαφορά είναι μετρημένη.**
+ * Εκείνο κάνει binary-search της **ελάχιστης** ανάμειξης μέχρι να πιάσει το κατώφλι, ώστε να
+ * κρατήσει την απόχρωση: `#111111` πάνω σε `#1d283a` με κατώφλι 4,5 του βγάζει `≈#8f8f8f` —
+ * **γκρι**. Ένα αυτόματο μελάνι δεν έχει απόχρωση να διατηρήσει· *είναι* η αντίθεση, άρα πάει
+ * στο άκρο. Το να επαναχρησιμοποιηθεί το άλλο «επειδή μοιάζει» δίνει γκρι αντί για λευκό.
+ */
+function inkForBackgroundRgb(bg: Rgb): MaxContrastInk {
+  return srgbRelativeLuminance(bg) < 0.5 ? '#ffffff' : '#000000';
+}
+
+/**
+ * Λευκό ή μαύρο — όποιο ξεχωρίζει από το `bgHex`. Καθαρή συνάρτηση: το φόντο είναι **όρισμα**,
+ * ποτέ διαβασμένο μέσα (σε jsdom το `resolveDxfCanvasBackgroundHex()` επιστρέφει πάντα το σκούρο
+ * default, οπότε ένας resolver που το ρωτούσε μόνος του θα δοκιμαζόταν **μόνο** στη μία
+ * κατεύθυνση και θα ήταν πράσινος με σπασμένη την άλλη).
+ *
+ * **Άκυρο φόντο ⇒ `#000000`.** Δεν είναι αυθαίρετο: από τις δύο σιωπηλές αποτυχίες, το λευκό
+ * κείμενο σε λευκό **χαρτί** φεύγει στον πελάτη και δεν αναιρείται, ενώ το μαύρο κείμενο σε
+ * σκούρη **οθόνη** το βλέπει ο χρήστης αμέσως και δεν κοστίζει τίποτα. Αποτυγχάνουμε προς την
+ * αναστρέψιμη πλευρά.
+ */
+export function maxContrastInk(bgHex: string): MaxContrastInk {
+  const bg = parseHex(bgHex);
+  return bg ? inkForBackgroundRgb(bg) : '#000000';
+}
 
 /**
  * Ελάχιστο WCAG contrast ratio οντότητας↔φόντου. 3.0 = WCAG AA «graphical objects»: αρκετά
@@ -52,8 +97,8 @@ export function adaptColorToBackground(
   if (!c || !bg) return colorHex;
   if (contrastRatio(colorHex, bgHex) >= minContrast) return colorHex;
 
-  // Στόχος ανάμειξης = το αντίθετο άκρο φωτεινότητας του φόντου (max-contrast endpoint).
-  const target = srgbRelativeLuminance(bg) < 0.5 ? '#ffffff' : '#000000';
+  // Στόχος ανάμειξης = το αντίθετο άκρο φωτεινότητας του φόντου — ο ΕΝΑΣ κανόνας.
+  const target = inkForBackgroundRgb(bg);
   // Mid-gray φόντο: ακόμη κι ο στόχος δεν φτάνει το κατώφλι → καλύτερη δυνατή προσέγγιση.
   if (contrastRatio(target, bgHex) < minContrast) return target;
 
@@ -134,7 +179,7 @@ function computeAdaptedFillTint(fill: string, bg: string): string {
 
   // Στόχος = αντίθετο άκρο φωτεινότητας φόντου. `s∈[0,1]` σπρώχνει ΤΑΥΤΟΧΡΟΝΑ base→endpoint
   // και alpha→targetA → contrast μονότονα αυξάνει → binary-search ελάχιστου `s`.
-  const endpoint = srgbRelativeLuminance(bgRgb) < 0.5 ? '#ffffff' : '#000000';
+  const endpoint = inkForBackgroundRgb(bgRgb);
   const baseHex = rgbToHex(c);
   const targetA = Math.max(c.a, FILL_BOOST_MAX_ALPHA);
   const tintAt = (s: number): RgbaColor => ({
