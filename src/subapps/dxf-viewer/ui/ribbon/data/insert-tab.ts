@@ -5,6 +5,7 @@
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
+import { TABLE_MENU_COMMAND } from './table-menu-command';
 
 export const INSERT_TAB: RibbonTab = {
   id: 'insert',
@@ -357,20 +358,14 @@ export const INSERT_TAB: RibbonTab = {
               },
             },
             {
-              // ADR-739 Φάση Δ — table: DEDICATED entity type (NOT an
-              // annotation-symbol kind), ίδια οικογένεια με το opening-info-tag
-              // από πάνω. commandKey δρομολογεί στο ίδιο generic SINGLE-CLICK
-              // drawing tool (RibbonLargeButton → onToolChange).
-              type: 'simple',
+              // ADR-739 Φάση Δ — table: DEDICATED entity type (NOT an annotation-symbol kind).
+              // §39: το κλικ ανοίγει ΕΠΙΛΟΓΕΑ ΜΕΓΕΘΟΥΣ (μοτίβο Word) αντί να οπλίζει αμέσως
+              // το εργαλείο· το widget γράφει το `table-options-store` και μετά onToolChange.
+              // `size: 'large'` ΜΕΝΕΙ — αλλιώς το `rowSize()` βγάζει 'mixed' κι αλλάζει η διάταξη.
+              type: 'widget',
               size: 'large',
-              command: {
-                id: 'insert.table',
-                labelKey: 'ribbon.commands.table',
-                tooltipKey: 'ribbon.commands.tableTooltip',
-                icon: 'table',
-                commandKey: 'table',
-                shortcut: 'TABLE',
-              },
+              widgetId: 'table-menu',
+              command: TABLE_MENU_COMMAND,
             },
           ],
         },

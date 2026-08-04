@@ -8,6 +8,7 @@
 
 import { computeTableFormulaBarFrame } from '../table-formula-bar-frame';
 import { TABLE_INDICATOR_OUTER_PX } from '../../../bim/table/table-indicator-geometry';
+import { tableInsertControlOuterPx } from '../../../bim/table/table-insert-control';
 
 describe('computeTableFormulaBarFrame', () => {
   it('η γραμμή απλώνεται όσο ο πίνακας ΣΥΝ τη ζώνη αριθμών', () => {
@@ -43,6 +44,27 @@ describe('computeTableFormulaBarFrame', () => {
 
     // Αριστερή ευθυγράμμιση: ακριβώς πάνω στην αριστερή ακμή της ζώνης αριθμών.
     expect(frame.offsetXPx).toBe(-TABLE_INDICATOR_OUTER_PX.left);
+  });
+
+  it('🔴 §40 ΤΟ ΙΔΙΟ, ΓΙΑ ΤΟΝ ΔΕΥΤΕΡΟ ΕΝΟΙΚΟ: η γραμμή δεν σκεπάζει το ⊕ της εισαγωγής', () => {
+    // ⚠️ Ο έλεγχος από πάνω ήταν **πράσινος** τη στιγμή που γεννήθηκε το ⊕, και παρέμενε
+    // πράσινος ενώ η γραμμή τύπων καθόταν ακριβώς πάνω του: ρωτά για τη **ζώνη**, και η ζώνη
+    // δεν μετακινήθηκε. Δηλαδή το §27.13 θα επαναλαμβανόταν αυτούσιο — ίδιο σχήμα, άλλος
+    // ένοικος, ίδιο τυφλό test. Αυτό εδώ είναι η ερώτηση που λείπει: **πού τελειώνει η γραμμή
+    // σε σχέση με το πού αρχίζει ΟΤΙΔΗΠΟΤΕ κάθεται έξω από το πλέγμα;**
+    const frame = computeTableFormulaBarFrame({ tableWidthMm: 100, tableHeightMm: 40, pxPerMm: 4, spaceAbovePx: 999 });
+    const barBottomPx = frame.offsetYPx + frame.heightPx;
+    expect(barBottomPx).toBeLessThanOrEqual(-tableInsertControlOuterPx('table-mode').top);
+  });
+
+  it('🔴 §40 το «χρειάζεται χώρο από πάνω» μετρά ΚΑΙ το ⊕ — αλλιώς δεν αναποδογυρίζει ποτέ', () => {
+    // Ο χώρος αρκεί για γραμμή + ζώνη, αλλά **όχι** για το ⊕ από πάνω τους. Πριν το §40 η
+    // γραμμή θα έμενε πάνω και θα κατάπινε το χειριστήριο σιωπηλά.
+    const tight = TABLE_INDICATOR_OUTER_PX.top + 4 + 22;
+    const frame = computeTableFormulaBarFrame({
+      tableWidthMm: 100, tableHeightMm: 40, pxPerMm: 4, spaceAbovePx: tight,
+    });
+    expect(frame.flipped).toBe(true);
   });
 
   it('οι μετατοπίσεις ΔΕΝ εξαρτώνται από το zoom — οι ζώνες είναι σταθερές σε px', () => {
