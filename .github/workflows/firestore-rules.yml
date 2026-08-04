@@ -1,4 +1,4 @@
-name: 🔒 Firestore Rules (ADR-298)
+name: T2 🔒 Firestore Rules (ADR-298)
 
 # =============================================================================
 # Layer 2 of Defense in Depth for Firestore Security Rules — CI mirror of the

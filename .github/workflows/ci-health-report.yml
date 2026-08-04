@@ -1,98 +1,83 @@
 name: 🚑 CI Health Report
 
 # =============================================================================
-# CI → agent notification, part 1 (GitHub-native, always reliable).
+# ADR-757 — Ο πίνακας κατάστασης των πυλών CI.
 #
-# Listens for the COMPLETION of every quality-gate / ratchet / test workflow. On
-# a FAILURE it upserts a single pinned issue ("🚨 CI Health — failing gate(s)",
-# label `ci-health`) and appends a comment describing which gate failed, on which
-# branch/commit, with a direct link to the run. This is the durable SSoT of CI
-# failures: any Claude agent reads it with `gh issue list --label ci-health`, and
-# the daily scheduled agent (part 2) turns open issues into a push notification.
+# ΤΙ ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΚΑΙ ΓΙΑΤΙ
+# ---------------------------
+# Η προηγούμενη εκδοχή άκουγε `workflow_run` σε 18 ΧΕΙΡΟΓΡΑΦΑ ονόματα και προσέθετε ένα
+# σχόλιο ανά αποτυχία. Δύο δομικά ελαττώματα, μετρημένα:
 #
-# Runs entirely inside GitHub with the built-in GITHUB_TOKEN — no external auth,
-# so the issue trail is accurate even when no agent is running. Adding a new gate
-# workflow = add its `name:` to the workflows list below.
+#   (α) Η λίστα είχε αποκλίνει. Επτά πύλες δεν παρακολουθούνταν καθόλου — ανάμεσά τους το
+#       «Build & Deploy Docker Image», η ΜΟΝΑΔΙΚΗ πύλη που φράζει την παραγωγή. Στις 05/08
+#       το Netcup σταμάτησε να δέχεται και το αρχείο που αυτοπεριγραφόταν ως «durable SSoT
+#       of CI failures» δεν το κατέγραψε καν. Ίδιο σχήμα με τις δύο λίστες namespace του
+#       CHECK 3.34: δύο χειρόγραφοι κατάλογοι, καμία πύλη να τους συγκρίνει.
+#
+#   (β) Ήταν append-only. Καμία αποδιπλοποίηση, καμία επίλυση σε πράσινο. Με 8 μόνιμα
+#       κόκκινα ⇒ 8 νέα σχόλια σε κάθε push: η ίδια πλημμύρα, μετακομισμένη από το inbox
+#       στο Issue. Δεν ήταν συγκέντρωση — ήταν ημερολόγιο.
+#
+# Η ΑΡΧΗ ΕΔΩ: ΠΡΟΒΟΛΗ, ΟΧΙ ΣΥΣΣΩΡΕΥΣΗ
+# ------------------------------------
+# Η κατάσταση ΞΑΝΑΫΠΟΛΟΓΙΖΕΤΑΙ από το Actions API για κάθε πύλη του `.ci-gate-tiers.json`.
+# Δεν υπάρχει λίστα να ξεχαστεί εδώ μέσα: η πηγή είναι το μητρώο, και το CHECK 3.37
+# (`ci-gate-tiers.yml`) φράζει το commit αν κάποιο workflow μείνει εκτός μητρώου.
+#
+# ΠΟΥ ΠΑΕΙ Η ΕΙΔΟΠΟΙΗΣΗ
+# ---------------------
+# Η ενημέρωση ΣΩΜΑΤΟΣ issue δεν στέλνει ειδοποίηση· μόνο τα ΣΧΟΛΙΑ στέλνουν. Άρα:
+#   - Tier 1/2 σε ΜΕΤΑΒΑΣΗ (έσπασε ή αποκαταστάθηκε) → σχόλιο → ειδοποίηση.
+#   - σταθερή κατάσταση, οποιουδήποτε tier                → μόνο σώμα → σιωπή.
+#   - Tier 3 (τάσεις)                                     → ποτέ σχόλιο.
+#
+# ΓΙΑΤΙ ΜΟΝΟ ΤΟ TIER 1 ΕΧΕΙ ΣΚΑΝΔΑΛΗ `workflow_run`
+# -------------------------------------------------
+# Κάθε `workflow_run` είναι ένα ξεχωριστό τρέξιμο runner. Σκανδάλη σε 26 πύλες × κάθε push
+# = δεκάδες τρεξίματα την ημέρα για πληροφορία που το ημερήσιο πέρασμα προβάλλει ούτως ή
+# άλλως από το API. Η παραγωγή είναι το μόνο που δεν περιμένει ως αύριο.
+#
+# ⚠️ ΑΥΤΟ ΤΟ WORKFLOW ΔΕΝ ΕΧΕΙ TIER και δεν παρακολουθεί τον εαυτό του (βρόχος). Αν σπάσει
+# ΤΟ ΙΔΙΟ, αποτυγχάνει κανονικά και στέλνει email — σκόπιμα: χαλασμένο όργανο πρέπει να
+# ουρλιάζει, αλλιώς η σιωπή του διαβάζεται ως «όλα καλά».
 # =============================================================================
 
 on:
   workflow_run:
     workflows:
-      - "🎯 TypeScript Error Gate (ADR-027)"
-      - "🛡️ Dependency-CVE Audit (ADR-598 G2)"
-      - "⚖️ License Audit (ADR-598 G13)"
-      - "🧹 ESLint Warning Ratchet (ADR-598 ΦΑΣΗ 1)"
-      - "🔤 Type-Coverage Ratchet (ADR-598 G5)"
-      - "📦 Bundle-Size Ratchet (ADR-598 G6)"
-      - "🧮 Type-Complexity Ratchet (ADR-598 G14)"
-      - "🧪 Coverage Floor Ratchet (ADR-598 G3)"
-      - "🕸️ Dependency-Graph Ratchet (ADR-598 G9+G10)"
-      - "♿ A11y Test-Coverage Ratchet (ADR-598 G11)"
-      - "📚 knip Dependency-Hygiene Ratchet (ADR-598 G15)"
-      - "🔐 Secret Scan (ADR-598 G12)"
-      - "🪦 Dead-code Ratchet (CHECK 3.22)"
-      - "🔒 Firestore Rules (ADR-298)"
-      - "🔬 Functions Integration (ADR-327)"
-      - "🌐 i18n Governance (ADR-279)"
-      - "🧬 jscpd Clone Ratchet (CHECK 3.28)"
-      - "🧬 SSoT Discover Ratchet (ADR-314)"
+      # ΜΟΝΟ Tier 1. Επιβάλλεται από το CHECK 3.37 και προς τις δύο κατευθύνσεις:
+      # Tier 1 που λείπει = αόρατη αποτυχία παραγωγής· μη-Tier-1 που περισσεύει = σπατάλη.
+      - "T1 🚀 Build & Deploy Docker Image"
     types: [completed]
+  schedule:
+    # 05:00 UTC = 08:00 Αθήνα — ο πίνακας είναι φρέσκος πριν ξεκινήσει η μέρα.
+    - cron: '0 5 * * *'
+  workflow_dispatch:
 
 permissions:
   issues: write
+  actions: read
   contents: read
 
 concurrency:
+  # ΔΕΝ ακυρώνεται εν εξελίξει: το πέρασμα κάνει read-modify-write στο σώμα του issue.
   group: ci-health-report
   cancel-in-progress: false
 
 jobs:
   report:
-    name: 🚑 Report failing gate to CI Health issue
+    name: 🚑 Προβολή κατάστασης πυλών στο CI Health issue
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: 🚑 Upsert CI Health issue
-        uses: actions/github-script@v7
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          script: |
-            const run = context.payload.workflow_run;
-            const LABEL = 'ci-health';
-            const TITLE = '🚨 CI Health — failing gate(s)';
-            const line =
-              `- ❌ **${run.name}** — \`${run.head_branch}\` @ \`${run.head_sha.slice(0, 8)}\` ` +
-              `· [run #${run.run_number}](${run.html_url}) · ${run.updated_at}`;
+          node-version: '20'
 
-            // Ensure the label exists (idempotent).
-            try {
-              await github.rest.issues.getLabel({ ...context.repo, name: LABEL });
-            } catch {
-              await github.rest.issues.createLabel({
-                ...context.repo, name: LABEL, color: 'b60205',
-                description: 'Automated CI gate failure report',
-              });
-            }
-
-            // Find the existing open CI-health issue (most recent).
-            const existing = await github.rest.issues.listForRepo({
-              ...context.repo, state: 'open', labels: LABEL, per_page: 1,
-            });
-
-            if (existing.data.length > 0) {
-              const number = existing.data[0].number;
-              await github.rest.issues.createComment({
-                ...context.repo, issue_number: number,
-                body: `${line}\n\n<sub>Fix the gate, then close this issue once CI is green again.</sub>`,
-              });
-              core.notice(`Appended failure to CI Health issue #${number}`);
-            } else {
-              const body =
-                `Automated report of failing CI quality gates. Each comment is one failure.\n\n` +
-                `**How to use:** an agent reads this with \`gh issue list --label ${LABEL}\`, ` +
-                `fixes the gate, then closes this issue when CI is green.\n\n---\n\n${line}`;
-              const created = await github.rest.issues.create({
-                ...context.repo, title: TITLE, labels: [LABEL], body,
-              });
-              core.notice(`Opened CI Health issue #${created.data.number}`);
-            }
+      # Καμία εγκατάσταση εξαρτήσεων: ο συγκεντρωτής χρησιμοποιεί μόνο built-ins (fetch).
+      - name: 🚑 Ενημέρωση πίνακα κατάστασης
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/ci/ci-health-report.js

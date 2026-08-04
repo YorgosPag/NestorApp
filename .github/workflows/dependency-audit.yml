@@ -1,4 +1,4 @@
-name: 🛡️ Dependency-CVE Audit (ADR-598 G2)
+name: T2 🛡️ Dependency-CVE Audit (ADR-598 G2)
 
 # =============================================================================
 # ADR-598 G2 — Dependency-CVE audit gate (pnpm audit).

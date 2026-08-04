@@ -1,0 +1,71 @@
+name: T2 🚦 CI Gate Tier Coverage (CHECK 3.37)
+
+# =============================================================================
+# Layer 2 του CHECK 3.37 — ADR-757. Η πύλη που φυλάει τις πύλες.
+#
+# ΤΙ ΡΩΤΑΕΙ
+# ---------
+#   1. έχει ΚΑΘΕ workflow αρχείο tier + αιτιολόγηση στο `.ci-gate-tiers.json`;
+#   2. συμφωνεί το `name:` του αρχείου με το μητρώο, και φέρει το πρόθεμα του tier του;
+#   3. παρακολουθεί ο συγκεντρωτής ΑΚΡΙΒΩΣ τα Tier 1 — ούτε λιγότερα, ούτε περισσότερα;
+#
+# ΓΙΑΤΙ ΥΠΑΡΧΕΙ
+# -------------
+# Στις 05/08/2026 η παραγωγή σταμάτησε να ενημερώνεται και ο συγκεντρωτής αποτυχιών CI δεν
+# το κατέγραψε: το `docker-build.yml` έλειπε από τη χειρόγραφη λίστα των 18. Μαζί του
+# έλειπαν άλλες έξι πύλες, όλες προστεθειμένες μετά τη σύνταξη της λίστας. Το σχόλιο έλεγε
+# «adding a new gate = add its name below» — και αυτό ΕΙΝΑΙ το ελάττωμα: οδηγία σε σχόλιο
+# δεν είναι πύλη.
+#
+# ΓΙΑΤΙ ΚΑΙ ΣΤΟ CI, ΑΦΟΥ ΤΡΕΧΕΙ ΣΤΟ PRE-COMMIT
+# --------------------------------------------
+# Το Layer 1 σκανδαλίζεται από staged αρχεία. Ένα workflow μπορεί να μπει στο δέντρο με
+# άλλον τρόπο (merge, ξένο commit, επεξεργασία στο github.com) — τότε το Layer 1 δεν
+# εκτελείται ποτέ. Εδώ τρέχει ΧΩΡΙΣ ΣΥΝΘΗΚΗ, όπως τα CHECK 3.33/3.34/3.36.
+#
+# ΔΕΝ ΕΙΝΑΙ RATCHET — καμία baseline, ποτέ. «Ανεκτό πλήθος απαρατήρητων πυλών» σημαίνει
+# ανεκτό πλήθος αόρατων αποτυχιών παραγωγής.
+#
+# ΟΤΑΝ ΚΟΚΚΙΝΙΣΕΙ: το μήνυμα ονομάζει τη ρητή κατάσταση (unregistered · name-drift ·
+# unwatched-tier1 · ghost-watch · …). Διόρθωσε το `.ci-gate-tiers.json` ή το workflow —
+# ΠΟΤΕ μη σβήσεις την εγγραφή για να πρασινίσει.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.ci-gate-tiers.json'
+      - 'scripts/check-ci-gate-tiers.js'
+      - 'scripts/lib/ci/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - '.ci-gate-tiers.json'
+      - 'scripts/check-ci-gate-tiers.js'
+      - 'scripts/lib/ci/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-gate-tiers-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tiers:
+    name: 🚦 Κάλυψη ιεράρχησης πυλών
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Καθαρό in-memory Node πάνω σε ~27 μικρά αρχεία — καμία εγκατάσταση εξαρτήσεων.
+      - name: 🚦 CHECK 3.37 — μητρώο ↔ αρχεία ↔ συγκεντρωτής
+        run: node scripts/check-ci-gate-tiers.js

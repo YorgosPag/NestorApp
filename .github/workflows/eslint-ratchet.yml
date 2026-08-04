@@ -1,4 +1,4 @@
-name: 🧹 ESLint Warning Ratchet (ADR-598 ΦΑΣΗ 1)
+name: T2 🧹 ESLint Warning Ratchet (ADR-598 ΦΑΣΗ 1)
 
 # =============================================================================
 # ADR-598 ΦΑΣΗ 1 — ESLint additive-rule ratchets (G4 jsx-a11y, G7 complexity,

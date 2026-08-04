@@ -1,4 +1,4 @@
-name: Build & Deploy Docker Image
+name: T1 🚀 Build & Deploy Docker Image
 
 on:
   push:

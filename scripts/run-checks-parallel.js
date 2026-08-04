@@ -27,6 +27,7 @@
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
+ *   SKIP_CI_TIER_COVERAGE          '1' = bypass CHECK 3.37 (CI gate tier coverage)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -150,6 +151,17 @@ const namespaceWiringTriggers = [
 ];
 if (!skipNamespaceWiring && namespaceWiringTriggers.length > 0)
   addThread('3.36', 'i18n namespace reachability', 'scripts/validate-i18n-config.js');
+
+// CHECK 3.37 (ADR-757) — «παρακολουθείται» η πύλη; Ο συγκεντρωτής CI κρατούσε ΧΕΙΡΟΓΡΑΦΗ
+// λίστα 18 workflows· επτά πύλες είχαν προστεθεί χωρίς να μπουν, ανάμεσά τους η ΜΟΝΑΔΙΚΗ
+// που φράζει την παραγωγή. Όταν σταμάτησε το deploy, το «SSoT των αποτυχιών CI» δεν το
+// κατέγραψε καν. Σκανδάλη: οτιδήποτε αγγίζει workflows, μητρώο ή τον κώδικα της πύλης.
+// ~27 μικρά αρχεία, καθαρό in-memory Node. ΔΕΝ είναι ratchet — καμία baseline, ποτέ.
+const ciTierTriggers = allFiles.filter(
+  f => f.startsWith('.github/workflows/') || f === '.ci-gate-tiers.json' || f.startsWith('scripts/lib/ci/')
+);
+if (!process.env.SKIP_CI_TIER_COVERAGE && ciTierTriggers.length > 0)
+  addThread('3.37', 'CI gate tier coverage', 'scripts/check-ci-gate-tiers.js');
 
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);

@@ -1,4 +1,4 @@
-name: 🎯 TypeScript Error Gate (ADR-027)
+name: T2 🎯 TypeScript Error Gate (ADR-027)
 
 # =============================================================================
 # ADR-598 G1 — Wire the enterprise TypeScript error-budget gate into CI.

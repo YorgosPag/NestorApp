@@ -1,4 +1,4 @@
-name: 🔒 Storage Rules (ADR-301 / ADR-657)
+name: T2 🔒 Storage Rules (ADR-301 / ADR-657)
 
 # =============================================================================
 # Layer 2 of Defense in Depth for Firebase Storage Security Rules — CI mirror

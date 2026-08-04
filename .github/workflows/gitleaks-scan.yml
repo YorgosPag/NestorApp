@@ -1,4 +1,4 @@
-name: 🔐 Secret Scan (ADR-598 G12)
+name: T2 🔐 Secret Scan (ADR-598 G12)
 
 # =============================================================================
 # ADR-598 ΦΑΣΗ 3 · G12 — gitleaks secret scanning (authoritative layer).
