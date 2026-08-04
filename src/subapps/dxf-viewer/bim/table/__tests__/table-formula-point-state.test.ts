@@ -10,16 +10,27 @@ import { createTableModel } from '../table-model-helpers';
 import type { TableColumn, TableModel, TableRow } from '../../../types/table';
 import { resolveFormulaPointState } from '../formula/table-formula-point-state';
 
-const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3'].map((id) => ({
+const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3', 'c4', 'c5'].map((id) => ({
   id,
   sizing: { kind: 'fixed', widthMm: 20 },
   valueType: 'number',
   align: 'right',
 }));
 
-const ROWS: TableRow[] = ['r1', 'r2', 'r3'].map((id) => ({ id, rowClass: 'data', heightMm: 8 }));
+const ROWS: TableRow[] = ['r1', 'r2', 'r3', 'r4', 'r5'].map((id) => ({
+  id,
+  rowClass: 'data',
+  heightMm: 8,
+}));
 
-/** Πλέγμα 3×3 ⇒ έγκυρες αναφορές `A1`…`C3`· οτιδήποτε πιο πέρα είναι εκτός ορίων. */
+/**
+ * Πλέγμα 5×5 ⇒ έγκυρες αναφορές `A1`…`E5`· οτιδήποτε πιο πέρα είναι εκτός ορίων.
+ *
+ * Το μέγεθος δεν είναι τυχαίο: κάνει το `E4` του στιγμιότυπου που ζήτησε ο ιδιοκτήτης
+ * **υπαρκτό** κελί. Σε μικρότερο πλέγμα κάθε περίπτωση με `E4` θα περνούσε για `off` όχι
+ * επειδή η λογική το αποφάσισε, αλλά επειδή η στήλη δεν υπήρχε — δηλαδή πράσινο test που
+ * δεν δοκιμάζει τίποτα.
+ */
 const MODEL: TableModel = createTableModel({ columns: COLUMNS, rows: ROWS, cells: [] });
 
 /**
@@ -51,10 +62,20 @@ describe('ARMED — η γραμματική περιμένει τελεστέο,
 describe('LIVE_REF — αναφορά χωρίς τελεστή μετά, το κλικ ΑΝΤΙΚΑΘΙΣΤΑ', () => {
   it.each([
     ['=A1|', 1, 3],
+    ['=E4|', 1, 3],
     ['=B2+C3|', 4, 6],
     ['=SUM(A1|', 5, 7],
-    ['=SUM(A1:B2|', 8, 10],
   ])('«%s» ⇒ ζωντανή αναφορά [%i, %i)', (marked, from, to) => {
+    expect(stateAt(marked)).toEqual({ kind: 'liveRef', from, to });
+  });
+
+  // 🔴 Ένα εύρος είναι **μία** αναφορά με τρεις μονάδες: το κλικ αντικαθιστά και τα δύο
+  // άκρα μαζί με την άνω τελεία. Η αντικατάσταση μόνο του `B2` έδινε `=SUM(A1:A1:C3`.
+  it.each([
+    ['=SUM(A1:B2|', 5, 10],
+    ['=A1:B2|', 1, 6],
+    ['=C3+A1:B2|', 4, 9],
+  ])('«%s» ⇒ ΟΛΟΚΛΗΡΟ το εύρος [%i, %i)', (marked, from, to) => {
     expect(stateAt(marked)).toEqual({ kind: 'liveRef', from, to });
   });
 });

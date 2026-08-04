@@ -15,15 +15,20 @@ import {
   pointedRangeReference,
 } from '../formula/table-formula-reference-edit';
 
-const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3'].map((id) => ({
+const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3', 'c4', 'c5'].map((id) => ({
   id,
   sizing: { kind: 'fixed', widthMm: 20 },
   valueType: 'number',
   align: 'right',
 }));
 
-const ROWS: TableRow[] = ['r1', 'r2', 'r3'].map((id) => ({ id, rowClass: 'data', heightMm: 8 }));
+const ROWS: TableRow[] = ['r1', 'r2', 'r3', 'r4', 'r5'].map((id) => ({
+  id,
+  rowClass: 'data',
+  heightMm: 8,
+}));
 
+/** 5×5 ⇒ το `E4` του στιγμιότυπου είναι **υπαρκτό** κελί. Δες `table-formula-point-state.test`. */
 const MODEL: TableModel = createTableModel({ columns: COLUMNS, rows: ROWS, cells: [] });
 
 const AT = (row: number, col: number) => ({ rowId: ROWS[row].id, colId: COLUMNS[col].id });
