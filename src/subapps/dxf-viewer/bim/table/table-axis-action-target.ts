@@ -55,6 +55,15 @@ export interface TableAxisActionTarget {
   readonly lastIndex: number;
   /** `lastIndex - firstIndex + 1` — το πλήθος που γράφει και η ετικέτα του μενού. */
   readonly count: number;
+  /**
+   * Η θέση του **ενός** άξονα που πατήθηκε — μέσα στο διάστημα, αλλά όχι απαραίτητα η αρχή του.
+   *
+   * ⚠️ Δεν είναι πλεονασμός: η **γραμμή μορφοποίησης** (ADR-739 Φ.Ε) δρα ακόμη σε έναν άξονα,
+   * και το προσβάσιμο όνομά της οφείλει να λέει σε **ποιον**. Χωρίς αυτό το πεδίο θα έγραφε
+   * «Μορφοποίηση στήλης A:C» ενώ βάφει μία — δηλαδή η διόρθωση της διαγραφής θα γεννούσε ένα
+   * νέο, μικρότερο ψέμα δίπλα της. Φεύγει όταν η μορφοποίηση ακολουθήσει κι αυτή την επιλογή.
+   */
+  readonly hitIndex: number;
 }
 
 /**
@@ -90,6 +99,7 @@ export function resolveTableAxisActionTarget(
     firstIndex,
     lastIndex,
     count: lastIndex - firstIndex + 1,
+    hitIndex: index,
   };
 }
 

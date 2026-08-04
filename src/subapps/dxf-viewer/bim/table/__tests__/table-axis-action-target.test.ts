@@ -54,6 +54,9 @@ describe('resolveTableAxisActionTarget — ο κανόνας Α22 στον άξ�
       firstIndex: 1,
       lastIndex: 3,
       count: 3,
+      // Ο άξονας που **πατήθηκε** μέσα στο διάστημα — τον θέλει η γραμμή μορφοποίησης, που
+      // δρα ακόμη σε έναν (§27.17). Χωρίς αυτόν θα έγραφε «Μορφοποίηση στήλης A:C».
+      hitIndex: 2,
     });
   });
 
@@ -113,6 +116,7 @@ describe('resolveTableAxisActionTarget — ο κανόνας Α22 στον άξ�
       firstIndex: 1,
       lastIndex: 3,
       count: 3,
+      hitIndex: 2,
     });
   });
 

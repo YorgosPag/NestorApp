@@ -418,7 +418,12 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     const isColumn = target.hit.axis === 'column';
     // Μόνο η ετικέτα χρειάζεται εδώ: οι σημαίες `canInsert`/`canDelete` ταξιδεύουν ολόκληρες
     // στο {@link TableHeaderMenuItems}, που είναι και το μόνο που τις καταναλώνει.
-    const { label } = target.state;
+    //
+    // 🔴 ADR-739 §27.17 — η γραμμή παίρνει το `axisLabel` (**ο ένας** άξονας που πατήθηκε) και
+    // όχι το `label` (ο στόχος της πράξης, που μπορεί να είναι `A:C`): οι δομικές εντολές
+    // ακολουθούν την επιλογή, η μορφοποίηση **όχι ακόμη**. Κάθε ετικέτα λέει την αλήθεια για
+    // το δικό της χειριστήριο — ποτέ μία ετικέτα που καλύπτει δύο διαφορετικά εύρη.
+    const { axisLabel } = target.state;
 
     return (
       <>
@@ -433,7 +438,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           anchorX={target.anchor.x}
           anchorY={target.anchor.y}
           axis={target.hit.axis}
-          label={label}
+          label={axisLabel}
           format={target.format}
           surfaceRef={toolbarRef}
           onToggle={(key) => runFormat((hit) => onToggleFormat(hit, key))}

@@ -185,7 +185,7 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελε
     onInsertBefore: noop,
     onInsertAfter: noop,
     onDelete: noop,
-    resolveState: () => ({ label: 'B', canInsert: true, canDelete: true }),
+    resolveState: () => ({ label: 'B', axisLabel: 'B', count: 1, canInsert: true, canDelete: true }),
     resolveFormat: (): TableAxisFormatSnapshot => ({
       bold: NO_FORMAT,
       italic: NO_FORMAT,

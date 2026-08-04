@@ -107,19 +107,24 @@ export function resolveHeaderState(
   model: PersistedTableModel | null,
   target: TableAxisActionTarget | null,
 ): TableHeaderMenuState {
-  if (!target) return { label: '', count: 0, canInsert: false, canDelete: false };
+  if (!target) {
+    return { label: '', axisLabel: '', count: 0, canInsert: false, canDelete: false };
+  }
   const label = tableHeaderLabel(target);
+  const axisLabel = axisName(target, target.hitIndex);
   const { count } = target;
-  if (!model) return { label, count, canInsert: false, canDelete: false };
+  if (!model) return { label, axisLabel, count, canInsert: false, canDelete: false };
   return target.axis === 'row'
     ? {
         label,
+        axisLabel,
         count,
         canInsert: canInsertTableRow(model, count),
         canDelete: canDeleteTableRow(model, count),
       }
     : {
         label,
+        axisLabel,
         count,
         canInsert: canInsertTableColumn(model, count),
         canDelete: canDeleteTableColumn(model, count),
@@ -160,9 +165,12 @@ function clampIndex(index: number, length: number): number {
  * γραφτεί ένα διάστημα — ο τίτλος του μενού λέει ακριβώς ό,τι δείχνει φωτισμένο η λωρίδα.
  */
 export function tableHeaderLabel(target: TableAxisActionTarget): string {
-  const name = (index: number): string =>
-    target.axis === 'column' ? columnLetter(index) : String(index + 1);
   return target.count === 1
-    ? name(target.firstIndex)
-    : `${name(target.firstIndex)}:${name(target.lastIndex)}`;
+    ? axisName(target, target.firstIndex)
+    : `${axisName(target, target.firstIndex)}:${axisName(target, target.lastIndex)}`;
+}
+
+/** Το όνομα **μιας** υποδιαίρεσης του άξονα — ο ένας κανόνας ονομασίας, δύο καταναλωτές. */
+function axisName(target: TableAxisActionTarget, index: number): string {
+  return target.axis === 'column' ? columnLetter(index) : String(index + 1);
 }
