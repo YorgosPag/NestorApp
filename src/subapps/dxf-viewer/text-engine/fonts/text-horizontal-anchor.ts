@@ -60,3 +60,23 @@ export function anchorOffset(anchor: HorizontalTextAnchor, advance: number): num
       return 0;
   }
 }
+
+/**
+ * A stored entity's `alignment` → the anchor it draws from. Mirrors `MTextEntity['alignment']`,
+ * which carries one value {@link HorizontalTextAnchor} deliberately does not.
+ *
+ * `'justify'` → **left**: fully justified text fills its column starting at the LEFT edge, and
+ * that edge is the anchor. `undefined` → left, the DXF default (group 72 absent = left).
+ *
+ * WHY here and not inline per caller: unlike `'start'`/`'end'` — whose meaning depends on text
+ * direction, so the narrowing belongs where the direction is known — `'justify'` has ONE answer
+ * for every consumer. It used to be given twice: `clip-entity.clipText` (which decides which
+ * characters survive a clip region) and `scene-vector-emitter.mapHAlign` (which places the
+ * glyphs in the exported PDF). Those two disagreeing is precisely the «screen ≠ file» class
+ * this module exists to close.
+ */
+export function entityAlignmentToAnchor(
+  alignment: 'left' | 'center' | 'right' | 'justify' | undefined,
+): HorizontalTextAnchor {
+  return alignment === 'center' || alignment === 'right' ? alignment : 'left';
+}

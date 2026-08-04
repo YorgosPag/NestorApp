@@ -43,6 +43,7 @@ import {
 import type { DimensionLookup } from '../../systems/dimensions/dim-geometry-builder';
 import { getDimStyleRegistry } from '../../systems/dimensions/dim-style-registry';
 import { projectSceneTextToDxf, type TextSceneShape } from '../../bim/text/project-scene-text';
+import { entityAlignmentToAnchor } from '../../text-engine/fonts/text-horizontal-anchor';
 import { emitResolvedImage } from './scene-image-emitter';
 // ADR-667 — όλη η γραμμοσκίαση (η **κλειδωμένη** σειρά dispatch + ο ορισμός των κελιών μοτίβου)
 // ζει στο sibling module, όπως και οι εικόνες στο `scene-image-emitter`.
@@ -229,7 +230,9 @@ function emitText(
   // no hint → keep the exact previous behaviour (left / alphabetic), so imported
   // text whose insertion-point semantics we don't own is never mis-placed.
   const baseline = (e as VectorTextBaselineHint).vBaseline;
-  const align = baseline !== undefined ? mapHAlign((e as TextEntity).alignment) : 'left';
+  // ADR-753 Φ4 — η ΙΔΙΑ στένωση με το `clip-entity`: το εξαγόμενο PDF και η αποκοπή στην οθόνη
+  // δεν επιτρέπεται να διαφωνούν για το από ποια ακμή απλώνεται ένα κείμενο.
+  const align = baseline !== undefined ? entityAlignmentToAnchor((e as TextEntity).alignment) : 'left';
   // Το `textStyle.bold` το προβάλλει ΗΔΗ ο `projectSceneTextToDxf` από το πρώτο run του
   // `textNode` — καμία δεύτερη ανάγνωση του AST εδώ (`extractFirstRunStyle` είναι ο SSoT).
   const bold = t.textStyle?.bold === true;
@@ -249,11 +252,6 @@ function emitText(
     // γράμματος, ποτέ σε δεύτερο χρώμα.
     ...(bold ? { renderingMode: 'fillThenStroke' as const } : {}),
   });
-}
-
-/** Horizontal alignment (`TextEntity.alignment`) → jsPDF text align. Default left. */
-function mapHAlign(alignment: TextEntity['alignment']): 'left' | 'center' | 'right' {
-  return alignment === 'center' ? 'center' : alignment === 'right' ? 'right' : 'left';
 }
 
 // ─── Dimension (decompose via the on-screen block SSoT) ───────────────────────
