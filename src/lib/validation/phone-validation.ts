@@ -85,8 +85,17 @@ export function extractEmailFromText(text: string): string | null {
  * A run that could be a written phone number: digits plus the separators people type.
  * Deliberately excludes `.` — `cleanPhoneNumber` does not strip it, so allowing it here
  * would build candidates that can never validate.
+ *
+ * Exported (ADR-751) because a second consumer needs the **positions** of each candidate,
+ * which {@link extractAllPhonesFromText} discards: it returns cleaned strings through
+ * `distinct()`, so by the time a caller sees `'2310788493'` there is no way back to the
+ * character range it occupied. Re-declaring the pattern next to that consumer would be a
+ * second answer to "what looks like a phone number" — the exact duplication N.12 forbids.
+ *
+ * ⚠️ Carries the `g` flag, so it is **stateful** (`lastIndex`). Every consumer must either
+ * use it with `matchAll` (which clones internally) or reset `lastIndex` before scanning.
  */
-const PHONE_CANDIDATE_RUN = /[+\d][+\d\s\-()]*/g;
+export const PHONE_CANDIDATE_RUN = /[+\d][+\d\s\-()]*/g;
 
 /** Preserve first-seen order while removing repeats. */
 function distinct(values: readonly string[]): string[] {

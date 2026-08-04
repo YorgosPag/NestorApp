@@ -1,0 +1,183 @@
+/**
+ * 🔴 ADR-751 — **πού ακριβώς κάθεται ο σύνδεσμος μέσα σε ένα κελί.**
+ *
+ * Ο ανιχνευτής (`@/lib/validation/text-link-segments`) απαντά «ποιοι χαρακτήρες είναι
+ * διεύθυνση». Εδώ απαντάται το δεύτερο μισό: «σε ποιο mm αρχίζει και πόσο πλατύς είναι» —
+ * δηλαδή πού μπαίνει η μπλε υπογράμμιση και πού πρέπει να πέσει το Ctrl+κλικ. Ένα SSoT,
+ * γιατί η ζωγραφική και το πικάρισμα **πρέπει** να συμφωνούν: ένας σύνδεσμος που φαίνεται
+ * κάπου και πιάνεται αλλού είναι χειρότερος από κανέναν.
+ *
+ * ## 🔴 Το πρόβλημα του kerning, και γιατί μετρώνται ΠΡΟΘΕΜΑΤΑ
+ *
+ * Ο προφανής τρόπος να τοποθετηθούν δύο τμήματα («Τηλ: » και «2310788493») είναι να
+ * μετρηθεί το καθένα χωριστά και να αθροιστούν. **Είναι λάθος:**
+ *
+ * ```
+ *   measure('Τηλ: ') + measure('2310788493')  ≠  measure('Τηλ: 2310788493')
+ * ```
+ *
+ * Το ζεύγος kerning στο **όριο** (εδώ `' '`→`'2'`) υπάρχει μόνο όταν οι δύο χαρακτήρες
+ * μετρηθούν στο ίδιο string. Με αθροιστική μέτρηση η μπλε υπογράμμιση θα ξεκινούσε λίγο
+ * δεξιότερα ή αριστερότερα από τα ψηφία που υποτίθεται ότι υπογραμμίζει — και η απόκλιση θα
+ * μεγάλωνε με κάθε επιπλέον τμήμα.
+ *
+ * Η απάντηση είναι να μετριούνται **προθέματα του ίδιου string**: η αρχή του τμήματος `k`
+ * είναι `measure(text.slice(0, start_k))`, όχι το άθροισμα των προηγούμενων. Έτσι κάθε
+ * ζεύγος kerning **μέσα** στο πρόθεμα μετριέται ακριβώς μία φορά και ακριβώς όπως θα το
+ * μετρούσε ο ζωγράφος του πλήρους κειμένου. Μένει εκτός μόνο το ένα ζεύγος πάνω στο ίδιο το
+ * όριο — αναπόφευκτο τη στιγμή που δύο τμήματα ζωγραφίζονται με χωριστές κλήσεις.
+ *
+ * ⚠️ Και αυτό το τελευταίο **δεν υπάρχει καθόλου** στην κύρια περίπτωση: ένα κελί που είναι
+ * ολόκληρο ένα e-mail έχει **ένα** τμήμα, άρα κανένα όριο, άρα η ζωγραφική είναι byte-για-byte
+ * η ίδια με πριν το ADR-751.
+ *
+ * @module subapps/dxf-viewer/bim/table/table-cell-link-spans
+ * @see lib/validation/text-link-segments.ts — ο ανιχνευτής (ποιοι χαρακτήρες)
+ * @see bim/table/table-text-decoration.ts — η γεωμετρία της γραμμής (πόσο κάτω από τη βάση)
+ */
+
+import {
+  splitTextIntoLinkSegments,
+  type TextLinkKind,
+  type TextLinkSegment,
+} from '@/lib/validation/text-link-segments';
+import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
+import type { TextWidthMeasure } from '../text/text-fit';
+import type { TableTextLinkSpan } from './table-layout-types';
+
+/**
+ * Τα είδη που ψάχνονται σε **αριθμητικό** κελί.
+ *
+ * 🔴 Ένα ελληνικό σταθερό τηλέφωνο είναι «2» και εννιά ψηφία — σχήμα από το οποίο μια
+ * δεκαψήφια ποσότητα, ένας κωδικός έργου ή ένα ΑΦΜ είναι **αδιάκριτα**. Σε πίνακα ποσοτήτων
+ * αυτό δεν είναι θεωρητικό: θα έβαφε μπλε υπολογισμένους αριθμούς και θα πρόσφερε να τους
+ * καλέσει.
+ *
+ * Το κριτήριο είναι το ίδιο `numeric` που ήδη αποφασίζει το `####` της περικοπής — δηλαδή
+ * `typeof cell.value === 'number'`, η **τιμή** και όχι ο τύπος της στήλης (βλ. την αιτιολόγηση
+ * στο `CellTextFitInput.numeric`). Ένα «2310788493» που πληκτρολόγησε ο χρήστης ως κείμενο
+ * παραμένει τηλέφωνο· ένα άθροισμα που έτυχε να βγει δεκαψήφιο δεν γίνεται ποτέ.
+ */
+const NON_NUMERIC_KINDS: readonly TextLinkKind[] = ['email', 'url'];
+
+export interface CellLinkSpansInput {
+  /** Το **ακέραιο** κείμενο του κελιού — η πηγή των προορισμών. */
+  readonly fullText: string;
+  /** Ό,τι ζωγραφίζεται· ίδιο με το `fullText` όταν χώρεσε, αλλιώς κομμένο με «…». */
+  readonly visibleText: string;
+  /** Χρειάστηκε περικοπή; Αλλάζει ριζικά τι επιτρέπεται — δες {@link resolveCellLinkSpans}. */
+  readonly clipped: boolean;
+  /** `typeof cell.value === 'number'` — ο φραγμός των ψευδών τηλεφώνων. */
+  readonly numeric: boolean;
+  /** Η στοίχιση: καθορίζει από ποια μεριά της άγκυρας απλώνεται το κείμενο. */
+  readonly hAlign: TextAlign;
+  /** Ο μετρητής **της διάταξης**, ήδη δεμένος στο στυλ του κελιού. */
+  readonly measure: TextWidthMeasure;
+}
+
+/**
+ * Τα τοποθετημένα τμήματα-σύνδεσμοι ενός κελιού. Κενός πίνακας όταν δεν υπάρχει κανένας —
+ * που είναι η περίπτωση σχεδόν κάθε κελιού, οπότε η γρήγορη έξοδος είναι ο κανόνας.
+ *
+ * ## Ο κανόνας της περικοπής
+ * Όταν το κείμενο **κόπηκε**, επιβιώνει **μόνο** ο σύνδεσμος που καλύπτει ολόκληρο το κελί.
+ *
+ * Δύο λόγοι, και ο δεύτερος είναι ο σοβαρός:
+ *  1. Οι θέσεις του ακέραιου κειμένου **δεν αντιστοιχούν** στο ορατό: η περικοπή κόβει, ρίχνει
+ *     τα κενά του τέλους (`trimEnd`) και προσθέτει «…», οπότε ο χάρτης χαρακτήρων σπάει.
+ *  2. Ένα μισό URL είναι **έγκυρο URL**. `www.nestorconstruct.gr/έργ…` θα ταίριαζε κανονικά
+ *     και θα άνοιγε διεύθυνση που δεν υπάρχει — δηλαδή ο σύνδεσμος δεν θα αποτύγχανε
+ *     θορυβωδώς, θα δούλευε **λάθος**. Καλύτερα κανένας σύνδεσμος παρά ένας που λέει ψέματα.
+ *
+ * Η επιβιώνουσα περίπτωση είναι και η συνηθέστερη με διαφορά — μια στήλη «E-mail» σε στενό
+ * πλάτος — και δουλεύει σωστά: το κελί δείχνει `georgios.pag…`, ο σύνδεσμος ανοίγει το
+ * **πλήρες** e-mail. Ακριβώς ό,τι κάνει το Excel, όπου το πλάτος στήλης δεν έχει καμία σχέση
+ * με το πού δείχνει ο υπερσύνδεσμος.
+ */
+export function resolveCellLinkSpans(input: CellLinkSpansInput): readonly TableTextLinkSpan[] {
+  const { fullText, visibleText, clipped, numeric, hAlign, measure } = input;
+  if (!fullText || !visibleText) return [];
+
+  const links = linksIn(fullText, numeric);
+  if (links.length === 0) return [];
+
+  const totalMm = measure(visibleText);
+  const textStartMm = anchorOffsetMm(hAlign, totalMm);
+
+  if (clipped) {
+    const whole = wholeTextLink(links, fullText);
+    return whole === null
+      ? []
+      : [{ text: visibleText, kind: whole.kind, href: whole.href, offsetMm: textStartMm, advanceMm: totalMm }];
+  }
+
+  return links.map((link) => {
+    // Προθέματα του ΙΔΙΟΥ string — δες την ενότητα kerning στην κεφαλίδα.
+    const beforeMm = link.start === 0 ? 0 : measure(fullText.slice(0, link.start));
+    const throughMm = link.end === fullText.length ? totalMm : measure(fullText.slice(0, link.end));
+    return {
+      text: link.text,
+      kind: link.kind,
+      href: link.href,
+      offsetMm: textStartMm + beforeMm,
+      advanceMm: throughMm - beforeMm,
+    };
+  });
+}
+
+/**
+ * 🔴 ADR-751 — ο σύνδεσμος που καλύπτει **ολόκληρο** το ορατό κείμενο ενός run, ή `null`.
+ *
+ * ## Γιατί ζει εδώ και όχι σε κάθε καταναλωτή
+ * Το ρωτούν **τρεις**: ο ζωγράφος του καμβά (για να ξεκινήσει μπλε αντί να κάνει δεύτερο
+ * πέρασμα με αποκοπή), η γέφυρα εξαγωγής (για να βάψει το primitive κειμένου) και η ίδια η
+ * γέφυρα ξανά (για να μη διπλογράψει υπογράμμιση). Γράφτηκε πρώτα δύο φορές — και το
+ * **CHECK 3.28 το έπιασε μέσα στο ίδιο commit** (16 γραμμές / 53 tokens). Δεν ήταν κόστος
+ * γραμμών: δύο σώματα σημαίνει ότι οθόνη και χαρτί θα μπορούσαν κάποτε να διαφωνήσουν για
+ * το **ποιο κελί είναι σύνδεσμος**, που είναι ακριβώς η κατηγορία απόκλισης που ολόκληρο το
+ * ADR-739 είναι χτισμένο για να μην μπορεί να συμβεί.
+ *
+ * ## Γιατί ισότητα κειμένου και όχι σύγκριση mm
+ * Ο τοποθετητής βάζει στο τμήμα **ακριβώς** το string που κάλυψε, οπότε «ίδιο κείμενο»
+ * σημαίνει «δεν έμεινε τίποτα απ' έξω» — χωρίς ανοχή κινητής υποδιαστολής, που θα ήταν
+ * τέταρτος αριθμός να συντηρηθεί.
+ */
+export function wholeRunLink(run: {
+  readonly text: string;
+  readonly links?: readonly TableTextLinkSpan[];
+}): TableTextLinkSpan | null {
+  const only = run.links?.length === 1 ? run.links[0] : undefined;
+  return only !== undefined && only.text === run.text ? only : null;
+}
+
+/** Τα τμήματα που είναι διευθύνσεις, με τον φραγμό των αριθμητικών κελιών εφαρμοσμένο. */
+function linksIn(text: string, numeric: boolean): readonly LinkSegment[] {
+  const segments = numeric
+    ? splitTextIntoLinkSegments(text, { kinds: NON_NUMERIC_KINDS })
+    : splitTextIntoLinkSegments(text);
+  return segments.filter(isLink);
+}
+
+/** Ο ΕΝΑΣ σύνδεσμος που καλύπτει όλο το κείμενο, ή `null` αν δεν υπάρχει τέτοιος. */
+function wholeTextLink(links: readonly LinkSegment[], fullText: string): LinkSegment | null {
+  const only = links.length === 1 ? links[0] : null;
+  return only !== null && only.start === 0 && only.end === fullText.length ? only : null;
+}
+
+/**
+ * Από ποιο mm ξεκινούν τα γράμματα, σχετικά με την άγκυρα.
+ *
+ * Ίδια σύμβαση —και ίδια τριάδα περιπτώσεων— με το `tableUnderlineGeometry`: το `ctx.textAlign`
+ * του καμβά και το `anchorXMm` της διάταξης συμφωνούν ήδη εδώ, οπότε ένα τμήμα τοποθετημένο με
+ * αυτόν τον όρο ακολουθεί τη στοίχιση χωρίς δεύτερη απόφαση σε κανέναν καταναλωτή.
+ */
+function anchorOffsetMm(hAlign: TextAlign, totalMm: number): number {
+  return hAlign === 'right' ? -totalMm : hAlign === 'center' ? -totalMm / 2 : 0;
+}
+
+/** Το σκέλος της ένωσης που έχει προορισμό — ο φύλακας που κάνει το `href` προσβάσιμο. */
+type LinkSegment = Extract<TextLinkSegment, { href: string }>;
+
+function isLink(segment: TextLinkSegment): segment is LinkSegment {
+  return segment.kind !== 'text';
+}
