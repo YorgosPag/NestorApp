@@ -3,7 +3,7 @@ name: 📦 Bundle-Size Ratchet (ADR-598 G6)
 # =============================================================================
 # ADR-598 ΦΑΣΗ 2 · G6 — bundle-size ratchet (Layer-2 CI, N.17).
 #
-# Builds the app (`pnpm run build` = build:tokens && next build) and then runs
+# Builds the app (`pnpm run build:ci` = build:tokens && next build) and then runs
 # scripts/check-bundle-size-ratchet.js, which REUSES analyzeNextBuild() from
 # scripts/bundle-analyzer.js to read `.next/static` and blocks when totalSize
 # rises above baseline*(1 + tolerancePct/100) (.bundle-size-baseline.json,
@@ -76,8 +76,15 @@ jobs:
       # The expensive step. Produces .next/static that the ratchet reads. CI only.
       # Heap matches docker-build.yml (the canonical production build): a full
       # `next build` OOMs at 6144 MB, so use 12288 MB (ubuntu-latest has 16 GB).
+      #
+      # ⚠️ `build:ci`, NOT `build`: the `build` script hardcodes
+      # `cross-env NODE_OPTIONS=--max-old-space-size=8192`, which OVERWRITES the
+      # NODE_OPTIONS below — the 12288 was silently discarded and the build ran
+      # at 8192 (measured 2026-08-04: OOM at 7847 MB, i.e. the 8 GB ceiling).
+      # `build:ci` omits cross-env so the env below actually reaches the process.
+      # Any workflow calling build:ci MUST set NODE_OPTIONS itself.
       - name: 🏗️ Production build
-        run: pnpm run build
+        run: pnpm run build:ci
         # Firebase public config mirrors docker-build.yml (the canonical build).
         # Without it, static page-data collection for routes that init Firebase
         # at module load (e.g. /api/admin/migrations/execute) throws

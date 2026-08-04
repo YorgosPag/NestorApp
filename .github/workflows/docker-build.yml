@@ -41,8 +41,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # ⚠️ `build:ci`, NOT `build`: the `build` script hardcodes
+      # `cross-env NODE_OPTIONS=--max-old-space-size=8192`, which OVERWRITES the
+      # NODE_OPTIONS below — the 12288 was silently discarded and the build ran
+      # at 8192. That ceiling was crossed on 2026-08-04 (OOM at 7847 MB) and the
+      # production deploy to Netcup stopped shipping. `build:ci` omits cross-env
+      # so the env below actually reaches the process.
+      # Any workflow calling build:ci MUST set NODE_OPTIONS itself.
       - name: Build Next.js app
-        run: pnpm run build
+        run: pnpm run build:ci
         env:
           NODE_OPTIONS: '--max-old-space-size=12288'
           NODE_ENV: production
