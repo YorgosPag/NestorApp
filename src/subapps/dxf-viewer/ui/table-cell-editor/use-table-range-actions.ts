@@ -53,10 +53,11 @@ import {
   extendTableSelectionTo,
   resolveTableSelectionBounds,
   tableRangeSize,
-  tableWholeGridRange,
   type TableCellRangeBounds,
   type TableCellRef,
 } from '../../bim/table/table-cell-range';
+// 🔴 ADR-739 §43 — ο ΕΝΑΣ γραφέας του «επίλεξε τα πάντα»: τρεις πόρτες, μία εντολή.
+import { selectWholeTable } from './table-select-all-action';
 import {
   clearTableRange,
   pasteTsvIntoTable,
@@ -188,20 +189,12 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
 
   const selectAll = useCallback(() => {
     if (!cursor || !entity) return;
-    const model = resolveTableModel(entity.model);
-    const whole = tableWholeGridRange(model);
-    if (!whole) return;
-    // 🔴 Το **ενεργό κελί ΔΕΝ μετακινείται**: το `Ctrl+A` επιλέγει, δεν πλοηγεί (Excel /
-    // Sheets). Γι' αυτό ακριβώς η επιλογή κρατά **δύο δικές της γωνίες** και δεν αντλεί
-    // τη μία από τη θέση του δρομέα — δες το σχόλιο του `selection` στο store.
-    setTableCellSelection({
-      from: { rowId: model.rows[whole.firstRow].id, colId: model.columns[whole.firstCol].id },
-      to: { rowId: model.rows[whole.lastRow].id, colId: model.columns[whole.lastCol].id },
-      // ADR-739 §27.15 — **περιοχή**, και το κούμπωμα είναι ταυτοτικό: όλες οι συγχωνεύσεις
-      // είναι ήδη μέσα εξ ορισμού (δες `tableWholeGridRange`). Δεν χρειάζεται τέταρτο είδος
-      // «όλα» για να ειπωθεί κάτι που το ορθογώνιο ήδη λέει.
-      kind: 'range',
-    });
+    // 🔴 ADR-739 §43 — το σώμα μετακόμισε στο {@link selectWholeTable} τη στιγμή που η πράξη
+    // απέκτησε **τρίτη** πόρτα (αριστερό και δεξί κλικ στο τετραγωνάκι της γωνίας). Το
+    // σκεπτικό — γιατί το «ενεργό κελί δεν μετακινείται» και γιατί το είδος είναι `'range'` —
+    // ζει εκεί, δίπλα στον κώδικα που το εκτελεί. Εδώ μένει μόνο ο φύλακας «υπάρχει δρομέας;»,
+    // που είναι η γνώση **της συνεδρίας**, όχι της πράξης.
+    selectWholeTable(resolveTableModel(entity.model));
   }, [cursor, entity]);
 
   const clearSelection = useCallback(() => {

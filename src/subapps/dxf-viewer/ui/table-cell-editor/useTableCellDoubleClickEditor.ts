@@ -336,6 +336,9 @@ export function useTableCellDoubleClickEditor(
     containerRef,
     transformRef,
     onSelectTo: rangeActions.selectTo,
+    // 🔴 ADR-739 §43 — **ο ΙΔΙΟΣ** χειριστής με το `Ctrl+A` (δες τις δύο άλλες κλήσεις του
+    // παρακάτω): η γωνία είναι δεύτερη πόρτα στην ίδια εντολή, όχι δεύτερη εντολή.
+    onSelectAll: rangeActions.selectAll,
     onCommitPending: commitPendingDraft,
     onPreviewModel: previewTableModel,
     onCommitModel: commitTableModel,

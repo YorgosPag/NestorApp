@@ -1,5 +1,5 @@
 /**
- * 🔴 ADR-739 §42 — **ΤΟ ΤΕΤΡΑΓΩΝΑΚΙ ΤΗΣ ΓΩΝΙΑΣ ΕΙΝΑΙ ΚΟΥΜΠΙ**: πού πιάνεται, και τι σχήμα
+ * 🔴 ADR-739 §43 — **ΤΟ ΤΕΤΡΑΓΩΝΑΚΙ ΤΗΣ ΓΩΝΙΑΣ ΕΙΝΑΙ ΚΟΥΜΠΙ**: πού πιάνεται, και τι σχήμα
  * ζωγραφίζεται μέσα του. Καθαρή γεωμετρία — μηδέν DOM, μηδέν store, μηδέν React.
  *
  * ## 🔴 ΑΥΤΟ ΤΟ MODULE ΕΙΝΑΙ ΑΝΤΙΣΤΡΟΦΗ ΑΠΟΦΑΣΗΣ, ΟΧΙ ΠΡΟΣΘΗΚΗ
@@ -46,7 +46,7 @@
  * @see bim/table/table-indicator-geometry.ts — ΠΟΥ κάθεται το κουτί (`tableIndicatorCornerRectMm`)
  * @see bim/table/table-cell-range.ts — ΤΙ επιλέγει (`tableWholeGridRange`, ο ΕΝΑΣ ορισμός)
  * @see rendering/entities/table/stamp-table-indicator.ts — ο ζωγράφος που καταναλώνει το τρίγωνο
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §42
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §43
  */
 
 import type { TableFramePoint } from '../../types/table-entity';

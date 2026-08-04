@@ -45,6 +45,9 @@ import {
   getTableCellCursor,
   restartTableCellCursorSession,
 } from '../../state/table-cell-cursor-store';
+// 🔴 ADR-739 §43 — ο ΕΝΑΣ γραφέας του «επίλεξε τα πάντα». Δες το σκεπτικό στο `resolveTarget`
+// για το γιατί το **δεξί** κλικ επιτρέπεται να γράψει, σε αντίθεση με κάθε άλλη διαδρομή.
+import { selectWholeTable } from './table-select-all-action';
 import { useLiveTable } from './use-live-table';
 import { useTableBorderActions } from './use-table-border-actions';
 import { useTableMergeActions } from './use-table-merge-actions';
@@ -107,7 +110,29 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
     [borderActions, mergeActions],
   );
 
-  /** Ο στόχος του δεξιού κλικ· `null` όταν δεν έπεσε σε κελί ζωντανού πίνακα. */
+  /**
+   * Ο στόχος του δεξιού κλικ· `null` όταν δεν έπεσε σε κελί —ή στη γωνία— ζωντανού πίνακα.
+   *
+   * ## 🔴 ADR-739 §43 — Η ΜΙΑ ΠΑΡΕΝΕΡΓΕΙΑ, ΡΗΤΗ ΚΑΙ ΜΕΤΡΗΜΕΝΗ
+   * Ο κλάδος της γωνίας **γράφει** την επιλογή πριν επιστρέψει, και είναι η **μόνη** διαδρομή
+   * δεξιού κλικ σε ολόκληρο τον πίνακα που το κάνει. Είναι απόκλιση από τον κανόνα του §27.14
+   * («*το δεξί σταματά εδώ: δήλωσε και παραδώσου*») και από τον Α22 της κεφαλίδας («*ο στόχος
+   * βγαίνει από την **ερώτηση** αντί από τη μεταβολή*») — και μπήκε ως **συνειδητή εξαίρεση**,
+   * όχι από παράβλεψη:
+   *
+   *  - **μετρήθηκε στο πραγματικό Excel** (Giorgio, 04/08): με ενεργή επιλογή `B2:C4`, δεξί
+   *    κλικ στο τετραγωνάκι ⇒ *«χάθηκε η επιλογή σου κι επιλέχθηκε όλο το φύλλο»*·
+   *  - ο ιδιοκτήτης επέλεξε ρητά **full parity** αφού του παρουσιάστηκε η σύγκρουση.
+   *
+   * ⚠️ Ο λόγος που ο Α22 **δεν** αρκούσε εδώ είναι πραγματικός, όχι τυπικός: η γωνία είναι
+   * **κουμπί**, όχι θέση. Ένα μενού με τίτλο `A1:E7` πάνω από μια οθόνη που δείχνει ακόμα
+   * μαρκαρισμένο το `B2:C4` λέει δύο πράγματα ταυτόχρονα — και ο Α22 στηρίζεται ακριβώς στο ότι
+   * ο τίτλος **συμφωνεί** με ό,τι φαίνεται.
+   *
+   * Η γραφή περνά από τον **ΕΝΑ** γραφέα ({@link selectWholeTable}), τον ίδιο που εκτελεί το
+   * `Ctrl+A` και το αριστερό κλικ — και τα όρια που τιτλοφορούν το μενού είναι **αυτά που
+   * γράφτηκαν**, όχι δεύτερος υπολογισμός τους.
+   */
   const resolveTarget = useCallback(
     (clientX: number, clientY: number): TableRangeMenuTarget | null => {
       const live = liveTable();
@@ -118,11 +143,21 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       const world = tableEventWorldPoint({ clientX, clientY }, container, transform);
       if (!world) return null;
       const hit = tablePointerHitAtWorld(live, world, transform.scale);
+      const model = resolveTableModel(live.model);
+
+      // 🔴 §43 — το τετραγωνάκι της γωνίας. Το Excel δείχνει εκεί το μενού **ΚΕΛΙΟΥ**, όχι της
+      // κεφαλίδας — μετρήθηκε στα δύο στιγμιότυπα της 04/08 και τα ξεχωρίζουν τα ίδια τα items
+      // (η γωνία έχει «Έξυπνη αναζήτηση / Φίλτρο / Ταξινόμηση»· η στήλη έχει «Πλάτος στήλης /
+      // Απόκρυψη»). Άρα ο στόχος είναι **περιοχή**, και το μενού είναι αυτό εδώ — κανένα νέο.
+      if (hit?.where === 'select-all-corner') {
+        const whole = selectWholeTable(model);
+        return whole ? describeTarget(whole) : null;
+      }
+
       // Ζώνη δείκτη και διαχωριστικό στηλών έχουν **δικούς τους** χειριστές σε προηγούμενη
       // προτεραιότητα· εδώ απαντάμε μόνο για κελιά.
       if (!hit || hit.where !== 'cell') return null;
 
-      const model = resolveTableModel(live.model);
       const bounds = tableBorderTargetBounds(
         model,
         { rowId: hit.cell.rowId, colId: hit.cell.colId },

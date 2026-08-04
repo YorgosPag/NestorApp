@@ -300,6 +300,38 @@ export function tableWholeGridRange(model: TableModel): TableCellRangeBounds | n
   };
 }
 
+/**
+ * 🔴 ADR-739 §43 — **ΚΑΛΥΠΤΕΙ Η ΠΕΡΙΟΧΗ ΟΛΟΚΛΗΡΟ ΤΟ ΠΛΕΓΜΑ;**
+ *
+ * Υπάρχει επειδή το τετραγωνάκι της γωνίας πρέπει να **δείχνει** αν είναι πατημένο — και η
+ * απάντηση οφείλει να είναι **παράγωγο** της επιλογής, ποτέ δεύτερη σημαία σε store. Μια
+ * σημαία θα αποκλίνει την πρώτη φορά που η επιλογή αλλάξει από αλλού (`Shift+βέλος`, undo,
+ * διαγραφή γραμμής) χωρίς να περάσει από το κουμπί.
+ *
+ * 🔑 Ρωτά **το ίδιο** {@link tableWholeGridRange} που **γράφει** το `selectAll()`. Άρα «τι
+ * βάφεται» και «τι γράφεται» δεν είναι δύο εκφράσεις που τυχαίνει να συμφωνούν: είναι η ίδια
+ * έκφραση, ρωτημένη από δύο μεριές. Αν αύριο αλλάξει ο ορισμός του «όλα» (π.χ. κρυμμένες
+ * γραμμές), αλλάζουν **μαζί**.
+ *
+ * ⚠️ Σύγκριση σε **δείκτες** και όχι σε ταυτότητες: το `tableWholeGridRange` επιστρέφει
+ * ούτως ή άλλως δείκτες, και τα όρια που φτάνουν εδώ έχουν ήδη περάσει από το
+ * {@link resolveTableSelectionBounds} — δηλαδή είναι κανονικοποιημένα (ταξινομημένα,
+ * κουμπωμένα σε συγχωνεύσεις). Μια σύγκριση σε `rowId`/`colId` θα ήταν τρίτο λεξιλόγιο.
+ */
+export function isTableWholeGridRange(
+  model: TableModel,
+  bounds: TableCellRangeBounds,
+): boolean {
+  const whole = tableWholeGridRange(model);
+  return (
+    whole !== null
+    && bounds.firstRow === whole.firstRow
+    && bounds.lastRow === whole.lastRow
+    && bounds.firstCol === whole.firstCol
+    && bounds.lastCol === whole.lastCol
+  );
+}
+
 /** Πόσες γραμμές × πόσες στήλες — για τη γραμμή κατάστασης (§4.2). */
 export function tableRangeSize(bounds: TableCellRangeBounds): TableRangeSize {
   return {
