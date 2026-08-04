@@ -126,15 +126,38 @@ describe('τα πλήκτρα που το κελί ΔΕΝ κλέβει ποτέ'
   // γραμμής: η αδράνεια ήταν δωρεάν. Το βήμα 6 το έκανε `<textarea>` (δεύτερη οπτική γραμμή),
   // οπότε η ΙΔΙΑ αδράνεια γράφει τώρα πραγματικό `\n` μέσα στο `TableCell.value` — που είναι
   // απλό `string` (ADR-739 Φ.Α). Η αρχή δεν άλλαξε· άλλαξε ποια ενέργεια την υπηρετεί.
-  it('Alt+Enter ⇒ suppress — το <textarea> ΘΑ έγραφε \\n σε μοντέλο μονής γραμμής', () => {
-    expect(resolveTableCellKeyIntent('Enter', { ...NO_MODS, altKey: true }, 'enter')).toEqual({
-      kind: 'suppress',
+  it.each(['enter', 'edit'] as const)(
+    'Alt+Enter σε %s ⇒ suppress — το <textarea> ΘΑ έγραφε \\n σε μοντέλο μονής γραμμής',
+    (mode) => {
+      expect(resolveTableCellKeyIntent('Enter', { ...NO_MODS, altKey: true }, mode)).toEqual({
+        kind: 'suppress',
+      });
+    },
+  );
+
+  // ── 🔴 ADR-751 Φ8.γ — ΓΙΑΤΙ ΑΥΤΟ ΤΟ TEST ΑΝΤΙΣΤΡΑΦΗΚΕ (2026-08-04) ──
+  //
+  // Μέχρι σήμερα έγραφε «suppress **και σε πλοήγηση** — καμία κατάσταση δεν γράφει αλλαγή
+  // γραμμής». Η **αιτιολογία** του ήταν σωστή και μένει ακέραιη από πάνω: σε `enter`/`edit`
+  // το πλήκτρο εξακολουθεί να καταπίνεται, γιατί εκεί όντως θα γραφόταν `\n`.
+  //
+  // Αυτό που ήταν λάθος ήταν η **εμβέλεια**: σε `nav` δεν γράφει κανείς, άρα δεν υπήρχε ποτέ
+  // `\n` να αποτραπεί — το πλήκτρο ήταν απλώς αχρησιμοποίητο. Η έρευνα του ADR-751 βρήκε ότι
+  // τα Google Sheets το έχουν ήδη δώσει **εκεί** στο «άνοιγμα συνδέσμου», και ότι το Excel
+  // δεν έχει **καμία** συντόμευση για υπερσύνδεσμο. Οι δύο σημασίες δεν συγκρούονται επειδή
+  // ζουν σε διαφορετική κατάσταση — και τα δύο tests μαζί το κλειδώνουν ακριβώς έτσι.
+  //
+  // ⚠️ Η αλλαγή γραμμής παραμένει **δεσμευμένη** για τη Φ.Δ.10 (`overflow: 'wrap'`): όποιος
+  // τη φέρει, την ακουμπά στο `enter`/`edit` — όχι εδώ.
+  it('Alt+Enter σε ΠΛΟΗΓΗΣΗ ⇒ openLink — η συντόμευση των Google Sheets', () => {
+    expect(resolveTableCellKeyIntent('Enter', { ...NO_MODS, altKey: true }, 'nav')).toEqual({
+      kind: 'openLink',
     });
   });
 
-  it('Alt+Enter ⇒ suppress και σε πλοήγηση — καμία κατάσταση δεν γράφει αλλαγή γραμμής', () => {
-    expect(resolveTableCellKeyIntent('Enter', { ...NO_MODS, altKey: true }, 'nav')).toEqual({
-      kind: 'suppress',
+  it.each(ALL_MODES)('Alt+άλλο πλήκτρο σε %s ⇒ passthrough — μόνο το Enter διεκδικείται', (mode) => {
+    expect(resolveTableCellKeyIntent('F', { ...NO_MODS, altKey: true }, mode)).toEqual({
+      kind: 'passthrough',
     });
   });
 

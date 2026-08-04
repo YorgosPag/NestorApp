@@ -55,13 +55,25 @@ export interface TableCellSessionKeyParams extends Omit<TableCellSessionHandlers
    * πεδίο χωρίς δικό του κύκλο δέσμευσης: το συμβάν συνεχίζει τον φυσικό του δρόμο.
    */
   readonly onPassthrough?: (event: KeyboardEvent<HTMLElement>) => void;
+  /**
+   * ADR-751 Φ8.γ — `Alt+Enter` σε **πλοήγηση**: άνοιξε τη διεύθυνση του κελιού.
+   *
+   * ## Γιατί ΠΡΟΑΙΡΕΤΙΚΟ, και γιατί ΔΕΝ μπαίνει στο `TableCellSessionHandlers`
+   * Το κοινό συμβόλαιο το απαιτούν **και τα δύο** πεδία της συνεδρίας. Η γραμμή τύπων όμως
+   * **δεν μπορεί** να βρεθεί σε `nav`: το `onFocus` της περνά τη συνεδρία σε `edit` (κλικ
+   * στη γραμμή = «διορθώνω αυτή την τιμή», Excel/Sheets — τεκμηριωμένο στο
+   * `table-cell-session-types`). Άρα εκεί η πρόθεση `openLink` **δεν παράγεται ποτέ**, και
+   * μια υποχρεωτική δέσμευση θα ήταν κώδικας που δεν εκτελείται — ακριβώς το είδος
+   * «κάλυψης σε νεκρό δίδυμο» που δεν είναι κάλυψη.
+   */
+  readonly onOpenLink?: () => void;
 }
 
 /** Ο χειριστής `onKeyDown` κάθε πεδίου της συνεδρίας. */
 export function useTableCellSessionKeys(
   params: TableCellSessionKeyParams,
 ): (event: KeyboardEvent<HTMLElement>) => void {
-  const { mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough } =
+  const { mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough, onOpenLink } =
     params;
 
   return useCallback(
@@ -106,14 +118,21 @@ export function useTableCellSessionKeys(
           event.preventDefault();
           onHistory(intent.direction);
           return;
+        case 'openLink':
+          // ADR-751 Φ8.γ — `preventDefault` απαραίτητο για τον ίδιο λόγο με το `suppress`:
+          // το `<textarea>` κρατά την εστίαση και θα έγραφε `\n` πίσω από το άνοιγμα.
+          event.preventDefault();
+          onOpenLink?.();
+          return;
         case 'suppress':
-          // Πλήκτρο που το `<textarea>` **θα** εκτελούσε και δεν πρέπει (σήμερα: `Alt+Enter`).
+          // Πλήκτρο που το `<textarea>` **θα** εκτελούσε και δεν πρέπει: σήμερα `Alt+Enter`
+          // **σε γραφή**, όπου η αλλαγή γραμμής του Excel μένει δεσμευμένη για τη Φ.Δ.10.
           event.preventDefault();
           return;
         case 'passthrough':
           onPassthrough?.(event);
       }
     },
-    [mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough],
+    [mode, initialText, commit, onMove, onClear, onHistory, onExtend, onSelectAll, onPassthrough, onOpenLink],
   );
 }

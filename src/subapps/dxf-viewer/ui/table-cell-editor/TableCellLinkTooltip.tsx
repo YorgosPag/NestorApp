@@ -39,24 +39,14 @@
 import React, { useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { TextLinkKind } from '@/lib/validation/text-link-segments';
 import {
   getHoveredCellLink,
   subscribeHoveredCellLink,
 } from '../../state/table-cell-link-hover-store';
-
-/**
- * Το κλειδί της ενέργειας ανά είδος.
- *
- * Χάρτης **κλειστός σε τύπο** (`Record<TextLinkKind, …>`) και όχι `switch` με `default`: αν
- * κάποτε προστεθεί τέταρτο είδος στον ανιχνευτή, ο μεταγλωττιστής θα το ζητήσει **εδώ** αντί
- * να το αφήσει να πέσει σιωπηλά σε γενικό κείμενο.
- */
-const ACTION_KEY: Readonly<Record<TextLinkKind, string>> = {
-  email: 'tableCellLink.email',
-  url: 'tableCellLink.url',
-  phone: 'tableCellLink.phone',
-};
+// ADR-751 Φ8 — ο χάρτης είδους→ενέργειας γεννήθηκε εδώ, αλλά τον λένε πλέον **τέσσερις**
+// επιφάνειες (tooltip · μενού · λίστα · Mirror DOM). Έφυγε στο SSoT πριν γίνει τέταρτο
+// αντίγραφο· δες την κεφαλίδα του για το γιατί μοιράζεται **κλειδί** και όχι κείμενο.
+import { LINK_ACTION_KEY } from '../../bim/table/table-link-labels';
 
 export function TableCellLinkTooltip() {
   const { t } = useTranslation('dxf-viewer');
@@ -69,7 +59,7 @@ export function TableCellLinkTooltip() {
   if (!hovered || typeof document === 'undefined') return null;
 
   const { span } = hovered.hit;
-  const action = t(ACTION_KEY[span.kind]);
+  const action = t(LINK_ACTION_KEY[span.kind]);
 
   return createPortal(
     <output

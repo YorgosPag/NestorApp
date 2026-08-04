@@ -23,7 +23,7 @@
  * @see ui/components/table-format-toolbar/table-border-menu-items.ts — η κοινή γνώση
  */
 
-import React, { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import React, { forwardRef } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
@@ -36,7 +36,7 @@ import {
   DxfMenuLabel,
   DxfMenuSeparator,
 } from './dxf-context-menu/DxfContextMenu';
-import { useAnchoredHiddenTrigger } from './dxf-context-menu/use-anchored-hidden-trigger';
+import { useAnchoredContextMenu } from './dxf-context-menu/use-anchored-context-menu';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
 import { TableBorderIcon } from './table-format-toolbar/TableBorderIcon';
 import { tableBorderMenuItems } from './table-format-toolbar/table-border-menu-items';
@@ -89,41 +89,19 @@ export interface TableRangeContextMenuHandle {
 const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, TableRangeMenuProps>(
   ({ onApplyBorder, onResetBorders, onApplyDiagonal, onClosed }, ref) => {
     const { t } = useTranslation('dxf-viewer');
-    const triggerRef = useRef<HTMLSpanElement>(null);
-    const [isOpen, setIsOpen] = useState(false);
-    const [target, setTarget] = useState<TableRangeMenuTarget | null>(null);
-    const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
 
-    // Η τοποθέτηση του κρυφού trigger είναι κοινή με το μενού των ζωνών — και το σκεπτικό της
-    // (γιατί χρειάζονται **δύο** γραψίματα) ζει εκεί, μία φορά.
-    const placeTrigger = useAnchoredHiddenTrigger(triggerRef, anchor);
-
-    useImperativeHandle(ref, () => ({
-      open: (x, y, next) => {
-        placeTrigger(x, y);
-        setAnchor({ x, y });
-        setTarget(next);
-        setIsOpen(true);
-      },
-      close: () => {
-        setIsOpen(false);
-        setTarget(null);
-      },
-    }), [placeTrigger]);
-
-    /** Ο ΕΝΑΣ δρόμος εξόδου — `Escape`, κλικ έξω, επιλογή item. Η εστίαση γυρίζει στο κελί. */
-    const handleOpenChange = useCallback((next: boolean) => {
-      setIsOpen(next);
-      if (!next) {
-        setTarget(null);
-        onClosed();
-      }
-    }, [onClosed]);
+    // 🔴 ADR-751 Φ8.β — ο κύκλος ζωής (τέσσερις καταστάσεις, τοποθέτηση κρυφού trigger,
+    // `open`/`close`, ΕΝΑΣ δρόμος εξόδου) **εξήχθη**: το τρίτο μενού δεξιού κλικ πίνακα τον
+    // αντέγραψε αυτούσιο και το CHECK 3.28 τον μέτρησε — 32 γραμμές / 138 tokens. Το
+    // `onClosed` μένει **εδώ** ως όρισμα γιατί είναι η μία πραγματική διαφορά: αυτό το μενού
+    // ζει μέσα σε συνεδρία κελιού και οφείλει να την ξαναζωντανέψει.
+    const { triggerRef, isOpen, target, onOpenChange } =
+      useAnchoredContextMenu<TableRangeMenuTarget>(ref, onClosed);
 
     const items = tableBorderMenuItems();
 
     return (
-      <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
+      <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
         <DropdownMenuTrigger asChild>
           <DxfMenuHiddenTrigger ref={triggerRef} {...TABLE_CELL_SESSION_MARKER} />
         </DropdownMenuTrigger>
