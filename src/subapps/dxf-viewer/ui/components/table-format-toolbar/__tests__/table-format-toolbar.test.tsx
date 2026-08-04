@@ -656,7 +656,7 @@ describe('οι τέσσερις ζώνες του μενού χρώματος', 
     // ορίσματα): ελέγχεται και το πλήθος των ορισμάτων.
     const { onSetTextColor } = openColorMenu();
 
-    fireEvent.click(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Από το στυλ/ }));
 
     expect(onSetTextColor).toHaveBeenCalledTimes(1);
     expect(onSetTextColor.mock.calls[0]).toEqual([undefined]);
@@ -664,7 +664,7 @@ describe('οι τέσσερις ζώνες του μενού χρώματος', 
 
   it('«Αυτόματο» είναι το ενεργό όταν ο άξονας ΔΕΝ δηλώνει ρητό χρώμα', () => {
     openColorMenu();
-    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }))
+    expect(screen.getByRole('menuitemradio', { name: /Από το στυλ/ }))
       .toHaveAttribute('aria-checked', 'true');
   });
 
@@ -675,7 +675,7 @@ describe('οι τέσσερις ζώνες του μενού χρώματος', 
         textColor: { ...INHERITED_TEXT_COLOR, current: '#ff0000', explicit: true },
       },
     });
-    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }))
+    expect(screen.getByRole('menuitemradio', { name: /Από το στυλ/ }))
       .toHaveAttribute('aria-checked', 'false');
   });
 
@@ -831,7 +831,7 @@ describe('ADR-739 Φ.Ε/Φ4β — χρώμα γεμίσματος, ο δεύτε
   it('«Αυτόματο» του γεμίσματος γράφει `undefined`, ΟΧΙ `null` — δύο διαφορετικές εντολές', () => {
     const { onSetFillColor } = openFillMenu();
 
-    fireEvent.click(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Από το στυλ/ }));
 
     expect(onSetFillColor.mock.calls[0]).toEqual([undefined]);
   });
@@ -844,7 +844,7 @@ describe('ADR-739 Φ.Ε/Φ4β — χρώμα γεμίσματος, ο δεύτε
     });
     expect(screen.getByRole('menuitemradio', { name: /Κανένα γέμισμα/ }))
       .toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }))
+    expect(screen.getByRole('menuitemradio', { name: /Από το στυλ/ }))
       .toHaveAttribute('aria-checked', 'false');
   });
 
@@ -852,7 +852,7 @@ describe('ADR-739 Φ.Ε/Φ4β — χρώμα γεμίσματος, ο δεύτε
     openFillMenu({
       format: { ...SAMPLE_FORMAT, fillColor: { ...INHERITED_NO_FILL, mixed: true, explicit: true } },
     });
-    for (const name of [/Κανένα γέμισμα/, /Αυτόματο/]) {
+    for (const name of [/Κανένα γέμισμα/, /Από το στυλ/]) {
       expect(screen.getByRole('menuitemradio', { name })).toHaveAttribute('aria-checked', 'false');
     }
   });
@@ -928,7 +928,7 @@ describe('🔴 μεικτή ΚΛΗΡΟΝΟΜΙΑ: το «Αυτόματο» δε
 
   it('🔴 ΔΕΝ λέει «κληρονομεί κανένα γέμισμα» όταν η κληρονομιά είναι μεικτή', () => {
     openFill(MIXED_INHERITANCE);
-    const automatic = screen.getByRole('menuitemradio', { name: /Αυτόματο/ });
+    const automatic = screen.getByRole('menuitemradio', { name: /Από το στυλ/ });
     expect(automatic.textContent).not.toContain('κανένα γέμισμα');
     expect(automatic.textContent).toContain('διαφέρει ανά κελί');
   });
@@ -937,13 +937,13 @@ describe('🔴 μεικτή ΚΛΗΡΟΝΟΜΙΑ: το «Αυτόματο» δε
     // Το test από πάνω μόνο του θα περνούσε και με «ποτέ μη λες τίποτα». Η αξία είναι ότι η
     // αληθινή δήλωση **παραμένει** εκεί που είναι αληθινή.
     openFill(INHERITED_NO_FILL);
-    expect(screen.getByRole('menuitemradio', { name: /Αυτόματο/ }).textContent)
+    expect(screen.getByRole('menuitemradio', { name: /Από το στυλ/ }).textContent)
       .toContain('κανένα γέμισμα');
   });
 
   it('και δηλώνει το χρώμα όταν κληρονομεί ένα και μόνο ένα', () => {
     openFill({ ...INHERITED_NO_FILL, inheritedColor: '#ededed' });
-    const text = screen.getByRole('menuitemradio', { name: /Αυτόματο/ }).textContent ?? '';
+    const text = screen.getByRole('menuitemradio', { name: /Από το στυλ/ }).textContent ?? '';
     expect(text).not.toContain('κανένα γέμισμα');
     expect(text).not.toContain('διαφέρει ανά κελί');
   });
@@ -952,7 +952,7 @@ describe('🔴 μεικτή ΚΛΗΡΟΝΟΜΙΑ: το «Αυτόματο» δε
     // Το γλυφό λευκό+κόκκινη-διαγώνιος **είναι** ισχυρισμός («δεν θα βαφτεί τίποτα»). Σε
     // μεικτή κληρονομιά ο ισχυρισμός είναι ψευδής — άρα άλλο γλυφό, όχι απλώς άλλο κείμενο.
     openFill(MIXED_INHERITANCE);
-    const swatch = screen.getByRole('menuitemradio', { name: /Αυτόματο/ })
+    const swatch = screen.getByRole('menuitemradio', { name: /Από το στυλ/ })
       .querySelector('span');
     const none = screen.getByRole('menuitemradio', { name: /Κανένα γέμισμα/ })
       .querySelector('span');

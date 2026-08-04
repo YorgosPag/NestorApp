@@ -13,6 +13,10 @@
  */
 
 import {
+  TITLE_BLOCK_FIELD_KEYS,
+  type TitleBlockFieldKey,
+} from '@/types/title-block-reading';
+import {
   matchesWordSequenceAt,
   normalizeForLabelMatch,
   splitIntoWords,
@@ -31,28 +35,14 @@ export { normalizeForLabelMatch, splitIntoWords, type TextWord };
 // ── Λεξιλόγιο πεδίων (SSoT) ───────────────────────────────────────────────────
 
 /**
- * Τα κανονικά κλειδιά πεδίου.
+ * Τα κανονικά κλειδιά πεδίου **ζούσαν εδώ** μέχρι τη Φ3β και προήχθησαν στο
+ * `@/types/title-block-reading` για τον **ίδιο** λόγο με τα παραπάνω: τα διαβάζει ο Λ2 έξω από
+ * το subapp, και ένα κλειδί ορισμένο σε εξαιρεμένο αρχείο δεν ελέγχεται από πουθενά.
+ * Επανεξάγονται αυτούσια — καμία αλλαγή για τους καταναλωτές του αναγνώστη.
  *
- * Τα `drawnBy` / `signature` **δεν** ήταν στην πρώτη γραφή του ADR. Μπήκαν από μέτρηση:
- * το `ΣΥΝΤΑΞΗ` και το `ΥΠΟΓΡΑΦΗ` του G753 κάθονται σχεδόν στο **ίδιο y**, οπότε αν το
- * δεύτερο δεν αναγνωριζόταν ως **ετικέτα**, θα διαβαζόταν ως η **τιμή** του πρώτου.
- * Η παράλειψη ενός κλειδιού δεν αφήνει απλώς ένα πεδίο κενό — **μολύνει το διπλανό**.
+ * Το **γιατί** των `drawnBy`/`signature` (μέτρηση, όχι πληρότητα) ζει πλέον μαζί με τον ορισμό.
  */
-export const TITLE_BLOCK_FIELD_KEYS = [
-  'employer',
-  'projectTitle',
-  'location',
-  'designers',
-  'studyType',
-  'drawingType',
-  'drawingNumber',
-  'scale',
-  'studyDate',
-  'drawnBy',
-  'signature',
-] as const;
-
-export type TitleBlockFieldKey = (typeof TITLE_BLOCK_FIELD_KEYS)[number];
+export { TITLE_BLOCK_FIELD_KEYS, type TitleBlockFieldKey };
 
 // ── Προφίλ γραφείου ───────────────────────────────────────────────────────────
 

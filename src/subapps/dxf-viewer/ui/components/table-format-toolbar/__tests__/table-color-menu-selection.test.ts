@@ -15,6 +15,7 @@ import {
   selectedSwatchHex,
   type TableAxisColorState,
 } from '../table-color-menu-selection';
+import { AUTOMATIC_TABLE_INK } from '../../../../bim/table/table-ink';
 
 function state(patch: Partial<TableAxisColorState> = {}): TableAxisColorState {
   return {
@@ -48,6 +49,41 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟ: δύο καταστάσεις που ζωγ�
     expect(asNone.current).toBe(asAutomatic.current);
     expect(resolveColorMenuSelection(asNone))
       .not.toEqual(resolveColorMenuSelection(asAutomatic));
+  });
+});
+
+/**
+ * 🔴 ADR-739 §38 — **η ΤΕΤΑΡΤΗ κατάσταση**: «ρητά αυτόματο» δίπλα στο «κληρονομώ».
+ *
+ * Οι δύο λέξεις μοιάζουν στα ελληνικά και είναι **αντίθετες**: το `automatic` σημαίνει «το
+ * πεδίο **λείπει**, ρώτα το στυλ», το `autoContrast` σημαίνει «ο χρήστης **το ζήτησε ρητά**».
+ * Ίδιο σχήμα ελαττώματος με το ζεύγος από πάνω, σε άλλο πεδίο.
+ */
+describe('🔴 ADR-739 §38 — ρητό «Αυτόματο» ≠ «Από το στυλ»', () => {
+  it('ρητό σεντινέλι ⇒ `autoContrast`, ΟΧΙ δείγμα με hex «auto»', () => {
+    // Χωρίς αυτό θα έπεφτε στο `{ kind: 'color', hex: 'auto' }` και **κανένα** δείγμα δεν θα
+    // φορούσε πλαίσιο: το μενού θα φαινόταν «χωρίς επιλογή» σε κατάσταση απολύτως ορισμένη.
+    expect(resolveColorMenuSelection(state({ explicit: true, current: AUTOMATIC_TABLE_INK })))
+      .toEqual({ kind: 'autoContrast' });
+  });
+
+  it('🔴 κληρονομούμενο σεντινέλι ⇒ `automatic` — το ΠΟΙΟΣ το είπε νικά το ΤΙ λέει', () => {
+    // Το `standard` γράφει πλέον σεντινέλι, άρα ένας άξονας χωρίς παράκαμψη έχει
+    // `current: 'auto'` **και** `explicit: false`. Ενεργή είναι η «Από το στυλ».
+    expect(resolveColorMenuSelection(state({ explicit: false, current: AUTOMATIC_TABLE_INK })))
+      .toEqual({ kind: 'automatic' });
+  });
+
+  it('μεικτός άξονας εξακολουθεί να επισκιάζει και το σεντινέλι', () => {
+    expect(resolveColorMenuSelection(
+      state({ mixed: true, explicit: true, current: AUTOMATIC_TABLE_INK }),
+    )).toEqual({ kind: 'mixed' });
+  });
+
+  it('δεν φοράει πλαίσιο κανένα δείγμα του πλέγματος', () => {
+    expect(selectedSwatchHex(
+      resolveColorMenuSelection(state({ explicit: true, current: AUTOMATIC_TABLE_INK })),
+    )).toBeUndefined();
   });
 });
 

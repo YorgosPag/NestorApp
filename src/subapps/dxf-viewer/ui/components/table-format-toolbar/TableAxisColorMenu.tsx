@@ -7,8 +7,9 @@
  * ## Οι ζώνες, και από πού προκύπτει καθεμία
  * | ζώνη | τι είναι | ποιος το κάνει έτσι |
  * |---|---|---|
- * | «Αυτόματο» | το πεδίο **λείπει** ⇒ κληρονομιά από το στυλ | Excel «Αυτόματο» · AutoCAD `ByLayer` · Revit «By Category» |
- * | «Κανένα γέμισμα» | ρητό `null` ⇒ **διαφανές**, ακόμη κι αν το στυλ βάφει | Excel «Χωρίς γέμισμα» · InDesign `[None]` · ArchiCAD Pen 0 |
+ * | «Από το στυλ» | το πεδίο **λείπει** ⇒ κληρονομιά από το στυλ | Excel «Αυτόματο» · AutoCAD `ByLayer` · Revit «By Category» |
+ * | «Αυτόματο» *(μόνο μελάνι)* | ρητό `'auto'` ⇒ λευκό ή μαύρο κατά το φόντο | AutoCAD ACI 7 · Word/Excel «Automatic» |
+ * | «Κανένα γέμισμα» *(μόνο γέμισμα)* | ρητό `null` ⇒ **διαφανές**, ακόμη κι αν το στυλ βάφει | Excel «Χωρίς γέμισμα» · InDesign `[None]` · ArchiCAD Pen 0 |
  * | «Χρώματα του σχεδίου» | τα χρώματα που **υπάρχουν** στο έγγραφο, επίπεδα | Figma «On this page» · C4D `SWATCH_CATEGORY::DOCUMENT` · ArchiCAD Pen Set |
  * | «Βασικά χρώματα» | το πλέγμα 13×6 της παλέτας | σχήμα Excel, περιεχόμενο AutoCAD |
  * | «Περισσότερα χρώματα…» | ο **υπάρχων** διάλογος του έργου | Excel · AutoCAD «Select Color…» |
@@ -70,6 +71,8 @@
  *
  * @module subapps/dxf-viewer/ui/components/table-format-toolbar/TableAxisColorMenu
  * @see table-color-menu-selection.ts — ποια γραμμή είναι η ενεργή (καθαρό, δοκιμάσιμο)
+ * @see table-color-menu-rows.tsx — οι δύο σειρές (N.7.1: εξήχθησαν στις 505/500 γραμμές)
+ * @see bim/table/table-ink.ts — τι σημαίνει «Αυτόματο» και πού επιλύεται (§38)
  * @see ui/components/table-format-toolbar/TableColorSwatchGrid.tsx — το πλέγμα
  * @see bim/table/table-drawing-colors.ts — από πού βγαίνουν τα «χρώματα του σχεδίου»
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §28.14, §35
@@ -87,13 +90,19 @@ import { normalizeHexColor } from '../../../config/color-math';
 import { toolbarColorStoreFor } from '../../../state/table-toolbar-color-store';
 import { colorGridFor } from '../../color/aci-color-grid';
 import {
+  AUTOMATIC_TABLE_INK,
+  liveTableSurfaceHex,
+  resolveTableInk,
+} from '../../../bim/table/table-ink';
+import {
   resolveColorMenuSelection,
   selectedSwatchHex,
   type TableAxisColorState,
 } from './table-color-menu-selection';
 import { automaticHintKey, colorMenuKeys } from './table-color-menu-roles';
+import { CommandRow, DrawingColorsRow } from './table-color-menu-rows';
 import { TableColorSwatchGrid } from './TableColorSwatchGrid';
-import { useRovingToolbar, type RovingItemProps } from './use-roving-toolbar';
+import { type RovingItemProps } from './use-roving-toolbar';
 import { TableColorDialog } from './TableColorDialog';
 import styles from './TableAxisColorMenu.module.css';
 import toolbar from './TableFormatToolbar.module.css';
@@ -151,6 +160,26 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
   const selectedHex = selectedSwatchHex(selection);
 
   /**
+   * 🔴 ADR-739 §38 — η επιφάνεια πάνω στην οποία θα προσγειωθεί το μελάνι, για να δείξουν τα
+   * **δείγματα** την αλήθεια.
+   *
+   * Χωρίς αυτό, ένα κληρονομούμενο `AUTOMATIC_TABLE_INK` θα έφτανε στο `backgroundColor` του
+   * δείγματος ως `'auto'` — **έγκυρη** CSS τιμή που απλώς δεν βάφει, δηλαδή κενό τετράγωνο σε
+   * γραμμή που υπόσχεται να δείξει χρώμα. Δεν σπάει τίποτα, και γι' αυτό ακριβώς είναι το
+   * επικίνδυνο σχήμα (δες `table-ink.ts`).
+   *
+   * ⚠️ Μη-αντιδραστική ανάγνωση, εσκεμμένα: το μενού είναι εφήμερο (κλείνει με κλικ έξω), οπότε
+   * μια αλλαγή θέματος **με το μενού ανοιχτό** είναι κατάσταση που δεν συμβαίνει — και μια
+   * συνδρομή εδώ θα ήταν ο ADR-040 σπασμένος για μηδέν κέρδος.
+   */
+  const surfaceHex = liveTableSurfaceHex();
+  const inheritedSwatch = state.inheritedMixed
+    ? 'varies'
+    : state.inheritedColor === undefined
+      ? 'none'
+      : resolveTableInk(state.inheritedColor, surfaceHex);
+
+  /**
    * Η μία διαδρομή κάθε **χρώματος**: θυμήσου → τροφοδότησε τα πρόσφατα → εφάρμοσε → κλείσε.
    *
    * Το «θυμήσου» γίνεται **πριν** την εφαρμογή ώστε η μπάρα να έχει ήδη το νέο χρώμα όταν ο
@@ -172,6 +201,19 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
    */
   const chooseAutomatic = useCallback(() => {
     onSet(undefined);
+    setIsOpen(false);
+  }, [onSet]);
+
+  /**
+   * 🔴 ADR-739 §38 — «Αυτόματο»: **ρητή** επιλογή του χρήστη, όχι απουσία επιλογής. Γράφει το
+   * σεντινέλι στο πεδίο, ενώ το {@link chooseAutomatic} γράφει `undefined` (= σβήνει το πεδίο).
+   *
+   * Ίδιος λόγος με το «Αυτόματο» να μην περνά από το {@link pick}: το «τελευταίο χρώμα» του
+   * split button πρέπει να παραμείνει **χρώμα** — ένα κύριο μισό που θα εφάρμοζε `'auto'` θα
+   * ήταν κουμπί που δεν ξέρει τι κάνει μέχρι να πατηθεί.
+   */
+  const chooseAutoContrast = useCallback(() => {
+    onSet(AUTOMATIC_TABLE_INK);
     setIsOpen(false);
   }, [onSet]);
 
@@ -262,14 +304,37 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
             Δες `table-header-format-snapshot.ts` για τη μέτρηση.
           */}
           <CommandRow
-            swatch={
-              state.inheritedMixed ? 'varies' : (state.inheritedColor ?? 'none')
-            }
+            swatch={inheritedSwatch}
             active={selection.kind === 'automatic'}
             label={t(keys.automatic)}
             hint={t(automaticHintKey(state, keys))}
             onActivate={chooseAutomatic}
           />
+
+          {/*
+            🔴 ADR-739 §38 — «**Αυτόματο**»: λευκό ή μαύρο, ό,τι ξεχωρίζει από το φόντο. Είναι το
+            ACI 7 του AutoCAD και το «Automatic» του Word/Excel — και **μόνο** για μελάνι: ένα
+            γέμισμα δεν παίρνει αντίθεση με τον εαυτό του, οπότε η γραμμή δεν υπάρχει για τον
+            ρόλο `'fill'` (ίδιος κανόνας με το «Κανένα γέμισμα», ανάποδα).
+
+            ⚠️ Η ετικέτα **δεν** λέει «Λευκό» μιμούμενη τον AutoCAD: εκεί το ACI 7 λέγεται
+            «White» ενώ σχεδιάζεται **μαύρο** σε λευκό φόντο. Είναι το ένα σημείο όπου ο AutoCAD
+            κάνει λάθος και το Office κάνει σωστά — και ο χρήστης πινάκων φέρνει τη διαίσθησή
+            του από το Office.
+
+            Το δείγμα δείχνει το χρώμα που **θα ισχύσει τώρα** στον τρέχοντα καμβά, με την ίδια
+            αρχή που ήδη διέπει τη γραμμή από πάνω: ο χρήστης βλέπει *σε τι* πάει, όχι απλώς ότι
+            πάει κάπου.
+          */}
+          {isFill ? null : (
+            <CommandRow
+              swatch={resolveTableInk(AUTOMATIC_TABLE_INK, surfaceHex)}
+              active={selection.kind === 'autoContrast'}
+              label={t('table.textColor.autoContrast')}
+              hint={t('table.textColor.autoContrastHint')}
+              onActivate={chooseAutoContrast}
+            />
+          )}
 
           {/*
             Η γραμμή «Κανένα» υπάρχει **μόνο** για γέμισμα, και όχι από γούστο: το
@@ -338,107 +403,3 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Ιδιωτικά
-// ──────────────────────────────────────────────────────────────────────────────
-
-interface CommandRowProps {
-  /**
-   * Τι δείχνει το δείγμα — **τρία** πράγματα, όχι δύο:
-   * `hex` το χρώμα · `'none'` το γλυφό «κανένα» (λευκό + κόκκινη διαγώνιος) · `'varies'` η
-   * **μη-δήλωση** για μεικτή κληρονομιά (`<varies>` του Revit).
-   *
-   * 🔴 Το `'varies'` δεν είναι καλλωπισμός: το γλυφό «κανένα» είναι **θετικός ισχυρισμός**
-   * («δεν θα βαφτεί τίποτα»), και σε μεικτό άξονα αυτός ο ισχυρισμός είναι ψευδής.
-   */
-  readonly swatch: string | 'none' | 'varies';
-  readonly active: boolean;
-  readonly label: string;
-  readonly hint: string;
-  readonly onActivate: () => void;
-}
-
-/**
- * Μια άχρωμη εντολή της ζώνης 0 — «Αυτόματο» ή «Κανένα γέμισμα».
- *
- * ## Το δείγμα του «Αυτόματο» δείχνει το **πραγματικό** χρώμα που θα ισχύσει
- * Το Excel δείχνει εκεί ένα μόνιμα μαύρο τετράγωνο, που είναι ψέμα όποτε το στυλ λέει άλλο
- * χρώμα. Αφού το επιλυμένο χρώμα το ξέρουμε ούτως ή άλλως (το χρειάζεται ο ζωγράφος), το
- * δείχνουμε: ο χρήστης βλέπει *σε τι* επιστρέφει, όχι απλώς ότι επιστρέφει.
- *
- * ## 🔴 Μία γραμμή για δύο εντολές, και όχι δύο components
- * Οι δύο γραμμές διαφέρουν **μόνο** σε ετικέτα, υπόδειξη και δείγμα. Δύο components θα ήταν
- * δύο σημεία που μπορούν να αποκτήσουν διαφορετική συμπεριφορά εστίασης ή διαφορετικό
- * `role` — δηλαδή δύο διαφορετικές απαντήσεις στον αναγνώστη οθόνης για την ίδια ομάδα radio.
- */
-function CommandRow({
-  swatch, active, label, hint, onActivate,
-}: CommandRowProps): React.ReactElement {
-  const glyph = swatch === 'none' ? styles.swatchNone
-    : swatch === 'varies' ? styles.swatchVaries
-      : undefined;
-
-  return (
-    <button
-      type="button"
-      role="menuitemradio"
-      aria-checked={active}
-      className={styles.command}
-      onClick={onActivate}
-      {...TABLE_CELL_SESSION_MARKER}
-    >
-      <span
-        className={cn(styles.swatch, styles.commandSwatch, glyph)}
-        style={glyph ? undefined : { backgroundColor: swatch }}
-        aria-hidden="true"
-      />
-      <span className={styles.commandText}>
-        {label}
-        <span className={styles.commandHint}>{hint}</span>
-      </span>
-    </button>
-  );
-}
-
-interface DrawingColorsRowProps {
-  readonly colors: readonly string[];
-  readonly selected: string | undefined;
-  readonly onPick: (hex: string) => void;
-  readonly nameOf: (hex: string) => string;
-}
-
-/**
- * Η ζώνη εγγράφου — **επίπεδη**, χωρίς παραγόμενες αποχρώσεις.
- *
- * Τρεις από τους τέσσερις μεγάλους (Figma, Cinema 4D, ArchiCAD) τη δείχνουν έτσι· μόνο το Excel
- * φτιάχνει ράμπα, και τη φτιάχνει από θέμα εγγράφου **που το DXF δεν έχει**. Οριζόντιο roving:
- * είναι μία σειρά, όχι πλέγμα — τα `↑/↓` δεν έχουν πού να πάνε.
- */
-function DrawingColorsRow({
-  colors, selected, onPick, nameOf,
-}: DrawingColorsRowProps): React.ReactElement {
-  const roving = useRovingToolbar(colors.length);
-  return (
-    <div className={styles.gridRow} role="group">
-      {colors.map((hex, index) => {
-        const item = roving.itemProps(index);
-        return (
-          <button
-            key={hex}
-            type="button"
-            ref={item.ref}
-            tabIndex={item.tabIndex}
-            onKeyDown={item.onKeyDown}
-            onFocus={item.onFocus}
-            className={cn(styles.swatch, selected === hex && styles.swatchSelected)}
-            style={{ backgroundColor: hex }}
-            aria-label={nameOf(hex)}
-            aria-pressed={selected === hex}
-            onClick={() => onPick(hex)}
-            {...TABLE_CELL_SESSION_MARKER}
-          />
-        );
-      })}
-    </div>
-  );
-}

@@ -338,7 +338,7 @@ describe('✅ Φ5 (Α23) — η ζώνη «Σχεδίαση περιγραμμά
     const group = screen.getByRole('radiogroup', { name: 'Πάχος γραμμής περιγράμματος' });
     expect(group.querySelectorAll('[role="menuitemradio"]'))
       .toHaveLength(tableBorderWeightsMm().length + 1);
-    expect(screen.getByRole('menuitemradio', { name: 'Αυτόματο' }))
+    expect(screen.getByRole('menuitemradio', { name: 'Από το στυλ' }))
       .toHaveAttribute('aria-checked', 'true');
   });
 
