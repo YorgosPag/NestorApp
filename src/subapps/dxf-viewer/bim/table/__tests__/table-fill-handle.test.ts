@@ -24,11 +24,15 @@ import {
   tableFillSourceBounds,
   isOnTableFillHandle,
   TABLE_FILL_HANDLE_PX,
+  TABLE_FILL_HANDLE_OUTWARD_APERTURE_PX,
 } from '../table-fill-handle';
 // 🔴 ADR-754 §14 — ο **11ος ρόλος** δείκτη ζει στο διπλανό module, αλλά η προδιαγραφή του είναι
 // αυτής της φάσης: δοκιμάζεται εδώ, πάνω στο **ίδιο** 5×5 πλέγμα με τη γεωμετρία που τον τρέφει.
 import { tableIndicatorCursorRoleAtFrame } from '../table-indicator-cursor-role';
-import { tableIndicatorBandsMm } from '../table-indicator-geometry';
+import {
+  tableIndicatorBandsMm,
+  TABLE_INDICATOR_GRIP_CLEARANCE_PX,
+} from '../table-indicator-geometry';
 import type { TableCellRangeBounds } from '../table-cell-range';
 import type { TableLayout } from '../table-layout-types';
 
@@ -161,6 +165,93 @@ describe('η λαβή κάθεται στην κάτω δεξιά γωνία', (
     expect(isOnTableFillHandle({ u: 20 + 2.5, v: 8 }, handle, PX_PER_MM)).toBe(true);
     // Μακριά: όχι.
     expect(isOnTableFillHandle({ u: 30, v: 8 }, handle, PX_PER_MM)).toBe(false);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🔴 ADR-754 §13.8 — Η ΟΠΗ ΕΙΝΑΙ ΑΣΥΜΜΕΤΡΗ: μεγαλώνει ΜΟΝΟ προς τα έξω
+//
+// Ο ιδιοκτήτης το μέτρησε στην οθόνη (04/08): «*το fill handle συγκρούεται με τον σταυρό με τα
+// βελάκια*». Αιτία: η οπή διαστελλόταν **ομοιόμορφα** γύρω από **κεντραρισμένη** ζωγραφιά, άρα
+// τα 7 px προς τα μέσα έπεφταν πάνω στη ζώνη `range-move` του ADR-739 §36.
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('🔴 §13.8 η οπή της λαβής ΔΕΝ κλέβει pixel από τη μετακίνηση', () => {
+  const HANDLE = tableFillHandleRectMm(LAYOUT, rect(0, 0, 0, 0), PX_PER_MM)!;
+  const on = (u: number, v: number) => isOnTableFillHandle({ u, v }, HANDLE, PX_PER_MM);
+  /** Η κορυφή του A1 — το σημείο γύρω από το οποίο παίζεται ολόκληρη η διεκδίκηση. */
+  const CORNER = { u: 20, v: 8 };
+  const inkHalfMm = TABLE_FILL_HANDLE_PX / 2 / PX_PER_MM;
+  const outwardMm = TABLE_FILL_HANDLE_OUTWARD_APERTURE_PX / PX_PER_MM;
+
+  /**
+   * 🔑 **Η ΖΩΓΡΑΦΙΑ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ.** Ό,τι βάφεται μαύρο πιάνεται — και προς τα μέσα
+   * **μόνο** αυτό. Η πάνω-αριστερή κορυφή της ζωγραφιάς είναι το εσώτατο pixel που ανήκει
+   * ακόμη στη λαβή· ένα νύχι πιο μέσα και ανήκει στη μετακίνηση.
+   */
+  it('🔑 ΟΛΗ η ζωγραφιά πιάνεται — και οι τέσσερις κορυφές της', () => {
+    expect(on(HANDLE.x, HANDLE.y)).toBe(true);
+    expect(on(HANDLE.x + HANDLE.w, HANDLE.y)).toBe(true);
+    expect(on(HANDLE.x, HANDLE.y + HANDLE.h)).toBe(true);
+    expect(on(HANDLE.x + HANDLE.w, HANDLE.y + HANDLE.h)).toBe(true);
+    expect(on(CORNER.u, CORNER.v)).toBe(true);
+  });
+
+  /** Προς τα έξω η οπή πληρώνεται **ολόκληρη**: εκεί δείχνει και η ίδια η πράξη. */
+  it('προς τα ΕΞΩ (κάτω-δεξιά) πιάνεται ολόκληρη η οπή', () => {
+    expect(on(CORNER.u + inkHalfMm + outwardMm, CORNER.v)).toBe(true);
+    expect(on(CORNER.u, CORNER.v + inkHalfMm + outwardMm)).toBe(true);
+    // Ένα νύχι πιο έξω από την οπή ⇒ τέλος.
+    expect(on(CORNER.u + inkHalfMm + outwardMm + 0.01, CORNER.v)).toBe(false);
+    expect(on(CORNER.u, CORNER.v + inkHalfMm + outwardMm + 0.01)).toBe(false);
+  });
+
+  /**
+   * 🔴🔴 **ΤΟ ΕΛΑΤΤΩΜΑ ΤΗΣ ΟΘΟΝΗΣ, ΚΛΕΙΔΩΜΕΝΟ.** Πριν τη διόρθωση και τα τέσσερα αυτά σημεία
+   * ήταν «λαβή», ενώ ο χρήστης σημάδευε το **περίγραμμα** για να μετακινήσει την περιοχή.
+   */
+  it('🔴 προς τα ΜΕΣΑ (πάνω-αριστερά) η οπή ΔΕΝ επεκτείνεται — ούτε ένα px', () => {
+    const justInside = 0.01;
+    expect(on(HANDLE.x - justInside, CORNER.v)).toBe(false);
+    expect(on(CORNER.u, HANDLE.y - justInside)).toBe(false);
+    // Και σε ολόκληρη τη λωρίδα που ανακτήθηκε (η παλιά συμμετρική οπή έπιανε ως εδώ).
+    expect(on(CORNER.u - inkHalfMm - outwardMm, CORNER.v)).toBe(false);
+    expect(on(CORNER.u, CORNER.v - inkHalfMm - outwardMm)).toBe(false);
+  });
+
+  /**
+   * 🔑 **Ο ΔΕΙΚΤΗΣ ΤΟ ΛΕΕΙ ΚΙΟΛΑΣ.** Δεν αρκεί η λαβή να παραιτηθεί — πρέπει το ίδιο pixel να
+   * **γυρίσει** στη μετακίνηση, αλλιώς θα είχαμε φτιάξει νεκρή ζώνη. Το `range-move` βγαίνει
+   * από τον **ίδιο** δρόμο που ρωτά και το πάτημα (§14.4), άρα η συμφωνία είναι δομική.
+   */
+  it('🔑 το pixel που ανακτήθηκε δίνει ΞΑΝΑ `range-move` στον δείκτη', () => {
+    const BANDS = tableIndicatorBandsMm(PX_PER_MM);
+    const rangeRect = { x: 0, y: 0, w: 20, h: 8 }; // το κελί A1
+    // Δύο βήματα μέσα από τη ζωγραφιά, πάνω στην κάτω πλευρά και στη δεξιά αντίστοιχα.
+    const onBottom = { u: CORNER.u - inkHalfMm - 0.5, v: CORNER.v };
+    const onRight = { u: CORNER.u, v: CORNER.v - inkHalfMm - 0.5 };
+    for (const point of [onBottom, onRight]) {
+      const fill = tableFillHandleHitAtFrame(LAYOUT, point, PX_PER_MM, rect(0, 0, 0, 0));
+      expect(fill).toBeNull();
+      expect(
+        tableIndicatorCursorRoleAtFrame(
+          LAYOUT, point, BANDS, rangeRect, undefined, null, 'table-mode', null, fill,
+        ),
+      ).toBe('range-move');
+    }
+  });
+
+  /**
+   * 🔴 **ΤΟ ΦΡΑΓΜΑ ΠΟΥ ΚΑΝΕΙ ΤΟΝ ΑΡΙΘΜΟ ΣΩΣΤΟ.** Η εξωτερική εμβέλεια της λαβής οφείλει να
+   * μένει **μέσα** στη ζώνη του περιγράμματος: μόλις την ξεπεράσει, η λαβή αρχίζει να τρώει το
+   * **σώμα** του γειτονικού κελιού — που είναι ο μόνος τρόπος να επιλεγεί εκείνο (§36).
+   *
+   * Ζει ως test και όχι ως `import` μέσα στη γεωμετρία επίτηδες: η οπή του περιγράμματος φτάνει
+   * στους καλούντες ως `bands.gapMm`, τιμή που η καθαρή `isOnTableFillHandle` δεν παραλαμβάνει.
+   */
+  it('🔴 η εξωτερική εμβέλεια ΔΕΝ ξεπερνά τη ζώνη μετακίνησης (7 ≤ 9 px)', () => {
+    const outerReachPx = TABLE_FILL_HANDLE_PX / 2 + TABLE_FILL_HANDLE_OUTWARD_APERTURE_PX;
+    expect(outerReachPx).toBeLessThanOrEqual(TABLE_INDICATOR_GRIP_CLEARANCE_PX);
   });
 });
 
