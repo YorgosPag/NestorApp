@@ -2,10 +2,10 @@
 
 **Status:** Active
 **Owner:** Γιώργος Παγώνης
-**Last updated:** 2026-08-02 (ADR-747 — προστέθηκε η CHECK 3.35)
+**Last updated:** 2026-08-05 (ADR-757 — προστέθηκε η CHECK 3.37)
 **Referenced from:** `CLAUDE.md` SOS N.11
 
-Full details for pre-commit checks CHECK 3.13 – CHECK 3.18, plus CHECK 3.22–3.25, 3.30, **3.33**, **3.34** and **3.35**. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
+Full details for pre-commit checks CHECK 3.13 – CHECK 3.18, plus CHECK 3.22–3.25, 3.30, **3.33**, **3.34**, **3.35**, **3.36** and **3.37**. These checks are enforced by the pre-commit hook and block commits that violate the baselines or introduce new violations.
 
 ⚠️ **Το hook είναι η αλήθεια, όχι αυτό το αρχείο.** Οι CHECK 3.26–3.29, 3.31 και 3.32 **λείπουν** από εδώ (ζουν στον πίνακα του `CLAUDE.md` N.11 και στο `scripts/git-hooks/pre-commit`). Πριν επικαλεστείς «ποιοι αριθμοί είναι πιασμένοι», άνοιξε το hook.
 
@@ -909,6 +909,61 @@ Jest** (δικό του module registry): 4/5 μεταλλάξεις «περν�
 `namespace-loaders.ts`: **3/3 + Μ0** (ADR-752 §6), επαληθευμένες **και** μέσα από τον hook
 orchestrator. Εντολή: `npm run test:i18n-namespace-reachability`.
 Escape: `SKIP_I18N_NAMESPACE_WIRING=1`.
+
+---
+
+## CHECK 3.37 — CI Gate Tier Coverage (ADR-757)
+
+### Rule
+Κάθε ενεργό `.github/workflows/*.yml` έχει εγγραφή στο **`.ci-gate-tiers.json`** με `tier` (1-3)
+και `why`· το `name:` του αρχείου συμφωνεί με το μητρώο και **φέρει το πρόθεμα του tier του**
+(`T1 `/`T2 `/`T3 `)· ο συγκεντρωτής `ci-health-report.yml` παρακολουθεί **ακριβώς** τα Tier 1.
+**ZERO TOL — καμία baseline, ποτέ.**
+
+### Γιατί υπάρχει
+Ο Γιώργος έκανε push και ήρθαν **9 emails αποτυχίας**: τα 8 προϋπάρχοντα κόκκινα από 15/07, το
+1 σήμαινε «**σταμάτησε η παραγωγή**». Κανένας τρόπος να ξεχωριστούν. Και ο συγκεντρωτής —
+που αυτοπεριγραφόταν ως «durable SSoT of CI failures» — **δεν κατέγραψε καν** την πτώση της
+παραγωγής: άκουγε **χειρόγραφη λίστα 18 ονομάτων** ενώ το δέντρο είχε **26 workflows**. Οι 7
+που έλειπαν περιλάμβαναν το `docker-build.yml`, τη **μοναδική** πύλη που φράζει το deploy.
+
+🔴 Το σχόλιο στο αρχείο έλεγε *«adding a new gate = add its name below»*. **Οδηγία γραμμένη σε
+σχόλιο δεν είναι πύλη.** Ίδιο σχήμα με τις δύο λίστες namespace του CHECK 3.34 (απόκλιση 63).
+
+### Εννέα ρητές καταστάσεις — καμία σιωπηλή απόρριψη
+| κατάσταση | τι σημαίνει |
+|---|---|
+| `unregistered` | workflow χωρίς tier ⇒ καμία πολιτική ειδοποίησης |
+| `orphan-registry` | εγγραφή χωρίς αρχείο ⇒ νεκρός φρουρός |
+| `name-drift` | μητρώο ≠ αρχείο ⇒ ο συγκεντρωτής δεν ταιριάζει ποτέ |
+| `tier-prefix-drift` | το όνομα δεν φέρει το tier του ⇒ το email δεν ξεχωρίζεται |
+| `unwatched-tier1` | **το αρχικό σφάλμα** ⇒ αόρατη αποτυχία παραγωγής |
+| `ghost-watch` | παρακολουθείται ανύπαρκτο όνομα ⇒ σιωπηλά ανενεργό |
+| `watch-not-tier1` | περιττή σκανδάλη ανά τρέξιμο ⇒ σπατάλη runner σε κάθε push |
+| `invalid-entry` | λείπει `why`, tier εκτός 1..3, διπλό `file`/`name` |
+| `no-tier1` | ιεράρχηση χωρίς κορυφή |
+
+### Enforcement (Defense in Depth)
+- **Layer 1** — pre-commit, Phase 1 worker· σκανδάλη: staged `.github/workflows/**`,
+  `.ci-gate-tiers.json`, `scripts/lib/ci/**`. Καθαρό in-memory Node (~27 μικρά αρχεία).
+- **Layer 2** — `.github/workflows/ci-gate-tiers.yml`, **χωρίς συνθήκη**: ένα workflow μπορεί
+  να μπει στο δέντρο χωρίς να περάσει από hook (merge, ξένο commit, επεξεργασία στο github.com).
+
+### ⚠️ ΜΗΝ
+- **ΜΗΝ** το κάνεις ratchet. «Ανεκτό πλήθος απαρατήρητων πυλών» = ανεκτό πλήθος **αόρατων
+  αποτυχιών παραγωγής**.
+- **ΜΗΝ** σβήσεις εγγραφή από το μητρώο για να πρασινίσει. Η εγγραφή **είναι** η πολιτική.
+- **ΜΗΝ** βάλεις μη-Tier-1 στη λίστα `workflow_run` του συγκεντρωτή: κάθε ολοκλήρωση κάθε πύλης
+  θα ξεκινούσε ξεχωριστό runner, για πληροφορία που το ημερήσιο πέρασμα προβάλλει ούτως ή άλλως.
+- **ΜΗΝ** «λύσεις» κόκκινη πύλη Tier 2/3 με `continue-on-error`. Αυτό έκανε το
+  `coverage-ratchet.yml` και άφησε **11 tests κόκκινα επί 6 commits** (ADR-587 §6.1). Η
+  ιεράρχηση αλλάζει το **μέσο μεταφοράς**, όχι την αυστηρότητα.
+
+### Test suite
+`scripts/__tests__/ci-gate-tiers.test.js` — **31 tests**: Μ0 στο ζωντανό δέντρο + **9/9
+μεταλλάξεις** (μία ανά κατάσταση) + εχθρικά YAML fixtures (όνομα/στοιχείο λίστας μέσα σε
+**σχόλιο** δεν διαβάζεται — η παγίδα του CHECK 3.36). Εντολή: `npm run test:ci-gate-tiers`.
+Escape: `SKIP_CI_TIER_COVERAGE=1`.
 
 ---
 

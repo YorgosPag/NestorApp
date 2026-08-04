@@ -2,6 +2,21 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **ADR-757 ΦΑΣΗ Β — οι 8 κόκκινες πύλες CI** (η ΦΑΣΗ Α έκλεισε 2026-08-05: ιεράρχηση
+  Tier 1/2/3 + CHECK 3.37· **καμία πύλη δεν διορθώθηκε**, μόνο έγινε αναγνώσιμη).
+  Κόκκινες από **15/07**: `📦 Bundle-Size` (43.88 vs 42.79 MB) · `🪵 Barrel 3.30` (43 νέα dead
+  exports) · `📚 knip` (**`unlisted: 470`**) · `🧬 SSoT Discover` · `🛡️ Dependency-CVE`
+  (`fast-uri`, `brace-expansion`) · `🧮 Type-Complexity` · `🧊 DXF-TS 3.29` ·
+  `🔐 Secret Scan` *(ΚΟΚΚΙΝΟ ΕΠΙΤΗΔΕΣ — απόφαση Giorgio, ADR-598 §7 28/07)*.
+  🔴 **ΜΗΝ κάνεις reseed baseline για να πρασινίσει** — VERIFY πρώτα (ADR-598 §7, 16/07).
+  🔴 **Το `unlisted: 470` δεν στέκει** — εξήγησέ το πριν αγγίξεις baseline.
+  ⚠️ **Το `🧮 Type-Complexity` είναι ύποπτο για την ΙΔΙΑ ασθένεια με το Bundle-Size**: εκείνο
+  ήταν κόκκινο 4 μέρες από **OOM**, όχι από υπέρβαση — **η πύλη πέθαινε πριν μετρήσει** και το
+  bundle μεγάλωνε **αμέτρητο** πίσω από ένα κόκκινο που έδειχνε ότι κάποιος κοιτάει.
+  *Πύλη που πέφτει για λάθος λόγο κρύβει τον σωστό.* Ανεπαλήθευτο — μέτρησέ το.
+  Μέθοδος ανά πύλη + οι 2 ιδέες (baseline **με λήξη**, culprit attribution σε ratchets):
+  **ADR-757 §7**.
+
 - ✅ **Η στοίχιση ως μετατόπιση — ΕΝΑΣ κανόνας, DONE** (2026-08-04, Opus 5, ADR-753 **§21**,
   κατά N.0.2). Νέο SSoT `text-engine/fonts/text-horizontal-anchor.ts`: `anchorOffset` +
   `entityAlignmentToAnchor` + ο τύπος `HorizontalTextAnchor`. **Έξι** σώματα ενώθηκαν (renderer,
