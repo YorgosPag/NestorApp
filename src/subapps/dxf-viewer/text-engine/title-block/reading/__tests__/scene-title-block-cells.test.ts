@@ -57,22 +57,48 @@ const entityFromRow = (
   } as TextEntity;
 };
 
-const sceneCells = (heightOverride?: number) =>
+/**
+ * Ομοιόμορφη κλίμακα ΟΛΟΥ του σχεδίου — θέσεις **και** ύψη.
+ *
+ * 🔴 Το ύψος δεν αλλάζει μόνο του: το ζευγάρωμα του Λ1 μετρά το κόστος σε **ύψη κειμένου της
+ * ετικέτας**, ώστε ένα κελί 0,73 και ένα 2,94 να συγκρίνονται δίκαια. Αν σμικρύνεις μόνο τα ύψη
+ * κρατώντας τις θέσεις, κάθε απόσταση εκτοξεύεται σε «ύψη» και **τίποτα δεν ζευγαρώνει** — δηλαδή
+ * δοκιμάζεις ένα σχέδιο που δεν υπάρχει. Ένα πραγματικό σχέδιο σε άλλη κλίμακα έχει **και τα δύο**
+ * σμικρυμένα, και εκεί ο αναγνώστης οφείλει να δίνει **το ίδιο** αποτέλεσμα.
+ */
+const scaleRow = (row: (typeof G753_TITLEBLOCK_ROWS)[number], k: number) => ({
+  ...row,
+  x: row.x * k,
+  y: row.y * k,
+  height: row.height * k,
+});
+
+const sceneCells = (k = 1) =>
   G753_TITLEBLOCK_ROWS.map((row) => {
-    const cell = sceneCellFromTextEntity(entityFromRow(row, heightOverride));
+    const scaled = scaleRow(row, k);
+    const cell = sceneCellFromTextEntity(entityFromRow(scaled));
     if (!cell) throw new Error(`Το κελί ${row.handle} χάθηκε στον προσαρμογέα`);
     return cell;
   });
 
-/** Τα ωμά κελιά με το ίδιο ύψος, ώστε η σύγκριση να αφορά **μόνο** τη διαδρομή του κειμένου. */
-const rawCells = (heightOverride?: number) =>
-  G753_TITLEBLOCK_ROWS.map((row) => ({
-    handle: row.handle,
-    x: row.x,
-    y: row.y,
-    height: heightOverride ?? row.height,
-    raw: row.raw,
-  }));
+/** Τα ωμά κελιά στην ίδια κλίμακα — η σύγκριση αφορά **μόνο** τη διαδρομή του κειμένου. */
+const rawCells = (k = 1) =>
+  G753_TITLEBLOCK_ROWS.map((row) => {
+    const { x, y, height } = scaleRow(row, k);
+    return { handle: row.handle, x, y, height, raw: row.raw };
+  });
+
+/**
+ * Η κλίμακα που φέρνει το κελί των μελετητών **ακριβώς** στο 2,5.
+ *
+ * Το 2,5 δεν είναι τυχαίο νούμερο: είναι η **σκληροκωδικοποιημένη βάση** του serializer
+ * (`createDefaultTextRunStyle`). Εκεί —και **μόνο** εκεί— ο serializer κρίνει ότι το ύψος «δεν
+ * άλλαξε» και **παραλείπει** το πρώτο `\H`, οπότε η πρώτη γραμμή μένει στη βάση ενώ οι επόμενες
+ * γράφονται απόλυτες. Είναι το ακριβές σημείο όπου μια αφελής υλοποίηση αντιστρέφει την κατάταξη
+ * και **χάνει τον κύριο μελετητή**. Το δείγμα G753 δεν το φτάνει ποτέ από μόνο του.
+ */
+const DESIGNERS_HEIGHT = 0.8997600000000002;
+const K_DESIGNERS_AT_2_5 = 2.5 / DESIGNERS_HEIGHT;
 
 describe('προσαρμογέας σκηνής → Λ1', () => {
   it('🔴 ΙΣΟΔΥΝΑΜΙΑ: η σκηνή διαβάζεται ΤΑΥΤΟΣΗΜΑ με το ωμό αρχείο', () => {
@@ -81,20 +107,24 @@ describe('προσαρμογέας σκηνής → Λ1', () => {
     );
   });
 
-  // Το 2,5 είναι η προεπιλογή του AutoCAD **και** η σκληροκωδικοποιημένη βάση του serializer:
-  // εκεί ακριβώς παραλείπεται το πρώτο `\H` και η πρώτη γραμμή μένει στο 1,0 ενώ οι επόμενες
-  // γίνονται απόλυτες. Αν σπάσει κάτι, θα σπάσει εδώ.
-  it.each([0.1, 1, 2.5, 100])(
-    '🔴 …και παραμένει ταυτόσημη με κωδ. 40 = %p (όχι μόνο στα ύψη του δείγματος)',
-    (h) => {
-      const fromScene = readTitleBlocks(LAYER_NAME, sceneCells(h));
-      expect(fromScene).toEqual(readTitleBlocks(LAYER_NAME, rawCells(h)));
-      // Και δεν είναι κενή ισοδυναμία: οι δύο μηχανικοί βγαίνουν, σε κάθε κλίμακα.
-      const people = fromScene.flatMap((r) => r.people).map((p) => p.displayName);
-      expect(people).toContain('ΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ');
-      expect(people).toContain('ΝΙΚΟΛΑΟΥ ΕΥ. ΙΩΑΝΝΗΣ');
-    },
-  );
+  it('το σημείο-παγίδα υπάρχει όντως στο 2,5 — η κλίμακα δεν είναι διακοσμητική', () => {
+    const designers = sceneCells(K_DESIGNERS_AT_2_5).find((c) => c.raw.includes('ΜΑΥΡΟΜΙΧΑΛΗΣ'));
+    expect(designers?.height).toBeCloseTo(2.5, 9);
+  });
+
+  it.each([
+    ['μισό σχέδιο', 0.5],
+    ['το δείγμα ως έχει', 1],
+    ['🔴 μελετητές ΑΚΡΙΒΩΣ στη βάση 2,5 του serializer', K_DESIGNERS_AT_2_5],
+    ['δεκαπλάσιο σχέδιο', 10],
+  ])('🔴 …και παραμένει ταυτόσημη σε κλίμακα «%s»', (_label, k) => {
+    const fromScene = readTitleBlocks(LAYER_NAME, sceneCells(k));
+    expect(fromScene).toEqual(readTitleBlocks(LAYER_NAME, rawCells(k)));
+    // Και δεν είναι κενή ισοδυναμία: οι δύο μηχανικοί βγαίνουν, σε κάθε κλίμακα.
+    const people = fromScene.flatMap((r) => r.people).map((p) => p.displayName);
+    expect(people).toContain('ΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ');
+    expect(people).toContain('ΝΙΚΟΛΑΟΥ ΕΥ. ΙΩΑΝΝΗΣ');
+  });
 
   it('η αλλαγή γραμμής \\N επιβιώνει του γυρισμού — δύο γραμμές, όχι μία', () => {
     // Ο parser γράφει το `\N` ως κυριολεκτικό '\n' μέσα στο run· χωρίς επανακωδικοποίηση στον
@@ -182,6 +212,36 @@ describe('κατάταξη layers — καμία εικασία από το όν
     const forward = scanTitleBlockLayers(s.entities, s.layersById).candidates.map((c) => c.layerName);
     const reversed = scanTitleBlockLayers([...s.entities].reverse(), s.layersById).candidates.map((c) => c.layerName);
     expect(reversed).toEqual(forward);
+  });
+
+  /**
+   * 🔴 Η ισοπαλία είναι το ΜΟΝΟ σενάριο όπου το σπάσιμο κατ' όνομα μετράει — και ένα σχέδιο με
+   * δύο ίδιες πινακίδες (π.χ. δύο φύλλα του ίδιου τοπογράφου) δεν είναι εξωτικό. Η `Array.sort`
+   * του V8 είναι **σταθερή**, οπότε χωρίς ρητό σπάσιμο ο νικητής θα ήταν όποιος τύχαινε να μπει
+   * πρώτος στο `layersById` — δηλαδή ο άνθρωπος θα έβλεπε **άλλη** πρόταση σε κάθε άνοιγμα.
+   */
+  it('🔴 σε ΙΣΟΠΑΛΙΑ κερδίζει το όνομα — όχι η σειρά των κλειδιών του layersById', () => {
+    const twin = (id: string, dx: number): Entity[] =>
+      G753_TITLEBLOCK_ROWS.map((r) => ({
+        ...entityFromRow({ ...r, x: r.x + dx }),
+        id: `${id}_${r.handle}`,
+        layerId: id,
+      })) as Entity[];
+
+    const entities = [...twin('lyr_alpha', 0), ...twin('lyr_beta', 5000)];
+    const alpha = layer('lyr_alpha', 'ALPHA');
+    const beta = layer('lyr_beta', 'BETA');
+
+    const first = scanTitleBlockLayers(entities, { lyr_beta: beta, lyr_alpha: alpha });
+    const second = scanTitleBlockLayers(entities, { lyr_alpha: alpha, lyr_beta: beta });
+
+    // Πρώτα βεβαιωνόμαστε ότι υπάρχει ΟΝΤΩΣ ισοπαλία — αλλιώς το test δεν δοκιμάζει τίποτα.
+    expect(first.candidates).toHaveLength(2);
+    expect(first.candidates[0].fieldCount).toBe(first.candidates[1].fieldCount);
+    expect(first.candidates[0].personCount).toBe(first.candidates[1].personCount);
+
+    expect(first.candidates.map((c) => c.layerName)).toEqual(['ALPHA', 'BETA']);
+    expect(second.candidates.map((c) => c.layerName)).toEqual(['ALPHA', 'BETA']);
   });
 
   it('layer με ένα μόνο κελί αγνοείται χωρίς να δηλωθεί παράλειψη — δεν υπάρχει ζεύγος', () => {
