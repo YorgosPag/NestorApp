@@ -32,16 +32,10 @@ import {
   type TableInsertControlHit,
 } from '../../../bim/table/table-insert-control';
 import { TABLE_INSERT_CONTROL } from '../../../config/color-config';
+// 🔴 §42 — ο ΕΝΑΣ δίσκος χειριστηρίου (κύκλος + σύμβολο + οι κανόνες προβολής τους), κοινός με
+// το ⊖ της διαγραφής. Δες το σχόλιο στο {@link stampInsertDisc} για το γιατί εξήχθη.
+import { stampTableControlDisc } from './stamp-table-control-disc';
 import type { StampTableContext } from './stamp-table-layout';
-
-/**
- * Το μισό μήκος κάθε σκέλους του σταυρού, ως **κλάσμα της ακτίνας**.
- *
- * Κλάσμα και όχι δεύτερη σταθερά σε px: ο σταυρός οφείλει να μένει αναλογικός μέσα στον δίσκο
- * του. Δύο ανεξάρτητοι αριθμοί θα άφηναν τον σταυρό να ξεχειλίσει την πρώτη φορά που κάποιος
- * μικρύνει την ακτίνα — και θα το ανακάλυπτε στην οθόνη, όχι στον κώδικα.
- */
-const GLYPH_ARM_RATIO = 0.5;
 
 /** Το μέγεθος του πίνακα, όσο χρειάζεται για να τραβηχτεί η γραμμή προεπισκόπησης άκρη σε άκρη. */
 export interface TableInsertControlSpanMm {
@@ -101,58 +95,24 @@ function stampInsertCaret(
   ctx.restore();
 }
 
-/** Ο δίσκος με τον σταυρό — τα δύο χρώματα βγαίνουν από τη φάση, όχι από τον καλούντα. */
-function stampInsertDisc(rc: StampTableContext, control: TableInsertControlHit): void {
-  const { ctx } = rc;
-  const armed = control.phase === 'armed';
-  const center = rc.toScreen(control.centerMm.u, control.centerMm.v);
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, TABLE_INSERT_CONTROL_RADIUS_PX, 0, Math.PI * 2);
-  ctx.fillStyle = armed ? TABLE_INSERT_CONTROL.armedFillHex : TABLE_INSERT_CONTROL.fillHex;
-  ctx.fill();
-  // Το περίγραμμα μπαίνει και στις δύο φάσεις: πάνω σε ανοιχτόχρωμο σχέδιο ένας λευκός δίσκος
-  // χωρίς περίγραμμα δεν έχει σχήμα, και πάνω σε σκούρο ο μπλε χάνει την ακμή του.
-  ctx.strokeStyle = armed ? TABLE_INSERT_CONTROL.armedGlyphHex : TABLE_INSERT_CONTROL.lineHex;
-  ctx.lineWidth = TABLE_INSERT_CONTROL.lineWidthPx;
-  ctx.setLineDash([]);
-  ctx.stroke();
-  ctx.restore();
-
-  stampInsertGlyph(rc, control, armed);
-}
-
 /**
- * Ο σταυρός, **γερμένος με τον πίνακα** — δες τον πίνακα της κεφαλίδας.
+ * Ο δίσκος με τον σταυρό — τα χρώματα βγαίνουν από τη **φάση**, όχι από τον καλούντα.
  *
- * Τα τέσσερα άκρα γεννιούνται σε mm γύρω από το κέντρο και προβάλλονται ένα προς ένα, ποτέ ως
- * σταθερές μετατοπίσεις πάνω στο προβεβλημένο κέντρο: η δεύτερη διαδρομή θα έδινε πάντα ίσιο
- * σταυρό, δηλαδή θα ακύρωνε σιωπηλά την περιστροφή.
+ * ⚠️ §42 — ο δίσκος και το σύμβολο **μετακόμισαν** στο `stamp-table-control-disc.ts` τη στιγμή
+ * που γεννήθηκε ο δεύτερος καταναλωτής (το ⊖ της διαγραφής). Δεν ήταν φορμαλισμός του CHECK
+ * 3.28: η κοινή γνώση είναι οι **κανόνες προβολής** (τι γέρνει με τον πίνακα και τι μένει σε
+ * px) — δύο αντίγραφά τους σημαίνουν δύο χειριστήρια που συμπεριφέρονται αλλιώς σε
+ * περιστραμμένο πίνακα, και το ένα από τα δύο θα το ανακάλυπτε ο χρήστης.
+ *
+ * Εδώ μένει **μόνο** η επιλογή φάσης: η γνώση που είναι όντως του ⊕.
  */
-function stampInsertGlyph(
-  rc: StampTableContext,
-  control: TableInsertControlHit,
-  armed: boolean,
-): void {
-  const { ctx } = rc;
-  const armMm = (TABLE_INSERT_CONTROL_RADIUS_PX * GLYPH_ARM_RATIO) / rc.pxPerMm;
-  const { u, v } = control.centerMm;
-  const left = rc.toScreen(u - armMm, v);
-  const right = rc.toScreen(u + armMm, v);
-  const top = rc.toScreen(u, v - armMm);
-  const bottom = rc.toScreen(u, v + armMm);
-
-  ctx.save();
-  ctx.strokeStyle = armed ? TABLE_INSERT_CONTROL.armedGlyphHex : TABLE_INSERT_CONTROL.glyphHex;
-  ctx.lineWidth = TABLE_INSERT_CONTROL.glyphWidthPx;
-  ctx.lineCap = 'round';
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(left.x, left.y);
-  ctx.lineTo(right.x, right.y);
-  ctx.moveTo(top.x, top.y);
-  ctx.lineTo(bottom.x, bottom.y);
-  ctx.stroke();
-  ctx.restore();
+function stampInsertDisc(rc: StampTableContext, control: TableInsertControlHit): void {
+  const armed = control.phase === 'armed';
+  stampTableControlDisc(rc, control.centerMm, TABLE_INSERT_CONTROL_RADIUS_PX, 'plus', {
+    fillHex: armed ? TABLE_INSERT_CONTROL.armedFillHex : TABLE_INSERT_CONTROL.fillHex,
+    lineHex: armed ? TABLE_INSERT_CONTROL.armedGlyphHex : TABLE_INSERT_CONTROL.lineHex,
+    glyphHex: armed ? TABLE_INSERT_CONTROL.armedGlyphHex : TABLE_INSERT_CONTROL.glyphHex,
+    lineWidthPx: TABLE_INSERT_CONTROL.lineWidthPx,
+    glyphWidthPx: TABLE_INSERT_CONTROL.glyphWidthPx,
+  });
 }

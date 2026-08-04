@@ -28,20 +28,18 @@
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import {
   computeTableEntityGeometryLive,
-  tableCellAtFrame,
   tableCellAtWorld,
-  tablePxPerMm,
-  tableWorldToFrame,
 } from '../../bim/table/table-entity-geometry';
 import {
-  isTableIndicatorVisible,
   tableColumnEdgeAtFrame,
   tableRowEdgeAtFrame,
-  tableIndicatorBandsMm,
   tableIndicatorHitAtFrame,
-  type TableIndicatorBandsMm,
   type TableIndicatorHit,
 } from '../../bim/table/table-indicator-geometry';
+// 🔴 §31.9 / N.7.1 — η κοινή βάση και το πιάσιμο περιοχής μετακόμισαν σε δικά τους αρχεία· δες
+// τις κεφαλίδες τους για το κριτήριο του κοψίματος (δεν ήταν οι γραμμές).
+import { indicatorProbeBasis } from './table-indicator-probe-basis';
+import { activeTableRange } from './table-range-grab';
 import {
   tableIndicatorCursorRoleAtFrame,
   type TableIndicatorCursorRole,
@@ -52,28 +50,19 @@ import {
   type TableInsertControlHit,
   type TableInsertControlMode,
 } from '../../bim/table/table-insert-control';
+// 🔴 ADR-739 §42 — το ⊖ της διαγραφής: **μέσα** στη ζώνη, πάνω στο στοιχείο που θα φύγει.
+import {
+  tableDeleteControlAtFrame,
+  type TableDeleteControlHit,
+} from '../../bim/table/table-delete-control';
 // 🔴 ADR-739 §36 — ο ΕΝΑΣ δρόμος «τι διάλεξε ο χρήστης → ποιο ορθογώνιο», κοινός με τον
 // ζωγράφο: ο χρήστης πιάνει το περίγραμμα **που βλέπει**.
 import {
-  resolveTableSelectionBounds,
-  tableRangeRectMm,
-} from '../../bim/table/table-cell-range';
-import { indexById, resolveTableModel } from '../../bim/table/table-model-helpers';
-import {
-  isOnTableRangeBorder,
   PLAIN_TABLE_RANGE_DRAG,
   type TableRangeDragIntent,
 } from '../../bim/table/table-range-move-zone';
 import type { TableCellSelection } from '../../state/table-cell-cursor-store';
-import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
-import type { TableRangeGrab } from '../../bim/table/table-range-drop-target';
-import type { TableRectMm } from '../../bim/table/table-layout-types';
-import type {
-  TableCellHit,
-  TableEntity,
-  TableEntityGeometry,
-  TableFramePoint,
-} from '../../types/table-entity';
+import type { TableCellHit, TableEntity, TableEntityGeometry } from '../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
 
 /**
@@ -114,6 +103,22 @@ export type TablePointerHit =
    * σε edit mode, ακριβώς το ελάττωμα που το §29 έκλεισε.
    */
   | { readonly where: 'insert-control'; readonly control: TableInsertControlHit }
+  /**
+   * 🔴 §42 — **ΤΟ ⊖ ΤΗΣ ΔΙΑΓΡΑΦΗΣ, ΟΠΛΙΣΜΕΝΟ** (2026-08-04).
+   *
+   * Χωριστή περίπτωση από το `'band'` παρότι ζει **μέσα** στη ζώνη, και ο λόγος είναι ο ίδιος
+   * που έκανε το `'column-edge'` χωριστό από το `'band'` (§31.9): ο pointer πρέπει να **μην**
+   * επιλέξει τον άξονα εδώ. Αν το ⊖ ήταν υποείδος του `band`, το πάτημα πάνω στο κουμπί θα
+   * μάρκαρε **και** ολόκληρη τη στήλη πριν τη σβήσει — δύο αποτελέσματα από μία χειρονομία.
+   *
+   * ⚠️ **ΜΟΝΟ φάση `armed`.** Στη φάση `nearby` το ⊖ φαίνεται αλλά το κουτί του γράμματος
+   * ανήκει ακέραιο στη ζώνη: το πάτημα επιλέγει άξονα, όπως πάντα. Ίδια ασυμμετρία με το ⊕
+   * (§40.8) και για τον ίδιο λόγο — η φάση εμφάνισης δεν διεκδικεί ποτέ pixel.
+   *
+   * 🔑 Σε αντίθεση με το ⊕, εδώ **δεν** χρειάστηκε να μάθει τίποτα ο φύλακας του §29: το ⊖
+   * κάθεται μέσα στη ζώνη, που ήταν **ήδη** μη-`null` απάντηση. Το `mousedown` περνούσε ήδη.
+   */
+  | { readonly where: 'delete-control'; readonly control: TableDeleteControlHit }
   | { readonly where: 'band'; readonly band: TableIndicatorHit }
   | { readonly where: 'cell'; readonly cell: TableCellHit };
 
@@ -169,6 +174,10 @@ export function tablePointerHitAtWorld(
   if (edge !== null) return { where: 'column-edge', columnIndex: edge };
   const rowEdge = rowEdgeAt(entity, world, geometry, viewScale);
   if (rowEdge !== null) return { where: 'row-edge', rowIndex: rowEdge };
+  // 🔴 §42 — **το ⊖ πριν από τη ζώνη**: ζει μέσα στο κουτί του γράμματος, άρα η σειρά εδώ
+  // λύνει πραγματική διεκδίκηση (σε αντίθεση με το ⊕ από πάνω, που ζει έξω από όλα).
+  const remove = armedDeleteControlAt(entity, world, geometry, viewScale);
+  if (remove) return { where: 'delete-control', control: remove };
   const band = indicatorHitAt(entity, world, geometry, viewScale);
   if (band) return { where: 'band', band };
   const cell = tableCellAtWorld(entity, world, geometry);
@@ -210,6 +219,31 @@ function armedInsertControlAt(
     probe.frame,
     probe.pxPerMm,
     'table-mode',
+  );
+  return control?.phase === 'armed' ? control : null;
+}
+
+/**
+ * 🔴 §42 — το ⊖ **που πατιέται** κάτω από το σημείο· `null` σε φάση `nearby`, κάτω από το LOD,
+ * σε στενή υποδιαίρεση, ή οπουδήποτε αλλού.
+ *
+ * Δεν παίρνει `mode`: το ⊖ ζει **μέσα** στη ζώνη, και η ζώνη υπάρχει μόνο σε λειτουργία
+ * πίνακα. Έξω από αυτήν δεν υπάρχει τίποτα να ρωτηθεί — ίδιο σκεπτικό με το σχόλιο του
+ * {@link armedInsertControlAt} για το γιατί η κατάστασή του είναι σταθερή.
+ */
+function armedDeleteControlAt(
+  entity: TableEntity,
+  world: Point2D,
+  geometry: TableEntityGeometry,
+  viewScale: number,
+): TableDeleteControlHit | null {
+  const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
+  if (!probe) return null;
+  const control = tableDeleteControlAtFrame(
+    geometry.layout,
+    probe.frame,
+    probe.bands,
+    probe.pxPerMm,
   );
   return control?.phase === 'armed' ? control : null;
 }
@@ -270,6 +304,12 @@ export function tableIndicatorProbeAtWorld(
   // πλήρωναν τη γεωμετρία δύο φορές ανά κίνηση ποντικιού — και θα άφηναν περιθώριο να
   // ζωγραφιστεί ⊕ σε άλλο σύνορο από εκείνο που θα εισήγαγε το πάτημα.
   const insert = tableInsertControlAtFrame(geometry.layout, probe.frame, probe.pxPerMm, mode);
+  // 🔴 §42 — **τέταρτο κανάλι της ίδιας σάρωσης**: το ⊖ της διαγραφής. Μόνο σε λειτουργία
+  // πίνακα, γιατί μόνο εκεί υπάρχει ζώνη — σε απλή επιλογή η ερώτηση δεν έχει αντικείμενο.
+  const remove =
+    mode === 'table-mode'
+      ? tableDeleteControlAtFrame(geometry.layout, probe.frame, probe.bands, probe.pxPerMm)
+      : null;
   return {
     // §40 — σε απλή επιλογή δεν υπάρχουν ζώνες να φωτιστούν. Ο φύλακας ζει εδώ και όχι στον
     // καλούντα, ώστε ένας δεύτερος καταναλωτής αύριο να μην μπορεί να τον ξεχάσει.
@@ -285,111 +325,11 @@ export function tableIndicatorProbeAtWorld(
       intent,
       insert,
       mode,
+      remove,
     ),
     insert,
+    remove,
   };
-}
-
-/**
- * 🔴 ADR-739 §36 — **ΤΟ ΟΡΘΟΓΩΝΙΟ ΠΟΥ ΠΙΑΝΕΤΑΙ**: η ενεργή επιλογή σε sheet-mm· `null` όταν
- * δεν υπάρχει επιλογή ή όταν έχει παλιώσει.
- *
- * ## Γιατί ΔΕΝ υπάρχει εδώ δεύτερη αλήθεια για το «ποια κελιά είναι μέσα»
- * Περνά από τον **ΕΝΑ** δρόμο (`resolveTableSelectionBounds` → `tableRangeRectMm`), τον ίδιο
- * ακριβώς που ρωτά ο ζωγράφος στο `TableRenderer.selectionOf`. Αυτό **είναι** η απαίτηση, όχι
- * ευπρέπεια: ο χρήστης πιάνει το περίγραμμα **που βλέπει**. Αν ο δείκτης ρωτούσε δική του
- * γεωμετρία, θα υπήρχε ζώνη όπου το μάτι βλέπει τη γραμμή και το χέρι δεν πιάνει τίποτα —
- * και ο χρήστης θα το διάβαζε ως «δεν δουλεύει», ποτέ ως «ένα pixel διαφορά».
- *
- * ⚠️ Το κόστος ανά κίνηση ποντικιού **μετρήθηκε πριν γραφτεί** και είναι ο λόγος που το
- * `indexById` απέκτησε απομνημόνευση (δες την κεφαλίδα του `table-cell-order`): χωρίς εκείνη,
- * αυτή η γραμμή θα χτίζε δύο `Map` μεγέθους «όσες οι γραμμές» **60 φορές το δευτερόλεπτο**.
- */
-function activeTableRange(
-  entity: TableEntity,
-  geometry: TableEntityGeometry,
-  selection: TableCellSelection | null,
-): { readonly bounds: TableCellRangeBounds; readonly rectMm: TableRectMm } | null {
-  if (!selection) return null;
-  const bounds = resolveTableSelectionBounds(resolveTableModel(entity.model), selection);
-  // Μπαγιάτικο άκρο (undo / διαγραφή γραμμής) ⇒ καμία υπόσχεση. Ίδια σύμβαση με κάθε άλλον
-  // καταναλωτή της επιλογής: ο καλών **δεν μαντεύει**.
-  if (!bounds) return null;
-  const rectMm = tableRangeRectMm(geometry.layout, bounds);
-  return rectMm ? { bounds, rectMm } : null;
-}
-
-/**
- * 🔴 ADR-739 §36 ΦΑΣΗ 3 — **ΠΙΑΣΤΗΚΕ ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΤΗΣ ΕΠΙΛΟΓΗΣ;** — και, αν ναι, **από πού**.
- * `null` παντού αλλού.
- *
- * ## Γιατί ζει εδώ και όχι στη χειρονομία
- * Είναι η **ίδια** ερώτηση που απαντά ο δείκτης (`range-move` / `range-copy`), από την **ίδια**
- * γεωμετρία: το ίδιο LOD ({@link indicatorProbeBasis}), το ίδιο ορθογώνιο
- * ({@link activeTableRange}), την ίδια οπή (`bands.gapMm`). Δύο αντίγραφα θα σήμαιναν ζώνη όπου
- * ο δείκτης υπόσχεται μετακίνηση και το πάτημα δεν πιάνει τίποτα — δηλαδή ακριβώς το «δεν
- * δουλεύει» που περιγράφει η κεφαλίδα του {@link activeTableRange}, από την πίσω πόρτα.
- *
- * ## 🔴 Η ΜΕΤΑΤΟΠΙΣΗ ΣΥΛΛΗΨΗΣ **ΠΕΡΙΟΡΙΖΕΤΑΙ ΜΕΣΑ** ΣΤΗΝ ΠΕΡΙΟΧΗ
- * Η ζώνη σύλληψης διαστέλλεται **εκατέρωθεν** της γραμμής (§36): πιάνοντας την πάνω πλευρά, το
- * χέρι είναι συχνά πάνω στο **γειτονικό** κελί, έξω από την περιοχή. Χωρίς τον περιορισμό η
- * μετατόπιση θα έβγαινε **αρνητική**, δηλαδή η περιοχή θα προσγειωνόταν ένα κελί παρακάτω από
- * εκεί που δείχνει το χέρι — σε **κάθε** κίνηση της σύρσης.
- *
- * ⚠️ Ο περιορισμός γίνεται σε **δείκτες** και όχι στο σημείο, και ο λόγος βρέθηκε γράφοντας:
- * ένα σημείο περιορισμένο πάνω στην ακμή του ορθογωνίου πέφτει **ακριβώς πάνω σε γραμμή του
- * πλέγματος**, όπου το `tableCellAtFrame` (κλειστά διαστήματα) απαντά το **προηγούμενο** κελί —
- * δηλαδή ξαναγεννά την αρνητική μετατόπιση από την πίσω πόρτα. Στους δείκτες δεν υπάρχει
- * αμφισημία ακμής. Καλύπτει επίσης τη **συγχώνευση** που ξεπερνά την περιοχή: εκείνη επιστρέφει
- * την **άγκυρά** της, που μπορεί να κάθεται έξω.
- *
- * Ο φύλακας «είμαστε μέσα στο πλέγμα;» περνά από τον **ΕΝΑ** δρόμο (`tableCellAtFrame`) αντί
- * για δεύτερη σύγκριση ορίων: η επιλογή μπορεί να ακουμπά την πάνω γραμμή, οπότε η εξωτερική
- * εμβέλεια βγαίνει σε αρνητικά mm — όπου ζουν οι **λαβές** (§27.11, «ένα pixel, μία ερώτηση»)
- * και δεν πιάνεται περιοχή.
- */
-export function tableRangeGrabAtWorld(
-  entity: TableEntity,
-  world: Point2D,
-  viewScale: number,
-  selection: TableCellSelection | null,
-): TableRangeGrabHit | null {
-  const geometry = computeTableEntityGeometryLive(entity);
-  const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
-  if (!probe) return null;
-  const range = activeTableRange(entity, geometry, selection);
-  if (!range) return null;
-  // ⚠️ `gapMm` — **η ίδια** οπή που ρωτά και ο ρόλος δείκτη (`tableIndicatorCursorRoleAtFrame`),
-  // δηλαδή η `gripAperturePx` του §27.16 Ε4. Κανένας δεύτερος αριθμός.
-  if (!isOnTableRangeBorder(range.rectMm, probe.frame, probe.bands.gapMm)) return null;
-
-  const hit = tableCellAtFrame(geometry.layout, probe.frame);
-  if (!hit) return null;
-  const row = indexById(entity.model.rows).get(hit.rowId);
-  const col = indexById(entity.model.columns).get(hit.colId);
-  if (row === undefined || col === undefined) return null;
-
-  const { firstRow, lastRow, firstCol, lastCol } = range.bounds;
-  return {
-    source: range.bounds,
-    grab: {
-      dRow: clampToSpan(row, firstRow, lastRow) - firstRow,
-      dCol: clampToSpan(col, firstCol, lastCol) - firstCol,
-    },
-  };
-}
-
-/** Ό,τι χρειάζεται η χειρονομία για να ξεκινήσει — δες {@link tableRangeGrabAtWorld}. */
-export interface TableRangeGrabHit {
-  /** Η περιοχή που πιάστηκε, σε δείκτες γραμμής/στήλης. */
-  readonly source: TableCellRangeBounds;
-  /** Πόσο μέσα της έπεσε το χέρι — η μετατόπιση που κρατά το σχήμα κάτω από το δάχτυλο. */
-  readonly grab: TableRangeGrab;
-}
-
-/** Ο δείκτης, φερμένος μέσα στο κλειστό διάστημα. Δες {@link tableRangeGrabAtWorld} για το γιατί. */
-function clampToSpan(index: number, first: number, last: number): number {
-  return Math.min(Math.max(index, first), last);
 }
 
 /** Ό,τι ξέρει ο hover για το σημείο κάτω από το ποντίκι — δες {@link tableIndicatorProbeAtWorld}. */
@@ -400,6 +340,8 @@ export interface TableIndicatorProbe {
   readonly cursor: TableIndicatorCursorRole | null;
   /** §40 — ποιο ⊕ εισαγωγής ζωγραφίζεται και αν πατιέται· `null` = κανένα. */
   readonly insert: TableInsertControlHit | null;
+  /** §42 — ποιο ⊖ διαγραφής ζωγραφίζεται και αν πατιέται· `null` = κανένα. */
+  readonly remove: TableDeleteControlHit | null;
 }
 
 /**
@@ -407,7 +349,7 @@ export interface TableIndicatorProbe {
  * αντικείμενο ώστε η συχνότερη διαδρομή (ποντίκι εκτός πίνακα) να μην κατανέμει μνήμη 60 φορές
  * το δευτερόλεπτο.
  */
-const EMPTY_PROBE: TableIndicatorProbe = { hit: null, cursor: null, insert: null };
+const EMPTY_PROBE: TableIndicatorProbe = { hit: null, cursor: null, insert: null, remove: null };
 
 /** Σε ποια υποδιαίρεση ζώνης έπεσε το συμβάν· `null` όταν ο δείκτης δεν ζωγραφίζεται καν (LOD). */
 function indicatorHitAt(
@@ -418,36 +360,4 @@ function indicatorHitAt(
 ): TableIndicatorHit | null {
   const probe = indicatorProbeBasis(entity, world, geometry, viewScale);
   return probe && tableIndicatorHitAtFrame(geometry.layout, probe.frame, probe.bands);
-}
-
-/**
- * 🔴 §31.9 — **η κοινή βάση κάθε ερώτησης δείκτη**: LOD ⇒ πλαίσιο ⇒ πάχη ζωνών.
- *
- * Εξήχθη επειδή το CHECK 3.28 (jscpd, N.18) την έπιασε ως **sibling clone μέσα στο ίδιο
- * αρχείο** τη στιγμή που γεννήθηκε ο τρίτος καταναλωτής (το διαχωριστικό). Δεν ήταν
- * φορμαλισμός: τρία αντίγραφα του «είναι ορατός ο δείκτης;» σημαίνουν ότι μια αλλαγή στο LOD
- * θα άφηνε **δύο** από τα τρία να πιάνουν ζώνη που δεν ζωγραφίζεται.
- *
- * `null` κάτω από το κατώφλι — ένα σημείο, μία απάντηση, για όλους.
- */
-function indicatorProbeBasis(
-  entity: TableEntity,
-  world: Point2D,
-  geometry: TableEntityGeometry,
-  viewScale: number,
-): {
-  readonly frame: TableFramePoint;
-  readonly bands: TableIndicatorBandsMm;
-  /** §40 — η κλίμακα ταξιδεύει μαζί: το ⊕ τη ζητά και δεν επιτρέπεται να την ξαναβγάλει. */
-  readonly pxPerMm: number;
-} | null {
-  const pxPerMm = tablePxPerMm(geometry.mmToWorld, viewScale);
-  if (!isTableIndicatorVisible(geometry.layout.widthMm, geometry.layout.heightMm, pxPerMm)) {
-    return null;
-  }
-  return {
-    frame: tableWorldToFrame(entity, world, geometry.mmToWorld),
-    bands: tableIndicatorBandsMm(pxPerMm),
-    pxPerMm,
-  };
 }

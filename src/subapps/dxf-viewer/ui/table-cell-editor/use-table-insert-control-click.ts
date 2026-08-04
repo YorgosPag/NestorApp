@@ -35,7 +35,6 @@
  */
 
 import { type RefObject } from 'react';
-import { useEventCallback } from '@/hooks/useEventCallback';
 import { useCommandHistory } from '../../core/commands';
 import {
   canInsertTableColumn,
@@ -43,13 +42,14 @@ import {
   insertTableColumn,
   insertTableRow,
 } from '../../bim/table/table-row-column-ops';
-import { getTableInsertControl } from '../../state/table-insert-control-store';
-// 🔴 §40.8 — ο ΕΝΑΣ ορισμός του «το πάτημα έπεσε μέσα στη συνεδρία» (§26.15), κοινός με τον pointer.
-import { claimTableCellSessionPointerDown } from './table-cell-session-focus';
-// 🔴 §40.8 — ο ΕΝΑΣ τρόπος προσάρτησης ακροατή σύλληψης στο δοχείο (κοινός με τον pointer, N.18).
-import { useTableContainerMouseDown } from './use-table-container-mousedown';
+import {
+  getTableInsertControl,
+  type TableInsertControlState,
+} from '../../state/table-insert-control-store';
+// 🔴 §41 — ο ΕΝΑΣ ακροατής οπλισμένου χειριστηρίου (κοινός με το ⊖, N.18): κουμπί ποντικιού,
+// ζωντανή οντότητα, **η σειρά κατανάλωση-πριν-αποτέλεσμα** του §40.8, διεκδίκηση συνεδρίας.
+import { useTableArmedControlClick } from './use-table-armed-control-click';
 import { useTableModelCommit } from './use-table-model-commit';
-import { resolveTableById } from './table-entity-lookup';
 import type { TableInsertControlTarget } from '../../bim/table/table-insert-control';
 import type { PersistedTableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
@@ -61,7 +61,18 @@ export interface UseTableInsertControlClickParams {
   readonly levelManager: LevelManagerLike;
 }
 
-/** Εκτελεί την εισαγωγή που υπόσχεται το οπλισμένο ⊕, όσο υπάρχει πίνακας στο προσκήνιο. */
+/**
+ * Εκτελεί την εισαγωγή που υπόσχεται το οπλισμένο ⊕, όσο υπάρχει πίνακας στο προσκήνιο.
+ *
+ * ⚠️ §41 — **ολόκληρη η διαδρομή του συμβάντος μετακόμισε** στο
+ * {@link useTableArmedControlClick} τη στιγμή που γεννήθηκε ο δεύτερος καταναλωτής (το ⊖ της
+ * διαγραφής): κουμπί ποντικιού, ανάγνωση οπλισμένης κατάστασης, ζωντανή οντότητα, **η σειρά
+ * κατανάλωση-πριν-αποτέλεσμα** του §40.8, η διεκδίκηση της συνεδρίας και η φάση προσάρτησης.
+ *
+ * 🔑 Η κοινή γνώση δεν είναι ο κώδικας — είναι η **σειρά**. Ένα αντίγραφό της είναι μια δεύτερη
+ * ευκαιρία να ξαναγραφτεί ανάποδα, και το σύμπτωμα («ο πίνακας έκλεισε μόνος του») δεν δείχνει
+ * ποτέ προς την αιτία. Εδώ μένει **μόνο** ό,τι είναι του ⊕: ποιο store, και ποια πράξη.
+ */
 export function useTableInsertControlClick(params: UseTableInsertControlClickParams): void {
   const { active, containerRef, levelManager } = params;
   const { execute } = useCommandHistory();
@@ -69,50 +80,24 @@ export function useTableInsertControlClick(params: UseTableInsertControlClickPar
   // `UpdateEntityCommand`, ένα `Ctrl+Z`, καμία δεύτερη διαδρομή εγγραφής (§6.6).
   const commitModel = useTableModelCommit({ levelManager, execute });
 
-  const handleMouseDown = useEventCallback((event: MouseEvent): void => {
-    // Μόνο το κύριο κουμπί: το δεξί κλικ ανήκει στον δρομολογητή μενού, το μεσαίο στο pan.
-    if (event.button !== 0) return;
-    const state = getTableInsertControl();
-    if (!state || state.control.phase !== 'armed') return;
-
-    // Η οντότητα διαβάζεται **τη στιγμή του συμβάντος** από τη σκηνή, ποτέ από στιγμιότυπο: η
-    // σκηνή ανανεώνεται ασύγχρονα (autosave) και μια κρατημένη αναφορά γίνεται μπαγιάτικη χωρίς
-    // ορατό σημάδι — δες την κεφαλίδα του `table-entity-lookup`.
-    const live = resolveTableById(levelManager, state.entityId);
-    if (!live) return;
-
-    // 🔴 §40.8 — **Η ΚΑΤΑΝΑΛΩΣΗ ΠΡΟΗΓΕΙΤΑΙ ΤΟΥ ΑΠΟΤΕΛΕΣΜΑΤΟΣ** (2026-08-04, ήταν από κάτω).
-    //
-    // Το κλικ ανήκει στο ⊕ επειδή το ⊕ είναι **οπλισμένο**, όχι επειδή η εισαγωγή πέτυχε. Ένα
-    // απενεργοποιημένο κουμπί εξακολουθεί να καταπίνει το πάτημά του — δεν το παραδίδει σε ό,τι
-    // βρίσκεται από πίσω. Με την παλιά σειρά, στο **όριο πλήθους** (`canInsert*` → «όχι») το
-    // `mousedown` συνέχιζε τη διαδρομή του και ο καμβάς έπαιρνε τη μεταφορά εστίασης: δηλαδή
-    // `blur` στο `<textarea>` της συνεδρίας ⇒ **η λειτουργία πίνακα έκλεινε** επειδή ο χρήστης
-    // πάτησε ένα κουμπί που δεν είχε τίποτα να κάνει. Δες την κεφαλίδα για το γιατί η φάση
-    // `nearby` εξακολουθεί να μη διεκδικεί απολύτως τίποτα.
-    event.preventDefault();
-    event.stopPropagation();
-    // 🔴 §40.8 — **δίχτυ, όχι πρωτεύων δρόμος** (N.7.2 #4). Ο πρωτεύων είναι το `preventDefault`
-    // από πάνω: χωρίς μεταφορά εστίασης δεν γεννιέται `blur`, άρα δεν υπάρχει τίποτα να
-    // σκοτώσει τη συνεδρία. Η δήλωση καλύπτει τον **δεύτερο** δρόμο προς το ίδιο `focusout` —
-    // το ξαναστήσιμο του πεδίου όταν η εισαγωγή αλλάξει τη διάταξη κάτω από τον δρομέα
-    // (`focusout` (Α) του §26.15, που δεν είναι προεπιλεγμένη ενέργεια και δεν αναιρείται).
-    // Ο ΙΔΙΟΣ ένας ορισμός του «δεν έφυγα» με τον pointer, καμία δεύτερη έννοια.
-    claimTableCellSessionPointerDown();
-
-    const nextModel = applyInsert(live.model, state.control.target);
-    // Το φράγμα πλήθους (`canInsert*`) απάντησε «όχι» ⇒ καμία εντολή, κανένα ιστορικό. Η
-    // ταυτότητα κατά αναφορά είναι η ΙΔΙΑ σύμβαση no-op που χρησιμοποιεί ήδη το μενού ζωνών.
-    if (nextModel === live.model) return;
-
-    commitModel(live, nextModel);
+  useTableArmedControlClick<TableInsertControlState>({
+    active,
+    containerRef,
+    levelManager,
+    // Η φάση ελέγχεται **εδώ**: είναι γνώση του ⊕, όχι του ακροατή. Στη φάση `nearby` το
+    // συμβάν περνά ανέγγιχτο — δες την κεφαλίδα.
+    resolveArmed: () => {
+      const state = getTableInsertControl();
+      return state && state.control.phase === 'armed' ? state : null;
+    },
+    run: (live, state) => {
+      const nextModel = applyInsert(live.model, state.control.target);
+      // Το φράγμα πλήθους (`canInsert*`) απάντησε «όχι» ⇒ καμία εντολή, κανένα ιστορικό. Η
+      // ταυτότητα κατά αναφορά είναι η ΙΔΙΑ σύμβαση no-op που χρησιμοποιεί ήδη το μενού ζωνών.
+      if (nextModel === live.model) return;
+      commitModel(live, nextModel);
+    },
   });
-
-  // Σύλληψη: πρέπει να προλάβει τον χειριστή επιλογής/σύρσης του καμβά, που ζει στο ίδιο
-  // container. Ίδια επιλογή φάσης με το `use-table-cell-pointer` — και πλέον ο **ίδιος** ένας
-  // τρόπος προσάρτησης (§40.8, N.18): η σειρά εγγραφής ακροατών δεν είναι συμβόλαιο, η φάση
-  // είναι, και δύο αντίγραφα της φάσης είναι δύο ευκαιρίες να αποκλίνει.
-  useTableContainerMouseDown({ active, containerRef, onMouseDown: handleMouseDown });
 }
 
 /**
