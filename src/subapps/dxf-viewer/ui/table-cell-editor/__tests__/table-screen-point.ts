@@ -54,6 +54,9 @@ import {
   tableColumnBoundaryView,
   tableRowBoundaryView,
 } from '../../../bim/table/table-axis-boundary';
+// 🔴 ADR-754 §14 — το ΙΔΙΟ τετράγωνο που ζωγραφίζεται και που ρωτούν ο δείκτης και το πάτημα.
+import { tableFillHandleRectMm } from '../../../bim/table/table-fill-handle';
+import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableEntity } from '../../../types/table-entity';
 import type { Point2D, ViewTransform, Viewport } from '../../../rendering/types/Types';
@@ -206,6 +209,34 @@ export function tableInsertControlScreenPoint(
  * εδώ — αλλά για λόγο **τύπου** (η γωνία δεν είναι υποδιαίρεση άξονα), όχι επειδή λείπει η
  * εντολή· την απαντά το `isTableSelectAllCornerAtFrame`. Ισχύει **σε στραμμένο** πίνακα εξίσου.
  */
+/**
+ * 🔴 ADR-754 §14 — το σημείο οθόνης **πάνω στη λαβή συμπλήρωσης** μιας περιοχής: η κάτω-δεξιά
+ * κορυφή της, όπου κάθεται κεντραρισμένο το τετραγωνάκι.
+ *
+ * ## Γιατί ρωτά το `tableFillHandleRectMm` και δεν υπολογίζει «κάτω-δεξιά γωνία»
+ * Ίδιο επιχείρημα με το {@link tableBandScreenPoint}, όπου η ίδια συντόμευση **έσπασε 18 tests
+ * σε αρχείο που δεν είχε αλλάξει** μόλις η ζώνη απέκτησε κενό. Η λαβή είναι **κεντραρισμένη**
+ * στην κορυφή (μισή μέσα, μισή έξω) και η ζώνη σύλληψής της είναι **ασύμμετρη** (§13.8: μηδέν
+ * προς τα μέσα, 4 px προς τα έξω). Ένα `rect.x + rect.w` εδώ θα ήταν δεύτερη απάντηση στο «πού
+ * κάθεται η λαβή» — και θα σημάδευε στο **χείλος** της ζώνης, όπου η στρογγυλοποίηση αποφασίζει
+ * αντί για τη λογική.
+ *
+ * Το **κέντρο** του ζωγραφισμένου τετραγώνου είναι το μόνο σημείο που είναι εγγυημένα μέσα και
+ * στις δύο διατυπώσεις, όσο κι αν αλλάξει η οπή.
+ */
+export function tableFillHandleScreenPoint(
+  entity: TableEntity,
+  bounds: TableCellRangeBounds,
+  view: TableTestView = TABLE_TEST_VIEW,
+): Point2D {
+  const geometry = computeTableEntityGeometryLive(entity);
+  const pxPerMm = tablePxPerMm(geometry.mmToWorld, view.transform.scale);
+  const rect = tableFillHandleRectMm(geometry.layout, bounds, pxPerMm);
+  if (!rect) throw new Error('Η περιοχή δεν τέμνει τη διάταξη — δεν υπάρχει λαβή να σημαδευτεί');
+  const { u, v } = rectCenterMm(rect);
+  return tableFrameScreenPoint(entity, u, v, view);
+}
+
 export function tableIndicatorCornerScreenPoint(
   entity: TableEntity,
   view: TableTestView = TABLE_TEST_VIEW,

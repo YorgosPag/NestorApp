@@ -89,11 +89,20 @@ export function tryTableFillHandleMouseDown(event: MouseEvent, press: TableFillH
   if (!source) return false;
   if (!isOnHandle(press, source)) return false;
 
-  claimTableCellSessionPointerDown();
-  claimTableCellPointerGesture();
-
   const anchor = cellAt(model, source.lastRow, source.lastCol);
   if (!anchor) return false;
+
+  // 🔴 ADR-754 §14.9.3 — **ΟΙ ΔΗΛΩΣΕΙΣ ΜΕΤΑ ΤΗΝ ΤΕΛΕΥΤΑΙΑ ΑΡΝΗΣΗ, ΠΟΤΕ ΠΡΙΝ.**
+  //
+  // Ζούσαν πάνω από τον έλεγχο της άγκυρας, δηλαδή ένα `return false` από κάτω άφηνε πίσω του
+  // **διεκδικημένη χειρονομία για πάτημα που δεν καταναλώθηκε**. Στην κοινή περίπτωση κρυβόταν
+  // (ο κλάδος «κελί» ξαναδηλώνει από κάτω), αλλά με **μπαγιάτικα** όρια μετά από undo —ακριβώς
+  // η περίπτωση που γεννά `anchor === null`— το `pointerHit` μπορεί να είναι `null` και ο
+  // χειριστής να γυρίσει χωρίς καμία δήλωση: τότε η δήλωση επιζεί ως σκέτο κλείδωμα του
+  // body-drag (ADR-560) για χειρονομία που κανείς δεν ανέλαβε. Ο κανόνας του §26.15 μιλά για
+  // πάτημα που **αναγνωρίστηκε**· η αναγνώριση ολοκληρώνεται εδώ, όχι τρεις γραμμές πιο πάνω.
+  claimTableCellSessionPointerDown();
+  claimTableCellPointerGesture();
 
   let target = resolveTableFillTarget(source, { row: source.lastRow, col: source.lastCol });
   startTableCellDrag({
@@ -145,11 +154,26 @@ function fillSourceBounds(model: TableModel, cursor: TableCellCursorState): Tabl
  * Έπεσε το πάτημα πάνω στη λαβή; Η γεωμετρία περνά από τον **έναν** δρόμο — τον ίδιο
  * `tableFillHandleHitAtFrame` που απαντά και στον **δείκτη** (§14). Ο χρήστης πιάνει ό,τι του
  * υπόσχεται ο λεπτός σταυρός, στο ίδιο ακριβώς pixel.
+ *
+ * ## 🔴 ADR-754 §14.9.2 — ΕΔΩ Ο ΔΕΙΚΤΗΣ ΕΨΕΥΔΕΤΑΙ, ΚΑΙ Η ΑΙΤΙΑ ΗΤΑΝ **ΤΑ ΟΡΙΣΜΑΤΑ**
+ * Έγραφε `tableWorldToFrame(press.entity, press.worldPoint.x, press.worldPoint.y, mmToWorld)` —
+ * **τέσσερα** ορίσματα σε συνάρτηση **τριών**. Δηλαδή το `world` έπαιρνε **αριθμό** (`x`), το
+ * `mmToWorld` έπαιρνε το **`y` του κόσμου**, και το τέταρτο αγνοούνταν. Το `world.x` ήταν
+ * `undefined` ⇒ `{ u: NaN, v: NaN }` ⇒ **κάθε** σύγκριση του `isOnTableFillHandle` ψευδής ⇒
+ * η συνάρτηση επέστρεφε `false` **πάντα**: η συμπλήρωση δεν εκτελέστηκε ποτέ, ενώ ο δείκτης
+ * —που περνά από το `indicatorProbeBasis`, με τη **σωστή** κλήση— υποσχόταν `fill-handle`. Η
+ * πρώτη παραβίαση του «*ο δείκτης δεν ψεύδεται*» (ADR-739 §31) στο έργο.
+ *
+ * 🔑 Το λάθος ήταν **αόρατο σε κάθε πύλη**: το `src/subapps/dxf-viewer/**` είναι εκτός του root
+ * `tsconfig.json` (ADR-663), άρα ούτε το `npm run typecheck` ούτε το pre-commit hook είδαν ποτέ
+ * το «Expected 3 arguments, but got 4» — και ο φρουρός **δεν είχε κανένα test**. Η μία γραμμή
+ * που το κλείνει είναι η σωστή κλήση· το δίχτυ που το κρατά κλειστό ζει στο
+ * `__tests__/table-fill-handle-drag.test.tsx`, που εκτελεί τη **ζωντανή** χειρονομία.
  */
 function isOnHandle(press: TableFillHandlePress, source: TableCellRangeBounds): boolean {
   const geometry = computeTableEntityGeometryLive(press.entity);
   const pxPerMm = tablePxPerMm(tableMmToWorldLive(), press.transform.scale);
-  const frame = tableWorldToFrame(press.entity, press.worldPoint.x, press.worldPoint.y, geometry.mmToWorld);
+  const frame = tableWorldToFrame(press.entity, press.worldPoint, geometry.mmToWorld);
   return tableFillHandleHitAtFrame(geometry.layout, frame, pxPerMm, source) !== null;
 }
 

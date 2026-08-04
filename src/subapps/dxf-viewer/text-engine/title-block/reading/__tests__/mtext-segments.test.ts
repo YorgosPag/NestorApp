@@ -200,3 +200,61 @@ describe('Λ1 — πραγματική πινακίδα G753', () => {
     });
   });
 });
+
+/**
+ * ADR-745 Φ3β — το `\H` έρχεται σε ΔΥΟ μορφές και μόνο η μία είναι λόγος.
+ *
+ * Το G753 έχει **μόνο** σχετικά `\H…x;`, οπότε καμία δοκιμή πάνω του δεν μπορεί να δει τη
+ * διαφορά — γι' αυτό αυτά τα σενάρια είναι **κατασκευασμένα** και όχι από το fixture. Δεν είναι
+ * υποθετικά: κάθε MTEXT που ξαναγράφεται από τον `serializeDxfTextNode` (δηλαδή **όλη** η
+ * ζωντανή διαδρομή του καμβά) φέρει απόλυτα `\H`.
+ */
+describe('Λ1 — απόλυτο \\H: ο λόγος μετριέται ως προς τον κωδ. 40', () => {
+  /** Όνομα σε πλήρες ύψος, ειδικότητα στο μισό — δηλωμένα ΑΠΟΛΥΤΑ, όπως τα γράφει ο serializer. */
+  const absolute = (h: number) => `\\H${h};ΟΝΟΜΑ\\P\\H${h / 2};ΕΙΔΙΚΟΤΗΤΑ`;
+
+  it.each([0.1, 0.6, 1, 2.5, 100])(
+    'με κωδ. 40 = %p δίνει λόγους 1 και 0,5 — όχι μονάδες σχεδίου',
+    (entityHeight) => {
+      const segs = mtextToSegments(absolute(entityHeight), entityHeight);
+      expect(segs.map(s => s.text)).toEqual(['ΟΝΟΜΑ', 'ΕΙΔΙΚΟΤΗΤΑ']);
+      expect(segs[0].heightFactor).toBeCloseTo(1, 6);
+      expect(segs[1].heightFactor).toBeCloseTo(0.5, 6);
+    },
+  );
+
+  it('🔴 χωρίς το ύψος της οντότητας, η ΚΑΤΑΤΑΞΗ αντιστρέφεται', () => {
+    // Ο ίδιος ακριβώς σωρός, διαβασμένος με την προεπιλογή (= «δεν μου είπες ύψος»).
+    const naive = mtextToSegments(absolute(2.5));
+    // Η ειδικότητα (1,25) βγαίνει ΨΗΛΟΤΕΡΗ από το όνομα (…που έμεινε 2,5): με κατάταξη
+    // επιπέδων, το όνομα θα γινόταν «γραμμή γραφείου» και το πρόσωπο θα χανόταν.
+    expect(naive[0].heightFactor).toBe(2.5);
+    expect(naive[1].heightFactor).toBe(1.25);
+    // …ενώ με τη σωστή μονάδα η σειρά είναι η αναμενόμενη.
+    const correct = mtextToSegments(absolute(2.5), 2.5);
+    expect(correct[0].heightFactor).toBeGreaterThan(correct[1].heightFactor);
+  });
+
+  it('τα σχετικά \\H…x; μένουν ΑΝΕΠΗΡΕΑΣΤΑ από το ύψος — είναι ήδη λόγοι', () => {
+    const raw = 'ΟΝΟΜΑ\\P\\H0.5334x;ΕΙΔΙΚΟΤΗΤΑ\\P\\H1.875x;ΟΝΟΜΑ2';
+    const at1 = mtextToSegments(raw, 1).map(s => s.heightFactor);
+    const at100 = mtextToSegments(raw, 100).map(s => s.heightFactor);
+    expect(at100).toEqual(at1);
+    expect(at1[0]).toBeCloseTo(1, 6);
+    expect(at1[2]).toBeCloseTo(1, 3); // 0,5334 × 1,875 ≈ 1,0 — η επιστροφή στο ύψος ονόματος
+  });
+
+  it('ύψος μηδέν / NaN υποβαθμίζεται σε 1 αντί να μολύνει κάθε συντελεστή με NaN', () => {
+    for (const bad of [0, -3, NaN, Infinity]) {
+      const segs = mtextToSegments('\\H2;Α', bad);
+      expect(segs[0].heightFactor).toBe(2);
+      expect(Number.isFinite(segs[0].heightFactor)).toBe(true);
+    }
+  });
+
+  it('η προεπιλογή αφήνει κάθε υπάρχοντα καλούντα αμετάβλητο', () => {
+    G753_TITLEBLOCK_ROWS.forEach(r => {
+      expect(mtextToSegments(r.raw)).toEqual(mtextToSegments(r.raw, 1));
+    });
+  });
+});

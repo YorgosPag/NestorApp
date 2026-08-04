@@ -25,13 +25,13 @@ import React from 'react';
 import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
 
 /** Πόσο παχιά ζωγραφίζεται μια πένα του ενός χιλιοστού, σε μονάδες `viewBox`. */
-export const TABLE_LINE_PREVIEW_PX_PER_MM = 3;
+const PREVIEW_PX_PER_MM = 3;
 /** Κάτω από αυτό η λεπτότερη πένα θα εξαφανιζόταν — hairline αντί για τίποτα. */
-export const TABLE_LINE_PREVIEW_MIN_WIDTH = 0.75;
+const PREVIEW_MIN_WIDTH = 0.75;
 
 /** Το πάχος απόδοσης μιας πένας, με το δάπεδο ορατότητας — η **μία** μετατροπή mm → viewBox. */
 export function tableLinePreviewStrokeWidth(widthMm: number): number {
-  return Math.max(widthMm * TABLE_LINE_PREVIEW_PX_PER_MM, TABLE_LINE_PREVIEW_MIN_WIDTH);
+  return Math.max(widthMm * PREVIEW_PX_PER_MM, PREVIEW_MIN_WIDTH);
 }
 
 export interface TableLinePreviewProps {

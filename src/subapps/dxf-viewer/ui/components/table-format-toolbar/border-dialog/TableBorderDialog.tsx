@@ -74,7 +74,7 @@ import styles from './TableBorderDialog.module.css';
  * επειδή είναι η βολική προεπιλογή. Ονομασμένη σταθερά ακριβώς για να αλλάζει με **μία**
  * γραμμή αν ο ιδιοκτήτης αποφασίσει αλλιώς αφού το δει στην οθόνη.
  */
-export const INITIAL_TABLE_BORDER_STYLE_ID: TableBorderStyleId = 'none';
+const INITIAL_TABLE_BORDER_STYLE_ID: TableBorderStyleId = 'none';
 
 /** Ό,τι χρειάζεται ο διάλογος για να δουλέψει — **παγωμένο στο άνοιγμα**, από τον καλούντα. */
 export interface TableBorderDialogTarget {
