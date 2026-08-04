@@ -62,6 +62,7 @@ export function resolveLandownerProposal(
     titleBlockIndex: context.titleBlockIndex,
     sourceHandle: field.sourceHandle,
     labelHandle: field.labelHandle,
+    at: field.at,
     snapshotValue: field.rawValue,
     personName: field.rawValue,
   } as const;

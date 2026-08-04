@@ -33,6 +33,7 @@ function unsupported(field: TitleBlockField, titleBlockIndex: number): BindingPr
     titleBlockIndex,
     sourceHandle: field.sourceHandle,
     labelHandle: field.labelHandle,
+    at: field.at,
     snapshotValue: field.rawValue,
     candidates: [],
     blockedBy: 'unsupported-field',

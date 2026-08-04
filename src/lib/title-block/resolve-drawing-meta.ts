@@ -46,20 +46,28 @@ export function resolveDrawingMetaProposal(
     titleBlockIndex: context.titleBlockIndex,
     sourceHandle: field.sourceHandle,
     labelHandle: field.labelHandle,
+    at: field.at,
     snapshotValue: field.rawValue,
   } as const;
 
   const target = DRAWING_FIELD_BY_KEY[field.key];
   if (!target) return { ...base, candidates: [], blockedBy: 'unsupported-field' };
 
-  return {
-    ...base,
-    candidates: [
-      {
-        target: { kind: 'drawing-meta', levelId: context.levelId, field: target, value: field.rawValue },
-        label: field.rawValue,
-        evidence: [],
-      },
-    ],
-  };
+  // 🔴 Φ3β: ΑΝΑΓΝΩΡΙΣΜΕΝΟ ΑΛΛΑ ΜΗ ΕΓΓΡΑΨΙΜΟ — και **φαίνεται**, δεν κρύβεται (§8 κανόνας 3).
+  //
+  // Το `DxfLevelDocument` (`api/dxf-levels/dxf-levels.types.ts:3-15`) **δεν έχει** `scale`,
+  // `studyDate` ή `drawingType`, και το `UpdateDxfLevelSchema` κλείνει με **`.passthrough()`**
+  // (`dxf-levels.schemas.ts:138`) ⇒ ένα άγνωστο πεδίο θα γραφόταν **αβασάνιστο**, χωρίς σχήμα,
+  // χωρίς όριο μήκους, χωρίς κανέναν να το έχει δηλώσει. Αυτό είναι ακριβώς το είδος σιωπής που
+  // αυτό το ADR κυνηγά — άρα ο σωστός χειρισμός δεν είναι «γράψ' το όπως-όπως», αλλά **δήλωσε
+  // ότι δεν χωράει ακόμη**.
+  //
+  // ⚠️ Το `scale` **δεν** πάει στο `bimRenderSettings.drawingScale` παρότι «ταιριάζει»: εκείνο
+  // είναι η **δική μας** κλίμακα απόδοσης (οδηγεί πάχη γραμμών και μεγέθη συμβόλων), όχι η
+  // κλίμακα του **ξένου** τοπογραφικού. Θα ήταν ψέμα με σωστή μορφή, ένα επίπεδο πιο πάνω.
+  //
+  // Ο στόχος `drawing-meta` **παραμένει στον τύπο** και ο χάρτης παραπάνω μένει ζωντανός: η Φ4
+  // (Λ3 Projection) κατέχει το level και θα δώσει τα πεδία. Μέχρι τότε η πρόταση είναι ορατή,
+  // με τη δική της αιτία — ώστε η μέρα που θα αποκτήσει πεδίο να φαίνεται σε κάποιον.
+  return { ...base, candidates: [], blockedBy: 'not-yet-writable' };
 }

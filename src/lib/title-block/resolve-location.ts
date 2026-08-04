@@ -132,6 +132,7 @@ export function resolveLocationProposals(
       titleBlockIndex: context.titleBlockIndex,
       sourceHandle: field.sourceHandle,
       labelHandle: field.labelHandle,
+      at: field.at,
       snapshotValue: segment.value,
     } as const;
 

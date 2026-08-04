@@ -132,6 +132,7 @@ export function resolvePersonProposal(
     titleBlockIndex: context.titleBlockIndex,
     sourceHandle: field.sourceHandle,
     labelHandle: field.labelHandle,
+    at: field.at,
     snapshotValue: person.displayName,
     personName: person.displayName,
   } as const;

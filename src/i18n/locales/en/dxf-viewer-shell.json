@@ -6302,7 +6302,9 @@
       "no-project": "This drawing is not linked to a project — there is nowhere to write.",
       "unsupported-field": "Read successfully, but it maps to no database field.",
       "no-match": "No matching record was found in the database.",
-      "role-undecided": "The person was found, but the profession does not resolve to a single role."
+      "role-undecided": "The person was found, but the profession does not resolve to a single role.",
+      "not-yet-writable": "Read correctly, but drawing metadata has no landing field yet.",
+      "no-primary-address": "This project has no primary address — create one from the project page first."
     },
     "target": {
       "contact": "Project contact",
@@ -6310,7 +6312,29 @@
       "project-address": "Project address",
       "project-field": "Project detail",
       "drawing-meta": "Drawing detail"
-    }
+    },
+    "approve": "Approve",
+    "approveTitle": "Write this link to the database, stamped with your name and the moment.",
+    "dismiss": "Dismiss",
+    "dismissTitle": "Hide this proposal for now. Nothing is written and nothing is deleted.",
+    "approving": "Approving…",
+    "approved": "Approved",
+    "approveFailed": "Approval failed: {reason}",
+    "disabled": {
+      "noFileRecord": "This drawing has not been saved yet. Save it first — otherwise the link could never be found again.",
+      "noUser": "No signed-in user — every link must carry the name of whoever approved it.",
+      "needsPercent": "Enter an ownership percentage first."
+    },
+    "landowner": {
+      "percentLabel": "Ownership percentage",
+      "percentHint": "The title block states only a name, never a percentage. Declare it yourself.",
+      "statusNote": "Recorded as “prospective”: the title block proves ownership at survey time, not a signature.",
+      "previousStays": "The previous landowner “{name}” remains on the project page. If that is wrong, remove them there — removal has its own checks."
+    },
+    "changeContact": "Change contact",
+    "createContact": "New contact",
+    "chooseCandidate": "Choose a candidate",
+    "supersededNote": "Replaces an earlier approval of the same cell."
   },
   "externalReferencesPalette": {
     "title": "External References",

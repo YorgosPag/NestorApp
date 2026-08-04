@@ -113,16 +113,51 @@ export type BindingBlockReason =
   /** Αναζητήθηκε και δεν βρέθηκε τίποτα στη βάση. */
   | 'no-match'
   /** Βρέθηκε πρόσωπο αλλά η ειδικότητα δεν δίνει **έναν** ρόλο (0 ή >1 — §6.4). */
-  | 'role-undecided';
+  | 'role-undecided'
+  /**
+   * Διαβάστηκε σωστά, αλλά **δεν υπάρχει πεδίο υποδοχής** — ακόμη (Φ3β: `drawing-meta`).
+   *
+   * 🔴 Ξεχωριστό από το `unsupported-field` **επίτηδες**. Εκείνο λέει «κανείς δεν το ζητά»· αυτό
+   * λέει «το θέλουμε, δεν χωράει ακόμη». Το `DxfLevelDocument` δεν έχει `scale`/`studyDate`/
+   * `drawingType`, και το `UpdateDxfLevelSchema` είναι `.passthrough()` ⇒ εγγραφή χωρίς δηλωμένο
+   * πεδίο θα περνούσε **αβασάνιστη**. Συγχωνεύοντας τα δύο, η μέρα που θα αποκτήσει πεδίο δεν θα
+   * φαινόταν ποτέ σε κανέναν.
+   */
+  | 'not-yet-writable'
+  /**
+   * Το έργο δεν έχει κύρια διεύθυνση, άρα ο δήμος/η περιοχή δεν έχουν πού να προσγειωθούν.
+   *
+   * Η πινακίδα δίνει **μόνο** διοικητικά τμήματα· το `ProjectAddress` απαιτεί `street`/
+   * `postalCode`/`country`. ⇒ **Εμπλουτίζουμε υπάρχουσα διεύθυνση, δεν εφευρίσκουμε νέα.**
+   */
+  | 'no-primary-address';
 
 export interface BindingProposal {
   readonly fieldKey: TitleBlockFieldKey;
   /** Ποια πινακίδα του layer — ένα layer φέρει μετρημένα δύο (§2.3 Παγίδα Δ). */
   readonly titleBlockIndex: number;
-  /** Το κελί της **τιμής** (id οντότητας σκηνής). */
+  /**
+   * Το κελί της **τιμής** (id οντότητας σκηνής).
+   *
+   * 🔴 **ΔΕΝ μπαίνει στο ντετερμινιστικό κλειδί — δεν είναι μοναδικό** (μετρημένο 2026-08-05).
+   * Παρά το όνομά του δεν είναι DXF handle: `scene-title-block-cells.ts:96` δίνει `entity.id`, που
+   * παράγεται ως `` `${idPrefix}_${index}` `` (`dxf-text-converters.ts:221`) από **δύο ανεξάρτητους
+   * μετρητές** — top-level (`dxf-scene-builder.ts:272→314`) και block-flattened (`:265` `idSeq`
+   * → `dxf-block-expander.ts:203`) — που **καταλήγουν στην ίδια σκηνή** (`:310`). Πινακίδα μέσα σε
+   * BLOCK δίνει έτσι **δύο `mtext_7`** στο ίδιο layer. Χρήσιμο για το overlay της Φ4· **θανατηφόρο**
+   * ως ταυτότητα. Το κλειδί χρησιμοποιεί το {@link BindingProposal.at} — δες `lib/title-block-binding-id`.
+   */
   readonly sourceHandle: string;
   /** Το κελί της **ετικέτας** — το overlay της Φ4 πρέπει να καλύψει και τα δύο (§6.1). */
   readonly labelHandle: string;
+  /**
+   * Το **σημείο εισαγωγής** του κελιού της τιμής (WCS) — η **ταυτότητα** του κελιού.
+   *
+   * 🔑 Σταθερό ανά αρχείο (ίδιο DXF ⇒ ίδιες συντεταγμένες), μοναδικό ανά κελί (δύο MTEXT στο ίδιο
+   * σημείο είναι εκφυλισμένο σχέδιο), και **ανεξάρτητο** και από τους δύο μετρητές id και από το
+   * κατώφλι ομαδοποίησης. Γι' αυτό το κλειδί χτίζεται από **γεωμετρία**, όχι από μετρητή.
+   */
+  readonly at: { readonly x: number; readonly y: number };
   /** Τι έγραφε η πινακίδα τη στιγμή της ανάγνωσης. */
   readonly snapshotValue: string;
   /** Το πρόσωπο του κελιού μελετητών, όταν η πρόταση αφορά πρόσωπο. */
@@ -147,6 +182,15 @@ export interface TitleBlockBinding {
   readonly id: string;
   /** Απομόνωση μισθωτή — **υποχρεωτικό**, το διαβάζουν τα Firestore rules. */
   readonly companyId: string;
+  /**
+   * Το έργο, **αποκανονικοποιημένο** από το `target`.
+   *
+   * 🔑 Δεν είναι πλεονασμός: το `target` είναι **ένωση** και το Firestore **δεν ερωτά μέσα σε
+   * ένωση**. Χωρίς αυτό, ο φύλακας διαγραφής δεν μπορεί να βρει τα bindings ενός έργου και η
+   * προέλευση επιβιώνει του έργου της — **ορφανή απόδειξη είναι χειρότερη από καμία**. Ίδιο
+   * πρότυπο με το `Project.landownerContactIds`.
+   */
+  readonly projectId: string;
   readonly fileRecordId: string;
   readonly levelId: string;
   readonly layerName: string;
@@ -154,6 +198,14 @@ export interface TitleBlockBinding {
   readonly fieldKey: TitleBlockFieldKey;
   readonly sourceHandle: string;
   readonly labelHandle: string;
+  /**
+   * Ποια **θέση πρότασης μέσα στο κελί** — ο άξονας που το `fieldKey` δεν διακρίνει.
+   *
+   * 🔴 Ένα κελί δίνει **πολλές** προτάσεις: το `ΜΕΛΕΤΗΤΗΣ` δύο πρόσωπα, το `ΘΕΣΗ` τρεις ενότητες.
+   * Το supersede οριοθετείται **στο slot**, όχι στο κελί — αλλιώς η έγκριση του μελετητή #2
+   * **σκοτώνει** τον #1. Παράγεται ντετερμινιστικά από την πρόταση (`lib/title-block-binding-id`).
+   */
+  readonly slot: string;
   readonly target: BindingTarget;
   /** Τι έγραφε η πινακίδα τη στιγμή της σύνδεσης — για ανίχνευση απόκλισης. */
   readonly snapshotValue: string;
