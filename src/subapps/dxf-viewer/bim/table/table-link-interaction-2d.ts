@@ -54,6 +54,7 @@ export function updateTableLinkHover2D(
   hitEntityId: string | null,
   worldPoint: Point2D,
   entities: readonly Entity[] | undefined,
+  anchor: { readonly clientX: number; readonly clientY: number },
 ): void {
   const entity = hitEntityId ? entities?.find((en) => en.id === hitEntityId) : undefined;
   if (!entity || !isTableEntity(entity)) {
@@ -61,7 +62,9 @@ export function updateTableLinkHover2D(
     return;
   }
   const hit = resolveTableCellLinkAtWorld(entity, worldPoint);
-  setHoveredCellLink(hit ? { entityId: entity.id, hit } : null);
+  setHoveredCellLink(
+    hit ? { entityId: entity.id, hit, clientX: anchor.clientX, clientY: anchor.clientY } : null,
+  );
 }
 
 /**

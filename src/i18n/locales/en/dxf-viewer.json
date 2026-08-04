@@ -417,6 +417,13 @@
       "contextMenu": "Filter menu"
     }
   },
+  "tableCellLink": {
+    "email": "Send e-mail",
+    "url": "Open website",
+    "phone": "Call",
+    "hint": "Ctrl+click",
+    "ariaLabel": "{action}: {target}. Ctrl+click to open."
+  },
   "selectionCycling": {
     "label": "Select entity",
     "overlapBadge": "{count, plural, one {# entity here} other {# entities here}}",

@@ -417,6 +417,13 @@
       "contextMenu": "Μενού φίλτρου"
     }
   },
+  "tableCellLink": {
+    "email": "Αποστολή e-mail",
+    "url": "Άνοιγμα ιστοσελίδας",
+    "phone": "Κλήση",
+    "hint": "Ctrl+κλικ",
+    "ariaLabel": "{action}: {target}. Ctrl+κλικ για άνοιγμα."
+  },
   "selectionCycling": {
     "label": "Επιλογή οντότητας",
     "overlapBadge": "{count, plural, one {# οντότητα εδώ} other {# οντότητες εδώ}}",

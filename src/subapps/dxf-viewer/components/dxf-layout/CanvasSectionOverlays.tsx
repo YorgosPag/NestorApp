@@ -51,6 +51,7 @@ import {
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
 import { OverlapCountBadge } from '../../systems/selection/OverlapCountBadge';
+import { TableCellLinkTooltip } from '../../ui/table-cell-editor/TableCellLinkTooltip';
 
 type QuickHoverProps = React.ComponentProps<typeof QuickPropertiesHoverPopover>;
 type QuickMiniProps = React.ComponentProps<typeof QuickPropertiesMiniPanel>;
@@ -156,6 +157,10 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       <SelectionCyclingPopover {...p.selectionCycling} />
       {/* ADR-659 — overlap «⧉ N» badge (portal, micro-leaf, ADR-040) */}
       <OverlapCountBadge />
+      {/* 🔴 ADR-751 Φ7 — η ένδειξη που διδάσκει το Ctrl+κλικ πάνω σε διεύθυνση κελιού. Δίπλα
+          στον αδελφό της (ίδιο portal, ίδιο micro-leaf συμβόλαιο): χωρίς προπ, όλη η
+          κατάσταση έρχεται από το χαμηλόσυχνο store της. */}
+      <TableCellLinkTooltip />
     </>
   );
 };
