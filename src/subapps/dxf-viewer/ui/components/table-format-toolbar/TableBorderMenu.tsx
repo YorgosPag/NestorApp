@@ -29,8 +29,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-750-table-cell-borders.md §9.2 · §18 (Α19/Α21)
  */
 
-import React from 'react';
-import { Grid2x2, RotateCcw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Grid2x2, RotateCcw, SquarePen } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
@@ -47,10 +47,29 @@ import {
   TableBorderPencilPanel,
 } from './TableBorderPencilPanel';
 import { tableBorderMenuItems } from './table-border-menu-items';
+import {
+  TableBorderDialog,
+  type TableBorderDialogTarget,
+} from './border-dialog/TableBorderDialog';
+import { TABLE_BORDER_DIALOG_KEY } from './border-dialog/table-border-dialog-labels';
+import type { PersistedTableModel } from '../../../types/table';
 import { useToolbarPanel } from './use-toolbar-panel';
 import { useRovingToolbar, type RovingItemProps } from './use-roving-toolbar';
 import panel from './TableBorderMenu.module.css';
 import toolbar from './TableFormatToolbar.module.css';
+
+/**
+ * ADR-750 Φ6 — ό,τι χρειάζεται το «Περισσότερα περιγράμματα…» για να ανοίξει και να δεσμεύσει.
+ *
+ * 🔑 **Getter, όχι στιγμιότυπο** (ADR-040 κανόνας #2): το μοντέλο, τα όρια και το στυλ
+ * διαβάζονται τη στιγμή που ο χρήστης πατά — ένα μενού που έμεινε ανοιχτό όσο έτρεχε ένα
+ * `Ctrl+Z` θα άνοιγε αλλιώς διάλογο πάνω σε πίνακα που δεν υπάρχει πια. `null` ⇒ δεν ανοίγει.
+ */
+export interface TableBorderDialogLaunch {
+  readonly resolveTarget: () => TableBorderDialogTarget | null;
+  /** **Ένα** commit, **ένα** `Ctrl+Z` — η ίδια διαδρομή με κάθε άλλη αλλαγή πίνακα. */
+  readonly onCommit: (model: PersistedTableModel) => void;
+}
 
 export interface TableBorderMenuProps {
   /** Τα props roving του **trigger**, ως μέλους της γραμμής εργαλείων που το φιλοξενεί. */
@@ -65,11 +84,20 @@ export interface TableBorderMenuProps {
   readonly canClearDiagonals: boolean;
   /** ADR-750 Φ5 (Α23) — το μολύβι που θα εφαρμοστεί, για τη ζώνη σχεδίασης. */
   readonly resolvePencil: () => TableBorderSpec | null;
+  /**
+   * ADR-750 Φ6 — «Περισσότερα περιγράμματα…». **Απόν ⇒ το στοιχείο δεν εμφανίζεται καθόλου**.
+   *
+   * Προαιρετικό για τον ίδιο λόγο με το ίδιο το `borders` ένα επίπεδο πιο πάνω: μια υποδοχή
+   * που δεν μπορεί να δώσει ζωντανό μοντέλο δεν επιτρέπεται να δείχνει στοιχείο που ανοίγει
+   * διάλογο με κενό προσχέδιο (Α19: κάθε ένδειξη ονομάζει κάτι υπαρκτό).
+   */
+  readonly moreBorders?: TableBorderDialogLaunch;
 }
 
 export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement {
   const {
     roving, onApply, onReset, canReset, onApplyDiagonal, canClearDiagonals, resolvePencil,
+    moreBorders,
   } = props;
   const { t } = useTranslation('dxf-viewer');
   // ADR-755 — ο κύκλος ζωής του πάνελ (κατάσταση, `aria-controls`, «εκτέλεσε → κλείσε → γύρνα
@@ -87,7 +115,17 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
   const resetIndex = items.length;
   const diagonalBase = resetIndex + 1;
   const pencilBase = diagonalBase + TABLE_DIAGONAL_COMMANDS.length;
-  const roving2 = useRovingToolbar(pencilBase + TABLE_PENCIL_ROW_COUNT, 'vertical');
+  const moreBordersIndex = pencilBase + TABLE_PENCIL_ROW_COUNT;
+  const roving2 = useRovingToolbar(moreBordersIndex + (moreBorders ? 1 : 0), 'vertical');
+
+  /**
+   * Ο στόχος του **ανοιχτού** διαλόγου· `null` ⇒ δεν υπάρχει καν στο δέντρο.
+   *
+   * Ζει εδώ και όχι μέσα στον διάλογο ώστε το πάνελ να μπορεί να **κλείσει** πάνω στο πάτημα
+   * (όπως κάθε άλλη εντολή του): ο διάλογος αποδίδεται **έξω** από το `isOpen`, αλλιώς θα
+   * ξεμοντάριζε στο ίδιο καρέ που ανοίγει.
+   */
+  const [dialogTarget, setDialogTarget] = useState<TableBorderDialogTarget | null>(null);
 
   return (
     <span className={panel.anchor}>
@@ -169,7 +207,38 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
             rovingOf={(index) => roving2.itemProps(pencilBase + index)}
             resolvePencil={resolvePencil}
           />
+
+          {/*
+            ADR-750 Φ6 — **δική του ομάδα, στο τέλος**: η μετρημένη θέση του Excel (το
+            «Περισσότερα περιγράμματα…» ζει μετά από διαχωριστικό, κάτω από όλες τις εντολές).
+            Δεν είναι εντολή περιγράμματος — είναι η πόρτα προς **όλες** τους μαζί.
+          */}
+          {moreBorders ? (
+            <>
+              <span className={panel.separator} role="separator" />
+              <MenuItem
+                roving={roving2.itemProps(moreBordersIndex)}
+                label={t(`${TABLE_BORDER_DIALOG_KEY}.menuItem`)}
+                icon={<SquarePen size={15} aria-hidden="true" />}
+                onActivate={() => runAndClose(() => setDialogTarget(moreBorders.resolveTarget()))}
+              />
+            </>
+          ) : null}
         </div>
+      ) : null}
+
+      {/*
+        🔴 ΕΞΩ από το `isOpen`: το στοιχείο κλείνει το πάνελ πριν ανοίξει τον διάλογο (ίδια
+        σύμβαση με κάθε άλλη εντολή), άρα ένας διάλογος **μέσα** στο πάνελ θα ξεμοντάριζε στο
+        ίδιο καρέ που γεννιέται. Μοντάρεται μόνο όταν υπάρχει στόχος, ώστε κάθε άνοιγμα να
+        ξεκινά από **φρέσκο** προσχέδιο — χωρίς effect επαναφοράς που μπορεί να ξεχαστεί.
+      */}
+      {moreBorders && dialogTarget ? (
+        <TableBorderDialog
+          {...dialogTarget}
+          onCommit={moreBorders.onCommit}
+          onClose={() => setDialogTarget(null)}
+        />
       ) : null}
     </span>
   );

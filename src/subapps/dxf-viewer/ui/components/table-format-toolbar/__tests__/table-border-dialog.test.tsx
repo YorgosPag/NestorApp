@@ -1,0 +1,389 @@
+/**
+ * ADR-750 Φ6 — **ο διάλογος «Περισσότερα περιγράμματα…»**: parity, a11y και σημασιολογία.
+ *
+ * Δοκιμάζεται από **το σημείο εισόδου του χρήστη** (η γραμμή εργαλείων → το dropdown → το
+ * στοιχείο), όχι με απομονωμένο render του διαλόγου: ο διάλογος ζει σκόπιμα **έξω** από το
+ * πάνελ (το στοιχείο κλείνει το πάνελ πριν τον ανοίξει), και ένα test που τον μοντάριζε μόνο
+ * του θα επαλήθευε τοπολογία που δεν τρέχει ποτέ.
+ *
+ * 🔑 Το πιο σημαντικό test του αρχείου είναι το «**Άκυρο ⇒ τίποτα**»: ολόκληρη η δικαιολογία
+ * του προσχεδίου-μοντέλου είναι ότι το ζωντανό μοντέλο **δεν** αγγίζεται πριν το ΟΚ.
+ */
+
+import React from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import i18next from 'i18next';
+import ICU from 'i18next-icu';
+import { initReactI18next, I18nextProvider } from 'react-i18next';
+import elDxfViewer from '@/i18n/locales/el/dxf-viewer.json';
+import { TableFormatToolbar } from '../TableFormatToolbar';
+import {
+  TABLE_BORDER_STYLES,
+  TABLE_BORDER_STYLE_GRID,
+} from '@/subapps/dxf-viewer/bim/table/table-border-style-catalog';
+import { setTableBorderDialogPositions } from '@/subapps/dxf-viewer/bim/table/table-border-dialog-draft';
+import { buildTableEdgeIndex } from '@/subapps/dxf-viewer/bim/table/table-edge-model';
+import { tableRangeSideEdges } from '@/subapps/dxf-viewer/bim/table/table-range-border-ops';
+import { resolveTableBorderPencil } from '@/subapps/dxf-viewer/bim/table/table-border-pencil';
+import { tableBorderPencilChoice } from '@/subapps/dxf-viewer/state/table-border-pencil-store';
+import {
+  BUILTIN_TABLE_STYLES,
+  BUILTIN_TABLE_STYLE_IDS,
+} from '@/subapps/dxf-viewer/bim/table/table-style-presets';
+import type { TableAxisFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
+import type { TableCellRangeBounds } from '@/subapps/dxf-viewer/bim/table/table-cell-range';
+import type { TableStyle } from '@/subapps/dxf-viewer/bim/table/table-style';
+import type { PersistedTableModel, TableColumn, TableRow } from '@/subapps/dxf-viewer/types/table';
+import type { TableBorderSpec } from '@/subapps/dxf-viewer/types/table-edges';
+
+jest.mock('@/i18n/lazy-config', () => ({
+  loadNamespace: jest.fn(() => Promise.resolve()),
+  CRITICAL_NAMESPACES: [],
+}));
+
+const i18nInstance = i18next.createInstance();
+
+beforeAll(async () => {
+  await i18nInstance.use(initReactI18next).use(ICU).init({
+    lng: 'el',
+    fallbackLng: 'el',
+    resources: {},
+    react: { useSuspense: false },
+    interpolation: { escapeValue: false },
+  });
+  i18nInstance.addResourceBundle('el', 'dxf-viewer', elDxfViewer, true, true);
+});
+
+function I18nWrapper({ children }: { children: React.ReactNode }): React.ReactElement {
+  return <I18nextProvider i18n={i18nInstance}>{children}</I18nextProvider>;
+}
+
+const wrapper = { wrapper: I18nWrapper };
+
+// ── Στήσιμο μοντέλου ────────────────────────────────────────────────────────
+
+const STANDARD: TableStyle = (() => {
+  const style = BUILTIN_TABLE_STYLES.find((s) => s.id === BUILTIN_TABLE_STYLE_IDS.STANDARD);
+  if (!style) throw new Error('missing preset: standard');
+  return style;
+})();
+
+function persisted(rowCount: number, colCount: number): PersistedTableModel {
+  const columns: TableColumn[] = Array.from({ length: colCount }, (_, c) => ({
+    id: `c${c + 1}`,
+    sizing: { kind: 'fixed', widthMm: 10 },
+    valueType: 'text',
+    align: 'left',
+  }));
+  const rows: TableRow[] = Array.from({ length: rowCount }, (_, r) => ({
+    id: `r${r + 1}`,
+    rowClass: 'data',
+    heightMm: 6,
+  }));
+  return { columns, rows, cells: [], merges: [] };
+}
+
+function bounds(
+  firstRow: number, lastRow: number, firstCol: number, lastCol: number,
+): TableCellRangeBounds {
+  return { firstRow, lastRow, firstCol, lastCol };
+}
+
+const SINGLE_CELL = bounds(0, 0, 0, 0);
+const PEN: TableBorderSpec = { visible: true, colorHex: '#ff00ff', widthMm: 0.25 };
+
+const NO_FORMAT: TableToggleFormatState = { active: false, mixed: false, explicit: false };
+const NO_COLOR = {
+  current: undefined, mixed: false, explicit: false,
+  inheritedColor: undefined, inheritedMixed: false, drawingColors: [],
+} as const;
+const FORMAT: TableAxisFormatSnapshot = {
+  bold: NO_FORMAT,
+  italic: NO_FORMAT,
+  underline: NO_FORMAT,
+  textColor: { ...NO_COLOR, current: '#111111', inheritedColor: '#111111' },
+  fillColor: NO_COLOR,
+  canReset: false,
+};
+
+interface Scenario {
+  readonly model?: PersistedTableModel;
+  readonly target?: TableCellRangeBounds;
+}
+
+function renderToolbar(scenario: Scenario = {}) {
+  const model = scenario.model ?? persisted(1, 1);
+  const target = scenario.target ?? SINGLE_CELL;
+  const onCommit = jest.fn();
+  const surfaceRef = React.createRef<HTMLDivElement>();
+  const noop = (): void => {};
+
+  render(
+    <TableFormatToolbar
+      anchorX={10}
+      anchorY={10}
+      scope="range"
+      label="A1"
+      surfaceRef={surfaceRef}
+      axisFormat={{
+        format: FORMAT,
+        onToggle: noop,
+        onStepSize: noop,
+        onReset: noop,
+        onSetTextColor: noop,
+        onSetFillColor: noop,
+      }}
+      borders={{
+        canReset: true,
+        onApply: noop,
+        onReset: noop,
+        onApplyDiagonal: noop,
+        canClearDiagonals: true,
+        resolvePencil: () => resolveTableBorderPencil(STANDARD, tableBorderPencilChoice()),
+        moreBorders: {
+          resolveTarget: () => ({ bounds: target, model, style: STANDARD }),
+          onCommit,
+        },
+      }}
+    />,
+    wrapper,
+  );
+  return { onCommit };
+}
+
+/** Ανοίγει τη γραμμή → το dropdown → τον διάλογο. Η διαδρομή του χρήστη, ολόκληρη. */
+function openDialog(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Περιγράμματα' }));
+  act(() => {
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Περισσότερα περιγράμματα…' }));
+  });
+}
+
+// ── Τα tests ────────────────────────────────────────────────────────────────
+
+describe('ADR-750 Φ6 — το σημείο εισόδου', () => {
+  it('το στοιχείο ζει στο ΤΕΛΟΣ του dropdown, σε δική του ομάδα', () => {
+    renderToolbar();
+    fireEvent.click(screen.getByRole('button', { name: 'Περιγράμματα' }));
+    const panel = screen.getByRole('menu', { name: 'Περιγράμματα κελιών' });
+    const items = Array.from(panel.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    expect(items[items.length - 1]).toHaveTextContent('Περισσότερα περιγράμματα…');
+  });
+
+  it('🔑 χωρίς `moreBorders` το στοιχείο ΔΕΝ υπάρχει — καμία πόρτα προς κενό προσχέδιο', () => {
+    const surfaceRef = React.createRef<HTMLDivElement>();
+    const noop = (): void => {};
+    render(
+      <TableFormatToolbar
+        anchorX={10} anchorY={10} scope="range" label="A1" surfaceRef={surfaceRef}
+        borders={{
+          canReset: true, onApply: noop, onReset: noop, onApplyDiagonal: noop,
+          canClearDiagonals: true,
+          resolvePencil: () => resolveTableBorderPencil(STANDARD, tableBorderPencilChoice()),
+        }}
+      />,
+      wrapper,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Περιγράμματα' }));
+    expect(screen.queryByRole('menuitem', { name: 'Περισσότερα περιγράμματα…' })).toBeNull();
+  });
+
+  it('το κλικ ανοίγει τον διάλογο ΚΑΙ κλείνει το dropdown', () => {
+    renderToolbar();
+    openDialog();
+    expect(screen.getByRole('dialog', { name: /Μορφοποίηση κελιών/ })).toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Περιγράμματα κελιών' })).toBeNull();
+  });
+});
+
+describe('ADR-750 Φ6 — οι έξι καρτέλες', () => {
+  it('🔴 πέντε ανενεργές αλλά ΑΝΑΚΟΙΝΩΣΙΜΕΣ, μόνο η «Περίγραμμα» επιλεγμένη', () => {
+    renderToolbar();
+    openDialog();
+
+    const border = screen.getByRole('tab', { name: 'Περίγραμμα' });
+    expect(border).toHaveAttribute('aria-selected', 'true');
+    expect(border).not.toHaveAttribute('aria-disabled');
+
+    for (const name of ['Αριθμός', 'Στοίχιση', 'Γραμματοσειρά', 'Γέμισμα', 'Προστασία']) {
+      const tab = screen.getByRole('tab', { name });
+      expect(tab).toHaveAttribute('aria-disabled', 'true');
+      // `aria-disabled`, ΠΟΤΕ `disabled`: αλλιώς ο αναγνώστης δεν μαθαίνει ποτέ ότι υπάρχει.
+      expect(tab).not.toHaveAttribute('disabled');
+      expect(tab).toHaveAttribute('aria-selected', 'false');
+    }
+  });
+
+  it('ο λόγος της απενεργοποίησης ταξιδεύει με `aria-describedby`', () => {
+    renderToolbar();
+    openDialog();
+    const hintId = screen.getByRole('tab', { name: 'Αριθμός' }).getAttribute('aria-describedby');
+    expect(hintId).toBeTruthy();
+    expect(document.getElementById(hintId ?? '')).toHaveTextContent('Διαθέσιμο σε επόμενη φάση');
+  });
+});
+
+describe('ADR-750 Φ6 — το listbox των 14 στυλ', () => {
+  it('🔑 και τα 14 αποδίδονται, με ΜΕΤΑΦΡΑΣΜΕΝΗ ετικέτα — καμία ωμή', () => {
+    renderToolbar();
+    openDialog();
+
+    const options = screen.getAllByRole('option');
+    expect(options).toHaveLength(TABLE_BORDER_STYLES.length);
+    for (const option of options) {
+      expect(option.textContent ?? '').not.toContain('lineStyles.');
+      expect((option.textContent ?? '').trim().length).toBeGreaterThan(0);
+    }
+    expect(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })).toBeInTheDocument();
+  });
+
+  it('η αρχική επιλογή είναι μία και μόνο μία', () => {
+    renderToolbar();
+    openDialog();
+    const selected = screen.getAllByRole('option').filter(
+      (option) => option.getAttribute('aria-selected') === 'true',
+    );
+    expect(selected).toHaveLength(1);
+  });
+
+  it('🔴 ΑΓΚΥΡΑ — το σχήμα 2×7 ζει στα δεδομένα· το CSS το αντιγράφει', () => {
+    // Το `.styleGrid` γράφει `repeat(7, …)`. Αν ο κατάλογος πάψει να είναι 2×7, αυτό το test
+    // σπάει **πριν** η οθόνη δείξει λάθος πλέγμα — δες την κεφαλίδα του module CSS.
+    expect(TABLE_BORDER_STYLE_GRID).toEqual({ columns: 2, rows: 7 });
+    expect(TABLE_BORDER_STYLES).toHaveLength(
+      TABLE_BORDER_STYLE_GRID.columns * TABLE_BORDER_STYLE_GRID.rows,
+    );
+  });
+});
+
+describe('ADR-750 Φ6 — ΕΝΑ κελί: ό,τι δεν έχει νόημα, γκριζάρει', () => {
+  it('🔴 τα μεσαία κουμπιά και το «Πλέγμα» είναι ανενεργά', () => {
+    renderToolbar();
+    openDialog();
+
+    for (const name of ['Οριζόντιο περίγραμμα στο μέσο', 'Κάθετο περίγραμμα στο μέσο']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-disabled', 'true');
+    }
+    expect(screen.getByRole('button', { name: 'Πλέγμα' })).toHaveAttribute('aria-disabled', 'true');
+
+    // Και ό,τι ΕΧΕΙ νόημα μένει ενεργό — αλλιώς το test θα ήταν πράσινο με τα πάντα γκρίζα.
+    expect(screen.getByRole('button', { name: 'Πάνω περίγραμμα' }))
+      .not.toHaveAttribute('aria-disabled');
+    expect(screen.getByRole('button', { name: 'Πλαίσιο' })).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('σε περιοχή 2×2 τα ίδια χειριστήρια ΕΙΝΑΙ ενεργά', () => {
+    renderToolbar({ model: persisted(2, 2), target: bounds(0, 1, 0, 1) });
+    openDialog();
+    expect(screen.getByRole('button', { name: 'Οριζόντιο περίγραμμα στο μέσο' }))
+      .not.toHaveAttribute('aria-disabled');
+    expect(screen.getByRole('button', { name: 'Πλέγμα' })).not.toHaveAttribute('aria-disabled');
+  });
+});
+
+describe('ADR-750 Φ6 — η ροή «πρώτα στυλ, μετά πού»', () => {
+  it('🔑 κλικ σε ακμή μετά από επιλογή στυλ: η θέση γίνεται πατημένη', () => {
+    renderToolbar();
+    openDialog();
+
+    const top = screen.getByRole('button', { name: 'Πάνω περίγραμμα' });
+    expect(top).toHaveAttribute('aria-pressed', 'false');
+
+    act(() => { fireEvent.click(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })); });
+    act(() => { fireEvent.click(top); });
+
+    expect(screen.getByRole('button', { name: 'Πάνω περίγραμμα' }))
+      .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('δεύτερο πάτημα του ίδιου = αναίρεση (εναλλαγή)', () => {
+    renderToolbar();
+    openDialog();
+    act(() => { fireEvent.click(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πάνω περίγραμμα' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πάνω περίγραμμα' })); });
+
+    expect(screen.getByRole('button', { name: 'Πάνω περίγραμμα' }))
+      .toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('🔴 «Καμία» + κλικ σε υπάρχουσα ακμή τη ΣΒΗΝΕΙ — η Α14 από τη μεριά του χρήστη', () => {
+    const model = setTableBorderDialogPositions(persisted(1, 1), SINGLE_CELL, ['top'], PEN);
+    renderToolbar({ model });
+    openDialog();
+
+    expect(screen.getByRole('button', { name: 'Πάνω περίγραμμα' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    // Η αρχική επιλογή είναι ήδη «Καμία» — δεν διαλέγουμε τίποτα, όπως και ο χρήστης.
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πάνω περίγραμμα' })); });
+    expect(screen.getByRole('button', { name: 'Πάνω περίγραμμα' }))
+      .toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('το υπόδειγμα «Πλαίσιο» ανάβει και τις τέσσερις περιμετρικές', () => {
+    renderToolbar();
+    openDialog();
+    act(() => { fireEvent.click(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πλαίσιο' })); });
+
+    for (const name of [
+      'Πάνω περίγραμμα', 'Κάτω περίγραμμα', 'Αριστερό περίγραμμα', 'Δεξί περίγραμμα',
+    ]) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
+    }
+  });
+});
+
+describe('ADR-750 Φ6 — η μεικτή κατάσταση', () => {
+  it('🔴 μερικές ακμές ⇒ `aria-pressed="mixed"` ΚΑΙ ονομασμένη ένδειξη', () => {
+    // 1×2: περίγραμμα πάνω **μόνο** στο πρώτο κελί, διάλογος για ολόκληρη τη γραμμή.
+    const model = setTableBorderDialogPositions(persisted(1, 2), bounds(0, 0, 0, 0), ['top'], PEN);
+    renderToolbar({ model, target: bounds(0, 0, 0, 1) });
+    openDialog();
+
+    const top = screen.getByRole('button', { name: /Πάνω περίγραμμα/ });
+    expect(top).toHaveAttribute('aria-pressed', 'mixed');
+    expect(top).toHaveTextContent('Μικτό περίγραμμα');
+  });
+});
+
+describe('ADR-750 Φ6 — ΟΚ / Άκυρο: το προσχέδιο δεν διαρρέει', () => {
+  it('🔴 Άκυρο ⇒ ΤΙΠΟΤΑ δεν φτάνει στο ζωντανό μοντέλο', () => {
+    const { onCommit } = renderToolbar();
+    openDialog();
+    act(() => { fireEvent.click(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πάνω περίγραμμα' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Άκυρο' })); });
+
+    expect(onCommit).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('🔑 ΟΚ ⇒ ΕΝΑ commit, με το μοντέλο που έχτισε ο χρήστης', () => {
+    const { onCommit } = renderToolbar();
+    openDialog();
+    act(() => { fireEvent.click(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πάνω περίγραμμα' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'OK' })); });
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+
+    // Και η ακμή είναι όντως εκεί — όχι απλώς «κλήθηκε κάτι».
+    const committed = onCommit.mock.calls[0][0] as PersistedTableModel;
+    const index = buildTableEdgeIndex(committed.edges);
+    const keys = tableRangeSideEdges(committed, SINGLE_CELL, 'top');
+    expect(keys.length).toBeGreaterThan(0);
+    for (const key of keys) expect(index.get(key)?.visible).toBe(true);
+  });
+
+  it('πολλά κλικ ⇒ ΕΝΑ και μόνο ένα commit (ένα `Ctrl+Z`)', () => {
+    const { onCommit } = renderToolbar();
+    openDialog();
+    act(() => { fireEvent.click(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })); });
+    for (const name of ['Πάνω περίγραμμα', 'Κάτω περίγραμμα', 'Αριστερό περίγραμμα']) {
+      act(() => { fireEvent.click(screen.getByRole('button', { name })); });
+    }
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'OK' })); });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
+});

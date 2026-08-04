@@ -387,6 +387,16 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
             if (b) borderActions.applyDiagonal(b, id);
           },
           resolvePencil: borderActions.resolvePencil,
+          // ADR-750 Φ6 — τα όρια ξαναρωτιούνται **εδώ μέσα**, όπως κάθε άλλος χειριστής αυτού
+          // του μπλοκ: αν το undo έσβησε τον άξονα, ο διάλογος δεν ανοίγει (αντί να ανοίξει
+          // πάνω σε μοντέλο που δεν υπάρχει).
+          moreBorders: {
+            resolveTarget: () => {
+              const b = axisBounds(hit);
+              return b ? borderActions.resolveDialogTarget(b) : null;
+            },
+            onCommit: borderActions.commitModel,
+          },
         };
       },
       /**

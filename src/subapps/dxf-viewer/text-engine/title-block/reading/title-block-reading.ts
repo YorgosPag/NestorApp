@@ -45,7 +45,9 @@ function readOneTitleBlock(
   const paired = pairTitleBlockCells(cells, profile);
   const designers = paired.valueCellOf.get('designers');
   const read = designers
-    ? extractPeople(mtextToSegments(designers.cell.raw), profile)
+    // Ο κωδ. 40 του **κελιού** είναι η μονάδα των απόλυτων `\H` (ADR-745 Φ3β): χωρίς αυτόν η
+    // τυπογραφική ιεραρχία μετριέται σε δύο μονάδες ταυτόχρονα και η κατάταξη αντιστρέφεται.
+    ? extractPeople(mtextToSegments(designers.cell.raw, designers.cell.height), profile)
     : { people: [], unparsed: [] };
 
   return {

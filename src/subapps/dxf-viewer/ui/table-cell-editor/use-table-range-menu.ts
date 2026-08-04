@@ -105,6 +105,12 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         onReset: () => borderActions.resetBorders(bounds),
         onApplyDiagonal: (id) => borderActions.applyDiagonal(bounds, id),
         resolvePencil: borderActions.resolvePencil,
+        // ADR-750 Φ6 — ο διάλογος ξαναρωτά τα **ίδια** όρια τη στιγμή του ανοίγματος: ένα undo
+        // ενόσω το μενού ήταν ανοιχτό σημαίνει «δεν ανοίγει», ποτέ διάλογος πάνω σε φάντασμα.
+        moreBorders: {
+          resolveTarget: () => borderActions.resolveDialogTarget(bounds),
+          onCommit: borderActions.commitModel,
+        },
       },
     }),
     [borderActions, mergeActions],

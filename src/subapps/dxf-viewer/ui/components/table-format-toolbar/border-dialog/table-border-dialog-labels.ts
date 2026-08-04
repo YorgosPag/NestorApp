@@ -23,6 +23,7 @@
  */
 
 import type { TableBorderDialogPositionId } from '../../../../bim/table/table-border-dialog-positions';
+import type { TableBorderDialogPresetId } from '../../../../bim/table/table-border-dialog-draft';
 
 /** Το κοινό πρόθεμα κάθε κλειδιού του διαλόγου — γραμμένο **μία** φορά. */
 export const TABLE_BORDER_DIALOG_KEY = 'table.borders.dialog';
@@ -45,6 +46,19 @@ export type TableBorderDialogTabId = (typeof TABLE_BORDER_DIALOG_TABS)[number];
 
 /** Η **μόνη** ενεργή καρτέλα της Φ6. */
 export const TABLE_BORDER_DIALOG_ACTIVE_TAB: TableBorderDialogTabId = 'border';
+
+/**
+ * Τα τρία υποδείγματα **στη σειρά του Excel** (Κανένα · Πλαίσιο · Πλέγμα).
+ *
+ * Η σειρά είναι παρουσίαση, άρα ζει εδώ και όχι στη μηχανή — εκείνη ρωτιέται ανά ταυτότητα και
+ * δεν έχει λόγο να ξέρει πώς παρατάσσονται. Ο τύπος όμως είναι **της μηχανής**: μια ταυτότητα
+ * που δεν υπάρχει δεν μεταγλωττίζεται.
+ */
+export const TABLE_BORDER_DIALOG_PRESETS: readonly TableBorderDialogPresetId[] = [
+  'none',
+  'outline',
+  'inside',
+];
 
 /**
  * Ταυτότητα θέσης → κλειδί ετικέτας. Εξαντλητικός επίτηδες (δες την κεφαλίδα).
