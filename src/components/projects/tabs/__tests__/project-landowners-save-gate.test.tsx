@@ -93,6 +93,15 @@ jest.mock('@/components/shared/owners/OwnersList', () => ({
   ),
 }));
 
+// Acquisition status UI (ADR-745 Φ3α) — stubbed like every other heavy child
+// above. It pulls in Radix Select, which pulls in the design-system module, which
+// needs a fuller COLOR_BRIDGE than this suite mocks. The invariants behind it are
+// proven directly in landowners/__tests__/landowner-form-model.test.ts.
+jest.mock('@/components/projects/tabs/landowners/LandownerAcquisitionControl', () => ({
+  LandownerAcquisitionSelect: () => null,
+  LandownerAcquisitionSummary: () => null,
+}));
+
 import { ProjectLandownersTab } from '@/components/projects/tabs/ProjectLandownersTab';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

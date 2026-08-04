@@ -12,7 +12,7 @@
  */
 
 import { COMMON_NAMESPACES } from '@/i18n/namespace-bundles';
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,7 +29,20 @@ import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import { cn } from '@/lib/utils';
 import { useTypography } from '@/hooks/useTypography';
 import { Landmark, Save } from 'lucide-react';
-import type { LandownerEntry, PropertyOwnerEntry } from '@/types/ownership-table';
+import {
+  LandownerAcquisitionSelect,
+  LandownerAcquisitionSummary,
+} from '@/components/projects/tabs/landowners/LandownerAcquisitionControl';
+import {
+  hasChanges,
+  landownersMateriallyChanged,
+  pruneStatuses,
+  rehydrateStatuses,
+  toLandownerEntries,
+  toPropertyOwners,
+  type AcquisitionStatusMap,
+} from '@/components/projects/tabs/landowners/landowner-form-model';
+import type { AcquisitionStatus, LandownerEntry, PropertyOwnerEntry } from '@/types/ownership-table';
 import type { UnlinkDependency } from '@/lib/firestore/landowner-unlink-guard.types';
 
 // ============================================================================
@@ -45,9 +58,6 @@ interface ProjectLandownersTabProps {
 // CONSTANTS
 // ============================================================================
 
-/** Max millesimal shares (1000‰) */
-const TOTAL_SHARES = 1000;
-
 /** State for the removal safety dialog */
 interface RemovalDialogState {
   open: boolean;
@@ -56,56 +66,8 @@ interface RemovalDialogState {
   contactName: string;
   blockingDeps: UnlinkDependency[];
   warningDeps: UnlinkDependency[];
-}
-
-// ============================================================================
-// BOUNDARY CONVERTERS (LandownerEntry ↔ PropertyOwnerEntry)
-// ============================================================================
-
-/**
- * LandownerEntry → PropertyOwnerEntry for OwnersList consumption.
- * Maps landOwnershipPct → ownershipPct, adds role + paymentPlanId.
- */
-function toPropertyOwners(entries: LandownerEntry[]): PropertyOwnerEntry[] {
-  return entries.map(e => ({
-    contactId: e.contactId,
-    name: e.name,
-    ownershipPct: e.landOwnershipPct,
-    role: 'landowner' as const,
-    paymentPlanId: null,
-  }));
-}
-
-/**
- * PropertyOwnerEntry → LandownerEntry for Firestore save.
- * Maps ownershipPct → landOwnershipPct, computes allocatedShares.
- */
-function toLandownerEntries(owners: PropertyOwnerEntry[]): LandownerEntry[] {
-  return owners.map(o => ({
-    contactId: o.contactId,
-    name: o.name,
-    landOwnershipPct: o.ownershipPct,
-    allocatedShares: Math.round((o.ownershipPct / 100) * TOTAL_SHARES),
-  }));
-}
-
-/**
- * Check if form has unsaved changes compared to persisted data.
- */
-function hasChanges(
-  currentOwners: PropertyOwnerEntry[],
-  persistedEntries: LandownerEntry[],
-  formBartex: number | null,
-  persistedBartex: number | null,
-): boolean {
-  if (formBartex !== persistedBartex) return true;
-  if (currentOwners.length !== persistedEntries.length) return true;
-  return currentOwners.some((o, i) => {
-    const pe = persistedEntries[i];
-    return o.contactId !== pe?.contactId
-      || o.name !== pe?.name
-      || o.ownershipPct !== pe?.landOwnershipPct;
-  });
+  /** Extra note when the landowner's acquisition is `secured` (ADR-745 Φ3α) */
+  extraNote?: string;
 }
 
 // ============================================================================
@@ -124,8 +86,25 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
 
   // ── State ──────────────────────────────────────────────────────────────
   const [owners, setOwners] = useState<PropertyOwnerEntry[]>([]);
+  const [statuses, setStatuses] = useState<AcquisitionStatusMap>({});
   const [bartexPct, setBartexPct] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+
+  /**
+   * Σ3 — the ONLY way owners change in this tab.
+   *
+   * Both `OwnersList`'s `onChange` and `handleConfirmRemoval` go through here, so
+   * the "status keys ⊆ current contactIds" invariant holds on every path. Pruning
+   * in just one of them works in a manual demo and leaks in the removal-dialog flow.
+   */
+  const updateOwners = useCallback((next: PropertyOwnerEntry[]) => {
+    setOwners(next);
+    setStatuses(prev => pruneStatuses(prev, next));
+  }, []);
+
+  const handleStatusChange = useCallback((contactId: string, next: AcquisitionStatus) => {
+    setStatuses(prev => ({ ...prev, [contactId]: next }));
+  }, []);
 
   // Save guard (ownership table snapshot staleness)
   const { ImpactDialog: SaveImpactDialog, runSaveOperation } = useGuardedLandownersSave(projectId ?? '');
@@ -164,6 +143,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     const loadedBartex = rawBartex ?? null;
 
     setOwners(toPropertyOwners(loadedEntries));
+    setStatuses(rehydrateStatuses(loadedEntries)); // Σ1 — see landowner-form-model
     setBartexPct(loadedBartex);
     setPersisted({ entries: loadedEntries, bartexPct: loadedBartex });
   }, [projectData]);
@@ -173,7 +153,13 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
   // zero landowners while still carrying a bartex percentage, so the gate must
   // accept an empty list (isOptionalOwnersValid, not isOwnersValid).
   const canSave = isOptionalOwnersValid(owners) && !saving;
-  const isDirty = hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct);
+  const isDirty = hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct, statuses);
+
+  /** Live view of the form (not the persisted snapshot) for the acquisition summary */
+  const draftEntries = useMemo(
+    () => toLandownerEntries(owners, statuses),
+    [owners, statuses],
+  );
 
   // SINGLE submit gate — the button's enabled state and handleSave's guard MUST
   // read the same value. Deriving them separately is what made the button
@@ -199,17 +185,27 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     if (!projectId) return true;
     const result = await checkBeforeRemove(projectId, owner.contactId);
 
+    // Removing someone whose acquisition is `secured` discards a signed deed
+    // record. The `warning` variant carries its own fixed note about the ownership
+    // table, so reusing it here would print the wrong sentence — hence a separate
+    // note that shows in any variant.
+    const contactName = owner.name || owner.contactId;
+    const extraNote = statuses[owner.contactId] === 'secured'
+      ? t('ownership.landownersTab.acquisition.removalNote', { name: contactName })
+      : undefined;
+
     setRemovalDialog({
       open: true,
       variant: result.variant,
       index,
-      contactName: owner.name || owner.contactId,
+      contactName,
       blockingDeps: result.blockingDeps,
       warningDeps: result.warningDeps,
+      extraNote,
     });
 
     return false; // Always false — dialog handles the actual removal
-  }, [projectId, persisted.entries, checkBeforeRemove]);
+  }, [projectId, persisted.entries, checkBeforeRemove, statuses, t]);
 
   /**
    * Confirm removal from dialog (confirm / warning variants only)
@@ -222,10 +218,10 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     if (updated.length === 1) {
       updated[0] = { ...updated[0], ownershipPct: 100, role: 'landowner' as const };
     }
-    setOwners(updated);
+    updateOwners(updated); // Σ3 — never bare setOwners; the status map must be pruned too
     setRemovalDialog(prev => ({ ...prev, open: false }));
     resetCheck();
-  }, [removalDialog, owners, setOwners, resetCheck]);
+  }, [removalDialog, owners, updateOwners, resetCheck]);
 
   // ── Handlers ───────────────────────────────────────────────────────────
 
@@ -247,7 +243,7 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     // Prevent stale projectData from overwriting local state after save
     skipNextLoad.current = true;
     try {
-      const landownerEntries = toLandownerEntries(owners);
+      const landownerEntries = toLandownerEntries(owners, statuses);
       // ADR-244: Denormalized IDs for Firestore array-contains queries (contact details page)
       const contactIds = owners.filter(o => o.contactId).map(o => o.contactId);
       const result = await updateProjectWithPolicy({
@@ -270,23 +266,22 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     } finally {
       setSaving(false);
     }
-  }, [projectId, owners, bartexPct, showSuccess, showError, t]);
+  }, [projectId, owners, statuses, bartexPct, showSuccess, showError, t]);
 
   const handleSave = useCallback(async () => {
     if (!projectId || !canSubmit) return;
 
-    const landownersChanged = hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct)
-      && owners.some((o, i) => {
-        const pe = persisted.entries[i];
-        return o.contactId !== pe?.contactId || o.ownershipPct !== pe?.landOwnershipPct;
-      });
+    // Σ4 — deliberately ASYMMETRIC with `isDirty`: see landownersMateriallyChanged.
+    const landownersChanged =
+      hasChanges(owners, persisted.entries, bartexPct, persisted.bartexPct, statuses)
+      && landownersMateriallyChanged(owners, persisted.entries);
     const bartexChanged = bartexPct !== persisted.bartexPct;
 
     await runSaveOperation(
       { landownersChanged, bartexChanged },
       executeSave,
     );
-  }, [projectId, canSubmit, owners, bartexPct, persisted, runSaveOperation, executeSave]);
+  }, [projectId, canSubmit, owners, statuses, bartexPct, persisted, runSaveOperation, executeSave]);
 
   // ── Loading guard ──────────────────────────────────────────────────────
   if (!projectData) {
@@ -318,11 +313,19 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
       {/* SSoT: OwnersList handles contact search + percentage + validation */}
       <OwnersList
         owners={owners}
-        onChange={setOwners}
+        onChange={updateOwners}
         defaultRole="landowner"
         disabled={saving}
         allowEmpty
         onBeforeRemove={handleBeforeRemove}
+        renderRowExtra={(owner) => owner.contactId ? (
+          <LandownerAcquisitionSelect
+            value={statuses[owner.contactId]}
+            onChange={(next) => handleStatusChange(owner.contactId, next)}
+            ownerName={owner.name || owner.contactId}
+            disabled={saving}
+          />
+        ) : null}
         labels={{
           singular: t('ownership.landownersTab.selectContact'),
           plural: t('ownership.bartex.landowners'),
@@ -346,11 +349,15 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
         contactName={removalDialog.contactName}
         blockingDeps={removalDialog.blockingDeps}
         warningDeps={removalDialog.warningDeps}
+        extraNote={removalDialog.extraNote}
         onConfirm={handleConfirmRemoval}
       />
 
-      {/* Save button */}
-      <footer className="flex justify-end">
+      {/* Save button + acquisition summary.
+          The summary reads the DRAFT entries, not the persisted snapshot, so the
+          "secured %" moves as the user edits — same as the 100% total above it. */}
+      <footer className="flex items-center justify-between gap-2">
+        <LandownerAcquisitionSummary entries={draftEntries} />
         <Button
           onClick={handleSave}
           disabled={!canSubmit}
