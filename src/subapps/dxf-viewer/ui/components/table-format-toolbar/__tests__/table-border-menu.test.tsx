@@ -111,15 +111,17 @@ function renderToolbar(borders?: {
     <TableFormatToolbar
       anchorX={10}
       anchorY={10}
-      axis="column"
+      scope="column"
       label="B"
-      format={FORMAT}
       surfaceRef={surfaceRef}
-      onToggle={noop}
-      onStepSize={noop}
-      onReset={noop}
-      onSetTextColor={noop}
-      onSetFillColor={noop}
+      axisFormat={{
+        format: FORMAT,
+        onToggle: noop,
+        onStepSize: noop,
+        onReset: noop,
+        onSetTextColor: noop,
+        onSetFillColor: noop,
+      }}
       borders={{
         canReset: borders?.canReset ?? true,
         onApply,
@@ -146,9 +148,11 @@ describe('ADR-750 Φ3 — το dropdown στο toolbar', () => {
     const noop = (): void => {};
     render(
       <TableFormatToolbar
-        anchorX={10} anchorY={10} axis="column" label="B" format={FORMAT}
-        surfaceRef={surfaceRef} onToggle={noop} onStepSize={noop} onReset={noop}
-        onSetTextColor={noop} onSetFillColor={noop}
+        anchorX={10} anchorY={10} scope="column" label="B" surfaceRef={surfaceRef}
+        axisFormat={{
+          format: FORMAT, onToggle: noop, onStepSize: noop, onReset: noop,
+          onSetTextColor: noop, onSetFillColor: noop,
+        }}
       />,
       wrapper,
     );
