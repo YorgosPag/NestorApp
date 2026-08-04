@@ -1,0 +1,301 @@
+/**
+ * ADR-750 Φ6 — **η διάταξη του διαλόγου «Μορφοποίηση κελιών → Περίγραμμα»**.
+ *
+ * Η διάταξη είναι **μετρημένη** από στιγμιότυπα ελληνικού Excel (2026-08-04), όχι επινοημένη:
+ * αριστερά η ομάδα «Γραμμή» (listbox 2×7 + χρώμα), δεξιά τα «Υποδείγματα» από πάνω και το proxy
+ * preview από κάτω, και το κείμενο βοήθειας κάτω από όλα.
+ *
+ * ⚠️ Το `.styleGrid` γράφει **7 σειρές** ρητά. Είναι η μόνη θέση όπου το σχήμα του listbox ζει
+ * σε CSS αντί για δεδομένα — και γι' αυτό υπάρχει άγκυρα στο `table-border-dialog.test.tsx` που
+ * σπάει αν το `TABLE_BORDER_STYLE_GRID` πάψει να είναι 2×7. Χωρίς την άγκυρα θα ήταν σιωπηλή
+ * δεύτερη δήλωση· με αυτήν, είναι δηλωμένο ζευγάρι.
+ */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) minmax(220px, 1.4fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.75;
+  padding: 0;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* ── Καρτέλες ──────────────────────────────────────────────────────────────── */
+
+.tabList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  margin-bottom: 12px;
+}
+
+.tab {
+  padding: 5px 12px;
+  font-size: 12px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 5px 5px 0 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.tabSelected {
+  border-color: var(--color-border, rgba(127, 127, 127, 0.35));
+  background: var(--color-accent, rgba(127, 127, 127, 0.14));
+  font-weight: 600;
+}
+
+/* Ανενεργή αλλά **ανακοινώσιμη**: `aria-disabled`, ποτέ `disabled` (δες το component). */
+.tabDisabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ── Το listbox των 14 στυλ ────────────────────────────────────────────────── */
+
+.styleGrid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 1fr);
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  border-radius: 6px;
+}
+
+.styleOption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 20px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.styleOptionSelected {
+  border-color: var(--color-primary, currentColor);
+  background: var(--color-accent, rgba(127, 127, 127, 0.18));
+}
+
+.styleLine {
+  width: 100%;
+  height: 12px;
+}
+
+/* Η **διπλή**: δύο παράλληλες στο ύψος μιας θέσης — αλλιώς θα ήταν όμοια με τη «συνεχή λεπτή». */
+.styleDouble {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+}
+
+.styleDouble .styleLine {
+  height: 5px;
+}
+
+/* Η θέση «Καμία» δεν έχει γραμμή να δείξει — έχει **όνομα**, και είναι ορατό. */
+.styleNone {
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+/* ── Χρώμα ─────────────────────────────────────────────────────────────────── */
+
+.colorAnchor {
+  position: relative;
+  display: block;
+}
+
+.colorTrigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.colorSwatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.25));
+}
+
+.colorPanel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 3;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+}
+
+.plainRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ── Υποδείγματα ───────────────────────────────────────────────────────────── */
+
+.presetRow {
+  display: flex;
+  gap: 12px;
+}
+
+.presetButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px;
+  font-size: 11px;
+  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.presetButton[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Το proxy preview ──────────────────────────────────────────────────────── */
+
+.widget {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px;
+  align-items: stretch;
+}
+
+.widgetSideColumn {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.widgetBottomRow {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.edgeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.edgeButtonPressed {
+  border-color: var(--color-primary, currentColor);
+  background: var(--color-accent, rgba(127, 127, 127, 0.2));
+}
+
+.edgeButton[aria-disabled='true'] {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.zoneButton {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.zone {
+  display: block;
+  width: 100%;
+  height: 96px;
+  overflow: visible;
+}
+
+/* Οι τέσσερις γωνιακοί δείκτες + η λέξη «Κείμενο»: ένδειξη, ποτέ χειριστήριο. */
+.zoneHint {
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0.45;
+  fill: none;
+}
+
+.zoneText {
+  fill: currentColor;
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/*
+ * Η **μεικτή** ακμή πρέπει να διακρίνεται με το μάτι, όχι μόνο με τον αναγνώστη οθόνης: είναι
+ * η κατάσταση όπου ένα κλικ ισοπεδώνει πληροφορία που ο χρήστης δεν ήξερε ότι υπάρχει.
+ */
+.edgeMixed {
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 3 4;
+  opacity: 0.55;
+}
+
+.help {
+  margin-top: 12px;
+  font-size: 11px;
+  line-height: 1.35;
+  opacity: 0.7;
+}

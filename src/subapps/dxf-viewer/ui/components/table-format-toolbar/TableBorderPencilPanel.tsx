@@ -37,7 +37,7 @@ import { getRecentColorsStore } from '../../color/RecentColorsStore';
 import { normalizeHexColor } from '../../../config/color-math';
 import { colorGridFor } from '../../color/aci-color-grid';
 import { resolveLinetypePatternMm } from '../../../rendering/linetype-dash-resolver';
-import { buildLinetypeThumbnailFromPattern } from '../../../rendering/linetype-thumbnail';
+import { TableLinePreview } from './TableLinePreview';
 import {
   getTableBorderPencil,
   setTableBorderPencilField,
@@ -384,19 +384,12 @@ function PenPreview({ pencil }: { readonly pencil: TableBorderSpec }): React.Rea
   );
 }
 
-/** Πόσο παχιά ζωγραφίζεται στην προεπισκόπηση μια πένα του ενός χιλιοστού, σε μονάδες viewBox. */
-const PREVIEW_PX_PER_MM = 3;
-/** Κάτω από αυτό, η λεπτότερη πένα θα εξαφανιζόταν στην προεπισκόπηση — hairline αντί για τίποτα. */
-const PREVIEW_MIN_WIDTH = 0.75;
-
 /**
- * Μία γραμμή προεπισκόπησης. Το μοτίβο περνά από το {@link buildLinetypeThumbnailFromPattern},
- * δηλαδή από το **ίδιο** `dashMmToScreenPx` που χρησιμοποιεί ο renderer και τα thumbnails του
- * ribbon: η προεπισκόπηση δεν μπορεί να δείξει άλλη διακεκομμένη από αυτήν που θα ζωγραφιστεί.
+ * Μία γραμμή προεπισκόπησης — **η κοινή** {@link TableLinePreview} με το δέρμα αυτού του πάνελ.
  *
- * Χωρίς `colorHex` κληρονομεί το `currentColor` του στοιχείου — theme-correct, όπως κάθε άλλο
- * thumbnail του έργου (N.3): στις λίστες τύπου/πάχους το ζητούμενο είναι το **σχήμα**, όχι το
- * χρώμα, και ένα σταθερό χρώμα θα εξαφανιζόταν στο ένα από τα δύο θέματα.
+ * Το σώμα της μετακόμισε (ADR-750 Φ6, N.18): η Φ6 τη ρωτά σε δύο ακόμη σημεία, οπότε ένα
+ * ιδιωτικό αντίγραφο εδώ θα ήταν sibling clone. Μένει αυτό το λεπτό περιτύλιγμα ώστε καμία από
+ * τις τέσσερις κλήσεις παρακάτω να μη χρειάζεται να ξέρει το όνομα της κλάσης.
  */
 function DashPreview({
   patternMm, widthMm, colorHex,
@@ -405,24 +398,13 @@ function DashPreview({
   readonly widthMm: number;
   readonly colorHex?: string;
 }): React.ReactElement {
-  const thumb = buildLinetypeThumbnailFromPattern(patternMm);
   return (
-    <svg
+    <TableLinePreview
+      patternMm={patternMm}
+      widthMm={widthMm}
+      colorHex={colorHex}
       className={panel.linePreview}
-      viewBox={`0 0 ${thumb.width} ${thumb.height}`}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <line
-        x1={0}
-        y1={thumb.height / 2}
-        x2={thumb.width}
-        y2={thumb.height / 2}
-        stroke={colorHex ?? 'currentColor'}
-        strokeWidth={Math.max(widthMm * PREVIEW_PX_PER_MM, PREVIEW_MIN_WIDTH)}
-        strokeDasharray={thumb.dash.length > 0 ? thumb.dash.join(' ') : undefined}
-      />
-    </svg>
+    />
   );
 }
 

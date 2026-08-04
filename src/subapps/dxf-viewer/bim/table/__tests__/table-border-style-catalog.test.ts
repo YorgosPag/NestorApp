@@ -153,3 +153,34 @@ describe('ADR-750 Φ6 — το μολύβι κάθε στυλ', () => {
     expect(tableBorderStylePencil(unknown, STANDARD, [])).toBe(HIDDEN_TABLE_EDGE);
   });
 });
+
+/**
+ * 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΕΛΕΙΠΕ — ο κατάλογος και οι ετικέτες του είναι **δύο** λίστες.
+ *
+ * Ο κατάλογος γράφτηκε σε `.ts`, οι ετικέτες σε δύο `.json`. Καμία πύλη δεν τις συγκρίνει:
+ * το CHECK 3.8 ρωτά «υπάρχει το κλειδί που καλεί ο κώδικας;» — αλλά ο κώδικας τα συνθέτει
+ * δυναμικά (`lineStyles.${id}`), οπότε **δεν υπάρχει γραμμή να σαρωθεί**.
+ *
+ * Και όντως απέκλιναν: όταν γράφτηκαν παράλληλα, **13 από τα 14** ids δεν ταίριαζαν
+ * (μόνο το `double` έπεφτε πάνω). Ο χρήστης θα έβλεπε 13 ωμά κλειδιά σε ένα listbox με
+ * ΟΛΕΣ τις άλλες πύλες πράσινες — ακριβώς το σχήμα που γέννησε το CHECK 3.36 (ADR-752).
+ *
+ * 🔑 Ο έλεγχος είναι στην **ταυτότητα και τη σειρά**, όχι στο πλήθος: δύο λίστες των 14 με
+ * ένα ζευγάρι ανταλλαγμένο δίνουν λάθος ετικέτα σε δύο στυλ — *φαίνεται* σωστό, και είναι
+ * η χειρότερη από τις τρεις καταστάσεις (`wrong-target` του ADR-752).
+ */
+describe('ADR-750 Φ6 — ο κατάλογος και οι ετικέτες του δεν αποκλίνουν', () => {
+  const LOCALES = ['el', 'en'] as const;
+
+  it.each(LOCALES)('%s: κάθε στυλ του καταλόγου έχει ετικέτα, με την ΙΔΙΑ σειρά', (lang) => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    const bundle = require(`@/i18n/locales/${lang}/dxf-viewer.json`) as {
+      table: { borders: { dialog: { lineStyles: Record<string, string> } } };
+    };
+    const labels = bundle.table.borders.dialog.lineStyles;
+
+    expect(Object.keys(labels)).toEqual(TABLE_BORDER_STYLES.map((preset) => preset.id));
+    // Καμία ετικέτα κενή: ένα `""` περνά κάθε έλεγχο ύπαρξης και βάφει **τίποτα**.
+    for (const id of Object.keys(labels)) expect(labels[id].trim().length).toBeGreaterThan(0);
+  });
+});

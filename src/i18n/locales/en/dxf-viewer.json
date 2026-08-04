@@ -688,19 +688,20 @@
         "ok": "OK",
         "cancel": "Cancel",
         "lineStyles": {
-          "hairline": "Solid, hairline weight",
-          "thin": "Solid, thin weight",
-          "medium": "Solid, medium weight",
-          "thick": "Solid, heavy weight",
-          "double": "Double line",
-          "dashedThin": "Dashed, thin weight",
-          "dashedMedium": "Dashed, medium weight",
-          "dottedThin": "Dotted, thin weight",
-          "dashDotThin": "Dash-dot, thin weight",
-          "dashDotMedium": "Dash-dot, medium weight",
-          "dashDotDotThin": "Dash-dot-dot, thin weight",
-          "dashDotDotMedium": "Dash-dot-dot, medium weight",
-          "slantDashDot": "Slant dash-dot, medium weight"
+          "none": "None",
+          "hairlineDotted": "Dotted, hairline",
+          "thinDashed": "Dashed, thin",
+          "thinDashedLong": "Long dashed, thin",
+          "thinDashDot": "Dash-dot, thin",
+          "thinDashDotDot": "Dash-dot-dot, thin",
+          "thinSolid": "Solid, thin",
+          "mediumDashDotDot": "Dash-dot-dot, medium",
+          "mediumDashDot": "Dash-dot, medium",
+          "mediumDashed": "Dashed, medium",
+          "mediumDashedLong": "Long dashed, medium",
+          "mediumSolid": "Solid, medium",
+          "thickSolid": "Solid, thick",
+          "double": "Double line"
         }
       }
     },
