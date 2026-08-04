@@ -644,6 +644,64 @@
         "basicColors": "Basic colours",
         "moreColors": "More colours…",
         "preview": "The pen that will be applied"
+      },
+      "dialog": {
+        "menuItem": "More Borders…",
+        "title": "Format Cells",
+        "tabs": {
+          "number": "Number",
+          "alignment": "Alignment",
+          "font": "Font",
+          "border": "Border",
+          "fill": "Fill",
+          "protection": "Protection",
+          "disabledHint": "Available in a future phase"
+        },
+        "line": {
+          "section": "Line",
+          "style": "Style:",
+          "color": "Colour:",
+          "styleNone": "None"
+        },
+        "presets": {
+          "section": "Presets",
+          "none": "None",
+          "outline": "Outline",
+          "inside": "Inside"
+        },
+        "border": {
+          "section": "Border",
+          "previewText": "Text"
+        },
+        "edges": {
+          "top": "Top border",
+          "middleHorizontal": "Middle horizontal border",
+          "bottom": "Bottom border",
+          "left": "Left border",
+          "middleVertical": "Middle vertical border",
+          "right": "Right border",
+          "diagonalDown": "Diagonal down border",
+          "diagonalUp": "Diagonal up border"
+        },
+        "helpText": "The border style selected can be applied by clicking the presets, preview diagram or the buttons above.",
+        "mixedEdge": "Mixed border",
+        "ok": "OK",
+        "cancel": "Cancel",
+        "lineStyles": {
+          "hairline": "Solid, hairline weight",
+          "thin": "Solid, thin weight",
+          "medium": "Solid, medium weight",
+          "thick": "Solid, heavy weight",
+          "double": "Double line",
+          "dashedThin": "Dashed, thin weight",
+          "dashedMedium": "Dashed, medium weight",
+          "dottedThin": "Dotted, thin weight",
+          "dashDotThin": "Dash-dot, thin weight",
+          "dashDotMedium": "Dash-dot, medium weight",
+          "dashDotDotThin": "Dash-dot-dot, thin weight",
+          "dashDotDotMedium": "Dash-dot-dot, medium weight",
+          "slantDashDot": "Slant dash-dot, medium weight"
+        }
       }
     },
     "colorMenu": {
