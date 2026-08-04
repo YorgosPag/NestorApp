@@ -31,6 +31,10 @@
 
 import { useCallback, useMemo } from 'react';
 import type React from 'react';
+// ADR-751 Φ8.γ — `Alt+Enter` σε πλοήγηση· η απόφαση «ένας / πολλοί / κανένας» ζει στον
+// επιλυτή, εδώ μένει μόνο η αντίδραση της διεπαφής στην περίπτωση «πολλοί».
+import { activateTableCellLink } from '../../bim/table/table-link-interaction-2d';
+import { openTableLinkPicker } from '../../state/table-link-picker-store';
 // ADR-711 — το SSoT του «ποιος κατέχει το πληκτρολόγιο». ΜΗΝ γράψεις δεύτερο scope.
 import { useModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope';
 import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
@@ -344,6 +348,21 @@ export function useTableCellDoubleClickEditor(
   // ανάγνωση σκηνής θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα μέσα στο ίδιο render.
   const { target, anchor } = useTableCellAnchor({ cursor, entity: liveEntity, containerRef });
 
+  /**
+   * ADR-751 Φ8.γ — `Alt+Enter`: άνοιξε τη διεύθυνση του κελιού του δρομέα (Google Sheets).
+   *
+   * Η `ambiguous` δεν ανοίγει τίποτα — **ρωτά**. Κελί με δύο διευθύνσεις δεν έχει μία σωστή
+   * απάντηση, και το να διαλέγαμε την πρώτη θα καλούσε λάθος άνθρωπο σιωπηλά.
+   */
+  const openCursorCellLink = useCallback(() => {
+    if (!liveEntity || !cursor) return;
+    const { rowId, colId } = cursor.position;
+    const outcome = activateTableCellLink(liveEntity, rowId, colId);
+    if (outcome.kind === 'ambiguous') {
+      openTableLinkPicker({ links: outcome.links, scope: 'cell' });
+    }
+  }, [liveEntity, cursor]);
+
   const overlay = useMemo<TableCellOverlayMount | null>(() => {
     if (!cursor || !target || !anchor) return null;
     const { entityId, position, mode, sessionId } = cursor;
@@ -370,9 +389,10 @@ export function useTableCellDoubleClickEditor(
         onCopy: rangeActions.onCopy,
         onCut: rangeActions.onCut,
         onPaste: rangeActions.onPaste,
+        onOpenLink: openCursorCellLink,
       },
     };
-  }, [cursor, target, anchor, commitText, move, history, rangeActions]);
+  }, [cursor, target, anchor, commitText, move, history, rangeActions, openCursorCellLink]);
 
   /**
    * 🔴 ADR-739 Φ.Δ βήμα 4 — **Η ΔΗΛΩΣΗ «ΕΙΜΑΙ ΜΕΣΑ ΣΤΟΝ ΠΙΝΑΚΑ»**.

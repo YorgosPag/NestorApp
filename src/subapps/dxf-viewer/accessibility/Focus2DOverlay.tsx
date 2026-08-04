@@ -21,6 +21,8 @@ import { getKeyboardFocus2DManager } from './keyboard-focus-2d-manager';
 import { paintFocus2DOutline } from './focus-2d-outline-painter';
 import { findFocusedEntityData2D } from './focus-2d-order';
 import { entityTypeLabel } from '../bim-3d/accessibility/status-bar-text-generator';
+import { focusedEntityLinkCount } from './focus-2d-link-note';
+import type { Entity } from '../types/entities';
 import type { DxfScene } from '../canvas-v2/dxf-canvas/dxf-types';
 import type { Viewport } from '../rendering/types/Types';
 // 🏢 SSoT overlay frame — DPR-aware sizing + πύλη + clear + paint σε ΕΝΑ primitive (ADR-726 Φ2).
@@ -91,6 +93,10 @@ function Focus2DOverlayCanvas({
   readonly className?: string;
 }) {
   const { t } = useTranslation('bim3d');
+  // ADR-751 Φ8.γ — δεύτερο namespace για τη σημείωση συνδέσμων, ίδιο ιδίωμα με το
+  // `SelectionCyclingPopover` (γενικές ετικέτες οντοτήτων σε `bim3d`, τα δικά μας σε
+  // `dxf-viewer`). Καμία συμβολοσειρά καρφωμένη εδώ (N.11).
+  const { t: tDxf } = useTranslation('dxf-viewer');
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Paint on focus/transform/scene change. Outline anchors to the entity's
@@ -128,6 +134,14 @@ function Focus2DOverlayCanvas({
   const typeLabel = data ? entityTypeLabel(data.bimType, t) : '';
   const display = data ? (typeLabel ? `${typeLabel} ${data.entityName}` : data.entityName) : '';
 
+  // 🔴 ADR-751 Φ8.γ — «αυτός ο πίνακας έχει διευθύνσεις, και να πώς τις βλέπεις».
+  //
+  // Μπαίνει στην **υπάρχουσα** aria-live περιοχή αντί σε δεύτερη σειρά εστίασης, γιατί το
+  // `Tab` της 2D όψης ανήκει ήδη στο `use2DKeyboardFocus` (άνευ όρων `preventDefault`) —
+  // δες το `focus-2d-link-note` για τη μέτρηση και για το τι λέει το ίδιο το Figma.
+  const linkCount = focusedEntityLinkCount(scene?.entities as readonly Entity[] | undefined, focusedId);
+  const linkNote = linkCount > 0 ? tDxf('tableCellLink.focusHint', { count: linkCount }) : '';
+
   return (
     <>
       <canvas
@@ -137,10 +151,11 @@ function Focus2DOverlayCanvas({
       />
       {data && (
         <output
-          className="pointer-events-none absolute left-1/2 top-3 z-[19] -translate-x-1/2 select-none rounded-md border border-ring/60 bg-black/75 px-2 py-1 text-xs font-medium text-foreground shadow-lg backdrop-blur-sm"
+          className="pointer-events-none absolute left-1/2 top-3 z-[19] flex items-baseline gap-2 -translate-x-1/2 select-none rounded-md border border-ring/60 bg-black/75 px-2 py-1 text-xs font-medium text-foreground shadow-lg backdrop-blur-sm"
           aria-live="polite"
         >
-          {display}
+          <span>{display}</span>
+          {linkNote ? <span className="font-normal text-muted-foreground">{linkNote}</span> : null}
         </output>
       )}
     </>

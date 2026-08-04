@@ -144,6 +144,13 @@ export interface TableCellEditorOverlayProps extends TableCellSessionHandlers {
   readonly onCopy: (event: ClipboardEvent<HTMLElement>) => void;
   readonly onCut: (event: ClipboardEvent<HTMLElement>) => void;
   readonly onPaste: (event: ClipboardEvent<HTMLElement>) => void;
+  /**
+   * ADR-751 Φ8.γ — `Alt+Enter` σε **πλοήγηση**: άνοιξε τη διεύθυνση αυτού του κελιού.
+   *
+   * Ζει εδώ και όχι στο κοινό {@link TableCellSessionHandlers} επειδή η γραμμή τύπων δεν
+   * μπορεί να βρεθεί σε πλοήγηση — δες το `onOpenLink` του `use-table-cell-session-keys`.
+   */
+  readonly onOpenLink: () => void;
 }
 
 /**
@@ -159,7 +166,7 @@ export function flattenToSingleLine(value: string): string {
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
   const {
     mode, draft, initialText, caretIndex, anchor,
-    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onCopy, onCut, onPaste,
+    onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onCopy, onCut, onPaste, onOpenLink,
   } = props;
   const { t } = useTranslation('dxf-viewer');
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -220,6 +227,7 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     onHistory,
     onExtend,
     onSelectAll,
+    onOpenLink,
     onPassthrough: inlineKeyDown,
   });
 

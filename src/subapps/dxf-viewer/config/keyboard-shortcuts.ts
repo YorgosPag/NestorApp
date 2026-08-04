@@ -553,6 +553,24 @@ export const DXF_CTRL_SHORTCUTS: Record<string, ShortcutDefinition> = {
     action: 'action:toggle-cursor-settings',
     category: 'action',
   },
+  /**
+   * 🔴 ADR-751 Φ8.γ — «Άνοιγμα εντοπισμένου συνδέσμου…» στον επιλεγμένο πίνακα.
+   *
+   * Μοτίβο **VS Code** (`Open Detected Link…`), που λύνει ακριβώς το ίδιο πρόβλημα: σύνδεσμοι
+   * εντοπισμένοι μέσα σε περιεχόμενο που **δεν είναι DOM**, άρα άφταστοι με `Tab`.
+   *
+   * ⚠️ **Δεν** είναι το `Ctrl+Shift+O` του VS Code: εκεί είναι ήδη πιασμένο σε αυτό το έργο
+   * (μετρήθηκε — τα ctrlShift που λείπουν είναι C·I·L·O·P·T·U·Z). Το `K` επιλέχθηκε γιατί το
+   * `Ctrl+K` είναι «εισαγωγή υπερσυνδέσμου» σε Excel / Sheets / Word / VS Code, οπότε ο
+   * χρήστης το διαβάζει ως «το πράγμα με τους συνδέσμους» χωρίς να το μάθει.
+   */
+  openTableLinks: {
+    key: 'K',
+    modifier: 'ctrlShift',
+    descriptionKey: 'shortcuts.actions.openTableLinks',
+    action: 'action:open-table-links',
+    category: 'action',
+  },
 } as const;
 
 // ============================================================================
