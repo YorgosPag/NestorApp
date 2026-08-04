@@ -9,6 +9,7 @@ import { readTitleBlocks } from '@/subapps/dxf-viewer/text-engine/title-block/re
 import { G753_TITLEBLOCK_ROWS } from '@/subapps/dxf-viewer/text-engine/title-block/reading/__tests__/fixtures/g753-titleblock.fixture';
 import type { BindingProposal } from '@/types/title-block-binding';
 import { resolveTitleBlockProposals } from '../title-block-proposals';
+import { isDrawingMetaField } from '../resolve-drawing-meta';
 import type { ContactSnapshotEntry } from '../resolve-people';
 
 const PROJECT = 'proj_g753';
@@ -149,20 +150,38 @@ describe('Λ2 — η ΘΕΣΗ σπάει σε ξεχωριστές αποφάσ�
 });
 
 describe('Λ2 — μεταδεδομένα σχεδίου', () => {
-  it('κλίμακα/χρόνος/αριθμός/είδος δένουν στο ΦΥΛΛΟ, όχι στο έργο', () => {
-    const metaTargets = resolve()
-      .flatMap((p) => p.candidates.map((c) => c.target))
-      .filter((t) => t.kind === 'drawing-meta');
-    expect(metaTargets.every((t) => t.kind === 'drawing-meta' && t.levelId === LEVEL)).toBe(true);
-    expect(metaTargets.map((t) => (t.kind === 'drawing-meta' ? `${t.field}=${t.value}` : ''))).toEqual(
+  /**
+   * 🔴 **Η συμπεριφορά ΑΛΛΑΞΕ ΣΚΟΠΙΜΑ στη Φ3β** και τα δύο tests ξαναγράφτηκαν αντί να διαγραφούν.
+   *
+   * Πριν: παρήγαν υποψήφιο `drawing-meta`. Τώρα: **`not-yet-writable`**, γιατί το
+   * `DxfLevelDocument` δεν έχει `scale`/`studyDate`/`drawingType` και το `UpdateDxfLevelSchema`
+   * είναι `.passthrough()` — δηλαδή ο υποψήφιος υποσχόταν εγγραφή που θα γινόταν **χωρίς σχήμα**.
+   *
+   * ⚠️ Το ζητούμενο του παλιού test **δεν** χάθηκε: το «ανήκουν στο ΦΥΛΛΟ, όχι στο έργο» και το
+   * «δεν χρειάζονται έργο» είναι **ακόμη** αναλλοίωτα και ελέγχονται — απλώς εκφράζονται τώρα ως
+   * «μπλοκάρονται για **δικό τους** λόγο, ποτέ για `no-project`». Ένα test που απλώς ανέμενε
+   * `candidates: []` θα ήταν πράσινο και για τους δύο λόγους, δηλαδή για κανέναν.
+   */
+  it('κλίμακα/χρόνος/αριθμός/είδος αναγνωρίζονται ΟΛΑ και μένουν ορατά με τη δική τους αιτία', () => {
+    const meta = resolve().filter((p) => isDrawingMetaField(p.fieldKey));
+
+    expect(meta.map((p) => `${p.fieldKey}=${p.snapshotValue}`)).toEqual(
       expect.arrayContaining(['scale=1:200', 'studyDate=ΙΟΥΛΙΟΣ 2026', 'drawingNumber=Τ1']),
     );
+    // Ορατά, όχι κρυμμένα: υπάρχει πρόταση για καθένα…
+    expect(meta.length).toBeGreaterThanOrEqual(3);
+    // …και καμία δεν υπόσχεται εγγραφή που δεν μπορεί να γίνει.
+    expect(meta.every((p) => p.candidates.length === 0)).toBe(true);
+    expect(meta.every((p) => p.blockedBy === 'not-yet-writable')).toBe(true);
   });
 
-  it('τα μεταδεδομένα δουλεύουν ΚΑΙ χωρίς έργο — δεν το χρειάζονται', () => {
-    const withoutProject = resolveWithoutProject();
-    const meta = withoutProject.filter((p) => p.fieldKey === 'scale');
-    expect(meta[0].candidates).toHaveLength(1);
+  it('🔑 τα μεταδεδομένα ΔΕΝ χρειάζονται έργο — μπλοκάρονται για δικό τους λόγο, ποτέ ως «no-project»', () => {
+    const meta = resolveWithoutProject().filter((p) => p.fieldKey === 'scale');
+
+    expect(meta).toHaveLength(1);
+    // Αυτό είναι το αναλλοίωτο που φύλαγε το παλιό test: το φύλλο δεν εξαρτάται από το ακίνητο.
+    expect(meta[0].blockedBy).toBe('not-yet-writable');
+    expect(meta[0].blockedBy).not.toBe('no-project');
   });
 });
 

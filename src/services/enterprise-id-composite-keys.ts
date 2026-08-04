@@ -52,6 +52,28 @@ export function ownershipRevisionKey(version: number): string {
 }
 
 /**
+ * ADR-745 Φ3β: deterministic key for `title_block_bindings/{id}` — one document per
+ * (file, level, title-block cell, field, proposal slot, resolved target).
+ *
+ * Assembly only. The *meaning* of the segments — which cell, which slot, which target, and the
+ * escaping that keeps them injective — lives in `lib/title-block-binding-id`, next to the domain
+ * types it reads. That module is the sole caller; this one owns the prefix, exactly like every
+ * sibling above. Splitting it the other way would either drag `BindingTarget` into this low-level
+ * module or fork the prefix into a second home.
+ *
+ * @throws if any segment is empty — a blank segment silently collapses two distinct cells into
+ *   one key, which is the failure this whole scheme exists to prevent.
+ */
+export function titleBlockBindingKey(segments: readonly string[]): string {
+  if (segments.length === 0) throw new Error('titleBlockBindingKey: segments are required');
+  const blankAt = segments.findIndex((s) => !s);
+  if (blankAt !== -1) {
+    throw new Error(`titleBlockBindingKey: segment ${blankAt} is empty`);
+  }
+  return `${P.TITLE_BLOCK_BINDING}_${segments.join('_')}`;
+}
+
+/**
  * UserSettings SSoT: deterministic 1:1 key — one preferences blob per
  * (user, tenant). Used by `user_preferences/{docId}` Firestore collection
  * and by `userSettingsRepository.bind(userId, companyId)`.

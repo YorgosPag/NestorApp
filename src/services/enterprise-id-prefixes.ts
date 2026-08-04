@@ -26,6 +26,7 @@ export const ENTERPRISE_ID_PREFIXES = {
   MEMBER: 'mbr',
   LANDOWNER: 'lown',         // ADR-244: Property ownership
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
+  TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
 
   // Legal Documents & Obligations
   SECTION: 'sec',
