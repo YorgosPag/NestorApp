@@ -140,3 +140,63 @@ export function insertionIndexFor(
   }
   return entries.length;
 }
+
+/**
+ * Η θέση ενός κελιού ως **ζεύγος ταυτοτήτων** — ό,τι χρειάζεται μια μετάφραση σε δείκτες,
+ * τίποτα άλλο.
+ *
+ * Δομικά συμβατό με τον δρομέα (`TableCursorPosition`, που κουβαλά επιπλέον την άγκυρα
+ * στήλης), με την επιλογή (`TableCellRef`) και με την αναφορά τύπου (`TableFormulaCellRef`).
+ * Ζει στο **χαμηλότερο** module ακριβώς γι' αυτό: όποιος μεταφράζει ταυτότητα σε θέση δεν
+ * έχει λόγο να ξέρει τι είναι δρομέας, τι είναι επιλογή ή τι είναι τύπος.
+ */
+export interface TableCellAddress {
+  readonly rowId: TableRowId;
+  readonly colId: TableColumnId;
+}
+
+/** Οι τέσσερις δείκτες δύο γωνιών, **ακατέργαστοι**: καμία κανονικοποίηση, κανένα κούμπωμα. */
+export interface CellPairIndices {
+  readonly fromRow: number;
+  readonly toRow: number;
+  readonly fromCol: number;
+  readonly toCol: number;
+}
+
+/**
+ * 🔴 Η **μία** μετάφραση «δύο κελιά → τέσσερις δείκτες».
+ *
+ * ## Γιατί εξάγεται (ADR-754 Γ1, CHECK 3.28)
+ * Οι ίδιες έξι γραμμές (`indexById` × 2, τέσσερα `get`, δύο φρουροί `undefined`) είχαν ήδη
+ * γεννηθεί **τρεις** φορές: στα όρια περιοχής (`table-cell-range.ts`), στην ονομασία εύρους
+ * (`table-cell-reference.ts`) και στη μετατόπιση τύπου (`table-formula-offset.ts`). Το
+ * σχήμα είναι το ίδιο που ο σχολιασμός του `rawTableCellRangeBounds` **είχε ήδη
+ * προβλέψει** — «εξαγωγή, όχι δίδυμο» — και παρ' όλα αυτά ξαναγεννήθηκε δύο φορές, γιατί
+ * κάθε καλών έγραφε δικά του ονόματα (`r0/c1`, `fromRow/toCol`) και το `ssot:discover`
+ * είναι τυφλό στα ονόματα. Ένα token-based δίδυμο χρειάζεται token-based απάντηση.
+ *
+ * ## Επιστρέφει ακατέργαστους δείκτες επίτηδες
+ * Ο ένας καλών θέλει `Math.min/max` (ορθογώνιο), ο άλλος **προσημασμένη διαφορά**
+ * (μετατόπιση: «μία γραμμή πάνω» είναι `-1`, όχι `1`). Αν εδώ γινόταν κανονικοποίηση, η
+ * μετατόπιση θα έχανε τη φορά της — δηλαδή η συμπλήρωση προς τα πάνω θα αντέγραφε τύπους
+ * σαν να πήγαινε προς τα κάτω. Η κανονικοποίηση είναι **σημασιολογία του καλούντος**.
+ *
+ * `null` όταν **οποιοδήποτε** άκρο δεν υπάρχει στο μοντέλο — ίδια σύμβαση ανοχής με το
+ * {@link indexById}: μπαγιάτικη ταυτότητα μετά από undo/διαγραφή δεν είναι σφάλμα, είναι
+ * απάντηση «δεν ξέρω», και ο καλών οφείλει να μη μαντέψει.
+ */
+export function cellPairIndices(
+  source: CellOrderSource,
+  from: TableCellAddress,
+  to: TableCellAddress,
+): CellPairIndices | null {
+  const rowIndex = indexById(source.rows);
+  const colIndex = indexById(source.columns);
+  const fromRow = rowIndex.get(from.rowId);
+  const toRow = rowIndex.get(to.rowId);
+  const fromCol = colIndex.get(from.colId);
+  const toCol = colIndex.get(to.colId);
+  if (fromRow === undefined || toRow === undefined) return null;
+  if (fromCol === undefined || toCol === undefined) return null;
+  return { fromRow, toRow, fromCol, toCol };
+}

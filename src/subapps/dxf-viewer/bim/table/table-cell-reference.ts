@@ -40,11 +40,18 @@
 import { columnIndexFromLetter, columnLetter } from '@/lib/spreadsheet/column-letter';
 import type { TableColumnId, TableModel, TableRowId } from '../../types/table';
 import { buildMergeIndex, cellKey, cellText, getCell, indexById } from './table-model-helpers';
+import { cellPairIndices } from './table-cell-order';
 import { tableCursorAt, type TableCursorPosition } from './table-cell-navigation';
 import type { TableColumnLayout, TableRowLayout } from './table-layout-types';
 
-/** Ο διαχωριστής εύρους — η σύμβαση κάθε φύλλου υπολογισμού και του `ACAD_TABLE`. */
-const RANGE_SEPARATOR = ':';
+/**
+ * Ο διαχωριστής εύρους — η σύμβαση κάθε φύλλου υπολογισμού και του `ACAD_TABLE`.
+ *
+ * Εξάγεται (ADR-754 Γ3) επειδή το `F4` ξαναγράφει τα δολάρια **και στα δύο άκρα** ενός εύρους
+ * και οφείλει να το ξανασυναρμολογήσει με τον ίδιο ακριβώς χαρακτήρα που το έγραψε αυτό το
+ * αρχείο. Ένα δεύτερο `':'` κάπου αλλού δεν πιάνεται από κανένα εργαλείο και αποκλίνει σιωπηλά.
+ */
+export const RANGE_SEPARATOR = ':';
 
 /**
  * Πώς ονομάζεται ένα κελί, στα δύο επίπεδα που χρειάζονται δύο διαφορετικοί καταναλωτές.
@@ -158,15 +165,12 @@ function mergedRangeA1(model: TableModel, rowId: TableRowId, colId: TableColumnI
 /**
  * Η θέση ενός κελιού ως **ζεύγος ταυτοτήτων** — ό,τι χρειάζεται μια ονομασία, τίποτα άλλο.
  *
- * Δομικά συμβατό τόσο με τον δρομέα ({@link TableCursorPosition}, που κουβαλά επιπλέον την
- * άγκυρα στήλης) όσο και με την αναφορά τύπου (`TableFormulaCellRef`). Ορίζεται εδώ ώστε η
- * ονομασία να **μη χρειάζεται** καμία από τις δύο: ένα module που απαντά «πώς λέγεται αυτό
- * το κελί» δεν έχει λόγο να ξέρει τι είναι δρομέας ή τι είναι τύπος.
+ * ADR-754 Γ1 — **μετακόμισε** στο `table-cell-order.ts` και επανεξάγεται εδώ αμετάβλητη. Το
+ * επιχείρημα που τη γέννησε («όποιος ονομάζει κελιά δεν έχει λόγο να ξέρει τι είναι δρομέας
+ * ή τύπος») ισχύει **ακόμη πιο δυνατά** ένα επίπεδο πιο κάτω, εκεί όπου ζει και η μετάφραση
+ * ταυτότητας σε δείκτη ({@link cellPairIndices}) που τη χρησιμοποιεί.
  */
-export interface TableCellAddress {
-  readonly rowId: TableRowId;
-  readonly colId: TableColumnId;
-}
+export type { TableCellAddress } from './table-cell-order';
 
 /**
  * Η ονομασία του **ορθογωνίου** ανάμεσα σε δύο γωνίες: `'A1:B5'`.
@@ -187,15 +191,10 @@ export function tableRangeReference(
   from: TableCellAddress,
   to: TableCellAddress,
 ): string | null {
-  const rowIndex = indexById(model.rows);
-  const colIndex = indexById(model.columns);
-  const fromRow = rowIndex.get(from.rowId);
-  const toRow = rowIndex.get(to.rowId);
-  const fromCol = colIndex.get(from.colId);
-  const toCol = colIndex.get(to.colId);
-  if (fromRow === undefined || toRow === undefined) return null;
-  if (fromCol === undefined || toCol === undefined) return null;
+  const pair = cellPairIndices(model, from, to);
+  if (pair === null) return null;
 
+  const { fromRow, toRow, fromCol, toCol } = pair;
   const start = `${columnLetter(Math.min(fromCol, toCol))}${Math.min(fromRow, toRow) + 1}`;
   const end = `${columnLetter(Math.max(fromCol, toCol))}${Math.max(fromRow, toRow) + 1}`;
   return start === end ? start : `${start}${RANGE_SEPARATOR}${end}`;

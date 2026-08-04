@@ -44,7 +44,7 @@
  */
 
 import type { TableColumnId, TableModel, TableRowId } from '../../types/table';
-import { indexById } from './table-model-helpers';
+import { cellPairIndices } from './table-cell-order';
 // ADR-739 §27.16 — ο ΜΗΧΑΝΙΣΜΟΣ του κουμπώματος ζει δίπλα· η ΑΠΟΦΑΣΗ «ποιος κουμπώνει»
 // μένει εδώ (§27.15), γιατί μόνο εδώ ζει η πρόθεση του χρήστη.
 import { snapToWholeMerges, type TableRectBounds } from './table-range-merge-snap';
@@ -112,25 +112,25 @@ export interface TableRangeMembership {
  *
  * Η εναλλακτική ήταν έξι πανομοιότυπες γραμμές `indexById` + `Math.min/max` στο νέο module —
  * δηλαδή **δεύτερος ορισμός του «τι είναι ορθογώνιο κελιών»** (N.18). Εξαγωγή, όχι δίδυμο.
+ *
+ * ⚠️ ADR-754 Γ1 — η προειδοποίηση της προηγούμενης παραγράφου **δεν αρκούσε**: οι έξι γραμμές
+ * ξαναγεννήθηκαν άλλες δύο φορές με άλλα ονόματα μεταβλητών. Πλέον η μετάφραση ζει στο
+ * {@link cellPairIndices} και εδώ μένει **μόνο** η κανονικοποίηση, που είναι το πραγματικό
+ * νόημα αυτής της συνάρτησης.
  */
 export function rawTableCellRangeBounds(
   model: TableModel,
   a: TableCellRef,
   b: TableCellRef,
 ): TableCellRangeBounds | null {
-  const rowIndex = indexById(model.rows);
-  const colIndex = indexById(model.columns);
-  const r0 = rowIndex.get(a.rowId);
-  const c0 = colIndex.get(a.colId);
-  const r1 = rowIndex.get(b.rowId);
-  const c1 = colIndex.get(b.colId);
-  if (r0 === undefined || c0 === undefined || r1 === undefined || c1 === undefined) return null;
+  const pair = cellPairIndices(model, a, b);
+  if (pair === null) return null;
 
   return {
-    firstRow: Math.min(r0, r1),
-    lastRow: Math.max(r0, r1),
-    firstCol: Math.min(c0, c1),
-    lastCol: Math.max(c0, c1),
+    firstRow: Math.min(pair.fromRow, pair.toRow),
+    lastRow: Math.max(pair.fromRow, pair.toRow),
+    firstCol: Math.min(pair.fromCol, pair.toCol),
+    lastCol: Math.max(pair.fromCol, pair.toCol),
   };
 }
 

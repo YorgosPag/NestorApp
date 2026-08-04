@@ -93,6 +93,7 @@ import { useTableContainerMouseDown } from './use-table-container-mousedown';
 // 🔴 ADR-754 §3 — η **τέταρτη** χειρονομία του πίνακα: υπόδειξη κελιού μέσα σε τύπο. Ίδιο
 // σχήμα με τις τρεις πρώτες — όλη η λογική σε δικό της module, εδώ μόνο ο φρουρός.
 import { tryTablePointModeMouseDown } from './table-point-mode-pointer';
+import { tryTableFillHandleMouseDown } from './table-fill-handle-drag';
 // ADR-739 §31.9 — η **δεύτερη** χειρονομία του πίνακα: σύρσιμο διαχωριστικού στηλών.
 import {
   beginTableAxisResize,
@@ -268,6 +269,26 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // γράμμα στήλης θα έτρωγε τον μισογραμμένο τύπο, σιωπηλά. Όλη η απόφαση —
     // «γράφει κάποιος;», «τι σημαίνει εδώ;», «τι πιάστηκε;» — ζει στο δικό της module.
     if (tryTablePointModeMouseDown(event, { entity, cursor, hit: pointerHit, container, transformRef })) {
+      return;
+    }
+
+    // 🔴 ADR-754 Γ4 — **η λαβή συμπλήρωσης, αμέσως μετά.** Η σειρά είναι σημασία: ο φρουρός
+    // της υπόδειξης τρέχει **πρώτος**, γιατί όσο γράφεται τύπος η λαβή ούτε ζωγραφίζεται
+    // (Excel parity) — δύο φρουροί με διαφορετική άποψη για την ίδια στιγμή θα έδιναν «λαβή
+    // που πιάνεται αλλά δεν φαίνεται». Πριν από τους τέσσερις κλάδους που δεσμεύουν ή
+    // μετακινούν, για τον **ίδιο** λόγο με την υπόδειξη: η λαβή κάθεται πάνω στην κορυφή του
+    // τελευταίου κελιού, δηλαδή ακριβώς εκεί που ο κλάδος «κελί» θα μετακινούσε τον δρομέα.
+    if (
+      tryTableFillHandleMouseDown(event, {
+        entity,
+        cursor,
+        worldPoint,
+        transform,
+        container,
+        transformRef,
+        commit: onCommitModel,
+      })
+    ) {
       return;
     }
 
