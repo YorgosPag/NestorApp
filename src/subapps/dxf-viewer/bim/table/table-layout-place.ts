@@ -225,7 +225,7 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     // 🔴 ADR-753 Φ2 — ίδια σύμβαση, τρίτη φορά: ένα μόνο τμήμα δεν λέει τίποτα που το ίδιο το
     // run δεν λέει ήδη (`bold`/`italic`/`heightMm`/`colorHex`/`fontFamily`), οπότε το πεδίο
     // **λείπει** και κάθε πίνακας που υπάρχει σήμερα παράγει byte-ταυτόσημη διάταξη.
-    ...(hasStyledSpans(visible.spans) && { spans: visible.spans }),
+    ...(hasStyledSpans(visible.spans, style) && { spans: visible.spans }),
   };
 
   // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος μετριέται **μόνο** για υπογραμμισμένο κείμενο: είναι ο

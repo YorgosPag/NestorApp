@@ -175,6 +175,68 @@ describe('resolveVisibleCellText — ο αριθμός γίνεται «###», �
   });
 });
 
+// ── Μορφοποίηση ανά χαρακτήρα (ADR-753 Φ2) ─────────────────────────────────
+
+describe('🔴 ADR-753 Φ2 — η περικοπή μετρά ΤΑ ΤΜΗΜΑΤΑ, όχι μία γραμματοσειρά', () => {
+  const BOLD_ALL: readonly TableCellTextRun[] = [{ start: 0, end: 6, style: { bold: true } }];
+  /** Το πραγματικό πλάτος ενός αποτελέσματος — άθροισμα των τμημάτων που παρήγαγε η μηχανή. */
+  const shownWidth = (got: VisibleCellText): number =>
+    got.spans.reduce((sum, span) => sum + span.advanceMm, 0);
+
+  it('έντονο κείμενο κόβεται ΝΩΡΙΤΕΡΑ — ο ομοιογενής χάρακας θα άφηνε διπλάσια γράμματα', () => {
+    // Χώρος 5 χαρακτήρων· τα έντονα πιάνουν διπλό πλάτος, ο δείκτης μετριέται με το κελί.
+    // Διαθέσιμο 5U − δείκτης 1U = 4U ⇒ χωρούν 2 έντονα γράμματα.
+    const got = visibleFull('AAAAAA', CHAR_MM * 5, { runs: BOLD_ALL });
+    expect(got.text).toBe(`AA${CELL_CLIP_ELLIPSIS}`);
+    // Η εκδοχή που αγνοεί τα runs θα έδινε «AAAA…» — δηλαδή 9U σε κελί 5U, ζωγραφισμένα
+    // πάνω στο περίγραμμα: ακριβώς το ελάττωμα για το οποίο γράφτηκε αυτό το αρχείο.
+    expect(visible('AAAAAA', CHAR_MM * 5).text).toBe(`AAAA${CELL_CLIP_ELLIPSIS}`);
+  });
+
+  it('🔴 ΠΟΤΕ δεν ξεπερνά το διαθέσιμο πλάτος — για ΚΑΘΕ πλάτος, με μικτή μορφοποίηση', () => {
+    // Ο ίδιος καθολικός έλεγχος με το ομοιογενές κείμενο, στον ετερογενή δρόμο. Ένα
+    // μεμονωμένο παράδειγμα θα ήταν πράσινο ακόμη κι αν το `runsLimit` έλειπε.
+    const runs: readonly TableCellTextRun[] = [{ start: 2, end: 5, style: { bold: true } }];
+    for (let chars = 0; chars <= 20; chars++) {
+      const available = CHAR_MM * chars;
+      const got = visibleFull('ΠΕΡΙΓΡΑΦΗ ΕΡΓΑΣΙΑΣ', available, { runs });
+      expect(shownWidth(got)).toBeLessThanOrEqual(available + 1e-9);
+    }
+  });
+
+  it('ο δείκτης «…» παίρνει το στυλ του ΚΕΛΙΟΥ, όχι του τελευταίου γράμματος', () => {
+    const got = visibleFull('AAAAAA', CHAR_MM * 5, { runs: BOLD_ALL });
+    expect(got.spans.map((s) => [s.text, s.bold])).toEqual([
+      ['AA', true],
+      [CELL_CLIP_ELLIPSIS, false],
+    ]);
+  });
+
+  it('το `####` δεν κληρονομεί τίποτα — αντικαθιστά ολόκληρη την τιμή', () => {
+    const got = visibleFull('123456789', CHAR_MM * 4, { numeric: true, runs: BOLD_ALL });
+    expect(got.text).toBe(CELL_CLIP_NUMERIC_FILL.repeat(4));
+    expect(got.spans).toHaveLength(1);
+    expect(got.spans[0].bold).toBe(false);
+  });
+
+  it('κείμενο που χωράει κρατά τα τμήματά του ακέραια', () => {
+    const got = visibleFull('AABB', CHAR_MM * 20, { runs: [{ start: 2, end: 4, style: { bold: true } }] });
+    expect(got.clipped).toBe(false);
+    expect(got.spans.map((s) => [s.text, s.bold, s.offsetMm])).toEqual([
+      ['AA', false, 0],
+      ['BB', true, 2 * CHAR_MM],
+    ]);
+  });
+
+  it('χωρίς runs υπάρχει ΠΑΝΤΑ ένα τμήμα — και καλύπτει ΟΛΟ το ορατό κείμενο, μαζί με τον δείκτη', () => {
+    // Το byte-compat της υπογράμμισης: όσο το ορατό κείμενο είναι ένα τμήμα, το `advanceMm`
+    // του run μετρά «κεφαλή + …» σε ΜΙΑ κλήση, όπως πριν το ADR-753.
+    const got = visibleFull('ABCDEFGH', CHAR_MM * 5);
+    expect(got.spans).toHaveLength(1);
+    expect(got.spans[0].text).toBe(got.text);
+  });
+});
+
 // ── Η επίλυση κελί → στήλη → προεπιλογή ────────────────────────────────────
 
 describe('resolveCellOverflow — ίδια σειρά προτεραιότητας με τη στοίχιση', () => {

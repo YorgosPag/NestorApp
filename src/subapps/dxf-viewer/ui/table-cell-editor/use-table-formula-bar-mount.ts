@@ -129,6 +129,12 @@ export function useTableFormulaBarMount(
         mode: cursor.mode,
         draft: cursor.draft,
         initialText,
+        // 🔴 ADR-754 §4 — η υπόδειξη κελιού γράφει κέρσορα **και για αυτό** το πεδίο: το
+        // κλειδί εδώ είναι ανά **πίνακα**, άρα η γραμμή δεν ξαναστήνεται ποτέ μέσα στη
+        // συνεδρία — χωρίς την αφορμή, ο κέρσοράς της θα έμενε για πάντα εκεί που τον
+        // άφησε ο browser μετά την πρώτη αλλαγή τιμής.
+        caretIndex: cursor.caretIndex,
+        caretRevision: cursor.caretRevision,
         anchor,
         onCommit,
         onMove,

@@ -54,10 +54,12 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §25
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TextEditorAnchorLayer, type TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
 import { flattenToSingleLine } from './TableCellEditorOverlay';
+// 🔴 ADR-754 §4 — η **ίδια** τοποθέτηση κέρσορα με τον επεξεργαστή κελιού.
+import { useTableCellCaret } from './use-table-cell-caret';
 import { useTableCellSessionKeys } from './use-table-cell-session-keys';
 import { TABLE_CELL_SESSION_MARKER, useTableCellSessionBlur } from './table-cell-session-focus';
 import {
@@ -77,15 +79,27 @@ export interface TableFormulaBarProps extends TableCellSessionHandlers {
   readonly draft: string;
   /** Το **δεσμευμένο** κείμενο — αυτό που φαίνεται όσο δεν γράφεις. */
   readonly initialText: string;
+  /**
+   * 🔴 ADR-754 §4 — ο δείκτης και **η αφορμή** για να μπει ο κέρσορας εκεί.
+   *
+   * Η υπόδειξη κελιού δουλεύει **και από εδώ**, χωρίς καμία δεύτερη διαδρομή: ο φρουρός του
+   * ποντικιού ρωτά «ποιο πεδίο της συνεδρίας έχει την εστίαση και πού είναι ο κέρσοράς του;»
+   * — ερώτηση που δεν ξεχωρίζει τα δύο πεδία. Λείπει μόνο αυτό: το ίδιο πεδίο πρέπει να
+   * ξέρει να **βάλει** τον κέρσορα εκεί που τον υπολόγισε η υπόδειξη.
+   */
+  readonly caretIndex?: number;
+  readonly caretRevision: number;
   readonly anchor: TextEditorAnchor;
 }
 
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
   const {
-    reference, mode, draft, initialText, anchor,
+    reference, mode, draft, initialText, caretIndex, caretRevision, anchor,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll,
   } = props;
   const { t } = useTranslation('dxf-viewer');
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useTableCellCaret(inputRef, caretIndex, caretRevision, mode !== 'nav');
 
   /**
    * Σε **πλοήγηση** το πεδίο δείχνει το δεσμευμένο κείμενο· σε **γραφή** το πρόχειρο.
@@ -172,6 +186,7 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
           {t('table.formulaBar.symbol')}
         </span>
         <input
+          ref={inputRef}
           type="text"
           spellCheck={false}
           value={value}

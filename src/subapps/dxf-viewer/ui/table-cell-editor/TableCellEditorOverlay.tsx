@@ -91,10 +91,12 @@
  * @see ui/inline-editor/use-inline-editor-keys.ts — ο φρουρός «μία φορά» + ο escape-bus
  */
 
-import React, { useCallback, useEffect, useRef, type ClipboardEvent } from 'react';
+import React, { useCallback, useRef, type ClipboardEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useInlineEditorKeys } from '../inline-editor/use-inline-editor-keys';
+// 🔴 ADR-754 §4 — η **μία** τοποθέτηση κέρσορα, κοινή με τη γραμμή τύπων.
+import { useTableCellCaret } from './use-table-cell-caret';
 import { TextEditorAnchorLayer, type TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
 import {
   TABLE_CELL_EDITOR_INPUT_STYLE,
@@ -134,6 +136,12 @@ export interface TableCellEditorOverlayProps extends TableCellSessionHandlers {
    * Το γεμίζει μόνο το διπλό κλικ (Excel: μπαίνεις εκεί που έδειξες).
    */
   readonly caretIndex?: number;
+  /**
+   * 🔴 ADR-754 §4 — **η αφορμή** για να ξαναμπεί ο κέρσορας στο {@link caretIndex}. Δες το
+   * σχόλιο του πεδίου στο store: η θέση μόνη της δεν αρκεί, γιατί δύο υποδείξεις στο ίδιο
+   * σημείο είναι δύο γεγονότα με ίδια θέση.
+   */
+  readonly caretRevision: number;
   readonly anchor: TextEditorAnchor;
   /**
    * ADR-739 Φ.Δ βήμα 8 — τα **φυσικά** συμβάντα προχείρου του browser. Δεν είναι πλήκτρα:
@@ -165,7 +173,7 @@ export function flattenToSingleLine(value: string): string {
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
   const {
-    mode, draft, initialText, caretIndex, anchor,
+    mode, draft, initialText, caretIndex, caretRevision, anchor,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onCopy, onCut, onPaste, onOpenLink,
   } = props;
   const { t } = useTranslation('dxf-viewer');
@@ -176,18 +184,13 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
   // με την `enter` και το F2 δεν θα σήμαινε τίποτα).
   //
   // ADR-739 Φ.Δ βήμα 3 — **πού** ακριβώς: στο γράμμα που έδειξε το διπλό κλικ, όπως στο
-  // Excel. `F2` και `Tab` δεν έχουν σημείο, άρα πέφτουν στο τέλος. Το `Math.min` δεν είναι
-  // παράνοια: ο δείκτης υπολογίστηκε πάνω στο **δεσμευμένο** κείμενο, ενώ εδώ διαβάζεται
-  // το πρόχειρο — μια ασύγχρονη ενημέρωση σκηνής ανάμεσα στα δύο θα έδινε δείκτη εκτός ορίων.
-  useEffect(() => {
-    if (mode === 'nav') return;
-    const el = inputRef.current;
-    if (!el) return;
-    const at = caretIndex === undefined ? el.value.length : Math.min(caretIndex, el.value.length);
-    el.setSelectionRange(at, at);
-    // Μόνο στο στήσιμο της συνεδρίας: μεταγενέστερες πληκτρολογήσεις δεν μετακινούν κέρσορα.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Excel. `F2` και `Tab` δεν έχουν σημείο, άρα πέφτουν στο τέλος.
+  //
+  // 🔴 ADR-754 §4 — το effect ήταν **εδώ**, με εξάρτηση `[]`. Μετακόμισε σε κοινό hook όταν
+  // απέκτησε **δεύτερη αφορμή** (η υπόδειξη κελιού γράφει κέρσορα σε ζωντανό πεδίο) και
+  // **δεύτερο πεδίο** (η γραμμή τύπων). Γενίκευση, όχι αντιγραφή: το σώμα είναι το ίδιο, οι
+  // αφορμές δύο, τα σημεία κλήσης δύο — και το CHECK 3.28 θα έπιανε το τρίτο αντίγραφο.
+  useTableCellCaret(inputRef, caretIndex, caretRevision, mode !== 'nav');
 
   const handleCommit = useCallback(() => {
     // Σε πλοήγηση δεν υπάρχει πρόχειρο: το `onBlur={commit}` πυροδοτεί και όταν απλώς
