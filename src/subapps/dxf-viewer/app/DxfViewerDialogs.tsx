@@ -39,7 +39,7 @@ import {
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -189,6 +189,8 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
         <HatchOverlapConfirmDialog />
         {/* ADR-739 §36.22 — ρώτα πριν σβήσεις: μεταφορά περιοχής πάνω σε κελιά με περιεχόμενο. */}
         <TableRangeOverwriteConfirmDialog />
+        {/* ADR-755 — ρώτα πριν χάσεις: συγχώνευση κρατά μόνο την επάνω αριστερή τιμή. */}
+        <TableMergeDiscardConfirmDialog />
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}>
         <CalibrationDialog />

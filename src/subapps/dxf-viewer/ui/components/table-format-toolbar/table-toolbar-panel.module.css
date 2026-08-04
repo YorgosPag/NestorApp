@@ -1,0 +1,103 @@
+/**
+ * 🔴 ADR-755 — **η κοινή γεωμετρία των πτυσσόμενων πάνελ του mini toolbar**.
+ *
+ * ## Γιατί υπάρχει (και γιατί τώρα)
+ * Το `TableAxisColorMenu.module.css` το είχε γράψει ρητά ως **χρέος**, με το όνομα αυτού του
+ * αρχείου μέσα: «τα δύο πάνελ μοιράζονται σήμερα τη γεωμετρία σε δύο αρχεία· μένουν χωριστά
+ * μόνο επειδή το ADR-750 γράφεται παράλληλα στο ίδιο working tree». Το ADR-750 έκλεισε, και το
+ * ADR-755 φέρνει **τρίτο** καταναλωτή — δηλαδή η επόμενη επιλογή ήταν «τριπλότυπο ή εξαγωγή».
+ *
+ * ## Τι μπαίνει εδώ και τι ΟΧΙ
+ * Μόνο ό,τι είναι **ταυτόσημο** στα τρία: η αγκύρωση, τα δύο μισά ενός split button, το πλαίσιο
+ * του πάνελ, μια γραμμή εντολής, ο διαχωριστής. Ό,τι διαφέρει νόμιμα — το `min-width` του
+ * πλέγματος περιγραμμάτων, το ψηλότερο `max-height` της παλέτας, η έγχρωμη μπάρα του χρώματος —
+ * μένει στο τοπικό module του καθενός και συνδυάζεται με `cn()`.
+ *
+ * Ένα κοινό αρχείο που θα «ενοποιούσε» και τις διαφορές θα ήταν χειρότερο από την επανάληψη:
+ * θα ανάγκαζε τον επόμενο να παλέψει με overrides για να πει κάτι που ισχύει μόνο για εκείνον.
+ *
+ * Χρώμα / περίγραμμα / σκιά **δεν** ορίζονται εδώ: έρχονται από τις ίδιες utility classes με το
+ * `DropdownMenuContent`, ώστε οι επιφάνειες να ακολουθούν μαζί το θέμα.
+ */
+
+.anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Τα δύο μισά ενός split button διαβάζονται ως ΕΝΑ χειριστήριο: μηδέν κενό, κοινό hover ύψος. */
+.split {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Το κύριο μισό: στρογγυλεμένο μόνο αριστερά, ώστε να «κολλά» με το βελάκι. */
+.splitMain {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.splitArrow {
+  width: 14px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 1;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  /* Το ίδιο ανώτατο ύψος με τα μενού του subapp: πάνω από αυτό, κύλιση αντί για έξοδο οθόνης. */
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.item:hover,
+.item:focus-visible {
+  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+}
+
+/*
+ * Το ανενεργό μένει **εστιάσιμο** (`aria-disabled`, ποτέ `disabled`): ο δείκτης του roving δεν
+ * επιτρέπεται να πέσει σε τρύπα, και το APG ορίζει ότι τα χειριστήρια ενός toolbar παραμένουν
+ * προσπελάσιμα ώστε ο χρήστης να μαθαίνει τι υπάρχει.
+ */
+.item[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.item[aria-disabled='true']:hover {
+  background-color: transparent;
+}
+
+.itemIcon {
+  flex: none;
+  display: inline-flex;
+}
+
+.separator {
+  height: 1px;
+  margin: 4px 2px;
+  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
+}

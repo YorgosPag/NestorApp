@@ -86,6 +86,8 @@ export const ColumnPromoteConfirmDialog = React.lazy(() => import('../ui/dialogs
 export const HatchOverlapConfirmDialog = React.lazy(() => import('../ui/dialogs/HatchOverlapConfirmDialog').then(mod => ({ default: mod.HatchOverlapConfirmDialog })));
 // ADR-739 §36.22 — «υπάρχουν ήδη δεδομένα εδώ» (μεταφορά περιοχής πίνακα).
 export const TableRangeOverwriteConfirmDialog = React.lazy(() => import('../ui/dialogs/TableRangeOverwriteConfirmDialog').then(mod => ({ default: mod.TableRangeOverwriteConfirmDialog })));
+// ADR-755 — «θα κρατηθεί μόνο η επάνω αριστερή τιμή» (συγχώνευση κελιών πάνω σε περιεχόμενο).
+export const TableMergeDiscardConfirmDialog = React.lazy(() => import('../ui/dialogs/TableMergeDiscardConfirmDialog').then(mod => ({ default: mod.TableMergeDiscardConfirmDialog })));
 export const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 export const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 export const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));

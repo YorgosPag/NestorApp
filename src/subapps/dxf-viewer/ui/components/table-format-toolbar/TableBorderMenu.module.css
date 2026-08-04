@@ -7,66 +7,39 @@
  * στοιχείο»: κάθε πάτημα εντολής θα έκλεινε το μενού από κάτω **πριν** τρέξει το `onClick`, και
  * θα κληρονομούσε ολόκληρη την ιστορία του `aria-hidden` (δες `useAriaHiddenGuard`). Μέσα στο
  * δοχείο, και τα δύο προβλήματα είναι ήδη λυμένα από αλλού.
+ *
+ * ⚠️ **ADR-755** — η κοινή γεωμετρία (`anchor` / `panel` / `item` / `itemIcon` / `separator`)
+ * μετακόμισε στο `table-toolbar-panel.module.css`, όπως το είχε ήδη γράψει ως χρέος το
+ * `TableAxisColorMenu.module.css`. Εδώ μένει **μόνο** ό,τι ισχύει για αυτό το πάνελ και μόνο.
  */
 
+/*
+ * `composes` και όχι νέο class name στο JSX: ο κανόνας ζει **μία** φορά, και κανένα από τα
+ * δεκαπέντε σημεία που τον χρησιμοποιούν δεν χρειάζεται να μάθει ότι μετακόμισε.
+ */
 .anchor {
-  position: relative;
-  display: inline-flex;
-}
-
-.panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 1;
-  min-width: 232px;
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  /* Το ίδιο ανώτατο ύψος με τα μενού του subapp: πάνω από αυτό, κύλιση αντί για έξοδο οθόνης. */
-  max-height: 60vh;
-  overflow-y: auto;
+  composes: anchor from './table-toolbar-panel.module.css';
 }
 
 .item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 5px 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.item:hover,
-.item:focus-visible {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
-}
-
-.item[aria-disabled='true'] {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.item[aria-disabled='true']:hover {
-  background-color: transparent;
+  composes: item from './table-toolbar-panel.module.css';
 }
 
 .itemIcon {
-  flex: none;
-  display: inline-flex;
+  composes: itemIcon from './table-toolbar-panel.module.css';
 }
 
 .separator {
-  height: 1px;
-  margin: 4px 2px;
-  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
+  composes: separator from './table-toolbar-panel.module.css';
+}
+
+/*
+ * Το πλέγμα των 13 εντολών θέλει σταθερό πλάτος: με `min-width: auto` οι μακριές ετικέτες
+ * («Επάνω και διπλό κάτω περίγραμμα») θα άλλαζαν το πλάτος του μενού ανά γλώσσα.
+ */
+.panel {
+  composes: panel from './table-toolbar-panel.module.css';
+  min-width: 232px;
 }
 
 /* ── ADR-750 Φ5 — η ζώνη «Σχεδίαση περιγραμμάτων» ────────────────────────────

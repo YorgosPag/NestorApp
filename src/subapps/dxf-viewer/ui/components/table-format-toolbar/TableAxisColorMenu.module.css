@@ -8,38 +8,43 @@
  * (`keepOpenOnToolbar`)· ένα δεύτερο portal θα ήταν για εκείνον «ξένο στοιχείο» και το `onClick`
  * δεν θα έτρεχε ποτέ.
  *
- * ⚠️ Τα δύο πάνελ μοιράζονται σήμερα τη γεωμετρία (`anchor` / `panel` / `separator`) σε δύο
- * αρχεία. Μένουν χωριστά **μόνο** επειδή το ADR-750 γράφεται παράλληλα στο ίδιο working tree·
- * μόλις κλείσει, τα κοινά μέρη ανήκουν σε ένα `table-toolbar-panel.module.css`. Καταγράφεται
- * ρητά ώστε να είναι χρέος, όχι παράλειψη.
+ * ✅ **ΛΥΘΗΚΕ (ADR-755).** Εδώ έγραφε: «τα δύο πάνελ μοιράζονται σήμερα τη γεωμετρία
+ * (`anchor` / `panel` / `separator`) σε δύο αρχεία· μένουν χωριστά **μόνο** επειδή το ADR-750
+ * γράφεται παράλληλα στο ίδιο working tree· μόλις κλείσει, τα κοινά μέρη ανήκουν σε ένα
+ * `table-toolbar-panel.module.css`». Το ADR-750 έκλεισε, το ADR-755 έφερε **τρίτο** πάνελ, και
+ * το αρχείο γράφτηκε με ακριβώς αυτό το όνομα. Εδώ μένει μόνο ό,τι είναι δικό του.
  *
  * Το χρώμα/περίγραμμα/σκιά **δεν** ορίζονται εδώ: έρχονται από τις ίδιες utility classes με το
  * `DropdownMenuContent`, ώστε οι επιφάνειες να ακολουθούν μαζί το θέμα.
  */
 
+/*
+ * `composes` και όχι νέο class name στο JSX: ο κανόνας ζει **μία** φορά, στο κοινό αρχείο.
+ */
 .anchor {
-  position: relative;
-  display: inline-flex;
+  composes: anchor from './table-toolbar-panel.module.css';
 }
 
-/* Τα δύο μισά του split button διαβάζονται ως ΕΝΑ χειριστήριο: μηδέν κενό, κοινό hover ύψος. */
 .split {
-  display: inline-flex;
-  align-items: center;
+  composes: split from './table-toolbar-panel.module.css';
 }
 
+/* Πλάτος για το γράμμα ΚΑΙ χώρος για την έγχρωμη μπάρα από κάτω. */
 .applyButton {
+  composes: splitMain from './table-toolbar-panel.module.css';
   width: 26px;
-  /* Χώρος για την έγχρωμη μπάρα κάτω από το γράμμα. */
   padding-bottom: 4px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 .arrowButton {
-  width: 14px;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  composes: splitArrow from './table-toolbar-panel.module.css';
+}
+
+/* Η παλέτα είναι το ψηλότερο πάνελ των τριών (δύο ζώνες + πλέγμα 13×6 + διάλογος). */
+.panel {
+  composes: panel from './table-toolbar-panel.module.css';
+  padding: 6px;
+  max-height: 70vh;
 }
 
 /**
@@ -56,22 +61,10 @@
   border-radius: 1px;
 }
 
-.panel {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 1;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
+/* Λίγο πιο αραιός από τον κοινό: οι ζώνες της παλέτας είναι εννοιολογικά πιο μακριά μεταξύ τους. */
 .separator {
-  height: 1px;
+  composes: separator from './table-toolbar-panel.module.css';
   margin: 6px 2px;
-  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
 }
 
 .sectionLabel {

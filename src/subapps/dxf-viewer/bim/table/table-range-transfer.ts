@@ -69,6 +69,11 @@ import { buildTableEdgeIndex, setTableEdges } from './table-edge-model';
 import { TABLE_BORDER_EVERY_SIDE, tableRangeSideEdges } from './table-range-border-ops';
 import { cellKey, getCell, resolveTableModel } from './table-model-helpers';
 import { recalculateTableModel } from './formula/table-formula-engine';
+import {
+  offsetTableFormula,
+  tableFormulaOffsetBetween,
+  type TableFormulaOffset,
+} from './formula/table-formula-offset';
 import { remapTableFormulaRefs, type TableFormulaRefRelocation } from './formula/table-formula-remap';
 
 /**
@@ -88,7 +93,7 @@ export function applyTableRangeTransfer(
 ): PersistedTableModel {
   const withContent = transferContent(model, plan);
   const withFormulas = plan.intent.copy
-    ? withContent
+    ? offsetCopiedFormulas(withContent, plan)
     : remapTableFormulaRefs(withContent, relocationOf(plan));
   const withMerges = transferMerges(withFormulas, plan);
   const withEdges = transferEdges(model, withMerges, plan);
@@ -234,6 +239,53 @@ function relocationOf(plan: TableRangeTransferPlan): TableFormulaRefRelocation {
     moved.set(cellKey(fill.from.rowId, fill.from.colId), fill.at);
   }
   return moved;
+}
+
+/**
+ * 🔴 ADR-754 Γ1 — **η αντιγραφή ΟΛΙΣΘΑΙΝΕΙ τις σχετικές αναφορές του αντιγράφου.**
+ *
+ * Αυτή η γραμμή έγραφε μέχρι το ADR-754 σκέτο `withContent`: το αντίγραφο κρατούσε τις ίδιες
+ * αναφορές, δηλαδή **κάθε** τύπος συμπεριφερόταν σαν `$A$1`. Ήταν **δηλωμένη απόκλιση** από το
+ * Excel (§36, καρφωμένη με test) και ήταν η **μόνη τίμια** επιλογή όσο ο τύπος δεν είχε τρόπο
+ * να πει «εγώ είμαι κλειδωμένος»: μια καθολική ολίσθηση θα έσπαγε σιωπηλά την άλλη μισή
+ * πρόθεση των χρηστών.
+ *
+ * Τώρα ο τύπος έχει τρόπο (`absoluteRow`/`absoluteCol`), οπότε η απόκλιση κλείνει — και
+ * κλείνει **εδώ** και όχι μόνο στη λαβή συμπλήρωσης, γιατί το `Ctrl+σύρσιμο` είναι η **ίδια**
+ * πράξη: «ξαναγράψε αυτόν τον τύπο αλλού». Δύο απαντήσεις στην ίδια ερώτηση θα σήμαιναν ότι το
+ * `$` μετράει με τη λαβή και αγνοείται με το `Ctrl` — δηλαδή ότι το ίδιο σύμβολο σημαίνει δύο
+ * πράγματα ανάλογα με τη χειρονομία.
+ *
+ * ⚠️ Η **πηγή** δεν αγγίζεται ποτέ: στην αντιγραφή δεν είναι στόχος κανενός γεμίσματος.
+ */
+function offsetCopiedFormulas(
+  model: PersistedTableModel,
+  plan: TableRangeTransferPlan,
+): PersistedTableModel {
+  const resolved = resolveTableModel(model);
+  const shifts = new Map<string, TableFormulaOffset>();
+  for (const fill of plan.fills) {
+    if (fill.from === null) continue;
+    const offset = tableFormulaOffsetBetween(resolved, fill.from, fill.at);
+    if (offset && (offset.rows !== 0 || offset.columns !== 0)) shifts.set(refKey(fill.at), offset);
+  }
+  if (shifts.size === 0) return model;
+
+  return writePersistedCells(
+    model,
+    plan.fills.map((fill) => fill.at),
+    {
+      update: (existing, target) => {
+        const offset = shifts.get(refKey(target));
+        if (offset === undefined || existing.formula === undefined) return null;
+        const formula = offsetTableFormula(resolved, existing.formula, offset);
+        return formula === existing.formula ? null : { ...existing, formula };
+      },
+      // Κελί χωρίς εγγραφή δεν έχει τύπο να ολισθήσει. Η **γέννηση** εγγραφών έγινε ήδη
+      // ολόκληρη στο σκέλος 1· εδώ μόνο ξαναγράφονται δέντρα που ήδη προσγειώθηκαν.
+      create: () => null,
+    },
+  );
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
