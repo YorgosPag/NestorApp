@@ -848,6 +848,70 @@ Jest** (δικό του module registry): 4/5 μεταλλάξεις «περν�
 
 ---
 
+## CHECK 3.36 — i18n Namespace Reachability (ADR-752)
+
+### Rule
+Κάθε αρχείο `src/i18n/locales/<γλώσσα>/<ns>.json` πρέπει να έχει **δικό του `case`** στο
+`src/i18n/namespace-loaders.ts`, **και για τις δύο** γλώσσες, δείχνοντας στο **ομώνυμο αρχείο
+της ίδιας γλώσσας**. **ZERO TOL — καμία baseline, ποτέ.**
+
+### Γιατί υπάρχει
+Έξι namespaces (`textTemplates`, `textSpell`, `textFonts`, `textDraft`, `textAi`,
+`dxf-viewer-dimensions`) είχαν αρχεία σε el **και** en, παραγόμενους τύπους και ~20 αρχεία
+καταναλωτές — αλλά **κανένα `case`**. Το `loadTranslations` έπεφτε στο `default: null` και
+κατέγραφε **άδειο bundle** ⇒ κάθε `t()` ζωγράφιζε **ωμό κλειδί** σε παραγωγή, με **όλες** τις
+άλλες CHECK πράσινες. Το βρήκε **άνθρωπος σε στιγμιότυπο οθόνης**: «Κενά πεδία:
+`placeholders.drawing.title`…» μέσα σε «έλεγχο πληρότητας για κατάθεση», ενώ η μετάφραση
+(«Τίτλος Σχεδίου») ήταν στον δίσκο.
+
+🔴 **Ο έλεγχος υπήρχε ήδη και ήταν ΚΟΚΚΙΝΟΣ.** Ο `validate-i18n-config.js` ονομάτιζε και τα
+έξι — **δεν τον έτρεχε καμία πύλη**, και το `i18n-governance.yml` το είχε γραμμένο ως
+δικαιολογία («2 pre-existing errors»). **Ένα anchor χωρίς gate δεν είναι anchor — είναι σχόλιο.**
+
+### Τρεις ρητές καταστάσεις — καμία σιωπηλή απόρριψη
+| κατάσταση | τι σημαίνει στην οθόνη |
+|---|---|
+| `no-loader` | άδειο bundle ⇒ **ωμά κλειδιά** (το αρχικό σφάλμα) |
+| `orphan` | `case` χωρίς αρχείο ⇒ **σφάλμα δυναμικής εισαγωγής** |
+| `wrong-target` | `case` σε άλλη γλώσσα/άλλο αρχείο ⇒ σιωπηλά **λάθος κείμενο** (χειρότερο: *φαίνεται* σωστό) |
+
+### Enforcement (Defense in Depth)
+- **Layer 1** — pre-commit, Phase 1 worker· σκανδάλη: staged locale JSON **ή** οτιδήποτε κάτω
+  από `src/i18n/` **ή** `src/types/i18n.ts`. Καθαρό in-memory Node (~60ms).
+- **Layer 2** — `i18n-governance.yml`, **άνευ όρων** (καλύπτει `--no-verify` / μηχάνημα χωρίς
+  `core.hooksPath`).
+
+### Πώς διορθώνεται
+Πρόσθεσε `case '<ns>': return () => import('./locales/<γλώσσα>/<ns>.json');` **και στις δύο**
+συναρτήσεις του `namespace-loaders.ts`, **και** το `<ns>` στο `SUPPORTED_NAMESPACES` του
+`lazy-config.ts` (χωρίς αυτό ο τύπος `Namespace` δεν το περιέχει και το `case` είναι
+απροσπέλαστο).
+
+### ⚠️ ΜΗΝ
+- **ΜΗΝ** το κάνεις ratchet. Μια δήλωση υπάρχει ή δεν υπάρχει· δεν υπάρχει «ανεκτό πλήθος
+  αφόρτωτων namespaces».
+- **ΜΗΝ** γράψεις παράδειγμα κλειδιού σε **μονά εισαγωγικά** μέσα σε σχόλιο στο
+  `SUPPORTED_NAMESPACES`: το `parseConstArray` διαβάζει το μπλοκ με regex. Θωρακίστηκε με
+  `stripLineComments()`, αλλά ο κανόνας μένει.
+- **ΜΗΝ** θεωρήσεις ότι το CHECK 3.36 εγγυάται ότι ο **καταναλωτής** δήλωσε το namespace:
+  `t('ns:key')` επιλύεται μόνο αν το bundle φορτώθηκε, και το `useTranslation` φορτώνει **μόνο
+  όσα του δηλώσεις**. Ανοιχτό θέμα (ADR-752 §8.1).
+
+### Relationship with other checks
+- **CHECK 3.8** → «υπάρχει το κλειδί;» — έλεγε **ναι** σε όλη τη διάρκεια του σφάλματος.
+- **CHECK 3.33** (ADR-727) → «είναι φρέσκοι οι τύποι;» — έλεγε **ναι**.
+- **CHECK 3.34** (ADR-744) → «είναι φρέσκο το shell slice;» — άσχετο (εκτός shell).
+- **CHECK 3.36** (αυτό) → **«φορτώνεται το namespace;»** — κανείς δεν το ρωτούσε.
+
+### Test suite
+`scripts/__tests__/i18n-namespace-reachability.test.js` — **17 tests / 4 ομάδες**. Η Ομάδα 4
+τρέχει στο **πραγματικό** δέντρο (θα ήταν κόκκινη πριν τη διόρθωση). Μεταλλάξεις στο πραγματικό
+`namespace-loaders.ts`: **3/3 + Μ0** (ADR-752 §6), επαληθευμένες **και** μέσα από τον hook
+orchestrator. Εντολή: `npm run test:i18n-namespace-reachability`.
+Escape: `SKIP_I18N_NAMESPACE_WIRING=1`.
+
+---
+
 ## Boy Scout Rule (applies to all RATCHET checks)
 
 Όταν αγγίζεις legacy file → καθάρισε όσα violations μπορείς. Δεν είναι υποχρεωτικό, αλλά σταδιακά φτάνουμε στο 0.

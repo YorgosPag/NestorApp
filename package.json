@@ -94,6 +94,7 @@
     "test:ssot-discover": "jest scripts/__tests__/check-ssot-discover-ratchet.test.js --verbose",
     "test:i18n-types-freshness": "jest scripts/__tests__/check-i18n-types-freshness.test.js --verbose",
     "test:i18n-shell-slice": "jest scripts/__tests__/i18n-shell-slice.test.js --verbose",
+    "test:i18n-namespace-reachability": "jest scripts/__tests__/i18n-namespace-reachability.test.js --verbose",
     "test:memory-identity": "jest scripts/__tests__/memory-identity.test.js --verbose",
     "test:registry-golden": "jest scripts/__tests__/registry-golden-regex.test.js --verbose",
     "test:capability-anchors": "jest --testPathPatterns=\"src/subapps/dxf-viewer/.*-coverage\\.test\\.ts\" --verbose",

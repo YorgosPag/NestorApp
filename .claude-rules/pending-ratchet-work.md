@@ -2,6 +2,31 @@
 
 **STATUS: ACTIVE**
 
+- 🟡 **`namespace-manifest.json`: 17 namespaces χωρίς εγγραφή governance** (μετρημένο 2026-08-04,
+  ADR-752 §7, κατά N.0.2). Ο `scripts/validate-i18n-manifest.js` βγάζει **3 σφάλματα** —
+  `Manifest/locales drift`, `Manifest/lazy-config drift`, `Manifest/generated-types drift` — και
+  τα τρία δείχνουν τα **ίδια** 17 namespaces: `bim3d`, `bim-3d-aria`, `bim-materials`,
+  `dxf-schedule`, `dxf-viewer-dimensions`, `floorplan-overlays`, `iso19650`, `onboarding`,
+  `quotes`, `settings`, `textAi`, `textDraft`, `textFindReplace`, `textFonts`, `textSpell`,
+  `textTemplates`, `vendor-portal`. ⚠️ **ΔΕΝ είναι το σφάλμα του ADR-752** (εκείνο ήταν οι
+  loaders και **έκλεισε**) — είναι τα **μεταδεδομένα διακυβέρνησης** ανά namespace (owner,
+  primarySurface, stringClasses, budget, status, splitRequired). **Γιατί δεν μπήκε σε πύλη
+  σήμερα**: θα γεννιόταν **κόκκινη**, και ένα gate που γεννιέται κόκκινο διδάσκει να το
+  αγνοείς (ADR-742). **Θεραπεία**: 17 εγγραφές στο `src/i18n/namespace-manifest.json` —
+  απόφαση ανά namespace (ποιος το κατέχει, τι budget), όχι μηχανική συμπλήρωση ⇒ >1h κατά N.0.2.
+  Μόλις μηδενίσει: πρόσθεσε `node scripts/validate-i18n-manifest.js` στο `i18n-governance.yml`
+  δίπλα στο CHECK 3.36 και ξεκλείδωσε το `i18n:check` ως ενιαία εντολή.
+
+- 🟡 **Πρόθεμα namespace χωρίς δήλωση στον καταναλωτή — δεν το βλέπει καμία πύλη** (ADR-752 §8.1).
+  Το `t('ns:key')` επιλύεται **μόνο** αν το bundle έχει φορτωθεί, και το `useTranslation`
+  φορτώνει **μόνο όσα του δηλώσεις**. Το `PrintComplianceHint.tsx` καλούσε
+  `t('textTemplates:…')` δηλώνοντας μόνο `dxf-viewer-shell`: **δούλευε ή όχι ανάλογα με το αν ο
+  χρήστης είχε ανοίξει νωρίτερα άλλη οθόνη** — τυχαία σωστό. Διορθώθηκε **αυτό** το σημείο και
+  σαρώθηκε όλο το `src/` για τα 6 namespaces του ADR-752 (κανένα άλλο). **Θεραπεία**: έλεγχος
+  AST «για κάθε `t('ns:key')`, ανήκει το `ns` στα ορίσματα του `useTranslation` του ίδιου
+  component;» — πιάνει την **κλάση**, όχι το δείγμα. **Γιατί δεν έγινε επί τόπου**: νέος AST
+  σαρωτής + άγνωστο πλήθος υπαρχουσών παραβιάσεων σε όλο το `src/` ⇒ >1h κατά N.0.2.
+
 - 🔴 **ΣΟΥΙΤΑ ΠΟΥ ΔΕΝ ΤΡΕΧΕΙ ΚΑΘΟΛΟΥ — κυκλική εισαγωγή στις εντολές οδηγών**
   (μετρημένο 2026-08-04 κατά τη Φ8 του ADR-751· **ΔΕΝ** το εισήγαγε αυτή η δουλειά — ο φάκελος
   `systems/guides/` είναι **ταυτόσημος με το HEAD** και δεν αναφέρει κανένα αρχείο της Φ8).
