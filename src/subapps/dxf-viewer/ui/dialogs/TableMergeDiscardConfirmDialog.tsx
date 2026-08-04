@@ -28,8 +28,8 @@
  */
 
 import React, { useSyncExternalStore } from 'react';
-import { createPortal } from 'react-dom';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { TableWarningConfirmDialog } from './TableWarningConfirmDialog';
 import { useEscapeHandler } from '../../systems/escape-bus/useEscapeHandler';
 import { ESC_PRIORITY } from '../../systems/escape-bus/escape-priority';
 import {
@@ -58,37 +58,17 @@ export const TableMergeDiscardConfirmDialog: React.FC = () => {
     },
   });
 
-  if (!state.open || typeof document === 'undefined') return null;
+  if (!state.open) return null;
 
-  return createPortal(
-    <div className="dxf-modal-overlay" role="dialog" aria-modal="true">
-      <div className="dxf-modal-card dxf-modal-card-warning">
-        <h2 className="dxf-modal-title dxf-modal-title-warning">{t('tableMergeDiscard.title')}</h2>
-        {/* Ο **αριθμός** είναι το περιεχόμενο του μηνύματος: «# κελιά», ποτέ «είσαι σίγουρος;». */}
-        <p className="dxf-modal-note-warning">
-          {t('tableMergeDiscard.message', { count: state.cells })}
-        </p>
-        {/* NN/g: πες αν είναι **ανακτήσιμο**. Είναι — ΕΝΑ βήμα undo. */}
-        <p className="dxf-modal-body">{t('tableMergeDiscard.undoNote')}</p>
-        <div className="dxf-modal-actions dxf-modal-actions-stack">
-          <button
-            type="button"
-            className="dxf-modal-button dxf-modal-button-warning"
-            onClick={() => resolveTableMergeDiscard('merge')}
-          >
-            {t('tableMergeDiscard.mergeButton')}
-          </button>
-          <button
-            type="button"
-            autoFocus
-            className="dxf-modal-button"
-            onClick={() => resolveTableMergeDiscard('cancel')}
-          >
-            {t('tableMergeDiscard.cancel')}
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+  return (
+    <TableWarningConfirmDialog
+      title={t('tableMergeDiscard.title')}
+      message={t('tableMergeDiscard.message', { count: state.cells })}
+      undoNote={t('tableMergeDiscard.undoNote')}
+      confirmLabel={t('tableMergeDiscard.mergeButton')}
+      cancelLabel={t('tableMergeDiscard.cancel')}
+      onConfirm={() => resolveTableMergeDiscard('merge')}
+      onCancel={() => resolveTableMergeDiscard('cancel')}
+    />
   );
 };

@@ -81,7 +81,7 @@
 import React, {
   useCallback, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent,
 } from 'react';
-import { Baseline, ChevronDown, PaintBucket, Palette } from 'lucide-react';
+import { Baseline, PaintBucket, Palette } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
@@ -102,6 +102,7 @@ import {
 import { automaticHintKey, colorMenuKeys } from './table-color-menu-roles';
 import { CommandRow, DrawingColorsRow } from './table-color-menu-rows';
 import { TableColorSwatchGrid } from './TableColorSwatchGrid';
+import { ToolbarSplitButton } from './ToolbarSplitButton';
 import { type RovingItemProps } from './use-roving-toolbar';
 import { TableColorDialog } from './TableColorDialog';
 import styles from './TableAxisColorMenu.module.css';
@@ -241,47 +242,31 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
 
   return (
     <span className={styles.anchor}>
-      <span className={styles.split}>
-        <button
-          type="button"
-          ref={rovingApply.ref}
-          tabIndex={rovingApply.tabIndex}
-          onKeyDown={rovingApply.onKeyDown}
-          onFocus={rovingApply.onFocus}
-          className={cn(toolbar.button, styles.applyButton)}
-          aria-label={t(keys.trigger)}
-          onClick={() => pick(lastColor)}
-          {...TABLE_CELL_SESSION_MARKER}
-        >
-          <TriggerIcon size={15} aria-hidden="true" />
-          {/* Η έγχρωμη μπάρα ΕΙΝΑΙ η πληροφορία «τι θα εφαρμόσει αυτό το κλικ». */}
-          <span
-            className={styles.colorBar}
-            style={{ backgroundColor: lastColor }}
-            aria-hidden="true"
-          />
-        </button>
-
-        <button
-          type="button"
-          ref={(node) => {
-            triggerRef.current = node;
-            rovingMenu.ref(node);
-          }}
-          tabIndex={rovingMenu.tabIndex}
-          onKeyDown={rovingMenu.onKeyDown}
-          onFocus={rovingMenu.onFocus}
-          className={cn(toolbar.button, styles.arrowButton, isOpen && toolbar.buttonActive)}
-          aria-label={t(keys.openMenu)}
-          aria-haspopup="menu"
-          aria-expanded={isOpen}
-          aria-controls={isOpen ? panelId : undefined}
-          onClick={() => setIsOpen((open) => !open)}
-          {...TABLE_CELL_SESSION_MARKER}
-        >
-          <ChevronDown size={12} aria-hidden="true" />
-        </button>
-      </span>
+      {/*
+        ADR-755 — ο σκελετός των δύο μισών είναι **κοινός** με το split button συγχώνευσης
+        (CHECK 3.28 τον μέτρησε ως δίδυμο). Εδώ μένει μόνο ό,τι είναι δικό του: το εικονίδιο
+        ρόλου και η έγχρωμη μπάρα.
+      */}
+      <ToolbarSplitButton
+        rovingApply={rovingApply}
+        rovingMenu={rovingMenu}
+        mainLabel={t(keys.trigger)}
+        menuLabel={t(keys.openMenu)}
+        mainClassName={styles.applyButton}
+        onMainClick={() => pick(lastColor)}
+        isOpen={isOpen}
+        panelId={panelId}
+        onToggleMenu={() => setIsOpen((open) => !open)}
+        triggerRef={triggerRef}
+      >
+        <TriggerIcon size={15} aria-hidden="true" />
+        {/* Η έγχρωμη μπάρα ΕΙΝΑΙ η πληροφορία «τι θα εφαρμόσει αυτό το κλικ». */}
+        <span
+          className={styles.colorBar}
+          style={{ backgroundColor: lastColor }}
+          aria-hidden="true"
+        />
+      </ToolbarSplitButton>
 
       {isOpen ? (
         <div

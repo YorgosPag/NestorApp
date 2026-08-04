@@ -31,8 +31,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-755-table-cell-merge.md
  */
 
-import React, { useCallback, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { ChevronDown, TableCellsMerge, TableCellsSplit } from 'lucide-react';
+import React from 'react';
+import { TableCellsMerge, TableCellsSplit } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
@@ -42,9 +42,10 @@ import {
   type TableMergeCommandId,
   type TableMergeState,
 } from '../../../bim/table/table-range-merge-ops';
+import { ToolbarSplitButton } from './ToolbarSplitButton';
+import { useToolbarPanel } from './use-toolbar-panel';
 import { type RovingItemProps } from './use-roving-toolbar';
 import styles from './TableMergeMenu.module.css';
-import toolbar from './TableFormatToolbar.module.css';
 
 export interface TableMergeMenuProps {
   /** Roving του **κύριου** μισού (toggle συγχώνευσης/κατάργησης). */
@@ -75,28 +76,9 @@ export function isTableMergeCommandDisabled(
 export function TableMergeMenu(props: TableMergeMenuProps): React.ReactElement {
   const { rovingApply, rovingMenu, state, onApply } = props;
   const { t } = useTranslation('dxf-viewer');
-  const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const panelId = useId();
-
-  /**
-   * Κάθε εντολή **κλείνει** το πάνελ — η ίδια απόφαση του ιδιοκτήτη που έκανε το μενού ζωνών να
-   * κλείνει στο πρώτο πάτημα (Excel parity). Η εστίαση γυρίζει στον trigger, αλλιώς ο χρήστης
-   * πληκτρολογίου μένει σε στοιχείο που μόλις ξεμόνταρε.
-   */
-  const runAndClose = useCallback((commandId: TableMergeCommandId) => {
-    onApply(commandId);
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  }, [onApply]);
-
-  // Το `Escape` κλείνει **το πάνελ**, όχι όλη τη γραμμή: ένα `Escape` = ένα επίπεδο.
-  const onPanelKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape') return;
-    event.stopPropagation();
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  }, []);
+  // Κύκλος ζωής πάνελ: κατάσταση, `aria-controls`, «εκτέλεσε → κλείσε → γύρνα την εστίαση»,
+  // και το `Escape` που κλείνει **ένα** επίπεδο. Κοινός με τα άλλα δύο πτυσσόμενα (N.18).
+  const panel = useToolbarPanel();
 
   // 🔑 Το toggle: πατημένο ⇒ ξήλωσε· ελεύθερο ⇒ η προεπιλογή του μητρώου. Η ταυτότητα της
   // προεπιλογής δεν γράφεται εδώ (`'mergeCenter'`) — έρχεται από το μητρώο, ώστε το κουμπί και
@@ -106,56 +88,32 @@ export function TableMergeMenu(props: TableMergeMenuProps): React.ReactElement {
 
   return (
     <span className={styles.anchor}>
-      <span className={styles.split}>
-        <button
-          type="button"
-          ref={rovingApply.ref}
-          tabIndex={rovingApply.tabIndex}
-          onKeyDown={rovingApply.onKeyDown}
-          onFocus={rovingApply.onFocus}
-          className={cn(toolbar.button, styles.mainButton, state.merged && toolbar.buttonActive)}
-          aria-label={t('table.merge.trigger')}
-          // Δίτιμο **επειδή είναι** δίτιμο: «αυτή η περιοχή είναι συγχωνευμένη» έχει ακριβώς δύο
-          // απαντήσεις, σε αντίθεση με τις τέσσερις εντολές του πάνελ (δες την κεφαλίδα).
-          aria-pressed={state.merged}
-          aria-disabled={primaryDisabled || undefined}
-          onClick={() => {
-            if (!primaryDisabled) onApply(primary);
-          }}
-          {...TABLE_CELL_SESSION_MARKER}
-        >
-          {state.merged
-            ? <TableCellsSplit size={15} aria-hidden="true" />
-            : <TableCellsMerge size={15} aria-hidden="true" />}
-        </button>
+      <ToolbarSplitButton
+        rovingApply={rovingApply}
+        rovingMenu={rovingMenu}
+        mainLabel={t('table.merge.trigger')}
+        menuLabel={t('table.merge.menuLabel')}
+        // Δίτιμο **επειδή είναι** δίτιμο: «αυτή η περιοχή είναι συγχωνευμένη» έχει ακριβώς δύο
+        // απαντήσεις, σε αντίθεση με τις τέσσερις εντολές του πάνελ (δες την κεφαλίδα).
+        mainPressed={state.merged}
+        mainDisabled={primaryDisabled}
+        onMainClick={() => onApply(primary)}
+        isOpen={panel.isOpen}
+        panelId={panel.panelId}
+        onToggleMenu={panel.toggle}
+        triggerRef={panel.triggerRef}
+      >
+        {state.merged
+          ? <TableCellsSplit size={15} aria-hidden="true" />
+          : <TableCellsMerge size={15} aria-hidden="true" />}
+      </ToolbarSplitButton>
 
-        <button
-          type="button"
-          ref={(node) => {
-            triggerRef.current = node;
-            rovingMenu.ref(node);
-          }}
-          tabIndex={rovingMenu.tabIndex}
-          onKeyDown={rovingMenu.onKeyDown}
-          onFocus={rovingMenu.onFocus}
-          className={cn(toolbar.button, styles.arrowButton, isOpen && toolbar.buttonActive)}
-          aria-label={t('table.merge.menuLabel')}
-          aria-haspopup="menu"
-          aria-expanded={isOpen}
-          aria-controls={isOpen ? panelId : undefined}
-          onClick={() => setIsOpen((open) => !open)}
-          {...TABLE_CELL_SESSION_MARKER}
-        >
-          <ChevronDown size={12} aria-hidden="true" />
-        </button>
-      </span>
-
-      {isOpen ? (
+      {panel.isOpen ? (
         <div
-          id={panelId}
+          id={panel.panelId}
           role="menu"
           aria-label={t('table.merge.menuLabel')}
-          onKeyDown={onPanelKeyDown}
+          onKeyDown={panel.onPanelKeyDown}
           className={cn(
             styles.panel,
             'border border-border rounded-lg bg-popover text-popover-foreground shadow-md',
@@ -179,7 +137,7 @@ export function TableMergeMenu(props: TableMergeMenuProps): React.ReactElement {
                   // στο `role="menu"` — δεν στήνεται δεύτερο roving μέσα σε τέσσερα items.
                   autoFocus={index === 0}
                   onClick={() => {
-                    if (!disabled) runAndClose(command.id);
+                    if (!disabled) panel.runAndClose(() => onApply(command.id));
                   }}
                   {...TABLE_CELL_SESSION_MARKER}
                 >

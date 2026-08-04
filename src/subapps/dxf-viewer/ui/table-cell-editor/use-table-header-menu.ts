@@ -62,10 +62,11 @@ import {
   deleteAxisTarget,
   insertAt,
   resolveHeaderState,
-  survivingCursor,
   type AxisActionPlanner,
   type SurvivorPick,
 } from './table-header-axis-actions';
+// 🔴 §42 — η ΜΙΑ διαδρομή «δομική πράξη άξονα → εντολή → επιζών δρομέας», κοινή με το ⊖ (N.18).
+import { useTableAxisActionApply } from './use-table-axis-action-apply';
 import {
   clearAxisStyleOverride,
   nextBooleanFormat,
@@ -91,7 +92,6 @@ import { useTableMergeActions } from './use-table-merge-actions';
 import {
   getTableCellCursor,
   restartTableCellCursorSession,
-  setTableCellCursor,
 } from '../../state/table-cell-cursor-store';
 import { useLiveTable } from './use-live-table';
 import {
@@ -99,7 +99,7 @@ import {
   setTableHeaderMenuPort,
   type TableHeaderMenuPort,
 } from './table-header-menu-port';
-import { useLiveTableMutation, useTableModelCommit } from './use-table-model-commit';
+import { useLiveTableMutation } from './use-table-model-commit';
 import { useCommandHistory } from '../../core/commands';
 import type { PersistedTableModel } from '../../types/table';
 import type {
@@ -127,10 +127,6 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
 
   /** Ο πίνακας του δρομέα, **τη στιγμή της κλήσης**· `null` χωρίς δρομέα ή σβησμένο πίνακα. */
   const liveTable = useLiveTable(levelManager);
-
-  // Η ΙΔΙΑ διαδρομή commit με το πρόχειρο· η οντότητα περνά ως όρισμα κλήσης, γιατί εδώ
-  // διαβάζεται με getter τη στιγμή της ενέργειας.
-  const commitModel = useTableModelCommit({ levelManager, execute });
 
   const getHit = useCallback(
     (clientX: number, clientY: number): TableIndicatorHit | null => {
@@ -177,25 +173,21 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
   }, [getHit]);
 
   /**
-   * Η μία διαδρομή κάθε ενέργειας: καθαρή πράξη πάνω στο **ζωντανό** μοντέλο, μία εντολή,
-   * και μετά ο δρομέας τοποθετείται σε κελί που **υπάρχει**.
+   * Η μία διαδρομή κάθε δομικής ενέργειας: καθαρή πράξη πάνω στο **ζωντανό** μοντέλο, μία
+   * εντολή, και μετά ο δρομέας τοποθετείται σε κελί που **υπάρχει**.
    *
-   * Χωρίς την τελευταία κίνηση, μια διαγραφή θα άφηνε τον δρομέα πάνω σε σβησμένη γραμμή:
-   * ο επεξεργαστής θα ξεμοντάριζε (`target` → `null`) και η συνεδρία θα γινόταν αδρανής —
-   * ζωντανή στο store, κουφή στην οθόνη.
+   * ⚠️ §42 — το σώμα μετακόμισε στο {@link useTableAxisActionApply} τη στιγμή που το **⊖ της
+   * διαγραφής** ζήτησε την ίδια ακριβώς ακολουθία. Το σκεπτικό (γιατί η τοποθέτηση του δρομέα
+   * δεν είναι προαιρετική) μένει γραμμένο εκεί, δίπλα στον κώδικα που το εκτελεί. Εδώ μένει
+   * μόνο η ανάγνωση του ζωντανού πίνακα — η γνώση που είναι όντως του μενού.
    */
+  const applyAxisAction = useTableAxisActionApply({ levelManager, execute });
   const apply = useCallback(
     (mutate: (model: PersistedTableModel) => PersistedTableModel, pick: SurvivorPick) => {
-      const cursor = getTableCellCursor();
       const live = liveTable();
-      if (!live || !cursor) return;
-      const nextModel = mutate(live.model);
-      if (nextModel === live.model) return;
-      if (!commitModel(live, nextModel)) return;
-      const position = survivingCursor(nextModel, cursor.position, pick);
-      if (position) setTableCellCursor(live.id, position, 'nav');
+      if (live) applyAxisAction(live, mutate, pick);
     },
-    [liveTable, commitModel],
+    [liveTable, applyAxisAction],
   );
 
   /**

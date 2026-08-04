@@ -29,7 +29,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-750-table-cell-borders.md §9.2 · §18 (Α19/Α21)
  */
 
-import React, { useCallback, useId, useRef, useState, type KeyboardEvent } from 'react';
+import React from 'react';
 import { Grid2x2, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -47,6 +47,7 @@ import {
   TableBorderPencilPanel,
 } from './TableBorderPencilPanel';
 import { tableBorderMenuItems } from './table-border-menu-items';
+import { useToolbarPanel } from './use-toolbar-panel';
 import { useRovingToolbar, type RovingItemProps } from './use-roving-toolbar';
 import panel from './TableBorderMenu.module.css';
 import toolbar from './TableFormatToolbar.module.css';
@@ -71,9 +72,9 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
     roving, onApply, onReset, canReset, onApplyDiagonal, canClearDiagonals, resolvePencil,
   } = props;
   const { t } = useTranslation('dxf-viewer');
-  const [isOpen, setIsOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const panelId = useId();
+  // ADR-755 — ο κύκλος ζωής του πάνελ (κατάσταση, `aria-controls`, «εκτέλεσε → κλείσε → γύρνα
+  // την εστίαση», `Escape` ένα επίπεδο) είναι **κοινός** με τα άλλα δύο πτυσσόμενα (N.18).
+  const { isOpen, panelId, triggerRef, toggle, runAndClose, onPanelKeyDown } = useToolbarPanel();
   const items = tableBorderMenuItems();
 
   /**
@@ -87,26 +88,6 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
   const diagonalBase = resetIndex + 1;
   const pencilBase = diagonalBase + TABLE_DIAGONAL_COMMANDS.length;
   const roving2 = useRovingToolbar(pencilBase + TABLE_PENCIL_ROW_COUNT, 'vertical');
-
-  /**
-   * Κάθε εντολή **κλείνει** το πάνελ — η ίδια απόφαση του ιδιοκτήτη που έκανε το μενού ζωνών να
-   * κλείνει στο πρώτο πάτημα (Excel parity). Η εστίαση γυρίζει στον trigger, αλλιώς ο χρήστης
-   * πληκτρολογίου μένει σε στοιχείο που μόλις ξεμόνταρε.
-   */
-  const runAndClose = useCallback((action: () => void) => {
-    action();
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  }, []);
-
-  // Το `Escape` κλείνει **το πάνελ**, όχι όλη τη γραμμή: `stopPropagation` ώστε ο γονέας να μη
-  // δει το πλήκτρο και κλείσει μαζί και το μενού από κάτω. Ένα `Escape` = ένα επίπεδο.
-  const onPanelKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape') return;
-    event.stopPropagation();
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  }, []);
 
   return (
     <span className={panel.anchor}>
@@ -124,7 +105,7 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
         aria-haspopup="menu"
         aria-expanded={isOpen}
         aria-controls={isOpen ? panelId : undefined}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={toggle}
         {...TABLE_CELL_SESSION_MARKER}
       >
         <Grid2x2 size={15} aria-hidden="true" />
