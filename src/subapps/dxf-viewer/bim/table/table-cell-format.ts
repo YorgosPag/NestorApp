@@ -163,13 +163,70 @@ const SEMANTIC_FORMAT_BY_VALUE_TYPE: Readonly<Record<ScheduleColumnValueType, Ta
  */
 export function cellDisplayText(cell: TableCell | undefined, format: TableCellFormat): string {
   const raw = cellText(cell);
-  if (raw === '' || format.kind === 'general' || format.kind === 'text') return raw;
+  if (raw === '') return raw;
+
+  const effective = format.kind === 'general' ? inferredFormat(cell, format) : format;
+  if (effective.kind === 'general' || effective.kind === 'text') return raw;
 
   const numeric = cellValueToNumber(cell?.value ?? null);
   if (numeric === null) return raw;
 
-  return renderNumber(numeric, format) ?? raw;
+  return renderNumber(numeric, effective) ?? raw;
 }
+
+/**
+ * 🔴 ADR-760 Φ3 — **ο κανόνας του Excel**: τύπος που επιστρέφει ημερομηνία δείχνει ημερομηνία,
+ * ακόμη κι όταν το κελί δεν έχει μορφή.
+ *
+ * Χωρίς αυτό, το `=DATE(2026,8,5)` δείχνει `46239` σε κάθε νέο πίνακα μέχρι να πάει κάποιος
+ * να ορίσει μορφή — δηλαδή **πάντα**, γιατί κανείς δεν το κάνει προτού δει το πρόβλημα. Ο ίδιος
+ * κανόνας υπάρχει στο Excel ακριβώς γι' αυτόν τον λόγο, και είναι η μόνη περίπτωση όπου η
+ * μορφή δεν έρχεται από τον χρήστη.
+ *
+ * ## Γιατί είναι ασφαλές, ενώ η «αναγνώριση από την τιμή» δεν θα ήταν
+ * Δεν μαντεύεται τίποτα από τον **αριθμό** — αυτό θα ήταν το `46239` που μπορεί να είναι τιμή
+ * σε ευρώ. Ρωτιέται ο **τύπος**: το `DATE(...)` επιστρέφει ημερομηνία εξ ορισμού της
+ * συνάρτησης, όχι κατά πιθανότητα. Είναι πληροφορία που ο χρήστης **έγραψε**, όχι εικασία.
+ *
+ * ## Και γιατί μένει στην ΕΜΦΑΝΙΣΗ
+ * Το Excel **γράφει** τη μορφή στο κελί (και ο χρήστης μένει με μια μορφή που δεν ζήτησε, την
+ * οποία πρέπει να καθαρίσει αν αλλάξει τον τύπο). Εδώ ο συμπερασμός υπολογίζεται στη ροή
+ * απόδοσης: το μοντέλο δεν αποκτά τίποτα, καμία εντολή undo δεν γεννιέται, και η στιγμή που ο
+ * χρήστης γράψει `=A1*2` πάνω από το `=DATE(...)` το κελί επιστρέφει μόνο του σε αριθμό.
+ * **Πιο σωστό από το Excel**, με λιγότερη κατάσταση.
+ *
+ * ⚠️ Ρητή παράκαμψη (ακόμη και ρητό `general` σε κελί/γραμμή/στήλη) **κερδίζει πάντα** — ο
+ * συμπερασμός τρέχει μόνο όταν κανείς δεν έχει άποψη, δηλαδή είναι το επίπεδο **5,5**.
+ */
+function inferredFormat(cell: TableCell | undefined, fallback: TableCellFormat): TableCellFormat {
+  if (cell?.kind !== 'formula' || cell.formula === undefined) return fallback;
+  const root = cell.formula.root;
+  if (root.kind !== 'call' || !DATE_RETURNING_FUNCTIONS.has(root.name)) return fallback;
+  return { kind: 'date', locale: fallback.locale };
+}
+
+/**
+ * Οι συναρτήσεις της βιβλιοθήκης που επιστρέφουν **ημερομηνία**, όχι αριθμό.
+ *
+ * Μικρός, ρητός κατάλογος και όχι ιδιότητα της βιβλιοθήκης: το `@formulajs/formulajs` δεν
+ * δηλώνει τύπο επιστροφής πουθενά (§49 το μέτρησε — επιστρέφει `Date` εκεί που το Excel
+ * επιστρέφει αριθμό, και η γέφυρα το **διορθώνει**). Τα ονόματα είναι ήδη κανονικοποιημένα σε
+ * κεφαλαία από τον αναλυτή.
+ *
+ * ⚠️ **Δεν** περιλαμβάνονται οι `DATEDIF`/`DAYS`/`YEARFRAC`/`NETWORKDAYS`: επιστρέφουν
+ * **πλήθος ημερών**, δηλαδή σκέτο αριθμό. Ένα `=DAYS(A1,B1)` μορφοποιημένο ως ημερομηνία θα
+ * έδειχνε «31 Ιανουαρίου 1900» αντί για «31» — το κλασικό σφάλμα που κάνει το Excel όταν ο
+ * χρήστης αντιγράφει μορφή, και το οποίο εδώ αποφεύγεται **επειδή** ο κατάλογος γράφτηκε με
+ * κριτήριο «τι *είναι* το αποτέλεσμα», όχι «ποια συνάρτηση αφορά ημερομηνίες».
+ */
+const DATE_RETURNING_FUNCTIONS: ReadonlySet<string> = new Set([
+  'DATE',
+  'EDATE',
+  'EOMONTH',
+  'WORKDAY',
+  'WORKDAY.INTL',
+  'WORKDAYINTL',
+]);
 
 /** `null` ⇒ «αυτή η μορφή δεν αποδίδεται γι' αυτόν τον αριθμό» ⇒ ο καλών δείχνει τον ωμό. */
 function renderNumber(value: number, format: TableCellFormat): string | null {

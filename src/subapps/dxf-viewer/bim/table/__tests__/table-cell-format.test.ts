@@ -322,3 +322,58 @@ describe('🔴 το πλάτος μετριέται πάνω στο ΜΟΡΦΟΠ
     expect(layout.cells[0].text?.clipped ?? false).toBe(false);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 6. Φ3 — ο συμπερασμός μορφής από τον ΤΥΠΟ (ο κανόνας του Excel)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('🔴 τύπος που επιστρέφει ημερομηνία δείχνει ημερομηνία χωρίς καμία ρύθμιση', () => {
+  function typedInto(input: string, columnFormat?: TableCellFormat): PersistedTableModel {
+    const columns: TableColumn[] = [
+      {
+        id: 'cA',
+        sizing: { kind: 'fixed', widthMm: 60 },
+        valueType: 'text',
+        align: 'left',
+        ...(columnFormat ? { styleOverride: { numberFormat: columnFormat } } : {}),
+      },
+      { id: 'cB', sizing: { kind: 'fixed', widthMm: 60 }, valueType: 'text', align: 'left' },
+    ];
+    const rows: TableRow[] = [{ id: 'r1', rowClass: 'data', heightMm: 6 }];
+    const base: PersistedTableModel = { columns, rows, cells: [], merges: [] };
+    return commitCellWrites(writeCellInput(base, 'r1', 'cA', input));
+  }
+
+  const painted = (model: PersistedTableModel): string | undefined =>
+    layoutTable(resolveTableModel(model), STANDARD, { measureText }).cells[0].text?.text;
+
+  it('🔴 Η ΠΛΗΓΗ ΤΗΣ Φ3 ΚΛΕΙΝΕΙ: `=DATE(2026,8,5)` σε ΣΚΕΤΟ κελί δείχνει ημερομηνία', () => {
+    const model = typedInto('=DATE(2026,8,5)');
+    expect(painted(model)).toBe('05/08/2026');
+    // …και η τιμή παραμένει ο ωμός σειριακός. Ο συμπερασμός ΔΕΝ γράφεται στο μοντέλο.
+    expect(model.cells[0][2].value).toBe(46239);
+    expect(model.cells[0][2].styleOverride).toBeUndefined();
+  });
+
+  it('αριθμητικός τύπος ΔΕΝ γίνεται ημερομηνία', () => {
+    expect(painted(typedInto('=1+1'))).toBe('2');
+  });
+
+  it('🔴 σκέτος αριθμός δεν συμπεραίνεται ΠΟΤΕ — η εικασία θα ήταν από την τιμή', () => {
+    expect(painted(typedInto('46239'))).toBe('46239');
+  });
+
+  it('ρητή παράκαμψη κερδίζει τον συμπερασμό', () => {
+    const model = typedInto('=DATE(2026,8,5)', { kind: 'decimal', decimals: 0 });
+    expect(painted(model)).toBe('46.239');
+  });
+
+  it('🔴 ΚΛΗΣΗ που δίνει ΠΛΗΘΟΣ ημερών μένει αριθμός — ο κατάλογος ρωτά «τι ΕΙΝΑΙ»', () => {
+    // ⚠️ Η ρίζα πρέπει να είναι **κλήση** (`DAYS(...)`), όχι αφαίρεση: το
+    // `=DATE(...)-DATE(...)` έχει ρίζα `binary`, οπότε δεν περνά καν από τον κατάλογο —
+    // πράσινο που θα σήμαινε «δεν κοίταξα». Μετρημένο: με τη διατύπωση της αφαίρεσης, η
+    // μετάλλαξη «βάλε το `DAYS` στον κατάλογο» **δεν πιανόταν**.
+    expect(painted(typedInto('=DAYS(DATE(2026,8,5),DATE(2026,7,5))'))).toBe('31');
+    expect(painted(typedInto('=DATE(2026,8,5)-DATE(2026,7,5)'))).toBe('31');
+  });
+});
