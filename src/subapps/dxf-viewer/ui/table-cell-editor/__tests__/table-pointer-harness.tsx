@@ -24,7 +24,7 @@
  */
 
 import React, { useRef } from 'react';
-import { TABLE_TEST_VIEW } from './table-screen-point';
+import { TABLE_TEST_VIEW, type TableTestView } from './table-screen-point';
 import { useTableCellCursor } from '../../../state/table-cell-cursor-store';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-session-focus';
 import { useTableCellPointer } from '../use-table-cell-pointer';
@@ -40,6 +40,15 @@ import type { ViewTransform } from '../../../rendering/types/Types';
  */
 export interface TablePointerHarnessProps {
   readonly entity: TableEntity;
+  /**
+   * 🔴 Η **προβολή** — προεπιλογή το {@link TABLE_TEST_VIEW}.
+   *
+   * Υπάρχει ως prop επειδή μερικές προδιαγραφές **είναι** συνάρτηση της κλίμακας: το φράγμα της
+   * ζώνης περιγράμματος (ADR-739 §36.9) δεσμεύει μόνο όταν το κελί είναι μικρότερο από
+   * ~36 px, δηλαδή σε κανονικό zoom φύλλου. Ένα harness κλειδωμένο σε μία κλίμακα θα έκανε
+   * εκείνα τα tests **πράσινα χωρίς να δοκιμάζουν τίποτα**.
+   */
+  readonly view?: TableTestView;
   /** Το μοντέλο που φτάνει στο commit — το **μόνο** πράγμα που θα δει ο χρήστης. */
   readonly onCommitModel?: (entity: TableEntity, model: PersistedTableModel) => void;
   readonly onSelectTo?: (cell: TableCellRef) => void;
@@ -57,7 +66,7 @@ export interface TablePointerHarnessProps {
  */
 export function TablePointerHarness(props: TablePointerHarnessProps): React.ReactElement {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const transformRef = useRef<ViewTransform>(TABLE_TEST_VIEW.transform);
+  const transformRef = useRef<ViewTransform>((props.view ?? TABLE_TEST_VIEW).transform);
   const cursor = useTableCellCursor();
 
   useTableCellPointer({
@@ -94,8 +103,8 @@ export function TablePointerHarness(props: TablePointerHarnessProps): React.Reac
  * **κάθε** μετατροπή οθόνης→κόσμου βγαίνει λάθος — σιωπηλά, γιατί τα μηδενικά είναι έγκυροι
  * αριθμοί. Ήταν γραμμένο πανομοιότυπα σε κάθε `mount()`.
  */
-export function stubHarnessRect(canvas: HTMLElement): void {
-  const { viewport } = TABLE_TEST_VIEW;
+export function stubHarnessRect(canvas: HTMLElement, view: TableTestView = TABLE_TEST_VIEW): void {
+  const { viewport } = view;
   canvas.getBoundingClientRect = () =>
     ({ left: 0, top: 0, width: viewport.width, height: viewport.height }) as DOMRect;
 }

@@ -24,7 +24,11 @@ import { buildCrosshairCursorValue } from './crosshair-cursor-image';
 // το `CrosshairSuppressionStore`: εδώ ζει ο ΕΝΑΣ γραφέας του `style.cursor`, και δύο γραφείς
 // σβήνουν σιωπηλά ο ένας τον άλλον στο επόμενο re-apply.
 import { getTableIndicatorCursor, subscribeTableIndicatorCursor } from './TableIndicatorCursorStore';
-import { buildTableArrowCursorValue, buildTableFillCursorValue } from './table-indicator-cursor-image';
+import {
+  buildTableArrowCursorValue,
+  buildTableFillCursorValue,
+  buildTableMoveCursorValue,
+} from './table-indicator-cursor-image';
 import { subscribeDevicePixelRatio } from './device-pixel-ratio';
 import { getDevicePixelRatio } from './utils';
 // 🔬 ADR-739 §31.11 — το όργανο. Σβηστό εξ ορισμού· κόστος όταν είναι σβηστό = μία σύγκριση
@@ -89,8 +93,12 @@ function tableIndicatorCursorValue(role: TableIndicatorCursorRole): string {
       return buildTableArrowCursorValue('right');
     case 'cell-select':
       return 'cell';
+    // 🔴 ADR-739 §36.10 — **δικό μας ράστερ, όχι πια η λέξη-κλειδί.** Ο ιδιοκτήτης ζήτησε ίσο
+    // μέγεθος με τον σταυρό συμπλήρωσης, και ο δείκτης του ΟΣ δεν έχει μέγεθος να ρυθμιστεί.
+    // Η εφεδρεία είναι το **ίδιο** `move`, άρα η χειρότερη περίπτωση είναι η προηγούμενη
+    // συμπεριφορά — το φθηνότερο ράστερ της οικογένειας. Δες την κεφαλίδα της συνάρτησης.
     case 'range-move':
-      return 'move';
+      return buildTableMoveCursorValue();
     case 'range-copy':
       return 'copy';
     // 🔴 ADR-739 §36 ΦΑΣΗ 3 — **η άρνηση, ορατή**. Το σχέδιο μεταφοράς απάντησε «όχι»
