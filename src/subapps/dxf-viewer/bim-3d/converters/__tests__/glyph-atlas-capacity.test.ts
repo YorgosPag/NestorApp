@@ -86,12 +86,14 @@ function textWithStyle(style: DxfText['textStyle']): DxfText {
  */
 function measureInkCapacity(atlas: GlyphAtlas, limit = 4000): number {
   const font = resolveTextFont(textWithStyle({ fontFamily: 'arial' }));
-  let inked = 0;
   for (let cp = 0x0100; cp < 0x0100 + limit; cp++) {
-    if (atlas.getCell(font, String.fromCodePoint(cp)).hasInk) inked++;
-    else break; // πρώτη άρνηση = ο atlas γέμισε (τα κενά εξαιρούνται από το εύρος)
+    atlas.getCell(font, String.fromCodePoint(cp));
+    // ⚠️ ΟΧΙ `hasInk === false` ως σήμα υπερχείλισης: από το Φ1 η χαμένη γλυφή επιστρέφει
+    // **tofu με μελάνι**. Το ερώτημα «χώρεσε;» το απαντά πλέον ΜΟΝΟ ο μετρητής — και αυτό
+    // είναι το ζητούμενο: η απώλεια είναι δηλωμένη, όχι συναγόμενη από απουσία pixel.
+    if (atlas.getStats().missingCount > 0) break;
   }
-  return inked;
+  return atlas.getStats().admitted;
 }
 
 describe('GlyphAtlas — χωρητικότητα (ADR-739 Φ.Θ βήμα 0)', () => {
@@ -116,23 +118,28 @@ describe('GlyphAtlas — χωρητικότητα (ADR-739 Φ.Θ βήμα 0)', (
     atlas.dispose();
   });
 
-  it('🔴 η υπερχείλιση είναι ΣΙΩΠΗΛΗ: η γλυφή χάνεται, καμία εξαίρεση, μόνο ένα warn', () => {
+  it('✅ η υπερχείλιση είναι ΘΟΡΥΒΩΔΗΣ: tofu στα pixels, μετρητής στο μοντέλο', () => {
     const atlas = new GlyphAtlas();
     const font = resolveTextFont(textWithStyle({ fontFamily: 'arial' }));
 
-    // Γέμισμα μέχρι την άρνηση.
     const capacity = measureInkCapacity(atlas);
     expect(capacity).toBeGreaterThan(0);
 
-    // Η ΕΠΟΜΕΝΗ γλυφή δεν πετάει — επιστρέφει κελί χωρίς μελάνι, δηλαδή **αόρατο κείμενο**.
+    // Η γλυφή που δεν χώρεσε ΔΕΝ εξαφανίζεται — παίρνει ορατό κελί «λείπει γλυφή».
+    // 🔴 Αυτή είναι η ΑΝΤΙΣΤΡΟΦΗ του παλιού συμβολαίου, και είναι σκόπιμη: πριν το Φ1 το
+    // `17` γινόταν `1` σε πίνακα ποσοτήτων χωρίς κανένα σημάδι.
     const overflowed = atlas.getCell(font, '一');
-    expect(overflowed.hasInk).toBe(false);
-    expect(overflowed.advanceEm).toBeGreaterThan(0); // κρατά advance ⇒ η διάταξη «δουλεύει»
-    expect(overflowed.u0).toBe(overflowed.u1);       // μηδενικό UV ⇒ τίποτα δεν ζωγραφίζεται
+    expect(overflowed.hasInk).toBe(true);
+    expect(overflowed.u1).toBeGreaterThan(overflowed.u0); // πραγματικό UV ⇒ ζωγραφίζεται
+    expect(overflowed.v1).toBeGreaterThan(overflowed.v0);
 
-    // Η ΜΟΝΗ ένδειξη προς τον κόσμο, μία φορά, σε κονσόλα που κανείς δεν βλέπει σε παραγωγή.
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(String(warnSpy.mock.calls[0][0])).toContain('atlas full');
+    // Και κρατά το ΔΙΚΟ της advance, όχι του tofu ⇒ η γραμμή δεν μετατοπίζεται.
+    const fitted = atlas.getCell(font, 'A');
+    expect(overflowed.advanceEm).toBeCloseTo(fitted.advanceEm, 6);
+
+    // Καμία εξάρτηση από κονσόλα: η απώλεια είναι ΚΑΤΑΣΤΑΣΗ.
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(atlas.getStats().missingCount).toBeGreaterThan(0);
 
     atlas.dispose();
   });
