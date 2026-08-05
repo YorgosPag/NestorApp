@@ -275,7 +275,11 @@ describe('Κάλυψη αποδείξεων', () => {
    */
   // 2026-08-04 (ADR-749 §6): 622 → 615, όταν τα `bim-to-boq-bridge` και
   // `xline-mode-store` ξαναγράφτηκαν και **έφεραν την απόδειξή τους μαζί**.
-  const UNPROVEN_CEILING = 615;
+  // 2026-08-05 (ADR-739 §48): 615 → 603. Το `table-formula-engine` απέκτησε **13ο** pattern
+  // (φρουρός εισαγωγής του `@formulajs/formulajs`) και **ταυτόχρονα** την απόδειξη και για τα
+  // δεκατρία. Καθαρό −12: +1 pattern, −13 χωρίς απόδειξη. Ο κανόνας που το επέβαλε είναι ο
+  // ίδιος που έγραψε αυτή τη γραμμή — νέο pattern **φέρνει την απόδειξή του μαζί**.
+  const UNPROVEN_CEILING = 603;
 
   it(`τα patterns χωρίς δηλωμένη απόδειξη δεν ξεπερνούν τα ${UNPROVEN_CEILING}`, () => {
     const proven = provenPatternKeys(modules);

@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **οι ειδικές μορφές**: οι έξι συναρτήσεις που **δεν** μπορούν να ζήσουν στο
+ * ADR-739 §49 — **οι ειδικές μορφές**: οι έξι συναρτήσεις που **δεν** μπορούν να ζήσουν στο
  * μητρώο, γιατί δεν επιτρέπεται να αξιολογηθούν όλα τα ορίσματά τους πριν την κλήση.
  *
  * ## Δύο διαφορετικοί λόγοι, που μοιάζουν ένας
@@ -24,7 +24,7 @@
  * κάποιος μπορεί να μετατρέψει έναν κόμβο σε τιμή, **όποτε** του το ζητήσουν.
  *
  * @module subapps/dxf-viewer/bim/table/formula/table-formula-special-forms
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 import type { TableFormulaNode } from '../../../types/table-formula';

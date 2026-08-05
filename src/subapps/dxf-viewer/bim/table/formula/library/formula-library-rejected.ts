@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **οι απορριφθείσες**, ομαδοποιημένες κατά αιτία. Αρχείο δεδομένων: μηδέν
+ * ADR-739 §49 — **οι απορριφθείσες**, ομαδοποιημένες κατά αιτία. Αρχείο δεδομένων: μηδέν
  * λογική, μηδέν εξάρτηση πέρα από την ταξινομία.
  *
  * Κάθε όνομα εδώ είναι **διαδρομή στη βιβλιοθήκη** (όπως εξάγεται), όχι όνομα Excel. Η
@@ -10,7 +10,7 @@
  * ένατη αιτία — και τότε γράφεται πρώτα το σκεπτικό της στην {@link FormulaLibraryRejection}.
  *
  * @module subapps/dxf-viewer/bim/table/formula/library/formula-library-rejected
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 import type { FormulaLibraryRejection } from './formula-library-taxonomy';

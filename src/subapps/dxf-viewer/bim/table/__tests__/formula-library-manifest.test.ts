@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **Η ΠΥΛΗ**: η διαμέριση της βιβλιοθήκης είναι πλήρης, καλέσιμη και
+ * ADR-739 §49 — **Η ΠΥΛΗ**: η διαμέριση της βιβλιοθήκης είναι πλήρης, καλέσιμη και
  * ντετερμινιστική.
  *
  * ## Γιατί είναι δοκιμή και όχι σαρωτής κειμένου
@@ -22,6 +22,7 @@ import {
   EXPLAINED_REFUSAL_BY_EXCEL_NAME,
   FORMULA_LIBRARY_MANIFEST,
 } from '../formula/library/formula-library-manifest';
+import { findFormulaRefusal } from '../formula/library/formula-library-hint';
 import { REJECTED_LIBRARY_PATHS } from '../formula/library/formula-library-rejected';
 import { resolveLibraryCallable } from '../formula/library/formula-library-registry';
 import { FORMULA_LIBRARY_REJECTIONS } from '../formula/library/formula-library-taxonomy';
@@ -149,6 +150,30 @@ describe('οι απορριφθείσες δεν μπαίνουν από την 
   });
 });
 
+describe('η εξήγηση προς τον χρήστη', () => {
+  it.each([
+    ['=TODAY()', 'TODAY', 'volatile'],
+    ['=1+RAND()', 'RAND', 'volatile'],
+    ['=sort(A1:A3)', 'SORT', 'array-result'],
+    ['=ROW()', 'ROW', 'graph-opaque'],
+    ['=VALUE("1,5")', 'VALUE', 'locale-unsafe'],
+  ])('«%s» εξηγείται ως %s / %s', (draft, name, reason) => {
+    expect(findFormulaRefusal(draft)).toEqual({ name, reason });
+  });
+
+  it.each(['=SUM(A1:A3)', '=IF(A1,1,2)', 'απλό κείμενο', '', '=STDEV(A1:A3)'])(
+    '«%s» δεν χρειάζεται εξήγηση',
+    (draft) => {
+      expect(findFormulaRefusal(draft)).toBeNull();
+    },
+  );
+
+  it('🔑 στήλη με ταυτότητα «NOW» ΔΕΝ μπερδεύεται με τη συνάρτηση', () => {
+    // Χωρίς τον έλεγχο «ακολουθεί παρένθεση», κάθε αναφορά σε κελί θα γεννούσε εξήγηση.
+    expect(findFormulaRefusal('=NOW+1')).toBeNull();
+  });
+});
+
 /**
  * Η **απόδειξη** του ντετερμινισμού — ελέγχει την ιδιότητα, όχι τη λίστα ονομάτων.
  *
@@ -158,7 +183,7 @@ describe('οι απορριφθείσες δεν μπαίνουν από την 
  * να χρειαστεί κανείς να το προβλέψει. Ούτε το Excel ούτε το Revit αποδεικνύουν κάτι τέτοιο —
  * το τεκμηριώνουν.
  */
-describe('🔑 απόδειξη ντετερμινισμού (ADR-739 §48)', () => {
+describe('🔑 απόδειξη ντετερμινισμού (ADR-739 §49)', () => {
   const PROBES: readonly (readonly TableFormulaArgument[])[] = [
     [],
     [{ kind: 'value', value: 2 }],

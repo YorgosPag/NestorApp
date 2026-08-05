@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **οι πληροφοριακές συναρτήσεις**: οι μόνες που ρωτούν «τι **είδους** τιμή
+ * ADR-739 §49 — **οι πληροφοριακές συναρτήσεις**: οι μόνες που ρωτούν «τι **είδους** τιμή
  * είναι αυτή;» αντί «πόσο κάνει;». Καθαρές συναρτήσεις, μηδέν εξάρτηση από τη βιβλιοθήκη.
  *
  * ## 🔴 Γιατί δεν ανατίθενται, ενώ η βιβλιοθήκη τις έχει όλες
@@ -21,7 +21,7 @@
  * `TRUE`. Δες τη σημαία `errorTransparent` στο `table-formula-functions.ts`.
  *
  * @module subapps/dxf-viewer/bim/table/formula/table-formula-info-functions
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 import {
@@ -114,14 +114,14 @@ export const TABLE_FORMULA_INFO_FUNCTIONS: Readonly<Record<string, TableFormulaF
   ISNA: inspecting((value) => value === FORMULA_ERROR.notAvailable),
   ISBLANK: inspecting(isBlank),
   ISLOGICAL: inspecting((value) => typeof value === 'boolean'),
-  ISNUMBER: inspecting((value) => typeof value === 'number'),
+  ISNUMBER: inspecting((value) => numericValue(value) !== null),
   ISTEXT: inspecting(isText),
   ISNONTEXT: inspecting((value) => !isText(value)),
 
   TYPE: inspecting((value) => {
     if (isFormulaError(value)) return 16;
     if (typeof value === 'boolean') return 4;
-    return typeof value === 'number' ? 1 : 2;
+    return numericValue(value) === null ? 2 : 1;
   }),
 
   'ERROR.TYPE': inspecting((value) =>
@@ -132,9 +132,8 @@ export const TABLE_FORMULA_INFO_FUNCTIONS: Readonly<Record<string, TableFormulaF
   ),
 
   N: inspecting((value) => {
-    if (typeof value === 'number') return value;
     if (typeof value === 'boolean') return value ? 1 : 0;
-    return 0;
+    return numericValue(value) ?? 0;
   }),
 
   NA: (args) => (args.length === 0 ? FORMULA_ERROR.notAvailable : FORMULA_ERROR.value),

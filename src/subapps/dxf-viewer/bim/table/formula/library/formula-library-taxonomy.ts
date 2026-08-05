@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **το λεξιλόγιο της διαμέρισης**: τι σημαίνει «εγκεκριμένη» και τι σημαίνει
+ * ADR-739 §49 — **το λεξιλόγιο της διαμέρισης**: τι σημαίνει «εγκεκριμένη» και τι σημαίνει
  * κάθε μία από τις οκτώ αιτίες απόρριψης. Καθαρό type module, μηδέν runtime πέρα από τους
  * ελέγχους ταυτότητας.
  *
@@ -16,7 +16,7 @@
  * εκτέλεσης), η πύλη ελέγχει την πληρότητα (χρόνος commit/CI).
  *
  * @module subapps/dxf-viewer/bim/table/formula/library/formula-library-taxonomy
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 /**

@@ -545,7 +545,14 @@
       "ariaLabel": "Formula bar",
       "referenceAriaLabel": "Cell reference",
       "valueAriaLabel": "Cell value",
-      "symbol": "fx"
+      "symbol": "fx",
+      "refusal": {
+        "ariaLabel": "Unavailable function explanation",
+        "volatile": "{name} returns a different value every time — a drawing is a deliverable and must not change on its own.",
+        "graphOpaque": "{name} depends on a position the recalculation does not track — it would go stale after a row insert.",
+        "arrayResult": "{name} returns an array of values; a cell holds one value.",
+        "localeUnsafe": "{name} reads numbers with the English convention — it would misread the Greek decimal."
+      }
     },
     "mode": {
       "label": "Table",

@@ -606,4 +606,41 @@ const rowRef = useRef<HTMLDivElement | null>(null);
 const other = createExternalStore<SnapModeState>({ mode: 'off' });
 const label = t('dxf.xlineMode.angle');`,
   },
+
+  // ADR-739 §49 (2026-08-05) — η απόδειξη γράφτηκε μαζί με το 13ο pattern
+  // (`@formulajs/formulajs`), όχι αργότερα. Το 13ο είναι και το σημαντικότερο: είναι ο
+  // ΜΟΝΟΣ φρουρός που εμποδίζει δεύτερο σημείο εισαγωγής της βιβλιοθήκης — δηλαδή
+  // παράκαμψη ολόκληρης της διαμέρισης, δηλαδή `TODAY()` σε κελί παραδοτέου σχεδίου.
+  'table-formula-engine': {
+    shouldMatch: `// Δεύτερη μηχανή τύπων — κάθε γραμμή πρέπει να πυροδοτήσει:
+export function parseTableFormula(text: string) {}
+function printTableFormula(node) {}
+export function tokenizeFormula(source: string) {}
+function evaluateTableFormulaNode(node) {}
+export function recalculateTableModel(model, changed) {}
+function writeCellInput(model, rowId, colId, text) {}
+export function setPersistedCellFormula(model, rowId, colId, formula) {}
+export interface TableFormulaEngine { evaluate(): void }
+type TableFormulaNode = { kind: 'number' };
+import { HyperFormula } from 'hyperformula';
+import FormulaParser from 'fast-formula-parser';
+import { calc } from '@sheetxl/formulas';
+import * as formulajs from '@formulajs/formulajs';`,
+    shouldSkip: `// Κανονική χρήση — τα πάντα μέσω της μίας μηχανής:
+import { writeCellInput, recalculateTableModel, cellInputText } from './formula/table-formula-engine';
+import { parseTableFormula, isFormulaInput } from './formula/table-formula-parse';
+import { evaluateTableFormula, expandRangeShape } from './formula/table-formula-eval';
+import type { TableFormulaNode, TableFormula } from '../../types/table-formula';
+import { TABLE_FORMULA_FUNCTIONS } from './table-formula-functions';
+const next = recalculateTableModel(writeCellInput(model, rowId, colId, text), [key]);
+const formula = parseTableFormula(model, draft);
+const value = evaluateTableFormula(scope, formula);
+
+// Παγίδες που ΔΕΝ πρέπει να πυροδοτήσουν:
+const parseTableFormulaResult = parseTableFormula(model, text);
+export const printTableFormulaLabel = 'fx';
+type TableFormulaNodeEvaluator = (node: TableFormulaNode) => TableFormulaValue;
+interface TableFormulaEngineProps { readonly engine: TableFormulaEngine }
+const doc = 'δες @formulajs/formulajs για τον κατάλογο συναρτήσεων';`,
+  },
 };

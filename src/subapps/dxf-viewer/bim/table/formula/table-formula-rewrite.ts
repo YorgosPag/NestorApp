@@ -84,6 +84,7 @@ export function rewriteTableFormulaRefs(
     }
     case 'number':
     case 'text':
+    case 'boolean':
     case 'error':
       return node;
   }

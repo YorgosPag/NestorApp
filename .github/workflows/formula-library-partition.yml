@@ -1,0 +1,112 @@
+name: T2 🧮 Table Formula Library Partition (CHECK 5D)
+
+# =============================================================================
+# Layer 2 — CI-authoritative gate for the ADR-739 §49 formula-library partition.
+#
+# What it guards
+# --------------
+# The DXF table's cell-formula registry is fed by @formulajs/formulajs (MIT) behind an
+# EXPLICIT PARTITION: every one of its ~417 exports carries a verdict — admitted (with an
+# argument shape), or rejected with one of eight reasons. The gate is completeness:
+#
+#     surface(library)  ===  keys(manifest)      exactly, both directions
+#
+# Why completeness and not a plain allow-list
+# -------------------------------------------
+# An allow-list says what goes in. It says NOTHING about what is missing — so on a library
+# upgrade there is no way to tell "rejected with an argument" from "nobody looked". The first
+# time a NON-DETERMINISTIC function slips through, cells in a DELIVERED DRAWING start changing
+# on their own: two prints of the same quantity schedule stop agreeing, and the dependency
+# graph cannot even see the change (a function with no inputs whose value moves is invisible
+# to it). Here a new 5.x export lands in no bucket → red → a human must decide.
+#
+# It also proves the PROPERTY, not the name list
+# ----------------------------------------------
+# Every registry entry is invoked TWICE with identical arguments and must answer identically.
+# A name-based deny-list only protects against the names its author knew. This caught two
+# things no list could:
+#   • formulajs MUTATES its first array argument in place — `PRODUCT([1,2,3,4], 2)` returns 48,
+#     then 96, then 192, because the array grows on every call. Sixteen functions do it.
+#   • a hypothetical renamed RAND (verified by mutation: admitting RAND fails this test even
+#     with the deny-list untouched).
+#
+# NO BASELINE, EVER
+# -----------------
+# A "tolerated drift" here would mean exactly that some function was never looked at — the
+# "0 means nobody looked, not clean" failure this repo has paid for four times (N.11, N.12,
+# CHECK 3.18, CHECK 3.35). This gate has no baseline file and must never grow one.
+#
+# Layer 1 is the pre-commit hook (CHECK 5D), triggered by the partition files, the bridge /
+# registry, and the dependency itself (manifest + lockfile — the moment the surface can move).
+# Pattern mirrors .github/workflows/capability-anchors.yml (CHECK 5C).
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/subapps/dxf-viewer/bim/table/formula/**'
+      - 'src/subapps/dxf-viewer/bim/table/__tests__/formula-library-*.test.ts'
+      - 'src/subapps/dxf-viewer/package.json'
+      - 'pnpm-lock.yaml'
+      - 'scripts/git-hooks/pre-commit'
+      - '.github/workflows/formula-library-partition.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/subapps/dxf-viewer/bim/table/formula/**'
+      - 'src/subapps/dxf-viewer/bim/table/__tests__/formula-library-*.test.ts'
+      - 'src/subapps/dxf-viewer/package.json'
+      - 'pnpm-lock.yaml'
+      - 'scripts/git-hooks/pre-commit'
+      - '.github/workflows/formula-library-partition.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: formula-library-partition-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  formula-library-partition:
+    name: 🧮 Formula Library Partition (CHECK 5D)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Canary — a selector that matches NOTHING must FAIL, never "pass with 0 tests".
+      # `--passWithNoTests` is therefore NEVER used here: this repo has shipped false green
+      # from a scan whose file list was silently empty.
+      - name: 🧮 Canary — the partition suites still resolve
+        run: |
+          COUNT=$(find src/subapps/dxf-viewer/bim/table/__tests__ -name 'formula-library-*.test.ts' | wc -l | tr -d '[:space:]')
+          echo "Partition suites found: $COUNT"
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error title=Formula partition canary::Expected >=3 'formula-library-*.test.ts' suites, found $COUNT. The selector is broken (renamed/moved), not satisfied — a green run would be meaningless."
+            exit 1
+          fi
+
+      # The gate. NO continue-on-error: a tolerated red here is a silent volatile function.
+      - name: 🧪 Partition completeness · callability · determinism · conformance
+        run: pnpm exec jest --testPathPatterns='formula-library-' --ci
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+
+      - name: ✅ Summary
+        if: success()
+        run: echo "::notice title=Formula Library Partition (CHECK 5D)::every library export has a verdict; every admitted function is callable and deterministic"

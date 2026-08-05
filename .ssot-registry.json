@@ -4058,7 +4058,7 @@
     },
     "table-formula-engine": {
       "ssotFile": "src/subapps/dxf-viewer/bim/table/formula/table-formula-engine.ts",
-      "description": "ADR-739 Φ.Ζ (2026-08-03) — Η ΜΙΑ μηχανή τύπων κελιού του repo: λεξικογράφος → αναλυτής → δέντρο δεμένο σε ταυτότητες → αξιολογητής → γράφος εξαρτήσεων, πίσω από το interface TableFormulaEngine που είχε δεσμευτεί το §9.2 μήνες νωρίτερα. ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΩΣ ΦΡΟΥΡΟΣ: η φάση γεννήθηκε από απόφαση που ΑΝΑΤΡΑΠΗΚΕ — το §14.4 είχε επιλέξει το `fast-formula-parser`, και η επαλήθευση βρήκε ότι είναι αδημοσίευτο από 26/11/2020, ότι ο πίνακας εξαρτήσεων του ADR είχε τις εκδόσεις του διαδόχου, και ότι ο διάδοχος `@sheetxl/formulas` δηλώνει ΑΚΟΜΗ `SEE LICENSE IN <LICENSE>` (N.5: ασαφές → ΡΩΤΑ). Γι' αυτό τρία από τα patterns φρουρούν ΕΙΣΑΓΩΓΕΣ: το `hyperformula` είναι GPLv3 (θα υποχρέωνε όλο το NESTOR σε open source), το `fast-formula-parser` και το `@sheetxl/*` απορρίφθηκαν με τεκμηρίωση. ΤΙ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΒΑΣΗ: το `numeric-expression.ts` (ADR-706, module `numeric-field`) απαντά ΑΛΛΗ ερώτηση — «τι αριθμό πληκτρολόγησε ο χρήστης σε πεδίο» — όπου το `2,4` ΕΙΝΑΙ 2.4 (parseLocaleNumber/ADR-576), ενώ σε τύπο φύλλου το `SUM(2,4)` είναι 6. Ομώνυμα, όχι συνώνυμα: κοινός λεξικογράφος θα σήμαινε ότι μια αλλαγή για τον πίνακα αλλάζει σιωπηλά κάθε πεδίο δεκαδικού της εφαρμογής. Επαναχρησιμοποιείται όμως ακριβώς εκεί που η ερώτηση ΕΙΝΑΙ η ίδια: το περιεχόμενο κελιού περνά από τον parseLocaleNumber, πίσω από πύλη αυστηρότητας (χωρίς αυτήν το `Δοκός 12` θα συνεισέφερε 12 σε άθροισμα). ΕΠΕΚΤΑΣΗ ΧΩΡΙΣ ΔΕΥΤΕΡΗ ΜΗΧΑΝΗ: περισσότερες συναρτήσεις = εγγραφές στο `table-formula-functions.ts` (ή σύνδεση MIT βιβλιοθήκης ΣΥΝΑΡΤΗΣΕΩΝ όπως το @formulajs/formulajs μέσα στο ίδιο μητρώο) — ποτέ δεύτερος αναλυτής. ΚΑΙ ΠΟΤΕ `eval`/`new Function`: το repo έχει μηδέν και αυτή η μηχανή δεν έγινε το πρώτο.",
+      "description": "ADR-739 Φ.Ζ (2026-08-03) — Η ΜΙΑ μηχανή τύπων κελιού του repo: λεξικογράφος → αναλυτής → δέντρο δεμένο σε ταυτότητες → αξιολογητής → γράφος εξαρτήσεων, πίσω από το interface TableFormulaEngine που είχε δεσμευτεί το §9.2 μήνες νωρίτερα. ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΩΣ ΦΡΟΥΡΟΣ: η φάση γεννήθηκε από απόφαση που ΑΝΑΤΡΑΠΗΚΕ — το §14.4 είχε επιλέξει το `fast-formula-parser`, και η επαλήθευση βρήκε ότι είναι αδημοσίευτο από 26/11/2020, ότι ο πίνακας εξαρτήσεων του ADR είχε τις εκδόσεις του διαδόχου, και ότι ο διάδοχος `@sheetxl/formulas` δηλώνει ΑΚΟΜΗ `SEE LICENSE IN <LICENSE>` (N.5: ασαφές → ΡΩΤΑ). Γι' αυτό τρία από τα patterns φρουρούν ΕΙΣΑΓΩΓΕΣ: το `hyperformula` είναι GPLv3 (θα υποχρέωνε όλο το NESTOR σε open source), το `fast-formula-parser` και το `@sheetxl/*` απορρίφθηκαν με τεκμηρίωση. ΤΙ ΔΕΝ ΕΙΝΑΙ ΠΑΡΑΒΑΣΗ: το `numeric-expression.ts` (ADR-706, module `numeric-field`) απαντά ΑΛΛΗ ερώτηση — «τι αριθμό πληκτρολόγησε ο χρήστης σε πεδίο» — όπου το `2,4` ΕΙΝΑΙ 2.4 (parseLocaleNumber/ADR-576), ενώ σε τύπο φύλλου το `SUM(2,4)` είναι 6. Ομώνυμα, όχι συνώνυμα: κοινός λεξικογράφος θα σήμαινε ότι μια αλλαγή για τον πίνακα αλλάζει σιωπηλά κάθε πεδίο δεκαδικού της εφαρμογής. Επαναχρησιμοποιείται όμως ακριβώς εκεί που η ερώτηση ΕΙΝΑΙ η ίδια: το περιεχόμενο κελιού περνά από τον parseLocaleNumber, πίσω από πύλη αυστηρότητας (χωρίς αυτήν το `Δοκός 12` θα συνεισέφερε 12 σε άθροισμα). ΕΠΕΚΤΑΣΗ ΧΩΡΙΣ ΔΕΥΤΕΡΗ ΜΗΧΑΝΗ: περισσότερες συναρτήσεις = εγγραφές στο `table-formula-functions.ts` (ή σύνδεση MIT βιβλιοθήκης ΣΥΝΑΡΤΗΣΕΩΝ όπως το @formulajs/formulajs μέσα στο ίδιο μητρώο) — ποτέ δεύτερος αναλυτής. ΚΑΙ ΠΟΤΕ `eval`/`new Function`: το repo έχει μηδέν και αυτή η μηχανή δεν έγινε το πρώτο. ΕΞΑΡΓΥΡΩΘΗΚΕ 2026-08-05 (ADR-739 §49): συνδέθηκε το `@formulajs/formulajs@4.6.1` (MIT) μέσα στο ΙΔΙΟ μητρώο — 340 διαδρομές + 10 παλαιά ψευδώνυμα, κανένας δεύτερος αναλυτής, καμία γραμμή του αξιολογητή μετακομισμένη. Γι' αυτό προστέθηκε ΤΕΤΑΡΤΟ pattern εισαγωγής, και είναι το σημαντικότερο: το `@formulajs/formulajs` επιτρέπεται ΜΟΝΟ στο `library/formula-library-registry.ts` (και στην πύλη του). Δεύτερο σημείο εισαγωγής θα ΠΑΡΑΚΑΜΠΤΕ ολόκληρη τη διαμέριση — δηλαδή θα έμπαινε `TODAY()`/`RAND()` σε κελί παραδοτέου σχεδίου χωρίς να το δει καμία πύλη. Η διαμέριση είναι ΠΛΗΡΗΣ εξ ορισμού: κάθε μία από τις ~417 εξαγωγές έχει ετυμηγορία (admit + σχήμα ορίσματος, ή reject με μία από 8 αιτίες), και η πύλη CHECK 5D απαιτεί `surface(βιβλιοθήκης) === keys(manifest)` ΑΚΡΙΒΩΣ — καμία baseline, ποτέ. ΤΙ ΜΕΝΕΙ ΔΙΚΟ ΜΑΣ ΚΑΙ ΓΙΑΤΙ (μετρημένο, όχι προτίμηση): οι 7 αριθμητικές (`SUM('άλφα')` δίνει 0 στη βιβλιοθήκη, `#VALUE!` σε εμάς — και το Excel συμφωνεί ΜΕ ΕΜΑΣ) και οι 13 πληροφοριακές (`ISERROR(new Error('#DIV/0!'))` επιστρέφει FALSE: η βιβλιοθήκη αναγνωρίζει σφάλματα κατά ταυτότητα ΑΝΤΙΚΕΙΜΕΝΟΥ, άρα ανάθεση θα απαντούσε «δεν είναι σφάλμα» για κάθε σφάλμα δικού μας κελιού). Οι 6 ειδικές μορφές (`IF`/`IFS`/`CHOOSE`/`SWITCH`/`IFERROR`/`IFNA`) ζουν στο `table-formula-special-forms.ts` και ΠΟΤΕ στο μητρώο — δύο σημασιολογίες αξιολόγησης για το ίδιο όνομα είναι το χειρότερο δίδυμο εδώ.",
       "forbiddenPatterns": [
         "function\\s+parseTableFormula\\b",
         "function\\s+printTableFormula\\b",
@@ -4071,7 +4071,8 @@
         "type\\s+TableFormulaNode\\b",
         "from\\s+['\"]hyperformula['\"]",
         "from\\s+['\"]fast-formula-parser['\"]",
-        "from\\s+['\"]@sheetxl/"
+        "from\\s+['\"]@sheetxl/",
+        "from\\s+['\"]@formulajs/formulajs['\"]"
       ],
       "allowlist": [
         "src/subapps/dxf-viewer/bim/table/formula/table-formula-engine.ts",
@@ -4080,8 +4081,18 @@
         "src/subapps/dxf-viewer/bim/table/formula/table-formula-print.ts",
         "src/subapps/dxf-viewer/bim/table/formula/table-formula-value.ts",
         "src/subapps/dxf-viewer/bim/table/formula/table-formula-functions.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-info-functions.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/table-formula-special-forms.ts",
         "src/subapps/dxf-viewer/bim/table/formula/table-formula-eval.ts",
         "src/subapps/dxf-viewer/bim/table/formula/table-formula-recalc.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/library/formula-library-taxonomy.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/library/formula-library-admitted.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/library/formula-library-rejected.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/library/formula-library-manifest.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/library/formula-library-bridge.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/library/formula-library-registry.ts",
+        "src/subapps/dxf-viewer/bim/table/formula/library/formula-library-hint.ts",
+        "src/subapps/dxf-viewer/bim/table/__tests__/formula-library-manifest.test.ts",
         "src/subapps/dxf-viewer/types/table-formula.ts",
         "src/subapps/dxf-viewer/bim/table/table-cell-content.ts",
         "src/subapps/dxf-viewer/bim/table/table-model-helpers.ts"

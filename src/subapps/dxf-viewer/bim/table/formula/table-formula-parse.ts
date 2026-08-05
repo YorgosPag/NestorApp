@@ -192,9 +192,22 @@ function parseGroup(reader: Reader): TableFormulaNode | null {
   return { kind: 'group', inner };
 }
 
-/** Το όνομα είναι **κλήση** αν ακολουθεί `(`· αλλιώς είναι αναφορά κελιού ή εύρους. */
+/** Τα δύο ονόματα που **δεν** είναι ποτέ διεύθυνση — δες `types/table-formula.ts`. */
+const BOOLEAN_LITERALS: Readonly<Record<string, boolean>> = { TRUE: true, FALSE: false };
+
+/**
+ * Το όνομα είναι **κλήση** αν ακολουθεί `(`· αλλιώς κυριολεκτικό `TRUE`/`FALSE`, ή αναφορά.
+ *
+ * Η σειρά έχει σημασία: το `TRUE()` **με** παρενθέσεις παραμένει κλήση συνάρτησης (υπάρχει
+ * στο μητρώο), ενώ το σκέτο `TRUE` είναι κυριολεκτικό. Και τα δύο δέχεται το Excel.
+ */
 function parseAfterName(reader: Reader, name: string): TableFormulaNode | null {
-  return peekPunct(reader) === '(' ? parseCall(reader, name) : parseReference(reader, name);
+  if (peekPunct(reader) === '(') return parseCall(reader, name);
+
+  const literal = BOOLEAN_LITERALS[name.toUpperCase()];
+  if (literal !== undefined) return { kind: 'boolean', value: literal };
+
+  return parseReference(reader, name);
 }
 
 /** Λίστα ορισμάτων χωρισμένη με `,`. Καμία συνάρτηση χωρίς παρενθέσεις. */

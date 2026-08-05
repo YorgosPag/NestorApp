@@ -587,6 +587,31 @@ register_area "DXF Entity Capability Anchors" \
     "src/subapps/dxf-viewer/.*-coverage\.test\.ts" \
     "npx jest --testPathPatterns='src/subapps/dxf-viewer/.*-coverage\.test\.ts' --verbose"
 
+# CHECK 5D: Table Formula Library partition (ADR-739 §49) — BLOCKING
+#
+# WHY: the cell-formula registry is fed by @formulajs/formulajs behind an EXPLICIT PARTITION —
+# every one of its ~417 exports carries a verdict (admitted, or rejected with a reason). The
+# gate is completeness: surface(library) === keys(manifest), exactly. A 5.x upgrade that adds a
+# new NON-DETERMINISTIC function lands in no bucket → red → a human must decide. Without it, a
+# volatile function would enter the registry silently and cells in a DELIVERED DRAWING would
+# start changing on their own (ADR-739 §49; the whole reason the partition exists).
+#
+# It also proves the property, not just the name list: every registry entry is called TWICE
+# with identical arguments and must answer identically. That check is what found formulajs
+# MUTATING its first array argument in place (`PRODUCT([1,2,3,4], 2)` → 48, then 96) — a defect
+# no name-based deny-list could ever catch.
+#
+# Trigger = the partition data, the bridge/registry that consume it, and the DEPENDENCY ITSELF
+# (a lockfile or manifest bump is exactly when the surface can change). Deliberately narrow —
+# the whole suite is ~3s, and only on commits that touch these.
+#
+# NO BASELINE, EVER: a "tolerated drift" here would mean precisely that some function was never
+# looked at — the "0 means nobody looked" failure this repo has paid for four times.
+register_area "Table Formula Library (ADR-739 §49)" \
+    "^(src/subapps/dxf-viewer/bim/table/formula/library/|src/subapps/dxf-viewer/bim/table/formula/table-formula-(functions|info-functions|special-forms)\.ts$|src/subapps/dxf-viewer/package\.json$|pnpm-lock\.yaml$)" \
+    "src/subapps/dxf-viewer/bim/table/__tests__/formula-library-.*\.test\.ts" \
+    "npx jest --testPathPatterns='formula-library-' --verbose"
+
 # ─── Canary: a convention-driven pattern that matches NOTHING must FAIL, not pass ───
 # Guards the exact trap this repo has paid for twice: a scan reports "clean" because its
 # file list was silently empty (bad path / renamed convention / moved folder). Without this,

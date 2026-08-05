@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **οι εγκεκριμένες**: η ρητή λίστα που χτίζει το μητρώο. Αρχείο δεδομένων:
+ * ADR-739 §49 — **οι εγκεκριμένες**: η ρητή λίστα που χτίζει το μητρώο. Αρχείο δεδομένων:
  * μηδέν λογική, μηδέν εξάρτηση.
  *
  * ## Γιατί ρητή λίστα και όχι «επιφάνεια μείον απορριφθείσες»
@@ -12,7 +12,7 @@
  * την ταξινομημένη επιφάνεια της βιβλιοθήκης, όχι με τη μνήμη του.
  *
  * @module subapps/dxf-viewer/bim/table/formula/library/formula-library-admitted
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 /** Οι 340 διαδρομές που μπαίνουν στο μητρώο, όπως εξάγονται από τη βιβλιοθήκη. */

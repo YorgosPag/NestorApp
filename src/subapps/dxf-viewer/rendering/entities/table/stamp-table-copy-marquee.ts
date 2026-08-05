@@ -40,6 +40,7 @@ import { strokeRectMm, type StampTableContext } from './stamp-table-layout';
 import { tableRangeRectMm } from '../../../bim/table/table-cell-range';
 import {
   MARCHING_ANTS_DASH_PX,
+  MARCHING_ANTS_LINE_WIDTH_PX,
   marchingAntsDashOffsetPx,
 } from '../../../bim/table/table-marching-ants';
 import type { TableLayout, TableRectMm } from '../../../bim/table/table-layout-types';
@@ -90,7 +91,9 @@ export function stampTableCopyMarquee(
     rc,
     rectMm,
     TABLE_COPY_MARQUEE.colorHex,
-    TABLE_COPY_MARQUEE.lineWidthPx,
+    // 🔴 §48.11 — το πάχος έρχεται από το **μοτίβο**, όχι από το χρώμα: είναι σκέλος της
+    // αναλογίας 7:2:1 του Excel και κλιμακώνεται μαζί της. Δες `table-marching-ants.ts`.
+    MARCHING_ANTS_LINE_WIDTH_PX,
     MARCHING_ANTS_DASH_PX,
     marchingAntsDashOffsetPx(nowMs - marquee.startedAtMs),
   );

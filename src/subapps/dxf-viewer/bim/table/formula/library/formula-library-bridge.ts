@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **η γέφυρα**: το ένα σημείο όπου το λεξιλόγιο του πίνακα συναντά το
+ * ADR-739 §49 — **η γέφυρα**: το ένα σημείο όπου το λεξιλόγιο του πίνακα συναντά το
  * λεξιλόγιο της βιβλιοθήκης. Καθαρές συναρτήσεις· δεν διαβάζει μοντέλο και δεν γράφει.
  *
  * ## Τέσσερις μεταφράσεις, όλες μετρημένες πάνω στην 4.6.1
@@ -12,7 +12,7 @@
  *    απορριφθείσες· αυτό εδώ είναι το **δίχτυ**, όχι η πρώτη γραμμή άμυνας.
  *
  * @module subapps/dxf-viewer/bim/table/formula/library/formula-library-bridge
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 import type { TableFormulaErrorCode } from '../../../../types/table-formula';

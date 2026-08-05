@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **το manifest**: η μία διαμέριση της βιβλιοθήκης, συναρμολογημένη από τα δύο
+ * ADR-739 §49 — **το manifest**: η μία διαμέριση της βιβλιοθήκης, συναρμολογημένη από τα δύο
  * αρχεία δεδομένων. Καθαρό module — **δεν φορτώνει τη βιβλιοθήκη**, ώστε η πληρότητα της
  * διαμέρισης να μπορεί να ελεγχθεί χωριστά από τη σύνδεσή της.
  *
@@ -9,7 +9,7 @@
  * 3. «Γιατί λείπει το `TODAY`;» → ο επεξεργαστής, όταν εξηγεί στον χρήστη
  *
  * @module subapps/dxf-viewer/bim/table/formula/library/formula-library-manifest
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 import {

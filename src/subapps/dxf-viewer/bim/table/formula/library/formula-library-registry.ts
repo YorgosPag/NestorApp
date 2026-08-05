@@ -1,5 +1,5 @@
 /**
- * ADR-739 §48 — **ο κατασκευαστής των εγγραφών**: manifest + βιβλιοθήκη → συναρτήσεις του
+ * ADR-739 §49 — **ο κατασκευαστής των εγγραφών**: manifest + βιβλιοθήκη → συναρτήσεις του
  * μητρώου. Η μοναδική θέση ολόκληρου του repo που εισάγει το `@formulajs/formulajs`.
  *
  * ## Γιατί στατική εισαγωγή ολόκληρου του χώρου ονομάτων
@@ -12,7 +12,7 @@
  * μόνη υπόσχεση είναι ο ντετερμινισμός, αυτή η ανταλλαγή δεν συζητιέται.
  *
  * @module subapps/dxf-viewer/bim/table/formula/library/formula-library-registry
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §48
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
 import * as formulajs from '@formulajs/formulajs';

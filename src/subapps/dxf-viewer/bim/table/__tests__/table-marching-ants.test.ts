@@ -17,6 +17,7 @@ import {
   MARCHING_ANTS_DASH_PX,
   MARCHING_ANTS_DASH_SCALE,
   MARCHING_ANTS_EXCEL_DASH_PX,
+  MARCHING_ANTS_LINE_WIDTH_PX,
   MARCHING_ANTS_PERIOD_PX,
   MARCHING_ANTS_SPEED_PX_PER_SEC,
   marchingAntsDashOffsetPx,
@@ -126,17 +127,31 @@ describe('🔴 ADR-739 §48 — ξεχωρίζει από το περίγραμ�
     expect([...MARCHING_ANTS_DASH_PX]).not.toEqual([...TABLE_MODE_OUTLINE.dashPx]);
   });
 
-  it('🔴 ΤΟ ΠΑΧΟΣ ΕΙΝΑΙ ΤΟ ΤΕΤΑΡΤΟ ΚΑΝΑΛΙ — 1 px έναντι 2, και είναι σκόπιμο', () => {
-    // Το πάχος είναι το κανάλι που επιβιώνει στη σμίκρυνση, όπου δύο πυκνά μοτίβα συγχέονται
-    // πρώτα. Είναι επίσης **ρητή παρέκκλιση** από τον κανόνα των 2 px (WCAG 2.2 SC 2.4.13
-    // δεσμεύει τον δείκτη ΕΣΤΙΑΣΗΣ — εδώ αυτός είναι ο δρομέας κελιού, που μένει στα 2 px).
-    // Η αιτιολόγηση ζει γραπτά στο `color-config.ts`· εδώ κλειδώνεται ότι δεν θα επιστρέψει
-    // σιωπηλά στα 2 px «για ομοιομορφία», που θα έκανε το marquee να φαίνεται συμπαγές:
-    // το μετρημένο κενό είναι 2 px, όσο και το πάχος που θα το έπνιγε.
-    expect(TABLE_COPY_MARQUEE.lineWidthPx).toBe(1);
-    expect(TABLE_COPY_MARQUEE.lineWidthPx).toBeLessThan(TABLE_MODE_OUTLINE.lineWidthPx);
-    // Και το κενό δεν επιτρέπεται να πέσει κάτω από το πάχος — εκεί ακριβώς παύει να διαβάζεται
-    // ως διακεκομμένη γραμμή.
-    expect(MARCHING_ANTS_DASH_PX[1]).toBeGreaterThanOrEqual(TABLE_COPY_MARQUEE.lineWidthPx);
+  it('🔴 ΤΟ ΠΑΧΟΣ ΚΛΙΜΑΚΩΝΕΤΑΙ ΜΑΖΙ ΜΕ ΤΟ ΜΟΤΙΒΟ — αναλογία 7:2:1 σε κάθε μέγεθος', () => {
+    // §48.11: το πάχος έπαψε να είναι ανεξάρτητος αριθμός στο `color-config.ts` και έγινε
+    // σκέλος της αναλογίας του Excel. Δύο ανεξάρτητοι μοχλοί θα επέτρεπαν συνδυασμούς που
+    // **δεν είναι** το Excel σε καμία κλίμακα, χωρίς τίποτα να το δηλώνει.
+    expect(MARCHING_ANTS_LINE_WIDTH_PX).toBe(MARCHING_ANTS_DASH_SCALE);
+    expect(MARCHING_ANTS_DASH_PX[0] / MARCHING_ANTS_LINE_WIDTH_PX).toBeCloseTo(7, 10);
+    expect(MARCHING_ANTS_DASH_PX[1] / MARCHING_ANTS_LINE_WIDTH_PX).toBeCloseTo(2, 10);
+  });
+
+  it('🔴 ΤΟ ΚΕΝΟ ΔΕΝ ΠΕΦΤΕΙ ΚΑΤΩ ΑΠΟ ΤΟ ΠΑΧΟΣ — αλλιώς παύει να διαβάζεται ως διακεκομμένη', () => {
+    // Αυτή είναι η **συνθήκη** που το §48.6 είχε γράψει λανθασμένα ως **κανόνα** («το πάχος
+    // πρέπει να είναι 1 px»). Το πραγματικό όριο δεν είναι απόλυτος αριθμός· είναι σχέση: μόλις
+    // το κενό γίνει μικρότερο από το πάχος, οι εγκοπές κλείνουν οπτικά και η γραμμή διαβάζεται
+    // συμπαγής — δηλαδή αδιάκριτη από τον δρομέα κελιού. Στην αναλογία 2:1 ισχύει πάντα, αλλά
+    // κλειδώνεται ρητά ώστε μια μελλοντική αλλαγή αναλογίας να χτυπήσει εδώ.
+    expect(MARCHING_ANTS_DASH_PX[1]).toBeGreaterThan(MARCHING_ANTS_LINE_WIDTH_PX);
+  });
+
+  it('🔴 ΤΟ ΠΑΧΟΣ ΔΕΝ ΖΕΙ ΠΙΑ ΣΤΟ `TABLE_COPY_MARQUEE` — μία ιδιοκτησία, όχι δύο', () => {
+    // Ένα εγκαταλελειμμένο `lineWidthPx` στο color-config θα ήταν το χειρότερο είδος
+    // διπλότυπου: θα φαινόταν έγκυρη ρύθμιση, κανείς δεν θα το εκτελούσε, και η πρώτη
+    // «διόρθωση» θα το ξανασύνδεε στον ζωγράφο ακυρώνοντας σιωπηλά την κλίμακα.
+    expect(TABLE_COPY_MARQUEE).not.toHaveProperty('lineWidthPx');
+    expect(TABLE_COPY_MARQUEE.colorHex).toBeDefined();
+    // Και εξακολουθεί να ξεχωρίζει από το περίγραμμα λειτουργίας — τώρα προς τα **πάνω**.
+    expect(MARCHING_ANTS_LINE_WIDTH_PX).not.toBe(TABLE_MODE_OUTLINE.lineWidthPx);
   });
 });

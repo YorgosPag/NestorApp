@@ -54,8 +54,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §25
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { findFormulaRefusal } from '../../bim/table/formula/library/formula-library-hint';
+import type { FormulaLibraryRejection } from '../../bim/table/formula/library/formula-library-taxonomy';
 import { TextEditorAnchorLayer, type TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
 import { flattenToSingleLine } from './TableCellEditorOverlay';
 // 🔴 ADR-754 §4 — η **ίδια** τοποθέτηση κέρσορα με τον επεξεργαστή κελιού.
@@ -92,6 +94,23 @@ export interface TableFormulaBarProps extends TableCellSessionHandlers {
   readonly anchor: TextEditorAnchor;
 }
 
+/**
+ * Αιτία αποκλεισμού → κατάληξη κλειδιού i18n.
+ *
+ * Ο πίνακας υπάρχει επειδή οι αιτίες γράφονται με παύλα (`graph-opaque`) ενώ τα κλειδιά της
+ * εφαρμογής είναι camelCase. Είναι `Record` πάνω στην ένωση **επίτηδες**: μια ένατη αιτία
+ * σπάει τη μεταγλώττιση εδώ, αντί να εμφανιστεί ωμό κλειδί στην οθόνη (N.11).
+ *
+ * Λείπουν οι `native`, `special-form`, `duplicate` και `not-a-function`: εκείνες **δεν**
+ * φτάνουν ποτέ ως εξήγηση — δες `EXPLAINED_REFUSAL_BY_EXCEL_NAME`.
+ */
+const REFUSAL_KEYS: Partial<Record<FormulaLibraryRejection, string>> = {
+  volatile: 'volatile',
+  'graph-opaque': 'graphOpaque',
+  'array-result': 'arrayResult',
+  'locale-unsafe': 'localeUnsafe',
+};
+
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
   const {
     reference, mode, draft, initialText, caretIndex, caretRevision, anchor,
@@ -109,6 +128,15 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
    * η γραμμή τύπων **κενό** πάνω σε γεμάτο κελί.
    */
   const value = mode === 'nav' ? initialText : draft;
+
+  /**
+   * Η εξήγηση για συνάρτηση που αποκλείστηκε επίτηδες — δες `formula-library-hint.ts`.
+   *
+   * Εμφανίζεται **όσο γράφει** ο χρήστης, δηλαδή πριν δεσμεύσει και δει `#NAME?`: η στιγμή
+   * που η πληροφορία έχει αξία είναι πριν αποθηκευτεί το λάθος, όχι μετά.
+   */
+  const refusal = useMemo(() => (mode === 'nav' ? null : findFormulaRefusal(value)), [mode, value]);
+  const refusalKey = refusal === null ? undefined : REFUSAL_KEYS[refusal.reason];
 
   const handleCommit = useCallback(() => {
     // Ίδιος φύλακας με τον επεξεργαστή κελιού: σε πλοήγηση δεν υπάρχει πρόχειρο, και ένα
@@ -201,6 +229,14 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
         />
+        {refusalKey === undefined || refusal === null ? null : (
+          <output
+            className="flex max-w-96 shrink items-center truncate border-l border-border px-2 text-[10px] text-muted-foreground"
+            aria-label={t('table.formulaBar.refusal.ariaLabel')}
+          >
+            {t(`table.formulaBar.refusal.${refusalKey}`, { name: refusal.name })}
+          </output>
+        )}
       </section>
     </TextEditorAnchorLayer>
   );

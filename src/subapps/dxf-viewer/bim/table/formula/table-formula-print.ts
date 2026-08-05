@@ -73,6 +73,10 @@ function printNode(model: TableModel, node: TableFormulaNode): string {
     case 'text':
       // Διπλασιασμός εισαγωγικών — η σύμβαση που διαβάζει πίσω ο λεξικογράφος.
       return `"${node.value.replace(/"/gu, '""')}"`;
+    // Πάντα κεφαλαία, όπως το Excel: ο χρήστης μπορεί να έγραψε `false`, αλλά η κανονική
+    // γραφή είναι μία — και ο λεξικογράφος τη διαβάζει πίσω ως το ίδιο κυριολεκτικό.
+    case 'boolean':
+      return node.value ? 'TRUE' : 'FALSE';
     case 'ref':
       return printRef(model, node.cell);
     case 'range':
