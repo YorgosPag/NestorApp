@@ -29,6 +29,53 @@ import { PERSONA_CLAIMS, SAME_TENANT_COMPANY_ID } from '../_registry/personas';
 import type { SeedOptions } from './seed-helpers';
 
 // ---------------------------------------------------------------------------
+// ADR-745 Φ3β — title-block bindings
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed a `title_block_bindings` document.
+ *
+ * 🔴 **Every field below is one the converter actually emits** — no more, no less
+ * (`lib/firestore/converters/title-block-binding.converter.ts`). This is the §9.1(ε)
+ * lesson paid for in this very ADR: the `contact_links` seeder wrote a `companyId`
+ * that production never wrote, so 12 green read/list cells all passed through a
+ * rule leg **no real document could reach**. A seeder that drifts from the
+ * converter turns the whole matrix into coverage of a dead twin.
+ *
+ * Contract: companyId=SAME_TENANT (read gate) + confirmedBy=same_tenant_user.uid.
+ * The approver is a plain user, not an admin, precisely so that
+ * `same_tenant_admin × update = allow` proves the tenant-only gate rather than an
+ * accidental ownership match.
+ */
+export async function seedTitleBlockBinding(
+  env: RulesTestEnvironment,
+  docId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('title_block_bindings').doc(docId).set({
+      id: docId,
+      companyId: opts?.companyId ?? SAME_TENANT_COMPANY_ID,
+      projectId: `project-${docId}`,
+      fileRecordId: `file-${docId}`,
+      levelId: `level-${docId}`,
+      layerName: 'PINAKAKI 500',
+      titleBlockIndex: 0,
+      fieldKey: 'designers',
+      sourceHandle: 'mtext_7',
+      labelHandle: 'mtext_6',
+      slot: '%CE%9C%CE%91%CE%A5%CE%A1%CE%9F',
+      target: { kind: 'contact', contactId: `contact-${docId}`, role: 'surveyor', projectId: `project-${docId}` },
+      snapshotValue: 'ΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ',
+      status: 'active',
+      confirmedBy: opts?.createdBy ?? PERSONA_CLAIMS.same_tenant_user.uid,
+      confirmedAt: new Date(),
+      ...opts?.overrides,
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Contact / relationship seeders
 // ---------------------------------------------------------------------------
 

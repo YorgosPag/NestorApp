@@ -425,6 +425,24 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         label: 'Αρχεία έργου',
         queryType: 'equals',
       },
+      {
+        // ADR-745 Φ3β: per-cell provenance of the surveyor's title block.
+        //
+        // 🔴 CASCADE, not a dependency. As a `dependencies` entry it would make
+        // the project permanently UNDELETABLE after a single approval click:
+        // `strategy: 'BLOCK'` above stops deletion and hands the user a
+        // remediation message — and there is no screen anywhere that lists or
+        // deletes bindings, so the message would lead nowhere.
+        //
+        // The FK is the denormalized top-level `projectId` (the `target` field is
+        // a union, and Firestore cannot query inside one). Every binding written
+        // in Φ3β carries it: `drawing-meta`, the only target kind without a
+        // project, is deliberately not writable yet.
+        collection: COLLECTIONS.TITLE_BLOCK_BINDINGS,
+        foreignKey: 'projectId',
+        label: 'Συνδέσεις πινακίδας τοπογραφικού',
+        queryType: 'equals',
+      },
     ],
     // ADR-709: was entirely missing — the binaries survived project deletion
     // with no Firestore record left to find them by.

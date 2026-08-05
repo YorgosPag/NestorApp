@@ -242,6 +242,96 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 🏷️ TITLE_BLOCK_BINDINGS — per-cell provenance (ADR-745 Φ3β)
+    //
+    // "This cell of this drawing, approved by this human at this moment, points
+    // at this entity." The title block is never a source of truth — it is a
+    // source of PROPOSALS (ADR-745 §5.1), so every document here carries the
+    // person who approved it. Nothing is ever written without an explicit click.
+    //
+    // Shape mirrors `contact_links` above, deliberately — including the two
+    // legs that were paid for in blood there. One rule differs, on purpose;
+    // see UPDATE.
+    // =========================================================================
+    match /title_block_bindings/{bindingId} {
+
+      // 📖 READ: Tenant-scoped.
+      //
+      // 🔴 `resource == null` is LOAD-BEARING, for the same measured reason as
+      // contact_links (ADR-745 §9.4): the write path opens with a point read of
+      // the deterministic id it is ABOUT to write (idempotency + supersede
+      // detection). That document does not exist yet, so `resource` is null and
+      // `resource.data.companyId` raises `Null value error`, which Firestore
+      // surfaces as permission-denied — and the collection would sit at 0
+      // documents forever while every test stayed green, because rules suites
+      // seed documents first and then read documents that exist.
+      //
+      // `isSuperAdminOnly()` stays the FIRST leg (ADR-195 Phase 10 shape,
+      // enforced by CHECK 3.16's rule-shape validator). The null leg changes
+      // nothing for `list`: a query only evaluates this rule against documents
+      // it actually returns, so `resource` is never null there.
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || resource == null
+                       || belongsToCompany(resource.data.companyId)
+                     );
+
+      // ✍️ CREATE: Tenant-bound + no impersonation.
+      //
+      // `confirmedBy == request.auth.uid` is the whole point of the collection:
+      // a binding that cannot name its approver is worse than no binding, since
+      // it looks like evidence.
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll([
+                         'companyId', 'projectId', 'fileRecordId', 'levelId',
+                         'fieldKey', 'slot', 'status', 'confirmedBy'
+                       ])
+                    && request.resource.data.companyId is string
+                    && request.resource.data.projectId is string
+                    && request.resource.data.fileRecordId is string
+                    && request.resource.data.levelId is string
+                    && request.resource.data.status is string
+                    && request.resource.data.confirmedBy == request.auth.uid
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
+
+      // 📝 UPDATE: tenant-bound, with `companyId` AND `confirmedBy` immutable.
+      //
+      // 🔴 DELIBERATE DIVERGENCE from contact_links, which also demands
+      // `createdBy == request.auth.uid` here. A binding is COMPANY knowledge,
+      // not a personal object: the only update this collection performs is
+      // `status → 'superseded'`, i.e. a colleague correcting a mis-click. Under
+      // the contact_links rule that correction would be denied, and the false
+      // binding would stay active forever — which is the exact multi-user
+      // failure ADR-745 §9.1 removed from the READ leg for the same reason.
+      // That restriction is a DOCUMENTED WEAKNESS there, not a pattern to copy.
+      //
+      // What replaces it is stronger where it matters: `confirmedBy` is
+      // immutable, so nobody can rewrite history to claim someone else approved
+      // a binding — the attack the creator-check was actually guarding against.
+      allow update: if isAuthenticated()
+                    && (
+                         isSuperAdminOnly()
+                         || (
+                              belongsToCompany(resource.data.companyId)
+                              && request.resource.data.companyId == resource.data.companyId
+                              && request.resource.data.confirmedBy == resource.data.confirmedBy
+                            )
+                       );
+
+      // 🗑️ DELETE: super admin only.
+      //
+      // Provenance is not housekeeping. A wrong approval is superseded, never
+      // erased — otherwise the database can no longer explain why it once said
+      // something else (same principle as `withdrawn` in ADR-745 Φ3α).
+      allow delete: if isAuthenticated() && isSuperAdminOnly();
+    }
+
+    // =========================================================================
     // 📋 ATTENDANCE_EVENTS COLLECTION - IMMUTABLE AUDIT TRAIL (ADR-090 Phase 2)
     // =========================================================================
     // Append-only attendance events: check_in, check_out, break_start, break_end,

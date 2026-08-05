@@ -78,6 +78,7 @@ import {
   auditLogMatrix,
   contactRelationshipsMatrix,
   contactLinksMatrix,
+  titleBlockBindingsMatrix,
   employmentRecordsMatrix,
   notificationsMatrix,
   searchDocumentsMatrix,
@@ -906,6 +907,19 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     // written — nominally tenant-scoped, structurally unreachable. Now real:
     // tenant-gated read/create/update/delete, creator-bound create.
     matrix: contactLinksMatrix(),
+  },
+  {
+    collection: 'title_block_bindings',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/title-block-bindings.rules.test.ts',
+    // ⚠️ `rulesRange` is parsed by CHECK 3.16 but never compared against
+    // firestore.rules, so a stale range fails nothing — keep it honest by hand.
+    rulesRange: [244, 335],
+    // ADR-745 Φ3β (2026-08-05): per-cell provenance. Same tenant discipline as
+    // contact_links, with two deliberate departures pinned by their own cells —
+    // company-wide update (a colleague may supersede) and super-admin-only delete
+    // (provenance is superseded, never erased).
+    matrix: titleBlockBindingsMatrix(),
   },
   {
     collection: 'relationships',

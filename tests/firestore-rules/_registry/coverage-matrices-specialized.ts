@@ -169,6 +169,78 @@ export function contactLinksMatrix(): readonly CoverageCell[] {
 }
 
 // ---------------------------------------------------------------------------
+// ADR-745 Φ3β — title-block bindings (per-cell provenance)
+// ---------------------------------------------------------------------------
+
+/**
+ * Matrix for `title_block_bindings` — tenant-gated everywhere, with TWO deliberate
+ * departures from `contactLinksMatrix()` that this matrix exists to pin down.
+ *
+ * Rule shape:
+ *   - read:   isSuperAdminOnly() || resource == null || belongsToCompany
+ *   - create: required fields + confirmedBy == auth.uid + companyId == claim
+ *   - update: tenant + companyId AND confirmedBy immutable — **no creator check**
+ *   - delete: isSuperAdminOnly() only
+ *
+ * 🔴 **Departure 1 — `same_tenant_admin × update = ALLOW`** (contact_links: DENY).
+ * A binding is COMPANY knowledge, not a personal object, and the only update this
+ * collection performs is `status → 'superseded'`: a colleague correcting someone
+ * else's mis-click. Under the contact_links rule that correction is denied and the
+ * false binding stays active forever — the very multi-user failure ADR-745 §9.1
+ * deleted from the READ leg. That restriction is a DOCUMENTED WEAKNESS there
+ * (§9.1 «το σκέλος createdBy == uid ΔΙΑΓΡΑΦΗΚΕ, δεν χαλάρωσε»), not a pattern to
+ * copy. `confirmedBy` immutability is what replaces it, and it guards the thing
+ * that actually mattered: nobody can rewrite history to claim another person
+ * approved a binding.
+ *
+ * 🔴 **Departure 2 — delete is super_admin ONLY** (contact_links: creator may delete).
+ * Provenance is not housekeeping. A wrong approval is superseded, never erased,
+ * or the database can no longer explain why it once said something else — the
+ * same principle as `withdrawn` in Φ3α, where plain deletion «αφήνει ορφανό το
+ * τοπογραφικό που πληρώθηκε».
+ *
+ * Test contract: seed doc carries companyId=SAME_TENANT_COMPANY_ID and
+ * confirmedBy=same_tenant_user.uid, and the seeder emits EXACTLY what
+ * `titleBlockBindingConverter.toFirestore` emits — the §9.1(ε) lesson: a seeder
+ * that writes a field production never writes turns every green cell into
+ * coverage of a dead twin.
+ */
+export function titleBlockBindingsMatrix(): readonly CoverageCell[] {
+  return [
+    // Read/list: tenant membership only. same_tenant_admin is NOT the approver —
+    // it passes purely on companyId.
+    cell('super_admin', 'read', 'allow'),
+    cell('super_admin', 'list', 'allow'),
+    cell('same_tenant_admin', 'read', 'allow'),
+    cell('same_tenant_admin', 'list', 'allow'),
+    cell('same_tenant_user', 'read', 'allow'),
+    cell('same_tenant_user', 'list', 'allow'),
+    cell('cross_tenant_admin', 'read', 'deny', 'cross_tenant'),
+    cell('cross_tenant_admin', 'list', 'deny', 'cross_tenant'),
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+    // Create: companyId must match the claim AND confirmedBy must be the caller.
+    cell('super_admin', 'create', 'allow'),
+    cell('same_tenant_admin', 'create', 'allow'),
+    cell('same_tenant_user', 'create', 'allow'),
+    cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+    // Update: tenant only — DEPARTURE 1. A colleague may supersede.
+    cell('super_admin', 'update', 'allow'),
+    cell('same_tenant_admin', 'update', 'allow'),
+    cell('same_tenant_user', 'update', 'allow'),
+    cell('cross_tenant_admin', 'update', 'deny', 'cross_tenant'),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+    // Delete: super_admin only — DEPARTURE 2. Provenance is superseded, not erased.
+    cell('super_admin', 'delete', 'allow'),
+    cell('same_tenant_admin', 'delete', 'deny', 'insufficient_role'),
+    cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
+    cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // ADR-298 Phase C.7 — employment records
 // ---------------------------------------------------------------------------
 
