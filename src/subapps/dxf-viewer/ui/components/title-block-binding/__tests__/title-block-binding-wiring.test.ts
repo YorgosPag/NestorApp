@@ -33,7 +33,13 @@ function at(tree: Record<string, unknown>, key: string): unknown {
 /** Τα κλειδιά που όντως γράφει ο κώδικας — διαβασμένα από το αρχείο, όχι ξαναγραμμένα εδώ. */
 function declaredKeys(): string[] {
   const sources = [
+    // ⚠️ Η λίστα πρέπει να καλύπτει **κάθε** αρχείο που γράφει κλειδί. Στη Φ3β το αρχείο
+    // χωρίστηκε σε τρία (N.7.1) και οι ετικέτες μετακόμισαν στο `proposal-labels.ts`: με τη
+    // σκέτη παλιά λίστα το test θα εξέταζε **7** κλειδιά αντί για 30+, δηλαδή θα έμενε πράσινο
+    // κοιτάζοντας σχεδόν τίποτα. Ο φρουρός «δηλώνει κλειδιά» παρακάτω υπάρχει ακριβώς γι' αυτό.
+    read('src/subapps/dxf-viewer/ui/components/title-block-binding/proposal-labels.ts'),
     read('src/subapps/dxf-viewer/ui/components/title-block-binding/TitleBlockProposalList.tsx'),
+    read('src/subapps/dxf-viewer/ui/components/title-block-binding/TitleBlockProposalRow.tsx'),
     read('src/subapps/dxf-viewer/ui/components/TitleBlockBindingPalette.tsx'),
   ].join('\n');
   return [...sources.matchAll(/'(titleBlockBinding\.[A-Za-z0-9.\-_]+)'/g)].map((m) => m[1]);
@@ -52,6 +58,15 @@ describe('καλωδίωση κουμπιού → ενέργεια', () => {
     const dialogs = read('src/subapps/dxf-viewer/app/DxfViewerDialogs.tsx');
     expect(dialogs).toContain('<TitleBlockBindingPalette');
     expect(dialogs).toContain('levelId={levelManager.currentLevelId');
+  });
+
+  it('🔴 το fileRecordId φτάνει στην παλέτα ως `?? null` — ΠΟΤΕ `?? \'\'`', () => {
+    // Γ2: μηδενίσιμο εκ σχεδιασμού, φτάνει ΑΡΓΟΤΕΡΑ, και είναι μέρος του ντετερμινιστικού
+    // κλειδιού. Κενή συμβολοσειρά ⇒ το επόμενο φόρτωμα δεν ξαναβρίσκει τη σύνδεση ⇒ δεύτερο
+    // κλικ = ΔΕΥΤΕΡΟ έγγραφο. Το `user?.uid ?? ''` ήταν ο τελευταίος φραγμός του κλικ (§13ι).
+    const dialogs = read('src/subapps/dxf-viewer/app/DxfViewerDialogs.tsx');
+    expect(dialogs).toContain('fileRecordId={levelManager.fileRecordId ?? null}');
+    expect(dialogs).not.toContain("fileRecordId={levelManager.fileRecordId ?? ''}");
   });
 });
 

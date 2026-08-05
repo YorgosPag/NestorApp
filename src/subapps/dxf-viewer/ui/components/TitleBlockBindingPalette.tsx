@@ -44,9 +44,20 @@ function isFocusInsidePalette(): boolean {
 interface Props {
   readonly levelId: string | null;
   readonly projectId?: string;
+  /**
+   * 🔴 **Μηδενίσιμο εκ σχεδιασμού — ΠΟΤΕ `?? ''`** (ADR-745 §Γ2).
+   *
+   * Το `fileRecordId` είναι **προαιρετικό, μηδενίσιμο και φτάνει ΑΡΓΟΤΕΡΑ** από την πρώτη
+   * απόδοση (`dxf-import-save-context.ts:34`, `useViewportAutoFit.ts:93` «*immune to the
+   * cold-load fileRecordId race*», `bim-floor-scope.ts:210` «**VOLATILE**»). Είναι μέρος του
+   * ντετερμινιστικού κλειδιού: με κενή τιμή το επόμενο φόρτωμα δεν ξαναβρίσκει τη σύνδεση και
+   * το δεύτερο κλικ φτιάχνει **δεύτερο έγγραφο**. Γι' αυτό το κουμπί απενεργοποιείται **με
+   * ορατό μήνυμα** αντί να ανεχτεί κενό.
+   */
+  readonly fileRecordId: string | null;
 }
 
-export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId }) => {
+export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId, fileRecordId }) => {
   const { t } = useTranslation('dxf-viewer-shell');
 
   const { isOpen } = useSyncExternalStore(
@@ -142,7 +153,13 @@ export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId }
             <p className="text-sm text-muted-foreground">{t('titleBlockBinding.empty')}</p>
           ) : null}
 
-          <TitleBlockProposalList proposals={state.proposals} />
+          <TitleBlockProposalList
+            proposals={state.proposals}
+            fileRecordId={fileRecordId}
+            levelId={levelId}
+            layerName={candidate?.layerName ?? ''}
+            projectId={projectId}
+          />
         </section>
       </FloatingPanel.Content>
     </FloatingPanel>

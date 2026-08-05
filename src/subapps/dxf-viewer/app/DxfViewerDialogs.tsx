@@ -283,7 +283,15 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
       {/* ADR-745 Φ3β — η πινακίδα του τοπογράφου ως πρόταση σύνδεσης. Modeless: η βάση αλλάζει
           ενόσω το σχέδιο είναι ανοιχτό, οπότε η ίδια ερώτηση αξίζει να ξαναγίνει. */}
       <React.Suspense fallback={hiddenFallback}>
-        <TitleBlockBindingPalette levelId={levelManager.currentLevelId ?? null} projectId={projectId} />
+        <TitleBlockBindingPalette
+          levelId={levelManager.currentLevelId ?? null}
+          projectId={projectId}
+          // 🔴 `?? null`, ΠΟΤΕ `?? ''` (ADR-745 §Γ2): μηδενίσιμο εκ σχεδιασμού και φτάνει
+          // ΑΡΓΟΤΕΡΑ από την πρώτη απόδοση. Είναι μέρος του ντετερμινιστικού κλειδιού, οπότε
+          // κενή συμβολοσειρά θα γεννούσε δεύτερο έγγραφο στο δεύτερο κλικ. Το `floorplanId`
+          // από πάνω κάνει `?? undefined` γιατί εκεί η απουσία είναι αδιάφορη· εδώ όχι.
+          fileRecordId={levelManager.fileRecordId ?? null}
+        />
       </React.Suspense>
       {/* ADR-736 §5 — η ΑΥΤΟΜΑΤΗ επίλυση συνημμένων. Ξεχωριστό host γιατί η παλέτα από πάνω
           αποδίδει `null` όσο είναι κλειστή: μέσα της, το «αυτόματα» σήμαινε στην πράξη «μόλις
