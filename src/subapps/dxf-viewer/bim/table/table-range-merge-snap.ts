@@ -116,7 +116,15 @@ function union(a: TableRectBounds, b: TableRectBounds): TableRectBounds {
   };
 }
 
-function sameBounds(a: TableRectBounds, b: TableRectBounds): boolean {
+/**
+ * Ταυτότητα δύο περιοχών κελιών — **σε δείκτες, όχι σε χιλιοστά**.
+ *
+ * Έγινε δημόσιο (ADR-739 §48.12) όταν απέκτησε δεύτερο καταναλωτή: το marquee ρωτά «είμαι η
+ * ίδια περιοχή με την επιλογή;». Η σύγκριση σε mm θα ήταν σύγκριση κινητής υποδιαστολής για
+ * ερώτημα που είναι **ακέραιος** — και θα απαντούσε «όχι» σε ορθογώνια που ο χρήστης βλέπει να
+ * συμπίπτουν στο pixel.
+ */
+export function tableRangeBoundsEqual(a: TableRectBounds, b: TableRectBounds): boolean {
   return (
     a.firstRow === b.firstRow &&
     a.lastRow === b.lastRow &&
@@ -155,7 +163,7 @@ export function snapToWholeMerges(model: TableModel, start: TableRectBounds): Ta
       const spanBounds = mergeSpanBounds(model, rowIndex, colIndex, span);
       if (spanBounds && tableRectsIntersect(grown, spanBounds)) grown = union(grown, spanBounds);
     }
-    if (sameBounds(grown, bounds)) return bounds;
+    if (tableRangeBoundsEqual(grown, bounds)) return bounds;
     bounds = grown;
   }
 }

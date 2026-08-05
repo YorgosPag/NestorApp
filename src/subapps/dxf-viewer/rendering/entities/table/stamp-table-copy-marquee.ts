@@ -43,6 +43,10 @@ import {
   MARCHING_ANTS_LINE_WIDTH_PX,
   marchingAntsDashOffsetPx,
 } from '../../../bim/table/table-marching-ants';
+import {
+  tableRangeBoundsEqual,
+  type TableRectBounds,
+} from '../../../bim/table/table-range-merge-snap';
 import type { TableLayout, TableRectMm } from '../../../bim/table/table-layout-types';
 import type { TableCopyMarqueeState } from '../../../state/table-copy-marquee-store';
 import type { TableEntity } from '../../../types/table-entity';
@@ -68,6 +72,40 @@ export function resolveTableCopyMarqueeRect(
   if (!marquee || marquee.entityId !== entity.id) return null;
   if (marquee.modelRef !== entity.model) return null;
   return tableRangeRectMm(layout, marquee.bounds);
+}
+
+/**
+ * 🔴 ADR-739 §48.12 — **ΤΑ ΜΥΡΜΗΓΚΙΑ ΕΧΟΥΝ ΠΡΟΤΕΡΑΙΟΤΗΤΑ ΣΤΗΝ ΚΟΙΝΗ ΔΙΑΔΡΟΜΗ.**
+ *
+ * Αμέσως μετά το `Ctrl+C` η ίδια περιοχή είναι **ταυτόχρονα** επιλεγμένη και αντιγραμμένη, οπότε
+ * το συμπαγές περίγραμμα της επιλογής και το διακεκομμένο του προχείρου χαράζονται στην **ίδια
+ * ακριβώς διαδρομή**. Δύο γραμμές στο ίδιο pixel δεν συνυπάρχουν: η συμπαγής κερδίζει και η
+ * κίνηση — το ισχυρότερο κανάλι πληροφορίας του §48.5 — **εξαφανίζεται**.
+ *
+ * Το λέπτυνμα του περιγράμματος (2 px → 1 px) δοκιμάστηκε πρώτο και **δεν έφτασε**: μια συμπαγής
+ * γραμμή οποιουδήποτε πάχους πάνω στην ίδια διαδρομή εξακολουθεί να γεμίζει τα κενά του μοτίβου.
+ * Το πρόβλημα δεν ήταν το **πάχος**· ήταν η **παρουσία**.
+ *
+ * ⇒ Όταν ταυτίζονται, το περίγραμμα επιλογής **αποσύρεται εντελώς** και μένει μόνο η **λαβή
+ * συμπλήρωσης**. Καμία πληροφορία δεν χάνεται: η περιοχή εξακολουθεί να ορίζεται —από τα ίδια τα
+ * μυρμήγκια, στην ίδια θέση— και η σκίαση της επιλογής μένει ανέγγιχτη, δηλαδή το «ποια κελιά»
+ * απαντιέται όπως πριν. Η λαβή επιβιώνει επειδή είναι **χερούλι**, όχι δείκτης: αν έφευγε, θα
+ * χανόταν μια **πράξη** (σύρσιμο συμπλήρωσης), όχι μια ένδειξη.
+ *
+ * ⚠️ Η σύγκριση γίνεται σε **δείκτες κελιών**, όχι σε χιλιοστά — δες `tableRangeBoundsEqual`.
+ * Και περνά από τους **ίδιους** δύο φρουρούς με τον ζωγράφο (ίδια οντότητα · φρέσκια σφραγίδα
+ * έκδοσης): αλλιώς ένα μπαγιάτικο marquee, που δεν ζωγραφίζεται πουθενά, θα έσβηνε το περίγραμμα
+ * της επιλογής και ο χρήστης θα έμενε με **καμία** γραμμή.
+ */
+export function tableCopyMarqueeCoversSelection(
+  entity: TableEntity,
+  marquee: TableCopyMarqueeState | null,
+  selectionBounds: TableRectBounds | undefined,
+): boolean {
+  if (!marquee || !selectionBounds) return false;
+  if (marquee.entityId !== entity.id) return false;
+  if (marquee.modelRef !== entity.model) return false;
+  return tableRangeBoundsEqual(marquee.bounds, selectionBounds);
 }
 
 /**
