@@ -23,6 +23,25 @@ NC='\033[0m'
 VIOLATIONS=0
 FILES="$@"
 
+# =============================================================================
+# Το ΕΝΑ φίλτρο σχολίων — διαβάζει έξοδο `grep -n`, δηλαδή "<αριθμός>:<γραμμή>"
+# =============================================================================
+# 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΩΣ ΣΥΝΑΡΤΗΣΗ (2026-08-06): οι RULE 2 και RULE 4 έγραφαν
+# `grep -v "^\s*//"` πάνω σε έξοδο `grep -n`. Εκείνη η έξοδος ΞΕΚΙΝΑ με τον
+# αριθμό γραμμής (`77: * ...`), άρα το μοτίβο "αρχή γραμμής, μετά //" δεν
+# ταίριαζε ΠΟΤΕ: το φίλτρο ήταν δομικά νεκρό και κάθε αναφορά μέσα σε σχόλιο
+# μετρούσε ως παραβίαση. Το βρήκε JSDoc που έλεγε «ποτέ `crypto.randomUUID()`
+# inline» — δηλαδή ένα σχόλιο που ΔΗΛΩΝΕΙ συμμόρφωση μπλόκαρε τον κανόνα του.
+# Το σωστό ιδίωμα υπήρχε ήδη 30 γραμμές πιο πάνω (RULE 1) — τρίτη αντιγραφή
+# του ίδιου ερωτήματος, δύο από τις οποίες λάθος. Πλέον υπάρχει μία απάντηση.
+#
+# ⚠️ Είναι ΓΡΑΜΜΙΚΟ φίλτρο, όχι parser: πιάνει `//`, `*`, `/*` στην αρχή της
+# γραμμής. Κώδικας με σχόλιο στο τέλος (`foo(); // …`) ελέγχεται κανονικά, που
+# είναι το ζητούμενο. Μπλοκ σχολίου με κώδικα στην ίδια γραμμή δεν υπάρχει εδώ.
+strip_comment_lines() {
+  grep -vE "^[[:space:]]*[0-9]+:[[:space:]]*(//|\*|/\*)"
+}
+
 # If no files specified, check all staged .ts/.tsx files
 if [[ -z "$FILES" ]]; then
   FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' | grep -v node_modules | grep -v '.d.ts')
@@ -66,7 +85,7 @@ check_hardcoded_storage_paths() {
   for pattern in "${patterns[@]}"; do
     local matches
     # Filter out: // comments, * block comments, lines mentioning LEGACY_STORAGE_PATHS, JSDoc examples
-    matches=$(grep -n "$pattern" "$file" 2>/dev/null | grep -vE "^\s*[0-9]+:\s*(//|\*|/\*)" | grep -v "LEGACY_STORAGE_PATHS")
+    matches=$(grep -n "$pattern" "$file" 2>/dev/null | strip_comment_lines | grep -v "LEGACY_STORAGE_PATHS")
     if [[ -n "$matches" ]]; then
       echo -e "${RED}  ❌ RULE 1: Hardcoded storage path in $file${NC}"
       echo "     Use LEGACY_STORAGE_PATHS.* or buildStoragePath() instead"
@@ -94,7 +113,7 @@ check_inline_uuid() {
   fi
 
   local matches
-  matches=$(grep -n "crypto\.randomUUID\(\)" "$file" 2>/dev/null | grep -v "^\s*//" | grep -v "^\s*\*")
+  matches=$(grep -n "crypto\.randomUUID\(\)" "$file" 2>/dev/null | strip_comment_lines)
   if [[ -n "$matches" ]]; then
     echo -e "${RED}  ❌ RULE 2: Inline crypto.randomUUID() in $file${NC}"
     echo "     Use generators from @/services/enterprise-id.service instead (CLAUDE.md N.6)"
@@ -115,7 +134,7 @@ check_add_doc() {
   fi
 
   local matches
-  matches=$(grep -n "addDoc(" "$file" 2>/dev/null | grep -v "^\s*//" | grep -v "^\s*\*" | grep -v "// LEGACY")
+  matches=$(grep -n "addDoc(" "$file" 2>/dev/null | strip_comment_lines | grep -v "// LEGACY")
   if [[ -n "$matches" ]]; then
     echo -e "${RED}  ❌ RULE 3: addDoc() found in $file${NC}"
     echo "     Use setDoc() with enterprise ID generator instead (CLAUDE.md N.6)"
