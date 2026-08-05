@@ -17,7 +17,9 @@
 import { createModuleLogger } from '@/lib/telemetry';
 import { createCellRanker, indexById, insertionIndexFor } from './table-cell-order';
 import { buildTableEdgeIndex, toPersistedTableEdges } from './table-edge-model';
+import { buildTableRowLinkIndex, toPersistedTableRowLinks } from './table-row-link-model';
 import type { TableEdgeEntry } from '../../types/table-edges';
+import type { TableRowLinkEntry } from '../../types/table-row-link';
 import type { TableFormula } from '../../types/table-formula';
 import type {
   CellKey,
@@ -168,6 +170,8 @@ export interface CreateTableModelInput {
   readonly merges?: readonly CellSpan[];
   /** ADR-750 Φ1 — μόνο οι **ρητές** ακμές· ίδια αραιή σύμβαση με τα κελιά. */
   readonly edges?: readonly TableEdgeEntry[];
+  /** ADR-739 Επίπεδο Β — μόνο οι γραμμές που δείχνουν κάπου· ίδια αραιή σύμβαση. */
+  readonly rowLinks?: readonly TableRowLinkEntry[];
 }
 
 /**
@@ -186,6 +190,8 @@ export function createTableModel(input: CreateTableModelInput): TableModel {
     merges: asSequence<CellSpan>(input.merges, 'merges'),
     // Το δίχτυ ζει στο `table-edge-model`: εκεί είναι η μόνη γνώση του σχήματος ακμής.
     edges: buildTableEdgeIndex(input.edges),
+    // Ομοίως το δίχτυ των δεσμών ζει στο `table-row-link-model`.
+    rowLinks: buildTableRowLinkIndex(input.rowLinks),
   };
 }
 
@@ -340,6 +346,7 @@ export function resolveTableModel(persisted: PersistedTableModel): TableModel {
     cells: persisted.cells,
     merges: persisted.merges,
     edges: persisted.edges,
+    rowLinks: persisted.rowLinks,
   });
   RESOLVED_MODEL_CACHE.set(persisted, model);
   return model;
@@ -370,6 +377,7 @@ export function toPersistedTableModel(model: TableModel): PersistedTableModel {
   }
   ordered.sort((a, b) => a.rank - b.rank);
   const edges = toPersistedTableEdges(model, model.edges);
+  const rowLinks = toPersistedTableRowLinks(model, model.rowLinks);
 
   return {
     columns: model.columns,
@@ -381,6 +389,10 @@ export function toPersistedTableModel(model: TableModel): PersistedTableModel {
     // «αλλαγή» — και, χειρότερα, θα έσπαγε το `persisted → runtime → persisted ταυτοτικό`
     // για κάθε πίνακα γραμμένο πριν από αυτή τη φάση.
     ...(edges.length > 0 ? { edges } : {}),
+    // ADR-739 Επίπεδο Β — ίδια σύμβαση παράλειψης με τις ακμές, και για τον ίδιο λόγο: ένα
+    // `rowLinks: []` θα έσπαγε το `persisted → runtime → persisted` ταυτοτικό για κάθε
+    // πίνακα γραμμένο πριν από αυτή τη φάση.
+    ...(rowLinks.length > 0 ? { rowLinks } : {}),
   };
 }
 

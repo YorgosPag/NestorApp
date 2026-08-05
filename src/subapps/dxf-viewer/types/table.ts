@@ -39,6 +39,7 @@ import type {
 } from '../bim/schedule/types';
 import type { CellKey, TableColumnId, TableRowId } from './table-ids';
 import type { TableBorderSpec, TableEdgeEntry, TableEdgeIndex } from './table-edges';
+import type { TableRowLinkEntry, TableRowLinkIndex } from './table-row-link';
 import type { TableFormula } from './table-formula';
 
 /**
@@ -445,6 +446,13 @@ export interface TableModel {
    * δύο απαντήσεις στο «έχει ρητές ακμές;» — απούσα και κενή.
    */
   readonly edges: TableEdgeIndex;
+  /**
+   * ADR-739 Επίπεδο Β — το ευρετήριο των δεσμών γραμμής→οντότητες, παράγωγο του
+   * {@link PersistedTableModel.rowLinks}. **Πάντα παρόν** (ενδεχομένως κενό), για τον ίδιο
+   * λόγο με τις ακμές: προαιρετικό πεδίο εδώ θα γεννούσε δύο απαντήσεις στο «έχει δεσμούς;»
+   * — απούσα και κενή — και κάθε αναγνώστης θα έπρεπε να θυμάται το `?.`.
+   */
+  readonly rowLinks: TableRowLinkIndex;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -500,6 +508,18 @@ export interface PersistedTableModel {
    * παράγει **byte-ταυτόσημο** JSON με πριν.
    */
   readonly edges?: readonly TableEdgeEntry[];
+  /**
+   * ADR-739 Επίπεδο Β — οι δεσμοί γραμμής→οντότητες, σε ντετερμινιστική σειρά γραμμής
+   * (ίδια αρχή με τα κελιά και τις ακμές). Ο χάρτης είναι αραιός: μόνο οι γραμμές που
+   * δείχνουν κάπου.
+   *
+   * **Προαιρετικό επίτηδες**: κάθε ήδη αποθηκευμένος πίνακας παραμένει έγκυρος χωρίς κανένα
+   * migration, και πίνακας χωρίς δεσμούς παράγει **byte-ταυτόσημο** JSON με πριν — δεν
+   * γράφεται καν όταν είναι κενό. Ένα `rowLinks: []` θα ταξίδευε σε κάθε αποθηκευμένο
+   * πίνακα του κόσμου, θα εμφανιζόταν σε κάθε diff ως «αλλαγή», και θα έσπαγε το
+   * `persisted → runtime → persisted` ταυτοτικό για κάθε πίνακα γραμμένο πριν από τη φάση.
+   */
+  readonly rowLinks?: readonly TableRowLinkEntry[];
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

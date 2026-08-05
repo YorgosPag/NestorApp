@@ -333,14 +333,17 @@ describe('ΠΙΝΑΚΑΣ — με το ΠΡΑΓΜΑΤΙΚΟ σχήμα της ο
 
   it('ΤΟ ΣΦΑΛΜΑ ΠΟΥ ΦΡΟΥΡΕΙ: το ευρετήριο μνήμης (`TableModel`) ΠΙΑΝΕΤΑΙ ως ένοχο', () => {
     // Αν κάποιος «απλοποιήσει» βάζοντας πάλι το runtime μοντέλο στην οντότητα, ο ανιχνευτής
-    // δείχνει ακριβώς πού. Τα **δύο** ευρετήρια ονομάζονται χωριστά επίτηδες: μια σκέτη
-    // μέτρηση («ένα ένοχο μονοπάτι») θα έμενε πράσινη αν κάποτε το `edges` γινόταν πάλι
+    // δείχνει ακριβώς πού. Τα **τρία** ευρετήρια ονομάζονται χωριστά επίτηδες: μια σκέτη
+    // μέτρηση («ένα ένοχο μονοπάτι») θα έμενε πράσινη αν κάποτε ένα από αυτά γινόταν πάλι
     // απλό αντικείμενο — δηλαδή ο φρουρός θα σιωπούσε ακριβώς όταν χανόταν κάτι.
+    // ADR-739 Επίπεδο Β — το `rowLinks` είναι το τρίτο, με την ίδια αρχή «λίστα στο αρχείο,
+    // ευρετήριο στη μνήμη»: ο `Map` εδώ είναι ΣΩΣΤΟΣ, αρκεί να μη φτάσει ποτέ στην οντότητα.
     const withRuntimeModel = { ...makeRealTableEntity(), model: createTableModel({ columns: [], rows: [] }) };
     const paths = findJsonUnsafePaths(withRuntimeModel, 'table');
-    expect(paths).toHaveLength(2);
+    expect(paths).toHaveLength(3);
     expect(paths.some((p) => p.includes('table.model.cells → Map'))).toBe(true);
     expect(paths.some((p) => p.includes('table.model.edges → Map'))).toBe(true);
+    expect(paths.some((p) => p.includes('table.model.rowLinks → Map'))).toBe(true);
   });
 });
 

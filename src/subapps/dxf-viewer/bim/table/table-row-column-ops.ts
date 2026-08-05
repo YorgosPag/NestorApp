@@ -64,6 +64,7 @@ import type {
 import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT } from './build-table-entity';
 import { indexById, insertionIndexFor } from './table-cell-order';
 import { rebuildTableEdgesOnDelete } from './table-edge-model';
+import { dropTableRowLink } from './table-row-link-model';
 import { cellKey } from './table-model-helpers';
 
 /** Ο άξονας πάνω στον οποίο γίνεται η πράξη — μία υλοποίηση, δύο όψεις (N.18). */
@@ -352,6 +353,9 @@ export function deleteTableRow(
     ...next,
     cells: rebuildCells(next, model.cells, (entry) => entry[0] !== rowId, anchorMoves),
     edges: rebuildTableEdgesOnDelete(next, model.edges, 'row', rowId, model.rows[at + 1]?.id),
+    // ADR-739 Επίπεδο Β — ο δεσμός φεύγει μαζί με τη γραμμή, **χωρίς** κληρονόμο. Ο κανόνας
+    // (και γιατί διαφέρει από τις ακμές) ζει ολόκληρος στο `table-row-link-model.ts`.
+    rowLinks: dropTableRowLink(model.rowLinks, rowId),
   };
 }
 
