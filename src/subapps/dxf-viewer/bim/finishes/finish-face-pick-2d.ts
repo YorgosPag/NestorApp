@@ -19,7 +19,7 @@
  */
 
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
-import { pointToSegmentDistance } from '../../systems/guides';
+import { pointToSegmentDistance } from '../../utils/segment-distance';
 import { finishFaceRef, type FinishFaceRef } from './structural-finish-face-ref';
 import { isFinishActive, type StructuralFinishSpec } from './structural-finish-types';
 

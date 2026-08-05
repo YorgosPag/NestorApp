@@ -13,7 +13,10 @@
 
 import * as THREE from 'three';
 import type { DxfScene, DxfEntityUnion } from '../../../canvas-v2/dxf-canvas/dxf-types';
-import { appendEntitySegments, DxfToThreeConverter } from '../DxfToThreeConverter';
+import { DxfToThreeConverter } from '../DxfToThreeConverter';
+// ADR-739 Φ.Θ / N.7.1 — η τεσελίωση οντότητας→τμήματα μετακόμισε σε δικό της module όταν
+// απέκτησε δεύτερο καταναλωτή (τον πίνακα). Ίδια συνάρτηση, ίδια συμπεριφορά, νέα διεύθυνση.
+import { appendEntitySegments } from '../dxf-underlay-segments';
 import { finiteBox3FromObject } from '../../scene/finite-bounds';
 
 const meshFromPositions = (positions: number[]): THREE.Mesh => {

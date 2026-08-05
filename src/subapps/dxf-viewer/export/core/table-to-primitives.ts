@@ -57,8 +57,25 @@ export function decomposeTable(
   entity: TableEntity,
   drawingScale: number,
   sceneUnits: SceneUnits,
+  /**
+   * 🔴 ADR-739 Φ.Θ — **η επιφάνεια κάτω από τον πίνακα**, για το αυτόματο μελάνι (§38).
+   *
+   * Απόν ⇒ χαρτί ({@link computeTableEntityGeometry} default), δηλαδή **η ιστορική συμπεριφορά
+   * ακέραιη**: η εξαγωγή (ο μοναδικός καλών μέχρι τη Φ.Θ) καταλήγει σε λευκή σελίδα και
+   * περνά τρία ορίσματα, όπως πάντα.
+   *
+   * Ρητό ⇒ ο καλών **γνωρίζει** πάνω σε τι κάθεται ο πίνακας. Τον χρειάζεται το 3Δ υπόστρωμα:
+   * εκεί η επιφάνεια δεν είναι ούτε χαρτί ούτε ο 2Δ καμβάς, αλλά το **φόντο της σκηνής** —
+   * και το `#111111` του χαρτιού πάνω στο προεπιλεγμένο `#1d283a` δίνει αντίθεση **1,27:1**,
+   * δηλαδή έναν πίνακα που «εμφανίστηκε» αλλά **δεν διαβάζεται**.
+   *
+   * ⚠️ Ένα τέταρτο όρισμα σε συνάρτηση τριών ορισμάτων ήταν η αιτία του ADR-754 §14.9.3
+   * (`tableWorldToFrame`). Εδώ η υπογραφή **δηλώνει** το τέταρτο· ο υπάρχων καλών περνά τρία
+   * και παίρνει την προεπιλογή — δεν υπάρχει θέση όπου ένας αριθμός να γλιστρήσει σε άλλη θέση.
+   */
+  surfaceHex?: string,
 ): Entity[] {
-  const geometry = computeTableEntityGeometry(entity, drawingScale, sceneUnits);
+  const geometry = computeTableEntityGeometry(entity, drawingScale, sceneUnits, surfaceHex);
   const primitives = tableLayoutToPrimitives(geometry.layout);
   const rotationDeg = entity.angleRad * RAD_TO_DEG;
 

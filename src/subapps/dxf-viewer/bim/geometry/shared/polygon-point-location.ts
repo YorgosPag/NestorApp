@@ -56,7 +56,7 @@
  * @see ./polygon-utils — `pointInPolygon` (ωμό crossing-number, fill rules)
  */
 
-import { pointToSegmentDistance } from '../../../systems/guides';
+import { pointToSegmentDistance } from '../../../utils/segment-distance';
 
 /** Ελάχιστο read-only επίπεδο σημείο — ό,τι εκθέτει `x`/`y` (Point2D, Point3D, κορυφή, λαβή). */
 export interface PlanarPoint {

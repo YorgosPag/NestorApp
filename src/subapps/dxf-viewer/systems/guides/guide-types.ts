@@ -17,7 +17,8 @@ import type { Point2D } from '../../rendering/types/Types';
 // 🏢 ADR-189: Centralized hover highlight config (single source of truth)
 // 🏢 ADR-571: GUIDE_X cyan SSoT — μην ξανα-hardcode-άρεις '#00BCD4' εδώ
 import { HOVER_HIGHLIGHT, UI_COLORS_BASE } from '../../config/color-config';
-import { clamp01 } from '../../utils/scalar-math';
+// Προήχθησαν στη βάση της στοίβας (βλ. σχόλιο στην επανεξαγωγή πιο κάτω).
+import { pointToSegmentDistance, projectPointOnSegment } from '../../utils/segment-distance';
 
 // Re-export for convenience
 export type { GridAxis, GridGuideStyle } from '../../ai-assistant/grid-types';
@@ -255,45 +256,19 @@ export function isGuideEditTool(tool: string | null | undefined): boolean {
 }
 
 /**
- * Distance from a point to a line segment (clamped to endpoints).
- * Reused by GuideStore.findNearestGuide() and GuideSnapEngine.
+ * ⚠️ **Τα δύο πρωτόγονα «σημείο ↔ τμήμα» ΔΕΝ ζουν πια εδώ** — προήχθησαν στο
+ * `utils/segment-distance.ts` (ίδια κίνηση με `clamp` → `scalar-math`, ADR-071).
+ *
+ * **Γιατί**: επτά αρχεία `bim/**` τα εισήγαγαν από το βαρέλι `systems/guides` για δέκα γραμμές
+ * τριγωνομετρίας, σέρνοντας μαζί store + εντολές + analytics. Ο κύκλος που προέκυπτε έριχνε
+ * ολόκληρη τη σουίτα `guide-commands-ssot.test.ts` σε `0 tests` — **αόρατη, όχι κόκκινη**.
+ *
+ * Η επανεξαγωγή μένει για συμβατότητα των υπαρχόντων καταναλωτών οδηγών (`guide-store`,
+ * `GuideSnapEngine`, `useCanvasMouse`, `offset-side`, …). **Νέος** καταναλωτής εκτός οδηγών
+ * εισάγει απευθείας από `utils/segment-distance`.
+ *
+ * ⚠️ Εισαγωγή **και** επανεξαγωγή, όχι σκέτο `export … from`: το `projectPointOntoGuide` πιο
+ * κάτω σε αυτό το αρχείο **καλεί** την `projectPointOnSegment`, και το `export … from` δεν
+ * φέρνει binding στο τοπικό scope (`ReferenceError` στο runtime, με τον μεταγλωττιστή σιωπηλό).
  */
-export function pointToSegmentDistance(point: Point2D, segStart: Point2D, segEnd: Point2D): number {
-  const dx = segEnd.x - segStart.x;
-  const dy = segEnd.y - segStart.y;
-  const lenSq = dx * dx + dy * dy;
-
-  if (lenSq === 0) {
-    return Math.sqrt((point.x - segStart.x) ** 2 + (point.y - segStart.y) ** 2);
-  }
-
-  const t = clamp01(((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq);
-  const projX = segStart.x + t * dx;
-  const projY = segStart.y + t * dy;
-  return Math.sqrt((point.x - projX) ** 2 + (point.y - projY) ** 2);
-}
-
-/**
- * Project a point onto a line segment, returning the projected point and parameter t.
- * t is clamped to [0, 1] (bounded to segment endpoints).
- */
-export function projectPointOnSegment(
-  point: Point2D,
-  segStart: Point2D,
-  segEnd: Point2D,
-): { snapPoint: Point2D; distance: number; t: number } {
-  const dx = segEnd.x - segStart.x;
-  const dy = segEnd.y - segStart.y;
-  const lenSq = dx * dx + dy * dy;
-
-  if (lenSq === 0) {
-    const d = Math.sqrt((point.x - segStart.x) ** 2 + (point.y - segStart.y) ** 2);
-    return { snapPoint: { x: segStart.x, y: segStart.y }, distance: d, t: 0 };
-  }
-
-  const t = clamp01(((point.x - segStart.x) * dx + (point.y - segStart.y) * dy) / lenSq);
-  const snapPoint = { x: segStart.x + t * dx, y: segStart.y + t * dy };
-  const distance = Math.sqrt((point.x - snapPoint.x) ** 2 + (point.y - snapPoint.y) ** 2);
-
-  return { snapPoint, distance, t };
-}
+export { pointToSegmentDistance, projectPointOnSegment };

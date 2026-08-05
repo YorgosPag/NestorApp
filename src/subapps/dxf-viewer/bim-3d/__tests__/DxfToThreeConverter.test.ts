@@ -9,12 +9,14 @@
  */
 
 import * as THREE from 'three';
-import {
-  DxfToThreeConverter,
-  appendEntitySegments,
-} from '../converters/DxfToThreeConverter';
+import { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 // N.7.1 split — the colour cascade moved out of the converter into its own module.
 import { resolveEntityColor } from '../converters/dxf-overlay-entity-color';
+// N.7.1 split (ADR-739 Φ.Θ) — η τεσελίωση οντότητας→τμήματα βγήκε από τον converter μόλις
+// απέκτησε δεύτερο καταναλωτή (την αποδόμηση πίνακα). Ίδια συνάρτηση, νέα διεύθυνση: αυτό το
+// αρχείο έμεινε πίσω και **11 tests έγιναν κόκκινα** χωρίς κανείς να τα τρέξει, γιατί ζει ένα
+// επίπεδο πάνω από το `converters/__tests__/` που σαρώθηκε.
+import { appendEntitySegments } from '../converters/dxf-underlay-segments';
 import type { DxfEntityUnion, DxfLine, DxfCircle, DxfArc, DxfPolyline, DxfScene } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneLayer } from '../../types/entities';
 import { collectPostFxOverlayRoots } from '../scene/post-fx-overlay-pass';

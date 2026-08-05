@@ -18,7 +18,7 @@ import type { Point3D } from '../types/bim-base';
 import type { ColumnParams } from '../types/column-types';
 import { computeColumnGeometry } from './column-geometry';
 import { pointInPolygon, polygonCentroid } from './shared/polygon-utils';
-import { pointToSegmentDistance } from '../../systems/guides';
+import { pointToSegmentDistance } from '../../utils/segment-distance';
 
 // ============================================================================
 // PUBLIC TYPES

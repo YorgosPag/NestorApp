@@ -31,7 +31,7 @@ import type { BeamParams } from '../types/beam-types';
 import type { SceneUnits } from '../../utils/scene-units';
 import { mmToSceneUnits } from '../../utils/scene-units';
 import { polygonArea } from './shared/polygon-utils';
-import { pointToSegmentDistance } from '../../systems/guides';
+import { pointToSegmentDistance } from '../../utils/segment-distance';
 import { computeWallGeometry } from './wall-geometry';
 import { computeBeamGeometry } from './beam-geometry';
 import { prepareColumns, type ColumnForEnvelope } from './envelope-column-bridge';

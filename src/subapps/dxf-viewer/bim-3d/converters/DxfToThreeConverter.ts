@@ -19,13 +19,11 @@
  */
 
 import * as THREE from 'three';
-import type { Point2D } from '../../rendering/types/Types';
-import type { DxfScene, DxfEntityUnion, DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
+import type { DxfScene, DxfText } from '../../canvas-v2/dxf-canvas/dxf-types';
 import type { SceneLayer } from '../../types/entities';
 // N.7.1 split — the ByLayer/ACI/trueColor cascade lives in its own module (ADR-571 SSoT inside).
 import { resolveEntityColor } from './dxf-overlay-entity-color';
 import { sceneUnitsToMeters, resolveSceneUnits } from '../../utils/scene-units';
-import { circlePolyline, arcPolyline } from './dxf-arc-circle-sample';
 // ADR-645 Φάση B — shared glyph atlas + merged, atlas-sampled text mesh (replaces the per-text
 // `CanvasTexture` path: 1 atlas + one draw call per floor instead of thousands of textures).
 import { GlyphAtlas } from './glyph-atlas';
@@ -50,71 +48,16 @@ import {
 } from './dxf-overlay-sync-guard';
 // ADR-650 M10d — topo contours are drawn once (draped) by TerrainContourLayer, never per-floor here.
 import { isTopoContourEntity } from '../../systems/topography/contour-entity-ids';
+// ADR-739 Φ.Θ — ο πίνακας αποδομείται στις ΙΔΙΕΣ γραμμές + κείμενα που παράγει η εξαγωγή.
+import { appendTableToUnderlay } from './dxf-table-3d-decompose';
+import { useDrawingScaleStore } from '../../state/drawing-scale-store';
+// N.7.1 — η τεσελίωση οντότητας→τμήματα ζει δίπλα, ώστε ο converter να κρατά μόνο κύκλο ζωής.
+import { appendEntitySegments } from './dxf-underlay-segments';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const WIREFRAME_OPACITY = 0.65;
 /** ADR-645 Φάση A — one active streaming build per converter; a re-sync replaces it under this id. */
 const DXF3D_STREAM_BUILD_ID = 'dxf3d-text-stream';
-
-// ── Geometry helpers ──────────────────────────────────────────────────────────
-
-function pushSeg(buf: number[], ax: number, az: number, bx: number, bz: number): void {
-  // ADR-537 NaN-guard — ONE non-finite coordinate poisons the whole overlay `Box3`
-  // (`getBounds` → `setFromObject`), which NaN-frames the SHARED camera → BOTH the DXF underlay
-  // AND the lit BIM scene vanish (empty 3D). This is the SSoT chokepoint every line / circle /
-  // arc / polyline segment flows through, so drop the bad segment here and keep the rest.
-  if (!Number.isFinite(ax) || !Number.isFinite(az) || !Number.isFinite(bx) || !Number.isFinite(bz)) return;
-  buf.push(ax, 0, az, bx, 0, bz);
-}
-
-/** Push a plan-mm poly-line (from the canonical sampler) as consecutive line segments,
- *  applying the DXF y → −Z floor-plane mapping. */
-function pushPolyline(buf: number[], pts: readonly Point2D[]): void {
-  for (let i = 0; i < pts.length - 1; i++) {
-    pushSeg(buf, pts[i].x, -pts[i].y, pts[i + 1].x, -pts[i + 1].y);
-  }
-}
-
-/** Append line-segment pairs for a single entity into a flat position buffer.
- *  Coordinate mapping: DXF x → X, DXF y → −Z (Y-up floor plane).
- *  Exported for unit testing. */
-export function appendEntitySegments(buf: number[], entity: DxfEntityUnion): void {
-  switch (entity.type) {
-    case 'line': {
-      pushSeg(buf, entity.start.x, -entity.start.y, entity.end.x, -entity.end.y);
-      break;
-    }
-
-    case 'circle': {
-      // Canonical tessellation SSoT (shared with hover-outline + grip-ghost).
-      pushPolyline(buf, circlePolyline(entity.center, entity.radius));
-      break;
-    }
-
-    case 'arc': {
-      pushPolyline(buf, arcPolyline(
-        entity.center, entity.radius, entity.startAngle, entity.endAngle, entity.counterclockwise,
-      ));
-      break;
-    }
-
-    case 'polyline': {
-      const { vertices, closed } = entity;
-      if (vertices.length < 2) break;
-      const count = closed ? vertices.length : vertices.length - 1;
-      for (let i = 0; i < count; i++) {
-        const a = vertices[i];
-        const b = vertices[(i + 1) % vertices.length];
-        pushSeg(buf, a.x, -a.y, b.x, -b.y);
-      }
-      break;
-    }
-
-    // BIM: wall/beam/slab → BimSceneLayer; text/stair/dimension/xline/ray/others → skip.
-    default:
-      break;
-  }
-}
 
 // ── DxfToThreeConverter ───────────────────────────────────────────────────────
 
@@ -154,12 +97,28 @@ function textPriorityArea(entity: DxfText): number {
   return Number.isFinite(area) ? area : 0;
 }
 
+/**
+ * ADR-739 Φ.Θ / ADR-040 — η ζωντανή κλίμακα σχεδίασης με **getter τη στιγμή της κλήσης**,
+ * ποτέ συνδρομή: ο converter δεν είναι React και δεν επιτρέπεται να αποκτήσει συνδρομή σε
+ * store. Την καλεί ο `sync` / `syncMultiFloor` **μία φορά**, στην αρχή.
+ */
+function currentDrawingScale(): number {
+  return useDrawingScaleStore.getState().drawingScale;
+}
+
+
 export class DxfToThreeConverter {
   private readonly scene: THREE.Scene;
   /** ADR-645 Φάση A — invoked per streamed batch so the frame scheduler repaints the fill-in. */
   private readonly onSceneDirty: () => void;
   private root: THREE.Group | null = null;
-  private readonly activeMaterials: THREE.LineBasicMaterial[] = [];
+  /**
+   * Τα υλικά του τρέχοντος root, για ρητό `dispose()`. ADR-739 Φ.Θ — `Material` και όχι
+   * `LineBasicMaterial`: το υπόστρωμα απέκτησε και `MeshBasicMaterial` (γεμίσματα κελιών).
+   * Ένας στενότερος τύπος εδώ θα σήμαινε **διαρροή GPU** για κάθε βαμμένο κελί που ζει και
+   * πεθαίνει με τον πίνακά του.
+   */
+  private readonly activeMaterials: THREE.Material[] = [];
   /** ADR-537 underlay-depth — unregister the post-FX overlay provider on dispose. */
   private readonly unregisterOverlay: () => void;
   /** ADR-645 Φάση A — in-flight streamed text build; cancelled on every re-sync / dispose. */
@@ -205,7 +164,10 @@ export class DxfToThreeConverter {
   sync(dxfScene: DxfScene | null, floorElevationMm = 0): void {
     // 🚀 PERF (ADR-040) — idempotent: identical overlay input ⇒ identical output ⇒
     // keep the existing geometry + GPU textures (no `texSubImage2D` re-upload).
-    const key = toDxfOverlaySyncKey(dxfScene);
+    // ADR-739 Φ.Θ — ΜΙΑ ανάγνωση της κλίμακας ανά sync, μοιρασμένη ανάμεσα στο κλειδί και στο
+    // χτίσιμο: αν τη διάβαζαν χωριστά, το κλειδί θα μπορούσε να δει άλλη τιμή από τη γεωμετρία.
+    const drawingScale = currentDrawingScale();
+    const key = toDxfOverlaySyncKey(dxfScene, drawingScale);
     if (
       this.lastMultiKey === null
       && this.lastSyncElevationMm === floorElevationMm
@@ -215,7 +177,7 @@ export class DxfToThreeConverter {
     this.lastSyncElevationMm = floorElevationMm;
     this.lastMultiKey = null; // leaving multi-floor mode
     this.disposeRoot();
-    const built = dxfScene ? this.buildLineGroup(dxfScene) : null;
+    const built = dxfScene ? this.buildLineGroup(dxfScene, drawingScale) : null;
     if (!built) return;
 
     // Flat structure (named group holds the LineSegments directly) — unchanged
@@ -246,7 +208,12 @@ export class DxfToThreeConverter {
   syncMultiFloor(entries: readonly DxfOverlayFloorEntry[]): void {
     // 🚀 PERF (ADR-040) — idempotent stacked variant: skip the rebuild when every
     // floor's overlay input AND elevation is unchanged since the last multi sync.
-    const keys = entries.map((e) => ({ key: toDxfOverlaySyncKey(e.scene), elev: e.floorElevationMm }));
+    // ADR-739 Φ.Θ — μία ανάγνωση κλίμακας για ΟΛΟΥΣ τους ορόφους: η κλίμακα σχεδίασης είναι
+    // ιδιότητα του φύλλου, όχι του ορόφου, οπότε μια ανά όροφο θα ήταν και σπατάλη και ρίσκο.
+    const drawingScale = currentDrawingScale();
+    const keys = entries.map((e) => (
+      { key: toDxfOverlaySyncKey(e.scene, drawingScale), elev: e.floorElevationMm }
+    ));
     if (this.lastSyncKey === null && isSameMultiKey(this.lastMultiKey, keys)) return;
     this.lastMultiKey = keys;
     this.lastSyncKey = null; // leaving single-floor mode
@@ -257,7 +224,7 @@ export class DxfToThreeConverter {
     // the real scale driver: text × floors → thousands). One runner, one progress bar, one budget.
     const textTasks: StreamTextItem[] = [];
     for (const entry of entries) {
-      const built = this.buildLineGroup(entry.scene);
+      const built = this.buildLineGroup(entry.scene, drawingScale);
       if (!built) continue;
       built.group.position.y = entry.floorElevationMm * MM_TO_M;
       root.add(built.group);
@@ -274,16 +241,53 @@ export class DxfToThreeConverter {
   }
 
   /**
+   * ADR-739 Φ.Θ / N.18 — **ένας buffer θέσεων ανά χρώμα → ένα αντικείμενο σκηνής.**
+   *
+   * Εξήχθη μόλις απέκτησε δεύτερο καλούντα: τα γεμίσματα κελιών χρειάζονται ακριβώς την ίδια
+   * ακολουθία (buffer → `BufferAttribute` → `computeBoundingSphere` → καταγραφή υλικού →
+   * `group.add`) με τις γραμμές, και **μόνο** το είδος του αντικειμένου διαφέρει. Το CHECK 3.28
+   * το έπιασε ως sibling clone μέσα στο ίδιο commit (9 γραμμές / 55 tokens) — σωστά: δύο
+   * σώματα που θα μπορούσαν κάποτε να διαφωνήσουν για το πότε υπολογίζεται η σφαίρα ορίων ή
+   * ποιο υλικό καταγράφεται για dispose. Ένα σώμα, δύο εργοστάσια.
+   *
+   * Η `computeBoundingSphere` είναι κοινή επίτηδες (ADR-645 Φάση C): στατικά όρια ⇒ το native
+   * frustum culling του three απορρίπτει έναν εκτός οθόνης όροφο **από το πρώτο καρέ**, χωρίς
+   * κόστος πρώτης απόδοσης — και αυτό ισχύει για τα γεμίσματα όσο και για τις γραμμές.
+   */
+  private addColorBuckets(
+    group: THREE.Group,
+    buckets: ReadonlyMap<number, number[]>,
+    make: (geometry: THREE.BufferGeometry, color: number) => THREE.Object3D & {
+      readonly material: THREE.Material;
+    },
+  ): void {
+    for (const [color, positions] of buckets) {
+      if (positions.length === 0) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
+      geo.computeBoundingSphere();
+      const object = make(geo, color);
+      this.activeMaterials.push(object.material);
+      group.add(object);
+    }
+  }
+
+  /**
    * ADR-645 Φάση A — build ONLY the cheap line color-buckets for one DXF scene (scaled to
    * metres) and collect its visible text entities for the deferred streamed pass. Returns null
    * when there is nothing visible/drawable. Shared by `sync` + `syncMultiFloor`.
    */
-  private buildLineGroup(dxfScene: DxfScene): BuiltFloorGroup | null {
+  private buildLineGroup(dxfScene: DxfScene, drawingScale: number): BuiltFloorGroup | null {
     if (dxfScene.entities.length === 0) return null;
 
     const layersById = dxfScene.layersById as Record<string, SceneLayer> | undefined;
     const colorBuckets = new Map<number, number[]>();
     const textEntities: DxfText[] = [];
+    // ADR-739 Φ.Θ — γεμίσματα κελιών (τρίγωνα). Άδειος για κάθε σκηνή χωρίς πίνακα.
+    const fillBuckets = new Map<number, number[]>();
+    // ADR-739 Φ.Θ — οι μονάδες της σκηνής, μία φορά: τις χρειάζεται η αποδόμηση του πίνακα
+    // (annotative γεωμετρία) και ήταν ήδη ο ίδιος υπολογισμός στο τέλος της συνάρτησης.
+    const sceneUnits = resolveSceneUnits({ units: dxfScene.units });
 
     for (const entity of dxfScene.entities) {
       if (!entity.visible) continue;
@@ -292,6 +296,18 @@ export class DxfToThreeConverter {
       // per floor. They render exactly once, draped at their real (datum-shifted) elevation, via
       // `TerrainContourLayer`. Skipped here (before the text/line split) so both are excluded.
       if (isTopoContourEntity(entity, layersById)) continue;
+      // ADR-739 Φ.Θ — ΕΔΩ έπεφτε ο πίνακας στο `default: break` του `appendEntitySegments`, και
+      // αυτός ήταν ΟΛΟΣ ο λόγος που δεν φαινόταν στο 3Δ. Αποδομείται στις ίδιες γραμμές +
+      // κείμενα που παράγει η εξαγωγή, και από εδώ και πέρα ρέει στα ΥΠΑΡΧΟΝΤΑ δύο μονοπάτια.
+      // **Μετά** το φίλτρο τοπογραφίας, ώστε ο αποκλεισμός ανά στρώμα να ισχύει ομοιόμορφα για
+      // κάθε οντότητα — ένας πίνακας σε στρώμα ισοϋψών δεν επιτρέπεται να «ξεφύγει» επειδή
+      // τυχαίνει να έχει δικό του κλάδο.
+      if (entity.type === 'table') {
+        appendTableToUnderlay(entity, {
+          drawingScale, sceneUnits, colorBuckets, fillBuckets, textEntities, layersById,
+        });
+        continue;
+      }
       // ADR-645 Φάση A — text is deferred to the streamed pass (the §2.2 freeze hotspot).
       if (entity.type === 'text') { textEntities.push(entity); continue; }
       const color = resolveEntityColor(entity, layersById);
@@ -313,22 +329,30 @@ export class DxfToThreeConverter {
     // call sites) γιατί ΚΑΘΕ διαδρομή — single-floor και stacked multi-floor — περνά από εδώ.
     lockClipScope(group, 'default');
 
-    for (const [color, positions] of colorBuckets) {
-      if (positions.length === 0) continue;
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(positions), 3));
-      // ADR-645 Φάση C — static line bounds → compute the bounding sphere ONCE now so three's native
-      // per-object frustum culling (`renderer.render(root, camera)`, the underlay pass) skips an
-      // off-screen floor's wireframe deterministically from the first frame (no lazy first-render cost).
-      geo.computeBoundingSphere();
-      // ADR-537 underlay-depth — drawn in the dedicated underlay pass: depth-TESTED (walls in
-      // front occlude it) but `depthWrite:false` so overlapping linework never self-z-fights.
-      const mat = new THREE.LineBasicMaterial({
+    // ADR-739 Φ.Θ — τα γεμίσματα ΠΡΩΤΑ, πριν από κάθε γραμμή και κάθε γράμμα: η ίδια σειρά που
+    // επιβάλλει το `tableLayoutToPrimitives` σε καμβά και PDF, όπου «η σειρά ΕΙΝΑΙ το z-order».
+    // Εδώ η σειρά δεν αρκεί (η GPU δεν την τιμά μόνη της), γι' αυτό μπαίνει και ρητό
+    // `renderOrder = -1`: όλα τα υλικά του υποστρώματος είναι `depthWrite:false`, οπότε το βάθος
+    // δεν τα διαχωρίζει και ένα γέμισμα ζωγραφισμένο αργότερα θα έσβηνε το πλέγμα του κελιού του.
+    this.addColorBuckets(group, fillBuckets, (geo, color) => {
+      // `DoubleSide`: ο πίνακας μπορεί να είναι περιστραμμένος ή ιδωμένος από κάτω — ένα
+      // γέμισμα που εξαφανίζεται όταν ο χρήστης κοιτάξει από το υπόγειο θα ήταν το ίδιο
+      // ελάττωμα «αόρατης κεφαλίδας», σε άλλη γωνία.
+      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
         color, transparent: true, opacity: WIREFRAME_OPACITY, depthWrite: false,
-      });
-      this.activeMaterials.push(mat);
-      group.add(new THREE.LineSegments(geo, mat));
-    }
+        side: THREE.DoubleSide,
+      }));
+      mesh.renderOrder = -1;
+      return mesh;
+    });
+
+    // ADR-537 underlay-depth — drawn in the dedicated underlay pass: depth-TESTED (walls in
+    // front occlude it) but `depthWrite:false` so overlapping linework never self-z-fights.
+    this.addColorBuckets(group, colorBuckets, (geo, color) => new THREE.LineSegments(
+      geo, new THREE.LineBasicMaterial({
+        color, transparent: true, opacity: WIREFRAME_OPACITY, depthWrite: false,
+      }),
+    ));
 
     // Nothing visible at all (no line segments, no text) → no group, mirrors the old null return.
     if (group.children.length === 0 && textEntities.length === 0) return null;
@@ -337,7 +361,7 @@ export class DxfToThreeConverter {
     // with BIM geometry. appendEntitySegments stores raw DXF coordinates;
     // the group-level transform converts them to the Three.js metre world.
     // Scene-units → metres via the SSoT (`scene-units.ts`); declared unit, else mm default.
-    const unitScale = sceneUnitsToMeters(resolveSceneUnits({ units: dxfScene.units }));
+    const unitScale = sceneUnitsToMeters(sceneUnits);
     group.scale.set(unitScale, 1, unitScale);
     return { group, layersById, textEntities };
   }
@@ -440,7 +464,9 @@ export class DxfToThreeConverter {
     this.textBuilders.length = 0;
     if (!this.root) return;
     this.root.traverse((obj) => {
-      if (obj instanceof THREE.LineSegments) obj.geometry.dispose();
+      // ADR-739 Φ.Θ — ΚΑΙ τα `Mesh` των γεμισμάτων. Ο έλεγχος ήταν `LineSegments`-only όσο το
+      // υπόστρωμα είχε μόνο γραμμές· τα atlas text meshes τα καθαρίζει ο δικός τους builder.
+      if (obj instanceof THREE.LineSegments || obj instanceof THREE.Mesh) obj.geometry.dispose();
     });
     for (const mat of this.activeMaterials) mat.dispose();
     this.activeMaterials.length = 0;

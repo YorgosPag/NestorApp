@@ -18,7 +18,7 @@ import type { Point2D } from '../../../rendering/types/Types';
 import { pointInPolygon, polygonCentroid } from './polygon-utils';
 // REUSE του κανονικού SSoT απόστασης σημείου↔τμήματος (systems/guides) — το ΙΔΙΟ που χρησιμοποιούν
 // ήδη `structural-finish-scene` / `building-footprint` / `envelope-column-bridge` (μηδέν duplicate).
-import { pointToSegmentDistance } from '../../../systems/guides';
+import { pointToSegmentDistance } from '../../../utils/segment-distance';
 
 type XY = Point2D;
 

@@ -38,7 +38,11 @@ import type { SceneLayer } from '../../types/entities';
  * affect the idempotency key.
  */
 const DRAWN_TYPES: ReadonlySet<DxfEntityUnion['type']> = new Set([
-  'line', 'circle', 'arc', 'polyline', 'text',
+  // ADR-739 Φ.Θ — ο `table` αποδομείται σε γραμμές + κείμενο (`dxf-table-3d-decompose`) και
+  // ΖΩΓΡΑΦΙΖΕΤΑΙ. Χωρίς αυτή τη γραμμή η ζωγραφική θα δούλευε, αλλά κάθε επεξεργασία κελιού θα
+  // άφηνε το κλειδί αμετάβλητο ⇒ ο πίνακας θα «πάγωνε» στην πρώτη του μορφή μέχρι κάποια
+  // άσχετη αλλαγή να ξαναχτίσει τη σκηνή — σιωπηλά, με κάθε πύλη πράσινη.
+  'line', 'circle', 'arc', 'polyline', 'text', 'table',
 ]);
 
 /** Immutable snapshot of the only inputs `buildColorGroup` reads. */
@@ -49,25 +53,53 @@ export interface DxfOverlaySyncKey {
   readonly layersById: Readonly<Record<string, SceneLayer>> | undefined;
   /** Drawing units — drives the metre scale. */
   readonly units: DxfScene['units'];
+  /**
+   * 🔴 ADR-739 Φ.Θ — η **κλίμακα σχεδίασης**, αλλά ΜΟΝΟ όταν η σκηνή περιέχει ορατό πίνακα.
+   *
+   * ## Γιατί συμμετέχει καθόλου
+   * Ο πίνακας είναι **annotative**: η γεωμετρία του παράγεται από `sheet-mm × mmToWorld`, όπου
+   * `mmToWorld = paperHeightToModel(1, drawingScale, sceneUnits)`. Δηλαδή 1:100 → 1:50
+   * **διπλασιάζει** τον πίνακα, χωρίς να αλλάξει ούτε μία αναφορά οντότητας. Καμία άλλη
+   * οντότητα του υποστρώματος δεν διαβάζει την κλίμακα — γι' αυτό δεν ήταν ποτέ στο κλειδί.
+   *
+   * ## Γιατί υπό συνθήκη και όχι πάντα
+   * Ένα άνευ όρων `drawingScale` θα έκανε **κάθε** αλλαγή κλίμακας να πετά ολόκληρο το
+   * υπόστρωμα και να ξανανεβάζει κάθε buffer στη GPU — ακριβώς η σπατάλη που αυτό το αρχείο
+   * υπάρχει για να σταματήσει (§THE PROBLEM). `undefined` χωρίς πίνακα ⇒ σχέδια χωρίς πίνακες
+   * συμπεριφέρονται **byte-για-byte** όπως πριν τη Φ.Θ.
+   */
+  readonly tableScale: number | undefined;
 }
 
 /** Shared key for the null / nothing-to-draw case (so two empty syncs match). */
-const EMPTY_KEY: DxfOverlaySyncKey = { drawn: [], layersById: undefined, units: undefined };
+const EMPTY_KEY: DxfOverlaySyncKey = {
+  drawn: [], layersById: undefined, units: undefined, tableScale: undefined,
+};
 
 /**
  * Build the idempotency key for one DXF overlay scene. `null` → the shared
  * {@link EMPTY_KEY} so consecutive empty syncs compare equal.
+ *
+ * `drawingScale` is the live annotation scale at sync time; it lands in the key only when the
+ * scene actually contains a visible table (see {@link DxfOverlaySyncKey.tableScale}).
  */
-export function toDxfOverlaySyncKey(scene: DxfScene | null): DxfOverlaySyncKey {
+export function toDxfOverlaySyncKey(
+  scene: DxfScene | null,
+  drawingScale: number,
+): DxfOverlaySyncKey {
   if (!scene) return EMPTY_KEY;
   const drawn: DxfEntityUnion[] = [];
+  let hasTable = false;
   for (const entity of scene.entities) {
-    if (entity.visible && DRAWN_TYPES.has(entity.type)) drawn.push(entity);
+    if (!entity.visible || !DRAWN_TYPES.has(entity.type)) continue;
+    if (entity.type === 'table') hasTable = true;
+    drawn.push(entity);
   }
   return {
     drawn,
     layersById: scene.layersById as Readonly<Record<string, SceneLayer>> | undefined,
     units: scene.units,
+    tableScale: hasTable ? drawingScale : undefined,
   };
 }
 
@@ -81,6 +113,8 @@ export function isSameDxfOverlaySync(a: DxfOverlaySyncKey | null, b: DxfOverlayS
   if (a === b) return true;
   if (a === null) return false;
   if (a.units !== b.units || a.layersById !== b.layersById) return false;
+  // ADR-739 Φ.Θ — `undefined === undefined` για σκηνές χωρίς πίνακα ⇒ μηδέν μεταβολή εκεί.
+  if (a.tableScale !== b.tableScale) return false;
   const da = a.drawn;
   const db = b.drawn;
   if (da.length !== db.length) return false;

@@ -12,7 +12,7 @@
 
 import type { EnvelopeFunction } from '../types/thermal-envelope-types';
 import { computeBuildingFootprint } from '../geometry/building-footprint';
-import { pointToSegmentDistance } from '../../systems/guides';
+import { pointToSegmentDistance } from '../../utils/segment-distance';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { toPt2 } from './structural-finish-point';
 import type { FinishEdgeClassifier } from './structural-finish-resolver';

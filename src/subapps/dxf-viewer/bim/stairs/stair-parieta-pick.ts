@@ -22,7 +22,7 @@
 import type { Point2D } from '../../rendering/types/Types';
 import type { StairParams } from '../types/stair-types';
 import { perp } from '../geometry/stairs/stair-geometry-shared';
-import { pointToSegmentDistance } from '../../systems/guides';
+import { pointToSegmentDistance } from '../../utils/segment-distance';
 import { stairFlightAxes } from './stair-flight-axes';
 
 export interface StairParietaPick {
