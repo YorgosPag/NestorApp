@@ -1,0 +1,133 @@
+name: T2 🔗 Service Integration (ADR-745)
+
+# =============================================================================
+# The join: production service code against live `firestore.rules` on a real
+# emulator.
+#
+# Why this workflow exists
+# ------------------------
+# The repo has both halves of this question and, until now, nothing ran the
+# join in CI:
+#
+#   * `tests/firestore-rules/**` exercises the rules but SEEDS documents
+#     directly — the production converter never runs.
+#   * `src/**/__tests__/**` exercises the services with Firestore MOCKED — the
+#     rules never run.
+#
+# So "the bytes the converter emits are bytes the rules accept" was asserted by
+# nobody. ADR-745 §9.4 measured what that costs: `contact_links` sat at 0
+# documents not because nobody used the feature, but because the flow was
+# STRUCTURALLY IMPOSSIBLE (a point read of a not-yet-existing document made
+# `resource.data.companyId` raise, surfacing as permission-denied). Every suite
+# in the repo was green throughout.
+#
+# `tests/service-integration/` was built to close that, and Φ3β's approval path
+# was then built on top of it. But the suites had NO GATE — no workflow, no
+# hook, nothing. That is the ADR-587 §6.1 pattern this codebase has already paid
+# for once (11 tests red on main for ~6 commits because `unit.yml` was disabled
+# and `coverage-ratchet.yml` was `continue-on-error`):
+#
+#     An anchor without a gate is a comment.
+#
+# Tier 2, deliberately: red here means the code on main has a defect that does
+# NOT show on screen — the write path is refused by the rules, or lands in the
+# wrong tenant. It does not stop the Netcup deploy, so it is not Tier 1.
+#
+# Triggered narrowly — only when the write paths, their rules, or the harness
+# change — so most PRs never pay for the emulator boot.
+#
+# @see .github/workflows/functions-integration.yml (same shape, same PATH lesson)
+# @see .github/workflows/firestore-rules.yml       (rules only, no production code)
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/services/title-block-apply/**'
+      - 'src/services/title-block-binding.service.ts'
+      - 'src/services/contact-link.service.ts'
+      - 'src/lib/title-block-binding-id.ts'
+      - 'src/lib/firestore/converters/**'
+      - 'tests/service-integration/**'
+      - 'jest.config.service-integration.js'
+      - 'firestore.rules'
+      - '.github/workflows/service-integration.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/services/title-block-apply/**'
+      - 'src/services/title-block-binding.service.ts'
+      - 'src/services/contact-link.service.ts'
+      - 'src/lib/title-block-binding-id.ts'
+      - 'src/lib/firestore/converters/**'
+      - 'tests/service-integration/**'
+      - 'jest.config.service-integration.js'
+      - 'firestore.rules'
+      - '.github/workflows/service-integration.yml'
+
+concurrency:
+  group: service-integration-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  runtime:
+    name: 🧪 Production services vs live rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 📥 Cache Firebase emulator binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-v1
+          restore-keys: |
+            firebase-emulators-${{ runner.os }}-
+
+      - name: ☕ Setup Java (required by the Firestore emulator)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: 📥 Install firebase-tools CLI
+        run: npm install -g firebase-tools
+
+      # Through the package script, NEVER as an inline `firebase emulators:exec`
+      # block. Two measured reasons:
+      #
+      #   1. PATH. `emulators:exec` spawns its command via `/bin/sh`, which
+      #      inherits the parent PATH. A raw `run:` step has no
+      #      `node_modules/.bin` on it, so the inner `jest` resolves to nothing
+      #      (`jest: not found`, exit 127). `pnpm run` puts the bin dir on PATH.
+      #   2. QUOTING. Nesting quotes inside `emulators:exec "<cmd>"` silently
+      #      mangled the jest args during ADR-745 §13(ιε): `-t` matched nothing,
+      #      all 39 tests were SKIPPED, and the run exited 0. A skipped suite
+      #      reporting success is precisely the false green this gate exists to
+      #      prevent — so the invocation lives in ONE place, the script.
+      - name: 🧪 Run service integration suites
+        run: pnpm test:service-integration:emulator
+        env:
+          CI: 'true'
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Service Integration::Production write paths are accepted by live firestore.rules"

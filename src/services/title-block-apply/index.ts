@@ -16,6 +16,7 @@ import { nowISO } from '@/lib/date-local';
 import { buildTitleBlockBindingKey } from '@/lib/title-block-binding-id';
 import { bindingSlot } from '@/lib/title-block-binding-id';
 import {
+  findSameSlotActive,
   listTitleBlockBindings,
   saveTitleBlockBinding,
 } from '@/services/title-block-binding.service';
@@ -24,8 +25,14 @@ import { applyContactTarget } from './apply-contact';
 import { applyLandownerTarget } from './apply-landowner';
 import { applyProjectAddressTarget, applyProjectFieldTarget } from './apply-project-value';
 import { applyFailed, type ApplyTargetContext, type ApplyTargetResult } from './apply-types';
+import {
+  refuseLandownerReplacement,
+  withdrawSupersededTargets,
+  type WithdrawFailure,
+} from './withdraw-superseded';
 
 export type { ApplyTargetContext, ApplyTargetResult } from './apply-types';
+export type { WithdrawFailure } from './withdraw-superseded';
 
 /**
  * Ποιο έργο αφορά ο στόχος — για το **αποκανονικοποιημένο** `projectId` του εγγράφου.
@@ -69,8 +76,42 @@ export interface ApproveProposalInput {
 }
 
 export type ApproveResult =
-  | { readonly success: true; readonly bindingId: string; readonly supersededIds: readonly string[] }
+  | {
+      readonly success: true;
+      readonly bindingId: string;
+      readonly supersededIds: readonly string[];
+      /**
+       * Στόχοι που αντικαταστάθηκαν αλλά **δεν** κατάφεραν να αποσυρθούν.
+       *
+       * Κενό στη συντριπτική πλειοψηφία. Δεν ακυρώνει την έγκριση — τη **συνοδεύει**, ώστε ένας
+       * μισοκαθαρισμένος παλιός σύνδεσμος να μη μείνει αόρατος.
+       */
+      readonly withdrawFailures: readonly WithdrawFailure[];
+    }
   | { readonly success: false; readonly error: string; readonly errorCode: string };
+
+/** Το binding που πρόκειται να γραφτεί — χτίζεται **πριν** τον στόχο, ώστε οι φύλακες να το δουν. */
+function buildBinding(input: ApproveProposalInput, id: string, projectId: string): TitleBlockBinding {
+  const { proposal, target, fileRecordId, levelId, layerName, ctx } = input;
+  return {
+    id,
+    companyId: ctx.companyId,
+    projectId,
+    fileRecordId,
+    levelId,
+    layerName,
+    titleBlockIndex: proposal.titleBlockIndex,
+    fieldKey: proposal.fieldKey,
+    sourceHandle: proposal.sourceHandle,
+    labelHandle: proposal.labelHandle,
+    slot: bindingSlot(proposal, target),
+    target,
+    snapshotValue: proposal.snapshotValue,
+    status: 'active',
+    confirmedBy: ctx.userId,
+    confirmedAt: nowISO(),
+  };
+}
 
 /**
  * Εγκρίνει **μία** πρόταση: γράφει τον στόχο, μετά την προέλευση.
@@ -98,6 +139,25 @@ export async function approveTitleBlockProposal(input: ApproveProposalInput): Pr
     return { success: false, error: String(error), errorCode: 'INVALID_BINDING_KEY' };
   }
 
+  const binding = buildBinding(input, bindingId, projectId);
+  const sameSlot = findSameSlotActive(existingBindings, binding);
+
+  // ── 0. Ο ΦΥΛΑΚΑΣ ΤΗΣ ΑΝΤΙΚΑΤΑΣΤΑΣΗΣ ──────────────────────────────────────
+  // Πριν από **οτιδήποτε**: μια αντικατάσταση οικοπεδούχου ξαναμοιράζει τα χιλιοστά τρίτων.
+  // Ελέγχεται εδώ και όχι στο UI, γιατί ένας φύλακας που ζει μόνο στο UI δεν είναι φύλακας.
+  if (target.kind === 'landowner') {
+    const blocked = refuseLandownerReplacement(sameSlot, target.contactId);
+    if (blocked) {
+      return {
+        success: false,
+        error: `slot already bound to landowner ${
+          blocked.target.kind === 'landowner' ? blocked.target.contactId : ''
+        }`,
+        errorCode: 'LANDOWNER_SLOT_TAKEN',
+      };
+    }
+  }
+
   // ── 1. Ο ΣΤΟΧΟΣ (Γ9) ──────────────────────────────────────────────────────
   const applied = await applyTarget(target, ctx);
   if (!applied.success) {
@@ -105,31 +165,26 @@ export async function approveTitleBlockProposal(input: ApproveProposalInput): Pr
   }
 
   // ── 2. Η ΠΡΟΕΛΕΥΣΗ ────────────────────────────────────────────────────────
-  const binding: TitleBlockBinding = {
-    id: bindingId,
-    companyId: ctx.companyId,
-    projectId,
-    fileRecordId,
-    levelId,
-    layerName,
-    titleBlockIndex: proposal.titleBlockIndex,
-    fieldKey: proposal.fieldKey,
-    sourceHandle: proposal.sourceHandle,
-    labelHandle: proposal.labelHandle,
-    slot: bindingSlot(proposal, target),
-    target,
-    snapshotValue: proposal.snapshotValue,
-    status: 'active',
-    confirmedBy: ctx.userId,
-    confirmedAt: nowISO(),
-  };
-
   const saved = await saveTitleBlockBinding(binding, existingBindings);
   if (!saved.success) {
     return { success: false, error: saved.error, errorCode: saved.errorCode };
   }
 
-  return { success: true, bindingId: saved.bindingId, supersededIds: saved.supersededIds };
+  // ── 3. Η ΑΠΟΣΥΡΣΗ ΤΩΝ ΑΝΤΙΚΑΤΑΣΤΑΘΕΝΤΩΝ ──────────────────────────────────
+  // **Μετά** το επιτυχές supersede, ποτέ πριν: ανάποδα, μια αποτυχία εγγραφής θα άφηνε τον
+  // παλιό στόχο αποσυνδεδεμένο **χωρίς αντικαταστάτη** — δηλαδή θα έσβηνε σύνδεση που κανείς
+  // δεν ζήτησε να σβήσει. Ίδιο σκεπτικό με τη σειρά του Γ9, ένα βήμα παρακάτω.
+  const withdrawFailures = await withdrawSupersededTargets(
+    sameSlot.filter((b) => saved.supersededIds.includes(b.id)),
+    ctx.userId,
+  );
+
+  return {
+    success: true,
+    bindingId: saved.bindingId,
+    supersededIds: saved.supersededIds,
+    withdrawFailures,
+  };
 }
 
 export { listTitleBlockBindings };

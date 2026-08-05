@@ -43,6 +43,7 @@ import type { Firestore } from 'firebase/firestore';
 import type { RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
 import { getContext } from '../../firestore-rules/_harness/auth-contexts';
+import { PERSONA_CLAIMS } from '../../firestore-rules/_registry/personas';
 import type { Persona } from '../../firestore-rules/_registry/personas';
 
 let activeDb: Firestore | null = null;
@@ -79,6 +80,55 @@ function modularFirestore(ctx: { firestore(): unknown }): Firestore {
 }
 
 /**
+ * The slice of `FirebaseUser` the API client actually reads — `uid` and `getIdToken`.
+ *
+ * Declared as its own interface rather than casting to `FirebaseUser`: a cast would claim
+ * this object satisfies the whole SDK type, and the next reader would have no way to see
+ * which two members are real. If production code starts reading a third, it fails by name.
+ */
+export interface MinimalAuthUser {
+  readonly uid: string;
+  getIdToken(forceRefresh?: boolean): Promise<string>;
+}
+
+type AuthListener = (user: MinimalAuthUser | null) => void;
+export type OnAuthStateChanged = (cb: AuthListener) => () => void;
+
+const authListeners = new Set<AuthListener>();
+
+/**
+ * The acting persona as an auth user, or `null` when nothing is bound.
+ *
+ * Derived on every read rather than stored, for the same reason `db` is a getter: a value
+ * captured once would pin the first persona forever and every later assertion would run
+ * under an identity the test never chose.
+ */
+function currentAuthUser(): MinimalAuthUser | null {
+  if (!activePersona || activePersona === 'anonymous') return null;
+  const { uid } = PERSONA_CLAIMS[activePersona];
+  return {
+    uid,
+    // Deterministic and obviously synthetic. Nothing in this process verifies it (see the
+    // honesty boundary on `firebaseSeam.auth`); it exists so the client's token path runs
+    // its real branches instead of short-circuiting on a missing user.
+    getIdToken: async () => `emulator-persona-token:${uid}`,
+  };
+}
+
+const personaAuth = {
+  get currentUser(): MinimalAuthUser | null {
+    return currentAuthUser();
+  },
+  onAuthStateChanged(cb: AuthListener): () => void {
+    authListeners.add(cb);
+    // Fired immediately, as the real SDK does: a listener that only hears about *changes*
+    // never learns who is signed in when it subscribes after the fact.
+    cb(currentAuthUser());
+    return () => authListeners.delete(cb);
+  },
+};
+
+/**
  * The object `jest.mock('@/lib/firebase', ...)` returns.
  *
  * `auth` and `storage` are exported by the real module. They are defined here
@@ -97,11 +147,33 @@ export const firebaseSeam = {
     }
     return activeDb;
   },
-  get auth(): never {
-    throw new Error(
-      'firestore-seam: `auth` is not wired. The contact-link path must not need it — ' +
-        'if it now does, wire it deliberately instead of stubbing it here.',
-    );
+  /**
+   * Persona-bound Auth stand-in — wired **deliberately** in ADR-745 Φ3β, and here is why.
+   *
+   * This getter used to throw, with the instruction "if it now does need auth, wire it
+   * deliberately instead of stubbing it here". It now does, and the reason is worth
+   * recording rather than papering over: `title-block-apply/index.ts` imports
+   * `apply-landowner.ts` → `project-mutation-gateway` → `projects-client.service` →
+   * `enterprise-api-client`, whose **module-load singleton** touches `auth` in its
+   * constructor (`enterprise-api-client.ts:76`). So merely *importing the approval
+   * dispatcher* requires auth, even for the contact target, which never makes an HTTP
+   * call. A suite that dodged this by importing only the sub-applier would be exercising
+   * a module graph the application does not have.
+   *
+   * 🔴 **The honesty boundary, stated so nobody mistakes this for more than it is.**
+   * There is no Next.js server in this process and `setup-after-env.ts` answers every
+   * in-app route with `{ success: true }`. So this token is **never validated by
+   * anything**. What this harness proves about the HTTP targets is *what the production
+   * code sent* — never that the server accepted it. Firestore targets are the opposite:
+   * those run against real rules and the verdict is real. Do not read a green HTTP-target
+   * assertion as proof of authorisation.
+   *
+   * The uid tracks `withPersona`, so an HTTP payload built from `auth.currentUser` cannot
+   * silently carry a different identity than the Firestore write beside it — the exact
+   * split that would let a suite prove tenancy on one half and miss it on the other.
+   */
+  get auth(): { currentUser: MinimalAuthUser | null; onAuthStateChanged: OnAuthStateChanged } {
+    return personaAuth;
   },
   get storage(): never {
     throw new Error('firestore-seam: `storage` is not wired (see `auth`).');
@@ -127,13 +199,23 @@ export async function withPersona<T>(
 
   activeDb = modularFirestore(getContext(env, persona));
   activePersona = persona;
+  notifyAuthListeners();
 
   try {
     return await fn();
   } finally {
     activeDb = previousDb;
     activePersona = previousPersona;
+    // Restored, not merely cleared — and the listeners are told, because the API client
+    // caches `currentUser` from the callback (`enterprise-api-client.ts:77`). Without this
+    // it would keep serving the identity of whichever persona happened to subscribe first.
+    notifyAuthListeners();
   }
+}
+
+function notifyAuthListeners(): void {
+  const user = currentAuthUser();
+  for (const listener of authListeners) listener(user);
 }
 
 /**
@@ -156,6 +238,34 @@ export async function readRaw(
   await env.withSecurityRulesDisabled(async (ctx) => {
     const snap = await ctx.firestore().collection(collectionPath).doc(docId).get();
     result = snap.exists ? (snap.data() as Record<string, unknown>) : null;
+  });
+  return result;
+}
+
+/**
+ * Every document of a collection, rules **disabled** — the census `readRaw` cannot take.
+ *
+ * `readRaw` answers "did *this* document land". It cannot answer "how many documents does
+ * the collection now hold", and that is the literal acceptance criterion of ADR-745 §0:
+ * `title_block_bindings` **0 → 1**. The difference is not pedantic — a write path that
+ * produces the intended document *plus* a stray second one under a slightly different
+ * deterministic key passes every `readRaw` assertion ever written, because each one only
+ * ever looks at the id it already expected. Idempotency is a claim about the **count**.
+ *
+ * Rules-disabled for the same reason as `readRaw`: an authenticated list is filtered by
+ * tenant, so it can never reveal a document that landed in the wrong one.
+ */
+export async function listRaw(
+  env: RulesTestEnvironment,
+  collectionPath: string,
+): Promise<Record<string, unknown>[]> {
+  let result: Record<string, unknown>[] = [];
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    const snap = await ctx.firestore().collection(collectionPath).get();
+    result = snap.docs.map((d: { id: string; data(): unknown }) => ({
+      id: d.id,
+      ...(d.data() as Record<string, unknown>),
+    }));
   });
   return result;
 }

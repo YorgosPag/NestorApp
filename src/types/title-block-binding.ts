@@ -223,11 +223,58 @@ export interface TitleBlockBinding {
  * κάθε άνοιγμα του ίδιου σχεδίου.
  */
 export function compareBindingCandidates(a: BindingCandidate, b: BindingCandidate): number {
+  const byEvidence = compareByEvidence(a, b);
+  if (byEvidence !== 0) return byEvidence;
+  return a.label.localeCompare(b.label);
+}
+
+/** Τα **αποδεικτικά** σκέλη της κατάταξης, χωρίς το αλφαβητικό. */
+function compareByEvidence(a: BindingCandidate, b: BindingCandidate): number {
   const best = (c: BindingCandidate) =>
     c.evidence.reduce((max, e) => Math.max(max, evidenceStrength(e.kind)), 0);
   const byStrength = best(b) - best(a);
   if (byStrength !== 0) return byStrength;
-  const byCount = b.evidence.length - a.evidence.length;
-  if (byCount !== 0) return byCount;
-  return a.label.localeCompare(b.label);
+  return b.evidence.length - a.evidence.length;
+}
+
+/**
+ * Ίδια **αποδεικτική** ισχύ ⇒ κανένας δεν κερδίζει τον άλλο.
+ *
+ * 🔴 **Δεν είναι `compareBindingCandidates(a,b) === 0`, και η διαφορά είναι ολόκληρο το
+ * ελάττωμα.** Το τρίτο σκέλος του συγκριτή είναι `label.localeCompare` — **σταθερότητα
+ * εμφάνισης**, όχι απόδειξη· το ίδιο του το σχόλιο μιλά για «δύο **εξίσου τεκμηριωμένους**
+ * υποψήφιους». Ένας έλεγχος ισοπαλίας που το συμπεριλαμβάνει βλέπει μόνο τη μία από τις δύο
+ * αυθαιρεσίες:
+ * - **ίδια επαφή × N ρόλοι** (η λέξη «Μηχανικός» ανήκει σε 5 από τους 7): ταυτόσημο `label`
+ *   ⇒ και τα τρία σκέλη μηδέν ⇒ πιάνεται έτσι κι αλλιώς. Γράφει λάθος **ρόλο**.
+ * - **N επαφές × ταυτόσημη μαρτυρία** (δύο «Παπαδόπουλος Γ.» με `name-exact`): το τρίτο σκέλος
+ *   διαλέγει **αλφαβητικά** ⇒ `compare() !== 0` ⇒ **διαφεύγει**. Γράφει λάθος **ΑΝΘΡΩΠΟ** —
+ *   σπανιότερο, ασυγκρίτως χειρότερο, και ακριβώς αυτό που το §8 κανόνας 1 ονομάζει «χειρότερο
+ *   από καμία ταυτοποίηση».
+ */
+export function candidatesTieOnEvidence(a: BindingCandidate, b: BindingCandidate): boolean {
+  return compareByEvidence(a, b) === 0;
+}
+
+/**
+ * Ο υποψήφιος που **κέρδισε**, ή `null` όταν η κορυφή είναι ισοπαλία και πρέπει να διαλέξει
+ * άνθρωπος.
+ *
+ * 🔑 Ο κανόνας δεν είναι «ένας υποψήφιος ⇒ προεπιλογή» ούτε «πολλοί ⇒ ρώτα»: είναι **«ο πρώτος
+ * είναι αυστηρά ισχυρότερος από τον δεύτερο»**. Ένα `length > 1` θα ζητούσε επιλογή εκεί που το
+ * e-mail έχει ήδη νικήσει το όνομα — θόρυβος που εκπαιδεύει τον χρήστη να πατά ό,τι βρει.
+ *
+ * ⚠️ **Ο ένας υποψήφιος επιστρέφεται πάντα, και αυτό ΔΕΝ είναι λεπτομέρεια.** Ο δήμος, η
+ * περιοχή και το Ο.Τ. (`resolve-location`) παράγουν **έναν** υποψήφιο με `evidence: []` — δεν
+ * τίθεται ερώτημα ταυτότητας, είναι τιμές που διαβάστηκαν. Χωρίς αυτόν τον φρουρό, η σύγκριση
+ * «κενή vs `undefined`» θα έβγαζε ισοπαλία και θα **έκλεινε τα μόνα κουμπιά που δουλεύουν
+ * σήμερα** — θεραπεία που γεννά οπισθοδρόμηση.
+ */
+export function unambiguousWinner(
+  candidates: readonly BindingCandidate[],
+): BindingCandidate | null {
+  const [first, second] = candidates;
+  if (!first) return null;
+  if (!second) return first;
+  return candidatesTieOnEvidence(first, second) ? null : first;
 }

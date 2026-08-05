@@ -13,6 +13,7 @@ import { useContactEntityLinks } from '@/hooks/useEntityAssociations';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/design-system';
+import { isProjectRole, PROJECT_ROLE_LABEL } from '@/config/project-role-labels';
 import type { ContactEntityLink } from '@/types/entity-associations';
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
@@ -92,7 +93,10 @@ function ProjectLinkRow({
   t: TranslateFn;
   colors: ReturnType<typeof useSemanticColors>;
 }) {
-  const roleLabel = t(`associations.roles.${link.role}`, link.role);
+  // Ρητό κλειδί από το SSoT, ποτέ συντεθειμένο: μια δυναμική `t()` είναι **αόρατη** στη CHECK 3.8
+  // και στον generator του shell slice, και το `defaultValue` που τη συνόδευε παραβίαζε τον N.11.
+  // Μη-έργου ρόλος (κτήριο/ακίνητο) πέφτει στο ωμό κείμενο — ίδια συμπεριφορά με πριν.
+  const roleLabel = isProjectRole(link.role) ? t(PROJECT_ROLE_LABEL[link.role]) : link.role;
 
   return (
     <li className={cn('flex items-center gap-3 p-2 rounded-md border', colors.border.default)}>

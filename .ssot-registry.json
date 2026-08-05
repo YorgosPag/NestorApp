@@ -255,7 +255,8 @@
         "src/subapps/dxf-viewer/rendering/core/UnifiedFrameScheduler.ts",
         "src/subapps/dxf-viewer/rendering/entities/shared/geometry-rendering-utils.ts",
         "src/subapps/dxf-viewer/settings/io/SyncService.ts",
-        "src/core/canvas/infrastructure/CanvasRegistry.ts"
+        "src/core/canvas/infrastructure/CanvasRegistry.ts",
+        "tests/service-integration/_harness/firestore-seam.ts"
       ],
       "tier": 3
     },

@@ -100,7 +100,7 @@ export async function getTitleBlockBindingById(id: string): Promise<TitleBlockBi
  * ένα δεύτερο composite index για ένα ερώτημα που εξυπηρετείται από δεδομένα ήδη στο χέρι θα
  * κόστιζε σε **κάθε** εγγραφή της συλλογής.
  */
-function sameSlotActive(
+export function findSameSlotActive(
   existing: readonly TitleBlockBinding[],
   binding: TitleBlockBinding,
 ): TitleBlockBinding[] {
@@ -143,7 +143,7 @@ export async function saveTitleBlockBinding(
     );
     await setDoc(ref, binding);
 
-    const superseded = sameSlotActive(existingForDrawing, binding);
+    const superseded = findSameSlotActive(existingForDrawing, binding);
     for (const stale of superseded) {
       await updateDoc(doc(db, COLLECTIONS.TITLE_BLOCK_BINDINGS, stale.id), {
         status: 'superseded',

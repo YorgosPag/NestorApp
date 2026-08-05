@@ -6270,14 +6270,10 @@
     "empty": "No title block was found on any layer of this drawing.",
     "loading": "Reading title block…",
     "layerLabel": "Title block layer",
-    "summary_one": "{count} title block · {fields} fields",
-    "summary_other": "{count} title blocks · {fields} fields",
-    "skipped_one": "{count} layer was not examined (too large)",
-    "skipped_other": "{count} layers were not examined (too large)",
+    "summary": "{count, plural, one {# title block} other {# title blocks}} · {fields} fields",
+    "skipped": "{count, plural, one {# layer was not examined (too large)} other {# layers were not examined (too large)}}",
     "proposalValue": "The title block reads",
     "proposalTarget": "Suggested binding",
-    "moreCandidates_one": "{count} more candidate",
-    "moreCandidates_other": "{count} more candidates",
     "fields": {
       "employer": "Employer",
       "projectTitle": "Project",
@@ -6323,13 +6319,14 @@
     "disabled": {
       "noFileRecord": "This drawing has not been saved yet. Save it first — otherwise the link could never be found again.",
       "noUser": "No signed-in user — every link must carry the name of whoever approved it.",
-      "needsPercent": "Enter an ownership percentage first."
+      "needsPercent": "Enter an ownership percentage first.",
+      "needsChoice": "Choose a candidate first — the proposals are equivalent, so none may be selected automatically."
     },
     "landowner": {
       "percentLabel": "Ownership percentage",
       "percentHint": "The title block states only a name, never a percentage. Declare it yourself.",
       "statusNote": "Recorded as “prospective”: the title block proves ownership at survey time, not a signature.",
-      "previousStays": "The previous landowner “{name}” remains on the project page. If that is wrong, remove them there — removal has its own checks."
+      "previousStays": "This slot is already bound to another landowner, who remains on the project page. Remove them there first — removal has its own checks, because it redistributes every owner's millesimals."
     },
     "changeContact": "Change contact",
     "createContact": "New contact",

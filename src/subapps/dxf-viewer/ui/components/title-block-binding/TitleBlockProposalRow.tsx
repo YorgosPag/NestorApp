@@ -1,14 +1,18 @@
 'use client';
 
 /**
- * @fileoverview Μία γραμμή πρότασης — **μαρτυρία και κουμπί** (ADR-745 Φ3β, Τομέας Δ2).
+ * @fileoverview Μία γραμμή πρότασης — **μαρτυρία, επιλογή, κουμπί** (ADR-745 Φ3β, Τομέας Δ2).
  *
- * Δείχνει το **«γιατί»**, όχι ποσοστό βεβαιότητας: «ταιριάζει το τηλέφωνο», «το όνομα ταιριάζει
- * σε συντομογραφία». Εκεί ξεπερνάμε τα εμπορικά CAD — κανένα δεν εξηγεί την πρόταση που κάνει,
- * οπότε ο χρήστης είτε την εμπιστεύεται τυφλά είτε την αγνοεί.
+ * Δείχνει το **«γιατί»**, όχι ποσοστό βεβαιότητας. Εκεί ξεπερνάμε τα εμπορικά CAD — κανένα δεν
+ * εξηγεί την πρόταση που κάνει, οπότε ο χρήστης είτε την εμπιστεύεται τυφλά είτε την αγνοεί.
  *
  * 🔴 **Ό,τι δεν συνδέεται εμφανίζεται ΜΕ ΑΙΤΙΑ**, ποτέ κρυμμένο (§8 κανόνας 3) — και το ίδιο
  * ισχύει για το **κουμπί**: απενεργοποιημένο χωρίς εξήγηση είναι σφάλμα αναφοράς.
+ *
+ * 🔴 **Η ΔΙΟΡΘΩΣΗ ΤΗΣ 05/08: εδώ ζούσε `const best = proposal.candidates[0]`.** Σε διφορούμενη
+ * ειδικότητα οι υποψήφιοι είναι **ισοδύναμοι** — ίδιο όνομα, ίδια μαρτυρία, άλλος ρόλος — και
+ * το κουμπί ήταν **ενεργό**: η βάση έγραφε αυθαίρετο ρόλο. Η επιλογή ανήκει στον άνθρωπο, και
+ * όταν δεν την έχει κάνει, το κουμπί **λέει γιατί**.
  *
  * @module subapps/dxf-viewer/ui/components/title-block-binding/TitleBlockProposalRow
  */
@@ -17,16 +21,18 @@ import React, { useState } from 'react';
 import { AlertCircle, Check, Link2Off, X } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { parseGreekDecimal } from '@/lib/number/greek-decimal';
-import type { BindingProposal } from '@/types/title-block-binding';
+import type { BindingCandidate, BindingProposal } from '@/types/title-block-binding';
+import { unambiguousWinner } from '@/types/title-block-binding';
 import {
   BLOCKED_LABEL,
   BLOCKER_LABEL,
-  EVIDENCE_LABEL,
   FIELD_LABEL,
   TARGET_LABEL,
+  type RowBlocker,
 } from './proposal-labels';
+import { LandownerPercentField, ProposalEvidence } from './proposal-row-parts';
+import { TitleBlockCandidatePicker } from './TitleBlockCandidatePicker';
 import type { ApproveRequest, ApprovalBlocker } from './useTitleBlockApproval';
 
 interface Props {
@@ -36,6 +42,9 @@ interface Props {
   readonly blockerFor: (req: ApproveRequest) => ApprovalBlocker | null;
   readonly onApprove: (req: ApproveRequest) => void;
   readonly onDismiss: () => void;
+  /** Ο επιλεγμένος υποψήφιος ζει **στη λίστα**, γιατί συνθέτει το κλειδί έγκρισης (δες εκεί). */
+  readonly chosen: BindingCandidate | null;
+  readonly onChoose: (candidate: BindingCandidate) => void;
 }
 
 export const TitleBlockProposalRow: React.FC<Props> = ({
@@ -45,6 +54,8 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
   blockerFor,
   onApprove,
   onDismiss,
+  chosen,
+  onChoose,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
 
@@ -52,21 +63,28 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
   // να είναι «δεν δηλώθηκε», όχι `0` — που θα σήμαινε «δεν κατέχει τίποτα».
   const [pctText, setPctText] = useState('');
 
-  const best = proposal.candidates[0];
-  const needsPercent = best?.target.kind === 'landowner';
+  // 🔑 Η **εμφάνιση** διαβάζει τον πρώτο υποψήφιο, η **εγγραφή** μόνο τον επιλεγμένο. Δεν είναι
+  // ασυνέπεια: όλοι οι υποψήφιοι μιας πρότασης μοιράζονται `kind` (ο Λ2 δεν αναμειγνύει είδη
+  // στόχου), άρα «είναι οικοπεδούχος;» απαντιέται πριν διαλέξει ο άνθρωπος. Χωρίς αυτό, μια
+  // διφορούμενη πρόταση οικοπεδούχου δεν θα έδειχνε ούτε ότι είναι οικοπεδούχος.
+  const shape = proposal.candidates[0];
+  const needsPercent = shape?.target.kind === 'landowner';
   // Ελληνικό πληκτρολόγιο: «12,5» και «12.5» είναι το ΙΔΙΟ ποσοστό — το ερμηνεύει το SSoT
-  // (ADR-397), όχι inline replace. Άκυρο κείμενο → `undefined` ⇒ ο φύλακας το κόβει ως
-  // `needsPercent`, ακριβώς όπως το παλιό `NaN`.
+  // (ADR-397), όχι inline replace.
   const parsedPct = parseGreekDecimal(pctText) ?? undefined;
 
-  const request: ApproveRequest | null = best
+  const request: ApproveRequest | null = chosen
     ? {
         proposal,
-        target: best.target,
+        target: chosen.target,
         ...(parsedPct !== undefined ? { landOwnershipPct: parsedPct } : {}),
       }
     : null;
-  const blocker = request ? blockerFor(request) : null;
+
+  // Η αιτία «δεν έχεις διαλέξει» γεννιέται **εδώ**: ο `blockerFor` απαιτεί χτισμένο αίτημα, που
+  // χωρίς επιλογή δεν υπάρχει. Πριν από αυτό, το κουμπί έκλεινε από ένα σιωπηλό `!request`.
+  const blocker: RowBlocker | null = request ? blockerFor(request) : shape ? 'needsChoice' : null;
+  const fieldId = `tbb-${proposal.titleBlockIndex}-${proposal.fieldKey}-${proposal.sourceHandle}`;
 
   return (
     <li className="rounded-md border border-border bg-card px-3 py-2">
@@ -74,9 +92,9 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
         <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {t(FIELD_LABEL[proposal.fieldKey])}
         </h4>
-        {best ? (
+        {shape ? (
           <span className="text-[11px] text-muted-foreground">
-            {t(TARGET_LABEL[best.target.kind])}
+            {t(TARGET_LABEL[shape.target.kind])}
           </span>
         ) : null}
       </header>
@@ -85,50 +103,29 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
         {proposal.personName ?? proposal.snapshotValue}
       </p>
 
-      {best ? (
+      {shape ? (
         <section className="mt-1.5">
-          <p className="text-sm font-medium text-primary">→ {best.label}</p>
-          <ul className="mt-1 flex flex-wrap gap-1.5">
-            {best.evidence.map((item) => (
-              <li
-                key={`${item.kind}:${item.value}`}
-                className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
-              >
-                {t(EVIDENCE_LABEL[item.kind])}
-              </li>
-            ))}
-          </ul>
+          {chosen ? <p className="text-sm font-medium text-primary">→ {chosen.label}</p> : null}
+          <ProposalEvidence evidence={(chosen ?? shape).evidence} />
+
+          {/* Ο επιλογέας εμφανίζεται όποτε υπάρχει **πραγματική** επιλογή. Ένας υποψήφιος δεν
+              είναι επιλογή· δύο ισοδύναμοι είναι, και τότε δεν επιτρέπεται προεπιλογή. */}
           {proposal.candidates.length > 1 ? (
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {t('titleBlockBinding.moreCandidates', { count: proposal.candidates.length - 1 })}
-            </p>
+            <TitleBlockCandidatePicker
+              candidates={proposal.candidates}
+              chosen={chosen}
+              onChoose={onChoose}
+              disabled={approved || busy}
+              fieldId={`${fieldId}-pick`}
+            />
           ) : null}
 
           {needsPercent ? (
-            <div className="mt-2 flex items-center gap-2">
-              <label
-                className="text-[11px] text-muted-foreground"
-                htmlFor={`tbb-pct-${proposal.sourceHandle}-${proposal.fieldKey}`}
-              >
-                {t('titleBlockBinding.landowner.percentLabel')}
-              </label>
-              <Input
-                id={`tbb-pct-${proposal.sourceHandle}-${proposal.fieldKey}`}
-                type="number"
-                min={0}
-                max={100}
-                step="0.01"
-                value={pctText}
-                onChange={(e) => setPctText(e.target.value)}
-                className="h-7 w-20 text-sm"
-              />
-              <span className="text-[11px] text-muted-foreground">%</span>
-            </div>
-          ) : null}
-          {needsPercent ? (
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {t('titleBlockBinding.landowner.percentHint')}
-            </p>
+            <LandownerPercentField
+              fieldId={`${fieldId}-pct`}
+              value={pctText}
+              onChange={setPctText}
+            />
           ) : null}
 
           <footer className="mt-2 flex items-center gap-2">
@@ -136,12 +133,8 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
               size="sm"
               variant="default"
               className="h-7"
-              disabled={approved || busy || blocker !== null || !request}
-              title={
-                blocker
-                  ? t(BLOCKER_LABEL[blocker])
-                  : t('titleBlockBinding.approveTitle')
-              }
+              disabled={approved || busy || blocker !== null}
+              title={blocker ? t(BLOCKER_LABEL[blocker]) : t('titleBlockBinding.approveTitle')}
               onClick={() => request && onApprove(request)}
             >
               <Check className="mr-1 size-3" aria-hidden />
@@ -185,3 +178,7 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
     </li>
   );
 };
+
+/** Η αρχική επιλογή μιας γραμμής — **μόνο** όταν ο νικητής είναι αδιαμφισβήτητος. */
+export const initialChoice = (proposal: BindingProposal): BindingCandidate | null =>
+  unambiguousWinner(proposal.candidates);

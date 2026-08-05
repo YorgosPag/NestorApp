@@ -179,6 +179,7 @@
     "emulator:firestore": "node scripts/build-firestore-rules.js && firebase emulators:start --only firestore",
     "dev:emulator": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 STORAGE_EMULATOR_HOST=http://localhost:9199 NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true NODE_OPTIONS=--max-old-space-size=4096 next dev --turbopack",
     "emulator:seed-demo": "tsx scripts/emulator-seed-demo-tenant.ts",
+    "verify:titleblock-live": "tsx scripts/verify-titleblock-landowner-live.ts",
     "test:qa": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 npx tsx scripts/qa-tests/contact-individual.qa.ts",
     "test:qa:individual": "cross-env FIRESTORE_EMULATOR_HOST=localhost:8080 npx tsx scripts/qa-tests/contact-individual.qa.ts",
     "test:qa:production": "cross-env QA_ALLOW_PRODUCTION=true npx tsx scripts/qa-tests/contact-individual.qa.ts",

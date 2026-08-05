@@ -38,10 +38,21 @@ import type { BindingProposal } from '@/types/title-block-binding';
 // ── Οι δύο κατάσκοποι ────────────────────────────────────────────────────────
 const firestoreWrites: string[] = [];
 const httpWrites: string[] = [];
+/**
+ * **Τι** γράφτηκε, όχι μόνο **πόσα**.
+ *
+ * Ένας μετρητής αποδεικνύει ότι έγινε εγγραφή· δεν αποδεικνύει ότι γράφτηκε ο υποψήφιος **που
+ * διάλεξε ο άνθρωπος**. Ακριβώς εκεί ζούσε το ελάττωμα της 05/08: οι εγγραφές ήταν πάντα δύο,
+ * και μία από αυτές είχε αυθαίρετο ρόλο.
+ */
+const firestorePayloads: Record<string, unknown>[] = [];
 
 jest.mock('firebase/firestore', () => ({
   __esModule: true,
-  setDoc: jest.fn(async () => { firestoreWrites.push('setDoc'); }),
+  setDoc: jest.fn(async (_ref: unknown, data: Record<string, unknown>) => {
+    firestoreWrites.push('setDoc');
+    firestorePayloads.push(data);
+  }),
   updateDoc: jest.fn(async () => { firestoreWrites.push('updateDoc'); }),
   writeBatch: jest.fn(() => { firestoreWrites.push('writeBatch'); return { set: jest.fn(), update: jest.fn(), commit: jest.fn() }; }),
   runTransaction: jest.fn(async () => { firestoreWrites.push('runTransaction'); }),
@@ -93,6 +104,33 @@ jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+// Το Radix Select στηρίζεται σε pointer capture που το jsdom δεν έχει. Ίδιο πρότυπο με το
+// `components/ui/__tests__/clearable-select.test.tsx`: κάθε επιλογή γίνεται πραγματικό κουμπί,
+// ώστε το **κλικ** να παραμένει αληθινό κλικ και όχι κλήση συνάρτησης.
+jest.mock('@/components/ui/select', () => {
+  const React_ = jest.requireActual<typeof import('react')>('react');
+  const Ctx = React_.createContext<(v: string) => void>(() => {});
+  return {
+    __esModule: true,
+    Select: ({ onValueChange, children }: { onValueChange: (v: string) => void; children: React.ReactNode }) =>
+      React_.createElement(Ctx.Provider, { value: onValueChange }, children),
+    SelectTrigger: ({ children, id }: { children: React.ReactNode; id?: string }) =>
+      React_.createElement('div', { id }, children),
+    SelectValue: ({ placeholder }: { placeholder?: string }) =>
+      React_.createElement('span', null, placeholder),
+    SelectContent: ({ children }: { children: React.ReactNode }) =>
+      React_.createElement('div', null, children),
+    SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => {
+      const onValueChange = React_.useContext(Ctx);
+      return React_.createElement(
+        'button',
+        { type: 'button', role: 'option', 'aria-selected': false, onClick: () => onValueChange(value) },
+        children,
+      );
+    },
+  };
+});
+
 // eslint-disable-next-line import/first
 import { TitleBlockProposalList } from '../TitleBlockProposalList';
 
@@ -142,6 +180,7 @@ const renderList = (proposals: BindingProposal[]) =>
 beforeEach(() => {
   firestoreWrites.length = 0;
   httpWrites.length = 0;
+  firestorePayloads.length = 0;
 });
 
 describe('🔴 ΚΑΜΙΑ ΕΓΓΡΑΦΗ ΧΩΡΙΣ ΚΛΙΚ', () => {
@@ -244,5 +283,113 @@ describe('🔴 ΤΟ ΚΟΥΜΠΙ ΚΛΕΙΝΕΙ ΜΕ ΑΙΤΙΑ, ΔΕΝ ΓΡΑΦ
     expect(firestoreWrites).toEqual([]);
     expect(httpWrites).toEqual([]);
     expect(screen.getByRole('status')).toHaveTextContent('titleBlockBinding.disabled.needsPercent');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 🔴 Η ΕΠΙΛΟΓΗ ΥΠΟΨΗΦΙΟΥ — το ελάττωμα της 05/08
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Ίδια επαφή, τρεις ρόλοι: ταυτόσημο label, ταυτόσημη μαρτυρία. Η «Μηχανικός» δίνει 5 από 7. */
+const ambiguousRole: BindingProposal = {
+  ...contactProposal,
+  candidates: [
+    { target: { kind: 'contact', contactId: 'cont_1', role: 'architect', projectId: 'proj_1' },
+      label: 'Μαυρομιχάλης Κωνσταντίνος', evidence: [{ kind: 'name-exact', value: 'Μ. Κ.' }] },
+    { target: { kind: 'contact', contactId: 'cont_1', role: 'surveyor', projectId: 'proj_1' },
+      label: 'Μαυρομιχάλης Κωνσταντίνος', evidence: [{ kind: 'name-exact', value: 'Μ. Κ.' }] },
+    { target: { kind: 'contact', contactId: 'cont_1', role: 'structural_engineer', projectId: 'proj_1' },
+      label: 'Μαυρομιχάλης Κωνσταντίνος', evidence: [{ kind: 'name-exact', value: 'Μ. Κ.' }] },
+  ],
+};
+
+/** ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΟΙ ΑΝΘΡΩΠΟΙ, ίδια μαρτυρία — η αστοχία που γράφει λάθος **πρόσωπο**. */
+const ambiguousPerson: BindingProposal = {
+  ...contactProposal,
+  candidates: [
+    { target: { kind: 'contact', contactId: 'cont_1', role: 'surveyor', projectId: 'proj_1' },
+      label: 'Παπαδόπουλος Γεώργιος', evidence: [{ kind: 'name-exact', value: 'Π. Γ.' }] },
+    { target: { kind: 'contact', contactId: 'cont_2', role: 'surveyor', projectId: 'proj_1' },
+      label: 'Παπαδόπουλος Γρηγόριος', evidence: [{ kind: 'name-exact', value: 'Π. Γ.' }] },
+  ],
+};
+
+describe('🔴 ΚΑΜΙΑ ΕΓΓΡΑΦΗ ΧΩΡΙΣ ΕΠΙΛΟΓΗ ΑΝΘΡΩΠΟΥ', () => {
+  it('🔑 διφορούμενη ΕΙΔΙΚΟΤΗΤΑ ⇒ κουμπί κλειστό, ΑΙΤΙΑ ορατή, μηδέν εγγραφές', async () => {
+    const user = userEvent.setup();
+    renderList([ambiguousRole]);
+
+    const button = await screen.findByRole('button', { name: /approve/i });
+    expect(button).toBeDisabled();
+    await user.click(button);
+
+    expect(firestoreWrites).toEqual([]);
+    expect(httpWrites).toEqual([]);
+    expect(screen.getByRole('status')).toHaveTextContent('titleBlockBinding.disabled.needsChoice');
+  });
+
+  it('🔴 δύο διαφορετικοί ΑΝΘΡΩΠΟΙ με ίδια μαρτυρία ⇒ επίσης κλειστό', async () => {
+    // Ο έλεγχος που πέφτει αν η ισοπαλία γραφτεί ως `compare()===0`: τα labels διαφέρουν, οπότε
+    // ο πλήρης συγκριτής δίνει «νικητή» — τον αλφαβητικά πρώτο. Λάθος ΑΝΘΡΩΠΟΣ, όχι λάθος ρόλος.
+    renderList([ambiguousPerson]);
+
+    const button = await screen.findByRole('button', { name: /approve/i });
+    expect(button).toBeDisabled();
+    expect(firestoreWrites).toEqual([]);
+    expect(screen.getByRole('status')).toHaveTextContent('titleBlockBinding.disabled.needsChoice');
+  });
+
+  it('🔑 ΜΕΤΑ την επιλογή γράφεται ΑΚΡΙΒΩΣ ο υποψήφιος που διάλεξε ο άνθρωπος', async () => {
+    const user = userEvent.setup();
+    renderList([ambiguousRole]);
+
+    // Ο δεύτερος υποψήφιος: `surveyor`. Αν ο κώδικας ξαναπέσει στο `candidates[0]`, θα γράψει
+    // `architect` — και το πλήθος εγγραφών θα ήταν **ίδιο**, γι' αυτό ελέγχεται το περιεχόμενο.
+    const options = await screen.findAllByRole('option');
+    expect(options).toHaveLength(3);
+    await user.click(options[1]);
+
+    const button = screen.getByRole('button', { name: /approve/i });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+
+    await waitFor(() => expect(firestoreWrites.filter((w) => w === 'setDoc')).toHaveLength(2));
+
+    const binding = firestorePayloads.find((p) => 'fieldKey' in p && 'confirmedBy' in p);
+    expect(binding).toBeDefined();
+    expect(binding?.target).toEqual(
+      expect.objectContaining({ kind: 'contact', contactId: 'cont_1', role: 'surveyor' }),
+    );
+  });
+
+  it('🔴 ΜΗ ΟΠΙΣΘΟΔΡΟΜΗΣΗ: ΕΝΑΣ υποψήφιος ⇒ κουμπί ενεργό ΧΩΡΙΣ επιλογέα', async () => {
+    // Ο μονοσήμαντος μελετητής και το Ο.Τ. (κενή μαρτυρία) είναι οι διαδρομές που δούλευαν πριν
+    // τη διόρθωση. Θεραπεία που τις κλείνει είναι χειρότερη από το ελάττωμα.
+    renderList([contactProposal, buildingBlockProposal]);
+
+    const buttons = await screen.findAllByRole('button', { name: /approve/i });
+    await waitFor(() => expect(buttons[0]).toBeEnabled());
+    expect(buttons[1]).toBeEnabled();
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+  });
+
+  it('🔑 αλλαγή επιλογής ΜΕΤΑ την έγκριση ΞΕΚΛΕΙΔΩΝΕΙ τη γραμμή', async () => {
+    // Χωρίς τον στόχο μέσα στο κλειδί έγκρισης, η γραμμή έμενε κλειδωμένη γράφοντας «Εγκρίθηκε»
+    // ενώ ο επιλογέας έδειχνε **άλλον** υποψήφιο — η οθόνη έλεγε ψέματα.
+    const user = userEvent.setup();
+    renderList([ambiguousRole]);
+
+    const options = await screen.findAllByRole('option');
+    await user.click(options[0]);
+    const button = screen.getByRole('button', { name: /approve/i });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    await waitFor(() => expect(screen.getByRole('button', { name: /approved/i })).toBeDisabled());
+
+    // Ο χρήστης καταλαβαίνει το λάθος και διαλέγει άλλον ρόλο.
+    await user.click(screen.getAllByRole('option')[1]);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /titleBlockBinding\.approve$/i })).toBeEnabled(),
+    );
   });
 });

@@ -47,10 +47,26 @@ export interface UseTitleBlockApprovalParams {
   readonly projectId?: string;
 }
 
+/**
+ * Τι **έγινε** σε μια επιτυχή έγκριση, πέρα από το «πέτυχε».
+ *
+ * 🔑 Χωρίς αυτό, το `supersededIds` που επιστρέφει ο διανομέας πεταγόταν — και ο χρήστης δεν
+ * μάθαινε ποτέ ότι η έγκρισή του **απέσυρε** προηγούμενη. Σιωπηλή αντικατάσταση σε συλλογή που
+ * υπάρχει για να **εξηγεί** την προέλευση είναι αντίφαση.
+ */
+export interface ApprovalOutcome {
+  readonly supersededCount: number;
+  /** Παλιοί στόχοι που έμειναν συνδεδεμένοι παρά την αντικατάσταση — σχεδόν πάντα 0. */
+  readonly withdrawFailureCount: number;
+}
+
 export interface TitleBlockApprovalState {
   readonly approving: string | null;
   readonly approvedIds: ReadonlySet<string>;
   readonly error: string | null;
+  /** Ο κωδικός του τελευταίου σφάλματος — για **μεταφρασμένο** μήνυμα αντί για τεχνικό κείμενο. */
+  readonly errorCode: string | null;
+  readonly outcomeFor: (key: string) => ApprovalOutcome | null;
   readonly blockerFor: (req: ApproveRequest) => ApprovalBlocker | null;
   readonly approve: (key: string, req: ApproveRequest) => Promise<boolean>;
   readonly ImpactDialog: ReactNode;
@@ -66,6 +82,10 @@ export function useTitleBlockApproval(
   const [approving, setApproving] = useState<string | null>(null);
   const [approvedIds, setApprovedIds] = useState<ReadonlySet<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [outcomes, setOutcomes] = useState<ReadonlyMap<string, ApprovalOutcome>>(new Map());
+
+  const outcomeFor = useCallback((key: string) => outcomes.get(key) ?? null, [outcomes]);
 
   // Ο φύλακας ζει σε επίπεδο έργου και είναι ο **υπάρχων** — το ίδιο hook που καλεί η καρτέλα
   // (`ProjectLandownersTab.tsx:110`). Δεύτερη, «απλούστερη» υλοποίηση εδώ θα ήταν sibling clone
@@ -101,6 +121,7 @@ export function useTitleBlockApproval(
 
       setApproving(key);
       setError(null);
+      setErrorCode(null);
       try {
         // Η **τρέχουσα** εικόνα του σχεδίου: μέσα σε αυτήν ψάχνεται τι πρέπει να αποσυρθεί.
         // Ποτέ από στιγμιότυπο της παλέτας — το supersede πρέπει να δει ό,τι υπάρχει τώρα.
@@ -133,7 +154,19 @@ export function useTitleBlockApproval(
         const capture = async () => {
           const result = await run();
           ok = result.success;
-          if (!result.success) setError(result.error);
+          if (result.success) {
+            // Ό,τι αντικαταστάθηκε γίνεται **ορατό**. Μια συλλογή που υπάρχει για να εξηγεί την
+            // προέλευση δεν επιτρέπεται να αποσύρει σιωπηλά προηγούμενη έγκριση.
+            setOutcomes((prev) =>
+              new Map(prev).set(key, {
+                supersededCount: result.supersededIds.length,
+                withdrawFailureCount: result.withdrawFailures.length,
+              }),
+            );
+          } else {
+            setError(result.error);
+            setErrorCode(result.errorCode);
+          }
         };
 
         if (req.target.kind === 'landowner' && projectId) {
@@ -160,5 +193,5 @@ export function useTitleBlockApproval(
     [blockerFor, fileRecordId, levelId, user?.uid, companyId, layerName, projectId, runSaveOperation],
   );
 
-  return { approving, approvedIds, error, blockerFor, approve, ImpactDialog };
+  return { approving, approvedIds, error, errorCode, outcomeFor, blockerFor, approve, ImpactDialog };
 }

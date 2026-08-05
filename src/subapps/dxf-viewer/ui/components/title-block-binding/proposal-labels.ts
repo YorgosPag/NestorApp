@@ -20,6 +20,7 @@ import type {
   BindingTargetKind,
 } from '@/types/title-block-binding';
 import type { TitleBlockFieldKey } from '@/types/title-block-reading';
+import type { ApprovalBlocker } from './useTitleBlockApproval';
 
 export const FIELD_LABEL: Record<TitleBlockFieldKey, string> = {
   employer: 'titleBlockBinding.fields.employer',
@@ -60,9 +61,27 @@ export const TARGET_LABEL: Record<BindingTargetKind, string> = {
   'drawing-meta': 'titleBlockBinding.target.drawing-meta',
 };
 
-/** Γιατί το κουμπί είναι κλειστό — ένα κλειδί ανά αιτία, ποτέ σκέτο γκρίζο κουμπί. */
-export const BLOCKER_LABEL = {
+/**
+ * Γιατί το κουμπί είναι κλειστό — **από τη σκοπιά της γραμμής**.
+ *
+ * 🔑 Ευρύτερο από το `ApprovalBlocker` κατά **μία** τιμή, και η διαφορά είναι δομική: ο
+ * `blockerFor()` δέχεται **ήδη χτισμένο** `ApproveRequest`, που απαιτεί `target`. Όταν δεν έχει
+ * διαλέξει ακόμη ο άνθρωπος **δεν υπάρχει target**, άρα ο hook δεν καλείται καν — η αιτία
+ * γεννιέται στη γραμμή και μόνο εκεί. Διευρύνοντας το `ApprovalBlocker` θα δηλώναμε τιμή που ο
+ * hook **δεν μπορεί να επιστρέψει ποτέ**.
+ */
+export type RowBlocker = ApprovalBlocker | 'needsChoice';
+
+/**
+ * Ένα κλειδί ανά αιτία, ποτέ σκέτο γκρίζο κουμπί.
+ *
+ * ⚠️ Ο ρητός τύπος `Record<RowBlocker, string>` **αντικατέστησε** ένα `as const` που δεν
+ * επαλήθευε τίποτα — παρά την υπόσχεση του docblock αυτού του αρχείου ότι το κενό γίνεται
+ * σφάλμα μεταγλώττισης. Νέα αιτία χωρίς ετικέτα δεν χτίζει πλέον.
+ */
+export const BLOCKER_LABEL: Record<RowBlocker, string> = {
   noFileRecord: 'titleBlockBinding.disabled.noFileRecord',
   noUser: 'titleBlockBinding.disabled.noUser',
   needsPercent: 'titleBlockBinding.disabled.needsPercent',
-} as const;
+  needsChoice: 'titleBlockBinding.disabled.needsChoice',
+};
