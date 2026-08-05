@@ -38,6 +38,7 @@ import {
   landownersMateriallyChanged,
   pruneStatuses,
   rehydrateStatuses,
+  buildLandownersUpdate,
   toLandownerEntries,
   toPropertyOwners,
   type AcquisitionStatusMap,
@@ -244,15 +245,15 @@ export function ProjectLandownersTab({ project, data }: ProjectLandownersTabProp
     skipNextLoad.current = true;
     try {
       const landownerEntries = toLandownerEntries(owners, statuses);
-      // ADR-244: Denormalized IDs for Firestore array-contains queries (contact details page)
-      const contactIds = owners.filter(o => o.contactId).map(o => o.contactId);
+      // ADR-745 Φ3β: the three fields that must travel together now have ONE home
+      // (`buildLandownersUpdate`), shared with the DXF canvas writer. The
+      // denormalized `landownerContactIds` feeds the contact deletion guard, and
+      // a second writer that forgot it would make landowners invisible to that
+      // guard — the contact would be deleted with no warning.
+      // This tab OWNS the bartex share, so it declares it explicitly.
       const result = await updateProjectWithPolicy({
         projectId,
-        updates: {
-          landowners: landownerEntries.length > 0 ? landownerEntries : null,
-          bartexPercentage: bartexPct,
-          landownerContactIds: contactIds.length > 0 ? contactIds : null,
-        },
+        updates: buildLandownersUpdate(landownerEntries, { set: bartexPct }),
       });
 
       if (result.success) {
