@@ -186,19 +186,6 @@ export async function getAllContactIds(): Promise<string[]> {
   return result.documents.map(d => d.id as string);
 }
 
-export async function getOwnerContactIds(): Promise<string[]> {
-  const result = await firestoreQueryService.getAll<DocumentData>('PROPERTIES', {
-    constraints: [where('soldTo', '>=', '')],
-    tenantOverride: 'skip',
-  });
-  const ownerIds = new Set<string>();
-  for (const d of result.documents) {
-    const soldTo = d.soldTo;
-    if (soldTo && typeof soldTo === 'string') ownerIds.add(soldTo);
-  }
-  return Array.from(ownerIds);
-}
-
 // ============================================================================
 // Search
 // ============================================================================

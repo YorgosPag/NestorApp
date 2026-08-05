@@ -75,7 +75,7 @@ export class EnterpriseCompanySettingsService {
 
       // If not found, try to load από contacts collection (legacy)
       if (!settings) {
-        settings = await this.loadFromContactsCollection(tenantId);
+        settings = await this.loadFromContactsCollection();
       }
 
       // If still not found, initialize default settings
@@ -136,7 +136,7 @@ export class EnterpriseCompanySettingsService {
   /**
    * 📥 Load settings από contacts collection (legacy support)
    */
-  private async loadFromContactsCollection(tenantId?: string): Promise<EnterpriseCompanySettings | null> {
+  private async loadFromContactsCollection(): Promise<EnterpriseCompanySettings | null> {
     try {
       const constraints = [
         where('type', '==', 'company'),
@@ -144,12 +144,14 @@ export class EnterpriseCompanySettingsService {
         limit(1)
       ];
 
-      if (tenantId) {
-        constraints.unshift(where('tenantId', '==', tenantId));
-      }
-
+      // Tenant filter comes from `buildTenantConstraints` (companyId, ADR-214).
+      // Until 2026-08-05 this read `tenantOverride: 'skip'` next to a conditional
+      // `where('tenantId', ...)` that was never reachable: both callers invoke the
+      // public API with no argument, and no `contacts` document carries a `tenantId`
+      // field at all — so the branch could only ever have returned zero rows. The
+      // effective behaviour was an unfiltered cross-tenant read.
       const result = await firestoreQueryService.getAll<Record<string, unknown>>(
-        'CONTACTS', { constraints, tenantOverride: 'skip' }
+        'CONTACTS', { constraints }
       );
 
       if (!result.isEmpty && result.documents.length > 0) {

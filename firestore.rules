@@ -893,7 +893,11 @@ service cloud.firestore {
                        // Super admin can read all
                        isSuperAdminOnly()
                        // OR user belongs to the project's company
-                       || belongsToProjectCompany(resource.data.project)
+                       // 📅 2026-08-05: field was `project` — every production document
+                       //    carries `projectId` (server writes it, ADR-284 §3.1). Accessing a
+                       //    missing key errors → this leg denied for ALL non-super-admins,
+                       //    leaving the public `commercialStatus` leg as the only read path.
+                       || belongsToProjectCompany(resource.data.projectId)
                      );
 
       // ✍️ CREATE: Admin/server only
@@ -911,7 +915,7 @@ service cloud.firestore {
                          isSuperAdminOnly()
                          // OR company admin of project's company with allowlist + invariants
                          || (
-                              isCompanyAdminOfProject(resource.data.project)
+                              isCompanyAdminOfProject(resource.data.projectId)
                               && isAllowedPropertyFieldUpdate()
                               && propertyStructuralFieldsUnchanged()
                             )
@@ -4869,7 +4873,9 @@ service cloud.firestore {
     // Properties don't have companyId directly - must lookup via project reference
 
     // Get companyId from a project document (for tenant isolation)
-    // Usage: getProjectCompanyId(resource.data.project) where project is the project ID string
+    // Usage: getProjectCompanyId(resource.data.projectId) — `projectId` is the canonical
+    // cross-reference field name on every child collection (ADR-284 §3.1). Do NOT write
+    // `resource.data.project`: the key does not exist, and a missing key errors → deny.
     function getProjectCompanyId(projectId) {
       return get(/databases/$(database)/documents/projects/$(projectId)).data.companyId;
     }
@@ -4942,7 +4948,7 @@ service cloud.firestore {
     //    - Properties CAN be moved between buildings/floors within the SAME project
     //    - Properties CANNOT be moved to a different project (tenant isolation)
     function propertyStructuralFieldsUnchanged() {
-      return request.resource.data.project == resource.data.project
+      return request.resource.data.projectId == resource.data.projectId
              && request.resource.data.id == resource.data.id;
     }
 

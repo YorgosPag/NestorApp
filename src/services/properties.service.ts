@@ -88,11 +88,14 @@ export async function createProperty(
   }
 }
 
-// Get all properties
+// Get all properties for the active tenant.
+// Tenant filter comes from `buildTenantConstraints` (companyId, ADR-214) — do NOT
+// re-add `tenantOverride: 'skip'`. It was there because `companyId ==` + `orderBy(name)`
+// needs a composite index that did not exist; the index now ships in
+// firestore.indexes.json (properties: companyId + name, 2026-08-05).
 export async function getProperties(): Promise<Property[]> {
   const result = await firestoreQueryService.getAll<DocumentData>('PROPERTIES', {
     constraints: [orderBy('name', 'asc')],
-    tenantOverride: 'skip',
   });
   return result.documents.map(toProperty);
 }

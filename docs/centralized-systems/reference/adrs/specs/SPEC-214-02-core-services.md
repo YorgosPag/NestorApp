@@ -82,7 +82,7 @@ All use `tenantOverride: 'skip'` (unit documents lack companyId field).
 |--------|----------|
 | `getContact(id)` | `getById()` + `toContact()` |
 | `getAllContactIds()` | `getAll()` → `.documents.map(d => d.id)` |
-| `getOwnerContactIds()` | Queries UNITS collection with `tenantOverride: 'skip'` |
+| ~~`getOwnerContactIds()`~~ | **ΑΦΑΙΡΕΘΗΚΕ 2026-08-05 (ADR-758 §3.4)** — 0 καλούντες. ⚠️ Αυτή η γραμμή έλεγε «Queries **UNITS** collection» ενώ ο κώδικας ρωτούσε **PROPERTIES**: τεκμηρίωση κώδικα που δεν εκτελέστηκε ποτέ. |
 | `getContactStatistics()` | `getAll()` → iterate + count |
 | `exportContacts(type?)` | `getAll()` + optional where constraint |
 | `searchContacts(opts)` | `getAll()` + client-side filtering |

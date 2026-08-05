@@ -39,7 +39,6 @@ import { cleanupOrphanedPhotos } from '@/utils/contactForm/photo-cleanup';
 export {
   getAllContacts,
   getAllContactIds,
-  getOwnerContactIds,
   searchContacts,
   getContactStatistics,
   subscribeToContacts,
@@ -464,7 +463,6 @@ export class ContactsService {
 
   static getAllContacts = queryService.getAllContacts;
   static getAllContactIds = queryService.getAllContactIds;
-  static getOwnerContactIds = queryService.getOwnerContactIds;
   static searchContacts = queryService.searchContacts;
   static getContactStatistics = queryService.getContactStatistics;
   static subscribeToContacts = queryService.subscribeToContacts;

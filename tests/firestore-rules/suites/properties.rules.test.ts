@@ -2,7 +2,7 @@
  * Firestore Rules — `properties` collection
  *
  * Pattern: admin_write_only with admin-update delta.
- * Reads are tenant-scoped via `project` crossdoc (belongsToProjectCompany).
+ * Reads are tenant-scoped via `projectId` crossdoc (belongsToProjectCompany).
  * Create/delete deny for all clients (Admin SDK only).
  * Update is allowed for super_admin (isSuperAdminOnly bypass) and for company
  * admins of the project's company (isCompanyAdminOfProject + isAllowedPropertyFieldUpdate
@@ -35,7 +35,7 @@ export const COVERAGE = FIRESTORE_RULES_COVERAGE.find(
   (c) => c.collection === 'properties',
 )!;
 
-describe('properties.rules — admin_write_only + admin-update (crossdoc via project)', () => {
+describe('properties.rules — admin_write_only + admin-update (crossdoc via projectId)', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => {
@@ -64,17 +64,17 @@ describe('properties.rules — admin_write_only + admin-update (crossdoc via pro
           collection: 'properties',
           docId: propertyId,
           // Update data: only allowed fields (isAllowedPropertyFieldUpdate allowlist).
-          // Firestore partial update preserves `project` and `id` from the seed doc
+          // Firestore partial update preserves `projectId` and `id` from the seed doc
           // so propertyStructuralFieldsUnchanged passes for same_tenant_admin.
           data: {
             description: 'Updated property description',
           },
           createData: {
-            project: projectId,
+            projectId,
             name: 'Created Property',
           },
           listFilter: {
-            field: 'project',
+            field: 'projectId',
             op: '==',
             value: projectId,
           },

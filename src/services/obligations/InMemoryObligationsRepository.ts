@@ -328,6 +328,13 @@ export class FirestoreObligationsRepository implements IObligationsRepository {
     try {
       const result = await firestoreQueryService.getAll<DocumentData & { id: string }>('OBLIGATION_TEMPLATES', {
         constraints: [orderBy('isDefault', 'desc')],
+        // tenant-scope-exempt: mixed collection — firestore.rules:2329-2331 keeps an explicit
+        // legacy fallback that grants read on templates carrying NO `companyId` at all
+        // (creator-owned). A `where('companyId','==')` filter would hide exactly those rows,
+        // so isolation is delegated to the per-document rule instead of the query.
+        // ⚠️ Known limit: Firestore rejects a whole `list` if any matched document fails the
+        // rule, so this read starts failing once a second tenant owns templates. Revisit as
+        // an OR-query (companyId == me || createdBy == me) when that becomes real.
         tenantOverride: 'skip',
       });
 

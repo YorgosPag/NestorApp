@@ -422,7 +422,10 @@ export async function seedProperty(
   await withSeedContext(env, async (ctx) => {
     await ctx.firestore().collection('properties').doc(propId).set({
       id: propId,
-      project: projectId,
+      // `projectId`, not `project` — must mirror what the server actually writes
+      // (api/properties/create, ADR-284 §3.1). Seeding `project` made this suite pass
+      // against a document shape that has never existed in production (2026-08-05).
+      projectId,
       name: `Test Property ${propId}`,
       description: 'Seed property',
       createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,

@@ -1,7 +1,7 @@
 # ADR-438 — Audit Log Retention / TTL Policy (Πολιτική Διατήρησης Audit Logs)
 
-- **Status**: ✅ **v3 COMPLETE — καμία εκκρεμότητα, code ΚΑΙ GCP.** Τριών-tier retention/delivery **DONE**· code-side bug που έσβηνε σιωπηλά τα `expiresAt`/`timestamp` (§0.α) **FIXED** (`isPlainObject` guard)· dedup **opt-in ανά call site** (§2.5) **DONE**· rollback αισιόδοξης σφράγισης (§2.5.1) **DONE**· stateful helpers εκτός barrel (§2.5.2) **DONE**· `floorplans/process` → `data_updated` **DONE**· **GCP-side TTL policy ENABLED — `audit_logs` + `system_audit_logs` σε `state: ACTIVE`** (εκτελέστηκε + επαληθεύτηκε 2026-07-20)
-- **Date**: 2026-06-10 (v1) · 2026-07-20 (v2 — τριών-tier αναθεώρηση) · **2026-07-20 (v3 — dedup opt-in)**
+- **Status**: ✅ **v4 COMPLETE — καμία εκκρεμότητα, code ΚΑΙ GCP ΚΑΙ IaC.** Τριών-tier retention/delivery **DONE**· code-side bug που έσβηνε σιωπηλά τα `expiresAt`/`timestamp` (§0.α) **FIXED** (`isPlainObject` guard)· dedup **opt-in ανά call site** (§2.5) **DONE**· rollback αισιόδοξης σφράγισης (§2.5.1) **DONE**· stateful helpers εκτός barrel (§2.5.2) **DONE**· `floorplans/process` → `data_updated` **DONE**· **GCP-side TTL policy ENABLED — `audit_logs` + `system_audit_logs` σε `state: ACTIVE`** (εκτελέστηκε + επαληθεύτηκε 2026-07-20)· **v4: οι policies δηλώθηκαν και στο `firestore.indexes.json` (`fieldOverrides`)** — μέχρι τότε ζούσαν **μόνο** στο GCP και ένα `deploy --force` θα τις έσβηνε σιωπηλά (§3, changelog 2026-08-05)
+- **Date**: 2026-06-10 (v1) · 2026-07-20 (v2 — τριών-tier αναθεώρηση) · 2026-07-20 (v3 — dedup opt-in) · **2026-08-05 (v4 — TTL policies στο IaC)**
 - **Authors**: Opus (research + implementation), Giorgio (product owner)
 - **Domain**: Security / Audit (RFC v6 authorization-rbac)
 - **Retention window**: **τρία tiers** — security 24 μήνες, compliance 12 μήνες, access 1 μήνας (βλ. §2)
@@ -370,10 +370,32 @@ server-only tainting. Tests ή οποιοσδήποτε isomorphic κατανα�
   λόγος: το project είναι **pre-production, με έναν και μοναδικό χρήστη** (Giorgio) — δεν υπάρχει πραγματικό
   compliance backlog που να αξίζει τον κίνδυνο/χρόνο ενός backfill. Δεν είναι ελλιπής υλοποίηση· είναι
   συνειδητή επιλογή scope για τη φάση του project.
-- ⚠️ **Single-field TTL** auto-exempt από indexing — μηδέν αλλαγή στο `firestore.indexes.json` (αμετάβλητο
-  από v1).
-- ⚠️ Το TTL enable είναι GCP-side write → απαιτεί `gcloud auth` + IAM δικαιώματα στο `pagonis-87766`. Δεν
-  εφαρμόζεται μέσω app deploy (αμετάβλητο από v1).
+- 🔴 **ΔΙΟΡΘΩΘΗΚΕ 2026-08-05 — αυτή η γραμμή έλεγε «μηδέν αλλαγή στο `firestore.indexes.json`». Ήταν
+  σωστή για λάθος λόγο και επικίνδυνη.** Ισχύει ότι ένα single-field TTL **δεν απαιτεί** composite index.
+  **Δεν** ισχύει ότι δεν αφήνει αποτύπωμα στο αρχείο: ενεργοποιώντας TTL, το Firestore γράφει **field
+  override** (`usesAncestorConfig: false`) — και το `firestore.indexes.json` έχει `fieldOverrides` array
+  που το Firebase CLI **αντιπαραβάλλει με το ζωντανό project σε κάθε deploy**. Με το array κενό, κάθε
+  `firebase deploy --only firestore:indexes` τύπωνε:
+
+  > `there are 2 field overrides defined in your project that are not present in your firestore indexes file. To delete them, run this command with the --force flag.`
+
+  ⚠️ **Ένα `--force` — που είναι το συνηθισμένο αντανακλαστικό για να καθαρίσει κανείς παλιά indexes —
+  θα έσβηνε και τις δύο TTL policies σιωπηλά.** Τα audit logs θα σταματούσαν να αυτοδιαγράφονται και θα
+  επέστρεφε ακριβώς το unbounded growth της §1, **χωρίς κανένα σφάλμα πουθενά**: το σύστημα θα φαινόταν
+  υγιές, απλώς δεν θα διέγραφε ποτέ τίποτα. Η ανακάλυψη έγινε **μόνο** επειδή κάποιος διάβασε το
+  προειδοποιητικό μήνυμα ενός άσχετου deploy (ADR-758).
+
+  🔑 **Ο κανόνας**: «η υποδομή δεν χρειάζεται αλλαγή στο IaC» και «η υποδομή δεν *υπάρχει* στο IaC» είναι
+  διαφορετικά πράγματα. Το δεύτερο σημαίνει ότι το IaC θεωρεί την υποδομή **περίσσευμα προς διαγραφή**.
+
+  **Θεραπεία**: τα δύο overrides γράφτηκαν ρητά στο `fieldOverrides` του `firestore.indexes.json`
+  (`audit_logs.expiresAt`, `system_audit_logs.expiresAt`, `"ttl": true` + τα τρία default index configs).
+  Επαλήθευση μετά το deploy: η προειδοποίηση **εξαφανίστηκε** και
+  `gcloud firestore fields ttls list` δίνει και τα δύο σε `ACTIVE`.
+- ⚠️ Το **αρχικό** TTL enable ήταν GCP-side write → απαιτούσε `gcloud auth` + IAM δικαιώματα στο
+  `pagonis-87766`, εκτός app deploy (αμετάβλητο από v1). **Από 2026-08-05 η κατάσταση είναι πλέον και
+  δηλωτική**: το `fieldOverrides` κρατά την πολιτική στο git, ώστε ένα `--force` να μην τη σβήνει και μια
+  ανακατασκευή project να μπορεί να την επαναφέρει.
 
 ---
 
@@ -463,3 +485,17 @@ server-only tainting. Tests ή οποιοσδήποτε isomorphic κατανα�
   (pre-production, μοναδικός χρήστης)· χειροκίνητο recursive delete αν χρειαστεί, **όχι** εκκρεμότητα ADR.
   Ο αυτοκαθαρισμός πιάνει ό,τι γράφεται από το fix και μετά, με 24/12/1 μήνες ανά tier. (Opus, κατ' εντολή
   Giorgio· `gcloud` ως `georgios.pagonis@gmail.com`)
+- **2026-08-05** — 🔴 **v4: οι TTL policies ζούσαν ΜΟΝΟ στο GCP — το IaC τις θεωρούσε προς διαγραφή.**
+  Το enable της 2026-07-20 ήταν σωστό αλλά **μονόπλευρο**: γράφτηκε στο project, ποτέ στο repo. Το §3
+  το δικαιολογούσε ρητά («single-field TTL auto-exempt από indexing — μηδέν αλλαγή στο
+  `firestore.indexes.json`») — αληθές για το *indexing*, **ψευδές για το state management**. Το TTL enable
+  δημιουργεί **field override**, και το `fieldOverrides: []` του αρχείου δήλωνε στο Firebase CLI ότι **δεν
+  πρέπει να υπάρχει κανένα**. Κάθε deploy indexes τύπωνε «2 field overrides … not present in your
+  firestore indexes file», και **ένα `--force` θα τις έσβηνε αθόρυβα** ⇒ επιστροφή στο unbounded growth
+  της §1 χωρίς κανένα ορατό σφάλμα. **Θεραπεία**: τα δύο overrides γράφτηκαν στο `fieldOverrides`
+  (`audit_logs.expiresAt` + `system_audit_logs.expiresAt`, `"ttl": true`). **Απόδειξη**: μετά το deploy η
+  προειδοποίηση εξαφανίστηκε και `gcloud firestore fields ttls list` → **και τα δύο `ACTIVE`** (το deploy
+  δεν τα πείραξε). **Πώς βρέθηκε**: ως παράπλευρο εύρημα του deploy του ADR-758 — κανείς δεν το έψαχνε,
+  το μήνυμα ήταν εκεί σε **κάθε** προηγούμενο deploy και δεν το είχε διαβάσει κανείς. 🔑 «Δεν χρειάζεται
+  αλλαγή στο IaC» ≠ «δεν υπάρχει στο IaC»· το δεύτερο σημαίνει «περίσσευμα προς διαγραφή». (Opus, κατ'
+  εντολή Giorgio)
