@@ -166,14 +166,26 @@ const buildingBlockProposal: BindingProposal = {
   }],
 };
 
+/**
+ * Οι αναγνώσεις του layer — **κενές εδώ επίτηδες**.
+ *
+ * Ο κατάσκοπος ρωτά «γράφεται κάτι χωρίς κλικ;». Με κενές αναγνώσεις καμία γραμμή δεν βρίσκει
+ * πρόσωπο, άρα το κουμπί «Νέα επαφή» δεν αποδίδεται καν — και το test μετρά **αυτό που δηλώνει
+ * ότι μετρά**, τη διαδρομή έγκρισης. Η διαδρομή δημιουργίας έχει τον δικό της κατάσκοπο
+ * παρακάτω, όπου οι αναγνώσεις είναι γεμάτες.
+ */
+const NO_READINGS: never[] = [];
+
 const renderList = (proposals: BindingProposal[]) =>
   render(
     <TitleBlockProposalList
       proposals={proposals}
+      readings={NO_READINGS}
       fileRecordId="file_1"
       levelId="lvl_1"
       layerName="PINAKAKI 500"
       projectId="proj_1"
+      onContactCreated={jest.fn()}
     />,
   );
 
@@ -243,10 +255,12 @@ describe('🔴 ΤΟ ΚΟΥΜΠΙ ΚΛΕΙΝΕΙ ΜΕ ΑΙΤΙΑ, ΔΕΝ ΓΡΑΦ
     render(
       <TitleBlockProposalList
         proposals={[contactProposal]}
+        readings={NO_READINGS}
         fileRecordId={null}
         levelId="lvl_1"
         layerName="PINAKAKI 500"
         projectId="proj_1"
+        onContactCreated={jest.fn()}
       />,
     );
 

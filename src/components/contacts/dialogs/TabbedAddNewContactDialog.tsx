@@ -43,7 +43,7 @@ import { cn } from '@/lib/utils';
 // 🏢 ENTERPRISE: Centralized dialog sizing tokens (ADR-031)
 import { DIALOG_SIZES, DIALOG_HEIGHT, DIALOG_SCROLL } from '@/styles/design-tokens';
 
-export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange, allowedContactTypes, defaultPersonas, presentation = 'dialog' }: AddNewContactDialogProps) {
+export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, editContact, onLiveChange, allowedContactTypes, defaultPersonas, presentation = 'dialog', prefill, prefillNotice }: AddNewContactDialogProps) {
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['contacts', 'contacts-banking', 'contacts-core', 'contacts-form', 'contacts-lifecycle', 'contacts-relationships']);
   // 🎯 ΚΕΝΤΡΙΚΟΠΟΙΗΜΕΝΑ ICON SIZES - ENTERPRISE PATTERN
@@ -68,7 +68,10 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
     handleProfilePhotoSelection,
     handleFieldBlur,
     guardDialogs,
-  } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open, onLiveChange });
+    // 🏢 ADR-759 Φ1 — ο σπόρος πηγαίνει **μέσα** στη φόρμα, όχι δίπλα της. Ο ιδιοκτήτης της
+    // αρχικής κατάστασης (`useContactDataLoader`) τον εφαρμόζει στο ίδιο effect με το reset,
+    // ώστε να μην υπάρχει καν κούρσα να κερδηθεί. Δες το σκεπτικό στο `prefill` εκεί.
+  } = useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen: open, onLiveChange, prefill });
 
   // 🔧 TypeScript safety με fallback
   const contactType = (formData.type || CONTACT_TYPES.INDIVIDUAL) as ContactType;
@@ -263,6 +266,12 @@ export function TabbedAddNewContactDialog({ open, onOpenChange, onContactAdded, 
               matches the canonical DetailsContainer (used by ProjectDetails /
               BuildingDetails). Dialog mode already ships its own card shell. */}
           <div className={cn('space-y-4', isSheet && 'bg-card border rounded-lg shadow-sm p-4')}>
+            {/* 🔴 Provenance FIRST, above every field it explains. A form that filled itself
+                from a file must say so before the user reaches the Save button — otherwise the
+                seeded values read as facts the user entered. Edit mode never shows it: there
+                is no seeding there (see the prefill effect). */}
+            {!editContact && prefillNotice ? prefillNotice : null}
+
             {/* Contact Type Selection — hidden when the type is already
                 resolved: editing (type locked) OR a single allowed type
                 (no choice to make). Shown only when the user needs to pick. */}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ContactType, PhoneInfo, EmailInfo, WebsiteInfo, SocialMediaInfo, CompanyContact } from '@/types/contacts';
 import type { PersonaType } from '@/types/contacts/personas';
 import type { PhotoSlot } from '@/components/ui/MultiplePhotosUpload';
@@ -13,6 +14,34 @@ export interface AddNewContactDialogProps {
   allowedContactTypes?: ContactType[];
   /** Personas to auto-activate on new contact creation */
   defaultPersonas?: PersonaType[];
+  /**
+   * Seed fields for a **new** contact, from a source the user did not type (ADR-759 Φ1).
+   *
+   * 🔑 **Why a prop and not a second form.** The first caller reads a surveyor's title block
+   * from a DXF drawing; the next will read a ΓΕΜΗ response or a scanned document. Each of
+   * those needs the same thing — the canonical contact form, already filled — and each would
+   * otherwise grow its own compact form, its own validation and its own writer. One dialog,
+   * one write path (`useContactSubmission` → `createContactWithPolicy`), one enterprise id.
+   *
+   * ⚠️ **Ignored in edit mode**, deliberately: an existing record is the source of truth and
+   * an external reading must never overwrite it silently (ADR-745 §8 rule 2 — «η βάση κερδίζει
+   * εξ ορισμού»).
+   *
+   * Applied **once per opening**, immediately after the form's own reset, and read through a
+   * ref rather than an effect dependency — so an inline object literal here is safe and the
+   * user's own corrections are never overwritten by a re-render. See `useContactDataLoader`,
+   * which owns the form's initial state and carries the measurement behind both guards.
+   */
+  prefill?: Partial<ContactFormData>;
+  /**
+   * Rendered above the form when {@link prefill} is in play — the caller's chance to say
+   * **what was seeded and what deserves a second look**.
+   *
+   * 🔴 Not decoration. A form that fills itself from a file and says nothing teaches the user
+   * to press Save without reading, which is precisely what ADR-745 §8.1 forbids. The caller
+   * owns this text because only the caller knows the provenance; the dialog owns the slot.
+   */
+  prefillNotice?: ReactNode;
   /**
    * Shell style. `dialog` (default) = centered modal; `sheet` = right-side
    * slide-over. Use `sheet` when nesting under another slide-over (e.g.

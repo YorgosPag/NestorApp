@@ -33,21 +33,28 @@ function at(tree: Record<string, unknown>, key: string): unknown {
   );
 }
 
+const PANEL_DIR = 'src/subapps/dxf-viewer/ui/components/title-block-binding';
+
 /**
  * Κάθε αρχείο της παλέτας που γράφει κλειδί i18n ή συνθέτει ετικέτα.
  *
  * ⚠️ Μία λίστα για **όλους** τους ελέγχους αυτού του αρχείου. Υπήρχαν δύο, με διαφορετικό
  * περιεχόμενο — και η μία είχε μείνει στα 2 από τα 6 αρχεία. Δύο λίστες για το ίδιο ερώτημα
  * αποκλίνουν: είναι το σχήμα των δύο λιστών namespace του CHECK 3.34.
+ *
+ * 🔴 **Boy scout 2026-08-05 (ADR-759 Φ1): η λίστα ΠΑΡΑΓΕΤΑΙ πλέον, δεν γράφεται.** Ήταν έξι
+ * χειρόγραφες διαδρομές με σχόλιο που παρακαλούσε τον επόμενο να τις συντηρήσει — και η Φ1
+ * πρόσθεσε **δύο** αρχεία που γράφουν κλειδιά. Ο φύλακας θα έμενε πράσινος κοιτάζοντας το
+ * **75%** του φακέλου, ακριβώς όπως είχε ήδη συμβεί μία φορά με τα 2/6. Οδηγία σε σχόλιο δεν
+ * είναι πύλη (CHECK 3.37): το αρχείο που μπαίνει στον φάκελο μπαίνει και στον έλεγχο.
  */
-const PALETTE_SOURCES = [
-  'src/subapps/dxf-viewer/ui/components/title-block-binding/proposal-labels.ts',
-  'src/subapps/dxf-viewer/ui/components/title-block-binding/proposal-row-parts.tsx',
-  'src/subapps/dxf-viewer/ui/components/title-block-binding/TitleBlockCandidatePicker.tsx',
-  'src/subapps/dxf-viewer/ui/components/title-block-binding/TitleBlockProposalList.tsx',
-  'src/subapps/dxf-viewer/ui/components/title-block-binding/TitleBlockProposalRow.tsx',
+const PALETTE_SOURCES: readonly string[] = [
+  ...fs
+    .readdirSync(path.join(ROOT, PANEL_DIR))
+    .filter((name) => /\.tsx?$/.test(name))
+    .map((name) => `${PANEL_DIR}/${name}`),
   'src/subapps/dxf-viewer/ui/components/TitleBlockBindingPalette.tsx',
-] as const;
+];
 
 /** Τα κλειδιά που όντως γράφει ο κώδικας — διαβασμένα από το αρχείο, όχι ξαναγραμμένα εδώ. */
 function declaredKeys(): string[] {
@@ -90,6 +97,15 @@ describe('κλειδιά i18n', () => {
 
   it('ο κώδικας δηλώνει κλειδιά — αλλιώς το test θα περνούσε χωρίς να κοιτάξει τίποτα', () => {
     expect(declaredKeys().length).toBeGreaterThan(15);
+  });
+
+  it('🔴 η λίστα πηγών ΠΑΡΑΓΕΤΑΙ και δεν είναι κολοβή', () => {
+    // Ο φρουρός του παραγωγού: ένα `readdirSync` που δείχνει σε λάθος φάκελο επιστρέφει κενό
+    // και **όλοι** οι έλεγχοι από κάτω γίνονται δωρεάν αληθείς — «0 = κανείς δεν κοίταξε».
+    expect(PALETTE_SOURCES.length).toBeGreaterThanOrEqual(7);
+    expect(PALETTE_SOURCES).toContain(`${PANEL_DIR}/proposal-labels.ts`);
+    expect(PALETTE_SOURCES).toContain(`${PANEL_DIR}/TitleBlockPrefillNotice.tsx`);
+    expect(PALETTE_SOURCES).toContain(`${PANEL_DIR}/TitleBlockContactCreation.tsx`);
   });
 
   it.each(['el', 'en'])('🔴 κάθε κλειδί που γράφει ο κώδικας υπάρχει στο %s', (lang) => {

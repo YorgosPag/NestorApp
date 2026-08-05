@@ -23,6 +23,12 @@ interface UseContactFormProps {
   editContact?: Contact | null;
   isModalOpen?: boolean; // 🔧 FIX: Track modal state για clean form reset
   onLiveChange?: (updatedContact: Contact) => void; // 🔥 NEW: For real-time preview
+  /**
+   * Seed fields for a **new** contact, from a source the user did not type (ADR-759 Φ1).
+   * Handed straight to `useContactDataLoader`, which owns the form's initial state — see the
+   * rationale there for why it may not live anywhere else.
+   */
+  prefill?: Partial<ContactFormData>;
 }
 
 // ============================================================================
@@ -52,7 +58,7 @@ interface UseContactFormProps {
  * - Better separation of concerns ✅
  * - Easier maintenance & debugging ✅
  */
-export function useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen, onLiveChange }: UseContactFormProps) {
+export function useContactForm({ onContactAdded, onOpenChange, editContact, isModalOpen, onLiveChange, prefill }: UseContactFormProps) {
 
   // ========================================================================
   // CORE HOOKS
@@ -135,7 +141,8 @@ export function useContactForm({ onContactAdded, onOpenChange, editContact, isMo
     isModalOpen,
     setFormData,
     handleMultiplePhotosChange,
-    resetForm
+    resetForm,
+    prefill
   });
 
   // 5️⃣ Legacy handlers compatibility (extracted)

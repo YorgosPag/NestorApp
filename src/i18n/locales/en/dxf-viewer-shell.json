@@ -6332,7 +6332,20 @@
     "createContact": "New contact",
     "chooseCandidate": "Choose a candidate",
     "candidateWithRole": "{name} — {role}",
-    "supersededNote": "Replaces an earlier approval of the same cell."
+    "supersededNote": "Replaces an earlier approval of the same cell.",
+    "newContact": {
+      "buttonTitle": "Add them here, from what the drawing already read. You do not leave this screen.",
+      "noticeTitle": "Pre-filled from the survey drawing",
+      "noticeBody": "The fields below were read from the drawing's title block — you typed none of them. Check them and correct whatever is needed before saving.",
+      "checkNameOrder": "The «first name / surname» order does not come from the drawing — the «surname first» convention was applied. Confirm it, because a reversed name will not show up anywhere else.",
+      "officeDetails": "{count, plural, one {# detail is written on the title block under more than one engineer — it belongs to the office, not to the person. Delete it if it is not theirs.} other {# details are written on the title block under more than one engineer — they belong to the office, not to the person. Delete whichever are not theirs.}}",
+      "createdStillUnapproved": "The contact was created and this row is being recomputed. If it stays «not found», the name was stored differently from what the title block says — open the contact and compare. Either way, the link is never written without «Approve».",
+      "detail": {
+        "phone": "phone",
+        "email": "e-mail",
+        "website": "website"
+      }
+    }
   },
   "externalReferencesPalette": {
     "title": "External References",

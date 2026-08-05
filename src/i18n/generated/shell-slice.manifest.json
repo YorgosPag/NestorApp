@@ -38,7 +38,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "ebbad65220b6f04d9b22306e95211041e00d553b8ba155bec6b12116487346b1",
+  "inputsSha256": "879a07640f7f6d318b03dc5bd29edf04f54383ac4631218fa50952241b2188aa",
   "languages": [
     "el"
   ],
@@ -420,7 +420,7 @@
     "src/subapps/dxf-viewer/utils/scalar-math.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/utils/scene-units.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/procurement/types/trade.ts": "09877fafb56a503091eda14932a8c302253de5d145ee80cd94df0b63c34584b0",
-    "src/types/ContactFormTypes.ts": "1698d111e3cdd3ce2ef58bb70fb6174191f069b8d0e4dc589c98687b201c6898",
+    "src/types/ContactFormTypes.ts": "43f2a2b6bbee226b7368bf44d4d4332aa93d8cb5c3508e5f08388f81f7864c94",
     "src/types/api/building-spaces.api.types.ts": "e94c6bda125749cbda26cfa7c785303dfbb4974e9fa9872197f3a2fe4702ef45",
     "src/types/audit-trail.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/types/building/contracts.ts": "e5dcd64cc5060fabd86630de9b0b0db83bd3e83b97276bc4386640ace8666f6a",

@@ -35,7 +35,9 @@ import {
 } from './proposal-labels';
 import { LandownerPercentField, ProposalEvidence } from './proposal-row-parts';
 import { TitleBlockCandidatePicker } from './TitleBlockCandidatePicker';
+import { TitleBlockContactCreation } from './TitleBlockContactCreation';
 import type { ApproveRequest, ApprovalBlocker } from './useTitleBlockApproval';
+import type { ProposalPerson } from '@/lib/title-block/contact-prefill';
 
 interface Props {
   readonly proposal: BindingProposal;
@@ -47,6 +49,14 @@ interface Props {
   /** Ο επιλεγμένος υποψήφιος ζει **στη λίστα**, γιατί συνθέτει το κλειδί έγκρισης (δες εκεί). */
   readonly chosen: BindingCandidate | null;
   readonly onChoose: (candidate: BindingCandidate) => void;
+  /**
+   * Το πρόσωπο πίσω από την πρόταση — `null` όταν η γραμμή δεν αφορά πρόσωπο.
+   *
+   * Έρχεται από τη λίστα (που κρατά τις αναγνώσεις) και **όχι** από την ίδια την πρόταση: το
+   * `BindingProposal` είναι σκόπιμα το **αποτέλεσμα** του Λ2 και δεν κουβαλά την πρώτη ύλη.
+   */
+  readonly subject: ProposalPerson | null;
+  readonly onContactCreated: () => void;
 }
 
 export const TitleBlockProposalRow: React.FC<Props> = ({
@@ -58,6 +68,8 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
   onDismiss,
   chosen,
   onChoose,
+  subject,
+  onContactCreated,
 }) => {
   // Δεύτερο namespace: η γραμμή δείχνει πλέον τον **ρόλο**, του οποίου το λεξιλόγιο ζει στο
   // `building-address` (SSoT). Χωρίς τη δήλωση βάφεται ωμό κλειδί — για προθεματισμένο κλειδί
@@ -182,14 +194,30 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
           ) : null}
         </section>
       ) : (
-        <p className="mt-1.5 flex items-start gap-1.5 text-[11px] text-muted-foreground">
-          {proposal.blockedBy === 'no-match' ? (
-            <Link2Off className="mt-px size-3 shrink-0" aria-hidden />
-          ) : (
-            <AlertCircle className="mt-px size-3 shrink-0" aria-hidden />
-          )}
-          {proposal.blockedBy ? t(BLOCKED_LABEL[proposal.blockedBy]) : null}
-        </p>
+        <section className="mt-1.5">
+          <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+            {proposal.blockedBy === 'no-match' ? (
+              <Link2Off className="mt-px size-3 shrink-0" aria-hidden />
+            ) : (
+              <AlertCircle className="mt-px size-3 shrink-0" aria-hidden />
+            )}
+            {proposal.blockedBy ? t(BLOCKED_LABEL[proposal.blockedBy]) : null}
+          </p>
+
+          {/* 🔴 **Μόνο στο `no-match`, και αυτό δεν είναι λεπτομέρεια.** Οι υπόλοιπες αιτίες
+              δεν θεραπεύονται με νέα επαφή: το `role-undecided` **βρήκε** τον άνθρωπο (νέα
+              επαφή θα έφτιαχνε **δίδυμο**), το `not-yet-writable` και το `unsupported-field`
+              δεν αφορούν καν πρόσωπο. Ένα κουμπί που εμφανίζεται όπου δεν βοηθά είναι
+              πρόσκληση να δημιουργηθούν διπλότυπες επαφές — δηλαδή θεραπεία που γεννά
+              χειρότερη ασθένεια από αυτήν που λύνει. */}
+          {proposal.blockedBy === 'no-match' && subject ? (
+            <TitleBlockContactCreation
+              subject={subject}
+              onCreated={onContactCreated}
+              disabled={busy}
+            />
+          ) : null}
+        </section>
       )}
     </li>
   );

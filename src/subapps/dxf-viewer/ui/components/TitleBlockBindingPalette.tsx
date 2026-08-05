@@ -18,6 +18,7 @@ import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { FileSignature } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FloatingPanel } from '@/components/ui/floating';
+import type { TitleBlockReading } from '@/types/title-block-reading';
 import { TitleBlockBindingPaletteStore } from '../../stores/TitleBlockBindingPaletteStore';
 import { ESC_PRIORITY, useEscapeHandler } from '../../systems/escape-bus';
 import { PANEL_ANCHORING, PanelPositionCalculator } from '../../config/panel-tokens';
@@ -25,6 +26,10 @@ import { TitleBlockProposalList } from './title-block-binding/TitleBlockProposal
 import { useTitleBlockProposals } from './title-block-binding/useTitleBlockProposals';
 
 const PALETTE_DOM_ID = 'dxf-title-block-binding-palette';
+
+/** Σταθερή αναφορά: νέος πίνακας ανά απόδοση θα ξανάφτιαχνε το `subject` κάθε γραμμής, και
+ *  μαζί του το `prefill` που είναι **εξάρτηση effect** μέσα στη φόρμα επαφής. */
+const EMPTY_READINGS: readonly TitleBlockReading[] = [];
 
 /** Σταθερή για πάντα: αλλαγή = «ξέχασε τη θέση όλων των χρηστών». */
 const PALETTE_PERSISTENCE_KEY = 'dxf.title-block-binding';
@@ -155,10 +160,12 @@ export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId, 
 
           <TitleBlockProposalList
             proposals={state.proposals}
+            readings={candidate?.readings ?? EMPTY_READINGS}
             fileRecordId={fileRecordId}
             levelId={levelId}
             layerName={candidate?.layerName ?? ''}
             projectId={projectId}
+            onContactCreated={state.refresh}
           />
         </section>
       </FloatingPanel.Content>

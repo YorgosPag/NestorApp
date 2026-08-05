@@ -11,7 +11,7 @@
  * @module subapps/dxf-viewer/ui/components/title-block-binding/useTitleBlockProposals
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getAllContacts } from '@/services/contacts-query.service';
 import { resolveContactDisplayName } from '@/services/contacts/ContactNameResolver';
 import { resolveTitleBlockProposals } from '@/lib/title-block/title-block-proposals';
@@ -65,7 +65,11 @@ export interface UseTitleBlockProposalsParams {
 
 export function useTitleBlockProposals(
   params: UseTitleBlockProposalsParams,
-): TitleBlockProposalsState & { selectLayer: (layerId: string) => void } {
+): TitleBlockProposalsState & {
+  selectLayer: (layerId: string) => void;
+  /** Ξαναδιαβάζει τις επαφές και **επαναϋπολογίζει** τις προτάσεις από τον ίδιο Λ2. */
+  refresh: () => void;
+} {
   const { levelId, projectId, enabled } = params;
   const scene = useLevelScene(levelId);
 
@@ -74,6 +78,19 @@ export function useTitleBlockProposals(
   const [error, setError] = useState<string | null>(null);
   const [chosenLayerId, setChosenLayerId] = useState<string | null>(null);
   const requestSeq = useRef(0);
+
+  /**
+   * Ένας μετρητής που **ζητά** νέο στιγμιότυπο επαφών — δεν κρατά δεδομένα.
+   *
+   * 🔴 **Γιατί μετρητής και όχι «πρόσθεσε τη νέα επαφή στη λίστα».** Το ADR-759 §4.5 το λέει
+   * ρητά: *«δεν μαντεύουμε το `contactId`, το ξαναπερνάμε από τον ίδιο Λ2. Ένα μονοπάτι, όχι
+   * δύο.»* Σπρώχνοντας τη νεογέννητη επαφή απευθείας στο `contacts`, το ταίριασμα θα γινόταν
+   * πάνω σε ό,τι **νομίζαμε** ότι γράψαμε — και το `name-exact` θα ήταν εγγυημένο **εξ
+   * ορισμού**, δηλαδή θα έπαυε να αποδεικνύει οτιδήποτε. Έτσι, αν το όνομα αποθηκεύτηκε
+   * διαφορετικά απ' ό,τι διαβάστηκε, η γραμμή **παραμένει** `no-match` και φαίνεται.
+   */
+  const [refreshSeq, setRefreshSeq] = useState(0);
+  const refresh = useCallback(() => setRefreshSeq((n) => n + 1), []);
 
   useEffect(() => {
     if (!enabled) return;
@@ -95,7 +112,7 @@ export function useTitleBlockProposals(
       }
     })();
     return () => { cancelled = true; };
-  }, [enabled]);
+  }, [enabled, refreshSeq]);
 
   const scan = useMemo(() => {
     if (!enabled || !scene) return null;
@@ -119,5 +136,6 @@ export function useTitleBlockProposals(
     truncated,
     error,
     selectLayer: setChosenLayerId,
+    refresh,
   };
 }

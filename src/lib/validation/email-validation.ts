@@ -42,6 +42,27 @@ export function isValidUrl(url: string): boolean {
 }
 
 /**
+ * A bare host (`www.nikolaou.com.gr`) → a URL that {@link isValidUrl} accepts.
+ *
+ * 🔴 **Why this exists in the same house as `isValidUrl`.** `extractAllUrlsFromText` deliberately
+ * accepts a bare `www.` host — see the note below — so everything it extracts from a drawing,
+ * an e-mail body or a scanned document arrives **without a scheme** and is therefore rejected by
+ * the very validator that guards the write. Producer and validator disagreed by construction,
+ * and every caller closed the gap privately: measured 2026-08-05, four call sites each carried
+ * their own `startsWith('http') ? v : \`https://${v}\`` (`UniversalClickableField`,
+ * `EmailContentRenderer` ×2, `contact-handler`). One question, one answer.
+ *
+ * `https` and not `http`: a site reachable over plain HTTP is reachable over neither more nor
+ * less than what the user typed, while the reverse choice would silently downgrade every link
+ * the app stores. Anything already carrying a scheme is returned untouched.
+ */
+export function ensureHttpUrl(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed.length === 0) return '';
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+/**
  * Extract a web address from free text — scheme, or a bare `www.` host.
  *
  * A scheme or a `www.` prefix is **required**, which deliberately misses `example.gr`

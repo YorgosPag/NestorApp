@@ -35,6 +35,19 @@ export interface PersonNameToken {
 /** Αρχικό πατρωνύμου: ένα έως τρία γράμματα και τελεία (`Ε.`, `ΕΥ.`, `ΓΕΩ.`). */
 const INITIAL = /^\p{L}{1,3}\.$/u;
 
+/**
+ * Είναι αυτή η λέξη **αρχικό πατρωνύμου** και όχι συστατικό ονόματος;
+ *
+ * Εξάγεται επειδή η **σειρά** του ονόματος το χρειάζεται ως σήμα, όχι μόνο η ταυτοποίηση:
+ * το `ΝΙΚΟΛΑΟΥ ΕΥ. ΙΩΑΝΝΗΣ` δηλώνει «επώνυμο–πατρώνυμο–όνομα» **επειδή** το αρχικό κάθεται
+ * στη μέση (δες {@link @/utils/greek-name-order}). Δεύτερο regex σε άλλο αρχείο θα ήταν
+ * sibling clone (N.18) — και το χειρότερο είδος, γιατί οι δύο ορισμοί του «τι είναι αρχικό»
+ * θα απέκλιναν σιωπηλά.
+ */
+export function isPatronymicInitial(raw: string): boolean {
+  return INITIAL.test(raw);
+}
+
 /** Συστολή: γράμματα, κάθετος, γράμματα — και οι δύο πλευρές υποχρεωτικές. */
 const CONTRACTION = /^(\p{L}+)\/(\p{L}+)$/u;
 
@@ -66,7 +79,7 @@ function foldFinalSigma(text: string): string {
 export function parsePersonName(text: string): PersonNameToken[] {
   const tokens: PersonNameToken[] = [];
   for (const word of splitIntoWords(text)) {
-    if (INITIAL.test(word.raw)) continue;
+    if (isPatronymicInitial(word.raw)) continue;
     const contracted = CONTRACTION.exec(word.raw);
     tokens.push({
       raw: word.raw,

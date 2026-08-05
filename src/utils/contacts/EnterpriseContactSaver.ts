@@ -277,9 +277,15 @@ export class EnterpriseContactSaver {
   }
 
   /**
-   * Get appropriate website type based on contact type
+   * Get appropriate website type based on contact type.
+   *
+   * 🔑 Public since 2026-08-05 (ADR-759 Φ1). Callers that build a `websites[]` entry **before**
+   * `convertToEnterpriseStructure` sees it — the title-block prefill is the first — must reach
+   * the same answer, not a second copy of this switch. The flat-field path below and the
+   * array path would otherwise classify the same website differently depending on which door
+   * the value came through.
    */
-  private static getWebsiteTypeForContactType(contactType: string): 'personal' | 'company' | 'other' {
+  static getWebsiteTypeForContactType(contactType: string): 'personal' | 'company' | 'other' {
     switch (contactType) {
       case 'individual':
         return 'personal';
@@ -294,8 +300,11 @@ export class EnterpriseContactSaver {
   /**
    * Get appropriate website label based on contact type
    * 🌐 i18n: Labels converted to i18n keys - 2026-01-18
+   *
+   * Public for the same reason as {@link getWebsiteTypeForContactType} — the label is an i18n
+   * **key** stored in the document, so a second spelling of it paints a raw key on screen.
    */
-  private static getWebsiteLabelForContactType(contactType: string): string {
+  static getWebsiteLabelForContactType(contactType: string): string {
     switch (contactType) {
       case 'individual':
         return 'contacts.website.personal';

@@ -17,7 +17,9 @@
 import React, { useCallback, useState } from 'react';
 import { targetRef } from '@/lib/title-block-binding-id';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { findProposalPerson } from '@/lib/title-block/contact-prefill';
 import type { BindingCandidate, BindingProposal } from '@/types/title-block-binding';
+import type { TitleBlockReading } from '@/types/title-block-reading';
 import { initialChoice, TitleBlockProposalRow } from './TitleBlockProposalRow';
 import { useTitleBlockApproval } from './useTitleBlockApproval';
 
@@ -44,19 +46,31 @@ const approvalKeyOf = (rowKey: string, chosen: BindingCandidate): string =>
 
 interface Props {
   readonly proposals: readonly BindingProposal[];
+  /**
+   * Οι **αναγνώσεις** του layer — η πρώτη ύλη πίσω από τις προτάσεις.
+   *
+   * Χρειάζονται για τη δημιουργία επαφής: η πρόταση κρατά μόνο το **όνομα** του προσώπου
+   * (`personName`), ενώ η προσυμπλήρωση θέλει ειδικότητα, τηλέφωνα, e-mail, site, έδρα — **και
+   * τα υπόλοιπα πρόσωπα του κελιού**, χωρίς τα οποία δεν ξεχωρίζει τι ανήκει στο γραφείο.
+   */
+  readonly readings: readonly TitleBlockReading[];
   /** 🔴 `null` στο cold load — το κουμπί κλείνει **με ορατό μήνυμα**, ποτέ `?? ''`. */
   readonly fileRecordId: string | null;
   readonly levelId: string | null;
   readonly layerName: string;
   readonly projectId?: string;
+  /** Ζητά νέο στιγμιότυπο βάσης + **επαναϋπολογισμό** από τον ίδιο Λ2 (ADR-759 §4.5). */
+  readonly onContactCreated: () => void;
 }
 
 export const TitleBlockProposalList: React.FC<Props> = ({
   proposals,
+  readings,
   fileRecordId,
   levelId,
   layerName,
   projectId,
+  onContactCreated,
 }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const approval = useTitleBlockApproval({ fileRecordId, levelId, layerName, projectId });
@@ -98,6 +112,8 @@ export const TitleBlockProposalList: React.FC<Props> = ({
                 blockerFor={approval.blockerFor}
                 onApprove={(req) => approvalKey && void approval.approve(approvalKey, req)}
                 onDismiss={() => dismiss(rowKey)}
+                subject={findProposalPerson(proposal, readings)}
+                onContactCreated={onContactCreated}
               />
               {outcome && outcome.supersededCount > 0 ? (
                 <li role="status" className="px-3 text-[11px] text-muted-foreground">
