@@ -10139,9 +10139,20 @@ ui/table-cell-editor/useTableCellDoubleClickEditor.ts         — το ίδιο,
 ακέραιη τιμή μοιράζεται σε ημιδιαφανείς σειρές pixel και δίνει θόλωμα (**έχει ήδη συμβεί εδώ**:
 ήταν 1,5). Το «όσο πιο λεπτό γίνεται» σταματά στο 1, και το φυλάει `Number.isInteger`.
 
+#### 🔴 Η καλωδίωση: **ΜΙΑ** ανάγνωση του προχείρου για ΟΛΟ το καρέ
+Ο `TableRenderer` διαβάζει το `getTableCopyMarquee()` **μία** φορά και δίνει την ίδια τιμή και
+στην απόφαση απόκρυψης και στον ζωγράφο — για τον ίδιο λόγο που το `activeCellRect` διαβάζεται
+μία φορά. Δύο κλήσεις getter είναι **δύο ευκαιρίες να απαντήσουν αλλιώς μέσα στο ίδιο καρέ**, και
+εδώ η ασυμφωνία έχει όνομα: «περίγραμμα κρυμμένο επειδή υπάρχει marquee» ενώ το marquee **δεν
+ζωγραφίστηκε ποτέ** ⇒ περιοχή με **καμία** γραμμή. Ο παλμός τρέχει σε **δικό του ρολόι** (~12 Hz,
+§48.2), άρα το παράθυρο δεν είναι θεωρητικό. Είναι η ίδια αρχή με τον κανόνα 2 του ADR-040
+(«event-time reads via getter»), εφαρμοσμένη μέσα στο καρέ αντί ανάμεσα σε καρέ.
+
 **Αρχεία**: `bim/table/table-range-merge-snap.ts` (το `sameBounds` δημόσιο) ·
 `rendering/entities/table/stamp-table-copy-marquee.ts` (`tableCopyMarqueeCoversSelection`) ·
-`rendering/entities/table/__tests__/table-selection-paint.test.ts` (τα anchors του πάχους).
+`rendering/entities/table/stamp-table-layout.ts` (ο ζωγράφος δέχεται την απόσυρση) ·
+`rendering/entities/TableRenderer.ts` (η **μία** ανάγνωση ανά καρέ) ·
+`rendering/entities/table/__tests__/table-selection-paint.test.ts` (anchors πάχους + απόσυρσης).
 
 ## §49 Η ΒΙΒΛΙΟΘΗΚΗ ΣΥΝΑΡΤΗΣΕΩΝ — **ΔΙΑΜΕΡΙΣΗ, ΟΧΙ ΛΙΣΤΑ** (2026-08-05) — **ΥΛΟΠΟΙΗΘΗΚΕ**
 

@@ -248,6 +248,18 @@ export function stampTableSelection(
   rc: StampTableContext,
   rectMm: TableRectMm,
   activeCellRectMm?: TableRectMm,
+  /**
+   * 🔴 ADR-739 §48.12 — **αποσύρει το περίγραμμα, όχι τη σκίαση.**
+   *
+   * `true` μόνο όταν τα «μυρμήγκια» του προχείρου καλύπτουν **ακριβώς** την ίδια περιοχή: τότε
+   * δύο γραμμές διεκδικούν το ίδιο pixel και η συμπαγής σβήνει την κίνηση. Η απόφαση **ποιος
+   * ρωτά** ζει στον `TableRenderer`, και η **γνώση** στο `stamp-table-copy-marquee.ts`
+   * (`tableCopyMarqueeCoversSelection`) — εδώ φτάνει έτοιμη απάντηση, γιατί αυτός ο ζωγράφος
+   * δεν επιτρέπεται να μάθει τι είναι πρόχειρο.
+   *
+   * Η προεπιλογή `false` είναι η **υπάρχουσα** συμπεριφορά byte-για-byte.
+   */
+  suppressOutline = false,
 ): void {
   const { ctx } = rc;
   ctx.save();
@@ -260,6 +272,7 @@ export function stampTableSelection(
   // υποδιαδρομή είναι πάντα τρύπα και ποτέ δεύτερο σχήμα.
   ctx.fill('evenodd');
   ctx.restore();
+  if (suppressOutline) return;
   strokeRectMm(
     rc,
     rectMm,

@@ -69,7 +69,10 @@ import { stampTableRangeGhost } from './table/stamp-table-range-ghost';
 import { getTableRangeTransferPreview } from '../../state/table-range-transfer-store';
 // 🔴 ADR-739 §48 — τα «μυρμήγκια» της αντιγραμμένης περιοχής. Ίδιος κανόνας ανάγνωσης με τα
 // δύο από πάνω· ο ζωγράφος είναι **και** ο φρουρός της μπαγιάτικης έκδοσης (δες εκεί).
-import { stampTableCopyMarquee } from './table/stamp-table-copy-marquee';
+import {
+  stampTableCopyMarquee,
+  tableCopyMarqueeCoversSelection,
+} from './table/stamp-table-copy-marquee';
 import { getTableCopyMarquee } from '../../state/table-copy-marquee-store';
 // 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των αναφορών του τύπου που γράφεται. **Κανένα
 // νέο store**: οι αναφορές είναι παράγωγο του προχείρου, που ταξιδεύει ήδη μέσα στον δρομέα
@@ -166,7 +169,20 @@ export class TableRenderer extends BaseEntityRenderer {
     // κείμενο**: είναι ημιδιαφανής, οπότε ένα στρώμα πάνω από τα γράμματα θα τα θόλωνε —
     // και η επιλογή υπάρχει ακριβώς για να διαβάσεις τι μάρκαρες.
     const selection = cursor ? tableFrameSelectionView(e, cursor, layout) : null;
-    if (selection) stampTableSelection(rc, selection.rectMm, activeCellRect);
+    // 🔴 ADR-739 §48.12 — **ΜΙΑ** ανάγνωση του προχείρου για ΟΛΟ το καρέ, για τον ίδιο λόγο που
+    // το `activeCellRect` διαβάζεται μία φορά παραπάνω: δύο getter κλήσεις είναι δύο ευκαιρίες
+    // να απαντήσουν αλλιώς μέσα στο ίδιο καρέ — εδώ θα σήμαινε «περίγραμμα κρυμμένο επειδή
+    // υπάρχει marquee» ενώ το marquee δεν ζωγραφίστηκε ποτέ, δηλαδή περιοχή **χωρίς καμία**
+    // γραμμή. Ο παλμός τρέχει σε δικό του ρολόι (~12 Hz), άρα δεν είναι θεωρητικό.
+    const copyMarquee = getTableCopyMarquee();
+    if (selection) {
+      stampTableSelection(
+        rc,
+        selection.rectMm,
+        activeCellRect,
+        tableCopyMarqueeCoversSelection(e, copyMarquee, selection.bounds),
+      );
+    }
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
     // ADR-750 Φ5 (Α2) — οι **διαγώνιοι** κρέμονται από τα κελιά, όχι από το πλέγμα: ταξιδεύουν
@@ -270,7 +286,7 @@ export class TableRenderer extends BaseEntityRenderer {
       // Εδώ ο κανόνας #3 είναι κρίσιμος όσο πουθενά αλλού: το marquee ζητά καρέ **μόνο του**
       // κάθε 80 ms, οπότε μια θέση μέσα στο cached raster θα σήμαινε πλήρη ανακατασκευή N
       // οντοτήτων 12 φορές το δευτερόλεπτο, για πάντα.
-      stampTableCopyMarquee(rc, e, layout, getTableCopyMarquee(), performance.now());
+      stampTableCopyMarquee(rc, e, layout, copyMarquee, performance.now());
       // 🔴 ADR-754 Γ4 — η λαβή συμπλήρωσης, **τελευταία μέσα στο πλέγμα**: είναι το μόνο
       // στοιχείο εδώ που λειτουργεί ως χερούλι, άρα τίποτα δεν επιτρέπεται να τη σκεπάσει.
       stampTableFillHandleOverlay(rc, layout, e, cursor, selection?.bounds);

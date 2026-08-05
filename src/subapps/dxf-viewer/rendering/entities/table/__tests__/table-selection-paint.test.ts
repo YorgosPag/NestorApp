@@ -186,6 +186,29 @@ describe('stampTableSelection — το περίγραμμα της περιοχ�
     ]);
   });
 
+  it('🔴 §48.12 ΤΟ ΠΕΡΙΓΡΑΜΜΑ ΑΠΟΣΥΡΕΤΑΙ όταν τα μυρμήγκια καλύπτουν την ίδια περιοχή', () => {
+    const log = createPaintLog();
+    stampTableSelection(createRc(log), RANGE, ACTIVE, true);
+
+    // Καμία συμπαγής γραμμή: δύο γραμμές στο ίδιο pixel δεν συνυπάρχουν και η συμπαγής έσβηνε
+    // την κίνηση — το ισχυρότερο κανάλι πληροφορίας του §48.5. Το λέπτυνμα σε 1 px δοκιμάστηκε
+    // πρώτο και δεν έφτασε: το πρόβλημα ήταν η **παρουσία**, όχι το πάχος.
+    expect(log.strokes).toHaveLength(0);
+  });
+
+  it('🔴 §48.12 Η ΣΚΙΑΣΗ ΜΕΝΕΙ — αποσύρεται το περίγραμμα, όχι η απάντηση «ποια κελιά»', () => {
+    const suppressed = createPaintLog();
+    stampTableSelection(createRc(suppressed), RANGE, ACTIVE, true);
+    const normal = createPaintLog();
+    stampTableSelection(createRc(normal), RANGE, ACTIVE);
+
+    // Η επιλογή εξακολουθεί να απαντά «ποια κελιά μάρκαρα» με τον ίδιο ακριβώς τρόπο· αυτό που
+    // φεύγει είναι μόνο η γραμμή που διεκδικούσε τη διαδρομή των μυρμηγκιών. Αν κάποτε
+    // «απλοποιηθεί» σε πρόωρο `return`, η σκίαση θα εξαφανιστεί σιωπηλά και αυτό θα χτυπήσει.
+    expect(suppressed.fills).toEqual(normal.fills);
+    expect(suppressed.fills.length).toBeGreaterThan(0);
+  });
+
   it('🔴 πάχος 1 px — λεπταίνει ώστε να μην πνίγει τα «μυρμήγκια» που κάθονται στην ΙΔΙΑ διαδρομή', () => {
     const log = createPaintLog();
     stampTableSelection(createRc(log), RANGE, ACTIVE);
