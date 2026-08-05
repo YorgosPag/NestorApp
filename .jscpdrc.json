@@ -1,13 +1,16 @@
 {
   "$schema": "https://raw.githubusercontent.com/kucherenko/jscpd/master/packages/jscpd/schema.json",
   "minTokens": 50,
-  "format": ["typescript", "tsx"],
+  "format": ["typescript", "tsx", "javascript"],
   "ignore": [
     "**/node_modules/**",
     "**/*.test.ts",
     "**/*.test.tsx",
+    "**/*.test.js",
+    "**/*.test.mjs",
     "**/*.spec.ts",
     "**/*.spec.tsx",
+    "**/*.spec.js",
     "**/__tests__/**",
     "**/__mocks__/**",
     "**/*.d.ts",

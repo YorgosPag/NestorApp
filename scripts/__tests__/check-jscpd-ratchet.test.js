@@ -352,7 +352,11 @@ describe('repo wiring', () => {
     expect(fs.existsSync(CONFIG_FILE)).toBe(true);
     const cfg = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
     expect(cfg.minTokens).toBe(50);
-    expect(cfg.format).toEqual(expect.arrayContaining(['typescript', 'tsx']));
+    // `javascript` is NOT decoration: without it every `.js` file is invisible to
+    // jscpd, so `npm run jscpd:diff scripts/foo.js` answered "0 clones in 0 files"
+    // — a green that meant "nobody looked" (ADR-584 §7, measured 2026-08-05:
+    // 202 real clones in scripts/). The behavioural proof lives in Group 10.
+    expect(cfg.format).toEqual(expect.arrayContaining(['typescript', 'tsx', 'javascript']));
   });
 
   it('ships a valid, in-range baseline', () => {
@@ -362,4 +366,76 @@ describe('repo wiring', () => {
     expect(typeof b.clones).toBe('number');
     expect(b.clones).toBeGreaterThanOrEqual(0);
   });
+});
+
+// =============================================================================
+// Group 10 — the diff gate can actually SEE a JavaScript clone
+//
+// This is the anchor that matters. Group 9 only asserts what the config *says*;
+// this one spawns the real gate over two real `.js` files and demands a BLOCK.
+// Drop "javascript" from `.jscpdrc.json` and this goes red — which is the whole
+// point: a declarative assertion can be satisfied by a config that still scans
+// nothing, and "0 clones in 0 files" is indistinguishable from "clean".
+// =============================================================================
+describe('diff gate — JavaScript coverage (ADR-584 §7)', () => {
+  // Two ~60-token twins. Kept well above minTokens:50 so the fixture stays a
+  // clone even if a future prettier pass reshuffles a line or two.
+  const TWIN = (fnName) => `'use strict';
+function ${fnName}(records, options) {
+  const out = [];
+  for (const record of records) {
+    if (!record || typeof record !== 'object') continue;
+    const id = String(record.id || '').trim();
+    if (!id) continue;
+    const scoped = options && options.companyId ? options.companyId : null;
+    if (scoped && record.companyId !== scoped) continue;
+    out.push({ id, name: record.name || '(unnamed)', companyId: record.companyId || null });
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
+module.exports = { ${fnName} };
+`;
+
+  // The fixtures MUST live inside the repo: runDiff() resolves every argument
+  // with `path.join(PROJECT_ROOT, f)` and drops what does not exist, so an
+  // absolute os.tmpdir() path is silently filtered out and the gate reports
+  // "no staged src files to scan" — a green that proves nothing. Found by
+  // writing this very anchor (2026-08-05).
+  const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+  const REL_DIR = `scripts/jscpd-anchor-tmp-${process.pid}`;
+  const relA = `${REL_DIR}/twin-alpha.js`;
+  const relB = `${REL_DIR}/twin-beta.js`;
+
+  beforeAll(() => {
+    fs.mkdirSync(path.join(PROJECT_ROOT, REL_DIR), { recursive: true });
+    // Different function names on purpose: jscpd is token-based, so renaming
+    // does NOT hide the clone. That independence is why CHECK 3.28 exists
+    // alongside the name/regex-based CHECK 3.18.
+    fs.writeFileSync(path.join(PROJECT_ROOT, relA), TWIN('normaliseRecords'));
+    fs.writeFileSync(path.join(PROJECT_ROOT, relB), TWIN('sanitiseEntries'));
+  });
+
+  afterAll(() => {
+    fs.rmSync(path.join(PROJECT_ROOT, REL_DIR), { recursive: true, force: true });
+  });
+
+  it('BLOCKS two .js siblings that duplicate each other', () => {
+    const r = spawnSync('node', [SCRIPT_UNDER_TEST, '--diff', relA, relB], {
+      cwd: PROJECT_ROOT,
+      encoding: 'utf8',
+      env: { ...process.env },
+    });
+    expect(r.status).toBe(1);
+    expect(r.stderr + r.stdout).toMatch(/CHECK 3\.28/);
+  }, 120000);
+
+  it('passes a single .js file with no twin (no false positive)', () => {
+    const r = spawnSync('node', [SCRIPT_UNDER_TEST, '--diff', relA], {
+      cwd: PROJECT_ROOT,
+      encoding: 'utf8',
+      env: { ...process.env },
+    });
+    expect(r.status).toBe(0);
+  }, 120000);
 });

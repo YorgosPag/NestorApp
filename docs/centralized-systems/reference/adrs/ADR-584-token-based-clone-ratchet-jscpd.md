@@ -91,13 +91,22 @@ Before declaring any centralization "done", the agent runs `npm run jscpd:diff <
 
 ## Baseline & maintenance
 
-- **Baseline**: 3059 clones / 36135 duplicated lines (2.31%) over `src/`, min-tokens 50, 2026-07-16 (`.jscpd-baseline.json` — SSoT). Ξεκίνησε στα 4548 / 58309 (3.92%) στις 2026-07-08.
+- **Baseline**: ⚠️ **άνοιξε το `.jscpd-baseline.json` — αυτή η γραμμή έχει μπαγιατέψει τρεις φορές** (έγραφε 4548, μετά 3059· το αρχείο έλεγε 2641 στις 2026-07-25). Πάνω σε `src/`, min-tokens 50. Ξεκίνησε στα 4548 / 58309 (3.92%) στις 2026-07-08.
+  - 📅 **2026-08-05, μετρημένο με τη μηχανή της πύλης**: το `src/` δίνει **2313**, δηλαδή **−328 κάτω** από την καταγεγραμμένη baseline. Πρόοδος τρίτων που **δεν κλειδώθηκε ποτέ** — μέχρι να τρέξει `npm run jscpd:baseline`, το ratchet επιτρέπει σιωπηλή παλινδρόμηση 328 κλώνων.
 - After legitimate de-duplication, run `npm run jscpd:baseline` to lock progress downward.
 - The baseline **never rises** without an explicit, justified refresh.
 
 ---
 
 ## Changelog
+
+- **2026-08-05** — 🔴 **§7 — το CHECK 3.28 ήταν δομικά τυφλό σε ΚΑΘΕ αρχείο `.js`.** Το `.jscpdrc.json` όριζε `format: ["typescript","tsx"]`, οπότε ο κανόνας **N.18** («πριν πεις done, `npm run jscpd:diff`») απαντούσε για `scripts/*.js` **«0 clones σε 0 αρχεία»** — πράσινο που σήμαινε **«δεν κοίταξα»**. **Τέταρτη εμφάνιση** του «0 = κανείς δεν κοίταξε» (μετά i18n / ssot-discover / tenant-scope).
+  - **Μετρήθηκε πρώτα, αποφασίστηκε μετά** (η σειρά είναι το ουσιώδες). Με τη **μηχανή της πύλης** — όχι με CLI `--format`, που παρακάμπτει τα `ignore` του config και έδινε 5085 αντί για 2313 στο `src/`: **το μάθημα του ADR-749 «διάλεκτος που δεν εκτελεί κανείς»**.
+  - **Η προσθήκη `"javascript"` έχει ΜΗΔΕΝΙΚΗ επίδραση στο `src/` ratchet**: 2313 πριν, 2313 μετά (τα 10 `.js` του `src/` δίνουν 0 κλώνους). Άρα μηδέν ρίσκο, και το N.18 σταματά να δίνει ψεύτικη διαβεβαίωση. Προστέθηκαν και `*.test.js` / `*.spec.js` / `*.test.mjs` στα `ignore`, για συμμετρία με τα `.ts` (μετρημένο: **0** από τους 202 κλώνους αγγίζει πια αρχείο test).
+  - 🔑 **Δεύτερο τυφλό σημείο, ανεξάρτητο από το πρώτο**: `check-jscpd-ratchet.js:71` — η ρίζα σάρωσης του **Layer 2** είναι `src` και μόνο. Το `scripts/` (**202 κλώνοι / 3.372 διπλές γραμμές / 6,70%**, ~3,5× η πυκνότητα του `src/`) μένει εκτός ratchet **ανεξάρτητα** από το format. Ανοιχτή απόφαση εύρους — **δεν** την παίρνει πράκτορας.
+  - ⚠️ **Η πρόβλεψη «υψηλά ψευδώς θετικά επειδή τα ratchet scripts μοιάζουν εκ σχεδιασμού» ΔΕΝ επιβεβαιώθηκε ως κυρίαρχη.** Ταξινόμηση των 3.372 γραμμών: **28,5%** scaffolding πυλών (η αναμενόμενη κατηγορία) · **27,2%** `migrations.*.backfillCompanyId.js` — ένα σχεδόν ταυτόσημο script **ανά συλλογή**, γνήσιο και διορθώσιμο · **24,2%** αταξινόμητο · 11,0% one-off firebase ops · 7,8% qa-tests · 1,2% shared parsers.
+  - **Άγκυρα, όχι σχόλιο** (ADR-587 §6.1): νέο Group 10 στο `check-jscpd-ratchet.test.js` που **εκτελεί** την πύλη πάνω σε δύο πραγματικά `.js` δίδυμα και απαιτεί μπλοκάρισμα — μια δηλωτική assertion στο config θα ικανοποιούνταν από ρύθμιση που εξακολουθεί να μη σαρώνει τίποτα. Tests **39 → 41**, **μετάλλαξη επαληθευμένη 2/2** (αφαίρεση του `"javascript"` ⇒ και οι δύο άγκυρες κόκκινες, ενώ το «κανένα ψευδώς θετικό» μένει σωστά πράσινο).
+  - ⚠️ **Το ίδιο το anchor αποκάλυψε τρίτο σημείο**: το `runDiff()` φιλτράρει με `path.join(PROJECT_ROOT, f)`, άρα δέχεται **μόνο repo-relative** διαδρομές — fixture σε `os.tmpdir()` πετάγεται σιωπηλά και η πύλη λέει «no staged src files to scan». **Πράσινο που δεν απέδειξε τίποτα**, μέσα στο ίδιο το test που γράφτηκε για να αποδείξει.
 
 - **2026-07-21** — Clone dedup — **`WallRenderer` ↔ `StairRenderer`: το hover-halo glow-context pre-pass**. **UNCOMMITTED.** 2 renderers + 1 νέο SSoT module / 1 domain (`bim/renderers`). Προϋπάρχον clone (εκτός της armed-orange συνεδρίας — αποδεδειγμένο με `git diff -U0` στο handoff), Boy-Scout pass κατ' εντολή Giorgio.
   - **Τι ήταν διπλό.** Και οι δύο renderers, στη φάση `highlighted`, έτρεχαν **ταυτόσημο** glow-CONTEXT boilerplate γύρω από την (διαφορετική) κλήση outline: `save` → `shadowBlur=0`/`shadowColor='transparent'` (το shadow glow είναι GPU-ακριβό, γι' αυτό double-stroke) → `strokeStyle=HOVER_HIGHLIGHT.ENTITY.glowColor` → `lineWidth = max(1, entity.lineWidth) + glowExtraWidth` → `globalAlpha=glowOpacity` → `setLineDash([])` → `restore`. Η **μόνη** διαφορά ήταν η μεσαία γραμμή σχεδίασης (`strokePerimeterOutline` inner/outer ring του τοίχου vs `drawStairPerimeterOutline` της σκάλας). **jscpd-ΟΡΑΤΟ** (>50 tokens) — γι' αυτό το έπιασε το CHECK 3.28 diff ενώ το name-based CHECK 3.18 ήταν τυφλό (διαφορετικά ονόματα συναρτήσεων → structural clone, ADR-584 ο λόγος ύπαρξης).

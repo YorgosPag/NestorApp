@@ -570,6 +570,9 @@ npm run jscpd:diff <τα staged src αρχεία σου>
 
 **Config SSoT:** `.jscpdrc.json` (min-tokens **50**, formats, ignores). **ΜΗΝ** hardcode-άρεις δεύτερο threshold. **ΜΗΝ** φτιάξεις νέο ratchet engine — υπάρχει `scripts/check-jscpd-ratchet.js` (μιμείται το `check-ssot-discover-ratchet.js`).
 
+⚠️ **Διορθώθηκε 2026-08-05 (ADR-584 §7): μέχρι σήμερα το `format` ήταν `["typescript","tsx"]`, άρα ο κανόνας αυτός ήταν ΔΟΜΙΚΑ ΤΥΦΛΟΣ σε κάθε `.js`** — το `jscpd:diff scripts/foo.js` απαντούσε «0 clones σε **0 αρχεία**», δηλαδή **πράσινο που σήμαινε «δεν κοίταξα»** (τέταρτη εμφάνιση του σχήματος). Πλέον `["typescript","tsx","javascript"]`· μετρημένο ότι η προσθήκη αφήνει το `src/` ratchet **αμετάβλητο** (2313 → 2313). Άγκυρα: Group 10 στο `check-jscpd-ratchet.test.js` **εκτελεί** την πύλη σε δύο `.js` δίδυμα (41 tests, μετάλλαξη 2/2).
+🔴 **Παραμένει τυφλό σημείο, μη λυμένο**: η ρίζα σάρωσης του **Layer 2** είναι `src` και μόνο (`check-jscpd-ratchet.js:71`) ⇒ το `scripts/` (**202 κλώνοι / 6,70%**) **δεν μπαίνει** στο ratchet, όσο σωστό κι αν είναι το format. Το `jscpd:diff` σε staged `scripts/*.js` **δουλεύει** πλέον· το ratchet **όχι**.
+
 **Μετά από νόμιμο de-duplication:** `npm run jscpd:baseline` (κλείδωσε την πρόοδο προς τα κάτω). Baseline: **2.641 clones / 30.018 γρ. / 1,866%** (`.jscpd-baseline.json`, 2026-07-25 — ⚠️ αυτή η γραμμή έλεγε «4548 clones (2026-07-08)», **μπαγιάτικη κατά 1.907**· διορθώθηκε 2026-08-05 ανοίγοντας το JSON. **Άνοιξε το αρχείο πριν επικαλεστείς αριθμό.**)
 
 ---
