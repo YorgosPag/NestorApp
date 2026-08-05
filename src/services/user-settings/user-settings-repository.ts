@@ -106,6 +106,10 @@ class UserSettingsRepository {
       (err) => {
         logger.warn('Subscription error', { error: err.message, docId: this.docId });
       },
+      // tenant-scope-exempt: ο μισθωτής είναι ΜΕΣΑ στο κλειδί — το `docId` παράγεται από
+      // `buildUserPreferencesDocId(userId, companyId)`, άρα η απομόνωση είναι δομική και όχι
+      // ερώτημα. Πρόκειται για `subscribeDoc` (ένα έγγραφο by-id), όχι list query: φίλτρο
+      // `tenantId ==` δίπλα σε ρητό id δεν προσθέτει τίποτα και θα ήταν παραπλανητικό.
       { tenantOverride: 'skip' },
     );
 

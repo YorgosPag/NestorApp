@@ -1,0 +1,89 @@
+/**
+ * FIXTURE — ΚΑΝΟΝΑΣ 3: `firestoreQueryService.*(KEY, { tenantOverride: 'skip' })`
+ *
+ * Το κενό που κλείνει ο R3: R1 κοιτά direct `query()`, R2 κοιτά Admin SDK — και **κανένας**
+ * δεν κοιτούσε το κεντρικοποιημένο API του ADR-214, δηλαδή τη διαδρομή που όλος ο κώδικας
+ * ενθαρρύνεται να χρησιμοποιεί. Εκεί το φίλτρο μισθωτή σβήνει με **μία λέξη**.
+ *
+ * Κάθε συνάρτηση εδώ ονομάζεται με την κατάσταση που ΟΦΕΙΛΕΙ να πάρει.
+ * Δεν μεταγλωττίζεται (κατάληξη `.fixture`) — είναι είσοδος του AST σαρωτή.
+ */
+
+import { where, orderBy } from 'firebase/firestore';
+import { firestoreQueryService } from '@/services/firestore/firestore-query.service';
+
+// ── violation: συλλογή companyId-scoped, skip χωρίς μία γραμμή αιτιολογίας ────────────────
+// Αυτό είναι ακριβώς το σχήμα του ζωντανού `getProperties()` (properties.service.ts:93).
+export async function violation_scopedCollectionNoReason() {
+  const result = await firestoreQueryService.getAll('PROPERTIES', {
+    constraints: [orderBy('name', 'asc')],
+    tenantOverride: 'skip',
+  });
+  return result.documents;
+}
+
+// ── violation: το χειροκίνητο where() ΔΕΝ σώζει, γιατί μπαίνει ΥΠΟ ΣΥΝΘΗΚΗ ────────────────
+// Σχήμα του EnterpriseCompanySettingsService: αν το `tenantId` λείπει, το φίλτρο δεν μπαίνει
+// ποτέ και το skip έχει ήδη απαγορεύσει στον πυρήνα να βάλει το δικό του.
+export async function violation_conditionalManualFilter(tenantId?: string) {
+  const constraints = [where('isActive', '==', true)];
+  if (tenantId) {
+    constraints.unshift(where('tenantId', '==', tenantId));
+  }
+  return firestoreQueryService.getAll('CONTACTS', { constraints, tenantOverride: 'skip' });
+}
+
+// ── exempt: αιτιολόγηση ΠΑΝΩ ΑΠΟ ΤΗΝ ΚΛΗΣΗ ───────────────────────────────────────────────
+// ⚠️ Η άγκυρα είναι η **κλήση**, όχι η δήλωση της συνάρτησης: σχόλιο πάνω από το
+// `export async function` έχει γραμμή κώδικα ανάμεσα, άρα ο `isExempt` σταματά πριν το δει.
+// Αυτό είναι σωστό — αλλιώς ένας λόγος στην κορυφή θα κάλυπτε **κάθε** query του σώματος.
+export async function exempt_reasonAboveCall() {
+  // tenant-scope-exempt: εργασία συντήρησης server-side — ο εκκαθαριστής οφείλει να δει τα
+  // ληγμένα αρχεία ΟΛΩΝ των μισθωτών, αλλιώς όσα ανήκουν αλλού δεν σβήνονται ποτέ.
+  return firestoreQueryService.getAll('FILES', {
+    constraints: [where('purgeAt', '<=', 'now')],
+    tenantOverride: 'skip',
+  });
+}
+
+// ── exempt: αιτιολόγηση ΔΙΠΛΑ ΣΤΟ tenantOverride (πολυγραμμική κλήση) ─────────────────────
+// 🔑 Η δεύτερη άγκυρα. Η κλήση πιάνει 8 γραμμές· ο αναγνώστης γράφει τον λόγο δίπλα στο
+// πράγμα που εξαιρεί, όχι πάνω από την ανοιχτή παρένθεση. Χωρίς αυτήν, ο κανόνας θα
+// απέρριπτε την τεκμηριωμένη εξαίρεση ενώ δεχόταν τη βιαστική μονόγραμμη.
+export function exempt_reasonBesideOverride(userId: string, companyId: string) {
+  return firestoreQueryService.subscribeDoc(
+    'USER_PREFERENCES',
+    buildDocId(userId, companyId),
+    (raw: unknown) => raw,
+    (err: Error) => err,
+    // tenant-scope-exempt: ο μισθωτής είναι ΜΕΣΑ στο κλειδί — subscribeDoc by-id, όχι list
+    // query· φίλτρο δίπλα σε ρητό id δεν προσθέτει τίποτα και θα ήταν παραπλανητικό.
+    { tenantOverride: 'skip' },
+  );
+}
+
+// ── exempt χωρίς ΛΟΓΟ ⇒ ΔΕΝ αναγνωρίζεται (violation) ─────────────────────────────────────
+// tenant-scope-exempt:
+export async function violation_exemptWithoutReason() {
+  return firestoreQueryService.getAll('OBLIGATION_TEMPLATES', { tenantOverride: 'skip' });
+}
+
+// ── not-tenant-scoped: η ΑΥΘΕΝΤΙΑ (tenant-config) λέει mode=none ──────────────────────────
+// Το skip εδώ είναι περιττό, όχι επικίνδυνο: δεν υπάρχει φίλτρο να παρακαμφθεί.
+export async function notScoped_authoritySaysNone(tenantId?: string) {
+  const constraints = tenantId ? [where('tenantId', '==', tenantId)] : [];
+  return firestoreQueryService.getAll('SECURITY_ROLES', { constraints, tenantOverride: 'skip' });
+}
+
+// ── unanalyzable: το κλειδί δεν προκύπτει στατικά ⇒ ΠΟΤΕ violation ────────────────────────
+// Η άγνοια δεν είναι ενοχή (πήχης ≤10% ψευδώς θετικών).
+export async function unanalyzable_dynamicKey(key: 'PROPERTIES' | 'CONTACTS') {
+  return firestoreQueryService.getAll(key, { tenantOverride: 'skip' });
+}
+
+// ── ok: καθόλου skip ⇒ ο R3 δεν έχει καν σημείο να κρίνει ─────────────────────────────────
+export async function noSite_noOverrideAtAll() {
+  return firestoreQueryService.getAll('PROPERTIES', { constraints: [orderBy('name')] });
+}
+
+declare function buildDocId(userId: string, companyId: string): string;

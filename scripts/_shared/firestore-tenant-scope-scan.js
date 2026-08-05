@@ -98,7 +98,7 @@ const EXEMPT_RE = /tenant-scope-exempt:\s*\S+/;
 
 /**
  * @typedef {Object} Site
- * @property {'R1-client'|'R2-admin'} rule
+ * @property {'R1-client'|'R2-admin'|'R3-service'} rule
  * @property {string}      file
  * @property {number}      line
  * @property {string|null} collectionKey
@@ -438,6 +438,125 @@ function collectChainedReassignments(scope, name, fieldConstants, out) {
 }
 
 // ---------------------------------------------------------------------------
+// ΚΑΝΟΝΑΣ 3 — το κεντρικό API: `firestoreQueryService.*(KEY, { tenantOverride: 'skip' })`
+// ---------------------------------------------------------------------------
+
+/**
+ * 🔴 ΤΟ ΚΕΝΟ ΠΟΥ ΚΛΕΙΝΕΙ (μετρημένο 2026-08-05)
+ *
+ * Οι R1/R2 κοιτούν **direct** `query()` και **Admin SDK** αλυσίδες. Καμία πύλη —
+ * ούτε το 3.10, ούτε το 3.15, ούτε ο R1/R2 — δεν κοιτούσε τη διαδρομή μέσω του
+ * **κεντρικοποιημένου** `firestoreQueryService` (ADR-214), δηλαδή ακριβώς το API
+ * που όλος ο κώδικας ενθαρρύνεται να χρησιμοποιεί. Εκεί το φίλτρο μισθωτή
+ * απενεργοποιείται με **μία λέξη**:
+ *
+ *     firestoreQueryService.getAll('PROPERTIES', { tenantOverride: 'skip' })
+ *
+ * και `buildTenantConstraints` κάνει `if (tenantOverride === 'skip') return []`.
+ * Μετρήθηκαν **16** τέτοια σημεία σε 11 αρχεία· το `getProperties()` — ζωντανό,
+ * καλούμενο από το `useContactsState` — παρακάμπτει έτσι το `companyId` σε
+ * συλλογή που η **αυθεντία** (`tenant-config.ts`) δηλώνει `companyId`-scoped,
+ * **χωρίς μία γραμμή σχολίου**.
+ *
+ * 🔑 ΤΟ ΣΧΗΜΑ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΜΕ ΤΟ ΓΕΝΕΣΙΟΥΡΓΟ: «η πύλη κοιτά ένα σχήμα κειμένου·
+ * ο κώδικας γράφτηκε σε άλλο». Η μόνη διαφορά είναι ότι εδώ το «άλλο σχήμα» είναι
+ * το **συνιστώμενο** — γι' αυτό είναι χειρότερο, όχι καλύτερο.
+ *
+ * ⚠️ Ο κανόνας **ΔΕΝ απαγορεύει** το `skip`: υπάρχουν νόμιμες χρήσεις (shared/system
+ * content, batch-get με `documentId()`, server-side κώδικας που βλέπει όλους τους
+ * μισθωτές εκ σχεδιασμού). Απαιτεί **αιτιολόγηση**, με το ίδιο ακριβώς σύστημα
+ * εξαίρεσης του R1/R2 (`// tenant-scope-exempt: <λόγος>`, λόγος υποχρεωτικός).
+ * Η νόμιμη χρήση κοστίζει μία γραμμή· η αθέλητη σταματά.
+ *
+ * ⚠️ Το πρώτο όρισμα είναι **CollectionKey**, όχι όνομα συλλογής — γι' αυτό ο κανόνας
+ * δεν χρησιμοποιεί το `resolveCollectionArg` (που ερμηνεύει το string literal ως
+ * *όνομα*). Κλειδί που δεν προκύπτει στατικά ⇒ `unanalyzable`, **ποτέ** violation.
+ */
+const QUERY_SERVICE_RE = /\bfirestoreQueryService\s*\./;
+
+/**
+ * `{ … tenantOverride: 'skip' … }` — επιστρέφει τον **κόμβο** της ανάθεσης (όχι boolean),
+ * ώστε ο κανόνας να ξέρει σε ποια γραμμή κάθεται η ίδια η παράκαμψη.
+ *
+ * 🔴 ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ Ο ΚΟΜΒΟΣ ΚΑΙ ΟΧΙ ΣΚΕΤΟ `true`: οι κλήσεις του service είναι
+ * **πολυγραμμικές** (`subscribeDoc(key, id, cb, onErr, { … })` πιάνει 8 γραμμές). Ο
+ * αναγνώστης γράφει τον λόγο **δίπλα στο `tenantOverride`**, όχι πάνω από την ανοιχτή
+ * παρένθεση δέκα γραμμές πιο πάνω. Η πρώτη εκδοχή κοιτούσε μόνο τη γραμμή της κλήσης και
+ * **απέρριπτε την τεκμηριωμένη εξαίρεση ενώ δεχόταν τη βιαστική μονόγραμμη** — ακριβώς το
+ * σφάλμα που το σχόλιο του {@link isExempt} προειδοποιεί να μην επαναληφθεί.
+ *
+ * @returns {ts.PropertyAssignment|null}
+ */
+function findSkipOverride(node) {
+  if (!ts.isObjectLiteralExpression(node)) return null;
+  for (const p of node.properties) {
+    if (
+      ts.isPropertyAssignment(p) &&
+      ts.isIdentifier(p.name) &&
+      p.name.text === 'tenantOverride' &&
+      ts.isStringLiteralLike(p.initializer) &&
+      p.initializer.text === 'skip'
+    ) {
+      return p;
+    }
+  }
+  return null;
+}
+
+/**
+ * `'PROPERTIES'` → `{key:'PROPERTIES', name:'properties'}` όταν το κλειδί υπάρχει στο
+ * μητρώο συλλογών· `null` όταν είναι δυναμικό (μεταβλητή, παράμετρος, ένωση).
+ */
+function resolveCollectionKeyArg(expr, collectionsMap) {
+  if (!expr || !ts.isStringLiteralLike(expr)) return null;
+  const key = expr.text;
+  if (!collectionsMap.has(key)) return null;
+  return { key, name: collectionsMap.get(key) };
+}
+
+function scanServiceOverrides(filePath, src, sf, ctx, lines, sites) {
+  if (!/tenantOverride/.test(src) || !QUERY_SERVICE_RE.test(src)) return;
+
+  (function visit(node) {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.expression.getText(sf) === 'firestoreQueryService'
+    ) {
+      // Το options object δεν έχει σταθερή θέση: `getAll(key, opts)` αλλά
+      // `subscribeDoc(key, id, cb, onErr, opts)`. Ψάχνουμε σε ΟΛΑ τα ορίσματα —
+      // υπόθεση θέσης εδώ θα ήταν σιωπηλή απώλεια, όχι απλοποίηση.
+      let skipNode = null;
+      for (const a of node.arguments) {
+        skipNode = findSkipOverride(a);
+        if (skipNode) break;
+      }
+      if (skipNode) {
+        const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+        const skipLine = sf.getLineAndCharacterOfPosition(skipNode.getStart(sf)).line;
+        sites.push(
+          classify({
+            rule: 'R3-service',
+            file: filePath,
+            line: line + 1,
+            coll: resolveCollectionKeyArg(node.arguments[0], ctx.collections),
+            fields: new Set(),
+            unresolved: false,
+            ctx,
+            // ΔΥΟ άγκυρες: πάνω από την κλήση **ή** πάνω από το ίδιο το `tenantOverride`.
+            // Και οι δύο θέσεις είναι φυσικές για τον αναγνώστη — βλ. findSkipOverride.
+            exempt: isExempt(lines, line) || isExempt(lines, skipLine),
+            ssotGuaranteed: false,
+            skipOverride: true,
+          }),
+        );
+      }
+    }
+    ts.forEachChild(node, visit);
+  })(sf);
+}
+
+// ---------------------------------------------------------------------------
 // Κατηγοριοποίηση — **ρητή**, ποτέ σιωπηλή απόρριψη
 // ---------------------------------------------------------------------------
 
@@ -449,7 +568,7 @@ function collectChainedReassignments(scope, name, fieldConstants, out) {
  *
  * @returns {Site}
  */
-function classify({ rule, file, line, coll, fields, unresolved, ctx, exempt, ssotGuaranteed, requiresWhere, hasWhere }) {
+function classify({ rule, file, line, coll, fields, unresolved, ctx, exempt, ssotGuaranteed, requiresWhere, hasWhere, skipOverride }) {
   const base = {
     rule, file, line,
     collectionKey: coll ? coll.key : null,
@@ -469,6 +588,18 @@ function classify({ rule, file, line, coll, fields, unresolved, ctx, exempt, sso
   if (requiresWhere && !hasWhere) {
     // Σκέτο `.collection(X).get()` / `.doc(id)` — άλλη ερώτηση, το κρίνουν τα rules.
     return { ...withMode, status: 'not-tenant-scoped', detail: 'χωρίς where() — δεν είναι list query' };
+  }
+  // R3: εδώ ΔΕΝ ρωτάμε «ποια πεδία φιλτράρονται». Το `tenantOverride: 'skip'` είναι
+  // **ρητή εντολή στον πυρήνα να ΜΗΝ βάλει το φίλτρο** (`buildTenantConstraints` →
+  // `if (skip) return []`). Ένα χειροκίνητο `where('tenantId', …)` δίπλα του δεν είναι
+  // απάντηση: μπορεί να μπαίνει **υπό συνθήκη** — και τότε η γραμμή που κρίνεται είναι
+  // ακριβώς η διαδρομή όπου δεν μπήκε. Άρα: ή αιτιολογείς, ή είναι παράβαση.
+  if (skipOverride) {
+    // Inline (όπως τα υπόλοιπα σύντομα returns εδώ) — και **επίτηδες** όχι στο πολυγραμμικό
+    // σχήμα του τελικού κλάδου: το Μ0 του mutation suite στοχεύει το `status: 'violation',`
+    // με εσοχή 4, και δεύτερη ίδια εμφάνιση θα το έκανε να μεταλλάσσει λάθος κλάδο ⇒ «5/5
+    // σκοτωμένες» χωρίς να έχει τρέξει τίποτα. Η αναγνωσιμότητα εδώ είναι *συμβόλαιο*.
+    return { ...withMode, status: 'violation', detail: `tenantOverride:'skip' σε ${tenant.mode}-scoped «${coll.name || coll.key}» χωρίς αιτιολόγηση` };
   }
   // 🔴 Η ΣΕΙΡΑ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ: **πρώτα η μέτρηση του ίδιου του call site**,
   // μετά οτιδήποτε συμπερασματικό. Η ανάποδη σειρά είναι το σφάλμα που έφτιαξε
@@ -520,6 +651,7 @@ function scanFile(filePath, ctx) {
   const sites = [];
   scanClientQueries(filePath, src, sf, ctx, lines, sites);
   scanAdminQueries(filePath, src, sf, ctx, lines, sites);
+  scanServiceOverrides(filePath, src, sf, ctx, lines, sites);
   return sites;
 }
 
@@ -532,6 +664,9 @@ module.exports = {
   isPassedToScopeHelper,
   enclosingScope,
   isExempt,
+  findSkipOverride,
+  resolveCollectionKeyArg,
   SCOPE_HELPER_RE,
   EXEMPT_RE,
+  QUERY_SERVICE_RE,
 };

@@ -15,6 +15,8 @@ import {
   where,
   serverTimestamp,
   type DocumentData,
+  type DocumentReference,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
@@ -53,6 +55,77 @@ function calculatePurgeDate(category: FileCategory): Date {
   return purgeDate;
 }
 
+/** Lifecycle timestamp that accompanies `createdAt` when normalizing a raw doc */
+type LifecycleTimestampField = 'trashedAt' | 'archivedAt' | 'updatedAt';
+
+/**
+ * Load a FILES document and fail loudly when it does not exist.
+ * Single source for the read-then-assert prologue of every mutation below.
+ */
+async function loadFileDocOrThrow(fileId: string): Promise<{
+  docRef: DocumentReference;
+  data: DocumentData;
+}> {
+  const docRef = doc(db, COLLECTIONS.FILES, fileId);
+
+  const docSnap = await getDoc(docRef);
+  if (!docSnap.exists()) {
+    throw new Error(`FileRecord not found: ${fileId}`);
+  }
+
+  return { docRef, data: docSnap.data() };
+}
+
+/**
+ * Normalize a raw Firestore doc into a FileRecord (ISO timestamps), or null
+ * when it fails the runtime shape guard.
+ */
+function normalizeFileRecord(
+  raw: DocumentData,
+  timestampField: LifecycleTimestampField
+): FileRecord | null {
+  const normalized = {
+    ...raw,
+    id: raw.id as string,
+    createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
+    [timestampField]: fieldToISO(raw as Record<string, unknown>, timestampField) || raw[timestampField],
+  };
+
+  return isFileRecord(normalized) ? normalized : null;
+}
+
+/**
+ * Run a tenant-scoped FILES query with the optional entity filters applied.
+ * 🏢 ADR-214 Phase 3: via FirestoreQueryService (companyId comes from the caller's constraints)
+ */
+async function queryLifecycleFiles(
+  baseConstraints: QueryConstraint[],
+  options: { entityType?: EntityType; entityId?: string },
+  timestampField: LifecycleTimestampField
+): Promise<FileRecord[]> {
+  const constraints = [...baseConstraints];
+
+  if (options.entityType) {
+    constraints.push(where('entityType', '==', options.entityType));
+  }
+
+  if (options.entityId) {
+    constraints.push(where('entityId', '==', options.entityId));
+  }
+
+  const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
+
+  const files: FileRecord[] = [];
+  for (const raw of result.documents) {
+    const normalized = normalizeFileRecord(raw, timestampField);
+    if (normalized) {
+      files.push(normalized);
+    }
+  }
+
+  return files;
+}
+
 // ============================================================================
 // TRASH OPERATIONS
 // ============================================================================
@@ -64,14 +137,7 @@ function calculatePurgeDate(category: FileCategory): Date {
 export async function moveToTrash(fileId: string, trashedBy: string): Promise<void> {
   logger.info('Moving FileRecord to trash', { fileId, trashedBy });
 
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
-
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) {
-    throw new Error(`FileRecord not found: ${fileId}`);
-  }
-
-  const data = docSnap.data();
+  const { docRef, data } = await loadFileDocOrThrow(fileId);
   const category = data.category as FileCategory;
   const purgeDate = calculatePurgeDate(category);
 
@@ -116,14 +182,7 @@ export async function moveToTrash(fileId: string, trashedBy: string): Promise<vo
 export async function restoreFromTrash(fileId: string, restoredBy: string): Promise<void> {
   logger.info('Restoring FileRecord from trash', { fileId, restoredBy });
 
-  const docRef = doc(db, COLLECTIONS.FILES, fileId);
-
-  const docSnap = await getDoc(docRef);
-  if (!docSnap.exists()) {
-    throw new Error(`FileRecord not found: ${fileId}`);
-  }
-
-  const data = docSnap.data();
+  const { docRef, data } = await loadFileDocOrThrow(fileId);
   if (data.lifecycleState !== FILE_LIFECYCLE_STATES.TRASHED && data.isDeleted !== true) {
     throw new Error(`FileRecord ${fileId} is not in trash`);
   }
@@ -161,36 +220,14 @@ export async function getTrashedFiles(options: {
   entityType?: EntityType;
   entityId?: string;
 }): Promise<FileRecord[]> {
-  const constraints = [
-    where('isDeleted', '==', true),
-    where('companyId', '==', options.companyId),
-  ];
-
-  if (options.entityType) {
-    constraints.push(where('entityType', '==', options.entityType));
-  }
-
-  if (options.entityId) {
-    constraints.push(where('entityId', '==', options.entityId));
-  }
-
-  const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
-
-  const trashedFiles: FileRecord[] = [];
-  for (const raw of result.documents) {
-    const normalized = {
-      ...raw,
-      id: raw.id as string,
-      createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
-      trashedAt: fieldToISO(raw as Record<string, unknown>, 'trashedAt') || raw.trashedAt,
-    };
-
-    if (isFileRecord(normalized)) {
-      trashedFiles.push(normalized);
-    }
-  }
-
-  return trashedFiles;
+  return queryLifecycleFiles(
+    [
+      where('isDeleted', '==', true),
+      where('companyId', '==', options.companyId),
+    ],
+    options,
+    'trashedAt'
+  );
 }
 
 /**
@@ -202,37 +239,15 @@ export async function getArchivedFiles(options: {
   entityType?: EntityType;
   entityId?: string;
 }): Promise<FileRecord[]> {
-  const constraints = [
-    where('isDeleted', '==', false),
-    where('companyId', '==', options.companyId),
-    where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ARCHIVED),
-  ];
-
-  if (options.entityType) {
-    constraints.push(where('entityType', '==', options.entityType));
-  }
-
-  if (options.entityId) {
-    constraints.push(where('entityId', '==', options.entityId));
-  }
-
-  const result = await firestoreQueryService.getAll<DocumentData>('FILES', { constraints });
-
-  const archivedFiles: FileRecord[] = [];
-  for (const raw of result.documents) {
-    const normalized = {
-      ...raw,
-      id: raw.id as string,
-      createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
-      archivedAt: fieldToISO(raw as Record<string, unknown>, 'archivedAt') || raw.archivedAt,
-    };
-
-    if (isFileRecord(normalized)) {
-      archivedFiles.push(normalized);
-    }
-  }
-
-  return archivedFiles;
+  return queryLifecycleFiles(
+    [
+      where('isDeleted', '==', false),
+      where('companyId', '==', options.companyId),
+      where('lifecycleState', '==', FILE_LIFECYCLE_STATES.ARCHIVED),
+    ],
+    options,
+    'archivedAt'
+  );
 }
 
 /**
@@ -247,6 +262,9 @@ export async function getFilesEligibleForPurge(): Promise<FileRecord[]> {
     where('purgeAt', '<=', now),
   ];
 
+  // tenant-scope-exempt: εργασία συντήρησης server-side (ADR-214 Φάση 3) — ο εκκαθαριστής
+  // οφείλει να δει τα ληγμένα αρχεία ΟΛΩΝ των μισθωτών, αλλιώς όσα ανήκουν σε άλλη εταιρεία
+  // δεν σβήνονται ποτέ. Δεν εξυπηρετεί αίτημα χρήστη και δεν επιστρέφει δεδομένα σε UI.
   const result = await firestoreQueryService.getAll<DocumentData>('FILES', {
     constraints,
     tenantOverride: 'skip',
@@ -267,14 +285,8 @@ export async function getFilesEligibleForPurge(): Promise<FileRecord[]> {
       }
     }
 
-    const normalized = {
-      ...raw,
-      id: raw.id as string,
-      createdAt: fieldToISO(raw as Record<string, unknown>, 'createdAt') || raw.createdAt,
-      updatedAt: fieldToISO(raw as Record<string, unknown>, 'updatedAt') || raw.updatedAt,
-    };
-
-    if (isFileRecord(normalized)) {
+    const normalized = normalizeFileRecord(raw, 'updatedAt');
+    if (normalized) {
       eligibleFiles.push(normalized);
     }
   }

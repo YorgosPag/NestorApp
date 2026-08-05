@@ -316,6 +316,80 @@ describe('6. Κανένα σιωπηλό πέταγμα — κάθε σημεί�
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+describe('6β. 🔴 ΚΑΝΟΝΑΣ 3 — το κεντρικό API, το κενό που κανείς δεν κοιτούσε', () => {
+// ═══════════════════════════════════════════════════════════════════════════
+  /**
+   * R1 κοιτά direct `query()`. R2 κοιτά Admin SDK. Και τα δύο αγνοούσαν τη διαδρομή
+   * μέσω του κεντρικοποιημένου `firestoreQueryService` (ADR-214) — δηλαδή **το API
+   * που όλος ο κώδικας ενθαρρύνεται να χρησιμοποιεί**. Εκεί το φίλτρο μισθωτή σβήνει
+   * με μία λέξη: `tenantOverride: 'skip'`, και `buildTenantConstraints` επιστρέφει `[]`.
+   *
+   * Μετρήθηκαν 16 τέτοια σημεία σε 11 αρχεία (2026-08-05). Το `getProperties()` —
+   * ζωντανό, καλούμενο από το `useContactsState` — παρέκαμπτε έτσι το `companyId` σε
+   * συλλογή που η αυθεντία δηλώνει `companyId`-scoped, **χωρίς μία γραμμή σχολίου**.
+   */
+  const FX = 'service-override.ts.fixture';
+
+  /** Όνομα της συνάρτησης που περιέχει τη γραμμή — η πρόθεση είναι στο όνομα. */
+  function siteNames(name) {
+    const lines = fs.readFileSync(fixture(name), 'utf8').split(/\r?\n/);
+    const nameAt = (line) => {
+      for (let i = line - 1; i >= 0; i--) {
+        const m = /function\s+([A-Za-z0-9_]+)/.exec(lines[i] || '');
+        if (m) return m[1];
+      }
+      return '';
+    };
+    return scanFile(fixture(name), ctx)
+      .filter((s) => s.rule === 'R3-service')
+      .map((s) => ({ fn: nameAt(s.line), status: s.status }));
+  }
+
+  test('κάθε συνάρτηση παίρνει ΑΚΡΙΒΩΣ την κατάσταση που δηλώνει το όνομά της', () => {
+    for (const { fn, status } of siteNames(FX)) {
+      const expected = fn.split('_')[0]
+        .replace('notScoped', 'not-tenant-scoped');
+      expect(`${fn} → ${status}`).toBe(`${fn} → ${expected}`);
+    }
+  });
+
+  test('το `noSite_noOverrideAtAll` ΔΕΝ παράγει καθόλου σημείο R3', () => {
+    expect(siteNames(FX).some((s) => s.fn.startsWith('noSite'))).toBe(false);
+  });
+
+  test('🔑 χειροκίνητο where() ΥΠΟ ΣΥΝΘΗΚΗ δεν εξιλεώνει το skip', () => {
+    // Το skip έχει ήδη πει στον πυρήνα «μη βάλεις φίλτρο». Ένα `if (tenantId)` από πάνω
+    // σημαίνει ότι υπάρχει διαδρομή χωρίς κανένα φίλτρο — και αυτή είναι που κρίνεται.
+    const s = siteNames(FX).find((x) => x.fn === 'violation_conditionalManualFilter');
+    expect(s.status).toBe('violation');
+  });
+
+  test('🔑 η αιτιολόγηση γίνεται δεκτή ΚΑΙ δίπλα στο tenantOverride (πολυγραμμική κλήση)', () => {
+    // Δεύτερη άγκυρα: `subscribeDoc(key, id, cb, onErr, {…})` πιάνει 8 γραμμές· ο λόγος
+    // γράφεται δίπλα στο πράγμα που εξαιρεί, όχι πάνω από την ανοιχτή παρένθεση.
+    const s = siteNames(FX).find((x) => x.fn === 'exempt_reasonBesideOverride');
+    expect(s.status).toBe('exempt');
+  });
+
+  test('εξαίρεση ΧΩΡΙΣ λόγο δεν αναγνωρίζεται — ίδιο δόγμα με R1/R2', () => {
+    const s = siteNames(FX).find((x) => x.fn === 'violation_exemptWithoutReason');
+    expect(s.status).toBe('violation');
+  });
+
+  test('η ΑΥΘΕΝΤΙΑ αποφασίζει: mode=none ⇒ not-tenant-scoped, όχι παράβαση', () => {
+    // Χωρίς αυτό, τα 3 σημεία του EnterpriseSecurityService θα ήταν θόρυβος — και ένας
+    // κανόνας που γεννιέται θορυβώδης διδάσκει να τον αγνοείς (ADR-742).
+    const s = siteNames(FX).find((x) => x.fn === 'notScoped_authoritySaysNone');
+    expect(s.status).toBe('not-tenant-scoped');
+  });
+
+  test('δυναμικό κλειδί ⇒ unanalyzable, ΠΟΤΕ violation (η άγνοια δεν είναι ενοχή)', () => {
+    const s = siteNames(FX).find((x) => x.fn === 'unanalyzable_dynamicKey');
+    expect(s.status).toBe('unanalyzable');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 describe('7. Ratchet — η αριθμητική του φύλακα', () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -412,10 +486,17 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
     // 🔴 Αν ΑΥΤΟ αποτύχει, όλες οι μεταλλάξεις παρακάτω είναι διακοσμητικές και
     // το «5/5 σκοτωμένες» είναι ψέμα. Βάφουμε μια ετικέτα κατάστασης και
     // απαιτούμε να τη ΔΟΥΜΕ στην έξοδο — αδιαμφισβήτητη απόδειξη εκτέλεσης.
+    // ⚠️ Ο στόχος πρέπει να είναι **μονοσήμαντος**. Η πρώτη εκδοχή έψαχνε σκέτο
+    // `status: 'violation',` — και τη στιγμή που προστέθηκε ο R3 (δεύτερος κλάδος
+    // παράβασης) το `String.replace` άρχισε να χτυπά **τον λάθος κλάδο**, με το Μ0 να
+    // γίνεται κόκκινο για λόγο άσχετο με αυτό που ελέγχει. Στόχος τώρα είναι το `detail`
+    // του τελικού κλάδου, που ανήκει **μόνο** σε αυτόν· η επανάληψη του `status` πιο κάτω
+    // στο ίδιο object literal υπερισχύει (τελευταίο κλειδί κερδίζει), άρα η μετάλλαξη
+    // παραμένει ορατή χωρίς να εξαρτάται από το πλήθος των κανόνων.
     const sites = withMutation(
       SCANNER,
-      "status: 'violation',",
-      "status: 'ΜΕΤΑΛΛΑΓΜΕΝΟ',",
+      'detail: `καμία where(',
+      "status: 'ΜΕΤΑΛΛΑΓΜΕΝΟ', detail: `καμία where(",
       (fresh) => fresh.scanFile(fixture('historical-bug.pre-fix.ts.fixture'), fresh.createScanContext()),
     );
     expect(sites.map((s) => s.status)).toContain('ΜΕΤΑΛΛΑΓΜΕΝΟ');
@@ -511,6 +592,40 @@ describe('8. 🧬 MUTATION TESTING — σπάμε τον σαρωτή και α�
     };
     const reassign = result.filter((s) => nameAt(s.line) === 'ok_conditionalReassignment');
     expect(reassign.some((s) => s.status === 'violation')).toBe(true);
+  });
+
+  test('Μ6: αν ο R3 πάψει να δέχεται τη 2η άγκυρα → η τεκμηριωμένη εξαίρεση γίνεται κόκκινη', () => {
+    // Ο R3 δέχεται λόγο πάνω από την κλήση **ή** πάνω από το ίδιο το `tenantOverride`.
+    // Κόβοντας τη δεύτερη, ο σαρωτής ξαναρχίζει να τιμωρεί ακριβώς τη συμπεριφορά που
+    // θέλει να ενθαρρύνει — και ΑΥΤΟ πρέπει να το δει το δίχτυ.
+    const result = withMutation(
+      SCANNER,
+      'isExempt(lines, line) || isExempt(lines, skipLine)',
+      'isExempt(lines, line)',
+      (fresh) => fresh.scanFile(fixture('service-override.ts.fixture'), fresh.createScanContext()),
+    );
+    const lines = fs.readFileSync(fixture('service-override.ts.fixture'), 'utf8').split(/\r?\n/);
+    const nameAt = (line) => {
+      for (let i = line - 1; i >= 0; i--) {
+        const m = /function\s+([A-Za-z0-9_]+)/.exec(lines[i] || '');
+        if (m) return m[1];
+      }
+      return '';
+    };
+    const beside = result.find((s) => nameAt(s.line) === 'exempt_reasonBesideOverride');
+    expect(beside.status).toBe('violation');
+  });
+
+  test('Μ7: αν ο R3 πάψει να ρωτά την αυθεντία → mode=none γίνεται ψευδώς κόκκινο', () => {
+    // Κόβοντας τον κλάδο «tenant-config: mode=none», τα 3 νόμιμα σημεία του
+    // EnterpriseSecurityService γίνονται παραβιάσεις ⇒ θορυβώδης πύλη ⇒ αγνοείται.
+    const result = withMutation(
+      SCANNER,
+      "return { ...withMode, status: 'not-tenant-scoped', detail: 'tenant-config: mode=none' };",
+      "/* μεταλλαγμένο: η αυθεντία αγνοείται */",
+      (fresh) => fresh.scanFile(fixture('service-override.ts.fixture'), fresh.createScanContext()),
+    );
+    expect(result.some((s) => s.status === 'not-tenant-scoped')).toBe(false);
   });
 
   test('ΜΕΤΑ ΤΙΣ ΜΕΤΑΛΛΑΞΕΙΣ: τα αρχεία επανήλθαν byte-για-byte και η πύλη ξαναλειτουργεί', () => {

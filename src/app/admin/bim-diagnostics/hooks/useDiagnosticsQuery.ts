@@ -42,6 +42,9 @@ export function useDiagnosticsQuery(enabled = true): DiagnosticsQueryState {
     }
 
     const cutoff = Timestamp.fromMillis(Date.now() - WINDOW_MS);
+    // tenant-scope-exempt: καθολική εικόνα super-admin εκ σχεδιασμού (ADR-366 §C.7.Q2) — η
+    // οθόνη διαγνωστικών απόδοσης υπάρχει ακριβώς για να συγκρίνει μετρήσεις ΜΕΤΑΞΥ μισθωτών.
+    // Ζει κάτω από `/admin`, όπου η εξουσιοδότηση κρίνεται από τα Firestore rules + RBAC.
     const unsub = firestoreQueryService.subscribe<PerformanceDiagnostic>(
       'PERFORMANCE_DIAGNOSTICS',
       (res) => {

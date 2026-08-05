@@ -267,6 +267,30 @@ function buildCollectionAliasMap(sf) {
 function resolveCollectionArg(expr, alias, collectionsMap) {
   if (!expr) return null;
 
+  // 🔑 Ξετύλιξε το `.withConverter(conv)`: το `collection(db, X).withConverter(c)` κρύβει τη
+  // συλλογή μέσα στην **έκφραση** της πρόσβασης ιδιότητας, ενώ ο σαρωτής κοιτά τα ορίσματα
+  // (εκεί βρίσκει μόνο τον converter) ⇒ `unanalyzable` ⇒ **η πύλη περνά χωρίς να δει**.
+  // Μετρήθηκε 2026-08-05: **9** τέτοια σημεία σε 7 αρχεία — όλα σε υπηρεσίες που ΕΧΟΥΝ
+  // σωστό `where('companyId')`. Δηλαδή η πύλη ήταν τυφλή ακριβώς στον κώδικα που περνούσε.
+  // ⚠️ Η θεραπεία είναι εδώ, στο **όργανο**, όχι σε 9 αρχεία παραγωγής: το ιδίωμα είναι
+  // νόμιμο Firestore v9 και δεν υπάρχει λόγος να το ξαναγράψει κανείς για χάρη του σαρωτή.
+  if (
+    ts.isCallExpression(expr) &&
+    ts.isPropertyAccessExpression(expr.expression) &&
+    expr.expression.name.getText() === 'withConverter'
+  ) {
+    return resolveCollectionArg(expr.expression.expression, alias, collectionsMap);
+  }
+
+  // `collection(db, X)` / `getCol(X, conv)` — η συλλογή είναι ένα από τα ορίσματα.
+  if (ts.isCallExpression(expr)) {
+    for (const a of expr.arguments) {
+      const r = resolveCollectionArg(a, alias, collectionsMap);
+      if (r) return r;
+    }
+    return null;
+  }
+
   if (ts.isStringLiteral(expr)) return { key: null, name: expr.text };
 
   if (ts.isPropertyAccessExpression(expr) && /COLLECTIONS$/.test(expr.expression.getText())) {
