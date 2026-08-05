@@ -92,9 +92,23 @@ export function evidenceFor(
 
   const evidence: BindingEvidence[] = [];
 
+  // 🔴 **Μία μαρτυρία ανά ΤΑΥΤΟΤΗΤΑ, όχι ανά γραφή.** Ο Λ1 συσσωρεύει ό,τι βρίσκει στο κελί
+  // (`title-block-people.ts` → `push(...phones)`) χωρίς απο-διπλοτύπωση, και το ίδιο νούμερο
+  // γραμμένο δύο φορές — «2310-788493» στην έδρα, «2310 788493» στην υπογραφή — είναι **ένα**
+  // τηλέφωνο για το `phoneKey`. Χωρίς αυτά τα σύνολα θα παρήγαγε **δύο** μαρτυρίες.
+  //
+  // Δεν είναι καλλωπισμός της οθόνης: το `evidence.length` είναι **κριτήριο κατάταξης**
+  // (`compareBindingCandidates`). Μια επαφή που τυχαίνει να φέρει το τηλέφωνο σε δύο μορφές θα
+  // **έσπαγε την ισοπαλία** εναντίον της σωστής, ο `unambiguousWinner` θα την αυτο-επέλεγε και το
+  // κουμπί θα ήταν **ενεργό** — δηλαδή λάθος **πρόσωπο** στη βάση, από άλλη πόρτα από εκείνη που
+  // έκλεισε ο Τομέας Δ2.
+  const seen = new Set<string>();
+
   const contactEmails = new Set(contact.emails.map(normalizeEmail));
   for (const email of person.emails) {
-    if (contactEmails.has(normalizeEmail(email))) {
+    const key = normalizeEmail(email);
+    if (contactEmails.has(key) && !seen.has(`email:${key}`)) {
+      seen.add(`email:${key}`);
       evidence.push({ kind: 'email', value: email });
     }
   }
@@ -102,7 +116,8 @@ export function evidenceFor(
   const contactPhones = new Set(contact.phones.map(phoneKey).filter((p) => p.length > 0));
   for (const phone of person.phones) {
     const key = phoneKey(phone);
-    if (key.length > 0 && contactPhones.has(key)) {
+    if (key.length > 0 && contactPhones.has(key) && !seen.has(`phone:${key}`)) {
+      seen.add(`phone:${key}`);
       evidence.push({ kind: 'phone', value: phone });
     }
   }

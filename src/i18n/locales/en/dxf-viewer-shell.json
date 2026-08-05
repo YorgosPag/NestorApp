@@ -6331,6 +6331,7 @@
     "changeContact": "Change contact",
     "createContact": "New contact",
     "chooseCandidate": "Choose a candidate",
+    "candidateWithRole": "{name} — {role}",
     "supersededNote": "Replaces an earlier approval of the same cell."
   },
   "externalReferencesPalette": {

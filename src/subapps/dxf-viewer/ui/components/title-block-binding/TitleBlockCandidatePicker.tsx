@@ -26,9 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PROJECT_ROLE_LABEL } from '@/config/project-role-labels';
+import { PROJECT_ROLE_LABEL_NAMESPACE } from '@/config/project-role-labels';
 import { targetRef } from '@/lib/title-block-binding-id';
 import type { BindingCandidate } from '@/types/title-block-binding';
+import { candidateLabel } from './proposal-labels';
 
 interface Props {
   readonly candidates: readonly BindingCandidate[];
@@ -48,17 +49,14 @@ export const TitleBlockCandidatePicker: React.FC<Props> = ({
   fieldId,
 }) => {
   // Το λεξιλόγιο ρόλων ζει στο `building-address` (SSoT — δες `config/project-role-labels`).
-  // Χωρίς δηλωμένο namespace το i18next επιστρέφει το ίδιο το κλειδί.
-  const { t } = useTranslation(['dxf-viewer-shell', 'building-address']);
+  // Χωρίς δηλωμένο namespace το i18next επιστρέφει το ίδιο το κλειδί. Η σταθερά αντικατέστησε
+  // κυριολεκτική συμβολοσειρά: το `PROJECT_ROLE_LABEL_NAMESPACE` υπήρχε με docblock που ζητούσε
+  // ακριβώς αυτή τη χρήση και **δεν το κατανάλωνε κανείς**.
+  const { t } = useTranslation(['dxf-viewer-shell', PROJECT_ROLE_LABEL_NAMESPACE]);
 
   // 🔑 Το `targetRef` είναι η **ταυτότητα** του στόχου, όχι το `label`: το Radix Select απαιτεί
   // μοναδικό `value`, και σε διφορούμενη ειδικότητα τα labels είναι **όλα ίδια**.
   const optionValue = (candidate: BindingCandidate): string => targetRef(candidate.target);
-
-  const optionLabel = (candidate: BindingCandidate): string =>
-    candidate.target.kind === 'contact'
-      ? `${candidate.label} — ${t(PROJECT_ROLE_LABEL[candidate.target.role])}`
-      : candidate.label;
 
   return (
     <div className="mt-2">
@@ -81,7 +79,7 @@ export const TitleBlockCandidatePicker: React.FC<Props> = ({
         <SelectContent>
           {candidates.map((candidate) => (
             <SelectItem key={optionValue(candidate)} value={optionValue(candidate)}>
-              {optionLabel(candidate)}
+              {candidateLabel(candidate, t)}
             </SelectItem>
           ))}
         </SelectContent>

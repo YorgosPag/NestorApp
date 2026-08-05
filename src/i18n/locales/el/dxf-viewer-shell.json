@@ -6331,6 +6331,7 @@
     "changeContact": "Αλλαγή επαφής",
     "createContact": "Νέα επαφή",
     "chooseCandidate": "Διάλεξε υποψήφιο",
+    "candidateWithRole": "{name} — {role}",
     "supersededNote": "Αντικαθιστά προηγούμενη έγκριση του ίδιου κελιού."
   },
   "externalReferencesPalette": {

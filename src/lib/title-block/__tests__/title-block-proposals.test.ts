@@ -8,9 +8,10 @@
 import { readTitleBlocks } from '@/subapps/dxf-viewer/text-engine/title-block/reading/title-block-reading';
 import { G753_TITLEBLOCK_ROWS } from '@/subapps/dxf-viewer/text-engine/title-block/reading/__tests__/fixtures/g753-titleblock.fixture';
 import type { BindingProposal } from '@/types/title-block-binding';
+import type { TitleBlockPerson } from '@/types/title-block-reading';
 import { resolveTitleBlockProposals } from '../title-block-proposals';
 import { isDrawingMetaField } from '../resolve-drawing-meta';
-import type { ContactSnapshotEntry } from '../resolve-people';
+import { type ContactSnapshotEntry, evidenceFor } from '../resolve-people';
 
 const PROJECT = 'proj_g753';
 const LEVEL = 'lvl_topo';
@@ -213,5 +214,59 @@ describe('Λ2 — καμία σιωπηλή απώλεια', () => {
   it('ο δείκτης πινακίδας διατηρείται — το layer φέρει ΔΥΟ πινακίδες', () => {
     expect(readings()).toHaveLength(2);
     expect(resolve().every((p) => Number.isInteger(p.titleBlockIndex))).toBe(true);
+  });
+});
+
+/**
+ * 🔴 **Το πλήθος μαρτυριών είναι ΚΡΙΤΗΡΙΟ ΚΑΤΑΤΑΞΗΣ, όχι διακόσμηση.**
+ *
+ * Ο Λ1 συσσωρεύει ό,τι βρίσκει στο κελί χωρίς απο-διπλοτύπωση (`title-block-people.ts`,
+ * `push(...phones)`). Το ίδιο τηλέφωνο γραμμένο σε δύο μορφές είναι **ένα** τηλέφωνο για το
+ * `phoneKey` — αλλά παρήγαγε **δύο** μαρτυρίες. Έτσι μια επαφή μπορούσε να **σπάσει την
+ * ισοπαλία** χωρίς να προσθέτει καμία πληροφορία, ο `unambiguousWinner` να την αυτο-επιλέξει και
+ * το κουμπί να είναι **ενεργό**: λάθος **πρόσωπο** στη βάση, από άλλη πόρτα από εκείνη που
+ * έκλεισε ο Τομέας Δ2.
+ */
+describe('Λ2 — μία μαρτυρία ανά ταυτότητα, όχι ανά γραφή', () => {
+  const twoWritings: TitleBlockPerson = {
+    displayName: 'ΠΑΠΑΔΟΠΟΥΛΟΣ ΓΕΩΡΓΙΟΣ',
+    professionText: 'ΑΡΧΙΤΕΚΤΩΝ ΜΗΧΑΝΙΚΟΣ',
+    // Το ΙΔΙΟ τηλέφωνο σε τρεις μορφές· το ΙΔΙΟ e-mail σε δύο γραφές πεζών-κεφαλαίων.
+    phones: ['2310-788493', '2310 788493', '+30 2310 788493'],
+    emails: ['info@nikolaou.com.gr', 'INFO@nikolaou.com.gr'],
+  };
+  const contact: ContactSnapshotEntry = {
+    id: 'cont_p',
+    displayName: 'Γεώργιος Παπαδόπουλος',
+    phones: ['2310788493'],
+    emails: ['info@nikolaou.com.gr'],
+  };
+
+  it('🔴 τρεις γραφές ενός τηλεφώνου δίνουν ΜΙΑ μαρτυρία', () => {
+    const kinds = evidenceFor(twoWritings, contact).map((e) => e.kind);
+    expect(kinds.filter((k) => k === 'phone')).toHaveLength(1);
+  });
+
+  it('🔴 δύο γραφές ενός e-mail δίνουν ΜΙΑ μαρτυρία', () => {
+    const kinds = evidenceFor(twoWritings, contact).map((e) => e.kind);
+    expect(kinds.filter((k) => k === 'email')).toHaveLength(1);
+  });
+
+  it('🔴 η επανάληψη ΔΕΝ προσθέτει ΒΑΡΟΣ — ίδιο πλήθος με μία και μόνη γραφή', () => {
+    // Αυτό είναι όλο το διακύβευμα: το `evidence.length` ζυγίζει στο `compareBindingCandidates`.
+    // Χωρίς απο-διπλοτύπωση οι ίδιες πληροφορίες μετρούσαν 6 αντί για 3, και το βάρος ήταν
+    // **τυπογραφικό γεγονός της πινακίδας**, όχι απόδειξη ταυτότητας.
+    const once: TitleBlockPerson = {
+      ...twoWritings,
+      phones: ['2310788493'],
+      emails: ['info@nikolaou.com.gr'],
+    };
+    expect(evidenceFor(twoWritings, contact)).toHaveLength(evidenceFor(once, contact).length);
+  });
+
+  it('ο φρουρός: χωρίς επανάληψη οι μαρτυρίες παραμένουν ΔΥΟ ξεχωριστά τηλέφωνα', () => {
+    const distinct: TitleBlockPerson = { ...twoWritings, phones: ['2310788493', '6949727121'] };
+    const both: ContactSnapshotEntry = { ...contact, phones: ['2310788493', '6949727121'] };
+    expect(evidenceFor(distinct, both).filter((e) => e.kind === 'phone')).toHaveLength(2);
   });
 });

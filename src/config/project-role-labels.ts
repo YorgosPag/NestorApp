@@ -52,3 +52,28 @@ export const PROJECT_ROLE_LABEL: Record<ProjectRole, string> = {
  */
 export const isProjectRole = (role: string): role is ProjectRole =>
   (ENTITY_ASSOCIATION_ROLES.project as readonly string[]).includes(role);
+
+/**
+ * Ο τύπος του `t` όπως τον επιστρέφει ο hook — **ως παράμετρος, ποτέ ως import του hook**.
+ *
+ * Type-only εισαγωγή: το `project-role-labels` παραμένει αρχείο ρύθμισης χωρίς runtime εξάρτηση
+ * από React/i18next, ώστε να μπορεί να το καταναλώνει και καθαρός κώδικας. Το ιδίωμα υπάρχει
+ * ήδη στο `ProjectParticipationSection.tsx:19` — δεν γεννιέται εδώ δεύτερο.
+ */
+export type RoleTranslateFn = ReturnType<typeof import('@/i18n/hooks/useTranslation').useTranslation>['t'];
+
+/**
+ * `ProjectRole` → η ανθρώπινη ετικέτα του. **Η μοναδική πράξη μετάφρασης ρόλου έργου.**
+ *
+ * 🔑 Ζει **δίπλα στον χάρτη** και όχι στον καταναλωτή, γιατί οι καταναλωτές είναι ήδη τρεις σε
+ * τρία διαφορετικά δέντρα (παλέτα πινακίδας, επιλογέας υποψηφίου, καρτέλα επαφής). Ο τέταρτος θα
+ * την ξανάγραφε — που είναι ακριβώς το σχήμα που κυνηγά ο N.0.2.
+ *
+ * ⚠️ **Ο καταναλωτής πρέπει να δηλώσει το {@link PROJECT_ROLE_LABEL_NAMESPACE}** στο
+ * `useTranslation([...])` του. Τα κλειδιά φέρουν πρόθεμα `building-address:`, και για
+ * προθεματισμένο κλειδί ο resolver του ADR-716 Φ5 **βγαίνει αμέσως** (`useTranslation.ts:99`):
+ * δεν υπάρχει δίχτυ ασφαλείας — χωρίς φορτωμένο namespace βάφεται **ωμό κλειδί στην οθόνη**.
+ * Το φυλάει ο έλεγχος στο `title-block-binding-wiring.test.ts`.
+ */
+export const roleLabel = (role: ProjectRole, t: RoleTranslateFn): string =>
+  t(PROJECT_ROLE_LABEL[role]);

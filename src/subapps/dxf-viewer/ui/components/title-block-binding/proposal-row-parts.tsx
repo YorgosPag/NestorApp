@@ -14,15 +14,29 @@ import React from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Input } from '@/components/ui/input';
 import type { BindingEvidence } from '@/types/title-block-binding';
-import { EVIDENCE_LABEL } from './proposal-labels';
+import { EVIDENCE_LABEL, EVIDENCE_SHOWS_VALUE } from './proposal-labels';
+
+interface EvidenceProps {
+  readonly evidence: readonly BindingEvidence[];
+  /**
+   * Αποδίδεται ήδη το όνομα της επαφής ακριβώς από πάνω (γραμμή «→ …»);
+   *
+   * Καθορίζει **μόνο** τις μαρτυρίες ονόματος: το `value` τους είναι το ίδιο το `displayName`.
+   * Δες το σκεπτικό στο {@link EVIDENCE_SHOWS_VALUE}.
+   */
+  readonly nameValueRedundant: boolean;
+}
 
 /**
  * **Το «γιατί»**, όχι ποσοστό βεβαιότητας: «ταιριάζει το τηλέφωνο», «το όνομα ταιριάζει σε
  * συντομογραφία». Εκεί ξεπερνάμε τα εμπορικά CAD — κανένα δεν εξηγεί την πρόταση που κάνει.
+ *
+ * 🔴 **Και ΠΟΙΟ ταίριαξε.** Το `value` υπήρχε στον τύπο και χρησιμοποιούνταν **μόνο** ως React
+ * `key` — ποτέ δεν εμφανιζόταν. Με δύο τηλέφωνα γραφείου η οθόνη έγραφε δύο φορές «ταιριάζει το
+ * τηλέφωνο»: σωστό, αλλά **μη διακρίσιμο**. Μια μαρτυρία που δεν λέει σε τι στηρίζεται είναι
+ * ισχυρισμός, όχι απόδειξη.
  */
-export const ProposalEvidence: React.FC<{ readonly evidence: readonly BindingEvidence[] }> = ({
-  evidence,
-}) => {
+export const ProposalEvidence: React.FC<EvidenceProps> = ({ evidence, nameValueRedundant }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   if (evidence.length === 0) return null;
 
@@ -31,9 +45,12 @@ export const ProposalEvidence: React.FC<{ readonly evidence: readonly BindingEvi
       {evidence.map((item) => (
         <li
           key={`${item.kind}:${item.value}`}
-          className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
+          className="flex items-baseline gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground"
         >
-          {t(EVIDENCE_LABEL[item.kind])}
+          <span>{t(EVIDENCE_LABEL[item.kind])}</span>
+          {EVIDENCE_SHOWS_VALUE[item.kind] || !nameValueRedundant ? (
+            <span className="break-all font-medium text-foreground">{item.value}</span>
+          ) : null}
         </li>
       ))}
     </ul>

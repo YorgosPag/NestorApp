@@ -22,11 +22,13 @@ import { AlertCircle, Check, Link2Off, X } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { parseGreekDecimal } from '@/lib/number/greek-decimal';
+import { PROJECT_ROLE_LABEL_NAMESPACE } from '@/config/project-role-labels';
 import type { BindingCandidate, BindingProposal } from '@/types/title-block-binding';
 import { unambiguousWinner } from '@/types/title-block-binding';
 import {
   BLOCKED_LABEL,
   BLOCKER_LABEL,
+  candidateLabel,
   FIELD_LABEL,
   TARGET_LABEL,
   type RowBlocker,
@@ -57,7 +59,10 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
   chosen,
   onChoose,
 }) => {
-  const { t } = useTranslation('dxf-viewer-shell');
+  // Δεύτερο namespace: η γραμμή δείχνει πλέον τον **ρόλο**, του οποίου το λεξιλόγιο ζει στο
+  // `building-address` (SSoT). Χωρίς τη δήλωση βάφεται ωμό κλειδί — για προθεματισμένο κλειδί
+  // δεν υπάρχει δίχτυ (δες `roleLabel`). Το φυλάει το `title-block-binding-wiring.test.ts`.
+  const { t } = useTranslation(['dxf-viewer-shell', PROJECT_ROLE_LABEL_NAMESPACE]);
 
   // Γ6 — η πινακίδα αποδεικνύει ΟΝΟΜΑ, ποτέ μερίδιο. Το κρατάμε ως κείμενο ώστε το άδειο πεδίο
   // να είναι «δεν δηλώθηκε», όχι `0` — που θα σήμαινε «δεν κατέχει τίποτα».
@@ -105,8 +110,19 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
 
       {shape ? (
         <section className="mt-1.5">
-          {chosen ? <p className="text-sm font-medium text-primary">→ {chosen.label}</p> : null}
-          <ProposalEvidence evidence={(chosen ?? shape).evidence} />
+          {chosen ? (
+            <p className="break-words text-sm font-medium text-primary">
+              → {candidateLabel(chosen, t)}
+            </p>
+          ) : null}
+          {/* Το όνομα ως μαρτυρία περισσεύει **μόνο** όταν αποδίδεται η γραμμή «→ …» από πάνω —
+              δηλαδή όταν υπάρχει επιλεγμένος. Χωρίς αυτόν (διφορούμενη πρόταση, ακριβώς η
+              περίπτωση για την οποία γεννήθηκε ο επιλογέας) το όνομα είναι η **μόνη** ένδειξη
+              ποιον αφορά η μαρτυρία, και η απόκρυψή του θα έκρυβε πληροφορία. */}
+          <ProposalEvidence
+            evidence={(chosen ?? shape).evidence}
+            nameValueRedundant={chosen !== null}
+          />
 
           {/* Ο επιλογέας εμφανίζεται όποτε υπάρχει **πραγματική** επιλογή. Ένας υποψήφιος δεν
               είναι επιλογή· δύο ισοδύναμοι είναι, και τότε δεν επιτρέπεται προεπιλογή. */}
