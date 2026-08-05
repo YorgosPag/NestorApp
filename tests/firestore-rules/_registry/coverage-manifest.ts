@@ -151,8 +151,32 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     collection: 'projects',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/projects.rules.test.ts',
-    rulesRange: [37, 102],
+    rulesRange: [37, 95],
     matrix: tenantDirectMatrix(),
+  },
+  {
+    // ADR-759 Φ2 — «Στοιχεία Τοπογραφικού». tenant_direct, with two departures
+    // spelled out below rather than inherited silently.
+    collection: 'survey_records',
+    pattern: 'tenant_direct',
+    testFile: 'tests/firestore-rules/suites/survey-records.rules.test.ts',
+    rulesRange: [97, 161],
+    matrix: overrideCells(tenantDirectMatrix(), [
+      // (1) A plain tenant user authors and edits survey records — that is the
+      // whole point of the card — but may NOT destroy one. A survey record is
+      // evidence other data was adopted from; deletion is an admin act.
+      cell('same_tenant_user', 'create', 'allow'),
+      cell('same_tenant_user', 'update', 'allow'),
+      cell('same_tenant_user', 'delete', 'deny', 'insufficient_role'),
+      // (2) Cross-tenant is closed on every operation, not just the ones the
+      // canonical matrix happens to list.
+      cell('cross_tenant_admin', 'create', 'deny', 'cross_tenant'),
+      cell('cross_tenant_admin', 'delete', 'deny', 'cross_tenant'),
+      cell('anonymous', 'create', 'deny', 'missing_claim'),
+      cell('anonymous', 'update', 'deny', 'missing_claim'),
+      cell('anonymous', 'delete', 'deny', 'missing_claim'),
+    ]),
+    seedDependencies: ['projects'],
   },
   {
     collection: 'buildings',

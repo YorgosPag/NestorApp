@@ -76,6 +76,7 @@ export const SUPPORTED_NAMESPACES = [
   'building-timeline',      // 🏢 Building timeline/analytics (split from building — ADR-280)
   'building-tabs',          // 🏢 Building tab content (split from building — ADR-280)
   'buildingCode',           // 🏢 Building Code Module — ΝΟΚ Phase 2 (ADR-186)
+  'surveyRecord',           // 📐 Survey Record card — ADR-759 Φ2
   'common-sales',           // 🏢 Sales/e-commerce domain (split from common — ADR-280)
   'common-account',         // 🏢 User account/2FA (split from common — ADR-280)
   'common-photos',          // 🏢 Photo management (split from common — ADR-280)

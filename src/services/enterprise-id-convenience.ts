@@ -26,6 +26,12 @@ export const generateWorkspaceId = () => enterpriseIdService.generateWorkspaceId
 export const generateAddressId = () => enterpriseIdService.generateAddressId();
 export const generateOpportunityId = () => enterpriseIdService.generateOpportunityId();
 export const generateLandownerId = () => enterpriseIdService.generateLandownerId();
+/** ADR-759 Φ2 — survey_records doc id (`srv_*`). */
+export const generateSurveyRecordId = () => enterpriseIdService.generateSurveyRecordId();
+/** ADR-759 Φ2β — repeating survey-record rows (`svact_*` / `svapr_*` / `svdeed_*`). */
+export const generateSurveyActId = () => enterpriseIdService.generateSurveyActId();
+export const generateSurveyApprovalId = () => enterpriseIdService.generateSurveyApprovalId();
+export const generateSurveyTitleDeedId = () => enterpriseIdService.generateSurveyTitleDeedId();
 
 // Legal Documents & Obligations
 export const generateSectionId = () => enterpriseIdService.generateSectionId();

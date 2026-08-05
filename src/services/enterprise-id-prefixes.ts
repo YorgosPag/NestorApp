@@ -27,6 +27,30 @@ export const ENTERPRISE_ID_PREFIXES = {
   LANDOWNER: 'lown',         // ADR-244: Property ownership
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
+  SURVEY_RECORD: 'srv',       // ADR-759 Φ2: survey_records collection — institutional/legal plot data
+                              // declared by a surveyor on a date. NOT `topo` (ADR-650) — that is TIN
+                              // surface GEOMETRY per floor. Two meanings, two prefixes (ADR-759 §Ζ.2).
+
+  // ADR-759 Φ2β — REPEATING ROWS INSIDE a survey record. Not documents; array
+  // elements. They still get enterprise ids, and the reason is a rule, not a habit:
+  //
+  //   IFC gives a `GlobalId` only to ROOTED entities (subtypes of `IfcRoot`). A
+  //   non-rooted value object — `IfcDocumentReference`, for instance — gets none,
+  //   because it exists only through whoever references it. Revit draws the same
+  //   line: every *element* carries a `UniqueId` assigned at creation that never
+  //   changes; the *parameters* inside it do not, they are identified by definition.
+  //
+  // An act, an approval and a title deed are the rooted kind: the engineer points at
+  // them one by one, and a deed links out to a notary contact. So each gets its own
+  // prefix — one per row TYPE, mirroring `PO_ITEM` ('poi'), the project's existing
+  // embedded-row precedent (`types/procurement/purchase-order.ts:193`).
+  //
+  // 🔴 The ΦΕΚ references (`GazetteRef`) and the remark strings deliberately get
+  // NOTHING. They are value objects; their identity is their position. Minting ids
+  // for them would claim an independence they do not have.
+  SURVEY_ACT: 'svact',        // InstitutionalAct row — decree / ΓΠΣ / zoning act
+  SURVEY_APPROVAL: 'svapr',   // SurveyApproval row — section Θ (ΕΓΚΡΙΣΕΙΣ)
+  SURVEY_TITLE_DEED: 'svdeed', // SurveyTitleDeed row — section Ι (ΤΙΤΛΟΙ ΙΔΙΟΚΤΗΣΙΑΣ)
 
   // Legal Documents & Obligations
   SECTION: 'sec',

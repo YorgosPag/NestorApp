@@ -128,6 +128,19 @@ export interface Project extends SoftDeletableFields {
   /** ADR-186 §8b: Phase 2 ΝΟΚ building-code form data — null = not yet defined */
   buildingCode?: ProjectBuildingCodePhase2 | null;
 
+  /**
+   * ADR-759 Φ2 — FK → `survey_records` for the survey this project currently works from.
+   *
+   * 🔑 **Explicit, never derived.** A project accumulates several surveys (purchase →
+   * implementation). Picking "the latest" by `orderBy(surveyDate)` would mean that
+   * uploading an *older* survey silently changes which one is authoritative — the
+   * lifecycle owner would be emergent instead of named (N.7.2 Q7). One field removes
+   * the whole class of bug.
+   *
+   * `null`/absent = no survey chosen yet. The card still lists every record.
+   */
+  activeSurveyRecordId?: string | null;
+
   // ─── ADR-369: Project elevation reference (Tier 1 + Tier 2 + rotation) ──
   /** Γεωδαιτικό σημείο αναφοράς (Tier 1 — Survey Point). METRES + reference system. */
   surveyPoint?: ProjectSurveyPoint;

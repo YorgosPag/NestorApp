@@ -144,6 +144,19 @@ export class EnterpriseIdService extends BimEntityIdGenerators {
   generateAddressId(): string { return this.generateId(P.ADDRESS).id; }
   generateOpportunityId(): string { return this.generateId(P.OPPORTUNITY).id; }
   generateLandownerId(): string { return this.generateId(P.LANDOWNER).id; }
+  /** ADR-759 Φ2 — survey_records doc id. */
+  generateSurveyRecordId(): string { return this.generateId(P.SURVEY_RECORD).id; }
+  /**
+   * ADR-759 Φ2β — ids for the REPEATING ROWS of a survey record.
+   *
+   * 🔴 Call these ONCE, when the row is created, and never again. This is Revit's
+   * `UniqueId` contract: assigned at creation, stable for the life of the element.
+   * Calling one during render would mint a new id every frame and destroy row
+   * identity — `survey-list-config.test.ts` guards it.
+   */
+  generateSurveyActId(): string { return this.generateId(P.SURVEY_ACT).id; }
+  generateSurveyApprovalId(): string { return this.generateId(P.SURVEY_APPROVAL).id; }
+  generateSurveyTitleDeedId(): string { return this.generateId(P.SURVEY_TITLE_DEED).id; }
 
   // Legal Documents & Obligations
   generateSectionId(): string { return this.generateId(P.SECTION).id; }

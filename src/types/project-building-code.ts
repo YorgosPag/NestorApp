@@ -13,10 +13,21 @@ import type { PlotType } from '@/services/building-code/types/site.types';
 
 /**
  * Provenance of a numeric field value:
- * - 'zone' : value came from ZONE_PARAMETERS auto-fill (matches selected zone)
- * - 'user' : value was manually edited by the user (override)
+ * - 'zone'   : value came from ZONE_PARAMETERS auto-fill (matches selected zone)
+ * - 'user'   : value was manually edited by the user (override)
+ * - 'survey' : value was adopted from a `SurveyRecord` (ADR-759 §4.1)
+ *
+ * 🔴 `'survey'` is NOT cosmetic. Without it, a number a surveyor declared and the
+ * engineer explicitly adopted becomes indistinguishable from one somebody typed —
+ * which is the whole distinction ADR-759 exists to preserve. Adoption is always an
+ * explicit per-field act; nothing ever writes `'survey'` automatically.
+ *
+ * ⚠️ Anything that branches on this union must be EXHAUSTIVE. When this type was
+ * two-valued, `ProvenanceBadge` used `if (zone) … else user`, so adding a third
+ * member would have silently rendered every adopted value as "manual override" —
+ * wrong text, no error, no failing test. See `ProvenanceBadge.tsx`.
  */
-export type FieldProvenance = 'zone' | 'user';
+export type FieldProvenance = 'zone' | 'user' | 'survey';
 
 /**
  * Provenance map for the 3 zone-derivable fields.

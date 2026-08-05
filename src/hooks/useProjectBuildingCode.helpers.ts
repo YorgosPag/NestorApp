@@ -128,12 +128,20 @@ export function resetFieldToZone(
   };
 }
 
-/** Whether resetField would actually change anything. */
+/**
+ * Whether resetField would actually change anything.
+ *
+ * ⚠️ Asks `!== 'zone'`, not `=== 'user'`. Since ADR-759 a value can also carry
+ * provenance `'survey'` (adopted from a survey record), and that is just as much a
+ * deviation from the zone default as a hand edit — the reset affordance must appear
+ * for it too. Written as `=== 'user'` this silently stopped offering reset for every
+ * adopted value, with no test able to see it.
+ */
 export function canResetField(
   draft: ProjectBuildingCodePhase2,
   field: NumericFieldKey,
 ): boolean {
-  return draft.zoneId !== null && draft.provenance[field] === 'user';
+  return draft.zoneId !== null && draft.provenance[field] !== 'zone';
 }
 
 /** Quick deep-equality for the 6 form values + zone + plotType + frontages. */

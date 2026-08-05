@@ -51,10 +51,12 @@
   },
   "provenance": {
     "fromZone": "From zone {zoneId}",
+    "fromSurvey": "From the survey",
     "userOverride": "User override",
     "default": "Default",
     "fromZoneShort": "Zone",
-    "userShort": "User"
+    "userShort": "User",
+    "fromSurveyShort": "Survey"
   },
   "reset": {
     "tooltip": "Reset to Zone {zoneId} default",

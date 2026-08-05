@@ -1,0 +1,192 @@
+{
+  "tab": {
+    "label": "Survey Data",
+    "description": "Institutional and legal plot data, as declared by the surveyor"
+  },
+  "card": {
+    "title": "Survey Data",
+    "subtitle": "What the surveyor declared, and when",
+    "explainer": "This card records the survey drawing as it is. It does not change the project's Building Terms — a value moves there only by explicit adoption.",
+    "empty": "No survey has been recorded for this project.",
+    "emptyCta": "Add a survey",
+    "listTitle": "Project surveys",
+    "activeBadge": "Active",
+    "setActive": "Set as active",
+    "recordLabel": "Survey {name}"
+  },
+  "header": {
+    "sourceFile": "Source file",
+    "sourceFileNone": "No file",
+    "surveyDate": "Survey date",
+    "surveyor": "Surveyor",
+    "surveyorNone": "Not set",
+    "confirmed": "Confirmed by {name}",
+    "unconfirmed": "Not confirmed",
+    "confirm": "Confirm",
+    "unconfirm": "Remove confirmation",
+    "frozenNotice": "A confirmed survey is locked. To correct it, remove the confirmation first."
+  },
+  "sections": {
+    "a": "A. Building Terms",
+    "aActs": "A′. Institutional Acts",
+    "b": "B. Settlement Acts",
+    "c": "C. Buildable & Compliant",
+    "d": "D. Road Plan Definition",
+    "e": "E. Suspension Status",
+    "st": "F. Plot Area",
+    "z": "G. Height Datum",
+    "i": "H. Remarks",
+    "th": "I. Approvals",
+    "iota": "J. Title Deeds"
+  },
+  "fields": {
+    "sector": "Sector",
+    "plotBoundaryLabels": "Plot boundary",
+    "plotBoundaryLabelsHint": "The vertices as labelled in the drawing, e.g. A, B, C, D, A",
+    "minFrontage": "Minimum frontage (m)",
+    "minArea": "Minimum area (m²)",
+    "deviation": "Deviation",
+    "buildingSystem": "Building system",
+    "declaredCoveragePct": "Coverage (%)",
+    "maxCoveragePct": "Maximum coverage (%)",
+    "maxCoverageHint": "The raised coverage, where it comes from a social factor",
+    "declaredMaxHeight": "Maximum height",
+    "declaredMaxHeightHint": "Often stated as text, e.g. \"per building code\"",
+    "declaredFloors": "Floors",
+    "declaredSd": "Floor area ratio (base)",
+    "socialFactorSd": "Social factor increment",
+    "totalSd": "Floor area ratio (total)",
+    "sdHint": "Three separate numbers: base, increment and total. The total is recorded as the drawing states it.",
+    "landUse": "Land use",
+    "inSocialFactorZone": "Within Social Factor Zone",
+    "settlementActs": "Settlement acts",
+    "isBuildable": "Buildable and compliant",
+    "buildabilityNote": "Buildability note",
+    "roadPlanDefinition": "Road plan definition",
+    "suspensionStatus": "Suspension",
+    "plotArea": "Plot area (m²)",
+    "heightDatum": "Height datum",
+    "remarks": "Remarks"
+  },
+  "implementationAct": {
+    "title": "Implementation Act",
+    "number": "Act number",
+    "numberHint": "The title block abbreviates this as \"Π.Ε.\" — which in the same drawing also means urban planning unit and regional unit.",
+    "decision": "Decision",
+    "volume": "Volume",
+    "entry": "Entry number",
+    "date": "Date",
+    "registry": "Land registry",
+    "urbanUnits": "Urban planning units",
+    "originalProperties": "Original properties"
+  },
+  "acts": {
+    "urbanPlanDecree": "Road plan decree",
+    "generalUrbanPlan": "General Urban Plan",
+    "zoningRegulations": "Zoning regulations / sector definitions",
+    "reference": "Act",
+    "note": "Note",
+    "add": "Add act",
+    "remove": "Remove act",
+    "empty": "No act recorded"
+  },
+  "gazette": {
+    "title": "Government Gazette",
+    "add": "Add gazette",
+    "remove": "Remove gazette",
+    "rawText": "Gazette reference",
+    "rawTextHint": "Write the gazette exactly as it appears in the drawing. This is never lost.",
+    "number": "Number",
+    "series": "Series",
+    "date": "Date",
+    "relation": "Relation",
+    "relationHint": "Fill this only if you know it. It is never inferred.",
+    "relationNone": "Not stated",
+    "relationOriginal": "Original",
+    "relationCorrection": "Correction",
+    "relationRevision": "Revision",
+    "empty": "No gazette recorded"
+  },
+  "remarks": {
+    "item": "Remark",
+    "add": "Add remark",
+    "remove": "Remove remark",
+    "empty": "No remark recorded"
+  },
+  "approvals": {
+    "authority": "Authority",
+    "protocolNumber": "Protocol number",
+    "date": "Date",
+    "add": "Add approval",
+    "remove": "Remove approval",
+    "empty": "No approval recorded"
+  },
+  "titleDeeds": {
+    "number": "Deed number",
+    "date": "Date",
+    "kind": "Deed type",
+    "notaryName": "Notary (as written)",
+    "notaryContact": "Linked contact",
+    "notaryContactNone": "Not linked",
+    "volume": "Volume",
+    "entry": "Entry number",
+    "registry": "Land registry",
+    "add": "Add deed",
+    "remove": "Remove deed",
+    "empty": "No title deed recorded"
+  },
+  "provenance": {
+    "survey": "From the drawing",
+    "user": "Entered manually",
+    "empty": "Blank in the drawing",
+    "emptyHint": "The field exists and is empty — that is information, not an omission.",
+    "rawText": "Source text"
+  },
+  "compare": {
+    "title": "Comparison with Building Terms",
+    "explainer": "On the left, what the surveyor declared; on the right, what applies to the project. No value copies itself.",
+    "surveyValue": "Survey",
+    "projectValue": "Building Terms",
+    "adopt": "Adopt →",
+    "adoptAria": "Adopt the survey value for {field}",
+    "keepOurs": "Accept the difference",
+    "keepOursAria": "Record that the difference in {field} is acceptable",
+    "adopted": "Adopted",
+    "keptOurs": "Accepted difference",
+    "decidedBy": "by {name}, {date}",
+    "reopened": "The survey value changed after the decision — it needs judging again.",
+    "identical": "Same value",
+    "noSurveyValue": "The survey states no value",
+    "undecided": "Not yet judged",
+    "fields": {
+      "sd": "Floor area ratio",
+      "coveragePct": "Coverage",
+      "maxHeight": "Maximum height"
+    }
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "edit": "Edit",
+    "clear": "Clear",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "toast": {
+    "saveSuccess": "Survey data saved",
+    "saveError": "Save failed",
+    "createSuccess": "Survey recorded",
+    "createError": "Could not record the survey",
+    "confirmSuccess": "Survey confirmed",
+    "unconfirmSuccess": "Confirmation removed",
+    "adoptSuccess": "Value adopted into Building Terms",
+    "adoptError": "Adoption failed",
+    "activeSuccess": "Set as the active survey"
+  },
+  "picker": {
+    "searchResults": "Search results",
+    "noResults": "No contact found",
+    "useFreeText": "Keep the text as written"
+  }
+}

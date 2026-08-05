@@ -24,6 +24,16 @@ export const COLLECTIONS = {
   BUILDINGS: process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings',
   PROPERTIES: process.env.NEXT_PUBLIC_PROPERTIES_COLLECTION || 'properties',
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
+  /**
+   * ADR-759 Φ2 — institutional/legal plot data as declared by a surveyor on a date
+   * («Στοιχεία Τοπογραφικού»). IDs via `srv_*` prefix.
+   *
+   * ⚠️ NOT `SURVEYS` (line ~88): that one lives under «FORMS & SURVEYS» next to
+   * `FORMS`/`SUBMISSIONS` and means *questionnaires*. It has zero consumers anywhere
+   * in `src/` (verified 2026-08-05), so a name-match grep will happily "find" it and
+   * put legal plot data in a forms collection with every gate green. ADR-759 §Ζ.1.
+   */
+  SURVEY_RECORDS: process.env.NEXT_PUBLIC_SURVEY_RECORDS_COLLECTION || 'survey_records',
 
   // 💬 COMMUNICATIONS
   COMMUNICATIONS: process.env.NEXT_PUBLIC_COMMUNICATIONS_COLLECTION || 'communications',

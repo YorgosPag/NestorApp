@@ -50,6 +50,7 @@ import { ProjectLandownersTab } from '@/components/projects/tabs/ProjectLandowne
 import { ProcurementProjectTab } from '@/components/projects/tabs/ProcurementProjectTab';
 // 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code CRUD form
 import { BuildingCodeTab } from '@/components/projects/building-code/BuildingCodeTab';
+import { SurveyDataTab } from '@/components/projects/survey-data/SurveyDataTab';
 
 // ============================================================================
 // PROJECT COMPONENT MAPPING
@@ -91,6 +92,8 @@ export const PROJECT_COMPONENT_MAPPING = {
   'ProcurementProjectTab': ProcurementProjectTab,
   // 🏢 ADR-186 §8b: Phase 2 ΝΟΚ Building Code form (parallel to legacy BuildingDataTab)
   'BuildingCodeTab': BuildingCodeTab,
+  // 📐 ADR-759 Φ2: «Στοιχεία Τοπογραφικού» — what the surveyor declared, and when.
+  'SurveyDataTab': SurveyDataTab,
 } as const;
 
 // ============================================================================

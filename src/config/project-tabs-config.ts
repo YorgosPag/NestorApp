@@ -359,6 +359,23 @@ export const PROJECT_TABS: ProjectTabConfig[] = [
     component: 'BuildingCodeTab',
   },
 
+  // -------------------------------------------------------------------------
+  // 17β. ΣΤΟΙΧΕΙΑ ΤΟΠΟΓΡΑΦΙΚΟΥ (ADR-759 Φ2) — what the surveyor declared, and when.
+  //      Sits next to `building-code` on purpose: they answer different questions
+  //      about the same numbers, and the card compares them side by side.
+  //      Φ2 is MANUAL entry; reading them off the DXF is Φ4.
+  // -------------------------------------------------------------------------
+  {
+    id: 'survey-data',
+    label: PROJECT_TAB_LABELS.SURVEY_DATA,
+    value: 'survey-data',
+    icon: 'map',
+    description: PROJECT_TAB_DESCRIPTIONS.SURVEY_DATA,
+    order: 16.6,
+    enabled: true,
+    component: 'SurveyDataTab',
+  },
+
   {
     id: 'building-data',
     label: PROJECT_TAB_LABELS.BUILDING_DATA,

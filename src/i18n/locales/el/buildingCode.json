@@ -51,10 +51,12 @@
   },
   "provenance": {
     "fromZone": "Από ζώνη {zoneId}",
+    "fromSurvey": "Από το τοπογραφικό",
     "userOverride": "Χειροκίνητη αλλαγή",
     "default": "Προεπιλογή",
     "fromZoneShort": "Ζώνη",
-    "userShort": "Χρήστης"
+    "userShort": "Χρήστης",
+    "fromSurveyShort": "Τοπογρ."
   },
   "reset": {
     "tooltip": "Επαναφορά στην προεπιλογή Ζώνης {zoneId}",

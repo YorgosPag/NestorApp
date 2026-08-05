@@ -54,7 +54,8 @@
       "landowners": "Landowners",
       "locations": "Addresses",
       "procurement": "Procurement",
-      "buildingCode": "Building Code"
+      "buildingCode": "Building Code",
+      "surveyData": "Survey Data"
     },
     "descriptions": {
       "projectGeneral": "Basic information and project details",
@@ -78,7 +79,8 @@
       "landowners": "Manage landowners and bartex percentage",
       "locations": "Manage project addresses",
       "procurement": "RFQ requests and quote evaluation for the project",
-      "buildingCode": "Building coefficient, coverage, height and ΝΟΚ zone per project"
+      "buildingCode": "Building coefficient, coverage, height and ΝΟΚ zone per project",
+      "surveyData": "Institutional and legal plot data, as declared by the surveyor"
     },
     "floors": {
       "title": "Building Floors",

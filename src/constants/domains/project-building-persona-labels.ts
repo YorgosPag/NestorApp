@@ -32,6 +32,8 @@ export const PROJECT_TAB_LABELS = {
   PROCUREMENT: 'tabs.labels.procurement',
   // ADR-186 §8b — Phase 2 ΝΟΚ Building Code form
   BUILDING_CODE: 'tabs.labels.buildingCode',
+  // ADR-759 Φ2 — Survey Record card
+  SURVEY_DATA: 'tabs.labels.surveyData',
 } as const;
 
 export const PROJECT_TAB_DESCRIPTIONS = {
@@ -55,6 +57,8 @@ export const PROJECT_TAB_DESCRIPTIONS = {
   PROCUREMENT: 'tabs.descriptions.procurement',
   // ADR-186 §8b — Phase 2 ΝΟΚ Building Code form
   BUILDING_CODE: 'tabs.descriptions.buildingCode',
+  // ADR-759 Φ2 — Survey Record card
+  SURVEY_DATA: 'tabs.descriptions.surveyData',
 } as const;
 
 export const PROJECT_COMPONENT_LABELS = {

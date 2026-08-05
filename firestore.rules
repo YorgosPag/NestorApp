@@ -95,6 +95,72 @@ service cloud.firestore {
     }
 
     // =========================================================================
+    // 📐 SURVEY_RECORDS COLLECTION — ADR-759 Φ2 «Στοιχεία Τοπογραφικού»
+    // =========================================================================
+    // 📅 Added: 2026-08-05 (ADR-759 Q1 — separate collection, not a Project subfield)
+    // 🔒 Pattern: tenant-scoped via companyId, project-scoped via projectId
+    //
+    // WHY ITS OWN COLLECTION: a survey record is an IMMUTABLE DATED STATEMENT
+    // ("surveyor X declared this on date Y"), not the project's working state. The
+    // freeze below is the rule that a subfield of `projects` could not express —
+    // inside the project document, "this map is frozen but the rest is editable"
+    // requires a field-by-field comparison that grows with every new field and
+    // breaks silently when someone forgets to extend it.
+    // =========================================================================
+    match /survey_records/{surveyRecordId} {
+
+      // 📖 READ: tenant-scoped.
+      allow read: if isAuthenticated()
+                  && (
+                       isSuperAdminOnly()
+                       || belongsToCompany(resource.data.companyId)
+                     );
+
+      // ✍️ CREATE: scope keys mandatory; no cross-tenant creation.
+      allow create: if isAuthenticated()
+                    && resource == null
+                    && request.resource.data.keys().hasAll(
+                         ['companyId', 'projectId', 'createdBy', 'createdAt']
+                       )
+                    && (
+                         isSuperAdminOnly()
+                         || request.resource.data.companyId == getUserCompanyId()
+                       );
+
+      // 📝 UPDATE: two regimes, decided by `confirmedBy`.
+      //   • DRAFT (confirmedBy == null) — freely editable inside the company.
+      //   • CONFIRMED — the transcription is FROZEN. Only the reconciliation ledger
+      //     and the confirmation flags themselves may move. To fix a typo you must
+      //     explicitly un-confirm first: that leaves a visible, auditable step
+      //     instead of a silent edit to a record other data was adopted from.
+      allow update: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || belongsToCompany(resource.data.companyId)
+                       )
+                    // No re-tenanting and no re-parenting to another project.
+                    && request.resource.data.companyId == resource.data.companyId
+                    && request.resource.data.projectId == resource.data.projectId
+                    && !isAttemptingToModifySystemFields(request.resource.data, resource.data)
+                    && (
+                         resource.data.confirmedBy == null
+                         || request.resource.data.diff(resource.data).affectedKeys()
+                              .hasOnly(['reconciliations', 'updatedAt',
+                                        'confirmedBy', 'confirmedAt'])
+                       );
+
+      // 🗑️ DELETE: company admin or super admin only. A survey record is evidence;
+      // the person who typed it is not automatically the person who may destroy it.
+      allow delete: if isAuthenticated()
+                    && resource != null
+                    && (
+                         isSuperAdminOnly()
+                         || isCompanyAdminOfCompany(resource.data.companyId)
+                       );
+    }
+
+    // =========================================================================
     // 👥 CONTACT_RELATIONSHIPS COLLECTION - TENANT ISOLATION (ADR-252 FR-H3)
     // =========================================================================
     // 📅 Updated: 2026-03-20 (ADR-252 FR-H3 — tenant isolation on READ)

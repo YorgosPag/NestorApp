@@ -32,19 +32,35 @@ export function ProvenanceBadge({ provenance, zoneId }: ProvenanceBadgeProps) {
     );
   }
 
-  if (provenance === 'zone') {
-    return (
-      <span className="text-xs text-[hsl(var(--text-success))] inline-flex items-center">
-        <span className={`${DOT_BASE} bg-[hsl(var(--text-success))]`} aria-hidden />
-        {t('provenance.fromZone', { zoneId })}
-      </span>
-    );
+  switch (provenance) {
+    case 'zone':
+      return (
+        <span className="text-xs text-[hsl(var(--text-success))] inline-flex items-center">
+          <span className={`${DOT_BASE} bg-[hsl(var(--text-success))]`} aria-hidden />
+          {t('provenance.fromZone', { zoneId })}
+        </span>
+      );
+    case 'survey':
+      return (
+        <span className="text-xs text-[hsl(var(--text-info))] inline-flex items-center">
+          <span className={`${DOT_BASE} bg-[hsl(var(--status-info))]`} aria-hidden />
+          {t('provenance.fromSurvey')}
+        </span>
+      );
+    case 'user':
+      return (
+        <span className="text-xs text-[hsl(var(--text-warning))] inline-flex items-center">
+          <span className={`${DOT_BASE} bg-[hsl(var(--status-warning))]`} aria-hidden />
+          {t('provenance.userOverride')}
+        </span>
+      );
+    default: {
+      // Exhaustiveness guard. Before ADR-759 this component ended in a bare
+      // `return <userOverride/>`, so widening `FieldProvenance` painted the new
+      // member with the wrong label and nothing anywhere could notice. Now the
+      // compiler refuses the widening until this switch is updated.
+      const never: never = provenance;
+      return <>{String(never)}</>;
+    }
   }
-
-  return (
-    <span className="text-xs text-[hsl(var(--text-warning))] inline-flex items-center">
-      <span className={`${DOT_BASE} bg-[hsl(var(--status-warning))]`} aria-hidden />
-      {t('provenance.userOverride')}
-    </span>
-  );
 }
