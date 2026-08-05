@@ -67,6 +67,10 @@ import {
 // και το hover: getter τη στιγμή του καρέ (ADR-040), καμία συνδρομή.
 import { stampTableRangeGhost } from './table/stamp-table-range-ghost';
 import { getTableRangeTransferPreview } from '../../state/table-range-transfer-store';
+// 🔴 ADR-739 §48 — τα «μυρμήγκια» της αντιγραμμένης περιοχής. Ίδιος κανόνας ανάγνωσης με τα
+// δύο από πάνω· ο ζωγράφος είναι **και** ο φρουρός της μπαγιάτικης έκδοσης (δες εκεί).
+import { stampTableCopyMarquee } from './table/stamp-table-copy-marquee';
+import { getTableCopyMarquee } from '../../state/table-copy-marquee-store';
 // 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των αναφορών του τύπου που γράφεται. **Κανένα
 // νέο store**: οι αναφορές είναι παράγωγο του προχείρου, που ταξιδεύει ήδη μέσα στον δρομέα
 // (δες την κεφαλίδα του `table-formula-reference-spans`).
@@ -257,6 +261,16 @@ export class TableRenderer extends BaseEntityRenderer {
       // καρέ (ADR-040), και **μόνο** σε φάση επιλογής ⇒ ποτέ ψημένο στο bitmap cache (#3).
       const transfer = getTableRangeTransferPreview();
       if (transfer?.entityId === e.id) stampTableRangeGhost(rc, layout, transfer);
+      // 🔴 ADR-739 §48 — **τα μυρμήγκια της αντιγραφής, πάνω απ' όλα**: απαντούν «τι είναι στο
+      // πρόχειρο», δηλαδή πληροφορία για μια πράξη που **δεν έχει γίνει ακόμα** — και γι' αυτό
+      // δεν επιτρέπεται να κρυφτεί κάτω από κανέναν δείκτη της τρέχουσας κατάστασης.
+      //
+      // Ίδιος κανόνας ανάγνωσης με τον δρομέα και το φάντασμα: getter τη στιγμή του καρέ
+      // (ADR-040) και **μόνο** σε φάση επιλογής ⇒ ποτέ ψημένο στο bitmap cache (κανόνας #3).
+      // Εδώ ο κανόνας #3 είναι κρίσιμος όσο πουθενά αλλού: το marquee ζητά καρέ **μόνο του**
+      // κάθε 80 ms, οπότε μια θέση μέσα στο cached raster θα σήμαινε πλήρη ανακατασκευή N
+      // οντοτήτων 12 φορές το δευτερόλεπτο, για πάντα.
+      stampTableCopyMarquee(rc, e, layout, getTableCopyMarquee(), performance.now());
       // 🔴 ADR-754 Γ4 — η λαβή συμπλήρωσης, **τελευταία μέσα στο πλέγμα**: είναι το μόνο
       // στοιχείο εδώ που λειτουργεί ως χερούλι, άρα τίποτα δεν επιτρέπεται να τη σκεπάσει.
       stampTableFillHandleOverlay(rc, layout, e, cursor, selection?.bounds);

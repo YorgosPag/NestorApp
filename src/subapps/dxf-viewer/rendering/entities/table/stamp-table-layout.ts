@@ -335,6 +335,17 @@ export function strokeRectMm(
   colorHex: string,
   lineWidthPx: number,
   dashPx: readonly number[],
+  /**
+   * 🔴 ADR-739 §48 — **η φάση του μοτίβου**, δηλαδή τα «μυρμήγκια». Παραλείπεται από κάθε
+   * στατικό δείκτη, και η προεπιλογή `0` είναι η **υπάρχουσα** συμπεριφορά byte-για-byte.
+   *
+   * Μπαίνει εδώ αντί για τέταρτο ζωγράφο επειδή αυτή είναι ήδη η κεφαλίδα του κανόνα: ένα
+   * ακόμα σώμα `save`/`strokeStyle`/`lineWidth`/`setLineDash`/`trace`/`stroke`/`restore`
+   * είναι ακριβώς το sibling clone που πιάνει το CHECK 3.28 (N.18), **ανεξάρτητα ονόματος**.
+   * Ο **λόγος** που το offset είναι αρνητικό ζει στο `bim/table/table-marching-ants.ts` —
+   * εδώ περνά αυτούσιο, ο χάρακας δεν ερμηνεύει.
+   */
+  dashOffsetPx = 0,
 ): void {
   const { ctx } = rc;
   ctx.save();
@@ -342,6 +353,7 @@ export function strokeRectMm(
   ctx.lineWidth = lineWidthPx;
   // `slice()`: το `setLineDash` δέχεται μεταβλητό πίνακα, και η σταθερά είναι κοινή.
   ctx.setLineDash(dashPx.slice());
+  ctx.lineDashOffset = dashOffsetPx;
   traceRectMm(rc, rectMm);
   ctx.stroke();
   ctx.restore();

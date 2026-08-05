@@ -1,22 +1,25 @@
 /**
- * ADR-739 Φ.Ζ — **το μητρώο συναρτήσεων**: η πρίζα της μηχανής.
+ * ADR-739 Φ.Ζ / §48 — **το μητρώο συναρτήσεων**: η πρίζα της μηχανής.
  *
- * ## Γιατί αυτό το αρχείο είναι η απάντηση στο «και αν αύριο θέλουμε 280 συναρτήσεις;»
+ * ## Γιατί αυτό το αρχείο ήταν η απάντηση στο «και αν αύριο θέλουμε 280 συναρτήσεις;»
  * Η μηχανή χωρίζεται σε δύο πράγματα που κατά λάθος θεωρούνται ένα: τον **αναλυτή** (πώς
  * διαβάζεται ένας τύπος, πώς δένονται οι αναφορές, πώς υπολογίζεται ποιος εξαρτάται από
  * ποιον) και τη **βιβλιοθήκη συναρτήσεων** (τι κάνει η `SUM`). Το πρώτο **οφείλει** να είναι
  * δικό μας — καμία βιβλιοθήκη δεν ξέρει από `TableRowId` ούτε διαχειρίζεται φύλλο (ADR-739
  * §9.2, λόγοι 2 και 3). Το δεύτερο είναι ένας πίνακας από καθαρές συναρτήσεις.
  *
- * Άρα «περισσότερες συναρτήσεις» **δεν** σημαίνει ποτέ δεύτερη μηχανή: σημαίνει
- * περισσότερες εγγραφές εδώ, ή σύνδεση μιας MIT βιβλιοθήκης συναρτήσεων (π.χ.
- * `@formulajs/formulajs`) **μέσα** σε αυτόν τον πίνακα. Ένας αναλυτής, μία διαδρομή
- * αξιολόγησης, ένα σημείο αλλαγής.
+ * Το §48 το εξαργύρωσε **ακριβώς όπως ήταν γραμμένο**: συνδέθηκε η `@formulajs/formulajs`
+ * (MIT) **μέσα** σε αυτόν τον πίνακα. Ένας αναλυτής, μία διαδρομή αξιολόγησης, ένα σημείο
+ * αλλαγής. Κανένας δεύτερος αναλυτής δεν γράφτηκε και καμία γραμμή του αξιολογητή δεν
+ * μετακόμισε.
  *
- * ## Το εύρος του v1 — η επιφάνεια του AutoCAD, όχι του Excel
- * Το ίδιο το AutoCAD δίνει στα κελιά πίνακα **αριθμητική + `Sum` / `Average` / `Count`**.
- * Αυτές, συν τέσσερις προφανείς (`MIN` `MAX` `ROUND` `ABS`), είναι το v1. Η `IF` **δεν** ζει
- * εδώ — δες `table-formula-eval.ts`, είναι ειδική μορφή.
+ * ## Τρεις πηγές, μία σειρά προτεραιότητας — και η σειρά **είναι** απόφαση
+ * 1. **Βιβλιοθήκη** (340 διαδρομές + 10 παλαιά ψευδώνυμα), πίσω από ρητή διαμέριση.
+ * 2. **Πληροφοριακές** (`ISERROR`, `TYPE`, …) — δικές μας, γιατί η βιβλιοθήκη δεν αναγνωρίζει
+ *    τα σφάλματά μας (μετρημένο· δες `table-formula-info-functions.ts`).
+ * 3. **Αριθμητικές** — δικές μας, γιατί η δική μας σημασιολογία είναι **πιο σωστή**:
+ *    μετρημένο ότι `SUM("άλφα")` δίνει `0` στη βιβλιοθήκη ενώ εμείς —και το Excel— λέμε
+ *    `#VALUE!`. Μπαίνουν τελευταίες ώστε να μην μπορεί ποτέ να τις σκεπάσει αναβάθμιση.
  *
  * ## Δύο αυστηρότητες, όπως στο Excel — και δεν είναι ασυνέπεια
  * - Όρισμα **τιμή** που δεν είναι αριθμός ⇒ `#VALUE!` (`=SUM("άλφα")`). Ο χρήστης το έγραψε
@@ -26,18 +29,38 @@
  *   `count` αγνοούν τα κενά και όσα δεν είναι αριθμοί».
  *
  * @module subapps/dxf-viewer/bim/table/formula/table-formula-functions
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §9
+ * @see bim/table/formula/library/formula-library-manifest.ts — η διαμέριση της βιβλιοθήκης
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §9, §48
  */
 
+import { FORMULA_LIBRARY_FUNCTIONS } from './library/formula-library-registry';
+import {
+  ERROR_TRANSPARENT_INFO_FUNCTIONS,
+  TABLE_FORMULA_INFO_FUNCTIONS,
+} from './table-formula-info-functions';
 import {
   FORMULA_ERROR,
   valueToNumber,
   type TableFormulaArgument,
+  type TableFormulaFunction,
   type TableFormulaValue,
 } from './table-formula-value';
 
-/** Μια συνάρτηση τύπου: καθαρή, από ορίσματα σε τιμή. Καμία πρόσβαση στο μοντέλο. */
-export type TableFormulaFunction = (args: readonly TableFormulaArgument[]) => TableFormulaValue;
+export type { TableFormulaFunction } from './table-formula-value';
+
+/**
+ * Μια εγγραφή του μητρώου.
+ *
+ * Είναι περιγραφέας και όχι σκέτη συνάρτηση εξαιτίας **μίας** ιδιότητας που δεν εκφράζεται
+ * στην υπογραφή: υπάρχουν συναρτήσεις που πρέπει να **δουν** το σφάλμα ενός ορίσματος αντί
+ * να τους διαδοθεί. Χωρίς τη σημαία, η `ISERROR` δεν θα καλούνταν ποτέ πάνω σε σφάλμα — θα
+ * επέστρεφε το ίδιο το σφάλμα, δηλαδή θα ήταν διακοσμητική.
+ */
+export interface TableFormulaEntry {
+  readonly call: TableFormulaFunction;
+  /** Τα σφάλματα ορισμάτων **δεν** διαδίδονται αυτόματα· τα βλέπει η ίδια. */
+  readonly errorTransparent?: boolean;
+}
 
 /**
  * Το αποτέλεσμα της συλλογής: αριθμοί ή σφάλμα. Διακριτή ένωση και όχι `number[] | string`,
@@ -101,10 +124,10 @@ function roundFunction(args: readonly TableFormulaArgument[]): TableFormulaValue
 }
 
 /**
- * Το μητρώο. Τα ονόματα είναι **κεφαλαία**: ο αναλυτής κανονικοποιεί, ώστε να μην μπορεί
- * ποτέ να υπάρξουν δύο εγγραφές για την ίδια συνάρτηση.
+ * Οι επτά αριθμητικές που κρατάμε δικές μας. Τα ονόματα είναι **κεφαλαία**: ο αναλυτής
+ * κανονικοποιεί, ώστε να μην μπορεί ποτέ να υπάρξουν δύο εγγραφές για την ίδια συνάρτηση.
  */
-export const TABLE_FORMULA_FUNCTIONS: Readonly<Record<string, TableFormulaFunction>> = {
+const NATIVE_ARITHMETIC: Readonly<Record<string, TableFormulaFunction>> = {
   SUM: (args) => withNumbers(args, (numbers) => numbers.reduce((total, n) => total + n, 0)),
 
   AVERAGE: (args) =>
@@ -136,4 +159,31 @@ export const TABLE_FORMULA_FUNCTIONS: Readonly<Record<string, TableFormulaFuncti
   },
 
   ROUND: roundFunction,
+};
+
+const ERROR_TRANSPARENT: ReadonlySet<string> = new Set(ERROR_TRANSPARENT_INFO_FUNCTIONS);
+
+/** Τυλίγει έναν πίνακα καθαρών συναρτήσεων σε εγγραφές, με τη σημαία όπου χρειάζεται. */
+function toEntries(
+  functions: Readonly<Record<string, TableFormulaFunction>>,
+): Record<string, TableFormulaEntry> {
+  return Object.fromEntries(
+    Object.entries(functions).map(([name, call]) => [
+      name,
+      ERROR_TRANSPARENT.has(name) ? { call, errorTransparent: true } : { call },
+    ]),
+  );
+}
+
+/**
+ * **Το μητρώο.** Η σειρά συγχώνευσης είναι η σειρά προτεραιότητας της κεφαλίδας: οι δικές μας
+ * γράφονται τελευταίες και δεν μπορεί να τις σκεπάσει καμία αναβάθμιση της βιβλιοθήκης.
+ *
+ * *(Η `IF` και οι υπόλοιπες ειδικές μορφές **δεν** ζουν εδώ — δες
+ * `table-formula-special-forms.ts`: μόνο ο αξιολογητής μπορεί να μην αξιολογήσει έναν κλάδο.)*
+ */
+export const TABLE_FORMULA_FUNCTIONS: Readonly<Record<string, TableFormulaEntry>> = {
+  ...toEntries(FORMULA_LIBRARY_FUNCTIONS),
+  ...toEntries(TABLE_FORMULA_INFO_FUNCTIONS),
+  ...toEntries(NATIVE_ARITHMETIC),
 };

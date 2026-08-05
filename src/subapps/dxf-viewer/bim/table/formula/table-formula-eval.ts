@@ -13,11 +13,13 @@
  * ## Η `IF` είναι **ειδική μορφή**, όχι εγγραφή του μητρώου
  * Το `=IF(A1=0, 0, 1/A1)` είναι ο πιο συνηθισμένος τύπος σε πίνακα ποσοτήτων: ο φύλακας
  * διαίρεσης. Αν η `IF` ήταν κανονική συνάρτηση, τα ορίσματα θα αξιολογούνταν **πριν** την
- * κλήση, το `1/A1` θα έδινε `#DIV/0!` και ο φύλακας θα προστάτευε από το τίποτα. Γι' αυτό
- * ζει εδώ — μόνο ο αξιολογητής μπορεί να **μην** αξιολογήσει έναν κλάδο.
+ * κλήση, το `1/A1` θα έδινε `#DIV/0!` και ο φύλακας θα προστάτευε από το τίποτα. Μόνο ο
+ * αξιολογητής μπορεί να **μην** αξιολογήσει έναν κλάδο — γι' αυτό η απόφαση γίνεται εδώ, ενώ
+ * οι ίδιες οι έξι ειδικές μορφές ζουν στο `table-formula-special-forms.ts` (§48).
  *
  * @module subapps/dxf-viewer/bim/table/formula/table-formula-eval
  * @see bim/table/formula/table-formula-functions.ts — το μητρώο (όλες οι υπόλοιπες)
+ * @see bim/table/formula/table-formula-special-forms.ts — οι έξι που δεν χωρούν στο μητρώο
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §9
  */
 
@@ -30,19 +32,19 @@ import type {
 } from '../../../types/table-formula';
 import { indexById } from '../table-model-helpers';
 import { TABLE_FORMULA_FUNCTIONS } from './table-formula-functions';
+import { TABLE_FORMULA_SPECIAL_FORMS } from './table-formula-special-forms';
 import {
   cellValueToNumber,
+  compareValues,
   FORMULA_ERROR,
   firstError,
+  isComparisonOperator,
   isFormulaError,
-  toCellValue,
   valueToNumber,
+  valueToText,
   type TableFormulaArgument,
   type TableFormulaValue,
 } from './table-formula-value';
-
-/** Το όνομα της μίας ειδικής μορφής — δες την κεφαλίδα. */
-const CONDITIONAL = 'IF';
 
 /** Τι χρειάζεται ο αξιολογητής από τον κόσμο έξω από αυτόν. */
 export interface TableFormulaScope {
@@ -82,6 +84,7 @@ function evaluateNode(scope: TableFormulaScope, node: TableFormulaNode): TableFo
   switch (node.kind) {
     case 'number':
     case 'text':
+    case 'boolean':
       return node.value;
     case 'error':
       return node.code;
@@ -126,35 +129,8 @@ function evaluateBinary(
   if (isFormulaError(right)) return right;
 
   if (node.op === '&') return valueToText(left) + valueToText(right);
-  if (isComparison(node.op)) return compare(node.op, left, right);
+  if (isComparisonOperator(node.op)) return compareValues(node.op, left, right);
   return arithmetic(node.op, left, right);
-}
-
-const COMPARISONS: readonly TableFormulaBinaryOp[] = ['=', '<>', '<', '<=', '>', '>='];
-const isComparison = (op: TableFormulaBinaryOp): boolean => COMPARISONS.includes(op);
-
-/**
- * Σύγκριση: **αριθμητική όταν και οι δύο πλευρές είναι αριθμοί**, αλλιώς κειμένου. Ίδιο με
- * κάθε φύλλο υπολογισμού — και ο λόγος που το `=A1="Ναι"` δουλεύει δίπλα στο `=A1>5`.
- */
-function compare(op: TableFormulaBinaryOp, left: TableFormulaValue, right: TableFormulaValue): boolean {
-  const leftNumber = valueToNumber(left);
-  const rightNumber = valueToNumber(right);
-  return leftNumber !== null && rightNumber !== null
-    ? compareOrdered(op, leftNumber, rightNumber)
-    : compareOrdered(op, valueToText(left), valueToText(right));
-}
-
-/** Η ίδια διάταξη για αριθμούς και για κείμενο — γενική, ώστε να γραφτεί **μία** φορά. */
-function compareOrdered<T extends number | string>(op: TableFormulaBinaryOp, a: T, b: T): boolean {
-  switch (op) {
-    case '=': return a === b;
-    case '<>': return a !== b;
-    case '<': return a < b;
-    case '<=': return a <= b;
-    case '>': return a > b;
-    default: return a >= b;
-  }
 }
 
 /** Οι τέσσερις πράξεις και η δύναμη, με τα δύο σφάλματα που μπορούν να προκύψουν. */
@@ -180,40 +156,27 @@ function arithmetic(
   }
 }
 
-/** Η μορφή που παίρνει μια τιμή όταν συνενώνεται ή συγκρίνεται ως κείμενο. */
-function valueToText(value: TableFormulaValue): string {
-  return String(toCellValue(value) ?? '');
-}
-
-/** Κλήση συνάρτησης — με την `IF` να κόβεται **πριν** αξιολογηθούν τα ορίσματα. */
+/**
+ * Κλήση συνάρτησης — με τις **ειδικές μορφές** να κόβονται πριν αξιολογηθεί οτιδήποτε.
+ *
+ * Οι δύο φύλακες που ακολουθούν δεν είναι ίδιοι:
+ * - Η **ειδική μορφή** παίρνει τα ορίσματα **ανώτατα** και αποφασίζει η ίδια τι θα αξιολογήσει.
+ * - Η **διαφανής στα σφάλματα** παίρνει αξιολογημένα ορίσματα, αλλά χωρίς την αυτόματη
+ *   διάδοση: αλλιώς η `ISERROR` δεν θα καλούνταν ποτέ πάνω σε σφάλμα.
+ */
 function evaluateCall(
   scope: TableFormulaScope,
   node: Extract<TableFormulaNode, { kind: 'call' }>,
 ): TableFormulaValue {
-  if (node.name === CONDITIONAL) return evaluateConditional(scope, node.args);
+  const special = TABLE_FORMULA_SPECIAL_FORMS[node.name];
+  if (special !== undefined) return special((child) => evaluateNode(scope, child), node.args);
 
-  const implementation = TABLE_FORMULA_FUNCTIONS[node.name];
-  if (implementation === undefined) return FORMULA_ERROR.name;
+  const entry = TABLE_FORMULA_FUNCTIONS[node.name];
+  if (entry === undefined) return FORMULA_ERROR.name;
 
   const args = node.args.map((arg) => evaluateArgument(scope, arg));
-  return firstError(args) ?? implementation(args);
-}
-
-/** `IF(συνθήκη, τότε[, αλλιώς])` — αξιολογείται **μόνο** ο κλάδος που ισχύει. */
-function evaluateConditional(
-  scope: TableFormulaScope,
-  args: readonly TableFormulaNode[],
-): TableFormulaValue {
-  if (args.length < 2 || args.length > 3) return FORMULA_ERROR.value;
-
-  const condition = evaluateNode(scope, args[0]);
-  if (isFormulaError(condition)) return condition;
-
-  const truthy = typeof condition === 'boolean' ? condition : valueToNumber(condition) !== 0;
-  if (truthy) return evaluateNode(scope, args[1]);
-  // Παραλειπόμενος τρίτος κλάδος ⇒ `FALSE`, όπως στο Excel: το κελί δηλώνει ότι η συνθήκη
-  // δεν ίσχυσε, αντί να δείχνει κενό που δεν ξεχωρίζει από «δεν υπολογίστηκε».
-  return args.length === 3 ? evaluateNode(scope, args[2]) : false;
+  if (entry.errorTransparent === true) return entry.call(args);
+  return firstError(args) ?? entry.call(args);
 }
 
 /**
@@ -226,10 +189,9 @@ function evaluateConditional(
 function evaluateArgument(scope: TableFormulaScope, node: TableFormulaNode): TableFormulaArgument {
   const bare = unwrapGroups(node);
   if (bare.kind !== 'range') return { kind: 'value', value: evaluateNode(scope, bare) };
-  return {
-    kind: 'list',
-    values: expandRange(scope.model, bare.from, bare.to).map((cell) => scope.valueAt(cell)),
-  };
+
+  const { cells, rows, cols } = expandRangeShape(scope.model, bare.from, bare.to);
+  return { kind: 'list', values: cells.map((cell) => scope.valueAt(cell)), rows, cols };
 }
 
 /** Ό,τι μένει όταν αφαιρεθούν οι ρητές παρενθέσεις. */
@@ -252,6 +214,27 @@ export function expandRange(
   from: TableFormulaCellRef,
   to: TableFormulaCellRef,
 ): readonly TableFormulaCellRef[] {
+  return expandRangeShape(model, from, to).cells;
+}
+
+/** Το ορθογώνιο **με τις διαστάσεις του** — δες {@link TableFormulaArgument.rows}. */
+export interface ExpandedRange {
+  readonly cells: readonly TableFormulaCellRef[];
+  readonly rows: number;
+  readonly cols: number;
+}
+
+/**
+ * Η μία επέκταση εύρους. Ο {@link expandRange} είναι η προβολή της που αγνοεί το σχήμα —
+ * δύο ερωτήσεις, **ένας** υπολογισμός: μια δεύτερη διπλή επανάληψη «γραμμή × στήλη» θα ήταν
+ * ακριβώς το είδος του διδύμου που πληρώνει το N.18, και θα απέκλινε την πρώτη φορά που
+ * αλλάξει η κανονικοποίηση των άκρων.
+ */
+export function expandRangeShape(
+  model: TableModel,
+  from: TableFormulaCellRef,
+  to: TableFormulaCellRef,
+): ExpandedRange {
   const rowIndex = indexById(model.rows);
   const colIndex = indexById(model.columns);
   const fromRow = rowIndex.get(from.rowId);
@@ -259,14 +242,19 @@ export function expandRange(
   const fromCol = colIndex.get(from.colId);
   const toCol = colIndex.get(to.colId);
   if (fromRow === undefined || toRow === undefined || fromCol === undefined || toCol === undefined) {
-    return [];
+    return { cells: [], rows: 0, cols: 0 };
   }
 
+  const firstRow = Math.min(fromRow, toRow);
+  const lastRow = Math.max(fromRow, toRow);
+  const firstCol = Math.min(fromCol, toCol);
+  const lastCol = Math.max(fromCol, toCol);
+
   const cells: TableFormulaCellRef[] = [];
-  for (let r = Math.min(fromRow, toRow); r <= Math.max(fromRow, toRow); r += 1) {
-    for (let c = Math.min(fromCol, toCol); c <= Math.max(fromCol, toCol); c += 1) {
+  for (let r = firstRow; r <= lastRow; r += 1) {
+    for (let c = firstCol; c <= lastCol; c += 1) {
       cells.push({ rowId: model.rows[r].id, colId: model.columns[c].id });
     }
   }
-  return cells;
+  return { cells, rows: lastRow - firstRow + 1, cols: lastCol - firstCol + 1 };
 }

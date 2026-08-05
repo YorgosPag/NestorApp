@@ -24,6 +24,9 @@
 import { useCallback } from 'react';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { buildTableModelCommand } from '../../bim/table/table-cell-edit-session';
+// 🔴 ADR-739 §48 — δες τη χρήση παρακάτω: η αλλαγή του πίνακα ακυρώνει την υπόσχεση του
+// προχείρου. Ο **ζωγράφος** έχει το δομικό δίχτυ· εδώ σταματά ο παλμός.
+import { clearTableCopyMarquee } from '../../state/table-copy-marquee-store';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
@@ -56,6 +59,16 @@ export function useTableModelCommit(params: UseTableModelCommitParams): TableMod
       const command = buildTableModelCommand(entity, nextModel, sceneManager);
       if (!command) return false;
       execute(command);
+      // 🔴 ADR-739 §48 — **η αλλαγή σβήνει τα μυρμήγκια** (Excel parity): το περίγραμμα
+      // υπόσχεται «αυτά τα κελιά, όπως τα βλέπεις», και μια δομική αλλαγή κάνει την υπόσχεση
+      // ψέμα. Μπαίνει **μετά** το `if (!command)`, άρα εκτελείται μόνο σε **πραγματική** αλλαγή
+      // — ο φύλακας ταυτότητας του `buildTableModelCommand` κάνει ήδη τη διάκριση, και μια
+      // δεύτερη σύγκριση εδώ θα ήταν δεύτερη άποψη για το «άλλαξε κάτι;».
+      //
+      // Ιδεμποτής, άρα αβλαβής όταν δεν υπάρχει marquee. Ο ζωγράφος έχει **ούτως ή άλλως** το
+      // δικό του δίχτυ (σύγκριση `modelRef`) για όποια διαδρομή δεν περνά από εδώ· αυτό εδώ
+      // υπάρχει για να μη μείνει ο **παλμός** να τρέχει σε marquee που δεν φαίνεται πια.
+      clearTableCopyMarquee();
       return true;
     },
     [levelManager, execute],

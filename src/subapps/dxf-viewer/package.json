@@ -51,6 +51,7 @@
     "analyze:bundle-report": "npm run analyze:bundle && echo 'Report saved to bundle-analysis-report.json'"
   },
   "dependencies": {
+    "@formulajs/formulajs": "4.6.1",
     "dockview": "^1.16.0",
     "firebase": "^12.2.1",
     "lucide-react": "^0.542.0",

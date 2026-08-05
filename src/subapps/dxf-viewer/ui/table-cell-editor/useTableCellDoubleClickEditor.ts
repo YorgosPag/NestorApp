@@ -37,20 +37,15 @@ import { activateTableCellLink } from '../../bim/table/table-link-interaction-2d
 import { openTableLinkPicker } from '../../state/table-link-picker-store';
 // ADR-711 — το SSoT του «ποιος κατέχει το πληκτρολόγιο». ΜΗΝ γράψεις δεύτερο scope.
 import { useModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope';
-import { CoordinateTransforms } from '../../rendering/core/CoordinateTransforms';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useCommandHistory } from '../../core/commands';
-import { resolveSelectedTable, resolveTableById } from './table-entity-lookup';
+import { resolveTableById } from './table-entity-lookup';
 import { toggleTableFormulaAbsoluteRef } from './table-point-mode-keys';
 import { useLiveTable } from './use-live-table';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
-import {
-  buildTableCellEditCommand,
-  resolveTableCellEditTarget,
-} from '../../bim/table/table-cell-edit-session';
+import { buildTableCellEditCommand } from '../../bim/table/table-cell-edit-session';
 import {
   moveTableCursor,
-  tableCursorAt,
   type TableCursorMove,
 } from '../../bim/table/table-cell-navigation';
 import {
@@ -58,11 +53,11 @@ import {
   setTableCellCursor,
   useTableCellCursor,
 } from '../../state/table-cell-cursor-store';
-import { resolveDxfCanvasBackgroundHex } from '../../config/color-config';
-// ADR-739 §26.15 — το **ζωντανό** κουτί του κελιού μετακόμισε σε δικό του module όταν αυτό
-// εδώ χτύπησε τις 500 γραμμές (N.7.1). Εξαγωγή, όχι κόψιμο: οι δύο συναρτήσεις δεν
-// χρειάζονται τίποτα από το hook.
-import { caretIndexOfClick, cellEditorFrameLive } from './table-cell-editor-frame-live';
+// 🔴 ADR-739 §46 — η **απόφαση** του διπλού κλικ (είσοδος vs άνοιγμα κελιού), σε δικό της
+// module: δεν χρειάζεται τίποτα από το hook, και αυτό εδώ ξαναχτύπησε τις 500 γραμμές (N.7.1).
+import { applyTableDoubleClick } from './table-double-click-gesture';
+// 🔴 ADR-739 §48 — δες το `commitText`: το γράψιμο σε κελί ακυρώνει την υπόσχεση του προχείρου.
+import { clearTableCopyMarquee } from '../../state/table-copy-marquee-store';
 // ADR-739 §31.10 — η **αλυσίδα προς την οθόνη** (κελί ⇒ κουτί ⇒ άγκυρο), εξαχθείσα για τον
 // ίδιο λόγο: αυτό το αρχείο ξαναχτύπησε τις 500 γραμμές.
 import { useTableCellAnchor } from './use-table-cell-anchor';
@@ -87,7 +82,7 @@ import { useTableModeCanvasWiring } from './use-table-mode-canvas-wiring';
 import { useTableModelCommit } from './use-table-model-commit';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
-import type { Point2D, ViewTransform, Viewport } from '../../rendering/types/Types';
+import type { ViewTransform } from '../../rendering/types/Types';
 
 interface UseTableCellDoubleClickEditorParams {
   readonly transformRef: React.RefObject<ViewTransform>;
@@ -117,21 +112,6 @@ interface TableCellDoubleClickEditorApi {
   readonly handleDoubleClick: (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
-/** Το σημείο κόσμου ενός mouse event, με την ίδια margin-aware αντιστροφή του renderer. */
-function eventWorldPoint(
-  event: React.MouseEvent<HTMLDivElement>,
-  container: HTMLDivElement,
-  transform: ViewTransform,
-): Point2D {
-  const containerRect = container.getBoundingClientRect();
-  const viewport: Viewport = { width: containerRect.width, height: containerRect.height };
-  return CoordinateTransforms.screenToWorld(
-    { x: event.clientX - containerRect.left, y: event.clientY - containerRect.top },
-    transform,
-    viewport,
-  );
-}
-
 export function useTableCellDoubleClickEditor(
   params: UseTableCellDoubleClickEditorParams,
 ): TableCellDoubleClickEditorApi {
@@ -139,30 +119,22 @@ export function useTableCellDoubleClickEditor(
   const { execute, undo, redo } = useCommandHistory();
   const cursor = useTableCellCursor();
 
+  /**
+   * ADR-739 §46 — **δύο** χειρονομίες: έξω ⇒ είσοδος σε πλοήγηση, μέσα ⇒ άνοιγμα κελιού. Όλη
+   * η απόφαση ζει στο `table-double-click-gesture` — δεν χρειάζεται τίποτα από το hook, και
+   * αυτό εδώ ξαναχτύπησε τις 500 γραμμές (N.7.1).
+   *
+   * ⚠️ **Καμία εξάρτηση από τον δρομέα**, επίτηδες: το πρόχειρο ζει μέσα του, άρα μια εξάρτηση
+   * θα ξανάφτιαχνε αυτόν τον χειριστή σε κάθε πάτημα πλήκτρου — και ταξιδεύει ως prop μέχρι
+   * τον `CanvasSection`, τον orchestrator που ο ADR-040 απαγορεύει να επαναποδίδεται. Τον
+   * διαβάζει η ίδια η χειρονομία, με getter, τη στιγμή του συμβάντος.
+   */
   const handleDoubleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
-      const entity = resolveSelectedTable(levelManager, getSelectedEntityIds);
       const container = containerRef.current;
       const transform = transformRef.current;
-      if (!entity || !container || !transform) return;
-
-      const target = resolveTableCellEditTarget(entity, eventWorldPoint(event, container, transform));
-      if (!target) return;
-      // Διπλό κλικ = «θέλω να διορθώσω ΑΥΤΟ το κελί» ⇒ κατάσταση `edit`, όχι `enter`. Και
-      // **νέα** στήλη αγκύρωσης: το κλικ ξεκινά νέα σειρά καταχώρισης, άρα το επόμενο Enter
-      // επιστρέφει ΕΔΩ.
-      // Το πρόχειρο ξεκινά από το **δεσμευμένο** κείμενο του κελιού: μπήκες με διπλό κλικ
-      // για να διορθώσεις, όχι για να ξαναγράψεις από την αρχή (η `enter` κάνει εκείνο).
-      // Ο κέρσορας πάει στο γράμμα που έδειξες (Excel) — το κουτί υπολογίζεται εδώ γιατί
-      // μόνο **τώρα** υπάρχει σημείο κλικ.
-      const frame = cellEditorFrameLive(target, entity.angleRad, resolveDxfCanvasBackgroundHex());
-      setTableCellCursor(
-        entity.id,
-        tableCursorAt(target.rowId, target.colId),
-        'edit',
-        target.text,
-        caretIndexOfClick(target, frame),
-      );
+      if (!container || !transform) return;
+      applyTableDoubleClick({ event, container, transform, levelManager, getSelectedEntityIds });
     },
     [levelManager, getSelectedEntityIds, containerRef, transformRef],
   );
@@ -188,7 +160,13 @@ export function useTableCellDoubleClickEditor(
         nextText,
         sceneManager,
       );
-      if (command) execute(command);
+      if (!command) return;
+      execute(command);
+      // 🔴 ADR-739 §48 — το γράψιμο σε κελί σβήνει τα μυρμήγκια (Excel parity). Δεύτερο σημείο
+      // δίπλα στο `useTableModelCommit` και **όχι** αντιγραφή: αυτή η διαδρομή δεν περνά από
+      // εκείνο το hook (χτίζει `buildTableCellEditCommand` απευθείας), και οι δύο μαζί είναι
+      // όλες οι διαδρομές που παράγουν εντολή πίνακα από τη διεπαφή του κελιού.
+      clearTableCopyMarquee();
     },
     [cursor, levelManager, execute],
   );

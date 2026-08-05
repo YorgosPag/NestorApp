@@ -11,11 +11,38 @@
  * είναι μια σύνθετη εντολή — και υπάρχει ήδη υποδομή γι' αυτό (`CompositeCommand`,
  * `executeAsAtomicBatch`).
  *
- * **Δεν χρειάζεται.** Το `setPersistedCellText` είναι ήδη **καθαρός, αμετάβλητος** γραφέας:
+ * **Δεν χρειάζεται.** Το `writeCellInput` είναι ήδη **καθαρός, αμετάβλητος** γραφέας:
  * εφαρμόζεται Ν φορές πάνω στο ενδιάμεσο αποτέλεσμα χωρίς να αγγίξει τίποτα, και μετά
  * γίνεται **μία** εγγραφή του τελικού μοντέλου. Ένα `UpdateEntityCommand`, ένα undo, και —
  * το σημαντικότερο — **η ίδια ακριβώς διαδρομή commit** με τη μονή επεξεργασία κελιού. Καμία
  * νέα μηχανική, κανένα δεύτερο μονοπάτι που θα μπορούσε να αποκλίνει (§6.6).
+ *
+ * ## 🔴 ΔΥΟ ΣΦΑΛΜΑΤΑ ΠΟΥ ΕΖΗΣΑΝ ΕΔΩ ΩΣ ΤΟ 2026-08-05 (ADR-739 §47)
+ * Και τα δύο είχαν το ίδιο σχήμα: **η επικόλληση δεν περνούσε από τη μηχανή τύπων**, ενώ
+ * κάθε αδελφή διαδρομή περνούσε. Κανένα gate δεν τα έβλεπε, γιατί και τα δύο παράγουν
+ * **σιωπηλά λάθος νούμερα** σε πίνακα ποσοτήτων — όχι εξαίρεση, όχι κόκκινο test.
+ *
+ *  1. **Καμία επαναξιολόγηση.** Ο βρόχος έγραφε κελιά και το αποτέλεσμα πήγαινε κατευθείαν
+ *     στο commit. Επικόλληση 20 αριθμών σε στήλη που την αθροίζει ένα `=SUM(A1:A20)` άφηνε
+ *     **το παλιό άθροισμα** στην οθόνη και στο DXF. Η απόδειξη ότι ήταν παράλειψη κι όχι
+ *     σχεδίαση: `table-fill-apply.ts` και `table-range-transfer.ts` καλούν αμφότερα
+ *     {@link recalculateTableModel} — **μόνο** η επικόλληση το ξεχνούσε, ενώ το ίδιο το
+ *     `table-cell-edit-session.ts` επικαλείται την επικόλληση ως το παράδειγμά του.
+ *  2. **Ωμό `setPersistedCellText`.** Κείμενο `=SUM(A1:A3)` από το πρόχειρο αποθηκευόταν ως
+ *     **κείμενο**, ποτέ ως τύπος — παρότι το `table-formula-engine.ts` δηλώνει ρητά «ό,τι
+ *     πληκτρολογεί **ή επικολλά** ο χρήστης περνά από εδώ». Η δήλωση ήταν ψευδής· τώρα
+ *     είναι αληθής.
+ *
+ * ## 🚪 Η ΠΟΡΤΑ ΓΙΑ ΤΗΝ ΕΙΣΑΓΩΓΗ ΑΠΟ ΑΡΧΕΙΟ EXCEL (μελλοντική φάση)
+ * Το {@link pasteTsvIntoTable} **δεν ξέρει από πρόχειρο**: δέχεται ορθογώνιο πλέγμα
+ * κειμένου και ενεργό κελί. Ένας μελλοντικός εισαγωγέας `.xlsx` έχει ακριβώς μία δουλειά —
+ * να παραγάγει `TsvGrid` — και κληρονομεί δωρεάν το κόψιμο στα όρια, τον σεβασμό των
+ * συγχωνεύσεων, την αναγνώριση τύπων, τον επαναϋπολογισμό και το **ένα** undo. Δεν
+ * χρειάζεται δεύτερος γραφέας, και **δεν επιτρέπεται** να γραφτεί: θα ήταν το τρίτο σημείο
+ * που μπορεί να ξεχάσει το recalc.
+ *
+ * ⚠️ Ό,τι **δεν** χωρά σε πλέγμα κειμένου (μορφοποίηση, πλάτη στηλών, συγχωνεύσεις της
+ * πηγής) ανήκει σε χωριστό στρώμα **πάνω** από αυτό, όχι σε παραλλαγή αυτού.
  *
  * ## Ο πίνακας ΔΕΝ μεγαλώνει μόνος του
  * Ό,τι δεν χωράει **κόβεται**, και ο χρήστης το μαθαίνει. Ίδιο επιχείρημα με το «το `Tab`
@@ -31,7 +58,7 @@
  */
 
 import type { TsvGrid } from '@/lib/spreadsheet/tsv';
-import type { PersistedTableModel, TableModel } from '../../types/table';
+import type { CellKey, PersistedTableModel, TableModel } from '../../types/table';
 import {
   buildMergeIndex,
   cellKey,
@@ -40,8 +67,10 @@ import {
   getCell,
   indexById,
   resolveTableModel,
-  setPersistedCellText,
 } from './table-model-helpers';
+// 🔴 ADR-739 Φ.Ζ — ο γραφέας που **καταλαβαίνει** `=`, και ο επαναϋπολογισμός που ακολουθεί.
+// Δες την κεφαλίδα: η επικόλληση έγραφε ωμό κείμενο και δεν ξαναϋπολόγιζε τίποτα.
+import { recalculateTableModel, writeCellInput } from './formula/table-formula-engine';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import { tableRangeCellRefs } from './table-cell-range';
 
@@ -106,8 +135,9 @@ export interface TablePasteResult {
  * του πίνακα.
  *
  * Επιστρέφει το **ίδιο** μοντέλο by-reference όταν καμία τιμή δεν άλλαξε — η εγγύηση
- * ταυτότητας του `setPersistedCellText`, που εδώ σημαίνει «καμία εντολή, κανένα βήμα undo»
- * για μια επικόλληση που δεν έφερε τίποτα νέο.
+ * ταυτότητας του `writeCellInput`, **συνεχισμένη** από τον {@link recalculatedAfter} (που
+ * δεν καλείται καν όταν κανένα κελί δεν άγγιξε τίποτα). Σημαίνει «καμία εντολή, κανένα βήμα
+ * undo» για μια επικόλληση που δεν έφερε τίποτα νέο.
  *
  * ⚠️ Η **επανάληψη μοτίβου** του Excel (πηγή × Ν σε πολλαπλάσιο προορισμό) **δεν**
  * υλοποιείται: δεν ζητήθηκε, και προσθέτει έναν κανόνα που κανένα CAD δεν έχει. Το ενεργό
@@ -129,15 +159,64 @@ export function pasteTsvIntoTable(
 
   const fittedRows = Math.max(Math.min(offeredRows, model.rows.length - start.row), 0);
   const fittedColumns = Math.max(Math.min(offeredColumns, model.columns.length - start.col), 0);
-  const covered = buildMergeIndex(model).covered;
 
+  const written = writeGridCells(persisted, model, start, grid, {
+    rows: fittedRows,
+    columns: fittedColumns,
+  });
+
+  return {
+    model: recalculatedAfter(written.model, written.touched),
+    offeredRows,
+    offeredColumns,
+    fittedRows,
+    fittedColumns,
+    skippedMergedCells: written.skippedMergedCells,
+  };
+}
+
+/** Τι άφησε πίσω του ο βρόχος γραφής — το μοντέλο, τι άγγιξε, και τι προσπέρασε. */
+interface TableGridWrite {
+  readonly model: PersistedTableModel;
+  /** **Μόνο** τα κελιά που όντως άλλαξαν — δες {@link recalculatedAfter}. */
+  readonly touched: readonly CellKey[];
+  readonly skippedMergedCells: number;
+}
+
+/**
+ * Ο βρόχος γραφής: πλέγμα → κελιά, με τη γωνία στο `start`.
+ *
+ * Χωριστή συνάρτηση επειδή ο καλών μετρά **έξι** μεγέθη για την αναφορά του και ο βρόχος
+ * γράφει **τρία** — μαζί ξεπερνούσαν το όριο των 40 γραμμών του N.7.1, και ο διαχωρισμός
+ * είναι ούτως ή άλλως σημασιολογικός: εκείνος απαντά «τι χώρεσε», αυτός «τι γράφτηκε».
+ *
+ * 🔴 Γράφει με **`writeCellInput`** και όχι `setPersistedCellText`: **η ίδια διακλάδωση `=`
+ * με το πληκτρολόγιο**. Κελί που έρχεται ως `=SUM(A1:A3)` γίνεται τύπος· που έρχεται ως
+ * `=1+` μένει κείμενο αυτούσιο. Δες την κεφαλίδα, σφάλμα 2.
+ *
+ * Ο ΕΝΑΣ αμετάβλητος γραφέας εφαρμόζεται Ν φορές **καθαρά**: το αποτέλεσμα κάθε βήματος
+ * τροφοδοτεί το επόμενο, καμία μετάλλαξη, καμία ενδιάμεση εντολή, ένα undo. Κελί που
+ * επιστρέφει **ίδια αναφορά** δεν άλλαξε τίποτα, άρα δεν μπαίνει στα `touched`: δεν έχει τι
+ * να διαδώσει, και ο περιττός κόμβος θα κόστιζε πέρασμα του γράφου για το τίποτα.
+ */
+function writeGridCells(
+  persisted: PersistedTableModel,
+  model: TableModel,
+  start: { readonly row: number; readonly col: number },
+  grid: TsvGrid,
+  fitted: { readonly rows: number; readonly columns: number },
+): TableGridWrite {
+  const covered = buildMergeIndex(model).covered;
+  const touched: CellKey[] = [];
   let next = persisted;
   let skippedMergedCells = 0;
-  for (let r = 0; r < fittedRows; r++) {
-    for (let c = 0; c < fittedColumns; c++) {
+
+  for (let r = 0; r < fitted.rows; r++) {
+    for (let c = 0; c < fitted.columns; c++) {
       const rowId = model.rows[start.row + r].id;
       const colId = model.columns[start.col + c].id;
-      if (covered.has(cellKey(rowId, colId))) {
+      const key = cellKey(rowId, colId);
+      if (covered.has(key)) {
         skippedMergedCells++;
         continue;
       }
@@ -145,20 +224,34 @@ export function pasteTsvIntoTable(
       // λιγότερα κελιά δεν σβήνει τα υπόλοιπα — δεν πρόσφερε τιμή γι' αυτά.
       const value = grid[r][c];
       if (value === undefined) continue;
-      // 🔴 Ο ΕΝΑΣ αμετάβλητος γραφέας, Ν φορές, **καθαρά**. Το αποτέλεσμα κάθε βήματος
-      // τροφοδοτεί το επόμενο· καμία μετάλλαξη, καμία ενδιάμεση εντολή, ένα undo.
-      next = setPersistedCellText(next, rowId, colId, value);
+      const cellWritten = writeCellInput(next, rowId, colId, value);
+      if (cellWritten === next) continue;
+      next = cellWritten;
+      touched.push(key);
     }
   }
 
-  return {
-    model: next,
-    offeredRows,
-    offeredColumns,
-    fittedRows,
-    fittedColumns,
-    skippedMergedCells,
-  };
+  return { model: next, touched, skippedMergedCells };
+}
+
+/**
+ * Ο επαναϋπολογισμός **μέσα στον ίδιο μετασχηματισμό** — η τελευταία πράξη κάθε γραφέα
+ * κελιών εδώ.
+ *
+ * 🔴 Δεν είναι βελτιστοποίηση ούτε καλλωπισμός: χωρίς αυτό, κάθε τύπος που **διαβάζει** τα
+ * κελιά που μόλις γράφτηκαν κρατά την προηγούμενη τιμή του — στην οθόνη, στην εξαγωγή και
+ * στο DXF. Και επειδή γίνεται εδώ, μέσα στο **ένα** μοντέλο που φτάνει στο commit, ο τύπος
+ * και το αποτέλεσμά του αναιρούνται πάντα **μαζί** (ίδιο επιχείρημα με το
+ * `buildTableCellEditCommand`).
+ *
+ * Κανένα κελί δεν άλλαξε ⇒ επιστρέφει το **ίδιο** μοντέλο by-reference, ώστε η εγγύηση
+ * «καμία εντολή, κανένα βήμα undo για το τίποτα» να φτάσει άθικτη στον καλούντα.
+ */
+function recalculatedAfter(
+  model: PersistedTableModel,
+  touched: readonly CellKey[],
+): PersistedTableModel {
+  return touched.length === 0 ? model : recalculateTableModel(model, touched);
 }
 
 /**
@@ -184,10 +277,24 @@ export function clearTableRange(
 ): PersistedTableModel {
   const model = resolveTableModel(persisted);
   const covered = buildMergeIndex(model).covered;
-  const targets = tableRangeCellRefs(model, bounds).filter(
-    (ref) => !covered.has(cellKey(ref.rowId, ref.colId)),
-  );
-  return clearPersistedCells(persisted, targets);
+
+  // Ένα πέρασμα για **δύο** απαντήσεις: ποια κελιά αδειάζουν (ο γραφέας) και ποια κλειδιά
+  // διαδίδονται (ο επαναϋπολογισμός). Χωριστά `filter` + `map` θα υπολόγιζαν το `cellKey`
+  // δύο φορές ανά κελί — σε `Ctrl+A` + `Delete` πάνω σε 500 × 8 δεν είναι θεωρητικό.
+  const targets: TableCellRef[] = [];
+  const keys: CellKey[] = [];
+  for (const ref of tableRangeCellRefs(model, bounds)) {
+    const key = cellKey(ref.rowId, ref.colId);
+    if (covered.has(key)) continue;
+    targets.push(ref);
+    keys.push(key);
+  }
+
+  // 🔴 Ο επαναϋπολογισμός λείπει από εδώ για τον **ίδιο** λόγο που έλειπε από την
+  // επικόλληση, και κοστίζει το ίδιο: ένα `=SUM(A1:A20)` πάνω από στήλη που μόλις άδειασε
+  // εξακολουθούσε να δείχνει το άθροισμα δεδομένων **που δεν υπάρχουν πια**.
+  const emptied = clearPersistedCells(persisted, targets);
+  return emptied === persisted ? persisted : recalculatedAfter(emptied, keys);
 }
 
 /** Πού αρχίζει η επικόλληση, σε δείκτες· `null` για μπαγιάτικο ενεργό κελί. */

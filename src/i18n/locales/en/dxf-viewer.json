@@ -766,7 +766,7 @@
       "pasteClippedRows": "{fitted} of {offered, plural, one {# row} other {# rows}}",
       "pasteClippedColumns": "{fitted} of {offered, plural, one {# column} other {# columns}}",
       "pasteMergedSkipped": "{count, plural, one {# cell was skipped} other {# cells were skipped}} because of a merge",
-      "pastePlainText": "Pasting from a spreadsheet inserts plain text: formatting and formulas are not carried over — a formula is pasted as its value.",
+      "pastePlainText": "Pasting from a spreadsheet inserts plain text — formatting is not carried over. Excel sends the values of formulas, not the formulas themselves; text starting with \"=\" is recognised as a formula and evaluated.",
       "pasteEmpty": "The clipboard has no text to paste"
     }
   },

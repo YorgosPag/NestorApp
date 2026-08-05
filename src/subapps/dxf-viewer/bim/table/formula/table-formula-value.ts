@@ -25,7 +25,7 @@
 
 import { parseLocaleNumber } from '@/lib/number/locale-number';
 import type { ScheduleCellValue } from '../../schedule/types';
-import type { TableFormulaErrorCode } from '../../../types/table-formula';
+import type { TableFormulaBinaryOp, TableFormulaErrorCode } from '../../../types/table-formula';
 
 /**
  * Οι κωδικοί σφάλματος ως **τιμές** — το SSoT που ονομάζει το ADR-739 §9.2.
@@ -39,6 +39,9 @@ export const FORMULA_ERROR = {
   reference: '#REF!',
   name: '#NAME?',
   number: '#NUM!',
+  notAvailable: '#N/A',
+  nullRange: '#NULL!',
+  calculation: '#CALC!',
   circular: '#CIRCULAR!',
 } as const satisfies Readonly<Record<string, TableFormulaErrorCode>>;
 
@@ -61,7 +64,37 @@ export type TableFormulaValue = number | string | boolean;
  */
 export type TableFormulaArgument =
   | { readonly kind: 'value'; readonly value: TableFormulaValue }
-  | { readonly kind: 'list'; readonly values: readonly TableFormulaValue[] };
+  | {
+      readonly kind: 'list';
+      /** Οι τιμές σε σειρά **γραμμή × στήλη** — η κανονική, επίπεδη μορφή. */
+      readonly values: readonly TableFormulaValue[];
+      /**
+       * 🔑 ADR-739 §48 — **το σχήμα του ορθογωνίου**, ως μεταδεδομένα δίπλα στην επίπεδη λίστα.
+       *
+       * ## Γιατί μεταδεδομένα και όχι τρίτη παραλλαγή `{kind:'grid'}`
+       * Οι δικές μας συναρτήσεις (`SUM`, `AVERAGE`, …) ρωτούν **μόνο** «ποιοι αριθμοί;» — για
+       * αυτές το σχήμα είναι θόρυβος, και μια τρίτη παραλλαγή θα τις ανάγκαζε όλες να
+       * μάθουν μια περίπτωση που δεν τις αφορά. Αντίθετα η `VLOOKUP` **δεν μπορεί** να
+       * δουλέψει χωρίς αυτό: μια επίπεδη λίστα δεν έχει «τρίτη στήλη» (μετρημένο —
+       * `VLOOKUP` πάνω σε επίπεδο πίνακα δίνει `#N/A`).
+       *
+       * Έτσι το επίπεδο μένει η κανονική μορφή, το σχήμα ταξιδεύει μαζί του, και η
+       * αναδίπλωση σε 2Δ γίνεται σε **ένα** σημείο — τη γέφυρα της βιβλιοθήκης — μόνο για
+       * όσες συναρτήσεις το δηλώνουν.
+       */
+      readonly rows: number;
+      /** Δες {@link TableFormulaArgument.rows}. `values.length === rows * cols`. */
+      readonly cols: number;
+    };
+
+/**
+ * Μια συνάρτηση τύπου: καθαρή, από ορίσματα σε τιμή. Καμία πρόσβαση στο μοντέλο.
+ *
+ * Ζει εδώ και όχι δίπλα στο μητρώο επειδή είναι **λεξιλόγιο**, όχι υλοποίηση: τη χρειάζονται
+ * και το μητρώο, και ο κατασκευαστής των εγγραφών της βιβλιοθήκης, και οι πληροφοριακές
+ * συναρτήσεις. Στο μητρώο θα ήταν κυκλική εξάρτηση τριών αρχείων πάνω σε έναν τύπο.
+ */
+export type TableFormulaFunction = (args: readonly TableFormulaArgument[]) => TableFormulaValue;
 
 /** True όταν η τιμή **είναι** κωδικός σφάλματος και όχι απλώς κείμενο που του μοιάζει. */
 export function isFormulaError(value: TableFormulaValue): value is TableFormulaErrorCode {
@@ -106,6 +139,64 @@ export function valueToNumber(value: TableFormulaValue): number | null {
   if (typeof value === 'boolean') return value ? 1 : 0;
   if (isFormulaError(value)) return null;
   return value.trim() === '' ? 0 : cellValueToNumber(value);
+}
+
+/**
+ * Αληθής ή ψευδής, με τη σύμβαση του Excel: το `FALSE` και το **μηδέν** είναι ψευδή, όλα τα
+ * άλλα αληθή. Ζει εδώ γιατί τη ρωτούν **δύο** ειδικές μορφές (`IF`, `IFS`) και ένα αντίγραφο
+ * στη δεύτερη θα ήταν δεύτερος ορισμός του «τι σημαίνει η συνθήκη ίσχυσε».
+ */
+export function isTruthy(value: TableFormulaValue): boolean {
+  return typeof value === 'boolean' ? value : valueToNumber(value) !== 0;
+}
+
+/** Η μορφή που παίρνει μια τιμή όταν συνενώνεται ή συγκρίνεται ως κείμενο. */
+export function valueToText(value: TableFormulaValue): string {
+  return String(toCellValue(value) ?? '');
+}
+
+/** Οι τελεστές που παράγουν `boolean` — δες {@link compareValues}. */
+const COMPARISONS: readonly TableFormulaBinaryOp[] = ['=', '<>', '<', '<=', '>', '>='];
+
+/** True όταν ο τελεστής είναι σύγκριση και όχι αριθμητική/συνένωση. */
+export function isComparisonOperator(op: TableFormulaBinaryOp): boolean {
+  return COMPARISONS.includes(op);
+}
+
+/**
+ * Σύγκριση: **αριθμητική όταν και οι δύο πλευρές είναι αριθμοί**, αλλιώς κειμένου. Ίδιο με
+ * κάθε φύλλο υπολογισμού — και ο λόγος που το `=A1="Ναι"` δουλεύει δίπλα στο `=A1>5`.
+ *
+ * Ζει εδώ, στο λεξιλόγιο, και όχι στον αξιολογητή: τη ρωτούν **δύο** καταναλωτές — ο δυαδικός
+ * τελεστής και η `SWITCH`, που ελέγχει ισότητα με κάθε υποψήφια. Δεύτερη υλοποίηση ισότητας
+ * θα σήμαινε ότι το `=A1="5"` και το `=SWITCH(A1,"5",…)` μπορούν να διαφωνήσουν (N.18).
+ */
+export function compareValues(
+  op: TableFormulaBinaryOp,
+  left: TableFormulaValue,
+  right: TableFormulaValue,
+): boolean {
+  const leftNumber = valueToNumber(left);
+  const rightNumber = valueToNumber(right);
+  return leftNumber !== null && rightNumber !== null
+    ? compareOrdered(op, leftNumber, rightNumber)
+    : compareOrdered(op, valueToText(left), valueToText(right));
+}
+
+/** Η ίδια διάταξη για αριθμούς και για κείμενο — γενική, ώστε να γραφτεί **μία** φορά. */
+function compareOrdered<T extends number | string>(
+  op: TableFormulaBinaryOp,
+  a: T,
+  b: T,
+): boolean {
+  switch (op) {
+    case '=': return a === b;
+    case '<>': return a !== b;
+    case '<': return a < b;
+    case '<=': return a <= b;
+    case '>': return a > b;
+    default: return a >= b;
+  }
 }
 
 /**

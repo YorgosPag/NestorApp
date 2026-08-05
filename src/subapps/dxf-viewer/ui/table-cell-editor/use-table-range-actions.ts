@@ -69,6 +69,9 @@ import {
   setTableCellSelection,
   type TableCellCursorState,
 } from '../../state/table-cell-cursor-store';
+// 🔴 ADR-739 §48 — τα «μυρμήγκια» της αντιγραμμένης περιοχής (Excel parity). **Ένα** σημείο
+// γραφής, στο `onCopy`· δες εκεί γιατί όχι στην αποκοπή.
+import { setTableCopyMarquee } from '../../state/table-copy-marquee-store';
 import { tableClipboardScope } from './table-cell-key-intent';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
@@ -242,9 +245,21 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
 
   const onCopy = useCallback(
     (event: ClipboardEvent<HTMLElement>) => {
-      writeRangeToClipboard(event);
+      if (!writeRangeToClipboard(event)) return;
+      // 🔴 ADR-739 §48 — **τα μυρμήγκια, ΜΟΝΟ όταν η αντιγραφή όντως έγινε.**
+      //
+      // Ο έλεγχος επιστροφής δεν είναι ευλάβεια: το `writeRangeToClipboard` σιωπά όταν το
+      // πρόχειρο ανήκει στον browser (γράφεται κείμενο **μέσα** σε κελί) ή όταν δεν υπάρχει τι
+      // να αντιγραφεί. Μυρμήγκια εκεί θα υπόσχονταν πρόχειρο που δεν γράφτηκε ποτέ.
+      //
+      // Τα `bounds` ξαναρωτιούνται αντί να περάσουν από το `rangeAsTsv`: εκείνο απαντά «τι
+      // κείμενο», αυτό «ποια κελιά». Ίδια πηγή (`currentBounds`), ίδιο render, μηδέν πιθανότητα
+      // απόκλισης — και το TSV **δεν** ξέρει όρια, οπότε μια κοινή επιστροφή θα ήταν το να
+      // μάθει κάτι που δεν το αφορά.
+      const bounds = currentBounds();
+      if (bounds && entity) setTableCopyMarquee(entity.id, bounds, entity.model);
     },
-    [writeRangeToClipboard],
+    [writeRangeToClipboard, currentBounds, entity],
   );
 
   const onCut = useCallback(
