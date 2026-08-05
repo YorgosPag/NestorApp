@@ -42,7 +42,8 @@ import type {
 import type { TableCellRangeBounds } from './table-cell-range';
 import type { TableRectBounds } from './table-range-merge-snap';
 import { mergeSpanBounds, tableRectsIntersect } from './table-range-merge-snap';
-import { cellText, clearPersistedCells, writePersistedCells } from './table-cell-content';
+import { cellText, clearPersistedCells, writePersistedCellStyles } from './table-cell-content';
+import { commitCellWrites } from './formula/table-formula-engine';
 import { indexById } from './table-model-helpers';
 import { resolveCellStyle, type TableStyle } from './table-style';
 
@@ -369,17 +370,34 @@ function intersectingSpans(
 // Ιδιωτικά — η εγγραφή κελιών
 // ──────────────────────────────────────────────────────────────────────────────
 
-/** Άδειασμα των καλυμμένων + κεντράρισμα των αγκυρών, σε **δύο** περάσματα του μαζικού γραφέα. */
+/**
+ * Άδειασμα των καλυμμένων + κεντράρισμα των αγκυρών, σε **δύο** περάσματα του μαζικού γραφέα.
+ *
+ * ## 🔴 ADR-739 §50 — γιατί το άδειασμα κάνει commit και το κεντράρισμα όχι
+ * Τα δύο περάσματα **δεν** είναι ομοειδή, και εδώ ακριβώς ήταν το ελάττωμα του §47.5: το πρώτο
+ * αλλάζει **περιεχόμενο** (τα καλυμμένα κελιά χάνουν την τιμή τους), άρα κάθε τύπος που τα
+ * διάβαζε είναι από εκείνη τη στιγμή μπαγιάτικος — ένα `=SUM(A1:A20)` πάνω από στήλη που μόλις
+ * καταπιέ η συγχώνευση εξακολουθούσε να δείχνει το παλιό άθροισμα, στην οθόνη **και** στο DXF.
+ * Το δεύτερο αλλάζει **στοίχιση**, που καμία τιμή δεν τη διαβάζει.
+ *
+ * Η διάκριση δεν αφήνεται στη μνήμη του αναγνώστη: το άδειασμα επιστρέφει
+ * {@link PendingCellWrites} (δεν είναι μοντέλο — δεν πάει πουθενά χωρίς
+ * {@link commitCellWrites}), ενώ το κεντράρισμα περνά από τη ρητή όψη μορφοποίησης
+ * {@link writePersistedCellStyles}.
+ *
+ * ⚠️ Σειρά: ο επαναϋπολογισμός τρέχει **πριν** το κεντράρισμα, και είναι σωστό — η στοίχιση
+ * δεν συμμετέχει στον γράφο εξαρτήσεων, οπότε δεύτερο πέρασμα θα ήταν πέρασμα για το τίποτα.
+ */
 function writeCells(
   model: PersistedTableModel,
   plan: MergePlan,
   anchorAlign: TableCellAlign,
 ): PersistedTableModel {
-  const emptied = clearPersistedCells(model, plan.covered);
+  const emptied = commitCellWrites(clearPersistedCells(model, plan.covered));
   if (plan.centered.length === 0) return emptied;
 
   const align = centeredAlign(anchorAlign);
-  return writePersistedCells(emptied, plan.centered, {
+  return writePersistedCellStyles(emptied, plan.centered, {
     update: (existing) =>
       existing.styleOverride?.align === align
         ? null

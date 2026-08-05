@@ -39,10 +39,9 @@ import {
   tableFrameToWorld,
   tableWorldToFrame,
 } from './table-entity-geometry';
-import { cellKey } from './table-model-helpers';
 import {
   cellInputText,
-  recalculateTableModel,
+  commitCellWrites,
   writeCellInput,
 } from './formula/table-formula-engine';
 
@@ -185,7 +184,7 @@ function buildEditTarget(
  * οντότητας, ή `null` όταν δεν άλλαξε τίποτα.
  *
  * Το «τίποτα δεν άλλαξε» ΔΕΝ ελέγχεται εδώ με δεύτερη σύγκριση: **και οι τρεις** καθαρές
- * συναρτήσεις της αλυσίδας (`writeCellInput` → `recalculateTableModel` →
+ * συναρτήσεις της αλυσίδας (`writeCellInput` → `commitCellWrites` →
  * `buildTableModelCommand`) επιστρέφουν το ΙΔΙΟ μοντέλο by-reference όταν δεν άλλαξε τίποτα
  * (ADR-739 Φ.Δ βήμα 1, εγγύηση 4· Φ.Ζ την επεκτείνει σε τύπους και αποτελέσματα) — αρκεί μια
  * σύγκριση `===` πάνω σε αυτή την εγγύηση, όχι re-implementation της λογικής ισότητας.
@@ -202,8 +201,7 @@ export function buildTableCellEditCommand(
   // δεύτερη εντολή, ένα `Ctrl+Z` θα ανέτρεπε τα αποτελέσματα αφήνοντας τον τύπο — ή το
   // αντίστροφο. Η ατομικότητα βγαίνει δωρεάν από την **καθαρότητα** των δύο συναρτήσεων,
   // ακριβώς όπως η επικόλληση 20 κελιών γίνεται ένα βήμα (δες `buildTableModelCommand`).
-  const written = writeCellInput(entity.model, rowId, colId, nextText);
-  const recalculated = recalculateTableModel(written, [cellKey(rowId, colId)]);
+  const recalculated = commitCellWrites(writeCellInput(entity.model, rowId, colId, nextText));
   return buildTableModelCommand(entity, recalculated, sceneManager);
 }
 

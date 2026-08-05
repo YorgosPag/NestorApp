@@ -22,9 +22,10 @@ import {
 } from '@/services/title-block-binding.service';
 import type { BindingProposal, BindingTarget, TitleBlockBinding } from '@/types/title-block-binding';
 import { applyContactTarget } from './apply-contact';
+import { applyDrawingMetaTarget } from './apply-drawing-meta';
 import { applyLandownerTarget } from './apply-landowner';
 import { applyProjectAddressTarget, applyProjectFieldTarget } from './apply-project-value';
-import { applyFailed, type ApplyTargetContext, type ApplyTargetResult } from './apply-types';
+import type { ApplyTargetContext, ApplyTargetResult } from './apply-types';
 import {
   refuseLandownerReplacement,
   withdrawSupersededTargets,
@@ -37,12 +38,15 @@ export type { WithdrawFailure } from './withdraw-superseded';
 /**
  * Ποιο έργο αφορά ο στόχος — για το **αποκανονικοποιημένο** `projectId` του εγγράφου.
  *
- * Το `drawing-meta` δεν έχει έργο, και γι' αυτό ακριβώς **δεν είναι εγγράψιμο στη Φ3β**: χωρίς
- * `projectId` το binding θα ήταν αόρατο στον φύλακα διαγραφής του έργου, δηλαδή **ορφανή
- * απόδειξη** — χειρότερη από καμία.
+ * 🔑 **ADR-759 Φ3: το `drawing-meta` κουβαλά πλέον κι αυτό έργο**, και ο λόγος είναι ο ίδιος που
+ * παλιότερα το έκανε μη-εγγράψιμο: χωρίς `projectId` το binding είναι αόρατο στον φύλακα
+ * διαγραφής έργου (`deletion-registry.ts:441`), δηλαδή **ορφανή απόδειξη** — χειρότερη από καμία.
+ * Η τιμή ανήκει στο φύλλο· η **απόδειξη** χρειάζεται έργο. Ο Λ2 δεν παράγει καν υποψήφιο όταν το
+ * σχέδιο δεν είναι δεμένο (`no-project`), οπότε αυτή η συνάρτηση δεν επιστρέφει πια ποτέ `null`
+ * σε πραγματική ροή — μένει ως **φύλακας** για προγραμματιστική κλήση.
  */
-function projectIdOf(target: BindingTarget): string | null {
-  return target.kind === 'drawing-meta' ? null : target.projectId;
+function projectIdOf(target: BindingTarget): string {
+  return target.projectId;
 }
 
 async function applyTarget(target: BindingTarget, ctx: ApplyTargetContext): Promise<ApplyTargetResult> {
@@ -56,11 +60,7 @@ async function applyTarget(target: BindingTarget, ctx: ApplyTargetContext): Prom
     case 'project-address':
       return applyProjectAddressTarget(target, ctx);
     case 'drawing-meta':
-      // Δηλωμένο, όχι σιωπηλό: το `DxfLevelDocument` δεν έχει πεδίο υποδοχής και το
-      // `UpdateDxfLevelSchema` είναι `.passthrough()` — εγγραφή εδώ θα γινόταν χωρίς σχήμα.
-      // Ο Λ2 το μαρκάρει ήδη `not-yet-writable`, άρα το UI δεν προσφέρει κουμπί· αυτή η
-      // γραμμή είναι ο φύλακας για την ημέρα που κάποιος το καλέσει προγραμματιστικά.
-      return applyFailed('drawing metadata has no landing field yet', 'NOT_YET_WRITABLE');
+      return applyDrawingMetaTarget(target, ctx);
   }
 }
 
@@ -127,7 +127,9 @@ export async function approveTitleBlockProposal(input: ApproveProposalInput): Pr
 
   const projectId = projectIdOf(target);
   if (!projectId) {
-    return { success: false, error: 'target has no project', errorCode: 'NOT_YET_WRITABLE' };
+    // Ο Λ2 δεν παράγει υποψήφιο χωρίς έργο (`no-project`). Αυτό είναι το δίχτυ για κλήση που
+    // παρακάμπτει το UI — μια απόδειξη χωρίς έργο δεν μπορεί ποτέ να ξαναβρεθεί ή να διαγραφεί.
+    return { success: false, error: 'target has no project', errorCode: 'MISSING_PROJECT' };
   }
 
   let bindingId: string;

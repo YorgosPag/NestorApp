@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import type { z } from 'zod';
 import type { AuthContext } from '@/lib/auth';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ApiError, apiSuccess, type ApiSuccessResponse } from '@/lib/api/ApiErrorHandler';
@@ -224,6 +225,55 @@ export async function handleCreateDxfLevel(
   }
 }
 
+/** Το σώμα του PATCH χωρίς τα δύο κλειδιά που ο handler αποδομεί (`levelId`, `_v`). */
+type UpdateLevelBody = Omit<z.infer<typeof UpdateDxfLevelSchema>, 'levelId' | '_v'>;
+
+/**
+ * 🔴 **Η ALLOWLIST — η μοναδική διαδρομή από το συμβόλαιο στη βάση.**
+ *
+ * Το `UpdateDxfLevelSchema` κλείνει με `.passthrough()`, οπότε άγνωστο πεδίο **περνά την
+ * επικύρωση**. Αυτή η συνάρτηση είναι που το **σταματά**: αντιγράφει ρητά, δεν κάνει spread.
+ *
+ * ⚠️ **Το τίμημα είναι σιωπηλό και επικίνδυνο**: πεδίο δηλωμένο στο Zod schema αλλά ξεχασμένο
+ * εδώ περνά ως έγκυρο και **πετιέται**, ενώ ο πελάτης παίρνει `success: true` (ή, αν ήταν το
+ * μόνο πεδίο, 400 «No fields to update» που διαβάζεται ως σφάλμα πελάτη). Με τον κανόνα Γ9 του
+ * ADR-745 (πρώτα ο στόχος, μετά η προέλευση), αυτό γράφει provenance για εγγραφή που **δεν
+ * έγινε ποτέ**. Άγκυρα: `__tests__/update-allowlist-parity.test.ts` — απαιτεί ότι **κάθε** πεδίο
+ * του συμβολαίου έχει γραμμή εδώ.
+ *
+ * `?? null` παντού όπου το πεδίο είναι nullable: `null` = **ρητός καθαρισμός** από τον χρήστη,
+ * και το Firestore δεν δέχεται `undefined`.
+ */
+function buildLevelUpdates(body: UpdateLevelBody): Record<string, unknown> {
+  const updates: Record<string, unknown> = {};
+  if (body.name !== undefined) updates.name = body.name;
+  if (body.order !== undefined) updates.order = body.order;
+  if (body.isDefault !== undefined) updates.isDefault = body.isDefault;
+  if (body.visible !== undefined) updates.visible = body.visible;
+  if (body.floorId !== undefined) updates.floorId = body.floorId ?? null;
+  if (body.buildingId !== undefined) updates.buildingId = body.buildingId ?? null;
+  if (body.sceneFileId !== undefined) updates.sceneFileId = body.sceneFileId ?? null;
+  if (body.sceneFileName !== undefined) updates.sceneFileName = body.sceneFileName ?? null;
+  // ADR-309 Phase 3: context-aware level fields
+  if (body.floorplanType !== undefined) updates.floorplanType = body.floorplanType ?? null;
+  if (body.entityLabel !== undefined) updates.entityLabel = body.entityLabel ?? null;
+  if (body.projectId !== undefined) updates.projectId = body.projectId ?? null;
+  // ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου (null = πίσω στην αυτόματη αρίθμηση θέσης)
+  if (body.sheetNumberOverride !== undefined) updates.sheetNumberOverride = body.sheetNumberOverride ?? null;
+  // ADR-759 Φ3: μεταδεδομένα πινακίδας τοπογραφικού — ανήκουν στο ΦΥΛΛΟ, ποτέ στο έργο.
+  if (body.studyDate !== undefined) updates.studyDate = body.studyDate ?? null;
+  if (body.drawingType !== undefined) updates.drawingType = body.drawingType ?? null;
+  if (body.scale !== undefined) updates.scale = body.scale ?? null;
+  if (body.drawingNumber !== undefined) updates.drawingNumber = body.drawingNumber ?? null;
+  // ADR-375 Phase B.2: per-view BIM render settings
+  if (body.bimRenderSettings !== undefined) updates.bimRenderSettings = body.bimRenderSettings ?? null;
+  // ADR-375 Phase B.3: FK → dxf_viewer_view_templates (or null = detached)
+  if (body.appliedViewTemplateId !== undefined) updates.appliedViewTemplateId = body.appliedViewTemplateId ?? null;
+  // ADR-396 P7: per-floor ETICS thermal envelope spec
+  if (body.thermalEnvelopeSpec !== undefined) updates.thermalEnvelopeSpec = body.thermalEnvelopeSpec ?? null;
+  return updates;
+}
+
 export async function handleUpdateDxfLevel(
   request: NextRequest,
   ctx: AuthContext
@@ -243,39 +293,22 @@ export async function handleUpdateDxfLevel(
     // above is what `loadOwnedLevelRef` is for (its `ref` is not needed here).
     const db = getAdminFirestore();
 
-    const updates: Record<string, unknown> = {};
-    if (body.name !== undefined) updates.name = body.name;
-    if (body.order !== undefined) updates.order = body.order;
-    if (body.isDefault !== undefined) updates.isDefault = body.isDefault;
-    if (body.visible !== undefined) updates.visible = body.visible;
-    if (body.floorId !== undefined) updates.floorId = body.floorId ?? null;
-    if (body.buildingId !== undefined) updates.buildingId = body.buildingId ?? null;
     // 🛡️ ADR-714 — ένα επίπεδο δεν επιτρέπεται ΠΟΤΕ να δείξει σε αρχείο άλλου ορόφου.
     // Ο έλεγχος γίνεται με τον όροφο ΟΠΩΣ ΘΑ ΕΙΝΑΙ μετά το PATCH (το ίδιο αίτημα μπορεί
     // να αλλάζει και τα δύο πεδία), αλλιώς μια ταυτόχρονη αλλαγή ορόφου θα τον παρέκαμπτε.
     // Το ξε-linkάρισμα (`sceneFileId: null`) είναι πάντα επιτρεπτό — είναι η θεραπεία.
+    //
+    // ⚠️ Μένει **εδώ** και όχι μέσα στο `buildLevelUpdates`: είναι ασύγχρονος φρουρός που
+    // διαβάζει τη βάση, ενώ εκείνη είναι καθαρή αντιγραφή πεδίων. Ανακατεμένα, ο φρουρός θα
+    // κρυβόταν μέσα σε λίστα αναθέσεων και θα ήταν το πρώτο πράγμα που θα «απλοποιούσε» κάποιος.
     if (body.sceneFileId) {
       await assertSceneFileBelongsToFloor(
         body.sceneFileId,
         body.floorId !== undefined ? body.floorId : owned.data.floorId,
       );
     }
-    if (body.sceneFileId !== undefined) updates.sceneFileId = body.sceneFileId ?? null;
-    if (body.sceneFileName !== undefined) updates.sceneFileName = body.sceneFileName ?? null;
-    // ADR-309 Phase 3: context-aware level fields
-    if (body.floorplanType !== undefined) updates.floorplanType = body.floorplanType ?? null;
-    if (body.entityLabel !== undefined) updates.entityLabel = body.entityLabel ?? null;
-    if (body.projectId !== undefined) updates.projectId = body.projectId ?? null;
-    // ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου (null = πίσω στην αυτόματη αρίθμηση θέσης)
-    if (body.sheetNumberOverride !== undefined) {
-      updates.sheetNumberOverride = body.sheetNumberOverride ?? null;
-    }
-    // ADR-375 Phase B.2: per-view BIM render settings
-    if (body.bimRenderSettings !== undefined) updates.bimRenderSettings = body.bimRenderSettings ?? null;
-    // ADR-375 Phase B.3: FK → dxf_viewer_view_templates (or null = detached)
-    if (body.appliedViewTemplateId !== undefined) updates.appliedViewTemplateId = body.appliedViewTemplateId ?? null;
-    // ADR-396 P7: per-floor ETICS thermal envelope spec
-    if (body.thermalEnvelopeSpec !== undefined) updates.thermalEnvelopeSpec = body.thermalEnvelopeSpec ?? null;
+
+    const updates = buildLevelUpdates(body);
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ success: false, error: 'No fields to update' }, { status: 400 });

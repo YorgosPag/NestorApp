@@ -53,7 +53,7 @@ const base = (): PersistedTableModel =>
 
 /** Γράψε κείμενο/τύπο σε κελί, με δείκτες. */
 function type(model: PersistedTableModel, row: number, col: number, text: string) {
-  return writeCellInput(model, ROWS[row].id, COLUMNS[col].id, text);
+  return writeCellInput(model, ROWS[row].id, COLUMNS[col].id, text).model;
 }
 
 const at = (row: number, col: number) => ({ row, col });

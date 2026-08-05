@@ -47,35 +47,17 @@ const LIBRARY_ERROR_CODES: Readonly<Record<string, TableFormulaErrorCode>> = {
   '#ERROR!': FORMULA_ERROR.value,
 };
 
-const MS_PER_DAY = 86_400_000;
-const SECONDS_PER_DAY = 86_400;
-
 /**
- * Η εποχή των σειριακών αριθμών του Excel: **30 Δεκεμβρίου 1899**, σε UTC.
+ * 🔴 ADR-739 §51 — η **εποχή** και οι δύο μετατροπές μετακόμισαν στο αδελφό
+ * `formula/excel-serial-date.ts`, όταν τις χρειάστηκε και το στρώμα **εμφάνισης** (§51).
+ * Επανεξάγεται αυτούσια: καμία υπάρχουσα διαδρομή εισαγωγής δεν αλλάζει.
  *
- * Η μετατόπιση κατά μία μέρα από την «1η Ιανουαρίου 1900» δεν είναι λάθος — απορροφά το
- * ιστορικό σφάλμα του Excel που θεωρεί το 1900 δίσεκτο. Επαληθεύτηκε ότι η βιβλιοθήκη μετρά
- * με την **ίδια** εποχή: `YEAR(46239)`/`MONTH`/`DAY` δίνουν 2026 / 8 / 5.
- *
- * ⚠️ Ημερομηνίες πριν την 1η Μαρτίου 1900 αποκλίνουν κατά μία μέρα, όπως **και στο Excel**.
- * Καταγράφεται ρητά· δεν αφορά κανέναν πίνακα ποσοτήτων.
+ * ⚠️ Η εξαγωγή ΕΠΡΕΠΕ να γίνει: αυτό το αρχείο είναι το **μόνο** που επιτρέπεται να εισάγει
+ * το `@formulajs/formulajs` (forbiddenPattern του `.ssot-registry.json`), οπότε μια εισαγωγή
+ * από τη διάταξη προς τα εδώ θα έσερνε 350 συναρτήσεις μέσα στη διαδρομή κάθε καρέ.
  */
-const EXCEL_EPOCH_UTC = Date.UTC(1899, 11, 30);
-
-/**
- * `Date` → σειριακός αριθμός Excel.
- *
- * 🔴 Ο υπολογισμός γίνεται από τα **ημερολογιακά μέρη** και όχι με αφαίρεση χιλιοστών του
- * δευτερολέπτου. Η διαφορά φαίνεται μόνο δύο φορές τον χρόνο και είναι καταστροφική: μια
- * τοπική «μεσάνυχτα» εκατέρωθεν της αλλαγής θερινής ώρας απέχει 23 ή 25 ώρες, οπότε η ωμή
- * αφαίρεση θα έδινε `46238,958` — δηλαδή **προηγούμενη μέρα** μετά τη στρογγυλοποίηση.
- */
-export function excelSerialFromDate(date: Date): number {
-  const midnightUtc = Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
-  const days = (midnightUtc - EXCEL_EPOCH_UTC) / MS_PER_DAY;
-  const seconds = date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
-  return days + seconds / SECONDS_PER_DAY;
-}
+import { excelSerialFromDate } from '../excel-serial-date';
+export { excelSerialFromDate };
 
 /**
  * 🔴 **Η πύλη locale** — μία τιμή κελιού όπως πρέπει να τη δει η βιβλιοθήκη.

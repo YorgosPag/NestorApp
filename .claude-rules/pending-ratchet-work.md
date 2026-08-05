@@ -2,6 +2,18 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **ΝΕΟ 05/08 — τέσσερα αντίγραφα του μετατροπέα διεύθυνσης↔ιεραρχίας, με ΑΓΝΩΣΤΟ πόσα πεδία
+  πετάει το καθένα** (ADR-759 Φ3). Το `AddressWithHierarchy` δίνει **έξι** διοικητικά επίπεδα·
+  κάθε καταναλωτής γράφει **δικό του** ζεύγος `to/fromHierarchyValue` και κρατά **όσα θυμήθηκε**:
+  `projects/tabs/locations/location-converters.ts` (**διορθώθηκε** — έπεφτε το `municipalUnit`) ·
+  `contacts/dynamic/CompanyAddressesSection.tsx:73,92` · `building-management/.../BuildingAddressesEditor.tsx:47,62`
+  · `projects/building-code/FrontageAddressCreateDialog.tsx` (δανείζεται το πρώτο).
+  🔑 **Η κλάση, όχι το δείγμα**: η οθόνη ρωτά έξι επίπεδα και η αποθήκευση κρατά τρία ή τέσσερα,
+  **χωρίς κανένα μήνυμα** — και το ίδιο σχήμα υπάρχει **δεύτερη φορά** στο Zod (`z.object` που
+  πετάει τα αδήλωτα· έσβηνε `frontageIndex` + όλο το ADR-332 Φ8). Η Φ3 έκλεισε **έναν** από τους
+  τέσσερις δρόμους και έβαλε άγκυρα `Required<ProjectAddress>` **μόνο** στο σχήμα. Λείπει:
+  ένας μετατροπέας SSoT + άγκυρα ανά καταναλωτή. Εκτίμηση: >1h, 4+ αρχεία, 2 domains.
+
 - 🔴 **ΝΕΟ 05/08 — δεν υπάρχει πύλη για την κλάση «τα rules διαβάζουν πεδίο που κανείς δεν
   γράφει»** (ADR-758 §4). Διορθώθηκε το **δείγμα** (`properties.project` → `projectId`), όχι η
   κλάση. Ο έλεγχος που λείπει: εξαγωγή κάθε `resource.data.X` ανά `match` block του

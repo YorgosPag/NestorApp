@@ -149,7 +149,7 @@ describe('🔴 ADR-739 §36.9 — το περίγραμμα του ΕΝΕΡΓΟ�
 
   /** Γράψε κείμενο σε κελί **πριν** το mount — το μοντέλο είναι immutable, η οντότητα νέα. */
   function type(row: number, col: number, text: string): void {
-    entity = { ...entity, model: writeCellInput(entity.model, rowId(row), colId(col), text) };
+    entity = { ...entity, model: writeCellInput(entity.model, rowId(row), colId(col), text).model };
   }
 
   /** 🔴 Ρητό mount, **μετά** το στήσιμο: δύο mounted harness δίνουν πράσινο για λάθος λόγο. */

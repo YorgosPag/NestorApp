@@ -204,9 +204,10 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
             {proposal.blockedBy ? t(BLOCKED_LABEL[proposal.blockedBy]) : null}
           </p>
 
-          {/* 🔴 **Μόνο στο `no-match`, και αυτό δεν είναι λεπτομέρεια.** Οι υπόλοιπες αιτίες
-              δεν θεραπεύονται με νέα επαφή: το `role-undecided` **βρήκε** τον άνθρωπο (νέα
-              επαφή θα έφτιαχνε **δίδυμο**), το `not-yet-writable` και το `unsupported-field`
+          {/* 🔴 **Μόνο στο `no-match`, και αυτό δεν είναι λεπτομέρεια.** Καμία από τις άλλες
+              έξι αιτίες δεν θεραπεύεται με νέα επαφή: το `role-undecided` **βρήκε** τον
+              άνθρωπο (νέα επαφή θα έφτιαχνε **δίδυμο**), ενώ τα `unsupported-field`,
+              `no-primary-address`, `resolver-gap`, `ambiguous-abbreviation` και `no-project`
               δεν αφορούν καν πρόσωπο. Ένα κουμπί που εμφανίζεται όπου δεν βοηθά είναι
               πρόσκληση να δημιουργηθούν διπλότυπες επαφές — δηλαδή θεραπεία που γεννά
               χειρότερη ασθένεια από αυτήν που λύνει. */}

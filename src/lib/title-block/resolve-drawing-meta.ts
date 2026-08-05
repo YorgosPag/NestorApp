@@ -30,6 +30,19 @@ const DRAWING_FIELD_BY_KEY: Partial<Record<TitleBlockFieldKey, BindableDrawingFi
 export interface DrawingMetaResolveContext {
   readonly levelId: string;
   readonly titleBlockIndex: number;
+  /**
+   * Απόν όταν το σχέδιο δεν είναι δεμένο σε έργο.
+   *
+   * 🔴 **Η τιμή ανήκει στο φύλλο, η ΑΠΟΔΕΙΞΗ όμως χρειάζεται έργο.** Το `TitleBlockBinding`
+   * κουβαλά **υποχρεωτικό** `projectId` επειδή το διαβάζει ο καταρράκτης διαγραφής έργου
+   * (`deletion-registry.ts:441`) — το `target` είναι ένωση και το Firestore δεν ερωτά μέσα σε
+   * ένωση. Χωρίς έργο, η έγκριση θα άφηνε **ορφανή προέλευση**: εγγραφή που βεβαιώνει ποιος
+   * ενέκρινε τι, και που κανένας μηχανισμός δεν μπορεί ποτέ να βρει ξανά.
+   *
+   * ⇒ Δεν γράφουμε «σχεδόν σωστά». Δηλώνουμε `no-project`, που έχει **ενέργεια** («δέσε το
+   * σχέδιο»), σε αντίθεση με το παλιό `not-yet-writable` που δεν είχε καμία.
+   */
+  readonly projectId?: string;
 }
 
 /** Το πεδίο είναι μεταδεδομένο σχεδίου; (Ο διαχωρισμός ζει **εδώ**, όχι σπαρμένος στη σύνθεση.) */
@@ -53,21 +66,32 @@ export function resolveDrawingMetaProposal(
   const target = DRAWING_FIELD_BY_KEY[field.key];
   if (!target) return { ...base, candidates: [], blockedBy: 'unsupported-field' };
 
-  // 🔴 Φ3β: ΑΝΑΓΝΩΡΙΣΜΕΝΟ ΑΛΛΑ ΜΗ ΕΓΓΡΑΨΙΜΟ — και **φαίνεται**, δεν κρύβεται (§8 κανόνας 3).
+  // 🔴 **ADR-759 Φ3 — ΕΓΓΡΑΨΙΜΟ.** Μέχρι τη Φ3β αυτή η γραμμή επέστρεφε `not-yet-writable`, και
+  // ήταν σωστή: το `DxfLevelDocument` δεν είχε `scale`/`studyDate`/`drawingType`/`drawingNumber`.
+  // Τώρα τα έχει — σε **τρεις** θέσεις (τύπος · `UpdateDxfLevelSchema` · allowlist του handler),
+  // γιατί δύο από τις τρεις δίνουν «επιτυχία» χωρίς αποθήκευση.
   //
-  // Το `DxfLevelDocument` (`api/dxf-levels/dxf-levels.types.ts:3-15`) **δεν έχει** `scale`,
-  // `studyDate` ή `drawingType`, και το `UpdateDxfLevelSchema` κλείνει με **`.passthrough()`**
-  // (`dxf-levels.schemas.ts:138`) ⇒ ένα άγνωστο πεδίο θα γραφόταν **αβασάνιστο**, χωρίς σχήμα,
-  // χωρίς όριο μήκους, χωρίς κανέναν να το έχει δηλώσει. Αυτό είναι ακριβώς το είδος σιωπής που
-  // αυτό το ADR κυνηγά — άρα ο σωστός χειρισμός δεν είναι «γράψ' το όπως-όπως», αλλά **δήλωσε
-  // ότι δεν χωράει ακόμη**.
-  //
-  // ⚠️ Το `scale` **δεν** πάει στο `bimRenderSettings.drawingScale` παρότι «ταιριάζει»: εκείνο
-  // είναι η **δική μας** κλίμακα απόδοσης (οδηγεί πάχη γραμμών και μεγέθη συμβόλων), όχι η
-  // κλίμακα του **ξένου** τοπογραφικού. Θα ήταν ψέμα με σωστή μορφή, ένα επίπεδο πιο πάνω.
-  //
-  // Ο στόχος `drawing-meta` **παραμένει στον τύπο** και ο χάρτης παραπάνω μένει ζωντανός: η Φ4
-  // (Λ3 Projection) κατέχει το level και θα δώσει τα πεδία. Μέχρι τότε η πρόταση είναι ορατή,
-  // με τη δική της αιτία — ώστε η μέρα που θα αποκτήσει πεδίο να φαίνεται σε κάποιον.
-  return { ...base, candidates: [], blockedBy: 'not-yet-writable' };
+  // Η κατάσταση `not-yet-writable` **αφαιρέθηκε** αντί να μείνει αδρανής: είχε **έναν** παραγωγό,
+  // αυτόν εδώ. Ένα μέλος ένωσης που κανείς δεν μπορεί πια να φτάσει είναι το ίδιο ελάττωμα που
+  // αυτή η φάση διορθώνει στο `no-primary-address` (ADR-759 §4.4).
+  if (!context.projectId) return { ...base, candidates: [], blockedBy: 'no-project' };
+
+  return {
+    ...base,
+    // Κενή μαρτυρία **επίτηδες**: η τιμή διαβάστηκε, δεν ταιριάστηκε — δεν τίθεται ερώτημα
+    // ταυτότητας. Ίδια σύμβαση με τον δήμο/το Ο.Τ. στο `resolve-location`.
+    candidates: [
+      {
+        target: {
+          kind: 'drawing-meta',
+          levelId: context.levelId,
+          projectId: context.projectId,
+          field: target,
+          value: field.rawValue,
+        },
+        label: field.rawValue,
+        evidence: [],
+      },
+    ],
+  };
 }

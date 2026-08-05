@@ -138,6 +138,20 @@ export interface ProjectAddress {
   cadastralCode?: string;
   /** Municipality (e.g., "Δήμος Καλαμαριάς") */
   municipality?: string;
+  /**
+   * Municipal Unit / Δημοτική Ενότητα (e.g., "Δ.Ε. Ευόσμου") — Καλλικράτης level 6.
+   *
+   * 🔴 **ADR-759 Φ3 — δεν είναι νέα έννοια, είναι το μισό round-trip που έλειπε.** Ο επιλογέας
+   * Δημοτικής Ενότητας ζωγραφίζεται ήδη στην καρτέλα τοποθεσιών του έργου
+   * (`address-with-hierarchy-config.ts:116`, επίπεδο 6) και ο χρήστης τον συμπληρώνει — αλλά το
+   * `fromHierarchyValue` **δεν τον χαρτογραφούσε πουθενά** και το `toHierarchyValue` επέστρεφε
+   * σταθερά `''`. Δηλαδή η τιμή **χανόταν στην αποθήκευση, χωρίς μήνυμα**, και το πεδίο
+   * ξαναφαινόταν άδειο στο επόμενο άνοιγμα.
+   *
+   * Ίδια λέξη με το domain επαφών (`address-info-builder.ts:82`) — **ένα** λεξιλόγιο διοικητικής
+   * διαίρεσης, δύο δοχεία.
+   */
+  municipalUnit?: string;
   /** Neighborhood (e.g., "Άνω Τούμπα") */
   neighborhood?: string;
 

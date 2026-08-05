@@ -24,6 +24,14 @@ export interface TitleBlockResolveContext {
   readonly projectId?: string;
   readonly levelId: string;
   readonly contacts: readonly ContactSnapshotEntry[];
+  /**
+   * Έχει το έργο κύρια διεύθυνση; `undefined` = άγνωστο ⇒ **δεν** μπλοκάρουμε (βλ. `resolve-location`).
+   *
+   * 🔑 **Η καθαρότητα δεν θυσιάζεται.** Είναι το ίδιο πρότυπο με το `contacts`: στιγμιότυπο της
+   * βάσης που δίνεται ως **όρισμα**, ποτέ ανάγνωση από μέσα. Ο Λ2 παραμένει συνάρτηση που ούτε
+   * διαβάζει ούτε γράφει — το φυλάει το `title-block-purity.test.ts`.
+   */
+  readonly hasPrimaryAddress?: boolean;
 }
 
 /** Πεδίο που ο Λ1 διαβάζει σωστά αλλά **καμία** οντότητα δεν το ζητά (π.χ. `ΕΡΓΟ`, `ΜΕΛΕΤΗ`). */
@@ -72,7 +80,15 @@ function proposalsForField(
   context: TitleBlockResolveContext,
 ): BindingProposal[] {
   if (isDrawingMetaField(field.key)) {
-    return [resolveDrawingMetaProposal(field, { levelId: context.levelId, titleBlockIndex })];
+    return [
+      resolveDrawingMetaProposal(field, {
+        levelId: context.levelId,
+        titleBlockIndex,
+        // ⚠️ Ρητό spread αντί για `projectId: context.projectId`: το `exactOptionalPropertyTypes`
+        // ξεχωρίζει «απόν» από «`undefined`», και ο στόχος `drawing-meta` απαιτεί **συμβολοσειρά**.
+        ...(context.projectId ? { projectId: context.projectId } : {}),
+      }),
+    ];
   }
   if (field.key === 'designers') {
     return designerProposals(field, reading, titleBlockIndex, context);
@@ -89,7 +105,13 @@ function proposalsForField(
     ];
   }
   if (field.key === 'location') {
-    return resolveLocationProposals(field, { projectId: context.projectId, titleBlockIndex });
+    return resolveLocationProposals(field, {
+      projectId: context.projectId,
+      titleBlockIndex,
+      ...(context.hasPrimaryAddress !== undefined
+        ? { hasPrimaryAddress: context.hasPrimaryAddress }
+        : {}),
+    });
   }
   return [unsupported(field, titleBlockIndex)];
 }

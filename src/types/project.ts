@@ -93,6 +93,14 @@ export interface Project extends SoftDeletableFields {
   /** Expected end date (ISO string) */
   endDate?: string;
   buildingBlock?: string;
+  /**
+   * Αριθμός οικοπέδου μέσα στο Ο.Τ. (π.χ. «01β») — ADR-759 Φ3.
+   *
+   * Δίπλα στο `buildingBlock` και **όχι** στη διεύθυνση: είναι αναγνωριστικό του ακινήτου στο
+   * σχέδιο πόλης, όχι ταχυδρομική πληροφορία. Το ίδιο έλεγε ήδη το `resolve-location.ts`
+   * («ανήκει στο ακίνητο, όχι στη διεύθυνση») χωρίς να έχει πού να το γράψει.
+   */
+  plotNumber?: string;
   protocolNumber?: string;
   licenseNumber?: string;
   /** Αρχή έκδοσης αδείας */

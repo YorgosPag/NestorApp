@@ -38,6 +38,7 @@ import type {
   ScheduleColumnValueType,
 } from '../bim/schedule/types';
 import type { CellKey, TableColumnId, TableRowId } from './table-ids';
+import type { TableCellFormat } from './table-cell-format';
 import type { TableBorderSpec, TableEdgeEntry, TableEdgeIndex } from './table-edges';
 import type { TableRowLinkEntry, TableRowLinkIndex } from './table-row-link';
 import type { TableFormula } from './table-formula';
@@ -48,7 +49,7 @@ import type { TableFormula } from './table-formula';
  * αλυσίδα και να μη γίνει κύκλος — δες την κεφαλίδα του `table-ids.ts`. Επανεξάγονται
  * αυτούσια εδώ: **καμία** υπάρχουσα διαδρομή εισαγωγής δεν αλλάζει.
  */
-export type { CellKey, TableBorderSpec, TableColumnId, TableRowId };
+export type { CellKey, TableBorderSpec, TableCellFormat, TableColumnId, TableRowId };
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Στήλες — Figma Auto Layout αντί για χειροκίνητα πλάτη
@@ -399,6 +400,22 @@ export interface TableAxisStyleOverride {
   readonly fontFamily?: string | null;
   /** 9 θέσεις (TL..BR) — DXF group code 170. */
   readonly align?: TableCellAlign;
+  /**
+   * 🔴 ADR-760 — **πώς δείχνει ο αριθμός** αυτού του κελιού / γραμμής / στήλης.
+   *
+   * Ζει **εδώ**, μέσα στην ίδια παράκαμψη με το χρώμα και τη στοίχιση, και όχι σε δικό της
+   * πεδίο: το AutoCAD κληρονομεί το Cell Data Format μαζί με το υπόλοιπο cell style, και εδώ
+   * η αλυσίδα **υπάρχει ήδη** (κελί → γραμμή → στήλη, §28.4). Δεύτερος μηχανισμός θα σήμαινε
+   * ότι το χρώμα και η μορφή μπορούν κάποτε να κληρονομούνται με διαφορετικό κανόνα.
+   *
+   * ⚠️ **Δεν αγγίζει ΠΟΤΕ το {@link TableCell.value}.** Ο αποθηκευμένος αριθμός μένει ωμός —
+   * αλλιώς ο επόμενος τύπος διαβάζει στρογγυλεμένο (ADR-720) και το round-trip DXF χάνει
+   * ακρίβεια σε κάθε άνοιγμα.
+   *
+   * Απούσα ⇒ πέφτει στη σημασιολογική βάση {@link TableColumn.valueType}, και μετά σε «καμία
+   * μορφή» — δες `bim/table/table-cell-format.ts`.
+   */
+  readonly numberFormat?: TableCellFormat;
 }
 
 /** Οι 9 θέσεις στοίχισης κελιού του `ACAD_TABLE` (group code 170). */

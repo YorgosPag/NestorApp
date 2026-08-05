@@ -25,6 +25,11 @@ export const ProjectUpdateSchema = z.object({
   address: z.string().max(500).optional(),
   city: z.string().max(200).optional(),
   addresses: projectAddressesSchema.optional(),
+  // ADR-759 Φ3 — δηλωμένα ρητά, ΟΧΙ μέσω `.passthrough()`: το ζεύγος Ο.Τ./ΟΙΚ. είναι ο στόχος
+  // δύο προτάσεων πινακίδας, και ένα πεδίο που περνά «επειδή δεν το κοιτάζει κανείς» δεν έχει
+  // ούτε όριο μήκους ούτε ίχνος στο συμβόλαιο. (Το `buildingBlock` ήταν ήδη έτσι από το ADR-745.)
+  buildingBlock: z.string().max(120).optional(),
+  plotNumber: z.string().max(120).optional(),
   progress: z.number().min(0).max(100).optional(),
   totalValue: z.number().min(0).max(999_999_999).optional(),
   totalArea: z.number().min(0).max(999_999_999).optional(),

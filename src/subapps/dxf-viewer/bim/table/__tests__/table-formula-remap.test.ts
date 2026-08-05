@@ -16,7 +16,7 @@
  */
 
 import { remapTableFormulaRefs } from '../formula/table-formula-remap';
-import { cellInputText, recalculateTableModel, writeCellInput } from '../formula/table-formula-engine';
+import { cellInputText, commitCellWrites, writeCellInput } from '../formula/table-formula-engine';
 import { applyTableRangeTransfer } from '../table-range-transfer';
 import { planTableRangeTransfer } from '../table-range-transfer-plan';
 import type { TableRangeTransferRequest } from '../table-range-transfer-types';
@@ -52,8 +52,7 @@ function base(): PersistedTableModel {
  * το κελί θα κρατούσε κενή τιμή και οι έλεγχοι θα μετρούσαν κάτι που ο χρήστης δεν βλέπει ποτέ.
  */
 function type(model: PersistedTableModel, rowId: string, colId: string, input: string): PersistedTableModel {
-  const written = writeCellInput(model, row(rowId), col(colId), input);
-  return recalculateTableModel(written, [cellKey(row(rowId), col(colId))]);
+  return commitCellWrites(writeCellInput(model, row(rowId), col(colId), input));
 }
 
 function transfer(model: PersistedTableModel, request: TableRangeTransferRequest): PersistedTableModel {

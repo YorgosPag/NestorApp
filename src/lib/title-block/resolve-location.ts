@@ -18,11 +18,32 @@
  */
 
 import { matchesWordSequenceAt, normalizeForLabelMatch, splitIntoWords } from '@/utils/greek-text';
-import type { BindingProposal, BindingTarget } from '@/types/title-block-binding';
+import type {
+  BindableAddressField,
+  BindableProjectField,
+  BindingBlockReason,
+  BindingProposal,
+  BindingTarget,
+} from '@/types/title-block-binding';
 import type { TitleBlockField } from '@/types/title-block-reading';
+import { splitFrontageStreets } from './frontage-streets';
 
-/** Πού προσγειώνεται μια αναγνωρισμένη ενότητα — ή `null` όταν συνειδητά **δεν** προσγειώνεται. */
-type LocationSlot = 'municipality' | 'neighborhood' | 'buildingBlock' | null;
+/**
+ * Πού καταλήγει μια αναγνωρισμένη ενότητα — **τέσσερις** εκβάσεις, όχι δύο (ADR-759 §2.2).
+ *
+ * 🔑 Η ένωση αντικατέστησε ένα `slot: … | null`, όπου το `null` σήμαινε «δεν προσγειώνεται» για
+ * **τέσσερις εντελώς διαφορετικούς λόγους**. Αυτό ήταν ολόκληρο το κεντρικό εύρημα του ADR: μία
+ * τιμή, τέσσερις αιτίες, ένα μήνυμα στον χρήστη.
+ */
+type LocationSlot =
+  /** Εμπλουτίζει την **κύρια** διεύθυνση του έργου (ADR-167/332) — ποτέ δεν φτιάχνει νέα. */
+  | { readonly to: 'address'; readonly field: BindableAddressField }
+  /** Βαθμωτό πεδίο του ίδιου του έργου (Ο.Τ., αριθμός οικοπέδου). */
+  | { readonly to: 'project'; readonly field: BindableProjectField }
+  /** Αναγνωρίστηκε, δεν γράφεται — με **ρητή, διακριτή** αιτία. */
+  | { readonly to: 'blocked'; readonly reason: BindingBlockReason }
+  /** Λίστα οδών: **μία πρόταση ανά πρόσωπο οικοπέδου**, όχι μία για όλες. */
+  | { readonly to: 'frontages' };
 
 interface LocationMarker {
   /** Οι λέξεις της σημαδούρας, σε μορφή σύγκρισης. */
@@ -41,32 +62,58 @@ const marker = (text: string, slot: LocationSlot, keepMarker = false): LocationM
 /**
  * Ο κατάλογος αναγνώρισης.
  *
- * 🔴 **Το `Π.Ε.` αναγνωρίζεται αλλά ΔΕΝ προσγειώνεται, και αυτό είναι απόφαση — όχι παράλειψη.**
- * Το ADR-745 §7 το αντιστοιχίζει σε `ProjectAddress.regionalUnit` (**Περιφερειακή** Ενότητα).
- * Σε τοπογραφικό διάγραμμα όμως το `Π.Ε. 39` είναι **Πολεοδομική** Ενότητα — ένας αριθμημένος
- * τομέας σχεδίου πόλης. Οι Περιφερειακές Ενότητες έχουν **ονόματα** («Θεσσαλονίκης»), ποτέ
- * αριθμούς. Γράφοντας «39» στο `regionalUnit` θα βάζαμε στη βάση **ψέμα με σωστή μορφή**, που
- * είναι χειρότερο από κενό (§8 κανόνας 1). Εμφανίζεται στον άνθρωπο ως αναγνωρισμένο-αλλά-άδετο.
+ * 🔴 **Το `Π.Ε.` αναγνωρίζεται αλλά ΔΕΝ γράφεται — και ο λόγος ΑΛΛΑΞΕ στη Φ3, χωρίς να αλλάξει
+ * η συμπεριφορά.** Το ADR-745 §7 και η προηγούμενη γραφή αυτού του σχολίου το αιτιολογούσαν ως
+ * «**Πολεοδομική** Ενότητα, όχι Περιφερειακή». Η §2β.3 του ADR-759 **μέτρησε το αρχείο** και το
+ * διέψευσε: το ίδιο έγγραφο γράφει *«στην 39 Π.Ε., των **Πολεοδομικών Ενοτήτων 16 και 17**»* —
+ * δηλαδή οι πολεοδομικές ενότητες δηλώνονται ρητά ως 16 και 17, άρα το 39 δεν είναι καμία από
+ * αυτές. Είναι **Πράξη Εφαρμογής 39** (γραμμένο τρεις φορές ολογράφως στο σώμα), και το πεδίο
+ * υποδοχής **υπάρχει ήδη** από τη Φ2: `SurveyRecord.implementationAct.number`.
+ *
+ * ⇒ Άρα δεν είναι `unsupported-field` («κανείς δεν το ζητά») **ούτε** `resolver-gap` («λείπει
+ * κώδικας»): είναι **`ambiguous-abbreviation`** — τρεις σημασίες του ίδιου ακρωνυμίου στο ίδιο
+ * σχέδιο, και η μορφή **δεν** αποφασίζει. Το λύνει το συμφραζόμενο (Φ4/Φ5), όχι ο resolver.
+ * Ο κανόνας που προκύπτει είναι κλάσης, όχι δείγματος: *όταν ένα ακρωνύμιο έχει >1 σημασία στο
+ * ίδιο έγγραφο, καμία απόφαση δεν βγαίνει από τη μορφή.*
  */
 const LOCATION_MARKERS: readonly LocationMarker[] = [
-  marker('ΔΗΜΟΣ', 'municipality'),
-  marker('ΠΕΡΙΟΧΗ', 'neighborhood', true),
-  marker('Ο.Τ.', 'buildingBlock', true),
-  // ── Αναγνωρισμένες αλλά ΑΔΕΤΕΣ ενότητες ────────────────────────────────────────────────
-  // 🔑 Δεν είναι «για πληρότητα»: **κάθε σημαδούρα τερματίζει την προηγούμενη**. Χωρίς αυτές
-  // τις τέσσερις, το `Ο.Τ.` ρουφούσε ολόκληρη την υπόλοιπη πρόταση («Ο.Τ. Γ 753 - ΟΙΚ.: 01β -
-  // Οδός Προέκταση Σμύρνης, …») και θα γραφόταν **αυτό** στο `Project.buildingBlock`. Ακριβώς
-  // το σχήμα του §6.3 του ADR: η παράλειψη ενός κλειδιού δεν αφήνει πεδίο κενό — **μολύνει το
-  // διπλανό**, και το αποτέλεσμα διαβάζεται απόλυτα εύλογα.
-  marker('Δ.Ε.', null, true), // Δημοτική Ενότητα — δεν υπάρχει πεδίο υποδοχής
-  marker('Π.Ε.', null, true), // βλ. σχόλιο παραπάνω: πολεοδομική, όχι περιφερειακή
-  marker('ΟΙΚ.', null, true), // αριθμός οικοπέδου — ανήκει στο ακίνητο, όχι στη διεύθυνση
-  marker('Οδός', null, true), // πρόσωπα οικοπέδου → `PlotFrontage[]`, δουλειά της Φ4
+  marker('ΔΗΜΟΣ', { to: 'address', field: 'municipality' }),
+  marker('ΠΕΡΙΟΧΗ', { to: 'address', field: 'neighborhood' }, true),
+  marker('Ο.Τ.', { to: 'project', field: 'buildingBlock' }, true),
+  // ── Φ3: οι τρεις που απέκτησαν πεδίο, και η μία που δεν πρόκειται ──────────────────────
+  // 🔑 Ο κατάλογος ΔΕΝ μίκρυνε, και δεν έπρεπε: **κάθε σημαδούρα τερματίζει την προηγούμενη**.
+  // Χωρίς αυτές τις τέσσερις, το `Ο.Τ.` ρουφούσε ολόκληρη την υπόλοιπη πρόταση («Ο.Τ. Γ 753 -
+  // ΟΙΚ.: 01β - Οδός Προέκταση Σμύρνης, …») και θα γραφόταν **αυτό** στο `Project.buildingBlock`.
+  // Το §6.3 του ADR-745: η παράλειψη ενός κλειδιού δεν αφήνει πεδίο κενό — **μολύνει το διπλανό**,
+  // και το αποτέλεσμα διαβάζεται απόλυτα εύλογα.
+
+  // Δημοτική Ενότητα → η κύρια διεύθυνση. **Κρατά** τη σημαδούρα, όπως το αδελφό της
+  // `regionalUnit` που το ίδιο το `ProjectAddress` τεκμηριώνει ως «Π.Ε. Θεσσαλονίκης» — και όπως
+  // το γράφει ήδη το domain επαφών («Δ.Ε. Θεσσαλονίκης»). Ένα λεξιλόγιο, μία μορφή.
+  marker('Δ.Ε.', { to: 'address', field: 'municipalUnit' }, true),
+  // Πράξη Εφαρμογής μεταμφιεσμένη σε ακρωνύμιο — βλ. το μπλοκ παραπάνω.
+  marker('Π.Ε.', { to: 'blocked', reason: 'ambiguous-abbreviation' }, true),
+  // Αριθμός οικοπέδου → `Project.plotNumber`. **ΔΕΝ** κρατά τη σημαδούρα, σε αντίθεση με το
+  // Ο.Τ. από πάνω, και η ασυμμετρία είναι μετρημένη: ο καταναλωτής
+  // (`lib/obligations/content.ts:25`) τυπώνει **δική του** ετικέτα «Αριθμός Οικοπέδου:», οπότε
+  // το «ΟΙΚ.:» θα εμφανιζόταν δύο φορές. Το «Ο.Τ. Γ 753» αντίθετα τυπώνεται αυτούσιο.
+  marker('ΟΙΚ.', { to: 'project', field: 'plotNumber' }, false),
+  // Πρόσωπα οικοπέδου → `PlotFrontage[]`: το πεδίο **υπάρχει** (ADR-186 Φ2.5), λείπει η σύνδεση.
+  marker('Οδός', { to: 'frontages' }, false),
 ];
 
 export interface LocationResolveContext {
   readonly projectId: string;
   readonly titleBlockIndex: number;
+  /**
+   * Έχει το έργο **κύρια** διεύθυνση να εμπλουτιστεί;
+   *
+   * `undefined` = **δεν το ξέρουμε ακόμη** (η ανάγνωση έργου δεν ολοκληρώθηκε ή απέτυχε), και
+   * τότε **δεν** μπλοκάρουμε: ο φύλακας τη στιγμή του κλικ (`apply-project-value.ts`) παραμένει
+   * και είναι η αυθεντία. Ένα `boolean` με προεπιλογή `false` θα μετέτρεπε μια αποτυχία δικτύου
+   * σε «το έργο δεν έχει διεύθυνση» — λάθος συμπέρασμα με σωστή μορφή.
+   */
+  readonly hasPrimaryAddress?: boolean;
 }
 
 interface LocationSegment {
@@ -100,20 +147,82 @@ export function splitLocationValue(text: string): LocationSegment[] {
   return segments;
 }
 
-function targetFor(
-  segment: LocationSegment,
+/** Ο σκελετός μιας πρότασης — ό,τι δεν εξαρτάται από την έκβαση της ενότητας. */
+type ProposalBase = Omit<BindingProposal, 'candidates' | 'blockedBy'>;
+
+const baseFor = (
+  field: TitleBlockField,
   context: LocationResolveContext,
-): BindingTarget | null {
-  if (segment.slot === null) return null;
-  if (segment.slot === 'buildingBlock') {
-    return { kind: 'project-field', projectId: context.projectId, field: 'buildingBlock', value: segment.value };
+  snapshotValue: string,
+): ProposalBase => ({
+  fieldKey: field.key,
+  titleBlockIndex: context.titleBlockIndex,
+  sourceHandle: field.sourceHandle,
+  labelHandle: field.labelHandle,
+  at: field.at,
+  snapshotValue,
+});
+
+const blocked = (base: ProposalBase, reason: BindingBlockReason): BindingProposal => ({
+  ...base,
+  candidates: [],
+  blockedBy: reason,
+});
+
+const proposing = (base: ProposalBase, target: BindingTarget, label: string): BindingProposal => ({
+  ...base,
+  // Κενή μαρτυρία **επίτηδες**: δεν τίθεται ερώτημα ταυτότητας — ο δήμος δεν «ταιριάζει» με
+  // κάποια οντότητα, είναι τιμή που διαβάστηκε και ζητά έγκριση για να γραφτεί.
+  candidates: [{ target, label, evidence: [] }],
+});
+
+/**
+ * Οι προτάσεις **μιας** αναγνωρισμένης ενότητας — συνήθως μία, για τις οδούς όσες και τα πρόσωπα.
+ */
+function proposalsForSegment(
+  segment: LocationSegment,
+  field: TitleBlockField,
+  context: LocationResolveContext,
+): BindingProposal[] {
+  const { slot, value } = segment;
+
+  if (slot.to === 'blocked') return [blocked(baseFor(field, context, value), slot.reason)];
+
+  if (slot.to === 'frontages') {
+    // 🔴 **Μία γραμμή ανά οδό, ΟΧΙ μία για όλες.** Το ADR-745 §7 μέτρησε **4 πρόσωπα** και το
+    // `frontagesCount` του ADR-186 τα περιμένει ένα-ένα. Μια ενιαία γραμμή «4 οδοί» θα έκρυβε
+    // ακριβώς την πληροφορία που κάνει το χρέος μετρήσιμο: **πόσα** πρόσωπα δεν συνδέονται.
+    return splitFrontageStreets(value).map((street) =>
+      blocked(baseFor(field, context, street), 'resolver-gap'),
+    );
   }
-  return {
-    kind: 'project-address',
-    projectId: context.projectId,
-    field: segment.slot,
-    value: segment.value,
-  };
+
+  const base = baseFor(field, context, value);
+
+  if (slot.to === 'project') {
+    return [
+      proposing(
+        base,
+        { kind: 'project-field', projectId: context.projectId, field: slot.field, value },
+        value,
+      ),
+    ];
+  }
+
+  // 🔴 **Ο έλεγχος κύριας διεύθυνσης ΠΡΙΝ το κλικ, όχι μετά.** Ο φύλακας υπήρχε ήδη στο
+  // `apply-project-value.ts:65` και επέστρεφε `NO_PRIMARY_ADDRESS` **αφού** ο άνθρωπος πατούσε
+  // Έγκριση — ενώ η απάντηση ήταν γνωστή από την ώρα που άνοιξε η παλέτα. Η κατάσταση
+  // `no-primary-address` υπήρχε στον τύπο, στο `BLOCKED_LABEL` και σε el+en, και **κανείς δεν
+  // την παρήγαγε ποτέ** (ADR-759 §4.4). Εδώ αποκτά τον παραγωγό της.
+  if (context.hasPrimaryAddress === false) return [blocked(base, 'no-primary-address')];
+
+  return [
+    proposing(
+      base,
+      { kind: 'project-address', projectId: context.projectId, field: slot.field, value },
+      value,
+    ),
+  ];
 }
 
 /**
@@ -126,22 +235,7 @@ export function resolveLocationProposals(
   field: TitleBlockField,
   context: LocationResolveContext,
 ): BindingProposal[] {
-  return splitLocationValue(field.rawValue).map((segment) => {
-    const base = {
-      fieldKey: field.key,
-      titleBlockIndex: context.titleBlockIndex,
-      sourceHandle: field.sourceHandle,
-      labelHandle: field.labelHandle,
-      at: field.at,
-      snapshotValue: segment.value,
-    } as const;
-
-    const target = targetFor(segment, context);
-    if (!target) return { ...base, candidates: [], blockedBy: 'unsupported-field' as const };
-
-    return {
-      ...base,
-      candidates: [{ target, label: segment.value, evidence: [] }],
-    };
-  });
+  return splitLocationValue(field.rawValue).flatMap((segment) =>
+    proposalsForSegment(segment, field, context),
+  );
 }

@@ -26,7 +26,6 @@
  */
 
 import { tableFormulaReferenceSpans } from '../../../bim/table/formula/table-formula-reference-spans';
-import { tableEffectiveRangeBounds } from '../../../bim/table/table-effective-range';
 import { resolveTableModel } from '../../../bim/table/table-model-helpers';
 import { getTableFillPreview } from '../../../state/table-fill-preview-store';
 import { stampTableFillHandle, stampTableFillPreview } from './stamp-table-fill-handle';
@@ -72,17 +71,25 @@ export function stampTableFormulaReferenceOverlay(
  * pixel δίπλα στο `<textarea>`. Είναι και Excel parity — εκεί εξαφανίζεται κι αυτό μόλις
  * ανοίξει ο επεξεργαστής κελιού.
  *
- * Πηγή είναι η **επιλογή**· χωρίς επιλογή, το ενεργό κελί. Τα όρια της επιλογής περνούν ως
- * όρισμα και δεν ξαναϋπολογίζονται: δεύτερος υπολογισμός τους θα ήταν δεύτερη απάντηση στο
- * «τι μάρκαρε ο χρήστης», μέσα στο **ίδιο καρέ** — δηλαδή λαβή που κάθεται αλλού από το
- * περίγραμμα που την υποτίθεται ότι συνοδεύει.
+ * Πηγή είναι η **επιλογή**· χωρίς επιλογή, το ενεργό κελί. Τα όρια περνούν ως όρισμα και δεν
+ * ξαναϋπολογίζονται: δεύτερος υπολογισμός τους θα ήταν δεύτερη απάντηση στο «τι μάρκαρε ο
+ * χρήστης», μέσα στο **ίδιο καρέ** — δηλαδή λαβή που κάθεται αλλού από το περίγραμμα που
+ * υποτίθεται ότι συνοδεύει.
+ *
+ * ## 🔴 §48.12 (2026-08-06) — δέχεται την **ενεργή περιοχή**, όχι τα όρια της επιλογής
+ * Καλούσε το ίδιο το {@link tableEffectiveRangeBounds} εδώ μέσα, και ήταν σωστό όσο η λαβή ήταν
+ * ο **μόνος** που ρωτούσε. Από τη στιγμή που την ίδια περιοχή χρειάστηκαν και τα δύο περιγράμματα
+ * (απόσυρση μπροστά στα μυρμήγκια), η ερώτηση ανέβηκε στον `TableRenderer` — αλλιώς θα υπήρχαν
+ * **δύο** απαντήσεις στο ίδιο καρέ, και η λαβή θα μπορούσε να κάθεται σε άλλο ορθογώνιο από
+ * αυτό που τα μυρμήγκια θεώρησαν ότι καλύπτουν. Ο ΕΝΑΣ ορισμός δεν άλλαξε· άλλαξε **ποιος τον
+ * ρωτά**, ώστε να τον ρωτά μία φορά.
  */
 export function stampTableFillHandleOverlay(
   rc: StampTableContext,
   layout: TableLayout,
   entity: TableEntity,
   cursor: TableCellCursorState,
-  selectionBounds: TableCellRangeBounds | undefined,
+  effectiveRange: TableCellRangeBounds | null,
 ): void {
   const preview = getTableFillPreview();
   // Δύο πίνακες στην ίδια σκηνή δεν μοιράζονται σύρση — ίδιο φίλτρο με το φάντασμα μεταφοράς.
@@ -91,16 +98,5 @@ export function stampTableFillHandleOverlay(
     return;
   }
   if (cursor.mode !== 'nav') return;
-
-  // 🔴 ADR-754 §14 — **ο ΕΝΑΣ ορισμός** του «ποια περιοχή έχει λαβή». Εδώ έγραφε
-  // `selectionBounds ?? rawTableCellRangeBounds(...)` με το χέρι· η ίδια πρόταση ζούσε και στον
-  // φρουρό του πατήματος, **διαφορετικά διατυπωμένη** — και ο δείκτης θα ήταν ο τρίτος. Δες
-  // την κεφαλίδα της `tableEffectiveRangeBounds` για την απόκλιση που είχαν ήδη.
-  const cell = { rowId: cursor.position.rowId, colId: cursor.position.colId };
-  const bounds = tableEffectiveRangeBounds(
-    resolveTableModel(entity.model),
-    cell,
-    selectionBounds ?? null,
-  );
-  if (bounds) stampTableFillHandle(rc, layout, bounds);
+  if (effectiveRange) stampTableFillHandle(rc, layout, effectiveRange);
 }

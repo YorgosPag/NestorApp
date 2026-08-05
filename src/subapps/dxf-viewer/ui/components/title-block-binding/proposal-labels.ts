@@ -51,8 +51,9 @@ export const BLOCKED_LABEL: Record<BindingBlockReason, string> = {
   'unsupported-field': 'titleBlockBinding.blocked.unsupported-field',
   'no-match': 'titleBlockBinding.blocked.no-match',
   'role-undecided': 'titleBlockBinding.blocked.role-undecided',
-  'not-yet-writable': 'titleBlockBinding.blocked.not-yet-writable',
   'no-primary-address': 'titleBlockBinding.blocked.no-primary-address',
+  'resolver-gap': 'titleBlockBinding.blocked.resolver-gap',
+  'ambiguous-abbreviation': 'titleBlockBinding.blocked.ambiguous-abbreviation',
 };
 
 export const TARGET_LABEL: Record<BindingTargetKind, string> = {

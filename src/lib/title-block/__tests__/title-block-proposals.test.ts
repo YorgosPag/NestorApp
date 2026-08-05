@@ -7,7 +7,7 @@
 
 import { readTitleBlocks } from '@/subapps/dxf-viewer/text-engine/title-block/reading/title-block-reading';
 import { G753_TITLEBLOCK_ROWS } from '@/subapps/dxf-viewer/text-engine/title-block/reading/__tests__/fixtures/g753-titleblock.fixture';
-import type { BindingProposal } from '@/types/title-block-binding';
+import { BINDABLE_PROJECT_FIELDS, type BindingProposal } from '@/types/title-block-binding';
 import type { TitleBlockPerson } from '@/types/title-block-reading';
 import { resolveTitleBlockProposals } from '../title-block-proposals';
 import { isDrawingMetaField } from '../resolve-drawing-meta';
@@ -37,7 +37,12 @@ const CONTACTS: readonly ContactSnapshotEntry[] = [
 ];
 
 const resolve = (contacts = CONTACTS) =>
-  resolveTitleBlockProposals(readings(), { projectId: PROJECT, levelId: LEVEL, contacts });
+  resolveTitleBlockProposals(readings(), {
+    projectId: PROJECT,
+    levelId: LEVEL,
+    contacts,
+    hasPrimaryAddress: true,
+  });
 
 /**
  * ⚠️ Χωριστός βοηθός, **όχι** `resolve(CONTACTS, undefined)`: περνώντας `undefined` σε παράμετρο
@@ -109,7 +114,13 @@ describe('Λ2 — ο «ΕΡΓΟΔΟΤΗΣ» πάει στους οικοπεδο
 
   it('🔴 ΚΑΜΙΑ πρόταση δεν δείχνει ποτέ στο Project.client', () => {
     const targets = resolve().flatMap((p) => p.candidates.map((c) => c.target));
-    expect(targets.some((t) => t.kind === 'project-field' && t.field !== 'buildingBlock')).toBe(false);
+    // Η λίστα είναι **η δηλωμένη ένωση** (`BindableProjectField`), όχι χειρόγραφη: όταν η Φ3
+    // πρόσθεσε το `plotNumber`, ένα σκέτο `!== 'buildingBlock'` θα κοκκίνιζε ζητώντας να
+    // «διορθωθεί» — δηλαδή θα εκπαίδευε τον επόμενο να χαλαρώνει τον φύλακα του `client`.
+    const allowedProjectFields = new Set(BINDABLE_PROJECT_FIELDS);
+    expect(
+      targets.some((t) => t.kind === 'project-field' && !allowedProjectFields.has(t.field)),
+    ).toBe(false);
     expect(JSON.stringify(targets)).not.toContain('client');
   });
 });
@@ -133,56 +144,146 @@ describe('Λ2 — η ΘΕΣΗ σπάει σε ξεχωριστές αποφάσ�
     expect(ot?.snapshotValue).not.toContain('Οδός');
   });
 
-  it('ό,τι δεν έχει πεδίο υποδοχής εμφανίζεται ΑΔΕΤΟ — δεν εξαφανίζεται', () => {
-    const unbound = forField(resolve(), 'location')
-      .filter((p) => p.blockedBy === 'unsupported-field')
-      .map((p) => p.snapshotValue);
-    expect(unbound.some((v) => v.startsWith('Δ.Ε.'))).toBe(true);
-    expect(unbound.some((v) => v.startsWith('ΟΙΚ'))).toBe(true);
-    expect(unbound.some((v) => v.startsWith('Οδός'))).toBe(true);
+  /**
+   * 🔴 **Η ΣΥΜΠΕΡΙΦΟΡΑ ΑΛΛΑΞΕ ΣΚΟΠΙΜΑ ΣΤΗ Φ3 — και τα δύο tests ξαναγράφτηκαν, δεν σβήστηκαν.**
+   *
+   * Πριν: και οι **τέσσερις** άδετες σημαδούρες έδιναν `unsupported-field` («κανείς δεν το
+   * ζητά»). Η §2.2 μέτρησε ότι αυτό ήταν **ψευδές και στις τέσσερις**: δύο ζητούσαν πεδίο που
+   * τώρα υπάρχει, μία ζητά σύνδεση που δεν γράφτηκε, και μία δεν μπορεί να αποφασιστεί από τη
+   * μορφή. Τέσσερις θεραπείες, τέσσερις καταστάσεις.
+   *
+   * Το αναλλοίωτο του παλιού test **δεν χάθηκε** — «τίποτα δεν εξαφανίζεται σιωπηλά» ελέγχεται
+   * τώρα αυστηρότερα: κάθε τιμή είναι **παρούσα** *και* φέρει **τη δική της** αιτία. Ένα test
+   * που ζητούσε απλώς `unsupported-field` θα ήταν πράσινο και για τους τέσσερις λόγους, δηλαδή
+   * για κανέναν.
+   */
+  it('🔴 Δ.Ε. και ΟΙΚ. ΑΠΕΚΤΗΣΑΝ πεδίο — προτείνονται, δεν δηλώνονται πια άδετα', () => {
+    const located = forField(resolve(), 'location');
+
+    const de = located.find((p) => p.snapshotValue.startsWith('Δ.Ε.'));
+    expect(de?.blockedBy).toBeUndefined();
+    expect(de?.candidates[0].target).toEqual({
+      kind: 'project-address',
+      projectId: PROJECT,
+      field: 'municipalUnit',
+      // Κρατά τη σημαδούρα, όπως το αδελφό `regionalUnit` («Π.Ε. Θεσσαλονίκης») — ένα λεξιλόγιο.
+      value: 'Δ.Ε. ΕΥΟΣΜΟΥ',
+    });
+
+    const oik = located.find((p) => p.snapshotValue === '01β');
+    expect(oik?.blockedBy).toBeUndefined();
+    expect(oik?.candidates[0].target).toEqual({
+      kind: 'project-field',
+      projectId: PROJECT,
+      field: 'plotNumber',
+      // 🔴 ΧΩΡΙΣ το «ΟΙΚ.:» — ο καταναλωτής (`lib/obligations/content.ts:25`) τυπώνει δική του
+      // ετικέτα «Αριθμός Οικοπέδου:», οπότε η σημαδούρα θα εμφανιζόταν δύο φορές.
+      value: '01β',
+    });
   });
 
-  it('🔴 το «Π.Ε. 39» αναγνωρίζεται αλλά ΔΕΝ γράφεται — αριθμημένη πολεοδομική, όχι περιφερειακή ενότητα', () => {
+  it('🔴 οι 4 ΟΔΟΙ γίνονται 4 ΞΕΧΩΡΙΣΤΕΣ γραμμές «resolver-gap» — το χρέος μετριέται', () => {
+    const streets = forField(resolve(), 'location').filter((p) => p.blockedBy === 'resolver-gap');
+
+    // Το ADR-745 §7 μέτρησε **4 πρόσωπα**· το `frontagesCount` του ADR-186 τα περιμένει ένα-ένα.
+    expect(streets.map((p) => p.snapshotValue)).toEqual([
+      'Προέκταση Σμύρνης',
+      'Δημ. Κολοκυθά',
+      'Ξενοκράτη',
+      'Αναγεννήσεως',
+    ]);
+    // Κενό υλοποίησης ≠ «δεν χωράει»: το πεδίο υπάρχει από το ADR-186 Φ2.5.
+    expect(streets.every((p) => p.candidates.length === 0)).toBe(true);
+    expect(streets.some((p) => p.blockedBy === 'unsupported-field')).toBe(false);
+  });
+
+  it('🔴 το «Π.Ε. 39» είναι ΔΙΦΟΡΟΥΜΕΝΟ, όχι «δεν το ζητά κανείς» — ούτε κενό resolver', () => {
     const pe = forField(resolve(), 'location').find((p) => p.snapshotValue.includes('Π.Ε.'));
     expect(pe).toBeDefined();
     expect(pe?.candidates).toEqual([]);
-    expect(pe?.blockedBy).toBe('unsupported-field');
+    // Η §2β.3 μέτρησε **τρεις** σημασίες του «Π.Ε.» στο ίδιο αρχείο. Το πεδίο υποδοχής υπάρχει
+    // (`SurveyRecord.implementationAct.number`, Φ2)· λείπει η **βεβαιότητα**, όχι ο κώδικας —
+    // γι' αυτό ΔΕΝ είναι `resolver-gap`. Τη λύνει το σώμα του σχεδίου (Φ5), όχι ο resolver.
+    expect(pe?.blockedBy).toBe('ambiguous-abbreviation');
+  });
+
+  it('🔴 χωρίς κύρια διεύθυνση, τα διοικητικά πεδία ΜΠΛΟΚΑΡΟΥΝ ΠΡΙΝ το κλικ — όχι μετά', () => {
+    const noAddress = resolveTitleBlockProposals(readings(), {
+      projectId: PROJECT,
+      levelId: LEVEL,
+      contacts: CONTACTS,
+      hasPrimaryAddress: false,
+    });
+    const de = forField(noAddress, 'location').find((p) => p.snapshotValue.startsWith('Δ.Ε.'));
+    expect(de?.blockedBy).toBe('no-primary-address');
+
+    // …αλλά το Ο.Τ. είναι **βαθμωτό πεδίο έργου**, δεν χρειάζεται διεύθυνση: ένας φύλακας που
+    // κλείνει και ό,τι δεν αφορά, είναι θόρυβος που εκπαιδεύει τον χρήστη να τον αγνοεί.
+    const ot = forField(noAddress, 'location').find((p) => p.snapshotValue.startsWith('Ο.Τ.'));
+    expect(ot?.blockedBy).toBeUndefined();
+  });
+
+  it('🔑 άγνωστη κύρια διεύθυνση (αποτυχία ανάγνωσης) ΔΕΝ μπλοκάρει — ο φύλακας του κλικ μένει', () => {
+    // `undefined` σημαίνει «δεν ξέρω», ποτέ «δεν υπάρχει». Μια αποτυχία δικτύου που βάφεται
+    // «το έργο δεν έχει διεύθυνση» είναι λάθος συμπέρασμα με σωστή μορφή.
+    const unknown = resolveTitleBlockProposals(readings(), {
+      projectId: PROJECT,
+      levelId: LEVEL,
+      contacts: CONTACTS,
+    });
+    const de = forField(unknown, 'location').find((p) => p.snapshotValue.startsWith('Δ.Ε.'));
+    expect(de?.blockedBy).toBeUndefined();
+    expect(de?.candidates).toHaveLength(1);
   });
 });
 
 describe('Λ2 — μεταδεδομένα σχεδίου', () => {
   /**
-   * 🔴 **Η συμπεριφορά ΑΛΛΑΞΕ ΣΚΟΠΙΜΑ στη Φ3β** και τα δύο tests ξαναγράφτηκαν αντί να διαγραφούν.
+   * 🔴 **Η συμπεριφορά ΑΛΛΑΞΕ ΣΚΟΠΙΜΑ ΔΥΟ ΦΟΡΕΣ, και τα tests ξαναγράφτηκαν και τις δύο.**
    *
-   * Πριν: παρήγαν υποψήφιο `drawing-meta`. Τώρα: **`not-yet-writable`**, γιατί το
-   * `DxfLevelDocument` δεν έχει `scale`/`studyDate`/`drawingType` και το `UpdateDxfLevelSchema`
-   * είναι `.passthrough()` — δηλαδή ο υποψήφιος υποσχόταν εγγραφή που θα γινόταν **χωρίς σχήμα**.
-   *
-   * ⚠️ Το ζητούμενο του παλιού test **δεν** χάθηκε: το «ανήκουν στο ΦΥΛΛΟ, όχι στο έργο» και το
-   * «δεν χρειάζονται έργο» είναι **ακόμη** αναλλοίωτα και ελέγχονται — απλώς εκφράζονται τώρα ως
-   * «μπλοκάρονται για **δικό τους** λόγο, ποτέ για `no-project`». Ένα test που απλώς ανέμενε
-   * `candidates: []` θα ήταν πράσινο και για τους δύο λόγους, δηλαδή για κανέναν.
+   * Φ3β: παρήγαν υποψήφιο ⇒ έγιναν `not-yet-writable`, γιατί το `DxfLevelDocument` δεν είχε τα
+   * πεδία. **Φ3**: τα πεδία υπάρχουν πλέον σε **τρεις** θέσεις (τύπος · `UpdateDxfLevelSchema` ·
+   * allowlist του `handleUpdateDxfLevel`) ⇒ ξαναγίνονται υποψήφιοι, και η κατάσταση
+   * `not-yet-writable` **αφαιρέθηκε** από την ένωση αντί να μείνει χωρίς παραγωγό.
    */
-  it('κλίμακα/χρόνος/αριθμός/είδος αναγνωρίζονται ΟΛΑ και μένουν ορατά με τη δική τους αιτία', () => {
+  it('κλίμακα/χρόνος/αριθμός/είδος γίνονται ΟΛΑ εγγράψιμοι υποψήφιοι του ΕΠΙΠΕΔΟΥ', () => {
     const meta = resolve().filter((p) => isDrawingMetaField(p.fieldKey));
 
     expect(meta.map((p) => `${p.fieldKey}=${p.snapshotValue}`)).toEqual(
       expect.arrayContaining(['scale=1:200', 'studyDate=ΙΟΥΛΙΟΣ 2026', 'drawingNumber=Τ1']),
     );
-    // Ορατά, όχι κρυμμένα: υπάρχει πρόταση για καθένα…
     expect(meta.length).toBeGreaterThanOrEqual(3);
-    // …και καμία δεν υπόσχεται εγγραφή που δεν μπορεί να γίνει.
-    expect(meta.every((p) => p.candidates.length === 0)).toBe(true);
-    expect(meta.every((p) => p.blockedBy === 'not-yet-writable')).toBe(true);
+    expect(meta.every((p) => p.blockedBy === undefined)).toBe(true);
+
+    const scale = meta.find((p) => p.fieldKey === 'scale');
+    expect(scale?.candidates[0].target).toEqual({
+      kind: 'drawing-meta',
+      levelId: LEVEL,
+      projectId: PROJECT,
+      field: 'scale',
+      value: '1:200',
+    });
   });
 
-  it('🔑 τα μεταδεδομένα ΔΕΝ χρειάζονται έργο — μπλοκάρονται για δικό τους λόγο, ποτέ ως «no-project»', () => {
+  it('🔑 η ΤΙΜΗ ανήκει στο φύλλο — κανένας στόχος μεταδεδομένου δεν αγγίζει πεδίο του έργου', () => {
+    // Το αναλλοίωτο του ADR-745 §7 που φύλαγε το αρχικό test: ένα έργο έχει δεκάδες σχέδια, και
+    // γραμμένα στο έργο το τελευταίο που ανοίγεις σβήνει σιωπηλά το προηγούμενο.
+    const targets = resolve()
+      .filter((p) => isDrawingMetaField(p.fieldKey))
+      .flatMap((p) => p.candidates.map((c) => c.target));
+    expect(targets.length).toBeGreaterThan(0);
+    expect(targets.every((t) => t.kind === 'drawing-meta')).toBe(true);
+  });
+
+  it('🔴 χωρίς έργο ΔΕΝ γράφονται — η ΤΙΜΗ ανήκει στο φύλλο, η ΑΠΟΔΕΙΞΗ όμως θέλει έργο', () => {
     const meta = resolveWithoutProject().filter((p) => p.fieldKey === 'scale');
 
     expect(meta).toHaveLength(1);
-    // Αυτό είναι το αναλλοίωτο που φύλαγε το παλιό test: το φύλλο δεν εξαρτάται από το ακίνητο.
-    expect(meta[0].blockedBy).toBe('not-yet-writable');
-    expect(meta[0].blockedBy).not.toBe('no-project');
+    // Το `TitleBlockBinding.projectId` είναι υποχρεωτικό επειδή το διαβάζει ο καταρράκτης
+    // διαγραφής έργου. Χωρίς έργο, η έγκριση θα άφηνε provenance που **κανείς δεν μπορεί ποτέ
+    // να ξαναβρεί ή να διαγράψει** — ορφανή απόδειξη, χειρότερη από καμία.
+    expect(meta[0].blockedBy).toBe('no-project');
+    expect(meta[0].candidates).toEqual([]);
   });
 });
 

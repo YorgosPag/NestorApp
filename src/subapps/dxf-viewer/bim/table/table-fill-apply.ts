@@ -36,8 +36,8 @@
 import type { PersistedTableModel, TableCell, TableModel } from '../../types/table';
 import { writePersistedCells } from './table-cell-content';
 import { offsetTableFormula } from './formula/table-formula-offset';
-import { recalculateTableModel } from './formula/table-formula-engine';
-import { cellKey, getCell, resolveTableModel } from './table-model-helpers';
+import { commitCellWrites } from './formula/table-formula-engine';
+import { getCell, resolveTableModel } from './table-model-helpers';
 import { isBlankCell, transferredCell } from './table-range-transfer';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import type { TableFillTarget } from './table-fill-handle';
@@ -66,22 +66,24 @@ export function applyTableFill(
   const byTarget = new Map<string, TableFillCell>();
   for (const fill of cells) byTarget.set(refKey(fill.at), fill);
 
-  const written = writePersistedCells(
-    model,
-    cells.map((fill) => fill.at),
-    {
-      update: (existing, at) => filled(before, byTarget.get(refKey(at)), existing),
-      create: (at) => {
-        const next = filled(before, byTarget.get(refKey(at)), undefined);
-        // Κενή πηγή σε κενό στόχο: καμία εγγραφή-φάντασμα. Ο αραιός χάρτης σημαίνει ήδη «κενό».
-        return next && isBlankCell(next) ? null : next;
+  // 🔴 ADR-739 §50 — ο επαναϋπολογισμός δεν είναι πια χωριστό βήμα που πρέπει να θυμηθεί
+  // αυτή η συνάρτηση: ο γραφέας επιστρέφει τα κελιά που **όντως** άλλαξαν και η
+  // `commitCellWrites` τα διαδίδει. Η λίστα κλειδιών που υπολογιζόταν εδώ με το χέρι
+  // (`cells.map(cellKey)`) ήταν **υπερσύνολο** — περιλάμβανε και τα κελιά όπου το γέμισμα
+  // δεν άλλαξε τίποτα, δηλαδή άνοιγε τον γράφο για διαδρομές που δεν είχαν αφορμή.
+  return commitCellWrites(
+    writePersistedCells(
+      model,
+      cells.map((fill) => fill.at),
+      {
+        update: (existing, at) => filled(before, byTarget.get(refKey(at)), existing),
+        create: (at) => {
+          const next = filled(before, byTarget.get(refKey(at)), undefined);
+          // Κενή πηγή σε κενό στόχο: καμία εγγραφή-φάντασμα. Ο αραιός χάρτης σημαίνει ήδη «κενό».
+          return next && isBlankCell(next) ? null : next;
+        },
       },
-    },
-  );
-  if (written === model) return model;
-  return recalculateTableModel(
-    written,
-    cells.map((fill) => cellKey(fill.at.rowId, fill.at.colId)),
+    ),
   );
 }
 

@@ -411,3 +411,4 @@ export {
   setPersistedCellFormula,
   setPersistedCellText,
 } from './table-cell-content';
+export type { CellWriteTarget, PendingCellWrites } from './table-cell-content';

@@ -58,7 +58,8 @@
  */
 
 import type { TsvGrid } from '@/lib/spreadsheet/tsv';
-import type { CellKey, PersistedTableModel, TableModel } from '../../types/table';
+import type { PersistedTableModel, TableModel } from '../../types/table';
+import type { CellWriteTarget, PendingCellWrites } from './table-model-helpers';
 import {
   buildMergeIndex,
   cellKey,
@@ -70,7 +71,7 @@ import {
 } from './table-model-helpers';
 // 🔴 ADR-739 Φ.Ζ — ο γραφέας που **καταλαβαίνει** `=`, και ο επαναϋπολογισμός που ακολουθεί.
 // Δες την κεφαλίδα: η επικόλληση έγραφε ωμό κείμενο και δεν ξαναϋπολόγιζε τίποτα.
-import { recalculateTableModel, writeCellInput } from './formula/table-formula-engine';
+import { commitCellWrites, writeCellInput } from './formula/table-formula-engine';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import { tableRangeCellRefs } from './table-cell-range';
 
@@ -135,7 +136,7 @@ export interface TablePasteResult {
  * του πίνακα.
  *
  * Επιστρέφει το **ίδιο** μοντέλο by-reference όταν καμία τιμή δεν άλλαξε — η εγγύηση
- * ταυτότητας του `writeCellInput`, **συνεχισμένη** από τον {@link recalculatedAfter} (που
+ * ταυτότητας του `writeCellInput`, **συνεχισμένη** από τον {@link commitCellWrites} (που
  * δεν καλείται καν όταν κανένα κελί δεν άγγιξε τίποτα). Σημαίνει «καμία εντολή, κανένα βήμα
  * undo» για μια επικόλληση που δεν έφερε τίποτα νέο.
  *
@@ -166,7 +167,7 @@ export function pasteTsvIntoTable(
   });
 
   return {
-    model: recalculatedAfter(written.model, written.touched),
+    model: commitCellWrites(written),
     offeredRows,
     offeredColumns,
     fittedRows,
@@ -175,11 +176,15 @@ export function pasteTsvIntoTable(
   };
 }
 
-/** Τι άφησε πίσω του ο βρόχος γραφής — το μοντέλο, τι άγγιξε, και τι προσπέρασε. */
-interface TableGridWrite {
-  readonly model: PersistedTableModel;
-  /** **Μόνο** τα κελιά που όντως άλλαξαν — δες {@link recalculatedAfter}. */
-  readonly touched: readonly CellKey[];
+/**
+ * Τι άφησε πίσω του ο βρόχος γραφής: η **εκκρεμότητα** του γραφέα, συν τι προσπέρασε.
+ *
+ * 🔴 ADR-739 §50 — ήταν δικό του `{ model, touched }`, δηλαδή χειροποίητο αντίγραφο του
+ * {@link PendingCellWrites}. Το ότι αυτό το σχήμα γεννήθηκε **εδώ πρώτα**, ιδιωτικά, είναι η
+ * απόδειξη ότι ο τύπος έλειπε από τον γραφέα: η ίδια απάντηση ξαναγράφτηκε τοπικά από τον
+ * πρώτο που τη χρειάστηκε, και οι επόμενοι τρεις δεν την είχαν.
+ */
+interface TableGridWrite extends PendingCellWrites {
   readonly skippedMergedCells: number;
 }
 
@@ -196,7 +201,7 @@ interface TableGridWrite {
  *
  * Ο ΕΝΑΣ αμετάβλητος γραφέας εφαρμόζεται Ν φορές **καθαρά**: το αποτέλεσμα κάθε βήματος
  * τροφοδοτεί το επόμενο, καμία μετάλλαξη, καμία ενδιάμεση εντολή, ένα undo. Κελί που
- * επιστρέφει **ίδια αναφορά** δεν άλλαξε τίποτα, άρα δεν μπαίνει στα `touched`: δεν έχει τι
+ * επιστρέφει **ίδια αναφορά** δεν άλλαξε τίποτα, άρα δεν μπαίνει στα `written`: δεν έχει τι
  * να διαδώσει, και ο περιττός κόμβος θα κόστιζε πέρασμα του γράφου για το τίποτα.
  */
 function writeGridCells(
@@ -207,7 +212,7 @@ function writeGridCells(
   fitted: { readonly rows: number; readonly columns: number },
 ): TableGridWrite {
   const covered = buildMergeIndex(model).covered;
-  const touched: CellKey[] = [];
+  const written: CellWriteTarget[] = [];
   let next = persisted;
   let skippedMergedCells = 0;
 
@@ -225,34 +230,19 @@ function writeGridCells(
       const value = grid[r][c];
       if (value === undefined) continue;
       const cellWritten = writeCellInput(next, rowId, colId, value);
-      if (cellWritten === next) continue;
-      next = cellWritten;
-      touched.push(key);
+      if (cellWritten.model === next) continue;
+      next = cellWritten.model;
+      written.push(...cellWritten.written);
     }
   }
 
-  return { model: next, touched, skippedMergedCells };
+  return { model: next, written, skippedMergedCells };
 }
 
-/**
- * Ο επαναϋπολογισμός **μέσα στον ίδιο μετασχηματισμό** — η τελευταία πράξη κάθε γραφέα
- * κελιών εδώ.
- *
- * 🔴 Δεν είναι βελτιστοποίηση ούτε καλλωπισμός: χωρίς αυτό, κάθε τύπος που **διαβάζει** τα
- * κελιά που μόλις γράφτηκαν κρατά την προηγούμενη τιμή του — στην οθόνη, στην εξαγωγή και
- * στο DXF. Και επειδή γίνεται εδώ, μέσα στο **ένα** μοντέλο που φτάνει στο commit, ο τύπος
- * και το αποτέλεσμά του αναιρούνται πάντα **μαζί** (ίδιο επιχείρημα με το
- * `buildTableCellEditCommand`).
- *
- * Κανένα κελί δεν άλλαξε ⇒ επιστρέφει το **ίδιο** μοντέλο by-reference, ώστε η εγγύηση
- * «καμία εντολή, κανένα βήμα undo για το τίποτα» να φτάσει άθικτη στον καλούντα.
- */
-function recalculatedAfter(
-  model: PersistedTableModel,
-  touched: readonly CellKey[],
-): PersistedTableModel {
-  return touched.length === 0 ? model : recalculateTableModel(model, touched);
-}
+// 🔴 ADR-739 §50 — ο ιδιωτικός `recalculatedAfter` **ανυψώθηκε** σε `commitCellWrites`
+// (`formula/table-formula-engine.ts`). Ήταν σωστός και μόνος του: το ίδιο σκεπτικό χρειάζονταν
+// άλλοι τέσσερις γραφείς, και τρεις από αυτούς δεν το είχαν. Ένας κανόνας γραμμένος ιδιωτικά
+// στο αρχείο που τον ανακάλυψε πρώτο δεν προστατεύει κανέναν άλλον — δες §47.5.
 
 /**
  * Αδειάζει κάθε κελί μιας περιοχής (`Delete` πάνω σε μαρκαρισμένη περιοχή).
@@ -278,23 +268,19 @@ export function clearTableRange(
   const model = resolveTableModel(persisted);
   const covered = buildMergeIndex(model).covered;
 
-  // Ένα πέρασμα για **δύο** απαντήσεις: ποια κελιά αδειάζουν (ο γραφέας) και ποια κλειδιά
-  // διαδίδονται (ο επαναϋπολογισμός). Χωριστά `filter` + `map` θα υπολόγιζαν το `cellKey`
-  // δύο φορές ανά κελί — σε `Ctrl+A` + `Delete` πάνω σε 500 × 8 δεν είναι θεωρητικό.
+  // 🔴 ADR-739 §50 — **η δεύτερη απάντηση έφυγε από εδώ.** Ο βρόχος υπολόγιζε παράλληλα τα
+  // κλειδιά που θα διαδίδονταν· τα ξέρει πλέον ο ίδιος ο γραφέας, και μάλιστα **ακριβέστερα**
+  // (μόνο όσα κελιά όντως άδειασαν, όχι όσα ζητήθηκαν). Ο ένας βρόχος μένει, με μία δουλειά.
   const targets: TableCellRef[] = [];
-  const keys: CellKey[] = [];
   for (const ref of tableRangeCellRefs(model, bounds)) {
-    const key = cellKey(ref.rowId, ref.colId);
-    if (covered.has(key)) continue;
+    if (covered.has(cellKey(ref.rowId, ref.colId))) continue;
     targets.push(ref);
-    keys.push(key);
   }
 
-  // 🔴 Ο επαναϋπολογισμός λείπει από εδώ για τον **ίδιο** λόγο που έλειπε από την
-  // επικόλληση, και κοστίζει το ίδιο: ένα `=SUM(A1:A20)` πάνω από στήλη που μόλις άδειασε
-  // εξακολουθούσε να δείχνει το άθροισμα δεδομένων **που δεν υπάρχουν πια**.
-  const emptied = clearPersistedCells(persisted, targets);
-  return emptied === persisted ? persisted : recalculatedAfter(emptied, keys);
+  // Ο επαναϋπολογισμός δεν είναι πια χωριστό βήμα που πρέπει να θυμηθεί ο καλών: ένα
+  // `=SUM(A1:A20)` πάνω από στήλη που μόλις άδειασε **δεν μπορεί** να δείχνει το άθροισμα
+  // δεδομένων που δεν υπάρχουν πια, γιατί ο τύπος επιστροφής δεν επιτρέπει να παραλειφθεί.
+  return commitCellWrites(clearPersistedCells(persisted, targets));
 }
 
 /** Πού αρχίζει η επικόλληση, σε δείκτες· `null` για μπαγιάτικο ενεργό κελί. */

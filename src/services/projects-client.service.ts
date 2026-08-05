@@ -55,6 +55,8 @@ export interface ProjectPayloadSharedFields {
   linkedCompanyId?: string | null;
   // Extended project fields (permits card, classification, timeline, financials)
   buildingBlock?: string;
+  /** ADR-759 Φ3 — αριθμός οικοπέδου (ΟΙΚ.), αδελφός του `buildingBlock`. */
+  plotNumber?: string;
   protocolNumber?: string;
   licenseNumber?: string;
   issuingAuthority?: string;

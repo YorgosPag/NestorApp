@@ -64,7 +64,7 @@ import type { CellKey, PersistedTableModel, TableCell } from '../../types/table'
 import type { TableBorderSpec, TableEdgeKey } from '../../types/table-edges';
 import type { TableCellRef } from './table-cell-range';
 import type { TableRangeTransferPlan } from './table-range-transfer-types';
-import { writePersistedCells } from './table-cell-content';
+import { writePersistedCells, type PendingCellWrites } from './table-cell-content';
 import { buildTableEdgeIndex, setTableEdges } from './table-edge-model';
 import { TABLE_BORDER_EVERY_SIDE, tableRangeSideEdges } from './table-range-border-ops';
 import { cellKey, getCell, resolveTableModel } from './table-model-helpers';
@@ -91,12 +91,18 @@ export function applyTableRangeTransfer(
   model: PersistedTableModel,
   plan: TableRangeTransferPlan,
 ): PersistedTableModel {
-  const withContent = transferContent(model, plan);
+  const withContent = transferContent(model, plan).model;
   const withFormulas = plan.intent.copy
-    ? offsetCopiedFormulas(withContent, plan)
+    ? offsetCopiedFormulas(withContent, plan).model
     : remapTableFormulaRefs(withContent, relocationOf(plan));
   const withMerges = transferMerges(withFormulas, plan);
   const withEdges = transferEdges(model, withMerges, plan);
+  // 🔴 ADR-739 §50 — εδώ **δεν** αρκεί η εκκρεμότητα των δύο γραφέων, και είναι η μόνη
+  // διαδρομή όπου δεν αρκεί: το `remapTableFormulaRefs` ξαναγράφει δέντρα τύπων **οπουδήποτε**
+  // στον πίνακα (κάθε αναφορά που έδειχνε σε κελί που μετακόμισε), δηλαδή αγγίζει κελιά που
+  // κανένας γραφέας κελιών δεν είδε. Το {@link touchedKeys} μένει γι' αυτόν ακριβώς τον λόγο
+  // — και είναι ούτως ή άλλως **υπερσύνολο** των δύο εκκρεμοτήτων, αφού και οι δύο γράφουν
+  // μόνο μέσα στα `plan.fills`.
   return recalculateTableModel(withEdges, touchedKeys(plan));
 }
 
@@ -117,7 +123,7 @@ export function applyTableRangeTransfer(
 function transferContent(
   model: PersistedTableModel,
   plan: TableRangeTransferPlan,
-): PersistedTableModel {
+): PendingCellWrites {
   const before = resolveTableModel(model);
   const sources = new Map<string, TableCellRef | null>();
   for (const fill of plan.fills) sources.set(refKey(fill.at), fill.from);
@@ -275,7 +281,7 @@ function relocationOf(plan: TableRangeTransferPlan): TableFormulaRefRelocation {
 function offsetCopiedFormulas(
   model: PersistedTableModel,
   plan: TableRangeTransferPlan,
-): PersistedTableModel {
+): PendingCellWrites {
   const resolved = resolveTableModel(model);
   const shifts = new Map<string, TableFormulaOffset>();
   for (const fill of plan.fills) {
@@ -283,7 +289,7 @@ function offsetCopiedFormulas(
     const offset = tableFormulaOffsetBetween(resolved, fill.from, fill.at);
     if (offset && (offset.rows !== 0 || offset.columns !== 0)) shifts.set(refKey(fill.at), offset);
   }
-  if (shifts.size === 0) return model;
+  if (shifts.size === 0) return { model, written: [] };
 
   return writePersistedCells(
     model,

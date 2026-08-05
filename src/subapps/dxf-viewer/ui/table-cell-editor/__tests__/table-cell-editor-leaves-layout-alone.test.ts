@@ -128,7 +128,7 @@ describe('🔴 ADR-739 Φ.Δ βήμα 6 — ο επεκτεταμένος επε
     const entity = entityWith(CELL);
     editorFrameFor(entity, `${LONG_TEXT} ΚΑΙ ΑΛΛΟ`);
 
-    const committed = setPersistedCellText(entity.model, 'r1', 'c1', `${LONG_TEXT} ΚΑΙ ΑΛΛΟ`);
+    const committed = setPersistedCellText(entity.model, 'r1', 'c1', `${LONG_TEXT} ΚΑΙ ΑΛΛΟ`).model;
     const run = layoutTable(modelWith({ kind: 'text', value: `${LONG_TEXT} ΚΑΙ ΑΛΛΟ` }), STANDARD)
       .cells[0]?.text;
 

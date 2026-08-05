@@ -61,6 +61,7 @@ import { stampTableIndicator } from './table/stamp-table-indicator';
 import {
   activeCellRectOf,
   editedCellRef,
+  tableFrameEffectiveRange,
   tableFrameSelectionView,
 } from './table/table-frame-cursor-view';
 // 🔴 ADR-739 §36 ΦΑΣΗ 3 — η προεπισκόπηση της μεταφοράς περιοχής. Ίδιος κανόνας με τον δρομέα
@@ -71,7 +72,7 @@ import { getTableRangeTransferPreview } from '../../state/table-range-transfer-s
 // δύο από πάνω· ο ζωγράφος είναι **και** ο φρουρός της μπαγιάτικης έκδοσης (δες εκεί).
 import {
   stampTableCopyMarquee,
-  tableCopyMarqueeCoversSelection,
+  tableCopyMarqueeCoversRange,
 } from './table/stamp-table-copy-marquee';
 import { getTableCopyMarquee } from '../../state/table-copy-marquee-store';
 // 🔴 ADR-754 Β1 — τα χρωματιστά περιγράμματα των αναφορών του τύπου που γράφεται. **Κανένα
@@ -175,13 +176,19 @@ export class TableRenderer extends BaseEntityRenderer {
     // υπάρχει marquee» ενώ το marquee δεν ζωγραφίστηκε ποτέ, δηλαδή περιοχή **χωρίς καμία**
     // γραμμή. Ο παλμός τρέχει σε δικό του ρολόι (~12 Hz), άρα δεν είναι θεωρητικό.
     const copyMarquee = getTableCopyMarquee();
+    // 🔴 ADR-739 §48.12 — **ΜΙΑ ΕΡΩΤΗΣΗ, ΤΡΕΙΣ ΚΑΤΑΝΑΛΩΤΕΣ.** Η «ενεργή περιοχή» (επιλογή, ή
+    // ενεργό κελί κουμπωμένο στη συγχώνευσή του) υπολογίζεται **εδώ, μία φορά**, και την ίδια
+    // απάντηση διαβάζουν και οι τρεις που ζωγραφίζουν πάνω της: το περίγραμμα της επιλογής, ο
+    // δρομέας, η λαβή συμπλήρωσης.
+    //
+    // Πριν, καθένας ρωτούσε μόνος του — και ο δρομέας **δεν ρωτούσε καθόλου**: με σκέτο ενεργό
+    // κελί ζωγράφιζε συμπαγή γραμμή ακριβώς πάνω στη διαδρομή των μυρμηγκιών (μετρημένο ζωντανά,
+    // §48.12). Η ερώτηση ανέβηκε ένα επίπεδο ώστε το λάθος να γίνει **μη εκφράσιμο**: δεν υπάρχει
+    // πια ζωγράφος αυτής της διαδρομής που να μπορεί να ξεχάσει να ρωτήσει.
+    const effectiveRange = cursor ? tableFrameEffectiveRange(e, cursor, selection?.bounds) : null;
+    const marqueeCoversRange = tableCopyMarqueeCoversRange(e, copyMarquee, effectiveRange);
     if (selection) {
-      stampTableSelection(
-        rc,
-        selection.rectMm,
-        activeCellRect,
-        tableCopyMarqueeCoversSelection(e, copyMarquee, selection.bounds),
-      );
+      stampTableSelection(rc, selection.rectMm, activeCellRect, marqueeCoversRange);
     }
     stampTableBorders(rc, visibleHorizontals(index, window.topMm, window.bottomMm));
     stampTableBorders(rc, index.verticals);
@@ -259,7 +266,19 @@ export class TableRenderer extends BaseEntityRenderer {
       // επιλογή 1×1 το περίγραμμα **της περιοχής** έχει ήδη το ίδιο χρώμα και πάχος
       // (`TABLE_CELL_SELECTION.outlineWidthPx` = `TABLE_CELL_CURSOR.lineWidthPx`) πάνω στο
       // ίδιο ορθογώνιο — δηλαδή η εικόνα του δρομέα, γραμμένη μία φορά.
-      if (!selection && activeCellRect) stampTableCellCursor(rc, activeCellRect);
+      //
+      // 🔴 §48.12 — **ΚΑΙ Ο ΔΡΟΜΕΑΣ ΣΙΩΠΑ ΟΤΑΝ ΤΑ ΜΥΡΜΗΓΚΙΑ ΚΑΘΟΝΤΑΙ ΣΤΗ ΘΕΣΗ ΤΟΥ.** Χωρίς
+      // επιλογή, ο δρομέας **είναι** το περίγραμμα της ενεργής περιοχής — άρα διεκδικεί ακριβώς
+      // την ίδια διαδρομή, και ο συλλογισμός του §48.12 τον αφορά αυτούσιο. Ο ίδιος `if` που τον
+      // σβήνει μπροστά στην επιλογή τον σβήνει τώρα και μπροστά στο πρόχειρο: δύο δηλώσεις του
+      // ίδιου ορθογωνίου, η μία εκ των οποίων κινείται και η άλλη το πνίγει.
+      //
+      // Δεν χάνεται κατάσταση και δεν χρειάζεται σβήσιμο: μόλις τα μυρμήγκια λήξουν ή ο δρομέας
+      // φύγει αλλού, το `marqueeCoversRange` γίνεται `false` **μόνο του** και ο δρομέας γυρίζει.
+      // Είναι παράγωγο του καρέ, όχι σημαία που κάποιος οφείλει να θυμηθεί να καθαρίσει.
+      if (!selection && activeCellRect && !marqueeCoversRange) {
+        stampTableCellCursor(rc, activeCellRect);
+      }
       // 🔴 ADR-754 Β1 — **μετά** τον δρομέα, ώστε ένα χρωματιστό περίγραμμα να μη χάνεται
       // κάτω από το συμπαγές μπλε όταν τα δύο εφάπτονται.
       //
@@ -289,7 +308,11 @@ export class TableRenderer extends BaseEntityRenderer {
       stampTableCopyMarquee(rc, e, layout, copyMarquee, performance.now());
       // 🔴 ADR-754 Γ4 — η λαβή συμπλήρωσης, **τελευταία μέσα στο πλέγμα**: είναι το μόνο
       // στοιχείο εδώ που λειτουργεί ως χερούλι, άρα τίποτα δεν επιτρέπεται να τη σκεπάσει.
-      stampTableFillHandleOverlay(rc, layout, e, cursor, selection?.bounds);
+      // §48.12 — δέχεται την **ήδη λυμένη** ενεργή περιοχή αντί να την ξαναρωτήσει. Ήταν η
+      // τέταρτη κλήση του `tableEffectiveRangeBounds` και η μόνη που την έκανε μόνη της· τώρα
+      // η λαβή και τα δύο περιγράμματα κάθονται πάνω στο **ίδιο** ορθογώνιο εξ ορισμού, όχι
+      // κατά σύμπτωση. Το πλήθος κλήσεων `resolveTableModel` ανά καρέ μένει ίδιο.
+      stampTableFillHandleOverlay(rc, layout, e, cursor, effectiveRange);
     }
 
     // 🔴 ADR-739 §40 — **ΤΟ ⊕ ΤΗΣ ΕΙΣΑΓΩΓΗΣ, ΕΞΩ ΑΠΟ ΤΟ `if (cursor)`.**

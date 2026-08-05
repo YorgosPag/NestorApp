@@ -48,9 +48,39 @@ export const evidenceStrength = (kind: BindingEvidenceKind): number =>
 
 // ── Στόχοι ────────────────────────────────────────────────────────────────────
 
-/** Τα πεδία διεύθυνσης έργου που μπορεί να προτείνει η πινακίδα (ADR-745 §7). */
-export const BINDABLE_ADDRESS_FIELDS = ['municipality', 'regionalUnit', 'neighborhood'] as const;
+/**
+ * Τα πεδία διεύθυνσης έργου που μπορεί να προτείνει η πινακίδα (ADR-745 §7).
+ *
+ * 🔑 **Το `municipalUnit` προστέθηκε στη Φ3 (ADR-759 §2.2 γρ. 5) και ΔΕΝ είναι νέο λεξιλόγιο.**
+ * Η λέξη υπάρχει ήδη στο domain επαφών (`types/contacts/contracts.ts`, `address-info-builder.ts`)
+ * και **το ίδιο το `AddressWithHierarchy` έχει επιλογέα Δημοτικής Ενότητας** (επίπεδο 6,
+ * `address-with-hierarchy-config.ts:116`) που ζωγραφίζεται **και στην καρτέλα τοποθεσιών του
+ * έργου**. Αυτό που έλειπε ήταν το **πεδίο υποδοχής**: το `fromHierarchyValue` δεν χαρτογραφούσε
+ * το `municipalUnitName` πουθενά ⇒ ο χρήστης το διάλεγε και **χανόταν στην αποθήκευση**. Δηλαδή
+ * η προσθήκη κλείνει round-trip που ήταν **ήδη μισό**, δεν εφευρίσκει τρίτη διοικητική διαίρεση.
+ */
+export const BINDABLE_ADDRESS_FIELDS = [
+  'municipality',
+  'regionalUnit',
+  'neighborhood',
+  'municipalUnit',
+] as const;
 export type BindableAddressField = (typeof BINDABLE_ADDRESS_FIELDS)[number];
+
+/**
+ * Τα **βαθμωτά** πεδία του ίδιου του έργου που μπορεί να προτείνει η πινακίδα.
+ *
+ * 🔑 Το `plotNumber` (ΟΙΚ., ADR-759 §2.2 γρ. 7) κάθεται δίπλα στο `buildingBlock` και **όχι** στη
+ * διεύθυνση, γιατί είναι η **ίδια κλάση πράγματος** με το Ο.Τ.: αναγνωριστικό του ακινήτου μέσα
+ * στο σχέδιο πόλης, όχι ταχυδρομική πληροφορία. Το `resolve-location.ts:63` το έλεγε ήδη γραπτά
+ * («ανήκει στο ακίνητο, όχι στη διεύθυνση») χωρίς να έχει πού να το βάλει.
+ *
+ * ⚠️ Το ομώνυμο `ProjectDetails.plotNumber` (`types/obligations/contracts.ts:121`) **δεν** είναι
+ * ανταγωνιστής: είναι **παγωμένο αντίγραφο μέσα σε έγγραφο υποχρέωσης**, όχι η τρέχουσα αλήθεια
+ * του έργου. Ίδια λέξη, ίδια σημασία, άλλη διάρκεια ζωής — δηλαδή ακριβώς ο διαχωρισμός του §4.1.
+ */
+export const BINDABLE_PROJECT_FIELDS = ['buildingBlock', 'plotNumber'] as const;
+export type BindableProjectField = (typeof BINDABLE_PROJECT_FIELDS)[number];
 
 /** Μεταδεδομένα του **σχεδίου** — δεν αγγίζουν το έργο (ADR-745 §7). */
 export const BINDABLE_DRAWING_FIELDS = ['scale', 'studyDate', 'drawingNumber', 'drawingType'] as const;
@@ -78,8 +108,32 @@ export type BindingTarget =
       readonly field: BindableAddressField;
       readonly value: string;
     }
-  | { readonly kind: 'project-field'; readonly projectId: string; readonly field: 'buildingBlock'; readonly value: string }
-  | { readonly kind: 'drawing-meta'; readonly levelId: string; readonly field: BindableDrawingField; readonly value: string };
+  | {
+      readonly kind: 'project-field';
+      readonly projectId: string;
+      readonly field: BindableProjectField;
+      readonly value: string;
+    }
+  | {
+      readonly kind: 'drawing-meta';
+      readonly levelId: string;
+      /**
+       * 🔴 **Προστέθηκε στη Φ3 και ΔΕΝ είναι διακοσμητικό.**
+       *
+       * Το `TitleBlockBinding.projectId` είναι **υποχρεωτικό** επειδή το διαβάζει ο καταρράκτης
+       * διαγραφής έργου (`config/deletion-registry.ts:441`) — το `target` είναι ένωση και το
+       * Firestore **δεν ερωτά μέσα σε ένωση**. Όσο το `drawing-meta` δεν είχε έργο, η έγκρισή
+       * του ήταν **δομικά αδύνατη** (`title-block-apply/index.ts:44` → `NOT_YET_WRITABLE`), κι
+       * αυτό ήταν σωστό: provenance που δεν πεθαίνει μαζί με το έργο του είναι **ορφανή
+       * απόδειξη, χειρότερη από καμία**.
+       *
+       * ⇒ Η Φ3 **δεν χαλαρώνει** τον κανόνα· του δίνει το έργο που η παλέτα ήδη κρατά. Σχέδιο
+       * χωρίς έργο ⇒ `no-project` (ορατό, με ενέργεια), **ποτέ** εγγραφή χωρίς προέλευση.
+       */
+      readonly projectId: string;
+      readonly field: BindableDrawingField;
+      readonly value: string;
+    };
 
 export type BindingTargetKind = BindingTarget['kind'];
 
@@ -99,38 +153,69 @@ export interface BindingCandidate {
   readonly evidence: readonly BindingEvidence[];
 }
 
+/** Ο **δηλωμένος** κατάλογος αιτιών. Δες {@link BindingBlockReason} για το γιατί είναι πίνακας. */
+export const BINDING_BLOCK_REASONS = [
+  /** Το σχέδιο δεν είναι δεμένο σε έργο — τίποτα δεν έχει πού να προσγειωθεί, ούτε η προέλευση. */
+  'no-project',
+  /** Το πεδίο δεν αντιστοιχίζεται σε καμία οντότητα (π.χ. `projectTitle`, `studyType`). */
+  'unsupported-field',
+  /** Αναζητήθηκε και δεν βρέθηκε τίποτα στη βάση. */
+  'no-match',
+  /** Βρέθηκε πρόσωπο αλλά η ειδικότητα δεν δίνει **έναν** ρόλο (0 ή >1 — §6.4). */
+  'role-undecided',
+  /**
+   * Το έργο δεν έχει κύρια διεύθυνση, άρα τα διοικητικά τμήματα δεν έχουν πού να προσγειωθούν.
+   *
+   * Η πινακίδα δίνει **μόνο** διοικητικά τμήματα· το `ProjectAddress` απαιτεί `street`/
+   * `postalCode`/`country`. ⇒ **Εμπλουτίζουμε υπάρχουσα διεύθυνση, δεν εφευρίσκουμε νέα.**
+   *
+   * 🔴 **Μέχρι τη Φ3 αυτή η τιμή ΔΕΝ ΕΙΧΕ ΚΑΝΕΝΑΝ ΠΑΡΑΓΩΓΟ** (ADR-759 §4.4, μετρημένο 05/08):
+   * υπήρχε σε τρία σημεία — ένωση, `BLOCKED_LABEL`, el+en — και **καμία** συνάρτηση δεν την
+   * επέστρεφε ποτέ. Ο έλεγχος ζούσε **μετά το κλικ** (`apply-project-value.ts:65`), οπότε η
+   * οθόνη υποσχόταν εγγραφή που ήξερε ήδη ότι θα αποτύχει. Η Φ3 τη γεννά **πριν** το κλικ.
+   */
+  'no-primary-address',
+  /**
+   * **Το πεδίο υπάρχει· λείπει η σύνδεση.** Κενό υλοποίησης, όχι έλλειψη δυνατότητας.
+   *
+   * 🔴 Ξεχωριστό από το `unsupported-field` **επίτηδες, και αυτό ήταν ολόκληρο το εύρημα της
+   * §2.2**: εκείνο λέει «κανείς δεν το ζητά»· αυτό λέει «το ζητάμε, το πεδίο υπάρχει, δεν
+   * γράφτηκε ο κώδικας». Παράγεται για τα **πρόσωπα οικοπέδου** (4 οδοί → `PlotFrontage[]` +
+   * διευθύνσεις τύπου `frontage`), όπου και τα δύο πεδία υπάρχουν από το ADR-186 Φ2.5.
+   *
+   * ⚠️ **Είναι πιστοποιητικό χρέους και οφείλει να μετριέται.** Ένα «δεν αντιστοιχεί σε πεδίο»
+   * δεν μπορεί να μετρηθεί από πύλη· αυτό μπορεί.
+   */
+  'resolver-gap',
+  /**
+   * Διαβάστηκε, αλλά η **ίδια συντομογραφία σημαίνει ≥2 πράγματα στο ίδιο σχέδιο**.
+   *
+   * 🔴 Δεν είναι παραλλαγή του `resolver-gap`, και η διαφορά είναι **η ενέργεια του μηχανικού**.
+   * Το `Π.Ε. 39` έχει πεδίο υποδοχής από τη Φ2 (`SurveyRecord.implementationAct.number`) — αυτό
+   * που λείπει είναι **η βεβαιότητα ότι η τιμή του ανήκει**. Η §2β.3 μέτρησε **τρεις** σημασίες
+   * του «Π.Ε.» στο **ίδιο** αρχείο (Πράξη Εφαρμογής · Περιφερειακή Ενότητα · λεζάντα εικόνας),
+   * και το ίδιο το κείμενο δηλώνει τις πολεοδομικές ενότητες ρητά ως **16 και 17**.
+   *
+   * ⇒ Καμία ποσότητα κώδικα resolver δεν το λύνει· το λύνει **το συμφραζόμενο** (Φ4/Φ5). Ένα
+   * `resolver-gap` εδώ θα υποσχόταν διόρθωση που κανείς δεν μπορεί να κάνει.
+   */
+  'ambiguous-abbreviation',
+] as const;
+
 /**
  * Γιατί ένα πεδίο **δεν** έχει υποψήφιο.
  *
  * Ποτέ σιωπηλά κενό: το ADR-745 §8 κανόνας 3 απαιτεί ορατή απώλεια. Ο χρήστης που βλέπει
  * «καμία πρόταση» χωρίς αιτία δεν μπορεί να ξεχωρίσει το «δεν βρέθηκε» από το «δεν κοιτάχτηκε».
+ *
+ * 🔑 **Παράγεται από πίνακα, όχι γραμμένη στο χέρι** (ADR-759 §4.4.1) — ίδιο πρότυπο με το
+ * {@link BINDING_EVIDENCE_KINDS} δίπλα, ώστε να μην υπάρχει δεύτερος μηχανισμός. Ο λόγος είναι
+ * μετρημένος: μια χειρόγραφη ένωση **δεν απαριθμείται σε χρόνο εκτέλεσης**, άρα καμία πύλη δεν
+ * μπορούσε να ρωτήσει «μπορεί κάποιος να δει ποτέ αυτό το μήνυμα;» — και έτσι το
+ * `no-primary-address` έζησε χωρίς παραγωγό. Το `binding-reason-coverage.test.ts` απαιτεί
+ * **ισότητα συνόλων** ανάμεσα σε αυτόν τον πίνακα και σε ό,τι όντως παράγει ο Λ2.
  */
-export type BindingBlockReason =
-  /** Το σχέδιο δεν είναι δεμένο σε έργο — τα πεδία έργου δεν έχουν πού να προσγειωθούν. */
-  | 'no-project'
-  /** Το πεδίο δεν αντιστοιχίζεται σε καμία οντότητα (π.χ. `projectTitle`, `studyType`). */
-  | 'unsupported-field'
-  /** Αναζητήθηκε και δεν βρέθηκε τίποτα στη βάση. */
-  | 'no-match'
-  /** Βρέθηκε πρόσωπο αλλά η ειδικότητα δεν δίνει **έναν** ρόλο (0 ή >1 — §6.4). */
-  | 'role-undecided'
-  /**
-   * Διαβάστηκε σωστά, αλλά **δεν υπάρχει πεδίο υποδοχής** — ακόμη (Φ3β: `drawing-meta`).
-   *
-   * 🔴 Ξεχωριστό από το `unsupported-field` **επίτηδες**. Εκείνο λέει «κανείς δεν το ζητά»· αυτό
-   * λέει «το θέλουμε, δεν χωράει ακόμη». Το `DxfLevelDocument` δεν έχει `scale`/`studyDate`/
-   * `drawingType`, και το `UpdateDxfLevelSchema` είναι `.passthrough()` ⇒ εγγραφή χωρίς δηλωμένο
-   * πεδίο θα περνούσε **αβασάνιστη**. Συγχωνεύοντας τα δύο, η μέρα που θα αποκτήσει πεδίο δεν θα
-   * φαινόταν ποτέ σε κανέναν.
-   */
-  | 'not-yet-writable'
-  /**
-   * Το έργο δεν έχει κύρια διεύθυνση, άρα ο δήμος/η περιοχή δεν έχουν πού να προσγειωθούν.
-   *
-   * Η πινακίδα δίνει **μόνο** διοικητικά τμήματα· το `ProjectAddress` απαιτεί `street`/
-   * `postalCode`/`country`. ⇒ **Εμπλουτίζουμε υπάρχουσα διεύθυνση, δεν εφευρίσκουμε νέα.**
-   */
-  | 'no-primary-address';
+export type BindingBlockReason = (typeof BINDING_BLOCK_REASONS)[number];
 
 export interface BindingProposal {
   readonly fieldKey: TitleBlockFieldKey;

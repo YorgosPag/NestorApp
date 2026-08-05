@@ -38,7 +38,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "e98f9a351e5ce6b524953cdfd4387d2316cc8f1ba941ee9a47b5dfe436c4e90c",
+  "inputsSha256": "a72f95e035b99ab067d776787a2e0a5cefd01181660a7d24d944e5afd7fcfbf7",
   "languages": [
     "el"
   ],
@@ -405,7 +405,7 @@
     "src/styles/design-tokens/modules/layout.ts": "ff704dd3c97caf4b642f303d678a7bee137d4742ed829e0ff7d43fcff005e30e",
     "src/styles/design-tokens/modules/portal-overlay.ts": "b5d469f1ea794f783e3e0f3399e150c9d99f9f4bec66573b6c994b52d9fc8e8e",
     "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts": "31f5c90a905b757963db4bf4b4cebaa8ac532bf982c978a5927d128ef1d6c9d7",
-    "src/subapps/dxf-viewer/config/color-config.ts": "1e5402fd5ed4e74a233a28f681447f68358edeceb2fe057e03c02b42480ddba4",
+    "src/subapps/dxf-viewer/config/color-config.ts": "6386f021c11b210c9380de25762bdbeb3b36dea75cdb2c3a69b62ee573989ba2",
     "src/subapps/dxf-viewer/config/color-math.ts": "b835d0310b123eaf65883a0cb8e4f4c7a3182c966a3f15e354140e19ccc10bf3",
     "src/subapps/dxf-viewer/config/dxf-timing.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/config/modal-select.ts": "a1c478d8cb6d0656503b57d91b950f17d4ee2f48fd195eaac6fbcbdf729d10c9",

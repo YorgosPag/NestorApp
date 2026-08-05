@@ -44,7 +44,9 @@ export function toHierarchyValue(addr: Partial<ProjectAddress>): Partial<Address
     settlementName: addr.city ?? '',
     settlementId: null,
     communityName: addr.neighborhood ?? '',
-    municipalUnitName: '',
+    // ADR-759 Φ3 — ήταν σταθερά `''`: ο επιλογέας Δημοτικής Ενότητας (επίπεδο 6) ζωγραφιζόταν
+    // κανονικά, ο χρήστης τον συμπλήρωνε, και η τιμή **δεν επέστρεφε ποτέ** στην επεξεργασία.
+    municipalUnitName: addr.municipalUnit ?? '',
     municipalityName: addr.municipality ?? '',
     municipalityId: null,
     regionalUnitName: addr.regionalUnit ?? '',
@@ -62,6 +64,11 @@ export function fromHierarchyValue(val: AddressWithHierarchyValue): Partial<Proj
     postalCode: val.postalCode || '',
     ...(val.number ? { number: val.number } : {}),
     ...(val.communityName ? { neighborhood: val.communityName } : {}),
+    // 🔴 ADR-759 Φ3 — ΕΛΕΙΠΕ. Το `municipalUnitName` δεν χαρτογραφούνταν πουθενά, άρα η
+    // επιλογή του χρήστη **σβηνόταν στην αποθήκευση χωρίς μήνυμα**. Η άλλη μισή διαρροή
+    // (το Zod που πετούσε το πεδίο) ζει στο `project/address-schemas.ts` — χρειάζονταν **και
+    // τα δύο**: μία μόνη διόρθωση θα άφηνε τη ροή σπασμένη και θα φαινόταν διορθωμένη.
+    ...(val.municipalUnitName ? { municipalUnit: val.municipalUnitName } : {}),
     ...(val.municipalityName ? { municipality: val.municipalityName } : {}),
     ...(val.regionalUnitName ? { regionalUnit: val.regionalUnitName } : {}),
     ...(val.regionName ? { region: val.regionName } : {}),

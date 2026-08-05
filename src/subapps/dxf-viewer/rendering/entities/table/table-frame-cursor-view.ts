@@ -27,6 +27,10 @@ import {
   type TableCellRangeBounds,
   type TableRangeMembership,
 } from '../../../bim/table/table-cell-range';
+// 🔴 ADR-739 §48.12 — **ο ΕΝΑΣ ορισμός** του «ποια περιοχή εννοεί ο χρήστης τώρα». Δες την
+// κεφαλίδα εκείνου: γεννήθηκε στη λαβή, το ζήτησαν μετά η μετακίνηση και ο φρουρός του
+// πατήματος, και εδώ αποκτά τον **πέμπτο** καταναλωτή — την απόσυρση των περιγραμμάτων.
+import { tableEffectiveRangeBounds } from '../../../bim/table/table-effective-range';
 import { resolveTableModel } from '../../../bim/table/table-model-helpers';
 import type { TableRenderIndex } from '../../../bim/table/table-render-index';
 import type { TableLayout, TableRectMm } from '../../../bim/table/table-layout-types';
@@ -130,4 +134,43 @@ export function tableFrameSelectionView(
     // `selectAll()`. Δες την κεφαλίδα του `isTableWholeGridRange`.
     whole: isTableWholeGridRange(model, bounds),
   };
+}
+
+/**
+ * 🔴 ADR-739 §48.12 — **Η ΠΕΡΙΟΧΗ ΠΟΥ ΕΝΝΟΕΙ Ο ΧΡΗΣΤΗΣ ΑΥΤΟ ΤΟ ΚΑΡΕ**: η επιλογή· χωρίς
+ * επιλογή, το **ενεργό κελί** (κουμπωμένο σε ολόκληρη τη συγχώνευσή του).
+ *
+ * ## 🔴 ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ Η {@link tableFrameSelectionView} — ΕΔΩ ΗΤΑΝ ΤΟ ΕΛΑΤΤΩΜΑ
+ * Εκείνη επιστρέφει `null` χωρίς επιλογή, **και σωστά**: «καμία επιλογή» δεν είναι «επιλογή
+ * 1×1» και δεν φαίνεται το ίδιο. Αλλά η ερώτηση *«τι είναι στο πρόχειρο;»* **δεν** έχει αυτόν
+ * τον διαχωρισμό — το `Ctrl+C` πάνω σε σκέτο ενεργό κελί γεμίζει το πρόχειρο κανονικά.
+ *
+ * Έτσι γεννήθηκε ασυμμετρία που **μετρήθηκε ζωντανά** (2026-08-05): με επιλεγμένη *περιοχή* η
+ * απόσυρση του §48.12 δούλευε· με σκέτο *ενεργό κελί* το `stampTableSelection` δεν καλούνταν
+ * **καθόλου**, οπότε το περίγραμμα που έβλεπε ο χρήστης ήταν ο **δρομέας** — που δεν ρωτούσε
+ * τίποτα. Συμπαγής γραμμή 2 px `#0099ff` κάτω από μυρμήγκια 3 px `#0A6BFF`: τα κενά του
+ * μοτίβου γέμιζαν από κάτω και το μάτι διάβαζε **συνεχή γραμμή**. Ούτε η απόσυρση φαινόταν,
+ * ούτε η κίνηση, ούτε το μέγεθος του μοτίβου.
+ *
+ * ## Γιατί εδώ, και όχι τρίτος υπολογισμός στον ζωγράφο
+ * Ο {@link tableEffectiveRangeBounds} είναι **ήδη** ο ΕΝΑΣ ορισμός, και η λαβή τον ρωτούσε
+ * ήδη — μέσα από το `stampTableFillHandleOverlay`. Η ερώτηση απλώς **ανέβηκε ένα επίπεδο**
+ * ώστε να τη μοιραστούν και οι τρεις καταναλωτές του ίδιου καρέ (περίγραμμα επιλογής, δρομέας,
+ * λαβή). Το πλήθος των κλήσεων `resolveTableModel` ανά πίνακα ανά καρέ μένει **ίδιο**: η
+ * κλήση μετακόμισε, δεν προστέθηκε.
+ *
+ * ⚠️ Τα όρια της επιλογής ζητούνται **ήδη λυμένα** (`selectionBounds`), ποτέ ξαναλυμένα εδώ:
+ * ο ίδιος κανόνας που τεκμηριώνει ο {@link tableEffectiveRangeBounds}, για τον ίδιο λόγο —
+ * δεύτερη λύση θα ήταν δεύτερη απάντηση στο «τι μάρκαρε ο χρήστης» μέσα στο ίδιο καρέ.
+ */
+export function tableFrameEffectiveRange(
+  entity: TableEntity,
+  cursor: TableCellCursorState,
+  selectionBounds: TableCellRangeBounds | undefined,
+): TableCellRangeBounds | null {
+  return tableEffectiveRangeBounds(
+    resolveTableModel(entity.model),
+    { rowId: cursor.position.rowId, colId: cursor.position.colId },
+    selectionBounds ?? null,
+  );
 }

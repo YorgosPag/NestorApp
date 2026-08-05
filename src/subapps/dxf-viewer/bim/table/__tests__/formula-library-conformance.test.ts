@@ -18,7 +18,7 @@ import type {
   TableColumn,
   TableRow,
 } from '../../../types/table';
-import { recalculateTableModel, writeCellInput } from '../formula/table-formula-engine';
+import { commitCellWrites, writeCellInput } from '../formula/table-formula-engine';
 
 const COLUMNS: TableColumn[] = ['c1', 'c2', 'c3', 'c4'].map((id) => ({
   id,
@@ -66,9 +66,7 @@ const BASE: PersistedTableModel = toPersistedTableModel(
 
 /** **Ακριβώς** η ζωντανή αλυσίδα: γράψε στο `D5`, ξαναϋπολόγισε, διάβασε την τιμή. */
 function result(text: string): string | number | null {
-  const written = recalculateTableModel(writeCellInput(BASE, 'r5', 'c4', text), [
-    cellKey('r5', 'c4'),
-  ]);
+  const written = commitCellWrites(writeCellInput(BASE, 'r5', 'c4', text));
   return written.cells.find(([r, c]) => r === 'r5' && c === 'c4')?.[2].value ?? null;
 }
 

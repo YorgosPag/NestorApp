@@ -25,7 +25,8 @@ import type {
   TableCellTextRun,
   TableModel,
 } from '../../types/table';
-import { cellKey, cellText } from './table-model-helpers';
+import { cellKey } from './table-model-helpers';
+import { cellDisplayText, resolveCellNumberFormat } from './table-cell-format';
 import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overflow';
 import { resolveCellLinkSpans } from './table-cell-link-spans';
 import {
@@ -298,7 +299,11 @@ export function placeCells(
         // τον in-cell επεξεργαστή (που ανοίγει και σε **κενό** κελί, όπου run δεν υπάρχει).
         hAlign,
         text: placeText({
-          text: cellText(cell),
+          // 🔴 ADR-760 — η **ίδια** επίλυση μορφής με τον μετρητή πλάτους
+          // (`naturalCellWidthMm`), πάνω στις **ίδιες** `overrides`. Δύο ξεχωριστές
+          // αποφάσεις εδώ δεν θα έδιναν «λάθος πλάτος» αλλά **κομμένο κείμενο** — ίδιο
+          // σύμπτωμα, ίδια αιτία με τις τρεις παρακάμψεις στυλ από πάνω.
+          text: cellDisplayText(cell, resolveCellNumberFormat(overrides, column.valueType)),
           rect,
           align: cellStyle.align,
           hAlign,

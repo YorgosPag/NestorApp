@@ -128,6 +128,23 @@ export const UpdateDxfLevelSchema = z.object({
   projectId: z.string().min(1).max(128).nullable().optional(),
   /** ADR-651 Φάση Ι: χειρόγραφος αριθμός φύλλου· null = αυτόματη αρίθμηση κατά θέση. */
   sheetNumberOverride: z.string().max(40).nullable().optional(),
+  // ── ADR-759 Φ3: μεταδεδομένα πινακίδας τοπογραφικού ──────────────────────────
+  //
+  // 🔴 **ΔΙΟΡΘΩΣΗ ΤΕΚΜΗΡΙΩΣΗΣ (μετρημένο 2026-08-05).** Το ADR-759 §2.2, το
+  // `resolve-drawing-meta.ts` και ο τύπος `BindingBlockReason` έγραφαν και οι τρεις ότι το
+  // `.passthrough()` παρακάτω αφήνει «εγγραφή σε μη-δηλωμένο πεδίο να περάσει **αβασάνιστη**».
+  // **Δεν ισχύει για αυτή τη διαδρομή**: ο `handleUpdateDxfLevel` δεν κάνει spread του σώματος —
+  // χτίζει το `updates` από **ρητή allowlist** `if (body.X !== undefined)`. Άρα ένα άγνωστο πεδίο
+  // περνά την επικύρωση και μετά **πετιέται σιωπηλά**.
+  //
+  // Η πραγματική αστοχία ήταν λοιπόν **η αντίθετη και χειρότερη**: όχι «γράφεται χωρίς σχήμα»,
+  // αλλά «**δεν γράφεται ενώ όλα λένε ναι**». Με το binding να γράφεται μετά τον στόχο (Γ9), θα
+  // είχαμε provenance που βεβαιώνει εγγραφή που δεν έγινε ποτέ — φάντασμα με όνομα ανθρώπου.
+  // ⇒ Κάθε πεδίο εδώ **πρέπει** να έχει και γραμμή στον handler. Άγκυρα: `dxf-levels.schemas.test.ts`.
+  studyDate: z.string().max(120).nullable().optional(),
+  drawingType: z.string().max(200).nullable().optional(),
+  scale: z.string().max(60).nullable().optional(),
+  drawingNumber: z.string().max(60).nullable().optional(),
   /** ADR-375 Phase B.2 + C.4 + ADR-377: per-view BIM render settings (Revit ViewPlan equivalent). */
   bimRenderSettings: BimRenderSettingsSchema.nullable().optional(),
   /** ADR-375 Phase B.3: FK → dxf_viewer_view_templates. Null = detached. */

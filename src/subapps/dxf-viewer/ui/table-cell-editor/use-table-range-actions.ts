@@ -46,6 +46,9 @@ import { useCallback, useMemo, type ClipboardEvent } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { formatTsv, parseTsv, rectangularizeTsvGrid } from '@/lib/spreadsheet/tsv';
+// 🔴 ADR-739 §48.12 — **ο ΕΝΑΣ ορισμός** του «ποια περιοχή εννοεί ο χρήστης τώρα», κοινός με
+// τον ζωγράφο. Δες το `currentBounds` παρακάτω για το γιατί έπρεπε να είναι κυριολεκτικά ο ίδιος.
+import { tableEffectiveRangeBounds } from '../../bim/table/table-effective-range';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import { useTableModelCommit } from './use-table-model-commit';
 import {
@@ -136,13 +139,23 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
   const currentBounds = useCallback((): TableCellRangeBounds | null => {
     if (!cursor || !entity) return null;
     const model = resolveTableModel(entity.model);
-    // ADR-739 §27.15 — χωρίς επιλογή, το ενεργό κελί είναι **περιοχή**: εκεί το κούμπωμα
-    // είναι ακριβώς ο κανόνας που θέλουμε (σκέτο κελί μέσα σε συγχώνευση ⇒ ολόκληρη η
-    // συγχώνευση), και είναι η συμπεριφορά που τεκμηριώνεται από πάνω.
-    return resolveTableSelectionBounds(
-      model,
-      cursor.selection ?? { from: cursor.position, to: cursor.position, kind: 'range' },
-    );
+    // 🔴 ADR-739 §48.12 — **ΚΥΡΙΟΛΕΚΤΙΚΑ Η ΙΔΙΑ ΣΥΝΑΡΤΗΣΗ ΠΟΥ ΡΩΤΑ Ο ΖΩΓΡΑΦΟΣ.**
+    //
+    // Εδώ έγραφε `resolveTableSelectionBounds(model, selection ?? {from: pos, to: pos, kind})` —
+    // αριθμητικά **ταυτόσημο** με το `tableEffectiveRangeBounds` (και τα δύο καταλήγουν σε
+    // `rawTableCellRangeBounds` + `snapToWholeMerges`), αλλά **δεύτερη διατύπωση** της ίδιας
+    // ερώτησης. Ήταν το πέμπτο αντίγραφο του σχήματος «επιλογή ?? ενεργό κελί» που η κεφαλίδα
+    // του `table-effective-range` υπάρχει για να σβήσει.
+    //
+    // 🔑 Δεν είναι καλλωπισμός: το §48.12 **συγκρίνει** αυτά τα όρια με εκείνα του ζωγράφου για
+    // να αποφασίσει αν θα αποσύρει το περίγραμμα. Με δύο διατυπώσεις, η ισότητα ήταν **σύμπτωση
+    // που κρατούσε όσο κανείς δεν άγγιζε καμία από τις δύο**· με μία, είναι **ταυτότητα**. Η
+    // κλάση σφάλματος «το πρόχειρο κράτησε άλλο ορθογώνιο από αυτό που ζωγραφίστηκε» παύει να
+    // είναι εκφράσιμη — δεν φυλάγεται με test, δεν υπάρχει.
+    const selectionBounds = cursor.selection
+      ? resolveTableSelectionBounds(model, cursor.selection)
+      : null;
+    return tableEffectiveRangeBounds(model, cursor.position, selectionBounds);
   }, [cursor, entity]);
 
   // ADR-739 Φ.Δ βήμα 9 — η μία διαδρομή commit ζει πλέον σε δικό της module: την καλεί και

@@ -19,7 +19,7 @@ import {
   getPersistedCellText,
   toPersistedTableModel,
 } from '../table-model-helpers';
-import { recalculateTableModel, writeCellInput } from '../formula/table-formula-engine';
+import { commitCellWrites, writeCellInput } from '../formula/table-formula-engine';
 import { formatTsv, parseTsv } from '@/lib/spreadsheet/tsv';
 import type {
   CellSpan,
@@ -249,8 +249,7 @@ const TOTAL = ref('r2', 'c0');
 
 /** Πίνακας με **ζωντανό** τύπο στο `A3`, ήδη υπολογισμένο (όπως θα ερχόταν από commit). */
 function withTotalFormula(cells: TableCellEntry[] = []): PersistedTableModel {
-  const written = writeCellInput(persisted(cells), TOTAL.rowId, TOTAL.colId, '=SUM(A1:A2)');
-  return recalculateTableModel(written, [cellKey(TOTAL.rowId, TOTAL.colId)]);
+  return commitCellWrites(writeCellInput(persisted(cells), TOTAL.rowId, TOTAL.colId, '=SUM(A1:A2)'));
 }
 
 const totalOf = (model: PersistedTableModel): string =>

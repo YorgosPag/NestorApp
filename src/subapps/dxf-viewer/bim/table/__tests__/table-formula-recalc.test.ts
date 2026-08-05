@@ -22,7 +22,7 @@ import type {
 import { insertTableRow } from '../table-row-column-ops';
 import {
   cellInputText,
-  recalculateTableModel,
+  commitCellWrites,
   writeCellInput,
 } from '../formula/table-formula-engine';
 
@@ -58,7 +58,7 @@ function edit(
   colId: string,
   text: string,
 ): PersistedTableModel {
-  return recalculateTableModel(writeCellInput(model, rowId, colId, text), [cellKey(rowId, colId)]);
+  return commitCellWrites(writeCellInput(model, rowId, colId, text));
 }
 
 describe('γραφή κελιού — η μία διακλάδωση `=`', () => {

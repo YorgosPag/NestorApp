@@ -128,7 +128,7 @@ describe('🔴 ADR-754 §14.9 — η λαβή συμπλήρωσης, από τ�
 
   /** Γράψε κείμενο σε κελί **πριν** το mount — το μοντέλο είναι immutable, η οντότητα νέα. */
   function type(row: number, col: number, text: string): void {
-    entity = { ...entity, model: writeCellInput(entity.model, rowId(row), colId(col), text) };
+    entity = { ...entity, model: writeCellInput(entity.model, rowId(row), colId(col), text).model };
   }
 
   /**

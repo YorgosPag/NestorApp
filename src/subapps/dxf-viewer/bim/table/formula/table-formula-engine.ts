@@ -26,6 +26,7 @@ import type {
   TableRowId,
 } from '../../../types/table';
 import type { ScheduleCellValue } from '../../schedule/types';
+import type { PendingCellWrites } from '../table-cell-content';
 import {
   cellKey,
   getPersistedCellText,
@@ -71,13 +72,38 @@ export function writeCellInput(
   rowId: TableRowId,
   colId: TableColumnId,
   text: string,
-): PersistedTableModel {
+): PendingCellWrites {
   if (!isFormulaInput(text)) return setPersistedCellText(model, rowId, colId, text);
 
   const formula = parseTableFormula(resolveTableModel(model), text);
   return formula === null
     ? setPersistedCellText(model, rowId, colId, text)
     : setPersistedCellFormula(model, rowId, colId, formula);
+}
+
+/**
+ * 🔴 ADR-739 §50 — **ΤΟ ΜΟΝΟ ΞΕΤΥΛΙΓΜΑ** μιας {@link PendingCellWrites} σε μοντέλο.
+ *
+ * Είναι το «η γραφή και ο επαναϋπολογισμός είναι ΕΝΑΣ μετασχηματισμός» του `Φ.Ζ`, ανυψωμένο
+ * από σύμβαση που θυμάται ο καθένας σε **βήμα που δεν παρακάμπτεται**: το μόνο πράγμα που
+ * μετατρέπει το αποτέλεσμα ενός γραφέα περιεχομένου σε κάτι που δέχεται ο υπόλοιπος πίνακας.
+ *
+ * ## Γιατί ζει ΕΔΩ και όχι δίπλα στον γραφέα
+ * Ο γραφέας (`table-cell-content.ts`) είναι **κάτω** από τη μηχανή τύπων: το
+ * `table-model-helpers` τον επανεξάγει και αυτό το αρχείο εισάγει από εκεί. Ένα
+ * `commitCellWrites` γραμμένο εκεί θα χρειαζόταν το `recalculateTableModel`, δηλαδή θα έκλεινε
+ * ακριβώς τον **κύκλο εισαγωγών** για τον οποίο προειδοποιεί η κεφαλίδα του — εκείνον που
+ * «δούλευε επειδή η ESM ανυψώνει δηλώσεις συναρτήσεων», και γι' αυτό ήταν επικίνδυνος.
+ *
+ * Κανένα κελί δεν άλλαξε ⇒ **το ίδιο** μοντέλο by-reference: καμία εντολή, κανένα βήμα undo
+ * για το τίποτα. Ο γράφος δεν ανοίγεται καν — δεν υπάρχει τίποτα να διαδοθεί.
+ */
+export function commitCellWrites(pending: PendingCellWrites): PersistedTableModel {
+  if (pending.written.length === 0) return pending.model;
+  return recalculateTableModel(
+    pending.model,
+    pending.written.map((target) => cellKey(target.rowId, target.colId)),
+  );
 }
 
 /**

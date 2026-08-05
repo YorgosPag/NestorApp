@@ -22,7 +22,9 @@ import type {
   TableCell,
   TableCellEntry,
   TableColumn,
+  TableColumnId,
   TableRow,
+  TableRowId,
 } from '../../../types/table';
 
 const COLUMNS: TableColumn[] = [
@@ -49,6 +51,23 @@ function makePersisted(cells: readonly TableCellEntry[] = ALL_CELLS): PersistedT
   return toPersistedTableModel(createTableModel({ columns: COLUMNS, rows: ROWS, cells }));
 }
 
+/**
+ * 🔴 ADR-739 §50 — ο γραφέας δεν επιστρέφει πια μοντέλο αλλά **εκκρεμότητα**
+ * ({@link PendingCellWrites}). Οι έλεγχοι των τεσσάρων εγγυήσεων ρωτούν το μοντέλο της· η
+ * **πέμπτη** εγγύηση (τι δηλώνει ότι έγραψε) ελέγχεται χωριστά, στην ενότητα 5.
+ *
+ * ⚠️ Η ταυτότητα by-reference **επιβιώνει μέσα από τον βοηθό**: `unchanged()` επιστρέφει το
+ * ίδιο `model`, οπότε το `expect(noOp).toBe(model)` παραμένει ο ίδιος έλεγχος που ήταν.
+ */
+function writeText(
+  model: PersistedTableModel,
+  rowId: TableRowId,
+  colId: TableColumnId,
+  value: string,
+): PersistedTableModel {
+  return setPersistedCellText(model, rowId, colId, value).model;
+}
+
 // ── 1. Καθαρότητα — το `model` εισόδου δεν αγγίζεται ποτέ ─────────────────
 
 describe('setPersistedCellText — καθαρότητα', () => {
@@ -57,7 +76,7 @@ describe('setPersistedCellText — καθαρότητα', () => {
     const before = model.cells;
     const beforeSnapshot = JSON.parse(JSON.stringify(before));
 
-    setPersistedCellText(model, 'r1', 'c1', 'Νέο κείμενο');
+    writeText(model, 'r1', 'c1', 'Νέο κείμενο');
 
     expect(model.cells).toBe(before); // ίδια αναφορά πίνακα — καμία μετάλλαξη in-place
     expect(model.cells).toEqual(beforeSnapshot);
@@ -67,7 +86,7 @@ describe('setPersistedCellText — καθαρότητα', () => {
     const model = makePersisted();
     const existingCellRef = model.cells[0][2];
 
-    setPersistedCellText(model, 'r1', 'c1', 'Νέο κείμενο');
+    writeText(model, 'r1', 'c1', 'Νέο κείμενο');
 
     expect(model.cells[0][2]).toBe(existingCellRef); // ίδιο κελί, αμετάβλητο
     expect(existingCellRef.value).toBe('Στοιχείο'); // δεν άλλαξε ΠΟΤΕ η αρχική τιμή
@@ -77,7 +96,7 @@ describe('setPersistedCellText — καθαρότητα', () => {
     const model = makePersisted([]);
     const before = model.cells;
 
-    setPersistedCellText(model, 'r1', 'c1', 'Πρώτο κελί');
+    writeText(model, 'r1', 'c1', 'Πρώτο κελί');
 
     expect(model.cells).toBe(before);
     expect(model.cells).toEqual([]);
@@ -85,7 +104,7 @@ describe('setPersistedCellText — καθαρότητα', () => {
 
   it('επιστρέφει ΝΕΟ αντικείμενο μοντέλου (όχι το ίδιο) όταν πράγματι αλλάζει κάτι', () => {
     const model = makePersisted();
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Νέο κείμενο');
+    const result = writeText(model, 'r1', 'c1', 'Νέο κείμενο');
     expect(result).not.toBe(model);
     expect(result.cells).not.toBe(model.cells);
   });
@@ -96,7 +115,7 @@ describe('setPersistedCellText — καθαρότητα', () => {
 describe('setPersistedCellText — ντετερμινιστική σειρά', () => {
   it('υπάρχον κελί αντικαθίσταται ΣΤΗΝ ΙΔΙΑ ΘΕΣΗ — η σειρά των άλλων μένει ίδια', () => {
     const model = makePersisted();
-    const result = setPersistedCellText(model, 'r2', 'c1', 'Δοκός Δ2');
+    const result = writeText(model, 'r2', 'c1', 'Δοκός Δ2');
 
     expect(result.cells.map(([r, c]) => `${r}/${c}`)).toEqual([
       'r1/c1', 'r1/c2', 'r2/c1', 'r2/c2',
@@ -107,7 +126,7 @@ describe('setPersistedCellText — ντετερμινιστική σειρά', (
   it('νέο κελί μπαίνει στη ΣΩΣΤΗ θέση γραμμή×στήλη, όχι στο τέλος', () => {
     // Λείπει το (r1,c2) — πρέπει να καταλήξει ΑΝΑΜΕΣΑ στο (r1,c1) και το (r2,c1).
     const sparse = makePersisted([ALL_CELLS[0], ALL_CELLS[2], ALL_CELLS[3]]);
-    const result = setPersistedCellText(sparse, 'r1', 'c2', 'Ποσότητα');
+    const result = writeText(sparse, 'r1', 'c2', 'Ποσότητα');
 
     expect(result.cells.map(([r, c]) => `${r}/${c}`)).toEqual([
       'r1/c1', 'r1/c2', 'r2/c1', 'r2/c2',
@@ -116,13 +135,13 @@ describe('setPersistedCellText — ντετερμινιστική σειρά', (
 
   it('νέο κελί σε άδειο μοντέλο γίνεται το μοναδικό στοιχείο', () => {
     const empty = makePersisted([]);
-    const result = setPersistedCellText(empty, 'r2', 'c1', 'Πρώτο');
+    const result = writeText(empty, 'r2', 'c1', 'Πρώτο');
     expect(result.cells).toEqual([['r2', 'c1', { kind: 'text', value: 'Πρώτο' }]]);
   });
 
   it('νέο κελί πριν από ΟΛΑ τα υπάρχοντα μπαίνει στην αρχή', () => {
     const withoutFirst = makePersisted([ALL_CELLS[1], ALL_CELLS[2], ALL_CELLS[3]]);
-    const result = setPersistedCellText(withoutFirst, 'r1', 'c1', 'Στοιχείο');
+    const result = writeText(withoutFirst, 'r1', 'c1', 'Στοιχείο');
     expect(result.cells.map(([r, c]) => `${r}/${c}`)).toEqual([
       'r1/c1', 'r1/c2', 'r2/c1', 'r2/c2',
     ]);
@@ -139,7 +158,7 @@ describe('setPersistedCellText — ντετερμινιστική σειρά', (
       cells: [ALL_CELLS[0], ['r_deleted', 'c1', text('ορφανό')], ALL_CELLS[3]],
       merges: [],
     };
-    const result = setPersistedCellText(withOrphan, 'r2', 'c1', 'Δοκός Δ1');
+    const result = writeText(withOrphan, 'r2', 'c1', 'Δοκός Δ1');
     // Το ορφανό μένει όπου ήταν (δεν αγγίζεται)· το νέο μπαίνει στη σωστή θέση ανάμεσα
     // στα ΕΓΚΥΡΑ κελιά.
     expect(result.cells.map(([r, c]) => `${r}/${c}`)).toEqual([
@@ -159,7 +178,7 @@ describe('setPersistedCellText — διατήρηση των υπόλοιπων 
       locked: true,
     };
     const model = makePersisted([['r1', 'c1', styled], ALL_CELLS[1], ALL_CELLS[2], ALL_CELLS[3]]);
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Νέο');
+    const result = writeText(model, 'r1', 'c1', 'Νέο');
 
     const updated = result.cells[0][2];
     expect(updated.value).toBe('Νέο');
@@ -171,7 +190,7 @@ describe('setPersistedCellText — διατήρηση των υπόλοιπων 
 
   it('νέο κελί παίρνει τα προεπιλεγμένα του module: μόνο `kind`+`value`', () => {
     const model = makePersisted([]);
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Κείμενο');
+    const result = writeText(model, 'r1', 'c1', 'Κείμενο');
     expect(result.cells[0][2]).toEqual({ kind: 'text', value: 'Κείμενο' });
   });
 });
@@ -181,19 +200,19 @@ describe('setPersistedCellText — διατήρηση των υπόλοιπων 
 describe('setPersistedCellText — ταυτότητα by-reference όταν το κείμενο δεν αλλάζει', () => {
   it('ίδιο κείμενο με υπάρχον κελί ⇒ επιστρέφει ΤΟ ΙΔΙΟ μοντέλο (===)', () => {
     const model = makePersisted();
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Στοιχείο');
+    const result = writeText(model, 'r1', 'c1', 'Στοιχείο');
     expect(result).toBe(model);
   });
 
   it('ίδιο κείμενο με κελί αριθμητικής τιμής (σύγκριση μέσω `cellText`) ⇒ ΤΟ ΙΔΙΟ μοντέλο', () => {
     const model = makePersisted();
-    const result = setPersistedCellText(model, 'r2', 'c2', '12.5');
+    const result = writeText(model, 'r2', 'c2', '12.5');
     expect(result).toBe(model);
   });
 
   it('διαφορετικό κείμενο ⇒ ΝΕΟ μοντέλο, ποτέ η ίδια αναφορά', () => {
     const model = makePersisted();
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Αλλαγμένο');
+    const result = writeText(model, 'r1', 'c1', 'Αλλαγμένο');
     expect(result).not.toBe(model);
   });
 
@@ -201,8 +220,8 @@ describe('setPersistedCellText — ταυτότητα by-reference όταν το
     // Χωρίς την ταυτότητα by-reference, μία επεξεργασία που δεν άλλαξε τίποτα θα ακύρωνε
     // σιωπηλά τη μνήμη του `resolveTableModel` — αχρείαστη επανα-διάταξη σε κάθε πλήκτρο.
     const model = makePersisted();
-    const noOp = setPersistedCellText(model, 'r1', 'c1', 'Στοιχείο');
-    const changed = setPersistedCellText(model, 'r1', 'c1', 'Αλλαγή');
+    const noOp = writeText(model, 'r1', 'c1', 'Στοιχείο');
+    const changed = writeText(model, 'r1', 'c1', 'Αλλαγή');
 
     expect(noOp).toBe(model);
     expect(changed).not.toBe(model);
@@ -214,14 +233,14 @@ describe('setPersistedCellText — ταυτότητα by-reference όταν το
 describe('setPersistedCellText — η έξοδος είναι JSON-safe', () => {
   it('περνά ακέραιο round-trip `JSON.parse(JSON.stringify())`', () => {
     const model = makePersisted();
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Νέο κείμενο');
+    const result = writeText(model, 'r1', 'c1', 'Νέο κείμενο');
     const revived: PersistedTableModel = JSON.parse(JSON.stringify(result));
     expect(revived).toEqual(result);
   });
 
   it('η εισαγωγή νέου κελιού επίσης περνά ακέραιη round-trip', () => {
     const model = makePersisted([]);
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Πρώτο');
+    const result = writeText(model, 'r1', 'c1', 'Πρώτο');
     const revived: PersistedTableModel = JSON.parse(JSON.stringify(result));
     expect(revived).toEqual(result);
   });
@@ -243,7 +262,7 @@ describe('getPersistedCellText', () => {
 
   it('συμφωνεί με το `setPersistedCellText`: ό,τι γράφεται, διαβάζεται πίσω ίδιο', () => {
     const model = makePersisted();
-    const result = setPersistedCellText(model, 'r1', 'c1', 'Δοκιμή');
+    const result = writeText(model, 'r1', 'c1', 'Δοκιμή');
     expect(getPersistedCellText(result, 'r1', 'c1')).toBe('Δοκιμή');
   });
 });

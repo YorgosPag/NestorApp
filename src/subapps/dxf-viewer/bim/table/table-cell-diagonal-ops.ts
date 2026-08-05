@@ -17,7 +17,7 @@
  *
  * ## Τι ΜΟΙΡΑΖΕΤΑΙ όμως, και σκόπιμα
  * Το **μολύβι** ({@link resolveTableBorderPencil}, Α20/Α23) και ο **μαζικός γραφέας κελιών**
- * ({@link writePersistedCells}). Οι διαγώνιοι δεν έχουν δικό τους χρώμα ή πάχος: παίρνουν το
+ * ({@link writePersistedCellStyles}). Οι διαγώνιοι δεν έχουν δικό τους χρώμα ή πάχος: παίρνουν το
  * ίδιο μολύβι με τα περιγράμματα, γιατί ο χρήστης έχει **ένα** μολύβι στο χέρι.
  *
  * @module subapps/dxf-viewer/bim/table/table-cell-diagonal-ops
@@ -32,7 +32,7 @@ import type {
   TableCellDiagonals,
 } from '../../types/table';
 import { tableRangeCellRefs, type TableCellRangeBounds } from './table-cell-range';
-import { writePersistedCells } from './table-cell-content';
+import { writePersistedCellStyles } from './table-cell-content';
 import { sameBorderSpec } from './table-edge-model';
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -175,7 +175,7 @@ export function applyTableDiagonalCommand(
  * (CHECK 3.28 / N.18) — και, χειρότερα, δύο απαντήσεις στο «πότε μένει κελί χωρίς πεδίο
  * `diagonal`». Εδώ η γενικότερη πράξη είναι η **μία**, και οι εντολές τη ζητούν ολικά.
  *
- * Οι εγγυήσεις του {@link writePersistedCells} μένουν αυτούσιες: ένα πέρασμα, ντετερμινιστική
+ * Οι εγγυήσεις του {@link writePersistedCellStyles} μένουν αυτούσιες: ένα πέρασμα, ντετερμινιστική
  * σειρά, και το **ίδιο** μοντέλο by-reference όταν καμία τιμή δεν αλλάζει.
  */
 export function setTableRangeDiagonals(
@@ -185,7 +185,7 @@ export function setTableRangeDiagonals(
 ): PersistedTableModel {
   if (patch.down === undefined && patch.up === undefined) return model;
 
-  return writePersistedCells(model, tableRangeCellRefs(model, bounds), {
+  return writePersistedCellStyles(model, tableRangeCellRefs(model, bounds), {
     update: (existing) => {
       const next = patchDiagonals(existing.diagonal, patch);
       return sameDiagonals(existing.diagonal, next) ? null : withDiagonals(existing, next);

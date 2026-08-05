@@ -96,7 +96,7 @@ export function setPersistedCellText(
   rowId: TableRowId,
   colId: TableColumnId,
   text: string,
-): PersistedTableModel {
+): PendingCellWrites {
   return writePersistedCell(model, rowId, colId, {
     // 🔴 ADR-739 Φ.Ζ — η ταυτότητα ΔΕΝ ισχύει πάνω σε κελί τύπου. Το `cellText` ενός τύπου
     // επιστρέφει το **αποτέλεσμα** (`'5'`), οπότε ο χρήστης που πληκτρολογεί σκέτο `5` πάνω
@@ -150,7 +150,7 @@ export function setPersistedCellFormula(
   rowId: TableRowId,
   colId: TableColumnId,
   formula: TableFormula,
-): PersistedTableModel {
+): PendingCellWrites {
   const formulaCell = (existing?: TableCell): TableCell => {
     const merged: TableCell = { ...existing, kind: 'formula', formula, value: '' };
     // Αφαίρεση **του πεδίου**, όχι `runs: undefined`: το δεύτερο επιβιώνει σε `Object.keys`
@@ -187,8 +187,8 @@ export function writePersistedCells(
   model: PersistedTableModel,
   targets: readonly CellWriteTarget[],
   write: CellWrite,
-): PersistedTableModel {
-  if (targets.length === 0) return model;
+): PendingCellWrites {
+  if (targets.length === 0) return unchanged(model);
 
   // Το κλειδί είναι **τοπικό** — ζει και πεθαίνει μέσα σε αυτή τη συνάρτηση — γι' αυτό δεν
   // περνά από το branded `cellKey()`: εκείνο υπάρχει για να μη διαρρέει χειροποίητο string σε
@@ -196,7 +196,7 @@ export function writePersistedCells(
   const pending = new Map<string, CellWriteTarget>();
   for (const target of targets) pending.set(`${target.rowId} ${target.colId}`, target);
 
-  let changed = false;
+  const written: CellWriteTarget[] = [];
   const kept: TableCellEntry[] = model.cells.map((entry) => {
     const [rowId, colId, cell] = entry;
     const key = `${rowId} ${colId}`;
@@ -205,7 +205,7 @@ export function writePersistedCells(
     pending.delete(key);
     const next = write.update(cell, target);
     if (next === null) return entry;
-    changed = true;
+    written.push(target);
     return [rowId, colId, next] as TableCellEntry;
   });
 
@@ -213,12 +213,36 @@ export function writePersistedCells(
   for (const target of pending.values()) {
     const cell = write.create(target);
     if (cell === null) continue;
-    changed = true;
+    written.push(target);
     created.push([target.rowId, target.colId, cell]);
   }
 
-  if (!changed) return model;
-  return { ...model, cells: created.length === 0 ? kept : mergeByRank(model, kept, created) };
+  if (written.length === 0) return unchanged(model);
+  const cells = created.length === 0 ? kept : mergeByRank(model, kept, created);
+  return { model: { ...model, cells }, written };
+}
+
+/**
+ * 🔴 ADR-739 §50 — **η όψη ΜΟΡΦΟΠΟΙΗΣΗΣ του ίδιου γραφέα**: γράφει `styleOverride` /
+ * `diagonal` και επιστρέφει σκέτο μοντέλο, **χωρίς** υποχρέωση επαναϋπολογισμού.
+ *
+ * ## Γιατί δύο ονόματα πάνω σε ΜΙΑ μηχανή
+ * Η τοποθέτηση είναι μία ({@link writePersistedCells} — ίδιος βρόχος, ίδια ταξινόμηση, ίδιες
+ * τέσσερις εγγυήσεις)· αυτό που διαφέρει είναι **τι χρωστά ο καλών μετά**. Κελί που άλλαξε
+ * *περιεχόμενο* κάνει μπαγιάτικο κάθε τύπο που το διαβάζει· κελί που άλλαξε *χρώμα* δεν κάνει
+ * τίποτα. Το όνομα δηλώνει την πρόθεση, ο **τύπος επιστροφής την επιβάλλει**
+ * ({@link PendingCellWrites}).
+ *
+ * 🔑 Το προεπιλεγμένο όνομα είναι επίτηδες αυτό του **περιεχομένου**: ο επόμενος που θα γράψει
+ * κελιά χωρίς να το σκεφτεί παίρνει την υποχρέωση, και η **εξαίρεση** είναι που πρέπει να
+ * ζητηθεί ρητά. Το αντίστροφο θα ήταν ακριβώς το σχήμα που γέννησε το §47.5.
+ */
+export function writePersistedCellStyles(
+  model: PersistedTableModel,
+  targets: readonly CellWriteTarget[],
+  write: CellWrite,
+): PersistedTableModel {
+  return writePersistedCells(model, targets, write).model;
 }
 
 /**
@@ -249,7 +273,7 @@ export function writePersistedCells(
 export function clearPersistedCells(
   model: PersistedTableModel,
   targets: readonly CellWriteTarget[],
-): PersistedTableModel {
+): PendingCellWrites {
   return writePersistedCells(model, targets, {
     update: (existing) =>
       existing.kind !== 'formula' && cellText(existing) === '' && existing.runs === undefined
@@ -318,6 +342,47 @@ export interface CellWriteTarget {
 }
 
 /**
+ * 🔴 ADR-739 §50 — **γραμμένα κελιά που ΔΕΝ έχουν ξαναϋπολογιστεί ακόμη.**
+ *
+ * ## Γιατί υπάρχει ως τύπος και όχι ως κανόνας που θυμάται ο καλών
+ * Τέσσερις φορές συνέβη το ίδιο: κάποιος έγραψε κελιά και δεν κάλεσε `recalculateTableModel`
+ * — επικόλληση (§47), `Delete` σε περιοχή (§47), καθάρισμα (§47) και **συγχώνευση** (§47.5).
+ * Το σύμπτωμα ήταν κάθε φορά το ίδιο και πάντα σιωπηλό: ένα `=SUM(A1:A20)` που εξακολουθεί να
+ * δείχνει το άθροισμα δεδομένων **που δεν υπάρχουν πια**, στην οθόνη, στην εξαγωγή και στο DXF.
+ *
+ * Η αιτία δεν ήταν απροσεξία — ήταν **ο τύπος επιστροφής**: ένας γραφέας που επιστρέφει
+ * `PersistedTableModel` δίνει στον καλούντα κάτι **πλήρως χρησιμοποιήσιμο**, οπότε δεν υπάρχει
+ * καμία στιγμή όπου κάτι να τον ρωτήσει «τελείωσες;». Εδώ ο καλών παίρνει κάτι που **δεν είναι
+ * μοντέλο** και δεν μπορεί να το δώσει πουθενά προτού το ξετυλίξει η `commitCellWrites` — άρα
+ * το πέμπτο δείγμα δεν είναι απαγορευμένο, είναι **μη εκφράσιμο**.
+ *
+ * Δεν χρειάζεται σαρωτής: ο μεταγλωττιστής **είναι** η πύλη — και είναι πύλη σε επίπεδο
+ * **σημείου κλήσης**, όχι αρχείου. Το `contacts-query.service.ts` του CHECK 3.35 έδειξε γιατί
+ * αυτό μετράει: 6 συναρτήσεις, 5 σωστές και 1 όχι· κριτήριο επιπέδου αρχείου θα έβαφε πράσινη
+ * τη σπασμένη.
+ *
+ * ## Γιατί κουβαλά και τα κελιά
+ * Ο επαναϋπολογισμός θέλει να ξέρει **από πού** να διαδώσει. Τρεις καλούντες υπολόγιζαν μόνοι
+ * τους αυτή τη λίστα (`touchedKeys(plan)`, ο βρόχος `keys[]` του `clearTableRange`, το
+ * `touched` της επικόλλησης) — γνώση που ο γραφέας **ήδη είχε** και πετούσε. Άρα ο τύπος δεν
+ * προσθέτει υποχρέωση: **αφαιρεί** τρία αντίγραφα μιας απάντησης που γεννιέται εδώ.
+ *
+ * ⚠️ **Κελιά, όχι `CellKey`.** Η μορφή του κλειδιού είναι μυστικό του `table-model-helpers`
+ * (δες `cellKey`) — και εκείνο το module **εισάγει** αυτό εδώ. Κωδικοποίηση σε αυτό το στρώμα
+ * θα ήταν ο κύκλος εισαγωγών για τον οποίο προειδοποιεί η κεφαλίδα του αρχείου.
+ *
+ * `written` κενό ⇒ **τίποτα δεν άλλαξε** και το `model` είναι το αρχικό by-reference: η
+ * τέταρτη εγγύηση ταξιδεύει άθικτη μέσα στον τύπο.
+ *
+ * @see bim/table/formula/table-formula-engine.ts — `commitCellWrites`, το ΜΟΝΟ ξετύλιγμα
+ */
+export interface PendingCellWrites {
+  readonly model: PersistedTableModel;
+  /** Τα κελιά που **όντως** άλλαξαν — υποσύνολο των στόχων, ποτέ υπερσύνολο. */
+  readonly written: readonly CellWriteTarget[];
+}
+
+/**
  * 🔴 **Η ΜΙΑ μηχανική τοποθέτησης κελιού** — εξήχθη από τους δύο γραφείς (ADR-739 Φ.Ζ,
  * υπόδειξη του CHECK 3.28 / N.18: τα δύο σώματα ήταν δίδυμα 11 γραμμών).
  *
@@ -331,23 +396,34 @@ function writePersistedCell(
   rowId: TableRowId,
   colId: TableColumnId,
   write: CellWrite,
-): PersistedTableModel {
+): PendingCellWrites {
   const existingIndex = model.cells.findIndex(([r, c]) => r === rowId && c === colId);
   const target: CellWriteTarget = { rowId, colId };
 
   if (existingIndex >= 0) {
     const next = write.update(model.cells[existingIndex][2], target);
-    if (next === null) return model;
+    if (next === null) return unchanged(model);
     const cells = model.cells.slice();
     cells[existingIndex] = [rowId, colId, next];
-    return { ...model, cells };
+    return { model: { ...model, cells }, written: [target] };
   }
 
   const created = write.create(target);
-  if (created === null) return model;
+  if (created === null) return unchanged(model);
   const cells = model.cells.slice();
   cells.splice(insertionIndexFor(model, model.cells, rowId, colId), 0, [rowId, colId, created]);
-  return { ...model, cells };
+  return { model: { ...model, cells }, written: [target] };
+}
+
+/**
+ * «Τίποτα δεν άλλαξε», με το **ίδιο** μοντέλο by-reference και κενή λίστα.
+ *
+ * Η τέταρτη εγγύηση εκφρασμένη μία φορά: κάθε πρόωρη έξοδος των γραφέων περνά από εδώ, ώστε
+ * να μην μπορεί κάποια να επιστρέψει `written: []` πάνω σε **νέο** αντικείμενο μοντέλου — που
+ * θα ήταν βήμα undo για το τίποτα, σιωπηλό ακριβώς επειδή ο επαναϋπολογισμός θα παραλειπόταν.
+ */
+function unchanged(model: PersistedTableModel): PendingCellWrites {
+  return { model, written: [] };
 }
 
 /**

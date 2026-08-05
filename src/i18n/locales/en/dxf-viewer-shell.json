@@ -6299,8 +6299,9 @@
       "unsupported-field": "Read successfully, but it maps to no database field.",
       "no-match": "No matching record was found in the database.",
       "role-undecided": "The person was found, but the profession does not resolve to a single role.",
-      "not-yet-writable": "Read correctly, but drawing metadata has no landing field yet.",
-      "no-primary-address": "This project has no primary address — create one from the project page first."
+      "no-primary-address": "This project has no primary address — create one from the project page first.",
+      "resolver-gap": "The receiving field exists — the connection is missing. A recorded implementation gap, not a missing capability.",
+      "ambiguous-abbreviation": "The same abbreviation means more than one thing in this drawing — it needs confirmation from the drawing body."
     },
     "target": {
       "contact": "Project contact",

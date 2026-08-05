@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getAllContacts } from '@/services/contacts-query.service';
 import { resolveContactDisplayName } from '@/services/contacts/ContactNameResolver';
+import { readProjectSnapshot } from '@/services/title-block-apply/project-snapshot';
 import { resolveTitleBlockProposals } from '@/lib/title-block/title-block-proposals';
 import type { ContactSnapshotEntry } from '@/lib/title-block/resolve-people';
 import type { BindingProposal } from '@/types/title-block-binding';
@@ -92,6 +93,40 @@ export function useTitleBlockProposals(
   const [refreshSeq, setRefreshSeq] = useState(0);
   const refresh = useCallback(() => setRefreshSeq((n) => n + 1), []);
 
+  /**
+   * Έχει το έργο κύρια διεύθυνση; **`undefined` όσο δεν ξέρουμε — ποτέ `false` από άγνοια.**
+   *
+   * 🔴 Γεννά το `no-primary-address` **πριν** το κλικ (ADR-759 §4.4): ο φύλακας υπήρχε ήδη στο
+   * `apply-project-value.ts:65`, αλλά μιλούσε **μετά**, όταν ο άνθρωπος είχε ήδη πατήσει
+   * Έγκριση σε πρόταση που η εφαρμογή ήξερε ότι θα αποτύχει.
+   *
+   * ⚠️ **Το `catch` αφήνει `undefined`, δεν βάζει `false`.** Αποτυχία δικτύου θα βαφόταν
+   * «το έργο δεν έχει διεύθυνση» — λάθος συμπέρασμα με σωστή μορφή, ακριβώς το σχήμα που το
+   * παρακάτω `catch` των επαφών υπάρχει για να αποτρέψει (§9.5).
+   *
+   * 🔑 Ίδια διαδρομή ανάγνωσης με την **εγγραφή** (`readProjectSnapshot` → `GET /api/projects`,
+   * ADR-742): δεύτερο direct Firestore read θα ήταν δεύτερο μοντέλο ασφαλείας για την ίδια
+   * ερώτηση.
+   */
+  const [hasPrimaryAddress, setHasPrimaryAddress] = useState<boolean | undefined>(undefined);
+
+  useEffect(() => {
+    if (!enabled || !projectId) {
+      setHasPrimaryAddress(undefined);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const snapshot = await readProjectSnapshot(projectId);
+        if (!cancelled) setHasPrimaryAddress(snapshot.addresses.some((a) => a.isPrimary));
+      } catch {
+        if (!cancelled) setHasPrimaryAddress(undefined);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [enabled, projectId, refreshSeq]);
+
   useEffect(() => {
     if (!enabled) return;
     const seq = ++requestSeq.current;
@@ -125,8 +160,13 @@ export function useTitleBlockProposals(
     if (!scan || !contacts || !levelId) return [];
     const layer = scan.candidates.find((c) => c.layerId === selectedLayerId);
     if (!layer) return [];
-    return resolveTitleBlockProposals(layer.readings, { projectId, levelId, contacts });
-  }, [scan, contacts, levelId, projectId, selectedLayerId]);
+    return resolveTitleBlockProposals(layer.readings, {
+      projectId,
+      levelId,
+      contacts,
+      ...(hasPrimaryAddress !== undefined ? { hasPrimaryAddress } : {}),
+    });
+  }, [scan, contacts, levelId, projectId, selectedLayerId, hasPrimaryAddress]);
 
   return {
     loading: enabled && (contacts === null || scan === null),

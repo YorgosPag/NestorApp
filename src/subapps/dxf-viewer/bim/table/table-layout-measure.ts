@@ -26,7 +26,8 @@
 import { measureTextAdvanceWorld } from '../../text-engine/fonts/text-advance';
 import type { TableColumn, TableModel, TableRow } from '../../types/table';
 import { resolveCellStyledSpans, styledSpansWidthMm } from './table-cell-styled-spans';
-import { buildMergeIndex, cellKey, cellText, type MergeIndex } from './table-model-helpers';
+import { buildMergeIndex, cellKey, type MergeIndex } from './table-model-helpers';
+import { cellDisplayText, resolveCellNumberFormat } from './table-cell-format';
 import { resolveCellStyle, type TableStyle } from './table-style';
 import type { TableTextMeasurer } from './table-layout-types';
 
@@ -76,15 +77,21 @@ function naturalCellWidthMm(
   measure: TableTextMeasurer,
 ): number {
   const cell = model.cells.get(cellKey(row.id, column.id));
-  const text = cellText(cell);
   // 🔴 Οι ΙΔΙΕΣ τρεις παρακάμψεις με το `placeCells`. Αν εδώ έλειπε έστω μία, οι `hug` στήλες
   // θα μετριούνταν με άλλο μέγεθος/έντονα/γραμματοσειρά από αυτά που ζωγραφίζονται — και το
   // σύμπτωμα δεν θα ήταν «λάθος πλάτος», αλλά **κομμένο κείμενο** σε τυχαία κελιά.
-  const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], {
+  const overrides = {
     column: column.styleOverride,
     row: row.styleOverride,
     cell: cell?.styleOverride,
-  });
+  };
+  const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], overrides);
+  // 🔴 ADR-760 — **μετριέται ό,τι ζωγραφίζεται.** Η μορφή αλλάζει το μήκος: το `46239` είναι 5
+  // χαρακτήρες, το `05/08/2026` είναι 10. Μετρημένο πριν τη μορφοποίηση, μια `hug` στήλη
+  // ημερομηνιών θα έβγαινε **στο μισό πλάτος** και το κείμενο θα κοβόταν. Είναι η **ίδια**
+  // επίλυση (`resolveCellNumberFormat` με τις ίδιες `overrides`) που καλεί ο ζωγράφος — δύο
+  // ξεχωριστές αποφάσεις θα αποκλίνανε ακριβώς όπως προειδοποιεί το σχόλιο από πάνω.
+  const text = cellDisplayText(cell, resolveCellNumberFormat(overrides, column.valueType));
   const marginsMm = cellStyle.margins.hMm * 2;
   if (!text) return marginsMm;
   // 🔴 ADR-753 Φ2 — άθροισμα **ετερογενών** τμημάτων, όχι μία μέτρηση. Χωρίς `runs` παράγεται
