@@ -25,6 +25,7 @@ import type {
   TableModel,
   TableRowId,
 } from '../../../types/table';
+import type { TableFormula } from '../../../types/table-formula';
 import type { ScheduleCellValue } from '../../schedule/types';
 import type { PendingCellWrites } from '../table-cell-content';
 import {
@@ -34,6 +35,7 @@ import {
   setPersistedCellFormula,
   setPersistedCellText,
 } from '../table-model-helpers';
+import { alternateFormulaGrammar, drawingFormulaGrammar } from './table-formula-grammar';
 import { isFormulaInput, parseTableFormula } from './table-formula-parse';
 import { printTableFormula } from './table-formula-print';
 import { evaluateTableFormulas } from './table-formula-recalc';
@@ -75,10 +77,39 @@ export function writeCellInput(
 ): PendingCellWrites {
   if (!isFormulaInput(text)) return setPersistedCellText(model, rowId, colId, text);
 
-  const formula = parseTableFormula(resolveTableModel(model), text);
+  const formula = parseWithFallback(resolveTableModel(model), text);
   return formula === null
     ? setPersistedCellText(model, rowId, colId, text)
     : setPersistedCellFormula(model, rowId, colId, formula);
+}
+
+/**
+ * 🔴 ADR-761 — **η ανεκτική ανάγνωση**: πρώτα η γραμματική του σχεδίου, και **μόνο αν εκείνη
+ * δεν βγάζει νόημα**, η άλλη.
+ *
+ * ## Γιατί αυτό ΔΕΝ είναι μαντεψιά — και γιατί η σειρά είναι όλη η απόδειξη
+ * Η εφεδρεία εκτελείται αποκλειστικά στον κλάδο όπου η κύρια επέστρεψε `null`, δηλαδή εκεί
+ * που το κείμενο **δεν είχε καμία** ερμηνεία στην κύρια γραμματική. Άρα δεν μπορεί ποτέ να
+ * **αλλάξει** νόημα· μπορεί μόνο να **δώσει** νόημα εκεί που δεν υπήρχε κανένα. Η ιδιότητα
+ * είναι κατοχυρωμένη με property test πάνω σε corpus (`table-formula-grammar.test.ts`) —
+ * χωρίς αυτήν, το `=SUM(1,5)` θα μπορούσε να διαβαστεί «3,5 ή 6 ανάλογα με την τύχη», που
+ * σε πίνακα ποσοτήτων είναι **σφάλμα τιμής**.
+ *
+ * ## Τι κερδίζει, μετρημένα
+ * - `=CONCATENATE(A2;" ";A3)` — η γραφή που ξέρει ο Έλληνας χρήστης από το Excel
+ * - `=SUM(A1,A2)` και `=SUM(1.5,2)` — ό,τι έχει ήδη γραφτεί, ό,τι αντιγράφεται από
+ *   αγγλόφωνο φύλλο ή από τεκμηρίωση, και ό,τι έρχεται από **επικόλληση** (η επικόλληση
+ *   περνά από αυτή την ίδια πόρτα — `table-range-clipboard.ts`)
+ *
+ * Και στις δύο περιπτώσεις ο τύπος αποθηκεύεται ως **δέντρο** και ξαναγράφεται από το
+ * {@link cellInputText} στη γραμματική του σχεδίου. Ακριβώς όπως το Excel ξαναγράφει τους
+ * τύπους σου όταν αλλάξεις το List Separator των Windows.
+ */
+function parseWithFallback(model: TableModel, text: string): TableFormula | null {
+  const grammar = drawingFormulaGrammar();
+  const primary = parseTableFormula(model, text, grammar);
+  if (primary !== null) return primary;
+  return parseTableFormula(model, text, alternateFormulaGrammar(grammar));
 }
 
 /**

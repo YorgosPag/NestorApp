@@ -35,7 +35,10 @@ import type {
   TableFormulaBinaryOp,
   TableFormulaNode,
 } from '../../../types/table-formula';
+import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
+import { createTableModel } from '../table-model-helpers';
 import { resolveWrittenCellRef } from './table-formula-absolute';
+import { drawingFormulaGrammar } from './table-formula-grammar';
 import {
   FORMULA_PREFIX,
   tokenizeFormula,
@@ -66,24 +69,58 @@ export function isFormulaInput(text: string): boolean {
 
 /**
  * Κείμενο (**με** το `=`) → αποθηκεύσιμος τύπος, ή `null` όταν δεν είναι συντακτικά τύπος.
+ *
+ * Η γραμματική είναι **ρητή παράμετρος** και όχι εσωτερική ανάγνωση: ο μόνος παραγωγικός
+ * καλών (`table-formula-engine.ts`) πρέπει να μπορεί να δοκιμάσει **και τη δεύτερη** όταν η
+ * πρώτη δεν βγάζει νόημα (ADR-761, ανεκτική εφεδρεία). Απούσα ⇒ η γραμματική του σχεδίου.
  */
-export function parseTableFormula(model: TableModel, text: string): TableFormula | null {
+export function parseTableFormula(
+  model: TableModel,
+  text: string,
+  grammar: TableFormulaGrammar = drawingFormulaGrammar(),
+): TableFormula | null {
   const trimmed = text.trim();
   if (!trimmed.startsWith(FORMULA_PREFIX)) return null;
 
-  const tokens = tokenizeFormula(trimmed.slice(FORMULA_PREFIX.length));
+  const tokens = tokenizeFormula(trimmed.slice(FORMULA_PREFIX.length), grammar);
   if (tokens === null || tokens.length === 0) return null;
 
-  const reader: Reader = { model, tokens, at: 0, depth: 0 };
+  const reader: Reader = { model, tokens, grammar, at: 0, depth: 0 };
   const root = parseBinary(reader, 0);
   if (root === null || reader.at !== tokens.length) return null;
   return { root };
 }
 
+/**
+ * **Είναι αυτό συντακτικά τύπος;** — χωρίς μοντέλο, επίτηδες.
+ *
+ * ## 🔑 Γιατί η απάντηση ΔΕΝ εξαρτάται από το μοντέλο
+ * Ο αναλυτής επιστρέφει `null` **μόνο** για συντακτική αποτυχία. Μια αναφορά που δεν
+ * υπάρχει στο πλέγμα **δεν** είναι αποτυχία: γίνεται κόμβος `error` με `#REF!` (δες
+ * {@link parseReference}) και η ανάλυση συνεχίζει κανονικά. Άρα το ίδιο κείμενο δίνει την
+ * ίδια απάντηση σε **κάθε** μοντέλο — και ένα κενό πλέγμα είναι έγκυρος μάρτυρας.
+ *
+ * Υπάρχει ώστε η **διάγνωση** (ADR-761, `table-formula-diagnosis.ts`) να μπορεί να ρωτηθεί
+ * από τη γραμμή τύπων, που δεν κρατά μοντέλο. Η εναλλακτική ήταν να διασχίσει το μοντέλο
+ * τρία επίπεδα props ως **prop διάγνωσης** — δηλαδή να μάθουν τρία αρχεία μια εξάρτηση που
+ * η ερώτηση δεν έχει.
+ */
+export function isParseableFormula(text: string, grammar: TableFormulaGrammar): boolean {
+  return parseTableFormula(GRAMMAR_PROBE_MODEL, text, grammar) !== null;
+}
+
+/**
+ * Το κενό πλέγμα του {@link isParseableFormula}. Ιδιωτικό και σταθερό: ένα νέο μοντέλο ανά
+ * κλήση θα ακύρωνε τα `WeakMap` που κρατούν τα βοηθήματα του πίνακα, σε κάθε πάτημα πλήκτρου.
+ */
+const GRAMMAR_PROBE_MODEL: TableModel = createTableModel({ columns: [], rows: [], cells: [] });
+
 /** Η θέση της ανάγνωσης. Μεταβλητή επίτηδες: ο αναλυτής είναι ένα πέρασμα, όχι δομή. */
 interface Reader {
   readonly model: TableModel;
   readonly tokens: readonly TableFormulaToken[];
+  /** Η γραμματική με την οποία σαρώθηκαν οι μονάδες — **η ίδια** που τις διαβάζει πίσω. */
+  readonly grammar: TableFormulaGrammar;
   at: number;
   depth: number;
 }
@@ -210,7 +247,10 @@ function parseAfterName(reader: Reader, name: string): TableFormulaNode | null {
   return parseReference(reader, name);
 }
 
-/** Λίστα ορισμάτων χωρισμένη με `,`. Καμία συνάρτηση χωρίς παρενθέσεις. */
+/**
+ * Λίστα ορισμάτων χωρισμένη με τον διαχωριστή **της γραμματικής**. Καμία συνάρτηση χωρίς
+ * παρενθέσεις.
+ */
 function parseCall(reader: Reader, name: string): TableFormulaNode | null {
   if (!eatPunct(reader, '(')) return null;
   reader.depth += 1;
@@ -222,7 +262,7 @@ function parseCall(reader: Reader, name: string): TableFormulaNode | null {
       if (arg === null) return null;
       args.push(arg);
       if (eatPunct(reader, ')')) break;
-      if (!eatPunct(reader, ',')) return null;
+      if (!eatPunct(reader, reader.grammar.argumentSeparator)) return null;
     }
   }
 

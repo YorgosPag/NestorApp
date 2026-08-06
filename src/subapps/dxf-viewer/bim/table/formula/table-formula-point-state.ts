@@ -32,7 +32,9 @@
  */
 
 import type { TableModel } from '../../../types/table';
+import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
 import { resolveWrittenCellRef } from './table-formula-absolute';
+import { drawingFormulaGrammar } from './table-formula-grammar';
 import {
   continuesLexeme,
   formulaBodyStart,
@@ -58,13 +60,16 @@ const OFF: FormulaPointState = { kind: 'off' };
 /**
  * Τα σημεία στίξης μετά από τα οποία η γραμματική περιμένει τελεστέο. Το `:` περιλαμβάνεται
  * επίτηδες: μετά το `A1:` το επόμενο κλικ ορίζει το **άλλο άκρο** του εύρους.
+ *
+ * Ο διαχωριστής έρχεται από τη {@link TableFormulaGrammar} (ADR-761) και **δεν** γράφεται
+ * εδώ: μια δική του λίστα θα ήταν πέμπτος ορισμός του «τι χωρίζει ορίσματα», που θα έμενε
+ * `,` την ημέρα που η γραμματική γίνει `;` — δηλαδή η υπόδειξη κελιού θα σταματούσε σιωπηλά
+ * να οπλίζεται μετά από κάθε διαχωριστή (N.18).
  */
-const OPERAND_EXPECTING_PUNCT: readonly string[] = ['(', ',', ':'];
-
-/** True όταν μετά από αυτή τη μονάδα η γραμματική περιμένει τελεστέο. */
-function expectsOperand(token: TableFormulaToken): boolean {
+function expectsOperand(token: TableFormulaToken, grammar: TableFormulaGrammar): boolean {
   if (token.kind === 'op') return true;
-  return token.kind === 'punct' && OPERAND_EXPECTING_PUNCT.includes(token.value);
+  if (token.kind !== 'punct') return false;
+  return token.value === '(' || token.value === ':' || token.value === grammar.argumentSeparator;
 }
 
 /**
@@ -126,9 +131,14 @@ export function resolveFormulaPointState(
   if (bodyStart === null) return OFF;
   if (caretIndex < bodyStart || caretIndex > draft.length) return OFF;
 
+  // 🔑 Η γραμματική **του σχεδίου**, όχι παράμετρος: ο επεξεργαστής δείχνει πάντα ό,τι
+  // τυπώνει το `cellInputText`, δηλαδή αυτήν. Η εφεδρική γραμματική (ADR-761) ζει
+  // αποκλειστικά στη **δέσμευση** — όσο ο χρήστης γράφει στην άλλη γραφή, η υπόδειξη κελιού
+  // απλώς δεν οπλίζεται, που είναι υποβάθμιση και όχι σφάλμα.
+  const grammar = drawingFormulaGrammar();
   const body = draft.slice(bodyStart);
   const caretInBody = caretIndex - bodyStart;
-  const tokens = tokenizeFormula(body.slice(0, caretInBody));
+  const tokens = tokenizeFormula(body.slice(0, caretInBody), grammar);
   if (tokens === null) return OFF;
 
   const last = tokens[tokens.length - 1];
@@ -136,9 +146,9 @@ export function resolveFormulaPointState(
   if (last === undefined) return { kind: 'armed', at: caretIndex };
 
   // Ο δρομέας κόβει λέξη που πληκτρολογείται ακόμη (`=A1|2`): το κλικ δεν έχει δικαίωμα.
-  if (continuesLexeme(body[caretInBody])) return OFF;
+  if (continuesLexeme(body[caretInBody], grammar)) return OFF;
 
-  if (expectsOperand(last)) return { kind: 'armed', at: caretIndex };
+  if (expectsOperand(last, grammar)) return { kind: 'armed', at: caretIndex };
 
   const liveStart = liveReferenceStart(model, tokens);
   if (liveStart !== null) {

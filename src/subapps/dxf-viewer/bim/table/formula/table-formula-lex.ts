@@ -17,9 +17,18 @@
  * Είναι ακριβώς η διάκριση που τεκμηριώνει ήδη το `lib/spreadsheet/column-letter.ts` για τις
  * ετικέτες δομικού κανάβου: **ομώνυμα, όχι συνώνυμα· μένουν χωριστά επίτηδες.**
  *
- * Ο πίνακας μιλά την **κανονική** μορφή — `.` δεκαδικό, `,` διαχωριστής ορισμάτων. Δεν είναι
- * προτίμηση: αυτό γράφει το `ACAD_TABLE` στο DXF (`=Sum(A1:A5)`) και αυτό διαβάζουν όλα τα
- * φύλλα υπολογισμού στο **αρχείο** τους, ανεξάρτητα από το τι δείχνουν στην οθόνη.
+ * ## 🔴 ΔΙΟΡΘΩΘΗΚΕ ΑΠΟ ΤΟ ADR-761 — ο λεξικογράφος ΔΕΝ έχει πια δική του γραμματική
+ * Μέχρι το ADR-761 αυτή η κεφαλίδα έγραφε: *«ο πίνακας μιλά την κανονική μορφή — `.`
+ * δεκαδικό, `,` διαχωριστής· αυτό γράφει το `ACAD_TABLE` στο DXF»*. Το **επιχείρημα ήταν
+ * σωστό και η συνέπεια λάθος**: αυτό που γράφει το `ACAD_TABLE` —όπως και αυτό που γράφει
+ * το `.xlsx`— αφορά τη **σειριοποίηση**, όχι το τι πληκτρολογεί ο άνθρωπος. Και εδώ δεν
+ * σειριοποιείται καν συμβολοσειρά: αποθηκεύεται **δέντρο** (§11 #7).
+ *
+ * Μετρημένη συνέπεια του λάθους: το `=CONCATENATE(A2;" ";A3)` έμενε **ορατό κείμενο**, και
+ * το `=A1+B1` που το διάβαζε έδινε `#VALUE!` — **ένα ελάττωμα, δύο συμπτώματα**.
+ *
+ * Πλέον η γραμματική έρχεται **απ' έξω**, ως {@link TableFormulaGrammar}. Ο λεξικογράφος
+ * παραμένει το ίδιο πράγμα που ήταν: ο **ένας** σαρωτής, χωρίς κρίση.
  *
  * ## Ασφάλεια
  * Μηδέν `eval`, μηδέν `new Function` — όπως όλο το repo. Μόνο οι μονάδες που δηλώνονται εδώ
@@ -30,10 +39,19 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §9
  */
 
+import { normalizeNumber } from '../../../systems/dynamic-input/utils/number';
 import type { TableFormulaBinaryOp } from '../../../types/table-formula';
+import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
 
-/** Τα σημεία στίξης της γραμματικής: ομαδοποίηση, χωρισμός ορισμάτων, εύρος. */
-export type TableFormulaPunct = '(' | ')' | ',' | ':';
+/**
+ * Τα σημεία στίξης της γραμματικής: ομαδοποίηση, χωρισμός ορισμάτων, εύρος.
+ *
+ * Ο διαχωριστής είναι **ένωση και των δύο** πιθανών χαρακτήρων επειδή ο τύπος περιγράφει τι
+ * *μπορεί* να παραχθεί, ενώ η {@link TableFormulaGrammar} αποφασίζει τι *παράγεται* σε κάθε
+ * σάρωση. Ένας τύπος ανά γραμματική θα σήμαινε γενικευμένους (`<G>`) καταναλωτές για ένα
+ * ερώτημα που κανείς τους δεν κάνει.
+ */
+export type TableFormulaPunct = '(' | ')' | ',' | ';' | ':';
 
 /**
  * Μια λεκτική μονάδα **χωρίς θέση** — ό,τι αναγνωρίζει ένας σαρωτής. Το `name` καλύπτει
@@ -80,10 +98,20 @@ const TWO_CHAR_OPERATORS = ['<>', '<=', '>='] as const;
 /** Οι τελεστές ενός χαρακτήρα. Το `=` εδώ είναι **σύγκριση** (μέσα σε `IF`), όχι πρόθεμα. */
 const ONE_CHAR_OPERATORS = ['^', '*', '/', '+', '-', '&', '=', '<', '>'] as const;
 
-const PUNCTUATION: readonly string[] = ['(', ')', ',', ':'];
+/**
+ * Τα σημεία στίξης **αυτής** της γραμματικής.
+ *
+ * Οι τρεις σταθεροί χαρακτήρες δεν εξαρτώνται από γλώσσα σε κανένα φύλλο υπολογισμού· ο
+ * τέταρτος είναι ο διαχωριστής, και είναι όλη η διαφορά.
+ */
+function punctuationOf(grammar: TableFormulaGrammar): readonly string[] {
+  return ['(', ')', ':', grammar.argumentSeparator];
+}
 
-/** Ψηφίο ή δεκαδική υποδιαστολή — **μόνο τελεία**, δες την κεφαλίδα. */
-const NUMBER_START = /[0-9.]/u;
+/** True για ψηφίο ή για τη δεκαδική υποδιαστολή **αυτής** της γραμματικής. */
+function startsNumber(char: string, grammar: TableFormulaGrammar): boolean {
+  return (char >= '0' && char <= '9') || char === grammar.decimalSeparator;
+}
 /**
  * Γράμμα, κάτω παύλα ή **δολάριο**: η αρχή ονόματος συνάρτησης ή αναφοράς κελιού.
  *
@@ -121,9 +149,12 @@ const QUOTE = '"';
  * αυτού του αρχείου. Αντιγραμμένη μία φορά, θα ήταν δεύτερος ορισμός του «τι είναι όνομα» —
  * και θα απέκλινε την πρώτη φορά που η γραμματική δεχτεί νέο χαρακτήρα (N.18).
  */
-export function continuesLexeme(char: string | undefined): boolean {
+export function continuesLexeme(
+  char: string | undefined,
+  grammar: TableFormulaGrammar,
+): boolean {
   if (char === undefined) return false;
-  return NAME_PART.test(char) || NUMBER_START.test(char);
+  return NAME_PART.test(char) || startsNumber(char, grammar);
 }
 
 /**
@@ -152,7 +183,10 @@ export function formulaBodyStart(draft: string): number | null {
  * Το `null` είναι σημασιολογικό: ο καλών **δεν** το θεωρεί σφάλμα τύπου αλλά «αυτό δεν ήταν
  * τύπος», και το αποθηκεύει ως σκέτο κείμενο. Δες `table-formula-parse.ts`.
  */
-export function tokenizeFormula(source: string): readonly TableFormulaToken[] | null {
+export function tokenizeFormula(
+  source: string,
+  grammar: TableFormulaGrammar,
+): readonly TableFormulaToken[] | null {
   const tokens: TableFormulaToken[] = [];
   let at = 0;
 
@@ -164,7 +198,7 @@ export function tokenizeFormula(source: string): readonly TableFormulaToken[] | 
       continue;
     }
 
-    const scanned = scanToken(source, at);
+    const scanned = scanToken(source, at, grammar);
     if (scanned === null) return null;
     // Η **μία** θέση όπου η μονάδα αποκτά θέση — δες {@link TableFormulaToken}.
     tokens.push({ ...scanned.token, start: at, end: scanned.next });
@@ -180,36 +214,64 @@ interface Scanned {
   readonly next: number;
 }
 
-/** Η μία διακλάδωση ανά είδος χαρακτήρα — η σειρά είναι σημασία, όχι τύχη. */
-function scanToken(source: string, at: number): Scanned | null {
+/**
+ * Η μία διακλάδωση ανά είδος χαρακτήρα — η σειρά είναι σημασία, όχι τύχη.
+ *
+ * 🔑 Ο αριθμός δοκιμάζεται **πριν** το σημείο στίξης, και είναι ασφαλές **επειδή** ο
+ * διαχωριστής δεν είναι ποτέ η υποδιαστολή της ίδιας γραμματικής (δες
+ * {@link TableFormulaGrammar}). Χωρίς εκείνη την αναλλοίωτη, ένα `,` θα έπρεπε να κριθεί
+ * από τα συμφραζόμενα — δηλαδή ο λεξικογράφος θα άρχιζε να **κρίνει**.
+ */
+function scanToken(source: string, at: number, grammar: TableFormulaGrammar): Scanned | null {
   const char = source[at];
 
-  if (NUMBER_START.test(char)) return scanNumber(source, at);
+  if (startsNumber(char, grammar)) return scanNumber(source, at, grammar);
   if (NAME_START.test(char)) return scanName(source, at);
   if (char === QUOTE) return scanText(source, at);
-  if (PUNCTUATION.includes(char)) {
+  if (punctuationOf(grammar).includes(char)) {
     return { token: { kind: 'punct', value: char as TableFormulaPunct }, next: at + 1 };
   }
   return scanOperator(source, at);
 }
 
 /**
- * Αριθμητικό κυριολεκτικό, με προαιρετικό εκθέτη: `12`, `1.5`, `.5`, `1e3`, `2.5E-2`.
+ * Αριθμητικό κυριολεκτικό, με προαιρετικό εκθέτη: `12`, `1.5`, `.5`, `1e3`, `2.5E-2` —
+ * και, στη γραμματική του δεκαδικού κόμματος, `1,5` και `,5`.
  *
  * Ο εκθέτης διαβάζεται **μόνο** μετά από ψηφία, γι' αυτό δεν συγκρούεται με την αναφορά
  * `E3`: εκείνη ξεκινά με γράμμα και πάει στον {@link scanName}.
+ *
+ * ## 🔴 Γιατί ΟΧΙ `parseLocaleNumber` (ADR-576) εδώ
+ * Εκείνο απαντά «τι αριθμό **πληκτρολόγησε** ο χρήστης;» και γι' αυτό αναγνωρίζει και
+ * **ομαδοποίηση χιλιάδων** (`1.200,50` → `1200.5`). Μέσα σε τύπο δεν υπάρχει ομαδοποίηση:
+ * το `=SUM(1.200,50)` στην κανονική γραμματική είναι **δύο ορίσματα**, όχι χίλια διακόσια.
+ * Ένας «επιεικής» αναγνώστης εδώ θα κατάπινε τον διαχωριστή — ακριβώς το σφάλμα τιμής που
+ * αποκλείει το ADR-761. Ο σαρωτής έχει ήδη οριοθετήσει **έναν** δεκαδικό, οπότε η
+ * κανονικοποίηση είναι μία στοχευμένη αντικατάσταση και τίποτα άλλο.
+ *
+ * ## ✅ Γιατί ΝΑΙ `normalizeNumber` (ADR-397/513, SSoT `comma-normalize`)
+ * Το επιχείρημα από πάνω αποκλείει το **app-level** `parseLocaleNumber` — δεν αποκλείει τον
+ * κανονικοποιητή του **ίδιου** subapp. Εκείνος είναι `/,/g` → `.` και **τίποτα άλλο**: καμία
+ * ομαδοποίηση χιλιάδων, καμία ερμηνεία. Πάνω σε λεκτική μονάδα που ο σαρωτής έχει ήδη
+ * οριοθετήσει με **το πολύ έναν** δεκαδικό (`decimals > 1 ⇒ null`), το καθολικό `/,/g` και η
+ * μονή αντικατάσταση δίνουν **ταυτόσημο** αποτέλεσμα — το λέει ρητά και η τεκμηρίωση του SSoT.
+ * Άρα inline `.replace(',', '.')` εδώ θα ήταν **δεύτερη υλοποίηση της ίδιας πρότασης**, που
+ * είναι ακριβώς αυτό που απαγορεύει η CHECK 3.7.
  */
-function scanNumber(source: string, at: number): Scanned | null {
+function scanNumber(source: string, at: number, grammar: TableFormulaGrammar): Scanned | null {
+  const decimal = grammar.decimalSeparator;
   let end = at;
-  let dots = 0;
-  while (end < source.length && NUMBER_START.test(source[end])) {
-    if (source[end] === '.') dots += 1;
+  let decimals = 0;
+  while (end < source.length && startsNumber(source[end], grammar)) {
+    if (source[end] === decimal) decimals += 1;
     end += 1;
   }
-  if (dots > 1) return null;
+  if (decimals > 1) return null;
 
   end = skipExponent(source, end);
-  const value = Number(source.slice(at, end));
+  const raw = source.slice(at, end);
+  const literal = decimal === '.' ? raw : normalizeNumber(raw);
+  const value = Number(literal);
   if (!Number.isFinite(value)) return null;
   return { token: { kind: 'number', value }, next: end };
 }

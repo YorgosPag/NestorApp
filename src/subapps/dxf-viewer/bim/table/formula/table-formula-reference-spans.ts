@@ -41,6 +41,7 @@ import {
   type TableCellRef,
 } from '../table-cell-range';
 import { resolveWrittenCellRef } from './table-formula-absolute';
+import { drawingFormulaGrammar } from './table-formula-grammar';
 import {
   formulaBodyStart,
   tokenizeFormula,
@@ -105,7 +106,9 @@ export function tableFormulaReferenceSpans(
   const bodyStart = formulaBodyStart(draft);
   if (bodyStart === null) return EMPTY;
 
-  const tokens = tokenizeFormula(draft.slice(bodyStart));
+  // Η γραμματική **του σχεδίου** (ADR-761) — ίδια επιλογή και ίδιος λόγος με το
+  // `table-formula-point-state.ts`: ο επεξεργαστής δείχνει ό,τι τυπώνει το `cellInputText`.
+  const tokens = tokenizeFormula(draft.slice(bodyStart), drawingFormulaGrammar());
   if (tokens === null) return EMPTY;
 
   const spans: TableFormulaReferenceSpan[] = [];

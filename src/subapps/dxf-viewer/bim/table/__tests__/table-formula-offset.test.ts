@@ -14,6 +14,7 @@
 import { createTableModel } from '../table-model-helpers';
 import type { TableColumn, TableModel, TableRow } from '../../../types/table';
 import { parseTableFormula } from '../formula/table-formula-parse';
+import { CANONICAL_FORMULA_GRAMMAR } from '../../../types/table-formula-grammar';
 import { printTableFormula } from '../formula/table-formula-print';
 import {
   offsetTableFormula,
@@ -35,11 +36,21 @@ const ROWS: TableRow[] = ['r1', 'r2', 'r3', 'r4', 'r5'].map((id) => ({
 
 const MODEL: TableModel = createTableModel({ columns: COLUMNS, rows: ROWS, cells: [] });
 
-/** `'=A1'` μετατοπισμένο κατά (γραμμές, στήλες), ξαναγραμμένο ως κείμενο. */
+/**
+ * `'=A1'` μετατοπισμένο κατά (γραμμές, στήλες), ξαναγραμμένο ως κείμενο.
+ *
+ * 🔑 **Ρητά η κανονική γραμματική** (ADR-761), για τον ίδιο λόγο με το
+ * `table-formula-eval.test.ts`: εδώ ελέγχεται η **μετατόπιση αναφορών**, όχι η γραφή. Ίδια
+ * γραμματική σε ανάλυση **και** εκτύπωση — αλλιώς το test θα μετρούσε τη διαφορά τους.
+ */
 function shift(text: string, rows: number, columns: number): string {
-  const formula = parseTableFormula(MODEL, text);
+  const formula = parseTableFormula(MODEL, text, CANONICAL_FORMULA_GRAMMAR);
   if (formula === null) throw new Error(`Δεν αναλύθηκε: ${text}`);
-  return printTableFormula(MODEL, offsetTableFormula(MODEL, formula, { rows, columns }));
+  return printTableFormula(
+    MODEL,
+    offsetTableFormula(MODEL, formula, { rows, columns }),
+    CANONICAL_FORMULA_GRAMMAR,
+  );
 }
 
 describe('η σχετική αναφορά ΑΚΟΛΟΥΘΕΙ', () => {

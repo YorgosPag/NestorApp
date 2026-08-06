@@ -30,18 +30,14 @@ import type {
   TableFormulaCellRef,
   TableFormulaNode,
 } from '../../../types/table-formula';
+import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
 import { tableColumnLetter, tableRowNumber } from '../table-cell-reference';
 import { formatAbsoluteReference } from './table-formula-absolute';
+import { drawingFormulaGrammar } from './table-formula-grammar';
 import { FORMULA_PREFIX } from './table-formula-lex';
 
 /** Ο κωδικός που τυπώνεται όταν μια ταυτότητα δεν υπάρχει πια στο πλέγμα. */
 const REF_ERROR = '#REF!';
-
-/**
- * Ο διαχωριστής ορισμάτων — **κόμμα**, η κανονική μορφή που γράφει το `ACAD_TABLE` στο DXF.
- * Δες την κεφαλίδα του λεξικογράφου για το γιατί δεν είναι ερωτηματικό.
- */
-const ARGUMENT_SEPARATOR = ',';
 
 /**
  * Προτεραιότητα ανά τελεστή — **ίδιοι αριθμοί με τα επίπεδα του αναλυτή**. Το πρόσημο (μη
@@ -60,16 +56,31 @@ const PRECEDENCE: Readonly<Record<TableFormulaBinaryOp, number>> = {
 const UNARY_PRECEDENCE = 7;
 const ATOM_PRECEDENCE = Number.POSITIVE_INFINITY;
 
-/** Ο αποθηκευμένος τύπος όπως τον βλέπει ο χρήστης — **με** το `=`. */
-export function printTableFormula(model: TableModel, formula: TableFormula): string {
-  return FORMULA_PREFIX + printNode(model, formula.root);
+/**
+ * Ο αποθηκευμένος τύπος όπως τον βλέπει ο χρήστης — **με** το `=`.
+ *
+ * 🔴 **Η γραμματική οφείλει να είναι η ΙΔΙΑ που θα τον ξαναδιαβάσει** (ADR-761): εκτύπωση σε
+ * μία και ανάγνωση σε άλλη σημαίνει ότι το `writeCellInput(cellInputText(x))` παύει να είναι
+ * ταυτότητα — δηλαδή ένας τύπος που ο χρήστης απλώς **άνοιξε και έκλεισε** θα γινόταν
+ * κείμενο. Το test round-trip το απαιτεί και στις δύο.
+ */
+export function printTableFormula(
+  model: TableModel,
+  formula: TableFormula,
+  grammar: TableFormulaGrammar = drawingFormulaGrammar(),
+): string {
+  return FORMULA_PREFIX + printNode(model, formula.root, grammar);
 }
 
 /** Ένας κόμβος ως κείμενο, χωρίς περιτύλιγμα. */
-function printNode(model: TableModel, node: TableFormulaNode): string {
+function printNode(
+  model: TableModel,
+  node: TableFormulaNode,
+  grammar: TableFormulaGrammar,
+): string {
   switch (node.kind) {
     case 'number':
-      return String(node.value);
+      return printNumber(node.value, grammar);
     case 'text':
       // Διπλασιασμός εισαγωγικών — η σύμβαση που διαβάζει πίσω ο λεξικογράφος.
       return `"${node.value.replace(/"/gu, '""')}"`;
@@ -82,16 +93,36 @@ function printNode(model: TableModel, node: TableFormulaNode): string {
     case 'range':
       return printRange(model, node.from, node.to);
     case 'unary':
-      return node.op + wrap(model, node.operand, UNARY_PRECEDENCE);
+      return node.op + wrap(model, node.operand, UNARY_PRECEDENCE, grammar);
     case 'binary':
-      return printBinary(model, node);
+      return printBinary(model, node, grammar);
     case 'call':
-      return `${node.name}(${node.args.map((arg) => printNode(model, arg)).join(ARGUMENT_SEPARATOR)})`;
+      return `${node.name}(${node.args
+        .map((arg) => printNode(model, arg, grammar))
+        .join(grammar.argumentSeparator)})`;
     case 'group':
-      return `(${printNode(model, node.inner)})`;
+      return `(${printNode(model, node.inner, grammar)})`;
     case 'error':
       return node.code;
   }
+}
+
+/**
+ * Ένα αριθμητικό κυριολεκτικό στη γραφή **αυτής** της γραμματικής.
+ *
+ * ## 🔴 Γιατί ΟΧΙ `Intl.NumberFormat`
+ * Εδώ δεν μορφοποιείται τίποτα — **αναπαράγεται πηγαίος κώδικας**. Ο `Intl` θα πρόσθετε
+ * ομαδοποίηση χιλιάδων (`1.234,5`), που ο λεξικογράφος **δεν** διαβάζει πίσω μέσα σε τύπο
+ * (δες `scanNumber`), και θα στρογγύλευε στα τρία δεκαδικά — δηλαδή ο τύπος του χρήστη θα
+ * **έχανε ακρίβεια** κάθε φορά που άνοιγε το κελί. Η μορφοποίηση για το **μάτι** είναι η
+ * δουλειά του `cellDisplayText` (ADR-760)· εδώ η δουλειά είναι η **αντιστρεψιμότητα**.
+ *
+ * Το `String(number)` δίνει πάντα τελεία (ή καθόλου δεκαδικό, ή εκθέτη `1e+21` που δεν έχει
+ * τελεία καθόλου), οπότε μία στοχευμένη αντικατάσταση αρκεί και είναι ακριβής.
+ */
+function printNumber(value: number, grammar: TableFormulaGrammar): string {
+  const literal = String(value);
+  return grammar.decimalSeparator === '.' ? literal : literal.replace('.', ',');
 }
 
 /**
@@ -122,13 +153,14 @@ function printRange(model: TableModel, from: TableFormulaCellRef, to: TableFormu
 function printBinary(
   model: TableModel,
   node: Extract<TableFormulaNode, { kind: 'binary' }>,
+  grammar: TableFormulaGrammar,
 ): string {
   const precedence = PRECEDENCE[node.op];
   // Η δύναμη είναι δεξιά-προσεταιριστική, οι υπόλοιποι αριστερά: γι' αυτό η ισοπαλία απαιτεί
   // παρένθεση στο **αντίθετο** σκέλος από τη φορά προσεταιρισμού.
   const tieOnLeft = node.op === '^';
-  const left = wrap(model, node.left, precedence, tieOnLeft);
-  const right = wrap(model, node.right, precedence, !tieOnLeft);
+  const left = wrap(model, node.left, precedence, grammar, tieOnLeft);
+  const right = wrap(model, node.right, precedence, grammar, !tieOnLeft);
   return `${left}${node.op}${right}`;
 }
 
@@ -140,9 +172,10 @@ function wrap(
   model: TableModel,
   node: TableFormulaNode,
   parentPrecedence: number,
+  grammar: TableFormulaGrammar,
   parenthesizeTie = false,
 ): string {
-  const text = printNode(model, node);
+  const text = printNode(model, node, grammar);
   const own = precedenceOf(node);
   const needs = own < parentPrecedence || (own === parentPrecedence && parenthesizeTie);
   return needs ? `(${text})` : text;

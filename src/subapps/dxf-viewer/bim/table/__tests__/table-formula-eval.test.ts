@@ -9,6 +9,7 @@
 import { createTableModel, getCell } from '../table-model-helpers';
 import type { TableCellEntry, TableColumn, TableModel, TableRow } from '../../../types/table';
 import { parseTableFormula } from '../formula/table-formula-parse';
+import { CANONICAL_FORMULA_GRAMMAR } from '../../../types/table-formula-grammar';
 import { evaluateTableFormula, type TableFormulaScope } from '../formula/table-formula-eval';
 import { toCellValue } from '../formula/table-formula-value';
 
@@ -37,9 +38,18 @@ const SCOPE: TableFormulaScope = {
   valueAt: (ref) => getCell(MODEL, ref.rowId, ref.colId)?.value ?? '',
 };
 
-/** Ό,τι θα αποθηκευόταν στο κελί για αυτό το κείμενο τύπου. */
+/**
+ * Ό,τι θα αποθηκευόταν στο κελί για αυτό το κείμενο τύπου.
+ *
+ * 🔑 **Ρητά η κανονική γραμματική** (ADR-761), και είναι απόφαση: αυτό το αρχείο ρωτά «τι
+ * **υπολογίζει** ο αξιολογητής», όχι «πώς **γράφεται** ένας τύπος». Αν τα δείγματα
+ * ακολουθούσαν τη γραμματική του σχεδίου, κάθε αλλαγή της θα έβαφε κόκκινη μια σουίτα που
+ * δεν έχει άποψη γι' αυτήν — δηλαδή η σουίτα θα έλεγχε **δύο** πράγματα και θα απαντούσε
+ * για ένα. Η γραμματική έχει δική της σουίτα (`table-formula-grammar.test.ts`), που ελέγχει
+ * ρητά ότι η **σημασιολογία είναι η ίδια** και στις δύο γραφές.
+ */
 function evaluate(text: string): string | number | null {
-  const formula = parseTableFormula(MODEL, text);
+  const formula = parseTableFormula(MODEL, text, CANONICAL_FORMULA_GRAMMAR);
   if (formula === null) throw new Error(`Δεν αναλύθηκε: ${text}`);
   return toCellValue(evaluateTableFormula(SCOPE, formula));
 }
