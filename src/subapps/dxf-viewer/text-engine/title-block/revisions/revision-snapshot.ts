@@ -24,6 +24,7 @@
  */
 
 import type { Entity } from '../../../types/entities';
+import { fnv1aHex8 } from '../../../utils/fnv1a-hash';
 import type { RevisionSheetSnapshot, RevisionSnapshot } from './revision.types';
 
 /** Το φύλλο όπως το δίνει ο καλών (React layer): level + οι οντότητες του scene του. */
@@ -48,15 +49,14 @@ const VOLATILE_KEYS: ReadonlySet<string> = new Set([
   'previewGripPoints',
 ]);
 
-/** FNV-1a 32-bit → 8 hex chars. Σταθερό σε όλες τις πλατφόρμες (καμία εξάρτηση). */
-function fnv1a(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, '0');
-}
+/**
+ * FNV-1a 32-bit → 8 hex chars. **Ζει πλέον στο `utils/fnv1a-hash.ts`** (ADR-767 Δ6): ήταν
+ * κυριολεκτικά ο ίδιος βρόχος με το `title-block-fingerprint.ts`, με μόνη διαφορά την
+ * κωδικοποίηση της εξόδου — δύο σώματα που μπορούσαν να αποκλίνουν χωρίς να πέσει test, ενώ
+ * και τα δύο hash ταξιδεύουν σε **αποθηκευμένα** δεδομένα. Το τοπικό ψευδώνυμο μένει ώστε
+ * καμία από τις κλήσεις αυτού του αρχείου να μην αλλάξει.
+ */
+const fnv1a = fnv1aHex8;
 
 /**
  * Κανονικοποιημένο JSON: **ταξινομημένα κλειδιά** + στρογγυλοποίηση αριθμών στα 6 δεκαδικά.

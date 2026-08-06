@@ -18,6 +18,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-651-auto-title-block-generator.md §5.11
  */
 
+import { fnv1aBase36 } from '../../utils/fnv1a-hash';
+
 /** Τα raw facts που ταυτοποιούν την έκδοση ενός φύλλου — locale-independent (ακέραιη αναθεώρηση). */
 export interface TitleBlockVersionFacts {
   /** Firestore doc id του έργου — ο στόχος του deep-link και μέρος της ταυτότητας. */
@@ -35,19 +37,6 @@ export function hasTitleBlockVersionFacts(facts: TitleBlockVersionFacts): boolea
     Boolean(facts.sheetNumber) ||
     facts.revisionNumber !== undefined
   );
-}
-
-/**
- * FNV-1a 32-bit → base36. Ντετερμινιστικό, εξαρτάται **μόνο** από το input string (μηδέν
- * κατάσταση, μηδέν ρολόι) — γι' αυτό είναι ασφαλές μέσα σε αποτύπωμα έκδοσης.
- */
-function fnv1aBase36(input: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(36);
 }
 
 /** Αναγνώσιμο τμήμα token: κρατά γράμματα/ψηφία (και ελληνικά), πετά διαχωριστικά (Α-2 ⇒ Α2). */
