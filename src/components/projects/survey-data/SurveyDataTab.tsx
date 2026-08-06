@@ -22,6 +22,7 @@ import type { Project } from '@/types/project';
 import type { SurveyRecord } from '@/types/project-survey-record';
 import { SourcedFieldRow } from './SourcedFieldRow';
 import { SurveyComparePanel } from './SurveyComparePanel';
+import { SurveyDocumentSection } from './SurveyDocumentSection';
 import { SurveyListSection } from './SurveyListSection';
 
 interface SurveyDataTabProps {
@@ -146,6 +147,17 @@ export function SurveyDataTab({ project, data }: SurveyDataTabProps) {
               {t('header.confirm')}
             </Button>
           )}
+
+          {survey.draft !== null ? (
+            <SurveyDocumentSection
+              records={survey.records}
+              current={survey.draft}
+              activeId={projectData?.activeSurveyRecordId ?? null}
+              disabled={survey.isSaving}
+              onSelect={survey.select}
+              onSetActive={(id) => void survey.setActive(id)}
+            />
+          ) : null}
 
           {comparisons.length > 0 ? (
             <SurveyComparePanel

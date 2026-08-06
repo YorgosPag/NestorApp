@@ -30,6 +30,11 @@ export const ProjectUpdateSchema = z.object({
   // ούτε όριο μήκους ούτε ίχνος στο συμβόλαιο. (Το `buildingBlock` ήταν ήδη έτσι από το ADR-745.)
   buildingBlock: z.string().max(120).optional(),
   plotNumber: z.string().max(120).optional(),
+  // ADR-759 Φ3γ — ο **ρητός** δείκτης «ποιο τοπογραφικό ισχύει». Δηλώνεται εδώ για τον ίδιο
+  // λόγο με το ζεύγος από πάνω: το `.passthrough()` θα το άφηνε να περάσει «επειδή δεν το
+  // κοιτάζει κανείς», δηλαδή χωρίς όριο μήκους και χωρίς ίχνος στο συμβόλαιο.
+  // `nullable` επίτηδες: η **αποδέσμευση** του ενεργού είναι νόμιμη ενέργεια, όχι απουσία.
+  activeSurveyRecordId: z.string().max(128).nullable().optional(),
   progress: z.number().min(0).max(100).optional(),
   totalValue: z.number().min(0).max(999_999_999).optional(),
   totalArea: z.number().min(0).max(999_999_999).optional(),

@@ -19,8 +19,9 @@ import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FieldAccessor } from '@/config/survey-card-config';
+import { surveyAffirmationLabel } from '@/config/survey-record-labels';
 import { parseStrictDecimal } from '@/lib/survey-record/survey-number';
-import { userSourced, type SurveyRecord } from '@/types/project-survey-record';
+import { userSourced, type Sourced, type SurveyRecord } from '@/types/project-survey-record';
 
 interface SourcedFieldRowProps {
   readonly record: SurveyRecord;
@@ -97,7 +98,7 @@ export function SourcedFieldRow({
     switch (field.kind) {
       case 'text': {
         const current = field.read(record);
-        if (!isEditing) return <ReadOnlyValue text={current.value} />;
+        if (!isEditing) return <ReadOnlyValue text={current.value} source={current} />;
         const commit = (raw: string) =>
           onChange(field.write(record, userSourced<string>(raw === '' ? null : raw)));
         return field.multiline ? (
@@ -119,7 +120,12 @@ export function SourcedFieldRow({
       case 'number': {
         const current = field.read(record);
         if (!isEditing) {
-          return <ReadOnlyValue text={current.value === null ? null : String(current.value)} />;
+          return (
+            <ReadOnlyValue
+              text={current.value === null ? null : String(current.value)}
+              source={current}
+            />
+          );
         }
         return (
           <Input
@@ -138,7 +144,10 @@ export function SourcedFieldRow({
         if (!isEditing) {
           return (
             <ReadOnlyValue
-              text={current.value === null ? null : t(current.value ? 'actions.yes' : 'actions.no')}
+              // SSoT (ADR-759 Φ4β): η **ίδια** λέξη που δείχνει η παλέτα σύνδεσης στο «→ …»
+              // πριν την έγκριση. Δύο κυριολεκτικά κλειδιά σε δύο οθόνες θα απέκλιναν.
+              text={current.value === null ? null : surveyAffirmationLabel(current.value, t)}
+              source={current}
             />
           );
         }
@@ -156,7 +165,7 @@ export function SourcedFieldRow({
       case 'textList': {
         const current = field.read(record);
         const joined = (current.value ?? []).join(LIST_SEPARATOR);
-        if (!isEditing) return <ReadOnlyValue text={joined === '' ? null : joined} />;
+        if (!isEditing) return <ReadOnlyValue text={joined === '' ? null : joined} source={current} />;
         return (
           <Input
             id={inputId}
@@ -185,23 +194,80 @@ export function SourcedFieldRow({
 }
 
 /**
- * A value the engineer is only reading.
+ * A value the engineer is only reading — in **three** states, not two (ADR-759 Φ3γ).
  *
- * `null` renders the explicit "blank in the drawing" marker — never an empty cell.
- * An empty cell reads as "there is nothing here"; the marker reads as "the drawing
- * does not say", which is the actual fact and is often the thing that matters.
+ * 🔴 THE THIRD STATE IS THE NEW ONE, AND IT IS NOT COSMETIC. A value can be read from
+ * the drawing and still fail to parse: the title block says «ΙΟΥΛΙΟΣ 2026» and
+ * `surveyDate` is an ISO date. Before this, that landed in the first state and the card
+ * printed *"blank in the drawing"* — which is **false**: the drawing said something, we
+ * just could not turn it into a date. Showing the verbatim text instead is what makes
+ * `Sourced.rawText` worth storing at all (ADR-745 §8 rule 3: the parse may be wrong,
+ * the original never is).
+ *
+ * | state | renders |
+ * |---|---|
+ * | value present | the value, plus the origin marker when it came from a drawing |
+ * | value `null`, `rawText` present | **the drawing's own words**, marked as unparsed |
+ * | value `null`, no `rawText` | «blank in the drawing» — nobody has said anything |
+ *
+ * The origin marker answers the §5.3 question — *"in six months, who wrote this?"* — at
+ * the only moment it can be asked, which is while looking at the field.
  */
-function ReadOnlyValue({ text }: { readonly text: string | null }) {
+function ReadOnlyValue({
+  text,
+  source,
+}: {
+  readonly text: string | null;
+  readonly source: Sourced<unknown>;
+}) {
   const { t } = useTranslation('surveyRecord');
-  if (text === null) {
+
+  if (text !== null) {
+    return (
+      <p className="text-sm whitespace-pre-wrap">
+        {text}
+        <OriginMarker source={source} />
+      </p>
+    );
+  }
+
+  if (source.rawText !== undefined && source.rawText.trim() !== '') {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <p className="text-sm text-muted-foreground italic">{t('provenance.empty')}</p>
+          <p className="text-sm whitespace-pre-wrap text-muted-foreground">
+            {source.rawText}
+            <OriginMarker source={source} />
+          </p>
         </TooltipTrigger>
-        <TooltipContent>{t('provenance.emptyHint')}</TooltipContent>
+        <TooltipContent>{t('provenance.rawText')}</TooltipContent>
       </Tooltip>
     );
   }
-  return <p className="text-sm whitespace-pre-wrap">{text}</p>;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <p className="text-sm text-muted-foreground italic">{t('provenance.empty')}</p>
+      </TooltipTrigger>
+      <TooltipContent>{t('provenance.emptyHint')}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * «Από το σχέδιο» — shown only for `'survey'`.
+ *
+ * Deliberately silent for `'user'`: a marker on every hand-typed field would be noise on
+ * ~30 rows, and noise is what trains the engineer to stop reading (ADR-759 §5.8). The
+ * interesting fact is the *exception* — a value this person did not type.
+ */
+function OriginMarker({ source }: { readonly source: Sourced<unknown> }) {
+  const { t } = useTranslation('surveyRecord');
+  if (source.provenance !== 'survey') return null;
+  return (
+    <span className="ml-2 align-middle text-xs text-muted-foreground">
+      {t('provenance.survey')}
+    </span>
+  );
 }

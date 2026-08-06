@@ -21,6 +21,7 @@ import {
   listSurveyRecords,
   updateSurveyRecord,
 } from '@/services/survey-record.service';
+import { updateProjectWithPolicy } from '@/services/projects/project-mutation-gateway';
 import { createEmptySurveyRecord } from '@/lib/survey-record/survey-record-factory';
 import { recordDecision } from '@/lib/survey-record/survey-reconciliation';
 import type {
@@ -50,6 +51,18 @@ export interface UseSurveyRecordsResult {
   setConfirmed(confirmed: boolean): Promise<boolean>;
   decide(field: ReconcilableField, action: ReconciliationAction, surveyValue: number | null): Promise<boolean>;
   select(recordId: string): void;
+  /**
+   * Δηλώνει **ποιο** τοπογραφικό ισχύει για το έργο (`project.activeSurveyRecordId`).
+   *
+   * 🔴 **Ο δείκτης υπήρχε από τη Φ2 και ΚΑΝΕΙΣ δεν τον έγραφε ποτέ** (μετρημένο 06/08:
+   * 6 αναφορές στο `src`, **όλες αναγνώσεις**). Δηλαδή το «ποιο ισχύει» ήταν μονίμως `null`
+   * και η καρτέλα έπεφτε πάντα στο εφεδρικό «η νεότερη» — ακριβώς η αναδυόμενη συμπεριφορά
+   * που το ADR-759 Q1 απαγορεύει γραπτά. Ίδιο σχήμα με το `no-primary-address`: δηλωμένο,
+   * χωρίς παραγωγό.
+   *
+   * Γίνεται απαραίτητο στη Φ3γ, όπου ο δείκτης καθορίζει **πού γράφει η πινακίδα**.
+   */
+  setActive(recordId: string): Promise<boolean>;
 }
 
 export function useSurveyRecords(
@@ -218,6 +231,35 @@ export function useSurveyRecords(
 
   const select = useCallback((recordId: string) => setSelectedId(recordId), []);
 
+  /**
+   * Γράφει τον δείκτη στο **έργο**, όχι στην εγγραφή.
+   *
+   * ⚠️ Περνά από το `updateProjectWithPolicy` (ADR-742) όπως κάθε άλλη μεταβολή έργου —
+   * δεύτερη διαδρομή θα ήταν δεύτερο μοντέλο ασφαλείας για την ίδια ερώτηση. Το τοπικό
+   * `selectedId` ενημερώνεται μαζί, ώστε η οθόνη να μη δείχνει άλλη εγγραφή από αυτήν που
+   * μόλις δηλώθηκε ενεργή.
+   */
+  const setActive = useCallback(
+    async (recordId: string): Promise<boolean> => {
+      if (!projectId) return false;
+      const result = await updateProjectWithPolicy({
+        projectId,
+        updates: { activeSurveyRecordId: recordId },
+      });
+      if (!result.success) {
+        toast.error(t('toast.saveError'));
+        return false;
+      }
+      setSelectedId(recordId);
+      // Το κλειδί υπήρχε από τη Φ2 **χωρίς κανέναν καταναλωτή** — μαζί με τα `card.setActive`,
+      // `card.activeBadge`, `header.surveyDate`, `provenance.survey`. Η Φ3γ τα ενεργοποιεί
+      // αντί να γράψει δεύτερα, που θα ήταν διπλότυπο με μεταφρασμένο νεκρό δίδυμο δίπλα.
+      toast.success(t('toast.activeSuccess'));
+      return true;
+    },
+    [projectId, t]
+  );
+
   return {
     records,
     current,
@@ -233,5 +275,6 @@ export function useSurveyRecords(
     setConfirmed,
     decide,
     select,
+    setActive,
   };
 }
