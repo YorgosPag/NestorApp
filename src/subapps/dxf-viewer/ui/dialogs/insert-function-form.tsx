@@ -10,6 +10,14 @@
  * ξέρει κατεβαίνει στην κατηγορία. Ανάποδα, ο πρώτος θα έπρεπε κάθε φορά να προσπερνά ένα
  * μενού που δεν τον αφορά.
  *
+ * ## Γιατί το πλαίσιο **αιωρείται** και δεν είναι modal (ADR-763 §18)
+ * Η κάρτα δεν τοποθετείται πια από ένα κεντραρισμένο overlay: δέχεται {@link InsertFunctionFrame}
+ * και κάθεται σε δικές της συντεταγμένες. Η **επικεφαλίδα** είναι η λαβή — δεν φέρει
+ * `data-drag-handle`, και αυτό είναι σκόπιμο: το γνώρισμα κάνει το SSoT σύρσιμο να αγνοήσει τον
+ * κανόνα «μη σέρνεις από διαδραστικό στοιχείο», οπότε πάνω σε έναν πρόγονο θα κατέληγε να
+ * ξεκινά σύρσιμο **και από το ✕**. Χωρίς αυτό, το `closest('button, …')` εξαιρεί σωστά το
+ * κουμπί κλεισίματος και σέρνει μόνο ο τίτλος.
+ *
  * ## Γιατί `<ul role="listbox">` και όχι `<select multiple>` ή κουμπιά
  * Το εγγενές `<select>` δεν επιτρέπει τη **σταθερού ύψους** λίστα των επτά σειρών με τη δική
  * της τυπογραφία (τα ονόματα είναι κώδικας, θέλουν μονοδιάστημη γραμματοσειρά) και δεν
@@ -22,6 +30,7 @@
  */
 
 import React, { useCallback, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
 import type {
   FormulaCatalogEntry,
@@ -42,8 +51,22 @@ export interface InsertFunctionFormLabels {
   readonly empty: string;
 }
 
+/**
+ * ADR-763 §18 — η γεωμετρία του αιωρούμενου πλαισίου, όπως τη δίνει το SSoT
+ * `useFloatingPanelGeometry` (ADR-723). Η όψη **δεν** υπολογίζει θέση· τη λαμβάνει.
+ */
+export interface InsertFunctionFrame {
+  /** Πάνω-αριστερή γωνία της κάρτας, σε CSS pixels του viewport. */
+  readonly position: { readonly x: number; readonly y: number };
+  /** Όσο κρατιέται ο δείκτης — αλλάζει μόνο τον δρομέα του ποντικιού. */
+  readonly isDragging: boolean;
+  /** Ξεκινά το σύρσιμο. Δένεται στην επικεφαλίδα, όχι σε ξεχωριστή λαβή. */
+  readonly onDragStart: (event: React.MouseEvent) => void;
+}
+
 export interface InsertFunctionFormProps {
   readonly labels: InsertFunctionFormLabels;
+  readonly frame: InsertFunctionFrame;
   readonly categories: readonly FormulaCategoryFilter[];
   /** Το μεταφρασμένο όνομα μιας κατηγορίας — ο γονέας κατέχει το i18n. */
   readonly categoryLabelOf: (category: FormulaCategoryFilter) => string;
@@ -64,7 +87,7 @@ export interface InsertFunctionFormProps {
 
 export function InsertFunctionForm(props: InsertFunctionFormProps): React.ReactElement {
   const {
-    labels, categories, categoryLabelOf, category, onCategoryChange,
+    labels, frame, categories, categoryLabelOf, category, onCategoryChange,
     query, onQueryChange, entries, selected, onSelect, onConfirm, onCancel,
     signature, help,
   } = props;
@@ -134,12 +157,20 @@ export function InsertFunctionForm(props: InsertFunctionFormProps): React.ReactE
 
   return (
     <section
-      className="dxf-insert-fn-card"
+      className={cn('dxf-insert-fn-card', frame.isDragging && 'dxf-insert-fn-card--dragging')}
       role="dialog"
-      aria-modal="true"
+      // ADR-763 §18 — **όχι** modal: όλο το νόημα του αιωρούμενου πλαισίου είναι ότι ο χρήστης
+      // βλέπει και αγγίζει τον πίνακα από πίσω όσο ο διάλογος είναι ανοιχτός.
+      aria-modal="false"
       aria-label={labels.title}
+      // Η θέση προέρχεται από χειρονομία δείκτη — είναι εξ ορισμού δυναμική και δεν εκφράζεται
+      // με κλάση. Ίδια, ρητή εξαίρεση στον κανόνα N.3 με το `FloatingPanel` (ADR-723), και η
+      // **μόνη** σε αυτό το αρχείο.
+      style={{ left: frame.position.x, top: frame.position.y }}
     >
-      <header className="dxf-insert-fn-header">
+      {/* Η επικεφαλίδα ΕΙΝΑΙ η λαβή — δες την κεφαλίδα του module για το γιατί δεν φέρει
+          `data-drag-handle`. */}
+      <header className="dxf-insert-fn-header" onMouseDown={frame.onDragStart}>
         <h2 className="dxf-insert-fn-title">{labels.title}</h2>
         <button
           type="button"

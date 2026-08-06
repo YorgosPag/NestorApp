@@ -39,7 +39,7 @@ import {
   OpeningSchedulePdfHost, ThermalEnvelopeHost, BimScheduleHost, TopoRibbonHost, AdminLayerManagerPalette, ExternalReferencesPalette, ExternalReferencesAutoResolveHost, TitleBlockBindingPalette,
   ImportedMeshBoqHost,
   ImportedMeshMaterialMapHost,
-  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableInsertFunctionDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
+  DxfAiChatPanel, ColumnPerimeterConfirmDialog, GapCloseConfirmDialog, ColumnAdoptSizeDialog, ColumnBecomesWallDialog, ShearWallExtentDialog, SectionRelationshipDialog, ColumnBatchFillConfirmDialog, AutoDimensionOptionsDialog, DxfSymbolDetectConfirmDialog, ColumnPromoteConfirmDialog, HatchOverlapConfirmDialog, TableRangeOverwriteConfirmDialog, TableMergeDiscardConfirmDialog, TableInsertFunctionDialog, TableFunctionArgumentsDialog, PrintHost, ExportHost, StampHost, AiTitleBlockHost, RevisionsHost, TitleBlockLibraryDialogHost, ColumnDetailHost, FoundationDetailHost, BeamDetailHost,
   SlabDetailHost, FloorManagementDialogHost, MatchPropertiesDialogHost,
 } from './dxf-viewer-lazy-components';
 
@@ -193,6 +193,10 @@ export function DxfViewerDialogs(props: DxfViewerDialogsProps): React.JSX.Elemen
         <TableMergeDiscardConfirmDialog />
         {/* ADR-763 — «Εισαγωγή συνάρτησης»: ο κατάλογος πίσω από το `fx` της γραμμής τύπων. */}
         <TableInsertFunctionDialog />
+        {/* ADR-763 Φ2 — «Ορίσματα συνάρτησης»: το «OK» του προηγούμενου ανοίγει αυτόν.
+            Το `levelManager` είναι για τη **ζωντανή αποτίμηση** (Φ2.3): το `= 20` δίπλα σε
+            κάθε όρισμα θέλει το μοντέλο του πίνακα, δηλαδή τη σκηνή. */}
+        <TableFunctionArgumentsDialog levelManager={levelManager} />
       </React.Suspense>
       <React.Suspense fallback={hiddenFallback}>
         <CalibrationDialog />

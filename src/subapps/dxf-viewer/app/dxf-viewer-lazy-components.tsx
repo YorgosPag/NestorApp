@@ -93,6 +93,21 @@ export const TableRangeOverwriteConfirmDialog = React.lazy(() => import('../ui/d
 export const TableMergeDiscardConfirmDialog = React.lazy(() => import('../ui/dialogs/TableMergeDiscardConfirmDialog').then(mod => ({ default: mod.TableMergeDiscardConfirmDialog })));
 // ADR-763 — «Εισαγωγή συνάρτησης» (fx της γραμμής τύπων), parity με τον ομώνυμο διάλογο του Excel.
 export const TableInsertFunctionDialog = React.lazy(() => import('../ui/dialogs/TableInsertFunctionDialog').then(mod => ({ default: mod.TableInsertFunctionDialog })));
+// ADR-763 Φ2 — «Ορίσματα συνάρτησης»: το δεύτερο βήμα της ίδιας εντολής, όπου η κλήση γεμίζει.
+//
+// 🔴 Ο ΜΟΝΟΣ ΔΙΑΛΟΓΟΣ ΤΟΥ ΑΡΧΕΙΟΥ ΜΕ PRELOAD — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ ΤΑΧΥΤΗΤΑΣ.
+// Οι υπόλοιποι ανοίγουν από **χειρονομία** του χρήστη, οπότε μια στιγμή `Suspense` είναι απλώς
+// αναμονή. Αυτός ανοίγει από το **κλείσιμο άλλου διαλόγου**: ανάμεσα στο ξεμοντάρισμα της
+// Φάσης 1 και στο μοντάρισμα αυτού, η εστίαση πέφτει στο `document.body` — δηλαδή ο δομικός
+// φύλακας `isTextEntryTarget` απαντά `false` και οι **43** window listeners ξυπνούν πάνω σε
+// έναν χρήστη που κοιτά διάλογο (ADR-763 §10). Ένα `Delete` σε εκείνο το παράθυρο σβήνει
+// **οντότητα**. Με το chunk ήδη φορτωμένο, το `Suspense` δεν ενεργοποιείται καθόλου και τα δύο
+// μονταρίσματα συμβαίνουν στο **ίδιο** commit.
+//
+// Η προφόρτωση **δεν** ζει εδώ αλλά στον έναν καλούντα (`TableInsertFunctionDialog`), δίπλα
+// στη χειρονομία που τη δικαιολογεί: μια εξαγωγή εδώ θα ανάγκαζε εκείνο το αρχείο να κάνει
+// στατικό import ολόκληρου αυτού του μητρώου για να πάρει μία γραμμή.
+export const TableFunctionArgumentsDialog = React.lazy(() => import('../ui/dialogs/TableFunctionArgumentsDialog').then(mod => ({ default: mod.TableFunctionArgumentsDialog })));
 export const DxfImportModal = React.lazy(() => import('../components/DxfImportModal'));
 export const SimpleProjectDialog = React.lazy(() => import('../components/SimpleProjectDialog').then(mod => ({ default: mod.SimpleProjectDialog })));
 export const ConstructionLayerScaffoldDialog = React.lazy(() => import('../hooks/useConstructionLayerScaffold').then(mod => ({ default: mod.ConstructionLayerScaffoldDialog })));
