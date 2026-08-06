@@ -17,7 +17,7 @@
 
 import type { TableHeaderMenuState } from './TableHeaderMenuItems';
 import type {
-  TableAxisFormatSnapshot,
+  TableFormatSnapshot,
   TableMergeMenuHostProps,
   TableToggleFormatKey,
 } from './table-format-toolbar/TableFormatToolbar';
@@ -43,7 +43,7 @@ export interface TableHeaderMenuProps {
   readonly onDelete: TableHeaderAction;
   readonly resolveState: (hit: TableIndicatorHit) => TableHeaderMenuState;
   /** Η κατάσταση των χειριστηρίων μορφοποίησης — ξαναρωτιέται **μετά από κάθε** πάτημα. */
-  readonly resolveFormat: (hit: TableIndicatorHit) => TableAxisFormatSnapshot;
+  readonly resolveFormat: (hit: TableIndicatorHit) => TableFormatSnapshot;
   readonly onToggleFormat: (hit: TableIndicatorHit, key: TableToggleFormatKey) => void;
   readonly onStepTextHeight: (hit: TableIndicatorHit, direction: TextHeightStepDirection) => void;
   readonly onResetFormat: TableHeaderAction;
@@ -96,7 +96,7 @@ export interface TableHeaderContextMenuHandle {
 export interface TableHeaderOpenTarget {
   readonly hit: TableIndicatorHit;
   readonly state: TableHeaderMenuState;
-  readonly format: TableAxisFormatSnapshot;
+  readonly format: TableFormatSnapshot;
   /** ADR-750 Φ3/Φ5 — ανανεώνεται μαζί με το `format`, για τον ίδιο ακριβώς λόγο. */
   readonly borders: TableBorderMenuHostProps;
   /** ADR-755 — ίδιο σκεπτικό: μετά τη συγχώνευση το κουμπί οφείλει να δείξει πατημένο. */

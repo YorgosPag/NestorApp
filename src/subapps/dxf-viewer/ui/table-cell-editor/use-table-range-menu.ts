@@ -31,6 +31,14 @@
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { columnLetter } from '@/lib/spreadsheet/column-letter';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
+// 🔴 ADR-739 §52 — η μορφοποίηση **κελιών**: ο ίδιος στόχος, οι ίδιες πέντε εντολές, το ίδιο
+// στιγμιότυπο με τη ζώνη δείκτη. Καμία δεύτερη υλοποίηση — δες τα δύο modules.
+import { tableFormatCommands } from './table-format-commands';
+import { resolveTableFormatSnapshot } from './table-format-snapshot';
+import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
+import { getAllLayers } from '../../stores/LayerStore';
+import { useLiveTableMutation } from './use-table-model-commit';
+import { useCommandHistory } from '../../core/commands';
 import {
   resolveTableSelectionBounds,
   type TableCellRangeBounds,
@@ -80,8 +88,37 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
   const { containerRef, transformRef, levelManager } = params;
   const menuRef = useRef<TableRangeContextMenuHandle | null>(null);
   const liveTable = useLiveTable(levelManager);
+  const { execute } = useCommandHistory();
   const borderActions = useTableBorderActions({ levelManager, liveTable });
   const mergeActions = useTableMergeActions({ levelManager, liveTable });
+  // §52 — **η ίδια ουρά** με τη μορφοποίηση άξονα και τα περιγράμματα: ένα
+  // `UpdateEntityCommand`, ένα `Ctrl+Z`, καμία δεύτερη διαδρομή εγγραφής (§6.6).
+  const applyFormat = useLiveTableMutation({ levelManager, execute, liveTable });
+  const formatCommands = useMemo(() => tableFormatCommands(applyFormat), [applyFormat]);
+
+  /**
+   * 🔴 §52 — ο στόχος μορφοποίησης **αυτής** της περιοχής, τη στιγμή της κλήσης.
+   *
+   * `kind: 'range'` γραμμένο ρητά και όχι μέσω `tableFormatScopeOf`: εδώ ο στόχος **δεν** είναι
+   * η επιλογή του χρήστη αλλά τα όρια που άνοιξε το δεξί κλικ (κανόνας Α22 — μπορεί να είναι
+   * ένα κελί **έξω** από την επιλογή). Ένα πέρασμα από τον resolver της επιλογής θα έβαφε τα
+   * μαρκαρισμένα κελιά ενώ ο τίτλος του μενού λέει `E5`.
+   */
+  const formatTarget = useCallback(
+    (bounds: TableCellRangeBounds) => {
+      const live = liveTable();
+      if (!live) return null;
+      return {
+        model: live.model,
+        style: resolveTableStyle(live),
+        scope: { kind: 'range' as const, bounds },
+        // ADR-040 κανόνας #2 — getter τη στιγμή του συμβάντος· αυτό το hook ζει στον
+        // `CanvasSection`, όπου κάθε συνδρομή γίνεται re-render του orchestrator.
+        layerColors: getAllLayers().map((layer) => layer.color),
+      };
+    },
+    [liveTable],
+  );
 
   /**
    * 🔑 Ό,τι ξέρει το μενού για μια περιοχή, σε **μία** ερώτηση.
@@ -98,6 +135,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       canReset: borderActions.canReset(bounds),
       canClearDiagonals: borderActions.canClearDiagonals(bounds),
       merge: mergeActions.resolveState(bounds),
+      format: resolveTableFormatSnapshot(formatTarget(bounds)),
       borders: {
         canReset: borderActions.canReset(bounds),
         canClearDiagonals: borderActions.canClearDiagonals(bounds),
@@ -113,7 +151,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         },
       },
     }),
-    [borderActions, mergeActions],
+    [borderActions, mergeActions, formatTarget],
   );
 
   /**
@@ -201,12 +239,22 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       // ADR-755 — επιστρέφει `Promise`: η συγχώνευση ρωτά πριν πετάξει περιεχόμενο, και ο
       // καλών περιμένει την απάντηση πριν ξαναρωτήσει την κατάσταση του κουμπιού.
       onApplyMerge: (bounds, commandId) => mergeActions.applyCommand(bounds, commandId),
+      // §52 — οι πέντε εντολές μορφοποίησης, παραμετρικές ως προς τα όρια. Ο στόχος
+      // ξαναφτιάχνεται **μέσα** σε κάθε χειριστή: ένα undo ενόσω η γραμμή ήταν ανοιχτή
+      // σημαίνει «καμία πράξη», ποτέ εγγραφή σε κελιά που δεν υπάρχουν πια.
+      formatActions: {
+        onToggle: (bounds, key) => formatCommands.toggle(formatTarget(bounds), key),
+        onStepSize: (bounds, direction) => formatCommands.stepSize(formatTarget(bounds), direction),
+        onReset: (bounds) => formatCommands.reset(formatTarget(bounds)),
+        onSetTextColor: (bounds, value) => formatCommands.setField(formatTarget(bounds), 'textColorHex', value),
+        onSetFillColor: (bounds, value) => formatCommands.setField(formatTarget(bounds), 'fillColorHex', value),
+      },
       resolveTarget: describeTarget,
       // Το μενού έκλεισε — η εστίαση επιστρέφει στο κελί, αλλιώς η συνεδρία μένει ζωντανή στο
       // store αλλά κουφή στην οθόνη (ίδια σύμβαση με το μενού των ζωνών).
       onClosed: restartTableCellCursorSession,
     }),
-    [borderActions, mergeActions, describeTarget],
+    [borderActions, mergeActions, describeTarget, formatCommands, formatTarget],
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);

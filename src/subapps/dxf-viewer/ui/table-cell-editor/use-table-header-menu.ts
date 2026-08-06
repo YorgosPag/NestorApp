@@ -54,7 +54,6 @@ import {
 } from '../../bim/table/table-indicator-geometry';
 // ADR-739 §27.17 — η πράξη ακολουθεί την **επιλογή**, όχι μόνο το γράμμα που πατήθηκε.
 import {
-  axisTargetAt,
   resolveTableAxisActionTarget,
   type TableAxisActionTarget,
 } from '../../bim/table/table-axis-action-target';
@@ -67,26 +66,20 @@ import {
 } from './table-header-axis-actions';
 // 🔴 §42 — η ΜΙΑ διαδρομή «δομική πράξη άξονα → εντολή → επιζών δρομέας», κοινή με το ⊖ (N.18).
 import { useTableAxisActionApply } from './use-table-axis-action-apply';
+// 🔴 ADR-739 §52 — η μορφοποίηση περνά πλέον από τον **ΕΝΑ** δρόμο επιλογής στόχου. Οι δύο
+// γραφείς (άξονας / κελιά) δεν καλούνται ποτέ κατευθείαν από επιφάνεια.
 import {
-  clearAxisStyleOverride,
-  nextBooleanFormat,
-  resolveAxesFormat,
-  setAxisStyleField,
-  writeEachAxis,
-} from '../../bim/table/table-axis-style-ops';
+  tableFormatScopeBounds,
+  type TableFormatScope,
+} from '../../bim/table/table-format-scope';
+import { tableFormatCommands } from './table-format-commands';
 import {
-  resolveAxisFormatSnapshot,
+  resolveTableFormatSnapshot,
   type FormatTarget,
-} from './table-header-format-snapshot';
+} from './table-format-snapshot';
 import { getAllLayers } from '../../stores/LayerStore';
-import { stepAxisTextHeight } from '../../bim/table/table-text-height-scale';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
-import {
-  extendTableSelectionTo,
-  resolveTableSelectionBounds,
-  wholeAxisSelection,
-  type TableCellRangeBounds,
-} from '../../bim/table/table-cell-range';
+import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import { useTableBorderActions } from './use-table-border-actions';
 import { useTableMergeActions } from './use-table-merge-actions';
 import {
@@ -212,6 +205,23 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
   );
 
   /**
+   * 🔴 ADR-739 §52 — **ο ίδιος στόχος, στη γλώσσα της μορφοποίησης**.
+   *
+   * Το `TableAxisActionTarget` κρατά ταυτότητες **και** θέσεις (η διαγραφή θέλει τις πρώτες, η
+   * εισαγωγή τις δεύτερες)· το {@link TableFormatScope} κρατά μόνο ό,τι χρειάζεται μια
+   * εγγραφή στυλ. Η μετάφραση ζει εδώ και είναι **μία γραμμή**, ακριβώς για να μη μπει
+   * `axis`/`ids` σε τέσσερις χειριστές — και για να καλεί αυτή η υποδοχή **τις ίδιες**
+   * συναρτήσεις με την κορδέλα και με το μενού των κελιών.
+   */
+  const formatScope = useCallback(
+    (hit: TableIndicatorHit): TableFormatScope | null => {
+      const target = axisTarget(hit);
+      return target ? { kind: 'axis', axis: target.axis, ids: target.ids } : null;
+    },
+    [axisTarget],
+  );
+
+  /**
    * Η **μία** διαδρομή κάθε δομικής πράξης: στόχος → σχέδιο (μεταβολή + πού πάει ο δρομέας)
    * → το υπάρχον {@link apply}.
    *
@@ -243,43 +253,31 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
    * τη μέτρησε ως sibling clone μέσα στο ίδιο commit. Το σκεπτικό μένει εδώ γιατί εδώ γεννήθηκε.
    */
   const applyFormat = useLiveTableMutation({ levelManager, execute, liveTable });
+  // §52 — οι πέντε εντολές, δεμένες μία φορά στον παραπάνω δεσμευτή (δες το module για το
+  // γιατί η κατάσταση διαβάζεται **μέσα** στη μεταβολή και όχι πριν από αυτήν).
+  const formatCommands = useMemo(() => tableFormatCommands(applyFormat), [applyFormat]);
 
   const borderActions = useTableBorderActions({ levelManager, liveTable });
   const mergeActions = useTableMergeActions({ levelManager, liveTable });
 
   /**
    * ADR-750 Φ3 — τα **όρια** που αντιστοιχούν σε μια ζώνη δείκτη: ολόκληρη η στήλη ή γραμμή.
-   *
-   * 🔑 Περνά υποχρεωτικά από το {@link wholeAxisSelection}, που είναι **ο ΕΝΑΣ ορισμός** της
-   * «ολόκληρης στήλης/γραμμής» (ADR-739 §27.16 Ε2). Ο πειρασμός εδώ είναι μια γραμμή αριθμητικής
-   * (`firstRow: 0, lastRow: rows.length - 1`) — που θα ήταν **τέταρτος** ορισμός της ίδιας
-   * έννοιας και θα έχανε σιωπηλά ό,τι μάθει κάποτε ο πρώτος.
-   *
-   * ⚠️ Το **resolved** μοντέλο και όχι το `live.model`: οι συναρτήσεις περιοχής δηλώνουν
-   * `TableModel` (κελιά ως `Map`), ενώ η οντότητα κρατά `PersistedTableModel` (κελιά ως
-   * ακολουθία). Το `resolveTableModel` είναι cached σε `WeakMap` πάνω στο ίδιο το persisted
-   * αντικείμενο, άρα η μετατροπή κοστίζει μία αναζήτηση.
    */
   const axisBounds = useCallback(
     (hit: TableIndicatorHit): TableCellRangeBounds | null => {
       const live = liveTable();
-      if (!live) return null;
-      const model = resolveTableModel(live.model);
-      const target = resolveTableAxisActionTarget(model, hit, getTableCellCursor()?.selection);
-      if (!target) return null;
-
+      const scope = formatScope(hit);
+      if (!live || !scope) return null;
       // 🔴 ADR-739 §27.17 — τα περιγράμματα καλύπτουν **όλους** τους επιλεγμένους άξονες.
       //
-      // Ο πειρασμός εδώ είναι δύο γραμμές αριθμητικής (`firstCol: target.firstIndex, …`) — ο
-      // **τέταρτος** ορισμός της «ολόκληρης στήλης». Αντ' αυτού: ο ΕΝΑΣ ορισμός για την πρώτη,
-      // ο ΕΝΑΣ ορισμός για την τελευταία, και ο **ΕΝΑΣ επεκτατής** (§27.16 Ε2) ανάμεσά τους.
-      // Με έναν άξονα το `from` και το `to` συμπίπτουν, άρα η παλιά συμπεριφορά μένει ακέραιη.
-      const first = wholeAxisSelection(model, axisTargetAt(target, 0));
-      const last = wholeAxisSelection(model, axisTargetAt(target, target.count - 1));
-      if (!first || !last) return null;
-      return resolveTableSelectionBounds(model, extendTableSelectionTo(first, last.to));
+      // ⚠️ §52 — το σώμα (πρώτος + τελευταίος άξονας μέσα από τον ΕΝΑ ορισμό της «ολόκληρης
+      // στήλης», §27.16 Ε2) **μετακόμισε** στο {@link tableFormatScopeBounds}: η κορδέλα ρωτά
+      // το ίδιο πράγμα και ένα αντίγραφο εδώ θα ήταν δεύτερη απάντηση στο «ποιο ορθογώνιο
+      // είναι μια μαρκαρισμένη στήλη;». Ο πειρασμός των δύο γραμμών αριθμητικής
+      // (`firstCol: target.firstIndex, …`) εξηγείται εκεί.
+      return tableFormatScopeBounds(live.model, scope);
     },
-    [liveTable],
+    [liveTable, formatScope],
   );
 
   /**
@@ -292,20 +290,19 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
   const formatTarget = useCallback(
     (hit: TableIndicatorHit): FormatTarget | null => {
       const live = liveTable();
-      const target = axisTarget(hit);
-      if (!live || !target) return null;
+      const scope = formatScope(hit);
+      if (!live || !scope) return null;
       return {
         model: live.model,
         style: resolveTableStyle(live),
-        axis: target.axis,
-        ids: target.ids,
+        scope,
         // ADR-739 Φ.Ε/Φ4 — τα χρώματα του σχεδίου διαβάζονται με **getter τη στιγμή του
         // συμβάντος** (ADR-040 κανόνας #2), ποτέ με συνδρομή: αυτό το hook καλείται μέσα από
         // τον `CanvasSection`, όπου κάθε συνδρομή γίνεται re-render του orchestrator.
         layerColors: getAllLayers().map((layer) => layer.color),
       };
     },
-    [liveTable, axisTarget],
+    [liveTable, formatScope],
   );
 
   const props = useMemo<TableHeaderMenuProps>(
@@ -314,58 +311,16 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       onInsertAfter: (hit) => runAxisAction(axisTarget(hit), insertAt('after')),
       onDelete: (hit) => runAxisAction(axisTarget(hit), deleteAxisTarget),
       resolveState: (hit) => resolveHeaderState(liveTable()?.model ?? null, axisTarget(hit)),
-      resolveFormat: (hit) => resolveAxisFormatSnapshot(formatTarget(hit)),
-      /**
-       * 🔴 §27.17 — **μία** απόφαση για όλους, όχι μία ανά άξονα.
-       *
-       * Η επόμενη τιμή βγαίνει από τη **συναθροισμένη** κατάσταση (`resolveAxesFormat`), άρα
-       * ισχύει αυτούσιος ο κανόνας «μεικτό ⇒ όλα ναι» του `nextBooleanFormat`: με δύο έντονες
-       * στήλες και μία όχι, το «Β» τις κάνει **όλες** έντονες. Αν κάθε άξονας αποφάσιζε μόνος
-       * του, το ίδιο πάτημα θα έσβηνε τα έντονα από τις δύο και θα τα άναβε στην τρίτη —
-       * δηλαδή το κουμπί θα **αντέστρεφε** αντί να ορίζει.
-       */
-      onToggleFormat: (hit, key) => {
-        const target = formatTarget(hit);
-        if (!target) return;
-        const { model, style, axis, ids } = target;
-        const next = nextBooleanFormat(resolveAxesFormat(model, style, axis, ids, key));
-        applyFormat((m) => writeEachAxis(m, ids, (n, id) => setAxisStyleField(n, axis, id, key, next)));
-      },
-      /**
-       * ⚠️ Εδώ, αντίθετα, **κάθε άξονας ξεκινά από το δικό του μέγεθος** — και είναι το σωστό:
-       * το «Αύξηση μεγέθους» του Excel ανεβάζει κάθε επιλεγμένο ένα σκαλί, διατηρώντας τις
-       * σχετικές διαφορές. Μια κοινή τιμή θα ισοπέδωνε τρεις διαφορετικά ρυθμισμένες στήλες
-       * στο ίδιο ύψος με ένα πάτημα, χωρίς ο χρήστης να το ζητήσει.
-       */
-      onStepTextHeight: (hit, direction) => {
-        const target = formatTarget(hit);
-        if (!target) return;
-        const { style, axis, ids } = target;
-        applyFormat((m) => writeEachAxis(m, ids, (n, id) => stepAxisTextHeight(n, style, axis, id, direction)));
-      },
-      onResetFormat: (hit) => {
-        const target = formatTarget(hit);
-        if (!target) return;
-        const { axis, ids } = target;
-        applyFormat((m) => writeEachAxis(m, ids, (n, id) => clearAxisStyleOverride(n, axis, id)));
-      },
-      // ADR-739 Φ.Ε/Φ4 + Φ4β — ρητό χρώμα, «Αυτόματο» και «Κανένα γέμισμα» είναι η **ίδια**
-      // πράξη με άλλο όρισμα: `hex` γράφει, `undefined` αφαιρεί το πεδίο (κληρονομιά), `null`
-      // γράφει «ρητά κανένα». Ξεχωριστές συναρτήσεις («clearTextColor», «setNoFill») θα ήταν
-      // δεύτερος και τρίτος δρόμος για την ίδια εγγραφή — και κάποιος από αυτούς θα ξεχνούσε
-      // κάποτε το no-op by-reference που κρατά καθαρό το ιστορικό αναιρέσεων.
-      onSetTextColor: (hit, value) => {
-        const target = formatTarget(hit);
-        if (!target) return;
-        const { axis, ids } = target;
-        applyFormat((m) => writeEachAxis(m, ids, (n, id) => setAxisStyleField(n, axis, id, 'textColorHex', value)));
-      },
-      onSetFillColor: (hit, value) => {
-        const target = formatTarget(hit);
-        if (!target) return;
-        const { axis, ids } = target;
-        applyFormat((m) => writeEachAxis(m, ids, (n, id) => setAxisStyleField(n, axis, id, 'fillColorHex', value)));
-      },
+      resolveFormat: (hit) => resolveTableFormatSnapshot(formatTarget(hit)),
+      // 🔴 §52 — τα πέντε σώματα **μετακόμισαν** στο `table-format-commands.ts` τη στιγμή που
+      // η κορδέλα και το μενού των κελιών ζήτησαν τα ίδια. Το σκεπτικό του καθενός (μεικτό ⇒
+      // όλα ναι· ένα πεδίο, τρεις καταστάσεις· η ασυμμετρία του βήματος) ζει εκεί, δίπλα στον
+      // κώδικα που το εκτελεί — εδώ μένει μόνο **ποιος** στόχος.
+      onToggleFormat: (hit, key) => formatCommands.toggle(formatTarget(hit), key),
+      onStepTextHeight: (hit, direction) => formatCommands.stepSize(formatTarget(hit), direction),
+      onResetFormat: (hit) => formatCommands.reset(formatTarget(hit)),
+      onSetTextColor: (hit, value) => formatCommands.setField(formatTarget(hit), 'textColorHex', value),
+      onSetFillColor: (hit, value) => formatCommands.setField(formatTarget(hit), 'fillColorHex', value),
       /**
        * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων σε μία απάντηση.
        *
@@ -421,7 +376,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       onClosed: restartTableCellCursorSession,
     }),
     [
-      runAxisAction, axisTarget, liveTable, applyFormat, formatTarget, axisBounds,
+      runAxisAction, axisTarget, liveTable, formatCommands, formatTarget, axisBounds,
       borderActions, mergeActions,
     ],
   );

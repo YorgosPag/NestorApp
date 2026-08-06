@@ -14,11 +14,15 @@
  * **επιλεγμένα κελιά**. Άρα η επιφάνεια δεν προστέθηκε για συμμετρία· προστέθηκε επειδή η
  * πράξη που ζητήθηκε κατοικεί εκεί.
  *
- * ## Τι δείχνει η γραμμή εδώ, και τι ΟΧΙ
- * **Μόνο** πράξεις περιοχής: συγχώνευση, περιγράμματα. Το τμήμα μορφοποίησης άξονα (Β/Ι/Υ,
- * χρώματα, μέγεθος) **λείπει** — γράφει `styleOverride` γραμμής/στήλης, και πάνω σε επιλογή
- * κελιών δεν υπάρχει άξονας να γράψει. Εννιά μονίμως γκρίζα κουμπιά θα ήταν υπόσχεση που δεν
- * τηρείται· δες `TableAxisFormatSection` για την πλήρη αιτιολόγηση.
+ * ## 🔴 Τι δείχνει η γραμμή εδώ — **ΑΝΑΤΡΟΠΗ ΤΟΥ §52**
+ * Εδώ έγραφε: «**Μόνο** πράξεις περιοχής: συγχώνευση, περιγράμματα. Το τμήμα μορφοποίησης
+ * άξονα (Β/Ι/Υ, χρώματα, μέγεθος) **λείπει** — γράφει `styleOverride` γραμμής/στήλης, και πάνω
+ * σε επιλογή κελιών δεν υπάρχει άξονας να γράψει».
+ *
+ * Η πρόταση ήταν σωστή και η αιτία της **πραγματική** — αλλά ήταν έλλειψη του μοντέλου, όχι
+ * σχεδιαστική επιλογή. Το §52 έγραψε τον γραφέα που έλειπε (`TableCell.styleOverride`) και την
+ * επιλογή στόχου (`table-format-scope.ts`), οπότε η γραμμή δείχνει πλέον **και τα εννιά**
+ * χειριστήρια — με στόχο τα μαρκαρισμένα κελιά. Δεν έλειπε κουμπί· έλειπε η **πράξη**.
  *
  * ## 🔑 Α22 — ο στόχος είναι το κελί, ΕΚΤΟΣ αν ανήκει στην επιλογή
  * ```
@@ -65,7 +69,10 @@ import { isTableMergeCommandDisabled } from './table-format-toolbar/TableMergeMe
 import {
   TableFormatToolbar,
   type TableBorderMenuHostProps,
+  type TableFormatSnapshot,
+  type TableToggleFormatKey,
 } from './table-format-toolbar/TableFormatToolbar';
+import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type { TableBorderCommandId } from '../../bim/table/table-range-border-ops';
 import {
   TABLE_DIAGONAL_COMMANDS,
@@ -77,6 +84,30 @@ import {
   type TableMergeState,
 } from '../../bim/table/table-range-merge-ops';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
+
+/**
+ * 🔴 ADR-739 §52 — οι **πέντε** εντολές μορφοποίησης, παραμετρικές ως προς τα όρια.
+ *
+ * Ένα αντικείμενο και όχι πέντε props, για τον ίδιο λόγο που το ADR-750 έβαλε τα περιγράμματα
+ * σε ένα: ο τύπος **είναι** το συμβόλαιο, και μια κατάσταση «τρεις από τις πέντε» δεν πρέπει
+ * να είναι εκφράσιμη. Παραμετρικές ως προς τα **όρια** (και όχι δεμένες) επειδή ο κανόνας
+ * ξαναρωτήματος του {@link TableRangeMenuProps.resolveTarget} απαιτεί να ξαναδοθούν φρέσκα
+ * μετά από κάθε πράξη — ένα undo ενόσω η γραμμή ήταν ανοιχτή δεν επιτρέπεται να γράψει σε
+ * κελιά που δεν υπάρχουν.
+ */
+export interface TableRangeFormatActions {
+  readonly onToggle: (bounds: TableCellRangeBounds, key: TableToggleFormatKey) => void;
+  readonly onStepSize: (
+    bounds: TableCellRangeBounds,
+    direction: TextHeightStepDirection,
+  ) => void;
+  readonly onReset: (bounds: TableCellRangeBounds) => void;
+  readonly onSetTextColor: (bounds: TableCellRangeBounds, value: string | undefined) => void;
+  readonly onSetFillColor: (
+    bounds: TableCellRangeBounds,
+    value: string | null | undefined,
+  ) => void;
+}
 
 /**
  * Ο στόχος, **παγωμένος στο άνοιγμα**: τα όρια που θα γραφτούν, το όνομα που φαίνεται και το τι
@@ -97,6 +128,14 @@ export interface TableRangeMenuTarget {
   readonly merge: TableMergeState;
   /** ADR-755 — το dropdown περιγραμμάτων, σε μία ερώτηση (ίδιο σχήμα με το μενού ζωνών). */
   readonly borders: TableBorderMenuHostProps;
+  /**
+   * 🔴 ADR-739 §52 — **τι δείχνουν τα εννιά χειριστήρια μορφοποίησης** για αυτά τα κελιά.
+   *
+   * Έλειπε μέχρι το §52 — όχι από παράλειψη: δεν υπήρχε γραφέας για το
+   * `TableCell.styleOverride`, οπότε το τμήμα θα ήταν εννιά κουμπιά που δεν κάνουν τίποτα.
+   * Δες την κεφαλίδα του `TableFormatSection`.
+   */
+  readonly format: TableFormatSnapshot;
 }
 
 export interface TableRangeMenuProps {
@@ -119,6 +158,8 @@ export interface TableRangeMenuProps {
     bounds: TableCellRangeBounds,
     commandId: TableMergeCommandId,
   ) => void | Promise<void>;
+  /** ADR-739 §52 — οι πέντε εντολές μορφοποίησης κελιών (Β/Ι/Υ, χρώματα, μέγεθος, επαναφορά). */
+  readonly formatActions: TableRangeFormatActions;
   /** Ξαναρωτά την κατάσταση μετά από εντολή — η γραμμή επιβιώνει και οφείλει να λέει αλήθεια. */
   readonly resolveTarget: (bounds: TableCellRangeBounds) => TableRangeMenuTarget | null;
   /** Το μενού έκλεισε — με ή χωρίς ενέργεια. Εδώ επιστρέφει η εστίαση στο κελί. */
@@ -131,7 +172,10 @@ export interface TableRangeContextMenuHandle {
 }
 
 const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, TableRangeMenuProps>(
-  ({ onApplyBorder, onResetBorders, onApplyDiagonal, onApplyMerge, resolveTarget, onClosed }, ref) => {
+  ({
+    onApplyBorder, onResetBorders, onApplyDiagonal, onApplyMerge, formatActions,
+    resolveTarget, onClosed,
+  }, ref) => {
     const { t } = useTranslation('dxf-viewer');
     const toolbarRef = useRef<HTMLDivElement>(null);
 
@@ -186,6 +230,20 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
             scope="range"
             label={target.label}
             surfaceRef={toolbarRef}
+            /*
+              🔴 ADR-739 §52 — **τα ίδια εννιά χειριστήρια με τη ζώνη δείκτη**, με άλλον στόχο
+              μέσα τους. Κάθε εντολή περνά από το {@link runOnRange}: εφαρμογή → ξαναρώτημα →
+              κλείσιμο **μόνο** του μενού· η γραμμή μένει, γιατί η μορφοποίηση είναι κατεξοχήν
+              επαναλαμβανόμενη πράξη (έντονα, μετά πλάγια, μετά ένα μέγεθος πάνω).
+            */
+            format={{
+              format: target.format,
+              onToggle: (key) => runOnRange((bounds) => formatActions.onToggle(bounds, key)),
+              onStepSize: (dir) => runOnRange((bounds) => formatActions.onStepSize(bounds, dir)),
+              onReset: () => runOnRange((bounds) => formatActions.onReset(bounds)),
+              onSetTextColor: (v) => runOnRange((bounds) => formatActions.onSetTextColor(bounds, v)),
+              onSetFillColor: (v) => runOnRange((bounds) => formatActions.onSetFillColor(bounds, v)),
+            }}
             merge={{
               state: target.merge,
               onApply: (id) => runOnRange((bounds) => onApplyMerge(bounds, id)),

@@ -18,7 +18,7 @@ import { TableFormatToolbar } from '../TableFormatToolbar';
 import { isTableMergeCommandDisabled } from '../TableMergeMenu';
 import { TABLE_MERGE_COMMANDS } from '@/subapps/dxf-viewer/bim/table/table-range-merge-ops';
 import type { TableMergeState } from '@/subapps/dxf-viewer/bim/table/table-range-merge-ops';
-import type { TableAxisFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
+import type { TableFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
 
 // Ίδιο μοτίβο με τα αδελφά: πραγματικό i18next με το **ίδιο** locale αρχείο που φορτώνει η
 // παραγωγή. Τα ονόματα των τεσσάρων εντολών είναι το αντικείμενο του test — ένα ωμό κλειδί θα
@@ -52,7 +52,7 @@ const NO_COLOR = {
   current: undefined, mixed: false, explicit: false,
   inheritedColor: undefined, inheritedMixed: false, drawingColors: [],
 } as const;
-const FORMAT: TableAxisFormatSnapshot = {
+const FORMAT: TableFormatSnapshot = {
   bold: NO_FORMAT,
   italic: NO_FORMAT,
   underline: NO_FORMAT,
@@ -65,7 +65,14 @@ const FREE: TableMergeState = { merged: false, canMerge: true };
 const MERGED: TableMergeState = { merged: true, canMerge: true };
 const SINGLE_CELL: TableMergeState = { merged: false, canMerge: false };
 
-/** Η υποδοχή **περιοχής**: mini toolbar χωρίς τμήμα άξονα — ακριβώς ό,τι τρέχει στα κελιά. */
+/**
+ * Η γραμμή **χωρίς** τμήμα μορφοποίησης — απομονώνει τη συγχώνευση.
+ *
+ * ⚠️ Έγραφε «ακριβώς ό,τι τρέχει στα κελιά». Μετά το **ADR-739 §52** αυτό δεν ισχύει: η
+ * υποδοχή της περιοχής δείχνει πλέον **και** τα εννιά χειριστήρια μορφοποίησης (ο γραφέας
+ * `TableCell.styleOverride` γράφτηκε). Το σχήμα εδώ μένει ως έχει επίτηδες — ελέγχει ότι το
+ * split button δουλεύει **μόνο** του, χωρίς να εξαρτάται από γείτονες.
+ */
 function renderRangeToolbar(state: TableMergeState = FREE) {
   const onApply = jest.fn();
   const surfaceRef = React.createRef<HTMLDivElement>();
@@ -95,7 +102,7 @@ function renderAxisToolbar(state: TableMergeState = FREE) {
       scope="column"
       label="B"
       surfaceRef={surfaceRef}
-      axisFormat={{
+      format={{
         format: FORMAT,
         onToggle: noop,
         onStepSize: noop,

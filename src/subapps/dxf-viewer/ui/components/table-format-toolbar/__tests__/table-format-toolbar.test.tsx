@@ -39,7 +39,7 @@ import { initReactI18next, I18nextProvider } from 'react-i18next';
 import elDxfViewer from '@/i18n/locales/el/dxf-viewer.json';
 import {
   TableFormatToolbar,
-  type TableAxisFormatSnapshot,
+  type TableFormatSnapshot,
   type TableFormatToolbarProps,
   type TableToggleFormatState,
 } from '../TableFormatToolbar';
@@ -109,7 +109,7 @@ const INHERITED_NO_FILL: TableAxisColorState = {
 };
 
 /** bold: ενεργό+ρητό· italic: μεικτό (όχι ρητό)· underline: τίποτα. */
-const SAMPLE_FORMAT: TableAxisFormatSnapshot = {
+const SAMPLE_FORMAT: TableFormatSnapshot = {
   bold: fmt(true, false, true),
   italic: fmt(false, true, false),
   underline: fmt(false, false, false),
@@ -119,15 +119,25 @@ const SAMPLE_FORMAT: TableAxisFormatSnapshot = {
 };
 
 /**
- * ADR-755 — τα οκτώ props μορφοποίησης άξονα ταξιδεύουν πλέον ως **ένα** αντικείμενο
- * (`axisFormat`), ώστε το τμήμα να μπορεί να λείπει ολόκληρο στην υποδοχή της περιοχής.
+ * ADR-755 / §52 — τα οκτώ props μορφοποίησης ταξιδεύουν ως **ένα** αντικείμενο (`format` του
+ * component· `formatSection` εδώ, για να μη συγκρούεται με τη συντόμευση του στιγμιότυπου),
+ * ώστε το τμήμα να μπορεί να λείπει ολόκληρο όταν δεν υπάρχει στόχος.
  *
  * Ο helper δέχεται και τις **παλιές** συντομεύσεις (`format`, `axis`) και τις μεταφράζει: οι
  * είκοσι υπάρχουσες δοκιμές ρωτούν «τι κάνει αυτό το κουμπί», όχι «πώς συσκευάζονται τα props»,
  * και μια μαζική επανεγγραφή τους θα άλλαζε είκοσι σημεία για μηδέν επιπλέον απόδειξη.
  */
-type ToolbarOverrides = Partial<TableFormatToolbarProps> & {
-  readonly format?: TableAxisFormatSnapshot;
+type ToolbarOverrides = Omit<Partial<TableFormatToolbarProps>, 'format'> & {
+  /** Συντόμευση: μόνο το **στιγμιότυπο**, με αδρανείς χειριστές γύρω του. */
+  readonly format?: TableFormatSnapshot;
+  /**
+   * Ολόκληρο το τμήμα, όταν το test θέλει δικούς του χειριστές.
+   *
+   * ⚠️ `null` = **«λείπει»** (το prop δεν περνιέται καθόλου). Δεν χρησιμοποιείται `undefined`
+   * γιατί εκείνο είναι η **απουσία override**, δηλαδή «δώσε το προεπιλεγμένο τμήμα» — και η
+   * σύγχυση των δύο θα έκανε το test «λείπει ολόκληρο» να ελέγχει τα αντίθετα από όσα λέει.
+   */
+  readonly formatSection?: TableFormatToolbarProps['format'] | null;
   readonly axis?: TableFormatToolbarProps['scope'];
 };
 
@@ -139,7 +149,7 @@ function renderToolbar(overrides: ToolbarOverrides = {}) {
   const onSetTextColor = jest.fn();
   const onSetFillColor = jest.fn();
 
-  const { format, axis, axisFormat, ...rest } = overrides;
+  const { format, axis, formatSection, ...rest } = overrides;
 
   const utils = render(
     <TableFormatToolbar
@@ -148,7 +158,7 @@ function renderToolbar(overrides: ToolbarOverrides = {}) {
       scope={axis ?? 'column'}
       label="A"
       surfaceRef={surfaceRef}
-      axisFormat={axisFormat ?? {
+      format={formatSection === null ? undefined : formatSection ?? {
         format: format ?? SAMPLE_FORMAT,
         onToggle,
         onStepSize,
@@ -203,7 +213,7 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελε
     onInsertAfter: noop,
     onDelete: noop,
     resolveState: () => ({ label: 'B', axisLabel: 'B', count: 1, canInsert: true, canDelete: true }),
-    resolveFormat: (): TableAxisFormatSnapshot => ({
+    resolveFormat: (): TableFormatSnapshot => ({
       bold: NO_FORMAT,
       italic: NO_FORMAT,
       underline: NO_FORMAT,
@@ -979,5 +989,40 @@ describe('🔴 μεικτή ΚΛΗΡΟΝΟΜΙΑ: το «Αυτόματο» δε
     const none = screen.getByRole('menuitemradio', { name: /Κανένα γέμισμα/ })
       .querySelector('span');
     expect(swatch?.className).not.toBe(none?.className);
+  });
+});
+
+/**
+ * 🔴 ADR-739 §52 — **η υποδοχή της ΠΕΡΙΟΧΗΣ δείχνει πλέον μορφοποίηση.**
+ *
+ * Μέχρι το §52 το τμήμα έλειπε ολόκληρο από το δεξί κλικ σε κελιά, και ο λόγος ήταν γραμμένος
+ * στην κεφαλίδα του component: «τα εννιά χειριστήρια γράφουν `styleOverride` γραμμής/στήλης,
+ * και πάνω σε επιλογή κελιών δεν υπάρχει άξονας να γράψουν». Η αιτία ήταν **πραγματική** —
+ * και έπαψε να ισχύει τη στιγμή που γράφτηκε ο γραφέας κελιών.
+ *
+ * Το test κλειδώνει και τις **δύο** πλευρές: ότι εμφανίζεται όταν δίνεται, και ότι εξακολουθεί
+ * να λείπει ολόκληρο όταν δεν δίνεται (στόχος που δεν επιβίωσε ⇒ ποτέ εννιά γκρίζα κουμπιά).
+ */
+describe('🔴 §52 — scope="range" με τμήμα μορφοποίησης', () => {
+  it('δείχνει τα Β/Ι/Υ και την «Επαναφορά» πάνω σε επιλογή κελιών', () => {
+    renderToolbar({ axis: 'range' });
+    expect(screen.getByRole('button', { name: /Έντονα/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Πλάγια/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Υπογράμμιση/ })).toBeInTheDocument();
+  });
+
+  it('το πάτημα φτάνει στον χειριστή της υποδοχής — ο στόχος είναι τα ΚΕΛΙΑ', () => {
+    const { onToggle } = renderToolbar({ axis: 'range' });
+    fireEvent.click(screen.getByRole('button', { name: /Έντονα/ }));
+    expect(onToggle).toHaveBeenCalledWith('bold');
+  });
+
+  it('🔴 ΧΩΡΙΣ τμήμα (στόχος που δεν επιβίωσε) ⇒ ΛΕΙΠΕΙ ολόκληρο, ποτέ γκρίζο', () => {
+    renderToolbar({
+      axis: 'range',
+      formatSection: null,
+      merge: { state: { merged: false, canMerge: true }, onApply: () => {} },
+    });
+    expect(screen.queryByRole('button', { name: /Έντονα/ })).not.toBeInTheDocument();
   });
 });

@@ -30,7 +30,7 @@ import {
   BUILTIN_TABLE_STYLES,
   BUILTIN_TABLE_STYLE_IDS,
 } from '@/subapps/dxf-viewer/bim/table/table-style-presets';
-import type { TableAxisFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
+import type { TableFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
 import type { TableCellRangeBounds } from '@/subapps/dxf-viewer/bim/table/table-cell-range';
 import type { TableStyle } from '@/subapps/dxf-viewer/bim/table/table-style';
 import type { PersistedTableModel, TableColumn, TableRow } from '@/subapps/dxf-viewer/types/table';
@@ -97,7 +97,7 @@ const NO_COLOR = {
   current: undefined, mixed: false, explicit: false,
   inheritedColor: undefined, inheritedMixed: false, drawingColors: [],
 } as const;
-const FORMAT: TableAxisFormatSnapshot = {
+const FORMAT: TableFormatSnapshot = {
   bold: NO_FORMAT,
   italic: NO_FORMAT,
   underline: NO_FORMAT,
@@ -125,7 +125,7 @@ function renderToolbar(scenario: Scenario = {}) {
       scope="range"
       label="A1"
       surfaceRef={surfaceRef}
-      axisFormat={{
+      format={{
         format: FORMAT,
         onToggle: noop,
         onStepSize: noop,

@@ -371,7 +371,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           scope={target.hit.axis}
           label={axisLabel}
           surfaceRef={toolbarRef}
-          axisFormat={{
+          format={{
             format: target.format,
             onToggle: (key) => runFormat((hit) => onToggleFormat(hit, key)),
             onStepSize: (direction) => runFormat((hit) => onStepTextHeight(hit, direction)),

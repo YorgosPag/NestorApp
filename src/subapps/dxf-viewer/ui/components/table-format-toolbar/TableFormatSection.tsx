@@ -1,32 +1,31 @@
 'use client';
 
 /**
- * 🔴 ADR-755 — **το διαμέρισμα «μορφοποίηση ΑΞΟΝΑ»** του mini toolbar: Β/Ι/Υ, τα δύο χρώματα,
- * το μέγεθος, η επαναφορά.
+ * 🔴 ADR-755 / **ADR-739 §52** — **το διαμέρισμα μορφοποίησης**: Β/Ι/Υ, τα δύο χρώματα, το
+ * μέγεθος, η επαναφορά.
  *
- * ## Γιατί έγινε δικό του component — και προαιρετικό
- * Το mini toolbar εμφανίζεται πλέον σε **δύο** συμφραζόμενα:
+ * ## 🔴 ΗΤΑΝ «ΜΟΡΦΟΠΟΙΗΣΗ ΑΞΟΝΑ» — ΔΕΝ ΕΙΝΑΙ ΠΙΑ (§52)
+ * Εδώ έγραφε: «*δεξί κλικ σε κελιά → στόχος = ΠΕΡΙΟΧΗ → **κανένα** από τα παρακάτω δεν ισχύει
+ * (ακόμη)*», και το τμήμα έλειπε ολόκληρο από την υποδοχή της περιοχής. Η πρόταση ήταν σωστή
+ * για την **αιτία** που έγραφε δίπλα της: τα εννιά χειριστήρια έγραφαν `TableRow`/
+ * `TableColumn.styleOverride`, και σε επιλογή κελιών **δεν υπάρχει άξονας** να γράψουν.
  *
- * ```
- *   δεξί κλικ σε ζώνη δείκτη  →  στόχος = ΑΞΟΝΑΣ    →  όλα τα παρακάτω ισχύουν
- *   δεξί κλικ σε κελιά        →  στόχος = ΠΕΡΙΟΧΗ   →  κανένα δεν ισχύει (ακόμη)
- * ```
+ * Το §52 έγραψε τον γραφέα που έλειπε (`TableCell.styleOverride`) και **την επιλογή στόχου**
+ * (`table-format-scope.ts`). Άρα η αιτία εξαφανίστηκε: τα ίδια εννιά χειριστήρια δείχνουν
+ * πλέον την ίδια ερώτηση για **όποιον** στόχο, και η υποδοχή της περιοχής τα παίρνει αυτούσια.
+ * Το component δεν άλλαξε γραμμή — άλλαξε το **όνομά** του, γιατί η λέξη «άξονας» είχε γίνει
+ * ψέμα (`TableAxisFormatSection` → `TableFormatSection`).
  *
- * Τα εννιά χειριστήρια εδώ γράφουν `TableColumn.styleOverride` / `TableRow.styleOverride` —
- * δηλαδή **στυλ άξονα**. Πάνω σε επιλογή κελιών δεν υπάρχει άξονας να γράψουν, και μια
- * «μορφοποίηση περιοχής» δεν είναι η ίδια πράξη με άλλο όρισμα: είναι άλλη πράξη (κάθε κελί
- * ξεχωριστά, ή runs χαρακτήρων του ADR-753). Η υποδοχή περιοχής θα την αποκτήσει όταν γραφτεί,
- * όχι σαν παρενέργεια αυτής της φάσης.
- *
- * Άρα το τμήμα είναι **απόν**, όχι απενεργοποιημένο: εννιά γκρίζα κουμπιά που δεν πρόκειται να
- * ενεργοποιηθούν ποτέ σε αυτό το συμφραζόμενο θα ήταν υπόσχεση που δεν τηρείται.
+ * Παραμένει **προαιρετικό** στο δοχείο: η γραμμή μπορεί ακόμη να ανοίξει χωρίς στόχο (undo
+ * που έσβησε τη γραμμή), και εννιά μονίμως γκρίζα κουμπιά θα ήταν χειρότερα από την απουσία
+ * τους — «μην υπόσχεσαι ό,τι δεν κάνεις».
  *
  * ## Γιατί ΕΝΑ prop και όχι οκτώ
  * Η ίδια απόφαση που πήρε ήδη το ADR-750 για τα περιγράμματα («**μία** ερώτηση και όχι πέντε
  * props»): ο τύπος **είναι** το συμβόλαιο. Οκτώ προαιρετικά props θα σήμαιναν οκτώ ελέγχους
  * `?.` στο δοχείο και μια κατάσταση «μισό τμήμα» που κανείς δεν θέλει να είναι εκφράσιμη.
  *
- * @module subapps/dxf-viewer/ui/components/table-format-toolbar/TableAxisFormatSection
+ * @module subapps/dxf-viewer/ui/components/table-format-toolbar/TableFormatSection
  * @see ui/components/table-format-toolbar/TableFormatToolbar.tsx — το δοχείο
  */
 
@@ -43,12 +42,12 @@ import styles from './TableFormatToolbar.module.css';
 /** Τα δίτιμα πεδία που εκθέτει το v1 του toolbar. */
 export type TableToggleFormatKey = 'bold' | 'italic' | 'underline';
 
-export interface TableAxisFormatSnapshot {
+export interface TableFormatSnapshot {
   readonly bold: TableToggleFormatState;
   readonly italic: TableToggleFormatState;
   readonly underline: TableToggleFormatState;
   /**
-   * ADR-739 Φ.Ε/Φ4 — το **χρώμα κειμένου** κατά μήκος του άξονα.
+   * ADR-739 Φ.Ε/Φ4 — το **χρώμα κειμένου** του στόχου (άξονα ή περιοχής, §52).
    *
    * Δεν είναι δίτιμο, άρα δεν χωρά στο {@link TableToggleFormatState}: αντί για «πατημένο /
    * ελεύθερο» απαντά «**ποιο** χρώμα». Ο τύπος ζει στο `table-color-menu-selection` μαζί με
@@ -58,12 +57,12 @@ export interface TableAxisFormatSnapshot {
   readonly textColor: TableAxisColorState;
   /** ADR-739 Φ.Ε/Φ4β — το **γέμισμα**: ίδιο σχήμα, τρεις καταστάσεις αντί για δύο. */
   readonly fillColor: TableAxisColorState;
-  /** Ο άξονας δηλώνει **οτιδήποτε** ρητά — αλλιώς η «Επαναφορά στο στυλ» δεν έχει τι να κάνει. */
+  /** Ο στόχος δηλώνει **οτιδήποτε** ρητά — αλλιώς η «Επαναφορά» δεν έχει τι να κάνει. */
   readonly canReset: boolean;
 }
 
-export interface TableAxisFormatSectionProps {
-  readonly format: TableAxisFormatSnapshot;
+export interface TableFormatSectionProps {
+  readonly format: TableFormatSnapshot;
   readonly onToggle: (key: TableToggleFormatKey) => void;
   readonly onStepSize: (direction: TextHeightStepDirection) => void;
   readonly onReset: () => void;
@@ -110,9 +109,9 @@ const COLOR_SLOTS = 2;
  * ταυτόχρονες προσθήκες σε κοινό working tree θα έδιναν δύο διαφορετικούς αριθμούς για την
  * ίδια θέση.
  */
-export const TABLE_AXIS_FORMAT_SLOTS = TOGGLES.length + COLOR_SLOTS * 2 + 3;
+export const TABLE_FORMAT_SLOTS = TOGGLES.length + COLOR_SLOTS * 2 + 3;
 
-export function TableAxisFormatSection(props: TableAxisFormatSectionProps): React.ReactElement {
+export function TableFormatSection(props: TableFormatSectionProps): React.ReactElement {
   const { format, onToggle, onStepSize, onReset, onSetTextColor, onSetFillColor, rovingOf } = props;
   const { t } = useTranslation('dxf-viewer');
 

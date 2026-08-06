@@ -28,7 +28,7 @@ import {
   BUILTIN_TABLE_STYLE_IDS,
 } from '@/subapps/dxf-viewer/bim/table/table-style-presets';
 import { tableBorderLinetypeNames, tableBorderWeightsMm } from '../table-border-pencil-options';
-import type { TableAxisFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
+import type { TableFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
 import type { TableBorderSpec } from '@/subapps/dxf-viewer/types/table-edges';
 
 // Ίδιο μοτίβο με το αδελφό `table-format-toolbar.test.tsx`: πραγματικό i18next με το **ίδιο**
@@ -68,7 +68,7 @@ const NO_COLOR = {
   current: undefined, mixed: false, explicit: false,
   inheritedColor: undefined, inheritedMixed: false, drawingColors: [],
 } as const;
-const FORMAT: TableAxisFormatSnapshot = {
+const FORMAT: TableFormatSnapshot = {
   bold: NO_FORMAT,
   italic: NO_FORMAT,
   underline: NO_FORMAT,
@@ -114,7 +114,7 @@ function renderToolbar(borders?: {
       scope="column"
       label="B"
       surfaceRef={surfaceRef}
-      axisFormat={{
+      format={{
         format: FORMAT,
         onToggle: noop,
         onStepSize: noop,
@@ -149,7 +149,7 @@ describe('ADR-750 Φ3 — το dropdown στο toolbar', () => {
     render(
       <TableFormatToolbar
         anchorX={10} anchorY={10} scope="column" label="B" surfaceRef={surfaceRef}
-        axisFormat={{
+        format={{
           format: FORMAT, onToggle: noop, onStepSize: noop, onReset: noop,
           onSetTextColor: noop, onSetFillColor: noop,
         }}

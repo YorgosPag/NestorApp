@@ -7,15 +7,18 @@
  * Δεξί κλικ ⇒ **δύο** επιφάνειες: αυτή εδώ, ξεκομμένη, και από κάτω το μενού. Ακριβώς όπως το
  * Excel, και όπως το ζήτησε ρητά ο ιδιοκτήτης: «ξεκομμένο … πάνω από το μενού».
  *
- * ## 🔴 ΤΙ ΔΕΙΧΝΕΙ, ΑΝΑΛΟΓΑ ΜΕ ΤΟ ΠΟΥ ΑΝΟΙΞΕ (ADR-755)
+ * ## 🔴 ΤΙ ΔΕΙΧΝΕΙ, ΑΝΑΛΟΓΑ ΜΕ ΤΟ ΠΟΥ ΑΝΟΙΞΕ (ADR-755 · **αναθεωρημένο §52**)
  * ```
- *   ζώνη δείκτη (γράμμα/αριθμός)  →  axis='column'|'row'  →  μορφοποίηση ΑΞΟΝΑ + περιοχή
- *   κελιά (επιλογή)               →  axis='range'         →  μόνο πράξεις ΠΕΡΙΟΧΗΣ
+ *   ζώνη δείκτη (γράμμα/αριθμός)  →  scope='column'|'row'  →  μορφοποίηση ΑΞΟΝΑ + περιοχή
+ *   κελιά (επιλογή)               →  scope='range'         →  μορφοποίηση ΚΕΛΙΩΝ + περιοχή
  * ```
- * Κάθε διαμέρισμα είναι **προαιρετικό prop**: απόν ⇒ δεν αποδίδεται καθόλου. Δεν είναι
- * ευκολία — είναι ο κανόνας «μην υπόσχεσαι ό,τι δεν κάνεις»: τα εννιά χειριστήρια άξονα
- * γράφουν `styleOverride` γραμμής/στήλης, και πάνω σε επιλογή κελιών **δεν υπάρχει άξονας** να
- * γράψουν. Εννιά μονίμως γκρίζα κουμπιά θα ήταν χειρότερα από την απουσία τους.
+ * ⚠️ Η δεύτερη γραμμή έγραφε «**μόνο** πράξεις ΠΕΡΙΟΧΗΣ» μέχρι το §52, επειδή τότε δεν υπήρχε
+ * γραφέας για το `TableCell.styleOverride` — δεν έλειπε κουμπί, **έλειπε η πράξη**. Τώρα και
+ * οι δύο υποδοχές δίνουν το ίδιο τμήμα, με άλλον στόχο μέσα του (`table-format-scope.ts`).
+ *
+ * Κάθε διαμέρισμα παραμένει **προαιρετικό prop**: απόν ⇒ δεν αποδίδεται καθόλου. Είναι ο
+ * κανόνας «μην υπόσχεσαι ό,τι δεν κάνεις» — μια γραμμή που άνοιξε πάνω σε στόχο που δεν
+ * επιβίωσε (undo) δεν δείχνει εννιά μονίμως γκρίζα κουμπιά, τα παραλείπει.
  *
  * ## 🔴 Γιατί σκέτα `<button>` και ΟΧΙ `DxfMenuItem`
  * ⚠️ **Η αιτιολόγηση άλλαξε στις 2026-08-03 — το συμπέρασμα όχι.** Έγραφε: «το `onSelect` του
@@ -44,7 +47,7 @@
  * @module subapps/dxf-viewer/ui/components/table-format-toolbar/TableFormatToolbar
  * @see ui/components/TableHeaderContextMenu.tsx — η υποδοχή του **άξονα**
  * @see ui/components/TableRangeContextMenu.tsx — η υποδοχή της **περιοχής** (ADR-755)
- * @see bim/table/table-axis-style-ops.ts — οι καθαρές πράξεις πίσω από τη μορφοποίηση άξονα
+ * @see bim/table/table-format-scope.ts — ο ΕΝΑΣ δρόμος «τι διάλεξε ο χρήστης → πού γράφεται»
  */
 
 import React, { type RefObject } from 'react';
@@ -61,25 +64,25 @@ import { useAriaHiddenGuard, useToolbarPlacement } from './use-toolbar-surface';
 import { TableBorderMenu, type TableBorderMenuProps } from './TableBorderMenu';
 import { TableMergeMenu, type TableMergeMenuProps } from './TableMergeMenu';
 import {
-  TABLE_AXIS_FORMAT_SLOTS,
-  TableAxisFormatSection,
-  type TableAxisFormatSectionProps,
-} from './TableAxisFormatSection';
+  TABLE_FORMAT_SLOTS,
+  TableFormatSection,
+  type TableFormatSectionProps,
+} from './TableFormatSection';
 import styles from './TableFormatToolbar.module.css';
 
 // Επανεξαγωγή: οι υποδοχές εισάγουν **έναν** τύπο από **ένα** σημείο, όπως και πριν τη διάσπαση
 // του ADR-755 — καμία υπάρχουσα διαδρομή εισαγωγής δεν αλλάζει.
 export type {
-  TableAxisFormatSnapshot,
+  TableFormatSnapshot,
   TableToggleFormatKey,
-} from './TableAxisFormatSection';
+} from './TableFormatSection';
 export type { TableToggleFormatState } from './ToolbarButton';
 
 /** Πάνω σε τι άνοιξε η γραμμή — καθορίζει **μόνο** το προσβάσιμο όνομά της. */
 export type TableFormatToolbarScope = 'row' | 'column' | 'range';
 
-/** Το τμήμα μορφοποίησης άξονα **όπως το δίνει ο ξενιστής**: όλα εκτός από τις θέσεις roving. */
-export type TableAxisFormatHostProps = Omit<TableAxisFormatSectionProps, 'rovingOf'>;
+/** Το τμήμα μορφοποίησης **όπως το δίνει ο ξενιστής**: όλα εκτός από τις θέσεις roving. */
+export type TableFormatHostProps = Omit<TableFormatSectionProps, 'rovingOf'>;
 
 /** Το split button συγχώνευσης όπως το δίνει ο ξενιστής (ADR-755). */
 export type TableMergeMenuHostProps = Omit<TableMergeMenuProps, 'rovingApply' | 'rovingMenu'>;
@@ -94,21 +97,21 @@ export interface TableFormatToolbarProps {
   /** Το δοχείο, ώστε ο γονέας να αναγνωρίζει «κλικ πάνω μου» στο `onInteractOutside`. */
   readonly surfaceRef: RefObject<HTMLDivElement | null>;
   /**
-   * ADR-755 — η μορφοποίηση **άξονα**· **απόν ⇒ η γραμμή δεν το δείχνει καθόλου**.
+   * ADR-755 / §52 — η **μορφοποίηση**· **απόν ⇒ η γραμμή δεν το δείχνει καθόλου**.
    *
    * Ένα prop και όχι οκτώ: ο τύπος **είναι** το συμβόλαιο, όπως ήδη ισχύει για το
-   * {@link borders}. Δες την κεφαλίδα του `TableAxisFormatSection` για το γιατί λείπει στην
-   * υποδοχή της περιοχής.
+   * {@link borders}. Ονομαζόταν `axisFormat` μέχρι το §52, όταν ο στόχος μπορούσε να είναι
+   * μόνο άξονας· η μετονομασία είναι το σημείο όπου το όνομα ξαναείπε την αλήθεια.
    */
-  readonly axisFormat?: TableAxisFormatHostProps;
+  readonly format?: TableFormatHostProps;
   /** ADR-755 — η **συγχώνευση**· πράξη περιοχής, ισχύει και στις δύο υποδοχές. */
   readonly merge?: TableMergeMenuHostProps;
   /**
    * ADR-750 Φ3 — το dropdown περιγραμμάτων· **απόν ⇒ η γραμμή δεν το δείχνει καθόλου**.
    *
    * Προαιρετικό και όχι υποχρεωτικό, ώστε ο μόνος τότε καλών να μην αλλάξει υπογραφή: η
-   * μορφοποίηση κειμένου (Β/Ι/Υ) είναι πράξη **άξονα**, τα περιγράμματα πράξη **περιοχής**.
-   * Είναι δύο ορθογώνια επίπεδα που τυχαίνει να μοιράζονται γραμμή εργαλείων — όχι ένα.
+   * μορφοποίηση κειμένου (Β/Ι/Υ) γράφει **στυλ**, τα περιγράμματα γράφουν **ακμές**. Είναι
+   * δύο ορθογώνια επίπεδα που τυχαίνει να μοιράζονται γραμμή εργαλείων — όχι ένα.
    */
   readonly borders?: Omit<TableBorderMenuProps, 'roving'>;
 }
@@ -117,7 +120,7 @@ export interface TableFormatToolbarProps {
 const MERGE_SLOTS = 2;
 
 export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactElement | null {
-  const { anchorX, anchorY, scope, label, surfaceRef, axisFormat, merge, borders } = props;
+  const { anchorX, anchorY, scope, label, surfaceRef, format, merge, borders } = props;
   const { t } = useTranslation('dxf-viewer');
 
   /**
@@ -126,10 +129,10 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
    *
    * Με σταθερό μέγεθος, ο δείκτης θα έδειχνε σε κουμπί που δεν υπάρχει και η γραμμή θα έμενε
    * χωρίς στάση `Tab` (δες `use-roving-toolbar`). Και το **πλήθος** κάθε τμήματος έρχεται από
-   * το ίδιο το τμήμα ({@link TABLE_AXIS_FORMAT_SLOTS}): γραμμένο εδώ θα ήταν σιωπηλή εξάρτηση
+   * το ίδιο το τμήμα ({@link TABLE_FORMAT_SLOTS}): γραμμένο εδώ θα ήταν σιωπηλή εξάρτηση
    * που σπάει στην επόμενη προσθήκη **εκεί**.
    */
-  const mergeBase = axisFormat ? TABLE_AXIS_FORMAT_SLOTS : 0;
+  const mergeBase = format ? TABLE_FORMAT_SLOTS : 0;
   const bordersIndex = mergeBase + (merge ? MERGE_SLOTS : 0);
   const roving = useRovingToolbar(bordersIndex + (borders ? 1 : 0));
 
@@ -162,8 +165,8 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
       )}
       {...TABLE_CELL_SESSION_MARKER}
     >
-      {axisFormat ? (
-        <TableAxisFormatSection {...axisFormat} rovingOf={roving.itemProps} />
+      {format ? (
+        <TableFormatSection {...format} rovingOf={roving.itemProps} />
       ) : null}
 
       {/*
@@ -177,7 +180,7 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
       */}
       {merge ? (
         <>
-          {axisFormat ? <span className={styles.separator} aria-hidden="true" /> : null}
+          {format ? <span className={styles.separator} aria-hidden="true" /> : null}
           <TableMergeMenu
             {...merge}
             rovingApply={roving.itemProps(mergeBase)}
@@ -193,7 +196,7 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
       */}
       {borders ? (
         <>
-          {axisFormat || merge ? <span className={styles.separator} aria-hidden="true" /> : null}
+          {format || merge ? <span className={styles.separator} aria-hidden="true" /> : null}
           <TableBorderMenu roving={roving.itemProps(bordersIndex)} {...borders} />
         </>
       ) : null}
