@@ -15,7 +15,8 @@
  */
 
 import type { BindableSurveyField, SurveyParsedValue } from '@/config/survey-bindable-fields';
-import type { DocumentBodyFieldKey } from '@/types/document-body-reading';
+import type { SurveyRowPartValue } from '@/config/survey-row-bindings';
+import type { DocumentBodyFieldKey, DocumentBodyListKey } from '@/types/document-body-reading';
 import type { AcquisitionStatus } from '@/types/ownership-table';
 import type { ProjectRole } from '@/types/entity-associations';
 import type { TitleBlockFieldKey } from '@/types/title-block-reading';
@@ -32,7 +33,7 @@ import type { TitleBlockFieldKey } from '@/types/title-block-reading';
  * **χωρίς ετικέτα δεν χτίζει**. Είναι ο μόνος λόγος που η γραμμή δεν μπορεί ποτέ να
  * εμφανιστεί ανώνυμη.
  */
-export type ProposalFieldKey = TitleBlockFieldKey | DocumentBodyFieldKey;
+export type ProposalFieldKey = TitleBlockFieldKey | DocumentBodyFieldKey | DocumentBodyListKey;
 
 // ── Μαρτυρία ──────────────────────────────────────────────────────────────────
 
@@ -179,6 +180,37 @@ export type BindingTarget =
        * Χωρίς αυτήν θα το έκανε με `typeof`, δηλαδή θα **πετούσε σιωπηλά** ό,τι δεν ταιριάζει.
        */
       readonly value: SurveyParsedValue;
+    }
+  /**
+   * Ο **7ος στόχος** (ADR-759 Φ4β): μια **γραμμή** επαναλαμβανόμενης ενότητας — θεσμική
+   * πράξη, έγκριση ή τίτλος ιδιοκτησίας.
+   *
+   * 🔴 **Γιατί χωριστό είδος και όχι `field` του `survey-record`.** Το βαθμωτό γράφεται σε
+   * πεδίο με **όνομα**, οπότε η επανάληψη της έγκρισης είναι αβλαβής. Μια γραμμή δεν έχει
+   * όνομα: χωρίς ένα, το δεύτερο κλικ στο **ίδιο** ΦΕΚ προσθέτει **δεύτερη** πράξη. Άρα ο
+   * στόχος κουβαλά το `rowId` — ταυτότητα παραγόμενη από το ίδιο το σχέδιο — και ο writer
+   * κάνει upsert. Το «ίδια δήλωση ⇒ ίδια γραμμή» είναι **μέρος του στόχου**, όχι σύμβαση
+   * του writer (N.7.2 ερώτημα 3).
+   *
+   * 🔑 Και γι' αυτό δεν υπάρχει `index`: η θέση αλλάζει όταν ο μηχανικός σβήσει μια γραμμή
+   * στην καρτέλα, η ταυτότητα όχι.
+   */
+  | {
+      readonly kind: 'survey-record-row';
+      readonly projectId: string;
+      readonly recordId: string;
+      readonly list: DocumentBodyListKey;
+      /** Ντετερμινιστική ταυτότητα της δήλωσης — δες `surveyRowKey`. */
+      readonly rowId: string;
+      /**
+       * Τα μέρη, **ήδη αναλυμένα**.
+       *
+       * Ίδιο δόγμα με το `survey-record`: η ανάλυση έγινε **μία** φορά, στον Λ2, και το
+       * αποτέλεσμά της φάνηκε στην οθόνη **πριν** το κλικ. Δεύτερη ανάλυση τη στιγμή της
+       * εγγραφής θα σήμαινε ότι την ημέρα που αλλάξει ο κανόνας, το σύστημα γράφει **άλλο**
+       * από αυτό που ενέκρινε ο μηχανικός.
+       */
+      readonly parts: readonly SurveyRowPartValue[];
     }
   | {
       readonly kind: 'drawing-meta';

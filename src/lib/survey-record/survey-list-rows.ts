@@ -109,6 +109,31 @@ export function updateRow<TRow>(
   return lens.write(record, replaceAt(rows, index, patch(row)));
 }
 
+/**
+ * Find the row carrying `id`, or **append** a fresh one that does — and say where it landed.
+ *
+ * 🔴 THIS IS WHAT MAKES APPROVING A LIST ROW IDEMPOTENT (ADR-759 Φ4β, N.7.2 question 3).
+ * A scalar binding is addressed **by name**: approving twice writes the same field twice and
+ * nothing duplicates. A list row has no name — so the drawing gives it one, deterministically
+ * (`surveyRowKey`), and this function turns "write row X" into an upsert. Without it, the
+ * second click on the same ΦΕΚ would append a second act, and the engineer would be left
+ * deleting rows the system invented.
+ *
+ * ⚠️ `seed` mints the row **with the given id**, so it must NOT be `lens.create()` — that one
+ * mints a fresh random identity every call, which is exactly what must not happen here.
+ */
+export function upsertRowById<TRow extends { readonly id: string }>(
+  record: SurveyRecord,
+  lens: ListLens<TRow>,
+  id: string,
+  seed: (id: string) => TRow
+): { readonly record: SurveyRecord; readonly index: number } {
+  const rows = lens.read(record);
+  const index = rows.findIndex((row) => row.id === id);
+  if (index >= 0) return { record, index };
+  return { record: lens.write(record, [...rows, seed(id)]), index: rows.length };
+}
+
 /** Row `index`, or `undefined` when it no longer exists. */
 export function rowAt<TRow>(
   record: SurveyRecord,
@@ -214,6 +239,7 @@ export const remarkLens: ListLens<Sourced<string>> = {
 export function newSurveyApproval(): SurveyApproval {
   return {
     id: generateSurveyApprovalId(),
+    subject: emptySourced<string>(),
     authority: emptySourced<string>(),
     protocolNumber: emptySourced<string>(),
     date: emptySourced<string>(),

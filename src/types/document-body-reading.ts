@@ -131,6 +131,84 @@ export interface DocumentBodyField {
   readonly line: string;
 }
 
+// ── Οι ΛΙΣΤΕΣ (Φ4β) ───────────────────────────────────────────────────────────
+
+/**
+ * Οι **επαναλαμβανόμενες** ενότητες που ξέρει να διαβάζει το σώμα.
+ *
+ * 🔑 **Δεν είναι «οι τρεις ενότητες Α′/Θ/Ι» — είναι πέντε κλειδιά, γιατί το Α′ είναι ΤΡΕΙΣ
+ * λίστες.** Το σχήμα `SurveyInstitutionalActs` κρατά τις θεσμικές πράξεις σε τρεις ομάδες
+ * (ρυμοτομία · Γ.Π.Σ. · πολεοδομικές ρυθμίσεις) ακριβώς επειδή ο μηχανικός τις ψάχνει
+ * χωριστά. Ένα κλειδί `institutionalActs` θα ανάγκαζε τον writer να ξαναποφασίσει την ομάδα
+ * — δηλαδή θα υπήρχαν **δύο** σημεία που ταξινομούν, με το δεύτερο να μη βλέπει το κείμενο.
+ *
+ * ⚠️ Η **σειρά** είναι η σειρά της τυπωμένης φόρμας, όπως και στο `SURVEY_LIST_SECTIONS`.
+ */
+export const DOCUMENT_BODY_LIST_KEYS = [
+  'urbanPlanDecree',
+  'generalUrbanPlan',
+  'zoningRegulations',
+  'approvals',
+  'titleDeeds',
+] as const;
+
+export type DocumentBodyListKey = (typeof DOCUMENT_BODY_LIST_KEYS)[number];
+
+/**
+ * Τα **μέρη** μιας γραμμής λίστας — το λεξιλόγιο που μοιράζονται ο αναγνώστης και ο writer.
+ *
+ * 🔴 **Κάθε κλειδί εδώ παράγεται σήμερα από το `G753_ergasia F.dxf`, και το επιβάλλει πύλη
+ * ισότητας.** Λείπουν επίτηδες μέρη που η φόρμα **τυπώνει** αλλά το σχέδιο άφησε **κενά** —
+ * χαρακτηριστικά ο αριθμός πρωτοκόλλου της ενότητας Θ, που είναι **είκοσι τελείες**. Το πεδίο
+ * υπάρχει στην καρτέλα για να το πληκτρολογήσει ο μηχανικός· **κανόνας ανάγνωσης** για κάτι
+ * που κανένα σχέδιο του δείγματος δεν λέει θα ήταν λεξιλόγιο χωρίς παραγωγό — ακριβώς το
+ * ελάττωμα που κυνηγά η αλυσίδα ADR-745/759 (§4.4.1).
+ */
+export const DOCUMENT_BODY_PART_KEYS = [
+  // Α′ — θεσμικές πράξεις
+  'reference',
+  'gazette',
+  'note',
+  // Θ — εγκρίσεις
+  'subject',
+  'authority',
+  // Ι — τίτλοι ιδιοκτησίας
+  'number',
+  'date',
+  'kind',
+  'notaryName',
+  'volume',
+  'entry',
+  'registry',
+] as const;
+
+export type DocumentBodyPartKey = (typeof DOCUMENT_BODY_PART_KEYS)[number];
+
+/**
+ * Ένα μέρος μιας γραμμής, αυτούσιο.
+ *
+ * ⚠️ Το ίδιο `part` μπορεί να εμφανιστεί **περισσότερες από μία φορές** στην ίδια γραμμή, και
+ * αυτό δεν είναι ατύχημα: η γραμμή `Γ.Π.Σ.` του G753 φέρει **δύο** ΦΕΚ. Ένας χάρτης
+ * `Record<part, value>` θα κρατούσε το ένα και θα έχανε το άλλο — σιωπηλά.
+ */
+export interface DocumentBodyRowPart {
+  readonly part: DocumentBodyPartKey;
+  readonly rawValue: string;
+}
+
+/**
+ * Μία **γραμμή λίστας** που διαβάστηκε από το σώμα.
+ *
+ * 🔴 Το `rawText` είναι **ολόκληρες οι γραμμές** που τη συνθέτουν, ενωμένες. Είναι η μόνη
+ * απόδειξη όταν κανένα μέρος δεν αναγνωρίζεται — και ο λόγος που μια γραμμή που δεν
+ * αποδίδεται σε τίποτα εξακολουθεί να **φαίνεται**, αντί να χάνεται (ADR-745 §8 κανόνας 3).
+ */
+export interface DocumentBodyListRow {
+  readonly list: DocumentBodyListKey;
+  readonly rawText: string;
+  readonly parts: readonly DocumentBodyRowPart[];
+}
+
 /** Ένα αναγνωρισμένο έγγραφο μέσα στο σχέδιο. */
 export interface DocumentBodyReading {
   readonly kind: DocumentBodyKind;
@@ -138,6 +216,8 @@ export interface DocumentBodyReading {
   readonly at: { readonly x: number; readonly y: number };
   readonly layerName: string;
   readonly fields: readonly DocumentBodyField[];
+  /** Οι γραμμές των επαναλαμβανόμενων ενοτήτων (Φ4β), με τη σειρά του εγγράφου. */
+  readonly rows: readonly DocumentBodyListRow[];
   /**
    * Ενότητες της φόρμας που **υπάρχουν τυπωμένες** και δεν απέδωσαν καμία τιμή.
    *

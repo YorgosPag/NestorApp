@@ -58,6 +58,8 @@ import {
 interface GazetteFieldBase {
   readonly labelKey: string;
   readonly hintKey?: string;
+  /** Which part of a read gazette this is — see `FieldBase.part`. Only `rawText` has one. */
+  readonly part?: string;
 }
 
 export interface GazetteTextField extends GazetteFieldBase {
@@ -204,6 +206,7 @@ function gazetteSubList(group: ActGroupKey): GazetteSubList {
           // 🔴 Required by signature in the schema, and required here too. The one
           // part of a ΦΕΚ that must survive even when nothing parses.
           required: true,
+          part: 'rawText',
           labelKey: 'gazette.rawText',
           hintKey: 'gazette.rawTextHint',
           read: (record) => at(record)?.rawText ?? '',
@@ -268,6 +271,7 @@ function institutionalActSection(group: ActGroupKey): SurveyListSection {
     rowFields: (index) => [
       {
         kind: 'text',
+        part: 'reference',
         labelKey: 'acts.reference',
         read: (record) => at(record, index)?.reference ?? emptySourced<string>(),
         write: (record, next) =>
@@ -276,6 +280,7 @@ function institutionalActSection(group: ActGroupKey): SurveyListSection {
       {
         kind: 'text',
         multiline: true,
+        part: 'note',
         labelKey: 'acts.note',
         read: (record) => at(record, index)?.note ?? emptySourced<string>(),
         write: (record, next) =>
@@ -331,7 +336,18 @@ export const SURVEY_APPROVALS_SECTION: SurveyListSection = {
     const at = (record: SurveyRecord) => rowAt(record, approvalLens, index);
     return [
       {
+        // 🔴 **Τι** εγκρίνεται — χωριστό από το **ποιος** εγκρίνει, γιατί το σχέδιο γράφει
+        // και τα δύο στην ίδια γραμμή και δεν είναι το ίδιο πράγμα (ADR-759 §2β.7).
         kind: 'text',
+        part: 'subject',
+        labelKey: 'approvals.subject',
+        read: (record) => at(record)?.subject ?? emptySourced<string>(),
+        write: (record, next) =>
+          updateRow(record, approvalLens, index, (row) => ({ ...row, subject: next })),
+      },
+      {
+        kind: 'text',
+        part: 'authority',
         labelKey: 'approvals.authority',
         read: (record) => at(record)?.authority ?? emptySourced<string>(),
         write: (record, next) =>
@@ -372,6 +388,7 @@ export const SURVEY_TITLE_DEEDS_SECTION: SurveyListSection = {
     return [
       {
         kind: 'text',
+        part: 'number',
         labelKey: 'titleDeeds.number',
         read: (record) => at(record)?.number ?? emptySourced<string>(),
         write: (record, next) =>
@@ -379,6 +396,7 @@ export const SURVEY_TITLE_DEEDS_SECTION: SurveyListSection = {
       },
       {
         kind: 'text',
+        part: 'date',
         labelKey: 'titleDeeds.date',
         read: (record) => at(record)?.date ?? emptySourced<string>(),
         write: (record, next) =>
@@ -386,6 +404,7 @@ export const SURVEY_TITLE_DEEDS_SECTION: SurveyListSection = {
       },
       {
         kind: 'text',
+        part: 'kind',
         labelKey: 'titleDeeds.kind',
         read: (record) => at(record)?.kind ?? emptySourced<string>(),
         write: (record, next) =>
@@ -393,6 +412,7 @@ export const SURVEY_TITLE_DEEDS_SECTION: SurveyListSection = {
       },
       {
         kind: 'text',
+        part: 'volume',
         labelKey: 'titleDeeds.volume',
         read: (record) => at(record)?.volume ?? emptySourced<string>(),
         write: (record, next) =>
@@ -400,6 +420,7 @@ export const SURVEY_TITLE_DEEDS_SECTION: SurveyListSection = {
       },
       {
         kind: 'text',
+        part: 'entry',
         labelKey: 'titleDeeds.entry',
         read: (record) => at(record)?.entry ?? emptySourced<string>(),
         write: (record, next) =>
@@ -407,6 +428,7 @@ export const SURVEY_TITLE_DEEDS_SECTION: SurveyListSection = {
       },
       {
         kind: 'text',
+        part: 'registry',
         labelKey: 'titleDeeds.registry',
         read: (record) => at(record)?.registry ?? emptySourced<string>(),
         write: (record, next) =>

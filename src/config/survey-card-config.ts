@@ -28,6 +28,19 @@ interface FieldBase {
   readonly labelKey: string;
   /** Optional i18n key for the helper line under the input. */
   readonly hintKey?: string;
+  /**
+   * Which **part of a list row** this accessor is — present only on row fields (Φ4β).
+   *
+   * 🔑 It is the join between what the drawing says and where it lands, and it exists so
+   * that the writer can reuse **this very accessor** instead of restating the patch. A
+   * second `(row) => ({...row, authority: next})` next to the card's own would be the
+   * sibling clone N.18 exists to stop — and the failure would be silent, because both
+   * compile and both look right.
+   *
+   * Scalar fields have no `part`: they are addressed by name through
+   * `SURVEY_BINDING_SPECS`, which already points at these same constants.
+   */
+  readonly part?: string;
 }
 
 export interface TextFieldAccessor extends FieldBase {

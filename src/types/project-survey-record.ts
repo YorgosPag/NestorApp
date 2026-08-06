@@ -229,10 +229,27 @@ export interface SurveySettlement {
 // SECTIONS Θ / Ι — approvals and title deeds
 // ============================================================================
 
-/** Section Θ — ΕΓΚΡΙΣΕΙΣ. Protocol numbers are blank in G753; blank is data. */
+/**
+ * Section Θ — ΕΓΚΡΙΣΕΙΣ. Protocol numbers are blank in G753; blank is data.
+ *
+ * 🔴 `subject` AND `authority` ARE TWO DIFFERENT THINGS, and the measurement is what
+ * settled it (ADR-759 §2β.7). The drawing writes both on one line:
+ *
+ * ```
+ * ΒΕΒΑΙΩΣΗ ΥΨΟΜΕΤΡΩΝ : ⇥Αρ. Πρωτ.: ..................... Δήμου Κορδελιού - Ευόσμου
+ * ```
+ *
+ * «ΒΕΒΑΙΩΣΗ ΥΨΟΜΕΤΡΩΝ» is **what is being approved**; the Δήμος is **who approves**.
+ * This type originally carried only `authority`, documented with the example
+ * `"ΑΡΧΑΙΟΛΟΓΙΑ"` — which is a *subject*, not an authority. Kept as one field, the card
+ * would have stated that the approving authority is named "ΒΕΒΑΙΩΣΗ ΥΨΟΜΕΤΡΩΝ", and the
+ * office that actually issues the document would have been dropped on the floor.
+ */
 export interface SurveyApproval {
   readonly id: string;
-  /** Εγκρίνουσα αρχή, e.g. `"ΑΡΧΑΙΟΛΟΓΙΑ"`. */
+  /** Τι εγκρίνεται, e.g. `"ΑΡΧΑΙΟΛΟΓΙΑ"` — the row's identity on the printed form. */
+  readonly subject: Sourced<string>;
+  /** Εγκρίνουσα αρχή, e.g. `"Εφορεία Αρχαιοτήτων Πόλης Θεσσαλονίκης"`. */
   readonly authority: Sourced<string>;
   readonly protocolNumber: Sourced<string>;
   /** ISO `YYYY-MM-DD`. */
