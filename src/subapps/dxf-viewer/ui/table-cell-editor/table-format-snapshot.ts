@@ -35,15 +35,31 @@ import {
   canResetTableFormatScope,
   resolveTableFormatState,
   setTableFormatField,
+  tableFormatScopeBounds,
   type TableFormatScope,
 } from '../../bim/table/table-format-scope';
 import { collectDrawingColors } from '../../bim/table/table-drawing-colors';
+// 🔴 ADR-739 §55 — η μορφή αριθμού **δεν** είναι πεδίο του `TableCellStyle`: κληρονομείται με
+// δική της αλυσίδα (κελί→γραμμή→στήλη→`valueType`), οπότε διαβάζεται με τον ΕΝΑ βρόχο πάνω στα
+// επιλυμένα κελιά — που κουβαλά ήδη `overrides` + `column` ακριβώς γι' αυτό.
+import { forEachResolvedCellStyle } from '../../bim/table/table-cell-style-scan';
+import {
+  explicitCellNumberFormat,
+  resolveCellNumberFormat,
+} from '../../bim/table/table-cell-format';
+import { isTableCellFormatEqual } from '../../bim/table/table-number-format-ops';
+import { tableRangeCellRefs, type TableCellRef } from '../../bim/table/table-cell-range';
 import type { PlotColorRole } from '../../config/print-color-policy';
-import type { TableStyle } from '../../bim/table/table-style';
-import type { PersistedTableModel } from '../../types/table';
+import type { TableCellStyleKey } from '../../bim/table/table-cell-style-scan';
+import type { TableCellStyle, TableStyle } from '../../bim/table/table-style';
+import type { PersistedTableModel, TableCellAlign } from '../../types/table';
+import type { TableCellFormat } from '../../types/table-cell-format';
 import type { TableAxisColorState } from '../components/table-format-toolbar/table-color-menu-selection';
 import type {
+  TableFontControlsState,
+  TableFontValueState,
   TableFormatSnapshot,
+  TableNumberFormatState,
   TableToggleFormatKey,
   TableToggleFormatState,
 } from '../components/table-format-toolbar/TableFormatToolbar';
@@ -101,6 +117,33 @@ export const EMPTY_TABLE_FORMAT_SNAPSHOT: TableFormatSnapshot = {
 };
 
 /**
+ * ADR-739 §55 — τυπογραφία **χωρίς στόχο**: κανένα όνομα, κανένα μέγεθος.
+ *
+ * ⚠️ `mixed: false` και όχι `true`: «ανάμεικτο» είναι **απάντηση** («τα κελιά διαφωνούν») και
+ * θα ζωγράφιζε την υπόδειξη «διαφέρει ανά κελί» πάνω σε στόχο που δεν υπάρχει καν. Ο στόχος
+ * που δεν βρέθηκε δεν διαφωνεί με τίποτα — δεν έχει τι να πει, ίδια σύμβαση με το
+ * {@link EMPTY_TOGGLE}.
+ */
+export const EMPTY_TABLE_FONT_STATE: TableFontControlsState = {
+  family: { current: undefined, mixed: false },
+  size: { current: undefined, mixed: false },
+};
+
+/**
+ * ADR-739 §55 / ADR-760 — μορφή αριθμού **χωρίς στόχο**: κανένα από τα πέντε κουμπιά πατημένο.
+ *
+ * ⚠️ Το `current: null` είναι η **μόνη** εκφράσιμη «καμία απάντηση» του τύπου, και συμπίπτει με
+ * το «ανάμεικτο». Η σύμπτωση είναι ακίνδυνη επειδή η γραμμή **δεν αποδίδεται καθόλου** χωρίς
+ * στόχο (κάθε διαμέρισμα είναι προαιρετικό prop — δες `TableFormatToolbar`): η υπόδειξη
+ * «διαφέρει ανά κελί» δεν έχει πού να φανεί. Η εναλλακτική — να μαντέψουμε `general` — θα ήταν
+ * ρητή δήλωση «κανένας δεν έχει μορφή», δηλαδή ψέμα με συνέπειες.
+ */
+export const EMPTY_TABLE_NUMBER_FORMAT_STATE: TableNumberFormatState = {
+  current: null,
+  explicit: false,
+};
+
+/**
  * Η κατάσταση όλων των χειριστηρίων + αν υπάρχει τι να επαναφερθεί.
  *
  * Υπολογίζεται **μία φορά ανά άνοιγμα ή πάτημα**, όχι σε κάθε απόδοση: κάθε κλήση διατρέχει
@@ -117,6 +160,102 @@ export function resolveTableFormatSnapshot(target: FormatTarget | null): TableFo
     fillColor: formatColorStateOf(target, 'fillColorHex', 'fill'),
     canReset: canResetTableFormatScope(target.model, target.scope),
   };
+}
+
+/**
+ * 🔴 ADR-739 §55 — **γραμματοσειρά + μέγεθος**, οι δύο πρώτες θέσεις της σειράς 1.
+ *
+ * Και τα δύο βγαίνουν από το **υπάρχον** `resolveTableFormatState`: είναι κανονικά πεδία του
+ * επιλυμένου στυλ (`fontFamily`, `textHeightMm`), δηλαδή η ίδια ερώτηση με τα Β/Ι/Υ σε άλλο
+ * λεξιλόγιο απάντησης. Καμία νέα σάρωση, κανένας νέος κανόνας κληρονομικότητας.
+ */
+export function resolveTableFontState(target: FormatTarget | null): TableFontControlsState {
+  if (!target) return EMPTY_TABLE_FONT_STATE;
+  return {
+    family: valueStateOf(target, 'fontFamily'),
+    size: valueStateOf(target, 'textHeightMm'),
+  };
+}
+
+/**
+ * 🔴 ADR-739 §55 — **η στοίχιση**· `null` ⇒ ανάμεικτος στόχος (ή στόχος που δεν βρέθηκε).
+ *
+ * Η σύμπτωση των δύο «τίποτα» είναι σκόπιμη και ακίνδυνη: το `TableAlignMenu` δέχεται ακριβώς
+ * αυτόν τον τύπο και συμπεριφέρεται **ίδια** και στις δύο περιπτώσεις — καμία επιλογή
+ * τσεκαρισμένη, βάση σύνθεσης η προεπιλογή της κλάσης δεδομένων. Ένα τρίτο σκέλος στον τύπο θα
+ * ήταν διάκριση που καμία επιφάνεια δεν μπορεί να δείξει.
+ */
+export function resolveTableAlignState(target: FormatTarget | null): TableCellAlign | null {
+  if (!target) return null;
+  const state = valueStateOf(target, 'align');
+  return state.mixed ? null : state.current ?? null;
+}
+
+/**
+ * 🔴 ADR-739 §55 / ADR-760 — **τι μορφή αριθμού ισχύει** σε αυτά τα κελιά.
+ *
+ * ## Γιατί ΔΕΝ περνά από το `resolveTableFormatState`
+ * Το `numberFormat` **δεν είναι πεδίο** του `TableCellStyle` (δες `TableCellStyleKey`: η τομή
+ * το αποκλείει ρητά). Κληρονομείται με **δική του** αλυσίδα — κελί → γραμμή → στήλη → η
+ * σημασιολογική βάση του `TableColumn.valueType` — και μόνο το τέταρτο επίπεδο εξηγεί γιατί το
+ * κουμπί «%» οφείλει να δείχνει πατημένο σε στήλη που **δεν** έχει καμία παράκαμψη.
+ *
+ * 🔑 Ο βρόχος είναι ο **ΕΝΑΣ** ({@link forEachResolvedCellStyle}), όχι δεύτερος: το
+ * `TableResolvedCell` κουβαλά ήδη `overrides` + `column` **ακριβώς** για αυτόν εδώ τον
+ * καταναλωτή (δες την κεφαλίδα του `table-cell-style-scan.ts` — το πρόβλεψε πριν γραφτεί).
+ *
+ * ⚠️ Ο στόχος-**άξονας** μεταφράζεται σε ορθογώνιο από το `tableFormatScopeBounds` (ο ΕΝΑΣ
+ * ορισμός της «ολόκληρης στήλης», §27.16 Ε2): η μορφή αριθμού είναι ερώτηση **κελιών**, και
+ * μια μαρκαρισμένη στήλη είναι τα κελιά της.
+ */
+export function resolveTableNumberFormatState(
+  target: FormatTarget | null,
+): TableNumberFormatState {
+  const refs = target === null ? null : numberFormatCellRefs(target);
+  if (target === null || refs === null) return EMPTY_TABLE_NUMBER_FORMAT_STATE;
+
+  let value: TableCellFormat | undefined;
+  let mixed = false;
+  let explicit = true;
+
+  const visited = forEachResolvedCellStyle(target.model, target.style, refs, (cell) => {
+    const format = resolveCellNumberFormat(cell.overrides, cell.column.valueType);
+    // «Ρητό» σημαίνει **όλα** τα κελιά το δηλώνουν — ίδια σύμβαση με το `overridden` της
+    // περιοχής στο `resolveRangeFormat`: ένα κελί που κληρονομεί αρκεί για να σβήσει η κουκκίδα.
+    if (explicitCellNumberFormat(cell.overrides) === undefined) explicit = false;
+    if (value === undefined) value = format;
+    else if (!isTableCellFormatEqual(value, format)) mixed = true;
+  });
+  if (!visited || value === undefined) return EMPTY_TABLE_NUMBER_FORMAT_STATE;
+
+  return { current: mixed ? null : value, explicit: !mixed && explicit };
+}
+
+/** Τα κελιά του στόχου· `null` όταν ο στόχος δεν επιβίωσε (undo έσβησε τον άξονα). */
+function numberFormatCellRefs(target: FormatTarget): readonly TableCellRef[] | null {
+  const bounds = tableFormatScopeBounds(target.model, target.scope);
+  return bounds === null ? null : tableRangeCellRefs(target.model, bounds);
+}
+
+/**
+ * 🔴 **ΜΙΑ συνάρτηση για τρία πεδία** — ίδιος κανόνας με το {@link formatColorStateOf}.
+ *
+ * Η γραμματοσειρά, το μέγεθος και η στοίχιση ρωτούν **την ίδια** διπλή ερώτηση («ποια τιμή /
+ * συμφωνούν;») για άλλο πεδίο. Τρία σώματα `fontFamilyStateOf` / `sizeStateOf` /
+ * `alignStateOf` θα ήταν ακριβώς το structural clone που πιάνει το CHECK 3.28 (N.18) — και,
+ * χειρότερα, τρία σημεία που μπορούν κάποτε να μάθουν διαφορετικό κανόνα για το τι επιστρέφει
+ * ένας μεικτός στόχος.
+ *
+ * `current: undefined` σε μεικτό στόχο: το combobox δείχνει **κενό**, όπως το Excel — ποτέ την
+ * τιμή του πρώτου κελιού, που θα ήταν σιωπηλή δήλωση ότι ισχύει παντού.
+ */
+function valueStateOf<K extends TableCellStyleKey>(
+  target: FormatTarget,
+  key: K,
+): TableFontValueState<TableCellStyle[K]> {
+  const state = resolveTableFormatState(target.model, target.style, target.scope, key);
+  if (!state) return { current: undefined, mixed: false };
+  return { current: state.mixed ? undefined : state.value, mixed: state.mixed };
 }
 
 /**

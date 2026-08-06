@@ -105,9 +105,23 @@ export function resolveCellNumberFormat(
   overrides: TableFormatOverrides,
   columnValueType: ScheduleColumnValueType,
 ): TableCellFormat {
-  const explicit =
-    overrides.cell?.numberFormat ?? overrides.row?.numberFormat ?? overrides.column?.numberFormat;
-  return explicit ?? SEMANTIC_FORMAT_BY_VALUE_TYPE[columnValueType];
+  return explicitCellNumberFormat(overrides) ?? SEMANTIC_FORMAT_BY_VALUE_TYPE[columnValueType];
+}
+
+/**
+ * 🔴 ADR-739 §55 — **Η ΡΗΤΗ μορφή** αυτού του κελιού: τα επίπεδα 1-3 μόνα τους, χωρίς τη
+ * σημασιολογική βάση. `undefined` ⇒ κανείς δεν έχει άποψη ⇒ κληρονομιά.
+ *
+ * Ξεχωριστή συνάρτηση επειδή τη ρωτά **δεύτερος** καταναλωτής με άλλη πρόθεση: το χειριστήριο
+ * μορφής αριθμού ανάβει την κουκκίδα «ρητό» ακριβώς όταν αυτή δεν είναι `undefined` — η ίδια
+ * σημασιολογία με το `overridden` των Β/Ι/Υ. Γραμμένη δεύτερη φορά εκεί, η αλυσίδα
+ * προτεραιότητας θα ήταν δύο εκφράσεις που *τυχαίνει* να συμφωνούν, και η μία θα ξεχνούσε το
+ * επίπεδο που θα προστεθεί αύριο.
+ */
+export function explicitCellNumberFormat(
+  overrides: TableFormatOverrides,
+): TableCellFormat | undefined {
+  return overrides.cell?.numberFormat ?? overrides.row?.numberFormat ?? overrides.column?.numberFormat;
 }
 
 /**
