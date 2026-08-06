@@ -24,6 +24,19 @@
  * Τα δύο πρώτα είναι καθαρά επίτηδες: τα καταναλώνουν **και τα δύο** πεδία της συνεδρίας
  * (κελί και γραμμή τύπων) και δεν επιτρέπεται να ξέρουν από `<textarea>`.
  *
+ * ## 🔴 ADR-763 Φ2.4 — Η ΤΕΤΑΡΤΗ ΕΡΩΤΗΣΗ ΠΟΥ ΕΛΕΙΠΕ: «**ΠΟΙΟΣ** ΓΡΑΦΕΙ;»
+ * Μέχρι τη Φ2.2 η απάντηση ήταν μία και υπονοούμενη — το πρόχειρο του κελιού. Ο διάλογος
+ * «Ορίσματα συνάρτησης» πρόσθεσε **δεύτερο** παραλήπτη, και μαζί του ένα σφάλμα που δεν
+ * φαινόταν πουθενά: ο κέρσορας ερχόταν από το **κουτί ορίσματος** (φέρει το ίδιο σημάδι
+ * συνεδρίας, υποχρεωτικά — ADR-763 §10) και μετριόταν πάνω στο **κείμενο του κελιού**. Με κενό
+ * κουτί η απάντηση ήταν πάντα `off` και **το κλικ δεν έγραφε πουθενά**· με γεμάτο, ο δείκτης
+ * έπεφτε μέσα στο όνομα της συνάρτησης και θα έγραφε διεύθυνση **εκεί**, σιωπηλά.
+ *
+ * Η διόρθωση είναι **δρομολόγηση, όχι δεύτερη μηχανή**: κείμενο, κέρσορας και γραφέας έρχονται
+ * πλέον **μαζί**, από τον έναν {@link TablePointTarget}, ώστε η αναντιστοιχία να είναι μη
+ * εκφράσιμη. Ίδιο σχήμα με την παραμετροποίηση `write` της σύρσης (δες παρακάτω): αλλάζει ο
+ * **παραλήπτης**, όχι ο μηχανισμός.
+ *
  * ## 🔴 Γιατί ΔΕΝ γράφεται εδώ δεύτερος βρόχος `mousemove`
  * Η σύρση υπόδειξης (`=SUM(` + σύρσιμο ⇒ `=SUM(A1:B5`) είναι η **ίδια χειρονομία** με τη
  * σύρση επιλογής: ίδιος κύκλος ζωής, ίδιος φύλακας «γράψε μόνο όταν αλλάζει κελί» (ADR-735),
@@ -69,11 +82,16 @@ import { wholeAxisSelection } from '../../bim/table/table-cell-range';
 import { axisEndAt, cellEndAt } from './table-pointer-axis-selection';
 import { startTableCellDrag } from './table-cell-drag-session';
 import {
-  activeTableCellSessionCaret,
   claimTableCellPointerGesture,
   claimTableCellSessionPointerDown,
 } from './table-cell-session-focus';
-import { setTableCellCursorDraftAt } from '../../state/table-cell-cursor-store';
+// 🔴 ADR-763 Φ2.4 — **ΠΟΥ πάει η διεύθυνση**: στο πρόχειρο του κελιού, ή στο ενεργό κουτί
+// ορίσματος όσο ο διάλογος της Φάσης 2 είναι ανοιχτός. Δες την κεφαλίδα εκείνου του module για
+// το γιατί η απάντηση εκφράζεται **πάντα ως τύπος** και όχι με κλάδο εδώ.
+import { resolveTablePointTarget, type TablePointTarget } from './table-point-target';
+// ADR-763 Φ2.4 — η **αυτόματη σύμπτυξη** της κάρτας όσο κρατά η χειρονομία. No-op όταν ο
+// διάλογος δεν είναι ανοιχτός, δηλαδή στην ιστορική διαδρομή δεν αλλάζει τίποτα.
+import { setFunctionArgumentPointing } from '../../state/function-arguments-dialog-store';
 import type { FormulaPointState } from '../../bim/table/formula/table-formula-point-state';
 import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableCellRef, TableSelectionKind } from '../../bim/table/table-cell-range';
@@ -108,8 +126,9 @@ interface PointedGesture {
  * `preventDefault`, γραφή, έναρξη σύρσης) και ο καλών οφείλει να σταματήσει εκεί.
  *
  * `false` ⇒ δεν είναι υπόδειξη· ο κανονικός δρόμος τρέχει αυτούσιος. Η άρνηση είναι η
- * **συνηθισμένη** έκβαση και δεν κοστίζει σχεδόν τίποτα: η πρώτη ερώτηση («έχει κάποιο πεδίο
- * της συνεδρίας την εστίαση;») απαντιέται με μία ανάγνωση DOM.
+ * **συνηθισμένη** έκβαση και δεν κοστίζει σχεδόν τίποτα: οι δύο πρώτες ερωτήσεις («είναι
+ * ανοιχτός ο διάλογος ορισμάτων;», «έχει κάποιο πεδίο της συνεδρίας την εστίαση;») απαντιούνται
+ * με μία ανάγνωση store και μία ανάγνωση DOM.
  */
 export function tryTablePointModeMouseDown(event: MouseEvent, press: TablePointModePress): boolean {
   // Το δεξί/μεσαίο πλήκτρο δεν γράφει ποτέ τύπο: το δεξί ανοίγει μενού (ο κανονικός δρόμος το
@@ -118,7 +137,7 @@ export function tryTablePointModeMouseDown(event: MouseEvent, press: TablePointM
   const state = resolvePressState(press);
   if (!state) return false;
 
-  const gesture = resolveGesture(press, state.model, event.shiftKey, state.state);
+  const gesture = resolveGesture(press, state, event.shiftKey);
   if (!gesture) return false;
 
   claimTableCellSessionPointerDown();
@@ -128,10 +147,19 @@ export function tryTablePointModeMouseDown(event: MouseEvent, press: TablePointM
   // πυροδοτούσε `blur`, και ο φύλακας θα το ανέκτανε **ξαναστήνοντας** το πεδίο — δηλαδή
   // remount σε κάθε κλικ, με τον κέρσορα να ξαναγεννιέται από την αρχή. Αναιρώντας την
   // προεπιλογή, το συμβάν που θα χρειαζόταν όλο αυτό **δεν γεννιέται καν**.
+  //
+  // 🔴 ADR-763 Φ2.4 — **η ίδια γραμμή προστατεύει τώρα ΔΕΥΤΕΡΟ πεδίο**: με τον διάλογο
+  // ορισμάτων ανοιχτό, ο εστιασμένος είναι το **κουτί ορίσματος**. Χωρίς αυτήν, κάθε κλικ σε
+  // κελί θα το έβγαζε από την εστίαση και το **επόμενο** κλικ δεν θα είχε κέρσορα να διαβάσει.
   event.preventDefault();
 
-  const write = referenceWriter(state.model, press.cursor.draft, state.state, gesture.anchor);
+  const write = referenceWriter(state, gesture.anchor);
   write(gesture.end);
+  // 🔴 ADR-763 Φ2.4 — **η κάρτα μαζεύεται τώρα, όχι στην πρώτη κίνηση**: στο Excel το παράθυρο
+  // εξαφανίζεται με το πάτημα, ώστε το κελί κάτω από το δάχτυλο να είναι ορατό **πριν** ο
+  // χρήστης αρχίσει να σέρνει. Αναβολή μέχρι το πρώτο `mousemove` θα σήμαινε ότι ένα σκέτο
+  // κλικ σε κρυμμένο κελί δεν αποκαλύπτει ποτέ τι διάλεξες.
+  setFunctionArgumentPointing(true);
   startTableCellDrag({
     anchor: gesture.anchor,
     kind: gesture.kind,
@@ -139,28 +167,42 @@ export function tryTablePointModeMouseDown(event: MouseEvent, press: TablePointM
     resolveAt: gesture.resolveAt,
     // ADR-754 §5 — ο **ίδιος** κύκλος ζωής σύρσης, άλλος παραλήπτης. Δες `table-cell-drag-session`.
     write: (span) => write(span.to),
+    // Ο **φυσικός** τερματισμός — και καλύπτει και το κουμπί που αφέθηκε εκτός παραθύρου (ο
+    // βρόχος κίνησης το ανιχνεύει και τερματίζει μόνος του). Δες `TableCellDragStart.onEnd`.
+    onEnd: () => setFunctionArgumentPointing(false),
   });
   return true;
 }
 
+/** Ό,τι κρίθηκε τη στιγμή του πατήματος και **παγώνει** για όλη τη χειρονομία. */
+interface PointPressState {
+  readonly model: TableModel;
+  readonly state: FormulaPointState;
+  /** Ποιος γράφει, και πάνω σε ποιο κείμενο κρίθηκε ο κέρσορας. */
+  readonly target: TablePointTarget;
+}
+
 /**
- * Οι δύο ερωτήσεις που πρέπει να απαντηθούν **πριν** κοιτάξουμε καν πού έπεσε το χέρι:
- * «γράφει κάποιος τώρα;» και «τι σημαίνει ένα κλικ σε αυτό το σημείο του κειμένου;».
+ * Οι τρεις ερωτήσεις που πρέπει να απαντηθούν **πριν** κοιτάξουμε καν πού έπεσε το χέρι:
+ * «**ποιος** γράφει τώρα;», «σε ποιο κείμενο και σε ποια θέση;» και «τι σημαίνει ένα κλικ
+ * εκεί;».
  *
- * `null` και στις δύο αρνήσεις — που είναι η κανονική κατάσταση της εφαρμογής.
+ * 🔴 Η **πρώτη** ήταν κρυμμένη μέχρι τη Φ2.4: το `activeTableCellSessionCaret()` έδινε τον
+ * κέρσορα ενός πεδίου και το `press.cursor.draft` το κείμενο ενός **άλλου** — δύο συστήματα
+ * συντεταγμένων σε δύο διαδοχικές γραμμές. Πλέον έρχονται **μαζί**, από τον ίδιο στόχο, και η
+ * αναντιστοιχία γίνεται μη εκφράσιμη.
+ *
+ * `null` σε κάθε άρνηση — που είναι η κανονική κατάσταση της εφαρμογής.
  */
-function resolvePressState(
-  press: TablePointModePress,
-): { readonly model: TableModel; readonly state: FormulaPointState } | null {
-  // 🔴 Ο κέρσορας διαβάζεται από το **εστιασμένο πεδίο**, τη στιγμή του συμβάντος (ADR-040:
-  // getter, ποτέ στιγμιότυπο). `null` ⇒ κανείς δεν γράφει ⇒ καμία υπόδειξη, δομικά.
-  const caretIndex = activeTableCellSessionCaret();
-  if (caretIndex === null) return null;
+function resolvePressState(press: TablePointModePress): PointPressState | null {
+  // ADR-040: ανάγνωση **τη στιγμή του συμβάντος**, ποτέ στιγμιότυπο απόδοσης.
+  const target = resolveTablePointTarget(press.cursor);
+  if (!target) return null;
   // Ο ΙΔΙΟΣ απομνημονευμένος (WeakMap) δρόμος που περνά και η γεωμετρία — ίδιο persisted ⇒
   // ίδιο μοντέλο, καμία δεύτερη αποσειριοποίηση ανά πάτημα.
   const model = resolveTableModel(press.entity.model);
-  const state = resolveFormulaPointState(model, press.cursor.draft, caretIndex);
-  return state.kind === 'off' ? null : { model, state };
+  const state = resolveFormulaPointState(model, target.formulaText, target.caretIndex);
+  return state.kind === 'off' ? null : { model, state, target };
 }
 
 /**
@@ -171,17 +213,17 @@ function resolvePressState(
  */
 function resolveGesture(
   press: TablePointModePress,
-  model: TableModel,
+  pressed: PointPressState,
   shiftKey: boolean,
-  state: FormulaPointState,
 ): PointedGesture | null {
+  const { model, state, target } = pressed;
   const base = baseGesture(press, model);
   if (!base) return null;
   // 🔴 `Shift+κλικ` **επεκτείνει** την αναφορά που μόλις μπήκε, αντί να την αντικαταστήσει —
   // το κάτοπτρο του `Shift+βέλος` και του `Shift+κλικ` στη ζώνη. Όταν δεν υπάρχει ζωντανή
   // αναφορά να επεκταθεί (κατάσταση `armed`), το πάτημα γίνεται **σκέτο κλικ**: ίδια στάση
   // με το `extendWholeAxis`, καμία εφεύρεση.
-  const extendFrom = shiftKey ? liveReferenceAnchor(model, press.cursor.draft, state) : null;
+  const extendFrom = shiftKey ? liveReferenceAnchor(model, target.formulaText, state) : null;
   return extendFrom ? { ...base, anchor: extendFrom } : base;
 }
 
@@ -219,11 +261,11 @@ function baseGesture(press: TablePointModePress, model: TableModel): PointedGest
  */
 function liveReferenceAnchor(
   model: TableModel,
-  draft: string,
+  formulaText: string,
   state: FormulaPointState,
 ): TableCellRef | null {
   if (state.kind !== 'liveRef') return null;
-  const position = parseTableCellReference(model, draft.slice(state.from, state.to));
+  const position = parseTableCellReference(model, formulaText.slice(state.from, state.to));
   return position ? { rowId: position.rowId, colId: position.colId } : null;
 }
 
@@ -237,19 +279,23 @@ function liveReferenceAnchor(
  * ακριβώς το `=SUM(A1:A1:C3` που έπιασε το test της αλυσίδας κλικ (§1.3).
  *
  * Έτσι η πράξη είναι **ιδεμποτής**: ίδιο άκρο ⇒ ίδιο κείμενο, όσες φορές κι αν κληθεί.
+ *
+ * 🔴 ADR-763 Φ2.4 — **και ο ΠΑΡΑΛΗΠΤΗΣ παγώνει μαζί τους.** Ο στόχος κρατά τον δείκτη του
+ * ορίσματος στο οποίο έπεσε το πάτημα· αν τον ξαναρωτούσαμε σε κάθε κίνηση, μια αλλαγή του
+ * `activeIndex` στη μέση της σύρσης (ο διάλογος ξαναστήνεται όταν μαζεύεται) θα έστελνε το
+ * υπόλοιπο του εύρους σε **άλλο κουτί**.
  */
 function referenceWriter(
-  model: TableModel,
-  baseDraft: string,
-  baseState: FormulaPointState,
+  pressed: PointPressState,
   anchor: TableCellRef,
 ): (to: TableCellRef) => void {
+  const { model, state, target } = pressed;
   return (to) => {
     const reference = pointedReference(model, anchor, to);
     if (!reference) return;
-    const edit = applyPointedReference(baseDraft, baseState, reference);
+    const edit = applyPointedReference(target.formulaText, state, reference);
     if (!edit) return;
-    setTableCellCursorDraftAt(edit.draft, edit.caretIndex);
+    target.write(edit.draft, edit.caretIndex);
   };
 }
 

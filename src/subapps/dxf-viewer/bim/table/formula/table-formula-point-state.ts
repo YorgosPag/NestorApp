@@ -97,6 +97,7 @@ function isCellName(model: TableModel, token: TableFormulaToken | undefined): bo
 function liveReferenceStart(
   model: TableModel,
   tokens: readonly TableFormulaToken[],
+  grammar: TableFormulaGrammar,
 ): number | null {
   const last = tokens[tokens.length - 1];
   if (last === undefined || !isCellName(model, last)) return null;
@@ -108,10 +109,10 @@ function liveReferenceStart(
     const head = tokens[tokens.length - 3];
     if (head === undefined || !isCellName(model, head)) return null;
     const beforeRange = tokens[tokens.length - 4];
-    return beforeRange === undefined || expectsOperand(beforeRange) ? head.start : null;
+    return beforeRange === undefined || expectsOperand(beforeRange, grammar) ? head.start : null;
   }
 
-  return expectsOperand(previous) ? last.start : null;
+  return expectsOperand(previous, grammar) ? last.start : null;
 }
 
 /**
@@ -150,7 +151,7 @@ export function resolveFormulaPointState(
 
   if (expectsOperand(last, grammar)) return { kind: 'armed', at: caretIndex };
 
-  const liveStart = liveReferenceStart(model, tokens);
+  const liveStart = liveReferenceStart(model, tokens, grammar);
   if (liveStart !== null) {
     return { kind: 'liveRef', from: bodyStart + liveStart, to: caretIndex };
   }
