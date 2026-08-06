@@ -118,7 +118,8 @@
     "empty": "No remark recorded"
   },
   "approvals": {
-    "authority": "Authority",
+    "subject": "Subject",
+    "authority": "Approving authority",
     "protocolNumber": "Protocol number",
     "date": "Date",
     "add": "Add approval",

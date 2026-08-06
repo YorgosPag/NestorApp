@@ -1811,6 +1811,7 @@
       "tableFormat": "Format"
     },
     "panels": {
+      "select": "Select",
       "topoData": "Data",
       "topoSurface": "Surface",
       "topoSurfaceDisplay": "Display",
@@ -6342,7 +6343,12 @@
       "plotArea": "Plot area",
       "heightDatum": "Height datum",
       "surveyDate": "Survey date",
-      "regionalUnit": "Regional unit"
+      "regionalUnit": "Regional unit",
+      "urbanPlanDecree": "Urban plan decree",
+      "generalUrbanPlan": "General urban plan",
+      "zoningRegulations": "Zoning regulation",
+      "approvals": "Approval",
+      "titleDeeds": "Title deed"
     },
     "evidence": {
       "email": "e-mail matches",
@@ -6368,7 +6374,8 @@
       "project-address": "Project address",
       "project-field": "Project detail",
       "drawing-meta": "Drawing detail",
-      "survey-record": "Survey data"
+      "survey-record": "Survey data",
+      "survey-record-row": "Survey data row"
     },
     "approve": "Approve",
     "approveTitle": "Write this link to the database, stamped with your name and the moment.",

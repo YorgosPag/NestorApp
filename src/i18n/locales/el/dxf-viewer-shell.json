@@ -1811,6 +1811,7 @@
       "tableFormat": "Μορφοποίηση"
     },
     "panels": {
+      "select": "Επιλογή",
       "topoData": "Δεδομένα",
       "topoSurface": "Επιφάνεια",
       "topoSurfaceDisplay": "Εμφάνιση",
@@ -6342,7 +6343,12 @@
       "plotArea": "Εμβαδόν οικοπέδου",
       "heightDatum": "Αφετηρία μέτρησης υψομέτρων",
       "surveyDate": "Ημερομηνία τοπογραφικού",
-      "regionalUnit": "Περιφερειακή ενότητα"
+      "regionalUnit": "Περιφερειακή ενότητα",
+      "urbanPlanDecree": "Διάταγμα ρυμοτομίας",
+      "generalUrbanPlan": "Γενικό Πολεοδομικό Σχέδιο",
+      "zoningRegulations": "Πολεοδομική ρύθμιση",
+      "approvals": "Έγκριση",
+      "titleDeeds": "Τίτλος ιδιοκτησίας"
     },
     "evidence": {
       "email": "ταιριάζει το e-mail",
@@ -6368,7 +6374,8 @@
       "project-address": "Διεύθυνση έργου",
       "project-field": "Στοιχείο έργου",
       "drawing-meta": "Στοιχείο σχεδίου",
-      "survey-record": "Στοιχεία Τοπογραφικού"
+      "survey-record": "Στοιχεία Τοπογραφικού",
+      "survey-record-row": "Γραμμή τοπογραφικού"
     },
     "approve": "Έγκριση",
     "approveTitle": "Γράψε αυτή τη σύνδεση στη βάση, με το όνομά σου και τη στιγμή.",
