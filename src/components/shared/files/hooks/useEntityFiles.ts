@@ -17,6 +17,7 @@ import type { QueryResult } from '@/services/firestore';
 import type { FileRecord } from '@/types/file-record';
 import type { EntityType, FileDomain, FileCategory } from '@/config/domain-constants';
 import { FILE_LIFECYCLE_STATES, FILE_STATUS } from '@/config/domain-constants';
+import { isPermissionDeniedError } from '@/lib/error-utils';
 import { createModuleLogger } from '@/lib/telemetry';
 import { RealtimeService } from '@/services/realtime';
 import type { FileCreatedPayload, FileUpdatedPayload, FileTrashedPayload, FileRestoredPayload, FileLinkCreatedPayload } from '@/services/realtime';
@@ -204,8 +205,10 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
     } catch (err) {
       const errObj = err instanceof Error ? err : new Error(String(err));
       const code = (err as { code?: string })?.code ?? 'unknown';
-      // Permission errors are expected (auth loading, unsaved entities) — don't show to user
-      if (code === 'permission-denied' || errObj.message.includes('permissions')) {
+      // Permission errors are expected (auth loading, unsaved entities) — don't show to user.
+      // The code check is the SSoT predicate; the message leg is kept because it also catches
+      // errors re-thrown without their `code` (narrowing it here would be a silent behaviour change).
+      if (isPermissionDeniedError(err) || errObj.message.includes('permissions')) {
         logger.warn('Files permission denied (expected during auth/creation)', { entityType, entityId });
         setFiles([]);
         setLoading(false);
@@ -276,7 +279,7 @@ export function useEntityFiles(params: UseEntityFilesParams): UseEntityFilesRetu
       (err: unknown) => {
         const code = (err as { code?: string })?.code ?? 'unknown';
         // Permission errors are expected (auth loading, unsaved entities)
-        if (code === 'permission-denied') {
+        if (isPermissionDeniedError(err)) {
           logger.warn('[realtime] Permission denied (expected)', { entityType, entityId });
           setFiles([]);
           setLoading(false);
