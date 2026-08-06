@@ -68,6 +68,7 @@ import {
   TOPO_SURFACE_CONTEXTUAL_TRIGGER,
   IMPORTED_MESH_CONTEXTUAL_TRIGGER,
   GENERIC_SOLID_CONTEXTUAL_TRIGGER,
+  TABLE_CONTEXTUAL_TRIGGER,
 } from '../ui/ribbon/data/contextual-triggers';
 import { isSanitaryKind } from '../bim/sanitary/sanitary-symbol-spec';
 import { isApplianceKind } from '../bim/appliances/appliance-symbol-spec';
@@ -158,6 +159,11 @@ export const ENTITY_CONTEXTUAL_TRIGGER: Partial<Record<EntityType, string>> = {
   // ↔ tool-active defaults, ΤΟ ΙΔΙΟ trigger, mirror annotation-symbol/scale-bar). Ο editor επεξεργάζεται
   // σχήμα/διαστάσεις/περιστροφή/υψόμετρο — ό,τι δεν βγαίνει με λαβή (ύψος/πάχος/πλευρές, Φ4-A).
   'generic-solid': GENERIC_SOLID_CONTEXTUAL_TRIGGER,
+  // 🔴 ADR-739 §52 — επιλεγμένος πίνακας → «Ιδιότητες Πίνακα». Ήταν ρητά στα no-tab types του
+  // coverage test («στη Φ.Δ θα μετακινηθεί εδώ»)· η φάση ήρθε. Είναι **η πρώτη μισή** ενός
+  // σύνθετου trigger: μπαίνοντας σε κελί, το `ribbon-contextual-config` προσθέτει δίπλα του
+  // το `table-cell-active` (ADR-566) — η προσθήκη γίνεται εκεί, γιατί εδώ δεν υπάρχει δρομέας.
+  table: TABLE_CONTEXTUAL_TRIGGER,
 };
 
 /**

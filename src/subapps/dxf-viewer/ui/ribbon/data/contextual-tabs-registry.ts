@@ -72,6 +72,8 @@ import { CONTEXTUAL_GUIDES_TAB } from './contextual-guides-tab';
 import { CONTEXTUAL_DIMENSIONS_TAB } from './contextual-dimensions-tab';
 import { CONTEXTUAL_TOPO_SURFACE_TAB } from './contextual-topo-surface-tab';
 import { CONTEXTUAL_IMPORTED_MESH_TAB } from './contextual-imported-mesh-tab';
+import { CONTEXTUAL_TABLE_TAB } from './contextual-table-tab';
+import { CONTEXTUAL_TABLE_FORMAT_TAB } from './contextual-table-format-tab';
 
 /**
  * Κάθε contextual tab, ΠΡΙΝ το `withStandardLeadPanel` (ADR-581) προσθέσει το κοινό
@@ -137,4 +139,10 @@ export const RAW_RIBBON_CONTEXTUAL_TABS: readonly RibbonTab[] = [
   CONTEXTUAL_TOPO_SURFACE_TAB,
   // ADR-683 Φ3.1β — επιλεγμένο εισαγόμενο πλέγμα → «Εισαγόμενο Πλέγμα» tab (ανάθεση προμέτρησης).
   CONTEXTUAL_IMPORTED_MESH_TAB,
+  // 🔴 ADR-739 §52 — οι ΔΥΟ καρτέλες πίνακα, με τη σειρά που εμφανίζονται: η «Ιδιότητες
+  // Πίνακα» με την επιλογή, η «Μορφοποίηση» μόλις μπεις σε κελί. Η σειρά ΕΔΩ δεν ορίζει ποια
+  // είναι ενεργή (αυτό το κάνει η σειρά των tokens + το `autoActivateOnAppear`) — ορίζει τη
+  // σειρά αναζήτησης, και η γειτνίασή τους κρατά τον κατάλογο αναγνώσιμο.
+  CONTEXTUAL_TABLE_TAB,
+  CONTEXTUAL_TABLE_FORMAT_TAB,
 ];

@@ -44,6 +44,7 @@ import { SCALE_BAR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-sc
 import { TEXT_EDITOR_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-text-editor-tab';
 import { LINE_TOOL_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-line-tool-tab';
 import { BLOCK_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-block-tab';
+import { TABLE_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-table-tab';
 import { MEP_FIXTURE_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-mep-fixture-tab';
 import { MEP_FLOOR_DRAIN_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-mep-floor-drain-tab';
 import { MEP_MANIFOLD_CONTEXTUAL_TRIGGER } from '../../ui/ribbon/data/contextual-mep-manifold-tab';
@@ -83,11 +84,11 @@ const NO_SELECTION_TAB_TYPES = [
   // ADR-612 — η πινακίδα ανοίγματος επεξεργάζεται μέσω double-click editor overlay
   // (`OpeningInfoTagEditorOverlay`) + grips, ΟΧΙ per-selection ribbon tab → null στην επιλογή.
   'opening-info-tag',
-  // ADR-739 Φ.Γ — ο πίνακας ΔΕΝ έχει ακόμη per-selection ribbon tab: στη Φ.Γ επεξεργάζεται
-  // μόνο γεωμετρικά (λαβές move/rotation/όριο στήλης). Ο επεξεργαστής κελιού και η καρτέλα
-  // πίνακα είναι **Φ.Δ** — τότε θα μετακινηθεί στο `ENTITY_CONTEXTUAL_TRIGGER` map, ακριβώς
-  // όπως έκαναν το `topo-surface` (Φ2β Stage C) και το `imported-mesh` (Φ3.1β).
-  'table',
+  // ADR-739 §52 — το `table` ΜΕΤΑΚΙΝΗΘΗΚΕ στο `ENTITY_CONTEXTUAL_TRIGGER` map, ακριβώς όπως
+  // προέβλεπε η σημείωση που έγραφε εδώ («στη Φ.Δ θα μετακινηθεί»): ένας επιλεγμένος πίνακας
+  // ανοίγει πλέον την «Ιδιότητες Πίνακα», και μπαίνοντας σε κελί προστίθεται δίπλα της η
+  // «Μορφοποίηση» (σύνθετο trigger — η προσθήκη γίνεται στο `ribbon-contextual-config`, όχι
+  // εδώ, γιατί εξαρτάται από τον δρομέα και όχι από την οντότητα).
   // ADR-662 Φ2β Stage C — το `topo-surface` ΜΕΤΑΚΙΝΗΘΗΚΕ στο `ENTITY_CONTEXTUAL_TRIGGER`
   // map (object-bound «Τοπογραφική Επιφάνεια» tab + Properties)· δεν είναι πλέον no-tab.
   // ADR-635 Φάση B — leader callout: annotation επεξεργάζεται μέσω grips (path vertices), ΟΧΙ
@@ -178,6 +179,14 @@ describe('Selection contextual-trigger coverage — map ↔ resolver ↔ descrip
       expect(resolveContextualTrigger({ type: 'generic-solid' })).toBe(GENERIC_SOLID_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'text' })).toBe(TEXT_EDITOR_CONTEXTUAL_TRIGGER);
       expect(resolveContextualTrigger({ type: 'mtext' })).toBe(TEXT_EDITOR_CONTEXTUAL_TRIGGER);
+      // 🔴 ADR-739 §52 — ο πίνακας βγήκε από τα no-tab types. Το golden pin είναι εδώ ώστε η
+      // μετακίνηση να **μη γίνεται σιωπηλά αντιστρεπτή**: το partition test μόνο του θα
+      // περνούσε και με λάθος trigger, αρκεί ο τύπος να ανήκει σε κάποια κατηγορία.
+      //
+      // ⚠️ Ο επιλεγμένος πίνακας δίνει **σκέτο** `table-selected` — ποτέ το σύνθετο. Το
+      // `table-cell-active` εξαρτάται από τον δρομέα, που είναι κατάσταση συνεδρίας και όχι
+      // της οντότητας· η σύνθεση ζει στο `ribbon-contextual-config` και ελέγχεται εκεί.
+      expect(resolveContextualTrigger({ type: 'table' })).toBe(TABLE_CONTEXTUAL_TRIGGER);
     });
   });
 

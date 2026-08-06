@@ -64,3 +64,7 @@ export { MEP_RISER_CONTEXTUAL_TRIGGER } from './contextual-mep-riser-tab';
 export { GUIDES_CONTEXTUAL_TRIGGER } from './contextual-guides-tab';
 export { DIMENSIONS_CONTEXTUAL_TRIGGER } from './contextual-dimensions-tab';
 export { TOPO_SURFACE_CONTEXTUAL_TRIGGER } from './contextual-topo-surface-tab';
+// ADR-739 §52 — σύνθετο trigger: επιλογή οντότητας → «Ιδιότητες Πίνακα»· είσοδος σε κελί →
+// **και** «Μορφοποίηση», δίπλα της (ποτέ αντικατάσταση).
+export { TABLE_CONTEXTUAL_TRIGGER } from './contextual-table-tab';
+export { TABLE_FORMAT_CONTEXTUAL_TRIGGER } from './contextual-table-format-tab';

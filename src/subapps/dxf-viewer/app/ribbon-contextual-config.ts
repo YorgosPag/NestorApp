@@ -11,6 +11,13 @@ import { MEP_CIRCUIT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep
 import { MEP_PIPE_NETWORK_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-mep-pipe-network-tab';
 import { ANIMATION_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-animation-tab';
 import { DIMENSIONS_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-dimensions-tab';
+// 🔴 ADR-739 §52 — η δεύτερη μισή του σύνθετου trigger του πίνακα. Η πρώτη (`table-selected`)
+// έρχεται από το entity-keyed map του `resolve-contextual-trigger`.
+import { TABLE_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-table-tab';
+import { TABLE_FORMAT_CONTEXTUAL_TRIGGER } from '../ui/ribbon/data/contextual-table-format-tab';
+// 🔴 §52 — boolean micro-selector, ΟΧΙ συνδρομή στο store του δρομέα: το `draft` αλλάζει σε
+// κάθε πλήκτρο και θα επανυπολόγιζε το trigger ανά χαρακτήρα (ADR-040/532/547).
+import { useTableCellCursorActive } from '../state/use-table-cell-cursor-active';
 import { selectAnimationToolActive, useAnimationStore } from '../bim-3d/animation/AnimationStore';
 import { useMepSystemStore } from '../bim/mep-systems/mep-system-store';
 import { useMepCircuitEditorStore } from '../bim/mep-systems/mep-circuit-editor-store';
@@ -53,6 +60,9 @@ export function useActiveContextualTrigger({
   currentScene: SceneModel | null;
   activeTool: string;
 }): string | null {
+  // ADR-739 §52 — «υπάρχει ενεργό κελί;» σε ένα boolean. Αλλάζει **δύο** φορές σε ολόκληρη
+  // μια συνεδρία γραφής (είσοδος/έξοδος), όχι μία ανά χαρακτήρα — δες το module.
+  const tableCellActive = useTableCellCursorActive();
   // ADR-366 §C.1.b — surface animation contextual tab when AnimationStore.toolActive flips.
   const animationToolActive = useAnimationStore(selectAnimationToolActive);
   // ADR-408 Φ6 — the circuit tab also surfaces when the selection touches an
@@ -169,12 +179,28 @@ export function useActiveContextualTrigger({
     if (fromSelection === DIMENSION_CONTEXTUAL_TRIGGER) {
       return `${DIMENSION_CONTEXTUAL_TRIGGER}${CONTEXTUAL_TRIGGER_SEPARATOR}${DIMENSIONS_CONTEXTUAL_TRIGGER}`;
     }
+    /**
+     * 🔴 ADR-739 §52 — **ο πίνακας δείχνει ΔΥΟ καρτέλες μόλις μπεις σε κελί.**
+     *
+     * Ίδιο σχήμα με τη διάσταση από πάνω (ADR-566): το per-kind tab είναι **πρώτο** token, άρα
+     * μένει ενεργό όσο δεν παρεμβαίνει κάτι άλλο· η «Μορφοποίηση» προστίθεται δίπλα του και
+     * γίνεται ενεργή μέσω του δηλωτικού `autoActivateOnAppear` — ο κοινός κανόνας του
+     * `RibbonRoot` **δεν** θα το έκανε, γιατί η ενεργή καρτέλα είναι ήδη contextual.
+     *
+     * ⚠️ Η προτεραιότητα είναι σκόπιμη: **κάτω** από το `animationToolActive` και το
+     * `activeTool === 'scale'` (modal εργαλεία που κατέχουν την κορδέλα), **πάνω** από το
+     * `resolveToolActiveTrigger`. Ένας πίνακας υπό επεξεργασία δεν επιτρέπεται να χάσει τη
+     * μορφοποίησή του επειδή έμεινε οπλισμένο κάποιο εργαλείο σχεδίασης.
+     */
+    if (fromSelection === TABLE_CONTEXTUAL_TRIGGER && tableCellActive) {
+      return `${TABLE_CONTEXTUAL_TRIGGER}${CONTEXTUAL_TRIGGER_SEPARATOR}${TABLE_FORMAT_CONTEXTUAL_TRIGGER}`;
+    }
     if (fromSelection) return fromSelection;
     // ADR-587 Φ3b-2 (Seam 2) — the pure, activeTool-only resolution (static tool→trigger
     // map + predicate/prefix/sticky escape-hatch) lives in `resolve-tool-active-trigger.ts`
     // (ToolType-keyed SSoT, §5.1). Reached only after every stateful pre-rule above misses.
     return resolveToolActiveTrigger(activeTool, lastNonModifyTriggerRef.current);
-  }, [primarySelectedId, selectedEntityIds, currentScene, entityIndex, activeTool, animationToolActive, mepSystems, activeSystemId, crossLevelEntities]);
+  }, [primarySelectedId, selectedEntityIds, currentScene, entityIndex, activeTool, animationToolActive, mepSystems, activeSystemId, crossLevelEntities, tableCellActive]);
   // ADR-510 Φ4i — record the last NON-modify resolution so the sticky branch inside
   // `resolveToolActiveTrigger` can restore it when a tab-neutral line-modify tool activates.
   React.useEffect(() => {
