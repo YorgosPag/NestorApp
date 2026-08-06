@@ -74,6 +74,9 @@ export {
 
 export type { FloatingPanelId } from './floating-panel-persistence';
 
+// ADR-750 Φ6β — «είναι η εστίαση μέσα σε ΑΥΤΗ την παλέτα;»: μία απάντηση για κάθε χειριστή ESC.
+export { isFocusInsidePanel } from './floating-panel-focus';
+
 export { useFloatingPanelGeometry } from './useFloatingPanelGeometry';
 export type {
   UseFloatingPanelGeometryOptions,

@@ -228,3 +228,75 @@ describe('useTableCellSessionBlur — οι πέντε δρόμοι', () => {
     expect(reclaim).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * 🔴 ADR-750 §21.9 — **Ο ΕΚΤΟΣ ΔΡΟΜΟΣ: απόγονος σημαδεμένου δοχείου.**
+ *
+ * Ο φύλακας ρωτούσε **μόνο για το ίδιο το στοιχείο**, οπότε κάθε κουμπί έπρεπε να θυμηθεί το
+ * σημάδι **ατομικά** — 20+ σημεία σε 12 αρχεία. Όποιο το ξεχνούσε γινόταν **ορατό αλλά νεκρό**:
+ * το `mousedown` σκότωνε τη συνεδρία, το υποδέντρο ξεμόνταρε, και το `click` δεν εκδιδόταν ποτέ.
+ *
+ * ⚠️ Ένα test με σκέτο `fireEvent.click` είναι **δομικά τυφλό** σε αυτό (δεν στέλνει `mousedown`
+ * ούτε μεταφέρει εστίαση) — γι' αυτό το «Χρώμα:» του ADR-750 Φ6β ήταν **πράσινο και νεκρό**.
+ */
+describe('useTableCellSessionBlur — 6ος δρόμος: ΜΕΣΑ σε σημαδεμένο δοχείο', () => {
+  let commit: jest.Mock;
+  let close: jest.Mock;
+  let reclaim: jest.Mock;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    __resetTableCellSessionFocusForTests();
+    commit = jest.fn();
+    close = jest.fn();
+    reclaim = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    __resetTableCellSessionFocusForTests();
+    document.body.innerHTML = '';
+  });
+
+  /** Κουμπί **χωρίς** δικό του σημάδι, μέσα σε δοχείο **με** σημάδι — η τοπολογία του Φ6β. */
+  function nestedButton(): HTMLElement {
+    const container = document.createElement('div');
+    for (const [name, value] of Object.entries(TABLE_CELL_SESSION_MARKER)) {
+      container.setAttribute(name, value);
+    }
+    const button = document.createElement('button');
+    container.appendChild(button);
+    document.body.appendChild(container);
+    return button;
+  }
+
+  it('🔴 κουμπί ΜΕΣΑ στο σημαδεμένο δοχείο ⇒ ΟΥΤΕ commit ΟΥΤΕ κλείσιμο', () => {
+    const target = nestedButton();
+    // Προϋπόθεση της άγκυρας: το ίδιο το κουμπί ΔΕΝ φέρει σημάδι. Χωρίς αυτόν τον έλεγχο το
+    // test θα ήταν πράσινο και για λάθος λόγο (αν κάποιος «διόρθωνε» σπρώχνοντας το σημάδι).
+    expect(isTableCellSessionElement(target)).toBe(false);
+
+    const { result } = renderHook(() => useTableCellSessionBlur(commit, close, reclaim));
+    act(() => {
+      result.current({ relatedTarget: target } as unknown as React.FocusEvent<HTMLElement>);
+    });
+    act(() => { nextFrame(); });
+
+    expect(commit).not.toHaveBeenCalled();
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  it('🔑 το κλικ ΕΞΩ εξακολουθεί να κλείνει — η μισή προδιαγραφή μένει ανέπαφη', () => {
+    const outsider = document.createElement('button');
+    document.body.appendChild(outsider);
+
+    const { result } = renderHook(() => useTableCellSessionBlur(commit, close, reclaim));
+    act(() => {
+      result.current({ relatedTarget: outsider } as unknown as React.FocusEvent<HTMLElement>);
+    });
+    act(() => { nextFrame(); });
+
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+});

@@ -22,7 +22,7 @@
  */
 
 import React, { useCallback, useId, useState } from 'react';
-import { Palette } from 'lucide-react';
+import { ChevronDown, Palette } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { normalizeHexColor } from '../../../../config/color-math';
@@ -84,6 +84,13 @@ export function TableBorderDialogColor({
             ? t('table.borders.pencil.automatic')
             : t('table.colorMenu.swatchHex', { color: selected })}
         </span>
+        {/*
+          🔴 Το βελάκι είναι **λειτουργικό**, όχι διακοσμητικό: χωρίς αυτό η γραμμή διαβάζεται ως
+          ετικέτα «Χρώμα: Από το στυλ» και κανείς δεν την πατά. Στο Excel το ίδιο χειριστήριο
+          είναι combo με `▾` — η μόνη ένδειξη ότι υπάρχει επιλογή από κάτω. `aria-hidden` γιατί
+          το «ανοίγει κάτι» το λέει ήδη το `aria-haspopup` στον αναγνώστη οθόνης.
+        */}
+        <ChevronDown size={14} aria-hidden="true" className={styles.colorCaret} />
       </button>
 
       {open ? (

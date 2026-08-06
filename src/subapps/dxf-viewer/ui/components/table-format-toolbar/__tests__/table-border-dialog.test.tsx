@@ -21,6 +21,10 @@ import {
   TABLE_BORDER_STYLES,
   TABLE_BORDER_STYLE_GRID,
 } from '@/subapps/dxf-viewer/bim/table/table-border-style-catalog';
+import {
+  ACI_COLOR_GRID,
+  ACI_GRID_HUE_KEYS,
+} from '@/subapps/dxf-viewer/ui/color/aci-color-grid';
 import { setTableBorderDialogPositions } from '@/subapps/dxf-viewer/bim/table/table-border-dialog-draft';
 import { buildTableEdgeIndex } from '@/subapps/dxf-viewer/bim/table/table-edge-model';
 import { tableRangeSideEdges } from '@/subapps/dxf-viewer/bim/table/table-range-border-ops';
@@ -196,6 +200,61 @@ describe('ADR-750 Φ6 — το σημείο εισόδου', () => {
   });
 });
 
+describe('ADR-750 Φ6β — ΑΙΩΡΟΥΜΕΝΟ κέλυφος, όχι modal', () => {
+  /** `true` αν το στοιχείο ή κάποιος πρόγονός του φέρει `aria-hidden="true"`. */
+  function hasAriaHiddenAncestor(element: HTMLElement): boolean {
+    for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+      if (node.getAttribute('aria-hidden') === 'true') return true;
+    }
+    return false;
+  }
+
+  it('🔴 `aria-modal="false"` — η δήλωση που κάνει την παλέτα παλέτα', () => {
+    renderToolbar();
+    openDialog();
+    expect(screen.getByRole('dialog', { name: /Μορφοποίηση κελιών/ }))
+      .toHaveAttribute('aria-modal', 'false');
+  });
+
+  it('🔑 ό,τι είναι ΑΠΕΞΩ μένει ανακοινώσιμο — ο Radix το έκρυβε με `aria-hidden`', () => {
+    renderToolbar();
+    openDialog();
+    // Αυτό είναι ΟΛΟ το ζητούμενο της Φ6β: ο πίνακας (και η γραμμή εργαλείων του) συνυπάρχει με
+    // την ανοιχτή παλέτα. Με modal κέλυφος το κουμπί κληρονομούσε `aria-hidden` από τον αδελφό
+    // του overlay — δηλαδή ο αναγνώστης οθόνης δεν έβλεπε τίποτα έξω από τον διάλογο.
+    expect(hasAriaHiddenAncestor(screen.getByRole('button', { name: 'Περιγράμματα' })))
+      .toBe(false);
+  });
+
+  it('η επικεφαλίδα φέρει τη λαβή συρσίματος — αλλιώς «floating» θα ήταν μόνο όνομα', () => {
+    renderToolbar();
+    openDialog();
+    const panel = screen.getByRole('dialog', { name: /Μορφοποίηση κελιών/ });
+    expect(panel.querySelector('[data-drag-handle="true"]')).not.toBeNull();
+  });
+
+  it('🔴 η ρίζα ΔΕΝ ψαλιδίζει — αλλιώς κάθε αναδυόμενο ΜΕΣΑ στην παλέτα γίνεται αόρατο', () => {
+    renderToolbar();
+    openDialog();
+    // Το `<Card>` του `FloatingPanel` φέρει `overflow-hidden` στη βάση του. Με αυτό ενεργό, η
+    // παλέτα χρωμάτων (absolute, ανοίγει προς τα κάτω, κοντά στο χείλος) κόβεται ολόκληρη — ο
+    // χρήστης πατά «Χρώμα:» και **δεν βλέπει τίποτα**. Το jsdom δεν υπολογίζει ψαλίδισμα, οπότε
+    // η άγκυρα είναι στην ΚΛΑΣΗ: αυτό ακριβώς ήταν το ζωντανό εύρημα της Φ6β.
+    const panel = screen.getByRole('dialog', { name: /Μορφοποίηση κελιών/ });
+    expect(panel.className).toContain('overflow-visible');
+    expect(panel.className).not.toContain('overflow-hidden');
+  });
+
+  it('🔑 η περιγραφή ΔΕΝ χάθηκε μαζί με το `DialogDescription`', () => {
+    renderToolbar();
+    openDialog();
+    const panel = screen.getByRole('dialog', { name: /Μορφοποίηση κελιών/ });
+    const describedBy = panel.getAttribute('aria-describedby');
+    expect(describedBy).toBeTruthy();
+    expect(document.getElementById(describedBy ?? '')?.textContent ?? '').toContain('υποδείγματα');
+  });
+});
+
 describe('ADR-750 Φ6 — οι έξι καρτέλες', () => {
   it('🔴 πέντε ανενεργές αλλά ΑΝΑΚΟΙΝΩΣΙΜΕΣ, μόνο η «Περίγραμμα» επιλεγμένη', () => {
     renderToolbar();
@@ -331,6 +390,48 @@ describe('ADR-750 Φ6 — η ροή «πρώτα στυλ, μετά πού»', (
     ]) {
       expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
     }
+  });
+});
+
+describe('ADR-750 Φ6 — «Χρώμα:»: το κενό που ΚΑΝΕΝΑ test δεν είχε ανοίξει', () => {
+  /**
+   * 🔴 Ο ίδιος ο `TableBorderDialogColor` γράφει στην κεφαλίδα του ότι ένα ζωντανό `TypeError`
+   * πέρασε από **145 πράσινα tests** επειδή «κανένα δεν άνοιξε τη γραμμή χρώματος». Έμεινε έτσι
+   * και μετά τη Φ6: το χρώμα ήταν το **μόνο** χειριστήριο του διαλόγου χωρίς άγκυρα.
+   */
+  it('🔑 το «Χρώμα:» ΕΙΝΑΙ κουμπί και ανοίγει παλέτα — όχι ετικέτα ανάγνωσης', () => {
+    renderToolbar();
+    openDialog();
+
+    const trigger = screen.getByRole('button', { name: 'Χρώμα:' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    act(() => { fireEvent.click(trigger); });
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('grid', { name: 'Βασικά χρώματα' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Περισσότερα χρώματα…' })).toBeInTheDocument();
+  });
+
+  it('🔴 το επιλεγμένο χρώμα φτάνει ΣΤΗΝ ΑΚΜΗ — όχι μόνο στο δείγμα του κουμπιού', () => {
+    const { onCommit } = renderToolbar();
+    openDialog();
+
+    act(() => { fireEvent.click(screen.getByRole('option', { name: 'Συνεχής, λεπτό πάχος' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Χρώμα:' })); });
+
+    // Το πλέγμα γράφεται κατά ΣΕΙΡΑ (απόχρωση ανά στήλη, τόνος ανά σειρά): «κόκκινο, βασικός».
+    const hues = ACI_GRID_HUE_KEYS.length;
+    const redBase = ACI_COLOR_GRID[1][1].hex;
+    act(() => { fireEvent.click(screen.getAllByRole('gridcell')[1 * hues + 1]); });
+
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πάνω περίγραμμα' })); });
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'OK' })); });
+
+    const committed = onCommit.mock.calls[0][0] as PersistedTableModel;
+    const index = buildTableEdgeIndex(committed.edges);
+    const [key] = tableRangeSideEdges(committed, SINGLE_CELL, 'top');
+    expect(index.get(key)?.colorHex).toBe(redBase);
   });
 });
 

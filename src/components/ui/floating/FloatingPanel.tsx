@@ -119,6 +119,15 @@ export interface FloatingPanelProps {
    * Όποιος ξέρει σε ποιο στρώμα ανήκει, το δηλώνει — με τιμή από το SSoT (ADR-002), ποτέ ωμή.
    */
   zIndex?: number;
+  /**
+   * ADR-750 Φ6β — id του στοιχείου που **περιγράφει** την παλέτα (όχι που την ονομάζει).
+   *
+   * Το όνομα το δίνει πάντα η επικεφαλίδα (`aria-labelledby` → `titleId`). Η περιγραφή είναι
+   * ξεχωριστό ερώτημα και μέχρι τώρα ήταν **αδύνατη**: μια παλέτα που διαδέχεται Radix
+   * `Dialog` έχανε σιωπηλά το `DialogDescription` της. Προαιρετικό ⇒ οι υπάρχοντες
+   * καταναλωτές μένουν ακριβώς ως έχουν.
+   */
+  'aria-describedby'?: string;
 }
 
 /** FloatingPanel Header props */
@@ -201,6 +210,7 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
   maxSize,
   persistenceKey,
   zIndex,
+  'aria-describedby': ariaDescribedBy,
 }) => {
   // ✅ ENTERPRISE: Hydration safety
   const [isMounted, setIsMounted] = useState(false);
@@ -299,6 +309,7 @@ const FloatingPanelRoot: React.FC<FloatingPanelProps> = ({
         role="dialog"
         aria-modal="false"
         aria-labelledby={titleId}
+        aria-describedby={ariaDescribedBy}
         data-testid={dataTestId}
       >
         {children}

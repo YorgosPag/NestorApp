@@ -1885,6 +1885,25 @@ export const PanelPositionCalculator = {
       y: panelBottomY - panelHeight,
     };
   },
+
+  /**
+   * Κεντραρισμένη τοποθέτηση — για παλέτα που **διαδέχεται modal διάλογο** (ADR-750 Φ6β).
+   *
+   * Ένας Radix `Dialog` κάθεται στο κέντρο του viewport. Όταν το κέλυφος γίνεται `FloatingPanel`,
+   * η **πρώτη** εμφάνιση πρέπει να είναι εκεί που ο χρήστης την περίμενε — αλλιώς η αλλαγή
+   * διαβάζεται ως «το παράθυρο πήδηξε», όχι ως «τώρα σέρνεται». Από εκεί και πέρα κυριαρχεί η
+   * χειρονομία του χρήστη (και η μόνιμη γεωμετρία, αν δηλωθεί `persistenceKey`).
+   *
+   * Το `Math.max` δεν είναι διακόσμηση: σε παράθυρο στενότερο από την παλέτα το κέντρο βγαίνει
+   * **αρνητικό**, δηλαδή η επικεφαλίδα — η μόνη λαβή συρσίματος — θα ξεκινούσε εκτός οθόνης.
+   */
+  getCenteredPosition: (panelWidth: number, panelHeight: number): { x: number; y: number } => {
+    const { OFFSETS } = PANEL_ANCHORING;
+    return {
+      x: Math.max(OFFSETS.VIEWPORT_MARGIN, Math.round((window.innerWidth - panelWidth) / 2)),
+      y: Math.max(OFFSETS.VIEWPORT_MARGIN, Math.round((window.innerHeight - panelHeight) / 2)),
+    };
+  },
 } as const;
 
 // ============================================================================

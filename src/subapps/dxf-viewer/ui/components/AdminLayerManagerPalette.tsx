@@ -38,7 +38,7 @@
 import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { FloatingPanel } from '@/components/ui/floating';
+import { FloatingPanel, isFocusInsidePanel } from '@/components/ui/floating';
 import { LazyAdminLayerManager } from './LazyLoadWrapper';
 import { LayerManagerPaletteStore } from '../../stores/LayerManagerPaletteStore';
 import { ESC_PRIORITY, useEscapeHandler } from '../../systems/escape-bus';
@@ -74,15 +74,6 @@ interface AdminLayerManagerPaletteProps {
   projectName?: string;
 }
 
-/** `true` όταν το `document.activeElement` βρίσκεται μέσα στην παλέτα. SSR-safe. */
-function isFocusInsidePalette(): boolean {
-  if (typeof document === 'undefined') return false;
-  const root = document.getElementById(PALETTE_DOM_ID);
-  const active = document.activeElement;
-  if (!root || !active) return false;
-  return root.contains(active);
-}
-
 export const AdminLayerManagerPalette: React.FC<AdminLayerManagerPaletteProps> = ({
   projectId = null,
   projectName = '',
@@ -106,6 +97,9 @@ export const AdminLayerManagerPalette: React.FC<AdminLayerManagerPaletteProps> =
    * κάθε ESC της εφαρμογής και θα σκότωνε το «ακύρωση εντολής / αποεπιλογή» του καμβά — το
    * συχνότερο πλήκτρο του σχεδιαστή. Δες {@link ESC_PRIORITY.FOCUSED_PALETTE}.
    *
+   * Ο ίδιος ο έλεγχος ζει στο {@link isFocusInsidePanel} (ADR-750 Φ6β): ήταν τοπική συνάρτηση
+   * εδώ μέχρι τη στιγμή που χρειάστηκε **δεύτερη** παλέτα την ίδια απάντηση.
+   *
    * ── ΓΙΑΤΙ ΚΑΘΟΛΟΥ ESC, ΑΦΟΥ ΟΙ ΜΕΓΑΛΟΙ ΔΕΝ ΤΟ ΚΑΝΟΥΝ; ──
    *
    * Σε Revit / AutoCAD / Figma το ESC με εστίαση σε παλέτα **δεν κάνει τίποτα** — νεκρό πλήκτρο.
@@ -123,7 +117,7 @@ export const AdminLayerManagerPalette: React.FC<AdminLayerManagerPaletteProps> =
       ? {
           id: 'layer-manager-palette',
           priority: ESC_PRIORITY.FOCUSED_PALETTE,
-          canHandle: isFocusInsidePalette,
+          canHandle: () => isFocusInsidePanel(PALETTE_DOM_ID),
           handle: (): boolean => {
             LayerManagerPaletteStore.close();
             return true;
