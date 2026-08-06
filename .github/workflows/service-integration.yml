@@ -33,8 +33,27 @@ name: T2 🔗 Service Integration (ADR-745)
 # NOT show on screen — the write path is refused by the rules, or lands in the
 # wrong tenant. It does not stop the Netcup deploy, so it is not Tier 1.
 #
-# Triggered narrowly — only when the write paths, their rules, or the harness
-# change — so most PRs never pay for the emulator boot.
+# Why the trigger is COARSE (corrected 2026-08-06, ADR-759 §4.12)
+# ---------------------------------------------------------------
+# This filter used to name nine specific paths, "so most PRs never pay for the
+# emulator boot". Measured cost of that thrift: commit `57b643ab` made
+# `projectId` mandatory on the `drawing-meta` target, which broke
+# `title-block-binding-flow`'s fixture — and touched **9 files, 0 trigger
+# paths**. The closest was `src/types/title-block-binding.ts`, THE union the
+# suites are entirely built on, and it was not listed. The suite sat RED and
+# this gate never ran once.
+#
+# 🔴 A longer named list is not the fix. The thing that must be watched is a
+# TRANSITIVE IMPORT GRAPH, and a hand-maintained list of it is the same failure
+# this repo has already paid for three times: the two i18n namespace lists that
+# drifted by 63 (CHECK 3.34), the CI aggregator watching 18 of 26 workflows
+# (CHECK 3.37), and `ssot-discover` scanning 118 of 12.630 files (CHECK 3.18).
+# In all three the list was green precisely because it was not looking.
+#
+# So the trigger is source ROOTS. Documentation and locale commits — the bulk of
+# traffic in this repo — still skip the emulator boot; no code change escapes.
+# The honest trade is a few extra minutes on some PRs against a whole class of
+# silent rot, and the rot has already happened once, undetected.
 #
 # @see .github/workflows/functions-integration.yml (same shape, same PATH lesson)
 # @see .github/workflows/firestore-rules.yml       (rules only, no production code)
@@ -43,24 +62,34 @@ name: T2 🔗 Service Integration (ADR-745)
 on:
   pull_request:
     paths:
-      - 'src/services/title-block-apply/**'
-      - 'src/services/title-block-binding.service.ts'
-      - 'src/services/contact-link.service.ts'
-      - 'src/lib/title-block-binding-id.ts'
-      - 'src/lib/firestore/converters/**'
+      # Source ROOTS, never a named file list — see "Why the trigger is coarse" above.
+      - 'src/services/**'
+      - 'src/lib/**'
+      - 'src/types/**'
+      - 'src/config/**'
+      - 'src/utils/**'
+      # The harness and the persona registry the suites import from live NEXT DOOR,
+      # under the rules-tests tree. They were not triggers either.
       - 'tests/service-integration/**'
+      - 'tests/firestore-rules/_harness/**'
+      - 'tests/firestore-rules/_registry/**'
       - 'jest.config.service-integration.js'
       - 'firestore.rules'
       - '.github/workflows/service-integration.yml'
   push:
     branches: [main]
     paths:
-      - 'src/services/title-block-apply/**'
-      - 'src/services/title-block-binding.service.ts'
-      - 'src/services/contact-link.service.ts'
-      - 'src/lib/title-block-binding-id.ts'
-      - 'src/lib/firestore/converters/**'
+      # Source ROOTS, never a named file list — see "Why the trigger is coarse" above.
+      - 'src/services/**'
+      - 'src/lib/**'
+      - 'src/types/**'
+      - 'src/config/**'
+      - 'src/utils/**'
+      # The harness and the persona registry the suites import from live NEXT DOOR,
+      # under the rules-tests tree. They were not triggers either.
       - 'tests/service-integration/**'
+      - 'tests/firestore-rules/_harness/**'
+      - 'tests/firestore-rules/_registry/**'
       - 'jest.config.service-integration.js'
       - 'firestore.rules'
       - '.github/workflows/service-integration.yml'
