@@ -21,24 +21,17 @@
 
 import {
   GREEK_SURVEYOR_BODY_PROFILES,
-  type BodyTake,
   type DocumentBodyProfile,
-  type DocumentBodyRule,
 } from '@/config/document-body-vocabulary';
 import type {
   DocumentBodyField,
   DocumentBodyReading,
   DocumentTextSource,
 } from '@/types/document-body-reading';
-import { matchesWordSequenceAt, splitIntoWords, type TextWord } from '@/utils/greek-text';
-import {
-  cleanToken,
-  hasShape,
-  takeList,
-  takeNumberLiteral,
-  takeRest,
-  takeToken,
-} from './document-body-values';
+import { matchesWordSequenceAt, splitIntoWords } from '@/utils/greek-text';
+import { cutOne, findAtSegmentStart, findSites, phraseOf } from './document-body-sites';
+import { takeRest } from './document-body-values';
+import { readListRows } from './read-document-body-lists';
 
 /**
  * Πόσες γραμμές από την αρχή ψάχνουμε για τίτλο.
@@ -51,24 +44,6 @@ const HEADING_SEARCH_LINES = 3;
 
 /** Η ενότητα στην οποία ανήκουν οι κανόνες εγγράφων **χωρίς** ενότητες. */
 const WHOLE_DOCUMENT = '';
-
-/** Οι λέξεις μιας φράσης καταλόγου, σε μορφή σύγκρισης. */
-const phraseOf = (text: string): readonly string[] =>
-  splitIntoWords(text).map((word) => word.normalized);
-
-/** Πού ταίριαξε ένας κανόνας, με ό,τι χρειάζεται το `take` για να κόψει την τιμή. */
-interface MatchSite {
-  /** Το κείμενο μέσα στο οποίο κόβεται η τιμή (τμήμα ή ολόκληρη γραμμή). */
-  readonly text: string;
-  readonly words: readonly TextWord[];
-  /** Δείκτης της πρώτης λέξης **μετά** την ετικέτα. */
-  readonly from: number;
-  /** Θέση χαρακτήρα όπου αρχίζει/τελειώνει η ετικέτα (ίσες όταν δεν υπάρχει ετικέτα). */
-  readonly labelStart: number;
-  readonly labelEnd: number;
-  /** Η ολόκληρη γραμμή — το συμφραζόμενο που δείχνεται στον άνθρωπο. */
-  readonly line: string;
-}
 
 // ── Ενότητες ──────────────────────────────────────────────────────────────────
 
@@ -130,135 +105,6 @@ function splitIntoSections(
   return sections;
 }
 
-// ── Εντοπισμός ────────────────────────────────────────────────────────────────
-
-/** Τα τμήματα μιας γραμμής: ό,τι υπάρχει ανάμεσα σε στηλοθέτες — οι στήλες της φόρμας. */
-const segmentsOf = (line: string): readonly string[] => line.split('\t');
-
-/** Κάθε τμήμα που **αρχίζει** με μία από τις ετικέτες, με τη σειρά που γράφτηκαν. */
-function findAtSegmentStart(lines: readonly string[], labels: readonly string[]): MatchSite[] {
-  const sites: MatchSite[] = [];
-  for (const line of lines) {
-    for (const segment of segmentsOf(line)) {
-      const words = splitIntoWords(segment);
-      if (words.length === 0) continue;
-      for (const label of labels) {
-        const phrase = phraseOf(label);
-        if (phrase.length === 0 || !matchesWordSequenceAt(words, 0, phrase)) continue;
-        sites.push({
-          text: segment,
-          words,
-          from: phrase.length,
-          labelStart: words[0].start,
-          labelEnd: words[phrase.length - 1].end,
-          line,
-        });
-      }
-    }
-  }
-  return sites;
-}
-
-/** Κάθε εμφάνιση μιας φράσης **οπουδήποτε** μέσα σε γραμμή. */
-function findLeadIn(lines: readonly string[], labels: readonly string[]): MatchSite[] {
-  const sites: MatchSite[] = [];
-  for (const line of lines) {
-    const words = splitIntoWords(line);
-    for (let i = 0; i < words.length; i += 1) {
-      for (const label of labels) {
-        const phrase = phraseOf(label);
-        if (phrase.length === 0 || !matchesWordSequenceAt(words, i, phrase)) continue;
-        sites.push({
-          text: line,
-          words,
-          from: i + phrase.length,
-          labelStart: words[i].start,
-          labelEnd: words[i + phrase.length - 1].end,
-          line,
-        });
-      }
-    }
-  }
-  return sites;
-}
-
-/** Η πρώτη γραμμή με περιεχόμενο — η πρόζα κάτω από την επικεφαλίδα. */
-function findSectionProse(lines: readonly string[]): MatchSite[] {
-  for (const line of lines) {
-    const words = splitIntoWords(line);
-    if (words.length === 0) continue;
-    return [{ text: line, words, from: 0, labelStart: 0, labelEnd: 0, line }];
-  }
-  return [];
-}
-
-/**
- * Η **τελευταία** γραμμή που τελειώνει σε ημερομηνία — η γραμμή υπογραφής.
- *
- * Σαρώνει από το τέλος γιατί αυτό ακριβώς ρωτάμε: *πότε υπογράφτηκε*. Το ίδιο έγγραφο
- * περιέχει τέσσερις άλλες ημερομηνίες (ΦΕΚ, απόφαση νομάρχη, μεταγραφή), **καμία** στο τέλος
- * γραμμής — άρα το κριτήριο δεν είναι απλώς «η τελευταία που βρήκα».
- */
-function findLineTailDate(lines: readonly string[]): MatchSite[] {
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const words = splitIntoWords(lines[i]);
-    const last = words[words.length - 1];
-    if (!last || !hasShape(last, 'date')) continue;
-    return [
-      {
-        text: lines[i],
-        words,
-        from: words.length - 1,
-        labelStart: last.start,
-        labelEnd: last.start,
-        line: lines[i],
-      },
-    ];
-  }
-  return [];
-}
-
-/**
- * **Όλα** τα σημεία όπου ταιριάζει ο κανόνας — όχι μόνο το πρώτο.
- *
- * 🔴 Μετρημένο: στη «ΔΗΛΩΣΗ ΤΟΥ Ν.651/77» η λέξη «στις» εμφανίζεται **δύο** φορές — «υπάγεται
- * **στις** διατάξεις του Ν.1337/83» και «**στις** 2-5-1996». Με «η πρώτη εμφάνιση κερδίζει», η
- * ημερομηνία μεταγραφής **χανόταν σιωπηλά**, γιατί μετά την πρώτη ακολουθεί λέξη και όχι
- * ημερομηνία. Ο κανόνας που ισχύει είναι: **η πρώτη εμφάνιση που δίνει τιμή του δηλωμένου
- * σχήματος** — ο έλεγχος σχήματος είναι ήδη ο φύλακας, οπότε η σάρωση όλων δεν χαλαρώνει
- * τίποτα· αντίθετα, είναι ο ίδιος μηχανισμός που κρατά το «Π.Ε. 39» έξω από την Περιφερειακή
- * Ενότητα ακόμη κι αν προηγηθεί στο κείμενο.
- */
-function findSites(rule: DocumentBodyRule, lines: readonly string[]): MatchSite[] {
-  switch (rule.match.at) {
-    case 'segment-start':
-      return findAtSegmentStart(lines, rule.match.labels);
-    case 'lead-in':
-      return findLeadIn(lines, rule.match.labels);
-    case 'section-prose':
-      return findSectionProse(lines);
-    case 'line-tail-date':
-      return findLineTailDate(lines);
-  }
-}
-
-// ── Κοπή ──────────────────────────────────────────────────────────────────────
-
-function cutValue(site: MatchSite, take: BodyTake): string | null {
-  switch (take.as) {
-    case 'rest':
-      return takeRest(site.text, site.labelEnd);
-    case 'token':
-      return takeToken(site.words, site.from, take.shape);
-    case 'list':
-      return takeList(site.text, site.words, site.from, take.shape);
-    case 'number':
-      return takeNumberLiteral(site.text.slice(site.labelEnd), take.unit, take.select);
-    case 'phrase':
-      return cleanToken(site.text.slice(site.labelStart, site.labelEnd));
-  }
-}
-
 // ── Ανάγνωση ενός εγγράφου ────────────────────────────────────────────────────
 
 /** Ενότητες που η φόρμα **τυπώνει** και που το σχέδιο άφησε κενές — ορατή απουσία, όχι σιωπή. */
@@ -294,8 +140,8 @@ function readOneDocument(
 
   const fields: DocumentBodyField[] = [];
   for (const rule of profile.rules) {
-    for (const site of findSites(rule, linesOf(rule.section ?? WHOLE_DOCUMENT))) {
-      const rawValue = cutValue(site, rule.take);
+    for (const site of findSites(rule.match, linesOf(rule.section ?? WHOLE_DOCUMENT))) {
+      const rawValue = cutOne(site, rule.take);
       // Ετικέτα που βρέθηκε χωρίς τιμή **δεν** είναι πεδίο: θα ενθάρρυνε τον Λ2 να γράψει κενό.
       // Το ότι ρωτήθηκε και έμεινε κενό το λέει το `emptySections` (ADR-762 §5).
       if (rawValue === null) continue;
@@ -310,6 +156,7 @@ function readOneDocument(
     at: source.at,
     layerName: source.layerName,
     fields,
+    rows: readListRows(linesOf, profile),
     emptySections: collectEmpty(sections, profile),
   };
 }

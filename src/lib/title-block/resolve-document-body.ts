@@ -24,9 +24,18 @@
  */
 
 import { parseSurveyValue, type BindableSurveyField } from '@/config/survey-bindable-fields';
+import {
+  parseSurveyRowPart,
+  SURVEY_ROW_LISTS,
+  type SurveyRowPartValue,
+} from '@/config/survey-row-bindings';
+import { cellRef } from '@/lib/title-block-binding-id';
+import { surveyRowKey } from '@/services/enterprise-id-composite-keys';
 import type {
   DocumentBodyField,
   DocumentBodyFieldKey,
+  DocumentBodyListKey,
+  DocumentBodyListRow,
   DocumentBodyReading,
 } from '@/types/document-body-reading';
 import type {
@@ -36,7 +45,11 @@ import type {
   BindingTarget,
 } from '@/types/title-block-binding';
 import { proposalBase, type ProposalBase } from './proposal-base';
-import { buildSurveyProposal, type SurveySnapshot } from './resolve-survey-record';
+import {
+  buildSurveyProposal,
+  buildSurveyRowProposal,
+  type SurveySnapshot,
+} from './resolve-survey-record';
 
 /**
  * 🔴 **Ο μοναδικός παραγωγός του `'document-body'`** (ADR-759 §4.6).
@@ -211,6 +224,86 @@ function proposalFor(
   });
 }
 
+// ── Γραμμές επαναλαμβανόμενων ενοτήτων (Φ4β) ─────────────────────────────────
+
+/**
+ * Η **ταυτότητα** μιας γραμμής, παραγόμενη από το σχέδιο.
+ *
+ * Τρία συστατικά, κανένα περιττό: **ποιο έγγραφο** (το σημείο εισαγωγής του — η ίδια
+ * γεωμετρική ταυτότητα που χρησιμοποιεί το κλειδί έγκρισης, γιατί το `handle` **δεν είναι
+ * μοναδικό**), **ποια λίστα**, και **η πολλοστή** μέσα της. Το ίδιο αρχείο, ξαναδιαβασμένο,
+ * δίνει την ίδια ταυτότητα — που είναι όλη η ταυτοδυναμία.
+ *
+ * ⚠️ **Όχι κατακερματισμός του κειμένου.** Διορθωμένη γραμμή είναι **η ίδια δήλωση
+ * διορθωμένη**: με ταυτότητα από το κείμενο θα εμφανιζόταν ως **δεύτερη** γραμμή δίπλα στην
+ * παλιά, και ο μηχανικός θα έσβηνε χειροκίνητα ό,τι θα έπρεπε να είχε ενημερωθεί.
+ */
+function rowIdOf(reading: DocumentBodyReading, list: DocumentBodyListKey, ordinal: number): string {
+  return surveyRowKey(SURVEY_ROW_LISTS[list].idPrefix, [
+    cellRef(reading.at),
+    list,
+    String(ordinal),
+  ]);
+}
+
+/** Τα μέρη μιας γραμμής, **αναλυμένα μία φορά** — η ίδια τιμή που θα δει ο άνθρωπος. */
+function partValuesOf(row: DocumentBodyListRow): readonly SurveyRowPartValue[] {
+  return row.parts.map((part) => ({
+    part: part.part,
+    value: parseSurveyRowPart(part.part, part.rawValue),
+    rawText: part.rawValue,
+  }));
+}
+
+/**
+ * Οι προτάσεις **γραμμών** ενός εγγράφου.
+ *
+ * ⚠️ **Δεν περνούν από τη συγχώνευση μαρτύρων, και είναι μετρημένο γιατί.** Η ίδια αλυσίδα
+ * ΦΕΚ δηλώνεται στο G753 για **δύο** πράξεις (πολεοδομικές ρυθμίσεις **και** ΖΚΣ) — δύο
+ * γραμμές με ταυτόσημο ΦΕΚ που **δεν είναι διπλότυπο**: είναι μία απόφαση που ισχύει για δύο
+ * πράγματα. Συγχωνευμένες, η καρτέλα θα έλεγε ότι υπάρχει **μία** πράξη εκεί που το σχέδιο
+ * δηλώνει δύο (ADR-759 §2β.7 εύρημα 5).
+ */
+function rowProposals(
+  reading: DocumentBodyReading,
+  context: DocumentBodyResolveContext,
+): BindingProposal[] {
+  const seen = new Map<DocumentBodyListKey, number>();
+
+  return reading.rows.map((row) => {
+    const ordinal = seen.get(row.list) ?? 0;
+    seen.set(row.list, ordinal + 1);
+
+    const base = {
+      ...proposalBase(
+        {
+          key: row.list,
+          rawValue: row.rawText,
+          sourceHandle: reading.handle,
+          labelHandle: reading.handle,
+          at: reading.at,
+        },
+        0,
+      ),
+      layerName: reading.layerName,
+    };
+    const parts = partValuesOf(row);
+
+    if (!context.projectId) {
+      return { ...base, sourceKind: BODY_SOURCE, candidates: [], blockedBy: 'no-project' };
+    }
+    return buildSurveyRowProposal(base, {
+      projectId: context.projectId,
+      list: row.list,
+      rowId: rowIdOf(reading, row.list, ordinal),
+      parts,
+      rawText: row.rawText,
+      snapshot: context.survey,
+      sourceKind: BODY_SOURCE,
+    });
+  });
+}
+
 /**
  * Όλες οι προτάσεις που γεννούν τα έγγραφα ενός σχεδίου.
  *
@@ -221,7 +314,10 @@ export function resolveDocumentBodyProposals(
   readings: readonly DocumentBodyReading[],
   context: DocumentBodyResolveContext,
 ): BindingProposal[] {
-  return mergeWitnesses(readings).map((group) =>
-    proposalFor(group.witness, group.corroboration, context),
-  );
+  return [
+    ...mergeWitnesses(readings).map((group) =>
+      proposalFor(group.witness, group.corroboration, context),
+    ),
+    ...readings.flatMap((reading) => rowProposals(reading, context)),
+  ];
 }
