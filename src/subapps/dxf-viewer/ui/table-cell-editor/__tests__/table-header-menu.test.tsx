@@ -566,6 +566,15 @@ const menuProps = {
   onResetFormat: noop,
   onSetTextColor: noop,
   onSetFillColor: noop,
+  // ADR-739 §55 — τα τρία νέα τμήματα (τυπογραφία / αριθμός / στοίχιση) αποδίδονται κι αυτά
+  // πάντα από τη γραμμή, άρα πρέπει να υπάρχουν εδώ που το θέμα είναι η εστίαση/escape-bus.
+  resolveToolbar: () => ({
+    fonts: { family: { current: undefined, mixed: false }, size: { current: undefined, mixed: false } },
+    fontNames: [],
+    numberFormat: { current: null, explicit: false },
+    align: null,
+  }),
+  onSetFormatField: noop,
   // ADR-750 Φ3 — οι εντολές περιγράμματος του ίδιου toolbar· αδρανείς εδώ, δοκιμάζονται στο
   // `table-border-menu-items.test.ts` και στο `table-border-icon.test.tsx`.
   /**

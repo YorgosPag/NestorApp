@@ -45,6 +45,10 @@ import { useKeepOpenOnSurface } from './dxf-context-menu/use-keep-open-on-surfac
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
 import { TableHeaderMenuItems } from './TableHeaderMenuItems';
 import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
+// 🔴 ADR-739 §55 — τα τρία νέα τμήματα χτίζονται **μία** φορά για τις δύο υποδοχές (δες την
+// κεφαλίδα του module): εδώ αλλάζει μόνο ο τυλιχτής εκτέλεσης.
+import { tableToolbarExtrasProps } from './table-format-toolbar/table-toolbar-extras';
+import type { TableAxisStyleOverride } from '../../types/table';
 import type {
   TableHeaderAction,
   TableHeaderContextMenuHandle,
@@ -65,6 +69,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     onInsertBefore, onInsertAfter, onDelete, resolveState,
     resolveFormat, onToggleFormat, onStepTextHeight, onResetFormat,
     onSetTextColor, onSetFillColor,
+    resolveToolbar, onSetFormatField,
     resolveBorderMenu, resolveMergeMenu, onClosed,
   }, ref) => {
     const triggerRef = useRef<HTMLSpanElement>(null);
@@ -90,6 +95,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           hit,
           state: resolveState(hit),
           format: resolveFormat(hit),
+          toolbar: resolveToolbar(hit),
           borders: resolveBorderMenu(hit),
           merge: resolveMergeMenu(hit),
           anchor: { x, y },
@@ -100,7 +106,10 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
         setIsOpen(false);
         setTarget(null);
       },
-    }), [resolveState, resolveFormat, resolveBorderMenu, resolveMergeMenu, placeTrigger]);
+    }), [
+      resolveState, resolveFormat, resolveToolbar, resolveBorderMenu, resolveMergeMenu,
+      placeTrigger,
+    ]);
 
     /**
      * **Ολόκληρη** η επιφάνεια φεύγει — μενού **και** γραμμή εργαλείων.
@@ -281,9 +290,27 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     const runFormat = useCallback((action: TableHeaderAction) => {
       if (!target) return;
       action(target.hit);
-      setTarget({ ...target, format: resolveFormat(target.hit) });
+      // §55 — **και τα δύο** στιγμιότυπα της γραμμής, με μία εγγραφή state: ένα «Α↑» αλλάζει
+      // ταυτόχρονα το κουμπί μεγέθους και την τιμή του combobox, και δύο ξεχωριστές ανανεώσεις
+      // θα άφηναν τη γραμμή να δείχνει δύο διαφορετικές αλήθειες για ένα καρέ.
+      setTarget({ ...target, format: resolveFormat(target.hit), toolbar: resolveToolbar(target.hit) });
       closeMenuKeepToolbar();
-    }, [target, resolveFormat, closeMenuKeepToolbar]);
+    }, [target, resolveFormat, resolveToolbar, closeMenuKeepToolbar]);
+
+    /**
+     * 🔴 §55 — ο γραφέας των τεσσάρων νέων πεδίων, τυλιγμένος στον **ίδιο** {@link runFormat}:
+     * είναι πράξεις μορφοποίησης άξονα, άρα οφείλουν να κλείνουν το μενού και να αφήνουν τη
+     * γραμμή ακριβώς όπως τα Β/Ι/Υ (§28.13).
+     */
+    const setToolbarField = useCallback(
+      <K extends keyof TableAxisStyleOverride>(
+        key: K,
+        value: TableAxisStyleOverride[K] | undefined,
+      ): void => {
+        runFormat((hit) => onSetFormatField(hit, key, value));
+      },
+      [runFormat, onSetFormatField],
+    );
 
     /**
      * ADR-750 Φ3 — μια εντολή περιγράμματος: **ίδια σειρά** με το {@link runFormat}.
@@ -379,6 +406,8 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
             onSetTextColor: (value) => runFormat((hit) => onSetTextColor(hit, value)),
             onSetFillColor: (value) => runFormat((hit) => onSetFillColor(hit, value)),
           }}
+          /* 🔴 §55 — τα τρία τμήματα, από τον **κοινό** builder με το μενού της περιοχής. */
+          {...tableToolbarExtrasProps(target.toolbar, setToolbarField)}
           merge={{
             ...target.merge,
             // Ίδια σειρά με κάθε άλλη εντολή: εφαρμογή → ξαναρώτημα → κλείσιμο μενού.

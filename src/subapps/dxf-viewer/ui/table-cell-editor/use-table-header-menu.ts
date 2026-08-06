@@ -73,10 +73,16 @@ import {
   type TableFormatScope,
 } from '../../bim/table/table-format-scope';
 import { tableFormatCommands } from './table-format-commands';
+// 🔴 ADR-739 §55 — οι τρεις αναγνώσεις των νέων τμημάτων της γραμμής, ίδιες με το μενού της
+// περιοχής: **η μία πλευρά δεν επιτρέπεται να μάθει και η άλλη όχι**.
 import {
+  resolveTableAlignState,
+  resolveTableFontState,
   resolveTableFormatSnapshot,
+  resolveTableNumberFormatState,
   type FormatTarget,
 } from './table-format-snapshot';
+import { useToolbarFontNames } from './use-toolbar-font-names';
 import { getAllLayers } from '../../stores/LayerStore';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
@@ -95,6 +101,7 @@ import {
 import { useLiveTableMutation } from './use-table-model-commit';
 import { useCommandHistory } from '../../core/commands';
 import type { PersistedTableModel } from '../../types/table';
+import type { TableToolbarExtrasState } from '../components/table-format-toolbar/table-toolbar-extras';
 import type {
   TableHeaderContextMenuHandle,
   TableHeaderMenuProps,
@@ -305,6 +312,28 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
     [liveTable, formatScope],
   );
 
+  const fontNames = useToolbarFontNames(levelManager);
+
+  /**
+   * 🔴 §55 — **τι δείχνουν τα τρία νέα τμήματα** για τους άξονες που πατήθηκαν.
+   *
+   * Ο στόχος περνά **μία** φορά από το {@link formatTarget}, για τον ίδιο λόγο που τον περνά
+   * μία φορά και το μενού της περιοχής: τρεις ξεχωριστές κατασκευές θα άφηναν ανοιχτό το
+   * παράθυρο να απαντήσουν πάνω σε διαφορετικά μοντέλα (`Ctrl+Z` από συντόμευση ενδιάμεσα).
+   */
+  const toolbarState = useCallback(
+    (hit: TableIndicatorHit): TableToolbarExtrasState => {
+      const target = formatTarget(hit);
+      return {
+        fonts: resolveTableFontState(target),
+        fontNames: fontNames(),
+        numberFormat: resolveTableNumberFormatState(target),
+        align: resolveTableAlignState(target),
+      };
+    },
+    [formatTarget, fontNames],
+  );
+
   const props = useMemo<TableHeaderMenuProps>(
     () => ({
       onInsertBefore: (hit) => runAxisAction(axisTarget(hit), insertAt('before')),
@@ -321,6 +350,10 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       onResetFormat: (hit) => formatCommands.reset(formatTarget(hit)),
       onSetTextColor: (hit, value) => formatCommands.setField(formatTarget(hit), 'textColorHex', value),
       onSetFillColor: (hit, value) => formatCommands.setField(formatTarget(hit), 'fillColorHex', value),
+      // §55 — τα τρία νέα τμήματα: η κατάσταση από τη μία ερώτηση, η εγγραφή από τον **ίδιο**
+      // γραφέα με τα δύο χρώματα από πάνω. Καμία δεύτερη διαδρομή, καμία δεύτερη ανάγνωση.
+      resolveToolbar: toolbarState,
+      onSetFormatField: (hit, key, value) => formatCommands.setField(formatTarget(hit), key, value),
       /**
        * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων σε μία απάντηση.
        *
@@ -377,7 +410,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
     }),
     [
       runAxisAction, axisTarget, liveTable, formatCommands, formatTarget, axisBounds,
-      borderActions, mergeActions,
+      borderActions, mergeActions, toolbarState,
     ],
   );
 

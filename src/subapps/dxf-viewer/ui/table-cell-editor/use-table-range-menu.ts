@@ -31,10 +31,18 @@
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
 import { columnLetter } from '@/lib/spreadsheet/column-letter';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
+import { clearTableRange } from '../../bim/table/table-range-clipboard';
 // 🔴 ADR-739 §52 — η μορφοποίηση **κελιών**: ο ίδιος στόχος, οι ίδιες πέντε εντολές, το ίδιο
 // στιγμιότυπο με τη ζώνη δείκτη. Καμία δεύτερη υλοποίηση — δες τα δύο modules.
 import { tableFormatCommands } from './table-format-commands';
-import { resolveTableFormatSnapshot } from './table-format-snapshot';
+// 🔴 ADR-739 §55 — οι τρεις αναγνώσεις των νέων τμημάτων της γραμμής. Ίδιο module, ίδιο ύφος
+// με το `resolveTableFormatSnapshot`: στόχος μέσα, κατάσταση έξω, μηδέν React.
+import {
+  resolveTableAlignState,
+  resolveTableFontState,
+  resolveTableFormatSnapshot,
+  resolveTableNumberFormatState,
+} from './table-format-snapshot';
 import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
 import { getAllLayers } from '../../stores/LayerStore';
 import { useLiveTableMutation } from './use-table-model-commit';
@@ -59,6 +67,11 @@ import { selectWholeTable } from './table-select-all-action';
 import { useLiveTable } from './use-live-table';
 import { useTableBorderActions } from './use-table-border-actions';
 import { useTableMergeActions } from './use-table-merge-actions';
+// 🔴 §54 — το πρόχειρο **χωρίς συμβάν** (async Clipboard API) και οι δομικές πράξεις, και τα
+// δύο μέσα από τους ήδη υπάρχοντες δρόμους εγγραφής. Καμία νέα πράξη — μόνο νέα πόρτα.
+import { useTableMenuClipboard } from './use-table-menu-clipboard';
+import { useTableStructureActions } from './use-table-structure-actions';
+import { useToolbarFontNames } from './use-toolbar-font-names';
 import {
   getTableRangeMenuPort,
   setTableRangeMenuPort,
@@ -66,9 +79,11 @@ import {
 } from './table-range-menu-port';
 import type {
   TableRangeContextMenuHandle,
+  TableRangeMenuEnabled,
   TableRangeMenuProps,
   TableRangeMenuTarget,
 } from '../components/TableRangeContextMenu';
+import type { TableToolbarExtrasState } from '../components/table-format-toolbar/table-toolbar-extras';
 import type { TableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
@@ -95,6 +110,46 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
   // `UpdateEntityCommand`, ένα `Ctrl+Z`, καμία δεύτερη διαδρομή εγγραφής (§6.6).
   const applyFormat = useLiveTableMutation({ levelManager, execute, liveTable });
   const formatCommands = useMemo(() => tableFormatCommands(applyFormat), [applyFormat]);
+  const clipboard = useTableMenuClipboard({ levelManager, execute, liveTable });
+  // §54 — **καμία νέα δομική πράξη**: η ίδια θύρα που δημοσιεύει η κορδέλα (§52), η οποία με
+  // τη σειρά της δείχνει στους καθαρούς σχεδιαστές του `table-header-axis-actions`.
+  const structure = useTableStructureActions({ levelManager, table: liveTable });
+  const fontNames = useToolbarFontNames(levelManager);
+
+  /**
+   * 🔴 §27.15/§27.17 — **ΠΟΙΟΝ ΑΞΟΝΑ ΕΝΝΟΕΙ Η «ΕΙΣΑΓΩΓΗ» ΑΠΟ ΕΔΩ** — και πότε καθόλου.
+   *
+   * Η μόνη νόμιμη πηγή πρόθεσης είναι το **είδος της επιλογής**, ποτέ η γεωμετρία των ορίων:
+   * το §27.15 έβγαλε ρητά την προεπιλογή από το `kind` ώστε μια σύρση `'range'` που τυχαίνει να
+   * πιάνει όλες τις γραμμές να **μη** διαβάζεται ως «ο χρήστης διάλεξε στήλες». Άρα:
+   *
+   * ```
+   *   επιλογή 'column' και ο στόχος ΕΙΝΑΙ αυτή  ⇒  'column'
+   *   επιλογή 'row'    και ο στόχος ΕΙΝΑΙ αυτή  ⇒  'row'
+   *   οτιδήποτε άλλο                            ⇒  null  (γκρίζα items)
+   * ```
+   *
+   * ⚠️ Ο έλεγχος ταυτότητας ορίων **δεν** είναι ευλάβεια: ο κανόνας Α22 επιτρέπει στόχο **έξω**
+   * από την επιλογή (δεξί κλικ στο `E5` με επιλεγμένες τις στήλες `B:D`). Χωρίς αυτόν, η
+   * «Διαγραφή» θα έσβηνε τις `B:D` ενώ ο τίτλος του μενού γράφει `E5` — αλλαγή μακριά από τον
+   * δείκτη, ακριβώς το ελάττωμα που τεκμηριώνει το `table-axis-action-target.ts` (Giorgio,
+   * 04/08: «η οθόνη έλεγε τρεις, η πράξη έκανε μία»).
+   *
+   * 🔑 Η **γωνία** («επιλογή όλων») γράφει επιλογή είδους `'range'` (§43), άρα πέφτει εδώ σε
+   * `null` — και σωστά: «Εισαγωγή» πάνω σε ολόκληρο τον πίνακα δεν έχει άξονα. Το Excel λύνει
+   * την ίδια ασάφεια με **modal διάλογο** τεσσάρων επιλογών (μετατόπιση δεξιά/κάτω, ολόκληρη
+   * γραμμή, ολόκληρη στήλη)· μέχρι να υπάρξει, γκρίζο είναι η τίμια απάντηση.
+   */
+  const structuralAxis = useCallback(
+    (bounds: TableCellRangeBounds): 'row' | 'column' | null => {
+      const live = liveTable();
+      const selection = getTableCellCursor()?.selection;
+      if (!live || !selection || selection.kind === 'range') return null;
+      const selected = resolveTableSelectionBounds(resolveTableModel(live.model), selection);
+      return selected && sameBounds(selected, bounds) ? selection.kind : null;
+    },
+    [liveTable],
+  );
 
   /**
    * 🔴 §52 — ο στόχος μορφοποίησης **αυτής** της περιοχής, τη στιγμή της κλήσης.
@@ -121,6 +176,59 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
   );
 
   /**
+   * 🔴 §55 — **τι δείχνουν τα τρία νέα τμήματα** της γραμμής για αυτά τα κελιά.
+   *
+   * Ο στόχος περνά **μία** φορά από το {@link formatTarget}: οι τρεις αναγνώσεις διατρέχουν η
+   * καθεμιά τα κελιά της, και μια δεύτερη κατασκευή στόχου ανάμεσά τους θα άφηνε ανοιχτό το
+   * παράθυρο να απαντήσουν πάνω σε **διαφορετικά** μοντέλα (ένα `Ctrl+Z` από συντόμευση
+   * ενδιάμεσα) — δηλαδή γραμματοσειρά ενός πίνακα με στοίχιση ενός άλλου.
+   */
+  const toolbarState = useCallback(
+    (bounds: TableCellRangeBounds): TableToolbarExtrasState => {
+      const target = formatTarget(bounds);
+      return {
+        fonts: resolveTableFontState(target),
+        fontNames: fontNames(),
+        numberFormat: resolveTableNumberFormatState(target),
+        align: resolveTableAlignState(target),
+      };
+    },
+    [formatTarget, fontNames],
+  );
+
+  /**
+   * 🔴 §54 — **ποιες από τις δεκαπέντε εντολές έχουν νόημα ΤΩΡΑ.**
+   *
+   * Ό,τι δεν αναφέρεται εδώ μένει γκρίζο δομικά (ο ένας κανόνας ζει στο `TableRangeMenuItems`:
+   * χειριστής **και** μη-`false`). Οι έξι που απαντιούνται:
+   *
+   *  - **αποκοπή / αντιγραφή / απαλοιφή**: ο στόχος υπάρχει ⇒ έχουν νόημα. Η άδεια περιοχή
+   *    δεν γκριζάρει: το `clearTableRange` επιστρέφει το **ίδιο** μοντέλο by-reference, άρα
+   *    «καμία εντολή, κανένα βήμα undo» — και ο χρήστης δεν χρειάζεται να μάθει τη διαφορά.
+   *  - **επικόλληση**: λέει «μπορεί να **επιχειρηθεί** ανάγνωση προχείρου». Το «υπάρχει κάτι
+   *    μέσα;» θα απαιτούσε ασύγχρονη ανάγνωση με άδεια σε **κάθε** δεξί κλικ — δες
+   *    {@link TableMenuClipboardActions.canPaste}.
+   *  - **εισαγωγή / διαγραφή**: μόνο όταν η επιλογή δηλώνει ρητά άξονα και ο στόχος **είναι**
+   *    αυτή· δες {@link structuralAxis}. Η διαγραφή περνά επιπλέον από το ίδιο φράγμα «όλα ή
+   *    τίποτα» με το ⊖ και το μενού των ζωνών (§42), ώστε τα τρία χειριστήρια να μη μπορούν να
+   *    διαφωνήσουν για το αν η πράξη επιτρέπεται.
+   */
+  const menuCommands = useCallback(
+    (bounds: TableCellRangeBounds): TableRangeMenuEnabled => {
+      const axis = structuralAxis(bounds);
+      return {
+        cut: true,
+        copy: true,
+        pasteAll: clipboard.canPaste(),
+        clearContents: true,
+        insert: axis !== null,
+        delete: axis !== null && structure.canDeleteAxis(axis),
+      };
+    },
+    [structuralAxis, clipboard, structure],
+  );
+
+  /**
    * 🔑 Ό,τι ξέρει το μενού για μια περιοχή, σε **μία** ερώτηση.
    *
    * Ξεχωριστό από το {@link resolveTarget} επειδή το ζητούν **δύο** διαφορετικά γεγονότα: το
@@ -136,6 +244,8 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       canClearDiagonals: borderActions.canClearDiagonals(bounds),
       merge: mergeActions.resolveState(bounds),
       format: resolveTableFormatSnapshot(formatTarget(bounds)),
+      toolbar: toolbarState(bounds),
+      commands: menuCommands(bounds),
       borders: {
         canReset: borderActions.canReset(bounds),
         canClearDiagonals: borderActions.canClearDiagonals(bounds),
@@ -151,7 +261,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         },
       },
     }),
-    [borderActions, mergeActions, formatTarget],
+    [borderActions, mergeActions, formatTarget, toolbarState, menuCommands],
   );
 
   /**
@@ -248,13 +358,47 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         onReset: (bounds) => formatCommands.reset(formatTarget(bounds)),
         onSetTextColor: (bounds, value) => formatCommands.setField(formatTarget(bounds), 'textColorHex', value),
         onSetFillColor: (bounds, value) => formatCommands.setField(formatTarget(bounds), 'fillColorHex', value),
+        // §55 — γραμματοσειρά, μέγεθος, αριθμητική μορφή, στοίχιση: **ο ίδιος** γραφέας με τα
+        // δύο χρώματα από πάνω, με το κλειδί ως όρισμα. Καμία δεύτερη διαδρομή εγγραφής.
+        onSetField: (bounds, key, value) => formatCommands.setField(formatTarget(bounds), key, value),
+      },
+      /*
+        🔴 §54 — οι **έξι εντολές δεδομένων**, παραμετρικές ως προς τα όρια για τον ίδιο λόγο
+        με τη μορφοποίηση: ο στόχος ξαναφτιάχνεται **μέσα** σε κάθε χειριστή, ώστε ένα undo
+        ενόσω το μενού ήταν ανοιχτό να σημαίνει «καμία πράξη» αντί για εγγραφή σε κελιά που
+        δεν υπάρχουν πια.
+      */
+      rangeActions: {
+        onCut: (bounds) => clipboard.cut(bounds),
+        onCopy: (bounds) => clipboard.copy(bounds),
+        onPaste: (bounds) => clipboard.paste(bounds),
+        // Ο έλεγχος ξαναγίνεται **εδώ** και δεν στηρίζεται στο `enabled` που πάγωσε στο
+        // άνοιγμα: το μενού επιβιώνει για την επόμενη εντολή, και η επιλογή μπορεί να έχει
+        // αλλάξει στο μεταξύ. Καμία εντολή δεν εμπιστεύεται τη σημαία της για να γράψει.
+        onInsert: (bounds) => {
+          const axis = structuralAxis(bounds);
+          if (axis) structure.insertAxis(axis, 'before');
+        },
+        onDelete: (bounds) => {
+          const axis = structuralAxis(bounds);
+          if (axis) structure.deleteAxis(axis);
+        },
+        onClearContents: (bounds) => {
+          // §6.6 — **η ίδια** ουρά με κάθε άλλη αλλαγή πίνακα: ένα `UpdateEntityCommand`, ένα
+          // `Ctrl+Z`. Το `clearTableRange` ξαναϋπολογίζει μόνο του τους τύπους (§50), οπότε
+          // ένα `=SUM(...)` πάνω από τα κελιά που άδειασαν δεν μένει με μπαγιάτικο άθροισμα.
+          applyFormat((model) => clearTableRange(model, bounds));
+        },
       },
       resolveTarget: describeTarget,
       // Το μενού έκλεισε — η εστίαση επιστρέφει στο κελί, αλλιώς η συνεδρία μένει ζωντανή στο
       // store αλλά κουφή στην οθόνη (ίδια σύμβαση με το μενού των ζωνών).
       onClosed: restartTableCellCursorSession,
     }),
-    [borderActions, mergeActions, describeTarget, formatCommands, formatTarget],
+    [
+      borderActions, mergeActions, describeTarget, formatCommands, formatTarget,
+      clipboard, structure, structuralAxis, applyFormat,
+    ],
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);
@@ -285,6 +429,17 @@ export function tableBorderTargetBounds(
 
   const selected = selection ? resolveTableSelectionBounds(model, selection) : null;
   return selected && contains(selected, cellBounds) ? selected : cellBounds;
+}
+
+/**
+ * Είναι **το ίδιο** ορθογώνιο; — «περιέχει και περιέχεται», χωρίς τέταρτη σύγκριση δεικτών.
+ *
+ * Γραμμένο πάνω στο {@link contains} και όχι με τέσσερα `===`: ο ορισμός της ισότητας ορίων
+ * μένει **ένας**, και η μέρα που τα όρια αποκτήσουν πέμπτο πεδίο δεν αφήνει πίσω της μια
+ * σύγκριση που το αγνοεί σιωπηλά.
+ */
+function sameBounds(a: TableCellRangeBounds, b: TableCellRangeBounds): boolean {
+  return contains(a, b) && contains(b, a);
 }
 
 /** Περιέχει το `outer` ολόκληρο το `inner`; Σύγκριση ορθογωνίων σε δείκτες, τίποτα άλλο. */

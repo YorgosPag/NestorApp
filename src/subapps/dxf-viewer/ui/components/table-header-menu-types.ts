@@ -21,9 +21,11 @@ import type {
   TableMergeMenuHostProps,
   TableToggleFormatKey,
 } from './table-format-toolbar/TableFormatToolbar';
+import type { TableToolbarExtrasState } from './table-format-toolbar/table-toolbar-extras';
 import type { TableBorderMenuProps } from './table-format-toolbar/TableBorderMenu';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
+import type { TableAxisStyleOverride } from '../../types/table';
 
 /**
  * ADR-750 Φ5 — το dropdown περιγραμμάτων **όπως το βλέπει ο ξενιστής**: όλα τα props του
@@ -61,6 +63,27 @@ export interface TableHeaderMenuProps {
    */
   readonly onSetFillColor: (hit: TableIndicatorHit, value: string | null | undefined) => void;
   /**
+   * 🔴 ADR-739 §55 — **τυπογραφία, αριθμητική μορφή, στοίχιση** για τον άξονα που πατήθηκε.
+   *
+   * Μία ερώτηση για τρία τμήματα — το ίδιο σχήμα με τα `resolve*` από κάτω, και για τον ίδιο
+   * λόγο: εμφανίζονται και εξαφανίζονται μαζί, οπότε «δύο από τα τρία» δεν πρέπει να είναι
+   * εκφράσιμο. Ξαναρωτιέται μετά από **κάθε** πάτημα, όπως το {@link resolveFormat}: η γραμμή
+   * επιβιώνει του μενού και το combobox οφείλει να δείξει το μέγεθος που μόλις γράφτηκε.
+   */
+  readonly resolveToolbar: (hit: TableIndicatorHit) => TableToolbarExtrasState;
+  /**
+   * 🔴 §55 — ο **ΕΝΑΣ** γραφέας των τεσσάρων νέων πεδίων, με το κλειδί ως όρισμα.
+   *
+   * Δες την αδελφή δήλωση στο `TableRangeContextMenu` (`TableRangeFormatActions.onSetField`)
+   * για το γιατί ένας χειριστής και όχι τέσσερις — και γιατί τα δύο χρώματα κρατούν τα δικά
+   * τους props.
+   */
+  readonly onSetFormatField: <K extends keyof TableAxisStyleOverride>(
+    hit: TableIndicatorHit,
+    key: K,
+    value: TableAxisStyleOverride[K] | undefined,
+  ) => void;
+  /**
    * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων του άξονα που πατήθηκε, σε μία ερώτηση.
    *
    * Ζει δίπλα στη μορφοποίηση κειμένου αλλά είναι **άλλο επίπεδο**: εκείνη γράφει στυλ άξονα,
@@ -97,6 +120,8 @@ export interface TableHeaderOpenTarget {
   readonly hit: TableIndicatorHit;
   readonly state: TableHeaderMenuState;
   readonly format: TableFormatSnapshot;
+  /** ADR-739 §55 — ανανεώνεται **μαζί** με το `format`: ίδιο πάτημα, ίδια γραμμή, ίδια στιγμή. */
+  readonly toolbar: TableToolbarExtrasState;
   /** ADR-750 Φ3/Φ5 — ανανεώνεται μαζί με το `format`, για τον ίδιο ακριβώς λόγο. */
   readonly borders: TableBorderMenuHostProps;
   /** ADR-755 — ίδιο σκεπτικό: μετά τη συγχώνευση το κουμπί οφείλει να δείξει πατημένο. */
