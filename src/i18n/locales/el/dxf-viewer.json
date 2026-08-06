@@ -539,7 +539,8 @@
   "table": {
     "cellEditor": {
       "editorPlaceholder": "",
-      "cellAriaLabel": "Κελί πίνακα"
+      "cellAriaLabel": "Κελί πίνακα",
+      "boundCellAriaLabel": "Κελί πίνακα δεμένο με πηγή — μόνο για ανάγνωση"
     },
     "formulaBar": {
       "ariaLabel": "Γραμμή τύπων",

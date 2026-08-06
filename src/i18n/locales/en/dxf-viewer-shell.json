@@ -2134,7 +2134,8 @@
       "tableRowsColumns": "Rows & Columns",
       "tableSelection": "Selection",
       "tableFont": "Font",
-      "tableCells": "Cells"
+      "tableCells": "Cells",
+      "tableData": "Data"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -5523,7 +5524,8 @@
         "insertColumnRight": "Insert column right",
         "deleteRow": "Delete row",
         "deleteColumn": "Delete column",
-        "selectAll": "Select all"
+        "selectAll": "Select all",
+        "refreshBinding": "Refresh"
       },
       "tableFormat": {
         "bold": "Bold",
@@ -6297,7 +6299,7 @@
   },
   "titleBlockBinding": {
     "title": "Survey Data",
-    "description": "The survey drawing was read \u2014 its title block and the documents in its body. Each suggestion is written to the database ONLY if you approve it.",
+    "description": "The survey drawing was read — its title block and the documents in its body. Each suggestion is written to the database ONLY if you approve it.",
     "empty": "No title block was found on any layer of this drawing.",
     "loading": "Reading title block…",
     "layerLabel": "Title block layer",
@@ -7316,7 +7318,20 @@
     "submit": "Export",
     "cancel": "Cancel",
     "exporting": "Exporting…",
-    "error": "Export failed. Please try again."
+    "error": "Export failed. Please try again.",
+    "boundTables": {
+      "title": "Outdated table data",
+      "description": "One or more bound tables no longer show what their source says. The file produced will contain them as they are now.",
+      "stale": "{count, plural, one {# table has numbers that differ from its source} other {# tables have numbers that differ from their sources}}",
+      "unchecked": "{count, plural, one {# table could not be checked — we do not know whether it agrees with its source} other {# tables could not be checked — we do not know whether they agree with their sources}}",
+      "examined": "{count, plural, one {# bound table examined} other {# bound tables examined}}",
+      "reasonNotWired": "Its source is not wired to a data producer yet.",
+      "reasonUnavailable": "Its source data was not available at the time of the check.",
+      "listLabel": "Tables blocking the export",
+      "cancel": "Cancel — I will refresh them first",
+      "proceed": "Export as is",
+      "proceedNote": "Choosing «Export as is» is recorded."
+    }
   },
   "titleBlockLibrary": {
     "title": "Title Block Template Library",

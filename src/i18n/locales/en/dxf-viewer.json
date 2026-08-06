@@ -539,7 +539,8 @@
   "table": {
     "cellEditor": {
       "editorPlaceholder": "",
-      "cellAriaLabel": "Table cell"
+      "cellAriaLabel": "Table cell",
+      "boundCellAriaLabel": "Table cell bound to a source — read-only"
     },
     "formulaBar": {
       "ariaLabel": "Formula bar",
