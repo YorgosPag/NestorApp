@@ -12,7 +12,10 @@ import { TimelineEditor } from '../TimelineEditor';
 import { useAnimationStore } from '../AnimationStore';
 import type { Waypoint } from '../animation-types';
 
-jest.mock('react-i18next', () => ({
+// Το component χρησιμοποιεί το hook **του έργου** (`@/i18n`), όχι το σκέτο `react-i18next`:
+// διαβάζει ετικέτες από δύο namespaces, και μόνο εκείνο ψάχνει στο δεύτερο (ADR-739 §52.3).
+// Ο μοκ επιστρέφει το κλειδί, ώστε οι ισχυρισμοί από κάτω να μιλούν για κλειδιά, όχι κείμενα.
+jest.mock('@/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 

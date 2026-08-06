@@ -69,28 +69,31 @@ const EN = enShell as unknown as LocaleTree;
 const ALL_TABS: readonly RibbonTab[] = [...RAW_RIBBON_CONTEXTUAL_TABS, ...DEFAULT_RIBBON_TABS];
 
 /**
- * ⏳ **ΤΟ ΜΟΝΟ ΧΑΡΑΚΤΗΡΙΣΜΕΝΟ ΧΡΕΟΣ** — η καρτέλα «Κίνηση» (3D turntable / waypoints).
+ * ✅ **ΚΑΜΙΑ ΕΞΑΙΡΕΣΗ — και έτσι πρέπει να μείνει.**
  *
- * Οι **21** ετικέτες της (`animation.panels.*`, `animation.toolbar.*`, …) υπάρχουν σε
- * `bim3d.json`, **όχι** στο `dxf-viewer-shell`. Η καρτέλα είναι καταχωρημένη στο
- * `RAW_RIBBON_CONTEXTUAL_TABS` και το `RibbonPanel` μεταφράζει με `dxf-viewer-shell` ⇒ όποτε
- * εμφανίζεται, τυπώνει **ωμά κλειδιά**.
+ * Η λίστα κρατούσε την καρτέλα «Κίνηση» (21 ετικέτες σε `bim3d.json` ενώ η κορδέλα μεταφράζει
+ * με `dxf-viewer-shell`). Έκλεισε στις 2026-08-06: τα κλειδιά **μετακόμισαν** στο shell και ο
+ * μοναδικός άλλος καταναλωτής (`TimelineEditor`) διαβάζει πλέον και τα δύο namespaces —
+ * **ένα** κλειδί ανά ετικέτα, κανένα αντίγραφο (ADR-739 §52.3).
  *
- * Δεν διορθώνεται εδώ επειδή η λύση είναι **απόφαση**, όχι μηχανική κίνηση: ή μετακομίζουν τα
- * κλειδιά (και ακολουθούν οι καταναλωτές τους στο `bim-3d`), ή η κορδέλα αποκτά τρόπο να
- * δηλώσει namespace ανά καρτέλα. Καταγράφηκε στο `.claude-rules/pending-ratchet-work.md`.
- *
- * ⚠️ Είναι **λίστα ενός** και μένει έτσι: κάθε νέα εγγραφή εδώ σημαίνει νέο ωμό κλειδί σε
- * παραγωγή. Το test από κάτω απαιτεί ρητά ότι δεν μεγάλωσε.
+ * ⚠️ Νέα εγγραφή εδώ σημαίνει **νέο ωμό κλειδί σε παραγωγή**. Το test από κάτω απαιτεί ρητά
+ * ότι η λίστα παραμένει **κενή**: αν χρειαστείς εξαίρεση, γράψε πρώτα τον λόγο σε ADR.
  */
-const CHARACTERISED_TAB_IDS: readonly string[] = ['animation'];
+const CHARACTERISED_TAB_IDS: readonly string[] = [];
 
 interface LabelRef {
   readonly key: string;
   readonly where: string;
 }
 
-/** Κάθε ετικέτα που θα περάσει από `t()`: καρτέλα, panel, εντολή, στατική επιλογή combobox. */
+/**
+ * Κάθε ετικέτα που θα περάσει από `t()`: καρτέλα, panel, εντολή, tooltip, στατική επιλογή.
+ *
+ * ⚠️ Το `tooltipKey` και το `labelKey` της **καρτέλας** ήταν τυφλά σημεία της πρώτης εκδοχής:
+ * μια πρόχειρη σάρωση με regex πάνω σε `labelKey: '…'` δεν έβλεπε ούτε τα tooltips ούτε τις
+ * ετικέτες που δηλώνονται μέσω σταθεράς (`labelKey: ANIMATION_TAB_LABEL_KEY`). Εδώ διαβάζεται
+ * το **αντικείμενο**, όχι το κείμενο του αρχείου — γι' αυτό δεν υπάρχει τέτοιο κενό.
+ */
 function collectTranslatedLabels(tabs: readonly RibbonTab[]): LabelRef[] {
   const out: LabelRef[] = [];
   for (const tab of tabs) {
@@ -101,6 +104,7 @@ function collectTranslatedLabels(tabs: readonly RibbonTab[]): LabelRef[] {
   }
   for (const cmd of collectRibbonCommands(tabs)) {
     out.push({ key: cmd.labelKey, where: `command:${cmd.id}` });
+    if (cmd.tooltipKey) out.push({ key: cmd.tooltipKey, where: `tooltip:${cmd.id}` });
     for (const option of cmd.options ?? []) {
       // `isLiteralLabel: true` ⇒ η επιφάνεια το τυπώνει αυτούσιο, καμία μετάφραση να λείψει.
       if (option.isLiteralLabel) continue;
@@ -131,15 +135,18 @@ describe('🔴 Κάλυψη ετικετών κορδέλας — καμία ε�
   });
 });
 
-describe('⏳ Το χαρακτηρισμένο χρέος δεν μεγαλώνει', () => {
-  it('η λίστα εξαιρέσεων παραμένει ΑΚΡΙΒΩΣ η καρτέλα «Κίνηση»', () => {
-    expect(CHARACTERISED_TAB_IDS).toEqual(['animation']);
+describe('✅ Καμία εξαίρεση', () => {
+  it('η λίστα εξαιρέσεων είναι ΚΕΝΗ — κάθε καρτέλα ελέγχεται', () => {
+    expect(CHARACTERISED_TAB_IDS).toEqual([]);
   });
 
-  it('η εξαιρεμένη καρτέλα ΥΠΑΡΧΕΙ — αλλιώς η εξαίρεση είναι νεκρό γράμμα', () => {
-    // Αν η καρτέλα μετονομαστεί ή φύγει, η εξαίρεση θα σιωπούσε για πάντα και το test θα
-    // έδειχνε πράσινο για δουλειά που κανείς δεν έκανε.
-    const ids = ALL_TABS.map((tab) => tab.id);
-    for (const id of CHARACTERISED_TAB_IDS) expect(ids).toContain(id);
+  it('🔴 η καρτέλα «Κίνηση» ελέγχεται πλέον ΚΑΝΟΝΙΚΑ (ήταν η μόνη εξαίρεση)', () => {
+    // Άγκυρα του §52.3: αν κάποιος ξαναβγάλει τα κλειδιά από το shell, θέλουμε να πέσει το
+    // test πάνω σε **ονομαστική** καρτέλα, όχι σε ανώνυμο πλήθος.
+    const animation = ALL_TABS.find((tab) => tab.id === 'animation');
+    expect(animation).toBeDefined();
+    const labels = collectTranslatedLabels(animation ? [animation] : []);
+    expect(labels.length).toBeGreaterThan(20);
+    expect(labels.filter((l) => !has(EL, l.key) || !has(EN, l.key))).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useAnimationStore } from '../../../bim-3d/animation/AnimationStore';
-import { SNAP_STEP_COMBOBOX_OPTIONS } from './useRibbonCommands-snap-options';
+import { SNAP_STEP_COMBOBOX_OPTIONS } from '../data/animation-snap-step-options';
 import type {
   RibbonCommandsApi,
   RibbonActionPayload,

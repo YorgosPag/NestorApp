@@ -13,9 +13,15 @@
  *
  * Action handlers wired σε `useDxfViewerCallbacks.wrappedHandleAction`
  * (animation.* cases). Coming-soon stubs render notification toast.
+ *
+ * ⚠️ **Οι ετικέτες ζουν στο `dxf-viewer-shell`, όχι στο `bim3d`** (ADR-739 §52.3). Ήταν στο
+ * `bim3d.json` ενώ το `RibbonPanel` μεταφράζει με `dxf-viewer-shell` και το `i18n/config.ts`
+ * **δεν έχει `fallbackNS`** — δηλαδή ολόκληρη η καρτέλα τύπωνε **ωμά κλειδιά**. Ό,τι μοιράζεται
+ * με τον `TimelineEditor` μετακόμισε **μία** φορά· εκείνος διαβάζει πλέον και τα δύο namespaces.
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
+import { SNAP_STEP_COMBOBOX_OPTIONS } from './animation-snap-step-options';
 
 export const ANIMATION_CONTEXTUAL_TRIGGER = 'animation-tool';
 
@@ -174,13 +180,10 @@ export const ANIMATION_CONTEXTUAL_TAB: RibbonTab = {
                 labelKey: 'animation.toolbar.snapStep',
                 commandKey: 'animation.snap-step',
                 comboboxWidthPx: 90,
-                options: [
-                  { value: '0.1', labelKey: 'animation.snapStepOptions.0.1' },
-                  { value: '0.25', labelKey: 'animation.snapStepOptions.0.25' },
-                  { value: '0.5', labelKey: 'animation.snapStepOptions.0.5' },
-                  { value: '1', labelKey: 'animation.snapStepOptions.1' },
-                  { value: '2', labelKey: 'animation.snapStepOptions.2' },
-                ],
+                // 🔴 Καμία χειρόγραφη λίστα: τα βήματα ΠΑΡΑΓΟΝΤΑΙ από τον κβαντιστή. Η παλιά
+                // λίστα εδώ ήταν το δεύτερο αντίγραφο (το πρώτο ζει στο `useRibbonCommands`)
+                // **και** έγραφε κλειδιά με τελεία στο φύλλο, δηλαδή δομικά ανεπίλυτα.
+                options: SNAP_STEP_COMBOBOX_OPTIONS,
               },
             },
           ],

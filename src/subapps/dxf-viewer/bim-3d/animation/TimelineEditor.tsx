@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/i18n';
 import { useCameraTargetStore } from '../stores/CameraTargetStore';
 import {
   selectActiveWaypoint,
@@ -39,7 +39,24 @@ const AXIS_OPTIONS: readonly AnimationAxis[] = ['x', 'y', 'z'];
 const DIRECTION_OPTIONS: readonly AnimationDirection[] = ['cw', 'ccw'];
 
 export function TimelineEditor() {
-  const { t } = useTranslation('bim3d');
+  /**
+   * 🔴 ADR-739 §52.3 — ΔΥΟ namespaces, **ένα** κλειδί ανά ετικέτα.
+   *
+   * Το `animation.title` / `toolbar.*` τα δείχνει **και** η contextual καρτέλα «Κίνηση», που
+   * μεταφράζει υποχρεωτικά με `dxf-viewer-shell` (το `RibbonPanel` δεν δηλώνει namespace ανά
+   * καρτέλα, και το `i18n/config.ts` δεν έχει `fallbackNS`). Οι κοινές ετικέτες μετακόμισαν
+   * εκεί **μία** φορά — αντί για δεύτερο αντίγραφο εδώ, που θα απέκλινε στην πρώτη αλλαγή
+   * διατύπωσης. Ό,τι είναι αποκλειστικά 3Δ (`timeline`, `config`, `waypoint`, `easing`,
+   * `queue`, `notification`, `axisLock`) **μένει** στο `bim3d`.
+   *
+   * ⚠️ **Το hook είναι του έργου (`@/i18n`), ΟΧΙ το σκέτο `react-i18next`** — και δεν είναι
+   * προτίμηση: το react-i18next δένει το `t` στο **πρώτο** namespace του πίνακα και **δεν
+   * ψάχνει ποτέ** στα υπόλοιπα (`nsMode: 'fallback'` δεν είναι ενεργό). Ο πίνακας θα φόρτωνε
+   * το `dxf-viewer-shell` και θα ζωγράφιζε **ωμό κλειδί** — ακριβώς το περιστατικό που
+   * τεκμηριώνει το `useTranslation.ts` (ADR-716 Φ5). Το hook του έργου έχει το δίχτυ
+   * `resolveAcrossNamespaces` που ρωτά ρητά τα υπόλοιπα πριν παραδοθεί ωμό κλειδί.
+   */
+  const { t } = useTranslation(['bim3d', 'dxf-viewer-shell']);
   // ADR-040 micro-leaf pattern — individual selectors avoid the new-object
   // identity that an aggregate selector would emit on every render.
   const waypoints = useAnimationStore((s) => s.waypoints);
