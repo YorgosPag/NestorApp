@@ -196,6 +196,9 @@ describe('λεξιλόγιο ρόλων έργου (building-address)', () => {
      */
     const trees: Record<string, Record<string, unknown>> = {
       'building-address': JSON.parse(read('src/i18n/locales/el/building-address.json')),
+      // ADR-759 Φ4β: το «Ναι/Όχι» μιας λογικής τιμής **δανείζεται** από την καρτέλα, ώστε ο
+      // μηχανικός να διαβάζει την ίδια λέξη πριν και μετά την έγκριση.
+      surveyRecord: JSON.parse(read('src/i18n/locales/el/surveyRecord.json')),
       'dxf-viewer-shell': locale('el'),
     };
     const fakeT = ((key: string, vars?: Record<string, string>) => {
@@ -233,6 +236,64 @@ describe('λεξιλόγιο ρόλων έργου (building-address)', () => {
       expect(candidateLabel(contactCandidate, fakeT)).not.toEqual(candidateLabel(other, fakeT));
     });
 
+    /**
+     * 🔴 **Η γραμμή έλεγε ψέματα, και κανένα από τα 1.757 tests δεν το έβλεπε** (ADR-759 §4.9).
+     *
+     * Το βέλος «→» σημαίνει «αυτό θα γραφτεί». Για τη ΖΚΣ έγραφε
+     * `→ ΕΝΤΟΣ ΖΩΝΗΣ ΚΟΙΝΩΝΙΚΟΥ ΣΥΝΤΕΛΕΣΤΗ` ενώ η Έγκριση γράφει **checkbox = Ναι** — δηλαδή
+     * υποσχόταν κάτι που δεν ίσχυε. Μόνο **εκτέλεση** της σύνθεσης το πιάνει: ο στατικός
+     * έλεγχος κλειδιών από πάνω ήταν και θα έμενε πράσινος.
+     */
+    const zoneCandidate: BindingCandidate = {
+      target: {
+        kind: 'survey-record',
+        projectId: 'p1',
+        recordId: 'srv_1',
+        field: 'inSocialFactorZone',
+        value: { kind: 'boolean', value: true },
+      },
+      label: 'ΕΝΤΟΣ ΖΩΝΗΣ ΚΟΙΝΩΝΙΚΟΥ ΣΥΝΤΕΛΕΣΤΗ',
+      evidence: [],
+    };
+
+    it('🔴 η λογική τιμή δείχνει «Ναι», όχι τη φράση που την προκάλεσε', () => {
+      const out = candidateLabel(zoneCandidate, fakeT);
+      expect(out).toBe((fakeT as (k: string) => string)('surveyRecord:actions.yes'));
+      expect(out).not.toContain('ΕΝΤΟΣ ΖΩΝΗΣ');
+      expect(out).not.toContain('actions.yes');
+    });
+
+    it('το `false` δίνει ΑΛΛΗ λέξη — αλλιώς η γραμμή θα έλεγε το ίδιο για τα δύο', () => {
+      const negative: BindingCandidate = {
+        ...zoneCandidate,
+        target: { ...zoneCandidate.target, value: { kind: 'boolean', value: false } } as never,
+      };
+      expect(candidateLabel(negative, fakeT)).not.toBe(candidateLabel(zoneCandidate, fakeT));
+    });
+
+    it('⚠️ ανάλυτη λογική τιμή (`null`) κρατά το ΩΜΟ κείμενο — δεν εφευρίσκεται «Όχι»', () => {
+      const unparsed: BindingCandidate = {
+        ...zoneCandidate,
+        target: { ...zoneCandidate.target, value: { kind: 'boolean', value: null } } as never,
+      };
+      expect(candidateLabel(unparsed, fakeT)).toBe('ΕΝΤΟΣ ΖΩΝΗΣ ΚΟΙΝΩΝΙΚΟΥ ΣΥΝΤΕΛΕΣΤΗ');
+    });
+
+    it('⚠️ ο αριθμός μένει ΩΜΟΣ — «1.364,05» είναι ήδη η ελληνική γραφή του', () => {
+      const area: BindingCandidate = {
+        ...zoneCandidate,
+        target: {
+          ...zoneCandidate.target,
+          field: 'plotArea',
+          value: { kind: 'number', value: 1364.05 },
+        } as never,
+        label: '1.364,05',
+      };
+      // Δεύτερη μορφοποίηση εδώ θα ήταν δεύτερος τόπος όπου αποφασίζεται πώς δείχνει ένας
+      // αριθμός — και η καρτέλα θα έδειχνε άλλο από την παλέτα για την ίδια τιμή.
+      expect(candidateLabel(area, fakeT)).toBe('1.364,05');
+    });
+
     it('ο οικοπεδούχος μένει σκέτος — δεν φέρει ρόλο στον τύπο του', () => {
       const landowner: BindingCandidate = {
         target: {
@@ -248,14 +309,26 @@ describe('λεξιλόγιο ρόλων έργου (building-address)', () => {
     });
   });
 
-  it('🔴 κάθε αρχείο της παλέτας που συνθέτει ετικέτα ρόλου δηλώνει το namespace', () => {
+  it('🔴 κάθε αρχείο της παλέτας που συνθέτει ετικέτα δηλώνει ΚΑΙ ΤΑ ΔΥΟ δανεικά namespaces', () => {
     const consumers = PALETTE_SOURCES.filter((file) => /\bcandidateLabel\(/.test(read(file)));
     // Δύο καταναλωτές: η γραμμή (πάντα ορατή) και ο επιλογέας (μόνο σε αμφισημία).
     expect(consumers.length).toBeGreaterThanOrEqual(2);
     for (const file of consumers) {
       const source = read(file);
       if (!/useTranslation\(/.test(source)) continue; // το `proposal-labels.ts` δέχεται το `t`
-      expect(source).toMatch(/useTranslation\(\[[^\]]*PROJECT_ROLE_LABEL_NAMESPACE/);
+      expect(source).toMatch(/useTranslation\(\[[\s\S]*?PROJECT_ROLE_LABEL_NAMESPACE/);
+      // ADR-759 Φ4β: το «Ναι/Όχι» έρχεται από το `surveyRecord`. Ίδια βλάβη, τρίτο namespace.
+      expect(source).toMatch(/useTranslation\(\[[\s\S]*?SURVEY_RECORD_LABEL_NAMESPACE/);
     }
+  });
+
+  /**
+   * 🔴 Ο **προορισμός** είναι δεύτερος καταναλωτής ξένου namespace, και **δεν** περνά από το
+   * `candidateLabel` — άρα ο έλεγχος από πάνω είναι δομικά τυφλός σε αυτόν.
+   */
+  it('🔴 η γραμμή προορισμού δηλώνει το namespace της καρτέλας', () => {
+    const source = read('src/subapps/dxf-viewer/ui/components/TitleBlockBindingPalette.tsx');
+    expect(source).toMatch(/surveyRecordDisplayName\(/);
+    expect(source).toMatch(/useTranslation\(\[[\s\S]*?SURVEY_RECORD_LABEL_NAMESPACE/);
   });
 });

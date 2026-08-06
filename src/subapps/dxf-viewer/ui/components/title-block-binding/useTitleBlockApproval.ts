@@ -138,7 +138,9 @@ export function useTitleBlockApproval(
             target: req.target,
             fileRecordId,
             levelId,
-            layerName,
+            // Η πρόταση κερδίζει όταν ξέρει το δικό της layer (σώμα σχεδίου, ADR-759 Φ4):
+            // η παλέτα εξετάζει ένα layer πινακίδας, τα έγγραφα ζουν σε περισσότερα.
+            layerName: req.proposal.layerName ?? layerName,
             existingBindings,
             ctx: {
               userId: user.uid,

@@ -15,13 +15,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getAllContacts } from '@/services/contacts-query.service';
 import { resolveContactDisplayName } from '@/services/contacts/ContactNameResolver';
 import { readProjectSnapshot } from '@/services/title-block-apply/project-snapshot';
+import { listSurveyRecords } from '@/services/survey-record.service';
+import { surveyRecordLabel } from '@/lib/survey-record/survey-record-label';
 import { resolveTitleBlockProposals } from '@/lib/title-block/title-block-proposals';
+import { resolveDocumentBodyProposals } from '@/lib/title-block/resolve-document-body';
+import { readDocumentBodies } from '@/lib/document-body/read-document-body';
+import type { DocumentBodyReading } from '@/types/document-body-reading';
 import type { ContactSnapshotEntry } from '@/lib/title-block/resolve-people';
+import type { SurveySnapshot } from '@/lib/title-block/resolve-survey-record';
+import type { SurveyRecord } from '@/types/project-survey-record';
 import type { BindingProposal } from '@/types/title-block-binding';
 import {
   scanTitleBlockLayers,
   type TitleBlockLayerScan,
 } from '../../../text-engine/title-block/reading/scene-title-block-cells';
+import { collectDocumentSources } from '../../../text-engine/document-body/scene-document-bodies';
 import { useLevelScene } from '../../../systems/scene/useSceneSelectors';
 
 /**
@@ -39,9 +47,44 @@ export interface TitleBlockProposalsState {
   /** Το layer που εξετάζεται — ο πρώτος υποψήφιος, ή ό,τι διάλεξε ο άνθρωπος. */
   readonly selectedLayerId: string | null;
   readonly proposals: readonly BindingProposal[];
+  /**
+   * Οι προτάσεις που γεννούν τα **έγγραφα** του σχεδίου — χωριστά από της πινακίδας.
+   *
+   * 🔴 **Χωριστά επίτηδες** (ADR-759 §4.6): η πινακίδα έχει δομή, το σώμα είναι πρόζα, και ο
+   * μηχανικός πρέπει να ξέρει ποια από τις δύο κοιτάζει **πριν** πατήσει Έγκριση. Ενωμένες σε
+   * μία λίστα, οι δύο ποιότητες θα φαίνονταν ίδιες.
+   */
+  readonly bodyProposals: readonly BindingProposal[];
+  /** Τα έγγραφα που βρέθηκαν — και **τι ρώτησαν και έμεινε κενό** (`emptySections`). */
+  readonly documentBodies: readonly DocumentBodyReading[];
+  /**
+   * Τα τοπογραφικά του έργου. `undefined` όσο δεν έχουν απαντήσει — η παλέτα το δείχνει ως
+   * φόρτωση, ποτέ ως «δεν υπάρχει».
+   */
+  readonly survey: SurveySnapshot | undefined;
   /** Το στιγμιότυπο κόπηκε στο όριο ⇒ «δεν βρέθηκε» δεν είναι εξαντλητικό. */
   readonly truncated: boolean;
   readonly error: string | null;
+}
+
+/**
+ * `SurveyRecord[]` → η ελάχιστη προβολή που χρειάζεται η **απόφαση προορισμού**.
+ *
+ * Το `label` χτίζεται από το κοινό `surveyRecordLabel` — το ίδιο που δείχνει η καρτέλα, ώστε
+ * το όνομα που διαβάζει ο μηχανικός εδώ να είναι **το ίδιο** που θα ψάξει εκεί.
+ */
+function toSurveySnapshot(
+  records: readonly SurveyRecord[],
+  activeId: string | null,
+): SurveySnapshot {
+  return {
+    records: records.map((record) => ({
+      id: record.id,
+      isConfirmed: record.confirmedBy !== null,
+      label: surveyRecordLabel(record),
+    })),
+    activeId,
+  };
 }
 
 /** `Contact` → η ελάχιστη προβολή που χρειάζεται το ταίριασμα. */
@@ -110,9 +153,26 @@ export function useTitleBlockProposals(
    */
   const [hasPrimaryAddress, setHasPrimaryAddress] = useState<boolean | undefined>(undefined);
 
+  /**
+   * Τα τοπογραφικά του έργου — ο **προορισμός** των δηλώσεων του τοπογράφου (ADR-759 Φ3γ).
+   *
+   * 🔴 **Δύο αναγνώσεις, μία απάντηση, και οι δύο είναι απαραίτητες.** Η λίστα λέει *πόσα
+   * υπάρχουν και ποια είναι παγωμένα*· το έργο λέει *ποιο ισχύει*. Με μόνο τη λίστα, το
+   * «ποιο ισχύει» θα προέκυπτε από ταξινόμηση — ακριβώς αυτό που απαγορεύει το ADR-759 Q1.
+   *
+   * ⚠️ **Αποτυχία ⇒ κενό στιγμιότυπο, ΟΧΙ `undefined`.** Είναι διαφορετική επιλογή από το
+   * `hasPrimaryAddress` από πάνω, και σκόπιμα: εκεί το `undefined` σημαίνει «μη μπλοκάρεις»,
+   * γιατί ο πραγματικός φύλακας ζει στο κλικ. Εδώ **δεν υπάρχει τιμή που να επιτρέπει
+   * συνέχεια** — χωρίς `recordId` δεν χτίζεται στόχος. Άρα η ίδια σύμβαση με τις **επαφές**:
+   * το σφάλμα γίνεται ορατό (`error`) και ο χρήστης βλέπει «δεν υπάρχει καρτέλα», με το
+   * μήνυμα αποτυχίας από πάνω — ποτέ γραμμή που εξαφανίζεται σιωπηλά.
+   */
+  const [survey, setSurvey] = useState<SurveySnapshot | undefined>(undefined);
+
   useEffect(() => {
     if (!enabled || !projectId) {
       setHasPrimaryAddress(undefined);
+      setSurvey(undefined);
       return;
     }
     let cancelled = false;
@@ -120,8 +180,13 @@ export function useTitleBlockProposals(
       try {
         const snapshot = await readProjectSnapshot(projectId);
         if (!cancelled) setHasPrimaryAddress(snapshot.addresses.some((a) => a.isPrimary));
-      } catch {
-        if (!cancelled) setHasPrimaryAddress(undefined);
+        const records = await listSurveyRecords(projectId);
+        if (!cancelled) setSurvey(toSurveySnapshot(records, snapshot.activeSurveyRecordId));
+      } catch (cause) {
+        if (cancelled) return;
+        setHasPrimaryAddress(undefined);
+        setSurvey({ records: [], activeId: null });
+        setError(cause instanceof Error ? cause.message : String(cause));
       }
     })();
     return () => { cancelled = true; };
@@ -156,6 +221,18 @@ export function useTitleBlockProposals(
 
   const selectedLayerId = chosenLayerId ?? scan?.candidates[0]?.layerId ?? null;
 
+  /**
+   * Τα έγγραφα του σχεδίου.
+   *
+   * ⚠️ **Δεν φιλτράρεται layer**: ποιο κείμενο είναι έγγραφο το λέει ο **τίτλος** του, και το
+   * μετρημένο εύρημα είναι ότι τα τέσσερα έγγραφα του G753 ζουν σε **δύο** layers ενώ το ένα
+   * από αυτά τα layers έχει 77 κείμενα θορύβου (ADR-759 §4.6).
+   */
+  const documentBodies = useMemo(() => {
+    if (!enabled || !scene) return [];
+    return readDocumentBodies(collectDocumentSources(scene.entities, scene.layersById));
+  }, [enabled, scene]);
+
   const proposals = useMemo(() => {
     if (!scan || !contacts || !levelId) return [];
     const layer = scan.candidates.find((c) => c.layerId === selectedLayerId);
@@ -165,14 +242,31 @@ export function useTitleBlockProposals(
       levelId,
       contacts,
       ...(hasPrimaryAddress !== undefined ? { hasPrimaryAddress } : {}),
+      ...(survey ? { survey } : {}),
     });
-  }, [scan, contacts, levelId, projectId, selectedLayerId, hasPrimaryAddress]);
+  }, [scan, contacts, levelId, projectId, selectedLayerId, hasPrimaryAddress, survey]);
+
+  const bodyProposals = useMemo(() => {
+    if (documentBodies.length === 0) return [];
+    return resolveDocumentBodyProposals(documentBodies, {
+      ...(projectId ? { projectId } : {}),
+      ...(hasPrimaryAddress !== undefined ? { hasPrimaryAddress } : {}),
+      ...(survey ? { survey } : {}),
+    });
+  }, [documentBodies, projectId, hasPrimaryAddress, survey]);
 
   return {
-    loading: enabled && (contacts === null || scan === null),
+    // 🔴 Το `survey` **μπαίνει στην πύλη φόρτωσης**, σε αντίθεση με το `hasPrimaryAddress`.
+    // Χωρίς αυτό, το πρώτο καρέ θα υπολόγιζε προτάσεις με κενό στιγμιότυπο και θα έγραφε
+    // «το έργο δεν έχει τοπογραφικό» — σωστό μήνυμα, λάθος στιγμή, και ο μηχανικός θα το
+    // διάβαζε πριν προλάβει να έρθει η απάντηση.
+    loading: enabled && (contacts === null || scan === null || (projectId !== undefined && survey === undefined)),
     scan,
     selectedLayerId,
+    survey,
     proposals,
+    bodyProposals,
+    documentBodies,
     truncated,
     error,
     selectLayer: setChosenLayerId,

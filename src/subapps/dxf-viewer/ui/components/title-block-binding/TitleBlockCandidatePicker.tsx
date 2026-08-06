@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PROJECT_ROLE_LABEL_NAMESPACE } from '@/config/project-role-labels';
+import { SURVEY_RECORD_LABEL_NAMESPACE } from '@/config/survey-record-labels';
 import { targetRef } from '@/lib/title-block-binding-id';
 import type { BindingCandidate } from '@/types/title-block-binding';
 import { candidateLabel } from './proposal-labels';
@@ -48,11 +49,16 @@ export const TitleBlockCandidatePicker: React.FC<Props> = ({
   disabled,
   fieldId,
 }) => {
-  // Το λεξιλόγιο ρόλων ζει στο `building-address` (SSoT — δες `config/project-role-labels`).
-  // Χωρίς δηλωμένο namespace το i18next επιστρέφει το ίδιο το κλειδί. Η σταθερά αντικατέστησε
-  // κυριολεκτική συμβολοσειρά: το `PROJECT_ROLE_LABEL_NAMESPACE` υπήρχε με docblock που ζητούσε
-  // ακριβώς αυτή τη χρήση και **δεν το κατανάλωνε κανείς**.
-  const { t } = useTranslation(['dxf-viewer-shell', PROJECT_ROLE_LABEL_NAMESPACE]);
+  // Τα ίδια δύο δανεικά namespaces με τη γραμμή, γιατί καλεί το **ίδιο** `candidateLabel`: οι
+  // ρόλοι ζουν στο `building-address`, το «Ναι/Όχι» μιας λογικής τιμής στο `surveyRecord`.
+  // Χωρίς δηλωμένο namespace το i18next επιστρέφει το ίδιο το κλειδί. Η πρώτη σταθερά
+  // αντικατέστησε κυριολεκτική συμβολοσειρά: το `PROJECT_ROLE_LABEL_NAMESPACE` υπήρχε με
+  // docblock που ζητούσε ακριβώς αυτή τη χρήση και **δεν το κατανάλωνε κανείς**.
+  const { t } = useTranslation([
+    'dxf-viewer-shell',
+    PROJECT_ROLE_LABEL_NAMESPACE,
+    SURVEY_RECORD_LABEL_NAMESPACE,
+  ]);
 
   // 🔑 Το `targetRef` είναι η **ταυτότητα** του στόχου, όχι το `label`: το Radix Select απαιτεί
   // μοναδικό `value`, και σε διφορούμενη ειδικότητα τα labels είναι **όλα ίδια**.

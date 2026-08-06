@@ -25,6 +25,7 @@ import { applyContactTarget } from './apply-contact';
 import { applyDrawingMetaTarget } from './apply-drawing-meta';
 import { applyLandownerTarget } from './apply-landowner';
 import { applyProjectAddressTarget, applyProjectFieldTarget } from './apply-project-value';
+import { applySurveyRecordTarget } from './apply-survey-record';
 import type { ApplyTargetContext, ApplyTargetResult } from './apply-types';
 import {
   refuseLandownerReplacement,
@@ -61,6 +62,8 @@ async function applyTarget(target: BindingTarget, ctx: ApplyTargetContext): Prom
       return applyProjectAddressTarget(target, ctx);
     case 'drawing-meta':
       return applyDrawingMetaTarget(target, ctx);
+    case 'survey-record':
+      return applySurveyRecordTarget(target, ctx);
   }
 }
 

@@ -25,6 +25,13 @@ export interface ProjectSnapshot {
   readonly landowners: readonly LandownerEntry[];
   readonly addresses: readonly ProjectAddress[];
   readonly buildingBlock?: string;
+  /**
+   * Ποιο τοπογραφικό έχει δηλωθεί ως **ενεργό** (ADR-759 Φ3γ).
+   *
+   * `null` = δεν έχει δηλωθεί — **ποτέ** «το νεότερο». Ο προορισμός των δηλώσεων του
+   * τοπογράφου κρίνεται από αυτό μαζί με την πληθικότητα (`resolveSurveyDestination`).
+   */
+  readonly activeSurveyRecordId: string | null;
 }
 
 type ProjectGetPayload = {
@@ -33,6 +40,7 @@ type ProjectGetPayload = {
     landowners?: LandownerEntry[] | null;
     addresses?: ProjectAddress[] | null;
     buildingBlock?: string | null;
+    activeSurveyRecordId?: string | null;
   };
 };
 
@@ -57,6 +65,7 @@ export async function readProjectSnapshot(projectId: string): Promise<ProjectSna
       id: project.id ?? projectId,
       landowners: project.landowners ?? [],
       addresses: project.addresses ?? [],
+      activeSurveyRecordId: project.activeSurveyRecordId ?? null,
       ...(project.buildingBlock ? { buildingBlock: project.buildingBlock } : {}),
     };
   } catch (error) {

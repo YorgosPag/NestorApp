@@ -23,12 +23,14 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Button } from '@/components/ui/button';
 import { parseGreekDecimal } from '@/lib/number/greek-decimal';
 import { PROJECT_ROLE_LABEL_NAMESPACE } from '@/config/project-role-labels';
+import { SURVEY_RECORD_LABEL_NAMESPACE } from '@/config/survey-record-labels';
 import type { BindingCandidate, BindingProposal } from '@/types/title-block-binding';
 import { unambiguousWinner } from '@/types/title-block-binding';
 import {
   BLOCKED_LABEL,
   BLOCKER_LABEL,
   candidateLabel,
+  CAUTION_LABEL,
   FIELD_LABEL,
   TARGET_LABEL,
   type RowBlocker,
@@ -71,10 +73,17 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
   subject,
   onContactCreated,
 }) => {
-  // Δεύτερο namespace: η γραμμή δείχνει πλέον τον **ρόλο**, του οποίου το λεξιλόγιο ζει στο
-  // `building-address` (SSoT). Χωρίς τη δήλωση βάφεται ωμό κλειδί — για προθεματισμένο κλειδί
-  // δεν υπάρχει δίχτυ (δες `roleLabel`). Το φυλάει το `title-block-binding-wiring.test.ts`.
-  const { t } = useTranslation(['dxf-viewer-shell', PROJECT_ROLE_LABEL_NAMESPACE]);
+  // Δύο δανεικά namespaces, και τα δύο για τον **ίδιο** λόγο: το λεξιλόγιο ανήκει σε άλλη
+  // οθόνη και δεν ξαναγράφεται εδώ (SSoT). Ο **ρόλος** ζει στο `building-address`· το
+  // **«Ναι/Όχι»** μιας λογικής τιμής ζει στην καρτέλα τοπογραφικού (`surveyRecord`), όπου ο
+  // μηχανικός θα δει την ίδια λέξη μετά την έγκριση. Χωρίς τη δήλωση βάφεται ωμό κλειδί — για
+  // προθεματισμένο κλειδί δεν υπάρχει δίχτυ (δες `roleLabel`). Το φυλάει το
+  // `title-block-binding-wiring.test.ts`.
+  const { t } = useTranslation([
+    'dxf-viewer-shell',
+    PROJECT_ROLE_LABEL_NAMESPACE,
+    SURVEY_RECORD_LABEL_NAMESPACE,
+  ]);
 
   // Γ6 — η πινακίδα αποδεικνύει ΟΝΟΜΑ, ποτέ μερίδιο. Το κρατάμε ως κείμενο ώστε το άδειο πεδίο
   // να είναι «δεν δηλώθηκε», όχι `0` — που θα σήμαινε «δεν κατέχει τίποτα».
@@ -192,6 +201,28 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
               {t(BLOCKER_LABEL[blocker])}
             </p>
           ) : null}
+
+          {/* 🔴 **Η επιφύλαξη στέκεται δίπλα σε κουμπί που ΔΟΥΛΕΥΕΙ** — εκεί είναι όλη η
+              διαφορά της από τον φραγμό από κάτω. Λέει «γίνεται· να τι δεν ξέρουμε», και
+              γι' αυτό μπαίνει **πάνω από** το κλικ και όχι σε tooltip: ο μηχανικός πρέπει να
+              τη διαβάσει **πριν** εγκρίνει, όχι αφού αναρωτηθεί. Το «Π.Ε. 39» πέρασε δύο
+              φάσεις ως αδιέξοδο ακριβώς επειδή δεν υπήρχε αυτή η θέση στην οθόνη. */}
+          {proposal.caution && !approved ? (
+            <p role="status" className="mt-1 flex items-start gap-1.5 text-[11px] text-[hsl(var(--text-warning))]">
+              <AlertCircle className="mt-px size-3 shrink-0" aria-hidden />
+              {t(CAUTION_LABEL[proposal.caution])}
+            </p>
+          ) : null}
+
+          {/* 🔑 **Πόσα έγγραφα του σχεδίου λένε το ίδιο** (ADR-759 Φ4). Δεν είναι σκορ: είναι
+              μετρημένο γεγονός, και είναι ο λόγος που ο μηχανικός βλέπει **μία** γραμμή αντί
+              για τρεις πανομοιότυπες. Εμφανίζεται μόνο όταν οι μάρτυρες είναι >1 — «το λέει
+              1 έγγραφο» δεν είναι πληροφορία, είναι θόρυβος. */}
+          {proposal.corroboration !== undefined && proposal.corroboration > 1 && !approved ? (
+            <p role="status" className="mt-1 text-[11px] text-muted-foreground">
+              {t('titleBlockBinding.corroboration', { count: proposal.corroboration })}
+            </p>
+          ) : null}
         </section>
       ) : (
         <section className="mt-1.5">
@@ -205,9 +236,9 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
           </p>
 
           {/* 🔴 **Μόνο στο `no-match`, και αυτό δεν είναι λεπτομέρεια.** Καμία από τις άλλες
-              έξι αιτίες δεν θεραπεύεται με νέα επαφή: το `role-undecided` **βρήκε** τον
+              οκτώ αιτίες δεν θεραπεύεται με νέα επαφή: το `role-undecided` **βρήκε** τον
               άνθρωπο (νέα επαφή θα έφτιαχνε **δίδυμο**), ενώ τα `unsupported-field`,
-              `no-primary-address`, `resolver-gap`, `ambiguous-abbreviation` και `no-project`
+              `no-primary-address`, `resolver-gap`, `no-project` και τα τρία του τοπογραφικού
               δεν αφορούν καν πρόσωπο. Ένα κουμπί που εμφανίζεται όπου δεν βοηθά είναι
               πρόσκληση να δημιουργηθούν διπλότυπες επαφές — δηλαδή θεραπεία που γεννά
               χειρότερη ασθένεια από αυτήν που λύνει. */}

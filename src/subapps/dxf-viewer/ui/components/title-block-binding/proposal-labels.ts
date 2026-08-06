@@ -15,16 +15,26 @@
  */
 
 import { type RoleTranslateFn, roleLabel } from '@/config/project-role-labels';
+import { surveyAffirmationLabel } from '@/config/survey-record-labels';
+import type { SurveyParsedValue } from '@/config/survey-bindable-fields';
 import type {
   BindingBlockReason,
   BindingCandidate,
+  BindingCaution,
   BindingEvidenceKind,
+  BindingSourceKind,
   BindingTargetKind,
+  ProposalFieldKey,
 } from '@/types/title-block-binding';
-import type { TitleBlockFieldKey } from '@/types/title-block-reading';
 import type { ApprovalBlocker } from './useTitleBlockApproval';
 
-export const FIELD_LABEL: Record<TitleBlockFieldKey, string> = {
+/**
+ * ⚠️ **Ρητός `Record<ProposalFieldKey, …>`**: καλύπτει **και** τα κλειδιά της πινακίδας **και**
+ * του σώματος (Φ4). Νέο κλειδί ανάγνωσης χωρίς ετικέτα **δεν χτίζει** — που είναι ο μόνος
+ * λόγος που μια γραμμή της παλέτας δεν μπορεί ποτέ να εμφανιστεί ανώνυμη.
+ */
+export const FIELD_LABEL: Record<ProposalFieldKey, string> = {
+  // ── Πινακίδα ──
   employer: 'titleBlockBinding.fields.employer',
   projectTitle: 'titleBlockBinding.fields.projectTitle',
   location: 'titleBlockBinding.fields.location',
@@ -36,6 +46,45 @@ export const FIELD_LABEL: Record<TitleBlockFieldKey, string> = {
   studyDate: 'titleBlockBinding.fields.studyDate',
   drawnBy: 'titleBlockBinding.fields.drawnBy',
   signature: 'titleBlockBinding.fields.signature',
+  // ── Σώμα του σχεδίου (ADR-759 Φ4) ──
+  sector: 'titleBlockBinding.fields.sector',
+  plotBoundaryLabels: 'titleBlockBinding.fields.plotBoundaryLabels',
+  minFrontage: 'titleBlockBinding.fields.minFrontage',
+  minArea: 'titleBlockBinding.fields.minArea',
+  declaredCoveragePct: 'titleBlockBinding.fields.declaredCoveragePct',
+  maxCoveragePct: 'titleBlockBinding.fields.maxCoveragePct',
+  declaredMaxHeight: 'titleBlockBinding.fields.declaredMaxHeight',
+  declaredSd: 'titleBlockBinding.fields.declaredSd',
+  socialFactorSd: 'titleBlockBinding.fields.socialFactorSd',
+  totalSd: 'titleBlockBinding.fields.totalSd',
+  landUse: 'titleBlockBinding.fields.landUse',
+  inSocialFactorZone: 'titleBlockBinding.fields.inSocialFactorZone',
+  settlementActs: 'titleBlockBinding.fields.settlementActs',
+  implementationActNumber: 'titleBlockBinding.fields.implementationActNumber',
+  implementationActDecision: 'titleBlockBinding.fields.implementationActDecision',
+  implementationActVolume: 'titleBlockBinding.fields.implementationActVolume',
+  implementationActEntry: 'titleBlockBinding.fields.implementationActEntry',
+  implementationActDate: 'titleBlockBinding.fields.implementationActDate',
+  implementationActRegistry: 'titleBlockBinding.fields.implementationActRegistry',
+  implementationActUrbanUnits: 'titleBlockBinding.fields.implementationActUrbanUnits',
+  implementationActOriginalProperties: 'titleBlockBinding.fields.implementationActOriginalProperties',
+  buildabilityNote: 'titleBlockBinding.fields.buildabilityNote',
+  roadPlanDefinition: 'titleBlockBinding.fields.roadPlanDefinition',
+  plotArea: 'titleBlockBinding.fields.plotArea',
+  heightDatum: 'titleBlockBinding.fields.heightDatum',
+  surveyDate: 'titleBlockBinding.fields.surveyDate',
+  regionalUnit: 'titleBlockBinding.fields.regionalUnit',
+};
+
+/**
+ * Ποιος αναγνώστης γέννησε τη γραμμή — **δήλωση αξιοπιστίας**, όχι μεταδεδομένο (§4.6).
+ *
+ * Η πινακίδα έχει δομή· το σώμα είναι πρόζα. Ο μηχανικός πρέπει να ξέρει ποια από τις δύο
+ * κοιτάζει **πριν** πατήσει Έγκριση, γι' αυτό το κείμενο του σώματος λέει ρητά «επιβεβαίωσε».
+ */
+export const SOURCE_KIND_LABEL: Record<BindingSourceKind, string> = {
+  'title-block': 'titleBlockBinding.sourceKind.title-block',
+  'document-body': 'titleBlockBinding.sourceKind.document-body',
 };
 
 export const EVIDENCE_LABEL: Record<BindingEvidenceKind, string> = {
@@ -53,7 +102,22 @@ export const BLOCKED_LABEL: Record<BindingBlockReason, string> = {
   'role-undecided': 'titleBlockBinding.blocked.role-undecided',
   'no-primary-address': 'titleBlockBinding.blocked.no-primary-address',
   'resolver-gap': 'titleBlockBinding.blocked.resolver-gap',
-  'ambiguous-abbreviation': 'titleBlockBinding.blocked.ambiguous-abbreviation',
+  'no-survey-record': 'titleBlockBinding.blocked.no-survey-record',
+  'survey-record-undecided': 'titleBlockBinding.blocked.survey-record-undecided',
+  'survey-record-locked': 'titleBlockBinding.blocked.survey-record-locked',
+};
+
+/**
+ * «Γίνεται — να τι δεν ξέρουμε».
+ *
+ * 🔑 Ξεχωριστός πίνακας από το {@link BLOCKED_LABEL} επειδή είναι **άλλη πρόταση προς τον
+ * άνθρωπο**: εκείνο εξηγεί γιατί δεν υπάρχει κουμπί· αυτό στέκεται δίπλα σε ένα κουμπί που
+ * **δουλεύει** και ζητά δεύτερη ματιά. Το `ambiguous-abbreviation` μετακόμισε εδώ στη Φ3γ —
+ * ήταν φραγμός για κάτι που δεν ήταν φραγμένο.
+ */
+export const CAUTION_LABEL: Record<BindingCaution, string> = {
+  'ambiguous-abbreviation': 'titleBlockBinding.caution.ambiguous-abbreviation',
+  'partial-value': 'titleBlockBinding.caution.partial-value',
 };
 
 export const TARGET_LABEL: Record<BindingTargetKind, string> = {
@@ -62,6 +126,7 @@ export const TARGET_LABEL: Record<BindingTargetKind, string> = {
   'project-address': 'titleBlockBinding.target.project-address',
   'project-field': 'titleBlockBinding.target.project-field',
   'drawing-meta': 'titleBlockBinding.target.drawing-meta',
+  'survey-record': 'titleBlockBinding.target.survey-record',
 };
 
 /**
@@ -124,13 +189,53 @@ export const EVIDENCE_SHOWS_VALUE: Record<BindingEvidenceKind, boolean> = {
 export const candidateLabel = (
   candidate: BindingCandidate,
   t: RoleTranslateFn,
-): string =>
-  candidate.target.kind === 'contact'
-    ? t('titleBlockBinding.candidateWithRole', {
+): string => {
+  switch (candidate.target.kind) {
+    case 'contact':
+      return t('titleBlockBinding.candidateWithRole', {
         name: candidate.label,
         role: roleLabel(candidate.target.role, t),
-      })
-    : candidate.label;
+      });
+    case 'survey-record':
+      return surveyValueLabel(candidate.target.value, t) ?? candidate.label;
+    case 'landowner':
+    case 'project-address':
+    case 'project-field':
+    case 'drawing-meta':
+      return candidate.label;
+  }
+};
+
+/**
+ * Η **αναλυμένη** τιμή τοπογραφικού όπως θα τη διαβάσει ο άνθρωπος — ή `null` όταν το ωμό
+ * κείμενο του σχεδίου είναι ήδη η καλύτερη γραφή της.
+ *
+ * 🔴 **Γιατί υπάρχει: το βέλος έλεγε ψέματα.** Η γραμμή έγραφε
+ * `Ζώνη κοινωνικού συντελεστή → ΕΝΤΟΣ ΖΩΝΗΣ ΚΟΙΝΩΝΙΚΟΥ ΣΥΝΤΕΛΕΣΤΗ`, αλλά η Έγκριση γράφει
+ * **checkbox = Ναι**. Το «→» σημαίνει «αυτό θα γραφτεί», άρα η οθόνη υποσχόταν κάτι που δεν
+ * ίσχυε — μετρημένο στην οθόνη 06/08 στο G753.
+ *
+ * 🔑 **Δεν μαντεύεται τίποτα**: το `target.value` κουβαλά ήδη την **ετικέτα τύπου**
+ * (`{kind:'boolean', value:true}`), ακριβώς για να μη χρειάζεται `typeof` εδώ (ADR-759 §4.8).
+ *
+ * ⚠️ **Οι αριθμοί και οι λίστες μένουν ωμοί, και αυτό είναι απόφαση.** Το «1.364,05» **είναι**
+ * η ελληνική γραφή του αριθμού· δική μας μορφοποίηση θα ήταν **δεύτερος τόπος** όπου
+ * αποφασίζεται πώς δείχνει ένας αριθμός, ενώ ο πρώτος (η καρτέλα) θα έδειχνε άλλο. Μόνο η
+ * λογική τιμή διαφέρει **ουσιωδώς** από το κείμενο που τη γέννησε.
+ *
+ * ⚠️ `value: null` ⇒ `null`: «δεν αναλύθηκε» δεν έχει λέξη, και η επιφύλαξη `partial-value`
+ * το λέει ήδη ρητά από κάτω. Το ωμό κείμενο είναι εκεί η μόνη αλήθεια (ADR-745 §8 κανόνας 3).
+ */
+function surveyValueLabel(value: SurveyParsedValue, t: RoleTranslateFn): string | null {
+  switch (value.kind) {
+    case 'boolean':
+      return value.value === null ? null : surveyAffirmationLabel(value.value, t);
+    case 'text':
+    case 'number':
+    case 'textList':
+      return null;
+  }
+}
 
 export const BLOCKER_LABEL: Record<RowBlocker, string> = {
   noFileRecord: 'titleBlockBinding.disabled.noFileRecord',

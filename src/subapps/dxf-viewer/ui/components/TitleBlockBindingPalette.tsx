@@ -18,6 +18,15 @@ import React, { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { FileSignature } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FloatingPanel } from '@/components/ui/floating';
+import {
+  resolveSurveyDestination,
+  type SurveyDestination,
+} from '@/lib/title-block/resolve-survey-record';
+import {
+  SURVEY_RECORD_LABEL_NAMESPACE,
+  surveyRecordDisplayName,
+} from '@/config/survey-record-labels';
+import { BLOCKED_LABEL, SOURCE_KIND_LABEL } from './title-block-binding/proposal-labels';
 import type { TitleBlockReading } from '@/types/title-block-reading';
 import { TitleBlockBindingPaletteStore } from '../../stores/TitleBlockBindingPaletteStore';
 import { ESC_PRIORITY, useEscapeHandler } from '../../systems/escape-bus';
@@ -102,6 +111,7 @@ export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId, 
   if (!isOpen) return null;
 
   const candidate = state.scan?.candidates.find((c) => c.layerId === state.selectedLayerId);
+  const surveyDestination = resolveSurveyDestination(state.survey);
 
   return (
     <FloatingPanel
@@ -124,6 +134,14 @@ export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId, 
           <p className="text-[11px] leading-snug text-muted-foreground">
             {t('titleBlockBinding.description')}
           </p>
+
+          {/* 🔑 **Ο προορισμός δηλώνεται ΜΙΑ φορά, όχι ανά γραμμή** (ADR-759 Φ3γ). Είναι
+              ιδιότητα του **έργου**, όχι του κελιού: όλες οι δηλώσεις του τοπογράφου πάνε
+              στην ίδια εγγραφή, γιατί αλλιώς ο μηχανικός θα μπορούσε να συνθέσει βεβαίωση
+              που κανείς δεν υπέγραψε. Ίδια πρακτική με το Copy/Monitor του Revit: διαλέγεις
+              τον σύνδεσμο μία φορά, μετά τα στοιχεία. Επαναλαμβανόμενο ανά γραμμή θα ήταν
+              και θόρυβος (§5.8) και λάθος μοντέλο. */}
+          <SurveyDestinationNotice destination={surveyDestination} />
 
           {state.loading ? (
             <p className="text-sm text-muted-foreground">{t('titleBlockBinding.loading')}</p>
@@ -169,6 +187,27 @@ export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId, 
             onContactCreated={state.refresh}
           />
 
+          {/* 🔴 **Το σώμα του σχεδίου, ΧΩΡΙΣΤΑ** (ADR-759 §4.6). Η πινακίδα έχει δομή· το σώμα
+              είναι πρόζα, και η ίδια μηχανή πάνω στα δύο υλικά δίνει δύο διαφορετικές
+              ποιότητες. Ενωμένες σε μία λίστα, οι δύο θα φαίνονταν ίδιες — γι' αυτό η ομάδα
+              φέρει ρητή επικεφαλίδα «επιβεβαίωσε», και όχι απλώς μια σήμανση ανά γραμμή. */}
+          {!state.loading && state.bodyProposals.length > 0 ? (
+            <section className="flex flex-col gap-1 border-t border-border pt-2">
+              <h3 className="text-[11px] font-medium uppercase tracking-wide text-[hsl(var(--text-warning))]">
+                {t(SOURCE_KIND_LABEL['document-body'])}
+              </h3>
+              <TitleBlockProposalList
+                proposals={state.bodyProposals}
+                readings={EMPTY_READINGS}
+                fileRecordId={fileRecordId}
+                levelId={levelId}
+                layerName=""
+                projectId={projectId}
+                onContactCreated={state.refresh}
+              />
+            </section>
+          ) : null}
+
           {/* 🔴 ADR-762 §5 — ό,τι διαβάστηκε και δεν δέθηκε. Κάτω από τις προτάσεις επίτηδες:
               είναι **πληροφορία**, όχι εργασία, και δεν πρέπει να ανταγωνίζεται τα κουμπιά. */}
           {!state.loading && candidate ? (
@@ -177,5 +216,35 @@ export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId, 
         </section>
       </FloatingPanel.Content>
     </FloatingPanel>
+  );
+};
+
+/**
+ * «Οι δηλώσεις του τοπογράφου γράφονται στο: …» — ή **γιατί δεν γράφονται πουθενά**.
+ *
+ * 🔑 Το μήνυμα άρνησης είναι το **ίδιο** που θα έδειχνε η κάθε μπλοκαρισμένη γραμμή
+ * (`BLOCKED_LABEL`), γιατί είναι η **ίδια** απόφαση ({@link resolveSurveyDestination}) —
+ * δεύτερη διατύπωση θα ήταν δύο κείμενα για ένα γεγονός, και θα απέκλιναν. Εδώ όμως λέγεται
+ * **μία** φορά αντί για τέσσερις, που είναι η διαφορά ανάμεσα σε πληροφορία και θόρυβο.
+ */
+const SurveyDestinationNotice: React.FC<{ readonly destination: SurveyDestination }> = ({
+  destination,
+}) => {
+  // 🔴 Δεύτερο namespace: το **όνομα** της εγγραφής ζει στο λεξιλόγιο της καρτέλας, όχι εδώ
+  // (SSoT — δες `config/survey-record-labels.ts`). Χωρίς τη δήλωση, το προθεματισμένο κλειδί
+  // βάφεται ωμό στην οθόνη ενώ η μετάφραση υπάρχει — η βλάβη του ADR-752, ίδιο σχήμα με τους
+  // ρόλους έργου. Το φυλάει το `title-block-binding-wiring.test.ts`.
+  const { t } = useTranslation(['dxf-viewer-shell', SURVEY_RECORD_LABEL_NAMESPACE]);
+
+  return (
+    <p className="text-[11px] leading-snug text-muted-foreground">
+      {destination.to === 'record'
+        ? t('titleBlockBinding.surveyDestination', {
+            // Η **ίδια** σύνθεση με την καρτέλα: «Τοπογραφικό 30/7/2026» ή «Τοπογραφικό χωρίς
+            // ημερομηνία» — ποτέ σκέτη παύλα, που ήταν η κατάσταση κάθε νέας καρτέλας.
+            record: surveyRecordDisplayName(destination.record.label, t),
+          })
+        : t(BLOCKED_LABEL[destination.reason])}
+    </p>
   );
 };
