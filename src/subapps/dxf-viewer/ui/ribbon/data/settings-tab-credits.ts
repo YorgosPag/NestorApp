@@ -20,7 +20,10 @@ export const SETTINGS_CREDITS_PANEL: RibbonPanelDef = {
           size: 'large',
           command: {
             id: 'settings.open-credits',
-            labelKey: 'ribbon.commands.openCredits',
+            // ⚠️ `tools.*` και όχι `ribbon.commands.*`: εκεί ζει η ετικέτα (ίδιο σχήμα με τα
+            // `tools.guide*` του «Οδηγοί»). Το `ribbon.commands.openCredits` **δεν υπάρχει**
+            // σε κανένα locale — το κουμπί τύπωνε το κλειδί ωμό (ADR-739 §52.2, σάρωση).
+            labelKey: 'tools.openCredits',
             icon: 'info',
             commandKey: 'open-credits',
             action: 'open-credits',
