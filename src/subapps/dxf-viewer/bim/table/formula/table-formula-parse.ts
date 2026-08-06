@@ -37,7 +37,7 @@ import type {
 } from '../../../types/table-formula';
 import type { TableFormulaGrammar } from '../../../types/table-formula-grammar';
 import { createTableModel } from '../table-model-helpers';
-import { resolveWrittenCellRef } from './table-formula-absolute';
+import { isWrittenAddressShape, resolveWrittenCellRef } from './table-formula-absolute';
 import { drawingFormulaGrammar } from './table-formula-grammar';
 import {
   FORMULA_PREFIX,
@@ -233,10 +233,24 @@ function parseGroup(reader: Reader): TableFormulaNode | null {
 const BOOLEAN_LITERALS: Readonly<Record<string, boolean>> = { TRUE: true, FALSE: false };
 
 /**
- * Το όνομα είναι **κλήση** αν ακολουθεί `(`· αλλιώς κυριολεκτικό `TRUE`/`FALSE`, ή αναφορά.
+ * Το όνομα είναι **κλήση** αν ακολουθεί `(`· αλλιώς κυριολεκτικό `TRUE`/`FALSE`, αναφορά, ή
+ * — από το ADR-765 — **γυμνό όνομα** που δεν ορίστηκε ποτέ.
  *
- * Η σειρά έχει σημασία: το `TRUE()` **με** παρενθέσεις παραμένει κλήση συνάρτησης (υπάρχει
- * στο μητρώο), ενώ το σκέτο `TRUE` είναι κυριολεκτικό. Και τα δύο δέχεται το Excel.
+ * ## 🔴 Η σειρά ΕΙΝΑΙ η σημασία, και το όνομα μπαίνει ΤΕΛΕΥΤΑΙΟ
+ * 1. `(` ⇒ **κλήση**. Το `TRUE()` **με** παρενθέσεις μένει κλήση (υπάρχει στο μητρώο), ενώ
+ *    το σκέτο `TRUE` είναι κυριολεκτικό. Και τα δύο δέχεται το Excel.
+ * 2. `TRUE`/`FALSE` ⇒ **κυριολεκτικό**.
+ * 3. `:` ή **σχήμα διεύθυνσης** ⇒ **αναφορά** (και `#REF!` όταν δείχνει εκτός πλέγματος).
+ * 4. οτιδήποτε άλλο ⇒ **όνομα** ⇒ `#NAME?` στον αξιολογητή.
+ *
+ * Ένα βήμα πιο πάνω και ο κόμβος ονόματος θα κατάπινε **διευθύνσεις**: το `A99` σε πίνακα
+ * πέντε γραμμών οφείλει να μένει `#REF!` (ADR-764), γιατί λέει στον μηχανικό ότι έσβησε
+ * γραμμή. Το κριτήριο του βήματος 3 είναι επομένως **σχήματος** και όχι ύπαρξης — ζει στον
+ * έναν ιδιοκτήτη του, δες {@link isWrittenAddressShape}.
+ *
+ * Το `:` προηγείται του σχήματος γιατί ο τελεστής εύρους **ορίζει** τα μέλη του ως
+ * διευθύνσεις: ένα `X:Y` δεν είναι δύο ονόματα, είναι εύρος που δεν λύνεται ⇒ `#REF!`,
+ * ακριβώς όπως πριν από αυτή τη φάση.
  */
 function parseAfterName(reader: Reader, name: string): TableFormulaNode | null {
   if (peekPunct(reader) === '(') return parseCall(reader, name);
@@ -244,7 +258,10 @@ function parseAfterName(reader: Reader, name: string): TableFormulaNode | null {
   const literal = BOOLEAN_LITERALS[name.toUpperCase()];
   if (literal !== undefined) return { kind: 'boolean', value: literal };
 
-  return parseReference(reader, name);
+  if (peekPunct(reader) === ':' || isWrittenAddressShape(name)) {
+    return parseReference(reader, name);
+  }
+  return { kind: 'name', name };
 }
 
 /**
@@ -258,7 +275,7 @@ function parseCall(reader: Reader, name: string): TableFormulaNode | null {
 
   if (!eatPunct(reader, ')')) {
     for (;;) {
-      const arg = parseBinary(reader, 0);
+      const arg = parseArgument(reader);
       if (arg === null) return null;
       args.push(arg);
       if (eatPunct(reader, ')')) break;
@@ -270,6 +287,28 @@ function parseCall(reader: Reader, name: string): TableFormulaNode | null {
   // Κανονικοποίηση σε κεφαλαία: `sum` και `Sum` είναι η **ίδια** συνάρτηση, και το μητρώο
   // δεν πρέπει να μάθει ποτέ δεύτερη γραφή του ίδιου ονόματος.
   return { kind: 'call', name: name.toUpperCase(), args };
+}
+
+/**
+ * 🔴 ADR-765 — **ένα όρισμα, ή η ρητή απουσία του**: το κενό ανάμεσα στα δύο `;` του
+ * `=IF(A1>10;;99)`.
+ *
+ * ## Γιατί το κενό είναι ΓΛΩΣΣΑ και όχι συντακτικό σφάλμα
+ * Ο ίδιος ο διάλογος «Ορίσματα συνάρτησης» **παράγει** αυτή τη γραφή: το
+ * `catalog/formula-call-text.ts` τεκμηριώνει ρητά ότι «τα κενά **τελευταία** ορίσματα
+ * κόβονται, τα **ενδιάμεσα** γράφονται», γιατί μια κοπή θα στοίβαζε το `99` στη θέση του
+ * *τιμή αν αληθές* — δηλαδή θα άλλαζε **σιωπηλά τη σημασία** του τύπου. Ο αναλυτής όμως το
+ * απέρριπτε, οπότε το κείμενο που ο διάλογος έγραφε σωστά κατέληγε **ωμό κείμενο στο κελί**
+ * (ADR-763 §19.9): μία απόφαση, δύο αρχεία, αντίθετες απαντήσεις.
+ *
+ * ⚠️ Δεν καταναλώνει τίποτα. Ο βρόχος του {@link parseCall} διαβάζει μετά τον διαχωριστή ή
+ * την κλειστή παρένθεση, ακριβώς όπως και για κάθε άλλο όρισμα — γι' αυτό το κενό δεν μπορεί
+ * ποτέ να «καταπιεί» το επόμενο όρισμα ούτε να μετατοπίσει τη σειρά τους.
+ */
+function parseArgument(reader: Reader): TableFormulaNode | null {
+  const punct = peekPunct(reader);
+  if (punct === ')' || punct === reader.grammar.argumentSeparator) return { kind: 'blank' };
+  return parseBinary(reader, 0);
 }
 
 /**

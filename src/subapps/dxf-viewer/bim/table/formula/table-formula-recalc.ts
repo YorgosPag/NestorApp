@@ -110,7 +110,17 @@ function collectPrecedents(model: TableModel, node: TableFormulaNode): readonly 
       case 'call':
         for (const arg of current.args) walk(arg, visit);
         return;
-      default:
+      // 🔴 ADR-765 — **ήταν `default:`, και γι' αυτό δεν θα είχε σπάσει.** Τα φύλλα χωρίς
+      // διεύθυνση απαριθμούνται πλέον ονομαστικά: ο μεταγλωττιστής οφείλει να ρωτήσει «έχει
+      // αυτό το νέο είδος κόμβου προγόνους;» κάθε φορά που η ένωση μεγαλώνει. Ένα `default:`
+      // απαντά **«όχι»** μόνο του — και η μέρα που η απάντηση θα ήταν «ναι» είναι η μέρα που
+      // ένας τύπος θα έπαυε σιωπηλά να ξαναϋπολογίζεται.
+      case 'number':
+      case 'text':
+      case 'boolean':
+      case 'error':
+      case 'name':
+      case 'blank':
         return;
     }
   }

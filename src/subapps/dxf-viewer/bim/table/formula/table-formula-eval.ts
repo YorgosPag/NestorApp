@@ -105,6 +105,17 @@ function evaluateNode(scope: TableFormulaScope, node: TableFormulaNode): TableFo
       return evaluateBinary(scope, node);
     case 'call':
       return evaluateCall(scope, node);
+    // 🔴 ADR-765 — **εδώ** κρίνεται το γυμνό όνομα, όχι στον αναλυτή. Ο ίδιος κωδικός με την
+    // άγνωστη συνάρτηση (γρ. 176): μία έννοια —«αυτό το όνομα δεν ορίστηκε»— ένας κωδικός,
+    // ακριβώς όπως σε Excel, Google Sheets και LibreOffice. Το ADR-764 §2 έλυσε την ίδια
+    // μορφή ερώτησης για το `#REF!` και κατέληξε στον αξιολογητή, για τον ίδιο λόγο.
+    case 'name':
+      return FORMULA_ERROR.name;
+    // 🔴 ADR-765 — το παραλειπόμενο όρισμα είναι **η ίδια διφορούμενη κενή τιμή** που δίνει
+    // ένα άδειο κελί: `0` σε αριθμητική, `''` σε συνένωση. Δες την τεκμηρίωση του
+    // {@link finalize} — η ασάφεια είναι κατά πρόθεση και τη λύνει το περιβάλλον χρήσης.
+    case 'blank':
+      return '';
   }
 }
 
