@@ -25,7 +25,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-767-table-bound-mode.md §9
  */
 
-import { commitCellWrites } from '../formula/table-formula-engine';
+import { commitCellWrites, writeCellInput } from '../formula/table-formula-engine';
 import { fingerprintExportableTable } from '../binding/table-binding-fingerprint';
 import { resolveTableSource } from '../binding/table-source-resolver';
 import { refreshTableBinding } from '../binding/table-binding-refresh';
@@ -345,9 +345,6 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     if (seeded.status !== 'refreshed') throw new Error('expected refreshed');
 
     // Τύπος που αθροίζει τη δεμένη στήλη X (B2:B3 = οι δύο γραμμές δεδομένων).
-    const { writeCellInput } = jest.requireActual<typeof import('../formula/table-formula-engine')>(
-      '../formula/table-formula-engine',
-    );
     const withFormula = commitCellWrites(writeCellInput(seeded.model, 'r1', 'cSum', '=SUM(B2:B3)'));
     expect(cellOf(withFormula, 'r1', 'cSum')?.value).toBe(5000);
 
