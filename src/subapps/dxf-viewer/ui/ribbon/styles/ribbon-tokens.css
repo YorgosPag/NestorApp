@@ -1407,6 +1407,249 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   ADR-763 — Διάλογος «Εισαγωγή συνάρτησης» (fx). Parity με το ομώνυμο του Excel:
+   αναζήτηση + κατηγορία + λίστα + υπογραφή + περιγραφή, με αυτή τη σειρά.
+
+   🔴 ΔΕΝ επαναχρησιμοποιεί την `.dxf-modal-card`: εκείνη είναι 360px και «στοίβα
+   παραγράφων + κουμπιά» — σχήμα διαλόγου ΕΠΙΒΕΒΑΙΩΣΗΣ. Εδώ υπάρχει λίστα με
+   κύλιση σταθερού ύψους, δηλαδή διάλογος ΕΠΙΛΟΓΗΣ. Μια κοινή κλάση με
+   τροποποιητή θα σήμαινε ότι κάθε ρύθμιση πλάτους των δεκατριών confirm
+   διαλόγων περνά από εδώ. Κοινό μένει το `.dxf-modal-overlay` (η σκίαση) και
+   το `.dxf-modal-button` (τα κουμπιά) — αυτά είναι πράγματι το ίδιο πράγμα.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.dxf-insert-fn-card {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  padding: 16px 20px 14px;
+  width: 460px;
+  max-width: 92vw;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #1a1a1a;
+}
+
+.dxf-insert-fn-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dxf-insert-fn-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dxf-insert-fn-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dxf-insert-fn-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.dxf-insert-fn-label {
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.dxf-insert-fn-search-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* Δύο γραμμές ύψος, όπως στο Excel: η οδηγία μέσα στο πεδίο είναι δίστιχη και σε
+   μονόστιχο πεδίο θα φαινόταν κομμένη. `resize: none` — η αλλαγή μεγέθους θα
+   έσπαγε τη στοίχιση με το κουμπί «Μετάβαση». */
+.dxf-insert-fn-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  resize: none;
+  padding: 4px 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  background: #ffffff;
+  color: inherit;
+}
+
+.dxf-insert-fn-category-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dxf-insert-fn-category-row .dxf-insert-fn-label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.dxf-insert-fn-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 2px 6px;
+  font-size: 12px;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  background: #ffffff;
+  color: inherit;
+}
+
+/* Επτά ορατές σειρές — όσες δείχνει το Excel πριν χρειαστεί κύλιση. */
+.dxf-insert-fn-list {
+  height: 154px;
+  overflow-y: auto;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  background: #ffffff;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+}
+
+.dxf-insert-fn-item {
+  padding: 2px 6px;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.dxf-insert-fn-item[aria-selected='true'] {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.dxf-insert-fn-empty {
+  padding: 8px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  color: #6b7280;
+}
+
+/* Η υπογραφή και η περιγραφή έχουν **σταθερό** ύψος: αλλιώς η κάρτα θα άλλαζε
+   μέγεθος σε κάθε κίνηση των βελών στη λίστα, δηλαδή τα κουμπιά θα κουνιόντουσαν
+   κάτω από το ποντίκι. */
+.dxf-insert-fn-signature {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 2px 0 0;
+  min-height: 16px;
+  overflow-wrap: anywhere;
+}
+
+.dxf-insert-fn-help {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #444444;
+  margin: 0;
+  min-height: 34px;
+}
+
+.dxf-insert-fn-actions {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.dxf-insert-fn-actions .dxf-modal-button {
+  min-width: 84px;
+}
+
+.dark .dxf-insert-fn-card,
+[data-theme='dark'] .dxf-insert-fn-card {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark .dxf-insert-fn-close:hover,
+[data-theme='dark'] .dxf-insert-fn-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dark .dxf-insert-fn-search,
+[data-theme='dark'] .dxf-insert-fn-search,
+.dark .dxf-insert-fn-select,
+[data-theme='dark'] .dxf-insert-fn-select,
+.dark .dxf-insert-fn-list,
+[data-theme='dark'] .dxf-insert-fn-list {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark .dxf-insert-fn-help,
+[data-theme='dark'] .dxf-insert-fn-help {
+  color: #cbd5e1;
+}
+
+.dark .dxf-insert-fn-empty,
+[data-theme='dark'] .dxf-insert-fn-empty {
+  color: #94a3b8;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ADR-763 — Τα τρία χειριστήρια της γραμμής τύπων (✕ ✓ fx), parity με το Excel.
+   Τα δύο πρώτα είναι **ανενεργά σε πλοήγηση** — όπως στο Excel, όπου γκριζάρουν
+   μέχρι να αρχίσεις να γράφεις: δεν υπάρχει τι να ακυρωθεί ή να καταχωριστεί.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.dxf-formula-bar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground, #6b7280);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.dxf-formula-bar-button:hover:not(:disabled) {
+  background: rgba(127, 127, 127, 0.18);
+}
+
+.dxf-formula-bar-button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.dxf-formula-bar-button-reject:not(:disabled) {
+  color: #dc2626;
+}
+
+.dxf-formula-bar-button-accept:not(:disabled) {
+  color: #16a34a;
+}
+
+.dxf-formula-bar-button-insert {
+  font-family: var(--font-serif, Georgia, serif);
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    ADR-739 §39 — Επιλογέας μεγέθους πίνακα (μοτίβο Word).
    Οι κυψελίδες είναι <td role="gridcell"> — ΠΟΤΕ κουμπιά, ΠΟΤΕ `title=`.
    ───────────────────────────────────────────────────────────────────────────── */

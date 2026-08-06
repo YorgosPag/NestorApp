@@ -21,6 +21,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §49
  */
 
+import { drawingFormulaGrammar } from '../table-formula-grammar';
 import { formulaBodyStart, tokenizeFormula } from '../table-formula-lex';
 import { EXPLAINED_REFUSAL_BY_EXCEL_NAME } from './formula-library-manifest';
 import type { FormulaLibraryRejection } from './formula-library-taxonomy';
@@ -42,7 +43,10 @@ export function findFormulaRefusal(draft: string): FormulaRefusalHint | null {
   const bodyStart = formulaBodyStart(draft);
   if (bodyStart === null) return null;
 
-  const tokens = tokenizeFormula(draft.slice(bodyStart));
+  // Η γραμματική **του σχεδίου** (ADR-761): εδώ αναζητούνται ονόματα συναρτήσεων, και το
+  // «όνομα ακολουθούμενο από `(`» είναι το ίδιο σε κάθε γραμματική. Η επιλογή έχει σημασία
+  // μόνο για το πού **σταματά** ο σαρωτής, και ο επεξεργαστής γράφει πάντα σε αυτήν.
+  const tokens = tokenizeFormula(draft.slice(bodyStart), drawingFormulaGrammar());
   if (tokens === null) return null;
 
   for (let at = 0; at < tokens.length - 1; at += 1) {

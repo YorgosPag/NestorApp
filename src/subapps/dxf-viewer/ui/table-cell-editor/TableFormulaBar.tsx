@@ -56,15 +56,25 @@
 
 import React, { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { findFormulaRefusal } from '../../bim/table/formula/library/formula-library-hint';
+import {
+  diagnoseFormulaText,
+  type FormulaDiagnosis,
+} from '../../bim/table/formula/table-formula-diagnosis';
 import type { FormulaLibraryRejection } from '../../bim/table/formula/library/formula-library-taxonomy';
 import { TextEditorAnchorLayer, type TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
 import { flattenToSingleLine } from './TableCellEditorOverlay';
 // 🔴 ADR-754 §4 — η **ίδια** τοποθέτηση κέρσορα με τον επεξεργαστή κελιού.
 import { useTableCellCaret } from './use-table-cell-caret';
 import { useTableCellSessionKeys } from './use-table-cell-session-keys';
-import { TABLE_CELL_SESSION_MARKER, useTableCellSessionBlur } from './table-cell-session-focus';
 import {
+  activeTableCellSessionCaret,
+  TABLE_CELL_SESSION_MARKER,
+  useTableCellSessionBlur,
+} from './table-cell-session-focus';
+import { FORMULA_PREFIX } from '../../bim/table/formula/table-formula-lex';
+import { openInsertFunctionDialog } from '../../state/insert-function-dialog-store';
+import {
+  cancelTableCellCursorSession,
   closeTableCellCursor,
   restartTableCellCursorSession,
   setTableCellCursorDraft,
@@ -111,6 +121,64 @@ const REFUSAL_KEYS: Partial<Record<FormulaLibraryRejection, string>> = {
   'locale-unsafe': 'localeUnsafe',
 };
 
+/**
+ * 🔴 ADR-761 — **η διάγνωση ως κλειδί i18n + παράμετροι**, σε ένα σημείο.
+ *
+ * Η μετάφραση της διακριτής ένωσης σε κείμενο γίνεται εδώ και όχι μέσα στο JSX, ώστε το
+ * `switch` να είναι **εξαντλητικό** για τον μεταγλωττιστή: μια τέταρτη κατάσταση αύριο δεν
+ * μπορεί να ξεχαστεί σιωπηλά και να εμφανιστεί ως κενό πλαίσιο.
+ */
+function diagnosisMessage(
+  diagnosis: FormulaDiagnosis,
+): { readonly key: string; readonly values: Record<string, string> } | null {
+  switch (diagnosis.kind) {
+    case 'refused-function': {
+      const suffix = REFUSAL_KEYS[diagnosis.reason];
+      return suffix === undefined
+        ? null
+        : { key: `table.formulaBar.refusal.${suffix}`, values: { name: diagnosis.name } };
+    }
+    case 'other-grammar':
+      return {
+        key: 'table.formulaBar.diagnosis.otherGrammar',
+        values: { separator: diagnosis.separator },
+      };
+    case 'not-a-formula':
+      return {
+        key: 'table.formulaBar.diagnosis.notAFormula',
+        values: { separator: diagnosis.separator },
+      };
+  }
+}
+
+/**
+ * 🔴 ADR-763 §10 — **η εστίαση ΔΕΝ φεύγει από το πεδίο όταν πατιέται ένα από τα τρία κουμπιά.**
+ *
+ * ## Το πρόβλημα, δομικά
+ * Τα κουμπιά κάθονται **μέσα** στη γραμμή τύπων, δηλαδή δίπλα στο πεδίο που κρατά την εστίαση.
+ * Ένα `mousedown` πάνω τους μεταφέρει την εστίαση ως **προεπιλεγμένη ενέργεια** — και ο
+ * παραλήπτης διαφέρει ανά μηχανή: Chrome εστιάζει το `<button>`, Safari και Firefox ιστορικά
+ * **δεν** το εστιάζουν, οπότε το `relatedTarget` του `blur` είναι `null`. Με `null`, ο φύλακας
+ * του `useTableCellSessionBlur` δεν μπορεί να απαντήσει «μέλος της συνεδρίας;» και ακολουθεί
+ * τον δρόμο της εξόδου: **δέσμευση και κλείσιμο δρομέα** — δηλαδή το κουμπί «Άκυρο» θα
+ * δέσμευε, ένα καρέ πριν προλάβει να ακυρώσει.
+ *
+ * ## Γιατί ΕΔΩ επιτρέπεται το `preventDefault`, ενώ το `table-cell-session-focus.ts` το απαγορεύει
+ * Εκείνη η απαγόρευση αφορά τον **καμβά**: εκεί ο ιδιοκτήτης του ποντικιού είναι το σχέδιο, και
+ * ένα `preventDefault` στο `mousedown` σκοτώνει το σύρσιμο λαβών και τη μετακίνηση οντότητας.
+ * Εδώ ο στόχος είναι ένα `<button>` σε επικάλυψη DOM που **δεν** συμμετέχει σε καμία
+ * χειρονομία σχεδίασης — δεν υπάρχει προεπιλεγμένη ενέργεια να χαθεί πέρα από τη μεταφορά
+ * εστίασης, που είναι ακριβώς αυτή που δεν θέλουμε. Είναι το πρότυπο μοτίβο κάθε toolbar πάνω
+ * από επεξεργαστή κειμένου (ProseMirror, Slate, Quill), για τον ίδιο λόγο.
+ *
+ * ⚠️ Belt-and-suspenders (N.7.2 #4): τα κουμπιά φέρουν **επίσης** το
+ * {@link TABLE_CELL_SESSION_MARKER}. Αν κάποια μηχανή μεταφέρει την εστίαση παρά το
+ * `preventDefault`, ο φύλακας θα δει μέλος της συνεδρίας και πάλι δεν θα κλείσει.
+ */
+const keepFocusInField = (event: React.MouseEvent<HTMLButtonElement>): void => {
+  event.preventDefault();
+};
+
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
   const {
     reference, mode, draft, initialText, caretIndex, caretRevision, anchor,
@@ -135,8 +203,13 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
    * Εμφανίζεται **όσο γράφει** ο χρήστης, δηλαδή πριν δεσμεύσει και δει `#NAME?`: η στιγμή
    * που η πληροφορία έχει αξία είναι πριν αποθηκευτεί το λάθος, όχι μετά.
    */
-  const refusal = useMemo(() => (mode === 'nav' ? null : findFormulaRefusal(value)), [mode, value]);
-  const refusalKey = refusal === null ? undefined : REFUSAL_KEYS[refusal.reason];
+  const message = useMemo(() => {
+    // 🔴 ADR-761 — `committed` όταν ο χρήστης **δεν** πληκτρολογεί: μόνο τότε ένα `=…` που
+    // δεν αναλύεται είναι όντως αποθηκευμένο ως κείμενο. Όσο γράφει, κάθε τύπος περνά από
+    // ενδιάμεσα άκυρα στάδια (`=`, `=S`, `=SUM(`) και το μήνυμα θα ήταν μονίμως αναμμένο.
+    const diagnosis = diagnoseFormulaText(value, mode === 'nav');
+    return diagnosis === null ? null : diagnosisMessage(diagnosis);
+  }, [mode, value]);
 
   const handleCommit = useCallback(() => {
     // Ίδιος φύλακας με τον επεξεργαστή κελιού: σε πλοήγηση δεν υπάρχει πρόχειρο, και ένα
@@ -179,6 +252,29 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
     onToggleAbsoluteRef,
   });
 
+  /**
+   * 🔴 ADR-763 §10 — **το `fx`**: γράφει `=` αν δεν γράφεται ήδη τύπος, και ανοίγει τον κατάλογο.
+   *
+   * Το «γράφει `=` αμέσως» είναι παρατηρημένη συμπεριφορά του Excel και **όχι** διακόσμηση: ο
+   * διάλογος επιστρέφει ένα **όνομα**, και ένα όνομα χωρίς `=` μπροστά είναι απλό κείμενο. Αν
+   * το πρόθεμα έμπαινε μόνο στο «OK», τότε η **ακύρωση** θα άφηνε το κελί σε κατάσταση που ο
+   * χρήστης δεν ζήτησε ποτέ. Έτσι όπως είναι, η ακύρωση αφήνει έναν άδειο τύπο — ακριβώς ό,τι
+   * αφήνει και το Excel, και ακριβώς ό,τι αφήνει και το να πληκτρολογήσεις `=` με το χέρι.
+   *
+   * Ο κέρσορας διαβάζεται **τη στιγμή του κλικ** (ADR-754 §3), γιατί ένα καρέ αργότερα την
+   * εστίαση την έχει το πεδίο αναζήτησης του διαλόγου και η ερώτηση δεν έχει πια απάντηση.
+   */
+  const handleInsertFunction = useCallback(() => {
+    if (mode === 'nav') {
+      // `enter` και όχι `edit`: ο χρήστης **ξεκινά** τύπο, δεν διορθώνει τον υπάρχοντα — ο
+      // κανόνας type-to-replace του Excel, ο ίδιος που ισχύει όταν πληκτρολογεί `=`.
+      setTableCellCursorMode('enter', FORMULA_PREFIX);
+      openInsertFunctionDialog(FORMULA_PREFIX.length);
+      return;
+    }
+    openInsertFunctionDialog(activeTableCellSessionCaret() ?? undefined);
+  }, [mode]);
+
   // ADR-739 §26.15 — κλικ από τη γραμμή τύπων πάνω σε κελί του **ίδιου** πίνακα: η συνεδρία
   // δεν φεύγει, μετακομίζει. Το πληκτρολόγιο επιστρέφει στο πλέγμα (Excel), από τον ένα
   // δρόμο ανάκτησης — τον ίδιο που περνά και ο επεξεργαστής κελιού.
@@ -208,12 +304,42 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
             </em>
           ) : null}
         </span>
-        <span
-          className="flex shrink-0 items-center border-r border-border px-2 font-serif italic text-muted-foreground"
-          aria-hidden="true"
-        >
-          {t('table.formulaBar.symbol')}
-        </span>
+        {/* 🔴 ADR-763 §10 — τα τρία χειριστήρια του Excel, με τη σειρά του Excel.
+            Το `fx` ήταν μέχρι σήμερα `<span aria-hidden>`: **σύμβολο, όχι κουμπί**. */}
+        <nav className="flex shrink-0 items-stretch border-r border-border">
+          <button
+            type="button"
+            className="dxf-formula-bar-button dxf-formula-bar-button-reject"
+            aria-label={t('table.insertFunction.rejectAriaLabel')}
+            disabled={mode === 'nav'}
+            {...TABLE_CELL_SESSION_MARKER}
+            onMouseDown={keepFocusInField}
+            onClick={cancelTableCellCursorSession}
+          >
+            ✕
+          </button>
+          <button
+            type="button"
+            className="dxf-formula-bar-button dxf-formula-bar-button-accept"
+            aria-label={t('table.insertFunction.acceptAriaLabel')}
+            disabled={mode === 'nav'}
+            {...TABLE_CELL_SESSION_MARKER}
+            onMouseDown={keepFocusInField}
+            onClick={handleCommit}
+          >
+            ✓
+          </button>
+          <button
+            type="button"
+            className="dxf-formula-bar-button dxf-formula-bar-button-insert"
+            aria-label={t('table.insertFunction.openAriaLabel')}
+            {...TABLE_CELL_SESSION_MARKER}
+            onMouseDown={keepFocusInField}
+            onClick={handleInsertFunction}
+          >
+            {t('table.formulaBar.symbol')}
+          </button>
+        </nav>
         <input
           ref={inputRef}
           type="text"
@@ -229,12 +355,12 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
         />
-        {refusalKey === undefined || refusal === null ? null : (
+        {message === null ? null : (
           <output
             className="flex max-w-96 shrink items-center truncate border-l border-border px-2 text-[10px] text-muted-foreground"
-            aria-label={t('table.formulaBar.refusal.ariaLabel')}
+            aria-label={t('table.formulaBar.diagnosis.ariaLabel')}
           >
-            {t(`table.formulaBar.refusal.${refusalKey}`, { name: refusal.name })}
+            {t(message.key, message.values)}
           </output>
         )}
       </section>
