@@ -62,13 +62,12 @@ import type {
   TableRowId,
 } from '../../types/table';
 import { MAX_TABLE_COLUMN_COUNT, MAX_TABLE_DATA_ROW_COUNT } from './build-table-entity';
-import { indexById, insertionIndexFor } from './table-cell-order';
+import { indexById, insertionIndexFor, type TableAxis } from './table-cell-order';
 import { rebuildTableEdgesOnDelete } from './table-edge-model';
 import { dropTableRowLink } from './table-row-link-model';
 import { cellKey } from './table-model-helpers';
-
-/** Ο άξονας πάνω στον οποίο γίνεται η πράξη — μία υλοποίηση, δύο όψεις (N.18). */
-type TableAxis = 'row' | 'column';
+import { recalculateAllTableFormulas } from './formula/table-formula-engine';
+import { healTableFormulaRefsOnDelete } from './formula/table-formula-structural-heal';
 
 const ID_PREFIX: Readonly<Record<TableAxis, string>> = { row: 'r', column: 'c' };
 
@@ -283,7 +282,11 @@ export function insertTableRow(model: PersistedTableModel, atIndex: number): Per
 
   // Απόφαση 2: κανένα κελί δεν αγγίζεται — η σειρά γραμμή × στήλη διατηρείται αυτούσια,
   // αφού η νέα γραμμή είναι κενή και οι υπόλοιπες κρατούν τη σχετική τους σειρά.
-  return { ...model, rows, merges: growSpansOnInsert(model.merges, 'row', ids, at) };
+  return recalculateAllTableFormulas({
+    ...model,
+    rows,
+    merges: growSpansOnInsert(model.merges, 'row', ids, at),
+  });
 }
 
 /**
@@ -321,7 +324,11 @@ export function insertTableColumn(
   const columns = model.columns.slice();
   columns.splice(at, 0, column);
 
-  return { ...model, columns, merges: growSpansOnInsert(model.merges, 'column', ids, at) };
+  return recalculateAllTableFormulas({
+    ...model,
+    columns,
+    merges: growSpansOnInsert(model.merges, 'column', ids, at),
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -344,19 +351,25 @@ export function deleteTableRow(
   const at = model.rows.findIndex((row) => row.id === rowId);
   if (at < 0 || !canDeleteTableRow(model)) return model;
 
+  // 🔴 ADR-764 (Α) — **ΠΡΙΝ** την αφαίρεση: μόνο όσο η σβησμένη ταυτότητα βρίσκεται ακόμη στη
+  // σειρά είναι γνώσιμος ο επιζών γείτονας, δηλαδή μόνο τώρα μπορεί ένα `=SUM(A1:A4)` να γίνει
+  // `=SUM(A1:A3)`. Ίδια αρχή με τον `heirId` των ακμών, μια γραμμή πιο κάτω.
+  const healed = healTableFormulaRefsOnDelete(model, 'row', rowId);
   const ids = model.rows.map((row) => row.id);
   const { spans, anchorMoves } = shrinkSpansOnDelete(model.merges, 'row', ids, at);
   const rows = model.rows.filter((row) => row.id !== rowId);
-  const next = { ...model, rows, merges: spans };
+  const next = { ...healed, rows, merges: spans };
 
-  return {
+  // ADR-764 (Β) — και **ΜΕΤΑ** την αφαίρεση: ό,τι δείχνει σε ταυτότητα που δεν ζει πια
+  // αποτιμάται `#REF!`. Μαζί με το (Α) είναι **μία** μεταβολή, άρα ένα βήμα undo.
+  return recalculateAllTableFormulas({
     ...next,
-    cells: rebuildCells(next, model.cells, (entry) => entry[0] !== rowId, anchorMoves),
+    cells: rebuildCells(next, healed.cells, (entry) => entry[0] !== rowId, anchorMoves),
     edges: rebuildTableEdgesOnDelete(next, model.edges, 'row', rowId, model.rows[at + 1]?.id),
     // ADR-739 Επίπεδο Β — ο δεσμός φεύγει μαζί με τη γραμμή, **χωρίς** κληρονόμο. Ο κανόνας
     // (και γιατί διαφέρει από τις ακμές) ζει ολόκληρος στο `table-row-link-model.ts`.
     rowLinks: dropTableRowLink(model.rowLinks, rowId),
-  };
+  });
 }
 
 /** Το ίδιο για στήλη — ίδιες τέσσερις εγγυήσεις (κελιά, εύρη, ακμές, ταυτότητα by-reference). */
@@ -367,14 +380,16 @@ export function deleteTableColumn(
   const at = model.columns.findIndex((column) => column.id === colId);
   if (at < 0 || !canDeleteTableColumn(model)) return model;
 
+  // ADR-764 (Α) και (Β) — δες `deleteTableRow`, ίδια σειρά και για τον ίδιο λόγο.
+  const healed = healTableFormulaRefsOnDelete(model, 'column', colId);
   const ids = model.columns.map((column) => column.id);
   const { spans, anchorMoves } = shrinkSpansOnDelete(model.merges, 'column', ids, at);
   const columns = model.columns.filter((column) => column.id !== colId);
-  const next = { ...model, columns, merges: spans };
+  const next = { ...healed, columns, merges: spans };
 
-  return {
+  return recalculateAllTableFormulas({
     ...next,
-    cells: rebuildCells(next, model.cells, (entry) => entry[1] !== colId, anchorMoves),
+    cells: rebuildCells(next, healed.cells, (entry) => entry[1] !== colId, anchorMoves),
     edges: rebuildTableEdgesOnDelete(
       next,
       model.edges,
@@ -382,7 +397,7 @@ export function deleteTableColumn(
       colId,
       model.columns[at + 1]?.id,
     ),
-  };
+  });
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

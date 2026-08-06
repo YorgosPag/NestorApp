@@ -24,8 +24,9 @@
 import type { CellKey, TableModel } from '../../../types/table';
 import type { TableFormula, TableFormulaCellRef, TableFormulaNode } from '../../../types/table-formula';
 import type { ScheduleCellValue } from '../../schedule/types';
-import { cellKey, getCell } from '../table-model-helpers';
+import { cellKey } from '../table-model-helpers';
 import { evaluateTableFormula, expandRange, type TableFormulaScope } from './table-formula-eval';
+import { readCellRefValue } from './table-formula-ref-scope';
 import { FORMULA_ERROR, toCellValue, type TableFormulaValue } from './table-formula-value';
 
 /** Ένα κελί που κρατά τύπο, με ό,τι χρειάζεται ο υπολογισμός του. */
@@ -197,15 +198,20 @@ function topologicalOrder(
   return { order, circular: [...pending.keys()] };
 }
 
-/** Η τιμή ενός κελιού: το φρέσκο αποτέλεσμα αν υπολογίστηκε τώρα, αλλιώς ό,τι λέει το μοντέλο. */
+/**
+ * Η τιμή ενός κελιού: το φρέσκο αποτέλεσμα αν υπολογίστηκε τώρα, αλλιώς ό,τι λέει το μοντέλο.
+ *
+ * 🔴 ADR-764 — η δεύτερη ερώτηση («ζει ακόμη αυτή η ταυτότητα;») **δεν** απαντιέται εδώ: την
+ * κατέχει ο {@link readCellRefValue}, μαζί με τον εκτυπωτή και την προεπισκόπηση. Πριν από
+ * αυτό, η γραμμή ήταν `getCell(...)?.value ?? ''` — δηλαδή «σβησμένη γραμμή» και «κενό κελί»
+ * έδιναν **την ίδια** απάντηση, και το `=CONCATENATE(A2;" ";A3)` μετά τη διαγραφή του `A3`
+ * έβγαζε `«20 »` αντί για `#REF!`.
+ */
 function readValue(
   model: TableModel,
   computed: ReadonlyMap<CellKey, TableFormulaValue>,
   ref: TableFormulaCellRef,
 ): TableFormulaValue {
-  const key = cellKey(ref.rowId, ref.colId);
-  const fresh = computed.get(key);
-  if (fresh !== undefined) return fresh;
-  // Κελί που δεν υπάρχει στον αραιό χάρτη **είναι** κενό — δες `setPersistedCellText`.
-  return getCell(model, ref.rowId, ref.colId)?.value ?? '';
+  const fresh = computed.get(cellKey(ref.rowId, ref.colId));
+  return fresh ?? readCellRefValue(model, ref);
 }

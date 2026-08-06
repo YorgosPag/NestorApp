@@ -35,9 +35,17 @@ import { tableColumnLetter, tableRowNumber } from '../table-cell-reference';
 import { formatAbsoluteReference } from './table-formula-absolute';
 import { drawingFormulaGrammar } from './table-formula-grammar';
 import { FORMULA_PREFIX } from './table-formula-lex';
+import { isLiveCellRef } from './table-formula-ref-scope';
+import { FORMULA_ERROR, isFormulaError, type TableFormulaValue } from './table-formula-value';
 
-/** Ο κωδικός που τυπώνεται όταν μια ταυτότητα δεν υπάρχει πια στο πλέγμα. */
-const REF_ERROR = '#REF!';
+/**
+ * Ο κωδικός που τυπώνεται όταν μια ταυτότητα δεν υπάρχει πια στο πλέγμα.
+ *
+ * 🔴 ADR-764 — ήταν **ιδιωτική σταθερά** `'#REF!'` δίπλα στο υπάρχον `FORMULA_ERROR.reference`:
+ * δύο κυριολεκτικά για την ίδια έννοια, σε αρχεία που οφείλουν να συμφωνούν. Πλέον ψευδώνυμο
+ * του SSoT — ο εκτυπωτής **διαβάζει**, δεν ξαναδηλώνει.
+ */
+const REF_ERROR: string = FORMULA_ERROR.reference;
 
 /**
  * Προτεραιότητα ανά τελεστή — **ίδιοι αριθμοί με τα επίπεδα του αναλυτή**. Το πρόσημο (μη
@@ -72,6 +80,46 @@ export function printTableFormula(
   return FORMULA_PREFIX + printNode(model, formula.root, grammar);
 }
 
+/**
+ * 🔴 ADR-763 Φ2.3 — **μια ΤΙΜΗ στη γραφή αυτής της γραμματικής**: `20` · `"κείμενο"` · `TRUE` ·
+ * `#DIV/0!`.
+ *
+ * ## Γιατί ζει εδώ, στον εκτυπωτή, και όχι στον διάλογο που τη ζήτησε
+ * Είναι **ακριβώς** η ερώτηση που απαντά ήδη ο εκτυπωτής για τα κυριολεκτικά ενός δέντρου —
+ * μαζί με τα δύο μη προφανή: τα εισαγωγικά διπλασιάζονται, και ο δεκαδικός χαρακτήρας είναι
+ * **της γραμματικής**, όχι τελεία. Γραμμένη αλλού θα ήταν δεύτερος ορισμός του «πώς γράφεται
+ * ένα κυριολεκτικό» (N.18) και θα απέκλινε την ημέρα που η γραμματική αλλάξει υποδιαστολή.
+ *
+ * ## Γιατί ΟΧΙ το `cellDisplayText`
+ * Εκείνο απαντά «πώς **δείχνει** αυτό το κελί» και θέλει τη **μορφή** του (ADR-760: δεκαδικά,
+ * ημερομηνία, ποσοστό). Εδώ η ερώτηση είναι «τι **κατάλαβα** από αυτό που έγραψες», και η
+ * απάντηση οφείλει να είναι η ωμή τιμή — αλλιώς ο χρήστης που γράφει `A1` σε στήλη με 0
+ * δεκαδικά θα έβλεπε `= 21` για την τιμή `20,6` και θα νόμιζε ότι έδειξε λάθος κελί. Το Excel
+ * κάνει το ίδιο ακριβώς σε αυτόν τον διάλογο — γι' αυτό δείχνει `""` για κενό κείμενο.
+ */
+export function printFormulaValue(
+  value: TableFormulaValue,
+  grammar: TableFormulaGrammar = drawingFormulaGrammar(),
+): string {
+  if (typeof value === 'number') return printNumber(value, grammar);
+  if (typeof value === 'boolean') return printBoolean(value);
+  // Ένας κωδικός σφάλματος **δεν** είναι κείμενο σε εισαγωγικά: είναι ό,τι θα έδειχνε το κελί.
+  return isFormulaError(value) ? value : printText(value);
+}
+
+/** Διπλασιασμός εισαγωγικών — η σύμβαση που διαβάζει πίσω ο λεξικογράφος. */
+function printText(value: string): string {
+  return `"${value.replace(/"/gu, '""')}"`;
+}
+
+/**
+ * Πάντα κεφαλαία, όπως το Excel: ο χρήστης μπορεί να έγραψε `false`, αλλά η κανονική γραφή
+ * είναι μία — και ο λεξικογράφος τη διαβάζει πίσω ως το ίδιο κυριολεκτικό.
+ */
+function printBoolean(value: boolean): string {
+  return value ? 'TRUE' : 'FALSE';
+}
+
 /** Ένας κόμβος ως κείμενο, χωρίς περιτύλιγμα. */
 function printNode(
   model: TableModel,
@@ -82,12 +130,9 @@ function printNode(
     case 'number':
       return printNumber(node.value, grammar);
     case 'text':
-      // Διπλασιασμός εισαγωγικών — η σύμβαση που διαβάζει πίσω ο λεξικογράφος.
-      return `"${node.value.replace(/"/gu, '""')}"`;
-    // Πάντα κεφαλαία, όπως το Excel: ο χρήστης μπορεί να έγραψε `false`, αλλά η κανονική
-    // γραφή είναι μία — και ο λεξικογράφος τη διαβάζει πίσω ως το ίδιο κυριολεκτικό.
+      return printText(node.value);
     case 'boolean':
-      return node.value ? 'TRUE' : 'FALSE';
+      return printBoolean(node.value);
     case 'ref':
       return printRef(model, node.cell);
     case 'range':
@@ -133,9 +178,13 @@ function printNumber(value: number, grammar: TableFormulaGrammar): string {
  * `$στήλη$γραμμή` να μην υπάρχει ως γνώση σε δύο αρχεία.
  */
 function printRef(model: TableModel, cell: TableFormulaCellRef): string {
+  // 🔴 ADR-764 — **το ίδιο** κατηγόρημα που ρωτά ο αξιολογητής. Πριν, ο εκτυπωτής έκρινε με
+  // δικό του κριτήριο (κενό γράμμα / μηδενικός αριθμός) — σωστό, αλλά **δεύτερος** ορισμός
+  // του «υπάρχει». Η μέρα που θα διαφωνούσαν είναι η μέρα που η γραμμή τύπων γράφει `#REF!`
+  // ενώ το κελί δείχνει αριθμό.
+  if (!isLiveCellRef(model, cell)) return REF_ERROR;
   const letter = tableColumnLetter(model, cell.colId);
   const number = tableRowNumber(model, cell.rowId);
-  if (letter === '' || number === 0) return REF_ERROR;
   return formatAbsoluteReference(letter, String(number), cell);
 }
 

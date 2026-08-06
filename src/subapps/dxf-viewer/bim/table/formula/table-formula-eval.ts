@@ -30,7 +30,8 @@ import type {
   TableFormulaCellRef,
   TableFormulaNode,
 } from '../../../types/table-formula';
-import { indexById } from '../table-model-helpers';
+import { cellPairIndices } from '../table-cell-order';
+import { isLiveCellRef } from './table-formula-ref-scope';
 import { TABLE_FORMULA_FUNCTIONS } from './table-formula-functions';
 import { TABLE_FORMULA_SPECIAL_FORMS } from './table-formula-special-forms';
 import {
@@ -190,6 +191,16 @@ function evaluateArgument(scope: TableFormulaScope, node: TableFormulaNode): Tab
   const bare = unwrapGroups(node);
   if (bare.kind !== 'range') return { kind: 'value', value: evaluateNode(scope, bare) };
 
+  // 🔴 ADR-764 — **άκρο που έσβησε ⇒ `#REF!`, όχι κενό εύρος.** Ο εκτυπωτής το λέει ήδη έτσι
+  // («ένα εύρος με ένα άκρο άγνωστο δεν είναι μισό εύρος, είναι άγνωστο εύρος»), αλλά ο
+  // αξιολογητής έπαιρνε κενή λίστα και το `=SUM(A2:A3)` πάνω σε σβησμένες γραμμές έδινε
+  // **`0`** — αριθμός που κανείς δεν μέτρησε (ADR-720), τη στιγμή που η γραμμή τύπων δίπλα
+  // του έγραφε `#REF!`. Η κανονική συρρίκνωση του Excel έχει ήδη γίνει πριν φτάσουμε εδώ
+  // (`table-formula-structural-heal.ts`): ό,τι μένει νεκρό, είναι πράγματι νεκρό.
+  if (!isLiveCellRef(scope.model, bare.from) || !isLiveCellRef(scope.model, bare.to)) {
+    return { kind: 'value', value: FORMULA_ERROR.reference };
+  }
+
   const { cells, rows, cols } = expandRangeShape(scope.model, bare.from, bare.to);
   return { kind: 'list', values: cells.map((cell) => scope.valueAt(cell)), rows, cols };
 }
@@ -235,20 +246,17 @@ export function expandRangeShape(
   from: TableFormulaCellRef,
   to: TableFormulaCellRef,
 ): ExpandedRange {
-  const rowIndex = indexById(model.rows);
-  const colIndex = indexById(model.columns);
-  const fromRow = rowIndex.get(from.rowId);
-  const toRow = rowIndex.get(to.rowId);
-  const fromCol = colIndex.get(from.colId);
-  const toCol = colIndex.get(to.colId);
-  if (fromRow === undefined || toRow === undefined || fromCol === undefined || toCol === undefined) {
-    return { cells: [], rows: 0, cols: 0 };
-  }
+  // 🔴 ADR-764 / N.18 — **το ΤΕΤΑΡΤΟ δίδυμο**, επιτέλους μετακομισμένο. Οι έξι γραμμές
+  // «`indexById` × 2, τέσσερα `get`, δύο φρουροί» είχαν εξαχθεί στο {@link cellPairIndices}
+  // ακριβώς επειδή είχαν ήδη γεννηθεί τρεις φορές — αυτή εδώ έμεινε πίσω και το `jscpd` δεν
+  // την είδε ποτέ, γιατί τα δύο αρχεία δεν είχαν σταλεί ποτέ **μαζί** στο `--diff`.
+  const pair = cellPairIndices(model, from, to);
+  if (pair === null) return { cells: [], rows: 0, cols: 0 };
 
-  const firstRow = Math.min(fromRow, toRow);
-  const lastRow = Math.max(fromRow, toRow);
-  const firstCol = Math.min(fromCol, toCol);
-  const lastCol = Math.max(fromCol, toCol);
+  const firstRow = Math.min(pair.fromRow, pair.toRow);
+  const lastRow = Math.max(pair.fromRow, pair.toRow);
+  const firstCol = Math.min(pair.fromCol, pair.toCol);
+  const lastCol = Math.max(pair.fromCol, pair.toCol);
 
   const cells: TableFormulaCellRef[] = [];
   for (let r = firstRow; r <= lastRow; r += 1) {
