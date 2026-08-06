@@ -61,6 +61,7 @@ import type { RibbonThermalSpaceBridge } from './useRibbonThermalSpaceBridge';
 import type { RibbonXlineModeBridge } from './useRibbonXlineModeBridge';
 import type { RibbonSketchFidelityBridge } from './useRibbonSketchFidelityBridge';
 import type { RibbonScaleToolBridge } from './useRibbonScaleToolBridge';
+import type { RibbonTableFormatBridge } from './useRibbonTableFormatBridge';
 
 export interface UseRibbonCommandsProps {
   activeTool: ToolType | null;
@@ -125,4 +126,6 @@ export interface UseRibbonCommandsProps {
   xlineModeBridge: RibbonXlineModeBridge;
   sketchFidelityBridge: RibbonSketchFidelityBridge;
   scaleToolBridge: RibbonScaleToolBridge;
+  /** ADR-739 §52 — οι δύο contextual καρτέλες πίνακα (ιδιότητες + μορφοποίηση). */
+  tableFormatBridge: RibbonTableFormatBridge;
 }

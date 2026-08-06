@@ -64,6 +64,13 @@ import { isDimRibbonKey } from './bridge/dim-command-keys';
 import { isXlineRibbonKey } from './bridge/xline-command-keys';
 import { isSketchRibbonKey } from './bridge/sketch-fidelity-command-keys';
 import { isScaleToolRibbonKey } from './bridge/scale-tool-command-keys';
+// ADR-739 §52 — οι δύο καρτέλες πίνακα μοιράζονται ΕΝΑΝ bridge: το ύψος κειμένου
+// (μορφοποίηση) και το ονοματισμένο στυλ (ιδιότητες) είναι δύο κλειδιά της ίδιας θύρας.
+import {
+  isTableFormatComboboxKey,
+  isTablePropertiesComboboxKey,
+  isTablePropertiesVisibilityKey,
+} from './bridge/table-format-command-keys';
 import { isBlockLibraryRibbonKey } from './bridge/block-library-command-keys';
 import {
   isTitleBlockRibbonKey,
@@ -158,6 +165,7 @@ export interface ComboboxRouteDeps {
   readonly scaleToolBridge: ComboboxCapable;
   readonly blockLibraryBridge: ComboboxCapable;
   readonly titleBlockBridge: ComboboxCapable;
+  readonly tableFormatBridge: ComboboxCapable;
 }
 
 /** Bridges consumed by the badge routes. */
@@ -191,6 +199,7 @@ export interface VisibilityRouteDeps {
   readonly floorplanSymbolBridge: VisibilityCapable;
   readonly hatchBridge: VisibilityCapable;
   readonly lineToolBridge: VisibilityCapable;
+  readonly tableFormatBridge: VisibilityCapable;
 }
 
 /** Bind a combobox-capable bridge's methods (arrow-wrapped → no `this` reliance). */
@@ -290,6 +299,9 @@ export function buildComboboxRoutes(d: ComboboxRouteDeps): readonly ComboboxRout
     // ADR-651 Φάση Γ — «Πινακίδα Σχεδίου»: string params (preset/χαρτί/προσανατολισμός/
     // κορνίζα → options store) + numeric (rotation/scale → tool handle).
     { ...both(anyOf(isTitleBlockRibbonKey, isTitleBlockRibbonStringKey)), ...boundCombobox(d.titleBlockBridge) },
+    // ADR-739 §52 — «Ύψος κειμένου» (μορφοποίηση) + «Στυλ» (ιδιότητες): ξένα σύνολα κλειδιών,
+    // ένας bridge, μία εγγραφή — άρα write και read δεν μπορούν να αποκλίνουν.
+    { ...both(anyOf(isTableFormatComboboxKey, isTablePropertiesComboboxKey)), ...boundCombobox(d.tableFormatBridge) },
   ];
 }
 
@@ -328,6 +340,8 @@ export function buildVisibilityRoutes(d: VisibilityRouteDeps): readonly SimpleRo
     { match: isHatchRibbonVisibilityKey, handle: (k) => d.hatchBridge.getPanelVisibility(k) },
     // ADR-510 Φ4 — Geometry panel is line-only (bridge inspects the selection).
     { match: isLineToolPanelVisibilityKey, handle: (k) => d.lineToolBridge.getPanelVisibility(k) },
+    // ADR-739 §52 — «Γραμμές & Στήλες» / «Επιλογή»: ορατά ΜΟΝΟ με ενεργό δρομέα κελιού.
+    { match: isTablePropertiesVisibilityKey, handle: (k) => d.tableFormatBridge.getPanelVisibility(k) },
   ];
 }
 

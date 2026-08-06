@@ -50,6 +50,10 @@ import { useRibbonDimBridge } from '../ui/ribbon/hooks/useRibbonDimBridge';
 import { useRibbonXlineModeBridge } from '../ui/ribbon/hooks/useRibbonXlineModeBridge';
 import { useRibbonSketchFidelityBridge } from '../ui/ribbon/hooks/useRibbonSketchFidelityBridge';
 import { useRibbonScaleToolBridge } from '../ui/ribbon/hooks/useRibbonScaleToolBridge';
+// 🔴 ADR-739 §52 — οι δύο contextual καρτέλες πίνακα. Self-contained όπως το scale tool: όλη
+// η κατάσταση ζει στη θύρα `table-format-port` (που δημοσιεύει ο `CanvasSection`), εδώ μπαίνει
+// μόνο η **μία** συνδρομή στον αριθμό έκδοσής της.
+import { useRibbonTableFormatBridge } from '../ui/ribbon/hooks/useRibbonTableFormatBridge';
 // 📐 ADR-345 Fase 5.5: bridge text-engine ↔ ribbon contextual tab (toggles + comboboxes)
 import { useRibbonTextEditorBridge } from '../ui/ribbon/hooks/useRibbonTextEditorBridge';
 import { useRibbonCommands } from '../ui/ribbon/hooks/useRibbonCommands';
@@ -152,6 +156,8 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
   const sketchFidelityBridge = useRibbonSketchFidelityBridge();
   // ADR-646 Φ4 #6 — Scale tool contextual tab ↔ ScaleToolStore (self-contained).
   const scaleToolBridge = useRibbonScaleToolBridge();
+  // ADR-739 §52 — «Ιδιότητες Πίνακα» + «Μορφοποίηση» ↔ `table-format-port`.
+  const tableFormatBridge = useRibbonTableFormatBridge();
 
   // ADR-363 — THE single «Κλείσιμο» primitive for EVERY contextual tab (generic
   // BIM entities + mep + array). Deselect via the existing SSoT `clearAll()`
@@ -169,7 +175,7 @@ export function useDxfViewerRibbon(params: DxfViewerRibbonParams): DxfViewerRibb
     closeContextualTab,
     canUndo, canRedo,
     textEditorBridge, arrayBridge, stairBridge, railingBridge, importedMeshBridge, wallBridge, openingBridge, slabBridge, roofBridge, floorFinishBridge, wallCoveringBridge, hatchBridge, thermalSpaceBridge, columnBridge, beamBridge, foundationBridge,
-    slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, genericSolidBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge, annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, lineToolBridge, dimBridge, xlineModeBridge, sketchFidelityBridge, scaleToolBridge,
+    slabOpeningBridge, mepCircuitBridge, mepPipeNetworkBridge, mepFixtureBridge, mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge, mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, waterAutoSupplyBridge, drainageAutoBridge, heatingAutoBridge, electricalAutoBridge, electricalWeakAutoBridge, hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, furnitureBridge, genericSolidBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge, annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, lineToolBridge, dimBridge, xlineModeBridge, sketchFidelityBridge, scaleToolBridge, tableFormatBridge,
   });
 
   return { ribbonCommands, ribbonContextualTabs };

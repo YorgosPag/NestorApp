@@ -87,6 +87,7 @@ export function useRibbonCommands({
   xlineModeBridge,
   sketchFidelityBridge,
   scaleToolBridge,
+  tableFormatBridge,
 }: UseRibbonCommandsProps): RibbonCommandsApi {
   // ADR-366 §C.1.b snap-to-grid — subscribe so ribbon re-renders on snap change.
   const snapEnabled = useAnimationStore((s) => s.snapEnabled);
@@ -113,6 +114,7 @@ export function useRibbonCommands({
     mepUnderfloorBridge, mepSegmentBridge, furnitureBridge, genericSolidBridge, blockLibraryBridge, titleBlockBridge, floorplanSymbolBridge,
     annotationSymbolBridge, scaleBarBridge, mepFixtureLibraryBridge, mepRiserBridge, arrayBridge,
     lineToolBridge, dimBridge, xlineModeBridge, sketchFidelityBridge, scaleToolBridge,
+    tableFormatBridge,
   };
   const routeTables = React.useMemo(
     () => ({
@@ -167,6 +169,7 @@ export function useRibbonCommands({
     dimBridge,
     scaleToolBridge,
     blockLibraryBridge,
+    tableFormatBridge,
     textEditorBridge,
   });
 
@@ -226,7 +229,7 @@ export function useRibbonCommands({
         hvacAutoBridge, fireAutoBridge, gasAutoBridge, clashDetectionBridge, mepFixtureBridge,
         mepManifoldBridge, electricalPanelBridge, mepRadiatorBridge, mepBoilerBridge,
         mepWaterHeaterBridge, mepUnderfloorBridge, mepSegmentBridge, furnitureBridge,
-        scaleToolBridge,
+        scaleToolBridge, tableFormatBridge,
         wrappedHandleAction,
       });
     },

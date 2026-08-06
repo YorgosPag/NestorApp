@@ -11,6 +11,7 @@ import { isHatchRibbonToggleKey } from './bridge/hatch-command-keys';
 import { isDimVisibilityKey } from './bridge/dim-command-keys';
 import { isScaleToolToggleKey } from './bridge/scale-tool-command-keys';
 import { isBlockLibraryToggleKey } from './bridge/block-library-command-keys';
+import { isTableFormatToggleKey } from './bridge/table-format-command-keys';
 
 /**
  * ADR-547 / N.7.1 — the ribbon toggle dispatch (write + read), extracted from
@@ -21,7 +22,7 @@ import { isBlockLibraryToggleKey } from './bridge/block-library-command-keys';
  */
 type RibbonToggleBridges = Pick<
   UseRibbonCommandsProps,
-  'wallBridge' | 'arrayBridge' | 'openingBridge' | 'roofBridge' | 'mepBoilerBridge' | 'hatchBridge' | 'dimBridge' | 'scaleToolBridge' | 'blockLibraryBridge' | 'textEditorBridge'
+  'wallBridge' | 'arrayBridge' | 'openingBridge' | 'roofBridge' | 'mepBoilerBridge' | 'hatchBridge' | 'dimBridge' | 'scaleToolBridge' | 'blockLibraryBridge' | 'tableFormatBridge' | 'textEditorBridge'
 >;
 
 interface UseRibbonToggleCommandsParams extends RibbonToggleBridges {
@@ -45,6 +46,7 @@ export function useRibbonToggleCommands({
   dimBridge,
   scaleToolBridge,
   blockLibraryBridge,
+  tableFormatBridge,
   textEditorBridge,
 }: UseRibbonToggleCommandsParams): RibbonToggleCommands {
   const onToggle = useEventCallback(
@@ -88,6 +90,13 @@ export function useRibbonToggleCommands({
         blockLibraryBridge.onToggle(key, next);
         return;
       }
+      // 🔴 ADR-739 §52 — Β/Ι/Υ κελιών. Το `next` **δεν** προωθείται: σε μεικτή επιλογή η
+      // κορδέλα το υπολογίζει ως `!null === true` κατά τύχη· ο κανόνας «μεικτό ⇒ όλα ναι» ζει
+      // μέσα στη θύρα, κοινός με το mini toolbar. Δες `useRibbonTableFormatBridge.onToggle`.
+      if (isTableFormatToggleKey(key)) {
+        tableFormatBridge.onToggle(key, next);
+        return;
+      }
       textEditorBridge.onToggle(key, next);
     },
   );
@@ -107,9 +116,11 @@ export function useRibbonToggleCommands({
       if (isScaleToolToggleKey(key)) return scaleToolBridge.getToggleState(key);
       // ADR-652 M5 — Block Library «Ομοιόμορφη κλίμακα» toggle state (default ON).
       if (isBlockLibraryToggleKey(key)) return blockLibraryBridge.getToggleState(key);
+      // ADR-739 §52 — `null` = μεικτό (Figma «Mixed» / Revit «<varies>»), όχι «άγνωστο».
+      if (isTableFormatToggleKey(key)) return tableFormatBridge.getToggleState(key);
       return textEditorBridge.getToggleState(key);
     },
-    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, dimBridge, scaleToolBridge, blockLibraryBridge, textEditorBridge],
+    [snapEnabled, wallBridge, arrayBridge, openingBridge, roofBridge, mepBoilerBridge, hatchBridge, dimBridge, scaleToolBridge, blockLibraryBridge, tableFormatBridge, textEditorBridge],
   );
 
   return { onToggle, getToggleState };

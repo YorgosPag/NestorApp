@@ -71,6 +71,8 @@ function comboboxDeps(): Record<string, ComboboxMock> {
     'sketchFidelityBridge',
     // ADR-652 M1.5 — Block Library (numeric-only: rotation/scale· κανένα asset key).
     'blockLibraryBridge',
+    // ADR-739 §52 — δύο καρτέλες πίνακα, ΕΝΑΣ bridge: «Ύψος κειμένου» + «Στυλ πίνακα».
+    'tableFormatBridge',
   ];
   const out: Record<string, ComboboxMock> = {};
   for (const n of names) out[n] = comboboxMock(n);
@@ -89,16 +91,18 @@ function boolDeps(method: 'getBadgeState' | 'getPanelVisibility', names: readonl
 }
 
 describe('dispatch tables — completeness', () => {
-  it('combobox = 39 routes (38 bridges + storey module-handler), badge = 9, visibility = 16', () => {
+  it('combobox = 40 routes (39 bridges + storey module-handler), badge = 9, visibility = 17', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(39);
+    expect(buildComboboxRoutes(comboboxDeps() as any)).toHaveLength(40);
     expect(buildBadgeRoutes(boolDeps('getBadgeState',
       ['stairBridge', 'wallBridge', 'openingBridge', 'slabBridge', 'roofBridge', 'columnBridge',
         'beamBridge', 'foundationBridge', 'slabOpeningBridge']) as never)).toHaveLength(9);
     expect(buildVisibilityRoutes(boolDeps('getPanelVisibility',
       ['stairBridge', 'columnBridge', 'beamBridge', 'slabBridge', 'mepFixtureBridge', 'mepManifoldBridge',
         'electricalPanelBridge', 'mepBoilerBridge', 'mepWaterHeaterBridge', 'mepUnderfloorBridge',
-        'mepSegmentBridge', 'furnitureBridge', 'genericSolidBridge', 'floorplanSymbolBridge', 'hatchBridge', 'lineToolBridge']) as never)).toHaveLength(16);
+        'mepSegmentBridge', 'furnitureBridge', 'genericSolidBridge', 'floorplanSymbolBridge', 'hatchBridge', 'lineToolBridge',
+        // ADR-739 §52 — «Γραμμές & Στήλες» / «Επιλογή»: ορατά μόνο με ενεργό δρομέα κελιού.
+        'tableFormatBridge']) as never)).toHaveLength(17);
   });
 });
 
@@ -113,7 +117,7 @@ describe('dispatch tables — no-drift invariant (write ≡ read except readouts
 
   it('every other route shares ONE matcher for write & read (cannot drift)', () => {
     const same = routes.filter((r) => r.matchWrite === r.matchRead);
-    expect(same).toHaveLength(35); // 39 total − 4 readout routes
+    expect(same).toHaveLength(36); // 40 total − 4 readout routes
   });
 });
 

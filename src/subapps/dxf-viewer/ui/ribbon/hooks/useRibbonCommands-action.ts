@@ -29,6 +29,11 @@ import { isMepUnderfloorActionKey } from './bridge/mep-underfloor-command-keys';
 import { isMepSegmentActionKey } from './bridge/mep-segment-command-keys';
 import { isFurnitureActionKey } from './bridge/furniture-command-keys';
 import { isScaleToolActionKey } from './bridge/scale-tool-command-keys';
+// ADR-739 §52 — «Α↑/Α↓/Επαναφορά» (μορφοποίηση) + οι έξι δομικές + «Επιλογή όλων» (ιδιότητες).
+import {
+  isTableFormatActionKey,
+  isTablePropertiesActionKey,
+} from './bridge/table-format-command-keys';
 import { isStairActionKey } from './bridge/stair-command-keys';
 import { isWallActionKey } from './bridge/wall-command-keys';
 import { isOpeningActionKey } from './bridge/opening-command-keys';
@@ -89,6 +94,7 @@ export type RibbonActionBridges = Pick<
   | 'mepSegmentBridge'
   | 'furnitureBridge'
   | 'scaleToolBridge'
+  | 'tableFormatBridge'
   | 'wrappedHandleAction'
 >;
 
@@ -250,6 +256,11 @@ export function routeRibbonAction(
   // ADR-646 Φ4 #6 — scale tool «Αναφορά» (reference-pick) action.
   if (isScaleToolActionKey(action)) {
     bridges.scaleToolBridge.onAction(action);
+    return;
+  }
+  // ADR-739 §52 — ένας bridge, δύο σύνολα κλειδιών (ξένα μεταξύ τους, άρα η σειρά αδιάφορη).
+  if (isTableFormatActionKey(action) || isTablePropertiesActionKey(action)) {
+    bridges.tableFormatBridge.onAction(action);
     return;
   }
   bridges.wrappedHandleAction(action, data);
