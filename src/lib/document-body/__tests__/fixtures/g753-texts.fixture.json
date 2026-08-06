@@ -1,0 +1,5434 @@
+[
+ {
+  "type": "MTEXT",
+  "handle": "652",
+  "layer": "BORAS",
+  "x": -0.26521,
+  "y": 22.43231,
+  "height": 3.2,
+  "raw": "{\\fViner Hand ITC|b0|i0|c0|p66;N}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "655",
+  "layer": "BORAS",
+  "x": -16.599631,
+  "y": 3.19464,
+  "height": 3.2,
+  "raw": "{\\fViner Hand ITC|b0|i0|c0|p66;W}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "654",
+  "layer": "BORAS",
+  "x": 14.027407,
+  "y": 3.19464,
+  "height": 3.2,
+  "raw": "{\\fViner Hand ITC|b0|i0|c0|p66;E}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "651",
+  "layer": "BORAS",
+  "x": -1.176175,
+  "y": 2.175457,
+  "height": 1.55,
+  "raw": "{\\fGreekC|b0|i0|c161|p2;Ν.\\Fgreekc|c0;I\\Fgreekc|c161;.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "653",
+  "layer": "BORAS",
+  "x": -0.26521,
+  "y": -11.89858,
+  "height": 3.2,
+  "raw": "{\\fViner Hand ITC|b0|i0|c0|p66;S}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "326",
+  "layer": "Height",
+  "x": 407812.789805,
+  "y": 4503972.233936,
+  "height": 0.4,
+  "raw": " 100.917",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "329",
+  "layer": "Height",
+  "x": 407816.423498,
+  "y": 4503969.200871,
+  "height": 0.4,
+  "raw": " 100.969",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "335",
+  "layer": "Height",
+  "x": 407890.938038,
+  "y": 4503968.549334,
+  "height": 0.4,
+  "raw": " 99.486",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "323",
+  "layer": "Height",
+  "x": 407814.18088,
+  "y": 4503967.878516,
+  "height": 0.4,
+  "raw": " 100.357",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "32F",
+  "layer": "Height",
+  "x": 407905.54267,
+  "y": 4503967.215642,
+  "height": 0.4,
+  "raw": " 99.327",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "320",
+  "layer": "Height",
+  "x": 407814.814388,
+  "y": 4503967.048048,
+  "height": 0.4,
+  "raw": " 100.336",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "32C",
+  "layer": "Height",
+  "x": 407815.664975,
+  "y": 4503966.797508,
+  "height": 0.4,
+  "raw": " 100.324",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "31D",
+  "layer": "Height",
+  "x": 407816.031457,
+  "y": 4503966.673945,
+  "height": 0.4,
+  "raw": " 100.274",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "332",
+  "layer": "Height",
+  "x": 407892.09436,
+  "y": 4503966.063995,
+  "height": 0.4,
+  "raw": " 98.8",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "33B",
+  "layer": "Height",
+  "x": 407904.901128,
+  "y": 4503965.052673,
+  "height": 0.4,
+  "raw": " 98.764",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "338",
+  "layer": "Height",
+  "x": 407905.108445,
+  "y": 4503965.000016,
+  "height": 0.4,
+  "raw": " 98.778",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "30B",
+  "layer": "Height",
+  "x": 407797.111523,
+  "y": 4503951.654884,
+  "height": 0.4,
+  "raw": " 100.637",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "31A",
+  "layer": "Height",
+  "x": 407815.556293,
+  "y": 4503951.463384,
+  "height": 0.4,
+  "raw": " 100.179",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "308",
+  "layer": "Height",
+  "x": 407798.913189,
+  "y": 4503951.136856,
+  "height": 0.4,
+  "raw": " 100.494",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "317",
+  "layer": "Height",
+  "x": 407814.243198,
+  "y": 4503950.872565,
+  "height": 0.4,
+  "raw": " 100.226",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "311",
+  "layer": "Height",
+  "x": 407814.633472,
+  "y": 4503950.207407,
+  "height": 0.4,
+  "raw": " 100.117",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "33E",
+  "layer": "Height",
+  "x": 407901.468184,
+  "y": 4503950.137275,
+  "height": 0.4,
+  "raw": " 98.643",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "305",
+  "layer": "Height",
+  "x": 407799.740715,
+  "y": 4503949.886046,
+  "height": 0.4,
+  "raw": " 100.376",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "341",
+  "layer": "Height",
+  "x": 407901.989253,
+  "y": 4503949.706823,
+  "height": 0.4,
+  "raw": " 98.677",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "34A",
+  "layer": "Height",
+  "x": 407908.308145,
+  "y": 4503949.474664,
+  "height": 0.4,
+  "raw": " 98.783",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "314",
+  "layer": "Height",
+  "x": 407813.947523,
+  "y": 4503949.373463,
+  "height": 0.4,
+  "raw": " 100.185",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "344",
+  "layer": "Height",
+  "x": 407902.419303,
+  "y": 4503948.826799,
+  "height": 0.4,
+  "raw": " 98.752",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "356",
+  "layer": "Height",
+  "x": 407915.763536,
+  "y": 4503948.802283,
+  "height": 0.4,
+  "raw": " 98.727",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "353",
+  "layer": "Height",
+  "x": 407914.754938,
+  "y": 4503948.415104,
+  "height": 0.4,
+  "raw": " 98.717",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "347",
+  "layer": "Height",
+  "x": 407906.614005,
+  "y": 4503948.161764,
+  "height": 0.4,
+  "raw": " 98.786",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "34D",
+  "layer": "Height",
+  "x": 407909.914352,
+  "y": 4503948.049934,
+  "height": 0.4,
+  "raw": " 98.808",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "350",
+  "layer": "Height",
+  "x": 407914.068501,
+  "y": 4503947.363548,
+  "height": 0.4,
+  "raw": " 98.76",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "359",
+  "layer": "Height",
+  "x": 407902.376295,
+  "y": 4503943.198304,
+  "height": 0.4,
+  "raw": " 98.686",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "30E",
+  "layer": "Height",
+  "x": 407815.373996,
+  "y": 4503941.898558,
+  "height": 0.4,
+  "raw": " 100.136",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "35C",
+  "layer": "Height",
+  "x": 407902.545558,
+  "y": 4503917.05549,
+  "height": 0.4,
+  "raw": " 98.261",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "302",
+  "layer": "Height",
+  "x": 407799.650727,
+  "y": 4503916.54897,
+  "height": 0.4,
+  "raw": " 99.871",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2FF",
+  "layer": "Height",
+  "x": 407813.749634,
+  "y": 4503916.024223,
+  "height": 0.4,
+  "raw": " 99.802",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3A7",
+  "layer": "Height",
+  "x": 407832.320888,
+  "y": 4503915.231352,
+  "height": 0.4,
+  "raw": " 99.68",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3B6",
+  "layer": "Height",
+  "x": 407858.832372,
+  "y": 4503914.799209,
+  "height": 0.4,
+  "raw": " 99.045",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3A4",
+  "layer": "Height",
+  "x": 407816.579663,
+  "y": 4503914.78446,
+  "height": 0.4,
+  "raw": " 99.813",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3B3",
+  "layer": "Height",
+  "x": 407848.573981,
+  "y": 4503914.155866,
+  "height": 0.4,
+  "raw": " 99.139",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2FC",
+  "layer": "Height",
+  "x": 407814.548135,
+  "y": 4503905.592796,
+  "height": 0.4,
+  "raw": " 99.691",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2F9",
+  "layer": "Height",
+  "x": 407814.962937,
+  "y": 4503904.37539,
+  "height": 0.4,
+  "raw": " 99.844",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3A1",
+  "layer": "Height",
+  "x": 407817.452673,
+  "y": 4503904.135973,
+  "height": 0.4,
+  "raw": " 99.884",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3AA",
+  "layer": "Height",
+  "x": 407831.67369,
+  "y": 4503903.130223,
+  "height": 0.4,
+  "raw": " 99.547",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3B9",
+  "layer": "Height",
+  "x": 407858.852219,
+  "y": 4503902.601747,
+  "height": 0.4,
+  "raw": " 98.749",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3B0",
+  "layer": "Height",
+  "x": 407846.887375,
+  "y": 4503901.669482,
+  "height": 0.4,
+  "raw": " 98.971",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3AD",
+  "layer": "Height",
+  "x": 407840.279795,
+  "y": 4503901.648182,
+  "height": 0.4,
+  "raw": " 99.397",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "39E",
+  "layer": "Height",
+  "x": 407816.365758,
+  "y": 4503899.348016,
+  "height": 0.4,
+  "raw": " 99.605",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3BC",
+  "layer": "Height",
+  "x": 407859.210046,
+  "y": 4503890.722358,
+  "height": 0.4,
+  "raw": " 98.741",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "39B",
+  "layer": "Height",
+  "x": 407817.321074,
+  "y": 4503887.204297,
+  "height": 0.4,
+  "raw": " 99.361",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "395",
+  "layer": "Height",
+  "x": 407839.9491,
+  "y": 4503886.073242,
+  "height": 0.4,
+  "raw": " 98.815",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "398",
+  "layer": "Height",
+  "x": 407826.156103,
+  "y": 4503886.00997,
+  "height": 0.4,
+  "raw": " 99.2",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3BF",
+  "layer": "Height",
+  "x": 407851.978427,
+  "y": 4503884.935182,
+  "height": 0.4,
+  "raw": " 98.777",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "38C",
+  "layer": "Height",
+  "x": 407860.476714,
+  "y": 4503884.851795,
+  "height": 0.4,
+  "raw": " 98.676",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "383",
+  "layer": "Height",
+  "x": 407892.238963,
+  "y": 4503884.797018,
+  "height": 0.4,
+  "raw": " 98.262",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2F0",
+  "layer": "Height",
+  "x": 407814.606383,
+  "y": 4503884.199218,
+  "height": 0.4,
+  "raw": " 99.314",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2ED",
+  "layer": "Height",
+  "x": 407816.889241,
+  "y": 4503883.662778,
+  "height": 0.4,
+  "raw": " 99.192",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "392",
+  "layer": "Height",
+  "x": 407841.816387,
+  "y": 4503883.63082,
+  "height": 0.4,
+  "raw": " 98.887",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "389",
+  "layer": "Height",
+  "x": 407860.448116,
+  "y": 4503883.531536,
+  "height": 0.4,
+  "raw": " 98.625",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "362",
+  "layer": "Height",
+  "x": 407902.107226,
+  "y": 4503883.357262,
+  "height": 0.4,
+  "raw": " 98.104",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2F3",
+  "layer": "Height",
+  "x": 407814.28237,
+  "y": 4503881.895233,
+  "height": 0.4,
+  "raw": " 99.361",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2EA",
+  "layer": "Height",
+  "x": 407815.531192,
+  "y": 4503880.346227,
+  "height": 0.4,
+  "raw": " 99.19",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2E1",
+  "layer": "Height",
+  "x": 407813.69684,
+  "y": 4503880.243341,
+  "height": 0.4,
+  "raw": " 99.182",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "377",
+  "layer": "Height",
+  "x": 407913.690143,
+  "y": 4503880.101833,
+  "height": 0.4,
+  "raw": " 98.08",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "36E",
+  "layer": "Height",
+  "x": 407906.261937,
+  "y": 4503880.060178,
+  "height": 0.4,
+  "raw": " 98.133",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "374",
+  "layer": "Height",
+  "x": 407909.524205,
+  "y": 4503879.936661,
+  "height": 0.4,
+  "raw": " 98.086",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "365",
+  "layer": "Height",
+  "x": 407902.144489,
+  "y": 4503879.812618,
+  "height": 0.4,
+  "raw": " 98.057",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2F6",
+  "layer": "Height",
+  "x": 407814.394199,
+  "y": 4503879.550692,
+  "height": 0.4,
+  "raw": " 99.079",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2E4",
+  "layer": "Height",
+  "x": 407814.357049,
+  "y": 4503879.119791,
+  "height": 0.4,
+  "raw": " 99.169",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "368",
+  "layer": "Height",
+  "x": 407902.084656,
+  "y": 4503879.0482,
+  "height": 0.4,
+  "raw": " 98.037",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "37A",
+  "layer": "Height",
+  "x": 407914.13789,
+  "y": 4503878.920546,
+  "height": 0.4,
+  "raw": " 98.072",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "35F",
+  "layer": "Height",
+  "x": 407906.987501,
+  "y": 4503878.797676,
+  "height": 0.4,
+  "raw": " 98.084",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "38F",
+  "layer": "Height",
+  "x": 407846.208926,
+  "y": 4503878.70332,
+  "height": 0.4,
+  "raw": " 98.736",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2E7",
+  "layer": "Height",
+  "x": 407815.539112,
+  "y": 4503878.690927,
+  "height": 0.4,
+  "raw": " 99.171",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "386",
+  "layer": "Height",
+  "x": 407860.279946,
+  "y": 4503878.564076,
+  "height": 0.4,
+  "raw": " 98.61",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "371",
+  "layer": "Height",
+  "x": 407907.643403,
+  "y": 4503878.443957,
+  "height": 0.4,
+  "raw": " 98.117",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "36B",
+  "layer": "Height",
+  "x": 407901.204846,
+  "y": 4503878.435308,
+  "height": 0.4,
+  "raw": " 98.052",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "37D",
+  "layer": "Height",
+  "x": 407915.237203,
+  "y": 4503878.304349,
+  "height": 0.4,
+  "raw": " 98.006",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2DE",
+  "layer": "Height",
+  "x": 407799.457333,
+  "y": 4503872.301705,
+  "height": 0.4,
+  "raw": " 99.002",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2C9",
+  "layer": "Height",
+  "x": 407815.877888,
+  "y": 4503870.598855,
+  "height": 0.4,
+  "raw": " 99.181",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2CC",
+  "layer": "Height",
+  "x": 407814.268048,
+  "y": 4503870.264933,
+  "height": 0.4,
+  "raw": " 99.05",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "380",
+  "layer": "Height",
+  "x": 407914.443699,
+  "y": 4503870.18415,
+  "height": 0.4,
+  "raw": " 97.997",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2C6",
+  "layer": "Height",
+  "x": 407816.644179,
+  "y": 4503869.510149,
+  "height": 0.4,
+  "raw": " 99.205",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2CF",
+  "layer": "Height",
+  "x": 407816.020664,
+  "y": 4503869.165394,
+  "height": 0.4,
+  "raw": " 99.191",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2DB",
+  "layer": "Height",
+  "x": 407799.479335,
+  "y": 4503865.551184,
+  "height": 0.4,
+  "raw": " 98.806",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2D8",
+  "layer": "Height",
+  "x": 407798.945428,
+  "y": 4503864.241872,
+  "height": 0.4,
+  "raw": " 98.779",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2D5",
+  "layer": "Height",
+  "x": 407798.077117,
+  "y": 4503863.973116,
+  "height": 0.4,
+  "raw": " 98.79",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2D2",
+  "layer": "Height",
+  "x": 407815.103175,
+  "y": 4503859.972772,
+  "height": 0.4,
+  "raw": " 98.844",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "325",
+  "layer": "Name",
+  "x": 407812.624335,
+  "y": 4503972.094705,
+  "height": 0.4,
+  "raw": " 31",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "328",
+  "layer": "Name",
+  "x": 407816.258028,
+  "y": 4503969.06164,
+  "height": 0.4,
+  "raw": " 32",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "334",
+  "layer": "Name",
+  "x": 407890.772567,
+  "y": 4503968.410103,
+  "height": 0.4,
+  "raw": " 35",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "322",
+  "layer": "Name",
+  "x": 407814.015409,
+  "y": 4503967.739285,
+  "height": 0.4,
+  "raw": " 30",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "32E",
+  "layer": "Name",
+  "x": 407905.377199,
+  "y": 4503967.076412,
+  "height": 0.4,
+  "raw": " 33",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "31F",
+  "layer": "Name",
+  "x": 407814.648917,
+  "y": 4503966.908818,
+  "height": 0.4,
+  "raw": " 29",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "32B",
+  "layer": "Name",
+  "x": 407815.499504,
+  "y": 4503966.658277,
+  "height": 0.4,
+  "raw": " S4",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "31C",
+  "layer": "Name",
+  "x": 407815.865987,
+  "y": 4503966.534715,
+  "height": 0.4,
+  "raw": " 28",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "331",
+  "layer": "Name",
+  "x": 407891.92889,
+  "y": 4503965.924765,
+  "height": 0.4,
+  "raw": " 34",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "33A",
+  "layer": "Name",
+  "x": 407904.735658,
+  "y": 4503964.913443,
+  "height": 0.4,
+  "raw": " S3",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "337",
+  "layer": "Name",
+  "x": 407904.942974,
+  "y": 4503964.860786,
+  "height": 0.4,
+  "raw": " 36",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "30A",
+  "layer": "Name",
+  "x": 407796.946052,
+  "y": 4503951.515654,
+  "height": 0.4,
+  "raw": " 22",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "319",
+  "layer": "Name",
+  "x": 407815.390823,
+  "y": 4503951.324154,
+  "height": 0.4,
+  "raw": " 27",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "307",
+  "layer": "Name",
+  "x": 407798.747719,
+  "y": 4503950.997626,
+  "height": 0.4,
+  "raw": " 21",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "316",
+  "layer": "Name",
+  "x": 407814.077727,
+  "y": 4503950.733335,
+  "height": 0.4,
+  "raw": " 26",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "310",
+  "layer": "Name",
+  "x": 407814.468001,
+  "y": 4503950.068177,
+  "height": 0.4,
+  "raw": " 24",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "33D",
+  "layer": "Name",
+  "x": 407901.302713,
+  "y": 4503949.998044,
+  "height": 0.4,
+  "raw": " 37",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "304",
+  "layer": "Name",
+  "x": 407799.575245,
+  "y": 4503949.746816,
+  "height": 0.4,
+  "raw": " 20",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "340",
+  "layer": "Name",
+  "x": 407901.823782,
+  "y": 4503949.567593,
+  "height": 0.4,
+  "raw": " 38",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "349",
+  "layer": "Name",
+  "x": 407908.142674,
+  "y": 4503949.335433,
+  "height": 0.4,
+  "raw": " 41",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "313",
+  "layer": "Name",
+  "x": 407813.782053,
+  "y": 4503949.234233,
+  "height": 0.4,
+  "raw": " 25",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "343",
+  "layer": "Name",
+  "x": 407902.253833,
+  "y": 4503948.687568,
+  "height": 0.4,
+  "raw": " 39",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "355",
+  "layer": "Name",
+  "x": 407915.598066,
+  "y": 4503948.663053,
+  "height": 0.4,
+  "raw": " 45",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "352",
+  "layer": "Name",
+  "x": 407914.589468,
+  "y": 4503948.275873,
+  "height": 0.4,
+  "raw": " 44",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "346",
+  "layer": "Name",
+  "x": 407906.448534,
+  "y": 4503948.022533,
+  "height": 0.4,
+  "raw": " 40",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "34C",
+  "layer": "Name",
+  "x": 407909.748881,
+  "y": 4503947.910704,
+  "height": 0.4,
+  "raw": " 42",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "34F",
+  "layer": "Name",
+  "x": 407913.903031,
+  "y": 4503947.224318,
+  "height": 0.4,
+  "raw": " 43",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "358",
+  "layer": "Name",
+  "x": 407902.210824,
+  "y": 4503943.059073,
+  "height": 0.4,
+  "raw": " 46",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "30D",
+  "layer": "Name",
+  "x": 407815.208526,
+  "y": 4503941.759327,
+  "height": 0.4,
+  "raw": " 23",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "35B",
+  "layer": "Name",
+  "x": 407902.380088,
+  "y": 4503916.916259,
+  "height": 0.4,
+  "raw": " S2",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "301",
+  "layer": "Name",
+  "x": 407799.485257,
+  "y": 4503916.409739,
+  "height": 0.4,
+  "raw": " S5",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2FE",
+  "layer": "Name",
+  "x": 407813.584163,
+  "y": 4503915.884993,
+  "height": 0.4,
+  "raw": " 19",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3A6",
+  "layer": "Name",
+  "x": 407832.155418,
+  "y": 4503915.092121,
+  "height": 0.4,
+  "raw": " 69",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3B5",
+  "layer": "Name",
+  "x": 407858.666902,
+  "y": 4503914.659979,
+  "height": 0.4,
+  "raw": " 74",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3A3",
+  "layer": "Name",
+  "x": 407816.414192,
+  "y": 4503914.64523,
+  "height": 0.4,
+  "raw": " 68",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3B2",
+  "layer": "Name",
+  "x": 407848.408511,
+  "y": 4503914.016635,
+  "height": 0.4,
+  "raw": " 73",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2FB",
+  "layer": "Name",
+  "x": 407814.382665,
+  "y": 4503905.453565,
+  "height": 0.4,
+  "raw": " 18",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2F8",
+  "layer": "Name",
+  "x": 407814.797467,
+  "y": 4503904.23616,
+  "height": 0.4,
+  "raw": " 17",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3A0",
+  "layer": "Name",
+  "x": 407817.287202,
+  "y": 4503903.996743,
+  "height": 0.4,
+  "raw": " 67",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3A9",
+  "layer": "Name",
+  "x": 407831.508219,
+  "y": 4503902.990993,
+  "height": 0.4,
+  "raw": " 70",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3B8",
+  "layer": "Name",
+  "x": 407858.686748,
+  "y": 4503902.462517,
+  "height": 0.4,
+  "raw": " 75",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3AF",
+  "layer": "Name",
+  "x": 407846.721905,
+  "y": 4503901.530251,
+  "height": 0.4,
+  "raw": " 72",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3AC",
+  "layer": "Name",
+  "x": 407840.114325,
+  "y": 4503901.508951,
+  "height": 0.4,
+  "raw": " 71",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "39D",
+  "layer": "Name",
+  "x": 407816.200288,
+  "y": 4503899.208786,
+  "height": 0.4,
+  "raw": " 66",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3BB",
+  "layer": "Name",
+  "x": 407859.044576,
+  "y": 4503890.583128,
+  "height": 0.4,
+  "raw": " 76",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "39A",
+  "layer": "Name",
+  "x": 407817.155603,
+  "y": 4503887.065067,
+  "height": 0.4,
+  "raw": " 65",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "394",
+  "layer": "Name",
+  "x": 407839.78363,
+  "y": 4503885.934011,
+  "height": 0.4,
+  "raw": " 63",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "397",
+  "layer": "Name",
+  "x": 407825.990633,
+  "y": 4503885.870739,
+  "height": 0.4,
+  "raw": " 64",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "3BE",
+  "layer": "Name",
+  "x": 407851.812956,
+  "y": 4503884.795952,
+  "height": 0.4,
+  "raw": " 77",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "38B",
+  "layer": "Name",
+  "x": 407860.311243,
+  "y": 4503884.712565,
+  "height": 0.4,
+  "raw": " 61",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "382",
+  "layer": "Name",
+  "x": 407892.073492,
+  "y": 4503884.657788,
+  "height": 0.4,
+  "raw": " 58",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2EF",
+  "layer": "Name",
+  "x": 407814.440913,
+  "y": 4503884.059988,
+  "height": 0.4,
+  "raw": " 14",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2EC",
+  "layer": "Name",
+  "x": 407816.723771,
+  "y": 4503883.523547,
+  "height": 0.4,
+  "raw": " 13",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "391",
+  "layer": "Name",
+  "x": 407841.650917,
+  "y": 4503883.491589,
+  "height": 0.4,
+  "raw": " 62",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "388",
+  "layer": "Name",
+  "x": 407860.282645,
+  "y": 4503883.392305,
+  "height": 0.4,
+  "raw": " 60",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "361",
+  "layer": "Name",
+  "x": 407901.941756,
+  "y": 4503883.218032,
+  "height": 0.4,
+  "raw": " 47",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2F2",
+  "layer": "Name",
+  "x": 407814.116899,
+  "y": 4503881.756003,
+  "height": 0.4,
+  "raw": " 15",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2E9",
+  "layer": "Name",
+  "x": 407815.365722,
+  "y": 4503880.206997,
+  "height": 0.4,
+  "raw": " 12",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2E0",
+  "layer": "Name",
+  "x": 407813.53137,
+  "y": 4503880.10411,
+  "height": 0.4,
+  "raw": " 9",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "376",
+  "layer": "Name",
+  "x": 407913.524672,
+  "y": 4503879.962603,
+  "height": 0.4,
+  "raw": " 54",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "36D",
+  "layer": "Name",
+  "x": 407906.096466,
+  "y": 4503879.920948,
+  "height": 0.4,
+  "raw": " 51",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "373",
+  "layer": "Name",
+  "x": 407909.358734,
+  "y": 4503879.797431,
+  "height": 0.4,
+  "raw": " 53",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "364",
+  "layer": "Name",
+  "x": 407901.979019,
+  "y": 4503879.673388,
+  "height": 0.4,
+  "raw": " 48",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2F5",
+  "layer": "Name",
+  "x": 407814.228729,
+  "y": 4503879.411461,
+  "height": 0.4,
+  "raw": " 16",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2E3",
+  "layer": "Name",
+  "x": 407814.191578,
+  "y": 4503878.980561,
+  "height": 0.4,
+  "raw": " 10",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "367",
+  "layer": "Name",
+  "x": 407901.919186,
+  "y": 4503878.90897,
+  "height": 0.4,
+  "raw": " 49",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "379",
+  "layer": "Name",
+  "x": 407913.972419,
+  "y": 4503878.781315,
+  "height": 0.4,
+  "raw": " 55",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "35E",
+  "layer": "Name",
+  "x": 407906.82203,
+  "y": 4503878.658445,
+  "height": 0.4,
+  "raw": " S1",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "38E",
+  "layer": "Name",
+  "x": 407846.043456,
+  "y": 4503878.564089,
+  "height": 0.4,
+  "raw": " S6",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2E6",
+  "layer": "Name",
+  "x": 407815.373642,
+  "y": 4503878.551697,
+  "height": 0.4,
+  "raw": " 11",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "385",
+  "layer": "Name",
+  "x": 407860.114476,
+  "y": 4503878.424845,
+  "height": 0.4,
+  "raw": " 59",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "370",
+  "layer": "Name",
+  "x": 407907.477933,
+  "y": 4503878.304726,
+  "height": 0.4,
+  "raw": " 52",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "36A",
+  "layer": "Name",
+  "x": 407901.039375,
+  "y": 4503878.296077,
+  "height": 0.4,
+  "raw": " 50",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "37C",
+  "layer": "Name",
+  "x": 407915.071732,
+  "y": 4503878.165118,
+  "height": 0.4,
+  "raw": " 56",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2DD",
+  "layer": "Name",
+  "x": 407799.291863,
+  "y": 4503872.162474,
+  "height": 0.4,
+  "raw": " S7",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2C8",
+  "layer": "Name",
+  "x": 407815.712418,
+  "y": 4503870.459624,
+  "height": 0.4,
+  "raw": " 2",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2CB",
+  "layer": "Name",
+  "x": 407814.102578,
+  "y": 4503870.125702,
+  "height": 0.4,
+  "raw": " 3",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "37F",
+  "layer": "Name",
+  "x": 407914.278228,
+  "y": 4503870.044919,
+  "height": 0.4,
+  "raw": " 57",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2C5",
+  "layer": "Name",
+  "x": 407816.478708,
+  "y": 4503869.370919,
+  "height": 0.4,
+  "raw": " 1",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2CE",
+  "layer": "Name",
+  "x": 407815.855193,
+  "y": 4503869.026164,
+  "height": 0.4,
+  "raw": " 4",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2DA",
+  "layer": "Name",
+  "x": 407799.313865,
+  "y": 4503865.411953,
+  "height": 0.4,
+  "raw": " 8",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2D7",
+  "layer": "Name",
+  "x": 407798.779957,
+  "y": 4503864.102641,
+  "height": 0.4,
+  "raw": " 7",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2D4",
+  "layer": "Name",
+  "x": 407797.911647,
+  "y": 4503863.833885,
+  "height": 0.4,
+  "raw": " 6",
+  "attachment": "BL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2D1",
+  "layer": "Name",
+  "x": 407814.937704,
+  "y": 4503859.833541,
+  "height": 0.4,
+  "raw": " 5",
+  "attachment": "BL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E19",
+  "layer": "OT",
+  "x": 407865.317815,
+  "y": 4503913.463218,
+  "height": 1.0,
+  "raw": "Ο.Τ. Γ 753"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E22",
+  "layer": "OT",
+  "x": 407919.373545,
+  "y": 4503912.251731,
+  "height": 1.0,
+  "raw": "Ο.Τ. Γ 748"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E32",
+  "layer": "OT",
+  "x": 407778.06019,
+  "y": 4503911.285139,
+  "height": 1.0,
+  "raw": "Ο.Τ. Γ 754"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E3A",
+  "layer": "OT",
+  "x": 407905.734688,
+  "y": 4503910.724724,
+  "height": 0.8,
+  "raw": "Ο.Τ.Γ748Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E43",
+  "layer": "OT",
+  "x": 407907.483604,
+  "y": 4503909.035291,
+  "height": 0.8,
+  "raw": "Χ.Π."
+ },
+ {
+  "type": "TEXT",
+  "handle": "E5C",
+  "layer": "OT",
+  "x": 407847.206681,
+  "y": 4503881.604503,
+  "height": 1.0,
+  "raw": "P"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E2A",
+  "layer": "OT",
+  "x": 407851.545396,
+  "y": 4503861.024027,
+  "height": 1.0,
+  "raw": "Ο.Τ. Γ 752"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E6C",
+  "layer": "OT",
+  "x": 407780.275879,
+  "y": 4503831.707032,
+  "height": 1.0,
+  "raw": "Ο.Τ. Γ 756"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1052",
+  "layer": "PINAKAKI 500",
+  "x": 408012.762107,
+  "y": 4503907.68129,
+  "height": 1.2845,
+  "raw": "ΕΡΓΟΔΟΤΗΣ: {\\C256;ΖΕΡΒΑ ΓΕΩΡΓΙΑ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1126",
+  "layer": "PINAKAKI 500",
+  "x": 408069.733476,
+  "y": 4503906.60174,
+  "height": 1.2845,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΕΡΓΟΔΟΤΗΣ\\H1.143x;: \\fArial|b0|i0|c0|p34;\\H0.54489x;\\C1;...\\fArial|b0|i0|c161|p34; ΥΠΟΓΡΑΦΗ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "104F",
+  "layer": "PINAKAKI 500",
+  "x": 408012.762107,
+  "y": 4503902.32929,
+  "height": 1.2845,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΕΡΓΟ\\H1.143x;:}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1125",
+  "layer": "PINAKAKI 500",
+  "x": 408069.733476,
+  "y": 4503901.24974,
+  "height": 1.2845,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΕΡΓΟ\\H1.143x;:}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "103E",
+  "layer": "PINAKAKI 500",
+  "x": 408017.223044,
+  "y": 4503898.344919,
+  "height": 0.6,
+  "raw": "\\pxqc;{\\fArial|b0|i0|c161|p34;ΔΗΜΟΣ ΚΟΡΔΕΛΙΟΥ ΕΥΟΣΜΟΥ - Δ.Ε. ΕΥΟΣΜΟΥ - \\fArial|b0|i0|c0|p34;\\P\\fArial|b0|i0|c161|p34;ΠΕΡΙΟΧΗ ΕΠΕΚΤΑΣΗΣ ΕΥΟΣΜΟΥ\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Π.Ε. 3\\fArial|b0|i0|c0|p34;9\\fArial|b0|i0|c161|p34; - Ο.Τ. Γ\\fArial|b0|i0|c0|p34; 753\\fArial|b0|i0|c161|p34; - ΟΙΚ.: \\C7;0\\fArial|b0|i0|c0|p34;1\\fArial|b0|i0|c161|p34;β\\C256; - \\C7;Οδός Προέκταση Σμύρνης, Δημ. Κολοκυθά\\fArial|b0|i0|c0|p34;, Ξενοκράτη & Αναγεννήσεως}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1054",
+  "layer": "PINAKAKI 500",
+  "x": 408012.762107,
+  "y": 4503897.92896,
+  "height": 1.2845,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΘΕΣΗ\\fTimes New Roman|b0|i0|c0|p18;:}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1057",
+  "layer": "PINAKAKI 500",
+  "x": 408012.762107,
+  "y": 4503890.435462,
+  "height": 1.2845,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΜΕΛΕΤΗΤΗΣ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1076",
+  "layer": "PINAKAKI 500",
+  "x": 408025.97182,
+  "y": 4503889.380323,
+  "height": 0.8997600000000002,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;\\LΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ\\P\\H0.5334x;ΑΓΡΟΝΟΜΟΣ ΤΟΠΟΓΡΑΦΟΣ ΜΗΧΑΝΙΚΟΣ Α.Π.Θ.\\P\\H1.875x;ΝΙΚΟΛΑΟΥ\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18; ΕΥ\\fTimes New Roman|b0|i0|c0|p18;.\\fTimes New Roman|b0|i0|c161|p18; ΙΩΑΝΝΗΣ\\P\\H0.5334x;ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ Τ.Ε. \\P\\fTimes New Roman|b0|i0|c161|p34;\\H0.7918x;ΤΟΠΟΓΡΑΦΙΚΕΣ ΜΕΛΕΤΕΣ - ΕΦΑΡΜΟΓΕΣ\\P\\fTimes New Roman|b0|i0|c161|p18;\\H1.16x;ΕΔΡΑ ΝΕΟΧΩΡΟΥΔΑ 2310-788493\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18;κιν \\fTimes New Roman|b0|i0|c0|p18;694\\fTimes New Roman|b0|i0|c161|p18;9727121\\fTimes New Roman|b0|i0|c0|p18;\\Psite: www.nikolaou.com.gr  \\H0.99999x;e-mail: info@nikolaou.com.gr}",
+  "attachment": "ML"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "105B",
+  "layer": "PINAKAKI 500",
+  "x": 408038.028607,
+  "y": 4503883.191545,
+  "height": 0.7340000000000001,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΑΡ.ΣΧΕΔΙΟΥ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1059",
+  "layer": "PINAKAKI 500",
+  "x": 408012.762107,
+  "y": 4503881.514026,
+  "height": 1.2845,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΜΕΛΕΤΗ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "104B",
+  "layer": "PINAKAKI 500",
+  "x": 408038.279491,
+  "y": 4503879.906704,
+  "height": 2.936,
+  "raw": "{\\fCourier New|b0|i0|c161|p49;Τ1}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1058",
+  "layer": "PINAKAKI 500",
+  "x": 408012.882073,
+  "y": 4503876.687984,
+  "height": 1.100999999999999,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΣΧΕΔΙΟ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "104C",
+  "layer": "PINAKAKI 500",
+  "x": 408021.097471,
+  "y": 4503876.513999,
+  "height": 0.6606000000000001,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΤΟΠΟΓΡΑΦΙΚΟ ΔΙΑΓΡΑΜΜΑ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "105E",
+  "layer": "PINAKAKI 500",
+  "x": 408023.634241,
+  "y": 4503872.875629,
+  "height": 0.9175,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;1\\fTimes New Roman|b0|i0|c0|p18;:2\\fTimes New Roman|b0|i0|c161|p18;00}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1060",
+  "layer": "PINAKAKI 500",
+  "x": 408012.762107,
+  "y": 4503872.692263,
+  "height": 0.9175,
+  "raw": "{\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18;ΚΛΙΜΑΚΑ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "110E",
+  "layer": "PINAKAKI 500",
+  "x": 408027.246695,
+  "y": 4503869.657324,
+  "height": 0.9175,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΙΟΥΛΙΟΣ 2026}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "105F",
+  "layer": "PINAKAKI 500",
+  "x": 408012.762107,
+  "y": 4503869.657314,
+  "height": 0.9175,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "10F3",
+  "layer": "PINAKAKI 500",
+  "x": 408016.695398,
+  "y": 4503867.164464,
+  "height": 0.9175,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΣΥΝΤΑΞ\\fTimes New Roman|b0|i0|c0|p18;H}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "105D",
+  "layer": "PINAKAKI 500",
+  "x": 408032.842068,
+  "y": 4503866.924464,
+  "height": 0.9175,
+  "raw": "{\\fTimes New Roman|b0|i0|c161|p18;ΥΠΟΓΡΑΦΗ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2262",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407890.126036,
+  "y": 4503949.083182,
+  "height": 1.0,
+  "raw": "3"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2260",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407816.313161,
+  "y": 4503948.786339,
+  "height": 1.0,
+  "raw": "2"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2227",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407852.984041,
+  "y": 4503948.741062,
+  "height": 0.5,
+  "raw": "73.07"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2229",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407895.691126,
+  "y": 4503948.136641,
+  "height": 0.5,
+  "raw": "12.37"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2264",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407901.981969,
+  "y": 4503947.740163,
+  "height": 1.0,
+  "raw": "4"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2225",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407818.078326,
+  "y": 4503931.36294,
+  "height": 0.5,
+  "raw": "33.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F7",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407860.571548,
+  "y": 4503916.300017,
+  "height": 1.0,
+  "raw": "Γ"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F5",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407815.30358,
+  "y": 4503915.944041,
+  "height": 1.0,
+  "raw": "Β"
+ },
+ {
+  "type": "TEXT",
+  "handle": "225F",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407817.083201,
+  "y": 4503915.867034,
+  "height": 0.5,
+  "raw": "64.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2265",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407902.211563,
+  "y": 4503914.987954,
+  "height": 0.5,
+  "raw": "62.94"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F6",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407838.469115,
+  "y": 4503914.912123,
+  "height": 0.5,
+  "raw": "44.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F8",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407860.893835,
+  "y": 4503901.685699,
+  "height": 0.5,
+  "raw": "31.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F4",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407818.047264,
+  "y": 4503899.592684,
+  "height": 0.5,
+  "raw": "31.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2154",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.302792,
+  "y": 4503887.883041,
+  "height": 0.5,
+  "raw": "Πίνακας Συντεταγμένων των κορυφών του Α,Β,Γ,Δ,Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F2",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.302792,
+  "y": 4503887.025898,
+  "height": 0.5,
+  "raw": "Εμβαδόν τεμαχίου = 1364.05 τ.μ. - Περίμετρος = 150.00 μ."
+ },
+ {
+  "type": "TEXT",
+  "handle": "214C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407744.250513,
+  "y": 4503886.11096,
+  "height": 0.5,
+  "raw": "TM 3"
+ },
+ {
+  "type": "TEXT",
+  "handle": "214B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407753.766036,
+  "y": 4503886.11096,
+  "height": 0.5,
+  "raw": "ΕΓΣΑ '87"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2150",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.902792,
+  "y": 4503885.183041,
+  "height": 0.5,
+  "raw": "α/α                    Χ                    Υ                      Χ                        Υ             Αποστάσεις"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21FA",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407838.12113,
+  "y": 4503885.048615,
+  "height": 0.5,
+  "raw": "44.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F3",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407817.919297,
+  "y": 4503885.005458,
+  "height": 1.0,
+  "raw": "Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "221F",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407881.142436,
+  "y": 4503884.947626,
+  "height": 0.5,
+  "raw": "41.32"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2139",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519845,
+  "y": 4503884.283041,
+  "height": 0.5,
+  "raw": "Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17E7",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503884.283041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17E8",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503884.283041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2209",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503884.283041,
+  "height": 0.5,
+  "raw": "407817.10"
+ },
+ {
+  "type": "TEXT",
+  "handle": "220A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503884.283041,
+  "height": 0.5,
+  "raw": "4503884.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "220B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407762.851204,
+  "y": 4503884.283041,
+  "height": 0.5,
+  "raw": "----"
+ },
+ {
+  "type": "TEXT",
+  "handle": "221E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407902.738834,
+  "y": 4503884.206951,
+  "height": 1.0,
+  "raw": "1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2267",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407864.211347,
+  "y": 4503883.828849,
+  "height": 0.5,
+  "raw": "85.32"
+ },
+ {
+  "type": "TEXT",
+  "handle": "213A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519845,
+  "y": 4503883.383041,
+  "height": 0.5,
+  "raw": "Β"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17EB",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503883.383041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17EC",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503883.383041,
+  "height": 0.5,
+  "raw": "741853.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "220D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503883.383041,
+  "height": 0.5,
+  "raw": "407817.21"
+ },
+ {
+  "type": "TEXT",
+  "handle": "220E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503883.383041,
+  "height": 0.5,
+  "raw": "4503915.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "220F",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.093019,
+  "y": 4503883.383041,
+  "height": 0.5,
+  "raw": "Α - Β: 31.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "21F9",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407861.161791,
+  "y": 4503883.339558,
+  "height": 1.0,
+  "raw": "Δ"
+ },
+ {
+  "type": "TEXT",
+  "handle": "213B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.560432,
+  "y": 4503882.483041,
+  "height": 0.5,
+  "raw": "Γ"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17EF",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503882.483041,
+  "height": 0.5,
+  "raw": "131800.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17F0",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503882.483041,
+  "height": 0.5,
+  "raw": "741853.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2211",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503882.483041,
+  "height": 0.5,
+  "raw": "407861.21"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2212",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503882.483041,
+  "height": 0.5,
+  "raw": "4503915.59"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2213",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.174192,
+  "y": 4503882.483041,
+  "height": 0.5,
+  "raw": "Β - Γ: 44.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "213C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519504,
+  "y": 4503881.583041,
+  "height": 0.5,
+  "raw": "Δ"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17F3",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503881.583041,
+  "height": 0.5,
+  "raw": "131800.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17F4",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503881.583041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2215",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503881.583041,
+  "height": 0.5,
+  "raw": "407861.10"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2216",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503881.583041,
+  "height": 0.5,
+  "raw": "4503884.59"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2217",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.17351,
+  "y": 4503881.583041,
+  "height": 0.5,
+  "raw": "Γ - Δ: 31.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "213D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519845,
+  "y": 4503880.683041,
+  "height": 0.5,
+  "raw": "Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17F7",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503880.683041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17F8",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503880.683041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2219",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503880.683041,
+  "height": 0.5,
+  "raw": "407817.10"
+ },
+ {
+  "type": "TEXT",
+  "handle": "221A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503880.683041,
+  "height": 0.5,
+  "raw": "4503884.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "221B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.092337,
+  "y": 4503880.683041,
+  "height": 0.5,
+  "raw": "Δ - Α: 44.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "213F",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.302792,
+  "y": 4503879.183041,
+  "height": 0.5,
+  "raw": "Πίνακας Συντεταγμένων των κορυφών του 1,Δ,Γ,Β,2,3,4,1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "17FB",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.302792,
+  "y": 4503878.379835,
+  "height": 0.5,
+  "raw": "Εμβαδόν τεμαχίου = 4092.13 τ.μ. - Περίμετρος = 297.69 μ."
+ },
+ {
+  "type": "TEXT",
+  "handle": "2153",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.902792,
+  "y": 4503877.383041,
+  "height": 0.5,
+  "raw": "α/α                    Χ                    Υ                      Χ                        Υ             Αποστάσεις"
+ },
+ {
+  "type": "TEXT",
+  "handle": "180C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503876.483041,
+  "height": 0.5,
+  "raw": "1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "180D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503876.483041,
+  "height": 0.5,
+  "raw": "131841.82"
+ },
+ {
+  "type": "TEXT",
+  "handle": "180E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503876.483041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "223D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503876.483041,
+  "height": 0.5,
+  "raw": "407902.42"
+ },
+ {
+  "type": "TEXT",
+  "handle": "223E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503876.483041,
+  "height": 0.5,
+  "raw": "4503884.44"
+ },
+ {
+  "type": "TEXT",
+  "handle": "223F",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407762.851204,
+  "y": 4503876.483041,
+  "height": 0.5,
+  "raw": "----"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1810",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519504,
+  "y": 4503875.583041,
+  "height": 0.5,
+  "raw": "Δ"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1811",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503875.583041,
+  "height": 0.5,
+  "raw": "131800.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1812",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503875.583041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2241",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503875.583041,
+  "height": 0.5,
+  "raw": "407861.10"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2242",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503875.583041,
+  "height": 0.5,
+  "raw": "4503884.59"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2243",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.169758,
+  "y": 4503875.583041,
+  "height": 0.5,
+  "raw": "1 - Δ: 41.32"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1814",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.560432,
+  "y": 4503874.683041,
+  "height": 0.5,
+  "raw": "Γ"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1815",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503874.683041,
+  "height": 0.5,
+  "raw": "131800.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1816",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503874.683041,
+  "height": 0.5,
+  "raw": "741853.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2245",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503874.683041,
+  "height": 0.5,
+  "raw": "407861.21"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2246",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503874.683041,
+  "height": 0.5,
+  "raw": "4503915.59"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2247",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.17351,
+  "y": 4503874.683041,
+  "height": 0.5,
+  "raw": "Δ - Γ: 31.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1818",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519845,
+  "y": 4503873.783041,
+  "height": 0.5,
+  "raw": "Β"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1819",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503873.783041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "181A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503873.783041,
+  "height": 0.5,
+  "raw": "741853.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2249",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503873.783041,
+  "height": 0.5,
+  "raw": "407817.21"
+ },
+ {
+  "type": "TEXT",
+  "handle": "224A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503873.783041,
+  "height": 0.5,
+  "raw": "4503915.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "224B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.174192,
+  "y": 4503873.783041,
+  "height": 0.5,
+  "raw": "Γ - Β: 44.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "181C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503872.883041,
+  "height": 0.5,
+  "raw": "2"
+ },
+ {
+  "type": "TEXT",
+  "handle": "181D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503872.883041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "181E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503872.883041,
+  "height": 0.5,
+  "raw": "741886.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "224D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503872.883041,
+  "height": 0.5,
+  "raw": "407817.32"
+ },
+ {
+  "type": "TEXT",
+  "handle": "224E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503872.883041,
+  "height": 0.5,
+  "raw": "4503948.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "224F",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.17044,
+  "y": 4503872.883041,
+  "height": 0.5,
+  "raw": "Β - 2: 33.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1820",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503871.983041,
+  "height": 0.5,
+  "raw": "3"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1821",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503871.983041,
+  "height": 0.5,
+  "raw": "131829.57"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1822",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503871.983041,
+  "height": 0.5,
+  "raw": "741886.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2251",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503871.983041,
+  "height": 0.5,
+  "raw": "407890.39"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2252",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503871.983041,
+  "height": 0.5,
+  "raw": "4503948.49"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2253",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.247862,
+  "y": 4503871.983041,
+  "height": 0.5,
+  "raw": "2 - 3: 73.07"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1824",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503871.083041,
+  "height": 0.5,
+  "raw": "4"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1825",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503871.083041,
+  "height": 0.5,
+  "raw": "131841.89"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1826",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503871.083041,
+  "height": 0.5,
+  "raw": "741885.44"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2255",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503871.083041,
+  "height": 0.5,
+  "raw": "407902.71"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2256",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503871.083041,
+  "height": 0.5,
+  "raw": "4503947.39"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2257",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.247862,
+  "y": 4503871.083041,
+  "height": 0.5,
+  "raw": "3 - 4: 12.36"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1828",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503870.183041,
+  "height": 0.5,
+  "raw": "1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1829",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503870.183041,
+  "height": 0.5,
+  "raw": "131841.82"
+ },
+ {
+  "type": "TEXT",
+  "handle": "182A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503870.183041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2259",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503870.183041,
+  "height": 0.5,
+  "raw": "407902.42"
+ },
+ {
+  "type": "TEXT",
+  "handle": "225A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503870.183041,
+  "height": 0.5,
+  "raw": "4503884.44"
+ },
+ {
+  "type": "TEXT",
+  "handle": "225B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.247862,
+  "y": 4503870.183041,
+  "height": 0.5,
+  "raw": "4 - 1: 62.94"
+ },
+ {
+  "type": "TEXT",
+  "handle": "22F0",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.302792,
+  "y": 4503868.683041,
+  "height": 0.5,
+  "raw": "Πίνακας Συντεταγμένων των κορυφών του Ο.Τ., Α,2,3,4,1,Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "225D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.302792,
+  "y": 4503867.825898,
+  "height": 0.5,
+  "raw": "Εμβαδόν τεμαχίου = 5456.18 τ.μ. - Περίμετρος = 297.70 μ."
+ },
+ {
+  "type": "TEXT",
+  "handle": "22FE",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407737.902792,
+  "y": 4503866.883041,
+  "height": 0.5,
+  "raw": "α/α                    Χ                    Υ                      Χ                        Υ             Αποστάσεις"
+ },
+ {
+  "type": "TEXT",
+  "handle": "183C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519845,
+  "y": 4503865.983041,
+  "height": 0.5,
+  "raw": "Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "183D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503865.983041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "183E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503865.983041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2277",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503865.983041,
+  "height": 0.5,
+  "raw": "407817.10"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2278",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503865.983041,
+  "height": 0.5,
+  "raw": "4503884.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2279",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407762.851204,
+  "y": 4503865.983041,
+  "height": 0.5,
+  "raw": "----"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1840",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503865.083041,
+  "height": 0.5,
+  "raw": "2"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1841",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503865.083041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1842",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503865.083041,
+  "height": 0.5,
+  "raw": "741886.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "227B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503865.083041,
+  "height": 0.5,
+  "raw": "407817.32"
+ },
+ {
+  "type": "TEXT",
+  "handle": "227C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503865.083041,
+  "height": 0.5,
+  "raw": "4503948.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "227D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.17044,
+  "y": 4503865.083041,
+  "height": 0.5,
+  "raw": "Α - 2: 64.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1844",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503864.183041,
+  "height": 0.5,
+  "raw": "3"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1845",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503864.183041,
+  "height": 0.5,
+  "raw": "131829.57"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1846",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503864.183041,
+  "height": 0.5,
+  "raw": "741886.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "227F",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503864.183041,
+  "height": 0.5,
+  "raw": "407890.39"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2280",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503864.183041,
+  "height": 0.5,
+  "raw": "4503948.49"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2281",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.247862,
+  "y": 4503864.183041,
+  "height": 0.5,
+  "raw": "2 - 3: 73.07"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1848",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503863.283041,
+  "height": 0.5,
+  "raw": "4"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1849",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503863.283041,
+  "height": 0.5,
+  "raw": "131841.89"
+ },
+ {
+  "type": "TEXT",
+  "handle": "184A",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503863.283041,
+  "height": 0.5,
+  "raw": "741885.44"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2283",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503863.283041,
+  "height": 0.5,
+  "raw": "407902.71"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2284",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503863.283041,
+  "height": 0.5,
+  "raw": "4503947.39"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2285",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.247862,
+  "y": 4503863.283041,
+  "height": 0.5,
+  "raw": "3 - 4: 12.36"
+ },
+ {
+  "type": "TEXT",
+  "handle": "184C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.558556,
+  "y": 4503862.383041,
+  "height": 0.5,
+  "raw": "1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "184D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503862.383041,
+  "height": 0.5,
+  "raw": "131841.82"
+ },
+ {
+  "type": "TEXT",
+  "handle": "184E",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503862.383041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2287",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503862.383041,
+  "height": 0.5,
+  "raw": "407902.42"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2288",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503862.383041,
+  "height": 0.5,
+  "raw": "4503884.44"
+ },
+ {
+  "type": "TEXT",
+  "handle": "2289",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.247862,
+  "y": 4503862.383041,
+  "height": 0.5,
+  "raw": "4 - 1: 62.94"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1850",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407738.519845,
+  "y": 4503861.483041,
+  "height": 0.5,
+  "raw": "Α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1851",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407741.40095,
+  "y": 4503861.483041,
+  "height": 0.5,
+  "raw": "131756.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1852",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407746.30095,
+  "y": 4503861.483041,
+  "height": 0.5,
+  "raw": "741822.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "228B",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407751.00095,
+  "y": 4503861.483041,
+  "height": 0.5,
+  "raw": "407817.10"
+ },
+ {
+  "type": "TEXT",
+  "handle": "228C",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407755.512478,
+  "y": 4503861.483041,
+  "height": 0.5,
+  "raw": "4503884.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "228D",
+  "layer": "Pinakas-Syntetagmenon",
+  "x": 407760.17044,
+  "y": 4503861.483041,
+  "height": 0.5,
+  "raw": "1 - Α: 85.32"
+ },
+ {
+  "type": "TEXT",
+  "handle": "EFE",
+  "layer": "TEL_NUM",
+  "x": 407788.406763,
+  "y": 4503937.851401,
+  "height": 0.6,
+  "raw": "01"
+ },
+ {
+  "type": "TEXT",
+  "handle": "F08",
+  "layer": "TEL_NUM",
+  "x": 407788.534826,
+  "y": 4503916.183858,
+  "height": 0.6,
+  "raw": "02"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E9B",
+  "layer": "TEL_NUM",
+  "x": 407880.191486,
+  "y": 4503915.491976,
+  "height": 0.6,
+  "raw": "01α"
+ },
+ {
+  "type": "TEXT",
+  "handle": "EEA",
+  "layer": "TEL_NUM",
+  "x": 407867.953582,
+  "y": 4503910.114882,
+  "height": 0.6,
+  "raw": "01"
+ },
+ {
+  "type": "TEXT",
+  "handle": "ED1",
+  "layer": "TEL_NUM",
+  "x": 407922.228366,
+  "y": 4503909.823934,
+  "height": 0.6,
+  "raw": "01"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E89",
+  "layer": "TEL_NUM",
+  "x": 407833.378442,
+  "y": 4503899.48768,
+  "height": 0.6,
+  "raw": "01β"
+ },
+ {
+  "type": "TEXT",
+  "handle": "F12",
+  "layer": "TEL_NUM",
+  "x": 407784.717948,
+  "y": 4503886.894221,
+  "height": 0.6,
+  "raw": "03"
+ },
+ {
+  "type": "TEXT",
+  "handle": "EF4",
+  "layer": "TEL_NUM",
+  "x": 407869.035867,
+  "y": 4503860.995169,
+  "height": 0.6,
+  "raw": "01"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E6",
+  "layer": "VT_ELEV",
+  "x": 407892.663038,
+  "y": 4503949.984121,
+  "height": 0.3,
+  "raw": "98.73"
+ },
+ {
+  "type": "TEXT",
+  "handle": "F0",
+  "layer": "VT_ELEV",
+  "x": 407844.374038,
+  "y": 4503942.577121,
+  "height": 0.3,
+  "raw": "99.40"
+ },
+ {
+  "type": "TEXT",
+  "handle": "94",
+  "layer": "VT_ELEV",
+  "x": 407821.645038,
+  "y": 4503915.239121,
+  "height": 0.3,
+  "raw": "100.17"
+ },
+ {
+  "type": "TEXT",
+  "handle": "98",
+  "layer": "VT_ELEV",
+  "x": 407839.912038,
+  "y": 4503915.206121,
+  "height": 0.3,
+  "raw": "99.54"
+ },
+ {
+  "type": "TEXT",
+  "handle": "9E",
+  "layer": "VT_ELEV",
+  "x": 407860.673038,
+  "y": 4503901.445121,
+  "height": 0.3,
+  "raw": "98.87"
+ },
+ {
+  "type": "TEXT",
+  "handle": "A2",
+  "layer": "VT_ELEV",
+  "x": 407860.603038,
+  "y": 4503891.312121,
+  "height": 0.3,
+  "raw": "98.81"
+ },
+ {
+  "type": "TEXT",
+  "handle": "90",
+  "layer": "VT_ELEV",
+  "x": 407814.494038,
+  "y": 4503887.076121,
+  "height": 0.3,
+  "raw": "99.27"
+ },
+ {
+  "type": "TEXT",
+  "handle": "A6",
+  "layer": "VT_ELEV",
+  "x": 407859.830038,
+  "y": 4503883.044121,
+  "height": 0.3,
+  "raw": "98.58"
+ },
+ {
+  "type": "TEXT",
+  "handle": "115",
+  "layer": "VT_ELEV_STASH",
+  "x": 407815.72708,
+  "y": 4503965.788865,
+  "height": 0.3,
+  "raw": "100.32"
+ },
+ {
+  "type": "TEXT",
+  "handle": "110",
+  "layer": "VT_ELEV_STASH",
+  "x": 407904.96308,
+  "y": 4503964.043865,
+  "height": 0.3,
+  "raw": "98.76"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10B",
+  "layer": "VT_ELEV_STASH",
+  "x": 407902.61908,
+  "y": 4503916.029865,
+  "height": 0.3,
+  "raw": "98.25"
+ },
+ {
+  "type": "TEXT",
+  "handle": "FC",
+  "layer": "VT_ELEV_STASH",
+  "x": 407799.71308,
+  "y": 4503915.534865,
+  "height": 0.3,
+  "raw": "99.85"
+ },
+ {
+  "type": "TEXT",
+  "handle": "106",
+  "layer": "VT_ELEV_STASH",
+  "x": 407907.05108,
+  "y": 4503877.774865,
+  "height": 0.3,
+  "raw": "98.09"
+ },
+ {
+  "type": "TEXT",
+  "handle": "F7",
+  "layer": "VT_ELEV_STASH",
+  "x": 407846.26608,
+  "y": 4503877.672865,
+  "height": 0.3,
+  "raw": "98.74"
+ },
+ {
+  "type": "TEXT",
+  "handle": "101",
+  "layer": "VT_ELEV_STASH",
+  "x": 407799.48608,
+  "y": 4503871.286865,
+  "height": 0.3,
+  "raw": "98.97"
+ },
+ {
+  "type": "TEXT",
+  "handle": "15F",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503980.15,
+  "height": 0.3,
+  "raw": "Y:4503960"
+ },
+ {
+  "type": "TEXT",
+  "handle": "15A",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503960.15,
+  "height": 0.3,
+  "raw": "Y:4503960"
+ },
+ {
+  "type": "TEXT",
+  "handle": "164",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503940.15,
+  "height": 0.3,
+  "raw": "Y:4503940"
+ },
+ {
+  "type": "TEXT",
+  "handle": "13E",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503920.15,
+  "height": 0.3,
+  "raw": "Y:4503920"
+ },
+ {
+  "type": "TEXT",
+  "handle": "139",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503900.15,
+  "height": 0.3,
+  "raw": "Y:4503900"
+ },
+ {
+  "type": "TEXT",
+  "handle": "143",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503880.15,
+  "height": 0.3,
+  "raw": "Y:4503880"
+ },
+ {
+  "type": "TEXT",
+  "handle": "11D",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503860.15,
+  "height": 0.3,
+  "raw": "Y:4503860"
+ },
+ {
+  "type": "TEXT",
+  "handle": "119",
+  "layer": "VT_KANABOS",
+  "x": 407780.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407780"
+ },
+ {
+  "type": "TEXT",
+  "handle": "15B",
+  "layer": "VT_KANABOS",
+  "x": 407800.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407800"
+ },
+ {
+  "type": "TEXT",
+  "handle": "13A",
+  "layer": "VT_KANABOS",
+  "x": 407820.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407820"
+ },
+ {
+  "type": "TEXT",
+  "handle": "11E",
+  "layer": "VT_KANABOS",
+  "x": 407840.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407840"
+ },
+ {
+  "type": "TEXT",
+  "handle": "160",
+  "layer": "VT_KANABOS",
+  "x": 407860.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407860"
+ },
+ {
+  "type": "TEXT",
+  "handle": "13F",
+  "layer": "VT_KANABOS",
+  "x": 407880.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407880"
+ },
+ {
+  "type": "TEXT",
+  "handle": "123",
+  "layer": "VT_KANABOS",
+  "x": 407900.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407900"
+ },
+ {
+  "type": "TEXT",
+  "handle": "165",
+  "layer": "VT_KANABOS",
+  "x": 407920.45,
+  "y": 4503858.014454,
+  "height": 0.3,
+  "raw": "X:407920"
+ },
+ {
+  "type": "TEXT",
+  "handle": "118",
+  "layer": "VT_KANABOS",
+  "x": 407780.6,
+  "y": 4503840.15,
+  "height": 0.3,
+  "raw": "Y:4503840"
+ },
+ {
+  "type": "TEXT",
+  "handle": "144",
+  "layer": "VT_KANABOS",
+  "x": 407940.45,
+  "y": 4503840.15,
+  "height": 0.3,
+  "raw": "X:407940"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E4",
+  "layer": "VT_POINT",
+  "x": 407892.964657,
+  "y": 4503950.598188,
+  "height": 0.3,
+  "raw": "115"
+ },
+ {
+  "type": "TEXT",
+  "handle": "EA",
+  "layer": "VT_POINT",
+  "x": 407882.858657,
+  "y": 4503943.305188,
+  "height": 0.3,
+  "raw": "117"
+ },
+ {
+  "type": "TEXT",
+  "handle": "F2",
+  "layer": "VT_POINT",
+  "x": 407822.054657,
+  "y": 4503943.283188,
+  "height": 0.3,
+  "raw": "120"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BE",
+  "layer": "VT_POINT",
+  "x": 407879.369657,
+  "y": 4503943.268188,
+  "height": 0.3,
+  "raw": "96"
+ },
+ {
+  "type": "TEXT",
+  "handle": "EE",
+  "layer": "VT_POINT",
+  "x": 407844.675657,
+  "y": 4503943.191188,
+  "height": 0.3,
+  "raw": "119"
+ },
+ {
+  "type": "TEXT",
+  "handle": "EC",
+  "layer": "VT_POINT",
+  "x": 407874.741657,
+  "y": 4503943.080188,
+  "height": 0.3,
+  "raw": "118"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E8",
+  "layer": "VT_POINT",
+  "x": 407883.076657,
+  "y": 4503943.053188,
+  "height": 0.3,
+  "raw": "116"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E2",
+  "layer": "VT_POINT",
+  "x": 407897.582657,
+  "y": 4503942.992188,
+  "height": 0.3,
+  "raw": "114"
+ },
+ {
+  "type": "TEXT",
+  "handle": "B2",
+  "layer": "VT_POINT",
+  "x": 407840.287657,
+  "y": 4503942.881188,
+  "height": 0.3,
+  "raw": "90"
+ },
+ {
+  "type": "TEXT",
+  "handle": "D4",
+  "layer": "VT_POINT",
+  "x": 407919.683657,
+  "y": 4503937.718188,
+  "height": 0.3,
+  "raw": "107"
+ },
+ {
+  "type": "TEXT",
+  "handle": "B4",
+  "layer": "VT_POINT",
+  "x": 407844.657657,
+  "y": 4503936.138188,
+  "height": 0.3,
+  "raw": "91"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BA",
+  "layer": "VT_POINT",
+  "x": 407874.712657,
+  "y": 4503936.051188,
+  "height": 0.3,
+  "raw": "94"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BC",
+  "layer": "VT_POINT",
+  "x": 407879.334657,
+  "y": 4503933.158188,
+  "height": 0.3,
+  "raw": "95"
+ },
+ {
+  "type": "TEXT",
+  "handle": "B6",
+  "layer": "VT_POINT",
+  "x": 407848.933657,
+  "y": 4503927.599188,
+  "height": 0.3,
+  "raw": "92"
+ },
+ {
+  "type": "TEXT",
+  "handle": "B8",
+  "layer": "VT_POINT",
+  "x": 407870.424657,
+  "y": 4503927.536188,
+  "height": 0.3,
+  "raw": "93"
+ },
+ {
+  "type": "TEXT",
+  "handle": "D6",
+  "layer": "VT_POINT",
+  "x": 407897.508657,
+  "y": 4503924.845188,
+  "height": 0.3,
+  "raw": "108"
+ },
+ {
+  "type": "TEXT",
+  "handle": "DA",
+  "layer": "VT_POINT",
+  "x": 407887.117657,
+  "y": 4503924.626188,
+  "height": 0.3,
+  "raw": "110"
+ },
+ {
+  "type": "TEXT",
+  "handle": "D8",
+  "layer": "VT_POINT",
+  "x": 407891.426657,
+  "y": 4503924.614188,
+  "height": 0.3,
+  "raw": "109"
+ },
+ {
+  "type": "TEXT",
+  "handle": "D2",
+  "layer": "VT_POINT",
+  "x": 407919.606657,
+  "y": 4503917.978188,
+  "height": 0.3,
+  "raw": "106"
+ },
+ {
+  "type": "TEXT",
+  "handle": "92",
+  "layer": "VT_POINT",
+  "x": 407821.946657,
+  "y": 4503915.853188,
+  "height": 0.3,
+  "raw": "79"
+ },
+ {
+  "type": "TEXT",
+  "handle": "96",
+  "layer": "VT_POINT",
+  "x": 407840.213657,
+  "y": 4503915.820188,
+  "height": 0.3,
+  "raw": "80"
+ },
+ {
+  "type": "TEXT",
+  "handle": "9A",
+  "layer": "VT_POINT",
+  "x": 407861.037657,
+  "y": 4503915.746188,
+  "height": 0.3,
+  "raw": "81"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E0",
+  "layer": "VT_POINT",
+  "x": 407886.937657,
+  "y": 4503910.495188,
+  "height": 0.3,
+  "raw": "113"
+ },
+ {
+  "type": "TEXT",
+  "handle": "DE",
+  "layer": "VT_POINT",
+  "x": 407887.570657,
+  "y": 4503910.482188,
+  "height": 0.3,
+  "raw": "112"
+ },
+ {
+  "type": "TEXT",
+  "handle": "DC",
+  "layer": "VT_POINT",
+  "x": 407897.440657,
+  "y": 4503910.195188,
+  "height": 0.3,
+  "raw": "111"
+ },
+ {
+  "type": "TEXT",
+  "handle": "CC",
+  "layer": "VT_POINT",
+  "x": 407902.417657,
+  "y": 4503904.994188,
+  "height": 0.3,
+  "raw": "103"
+ },
+ {
+  "type": "TEXT",
+  "handle": "B0",
+  "layer": "VT_POINT",
+  "x": 407792.133657,
+  "y": 4503904.756188,
+  "height": 0.3,
+  "raw": "89"
+ },
+ {
+  "type": "TEXT",
+  "handle": "D0",
+  "layer": "VT_POINT",
+  "x": 407918.889657,
+  "y": 4503902.655188,
+  "height": 0.3,
+  "raw": "105"
+ },
+ {
+  "type": "TEXT",
+  "handle": "9C",
+  "layer": "VT_POINT",
+  "x": 407860.974657,
+  "y": 4503902.059188,
+  "height": 0.3,
+  "raw": "82"
+ },
+ {
+  "type": "TEXT",
+  "handle": "CE",
+  "layer": "VT_POINT",
+  "x": 407918.914657,
+  "y": 4503899.150188,
+  "height": 0.3,
+  "raw": "104"
+ },
+ {
+  "type": "TEXT",
+  "handle": "CA",
+  "layer": "VT_POINT",
+  "x": 407897.447657,
+  "y": 4503892.100188,
+  "height": 0.3,
+  "raw": "102"
+ },
+ {
+  "type": "TEXT",
+  "handle": "A0",
+  "layer": "VT_POINT",
+  "x": 407860.904657,
+  "y": 4503891.926188,
+  "height": 0.3,
+  "raw": "83"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C0",
+  "layer": "VT_POINT",
+  "x": 407879.150657,
+  "y": 4503891.755188,
+  "height": 0.3,
+  "raw": "97"
+ },
+ {
+  "type": "TEXT",
+  "handle": "8D",
+  "layer": "VT_POINT",
+  "x": 407814.795657,
+  "y": 4503887.690188,
+  "height": 0.3,
+  "raw": "78"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C8",
+  "layer": "VT_POINT",
+  "x": 407919.165657,
+  "y": 4503884.410188,
+  "height": 0.3,
+  "raw": "101"
+ },
+ {
+  "type": "TEXT",
+  "handle": "A4",
+  "layer": "VT_POINT",
+  "x": 407860.131657,
+  "y": 4503883.658188,
+  "height": 0.3,
+  "raw": "84"
+ },
+ {
+  "type": "TEXT",
+  "handle": "AE",
+  "layer": "VT_POINT",
+  "x": 407792.082657,
+  "y": 4503868.796188,
+  "height": 0.3,
+  "raw": "88"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C2",
+  "layer": "VT_POINT",
+  "x": 407894.709657,
+  "y": 4503868.352188,
+  "height": 0.3,
+  "raw": "98"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C4",
+  "layer": "VT_POINT",
+  "x": 407895.334657,
+  "y": 4503867.787188,
+  "height": 0.3,
+  "raw": "99"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C6",
+  "layer": "VT_POINT",
+  "x": 407929.529657,
+  "y": 4503867.432188,
+  "height": 0.3,
+  "raw": "100"
+ },
+ {
+  "type": "TEXT",
+  "handle": "A8",
+  "layer": "VT_POINT",
+  "x": 407824.606657,
+  "y": 4503859.997188,
+  "height": 0.3,
+  "raw": "85"
+ },
+ {
+  "type": "TEXT",
+  "handle": "AA",
+  "layer": "VT_POINT",
+  "x": 407834.662657,
+  "y": 4503859.841188,
+  "height": 0.3,
+  "raw": "86"
+ },
+ {
+  "type": "TEXT",
+  "handle": "AC",
+  "layer": "VT_POINT",
+  "x": 407883.308657,
+  "y": 4503859.260188,
+  "height": 0.3,
+  "raw": "87"
+ },
+ {
+  "type": "TEXT",
+  "handle": "114",
+  "layer": "VT_STASH",
+  "x": 407815.967368,
+  "y": 4503966.723683,
+  "height": 0.375,
+  "raw": "S4"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10F",
+  "layer": "VT_STASH",
+  "x": 407905.203368,
+  "y": 4503964.978683,
+  "height": 0.375,
+  "raw": "S3"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10A",
+  "layer": "VT_STASH",
+  "x": 407902.859368,
+  "y": 4503916.964683,
+  "height": 0.375,
+  "raw": "S2"
+ },
+ {
+  "type": "TEXT",
+  "handle": "FB",
+  "layer": "VT_STASH",
+  "x": 407799.953368,
+  "y": 4503916.469683,
+  "height": 0.375,
+  "raw": "S5"
+ },
+ {
+  "type": "TEXT",
+  "handle": "105",
+  "layer": "VT_STASH",
+  "x": 407907.291368,
+  "y": 4503878.709683,
+  "height": 0.375,
+  "raw": "S1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "F5",
+  "layer": "VT_STASH",
+  "x": 407846.506368,
+  "y": 4503878.607683,
+  "height": 0.375,
+  "raw": "S6"
+ },
+ {
+  "type": "TEXT",
+  "handle": "100",
+  "layer": "VT_STASH",
+  "x": 407799.726368,
+  "y": 4503872.221683,
+  "height": 0.375,
+  "raw": "S7"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "13C9",
+  "layer": "adeia_H",
+  "x": 407811.779318,
+  "y": 4503915.640317,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =99.80}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1447",
+  "layer": "adeia_H",
+  "x": 407858.758322,
+  "y": 4503915.254565,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\fArial|b0|i0|c161|p34;\\H0.75x;εδ.\\fArial|b0|i0|c0|p34;\\H1.3333x;=99.05}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "143B",
+  "layer": "adeia_H",
+  "x": 407817.532846,
+  "y": 4503914.723275,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\fArial|b0|i0|c161|p34;\\H0.75x;εδ.\\fArial|b0|i0|c0|p34;\\H1.3333x;=99.81}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1453",
+  "layer": "adeia_H",
+  "x": 407861.259069,
+  "y": 4503902.832741,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\fArial|b0|i0|c161|p34;\\H0.75x;εδ.\\fArial|b0|i0|c0|p34;\\H1.3333x;=98.87}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "146B",
+  "layer": "adeia_H",
+  "x": 407817.904311,
+  "y": 4503886.553087,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\fArial|b0|i0|c161|p34;\\H0.75x;εδ.\\fArial|b0|i0|c0|p34;\\H1.3333x;=99.36}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "145F",
+  "layer": "adeia_H",
+  "x": 407861.538385,
+  "y": 4503885.213553,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\fArial|b0|i0|c161|p34;\\H0.75x;εδ.\\fArial|b0|i0|c0|p34;\\H1.3333x;=98.67}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "13F9",
+  "layer": "adeia_H",
+  "x": 407817.591766,
+  "y": 4503883.936065,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =99.19}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "141D",
+  "layer": "adeia_H",
+  "x": 407860.339866,
+  "y": 4503882.539679,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =98.63}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1405",
+  "layer": "adeia_H",
+  "x": 407841.520856,
+  "y": 4503882.409798,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =98.89}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "13D5",
+  "layer": "adeia_H",
+  "x": 407811.000267,
+  "y": 4503880.154628,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =99.18}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "13ED",
+  "layer": "adeia_H",
+  "x": 407811.660475,
+  "y": 4503879.031079,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =99.17}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "13E1",
+  "layer": "adeia_H",
+  "x": 407814.964966,
+  "y": 4503877.919596,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =99.17}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1411",
+  "layer": "adeia_H",
+  "x": 407860.05769,
+  "y": 4503877.835136,
+  "height": 0.45,
+  "raw": "{\\fArial|b0|i0|c0|p34;\\H0.8x;Η\\H0.75x;κρ\\H1.3333x; =98.61}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1B60",
+  "layer": "t-iso-label",
+  "x": 407822.911763,
+  "y": 4503911.192902,
+  "height": 0.4,
+  "raw": "100.00"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1B5E",
+  "layer": "t-iso-label",
+  "x": 407826.846375,
+  "y": 4503896.639222,
+  "height": 0.4,
+  "raw": "99.50"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1B5F",
+  "layer": "t-iso-label",
+  "x": 407836.960138,
+  "y": 4503888.352742,
+  "height": 0.4,
+  "raw": "99.50"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "111F",
+  "layer": "ΑΠΟΤ_ΚΤΙΡΙΟ",
+  "x": 408044.300141,
+  "y": 4503903.028466,
+  "height": 0.8,
+  "raw": "\\pxqc;{\\fArial|b0|i0|c0|p34;\\C1;..\\fTimes New Roman|b0|i0|c161|p18;\\C7;                 }",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10BB",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407938.297479,
+  "y": 4503964.160368,
+  "height": 0.3505877731125,
+  "raw": "   κτίσμα"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1087",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407952.012937,
+  "y": 4503964.052399,
+  "height": 0.4244625000000001,
+  "raw": " ισοϋψής"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10BC",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407938.285609,
+  "y": 4503963.64178,
+  "height": 0.3505877731125,
+  "raw": "μελλοντικό"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1086",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407952.01163,
+  "y": 4503962.374053,
+  "height": 0.4244625000000001,
+  "raw": "υψόμετρo δαπέδου/κρασπέδου",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1085",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407948.197751,
+  "y": 4503961.342101,
+  "height": 0.4244625000000001,
+  "raw": "h=11.04"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10B4",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407938.297479,
+  "y": 4503961.006842,
+  "height": 0.3505877731125,
+  "raw": "   κτίσμα"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10BA",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407938.297479,
+  "y": 4503960.402549,
+  "height": 0.3505877731125,
+  "raw": "υφιστάμενο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "108F",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407950.756615,
+  "y": 4503958.730396,
+  "height": 0.3505877731125,
+  "raw": "κολόνα ΔΕH, ΟΤΕ"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1093",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407939.436948,
+  "y": 4503958.351638,
+  "height": 0.4244625000000001,
+  "raw": "στέγαστρο",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "108E",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407950.754439,
+  "y": 4503957.625351,
+  "height": 0.3505877731125,
+  "raw": "σημείο \\Pπολυγωνικής όδευσης",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "10B9",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407938.844097,
+  "y": 4503955.712118,
+  "height": 0.3505877731125,
+  "raw": "θέση λήψης φωτογραφίας",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1089",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407950.754439,
+  "y": 4503955.631281,
+  "height": 0.3505877731125,
+  "raw": "δέντρο",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10B8",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407936.352355,
+  "y": 4503954.935593,
+  "height": 0.4347288386595002,
+  "raw": "1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1FA2",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407861.820124,
+  "y": 4503875.928329,
+  "height": 0.4347288386595002,
+  "raw": "1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1FB0",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407860.863335,
+  "y": 4503874.952063,
+  "height": 0.4347288386595002,
+  "raw": "2"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1FCC",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407800.457273,
+  "y": 4503872.382622,
+  "height": 0.4347288386595002,
+  "raw": "4"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1FBE",
+  "layer": "ΚΕΙΜΕΝΟ",
+  "x": 407801.218373,
+  "y": 4503871.2604,
+  "height": 0.4347288386595002,
+  "raw": "3"
+ },
+ {
+  "type": "TEXT",
+  "handle": "E5D",
+  "layer": "ΟΔΟΙ",
+  "x": 407843.772226,
+  "y": 4503880.622001,
+  "height": 0.5,
+  "raw": "ΧΩΡΟΣ ΣΤΑΘΜΕΥΣΗΣ"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1960",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407798.562503,
+  "y": 4503974.943372,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Αθλητικό κέντρο}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1982",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407847.367045,
+  "y": 4503968.999954,
+  "height": 0.7,
+  "raw": "Έκτος Σχεδίου Περιοχή"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "10F7",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 408011.545792,
+  "y": 4503968.364454,
+  "height": 0.7,
+  "raw": "\\A1;{\\fArial|b1|i0|c161|p34;\\L\\C7;ΣΤΟΙΧΕΙΑ ΕΡΕΥΝΑΣ ΙΔΙΩΤΗ  ΜΗΧΑΝΙΚΟΥ\\P\\pxsm0.9;\\P\\ps*;\\fArial|b0|i0|c161|p34;\\H0.85714x;A ΟΡΟΙ ΔΟΜΗΣΗΣ\\fArial|b0|i0|c0|p34;\\l^I^I^I^I\\fArial|b0|i0|c161|p34;ΤΟΜΕΑΣ Ι\\P\\H0.83335x;\\LΌρια οικοπέδου \\lΑ\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Β\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Γ\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Δ\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Α ^I^I^IΚ.Α.Ε.Κ.: \\A0;19040150900\\fArial|b0|i0|c0|p34;1\\A1;\\fArial|b0|i0|c161|p34;\\P\\LΔιάταγμα Ρυμοτομίας \\l^IΠ.Δ. 02-09-1992^IΦΕΚ 963Δ/25\\fArial|b0|i0|c0|p34;-\\fArial|b0|i0|c161|p34;09\\fArial|b0|i0|c0|p34;-\\fArial|b0|i0|c161|p34;1992\\fArial|b0|i0|c0|p34;\\P\\A0;\\fArial|b0|i0|c161|p34;ΔΠ/ΠΜ/28941/775/15.9.1993 Α\\fArial|b0|i0|c0|p34;.\\fArial|b0|i0|c161|p34;Ν\\fArial|b0|i0|c0|p34;.\\fArial|b0|i0|c161|p34;Θ\\fArial|b0|i0|c0|p34;.^I^I\\fArial|b0|i0|c161|p34;ΦΕΚ 1220Δ\\fArial|b0|i0|c0|p34;/\\fArial|b0|i0|c161|p34;30\\fArial|b0|i0|c0|p34;-\\fArial|b0|i0|c161|p34;9\\fArial|b0|i0|c0|p34;-\\fArial|b0|i0|c161|p34;.1993) «Καθορισμός\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;τομέων αρτιοτήτων»\\A1;\\P^I^I^I^I^IΦΕΚ 2Δ/10-01-2005 όπως διορθώθηκε ΦΕΚ 2/τ.Δ/2006 με το\\P^I^I^I^I^IΦΕΚ 49τ.Δ/ 30-01-2006\\fArial|b0|i0|c0|p34; \\A0;\\fArial|b0|i0|c161|p34;Έγκριση Πολεοδομικών ρυθμίσεων\\A1;\\PΓ.Π.Σ.^I^I^I^I^IΦΕΚ \\fArial|b0|i0|c0|p34;115/\\fArial|b0|i0|c161|p34;Δ/\\fArial|b0|i0|c0|p34;24-\\fArial|b0|i0|c161|p34;02-\\fArial|b0|i0|c0|p34;1999, \\A0;\\fArial|b0|i0|c161|p34;ΦΕΚ 633Δ/02-08-2001\\A1; \\fArial|b0|i0|c0|p34;\\P\\fArial|b0|i0|c161|p34;ΕΝΤΟΣ ΖΩΝΗΣ ΚΟΙΝΩΝΙΚΟΥ ΣΥΝΤΕΛΕΣΤΗ (ΖΚΣ) ^IΦΕΚ 2/τ.Δ/ 10-01-2005 όπως διορθώθηκε ΦΕΚ 2/τ.Δ/2006 με το ΦΕΚ 49τ.Δ/ 30-01-2006\\P\\psm0.9;\\P\\ps*;Ελάχιστα όρια: ^IΠρόσωπο \\fArial|b0|i0|c0|p34;2\\fArial|b0|i0|c161|p34;0μ.^IΕμβαδόν Ε=\\fArial|b0|i0|c0|p34;5\\fArial|b0|i0|c161|p34;00 τ.μ.\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;\\PΠαρέκλιση :^I\\C1;\\P\\C7;\\PΣύστημα  ^I^I^IΠοσοστό κάλυψης \\fArial|b0|i0|c0|p34;50%, \\fArial|b0|i0|c161|p34;60% (μέγιστο ποσοστό καλύψης λόγω κοινωνικού συντελεστή) \\PΎψος : κατά \\fArial|b0|i0|c0|p34;N\\fArial|b0|i0|c161|p34;ΟΚ^I^IΟΡΟΦΟΙ: \\PΣυντελεστής Δόμησης : 0,8 με κοινωνικό συντελεστή \\fArial|b0|i0|c0|p34;0,8\\fArial|b0|i0|c161|p34;+0,5 = 1,3 (βασικός + κοινωνικός συντελεστής)^I\\fArial|b0|i0|c0|p34;\\P\\fArial|b0|i0|c161|p34;Χρήση Γης: Αμιγής Κατοικία\\H0.87543x;\\C1;\\P\\H1.1997x;\\L\\P\\H1.1426x;\\C7;Β. ΠΡΑΞΕΙΣ ΤΑΚΤΟΠΟΙΗΣΗΣ\\H1.0213x;\\P\\H0.81596x;\\lΔεν Υπάρχουν ούτε απαιτούνται\\P\\H1.0502x;     \\H1.1426x;\\LΠΡΑΞΗ ΕΦΑΡΜΟΓΗΣ 3\\fArial|b0|i0|c0|p34;9\\fArial|b0|i0|c161|p34;\\H0.83336x;\\l της πολεοδομικής μελέτης επέκτασης του ρυμοτομικού σχεδίου Δήμου Ευόσμου Θεσσαλονίκης\\fArial|b0|i0|c0|p34;. \\fArial|b0|i0|c161|p34;ΑΠΟΦ. ΝΟΜ. \\A0;29/οικ/5078/ΠΕ/534/13-02-1996\\A1; \\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;που μεταγράφηκε στον Τόμο 106 με α.α. 155, στις 2-5-1996   στο Υποθ/κειο Νεάπολης (Πολεοδομικές ενότητες 1\\fArial|b0|i0|c0|p34;6\\fArial|b0|i0|c161|p34; και 1\\fArial|b0|i0|c0|p34;7\\fArial|b0|i0|c161|p34;).\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;(Αρχική Ιδιοκτησία 01\\fArial|b0|i0|c0|p34;2431 & 012432\\fArial|b0|i0|c161|p34;)\\C1;\\P\\H0.87537x;\\P\\H1.3708x;\\L\\C7;Γ. ΑΡΤΙΟ ΚΑΙ ΟΙΚΟΔΟΜΗΣΙΜΟ\\P\\psm0.9;\\H0.83336x;\\lΕίναι με τα κατά κανόνα όρια αρτιότητας\\P\\H0.8754x;\\L\\P\\ps*;\\H1.3707x;Δ\\fArial|b0|i0|c0|p34;.\\fArial|b0|i0|c161|p34; ΛΕΠΤΟΜΕΡΗΣ ΚΑΘΟΡΙΣΜΟΣ ΡΥΜΟΤΟΜΙΑΣ\\P\\psm0.9;\\H0.83339x;\\lΗ ρυμοτομία ορίζεται από αναλυτικά στοιχεία και από τις εξασφαλίσεις όπως φαίνονται στο σχέδιο\\P\\H0.87536x;\\P\\ps*;\\H1.3708x;\\LΕ. ΤΟ ΟΙΚΟΠΕΔΟ ΕΚΤΟΣ ΑΝΑΣΤΟΛΗΣ\\P\\psm0.9;\\H1.0213x;\\P\\H0.97911x;ΣΤ. ΕΜΒΑΔΟΝ ΟΙΚΟΠΕΔΟΥ\\H1.0213x;\\l Ε = 1\\fArial|b0|i0|c0|p34;.364\\fArial|b0|i0|c161|p34;,0\\fArial|b0|i0|c0|p34;5\\fArial|b0|i0|c161|p34; τ.μ.\\C1;\\P\\L\\P\\ps*;\\H0.97911x;\\C7;Ζ. ΠΡΟΣΔΙΟΡΙΣΜΟΣ ΑΦΕΤΕΡΙΑΣ ΥΨΟΥΣ \\H1.1667x;\\P\\psm0.9;\\H0.71435x;\\lΣαν αφετηρία μέτρησης υψομέτρων πάρθηκαν Απόλυτα Υψόμετρα\\P\\H0.87533x;\\L\\P\\ps*;\\H1.3708x;Η. ΠΑΡΑΤΗΡΗΣΗ\\P\\psm0.9;\\H0.8334x;\\lΑπό το οικόπεδο  δεν διέρχεται ρεύμα υψηλής τάσης\\H0.87534x;\\C1;\\P\\P\\ps*;\\H1.3708x;\\L\\C7;Θ. ΕΓΚΡΙΣΕΙΣ\\P\\psm0.9;\\H0.83339x;\\lΑΡΧΑΙΟΛΟΓΙΑ :\\fArial|b0|i0|c0|p34;^I^I\\fArial|b0|i0|c161|p34;Αρ. Πρωτ.: \\fArial|b0|i0|c0|p34;....................\\fArial|b0|i0|c161|p34; Εφορεία Αρχαιοτήτων Πόλης Θεσσαλονίκης\\PΒΕΒΑΙΩΣΗ ΥΨΟΜΕΤΡΩΝ :\\fArial|b0|i0|c0|p34; ^I\\fArial|b0|i0|c161|p34;Αρ. Πρωτ.: \\fArial|b0|i0|c0|p34;.....................\\fArial|b0|i0|c161|p34; Δήμου Κορδελιού - Ευόσμου\\H0.87535x;\\P\\fTimes New Roman|b1|i0|c161|p18;\\H0.86299x;\\L\\P\\ps*;\\fArial|b0|i0|c161|p34;\\H1.5884x;Ι.  ΤΙΤΛΟΣ ΙΔΙΟΚΤΗΣΙΑΣ \\P\\A0;\\H0.83338x;\\l2\\fArial|b0|i0|c0|p34;94\\fArial|b0|i0|c161|p34;6\\fArial|b0|i0|c0|p34; - 1\\fArial|b0|i0|c161|p34;8\\fArial|b0|i0|c0|p34;/0\\fArial|b0|i0|c161|p34;1\\fArial|b0|i0|c0|p34;/\\fArial|b0|i0|c161|p34;1993\\fArial|b0|i0|c0|p34; \\A1;\\fArial|b0|i0|c161|p34;Συμβόλαιο Κληρονομιάς ΣΥΜΒ/ΦΟΣ ΘΕΣ/ ΝΙΚΗΣ \\A0;ΜΑΙΡΗΣ ΑΘΑΝΑΣΙΑΔ\\fArial|b0|i0|c0|p34;ΟΥ\\fArial|b0|i0|c161|p34;.\\A1; \\P\\A0;\\fArial|b0|i0|c0|p34;47\\fArial|b0|i0|c161|p34;5\\fArial|b0|i0|c0|p34;, \\fArial|b0|i0|c161|p34;25\\fArial|b0|i0|c0|p34;/06/2004,\\A1;\\fArial|b0|i0|c161|p34; Συμβόλαιο Γονικής Παροχής ΣΥΜΒ/ΦΟΣ ΘΕΣ/ ΝΙΚΗΣ \\A0;\\fArial|b0|i0|c0|p34;ΚΩΝΣΤΑΝΤΙΝΑ ΚΑΛΟΓΙΑΝΝΗ\\fArial|b0|i0|c161|p34;.\\A1; \\A0;Μεταγράφηκε στον Τόμο ... \\fArial|b0|i0|c0|p34;με\\fArial|b0|i0|c161|p34; α.\\fArial|b0|i0|c0|p34;α\\fArial|b0|i0|c161|p34;. ... στο Υποθ/κειο Νεάπολης\\fArial|b0|i0|c0|p34;.\\P477, 30/06/2004,\\A1;\\fArial|b0|i0|c161|p34; Συμβόλαιο Διανομής ΣΥΜΒ/ΦΟΣ ΘΕΣ/ ΝΙΚΗΣ \\A0;\\fArial|b0|i0|c0|p34;ΚΩΝΣΤΑΝΤΙΝΑ ΚΑΛΟΓΙΑΝΝΗ\\fArial|b0|i0|c161|p34;.\\A1; \\A0;Μεταγράφηκε στον Τόμο 262 \\fArial|b0|i0|c0|p34;με\\fArial|b0|i0|c161|p34; α.\\fArial|b0|i0|c0|p34;α\\fArial|b0|i0|c161|p34;. 78 στο Υποθ/κειο Νεάπολης\\fArial|b0|i0|c0|p34;.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1077",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407947.232872,
+  "y": 4503967.671218,
+  "height": 0.6200000000000001,
+  "raw": "%%UΥΠΟΜΝΗΜΑ ΣΥΜΒΟΛΙΣΜΟΥ"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1968",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407846.887949,
+  "y": 4503967.49481,
+  "height": 0.7,
+  "raw": "Όριο Πράξης Εφαρμογής"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BC1",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407817.075155,
+  "y": 4503965.779272,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1EB9",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407827.357598,
+  "y": 4503958.705455,
+  "height": 0.5,
+  "raw": "\\A1;20.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BD1",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407845.391006,
+  "y": 4503958.243703,
+  "height": 0.7,
+  "raw": "Οδός Αναγεννήσεως"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "EBF",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407860.926775,
+  "y": 4503957.647292,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΚΑΕΚ:\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;19040ΕΚ\\fArial|b0|i0|c0|p34;15\\fArial|b0|i0|c161|p34;00\\fArial|b0|i0|c0|p34;1}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "108A",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407948.094827,
+  "y": 4503957.315285,
+  "height": 0.2477871,
+  "raw": "S1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BD0",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407842.834501,
+  "y": 4503957.201527,
+  "height": 0.5,
+  "raw": "Ασφαλτοστρωμένη δημοτική οδός με κράσπεδα"
+ },
+ {
+  "type": "TEXT",
+  "handle": "108B",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407948.027513,
+  "y": 4503956.873517,
+  "height": 0.2477871,
+  "raw": "7.98"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "110C",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407958.48969,
+  "y": 4503955.419934,
+  "height": 0.4244625000000001,
+  "raw": "{\\fArial|b0|i0|c161|p34;\\C256;19040150900\\fArial|b0|i0|c0|p34;1}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BDA",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407816.740652,
+  "y": 4503951.126811,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1EAD",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407827.314023,
+  "y": 4503946.205531,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BE6",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407814.30903,
+  "y": 4503945.045647,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BE7",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407800.845159,
+  "y": 4503944.417073,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C1A",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407907.016298,
+  "y": 4503944.171829,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C22",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407910.973197,
+  "y": 4503944.149164,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C03",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407903.489783,
+  "y": 4503944.14867,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C02",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407914.356858,
+  "y": 4503943.41159,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "112D",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407953.312561,
+  "y": 4503939.94448,
+  "height": 0.6,
+  "raw": "Οδός Αναγεννήσεως"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1EC5",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407900.163527,
+  "y": 4503937.802751,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1ED1",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407904.164056,
+  "y": 4503937.784173,
+  "height": 0.5,
+  "raw": "\\A1;3.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1EE9",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407913.156347,
+  "y": 4503937.743663,
+  "height": 0.5,
+  "raw": "\\A1;3.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1EF5",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407917.156154,
+  "y": 4503937.725739,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "CCA",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407859.481925,
+  "y": 4503937.460986,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "112C",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407944.999042,
+  "y": 4503935.43091,
+  "height": 0.6,
+  "raw": "Οδός Προέκταση Σμύρνης"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "CBA",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407892.126123,
+  "y": 4503933.146952,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "CC2",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407830.4672,
+  "y": 4503930.599422,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "CB2",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407922.949615,
+  "y": 4503928.637466,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "112B",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407953.346331,
+  "y": 4503926.455238,
+  "height": 0.6,
+  "raw": "Οδός Δημ. Κολοκυθά"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1E89",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407794.738561,
+  "y": 4503924.614957,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1E95",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407807.238485,
+  "y": 4503924.571383,
+  "height": 0.5,
+  "raw": "\\A1;20.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1EA1",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407819.738409,
+  "y": 4503924.527808,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1D4A",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407800.306734,
+  "y": 4503916.288952,
+  "height": 0.2477871,
+  "raw": "S5"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1E79",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407808.694506,
+  "y": 4503915.949484,
+  "height": 0.5,
+  "raw": "\\A1;17.03",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "E9D",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407877.429993,
+  "y": 4503914.36967,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΚΑΕΚ:\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;19040150900\\fArial|b0|i0|c0|p34;2}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "E9E",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407877.306549,
+  "y": 4503913.39512,
+  "height": 0.6,
+  "raw": "\\A1;{\\fArial|b0|i0|c161|p34;\\L\\C7;Ε\\H0.7x;\\S^ τίτλου;\\fArial|b0|i0|c0|p34;\\H1.4286x; \\fArial|b0|i0|c161|p34;= 4092,13 τ.μ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "E9F",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407877.31,
+  "y": 4503911.90588,
+  "height": 0.35,
+  "raw": "{\\fArial|b0|i0|c161|p34;\\C7;1,Δ,Γ,Β,2,3,4,1\\C1;\\P\\C7;άρτιο και οικοδομήσιμο}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1E71",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407804.763881,
+  "y": 4503910.200288,
+  "height": 0.5,
+  "raw": "\\A1;27.24",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "13BC",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407865.078391,
+  "y": 4503908.832139,
+  "height": 0.6,
+  "raw": "{\\fArial|b0|i0|c161|p34;\\L\\C7;Ε\\A1;\\H0.7x;\\S^ Π.Ε.;\\A0;\\fArial|b0|i0|c0|p34;\\H1.4286x; \\fArial|b0|i0|c161|p34;= 5.456,18 τ.μ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "EC7",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407808.023785,
+  "y": 4503907.8678,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΚΑΕΚ:\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;19040ΕΚ\\fArial|b0|i0|c0|p34;15\\fArial|b0|i0|c161|p34;00\\fArial|b0|i0|c0|p34;1}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "13BD",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407865.050373,
+  "y": 4503907.342899,
+  "height": 0.35,
+  "raw": "{\\fArial|b0|i0|c161|p34;\\C7;Α,2,3,4,1,Α\\Pάρτιο και οικοδομήσιμο}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "E8D",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407830.616949,
+  "y": 4503898.365374,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΚΑΕΚ:\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;19040150900\\fArial|b0|i0|c0|p34;1}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "E8E",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407830.493505,
+  "y": 4503897.390824,
+  "height": 0.6,
+  "raw": "\\A1;{\\fArial|b0|i0|c161|p34;\\LΕ\\H0.7x;\\S^ τίτλου;\\fArial|b0|i0|c0|p34;\\H1.4286x; \\fArial|b0|i0|c161|p34;= 1.364,05 τ.μ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "CA2",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407889.949001,
+  "y": 4503897.174636,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C42",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407908.75937,
+  "y": 4503896.798419,
+  "height": 0.5,
+  "raw": "Νησίδα"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "C9A",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407869.654141,
+  "y": 4503896.007351,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "E8F",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407830.49,
+  "y": 4503895.901584,
+  "height": 0.35,
+  "raw": "{\\fArial|b0|i0|c161|p34;Α,Β,Γ,Δ,Α\\Pάρτιο και οικοδομήσιμο}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "CAA",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407921.753678,
+  "y": 4503894.995132,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1E59",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407804.709848,
+  "y": 4503894.700382,
+  "height": 0.5,
+  "raw": "\\A1;31.79",
+  "attachment": "MC"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BE5",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407807.339369,
+  "y": 4503893.136625,
+  "height": 0.8,
+  "raw": "Οδός Προέκταση Σμύρνης"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BE8",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407808.498859,
+  "y": 4503892.603826,
+  "height": 0.5,
+  "raw": "Ασφαλτοστρωμένη δημοτική οδός με κράσπεδα"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C2B",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407904.061414,
+  "y": 4503891.01767,
+  "height": 0.8,
+  "raw": "Οδός Ξενοκράτη Πεζόδρομος"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C2C",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407905.094904,
+  "y": 4503890.894041,
+  "height": 0.5,
+  "raw": "Ασφαλτοστρωμένη δημοτική οδός με κράσπεδα"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C01",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407912.761558,
+  "y": 4503890.738328,
+  "height": 0.8,
+  "raw": "Οδός Ξενοκράτη Πεζόδρομος"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C04",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407913.795048,
+  "y": 4503890.614699,
+  "height": 0.5,
+  "raw": "Ασφαλτοστρωμένη δημοτική οδός με κράσπεδα"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "10DD",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407973.545792,
+  "y": 4503888.384548,
+  "height": 0.5,
+  "raw": "\\A1;{\\fArial|b0|i0|c161|p34;                       \\LΔΗΛΩΣΗ ΤΟΥ Ν.651/77\\l\\P\\PΟ κάτωθι υπογεγραμμένος Αγρονόμος Τοπογράφος Μηχανικός Α.Π.Θ Μαυρομιχάλης Κωνσταντίνος δηλώνω υπεύθυνα και βάση των συνεπειών του νόμου ότι το \\fArial|b1|i0|c161|p34;0\\fArial|b1|i0|c0|p34;1\\fArial|b1|i0|c161|p34;β\\fArial|b0|i0|c161|p34; οικόπεδο με στοιχεία \\fArial|b1|i0|c161|p34;Α,Β,Γ,Δ,Α,\\fArial|b0|i0|c161|p34; στο\\fArial|b1|i0|c161|p34; Ο.Τ. Γ \\fArial|b1|i0|c0|p34;753\\fArial|b0|i0|c161|p34;, \\H0.99998x; των Πολεοδομικών Ενοτήτων 1\\fArial|b0|i0|c0|p34;6\\fArial|b0|i0|c161|p34; και 1\\fArial|b0|i0|c0|p34;7\\fArial|b0|i0|c161|p34;, της υπ' αριθμ. 3\\fArial|b0|i0|c0|p34;9\\fArial|b0|i0|c161|p34; Πράξης Εφαρμογής, της Δημοτικής Ενότητας Ευόσμου, του Δήμου Κορδελιού - Ευόσμου, Π.Ε. Θεσσαλονίκης,\\fArial|b0|i0|c0|p34;\\C1; \\fArial|b0|i0|c161|p34;\\C7;εμβαδού \\A0;κατά\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;τον\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;τίτλο και κατά την καταμέτρηση \\fArial|b1|i0|c161|p34;1364,05\\A1;τ.\\H0.99998x;μ.\\fArial|b1|i0|c0|p34;,\\fArial|b0|i0|c161|p34; με διαστάσεις και σχήμα όπως φαίνονται στο διάγραμμα \\fArial|b0|i0|c0|p34;\\P\\H0.99998x;1) \\fArial|b0|i0|c161|p34;Είναι εντός εντός σχεδίου\\fArial|b0|i0|c0|p34; (\\fArial|b0|i0|c161|p34;ΦΕΚ 963\\fArial|b0|i0|c0|p34;/\\fArial|b0|i0|c161|p34;τ.Δ/25-09-1992), και\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;είναι\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;άρτιο\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;και\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;οικοδομήσιμο\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;σύμφωνα με τις ισχύουσες πολεοδομικές διατάξεις.\\P2) Η\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;περιοχή\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;υπάγεται\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;στις\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;διατάξεις\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;του\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Ν\\fArial|b0|i0|c0|p34;.1337/83 \\fArial|b0|i0|c161|p34;περί υποχρέωσης εισφοράς σε γη και χρήμα.\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Η\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;εισφορά\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;σε\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;γη έχει παρακρατηθεί με την κύρωση της πράξης εφαρμογής και\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;η εισφορά σε χρήμα,και οι υποχρεώσεις φαίνονται στον κτηματολογικό  πίνακα της πράξης εφαρμογής.\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Στην περιοχή έχει κυρωθεί η 3\\fArial|b0|i0|c0|p34;9\\fArial|b0|i0|c161|p34; πράξη εφαρμογής του άρθρου\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;12 του Ν.1337/83 με την\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Αρ. Πρωτ.: \\A0;29/οικ/5078/ΠΕ/534/13-02-1996\\A1; Απόφαση Νομάρχη Θεσ/νικης\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;που μεταγράφηκε στον Τόμο 106 με α.α. 155, στις 2-5-1996 του Υποθ/κειου Νεάπολης.\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;\\P3) Στην\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;περιοχή\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;έχει συνταχθεί\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;μελέτη περί\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Εθνικού\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Κτηματολογίου\\H0.99992x;\\C1; \\C7;(ΚΑΕΚ 19\\fArial|b0|i0|c0|p34;040\\fArial|b0|i0|c161|p34;15\\fArial|b0|i0|c0|p34;0\\fArial|b0|i0|c161|p34;90\\fArial|b0|i0|c0|p34;0\\fArial|b0|i0|c161|p34;1) \\fArial|b0|i0|c0|p34; \\P\\fArial|b0|i0|c161|p34;και\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;βρίσκεται\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;εντός\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Γ\\fArial|b0|i0|c0|p34;.\\fArial|b0|i0|c161|p34;Π\\fArial|b0|i0|c0|p34;.\\fArial|b0|i0|c161|p34;Σ (ΦΕΚ \\fArial|b0|i0|c0|p34;115/\\fArial|b0|i0|c161|p34;Δ/\\fArial|b0|i0|c0|p34;24-\\fArial|b0|i0|c161|p34;02-\\fArial|b0|i0|c0|p34;1999 \\fArial|b0|i0|c161|p34;και \\A0;ΦΕΚ \\fArial|b0|i0|c0|p34;633\\fArial|b0|i0|c161|p34;Δ/\\fArial|b0|i0|c0|p34;02\\fArial|b0|i0|c161|p34;-\\fArial|b0|i0|c0|p34;08\\fArial|b0|i0|c161|p34;-200\\fArial|b0|i0|c0|p34;1\\fArial|b0|i0|c161|p34; \\H1.1202x;\\C256;χρήση αμιγής κατοικία\\A1;\\H0.89273x;\\C7;)\\fArial|b0|i0|c0|p34;.\\fArial|b0|i0|c161|p34;\\H0.99998x;\\P4)\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Εντός του ΟΤ δε διέρχονται εναέριες γραμμές μεταφοράς υψηλής τάσης της ΔΕΗ, αγωγός φυσικού αερίου, οδός προϋφιστάμενη του 1923 ή ρέμα.\\fArial|b0|i0|c0|p34;  \\fArial|b0|i0|c161|p34;\\P5) Εντός των ομόρων γεωτεμαχίων δεν υφίστανται διατηρητέα κτίσματα.\\P6) Εντός του οικοπέδου και κατά μήκος του προσώπου του\\C1; \\C7;υπάρχουν δέντρα.\\P7) Το παρόν συνετάγει στο προβολικό σύστημα συντεταγμένων Ε.Γ.Σ.Α.'87 (παραγρ.4, άρθρο 83 του Ν.4495/2017) . \\PΗ εξάρτηση από το ΕΓΣΑ'87 πραγματοποιήθηκε με σύστημα GPS και κάνοντας χρήση του Ελληνικού Συστήματος Εντοπισμού - HEPOS.                                        \\P      \\fArial|b0|i0|c0|p34;                                                  \\P                                                          Θεσσαλονίκη 30/7/20\\fArial|b0|i0|c161|p34;2\\fArial|b0|i0|c0|p34;6\\P                                                                            -ο-\\P                                                                      Μηχανικός  }",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "C7B",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407788.609026,
+  "y": 4503887.997678,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;Πολ.}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1F0D",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407875.029379,
+  "y": 4503887.038837,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C4A",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407817.795844,
+  "y": 4503882.838936,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1F01",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407875.011949,
+  "y": 4503882.038867,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "23F8",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407853.917714,
+  "y": 4503881.456189,
+  "height": 0.5,
+  "raw": "\\A1;15.67",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "EAD",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407862.421163,
+  "y": 4503880.842546,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΚΑΕΚ:\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;190401509003}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1D3E",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407846.859734,
+  "y": 4503878.426952,
+  "height": 0.2477871,
+  "raw": "S6"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BFF",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407817.851991,
+  "y": 4503877.724311,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1E51",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407804.684348,
+  "y": 4503876.720382,
+  "height": 0.5,
+  "raw": "\\A1;29.56",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1F31",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407883.579258,
+  "y": 4503876.508968,
+  "height": 0.5,
+  "raw": "\\A1;16.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1E69",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407877.998214,
+  "y": 4503876.421689,
+  "height": 0.5,
+  "raw": "\\A1;37.53",
+  "attachment": "MC"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BF2",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407847.541794,
+  "y": 4503874.073938,
+  "height": 0.7,
+  "raw": "Οδός Δημ. Κολοκυθά"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1F19",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407874.984061,
+  "y": 4503874.038916,
+  "height": 0.5,
+  "raw": "\\A1;11.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "EB7",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407862.551967,
+  "y": 4503873.620469,
+  "height": 0.5,
+  "raw": "{\\fArial|b0|i0|c161|p34;ΚΑΕΚ:\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;19040ΕΚ\\fArial|b0|i0|c0|p34;15\\fArial|b0|i0|c161|p34;00\\fArial|b0|i0|c0|p34;1}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "BF1",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407845.644923,
+  "y": 4503873.154592,
+  "height": 0.5,
+  "raw": "Ασφαλτοστρωμένη δημοτική οδός με κράσπεδα"
+ },
+ {
+  "type": "TEXT",
+  "handle": "C00",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407818.125454,
+  "y": 4503870.307734,
+  "height": 0.5,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1F25",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407874.956173,
+  "y": 4503866.038965,
+  "height": 0.5,
+  "raw": "\\A1;5.00",
+  "attachment": "MC"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "AAB",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407911.968177,
+  "y": 4503865.596554,
+  "height": 0.5,
+  "raw": "{\\fTimes New Roman|b0|i0|c0|p18;I}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "871",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407828.665145,
+  "y": 4503858.737986,
+  "height": 0.5,
+  "raw": "{\\fTimes New Roman|b0|i0|c0|p18;II}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "AAA",
+  "layer": "ΠΕΡΙΓΡΑΦΗ",
+  "x": 407856.752974,
+  "y": 4503858.585785,
+  "height": 0.5,
+  "raw": "{\\fTimes New Roman|b0|i0|c0|p18;I}",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "163C",
+  "layer": "Περίγραμμα",
+  "x": 407744.0,
+  "y": 4503967.982995,
+  "height": 0.4649486999185847,
+  "raw": "ΦΩΤΟΓΡΑΦΙΑ ΑΠΟ ΘΕΣΗ ΛΗΨΗΣ  1"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10DC",
+  "layer": "Περίγραμμα",
+  "x": 407981.045792,
+  "y": 4503967.767283,
+  "height": 0.6200000000000001,
+  "raw": "Απόσπασμα Διατάγματος Αναθεώρησης Ρυμοτομίας"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1083",
+  "layer": "Περίγραμμα",
+  "x": 407941.91895,
+  "y": 4503950.385806,
+  "height": 0.6200000000000001,
+  "raw": "Απόσπασμα Δορυφορικής Εικόνας από google earth"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1677",
+  "layer": "Περίγραμμα",
+  "x": 407744.0,
+  "y": 4503947.680314,
+  "height": 0.4649486999185847,
+  "raw": "ΦΩΤΟΓΡΑΦΙΑ ΑΠΟ ΘΕΣΗ ΛΗΨΗΣ  2"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1116",
+  "layer": "Περίγραμμα",
+  "x": 407982.741889,
+  "y": 4503937.034765,
+  "height": 0.6200000000000001,
+  "raw": "Απόσπασμα Γ.Π.Σ. Ευόσμου"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1685",
+  "layer": "Περίγραμμα",
+  "x": 407744.0,
+  "y": 4503927.377632,
+  "height": 0.4649486999185847,
+  "raw": "ΦΩΤΟΓΡΑΦΙΑ ΑΠΟ ΘΕΣΗ ΛΗΨΗΣ  3"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10C8",
+  "layer": "Περίγραμμα",
+  "x": 407941.91895,
+  "y": 4503916.479644,
+  "height": 0.6200000000000001,
+  "raw": "Απόσπασμα Διατάγματος Ρυμοτομίας"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1693",
+  "layer": "Περίγραμμα",
+  "x": 407744.0,
+  "y": 4503907.07495,
+  "height": 0.4649486999185847,
+  "raw": "ΦΩΤΟΓΡΑΦΙΑ ΑΠΟ ΘΕΣΗ ΛΗΨΗΣ  4"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "10D8",
+  "layer": "Περίγραμμα",
+  "x": 407973.11815,
+  "y": 4503903.486109,
+  "height": 0.45,
+  "raw": "\\A1;{\\fArial|b0|i0|c0|p34;\\H1.5556x;\\C7;EΜΒΑΔΟΝ  ΓΕΩΤΕΜΑΧΙΟΥ:^I\\fArial|b0|i0|c161|p34;\\H0.99998x;Ε\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;\\H0.7x;\\S^ (Α,Β,Γ,Δ,Α) ;\\fArial|b0|i0|c0|p34;\\H1.4286x; =\\fArial|b1|i0|c0|p34; \\fArial|b1|i0|c161|p34;1.364,05\\fArial|b1|i0|c0|p34; \\fArial|b1|i0|c161|p34;τ.μ.\\fArial|b1|i0|c0|p34; \\H0.99999x; \\fArial|b0|i0|c161|p34;\\H0.49998x;^I^I^I\\fArial|b0|i0|c0|p34;^I\\H2.0001x;^I^I\\fArial|b0|i0|c161|p34;\\H0.99996x;^I^I^I^I\\fArial|b0|i0|c0|p34;^I^I\\H0.64287x;\\P\\fArial|b1|i0|c161|p34;\\H1.2223x;\\L\\C256;ΠΑΡΑΤΗΡΗΣΕΙΣ\\fArial|b1|i0|c0|p34;\\P\\fArial|b1|i0|c161|p34;\\P\\pxi-3,l3,sm1.5,t3;\\fArial|b0|i0|c161|p34;\\l1.^IΤο διάγραμμα είναι ενταγμένο στο κρατικό σύστημα συντεταγμένων \\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;ΕΓΣΑ'87\\P2.^IΟι διαστάσεις και τα εμβαδά υπολογίστηκαν αναλυτικά από τις  συν/νες των κορυφών \\P3.^IΗ εξάρτηση από το κρατικό δίκτυο συντεταγμένων ΕΓΣΑ '87 έγινε με\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;GPS δύο συχνοτήτων \\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;(ακρίβειας εκατοστού) με τη χρήση του Ελληνικού Συστήματος Εντοπισμού - Hepos\\fArial|b0|i0|c0|p34;\\P\\A0;4.^IΥπάρχει ρυμοτομική γραμμή και η οικοδομική γραμμή oρίζεται στα \\fArial|b0|i0|c161|p34;\\C7;5\\fArial|b0|i0|c0|p34;μ. \\C256;από αυτή.\\A1;\\fArial|b0|i0|c161|p34;\\P\\pi0,l0,tz;\\fArial|b0|i0|c0|p34; }",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1135",
+  "layer": "Περίγραμμα",
+  "x": 407941.91895,
+  "y": 4503888.789936,
+  "height": 0.6200000000000001,
+  "raw": "Απόσπασμα Διαγράμματος Π.Ε."
+ },
+ {
+  "type": "MTEXT",
+  "handle": "2123",
+  "layer": "Περίγραμμα",
+  "x": 407935.667898,
+  "y": 4503865.682631,
+  "height": 0.5,
+  "raw": "{\\fCambria|b1|i1|c161|p18;\\L\\P \\fArial|b1|i0|c161|p34;\\C7;ΔΗΛΩΣΗ\\fArial|b1|i0|c0|p34; \\fArial|b1|i0|c161|p34;ΙΔΙΟΚΤΗΤΗ\\fArial|b0|i0|c0|p34;\\l   (Ν. \\fArial|b0|i0|c161|p34;4030/11)\\P\\fArial|b0|i0|c0|p34;\\P\\fArial|b0|i0|c161|p34;Ο\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;κάτωθι υπογεγραμμένος: .....    \\H0.99999x;            δηλώνω ότι : \\P\\pxqj;\\fArial|b0|i0|c0|p34;·\\W5.9561;  \\fArial|b0|i0|c161|p34;\\W1;τα αρχικά και υλοποιημένα όρια του 01β οικοπέδου \\fArial|b0|i0|c0|p34;, \\fArial|b0|i0|c161|p34;με στοιχεία Α\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Β\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Γ\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Δ\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;Α\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34;  που βρίσκεται στο Ο.Τ. Γ 753 \\A1;των Πολεοδομικών Ενοτήτων 16 και \\fArial|b0|i0|c0|p34;1\\fArial|b0|i0|c161|p34;7 της Δημοτικής Ενότητας Ευόσμου, του Δήμου Κορδελιού - Ευόσμου\\fArial|b0|i0|c0|p34;,\\fArial|b0|i0|c161|p34; \\A0;Π.Ε. Θεσσαλονίκης υποδείχθηκαν από εμένα και \\P\\fArial|b0|i0|c0|p34;·\\W5.9561;  \\fArial|b0|i0|c161|p34;\\W1;ευθύνομαι για την ακρίβεια των δηλουμένων ορίων του οικοπέδου και για την ύπαρξη και την αιτία του δικαιώματός μου να ζητήσω την έκδοση άδειας δόμησης\\P\\pq*;\\fArial|b0|i0|c0|p34;^I^I^I^I^I^I^I^I^I^I^I^I^I^IΟ \\fArial|b0|i0|c161|p34;Δηλών\\P                }",
+  "attachment": "TL"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1105",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616389,
+  "y": 4503965.400195,
+  "height": 0.4244625000000001,
+  "raw": "όριο ιδιοκτησίας"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1106",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616389,
+  "y": 4503964.210195,
+  "height": 0.4244625000000001,
+  "raw": "όριο κτηματολογίου"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1101",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616389,
+  "y": 4503963.014744,
+  "height": 0.4244625000000001,
+  "raw": "ρυμοτομική γραμμή"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1103",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616389,
+  "y": 4503961.824744,
+  "height": 0.4244625000000001,
+  "raw": "οικοδομική γραμμή"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1102",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616389,
+  "y": 4503960.614744,
+  "height": 0.4244625000000001,
+  "raw": "εφαρμογή οικοπέδων"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10FB",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616615,
+  "y": 4503959.36281,
+  "height": 0.4244625000000001,
+  "raw": "τοιχίο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "1100",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616615,
+  "y": 4503958.142196,
+  "height": 0.4244625000000001,
+  "raw": "κράσπεδο"
+ },
+ {
+  "type": "TEXT",
+  "handle": "10FD",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.616615,
+  "y": 4503956.719609,
+  "height": 0.4244625000000001,
+  "raw": "συρματοπερίφραξη"
+ },
+ {
+  "type": "TEXT",
+  "handle": "110B",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407963.61695,
+  "y": 4503955.019609,
+  "height": 0.4244625000000001,
+  "raw": "KAEK"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "10D7",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407989.645358,
+  "y": 4503954.362919,
+  "height": 0.6,
+  "raw": "{\\fArial|b0|i0|c0|p34;     \\fArial|b0|i0|c161|p34;ΘΕΣΗ\\PΟΙΚΟΠΕΔΟΥ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1043",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407952.017969,
+  "y": 4503935.687096,
+  "height": 0.6,
+  "raw": "{\\fArial|b0|i0|c0|p34;     \\fArial|b0|i0|c161|p34;ΘΕΣΗ\\PΟΙΚΟΠΕΔΟΥ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "111C",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407986.763794,
+  "y": 4503927.500037,
+  "height": 0.6,
+  "raw": "{\\fArial|b0|i0|c0|p34;     \\fArial|b0|i0|c161|p34;ΘΕΣΗ\\PΟΙΚΟΠΕΔΟΥ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1127",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 408012.486877,
+  "y": 4503915.864454,
+  "height": 0.45,
+  "raw": "ΣΤΟΙΧΕΙΑ ΗΛΕΚΤΡΟΝΙΚΗΣ ΥΠΟΒΟΛΗΣ (άρθρο 3, Υ.Α 27623/1752/ ΦΕΚ 2216Β'/14-6-2018 ν.4409/2016)\\P\\PΤο παρόν τοπογραφικό διάγραμμα υποβλήθηκε ηλεκτρονικά στον ψηφιακό Υποδοχέα του ΝΠΔΔ \"Ελληνικό Κτηματολόγιο\" και έλαβε μοναδικό Κωδικό Ηλεκτρονικού Διαγράμματος (ΚΗΔ):                    με ημερομηνία υποβολής ..../..../2026 και αφορά στο{\\fArial|b1|i0|c161|p34; 01β} {\\A1;\\C7;οικόπεδο με στοιχεία}{\\A1;\\C1; }{\\A1;\\fArial|b1|i0|c161|p34;\\C7;Α,Β,Γ,Δ,Α,}{\\A1;\\C1; }{\\A1;\\C7;του }{\\A1;\\fArial|b1|i0|c161|p34;\\C7;Ο.Τ. Γ753}{\\A1;\\C7;, }στην 39 Π.Ε., τ{\\A1;ων Πολεοδομικών }{\\A1;Ενοτήτων 16 και 17 της Δημοτικής Ενότητας Ευόσμου, του Δήμου Κορδελιού - Ευόσμου},{\\A1; Π.Ε. Θεσσαλονίκης}.",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "10F2",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407949.590868,
+  "y": 4503908.143558,
+  "height": 0.6,
+  "raw": "{\\fArial|b0|i0|c0|p34;     \\fArial|b0|i0|c161|p34;ΘΕΣΗ\\PΟΙΚΟΠΕΔΟΥ}",
+  "attachment": "TL"
+ },
+ {
+  "type": "MTEXT",
+  "handle": "1139",
+  "layer": "ΥΠΟΜΝΗΜΑ",
+  "x": 407955.331215,
+  "y": 4503875.520916,
+  "height": 0.6,
+  "raw": "{\\fArial|b0|i0|c0|p34;     \\fArial|b0|i0|c161|p34;ΘΕΣΗ\\PΟΙΚΟΠΕΔΟΥ}",
+  "attachment": "TL"
+ }
+]
