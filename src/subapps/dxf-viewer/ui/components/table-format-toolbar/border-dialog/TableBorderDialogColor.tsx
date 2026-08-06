@@ -24,7 +24,9 @@
 import React, { useCallback, useId, useState } from 'react';
 import { ChevronDown, Palette } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { AnchoredPopover } from '@/components/ui/floating';
 import { cn } from '@/lib/utils';
+import { TABLE_CELL_SESSION_MARKER } from '../../../table-cell-editor/table-cell-session-focus';
 import { normalizeHexColor } from '../../../../config/color-math';
 import { colorGridFor } from '../../../color/aci-color-grid';
 import { getRecentColorsStore } from '../../../color/RecentColorsStore';
@@ -51,6 +53,11 @@ export function TableBorderDialogColor({
   const labelId = useId();
   const [open, setOpen] = useState(false);
   const [pickerDraft, setPickerDraft] = useState<string | null>(null);
+  /**
+   * Η άγκυρα ως **στοιχείο**, όχι `ref`: το {@link AnchoredPopover} πρέπει να αποδώσει ξανά
+   * όταν το κουμπί προσαρτηθεί, και ένα `useRef` δεν το προκαλεί αυτό (δες την κεφαλίδα του).
+   */
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
 
   const pick = useCallback((rawHex: string | undefined) => {
     if (rawHex === undefined) {
@@ -71,6 +78,7 @@ export function TableBorderDialogColor({
 
       <button
         type="button"
+        ref={setAnchor}
         aria-labelledby={labelId}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -93,32 +101,50 @@ export function TableBorderDialogColor({
         <ChevronDown size={14} aria-hidden="true" className={styles.colorCaret} />
       </button>
 
-      {open ? (
-        <div className={cn(styles.colorPanel, SURFACE_SKIN)}>
-          <button
-            type="button"
-            aria-pressed={selected === undefined}
-            className={styles.plainRow}
-            onClick={() => pick(undefined)}
-          >
-            {t('table.borders.pencil.automatic')}
-          </button>
-          <TableColorSwatchGrid
-            grid={colorGridFor('ink')}
-            selected={selected}
-            onPick={pick}
-            label={t('table.borders.pencil.basicColors')}
-          />
-          <button
-            type="button"
-            className={styles.plainRow}
-            onClick={() => setPickerDraft(selected ?? resolvedHex)}
-          >
-            <Palette size={15} aria-hidden="true" />
-            {t('table.borders.pencil.moreColors')}
-          </button>
-        </div>
-      ) : null}
+      {/*
+        🔴 ADR-750 §21.10 — **top layer, όχι `absolute` παιδί.** Μετρημένο ζωντανά: η παλέτα
+        άνοιγε κανονικά (`aria-expanded` → `true`, στοιχείο στο DOM, 246×217) και ψαλιδιζόταν
+        στο **μηδέν** από το `<section className={styles.layout}>` του διαλόγου — που είναι
+        δοχείο κύλισης χωρίς να το ζητήσει κανείς, επειδή το `globals.css:1105` δίνει
+        `overflow-x: hidden` σε **κάθε** `<section>` και η προδιαγραφή CSS μετατρέπει τότε τον
+        άλλο άξονα σε `auto`. Δες την κεφαλίδα του {@link AnchoredPopover}.
+
+        🔑 Το `TABLE_CELL_SESSION_MARKER` ΔΕΝ είναι προαιρετικό εδώ: σε portal, το popup ζει
+        **έξω** από τη σημαδεμένη γραμμή εργαλείων, οπότε ένα κλικ σε δείγμα θα διαβαζόταν από
+        τον φύλακα ως «ο χρήστης έφυγε από τον πίνακα» και θα σκότωνε τη συνεδρία **ανάμεσα
+        στο `mousedown` και το `click`** — δηλαδή θα ξαναγεννούσε ακριβώς το σφάλμα «ορατό
+        αλλά νεκρό» που μόλις έκλεισε (ADR-739 §26.15, ADR-750 §21.9).
+      */}
+      <AnchoredPopover
+        open={open}
+        onOpenChange={setOpen}
+        anchor={anchor}
+        className={cn(styles.colorPanel, SURFACE_SKIN)}
+        {...TABLE_CELL_SESSION_MARKER}
+      >
+        <button
+          type="button"
+          aria-pressed={selected === undefined}
+          className={styles.plainRow}
+          onClick={() => pick(undefined)}
+        >
+          {t('table.borders.pencil.automatic')}
+        </button>
+        <TableColorSwatchGrid
+          grid={colorGridFor('ink')}
+          selected={selected}
+          onPick={pick}
+          label={t('table.borders.pencil.basicColors')}
+        />
+        <button
+          type="button"
+          className={styles.plainRow}
+          onClick={() => setPickerDraft(selected ?? resolvedHex)}
+        >
+          <Palette size={15} aria-hidden="true" />
+          {t('table.borders.pencil.moreColors')}
+        </button>
+      </AnchoredPopover>
 
       <TableColorDialog
         draft={pickerDraft}

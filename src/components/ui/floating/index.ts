@@ -77,6 +77,19 @@ export type { FloatingPanelId } from './floating-panel-persistence';
 // ADR-750 Φ6β — «είναι η εστίαση μέσα σε ΑΥΤΗ την παλέτα;»: μία απάντηση για κάθε χειριστή ESC.
 export { isFocusInsidePanel } from './floating-panel-focus';
 
+// ============================================================================
+// ADR-750 Φ6γ — ΑΓΚΥΡΩΜΕΝΟ ΑΝΑΔΥΟΜΕΝΟ: το popup που δεν ψαλιδίζεται ποτέ
+// ============================================================================
+//
+// Ζει εδώ και όχι δίπλα σε όποιο μενού το χρειάστηκε πρώτο, επειδή το ψαλίδισμα **δεν είναι
+// πρόβλημα του μενού**: κάθε `position: absolute` αναδυόμενο μέσα σε οποιοδήποτε δοχείο με
+// `overflow` κόβεται — και ένα ολόκληρο `<section>` της εφαρμογής είναι δοχείο κύλισης χωρίς
+// να το ζητήσει κανείς (globals.css:1105). Λυμένο εδώ, λύνεται για κάθε καταναλωτή του
+// `floating` — αλλιώς γεννιόταν τέταρτο αντίγραφο λογικής τοποθέτησης (CHECK 3.28 / N.18).
+
+export { AnchoredPopover } from './AnchoredPopover';
+export type { AnchoredPopoverProps } from './AnchoredPopover';
+
 export { useFloatingPanelGeometry } from './useFloatingPanelGeometry';
 export type {
   UseFloatingPanelGeometryOptions,

@@ -47,7 +47,6 @@ import React, { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { FloatingPanel, isFocusInsidePanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { ESC_PRIORITY, useEscapeHandler } from '../../../../systems/escape-bus';
 import { PanelPositionCalculator } from '../../../../config/panel-tokens';
 import { resolveLinetypePatternMm } from '../../../../rendering/linetype-dash-resolver';
@@ -102,23 +101,25 @@ const BORDER_PANEL_DOM_ID = 'dxf-table-border-panel';
 const BORDER_PANEL_SIZE = { width: 600, height: 430 } as const;
 
 /**
- * 🔴 `overflow-visible` — ΟΧΙ καλλωπισμός: **χωρίς αυτό το «Χρώμα:» είναι πρακτικά νεκρό.**
+ * 🔴 ADR-750 §21.10 — εδώ ήταν `cn(styles.panel, 'overflow-visible')`, και η αιτιολόγησή του
+ * **αποδείχθηκε ψευδής με μέτρηση**. Μένει γραμμένη γιατί είναι το μάθημα, όχι το σφάλμα.
  *
- * Η ρίζα του `FloatingPanel` είναι `<Card>`, και το `Card` φέρει `overflow-hidden` στη βάση του.
- * Η παλέτα χρωμάτων ανοίγει ως `position: absolute` **κάτω** από το χειριστήριο, το οποίο κάθεται
- * κοντά στο κάτω χείλος ⇒ κόβεται ολόκληρη. Ο χρήστης πατά και **δεν συμβαίνει τίποτα ορατό**.
+ * Το §21.8 έγραφε «χωρίς αυτό το "Χρώμα:" είναι πρακτικά νεκρό»: η ρίζα είναι `<Card>`, το
+ * `Card` φέρει `overflow-hidden`, άρα η `absolute` παλέτα κόβεται. Ο συλλογισμός ήταν σωστός
+ * — και **ελλιπής**. Η ζωντανή μέτρηση (2026-08-07) βρήκε ότι ο πραγματικός ψαλιδιστής ήταν
+ * **ένα επίπεδο πιο μέσα**: το `<section className={styles.layout}>` παρακάτω, που γίνεται
+ * δοχείο κύλισης από το `globals.css:1105` (`overflow-x: hidden` σε κάθε `<section>` ⇒ ο
+ * άλλος άξονας υπολογίζεται `auto`). Η παλέτα κοβόταν στο **μηδέν** στο `y=989` από ένα
+ * `<section>` που τελείωνε στο `y=985` — με το `overflow-visible` της ρίζας ενεργό.
  *
- * ⚠️ Γεννήθηκε μαζί με τη Φ6β: ο Radix `DialogContent` που αντικαταστάθηκε **δεν** έκοβε. Είναι
- * το τίμημα κάθε αλλαγής κελύφους — ιδιότητες που τις έδινε δωρεάν ο προηγούμενος ιδιοκτήτης.
- *
- * Το `cn` είναι `tailwind-merge`: το `overflow-visible` του καταναλωτή νικά **ντετερμινιστικά**
- * το `overflow-hidden` της βάσης (ίδια ομάδα utility ⇒ κερδίζει το τελευταίο). Ένας κανόνας CSS
- * module ίδιας ειδικότητας θα άφηνε την απόφαση στη σειρά του bundle — δηλαδή στην τύχη.
- *
- * Ασφαλές εδώ επειδή η παλέτα **δεν κυλά**: χωρίς `resizable`/`persistenceKey` παίρνει ύψος από
- * το περιεχόμενο, άρα δεν υπάρχει τίποτα να κοπεί.
+ * 🔑 **Το μάθημα**: ένα `overflow` σε πρόγονο δεν είναι κάτι που «διορθώνεται» — είναι κάτι
+ * που **θα ξανασυμβεί** στον επόμενο πρόγονο. Γι' αυτό η παλέτα μετακόμισε στο top layer
+ * ({@link AnchoredPopover}) αντί να κυνηγάμε ψαλιδιστές έναν-έναν. Με το popup εκτός δέντρου,
+ * το `overflow-hidden` της βάσης δεν έχει τίποτα να κόψει και η παράκαμψη έφυγε: μια
+ * παράκαμψη που δεν κάνει τίποτα είναι χειρότερη από καμία, γιατί την επόμενη φορά κάποιος θα
+ * τη διαβάσει ως απόδειξη ότι το ψαλίδισμα έχει αντιμετωπιστεί.
  */
-const PANEL_CLASSNAME = cn(styles.panel, 'overflow-visible');
+const PANEL_CLASSNAME = styles.panel;
 
 /** Ό,τι χρειάζεται ο διάλογος για να δουλέψει — **παγωμένο στο άνοιγμα**, από τον καλούντα. */
 export interface TableBorderDialogTarget {
