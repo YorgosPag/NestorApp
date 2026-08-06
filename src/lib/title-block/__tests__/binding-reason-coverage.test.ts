@@ -46,18 +46,49 @@
  */
 
 /* global describe, it, expect */
+import { BINDABLE_SURVEY_FIELDS, type BindableSurveyField } from '@/config/survey-bindable-fields';
 import { readTitleBlocks } from '@/subapps/dxf-viewer/text-engine/title-block/reading/title-block-reading';
 import { G753_TITLEBLOCK_ROWS } from '@/subapps/dxf-viewer/text-engine/title-block/reading/__tests__/fixtures/g753-titleblock.fixture';
 import {
   BINDING_BLOCK_REASONS,
+  BINDING_CAUTIONS,
+  BINDING_SOURCE_KINDS,
   type BindingBlockReason,
+  type BindingCaution,
+  type BindingProposal,
+  type BindingSourceKind,
 } from '@/types/title-block-binding';
+import { DOCUMENT_BODY_FIELD_KEYS, type DocumentBodyFieldKey } from '@/types/document-body-reading';
+import { g753DocumentReadings } from '@/lib/document-body/__tests__/fixtures/g753-body.fixture';
+import { resolveDocumentBodyProposals } from '../resolve-document-body';
 import type { TitleBlockReading } from '@/types/title-block-reading';
 import { resolveTitleBlockProposals } from '../title-block-proposals';
 import type { ContactSnapshotEntry } from '../resolve-people';
+import type { SurveySnapshot } from '../resolve-survey-record';
 
 const LEVEL = 'lvl_topo';
 const PROJECT = 'proj_g753';
+
+/** Ένα έργο με **ένα** τοπογραφικό, ανοιχτό — η συνηθισμένη κατάσταση. */
+const ONE_OPEN_RECORD: SurveySnapshot = {
+  records: [{ id: 'srv_a', isConfirmed: false, label: 'ΙΟΥΛΙΟΣ 2026' }],
+  activeId: null,
+};
+
+/** Το ίδιο τοπογραφικό, **επιβεβαιωμένο** ⇒ παγωμένο. */
+const ONE_FROZEN_RECORD: SurveySnapshot = {
+  records: [{ id: 'srv_a', isConfirmed: true, label: 'ΙΟΥΛΙΟΣ 2026' }],
+  activeId: 'srv_a',
+};
+
+/** Δύο τοπογραφικά και **κανένας δείκτης** — ο προορισμός δεν είναι μονοσήμαντος. */
+const TWO_RECORDS_NO_POINTER: SurveySnapshot = {
+  records: [
+    { id: 'srv_a', isConfirmed: false, label: 'ΙΟΥΛΙΟΣ 2026' },
+    { id: 'srv_b', isConfirmed: false, label: 'ΜΑΡΤΙΟΣ 2024' },
+  ],
+  activeId: null,
+};
 
 const readings = (): TitleBlockReading[] => readTitleBlocks('PINAKAKI 500', G753_TITLEBLOCK_ROWS);
 
@@ -131,7 +162,47 @@ const SCENARIOS: ReadonlyArray<{ readonly what: string; readonly reasons: () => 
   {
     what: 'σχέδιο ΔΕΜΕΝΟ σε έργο με κύρια διεύθυνση, όλες οι επαφές γνωστές',
     reasons: () =>
-      collect(readings(), { projectId: PROJECT, levelId: LEVEL, contacts: KNOWN_CONTACTS, hasPrimaryAddress: true }),
+      collect(readings(), {
+        projectId: PROJECT,
+        levelId: LEVEL,
+        contacts: KNOWN_CONTACTS,
+        hasPrimaryAddress: true,
+        survey: ONE_OPEN_RECORD,
+      }),
+  },
+  {
+    // Το έργο δεν έχει ακόμη καρτέλα «Στοιχεία Τοπογραφικού» — η **αρχική** κατάσταση κάθε
+    // έργου, όχι εξωτικό σενάριο: η καρτέλα φτιάχνεται με το χέρι από τον μηχανικό.
+    what: 'έργο ΧΩΡΙΣ καμία εγγραφή τοπογραφικού',
+    reasons: () =>
+      collect(readings(), {
+        projectId: PROJECT,
+        levelId: LEVEL,
+        contacts: KNOWN_CONTACTS,
+        hasPrimaryAddress: true,
+      }),
+  },
+  {
+    what: 'έργο με ΔΥΟ τοπογραφικά και κανένα δηλωμένο ως ενεργό',
+    reasons: () =>
+      collect(readings(), {
+        projectId: PROJECT,
+        levelId: LEVEL,
+        contacts: KNOWN_CONTACTS,
+        hasPrimaryAddress: true,
+        survey: TWO_RECORDS_NO_POINTER,
+      }),
+  },
+  {
+    what: 'το ενεργό τοπογραφικό είναι ΕΠΙΒΕΒΑΙΩΜΕΝΟ (παγωμένο)',
+    reasons: () =>
+      collect(readings(), {
+        projectId: PROJECT,
+        levelId: LEVEL,
+        contacts: KNOWN_CONTACTS,
+        hasPrimaryAddress: true,
+        survey: ONE_FROZEN_RECORD,
+      }),
   },
   {
     what: 'σχέδιο ΧΩΡΙΣ έργο',
@@ -140,11 +211,23 @@ const SCENARIOS: ReadonlyArray<{ readonly what: string; readonly reasons: () => 
   {
     what: 'έργο ΧΩΡΙΣ κύρια διεύθυνση',
     reasons: () =>
-      collect(readings(), { projectId: PROJECT, levelId: LEVEL, contacts: KNOWN_CONTACTS, hasPrimaryAddress: false }),
+      collect(readings(), {
+        projectId: PROJECT,
+        levelId: LEVEL,
+        contacts: KNOWN_CONTACTS,
+        hasPrimaryAddress: false,
+        survey: ONE_OPEN_RECORD,
+      }),
   },
   {
     what: 'καμία επαφή στη βάση',
-    reasons: () => collect(readings(), { projectId: PROJECT, levelId: LEVEL, contacts: [], hasPrimaryAddress: true }),
+    reasons: () => collect(readings(), {
+        projectId: PROJECT,
+        levelId: LEVEL,
+        contacts: [],
+        hasPrimaryAddress: true,
+        survey: ONE_OPEN_RECORD,
+      }),
   },
   {
     what: 'πινακίδα με τίτλο έργου — πεδίο που καμία οντότητα δεν ζητά',
@@ -154,6 +237,7 @@ const SCENARIOS: ReadonlyArray<{ readonly what: string; readonly reasons: () => 
         levelId: LEVEL,
         contacts: KNOWN_CONTACTS,
         hasPrimaryAddress: true,
+        survey: ONE_OPEN_RECORD,
       }),
   },
   {
@@ -164,6 +248,7 @@ const SCENARIOS: ReadonlyArray<{ readonly what: string; readonly reasons: () => 
         levelId: LEVEL,
         contacts: KNOWN_CONTACTS,
         hasPrimaryAddress: true,
+        survey: ONE_OPEN_RECORD,
       }),
   },
 ];
@@ -185,6 +270,59 @@ const producedByAnyScenario = (): Set<string> => {
   return all;
 };
 
+/**
+ * Ό,τι παράγει ο πραγματικός Λ2 **πέρα από** τις αιτίες μπλοκαρίσματος.
+ *
+ * Τρέχει στο σενάριο με **ανοιχτό** τοπογραφικό, γιατί επιφυλάξεις και στόχοι υπάρχουν μόνο
+ * όταν η πρόταση όντως γίνεται — μπλοκαρισμένη γραμμή δεν έχει ούτε τα δύο.
+ */
+function producedOpenRecord(): {
+  readonly cautions: Set<string>;
+  readonly surveyFields: Set<string>;
+  readonly sourceKinds: Set<string>;
+  readonly bodyFields: Set<string>;
+} {
+  const cautions = new Set<string>();
+  const surveyFields = new Set<string>();
+  const sourceKinds = new Set<string>();
+  const bodyFields = new Set<string>();
+
+  // 🔴 **ΚΑΙ ΟΙ ΔΥΟ αναγνώστες** (Φ4). Ο Λ2 έπαψε να έχει μία είσοδο: η πινακίδα και το σώμα
+  // του σχεδίου γεννούν προτάσεις από διαφορετικό υλικό, και ένα λεξιλόγιο που ελέγχεται
+  // μόνο απέναντι στον έναν είναι **μισοελεγμένο** — ακριβώς το κενό που άφησε το
+  // `sourceKind` να ζήσει χωρίς παραγωγό.
+  const proposals: BindingProposal[] = [
+    ...resolveTitleBlockProposals(readings(), {
+      projectId: PROJECT,
+      levelId: LEVEL,
+      contacts: KNOWN_CONTACTS,
+      hasPrimaryAddress: true,
+      survey: ONE_OPEN_RECORD,
+    }),
+    ...resolveDocumentBodyProposals(g753DocumentReadings(), {
+      projectId: PROJECT,
+      hasPrimaryAddress: true,
+      survey: ONE_OPEN_RECORD,
+    }),
+  ];
+
+  for (const proposal of proposals) {
+    if (proposal.caution) cautions.add(proposal.caution);
+    // Απόν ⇒ `'title-block'` **εξ ορισμού** (δες `BindingProposal.sourceKind`) — η προεπιλογή
+    // είναι παραγωγός όσο και η ρητή δήλωση, αλλιώς η πύλη θα απαιτούσε θόρυβο σε επτά σημεία.
+    sourceKinds.add(proposal.sourceKind ?? 'title-block');
+    for (const candidate of proposal.candidates) {
+      if (candidate.target.kind === 'survey-record') surveyFields.add(candidate.target.field);
+    }
+  }
+
+  for (const reading of g753DocumentReadings()) {
+    for (const field of reading.fields) bodyFields.add(field.key);
+  }
+
+  return { cautions, surveyFields, sourceKinds, bodyFields };
+}
+
 describe('🔴 κάθε δηλωμένη αιτία μπλοκαρίσματος ΕΧΕΙ παραγωγό', () => {
   it.each(BINDING_BLOCK_REASONS)(
     '«%s» παράγεται από τον πραγματικό Λ2 σε τουλάχιστον ένα συμφραζόμενο',
@@ -203,6 +341,46 @@ describe('🔴 κάθε δηλωμένη αιτία μπλοκαρίσματος
   });
 });
 
+/**
+ * 🔴 **Η ίδια πύλη, στο ίδιο σχήμα, για τις ΕΠΙΦΥΛΑΞΕΙΣ** (ADR-759 Φ3γ).
+ *
+ * Μια επιφύλαξη χωρίς παραγωγό είναι **ακριβώς** το ίδιο ελάττωμα με μια αιτία χωρίς
+ * παραγωγό — μεταφρασμένο μήνυμα που κανείς δεν μπορεί να δει. Το ότι η έννοια είναι νέα δεν
+ * της δίνει περίοδο χάριτος: γεννήθηκε **μαζί** με την πύλη της, που είναι όλο το μάθημα του
+ * §4.4 (το `resolver-gap` έζησε φάσεις στα χαρτιά πριν υπάρξει σε κώδικα).
+ */
+describe('🔴 κάθε δηλωμένη ΕΠΙΦΥΛΑΞΗ έχει παραγωγό', () => {
+  it.each(BINDING_CAUTIONS)('«%s» παράγεται από τον πραγματικό Λ2', (caution: BindingCaution) => {
+    expect(producedOpenRecord().cautions.has(caution)).toBe(true);
+  });
+
+  it('τα δύο σύνολα είναι ΙΣΑ — ούτε νεκρή δήλωση, ούτε αδήλωτος παραγωγός', () => {
+    expect([...producedOpenRecord().cautions].sort()).toEqual([...BINDING_CAUTIONS].sort());
+  });
+});
+
+/**
+ * 🔴 **Και για το ΛΕΞΙΛΟΓΙΟ ΣΤΟΧΩΝ του τοπογραφικού.**
+ *
+ * Το `BINDABLE_SURVEY_FIELDS` είναι υπόσχεση: «αυτά τα πεδία της καρτέλας μπορεί να τα
+ * γεμίσει το σχέδιο». Ένα πεδίο δηλωμένο χωρίς παραγωγό μετατρέπει την υπόσχεση σε ψέμα που
+ * **κανείς δεν μπορεί να διαψεύσει διαβάζοντας** — ο κατάλογος φαίνεται πλούσιος, η οθόνη
+ * δεν προσφέρει τίποτα. Είναι η αιτία που ο κατάλογος έχει **δύο** εγγραφές και όχι τριάντα:
+ * το σώμα του σχεδίου θα φέρει τις υπόλοιπες **μαζί με τον αναγνώστη τους**.
+ */
+describe('🔴 κάθε δηλωμένο πεδίο τοπογραφικού ΠΡΟΣΓΕΙΩΝΕΤΑΙ όντως', () => {
+  it.each(BINDABLE_SURVEY_FIELDS)(
+    '«%s» παράγεται ως στόχος από τον πραγματικό Λ2 στο G753',
+    (field: BindableSurveyField) => {
+      expect(producedOpenRecord().surveyFields.has(field)).toBe(true);
+    },
+  );
+
+  it('τα δύο σύνολα είναι ΙΣΑ — κανένας αδήλωτος στόχος δεν διαφεύγει', () => {
+    expect([...producedOpenRecord().surveyFields].sort()).toEqual([...BINDABLE_SURVEY_FIELDS].sort());
+  });
+});
+
 describe('τα σενάρια είναι διακριτά — κανένα δεν είναι διακοσμητικό', () => {
   it('κάθε σενάριο συνεισφέρει τουλάχιστον μία αιτία που δεν δίνει το «πλήρες» σενάριο', () => {
     const baseline = SCENARIOS[0].reasons();
@@ -210,5 +388,44 @@ describe('τα σενάρια είναι διακριτά — κανένα δε�
       const own = [...scenario.reasons()].filter((r) => !baseline.has(r));
       expect(own.length).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * 🔴 **ΤΟ ΧΡΕΟΣ ΤΗΣ Φ3γ, ΚΛΕΙΣΜΕΝΟ** (ADR-759 §4.6).
+ *
+ * Το `BINDING_SOURCE_KINDS` προστέθηκε στη Φ3γ **προκαταβολικά**, για να το χρησιμοποιήσει ο
+ * αναγνώστης του σώματος — και έμεινε με **μηδέν παραγωγούς** (επαληθευμένο με grep 06/08).
+ * Είναι κατά λέξη το ελάττωμα που κυνηγά όλη η αλυσίδα ADR-745/759: δηλωμένο λεξιλόγιο χωρίς
+ * κώδικα πίσω του. Δύο τίμιες εκβάσεις υπήρχαν — να παραχθεί ή να φύγει από την ένωση — και η
+ * Φ4 διάλεξε την πρώτη. Αυτή η πύλη είναι ο λόγος που δεν μπορεί να ξαναγίνει.
+ */
+describe('🔴 κάθε δηλωμένο ΕΙΔΟΣ ΠΗΓΗΣ έχει παραγωγό', () => {
+  it.each(BINDING_SOURCE_KINDS)('«%s» παράγεται από τον πραγματικό Λ2', (kind: BindingSourceKind) => {
+    expect(producedOpenRecord().sourceKinds.has(kind)).toBe(true);
+  });
+
+  it('τα δύο σύνολα είναι ΙΣΑ — ούτε νεκρή δήλωση, ούτε αδήλωτος παραγωγός', () => {
+    expect([...producedOpenRecord().sourceKinds].sort()).toEqual([...BINDING_SOURCE_KINDS].sort());
+  });
+});
+
+/**
+ * 🔴 **Και για το λεξιλόγιο ΑΝΑΓΝΩΣΗΣ του σώματος** (Φ4).
+ *
+ * Ίδιο δόγμα, τρίτη εφαρμογή: κλειδί που δηλώνει «αυτό ξέρω να το διαβάζω» και δεν το παράγει
+ * κανένας κανόνας πάνω στο **πραγματικό** σχέδιο είναι υπόσχεση που κανείς δεν μπορεί να
+ * διαψεύσει διαβάζοντας. Τα 27 κλειδιά είναι μετρημένα στο `G753_ergasia F.dxf`.
+ */
+describe('🔴 κάθε δηλωμένο πεδίο ΣΩΜΑΤΟΣ διαβάζεται όντως', () => {
+  it.each(DOCUMENT_BODY_FIELD_KEYS)(
+    '«%s» παράγεται από τον πραγματικό Λ1β στο G753',
+    (key: DocumentBodyFieldKey) => {
+      expect(producedOpenRecord().bodyFields.has(key)).toBe(true);
+    },
+  );
+
+  it('τα δύο σύνολα είναι ΙΣΑ — κανένας αδήλωτος αναγνώστης δεν διαφεύγει', () => {
+    expect([...producedOpenRecord().bodyFields].sort()).toEqual([...DOCUMENT_BODY_FIELD_KEYS].sort());
   });
 });

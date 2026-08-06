@@ -13,6 +13,7 @@
 
 import type { BindableDrawingField, BindingProposal } from '@/types/title-block-binding';
 import type { TitleBlockField, TitleBlockFieldKey } from '@/types/title-block-reading';
+import { proposalBase } from './proposal-base';
 
 /**
  * Ποιο κλειδί της πινακίδας γίνεται ποιο μεταδεδομένο σχεδίου.
@@ -54,14 +55,7 @@ export function resolveDrawingMetaProposal(
   field: TitleBlockField,
   context: DrawingMetaResolveContext,
 ): BindingProposal {
-  const base = {
-    fieldKey: field.key,
-    titleBlockIndex: context.titleBlockIndex,
-    sourceHandle: field.sourceHandle,
-    labelHandle: field.labelHandle,
-    at: field.at,
-    snapshotValue: field.rawValue,
-  } as const;
+  const base = proposalBase(field, context.titleBlockIndex);
 
   const target = DRAWING_FIELD_BY_KEY[field.key];
   if (!target) return { ...base, candidates: [], blockedBy: 'unsupported-field' };

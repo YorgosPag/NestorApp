@@ -18,15 +18,19 @@
  */
 
 import { matchesWordSequenceAt, normalizeForLabelMatch, splitIntoWords } from '@/utils/greek-text';
+import type { BindableSurveyField } from '@/config/survey-bindable-fields';
 import type {
   BindableAddressField,
   BindableProjectField,
   BindingBlockReason,
+  BindingCaution,
   BindingProposal,
   BindingTarget,
 } from '@/types/title-block-binding';
 import type { TitleBlockField } from '@/types/title-block-reading';
 import { splitFrontageStreets } from './frontage-streets';
+import { proposalBase, type ProposalBase } from './proposal-base';
+import { buildSurveyProposal, type SurveySnapshot } from './resolve-survey-record';
 
 /**
  * Πού καταλήγει μια αναγνωρισμένη ενότητα — **τέσσερις** εκβάσεις, όχι δύο (ADR-759 §2.2).
@@ -42,6 +46,13 @@ type LocationSlot =
   | { readonly to: 'project'; readonly field: BindableProjectField }
   /** Αναγνωρίστηκε, δεν γράφεται — με **ρητή, διακριτή** αιτία. */
   | { readonly to: 'blocked'; readonly reason: BindingBlockReason }
+  /**
+   * Δήλωση του τοπογράφου → η καρτέλα «Στοιχεία Τοπογραφικού» (ADR-759 Φ3γ).
+   *
+   * Η `caution` δηλώνεται **στη σημαδούρα**, γιατί εκεί ζει ο λόγος: το «Π.Ε.» είναι
+   * διφορούμενο ως **ακρωνύμιο**, ανεξάρτητα από το τι τιμή ακολουθεί.
+   */
+  | { readonly to: 'survey'; readonly field: BindableSurveyField; readonly caution?: BindingCaution }
   /** Λίστα οδών: **μία πρόταση ανά πρόσωπο οικοπέδου**, όχι μία για όλες. */
   | { readonly to: 'frontages' };
 
@@ -62,8 +73,14 @@ const marker = (text: string, slot: LocationSlot, keepMarker = false): LocationM
 /**
  * Ο κατάλογος αναγνώρισης.
  *
- * 🔴 **Το `Π.Ε.` αναγνωρίζεται αλλά ΔΕΝ γράφεται — και ο λόγος ΑΛΛΑΞΕ στη Φ3, χωρίς να αλλάξει
- * η συμπεριφορά.** Το ADR-745 §7 και η προηγούμενη γραφή αυτού του σχολίου το αιτιολογούσαν ως
+ * 🔴 **Το `Π.Ε.` ΓΡΑΦΕΤΑΙ ΠΛΕΟΝ — Φ3γ, και η αλλαγή είναι στο ΠΟΙΟΣ αποφασίζει, όχι στο τι
+ * ξέρουμε.** Επί δύο φάσεις ήταν φραγμός (`ambiguous-abbreviation`) με ενέργεια «περίμενε τη
+ * Φ4/Φ5». Ο φραγμός ήταν λάθος εργαλείο: το πεδίο υποδοχής **υπήρχε** και ο μηχανικός που
+ * κοιτάζει το σχέδιο **ξέρει** τι είναι το «Π.Ε. 39». Πλέον παράγεται **πρόταση με δηλωμένη
+ * επιφύλαξη** ({@link BINDING_CAUTIONS}) — η μορφή εξακολουθεί να μην αποφασίζει, αλλά η
+ * απόφαση δίνεται στον άνθρωπο αντί να αναβάλλεται επ' αόριστον.
+ *
+ * Το ADR-745 §7 και η προηγούμενη γραφή αυτού του σχολίου το αιτιολογούσαν ως
  * «**Πολεοδομική** Ενότητα, όχι Περιφερειακή». Η §2β.3 του ADR-759 **μέτρησε το αρχείο** και το
  * διέψευσε: το ίδιο έγγραφο γράφει *«στην 39 Π.Ε., των **Πολεοδομικών Ενοτήτων 16 και 17**»* —
  * δηλαδή οι πολεοδομικές ενότητες δηλώνονται ρητά ως 16 και 17, άρα το 39 δεν είναι καμία από
@@ -91,8 +108,14 @@ const LOCATION_MARKERS: readonly LocationMarker[] = [
   // `regionalUnit` που το ίδιο το `ProjectAddress` τεκμηριώνει ως «Π.Ε. Θεσσαλονίκης» — και όπως
   // το γράφει ήδη το domain επαφών («Δ.Ε. Θεσσαλονίκης»). Ένα λεξιλόγιο, μία μορφή.
   marker('Δ.Ε.', { to: 'address', field: 'municipalUnit' }, true),
-  // Πράξη Εφαρμογής μεταμφιεσμένη σε ακρωνύμιο — βλ. το μπλοκ παραπάνω.
-  marker('Π.Ε.', { to: 'blocked', reason: 'ambiguous-abbreviation' }, true),
+  // Πράξη Εφαρμογής μεταμφιεσμένη σε ακρωνύμιο — βλ. το μπλοκ παραπάνω. **Προσγειώνεται**
+  // πλέον (Φ3γ), με δηλωμένη επιφύλαξη· η μορφή εξακολουθεί να μην αποφασίζει, αλλά τώρα
+  // αποφασίζει ο άνθρωπος αντί να περιμένει φάση που δεν είχε ημερομηνία.
+  marker(
+    'Π.Ε.',
+    { to: 'survey', field: 'implementationActNumber', caution: 'ambiguous-abbreviation' },
+    true,
+  ),
   // Αριθμός οικοπέδου → `Project.plotNumber`. **ΔΕΝ** κρατά τη σημαδούρα, σε αντίθεση με το
   // Ο.Τ. από πάνω, και η ασυμμετρία είναι μετρημένη: ο καταναλωτής
   // (`lib/obligations/content.ts:25`) τυπώνει **δική του** ετικέτα «Αριθμός Οικοπέδου:», οπότε
@@ -114,6 +137,14 @@ export interface LocationResolveContext {
    * σε «το έργο δεν έχει διεύθυνση» — λάθος συμπέρασμα με σωστή μορφή.
    */
   readonly hasPrimaryAddress?: boolean;
+  /**
+   * Τα τοπογραφικά του έργου — ο **προορισμός** των δηλώσεων του τοπογράφου (Φ3γ).
+   *
+   * ⚠️ Απόν ⇒ «κανένα δεν δόθηκε», που είναι **κυριολεκτικά** το `no-survey-record`, όχι
+   * εικασία. Η παλέτα το φορτώνει όπως τις επαφές (πύλη πριν τον υπολογισμό), οπότε στη
+   * ζωντανή ροή η απουσία σημαίνει πράγματι «το έργο δεν έχει καρτέλα ακόμη».
+   */
+  readonly survey?: SurveySnapshot;
 }
 
 interface LocationSegment {
@@ -147,21 +178,11 @@ export function splitLocationValue(text: string): LocationSegment[] {
   return segments;
 }
 
-/** Ο σκελετός μιας πρότασης — ό,τι δεν εξαρτάται από την έκβαση της ενότητας. */
-type ProposalBase = Omit<BindingProposal, 'candidates' | 'blockedBy'>;
-
 const baseFor = (
   field: TitleBlockField,
   context: LocationResolveContext,
   snapshotValue: string,
-): ProposalBase => ({
-  fieldKey: field.key,
-  titleBlockIndex: context.titleBlockIndex,
-  sourceHandle: field.sourceHandle,
-  labelHandle: field.labelHandle,
-  at: field.at,
-  snapshotValue,
-});
+): ProposalBase => proposalBase(field, context.titleBlockIndex, snapshotValue);
 
 const blocked = (base: ProposalBase, reason: BindingBlockReason): BindingProposal => ({
   ...base,
@@ -187,6 +208,19 @@ function proposalsForSegment(
   const { slot, value } = segment;
 
   if (slot.to === 'blocked') return [blocked(baseFor(field, context, value), slot.reason)];
+
+  if (slot.to === 'survey') {
+    return [
+      buildSurveyProposal(baseFor(field, context, value), {
+        projectId: context.projectId,
+        field: slot.field,
+        rawText: value,
+        snapshot: context.survey,
+        // Ρητό spread: το `exactOptionalPropertyTypes` ξεχωρίζει «απόν» από «`undefined`».
+        ...(slot.caution ? { declaredCaution: slot.caution } : {}),
+      }),
+    ];
+  }
 
   if (slot.to === 'frontages') {
     // 🔴 **Μία γραμμή ανά οδό, ΟΧΙ μία για όλες.** Το ADR-745 §7 μέτρησε **4 πρόσωπα** και το

@@ -12,6 +12,7 @@ import type { TitleBlockPerson } from '@/types/title-block-reading';
 import { resolveTitleBlockProposals } from '../title-block-proposals';
 import { isDrawingMetaField } from '../resolve-drawing-meta';
 import { type ContactSnapshotEntry, evidenceFor } from '../resolve-people';
+import type { SurveySnapshot } from '../resolve-survey-record';
 
 const PROJECT = 'proj_g753';
 const LEVEL = 'lvl_topo';
@@ -36,12 +37,25 @@ const CONTACTS: readonly ContactSnapshotEntry[] = [
   { id: 'cont_other', displayName: 'Δημήτριος Παπαδόπουλος', phones: [], emails: [] },
 ];
 
+/**
+ * Το έργο έχει **ένα** τοπογραφικό, ανοιχτό (ADR-759 Φ3γ).
+ *
+ * ⚠️ Μέρος της **βασικής** κατάστασης και όχι ειδικό σενάριο: από τη Φ3γ ο προορισμός των
+ * δηλώσεων του τοπογράφου είναι προϋπόθεση για δύο γραμμές της πινακίδας («Π.Ε.» και «ΧΡΟΝΟΣ
+ * ΜΕΛΕΤΗΣ»). Χωρίς αυτό, το «κανονικό» σενάριο θα έλεγχε μονίμως τη μπλοκαρισμένη διαδρομή.
+ */
+const SURVEY: SurveySnapshot = {
+  records: [{ id: 'srv_g753', isConfirmed: false, label: 'ΙΟΥΛΙΟΣ 2026' }],
+  activeId: null,
+};
+
 const resolve = (contacts = CONTACTS) =>
   resolveTitleBlockProposals(readings(), {
     projectId: PROJECT,
     levelId: LEVEL,
     contacts,
     hasPrimaryAddress: true,
+    survey: SURVEY,
   });
 
 /**
@@ -197,14 +211,49 @@ describe('Λ2 — η ΘΕΣΗ σπάει σε ξεχωριστές αποφάσ�
     expect(streets.some((p) => p.blockedBy === 'unsupported-field')).toBe(false);
   });
 
-  it('🔴 το «Π.Ε. 39» είναι ΔΙΦΟΡΟΥΜΕΝΟ, όχι «δεν το ζητά κανείς» — ούτε κενό resolver', () => {
+  /**
+   * 🔴 **Η ΣΥΜΠΕΡΙΦΟΡΑ ΑΛΛΑΞΕ ΣΚΟΠΙΜΑ ΣΤΗ Φ3γ — και η αλλαγή είναι στο ΠΟΙΟΣ αποφασίζει.**
+   *
+   * Μέχρι τη Φ3β το «Π.Ε. 39» ήταν **φραγμός** (`ambiguous-abbreviation`) με ενέργεια
+   * «περίμενε τη Φ5». Η §2β.3 είχε μετρήσει **τρεις** σημασίες του ακρωνυμίου στο ίδιο αρχείο
+   * και το συμπέρασμα ήταν σωστό: *η μορφή δεν αποφασίζει*. Αυτό **δεν άλλαξε**.
+   *
+   * Αυτό που άλλαξε είναι ότι ο φραγμός ήταν **λάθος εργαλείο** για τη δουλειά: το πεδίο
+   * υποδοχής υπήρχε από τη Φ2 και ο μηχανικός που κοιτάζει το σχέδιο **ξέρει** τι είναι το
+   * «Π.Ε. 39». Ένα αδιέξοδο χωρίς ενέργεια είναι το κάτοπτρο του `resolver-gap` που «υπόσχεται
+   * διόρθωση που κανείς δεν μπορεί να κάνει».
+   *
+   * ⇒ Πρόταση **με δηλωμένη επιφύλαξη**. Η αβεβαιότητα δεν κρύφτηκε — άλλαξε παραλήπτη.
+   */
+  it('🔴 το «Π.Ε. 39» ΠΡΟΤΕΙΝΕΤΑΙ πλέον, με ρητή επιφύλαξη — ο άνθρωπος αποφασίζει, όχι η μορφή', () => {
     const pe = forField(resolve(), 'location').find((p) => p.snapshotValue.includes('Π.Ε.'));
     expect(pe).toBeDefined();
+    expect(pe?.blockedBy).toBeUndefined();
+    expect(pe?.caution).toBe('ambiguous-abbreviation');
+
+    // Ο προορισμός είναι **ονομαστικός**: ποια εγγραφή, ποιο πεδίο — και η τιμή είναι το «39»,
+    // χωρίς τη σημαδούρα, γιατί το πεδίο τεκμηριώνεται ως αριθμός πράξης.
+    expect(pe?.candidates).toHaveLength(1);
+    expect(pe?.candidates[0].target).toEqual({
+      kind: 'survey-record',
+      projectId: PROJECT,
+      recordId: 'srv_g753',
+      field: 'implementationActNumber',
+      value: { kind: 'text', value: '39' },
+    });
+  });
+
+  it('🔒 σε ΠΑΓΩΜΕΝΟ τοπογραφικό το «Π.Ε. 39» μπλοκάρει ΟΡΑΤΑ — ποτέ σιωπηλή παράκαμψη', () => {
+    const frozen = resolveTitleBlockProposals(readings(), {
+      projectId: PROJECT,
+      levelId: LEVEL,
+      contacts: CONTACTS,
+      hasPrimaryAddress: true,
+      survey: { records: [{ id: 'srv_g753', isConfirmed: true, label: 'x' }], activeId: 'srv_g753' },
+    });
+    const pe = forField(frozen, 'location').find((p) => p.snapshotValue.includes('Π.Ε.'));
     expect(pe?.candidates).toEqual([]);
-    // Η §2β.3 μέτρησε **τρεις** σημασίες του «Π.Ε.» στο ίδιο αρχείο. Το πεδίο υποδοχής υπάρχει
-    // (`SurveyRecord.implementationAct.number`, Φ2)· λείπει η **βεβαιότητα**, όχι ο κώδικας —
-    // γι' αυτό ΔΕΝ είναι `resolver-gap`. Τη λύνει το σώμα του σχεδίου (Φ5), όχι ο resolver.
-    expect(pe?.blockedBy).toBe('ambiguous-abbreviation');
+    expect(pe?.blockedBy).toBe('survey-record-locked');
   });
 
   it('🔴 χωρίς κύρια διεύθυνση, τα διοικητικά πεδία ΜΠΛΟΚΑΡΟΥΝ ΠΡΙΝ το κλικ — όχι μετά', () => {
@@ -247,13 +296,21 @@ describe('Λ2 — μεταδεδομένα σχεδίου', () => {
    * `not-yet-writable` **αφαιρέθηκε** από την ένωση αντί να μείνει χωρίς παραγωγό.
    */
   it('κλίμακα/χρόνος/αριθμός/είδος γίνονται ΟΛΑ εγγράψιμοι υποψήφιοι του ΕΠΙΠΕΔΟΥ', () => {
-    const meta = resolve().filter((p) => isDrawingMetaField(p.fieldKey));
+    // ⚠️ **Το φίλτρο είναι ο ΣΤΟΧΟΣ, όχι το `fieldKey` — και αυτό ΕΙΝΑΙ το test.** Από τη Φ3γ
+    // το κελί «ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ» δίνει **δύο** προτάσεις με το ίδιο `fieldKey: 'studyDate'`
+    // (φύλλο + τοπογραφικό). Ένα φίλτρο ανά `fieldKey` θα τις μάζευε και τις δύο και θα
+    // απαιτούσε από την πρόταση **του τοπογραφικού** να είναι μεταδεδομένο σχεδίου — δηλαδή θα
+    // κοκκίνιζε για σωστή συμπεριφορά.
+    const meta = resolve().filter((p) =>
+      p.candidates.some((c) => c.target.kind === 'drawing-meta'),
+    );
 
     expect(meta.map((p) => `${p.fieldKey}=${p.snapshotValue}`)).toEqual(
       expect.arrayContaining(['scale=1:200', 'studyDate=ΙΟΥΛΙΟΣ 2026', 'drawingNumber=Τ1']),
     );
     expect(meta.length).toBeGreaterThanOrEqual(3);
     expect(meta.every((p) => p.blockedBy === undefined)).toBe(true);
+    expect(meta.every((p) => isDrawingMetaField(p.fieldKey))).toBe(true);
 
     const scale = meta.find((p) => p.fieldKey === 'scale');
     expect(scale?.candidates[0].target).toEqual({
@@ -265,14 +322,60 @@ describe('Λ2 — μεταδεδομένα σχεδίου', () => {
     });
   });
 
-  it('🔑 η ΤΙΜΗ ανήκει στο φύλλο — κανένας στόχος μεταδεδομένου δεν αγγίζει πεδίο του έργου', () => {
-    // Το αναλλοίωτο του ADR-745 §7 που φύλαγε το αρχικό test: ένα έργο έχει δεκάδες σχέδια, και
-    // γραμμένα στο έργο το τελευταίο που ανοίγεις σβήνει σιωπηλά το προηγούμενο.
+  /**
+   * 🔴 **Ένα κελί, δύο αληθή γεγονότα** (ADR-759 Φ3γ).
+   *
+   * «ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ» λέει *πότε σχεδιάστηκε το φύλλο* **και** *πότε δήλωσε ο τοπογράφος*. Οι
+   * δύο προτάσεις είναι **ξεχωριστές γραμμές** ώστε ο μηχανικός να δεχτεί τη μία και να
+   * απορρίψει την άλλη, και **δεν αλληλοαναιρούνται**: το slot είναι το πεδίο
+   * (`studyDate` ≠ `surveyDate`), όχι το κελί.
+   *
+   * ⚠️ Και το `value` του τοπογραφικού είναι **`null`**: «ΙΟΥΛΙΟΣ 2026» είναι μήνας, όχι
+   * ημερομηνία. Το `rawText` το κρατά ακέραιο και η καρτέλα το δείχνει· μια εφευρημένη 1η
+   * Ιουλίου θα διαβαζόταν ως γεγονός.
+   */
+  it('🔴 ο «ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ» δίνει ΔΥΟ προτάσεις — φύλλο ΚΑΙ τοπογραφικό, χωρίς να συγκρούονται', () => {
+    const studyDate = resolve().filter((p) => p.fieldKey === 'studyDate');
+    expect(studyDate).toHaveLength(2);
+
+    const kinds = studyDate.flatMap((p) => p.candidates.map((c) => c.target.kind));
+    expect(kinds.sort()).toEqual(['drawing-meta', 'survey-record']);
+
+    const toSurvey = studyDate.find((p) =>
+      p.candidates.some((c) => c.target.kind === 'survey-record'),
+    );
+    expect(toSurvey?.caution).toBe('partial-value');
+    expect(toSurvey?.candidates[0].target).toEqual({
+      kind: 'survey-record',
+      projectId: PROJECT,
+      recordId: 'srv_g753',
+      field: 'surveyDate',
+      value: { kind: 'text', value: null },
+    });
+  });
+
+  /**
+   * 🔑 Το αναλλοίωτο του ADR-745 §7: ένα έργο έχει **δεκάδες** σχέδια, και ένα μεταδεδομένο
+   * σχεδίου γραμμένο στο έργο σημαίνει ότι το τελευταίο που ανοίγεις σβήνει σιωπηλά το
+   * προηγούμενο.
+   *
+   * ⚠️ **Η διατύπωση ΣΤΕΝΕΨΕ στη Φ3γ, δεν χαλάρωσε.** Το αρχικό test έλεγε «κάθε στόχος είναι
+   * `drawing-meta`», που ήταν *σωστό όσο υπήρχε ένας μόνο προορισμός* — αλλά μετρούσε τον
+   * **αριθμό των ειδών**, ενώ το αναλλοίωτο αφορά **το έγγραφο του έργου**. Πλέον ρωτά αυτό
+   * ακριβώς: κανένα κελί μεταδεδομένου δεν γράφει στο `projects/{id}`.
+   *
+   * Η προσγείωση στο **τοπογραφικό** δεν το παραβιάζει και δεν είναι εξαίρεση: το
+   * `survey_records` είναι **χωριστή** συλλογή με **δική της** εγγραφή ανά έγγραφο (ADR-759
+   * Q1), δηλαδή δεν υπάρχει μοναδικό πεδίο να επιγραφεί από το επόμενο σχέδιο. Ακριβώς ο λόγος
+   * που το Q1 επέλεξε χωριστή συλλογή αντί για πεδία μέσα στο έργο.
+   */
+  it('🔑 η ΤΙΜΗ ανήκει στο φύλλο — κανένα κελί μεταδεδομένου δεν γράφει στο ΕΓΓΡΑΦΟ του έργου', () => {
     const targets = resolve()
       .filter((p) => isDrawingMetaField(p.fieldKey))
       .flatMap((p) => p.candidates.map((c) => c.target));
     expect(targets.length).toBeGreaterThan(0);
-    expect(targets.every((t) => t.kind === 'drawing-meta')).toBe(true);
+    expect(targets.some((t) => t.kind === 'drawing-meta')).toBe(true);
+    expect(targets.filter((t) => t.kind === 'project-field' || t.kind === 'project-address')).toEqual([]);
   });
 
   it('🔴 χωρίς έργο ΔΕΝ γράφονται — η ΤΙΜΗ ανήκει στο φύλλο, η ΑΠΟΔΕΙΞΗ όμως θέλει έργο', () => {

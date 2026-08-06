@@ -14,10 +14,12 @@
 
 import type { BindingProposal } from '@/types/title-block-binding';
 import type { TitleBlockField, TitleBlockReading } from '@/types/title-block-reading';
+import { proposalBase } from './proposal-base';
 import { isDrawingMetaField, resolveDrawingMetaProposal } from './resolve-drawing-meta';
 import { resolveLandownerProposal } from './resolve-landowner';
 import { resolveLocationProposals } from './resolve-location';
 import { type ContactSnapshotEntry, resolvePersonProposal } from './resolve-people';
+import { buildSurveyProposal, type SurveySnapshot } from './resolve-survey-record';
 
 export interface TitleBlockResolveContext {
   /** Απόν όταν το σχέδιο δεν είναι δεμένο σε έργο — τα πεδία έργου τότε **δηλώνονται** κλειστά. */
@@ -32,17 +34,20 @@ export interface TitleBlockResolveContext {
    * διαβάζει ούτε γράφει — το φυλάει το `title-block-purity.test.ts`.
    */
   readonly hasPrimaryAddress?: boolean;
+  /**
+   * Τα τοπογραφικά του έργου — ο προορισμός των **δηλώσεων του τοπογράφου** (ADR-759 Φ3γ).
+   *
+   * Ίδιο πρότυπο με το `contacts`: στιγμιότυπο της βάσης ως **όρισμα**, ποτέ ανάγνωση από
+   * μέσα. Απόν ⇒ κανένα τοπογραφικό δεν δόθηκε ⇒ `no-survey-record` (κυριολεκτικά αληθές,
+   * όχι εικασία) — δες {@link resolveSurveyDestination}.
+   */
+  readonly survey?: SurveySnapshot;
 }
 
 /** Πεδίο που ο Λ1 διαβάζει σωστά αλλά **καμία** οντότητα δεν το ζητά (π.χ. `ΕΡΓΟ`, `ΜΕΛΕΤΗ`). */
 function unsupported(field: TitleBlockField, titleBlockIndex: number): BindingProposal {
   return {
-    fieldKey: field.key,
-    titleBlockIndex,
-    sourceHandle: field.sourceHandle,
-    labelHandle: field.labelHandle,
-    at: field.at,
-    snapshotValue: field.rawValue,
+    ...proposalBase(field, titleBlockIndex),
     candidates: [],
     blockedBy: 'unsupported-field',
   };
@@ -51,6 +56,34 @@ function unsupported(field: TitleBlockField, titleBlockIndex: number): BindingPr
 /** Πεδίο έργου σε σχέδιο χωρίς έργο — ορατά κλειστό, ποτέ κρυμμένο. */
 function needsProject(field: TitleBlockField, titleBlockIndex: number): BindingProposal {
   return { ...unsupported(field, titleBlockIndex), blockedBy: 'no-project' };
+}
+
+/**
+ * Το κελί «ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ» λέει **δύο πράγματα ταυτόχρονα**, και τα δύο είναι αληθή.
+ *
+ * 🔑 **Δεν είναι διπλογραφή — είναι δύο διαφορετικά γεγονότα με την ίδια αφορμή:**
+ * - *πότε σχεδιάστηκε **αυτό το φύλλο*** → `DxfLevelDocument.studyDate` (ADR-745 §7: τα
+ *   μεταδεδομένα ανήκουν στο φύλλο· ένα έργο έχει δεκάδες σχέδια με διαφορετικές ημερομηνίες)·
+ * - *πότε **δήλωσε ο τοπογράφος** όσα δηλώνει* → `SurveyRecord.surveyDate`, που είναι η
+ *   ημερομηνία **της βεβαίωσης** και ο λόγος που ένα τοπογραφικό του 2019 δεν επιτρέπεται να
+ *   επικαιροποιήσει τους σημερινούς όρους δόμησης (ADR-759 §4.1).
+ *
+ * Δύο **ξεχωριστές** προτάσεις, όχι δύο υποψήφιοι μιας: ο μηχανικός δέχεται τη μία και
+ * απορρίπτει την άλλη. Οι δύο εγκρίσεις συνυπάρχουν, γιατί το `slot` είναι το **πεδίο**
+ * (`studyDate` ≠ `surveyDate`) — δες `lib/title-block-binding-id`.
+ */
+function studyDateAsSurveyDate(
+  field: TitleBlockField,
+  titleBlockIndex: number,
+  context: TitleBlockResolveContext,
+  projectId: string,
+): BindingProposal {
+  return buildSurveyProposal(proposalBase(field, titleBlockIndex), {
+    projectId,
+    field: 'surveyDate',
+    rawText: field.rawValue,
+    snapshot: context.survey,
+  });
 }
 
 /** Το κελί μελετητών: **μία πρόταση ανά πρόσωπο**, όλες από το ίδιο κελί. */
@@ -80,15 +113,16 @@ function proposalsForField(
   context: TitleBlockResolveContext,
 ): BindingProposal[] {
   if (isDrawingMetaField(field.key)) {
-    return [
-      resolveDrawingMetaProposal(field, {
-        levelId: context.levelId,
-        titleBlockIndex,
-        // ⚠️ Ρητό spread αντί για `projectId: context.projectId`: το `exactOptionalPropertyTypes`
-        // ξεχωρίζει «απόν» από «`undefined`», και ο στόχος `drawing-meta` απαιτεί **συμβολοσειρά**.
-        ...(context.projectId ? { projectId: context.projectId } : {}),
-      }),
-    ];
+    const meta = resolveDrawingMetaProposal(field, {
+      levelId: context.levelId,
+      titleBlockIndex,
+      // ⚠️ Ρητό spread αντί για `projectId: context.projectId`: το `exactOptionalPropertyTypes`
+      // ξεχωρίζει «απόν» από «`undefined`», και ο στόχος `drawing-meta` απαιτεί **συμβολοσειρά**.
+      ...(context.projectId ? { projectId: context.projectId } : {}),
+    });
+    return context.projectId && field.key === 'studyDate'
+      ? [meta, studyDateAsSurveyDate(field, titleBlockIndex, context, context.projectId)]
+      : [meta];
   }
   if (field.key === 'designers') {
     return designerProposals(field, reading, titleBlockIndex, context);
@@ -111,6 +145,7 @@ function proposalsForField(
       ...(context.hasPrimaryAddress !== undefined
         ? { hasPrimaryAddress: context.hasPrimaryAddress }
         : {}),
+      ...(context.survey ? { survey: context.survey } : {}),
     });
   }
   return [unsupported(field, titleBlockIndex)];
