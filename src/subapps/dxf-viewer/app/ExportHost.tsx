@@ -43,6 +43,16 @@ import { runExport } from '../export/export-service';
 import type { ExportDeps, ExportLevelScene, ExportRequest } from '../export/types';
 import type { BuildingRef } from '../bim/utils/bim-floor-utils';
 import { ExportDialog } from '../ui/components/export/ExportDialog';
+// 🔴 ADR-767 Δ4 — ο φραγμός των **μπαγιάτικων δεμένων πινάκων** (`DXEVAL`). Η κρίση είναι
+// καθαρή και ελεγμένη· εδώ αποκτά το σημείο όπου σταματά τον χρήστη.
+import { assessExportBoundTables } from '../export/core/bound-table-export-preflight';
+import { readTableSourceContext } from '../bim/table/binding/table-source-context';
+import { setTableBindingFreshness } from '../state/table-binding-freshness-store';
+import { BoundTableExportBarrier } from '../ui/components/export/BoundTableExportBarrier';
+import type { BoundTableExportVerdict } from '../bim/table/binding/table-binding-export-guard';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('DXF_EXPORT_BOUND_TABLES');
 
 export interface ExportHostProps {
   /** Active project id — forwarded to the canonical IFC export flow. */
@@ -99,8 +109,82 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
     [firestoreBuildings],
   );
 
+  /**
+   * 🔴 ADR-767 Δ4 — ο φραγμός **εν αναμονή**: η ετυμηγορία + το «τι κάνω μόλις απαντήσεις».
+   *
+   * Η απόφαση του χρήστη ταξιδεύει ως `resolve` μιας υπόσχεσης, ώστε ο **ένας** δρόμος
+   * `handleSubmit` να μη διχαστεί σε δύο (σύγχρονο για καθαρό έργο, callback για μπλοκαρισμένο)
+   * — δύο δρόμοι σημαίνουν δύο σημεία που πρέπει να θυμούνται να τρέξουν την ίδια εξαγωγή.
+   */
+  const [barrier, setBarrier] = React.useState<
+    { readonly verdict: BoundTableExportVerdict; readonly decide: (proceed: boolean) => void } | null
+  >(null);
+
+  /**
+   * 🔴 **Ο ΦΡΑΓΜΟΣ, ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΜΟΡΦΗ.**
+   *
+   * Τρέχει **πριν** τη διακλάδωση IFC/PDF/DXF επίτηδες: το PDF είναι το **πιο** ευαίσθητο
+   * παραδοτέο (υπογράφεται), και το ότι δρομολογείται σε άλλη μηχανή δεν το κάνει λιγότερο
+   * παραδοτέο. Η εναλλακτική — φραγμός μόνο στο `runExport` — θα άφηνε τη μία μορφή που
+   * τυπώνεται ακριβώς **έξω**.
+   *
+   * ⚠️ **Γνωστό κενό, δηλωμένο**: ο **αυτόνομος** διάλογος Εκτύπωσης (ADR-453, `PrintHost`)
+   * έχει δικό του σημείο εισόδου και **δεν** περνά από εδώ. Λέγεται αντί να υπονοείται.
+   *
+   * Ο έλεγχος **καταγράφει** ό,τι βρήκε στο store φρεσκάδας: μετά από ακύρωση, οι μπαγιάτικοι
+   * πίνακες μένουν **σημαδεμένοι στην οθόνη**, δηλαδή ο χρήστης βλέπει *ποιους* να ανανεώσει
+   * αντί να τους ψάχνει. Είναι ακριβώς η συμπεριφορά του AutoCAD `DATALINKNOTIFY`.
+   */
+  const passesBoundTableGate = React.useCallback(
+    async (request: ExportRequest, levelScenes: readonly ExportLevelScene[]): Promise<boolean> => {
+      const verdict = assessExportBoundTables({
+        levelScenes,
+        activeLevelId: currentLevelId,
+        floorScope: request.floorScope,
+        context: readTableSourceContext(),
+      });
+      for (const table of verdict.stale) {
+        setTableBindingFreshness(table.entityId, {
+          status: 'stale',
+          freshRevision: table.freshRevision,
+        });
+      }
+      for (const table of verdict.unchecked) {
+        setTableBindingFreshness(table.entityId, { status: 'unknown', reason: table.reason });
+      }
+      if (!verdict.blocked) return true;
+
+      const proceed = await new Promise<boolean>((resolve) => {
+        setBarrier({ verdict, decide: resolve });
+      });
+      setBarrier(null);
+      // §8 #6 — «η επιλογή “εξάγω έτσι” **καταγράφεται**». Χωρίς αυτό, ο φραγμός θα ήταν
+      // εμπόδιο χωρίς ίχνος: κανείς δεν θα μπορούσε να απαντήσει «ποιος εξήγαγε μπαγιάτικα».
+      if (proceed) {
+        logger.warn('Export proceeded over stale bound tables', {
+          format: request.format,
+          stale: verdict.stale.length,
+          unchecked: verdict.unchecked.length,
+          examined: verdict.examined,
+        });
+      }
+      return proceed;
+    },
+    [currentLevelId],
+  );
+
   const handleSubmit = React.useCallback(
     async (request: ExportRequest) => {
+      // 🔴 ADR-767 Δ4 — οι σκηνές συναρμολογούνται **πριν** τη διακλάδωση, γιατί ο φραγμός
+      // τις χρειάζεται για **κάθε** μορφή (δες `passesBoundTableGate`). Η λίστα ξαναχρησιμο-
+      // ποιείται αυτούσια από το `deps` παρακάτω — καμία δεύτερη συλλογή.
+      const levelScenes: ExportLevelScene[] = [];
+      for (const level of levels) {
+        const scene = getLevelScene(level.id);
+        if (scene) levelScenes.push({ level, scene });
+      }
+      if (!(await passesBoundTableGate(request, levelScenes))) return;
+
       // IFC / PDF → delegate to the canonical engines (SSoT, no duplication).
       if (request.format === 'ifc') {
         EventBus.emit('bim:ifc-export-requested', {
@@ -116,11 +200,6 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
       }
 
       // DXF / TEK / OBJ / glTF → unified pipeline (content scope + multi-floor live here).
-      const levelScenes: ExportLevelScene[] = [];
-      for (const level of levels) {
-        const scene = getLevelScene(level.id);
-        if (scene) levelScenes.push({ level, scene });
-      }
       const deps: ExportDeps = {
         levelScenes,
         activeLevelId: currentLevelId,
@@ -137,7 +216,7 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
       await runExport(request, deps);
     },
     [levels, getLevelScene, currentLevelId, projectName, projectId, buildingId,
-     buildingFloors, buildings, activeBuildingId],
+     buildingFloors, buildings, activeBuildingId, passesBoundTableGate],
   );
 
   const handleOpenChange = React.useCallback(
@@ -145,5 +224,19 @@ function ExportBody({ projectId, buildingId, onClose }: ExportBodyProps): React.
     [onClose],
   );
 
-  return <ExportDialog open onOpenChange={handleOpenChange} onSubmit={handleSubmit} />;
+  return (
+    <React.Fragment>
+      <ExportDialog open onOpenChange={handleOpenChange} onSubmit={handleSubmit} />
+      {/* 🔴 ADR-767 §8 #6 — ΠΑΝΩ από τον διάλογο εξαγωγής, ποτέ αντί αυτού: ο χρήστης πρέπει
+          να βλέπει ότι ο φραγμός αφορά **αυτή** την εξαγωγή που μόλις ζήτησε. Οι δύο έξοδοι
+          είναι ρητές — καμία δεν είναι προεπιλεγμένη (δες τον διάλογο). */}
+      {barrier && (
+        <BoundTableExportBarrier
+          verdict={barrier.verdict}
+          onProceed={() => barrier.decide(true)}
+          onCancel={() => barrier.decide(false)}
+        />
+      )}
+    </React.Fragment>
+  );
 }
