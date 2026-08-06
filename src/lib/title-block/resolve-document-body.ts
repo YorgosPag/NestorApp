@@ -237,9 +237,14 @@ function proposalFor(
  * ⚠️ **Όχι κατακερματισμός του κειμένου.** Διορθωμένη γραμμή είναι **η ίδια δήλωση
  * διορθωμένη**: με ταυτότητα από το κείμενο θα εμφανιζόταν ως **δεύτερη** γραμμή δίπλα στην
  * παλιά, και ο μηχανικός θα έσβηνε χειροκίνητα ό,τι θα έπρεπε να είχε ενημερωθεί.
+ *
+ * 🔑 **Ισχύει και για τις λίστες value objects** (ενότητα Η, Φ4γ), και δεν είναι αντίφαση με
+ * το ότι εκεί ο writer ταυτοποιεί **με το κείμενο**: αυτό το κλειδί απαντά *«ποια δήλωση του
+ * σχεδίου εγκρίθηκε»* — ερώτημα της συλλογής συνδέσεων — ενώ το κείμενο απαντά *«σε ποια
+ * γραμμή της καρτέλας γράφεται»*. Δύο ερωτήματα, δύο απαντήσεις (δες `SurveyRowIdentity`).
  */
 function rowIdOf(reading: DocumentBodyReading, list: DocumentBodyListKey, ordinal: number): string {
-  return surveyRowKey(SURVEY_ROW_LISTS[list].idPrefix, [
+  return surveyRowKey(SURVEY_ROW_LISTS[list].keyPrefix, [
     cellRef(reading.at),
     list,
     String(ordinal),

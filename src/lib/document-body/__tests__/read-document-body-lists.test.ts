@@ -29,6 +29,22 @@ const form = (): DocumentBodyReading => {
 const rowsOf = (list: DocumentBodyListKey): readonly DocumentBodyListRow[] =>
   form().rows.filter((row) => row.list === list);
 
+/**
+ * Οι τρεις ομάδες της ενότητας Α′, **ονομαστικά**.
+ *
+ * ⚠️ Ήταν `row.list !== 'approvals' && row.list !== 'titleDeeds'` — δηλαδή «ό,τι δεν είναι Θ ή
+ * Ι». Το «όλα τα υπόλοιπα» ως ορισμός κατηγορίας κρατά όσο δεν προστίθεται τίποτα: η ενότητα Η
+ * (Φ4γ) μπήκε **μέσα** στις θεσμικές πράξεις χωρίς μία λέξη να αλλάξει.
+ */
+const ACT_LISTS: readonly DocumentBodyListKey[] = [
+  'urbanPlanDecree',
+  'generalUrbanPlan',
+  'zoningRegulations',
+];
+
+const actRows = (): readonly DocumentBodyListRow[] =>
+  form().rows.filter((row) => ACT_LISTS.includes(row.list));
+
 /** Όλες οι τιμές ενός μέρους μιας γραμμής — πίνακας, γιατί το ΦΕΚ επαναλαμβάνεται. */
 const partsOf = (row: DocumentBodyListRow, part: DocumentBodyPartKey): readonly string[] =>
   row.parts.filter((p) => p.part === part).map((p) => p.rawValue);
@@ -40,12 +56,11 @@ const oneOf = (row: DocumentBodyListRow, part: DocumentBodyPartKey): string | un
 
 describe('🔴 Α′ — δέκα εμφανίσεις «ΦΕΚ» δεν είναι δέκα γραμμές', () => {
   it('πέντε θεσμικές πράξεις από έξι γραμμές του σχεδίου', () => {
-    const acts = form().rows.filter((r) => r.list !== 'approvals' && r.list !== 'titleDeeds');
-    expect(acts).toHaveLength(5);
+    expect(actRows()).toHaveLength(5);
   });
 
   it('🔴 έξι αναφορές ΦΕΚ από ΔΕΚΑ εμφανίσεις της λέξης', () => {
-    const acts = form().rows.filter((r) => r.list !== 'approvals' && r.list !== 'titleDeeds');
+    const acts = actRows();
     const gazettes = acts.flatMap((row) => partsOf(row, 'gazette'));
     const spelled = acts.reduce((sum, row) => sum + (row.rawText.match(/ΦΕΚ/g)?.length ?? 0), 0);
 
@@ -123,6 +138,35 @@ describe('🔴 Α′ — δέκα εμφανίσεις «ΦΕΚ» δεν είν�
     const zks = rowsOf('zoningRegulations').find((row) => row.rawText.includes('(ΖΚΣ)'));
     expect(oneOf(zks!, 'reference')).toBe('ΕΝΤΟΣ ΖΩΝΗΣ ΚΟΙΝΩΝΙΚΟΥ ΣΥΝΤΕΛΕΣΤΗ (ΖΚΣ)');
     expect(form().fields.some((f) => f.key === 'inSocialFactorZone')).toBe(true);
+  });
+});
+
+describe('🔴 Η — μία παρατήρηση, και είναι ΛΙΣΤΑ επειδή το λέει το σχήμα, όχι το δείγμα', () => {
+  it('το σχέδιο γράφει ΜΙΑ παρατήρηση', () => {
+    expect(rowsOf('remarks')).toHaveLength(1);
+  });
+
+  it('🔴 ολόκληρη η πρόταση, ΑΥΤΟΥΣΙΑ — μαζί με το διπλό κενό του σχεδίου', () => {
+    // Το `rawValue` είναι το πρωτότυπο (ADR-745 §8 κανόνας 3): η κανονικοποίηση κενών ζει στην
+    // **τιμή** (`parseSurveyText`), όχι στον αναγνώστη. Δύο τόποι που «καθαρίζουν» σημαίνει ότι
+    // η απόδειξη του τι έλεγε το σχέδιο έχει ήδη πειραχτεί πριν αποθηκευτεί.
+    expect(oneOf(rowsOf('remarks')[0], 'remark')).toBe(
+      'Από το οικόπεδο  δεν διέρχεται ρεύμα υψηλής τάσης',
+    );
+  });
+
+  it('η επικεφαλίδα ΔΕΝ γίνεται παρατήρηση — ούτε η κενή γραμμή κάτω της', () => {
+    // Ο κανόνας `per: 'line'` πάνω στην ενότητα βλέπει **τρεις** γραμμές: το υπόλοιπο της
+    // γραμμής επικεφαλίδας (κενό), το κείμενο, και μια κενή. Μία μόνο έχει περιεχόμενο.
+    for (const row of rowsOf('remarks')) {
+      expect(row.rawText).not.toContain('ΠΑΡΑΤΗΡΗΣΗ');
+      expect(row.rawText.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it('🔴 η παρατήρηση δεν έχει ΜΕΡΗ πέρα από τον εαυτό της', () => {
+    // Ελεύθερος λόγος: κάθε τεμαχισμός θα ήταν εφεύρεση δομής που το έντυπο δεν έχει.
+    expect(rowsOf('remarks')[0].parts.map((p) => p.part)).toEqual(['remark']);
   });
 });
 

@@ -78,6 +78,7 @@ export const FIELD_LABEL: Record<ProposalFieldKey, string> = {
   urbanPlanDecree: 'titleBlockBinding.fields.urbanPlanDecree',
   generalUrbanPlan: 'titleBlockBinding.fields.generalUrbanPlan',
   zoningRegulations: 'titleBlockBinding.fields.zoningRegulations',
+  remarks: 'titleBlockBinding.fields.remarks',
   approvals: 'titleBlockBinding.fields.approvals',
   titleDeeds: 'titleBlockBinding.fields.titleDeeds',
 };

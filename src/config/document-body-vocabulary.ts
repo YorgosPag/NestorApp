@@ -188,7 +188,7 @@ export interface DocumentBodyRule {
  * διαβάζεται ούτε μία λέξη ελληνικών για να παρθεί η απόφαση.
  */
 export type BodyRowMatch =
-  /** Κάθε γραμμή με περιεχόμενο είναι γραμμή (ενότητες Θ και Ι). */
+  /** Κάθε γραμμή με περιεχόμενο είναι γραμμή (ενότητες Η, Θ και Ι). */
   | { readonly per: 'line' }
   /** Γραμμές που φέρουν τη σημαδούρα· οι ανώνυμες ενώνονται **κατά στήλη** (ενότητα Α′). */
   | { readonly per: 'marker'; readonly marker: string; readonly joinUnlabeled: 'sameColumn' };
@@ -291,6 +291,32 @@ const INSTITUTIONAL_ACTS_LIST: DocumentBodyListRule = {
     { part: 'gazette', match: { at: 'whole' }, take: { as: 'marked', marker: 'ΦΕΚ', keep: 'each' } },
     { part: 'note', match: { at: 'whole' }, take: { as: 'marked', marker: 'ΦΕΚ', keep: 'after' } },
   ],
+};
+
+/**
+ * **Η — παρατηρήσεις.**
+ *
+ * 🔴 **Η μόνη λίστα της οποίας η γραμμή ΔΕΝ έχει μέρη — και αυτό είναι η δήλωση.** Οι άλλες
+ * τρεις ενότητες γράφουν δομημένα πράγματα (πράξη + ΦΕΚ + σημείωση · τι + ποιος · αριθμός +
+ * ημερομηνία + είδος + συμβολαιογράφος + μεταγραφή) και τα μέρη τους είναι ο τρόπος να
+ * σταθούν σε πεδία. Η παρατήρηση είναι **μία πρόταση σε ελεύθερο λόγο**: κάθε προσπάθεια να
+ * τεμαχιστεί θα ήταν εφεύρεση δομής που το έντυπο δεν έχει.
+ *
+ * ⚠️ Η φόρμα τυπώνει «ΠΑΡΑΤΗΡΗΣΗ» στον **ενικό** και το G753 γράφει **μία**. Ο κανόνας
+ * παράγει όμως **γραμμές** (`per: 'line'`), γιατί το σχήμα κρατά λίστα (`SurveyRecord.remarks`)
+ * και άλλο σχέδιο γράφει περισσότερες. Η αντίστροφη επιλογή — βαθμωτός κανόνας επειδή το
+ * δείγμα έχει ένα — είναι κατά λέξη το «ένα δείγμα δεν είναι κλάση» του Q3.
+ *
+ * Το `rest` και όχι το `whole`: δεν υπάρχει ετικέτα να προσπεραστεί, αλλά η γραμμή μπορεί να
+ * αρχίζει με το διαχωριστικό της επικεφαλίδας (`:` ή παύλα) — και αυτό δεν είναι κείμενο του
+ * μηχανικού. Το εσωτερικό διπλό κενό («οικόπεδο  δεν») **μένει**: το `rawText` είναι το
+ * πρωτότυπο, και η κανονικοποίηση ανήκει στην τιμή (`parseSurveyText`).
+ */
+const REMARKS_LIST: DocumentBodyListRule = {
+  section: 'i',
+  rows: { per: 'line' },
+  list: 'remarks',
+  parts: [{ part: 'remark', match: { at: 'whole' }, take: { as: 'rest' } }],
 };
 
 /**
@@ -430,7 +456,8 @@ const PRIVATE_ENGINEER_SURVEY: DocumentBodyProfile = {
     { key: 'plotArea', section: 'st', match: { at: 'section-prose' }, take: { as: 'number', unit: 'squareMetre', select: { nth: 1 } } },
     { key: 'heightDatum', section: 'z', match: { at: 'section-prose' }, take: { as: 'rest' } },
   ],
-  listRules: [INSTITUTIONAL_ACTS_LIST, APPROVALS_LIST, TITLE_DEEDS_LIST],
+  // Με τη σειρά της τυπωμένης φόρμας: Α′ (μέσα στην Α) · Η · Θ · Ι.
+  listRules: [INSTITUTIONAL_ACTS_LIST, REMARKS_LIST, APPROVALS_LIST, TITLE_DEEDS_LIST],
 };
 
 /**

@@ -302,6 +302,12 @@ export const SURVEY_ACT_SECTIONS: readonly SurveyListSection[] =
 /**
  * A remark **is** a `Sourced<string>` — there is no row object around it, so the
  * row's single field reads and writes the row itself.
+ *
+ * 🔴 ADR-759 Φ4γ: the single field carries `part: 'remark'` for the same reason every
+ * other row field does — so the drawing lands through **this very accessor** and not
+ * through a second, hand-written patch. Here it also carries the row's whole identity:
+ * a remark has no id, so the text this field holds is the only thing that says which
+ * remark it is (see `survey-row-bindings.ts`, `upsertValueRow`).
  */
 export const SURVEY_REMARKS_SECTION: SurveyListSection = {
   id: 'i-remarks',
@@ -314,6 +320,7 @@ export const SURVEY_REMARKS_SECTION: SurveyListSection = {
     {
       kind: 'text',
       multiline: true,
+      part: 'remark',
       labelKey: 'remarks.item',
       read: (record) => rowAt(record, remarkLens, index) ?? emptySourced<string>(),
       write: (record, next) => updateRow(record, remarkLens, index, () => next),

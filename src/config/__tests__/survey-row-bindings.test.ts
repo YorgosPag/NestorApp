@@ -17,7 +17,7 @@ import { createEmptySurveyRecord } from '@/lib/survey-record/survey-record-facto
 import { newGazetteRef, updateRow, actLens } from '@/lib/survey-record/survey-list-rows';
 import type { SurveySnapshot } from '@/lib/title-block/resolve-survey-record';
 import { DOCUMENT_BODY_PART_KEYS, type DocumentBodyPartKey } from '@/types/document-body-reading';
-import type { SurveyRecord } from '@/types/project-survey-record';
+import { userSourced, type SurveyRecord } from '@/types/project-survey-record';
 import type { BindingTarget } from '@/types/title-block-binding';
 import {
   applySurveyRowBinding,
@@ -79,15 +79,16 @@ function approveAll(record: SurveyRecord, targets: readonly RowTarget[]): Survey
 describe('🔴 ΤΑΥΤΟΔΥΝΑΜΙΑ — δεύτερη Έγκριση δεν διπλασιάζει καμία γραμμή', () => {
   const targets = g753RowTargets();
 
-  it('το σχέδιο δίνει δέκα γραμμές προς έγκριση', () => {
-    expect(targets).toHaveLength(10);
+  it('το σχέδιο δίνει έντεκα γραμμές προς έγκριση', () => {
+    expect(targets).toHaveLength(11);
   });
 
-  it('μία Έγκριση ⇒ πέντε πράξεις, δύο εγκρίσεις, τρεις τίτλοι', () => {
+  it('μία Έγκριση ⇒ πέντε πράξεις, μία παρατήρηση, δύο εγκρίσεις, τρεις τίτλοι', () => {
     const record = approveAll(blank(), targets);
     expect(record.institutionalActs.urbanPlanDecree).toHaveLength(1);
     expect(record.institutionalActs.generalUrbanPlan).toHaveLength(1);
     expect(record.institutionalActs.zoningRegulations).toHaveLength(3);
+    expect(record.remarks).toHaveLength(1);
     expect(record.approvals).toHaveLength(2);
     expect(record.titleDeeds).toHaveLength(3);
   });
@@ -103,8 +104,8 @@ describe('🔴 ΤΑΥΤΟΔΥΝΑΜΙΑ — δεύτερη Έγκριση δεν
     expect(g753RowTargets().map((t) => t.rowId)).toEqual(targets.map((t) => t.rowId));
   });
 
-  it('κάθε γραμμή έχει ΔΙΚΗ της ταυτότητα — καμία σύγκρουση ανάμεσα στις δέκα', () => {
-    expect(new Set(targets.map((t) => t.rowId)).size).toBe(10);
+  it('κάθε γραμμή έχει ΔΙΚΗ της ταυτότητα — καμία σύγκρουση ανάμεσα στις έντεκα', () => {
+    expect(new Set(targets.map((t) => t.rowId)).size).toBe(11);
   });
 
   it('🔴 οι ΤΑΥΤΟΤΗΤΕΣ των γραμμών επιβιώνουν της δεύτερης έγκρισης', () => {
@@ -204,6 +205,41 @@ describe('🔴 ό,τι έγραψε ο ΑΝΘΡΩΠΟΣ επιβιώνει', () 
       'ΦΕΚ 963Δ/25-09-1992',
       'ΦΕΚ ΧΕΙΡΟΓΡΑΦΟ',
     ]);
+  });
+
+  it('🔴 παρατήρηση που πληκτρολόγησε ο μηχανικός ΔΕΝ σβήνεται και ΔΕΝ οικειοποιείται', () => {
+    // Το value object δεν έχει id, άρα η ταυτότητά του είναι το κείμενό του: η δική του
+    // πρόταση δεν ταιριάζει με του σχεδίου, οπότε **συνυπάρχουν** — και η δική του μένει
+    // `'user'`. Το αντίθετο («ξαναγράψ' το, ίδιο είναι») θα απέδιδε στο σχέδιο πρόταση που
+    // έγραψε άνθρωπος.
+    const remark = g753RowTargets().find((t) => t.list === 'remarks');
+    const typed: SurveyRecord = {
+      ...blank(),
+      remarks: [userSourced<string>('Δικό μου κείμενο')],
+    };
+
+    const after = applySurveyRowBinding(typed, 'remarks', remark!.rowId, remark!.parts).record;
+    expect(after.remarks.map((r) => r.value)).toEqual([
+      'Δικό μου κείμενο',
+      'Από το οικόπεδο δεν διέρχεται ρεύμα υψηλής τάσης',
+    ]);
+    expect(after.remarks[0].provenance).toBe('user');
+    expect(after.remarks[1].provenance).toBe('survey');
+  });
+
+  it('🔴 παρατήρηση που ο μηχανικός έγραψε ΙΔΙΑ με το σχέδιο δεν διπλασιάζεται', () => {
+    // Το σχέδιο γράφει «οικόπεδο**  **δεν» με **διπλό** κενό· κανείς δεν το πληκτρολογεί έτσι.
+    // Η σύγκριση γίνεται στο κείμενο που **δείχνει** η γραμμή — αλλιώς η καρτέλα θα έδειχνε δύο
+    // ολόιδιες παρατηρήσεις και ο μηχανικός θα έσβηνε τη μία.
+    const remark = g753RowTargets().find((t) => t.list === 'remarks');
+    const typed: SurveyRecord = {
+      ...blank(),
+      remarks: [userSourced<string>('Από το οικόπεδο δεν διέρχεται ρεύμα υψηλής τάσης')],
+    };
+
+    const after = applySurveyRowBinding(typed, 'remarks', remark!.rowId, remark!.parts).record;
+    expect(after.remarks).toHaveLength(1);
+    expect(after.remarks[0].provenance).toBe('user');
   });
 
   it('η εγγραφή αγγίζει **ένα** κλειδί πρώτου επιπέδου — η εμβέλεια του patch', () => {
