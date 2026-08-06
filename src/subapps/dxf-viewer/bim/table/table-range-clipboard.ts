@@ -57,7 +57,7 @@
  * @see bim/table/table-cell-edit-session.ts — η ΜΙΑ διαδρομή commit
  */
 
-import type { TsvGrid } from '@/lib/spreadsheet/tsv';
+import { formatTsv, parseTsv, rectangularizeTsvGrid, type TsvGrid } from '@/lib/spreadsheet/tsv';
 import type { PersistedTableModel, TableModel } from '../../types/table';
 import type { CellWriteTarget, PendingCellWrites } from './table-model-helpers';
 import {
@@ -99,6 +99,39 @@ export function tableRangeToTsvGrid(
   const grid: string[][] = [];
   for (let i = 0; i < flat.length; i += width) grid.push(flat.slice(i, i + width));
   return grid;
+}
+
+/**
+ * 🔴 ADR-739 §54 — **Η ΠΕΡΙΟΧΗ ΩΣ ΚΕΙΜΕΝΟ ΠΡΟΧΕΙΡΟΥ**· `null` ⇒ δεν υπάρχει τι να αντιγραφεί.
+ *
+ * ## Γιατί εδώ και όχι στον καταναλωτή
+ * Το ζεύγος *«πλέγμα → TSV»* / *«TSV → πλέγμα»* γράφτηκε πρώτα μέσα στο
+ * `use-table-range-actions.ts`, χτισμένο πάνω σε `ClipboardEvent`. Το μενού δεξιού κλικ ζητά
+ * **την ίδια** μετατροπή χωρίς συμβάν (async Clipboard API): αντιγραμμένη εκεί, θα ήταν δεύτερη
+ * απάντηση στο «πώς κωδικοποιείται ένα κελί που περιέχει στηλοθέτη» — και οι δύο δρόμοι θα
+ * παρήγαγαν διαφορετικό πρόχειρο για τα ίδια κελιά, χωρίς κανένα test να τους συγκρίνει.
+ *
+ * 🔑 Η ίδια η σειριοποίηση **δεν** γεννιέται ούτε εδώ: έρχεται από το `lib/spreadsheet/tsv`,
+ * το SSoT που μοιράζεται κάθε φύλλο υπολογισμού του έργου.
+ */
+export function tableRangeToClipboardText(
+  persisted: PersistedTableModel,
+  bounds: TableCellRangeBounds,
+): string | null {
+  const grid = tableRangeToTsvGrid(persisted, bounds);
+  return grid.length === 0 ? null : formatTsv(grid);
+}
+
+/**
+ * Κείμενο προχείρου → **ορθογώνιο** πλέγμα, έτοιμο για το {@link pasteTsvIntoTable}.
+ *
+ * Κενό πλέγμα σημαίνει «δεν υπήρχε τίποτα να επικολληθεί» και ο καλών **οφείλει** να το
+ * ξεχωρίσει από «ένα κενό κελί»: η δεύτερη περίπτωση σβήνει δεδομένα, η πρώτη δεν πρέπει.
+ * Η ορθογωνοποίηση είναι υποχρεωτική εδώ και όχι στον γραφέα — κείμενο από τον έξω κόσμο δεν
+ * έχει καμία υποχρέωση να είναι ορθογώνιο (δες `lib/spreadsheet/tsv`).
+ */
+export function clipboardTextToTableGrid(text: string): TsvGrid {
+  return rectangularizeTsvGrid(parseTsv(text));
 }
 
 /**

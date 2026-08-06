@@ -45,7 +45,6 @@
 import { useCallback, useMemo, type ClipboardEvent } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { formatTsv, parseTsv, rectangularizeTsvGrid } from '@/lib/spreadsheet/tsv';
 // 🔴 ADR-739 §48.12 — **ο ΕΝΑΣ ορισμός** του «ποια περιοχή εννοεί ο χρήστης τώρα», κοινός με
 // τον ζωγράφο. Δες το `currentBounds` παρακάτω για το γιατί έπρεπε να είναι κυριολεκτικά ο ίδιος.
 import { tableEffectiveRangeBounds } from '../../bim/table/table-effective-range';
@@ -61,12 +60,16 @@ import {
 } from '../../bim/table/table-cell-range';
 // 🔴 ADR-739 §43 — ο ΕΝΑΣ γραφέας του «επίλεξε τα πάντα»: τρεις πόρτες, μία εντολή.
 import { selectWholeTable } from './table-select-all-action';
+// 🔴 ADR-739 §54 — η **σειριοποίηση** ζει στην καθαρή στοίβα, όχι εδώ: το μενού δεξιού κλικ
+// κάνει την ίδια μετατροπή χωρίς `ClipboardEvent`, και δύο σειριοποιητές TSV θα σήμαιναν δύο
+// απαντήσεις στο «πώς κωδικοποιείται κελί με στηλοθέτη μέσα του».
 import {
   clearTableRange,
+  clipboardTextToTableGrid,
   pasteTsvIntoTable,
-  tableRangeToTsvGrid,
-  type TablePasteResult,
+  tableRangeToClipboardText,
 } from '../../bim/table/table-range-clipboard';
+import { useTablePasteReport } from './use-table-paste-report';
 import type { TableCursorMove } from '../../bim/table/table-cell-navigation';
 import {
   setTableCellSelection,
@@ -107,22 +110,9 @@ export interface TableRangeActions {
   readonly onPaste: (event: ClipboardEvent<HTMLElement>) => void;
 }
 
-/**
- * Η προειδοποίηση «απλό κείμενο» λέγεται **μία φορά ανά φόρτωση σελίδας** (§4.5).
- *
- * Ένα toast σε **κάθε** επικόλληση θα ήταν θόρυβος που ο χρήστης μαθαίνει να αγνοεί — και
- * τότε θα έχανε και τα μηνύματα που **μετράνε** (τι δεν χώρεσε). Μία φορά είναι αρκετή για
- * να μάθει τον κανόνα· είναι πληροφορία για το **σύστημα**, όχι για τη συγκεκριμένη πράξη.
- *
- * Σε επίπεδο module και όχι στο store: δεν είναι κατάσταση του πίνακα, δεν σειριοποιείται,
- * δεν αναιρείται.
- */
-let plainTextNoticeShown = false;
-
-/** Test helper — μηδενισμός του «μία φορά» μεταξύ tests. */
-export function __resetTablePlainTextNoticeForTests(): void {
-  plainTextNoticeShown = false;
-}
+// ⚠️ ADR-739 §54 — η σημαία «το είπαμε μία φορά» και η **αναφορά** της επικόλλησης μετακόμισαν
+// στο `use-table-paste-report.ts`: η δεύτερη διαδρομή επικόλλησης (μενού δεξιού κλικ) οφείλει
+// να λέει τα ίδια μηνύματα **και** να μοιράζεται το «μία φορά ανά σελίδα».
 
 export function useTableRangeActions(params: UseTableRangeActionsParams): TableRangeActions {
   const { cursor, entity, levelManager, execute } = params;
@@ -225,8 +215,7 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
   const rangeAsTsv = useCallback((): string | null => {
     const bounds = currentBounds();
     if (!bounds || !entity) return null;
-    const grid = tableRangeToTsvGrid(entity.model, bounds);
-    return grid.length === 0 ? null : formatTsv(grid);
+    return tableRangeToClipboardText(entity.model, bounds);
   }, [currentBounds, entity]);
 
   /** `true` όταν το πρόχειρο ανήκει στην **περιοχή**· `false` ⇒ ο browser κάνει τη δουλειά. */
@@ -285,54 +274,15 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
     [writeRangeToClipboard, clearSelection],
   );
 
-  /**
-   * Τι έμαθε ο χρήστης μετά την επικόλληση — **ποτέ σιωπηλή απώλεια** (§4.3, §4.5).
-   *
-   * Δύο διαφορετικά πράγματα, δύο διαφορετικά μηνύματα:
-   *  - **τι δεν χώρεσε** (προειδοποίηση, ανά πράξη) — αφορά *αυτά* τα δεδομένα·
-   *  - **τι δεν μεταφέρεται ποτέ** (ενημέρωση, μία φορά) — αφορά τον κανόνα του συστήματος.
-   */
-  const reportPaste = useCallback(
-    (result: TablePasteResult) => {
-      const parts: string[] = [];
-      if (result.fittedRows < result.offeredRows) {
-        parts.push(
-          t('table.clipboard.pasteClippedRows', {
-            fitted: result.fittedRows,
-            offered: result.offeredRows,
-          }),
-        );
-      }
-      if (result.fittedColumns < result.offeredColumns) {
-        parts.push(
-          t('table.clipboard.pasteClippedColumns', {
-            fitted: result.fittedColumns,
-            offered: result.offeredColumns,
-          }),
-        );
-      }
-      if (result.skippedMergedCells > 0) {
-        parts.push(t('table.clipboard.pasteMergedSkipped', { count: result.skippedMergedCells }));
-      }
-      if (parts.length > 0) {
-        notifications.warning(t('table.clipboard.pasteClipped', { detail: parts.join(' · ') }), {
-          duration: 6000,
-        });
-      }
-      if (!plainTextNoticeShown) {
-        plainTextNoticeShown = true;
-        notifications.info(t('table.clipboard.pastePlainText'), { duration: 8000 });
-      }
-    },
-    [notifications, t],
-  );
+  // §54 — **η ίδια** αναφορά με τη διαδρομή του μενού· δες `use-table-paste-report.ts`.
+  const reportPaste = useTablePasteReport();
 
   const onPaste = useCallback(
     (event: ClipboardEvent<HTMLElement>) => {
       if (!ownsClipboard() || !cursor || !entity) return;
       event.preventDefault();
       const text = event.clipboardData.getData('text/plain');
-      const grid = rectangularizeTsvGrid(parseTsv(text));
+      const grid = clipboardTextToTableGrid(text);
       if (grid.length === 0) {
         notifications.info(t('table.clipboard.pasteEmpty'));
         return;
