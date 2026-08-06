@@ -42,6 +42,11 @@ import { preloadCadSubstituteFonts, subscribeFontReady } from '../../text-engine
 // αφού ο cache έχει ήδη χτιστεί με το placeholder. Δεν είναι μέρος του cache key (one-time
 // event, ίδιο συμβόλαιο με τα CAD fonts) → invalidate ώστε να ξαναχτιστεί το entity layer.
 import { subscribeImageAssetReady } from '../../rendering/entities/shared/hatch-image-cache';
+// 🔴 ADR-767 Δ4 — η ετυμηγορία «μπαγιάτικος πίνακας» ζει σε store και διαβάζεται στον
+// `TableRenderer` **τη στιγμή του καρέ**, δηλαδή είναι paint-time state και ΔΕΝ μπαίνει στο
+// κλειδί του cache (το μοντέλο του πίνακα δεν άλλαξε — άλλαξε η **πηγή** του). Ίδιο ακριβώς
+// συμβόλαιο με LWDISPLAY / LayerStore / linetype registry παραπάνω.
+import { subscribeTableBindingFreshness } from '../../state/table-binding-freshness-store';
 
 /**
  * Register the DxfCanvas bitmap-cache dirty/invalidate store subscriptions. `bitmapCacheRef`
@@ -137,6 +142,18 @@ export function useDxfCanvasCacheInvalidation(
   // opacity slider), so a full-layer rebuild here is ADR-040 compliant.
   useEffect(() => {
     return subscribeLinetypeRegistry(() => {
+      bitmapCacheRef.current?.invalidate();
+      isDirtyRef.current = true;
+    });
+  }, [bitmapCacheRef, isDirtyRef]);
+
+  // 🔴 ADR-767 Δ4 — «αυτός ο δεμένος πίνακας δεν συμφωνεί με την πηγή του». Η ετυμηγορία
+  // γράφεται σε **ρητές** στιγμές (πάτημα «Ανανέωση», απόπειρα εξαγωγής) και ο ζωγράφος τη
+  // διαβάζει τη στιγμή του καρέ — άρα, όπως το LWDISPLAY, δεν είναι στο cache key και μια
+  // αλλαγή της απαιτεί ρητή ακύρωση. Χαμηλότατης συχνότητας εξ ορισμού (Δ3: ο πίνακας δεν
+  // ελέγχεται ποτέ μόνος του), οπότε ένα πλήρες rebuild εδώ είναι ADR-040 συμβατό.
+  useEffect(() => {
+    return subscribeTableBindingFreshness(() => {
       bitmapCacheRef.current?.invalidate();
       isDirtyRef.current = true;
     });

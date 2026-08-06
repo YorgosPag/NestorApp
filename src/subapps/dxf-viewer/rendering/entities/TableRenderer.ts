@@ -100,6 +100,12 @@ import { stampTableDeleteControl } from './table/stamp-table-delete-control';
 import { getTableDeleteControl } from '../../state/table-delete-control-store';
 import { tableDeleteSpanRectMm } from '../../bim/table/table-delete-control';
 import { tableIndicatorBandsMm } from '../../bim/table/table-indicator-geometry';
+// 🔴 ADR-767 Δ4 — ο δείκτης δεσμού: **λωρίδα ανά δεμένη στήλη** (Δ8) + σημάδι στα κελιά που
+// αποκλίνουν. Ο ίδιος κανόνας ανάγνωσης με κάθε άλλο store εδώ: getter τη στιγμή του καρέ.
+// ⚠️ Ζωγραφίζεται **έξω** από το `if (cursor)` και **έξω** από το `if (selected)`: είναι
+// ιδιότητα του σχεδίου, όχι της τρέχουσας χειρονομίας — ο δεσμός φαίνεται πάντα. Ο φρουρός
+// του χαρτιού ζει **μέσα** στον ζωγράφο (δες την κεφαλίδα του).
+import { stampTableBoundStateOverlay } from './table/table-bound-state-overlay';
 import { gripGlyphShape } from '../../bim/grips/grip-glyph-registry';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { toRenderGripInfo } from './shared/grip-utils';
@@ -198,6 +204,16 @@ export class TableRenderer extends BaseEntityRenderer {
     // «Ν/Α» πάνω σε διαγραμμένο κελί να παραμένει αναγνώσιμο.
     for (const cell of cells) if (cell.diagonals) stampTableBorders(rc, cell.diagonals);
     stampTableText(rc, cells, editedCellRef(cursor));
+    // 🔴 ADR-767 Δ4 — **ο δείκτης δεσμού, μετά το κείμενο και πριν κάθε δείκτη χειρονομίας.**
+    //
+    // Η θέση είναι η προδιαγραφή: πάνω από τα δεδομένα (αλλιώς μια λωρίδα θα κρυβόταν κάτω
+    // από γέμισμα κεφαλίδας), αλλά **κάτω** από δρομέα/επιλογή/μυρμήγκια — εκείνα απαντούν
+    // «τι κάνω τώρα» και δεν επιτρέπεται να τα σκεπάσει μια ιδιότητα του εγγράφου.
+    //
+    // Και **έξω** από τα δύο `if`: ο δεσμός δεν είναι κατάσταση της χειρονομίας. Ένας
+    // δεμένος πίνακας που κανείς δεν άγγιξε οφείλει να φαίνεται δεμένος — αλλιώς η ένδειξη
+    // θα τη βρήκε μόνο όποιος ήδη ξέρει ότι υπάρχει (η αστοχία ανακάλυψης του §31.8).
+    stampTableBoundStateOverlay(rc, e, layout.columns, cells);
     if (cursor) {
       // ADR-739 Φ.Δ βήμα 4 — ΠΡΩΤΑ το περίγραμμα λειτουργίας, ΜΕΤΑ ο δρομέας κελιού: όταν ο
       // δρομέας κάθεται σε κελί της άκρης, οι δύο γραμμές εφάπτονται και πρέπει να νικά η
