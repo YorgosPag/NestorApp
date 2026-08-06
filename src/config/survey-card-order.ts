@@ -34,6 +34,7 @@ import {
   SURVEY_SECTION_B,
   SURVEY_SECTION_C,
   SURVEY_SECTION_D,
+  SURVEY_SECTION_DOC,
   SURVEY_SECTION_E,
   SURVEY_SECTION_ST,
   SURVEY_SECTION_Z,
@@ -67,6 +68,9 @@ export type SurveyCardEntry =
 
 /** The card, in the order of the printed form. The single source of that order. */
 export const SURVEY_CARD_ORDER: readonly SurveyCardEntry[] = [
+  // «Το έγγραφο» — δεν ανήκει στη φόρμα Α–Ι· απαντά **ποιο** έγγραφο διαβάζουμε, που είναι
+  // η ερώτηση πριν από κάθε άλλη. Η σειρά Α–Ι από κάτω μένει άθικτη.
+  { kind: 'scalar', section: SURVEY_SECTION_DOC },
   { kind: 'scalar', section: SURVEY_SECTION_A },
   { kind: 'listGroup', titleKey: 'sections.aActs', sections: SURVEY_ACT_SECTIONS },
   { kind: 'scalar', section: SURVEY_SECTION_B },

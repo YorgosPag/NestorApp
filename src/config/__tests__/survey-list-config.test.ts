@@ -103,6 +103,7 @@ describe('printed-form order (ADR-759 §2β.2)', () => {
     });
 
     expect(sequence).toEqual([
+      'sections.doc', // «Το έγγραφο» — εκτός φόρμας Α–Ι· ποιο έγγραφο διαβάζουμε (Φ3γ)
       'sections.a', // Α  ΟΡΟΙ ΔΟΜΗΣΗΣ
       'sections.aActs', // Α′ ΘΕΣΜΙΚΕΣ ΠΡΑΞΕΙΣ — between Α and Β, not appended
       'acts.urbanPlanDecree',

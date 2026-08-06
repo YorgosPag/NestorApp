@@ -435,12 +435,32 @@ export const DELETION_REGISTRY: Record<EntityType, EntityDeletionConfig> = {
         // deletes bindings, so the message would lead nowhere.
         //
         // The FK is the denormalized top-level `projectId` (the `target` field is
-        // a union, and Firestore cannot query inside one). Every binding written
-        // in Φ3β carries it: `drawing-meta`, the only target kind without a
-        // project, is deliberately not writable yet.
+        // a union, and Firestore cannot query inside one). **Every** target kind
+        // carries it — `drawing-meta` gained one in Φ3 for exactly this reason,
+        // and `survey-record` (Φ3γ) was born with one.
         collection: COLLECTIONS.TITLE_BLOCK_BINDINGS,
         foreignKey: 'projectId',
         label: 'Συνδέσεις πινακίδας τοπογραφικού',
+        queryType: 'equals',
+      },
+      {
+        // ADR-759: the surveyor's transcribed statements about **this** plot.
+        //
+        // 🔴 THIS WAS MISSING SINCE Φ2 — found 2026-08-06 while wiring Φ3γ.
+        // Deleting a project left every `survey_records` document behind, with a
+        // `projectId` pointing at nothing: unreachable from any screen (the card
+        // is reached *through* the project) and invisible to every audit. It is
+        // the same defect ADR-709 found for `FileRecord`, and the same one this
+        // very registry argues for title-block bindings two entries up —
+        // *orphaned evidence is worse than none*.
+        //
+        // CASCADE and not a dependency, for the identical reason: `strategy:
+        // 'BLOCK'` would make a project permanently undeletable the moment a
+        // survey card exists, and a transcription of a document *about this
+        // project* has no meaning once the project is gone.
+        collection: COLLECTIONS.SURVEY_RECORDS,
+        foreignKey: 'projectId',
+        label: 'Στοιχεία Τοπογραφικού',
         queryType: 'equals',
       },
     ],

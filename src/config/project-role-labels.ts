@@ -24,6 +24,7 @@
 
 import { ENTITY_ASSOCIATION_ROLES } from '@/types/entity-associations';
 import type { ProjectRole } from '@/types/entity-associations';
+import type { ConfigTranslateFn } from './config-translate-fn';
 
 /**
  * Το namespace στο οποίο ζουν οι ετικέτες.
@@ -56,11 +57,13 @@ export const isProjectRole = (role: string): role is ProjectRole =>
 /**
  * Ο τύπος του `t` όπως τον επιστρέφει ο hook — **ως παράμετρος, ποτέ ως import του hook**.
  *
- * Type-only εισαγωγή: το `project-role-labels` παραμένει αρχείο ρύθμισης χωρίς runtime εξάρτηση
- * από React/i18next, ώστε να μπορεί να το καταναλώνει και καθαρός κώδικας. Το ιδίωμα υπάρχει
- * ήδη στο `ProjectParticipationSection.tsx:19` — δεν γεννιέται εδώ δεύτερο.
+ * ⚠️ **Ψευδώνυμο συμβατότητας, όχι δεύτερη δήλωση** (boy scout 2026-08-06, N.0.2). Εδώ ζούσε
+ * αυτούσιο το `ReturnType<typeof import(...)>['t']`, με σχόλιο που έλεγε «δεν γεννιέται εδώ
+ * δεύτερο» — και ο **τρίτος** καταναλωτής (`survey-record-labels.ts`) θα γεννούσε τρίτο, γιατί
+ * το όνομα `Role…` δεν ταιριάζει σε τίποτε άλλο. Ο τύπος μετακόμισε στο
+ * {@link ConfigTranslateFn}· το όνομα μένει για τους 3 υπάρχοντες καταναλωτές.
  */
-export type RoleTranslateFn = ReturnType<typeof import('@/i18n/hooks/useTranslation').useTranslation>['t'];
+export type RoleTranslateFn = ConfigTranslateFn;
 
 /**
  * `ProjectRole` → η ανθρώπινη ετικέτα του. **Η μοναδική πράξη μετάφρασης ρόλου έργου.**

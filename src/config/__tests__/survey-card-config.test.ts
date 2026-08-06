@@ -42,6 +42,11 @@ describe('card structure', () => {
     // The engineer reads the card in the same order as the drawing. This is the
     // contract that the first draft of §4.2 broke by inventing its own grouping.
     expect(SURVEY_CARD_SECTIONS.map((s) => s.titleKey)).toEqual([
+      // ⚠️ «Το έγγραφο» ΔΕΝ είναι ενότητα της τυπωμένης φόρμας — η φόρμα δεν περιγράφει τον
+      // εαυτό της. Μπήκε στη Φ3γ επειδή το `surveyDate` υπήρχε στο σχήμα και **δεν αποδιδόταν
+      // πουθενά**: η προσγείωση της πινακίδας θα έγραφε τιμή που κανείς δεν μπορεί να δει.
+      // Κάθεται **πρώτη** γιατί απαντά «ποιο έγγραφο διαβάζω;», πριν από κάθε άλλη ερώτηση.
+      'sections.doc',
       'sections.a',
       'sections.b',
       'sections.c',
