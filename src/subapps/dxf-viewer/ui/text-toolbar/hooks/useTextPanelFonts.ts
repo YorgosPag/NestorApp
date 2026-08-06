@@ -15,26 +15,15 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { fontCache, subscribeMissingFontReport } from '../../../text-engine/fonts';
+import { collectAvailableFontNames, subscribeMissingFontReport } from '../../../text-engine/fonts';
 import { useCurrentSceneModel } from './useCurrentSceneModel';
 
-function snapshotCacheNames(): readonly string[] {
-  const out: string[] = [];
-  // `fontCache.byName` is private; the cache exposes only `has/get/size`.
-  // Use a sentinel iteration via `size` as a freshness key while reading
-  // names through `keys()` proxy. Since the cache does not expose keys,
-  // we ship a minimal `entries` adapter inline.
-  const cacheUnknown = fontCache as unknown as {
-    byName?: Map<string, unknown>;
-  };
-  if (cacheUnknown.byName) {
-    for (const name of cacheUnknown.byName.keys()) {
-      out.push(name);
-    }
-  }
-  return out.sort();
-}
-
+/**
+ * ⚠️ ADR-739 §55 — **η γνώση μετακόμισε** στο {@link collectAvailableFontNames}: το mini
+ * toolbar του πίνακα τη ζητά κι εκείνο, αλλά ως **getter** (ζει μέσα στον `CanvasSection`,
+ * όπου κάθε συνδρομή είναι re-render του orchestrator — ADR-040 κανόνας #1). Εδώ μένει ό,τι
+ * είναι όντως του πάνελ: **πότε** ξαναρωτιέται.
+ */
 export function useTextPanelFonts(): readonly string[] {
   const scene = useCurrentSceneModel();
   const [bump, setBump] = useState(0);
@@ -45,13 +34,6 @@ export function useTextPanelFonts(): readonly string[] {
 
   return useMemo(() => {
     void bump;
-    const set = new Set<string>(snapshotCacheNames());
-    if (scene) {
-      for (const entity of scene.entities) {
-        const e = entity as unknown as { fontFamily?: string };
-        if (e.fontFamily) set.add(e.fontFamily);
-      }
-    }
-    return [...set].sort();
+    return collectAvailableFontNames(scene);
   }, [scene, bump]);
 }

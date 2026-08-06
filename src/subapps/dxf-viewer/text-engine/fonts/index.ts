@@ -3,6 +3,10 @@ export type { FontSubstitutionEntry } from './font-substitution-table';
 
 export { FontCache, fontCache } from './font-cache';
 
+// ADR-739 §55 — η **μία** απάντηση στο «ποιες γραμματοσειρές υπάρχουν», κοινή για το πάνελ
+// κειμένου (συνδρομή) και το mini toolbar του πίνακα (getter στο δεξί κλικ).
+export { collectAvailableFontNames } from './available-font-names';
+
 export {
   loadFont,
   loadFontFromBuffer,

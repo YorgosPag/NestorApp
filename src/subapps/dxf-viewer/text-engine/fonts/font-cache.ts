@@ -33,6 +33,19 @@ export class FontCache {
     return this.byBuffer.get(buffer);
   }
 
+  /**
+   * Τα ονόματα που έχουν φορτωθεί (πεζά, όπως το κλειδί αναζήτησης).
+   *
+   * Υπάρχει επειδή **δύο** επιφάνειες ρωτούν «ποιες γραμματοσειρές υπάρχουν;» (το πάνελ
+   * κειμένου και το mini toolbar του πίνακα). Πριν από αυτό, ο μόνος τρόπος ήταν
+   * `fontCache as unknown as { byName?: Map<…> }` — δηλαδή ο καταναλωτής **έσπαγε** την
+   * ενθυλάκωση της κλάσης, και ένα δεύτερο αντίγραφο εκείνου του cast θα ήταν δεύτερη
+   * γνώση για ένα ιδιωτικό πεδίο.
+   */
+  names(): readonly string[] {
+    return [...this.byName.keys()];
+  }
+
   clear(): void {
     this.byName.clear();
     // WeakMap entries are GC'd automatically — no manual clear needed
