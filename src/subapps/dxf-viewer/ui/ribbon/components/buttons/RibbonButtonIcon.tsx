@@ -455,6 +455,11 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'table-size-up': return <AArrowUp width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'table-size-down': return <AArrowDown width={sizePx[size]} height={sizePx[size]} className={className} />;
     case 'table-reset-format': return <RotateCcw width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // 🔴 ADR-767 Δ3 — «Ανανέωση»: ο πίνακας ξαναρωτά την πηγή του. `RefreshCw` (κυκλικό, με
+    // φορά) και **όχι** `RotateCcw` — εκείνο σημαίνει ήδη «επαναφορά μορφοποίησης» μία γραμμή
+    // πιο πάνω, και δύο εντολές του **ίδιου** πίνακα με το ίδιο εικονίδιο θα ήταν δύο κουμπιά
+    // που μοιάζουν ίδια και κάνουν άσχετα πράγματα.
+    case 'table-refresh-binding': return <RefreshCw width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

@@ -52,6 +52,7 @@ import type { TableAxisStyleOverride } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableAxisColorState } from '../components/table-format-toolbar/table-color-menu-selection';
 import type { TableToggleFormatKey } from '../components/table-format-toolbar/TableFormatSection';
+import type { TableBindingPort } from './use-table-binding-actions';
 import type { TableBorderActions } from './use-table-border-actions';
 import type { TableMergeActions } from './use-table-merge-actions';
 
@@ -133,6 +134,14 @@ export interface TableFormatPort {
   readonly borders: TableBorderActions;
   readonly merge: TableMergeActions;
   readonly structure: TableStructurePort;
+  /**
+   * 🔴 ADR-767 Δ3 — ο **δεσμός** του πίνακα: «τρέφεται από πηγή;» και «ξαναρώτησέ την».
+   *
+   * Ξεχωριστό υπο-αντικείμενο για τον ίδιο λόγο που ξεχωρίζει το {@link TableStructurePort}:
+   * απαντά σε **άλλη ερώτηση** («από πού ήρθαν τα νούμερα») και έχει **άλλη προϋπόθεση** — η
+   * μορφοποίηση θέλει δρομέα, η δομή θέλει δρομέα, ο δεσμός θέλει μόνο **δεμένο πίνακα**.
+   */
+  readonly binding: TableBindingPort;
 }
 
 let port: TableFormatPort | null = null;

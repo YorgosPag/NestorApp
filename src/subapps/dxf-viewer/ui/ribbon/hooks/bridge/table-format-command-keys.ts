@@ -47,6 +47,15 @@ export const TABLE_PROPERTIES_RIBBON_KEYS = {
     deleteRow: 'tableProps.actions.deleteRow',
     deleteColumn: 'tableProps.actions.deleteColumn',
     selectAll: 'tableProps.actions.selectAll',
+    /**
+     * 🔴 ADR-767 Δ3 — «Ανανέωση»: ο πίνακας **ξαναρωτά** την πηγή του.
+     *
+     * Ζει στην καρτέλα «Ιδιότητες Πίνακα» και όχι στη «Μορφοποίηση», γιατί απαντά στο «τι
+     * **είναι** ο πίνακας» (από πού ήρθαν τα νούμερα) και όχι στο «πώς φαίνεται». Ίδια
+     * οικογένεια με το στυλ και τις δομικές πράξεις — πρότυπο: AutoCAD, καρτέλα *Table* →
+     * panel *Data* → «Download from Source».
+     */
+    refreshBinding: 'tableProps.actions.refreshBinding',
   },
   /**
    * 🔴 Τα δύο panels που **κρύβονται χωρίς δρομέα**.
@@ -59,6 +68,15 @@ export const TABLE_PROPERTIES_RIBBON_KEYS = {
   panels: {
     rowsColumns: 'tableProps.panel.rowsColumns',
     selection: 'tableProps.panel.selection',
+    /**
+     * 🔴 ADR-767 — το panel «Δεδομένα» **δεν υπάρχει** σε πίνακα χωρίς δεσμό.
+     *
+     * Τρίτος καταναλωτής του ίδιου μηχανισμού, με **άλλη** ερώτηση από τους δύο από πάνω:
+     * εκείνοι ρωτούν «υπάρχει δρομέας;», αυτός ρωτά «δηλώνει ο πίνακας πηγή;». Ένα γκρίζο
+     * «Ανανέωση» σε στατικό πίνακα θα υποσχόταν λειτουργία που δεν υπάρχει — και θα άφηνε
+     * τον χρήστη να ψάχνει τι λείπει για να ενεργοποιηθεί.
+     */
+    data: 'tableProps.panel.data',
   },
 } as const;
 

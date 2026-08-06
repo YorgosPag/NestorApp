@@ -169,6 +169,13 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
       port.structure.selectAll();
       return;
     }
+    // 🔴 ADR-767 Δ3 — **η μοναδική ρητή ενέργεια ανανέωσης.** Ο φύλακας «έχει δεσμό;» ζει
+    // μέσα στη θύρα, όχι εδώ: το ίδιο κουμπί μπορεί αύριο να πατηθεί από άλλη επιφάνεια, και
+    // ένας έλεγχος ανά επιφάνεια θα ήταν N ευκαιρίες να ξεχαστεί.
+    if (commandKey === TABLE_PROPERTIES_RIBBON_KEYS.actions.refreshBinding) {
+      port.binding.refresh();
+      return;
+    }
     const insert = STRUCTURE_INSERT[commandKey];
     if (insert) {
       port.structure.insertAxis(insert.axis, insert.side);
@@ -186,6 +193,13 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
    */
   const getPanelVisibility = (visibilityKey: string): boolean => {
     if (!isTablePropertiesVisibilityKey(visibilityKey)) return true;
+    // 🔴 ADR-767 — το «Δεδομένα» ρωτά **άλλη** ερώτηση από τα άλλα δύο panels: εκείνα θέλουν
+    // δρομέα («ποιας γραμμής;»), αυτό θέλει **δεσμό**. Ένα κοινό `scope() != null` θα έκρυβε
+    // το «Ανανέωση» σε σκέτη επιλογή δεμένου πίνακα — δηλαδή ακριβώς στη συνηθέστερη στιγμή
+    // που ο χρήστης θέλει να το πατήσει.
+    if (visibilityKey === TABLE_PROPERTIES_RIBBON_KEYS.panels.data) {
+      return getTableFormatPort()?.binding.isBound() === true;
+    }
     return getTableFormatPort()?.scope() != null;
   };
 

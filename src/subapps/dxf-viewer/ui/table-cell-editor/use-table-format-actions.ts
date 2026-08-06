@@ -57,6 +57,7 @@ import { resolveSelectedTable } from './table-entity-lookup';
 import { useTableBorderActions } from './use-table-border-actions';
 import { useTableMergeActions } from './use-table-merge-actions';
 import { useTableStructureActions } from './use-table-structure-actions';
+import { useTableBindingActions } from './use-table-binding-actions';
 import { useLiveTableMutation } from './use-table-model-commit';
 import {
   getTableCellCursor,
@@ -140,6 +141,9 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
   const borders = useTableBorderActions({ levelManager, liveTable: table });
   const merge = useTableMergeActions({ levelManager, liveTable: table });
   const structure = useTableStructureActions({ levelManager, table });
+  // 🔴 ADR-767 Δ3 — ο δεσμός ζητά **μόνο** τον ζωντανό πίνακα: δεν χρειάζεται δρομέα, γιατί
+  // ανανεώνεται ολόκληρος ο πίνακας (Δ8: ένα `sourceRef` ανά πίνακα, ποτέ ανά περιοχή).
+  const binding = useTableBindingActions({ levelManager, table });
 
   /**
    * Ό,τι απαντά η θύρα **αυτή τη στιγμή**. Απλό αντικείμενο, ξαναφτιαγμένο ανά render —
@@ -186,6 +190,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     borders,
     merge,
     structure,
+    binding,
   };
 
   /**
@@ -227,6 +232,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     get borders() { return latest.current.borders; },
     get merge() { return latest.current.merge; },
     get structure() { return latest.current.structure; },
+    get binding() { return latest.current.binding; },
   }), []);
 
   useEffect(() => {

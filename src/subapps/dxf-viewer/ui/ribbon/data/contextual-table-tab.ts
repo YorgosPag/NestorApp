@@ -131,5 +131,39 @@ export const CONTEXTUAL_TABLE_TAB: RibbonTab = {
         },
       ],
     },
+    {
+      /**
+       * 🔴 ADR-767 Δ3 — **«Δεδομένα»**: η μία ρητή ενέργεια ανανέωσης ενός δεμένου πίνακα.
+       *
+       * Ορατό **μόνο** όταν ο πίνακας δηλώνει πηγή (`panels.data`). Ο δεσμός δεν χρειάζεται
+       * δρομέα — ανανεώνεται ολόκληρος ο πίνακας, γιατί το Δ8 ορίζει **ένα** `sourceRef` ανά
+       * πίνακα. Γι' αυτό δεν μοιράζεται τον φύλακα των δύο από πάνω.
+       *
+       * ⛔ **Καμία αυτόματη ανανέωση.** Απόφαση Giorgio (06/08): ο πίνακας δεν ξαναγεμίζει
+       * ποτέ μόνος του — δες `use-table-binding-actions.ts` για το γιατί.
+       */
+      id: 'table-properties-data',
+      labelKey: 'ribbon.panels.tableData',
+      visibilityKey: panels.data,
+      keepsTableCellSession: true,
+      rows: [
+        {
+          isInFlyout: false,
+          buttons: [
+            {
+              type: 'simple',
+              size: 'small',
+              command: {
+                id: 'tableProps.refreshBinding',
+                labelKey: 'ribbon.commands.tableProps.refreshBinding',
+                icon: 'table-refresh-binding',
+                commandKey: actions.refreshBinding,
+                action: actions.refreshBinding,
+              },
+            },
+          ],
+        },
+      ],
+    },
   ],
 };

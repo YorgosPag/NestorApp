@@ -44,6 +44,7 @@ type Recorded = readonly [string, ...unknown[]];
 function fakePort(
   overrides: Partial<TableFormatPort> = {},
   structureOverrides: Partial<TableFormatPort['structure']> = {},
+  bindingOverrides: Partial<TableFormatPort['binding']> = {},
 ): { port: TableFormatPort; calls: Recorded[] } {
   const calls: Recorded[] = [];
   const record = (name: string) => (...args: unknown[]): void => { calls.push([name, ...args]); };
@@ -73,6 +74,14 @@ function fakePort(
       canDeleteAxis: () => true,
       selectAll: record('selectAll'),
       ...structureOverrides,
+    },
+    // 🔴 ADR-767 Δ3 — προεπιλογή «στατικός πίνακας»: το panel «Δεδομένα» οφείλει να είναι
+    // κρυφό όταν κανείς δεν το ζήτησε ρητά, όχι να κρασάρει.
+    binding: {
+      isBound: () => false,
+      refresh: record('refresh'),
+      check: record('check'),
+      ...bindingOverrides,
     },
     ...overrides,
   } as TableFormatPort;
@@ -234,5 +243,75 @@ describe('useRibbonTableFormatBridge — ιδιότητες πίνακα', () =>
       scope: () => ({ kind: 'range', bounds: { firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 } }),
     }).port);
     expect(bridge().current.getPanelVisibility(TABLE_PROPERTIES_RIBBON_KEYS.panels.rowsColumns)).toBe(true);
+  });
+});
+
+// ─── 🔴 ADR-767 Δ3 — το panel «Δεδομένα» και η ρητή ανανέωση ──────────────────
+
+/**
+ * Τρία πράγματα που σπάνε σιωπηλά αν κανείς δεν τα φυλάει:
+ *
+ * 1. Το «Δεδομένα» να μοιραστεί τον φύλακα των άλλων δύο panels (`scope() != null`) ⇒ θα
+ *    εξαφανιζόταν σε **σκέτη επιλογή** δεμένου πίνακα, δηλαδή ακριβώς στη συνηθέστερη στιγμή
+ *    που ο χρήστης θέλει να πατήσει «Ανανέωση».
+ * 2. Το «Ανανέωση» να πέσει στην αλυσίδα `STRUCTURE_INSERT` / `STRUCTURE_DELETE` ⇒ θα
+ *    **έσβηνε γραμμή** αντί να ανανεώσει, χωρίς κανένα σφάλμα.
+ * 3. Ο bridge να διεκδικήσει το κλειδί ενός ξένου panel.
+ */
+describe('🔴 ADR-767 Δ3 — «Δεδομένα»: ορατό μόνο σε δεμένο πίνακα, μία ρητή ενέργεια', () => {
+  beforeEach(() => { __resetTableFormatPortForTests(); });
+
+  it('χωρίς θύρα το panel είναι κρυφό — ποτέ σφάλμα', () => {
+    expect(bridge().current.getPanelVisibility(TABLE_PROPERTIES_RIBBON_KEYS.panels.data)).toBe(false);
+  });
+
+  it('🔴 ΣΤΑΤΙΚΟΣ ΠΙΝΑΚΑΣ ⇒ ΚΡΥΦΟ — καμία υπόσχεση που δεν τηρείται', () => {
+    setTableFormatPort(fakePort({}, {}, { isBound: () => false }).port);
+
+    expect(bridge().current.getPanelVisibility(TABLE_PROPERTIES_RIBBON_KEYS.panels.data)).toBe(false);
+  });
+
+  it('🔴 ΔΕΜΕΝΟΣ ΠΙΝΑΚΑΣ ΧΩΡΙΣ ΔΡΟΜΕΑ ⇒ ΟΡΑΤΟ (δεν μοιράζεται τον φύλακα των άλλων δύο)', () => {
+    const { port } = fakePort({ scope: () => null }, {}, { isBound: () => true });
+    setTableFormatPort(port);
+    const api = bridge().current;
+
+    expect(api.getPanelVisibility(TABLE_PROPERTIES_RIBBON_KEYS.panels.data)).toBe(true);
+    // …ενώ τα δύο που ΟΝΤΩΣ θέλουν δρομέα μένουν κρυφά. Η αντίθεση είναι η απόδειξη.
+    expect(api.getPanelVisibility(TABLE_PROPERTIES_RIBBON_KEYS.panels.rowsColumns)).toBe(false);
+    expect(api.getPanelVisibility(TABLE_PROPERTIES_RIBBON_KEYS.panels.selection)).toBe(false);
+  });
+
+  it('🔴 ΤΟ «ΑΝΑΝΕΩΣΗ» ΚΑΛΕΙ `binding.refresh()` — και ΤΙΠΟΤΑ ΑΛΛΟ', () => {
+    const { port, calls } = fakePort({}, {}, { isBound: () => true });
+    setTableFormatPort(port);
+
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_PROPERTIES_RIBBON_KEYS.actions.refreshBinding); });
+
+    expect(calls).toEqual([['refresh']]);
+  });
+
+  it('🔴 ΔΕΝ ΠΕΦΤΕΙ ΣΤΗ ΔΙΑΓΡΑΦΗ ΑΞΟΝΑ — «Ανανέωση» δεν σβήνει γραμμή', () => {
+    const { port, calls } = fakePort({}, {}, { isBound: () => true });
+    setTableFormatPort(port);
+
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_PROPERTIES_RIBBON_KEYS.actions.refreshBinding); });
+
+    expect(calls.map(([name]) => name)).not.toContain('deleteAxis');
+    expect(calls.map(([name]) => name)).not.toContain('insertAxis');
+  });
+
+  it('ο φύλακας «έχει δεσμό;» ζει στη ΘΥΡΑ — ο bridge δεν τον αντιγράφει', () => {
+    // Ακόμη και με `isBound() === false`, ο bridge προωθεί: μία απόφαση, ένα σημείο. Ένας
+    // δεύτερος έλεγχος εδώ θα ήταν δεύτερη ευκαιρία να αποκλίνει από τον πρώτο.
+    const { port, calls } = fakePort({}, {}, { isBound: () => false });
+    setTableFormatPort(port);
+
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_PROPERTIES_RIBBON_KEYS.actions.refreshBinding); });
+
+    expect(calls).toEqual([['refresh']]);
   });
 });
