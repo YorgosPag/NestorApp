@@ -159,6 +159,18 @@ export interface TableCellEditorOverlayProps extends TableCellSessionHandlers {
    * μπορεί να βρεθεί σε πλοήγηση — δες το `onOpenLink` του `use-table-cell-session-keys`.
    */
   readonly onOpenLink: () => void;
+  /**
+   * 🔴 ADR-767 Δ1 — **το κελί τρέφεται από πηγή**: ο επεξεργαστής ανοίγει, αλλά δεν γράφεται.
+   *
+   * Ανοίγει και δεν κλειδώνει την είσοδο, επίτηδες: ο χρήστης πρέπει να μπορεί να **δει** και
+   * να **αντιγράψει** την τιμή, όπως σε κάθε φύλλο υπολογισμού — αυτό που δεν επιτρέπεται
+   * είναι να πληκτρολογήσει κάτι που θα εξαφανιζόταν στο επόμενο refresh.
+   *
+   * ⚠️ Ο φρουρός είναι **διπλός** (N.7.2 #4): εδώ ζει η **παρουσίαση** (`readOnly` στο πεδίο),
+   * ενώ ο πραγματικός φύλακας ζει στο `buildTableCellEditCommand` και πιάνει κάθε άλλο
+   * μονοπάτι εγγραφής. Το ένα χωρίς το άλλο είναι ή ευγενική παράκληση ή μυστήριο.
+   */
+  readonly readOnly: boolean;
 }
 
 /**
@@ -173,7 +185,7 @@ export function flattenToSingleLine(value: string): string {
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
   const {
-    mode, draft, initialText, caretIndex, caretRevision, anchor,
+    mode, draft, initialText, caretIndex, caretRevision, anchor, readOnly,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
     onCopy, onCut, onPaste, onOpenLink,
   } = props;
@@ -300,7 +312,12 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         // γκρίζο «πληκτρολογήστε…» μέσα σε άδειο κελί είναι κείμενο που δεν υπάρχει στο
         // έγγραφο. Κανένα φύλλο υπολογισμού δεν το κάνει. Ο ρόλος δηλώνεται με `aria-label`,
         // που είναι και ο σωστός φορέας του (δεν ζωγραφίζεται).
-        aria-label={t('table.cellEditor.cellAriaLabel')}
+        // 🔴 ADR-767 Δ1 — καμία πληκτρολόγηση σε δεμένο κελί· η **επιλογή και αντιγραφή**
+        // μένουν (`readOnly`, όχι `disabled`), όπως σε κάθε φύλλο υπολογισμού.
+        readOnly={readOnly}
+        // Ο ρόλος λέγεται, δεν μαντεύεται: ένα πεδίο που απλώς αγνοεί τα πλήκτρα είναι
+        // μυστήριο για κάθε χρήστη και **αόρατο** σε αναγνώστη οθόνης.
+        aria-label={t(readOnly ? 'table.cellEditor.boundCellAriaLabel' : 'table.cellEditor.cellAriaLabel')}
         // Το σημάδι που διαβάζει το {@link useTableCellSessionBlur} για να ξεχωρίσει
         // «μετακινήθηκα μέσα στη συνεδρία» από «έφυγα από τον πίνακα». Δεν είναι στυλ —
         // είναι ταυτότητα ρόλου, και ο ορισμός του ζει σε **ένα** σημείο.

@@ -28,8 +28,11 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { ICommand, ISceneManager } from '../../core/commands';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TableColumnId, TableRowId } from '../../types/table';
+import type { TableCell, TableColumnId, TableRowId } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
+// 🔴 ADR-767 Δ1 — ο ΕΝΑΣ κριτής του «γράφεται αυτό το κελί;». Η κρίση υπήρχε από τις 07/08
+// και **κανείς δεν τη ρωτούσε** (§11.2 #4): αυτό το import είναι όλη η διόρθωση.
+import { isBoundCellWritable } from './binding/table-binding-state';
 import type { TableCellLayout, TableRectMm } from './table-layout-types';
 import { cellBaselineYMm } from './table-layout-place';
 import type { TableCellStyle } from './table-style';
@@ -95,6 +98,21 @@ export interface TableCellEditTarget {
    * είναι «από πού μπήκες», και γι' αυτό είναι προαιρετικό.
    */
   readonly clickOffsetMm?: number;
+  /**
+   * 🔴 ADR-767 Δ1 — **το κελί τρέφεται από πηγή και δεν δέχεται πληκτρολόγηση.**
+   *
+   * Δεν είναι σφάλμα ούτε κλείδωμα του χρήστη: στη Φ.ΣΤ δεν υπάρχει write-back (αυτό είναι
+   * ρητά η Φ.Η), άρα **δεν υπάρχει ιδιοκτήτης να δεχτεί τη γραφή** — μια πληκτρολογημένη
+   * τιμή θα εξαφανιζόταν στο επόμενο refresh. Πρότυπο: AutoCAD Data Link («*locked from
+   * editing by default*») + Revit Calculated Values (ποτέ).
+   *
+   * ⚠️ Αφορά **μόνο** το περιεχόμενο. Η μορφοποίηση (χρώμα, στοίχιση, πλάτος) μένει
+   * ελεύθερη, όπως ρητά στο AutoCAD: «*Cell formatting changes do not require unlocking*».
+   *
+   * Ο άνθρωπος **ξεκλειδώνει ρητά** (Δ2) και τότε το κελί ξαναγίνεται γράψιμο **χωρίς** να
+   * σπάσει ο δεσμός — γι' αυτό `overridden` και `conflict` απαντούν `false` εδώ.
+   */
+  readonly readOnly: boolean;
 }
 
 /**
@@ -176,7 +194,27 @@ function buildEditTarget(
     // ξαναβασισμένη στην κορυφή του κελιού.
     baselineFromTopMm: cellBaselineYMm(rect, style.align, style) - rect.y,
     clickOffsetMm,
+    // 🔴 ADR-767 Δ1 — ρωτιέται **ο ίδιος κριτής** που ήδη απαντά στον φραγμό εξαγωγής και
+    // στον ζωγράφο. Ένας δεύτερος έλεγχος `cell.bound?.overridden` εδώ θα ήταν η δεύτερη
+    // ερμηνεία των ίδιων σημαιών, δηλαδή δύο απαντήσεις στο «γράφεται;» μέσα στην ίδια
+    // χειρονομία: read-only επεξεργαστής πάνω από γραφέα που δέχεται (ή το αντίστροφο).
+    readOnly: !isBoundCellWritable(persistedCell(entity.model, cell.rowId, cell.colId)),
   };
+}
+
+/**
+ * Το **αποθηκευμένο** κελί με αυτή την ταυτότητα, ή `undefined` όταν είναι κενό.
+ *
+ * Το `TableCellLayout` της διάταξης κουβαλά ό,τι χρειάζεται η **ζωγραφική** (ορθογώνιο,
+ * στυλ, στοίχιση) — όχι τα μεταδεδομένα δεσμού. Η ερώτηση «τρέφεται από πηγή;» απαντιέται
+ * από το μοντέλο, που είναι και η μόνη αλήθεια γι' αυτό.
+ */
+function persistedCell(
+  model: TableEntity['model'],
+  rowId: TableRowId,
+  colId: TableColumnId,
+): TableCell | undefined {
+  return model.cells.find(([r, c]) => r === rowId && c === colId)?.[2];
 }
 
 /**
@@ -196,6 +234,17 @@ export function buildTableCellEditCommand(
   nextText: string,
   sceneManager: ISceneManager,
 ): ICommand | null {
+  // 🔴 ADR-767 Δ1 — **Ο ΦΡΟΥΡΟΣ, ΠΡΙΝ ΑΠΟ ΚΑΘΕ ΓΡΑΦΗ.**
+  //
+  // Ο επεξεργαστής ανοίγει ήδη read-only (`TableCellEditTarget.readOnly`), οπότε αυτό εδώ
+  // είναι το δεύτερο σκέλος του belt-and-suspenders (N.7.2 #4): κάθε **άλλο** μονοπάτι
+  // εγγραφής — πληκτρολόγιο, μελλοντική επιφάνεια, προγραμματιστική κλήση — πέφτει στον
+  // ίδιο τοίχο. Ένας φρουρός μόνο στο UI θα ήταν ευγενική παράκληση.
+  //
+  // ⚠️ **`null`, ΠΟΤΕ εξαίρεση.** Δεμένο κελί που δεν γράφεται είναι **φυσιολογική
+  // κατάσταση**, όχι σφάλμα προγραμματισμού — και το `null` σημαίνει ήδη «καμία εντολή,
+  // κανένα βήμα undo», δηλαδή δεν γεννιέται καμία νέα σημασιολογία για τον καλούντα.
+  if (!isBoundCellWritable(persistedCell(entity.model, rowId, colId))) return null;
   // 🔴 ADR-739 Φ.Ζ — **η γραφή και ο επαναϋπολογισμός είναι ΕΝΑΣ μετασχηματισμός**, μέσα
   // στην ίδια εντολή. Δεν είναι λεπτομέρεια υλοποίησης: αν ο επαναϋπολογισμός γινόταν σε
   // δεύτερη εντολή, ένα `Ctrl+Z` θα ανέτρεπε τα αποτελέσματα αφήνοντας τον τύπο — ή το
@@ -252,6 +301,32 @@ export function buildTableModelCommand(
  * είναι η ίδια σημασιολογία με το `ByLayer` του AutoCAD, και ο δρόμος να φύγουν είναι η
  * «Επαναφορά», ποτέ μια παρενέργεια της επιλογής στυλ.
  */
+/**
+ * 🔴 ADR-767 Δ3/Δ5 — **η ανανέωση του δεσμού**: το τρίτο αδελφό μονοπάτι δέσμευσης πίνακα.
+ *
+ * ## Γιατί ΔΕΝ αρκεί το {@link buildTableModelCommand}
+ * Η ανανέωση αλλάζει **δύο** πράγματα ταυτόχρονα: τα κελιά (`model`) **και** το αποτύπωμα
+ * (`binding.revision`). Δύο εντολές θα σήμαιναν ότι ένα `Ctrl+Z` αναιρεί τα νούμερα αλλά
+ * αφήνει το νέο αποτύπωμα — δηλαδή ο πίνακας θα δήλωνε «ενημερωμένος» δείχνοντας τα **παλιά**
+ * νούμερα. Ακριβώς το είδος ασυνέπειας που η Φ.Ζ έκλεισε για τύπους+αποτελέσματα, με το ίδιο
+ * επιχείρημα: **ένας** μετασχηματισμός, **μία** εντολή, **ένα** undo (ADR-767 §9).
+ *
+ * ## 🔴 Ο φύλακας του no-op είναι ΔΙΠΛΟΣ — και οφείλει να είναι
+ * Το early cutoff (Δ5) επιστρέφει το **ίδιο** μοντέλο **και** το ίδιο binding by-reference
+ * όταν τα δεδομένα βγήκαν ίδια. Ελέγχονται **και τα δύο**: μια ανανέωση που δεν άλλαξε τιμές
+ * αλλά ξαναέγραψε ίδιο revision θα γεννούσε βήμα undo για το τίποτα — και ο χρήστης θα
+ * πατούσε «Ανανέωση» σε καθαρό έργο και θα έβλεπε το `Ctrl+Z` να «γεμίζει».
+ */
+export function buildTableBindingRefreshCommand(
+  entity: TableEntity,
+  nextModel: TableEntity['model'],
+  nextBinding: TableEntity['binding'],
+  sceneManager: ISceneManager,
+): ICommand | null {
+  if (nextModel === entity.model && nextBinding === entity.binding) return null;
+  return new UpdateEntityCommand(entity.id, { model: nextModel, binding: nextBinding }, sceneManager);
+}
+
 export function buildTableStyleCommand(
   entity: TableEntity,
   nextStyleId: string,
