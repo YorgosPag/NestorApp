@@ -12,7 +12,8 @@
     "listTitle": "Project surveys",
     "activeBadge": "Active",
     "setActive": "Set as active",
-    "recordLabel": "Survey {name}"
+    "recordLabel": "Survey {name}",
+    "recordUnnamed": "Undated survey"
   },
   "header": {
     "sourceFile": "Source file",
@@ -37,7 +38,8 @@
     "z": "G. Height Datum",
     "i": "H. Remarks",
     "th": "I. Approvals",
-    "iota": "J. Title Deeds"
+    "iota": "J. Title Deeds",
+    "doc": "The document"
   },
   "fields": {
     "sector": "Sector",
@@ -66,7 +68,9 @@
     "suspensionStatus": "Suspension",
     "plotArea": "Plot area (m²)",
     "heightDatum": "Height datum",
-    "remarks": "Remarks"
+    "remarks": "Remarks",
+    "surveyDate": "Survey date",
+    "surveyDateHint": "When the survey was drawn up — not when it was typed in here."
   },
   "implementationAct": {
     "title": "Implementation Act",

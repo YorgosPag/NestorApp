@@ -1806,7 +1806,9 @@
       "topography": "Topography",
       "topoSurfaceProperties": "Topographic Surface",
       "importedMeshProperties": "Imported Mesh",
-      "genericSolidProperties": "Solid Properties"
+      "genericSolidProperties": "Solid Properties",
+      "tableProperties": "Table Properties",
+      "tableFormat": "Format"
     },
     "panels": {
       "topoData": "Data",
@@ -2126,7 +2128,12 @@
         "pyramid": "Pyramid dimensions",
         "disc": "Disc dimensions",
         "prism": "Prism dimensions"
-      }
+      },
+      "tableStyle": "Style",
+      "tableRowsColumns": "Rows & Columns",
+      "tableSelection": "Selection",
+      "tableFont": "Font",
+      "tableCells": "Cells"
     },
     "minimizeStates": {
       "full": "Full Ribbon",
@@ -5506,6 +5513,29 @@
           "thicknessMm": "Thickness",
           "sides": "Sides"
         }
+      },
+      "tableProps": {
+        "style": "Table style",
+        "insertRowAbove": "Insert row above",
+        "insertRowBelow": "Insert row below",
+        "insertColumnLeft": "Insert column left",
+        "insertColumnRight": "Insert column right",
+        "deleteRow": "Delete row",
+        "deleteColumn": "Delete column",
+        "selectAll": "Select all"
+      },
+      "tableFormat": {
+        "bold": "Bold",
+        "italic": "Italic",
+        "underline": "Underline",
+        "textHeight": "Text height",
+        "sizeUp": "Increase size",
+        "sizeDown": "Decrease size",
+        "reset": "Clear formatting",
+        "textColor": "Font colour",
+        "fillColor": "Fill colour",
+        "merge": "Merge cells",
+        "borders": "Borders"
       }
     },
     "tooltips": {
@@ -6285,7 +6315,34 @@
       "scale": "Scale",
       "studyDate": "Study date",
       "drawnBy": "Drawn by",
-      "signature": "Signature"
+      "signature": "Signature",
+      "sector": "Sector",
+      "plotBoundaryLabels": "Plot boundary vertices",
+      "minFrontage": "Minimum frontage",
+      "minArea": "Minimum plot area",
+      "declaredCoveragePct": "Coverage ratio",
+      "maxCoveragePct": "Maximum coverage ratio",
+      "declaredMaxHeight": "Maximum height",
+      "declaredSd": "Floor area ratio",
+      "socialFactorSd": "Social factor bonus",
+      "totalSd": "Total floor area ratio",
+      "landUse": "Land use",
+      "inSocialFactorZone": "Social factor zone",
+      "settlementActs": "Settlement acts",
+      "implementationActNumber": "Implementation act number",
+      "implementationActDecision": "Implementation act decision",
+      "implementationActVolume": "Registration volume",
+      "implementationActEntry": "Registration entry",
+      "implementationActDate": "Registration date",
+      "implementationActRegistry": "Land registry office",
+      "implementationActUrbanUnits": "Urban planning units",
+      "implementationActOriginalProperties": "Original properties",
+      "buildabilityNote": "Buildability note",
+      "roadPlanDefinition": "Road plan definition",
+      "plotArea": "Plot area",
+      "heightDatum": "Height datum",
+      "surveyDate": "Survey date",
+      "regionalUnit": "Regional unit"
     },
     "evidence": {
       "email": "e-mail matches",
@@ -6301,14 +6358,17 @@
       "role-undecided": "The person was found, but the profession does not resolve to a single role.",
       "no-primary-address": "This project has no primary address — create one from the project page first.",
       "resolver-gap": "The receiving field exists — the connection is missing. A recorded implementation gap, not a missing capability.",
-      "ambiguous-abbreviation": "The same abbreviation means more than one thing in this drawing — it needs confirmation from the drawing body."
+      "no-survey-record": "This project has no survey record yet — create the card from the project page and try again.",
+      "survey-record-undecided": "This project has more than one survey record and none is marked active. Choose which one applies, on the project card.",
+      "survey-record-locked": "The survey record is confirmed, and therefore frozen. Remove the confirmation on the card before this value can be written."
     },
     "target": {
       "contact": "Project contact",
       "landowner": "Landowner",
       "project-address": "Project address",
       "project-field": "Project detail",
-      "drawing-meta": "Drawing detail"
+      "drawing-meta": "Drawing detail",
+      "survey-record": "Survey data"
     },
     "approve": "Approve",
     "approveTitle": "Write this link to the database, stamped with your name and the moment.",
@@ -6351,7 +6411,17 @@
     "unreadNote": "Not an error and never written anywhere. This is what the reader saw but could not connect — shown on purpose.",
     "missingValue": "The title block has «{label}» — no value was found next to it.",
     "unparsedItem": "Text without a label: {text}",
-    "unreadCount": "{labels, plural, =0 {} one {# label without a value} other {# labels without a value}}"
+    "unreadCount": "{labels, plural, =0 {} one {# label without a value} other {# labels without a value}}",
+    "caution": {
+      "ambiguous-abbreviation": "The same abbreviation means more than one thing in this drawing. The receiving field is right — confirm that this value belongs to it.",
+      "partial-value": "The drawing gives less precision than the field asks for. The drawing text will be stored verbatim."
+    },
+    "surveyDestination": "The surveyor’s statements are written to: {record}",
+    "sourceKind": {
+      "title-block": "From the title block",
+      "document-body": "From the drawing body — please confirm"
+    },
+    "corroboration": "{count, plural, one {Stated identically by # document in the drawing} other {Stated identically by # documents in the drawing}}"
   },
   "externalReferencesPalette": {
     "title": "External References",

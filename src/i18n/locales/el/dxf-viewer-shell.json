@@ -1806,7 +1806,9 @@
       "topography": "Τοπογραφικό",
       "topoSurfaceProperties": "Τοπογραφική Επιφάνεια",
       "importedMeshProperties": "Εισαγόμενο Πλέγμα",
-      "genericSolidProperties": "Ιδιότητες Στερεού"
+      "genericSolidProperties": "Ιδιότητες Στερεού",
+      "tableProperties": "Ιδιότητες Πίνακα",
+      "tableFormat": "Μορφοποίηση"
     },
     "panels": {
       "topoData": "Δεδομένα",
@@ -2126,7 +2128,12 @@
         "pyramid": "Διαστάσεις πυραμίδας",
         "disc": "Διαστάσεις δίσκου",
         "prism": "Διαστάσεις πρίσματος"
-      }
+      },
+      "tableStyle": "Στυλ",
+      "tableRowsColumns": "Γραμμές & Στήλες",
+      "tableSelection": "Επιλογή",
+      "tableFont": "Γραμματοσειρά",
+      "tableCells": "Κελιά"
     },
     "minimizeStates": {
       "full": "Πλήρης Προβολή",
@@ -5506,6 +5513,29 @@
           "thicknessMm": "Πάχος",
           "sides": "Πλευρές"
         }
+      },
+      "tableProps": {
+        "style": "Στυλ πίνακα",
+        "insertRowAbove": "Εισαγωγή γραμμής πάνω",
+        "insertRowBelow": "Εισαγωγή γραμμής κάτω",
+        "insertColumnLeft": "Εισαγωγή στήλης αριστερά",
+        "insertColumnRight": "Εισαγωγή στήλης δεξιά",
+        "deleteRow": "Διαγραφή γραμμής",
+        "deleteColumn": "Διαγραφή στήλης",
+        "selectAll": "Επιλογή όλων"
+      },
+      "tableFormat": {
+        "bold": "Έντονα",
+        "italic": "Πλάγια",
+        "underline": "Υπογράμμιση",
+        "textHeight": "Ύψος κειμένου",
+        "sizeUp": "Αύξηση μεγέθους",
+        "sizeDown": "Μείωση μεγέθους",
+        "reset": "Επαναφορά μορφοποίησης",
+        "textColor": "Χρώμα κειμένου",
+        "fillColor": "Χρώμα γεμίσματος",
+        "merge": "Συγχώνευση κελιών",
+        "borders": "Περιγράμματα"
       }
     },
     "tooltips": {
@@ -6285,7 +6315,34 @@
       "scale": "Κλίμακα",
       "studyDate": "Χρόνος μελέτης",
       "drawnBy": "Σύνταξη",
-      "signature": "Υπογραφή"
+      "signature": "Υπογραφή",
+      "sector": "Τομέας",
+      "plotBoundaryLabels": "Όρια οικοπέδου",
+      "minFrontage": "Ελάχιστο πρόσωπο",
+      "minArea": "Ελάχιστο εμβαδόν",
+      "declaredCoveragePct": "Ποσοστό κάλυψης",
+      "maxCoveragePct": "Μέγιστο ποσοστό κάλυψης",
+      "declaredMaxHeight": "Μέγιστο ύψος",
+      "declaredSd": "Συντελεστής δόμησης",
+      "socialFactorSd": "Κοινωνικός συντελεστής",
+      "totalSd": "Συνολικός συντελεστής δόμησης",
+      "landUse": "Χρήση γης",
+      "inSocialFactorZone": "Ζώνη κοινωνικού συντελεστή",
+      "settlementActs": "Πράξεις τακτοποίησης",
+      "implementationActNumber": "Αριθμός πράξης εφαρμογής",
+      "implementationActDecision": "Απόφαση πράξης εφαρμογής",
+      "implementationActVolume": "Τόμος μεταγραφής",
+      "implementationActEntry": "Αύξων αριθμός μεταγραφής",
+      "implementationActDate": "Ημερομηνία μεταγραφής",
+      "implementationActRegistry": "Υποθηκοφυλακείο",
+      "implementationActUrbanUnits": "Πολεοδομικές ενότητες",
+      "implementationActOriginalProperties": "Αρχική ιδιοκτησία",
+      "buildabilityNote": "Αρτιότητα — παρατήρηση",
+      "roadPlanDefinition": "Καθορισμός ρυμοτομίας",
+      "plotArea": "Εμβαδόν οικοπέδου",
+      "heightDatum": "Αφετηρία μέτρησης υψομέτρων",
+      "surveyDate": "Ημερομηνία τοπογραφικού",
+      "regionalUnit": "Περιφερειακή ενότητα"
     },
     "evidence": {
       "email": "ταιριάζει το e-mail",
@@ -6301,14 +6358,17 @@
       "role-undecided": "Βρέθηκε το πρόσωπο, αλλά η ειδικότητα δεν δίνει έναν συγκεκριμένο ρόλο.",
       "no-primary-address": "Το έργο δεν έχει κύρια διεύθυνση — φτιάξε μία πρώτα από την καρτέλα του.",
       "resolver-gap": "Το πεδίο υποδοχής υπάρχει — λείπει η σύνδεση. Καταγεγραμμένο κενό υλοποίησης, όχι έλλειψη δυνατότητας.",
-      "ambiguous-abbreviation": "Η ίδια συντομογραφία σημαίνει περισσότερα από ένα πράγματα σε αυτό το σχέδιο — χρειάζεται επιβεβαίωση από το σώμα του."
+      "no-survey-record": "Το έργο δεν έχει ακόμη καρτέλα «Στοιχεία Τοπογραφικού» — φτιάξ’ την από το έργο και ξαναδοκίμασε.",
+      "survey-record-undecided": "Το έργο έχει περισσότερα από ένα τοπογραφικά και κανένα δεν είναι δηλωμένο ως ενεργό. Όρισε ποιο ισχύει, στην καρτέλα του έργου.",
+      "survey-record-locked": "Το τοπογραφικό είναι επιβεβαιωμένο, άρα κλειδωμένο. Για να γραφτεί η τιμή, άρε πρώτα την επιβεβαίωση από την καρτέλα."
     },
     "target": {
       "contact": "Επαφή έργου",
       "landowner": "Οικοπεδούχος",
       "project-address": "Διεύθυνση έργου",
       "project-field": "Στοιχείο έργου",
-      "drawing-meta": "Στοιχείο σχεδίου"
+      "drawing-meta": "Στοιχείο σχεδίου",
+      "survey-record": "Στοιχεία Τοπογραφικού"
     },
     "approve": "Έγκριση",
     "approveTitle": "Γράψε αυτή τη σύνδεση στη βάση, με το όνομά σου και τη στιγμή.",
@@ -6351,7 +6411,17 @@
     "unreadNote": "Δεν είναι σφάλμα και δεν γράφεται πουθενά. Είναι ό,τι είδε η ανάγνωση χωρίς να μπορεί να το συνδέσει — ορατό επίτηδες.",
     "missingValue": "Η πινακίδα έχει «{label}» — δεν βρέθηκε τιμή δίπλα του.",
     "unparsedItem": "Κείμενο χωρίς ετικέτα: {text}",
-    "unreadCount": "{labels, plural, =0 {} one {# ετικέτα χωρίς τιμή} other {# ετικέτες χωρίς τιμή}}"
+    "unreadCount": "{labels, plural, =0 {} one {# ετικέτα χωρίς τιμή} other {# ετικέτες χωρίς τιμή}}",
+    "caution": {
+      "ambiguous-abbreviation": "Η ίδια συντομογραφία σημαίνει περισσότερα από ένα πράγματα σε αυτό το σχέδιο. Το πεδίο υποδοχής είναι σωστό — επιβεβαίωσε ότι η τιμή του ανήκει.",
+      "partial-value": "Το σχέδιο δίνει λιγότερη ακρίβεια από όση ζητά το πεδίο. Θα αποθηκευτεί αυτούσιο το κείμενο του σχεδίου."
+    },
+    "surveyDestination": "Οι δηλώσεις του τοπογράφου γράφονται στο: {record}",
+    "sourceKind": {
+      "title-block": "Από την πινακίδα",
+      "document-body": "Από το σώμα του σχεδίου — επιβεβαίωσε"
+    },
+    "corroboration": "{count, plural, one {Το ίδιο το λέει # έγγραφο του σχεδίου} other {Το ίδιο το λένε # έγγραφα του σχεδίου}}"
   },
   "externalReferencesPalette": {
     "title": "Εξωτερικές Αναφορές",

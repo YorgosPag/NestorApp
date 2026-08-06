@@ -1123,6 +1123,171 @@
       "pasteMergedSkipped": "{count, plural, one {# cell was skipped} other {# cells were skipped}} because of a merge",
       "pastePlainText": "Pasting from a spreadsheet inserts plain text — formatting is not carried over. Excel sends the values of formulas, not the formulas themselves; text starting with \"=\" is recognised as a formula and evaluated.",
       "pasteEmpty": "The clipboard has no text to paste"
+    },
+    "functionArguments": {
+      "title": "Function Arguments",
+      "genericArgument": "Argument",
+      "result": "Formula result =",
+      "helpLink": "Help on this function",
+      "helpAriaLabel": "Help on this function",
+      "noArguments": "This function takes no arguments.",
+      "collapseAriaLabel": "Collapse dialog",
+      "expandAriaLabel": "Expand dialog",
+      "kind": {
+        "number": "number",
+        "text": "text",
+        "logical": "logical",
+        "reference": "reference",
+        "range": "range",
+        "any": "any"
+      },
+      "argHelp": {
+        "SUM": {
+          "0": "number1;number2;… are 1 to 255 numbers, cells or ranges you want to add up.",
+          "1": "number1;number2;… are 1 to 255 numbers, cells or ranges you want to add up."
+        },
+        "AVERAGE": {
+          "0": "number1;number2;… are 1 to 255 numbers, cells or ranges you want the average of.",
+          "1": "number1;number2;… are 1 to 255 numbers, cells or ranges you want the average of."
+        },
+        "MIN": {
+          "0": "number1;number2;… are 1 to 255 numbers, cells or ranges you want the smallest value of.",
+          "1": "number1;number2;… are 1 to 255 numbers, cells or ranges you want the smallest value of."
+        },
+        "MAX": {
+          "0": "number1;number2;… are 1 to 255 numbers, cells or ranges you want the largest value of.",
+          "1": "number1;number2;… are 1 to 255 numbers, cells or ranges you want the largest value of."
+        },
+        "PRODUCT": {
+          "0": "number1;number2;… are 1 to 255 numbers, cells or ranges you want to multiply.",
+          "1": "number1;number2;… are 1 to 255 numbers, cells or ranges you want to multiply."
+        },
+        "COUNT": {
+          "0": "value1;value2;… are 1 to 255 values, cells or ranges. Only entries containing numbers are counted.",
+          "1": "value1;value2;… are 1 to 255 values, cells or ranges. Only entries containing numbers are counted."
+        },
+        "COUNTA": {
+          "0": "value1;value2;… are 1 to 255 values, cells or ranges. Every entry that is not empty is counted.",
+          "1": "value1;value2;… are 1 to 255 values, cells or ranges. Every entry that is not empty is counted."
+        },
+        "ROUND": {
+          "0": "number is the number you want to round.",
+          "1": "num_digits is the number of decimal places to round to. Zero rounds to the nearest integer; a negative value rounds to the left of the decimal point."
+        },
+        "ROUNDUP": {
+          "0": "number is the number you want rounded up, away from zero.",
+          "1": "num_digits is the number of decimal places to round to. Zero rounds to the nearest integer; a negative value rounds to the left of the decimal point."
+        },
+        "ROUNDDOWN": {
+          "0": "number is the number you want rounded down, toward zero.",
+          "1": "num_digits is the number of decimal places to round to. Zero rounds to the nearest integer; a negative value rounds to the left of the decimal point."
+        },
+        "ABS": {
+          "0": "number is the real number you want the absolute value of, that is, without its sign."
+        },
+        "INT": {
+          "0": "number is the real number you want rounded down to the nearest integer."
+        },
+        "SQRT": {
+          "0": "number is the number you want the square root of. A negative number returns #NUM!."
+        },
+        "POWER": {
+          "0": "number is the base, any real number.",
+          "1": "power is the exponent the base is raised to."
+        },
+        "MOD": {
+          "0": "number is the number you want the remainder of after division.",
+          "1": "divisor is the number to divide by. Zero returns #DIV/0!."
+        },
+        "CONCATENATE": {
+          "0": "text1;text2;… are 1 to 255 text strings to be joined into a single text string, and can be text strings, numbers, or single-cell references.",
+          "1": "text1;text2;… are 1 to 255 text strings to be joined into a single text string, and can be text strings, numbers, or single-cell references."
+        },
+        "LEFT": {
+          "0": "text is the text string containing the characters you want to extract.",
+          "1": "num_chars specifies how many characters are returned from the start. If omitted, one character is returned."
+        },
+        "RIGHT": {
+          "0": "text is the text string containing the characters you want to extract.",
+          "1": "num_chars specifies how many characters are returned from the end. If omitted, one character is returned."
+        },
+        "MID": {
+          "0": "text is the text string containing the characters you want to extract.",
+          "1": "start_num is the position of the first character to extract. The first character of the text is 1.",
+          "2": "num_chars specifies how many characters are returned from the starting position onward."
+        },
+        "LEN": {
+          "0": "text is the text whose length you want. Spaces count as characters."
+        },
+        "TRIM": {
+          "0": "text is the text from which to remove extra spaces, except for single spaces between words."
+        },
+        "UPPER": {
+          "0": "text is the text you want converted to uppercase."
+        },
+        "LOWER": {
+          "0": "text is the text you want converted to lowercase."
+        },
+        "IF": {
+          "0": "logical_test is any value or expression that can be evaluated to TRUE or FALSE.",
+          "1": "value_if_true is the result when the logical test is TRUE. If omitted, TRUE is returned.",
+          "2": "value_if_false is the result when the logical test is FALSE. If omitted, FALSE is returned."
+        },
+        "IFERROR": {
+          "0": "value is any value, expression or reference that is checked for an error.",
+          "1": "value_if_error is the result when the value evaluates to an error."
+        },
+        "AND": {
+          "0": "logical1;logical2;… are 1 to 255 conditions to test. The result is TRUE only if all of them are TRUE.",
+          "1": "logical1;logical2;… are 1 to 255 conditions to test. The result is TRUE only if all of them are TRUE."
+        },
+        "OR": {
+          "0": "logical1;logical2;… are 1 to 255 conditions to test. The result is TRUE if any one of them is TRUE.",
+          "1": "logical1;logical2;… are 1 to 255 conditions to test. The result is TRUE if any one of them is TRUE."
+        },
+        "NOT": {
+          "0": "logical is a value or expression that evaluates to TRUE or FALSE, whose result is reversed."
+        },
+        "SUMIF": {
+          "0": "range is the range of cells the criteria are applied to.",
+          "1": "criteria is the condition, as a number, expression or text, that defines which cells are added.",
+          "2": "sum_range are the cells actually added up. If omitted, the range itself is added."
+        },
+        "SUMIFS": {
+          "0": "sum_range are the cells to add up.",
+          "1": "criteria_range1 is the range the first condition is applied to.",
+          "2": "criteria1 is the condition, as a number, expression or text, that defines which cells of the matching criteria range count."
+        },
+        "COUNTIFS": {
+          "0": "criteria_range1 is the range the first condition is applied to.",
+          "1": "criteria1 is the condition, as a number, expression or text, that defines which cells of the matching criteria range are counted."
+        },
+        "AVERAGEIFS": {
+          "0": "average_range are the cells to average.",
+          "1": "criteria_range1 is the range the first condition is applied to.",
+          "2": "criteria1 is the condition, as a number, expression or text, that defines which cells of the matching criteria range count."
+        },
+        "MAXIFS": {
+          "0": "max_range are the cells the largest value is returned from.",
+          "1": "criteria_range1 is the range the first condition is applied to.",
+          "2": "criteria1 is the condition, as a number, expression or text, that defines which cells of the matching criteria range count."
+        },
+        "MINIFS": {
+          "0": "min_range are the cells the smallest value is returned from.",
+          "1": "criteria_range1 is the range the first condition is applied to.",
+          "2": "criteria1 is the condition, as a number, expression or text, that defines which cells of the matching criteria range count."
+        },
+        "COUNTIF": {
+          "0": "range is the range of cells the criteria are applied to.",
+          "1": "criteria is the condition, as a number, expression or text, that defines which cells are counted."
+        },
+        "VLOOKUP": {
+          "0": "lookup_value is the value to be found in the first column of the table.",
+          "1": "array is the range to search within. It must have two or more columns — a single-column range returns #N/A.",
+          "2": "col_index_num is the column number in the table from which the value is returned. The first column is 1.",
+          "3": "range_lookup is a logical value: FALSE for an exact match, TRUE or omitted for an approximate match on a sorted first column."
+        }
+      }
     }
   },
   "scene": {
