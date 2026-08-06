@@ -25,6 +25,11 @@ import { useTableModeEntry } from '../../ui/table-cell-editor/use-table-mode-ent
 // που ρωτά ο ΕΝΑΣ δρομολογητής δεξιού κλικ (`useCanvasContextMenu`).
 import { useTableHeaderMenu } from '../../ui/table-cell-editor/use-table-header-menu';
 import { useTableRangeMenu } from '../../ui/table-cell-editor/use-table-range-menu';
+// 🔴 ADR-739 §52 — η **τρίτη** θύρα πίνακα: η μορφοποίηση προς την κορδέλα. Δεν επιστρέφει
+// τίποτα και δεν μοντάρει επιφάνεια — δημοσιεύει getters που ρωτά ο ribbon bridge, ο οποίος
+// ζει σε άλλο κλαδί του δέντρου (`DxfViewerTopBar`) και δεν μπορεί να πάρει props από εδώ
+// χωρίς να ανεβεί η κατάσταση στον orchestrator (παλινδρόμηση ADR-040/532).
+import { useTableFormatActions } from '../../ui/table-cell-editor/use-table-format-actions';
 import { useTableLinkMenu } from '../../ui/table-cell-editor/use-table-link-menu';
 import { useTableLinkShortcut } from '../../ui/table-cell-editor/use-table-link-shortcut';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
@@ -88,6 +93,9 @@ export function useCanvasSectionUI({
   // (μοτίβο VS Code «Open Detected Link…»). Χωρίς επιστρεφόμενη τιμή: η επιφάνεια είναι
   // micro-leaf πάνω σε store, όχι μονταρισμένο ref.
   useTableLinkShortcut({ levelManager, getSelectedEntityIds });
+  // ADR-739 §52 — χωρίς επιστρεφόμενη τιμή, όπως το `useTableLinkShortcut`: ο καταναλωτής
+  // είναι η κορδέλα μέσω module θύρας, όχι μονταρισμένο ref αυτού του δέντρου.
+  useTableFormatActions({ levelManager, getSelectedEntityIds });
   const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (activeTool === 'select') {
       const ids = getSelectedEntityIds();
