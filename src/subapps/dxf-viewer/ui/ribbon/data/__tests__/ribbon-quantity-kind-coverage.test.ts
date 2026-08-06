@@ -33,29 +33,10 @@ import { DEFAULT_RIBBON_TABS } from '../ribbon-default-tabs';
 import { isNumericOptionList } from '../../components/buttons/ribbon-combobox-numeric';
 import { isLineGeometryKey } from '../../hooks/useRibbonLineToolBridge.helpers';
 import { LINE_PROPERTY_GROUPS } from '../../../line-advanced-panel/line-property-fields';
-import type { RibbonCommand, RibbonTab } from '../../types/ribbon-types';
+import { collectRibbonCommands } from './ribbon-registry-test-loader';
+import type { RibbonTab } from '../../types/ribbon-types';
 import elShell from '@/i18n/locales/el/dxf-viewer-shell.json';
 import enShell from '@/i18n/locales/en/dxf-viewer-shell.json';
-
-/** Κάθε command ενός tab, μαζί με variants και φωλιασμένα subVariants (ADR-419). */
-function collectCommands(tabs: readonly RibbonTab[]): RibbonCommand[] {
-  const out: RibbonCommand[] = [];
-  const push = (cmd: RibbonCommand): void => {
-    out.push(cmd);
-    for (const sub of cmd.subVariants ?? []) push(sub);
-  };
-  for (const tab of tabs) {
-    for (const panel of tab.panels) {
-      for (const row of panel.rows) {
-        for (const button of row.buttons) {
-          push(button.command);
-          for (const variant of button.variants ?? []) push(variant);
-        }
-      }
-    }
-  }
-  return out;
-}
 
 const ALL_TABS: readonly RibbonTab[] = [...RAW_RIBBON_CONTEXTUAL_TABS, ...DEFAULT_RIBBON_TABS];
 
@@ -69,7 +50,7 @@ const ALL_TABS: readonly RibbonTab[] = [...RAW_RIBBON_CONTEXTUAL_TABS, ...DEFAUL
  * να επιθεωρηθεί. Σήμερα κανένα τέτοιο δεν είναι διαστατικό· αν προστεθεί, θα χρειαστεί
  * χωριστό anchor στο bridge.
  */
-const NUMERIC_COMMANDS = collectCommands(ALL_TABS).filter((cmd) =>
+const NUMERIC_COMMANDS = collectRibbonCommands(ALL_TABS).filter((cmd) =>
   isNumericOptionList(cmd.options ?? []),
 );
 
@@ -209,7 +190,7 @@ describe('ADR-677 Φάση 2γ — η μετατροπή γίνεται ΜΙΑ �
     // ADR-510 Φ2E #5: μετακόμισαν στην αριστερή παλέτα Ιδιοτήτων (AutoCAD: geometry = Ctrl+1,
     // ποτέ ribbon). ΑΝ ΣΕ ΕΚΟΨΕ: κάποιος τα ξαναέφερε στο ribbon. Πριν το κάνεις πράσινο,
     // βεβαιώσου ότι ΔΕΝ δηλώνουν `quantityKind` — ο bridge μετατρέπει ήδη.
-    const inRibbon = collectCommands(ALL_TABS)
+    const inRibbon = collectRibbonCommands(ALL_TABS)
       .filter((cmd) => isLineGeometryKey(cmd.commandKey))
       .map((cmd) => `${cmd.id} (${cmd.commandKey})`);
     expect(inRibbon).toEqual([]);

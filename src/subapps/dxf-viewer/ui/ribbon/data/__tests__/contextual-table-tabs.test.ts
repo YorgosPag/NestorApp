@@ -143,6 +143,20 @@ describe('Καλωδίωση εντολών — καμία εντολή χωρί
       .map((b) => b.command.id);
     expect(ids.length).toBe(new Set(ids).size);
   });
+
+  it('🔴 ΚΑΘΕ `widgetId` υπάρχει στο ΠΡΑΓΜΑΤΙΚΟ μητρώο — άγνωστο id = αόρατο κουμπί', async () => {
+    const renderRibbonWidget = await loadWidgetRenderer();
+    const widgetIds = [...allButtons(CONTEXTUAL_TABLE_TAB), ...allButtons(CONTEXTUAL_TABLE_FORMAT_TAB)]
+      .filter((b) => b.type === 'widget')
+      .map((b) => b.widgetId);
+
+    // Τα τέσσερα σύνθετα χειριστήρια (δύο χρώματα, συγχώνευση, περιγράμματα). Αν αυτό γίνει
+    // 0, το test θα περνούσε κενό ενώ η καρτέλα θα είχε χάσει τα widgets της.
+    expect(widgetIds).toHaveLength(4);
+
+    const unknown = widgetIds.filter((id) => renderRibbonWidget(id) === null);
+    expect(unknown).toEqual([]);
+  });
 });
 
 describe('Ύψος κειμένου — η λίστα ΠΑΡΑΓΕΤΑΙ από τη σκάλα', () => {
