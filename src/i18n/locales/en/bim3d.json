@@ -806,35 +806,6 @@
     }
   },
   "animation": {
-    "title": "Animation",
-    "panels": {
-      "tool": "Tool",
-      "waypoints": "Waypoints",
-      "persistence": "Save",
-      "export": "Export",
-      "snap": "Grid snap"
-    },
-    "toolbar": {
-      "turntable": "Turntable",
-      "deactivate": "Deactivate",
-      "addWaypoint": "Add waypoint",
-      "deleteWaypoint": "Delete",
-      "reverseTrack": "Reverse track",
-      "preview": "Preview",
-      "export": "Export",
-      "addAtCurrentCamera": "Add at current camera",
-      "snapToggle": "Snap to grid",
-      "snapStep": "Grid step",
-      "activate": "Activate",
-      "activateHint": "Activate the tool to show the path handles in 3D"
-    },
-    "snapStepOptions": {
-      "1": "1 u",
-      "2": "2 u",
-      "0.1": "0.1 u",
-      "0.25": "0.25 u",
-      "0.5": "0.5 u"
-    },
     "timeline": {
       "scrubberLabel": "Scrubber",
       "emptyHint": "No track yet. Click \"Turntable\" or add waypoints."
@@ -885,13 +856,7 @@
         "handleP2": "Control handle 2"
       }
     },
-    "persistence": {
-      "save": "Save",
-      "load": "Load",
-      "share": "Share"
-    },
     "defaultName": "Untitled {time}",
-    "exportTooltip": "Export to MP4",
     "notification": {
       "renderStarted": "Render started: \"{name}\"",
       "renderCompleted": "Render \"{name}\" completed",

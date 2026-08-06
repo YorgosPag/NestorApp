@@ -912,6 +912,42 @@
     "range": {
       "size": "{rows, plural, one {# row} other {# rows}} × {columns, plural, one {# column} other {# columns}}"
     },
+    "rangeMenu": {
+      "items": {
+        "cut": "Cut",
+        "copy": "Copy",
+        "pasteOptions": "Paste Options:",
+        "pasteAll": "Paste",
+        "pasteSpecial": "Paste Special...",
+        "smartLookup": "Smart Lookup",
+        "insert": "Insert",
+        "delete": "Delete",
+        "clearContents": "Clear Contents",
+        "quickAnalysis": "Quick Analysis",
+        "filter": "Filter",
+        "sort": "Sort",
+        "newComment": "New Comment",
+        "newNote": "New Note",
+        "formatCells": "Format Cells...",
+        "pickFromList": "Pick From Drop-down List...",
+        "defineName": "Define Name...",
+        "link": "Link..."
+      },
+      "filterSub": {
+        "byCellValue": "Filter by Selected Cell's Value",
+        "byColor": "Filter by Selected Cell's Color",
+        "byFontColor": "Filter by Selected Cell's Font Color",
+        "byIcon": "Filter by Selected Cell's Icon"
+      },
+      "sortSub": {
+        "ascending": "Sort Smallest to Largest",
+        "descending": "Sort Largest to Smallest",
+        "byColor": "Put Selected Cell Color On Top",
+        "byFontColor": "Put Selected Font Color On Top",
+        "custom": "Custom Sort..."
+      },
+      "notImplementedHint": "Not available yet"
+    },
     "headerMenu": {
       "columnTitle": "Column {label}",
       "columnsTitle": "Columns {label}",
@@ -941,7 +977,28 @@
       "resetFormatting": "Reset formatting",
       "mixedHint": "Mixed value across the run",
       "explicitHint": "Explicit value (not inherited)",
-      "rangeLabel": "Format range {label}"
+      "rangeLabel": "Format range {label}",
+      "fontFamily": "Font",
+      "fontFamilyMenuLabel": "Select font",
+      "fontSize": "Font Size",
+      "fontSizeMenuLabel": "Select font size",
+      "automaticFont": "Automatic",
+      "accountingFormat": "Accounting Number Format",
+      "percentFormat": "Percent Style",
+      "thousandsFormat": "Comma Style",
+      "wrapText": "Wrap Text",
+      "increaseDecimal": "Increase Decimal",
+      "decreaseDecimal": "Decrease Decimal",
+      "formatPainter": "Format Painter",
+      "align": "Alignment",
+      "alignMenuLabel": "Cell alignment",
+      "alignLeft": "Align Left",
+      "alignCenter": "Center",
+      "alignRight": "Align Right",
+      "alignTop": "Top Align",
+      "alignMiddle": "Middle Align",
+      "alignBottom": "Bottom Align",
+      "notImplementedHint": "Not available yet"
     },
     "merge": {
       "trigger": "Merge and center",
@@ -1122,7 +1179,9 @@
       "pasteClippedColumns": "{fitted} of {offered, plural, one {# column} other {# columns}}",
       "pasteMergedSkipped": "{count, plural, one {# cell was skipped} other {# cells were skipped}} because of a merge",
       "pastePlainText": "Pasting from a spreadsheet inserts plain text — formatting is not carried over. Excel sends the values of formulas, not the formulas themselves; text starting with \"=\" is recognised as a formula and evaluated.",
-      "pasteEmpty": "The clipboard has no text to paste"
+      "pasteEmpty": "The clipboard has no text to paste",
+      "readDenied": "The browser did not allow reading the clipboard. Use Ctrl+V inside the cell.",
+      "writeDenied": "The browser did not allow writing to the clipboard. Use Ctrl+C inside the cell."
     },
     "functionArguments": {
       "title": "Function Arguments",

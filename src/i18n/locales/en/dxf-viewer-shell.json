@@ -5229,7 +5229,7 @@
       "uploadDxfLegacy": "Upload DXF (Legacy)",
       "enhancedImport": "Enhanced DXF Import",
       "importTek": "Import Tekton (.tek)",
-      "titleBlockBinding": "Title Block Binding",
+      "titleBlockBinding": "Survey Data",
       "externalReferences": "External References",
       "attachImage": "Image",
       "attachImageTooltip": "Insert an image into the drawing — click to place, or Enter for the centre of the view",
@@ -6296,8 +6296,8 @@
     "title": "Layer Manager"
   },
   "titleBlockBinding": {
-    "title": "Title Block Binding",
-    "description": "The surveyor's title block was read. Each suggestion is written to the database ONLY if you approve it.",
+    "title": "Survey Data",
+    "description": "The survey drawing was read \u2014 its title block and the documents in its body. Each suggestion is written to the database ONLY if you approve it.",
     "empty": "No title block was found on any layer of this drawing.",
     "loading": "Reading title block…",
     "layerLabel": "Title block layer",
@@ -6347,6 +6347,7 @@
       "urbanPlanDecree": "Urban plan decree",
       "generalUrbanPlan": "General urban plan",
       "zoningRegulations": "Zoning regulation",
+      "remarks": "Remark",
       "approvals": "Approval",
       "titleDeeds": "Title deed"
     },
@@ -7579,5 +7580,42 @@
       "columnDesc": "Description",
       "columnQty": "Quantity"
     }
+  },
+  "animation": {
+    "title": "Animation",
+    "panels": {
+      "tool": "Tool",
+      "waypoints": "Waypoints",
+      "persistence": "Save",
+      "export": "Export",
+      "snap": "Grid snap"
+    },
+    "toolbar": {
+      "turntable": "Turntable",
+      "deactivate": "Deactivate",
+      "addWaypoint": "Add waypoint",
+      "deleteWaypoint": "Delete",
+      "reverseTrack": "Reverse track",
+      "preview": "Preview",
+      "export": "Export",
+      "addAtCurrentCamera": "Add at current camera",
+      "snapToggle": "Snap to grid",
+      "snapStep": "Grid step",
+      "activate": "Activate",
+      "activateHint": "Activate the tool to show the path handles in 3D"
+    },
+    "persistence": {
+      "save": "Save",
+      "load": "Load",
+      "share": "Share"
+    },
+    "snapStepOptions": {
+      "s0_1": "0.1 u",
+      "s0_25": "0.25 u",
+      "s0_5": "0.5 u",
+      "s1": "1 u",
+      "s2": "2 u"
+    },
+    "exportTooltip": "Export to MP4"
   }
 }
