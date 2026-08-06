@@ -74,6 +74,12 @@ export const FIELD_LABEL: Record<ProposalFieldKey, string> = {
   heightDatum: 'titleBlockBinding.fields.heightDatum',
   surveyDate: 'titleBlockBinding.fields.surveyDate',
   regionalUnit: 'titleBlockBinding.fields.regionalUnit',
+  // ── Γραμμές επαναλαμβανόμενων ενοτήτων (ADR-759 Φ4β) ──
+  urbanPlanDecree: 'titleBlockBinding.fields.urbanPlanDecree',
+  generalUrbanPlan: 'titleBlockBinding.fields.generalUrbanPlan',
+  zoningRegulations: 'titleBlockBinding.fields.zoningRegulations',
+  approvals: 'titleBlockBinding.fields.approvals',
+  titleDeeds: 'titleBlockBinding.fields.titleDeeds',
 };
 
 /**
@@ -127,6 +133,7 @@ export const TARGET_LABEL: Record<BindingTargetKind, string> = {
   'project-field': 'titleBlockBinding.target.project-field',
   'drawing-meta': 'titleBlockBinding.target.drawing-meta',
   'survey-record': 'titleBlockBinding.target.survey-record',
+  'survey-record-row': 'titleBlockBinding.target.survey-record-row',
 };
 
 /**
@@ -202,6 +209,10 @@ export const candidateLabel = (
     case 'project-address':
     case 'project-field':
     case 'drawing-meta':
+    // Η γραμμή φέρνει ήδη τη σύνοψή της ως `label` (`surveyRowPreview`): τα μέρη της με
+    // τη σειρά της φόρμας. Δεύτερη σύνθεση εδώ θα ήταν δεύτερος τόπος που αποφασίζει
+    // πώς διαβάζεται μια γραμμή — με τον πρώτο (τον Λ2) να λέει άλλο.
+    case 'survey-record-row':
       return candidate.label;
   }
 };

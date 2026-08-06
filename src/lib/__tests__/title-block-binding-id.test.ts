@@ -112,6 +112,92 @@ describe('🔴 ΤΟ SLOT ΚΡΑΤΑΕΙ ΖΩΝΤΑΝΕΣ ΤΙΣ ΠΟΛΛΑΠΛΕ
   });
 });
 
+/**
+ * 🔴 **ΤΟ ΕΚΚΡΕΜΕΣ ΤΗΣ Φ3γ** (ADR-759 §4.8 χρέος β / §4.9).
+ *
+ * Το `bindingSlot` επέστρεφε `encodeKeySegment(personName)` **πριν κοιτάξει το είδος στόχου**.
+ * Άρα «ο Μαυρομιχάλης → επαφή έργου» και «ο Μαυρομιχάλης → **τοπογράφος αυτού** του
+ * τοπογραφικού» έπεφταν στο **ίδιο slot**: δύο νόμιμες, ταυτόχρονα αληθείς συνδέσεις, και η
+ * δεύτερη έγκριση μαρκάριζε `superseded` την πρώτη — **σιωπηλά, χωρίς μήνυμα**.
+ *
+ * Είναι **κατά λέξη** η βλάβη που γέννησε αυτή τη συνάρτηση (δύο μελετητές από ένα κελί), σε
+ * άλλον άξονα: εκεί άλλαζε το **πρόσωπο** με σταθερό προορισμό, εδώ αλλάζει ο **προορισμός** με
+ * σταθερό πρόσωπο. Ο πρώτος άξονας καλύφθηκε· ο δεύτερος όχι, γιατί μέχρι τη Φ3γ **δεν υπήρχε**
+ * δεύτερος προορισμός για πρόσωπο.
+ *
+ * ⚠️ **Ο έλεγχος γράφτηκε ΠΡΙΝ τη θεραπεία και ήταν κόκκινος** — αλλιώς δεν θα ξέραμε ότι
+ * διορθώθηκε κάτι (handoff §Δ.2).
+ */
+describe('🔴 ΙΔΙΟ ΠΡΟΣΩΠΟ, ΑΛΛΟΣ ΠΡΟΟΡΙΣΜΟΣ — Η ΣΙΩΠΗΛΗ ΑΠΟΣΥΡΣΗ', () => {
+  const scope = (p: BindingProposal, t: BindingTarget) =>
+    bindingSlotScope({ fileRecordId: FILE, levelId: LEVEL, proposal: p, target: t });
+
+  /** Η ίδια δήλωση της πινακίδας, με προορισμό το **τοπογραφικό** αντί για την επαφή έργου. */
+  const surveyTarget: BindingTarget = {
+    kind: 'survey-record',
+    projectId: 'proj_1',
+    recordId: 'srv_1',
+    field: 'surveyDate',
+    value: { kind: 'text', value: '2026-07-30' },
+  } as BindingTarget;
+
+  it('🔴 η δεύτερη έγκριση ΔΕΝ αποσύρει την πρώτη — άλλο είδος στόχου, άλλη εμβέλεια', () => {
+    const p = proposal({ personName: 'ΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ' });
+    expect(scope(p, contactTarget('c1'))).not.toBe(scope(p, surveyTarget));
+  });
+
+  it('και τα δύο έγγραφα επιβιώνουν — δύο κλειδιά, όχι ένα επιγραμμένο', () => {
+    const p = proposal({ personName: 'ΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ' });
+    expect(key(p, contactTarget('c1'))).not.toBe(key(p, surveyTarget));
+  });
+
+  it('το ίδιο ισχύει για τον οικοπεδούχο — ο άξονας είναι το ΕΙΔΟΣ, όχι ο ρόλος', () => {
+    const p = proposal({ personName: 'ΖΕΡΒΑ ΓΕΩΡΓΙΑ' });
+    const landowner = {
+      kind: 'landowner',
+      projectId: 'proj_1',
+      contactId: 'c9',
+      acquisitionStatus: 'prospective',
+    } as BindingTarget;
+    expect(scope(p, landowner)).not.toBe(scope(p, surveyTarget));
+  });
+
+  /**
+   * 🔴 **Η ΑΠΟΔΕΙΞΗ ΟΤΙ Η ΘΕΡΑΠΕΙΑ ΕΙΝΑΙ ΠΡΟΣΘΕΤΙΚΗ.**
+   *
+   * Το slot ζει μέσα σε **αποθηκευμένα** `bindingId` του Firestore. Αλλάζοντάς το για τα
+   * υπάρχοντα είδη, κάθε εγκεκριμένη σύνδεση θα αποκτούσε **νέο** κλειδί: το επόμενο φόρτωμα
+   * δεν θα την ξανάβρισκε, το δεύτερο κλικ θα γεννούσε **δεύτερο έγγραφο**, και το supersede
+   * δεν θα έφτανε ποτέ στο παλιό (ADR-745 §Γ2, η ίδια βλάβη με το `?? ''`).
+   *
+   * Ο έλεγχος είναι ασφαλής **επειδή είναι μετρημένο** ότι μόνο δύο σημεία παράγουν
+   * `personName` (`resolve-people.ts:152`, `resolve-landowner.ts:67`) και **και τα δύο**
+   * δίνουν στόχο προσώπου — άρα κανένα αποθηκευμένο κλειδί δεν αλλάζει.
+   */
+  it.each([
+    ['επαφή έργου', contactTarget('c1')],
+    [
+      'οικοπεδούχος',
+      {
+        kind: 'landowner',
+        projectId: 'proj_1',
+        contactId: 'c1',
+        acquisitionStatus: 'prospective',
+      } as BindingTarget,
+    ],
+  ])('🔴 το slot του «%s» μένει ΑΚΡΙΒΩΣ το πρόσωπο — κανένα αποθηκευμένο κλειδί δεν αλλάζει', (
+    _name,
+    target: BindingTarget,
+  ) => {
+    const name = 'ΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ';
+    expect(bindingSlot(proposal({ personName: name }), target)).toBe(encodeKeySegment(name));
+  });
+
+  it('χωρίς πρόσωπο, τα είδη προσώπου κρατούν το contactId — ίδια συμπεριφορά με πριν', () => {
+    expect(bindingSlot(proposal(), contactTarget('c1'))).toBe('c1');
+  });
+});
+
 describe('🔴 Η ΔΙΟΡΘΩΣΗ ΚΡΑΤΑΕΙ ΙΣΤΟΡΙΑ — ΙΔΙΟ SLOT, ΑΛΛΟ ΕΓΓΡΑΦΟ', () => {
   it('λάθος επαφή και σωστή επαφή = δύο έγγραφα, ίδια εμβέλεια supersede', () => {
     const p = proposal({ personName: 'ΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ' });
@@ -182,5 +268,49 @@ describe('🔴 ΚΑΝΕΝΑ ΣΙΩΠΗΛΟ ΚΕΝΟ ΤΜΗΜΑ — ΠΟΤΕ `?? 
 
   it('κενό personName ⇒ ΣΚΑΕΙ αντί να συγχωνεύσει δύο πρόσωπα σε ένα slot', () => {
     expect(() => bindingSlot(proposal({ personName: '   ' }), contactTarget('c1'))).toThrow();
+  });
+});
+
+/**
+ * 🔴 **ΟΙ ΓΡΑΜΜΕΣ ΜΟΙΡΑΖΟΝΤΑΙ ΤΟ ΙΔΙΟ ΚΕΛΙ — ΤΟ SLOT ΕΙΝΑΙ ΤΟ ΜΟΝΟ ΠΟΥ ΤΙΣ ΞΕΧΩΡΙΖΕΙ** (Φ4β).
+ *
+ * Τα έγγραφα του σώματος είναι **ένα MTEXT το καθένα**: οι πέντε θεσμικές πράξεις, οι δύο
+ * εγκρίσεις και οι τρεις τίτλοι του G753 έχουν **ταυτόσημο** σημείο εισαγωγής. Με slot το
+ * πεδίο — όπως τα βαθμωτά — και οι δέκα θα καταλάμβαναν την ίδια θέση, και κάθε έγκριση θα
+ * μαρκάριζε `superseded` την προηγούμενη: θα επιβίωνε **μία**.
+ */
+describe('🔴 ΓΡΑΜΜΗ ΤΟΠΟΓΡΑΦΙΚΟΥ — ΔΕΚΑ ΔΗΛΩΣΕΙΣ ΑΠΟ ΕΝΑ ΣΗΜΕΙΟ', () => {
+  const rowTarget = (rowId: string, list = 'zoningRegulations'): BindingTarget =>
+    ({
+      kind: 'survey-record-row',
+      projectId: 'proj_1',
+      recordId: 'srv_1',
+      list,
+      rowId,
+      parts: [],
+    }) as BindingTarget;
+
+  const rowProposal = proposal({ fieldKey: 'zoningRegulations', personName: undefined });
+
+  it('δύο γραμμές του ΙΔΙΟΥ εγγράφου δίνουν ΔΙΑΦΟΡΕΤΙΚΟ κλειδί', () => {
+    expect(key(rowProposal, rowTarget('svact_a'))).not.toBe(key(rowProposal, rowTarget('svact_b')));
+  });
+
+  it('🔴 και ΔΙΑΦΟΡΕΤΙΚΟ slot — αλλιώς η δεύτερη έγκριση αποσύρει την πρώτη', () => {
+    expect(bindingSlot(rowProposal, rowTarget('svact_a'))).not.toBe(
+      bindingSlot(rowProposal, rowTarget('svact_b')),
+    );
+  });
+
+  it('η ίδια γραμμή σε ΑΛΛΟ τοπογραφικό είναι άλλος σύνδεσμος', () => {
+    const other = {
+      ...rowTarget('svact_a'),
+      recordId: 'srv_2',
+    } as BindingTarget;
+    expect(targetRef(rowTarget('svact_a'))).not.toBe(targetRef(other));
+  });
+
+  it('ίδια γραμμή ⇒ ίδιο κλειδί: η επανάληψη της έγκρισης δεν διπλασιάζει', () => {
+    expect(key(rowProposal, rowTarget('svact_a'))).toBe(key(rowProposal, rowTarget('svact_a')));
   });
 });

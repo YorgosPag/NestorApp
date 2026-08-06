@@ -107,10 +107,40 @@ describe('🔒 οι φύλακες — καμία εγγραφή, με ΚΩΔΙ�
     expect(service.updateSurveyRecord).not.toHaveBeenCalled();
   });
 
-  it('🔴 εγγραφή ΑΛΛΟΥ μισθωτή — το `getById` δεν φιλτράρει, ο έλεγχος ανήκει εδώ', async () => {
+  /**
+   * 🔴 **ΞΕΝΟ ≡ ΑΝΥΠΑΡΚΤΟ** — και ο ίδιος κωδικός με το «δεν υπάρχει» είναι το ζητούμενο,
+   * όχι παράλειψη (ADR-742 / ADR-759 §4.9).
+   *
+   * Εδώ ζούσε ξεχωριστό `SURVEY_RECORD_FOREIGN`, δηλαδή **μαντείο ύπαρξης**: «ανήκει σε άλλον»
+   * επιβεβαιώνει ότι το id υπάρχει. Ο έλεγχος πέρασε στο SSoT `ownedOrNull`, που κρατά τη
+   * σιωπηλή πολιτική και **καταγράφει** την απόπειρα.
+   */
+  it('🔴 εγγραφή ΑΛΛΟΥ μισθωτή — σιωπά όπως το ανύπαρκτο, δεν μαρτυρά ύπαρξη', async () => {
     service.getSurveyRecord.mockResolvedValue(record({ companyId: 'comp_OTHER' }));
     const result = await applySurveyRecordTarget(TARGET, CTX);
-    expect(result).toMatchObject({ success: false, errorCode: 'SURVEY_RECORD_FOREIGN' });
+    expect(result).toMatchObject({ success: false, errorCode: 'SURVEY_RECORD_MISSING' });
+    expect(service.updateSurveyRecord).not.toHaveBeenCalled();
+  });
+
+  it('🔴 ο κωδικός είναι ΑΚΡΙΒΩΣ ο ίδιος με το ανύπαρκτο — αλλιώς η διάκριση ΕΙΝΑΙ η διαρροή', async () => {
+    service.getSurveyRecord.mockResolvedValue(null);
+    const missing = await applySurveyRecordTarget(TARGET, CTX);
+    service.getSurveyRecord.mockResolvedValue(record({ companyId: 'comp_OTHER' }));
+    const foreign = await applySurveyRecordTarget(TARGET, CTX);
+    expect(foreign).toEqual(missing);
+  });
+
+  /**
+   * 🔴 **Η ΠΑΓΙΔΑ ΤΟΥ ΚΕΝΟΥ, που ο χειρόγραφος έλεγχος άφηνε ανοιχτή.**
+   *
+   * Χαλασμένο token (`companyId: ''`) και έγγραφο με κενό `companyId` (ADR-232 — τα φτιάχνει
+   * το υπεργραφείο) «ταίριαζαν» σε ωμή `!==`, δηλαδή **εγγραφή σε ξένο έγγραφο**. Δεν είναι
+   * λάθος κωδικός· είναι απώλεια απομόνωσης μισθωτή.
+   */
+  it('🔴 κενό companyId και στις δύο πλευρές ΔΕΝ είναι ταίριασμα — το κενό είναι απουσία tenant', async () => {
+    service.getSurveyRecord.mockResolvedValue(record({ companyId: '' }));
+    const result = await applySurveyRecordTarget(TARGET, { ...CTX, companyId: '' });
+    expect(result).toMatchObject({ success: false, errorCode: 'SURVEY_RECORD_MISSING' });
     expect(service.updateSurveyRecord).not.toHaveBeenCalled();
   });
 

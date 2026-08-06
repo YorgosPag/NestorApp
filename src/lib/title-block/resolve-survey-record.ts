@@ -21,6 +21,8 @@ import {
   surveyBindingPreview,
   type BindableSurveyField,
 } from '@/config/survey-bindable-fields';
+import type { SurveyRowPartValue } from '@/config/survey-row-bindings';
+import type { DocumentBodyListKey } from '@/types/document-body-reading';
 import type {
   BindingBlockReason,
   BindingCandidate,
@@ -148,35 +150,119 @@ export function buildSurveyProposal(
   params: SurveyProposalParams,
 ): BindingProposal {
   const { projectId, field, rawText, snapshot, declaredCaution, sourceKind, corroboration } = params;
+
+  return towardsSurveyRecord(
+    { base, snapshot, sourceKind, corroboration },
+    (recordId) => ({
+      target: {
+        kind: 'survey-record',
+        projectId,
+        recordId,
+        field,
+        value: parseSurveyValue(field, rawText),
+      },
+      // Τι **θα γραφτεί** — και όχι το ωμό κείμενο, όταν τα δύο διαφέρουν («Π.Ε. 39» → «39»).
+      label: surveyBindingPreview(field, rawText),
+      // Κενή μαρτυρία επίτηδες: δεν τίθεται ερώτημα ταυτότητας. Ίδια σύμβαση με τον δήμο.
+      evidence: [],
+    }),
+    declaredCaution ?? valueCaution(field, rawText),
+  );
+}
+
+// ── Ο κοινός σκελετός ─────────────────────────────────────────────────────────
+
+/** Ό,τι μοιράζονται οι δύο κατασκευές πρότασης προς το τοπογραφικό. */
+interface SurveyProposalShell {
+  readonly base: ProposalBase;
+  readonly snapshot: SurveySnapshot | undefined;
+  readonly sourceKind?: BindingSourceKind | undefined;
+  readonly corroboration?: number | undefined;
+}
+
+/**
+ * Ο **ένας** σκελετός: λύσε τον προορισμό, και αν κλείνει, πες γιατί.
+ *
+ * 🔑 Δύο καλούντες με ταυτόσημο σώμα και **έναν** υποψήφιο διαφορετικό (βαθμωτό πεδίο vs
+ * γραμμή λίστας) είναι ακριβώς το δίδυμο του N.18: την ημέρα που αλλάξει ο κανόνας
+ * προορισμού — π.χ. προστεθεί τέταρτη έκβαση — ο ένας θα την πάρει και ο άλλος όχι, και το
+ * σφάλμα θα είναι **οθόνη που υπόσχεται εγγραφή η οποία δεν γίνεται**.
+ */
+function towardsSurveyRecord(
+  shell: SurveyProposalShell,
+  makeCandidate: (recordId: string) => BindingCandidate,
+  caution: BindingCaution | null,
+): BindingProposal {
   // Ρητά spreads: το `exactOptionalPropertyTypes` ξεχωρίζει «απόν» από «`undefined`», και και
   // τα δύο πεδία τεκμηριώνονται ως **απόντα ⇒ προεπιλογή**, όχι ως `undefined`.
   const withSource = {
-    ...base,
-    ...(sourceKind ? { sourceKind } : {}),
-    ...(corroboration !== undefined ? { corroboration } : {}),
+    ...shell.base,
+    ...(shell.sourceKind ? { sourceKind: shell.sourceKind } : {}),
+    ...(shell.corroboration !== undefined ? { corroboration: shell.corroboration } : {}),
   };
-  const destination = resolveSurveyDestination(snapshot);
+  const destination = resolveSurveyDestination(shell.snapshot);
 
   if (destination.to === 'blocked') {
     return { ...withSource, candidates: [], blockedBy: destination.reason };
   }
 
-  const candidate: BindingCandidate = {
-    target: {
-      kind: 'survey-record',
-      projectId,
-      recordId: destination.record.id,
-      field,
-      value: parseSurveyValue(field, rawText),
-    },
-    // Τι **θα γραφτεί** — και όχι το ωμό κείμενο, όταν τα δύο διαφέρουν («Π.Ε. 39» → «39»).
-    label: surveyBindingPreview(field, rawText),
-    // Κενή μαρτυρία επίτηδες: δεν τίθεται ερώτημα ταυτότητας. Ίδια σύμβαση με τον δήμο.
-    evidence: [],
-  };
-
-  const caution = declaredCaution ?? valueCaution(field, rawText);
+  const candidate = makeCandidate(destination.record.id);
   return caution
     ? { ...withSource, candidates: [candidate], caution }
     : { ...withSource, candidates: [candidate] };
+}
+
+// ── Γραμμές επαναλαμβανόμενων ενοτήτων (Φ4β) ─────────────────────────────────
+
+export interface SurveyRowProposalParams {
+  readonly projectId: string;
+  readonly list: DocumentBodyListKey;
+  /** Ντετερμινιστική ταυτότητα της δήλωσης — δες `surveyRowKey`. */
+  readonly rowId: string;
+  readonly parts: readonly SurveyRowPartValue[];
+  /** Ολόκληρες οι γραμμές του σχεδίου, ενωμένες — η εφεδρεία όταν κανένα μέρος δεν αναλύεται. */
+  readonly rawText: string;
+  readonly snapshot: SurveySnapshot | undefined;
+  readonly sourceKind?: BindingSourceKind;
+  readonly corroboration?: number;
+}
+
+/**
+ * Πώς **διαβάζεται** μια γραμμή πριν εγκριθεί: τα μέρη της, με τη σειρά της φόρμας.
+ *
+ * ⚠️ Δείχνει την **αναλυμένη** τιμή όπου υπάρχει και το ωμό κείμενο όπου δεν αναλύθηκε —
+ * γιατί «→» σημαίνει «αυτό θα γραφτεί» (ADR-759 §4.9 απόφαση 3). Χωρίς κανένα μέρος, δείχνει
+ * ολόκληρη τη γραμμή: πρόταση χωρίς ετικέτα είναι πρόταση που κανείς δεν μπορεί να κρίνει.
+ */
+function surveyRowPreview(
+  parts: readonly SurveyRowPartValue[],
+  rawText: string,
+): string {
+  const shown = parts.map((part) => part.value ?? part.rawText).filter((text) => text.length > 0);
+  return shown.length > 0 ? shown.join(' · ') : rawText;
+}
+
+/**
+ * **Η μία** κατασκευή πρότασης **γραμμής** προς το τοπογραφικό.
+ *
+ * Η επιφύλαξη είναι η ίδια έννοια με τα βαθμωτά, μετρημένη στη γραμμή: μέρος που διαβάστηκε
+ * και **δεν αναλύθηκε** σημαίνει ότι η καρτέλα θα κρατήσει το ωμό κείμενο. Ο μηχανικός
+ * πρέπει να το ξέρει **πριν** πατήσει Έγκριση, όχι να το ανακαλύψει μετά.
+ */
+export function buildSurveyRowProposal(
+  base: ProposalBase,
+  params: SurveyRowProposalParams,
+): BindingProposal {
+  const { projectId, list, rowId, parts, rawText, snapshot, sourceKind, corroboration } = params;
+  const unparsed = parts.some((part) => part.value === null);
+
+  return towardsSurveyRecord(
+    { base, snapshot, sourceKind, corroboration },
+    (recordId) => ({
+      target: { kind: 'survey-record-row', projectId, recordId, list, rowId, parts },
+      label: surveyRowPreview(parts, rawText),
+      evidence: [],
+    }),
+    unparsed ? 'partial-value' : null,
+  );
 }

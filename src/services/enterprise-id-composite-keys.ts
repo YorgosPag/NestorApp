@@ -74,6 +74,32 @@ export function titleBlockBindingKey(segments: readonly string[]): string {
 }
 
 /**
+ * ADR-759 Φ4β: deterministic id for a **list row transcribed from a drawing** — one row per
+ * (drawing statement, list).
+ *
+ * 🔴 Why a row needs a derived id at all. A scalar binding is addressed **by name**
+ * (`plotArea`), so approving it twice writes the same field twice and nothing duplicates. A
+ * list row has no name: without one, the second click on the same ΦΕΚ appends a **second**
+ * act and the engineer is left deleting rows the system invented. The drawing's own
+ * statement is the name — same reasoning, and same shape, as `titleBlockBindingKey` above.
+ *
+ * ⚠️ Rows the engineer types keep a **random** `generateSurveyActId()`-class id, so a typed
+ * row and a transcribed one can never collide.
+ *
+ * @param prefix the row family (`svact` / `svapr` / `svdeed`) — the caller holds it, exactly
+ *   as it holds the row type.
+ * @throws if any segment is empty — a blank segment merges two distinct statements into one
+ *   row, which is the failure this scheme exists to prevent.
+ */
+export function surveyRowKey(prefix: string, segments: readonly string[]): string {
+  if (!prefix) throw new Error('surveyRowKey: prefix is required');
+  if (segments.length === 0) throw new Error('surveyRowKey: segments are required');
+  const blankAt = segments.findIndex((s) => !s);
+  if (blankAt !== -1) throw new Error(`surveyRowKey: segment ${blankAt} is empty`);
+  return `${prefix}_${segments.join('_')}`;
+}
+
+/**
  * UserSettings SSoT: deterministic 1:1 key — one preferences blob per
  * (user, tenant). Used by `user_preferences/{docId}` Firestore collection
  * and by `userSettingsRepository.bind(userId, companyId)`.
