@@ -131,8 +131,18 @@ export const TitleBlockProposalRow: React.FC<Props> = ({
 
       {shape ? (
         <section className="mt-1.5">
+          {/* 🔴 ΠΟΤΕ `text-primary` ΣΤΗ ΓΡΑΜΜΗ «→ …». Στο σκοτεινό θέμα το `--primary` και
+              το `--card` είναι **η ίδια** τιμή (`217 33% 17%` — `globals.css:212` και `:218`,
+              που δηλώνει ρητά «Dark primary background»), άρα κείμενο `text-primary` πάνω σε
+              κάρτα δίνει **λόγο αντίθεσης 1,00:1**: η προτεινόμενη τιμή — το μόνο πράγμα που
+              απαντά «τι θα γραφτεί στη βάση» — ήταν **αόρατη** και στις 52 προτάσεις.
+              Μετρημένο στην οθόνη (ADR-759 §4.12 «Επαλήθευση στην οθόνη»)· καμία πύλη δεν το
+              είδε, γιατί το DOM ήταν σωστό — μόνο το χρώμα ήταν λάθος.
+              Το `text-foreground` είναι ήδη η σύμβαση των αδελφών του ίδιου φακέλου
+              (`proposal-row-parts.tsx:52`, `TitleBlockPrefillNotice.tsx:84`) για ακριβώς αυτή
+              τη δουλειά — την έμφαση την κάνουν το `font-medium` και το βέλος. */}
           {chosen ? (
-            <p className="break-words text-sm font-medium text-primary">
+            <p className="break-words text-sm font-medium text-foreground">
               → {candidateLabel(chosen, t)}
             </p>
           ) : null}

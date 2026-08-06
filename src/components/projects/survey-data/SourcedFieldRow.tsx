@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { FieldAccessor } from '@/config/survey-card-config';
 import { surveyAffirmationLabel } from '@/config/survey-record-labels';
+import { formatNumber } from '@/lib/intl-formatting';
 import { parseStrictDecimal } from '@/lib/survey-record/survey-number';
 import { userSourced, type Sourced, type SurveyRecord } from '@/types/project-survey-record';
 
@@ -120,9 +121,23 @@ export function SourcedFieldRow({
       case 'number': {
         const current = field.read(record);
         if (!isEditing) {
+          /* 🔴 ΑΝΑΓΝΩΣΗ = ΕΛΛΗΝΙΚΗ ΓΡΑΦΗ. Το `String(1364.05)` δίνει «1364.05» — τελεία
+             υποδιαστολή, χωρίς χιλιάδες — μέσα σε **ελληνική** οθόνη, ενώ η παλέτα για την
+             ίδια τιμή δείχνει «1.364,05». Το test `title-block-binding-wiring.test.ts:299`
+             κρατά **ωμό** το κείμενο της παλέτας με ρητή αιτιολογία: *«η καρτέλα θα έδειχνε
+             άλλο από την παλέτα για την ίδια τιμή»* — δηλαδή ονόμαζε την αναλλοίωτη, αλλά
+             μετρούσε **μόνο τη μία** από τις δύο πλευρές της. Η άλλη απέκλινε, και το
+             φάνηκε μόνο η οθόνη (ADR-759 §4.12 «Επαλήθευση στην οθόνη»).
+             ⚠️ ΜΟΝΟ η ανάγνωση μορφοποιείται. Το `<Input>` παρακάτω μένει `String(...)`:
+             μορφοποιημένη τιμή μέσα σε πεδίο επεξεργασίας θα ξαναπερνούσε από
+             `parseStrictDecimal` σε κάθε πληκτρολόγηση.
+             ⚠️ Και τα εννέα `kind: 'number'` πεδία του `survey-card-config` είναι
+             **ποσότητες** (εμβαδά, πρόσωπα, συντελεστές, όροφοι) — κανένα δεν είναι αύξων
+             αριθμός. Ο Τόμος/α.α./αριθμός πράξης είναι κείμενο, γι' αυτό ο διαχωριστής
+             χιλιάδων εδώ δεν παραμορφώνει ποτέ ταυτότητα. */
           return (
             <ReadOnlyValue
-              text={current.value === null ? null : String(current.value)}
+              text={current.value === null ? null : formatNumber(current.value)}
               source={current}
             />
           );
