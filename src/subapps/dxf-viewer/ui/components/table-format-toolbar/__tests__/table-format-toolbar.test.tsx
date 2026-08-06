@@ -177,8 +177,15 @@ function renderToolbar(overrides: ToolbarOverrides = {}) {
 }
 
 /**
- * Τα ΔΕΚΑ κουμπιά της γραμμής, με τη σειρά του DOM:
- * Β, Π, Υ, **Α (κείμενο), ▾**, **🪣 (γέμισμα), ▾**, Α↑, Α↓, ↺.
+ * Τα ΔΩΔΕΚΑ κουμπιά που δίνει **μόνο** το τμήμα μορφοποίησης, με τη σειρά του DOM:
+ * ```
+ *   σειρά 1:  Α↑  Α↓ │ αναδίπλωση(ανενεργή)
+ *   σειρά 2:  Β  Π │ **🪣 (γέμισμα), ▾**  **Α (κείμενο), ▾**  πινέλο(ανενεργό) ‖ Υ  ↺
+ * ```
+ * ⚠️ **Ήταν δέκα σε μία σειρά μέχρι το §55** (Β, Π, Υ, Α▾, 🪣▾, Α↑, Α↓, ↺). Άλλαξαν τρία
+ * πράγματα, όλα με ρητή εντολή του ιδιοκτήτη για διάταξη **1:1 με το Excel**: δύο σειρές· το
+ * γέμισμα **πριν** το χρώμα κειμένου· και δύο νέες θέσεις χωρίς πράξη (αναδίπλωση, πινέλο) που
+ * κρατούν τη θέση τους στη σειρά του Excel μέχρι να αποκτήσουν λειτουργία.
  *
  * ⚠️ Κάθε χρώμα είναι **δύο** κουμπιά, όχι ένα: split button — το κύριο μισό εφαρμόζει το
  * τελευταίο χρώμα χωρίς μενού, το βελάκι ανοίγει την παλέτα (πρότυπο Excel).
@@ -232,6 +239,15 @@ describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελε
     // ADR-739 Φ.Ε/Φ4 + Φ4β — δες το σχόλιο στο sibling test.
     onSetTextColor: noop,
     onSetFillColor: noop,
+    // ADR-739 §55 — τα τρία νέα τμήματα της γραμμής· αδρανή εδώ, δοκιμάζονται στο
+    // `table-toolbar-extras.test.ts` και στο `table-format-snapshot-readers.test.ts`.
+    resolveToolbar: () => ({
+      fonts: { family: { current: undefined, mixed: false }, size: { current: undefined, mixed: false } },
+      fontNames: [],
+      numberFormat: { current: null, explicit: false },
+      align: null,
+    }),
+    onSetFormatField: noop,
     // ADR-750 Φ3 — δες το σχόλιο στο sibling test.
     /**
      * ADR-750 Φ5 — το dropdown περιγραμμάτων ως **μία** απάντηση (Φ3/Φ5 refactor).
@@ -458,8 +474,9 @@ describe('roving tabindex (WAI-ARIA APG toolbar)', () => {
   it('μόνο ΕΝΑ κουμπί έχει tabIndex 0 στην αρχή — το πρώτο', () => {
     renderToolbar();
     const buttons = getToolbarButtons();
-    // Β, Π, Υ, **Α, ▾**, **🪣, ▾**, Α↑, Α↓, ↺ — κάθε χρώμα είναι split button, δύο θέσεις roving.
-    expect(buttons).toHaveLength(10);
+    // §55: Α↑, Α↓, αναδίπλωση, Β, Π, **🪣, ▾**, **Α, ▾**, πινέλο, Υ, ↺ — δες
+    // `getToolbarButtons`. Κάθε χρώμα είναι split button, δύο θέσεις roving.
+    expect(buttons).toHaveLength(12);
     expect(buttons[0]).toHaveAttribute('tabindex', '0');
     for (const button of buttons.slice(1)) {
       expect(button).toHaveAttribute('tabindex', '-1');

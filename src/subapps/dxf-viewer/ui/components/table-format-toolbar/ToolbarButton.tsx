@@ -49,25 +49,53 @@ export interface TableToggleFormatState {
   readonly explicit: boolean;
 }
 
+/**
+ * 🔴 ADR-739 §55 — **ο ίδιος** trigger για κάθε πτυσσόμενο χειριστήριο που ΔΕΝ είναι split.
+ *
+ * Πριν από αυτό, όποιος ήθελε κουμπί-με-μενού είχε δύο επιλογές: να αντιγράψει τον σκελετό του
+ * {@link ToolbarSplitButton} (μαζί με το επικίνδυνο κομμάτι του — το `ref` που γράφεται σε
+ * **δύο** θέσεις ταυτόχρονα, δες την κεφαλίδα εκείνου) ή να ξαναγράψει `<button>` + tooltip +
+ * σημάδι συνεδρίας. Με τρία νέα πτυσσόμενα στη σειρά (γραμματοσειρά, μέγεθος, στοίχιση) και τα
+ * δύο θα ήταν sibling clones — ακριβώς το σχήμα που πιάνει η CHECK 3.28 (N.18).
+ */
+export interface ToolbarButtonPopup {
+  readonly isOpen: boolean;
+  readonly panelId: string;
+  /** Τι ανοίγει: λίστα τιμών (`listbox`) ή εντολές (`menu`) — ταξιδεύει στο `aria-haspopup`. */
+  readonly kind: 'listbox' | 'menu';
+  /** Ο trigger του πάνελ· γράφεται **μαζί** με το roving ref, ποτέ αντ' αυτού. */
+  readonly triggerRef: React.MutableRefObject<HTMLButtonElement | null>;
+}
+
 export interface ToolbarButtonProps {
   readonly roving: RovingItemProps;
   readonly title: string;
   readonly hint?: string;
   readonly state?: TableToggleFormatState;
   readonly disabled?: boolean;
+  /** Επιπλέον κλάσεις — π.χ. το πλάτος ενός combobox που δείχνει τιμή αντί για εικονίδιο. */
+  readonly className?: string;
+  /** Απόν ⇒ σκέτο κουμπί εντολής. Παρόν ⇒ trigger πτυσσόμενου (δες {@link ToolbarButtonPopup}). */
+  readonly popup?: ToolbarButtonPopup;
   readonly onActivate: () => void;
   readonly children: React.ReactNode;
 }
 
 export function ToolbarButton({
-  roving, title, hint, state, disabled, onActivate, children,
+  roving, title, hint, state, disabled, className, popup, onActivate, children,
 }: ToolbarButtonProps): React.ReactElement {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
-          ref={roving.ref}
+          // 🔴 Και οι δύο παραλήπτες, με αυτή τη σειρά. Ξεχασμένος ο πρώτος, το `Escape` δεν
+          // γυρίζει την εστίαση· ξεχασμένος ο δεύτερος, το κουμπί βγαίνει από το roving. Και
+          // τα δύο συμπτώματα είναι ασυμμετρίες που καμία οπτική επιθεώρηση δεν πιάνει.
+          ref={(node) => {
+            if (popup) popup.triggerRef.current = node;
+            roving.ref(node);
+          }}
           tabIndex={roving.tabIndex}
           onKeyDown={roving.onKeyDown}
           onFocus={roving.onFocus}
@@ -75,9 +103,14 @@ export function ToolbarButton({
             styles.button,
             state?.active && !state.mixed && styles.buttonActive,
             state?.mixed && styles.buttonMixed,
+            popup?.isOpen && styles.buttonActive,
+            className,
           )}
           aria-label={title}
           aria-pressed={state ? (state.mixed ? 'mixed' : state.active) : undefined}
+          aria-haspopup={popup?.kind}
+          aria-expanded={popup ? popup.isOpen : undefined}
+          aria-controls={popup?.isOpen ? popup.panelId : undefined}
           aria-disabled={disabled || undefined}
           onClick={() => {
             if (!disabled) onActivate();
