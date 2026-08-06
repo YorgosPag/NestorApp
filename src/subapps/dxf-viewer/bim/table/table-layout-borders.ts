@@ -41,7 +41,8 @@ import type { CellKey, TableBorderSpec, TableModel } from '../../types/table';
 import type { TableEdgeOrientation } from '../../types/table-edges';
 import { cellKey } from './table-model-helpers';
 import type { MergeIndex } from './table-model-helpers';
-import { sameBorderSpec, tableEdgeKeyAt } from './table-edge-model';
+import { sameBorderSpec } from './table-edge-model';
+import { resolveTableEdgeSpec } from './table-edge-resolve';
 import { resolveTableBorderInk } from './table-ink';
 import type { TableStyle } from './table-style';
 import type { TableBorderSegment } from './table-layout-types';
@@ -65,97 +66,26 @@ function sameMerge(merges: MergeIndex, a: CellKey, b: CellKey): boolean {
 }
 
 /**
- * **Επίπεδο 1** — η ρητή ακμή αυτής ακριβώς της θέσης πλέγματος, ή `undefined` αν δεν
- * υπάρχει (τότε αποφασίζουν τα επίπεδα 2–4).
+ * Το μολύβι μιας ακμής **έτοιμο για την οθόνη**: τα τέσσερα επίπεδα του ADR-750 §6.5, μετά
+ * την προσαρμογή μελανιού.
  *
- * Ο έλεγχος `size === 0` δεν είναι μικροβελτιστοποίηση: ο **συνηθέστερος** πίνακας δεν έχει
- * καμία ρητή ακμή, και χωρίς αυτόν θα συνθέταμε ~8.500 κλειδιά για έναν 8×500 μόνο για να
- * αστοχήσουν όλα. Η διάταξη απομνημονεύεται, άρα το κόστος δεν είναι ανά καρέ — είναι όμως
- * ανά αλλαγή μοντέλου, δηλαδή ανά πληκτρολόγηση.
+ * 🔴 **ADR-768 Φ2β — τα τέσσερα επίπεδα ΜΕΤΑΚΟΜΙΣΑΝ** στο {@link resolveTableEdgeSpec}. Ήταν
+ * ιδιωτικά εδώ (`rawHorizontalSpec` / `rawVerticalSpec` / `explicitSpec`) μέχρι που το
+ * **πινέλο μορφοποίησης** χρειάστηκε την ίδια κληρονομιά — και μάλιστα **χωρισμένη**, για να
+ * ρωτήσει «τι θα έδειχνε ο στόχος χωρίς ρητή ακμή;». Εδώ μένει ό,τι είναι **της ζωγραφικής**:
+ * το τύλιγμα σε **ΕΝΑ** σημείο ανά προσανατολισμό, ώστε το πέμπτο επίπεδο που θα προστεθεί
+ * κάποτε να μην μπορεί να ξεχάσει την προσαρμογή — και να είναι αόρατο, γιατί μια αχνή γραμμή
+ * δεν πετάει σφάλμα.
  */
-function explicitSpec(
+function inkedSpec(
   model: TableModel,
+  style: TableStyle,
   orientation: TableEdgeOrientation,
   r: number,
   c: number,
-): TableBorderSpec | undefined {
-  if (model.edges.size === 0) return undefined;
-  const key = tableEdgeKeyAt(model, orientation, r, c);
-  return key === undefined ? undefined : model.edges.get(key);
-}
-
-/**
- * Το μολύβι της οριζόντιας ακμής στη θέση `(r, c)` — `r` = 0 κορυφή, `rows.length` βάση.
- *
- * 🔴 Παίρνει **και** τη στήλη, σε αντίθεση με πριν: μέχρι το ADR-750 μια οριζόντια ακμή
- * είχε αναγκαστικά το ίδιο μολύβι σε όλο το πλάτος (η πηγή ήταν πάντα η γραμμή ή η κλάση
- * της), οπότε η στήλη ήταν πράγματι άσχετη. Η ρητή ακμή είναι η πρώτη πηγή που μπορεί να
- * πει κάτι διαφορετικό **ανά στήλη** — δηλαδή είναι ακριβώς αυτό που κάνει το «περίγραμμα σε
- * μεμονωμένο κελί» εκφράσιμο.
- */
-function horizontalSpec(
-  model: TableModel,
-  style: TableStyle,
-  r: number,
-  c: number,
   surfaceHex: string,
 ): TableBorderSpec {
-  return resolveTableBorderInk(rawHorizontalSpec(model, style, r, c), surfaceHex);
-}
-
-/**
- * Τα **τέσσερα επίπεδα** αυτούσια — η πηγή του μολυβιού, πριν από κάθε προσαρμογή οθόνης.
- *
- * Ξεχωριστή συνάρτηση ώστε η {@link resolveTableBorderInk} να τυλίγει **ΕΝΑ** σημείο ανά
- * προσανατολισμό: με την προσαρμογή σκορπισμένη στα `return` της κληρονομιάς, το πέμπτο επίπεδο
- * που θα προστεθεί κάποτε θα την ξεχνούσε — και θα ήταν αόρατο, γιατί μια αχνή γραμμή δεν
- * πετάει σφάλμα.
- */
-function rawHorizontalSpec(
-  model: TableModel,
-  style: TableStyle,
-  r: number,
-  c: number,
-): TableBorderSpec {
-  const explicit = explicitSpec(model, 'H', r, c);
-  if (explicit) return explicit;
-
-  const rows = model.rows;
-  if (r === 0) return style.rowClasses[rows[0].rowClass].borders.top;
-  if (r === rows.length) return style.rowClasses[rows[rows.length - 1].rowClass].borders.bottom;
-
-  const above = rows[r - 1];
-  const below = rows[r];
-  if (below.borderTop) return below.borderTop;
-  if (above.rowClass !== below.rowClass) return style.rowClasses[above.rowClass].borders.bottom;
-  return style.rowClasses[above.rowClass].borders.insideH;
-}
-
-/** Το μολύβι μιας κατακόρυφης ακμής στον δείκτη `c`, για τη γραμμή `r`. */
-function verticalSpec(
-  model: TableModel,
-  style: TableStyle,
-  r: number,
-  c: number,
-  surfaceHex: string,
-): TableBorderSpec {
-  return resolveTableBorderInk(rawVerticalSpec(model, style, r, c), surfaceHex);
-}
-
-/** Τα τέσσερα επίπεδα της κατακόρυφης, αυτούσια — δες {@link rawHorizontalSpec}. */
-function rawVerticalSpec(
-  model: TableModel,
-  style: TableStyle,
-  r: number,
-  c: number,
-): TableBorderSpec {
-  const explicit = explicitSpec(model, 'V', r, c);
-  if (explicit) return explicit;
-
-  const borders = style.rowClasses[model.rows[r].rowClass].borders;
-  if (c === 0) return borders.left;
-  if (c === model.columns.length) return borders.right;
-  return borders.insideV;
+  return resolveTableBorderInk(resolveTableEdgeSpec(model, style, orientation, r, c), surfaceHex);
 }
 
 /**
@@ -267,7 +197,7 @@ function horizontalSegments({
         const below = cellKey(model.rows[r].id, model.columns[c].id);
         if (sameMerge(merges, above, below)) continue;
       }
-      pieces.push({ spec: horizontalSpec(model, style, r, c, surfaceHex), from: c, to: c + 1 });
+      pieces.push({ spec: inkedSpec(model, style, 'H', r, c, surfaceHex), from: c, to: c + 1 });
     }
     const y = yEdges[r];
     for (const piece of coalesce(pieces)) {
@@ -303,7 +233,7 @@ function verticalSegments({
         const right = cellKey(model.rows[r].id, model.columns[c].id);
         if (sameMerge(merges, left, right)) continue;
       }
-      pieces.push({ spec: verticalSpec(model, style, r, c, surfaceHex), from: r, to: r + 1 });
+      pieces.push({ spec: inkedSpec(model, style, 'V', r, c, surfaceHex), from: r, to: r + 1 });
     }
     const x = xEdges[c];
     for (const piece of coalesce(pieces)) {

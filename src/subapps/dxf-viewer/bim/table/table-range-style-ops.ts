@@ -176,8 +176,15 @@ export function resolveRangeFormat<K extends TableCellStyleKey>(
  *
  * Το εύρος είναι **ολόκληρο** το κείμενο επειδή ο χρήστης μόρφωσε ολόκληρο το κελί: μια μερική
  * ισοπέδωση θα άφηνε τα υπόλοιπα γράμματα να αγνοούν την εντολή που μόλις δόθηκε.
+ *
+ * 🔴 **ADR-768 Φ3 — εξάγεται** επειδή απέκτησε δεύτερο καταναλωτή: ο ζωγράφος του πινέλου
+ * μορφοποίησης γράφει **διαφορετική** τιμή σε κάθε κελί (άπλωμα μοτίβου), άρα δεν μπορεί να
+ * περάσει από το {@link setRangeStyleField} — αλλά χρωστά **ακριβώς την ίδια** ισοπέδωση.
+ * Δεύτερο αντίγραφο θα σήμαινε ότι το πινέλο βάφει το κελί κόκκινο και ένα μισό του μένει
+ * μπλε, γιατί τα runs **νικούν** το κελί στην επίλυση — σφάλμα ορατό μόνο σε κελιά με
+ * μορφοποίηση ανά χαρακτήρα, δηλαδή στο 1% που κανείς δεν δοκιμάζει.
  */
-function runsWithoutField(cell: TableCell, key: string): readonly TableCellTextRun[] | undefined {
+export function runsWithoutField(cell: TableCell, key: string): readonly TableCellTextRun[] | undefined {
   if (cell.runs === undefined || !isTableTextRunStyleKey(key)) return cell.runs;
   const length = cellText(cell).length;
   return setCellRunStyleField(cell.runs, length, { start: 0, end: length }, key, undefined);

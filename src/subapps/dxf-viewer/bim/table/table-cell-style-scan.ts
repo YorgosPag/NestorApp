@@ -40,7 +40,9 @@ import type { TableCellRef } from './table-cell-range';
 import type {
   PersistedTableModel,
   TableAxisStyleOverride,
+  TableCell,
   TableColumn,
+  TableRowClass,
 } from '../../types/table';
 
 /**
@@ -101,6 +103,41 @@ export interface TableResolvedCell {
   readonly style: TableCellStyle;
   readonly overrides: TableStyleOverrides;
   readonly column: TableColumn;
+  /**
+   * 🔴 ADR-768 Φ3 — η **θέση στο πλέγμα**, για ό,τι δεν απαντιέται με ταυτότητες.
+   *
+   * Τα περιγράμματα είναι ιδιότητα του **πλέγματος**, όχι του κελιού (ADR-750 §6): μια ακμή
+   * ζει ανάμεσα σε δύο κελιά και ο επιλυτής της ({@link resolveTableEdgeSpec}) δέχεται
+   * **δείκτες**, όχι `rowId`/`colId`. Χωρίς αυτά τα δύο πεδία, το πινέλο μορφοποίησης θα ήταν
+   * αναγκασμένο να ξανακάνει `resolveTableModel` + δύο `indexById` — δηλαδή **δεύτερο
+   * αντίγραφο** αυτού ακριβώς του βρόχου, που αυτό το module υπάρχει για να αποτρέψει.
+   *
+   * Το κόστος τους είναι μηδέν: ο βρόχος τα **έχει ήδη** και τα πετούσε.
+   */
+  readonly rowIndex: number;
+  readonly colIndex: number;
+  /**
+   * 🔴 ADR-768 Φ3 — η **κλάση** της γραμμής (τίτλος / κεφαλίδα / δεδομένα).
+   *
+   * Είναι η βάση της επίλυσης, και το πινέλο μορφοποίησης τη χρειάζεται για να κάνει την
+   * **αντίστροφη** ερώτηση: «τι θα έδειχνε αυτό το κελί **χωρίς** τη δική του παράκαμψη;»
+   * — δηλαδή `resolveCellStyle(rowClasses[rowClass], { column, row })`. Χωρίς αυτήν, η
+   * «ελάχιστη υλοποίηση» δεν έχει με τι να συγκρίνει και το πινέλο θα κάρφωνε **κάθε** πεδίο
+   * σε **κάθε** κελί, σκοτώνοντας την κληρονομιά που το ADR-739 Α2 υπάρχει για να δώσει.
+   */
+  readonly rowClass: TableRowClass;
+  /**
+   * 🔴 ADR-768 Φ3 — το **ωμό** κελί, όταν υπάρχει στον αραιό χάρτη.
+   *
+   * Το {@link overrides}`.cell` κρατά **μόνο** το `styleOverride` του. Οι **διαγώνιοι**
+   * (ADR-750 §6.3) είναι μορφοποίηση που ζει σε δικό της πεδίο του `TableCell` και δεν
+   * περνά από καμία αλυσίδα κληρονομιάς — άρα δεν εμφανίζεται πουθενά στο επιλυμένο στυλ,
+   * και ένα πινέλο που δεν τις έβλεπε θα άφηνε σιωπηλά πίσω του τη μισή δουλειά.
+   *
+   * Ίδιο επιχείρημα με τα `overrides` / `column`: μία αναφορά ανά κελί, μηδέν επιπλέον
+   * δουλειά — ο βρόχος κάνει ήδη αυτό ακριβώς το `get`.
+   */
+  readonly cell: TableCell | undefined;
 }
 
 /**
@@ -134,16 +171,21 @@ export function forEachResolvedCellStyle(
 
     const row = resolved.rows[rowIndex];
     const column = resolved.columns[colIndex];
+    const cell = resolved.cells.get(cellKey(row.id, column.id));
     const overrides: TableStyleOverrides = {
       column: column.styleOverride,
       row: row.styleOverride,
-      cell: resolved.cells.get(cellKey(row.id, column.id))?.styleOverride,
+      cell: cell?.styleOverride,
     };
     visit({
       ref,
       style: resolveCellStyle(style.rowClasses[row.rowClass], overrides),
       overrides,
       column,
+      rowIndex,
+      colIndex,
+      rowClass: row.rowClass,
+      cell,
     });
     visited = true;
   }

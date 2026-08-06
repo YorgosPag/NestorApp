@@ -1,0 +1,184 @@
+/**
+ * 🔴 ADR-768 — **ΤΙ ΥΠΟΣΧΕΤΑΙ ΤΟ ΠΙΝΕΛΟ ΜΟΡΦΟΠΟΙΗΣΗΣ**, και η απόδειξη ότι το τηρεί.
+ *
+ * Οι άγκυρες εδώ **δεν** ελέγχουν «τρέχει χωρίς σφάλμα». Ελέγχουν τις τέσσερις υποσχέσεις που
+ * κάνει το εργαλείο, και καθεμία μπορεί να σπάσει **μόνη της**:
+ *
+ * 1. **Ισοδυναμία με Excel** — μετά το βάψιμο, ο στόχος **βλέπεται** ακριβώς όπως η πηγή.
+ * 2. **Ελάχιστη υλοποίηση** — καρφώνεται **μόνο** η διαφορά· ό,τι ήδη συμφωνεί μένει ζωντανό.
+ * 3. **Η κληρονομιά επιβιώνει** — και αποδεικνύεται αλλάζοντας τη γραμμή **μετά** το βάψιμο.
+ * 4. **Καθόλου περιεχόμενο** — κείμενο και τύποι δεν αγγίζονται ποτέ.
+ *
+ * ⚠️ Το δείγμα είναι το **ιεραρχικό** στυλ επίτηδες: με ομοιόμορφο στυλ κάθε άγκυρα εδώ θα
+ * έμενε πράσινη **χωρίς να ρωτά τίποτα** — η χειρότερη κατάληξη για δίχτυ ασφαλείας. Το
+ * `textColorHex` είναι το ίδιο (`#111111`) σε **όλες** τις κλάσεις, και ακριβώς γι' αυτό είναι
+ * η καλύτερη άγκυρα της «ελάχιστης υλοποίησης»: το Excel θα το κάρφωνε· εμείς όχι.
+ *
+ * @see ../table-format-paint.ts
+ */
+
+import { captureTableFormatBrush, paintTableFormat } from '../table-format-paint';
+import { readTableCellFormat } from '../table-format-read';
+import { ALL_TABLE_FORMAT_FACETS } from '../table-format-payload';
+import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
+import type { TableCellRangeBounds } from '../table-cell-range';
+import type {
+  PersistedTableModel,
+  TableCellStyleOverride,
+  TableFormatFacet,
+} from '../../../types/table';
+import type { TableFormatFacetSet } from '../table-format-payload';
+
+const STYLE = hierarchicalTableStyle();
+
+/** r0 = κεφαλίδα (3mm, έντονη, γέμισμα) · r1…r6 = δεδομένα (2,8mm, κανονικά). */
+function model(): PersistedTableModel {
+  return {
+    columns: [
+      { id: 'c0', sizing: { kind: 'hug' }, valueType: 'text', align: 'left' },
+      { id: 'c1', sizing: { kind: 'hug' }, valueType: 'text', align: 'left' },
+    ],
+    rows: [
+      { id: 'r0', rowClass: 'header' },
+      ...Array.from({ length: 6 }, (_, i) => ({ id: `r${i + 1}`, rowClass: 'data' as const })),
+    ],
+    cells: [],
+    merges: [],
+  };
+}
+
+const at = (row: number, col = 0): TableCellRangeBounds => ({
+  firstRow: row,
+  lastRow: row,
+  firstCol: col,
+  lastCol: col,
+});
+
+const rows = (from: number, to: number, col = 0): TableCellRangeBounds => ({
+  firstRow: from,
+  lastRow: to,
+  firstCol: col,
+  lastCol: col,
+});
+
+const ref = (row: number, col = 0) => ({ rowId: `r${row}`, colId: `c${col}` });
+
+const facets = (...names: readonly TableFormatFacet[]): TableFormatFacetSet => new Set(names);
+
+/** Η **ρητή** παράκαμψη ενός κελιού — ό,τι κάρφωσε πράγματι το βάψιμο. */
+function overrideAt(
+  m: PersistedTableModel,
+  row: number,
+  col = 0,
+): TableCellStyleOverride | undefined {
+  const entry = m.cells.find(([rowId, colId]) => rowId === `r${row}` && colId === `c${col}`);
+  return entry?.[2].styleOverride;
+}
+
+/** Φορτώνει και βάφει σε ένα βήμα — η χειρονομία του χρήστη, όχι δύο κλήσεις. */
+function paint(
+  m: PersistedTableModel,
+  source: TableCellRangeBounds,
+  target: TableCellRangeBounds,
+  which: TableFormatFacetSet = ALL_TABLE_FORMAT_FACETS,
+): PersistedTableModel {
+  const brush = captureTableFormatBrush(m, STYLE, source, which);
+  if (!brush) throw new Error('το πινέλο δεν φόρτωσε');
+  return paintTableFormat(m, STYLE, brush, target);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('ΥΠΟΣΧΕΣΗ 1 — ισοδυναμία με Excel: ο στόχος ΒΛΕΠΕΤΑΙ όπως η πηγή', () => {
+  it('κεφαλίδα → δεδομένα: κάθε πεδίο της επιλυμένης μορφής ταυτίζεται', () => {
+    const before = model();
+    const after = paint(before, at(0), at(3));
+
+    expect(readTableCellFormat(after, STYLE, ref(3))).toEqual(
+      readTableCellFormat(before, STYLE, ref(0)),
+    );
+  });
+
+  it('δεδομένα → κεφαλίδα: ταυτίζεται και προς την ΑΝΤΙΘΕΤΗ φορά', () => {
+    const before = model();
+    const after = paint(before, at(3), at(0));
+
+    expect(readTableCellFormat(after, STYLE, ref(0))).toEqual(
+      readTableCellFormat(before, STYLE, ref(3)),
+    );
+  });
+});
+
+describe('ΥΠΟΣΧΕΣΗ 2 — ελάχιστη υλοποίηση: καρφώνεται ΜΟΝΟ η διαφορά', () => {
+  it('ίδια κλάση γραμμής ⇒ ΤΟ ΙΔΙΟ μοντέλο by-reference (κανένα βήμα undo)', () => {
+    const before = model();
+    expect(paint(before, at(2), at(4))).toBe(before);
+  });
+
+  it('κεφαλίδα → δεδομένα: γράφεται το `bold`, ΔΕΝ γράφεται το κοινό `textColorHex`', () => {
+    const override = overrideAt(paint(model(), at(0), at(3)), 3);
+
+    // Διαφέρουν ⇒ ρητά.
+    expect(override?.bold).toBe(true);
+    expect(override?.align).toBe('MC');
+    // 🔴 Ταυτίζονται ⇒ ΚΑΜΙΑ παράκαμψη. Το Excel θα τα κάρφωνε και τα τρία.
+    expect(override).not.toHaveProperty('textColorHex');
+    expect(override).not.toHaveProperty('italic');
+    expect(override).not.toHaveProperty('underline');
+  });
+
+  it('βάψιμο μόνο-γεμίσματος δεν αγγίζει τα έντονα που έβαλε ο χρήστης', () => {
+    const withBold = paint(model(), at(0), at(3), facets('text'));
+    const then = paint(withBold, at(0), at(3), facets('fill'));
+
+    expect(overrideAt(then, 3)?.bold).toBe(true);
+  });
+});
+
+describe('ΥΠΟΣΧΕΣΗ 3 — η κληρονομιά ΕΠΙΒΙΩΝΕΙ (εδώ το Excel αποτυγχάνει)', () => {
+  it('αλλαγή της στήλης ΜΕΤΑ το βάψιμο αλλάζει το πεδίο που δεν καρφώθηκε', () => {
+    const painted = paint(model(), at(0), at(3));
+
+    // Ο χρήστης βάφει τη ΣΤΗΛΗ με άλλο μελάνι — πεδίο που το πινέλο άφησε ζωντανό.
+    const recoloured: PersistedTableModel = {
+      ...painted,
+      columns: painted.columns.map((c) =>
+        c.id === 'c0' ? { ...c, styleOverride: { textColorHex: '#C00000' } } : c,
+      ),
+    };
+
+    expect(readTableCellFormat(recoloured, STYLE, ref(3))?.style.textColorHex).toBe('#C00000');
+    // …ενώ το πεδίο που ΟΝΤΩΣ καρφώθηκε μένει ανεπηρέαστο, όπως πρέπει.
+    expect(readTableCellFormat(recoloured, STYLE, ref(3))?.style.bold).toBe(true);
+  });
+});
+
+describe('ΥΠΟΣΧΕΣΗ 4 — καθόλου περιεχόμενο', () => {
+  it('κείμενο και τύπος του στόχου μένουν άθικτα', () => {
+    const withText: PersistedTableModel = {
+      ...model(),
+      cells: [['r3', 'c0', { kind: 'text', value: 'ΣΥΝΟΛΟ' }]],
+    };
+    const after = paint(withText, at(0), at(3));
+    const entry = after.cells.find(([r, c]) => r === 'r3' && c === 'c0');
+
+    expect(entry?.[2].value).toBe('ΣΥΝΟΛΟ');
+    expect(entry?.[2].formula).toBeUndefined();
+  });
+});
+
+describe('ΑΠΛΩΜΑ ΜΟΤΙΒΟΥ — γραμμές 6/7/8 της προδιαγραφής', () => {
+  it('πηγή ΕΝΑ κελί → στόχος εύρος: ίδια μορφή σε ΟΛΑ', () => {
+    const after = paint(model(), at(0), rows(3, 5));
+
+    for (const row of [3, 4, 5]) expect(overrideAt(after, row)?.bold).toBe(true);
+  });
+
+  it('πηγή ΔΥΟ γραμμών → στόχος τεσσάρων: το μοτίβο ΕΠΑΝΑΛΑΜΒΑΝΕΤΑΙ', () => {
+    // Πηγή = κεφαλίδα (έντονη) + δεδομένα (όχι έντονα) ⇒ αναμενόμενο ΝΑΙ/ΟΧΙ/ΝΑΙ/ΟΧΙ.
+    const after = paint(model(), rows(0, 1), rows(3, 6));
+
+    expect([3, 4, 5, 6].map((row) => overrideAt(after, row)?.bold ?? false))
+      .toEqual([true, false, true, false]);
+  });
+});
