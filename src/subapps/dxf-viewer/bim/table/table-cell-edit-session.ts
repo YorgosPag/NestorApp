@@ -235,3 +235,28 @@ export function buildTableModelCommand(
   if (nextModel === entity.model) return null;
   return new UpdateEntityCommand(entity.id, { model: nextModel }, sceneManager);
 }
+
+/**
+ * ADR-739 §52 — **η αλλαγή ονοματισμένου στυλ**: το αδελφό μονοπάτι του
+ * {@link buildTableModelCommand}, για το **μόνο** πεδίο μορφοποίησης που δεν ζει στο μοντέλο.
+ *
+ * ## Γιατί ξεχωριστή συνάρτηση και όχι παράμετρος του από πάνω
+ * Το `styleId` είναι πεδίο της **οντότητας**, όχι του `model` (`types/table-entity.ts`), και
+ * το patch του `UpdateEntityCommand` είναι άλλο. Μια ενιαία υπογραφή
+ * `(entity, patch: Partial<TableEntity>)` θα έχανε ακριβώς αυτό που κάνει τις δύο χρήσιμες:
+ * τον **φύλακα ταυτότητας** ανά πεδίο — «διάλεξα το στυλ που είχα ήδη» δεν επιτρέπεται να
+ * γεννήσει βήμα αναίρεσης, όπως δεν το γεννά ούτε το «Β» σε ήδη έντονο κελί.
+ *
+ * ⚠️ Δεν αγγίζει το `model`: το στυλ είναι **κληρονομιά** (§28.4 σειρά προτεραιότητας), όχι
+ * παράκαμψη. Οι ρητές παρακάμψεις γραμμών/στηλών/κελιών **επιβιώνουν** της αλλαγής στυλ —
+ * είναι η ίδια σημασιολογία με το `ByLayer` του AutoCAD, και ο δρόμος να φύγουν είναι η
+ * «Επαναφορά», ποτέ μια παρενέργεια της επιλογής στυλ.
+ */
+export function buildTableStyleCommand(
+  entity: TableEntity,
+  nextStyleId: string,
+  sceneManager: ISceneManager,
+): ICommand | null {
+  if (nextStyleId === entity.styleId) return null;
+  return new UpdateEntityCommand(entity.id, { styleId: nextStyleId }, sceneManager);
+}

@@ -80,6 +80,9 @@ import { useTableModeCanvasWiring } from './use-table-mode-canvas-wiring';
 // ADR-739 §31.9 — ο ΕΝΑΣ δεσμευτής «οντότητα + νέο μοντέλο ⇒ μία εντολή», κοινός με το μενού
 // ζωνών· η σύρση πλάτους τον καλεί **μία** φορά, στο `mouseup`.
 import { useTableModelCommit } from './use-table-model-commit';
+// 🔴 ADR-763 Φ2.4.1 — ο ΕΝΑΣ εξυπηρετητής του «δέσμευσε και βγες». Δικό του module για τον
+// ίδιο λόγο με τα υπόλοιπα τέσσερα: αυτό το αρχείο είναι στα όρια των 500 γραμμών (N.7.1).
+import { useTableCellCommitRequest } from './use-table-cell-commit-request';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
@@ -466,6 +469,11 @@ export function useTableCellDoubleClickEditor(
     onSelectAll: rangeActions.selectAll,
     onToggleAbsoluteRef: toggleAbsoluteRef,
   });
+
+  // 🔴 ADR-763 Φ2.4.1 — «δέσμευσε και βγες», ζητημένο από καλούντα **εκτός React** (το «OK»
+  // του διαλόγου ορισμάτων). Ο δεσμευτής είναι ο **ΙΔΙΟΣ** με του `Enter` — καμία δεύτερη
+  // διαδρομή εγγραφής κελιού. Δες `use-table-cell-commit-request`.
+  useTableCellCommitRequest(cursor, commitText);
 
   return useMemo(
     () => ({ overlay, formulaBar, handleDoubleClick }),
