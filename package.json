@@ -85,6 +85,7 @@
     "jscpd:check": "node scripts/check-jscpd-ratchet.js --full",
     "jscpd:diff": "node scripts/check-jscpd-ratchet.js --diff",
     "test:jscpd": "jest scripts/__tests__/check-jscpd-ratchet.test.js --verbose",
+    "measure:text-primary": "node scripts/measure-text-primary-contrast.js",
     "dxf:tsc:baseline": "node scripts/check-dxf-tsc-ratchet.js --write-baseline",
     "dxf:tsc:check": "node scripts/check-dxf-tsc-ratchet.js --full",
     "test:dxf-tsc": "jest scripts/__tests__/check-dxf-tsc-ratchet.test.js --verbose",
