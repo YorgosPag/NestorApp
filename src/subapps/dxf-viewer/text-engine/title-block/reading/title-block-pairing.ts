@@ -34,6 +34,7 @@
  * @see ADR-745 §5.3 (Λ1) · ./title-block-vocabulary (τι είναι ετικέτα)
  */
 
+import { cellVerticalSpan, verticalGapToSpan } from './title-block-extent';
 import { mtextToPlainText } from './mtext-segments';
 import type { TitleBlockSourceCell, TitleBlockField, TitleBlockMatchKind } from './title-block-reading.types';
 import {
@@ -113,33 +114,74 @@ interface Candidate {
   readonly slot: number;
   readonly value: number;
   readonly cost: number;
+  /** Δεύτερο κλειδί ταξινόμησης — δες {@link rankCandidates}. */
+  readonly tieBreak: number;
   readonly kind: TitleBlockMatchKind;
 }
 
 /**
  * Το κόστος του ζεύγους, ή `null` αν η τιμή δεν βρίσκεται καν σε θέση να ανήκει στην ετικέτα.
  *
- * Σειρά: πρώτα η ίδια **σειρά** (τιμή δεξιά, μικρό Δy), μετά η ίδια **στήλη** (τιμή από
- * κάτω, μικρό Δx). Ποτέ αριστερά και ποτέ από πάνω — μια πινακίδα διαβάζεται όπως γράφεται.
+ * Σειρά: πρώτα η ίδια **σειρά** (τιμή δεξιά, η ετικέτα πέφτει στο ύψος της), μετά η ίδια
+ * **στήλη** (τιμή από κάτω, μικρό Δx). Ποτέ αριστερά και ποτέ από πάνω — μια πινακίδα
+ * διαβάζεται όπως γράφεται.
+ *
+ * 🔴 **ADR-762 — δεν συγκρίνονται δύο σημεία εισαγωγής.** Το `y` σημαίνει διαφορετικό πράγμα
+ * ανά κελί (κωδ. 71): κορυφή, κέντρο ή βάση του μπλοκ. Η παλιά γραφή
+ * (`|value.y − label.y| ≤ ανοχή`) συνέκρινε **κορυφή με κέντρο** και κατανάλωνε **41%** της
+ * ανοχής στο ζεύγος `ΜΕΛΕΤΗΤΗΣ`, ενώ κάθε άλλο πεδίο έμενε κάτω από 16% — περιθώριο 1,51
+ * μονάδες, δηλαδή μία-δύο γραμμές κειμένου. Όταν ο χρήστης άλλαξε έναν μελετητή, το ζεύγος
+ * έσπασε και το πεδίο **εξαφανίστηκε χωρίς μήνυμα**.
+ *
+ * ## Δύο ερωτήματα, όχι ένα
+ *
+ * | ερώτημα | ποσότητα | γιατί αυτή |
+ * |---|---|---|
+ * | «είναι στην **ίδια σειρά**;» | το σημείο της ετικέτας πέφτει μέσα στο **εύρος** της τιμής | **μονότονο**: το εύρος μόνο μεγαλώνει όταν μεγαλώνει το κείμενο |
+ * | «πόσο **καλά** ταιριάζουν;» | απόσταση **κέντρων** | είναι η στοίχιση που όντως χάραξε ο συντάκτης — μετρημένο υπόλοιπο **0,0153** |
+ *
+ * ⚠️ **Δύο «προφανείς» λύσεις που μετρήθηκαν ΛΑΘΟΣ και δεν πρέπει να ξαναδοκιμαστούν:**
+ * · **κορυφή με κορυφή** — καταναλώνει **89%** της ανοχής στο `ΜΕΛΕΤΗΤΗΣ` και μετά από δύο
+ *   γραμμές φτάνει 3,03 έναντι 2,569, δηλαδή **σπάει το ίδιο πεδίο** που πάει να σώσει·
+ * · **περιεκτικότητα ως κόστος** — το `Τ1` (κουτί 4,89) **περιέχει** την ετικέτα `ΣΧΕΔΙΟ`, της
+ *   έδινε κόστος `0`, και κατέρρεαν **δύο** πεδία (`drawingType` **και** `drawingNumber`).
  */
 function pairCost(
   label: TitleBlockSourceCell,
   value: TitleBlockSourceCell,
-): { cost: number; kind: TitleBlockMatchKind } | null {
+): { cost: number; tieBreak: number; kind: TitleBlockMatchKind } | null {
   const unit = label.height;
   const dx = value.x - label.x;
-  const dy = value.y - label.y;
-  if (dx > 0 && Math.abs(dy) <= ROW_TOLERANCE_FACTOR * unit) {
-    return { cost: Math.abs(dy) / unit, kind: 'row-alignment' };
+  const labelSpan = cellVerticalSpan(label);
+  const valueSpan = cellVerticalSpan(value);
+  const offCenter = Math.abs(valueSpan.center - labelSpan.center);
+  // Το σημείο εισαγωγής της ετικέτας είναι η **σταθερή** της αναφορά — οι ετικέτες πινακίδας
+  // είναι μονόγραμμες και δεν αλλάζουν. Η τιμή είναι εκείνη που μεγαλώνει, και το εύρος της
+  // μεγαλώνοντας δεν μπορεί να **χάσει** ένα σημείο που ήδη περιέχει.
+  const inSameRow = verticalGapToSpan(label.y, valueSpan) === 0;
+  if (dx > 0 && (inSameRow || offCenter <= ROW_TOLERANCE_FACTOR * unit)) {
+    return { cost: offCenter / unit, tieBreak: dx / unit, kind: 'row-alignment' };
   }
-  const depth = -dy;
+  // Βάθος = από τη **βάση** της ετικέτας ως την **κορυφή** της τιμής. Με σκέτα `y` το βάθος
+  // περιλάμβανε το ύψος της ίδιας της ετικέτας, άρα ένα ψηλό κελί «απομακρυνόταν» χωρίς λόγο.
+  const depth = labelSpan.bottom - valueSpan.top;
   if (depth > 0 && depth <= COLUMN_DEPTH_FACTOR * unit && Math.abs(dx) <= COLUMN_TOLERANCE_FACTOR * unit) {
-    return { cost: Math.abs(dx) / unit, kind: 'column-alignment' };
+    return { cost: Math.abs(dx) / unit, tieBreak: depth / unit, kind: 'column-alignment' };
   }
   return null;
 }
 
-/** Όλα τα επιτρεπτά ζεύγη, ταξινομημένα ώστε το φθηνότερο να δεσμεύεται πρώτο. */
+/**
+ * Όλα τα επιτρεπτά ζεύγη, ταξινομημένα ώστε το φθηνότερο να δεσμεύεται πρώτο.
+ *
+ * 🔑 **Γιατί χρειάστηκε δεύτερο κλειδί (ADR-762).** Το κόστος σειράς είναι πλέον απόκλιση
+ * **κέντρων**, και δύο κελιά ίδιου ύψους στην ίδια σειρά δίνουν ακριβώς `0` — στο πραγματικό
+ * αρχείο το `ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ → ΙΟΥΛΙΟΣ 2026` δίνει `0` στα δέκα δεκαδικά. Χωρίς δεύτερο κλειδί
+ * η σειρά θα κρινόταν από τη **λαβή**, δηλαδή από τυχαία δεκαεξαδικά. Το `tieBreak` βάζει την
+ * **οριζόντια εγγύτητα**: όταν δύο τιμές είναι εξίσου καλά στοιχισμένες, κερδίζει αυτή που
+ * κάθεται δίπλα στην ετικέτα — που είναι και ο τρόπος που διαβάζει το μάτι. Οι λαβές μένουν
+ * εκεί που ανήκουν: **τελευταίες**, για ντετερμινισμό, όχι για απόφαση.
+ */
 function rankCandidates(
   slots: readonly LabelSlot[],
   values: readonly ClassifiedCell[],
@@ -151,10 +193,11 @@ function rankCandidates(
       if (scored) candidates.push({ slot: s, value: v, ...scored });
     });
   });
-  // Ισοπαλία κόστους → λαβές: ντετερμινιστικό ανεξάρτητα από τη σειρά εισόδου.
+  // Ισοπαλία κόστους → εγγύτητα → λαβές: ντετερμινιστικό ανεξάρτητα από τη σειρά εισόδου.
   return candidates.sort(
     (a, b) =>
       a.cost - b.cost ||
+      a.tieBreak - b.tieBreak ||
       slots[a.slot].cell.handle.localeCompare(slots[b.slot].cell.handle) ||
       values[a.value].cell.handle.localeCompare(values[b.value].cell.handle),
   );
@@ -168,6 +211,14 @@ export interface PairingResult {
   readonly valueCellOf: ReadonlyMap<TitleBlockFieldKey, ClassifiedCell>;
   /** Κελιά τιμής που δεν βρήκαν ετικέτα. Πάνε στο `unparsed`, δεν εξαφανίζονται. */
   readonly orphanValues: readonly ClassifiedCell[];
+  /**
+   * Ετικέτες που δεν βρήκαν τιμή — **η συμμετρική περίπτωση των ορφανών** (ADR-762 §5).
+   *
+   * Υπήρχε ήδη ως `openSlots` μέσα στη συνάρτηση και **πεταγόταν**. Η ασυμμετρία ήταν το
+   * ελάττωμα: μια αζευγάρωτη **τιμή** επιβίωνε στο `unparsed`, μια αζευγάρωτη **ετικέτα**
+   * εξαφανιζόταν αθόρυβα. Δεν παράγουν πεδίο — ώστε ο Λ2 να μην μπορεί να γράψει κενό.
+   */
+  readonly unmatchedLabels: readonly LabelSlot[];
 }
 
 function toField(slot: LabelSlot, value: ClassifiedCell | null, kind: TitleBlockMatchKind): TitleBlockField {
@@ -189,6 +240,8 @@ function toField(slot: LabelSlot, value: ClassifiedCell | null, kind: TitleBlock
  * αλλιώς μια συμπληρωμένη ετικέτα θα άρπαζε την τιμή μιας κενής διπλανής της.
  * Ετικέτα που δεν βρίσκει τιμή **δεν παράγει πεδίο**: κενό πεδίο και απούσα τιμή είναι το
  * ίδιο πράγμα στο σχέδιο, και ένα ψεύτικο κενό πεδίο θα ενθάρρυνε τον Λ2 να γράψει κενό.
+ * ⚠️ **Δεν παράγει πεδίο ≠ δεν λέγεται** (ADR-762 §5): βγαίνει στο `unmatchedLabels`, που το
+ * διαβάζει **μόνο** η οθόνη. Το σκεπτίκο ήταν σωστό για τη μηχανή και λάθος για τον άνθρωπο.
  */
 export function pairTitleBlockCells(
   cells: readonly TitleBlockSourceCell[],
@@ -227,5 +280,7 @@ export function pairTitleBlockCells(
     fields,
     valueCellOf,
     orphanValues: values.filter((_, i) => !takenValues.has(i)),
+    // Με τη σειρά που εμφανίζονται στην πινακίδα, όχι με τη σειρά που τις άφησε το `Set`.
+    unmatchedLabels: slots.filter((_, i) => openSlots.has(i)),
   };
 }

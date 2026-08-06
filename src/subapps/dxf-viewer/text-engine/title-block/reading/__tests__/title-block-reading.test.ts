@@ -55,6 +55,48 @@ describe('Λ1 — ανάγνωση του layer PINAKAKI 500', () => {
     expect(left().unparsed).toEqual(['ΤΟΠΟΓΡΑΦΙΚΕΣ ΜΕΛΕΤΕΣ - ΕΦΑΡΜΟΓΕΣ']);
   });
 
+  it('🔴 και οι ετικέτες ΧΩΡΙΣ ΤΙΜΗ είναι ορατές — η συμμετρική περίπτωση (ADR-762 §5)', () => {
+    // Ο τοπογράφος άφησε τέσσερα πεδία της αριστερής πινακίδας ασυμπλήρωτα. Πριν το ADR-762
+    // αυτά **πετάγονταν μέσα στο ζευγάρωμα**: μια αζευγάρωτη ΤΙΜΗ επιβίωνε στο `unparsed`,
+    // μια αζευγάρωτη ΕΤΙΚΕΤΑ εξαφανιζόταν αθόρυβα. Η ασυμμετρία ήταν το ελάττωμα.
+    expect(left().unmatchedLabels.map((l) => l.key).sort()).toEqual([
+      'drawnBy',
+      'projectTitle',
+      'signature',
+      'studyType',
+    ]);
+    // Κρατούν τη λαβή ΚΑΙ τη θέση τους, ώστε το overlay να μπορεί να τις δείξει πάνω στο σχέδιο.
+    const study = left().unmatchedLabels.find((l) => l.key === 'studyType');
+    expect(study).toMatchObject({ labelHandle: '1059', at: { x: 408012.7621071524 } });
+  });
+
+  it('🔴 οι αόρατες ετικέτες ΔΕΝ γίνονται πεδία — ο Λ2 δεν πρέπει να μπορεί να γράψει κενό', () => {
+    const keys = new Set(left().fields.map((f) => f.key));
+    for (const label of left().unmatchedLabels) {
+      expect({ key: label.key, leakedIntoFields: keys.has(label.key) }).toEqual({
+        key: label.key,
+        leakedIntoFields: false,
+      });
+    }
+  });
+
+  it('🔴 ΕΝΑ κελί δίνει ΔΥΟ αζευγάρωτες ετικέτες — η λαβή ΔΕΝ είναι ταυτότητα γραμμής', () => {
+    // Η δεξιά πινακίδα είναι κενή φόρμα υπογραφής: το κελί `1126` είναι **ένα** MTEXT με
+    // **δύο** ετικέτες («ΕΡΓΟΔΟΤΗΣ … ΥΠΟΓΡΑΦΗ») και καμία τιμή.
+    //
+    // 🔴 Ο Giorgio το βρήκε στην οθόνη ως `two children with the same key` — η παλέτα κλείδωνε
+    // τη γραμμή στη **λαβή**, που εδώ επαναλαμβάνεται. Χωρίς αυτόν τον ισχυρισμό, η επόμενη
+    // υλοποίηση UI θα ξανακάνει την ίδια υπόθεση: «μία λαβή = μία ετικέτα».
+    const right = readAll()[1];
+    const handles = right.unmatchedLabels.map((l) => l.labelHandle);
+    expect(right.unmatchedLabels.map((l) => l.key).sort()).toEqual([
+      'employer',
+      'projectTitle',
+      'signature',
+    ]);
+    expect(handles.length - new Set(handles).size).toBe(1);
+  });
+
   it('🔴 η δεξιά πινακίδα είναι ΚΕΝΗ φόρμα — και δεν δανείζεται τίποτα από την αριστερή', () => {
     const right = readAll()[1];
     expect(right.fields).toEqual([]);

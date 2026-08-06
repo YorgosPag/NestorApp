@@ -24,6 +24,8 @@
  * @see ADR-745 §6.3 — TitleBlockFieldKey
  */
 
+import type { TextJustification } from './dxf-text-justification';
+
 // ── Λεξιλόγιο πεδίων (SSoT) ───────────────────────────────────────────────────
 
 /**
@@ -62,6 +64,20 @@ export interface TitleBlockSourceCell {
   readonly height: number;
   /** Ωμό MTEXT, με τους κωδικούς μορφοποίησης ΑΘΙΚΤΟΥΣ. */
   readonly raw: string;
+  /**
+   * 🔴 Σημείο προσάρτησης (κωδ. 71) — **χωρίς αυτό το `y` δεν σημαίνει τίποτα** (ADR-762).
+   *
+   * Το `y` είναι το σημείο **εισαγωγής**, και η προσάρτηση λέει πού μέσα στο μπλοκ κειμένου
+   * βρίσκεται αυτό το σημείο. Στο `G753_ergasia F.dxf` **18** κελιά έχουν `1 = TL` (το `y`
+   * είναι η κορυφή) και **ένα** — το πολύγραμμο κελί του ΜΕΛΕΤΗΤΗ — έχει `4 = ML` (το `y`
+   * είναι το **κέντρο**). Σύγκριση των δύο `y` ως ομοειδών συγκρίνει κορυφή με κέντρο.
+   *
+   * Είναι **δεδομένο του αρχείου**, όχι υπολογισμός: ο Λ1 το δέχεται όπως δέχεται το `raw` και
+   * το `height`, και παραμένει καθαρή συνάρτηση χωρίς γραμματοσειρές (ADR-762 §4).
+   *
+   * Απόν ⇒ `'TL'`, που είναι η προεπιλογή **του DXF** — δες `DEFAULT_TEXT_JUSTIFICATION`.
+   */
+  readonly attachment?: TextJustification;
 }
 
 // ── Η έξοδος του αναγνώστη ────────────────────────────────────────────────────
@@ -93,6 +109,23 @@ export interface TitleBlockPerson {
   readonly officeSeat?: string;
 }
 
+/**
+ * Ετικέτα που **υπάρχει στην πινακίδα** αλλά δεν βρήκε τιμή (ADR-762 §5).
+ *
+ * 🔴 Ζει **έξω** από τα `fields` επίτηδες. Ο κώδικας του ζευγαρώματος έλεγε — σωστά — ότι ένα
+ * κενό πεδίο *«θα ενθάρρυνε τον Λ2 να γράψει κενό»*. Αυτό είναι σωστό **για τη μηχανή** και
+ * λάθος **για τον άνθρωπο**: η πινακίδα έχει τυπωμένο `ΜΕΛΕΤΗΤΗΣ`, και η απουσία τιμής είναι
+ * **γεγονός που πρέπει να ειπωθεί**, όχι σιωπή. Χωριστή λίστα ⇒ ο άνθρωπος το βλέπει και ο Λ2
+ * **δεν μπορεί** να το γράψει, γιατί δεν το βλέπει καν.
+ */
+export interface TitleBlockUnmatchedLabel {
+  readonly key: TitleBlockFieldKey;
+  /** Σε ποιο MTEXT βρέθηκε η ετικέτα — για να μπορεί το overlay να τη δείξει. */
+  readonly labelHandle: string;
+  /** Θέση εισαγωγής του κελιού της **ετικέτας** (WCS). */
+  readonly at: { readonly x: number; readonly y: number };
+}
+
 /** Μία πινακίδα. Ένα layer μπορεί να δώσει περισσότερες από μία (§2.3 Παγίδα Δ). */
 export interface TitleBlockReading {
   readonly layerName: string;
@@ -111,6 +144,12 @@ export interface TitleBlockReading {
   };
   readonly fields: readonly TitleBlockField[];
   readonly people: readonly TitleBlockPerson[];
+  /**
+   * Ετικέτες της πινακίδας που έμειναν **χωρίς τιμή** — ορατή απουσία, όχι σιωπή (ADR-762 §5).
+   *
+   * Δεν είναι υποψήφιοι προς εγγραφή και ο Λ2 δεν τις διαβάζει· τις δείχνει **μόνο** η οθόνη.
+   */
+  readonly unmatchedLabels: readonly TitleBlockUnmatchedLabel[];
   /** Ό,τι δεν αναγνωρίστηκε — **ποτέ** δεν πετιέται σιωπηλά (ADR-745 §8 κανόνας 3). */
   readonly unparsed: readonly string[];
 }

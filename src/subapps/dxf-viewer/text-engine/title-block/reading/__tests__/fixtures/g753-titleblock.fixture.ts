@@ -39,26 +39,38 @@ export interface TitleBlockFixtureRow {
   readonly height: number;
   /** Ωμό περιεχόμενο, κωδ. 3 (συνέχειες) + κωδ. 1 (τελευταίο κομμάτι). */
   readonly raw: string;
+  /**
+   * Σημείο προσάρτησης (κωδ. 71) — **μετρημένο από το αρχείο**, όχι υποτιθέμενο (ADR-762).
+   *
+   * `1 = TL` σε 18 κελιά · `4 = ML` **μόνο** στη λαβή 1076. Η στήλη προστέθηκε 06/08 όταν
+   * αποδείχθηκε ότι αυτό ακριβώς το δεδομένο έλειπε από τον Λ1 — η παρατήρηση υπήρχε στην
+   * επικεφαλίδα εδώ από την πρώτη μέρα, αλλά **κανένας κώδικας δεν την κατανάλωνε**.
+   *
+   * 🔴 Μετρήθηκε επίσης ότι οι κωδ. **42/43** (μετρημένο πλάτος/ύψος μπλοκ) **ΑΠΟΥΣΙΑΖΟΥΝ και
+   * από τα 19** — γι' αυτό το ύψος παράγεται και δεν διαβάζεται. Οι κωδ. 44 = 1,0 και 73 = 1
+   * (μονό διάστιχο) σε **όλα**, που είναι η προϋπόθεση του `MTEXT_LINE_BOX_FACTOR`.
+   */
+  readonly attachment: 'TL' | 'ML';
 }
 
 export const G753_TITLEBLOCK_ROWS: readonly TitleBlockFixtureRow[] = [
-  { type: "MTEXT", handle: "1052", x: 408012.7621071524, y: 4503907.681289992, height: 1.2845, raw: "ΕΡΓΟΔΟΤΗΣ: {\\C256;ΖΕΡΒΑ ΓΕΩΡΓΙΑ}" },
-  { type: "MTEXT", handle: "1126", x: 408069.7334756072, y: 4503906.601740083, height: 1.2845, raw: "{\\fArial|b0|i0|c161|p34;ΕΡΓΟΔΟΤΗΣ\\H1.143x;: \\fArial|b0|i0|c0|p34;\\H0.54489x;\\C1;...\\fArial|b0|i0|c161|p34; ΥΠΟΓΡΑΦΗ}" },
-  { type: "MTEXT", handle: "104F", x: 408012.7621071524, y: 4503902.329289503, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΕΡΓΟ\\H1.143x;:}" },
-  { type: "MTEXT", handle: "1125", x: 408069.7334756072, y: 4503901.249739595, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΕΡΓΟ\\H1.143x;:}" },
-  { type: "MTEXT", handle: "103E", x: 408017.2230441418, y: 4503898.344919419, height: 0.6, raw: "\\pxqc;{\\fArial|b0|i0|c161|p34;ΔΗΜΟΣ ΚΟΡΔΕΛΙΟΥ ΕΥΟΣΜΟΥ - Δ.Ε. ΕΥΟΣΜΟΥ - \\fArial|b0|i0|c0|p34;\\P\\fArial|b0|i0|c161|p34;ΠΕΡΙΟΧΗ ΕΠΕΚΤΑΣΗΣ ΕΥΟΣΜΟΥ\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Π.Ε. 3\\fArial|b0|i0|c0|p34;9\\fArial|b0|i0|c161|p34; - Ο.Τ. Γ\\fArial|b0|i0|c0|p34; 753\\fArial|b0|i0|c161|p34; - ΟΙΚ.: \\C7;0\\fArial|b0|i0|c0|p34;1\\fArial|b0|i0|c161|p34;β\\C256; - \\C7;Οδός Προέκταση Σμύρνης, Δημ. Κολοκυθά\\fArial|b0|i0|c0|p34;, Ξενοκράτη & Αναγεννήσεως}" },
-  { type: "MTEXT", handle: "1054", x: 408012.7621071524, y: 4503897.928960043, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΘΕΣΗ\\fTimes New Roman|b0|i0|c0|p18;:}" },
-  { type: "MTEXT", handle: "1057", x: 408012.7621071524, y: 4503890.435462355, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΜΕΛΕΤΗΤΗΣ}" },
-  { type: "MTEXT", handle: "1076", x: 408025.9718197541, y: 4503889.38032347, height: 0.8997600000000002, raw: "{\\fTimes New Roman|b0|i0|c161|p18;\\LΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ\\P\\H0.5334x;ΑΓΡΟΝΟΜΟΣ ΤΟΠΟΓΡΑΦΟΣ ΜΗΧΑΝΙΚΟΣ Α.Π.Θ.\\P\\H1.875x;ΝΙΚΟΛΑΟΥ\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18; ΕΥ\\fTimes New Roman|b0|i0|c0|p18;.\\fTimes New Roman|b0|i0|c161|p18; ΙΩΑΝΝΗΣ\\P\\H0.5334x;ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ Τ.Ε. \\P\\fTimes New Roman|b0|i0|c161|p34;\\H0.7918x;ΤΟΠΟΓΡΑΦΙΚΕΣ ΜΕΛΕΤΕΣ - ΕΦΑΡΜΟΓΕΣ\\P\\fTimes New Roman|b0|i0|c161|p18;\\H1.16x;ΕΔΡΑ ΝΕΟΧΩΡΟΥΔΑ 2310-788493\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18;κιν \\fTimes New Roman|b0|i0|c0|p18;694\\fTimes New Roman|b0|i0|c161|p18;9727121\\fTimes New Roman|b0|i0|c0|p18;\\Psite: www.nikolaou.com.gr  \\H0.99999x;e-mail: info@nikolaou.com.gr}" },
-  { type: "MTEXT", handle: "105B", x: 408038.0286073313, y: 4503883.191544608, height: 0.7340000000000001, raw: "{\\fArial|b0|i0|c161|p34;ΑΡ.ΣΧΕΔΙΟΥ}" },
-  { type: "MTEXT", handle: "1059", x: 408012.7621071524, y: 4503881.514025926, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΜΕΛΕΤΗ}" },
-  { type: "MTEXT", handle: "104B", x: 408038.279490617, y: 4503879.906704318, height: 2.936, raw: "{\\fCourier New|b0|i0|c161|p49;Τ1}" },
-  { type: "MTEXT", handle: "1058", x: 408012.8820733201, y: 4503876.68798361, height: 1.100999999999999, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΣΧΕΔΙΟ}" },
-  { type: "MTEXT", handle: "104C", x: 408021.0974705691, y: 4503876.51399863, height: 0.6606000000000001, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΤΟΠΟΓΡΑΦΙΚΟ ΔΙΑΓΡΑΜΜΑ}" },
-  { type: "MTEXT", handle: "105E", x: 408023.6342413947, y: 4503872.875628606, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;1\\fTimes New Roman|b0|i0|c0|p18;:2\\fTimes New Roman|b0|i0|c161|p18;00}" },
-  { type: "MTEXT", handle: "1060", x: 408012.7621071524, y: 4503872.692263043, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18;ΚΛΙΜΑΚΑ}" },
-  { type: "MTEXT", handle: "110E", x: 408027.246694994, y: 4503869.657323537, height: 0.9175, raw: "{\\fArial|b0|i0|c161|p34;ΙΟΥΛΙΟΣ 2026}" },
-  { type: "MTEXT", handle: "105F", x: 408012.7621071524, y: 4503869.657314395, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ}" },
-  { type: "MTEXT", handle: "10F3", x: 408016.695398103, y: 4503867.164464338, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΣΥΝΤΑΞ\\fTimes New Roman|b0|i0|c0|p18;H}" },
-  { type: "MTEXT", handle: "105D", x: 408032.8420679044, y: 4503866.92446434, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΥΠΟΓΡΑΦΗ}" },
+  { type: "MTEXT", handle: "1052", x: 408012.7621071524, y: 4503907.681289992, height: 1.2845, raw: "ΕΡΓΟΔΟΤΗΣ: {\\C256;ΖΕΡΒΑ ΓΕΩΡΓΙΑ}", attachment: "TL" },
+  { type: "MTEXT", handle: "1126", x: 408069.7334756072, y: 4503906.601740083, height: 1.2845, raw: "{\\fArial|b0|i0|c161|p34;ΕΡΓΟΔΟΤΗΣ\\H1.143x;: \\fArial|b0|i0|c0|p34;\\H0.54489x;\\C1;...\\fArial|b0|i0|c161|p34; ΥΠΟΓΡΑΦΗ}", attachment: "TL" },
+  { type: "MTEXT", handle: "104F", x: 408012.7621071524, y: 4503902.329289503, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΕΡΓΟ\\H1.143x;:}", attachment: "TL" },
+  { type: "MTEXT", handle: "1125", x: 408069.7334756072, y: 4503901.249739595, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΕΡΓΟ\\H1.143x;:}", attachment: "TL" },
+  { type: "MTEXT", handle: "103E", x: 408017.2230441418, y: 4503898.344919419, height: 0.6, raw: "\\pxqc;{\\fArial|b0|i0|c161|p34;ΔΗΜΟΣ ΚΟΡΔΕΛΙΟΥ ΕΥΟΣΜΟΥ - Δ.Ε. ΕΥΟΣΜΟΥ - \\fArial|b0|i0|c0|p34;\\P\\fArial|b0|i0|c161|p34;ΠΕΡΙΟΧΗ ΕΠΕΚΤΑΣΗΣ ΕΥΟΣΜΟΥ\\fArial|b0|i0|c0|p34; \\fArial|b0|i0|c161|p34;Π.Ε. 3\\fArial|b0|i0|c0|p34;9\\fArial|b0|i0|c161|p34; - Ο.Τ. Γ\\fArial|b0|i0|c0|p34; 753\\fArial|b0|i0|c161|p34; - ΟΙΚ.: \\C7;0\\fArial|b0|i0|c0|p34;1\\fArial|b0|i0|c161|p34;β\\C256; - \\C7;Οδός Προέκταση Σμύρνης, Δημ. Κολοκυθά\\fArial|b0|i0|c0|p34;, Ξενοκράτη & Αναγεννήσεως}", attachment: "TL" },
+  { type: "MTEXT", handle: "1054", x: 408012.7621071524, y: 4503897.928960043, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΘΕΣΗ\\fTimes New Roman|b0|i0|c0|p18;:}", attachment: "TL" },
+  { type: "MTEXT", handle: "1057", x: 408012.7621071524, y: 4503890.435462355, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΜΕΛΕΤΗΤΗΣ}", attachment: "TL" },
+  { type: "MTEXT", handle: "1076", x: 408025.9718197541, y: 4503889.38032347, height: 0.8997600000000002, raw: "{\\fTimes New Roman|b0|i0|c161|p18;\\LΜΑΥΡΟΜΙΧΑΛΗΣ ΚΩΝ/ΝΟΣ\\P\\H0.5334x;ΑΓΡΟΝΟΜΟΣ ΤΟΠΟΓΡΑΦΟΣ ΜΗΧΑΝΙΚΟΣ Α.Π.Θ.\\P\\H1.875x;ΝΙΚΟΛΑΟΥ\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18; ΕΥ\\fTimes New Roman|b0|i0|c0|p18;.\\fTimes New Roman|b0|i0|c161|p18; ΙΩΑΝΝΗΣ\\P\\H0.5334x;ΠΟΛΙΤΙΚΟΣ ΜΗΧΑΝΙΚΟΣ Τ.Ε. \\P\\fTimes New Roman|b0|i0|c161|p34;\\H0.7918x;ΤΟΠΟΓΡΑΦΙΚΕΣ ΜΕΛΕΤΕΣ - ΕΦΑΡΜΟΓΕΣ\\P\\fTimes New Roman|b0|i0|c161|p18;\\H1.16x;ΕΔΡΑ ΝΕΟΧΩΡΟΥΔΑ 2310-788493\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18;κιν \\fTimes New Roman|b0|i0|c0|p18;694\\fTimes New Roman|b0|i0|c161|p18;9727121\\fTimes New Roman|b0|i0|c0|p18;\\Psite: www.nikolaou.com.gr  \\H0.99999x;e-mail: info@nikolaou.com.gr}", attachment: "ML" },
+  { type: "MTEXT", handle: "105B", x: 408038.0286073313, y: 4503883.191544608, height: 0.7340000000000001, raw: "{\\fArial|b0|i0|c161|p34;ΑΡ.ΣΧΕΔΙΟΥ}", attachment: "TL" },
+  { type: "MTEXT", handle: "1059", x: 408012.7621071524, y: 4503881.514025926, height: 1.2845, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΜΕΛΕΤΗ}", attachment: "TL" },
+  { type: "MTEXT", handle: "104B", x: 408038.279490617, y: 4503879.906704318, height: 2.936, raw: "{\\fCourier New|b0|i0|c161|p49;Τ1}", attachment: "TL" },
+  { type: "MTEXT", handle: "1058", x: 408012.8820733201, y: 4503876.68798361, height: 1.100999999999999, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΣΧΕΔΙΟ}", attachment: "TL" },
+  { type: "MTEXT", handle: "104C", x: 408021.0974705691, y: 4503876.51399863, height: 0.6606000000000001, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΤΟΠΟΓΡΑΦΙΚΟ ΔΙΑΓΡΑΜΜΑ}", attachment: "TL" },
+  { type: "MTEXT", handle: "105E", x: 408023.6342413947, y: 4503872.875628606, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;1\\fTimes New Roman|b0|i0|c0|p18;:2\\fTimes New Roman|b0|i0|c161|p18;00}", attachment: "TL" },
+  { type: "MTEXT", handle: "1060", x: 408012.7621071524, y: 4503872.692263043, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c0|p18; \\fTimes New Roman|b0|i0|c161|p18;ΚΛΙΜΑΚΑ}", attachment: "TL" },
+  { type: "MTEXT", handle: "110E", x: 408027.246694994, y: 4503869.657323537, height: 0.9175, raw: "{\\fArial|b0|i0|c161|p34;ΙΟΥΛΙΟΣ 2026}", attachment: "TL" },
+  { type: "MTEXT", handle: "105F", x: 408012.7621071524, y: 4503869.657314395, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΧΡΟΝΟΣ ΜΕΛΕΤΗΣ}", attachment: "TL" },
+  { type: "MTEXT", handle: "10F3", x: 408016.695398103, y: 4503867.164464338, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΣΥΝΤΑΞ\\fTimes New Roman|b0|i0|c0|p18;H}", attachment: "TL" },
+  { type: "MTEXT", handle: "105D", x: 408032.8420679044, y: 4503866.92446434, height: 0.9175, raw: "{\\fTimes New Roman|b0|i0|c161|p18;ΥΠΟΓΡΑΦΗ}", attachment: "TL" },
 ];

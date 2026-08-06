@@ -102,6 +102,12 @@ export function sceneCellFromTextEntity(entity: TextEntity): TitleBlockSourceCel
     // ύψος του πρώτου run, που είναι ακριβώς η βάση από την οποία ο serializer ξεκινά να
     // μετρά διαφορές — δηλαδή η **σωστή** απάντηση, όχι απλώς μια διαθέσιμη.
     height: resolveTextHeight(entity),
+    // 🔴 **ADR-762 — χωρίς αυτό το `y` παραπάνω δεν σημαίνει τίποτα.** Ο κωδ. 71 φτάνει ήδη στη
+    // σκηνή ως `textNode.attachment` (`dxf-text-converters.ts`, `MTEXT_ATTACHMENT_MAP`) — απλώς
+    // **δεν τον ζητούσε κανείς**. Οντότητα χωρίς AST (χειροποίητη, παλιό στιγμιότυπο, σκέτο
+    // TEXT) δεν δηλώνει προσάρτηση· το `undefined` πέφτει στην προεπιλογή του DXF (`TL`), που
+    // είναι ακριβώς ό,τι εννοεί.
+    ...(entity.textNode ? { attachment: entity.textNode.attachment } : {}),
     raw,
   };
 }

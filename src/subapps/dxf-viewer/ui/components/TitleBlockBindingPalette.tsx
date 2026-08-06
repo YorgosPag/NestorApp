@@ -23,6 +23,7 @@ import { TitleBlockBindingPaletteStore } from '../../stores/TitleBlockBindingPal
 import { ESC_PRIORITY, useEscapeHandler } from '../../systems/escape-bus';
 import { PANEL_ANCHORING, PanelPositionCalculator } from '../../config/panel-tokens';
 import { TitleBlockProposalList } from './title-block-binding/TitleBlockProposalList';
+import { TitleBlockUnreadSection } from './title-block-binding/TitleBlockUnreadSection';
 import { useTitleBlockProposals } from './title-block-binding/useTitleBlockProposals';
 
 const PALETTE_DOM_ID = 'dxf-title-block-binding-palette';
@@ -167,6 +168,12 @@ export const TitleBlockBindingPalette: React.FC<Props> = ({ levelId, projectId, 
             projectId={projectId}
             onContactCreated={state.refresh}
           />
+
+          {/* 🔴 ADR-762 §5 — ό,τι διαβάστηκε και δεν δέθηκε. Κάτω από τις προτάσεις επίτηδες:
+              είναι **πληροφορία**, όχι εργασία, και δεν πρέπει να ανταγωνίζεται τα κουμπιά. */}
+          {!state.loading && candidate ? (
+            <TitleBlockUnreadSection readings={candidate.readings} />
+          ) : null}
         </section>
       </FloatingPanel.Content>
     </FloatingPanel>

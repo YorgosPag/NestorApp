@@ -10,15 +10,21 @@
  * The viewport infrastructure (Phase 11) reads these fields at render time.
  */
 
+import type { TextJustification } from '@/types/dxf-text-justification';
 import type { DxfColor } from './text-toolbar.types';
 
 // ── Justification & spacing ───────────────────────────────────────────────────
 
-/** 9-point attachment grid used by MTEXT group code 71. */
-export type TextJustification =
-  | 'TL' | 'TC' | 'TR'
-  | 'ML' | 'MC' | 'MR'
-  | 'BL' | 'BC' | 'BR';
+/**
+ * 9-point attachment grid used by MTEXT group code 71.
+ *
+ * 🔑 PROMOTED to `@/types/dxf-text-justification` (ADR-762) and re-exported here so the ~18
+ * consumers inside the subapp keep their import path. The single definition now lives outside
+ * `src/subapps/dxf-viewer/**` because `TitleBlockSourceCell` needs it and that contract is
+ * type-checked by the ROOT tsconfig, which excludes this folder — a second literal-union copy
+ * would drift silently (same reason and same pattern as `@/types/title-block-reading`).
+ */
+export type { TextJustification };
 
 /**
  * Vertical anchor of a text entity's `position` — stated in the CANVAS `textBaseline`

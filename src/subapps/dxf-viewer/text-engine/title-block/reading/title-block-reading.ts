@@ -55,6 +55,13 @@ function readOneTitleBlock(
     bbox: boundsOf(cells),
     fields: paired.fields,
     people: read.people,
+    // Η πινακίδα **έχει** αυτές τις ετικέτες τυπωμένες — η απουσία τιμής είναι γεγονός, όχι
+    // σιωπή (ADR-762 §5). Δεν είναι πεδία, άρα ο Λ2 δεν μπορεί να γράψει κενό από αυτές.
+    unmatchedLabels: paired.unmatchedLabels.map((slot) => ({
+      key: slot.key,
+      labelHandle: slot.cell.handle,
+      at: { x: slot.cell.x, y: slot.cell.y },
+    })),
     // Πρώτα τα ορφανά κελιά, μετά ό,τι δεν διαβάστηκε μέσα στο κελί μελετητών.
     unparsed: [...paired.orphanValues.map((v) => v.plain), ...read.unparsed],
   };

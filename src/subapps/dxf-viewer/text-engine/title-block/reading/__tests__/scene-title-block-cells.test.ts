@@ -53,7 +53,11 @@ const entityFromRow = (
     height,
     rotation: 0,
     alignment: 'left',
-    textNode: parseMtext(tokenizeMtext(row.raw), { height }),
+    // 🔴 Το `parseMtext` **σκληροκωδικοποιεί `attachment: 'TL'`** — βλέπει μόνο inline κωδικούς,
+    // όχι τον κωδ. 71 της οντότητας. Ο πραγματικός `convertMText` το γράφει από πάνω με το
+    // `MTEXT_ATTACHMENT_MAP`, και το ίδιο κάνουμε εδώ: αλλιώς το δείγμα θα δήλωνε ότι **όλα**
+    // τα κελιά είναι `TL`, δηλαδή θα έσβηνε ακριβώς τη μεταβλητή που εξετάζει το ADR-762.
+    textNode: { ...parseMtext(tokenizeMtext(row.raw), { height }), attachment: row.attachment },
   } as TextEntity;
 };
 
@@ -85,7 +89,7 @@ const sceneCells = (k = 1) =>
 const rawCells = (k = 1) =>
   G753_TITLEBLOCK_ROWS.map((row) => {
     const { x, y, height } = scaleRow(row, k);
-    return { handle: row.handle, x, y, height, raw: row.raw };
+    return { handle: row.handle, x, y, height, raw: row.raw, attachment: row.attachment };
   });
 
 /**

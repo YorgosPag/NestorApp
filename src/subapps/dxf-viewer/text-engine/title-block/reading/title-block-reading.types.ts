@@ -18,4 +18,5 @@ export type {
   TitleBlockPerson,
   TitleBlockReading,
   TitleBlockSourceCell,
+  TitleBlockUnmatchedLabel,
 } from '@/types/title-block-reading';

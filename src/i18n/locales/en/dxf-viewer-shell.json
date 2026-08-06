@@ -6346,7 +6346,12 @@
         "email": "e-mail",
         "website": "website"
       }
-    }
+    },
+    "unreadTitle": "Read, not linked",
+    "unreadNote": "Not an error and never written anywhere. This is what the reader saw but could not connect — shown on purpose.",
+    "missingValue": "The title block has «{label}» — no value was found next to it.",
+    "unparsedItem": "Text without a label: {text}",
+    "unreadCount": "{labels, plural, =0 {} one {# label without a value} other {# labels without a value}}"
   },
   "externalReferencesPalette": {
     "title": "External References",
