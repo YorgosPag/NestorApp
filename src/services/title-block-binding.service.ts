@@ -28,6 +28,7 @@ import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
 import { titleBlockBindingConverter } from '@/lib/firestore/converters/title-block-binding.converter';
+import { cellRefOfBindingId } from '@/lib/title-block-binding-id';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
 import type { TitleBlockBinding } from '@/types/title-block-binding';
@@ -110,8 +111,39 @@ export function findSameSlotActive(
       b.id !== binding.id &&
       b.slot === binding.slot &&
       b.fieldKey === binding.fieldKey &&
-      b.sourceHandle === binding.sourceHandle,
+      sameCell(b, binding),
   );
+}
+
+/**
+ * Είναι οι δύο συνδέσεις **του ίδιου κελιού**;
+ *
+ * 🔴 **ΕΔΩ ΖΟΥΣΕ Ο ΔΕΥΤΕΡΟΣ ΟΡΙΣΜΟΣ ΤΟΥ «ΙΔΙΟ SLOT»** (ADR-759 §4.9 εύρημα 3 → §Θ.2). Η
+ * γραμμή έλεγε `b.sourceHandle === binding.sourceHandle` — ενώ το **κλειδί** της ίδιας
+ * σύνδεσης ταυτοποιεί το κελί με τη **γεωμετρία**, και το κάνει επειδή το `sourceHandle` έχει
+ * **μετρημένη σύγκρουση**: πινακίδα μέσα σε BLOCK δίνει δεύτερο `mtext_7` στο ίδιο layer
+ * (δες `lib/title-block-binding-id.ts`).
+ *
+ * Δύο ορισμοί για ένα ερώτημα ⇒ σε σχέδιο με **δύο πινακίδες** η έγκριση στη δεύτερη αποσύρει
+ * τη σύνδεση της πρώτης: διαφορετικό `bindingId` (η γεωμετρία τα ξεχωρίζει), ίδιο «slot» (η
+ * σημαδούρα τα μπερδεύει). **Σιωπηλά** — καμία εξαίρεση, καμία άρνηση, απλώς μια σύνδεση που
+ * ήταν ενεργή γίνεται `superseded`.
+ *
+ * 🔑 **Καμία migration, και κανένα νέο πεδίο**: το `cellRef` κάθεται ήδη μέσα σε **κάθε**
+ * αποθηκευμένο `bindingId`. Ένα νέο πεδίο στη συλλογή θα ήταν δεύτερη γραφή της ίδιας
+ * πληροφορίας, και θα προστάτευε **μόνο** ό,τι γράφεται από εδώ και μπρος.
+ *
+ * ⚠️ Η **εφεδρεία** στο `sourceHandle` δεν είναι δείγμα δισταγμού: κλειδί που δεν έχει τη
+ * μορφή του `buildTitleBlockBindingKey` δεν είναι κλειδί αυτής της οικογένειας, και η
+ * σιωπηλή απάντηση «όχι, άλλο κελί» θα άφηνε τη θέση **κατειλημμένη από δύο** ενεργές
+ * συνδέσεις — δηλαδή θα αντάλλασσε μια σπάνια λάθος απόσυρση με μια σπάνια λάθος συνύπαρξη.
+ * Η εφεδρεία διατηρεί **ακριβώς** τη σημερινή συμπεριφορά για ό,τι δεν αναγνωρίζεται.
+ */
+function sameCell(a: TitleBlockBinding, b: TitleBlockBinding): boolean {
+  const cellA = cellRefOfBindingId(a.id);
+  const cellB = cellRefOfBindingId(b.id);
+  if (cellA === null || cellB === null) return a.sourceHandle === b.sourceHandle;
+  return cellA === cellB;
 }
 
 /**

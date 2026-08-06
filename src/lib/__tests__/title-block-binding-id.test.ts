@@ -11,6 +11,7 @@ import {
   bindingSlotScope,
   buildTitleBlockBindingKey,
   cellRef,
+  cellRefOfBindingId,
   encodeKeySegment,
   targetRef,
 } from '../title-block-binding-id';
@@ -312,5 +313,58 @@ describe('🔴 ΓΡΑΜΜΗ ΤΟΠΟΓΡΑΦΙΚΟΥ — ΔΕΚΑ ΔΗΛΩΣΕΙ
 
   it('ίδια γραμμή ⇒ ίδιο κλειδί: η επανάληψη της έγκρισης δεν διπλασιάζει', () => {
     expect(key(rowProposal, rowTarget('svact_a'))).toBe(key(rowProposal, rowTarget('svact_a')));
+  });
+});
+
+/**
+ * 🔴 **ΟΙ ΔΥΟ ΟΡΙΣΜΟΙ ΤΟΥ «ΙΔΙΟ SLOT»** — ADR-759 §4.9 εύρημα 3, κλεισμένο στο §Θ.2.
+ *
+ * Το κλειδί ταυτοποιεί το κελί με τη **γεωμετρία**· το `findSameSlotActive` το ταυτοποιούσε με
+ * το **`sourceHandle`**, δηλαδή με ακριβώς το πράγμα που το πρώτο describe αυτού του αρχείου
+ * απορρίπτει ως ανεπαρκές. Η γέφυρα είναι ότι το `cellRef` **ήδη υπάρχει** μέσα στο κλειδί:
+ * καμία αλλαγή σχήματος, καμία migration, και η προστασία ισχύει και για ό,τι είναι ήδη
+ * αποθηκευμένο.
+ */
+describe('🔴 ΤΟ ΚΕΛΙ ΔΙΑΒΑΖΕΤΑΙ ΠΙΣΩ ΑΠΟ ΤΟ ΚΛΕΙΔΙ — ΕΝΑΣ ΟΡΙΣΜΟΣ, ΟΧΙ ΔΥΟ', () => {
+  it('ό,τι έβαλε ο κατασκευαστής, το βγάζει ο αναγνώστης — αυτούσιο', () => {
+    // Η μία ιδιότητα που κάνει τη λύση δυνατή: το κλειδί **είναι** ο φορέας του `cellRef`.
+    const p = proposal();
+    expect(cellRefOfBindingId(key(p, contactTarget('c1')))).toBe(cellRef(p.at));
+  });
+
+  it('αρνητικές και μηδενικές συντεταγμένες επιβιώνουν της ανάγνωσης', () => {
+    // Το `coordSegment` γράφει το πρόσημο ως `n` και την υποδιαστολή ως `p`· ένας αναγνώστης
+    // που δεν τα δεχόταν θα επέστρεφε `null` ακριβώς για τα κελιά κάτω από τον άξονα, δηλαδή
+    // για **τα μισά σχέδια**, και θα ξανάπεφτε σιωπηλά στη σημαδούρα.
+    for (const at of [{ x: -1234.5, y: 0 }, { x: 0, y: -0.0001 }, { x: 408012.8, y: 4497231.25 }]) {
+      expect(cellRefOfBindingId(key(proposal({ at }), contactTarget('c1')))).toBe(cellRef(at));
+    }
+  });
+
+  it('🔴 το `targetRef` περιέχει κάτω παύλες — γι\' αυτό η ανάγνωση είναι ΚΑΤΑ ΘΕΣΗ', () => {
+    // `contact-cont_abc-surveyor`: μέτρημα από το τέλος θα έπεφτε πάνω στο enterprise id.
+    const built = key(proposal(), contactTarget('cont_abc_def'));
+    expect(built).toContain('cont_abc_def');
+    expect(cellRefOfBindingId(built)).toBe(cellRef(proposal().at));
+  });
+
+  it('κλειδί άλλης οικογένειας ΔΕΝ δίνει κελί — η εφεδρεία πρέπει να ενεργοποιηθεί', () => {
+    // Σιωπηλή επιστροφή «κάποιου» τμήματος θα έκανε δύο άσχετες συνδέσεις να «μοιράζονται κελί».
+    expect(cellRefOfBindingId('cl_cont1_project_proj1_surveyor')).toBeNull();
+    expect(cellRefOfBindingId('tbb_a_b')).toBeNull();
+    expect(cellRefOfBindingId('')).toBeNull();
+  });
+
+  it('🔴 ΚΑΝΕΝΑ ΑΠΟΘΗΚΕΥΜΕΝΟ ΚΛΕΙΔΙ ΔΕΝ ΑΛΛΑΖΕΙ — η αλλαγή είναι καθαρά αναγνωστική', () => {
+    // Ο φύλακας της §ΣΤ.10: το slot ζει μέσα σε αποθηκευμένα `bindingId`. Αν η θεραπεία
+    // άγγιζε τον **κατασκευαστή**, κάθε εγκεκριμένη σύνδεση θα αποκτούσε νέο κλειδί και το
+    // επόμενο φόρτωμα δεν θα την ξανάβρισκε.
+    const p = proposal();
+    expect(key(p, contactTarget('c1'))).toBe(
+      `tbb_${encodeKeySegment(FILE)}_${encodeKeySegment(LEVEL)}_${cellRef(p.at)}_designers_` +
+        `${bindingSlot(p, contactTarget('c1'))}_${targetRef(contactTarget('c1'))}`,
+    );
+    expect(bindingSlotScope({ fileRecordId: FILE, levelId: LEVEL, proposal: p, target: contactTarget('c1') }))
+      .toBe(key(p, contactTarget('c1')).slice(0, -`_${targetRef(contactTarget('c1'))}`.length));
   });
 });

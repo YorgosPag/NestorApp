@@ -79,16 +79,24 @@ function approveAll(record: SurveyRecord, targets: readonly RowTarget[]): Survey
 describe('🔴 ΤΑΥΤΟΔΥΝΑΜΙΑ — δεύτερη Έγκριση δεν διπλασιάζει καμία γραμμή', () => {
   const targets = g753RowTargets();
 
-  it('το σχέδιο δίνει έντεκα γραμμές προς έγκριση', () => {
-    expect(targets).toHaveLength(11);
+  it('το σχέδιο δίνει δεκαπέντε γραμμές προς έγκριση', () => {
+    // 11 → 15 (ADR-759 §4.11β): οι **τέσσερις** αριθμημένες παρατηρήσεις του «ΕΜΒΑΔΟΝ
+    // ΓΕΩΤΕΜΑΧΙΟΥ» — μετρημένο εύρημα της Φ4γ που τότε έμεινε αδιάβαστο επειδή η ανάγνωσή
+    // τους απαιτούσε ενότητες, και οι ενότητες απειλούσαν τον τρίτο μάρτυρα του εμβαδού.
+    expect(targets).toHaveLength(15);
   });
 
-  it('μία Έγκριση ⇒ πέντε πράξεις, μία παρατήρηση, δύο εγκρίσεις, τρεις τίτλοι', () => {
+  it('μία Έγκριση ⇒ πέντε πράξεις, ΠΕΝΤΕ παρατηρήσεις, δύο εγκρίσεις, τρεις τίτλοι', () => {
     const record = approveAll(blank(), targets);
     expect(record.institutionalActs.urbanPlanDecree).toHaveLength(1);
     expect(record.institutionalActs.generalUrbanPlan).toHaveLength(1);
     expect(record.institutionalActs.zoningRegulations).toHaveLength(3);
-    expect(record.remarks).toHaveLength(1);
+    // 🔑 **Μία λίστα, δύο μπλοκ του σχεδίου.** Η ενότητα Η δίνει μία και το «ΕΜΒΑΔΟΝ
+    // ΓΕΩΤΕΜΑΧΙΟΥ» τέσσερις· είναι δηλώσεις του ίδιου μηχανικού για το ίδιο οικόπεδο, και
+    // δεύτερη λίστα στην καρτέλα θα αντέγραφε τον **σχεδιαστικό** διαχωρισμό, όχι τον
+    // νοηματικό. Ότι φτάνουν από **δύο** διαδρομές είναι και η απόδειξη ότι η αφαίρεση
+    // `upsertValueRow` της Φ4γ είναι πραγματική.
+    expect(record.remarks).toHaveLength(5);
     expect(record.approvals).toHaveLength(2);
     expect(record.titleDeeds).toHaveLength(3);
   });
@@ -104,8 +112,13 @@ describe('🔴 ΤΑΥΤΟΔΥΝΑΜΙΑ — δεύτερη Έγκριση δεν
     expect(g753RowTargets().map((t) => t.rowId)).toEqual(targets.map((t) => t.rowId));
   });
 
-  it('κάθε γραμμή έχει ΔΙΚΗ της ταυτότητα — καμία σύγκρουση ανάμεσα στις έντεκα', () => {
-    expect(new Set(targets.map((t) => t.rowId)).size).toBe(11);
+  it('κάθε γραμμή έχει ΔΙΚΗ της ταυτότητα — καμία σύγκρουση ανάμεσα στις δεκαπέντε', () => {
+    // 🔴 Ο έλεγχος δυνάμωσε χωρίς να αλλάξει: οι 4 νέες γραμμές είναι κι αυτές `remarks`
+    // με ordinal 0-3, δηλαδή θα συγκρούονταν κατά μέτωπο με τη γραμμή της ενότητας Η αν το
+    // κλειδί δήλωσης δεν κουβαλούσε το **σημείο εισαγωγής του εγγράφου**. Τα δύο μπλοκ
+    // είναι δύο διαφορετικά MTEXT, άρα δύο `cellRef` — και γι' αυτό το `rowIdOf` ξεκινά
+    // από τη γεωμετρία και όχι από τη λίστα.
+    expect(new Set(targets.map((t) => t.rowId)).size).toBe(15);
   });
 
   it('🔴 οι ΤΑΥΤΟΤΗΤΕΣ των γραμμών επιβιώνουν της δεύτερης έγκρισης', () => {

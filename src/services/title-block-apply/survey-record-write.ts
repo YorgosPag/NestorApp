@@ -13,10 +13,13 @@
 
 import { ownedOrNull } from '@/lib/auth/tenant-ownership';
 import { nowISO } from '@/lib/date-local';
-import { getErrorMessage } from '@/lib/error-utils';
+import { getErrorMessage, isPermissionDeniedError } from '@/lib/error-utils';
+import { createModuleLogger } from '@/lib/telemetry';
 import { getSurveyRecord, updateSurveyRecord } from '@/services/survey-record.service';
 import type { SurveyRecord } from '@/types/project-survey-record';
 import { applyFailed, type ApplyTargetContext, type ApplyTargetResult } from './apply-types';
+
+const logger = createModuleLogger('SurveyRecordWrite');
 
 /** Ό,τι κοινό φέρει κάθε στόχος τοπογραφικού — σε ποια εγγραφή, ποιου έργου. */
 export interface SurveyRecordAddress {
@@ -60,6 +63,9 @@ function checkRecord(
   // Ο έλεγχος εξακολουθεί να ανήκει εδώ: το `getSurveyRecord` είναι `getById`, δηλαδή **δεν**
   // περνά από φίλτρο μισθωτή (CHECK 3.35 — το ίδιο κενό που έψαξε το ADR-747), και το id
   // έρχεται από στόχο που έφτιαξε ο πελάτης.
+  // ⚠️ Ο φύλακας **δεν** είναι πλεονασμός επειδή η ανάγνωση μεταφράζει ήδη την άρνηση των
+  // κανόνων σε `null` (δες `readVisibleRecord`): ο υπερδιαχειριστής **διαβάζει** κάθε μισθωτή,
+  // οπότε για εκείνον αυτή η γραμμή είναι ο **μόνος** έλεγχος ιδιοκτησίας που εκτελείται.
   const owned = ownedOrNull(record, ctx.companyId, {
     resource: 'survey record',
     resourceId: address.recordId,
@@ -93,6 +99,40 @@ function checkRecord(
 }
 
 /**
+ * Η εγγραφή **όπως τη βλέπει ο καλών** — ή `null` όταν δεν τη βλέπει καθόλου.
+ *
+ * 🔴 **ΜΕΤΡΗΜΕΝΟ ΣΕ ΖΩΝΤΑΝΟ EMULATOR (ADR-759 §Θ.1), και δεν φαινόταν από πουθενά αλλού.**
+ * Το `getSurveyRecord` είναι `getById` ⇒ σκέτο `getDoc`. Σε πραγματική βάση ο κανόνας READ
+ * του `survey_records` **απορρίπτει** τόσο το έγγραφο άλλου μισθωτή (`false for 'get'`) όσο
+ * και το **ανύπαρκτο** (`evaluation error` — το `resource.data.companyId` πάνω σε `null`
+ * `resource`). Και στις δύο περιπτώσεις ο SDK **πετά**, δεν επιστρέφει `null`.
+ *
+ * Άρα η εξαίρεση έφτανε στο catch-all του `writeSurveyRecordPatch` και ο άνθρωπος έπαιρνε
+ * `SURVEY_RECORD_UPDATE_FAILED` — κατά λέξη το *«ανεξήγητο permission error»* που οι κωδικοί
+ * αυτού του αρχείου υπάρχουν για να αποτρέψουν — ενώ ο `ownedOrNull` και ολόκληρο το
+ * σκεπτικό του §4.9 **δεν εκτελούνταν ποτέ**. Κανένα από τα 3.113 πράσινα tests δεν μπορούσε
+ * να το δει: τα mocks επιστρέφουν `null`, γιατί γράφουν σε **μνήμη** όπου δεν υπάρχουν
+ * κανόνες.
+ *
+ * 🔑 **Η μετάφραση είναι η ΙΔΙΑ πολιτική, όχι νέα**: «ξένο ≡ ανύπαρκτο». Απλώς εφαρμόζεται
+ * πλέον και στη διαδρομή που πραγματικά εκτελείται. Ότι οι δύο αιτίες είναι **αδιάκριτες**
+ * είναι το ζητούμενο, όχι περιορισμός: ξεχωριστός κωδικός θα ήταν μαντείο ύπαρξης.
+ *
+ * ⚠️ Μεταφράζεται **μόνο** η ανάγνωση. Άρνηση των κανόνων στην **εγγραφή** (π.χ. πάγωμα που
+ * μεσολάβησε) παραμένει `SURVEY_RECORD_UPDATE_FAILED`: «δεν υπάρχει» εκεί θα ήταν ψέμα.
+ */
+async function readVisibleRecord(recordId: string): Promise<SurveyRecord | null> {
+  try {
+    return await getSurveyRecord(recordId);
+  } catch (error) {
+    if (!isPermissionDeniedError(error)) throw error;
+    // Σήμα ασφαλείας, όχι μήνυμα προς τον καλούντα — ίδιο πρότυπο με το `ownedOrNull`.
+    logger.warn('Survey record read denied by rules — treated as missing', { recordId });
+    return null;
+  }
+}
+
+/**
  * Διαβάζει **τώρα**, ελέγχει, εφαρμόζει το `patch`, γράφει **ένα** κλειδί.
  *
  * 🔴 **Η ΑΝΑΓΝΩΣΗ ΓΙΝΕΤΑΙ ΤΩΡΑ, ΟΧΙ ΑΠΟ ΤΟ ΣΤΙΓΜΙΟΤΥΠΟ ΤΗΣ ΠΑΛΕΤΑΣ.** Ο Λ2 διάβασε τα
@@ -111,7 +151,7 @@ export async function writeSurveyRecordPatch(
   patch: (record: SurveyRecord) => SurveyRecordPatch,
 ): Promise<ApplyTargetResult> {
   try {
-    const checked = checkRecord(await getSurveyRecord(address.recordId), address, ctx);
+    const checked = checkRecord(await readVisibleRecord(address.recordId), address, ctx);
     if (!checked.ok) return checked.failure;
 
     const { record, documentKey } = patch(checked.record);

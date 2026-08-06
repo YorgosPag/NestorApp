@@ -371,6 +371,34 @@ describe('ΤΟ ΚΛΙΚ — supersede is scoped to the slot, not to the cell', (
     expect(await readRaw(env, BINDINGS, keyOf(corrected))).toMatchObject({ status: 'active' });
   });
 
+  it('🔴 keeps two TITLE BLOCKS apart even when the scene hands both the same handle', async () => {
+    // ADR-759 §Θ.2 — the second definition of "same slot", closed.
+    //
+    // `sourceHandle` is not a DXF handle: it is `entity.id`, minted by TWO independent
+    // counters that land in the same scene, so a title block nested in a BLOCK yields a
+    // second `mtext_7` on the same layer. The binding KEY has always identified the cell by
+    // geometry for exactly that reason — but `findSameSlotActive` compared the handle, so a
+    // drawing with two title blocks retired the first block's binding the moment the second
+    // was approved. Different id (geometry separates them), same "slot" (the handle merges
+    // them): silent, and impossible to notice from the screen.
+    //
+    // The fixture is the collision itself: identical `fieldKey`, `sourceHandle` and
+    // `personName` — every axis the old comparison looked at — differing ONLY in `at`.
+    const secondBlock = {
+      proposal: { ...SURVEYOR.proposal, at: { x: 1271.057, y: -89.001 } },
+      target: contactTarget('cont_mavromichalis_block_2', 'surveyor'),
+    };
+
+    const first = await approveAndReload(SURVEYOR, []);
+    const second = await approveAndReload(secondBlock, first.reloaded);
+
+    expect(second.result).toMatchObject({ supersededIds: [] });
+
+    const stored = await listRaw(env, BINDINGS);
+    expect(stored).toHaveLength(2);
+    expect(stored.every((b) => b.status === 'active')).toBe(true);
+  });
+
   it('does not delete the retired binding — provenance is withdrawn, never erased', async () => {
     const first = await approveAndReload(SURVEYOR, []);
     const corrected = {
@@ -529,23 +557,41 @@ describe('ΤΟ ΚΛΙΚ — tenant isolation on the live write and read paths', 
   });
 });
 
-describe('ΤΟ ΚΛΙΚ — what is deliberately NOT writable stays not writable', () => {
+describe('ΤΟ ΚΛΙΚ — drawing-meta became writable, and the guard that replaced the refusal', () => {
   let env: RulesTestEnvironment;
 
   beforeAll(async () => { env = await initEmulator(); });
   afterAll(async () => { await teardownEmulator(env); });
   afterEach(async () => { await resetData(env); });
 
-  it('refuses drawing-meta with a named reason and leaves nothing behind', async () => {
-    // §7: `DxfLevelDocument` has no landing field and `UpdateDxfLevelSchema` is
-    // `.passthrough()`, so a write here would land unvalidated. The UI offers no
-    // button; this is the guard for the day someone calls it programmatically.
-    const metaTarget: BindingTarget = {
-      kind: 'drawing-meta',
-      levelId: LEVEL_ID,
-      field: 'scale',
-      value: '1:500',
-    };
+  // 🔴 WHAT THIS BLOCK USED TO CLAIM, AND WHY IT WAS FALSE (measured 2026-08-06).
+  //
+  // It asserted `NOT_YET_WRITABLE` — a code that **no longer exists anywhere in `src/`**.
+  // ADR-759 Φ3 gave `drawing-meta` a real writer (`apply-drawing-meta.ts` →
+  // `updateDxfLevelWithPolicy`), and Φ4β then made `projectId` **mandatory** on the target
+  // (commit `57b643ab`). This fixture kept omitting it, so execution died two guards early
+  // at `MISSING_PROJECT` and never reached the writer at all.
+  //
+  // The test was therefore RED from that commit onwards and nobody saw it, because this
+  // suite needs an emulator and no gate runs it — the ADR-587 §6.1 shape, verbatim: **an
+  // anchor without a gate is a comment.** Worse, while it was merely *stale* it was green
+  // for the wrong reason, witnessing a neighbouring guard while claiming to witness this
+  // one — the same mistake this file already documents twice (M4, M8).
+  //
+  // Nothing is "restored" here: the refusal is gone because the feature shipped. What the
+  // block guards now is the invariant that replaced it — a meta write carries a **project**,
+  // because a binding without one is provenance the project-deletion cascade cannot see
+  // (`deletion-registry.ts:441`), i.e. an orphan that outlives the thing it describes.
+
+  const metaTarget: BindingTarget = {
+    kind: 'drawing-meta',
+    projectId: PROJECT_ID,
+    levelId: LEVEL_ID,
+    field: 'scale',
+    value: '1:500',
+  };
+
+  it('writes the level meta and leaves provenance that names its project', async () => {
     // Built explicitly rather than spread-and-override: `personName` must be
     // ABSENT, not `undefined`, because `bindingSlot` branches on its
     // truthiness — and a spread that carried a stale name would silently take
@@ -564,7 +610,44 @@ describe('ΤΟ ΚΛΙΚ — what is deliberately NOT writable stays not writable
       approveTitleBlockProposal(approvalInput({ proposal: metaProposal, target: metaTarget })),
     );
 
-    expect(result).toMatchObject({ success: false, errorCode: 'NOT_YET_WRITABLE' });
+    expect(result).toMatchObject({ success: true });
+
+    // 🔴 The honesty boundary of this process (see `firestore-seam.ts`): the level write goes
+    // over HTTP and `setup-after-env.ts` answers every in-app route `{ success: true }`, so
+    // NOTHING here proves the level document changed. What IS real is the Firestore half —
+    // the binding below ran against live rules — and the ordering guarantee that makes it
+    // meaningful: provenance is written only AFTER the target reported success (Γ9).
+    const stored = await listRaw(env, BINDINGS);
+    expect(stored).toHaveLength(1);
+    expect(stored[0]).toMatchObject({
+      projectId: PROJECT_ID,
+      fieldKey: 'scale',
+      status: 'active',
+      confirmedBy: ADMIN,
+    });
+  });
+
+  it('still refuses a meta target with no project, before anything is written', async () => {
+    // The guard that replaced the refusal, exercised directly. `projectId` is stripped
+    // deliberately rather than left out of the type: this is the programmatic-caller case,
+    // and `swc` type-erases the suite, so only an executed assertion can hold the line —
+    // which is precisely how the previous version of this block rotted unnoticed.
+    const orphan = { ...metaTarget, projectId: '' } satisfies BindingTarget;
+    const metaProposal: BindingProposal = {
+      fieldKey: 'scale',
+      titleBlockIndex: 0,
+      sourceHandle: 'mtext_11',
+      labelHandle: 'mtext_10',
+      at: { x: 1300.5, y: -120.25 },
+      snapshotValue: '1:500',
+      candidates: [],
+    };
+
+    const result = await withPersona(env, 'same_tenant_admin', () =>
+      approveTitleBlockProposal(approvalInput({ proposal: metaProposal, target: orphan })),
+    );
+
+    expect(result).toMatchObject({ success: false, errorCode: 'MISSING_PROJECT' });
     expect(await listRaw(env, BINDINGS)).toHaveLength(0);
   });
 });
