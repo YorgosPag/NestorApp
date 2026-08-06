@@ -34,6 +34,7 @@ import {
   setAxisStyleField,
   type TableStyleAxis,
 } from './table-axis-style-ops';
+import type { TableNumericRange } from './table-cell-style-scan';
 import type { TableStyle } from './table-style';
 import type { PersistedTableModel } from '../../types/table';
 
@@ -106,11 +107,35 @@ export function stepAxisTextHeight(
   const range = resolveAxisNumericRange(model, style, axis, id, 'textHeightMm');
   if (!range) return model;
 
-  const from = direction === 1 ? range.max : range.min;
-  const next = nextTextHeightStepMm(from, direction);
-  if (next === from && range.min === range.max) return model;
+  const next = nextTextHeightFromRange(range, direction);
+  if (next === null) return model;
 
   return setAxisStyleField(model, axis, id, 'textHeightMm', next);
+}
+
+/**
+ * 🔴 ADR-739 §52 — **η απόφαση του βήματος, χωρίς να ξέρει ΠΟΥ γράφεται.**
+ *
+ * Εξήχθη από το {@link stepAxisTextHeight} τη στιγμή που η μορφοποίηση απέκτησε **δεύτερο
+ * στόχο** (περιοχή κελιών): το «από ποια τιμή ξεκινώ» και το «πότε δεν κάνω τίποτα» είναι
+ * ταυτόσημα και στους δύο, ενώ ο γραφέας είναι άλλος. Ένα αντίγραφο των τεσσάρων γραμμών
+ * μέσα στο `table-format-scope.ts` δεν θα έφτανε το κατώφλι του jscpd (N.18) — δηλαδή θα
+ * ήταν ακριβώς το διπλότυπο **που καμία πύλη δεν βλέπει**, με δύο σημεία που μπορούν κάποτε
+ * να μάθουν διαφορετική ασυμμετρία «μεγαλώνω → μέγιστο / μικραίνω → ελάχιστο».
+ *
+ * `null` σημαίνει «καμία εγγραφή»: είμαστε στο άκρο της σκάλας **και** η σειρά είναι
+ * ομοιόμορφη, άρα δεν υπάρχει ούτε βήμα ούτε ισοπέδωση να γίνει. Με **μεικτή** σειρά η
+ * εγγραφή γίνεται ακόμη κι όταν η τιμή δεν κουνήθηκε — η ισοπέδωση στο άκρο **είναι** η
+ * ζητούμενη αλλαγή (δες την ⚠️ του {@link stepAxisTextHeight}).
+ */
+export function nextTextHeightFromRange(
+  range: TableNumericRange,
+  direction: TextHeightStepDirection,
+): number | null {
+  const from = direction === 1 ? range.max : range.min;
+  const next = nextTextHeightStepMm(from, direction);
+  if (next === from && range.min === range.max) return null;
+  return next;
 }
 
 /**

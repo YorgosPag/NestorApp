@@ -35,7 +35,10 @@
  * @see docs/centralized-systems/reference/adrs/ADR-753-table-cell-rich-text.md
  */
 
-import type { TableAxisFormatState } from './table-axis-style-ops';
+// ADR-739 — το σχήμα απόκρισης ενός χειριστηρίου ζει στον κοινό σαρωτή. Ερχόταν μέχρι τώρα
+// από το `table-axis-style-ops.ts` (εκεί γεννήθηκε), αλλά τα runs **δεν** έχουν άξονα: η
+// εξάρτηση ήταν σύζευξη με γείτονα αντί με τον ορισμό. Ίδιος τύπος, σωστότερη διαδρομή.
+import type { TableFormatState } from './table-cell-style-scan';
 import type { TableCellTextRun, TableTextRunStyle } from '../../types/table';
 
 /**
@@ -62,6 +65,23 @@ export type TableTextRunStyleKey = keyof TableTextRunStyle;
 
 /** Τα κλειδιά ως πίνακας — μία φορά, από το σύνολο που ελέγχει ο μεταγλωττιστής. */
 const RUN_STYLE_KEYS = Object.keys(RUN_STYLE_KEY_SET) as readonly TableTextRunStyleKey[];
+
+/**
+ * 🔴 ADR-739 — **έχει αυτό το πεδίο στυλ νόημα και ΑΝΑ ΧΑΡΑΚΤΗΡΑ;**
+ *
+ * Η μορφοποίηση ενός ολόκληρου κελιού πρέπει να ξέρει την απάντηση, γιατί τα runs **νικούν**
+ * το κελί στην επίλυση: πατώντας «Β» σε κελί που περιέχει έστω ένα run με `bold: false`, η
+ * εγγραφή στο κελί δεν θα φαινόταν **πουθενά** — το κουμπί θα έλεγε ψέματα. Ο γραφέας του
+ * κελιού ισοπεδώνει λοιπόν το **ίδιο** πεδίο στα runs, και ρωτά εδώ αν αυτό το πεδίο υπάρχει
+ * καν εκεί (το `align` και το `fillColorHex` δεν έχουν νόημα σε επιλογή γραμμάτων).
+ *
+ * Predicate και όχι εξαγωγή της λίστας: ο καλών κάνει **μία** ερώτηση ανά εγγραφή, και μια
+ * εξαγόμενη λίστα θα καλούσε τον επόμενο να χτίσει δικό του `Set` — δεύτερη, αποκλίνουσα
+ * απάντηση στο «ποια πεδία είναι πεδία run».
+ */
+export function isTableTextRunStyleKey(key: string): key is TableTextRunStyleKey {
+  return Object.prototype.hasOwnProperty.call(RUN_STYLE_KEY_SET, key);
+}
 
 /**
  * Ένα εύρος χαρακτήρων, με τη σύμβαση του DOM (`selectionStart`/`selectionEnd`) και του
@@ -181,7 +201,7 @@ export function remapCellTextRuns(
  * ακριβώς το μάθημα που είναι ήδη γραμμένο στο `resolveAxisFormat` — και ο λόγος που εκείνο
  * διατρέχει τα επιλυμένα στυλ αντί για τις παρακάμψεις.
  *
- * Το σχήμα απόκρισης είναι το **ίδιο** {@link TableAxisFormatState} του άξονα, όχι δίδυμό του:
+ * Το σχήμα απόκρισης είναι το **ίδιο** {@link TableFormatState} κάθε χειριστηρίου, όχι δίδυμό του:
  * οι τρεις ερωτήσεις («τι ισχύει / συμφωνούν; / ποιος το είπε;») είναι οι ίδιες τρεις, και δύο
  * σχήματα θα ήταν ο structural clone που πιάνει το CHECK 3.28 ανεξάρτητα ονομάτων (N.18).
  *
@@ -196,7 +216,7 @@ export function resolveCellRunFormat<K extends TableTextRunStyleKey>(
   range: TableTextRange,
   key: K,
   inherited: NonNullable<TableTextRunStyle[K]>,
-): TableAxisFormatState<NonNullable<TableTextRunStyle[K]>> {
+): TableFormatState<NonNullable<TableTextRunStyle[K]>> {
   const styles = expandStyles(runs, textLength);
   const { start, end } = clampRange(range, textLength);
   const from = start === end ? Math.max(0, start - 1) : start;

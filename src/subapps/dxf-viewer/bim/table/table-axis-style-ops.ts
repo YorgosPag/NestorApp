@@ -28,8 +28,21 @@
  * @see bim/table/table-row-column-ops.ts — οι δομικές πράξεις (εισαγωγή/διαγραφή)
  */
 
-import { cellKey, resolveTableModel } from './table-model-helpers';
-import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
+import { resolveTableModel } from './table-model-helpers';
+// ADR-739 — ο ΕΝΑΣ βρόχος πάνω στα επιλυμένα στυλ ζει πλέον στο scan module, ώστε να τον
+// μοιράζεται και ο στόχος «περιοχή κελιών». Δες την κεφαλίδα εκεί για το τι είναι κοινό και
+// τι όχι.
+import {
+  resolveCellsFormat,
+  resolveCellsNumericRange,
+  type TableCellNumericKey,
+  type TableCellStyleKey,
+  type TableFormatState,
+  type TableNumericRange,
+} from './table-cell-style-scan';
+import { patchStyleOverride } from './table-style-override';
+import type { TableCellStyle, TableStyle } from './table-style';
+import type { TableCellRef } from './table-cell-range';
 import type {
   PersistedTableModel,
   TableAxisStyleOverride,
@@ -41,33 +54,24 @@ import type {
 export type TableStyleAxis = 'row' | 'column';
 
 /**
- * Τα πεδία που μπορεί να παρακάμψει ένας άξονας **και** εμφανίζονται στο επιλυμένο στυλ.
+ * 🔴 ADR-739 — τα τέσσερα ονόματα που **μετακόμισαν** στο `table-cell-style-scan.ts`, μαζί με
+ * τον βρόχο που τα γεννά, όταν απέκτησαν δεύτερο στόχο (περιοχή κελιών).
  *
- * Η τομή δεν είναι φορμαλισμός: το `margins` ζει στο {@link TableCellStyle} αλλά **δεν**
- * παρακάμπτεται, και το `overflow` παρακάμπτεται σε επίπεδο κελιού αλλά δεν είναι στυλ. Ο
- * τύπος κρατά τα δύο σύνολα ευθυγραμμισμένα χωρίς τρίτη χειρόγραφη λίστα.
+ * Επανεξάγονται ως ψευδώνυμα και **όχι** ως μετονομασία των καταναλωτών: τα ονόματα με το
+ * πρόθεμα `Axis` τα εισάγουν ήδη το mini toolbar, το `table-cell-run-ops.ts` και τα tests
+ * τους. Μια μετονομασία θα άλλαζε δέκα αρχεία για μηδέν κέρδος — και θα έκρυβε, μέσα στον
+ * θόρυβο, την **πραγματική** αλλαγή αυτής της φάσης (ότι ο βρόχος έγινε κοινός).
+ *
+ * ⚠️ Δεν είναι «παλιά» ονόματα προς κατάργηση: για τον καλούντα που μιλά **μόνο** για άξονες,
+ * το `TableAxisFormatState` παραμένει το ακριβέστερο όνομα της ίδιας δομής.
  */
-export type TableAxisStyleKey = keyof TableAxisStyleOverride & keyof TableCellStyle;
+export type TableAxisStyleKey = TableCellStyleKey;
+export type TableAxisNumericKey = TableCellNumericKey;
+export type TableAxisFormatState<T> = TableFormatState<T>;
+export type TableAxisNumericRange = TableNumericRange;
 
 /** Ό,τι κρατά ένας άξονας — το κοινό σχήμα γραμμής και στήλης, όσο αφορά το στυλ. */
 type AxisItem = TableColumn | TableRow;
-
-/**
- * Τα πεδία του {@link TableAxisStyleKey} που ο ζωγράφος επιλύει σε **αριθμό**.
- *
- * Παράγεται από τον ίδιο τον τύπο του επιλυμένου στυλ αντί για χειρόγραφη ένωση ονομάτων:
- * την ημέρα που ένα πεδίο αλλάξει τύπο, ο μεταγλωττιστής το λέει εδώ — μια λίστα
- * `'textHeightMm' | …` θα έμενε πίσω σιωπηλά.
- */
-export type TableAxisNumericKey = {
-  [K in TableAxisStyleKey]: TableCellStyle[K] extends number ? K : never;
-}[TableAxisStyleKey];
-
-/** Τα άκρα μιας αριθμητικής ιδιότητας κατά μήκος ενός άξονα. */
-export interface TableAxisNumericRange {
-  readonly min: number;
-  readonly max: number;
-}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Εγγραφή
@@ -86,8 +90,15 @@ export interface TableAxisNumericRange {
  * Ένα πεδίο τη φορά και όχι patch αντικείμενο: σε ένα patch το `{ bold: undefined }` είναι
  * δυσδιάκριτο από το «δεν ανέφερα καθόλου το bold», δηλαδή η **αφαίρεση** — που είναι η
  * μισή λειτουργία αυτού του toolbar — δεν θα μπορούσε καν να εκφραστεί.
+ *
+ * ⚠️ Το `K` δεσμεύεται σε **ολόκληρο** το `keyof TableAxisStyleOverride`, όχι στο στενότερο
+ * {@link TableAxisStyleKey}: η **γραφή** μπορεί να θέσει κάθε πεδίο που δέχεται η παράκαμψη,
+ * ενώ η τομή με το επιλυμένο στυλ αφορά μόνο την **ανάγνωση** ({@link resolveAxisFormat}).
+ * Η μορφή αριθμού (ADR-760) είναι ακριβώς το πεδίο που ζει στην παράκαμψη χωρίς να ζει στο
+ * `TableCellStyle` — με τον στενό περιορισμό δεν θα μπορούσε ποτέ να γραφτεί σε άξονα, και η
+ * μόνη διέξοδος θα ήταν δεύτερος γραφέας για ένα πεδίο.
  */
-export function setAxisStyleField<K extends TableAxisStyleKey>(
+export function setAxisStyleField<K extends keyof TableAxisStyleOverride>(
   model: PersistedTableModel,
   axis: TableStyleAxis,
   id: string,
@@ -103,7 +114,7 @@ export function setAxisStyleField<K extends TableAxisStyleKey>(
   // δίνουν και τα δύο `undefined` (άρα ίσα, σωστά), ενώ το `null` παραμένει διακριτό.
   if (current?.[key] === value) return model;
 
-  return writeAxisOverride(model, axis, at, patched(current, key, value));
+  return writeAxisOverride(model, axis, at, patchStyleOverride(current, key, value));
 }
 
 /**
@@ -181,23 +192,6 @@ export function hasAnyAxisStyleOverride(
 }
 
 /**
- * Τι δείχνει ένα χειριστήριο του toolbar. **Δύο ορθογώνιες** ερωτήσεις, όχι μία.
- *
- * Το Excel απαντά μόνο την πρώτη, και γι' αυτό δεν μπορεί ποτέ να σου πει αν τα έντονα που
- * βλέπεις τα ζήτησες εσύ ή τα λέει το στυλ — ούτε να σε γυρίσει πίσω. Τα εργαλεία που
- * διαχειρίζονται **κληρονομιά** (Revit «By Category», Figma detached override, Blender
- * library override) απαντούν και τις δύο, και δείχνουν ρητά τη διαφορά.
- */
-export interface TableAxisFormatState<T> {
-  /** Η **κοινή** επιλυμένη τιμή όλων των κελιών του άξονα· `undefined` όταν {@link mixed}. */
-  readonly value: T | undefined;
-  /** Τα κελιά του άξονα δεν συμφωνούν — Figma «Mixed», Revit «<varies>». */
-  readonly mixed: boolean;
-  /** Ο άξονας δηλώνει **ρητά** αυτό το πεδίο (δεν το κληρονομεί). */
-  readonly overridden: boolean;
-}
-
-/**
  * Η κατάσταση ενός πεδίου για έναν ολόκληρο άξονα — υπολογισμένη από την **πραγματική**
  * επίλυση κάθε κελιού, όχι από την παράκαμψη μόνη της.
  *
@@ -205,6 +199,10 @@ export interface TableAxisFormatState<T> {
  * (έντονη), κεφαλίδας (έντονη) και δεδομένων (όχι) ⇒ η ειλικρινής απάντηση είναι **μεικτή**.
  * Αν διαβάζαμε μόνο το `styleOverride`, το κουμπί θα έλεγε «όχι έντονα» ενώ τα μισά κελιά
  * της στήλης είναι έντονα — δηλαδή θα έλεγε ψέματα για ό,τι βλέπει ο χρήστης.
+ *
+ * Τα δύο πρώτα πεδία τα απαντά ο κοινός σαρωτής· το **τρίτο** μένει εδώ και είναι ο λόγος που
+ * ο σαρωτής δεν το επιστρέφει: «ρητά δηλωμένο» σημαίνει, για έναν άξονα, «το λέει το
+ * `styleOverride` **της άγκυρας**» — μια ερώτηση που η περιοχή κελιών απαντά αλλιώς.
  */
 export function resolveAxisFormat<K extends TableAxisStyleKey>(
   model: PersistedTableModel,
@@ -216,26 +214,10 @@ export function resolveAxisFormat<K extends TableAxisStyleKey>(
   const anchor = axisItems(model, axis).find((item) => item.id === id);
   if (!anchor) return null;
 
-  let value: TableCellStyle[K] | undefined;
-  let seen = false;
-  let mixed = false;
+  const shared = resolveCellsFormat(model, style, axisCellRefs(model, axis, id), key);
+  if (!shared) return null;
 
-  const visited = forEachAxisCellStyle(model, style, axis, id, (cellStyle) => {
-    const current = cellStyle[key];
-    if (!seen) {
-      value = current;
-      seen = true;
-    } else if (current !== value) {
-      mixed = true;
-    }
-  });
-  if (!visited) return null;
-
-  return {
-    value: mixed ? undefined : value,
-    mixed,
-    overridden: anchor.styleOverride?.[key] !== undefined,
-  };
+  return { ...shared, overridden: anchor.styleOverride?.[key] !== undefined };
 }
 
 /**
@@ -306,30 +288,15 @@ export function resolveAxisNumericRange(
   id: string,
   key: TableAxisNumericKey,
 ): TableAxisNumericRange | null {
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-
-  const visited = forEachAxisCellStyle(model, style, axis, id, (cellStyle) => {
-    const current = cellStyle[key];
-    if (!Number.isFinite(current)) return;
-    if (current < min) min = current;
-    if (current > max) max = current;
-  });
-  if (!visited || !Number.isFinite(min)) return null;
-
-  return { min, max };
+  return resolveCellsNumericRange(model, style, axisCellRefs(model, axis, id), key);
 }
 
 /**
- * Τι γίνεται όταν πατηθεί ένα δίτιμο χειριστήριο.
- *
- * Ο κανόνας του Excel και κάθε εργαλείου με πολλαπλή επιλογή: **μεικτό ⇒ όλα ναι**. Είναι η
- * μόνη επιλογή που δίνει ορατή αλλαγή σε **κάθε** κελί που δεν συμφωνούσε — ένα «όλα όχι»
- * θα άφηνε τον μισό άξονα φαινομενικά αμετάβλητο.
+ * Ο κανόνας «μεικτό ⇒ όλα ναι» — **μετακόμισε** στον κοινό σαρωτή, γιατί την ίδια ερώτηση την
+ * κάνει πανομοιότυπα και η μορφοποίηση περιοχής. Επανεξάγεται ώστε καμία υπάρχουσα διαδρομή
+ * εισαγωγής να μην αλλάξει.
  */
-export function nextBooleanFormat(state: TableAxisFormatState<boolean> | null): boolean {
-  return !(state && !state.mixed && state.value === true);
-}
+export { nextBooleanFormat } from './table-cell-style-scan';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Ιδιωτικά
@@ -340,54 +307,28 @@ function axisItems(model: PersistedTableModel, axis: TableStyleAxis): readonly A
 }
 
 /**
- * Ο **ΕΝΑΣ** βρόχος πάνω στα επιλυμένα στυλ των κελιών ενός άξονα· `false` όταν ο άξονας
- * δεν έχει κελιά να επισκεφθεί.
+ * Τα κελιά ενός άξονα — δηλαδή «ποια κελιά» για τον στόχο **άξονας**, στο σχήμα που καταλαβαίνει
+ * ο κοινός σαρωτής.
  *
- * Δύο αναγνώστες ρωτούν διαφορετικά πράγματα για την **ίδια** διαδρομή («συμφωνούν;» και
- * «ποια τα άκρα;»). Δύο αντίγραφα του διπλού βρόχου θα ήταν ακριβώς το structural clone που
- * πιάνει το CHECK 3.28 (N.18) — και, χειρότερα, δύο σημεία που μπορούν κάποτε να μάθουν
- * διαφορετικό κανόνα προτεραιότητας (Α6) για το ίδιο κελί.
+ * Άξονας που δεν υπάρχει δίνει **κενή** λίστα και όχι σφάλμα: ο σαρωτής θα απαντήσει `false`
+ * («δεν έχω τι να πω») και ο καλών το μεταφράζει σε `null` — η ίδια σύμβαση ανοχής σε
+ * μπαγιάτικες ταυτότητες που ίσχυε και πριν, απλώς εκφρασμένη μία φορά αντί για δύο.
  */
-function forEachAxisCellStyle(
+function axisCellRefs(
   model: PersistedTableModel,
-  style: TableStyle,
   axis: TableStyleAxis,
   id: string,
-  visit: (cellStyle: TableCellStyle) => void,
-): boolean {
+): readonly TableCellRef[] {
   const resolved = resolveTableModel(model);
-  const rows = axis === 'row' ? resolved.rows.filter((r) => r.id === id) : resolved.rows;
-  const columns = axis === 'column' ? resolved.columns.filter((c) => c.id === id) : resolved.columns;
-  if (rows.length === 0 || columns.length === 0) return false;
-
-  for (const row of rows) {
-    for (const column of columns) {
-      visit(resolveCellStyle(style.rowClasses[row.rowClass], {
-        column: column.styleOverride,
-        row: row.styleOverride,
-        cell: resolved.cells.get(cellKey(row.id, column.id))?.styleOverride,
-      }));
-    }
+  const rows = axis === 'row' ? [id] : resolved.rows.map((r) => r.id);
+  const columns = axis === 'column' ? [id] : resolved.columns.map((c) => c.id);
+  // Ο σαρωτής προσπερνά ταυτότητες που δεν υπάρχουν, οπότε ένα `id` εκτός μοντέλου δεν
+  // χρειάζεται έλεγχο εδώ: θα δώσει μηδέν επισκέψεις, δηλαδή ακριβώς το ίδιο `false`.
+  const refs: TableCellRef[] = [];
+  for (const rowId of rows) {
+    for (const colId of columns) refs.push({ rowId, colId });
   }
-  return true;
-}
-
-/**
- * Η νέα παράκαμψη μετά την αλλαγή ενός πεδίου· `undefined` όταν δεν έμεινε τίποτα.
- *
- * Το άδειασμα δεν είναι καλλωπισμός: ένα `styleOverride: {}` θα ταξίδευε στο JSON, θα
- * εμφανιζόταν σε κάθε diff και θα έκανε το «έχει παράκαμψη;» να απαντιέται `true` για κάτι
- * που δεν παρακάμπτει τίποτα.
- */
-function patched<K extends TableAxisStyleKey>(
-  current: TableAxisStyleOverride | undefined,
-  key: K,
-  value: TableAxisStyleOverride[K] | undefined,
-): TableAxisStyleOverride | undefined {
-  const next: Record<string, unknown> = { ...current };
-  if (value === undefined) delete next[key];
-  else next[key] = value;
-  return Object.keys(next).length > 0 ? (next as TableAxisStyleOverride) : undefined;
+  return refs;
 }
 
 /**

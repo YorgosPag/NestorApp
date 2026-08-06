@@ -115,8 +115,20 @@ export function resolveTableAxisActionTarget(
  */
 export function axisTargetAt(target: TableAxisActionTarget, index: number): TableAxisTarget {
   const at = Math.min(Math.max(index, 0), target.ids.length - 1);
-  const id = target.ids[at];
-  return target.axis === 'column' ? { axis: 'column', colId: id } : { axis: 'row', rowId: id };
+  return axisTargetOf(target.axis, target.ids[at]);
+}
+
+/**
+ * ADR-739 §52 — **ο πυρήνας του {@link axisTargetAt}: άξονας + ταυτότητα → στόχος επιλογής.**
+ *
+ * Το `axisTargetAt` το ήθελε από `TableAxisActionTarget` (δείκτης μέσα σε διάστημα)· το
+ * `tableFormatScopeBounds` το θέλει από **σκέτο** `(axis, id)`, γιατί ένα `TableFormatScope`
+ * κρατά ταυτότητες χωρίς διάστημα. Ο ορισμός μένει **ΕΝΑΣ**: το τριαδικό
+ * `axis === 'column' ? { colId } : { rowId }` γράφεται εδώ και πουθενά αλλού — ακριβώς ό,τι
+ * λέει η κεφαλίδα του `axisTargetAt` από την πρώτη μέρα.
+ */
+export function axisTargetOf(axis: 'row' | 'column', id: string): TableAxisTarget {
+  return axis === 'column' ? { axis: 'column', colId: id } : { axis: 'row', rowId: id };
 }
 
 /**
