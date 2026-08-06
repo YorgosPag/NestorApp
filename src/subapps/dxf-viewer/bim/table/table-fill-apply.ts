@@ -8,6 +8,12 @@
  * αντιγραφόταν μόνο το τελευταίο, μια επιλογή δύο κελιών θα ήταν αδιάκριτη από επιλογή ενός,
  * και ο χρήστης που μάρκαρε δύο θα έπαιρνε σιωπηλά κάτι που δεν ζήτησε.
  *
+ * 🔴 **ADR-768 Φ2 — ο κυκλικός δείκτης ΜΕΤΑΚΟΜΙΣΕ** στο {@link tileTableRange}. Ήταν ιδιωτική
+ * `fillCells` εδώ μέχρι που το **πινέλο μορφοποίησης** έκανε την ίδια ερώτηση για τον ίδιο
+ * λόγο (γραμμές 6/7/8 της προδιαγραφής του Excel). Δεύτερο αντίγραφο θα ήταν sibling clone
+ * (CHECK 3.28 / N.18) και δύο σημεία που μπορούν να μάθουν διαφορετικό πρόσημο υπολοίπου.
+ * Εδώ μένει ό,τι είναι **του γεμίσματος**: τι κουβαλά ένα κελί και πώς ολισθαίνει ο τύπος του.
+ *
  * ⚠️ **Δεν** υλοποιείται η **σειρά** του Excel (`1, 2` ⇒ `3, 4, 5`). Είναι ρητή απόφαση, όχι
  * παράλειψη: η ανίχνευση σειράς είναι ολόκληρη δική της σημασιολογία (αριθμητική πρόοδος,
  * ημερομηνίες, μήνες, προσαρμοσμένες λίστες) και το Excel την κάνει **διαφορετικά** ανάλογα με
@@ -39,6 +45,7 @@ import { offsetTableFormula } from './formula/table-formula-offset';
 import { commitCellWrites } from './formula/table-formula-engine';
 import { getCell, resolveTableModel } from './table-model-helpers';
 import { isBlankCell, transferredCell } from './table-range-transfer';
+import { tileTableRange, type TableTiledCell } from './table-range-tiling';
 import type { TableCellRangeBounds, TableCellRef } from './table-cell-range';
 import type { TableFillTarget } from './table-fill-handle';
 
@@ -57,13 +64,13 @@ export function applyTableFill(
   target: TableFillTarget,
 ): PersistedTableModel {
   const before = resolveTableModel(model);
-  const cells = fillCells(before, source, target);
+  const cells = tileTableRange(before, source, target.bounds);
   if (cells.length === 0) return model;
 
   // Ίδιο **τοπικό** κλειδί με τον μαζικό γραφέα: ζει και πεθαίνει μέσα σε αυτή τη συνάρτηση,
   // γι' αυτό δεν περνά από το branded `cellKey()`. Χάρτης και όχι γραμμική αναζήτηση: ένα
   // γέμισμα 500 γραμμών θα ήταν O(εμβαδόν²) — το ακριβές σχήμα που πλήρωσε ο ADR-735.
-  const byTarget = new Map<string, TableFillCell>();
+  const byTarget = new Map<string, TableTiledCell>();
   for (const fill of cells) byTarget.set(refKey(fill.at), fill);
 
   // 🔴 ADR-739 §50 — ο επαναϋπολογισμός δεν είναι πια χωριστό βήμα που πρέπει να θυμηθεί
@@ -92,56 +99,15 @@ function refKey(ref: TableCellRef): string {
   return `${ref.rowId} ${ref.colId}`;
 }
 
-/** Ένα κελί που γεμίζει: πού, από ποιο κελί της πηγής, και πόσο μετατοπίστηκε ο τύπος. */
-interface TableFillCell {
-  readonly at: TableCellRef;
-  readonly from: TableCellRef;
-  readonly rows: number;
-  readonly columns: number;
-}
-
-/**
- * Η αντιστοίχιση «κάθε κελί του στόχου ← ποιο κελί της πηγής», με τη μετατόπισή του.
- *
- * 🔑 Ο **κυκλικός** δείκτης είναι όλο το μοτίβο: `firstRow + ((tr − firstRow) mod ύψος)`, με
- * υπόλοιπο **πάντα θετικό** ώστε το γέμισμα προς τα **πάνω** να συνεχίζει το ίδιο μοτίβο
- * ανάποδα, αντί να πέφτει σε αρνητικό δείκτη.
- */
-function fillCells(
-  model: TableModel,
-  source: TableCellRangeBounds,
-  target: TableFillTarget,
-): readonly TableFillCell[] {
-  const height = source.lastRow - source.firstRow + 1;
-  const width = source.lastCol - source.firstCol + 1;
-  const cells: TableFillCell[] = [];
-
-  const lastRow = Math.min(target.bounds.lastRow, model.rows.length - 1);
-  const lastCol = Math.min(target.bounds.lastCol, model.columns.length - 1);
-  for (let r = Math.max(target.bounds.firstRow, 0); r <= lastRow; r++) {
-    for (let c = Math.max(target.bounds.firstCol, 0); c <= lastCol; c++) {
-      const sourceRow = source.firstRow + positiveMod(r - source.firstRow, height);
-      const sourceCol = source.firstCol + positiveMod(c - source.firstCol, width);
-      cells.push({
-        at: { rowId: model.rows[r].id, colId: model.columns[c].id },
-        from: { rowId: model.rows[sourceRow].id, colId: model.columns[sourceCol].id },
-        rows: r - sourceRow,
-        columns: c - sourceCol,
-      });
-    }
-  }
-  return cells;
-}
-
 /**
  * Το τελικό κελί: ό,τι κουβαλά η πηγή ({@link transferredCell}, ο ένας ορισμός) με τον τύπο
- * του **ολισθημένο** κατά τη μετατόπιση.
+ * του **ολισθημένο** κατά τη μετατόπιση που υπολόγισε το {@link tileTableRange}.
  *
  * `null` όταν αυτό το κελί δεν ανήκει στο γέμισμα — αμυντικό, δεν συμβαίνει.
  */
 function filled(
   before: TableModel,
-  fill: TableFillCell | undefined,
+  fill: TableTiledCell | undefined,
   existing: TableCell | undefined,
 ): TableCell | null {
   if (!fill) return null;
@@ -155,9 +121,4 @@ function filled(
     columns: fill.columns,
   });
   return formula === next.formula ? next : { ...next, formula };
-}
-
-/** Υπόλοιπο **πάντα θετικό** — δες {@link fillCells} για το γιατί το πρόσημο έχει σημασία. */
-function positiveMod(value: number, modulus: number): number {
-  return ((value % modulus) + modulus) % modulus;
 }
