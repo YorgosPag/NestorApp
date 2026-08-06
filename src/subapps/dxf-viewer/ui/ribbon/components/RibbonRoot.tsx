@@ -38,7 +38,15 @@ import { useRibbonContextualTrigger } from '../context/RibbonContextualTabContex
 // ADR-748 Φάση 2 — φίλτρο καρτελών ανά θέση του διακόπτη ειδικότητας.
 import { resolveVisibleTabIds } from '../data/ribbon-tab-specialties';
 import { CONTEXTUAL_TRIGGER_SEPARATOR } from '../data/contextual-multi-selection-tab';
+// ADR-739 §52 — η απόφαση «ποια καρτέλα γίνεται ενεργή» ως καθαρή συνάρτηση (δες το effect).
+import {
+  contextualTabsKey,
+  resolveContextualTabActivation,
+} from '../data/contextual-tab-activation';
 import type { RibbonTab } from '../types/ribbon-types';
+
+/** Οι **μόνιμες** καρτέλες, μία φορά: το «επιβιώνει η ενεργή;» δεν ξαναϋπολογίζεται ανά render. */
+const PERSISTENT_TAB_IDS: readonly string[] = DEFAULT_RIBBON_TABS.map((tab) => tab.id);
 
 interface RibbonRootProps {
   /** ADR-345 Fase 3 — command bridge to the DXF viewer state. */
@@ -106,32 +114,26 @@ const RibbonTabsRegion: React.FC<RibbonTabsRegionProps> = ({
       : permanent;
   }, [state.tabOrder, state.activeSpecialty, visibleContextualTabs]);
 
-  // ADR-345 §5.4 — auto-activate contextual tab when it appears; revert
-  // to last persistent tab when it disappears.
+  /**
+   * ADR-345 §5.4 / ADR-739 §52 — auto-activate contextual tab when it appears; revert to home
+   * when the active one is gone.
+   *
+   * 🔴 Η **απόφαση** ζει σε καθαρή συνάρτηση (`contextual-tab-activation.ts`) και εδώ μένει
+   * μόνο η **εκτέλεση**. Ο κανόνας απέκτησε τέταρτο κλάδο και είναι η μόνη απάντηση στο
+   * «γιατί δεν άνοιξε η καρτέλα μου;» — μέσα σε effect ελέγχεται μόνο με μονταρισμένη
+   * ολόκληρη την κορδέλα (~90 widgets)· εκεί, με τέσσερις γραμμές δεδομένων.
+   */
   const prevContextualIdsRef = useRef<string>('');
   useEffect(() => {
-    const ids = visibleContextualTabs.map((t) => t.id).join(',');
-    const prev = prevContextualIdsRef.current;
-    if (ids === prev) return; // contextual set unchanged → respect manual tab choice
-    prevContextualIdsRef.current = ids;
-
-    if (ids) {
-      // The visible contextual set changed and is non-empty → follow the
-      // selection: activate the first visible contextual tab unless it is
-      // already active. Covers persistent→contextual (e.g. select a fixture)
-      // AND contextual→different-contextual (e.g. the fixture tab's "Edit
-      // Circuit" jump selects the source panel → the circuit tab replaces the
-      // now-gone fixture tab; ADR-408 Φ7). Without this, `activeTabId` would
-      // point at the vanished tab and the body would fall back to Home.
-      const firstId = visibleContextualTabs[0]?.id;
-      if (firstId && !visibleContextualTabs.some((tab) => tab.id === state.activeTabId)) {
-        state.setActiveTabId(firstId);
-      }
-    } else if (prev) {
-      // contextual → none: revert to home only if the active tab no longer exists.
-      const stillExists = DEFAULT_RIBBON_TABS.some((tab) => tab.id === state.activeTabId);
-      if (!stillExists) state.setActiveTabId('home');
-    }
+    const key = contextualTabsKey(visibleContextualTabs);
+    const next = resolveContextualTabActivation({
+      previousKey: prevContextualIdsRef.current,
+      visibleContextualTabs,
+      activeTabId: state.activeTabId,
+      persistentTabIds: PERSISTENT_TAB_IDS,
+    });
+    prevContextualIdsRef.current = key;
+    if (next) state.setActiveTabId(next);
   }, [visibleContextualTabs, state]);
 
   const activeTab = findRibbonTabById(orderedTabs, state.activeTabId) ?? orderedTabs[0];

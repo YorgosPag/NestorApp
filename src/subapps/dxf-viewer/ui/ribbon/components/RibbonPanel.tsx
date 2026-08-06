@@ -17,6 +17,9 @@ import { RibbonColorSwatchWidget } from './RibbonColorSwatchWidget';
 // νέο widget, ενώ αυτό εδώ έχει μία ευθύνη — να ζωγραφίζει ένα panel (N.7.1).
 import { renderRibbonWidget } from './ribbon-widget-registry';
 import { useRibbonPanelVisibility } from '../context/useRibbonFieldSelectors';
+// 🔴 ADR-739 §52 — ο ΕΝΑΣ ορισμός του «μη κλείσεις τη συνεδρία κελιού» (τέταρτη μορφή του
+// ίδιου σημαδιού· ζει δίπλα στον φύλακα που τον διαβάζει, ποτέ ξαναγραμμένος εδώ).
+import { TABLE_SESSION_KEEPALIVE_MARKER } from '../../table-cell-editor/table-cell-session-focus';
 
 interface RibbonPanelProps {
   panel: RibbonPanelDef;
@@ -112,6 +115,10 @@ export const RibbonPanel: React.FC<RibbonPanelProps> = ({
       className="dxf-ribbon-panel"
       data-panel-id={panel.id}
       data-flyout-open={flyoutVisible}
+      // 🔴 ADR-739 §52 — «δέσμευσε, αλλά μη μου κλείσεις τον δρομέα κελιού». Μπαίνει στο
+      // **panel** και όχι σε κάθε κουμπί: ο φύλακας ρωτά με `closest()`, οπότε ένα σημάδι
+      // καλύπτει όλο το τμήμα — και δεν χρειάζεται κανένα κουμπί να το θυμηθεί.
+      {...(panel.keepsTableCellSession ? TABLE_SESSION_KEEPALIVE_MARKER : {})}
     >
       <div className="dxf-ribbon-panel-body" data-empty={!hasContent}>
         {hasContent

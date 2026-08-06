@@ -112,6 +112,14 @@ import { CurrentLayerPicker } from '../../components/layer-picker/CurrentLayerPi
 // ADR-739 §39 — το κουμπί «Πίνακας» ανοίγει επιλογέα μεγέθους (μοτίβο Word) αντί να οπλίζει
 // αμέσως το εργαλείο· ο γραφέας που έλειπε από το `table-options-store`.
 import { RibbonTableMenuWidget } from './table/RibbonTableMenuWidget';
+// 🔴 ADR-739 §52 — τα τέσσερα σύνθετα χειριστήρια της καρτέλας «Μορφοποίηση»: λεπτοί wrappers
+// γύρω από τα ΙΔΙΑ components που ζωγραφίζει το floating mini toolbar, ποτέ αντίγραφά τους.
+import {
+  RibbonTableBordersWidget,
+  RibbonTableFillColorWidget,
+  RibbonTableMergeWidget,
+  RibbonTableTextColorWidget,
+} from './table/RibbonTableFormatWidgets';
 
 /** Ένα widget όπως το ζητά το ribbon: χωρίς props, με σταθερό `key`. */
 type WidgetFactory = () => React.ReactNode;
@@ -133,6 +141,11 @@ const CORE_WIDGETS: Readonly<Record<string, WidgetFactory>> = {
   'current-layer-picker': () => <CurrentLayerPicker key="current-layer-picker-widget" variant="ribbon" />,
   'insert-tokens': () => <RibbonInsertTokenWidget key="insert-tokens-widget" />,
   'table-menu': () => <RibbonTableMenuWidget key="table-menu-widget" />,
+  // ADR-739 §52 — contextual «Μορφοποίηση» πίνακα.
+  'table-text-color': () => <RibbonTableTextColorWidget key="table-text-color-widget" />,
+  'table-fill-color': () => <RibbonTableFillColorWidget key="table-fill-color-widget" />,
+  'table-merge': () => <RibbonTableMergeWidget key="table-merge-widget" />,
+  'table-borders': () => <RibbonTableBordersWidget key="table-borders-widget" />,
   'visual-style-select': () => <VisualStyleSelect key="visual-style-select-widget" />,
   'glass-quality-select': () => <GlassQualitySelect key="glass-quality-select-widget" />,
   'mesh-wire-mode-select': () => <MeshWireModeSelect key="mesh-wire-mode-select-widget" />,

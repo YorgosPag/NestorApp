@@ -7,7 +7,8 @@
  */
 
 import React, { useSyncExternalStore } from 'react';
-import { Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Trees, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig, Waypoints, MapPin, Tag, Mountain, ShieldCheck, Cloud, Box,
+import { AArrowDown, AArrowUp, BetweenHorizontalEnd, BetweenHorizontalStart, BetweenVerticalEnd, BetweenVerticalStart, SquareDashedMousePointer,
+  Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Trees, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig, Waypoints, MapPin, Tag, Mountain, ShieldCheck, Cloud, Box,
   Link2, ImagePlus,
 } from 'lucide-react';
 // ADR-581 Φ6 — reactive 2-state σύριγγα icon (empty ⇄ full) driven by the brush store.
@@ -42,6 +43,10 @@ import {
   MEASURE_DISTANCE_PATH, MEASURE_DISTANCE_CONTINUOUS_PATH,
   MEASURE_AREA_PATH, MEASURE_AREA_AUTO_PATH,
 } from './ribbon-icon-paths-view-measure';
+import {
+  NORTH_ARROW_PATH, SECTION_MARK_PATH, GRID_BUBBLE_PATH, ELEVATION_MARK_PATH,
+  DETAIL_CALLOUT_PATH, REVISION_TAG_PATH, SCALE_BAR_PATH, OPENING_INFO_TAG_PATH,
+} from './ribbon-icon-paths-annotation';
 import { STAIR_PATH_STRAIGHT, STAIR_PATH_SPIRAL, STAIR_PATH_USHAPE } from './stair-kind-icon-paths';
 import { XLINE_PATH, RAY_PATH } from './xline-ray-icon-paths';
 import { StructuralToolIcon } from './StructuralToolIcon';
@@ -398,73 +403,16 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'struct-run-analysis': return <Activity width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-457 — «Λεπτομέρεια Οπλισμού» (dimensioned reinforcement detail sheet).
     case 'column-reinforcement-detail': return <Ruler width={sizePx[size]} height={sizePx[size]} className={className} />;
-    // ADR-583 — annotation symbol library: North arrow (compass glyph — filled
-    // arrowhead + shaft + "N", the surveyor's convention).
-    case 'north-arrow': return inlineSvg(size, (
-      <>
-        <path d="M12 3 L15 10 L9 10 Z" fill="currentColor" stroke="none" />
-        <line x1="12" y1="10" x2="12" y2="21" />
-        <text x="12" y="6.5" textAnchor="middle" fontSize="5" fontWeight="700" stroke="none" fill="currentColor">N</text>
-      </>
-    ));
-    // ADR-583 Φ1b — section mark: identifier bubble + view-direction arrow (Revit section head).
-    case 'section-mark': return inlineSvg(size, (
-      <>
-        <circle cx="12" cy="8" r="5.5" fill="none" />
-        <text x="12" y="10" textAnchor="middle" fontSize="6" fontWeight="700" stroke="none" fill="currentColor">A</text>
-        <line x1="12" y1="13.5" x2="12" y2="17" />
-        <path d="M12 21 L15 16 L9 16 Z" fill="currentColor" stroke="none" />
-      </>
-    ));
-    // ADR-583 Φ1c — grid bubble: hollow circle + axis id.
-    case 'grid-bubble': return inlineSvg(size, (
-      <>
-        <circle cx="12" cy="12" r="8" fill="none" />
-        <text x="12" y="15" textAnchor="middle" fontSize="9" fontWeight="700" stroke="none" fill="currentColor">1</text>
-      </>
-    ));
-    // ADR-583 Φ1c — elevation mark: filled down-triangle on a datum line + value.
-    case 'elevation-mark': return inlineSvg(size, (
-      <>
-        <line x1="4" y1="15" x2="20" y2="15" />
-        <path d="M12 15 L15 9 L9 9 Z" fill="currentColor" stroke="none" />
-        <text x="12" y="6" textAnchor="middle" fontSize="4.5" stroke="none" fill="currentColor">0.00</text>
-      </>
-    ));
-    // ADR-583 Φ1c — detail callout: bubble + hook leader.
-    case 'detail-callout': return inlineSvg(size, (
-      <>
-        <circle cx="15" cy="9" r="5" fill="none" />
-        <text x="15" y="11" textAnchor="middle" fontSize="5.5" fontWeight="700" stroke="none" fill="currentColor">1</text>
-        <path d="M11 12 A6 6 0 1 0 6 17" fill="none" />
-      </>
-    ));
-    // ADR-583 Φ1c — revision tag: revision number inside a delta triangle.
-    case 'revision-tag': return inlineSvg(size, (
-      <>
-        <path d="M12 3 L20 19 L4 19 Z" fill="none" />
-        <text x="12" y="18" textAnchor="middle" fontSize="7" fontWeight="700" stroke="none" fill="currentColor">1</text>
-      </>
-    ));
-    // ADR-583 Φ2 — graphic scale-bar: classic alternating checker bar (cartographic glyph).
-    case 'scale-bar': return inlineSvg(size, (
-      <>
-        <rect x="3" y="10" width="4.5" height="4" fill="currentColor" stroke="none" />
-        <rect x="7.5" y="10" width="4.5" height="4" fill="none" />
-        <rect x="12" y="10" width="4.5" height="4" fill="currentColor" stroke="none" />
-        <rect x="16.5" y="10" width="4.5" height="4" fill="none" />
-      </>
-    ));
-    // ADR-612 — opening info tag: 3-cell box glyph (outer rect + full-width mid divider +
-    // bottom-half vertical divider) — mirrors the on-canvas layout (top cell full width,
-    // bottom split in two).
-    case 'opening-info-tag': return inlineSvg(size, (
-      <>
-        <rect x="4" y="5" width="16" height="14" fill="none" />
-        <line x1="4" y1="12" x2="20" y2="12" />
-        <line x1="12" y1="12" x2="12" y2="19" />
-      </>
-    ));
+    // ADR-583 / ADR-612 — σύμβολα σχεδίου· οι γλυφές ζουν στο
+    // `ribbon-icon-paths-annotation.tsx` (N.7.1 SRP split, όπως τα υπόλοιπα path modules).
+    case 'north-arrow': return inlineSvg(size, NORTH_ARROW_PATH);
+    case 'section-mark': return inlineSvg(size, SECTION_MARK_PATH);
+    case 'grid-bubble': return inlineSvg(size, GRID_BUBBLE_PATH);
+    case 'elevation-mark': return inlineSvg(size, ELEVATION_MARK_PATH);
+    case 'detail-callout': return inlineSvg(size, DETAIL_CALLOUT_PATH);
+    case 'revision-tag': return inlineSvg(size, REVISION_TAG_PATH);
+    case 'scale-bar': return inlineSvg(size, SCALE_BAR_PATH);
+    case 'opening-info-tag': return inlineSvg(size, OPENING_INFO_TAG_PATH);
     // ADR-739 Φάση Δ — table: γλυφή πλέγματος πίνακα (βλ. `table-icon-glyph.tsx`
     // για σχεδιαστική τεκμηρίωση· N.7.1 SRP split, αυτό το αρχείο άγγιζε το όριο 500 γρ.).
     case 'table': return inlineSvg(size, <TableIconGlyph />);
@@ -493,6 +441,20 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'boq-assign': return <Tag width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-686 Φ5 — «Αντιστοίχιση Υλικών» (εισαγόμενο μοντέλο → υλικά ανά κομμάτι, Revit Material Mapping).
     case 'material-map': return <Palette width={sizePx[size]} height={sizePx[size]} className={className} />;
+    // 🔴 ADR-739 §52 — οι δύο contextual καρτέλες πίνακα. Τα Β/Ι/Υ **δεν** επαναλαμβάνονται εδώ:
+    // χρησιμοποιούν αυτούσια τα υπάρχοντα `text-bold` / `text-italic` / `text-underline`, γιατί
+    // είναι η ίδια εντολή σε άλλο συμφραζόμενο — δύο γλυφές για «έντονα» θα ήταν δύο εικόνες
+    // που κάποτε αποκλίνουν.
+    case 'table-row-insert-above': return <BetweenHorizontalStart width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-row-insert-below': return <BetweenHorizontalEnd width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-col-insert-left': return <BetweenVerticalStart width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-col-insert-right': return <BetweenVerticalEnd width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-row-delete': return <Rows3 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-col-delete': return <Columns3 width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-select-all': return <SquareDashedMousePointer width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-size-up': return <AArrowUp width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-size-down': return <AArrowDown width={sizePx[size]} height={sizePx[size]} className={className} />;
+    case 'table-reset-format': return <RotateCcw width={sizePx[size]} height={sizePx[size]} className={className} />;
     default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
   }
 };

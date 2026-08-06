@@ -1414,11 +1414,24 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
    παραγράφων + κουμπιά» — σχήμα διαλόγου ΕΠΙΒΕΒΑΙΩΣΗΣ. Εδώ υπάρχει λίστα με
    κύλιση σταθερού ύψους, δηλαδή διάλογος ΕΠΙΛΟΓΗΣ. Μια κοινή κλάση με
    τροποποιητή θα σήμαινε ότι κάθε ρύθμιση πλάτους των δεκατριών confirm
-   διαλόγων περνά από εδώ. Κοινό μένει το `.dxf-modal-overlay` (η σκίαση) και
-   το `.dxf-modal-button` (τα κουμπιά) — αυτά είναι πράγματι το ίδιο πράγμα.
+   διαλόγων περνά από εδώ. Κοινό μένει το `.dxf-modal-button` (τα κουμπιά) —
+   αυτό είναι πράγματι το ίδιο πράγμα.
+
+   🔵 ADR-763 §18 — ΑΙΩΡΟΥΜΕΝΟΣ, ΟΧΙ MODAL. Η `.dxf-modal-overlay` **αφαιρέθηκε**
+   από αυτόν τον διάλογο (μένει στους δεκατρείς confirm, όπου είναι σωστή): εκείνη
+   και σκίαζε και κεντράριζε, δηλαδή σκέπαζε ακριβώς το κελί για το οποίο μιλά ο
+   διάλογος και δεν επέτρεπε μετακίνηση. Η κάρτα κάθεται πλέον μόνη της, σε
+   συντεταγμένες που δίνει το SSoT `useFloatingPanelGeometry` (ADR-723).
+
+   ⚠️ Το `width: 460px` ΔΕΝ είναι διακοσμητικό: αντιγράφεται στο
+   `INSERT_FN_CARD_SIZE` του `TableInsertFunctionDialog.tsx`, γιατί ο κανόνας
+   ορίων ADR-030 («μένουν πάντα 40px να πιαστεί») κρίνεται με το πλάτος. Αν
+   αλλάξει εδώ, αλλάζει και εκεί.
    ───────────────────────────────────────────────────────────────────────────── */
 
 .dxf-insert-fn-card {
+  position: fixed;
+  z-index: 9000;
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
@@ -1431,11 +1444,22 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   color: #1a1a1a;
 }
 
+/* Ολόκληρη η επικεφαλίδα είναι η λαβή — γι' αυτό ο δρομέας το λέει σε ΟΛΟ το
+   πλάτος της, όχι μόνο πάνω στον τίτλο. Το `user-select: none` δεν είναι
+   πλεονασμός δίπλα στο `preventDefault()` του συρσίματος: χωρίς αυτό, ένα
+   γρήγορο διπλό κλικ στον τίτλο επιλέγει το κείμενο πριν καν ξεκινήσει η
+   χειρονομία. Το ✕ κρατά τον δικό του `pointer` — δεν σέρνεται από εκεί. */
 .dxf-insert-fn-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.dxf-insert-fn-card--dragging .dxf-insert-fn-header {
+  cursor: grabbing;
 }
 
 .dxf-insert-fn-title {
@@ -1603,6 +1627,339 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 .dark .dxf-insert-fn-empty,
 [data-theme='dark'] .dxf-insert-fn-empty {
   color: #94a3b8;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   ADR-763 §16 — Ο ΔΕΥΤΕΡΟΣ ΔΙΑΛΟΓΟΣ: «Ορίσματα συνάρτησης».
+
+   Μοιράζεται το κέλυφος με τον πρώτο (αιωρούμενη κάρτα, επικεφαλίδα-λαβή, ίδια
+   κουμπιά `.dxf-modal-button`) αλλά **δεν** το κληρονομεί μέσω κοινών κλάσεων:
+   οι δύο κάρτες έχουν διαφορετικό πλάτος, διαφορετικό πλέγμα και διαφορετική
+   ιεραρχία κειμένου. Κοινή κλάση θα σήμαινε ότι κάθε μελλοντική ρύθμιση του ενός
+   μετακινεί τον άλλον — και η πρώτη φορά που θα συνέβαινε, θα το μάθαινε ο
+   Giorgio από την οθόνη.
+
+   ⚠️ Το `width: 560px` αντιγράφεται στο `FN_ARGS_CARD_SIZE` του
+   `TableFunctionArgumentsDialog.tsx`, για τον κανόνα ορίων ADR-030. Αν αλλάξει
+   εδώ, αλλάζει και εκεί.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.dxf-fn-args-card {
+  position: fixed;
+  z-index: 9001;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  padding: 14px 18px 12px;
+  width: 560px;
+  max-width: 94vw;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #1a1a1a;
+}
+
+.dxf-fn-args-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.dxf-fn-args-card--dragging .dxf-fn-args-header {
+  cursor: grabbing;
+}
+
+.dxf-fn-args-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dxf-fn-args-close {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dxf-fn-args-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Το πλαίσιο ομάδας του Excel είναι κυριολεκτικά η εγγενής εμφάνιση του
+   `<fieldset>` — δες την κεφαλίδα του `function-arguments-form.tsx`. Το
+   `min-height` κρατά το κουτί σταθερό όταν οι σειρές είναι μία ή καμία: αλλιώς
+   η κάρτα θα «ανέβαινε» αλλάζοντας συνάρτηση, δηλαδή τα κουμπιά θα κουνιόντουσαν
+   κάτω από το ποντίκι. */
+.dxf-fn-args-group {
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  margin: 2px 0 0;
+  padding: 6px 10px 10px;
+  min-height: 128px;
+}
+
+.dxf-fn-args-legend {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.dxf-fn-args-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Πέντε στήλες: ετικέτα (στοιχισμένη δεξιά, όπως στο Excel) · κουτί · `⬆` · `=` ·
+   τιμή. Η ετικέτα παίρνει σταθερό ελάχιστο ώστε τα κουτιά όλων των σειρών να
+   ξεκινούν στην ίδια κατακόρυφο — με `auto` θα χόρευαν ανάλογα με το μήκος του
+   ονόματος, και η φόρμα θα διαβαζόταν ως λίστα άσχετων πεδίων.
+   ADR-763 Φ2.4: η τρίτη στήλη είναι το κουμπί σύμπτυξης — `auto`, δηλαδή όσο το
+   κουμπί, ώστε η προσθήκη του να μη μικρύνει το κουτί κειμένου. */
+.dxf-fn-args-row {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, max-content) minmax(0, 1fr) auto auto minmax(90px, 0.7fr);
+  align-items: center;
+  gap: 8px;
+}
+
+/* ADR-763 Φ2.4 — το `⬆` του Excel: μαζεύει την κάρτα ώστε να φανεί ο πίνακας από
+   πίσω. Μικρό και διακριτικό επίτηδες — είναι βοήθημα, όχι ενέργεια της φόρμας. */
+.dxf-fn-args-collapse {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  background: #f3f4f6;
+  color: #374151;
+  cursor: pointer;
+}
+
+.dxf-fn-args-collapse:hover {
+  background: #e5e7eb;
+}
+
+/* 🔴 Η ΣΥΜΠΤΥΓΜΕΝΗ ΜΟΡΦΗ. Ίδια θέση, άλλο περιεχόμενο: μία σειρά, χωρίς
+   επικεφαλίδα και χωρίς κουμπιά. Το πλάτος πέφτει γιατί ολόκληρο το νόημα της
+   σύμπτυξης είναι να **μη σκεπάζει** τον πίνακα που δείχνει ο χρήστης. */
+.dxf-fn-args-card--collapsed {
+  width: 420px;
+  display: grid;
+  /* λαβή · ετικέτα · κουτί · `⬇` · `=` · τιμή — οι δύο τελευταίες είναι το «πιο πλούσιο από
+     το Excel»: η τιμή μεγαλώνει όσο σέρνει ο χρήστης, χωρίς να ανοίξει τίποτα. */
+  grid-template-columns:
+    auto minmax(70px, max-content) minmax(0, 1fr) auto auto minmax(60px, 0.6fr);
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+}
+
+/* Η λαβή μετακίνησης της λωρίδας — ρητή, ώστε η επιλογή κειμένου μέσα στο κουτί
+   να μη σέρνει το παράθυρο. */
+.dxf-fn-args-grip {
+  cursor: move;
+  color: #9ca3af;
+  font-size: 13px;
+  line-height: 1;
+  user-select: none;
+}
+
+.dxf-fn-args-name {
+  font-size: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Έντονο = **υποχρεωτικό**, ο κανόνας του Excel. Δες `FormulaArgumentRequirement`
+   για το γιατί το «δεν ξέρουμε» ΔΕΝ βάφεται έντονο. */
+.dxf-fn-args-name--required {
+  font-weight: 700;
+}
+
+.dxf-fn-args-input {
+  min-width: 0;
+  height: 24px;
+  padding: 2px 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 12px;
+  border: 1px solid #9ca3af;
+  border-radius: 3px;
+  background: #ffffff;
+  color: inherit;
+}
+
+.dxf-fn-args-eq {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.dxf-fn-args-value {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Γκρι = «αυτό περιμένω εδώ», όχι «αυτό υπολόγισα». Η διάκριση με το χρώμα είναι
+   ο λόγος που ο χρήστης δεν μπερδεύει την οδηγία με το αποτέλεσμα. */
+.dxf-fn-args-value--kind {
+  color: #9ca3af;
+}
+
+.dxf-fn-args-none {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 4px 0 0;
+}
+
+/* Η αποτίμηση της κλήσης κάθεται δεξιά, στην ίδια κατακόρυφο με τη στήλη των
+   τιμών — ένα επίπεδο πιο έξω από το πλαίσιο ομάδας. */
+.dxf-fn-args-call {
+  font-size: 12px;
+  text-align: right;
+  margin: 0;
+  min-height: 16px;
+}
+
+/* Σταθερά ύψη: η κάρτα δεν επιτρέπεται να αλλάζει μέγεθος όσο ο χρήστης
+   πληκτρολογεί ή αλλάζει όρισμα με `Tab`. Ίδιος λόγος με τη Φάση 1. */
+.dxf-fn-args-description {
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+  min-height: 17px;
+}
+
+.dxf-fn-args-arghelp {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #444444;
+  margin: 0;
+  padding-left: 18px;
+  min-height: 52px;
+}
+
+.dxf-fn-args-arghelp-name {
+  font-weight: 700;
+}
+
+.dxf-fn-args-result {
+  font-size: 12px;
+  margin: 2px 0 0;
+  min-height: 17px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 6px;
+}
+
+/* Ο σύνδεσμος αριστερά, τα κουμπιά δεξιά — η διάταξη του Excel. Το
+   `justify-content: space-between` το πετυχαίνει χωρίς spacer, και το `<span />`
+   του component καλύπτει την περίπτωση που ο σύνδεσμος λείπει. */
+.dxf-fn-args-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.dxf-fn-args-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.dxf-fn-args-buttons .dxf-modal-button {
+  min-width: 84px;
+}
+
+.dxf-fn-args-help-link {
+  font-size: 12px;
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.dark .dxf-fn-args-card,
+[data-theme='dark'] .dxf-fn-args-card {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.dark .dxf-fn-args-close:hover,
+[data-theme='dark'] .dxf-fn-args-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.dark .dxf-fn-args-group,
+[data-theme='dark'] .dxf-fn-args-group {
+  border-color: #475569;
+}
+
+.dark .dxf-fn-args-input,
+[data-theme='dark'] .dxf-fn-args-input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark .dxf-fn-args-arghelp,
+[data-theme='dark'] .dxf-fn-args-arghelp {
+  color: #cbd5e1;
+}
+
+.dark .dxf-fn-args-none,
+[data-theme='dark'] .dxf-fn-args-none,
+.dark .dxf-fn-args-eq,
+[data-theme='dark'] .dxf-fn-args-eq {
+  color: #94a3b8;
+}
+
+.dark .dxf-fn-args-value--kind,
+[data-theme='dark'] .dxf-fn-args-value--kind {
+  color: #64748b;
+}
+
+/* ADR-763 Φ2.4 — το `⬆` της σύμπτυξης και η λαβή της λωρίδας. */
+.dark .dxf-fn-args-collapse,
+[data-theme='dark'] .dxf-fn-args-collapse {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.dark .dxf-fn-args-collapse:hover,
+[data-theme='dark'] .dxf-fn-args-collapse:hover {
+  background: #475569;
+}
+
+.dark .dxf-fn-args-grip,
+[data-theme='dark'] .dxf-fn-args-grip {
+  color: #64748b;
+}
+
+.dark .dxf-fn-args-result,
+[data-theme='dark'] .dxf-fn-args-result {
+  border-top-color: #334155;
+}
+
+.dark .dxf-fn-args-help-link,
+[data-theme='dark'] .dxf-fn-args-help-link {
+  color: #93c5fd;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
