@@ -132,6 +132,9 @@ function styleSnapshotOf(cell: TableResolvedCell): TableCellStyleSnapshot {
     // **όχι** ο μεταγλωττιστής: το jest μεταγλωττίζει χωρίς έλεγχο τύπων, οπότε το `Pick<…>` από
     // πάνω είναι φύλακας του `tsc`/CI και όχι της σουίτας. Δύο πύλες, όχι μία.
     indentLevel: s.indentLevel,
+    // 🔴 ADR-739 §59 Δ1 — ίδιο σκεπτικό, ίδια αστοχία αν λείψει: το πινέλο θα έγραφε
+    // `textRotationDeg: null` σε κάθε κελί.
+    textRotationDeg: s.textRotationDeg,
   };
 }
 
