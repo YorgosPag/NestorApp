@@ -2133,8 +2133,10 @@
       "tableStyle": "Στυλ",
       "tableRowsColumns": "Γραμμές & Στήλες",
       "tableSelection": "Επιλογή",
+      "tableClipboard": "Πρόχειρο",
       "tableFont": "Γραμματοσειρά",
-      "tableCells": "Κελιά",
+      "tableAlign": "Στοίχιση",
+      "tableNumber": "Αριθμός",
       "tableData": "Δεδομένα"
     },
     "minimizeStates": {
@@ -5532,6 +5534,8 @@
         "italic": "Πλάγια",
         "underline": "Υπογράμμιση",
         "textHeight": "Ύψος κειμένου",
+        "fontFamily": "Γραμματοσειρά",
+        "automaticFont": "Αυτόματη",
         "sizeUp": "Αύξηση μεγέθους",
         "sizeDown": "Μείωση μεγέθους",
         "reset": "Επαναφορά μορφοποίησης",
@@ -5539,7 +5543,25 @@
         "fillColor": "Χρώμα γεμίσματος",
         "merge": "Συγχώνευση κελιών",
         "borders": "Περιγράμματα",
-        "formatPainter": "Πινέλο μορφοποίησης"
+        "formatPainter": "Πινέλο μορφοποίησης",
+        "paste": "Επικόλληση",
+        "cut": "Αποκοπή",
+        "copy": "Αντιγραφή",
+        "align": {
+          "left": "Στοίχιση αριστερά",
+          "center": "Στοίχιση στο κέντρο",
+          "right": "Στοίχιση δεξιά",
+          "top": "Στοίχιση επάνω",
+          "middle": "Στοίχιση στη μέση",
+          "bottom": "Στοίχιση κάτω"
+        },
+        "numberFormat": {
+          "accounting": "Λογιστική μορφή",
+          "percent": "Ποσοστιαία μορφή",
+          "grouping": "Διαχωριστικό χιλιάδων"
+        },
+        "decimalUp": "Αύξηση δεκαδικών ψηφίων",
+        "decimalDown": "Μείωση δεκαδικών ψηφίων"
       }
     },
     "tooltips": {

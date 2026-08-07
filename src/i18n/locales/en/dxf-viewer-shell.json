@@ -2133,8 +2133,10 @@
       "tableStyle": "Style",
       "tableRowsColumns": "Rows & Columns",
       "tableSelection": "Selection",
+      "tableClipboard": "Clipboard",
       "tableFont": "Font",
-      "tableCells": "Cells",
+      "tableAlign": "Alignment",
+      "tableNumber": "Number",
       "tableData": "Data"
     },
     "minimizeStates": {
@@ -5532,6 +5534,8 @@
         "italic": "Italic",
         "underline": "Underline",
         "textHeight": "Text height",
+        "fontFamily": "Font",
+        "automaticFont": "Automatic",
         "sizeUp": "Increase size",
         "sizeDown": "Decrease size",
         "reset": "Clear formatting",
@@ -5539,7 +5543,25 @@
         "fillColor": "Fill colour",
         "merge": "Merge cells",
         "borders": "Borders",
-        "formatPainter": "Format Painter"
+        "formatPainter": "Format Painter",
+        "paste": "Paste",
+        "cut": "Cut",
+        "copy": "Copy",
+        "align": {
+          "left": "Align left",
+          "center": "Center",
+          "right": "Align right",
+          "top": "Top align",
+          "middle": "Middle align",
+          "bottom": "Bottom align"
+        },
+        "numberFormat": {
+          "accounting": "Accounting number format",
+          "percent": "Percent style",
+          "grouping": "Comma style"
+        },
+        "decimalUp": "Increase decimal places",
+        "decimalDown": "Decrease decimal places"
       }
     },
     "tooltips": {

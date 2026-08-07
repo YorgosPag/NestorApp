@@ -1186,7 +1186,26 @@
       "pastePlainText": "Pasting from a spreadsheet inserts plain text — formatting is not carried over. Excel sends the values of formulas, not the formulas themselves; text starting with \"=\" is recognised as a formula and evaluated.",
       "pasteEmpty": "The clipboard has no text to paste",
       "readDenied": "The browser did not allow reading the clipboard. Use Ctrl+V inside the cell.",
-      "writeDenied": "The browser did not allow writing to the clipboard. Use Ctrl+C inside the cell."
+      "writeDenied": "The browser did not allow writing to the clipboard. Use Ctrl+C inside the cell.",
+      "internalFallback": "The browser did not allow reading the clipboard — the last copy made in NESTOR was pasted instead.",
+      "needsInternal": "Pasting formatting requires a copy made in NESTOR. The clipboard holds text from another application, which carries no formatting.",
+      "menu": {
+        "trigger": "Paste",
+        "label": "Paste options",
+        "all": "Paste",
+        "values": "Values",
+        "formulas": "Formulas",
+        "formats": "Formatting",
+        "facetsHeading": "Selected aspects only",
+        "applyFacets": "Paste selected aspects"
+      },
+      "facets": {
+        "text": "Text",
+        "alignment": "Alignment",
+        "fill": "Fill",
+        "numberFormat": "Number format",
+        "borders": "Borders"
+      }
     },
     "writeBack": {
       "unwritableOrdinal": "The row number is calculated by the table — it cannot be written.",
