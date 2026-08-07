@@ -73,13 +73,12 @@ import {
   type TableFormatScope,
 } from '../../bim/table/table-format-scope';
 import { tableFormatCommands } from './table-format-commands';
-// 🔴 ADR-739 §55 — οι τρεις αναγνώσεις των νέων τμημάτων της γραμμής, ίδιες με το μενού της
-// περιοχής: **η μία πλευρά δεν επιτρέπεται να μάθει και η άλλη όχι**.
+// 🔴 ADR-739 §55/§58 Γ2 — οι αναγνώσεις των τμημάτων της γραμμής έρχονται από τον **ΕΝΑΝ**
+// κατασκευαστή, τον ίδιο που καλεί το μενού της περιοχής: **η μία πλευρά δεν επιτρέπεται να
+// μάθει τέταρτο τμήμα και η άλλη όχι** (N.18 — το CHECK 3.28 έπιασε το δίδυμο στο §58 Γ2).
 import {
-  resolveTableAlignState,
-  resolveTableFontState,
   resolveTableFormatSnapshot,
-  resolveTableNumberFormatState,
+  resolveTableToolbarExtrasState,
   type FormatTarget,
 } from './table-format-snapshot';
 import { useToolbarFontNames } from './use-toolbar-font-names';
@@ -315,22 +314,19 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
   const fontNames = useToolbarFontNames(levelManager);
 
   /**
-   * 🔴 §55 — **τι δείχνουν τα τρία νέα τμήματα** για τους άξονες που πατήθηκαν.
+   * 🔴 §55/§58 Γ2 — **τι δείχνουν τα τέσσερα τμήματα** για τους άξονες που πατήθηκαν.
    *
    * Ο στόχος περνά **μία** φορά από το {@link formatTarget}, για τον ίδιο λόγο που τον περνά
-   * μία φορά και το μενού της περιοχής: τρεις ξεχωριστές κατασκευές θα άφηναν ανοιχτό το
+   * μία φορά και το μενού της περιοχής: τέσσερις ξεχωριστές κατασκευές θα άφηναν ανοιχτό το
    * παράθυρο να απαντήσουν πάνω σε διαφορετικά μοντέλα (`Ctrl+Z` από συντόμευση ενδιάμεσα).
+   *
+   * ⚠️ Το **ποια** τμήματα και **πώς** διαβάζονται ζει στο {@link resolveTableToolbarExtrasState}
+   * — ο ΕΝΑΣ κατασκευαστής για τις δύο υποδοχές (N.18· δες την κεφαλίδα του). Εδώ μένει μόνο
+   * **ποιος** είναι ο στόχος, που είναι ακριβώς ό,τι διαφέρει ανάμεσά τους.
    */
   const toolbarState = useCallback(
-    (hit: TableIndicatorHit): TableToolbarExtrasState => {
-      const target = formatTarget(hit);
-      return {
-        fonts: resolveTableFontState(target),
-        fontNames: fontNames(),
-        numberFormat: resolveTableNumberFormatState(target),
-        align: resolveTableAlignState(target),
-      };
-    },
+    (hit: TableIndicatorHit): TableToolbarExtrasState =>
+      resolveTableToolbarExtrasState(formatTarget(hit), fontNames()),
     [formatTarget, fontNames],
   );
 
@@ -354,6 +350,8 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       // γραφέα με τα δύο χρώματα από πάνω. Καμία δεύτερη διαδρομή, καμία δεύτερη ανάγνωση.
       resolveToolbar: toolbarState,
       onSetFormatField: (hit, key, value) => formatCommands.setField(formatTarget(hit), key, value),
+      // 🔴 §58 Γ2 — δικός του γραφέας: το `overflow` δεν είναι `keyof TableAxisStyleOverride`.
+      onSetOverflow: (hit, value) => formatCommands.setOverflow(formatTarget(hit), value),
       /**
        * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων σε μία απάντηση.
        *

@@ -29,12 +29,17 @@ import {
   clearTableFormatScope,
   resolveTableFormatState,
   setTableFormatField,
+  setTableFormatOverflow,
   stepTableFormatTextHeight,
   type TableFormatScope,
 } from '../../bim/table/table-format-scope';
 import type { TableStyle } from '../../bim/table/table-style';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
-import type { PersistedTableModel, TableAxisStyleOverride } from '../../types/table';
+import type {
+  PersistedTableModel,
+  TableAxisStyleOverride,
+  TableCellOverflow,
+} from '../../types/table';
 import type { TableToggleFormatKey } from '../components/table-format-toolbar/TableFormatToolbar';
 
 /**
@@ -53,8 +58,8 @@ export interface TableFormatCommandTarget {
 }
 
 /**
- * Οι πέντε εντολές. Δέχονται όλες `target | null` ώστε ο καλών να μη γράφει τον ίδιο έλεγχο
- * πέντε φορές: χωρίς στόχο (undo έσβησε τη γραμμή) η εντολή είναι **no-op**, ποτέ μαντεψιά.
+ * Οι έξι εντολές. Δέχονται όλες `target | null` ώστε ο καλών να μη γράφει τον ίδιο έλεγχο έξι
+ * φορές: χωρίς στόχο (undo έσβησε τη γραμμή) η εντολή είναι **no-op**, ποτέ μαντεψιά.
  */
 export interface TableFormatCommands {
   /** «Β»/«Ι»/«Υ» — ο κανόνας «**μεικτό ⇒ όλα ναι**» ζει εδώ, όχι στον καλούντα. */
@@ -76,6 +81,22 @@ export interface TableFormatCommands {
     target: TableFormatCommandTarget | null,
     key: K,
     value: TableAxisStyleOverride[K] | undefined,
+  ) => void;
+  /**
+   * 🔴 ADR-739 §58 Γ2 — **αναδίπλωση / σμίκρυνση**: δικό της μέλος, όχι `setField`.
+   *
+   * Δεν **γίνεται** μέσω του {@link setField}: εκείνο δέχεται `keyof TableAxisStyleOverride`, και
+   * το `overflow` ζει **μόνο** στο `TableCellStyleOverride`. Ο αποκλεισμός δεν είναι τυπικός —
+   * είναι ο ίδιος λόγος που το `setTableFormatOverflow` γράφει πάντα σε κελιά (δες την
+   * τεκμηρίωσή του: υπάρχει ήδη γραφέας, και γράφει κελιά).
+   *
+   * ⚠️ Δέχεται την **τελική** τιμή, όχι την επιλογή του κουμπιού. Ο κανόνας «ίδια ⇒ ξεπάτωμα»
+   * ζει στο `bim/table/table-overflow-ops.ts` και τον ρωτούν **και οι δύο** επιφάνειες — ίδια
+   * ακριβώς διαίρεση με τη στοίχιση (`nextTableAlign` → `setField('align', …)`).
+   */
+  readonly setOverflow: (
+    target: TableFormatCommandTarget | null,
+    value: TableCellOverflow | undefined,
   ) => void;
 }
 
@@ -111,6 +132,11 @@ export function tableFormatCommands(apply: TableFormatApply): TableFormatCommand
       if (!target) return;
       const { scope } = target;
       apply((model) => setTableFormatField(model, scope, key, value));
+    },
+    setOverflow: (target, value) => {
+      if (!target) return;
+      const { scope } = target;
+      apply((model) => setTableFormatOverflow(model, scope, value));
     },
   };
 }

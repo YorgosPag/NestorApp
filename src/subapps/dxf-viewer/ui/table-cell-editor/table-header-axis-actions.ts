@@ -32,6 +32,11 @@ import {
   insertTableColumns,
   insertTableRows,
 } from '../../bim/table/table-row-column-bulk-ops';
+// 🔴 ADR-739 §58 Γ2 — «ποιος κατέχει το ύψος». Καθαρό SSoT, δεύτερος καταναλωτής μετά τα tests.
+import {
+  clearTableRowHeights,
+  hasFixedTableRowHeight,
+} from '../../bim/table/table-row-height-ops';
 import { tableCursorAt, type TableCursorPosition } from '../../bim/table/table-cell-navigation';
 import type { TableAxisActionTarget } from '../../bim/table/table-axis-action-target';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
@@ -89,6 +94,44 @@ export function insertAt(side: 'before' | 'after'): AxisActionPlanner {
       pick: survivorAt(target.axis, at),
     };
   };
+}
+
+/**
+ * 🔴 ADR-739 §58 Γ2 — **«Αυτόματο ύψος γραμμής»**: το ύψος ξαναγίνεται παράγωγο του περιεχομένου.
+ *
+ * Τρίτος `AxisActionPlanner`, με τον **ίδιο** στόχο και τον ίδιο εκτελεστή που έχουν η εισαγωγή
+ * και η διαγραφή (§27.17 · §42): ένα `Ctrl+Z`, επιζών δρομέας, καμία δεύτερη διαδρομή εγγραφής.
+ *
+ * ⚠️ **`pick: {}` — ο δρομέας ΔΕΝ κουνιέται**, και είναι η μόνη από τις τρεις πράξεις όπου αυτό
+ * ισχύει: η εισαγωγή και η διαγραφή **αλλάζουν το πλέγμα** (μια θέση παύει να υπάρχει ή
+ * μετακινείται), ενώ εδώ κάθε ταυτότητα μένει ακριβώς όπου ήταν. Το {@link survivingCursor}
+ * διαβάζει τότε την **τρέχουσα** θέση και την κόβει στα όρια — δηλαδή δεν αλλάζει τίποτα.
+ *
+ * ⚠️ **Στηλες ⇒ no-op**, δηλωμένο και όχι σιωπηλό: η ερώτηση «ποιος κατέχει το ύψος» έχει νόημα
+ * μόνο στον κατακόρυφο άξονα. Το οριζόντιο αντίστοιχο υπάρχει ήδη με **άλλο λεξιλόγιο**
+ * (`TableColumnSizing`: `fixed` vs `hug`) και **δεν** συγχωνεύεται εδώ βίαια — δύο πεδία με
+ * διαφορετικό σχήμα πίσω από ένα κουμπί θα ήταν το πρώτο σημείο όπου το ένα από τα δύο ξεχνιέται.
+ */
+export function autoFitAxisHeight(target: TableAxisActionTarget): AxisActionPlan {
+  return {
+    mutate: (model) =>
+      target.axis === 'row' ? clearTableRowHeights(model, target.ids) : model,
+    pick: {},
+  };
+}
+
+/**
+ * Έχει **αυτός** ο στόχος τι να επαναφέρει; — η μία έκφραση, όπως το {@link canDeleteAxisTarget}.
+ *
+ * Εξηγεί γιατί το κουμπί μπορεί να είναι σβηστό: όχι επειδή η πράξη είναι αδύνατη, αλλά επειδή
+ * **δεν υπάρχει καρφωμένο ύψος**. Στο Excel η ίδια εντολή είναι πάντα πατήσιμη και πάντα
+ * σιωπηλή — δες `hasFixedTableRowHeight` για το τι κερδίζει ο χρήστης από τη διαφορά.
+ */
+export function canAutoFitAxisHeight(
+  model: PersistedTableModel,
+  target: TableAxisActionTarget,
+): boolean {
+  return target.axis === 'row' && hasFixedTableRowHeight(model, target.ids);
 }
 
 /**

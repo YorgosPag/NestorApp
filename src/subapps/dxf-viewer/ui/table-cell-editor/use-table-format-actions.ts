@@ -43,6 +43,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
 import {
   canResetTableFormatScope,
+  resolveTableFormatOverflow,
   resolveTableFormatState,
   tableFormatNumericRange,
   tableFormatScopeBounds,
@@ -223,6 +224,16 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     // δεξιού κλικ θα έλεγαν άλλα για το ίδιο κελί.
     numberFormat: (): ReturnType<TableFormatPort['numberFormat']> =>
       resolveTableNumberFormatState(formatTarget()),
+    // 🔴 ADR-739 §58 Γ2 — **η καθαρή ανάγνωση**, χωρίς ενδιάμεσο στιγμιότυπο διεπαφής: η
+    // απάντηση είναι τιμή του **μοντέλου** (`TableCellOverflow | null`), όχι τύπος toolbar.
+    // Γι' αυτό ζει στο `table-format-scope.ts` και όχι στο `table-format-snapshot.ts`, όπου ζει
+    // η μορφή αριθμού: εκείνη παράγει `TableNumberFormatState`, δηλαδή σχήμα της επιφάνειας.
+    overflow: (): ReturnType<TableFormatPort['overflow']> => {
+      const target = formatTarget();
+      return target ? resolveTableFormatOverflow(target.model, target.style, target.scope) : null;
+    },
+    setOverflow: (value: Parameters<TableFormatPort['setOverflow']>[0]): void =>
+      commands.setOverflow(formatTarget(), value),
     fontNames,
     reset: (): void => commands.reset(formatTarget()),
     canReset: (): boolean => {
@@ -273,6 +284,8 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     stepTextHeight: (direction) => latest.current.stepTextHeight(direction),
     textHeightMm: () => latest.current.textHeightMm(),
     numberFormat: () => latest.current.numberFormat(),
+    overflow: () => latest.current.overflow(),
+    setOverflow: (value) => latest.current.setOverflow(value),
     fontNames: () => latest.current.fontNames(),
     reset: () => latest.current.reset(),
     canReset: () => latest.current.canReset(),

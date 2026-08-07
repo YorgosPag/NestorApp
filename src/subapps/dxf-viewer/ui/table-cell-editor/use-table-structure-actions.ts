@@ -40,6 +40,8 @@ import {
 } from '../../bim/table/table-axis-action-target';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
+  autoFitAxisHeight,
+  canAutoFitAxisHeight,
   canDeleteAxisTarget,
   deleteAxisTarget,
   insertAt,
@@ -118,6 +120,15 @@ export function useTableStructureActions(
         const live = table();
         const target = axisTarget(axis);
         return live !== null && target !== null && canDeleteAxisTarget(live.model, target);
+      },
+      // 🔴 ADR-739 §58 Γ2 — **ο ίδιος στόχος με τη «Διαγραφή γραμμής»** (§27.17), ο ίδιος
+      // εκτελεστής (§42). Δεύτερος κανόνας επιλογής γραμμών θα σήμαινε ότι το ίδιο μαρκάρισμα
+      // δίνει άλλες γραμμές σε δύο κουμπιά που κάθονται δίπλα-δίπλα στο ίδιο panel.
+      autoFitRowHeight: () => runAxisAction('row', autoFitAxisHeight),
+      canAutoFitRowHeight: () => {
+        const live = table();
+        const target = axisTarget('row');
+        return live !== null && target !== null && canAutoFitAxisHeight(live.model, target);
       },
       selectAll: () => {
         const live = table();

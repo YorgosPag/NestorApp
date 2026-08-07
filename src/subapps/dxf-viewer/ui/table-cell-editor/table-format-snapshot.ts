@@ -33,6 +33,7 @@
 
 import {
   canResetTableFormatScope,
+  resolveTableFormatOverflow,
   resolveTableFormatState,
   setTableFormatField,
   tableFormatScopeBounds,
@@ -52,9 +53,14 @@ import { tableRangeCellRefs, type TableCellRef } from '../../bim/table/table-cel
 import type { PlotColorRole } from '../../config/print-color-policy';
 import type { TableCellStyleKey } from '../../bim/table/table-cell-style-scan';
 import type { TableCellStyle, TableStyle } from '../../bim/table/table-style';
-import type { PersistedTableModel, TableCellAlign } from '../../types/table';
+import type {
+  PersistedTableModel,
+  TableCellAlign,
+  TableCellOverflow,
+} from '../../types/table';
 import type { TableCellFormat } from '../../types/table-cell-format';
 import type { TableAxisColorState } from '../components/table-format-toolbar/table-color-menu-selection';
+import type { TableToolbarExtrasState } from '../components/table-format-toolbar/table-toolbar-extras';
 import type {
   TableFontControlsState,
   TableFontValueState,
@@ -192,6 +198,26 @@ export function resolveTableAlignState(target: FormatTarget | null): TableCellAl
 }
 
 /**
+ * 🔴 ADR-739 §58 Γ2 — **τι ξεχείλισμα ισχύει**· `null` ⇒ ανάμεικτο ή στόχος που δεν βρέθηκε.
+ *
+ * Προσαρμογέας μιας γραμμής και **όχι** δεύτερη ανάγνωση: η γνώση ζει ολόκληρη στο
+ * {@link resolveTableFormatOverflow} (καθαρό, `bim/`), γιατί η απάντηση είναι τιμή του
+ * **μοντέλου** και όχι σχήμα της επιφάνειας — σε αντίθεση με τη μορφή αριθμού από κάτω, που
+ * παράγει `TableNumberFormatState` και γι' αυτό ζει εδώ.
+ *
+ * Υπάρχει ώστε οι **δύο** υποδοχές του mini toolbar να μιλούν την ίδια γλώσσα με τα άλλα τρία
+ * τμήματα (`FormatTarget | null` μέσα, κατάσταση έξω) και να μην ξέρουν ότι υπάρχει `scope`.
+ * Ίδια ακριβώς μορφή με το {@link resolveTableAlignState}.
+ */
+export function resolveTableOverflowState(
+  target: FormatTarget | null,
+): TableCellOverflow | null {
+  return target === null
+    ? null
+    : resolveTableFormatOverflow(target.model, target.style, target.scope);
+}
+
+/**
  * 🔴 ADR-739 §55 / ADR-760 — **τι μορφή αριθμού ισχύει** σε αυτά τα κελιά.
  *
  * ## Γιατί ΔΕΝ περνά από το `resolveTableFormatState`
@@ -229,6 +255,40 @@ export function resolveTableNumberFormatState(
   if (!visited || value === undefined) return EMPTY_TABLE_NUMBER_FORMAT_STATE;
 
   return { current: mixed ? null : value, explicit: !mixed && explicit };
+}
+
+/**
+ * 🔴 ADR-739 §58 Γ2 — **τα τέσσερα τμήματα της γραμμής, από ΕΝΑΝ στόχο: ο ΕΝΑΣ κατασκευαστής.**
+ *
+ * ## Γιατί υπάρχει (CHECK 3.28 το έπιασε στο ίδιο commit)
+ * Οι δύο υποδοχές του mini toolbar — το μενού των **ζωνών δείκτη** (`use-table-header-menu`)
+ * και το μενού της **περιοχής** (`use-table-range-menu`) — έγραφαν το ίδιο σώμα η καθεμιά.
+ * Με **τρία** τμήματα (§55) το δίδυμο ήταν κάτω από το κατώφλι του jscpd· το **τέταρτο** (§58
+ * Γ2) το πέρασε, και σωστά: δύο σώματα που απαντούν «τι δείχνει η γραμμή» μπορούν κάποτε να
+ * μάθουν **διαφορετικό** σύνολο τμημάτων, και η διαφωνία τους θα ήταν αόρατη όσο κάθε πλευρά
+ * δουλεύει (δεν υπάρχει υποδοχή που να τις δείχνει και τις δύο ταυτόχρονα).
+ *
+ * 🔑 Ο στόχος περνά **μία** φορά, όπως και πριν: οι τέσσερις αναγνώσεις διατρέχουν η καθεμιά τα
+ * κελιά της, και μια δεύτερη κατασκευή στόχου ανάμεσά τους θα άφηνε ανοιχτό το παράθυρο να
+ * απαντήσουν πάνω σε **διαφορετικά** μοντέλα (ένα `Ctrl+Z` από συντόμευση ενδιάμεσα) — δηλαδή
+ * γραμματοσειρά ενός πίνακα με στοίχιση ενός άλλου. Γι' αυτό η υπογραφή δέχεται τον **έτοιμο**
+ * στόχο και όχι τον τρόπο να τον φτιάξει: το «μία φορά» παραμένει ευθύνη του καλούντος, που
+ * είναι ο μόνος που ξέρει τι σημαίνει «ο στόχος» στη δική του υποδοχή (ζώνη ή όρια).
+ *
+ * ⚠️ Το `fontNames` έρχεται ως **τιμή** και όχι ως getter για τον ίδιο λόγο: διαβάζεται τη
+ * στιγμή του δεξιού κλικ (ADR-040 κανόνας #2) από τον καλούντα, όχι εδώ.
+ */
+export function resolveTableToolbarExtrasState(
+  target: FormatTarget | null,
+  fontNames: readonly string[],
+): TableToolbarExtrasState {
+  return {
+    fonts: resolveTableFontState(target),
+    fontNames,
+    numberFormat: resolveTableNumberFormatState(target),
+    align: resolveTableAlignState(target),
+    overflow: resolveTableOverflowState(target),
+  };
 }
 
 /** Τα κελιά του στόχου· `null` όταν ο στόχος δεν επιβίωσε (undo έσβησε τον άξονα). */

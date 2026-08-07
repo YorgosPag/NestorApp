@@ -25,7 +25,7 @@ import type { TableToolbarExtrasState } from './table-format-toolbar/table-toolb
 import type { TableBorderMenuProps } from './table-format-toolbar/TableBorderMenu';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
-import type { TableAxisStyleOverride } from '../../types/table';
+import type { TableAxisStyleOverride, TableCellOverflow } from '../../types/table';
 
 /**
  * ADR-750 Φ5 — το dropdown περιγραμμάτων **όπως το βλέπει ο ξενιστής**: όλα τα props του
@@ -83,6 +83,15 @@ export interface TableHeaderMenuProps {
     key: K,
     value: TableAxisStyleOverride[K] | undefined,
   ) => void;
+  /**
+   * 🔴 §58 Γ2 — ο γραφέας του **ξεχειλίσματος**· ξεχωριστός από τον από πάνω.
+   *
+   * Δεν χωρά στο {@link onSetFormatField}: το `overflow` **δεν είναι**
+   * `keyof TableAxisStyleOverride` — ζει μόνο στο `TableCellStyleOverride` και γράφεται πάντα σε
+   * επίπεδο κελιού. Χωμένο εκεί θα απαιτούσε cast, δηλαδή θα έκανε εκφράσιμη μια εγγραφή που το
+   * μοντέλο απορρίπτει. Δες `setTableFormatOverflow` για το γιατί «πάντα κελί».
+   */
+  readonly onSetOverflow: (hit: TableIndicatorHit, value: TableCellOverflow) => void;
   /**
    * ADR-750 Φ3/Φ5 — **όλο** το dropdown περιγραμμάτων του άξονα που πατήθηκε, σε μία ερώτηση.
    *

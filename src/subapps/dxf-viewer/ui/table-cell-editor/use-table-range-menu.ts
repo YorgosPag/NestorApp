@@ -35,13 +35,12 @@ import { clearTableRange } from '../../bim/table/table-range-clipboard';
 // 🔴 ADR-739 §52 — η μορφοποίηση **κελιών**: ο ίδιος στόχος, οι ίδιες πέντε εντολές, το ίδιο
 // στιγμιότυπο με τη ζώνη δείκτη. Καμία δεύτερη υλοποίηση — δες τα δύο modules.
 import { tableFormatCommands } from './table-format-commands';
-// 🔴 ADR-739 §55 — οι τρεις αναγνώσεις των νέων τμημάτων της γραμμής. Ίδιο module, ίδιο ύφος
-// με το `resolveTableFormatSnapshot`: στόχος μέσα, κατάσταση έξω, μηδέν React.
+// 🔴 ADR-739 §55/§58 Γ2 — τα τμήματα της γραμμής από τον **ΕΝΑΝ** κατασκευαστή, κοινό με το
+// μενού των ζωνών δείκτη. Ίδιο module, ίδιο ύφος με το `resolveTableFormatSnapshot`: στόχος
+// μέσα, κατάσταση έξω, μηδέν React.
 import {
-  resolveTableAlignState,
-  resolveTableFontState,
   resolveTableFormatSnapshot,
-  resolveTableNumberFormatState,
+  resolveTableToolbarExtrasState,
 } from './table-format-snapshot';
 import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
 import { getAllLayers } from '../../stores/LayerStore';
@@ -176,23 +175,20 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
   );
 
   /**
-   * 🔴 §55 — **τι δείχνουν τα τρία νέα τμήματα** της γραμμής για αυτά τα κελιά.
+   * 🔴 §55/§58 Γ2 — **τι δείχνουν τα τέσσερα τμήματα** της γραμμής για αυτά τα κελιά.
    *
-   * Ο στόχος περνά **μία** φορά από το {@link formatTarget}: οι τρεις αναγνώσεις διατρέχουν η
-   * καθεμιά τα κελιά της, και μια δεύτερη κατασκευή στόχου ανάμεσά τους θα άφηνε ανοιχτό το
+   * Ο στόχος περνά **μία** φορά από το {@link formatTarget}: οι τέσσερις αναγνώσεις διατρέχουν
+   * η καθεμιά τα κελιά της, και μια δεύτερη κατασκευή στόχου ανάμεσά τους θα άφηνε ανοιχτό το
    * παράθυρο να απαντήσουν πάνω σε **διαφορετικά** μοντέλα (ένα `Ctrl+Z` από συντόμευση
    * ενδιάμεσα) — δηλαδή γραμματοσειρά ενός πίνακα με στοίχιση ενός άλλου.
+   *
+   * ⚠️ Το **ποια** τμήματα και **πώς** διαβάζονται ζει στο {@link resolveTableToolbarExtrasState}
+   * — ο ΕΝΑΣ κατασκευαστής για τις δύο υποδοχές (N.18). Εδώ μένει μόνο **ποιος** είναι ο
+   * στόχος: όρια εδώ, ζώνη δείκτη εκεί — ακριβώς ό,τι διαφέρει ανάμεσά τους.
    */
   const toolbarState = useCallback(
-    (bounds: TableCellRangeBounds): TableToolbarExtrasState => {
-      const target = formatTarget(bounds);
-      return {
-        fonts: resolveTableFontState(target),
-        fontNames: fontNames(),
-        numberFormat: resolveTableNumberFormatState(target),
-        align: resolveTableAlignState(target),
-      };
-    },
+    (bounds: TableCellRangeBounds): TableToolbarExtrasState =>
+      resolveTableToolbarExtrasState(formatTarget(bounds), fontNames()),
     [formatTarget, fontNames],
   );
 
@@ -361,6 +357,8 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         // §55 — γραμματοσειρά, μέγεθος, αριθμητική μορφή, στοίχιση: **ο ίδιος** γραφέας με τα
         // δύο χρώματα από πάνω, με το κλειδί ως όρισμα. Καμία δεύτερη διαδρομή εγγραφής.
         onSetField: (bounds, key, value) => formatCommands.setField(formatTarget(bounds), key, value),
+        // 🔴 §58 Γ2 — δικός του γραφέας: το `overflow` δεν είναι `keyof TableAxisStyleOverride`.
+        onSetOverflow: (bounds, value) => formatCommands.setOverflow(formatTarget(bounds), value),
       },
       /*
         🔴 §54 — οι **έξι εντολές δεδομένων**, παραμετρικές ως προς τα όρια για τον ίδιο λόγο

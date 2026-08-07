@@ -48,7 +48,7 @@ import type {
 import type { TableCellStyle } from '../../bim/table/table-style';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
-import type { TableAxisStyleOverride } from '../../types/table';
+import type { TableAxisStyleOverride, TableCellOverflow } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableAxisColorState } from '../components/table-format-toolbar/table-color-menu-selection';
 import type { TableNumberFormatState } from '../components/table-format-toolbar/TableNumberFormatSection';
@@ -80,6 +80,28 @@ export interface TableStructurePort {
   readonly deleteAxis: (axis: 'row' | 'column') => void;
   /** Επιτρέπεται η διαγραφή; (ο πίνακας δεν μένει ποτέ χωρίς γραμμή ή στήλη). */
   readonly canDeleteAxis: (axis: 'row' | 'column') => boolean;
+  /**
+   * 🔴 ADR-739 §58 Γ2 — **«Αυτόματο ύψος γραμμής»**: σβήνει το ρητό `heightMm` των γραμμών του
+   * στόχου, ώστε το ύψος να ξαναπροκύπτει από το περιεχόμενο.
+   *
+   * Ζει στις **δομικές** πράξεις και όχι στη μορφοποίηση, γιατί απαντά στην ερώτηση «τι σχήμα
+   * έχει ο πίνακας» και γράφει σε **γραμμή**, όχι σε κελί — η ίδια διαίρεση που τεκμηριώνει η
+   * κεφαλίδα αυτού του υπο-αντικειμένου. Είναι επίσης η θέση του Excel: *Home ▸ Cells ▸ Format
+   * ▸ AutoFit Row Height*, δηλαδή ομάδα «Κελιά», όχι «Στοίχιση».
+   *
+   * ⚠️ Ο **στόχος** είναι ο ίδιος με της «Διαγραφής γραμμής» (§27.17: ο άξονας του δρομέα, ή
+   * ολόκληρη η επιλογή αν είναι του ίδιου είδους). Δεύτερος κανόνας εδώ θα σήμαινε ότι το ίδιο
+   * μαρκάρισμα δίνει άλλες γραμμές σε δύο κουμπιά που κάθονται δίπλα-δίπλα.
+   */
+  readonly autoFitRowHeight: () => void;
+  /**
+   * Υπάρχει **τι** να επαναφερθεί; — `some`, όχι `every` (δες `hasFixedTableRowHeight`).
+   *
+   * 🏆 Το κουμπί του Excel είναι **πάντα** πατήσιμο και πάντα σιωπηλό, οπότε ο χρήστης δεν
+   * μπορεί να μάθει από τη διεπαφή αν η γραμμή που βλέπει είναι καρφωμένη. Εδώ το ίδιο κουμπί
+   * **είναι η ένδειξη**.
+   */
+  readonly canAutoFitRowHeight: () => boolean;
   /** `Ctrl+A` του πίνακα — ο ΕΝΑΣ γραφέας του §43. */
   readonly selectAll: () => void;
 }
@@ -147,6 +169,34 @@ export interface TableFormatPort {
    * εκείνο δέχεται `keyof TableAxisStyleOverride` — το ευρύτερο από τα δύο σκέλη.
    */
   readonly numberFormat: () => TableNumberFormatState;
+  /**
+   * 🔴 ADR-739 §58 Γ2 — **τι ξεχείλισμα ισχύει** στον στόχο· `null` = ανάμεικτο **ή** χωρίς στόχο.
+   *
+   * ## Γιατί ΔΙΚΟ ΤΟΥ μέλος — και γιατί ΔΥΟ, όχι ένα
+   * Ούτε η ανάγνωση ούτε η εγγραφή χωρούν στα γενικά μέλη, και για **δύο διαφορετικούς** λόγους
+   * που τυχαίνει να δείχνουν στο ίδιο πεδίο:
+   * ```
+   *   state('overflow')     ✗  δέχεται TableCellStyleKey — το `overflow` ΔΕΝ είναι στο TableCellStyle
+   *   setField('overflow')  ✗  δέχεται keyof TableAxisStyleOverride — το `overflow` ΔΕΝ είναι εκεί
+   * ```
+   * Το `numberFormat` χρειάστηκε **ένα** μέλος ακριβώς επειδή αποκλειόταν μόνο από το πρώτο (η
+   * γραφή του δούλευε ήδη). Το ξεχείλισμα αποκλείεται και από τα δύο άκρα, γιατί ζει **μόνο**
+   * στο `TableCellStyleOverride` — το στενότερο σκέλος και των δύο τομών.
+   *
+   * ⚠️ Η σύμπτωση «ανάμεικτο» ≡ «χωρίς στόχο» είναι η **ίδια** που κωδικοποιεί ήδη το
+   * {@link numberFormat}, και έχει την ίδια θεραπεία στην κορδέλα: ο φύλακας `scope()` πριν την
+   * ανάγνωση, αλλιώς τα δύο κουμπιά γίνονται indeterminate για επιλογή που δεν υπάρχει (§56 β).
+   */
+  readonly overflow: () => TableCellOverflow | null;
+  /**
+   * Γράφει το ξεχείλισμα. Δέχεται την **τελική** τιμή: ο κανόνας «ίδια ⇒ ξεπάτωμα» ζει στο
+   * `bim/table/table-overflow-ops.ts`, που ρωτούν **και οι δύο** επιφάνειες — ίδια ακριβώς
+   * διαίρεση με τη στοίχιση.
+   *
+   * 🔑 Η **αμοιβαία αποκλειστικότητα** αναδίπλωσης/σμίκρυνσης δεν επιβάλλεται εδώ και δεν
+   * χρειάζεται: την κάνει **μη εκφράσιμη** ο τύπος `TableCellOverflow` (ένωση, ποτέ δύο σημαίες).
+   */
+  readonly setOverflow: (value: TableCellOverflow) => void;
   /**
    * 🔴 ADR-739 §56 — **ποιες γραμματοσειρές υπάρχουν**, τη στιγμή της κλήσης.
    *
