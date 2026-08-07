@@ -988,6 +988,7 @@
       "percentFormat": "Στυλ ποσοστού",
       "thousandsFormat": "Στυλ κόμματος",
       "wrapText": "Αναδίπλωση κειμένου",
+      "shrinkToFit": "Σμίκρυνση ώστε να χωρά",
       "increaseDecimal": "Αύξηση δεκαδικών ψηφίων",
       "decreaseDecimal": "Μείωση δεκαδικών ψηφίων",
       "formatPainter": "Πινέλο μορφοποίησης",

@@ -988,6 +988,7 @@
       "percentFormat": "Percent Style",
       "thousandsFormat": "Comma Style",
       "wrapText": "Wrap Text",
+      "shrinkToFit": "Shrink to Fit",
       "increaseDecimal": "Increase Decimal",
       "decreaseDecimal": "Decrease Decimal",
       "formatPainter": "Format Painter",

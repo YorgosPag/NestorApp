@@ -5527,7 +5527,8 @@
         "deleteRow": "Διαγραφή γραμμής",
         "deleteColumn": "Διαγραφή στήλης",
         "selectAll": "Επιλογή όλων",
-        "refreshBinding": "Ανανέωση"
+        "refreshBinding": "Ανανέωση",
+        "autoFitRowHeight": "Αυτόματο ύψος γραμμής"
       },
       "tableFormat": {
         "bold": "Έντονα",
@@ -5554,6 +5555,10 @@
           "top": "Στοίχιση επάνω",
           "middle": "Στοίχιση στη μέση",
           "bottom": "Στοίχιση κάτω"
+        },
+        "overflow": {
+          "wrap": "Αναδίπλωση κειμένου",
+          "shrink": "Σμίκρυνση ώστε να χωρά"
         },
         "numberFormat": {
           "accounting": "Λογιστική μορφή",

@@ -5527,7 +5527,8 @@
         "deleteRow": "Delete row",
         "deleteColumn": "Delete column",
         "selectAll": "Select all",
-        "refreshBinding": "Refresh"
+        "refreshBinding": "Refresh",
+        "autoFitRowHeight": "AutoFit Row Height"
       },
       "tableFormat": {
         "bold": "Bold",
@@ -5554,6 +5555,10 @@
           "top": "Top align",
           "middle": "Middle align",
           "bottom": "Bottom align"
+        },
+        "overflow": {
+          "wrap": "Wrap Text",
+          "shrink": "Shrink to Fit"
         },
         "numberFormat": {
           "accounting": "Accounting number format",
