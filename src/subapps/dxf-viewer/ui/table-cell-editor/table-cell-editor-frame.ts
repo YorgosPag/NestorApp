@@ -55,6 +55,10 @@
 import type { TextAlign } from '../../bim/structural/detail-sheet/detail-sheet-types';
 import type { TableCellEditTarget } from '../../bim/table/table-cell-edit-session';
 import { tableCellBackdrop } from '../../bim/table/table-ink';
+// 🔴 ADR-739 §59 Δ1 — ο ΕΝΑΣ κριτής της γωνίας. Ένα σκέτο `style.textRotationDeg` εδώ θα
+// παρέκαμπτε το κόψιμο στα όρια, δηλαδή ένα εκτός εμβέλειας αποθηκευμένο αρχείο θα έγερνε το
+// πεδίο αλλιώς από τον καμβά — και το σύμπτωμα θα ήταν ακριβώς η αναπήδηση που λύνει το βήμα 3.
+import { tableTextRotationDeg } from '../../bim/table/table-rotation-ops';
 import { tableCellFont } from '../../rendering/entities/table/stamp-table-layout';
 import type { CellFontBandPx } from './table-cell-text-metrics';
 import {
@@ -240,7 +244,12 @@ export function computeTableCellEditorFrame(params: {
       growth.clipMarkerPx === undefined
         ? undefined
         : { widthPx: sidePx + growth.clipMarkerPx, heightPx: cellHeightPx },
-    rotationRad: -angleRad,
+    // 🔴 ADR-739 §59 Δ1 — **γωνία πίνακα ΣΥΝ γωνία κελιού**, και οι δύο αντεστραμμένες μαζί.
+    // Το CSS μετρά δεξιόστροφα (y-κάτω)· η σκηνή και το μοντέλο αριστερόστροφα. Αν η γωνία του
+    // κελιού έλειπε από εδώ, το πεδίο θα άνοιγε **ίσιο πάνω σε γερμένο κείμενο** — δηλαδή το
+    // ακριβές ελάττωμα «το κείμενο αναπηδά στο διπλό κλικ» που το βήμα 3 υπάρχει για να λύσει,
+    // αναγεννημένο για τα κελιά που έγειρε ο χρήστης.
+    rotationRad: -angleRad - (tableTextRotationDeg(style) * Math.PI) / 180,
     font,
     underline: style.underline,
     paddingTopPx: vertical.topPx,

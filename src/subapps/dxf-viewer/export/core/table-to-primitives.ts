@@ -75,7 +75,15 @@ export function decomposeTable(
    */
   surfaceHex?: string,
 ): Entity[] {
-  const geometry = computeTableEntityGeometry(entity, drawingScale, sceneUnits, surfaceHex);
+  // 🔴 ADR-771 Φ.2 — `paint: false` **πάντα** εδώ: αυτό είναι το παραδοτέο, και η επιφάνειά του
+  // την παρέχει το μέσο (λευκή σελίδα / φόντο σκηνής). Ένα αδιαφανές ορθογώνιο φύλλου θα
+  // έκρυβε ό,τι είναι κάτω από τον πίνακα, δηλαδή θα άλλαζε την ίδια την εξαγωγή.
+  const geometry = computeTableEntityGeometry(
+    entity,
+    drawingScale,
+    sceneUnits,
+    surfaceHex === undefined ? undefined : { hex: surfaceHex, paint: false },
+  );
   const primitives = tableLayoutToPrimitives(geometry.layout);
   const rotationDeg = entity.angleRad * RAD_TO_DEG;
 
@@ -159,7 +167,11 @@ function mapTablePrimitive(
           text: prim.text,
           height: prim.heightMm * mmToWorld,
           alignment: prim.align,
-          rotationDeg,
+          // 🔴 ADR-739 §59 Δ1 — **η γωνία του πίνακα ΣΥΝ η γωνία του κελιού.** Και οι δύο
+          // μετρούν αριστερόστροφα σε σκηνή y-πάνω, οπότε η πρόσθεση είναι η πράξη — καμία
+          // μετατροπή. Το DXF `TEXT` το γράφει στο group code 50 **δωρεάν**: η στροφή δεν
+          // κοστίζει καμία νέα ομάδα κωδικών, όπως ακριβώς και η αναδίπλωση του §58.4.
+          rotationDeg: rotationDeg + (prim.rotationDeg ?? 0),
           // Το `y` ενός `TableTextRun` ΕΙΝΑΙ η γραμμή βάσης (σύμβαση `TextPrimitive`),
           // δηλαδή η προεπιλογή `alphabetic` — αυτό ακριβώς ήταν το σφάλμα των 1,5mm
           // της Φ.Β: γραμμή περιεχομένου ≠ ακμή γραμμής.

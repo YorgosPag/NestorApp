@@ -119,7 +119,12 @@ function textToEntity(prim: TextPrimitive, o: SheetToSceneOptions): TextEntity {
     fontSize: height,
     alignment: prim.align,
     color: prim.colorHex,
-    rotation: 0,
+    // 🔴 ADR-739 §59 Δ1 — εδώ ήταν καρφωμένο `0`, και ήταν σωστό όσο **κανένα** primitive δεν
+    // δήλωνε γωνία. Πλέον δηλώνει (γερμένο κελί πίνακα), και ένα καρφωτό μηδέν θα ίσιωνε
+    // σιωπηλά κάθε γερμένη κεφαλίδα **μόνο** στη διαδρομή του φύλλου — ενώ η οθόνη και η
+    // απευθείας εξαγωγή θα την έγερναν κανονικά. Η σκηνή είναι y-πάνω και μετρά
+    // αριστερόστροφα, ίδια σύμβαση με το primitive: καμία μετατροπή.
+    rotation: prim.rotationDeg ?? 0,
   };
 }
 

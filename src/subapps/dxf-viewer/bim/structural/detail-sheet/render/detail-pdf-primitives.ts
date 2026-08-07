@@ -128,7 +128,16 @@ export function renderDetailPrimitive(pdf: jsPDF, prim: DetailPrimitive): void {
     }
     case 'text':
       applyTextStyle(pdf, prim.colorHex, prim.heightMm, prim.bold ?? false);
-      pdf.text(prim.text, prim.position.x, prim.position.y, { align: prim.align, baseline: 'alphabetic' });
+      pdf.text(prim.text, prim.position.x, prim.position.y, {
+        align: prim.align,
+        baseline: 'alphabetic',
+        // 🔴 ADR-739 §59 Δ1 — το `angle` του jsPDF μετρά **αριστερόστροφα**, ίδια σύμβαση με το
+        // primitive (και με το DXF group code 50), άρα περνά αυτούσιο. Δες τη διάσταση δίπλα
+        // (`drawDim`), που αντιστρέφει: εκεί η γωνία έρχεται από **γεωμετρία οθόνης** (y-κάτω),
+        // εδώ από το **μοντέλο**. Δύο διαφορετικές ερωτήσεις, δύο διαφορετικά πρόσημα — και
+        // γι' αυτό η αντιγραφή του ενός στο άλλο θα ήταν σιωπηλά καθρεφτισμένο κείμενο.
+        ...(prim.rotationDeg ? { angle: prim.rotationDeg } : {}),
+      });
       return;
     case 'dim':
       drawDim(pdf, prim);

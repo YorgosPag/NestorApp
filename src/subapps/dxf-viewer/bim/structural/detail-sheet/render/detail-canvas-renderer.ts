@@ -139,13 +139,28 @@ function renderPrimitive(
       if (prim.fillHex) { ctx.fillStyle = prim.fillHex; ctx.fill(); }
       if (prim.stroke) { applyStroke(ctx, prim.stroke, pxPerMm); ctx.stroke(); }
       return;
-    case 'text':
+    case 'text': {
       ctx.fillStyle = prim.colorHex;
       ctx.textAlign = prim.align;
       ctx.textBaseline = 'alphabetic';
       ctx.font = `${prim.bold ? '600 ' : ''}${prim.heightMm * pxPerMm}px sans-serif`;
-      ctx.fillText(prim.text, prim.position.x * pxPerMm, prim.position.y * pxPerMm);
+      const xPx = prim.position.x * pxPerMm;
+      const yPx = prim.position.y * pxPerMm;
+      // 🔴 ADR-739 §59 Δ1 — μηδενική γωνία ⇒ **η ίδια ακριβώς κλήση** με πριν, χωρίς
+      // `save`/`restore`: κάθε φύλλο του έργου ζωγραφίζεται με ταυτόσημο κόστος και ταυτόσημα
+      // pixel. Το πρόσημο αντιστρέφεται γιατί ο καμβάς έχει y προς τα **κάτω**, ενώ η γωνία του
+      // primitive μετρά αριστερόστροφα (σύμβαση DXF group code 50).
+      if (!prim.rotationDeg) {
+        ctx.fillText(prim.text, xPx, yPx);
+        return;
+      }
+      ctx.save();
+      ctx.translate(xPx, yPx);
+      ctx.rotate((-prim.rotationDeg * Math.PI) / 180);
+      ctx.fillText(prim.text, 0, 0);
+      ctx.restore();
       return;
+    }
     case 'dim':
       renderDim(ctx, prim, pxPerMm);
       return;

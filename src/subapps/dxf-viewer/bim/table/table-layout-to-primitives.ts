@@ -95,6 +95,12 @@ function textPrimitive(
     colorHex: tablePieceInkHex(run, piece, TABLE_CELL_LINK.colorHex),
     align: piece.align,
     bold: piece.bold,
+    // 🔴 ADR-739 §59 Δ1 — η **γωνία του κελιού** ταξιδεύει στο χαρτί και στο αρχείο. Ίδια
+    // σύμβαση «παρόν μόνο όταν διαφέρει από την προεπιλογή» με το `italic` από κάτω: κάθε
+    // πίνακας που υπάρχει σήμερα παράγει **byte-ταυτόσημο** primitive, άρα τα snapshots
+    // χαρακτηρισμού του ADR-622 μένουν άθικτα.
+    ...(run.rotationDeg !== undefined && run.rotationDeg !== 0
+      && { rotationDeg: run.rotationDeg }),
     // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — **παρόν μόνο όταν αληθεύει**, όπως το `clipped` και το
     // `dashMm`. Ένα ρητό `italic: false` θα άλλαζε το **σχήμα** κάθε primitive κειμένου του
     // repo — και μαζί τα snapshots χαρακτηρισμού του ADR-622, που υπάρχουν για να αποδεικνύουν

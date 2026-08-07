@@ -145,13 +145,19 @@ export function stampFrameText(
   anchorScreen: Point2D,
   text: string,
   underline?: TableUnderlineGeometry | null,
+  /**
+   * 🔴 ADR-739 §59 Δ1 — η γωνία **οθόνης** αυτού του κειμένου. Απούσα ⇒ η γωνία του πίνακα,
+   * δηλαδή η συμπεριφορά του βήματος 8 ακέραιη (και οι ετικέτες των ζωνών, που δεν έχουν
+   * ποτέ δική τους γωνία, δεν αλλάζουν ούτε κατά ένα pixel).
+   */
+  angleRad: number = rc.textAngleRad,
 ): void {
   const { ctx } = rc;
   // Μετάθεση **πρώτα**, στροφή **μετά**: η στροφή γίνεται γύρω από την άγκυρα του κειμένου
   // (τη γραμμή βάσης στη θέση στοίχισης), όχι γύρω από την αρχή του καμβά. Αντίστροφα, το
   // κείμενο θα εκτοξευόταν κατά `|anchor| · sin(γωνία)` px μακριά από το κελί του.
   ctx.translate(anchorScreen.x, anchorScreen.y);
-  ctx.rotate(rc.textAngleRad);
+  ctx.rotate(angleRad);
   // Το `textAlign` / `textBaseline` που έθεσε ο καλών ισχύουν πλέον στο **στραμμένο**
   // σύστημα — δηλαδή «δεξιά στοίχιση» σημαίνει «δεξιά μέσα στο κελί», που είναι ακριβώς η
   // σημασία που ήδη ταξιδεύει στο DXF ως `halign` (μετρήθηκε: 0/1/2 για left/center/right).
@@ -247,11 +253,18 @@ function stampRun(
   fontPx: number,
 ): void {
   const anchor = rc.toScreen(run.position.x, run.position.y);
+  // 🔴 ADR-739 §59 Δ1 — **η γωνία του κελιού ΠΡΟΣΤΙΘΕΤΑΙ σε αυτήν του πίνακα, με αντίθετο
+  // πρόσημο.** Το μοντέλο μετρά θετικά **προς τα πάνω** (σύμβαση Excel, και η ίδια που
+  // ταξιδεύει αυτούσια στο DXF group code 50, όπου η σκηνή είναι y-πάνω)· ο καμβάς έχει y προς
+  // τα **κάτω**, όπου το θετικό `ctx.rotate` γέρνει προς τα κάτω. Χωρίς την αναστροφή, το ίδιο
+  // κελί θα έγερνε **αντίθετα** στην οθόνη από ό,τι στο τυπωμένο σχέδιο — η ακριβής ασυμφωνία
+  // που έκλεισε το βήμα 8, ξαναγεννημένη ένα επίπεδο πιο κάτω.
+  const angleRad = rc.textAngleRad - ((run.rotationDeg ?? 0) * Math.PI) / 180;
   // 🔴 ADR-753 Φ3 — **ένα** κομμάτι σε κάθε πίνακα που υπάρχει σήμερα (το ίδιο το run), Ν όταν
   // το κελί έχει μορφοποίηση ανά χαρακτήρα. Ο βρόχος είναι ο ίδιος και στις δύο περιπτώσεις:
   // η γενική μορφή **εκφυλίζεται** στη σημερινή, δεν συνυπάρχει μαζί της.
   for (const piece of tableTextPieces(run)) {
-    stampPiece(ctx, rc, run, piece, anchor, fontPx);
+    stampPiece(ctx, rc, run, piece, anchor, fontPx, angleRad);
   }
 }
 
@@ -277,6 +290,8 @@ function stampPiece(
   piece: TableTextPiece,
   anchor: Point2D,
   runFontPx: number,
+  /** §59 Δ1 — γωνία **πίνακα + κελιού**, ήδη σε συντεταγμένες οθόνης. */
+  angleRad: number,
 ): void {
   const fontPx = piece.whole ? runFontPx : piece.heightMm * rc.pxPerMm;
   const inkHex = tablePieceInkHex(run, piece, TABLE_CELL_LINK.colorHex);
@@ -295,13 +310,16 @@ function stampPiece(
   // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος έρχεται από τη **διάταξη** (`advanceMm`), όχι από
   // δεύτερο `ctx.measureText` σε κάθε καρέ: η ίδια μέτρηση που αποφάσισε τα πλάτη στηλών και
   // την περικοπή ορίζει και την έκταση της γραμμής, σε καμβά **και** στην εξαγωγή.
-  stampFrameText(rc, offsetAnchor(anchor, piece.offsetMm * rc.pxPerMm, rc.textAngleRad),
-    piece.text, underlineOf(run, piece, fontPx, rc.pxPerMm));
+  // §59 Δ1 — η μετατόπιση του τμήματος περιστρέφεται με την **ίδια** γωνία που θα γείρουν τα
+  // γράμματά του. Με τη γωνία μόνο του πίνακα, τα τμήματα ενός γερμένου κελιού θα απλώνονταν
+  // κατά μήκος **άλλης** ευθείας από αυτήν που τα ζωγραφίζει — ορατό σε κάθε έντονη λέξη.
+  stampFrameText(rc, offsetAnchor(anchor, piece.offsetMm * rc.pxPerMm, angleRad),
+    piece.text, underlineOf(run, piece, fontPx, rc.pxPerMm), angleRad);
   ctx.restore();
 
   // Μικτό κείμενο: οι σύνδεσμοι χρειάζονται δικό τους πέρασμα με αποκοπή. Δες την κεφαλίδα.
   if (!alreadyBlue) {
-    stampLinkStrips(rc, anchor, piece, fontPx, tablePieceLinkStrips(run, piece));
+    stampLinkStrips(rc, anchor, piece, fontPx, tablePieceLinkStrips(run, piece), angleRad);
   }
 }
 
@@ -371,13 +389,15 @@ function stampLinkStrips(
   piece: TableTextPiece,
   fontPx: number,
   strips: readonly TableTextStripMm[],
+  /** §59 Δ1 — γωνία **πίνακα + κελιού**: το δεύτερο πέρασμα οφείλει να πέσει πάνω στο πρώτο. */
+  angleRad: number,
 ): void {
   const { ctx } = rc;
   if (strips.length === 0) return;
 
   ctx.save();
   ctx.translate(anchorScreen.x, anchorScreen.y);
-  ctx.rotate(rc.textAngleRad);
+  ctx.rotate(angleRad);
   ctx.fillStyle = TABLE_CELL_LINK.colorHex;
   ctx.font = tableCellFont(fontPx, piece.bold, piece.italic, piece.fontFamily);
   ctx.textAlign = piece.align;
