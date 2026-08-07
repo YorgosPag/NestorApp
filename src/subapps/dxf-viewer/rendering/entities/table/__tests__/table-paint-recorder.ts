@@ -308,6 +308,12 @@ export interface PaintRecorderOptions {
    * σπασμένη τη φωτεινή. Τα tests parity με Excel περνούν ρητά `TABLE_PAPER_HEX`.
    */
   readonly surfaceHex?: string;
+  /**
+   * 🔴 ADR-771 Φ.2 — ζωγραφίζει ο πίνακας ο ίδιος την επιφάνεια; **Προεπιλογή `false`**, που
+   * είναι η ιστορική συμπεριφορά (κατάσταση «Καμβάς»): κάθε υπάρχουσα σουίτα βλέπει ό,τι
+   * έβλεπε πάντα, χωρίς να αλλάξει γραμμή. Τα tests της Φ.2 το ανεβάζουν ρητά.
+   */
+  readonly surfacePaint?: boolean;
 }
 
 /**
@@ -334,12 +340,14 @@ export function createRc(log: PaintLog, options: PaintRecorderOptions = {}): Sta
     pxPerMm = 10,
     toScreen = (u, v) => ({ x: u, y: v }),
     surfaceHex = RECORDER_DARK_SURFACE,
+    surfacePaint = false,
   } = options;
   return createStampTableContext({
     ctx: createCtx(log),
     toScreen,
     pxPerMm,
     surfaceHex,
+    surfacePaint,
     phaseColor,
   });
 }

@@ -56,6 +56,7 @@ import {
 // υποδιαιρέσεών του. Η ονομασία ζει στο `bim/`, η ζωγραφική εδώ — ίδιος διαχωρισμός με
 // τη διάταξη και τον ζωγράφο της.
 import { stampTableIndicator } from './table/stamp-table-indicator';
+import { stampTableSheet } from './table/stamp-table-sheet';
 // 🔴 N.7.1 (2026-08-04, §43) — **τι σημαίνει ο δρομέας και η επιλογή για αυτό το καρέ**: τρεις
 // καθαρές ερωτήσεις που δεν αγγίζουν καμβά. Εξαγωγή, όχι κόψιμο — δες την κεφαλίδα εκείνου.
 import {
@@ -157,6 +158,8 @@ export class TableRenderer extends BaseEntityRenderer {
       // διάταξη μόλις έβαψε τα κελιά με αυτή την επιφάνεια και η σκίαση επιλογής οφείλει να
       // δει την ίδια. Δεύτερη ανάγνωση = δεύτερο `getComputedStyle` ανά πίνακα ανά καρέ.
       surfaceHex: geometry.surfaceHex,
+      // 🔴 ADR-771 Φ.2 — από την **ίδια** γεωμετρία, για τον ίδιο λόγο με το `surfaceHex`.
+      surfacePaint: geometry.surfacePaint,
       // Η φάση (hover/επιλογή) έχει ήδη θέσει το `strokeStyle`· όταν είναι η κανονική
       // φάση, το `undefined` αφήνει τα χρώματα του στυλ να περάσουν αυτούσια.
       phaseColor: this.tablePhaseColor(),
@@ -171,6 +174,9 @@ export class TableRenderer extends BaseEntityRenderer {
     // στο ίδιο καρέ — δηλαδή σκίαση που τρυπά ένα κελί ενώ το πλαίσιο στέκεται σε άλλο.
     const activeCellRect = cursor ? activeCellRectOf(cursor, index) : undefined;
 
+    // 🔴 ADR-771 Φ.2 — **ΠΡΩΤΟ**: το φύλλο είναι φόντο, όλα τα υπόλοιπα κάθονται από πάνω.
+    // Καλείται πάντα, χωρίς συνθήκη — ο φρουρός (`surfacePaint`) ζει μέσα στον ζωγράφο.
+    stampTableSheet(rc, layout);
     stampTableFills(rc, cells);
     // ADR-739 Φ.Δ βήμα 8 — η επιλογή **πάνω από τα γεμίσματα, κάτω από το πλέγμα και το
     // κείμενο**: είναι ημιδιαφανής, οπότε ένα στρώμα πάνω από τα γράμματα θα τα θόλωνε —

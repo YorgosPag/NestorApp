@@ -22,10 +22,17 @@
  * `print/capture/capture-2d.ts` ρασταροποιεί το PDF **μέσα από τους ίδιους renderers**. Χωρίς
  * τον φρουρό, ο δείκτης θα τυπωνόταν αυτούσιος και το test της εξαγωγής θα έμενε **πράσινο**.
  *
- * Ο φρουρός είναι το `getPrintColorPolicy()` και **όχι** νέα σημαία: η ερώτηση «είμαι πάνω σε
- * χαρτί;» έχει ήδη ιδιοκτήτη, τον οποίο ρωτά και το μελάνι του πίνακα (`table-ink.ts`). Δύο
+ * Ο φρουρός είναι το `tableSurfaceShowsPaper()` και **όχι** νέα σημαία: η ερώτηση «είμαι πάνω
+ * σε χαρτί;» έχει ήδη ιδιοκτήτη, τον οποίο ρωτά και το μελάνι του πίνακα (`table-ink.ts`). Δύο
  * απαντήσεις θα σήμαιναν ένα σημείο όπου το μελάνι και ο δείκτης διαφωνούν για το αν
  * τυπώνονται.
+ *
+ * ⚠️ **ADR-771 Φ.2 — ήταν σκέτο `getPrintColorPolicy()` και δεν αρκεί πια.** Ο χρήστης μπορεί
+ * πλέον να ζητήσει την κατάσταση «Χαρτί» ως **θέαση**, χωρίς να τρέχει εκτύπωση. Αν ο φρουρός
+ * ρωτούσε μόνο την πολιτική εκτύπωσης, η προεπισκόπηση θα έδειχνε δείκτες δεσμού που **δεν
+ * τυπώνονται** — δηλαδή θα έλεγε ψέματα ακριβώς εκεί που υπόσχεται ακρίβεια, και μαζί της θα
+ * έπεφτε ολόκληρο το επιχείρημα της τρίτης κατάστασης. Το `tableSurfaceShowsPaper()` **περιέχει**
+ * την παλιά ερώτηση, οπότε δεν είναι δεύτερη απάντηση: είναι η ίδια, πιο πλατιά.
  *
  * ⚠️ **Το `skipInteractive` ΔΕΝ κάνει τη δουλειά.** Το καταναλώνει ο `DxfRenderer` για να
  * μηδενίσει επιλογή/hover/λαβές και **δεν φτάνει** εδώ· και το περνά **και** το bitmap cache,
@@ -49,7 +56,7 @@
  */
 
 import { TABLE_BOUND_STATE } from '../../../config/color-config';
-import { getPrintColorPolicy } from '../../../config/print-color-policy';
+import { tableSurfaceShowsPaper } from '../../../bim/table/table-ink';
 import { hexToRgba } from '../../../config/color-math';
 import { traceRectMm, type StampTableContext } from './stamp-table-layout';
 import type { TableExceptionMarkCorner } from '../../../config/color-config';
@@ -77,7 +84,7 @@ export interface TableBoundStateMarks {
 export function stampTableBoundState(rc: StampTableContext, input: TableBoundStateMarks): void {
   // 🔴 Ο ΦΡΟΥΡΟΣ ΤΟΥ ΧΑΡΤΙΟΥ — δες την κεφαλίδα. Πρώτη γραμμή επίτηδες: ό,τι μπει από πάνω
   // του αύριο είναι ήδη προστατευμένο, χωρίς να χρειαστεί να το θυμηθεί ο επόμενος.
-  if (getPrintColorPolicy() !== null) return;
+  if (tableSurfaceShowsPaper()) return;
   if (input.strips.length === 0 && input.marks.length === 0) return;
 
   stampColumnStrips(rc, input.strips, input.stale);

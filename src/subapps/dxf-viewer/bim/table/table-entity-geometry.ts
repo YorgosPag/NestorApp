@@ -45,7 +45,7 @@ import type {
 } from '../../types/table-entity';
 import type { TableLayout } from './table-layout-types';
 import { layoutTable } from './table-layout';
-import { liveTableSurfaceHex, TABLE_PAPER_HEX } from './table-ink';
+import { DELIVERABLE_PAPER_SURFACE, liveTableSurface, type TableSurface } from './table-ink';
 import { resolveTableModel } from './table-model-helpers';
 import type { TableStyle } from './table-style';
 import { getTableStyleRegistry } from './table-style-registry';
@@ -222,9 +222,15 @@ export function computeTableEntityGeometry(
    * 🔴 ADR-739 §38 — η επιφάνεια κάτω από τον πίνακα. **Προεπιλογή: χαρτί**, γιατί αυτή είναι η
    * μη-ζωντανή εκδοχή — την καλεί η **εξαγωγή** (`table-to-primitives.ts`), που καταλήγει σε
    * λευκή σελίδα. Η οθόνη περνά από το {@link computeTableEntityGeometryLive}.
+   *
+   * 🔴 ADR-771 Φ.2 — **αντικείμενο, όχι σκέτο hex**: η επιφάνεια είναι χρώμα **και** «ποιος
+   * τη ζωγραφίζει», και τα δύο πρέπει να ταξιδεύουν μαζί (δες {@link TableSurface}). Η
+   * προεπιλογή {@link DELIVERABLE_PAPER_SURFACE} κρατά την ιστορική συμπεριφορά ακέραιη:
+   * κανένα παραδοτέο δεν ζωγράφισε ποτέ φύλλο και δεν αρχίζει τώρα.
    */
-  surfaceHex: string = TABLE_PAPER_HEX,
+  surface: TableSurface = DELIVERABLE_PAPER_SURFACE,
 ): TableEntityGeometry {
+  const { hex: surfaceHex } = surface;
   const style = resolveTableStyle(entity);
   // Το entity κρατά απλό JSON (Φ.Δ Λύση Α)· ο `Map` είναι παράγωγος και απομνημονευμένος,
   // οπότε οι δύο WeakMaps αλυσιδώνονται: ίδιο persisted ⇒ ίδιο μοντέλο ⇒ ίδια διάταξη.
@@ -250,20 +256,22 @@ export function computeTableEntityGeometry(
     // 🔴 ADR-739 §41 — η **ίδια** τιμή που μόλις έφτιαξε τα χρώματα της διάταξης, όχι δεύτερη
     // ανάγνωση: δες `TableEntityGeometry.surfaceHex` για το γιατί δεν επιτρέπεται να ξαναζητηθεί.
     surfaceHex,
+    // 🔴 ADR-771 Φ.2 — από το **ίδιο** αντικείμενο, ποτέ από δεύτερη ερώτηση.
+    surfacePaint: surface.paint,
   };
 }
 
 /**
  * Με το ζωντανό `drawingScale` SSoT (getter τη στιγμή της κλήσης, ADR-040).
  *
- * 🔴 ADR-739 §38 — «ζωντανό» σημαίνει **και** ζωντανή επιφάνεια ({@link liveTableSurfaceHex}),
+ * 🔴 ADR-739 §38 — «ζωντανό» σημαίνει **και** ζωντανή επιφάνεια ({@link liveTableSurface}),
  * όχι μόνο ζωντανή κλίμακα. Δεν είναι διακοσμητικό: από αυτή τη διαδρομή περνούν **όλοι** οι
  * καταναλωτές οθόνης — ο ζωγράφος, το hit-test, οι λαβές και ο **in-cell επεξεργαστής**. Αν η
  * προεπιλογή έμενε «χαρτί», το `<textarea>` θα άνοιγε με **μαύρα** γράμματα πάνω στο σκούρο
  * κελί που ο καμβάς μόλις ζωγράφισε λευκά — δηλαδή ακριβώς η αναπήδηση που η Φ.Δ βήμα 3 υπάρχει
  * για να μην υπάρχει, σε χρώμα αντί σε θέση.
  *
- * Μία ανάγνωση `getComputedStyle` ανά κλήση — ποτέ ανά κελί (δες {@link liveTableSurfaceHex}).
+ * Μία ανάγνωση `getComputedStyle` ανά κλήση — ποτέ ανά κελί (δες {@link liveTableSurface}).
  */
 export function computeTableEntityGeometryLive(
   entity: TableEntity,
@@ -273,7 +281,8 @@ export function computeTableEntityGeometryLive(
     entity,
     useDrawingScaleStore.getState().drawingScale,
     sceneUnits,
-    liveTableSurfaceHex(),
+    // ADR-771 Φ.2 — **μία** κλήση δίνει και το χρώμα και το «ποιος το ζωγραφίζει».
+    liveTableSurface(),
   );
 }
 
