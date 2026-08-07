@@ -27,6 +27,7 @@ import { getTableIndicatorCursor, subscribeTableIndicatorCursor } from './TableI
 import {
   buildTableArrowCursorValue,
   buildTableFillCursorValue,
+  buildTableFormatPaintCursorValue,
   buildTableMoveCursorValue,
 } from './table-indicator-cursor-image';
 import { subscribeDevicePixelRatio } from './device-pixel-ratio';
@@ -35,7 +36,16 @@ import { getDevicePixelRatio } from './utils';
 // boolean. Ζει εδώ γιατί εδώ είναι ο ΕΝΑΣ γραφέας: κάθε αλλαγή σχήματος δείκτη περνά από αυτό
 // το `apply()`, άρα μία μέτρηση εδώ είναι **πλήρης** εξ ορισμού.
 import { noteCursorApply, type CursorApplyBranch } from './cursor-apply-audit';
-import type { TableIndicatorCursorRole } from '../../bim/table/table-indicator-cursor-role';
+// 🔴 ADR-768 Δ2 — ο ΕΝΑΣ κανόνας «πού βάφει το οπλισμένο πινέλο», κοινός με τον ακροατή του
+// κλικ: δύο αντίγραφα θα ήταν pixel όπου ο δείκτης υπόσχεται ένα και το πάτημα κάνει άλλο (§31).
+import {
+  tableFormatPaintRoleOf,
+  type TableIndicatorCursorRole,
+} from '../../bim/table/table-indicator-cursor-role';
+import {
+  isTableFormatPainterArmed,
+  subscribeTableFormatPainter,
+} from '../../state/table-format-painter-store';
 // 🔴 ADR-751 — το χεράκι πάνω σε διεύθυνση κελιού. Δύο ανεξάρτητα σκέλη, δύο συνδρομές:
 // το `CtrlKeyTracker` είναι ο SSoT του modifier (ADR-363) και μέχρι τώρα δεν είχε κανέναν
 // καταναλωτή στη διαδρομή δείκτη — εδώ αποκτά τον πρώτο.
@@ -146,6 +156,17 @@ function tableIndicatorCursorValue(role: TableIndicatorCursorRole): string {
     // υπάρχει σύρση «όλων», και ένα βέλος θα υποσχόταν μία.
     case 'select-all':
       return 'pointer';
+    // 🔴 ADR-768 Βήμα 5 — **το πινέλο μορφοποίησης, οπλισμένο.** Ο τέταρτος ρόλος που πληρώνει
+    // ράστερ, και ο **δεύτερος** που το πληρώνει επειδή οι λέξεις-κλειδιά είναι **πιασμένες**:
+    // το `copy` το κρατά το `range-copy` (αντιγραφή *περιεχομένου*), το `cell` το `cell-select`
+    // (η κατάσταση **χωρίς** πινέλο), το `crosshair` το σταυρόνημα CAD. Και οι τρεις θα ήταν
+    // οπτικά ταυτόσημες με «δεν άλλαξε τίποτα».
+    //
+    // ⚠️ Είναι ο **μόνος** ρόλος που δεν γεννιέται από γεωμετρία αλλά από **κατάσταση
+    // εργαλείου** — τον παράγει η `tableFormatPaintRoleOf` στον ΕΝΑ γραφέα. Η μετάφραση εδώ
+    // μένει ό,τι ήταν πάντα: ρόλος → τιμή CSS, καμία γνώση για το ποιος τον ζήτησε.
+    case 'format-paint':
+      return buildTableFormatPaintCursorValue();
   }
 }
 
@@ -189,6 +210,7 @@ export function useCrosshairCursor(
     let unsubTable: () => void = () => {};
     let unsubCellLink: () => void = () => {};
     let unsubCtrl: () => void = () => {};
+    let unsubPainter: () => void = () => {};
 
     const apply = (): void => {
       const target = el;
@@ -197,7 +219,24 @@ export function useCrosshairCursor(
       // Ο ρόλος διαβάζεται **μία** φορά, πριν από κάθε κλάδο: τον χρειάζεται και η απόφαση
       // παρακάτω και η καταγραφή κάθε κλάδου (ένα «NavWheel ενώ ο πίνακας ζητούσε βέλος»
       // είναι διάγνωση, όχι θόρυβος). Καθαρή ανάγνωση store — καμία παρενέργεια.
-      const tableCursor = getTableIndicatorCursor();
+      /**
+       * 🔴 ADR-768 Βήμα 5 — **η ΓΕΩΜΕΤΡΙΑ απαντά «πού είμαι», το ΕΡΓΑΛΕΙΟ «τι θα κάνω».**
+       *
+       * Το store κρατά ό,τι είδε η τελευταία σάρωση· η κατάσταση του πινέλου εφαρμόζεται
+       * **εδώ**, ακριβώς όπως το χεράκι του ADR-751 συνδυάζει `Ctrl` + σύνδεσμο σε αυτό το
+       * σημείο αντί να τα γράφει στο store της λωρίδας.
+       *
+       * 🔑 **Και είναι ο μόνος τρόπος να αλλάξει ο δείκτης χωρίς κίνηση χεριού.** Το πινέλο
+       * οπλίζεται από **κουμπί** (γραμμή εργαλείων ή κορδέλα), όχι από το ποντίκι: αν η
+       * μετάφραση ζούσε στον γραφέα του hover, ο δείκτης θα άλλαζε μόνο στο επόμενο pixel
+       * κίνησης — δηλαδή θα έμοιαζε σπασμένος ακριβώς στη στιγμή που ο χρήστης ρωτά «οπλίστηκε;».
+       *
+       * Η καταγραφή του §31.11 παίρνει τον **τελικό** ρόλο, γιατί αυτόν γράφει το `apply()`.
+       */
+      const geometryRole = getTableIndicatorCursor();
+      const tableCursor = isTableFormatPainterArmed()
+        ? tableFormatPaintRoleOf(geometryRole)
+        : geometryRole;
       /**
        * 🔴 Ο ΕΝΑΣ γραφέας γράφει από **ΕΝΑ** σημείο.
        *
@@ -292,6 +331,12 @@ export function useCrosshairCursor(
       //     ποντίκι μετά το Ctrl, δηλαδή θα έμοιαζε σπασμένο ακριβώς στη σωστή χειρονομία.
       unsubCellLink = subscribeHoveredCellLink(apply);
       unsubCtrl = CtrlKeyTracker.subscribe(apply);
+      // 🔴 ADR-768 Βήμα 5 — **το πινέλο οπλίζεται από κουμπί, όχι από το ποντίκι.** Χωρίς αυτή τη
+      // συνδρομή, ο δείκτης θα άλλαζε μόνο στην επόμενη κίνηση του χεριού — και το `Esc` θα
+      // άφηνε το πινέλο ζωγραφισμένο πάνω από σχέδιο που δεν βάφεται πια. Ίδιος λόγος με τη
+      // συνδρομή στη λωρίδα από πάνω: ο δείκτης του ΟΣ ζει στο `style.cursor`, όχι σε καρέ που
+      // παύει να ζωγραφίζεται. Χαμηλής συχνότητας εξ ορισμού (δύο γραψίματα ανά χειρονομία).
+      unsubPainter = subscribeTableFormatPainter(apply);
     };
     attach();
 
@@ -304,6 +349,7 @@ export function useCrosshairCursor(
       unsubTable();
       unsubCellLink();
       unsubCtrl();
+      unsubPainter();
       if (el) el.style.cursor = ''; // restore (class-defined cursor takes over again)
     };
   }, [targetRef, enabled, size, color, lineWidth]);
