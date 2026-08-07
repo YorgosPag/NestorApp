@@ -219,32 +219,50 @@ export function formatAddressType(
  * @param data - Partial address data
  * @returns Complete ProjectAddress
  */
+/**
+ * Πετάει ό,τι **δεν έχει περιεχόμενο** — το Firestore απορρίπτει `undefined`, και ένα κενό
+ * string ή ένα `null` σε **νεοδημιουργούμενη** εγγραφή δεν σβήνει τίποτα: είναι σκουπίδι.
+ *
+ * ⚠️ Δεν είναι το `stripUndefinedDeep` (`utils/firestore-sanitize`): εκείνο ρωτά **άλλο
+ * ερώτημα** (μόνο `undefined`, και αναδρομικά). Εδώ ο κανόνας είναι ο ίδιος που είχαν οι
+ * χειρόγραφες `data.x ? {x} : {}` που αντικαθιστά, γραμμένος **μία** φορά.
+ */
+function withContentOnly(data: Record<string, unknown>): Record<string, unknown> {
+  const kept: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined || value === null || value === '') continue;
+    kept[key] = value;
+  }
+  return kept;
+}
+
 export function createProjectAddress(
   data: Partial<ProjectAddress> & { city: string }
 ): ProjectAddress {
-  // 🏢 ENTERPRISE: Use conditional spread to avoid undefined values
-  // Firestore REJECTS undefined — omit optional fields entirely if not provided
+  const {
+    id, street, city, postalCode, country, type, isPrimary, sortOrder,
+    ...optional
+  } = data;
+
   return {
-    id: data.id || generateAddressId(),
-    street: data.street || '',
-    city: data.city,
-    postalCode: data.postalCode || '',
-    country: data.country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
-    type: data.type || 'site',
-    isPrimary: data.isPrimary ?? false,
-    sortOrder: data.sortOrder ?? 0,
-    // Optional fields: only include if defined (Firestore rejects undefined)
-    ...(data.number ? { number: data.number } : {}),
-    ...(data.region ? { region: data.region } : {}),
-    ...(data.regionalUnit ? { regionalUnit: data.regionalUnit } : {}),
-    ...(data.label ? { label: data.label } : {}),
-    ...(data.blockSide ? { blockSide: data.blockSide } : {}),
-    ...(data.blockSideDescription ? { blockSideDescription: data.blockSideDescription } : {}),
-    ...(data.cadastralCode ? { cadastralCode: data.cadastralCode } : {}),
-    ...(data.municipality ? { municipality: data.municipality } : {}),
-    ...(data.neighborhood ? { neighborhood: data.neighborhood } : {}),
-    ...(data.coordinates ? { coordinates: data.coordinates } : {}),
-    ...(data.frontageIndex !== undefined ? { frontageIndex: data.frontageIndex } : {}),
+    // 🔴 **ADR-772 — η σειρά ΕΙΝΑΙ ο μηχανισμός.** Τα προαιρετικά μπαίνουν ΠΡΩΤΑ ώστε τα
+    // υποχρεωτικά με προεπιλογή να μην μπορούν να παρακαμφθούν.
+    //
+    // Ήταν **χειρόγραφη λίστα 11 προαιρετικών πεδίων** ενώ ο τύπος δήλωνε 22: πετούσε
+    // σιωπηλά `municipalUnit` (ADR-759 Φ3!), `decentAdmin`, `majorGeo`, **και τις οκτώ
+    // ταυτότητες**, `source`/`verifiedAt`/`geocodingMetadata` (ADR-332 Φ8). Ίδιο σχήμα με
+    // το Zod του `address-schemas.ts` — «ό,τι δεν δηλώθηκε, εξαφανίζεται» — αλλά σε
+    // **εργοστάσιο**, όπου κανείς δεν το έψαχνε. Πλέον περνά ό,τι έχει περιεχόμενο, οπότε
+    // νέο πεδίο στον τύπο **δεν χρειάζεται καμία αλλαγή εδώ**.
+    ...withContentOnly(optional),
+    id: id || generateAddressId(),
+    street: street || '',
+    city,
+    postalCode: postalCode || '',
+    country: country || GEOGRAPHIC_CONFIG.DEFAULT_COUNTRY,
+    type: type || 'site',
+    isPrimary: isPrimary ?? false,
+    sortOrder: sortOrder ?? 0,
   };
 }
 

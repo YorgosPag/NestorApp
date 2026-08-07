@@ -50,6 +50,17 @@ const FULL_ADDRESS: Required<ProjectAddress> = {
   municipality: 'Δήμος Κορδελιού - Ευόσμου',
   municipalUnit: 'Δ.Ε. ΕΥΟΣΜΟΥ',
   neighborhood: 'ΠΕΡΙΟΧΗ ΕΠΕΚΤΑΣΗΣ ΕΥΟΣΜΟΥ',
+  // ADR-772 — τα δύο ανώτερα επίπεδα και οι ταυτότητες. Ο τύπος τα **επέβαλε** εδώ τη
+  // στιγμή που μπήκαν στο `ProjectAddress`: αυτός ακριβώς είναι ο μηχανισμός.
+  decentAdmin: 'Α.Δ. Μακεδονίας - Θράκης',
+  majorGeo: 'Βόρεια Ελλάδα',
+  settlementId: 'stl_12345',
+  municipalUnitId: 'mu_678',
+  municipalityId: 'mun_901',
+  regionalUnitId: 'ru_234',
+  regionId: 'reg_567',
+  decentAdminId: 'da_890',
+  majorGeoId: 'mg_123',
   coordinates: { lat: 40.67, lng: 22.9 },
   source: 'titleblock',
   verifiedAt: 1_754_400_000_000,

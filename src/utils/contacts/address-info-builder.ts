@@ -41,6 +41,15 @@ import {
   toAddressInfoType,
   type ContactAddressType,
 } from '@/types/contacts/address-types';
+import { projectAddressVocabulary } from '@/utils/address/administrative-hierarchy';
+import type { FlatAddressFormFields } from '@/utils/address/administrative-hierarchy-vocabulary';
+
+/**
+ * ⚠️ **ADR-772**: ο τύπος μετακόμισε δίπλα στον πίνακα που τον τυπώνει (είναι ένα από τα
+ * λεξιλόγιά του). Επανεξάγεται εδώ ώστε οι υπάρχοντες καταναλωτές (`individualMapper`,
+ * `serviceMapper`) να μην αλλάξουν ούτε μία εισαγωγή.
+ */
+export type { FlatAddressFormFields };
 
 // =============================================================================
 // ΣΤΑΘΕΡΕΣ
@@ -57,98 +66,46 @@ import {
 const CONTACT_ADDRESS_DEFAULT_COUNTRY = 'GR';
 
 // =============================================================================
-// ΠΙΝΑΚΑΣ ΠΡΟΒΟΛΗΣ ΙΕΡΑΡΧΙΑΣ — SSoT ονομάτων
+// ΠΡΟΒΟΛΗ ΙΕΡΑΡΧΙΑΣ — καταναλωτής του SSoT
 // =============================================================================
 
 /**
- * Η ίδια διοικητική ιεραρχία λέγεται αλλιώς σε κάθε σχήμα:
- *   - `AddressInfo`   → `municipality`, `region`, `settlement`, …
- *   - `CompanyAddress`→ `municipalityName`, `regionName`, `city`, …
- *   - flat form       → `municipality`, `region`, `settlement`, … (ίδια με AddressInfo)
+ * 🔴 **ADR-772: ο πίνακας μετακόμισε.**
  *
- * Η αντιστοίχιση ήταν γραμμένη με το χέρι σε τρία σημεία· κάθε νέο επίπεδο
- * έπρεπε να προστεθεί παντού και μια ξεχασμένη προσθήκη περνούσε αθόρυβα.
- * Εδώ ζει **μία γραμμή ανά επίπεδο**, με αλυσίδα εναλλακτικών ονομάτων.
- */
-const HIERARCHY_PROJECTION: ReadonlyArray<{
-  readonly target: keyof AddressInfo;
-  readonly company: readonly string[];
-  readonly flat: readonly string[];
-}> = [
-  // Ο οικισμός στο CompanyAddress ζει στο `city` — δεν υπάρχει ξεχωριστό πεδίο.
-  { target: 'settlement', company: ['city'], flat: ['settlement'] },
-  { target: 'settlementId', company: ['settlementId'], flat: ['settlementId'] },
-  { target: 'community', company: ['communityName'], flat: ['community'] },
-  { target: 'municipalUnit', company: ['municipalUnitName'], flat: ['municipalUnit'] },
-  { target: 'municipality', company: ['municipalityName'], flat: ['municipality'] },
-  { target: 'municipalityId', company: ['municipalityId'], flat: ['municipalityId'] },
-  { target: 'regionalUnit', company: ['regionalUnitName'], flat: ['regionalUnit'] },
-  // Το CompanyAddress κουβαλά ΚΑΙ `regionName` (από την ιεραρχία) ΚΑΙ `region`
-  // (ελεύθερο ταχυδρομικό πεδίο). Ο αναγνώστης προτιμά το πρώτο· ίδια σειρά εδώ.
-  { target: 'region', company: ['regionName', 'region'], flat: ['region'] },
-  { target: 'decentAdmin', company: ['decentAdminName'], flat: ['decentAdmin'] },
-  { target: 'majorGeo', company: ['majorGeoName'], flat: ['majorGeo'] },
-  // Περιοχή / Συνοικία — εκτός διοικητικής ιεραρχίας, αλλά ίδιο μονοπάτι.
-  { target: 'neighborhood', company: ['neighborhood'], flat: ['neighborhood'] },
-];
-
-type HierarchyVocabulary = 'company' | 'flat';
-
-/** Πρώτη μη-κενή τιμή από την αλυσίδα ονομάτων. */
-function pickFirst(
-  source: Readonly<Record<string, unknown>>,
-  keys: readonly string[],
-): string | undefined {
-  for (const key of keys) {
-    const value = source[key];
-    if (typeof value === 'string' && value !== '') return value;
-  }
-  return undefined;
-}
-
-/**
- * Προβάλλει την ιεραρχία της πηγής στα ονόματα του `AddressInfo`.
+ * Ο `HIERARCHY_PROJECTION` ζούσε εδώ και κάλυπτε **μόνο** τα τρία λεξιλόγια των επαφών.
+ * Η ίδια αντιστοίχιση χρειαζόταν και στα **έργα** και στη **φόρμα ιεραρχίας**, όπου ήταν
+ * γραμμένη με το χέρι άλλες τέσσερις φορές με άλλο πλήθος επιπέδων. Ζει πλέον στο
+ * ουδέτερο `utils/address/administrative-hierarchy-vocabulary` — η διοικητική ιεραρχία
+ * δεν είναι έννοια επαφών.
  *
- * Τα κενά **παραλείπονται** (δεν γράφονται κενά strings στο Firestore) — ίδια
- * σημασιολογία με τα conditional spreads που αντικαθιστά.
+ * ⚠️ `includePostal: false` **σκόπιμα**: τα ταχυδρομικά πεδία εδώ έχουν δικούς τους
+ * κανόνες (προεπιλεγμένη χώρα `'GR'`, `city` πάντα παρόν, `number` ↔ `streetNumber`) που
+ * γράφονται ρητά παρακάτω. Χωρίς αυτό, η προαγωγή του πίνακα θα άλλαζε συμπεριφορά στις
+ * επαφές — και η δουλειά ήταν να **μην** αλλάξει καμία.
  */
 function projectHierarchy(
   source: Readonly<Record<string, unknown>>,
-  vocabulary: HierarchyVocabulary,
+  vocabulary: 'companyAddress' | 'contactFlat',
 ): Partial<AddressInfo> {
-  const projected: Record<string, string> = {};
-  for (const rule of HIERARCHY_PROJECTION) {
-    const value = pickFirst(source, rule[vocabulary]);
-    if (value !== undefined) projected[rule.target] = value;
-  }
-  return projected as Partial<AddressInfo>;
+  return projectAddressVocabulary(source, vocabulary, 'addressInfo', {
+    includePostal: false,
+    // Κατασκευή από την αρχή: δεν υπάρχει παλιά ταυτότητα να σβηστεί, και το `null` θα
+    // ήταν σκουπίδι στο Firestore. Δοκιμασμένο συμβόλαιο — βλ. `address-info-builder.test`.
+    clearedIdsAsNull: false,
+  }) as Partial<AddressInfo>;
 }
 
-/**
- * Η **αντίστροφη** διαδρομή: `AddressInfo` ➜ λεξιλόγιο `CompanyAddress`.
- *
- * Χρειάζεται όταν διαβάζουμε παλαιά έγγραφα που έχουν μόνο το παράγωγο
- * `addresses[]` και πρέπει να ξαναστηθεί η λίστα της φόρμας. Ζει **εδώ**, πάνω
- * στον ίδιο `HIERARCHY_PROJECTION`, ώστε η αντιστοίχιση να μη γραφτεί ποτέ
- * δεύτερη φορά με το χέρι — ένα νέο διοικητικό επίπεδο προστίθεται σε μία
- * γραμμή και ισχύει **και στις δύο** κατευθύνσεις (N.18: μια χειρόγραφη
- * αντίστροφη θα ήταν sibling clone αόρατο στο `ssot:discover`).
- *
- * Κανονικός στόχος = το **πρώτο** όνομα της αλυσίδας (π.χ. `region` ➜
- * `regionName`), γιατί εκεί γράφει η ιεραρχία· τα υπόλοιπα είναι αναγνωστικά
- * εναλλακτικά παλαιών εγγραφών.
- */
+/** Η **αντίστροφη** διαδρομή: `AddressInfo` ➜ λεξιλόγιο επαφών, ίδιος πίνακας. */
 function projectHierarchyFrom(
   addr: Readonly<AddressInfo>,
-  vocabulary: HierarchyVocabulary,
-): Record<string, string> {
-  const projected: Record<string, string> = {};
-  const source = addr as Readonly<Record<string, unknown>>;
-  for (const rule of HIERARCHY_PROJECTION) {
-    const value = source[rule.target];
-    if (typeof value === 'string' && value !== '') projected[rule[vocabulary][0]] = value;
-  }
-  return projected;
+  vocabulary: 'companyAddress' | 'contactFlat',
+): Record<string, string | null> {
+  return projectAddressVocabulary(
+    addr as Readonly<Record<string, unknown>>,
+    'addressInfo',
+    vocabulary,
+    { includePostal: false, clearedIdsAsNull: false },
+  );
 }
 
 // =============================================================================
@@ -200,7 +157,7 @@ export function buildAddressInfoFromFlatFields(formData: Partial<ContactFormData
     type: contactTypeToAddressInfoType(formData.type),
     isPrimary: true,
     label: resolveAddressLabel(addressType, formData.primaryAddressCustomLabel),
-    ...projectHierarchy(formData as Readonly<Record<string, unknown>>, 'flat'),
+    ...projectHierarchy(formData as Readonly<Record<string, unknown>>, 'contactFlat'),
   };
 }
 
@@ -227,7 +184,7 @@ export function buildAddressInfoListFromCompanyAddresses(
     // να αφήσει την επαφή χωρίς κύρια διεύθυνση.
     isPrimary: index === 0 || ca.type === 'headquarters' || ca.type === 'home',
     label: resolveAddressLabel(ca.type, ca.customLabel),
-    ...projectHierarchy(ca as Readonly<Record<string, unknown>>, 'company'),
+    ...projectHierarchy(ca as Readonly<Record<string, unknown>>, 'companyAddress'),
   }));
 }
 
@@ -260,27 +217,8 @@ export function buildCompanyAddressFromAddressInfo(
     postalCode: addr.postalCode || '',
     city: addr.city || '',
     ...(addr.country?.trim() ? { country: addr.country } : {}),
-    ...(projectHierarchyFrom(addr, 'company') as Partial<CompanyAddress>),
+    ...(projectHierarchyFrom(addr, 'companyAddress') as Partial<CompanyAddress>),
   };
-}
-
-/** Τα επίπεδα πεδία διεύθυνσης της φόρμας επαφής, όπως τα περιμένουν οι mappers. */
-export interface FlatAddressFormFields {
-  street: string;
-  streetNumber: string;
-  city: string;
-  postalCode: string;
-  settlement: string;
-  settlementId: string | null;
-  community: string;
-  municipalUnit: string;
-  municipality: string;
-  municipalityId: string | null;
-  regionalUnit: string;
-  region: string;
-  decentAdmin: string;
-  majorGeo: string;
-  neighborhood: string;
 }
 
 /**
@@ -309,7 +247,7 @@ export function buildFlatFieldsFromAddressInfo(
     streetNumber: addr.number || '', // array: `number` — flat: `streetNumber`
     city: addr.city || '',
     postalCode: addr.postalCode || '',
-    ...projectHierarchyFrom(addr, 'flat'),
+    ...projectHierarchyFrom(addr, 'contactFlat'),
     // Οι ταυτότητες είναι `string | null` (ποτέ κενό string) — το `projectHierarchyFrom`
     // παραλείπει τα κενά, οπότε η ρητή προεπιλογή `null` μένει.
     settlementId: addr.settlementId ?? null,

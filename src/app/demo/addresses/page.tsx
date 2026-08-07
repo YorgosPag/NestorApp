@@ -21,6 +21,10 @@ import React, { useState } from 'react';
 import { AddressCard, AddressListCard, AddressFormSection } from '@/components/shared/addresses';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import {
+  EMPTY_HIERARCHY,
+  fromHierarchyValue,
+} from '@/components/projects/tabs/locations/location-converters';
+import {
   createProjectAddress,
   migrateLegacyAddress,
   getPrimaryAddress,
@@ -87,14 +91,10 @@ export default function AddressesDemoPage() {
   };
 
   const handleAddAddress = () => {
-    const hv = newHierarchy as AddressWithHierarchyValue;
-    const city = hv.settlementName || hv.municipalityName || '';
-    const partial = {
-      street: hv.street || '',
-      number: hv.number || undefined,
-      city,
-      postalCode: hv.postalCode || '',
-    };
+    // ADR-772: ίδιος μετατροπέας με τις πραγματικές οθόνες — μια σελίδα επίδειξης που
+    // κρατά λιγότερα από την εφαρμογή δείχνει συμπεριφορά που δεν υπάρχει.
+    const partial = fromHierarchyValue({ ...EMPTY_HIERARCHY, ...newHierarchy });
+    const city = partial.city ?? '';
 
     const errors = validateAddress(partial);
     if (errors.length > 0) {
@@ -104,6 +104,7 @@ export default function AddressesDemoPage() {
 
     const newAddress = createProjectAddress({
       ...partial,
+      city,
       isPrimary: addresses.length === 0,
       sortOrder: addresses.length,
     });

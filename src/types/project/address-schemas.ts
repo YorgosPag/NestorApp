@@ -41,6 +41,20 @@ export const projectAddressSchema = z.object({
   /** ADR-759 Φ3 — Δημοτική Ενότητα (Καλλικράτης επίπεδο 6). */
   municipalUnit: z.string().optional(),
   neighborhood: z.string().optional(),
+  // ── ADR-772: τα ανώτερα επίπεδα + οι ταυτότητες ─────────────────────────────
+  // Η οθόνη τα ρωτούσε ήδη· ο τύπος τώρα τα κρατά. **Χωρίς δήλωση εδώ το PATCH τα
+  // σβήνει** — ακριβώς η βλάβη που έπιασε το ADR-759 Φ3 για το `municipalUnit`.
+  decentAdmin: z.string().optional(),
+  majorGeo: z.string().optional(),
+  // `nullable`: το `null` σημαίνει «καθαρίστηκε ρητά» και ΠΡΕΠΕΙ να επιβιώνει — αλλιώς
+  // μια σβησμένη επιλογή αφήνει μπαγιάτικη ταυτότητα δίπλα σε νέο όνομα.
+  settlementId: z.string().nullable().optional(),
+  municipalUnitId: z.string().nullable().optional(),
+  municipalityId: z.string().nullable().optional(),
+  regionalUnitId: z.string().nullable().optional(),
+  regionId: z.string().nullable().optional(),
+  decentAdminId: z.string().nullable().optional(),
+  majorGeoId: z.string().nullable().optional(),
   coordinates: z.object({
     lat: z.number(),
     lng: z.number(),

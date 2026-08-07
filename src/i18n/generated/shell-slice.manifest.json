@@ -39,7 +39,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "05179fa332fa22e33cc397e4e7108e69fe47dfff587fc0d31b50d72d337e1b8f",
+  "inputsSha256": "cda496eb65089e9a3c5d7b8570c3a4ec9f833293766782d3259dd7385a12569e",
   "languages": [
     "el"
   ],
@@ -123,6 +123,7 @@
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
     "src/components/shared/ModuleBreadcrumb.tsx": "5b6f8567dffe6c16e78d447cafe8ebf328465366fe0ab46ce5bf37f33c4fddfd",
+    "src/components/shared/addresses/address-with-hierarchy-config.ts": "7f72a362f5c9afaab5c9fa179f39260494cc4891a945e932096dcdef702d3c62",
     "src/components/shared/files/hooks/useFileDownload.ts": "4680385f283b732c7b6cfeb4cecbec8aff682b22cb0bff96ca4cb9a08b5c094c",
     "src/components/sharing/fields/PersonalMessageField.tsx": "b2334018eef4ba7c8a72b82cde1fba2a028420adedb587d2510d8993562a93a7",
     "src/components/sidebar/sidebar-badge.tsx": "269baa7a33c29e10d15ad0713ede7cb63b45b93c1b6b8a704767f782786ff258",
@@ -165,6 +166,7 @@
     "src/components/ui/navigation/tabs-types.ts": "a9317bb904ca8f972f42b65c3ef76850bc793b5523b7109340960a90198e3c2c",
     "src/components/ui/popover.tsx": "3e8fda06d31f4a3402105a2171e86655c0d901e6e3363e9369aa9076937b3dbf",
     "src/components/ui/scroll-area.tsx": "130899d1fac0b66d4e8b3ca5bdbfb166ff0881c6e20c7568e8b6a364ee2337c3",
+    "src/components/ui/searchable-combobox-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/ui/select.tsx": "ad35c978d4b697c7991afbe053f1bb0b5a981316e202970546e4762b6127c21a",
     "src/components/ui/separator.tsx": "c23dc73460d4e1ed17e0fb42e464886c3934693b77617001a8470121f23dbb6a",
     "src/components/ui/sharing/ShareStatusBanner.tsx": "e829058926ca3e77e3308989b66a7e60d0e6093c03abc94eaa8705e182d9b79f",
@@ -242,6 +244,7 @@
     "src/design-system/color-bridge.ts": "fea2b6ca817fbeccfdbff4cca2aa8a37a4a2aa0383e269f10ce5fdacccaa652e",
     "src/design-system/tokens/colors.ts": "e856f257d1fdc9f620a2f71966ebf1e15957da57b13a3cabfe266b7ad718e8be",
     "src/hooks/notifications/useFilesNotifications.ts": "2394f57ce9d431654818cef6fe1185a7b35a39258463e0b1a5cea8b75fe64ca3",
+    "src/hooks/useAdministrativeHierarchy.ts": "cf399b3f4fbdda749e3931ad6279011fc8485b492d5cab5e52e46310e3e9112e",
     "src/hooks/useBorderTokens.ts": "e57e219e9753daedbc00c737db3d3e3ef8fcc88a2013823ad53361ae1257bcd9",
     "src/hooks/useCopyToClipboard.ts": "e9fbb8dfd166df3911b4085ea71f5e1aabae6983babf12b78d0403dbf2bdf998",
     "src/hooks/useDropdownTokens.ts": "fbf97823babaf80ed36e89974f45744eb162ef33144fd91d14d0d6db8ed60e37",
@@ -407,7 +410,7 @@
     "src/styles/design-tokens/modules/layout.ts": "ff704dd3c97caf4b642f303d678a7bee137d4742ed829e0ff7d43fcff005e30e",
     "src/styles/design-tokens/modules/portal-overlay.ts": "b5d469f1ea794f783e3e0f3399e150c9d99f9f4bec66573b6c994b52d9fc8e8e",
     "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts": "31f5c90a905b757963db4bf4b4cebaa8ac532bf982c978a5927d128ef1d6c9d7",
-    "src/subapps/dxf-viewer/config/color-config.ts": "6386f021c11b210c9380de25762bdbeb3b36dea75cdb2c3a69b62ee573989ba2",
+    "src/subapps/dxf-viewer/config/color-config.ts": "4548f1ee64570a3565b06c3ed2cb92eb78d736e62fb4cfd4664ebbe60c6b3bf5",
     "src/subapps/dxf-viewer/config/color-math.ts": "b835d0310b123eaf65883a0cb8e4f4c7a3182c966a3f15e354140e19ccc10bf3",
     "src/subapps/dxf-viewer/config/dxf-timing.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/config/modal-select.ts": "a1c478d8cb6d0656503b57d91b950f17d4ee2f48fd195eaac6fbcbdf729d10c9",
@@ -461,11 +464,13 @@
     "src/types/workspace.ts": "d2d04d6bba6c700d37786ec94a15392297fe1585ae0545e3ae33720e4d16e648",
     "src/ui-adapters/react/useSemanticColors.ts": "c84e9d56eda0d3a334f46cdf8a658a8c8876ee06771f5910862c755141588e5c",
     "src/utils/accessibility.ts": "417718df0f870d4d5a0ca91603f9a8f4bd0a553667f4da9b280ac3e7f3736aa3",
+    "src/utils/address/administrative-hierarchy-vocabulary.ts": "9f7eb691c4f35e4d57975af58ab3a20c1adfe3eacecbcaf1f19971dcb5de7a80",
+    "src/utils/address/administrative-hierarchy.ts": "fdf8449bf9c4ea1a8c95c2ceae4f74dd67b944a625f3eb110ed418eca2a8e391",
     "src/utils/contactForm/contactMapper.ts": "4d191037094914534b7e55e00200957aba3b01945520e46b13158a2b82efcd24",
     "src/utils/contactForm/fieldMappers/companyMapper.ts": "3175cabe34f6d81213692311f7bceba272b99cc5d7e830bb9192b71c6dbfd247",
     "src/utils/contactForm/fieldMappers/individualMapper.ts": "cebfb1c6ada8832982a1132bfef7010c5854a5985e3139b9a61952d438f0ae16",
     "src/utils/contactForm/fieldMappers/serviceMapper.ts": "ea0188b175689586b5ee43127e73612912fa43b9b1298e3cf6295fc16c72721b",
-    "src/utils/contacts/address-info-builder.ts": "51cc536b9cb89f534d0305e0ba08b5b9e07e6ee271331e24a152ce4ad385db07",
+    "src/utils/contacts/address-info-builder.ts": "72e013062f907dbb674bf6cad005faeadad373c87777d3e448135f24ee43ecab",
     "src/utils/contacts/contact-addresses-reader.ts": "5e0760ab987db8809aaf2d3e93ae2b04712d9cf4fd94a8e9c1615e024d85e8c9",
     "src/utils/firestore-sanitize.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/utils/preloadRoutes.ts": "abf75a95040cffe88cc0f8872ae323ec711810800a5c5bcc12eff3b7a936aec0"
@@ -484,7 +489,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 407,
+    "shellFiles": 412,
     "sliceBytes": 187910
   },
   "unresolvableKeys": [
