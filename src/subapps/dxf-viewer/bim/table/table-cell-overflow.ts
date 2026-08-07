@@ -98,7 +98,29 @@ export const CELL_CLIP_ELLIPSIS = '…';
 export const CELL_CLIP_NUMERIC_FILL = '#';
 
 /** Οι τιμές που η μηχανή **όντως** ξέρει να εκτελέσει σήμερα (βλ. {@link resolveCellOverflow}). */
-const SUPPORTED_OVERFLOW: ReadonlySet<string> = new Set<TableCellOverflow>(['clip']);
+const SUPPORTED_OVERFLOW: ReadonlySet<string> = new Set<TableCellOverflow>(['clip', 'shrink']);
+
+/**
+ * 🔴 ADR-739 §58 Γ1 — **το κάτω όριο της σμίκρυνσης, και γιατί υπάρχει ενώ το Excel δεν έχει.**
+ *
+ * Το *Shrink to Fit* του Excel δεν έχει κατώτατο μέγεθος: σμικρύνει όσο χρειαστεί, και σε
+ * στενή στήλη παράγει γράμματα που **κανείς δεν μπορεί να διαβάσει**. Σε φύλλο υπολογισμού
+ * αυτό είναι ανεκτό — κάνεις κλικ και βλέπεις την τιμή στη γραμμή τύπων.
+ *
+ * **Ένα τυπωμένο σχέδιο δεν έχει γραμμή τύπων.** Και δεν είναι θέμα γούστου πόσο μικρό
+ * επιτρέπεται να τυπωθεί ένα γράμμα: το **ISO 3098-1:2015** (Τεχνική τεκμηρίωση προϊόντος —
+ * Γραμματογραφία) ορίζει τη σειρά ονομαστικών υψών `1,8 · 2,5 · 3,5 · 5 · 7 · 10 · 14 · 20`
+ * mm. Το `1,8` είναι το **κάτω άκρο της σειράς** — κάτω από αυτό δεν υπάρχει νόμιμο ύψος
+ * γραμμάτων σε τεχνικό σχέδιο.
+ *
+ * Άρα η σμίκρυνση σταματά εδώ και το κελί **περικόπτεται** αντί να σμικρυνθεί άλλο. Η
+ * επιλογή αποτυγχάνει προς την **ανιχνεύσιμη** πλευρά: ένα «…» λέει στον μηχανικό ότι
+ * κρύβονται δεδομένα· μια δυσανάγνωστη μουτζούρα του λέει ότι κάτι γράφει, και τον αφήνει
+ * να μαντέψει τι. Ίδιο σκεπτικό με το `CELL_CLIP_NUMERIC_FILL`.
+ *
+ * @see https://www.iso.org/standard/65679.html — ISO 3098-1:2015
+ */
+export const MIN_PRINTABLE_TEXT_HEIGHT_MM = 1.8;
 
 /**
  * Η επίλυση **κελί → στήλη → προεπιλογή**, ίδια σειρά προτεραιότητας με τη στοίχιση.
@@ -163,9 +185,24 @@ export interface VisibleCellText {
    * παραγωγή τους στον `placeText` θα ήταν δεύτερη απάντηση στο «ποιοι χαρακτήρες φαίνονται».
    */
   readonly spans: readonly TableTextStyleSpan[];
+  /**
+   * 🔴 ADR-739 §58 Γ1 — ο **συντελεστής σμίκρυνσης** που εφαρμόστηκε· `1` όταν καμία.
+   *
+   * ## Γιατί ταξιδεύει ρητά ενώ τα `spans` είναι ΗΔΗ κλιμακωμένα
+   * Τα τμήματα φτάνουν στον ζωγράφο με τα τελικά τους μεγέθη, οπότε θα μπορούσε κανείς να
+   * πει ότι ο συντελεστής είναι περιττός. **Δεν είναι**, για δύο λόγους που δεν έχουν σχέση
+   * με τη ζωγραφική:
+   *  1. Το `TableTextRun.heightMm` και η **γραμμή βάσης** (`cellBaselineYMm`) διαβάζουν το
+   *     `TableCellStyle.textHeightMm` — που **δεν** έχει κλιμακωθεί. Χωρίς τον συντελεστή,
+   *     ένα σμικρυμένο κείμενο θα ζωγραφιζόταν στη γραμμή βάσης του **αρχικού** μεγέθους,
+   *     δηλαδή μετατοπισμένο κατακόρυφα μέσα στο κελί.
+   *  2. Ένα **κενό** κελί δεν έχει καθόλου `spans`, αλλά ο in-cell επεξεργαστής χρειάζεται
+   *     να ξέρει με τι μέγεθος θα φανεί ό,τι πληκτρολογηθεί.
+   */
+  readonly heightScale: number;
 }
 
-const NOTHING: VisibleCellText = { text: '', clipped: false, spans: [] };
+const NOTHING: VisibleCellText = { text: '', clipped: false, spans: [], heightScale: 1 };
 
 /** Ο μετρητής δεμένος στο στυλ αυτού του κελιού — μία έκφραση, ώστε να μη γραφτεί δεύτερη. */
 function boundMeasure(input: CellTextFitInput): TextWidthMeasure {
@@ -186,24 +223,102 @@ export function resolveVisibleCellText(input: CellTextFitInput): VisibleCellText
   if (!input.text) return NOTHING;
   // Μηδενικό ή αρνητικό ωφέλιμο πλάτος (στήλη στενότερη από τα περιθώριά της): τίποτα δεν
   // χωρά, και είναι **περικοπή** — ο καλών πρέπει να το ξέρει, δεν είναι κενό κελί.
-  if (!(input.availableWidthMm > 0)) return { text: '', clipped: true, spans: [] };
+  if (!(input.availableWidthMm > 0)) {
+    return { text: '', clipped: true, spans: [], heightScale: 1 };
+  }
 
   const spans = spansOf(input, input.text, input.text.length);
-  if (styledSpansWidthMm(spans) <= input.availableWidthMm) {
-    return { text: input.text, clipped: false, spans };
+  const widthMm = styledSpansWidthMm(spans);
+  if (widthMm <= input.availableWidthMm) {
+    return { text: input.text, clipped: false, spans, heightScale: 1 };
   }
 
-  // Σήμερα υπάρχει ΜΙΑ λειτουργία. Ο διακόπτης γράφεται ρητά και **χωρίς `default`** ώστε η
-  // προσθήκη μέλους στο union να σπάει τη ΜΕΤΑΓΛΩΤΤΙΣΗ εδώ — δηλαδή να μην μπορεί να
-  // προστεθεί τιμή χωρίς τη μηχανή της (βλ. `TableCellOverflow`).
+  // Ο διακόπτης γράφεται ρητά και **χωρίς `default`** ώστε η προσθήκη μέλους στο union να
+  // σπάει τη ΜΕΤΑΓΛΩΤΤΙΣΗ εδώ — δηλαδή να μην μπορεί να προστεθεί τιμή χωρίς τη μηχανή της
+  // (βλ. `TableCellOverflow`). Έτσι μπήκε το `'shrink'` στο §58 Γ1.
   switch (input.overflow) {
-    case 'clip': {
-      const cut = input.numeric
-        ? numericCut(input.availableWidthMm, boundMeasure(input))
-        : ellipsisCut(input, spans);
-      return { text: cut.text, clipped: true, spans: spansOf(input, cut.text, cut.runsLimit) };
+    case 'shrink': {
+      const shrunk = shrinkToFit(input, spans, widthMm);
+      if (shrunk) return shrunk;
+      // Η σμίκρυνση χτύπησε στο όριο αναγνωσιμότητας ({@link MIN_PRINTABLE_TEXT_HEIGHT_MM}):
+      // **πέφτουμε στην περικοπή**, δεν τυπώνουμε δυσανάγνωστο. Δεν είναι σιωπηλή υποχώρηση —
+      // ο δείκτης «…» / «####» είναι ορατός και λέει ακριβώς ότι κρύβονται δεδομένα.
+      return clipToFit(input, spans);
     }
+    case 'clip':
+      return clipToFit(input, spans);
   }
+}
+
+/**
+ * ADR-739 §58 Γ1 — η **περικοπή**, ως μία διατύπωση για τους δύο καλούντες.
+ *
+ * Εξήχθη όταν το `'shrink'` απέκτησε ανάγκη να πέσει σε αυτήν: δύο αντίγραφα του ίδιου
+ * τριγράμμου θα ήταν structural clone μέσα στο ίδιο αρχείο (N.18 / CHECK 3.28).
+ */
+function clipToFit(
+  input: CellTextFitInput,
+  spans: readonly TableTextStyleSpan[],
+): VisibleCellText {
+  const cut = input.numeric
+    ? numericCut(input.availableWidthMm, boundMeasure(input))
+    : ellipsisCut(input, spans);
+  return {
+    text: cut.text,
+    clipped: true,
+    spans: spansOf(input, cut.text, cut.runsLimit),
+    heightScale: 1,
+  };
+}
+
+/**
+ * 🏆 ADR-739 §58 Γ1 — **Shrink to Fit**: το κείμενο σμικραίνει ώστε να χωρέσει, ακέραιο.
+ *
+ * ## Γιατί ΜΙΑ διαίρεση και όχι δυαδική αναζήτηση — μετρημένο, όχι υποτεθειμένο
+ * Ο μετρητής (`measureTextAdvanceWorld`, ADR-557) είναι **αυστηρά γραμμικός** ως προς το
+ * ύψος και στα **τρία** του tiers:
+ * ```
+ *   opentype :  (run.width / GLYPH_REFERENCE_SIZE) × emSizeForTextHeight(h)   →  h / capRatio
+ *   CSS      :  (px / CSS_MEASURE_REF_PX) × h
+ *   monospace:  len × h × CHAR_WIDTH_MONOSPACE
+ * ```
+ * Άρα ο ζητούμενος συντελεστής είναι **ακριβώς** `διαθέσιμο / μετρημένο` — καμία επανάληψη,
+ * καμία προσέγγιση, καμία ανοχή. Το Excel σμικραίνει σε **διακριτά βήματα** μεγέθους
+ * γραμματοσειράς και γι' αυτό αφήνει ορατό κενό στο τέλος του κελιού· εδώ το κείμενο
+ * τελειώνει **ακριβώς** στο περιθώριο.
+ *
+ * ⚠️ Ο πολλαπλασιασμός εφαρμόζεται στα **ήδη μετρημένα** τμήματα, όχι σε νέα μέτρηση με
+ * μικρότερο στυλ. Έτσι ένα τμήμα που δηλώνει **δικό του** `textHeightMm` (ADR-753) σμικραίνεται
+ * κι αυτό αναλογικά — ενώ μια επαναμέτρηση με κλιμακωμένο **στυλ κελιού** θα το άφηνε
+ * ανέγγιχτο, και το κελί θα συνέχιζε να ξεχειλίζει ακριβώς εκεί που ο χρήστης έβαλε έμφαση.
+ *
+ * `null` όταν ο συντελεστής θα έριχνε **οποιοδήποτε** τμήμα κάτω από το όριο ISO 3098.
+ */
+function shrinkToFit(
+  input: CellTextFitInput,
+  spans: readonly TableTextStyleSpan[],
+  widthMm: number,
+): VisibleCellText | null {
+  if (!(widthMm > 0)) return null;
+  const scale = input.availableWidthMm / widthMm;
+  // Το **μικρότερο** τμήμα είναι αυτό που φτάνει πρώτο στο όριο — όχι το στυλ του κελιού:
+  // ένας εκθέτης σε «m³» έχει ήδη μικρότερο ύψος από το κελί.
+  const smallestMm = spans.reduce((min, s) => Math.min(min, s.heightMm), input.style.textHeightMm);
+  if (smallestMm * scale < MIN_PRINTABLE_TEXT_HEIGHT_MM) return null;
+
+  return {
+    text: input.text,
+    // **Δεν** είναι περικοπή: κανένας χαρακτήρας δεν χάθηκε, άρα ούτε δείκτης «…» χρειάζεται
+    // ούτε ο επεξεργαστής έχει λόγο να δείξει «πού θα κοπεί» (Φ.Δ βήμα 6).
+    clipped: false,
+    spans: spans.map((span) => ({
+      ...span,
+      heightMm: span.heightMm * scale,
+      offsetMm: span.offsetMm * scale,
+      advanceMm: span.advanceMm * scale,
+    })),
+    heightScale: scale,
+  };
 }
 
 /**
