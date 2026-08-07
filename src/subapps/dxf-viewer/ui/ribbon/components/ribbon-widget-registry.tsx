@@ -117,6 +117,7 @@ import { RibbonTableMenuWidget } from './table/RibbonTableMenuWidget';
 import {
   RibbonTableBordersWidget,
   RibbonTableFillColorWidget,
+  RibbonTableFormatPainterWidget,
   RibbonTableMergeWidget,
   RibbonTableTextColorWidget,
 } from './table/RibbonTableFormatWidgets';
@@ -146,6 +147,10 @@ const CORE_WIDGETS: Readonly<Record<string, WidgetFactory>> = {
   'table-fill-color': () => <RibbonTableFillColorWidget key="table-fill-color-widget" />,
   'table-merge': () => <RibbonTableMergeWidget key="table-merge-widget" />,
   'table-borders': () => <RibbonTableBordersWidget key="table-borders-widget" />,
+  // 🔴 ADR-768 Βήμα 5 — widget και όχι `type: 'toggle'` της κορδέλας: το `RibbonToggleState` είναι
+  // `boolean | null` (`null` = μεικτό) και **δεν** χωρά το «κλειδωμένο», ούτε έχει πού να δείξει
+  // λουκέτο. Το widget τυλίγει το **ίδιο** κουμπί με το mini toolbar.
+  'table-format-painter': () => <RibbonTableFormatPainterWidget key="table-format-painter-widget" />,
   'visual-style-select': () => <VisualStyleSelect key="visual-style-select-widget" />,
   'glass-quality-select': () => <GlassQualitySelect key="glass-quality-select-widget" />,
   'mesh-wire-mode-select': () => <MeshWireModeSelect key="mesh-wire-mode-select-widget" />,

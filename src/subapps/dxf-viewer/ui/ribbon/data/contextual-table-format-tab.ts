@@ -85,6 +85,12 @@ const BORDERS_WIDGET_COMMAND = {
   ...WIDGET_NO_COMMAND,
 };
 
+const FORMAT_PAINTER_WIDGET_COMMAND = {
+  id: 'tableFormat.formatPainter',
+  labelKey: 'ribbon.commands.tableFormat.formatPainter',
+  ...WIDGET_NO_COMMAND,
+};
+
 export const CONTEXTUAL_TABLE_FORMAT_TAB: RibbonTab = {
   id: 'table-format',
   labelKey: 'ribbon.tabs.tableFormat',
@@ -179,6 +185,19 @@ export const CONTEXTUAL_TABLE_FORMAT_TAB: RibbonTab = {
                 commandKey: TABLE_FORMAT_RIBBON_KEYS.actions.sizeDown,
                 action: TABLE_FORMAT_RIBBON_KEYS.actions.sizeDown,
               },
+            },
+            // 🔴 ADR-768 Βήμα 5 — **«αντίγραψε μορφή» ακριβώς πριν από «καθάρισε μορφή»**: το
+            // ζευγάρι του Excel Home tab, όπου το Format Painter και το Clear Formats απαντούν
+            // στην ίδια ερώτηση από τις δύο πλευρές. Widget και όχι κουμπί κορδέλας — δες το
+            // μητρώο για το γιατί το `RibbonToggleState` δεν χωρά το «κλειδωμένο».
+            //
+            // ⚠️ Είναι **η μόνιμη** επιφάνεια του πινέλου: το mini toolbar ζει σε μενού δεξιού
+            // κλικ που κλείνει με το πρώτο βάψιμο. Δες `RibbonTableFormatPainterWidget`.
+            {
+              type: 'widget',
+              size: 'small',
+              widgetId: 'table-format-painter',
+              command: FORMAT_PAINTER_WIDGET_COMMAND,
             },
             {
               type: 'simple',

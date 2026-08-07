@@ -35,13 +35,20 @@
  */
 
 import React, { useSyncExternalStore } from 'react';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   getTableFormatPort,
   getTableFormatRevision,
   subscribeTableFormatPort,
 } from '../../../table-cell-editor/table-format-port';
+// 🔴 ADR-768 Βήμα 5 — το **ίδιο** κουμπί με το mini toolbar, ποτέ αντίγραφό του.
+import {
+  getTableFormatPainterState,
+  subscribeTableFormatPainter,
+} from '../../../../state/table-format-painter-store';
 import { TableAxisColorMenu } from '../../../components/table-format-toolbar/TableAxisColorMenu';
 import { TableBorderMenu } from '../../../components/table-format-toolbar/TableBorderMenu';
+import { TableFormatPainterButton } from '../../../components/table-format-toolbar/TableFormatPainterButton';
 import { TableMergeMenu } from '../../../components/table-format-toolbar/TableMergeMenu';
 import type { RovingItemProps } from '../../../components/table-format-toolbar/use-roving-toolbar';
 import type { TableMergeState } from '../../../../bim/table/table-range-merge-ops';
@@ -176,5 +183,52 @@ export function RibbonTableBordersWidget(): React.ReactElement {
         onCommit: (model) => getTableFormatPort()?.borders.commitModel(model),
       }}
     />
+  );
+}
+
+/**
+ * 🔴 ADR-768 Βήμα 5 — **ΤΟ ΠΙΝΕΛΟ ΜΟΡΦΟΠΟΙΗΣΗΣ, ΣΤΗ ΜΟΝΙΜΗ ΕΠΙΦΑΝΕΙΑ.**
+ *
+ * ## Γιατί το κουμπί ΔΕΝ αρκούσε στο mini toolbar (μετρήθηκε 2026-08-07)
+ * Το `TableFormatToolbar` μοντάρεται **μόνο** μέσα στα `TableHeaderContextMenu` /
+ * `TableRangeContextMenu` — δηλαδή στο **μενού δεξιού κλικ**. Το `useKeepOpenOnSurface` το κρατά
+ * ανοιχτό όσο πατάς **πάνω** του, αλλά το κλικ στο κελί-στόχο είναι «έξω» ⇒ **το μενού κλείνει**.
+ *
+ * ⇒ Το «πατημένο κουμπί» θα ήταν ορατό **μέχρι το πρώτο βάψιμο**, και στο `locked` ο χρήστης δεν
+ * θα είχε **πουθενά** να επιβεβαιώσει ότι το εργαλείο έμεινε ενεργό. Η κορδέλα δεν κλείνει ποτέ:
+ * εκεί ζει η κατάσταση, ακριβώς όπως στο Excel, όπου το Home tab μένει ορατό όση ώρα βάφεις.
+ *
+ * ## 🔴 Η ΖΩΝΤΑΝΗ ΠΕΡΙΟΧΗ ΖΕΙ **ΕΔΩ**, ΚΑΙ ΟΧΙ ΣΤΟ ΚΟΥΜΠΙ
+ * Μια `aria-live` περιοχή που **μοντάρεται μαζί** με το περιεχόμενό της δεν ανακοινώνεται
+ * αξιόπιστα: οι αναγνώστες οθόνης αγνοούν κόμβους που εμφανίστηκαν στο ίδιο καρέ με το κείμενό
+ * τους. Εδώ η περιοχή υπάρχει **άδεια** όσο ζει η καρτέλα (δηλαδή όσο ζει η συνεδρία πίνακα) και
+ * αποκτά κείμενο **μόνο** τη στιγμή που οπλίζεται το πινέλο — δηλαδή αργότερα, πάντα.
+ *
+ * Είναι το κανάλι που κουβαλά τη διαφορά **«μία χρήση» ↔ «κλειδωμένο»**, την οποία το
+ * `aria-pressed` δεν επιτρέπεται να πει (είναι δίτιμο· το `mixed` σημαίνει «μερική επιλογή»).
+ * Το Excel δεν την ανακοινώνει καθόλου.
+ */
+export function RibbonTableFormatPainterWidget(): React.ReactElement {
+  const { t } = useTranslation('dxf-viewer');
+  const state = useSyncExternalStore(
+    subscribeTableFormatPainter,
+    getTableFormatPainterState,
+    () => 'idle' as const,
+  );
+
+  return (
+    <>
+      <TableFormatPainterButton roving={INERT_ROVING} />
+      <output role="status" aria-live="polite" className="sr-only">
+        {/*
+          Κυριολεκτικά κλειδιά και όχι δυναμικό `t(key)`: ο generator του i18n shell slice
+          (ADR-744) **αρνείται** να παράγει σε ανεπίλυτη δυναμική κλήση, και η CHECK 3.8 δεν
+          μπορεί να επαληθεύσει κλειδί που δεν βλέπει. Τρεις καταστάσεις, δύο ανακοινώσεις:
+          το «ανενεργό» είναι σιωπή — μια ανακοίνωση «σβήστηκε» σε κάθε βάψιμο θα ήταν θόρυβος.
+        */}
+        {state === 'once' ? t('table.formatToolbar.formatPainterArmedOnce') : null}
+        {state === 'locked' ? t('table.formatToolbar.formatPainterArmedLocked') : null}
+      </output>
+    </>
   );
 }
