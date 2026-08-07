@@ -15,10 +15,9 @@ import { useFullscreen } from '@/hooks/useFullscreen';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { AddressEditor, AddressSourceLabel } from '@/components/shared/addresses/editor';
-import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
+import type { AddressEditorHandle } from '@/components/shared/addresses/editor';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
-import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import { CompanyAddressesSection, type CompanyAddressesSectionHandle } from '@/components/contacts/dynamic/CompanyAddressesSection';
 import { ContactAddressMapPreview, type DragResolvedAddress } from '@/components/contacts/details/ContactAddressMapPreview';
@@ -43,10 +42,11 @@ interface AddressesSectionWithFullscreenProps {
 // Καθαρές συναρτήσεις χαρτογράφησης — εξήχθησαν (N.7.1)
 import {
   formatHqStreetLine,
-  DRAG_RESOLVED_HIERARCHY_RESET,
   formDataToResolvedFields,
 } from './addresses-section-form-mapping';
 import { formatContactAddressLine } from '@/utils/address/address-line';
+// Ο ΕΝΑΣ ιδιοκτήτης της εγγραφής της έδρας — εξήχθη (N.7.1, ADR-772).
+import { useHqAddressMutations } from './use-hq-address-mutations';
 
 export function AddressesSectionWithFullscreen({
   formData,
@@ -106,40 +106,6 @@ export function AddressesSectionWithFullscreen({
      formData.settlement, formData.neighborhood, formData.region],
   );
 
-  // Called by AddressEditor when reconciliation/suggestion changes basic fields — keeps hierarchy.
-  const handleHqChange = useCallback((addr: ResolvedAddressFields) => {
-    if (!setFormData) return;
-    setFormData(prev => {
-      const existing = (prev.companyAddresses ?? []) as CompanyAddress[];
-      const updatedAddresses = existing.length > 0
-        ? [{ ...existing[0], street: addr.street ?? existing[0].street, number: addr.number ?? existing[0].number, postalCode: addr.postalCode ?? existing[0].postalCode, city: addr.city ?? existing[0].city }, ...existing.slice(1)]
-        : existing;
-
-      // Η «Πόλη» του editor αντιστοιχεί στο ορατό πεδίο «Οικισμός / Πόλη», το
-      // οποίο διαβάζει `settlement || city`. Αν γράψουμε μόνο το `city`, η
-      // διόρθωση καταλήγει σε σκιώδες πεδίο και η οθόνη μένει με την παλιά τιμή.
-      const cityApplied = addr.city !== undefined;
-      const settlementRenamed = cityApplied && addr.city !== ((prev.settlement as string) ?? '');
-
-      return {
-        ...prev,
-        street: addr.street ?? (prev.street as string) ?? '',
-        streetNumber: addr.number ?? (prev.streetNumber as string) ?? '',
-        postalCode: addr.postalCode ?? (prev.postalCode as string) ?? '',
-        city: addr.city ?? (prev.city as string) ?? '',
-        neighborhood: addr.neighborhood ?? (prev.neighborhood as string) ?? '',
-        region: addr.region ?? (prev.region as string) ?? '',
-        ...(cityApplied ? { settlement: addr.city } : {}),
-        // Το όνομα άλλαξε από πηγή εκτός ιεραρχίας → το προηγούμενο settlementId
-        // δεν αντιστοιχεί πλέον στο εμφανιζόμενο όνομα. Ταυτότητα και ετικέτα
-        // δεν επιτρέπεται να αποκλίνουν.
-        ...(settlementRenamed ? { settlementId: null } : {}),
-        ...(addr.country !== undefined ? { hqAddressCountry: addr.country } : {}),
-        ...(updatedAddresses.length > 0 ? { companyAddresses: updatedAddresses } : {}),
-      };
-    });
-  }, [setFormData]);
-
   const isEditing = !disabled;
 
   /** Has any HQ field been filled? Drives disabled state of Clear button. */
@@ -168,10 +134,9 @@ export function AddressesSectionWithFullscreen({
   }, [clearHq, isEditing, hqHasValue]);
 
   /**
-   * Apply drag-resolved address to form state (clears hierarchy fields).
-   * If OSM did not return a house number (addr.number is empty), we open the
-   * HQ inline editor and raise a toast so the user knows to type it manually
-   * — Modo 4 UX fallback for the OSM coverage gap.
+   * Αν το OSM δεν επέστρεψε αριθμό, ανοίγουμε τη φόρμα της έδρας και δείχνουμε
+   * ειδοποίηση ώστε ο χρήστης να τον γράψει με το χέρι — UX fallback για το κενό
+   * κάλυψης του OSM. **Παρουσίαση**, γι' αυτό μένει εδώ και δεν μπήκε στο hook.
    */
   const maybeWarnMissingNumber = useCallback((addr: DragResolvedAddress) => {
     if (addr.number?.trim()) return;
@@ -181,69 +146,6 @@ export function AddressesSectionWithFullscreen({
       duration: 6000,
     });
   }, [notify, tContacts]);
-
-  const applyDragResolve = useCallback((addr: DragResolvedAddress, addressIndex: number) => {
-    if (!setFormData) return;
-    const existing = formData.companyAddresses ?? [];
-
-    // Individual contact: no companyAddresses array — update HQ flat fields directly.
-    // Without this branch, the multi-address path would zero out street/city because
-    // `updatedAddresses[0]` is undefined, making the map pin disappear after drag.
-    if (existing.length === 0) {
-      setFormData({
-        ...formData,
-        street: addr.street,
-        streetNumber: addr.number,
-        postalCode: addr.postalCode,
-        city: addr.city,
-        settlement: addr.city,
-        neighborhood: addr.neighborhood,
-        ...DRAG_RESOLVED_HIERARCHY_RESET,
-      });
-      maybeWarnMissingNumber(addr);
-      return;
-    }
-
-    const updatedAddresses = [...existing];
-    if (addressIndex >= 0 && addressIndex < updatedAddresses.length) {
-      updatedAddresses[addressIndex] = {
-        ...updatedAddresses[addressIndex],
-        street: addr.street,
-        number: addr.number,
-        postalCode: addr.postalCode,
-        city: addr.city,
-      };
-    }
-    // ADR-319: HQ is always index 0 (positional invariant across contact types).
-    const hq = updatedAddresses[0];
-    setFormData({
-      ...formData,
-      companyAddresses: updatedAddresses,
-      street: hq?.street ?? '',
-      streetNumber: hq?.number ?? '',
-      postalCode: hq?.postalCode ?? '',
-      city: hq?.city ?? '',
-      settlement: hq?.city ?? '',
-      neighborhood: addr.neighborhood,
-      ...DRAG_RESOLVED_HIERARCHY_RESET,
-    });
-    maybeWarnMissingNumber(addr);
-  }, [formData, setFormData, maybeWarnMissingNumber]);
-
-  // Called by AddressEditor specifically on drag confirm — clears hierarchy (ADR-277).
-  const handleHqDragApplied = useCallback((addr: ResolvedAddressFields) => {
-    applyDragResolve({
-      street: addr.street ?? '',
-      number: addr.number ?? '',
-      postalCode: addr.postalCode ?? '',
-      city: addr.city ?? '',
-      // Το reverse-geocoding ΕΠΙΣΤΡΕΦΕΙ συνοικία· παλαιότερα σβηνόταν εδώ με
-      // σκέτο '' και η τιμή χανόταν σιωπηλά πριν καν φτάσει στο formData.
-      neighborhood: addr.neighborhood ?? '',
-      region: addr.region ?? '',
-      country: addr.country ?? '',
-    }, 0);
-  }, [applyDragResolve]);
 
   // ADR-319: semantic type for the primary (flat-field) address — resolved from
   // formData or derived from the contact type (`home` for individuals,
@@ -268,44 +170,27 @@ export function AddressesSectionWithFullscreen({
       ? [{ type: primaryType, customLabel: primaryCustomLabel, street: formData.street as string, number: (formData.streetNumber as string) ?? '', postalCode: (formData.postalCode as string) ?? '', city: (formData.city as string) ?? '' }]
       : [{ type: primaryType, customLabel: primaryCustomLabel, street: '', number: '', postalCode: '', city: '' }];
 
-  // Extracted from JSX to keep AddressEditor children concise (ADR-332 Phase 6).
-  const handleHqHierarchyChange = useCallback((addr: AddressWithHierarchyValue) => {
-    if (!setFormData) return;
-    const updatedAddresses = [...effectiveAddresses];
-    if (updatedAddresses.length > 0) {
-      updatedAddresses[0] = { ...updatedAddresses[0], street: addr.street, number: addr.number,
-        city: addr.settlementName || addr.municipalityName, postalCode: addr.postalCode,
-        country: addr.country || undefined, settlementId: addr.settlementId,
-        communityName: addr.communityName, municipalUnitName: addr.municipalUnitName,
-        municipalityName: addr.municipalityName, municipalityId: addr.municipalityId,
-        regionalUnitName: addr.regionalUnitName, regionName: addr.regionName,
-        region: addr.regionName, decentAdminName: addr.decentAdminName, majorGeoName: addr.majorGeoName };
-    }
-    setFormData({ ...formData, street: addr.street, streetNumber: addr.number,
-      postalCode: addr.postalCode, hqAddressCountry: addr.country || undefined,
-      city: addr.settlementName || addr.municipalityName, settlement: addr.settlementName,
-      settlementId: addr.settlementId, community: addr.communityName, municipalUnit: addr.municipalUnitName,
-      municipality: addr.municipalityName, municipalityId: addr.municipalityId,
-      regionalUnit: addr.regionalUnitName, region: addr.regionName,
-      decentAdmin: addr.decentAdminName, majorGeo: addr.majorGeoName, companyAddresses: updatedAddresses });
-  }, [formData, setFormData, effectiveAddresses]);
+  /**
+   * Όλες οι γραφές της έδρας — **ένας** ιδιοκτήτης (N.7.1 / ADR-772).
+   * Η έδρα ζει σε δύο δοχεία (επίπεδα πεδία **και** θέση 0 της λίστας)· το hook
+   * κρατά την αναλλοίωτη ως δομή, όχι ως συνήθεια των σημείων κλήσης.
+   */
+  const {
+    handleHqChange,
+    applyDragResolve,
+    handleHqDragApplied,
+    hqHierarchyValue,
+    handleHqHierarchyChange,
+    handlePrimaryTypeChange,
+  } = useHqAddressMutations({
+    formData,
+    setFormData,
+    effectiveAddresses,
+    onDragMissingNumber: maybeWarnMissingNumber,
+  });
 
   const tAddrFn = useCallback((key: string) => tAddr(key) as string, [tAddr]);
   const hqTypeLabel = resolveContactAddressLabel(primaryType, primaryCustomLabel, tAddrFn);
-
-  const handlePrimaryTypeChange = useCallback((next: { type: ContactAddressType; customLabel?: string }) => {
-    if (!setFormData) return;
-    const existing = formData.companyAddresses ?? [];
-    const updated = existing.length > 0
-      ? [{ ...existing[0], type: next.type, customLabel: next.customLabel }, ...existing.slice(1)]
-      : existing;
-    setFormData({
-      ...formData,
-      primaryAddressType: next.type,
-      primaryAddressCustomLabel: next.customLabel,
-      ...(existing.length > 0 ? { companyAddresses: updated } : {}),
-    });
-  }, [formData, setFormData]);
 
   return (
     <FullscreenOverlay
@@ -377,22 +262,7 @@ export function AddressesSectionWithFullscreen({
               telemetry={{ enabled: true, contextEntityType: 'contact', contextEntityId: formData.id ?? '' }}
             >
               <AddressWithHierarchy
-                value={{
-                  street: (formData.street as string) || '',
-                  number: (formData.streetNumber as string) || '',
-                  postalCode: (formData.postalCode as string) || '',
-                  country: formData.hqAddressCountry || '',
-                  settlementName: (formData.settlement as string) || (formData.city as string) || '',
-                  settlementId: (formData.settlementId as string | null) ?? null,
-                  communityName: (formData.community as string) || '',
-                  municipalUnitName: (formData.municipalUnit as string) || '',
-                  municipalityName: (formData.municipality as string) || '',
-                  municipalityId: (formData.municipalityId as string | null) ?? null,
-                  regionalUnitName: (formData.regionalUnit as string) || '',
-                  regionName: (formData.region as string) || '',
-                  decentAdminName: (formData.decentAdmin as string) || '',
-                  majorGeoName: (formData.majorGeo as string) || '',
-                }}
+                value={hqHierarchyValue}
                 onChange={handleHqHierarchyChange}
                 disabled={disabled}
               />

@@ -14,6 +14,7 @@
 import type { ResolvedAddressFields } from '@/components/shared/addresses/editor';
 import type { ContactFormData } from '@/types/ContactFormTypes';
 import { formatContactAddressLine } from '@/utils/address/address-line';
+import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
 
 export function formatHqStreetLine(formData: ContactFormData): string {
   return formatContactAddressLine({
@@ -45,17 +46,18 @@ export const DRAG_RESOLVED_HIERARCHY_RESET = {
   majorGeo: '',
 } as const;
 
+/**
+ * ADR-772 — ήταν το **τέταρτο** δίδυμο, και το πιο ύπουλο: διέφερε από τα άλλα τρία σε
+ * **δύο** σημεία (`streetNumber` αντί `number`, `settlement || city` αντί σκέτο `city`),
+ * δηλαδή έμοιαζε με «διαφορετική συνάρτηση» ενώ ήταν το ίδιο ερώτημα σε **άλλο λεξιλόγιο**.
+ *
+ * ⚠️ **Η προειδοποίηση που ήταν εδώ σε σχόλιο είναι πλέον ΔΟΜΗ**: η προτεραιότητα
+ * «`settlement` πριν `city`» δηλώνεται μία φορά στον πίνακα
+ * (`ADMIN_LEVEL_VOCABULARY.settlement.contactFlat`) και ισχύει αυτόματα παντού. Όσο ήταν
+ * σχόλιο, η απόκλιση ήταν θέμα προσοχής· τώρα είναι αδύνατη. *(Το γιατί μετρά: όταν
+ * αποκλίνει, ο πίνακας «Συμφωνία Πεδίων» συγκρίνει **άλλη** τιμή από αυτή που βλέπει ο
+ * χρήστης και το «Διόρθωση» φαίνεται να μην κάνει τίποτα.)*
+ */
 export function formDataToResolvedFields(fd: ContactFormData): ResolvedAddressFields {
-  return {
-    street: (fd.street as string) || undefined,
-    number: (fd.streetNumber as string) || undefined,
-    postalCode: (fd.postalCode as string) || undefined,
-    // ⚠️ Η προτεραιότητα ΠΡΕΠΕΙ να ταυτίζεται με αυτή που αποδίδει το combobox
-    // «Οικισμός / Πόλη» (`settlement || city`). Όταν αποκλίνει, ο πίνακας
-    // «Συμφωνία Πεδίων» συγκρίνει ΑΛΛΗ τιμή από αυτή που βλέπει ο χρήστης και
-    // το «Διόρθωση» φαίνεται να μην κάνει τίποτα.
-    city: (fd.settlement as string) || (fd.city as string) || undefined,
-    neighborhood: (fd.neighborhood as string) || undefined,
-    region: (fd.region as string) || undefined,
-  };
+  return storedAddressToResolved(fd as Readonly<Record<string, unknown>>, 'contactFlat');
 }

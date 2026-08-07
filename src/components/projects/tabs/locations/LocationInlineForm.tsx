@@ -13,6 +13,7 @@ import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithH
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
+import { hierarchyToResolvedAddress } from '@/utils/address/administrative-hierarchy';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
@@ -53,16 +54,9 @@ interface LocationInlineFormProps {
 // HELPERS
 // =============================================================================
 
-function hierarchyToResolved(h: Partial<AddressWithHierarchyValue>): ResolvedAddressFields {
-  return {
-    street: h.street || undefined,
-    number: h.number || undefined,
-    postalCode: h.postalCode || undefined,
-    city: h.settlementName || undefined,
-    neighborhood: h.communityName || undefined,
-    region: h.regionName || undefined,
-  };
-}
+// 🔴 ADR-772 — το τοπικό `hierarchyToResolved` έφυγε. Ήταν ένα από **δύο** αντίγραφα που
+// είχαν ήδη αποκλίνει: αυτό εδώ **δεν** έπεφτε στον Δήμο όταν έλειπε ο οικισμός, οπότε ένα
+// χωριό έστελνε στον γεωκωδικοποιητή διεύθυνση χωρίς πόλη. Βλ. `hierarchyToResolvedAddress`.
 
 // =============================================================================
 // COMPONENT
@@ -98,7 +92,7 @@ export const LocationInlineForm = forwardRef<AddressEditorHandle, LocationInline
 
     // Derive ResolvedAddressFields from hierarchy for AddressEditor geocoding engine
     const resolvedValue = useMemo<ResolvedAddressFields>(
-      () => hierarchyToResolved(hierarchy),
+      () => hierarchyToResolvedAddress(hierarchy),
       // eslint-disable-next-line react-hooks/exhaustive-deps
       [hierarchy.street, hierarchy.number, hierarchy.postalCode, hierarchy.settlementName, hierarchy.communityName, hierarchy.regionName],
     );

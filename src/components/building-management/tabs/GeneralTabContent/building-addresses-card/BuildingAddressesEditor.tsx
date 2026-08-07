@@ -8,6 +8,15 @@ import { AddressMap } from '@/components/shared/addresses/AddressMap';
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/shared/addresses/editor';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
+import {
+  EMPTY_HIERARCHY,
+  fromHierarchyValue,
+  toHierarchyValue,
+} from '@/components/projects/tabs/locations/location-converters';
+import {
+  hierarchyToResolvedAddress,
+  storedAddressToResolved,
+} from '@/utils/address/administrative-hierarchy';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
@@ -44,34 +53,26 @@ const EDITOR_PRESENTATION: Record<BuildingAddressEditorMode, EditorPresentation>
 // CONVERTERS (local helpers)
 // =============================================================================
 
+/**
+ * 🔴 **ADR-772** — τα τρία τοπικά αντίγραφα έφυγαν.
+ *
+ * Μετρημένο πριν: **5/8** διοικητικά επίπεδα και στις **δύο** κατευθύνσεις. Έλειπε η
+ * **Δημοτική Ενότητα** — δηλαδή το *ίδιο ακριβώς* σφάλμα που το ADR-759 Φ3 διόρθωσε στον
+ * μετατροπέα των έργων, ζωντανό εδώ, επειδή η Φ3 διόρθωσε το **δείγμα** και όχι την κλάση.
+ * Έλειπαν επίσης `decentAdmin`, `majorGeo`, **και οι οκτώ ταυτότητες**, και το `country`
+ * δεν διαβαζόταν καν.
+ */
 function toHierarchyFromAddr(addr?: Partial<ProjectAddress>): Partial<AddressWithHierarchyValue> {
   if (!addr) return {};
-  return {
-    street: addr.street ?? '',
-    number: addr.number ?? '',
-    postalCode: addr.postalCode ?? '',
-    settlementName: addr.city ?? '',
-    communityName: addr.neighborhood ?? '',
-    municipalityName: addr.municipality ?? '',
-    regionalUnitName: addr.regionalUnit ?? '',
-    regionName: addr.region ?? '',
-  };
+  return toHierarchyValue(addr);
 }
 
 function hierarchyToPartial(
   h: Partial<AddressWithHierarchyValue>,
   extra: { type: ProjectAddressType; blockSide: BlockSideDirection | typeof SELECT_CLEAR_VALUE; label: string; isPrimary: boolean },
 ): Partial<ProjectAddress> {
-  const hv = h as AddressWithHierarchyValue;
   return {
-    street: hv.street || '',
-    number: hv.number || undefined,
-    city: hv.settlementName || hv.municipalityName || '',
-    postalCode: hv.postalCode || '',
-    neighborhood: hv.communityName || undefined,
-    municipality: hv.municipalityName || undefined,
-    regionalUnit: hv.regionalUnitName || undefined,
-    region: hv.regionName || undefined,
+    ...fromHierarchyValue({ ...EMPTY_HIERARCHY, ...h }),
     type: extra.type,
     blockSide: extra.blockSide !== SELECT_CLEAR_VALUE ? (extra.blockSide as BlockSideDirection) : undefined,
     label: extra.label || undefined,
@@ -79,27 +80,9 @@ function hierarchyToPartial(
   };
 }
 
-function hierarchyToResolved(h: Partial<AddressWithHierarchyValue>): ResolvedAddressFields {
-  const hv = h as AddressWithHierarchyValue;
-  return {
-    street: hv.street || undefined,
-    number: hv.number || undefined,
-    postalCode: hv.postalCode || undefined,
-    city: hv.settlementName || hv.municipalityName || undefined,
-    neighborhood: hv.communityName || undefined,
-    region: hv.regionName || undefined,
-  };
-}
-
+// ADR-772 / CHECK 3.28 — ήταν δίδυμο του `branchToResolvedFields` των επαφών.
 function toResolvedFromAddr(addr: Partial<PartialProjectAddress>): ResolvedAddressFields {
-  return {
-    street: addr.street || undefined,
-    number: addr.number || undefined,
-    postalCode: addr.postalCode || undefined,
-    city: addr.city || undefined,
-    neighborhood: addr.neighborhood || undefined,
-    region: addr.region || undefined,
-  };
+  return storedAddressToResolved(addr, 'projectAddress');
 }
 
 // =============================================================================
@@ -133,7 +116,7 @@ export function BuildingAddressesEditor({
   const editorRef = useRef<AddressEditorHandle>(null);
 
   const resolvedValue = useMemo(
-    () => hierarchyToResolved(hierarchy),
+    () => hierarchyToResolvedAddress(hierarchy),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [(hierarchy as AddressWithHierarchyValue).street, (hierarchy as AddressWithHierarchyValue).number,
      (hierarchy as AddressWithHierarchyValue).postalCode, (hierarchy as AddressWithHierarchyValue).settlementName],

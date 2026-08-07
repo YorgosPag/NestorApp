@@ -17,6 +17,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useSpacingTokens } from '@/hooks/useSpacingTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useFullscreen } from '@/hooks/useFullscreen';
+import { storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
 import { FullscreenOverlay, FullscreenToggleButton } from '@/core/containers/FullscreenOverlay';
 import { cn } from '@/lib/utils';
 import { LocationInlineForm } from './locations/LocationInlineForm';
@@ -28,15 +29,10 @@ import type { AddressEditorHandle, ResolvedAddressFields } from '@/components/sh
 // HELPERS
 // =============================================================================
 
+// ADR-772 — ήταν το **τρίτο** από τέσσερα δίδυμα. Το `jscpd --diff` δεν το είδε ποτέ:
+// αυτό το αρχείο δεν ήταν στο diff που εξέτασε η πύλη.
 function toResolvedFields(addr: Partial<PartialProjectAddress>): ResolvedAddressFields {
-  return {
-    street: addr.street || undefined,
-    number: addr.number || undefined,
-    postalCode: addr.postalCode || undefined,
-    city: addr.city || undefined,
-    neighborhood: addr.neighborhood || undefined,
-    region: addr.region || undefined,
-  };
+  return storedAddressToResolved(addr, 'projectAddress');
 }
 
 interface PendingViewDrag {

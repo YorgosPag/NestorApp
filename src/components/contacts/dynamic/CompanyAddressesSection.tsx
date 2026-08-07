@@ -20,6 +20,11 @@ import { Plus } from 'lucide-react';
 import { BranchDeleteConfirmDialog } from '@/components/contacts/dialogs/BranchDeleteConfirmDialog';
 import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithHierarchy';
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
+import {
+  projectAddressVocabulary,
+  resolveCityFromHierarchy,
+  storedAddressToResolved,
+} from '@/utils/address/administrative-hierarchy';
 import { SharedAddressActionCard } from '@/components/shared/addresses/SharedAddressActionCard';
 import type { CompanyAddress } from '@/types/ContactFormTypes';
 import type { ContactType } from '@/types/contacts';
@@ -70,42 +75,38 @@ function createEmptyBranch(contactType?: ContactType): CompanyAddress {
   };
 }
 
+/**
+ * 🔴 **ADR-772** — τα δύο τοπικά ζεύγη έγιναν κλήσεις στον έναν μετατροπέα.
+ *
+ * Αυτό το αρχείο ήταν το **πληρέστερο** από τα τέσσερα (8/8 ονόματα, 2/8 ταυτότητες), και
+ * γι' αυτό ακριβώς ήταν επικίνδυνο: το grep ονομάτων το έβγαζε πράσινο, οπότε κανείς δεν
+ * ρωτούσε γιατί τα άλλα τρία δεν του έμοιαζαν. Η πληρότητα ενός αντιγράφου δεν λέει
+ * **τίποτα** για τα υπόλοιπα — αυτό είναι το επιχείρημα υπέρ του SSoT, όχι η ορθότητα.
+ */
 function toHierarchyValue(addr: CompanyAddress): Partial<AddressWithHierarchyValue> {
-  return {
-    street: addr.street,
-    number: addr.number,
-    postalCode: addr.postalCode,
-    country: addr.country ?? '',
-    settlementName: addr.city,
-    settlementId: addr.settlementId ?? null,
-    communityName: addr.communityName ?? '',
-    municipalUnitName: addr.municipalUnitName ?? '',
-    municipalityName: addr.municipalityName ?? '',
-    municipalityId: addr.municipalityId ?? null,
-    regionalUnitName: addr.regionalUnitName ?? '',
-    regionName: addr.regionName ?? addr.region ?? '',
-    decentAdminName: addr.decentAdminName ?? '',
-    majorGeoName: addr.majorGeoName ?? '',
-  };
+  return projectAddressVocabulary(addr, 'companyAddress', 'form', {
+    includePostal: true,
+    clearedIdsAsNull: true,
+  }) as Partial<AddressWithHierarchyValue>;
 }
 
 function fromHierarchyValue(existing: CompanyAddress, val: AddressWithHierarchyValue): CompanyAddress {
   return {
     ...existing,
+    ...(projectAddressVocabulary(val, 'form', 'companyAddress', {
+      includePostal: true,
+      // Συγχώνευση σε **υπάρχουσα** εγγραφή: σβησμένη επιλογή σβήνει και την ταυτότητα.
+      clearedIdsAsNull: true,
+    }) as Partial<CompanyAddress>),
+    // Τα τρία που ο πίνακας δεν μπορεί να παραγάγει μόνος του:
+    // `city` = κανόνας τομέα (οικισμός, αλλιώς Δήμος)· `region` = **δεύτερο** πεδίο που
+    // κρατά την ίδια τιμή με το `regionName` για συμβατότητα παλαιών αναγνωστών· και τα
+    // υποχρεωτικά ταχυδρομικά που γράφονται ακόμη και κενά.
     street: val.street,
     number: val.number,
     postalCode: val.postalCode,
-    city: val.settlementName || val.municipalityName,
-    settlementId: val.settlementId,
-    communityName: val.communityName,
-    municipalUnitName: val.municipalUnitName,
-    municipalityName: val.municipalityName,
-    municipalityId: val.municipalityId,
-    regionalUnitName: val.regionalUnitName,
-    regionName: val.regionName,
+    city: resolveCityFromHierarchy(val),
     region: val.regionName,
-    decentAdminName: val.decentAdminName,
-    majorGeoName: val.majorGeoName,
     country: val.country || undefined,
   };
 }
@@ -114,16 +115,9 @@ function formatBranchStreetLine(addr: CompanyAddress): string {
   return formatContactAddressLine(addr);
 }
 
+// ADR-772 / CHECK 3.28 — ήταν δίδυμο του `toResolvedFromAddr` των κτιρίων.
 function branchToResolvedFields(addr: CompanyAddress): ResolvedAddressFields {
-  return {
-    street: addr.street || undefined,
-    number: addr.number || undefined,
-    postalCode: addr.postalCode || undefined,
-    city: addr.city || undefined,
-    neighborhood: addr.neighborhood || undefined,
-    region: addr.regionName || addr.region || undefined,
-    country: addr.country || undefined,
-  };
+  return storedAddressToResolved(addr, 'companyAddress');
 }
 
 function applyResolvedToBranch(resolved: ResolvedAddressFields, existing: CompanyAddress): CompanyAddress {

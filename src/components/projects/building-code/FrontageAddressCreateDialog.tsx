@@ -16,6 +16,7 @@ import { AddressWithHierarchy } from '@/components/shared/addresses/AddressWithH
 import type { AddressWithHierarchyValue } from '@/components/shared/addresses/AddressWithHierarchy';
 import { AddressEditor } from '@/components/shared/addresses/editor';
 import { fromHierarchyValue, EMPTY_HIERARCHY } from '@/components/projects/tabs/locations/location-converters';
+import { resolveCityFromHierarchy } from '@/utils/address/administrative-hierarchy';
 
 interface FrontageAddressCreateDialogProps {
   open: boolean;
@@ -37,10 +38,8 @@ export function FrontageAddressCreateDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = Boolean(
-    (hierarchy as Partial<AddressWithHierarchyValue>).settlementName?.trim() ||
-    (hierarchy as Partial<AddressWithHierarchyValue>).municipalityName?.trim(),
-  );
+  // ADR-772: ο κανόνας «οικισμός, αλλιώς Δήμος» ζει σε ΕΝΑ σημείο (ήταν σε επτά).
+  const canSave = Boolean(resolveCityFromHierarchy(hierarchy).trim());
 
   const handleClose = () => {
     setHierarchy({});
@@ -59,7 +58,12 @@ export function FrontageAddressCreateDialog({
         return;
       }
 
+      // 🔴 **ADR-772** — εδώ ζούσε το **τρίτο σχήμα** σιωπηλής απώλειας: ο μετατροπέας
+      // παρήγαγε σωστά όλη την ιεραρχία και αυτές οι γραμμές **ξαναδιάλεγαν τέσσερα
+      // πεδία**, πετώντας δήμο, δημοτική ενότητα, περιφέρεια, περιφερειακή ενότητα και
+      // συνοικία. Ο μετατροπέας ήταν πράσινος· η απώλεια ήταν στον **καλούντα**.
       const newAddress = createProjectAddress({
+        ...addressFields,
         street: addressFields.street?.trim() ?? '',
         number: addressFields.number?.trim() || undefined,
         city: addressFields.city.trim(),
@@ -104,7 +108,7 @@ export function FrontageAddressCreateDialog({
               street: hierarchy.street,
               number: hierarchy.number,
               postalCode: hierarchy.postalCode,
-              city: hierarchy.settlementName || hierarchy.municipalityName,
+              city: resolveCityFromHierarchy(hierarchy),
             }}
             onChange={(resolved) => {
               setHierarchy((prev) => ({
