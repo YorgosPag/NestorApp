@@ -53,6 +53,7 @@ import type { TableEntity } from '../../types/table-entity';
 import type { TableAxisColorState } from '../components/table-format-toolbar/table-color-menu-selection';
 import type { TableToggleFormatKey } from '../components/table-format-toolbar/TableFormatSection';
 import type { TableBindingPort } from './use-table-binding-actions';
+import type { TableFormatPainterPort } from './use-table-format-painter-actions';
 import type { TableBorderActions } from './use-table-border-actions';
 import type { TableMergeActions } from './use-table-merge-actions';
 
@@ -142,6 +143,19 @@ export interface TableFormatPort {
    * μορφοποίηση θέλει δρομέα, η δομή θέλει δρομέα, ο δεσμός θέλει μόνο **δεμένο πίνακα**.
    */
   readonly binding: TableBindingPort;
+  /**
+   * 🔴 ADR-768 Βήμα 5 — το **Πινέλο Μορφοποίησης**: «ρούφα τη μορφή» και «σβήσε το πινέλο».
+   *
+   * Μπαίνει στη θύρα και όχι σε props για τον λόγο που γεννήθηκε η θύρα: το κουμπί ζωγραφίζεται
+   * σε **δύο** επιφάνειες — το εφήμερο mini toolbar (μενού δεξιού κλικ) και τη **μόνιμη**
+   * κορδέλα. Χωρίς κοινή θύρα, η δεύτερη επιφάνεια θα ήταν δεύτερη υλοποίηση της ίδιας
+   * χειρονομίας, με δύο ευκαιρίες να διαφωνήσουν για το τι σημαίνει «διπλό κλικ».
+   *
+   * ⚠️ Το **βάψιμο** δεν είναι εδώ, και δεν πρόκειται να μπει: γεννιέται από **κλικ στον
+   * καμβά**, δηλαδή από ερώτηση που καμία επιφάνεια δεν μπορεί να απαντήσει («σε ποιο κελί
+   * έπεσε το χέρι;»). Ζει στο `use-table-format-painter-click.ts`.
+   */
+  readonly painter: TableFormatPainterPort;
 }
 
 let port: TableFormatPort | null = null;
@@ -176,9 +190,17 @@ function emit(): void {
  * ταυτότητα αλλά ίδιο περιεχόμενο δίνει τις ίδιες απαντήσεις. Ό,τι όντως αλλάζει απάντηση
  * φτάνει από τα δύο ρητά σήματα του εκδότη ({@link notifyTableFormatPort}).
  *
- * Η **παρουσία** είναι η εξαίρεση: `null → θύρα` σημαίνει «η συνεδρία πίνακα ξεκίνησε» και
+ * Η **παρουσία** είναι η εξαίρεση: `null → θύρα` σημαίνει «υπάρχει πλέον κάποιος να ρωτήσω» και
  * κανένα άλλο σήμα δεν το λέει· χωρίς αυτό το emit, η κορδέλα θα έμενε αδρανής μέχρι το
  * επόμενο πάτημα πλήκτρου.
+ *
+ * 🔴 **ΔΙΟΡΘΩΣΗ (μετρήθηκε 2026-08-07, ADR-768):** εδώ έγραφε «`null → θύρα` σημαίνει *η συνεδρία
+ * πίνακα ξεκίνησε*». **Ψευδές.** Το `useTableFormatActions` καλείται **άνευ όρων**
+ * (`hooks/canvas/useCanvasSectionUI.ts:98`), άρα η θύρα υπάρχει όσο ζει ο viewer: η παρουσία της
+ * αλλάζει με το **mount του καμβά**, όχι με τη συνεδρία. Το σήμα συνεδρίας είναι ο **δρομέας**,
+ * και μόνο αυτός — γι' αυτό ο ιδιοκτήτης κύκλου ζωής του πινέλου (ADR-768 Φ4) είναι το store του
+ * δρομέα και όχι αυτή η θύρα. Δεν είναι λεπτομέρεια σχολίου: όποιος το πίστευε θα έγραφε φύλακα
+ * «υπάρχει θύρα ⇒ υπάρχει συνεδρία», που είναι **μονίμως αληθής** — δηλαδή κανένας φύλακας.
  */
 export function setTableFormatPort(next: TableFormatPort | null): void {
   const presenceChanged = (port === null) !== (next === null);

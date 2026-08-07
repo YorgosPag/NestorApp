@@ -41,7 +41,6 @@ import {
   AArrowUp,
   Bold,
   Italic,
-  Paintbrush,
   RotateCcw,
   Underline,
   WrapText,
@@ -270,28 +269,18 @@ export function TableFormatWrapButton(props: TableFormatSectionProps): React.Rea
 }
 
 /**
- * **Σειρά 2, θέση 9** — Πινέλο μορφοποίησης. **Ανενεργό**, ίδιος κανόνας με την αναδίπλωση.
+ * **Σειρά 2, θέση 9** — Πινέλο μορφοποίησης.
  *
- * Δεν υπάρχει «πρόχειρο μορφοποίησης» πουθενά στο υποσύστημα: το πινέλο θέλει να **διαβάσει**
- * ολόκληρη την επιλυμένη μορφή ενός κελιού και να τη **γράψει** σε άλλο — δηλαδή μια πράξη
- * αντιγραφής στυλ που δεν έχει γραφτεί ακόμη, όχι ένα `onClick`.
+ * 🔴 **ΜΕΤΑΚΟΜΙΣΕ (ADR-768 Βήμα 5) στο `TableFormatPainterButton.tsx`.** Εδώ έγραφε «*ανενεργό,
+ * ίδιος κανόνας με την αναδίπλωση: δεν υπάρχει πρόχειρο μορφοποίησης πουθενά στο υποσύστημα*».
+ * Η αιτία εξαφανίστηκε — οι Φ1–Φ3 έγραψαν τη μηχανή (`captureTableFormatBrush` /
+ * `paintTableFormat`) και η Φ4 τη μνήμη.
+ *
+ * Δεν έμεινε εδώ, και ο λόγος είναι ο **τύπος των props**: κάθε θραύσμα αυτού του αρχείου
+ * δείχνει *μορφοποίηση του στόχου* και μοιράζεται το ίδιο {@link TableFormatSectionProps}· το
+ * πινέλο δείχνει *κατάσταση εργαλείου* και έχει **δεύτερο ξενιστή** (την κορδέλα), που δεν έχει
+ * κανέναν από τους έξι χειριστές να δώσει.
  */
-export function TableFormatPainterButton(props: TableFormatSectionProps): React.ReactElement {
-  const { rovingOf } = props;
-  const { t } = useTranslation('dxf-viewer');
-
-  return (
-    <ToolbarButton
-      roving={rovingOf(0)}
-      title={t('table.formatToolbar.formatPainter')}
-      hint={t('table.formatToolbar.notImplementedHint')}
-      disabled
-      onActivate={() => undefined}
-    >
-      <Paintbrush size={15} />
-    </ToolbarButton>
-  );
-}
 
 /**
  * 🔴 **ΤΟ ΤΡΙΤΟ ΤΜΗΜΑ, ΜΕΡΟΣ 1** — Υπογράμμιση.

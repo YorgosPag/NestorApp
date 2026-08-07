@@ -98,9 +98,11 @@ import {
   TableNumberKindButtons,
   type TableNumberFormatSectionProps,
 } from './TableNumberFormatSection';
+// 🔴 ADR-768 Βήμα 5 — δικό του αρχείο επειδή έχει **δεύτερο ξενιστή** (την κορδέλα) και μηδέν
+// γνώση μορφοποίησης: δεν μοιράζεται το `TableFormatSectionProps` με τα υπόλοιπα θραύσματα.
+import { TableFormatPainterButton } from './TableFormatPainterButton';
 import {
   TableFormatColors,
-  TableFormatPainterButton,
   TableFormatResetButton,
   TableFormatSizeButtons,
   TableFormatToggles,
@@ -322,9 +324,15 @@ function ToolbarRowTwo({ toolbar, slots, roving }: ToolbarRowProps): React.React
       {numberFormat ? (
         <TableDecimalButtons {...numberFormat} rovingOf={offsetOf(roving, slots.decimals)} />
       ) : null}
-      {format ? (
-        <TableFormatPainterButton {...format} rovingOf={offsetOf(roving, slots.formatPainter)} />
-      ) : null}
+      {/*
+        🔴 ADR-768 Βήμα 5 — **η θέση δεν άλλαξε, τα props ναι.** Το κουμπί δεν παίρνει πια το
+        `{...format}`: δεν διαβάζει τίποτα από αυτό, και δεν το διάβαζε ποτέ. Διαβάζει μόνο του
+        την κατάσταση του πινέλου και τη θύρα — μία θέση roving είναι όλη η εξάρτησή του.
+
+        ⚠️ Ο φρουρός `format ?` μένει: όταν λείπει ο στόχος μορφοποίησης, λείπει και το πινέλο.
+        Έτσι η θέση 9 του Excel δεν μετακινείται όταν το τμήμα εμφανίζεται μερικώς.
+      */}
+      {format ? <TableFormatPainterButton roving={roving.itemProps(slots.formatPainter)} /> : null}
 
       {/*
         ‖ **Το τρίτο τμήμα**: υπογράμμιση, συγχώνευση, επαναφορά — ό,τι έχει ο ΝΕΣΤΩΡ παραπάνω

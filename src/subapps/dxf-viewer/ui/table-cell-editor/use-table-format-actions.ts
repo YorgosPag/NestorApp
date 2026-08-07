@@ -58,6 +58,8 @@ import { useTableBorderActions } from './use-table-border-actions';
 import { useTableMergeActions } from './use-table-merge-actions';
 import { useTableStructureActions } from './use-table-structure-actions';
 import { useTableBindingActions } from './use-table-binding-actions';
+// 🔴 ADR-768 Βήμα 5 — το πινέλο μορφοποίησης: **δύο** πράξεις («ρούφα», «σβήσε») + το `Esc` του.
+import { useTableFormatPainterActions } from './use-table-format-painter-actions';
 import { useLiveTableMutation } from './use-table-model-commit';
 import {
   getTableCellCursor,
@@ -119,6 +121,23 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     return tableFormatScopeOf(live.model, cursor.position, cursor.selection);
   }, [cursorTable]);
 
+  /**
+   * Ο στόχος ως **ορθογώνιο** — ό,τι δέχονται περιγράμματα, συγχώνευση και το πινέλο.
+   *
+   * Ζει ως `useCallback` και όχι inline μέσα στο `answers` επειδή έχει πλέον **δεύτερο**
+   * καταναλωτή: το {@link useTableFormatPainterActions} το χρειάζεται ως εξάρτηση, και μια νέα
+   * ταυτότητα ανά render θα ξανάφτιαχνε το `arm` σε κάθε απόδοση — δηλαδή θα ακύρωνε το `useMemo`
+   * της θύρας του πινέλου χωρίς κανένα όφελος.
+   */
+  const bounds = useCallback(
+    (): ReturnType<TableFormatPort['bounds']> => {
+      const live = table();
+      const current = scope();
+      return live && current ? tableFormatScopeBounds(live.model, current) : null;
+    },
+    [table, scope],
+  );
+
   /** Ο στόχος + το στυλ + τα χρώματα του σχεδίου, **τη στιγμή της κλήσης**. */
   const formatTarget = useCallback(() => {
     const live = cursorTable();
@@ -144,6 +163,11 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
   // 🔴 ADR-767 Δ3 — ο δεσμός ζητά **μόνο** τον ζωντανό πίνακα: δεν χρειάζεται δρομέα, γιατί
   // ανανεώνεται ολόκληρος ο πίνακας (Δ8: ένα `sourceRef` ανά πίνακα, ποτέ ανά περιοχή).
   const binding = useTableBindingActions({ levelManager, table });
+  // 🔴 ADR-768 Βήμα 5 — το πινέλο ζητά **τον πίνακα του δρομέα** (`cursorTable`, όχι `table`): η
+  // πηγή είναι πάντα περιοχή **μέσα σε συνεδρία**, ενώ ένας απλώς επιλεγμένος πίνακας δεν έχει
+  // τι να ρουφήξει. Το `bounds()` το λέει ήδη (`null` χωρίς δρομέα) — η συμφωνία των δύο
+  // ορισμάτων είναι δομική, όχι σύμπτωση.
+  const painter = useTableFormatPainterActions({ liveTable: cursorTable, bounds });
 
   /**
    * Ό,τι απαντά η θύρα **αυτή τη στιγμή**. Απλό αντικείμενο, ξαναφτιαγμένο ανά render —
@@ -152,11 +176,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
   const answers = {
     table,
     scope,
-    bounds: (): ReturnType<TableFormatPort['bounds']> => {
-      const live = table();
-      const current = scope();
-      return live && current ? tableFormatScopeBounds(live.model, current) : null;
-    },
+    bounds,
     state: ((key) => {
       const target = formatTarget();
       return target ? resolveTableFormatState(target.model, target.style, target.scope, key) : null;
@@ -191,6 +211,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     merge,
     structure,
     binding,
+    painter,
   };
 
   /**
@@ -233,6 +254,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     get merge() { return latest.current.merge; },
     get structure() { return latest.current.structure; },
     get binding() { return latest.current.binding; },
+    get painter() { return latest.current.painter; },
   }), []);
 
   useEffect(() => {

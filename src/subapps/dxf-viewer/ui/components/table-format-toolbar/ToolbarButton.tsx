@@ -72,17 +72,56 @@ export interface ToolbarButtonProps {
   readonly title: string;
   readonly hint?: string;
   readonly state?: TableToggleFormatState;
+  /**
+   * 🔴 ADR-768 Δ1 — **κουμπί ΛΕΙΤΟΥΡΓΙΑΣ πατημένο**, δίτιμο, κατά WAI-ARIA.
+   *
+   * Ξεχωριστό prop και **όχι** στρίμωγμα στο {@link TableToggleFormatState}, παρότι και τα δύο
+   * καταλήγουν σε `aria-pressed`. Ο λόγος είναι σημασιολογικός και μετρήσιμος:
+   *
+   * - Το `state` σημαίνει «*η κατάσταση ενός **πεδίου μορφοποίησης***». Τα δύο άλλα πεδία του
+   *   δεν έχουν νόημα για λειτουργία: το `mixed` σημαίνει «ανάμεικτη **επιλογή**» και το
+   *   `explicit` σημαίνει «ποιος το είπε — άξονας ή στυλ», και **ζωγραφίζει κουκκίδα** παρακάτω.
+   *   Ένα εργαλείο που δηλωνόταν έτσι θα κουβαλούσε δύο νεκρά πεδία και μία ανεπιθύμητη τελεία.
+   * - Το `mixed` του WAI-ARIA ορίζεται ως «*οι τιμές περισσότερων του ενός ελεγχόμενων
+   *   στοιχείων δεν συμφωνούν*» — **μερική επιλογή**, ποτέ «τρίτη κατάσταση εργαλείου». Το
+   *   «κλειδωμένο» του πινέλου ταξιδεύει στο {@link badge} και στη ζωντανή περιοχή, όχι εδώ.
+   *
+   * Όταν δίνεται, **νικά** το `state`: κανένα χειριστήριο δεν είναι και τα δύο.
+   */
+  readonly pressed?: boolean;
+  /**
+   * 🔴 ADR-768 Δ1 — μικρό σήμα πάνω στο κουμπί (π.χ. **λουκέτο** «κλειδωμένο πινέλο»).
+   *
+   * Το Excel δείχνει το κουμπί **οπτικά ταυτόσημο** για μονό και διπλό κλικ — ο χρήστης δεν
+   * μαθαίνει ποτέ αν κλείδωσε. Εδώ το μαθαίνει, χωρίς να επιβαρυνθεί το `aria-label` (το
+   * σήμα είναι `aria-hidden`· η διαφορά ανακοινώνεται από τη ζωντανή περιοχή).
+   */
+  readonly badge?: React.ReactNode;
   readonly disabled?: boolean;
   /** Επιπλέον κλάσεις — π.χ. το πλάτος ενός combobox που δείχνει τιμή αντί για εικονίδιο. */
   readonly className?: string;
   /** Απόν ⇒ σκέτο κουμπί εντολής. Παρόν ⇒ trigger πτυσσόμενου (δες {@link ToolbarButtonPopup}). */
   readonly popup?: ToolbarButtonPopup;
   readonly onActivate: () => void;
+  /**
+   * 🔴 ADR-768 Α1 — **η δεύτερη χειρονομία του ίδιου κουμπιού**: διπλό κλικ = «κράτα το εργαλείο
+   * ενεργό» (Excel/Word/Figma «keep tool active»).
+   *
+   * Ονοματισμένο prop και όχι σκέτο `onDoubleClick`: η υποδοχή δεν διαρρέει DOM συμβάν, και ο
+   * καλών δεν μπορεί να δηλώσει διπλό κλικ που κάνει **άσχετη** πράξη από το μονό.
+   *
+   * ⚠️ **Καμία μαντεψιά χρόνου, κανένας timer.** Ο browser στέλνει `click → click → dblclick`,
+   * άρα το πρώτο κλικ οπλίζει, το δεύτερο (ως toggle) σβήνει, και το `dblclick` ξαναοπλίζει
+   * κλειδωμένα. Η τελική κατάσταση είναι σωστή **εξ ορισμού της σειράς**, και όχι επειδή
+   * μαντέψαμε ένα κατώφλι 250ms που ο χρήστης μπορεί να ρυθμίσει στο λειτουργικό του.
+   */
+  readonly onActivateLocked?: () => void;
   readonly children: React.ReactNode;
 }
 
 export function ToolbarButton({
-  roving, title, hint, state, disabled, className, popup, onActivate, children,
+  roving, title, hint, state, pressed, badge, disabled, className, popup,
+  onActivate, onActivateLocked, children,
 }: ToolbarButtonProps): React.ReactElement {
   return (
     <Tooltip>
@@ -104,10 +143,12 @@ export function ToolbarButton({
             state?.active && !state.mixed && styles.buttonActive,
             state?.mixed && styles.buttonMixed,
             popup?.isOpen && styles.buttonActive,
+            pressed && styles.buttonActive,
             className,
           )}
           aria-label={title}
-          aria-pressed={state ? (state.mixed ? 'mixed' : state.active) : undefined}
+          // Το `pressed` νικά: ένα κουμπί λειτουργίας δεν έχει ποτέ και `state` πεδίου.
+          aria-pressed={pressed ?? (state ? (state.mixed ? 'mixed' : state.active) : undefined)}
           aria-haspopup={popup?.kind}
           aria-expanded={popup ? popup.isOpen : undefined}
           aria-controls={popup?.isOpen ? popup.panelId : undefined}
@@ -115,10 +156,18 @@ export function ToolbarButton({
           onClick={() => {
             if (!disabled) onActivate();
           }}
+          onDoubleClick={onActivateLocked && !disabled ? onActivateLocked : undefined}
           {...TABLE_CELL_SESSION_MARKER}
         >
           {children}
           {state?.explicit ? <span className={styles.explicitDot} aria-hidden="true" /> : null}
+          {/*
+            🔴 ADR-768 Δ1 — το σήμα κλειδώματος. `aria-hidden` επίτηδες: το όνομα του κουμπιού
+            μένει σκέτο (ίδιος κανόνας με το `hint`, δες την κεφαλίδα), και η διαφορά
+            «μία χρήση / κλειδωμένο» ανακοινώνεται από τη **ζωντανή περιοχή** — μία φορά, όταν
+            συμβαίνει, αντί να διαβάζεται σε κάθε πέρασμα του δρομέα του αναγνώστη.
+          */}
+          {badge ? <span className={styles.lockBadge} aria-hidden="true">{badge}</span> : null}
         </button>
       </TooltipTrigger>
       {/*
