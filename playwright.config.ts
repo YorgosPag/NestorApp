@@ -60,7 +60,13 @@ export default defineConfig({
         navigationTimeout: 90000,
         actionTimeout: 30000,
       },
-      snapshotPathTemplate: 'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}{ext}',
+      // ⚠️ Τα {projectName}/{platform} είναι ΥΠΟΧΡΕΩΤΙΚΑ και είναι το DEFAULT του Playwright
+      // ({arg}-{projectName}-{platform}{ext}). Μέχρι 08/08 έλειπαν και τα δύο: τα projects
+      // firefox/webkit/Mobile* δεν έχουν testMatch, άρα έτρεχαν κι αυτά τα 43 visual tests και
+      // συγκρίνονταν με τα ΙΔΙΑ 40 golden (chromium/Windows) ⇒ 172 βέβαιες αποτυχίες, και σε
+      // Linux runner αποτυγχάνει ακόμα και το chromium. Φρουρείται από CHECK 3.46 (ADR-775).
+      snapshotPathTemplate:
+        'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}-{projectName}-{platform}{ext}',
       testMatch: ['**/dxf-viewer/e2e/dxf-visual-regression.spec.ts'],
       timeout: 120000,
     },
@@ -83,7 +89,9 @@ export default defineConfig({
           ],
         },
       },
-      snapshotPathTemplate: 'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}{ext}',
+      // βλ. σχόλιο στο visual-dxf — ίδιος λόγος, ίδια πύλη (CHECK 3.46).
+      snapshotPathTemplate:
+        'src/subapps/dxf-viewer/e2e/__snapshots__/{testFilePath}/{arg}-{projectName}-{platform}{ext}',
       testMatch: ['**/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts'],
       timeout: 180000,
     },
