@@ -48,61 +48,21 @@ const CVD_TARGET = 8.0;
 const NORMAL_FLOOR = 15.0;
 const CONTRAST_MIN = 3.0;
 
-// Machado-Oliveira-Fernandes 2009, severity 1.0. The thresholds above are
-// calibrated to THIS simulation model, so the model is part of the standard —
-// swapping it silently changes what passes.
-const MACHADO = {
-  protan: [[0.152286, 1.052583, -0.204868], [0.114503, 0.786281, 0.099216], [-0.003882, -0.048116, 1.051998]],
-  deutan: [[0.367322, 0.860646, -0.227968], [0.280085, 0.672501, 0.047413], [-0.011820, 0.042940, 0.968881]],
-};
-
 // ── colour maths ────────────────────────────────────────────────────────────
-const s2lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-const clamp01 = (v) => Math.max(0, Math.min(1, v));
-
-function hslToRgb(h, s, l) {
-  s /= 100;
-  l /= 100;
-  const k = (n) => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-  return [f(0), f(8), f(4)];
-}
-const toHex = (rgb) => '#' + rgb.map((v) => Math.round(255 * clamp01(v)).toString(16).padStart(2, '0')).join('');
-
-function oklabFromLin([r, g, b]) {
-  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-  return [
-    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
-    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
-    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
-  ];
-}
-const linOf = (rgb) => rgb.map((c) => s2lin(clamp01(c)));
-const oklch = (rgb) => {
-  const [L, a, b] = oklabFromLin(linOf(rgb));
-  return [L, Math.hypot(a, b)];
-};
-const relLum = (rgb) => {
-  const [r, g, b] = linOf(rgb);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-const contrast = (a, b) => {
-  const [hi, lo] = [relLum(a), relLum(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
-};
-function simulate(rgb, kind) {
-  const [r, g, b] = linOf(rgb);
-  const M = MACHADO[kind];
-  return M.map((row) => clamp01(row[0] * r + row[1] * g + row[2] * b));
-}
-function deltaE(rgb1, rgb2, kind) {
-  const a = oklabFromLin(kind ? simulate(rgb1, kind) : linOf(rgb1));
-  const b = oklabFromLin(kind ? simulate(rgb2, kind) : linOf(rgb2));
-  return 100 * Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-}
+// 🔴 ADR-771 Φ.1 — the Machado 2009 matrices and the OKLab distance USED to live
+// here, privately. They now live in `scripts/lib/contrast/cvd.js` because a second
+// gate (state-channel distinctness for the ADR-769 liveness marks) asks the very
+// same question of a different colour family. Copying them would have been the
+// textbook sibling clone CHECK 3.28 exists to catch — and worse, two copies of a
+// simulation model drift silently, at which point two gates answer "are these two
+// colours distinguishable?" differently. Values are unchanged: this is a MOVE.
+const {
+  hslToRgb,
+  toHex,
+  oklch,
+  contrast,
+  deltaE,
+} = require('./lib/contrast/cvd');
 
 // ── CSS extraction ──────────────────────────────────────────────────────────
 /** Slice the body of the first rule whose selector line matches `selector`. */

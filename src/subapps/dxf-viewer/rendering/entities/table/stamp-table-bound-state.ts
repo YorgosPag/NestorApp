@@ -5,10 +5,16 @@
  *   ┌───────────┬───────────┬───────────┬───────────┐
  *   │ ▔▔▔▔▔▔▔▔▔ │ ▔▔▔▔▔▔▔▔▔ │ ▔▔▔▔▔▔▔▔▔ │           │ ← λωρίδες: ΔΕΜΕΝΕΣ ΣΤΗΛΕΣ (Δ8)
  *   │ Κ1        │ 412350.12 │ 4203118.4 │ γωνία     │
- *   │ Κ3        │ 412370.05 │◤4203095.1 │           │ ← ◤ κεχριμπάρι: ΠΑΡΑΚΑΜΨΗ
- *   │ Κ4        │ 412381.44 │◤4203088.9 │           │ ← ◤ κόκκινο: ΣΥΓΚΡΟΥΣΗ
+ *   │ Κ3        │ 412370.05 │◤4203095.1 │           │ ← ◤ πάνω-ΑΡΙΣΤΕΡΑ, κεχριμπάρι: ΠΑΡΑΚΑΜΨΗ
+ *   │ Κ4        │ 412381.44 │4203088.9◥ │           │ ← ◥ πάνω-ΔΕΞΙΑ,  κόκκινο:    ΣΥΓΚΡΟΥΣΗ
  *   └───────────┴───────────┴───────────┴───────────┘
  * ```
+ *
+ * 🔴 **ADR-771 Φ.1 — η γωνία ΕΙΝΑΙ πληροφορία, όχι διακόσμηση.** Μέχρι 07/08 και τα δύο
+ * σημάδια κάθονταν πάνω-αριστερά και διέφεραν **μόνο** στην απόχρωση: η ταυτότητα της
+ * κατάστασης ήταν κωδικοποιημένη σε ένα κανάλι (WCAG 1.4.1). Δες `TABLE_BOUND_STATE
+ * .exceptionMarks` για το γιατί η δικαιολόγηση **δεν** είναι «τα χρώματα μοιάζουν» — δεν
+ * μοιάζουν, μετρήθηκε.
  *
  * ## 🔴🔴 Ο ΦΡΟΥΡΟΣ ΤΟΥ ΧΑΡΤΙΟΥ — η γραμμή που κάνει ολόκληρο το αρχείο νόμιμο
  * Το Δ4 απαγορεύει ρητά αυτά τα σημάδια στο παραδοτέο, και το υπάρχον test της εξαγωγής
@@ -46,6 +52,7 @@ import { TABLE_BOUND_STATE } from '../../../config/color-config';
 import { getPrintColorPolicy } from '../../../config/print-color-policy';
 import { hexToRgba } from '../../../config/color-math';
 import { traceRectMm, type StampTableContext } from './stamp-table-layout';
+import type { TableExceptionMarkCorner } from '../../../config/color-config';
 import type {
   BoundColumnStrip,
   BoundExceptionMark,
@@ -145,14 +152,19 @@ function stampDashedStrip(
 }
 
 /**
- * Το τριγωνάκι της εξαίρεσης, στην **πάνω-αριστερή** γωνία του κελιού.
+ * Το τριγωνάκι της εξαίρεσης, στη γωνία που **ονομάζει η κατάστασή του**.
  *
- * Θέση δανεισμένη από τον δείκτη σφάλματος του Excel/Sheets — και η μόνη γωνία κελιού που
- * δεν διεκδικείται ήδη (η λαβή συμπλήρωσης κάθεται κάτω-δεξιά, ADR-754 Γ4).
+ * Θέσεις δανεισμένες από το Excel/Sheets, που χρησιμοποιεί τη γωνία ως **διάσταση** (δείκτης
+ * σφάλματος πάνω-αριστερά · σχόλιο πάνω-δεξιά). Και οι δύο πάνω γωνίες είναι ελεύθερες — η
+ * λαβή συμπλήρωσης κάθεται **κάτω**-δεξιά (ADR-754 Γ4).
  *
  * Το μέγεθος είναι σε **px οθόνης**: ένα σημάδι που μεγαλώνει με το zoom θα σκέπαζε το κελί
  * του σε μεγάλη κλίμακα και θα εξαφανιζόταν σε μικρή — δηλαδή θα ήταν χρήσιμο σε ακριβώς μία
  * κλίμακα.
+ *
+ * ⚠️ Η γωνία διαβάζεται από το `TABLE_BOUND_STATE.exceptionMarks`, **όχι** από `if` εδώ: η
+ * πύλη διακριτότητας κρίνει το ίδιο πεδίο που ζωγραφίζεται, ώστε να μην μπορεί να αποκλίνει
+ * το ζωγραφισμένο από το κριμένο.
  */
 function stampExceptionMarks(rc: StampTableContext, marks: readonly BoundExceptionMark[]): void {
   if (marks.length === 0) return;
@@ -161,19 +173,39 @@ function stampExceptionMarks(rc: StampTableContext, marks: readonly BoundExcepti
 
   ctx.save();
   for (const mark of marks) {
+    const spec = TABLE_BOUND_STATE.exceptionMarks[mark.state];
     // Το σημάδι **δεν** ξεπερνά ποτέ το κελί του: σε πολύ στενό ή χαμηλό κελί συρρικνώνεται
     // αντί να ξεχειλίσει στον γείτονα, όπου θα φαινόταν ότι αφορά **εκείνον**.
     const side = Math.min(sizeMm, mark.rect.w, mark.rect.h);
-    ctx.fillStyle =
-      mark.state === 'conflict' ? TABLE_BOUND_STATE.conflictHex : TABLE_BOUND_STATE.overriddenHex;
+    ctx.fillStyle = spec.hex;
     ctx.beginPath();
-    lineTo(rc, mark.rect.x, mark.rect.y, true);
-    lineTo(rc, mark.rect.x + side, mark.rect.y, false);
-    lineTo(rc, mark.rect.x, mark.rect.y + side, false);
+    traceCornerTriangle(rc, mark.rect, side, spec.corner);
     ctx.closePath();
     ctx.fill();
   }
   ctx.restore();
+}
+
+/**
+ * Ορθογώνιο τρίγωνο κολλημένο σε **μία** γωνία του κελιού, με την ορθή γωνία εκεί.
+ *
+ * Η κορυφή της ορθής γωνίας μπαίνει πρώτη· οι δύο κάθετες πλευρές φεύγουν **προς τα μέσα**,
+ * οπότε το σχήμα ποτέ δεν βγαίνει έξω από το `rect` — ανεξάρτητα γωνίας.
+ */
+function traceCornerTriangle(
+  rc: StampTableContext,
+  rect: { x: number; y: number; w: number; h: number },
+  side: number,
+  corner: TableExceptionMarkCorner,
+): void {
+  // `dx` = προς ποια κατεύθυνση «μέσα» κοιτά η οριζόντια πλευρά από αυτή τη γωνία.
+  const atRight = corner === 'top-right';
+  const cornerX = atRight ? rect.x + rect.w : rect.x;
+  const dx = atRight ? -side : side;
+
+  lineTo(rc, cornerX, rect.y, true);
+  lineTo(rc, cornerX + dx, rect.y, false);
+  lineTo(rc, cornerX, rect.y + side, false);
 }
 
 /** Οι τέσσερις γωνίες ενός ορθογωνίου **μέσα** σε τρέχουσα διαδρομή (χωρίς `beginPath`). */
