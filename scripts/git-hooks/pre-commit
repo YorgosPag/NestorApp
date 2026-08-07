@@ -640,6 +640,11 @@ register_area "UI Contrast Gate (CHECK 3.38)" \
     "scripts/__tests__/check-text-primary-ratchet\.test\.js" \
     "npm run test:text-primary-ratchet"
 
+register_area "Theme Pairing Gate (CHECK 3.39)" \
+    "^(scripts/check-theme-pairing-ratchet\.js$|scripts/lib/contrast/(ts-token-palette|theme-pairing|css-token-themes)\.js$|\.theme-pairing-baseline\.json$)" \
+    "scripts/__tests__/check-theme-pairing-ratchet\.test\.js" \
+    "npm run test:theme-pairing"
+
 # ─── Canary: a convention-driven pattern that matches NOTHING must FAIL, not pass ───
 # Guards the exact trap this repo has paid for twice: a scan reports "clean" because its
 # file list was silently empty (bad path / renamed convention / moved folder). Without this,

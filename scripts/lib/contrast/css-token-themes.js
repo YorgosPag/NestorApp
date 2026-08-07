@@ -107,9 +107,29 @@ function readThemes(repoRoot = process.cwd()) {
 
 /** The subset of a theme's tokens that can legitimately sit behind text. */
 function surfaceTokens(theme) {
+  return tokensMatching(theme, SURFACE_TOKEN_PATTERN);
+}
+
+/**
+ * Token roles that are painted ON TOP of a surface (text, icons, labels).
+ *
+ * Needed by CHECK 3.39 to judge a HARDCODED surface: a fixed `#ffffff` background is a
+ * light island in the dark theme, and the thing that becomes unreadable on it is the
+ * *themed* foreground the app puts there. Asking only "is this surface fixed?" cannot
+ * express that; asking "does the verdict against `--foreground` flip between themes?" can.
+ */
+const FOREGROUND_TOKEN_PATTERN = /^--([a-z-]*foreground|text-[a-z-]+)$/;
+
+/** The subset of a theme's tokens that are painted on top of a surface. */
+function foregroundTokens(theme) {
+  return tokensMatching(theme, FOREGROUND_TOKEN_PATTERN);
+}
+
+/** Shared filter: named tokens whose value parses to a literal HSL triple. */
+function tokensMatching(theme, pattern) {
   const out = [];
   for (const [name, value] of theme) {
-    if (!SURFACE_TOKEN_PATTERN.test(name)) continue;
+    if (!pattern.test(name)) continue;
     const described = describeValue(value);
     if (described.kind !== 'literal') continue;
     out.push({ name, value, hsl: described.hsl });
@@ -117,4 +137,12 @@ function surfaceTokens(theme) {
   return out.sort((a, b) => a.name.localeCompare(b.name));
 }
 
-module.exports = { readThemes, surfaceTokens, describeValue, SURFACE_TOKEN_PATTERN, GLOBALS_CSS };
+module.exports = {
+  readThemes,
+  surfaceTokens,
+  foregroundTokens,
+  describeValue,
+  SURFACE_TOKEN_PATTERN,
+  FOREGROUND_TOKEN_PATTERN,
+  GLOBALS_CSS,
+};

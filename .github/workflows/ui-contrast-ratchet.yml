@@ -51,6 +51,9 @@ on:
       - 'scripts/check-text-primary-ratchet.js'
       - 'scripts/lib/contrast/**'
       - '.text-primary-baseline.json'
+      - 'scripts/check-theme-pairing-ratchet.js'
+      - 'src/styles/design-tokens/modules/**'
+      - '.theme-pairing-baseline.json'
       - '.github/workflows/ui-contrast-ratchet.yml'
   push:
     branches: [main]
@@ -61,6 +64,9 @@ on:
       - 'scripts/check-text-primary-ratchet.js'
       - 'scripts/lib/contrast/**'
       - '.text-primary-baseline.json'
+      - 'scripts/check-theme-pairing-ratchet.js'
+      - 'src/styles/design-tokens/modules/**'
+      - '.theme-pairing-baseline.json'
 
 concurrency:
   group: ui-contrast-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
@@ -106,6 +112,17 @@ jobs:
       - name: 🔍 CHECK 3.38 — text-primary ratchet, FULL tree (ADR-770)
         run: node scripts/check-text-primary-ratchet.js --all
 
+      # CHECK 3.39 / Στρώμα 2 — the OTHER route to the same invisible text. Also pure
+      # Node (AST walk over 12 token modules + one CSS parse), so it belongs in the
+      # dependency-free block: ~250ms, and it fails closed if the baseline is missing.
+      #
+      # ⚠️ It lives in THIS workflow on purpose rather than in a new one. A new
+      # workflow would need an entry in `.ci-gate-tiers.json` or CHECK 3.37 blocks
+      # the commit (ADR-757) — and there is no reason to pay that: same ADR, same
+      # question ("is this readable?"), same tier, same inputs.
+      - name: 🔍 CHECK 3.39 — theme pairing ratchet (ADR-770 Στρώμα 2)
+        run: node scripts/check-theme-pairing-ratchet.js
+
       # The gate's own mutation suite. A gate whose tests never run is a gate
       # nobody can trust — ADR-587 §6.1, paid for with 11 red tests that sat on
       # main for six commits because `unit.yml` was disabled and
@@ -122,3 +139,6 @@ jobs:
 
       - name: 🧪 Theme token hygiene anchors (ADR-759 §4.12.3, 12 tests)
         run: pnpm exec jest scripts/__tests__/theme-token-hygiene.test.js
+
+      - name: 🧪 Mutation suite — CHECK 3.39 (29 tests)
+        run: pnpm exec jest scripts/__tests__/check-theme-pairing-ratchet.test.js

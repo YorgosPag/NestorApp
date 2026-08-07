@@ -173,6 +173,24 @@ if (!process.env.SKIP_CI_TIER_COVERAGE && ciTierTriggers.length > 0)
 if (!process.env.SKIP_TEXT_PRIMARY_RATCHET && srcTsFiles.length > 0)
   addThread('3.38', 'UI contrast ratchet', 'scripts/check-text-primary-ratchet.js', srcTsFiles);
 
+// CHECK 3.39 (ADR-770 Στρώμα 2) — η ΑΛΛΗ διαδρομή προς το ίδιο αόρατο κείμενο. Η
+// εφαρμογή έχει ΔΥΟ συστήματα χρωμάτων: το `globals.css` (δύο θέματα) και ένα
+// χειρόγραφο σε TypeScript που δηλώνει `colors.text.primary = "#1e293b"` — σταθερό hex
+// φωτεινού θέματος, μηδενική έννοια θέματος — και καταλήγει σε INLINE STYLE, δηλαδή
+// νικάει κάθε κλάση κατά ειδικότητα. Το 3.38 διαβάζει κλάσεις· εδώ δεν υπάρχει κλάση.
+// Το `color-contrast` του axe ΔΕΝ εκτελείται σε jsdom (`getClientRects`, μετρημένο
+// 2026-08-07) ⇒ 1,00:1 περνά πράσινο. Κριτήριο: «αλλάζει η ετυμηγορία ανάμεσα στα δύο
+// θέματα;» — δεν χρειάζεται να μαντέψει τι συμβαίνει στην οθόνη.
+// Σκανδάλη: μόνο τα 13 αρχεία εισόδου. ΔΕΝ έχει staged λειτουργία σκόπιμα — κάθε
+// αλλαγή σε οποιοδήποτε από αυτά ξαναταξινομεί τα υπόλοιπα (~250ms συνολικά).
+const themePairingTriggers = allFiles.filter(
+  f => f.startsWith('src/styles/design-tokens/modules/')
+    || f === 'src/app/globals.css'
+    || f.startsWith('scripts/lib/contrast/')
+);
+if (!process.env.SKIP_THEME_PAIRING && themePairingTriggers.length > 0)
+  addThread('3.39', 'Theme pairing ratchet', 'scripts/check-theme-pairing-ratchet.js');
+
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);
 
