@@ -186,6 +186,7 @@ function style(over: Partial<TableCellStyle> = {}): TableCellStyle {
     italic: false,
     underline: false,
     align: 'ML' as TableCellAlign,
+    indentLevel: 0,
     margins: { hMm: 2, vMm: 1 },
     ...over,
   };
@@ -200,6 +201,7 @@ function target(hAlign: TextAlign = 'left'): TableCellEditTarget {
     rectMm: { x: 0, y: 0, w: 40, h: 10 },
     style: style(),
     hAlign,
+    indentMm: 0,
     baselineFromTopMm: 7,
   };
 }

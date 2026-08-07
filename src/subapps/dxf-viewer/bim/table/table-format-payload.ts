@@ -133,6 +133,12 @@ const FACET_BY_STYLE_KEY: Readonly<Record<TableCellStyleKey, TableFormatFacet>> 
   underline: 'text',
   fontFamily: 'text',
   align: 'alignment',
+  // 🔴 ADR-739 §59 Δ2 — η **εσοχή** είναι εντολή στοίχισης, όχι τυπογραφίας: στο Excel τα δύο
+  // κουμπιά της κάθονται στην ομάδα «Στοίχιση» και στο OOXML είναι attribute του **ίδιου**
+  // στοιχείου `<alignment>` με το `horizontal`/`vertical`/`wrapText`. Δική της όψη θα ήταν
+  // διακόπτης που κανείς δεν ζητά χωριστά — «μετάφερε τη στοίχιση αλλά όχι την εσοχή» δεν είναι
+  // αίτημα που έχει διατυπωθεί ποτέ, σε κανένα από τα πέντε εργαλεία αναφοράς.
+  indentLevel: 'alignment',
   fillColorHex: 'fill',
 };
 

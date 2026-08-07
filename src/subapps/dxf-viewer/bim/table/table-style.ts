@@ -135,8 +135,35 @@ export interface TableCellStyle {
   readonly underline: boolean;
   readonly fontFamily?: string;
   readonly align: TableCellAlign;
+  /**
+   * 🔴 ADR-739 §59 Δ2 — σκαλιά **εσοχής κειμένου** (ακέραιος ≥ 0· `0` = καμία).
+   * Δες `bim/table/table-indent-ops.ts` για το τι σημαίνει ένα σκαλί σε mm.
+   */
+  readonly indentLevel: number;
+  /**
+   * 🔴 ADR-739 §59 Δ1 — **γωνία κειμένου κελιού** σε μοίρες (θετικές = προς τα πάνω· `0` =
+   * οριζόντιο). Επιπλέον της γωνίας του **πίνακα** — δες `bim/table/table-rotation-ops.ts`.
+   */
+  readonly textRotationDeg: number;
   readonly margins: TableCellMargins;
 }
+
+/**
+ * 🔴 ADR-739 §59 Δ2/Δ1 — **η βάση των δύο πεδίων που ΔΕΝ είναι ιδιότητα κλάσης γραμμής.**
+ *
+ * Η εσοχή είναι απόφαση **του κελιού** («αυτή η γραμμή είναι υποσύνολο της από πάνω»), όχι της
+ * κλάσης του — και το ίδιο ισχύει στο πρότυπο: το `TABLESTYLE` του AutoCAD δηλώνει ανά κλάση
+ * γραμμής τυπογραφία, γέμισμα, στοίχιση, περιγράμματα και **περιθώρια**, ποτέ εσοχή. Ένα πεδίο
+ * στο {@link TableRowClassStyle} θα ήταν δεύτερη αυθεντία που **κανένα** preset δεν θέτει ποτέ
+ * σε τιμή ≠ 0 — δηλαδή φρουρός χωρίς απόδειξη ζωής (ADR-749 §5).
+ *
+ * Ονομασμένη σταθερά και όχι γυμνό `0` μέσα στο {@link baseCellStyle}: το `0` εκεί θα διαβαζόταν
+ * ως «δεν το σκέφτηκε κανείς», ενώ είναι ρητή απάντηση.
+ */
+export const NO_TABLE_INDENT_LEVEL = 0;
+
+/** Οριζόντιο κείμενο — η βάση της {@link TableCellStyle.textRotationDeg}, με το ίδιο σκεπτικό. */
+export const NO_TABLE_TEXT_ROTATION_DEG = 0;
 
 /** Το στυλ μιας κλάσης γραμμής, χωρίς τα περιγράμματα (βλ. {@link TableCellStyle}). */
 export function baseCellStyle(rowStyle: TableRowClassStyle): TableCellStyle {
@@ -149,6 +176,8 @@ export function baseCellStyle(rowStyle: TableRowClassStyle): TableCellStyle {
     underline: rowStyle.underline,
     fontFamily: rowStyle.fontFamily,
     align: rowStyle.align,
+    indentLevel: NO_TABLE_INDENT_LEVEL,
+    textRotationDeg: NO_TABLE_TEXT_ROTATION_DEG,
     margins: rowStyle.margins,
   };
 }
@@ -209,9 +238,22 @@ export function clearable<T>(levels: readonly (T | null | undefined)[], base: T 
  * (Το επίπεδο 4 — η σημασιολογική `TableColumn.align` — αφορά **μόνο** την οριζόντια
  * συνιστώσα και επιλύεται στο `table-layout-place.ts`, μαζί με τα υπόλοιπα της διάταξης.)
  *
- * Τα `margins` μένουν **ρητά εκτός**: είναι γεωμετρία της κλάσης γραμμής, και μια εσοχή που
- * αλλάζει ανά κελί θα άλλαζε το φυσικό πλάτος της στήλης — δηλαδή θα έκανε τη μέτρηση να
- * εξαρτάται από το περιεχόμενο δύο φορές. Ανοίγει με δική του φάση, όχι ως παρενέργεια.
+ * ## ✅ Τα `margins` μένουν ρητά εκτός — και η ΕΣΟΧΗ μπήκε ΧΩΡΙΣ να τα αγγίξει (§59 Δ2)
+ * Εδώ έγραφε: *«μια εσοχή που αλλάζει ανά κελί θα άλλαζε το φυσικό πλάτος της στήλης — δηλαδή
+ * θα έκανε τη μέτρηση να εξαρτάται από το περιεχόμενο δύο φορές. Ανοίγει με δική της φάση.»*
+ * Η φάση ήρθε, και η προειδοποίηση **επαληθεύτηκε σωστή**: γι' αυτό η εσοχή **δεν** έγινε
+ * `margins` ανά κελί. Είναι `indentLevel` — *padding του κειμένου*, όχι *margin του κελιού*:
+ *
+ * ```
+ *   margins    →  γεωμετρία της ΚΛΑΣΗΣ ΓΡΑΜΜΗΣ (DXF 40/41)· μπαίνει και στις ΔΥΟ πλευρές
+ *                 του κελιού· διαβάζεται από τη μέτρηση ΚΑΙ από την τοποθέτηση
+ *   indentLevel → πρόθεση του ΚΕΛΙΟΥ· μετατοπίζει ΜΟΝΟ την άγκυρα και μικραίνει το ωφέλιμο
+ *                 πλάτος· τα περιθώρια δεν τη βλέπουν ποτέ
+ * ```
+ *
+ * Ο κύκλος που φοβόταν η προειδοποίηση απαιτεί το `margins` να εξαρτάται από το περιεχόμενο.
+ * Το `indentLevel` είναι **σταθερά του μοντέλου** — δεν μετριέται από τίποτα, άρα δεν μπορεί
+ * να εξαρτηθεί από το πλάτος που το ίδιο καθορίζει. Ο κύκλος δεν σχηματίζεται καν.
  */
 export function resolveCellStyle(
   rowStyle: TableRowClassStyle,
@@ -233,6 +275,12 @@ export function resolveCellStyle(
     underline: inherited([cell?.underline, row?.underline, column?.underline], base.underline),
     fontFamily: clearable([cell?.fontFamily, row?.fontFamily, column?.fontFamily], base.fontFamily),
     align: inherited([cell?.align, row?.align, column?.align], base.align),
+    indentLevel: inherited(
+      [cell?.indentLevel, row?.indentLevel, column?.indentLevel], base.indentLevel,
+    ),
+    textRotationDeg: inherited(
+      [cell?.textRotationDeg, row?.textRotationDeg, column?.textRotationDeg], base.textRotationDeg,
+    ),
     margins: base.margins,
   };
 }

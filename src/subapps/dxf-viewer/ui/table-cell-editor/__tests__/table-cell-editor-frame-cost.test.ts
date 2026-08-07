@@ -83,6 +83,7 @@ const style: TableCellStyle = {
   italic: false,
   underline: false,
   align: 'ML' as TableCellAlign,
+  indentLevel: 0,
   margins: { hMm: 2, vMm: 1 },
 };
 
@@ -94,6 +95,7 @@ const target: TableCellEditTarget = {
   rectMm: { x: 0, y: 0, w: 40, h: 10 },
   style,
   hAlign: 'left',
+  indentMm: 0,
   baselineFromTopMm: 7,
 };
 

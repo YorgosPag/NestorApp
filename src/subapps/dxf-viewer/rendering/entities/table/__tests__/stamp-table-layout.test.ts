@@ -50,6 +50,7 @@ const style = (fillColorHex?: string): TableCellStyle => ({
   italic: false,
   underline: false,
   align: 'ML',
+  indentLevel: 0,
   margins: { hMm: 1, vMm: 1 },
 });
 
@@ -64,6 +65,7 @@ function cell(
     rect: { x: 0, y: 0, w: 40, h: 8 },
     style: style(fillColorHex),
     hAlign: 'left',
+    indentMm: 0,
     // ADR-739 §58 Γ2 — **πίνακας** γραμμών· ένα στοιχείο για κελί που δεν αναδιπλώνεται.
     texts: [
       {

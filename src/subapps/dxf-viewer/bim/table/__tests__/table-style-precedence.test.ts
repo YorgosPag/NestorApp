@@ -39,6 +39,7 @@ const BASE: TableRowClassStyle = {
   underline: false,
   fontFamily: 'arial',
   align: 'ML',
+  indentLevel: 0,
   margins: { hMm: 2, vMm: 1 },
   borders: {
     top: { visible: true, colorHex: '#000000', widthMm: 0.25 },

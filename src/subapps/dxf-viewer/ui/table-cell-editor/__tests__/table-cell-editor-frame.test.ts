@@ -40,6 +40,7 @@ const style = (over: Partial<TableCellStyle> = {}): TableCellStyle => ({
   italic: false,
   underline: false,
   align: 'ML' as TableCellAlign,
+  indentLevel: 0,
   margins: { hMm: 2, vMm: 1 },
   ...over,
 });
@@ -54,6 +55,9 @@ function target(over: Partial<TableCellEditTarget> = {}): TableCellEditTarget {
     rectMm: { x: 0, y: 0, w: 40, h: 10 },
     style: style(),
     hAlign: 'left',
+    // §59 Δ2 — καμία εσοχή στη βάση: κάθε test που δεν τη ζητά ρητά οφείλει να δίνει
+    // **byte-ταυτόσημο** κουτί με πριν τη φάση.
+    indentMm: 0,
     baselineFromTopMm: 7,
     ...over,
   };

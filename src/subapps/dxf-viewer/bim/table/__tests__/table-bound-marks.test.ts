@@ -83,6 +83,7 @@ function cellLayout(rowId: string, colId: string, y: number): TableCellLayout {
     rect: { x: column.xMm, y, w: column.widthMm, h: 6 },
     style: STYLE,
     hAlign: 'left',
+    indentMm: 0,
   } as TableCellLayout;
 }
 

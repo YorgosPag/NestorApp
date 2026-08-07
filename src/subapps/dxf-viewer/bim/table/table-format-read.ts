@@ -125,6 +125,13 @@ function styleSnapshotOf(cell: TableResolvedCell): TableCellStyleSnapshot {
     underline: s.underline,
     fontFamily: s.fontFamily,
     align: s.align,
+    // 🔴 ADR-739 §59 Δ2 — **η εσοχή ταξιδεύει με το πινέλο.** Ξεχασμένη εδώ, το βάψιμο θα
+    // έγραφε `indentLevel: null` σε **κάθε** κελί (η πηγή θα έλεγε `undefined`, ο στόχος `0`,
+    // άρα «διαφορά») — δηλαδή θα γεννούσε βήμα undo και εγγραφή-φάντασμα σε κάθε ίδια-κλάση
+    // βάψιμο. Το έπιασε ζωντανά η άγκυρα «ίδια κλάση γραμμής ⇒ ΤΟ ΙΔΙΟ μοντέλο by-reference»,
+    // **όχι** ο μεταγλωττιστής: το jest μεταγλωττίζει χωρίς έλεγχο τύπων, οπότε το `Pick<…>` από
+    // πάνω είναι φύλακας του `tsc`/CI και όχι της σουίτας. Δύο πύλες, όχι μία.
+    indentLevel: s.indentLevel,
   };
 }
 

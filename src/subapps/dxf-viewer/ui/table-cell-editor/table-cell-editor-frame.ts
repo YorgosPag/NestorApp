@@ -207,6 +207,14 @@ export function computeTableCellEditorFrame(params: {
   const cellHeightPx = Math.max(rectMm.h * pxPerMm, MIN_CONTENT_PX);
   const vertical = verticalPadding(cellHeightPx, target.baselineFromTopMm * pxPerMm, resolveBand(font));
   const sidePx = horizontalPadding(cellWidthPx, style.margins.hMm * pxPerMm);
+  // 🔴 ADR-739 §59 Δ2 — η **εσοχή** μπαίνει μόνο στην πλευρά στην οποία είναι στοιχισμένο το
+  // κείμενο, ακριβώς όπως το `anchorXMm` της διάταξης, από την άλλη μεριά της ίδιας εξίσωσης.
+  // Και στις **δύο** πλευρές θα στένευε το κουτί εις διπλούν και θα το ξεκεντράριζε· στην
+  // **λάθος** πλευρά θα έσπρωχνε το δεξιά στοιχισμένο κείμενο έξω από το κελί. Το κέντρο δεν
+  // παίρνει ποτέ εσοχή, και ο κανόνας δεν ξαναγράφεται εδώ: το `indentMm` είναι ήδη `0` εκεί.
+  const indentPx = Math.max(target.indentMm, 0) * pxPerMm;
+  const indentLeftPx = target.hAlign === 'right' ? 0 : indentPx;
+  const indentRightPx = target.hAlign === 'right' ? indentPx : 0;
   const lineHeightPx = Math.max(cellHeightPx - vertical.topPx - vertical.bottomPx, MIN_CONTENT_PX);
 
   const growth = resolveGrowth({
@@ -214,10 +222,11 @@ export function computeTableCellEditorFrame(params: {
     font,
     cellWidthPx,
     sidePx,
+    indentPx,
     maxWidthPx: params.maxWidthPx,
     resolveWidth: params.resolveWidth,
   });
-  const widthPx = growth.contentWidthPx + 2 * sidePx;
+  const widthPx = growth.contentWidthPx + 2 * sidePx + indentPx;
   // Μία γραμμή ⇒ `padTop + lineHeight + padBottom` = **ακριβώς** το ύψος του κελιού. Η
   // ισότητα δεν είναι σύμπτωση: το `lineHeightPx` ορίστηκε ως το υπόλοιπο του κελιού.
   const heightPx = vertical.topPx + growth.lines * lineHeightPx + vertical.bottomPx;
@@ -235,9 +244,9 @@ export function computeTableCellEditorFrame(params: {
     font,
     underline: style.underline,
     paddingTopPx: vertical.topPx,
-    paddingRightPx: sidePx,
+    paddingRightPx: sidePx + indentRightPx,
     paddingBottomPx: vertical.bottomPx,
-    paddingLeftPx: sidePx,
+    paddingLeftPx: sidePx + indentLeftPx,
     lineHeightPx,
     // 🔴 Σε επέκταση η στοίχιση γίνεται **αριστερή** — και δεν χάνεται τίποτα: το κουτί έχει
     // πλάτος ίσο με το κείμενο, άρα δεν υπάρχει περιθώριο για να στοιχιστεί οτιδήποτε (και οι
@@ -263,18 +272,25 @@ function resolveGrowth(params: {
   readonly font: string;
   readonly cellWidthPx: number;
   readonly sidePx: number;
+  /**
+   * §59 Δ2 — η εσοχή τρώει από το **ωφέλιμο** πλάτος, ακριβώς όπως στη διάταξη
+   * (`placeTexts`). Χωρίς αυτήν, το πεδίο θα νόμιζε ότι χωρά περισσότερο κείμενο απ' όσο
+   * ζωγραφίζει ο καμβάς, δηλαδή θα άργησε να επεκταθεί ακριβώς σε κελιά με εσοχή.
+   */
+  readonly indentPx: number;
   readonly maxWidthPx: number | undefined;
   readonly resolveWidth: ((text: string, font: string) => number) | undefined;
 }): CellEditorExpansion {
-  const { draft, font, cellWidthPx, sidePx, maxWidthPx, resolveWidth } = params;
-  const cellContentWidthPx = Math.max(cellWidthPx - 2 * sidePx, 0);
+  const { draft, font, cellWidthPx, sidePx, indentPx, maxWidthPx, resolveWidth } = params;
+  const chromePx = 2 * sidePx + indentPx;
+  const cellContentWidthPx = Math.max(cellWidthPx - chromePx, 0);
   if (!draft || !resolveWidth) {
     return { contentWidthPx: cellContentWidthPx, lines: 1, expanded: false };
   }
   return computeCellEditorExpansion({
     text: draft,
     cellContentWidthPx,
-    maxContentWidthPx: Math.max((maxWidthPx ?? cellWidthPx) - 2 * sidePx, cellContentWidthPx),
+    maxContentWidthPx: Math.max((maxWidthPx ?? cellWidthPx) - chromePx, cellContentWidthPx),
     measure: (s) => resolveWidth(s, font),
   });
 }

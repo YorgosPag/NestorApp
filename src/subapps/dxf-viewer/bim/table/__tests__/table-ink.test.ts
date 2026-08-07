@@ -69,6 +69,7 @@ function cellStyle(overrides: Partial<TableCellStyle> = {}): TableCellStyle {
     italic: false,
     underline: false,
     align: 'ML',
+    indentLevel: 0,
     margins: { hMm: 2, vMm: 1.5 },
     ...overrides,
   };

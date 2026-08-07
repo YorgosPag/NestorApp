@@ -23,7 +23,7 @@ import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableCellAlign } from '../../types/table';
 import { CHARACTER_METRICS } from '../../config/text-rendering-config';
 import { resolveMultilineExtents, type TextRow } from '../text/text-lines';
-import type { TableCellStyle } from './table-style';
+import type { TableCellStyle, TableStyleOverrides } from './table-style';
 import type { TableRectMm } from './table-layout-types';
 
 /** Η οριζόντια συνιστώσα της 9-θέσης στοίχισης κελιού. */
@@ -40,6 +40,37 @@ export const H_BY_COLUMN_ALIGN: Readonly<Record<ScheduleColumnAlign, TextAlign>>
   right: 'right',
 };
 
+/**
+ * 🔴 ADR-739 §59 Δ2 — **Η ΟΡΙΖΟΝΤΙΑ ΣΤΟΙΧΙΣΗ ΕΝΟΣ ΚΕΛΙΟΥ**, με τα τέσσερα επίπεδα σε ρητή σειρά.
+ *
+ * ```
+ *   1. παράκαμψη κελιού    ┐
+ *   2. παράκαμψη γραμμής   ├─ ρητές· 9 θέσεις, από τις οποίες κρατιέται η ΟΡΙΖΟΝΤΙΑ συνιστώσα
+ *   3. παράκαμψη στήλης    ┘
+ *   4. TableColumn.align   ← ΣΗΜΑΣΙΟΛΟΓΙΚΗ βάση (οι αριθμοί δεξιά επειδή είναι αριθμοί)
+ * ```
+ *
+ * ## 🔴 Γιατί ΕΞΗΧΘΗ — και γιατί δεν αρκούσε το `cellStyle.align`
+ * Μέχρι το §59 ο κανόνας ζούσε **inline** μέσα στο `placeCells`, σωστά όσο τον ρωτούσε **ένα**
+ * σημείο. Η εσοχή τον έκανε ερώτηση και της **μέτρησης**: το `hug` πλάτος μιας στήλης οφείλει
+ * να ξέρει αν η εσοχή ισχύει (δεν ισχύει σε κεντραρισμένο κελί, ECMA-376), δηλαδή οφείλει να
+ * ξέρει τη στοίχιση **πριν** τρέξει η τοποθέτηση. Δεύτερη γραφή του κανόνα εκεί θα ήταν sibling
+ * clone (N.18) — και, το σοβαρό, δύο απαντήσεις στο «πού κάθεται αυτό το κείμενο», που θα
+ * απέκλιναν ακριβώς στο επίπεδο 4 (τη μόνη περίπτωση που κανείς δεν δοκιμάζει).
+ *
+ * ⚠️ **ΔΕΝ ισοδυναμεί με `H_BY_CELL_ALIGN[cellStyle.align]`**, και η διαφορά είναι ο λόγος που
+ * το επίπεδο 4 υπάρχει: το επιλυμένο `cellStyle.align` πέφτει στην **κλάση γραμμής** όταν καμία
+ * παράκαμψη δεν μιλά — δηλαδή θα έθαβε τη σημασιολογική `TableColumn.align` κάτω από το default
+ * του στυλ. Γι' αυτό η συνάρτηση δέχεται τις **ωμές παρακάμψεις** και όχι το επιλυμένο στυλ.
+ */
+export function resolveCellHAlign(
+  overrides: TableStyleOverrides,
+  columnAlign: ScheduleColumnAlign,
+): TextAlign {
+  const explicit = overrides.cell?.align ?? overrides.row?.align ?? overrides.column?.align;
+  return explicit ? H_BY_CELL_ALIGN[explicit] : H_BY_COLUMN_ALIGN[columnAlign];
+}
+
 /** Κατακόρυφη ζώνη της 9-θέσης στοίχισης. */
 export function verticalBand(align: TableCellAlign): 'top' | 'middle' | 'bottom' {
   const first = align.charAt(0);
@@ -48,10 +79,25 @@ export function verticalBand(align: TableCellAlign): 'top' | 'middle' | 'bottom'
   return 'middle';
 }
 
-/** Το x του σημείου αγκύρωσης, σύμφωνα με την οριζόντια στοίχιση και τα περιθώρια. */
-export function anchorXMm(rect: TableRectMm, hAlign: TextAlign, marginHMm: number): number {
-  if (hAlign === 'left') return rect.x + marginHMm;
-  if (hAlign === 'right') return rect.x + rect.w - marginHMm;
+/**
+ * Το x του σημείου αγκύρωσης, σύμφωνα με την οριζόντια στοίχιση, τα περιθώρια **και την εσοχή**.
+ *
+ * 🔴 ADR-739 §59 Δ2 — η εσοχή σπρώχνει **προς τα μέσα**, δηλαδή σε **αντίθετες** κατευθύνσεις
+ * στα δύο άκρα: δεξιά στοίχιση με εσοχή απομακρύνεται από τη **δεξιά** ακμή. Ένα σκέτο `+`
+ * και στις δύο περιπτώσεις θα έβγαζε το δεξιά στοιχισμένο κείμενο **έξω** από το κελί, και το
+ * σύμπτωμα θα φαινόταν μόνο σε στήλες ποσών — δηλαδή σε κάθε πίνακα ποσοτήτων.
+ *
+ * Το κέντρο δεν δέχεται ποτέ εσοχή· ο κανόνας δεν γράφεται εδώ, τον έχει ήδη απαντήσει το
+ * {@link tableIndentOffsetMm} επιστρέφοντας `0` (δες εκεί για το γιατί).
+ */
+export function anchorXMm(
+  rect: TableRectMm,
+  hAlign: TextAlign,
+  marginHMm: number,
+  indentMm: number,
+): number {
+  if (hAlign === 'left') return rect.x + marginHMm + indentMm;
+  if (hAlign === 'right') return rect.x + rect.w - marginHMm - indentMm;
   return rect.x + rect.w / 2;
 }
 

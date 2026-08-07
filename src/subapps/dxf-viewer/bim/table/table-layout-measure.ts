@@ -32,6 +32,12 @@ import { resolveVisibleCellContent } from './table-cell-visible-lines';
 import { buildMergeIndex, cellKey, type MergeIndex } from './table-model-helpers';
 import { cellDisplayText, resolveCellNumberFormat } from './table-cell-format';
 import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
+// 🔴 ADR-739 §59 Δ2 — η εσοχή είναι ερώτηση **και** της μέτρησης: μπαίνει στο `hug` πλάτος και
+// αφαιρείται από το ωφέλιμο πλάτος της αναδίπλωσης, με τον **ίδιο** κανόνα στοίχισης που θα
+// εφαρμόσει η τοποθέτηση (`resolveCellHAlign`) — δύο κανόνες εδώ θα έδιναν στήλη μετρημένη με
+// εσοχή που δεν ζωγραφίζεται, ή το αντίστροφο.
+import { resolveCellHAlign } from './table-layout-align';
+import { tableIndentOffsetMm } from './table-indent-ops';
 import type { TableTextMeasurer } from './table-layout-types';
 
 /** Ο προεπιλεγμένος μετρητής: το SSoT πλάτους κειμένου του renderer (ADR-557). */
@@ -102,7 +108,14 @@ function naturalCellWidthMm(
   // μέτρηση θα έλεγε τη στήλη **στενότερη** απ' όσο χρειάζεται — και το σύμπτωμα δεν θα ήταν
   // «λάθος πλάτος» αλλά κομμένο κείμενο, ακριβώς όπως όταν έλειπε μία από τις παρακάμψεις.
   const spans = resolveCellStyledSpans({ text, runs: cell?.runs, style: cellStyle, measure });
-  return styledSpansWidthMm(spans) + marginsMm;
+  // 🏆 ADR-739 §59 Δ2 — **η εσοχή συμμετέχει στο `hug` πλάτος, και εδώ περνάμε το Excel.**
+  // Εκεί το AutoFit Column Width **αγνοεί** την εσοχή: βάζοντας εσοχή σε στήλη που «χωρούσε»,
+  // το κείμενο αρχίζει να κόβεται και η μόνη διέξοδος είναι χειροκίνητο πλάτος. Είναι
+  // αποδεδειγμένα ασφαλές να τη μετρήσουμε: η εσοχή είναι **σταθερά του μοντέλου** (σκαλιά),
+  // όχι μετρημένο μέγεθος, άρα δεν μπορεί να εξαρτηθεί από το πλάτος που η ίδια καθορίζει —
+  // ο κύκλος που φοβόταν η προειδοποίηση των `margins` δεν σχηματίζεται (δες `table-style.ts`).
+  const indentMm = tableIndentOffsetMm(cellStyle, resolveCellHAlign(overrides, column.align), measure);
+  return styledSpansWidthMm(spans) + marginsMm + indentMm;
 }
 
 /**
@@ -250,7 +263,11 @@ function contentHeightMm(
 
     const lines = resolveVisibleCellContent({
       text,
-      availableWidthMm: cellContentWidthMm(widthsMm, colIndex, span?.colSpan ?? 1, cellStyle),
+      // 🔴 §59 Δ2 — **το ίδιο** ωφέλιμο πλάτος που θα δει η τοποθέτηση (`placeTexts`), εσοχή
+      // συμπεριλαμβανομένη. Χωρίς αυτήν, η μέτρηση θα έλεγε «τρεις γραμμές» και η τοποθέτηση
+      // θα έβγαζε τέσσερις — δηλαδή κείμενο που ξεχειλίζει από τη γραμμή που φτιάχτηκε γι' αυτό.
+      availableWidthMm: cellContentWidthMm(widthsMm, colIndex, span?.colSpan ?? 1, cellStyle)
+        - tableIndentOffsetMm(cellStyle, resolveCellHAlign(overrides, column.align), measure),
       style: cellStyle,
       overflow: 'wrap',
       numeric: false,

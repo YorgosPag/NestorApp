@@ -49,6 +49,7 @@ const STYLE: TableCellStyle = {
   italic: false,
   underline: false,
   align: 'ML',
+  indentLevel: 0,
   margins: { hMm: 0, vMm: 0 },
 };
 

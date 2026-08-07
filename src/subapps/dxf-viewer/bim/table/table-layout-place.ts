@@ -26,12 +26,14 @@ import type {
 } from '../../types/table';
 import {
   anchorXMm,
-  cellBaselineYMm,
   fittingLineCount,
   multilineBaselineYMm,
-  H_BY_CELL_ALIGN,
-  H_BY_COLUMN_ALIGN,
+  resolveCellHAlign,
 } from './table-layout-align';
+// 🔴 ADR-739 §59 Δ2 — πόσο είναι ένα σκαλί εσοχής, και πότε δεν ισχύει καθόλου. Το **ίδιο**
+// module που ρωτά ο μετρητής: η εσοχή μπαίνει στο `hug` πλάτος και αφαιρείται από το ωφέλιμο,
+// οπότε δύο απαντήσεις θα έδιναν κομμένο κείμενο σε στήλη που είχε μετρηθεί αρκετά πλατιά.
+import { tableIndentOffsetMm } from './table-indent-ops';
 import { cellKey } from './table-model-helpers';
 import { cellDisplayText, resolveCellNumberFormat } from './table-cell-format';
 import { resolveCellOverflow } from './table-cell-overflow';
@@ -109,6 +111,15 @@ interface PlaceTextInput {
   readonly align: TableCellAlign;
   readonly hAlign: TextAlign;
   readonly style: TableCellStyle;
+  /**
+   * 🔴 ADR-739 §59 Δ2 — η **εσοχή σε mm**, ήδη κριμένη ως προς τη στοίχιση
+   * ({@link tableIndentOffsetMm} επιστρέφει `0` σε κεντραρισμένο κελί).
+   *
+   * Περνά έτοιμη και δεν ξαναϋπολογίζεται εδώ, γιατί ο **μετρητής** τη χρειάζεται κι εκείνος
+   * (`naturalCellWidthMm`, `contentHeightMm`) και μια δεύτερη κλήση θα ήταν δεύτερη ευκαιρία
+   * να ξεχαστεί ο κανόνας του κέντρου — δηλαδή στήλη μετρημένη με εσοχή που δεν ζωγραφίζεται.
+   */
+  readonly indentMm: number;
   readonly overflow: TableCellOverflow;
   /** `typeof cell.value === 'number'` — βλ. `CellTextFitInput.numeric` για το γιατί. */
   readonly numeric: boolean;
@@ -147,7 +158,11 @@ function placeTexts(input: PlaceTextInput): TableTextRun[] {
 
   const content = resolveVisibleCellContent({
     text: input.text,
-    availableWidthMm: rect.w - style.margins.hMm * 2,
+    // 🔴 §59 Δ2 — η εσοχή **αφαιρείται από το ωφέλιμο πλάτος**, όχι μόνο από την άγκυρα: κείμενο
+    // σπρωγμένο μέσα χωρίς αντίστοιχη συρρίκνωση του διαθέσιμου χώρου θα ξεχείλιζε από την
+    // απέναντι ακμή — και η περικοπή (βήμα 5) δεν θα το έβλεπε, γιατί εκείνη ρωτά **αυτό** το
+    // νούμερο. Είναι το ίδιο ζεύγος «άγκυρα + ωφέλιμο πλάτος» που κρατά ήδη τα περιθώρια συνεπή.
+    availableWidthMm: rect.w - style.margins.hMm * 2 - input.indentMm,
     style,
     overflow: input.overflow,
     numeric: input.numeric,
@@ -222,7 +237,7 @@ function placeLine(
 
   const base: TableTextRunBase = {
     position: {
-      x: anchorXMm(rect, hAlign, style.margins.hMm),
+      x: anchorXMm(rect, hAlign, style.margins.hMm, input.indentMm),
       y: multilineBaselineYMm(rect, align, drawnStyle, content.lines.length, index),
     },
     text: visible.text,
@@ -305,10 +320,12 @@ export function placeCells(
       // Η **σημασιολογική** `TableColumn.align` (επίπεδο 4) κερδίζει μόνο όταν καμία ρητή
       // παράκαμψη δεν έχει άποψη — γι' αυτό δεν μπορεί να μπει στο `resolveCellStyle`: εκεί
       // θα ήταν βάση, ενώ εδώ είναι το **προτελευταίο** σκαλί, κάτω από κελί/γραμμή/στήλη.
-      const explicitAlign = overrides.cell?.align ?? overrides.row?.align ?? overrides.column?.align;
-      const hAlign = explicitAlign
-        ? H_BY_CELL_ALIGN[explicitAlign]
-        : H_BY_COLUMN_ALIGN[column.align];
+      //
+      // 🔴 §59 Δ2 — ο κανόνας **μετακόμισε** στο `table-layout-align.ts`: η μέτρηση τον χρειάζεται
+      // κι εκείνη (η εσοχή δεν ισχύει σε κεντραρισμένο κελί), και δύο γραφές του θα απέκλιναν
+      // ακριβώς στο επίπεδο 4. Δες `resolveCellHAlign`.
+      const hAlign = resolveCellHAlign(overrides, column.align);
+      const indentMm = tableIndentOffsetMm(cellStyle, hAlign, measure);
 
       out.push({
         rowId: row.id,
@@ -318,6 +335,9 @@ export function placeCells(
         // Η ΙΔΙΑ τιμή ταξιδεύει και στο κελί και στο run του: το κελί τη χρειάζεται για
         // τον in-cell επεξεργαστή (που ανοίγει και σε **κενό** κελί, όπου run δεν υπάρχει).
         hAlign,
+        // §59 Δ2 — ίδιο ακριβώς σκεπτικό: στα `texts` η εσοχή είναι ψημένη μέσα στο `position`,
+        // αλλά ένα κενό κελί δεν έχει `texts` και ο κέρσορας πρέπει να ξέρει πού να καθίσει.
+        indentMm,
         texts: placeTexts({
           // 🔴 ADR-760 — η **ίδια** επίλυση μορφής με τον μετρητή πλάτους
           // (`naturalCellWidthMm`), πάνω στις **ίδιες** `overrides`. Δύο ξεχωριστές
@@ -328,6 +348,7 @@ export function placeCells(
           align: cellStyle.align,
           hAlign,
           style: cellStyle,
+          indentMm,
           // Ίδια σειρά προτεραιότητας με τη στοίχιση: κελί → στήλη → προεπιλογή.
           overflow: resolveCellOverflow(cell?.styleOverride?.overflow, column.overflow),
           numeric: typeof cell?.value === 'number',
