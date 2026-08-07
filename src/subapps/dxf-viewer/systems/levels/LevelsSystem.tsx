@@ -14,7 +14,7 @@ import { type LevelsHookReturn } from './useLevels';
 import { useAutoSaveSceneManager } from '../../hooks/scene/useAutoSaveSceneManager';
 import type { SceneModel } from '../../types/scene';
 import type { SceneWriteOrigin } from '../../hooks/scene/scene-write-origin';
-import { StorageErrorHandler } from '../../utils/storage-utils';
+import { StorageErrorHandler } from '../../utils/storage-error-handling';
 import { getErrorMessage } from '@/lib/error-utils';
 import { LevelsSystemProps, DEFAULT_IMPORT_WIZARD_STATE } from './LevelsSystem.types';
 import { useLevelSceneLoader } from './hooks/useLevelSceneLoader';

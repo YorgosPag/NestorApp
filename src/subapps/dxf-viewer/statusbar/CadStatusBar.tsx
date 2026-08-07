@@ -17,6 +17,7 @@ import { CurrentLayerPicker } from '../ui/components/layer-picker/CurrentLayerPi
 import type { ExtendedSnapType } from '../snapping/extended-types';
 import { useStairStatusKey } from './stair-status-store';
 import { IsolateStatusIndicator } from './IsolateStatusIndicator';
+import { StatusBarTableSurfaceSlot } from '../ui/status-bar/StatusBarTableSurfaceSlot';
 import { LinetypeScaleControl } from './LinetypeScaleControl';
 import { LineweightDisplayControl } from './LineweightDisplayControl';
 import { AutoAlignToggle } from './AutoAlignToggle';
@@ -86,6 +87,10 @@ export default function CadStatusBar() {
           <CommandLineInput />
           {/* ADR-680: εφήμερο «Μέτρημα Απόστασης» (DIST) — κάτω-αριστερά δίπλα στη γραμμή εντολών */}
           <DistMeasureButton id="cad-dist-measure" />
+          {/* 🔴 ADR-771 Φ.2 — ΚΑΜΒΑΣ / ΦΥΛΛΟ / ΧΑΡΤΙ. Μόνιμα ορατός επίτηδες: οι δύο ανοιχτές
+              καταστάσεις απέχουν 1,09:1 μεταξύ τους, άρα ο δείκτης — όχι το χρώμα — είναι ο
+              φορέας της διάκρισης (WCAG 1.4.1). Ίδια θέση με το MODEL/PAPER του AutoCAD. */}
+          <StatusBarTableSurfaceSlot />
           {stairStatusText && (
             <span
               className="shrink-0 text-xs font-semibold text-[hsl(var(--text-warning))]"

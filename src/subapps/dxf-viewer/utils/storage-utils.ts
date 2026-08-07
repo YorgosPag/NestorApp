@@ -2,10 +2,15 @@
  * 🏢 ADR-092: Centralized localStorage Service
  *
  * Storage utilities για DXF Viewer
- * - Χειρισμός storage errors και cleanup
  * - SSR-safe localStorage operations
  * - Type-safe JSON serialization
  * - Consistent error handling
+ *
+ * ⚠️ **Η ανάκτηση από γεμάτο storage ΔΕΝ ζει εδώ** — μετακόμισε στο
+ * {@link ../utils/storage-error-handling storage-error-handling.ts} όταν το αρχείο πέρασε τις
+ * 500 γραμμές (N.7.1, EXTRACT ποτέ trim). Η τομή είναι κατά ευθύνη, όχι κατά γραμμή: εδώ «πώς
+ * γράφω και διαβάζω», εκεί «τι κάνω όταν γεμίσει». Αν ψάχνεις `StorageErrorHandler` ή
+ * `withStorageErrorHandling`, είναι εκεί.
  *
  * @author Γιώργος Παγωνής + Claude Code (Anthropic AI)
  * @since 2026-01-31
@@ -76,6 +81,10 @@ export const STORAGE_KEYS = {
   CANVAS_BACKGROUND: 'dxf-viewer:canvas-background-theme',
   // Custom canvas background color (hex) — used when CANVAS_BACKGROUND === 'custom'
   CANVAS_BACKGROUND_CUSTOM: 'dxf-viewer:canvas-background-custom',
+
+  // Table presentation surface (ADR-771 Φ.2) — 'canvas' | 'sheet' | 'paper'.
+  // Κατάσταση ΘΕΑΣΗΣ, ρητά έξω από το έγγραφο: γι' αυτό εδώ και όχι στο PersistedTableModel.
+  TABLE_SURFACE_MODE: 'dxf-viewer:table-surface-mode',
 
   // Viewport State Persistence (ADR-400) — dynamic key, used with `:{fileRecordId}` suffix
   VIEWPORT_STATE_PREFIX: 'dxf-viewer:viewport-state',
@@ -415,86 +424,5 @@ export class StorageManager {
     } catch (error) {
       return 'Storage usage: Unable to determine';
     }
-  }
-}
-
-/**
- * Error handler για storage-related errors
- */
-export class StorageErrorHandler {
-  static isStorageError(error: unknown): boolean {
-    if (typeof error === 'string') {
-      return error.includes('FILE_ERROR_NO_SPACE') ||
-             error.includes('QuotaExceededError') ||
-             error.includes('DOMException') ||
-             error.includes('storage');
-    }
-    
-    if (error instanceof Error) {
-      return error.message.includes('FILE_ERROR_NO_SPACE') ||
-             error.message.includes('QuotaExceededError') ||
-             error.message.includes('storage') ||
-             error.name === 'QuotaExceededError';
-    }
-    
-    return false;
-  }
-
-  static async handleStorageError(error: unknown): Promise<boolean> {
-    if (!this.isStorageError(error)) {
-      return false; // Not a storage error
-    }
-
-    derr('Storage', 'Storage error detected:', error);
-    
-    try {
-      // Report current usage
-      const usage = await StorageManager.reportStorageUsage();
-
-      // Ask user permission to clear storage
-      const shouldClear = confirm(
-        'Το storage του browser είναι γεμάτο. Θέλετε να καθαρίσω τα cached data για να συνεχίσετε;\n\n' +
-        'Αυτό θα διαγράψει:\n' +
-        '• Cached DXF files\n' +
-        '• Temporary levels data\n' +
-        '• Browser cache\n\n' +
-        'Τα αποθηκευμένα projects δεν θα επηρεαστούν.'
-      );
-      
-      if (shouldClear) {
-        await StorageManager.clearAllStorage();
-        alert('✅ Storage cleared! Please refresh the page.');
-        window.location.reload();
-        return true;
-      }
-      
-      return false;
-    } catch (cleanupError) {
-      derr('Storage', 'Error during storage cleanup:', cleanupError);
-      alert('Could not clear storage. Please clear the browser cache manually from settings.');
-      return false;
-    }
-  }
-}
-
-/**
- * Wrapper για storage operations με automatic error handling
- */
-export async function withStorageErrorHandling<T>(
-  operation: () => Promise<T>,
-  errorMessage?: string
-): Promise<T | null> {
-  try {
-    return await operation();
-  } catch (error) {
-    const handled = await StorageErrorHandler.handleStorageError(error);
-    
-    if (!handled) {
-      // If it's not a storage error or couldn't be handled, rethrow
-      derr('Storage', errorMessage || 'Operation failed:', error);
-      throw error;
-    }
-    
-    return null;
   }
 }
