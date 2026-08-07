@@ -112,21 +112,14 @@ export const CONTACT_BUSINESS_TYPE_LABELS = {
 } as const;
 
 // ============================================================================
-// PARKING TABLE COLUMN LABELS
+// PARKING TABLE COLUMN LABELS — ΔΙΑΓΡΑΦΗΚΕ (ADR-771 Φ.5, 2026-08-07)
 // ============================================================================
-
-export const PARKING_TABLE_COLUMN_LABELS = {
-  CODE: 'parkingManagement.columns.code',
-  TYPE: 'parkingManagement.columns.type',
-  PROPERTY_CODE: 'parkingManagement.columns.property',
-  LEVEL: 'parkingManagement.columns.level',
-  AREA: 'parkingManagement.columns.area',
-  PRICE: 'parkingManagement.columns.price',
-  VALUE: 'parkingManagement.columns.value',
-  VALUE_WITH_SYNDICATE: 'parkingManagement.columns.valueWithSyndicate',
-  STATUS: 'parkingManagement.columns.status',
-  OWNER: 'parkingManagement.columns.owner',
-  FLOOR_PLAN: 'parkingManagement.columns.floorPlan',
-  CONSTRUCTED_BY: 'parkingManagement.columns.registeredBy',
-  ACTIONS: 'parkingManagement.columns.actions'
-} as const;
+//
+// Το `PARKING_TABLE_COLUMN_LABELS` είχε **έναν** καταναλωτή, το
+// `components/parking/parking-spot-table/config/columns.ts`, το οποίο ανήκε στο νεκρό
+// υποδέντρο που έσβησε η Φ.5 (μηδέν διαδρομές το έφταναν). Χωρίς αυτόν, η σταθερά γινόταν
+// νεκρό barrel export μέσω του `property-statuses-enterprise.ts` ⇒ παλινδρόμηση στο CHECK 3.30.
+//
+// ⚠️ Τα κλειδιά `parkingManagement.columns.*` **παραμένουν** στα `locales/{el,en}/projects-data.json`
+// επίτηδες: η εκκαθάριση αχρησιμοποίητων κλειδιών locale είναι **άλλη ερώτηση** (και αγγίζει
+// τα artifacts των CHECK 3.33/3.34). Δηλωμένο υπόλοιπο, όχι παράλειψη.
