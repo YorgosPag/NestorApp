@@ -19,9 +19,15 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { readTokenPalette, semanticEntries, classifyRole, classifyValue } = require('../lib/contrast/ts-token-palette');
+const {
+  readTokenPalette, semanticEntries, translucentEntries, classifyRole, classifyValue,
+} = require('../lib/contrast/ts-token-palette');
 const { readThemes, surfaceTokens, foregroundTokens } = require('../lib/contrast/css-token-themes');
-const { evaluate, RATCHETED_STATES, HEALTHY_STATES, hexToRgb, isTextual } = require('../lib/contrast/theme-pairing');
+const {
+  evaluate, evaluateTranslucent, RATCHETED_STATES, HEALTHY_STATES,
+  hexToRgb, isTextual, thresholdFor, TEXT_ON_SURFACE,
+} = require('../lib/contrast/theme-pairing');
+const { auditPalette } = require('../lib/contrast/palette-ledger');
 const { compareSets } = require('../lib/ratchet-baseline');
 const { measure, violationId, declarationIds, baselineFile } = require('../check-theme-pairing-ratchet');
 
@@ -170,13 +176,36 @@ describe('Μ1..Μ9 — κάθε κατάσταση παράγεται από π�
     expect(r.findings).toHaveLength(0);
     // ⚠️ Το «κανένα εύρημα» ΔΕΝ επιτρέπεται να σημαίνει «δεν κοίταξα»:
     // η δήλωση πρέπει να εμφανίζεται ρητά στο out-of-scope.
-    expect(r.outOfScope['literal-hex/primitive']).toBe(1);
+    expect(r.census['literal-hex/primitive']).toBe(1);
   });
 
   test('Μ9 — token μέσω hsl(var(--…)) ⇒ ΔΕΝ κρίνεται, καταγράφεται ως css-var', () => {
     const r = run(`export const colors = { text: { ok: 'hsl(var(--foreground))' } } as const;`);
     expect(r.findings).toHaveLength(0);
-    expect(r.outOfScope['css-var']).toBe(1);
+    expect(r.census['css-var']).toBe(1);
+  });
+
+  /**
+   * ΟΙ ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ ΤΗΣ ΚΑΤΗΓΟΡΙΑΣ Ε, από πραγματική μετάλλαξη.
+   *
+   * ⚠️ Η μετάλλαξη πρέπει να αλλάζει **ΣΥΜΠΕΡΙΦΟΡΑ** (μάθημα της `Μ6` του Στρώματος 2β,
+   * που στόχευε ένα `.sort()` — σημασιολογικά ουδέτερο). Εδώ αλλάζει το **άλφα**: 5%
+   * μαύρο πάνω σε οτιδήποτε παραμένει ουσιαστικά το φόντο ⇒ αόρατο παντού· 90% μαύρο
+   * γίνεται σχεδόν μαύρο ⇒ στέκει κάτω από ανοιχτόχρωμο κείμενο.
+   */
+  test('Μ10 — ημιδιαφανές αόρατο σε ΚΑΘΕ επιφάνεια ⇒ translucent-invisible', () => {
+    const r = run(`export const colors = { text: { a: 'rgba(0,0,0,0.05)' } } as const;`);
+    expect(statesOf(r, 'translucent-invisible')).toHaveLength(1);
+    const f = r.findings.find((x) => x.state === 'translucent-invisible');
+    expect(f.detail).toMatch(/α=0\.05/);
+    expect(f.failing).toBe(f.surfaces); // «παντού» σημαίνει ΟΛΕΣ, όχι «πολλές»
+  });
+
+  test('Μ11 — ημιδιαφανές που στέκει κάπου ⇒ translucent-ok (ΟΧΙ παραβίαση)', () => {
+    const r = run(`export const colors = { background: { a: 'rgba(0,0,0,0.9)' } } as const;`);
+    expect(statesOf(r, 'translucent-ok')).toHaveLength(1);
+    expect(HEALTHY_STATES).toContain('translucent-ok');
+    expect(RATCHETED_STATES).not.toContain('translucent-ok');
   });
 });
 
@@ -287,14 +316,171 @@ describe('Κ — κοκκίωση και δηλωμένα όρια', () => {
     expect(isTextual({ segments: ['colors', 'severity', 'icon'] })).toBe(false);
   });
 
-  test('Κ5 — ΔΗΛΩΜΕΝΟ ΚΕΝΟ: κρίνονται μόνο literal hex, όχι υπολογισμένες τιμές', () => {
-    // `style={someVariable}` και `rgba(...)` δεν αποτιμώνται στατικά. Το γράφουμε ως
-    // test ώστε το «πέρασε» να μη διαβαστεί ποτέ ως «δεν υπάρχουν τέτοιες τιμές».
+  /**
+   * 🔑 ΑΥΤΗ Η ΑΓΚΥΡΑ ΑΝΤΙΣΤΡΑΦΗΚΕ ΣΤΙΣ 2026-08-08 — ΔΕΝ ΣΒΗΣΤΗΚΕ.
+   *
+   * Μέχρι τότε βεβαίωνε ότι το `rgba()` **δεν** κρίνεται (`findings === 0`) και ήταν
+   * σωστή: το όριο υπήρχε. Τώρα το όριο έκλεισε, οπότε η ίδια άγκυρα βεβαιώνει το
+   * αντίθετο — και **κρατά** τη δουλειά της, που είναι να μην αφήσει κανένα «πέρασε» να
+   * διαβαστεί ως «δεν υπάρχουν τέτοιες τιμές». Το να τη σβήσουμε θα ήταν σιωπηλή
+   * απώλεια εμβέλειας: κανείς δεν θα ήξερε ποια είναι τα σημερινά όρια.
+   */
+  test('Κ5 — το rgba() literal ΚΡΙΝΕΤΑΙ (το παλιό όριο έκλεισε)', () => {
     expect(classifyValue('rgba(0, 0, 0, 0.5)').form).toBe('rgb-literal');
-    expect(classifyValue('var(--x)').form).toBe('css-var');
+
     const r = run(`export const colors = { text: { a: 'rgba(0,0,0,0.5)' } } as const;`);
-    expect(r.findings).toHaveLength(0);
-    expect(r.outOfScope['rgb-literal']).toBe(1);
+    const f = r.findings.filter((x) => x.state.startsWith('translucent-'));
+    expect(f).toHaveLength(1);
+    // Το κατώφλι είναι του **κειμένου** (1.4.3), όχι του μη-κειμένου: βλ. Κ13.
+    expect(f[0].detail).toMatch(/WCAG 1\.4\.3/);
+    // Και μπαίνει στο ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ — αλλιώς νέα ημιδιαφανής δήλωση δεν θα μπλόκαρε.
+    expect(auditPalette(readTokenPalette(miniRepo(
+      `export const colors = { text: { a: 'rgba(0,0,0,0.5)' } } as const;`,
+    ))).judgedIds).toHaveLength(1);
+  });
+
+  /**
+   * ΤΑ **ΝΕΑ** ΔΗΛΩΜΕΝΑ ΟΡΙΑ, ονομαστικά. Μια πύλη χωρίς γραπτό όριο δεν έχει όριο·
+   * έχει άγνοια. Και τα τρία μετρήθηκαν στο ζωντανό δέντρο πριν γραφτούν.
+   */
+  test('Κ5β — ΤΑ ΝΕΑ ΔΗΛΩΜΕΝΑ ΟΡΙΑ: σύνθετη τιμή · hsl() literal · α=1', () => {
+    // (i) `rgba()` ΜΕΣΑ σε σύνθετη τιμή (σκιά) ⇒ `non-color`. Μια σκιά δεν έχει
+    //     ετυμηγορία αντίθεσης. Μετρημένο: 8 δηλώσεις / 22 εμφανίσεις στο δέντρο.
+    expect(classifyValue('0 4px 6px -1px rgba(0,0,0,0.1)').form).toBe('non-color');
+
+    // (ii) `hsl()` literal ⇒ ο `parseComputedColor` δεν το διαβάζει. Σήμερα: 0 τέτοια.
+    expect(classifyValue('hsl(0 0% 0% / 50%)').form).toBe('hsl-literal');
+    const hsl = run(`export const colors = { text: { a: 'hsl(0 0% 0% / 50%)' } } as const;`);
+    expect(hsl.findings.filter((x) => x.state.startsWith('translucent-'))).toHaveLength(0);
+    expect(hsl.census['hsl-literal']).toBe(1);
+
+    // (iii) `rgb()` με α=1 δεν είναι ημιδιαφανές — δεν συνθέτεται, άρα δεν κρίνεται εδώ.
+    const opaque = run(`export const colors = { text: { a: 'rgb(0, 0, 0)' } } as const;`);
+    expect(opaque.findings.filter((x) => x.state.startsWith('translucent-'))).toHaveLength(0);
+
+    // (iv) `var(--x)` παραμένει δουλειά του Στρώματος 2β (CHECK 3.40).
+    expect(classifyValue('var(--x)').form).toBe('css-var');
+  });
+
+  /**
+   * ΤΟ ΚΑΤΩΦΛΙ ΤΟ ΟΡΙΖΕΙ ΑΥΤΟ ΠΟΥ ΚΡΙΝΕΤΑΙ, ΟΧΙ ΤΟ ΦΟΝΤΟ.
+   *
+   * Η Κατηγορία Ε ρωτούσε `thresholdFor(επιφάνεια)` → **3,0** ενώ έκρινε **κείμενο**
+   * πάνω της· η Γ2 είχε καρφωμένο **4,5** για το ίδιο ερώτημα. Δύο απαντήσεις, μία
+   * ερώτηση — και η μία εφάρμοζε το πρότυπο του μη-κειμένου σε κείμενο.
+   */
+  test('Κ13 — κείμενο πάνω σε επιφάνεια = 1.4.3 (4,5)· περίγραμμα = 1.4.11 (3,0)', () => {
+    expect(TEXT_ON_SURFACE).toEqual({ min: 4.5, rule: 'WCAG 1.4.3' });
+    expect(thresholdFor({ role: 'border', segments: ['x'] }).min).toBe(3);
+
+    const surf = run(`export const colors = { background: { a: 'rgba(0,0,0,0.5)' } } as const;`);
+    expect(surf.findings.find((f) => f.state.startsWith('translucent-')).detail)
+      .toMatch(/απαιτείται 4\.5:1 \(WCAG 1\.4\.3\)/);
+
+    const bord = run(`export const colors = { border: { a: 'rgba(0,0,0,0.5)' } } as const;`);
+    expect(bord.findings.find((f) => f.state.startsWith('translucent-')).detail)
+      .toMatch(/απαιτείται 3:1 \(WCAG 1\.4\.11\)/);
+  });
+
+  /**
+   * Η Ε μπήκε **ΜΕΣΑ** στο `evaluate`. Όσο ήταν ξεχωριστή κλήση, κάθε καταναλωτής
+   * όφειλε να τη θυμηθεί — και το ίδιο το CHECK 3.39 δεν την καλούσε ποτέ. Μια μηχανή
+   * που απαιτεί από τον καλούντα να ξέρει τον κατάλογο των κατηγοριών της δεν είναι
+   * SSoT· είναι κατάλογος που θα αποκλίνει.
+   */
+  test('Κ14 — το evaluate() είναι η ΜΟΝΑΔΙΚΗ είσοδος: περιέχει και την Ε', () => {
+    const root = miniRepo(`export const colors = { text: { a: 'rgba(0,0,0,0.5)' } } as const;`);
+    const palette = readTokenPalette(root);
+    const themes = readThemes(root);
+
+    expect(palette.translucent).toHaveLength(1);
+    const viaEvaluate = evaluate(palette, themes).findings
+      .filter((f) => f.state.startsWith('translucent-'));
+    const viaDirect = evaluateTranslucent(palette, themes);
+    expect(viaEvaluate.map((f) => f.id)).toEqual(viaDirect.map((f) => f.id));
+
+    // Παλέτα ΧΩΡΙΣ ημιδιαφανείς δεν σκάει — το πεδίο είναι προαιρετικό.
+    expect(() => evaluate({ ...palette, translucent: undefined }, themes)).not.toThrow();
+  });
+
+  /**
+   * Η ΛΟΓΙΣΤΙΚΗ ΚΛΕΙΝΕΙ **ΚΑΙ ΕΛΕΓΧΕΤΑΙ** — και ο έλεγχος ρωτά «**ΠΟΙΟΣ** κρίθηκε», όχι
+   * «κλείνει το άθροισμα». Το CHECK 3.42 έπιασε έτσι διπλομέτρηση (1533/1532) **πριν**
+   * γραφτεί baseline· το Στρώμα 2β έπιασε έτσι 9 ημιδιαφανείς που δεν κρίνονταν ενώ το
+   * άθροισμα έκλεινε μια χαρά.
+   */
+  test('Κ15 — κλειστή λογιστική: ΚΑΘΕ κάδος, ένας-ένας, με πραγματική είσοδο', () => {
+    /**
+     * ⚠️ ΚΑΘΕ ΚΑΔΟΣ ΕΧΕΙ ΕΙΣΟΔΟ ΕΔΩ, **ΚΑΙ ΟΙ ΔΥΟ ΜΕ ΠΛΗΘΟΣ 0 ΣΤΟ ΖΩΝΤΑΝΟ ΔΕΝΤΡΟ**.
+     * Η πρώτη εκδοχή του test κάλυπτε **6 από τους 8** — έλειπαν ακριβώς οι δύο
+     * «δηλωμένα κενά». Το βρήκε **μετάλλαξη που πέρασε**: σπάζοντας τον κλάδο του
+     * `hsl-literal` **κανένα test δεν κοκκίνισε**. Ένας κάδος που δηλώνεται αλλά δεν
+     * ασκείται ποτέ είναι φρουρός χωρίς απόδειξη ζωής (ADR-749 §5) — και το χειρότερο
+     * είδος, γιατί το «0» του διαβάζεται ως «κοίταξα και δεν υπάρχουν».
+     */
+    const root = miniRepo(`export const colors = {
+      text: { a: '#1e293b', b: 'rgba(0,0,0,0.5)' },
+      blue: { "500": '#3b82f6' },
+      background: { opaque: 'rgb(255, 255, 255)' },
+      border: { h: 'hsl(0 0% 0% / 50%)' },
+      ok: { c: 'hsl(var(--foreground))' },
+      kw: { d: 'transparent' },
+      size: { e: '4px' },
+    } as const;`);
+    const palette = readTokenPalette(root);
+    const a = auditPalette(palette);
+
+    expect(a.balanced).toBe(true);
+    expect(a.placed).toBe(palette.entries.length);
+    expect(a.counts).toEqual({
+      'judged-opaque': 1,          // colors.text.a
+      'judged-translucent': 1,     // colors.text.b
+      'unjudged-role': 1,          // colors.blue.500 — primitive
+      'unjudged-opaque-rgb': 1,    // 🔶 rgb() με α=1 σε ρόλο surface
+      'unjudged-hsl-literal': 1,   // 🔶 hsl() literal — ο parser δεν το διαβάζει
+      'css-var': 1,
+      keyword: 1,
+      'non-color': 1,
+    });
+
+    // ΟΝΟΜΑΣΤΙΚΑ, όχι μόνο πλήθος: το κλειστό σύνολο ΕΙΝΑΙ αυτό που κρίθηκε.
+    expect(a.judgedIds).toEqual([
+      'src/styles/design-tokens/modules/test-tokens.ts::colors.text.a',
+      'src/styles/design-tokens/modules/test-tokens.ts::colors.text.b',
+    ]);
+    // Κάθε κάδος έχει γραπτή εξήγηση — αλλιώς «unjudged-role: 36» δεν λέει τίποτα.
+    for (const k of Object.keys(a.counts)) expect(a.descriptions[k]).toBeTruthy();
+  });
+
+  /**
+   * FAIL-CLOSED: μια δήλωση που δεν χωράει σε κάδο πρέπει να **σκάει**, όχι να χάνεται.
+   * Το αποδεικνύουμε με πραγματική είσοδο άγνωστης μορφής, όχι με ισχυρισμό.
+   */
+  test('Κ15β — δήλωση εκτός κάδων ⇒ η λογιστική ΔΕΝ κλείνει (ποτέ σιωπηλά)', () => {
+    const root = miniRepo(`export const colors = { text: { a: '#1e293b' } } as const;`);
+    const palette = readTokenPalette(root);
+    // Μορφή που κανένας κάδος δεν ονομάζει — ό,τι θα συνέβαινε αν προστεθεί νέα `form`
+    // στο `classifyValue` και ξεχαστεί εδώ.
+    palette.entries.push({ ...palette.entries[0], path: 'x.y', form: 'ΑΓΝΩΣΤΗ-ΜΟΡΦΗ' });
+    expect(() => auditPalette(palette)).toThrow(/άγνωστη μορφή/);
+  });
+
+  /**
+   * ⚠️ ΤΟ ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ ΠΡΕΠΕΙ ΝΑ ΕΡΧΕΤΑΙ ΑΠΟ ΤΗ ΛΟΓΙΣΤΙΚΗ, ΟΧΙ ΑΠΟ ΔΕΥΤΕΡΟ ΦΙΛΤΡΟ.
+   * Ήταν `semanticEntries` — που δεν ξέρει από ημιδιαφάνεια. Όσο συνέπιπταν κανείς δεν
+   * το πρόσεχε· από τη στιγμή που η Ε άρχισε να κρίνει, μια **νέα** ημιδιαφανής δήλωση
+   * θα προσγειωνόταν χωρίς να μπλοκάρει — δηλαδή ο μηχανισμός θα ήταν εκεί, πράσινος
+   * και ανενεργός.
+   */
+  test('Κ16 — declarationIds = κρίθηκαν όντως (hex ΚΑΙ rgba), όχι μόνο hex', () => {
+    const root = miniRepo(`export const colors = {
+      text: { a: '#1e293b', b: 'rgba(0,0,0,0.5)' },
+    } as const;`);
+    const palette = readTokenPalette(root);
+
+    expect(semanticEntries(palette)).toHaveLength(1);   // το παλιό κριτήριο: μόνο το hex
+    expect(translucentEntries(palette)).toHaveLength(1);
+    expect(declarationIds(palette)).toHaveLength(2);    // το κλειστό σύνολο: **και τα δύο**
   });
 
   test('Κ6 — ΔΗΛΩΜΕΝΟ ΚΕΝΟ: επιφάνεια που υπάρχει σε ΕΝΑ μόνο θέμα δεν κρίνεται', () => {

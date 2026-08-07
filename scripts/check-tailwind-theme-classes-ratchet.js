@@ -68,17 +68,24 @@
 const path = require('path');
 const { PROJECT_ROOT, runSetRatchetCli } = require('./lib/ratchet-baseline');
 const { readThemes, GLOBALS_CSS } = require('./lib/contrast/css-token-themes');
+/**
+ * ⚠️ Το `evaluateTranslucent` **δεν** εισάγεται πια από το `runtime-matrix` (module του
+ * CHECK 3.40): μετακόμισε στη μηχανή κρίσης και είναι πλέον **μέσα** στο `evaluate`.
+ * Αυτή η πύλη τραβούσε ολόκληρο τον κριτή του browser για μια συνάρτηση που δεν αγγίζει
+ * browser. Αν ξαναπροσθέσεις χωριστή κλήση, οι ημιδιαφανείς μετρώνται **δύο φορές**.
+ */
 const { evaluate, RATCHETED_STATES } = require('./lib/contrast/theme-pairing');
-const { evaluateTranslucent } = require('./lib/contrast/runtime-matrix');
 const { buildClassPalette, auditBuckets, MODULE_NAME } = require('./lib/contrast/tailwind-class-palette');
 const { TAILWIND_CONFIG } = require('./lib/contrast/tailwind-class-resolver');
 
 const ADR = 'ADR-773 §8 (CHECK 3.42)';
 
-/** Οι έξι του κοινού κριτή + οι τρεις που γεννιούνται σε χώρο **κλάσεων**. */
+/**
+ * Οι **επτά** του κοινού κριτή (το `translucent-invisible` μπήκε εκεί 2026-08-08) + οι
+ * δύο που γεννιούνται αποκλειστικά σε χώρο **κλάσεων**.
+ */
 const CLASS_RATCHETED_STATES = [
   ...RATCHETED_STATES,
-  'translucent-invisible',
   'class-unknown',
   'dangling-var',
 ];
@@ -114,7 +121,6 @@ function measure() {
   const result = evaluate(palette, themes);
   const findings = [
     ...result.findings,
-    ...evaluateTranslucent(palette, themes),
     ...palette.extraFindings,
   ];
   const byState = {};

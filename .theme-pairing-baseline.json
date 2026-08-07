@@ -6,20 +6,32 @@
   ],
   "note": "ΔΕΝ είναι δείκτης υγείας: μετρά δηλώσεις χρώματος δομικά ασύμβατες με δύο θέματα. Η θεραπεία είναι μετανάστευση σε hsl(var(--…)), όχι μικρότερος αριθμός.",
   "violation_count": 35,
-  "declaration_count": 43,
+  "declaration_count": 54,
   "by_state": {
     "declared-pair-ok": 2,
     "declared-pair-fail": 8,
     "themed-side-ok": 6,
     "themed-side-invisible": 6,
     "theme-flip": 9,
-    "surface-theme-flip": 12
+    "surface-theme-flip": 12,
+    "translucent-ok": 11
   },
-  "out_of_scope": {
+  "ledger": {
+    "judged-opaque": 43,
+    "judged-translucent": 11,
+    "unjudged-role": 36,
+    "unjudged-opaque-rgb": 0,
+    "unjudged-hsl-literal": 0,
+    "css-var": 45,
+    "keyword": 30,
+    "non-color": 615
+  },
+  "census": {
     "non-color": 615,
     "literal-hex/border": 21,
     "keyword": 30,
-    "rgb-literal": 11,
+    "rgb-literal/border": 3,
+    "rgb-literal/surface": 8,
     "literal-hex/surface": 12,
     "literal-hex/foreground": 10,
     "literal-hex/primitive": 36,
@@ -75,9 +87,17 @@
     "src/styles/design-tokens/modules/borders.ts::borderColors.success.light",
     "src/styles/design-tokens/modules/borders.ts::borderColors.warning.dark",
     "src/styles/design-tokens/modules/borders.ts::borderColors.warning.light",
+    "src/styles/design-tokens/modules/canvas-ui.ts::canvasUI.overlay.colors.selection.crossing.background",
+    "src/styles/design-tokens/modules/canvas-ui.ts::canvasUI.overlay.colors.selection.crossing.border",
+    "src/styles/design-tokens/modules/canvas-ui.ts::canvasUI.overlay.colors.selection.window.background",
+    "src/styles/design-tokens/modules/canvas-ui.ts::canvasUI.overlay.colors.selection.window.border",
+    "src/styles/design-tokens/modules/canvas-ui.ts::canvasUI.overlay.colors.zoom.background",
+    "src/styles/design-tokens/modules/canvas-ui.ts::canvasUI.overlay.colors.zoom.border",
+    "src/styles/design-tokens/modules/canvas-ui.ts::canvasUI.positioning.floatingPanel.testModal.backdrop.backgroundColor",
     "src/styles/design-tokens/modules/foundations.ts::colors.background.accent",
     "src/styles/design-tokens/modules/foundations.ts::colors.background.hover",
     "src/styles/design-tokens/modules/foundations.ts::colors.background.muted",
+    "src/styles/design-tokens/modules/foundations.ts::colors.background.overlay",
     "src/styles/design-tokens/modules/foundations.ts::colors.background.primary",
     "src/styles/design-tokens/modules/foundations.ts::colors.background.secondary",
     "src/styles/design-tokens/modules/foundations.ts::colors.background.tertiary",
@@ -105,6 +125,9 @@
     "src/styles/design-tokens/modules/foundations.ts::colors.text.primary",
     "src/styles/design-tokens/modules/foundations.ts::colors.text.secondary",
     "src/styles/design-tokens/modules/foundations.ts::colors.text.tertiary",
+    "src/styles/design-tokens/modules/layout-utilities-constants.ts::layoutUtilities.cssVars.debugFloat.main.background",
+    "src/styles/design-tokens/modules/layout-utilities-constants.ts::layoutUtilities.cssVars.debugPanel.tooltip.background",
+    "src/styles/design-tokens/modules/layout-utilities-constants.ts::layoutUtilities.dxf.debug.tooltip.background",
     "src/styles/design-tokens/modules/portal-overlay.ts::photoPreviewComponents.colors.uploadingBackground"
   ]
 }

@@ -69,6 +69,13 @@ on:
       - 'scripts/check-css-token-authority.js'
       - 'scripts/lib/css-vars/**'
       - '.css-token-authority-baseline.json'
+      # CHECK 3.45 (ADR-771 Φ.3) — «αυτό το κατώφλι αντίθεσης είναι ΕΦΙΚΤΟ;». Σκανδάλη είναι
+      # ΚΑΙ οι είσοδοι-SSoT: ένα νέο μεσοτονικό θέμα καμβά κάνει ανέφικτες υποσχέσεις σε
+      # αρχεία που κανείς δεν άγγιξε — το `src/subapps/dxf-viewer/**` δεν αρκεί μόνο του.
+      - 'scripts/check-contrast-promise-reachability.js'
+      - 'scripts/lib/contrast-promise/**'
+      - 'src/subapps/dxf-viewer/**'
+      - 'src/styles/design-system/generated/variables.css'
       # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή: οι ΚΛΑΣΕΙΣ της κεντρικής αρχής χρώματος.
       # Το `.ssot-registry.json` είναι σκανδάλη επειδή η allowlist του ΕΙΝΑΙ η εμβέλεια της
       # πύλης· το `tailwind.config.ts` επειδή είναι η ΑΥΘΕΝΤΙΑ των τιμών (δεν κρατάμε πίνακα).
@@ -102,6 +109,13 @@ on:
       - 'scripts/check-css-token-authority.js'
       - 'scripts/lib/css-vars/**'
       - '.css-token-authority-baseline.json'
+      # CHECK 3.45 (ADR-771 Φ.3) — «αυτό το κατώφλι αντίθεσης είναι ΕΦΙΚΤΟ;». Σκανδάλη είναι
+      # ΚΑΙ οι είσοδοι-SSoT: ένα νέο μεσοτονικό θέμα καμβά κάνει ανέφικτες υποσχέσεις σε
+      # αρχεία που κανείς δεν άγγιξε — το `src/subapps/dxf-viewer/**` δεν αρκεί μόνο του.
+      - 'scripts/check-contrast-promise-reachability.js'
+      - 'scripts/lib/contrast-promise/**'
+      - 'src/subapps/dxf-viewer/**'
+      - 'src/styles/design-system/generated/variables.css'
       # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή: οι ΚΛΑΣΕΙΣ της κεντρικής αρχής χρώματος.
       # Το `.ssot-registry.json` είναι σκανδάλη επειδή η allowlist του ΕΙΝΑΙ η εμβέλεια της
       # πύλης· το `tailwind.config.ts` επειδή είναι η ΑΥΘΕΝΤΙΑ των τιμών (δεν κρατάμε πίνακα).
@@ -190,6 +204,14 @@ jobs:
       - name: 🔍 CHECK 3.43 — CSS token authority, FULL tree (ADR-774)
         run: node scripts/check-css-token-authority.js --all
 
+      # CHECK 3.45 (ADR-771 Φ.3) — «η υπόσχεση αντίθεσης είναι εφικτή, ή τουλάχιστον
+      # ΛΕΓΕΤΑΙ όταν αθετείται;». Ίδιο workflow, ίδιος λόγος με τα 3.41/3.42/3.43: νέο αρχείο
+      # workflow θα απαιτούσε εγγραφή στο `.ci-gate-tiers.json`, αλλιώς μπλοκάρει το CHECK
+      # 3.37. Το μητρώο παρακολουθεί ΑΡΧΕΙΑ workflow, όχι steps ⇒ 29 πύλες αμετάβλητες.
+      # ⚠️ ΑΝΕΥ ΟΡΩΝ `--all`, όπως και στο hook: οι επιφάνειες είναι ΚΑΘΟΛΙΚΕΣ. ~2,7s.
+      - name: 🔍 CHECK 3.45 — contrast promise reachability, FULL subapp (ADR-771 Φ.3)
+        run: node scripts/check-contrast-promise-reachability.js --all --verbose
+
       # The gate's own mutation suite. A gate whose tests never run is a gate
       # nobody can trust — ADR-587 §6.1, paid for with 11 red tests that sat on
       # main for six commits because `unit.yml` was disabled and
@@ -223,7 +245,7 @@ jobs:
       - name: 🧪 Theme token hygiene anchors (ADR-759 §4.12.3, 12 tests)
         run: pnpm exec jest scripts/__tests__/theme-token-hygiene.test.js
 
-      - name: 🧪 Mutation suite — CHECK 3.39 (29 tests)
+      - name: 🧪 Mutation suite — CHECK 3.39 (37 tests, 9/9 μεταλλάξεις)
         run: pnpm exec jest scripts/__tests__/check-theme-pairing-ratchet.test.js
 
       # CHECK 3.40 / Στρώμα 2β — η ίδια μηχανή κρίσης, τροφοδοτημένη με ΣΥΝΘΕΤΙΚΑ
@@ -231,7 +253,7 @@ jobs:
       # ΠΡΑΓΜΑΤΙΚΟ `globals.css` και τα ΠΡΑΓΜΑΤΙΚΑ token modules, οπότε τρέχει εδώ,
       # στο φθηνό μπλοκ, και φρουρεί όλη τη λογική (8/8 μεταλλάξεις).
       # Ο browser χρειάζεται μόνο για τη ΣΥΛΛΟΓΗ, και αυτή ζει στο ξεχωριστό job.
-      - name: 🧪 Mutation suite — CHECK 3.40 (52 tests, χωρίς browser)
+      - name: 🧪 Mutation suite — CHECK 3.40 (53 tests, χωρίς browser)
         run: pnpm exec jest scripts/__tests__/check-runtime-contrast-ratchet.test.js
 
       # ⚠️ ΔΥΟ σουίτες, όχι μία — και είναι οι δύο μισές της ίδιας απόδειξης:
@@ -253,6 +275,22 @@ jobs:
       # ήταν ΠΑΝΤΑ η τιμή. Με ρηχό checkout η απόδειξη εξαφανίζεται σιωπηλά.
       - name: 🧪 Mutation suite — CHECK 3.43 (27 tests)
         run: pnpm exec jest scripts/__tests__/check-css-token-authority.test.js
+
+      # ⚠️ ΤΡΕΙΣ σουίτες μαζί, επίτηδες — καθεμία απαντά διαφορετική ερώτηση και μόνες τους
+      # αφήνουν μισό ελάττωμα ανοιχτό:
+      #   · η πύλη: ένα ΑΝΕΦΙΚΤΟ κατώφλι ζητιέται μέσα από υπογραφή που μπορεί να πει «απέτυχα»
+      #   · `ink-verdict`: ο κλάδος αποτυχίας είναι ΖΩΝΤΑΝΟΣ σήμερα (cinema4d 7,46:1 < 9,0)
+      #   · `wall-contrast-casing`: ο καμβάς ΟΝΤΩΣ ζωγραφίζει τη διάσωση — μετρημένο ότι τα
+      #     67 προϋπάρχοντα tests έμειναν πράσινα όταν προστέθηκε το casing, δηλαδή καμία
+      #     άγκυρα δεν κλείδωνε τι ζωγραφίζεται (το ίδιο κενό με τη Φ.1).
+      # Και αυτή χρειάζεται το `fetch-depth: 0`: η ομάδα Π τραβά με `git show 1cafeb6a:` τον
+      # ΠΡΑΓΜΑΤΙΚΟ κώδικα της σιωπηλής παράδοσης και απαιτεί να τον ΜΠΛΟΚΑΡΕΙ η πύλη.
+      - name: 🧪 Mutation suite — CHECK 3.45 (28 tests) + άγκυρες (16 + 6)
+        run: >
+          pnpm exec jest
+          scripts/__tests__/check-contrast-promise-reachability.test.js
+          src/subapps/dxf-viewer/config/__tests__/ink-verdict.test.ts
+          src/subapps/dxf-viewer/bim/renderers/__tests__/wall-contrast-casing.test.ts
 
       # ⚠️ Και αυτή χρειάζεται το `fetch-depth: 0`: η ομάδα Π τραβά με `git show eff100ba:`
       # το ΠΡΑΓΜΑΤΙΚΟ `design-system/tokens/colors.ts` και απαιτεί να βγει το μετρημένο

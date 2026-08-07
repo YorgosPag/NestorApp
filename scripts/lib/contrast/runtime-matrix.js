@@ -8,12 +8,24 @@
  * στα `theme-pairing.js` / `ts-token-palette.js`. Εδώ αλλάζει μόνο η **προέλευση** των
  * αριθμών: αντί για parsed hex του AST, **υπολογισμένα rgb** από τον browser.
  *
- * Γι' αυτό το 2β κλείνει τα ρητά όρια **Κ5–Κ7** του 2α αντί να τα ξανα-δηλώνει:
- *   · `rgba()` / `hsl()` literal        — ο browser τα λύνει, το regex του AST όχι
+ * Γι' αυτό το 2β κλείνει τα ρητά όρια **Κ6–Κ7** του 2α αντί να τα ξανα-δηλώνει:
  *   · `hsl(var(--x))` και indirection    — ο AST τα λέει `css-var`, «εκτός εμβέλειας»
  *   · `color-mix()` / υπολογισμένα       — ίδιο
+ *   · `hsl()` literal                    — ο `parseComputedColor` διαβάζει μόνο rgb/rgba
  *
- * ΤΡΕΙΣ ΝΕΕΣ ΚΑΤΑΣΤΑΣΕΙΣ, που κανένα στατικό εργαλείο **δεν μπορεί** να παράγει:
+ * ⚠️ Το **Κ5** (`rgba()` literal) **ΔΕΝ** είναι πια δικό του: έκλεισε στατικά στις
+ * 2026-08-08. Το γεγονός ότι ένα βαρύτερο στρώμα *μπορεί* να απαντήσει κάτι δεν σημαίνει
+ * ότι είναι το **σωστό** στρώμα — αν το ερώτημα απαντιέται με AST, εκεί ανήκει: ο AST
+ * τρέχει σε **κάθε commit**, ενώ το 2β θέλει dev server και browser.
+ *
+ * ΔΥΟ ΝΕΕΣ ΚΑΤΑΣΤΑΣΕΙΣ, που κανένα στατικό εργαλείο **δεν μπορεί** να παράγει:
+ *
+ * ⚠️ ΗΤΑΝ ΤΡΕΙΣ ΜΕΧΡΙ ΤΙΣ 2026-08-08. Η τρίτη (`translucent-invisible`) μετακόμισε στο
+ * `theme-pairing.js`: ένα `rgba()` **γραμμένο ως literal** δεν χρειάζεται browser για να
+ * λυθεί — είναι ήδη λυμένο. Ο ισχυρισμός «αδύνατο στατικά» ήταν ιδιότητα της
+ * υλοποίησης, όχι της ερώτησης, και έπεσε μόλις κάποιος έθεσε την ερώτηση στον AST.
+ * Το 2β εξακολουθεί να κρίνει ημιδιαφάνεια — απλώς με τον **κοινό** κριτή, και για
+ * τιμές που ο AST **όντως** δεν βλέπει (`hsl(var(--x))`, `color-mix()`, indirection).
  *
  *   1. `dangling-var` — η δήλωση δείχνει σε custom property που **δεν ορίζεται πουθενά**.
  *      Το declaration γίνεται *invalid at computed-value time*, οπότε το στοιχείο βάφεται
@@ -32,11 +44,6 @@
  *      Material 3, Leonardo ή Atlassian — και είναι η προϋπόθεση για να σημαίνει κάτι
  *      οποιαδήποτε στατική μέτρηση.
  *
- *   3. `translucent-invisible` — ημιδιαφανής δήλωση (α<1) που, **συνθεμένη πάνω σε κάθε
- *      επιφάνεια** του θέματός της, δεν φτάνει το κατώφλι σε καμία. Το άλφα είναι ο λόγος
- *      που το 2α δεν μπορούσε να τις κρίνει: το χρώμα τους **δεν είναι ένα** — είναι ένα
- *      ανά φόντο.
- *
  * ⚠️ ΤΙ ΔΕΝ ΑΠΑΝΤΑ ΑΥΤΟ ΤΟ ΣΤΡΩΜΑ (ρητά, ώστε το «0» να μη σημαίνει «δεν κοίταξα»):
  *   · Τη **σύνθεση προγόνων σε πραγματικές σελίδες**. Μετρήθηκε ότι χωρίς
  *     αυθεντικοποίηση οι λίστες δεδομένων βάφουν **μόνο** το sidebar (ταυτόσημα 33
@@ -53,24 +60,34 @@
 
 'use strict';
 
-const {
-  parseComputedColor, toHex, contrastRatio, hslToRgb, compositeOver,
-} = require('./wcag-contrast');
-const { surfaceTokens, foregroundTokens, describeValue } = require('./css-token-themes');
+const { parseComputedColor, toHex } = require('./wcag-contrast');
+const { surfaceTokens, describeValue } = require('./css-token-themes');
 const { derivePairs, classifyRole, classifyValue } = require('./ts-token-palette');
-const { evaluate, thresholdFor, RATCHETED_STATES } = require('./theme-pairing');
+const { evaluate, RATCHETED_STATES } = require('./theme-pairing');
 
 /** Πηγή που δηλώνεται όταν μια δήλωση δεν γεφυρώνεται σε αρχείο AST. */
 const RUNTIME_SOURCE = '(runtime)';
 
-/** Οι νέες καταστάσεις του 2β. Ratchet — 18 `dangling-var` υπάρχουν ήδη (§12.5). */
+/**
+ * Οι καταστάσεις που **μόνο** το 2β μπορεί να γεννήσει. Ratchet — 18 `dangling-var`
+ * υπάρχουν ήδη (§12.5).
+ *
+ * ⚠️ ΗΤΑΝ ΤΡΕΙΣ. Το `translucent-invisible` **έφυγε** στις 2026-08-08 (ADR-770 §Γ3) και
+ * ζει πλέον στο `RATCHETED_STATES` του `theme-pairing.js`. Ο λόγος είναι διόρθωση
+ * ισχυρισμού, όχι αναδιάταξη: αυτό το αρχείο δήλωνε ότι πρόκειται για κατάσταση «που
+ * κανένα στατικό εργαλείο **δεν μπορεί** να παράγει». Ένα `rgba()` γραμμένο ως literal
+ * την παράγει χωρίς browser — άρα ο ισχυρισμός ήταν ιδιότητα της υλοποίησης.
+ *
+ * Οι **δύο** που έμειναν είναι γνήσια αδύνατες στατικά: το «υπάρχει αυτό το custom
+ * property;» και το «ο AST διάβασε ό,τι βάφει ο browser;» απαντιούνται **μόνο** από
+ * φορτωμένο CSS. Το `ALL_RATCHETED_STATES` παραμένει **το ίδιο σύνολο**.
+ */
 const RUNTIME_RATCHETED_STATES = [
   'dangling-var',
   'ast-runtime-divergence',
-  'translucent-invisible',
 ];
 
-/** Οι καταστάσεις που μετρώνται έναντι baseline: οι εννέα του 3.39 **και** οι τρεις νέες. */
+/** Οι καταστάσεις που μετρώνται έναντι baseline: οι έντεκα του 3.39 **και** οι δύο νέες. */
 const ALL_RATCHETED_STATES = [...RATCHETED_STATES, ...RUNTIME_RATCHETED_STATES];
 
 /**
@@ -241,77 +258,6 @@ function findAstDivergence(palette) {
 }
 
 /**
- * Ημιδιαφανείς δηλώσεις: το χρώμα τους **δεν είναι ένα**, είναι ένα ανά φόντο. Άρα
- * συνθέτονται πάνω σε **κάθε** επιφάνεια του κάθε θέματος και η ετυμηγορία είναι
- * «αόρατη παντού» (`translucent-invisible`) ή «στέκει κάπου» (`translucent-ok`).
- *
- * Το κατώφλι έρχεται από την **ίδια** `thresholdFor` του 3.39 — όχι από νέο αριθμό εδώ.
- */
-function evaluateTranslucent(palette, themes) {
-  const findings = [];
-  const surfaces = { light: surfaceTokens(themes.light), dark: surfaceTokens(themes.dark) };
-  const foregrounds = { light: foregroundTokens(themes.light), dark: foregroundTokens(themes.dark) };
-
-  for (const t of palette.translucent) {
-    if (!['foreground', 'border', 'surface'].includes(t.role)) continue;
-    const { min, rule } = thresholdFor(t);
-    let failing = 0;
-    let total = 0;
-    let best = 0;
-
-    for (const theme of ['light', 'dark']) {
-      for (const s of surfaces[theme]) {
-        const base = hslToRgb(s.hsl);
-        if (t.role === 'surface') {
-          /**
-           * ⚠️ ΗΜΙΔΙΑΦΑΝΗΣ **ΕΠΙΦΑΝΕΙΑ** — η ερώτηση αντιστρέφεται, όπως στην ομάδα Γ2.
-           * Ένα `rgba(0,0,0,0.5)` overlay δεν είναι αόρατο από μόνο του: συνθέτεται
-           * πάνω στην υποκείμενη επιφάνεια και **πάνω του** μπαίνει το θεματικό
-           * χρώμα κειμένου. Αυτό είναι το modal backdrop, δηλαδή ένα από τα
-           * συχνότερα σημεία όπου το κείμενο χάνεται στην πράξη.
-           *
-           * Η πρώτη υλοποίηση αυτής της συνάρτησης έκρινε **μόνο** foreground/border
-           * και παρέλειπε **9 από τις 12** ημιδιαφανείς — ακριβώς το σφάλμα που το
-           * test `Κ1` του Στρώματος 2α υπάρχει για να μην επαναληφθεί, επαναλαμβανόμενο
-           * σε άλλο αρχείο. Άγκυρα εδώ: `Ρ5`.
-           */
-          const composited = compositeOver(t.rgb, base, t.alpha);
-          for (const fg of foregrounds[theme]) {
-            const ratio = contrastRatio(hslToRgb(fg.hsl), composited);
-            total++;
-            if (ratio < min) failing++;
-            if (ratio > best) best = ratio;
-          }
-        } else {
-          const composited = compositeOver(t.rgb, base, t.alpha);
-          const ratio = contrastRatio(composited, base);
-          total++;
-          if (ratio < min) failing++;
-          if (ratio > best) best = ratio;
-        }
-      }
-    }
-    if (!total) continue;
-
-    const against = t.role === 'surface' ? 'θεματικά χρώματα κειμένου' : 'επιφάνειες';
-    findings.push({
-      state: failing === total ? 'translucent-invisible' : 'translucent-ok',
-      file: t.file,
-      line: t.line,
-      id: `${t.file}::${t.path}`,
-      declId: `${t.file}::${t.path}`,
-      detail:
-        `${t.path} = ${t.raw} (α=${t.alpha}, ρόλος ${t.role}) συνθεμένο: αποτυγχάνει σε `
-        + `${failing}/${total} ${against} των δύο θεμάτων, καλύτερο ${best.toFixed(2)}:1, `
-        + `απαιτείται ${min}:1 (${rule})`,
-      failing,
-      surfaces: total,
-    });
-  }
-  return findings;
-}
-
-/**
  * Έλεγχοι ακεραιότητας του στιγμιότυπου. **Fail-closed**: ένα στιγμιότυπο που δεν
  * μπορεί να απαντήσει την ερώτηση πρέπει να **σκάει**, όχι να αναφέρει «καθαρό».
  * Το `themeVerified` είναι ο λόγος: το «`dark: false` αμέσως μετά τη φόρτωση» είναι
@@ -355,12 +301,16 @@ function evaluateRuntimeMatrix(snapshots, astPalette) {
   const themes = buildRuntimeThemes(snapshots);
   const palette = buildRuntimePalette(snapshots.light.declarations, astPalette, snapshots.light.aliases || []);
 
+  /**
+   * ⚠️ Το `evaluate` περιλαμβάνει πλέον **και** την Κατηγορία Ε (ημιδιαφανείς) — μέχρι
+   * τις 2026-08-08 έμπαινε εδώ ως τέταρτη, χειροκίνητη γραμμή. Αν την ξαναπροσθέσεις,
+   * κάθε ημιδιαφανής δήλωση θα μετρηθεί **δύο φορές**.
+   */
   const shared = evaluate(palette, themes);
   const findings = [
     ...shared.findings,
     ...findDanglingVars(snapshots),
     ...findAstDivergence(palette),
-    ...evaluateTranslucent(palette, themes),
   ];
 
   const byState = {};
@@ -398,7 +348,7 @@ function evaluateRuntimeMatrix(snapshots, astPalette) {
   return {
     findings,
     byState,
-    outOfScope: shared.outOfScope,
+    census: shared.census,
     judgeableUnjudgedIds,
     /** Ό,τι το στρώμα **δεν** έκρινε, με αριθμούς — ποτέ σιωπηλά. */
     unjudged: {
@@ -485,7 +435,6 @@ module.exports = {
   buildRuntimeThemes,
   findDanglingVars,
   findAstDivergence,
-  evaluateTranslucent,
   assertSnapshotUsable,
   describeValue,
   classifyValue,

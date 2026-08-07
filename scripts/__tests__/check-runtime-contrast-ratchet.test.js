@@ -453,11 +453,30 @@ describe('Ρ11 — ΜΙΑ μηχανή: το derivePairs είναι κοινό A
 
 // ════════════════════════════════════════════════════════════════════════════
 describe('Ρ12 — το συμβόλαιο της πύλης', () => {
-  test('Ρ12.1 οι τρεις νέες καταστάσεις είναι ratcheted, όχι zero-tolerance', () => {
-    expect(RUNTIME_RATCHETED_STATES).toEqual(
-      expect.arrayContaining(['dangling-var', 'ast-runtime-divergence', 'translucent-invisible']),
-    );
+  /**
+   * 🔑 ΞΑΝΑΓΡΑΦΤΗΚΕ 2026-08-08 — ΔΕΝ ΧΑΛΑΡΩΣΕ.
+   *
+   * Απαιτούσε **τρεις** καταστάσεις, ανάμεσά τους το `translucent-invisible`, με τον
+   * ισχυρισμό ότι «κανένα στατικό εργαλείο δεν μπορεί να τις παράγει». Ο ισχυρισμός
+   * ήταν ιδιότητα της **υλοποίησης**: κανείς δεν είχε δώσει στον AST reader
+   * `palette.translucent`. Μόλις το CHECK 3.39 έκλεισε το όριο `Κ5`, η ημιδιαφάνεια
+   * κρίνεται **χωρίς browser** — άρα η κατάσταση μετακόμισε στον κοινό κριτή.
+   *
+   * Οι **δύο** που έμειναν είναι γνήσια αδύνατες στατικά, και το test το λέει ρητά ώστε
+   * να μη γίνει ποτέ ξανά «τρεις επειδή έτσι τις βρήκαμε».
+   */
+  test('Ρ12.1 οι ΔΥΟ γνήσια runtime καταστάσεις είναι ratcheted, όχι zero-tolerance', () => {
+    expect(RUNTIME_RATCHETED_STATES).toEqual(['dangling-var', 'ast-runtime-divergence']);
     for (const s of RUNTIME_RATCHETED_STATES) expect(ALL_RATCHETED_STATES).toContain(s);
+  });
+
+  test('Ρ12.1β το translucent-invisible μετακόμισε στον ΚΟΙΝΟ κριτή — και μένει ratcheted', () => {
+    // Δεν είναι πια «δικό μου»…
+    expect(RUNTIME_RATCHETED_STATES).not.toContain('translucent-invisible');
+    // …αλλά το ΣΥΝΟΛΟ που μετράει η πύλη μένει **ακριβώς το ίδιο**: η baseline δεν
+    // επιτρέπεται να κουνηθεί επειδή ένας ορισμός μετακόμισε αρχείο.
+    expect(ALL_RATCHETED_STATES).toContain('translucent-invisible');
+    expect(new Set(ALL_RATCHETED_STATES).size).toBe(ALL_RATCHETED_STATES.length);
   });
 
   test('Ρ12.2 οι υγιείς καταστάσεις ΔΕΝ μπαίνουν στο ratchet', () => {

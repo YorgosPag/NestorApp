@@ -28,12 +28,36 @@
 'use strict';
 
 const { surfaceTokens, foregroundTokens } = require('./css-token-themes');
-const { hslToRgb, contrastRatio } = require('./wcag-contrast');
+const { hslToRgb, contrastRatio, compositeOver } = require('./wcag-contrast');
+// Ο ορισμός του «σημασιολογικός ρόλος» ζει **μία** φορά, στον ταξινομητή ρόλων.
+const { SEMANTIC_ROLES } = require('./ts-token-palette');
+// Η ΛΟΓΙΣΤΙΚΗ («ποιος κρίθηκε;») είναι άλλη ευθύνη από την ΚΡΙΣΗ («είναι σπασμένο;»).
+const { censusByForm } = require('./palette-ledger');
 
 /** WCAG 2.1 §1.4.3 — κείμενο κανονικού μεγέθους. */
 const AA_TEXT = 4.5;
 /** WCAG 2.1 §1.4.11 — εικονίδια, περιγράμματα, κάθε μη-κείμενο. */
 const AA_NON_TEXT = 3.0;
+
+/**
+ * ΤΟ ΚΑΤΩΦΛΙ ΤΟ ΟΡΙΖΕΙ ΑΥΤΟ ΠΟΥ ΚΡΙΝΕΤΑΙ, ΟΧΙ ΤΟ ΦΟΝΤΟ.
+ *
+ * Όταν η **επιφάνεια** είναι το υπό κρίση αντικείμενο, δεν κρίνεται η ίδια: κρίνεται
+ * το **κείμενο** που θα πέσει πάνω της. Άρα ισχύει το **1.4.3 (4,5:1)**, όχι το 1.4.11 —
+ * το τελευταίο διέπει *μη-κείμενο* (περιγράμματα, εικονίδια) έναντι του διπλανού χρώματος.
+ *
+ * ⚠️ Υπάρχει ως **συνάρτηση** επειδή το ερώτημα «κείμενο πάνω σε αυτή την επιφάνεια»
+ * τίθεται σε **δύο** κατηγορίες — Γ2 (αδιαφανής επιφάνεια) και Ε (ημιδιαφανής, μετά τη
+ * σύνθεση). Μέχρι τις 2026-08-08 η Γ2 είχε καρφωμένο `AA_TEXT` και η Ε ρωτούσε το
+ * `thresholdFor(επιφάνεια)`, που επιστρέφει **3,0**: δύο απαντήσεις για ένα ερώτημα,
+ * και η μία κρίνει κείμενο με το κατώφλι του μη-κειμένου. Το σχήμα του ADR-749 σε
+ * μικρογραφία. Άγκυρα: `Κ13`.
+ *
+ * Τα `foregroundTokens` του `globals.css` είναι **όλα** χρώματα κειμένου
+ * (`--foreground`, `--muted-foreground`, `--text-error`, …) — κανένα εικονίδιο — οπότε
+ * δεν υπάρχει περίπτωση όπου το 3,0 θα ήταν το σωστό εδώ.
+ */
+const TEXT_ON_SURFACE = { min: AA_TEXT, rule: 'WCAG 1.4.3' };
 
 /** `#rgb` · `#rrggbb` · (`#rrggbbaa` → το άλφα αγνοείται εδώ, βλ. `alphaOf`). */
 function hexToRgb(hex) {
@@ -234,8 +258,8 @@ function evaluateFixedSurfaces(palette, themes) {
       if (!dt) continue;
       const rl = contrastRatio(hslToRgb(lt.hsl), bg);
       const rd = contrastRatio(hslToRgb(dt.hsl), bg);
-      const pl = rl >= AA_TEXT;
-      const pd = rd >= AA_TEXT;
+      const pl = rl >= TEXT_ON_SURFACE.min;
+      const pd = rd >= TEXT_ON_SURFACE.min;
       if (pl && pd) { bothPass++; continue; }
       if (!pl && !pd) { bothFail++; continue; }
       flips++;
@@ -265,25 +289,99 @@ function evaluateFixedSurfaces(palette, themes) {
 }
 
 /**
- * ΚΑΤΗΓΟΡΙΑ Δ — ό,τι **δεν** κρίνεται, δηλωμένο ονομαστικά.
+ * ΚΑΤΗΓΟΡΙΑ Ε — **ημιδιαφανείς δηλώσεις** (`rgba(0,0,0,0.5)`, `bg-black/50`).
  *
- * Ένα σκαλί παλέτας (`colors.blue.500`) δεν ισχυρίζεται ρόλο: δεν είναι ούτε κείμενο
- * ούτε φόντο μέχρι κάποιος να το βάλει κάπου. Το να το χαρακτηρίσουμε σπασμένο θα ήταν
- * ψευδώς θετικό. Καταγράφεται ώστε το «0 παραβιάσεις» να μη σημαίνει ποτέ «δεν κοίταξα».
+ * 🔑 ΓΙΑΤΙ ΔΕΝ ΜΠΟΡΟΥΣΑΝ ΝΑ ΚΡΙΘΟΥΝ ΜΕ ΤΙΣ ΑΛΛΕΣ ΚΑΤΗΓΟΡΙΕΣ: το χρώμα τους **δεν
+ * είναι ένα** — είναι ένα ανά φόντο. Ένα `#1e293b` έχει μία τιμή που μπορείς να βάλεις
+ * στον τύπο· ένα `rgba(0,0,0,0.5)` έχει είκοσι τρεις, μία ανά επιφάνεια του θέματος.
+ * Γι' αυτό η μόνη ειλικρινής ετυμηγορία είναι «**αόρατη παντού**»
+ * (`translucent-invisible`) ή «**στέκει κάπου**» (`translucent-ok`).
+ *
+ * ⚠️ ΓΙΑΤΙ ΖΕΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `runtime-matrix.js` (μετακόμισε 2026-08-08, ADR-770 §Γ3):
+ * γεννήθηκε στο module του Στρώματος 2β επειδή **εκεί** χρειάστηκε πρώτη φορά, αλλά δεν
+ * αγγίζει τίποτα του browser — τρώει `{rgb, alpha, role}` και τα κατώφλια αυτού του
+ * αρχείου. Όσο έμενε εκεί, το CHECK 3.39 **και** το 3.42 έπρεπε να κάνουν `require` το
+ * module του 3.40 για να κρίνουν κάτι που ο AST βλέπει μια χαρά: παλαιότερη πύλη
+ * εξαρτημένη από νεότερη, για συνάρτηση **κρίσης**. Η μετακόμιση **αφαιρεί** εξάρτηση.
+ *
+ * ⚠️ ΤΟ ΑΛΦΑ ΔΕΝ ΕΙΝΑΙ ΣΤΟ WCAG. Το πρότυπο υπολογίζει αντίθεση μεταξύ **αδιαφανών**
+ * χρωμάτων και δεν ορίζει τι σημαίνει «ημιδιαφανές φόντο». Αυτό που μετράμε είναι ό,τι
+ * **βάφει ο browser**: σύνθεση alpha στον sRGB χώρο (η ίδια προσέγγιση που κάνουν το
+ * WebAIM Contrast Checker και το OddContrast — δεν είναι δική μας εφεύρεση).
  */
-function summarizeOutOfScope(palette) {
-  const counts = {};
-  for (const e of palette.entries) {
-    const key = e.form === 'literal-hex' ? `literal-hex/${e.role}` : e.form;
-    counts[key] = (counts[key] || 0) + 1;
+function evaluateTranslucent(palette, themes) {
+  const findings = [];
+  const surfaces = { light: surfaceTokens(themes.light), dark: surfaceTokens(themes.dark) };
+  const foregrounds = { light: foregroundTokens(themes.light), dark: foregroundTokens(themes.dark) };
+
+  for (const t of palette.translucent || []) {
+    if (!SEMANTIC_ROLES.includes(t.role)) continue;
+    const { min, rule } = t.role === 'surface' ? TEXT_ON_SURFACE : thresholdFor(t);
+    let failing = 0;
+    let total = 0;
+    let best = 0;
+
+    for (const theme of ['light', 'dark']) {
+      for (const s of surfaces[theme]) {
+        const base = hslToRgb(s.hsl);
+        const composited = compositeOver(t.rgb, base, t.alpha);
+        if (t.role === 'surface') {
+          /**
+           * ⚠️ ΗΜΙΔΙΑΦΑΝΗΣ **ΕΠΙΦΑΝΕΙΑ** — η ερώτηση αντιστρέφεται, όπως στην Γ2.
+           * Ένα `rgba(0,0,0,0.5)` overlay δεν είναι αόρατο από μόνο του: συνθέτεται
+           * πάνω στην υποκείμενη επιφάνεια και **πάνω του** μπαίνει το θεματικό χρώμα
+           * κειμένου. Αυτό είναι το modal backdrop, δηλαδή ένα από τα συχνότερα σημεία
+           * όπου το κείμενο χάνεται στην πράξη.
+           *
+           * Η πρώτη υλοποίηση έκρινε **μόνο** foreground/border και παρέλειπε **9 από
+           * τις 12** ημιδιαφανείς — ακριβώς το σφάλμα που το `Κ1` υπάρχει για να μην
+           * επαναληφθεί, επαναλαμβανόμενο σε άλλο αρχείο. Άγκυρα: `Ρ5` (3.40).
+           */
+          for (const fg of foregrounds[theme]) {
+            const ratio = contrastRatio(hslToRgb(fg.hsl), composited);
+            total++;
+            if (ratio < min) failing++;
+            if (ratio > best) best = ratio;
+          }
+        } else {
+          const ratio = contrastRatio(composited, base);
+          total++;
+          if (ratio < min) failing++;
+          if (ratio > best) best = ratio;
+        }
+      }
+    }
+    if (!total) continue;
+
+    const against = t.role === 'surface' ? 'θεματικά χρώματα κειμένου' : 'επιφάνειες';
+    findings.push({
+      state: failing === total ? 'translucent-invisible' : 'translucent-ok',
+      file: t.file,
+      line: t.line,
+      id: `${t.file}::${t.path}`,
+      declId: `${t.file}::${t.path}`,
+      detail:
+        `${t.path} = ${t.raw} (α=${t.alpha}, ρόλος ${t.role}) συνθεμένο: αποτυγχάνει σε `
+        + `${failing}/${total} ${against} των δύο θεμάτων, καλύτερο ${best.toFixed(2)}:1, `
+        + `απαιτείται ${min}:1 (${rule})`,
+      failing,
+      surfaces: total,
+    });
   }
-  return counts;
+  return findings;
 }
 
 /**
- * Τρέξε και τις τέσσερις κατηγορίες.
+ * Τρέξε **ΟΛΕΣ** τις κατηγορίες κρίσης — αυτή είναι η **μοναδική** είσοδος.
  *
- * @param {object} palette έξοδος του `readTokenPalette`
+ * ⚠️ Η Ε (ημιδιαφανείς) μπήκε **μέσα** εδώ στις 2026-08-08· μέχρι τότε ήταν ξεχωριστή
+ * κλήση που **κάθε** καταναλωτής όφειλε να θυμηθεί να προσθέσει στα ευρήματά του. Δύο
+ * από τους τρεις τη θυμόντουσαν· ο τρίτος (**το ίδιο το CHECK 3.39**) όχι — και το
+ * αποτέλεσμα δεν ήταν σφάλμα, ήταν **σιωπηλά λιγότερη κάλυψη**. Μια μηχανή κρίσης που
+ * απαιτεί από τον καλούντα να ξέρει τον κατάλογο των κατηγοριών της δεν είναι SSoT·
+ * είναι κατάλογος που θα αποκλίνει. Άγκυρα: `Κ14`.
+ *
+ * @param {object} palette έξοδος του `readTokenPalette` (`translucent` προαιρετικό)
  * @param {{light:Map,dark:Map}} themes έξοδος του `readThemes`
  */
 function evaluate(palette, themes) {
@@ -292,10 +390,11 @@ function evaluate(palette, themes) {
     ...evaluateThemedPairs(palette, themes),
     ...evaluateMonoThemed(palette, themes),
     ...evaluateFixedSurfaces(palette, themes),
+    ...evaluateTranslucent(palette, themes),
   ];
   const byState = {};
   for (const f of findings) byState[f.state] = (byState[f.state] || 0) + 1;
-  return { findings, byState, outOfScope: summarizeOutOfScope(palette) };
+  return { findings, byState, census: censusByForm(palette) };
 }
 
 /**
@@ -314,6 +413,14 @@ const RATCHETED_STATES = [
   'themed-side-invisible',
   'surface-theme-flip',
   'surface-both-fail',
+  /**
+   * ⚠️ Ήταν στο `RUNTIME_RATCHETED_STATES` του Στρώματος 2β, δηλωμένο ως κατάσταση που
+   * «**κανένα στατικό εργαλείο δεν μπορεί** να παράγει». Αυτό ίσχυε όσο κανείς δεν
+   * είχε δώσει στον AST reader `palette.translucent` — δηλαδή ήταν ιδιότητα της
+   * **υλοποίησης**, όχι της ερώτησης. Από τη στιγμή που ένα `rgba()` literal παράγει
+   * αυτή την ετυμηγορία χωρίς browser, ανήκει εδώ.
+   */
+  'translucent-invisible',
 ];
 
 /**
@@ -328,6 +435,7 @@ const HEALTHY_STATES = [
   'themed-side-ok',
   'both-pass',
   'surface-both-pass',
+  'translucent-ok',
 ];
 
 module.exports = {
@@ -336,11 +444,13 @@ module.exports = {
   evaluateThemedPairs,
   evaluateMonoThemed,
   evaluateFixedSurfaces,
+  evaluateTranslucent,
   hexToRgb,
   isTextual,
   thresholdFor,
   RATCHETED_STATES,
   HEALTHY_STATES,
+  TEXT_ON_SURFACE,
   AA_TEXT,
   AA_NON_TEXT,
 };

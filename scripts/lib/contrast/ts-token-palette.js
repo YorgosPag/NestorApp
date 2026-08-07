@@ -25,6 +25,7 @@
 const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
+const { parseComputedColor } = require('./wcag-contrast');
 
 /** Ο φάκελος που ΟΡΙΖΕΙ το TypeScript σύστημα χρωμάτων. */
 const TOKEN_MODULES_DIR = 'src/styles/design-tokens/modules';
@@ -292,6 +293,9 @@ function readPaletteFromFiles(relFiles, repoRoot = process.cwd()) {
 
   // Μία μηχανή για τη δομική ανάλυση — κοινή με το Στρώμα 2β (ADR-770 §13).
   Object.assign(out, derivePairs(out.entries));
+  // Η Κατηγορία Ε διαβάζει `palette.translucent`· παράγεται **εδώ** ώστε κάθε
+  // καταναλωτής του AST reader να το έχει χωρίς να ξέρει ότι υπάρχει (βλ. `evaluate`).
+  out.translucent = translucentEntries(out);
   return out;
 }
 
@@ -315,20 +319,72 @@ function readTokenPalette(repoRoot = process.cwd()) {
   return { source: TOKEN_MODULES_DIR, ...readPaletteFromFiles(files, repoRoot) };
 }
 
-/** Οι καταχωρήσεις που ισχυρίζονται ΣΗΜΑΣΙΟΛΟΓΙΚΟ ρόλο — οι μόνες που κρίνονται. */
+/** Οι ρόλοι που ισχυρίζονται κάτι κρίσιμο. Ένα primitive/unknown δεν ισχυρίζεται τίποτα. */
+const SEMANTIC_ROLES = ['foreground', 'surface', 'border'];
+
+/**
+ * Οι **αδιαφανείς** σημασιολογικές καταχωρήσεις — αυτές που έχουν **μία** τιμή.
+ *
+ * ⚠️ ΔΕΝ περιλαμβάνει τις ημιδιαφανείς, και δεν είναι παράλειψη: κάθε καταναλωτής της
+ * περιμένει `.hex` (ο codemod του ADR-770 §14 χαρτογραφεί hex → token, ο έλεγχος `Χ1`
+ * απαιτεί απόφαση για καθεμία). Ένα `rgba()` **δεν έχει** hex — έχει τόσα όσα και οι
+ * επιφάνειες κάτω του. Το να τα χώσουμε εδώ θα έσπαγε τον codemod με `undefined`, αντί
+ * να πει ότι είναι **άλλο είδος** δήλωσης. Βλ. `translucentEntries`.
+ */
 function semanticEntries(palette) {
   return palette.entries.filter(
-    (e) => e.form === 'literal-hex' && ['foreground', 'surface', 'border'].includes(e.role),
+    (e) => e.form === 'literal-hex' && SEMANTIC_ROLES.includes(e.role),
   );
+}
+
+/**
+ * Οι **ημιδιαφανείς** σημασιολογικές καταχωρήσεις, στη μορφή που τρώει η Κατηγορία Ε:
+ * `{file, line, path, role, segments, rgb, alpha, raw}`.
+ *
+ * 🔑 ΤΟ ΟΡΙΟ `Κ5` ΤΟΥ CHECK 3.39 ΕΚΛΕΙΣΕ ΕΔΩ (2026-08-08). Μέχρι τότε το `rgba()`
+ * δηλωνόταν «εκτός στατικής εμβέλειας» και ανατίθετο στο Στρώμα 2β — που χρειάζεται
+ * **browser**. Αλλά ένα `rgba(0, 0, 0, 0.5)` **γραμμένο ως literal** δεν χρειάζεται
+ * τίποτα να το λύσει: είναι ήδη λυμένο. Αυτό που έλειπε δεν ήταν πληροφορία, ήταν
+ * **ερώτηση** — μετρημένο: **11** τέτοιες δηλώσεις (επιφάνεια 8 · περίγραμμα 3),
+ * ανάμεσά τους το modal backdrop `colors.background.overlay`.
+ *
+ * ⚠️ **ΜΟΝΟ** `rgb()`/`rgba()`. Ένα `hsl()` literal δεν το διαβάζει το
+ * `parseComputedColor` και **μένει** δηλωμένο όριο (σήμερα: 0 τέτοια). Δεν γράφτηκε
+ * δεύτερος parser για μηδέν εισόδους: ένας φρουρός χωρίς απόδειξη ζωής είναι ένας από
+ * τους 606 αδρανείς του ADR-749 §5.
+ *
+ * ⚠️ Ένα `rgba()` με **α=1** ΔΕΝ είναι ημιδιαφανές — δεν χρειάζεται σύνθεση, και η
+ * ετυμηγορία «αόρατο σε 46/46» θα ήταν σωστή αλλά θα το έκρινε ως κάτι που δεν είναι.
+ */
+function translucentEntries(palette) {
+  const out = [];
+  for (const e of palette.entries) {
+    if (e.form !== 'rgb-literal' || !SEMANTIC_ROLES.includes(e.role)) continue;
+    const parsed = parseComputedColor(e.raw);
+    if (!parsed || parsed.alpha >= 1) continue;
+    out.push({
+      file: e.file,
+      line: e.line,
+      path: e.path,
+      role: e.role,
+      segments: e.segments,
+      rgb: parsed.rgb,
+      alpha: parsed.alpha,
+      raw: e.raw,
+    });
+  }
+  return out;
 }
 
 module.exports = {
   readTokenPalette,
   readPaletteFromFiles,
   semanticEntries,
+  translucentEntries,
   derivePairs,
   collectThemedPairs,
   classifyRole,
   classifyValue,
+  SEMANTIC_ROLES,
   TOKEN_MODULES_DIR,
 };

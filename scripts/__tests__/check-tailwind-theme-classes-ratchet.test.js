@@ -27,7 +27,6 @@ const { execFileSync } = require('child_process');
 
 const { readThemes } = require('../lib/contrast/css-token-themes');
 const { evaluate, RATCHETED_STATES } = require('../lib/contrast/theme-pairing');
-const { evaluateTranslucent } = require('../lib/contrast/runtime-matrix');
 const { buildClassPalette, auditBuckets, resolveScope } = require('../lib/contrast/tailwind-class-palette');
 const { loadTailwindColors, resolveClassToken, lookupColor } = require('../lib/contrast/tailwind-class-resolver');
 const { parseColorUtility, splitVariants, splitOpacity } = require('../lib/contrast/tailwind-classes');
@@ -92,13 +91,19 @@ function miniRepo(moduleSource, { css = MINI_CSS, registry = MINI_REGISTRY } = {
   return root;
 }
 
-/** Τρέχει ΟΛΗ τη μηχανή (κρίση + ημιδιαφανή + extra) πάνω σε μίνι-repo. */
+/**
+ * Τρέχει ΟΛΗ τη μηχανή πάνω σε μίνι-repo.
+ *
+ * ⚠️ Το `evaluate` περιλαμβάνει πλέον **και** τους ημιδιαφανείς (Κατηγορία Ε,
+ * 2026-08-08). Μέχρι τότε εδώ υπήρχε δεύτερη κλήση `evaluateTranslucent` — αν την
+ * ξαναπροσθέσεις, κάθε ημιδιαφανής μετριέται **δύο φορές**.
+ */
 function run(moduleSource, opts) {
   const root = miniRepo(moduleSource, opts);
   const themes = readThemes(root);
   const palette = buildClassPalette(root, themes);
   const result = evaluate(palette, themes);
-  const findings = [...result.findings, ...evaluateTranslucent(palette, themes), ...palette.extraFindings];
+  const findings = [...result.findings, ...palette.extraFindings];
   return { palette, findings, ledger: auditBuckets(palette) };
 }
 

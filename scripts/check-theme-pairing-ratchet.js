@@ -27,23 +27,38 @@
  * συνδυασμούς που **δεν συμβαίνουν** (λευκό σε λευκή κάρτα). Κρατήθηκε το «**αλλάζει η
  * ετυμηγορία ανάμεσα στα δύο θέματα;**», που δεν χρειάζεται να μαντέψει τι συμβαίνει.
  *
- * ΤΕΣΣΕΡΙΣ ΟΜΑΔΕΣ, ΕΝΝΕΑ ΡΗΤΕΣ ΚΑΤΑΣΤΑΣΕΙΣ — καμία σιωπηλή απόρριψη:
+ * ΠΕΝΤΕ ΟΜΑΔΕΣ, ΕΝΤΕΚΑ ΡΗΤΕΣ ΚΑΤΑΣΤΑΣΕΙΣ — καμία σιωπηλή απόρριψη:
  *   Α. δηλωμένα ζεύγη (`severity.*` = {background, icon, border} μαζί)
  *        `declared-pair-fail` / `declared-pair-ok`
  *   Β. θεματικά ζεύγη (`borderColors.*` = {light, dark})
  *        `themed-side-invisible` / `themed-side-ok`
  *   Γ. μονοθεματικό κείμενο/περίγραμμα  `theme-flip` / `both-fail` / `both-pass`
  *   Γ2. καρφωμένη επιφάνεια             `surface-theme-flip` / `surface-both-fail` / `surface-both-pass`
+ *   Ε. **ημιδιαφανές `rgba()`** — συνθεμένο πάνω σε κάθε επιφάνεια των δύο θεμάτων
+ *        `translucent-invisible` / `translucent-ok`
  *   Δ. primitives (`colors.blue.500`) — **δηλώνονται εκτός εμβέλειας**, δεν κρίνονται:
  *      ένα σκαλί παλέτας δεν ισχυρίζεται ρόλο, οπότε δεν μπορεί να είναι σπασμένο.
+ *
+ * 🔑 Η ΟΜΑΔΑ Ε ΕΚΛΕΙΣΕ ΤΟ ΔΗΛΩΜΕΝΟ ΟΡΙΟ `Κ5` (2026-08-08). Το `rgba()` ανατίθετο στο
+ * Στρώμα 2β «γιατί ο browser το λύνει» — αλλά ένα `rgba(0, 0, 0, 0.5)` **γραμμένο ως
+ * literal** δεν έχει τίποτα να λυθεί: είναι ήδη λυμένο. Αυτό που έλειπε δεν ήταν
+ * πληροφορία, ήταν **ερώτηση**. Μετρήθηκαν **11** τέτοιες δηλώσεις (επιφάνεια 8 ·
+ * περίγραμμα 3), ανάμεσά τους το **modal backdrop** — και το ερώτημα απαντιέται τώρα
+ * σε **κάθε commit** αντί για μια πύλη που θέλει dev server και browser.
  *
  * ΔΥΟ ΜΗΧΑΝΙΣΜΟΙ, ΟΧΙ ΕΝΑΣ:
  *   1. **RATCHET κατά ταυτότητα** στις παραβιάσεις — μόνο μειώνονται· η *ανταλλαγή*
  *      μιας παραβίασης με άλλη μπλοκάρει (`compareSets`, μάθημα του ADR-749).
- *   2. **ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ** σημασιολογικών ταυτοτήτων — **κάθε ΝΕΑ** δήλωση σταθερού hex
- *      σε σημασιολογικό ρόλο μπλοκάρει, **ακόμα κι αν σήμερα περνά και στα δύο θέματα**,
- *      γιατί θα σπάσει μόλις μετακινηθεί μια επιφάνεια. Είναι το μοντέλο του Atlassian
+ *   2. **ΚΛΕΙΣΤΟ ΣΥΝΟΛΟ** των δηλώσεων που κρίθηκαν — **κάθε ΝΕΑ** δήλωση σταθερού
+ *      χρώματος σε σημασιολογικό ρόλο (hex **ή** ημιδιαφανές `rgba()`) μπλοκάρει,
+ *      **ακόμα κι αν σήμερα περνά και στα δύο θέματα**, γιατί θα σπάσει μόλις
+ *      μετακινηθεί μια επιφάνεια. Είναι το μοντέλο του Atlassian
  *      (`no-unsafe-design-token-usage`): η μάζα ratchet-άρεται, το **νέο** απαγορεύεται.
+ *
+ * ΛΟΓΙΣΤΙΚΗ ΚΛΕΙΣΤΗ ΚΑΙ FAIL-CLOSED (`auditPalette`): κάθε δήλωση μπαίνει σε **έναν**
+ * ονομασμένο κάδο και το «ποιος κρίθηκε» απαντιέται **ονομαστικά**. Δύο κάδοι είναι
+ * δηλωμένα κενά με πλήθος **0** (`rgb()` με α=1 · `hsl()` literal) — γράφονται ακριβώς
+ * επειδή είναι μηδέν: ένα μηδέν που δεν δηλώνεται διαβάζεται ως «δεν υπάρχουν τέτοια».
  *
  * ⚠️ ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ — είναι «πόσες δηλώσεις είναι δομικά
  * ασύμβατες με δύο θέματα». Η θεραπεία είναι **μετανάστευση σε `hsl(var(--…))`** (το
@@ -70,9 +85,10 @@
 const fs = require('fs');
 const path = require('path');
 const { PROJECT_ROOT, runSetRatchetCli } = require('./lib/ratchet-baseline');
-const { readTokenPalette, semanticEntries, TOKEN_MODULES_DIR } = require('./lib/contrast/ts-token-palette');
+const { readTokenPalette, TOKEN_MODULES_DIR } = require('./lib/contrast/ts-token-palette');
 const { readThemes, GLOBALS_CSS } = require('./lib/contrast/css-token-themes');
 const { evaluate, RATCHETED_STATES } = require('./lib/contrast/theme-pairing');
+const { auditPalette } = require('./lib/contrast/palette-ledger');
 
 function baselineFile() {
   return process.env.THEME_PAIRING_BASELINE_FILE
@@ -86,22 +102,45 @@ function baselineFile() {
  */
 const violationId = (f) => `${f.state}::${f.id}`;
 
-/** Το κλειστό σύνολο: κάθε σημασιολογική δήλωση σταθερού hex, υγιής ή όχι. */
-const declarationIds = (palette) =>
-  semanticEntries(palette).map((e) => `${e.file}::${e.path}`).sort();
+/**
+ * Το κλειστό σύνολο: **κάθε δήλωση που όντως κρίθηκε**, υγιής ή όχι — σταθερό hex *και*
+ * ημιδιαφανές `rgba()`.
+ *
+ * ⚠️ ΠΡΟΕΡΧΕΤΑΙ ΑΠΟ ΤΗ ΛΟΓΙΣΤΙΚΗ, ΟΧΙ ΑΠΟ ΞΕΧΩΡΙΣΤΟ ΦΙΛΤΡΟ. Μέχρι τις 2026-08-08 ήταν
+ * `semanticEntries(palette)`, δηλαδή ένα **δεύτερο** κατηγόρημα δίπλα σε αυτό που
+ * χρησιμοποιεί η κρίση. Όσο συνέπιπταν, κανείς δεν το πρόσεχε· τη στιγμή που η
+ * Κατηγορία Ε άρχισε να κρίνει `rgba()`, το κλειστό σύνολο θα έμενε πίσω **σιωπηλά** —
+ * δηλαδή μια νέα ημιδιαφανής δήλωση θα προσγειωνόταν χωρίς να μπλοκάρει, ενώ ο σκοπός
+ * του κλειστού συνόλου είναι ακριβώς αυτό.
+ */
+const declarationIds = (palette) => auditPalette(palette).judgedIds;
 
 function measure() {
   const palette = readTokenPalette(PROJECT_ROOT);
   const themes = readThemes(PROJECT_ROOT);
+  const ledger = auditPalette(palette);
+
+  /**
+   * FAIL-CLOSED ΣΤΗ ΛΟΓΙΣΤΙΚΗ (πρότυπο CHECK 3.42). Αν έστω μία δήλωση δεν μπήκε σε
+   * κάδο, η πύλη **σκάει** αντί να αναφέρει «καθαρό»: ένα άθροισμα που κλείνει χωρίς να
+   * ρωτά «ποιος κρίθηκε» επικυρώνει τον εαυτό του.
+   */
+  if (!ledger.balanced) {
+    throw new Error(
+      `η λογιστική ΔΕΝ κλείνει (${ledger.placed}/${ledger.total}) — σιωπηλή απόρριψη, fail-closed.`,
+    );
+  }
+
   const result = evaluate(palette, themes);
   const violations = result.findings.filter((f) => RATCHETED_STATES.includes(f.state));
   return {
     palette,
     themes,
     result,
+    ledger,
     violations,
     violationIds: violations.map(violationId).sort(),
-    declarations: declarationIds(palette),
+    declarations: ledger.judgedIds,
   };
 }
 
@@ -115,7 +154,8 @@ function buildPayload(m) {
     violation_count: m.violationIds.length,
     declaration_count: m.declarations.length,
     by_state: m.result.byState,
-    out_of_scope: m.result.outOfScope,
+    ledger: m.ledger.counts,
+    census: m.result.census,
     violations: m.violationIds,
     declarations: m.declarations,
   };
@@ -124,15 +164,22 @@ function buildPayload(m) {
 function printReport(m) {
   console.log(`CHECK 3.39 — θεματικό ζευγάρωμα (${TOKEN_MODULES_DIR} × ${GLOBALS_CSS})\n`);
   console.log(`  αρχεία token: ${m.palette.files.length}   δηλώσεις: ${m.palette.entries.length}`);
-  console.log(`  σημασιολογικές (κρίνονται): ${m.declarations.length}`);
+  console.log(`  κρίνονται: ${m.declarations.length}`);
   console.log(`  παραβιάσεις: ${m.violationIds.length}\n`);
-  console.log('  ανά κατάσταση:');
+
+  console.log(`  ΛΟΓΙΣΤΙΚΗ (${m.ledger.placed}/${m.ledger.total} — κλειστή):`);
+  for (const [k, n] of Object.entries(m.ledger.counts)) {
+    const mark = k.startsWith('judged') ? '⚖️ ' : '  ';
+    console.log(`    ${mark}${k.padEnd(22)} ${String(n).padStart(4)}  ${m.ledger.descriptions[k]}`);
+  }
+
+  console.log('\n  ανά κατάσταση:');
   for (const [state, n] of Object.entries(m.result.byState).sort()) {
     const mark = RATCHETED_STATES.includes(state) ? '🔴' : '✅';
     console.log(`    ${mark} ${state.padEnd(24)} ${n}`);
   }
   console.log('\n  εκτός εμβέλειας (δηλωμένο, ΔΕΝ κρίνεται):');
-  for (const [k, n] of Object.entries(m.result.outOfScope).sort()) {
+  for (const [k, n] of Object.entries(m.result.census).sort()) {
     console.log(`     · ${k.padEnd(24)} ${n}`);
   }
   console.log('\n  παραβιάσεις αναλυτικά:');
@@ -155,14 +202,16 @@ const DESCRIPTOR = {
   buildPayload,
   printReport,
   violationId,
-  labels: { violations: 'παραβιάσεις', declarations: 'σημασιολογικές δηλώσεις' },
+  labels: { violations: 'παραβιάσεις', declarations: 'δηλώσεις που κρίθηκαν' },
   messages: {
     worse: 'το θεματικό ζευγάρωμα χειροτέρεψε',
     newDeclLabel: 'ΝΕΑ ΜΟΝΟΘΕΜΑΤΙΚΗ ΔΗΛΩΣΗ',
     newDeclAdvice: [
-      'Ένα σταθερό hex δεν μπορεί να ισχύει και στα δύο θέματα. Ακόμα κι αν',
-      'σήμερα τυχαίνει να περνά, θα σπάσει μόλις μετακινηθεί μια επιφάνεια.',
+      'Ένα σταθερό χρώμα δεν μπορεί να ισχύει και στα δύο θέματα — ούτε σταθερό hex,',
+      'ούτε σταθερό rgba(). Ακόμα κι αν σήμερα τυχαίνει να περνά, θα σπάσει μόλις',
+      'μετακινηθεί μια επιφάνεια.',
       'Γράψε το όπως το `semanticColors` στο ίδιο αρχείο:  hsl(var(--token))',
+      'Για ημιδιαφάνεια πάνω σε token:                     hsl(var(--token) / 0.5)',
     ],
   },
   commands: {
