@@ -41,6 +41,11 @@ import {
   isCanvasLockedByTableSession,
   useTableCanvasLockdown,
 } from '../use-table-canvas-lockdown';
+// 🔴 ADR-768 — ο **δεύτερος** αναγνώστης του φύλακα: ο στόχος βαψίματος του πινέλου.
+import {
+  __resetTableFormatPaintTargetForTests,
+  setTableFormatPaintTarget,
+} from '../../../state/table-format-paint-target-store';
 import type { TableEntity } from '../../../types/table-entity';
 import type { ViewTransform } from '../../../rendering/types/Types';
 
@@ -134,12 +139,16 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
 
   beforeEach(() => {
     __resetTableCanvasLockdownForTests();
+    // 🔴 ADR-768 — ο στόχος βαψίματος είναι **έκτο** κριτήριο του `shouldBlock`: αν διέρρεε από
+    // test σε test, θα άφηνε την τρύπα ανοιχτή σε ολόκληρο το αρχείο, σιωπηλά.
+    __resetTableFormatPaintTargetForTests();
     entity = buildTableEntity({ x: 0, y: 0 }, {}, 'table-1', 'layer-0');
   });
 
   afterEach(() => {
     unmount?.();
     __resetTableCanvasLockdownForTests();
+    __resetTableFormatPaintTargetForTests();
   });
 
   describe('με ανοιχτή λειτουργία πίνακα', () => {
@@ -277,6 +286,60 @@ describe('🔴 ADR-739 §29 — ο καμβάς παραιτείται όσο ζ
         const nextBoundary = tableInsertControlScreenPoint(entity, 'column', 2);
         const midway = { x: (armed.x + nextBoundary.x) / 2, y: (armed.y + nextBoundary.y) / 2 };
         dispatchAt('mousedown', midway);
+        expect(seenByCanvas).toEqual([]);
+      });
+    });
+
+    /**
+     * 🔴 **ADR-768 Βήμα 5 — ΤΟ ΠΙΝΕΛΟ ΑΝΟΙΓΕΙ ΣΤΕΝΗ ΤΡΥΠΑ ΣΤΟ §29.**
+     *
+     * ## Το ελάττωμα που ΔΕΝ υπήρξε ποτέ στην οθόνη, επειδή μετρήθηκε πριν γραφτεί
+     * Ο φύλακας από πάνω ρωτά τη γεωμετρία **ΤΟΥ ΠΙΝΑΚΑ ΤΟΥ ΔΡΟΜΕΑ** και μόνο. Άρα το κλικ σε
+     * **δεύτερο** πίνακα δίνει `hit === null` ⇒ μπλοκάρεται ⇒ και επειδή αυτός ο ακροατής ζει
+     * στο `document` σε **σύλληψη** ενώ ο ακροατής του πινέλου ζει στο **δοχείο**, το
+     * `stopPropagation()` σημαίνει ότι ο ακροατής του πινέλου **δεν καλείται ποτέ**. Το
+     * cross-table βάψιμο ήταν **δομικά αδύνατο**, όχι απλώς άγραφο — ακριβώς το σχήμα του
+     * §40.8 («σωστός ζωγράφος + σωστό hit-test + άφταστο κουμπί»), μία στροφή πιο έξω.
+     *
+     * ## Η ερώτηση των anchors: **πόσο στενή είναι η τρύπα;**
+     * Ο κρίσιμος αριθμός δεν είναι «ανοίγει», είναι «ανοίγει **μόνο** όπου υπάρχει στόχος». Ένα
+     * σκέτο «το πινέλο είναι οπλισμένο» θα άφηνε το `mousedown` να φτάσει στον καμβά πάνω από
+     * **κενό σχέδιο** ⇒ lasso ⇒ `blur` ⇒ θάνατος συνεδρίας: έξοδος **κατά λάθος**, δηλαδή
+     * ακριβώς αυτό που το §29 ήρθε να καταργήσει. Το τρίτο anchor το κλειδώνει.
+     */
+    describe('🔴 ADR-768 — το οπλισμένο πινέλο βάφει και σε ΑΛΛΟΝ πίνακα', () => {
+      /** Ο στόχος γράφεται από τον ΕΝΑ γραφέα (hover)· εδώ δηλώνεται απευθείας, ως συμβόλαιο. */
+      function armPaintTargetElsewhere(): void {
+        setTableFormatPaintTarget({ entityId: 'other-table', rowId: 'r1', colId: 'c1' });
+      }
+
+      it('🔴 ✅ με ΓΡΑΜΜΕΝΟ στόχο, το `mousedown` ΕΞΩ από τον πίνακα του δρομέα ΦΤΑΝΕΙ', () => {
+        // Χωρίς αυτό, ο ακροατής του πινέλου (δοχείο) δεν καλείται ΠΟΤΕ για δεύτερο πίνακα.
+        armPaintTargetElsewhere();
+        dispatchAt('mousedown', outsidePoint(entity));
+        expect(seenByCanvas).toEqual(['mousedown']);
+      });
+
+      it('🔴 ⛔ το `mouseup` στο ΙΔΙΟ σημείο ΔΕΝ φτάνει — αλλιώς το βάψιμο αποεπιλέγει τον πίνακα', () => {
+        // Η ίδια ασυμμετρία με το ⊕ (§40.9): η επιλογή οντότητας γεννιέται στο `mouseup`
+        // (`mouse-handler-up.ts` → `onCanvasClick`) και τρέχει ΚΑΙ χωρίς προηγούμενο mousedown.
+        armPaintTargetElsewhere();
+        dispatchAt('mouseup', outsidePoint(entity));
+        expect(seenByCanvas).toEqual([]);
+      });
+
+      it('🔴 ⛔ ΧΩΡΙΣ στόχο η τρύπα είναι κλειστή — το κενό σχέδιο δεν σκοτώνει τη συνεδρία', () => {
+        // Ο στόχος γράφεται μόνο εκεί που ο δείκτης υπόσχεται βάψιμο. Πάνω από κενό σχέδιο
+        // είναι `null`, και το κλείδωμα οφείλει να κρατά ακέραιο.
+        dispatchAt('mousedown', outsidePoint(entity));
+        expect(seenByCanvas).toEqual([]);
+      });
+
+      it('⛔ ούτε `click` / `dblclick` / `contextmenu` — μόνο το πάτημα περνά', () => {
+        armPaintTargetElsewhere();
+        dispatchAt('click', outsidePoint(entity));
+        dispatchAt('dblclick', outsidePoint(entity));
+        dispatchAt('contextmenu', outsidePoint(entity), { button: 2 });
         expect(seenByCanvas).toEqual([]);
       });
     });

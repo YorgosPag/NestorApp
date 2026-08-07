@@ -51,7 +51,19 @@ import { useEffect, useRef, type RefObject } from 'react';
 // στιγμή του συμβάντος. Χωρίς αυτό, το effect θα ξαναέγραφε τον ακροατή σε κάθε αλλαγή
 // οντότητας — δηλαδή σε κάθε πάτημα πλήκτρου μέσα στον πίνακα.
 import { useEventCallback } from '@/hooks/useEventCallback';
-import { tableEventWorldPoint, tableIndicatorProbeAtWorld } from './table-cell-pointer-hit';
+import {
+  tableEventWorldPoint,
+  tableIndicatorProbeAtWorld,
+  tablePointerHitAtWorld,
+} from './table-cell-pointer-hit';
+// 🔴 ADR-768 Δ2/Δ3 — το **πέμπτο** κανάλι της ίδιας σάρωσης: πού βάφει το οπλισμένο πινέλο.
+import { isTableFormatPainterArmed } from '../../state/table-format-painter-store';
+import { tableFormatPaintRoleOf } from '../../bim/table/table-indicator-cursor-role';
+import {
+  clearTableFormatPaintTarget,
+  setTableFormatPaintTarget,
+  type TableFormatPaintTargetState,
+} from '../../state/table-format-paint-target-store';
 import {
   clearTableIndicatorHover,
   setTableIndicatorHover,
@@ -94,7 +106,7 @@ import {
 // η σάρωση θέσης δεν το ξέρει και δεν μπορεί να το μάθει (χρειάζεται ολόκληρο το σχέδιο).
 import { activeTableRangeTransferCursor } from './table-range-transfer-drag';
 import type { TableEntity } from '../../types/table-entity';
-import type { ViewTransform } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 
 /**
  * Ο **ένας** καθαρισμός και των δύο καναλιών, με **σταθερή** ταυτότητα.
@@ -123,7 +135,31 @@ const clearTableIndicatorFeedback = (): void => {
   // σημεία εξόδου το πήραν. Εδώ έχει και **βάρος**: ένα ξεχασμένο ⊖ θα άφηνε κόκκινη στήλη
   // βαμμένη σε πίνακα που δεν έχει πια χειριστήριο από πάνω του.
   clearTableDeleteControl();
+  // 🔴 ADR-768 Δ3 — **πέμπτο κανάλι, ίδιος καθαρισμός.** Η πρόβλεψη της κεφαλίδας κρατά και για
+  // το πέμπτο: ένα σημείο άλλαξε, και τα τέσσερα σημεία εξόδου το πήραν. Εδώ έχει το **μεγαλύτερο**
+  // βάρος: ένας ξεχασμένος στόχος βαψίματος αφήνει το κλείδωμα του §29 να δέχεται `mousedown` για
+  // κελί που δεν είναι πια κάτω από το χέρι — δηλαδή βάψιμο σε λάθος κελί, χωρίς κανένα ίχνος.
+  clearTableFormatPaintTarget();
 };
+
+/**
+ * 🔴 ADR-768 Δ3 — **ΠΟΙΟ ΚΕΛΙ ΘΑ ΒΑΨΕΙ ΤΟ ΠΑΤΗΜΑ**, από την ίδια σάρωση που έδωσε τον δείκτη.
+ *
+ * Ταυτότητες και όχι δείκτες ορίων: δες την κεφαλίδα του store. Η ερώτηση `where === 'cell'`
+ * είναι **δίχτυ** (N.7.2 #4) — ο πρωτεύων φρουρός είναι ο **ρόλος δείκτη**, που ο καλών έχει ήδη
+ * ελέγξει. Οι δύο δεν μπορούν να διαφωνήσουν: και οι δύο ρωτούν την ίδια γεωμετρία για το ίδιο
+ * σημείο, και η ερώτηση εδώ είναι η **γενικότερη** από τις δύο.
+ */
+function paintTargetAt(
+  entity: TableEntity,
+  world: Point2D,
+  viewScale: number,
+): TableFormatPaintTargetState | null {
+  const hit = tablePointerHitAtWorld(entity, world, viewScale);
+  return hit?.where === 'cell'
+    ? { entityId: entity.id, rowId: hit.cell.rowId, colId: hit.cell.colId }
+    : null;
+}
 
 export interface UseTableIndicatorHoverParams {
   /** Η **ζωντανή** οντότητα του δρομέα· `null` όταν ο πίνακας χάθηκε από κάτω του. */
@@ -138,13 +174,25 @@ export interface UseTableIndicatorHoverParams {
    * σκηνής πληρώνεται μόνο τη στιγμή που υπάρχει όντως επιλεγμένος πίνακας.
    */
   readonly resolveSelected: () => TableEntity | null;
+  /**
+   * 🔴 ADR-768 Βήμα 5 — ο πίνακας **κάτω από το χέρι**, όποιος κι αν είναι.
+   *
+   * Καλείται **μόνο** όσο το πινέλο μορφοποίησης είναι οπλισμένο, και ο λόγος είναι το κόστος: η
+   * απάντηση απαιτεί σάρωση σκηνής **και** υπολογισμό διάταξης ανά πίνακα, δηλαδή κάτι που δεν
+   * επιτρέπεται να πληρώνεται 60 φορές το δευτερόλεπτο ως μόνιμη συμπεριφορά.
+   *
+   * Γιατί υπάρχει καθόλου: το βάψιμο ταξιδεύει **από πίνακα σε πίνακα** (§2.2), οπότε ο πίνακας
+   * του δρομέα δεν είναι απάντηση στο «πού δείχνω». Χωρίς αυτό, ο δείκτης θα σιωπούσε πάνω από
+   * τον δεύτερο πίνακα ενώ το πάτημα θα έβαφε — η ακριβής παραβίαση που ο §31 απαγορεύει.
+   */
+  readonly resolvePaintTable: (world: Point2D, viewScale: number) => TableEntity | null;
   readonly containerRef: RefObject<HTMLDivElement | null>;
   readonly transformRef: RefObject<ViewTransform>;
 }
 
 /** Ανάβει την υποδιαίρεση ζώνης κάτω από το ποντίκι, όσο ζει η λειτουργία πίνακα. */
 export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): void {
-  const { entity, resolveSelected, containerRef, transformRef } = params;
+  const { entity, resolveSelected, resolvePaintTable, containerRef, transformRef } = params;
 
   /**
    * 🔴 §36 — **ΠΟΥ ΣΤΕΚΕΤΑΙ ΤΟ ΧΕΡΙ**, ώστε το `Ctrl` να μπορεί να ξαναρωτήσει χωρίς κίνηση.
@@ -187,9 +235,13 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     // 🔴 §40 — **ΠΟΙΟΣ ΠΙΝΑΚΑΣ, ΚΑΙ ΣΕ ΠΟΙΑ ΚΑΤΑΣΤΑΣΗ.** Ο δρομέας νικά πάντα: όσο υπάρχει,
     // ο χρήστης είναι **μέσα** στον πίνακα και ο επιλεγμένος είναι ο ίδιος ούτως ή άλλως. Ο
     // resolver τρέχει μόνο στο `else` — δες το σκεπτικό του prop για το γιατί δεν είναι τιμή.
-    const target: TableEntity | null = entity ?? resolveSelected();
+    const owned: TableEntity | null = entity ?? resolveSelected();
     const mode: TableInsertControlMode = entity ? 'table-mode' : 'selection';
-    if (!container || !target || !transform) {
+    // 🔴 ADR-768 — μία ανάγνωση store, πριν από κάθε γεωμετρία. Δες παρακάτω γιατί μπαίνει
+    // **στον φρουρό**: χωρίς αυτήν, ένα οπλισμένο πινέλο πάνω από **άλλον** πίνακα θα έβγαινε από
+    // εδώ με «κανένας πίνακας» και ο δείκτης θα σιωπούσε εκεί ακριβώς που το πάτημα βάφει.
+    const painting = isTableFormatPainterArmed();
+    if (!container || !transform || (!owned && !painting)) {
       noteCursorProbe('no-entity', null, null, event.clientX, event.clientY);
       clearTableIndicatorFeedback();
       return;
@@ -199,6 +251,21 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
     const world = tableEventWorldPoint(event, container, transform);
     if (!world) {
       noteCursorProbe('no-world', null, null, event.clientX, event.clientY);
+      clearTableIndicatorFeedback();
+      return;
+    }
+    // 🔴 ADR-768 Βήμα 5 — **ΤΟ ΥΠΟΚΕΙΜΕΝΟ ΑΛΛΑΖΕΙ ΟΣΟ ΤΟ ΠΙΝΕΛΟ ΕΙΝΑΙ ΟΠΛΙΣΜΕΝΟ.**
+    //
+    // Κανονικά η σάρωση αφορά τον πίνακα **του χρήστη** (δρομέας ή επιλογή). Με οπλισμένο πινέλο
+    // το ερώτημα αντιστρέφεται: ο χρήστης δεν κοιτά τον δικό του πίνακα, **στοχεύει** — και ο
+    // στόχος μπορεί να είναι οποιοσδήποτε (cross-table, §2.2). Ο δρομέας μένει εφεδρεία, ώστε το
+    // χέρι πάνω από κενό σχέδιο να μη χάνει τη λωρίδα του δικού του πίνακα.
+    //
+    // ⚠️ Η σάρωση σκηνής πληρώνεται **μόνο** εδώ, πίσω από το `painting`. Δες το prop.
+    const target: TableEntity | null =
+      (painting ? resolvePaintTable(world, transform.scale) : null) ?? owned;
+    if (!target) {
+      noteCursorProbe('no-entity', null, null, event.clientX, event.clientY);
       clearTableIndicatorFeedback();
       return;
     }
@@ -289,6 +356,21 @@ export function useTableIndicatorHover(params: UseTableIndicatorHoverParams): vo
       // `1` (§27.17): με τέσσερις στήλες μαρκαρισμένες σε πίνακα τεσσάρων, το ⊖ δεν υπάρχει.
       remove && removeTarget && canDeleteAxisTarget(target.model, removeTarget)
         ? { entityId: target.id, control: remove, target: removeTarget }
+        : null,
+    );
+    // 🔴 ADR-768 Δ2/Δ3 — **ΤΟ ΠΕΜΠΤΟ ΚΑΝΑΛΙ**: πού θα βάψει το πάτημα, αν γίνει τώρα.
+    //
+    // Ο φρουρός είναι ο **ρόλος δείκτη**, όχι δεύτερη γεωμετρική ερώτηση: ό,τι υπόσχεται η οθόνη
+    // είναι ό,τι εκτελεί το πάτημα (§31/§40.5). Γι' αυτό ρωτιέται η {@link tableFormatPaintRoleOf}
+    // πάνω στην **ίδια** απάντηση `cursor` που μόλις γράφτηκε — και όχι, λόγου χάρη, «είμαι μέσα
+    // στο πλέγμα;». Πάνω στη λαβή συμπλήρωσης, στο ⊕, στο ⊖, στις λωρίδες και στη γωνία ο ρόλος
+    // **δεν** είναι βαψίματος, άρα ο στόχος είναι `null` και το πάτημα ανήκει σε εκείνα.
+    //
+    // ⚠️ Το `null` όταν το πινέλο δεν είναι οπλισμένο **δεν** είναι προαιρετικό: αλλιώς το
+    // κλείδωμα του §29 θα άφηνε `mousedown` να περνά σε κάθε κελί, για πάντα.
+    setTableFormatPaintTarget(
+      painting && tableFormatPaintRoleOf(cursor) === 'format-paint'
+        ? paintTargetAt(target, world, transform.scale)
         : null,
     );
   });

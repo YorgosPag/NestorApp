@@ -21,8 +21,12 @@
  */
 
 import { isTableEntity } from '../../types/table-entity';
+// 🔴 ADR-768 — η **ΜΙΑ** ερώτηση «πού έπεσε αυτό;», η ίδια που ρωτούν ο pointer και το κλείδωμα.
+// Δεύτερη διατύπωσή της εδώ θα ήταν pixel όπου ο ένας βρίσκει κελί και ο άλλος όχι.
+import { tablePointerHitAtWorld } from './table-cell-pointer-hit';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
+import type { Point2D } from '../../rendering/types/Types';
 
 /** Η οντότητα πίνακα με αυτό το id, διαβασμένη **τη στιγμή της κλήσης**· `null` αν δεν υπάρχει. */
 export function resolveTableById(
@@ -50,4 +54,44 @@ export function resolveSelectedTable(
   const ids = getSelectedEntityIds();
   if (ids.length !== 1) return null;
   return resolveTableById(levelManager, ids[0]);
+}
+
+/**
+ * 🔴 ADR-768 Βήμα 5 — **ο πίνακας ΚΑΤΩ ΑΠΟ ΤΟ ΧΕΡΙ**, όποιος κι αν είναι· `null` αν το σημείο
+ * δεν πέφτει σε κελί κανενός.
+ *
+ * Η **τρίτη** ερώτηση ταυτότητας πίνακα, και η μόνη που δεν ξεκινά από ταυτότητα ή επιλογή αλλά
+ * από **σημείο**. Υπάρχει για μία χειρονομία: το πινέλο μορφοποίησης βάφει **από πίνακα σε
+ * πίνακα** (Excel μεταξύ φύλλων και βιβλίων· AutoCAD MATCHPROP μεταξύ σχεδίων· Revit Match Type
+ * μεταξύ όψεων), οπότε ο πίνακας του δρομέα **δεν** είναι απάντηση στο «πού βάφω».
+ *
+ * ## ⚠️ ΚΟΣΤΟΣ — γι' αυτό καλείται ΜΟΝΟ με οπλισμένο πινέλο
+ * Σαρώνει τις οντότητες του επιπέδου και για κάθε πίνακα πληρώνει έναν πλήρη υπολογισμό
+ * διάταξης (`tablePointerHitAtWorld`). Σε ακροατή `mousemove` που τρέχει ~60 φορές το
+ * δευτερόλεπτο αυτό θα ήταν απαράδεκτο ως **μόνιμη** συμπεριφορά· ο μοναδικός καλών το
+ * περιφράσσει ρητά πίσω από το `isTableFormatPainterArmed()`.
+ *
+ * ## Γιατί από το τέλος προς την αρχή
+ * Ο ζωγράφος περνά τις οντότητες με τη σειρά του πίνακα, άρα η **τελευταία** είναι από πάνω. Δύο
+ * πίνακες που επικαλύπτονται πρέπει να απαντούν όπως φαίνονται — αλλιώς ο χρήστης θα έβαφε
+ * εκείνον που είναι από κάτω, με αποτέλεσμα απολύτως έγκυρο και εντελώς λάθος.
+ *
+ * ⚠️ Δέχεται **μόνο** `where: 'cell'`. Ένα σημείο πάνω σε λωρίδα, διαχωριστικό, ⊕/⊖ ή γωνία
+ * **δεν** είναι στόχος βαψίματος (Δ2): εκεί ο δείκτης υπόσχεται άλλη πράξη, και η πράξη εκτελείται.
+ */
+export function resolveTableAtWorld(
+  levelManager: LevelManagerLike,
+  world: Point2D,
+  viewScale: number,
+): TableEntity | null {
+  const levelId = levelManager.currentLevelId;
+  const scene = levelId ? levelManager.getLevelScene(levelId) : null;
+  const entities = scene?.entities;
+  if (!entities) return null;
+  for (let index = entities.length - 1; index >= 0; index--) {
+    const entity = entities[index];
+    if (!isTableEntity(entity)) continue;
+    if (tablePointerHitAtWorld(entity, world, viewScale)?.where === 'cell') return entity;
+  }
+  return null;
 }

@@ -34,6 +34,30 @@ export const ESC_PRIORITY = {
   BLOCKING_CONFIRM: 1050,
 
   /**
+   * P1025 — **Το Πινέλο Μορφοποίησης πίνακα, οπλισμένο** (ADR-768 Βήμα 5, Α6).
+   *
+   * ## 🔴 ΓΙΑΤΙ ΠΑΝΩ ΑΠΟ ΤΟ {@link MODAL_DIALOG} — ΜΕΤΡΗΘΗΚΕ, ΔΕΝ ΕΠΙΛΕΧΘΗΚΕ
+   * Ο inline editor του κελιού γράφεται στο **P1000** με `canHandle: () => !settledRef.current`
+   * (`ui/inline-editor/use-inline-editor-keys.ts:82-88`), που είναι `true` σε **ολόκληρη** τη
+   * συνεδρία — και το `<TableCellEditorOverlay>` μοντάρεται όποτε **υπάρχει δρομέας**, όχι μόνο
+   * σε γραφή (`CanvasSectionOverlays.tsx:145`). Σε κατάσταση `nav` το `handleCancel` του καλεί
+   * **`closeTableCellCursor()`**, δηλαδή κλείνει ολόκληρη τη συνεδρία.
+   *
+   * ⇒ **Κάθε σκαλί ≤1000 είναι δομικά σκιασμένο**: ένα `Esc` με οπλισμένο πινέλο θα έκλεινε τον
+   * πίνακα αντί να σβήσει το πινέλο — και ο χρήστης θα έχανε τη θέση του για να ακυρώσει ένα
+   * εργαλείο. Ίδιο σχήμα με τις μετρήσεις `GROUP_EXIT` 275→408 του ADR-364 §10.14.
+   *
+   * ## Γιατί ΟΧΙ πάνω από το {@link BLOCKING_CONFIRM}
+   * Εκεί ζουν οι ερωτήσεις που **φυλάνε δεδομένα από σβήσιμο** (§36.22). Ένα εργαλείο δεν
+   * προηγείται μιας ερώτησης «θα χαθούν δεδομένα;» — το πινέλο περιμένει τη σειρά του.
+   *
+   * ⚠️ Ο handler ΟΦΕΙΛΕΙ να είναι inert (`canHandle: () => isTableFormatPainterArmed()`) και να
+   * δηλώνει `allowWhenEditable: true`: η εστίαση ανήκει στο `<textarea>` της συνεδρίας όση ώρα
+   * το πινέλο είναι οπλισμένο. Η **μία** εγγραφή ζει στο `use-table-format-painter-actions.ts`.
+   */
+  TABLE_FORMAT_PAINTER: 1025,
+
+  /**
    * P1000 — Hard-modal dialog / overlay above the canvas.
    *
    * Examples: TextEditorOverlay (editing a text/mtext entity), MirrorConfirmOverlay

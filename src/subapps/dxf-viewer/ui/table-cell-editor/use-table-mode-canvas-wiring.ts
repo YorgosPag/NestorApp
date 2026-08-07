@@ -25,7 +25,7 @@
 
 import { useCallback } from 'react';
 import type React from 'react';
-import { resolveSelectedTable } from './table-entity-lookup';
+import { resolveSelectedTable, resolveTableAtWorld } from './table-entity-lookup';
 // ADR-739 §29 — το δίδυμο του modal keyboard scope για το ποντίκι: όσο ζει η λειτουργία
 // πίνακα, ο καμβάς δεν επιλέγει, δεν σέρνει και δεν κάνει hover σε οντότητες.
 import { useTableCanvasLockdown } from './use-table-canvas-lockdown';
@@ -36,9 +36,11 @@ import { useTableIndicatorHover } from './use-table-indicator-hover';
 import { useTableInsertControlClick } from './use-table-insert-control-click';
 // 🔴 ADR-739 §42 — το ⊖ της διαγραφής: ίδια διαδρομή συμβάντος, άλλο store, άλλη πράξη.
 import { useTableDeleteControlClick } from './use-table-delete-control-click';
+// 🔴 ADR-768 Βήμα 5 — το **βάψιμο**: ίδια διαδρομή συμβάντος με ⊕/⊖, άλλο store, άλλη πράξη.
+import { useTableFormatPainterClick } from './use-table-format-painter-click';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
-import type { ViewTransform } from '../../rendering/types/Types';
+import type { Point2D, ViewTransform } from '../../rendering/types/Types';
 
 export interface UseTableModeCanvasWiringParams {
   /**
@@ -70,6 +72,21 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
   const resolveSelectedTableEntity = useCallback(
     () => resolveSelectedTable(levelManager, getSelectedEntityIds),
     [levelManager, getSelectedEntityIds],
+  );
+
+  /**
+   * 🔴 ADR-768 Βήμα 5 — ο πίνακας **κάτω από το χέρι**, όποιος κι αν είναι.
+   *
+   * Τρίτος resolver δίπλα στους δύο υπάρχοντες, και ο μόνος που ξεκινά από **σημείο** αντί από
+   * ταυτότητα ή επιλογή. Υπάρχει επειδή το πινέλο βάφει **από πίνακα σε πίνακα** (§2.2), οπότε
+   * «ο πίνακας του δρομέα» δεν είναι απάντηση στο «πού στοχεύω».
+   *
+   * ⚠️ Ο hover τον καλεί **μόνο** με οπλισμένο πινέλο: κοστίζει σάρωση σκηνής **και** υπολογισμό
+   * διάταξης ανά πίνακα, δηλαδή κάτι που δεν επιτρέπεται να πληρώνεται σε κάθε κίνηση ποντικιού.
+   */
+  const resolvePaintTable = useCallback(
+    (world: Point2D, viewScale: number) => resolveTableAtWorld(levelManager, world, viewScale),
+    [levelManager],
   );
 
   /**
@@ -151,6 +168,7 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
   useTableIndicatorHover({
     entity,
     resolveSelected: resolveSelectedTableEntity,
+    resolvePaintTable,
     containerRef,
     transformRef,
   });
@@ -180,6 +198,22 @@ export function useTableModeCanvasWiring(params: UseTableModeCanvasWiringParams)
    * Δηλαδή ο φρουρός που μετράει ήταν πάντα **δύο στρώσεις πιο κάτω**, στη γεωμετρία.
    */
   useTableDeleteControlClick({
+    containerRef,
+    levelManager,
+  });
+
+  /**
+   * 🔴 ADR-768 Βήμα 5 — το **βάψιμο**. Τρίτος καταναλωτής του `useTableArmedControlClick`, και ο
+   * πρώτος που δεν είναι «χειριστήριο»: το οπλισμένο πράγμα δεν είναι σχήμα πάνω στον πίνακα,
+   * είναι **εργαλείο**. Ο κοινός ακροατής δεν χρειάστηκε ούτε μία αλλαγή — το πινέλο απλώς γράφει
+   * τον στόχο του εκεί που γράφουν τον δικό τους το ⊕ και το ⊖ (πέμπτο κανάλι της ίδιας σάρωσης).
+   *
+   * ⚠️ Καμία συνθήκη προσάρτησης, ίδιος λόγος με τα δύο από πάνω (§40.9): ο φρουρός που μετράει
+   * είναι το `resolveArmed()`, που απαντά `null` όποτε δεν υπάρχει **και** οπλισμένο πινέλο
+   * **και** στόχος γραμμένος από τον hover — δύο συνθήκες που δεν μπορούν να ισχύσουν χωρίς
+   * ζωντανό πίνακα κάτω από το χέρι.
+   */
+  useTableFormatPainterClick({
     containerRef,
     levelManager,
   });
