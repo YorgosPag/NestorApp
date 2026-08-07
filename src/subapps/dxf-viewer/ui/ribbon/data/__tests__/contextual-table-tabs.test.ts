@@ -33,6 +33,8 @@ import {
   TABLE_FORMAT_RIBBON_KEYS,
   TABLE_PROPERTIES_RIBBON_KEYS,
   isTableFormatActionKey,
+  isTableFormatAlignKey,
+  isTableFormatNumberKey,
   isTableFormatToggleKey,
   isTablePropertiesActionKey,
 } from '../../hooks/bridge/table-format-command-keys';
@@ -122,10 +124,35 @@ describe('Καλωδίωση εντολών — καμία εντολή χωρί
     expect(orphans).toEqual([]);
   });
 
-  it('κάθε toggle ανήκει στον φύλακα μορφοποίησης', () => {
+  /**
+   * 🔴 **ΤΡΕΙΣ** οικογένειες toggle, όχι μία — και η επέκταση δεν είναι χαλάρωση.
+   *
+   * ⚠️ **Η άγκυρα ήταν ΚΟΚΚΙΝΗ από το §56 και κανείς δεν το είδε** (μετρήθηκε 2026-08-07):
+   * εκείνο πρόσθεσε **έξι** κουμπιά στοίχισης και **τρία** μορφής αριθμού ως `type: 'toggle'`,
+   * με **δικούς τους** φύλακες (`isTableFormatAlignKey` / `isTableFormatNumberKey`) — ρητή και
+   * σωστή σχεδίαση, τεκμηριωμένη στο `table-format-command-keys.ts`. Αυτό εδώ όμως ρωτούσε μόνο
+   * τον **έναν** από τους τρεις, οπότε και τα εννέα έβγαιναν «ορφανά».
+   *
+   * 🔑 Δεν το έπιασε κανείς επειδή η απόδειξη του §56 έτρεξε **άλλους τρεις φακέλους**
+   * (`table-format-toolbar`, `table-cell-editor/__tests__`, `bim/table/__tests__`) — αυτό το
+   * suite ζει στο `ui/ribbon/data/__tests__` και δεν το άγγιξε καμία εντολή. Είναι ακριβώς το
+   * σχήμα που το ADR-587 §6.1 ονομάζει «anchor χωρίς gate»: το δίχτυ υπήρχε, απλώς δεν το
+   * τράβηξε κανείς.
+   *
+   * Η ερώτηση που κάνει το test μένει **η ίδια** («κάθε toggle έχει παραλήπτη στον bridge») —
+   * αυτό που διορθώνεται είναι ότι ρωτούσε **λάθος** τους δύο από τους τρεις παραλήπτες.
+   */
+  it('κάθε toggle ανήκει σε ΕΝΑΝ από τους τρεις φύλακες μορφοποίησης', () => {
     const orphans = allButtons(CONTEXTUAL_TABLE_FORMAT_TAB)
       .filter((b) => b.type === 'toggle')
-      .filter((b) => !isTableFormatToggleKey(b.command.commandKey))
+      .filter((b) => {
+        const { commandKey } = b.command;
+        return !(
+          isTableFormatToggleKey(commandKey)
+          || isTableFormatAlignKey(commandKey)
+          || isTableFormatNumberKey(commandKey)
+        );
+      })
       .map((b) => b.command.id);
     expect(orphans).toEqual([]);
   });
@@ -150,15 +177,19 @@ describe('Καλωδίωση εντολών — καμία εντολή χωρί
       .filter((b) => b.type === 'widget')
       .map((b) => b.widgetId);
 
-    // Τα **πέντε** σύνθετα χειριστήρια: δύο χρώματα, συγχώνευση, περιγράμματα, και το
-    // **πινέλο μορφοποίησης** (ADR-768 Βήμα 5). Αν αυτό γίνει 0, το test θα περνούσε κενό ενώ
-    // η καρτέλα θα είχε χάσει τα widgets της.
+    // Τα **έξι** σύνθετα χειριστήρια: δύο χρώματα, συγχώνευση, περιγράμματα, το **πινέλο
+    // μορφοποίησης** (ADR-768 Βήμα 5) και η **«Επικόλληση»** (ADR-739 §57). Αν αυτό γίνει 0, το
+    // test θα περνούσε κενό ενώ η καρτέλα θα είχε χάσει τα widgets της.
     //
     // ⚠️ Το πινέλο μπήκε ως `widget` και **όχι** ως `type: 'toggle'` της κορδέλας, παρότι είναι
     // δίτιμο κουμπί: το `RibbonToggleState` είναι `boolean | null` (`null` = μεικτό) και δεν
     // χωρά την **τρίτη** κατάσταση («κλειδωμένο»), ούτε έχει πού να δείξει λουκέτο. Το widget
     // τυλίγει το **ίδιο** component με το mini toolbar, ποτέ αντίγραφό του.
-    expect(widgetIds).toHaveLength(5);
+    //
+    // ⚠️ §57 — η «Επικόλληση» μπήκε ως `widget` και **όχι** ως `type: 'split'` της κορδέλας για
+    // **δομικό** λόγο: το `RibbonSplitDropdown` ζωγραφίζει σε portal, που ο φύλακας συνεδρίας
+    // κελιού δεν αναγνωρίζει ⇒ το κλικ σε item θα εξαφάνιζε την ίδια την καρτέλα.
+    expect(widgetIds).toHaveLength(6);
 
     const unknown = widgetIds.filter((id) => renderRibbonWidget(id) === null);
     expect(unknown).toEqual([]);

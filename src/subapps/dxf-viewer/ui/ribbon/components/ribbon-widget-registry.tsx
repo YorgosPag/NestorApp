@@ -119,6 +119,7 @@ import {
   RibbonTableFillColorWidget,
   RibbonTableFormatPainterWidget,
   RibbonTableMergeWidget,
+  RibbonTablePasteWidget,
   RibbonTableTextColorWidget,
 } from './table/RibbonTableFormatWidgets';
 
@@ -151,6 +152,10 @@ const CORE_WIDGETS: Readonly<Record<string, WidgetFactory>> = {
   // `boolean | null` (`null` = μεικτό) και **δεν** χωρά το «κλειδωμένο», ούτε έχει πού να δείξει
   // λουκέτο. Το widget τυλίγει το **ίδιο** κουμπί με το mini toolbar.
   'table-format-painter': () => <RibbonTableFormatPainterWidget key="table-format-painter-widget" />,
+  // 🔴 ADR-739 §57 — split button («Επικόλληση Ειδική»). Widget και όχι `type: 'split'` της
+  // κορδέλας: εκείνο ζωγραφίζει το πτυσσόμενό του σε **portal**, που ο φύλακας συνεδρίας κελιού
+  // δεν αναγνωρίζει ⇒ το κλικ σε item θα έκλεινε τη συνεδρία και θα εξαφάνιζε την καρτέλα.
+  'table-paste': () => <RibbonTablePasteWidget key="table-paste-widget" />,
   'visual-style-select': () => <VisualStyleSelect key="visual-style-select-widget" />,
   'glass-quality-select': () => <GlassQualitySelect key="glass-quality-select-widget" />,
   'mesh-wire-mode-select': () => <MeshWireModeSelect key="mesh-wire-mode-select-widget" />,

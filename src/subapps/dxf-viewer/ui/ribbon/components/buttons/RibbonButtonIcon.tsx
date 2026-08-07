@@ -7,7 +7,7 @@
  */
 
 import React, { useSyncExternalStore } from 'react';
-import { AArrowDown, AArrowUp, BetweenHorizontalEnd, BetweenHorizontalStart, BetweenVerticalEnd, BetweenVerticalStart, SquareDashedMousePointer,
+import {
   Undo, Redo, Trash2, PanelRight, Eye, BarChart3, Grid3X3, Crop, Scissors, Lasso, Pentagon, FileImage, Upload, FolderUp, Wand2, Download, Crosshair, FlaskConical, Activity, Sparkles, Layers, Maximize2, Bold, Italic, Underline, Strikethrough, Ruler, MoveHorizontal, MoveDiagonal2, Triangle, CircleDot, Diameter, Spline, CircleSlash, MoveUpRight, Rows3, Equal, Palette, Check, Pencil, RotateCcw, RefreshCw, Settings, Type, Construction, DoorOpen, Columns3, SquareDashed, RectangleHorizontal, TableProperties, Boxes, FileDown, Thermometer, Flame, Droplet, ArrowUpToLine, ArrowDownToLine, Unlink2, Lightbulb, Fence, Server, Armchair, Users, Car, Trees, Split, Info, Plug, Printer, Frame, Merge, Group, Ungroup, Syringe, Stamp, History, LibraryBig, Waypoints, MapPin, Tag, Mountain, ShieldCheck, Cloud, Box,
   Link2, ImagePlus,
 } from 'lucide-react';
@@ -55,6 +55,10 @@ import { WallFromLinesIcon } from './WallFromLinesIcon';
 import { WallRegionInsideIcon } from './WallRegionInsideIcon';
 import { WallSingleIcon } from './WallSingleIcon';
 import { TableIconGlyph } from './table-icon-glyph';
+// 🔴 ADR-739 §52/§56/§57 — τα εικονίδια των contextual καρτελών πίνακα, σε δικό τους module
+// (N.7.1). ΣΗΜΕΙΩΣΗ: μαζί μετακόμισε και το `glyphSvg` — τα γλυφά του Excel είναι μέρος της
+// ίδιας ομάδας «Αριθμός», όχι γενικό βοηθητικό αυτού του αρχείου.
+import { resolveTableRibbonIcon } from './ribbon-icon-table';
 
 export type RibbonIconSize = 'large' | 'small';
 
@@ -441,25 +445,15 @@ export const RibbonButtonIcon: React.FC<RibbonButtonIconProps> = ({ icon, size }
     case 'boq-assign': return <Tag width={sizePx[size]} height={sizePx[size]} className={className} />;
     // ADR-686 Φ5 — «Αντιστοίχιση Υλικών» (εισαγόμενο μοντέλο → υλικά ανά κομμάτι, Revit Material Mapping).
     case 'material-map': return <Palette width={sizePx[size]} height={sizePx[size]} className={className} />;
-    // 🔴 ADR-739 §52 — οι δύο contextual καρτέλες πίνακα. Τα Β/Ι/Υ **δεν** επαναλαμβάνονται εδώ:
-    // χρησιμοποιούν αυτούσια τα υπάρχοντα `text-bold` / `text-italic` / `text-underline`, γιατί
-    // είναι η ίδια εντολή σε άλλο συμφραζόμενο — δύο γλυφές για «έντονα» θα ήταν δύο εικόνες
-    // που κάποτε αποκλίνουν.
-    case 'table-row-insert-above': return <BetweenHorizontalStart width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-row-insert-below': return <BetweenHorizontalEnd width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-col-insert-left': return <BetweenVerticalStart width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-col-insert-right': return <BetweenVerticalEnd width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-row-delete': return <Rows3 width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-col-delete': return <Columns3 width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-select-all': return <SquareDashedMousePointer width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-size-up': return <AArrowUp width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-size-down': return <AArrowDown width={sizePx[size]} height={sizePx[size]} className={className} />;
-    case 'table-reset-format': return <RotateCcw width={sizePx[size]} height={sizePx[size]} className={className} />;
-    // 🔴 ADR-767 Δ3 — «Ανανέωση»: ο πίνακας ξαναρωτά την πηγή του. `RefreshCw` (κυκλικό, με
-    // φορά) και **όχι** `RotateCcw` — εκείνο σημαίνει ήδη «επαναφορά μορφοποίησης» μία γραμμή
-    // πιο πάνω, και δύο εντολές του **ίδιου** πίνακα με το ίδιο εικονίδιο θα ήταν δύο κουμπιά
-    // που μοιάζουν ίδια και κάνουν άσχετα πράγματα.
-    case 'table-refresh-binding': return <RefreshCw width={sizePx[size]} height={sizePx[size]} className={className} />;
-    default: return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
+    // 🔴 ADR-739 §52/§56/§57 — ΟΛΑ τα εικονίδια των contextual καρτελών πίνακα ζουν σε
+    // δικό τους module (N.7.1). Επιστρέφει `null` αν το κλειδί δεν είναι δικό του, ώστε
+    // ένα άγνωστο κλειδί ΑΛΛΗΣ περιοχής να μη κρυφτεί πίσω από εικονίδιο που μοιάζει σωστό.
+    // ⚠️ Τα Β/Ι/Υ ΔΕΝ επαναλαμβάνονται εκεί: ο πίνακας χρησιμοποιεί αυτούσια τα
+    // `text-bold` / `text-italic` / `text-underline` — ίδια εντολή, άλλο συμφραζόμενο.
+    default: {
+      const tableIcon = resolveTableRibbonIcon(icon, size, className);
+      if (tableIcon) return tableIcon;
+      return inlineSvg(size, <circle cx="12" cy="12" r="2" />);
+    }
   }
 };

@@ -45,12 +45,26 @@ import {
   TABLE_FORMAT_TOGGLE_FIELD,
   TABLE_PROPERTIES_RIBBON_KEYS,
   isTableFormatActionKey,
+  isTableFormatAlignKey,
   isTableFormatComboboxKey,
+  isTableFormatNumberKey,
   isTableFormatToggleKey,
   isTablePropertiesActionKey,
   isTablePropertiesComboboxKey,
   isTablePropertiesVisibilityKey,
 } from './bridge/table-format-command-keys';
+// 🔴 ADR-739 §56 — στοίχιση / μορφή αριθμού / οικογένεια. Καθαρές συναρτήσεις πάνω στη θύρα:
+// δες την κεφαλίδα τους για το γιατί δεν ζουν εδώ μέσα.
+import {
+  isTableFontFamilyKey,
+  readTableAlignToggle,
+  readTableFontFamilyCombobox,
+  readTableNumberToggle,
+  writeTableClipboardCommand,
+  writeTableDecimalStep,
+  writeTableFontFamily,
+  writeTableFormatToggle,
+} from './bridge/table-format-field-routing';
 import type {
   RibbonComboboxState,
   RibbonToggleState,
@@ -104,6 +118,9 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
   const getComboboxState = (commandKey: string): RibbonComboboxState | null => {
     const port = getTableFormatPort();
     if (isTableFormatComboboxKey(commandKey)) {
+      // §56 — δύο combobox πλέον, **ίδια** σύμβαση για το `null` (μεικτό). Η οικογένεια έχει
+      // δική της λίστα τιμών· το ύψος όχι (οι επιλογές του ζουν στη δήλωση δεδομένων).
+      if (isTableFontFamilyKey(commandKey)) return readTableFontFamilyCombobox(port);
       const mm = port?.textHeightMm() ?? null;
       // `null` = μεικτό, όπως και στα toggles: η κορδέλα δείχνει κενό πεδίο αντί να διαλέξει
       // αυθαίρετα μία από τις τρεις τιμές μιας σειράς τίτλου/κεφαλίδας/δεδομένων.
@@ -126,6 +143,10 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
     const port = getTableFormatPort();
     if (!port) return;
     if (isTableFormatComboboxKey(commandKey)) {
+      if (isTableFontFamilyKey(commandKey)) {
+        writeTableFontFamily(port, value);
+        return;
+      }
       const mm = Number.parseFloat(value);
       // Μη αριθμός ή μη θετικό ⇒ **καμία** εγγραφή. Ύψος `0` δεν είναι μικρό κείμενο, είναι
       // αόρατο — και ο χρήστης δεν θα καταλάβαινε γιατί άδειασε ο πίνακας.
@@ -136,9 +157,17 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
     if (isTablePropertiesComboboxKey(commandKey)) port.structure.setStyleId(value);
   };
 
+  /**
+   * §56 — **τρεις οικογένειες διακοπτών, μία σύμβαση**: `null` = μεικτό, `false` = δεν ισχύει
+   * (ή δεν υπάρχει στόχος). Οι δύο νέες ζουν στο `table-format-field-routing.ts`, γιατί
+   * ρωτούν **άλλα** πεδία του μοντέλου με άλλες αλυσίδες κληρονομιάς.
+   */
   const getToggleState = (commandKey: string): RibbonToggleState => {
+    const port = getTableFormatPort();
+    if (isTableFormatAlignKey(commandKey)) return readTableAlignToggle(port, commandKey);
+    if (isTableFormatNumberKey(commandKey)) return readTableNumberToggle(port, commandKey);
     if (!isTableFormatToggleKey(commandKey)) return NULL_TOGGLE;
-    const state = getTableFormatPort()?.state(TABLE_FORMAT_TOGGLE_FIELD[commandKey]);
+    const state = port?.state(TABLE_FORMAT_TOGGLE_FIELD[commandKey]);
     if (!state) return NULL_TOGGLE;
     return state.mixed ? null : state.value === true;
   };
@@ -152,13 +181,28 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
    * κοινό με το mini toolbar. Δες `tableFormatCommands.toggle`.
    */
   const onToggle = (commandKey: string): void => {
+    const port = getTableFormatPort();
+    // §56 — στοίχιση / αριθμός πρώτα: επιστρέφουν `true` όταν το κλειδί ήταν δικό τους, ώστε η
+    // ερώτηση «δικό μου;» να απαντηθεί **μία** φορά και όχι ξανά από κάθε φύλακα εδώ.
+    if (writeTableFormatToggle(port, commandKey)) return;
     if (!isTableFormatToggleKey(commandKey)) return;
-    getTableFormatPort()?.toggle(TABLE_FORMAT_TOGGLE_FIELD[commandKey]);
+    port?.toggle(TABLE_FORMAT_TOGGLE_FIELD[commandKey]);
   };
 
   const onAction = (commandKey: string): void => {
     const port = getTableFormatPort();
     if (!port) return;
+    // 🔴 §56 — **ΠΡΩΤΑ τα δεκαδικά, και η σειρά είναι υποχρεωτική.** Τα δύο νέα κλειδιά ζουν
+    // μέσα στο `actions`, άρα το `isTableFormatActionKey` τα δέχεται — και ο κλάδος από κάτω
+    // στέλνει ό,τι δεν είναι «επαναφορά» στο `stepTextHeight`. Ανάποδα, το «.00→» θα **μεγάλωνε
+    // τη γραμματοσειρά** (`STEP_DIRECTION[decimalUp]` = `undefined` ⇒ βήμα προς το πουθενά),
+    // χωρίς κανένα σφάλμα και με το κουμπί να φαίνεται ότι δουλεύει.
+    if (writeTableDecimalStep(port, commandKey)) return;
+    // 🔴 §57 — **και το πρόχειρο πριν από τον γενικό κλάδο, για την ΙΔΙΑ αιτία.** Τα
+    // `cut`/`copy` ζουν κι αυτά μέσα στο `actions`, άρα ο `isTableFormatActionKey` τα δέχεται
+    // και θα κατέληγαν στο `stepTextHeight`: η «Αντιγραφή» θα μεγάλωνε τη γραμματοσειρά. Δεύτερη
+    // εμφάνιση της ίδιας παγίδας — δες `writeTableClipboardCommand`.
+    if (writeTableClipboardCommand(port, commandKey)) return;
     if (isTableFormatActionKey(commandKey)) {
       if (commandKey === TABLE_FORMAT_RIBBON_KEYS.actions.reset) port.reset();
       else port.stepTextHeight(STEP_DIRECTION[commandKey]);

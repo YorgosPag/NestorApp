@@ -50,6 +50,9 @@ import { TableAxisColorMenu } from '../../../components/table-format-toolbar/Tab
 import { TableBorderMenu } from '../../../components/table-format-toolbar/TableBorderMenu';
 import { TableFormatPainterButton } from '../../../components/table-format-toolbar/TableFormatPainterButton';
 import { TableMergeMenu } from '../../../components/table-format-toolbar/TableMergeMenu';
+// 🔴 ADR-739 §57 — η «Επικόλληση» ως split button **του mini toolbar** και όχι της κορδέλας:
+// δες την κεφαλίδα του component για το γιατί το `RibbonSplitButton` είναι δομικά αδύνατο εδώ.
+import { TablePasteMenu } from '../../../components/table-format-toolbar/TablePasteMenu';
 import type { RovingItemProps } from '../../../components/table-format-toolbar/use-roving-toolbar';
 import type { TableMergeState } from '../../../../bim/table/table-range-merge-ops';
 import type { TableAxisColorState } from '../../../components/table-format-toolbar/table-color-menu-selection';
@@ -148,6 +151,35 @@ export function RibbonTableMergeWidget(): React.ReactElement {
         const live = getTableFormatPort();
         const target = live?.bounds();
         if (live && target) void live.merge.applyCommand(target, commandId);
+      }}
+    />
+  );
+}
+
+/**
+ * 🔴 ADR-739 §57 — η **«Επικόλληση»** της ομάδας «Πρόχειρο».
+ *
+ * ⚠️ Τα όρια ξαναρωτιούνται **μέσα** στον χειριστή, ποτέ παγωμένα στο render — ίδιος κανόνας και
+ * ίδιος λόγος με τη συγχώνευση από πάνω (ADR-040 #2). Εδώ έχει επιπλέον δόντια: το πάνελ μπορεί
+ * να μείνει ανοιχτό όσο ο χρήστης μαρκάρει όψεις, και στο μεταξύ ένα `Ctrl+Z` να αλλάξει τον
+ * στόχο. Παγωμένα όρια θα σήμαιναν επικόλληση σε κελιά που δεν φωτίζουν πια.
+ *
+ * Το `void` στην κλήση είναι ρητό: η επικόλληση είναι **ασύγχρονη** (ανάγνωση προχείρου) και
+ * κάθε άρνησή της λέγεται από τον ίδιο τον εφαρμοστή — δεν υπάρχει `Promise` να περιμένει κανείς.
+ */
+export function RibbonTablePasteWidget(): React.ReactElement {
+  useTableFormatRevision();
+  const port = getTableFormatPort();
+  return (
+    <TablePasteMenu
+      rovingApply={INERT_ROVING}
+      rovingMenu={INERT_ROVING}
+      // Χωρίς θύρα ⇒ σβηστό. Η καρτέλα ζει ένα καρέ μετά το κλείσιμο του δρομέα (§52 παγίδα 3).
+      canPaste={port !== null && port.bounds() !== null && port.clipboard.canPaste()}
+      onPaste={(request) => {
+        const live = getTableFormatPort();
+        const target = live?.bounds();
+        if (live && target) void live.clipboard.pasteAs(target, request);
       }}
     />
   );

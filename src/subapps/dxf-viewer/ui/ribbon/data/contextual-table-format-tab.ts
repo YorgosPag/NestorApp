@@ -6,6 +6,20 @@
  * επιλογή της οντότητας και **μένει** — αυτή προστίθεται δίπλα της. Ακριβώς όπως η κορδέλα
  * του Excel: το φύλλο δεν χάνει τις καρτέλες του επειδή μπήκες σε κελί, αποκτά μία ακόμη.
  *
+ * ## 🔴 §56 — Η ΟΜΑΔΟΠΟΙΗΣΗ ΕΙΝΑΙ ΤΟΥ EXCEL, ΟΧΙ ΔΙΚΗ ΜΑΣ
+ * ```
+ *   Γραμματοσειρά:  [οικογένεια ▾][μέγεθος ▾] A↑ A↓ │ B I U  περιγράμματα▾ γέμισμα▾ χρώμα▾
+ *   Στοίχιση:       πάνω μέση κάτω │ αριστερά κέντρο δεξιά  συγχώνευση▾
+ *   Αριθμός:        λογιστική % 000 │ .0← .00→
+ * ```
+ * Δύο χειριστήρια **μετακόμισαν** και η μετακόμιση είναι όλη η ουσία του §56:
+ * · τα **περιγράμματα** ήταν σε ομάδα «Κελιά» — στο Excel ζουν στη **Γραμματοσειρά**·
+ * · η **συγχώνευση** ήταν δίπλα τους — στο Excel είναι η τελευταία θέση της **Στοίχισης**,
+ *   γιατί **είναι** εντολή στοίχισης («Συγχώνευση και στοίχιση στο κέντρο»).
+ *
+ * Η ομάδα «Κελιά» έπαψε να υπάρχει: ήταν δικό μας δοχείο για ό,τι δεν είχε ακόμη σπίτι, και
+ * κρατούσε μαζί δύο ερωτήσεις που το Excel χωρίζει — «πώς πλαισιώνεται» και «πού κάθεται».
+ *
  * ## 🔴 ΓΙΑΤΙ ΚΑΘΕ PANEL ΔΗΛΩΝΕΙ `keepsTableCellSession`
  * Χωρίς αυτό, το κλικ στο «Β» **κλείνει τον δρομέα** — και μαζί του εξαφανίζεται η ίδια η
  * καρτέλα που μόλις πάτησες: ο φύλακας `useTableCellSessionBlur` βλέπει την εστίαση να φεύγει
@@ -18,20 +32,25 @@
  *    components, που ήδη μεταφράζουν από το `dxf-viewer` namespace (`table.borders.*`,
  *    `table.merge.*`). Δεύτερος κατάλογος κλειδιών θα απέκλινε στην πρώτη αλλαγή ετικέτας.
  *
- * ## Φάσεις (απόφαση ιδιοκτήτη, 2026-08-06)
- * **Φ1 = ό,τι υπάρχει ήδη** (Β/Ι/Υ, χρώματα, μέγεθος, merge, borders). Στοίχιση + οικογένεια
- * γραμματοσειράς είναι **Φ2**· μορφή αριθμού **Φ3**. Μία τη φορά — και καμία δεν μπαίνει εδώ
- * πριν υπάρχει η πράξη της, γιατί ένα κουμπί χωρίς πράξη είναι υπόσχεση που δεν τηρείται
- * (§52: «δεν έλειπε κουμπί, έλειπε η πράξη»).
+ * ## Φάσεις (απόφαση ιδιοκτήτη 2026-08-06, αναθεωρημένη 2026-08-07)
+ * **Φ1 = ό,τι υπήρχε ήδη** (Β/Ι/Υ, χρώματα, μέγεθος, merge, borders) — έκλεισε.
+ * **Φ2 = §56**: οικογένεια γραμματοσειράς · στοίχιση · μορφή αριθμού. Και τα τρία είχαν ήδη
+ * **μοντέλο, γραφέα και ανάγνωση** από το §55 — έλειπε μόνο η επιφάνεια.
+ * Μένουν, με σειρά που όρισε ο ιδιοκτήτης: ομάδα **«Πρόχειρο»** (αποκοπή/αντιγραφή/επικόλληση,
+ * όπου μετακομίζει και το πινέλο), και τελευταία η **αναδίπλωση κειμένου** — η μόνη που
+ * απαιτεί νέα μηχανή αντί για νέο κουμπί (αλλάζει ύψος γραμμής, άρα γεωμετρία οντότητας).
  *
  * @see ui/ribbon/data/contextual-table-tab.ts — η πρώτη μισή του σύνθετου trigger
  * @see ui/ribbon/hooks/useRibbonTableFormatBridge.ts — ο bridge
- * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §52
+ * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §52, §56
  */
 
 import type { RibbonTab } from '../types/ribbon-types';
 import { TABLE_FORMAT_RIBBON_KEYS } from '../hooks/bridge/table-format-command-keys';
 import { TABLE_TEXT_HEIGHT_SCALE_MM } from '../../../bim/table/table-text-height-scale';
+import { TABLE_FORMAT_CLIPBOARD_PANEL } from './contextual-table-format-clipboard-panel';
+import { TABLE_FORMAT_ALIGN_PANEL } from './contextual-table-format-align-panel';
+import { TABLE_FORMAT_NUMBER_PANEL } from './contextual-table-format-number-panel';
 
 export const TABLE_FORMAT_CONTEXTUAL_TRIGGER = 'table-cell-active';
 
@@ -73,21 +92,9 @@ const FILL_COLOR_WIDGET_COMMAND = {
   ...WIDGET_NO_COMMAND,
 };
 
-const MERGE_WIDGET_COMMAND = {
-  id: 'tableFormat.merge',
-  labelKey: 'ribbon.commands.tableFormat.merge',
-  ...WIDGET_NO_COMMAND,
-};
-
 const BORDERS_WIDGET_COMMAND = {
   id: 'tableFormat.borders',
   labelKey: 'ribbon.commands.tableFormat.borders',
-  ...WIDGET_NO_COMMAND,
-};
-
-const FORMAT_PAINTER_WIDGET_COMMAND = {
-  id: 'tableFormat.formatPainter',
-  labelKey: 'ribbon.commands.tableFormat.formatPainter',
   ...WIDGET_NO_COMMAND,
 };
 
@@ -100,6 +107,9 @@ export const CONTEXTUAL_TABLE_FORMAT_TAB: RibbonTab = {
   // «Ιδιότητες Πίνακα» είναι ήδη ενεργή όταν εμφανίζεται αυτή. Δες το σχόλιο του πεδίου.
   autoActivateOnAppear: true,
   panels: [
+    // 🔴 §57 — **πρώτη**, όπως στο Excel. Δες την κεφαλίδα της για το γιατί η θέση είναι μνήμη
+    // χεριού και όχι αισθητική.
+    TABLE_FORMAT_CLIPBOARD_PANEL,
     {
       id: 'table-format-font',
       labelKey: 'ribbon.panels.tableFont',
@@ -108,47 +118,19 @@ export const CONTEXTUAL_TABLE_FORMAT_TAB: RibbonTab = {
         {
           isInFlyout: false,
           buttons: [
+            // 🔴 §56 — **η οικογένεια, πρώτη θέση**, όπως στο Excel. Οι επιλογές της είναι
+            // δυναμικές (έρχονται από τη σκηνή μέσω του bridge) — γι' αυτό καμία `options` εδώ:
+            // μια στατική λίστα θα ήταν δεύτερη απάντηση στο «ποιες γραμματοσειρές υπάρχουν».
             {
-              type: 'toggle',
+              type: 'combobox',
               size: 'small',
               command: {
-                id: 'tableFormat.bold',
-                labelKey: 'ribbon.commands.tableFormat.bold',
-                icon: 'text-bold',
-                commandKey: TABLE_FORMAT_RIBBON_KEYS.toggles.bold,
+                id: 'tableFormat.fontFamily',
+                labelKey: 'ribbon.commands.tableFormat.fontFamily',
+                commandKey: TABLE_FORMAT_RIBBON_KEYS.fontFamily,
+                comboboxWidthPx: 148,
               },
             },
-            {
-              type: 'toggle',
-              size: 'small',
-              command: {
-                id: 'tableFormat.italic',
-                labelKey: 'ribbon.commands.tableFormat.italic',
-                icon: 'text-italic',
-                commandKey: TABLE_FORMAT_RIBBON_KEYS.toggles.italic,
-              },
-            },
-            {
-              type: 'toggle',
-              size: 'small',
-              command: {
-                id: 'tableFormat.underline',
-                labelKey: 'ribbon.commands.tableFormat.underline',
-                icon: 'text-underline',
-                commandKey: TABLE_FORMAT_RIBBON_KEYS.toggles.underline,
-              },
-            },
-            // Τα δύο χρώματα είναι **widgets** και όχι κουμπιά κορδέλας: το καθένα είναι split
-            // button με παλέτα, «Αυτόματο», «χρώματα του σχεδίου» και διάλογο true-color — ένα
-            // ολόκληρο χειριστήριο που ήδη υπάρχει (`TableAxisColorMenu`). Ξαναγράψιμό του ως
-            // ribbon combobox θα ήταν το τρίτο αντίγραφο της ίδιας παλέτας.
-            { type: 'widget', size: 'small', widgetId: 'table-text-color', command: TEXT_COLOR_WIDGET_COMMAND },
-            { type: 'widget', size: 'small', widgetId: 'table-fill-color', command: FILL_COLOR_WIDGET_COMMAND },
-          ],
-        },
-        {
-          isInFlyout: false,
-          buttons: [
             {
               type: 'combobox',
               size: 'small',
@@ -186,19 +168,57 @@ export const CONTEXTUAL_TABLE_FORMAT_TAB: RibbonTab = {
                 action: TABLE_FORMAT_RIBBON_KEYS.actions.sizeDown,
               },
             },
-            // 🔴 ADR-768 Βήμα 5 — **«αντίγραψε μορφή» ακριβώς πριν από «καθάρισε μορφή»**: το
-            // ζευγάρι του Excel Home tab, όπου το Format Painter και το Clear Formats απαντούν
-            // στην ίδια ερώτηση από τις δύο πλευρές. Widget και όχι κουμπί κορδέλας — δες το
-            // μητρώο για το γιατί το `RibbonToggleState` δεν χωρά το «κλειδωμένο».
-            //
-            // ⚠️ Είναι **η μόνιμη** επιφάνεια του πινέλου: το mini toolbar ζει σε μενού δεξιού
-            // κλικ που κλείνει με το πρώτο βάψιμο. Δες `RibbonTableFormatPainterWidget`.
+          ],
+        },
+        {
+          isInFlyout: false,
+          buttons: [
             {
-              type: 'widget',
+              type: 'toggle',
               size: 'small',
-              widgetId: 'table-format-painter',
-              command: FORMAT_PAINTER_WIDGET_COMMAND,
+              command: {
+                id: 'tableFormat.bold',
+                labelKey: 'ribbon.commands.tableFormat.bold',
+                icon: 'text-bold',
+                commandKey: TABLE_FORMAT_RIBBON_KEYS.toggles.bold,
+              },
             },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'tableFormat.italic',
+                labelKey: 'ribbon.commands.tableFormat.italic',
+                icon: 'text-italic',
+                commandKey: TABLE_FORMAT_RIBBON_KEYS.toggles.italic,
+              },
+            },
+            {
+              type: 'toggle',
+              size: 'small',
+              command: {
+                id: 'tableFormat.underline',
+                labelKey: 'ribbon.commands.tableFormat.underline',
+                icon: 'text-underline',
+                commandKey: TABLE_FORMAT_RIBBON_KEYS.toggles.underline,
+              },
+            },
+            // 🔴 §56 — τα **περιγράμματα** μετακόμισαν εδώ από την πρώην ομάδα «Κελιά»: στο
+            // Excel είναι η τέταρτη θέση της σειράς 2 της «Γραμματοσειράς», ανάμεσα στο «Υ» και
+            // στο γέμισμα. Ίδιο widget, άλλη ομάδα — καμία αλλαγή στη συμπεριφορά του.
+            { type: 'widget', size: 'small', widgetId: 'table-borders', command: BORDERS_WIDGET_COMMAND },
+            // Τα δύο χρώματα είναι **widgets** και όχι κουμπιά κορδέλας: το καθένα είναι split
+            // button με παλέτα, «Αυτόματο», «χρώματα του σχεδίου» και διάλογο true-color — ένα
+            // ολόκληρο χειριστήριο που ήδη υπάρχει (`TableAxisColorMenu`). Ξαναγράψιμό του ως
+            // ribbon combobox θα ήταν το τρίτο αντίγραφο της ίδιας παλέτας.
+            { type: 'widget', size: 'small', widgetId: 'table-fill-color', command: FILL_COLOR_WIDGET_COMMAND },
+            { type: 'widget', size: 'small', widgetId: 'table-text-color', command: TEXT_COLOR_WIDGET_COMMAND },
+            // ✅ §57 — **το πινέλο ΜΕΤΑΚΟΜΙΣΕ** στην ομάδα «Πρόχειρο», όπου ζει και στο Excel.
+            // Η προσωρινότητα της θέσης του εδώ ήταν δηλωμένη από το §56· ο λόγος της μετακόμισης
+            // είναι σημασιολογικός και ζει στην κεφαλίδα του `contextual-table-format-clipboard-panel.ts`.
+            //
+            // ⚠️ Η «Επαναφορά μορφοποίησης» από κάτω **μένει** εδώ: στο Excel ζει στο
+            // «Επεξεργασία → Απαλοιφή», ομάδα που δεν υπάρχει ακόμη. Δηλωμένη απόκλιση.
             {
               type: 'simple',
               size: 'small',
@@ -214,19 +234,7 @@ export const CONTEXTUAL_TABLE_FORMAT_TAB: RibbonTab = {
         },
       ],
     },
-    {
-      id: 'table-format-cells',
-      labelKey: 'ribbon.panels.tableCells',
-      keepsTableCellSession: true,
-      rows: [
-        {
-          isInFlyout: false,
-          buttons: [
-            { type: 'widget', size: 'small', widgetId: 'table-merge', command: MERGE_WIDGET_COMMAND },
-            { type: 'widget', size: 'small', widgetId: 'table-borders', command: BORDERS_WIDGET_COMMAND },
-          ],
-        },
-      ],
-    },
+    TABLE_FORMAT_ALIGN_PANEL,
+    TABLE_FORMAT_NUMBER_PANEL,
   ],
 };

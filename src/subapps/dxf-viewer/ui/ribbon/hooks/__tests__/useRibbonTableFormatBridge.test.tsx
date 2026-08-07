@@ -30,6 +30,7 @@ import {
   type TableFormatPort,
 } from '../../../table-cell-editor/table-format-port';
 import type { TableFormatState } from '../../../../bim/table/table-cell-style-scan';
+import type { TableCellAlign } from '../../../../types/table';
 import { getTableStyleSnapshot } from '../../../../bim/table/table-style-registry';
 import { resolveStyleNameLabel } from '../../../../systems/style-naming/style-name-label';
 
@@ -62,6 +63,12 @@ function fakePort(
     setField: record('setField'),
     stepTextHeight: record('stepTextHeight'),
     textHeightMm: () => null,
+    // 🔴 ADR-739 §56 — τα δύο νέα μέλη με **ουδέτερες** προεπιλογές, όχι `undefined`. Το
+    // `as TableFormatPort` παρακάτω θα δεχόταν και την απουσία τους· τότε όμως μια κλήση σε
+    // αυτά θα έσκαγε ως `TypeError` αντί να απαντήσει, δηλαδή ακριβώς το «σιωπηλό undefined»
+    // που η κεφαλίδα αυτού του fake υπόσχεται ότι δεν επιτρέπει.
+    numberFormat: () => ({ current: null, explicit: false }),
+    fontNames: () => [],
     reset: record('reset'),
     canReset: () => false,
     borders: {} as TableFormatPort['borders'],
@@ -83,6 +90,16 @@ function fakePort(
       check: record('check'),
       ...bindingOverrides,
     },
+    // 🔴 ADR-739 §57 — το πρόχειρο, με **καταγραφή** και όχι ουδέτερο no-op: το κρίσιμο test
+    // εδώ είναι ότι η «Αντιγραφή» καλεί `copy` και **όχι** `stepTextHeight` (η παγίδα των
+    // `actions`), και μια σιωπηλή προεπιλογή θα έκανε τη διαφορά αόρατη.
+    clipboard: {
+      canPaste: () => true,
+      copy: async (...args: unknown[]) => { record('copy')(...args); },
+      cut: async (...args: unknown[]) => { record('cut')(...args); },
+      paste: async (...args: unknown[]) => { record('paste')(...args); },
+      pasteAs: async (...args: unknown[]) => { record('pasteAs')(...args); },
+    } as unknown as TableFormatPort['clipboard'],
     ...overrides,
   } as TableFormatPort;
 
@@ -184,6 +201,214 @@ describe('useRibbonTableFormatBridge — μορφοποίηση', () => {
       api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.reset);
     });
     expect(calls).toEqual([['stepTextHeight', 1], ['stepTextHeight', -1], ['reset']]);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🔴 ADR-739 §56 — στοίχιση · μορφή αριθμού · οικογένεια γραμματοσειράς
+// ──────────────────────────────────────────────────────────────────────────────
+
+const alignState = (
+  value: TableCellAlign | undefined,
+  mixed: boolean,
+): TableFormatState<TableCellAlign> => ({ value, mixed, overridden: true });
+
+/** Θύρα με **στόχο** — ο φύλακας `scope()` της μορφής αριθμού απαιτεί να μην είναι `null`. */
+function portWithScope(overrides: Partial<TableFormatPort> = {}) {
+  return fakePort({ scope: () => ({}) as never, ...overrides });
+}
+
+describe('useRibbonTableFormatBridge §56 — στοίχιση', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  it('🔴 ΤΟ ΠΑΤΗΜΑ ΑΛΛΑΖΕΙ ΜΟΝΟ ΤΟ ΜΙΣΟ — η κάθετη θέση ΕΠΙΒΙΩΝΕΙ', () => {
+    // Κελί στοιχισμένο **πάνω-δεξιά**. Το «αριστερά» οφείλει να δώσει `TL`, όχι `ML`: ο χρήστης
+    // ζήτησε οριζόντια αλλαγή και δεν είπε τίποτα για την κάθετη. Είναι όλος ο λόγος που ο
+    // κανόνας ζει στο `table-align-ops.ts` αντί για έξι σταθερές στην κορδέλα.
+    const { port, calls } = fakePort({ state: (() => alignState('TR', false)) as TableFormatPort['state'] });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.align.left, true); });
+    expect(calls).toEqual([['setField', 'align', 'TL']]);
+  });
+
+  it('🔴 και αντίστροφα: η κάθετη αλλαγή κρατά την ΟΡΙΖΟΝΤΙΑ θέση', () => {
+    const { port, calls } = fakePort({ state: (() => alignState('TR', false)) as TableFormatPort['state'] });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.align.bottom, true); });
+    expect(calls).toEqual([['setField', 'align', 'BR']]);
+  });
+
+  it('μεικτός στόχος ⇒ ΚΑΝΕΝΑ κουμπί πατημένο (`null`), και η εγγραφή ξεκινά από τη βάση', () => {
+    const { port, calls } = fakePort({ state: (() => alignState(undefined, true)) as TableFormatPort['state'] });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.left)).toBeNull();
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.top)).toBeNull();
+    // Δεν υπάρχει «άλλο μισό» να κρατηθεί ⇒ βάση `ML` (η δηλωμένη, αποδεκτή ισοπέδωση).
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.align.center, true); });
+    expect(calls).toEqual([['setField', 'align', 'MC']]);
+  });
+
+  it('πατημένο είναι ΜΟΝΟ το κουμπί που ισχύει — σε καθέναν από τους δύο άξονες', () => {
+    setTableFormatPort(fakePort({ state: (() => alignState('BC', false)) as TableFormatPort['state'] }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.center)).toBe(true);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.left)).toBe(false);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.bottom)).toBe(true);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.top)).toBe(false);
+  });
+});
+
+describe('useRibbonTableFormatBridge §57 — πρόχειρο', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  const TARGET = { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 };
+
+  /**
+   * 🔴 **Η ΙΔΙΑ ΠΑΓΙΔΑ, ΔΕΥΤΕΡΗ ΦΟΡΑ** — γι' αυτό η άγκυρα είναι ρητή και όχι «καλύπτεται».
+   *
+   * Τα `cut`/`copy` ζουν κι αυτά μέσα στο `TABLE_FORMAT_RIBBON_KEYS.actions`, ακριβώς όπως τα
+   * δεκαδικά του §56. Χωρίς την προτεραιότητα του `writeTableClipboardCommand`, η **«Αντιγραφή»
+   * θα μεγάλωνε τη γραμματοσειρά** (`STEP_DIRECTION['…copy']` = `undefined` ⇒ βήμα προς το
+   * πουθενά) — χωρίς κανένα σφάλμα, με το κουμπί να φαίνεται ότι δουλεύει.
+   */
+  it('🔴 Η ΑΝΤΙΓΡΑΦΗ ΔΕΝ ΠΕΦΤΕΙ ΣΤΟ `stepTextHeight` — η σειρά των κλάδων είναι ο μηχανισμός', () => {
+    const { port, calls } = fakePort({ bounds: () => TARGET });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.copy); });
+    expect(calls).toEqual([['copy', TARGET]]);
+    expect(calls.some(([name]) => name === 'stepTextHeight')).toBe(false);
+  });
+
+  it('🔴 και η ΑΠΟΚΟΠΗ — δεύτερο κλειδί, ίδιος κίνδυνος', () => {
+    const { port, calls } = fakePort({ bounds: () => TARGET });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.cut); });
+    expect(calls).toEqual([['cut', TARGET]]);
+    expect(calls.some(([name]) => name === 'stepTextHeight')).toBe(false);
+  });
+
+  it('χωρίς στόχο ⇒ ΚΑΜΙΑ πράξη (και καμία εξαίρεση) — η καρτέλα ζει ένα καρέ μετά τον δρομέα', () => {
+    const { port, calls } = fakePort({ bounds: () => null });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.copy); });
+    expect(calls).toEqual([]);
+  });
+});
+
+describe('useRibbonTableFormatBridge §56 — μορφή αριθμού', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  it('🔴 ΤΑ ΔΕΚΑΔΙΚΑ ΔΕΝ ΠΕΦΤΟΥΝ ΣΤΟ `stepTextHeight` — η σειρά των κλάδων είναι ο μηχανισμός', () => {
+    // Τα δύο κλειδιά ζουν μέσα στο `actions`, άρα ο φύλακας `isTableFormatActionKey` τα δέχεται.
+    // Χωρίς την προτεραιότητα του §56, το «.00→» θα καλούσε `stepTextHeight(undefined)` —
+    // δηλαδή θα **μεγάλωνε τη γραμματοσειρά** αντί να προσθέσει δεκαδικό, χωρίς κανένα σφάλμα.
+    const { port, calls } = portWithScope();
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.decimalUp); });
+    expect(calls).toEqual([['setField', 'numberFormat', { kind: 'decimal', decimals: 1 }]]);
+    expect(calls.some(([name]) => name === 'stepTextHeight')).toBe(false);
+  });
+
+  it('«%» σε κελί χωρίς μορφή ⇒ ποσοστό· ξαναπάτημα ⇒ ΞΕΠΑΤΗΜΑ (`undefined` = κληρονομιά)', () => {
+    const percent = { kind: 'percent', decimals: 0 } as const;
+    const { port, calls } = portWithScope({ numberFormat: () => ({ current: null, explicit: false }) });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.numberFormat.percent, true); });
+    expect(calls).toEqual([['setField', 'numberFormat', percent]]);
+
+    const active = portWithScope({ numberFormat: () => ({ current: percent, explicit: true }) });
+    setTableFormatPort(active.port);
+    const activeApi = bridge().current;
+    act(() => { activeApi.onToggle(TABLE_FORMAT_RIBBON_KEYS.numberFormat.percent, false); });
+    expect(active.calls).toEqual([['setField', 'numberFormat', undefined]]);
+  });
+
+  it('🔴 ΧΩΡΙΣ ΣΤΟΧΟ ⇒ `false`, ΠΟΤΕ `null` — η κορδέλα ζει και μετά το κλείσιμο του δρομέα', () => {
+    // Το `EMPTY_TABLE_NUMBER_FORMAT_STATE` κωδικοποιεί το «χωρίς στόχο» ως `current: null`,
+    // δηλαδή την ΙΔΙΑ τιμή με το «ανάμεικτο». Στο mini toolbar είναι ακίνδυνο (δεν αποδίδεται
+    // καθόλου χωρίς στόχο)· εδώ, χωρίς τον φύλακα `scope()`, τα τρία κουμπιά θα δήλωναν
+    // «τα κελιά διαφωνούν» για επιλογή που δεν υπάρχει.
+    setTableFormatPort(fakePort({ scope: () => null }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.numberFormat.percent)).toBe(false);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.numberFormat.accounting)).toBe(false);
+
+    // Με στόχο, το ίδιο `current: null` σημαίνει πλέον πραγματικά «ανάμεικτο».
+    setTableFormatPort(portWithScope().port);
+    expect(bridge().current.getToggleState(TABLE_FORMAT_RIBBON_KEYS.numberFormat.percent)).toBeNull();
+  });
+
+  it('πατημένο δείχνει το είδος που ΙΣΧΥΕΙ, ακόμη κι αν το κληρονομεί από τη στήλη', () => {
+    setTableFormatPort(portWithScope({
+      numberFormat: () => ({ current: { kind: 'currency', decimals: 2 }, explicit: false }),
+    }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.numberFormat.accounting)).toBe(true);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.numberFormat.percent)).toBe(false);
+    // Το νόμισμα ομαδοποιεί εξ ορισμού (`grouping !== false`) — το κουμπί λέει τι ΒΛΕΠΕΙ ο χρήστης.
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.numberFormat.grouping)).toBe(true);
+  });
+});
+
+describe('useRibbonTableFormatBridge §56 — οικογένεια γραμματοσειράς', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  it('«Αυτόματη» πρώτη στη λίστα· τα ονόματα περνούν ΩΜΑ (`isLiteralLabel`)', () => {
+    setTableFormatPort(fakePort({
+      fontNames: () => ['Arial', 'ISOCPEUR'],
+      state: (() => ({ value: 'Arial', mixed: false, overridden: true })) as TableFormatPort['state'],
+    }).port);
+    const state = bridge().current.getComboboxState(TABLE_FORMAT_RIBBON_KEYS.fontFamily);
+    expect(state?.value).toBe('Arial');
+    expect(state?.options).toEqual([
+      { value: '', labelKey: 'ribbon.commands.tableFormat.automaticFont' },
+      { value: 'Arial', labelKey: 'Arial', isLiteralLabel: true },
+      { value: 'ISOCPEUR', labelKey: 'ISOCPEUR', isLiteralLabel: true },
+    ]);
+  });
+
+  it('κληρονομεί ⇒ η τιμή είναι `\'\'` (η «Αυτόματη» επιλεγμένη)· μεικτό ⇒ `null` (κενό πεδίο)', () => {
+    setTableFormatPort(fakePort({
+      state: (() => ({ value: undefined, mixed: false, overridden: false })) as TableFormatPort['state'],
+    }).port);
+    expect(bridge().current.getComboboxState(TABLE_FORMAT_RIBBON_KEYS.fontFamily)?.value).toBe('');
+
+    setTableFormatPort(fakePort({
+      state: (() => ({ value: undefined, mixed: true, overridden: false })) as TableFormatPort['state'],
+    }).port);
+    expect(bridge().current.getComboboxState(TABLE_FORMAT_RIBBON_KEYS.fontFamily)?.value).toBeNull();
+  });
+
+  it('🔴 η «Αυτόματη» ΣΒΗΝΕΙ το πεδίο (`undefined`), δεν γράφει κενό όνομα', () => {
+    const { port, calls } = fakePort();
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onComboboxChange(TABLE_FORMAT_RIBBON_KEYS.fontFamily, ''); });
+    expect(calls).toEqual([['setField', 'fontFamily', undefined]]);
+
+    act(() => { api.onComboboxChange(TABLE_FORMAT_RIBBON_KEYS.fontFamily, 'ISOCPEUR'); });
+    expect(calls).toEqual([
+      ['setField', 'fontFamily', undefined],
+      ['setField', 'fontFamily', 'ISOCPEUR'],
+    ]);
+  });
+
+  it('🔴 το ύψος κειμένου ΔΕΝ παρασύρεται από τον νέο κλάδο της οικογένειας', () => {
+    // Τα δύο combobox μοιράζονται πλέον τον ίδιο φύλακα (`isTableFormatComboboxKey`). Αν ο
+    // εσωτερικός διαχωρισμός έσπαγε, το «2.5» θα γραφόταν ως **όνομα γραμματοσειράς**.
+    const { port, calls } = fakePort();
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onComboboxChange(TABLE_FORMAT_RIBBON_KEYS.textHeight, '2.5'); });
+    expect(calls).toEqual([['setField', 'textHeightMm', 2.5]]);
   });
 });
 
