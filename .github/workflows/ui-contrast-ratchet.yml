@@ -285,12 +285,17 @@ jobs:
       #     άγκυρα δεν κλείδωνε τι ζωγραφίζεται (το ίδιο κενό με τη Φ.1).
       # Και αυτή χρειάζεται το `fetch-depth: 0`: η ομάδα Π τραβά με `git show 1cafeb6a:` τον
       # ΠΡΑΓΜΑΤΙΚΟ κώδικα της σιωπηλής παράδοσης και απαιτεί να τον ΜΠΛΟΚΑΡΕΙ η πύλη.
-      - name: 🧪 Mutation suite — CHECK 3.45 (28 tests) + άγκυρες (16 + 6)
+      # Η τρίτη άγκυρα (ADR-771 Φ.4) κλειδώνει τη ΜΕΖΟΥΡΑ, όχι το κατώφλι: το σύνορο
+      # πολικότητας σε σταθερές (#757575/#767676), απορρίπτοντας ρητά CIE L* και APCA, και ότι
+      # το μελάνι κελιού ΔΕΝ εξαρτάται από μέγεθος/βάρος. Τρέχει εδώ γιατί το Layer 1 είναι
+      # σκανδαλισμένο: μια αλλαγή μεζούρας μπορεί να έρθει από αρχείο που κανείς δεν στάδιοποίησε.
+      - name: 🧪 Mutation suite — CHECK 3.45 (28 tests) + άγκυρες (16 + 6 + 13)
         run: >
           pnpm exec jest
           scripts/__tests__/check-contrast-promise-reachability.test.js
           src/subapps/dxf-viewer/config/__tests__/ink-verdict.test.ts
           src/subapps/dxf-viewer/bim/renderers/__tests__/wall-contrast-casing.test.ts
+          src/subapps/dxf-viewer/config/__tests__/ink-polarity-doctrine.test.ts
 
       # ⚠️ Και αυτή χρειάζεται το `fetch-depth: 0`: η ομάδα Π τραβά με `git show eff100ba:`
       # το ΠΡΑΓΜΑΤΙΚΟ `design-system/tokens/colors.ts` και απαιτεί να βγει το μετρημένο
