@@ -163,6 +163,16 @@ const ciTierTriggers = allFiles.filter(
 if (!process.env.SKIP_CI_TIER_COVERAGE && ciTierTriggers.length > 0)
   addThread('3.37', 'CI gate tier coverage', 'scripts/check-ci-gate-tiers.js');
 
+// CHECK 3.38 (ADR-770) — «διαβάζεται»; Στο ΠΡΟΕΠΙΛΕΓΜΕΝΟ (σκοτεινό) θέμα το `--primary`
+// λύνεται σε `217 33% 17%`, ΤΑΥΤΟΣΗΜΟ με το `--card`: το `text-primary` αποτυγχάνει σε
+// 23/23 επιφάνειες, τέσσερις στο 1,00:1 (ADR-759 §4.12.2). Κανένα υπάρχον gate δεν το
+// έβλεπε — το 3.32 μετρά μόνο παλέτα γραφημάτων, το a11y ratchet ρωτά αν ΥΠΑΡΧΕΙ test,
+// ο Tailwind δεν έχει λόγο για μια συμβολοσειρά. Έτσι έφτασαν οι 424, με όλες τις
+// πύλες πράσινες. Layer 1 = ΜΟΝΟ τα staged (~50-150ms)· το πλήρες δέντρο (2,7s) είναι
+// Layer 1b στο CI. ⚠️ Το Layer 1 ΔΕΝ ξαναταξινομεί μη-staged αρχεία — δηλωμένο όριο.
+if (!process.env.SKIP_TEXT_PRIMARY_RATCHET && srcTsFiles.length > 0)
+  addThread('3.38', 'UI contrast ratchet', 'scripts/check-text-primary-ratchet.js', srcTsFiles);
+
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);
 

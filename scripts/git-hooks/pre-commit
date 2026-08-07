@@ -612,6 +612,34 @@ register_area "Table Formula Library (ADR-739 §49)" \
     "src/subapps/dxf-viewer/bim/table/__tests__/formula-library-.*\.test\.ts" \
     "npx jest --testPathPatterns='formula-library-' --verbose"
 
+# ─── Theme token hygiene (ADR-759 §4.12.3 + ADR-770) ───────────────────────────
+# WHY THIS AREA EXISTS AT ALL: the anchors it runs were written on 2026-08-07 and
+# NOTHING ran them. Per ADR-587 §6.1 an anchor without a gate is a comment — the
+# exact failure this repo has paid for with 11 red tests sitting on main for six
+# commits. So the anchors get teeth here.
+#
+# What it protects, and why static tooling could not see any of it:
+#   · `--primary` used as INK. In the default (dark) theme it equals `--card`
+#     byte-for-byte ⇒ 1,00:1. A class is a string; no compiler has an opinion.
+#   · hex comments in globals.css that disagree with their own HSL — 7 of 27 were
+#     wrong, two of them SWAPPED with each other.
+#   · a comment certifying "WCAG AA ≥4.5:1" over three tokens that measure
+#     4,28 / 3,01 / 4,45. A FALSE anchor is worse than none: it stops the enquiry.
+#   · an inline `color` from the static JS palette outranking the correct class.
+#
+# Triggers are the files that can reintroduce each of those, not a broad glob.
+register_area "Theme Token Hygiene (ADR-770)" \
+    "^(src/app/globals\.css$|src/components/ui/form/(action-button-config\.ts|ToolbarButtons\.tsx)$|src/styles/design-tokens/modules/(foundations|canvas-utilities)\.ts$|src/subapps/dxf-viewer/ui/components/CentralizedAutoSaveStatus)" \
+    "scripts/__tests__/theme-token-hygiene\.test\.js" \
+    "npm run test:theme-token-hygiene"
+
+# The gate's OWN suite: if the ratchet engine or its shared detectors change, prove
+# the gate still fires. A gate nobody tests is a gate nobody can trust.
+register_area "UI Contrast Gate (CHECK 3.38)" \
+    "^(scripts/check-text-primary-ratchet\.js$|scripts/lib/contrast/|\.text-primary-baseline\.json$)" \
+    "scripts/__tests__/check-text-primary-ratchet\.test\.js" \
+    "npm run test:text-primary-ratchet"
+
 # ─── Canary: a convention-driven pattern that matches NOTHING must FAIL, not pass ───
 # Guards the exact trap this repo has paid for twice: a scan reports "clean" because its
 # file list was silently empty (bad path / renamed convention / moved folder). Without this,

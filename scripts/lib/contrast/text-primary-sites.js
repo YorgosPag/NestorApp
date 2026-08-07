@@ -102,10 +102,20 @@ function classify({ matched, suffix, context, fileText, overrideClasses }) {
   return 'theme-surface';
 }
 
-/** Scan `srcDir` and return one record per occurrence, with an explicit state on each. */
-function scanTextPrimarySites(srcDir, overrideClasses = []) {
+/**
+ * Scan an EXPLICIT list of files. Added for ADR-770 (CHECK 3.38), whose pre-commit
+ * layer only ever looks at the staged files — walking all ~14.7k sources costs 2,7s
+ * and would be paid on every commit for nothing. Same classification, same states;
+ * the only difference is who chooses the file list.
+ *
+ * ⚠️ A per-file scan CANNOT see cross-file effects (e.g. a newly added scoped
+ * override of `--primary` re-classifies files nobody staged). That is the declared
+ * limit of Layer 1 and the reason Layer 1b runs `--all` in CI.
+ */
+function scanFiles(files, overrideClasses = []) {
   const sites = [];
-  for (const file of walkSourceFiles(srcDir)) {
+  for (const file of files) {
+    if (!fs.existsSync(file)) continue; // staged-deleted file: nothing to classify
     const text = fs.readFileSync(file, 'utf8');
     if (!text.includes('text-primary')) continue;
     TEXT_PRIMARY_RE.lastIndex = 0;
@@ -128,4 +138,20 @@ function scanTextPrimarySites(srcDir, overrideClasses = []) {
   return sites;
 }
 
-module.exports = { scanTextPrimarySites, walkSourceFiles, TEXT_PRIMARY_RE, LIGHT_SURFACE_RE };
+/** Scan `srcDir` and return one record per occurrence, with an explicit state on each. */
+function scanTextPrimarySites(srcDir, overrideClasses = []) {
+  return scanFiles(walkSourceFiles(srcDir), overrideClasses);
+}
+
+module.exports = {
+  scanTextPrimarySites,
+  scanFiles,
+  walkSourceFiles,
+  // Exported for ADR-770: `glued-class.js` must answer "is this offset inside a
+  // comment?" the SAME way this scanner does. Two implementations of that question
+  // would disagree the first time someone writes an example inside a block comment —
+  // which is exactly how CHECK 3.36 grew a ghost namespace (ADR-752).
+  isInsideComment,
+  TEXT_PRIMARY_RE,
+  LIGHT_SURFACE_RE,
+};

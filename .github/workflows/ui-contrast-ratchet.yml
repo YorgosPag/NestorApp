@@ -1,0 +1,124 @@
+name: T2 🎨 UI Contrast Ratchet (ADR-770)
+
+# =============================================================================
+# Layer 1b of CHECK 3.38 — the FULL-TREE mirror of a deliberately partial hook.
+#
+# Why this exists
+# ---------------
+# The pre-commit layer scans ONLY the staged files. That is not a shortcut, it is
+# a cost decision: walking all ~14.700 sources costs ~2,7s and would be paid on
+# every commit for a question that almost never changes. But it leaves a real,
+# NAMED gap that only a full scan can close:
+#
+#   a new scoped override of `--primary` (like `.cut-plane-slider-accent`, the
+#   ADR-682 §5.5 fix) RE-CLASSIFIES files nobody staged. Layer 1 cannot see that,
+#   because it never looks at them.
+#
+# So this job runs `--all` unconditionally on every PR. If it ever disagrees with
+# the committed baseline, the baseline is stale — not the code.
+#
+# What is being ratcheted
+# -----------------------
+# ADR-759 §4.12.2 measured it: in the DEFAULT (dark) theme `--primary` resolves to
+# `217 33% 17%`, byte-identical to `--card`. So `text-primary` there is not hard to
+# read — it is ABSENT: 23/23 surface tokens fail, four of them at exactly 1,00:1.
+# 424 such uses exist across 229 files. This gate does not fix them; it stops the
+# bleeding while the real cure (Material-3 style `on-*` role pairs) is decided.
+#
+# ⚠️ THE COUNT IS NOT A HEALTH METRIC. It is "sites static analysis cannot prove
+# healthy". Read `.text-primary-baseline.json` before quoting any number.
+#
+# Why no existing gate covered this
+# ---------------------------------
+#   · CHECK 3.32 (ADR-710 §10) measures ONLY the categorical chart palette.
+#   · ADR-598 G11 a11y-coverage asks whether a test EXISTS, not what it asserts.
+#   · CHECK 3.26 (ADR-365) guards raw Tailwind scales — a different family, and
+#     it is about SSoT bypass, not contrast.
+#   · The compiler and Tailwind have no opinion about a string.
+# Every one of the 424 landed with all gates green.
+#
+# Pure Node.js, no dependencies, no build: the scripts only walk the filesystem
+# and do arithmetic on colours. That is what keeps this under a minute and makes
+# it immune to pnpm-lock churn — the same discipline as i18n-governance.yml.
+# =============================================================================
+
+on:
+  pull_request:
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/app/globals.css'
+      - 'scripts/check-text-primary-ratchet.js'
+      - 'scripts/lib/contrast/**'
+      - '.text-primary-baseline.json'
+      - '.github/workflows/ui-contrast-ratchet.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/**/*.ts'
+      - 'src/**/*.tsx'
+      - 'src/app/globals.css'
+      - 'scripts/check-text-primary-ratchet.js'
+      - 'scripts/lib/contrast/**'
+      - '.text-primary-baseline.json'
+
+concurrency:
+  group: ui-contrast-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  contrast:
+    name: 🎨 UI Contrast Ratchet
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # ⚠️ fetch-depth: 0 — ΟΧΙ προεπιλογή. Η ομάδα Π της σουίτας αποδεικνύει ότι η
+      # πύλη πιάνει, τραβώντας με `git show 4a1babe2:<αρχείο>` τον κώδικα που ΟΝΤΩΣ
+      # πέρασε σπασμένος. Με ρηχό checkout (depth 1) το αντικείμενο δεν υπάρχει και
+      # τρία tests γίνονται κόκκινα για λόγο άσχετο με την αντίθεση.
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ⚠️ pnpm, NOT npm. This repo has no package-lock.json at all and its
+      # `engines` field literally reads `"npm": "please-use-pnpm"` — an `npm ci`
+      # step here fails the job before it reaches a single check. Same block as
+      # a11y-ratchet.yml / deadcode-ratchet.yml; version pinned to packageManager.
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ── Dependency-free steps FIRST ──────────────────────────────────────────
+      # The gate itself is pure Node (filesystem walk + colour arithmetic). Running
+      # it before the install means a broken lockfile can never mask a real
+      # contrast regression — the cheap, load-bearing check always reports.
+
+      # The full scan Layer 1 deliberately skips. ~8s.
+      - name: 🔍 CHECK 3.38 — text-primary ratchet, FULL tree (ADR-770)
+        run: node scripts/check-text-primary-ratchet.js --all
+
+      # The gate's own mutation suite. A gate whose tests never run is a gate
+      # nobody can trust — ADR-587 §6.1, paid for with 11 red tests that sat on
+      # main for six commits because `unit.yml` was disabled and
+      # `coverage-ratchet.yml` was `continue-on-error`.
+      #
+      # ⚠️ jest is the ONLY reason this workflow installs anything. `--ignore-scripts`
+      # mirrors deadcode-ratchet.yml: no postinstall build is needed to run tests
+      # that never import the app.
+      - name: 📦 Install dependencies (jest only)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🧪 Mutation suite — CHECK 3.38 (19 tests)
+        run: pnpm exec jest scripts/__tests__/check-text-primary-ratchet.test.js
+
+      - name: 🧪 Theme token hygiene anchors (ADR-759 §4.12.3, 12 tests)
+        run: pnpm exec jest scripts/__tests__/theme-token-hygiene.test.js

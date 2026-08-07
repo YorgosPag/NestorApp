@@ -1,0 +1,700 @@
+{
+  "_meta": {
+    "check": "CHECK 3.38",
+    "adr": "ADR-770",
+    "description": "Στατική πύλη αντίθεσης UI — χρήσεις του `text-primary` που η στατική ανάλυση ΔΕΝ μπορεί να αποδείξει υγιείς, ανά αρχείο και ανά κατάσταση.",
+    "generatedBy": "node scripts/check-text-primary-ratchet.js --write-baseline",
+    "totalInvisible": 424,
+    "totalFiles": 229,
+    "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Ο σαρωτής αποδεικνύει βλάβη, όχι υγεία (το φόντο είναι ερώτημα προγόνων ⇒ browser). Η θεραπεία είναι ρόλοι on-* (Material 3), όχι μικρότερος αριθμός — ADR-759 §4.12.2. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό."
+  },
+  "files": {
+    "src/app/onboarding/organization/page.tsx": {
+      "theme-surface": 1
+    },
+    "src/app/pending-approval/page.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/account/SessionsList.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/admin/ai-inbox/ai-inbox-helpers.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/admin/audit-log/GlobalAuditLogView.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/admin/backup/RestorePreviewTable.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/admin/layout/AdminSidebar.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/admin/operator-inbox/proposal-review-card/ProposalActionContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/admin/pages/DatabaseUpdatePageContent.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/admin/pages/EnterpriseMigrationPageContent.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/admin/pages/PropertyStatusDemoPageContent.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/admin/pages/SearchBackfillPageContent.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/admin/role-management/components/AssignMemberDialog.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/admin/role-management/components/AuditTimeline.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/banking/IBANInput.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/dialogs/NameComboboxField.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/StorageForm/StorageFormHeader.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/StorageTab/index.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/building-management/StorageTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/tabs/AnalyticsTabContent/AnalyticsFinancial.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/building-management/tabs/AnalyticsTabContent/AnalyticsProgress.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/building-management/tabs/AnalyticsTabContent/KPICards.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/building-management/tabs/BuildingFloorplanTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/tabs/BuildingVerticalSetupForm.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/tabs/FloorsTabContent.tsx": {
+      "theme-surface": 4
+    },
+    "src/components/building-management/tabs/GeneralTabContent/Header.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/tabs/MeasurementsTabContent/BOQEditorFieldsets.tsx": {
+      "theme-surface": 4
+    },
+    "src/components/building-management/tabs/MeasurementsTabContent/BOQFloorGroup.tsx": {
+      "theme-surface": 5
+    },
+    "src/components/building-management/tabs/MeasurementsTabContent/BOQSummaryCards.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/building-management/tabs/parking-tab-config.ts": {
+      "theme-surface": 2
+    },
+    "src/components/building-management/tabs/ParkingTabContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/tabs/PropertiesTabContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/building-management/tabs/property-tab-constants.ts": {
+      "theme-surface": 2
+    },
+    "src/components/building-management/tabs/TimelineTabContent/dashboard/ScheduleVarianceTable.tsx": {
+      "theme-surface": 6
+    },
+    "src/components/building-management/tabs/TimelineTabContent/OverallProgressCard.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/communications/utils/formatters.ts": {
+      "theme-surface": 3
+    },
+    "src/components/compositions/ContactCard/ContactCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/compositions/NotificationCard/NotificationCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/compositions/PropertyCard/PropertyCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/compositions/TaskCard/TaskCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/compositions/ToolbarShowcase/ToolbarShowcase.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/compositions/UserCard/UserCard.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/ContactFormSections/contactRenderersTyped.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/contacts/dialogs/CommunicationImpactDialog.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/contacts/dialogs/ContactIdentityImpactDialog.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/contacts/dynamic/communication/config/CommunicationIcons.ts": {
+      "theme-surface": 3
+    },
+    "src/components/contacts/relationships/utils/relationship-types.ts": {
+      "theme-surface": 2
+    },
+    "src/components/contacts/tabs/ContactBankingTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/contacts/tabs/ContactHistoryTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/contacts/tabs/ImportFromRelationshipsBanner.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/contacts/tabs/procurement/ContactRfqInvitesSection.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/crm/inbox/attachment-parts.tsx": {
+      "file-light-bg": 1
+    },
+    "src/components/crm/inbox/ReactionBubbles.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/crm/inbox/ReplyComposer.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/crm/inbox/ThreadView.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/crm/pages/CrmHubPageContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/file-manager/BatchActionsBar.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/file-manager/company-file-tree-builders.tsx": {
+      "theme-surface": 4
+    },
+    "src/components/file-manager/company-file-tree-iso19650-builder.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/generic/config/photo-config/styling/colors.ts": {
+      "theme-surface": 2
+    },
+    "src/components/generic/photo-system/components/PhotosTabBase.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/generic/photo-system/config/photos-tab-config.ts": {
+      "theme-surface": 3
+    },
+    "src/components/navigation/components/MobileNavigation.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/navigation/config/navigation-entities/action-config.ts": {
+      "theme-surface": 4
+    },
+    "src/components/NotificationDrawer.enterprise.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/live-preview/parts/DocumentContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/live-preview/parts/DocumentHeader.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/live-preview/parts/TableOfContents.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/pdf/PDFExportButton/DocumentInfoCard.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/obligations/pdf/PDFExportButton/ExportProgressCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/structure-editor/parts/SectionCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/table-of-contents/parts/TocBody.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/table-of-contents/parts/TocItem.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/obligations/table-of-contents/utils/badges.ts": {
+      "theme-surface": 1
+    },
+    "src/components/procurement/hub/cards/PurchaseOrdersCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/procurement/SupplierComparisonTable.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/procurement/vendors/VendorDetail.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/projects/AllowedBuildingDataTab.tsx": {
+      "theme-surface": 7
+    },
+    "src/components/projects/ika/components/WorkerCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/projects/parking/ParkingColumnHeader.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/projects/PermitsTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/projects/procurement/ProjectProcurementTabs.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/projects/ProjectTimelineTab.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/projects/tabs/brokerage/BrokerageAgreementCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/projects/utils/parking-utils.ts": {
+      "theme-surface": 2
+    },
+    "src/components/properties/tabs/CustomerProfileSection.tsx": {
+      "theme-surface": 4
+    },
+    "src/components/reports/builder/AIQueryInput.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/reports/core/ReportKPIGrid.tsx": {
+      "theme-surface": 5
+    },
+    "src/components/reports/core/ReportPage.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/cards/PropertyHierarchyCard.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/sales/cards/SalesParkingCard.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/sales/cards/SalesPropertyListCard.tsx": {
+      "theme-surface": 5
+    },
+    "src/components/sales/cards/SalesStorageCard.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/sales/cards/TransactionChainCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/config/sales-colors.ts": {
+      "theme-surface": 11
+    },
+    "src/components/sales/legal/ContractCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/legal/ContractTimeline.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/sales/legal/professionals-card-dialogs.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/legal/ProfessionalsCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/pages/SalesHubPageContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/counterproposal-negotiation.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/CounterproposalScenarioRow.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/CounterproposalTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/DrawScheduleTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/DSCRStressTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/equity-waterfall-results.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/ForwardCurveChart.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/HedgingComparisonTable.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/monte-carlo-panels.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/sales/payments/financial-intelligence/MonteCarloTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/financial-intelligence/SensitivityTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/InstallmentSchedule.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/interest-cost-helpers.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/sales/payments/interest-cost-pricing-settings.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/payments/interest-cost-tabs.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/sales/payments/LoanStatusTimeline.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sales/shared/SalesGridCard.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/sales/tabs/PropertySummaryContent.tsx": {
+      "theme-surface": 6
+    },
+    "src/components/settings/company/OrgTreeView.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/addresses/AddressCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/addresses/AddressMap.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/addresses/editor/AddressEditor.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/shared/audit/activity-tab-config.ts": {
+      "theme-surface": 9
+    },
+    "src/components/shared/audit/audit-timeline-entry.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/AutoSaveStatusIndicator.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/customer-info/components/CustomerInfoCompact.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/customer-info/components/UnifiedCustomerCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/EscoOccupationPicker.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/EscoSkillPicker.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/shared/files/AuditLogPanel.tsx": {
+      "theme-surface": 11
+    },
+    "src/components/shared/files/FileInspector.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/shared/files/FilePathTree.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/files/FilesList.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/shared/files/hierarchical-entry-cards.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/files/inbox-view-helpers.ts": {
+      "theme-surface": 2
+    },
+    "src/components/shared/files/InboxView.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/shared/files/media/MediaCard.tsx": {
+      "element-light-bg": 1
+    },
+    "src/components/shared/files/media/VideoPlayer.tsx": {
+      "element-light-bg": 1
+    },
+    "src/components/shared/files/UploadEntryPointSelector.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/files/VersionHistory.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/pages/SharedContactPageContent.tsx": {
+      "theme-surface": 5
+    },
+    "src/components/shared/pages/SharedFilePageContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/shared/space-info/DescriptionNotesCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/sidebar/sidebar-menu-item.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/sidebar/sidebar-reveal-banner.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/space-management/ParkingPage/ParkingGridView.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/storage/pages/StorageDetailPageContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/button.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/channel-sharing/ChannelLinkForm.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/ui/channel-sharing/ChannelShareForm.tsx": {
+      "theme-surface": 5
+    },
+    "src/components/ui/channel-sharing/ContactChannelPicker.tsx": {
+      "theme-surface": 5
+    },
+    "src/components/ui/effects/form-effects.ts": {
+      "file-light-bg": 1
+    },
+    "src/components/ui/effects/hover-effects.ts": {
+      "file-light-bg": 4
+    },
+    "src/components/ui/effects/hover-text-effects.ts": {
+      "theme-surface": 2
+    },
+    "src/components/ui/effects/social-effects.ts": {
+      "theme-surface": 1
+    },
+    "src/components/ui/email-sharing/components/RecipientsList.tsx": {
+      "theme-surface": 3
+    },
+    "src/components/ui/email-sharing/ContactEmailPicker.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/enterprise-contact-dropdown.tsx": {
+      "theme-surface": 2
+    },
+    "src/components/ui/floating/FloatingPanel.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/ProductTour/product-tour-overlay.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/property-status/PropertyStatusSelector.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/radio-group.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/search/HeaderSearch.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/searchable-combobox.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/sharing/ShareStatusBanner.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/ui/sharing/ShareSurfaceShell.tsx": {
+      "theme-surface": 1
+    },
+    "src/components/voice-ai/VoiceAIPanel.tsx": {
+      "theme-surface": 2
+    },
+    "src/config/study-groups-config.ts": {
+      "theme-surface": 3
+    },
+    "src/constants/contacts.ts": {
+      "theme-surface": 2
+    },
+    "src/core/entity-headers/UnifiedEntityHeaderSystem.tsx": {
+      "theme-surface": 2
+    },
+    "src/core/progress/ThemeProgressBar.tsx": {
+      "theme-surface": 1
+    },
+    "src/design-system/primitives/Card/CardActionsToolbar.tsx": {
+      "theme-surface": 1
+    },
+    "src/domain/cards/agreement/AgreementGridCard.tsx": {
+      "theme-surface": 2
+    },
+    "src/domain/cards/agreement/AgreementListCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/domain/cards/conversation/ConversationListCard.tsx": {
+      "theme-surface": 3
+    },
+    "src/domain/cards/material/MaterialGridCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/domain/cards/overlay/OverlayListCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/domain/cards/po/PurchaseOrderGridCard.tsx": {
+      "theme-surface": 2
+    },
+    "src/domain/cards/po/PurchaseOrderListCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/domain/cards/property/usePropertyCardModel.ts": {
+      "theme-surface": 3
+    },
+    "src/domain/cards/quote/QuoteGridCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/domain/cards/vendor/VendorGridCard.tsx": {
+      "theme-surface": 1
+    },
+    "src/features/floorplan-import/components/StepPropertySelector.tsx": {
+      "theme-surface": 1
+    },
+    "src/features/property-details/components/property-fields-constants.ts": {
+      "theme-surface": 11
+    },
+    "src/features/property-details/components/PropertyFieldsEditForm.tsx": {
+      "theme-surface": 1
+    },
+    "src/features/property-hover/constants.ts": {
+      "theme-surface": 2
+    },
+    "src/styles/design-tokens/modules/layout.ts": {
+      "theme-surface": 2
+    },
+    "src/subapps/accounting/components/apy-certificates/APYCertificateDetails.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/accounting/components/apy-certificates/CreateAPYCertificateDialog.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/accounting/components/invoices/details/InvoiceDetails.tsx": {
+      "theme-surface": 9
+    },
+    "src/subapps/accounting/components/invoices/details/__tests__/CancelInvoiceDialog.test.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/accounting/components/invoices/forms/InvoiceForm.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/accounting/components/reports/FinancialReportCard.tsx": {
+      "theme-surface": 4
+    },
+    "src/subapps/accounting/components/setup/MemberManagementSection.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/accounting/components/setup/ShareholderManagementSection.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/accounting/components/setup/ShareholderRow.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/accounting/components/tax/PartnerTaxBreakdown.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/ai-assistant/components/DxfAiChatPanel.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/bim-3d/panels/section/PlaneListItem.tsx": {
+      "file-light-bg": 1
+    },
+    "src/subapps/dxf-viewer/bim-3d/properties/tabs/BimBoqTab.tsx": {
+      "theme-surface": 2
+    },
+    "src/subapps/dxf-viewer/bim-3d/render/RenderFinalDialog.tsx": {
+      "theme-surface": 3
+    },
+    "src/subapps/dxf-viewer/bim-3d/telemetry/TelemetryConsentDialog.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/bim-3d/viewport/BimViewport3DRenderPanel.tsx": {
+      "theme-surface": 2
+    },
+    "src/subapps/dxf-viewer/components/DxfImportModal.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/config/modal-colors.ts": {
+      "file-light-bg": 2
+    },
+    "src/subapps/dxf-viewer/debug/panels/HierarchyDebugPanel.tsx": {
+      "theme-surface": 3
+    },
+    "src/subapps/dxf-viewer/floorplan-background/components/FloorplanBackgroundPanel.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/floorplan-background/components/__tests__/FloorplanBackgroundPanel.a11y.test.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/ui/components/bim-schedule/ScheduleFilterBar.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/ui/components/dxf-settings/categories/BackgroundCategory.tsx": {
+      "theme-surface": 2
+    },
+    "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateDropdownPopover.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/ui/components/layer-state/LayerStateTemplateBrowser.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/ui/components/print/PrintOutputControls.tsx": {
+      "theme-surface": 2
+    },
+    "src/subapps/dxf-viewer/ui/panels/dimensions/TextOverrideEditor.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/dxf-viewer/ui/ribbon/components/RibbonWallDrawModeWidget.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/geo-canvas/app/GeoCanvasContent.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/geo-canvas/app/GeoCanvasPanels.tsx": {
+      "theme-surface": 7
+    },
+    "src/subapps/geo-canvas/components/CitizenDrawingInterface.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/geo-canvas/floor-plan-system/components/FloorPlanPreview.tsx": {
+      "theme-surface": 2
+    },
+    "src/subapps/geo-canvas/floor-plan-system/components/FloorPlanUploadModal.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/geo-canvas/systems/polygon-system/components/PolygonControls.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/geo-canvas/ui/design-system/search/SearchSystem.classes.ts": {
+      "theme-surface": 1
+    },
+    "src/subapps/procurement/components/ComparisonPanel.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/procurement/components/ExtractedDataReviewPanel.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/procurement/components/ProcurementSubNav.tsx": {
+      "theme-surface": 2
+    },
+    "src/subapps/procurement/components/QuoteCommentsDrawer.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/procurement/components/QuoteList.tsx": {
+      "theme-surface": 1
+    },
+    "src/subapps/procurement/components/signatory/SignatoryDisambiguationModal.tsx": {
+      "theme-surface": 1
+    }
+  }
+}
