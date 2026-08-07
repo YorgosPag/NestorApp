@@ -693,6 +693,14 @@
   },
   "cadDock": {
     "statusBar": {
+      "tableSurface": "ΕΠΙΦΑΝΕΙΑ",
+      "tableSurfaceDesc": "Πάνω σε τι παρουσιάζονται οι πίνακες. Κατάσταση θέασης — δεν αλλάζει το σχέδιο ούτε την εξαγωγή.",
+      "tableSurfaceCanvas": "ΚΑΜΒΑΣ",
+      "tableSurfaceCanvasDesc": "Ο πίνακας ανήκει στο σχέδιο: παίρνει το φόντο του καμβά.",
+      "tableSurfaceSheet": "ΦΥΛΛΟ",
+      "tableSurfaceSheetDesc": "Ανοιχτό φύλλο για άνετη ανάγνωση. Τα βοηθήματα οθόνης παραμένουν ορατά.",
+      "tableSurfacePaper": "ΧΑΡΤΙ",
+      "tableSurfacePaperDesc": "Ακριβώς όπως θα τυπωθεί: λευκή σελίδα, χωρίς κανένα βοήθημα οθόνης.",
       "osnap": "OSNAP",
       "grid": "ΠΛΕΓΜΑ",
       "snap": "SNAP",

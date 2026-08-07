@@ -693,6 +693,14 @@
   },
   "cadDock": {
     "statusBar": {
+      "tableSurface": "SURFACE",
+      "tableSurfaceDesc": "What tables are presented on. A viewing state — it changes neither the drawing nor the export.",
+      "tableSurfaceCanvas": "CANVAS",
+      "tableSurfaceCanvasDesc": "The table belongs to the drawing: it takes the canvas background.",
+      "tableSurfaceSheet": "SHEET",
+      "tableSurfaceSheetDesc": "A light sheet for comfortable reading. On-screen aids stay visible.",
+      "tableSurfacePaper": "PAPER",
+      "tableSurfacePaperDesc": "Exactly as it will print: white page, no on-screen aids at all.",
       "osnap": "OSNAP",
       "grid": "GRID",
       "snap": "SNAP",
