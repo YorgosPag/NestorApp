@@ -62,6 +62,13 @@ on:
       - 'scripts/check-state-channel-distinctness.js'
       - 'src/subapps/dxf-viewer/config/color-config.ts'
       - 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
+      # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή: οι ΚΛΑΣΕΙΣ της κεντρικής αρχής χρώματος.
+      # Το `.ssot-registry.json` είναι σκανδάλη επειδή η allowlist του ΕΙΝΑΙ η εμβέλεια της
+      # πύλης· το `tailwind.config.ts` επειδή είναι η ΑΥΘΕΝΤΙΑ των τιμών (δεν κρατάμε πίνακα).
+      - 'scripts/check-tailwind-theme-classes-ratchet.js'
+      - 'tailwind.config.ts'
+      - '.ssot-registry.json'
+      - '.theme-classes-baseline.json'
       - '.github/workflows/ui-contrast-ratchet.yml'
   push:
     branches: [main]
@@ -83,6 +90,13 @@ on:
       - 'scripts/check-state-channel-distinctness.js'
       - 'src/subapps/dxf-viewer/config/color-config.ts'
       - 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
+      # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή: οι ΚΛΑΣΕΙΣ της κεντρικής αρχής χρώματος.
+      # Το `.ssot-registry.json` είναι σκανδάλη επειδή η allowlist του ΕΙΝΑΙ η εμβέλεια της
+      # πύλης· το `tailwind.config.ts` επειδή είναι η ΑΥΘΕΝΤΙΑ των τιμών (δεν κρατάμε πίνακα).
+      - 'scripts/check-tailwind-theme-classes-ratchet.js'
+      - 'tailwind.config.ts'
+      - '.ssot-registry.json'
+      - '.theme-classes-baseline.json'
 
 concurrency:
   group: ui-contrast-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
@@ -163,6 +177,22 @@ jobs:
       - name: 📦 Install dependencies (jest only)
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή χρώματος: «οι ΚΛΑΣΕΙΣ που παράγει η κεντρική
+      # αρχή είναι θεματικές;». Ίδιο workflow, ίδιος λόγος με τα 3.39/3.41/3.43: το μητρώο του
+      # CHECK 3.37 παρακολουθεί ΑΡΧΕΙΑ workflow, όχι steps ⇒ 29 πύλες αμετάβλητες.
+      #
+      # ⚠️ ΜΕΤΑ το install, αντίθετα από τα υπόλοιπα του φθηνού μπλοκ: η αυθεντία των τιμών
+      # είναι το ΙΔΙΟ το Tailwind (`loadConfig` + `resolveConfig` πάνω στο πραγματικό
+      # `tailwind.config.ts`), οπότε το πακέτο πρέπει να υπάρχει. Αυτό είναι το τίμημα του να
+      # ΜΗΝ κρατάμε δικό μας πίνακα «κλίμακα → hex» — και είναι το σωστό τίμημα: ένας πίνακας
+      # θα απέκλινε από το build την πρώτη φορά που κάποιος αγγίξει το config.
+      #
+      # ⚠️ Τρέχει ΑΝΕΥ ΟΡΩΝ. Η εμβέλεια είναι δυναμική (allowlist του μητρώου) και η αυθεντία
+      # καθολική: ένα override του `slate` στο config ξαναταξινομεί αρχεία που κανείς δεν
+      # σταδιοποίησε — το Layer 1 είναι ΔΟΜΙΚΑ ανίκανο να το δει. ~1s.
+      - name: 🔍 CHECK 3.42 — Tailwind theme classes ratchet (ADR-773 §8)
+        run: node scripts/check-tailwind-theme-classes-ratchet.js
+
       - name: 🧪 Mutation suite — CHECK 3.38 (19 tests)
         run: pnpm exec jest scripts/__tests__/check-text-primary-ratchet.test.js
 
@@ -192,6 +222,12 @@ jobs:
           pnpm exec jest
           scripts/__tests__/check-state-channel-distinctness.test.js
           src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-bound-mark-corner.test.ts
+
+      # ⚠️ Και αυτή χρειάζεται το `fetch-depth: 0`: η ομάδα Π τραβά με `git show eff100ba:`
+      # το ΠΡΑΓΜΑΤΙΚΟ `design-system/tokens/colors.ts` και απαιτεί να βγει το μετρημένο
+      # 1,02:1. Ένα fixture θα απεδείκνυε μόνο ότι ο κώδικας συμφωνεί με τον εαυτό του.
+      - name: 🧪 Mutation suite — CHECK 3.42 (35 tests)
+        run: pnpm exec jest scripts/__tests__/check-tailwind-theme-classes-ratchet.test.js
 
   # ═══════════════════════════════════════════════════════════════════════════════
   # CHECK 3.40 / ADR-770 Στρώμα 2β — η ΜΕΤΡΗΣΗ σε πραγματικό browser.

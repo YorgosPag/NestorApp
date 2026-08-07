@@ -651,6 +651,16 @@ register_area "Theme Pairing Gate (CHECK 3.39)" \
     "scripts/__tests__/check-theme-pairing-ratchet\.test\.js" \
     "npm run test:theme-pairing"
 
+# CHECK 3.42 (ADR-773 §8) — η πύλη της ΠΕΜΠΤΗΣ αρχής χρώματος. Στη σκανδάλη μπαίνει ΚΑΙ το
+# `.ssot-registry.json`: η εμβέλεια της πύλης ΕΙΝΑΙ η allowlist του CHECK 3.26, οπότε μια
+# προσθήκη εκεί μεγαλώνει σιωπηλά αυτό που κρίνεται — και πρέπει να το δει η σουίτα.
+# ΚΑΙ το `tailwind.config.ts`: είναι η ΑΥΘΕΝΤΙΑ των τιμών (δεν κρατάμε δικό μας πίνακα
+# «κλίμακα → hex»), άρα ένα override του `slate` αλλάζει κάθε ετυμηγορία.
+register_area "Theme Classes Gate (CHECK 3.42)" \
+    "^(scripts/check-tailwind-theme-classes-ratchet\.js$|scripts/lib/contrast/(tailwind-class-resolver|tailwind-class-palette|tailwind-classes)\.js$|\.theme-classes-baseline\.json$|\.ssot-registry\.json$|tailwind\.config\.ts$)" \
+    "scripts/__tests__/check-tailwind-theme-classes-ratchet\.test\.js" \
+    "npm run test:theme-classes"
+
 # CHECK 3.41 (ADR-771 Φ.1) — η πύλη ΚΑΙ η άγκυρα του ζωγράφου μαζί: η πρώτη βεβαιώνει ότι
 # οι δύο καταστάσεις ΔΗΛΩΝΟΥΝ διαφορετική γωνία, η δεύτερη ότι ο καμβάς την ΤΙΜΑ. Χωριστά,
 # καθεμία αφήνει ανοιχτό το μισό ελάττωμα.

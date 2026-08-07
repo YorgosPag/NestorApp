@@ -78,7 +78,12 @@ const PALETTES = [
   'pink', 'rose',
 ];
 const SHADES = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950'];
-const UTILITIES = ['bg', 'text', 'border', 'ring', 'fill', 'stroke'];
+// ⚠️ SSoT: το «ποια utilities παίρνουν χρώμα» καταναλώνεται πλέον από ΔΥΟ πύλες — αυτή
+// (3.26, «παρακάμπτεις το SSoT;») και το CHECK 3.42 (ADR-773 §8, «οι κλάσεις του SSoT
+// είναι θεματικές;»). Ήταν σκληροκωδικοποιημένο και στις δύο· δύο αντίγραφα του ίδιου
+// λεξιλογίου αποκλίνουν, και τότε η μία πύλη φρουρεί κάτι που η άλλη δεν βλέπει καν.
+// Το `tailwind-classes.js` δεν φορτώνει το config του Tailwind — μηδέν κόστος εδώ.
+const { COLOR_UTILITIES: UTILITIES } = require('./lib/contrast/tailwind-classes');
 const STATE_PREFIXES = ['hover:', 'focus:', 'active:', 'group-hover:', 'peer-hover:'];
 
 // Single regex covering both `(state?)util-palette-shade` and `dark:(state?)util-palette-shade`.

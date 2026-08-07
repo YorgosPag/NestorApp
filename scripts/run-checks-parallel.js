@@ -191,6 +191,35 @@ const themePairingTriggers = allFiles.filter(
 if (!process.env.SKIP_THEME_PAIRING && themePairingTriggers.length > 0)
   addThread('3.39', 'Theme pairing ratchet', 'scripts/check-theme-pairing-ratchet.js');
 
+// CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή χρώματος: «οι ΚΛΑΣΕΙΣ που παράγει η κεντρική
+// αρχή είναι θεματικές;». Το `design-system/tokens/colors.ts:76` δηλώνει
+// `text.primary = 'text-slate-900'` = `#0f172a` ⇒ στο ΠΡΟΕΠΙΛΕΓΜΕΝΟ (σκοτεινό) θέμα
+// **1,02:1** πάνω στο `--background`, ΧΕΙΡΟΤΕΡΟ από το 1,01:1 που ξεκίνησε την
+// εκστρατεία — με **875** αρχεία καταναλωτές. Καμία πύλη δεν το ρωτούσε, και δεν ήταν
+// κενό καμίας: το 3.26 ρωτά «παρακάμπτεις;» και τα αρχεία είναι ΟΡΘΑ στην allowlist
+// (*είναι* το SSoT)· το 3.38 ψάχνει `text-primary`· τα 3.39/3.40 διαβάζουν ΤΙΜΕΣ και
+// εδώ υπάρχει ΚΛΑΣΗ.
+// 🔑 Η εμβέλεια ΕΙΝΑΙ η allowlist του 3.26 — δομικά: μέχρι σήμερα, βάζοντας αρχείο εκεί
+// το εξαίρειες από το 3.26 και ΚΑΝΕΙΣ άλλος δεν το κοίταζε ποτέ. Οι δύο πύλες είναι
+// πλέον τα δύο μισά ενός ερωτήματος, με ΜΙΑ λίστα.
+// Σκανδάλη: τα αρχεία της allowlist, το μητρώο, το config του Tailwind, το globals.css
+// (~0,9s — 303ms το `resolveConfig`, που είναι και η ΑΥΘΕΝΤΙΑ των τιμών: καμία δική μας
+// χαρτογράφηση «κλίμακα → hex»).
+let themeClassesTriggered = allFiles.some(
+  f => f === '.ssot-registry.json' || f === 'tailwind.config.ts'
+    || f === 'src/app/globals.css' || f.startsWith('scripts/lib/contrast/'),
+);
+if (!themeClassesTriggered && srcTsFiles.length > 0) {
+  // Η ιδιότητα «είναι αρχείο-αυθεντία;» ζει στο μητρώο, όχι εδώ. Fail-open προς τα
+  // ΜΕΣΑ: αν το module λείπει, τρέχει η πύλη — και εκείνη κάνει fail-closed.
+  const { loadRegistry, isAllowlisted } = require('./lib/ssot/registry');
+  const mod = loadRegistry().modules.find(m => m.name === 'tailwind-hardcoded-palette');
+  themeClassesTriggered = !mod
+    || srcTsFiles.some(f => isAllowlisted(f.replace(/\\/g, '/'), mod.allowlist));
+}
+if (!process.env.SKIP_THEME_CLASSES && themeClassesTriggered)
+  addThread('3.42', 'Tailwind theme classes ratchet', 'scripts/check-tailwind-theme-classes-ratchet.js');
+
 // CHECK 3.41 (ADR-771 Φ.1) — «ξέρω ΠΟΙΟ είναι ποιο χωρίς να δω χρώμα;». Η «παράκαμψη»
 // και η «σύγκρουση» κελιού ζωγραφίζονταν ως ΤΑΥΤΟΣΗΜΟ τρίγωνο, στην ίδια γωνία, στο ίδιο
 // μέγεθος — μόνη διαφορά η απόχρωση (WCAG 1.4.1). Καμία πύλη δεν τα κοίταζε: το 3.32
