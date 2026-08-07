@@ -133,7 +133,8 @@ function writeArtifacts(config, rendered) {
     fs.writeFileSync(path.join(PROJECT_ROOT, relPath), text, 'utf8');
   }
   fs.writeFileSync(path.join(PROJECT_ROOT, manifestPath(config)), rendered.manifestText, 'utf8');
-  console.log(`${GREEN}  ✓ wrote ${rendered.artifacts.size} slice(s) + manifest to ${config.outputDir}/${NC}`);
+  console.log(`${GREEN}  ✓ wrote ${rendered.artifacts.size} artifact(s) + manifest to ${config.outputDir}/${NC}`);
+  console.log(`${DIM}    (${config.languages.length} slice(s) + shell-slice.whole.json — the completeness list the runtime reads)${NC}`);
 }
 
 function main() {

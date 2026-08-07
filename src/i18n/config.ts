@@ -12,6 +12,9 @@ import { pseudoPostProcessor, PSEUDO_LANGUAGE } from './pseudo-post-processor';
 
 // 🏢 ADR-744: the ONLY locale data imported synchronously — generated, not written.
 import shellSlice from './generated/shell-slice.el.json';
+// 🏢 ADR-744 §11: which of those namespaces travel WHOLE — also generated (~200 bytes).
+import shellWholeNamespaces from './generated/shell-slice.whole.json';
+import { recordShellBootstrap } from './bundle-registry';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeGetItem, STORAGE_KEYS } from '@/lib/storage';
@@ -99,6 +102,21 @@ i18n
       useSuspense: false, // Better for lazy loading
     },
   });
+
+/**
+ * 🔴 ADR-744 §11 — Ο BOOTSTRAP ΔΗΛΩΝΕΙ ΤΙ ΕΓΡΑΨΕ, ΔΕΝ ΤΟ ΑΦΗΝΕΙ ΝΑ ΜΑΝΤΕΥΤΕΙ.
+ *
+ * Επτά από τα δεκάξι namespaces του slice μπαίνουν **κομμένα σε επίπεδο
+ * κλειδιού** — αυτό είναι το σχέδιο. Το i18next όμως δεν έχει έννοια πληρότητας:
+ * μετά από αυτή τη γραμμή, `hasResourceBundle('el','projects')` είναι `true` με
+ * **1 από 49** top-level κλειδιά μέσα. Κάθε καταναλωτής που το διάβαζε ως «είναι
+ * φορτωμένο» παρέλειπε τη φόρτωση του πλήρους αρχείου οριστικά.
+ *
+ * Η λίστα των «ολόκληρων» έρχεται από τον generator — καμία χειρόγραφη λίστα δεν
+ * επιτρέπεται εδώ, γιατί η απόκλιση δύο χειρόγραφων λιστών είναι ακριβώς το
+ * σφάλμα που γέννησε ολόκληρο το ADR-744.
+ */
+recordShellBootstrap(DEFAULT_LANGUAGE, SHELL_NAMESPACES, shellWholeNamespaces);
 
 // Preload critical namespaces after initialization
 if (typeof window !== 'undefined') {

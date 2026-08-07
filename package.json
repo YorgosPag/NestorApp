@@ -96,7 +96,7 @@
     "test:ssot-imports": "jest scripts/__tests__/check-ssot-imports.test.js --verbose",
     "test:ssot-discover": "jest scripts/__tests__/check-ssot-discover-ratchet.test.js --verbose",
     "test:i18n-types-freshness": "jest scripts/__tests__/check-i18n-types-freshness.test.js --verbose",
-    "test:i18n-shell-slice": "jest scripts/__tests__/i18n-shell-slice.test.js --verbose",
+    "test:i18n-shell-slice": "jest scripts/__tests__/i18n-shell-slice.test.js src/i18n/__tests__/shell-slice-no-raw-keys.test.ts src/i18n/__tests__/bundle-completeness.test.ts src/i18n/__tests__/bundle-hydration.integration.test.ts src/i18n/__tests__/use-translation-partial-bundle.test.tsx --verbose",
     "test:i18n-namespace-reachability": "jest scripts/__tests__/i18n-namespace-reachability.test.js --verbose",
     "test:ci-gate-tiers": "jest scripts/__tests__/ci-gate-tiers.test.js --verbose",
     "ci:tiers": "node scripts/check-ci-gate-tiers.js",

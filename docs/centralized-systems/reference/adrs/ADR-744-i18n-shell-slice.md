@@ -303,10 +303,21 @@ CHECK 3.33.
 | `.i18n-shell-slice.json` | ρίζες, migration ledger, dynamic-key policy |
 | `src/i18n/generated/shell-slice.el.json` | **παραγόμενο** — μην το επεξεργαστείς |
 | `src/i18n/generated/shell-slice.manifest.json` | **παραγόμενο** — προέλευση + wants + fingerprints |
-| `src/i18n/config.ts` | καταναλωτής (Φ2) |
+| `src/i18n/config.ts` | καταναλωτής (Φ2) + δήλωση bootstrap (§11) |
+| `src/i18n/bundle-registry.ts` | **SSoT πληρότητας — τρεις ρητές καταστάσεις (§11)** |
+| `src/i18n/generated/shell-slice.whole.json` | **παραγόμενο — ποια namespaces ταξιδεύουν ολόκληρα (§11)** |
+| `src/i18n/lazy-config.ts` | `loadNamespace` — ο ένας από τους δύο καταναλωτές του μητρώου |
+| `src/i18n/hooks/useTranslation.ts` | ο άλλος — **δύο** σημεία απόφασης + η διάγνωση |
 | `scripts/__tests__/i18n-shell-slice.test.js` | 62 tests — self-test της πύλης |
 | `src/i18n/__tests__/shell-slice-no-raw-keys.test.ts` | 5 tests — runtime απόδειξη |
+| `src/i18n/__tests__/bundle-completeness.test.ts` | 26 tests — η λίστα whole δεν μπορεί να ψεύδεται (§11) |
+| `src/i18n/__tests__/bundle-hydration.integration.test.ts` | 5 tests — ο **πραγματικός** loader σε κομμένο bundle (§11) |
+| `src/i18n/__tests__/use-translation-partial-bundle.test.tsx` | 5 tests — τα δύο σημεία απόφασης του hook (§11) |
 | `.github/workflows/i18n-shell-slice.yml` | Layer 2 |
+
+> ⚠️ **Και τα πέντε suites τρέχουν από `npm run test:i18n-shell-slice` (115 tests).** Μέχρι
+> 2026-08-07 το script έτρεχε **μόνο** το πρώτο· τα υπόλοιπα υπήρχαν αλλά κανείς δεν τα εκτελούσε.
+> Αν προσθέσεις suite εδώ, πρόσθεσέ το **και** στο script — αλλιώς γράφεις σχόλιο, όχι άγκυρα.
 
 ### 9.1 Δύο παγίδες ADR-727 που τηρήθηκαν κατά γράμμα
 
@@ -323,3 +334,156 @@ CHECK 3.33.
 |---|---|
 | 2026-07-31 | **Αρχική υλοποίηση.** Φ1 generator · Φ2 κατανάλωση στο `config.ts` (18 static imports → 1) · Φ3 CHECK 3.34 δύο στρώσεων + tests + CI workflow. `extractTCalls` εξήχθη από το `check-i18n-missing-keys.js` στο κοινό SSoT (μετακίνηση, όχι αντιγραφή — CHECK 3.28). Δύο σφάλματα πιάστηκαν από τις ίδιες τις δοκιμές πριν το commit: (α) το `t('a.b', { ns: 'files' })` έχανε το namespace override, (β) τα λείποντα κλειδιά namespace με άδειο slice δεν αναφέρονταν καθόλου. |
 | 2026-07-31 | **🔴 Διόρθωση regression που εντόπισε ζωντανή χρήση.** Το `/dxf/viewer` έβαψε το ωμό `dxfViewer.checkingPermissions`: η πρώτη εκδοχή έκοβε σε επίπεδο κλειδιού **και** τα 9 προηγουμένως σύγχρονα namespaces, ενώ οι **σελίδες** είναι εκτός shell closure εξ ορισμού και σε cold load βάφουν στο **ίδιο καρέ** με το layout. Τα 9 μένουν πλέον **ολόκληρα** (§6.0, §6.2). Ο αριθμός διορθώθηκε **35.140 → 184.599 bytes** (−37,4% αντί για −88%). Προστέθηκε regression anchor: 9 tests `whole === true` + ονομαστικό test για τα κλειδιά του `/dxf/viewer`. **Μάθημα: ο ισχυρισμός «καμία οπισθοδρόμηση» επαληθεύτηκε σε επίπεδο namespace ενώ η αλλαγή ήταν σε επίπεδο κλειδιού — λάθος μονάδα μέτρησης, όχι λάθος υλοποίηση.** |
+| 2026-08-07 | **🔴 Δεύτερο regression από ζωντανή χρήση — και το πιο σοβαρό: το §11.** Το `/projects` έβαφε ωμό `page.loadingMessage`. Αιτία: το `loadNamespace` αποφάσιζε «χρειάζεται φόρτωση;» με `hasResourceBundle` («υπάρχει **κάτι**;»), και αυτό το ADR είχε φροντίσει να υπάρχει πάντα κάτι ⇒ το πλήρες locale **δεν φορτωνόταν ΠΟΤΕ** για τα 7 κομμένα namespaces. Προστέθηκε `src/i18n/bundle-registry.ts` (τρεις ρητές καταστάσεις) + παραγόμενο `shell-slice.whole.json`. **5/5 μεταλλάξεις + Μ0.** Βλ. §11. |
+
+---
+
+## 11. Πληρότητα bundle — η ερώτηση που το i18next δεν μπορεί να απαντήσει
+
+### 11.1 Το περιστατικό
+
+**2026-08-07, `/projects`, σκληρή ανανέωση:** στην οθόνη το ωμό κλειδί `page.loadingMessage`.
+
+Όλες οι σχετικές πύλες ήταν **πράσινες**, και όλες σωστά:
+
+| πύλη | ρωτά | απάντηση |
+|---|---|---|
+| CHECK 3.8 | υπάρχει το κλειδί στα locales; | ναι — `locales/el/projects.json:149` |
+| CHECK 3.36 | έχει το namespace loader; | ναι — `namespace-loaders.ts:56` |
+| CHECK 3.33 | είναι φρέσκοι οι τύποι; | ναι |
+| CHECK 3.34 | είναι το slice αυτό που παράγει ο κώδικας; | ναι, υπογεγραμμένο |
+
+Καμία δεν ρωτούσε **«έφτασε το περιεχόμενο στον χρήστη;»**, γιατί μέχρι αυτό το ADR η ερώτηση δεν είχε
+νόημα: ο σύγχρονος bootstrap έγραφε **ολόκληρα** namespaces.
+
+### 11.2 Η αιτία, σε μία γραμμή
+
+```ts
+// src/i18n/lazy-config.ts — ΠΡΙΝ
+if (!forceReload && i18n.hasResourceBundle(currentLanguage, namespace)) return;
+```
+
+Το `hasResourceBundle` απαντά **«υπάρχει κάτι;»**. Το i18next **δεν έχει καθόλου** έννοια πληρότητας
+ανά namespace — ούτε με `partialBundledLanguages`. Όσο οι δύο ερωτήσεις ταυτίζονταν, ο έλεγχος ήταν
+σωστός. Το §3 (key-granularity slicing) τερμάτισε την ταύτιση: **7 από τα 16** namespaces του slice
+μπαίνουν κομμένα.
+
+| namespace | φύλλα στο slice / σύνολο |
+|---|---|
+| `projects` | **1 / 49** top-level |
+| `dashboard` | 1 / 8 |
+| `files` | 6 / 45 |
+| `common-shared` | 7 / 16 |
+| `common-photos` | 1 / 6 |
+| `common-account` | 2 / 3 |
+| `onboarding` | 1 / 1 |
+
+Ο έλεγχος γύριζε `true` **ακριβώς** για τα bundles που ήταν ελλιπή, άρα `return`, άρα το
+`addResourceBundle` — που κάνει σωστά το merge — **δεν εκτελούνταν ποτέ**.
+
+### 11.3 Γιατί δεν το είδε κανείς
+
+Η παραδοχή ήταν **γραμμένη**, όχι ξεχασμένη. Στο `slice-build.js` στεκόταν ως αιτιολόγηση ασφάλειας:
+
+> «A namespace present in i18next with SOME of its keys is not a half-loaded namespace —
+> `addResourceBundle` merges the full version over the slice **when the async load lands** […] The
+> slice can only ever ADD correct strings to the first frame; it can never remove one.»
+
+Κάθε πρόταση ήταν σωστή **εκτός από την προϋπόθεση**: η φόρτωση δεν landάριζε. Μια αιτιολόγηση που
+περιγράφει σωστά έναν μηχανισμό δύο βήματα πιο κάτω, χωρίς να ελέγξει το πρώτο βήμα, διαβάζεται ως
+απόδειξη και δεν είναι.
+
+**Δύο συνθήκες έκρυψαν το μέγεθος:**
+- Στο **dev** ο `useTranslation` περνά `forceReload = true`, οπότε το πλήρες locale τελικά έφτανε —
+  το φαινόμενο ήταν *αργό*, όχι *σπασμένο*. Στην **παραγωγή** ήταν μόνιμο.
+- Το bug χτυπά **μόνο στα ελληνικά**: το slice είναι `el`-only (§4), άρα σε `en` το
+  `hasResourceBundle` γύριζε `false` και όλα δούλευαν. Η default γλώσσα ήταν η σπασμένη.
+
+### 11.4 Η απόφαση
+
+**Η πληρότητα δεν είναι συναγώγιμη — πρέπει να δηλώνεται από όποιον γράφει το bundle.**
+
+Δεν υπάρχει φθηνός έλεγχος «είναι πλήρες;»: για να συγκρίνεις το bundle με το πλήρες αρχείο πρέπει
+να κατεβάσεις το πλήρες αρχείο, δηλαδή να κάνεις ακριβώς ό,τι ήθελες να αποφύγεις.
+
+Τρεις **ρητές** καταστάσεις σε ένα SSoT μητρώο (`src/i18n/bundle-registry.ts`):
+
+| κατάσταση | ποιος τη γράφει | σημαίνει |
+|---|---|---|
+| `absent` | κανείς (προεπιλογή) | το i18next δεν έχει τίποτα |
+| `shell-partial` | ο bootstrap | το slice έγραψε **υποσύνολο** κλειδιών |
+| `complete` | ο loader | εγκαταστάθηκε το **πλήρες** αρχείο locale |
+
+Το `shell-partial` **δεν είναι σφάλμα** — είναι το σχέδιο του §3. Σφάλμα είναι μόνο να διαβαστεί ως
+`complete`.
+
+**Ποιος ξέρει ποια είναι ολόκληρα:** ο generator, και μόνο αυτός. Εξάγει
+`src/i18n/generated/shell-slice.whole.json` (~200 bytes) στο **ίδιο πέρασμα**, από την **ίδια** πηγή
+(`wants[ns].whole`). Δεν είναι δεύτερη λίστα· είναι δεύτερη προβολή της πρώτης — η διάκριση είναι
+ολόκληρο το νόημα αυτού του ADR.
+
+> ⚠️ Η αυθεντία είναι το **`wants[ns].whole`**, όχι το `config.guaranteedNamespaces`. Το `whole`
+> τίθεται από **δύο** μονοπάτια: τον migration ledger (§6.2) **και** το
+> `dynamicKeyPolicy[file].wholeNamespaces` (§5). Σήμερα ταυτίζονται· διαβάζοντας τον ledger θα
+> χανόταν το δεύτερο.
+
+Το νέο artifact μπαίνει στο `artifacts` Map του `renderArtifacts`, οπότε **κληρονομεί δωρεάν** και τις
+δύο στρώσεις του CHECK 3.34: υπογραφή sha256 (Layer 1) και πλήρη αναπαραγωγή (Layer 2). Επαληθεύτηκε
+εκτελεστικά — χειρόγραφο πείραγμα του `whole.json` παράγει `CHECK 3.34 FAIL`.
+
+### 11.5 Τι άλλαξε
+
+| αρχείο | αλλαγή |
+|---|---|
+| `src/i18n/bundle-registry.ts` | **νέο** — το SSoT μητρώο, τρεις καταστάσεις |
+| `src/i18n/generated/shell-slice.whole.json` | **νέο παραγόμενο** — ποια ταξιδεύουν ολόκληρα |
+| `scripts/lib/i18n-shell-slice/plan.js` | `wholeNamespaces()` + το artifact στο render |
+| `src/i18n/config.ts` | ο bootstrap **δηλώνει** τι έγραψε |
+| `src/i18n/lazy-config.ts` | `isBundleComplete` αντί `hasResourceBundle` |
+| `src/i18n/hooks/useTranslation.ts` | τα **δύο** σημεία απόφασης + η διάγνωση |
+
+**Η διάγνωση ήταν κι αυτή μέρος του προβλήματος.** Το `warnUnresolvedKey` τύπωνε
+`loaded | MISSING` — **δύο** καταστάσεις εκεί που υπήρχαν **τρεις**. Το ίχνος του `/projects` έλεγε
+κατά λέξη `projects=loaded` ενώ το bundle είχε 1 από 49 κλειδιά: το μόνο όργανο που θα μπορούσε να
+δείξει την αιτία **έδειχνε το αντίθετό της**. Τυπώνει πλέον `getBundleState`.
+
+**Κόστος:** μηδέν επιπλέον δίκτυο. Τα 9 ολόκληρα namespaces δηλώνονται `complete` στο boot, οπότε το
+preload των 72 CRITICAL τα παραλείπει όπως πάντα. Χωρίς τη λίστα θα ξαναφορτώνονταν 162.803 bytes.
+
+### 11.6 Άγκυρες — 5/5 μεταλλάξεις + Μ0
+
+`npm run test:i18n-shell-slice` (**115 tests**, 5 suites):
+
+| # | μετάλλαξη | πιάνεται από |
+|---|---|---|
+| Μ1 | ο bootstrap δηλώνει τα πάντα `complete` | `bundle-completeness` (2) |
+| Μ2 | το `whole.json` ισχυρίζεται ότι το `projects` είναι ολόκληρο | `bundle-completeness` (4) |
+| Μ3 | `loadNamespace` προς `hasResourceBundle` | `bundle-hydration.integration` (2) |
+| Μ4 | `useTranslation` useEffect προς `hasResourceBundle` | `use-translation-partial-bundle` (2) |
+| Μ5 | `useTranslation` αρχικό `useState` προς `hasResourceBundle` | `use-translation-partial-bundle` (1) |
+
+> 🔴 **Τρεις παγίδες που κόστισαν, γραμμένες ώστε να μην ξαναστηθούν:**
+>
+> 1. **Το `shell-slice-no-raw-keys.test.ts` δεν έτρεχε από κανένα npm script.** Υπήρχε από
+>    2026-07-31, αναφερόταν στο CLAUDE.md ως «runtime απόδειξη (5)», και **κανείς δεν το εκτελούσε** —
+>    το ίδιο σχήμα με τον `validate-i18n-config.js` του ADR-752. *Ένα anchor χωρίς gate είναι σχόλιο.*
+>    Το `test:i18n-shell-slice` τρέχει πλέον και τα πέντε suites.
+> 2. **Η πρώτη γραφή του `use-translation-partial-bundle` επέζησε ΚΑΙ ΤΩΝ ΔΥΟ μεταλλάξεων.**
+>    Χρησιμοποιούσε `projects`, που έχει compat splits (ADR-280) τα οποία το instance του test δεν
+>    είχε, άρα το `allLoaded` έβγαινε `false` **ανεξάρτητα** από το κριτήριο. Πράσινο επειδή δεν
+>    ρωτούσε τίποτα. Τα ονόματα `dashboard` / `landing` (καμία εγγραφή στο `COMPAT_NAMESPACE_MAP`)
+>    **είναι μέρος του test** — μην τα αλλάξεις.
+> 3. **Το πρώτο καρέ χρειάζεται δικό του assertion.** Το `useEffect` προλαβαίνει να διορθώσει το
+>    `namespaceLoaded` πριν επιστρέψει το `renderHook`, οπότε η Μ5 ήταν αόρατη μέχρι να καταγραφεί η
+>    τιμή **κατά** το render. Κι όμως είναι το καρέ που βλέπει ο χρήστης: περίπου 38 καταναλωτές
+>    βάφουν με βάση το `isNamespaceReady`.
+
+### 11.7 Τι ΔΕΝ λύνει
+
+Το `/projects` σε **cold load** μπορεί ακόμη να δείξει το ωμό κλειδί για **ένα-δύο καρέ**, όσο τρέχει
+το async preload. Αυτό είναι το **ίδιο** ανοιχτό ζήτημα με το `/dxf/viewer` (§8.1): μια **σελίδα**
+είναι route boundary και μένει εκτός shell closure εξ ορισμού, ενώ σε cold load βάφει στο ίδιο καρέ με
+το layout. Το λύνουν οι **per-route slices (Φ4)**, όχι αυτό το κεφάλαιο.
+
+Η διαφορά που κάνει αυτό το κεφάλαιο είναι κατηγορική: **μόνιμο προς παροδικό**. Πριν, το κλειδί έμενε
+ωμό στην παραγωγή για όλη τη ζωή της σελίδας.

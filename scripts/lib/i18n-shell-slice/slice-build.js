@@ -10,13 +10,33 @@
  * `common-shared`, roughly 400 bytes, so that is what ships synchronously. The
  * remaining 99% still arrives through the existing async preload, unchanged.
  *
- * WHY THAT IS SAFE RATHER THAN CLEVER
- * -----------------------------------
- * A namespace present in i18next with SOME of its keys is not a half-loaded
- * namespace — `addResourceBundle(..., deep=true, overwrite=true)` merges the
- * full version over the slice when the async load lands, and `t()` for a key
- * that is not in the slice yet behaves exactly as it does today. The slice can
- * only ever ADD correct strings to the first frame; it can never remove one.
+ * WHY THAT IS SAFE RATHER THAN CLEVER — AND THE PART THAT WAS WRONG
+ * -----------------------------------------------------------------
+ * The merge itself is sound: `addResourceBundle(..., deep=true, overwrite=true)`
+ * does lay the full namespace over the slice, and a key absent from the slice
+ * resolves exactly as it did before.
+ *
+ * 🔴 BUT THE SENTENCE THAT USED TO STAND HERE — "when the async load lands" —
+ * ASSUMED SOMETHING NOBODY CHECKED. The async load did not land. `loadNamespace`
+ * decided whether to fetch with `i18n.hasResourceBundle`, which answers "is
+ * there anything?", and this very module had guaranteed there would always be
+ * SOMETHING. So the loader returned early, `addResourceBundle` was never
+ * reached, and the seven key-sliced namespaces stayed at their shell subset
+ * FOREVER. Measured 2026-08-07: `/projects` painted the raw key
+ * `page.loadingMessage` with `projects` holding 1 of its 49 top-level keys —
+ * permanently in production, and merely slow in dev only because the hook passes
+ * `forceReload` there.
+ *
+ * The claim "the slice can only ever ADD correct strings; it can never remove
+ * one" was therefore false as written. It is TRUE NOW, and it is true because
+ * completeness became explicit rather than inferred: `shell-slice.whole.json`
+ * tells the runtime which namespaces arrived whole, and
+ * `src/i18n/bundle-registry.ts` is the only thing allowed to answer "does this
+ * need loading?". Anchors: `src/i18n/__tests__/bundle-hydration.integration.test.ts`.
+ *
+ * ⚠️ Slicing a namespace at key granularity is only safe while that registry
+ *    exists. If you ever add a consumer that reasons about "is this namespace
+ *    loaded" from i18next directly, you have re-created the bug.
  *
  * DETERMINISM (ADR-727's two traps, inherited verbatim)
  * -----------------------------------------------------

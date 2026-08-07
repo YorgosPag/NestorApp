@@ -1,7 +1,8 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "8ed6d64aea4e9020f1605a8a57020a182c5bb78439acec318bb0b8186f9f8228"
+    "src/i18n/generated/shell-slice.el.json": "8ed6d64aea4e9020f1605a8a57020a182c5bb78439acec318bb0b8186f9f8228",
+    "src/i18n/generated/shell-slice.whole.json": "5fbab353a5df2ffcf0f3fbeda2e663d5da19fc988e55e935bea8c9ea4e5eee3c"
   },
   "boundaries": {
     "dynamic": [
@@ -38,7 +39,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "a72f95e035b99ab067d776787a2e0a5cefd01181660a7d24d944e5afd7fcfbf7",
+  "inputsSha256": "05179fa332fa22e33cc397e4e7108e69fe47dfff587fc0d31b50d72d337e1b8f",
   "languages": [
     "el"
   ],
@@ -262,10 +263,11 @@
     "src/hooks/useVoiceCommand.ts": "fa2df132dd60e7b209fda0bdfe1691dd993ad2c0af1522c8ac8ab0641124e1c7",
     "src/hooks/useVoiceCommandSubscription.ts": "2c404e42d58b1d41487b8ef3ab7f4dd04cfacbcba89805b5632829b0dfd2ce98",
     "src/hooks/useVoiceRecorder.ts": "bae55aaae53faa71dc6d705e23fa66d427b8d834c5de738cfc246945bc6db1e1",
-    "src/i18n/config.ts": "da34ea9093816e29cb2b0417539a47f8be3c2dea56f9a7fdc7cbb73af5f185f6",
-    "src/i18n/hooks/useTranslation.ts": "267d916e98fa92e0bdbac93a459902d91c42ca9d154b9df37a904c9bfc337e16",
+    "src/i18n/bundle-registry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/i18n/config.ts": "5a4d52b43b7c769dba3f48b960cda6ba058ba2f3a79e03d3b30c29079f0c3270",
+    "src/i18n/hooks/useTranslation.ts": "fb516bf7023132029c162d56a700e858cca755233456684efbb5f3012c773af5",
     "src/i18n/hooks/useTranslationLazy.ts": "83038e2582b5cd891eb0024597f6d8b81094470e69fd0dd0c7c8c5d679af37f5",
-    "src/i18n/lazy-config.ts": "0087719d24472b0eeaa06440a0a9cfacbca8d281b48a69c24f2d10ca296982b0",
+    "src/i18n/lazy-config.ts": "e9eb278736edf9f74be6b024f467c8148d921d26c34389f7879cb9f88eb9fea1",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
     "src/i18n/namespace-loaders.ts": "9a3e8e306122b397870918420a994da9be8e9da528a5235562bcfa98577000f0",
@@ -482,8 +484,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 406,
-    "sliceBytes": 187745
+    "shellFiles": 407,
+    "sliceBytes": 187910
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",
@@ -657,6 +659,7 @@
     "src/app/dxf/viewer/layout.tsx → @/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css",
     "src/app/layout.tsx → ./globals.css",
     "src/i18n/config.ts → ./generated/shell-slice.el.json",
+    "src/i18n/config.ts → ./generated/shell-slice.whole.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/accounting-setup.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/accounting-tax-offices.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/accounting.json",

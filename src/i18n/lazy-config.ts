@@ -4,6 +4,7 @@ import ICU from 'i18next-icu';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { getNamespaceLoader, type TranslationData } from './namespace-loaders';
+import { isBundleComplete, recordLoaderInstall } from './bundle-registry';
 
 const logger = createModuleLogger('i18n-lazy-config');
 
@@ -179,22 +180,45 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
 
 
 /**
- * Load namespace on demand
+ * Load namespace on demand.
+ *
+ * 🔴 ADR-744 §11 — ΤΟ `hasResourceBundle` ΔΕΝ ΞΑΝΑΜΠΑΙΝΕΙ ΕΔΩ. ΠΟΤΕ.
+ *
+ * Εδώ έγραφε `if (!forceReload && i18n.hasResourceBundle(lng, ns)) return;`.
+ * Αυτό ρωτά **«υπάρχει κάτι;»** ενώ η απόφαση απαιτεί **«υπάρχει ΟΛΟ;»**. Όσο ο
+ * σύγχρονος bootstrap έγραφε ολόκληρα namespaces οι δύο ερωτήσεις ταυτίζονταν·
+ * από το ADR-744 το shell slice γράφει **επτά** namespaces κομμένα σε επίπεδο
+ * κλειδιού, οπότε ο έλεγχος γύριζε `true` **ακριβώς** για τα bundles που ήταν
+ * ελλιπή, και το πλήρες locale δεν φορτωνόταν ΠΟΤΕ.
+ *
+ * Μετρημένο 2026-08-07: `projects` = **1 από 49** top-level κλειδιά στο boot·
+ * το `/projects` ζωγράφιζε ωμό `page.loadingMessage` ενώ η μετάφραση υπήρχε.
+ * Στο dev το φαινόμενο ήταν παροδικό (το `useTranslation` περνά `forceReload`
+ * και τελικά το φόρτωνε)· στην **παραγωγή** ήταν μόνιμο.
+ *
+ * Το `translationCache` ΔΕΝ είναι υποκατάστατο: το κλειδί του είναι η γλώσσα που
+ * **διαβάστηκε**, όχι αυτή που **γράφτηκε** — στο fallback μονοπάτι (γραμμή 153)
+ * γράφει `el:ns` ενώ το bundle μπαίνει σε `en:ns`.
  */
 export async function loadNamespace(namespace: Namespace, language?: Language, forceReload = false) {
   const currentLanguage = (language || i18n.language || 'el') as Language;
-  
-  // Check if already loaded
-  if (!forceReload && i18n.hasResourceBundle(currentLanguage, namespace)) {
+
+  if (!forceReload && isBundleComplete(currentLanguage, namespace)) {
     return;
   }
-  
+
   const translations = await loadTranslations(currentLanguage, namespace, forceReload);
-  
+
   // Add to i18n instance
   i18n.addResourceBundle(currentLanguage, namespace, translations, true, true);
-  
-  // console.log(`✅ Loaded namespace: ${namespace} for language: ${currentLanguage}`);
+
+  // Άδειο bundle = αποτυχία import ή namespace χωρίς αρχείο (βλ. loadTranslations:
+  // επιστρέφει `{}` σε κάθε σφάλμα). Δεν είναι πληρότητα, και το να σημειωθεί ως
+  // `complete` θα έκλεινε τη μοναδική πόρτα επανάληψης — ακριβώς το σχήμα που
+  // αυτή η διόρθωση καταργεί.
+  if (Object.keys(translations).length > 0) {
+    recordLoaderInstall(currentLanguage, namespace);
+  }
 }
 
 /**

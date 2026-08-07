@@ -5,6 +5,7 @@ import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { TOptions } from 'i18next';
 import { loadNamespace, type Namespace, type Language } from '../lazy-config';
 import { remapLegacyTranslationKey, getCompatNamespaces, getExplicitNamespace } from '../namespace-compat';
+import { getBundleState, isBundleComplete } from '../bundle-registry';
 
 import { createModuleLogger } from '@/lib/telemetry';
 import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
@@ -110,13 +111,17 @@ function resolveAcrossNamespaces(
 /** Ελάχιστη όψη του i18next instance που χρειάζεται η διάγνωση (χωρίς `any`). */
 interface BundleProbe {
   readonly language: string;
-  hasResourceBundle(language: string, namespace: string): boolean;
 }
 
 /**
  * Ένα ωμό κλειδί στην οθόνη δεν επιτρέπεται να είναι **σιωπηλό**: αφήνει ίχνος με το ΠΟΙΟ
- * κλειδί, σε ΠΟΙΑ γλώσσα, και **ποια namespaces ήταν όντως φορτωμένα** τη στιγμή της κλήσης —
- * που είναι ακριβώς η διαφορά ανάμεσα σε «λείπει η μετάφραση» και «δεν είχε φορτώσει ακόμα».
+ * κλειδί, σε ΠΟΙΑ γλώσσα, και **σε ποια κατάσταση ήταν κάθε bundle** τη στιγμή της κλήσης.
+ *
+ * 🔴 ADR-744 §11 — εδώ έγραφε `hasResourceBundle(…) ? 'loaded' : 'MISSING'`, δηλαδή **δύο**
+ * καταστάσεις εκεί που υπάρχουν **τρεις**. Το κρίσιμο ενδιάμεσο — bundle που υπάρχει αλλά
+ * είναι **κομμένο** από το shell slice — αναφερόταν ως `loaded`, οπότε το ίχνος του
+ * `/projects` έλεγε κατά λέξη «projects=loaded» ενώ το bundle είχε 1 από 49 κλειδιά. Το
+ * μόνο όργανο που θα μπορούσε να δείξει την αιτία **έδειχνε το αντίθετο της αιτίας**.
  */
 function warnUnresolvedKey(fullKey: string, probe: BundleProbe, namespaces: readonly string[]): void {
   if (process.env.NODE_ENV === 'production') return;
@@ -124,9 +129,7 @@ function warnUnresolvedKey(fullKey: string, probe: BundleProbe, namespaces: read
   warnedUnresolvedKeys.add(fullKey);
 
   const language = probe.language;
-  const bundles = namespaces.map(
-    (ns) => `${ns}=${probe.hasResourceBundle(language, ns) ? 'loaded' : 'MISSING'}`,
-  );
+  const bundles = namespaces.map((ns) => `${ns}=${getBundleState(language, ns)}`);
   logger.warn(`i18n: raw key reached the UI → ${fullKey}`, { language, bundles });
 }
 
@@ -158,9 +161,11 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
   // Declared BEFORE `t` memo so namespaceLoaded can be a dep — forces `t` to be a new
   // reference when the namespace finishes loading, ensuring consumers' useMemo chains
   // (e.g. TradeSelector options) recompute and show the correct translated labels.
+  // 🔴 ADR-744 §11 — `isBundleComplete`, ΟΧΙ `hasResourceBundle`: ένα κομμένο shell-slice
+  // bundle υπάρχει αλλά δεν αρκεί. Βλ. `src/i18n/bundle-registry.ts`.
   const [namespaceLoaded, setNamespaceLoaded] = useState(() => {
     if (allNamespacesToLoad.length === 0) return true;
-    return allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
+    return allNamespacesToLoad.every((ns) => isBundleComplete(i18n.language, ns));
   });
 
   // Wrap t to apply compat remapping for split namespaces (ADR-280)
@@ -203,7 +208,11 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
     if (allNamespacesToLoad.length === 0) return;
 
     const shouldForceReload = process.env.NODE_ENV === 'development';
-    const allLoaded = allNamespacesToLoad.every((ns) => i18n.hasResourceBundle(i18n.language, ns));
+    // 🔴 ADR-744 §11 — το δεύτερο από τα δύο σημεία που ρωτούσαν «υπάρχει κάτι;» αντί για
+    // «υπάρχει ΟΛΟ;». Στην παραγωγή αυτό ακριβώς το `return` άφηνε μόνιμα ωμό το
+    // `page.loadingMessage` στο /projects: το slice είχε γράψει `projects` (1/49 κλειδιά),
+    // άρα «όλα φορτωμένα», άρα ο loader δεν καλούνταν ποτέ.
+    const allLoaded = allNamespacesToLoad.every((ns) => isBundleComplete(i18n.language, ns));
     if (!shouldForceReload && allLoaded) {
       setNamespaceLoaded(true);
       return;
