@@ -16,7 +16,6 @@
  * @module subapps/dxf-viewer/bim/table/table-layout-place
  */
 
-import type { ScheduleColumnAlign } from '../schedule/types';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type {
   TableCell,
@@ -25,9 +24,22 @@ import type {
   TableCellTextRun,
   TableModel,
 } from '../../types/table';
+import {
+  anchorXMm,
+  cellBaselineYMm,
+  fittingLineCount,
+  multilineBaselineYMm,
+  H_BY_CELL_ALIGN,
+  H_BY_COLUMN_ALIGN,
+} from './table-layout-align';
 import { cellKey } from './table-model-helpers';
 import { cellDisplayText, resolveCellNumberFormat } from './table-cell-format';
-import { resolveCellOverflow, resolveVisibleCellText } from './table-cell-overflow';
+import { resolveCellOverflow } from './table-cell-overflow';
+import {
+  resolveVisibleCellContent,
+  type VisibleCellContent,
+  type VisibleCellLine,
+} from './table-cell-visible-lines';
 import { resolveCellLinkSpans } from './table-cell-link-spans';
 import {
   hasStyledSpans,
@@ -65,59 +77,6 @@ export function rowEdgesMm(heightsMm: readonly number[]): number[] {
   return columnEdgesMm(heightsMm);
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Στοίχιση
-// ──────────────────────────────────────────────────────────────────────────────
-
-const H_BY_CELL_ALIGN: Readonly<Record<TableCellAlign, TextAlign>> = {
-  TL: 'left', ML: 'left', BL: 'left',
-  TC: 'center', MC: 'center', BC: 'center',
-  TR: 'right', MR: 'right', BR: 'right',
-};
-
-const H_BY_COLUMN_ALIGN: Readonly<Record<ScheduleColumnAlign, TextAlign>> = {
-  left: 'left',
-  center: 'center',
-  right: 'right',
-};
-
-/** Κατακόρυφη ζώνη της 9-θέσης στοίχισης. */
-function verticalBand(align: TableCellAlign): 'top' | 'middle' | 'bottom' {
-  const first = align.charAt(0);
-  if (first === 'T') return 'top';
-  if (first === 'B') return 'bottom';
-  return 'middle';
-}
-
-/** Το x του σημείου αγκύρωσης, σύμφωνα με την οριζόντια στοίχιση και τα περιθώρια. */
-function anchorXMm(rect: TableRectMm, hAlign: TextAlign, marginHMm: number): number {
-  if (hAlign === 'left') return rect.x + marginHMm;
-  if (hAlign === 'right') return rect.x + rect.w - marginHMm;
-  return rect.x + rect.w / 2;
-}
-
-/**
- * Το y της **γραμμής βάσης**.
- *
- * `top` δίνει `rect.y + margin + textHeight`, δηλαδή ακριβώς τη σύμβαση που ήδη
- * χρησιμοποιεί ο ADR-622 (`rowTop + TEXT_MM`) — το κείμενο κρέμεται από την κορυφή της
- * γραμμής. `middle` κεντράρει το κεφαλαίο γράμμα γύρω από τον άξονα του κελιού.
- *
- * 🔴 **Εξαγόμενη** (ADR-739 Φ.Δ βήμα 3): ο in-cell επεξεργαστής πρέπει να τοποθετήσει τη
- * γραμμή βάσης του `<input>` **ακριβώς** εκεί που τη ζωγραφίζει ο καμβάς. Μια δεύτερη
- * διατύπωση του κανόνα θα σήμαινε ότι το κείμενο **αναπηδά** τη στιγμή που μπαίνεις στο
- * κελί — δηλαδή το ίδιο ελάττωμα που λύνει το βήμα, σε πιο ύπουλη μορφή.
- */
-export function cellBaselineYMm(
-  rect: TableRectMm,
-  align: TableCellAlign,
-  style: TableCellStyle,
-): number {
-  const band = verticalBand(align);
-  if (band === 'top') return rect.y + style.margins.vMm + style.textHeightMm;
-  if (band === 'bottom') return rect.y + rect.h - style.margins.vMm;
-  return rect.y + rect.h / 2 + style.textHeightMm / 2;
-}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Κελιά
@@ -156,6 +115,16 @@ interface PlaceTextInput {
   /** 🔴 ADR-753 — η μορφοποίηση ανά χαρακτήρα του κελιού· απούσα στα σχεδόν όλα. */
   readonly runs?: readonly TableCellTextRun[];
   readonly measure: TableTextMeasurer;
+  /**
+   * 🔴 ADR-739 §58 Γ2 — πόσες οπτικές γραμμές **χωρούν** στο ορθογώνιο. Απόν ⇒ χωρίς όριο.
+   *
+   * Υπάρχει επειδή το ύψος μιας γραμμής μπορεί να είναι **καρφωμένο** ενώ το κελί
+   * αναδιπλώνεται: τότε η μέτρηση ζήτησε τρεις γραμμές αλλά ο χρήστης έδωσε χώρο για δύο.
+   * Χωρίς το φράγμα, η τρίτη γραμμή θα ζωγραφιζόταν **πάνω στο περίγραμμα και μέσα στο
+   * επόμενο κελί** — ακριβώς το ελάττωμα που το βήμα 5 (περικοπή) υπάρχει για να μην υπάρχει,
+   * στον άλλο άξονα.
+   */
+  readonly maxLines?: number;
 }
 
 /**
@@ -172,11 +141,11 @@ interface PlaceTextInput {
  * ακμή που κρατά το `anchorXMm` — άρα το κείμενο σταματά ακριβώς εκεί που θα σταματούσε ένα
  * κείμενο που «μόλις χωρούσε», σε κάθε στοίχιση.
  */
-function placeText(input: PlaceTextInput): TableTextRun | undefined {
-  const { rect, align, hAlign, style } = input;
-  if (!input.text) return undefined;
+function placeTexts(input: PlaceTextInput): TableTextRun[] {
+  const { rect, style } = input;
+  if (!input.text) return [];
 
-  const visible = resolveVisibleCellText({
+  const content = resolveVisibleCellContent({
     text: input.text,
     availableWidthMm: rect.w - style.margins.hMm * 2,
     style,
@@ -184,13 +153,59 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     numeric: input.numeric,
     runs: input.runs,
     measure: input.measure,
+    ...(input.maxLines !== undefined && { maxLines: input.maxLines }),
   });
+
+  const out: TableTextRun[] = [];
+  content.lines.forEach((line, index) => {
+    const run = placeLine(input, content, line, index);
+    if (run) out.push(run);
+  });
+  return out;
+}
+
+/**
+ * 🔴 ADR-739 §58 Γ2 — **πού κάθεται η γραμμή `index` ενός αναδιπλωμένου κελιού.**
+ *
+ * ## Η κατακόρυφη κατανομή ΔΕΝ ξαναγράφεται εδώ
+ * Το ερώτημα «σε πολυγραμμικό μπλοκ, προς τα πού μεγαλώνει;» το έχει ήδη απαντήσει το
+ * `resolveMultilineExtents` (`bim/text/text-lines.ts`) για το MTEXT, με τον κανόνα των
+ * AutoCAD/Revit: **T** μεγαλώνει προς τα κάτω, **B** προς τα πάνω, **M** συμμετρικά. Ένας
+ * δεύτερος υπολογισμός εδώ θα ήταν δεύτερη απάντηση στην ίδια ερώτηση — και θα απέκλινε
+ * ακριβώς στην περίπτωση που κανείς δεν δοκιμάζει (κάτω στοίχιση με τρεις γραμμές).
+ *
+ * ```
+ *   πρώτη γραμμή βάσης = cellBaselineYMm(μονής γραμμής) − topAdd × ύψος
+ *   γραμμή i           = πρώτη + i × βήμα
+ * ```
+ * Με **μία** γραμμή το `topAdd` είναι 0 και η έκφραση εκφυλίζεται στη σημερινή: κάθε πίνακας
+ * που υπάρχει παράγει **ταυτόσημη** θέση κειμένου, χωρίς εξαίρεση στον κώδικα.
+ */
+function placeLine(
+  input: PlaceTextInput,
+  content: VisibleCellContent,
+  visible: VisibleCellLine,
+  index: number,
+): TableTextRun | undefined {
+  const { rect, align, hAlign, style } = input;
   if (!visible.text) return undefined;
+
+  // 🔴 ADR-739 §58 Γ1 — **το ύψος που ΖΩΓΡΑΦΙΖΕΤΑΙ**, μετά τη σμίκρυνση. Ταυτότητα (`style`)
+  // όταν δεν σμικρύνθηκε, ώστε κάθε πίνακας που υπάρχει σήμερα να παράγει byte-ταυτόσημη
+  // διάταξη — η ίδια αρχή με τα προαιρετικά πεδία του `TableTextRunBase`.
+  //
+  // Το `cellBaselineYMm` το χρειάζεται **εξίσου** με το `heightMm`: η γραμμή βάσης ορίζεται
+  // ως προς το ύψος του κειμένου, οπότε ένα σμικρυμένο κείμενο τοποθετημένο στη βάση του
+  // αρχικού μεγέθους θα κρεμόταν έξω από τη ζώνη του — ορατό σε κάθε `top`/`middle` κελί.
+  const drawnStyle: TableCellStyle =
+    visible.heightScale === 1
+      ? style
+      : { ...style, textHeightMm: style.textHeightMm * visible.heightScale };
 
   // 🔴 ADR-753 Φ2 — η **μία** απάντηση στο «πόσο πλατιοί είναι οι πρώτοι k χαρακτήρες», για
   // όποιον τη χρειαστεί. Με ένα τμήμα εκφυλίζεται στο σημερινό `measure(text.slice(0, k))`.
-  const prefixWidthMm = (index: number): number =>
-    styledPrefixWidthMm(visible.spans, index, input.measure);
+  const prefixWidthMm = (charIndex: number): number =>
+    styledPrefixWidthMm(visible.spans, charIndex, input.measure);
 
   // 🔴 ADR-751 — οι διευθύνσεις εντοπίζονται **εδώ**, στο ίδιο σημείο που γεννιέται το ορατό
   // κείμενο, και με τον **ίδιο** μετρητή που μόλις αποφάσισε την περικοπή. Αν τις έβρισκε ο
@@ -208,10 +223,10 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
   const base: TableTextRunBase = {
     position: {
       x: anchorXMm(rect, hAlign, style.margins.hMm),
-      y: cellBaselineYMm(rect, align, style),
+      y: multilineBaselineYMm(rect, align, drawnStyle, content.lines.length, index),
     },
     text: visible.text,
-    heightMm: style.textHeightMm,
+    heightMm: drawnStyle.textHeightMm,
     colorHex: style.textColorHex,
     hAlign,
     bold: style.bold,
@@ -226,7 +241,12 @@ function placeText(input: PlaceTextInput): TableTextRun | undefined {
     // 🔴 ADR-753 Φ2 — ίδια σύμβαση, τρίτη φορά: ένα μόνο τμήμα δεν λέει τίποτα που το ίδιο το
     // run δεν λέει ήδη (`bold`/`italic`/`heightMm`/`colorHex`/`fontFamily`), οπότε το πεδίο
     // **λείπει** και κάθε πίνακας που υπάρχει σήμερα παράγει byte-ταυτόσημη διάταξη.
-    ...(hasStyledSpans(visible.spans, style) && { spans: visible.spans }),
+    // ADR-739 §58 Γ1 — η σύγκριση γίνεται με το **ζωγραφισμένο** στυλ, όχι με το ονομαστικό:
+    // σε σμικρυμένο κελί χωρίς μορφοποίηση ανά χαρακτήρα, το μοναδικό τμήμα έχει ακριβώς το
+    // κλιμακωμένο ύψος του run, άρα δεν λέει τίποτα που το run δεν λέει ήδη — και το πεδίο
+    // σωστά λείπει. Με το ονομαστικό `style` θα φαινόταν πάντα «διαφορετικό» και κάθε
+    // σμικρυμένο κελί θα κουβαλούσε περιττά τμήματα σε κάθε εξαγωγή.
+    ...(hasStyledSpans(visible.spans, drawnStyle) && { spans: visible.spans }),
   };
 
   // ADR-739 Φ.Ε/Φ2 βήμα 4 — το πλάτος μετριέται **μόνο** για υπογραμμισμένο κείμενο: είναι ο
@@ -298,7 +318,7 @@ export function placeCells(
         // Η ΙΔΙΑ τιμή ταξιδεύει και στο κελί και στο run του: το κελί τη χρειάζεται για
         // τον in-cell επεξεργαστή (που ανοίγει και σε **κενό** κελί, όπου run δεν υπάρχει).
         hAlign,
-        text: placeText({
+        texts: placeTexts({
           // 🔴 ADR-760 — η **ίδια** επίλυση μορφής με τον μετρητή πλάτους
           // (`naturalCellWidthMm`), πάνω στις **ίδιες** `overrides`. Δύο ξεχωριστές
           // αποφάσεις εδώ δεν θα έδιναν «λάθος πλάτος» αλλά **κομμένο κείμενο** — ίδιο
@@ -313,6 +333,7 @@ export function placeCells(
           numeric: typeof cell?.value === 'number',
           runs: cell?.runs,
           measure,
+          maxLines: fittingLineCount(rect, cellStyle),
         }),
         rowSpan: span?.rowSpan ?? 1,
         colSpan: span?.colSpan ?? 1,

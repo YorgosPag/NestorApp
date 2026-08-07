@@ -194,9 +194,9 @@ describe('🔴 εγκλωβισμός: η διάταξη ΔΕΝ βγάζει π�
     for (const cell of layout.cells) {
       expect(parseHex(cell.style.textColorHex)).not.toBeNull();
       expect(isAutomaticTableInk(cell.style.textColorHex)).toBe(false);
-      if (cell.text) {
-        expect(parseHex(cell.text.colorHex)).not.toBeNull();
-        expect(isAutomaticTableInk(cell.text.colorHex)).toBe(false);
+      if (cell.texts[0]) {
+        expect(parseHex(cell.texts[0].colorHex)).not.toBeNull();
+        expect(isAutomaticTableInk(cell.texts[0].colorHex)).toBe(false);
       }
     }
   }
@@ -204,24 +204,24 @@ describe('🔴 εγκλωβισμός: η διάταξη ΔΕΝ βγάζει π�
   it('σε ΟΘΟΝΗ — και το χρώμα είναι λευκό', () => {
     expectEveryColorIsRealHex(DARK_CANVAS);
     const layout = layoutTable(model, STANDARD, { surfaceHex: DARK_CANVAS, measureText });
-    expect(layout.cells[0].text?.colorHex).toBe('#ffffff');
+    expect(layout.cells[0].texts[0]?.colorHex).toBe('#ffffff');
   });
 
   it('σε ΧΑΡΤΙ — και το χρώμα είναι μαύρο', () => {
     expectEveryColorIsRealHex(TABLE_PAPER_HEX);
     const layout = layoutTable(model, STANDARD, { surfaceHex: TABLE_PAPER_HEX, measureText });
-    expect(layout.cells[0].text?.colorHex).toBe('#000000');
+    expect(layout.cells[0].texts[0]?.colorHex).toBe('#000000');
   });
 
   it('🔴 ΧΩΡΙΣ επιφάνεια ⇒ χαρτί: η προεπιλογή δείχνει προς την ασφαλή πλευρά', () => {
     expectEveryColorIsRealHex(TABLE_PAPER_HEX);
-    expect(layoutTable(model, STANDARD, { measureText }).cells[0].text?.colorHex).toBe('#000000');
+    expect(layoutTable(model, STANDARD, { measureText }).cells[0].texts[0]?.colorHex).toBe('#000000');
   });
 
   it('το ΚΕΛΙ και το RUN συμφωνούν πάντα — ένας κόμβος επίλυσης, όχι δύο', () => {
     for (const surface of [DARK_CANVAS, TABLE_PAPER_HEX]) {
       for (const cell of layoutTable(model, STANDARD, { surfaceHex: surface, measureText }).cells) {
-        if (cell.text) expect(cell.text.colorHex).toBe(cell.style.textColorHex);
+        if (cell.texts[0]) expect(cell.texts[0].colorHex).toBe(cell.style.textColorHex);
       }
     }
   });

@@ -208,13 +208,19 @@ export function stampTableText(
   const { ctx } = rc;
   let drewAny = false;
   for (const cell of cells) {
-    const run = cell.text;
-    if (!run) continue;
     if (skip && cell.rowId === skip.rowId && cell.colId === skip.colId) continue;
-    const fontPx = run.heightMm * rc.pxPerMm;
-    if (fontPx < MIN_CELL_TEXT_SCREEN_PX) continue;
-    stampRun(ctx, rc, run, fontPx);
-    drewAny = true;
+    // 🔴 ADR-739 §58 Γ2 — **όλες** οι οπτικές γραμμές, όχι η πρώτη. Ένα κελί χωρίς αναδίπλωση
+    // έχει ακριβώς μία, οπότε ο βρόχος είναι η σημερινή πράξη· με αναδίπλωση είναι ο **μόνος**
+    // τρόπος να μη χαθεί σιωπηλά ό,τι ο χρήστης ζήτησε να φανεί.
+    for (const run of cell.texts) {
+      const fontPx = run.heightMm * rc.pxPerMm;
+      // Το LOD κρίνεται **ανά γραμμή** επειδή η σμίκρυνση (§58 Γ1) μπορεί να δώσει άλλο ύψος
+      // ανά κελί — και ένα κοινό κατώφλι ανά κελί θα ζωγράφιζε μουτζούρα στο ένα και τίποτα
+      // στο άλλο, με το ίδιο zoom.
+      if (fontPx < MIN_CELL_TEXT_SCREEN_PX) continue;
+      stampRun(ctx, rc, run, fontPx);
+      drewAny = true;
+    }
   }
   return drewAny;
 }

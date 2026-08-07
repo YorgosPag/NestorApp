@@ -298,7 +298,7 @@ describe('🔴 anti-drift — η ΜΕΤΡΗΣΗ βλέπει τις ίδιες �
       { measureText },
     );
 
-    const run = layout.cells[0].text;
+    const run = layout.cells[0].texts[0];
     expect(run?.fontFamily).toBe('verdana');
     expect(run?.italic).toBe(true);
     expect(run?.underline).toBe(true);

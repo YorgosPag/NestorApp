@@ -92,7 +92,7 @@ function sumValue(model: PersistedTableModel): unknown {
 function sumOnCanvas(model: PersistedTableModel): string | undefined {
   const layout = layoutTable(resolveTableModel(model), STANDARD, { measureText });
   const cell = layout.cells.find((c) => c.rowId === 'r1' && c.colId === 'cB');
-  return cell?.text?.text;
+  return cell?.texts[0]?.text;
 }
 
 const at = (rowId: TableRowId, colId: TableColumnId) => ({ rowId, colId });

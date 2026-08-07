@@ -23,12 +23,15 @@
  * @module subapps/dxf-viewer/bim/table/table-layout-measure
  */
 
+import { CHARACTER_METRICS } from '../../config/text-rendering-config';
 import { measureTextAdvanceWorld } from '../../text-engine/fonts/text-advance';
 import type { TableColumn, TableModel, TableRow } from '../../types/table';
 import { resolveCellStyledSpans, styledSpansWidthMm } from './table-cell-styled-spans';
+import { resolveCellOverflow } from './table-cell-overflow';
+import { resolveVisibleCellContent } from './table-cell-visible-lines';
 import { buildMergeIndex, cellKey, type MergeIndex } from './table-model-helpers';
 import { cellDisplayText, resolveCellNumberFormat } from './table-cell-format';
-import { resolveCellStyle, type TableStyle } from './table-style';
+import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-style';
 import type { TableTextMeasurer } from './table-layout-types';
 
 /** Ο προεπιλεγμένος μετρητής: το SSoT πλάτους κειμένου του renderer (ADR-557). */
@@ -178,9 +181,109 @@ function measureColumns(
   return widths;
 }
 
-/** Ύψη γραμμών: ρητό `heightMm` της γραμμής, αλλιώς το προεπιλεγμένο του στυλ. */
-function measureRows(model: TableModel, style: TableStyle): number[] {
-  return model.rows.map((row) => Math.max(row.heightMm ?? style.defaultRowHeightMm, 0));
+/**
+ * 🔴 ADR-739 §58 Γ2 — **το ύψος μιας γραμμής, όταν κανείς δεν το κάρφωσε.**
+ *
+ * Ίδια αριθμητική με την τοποθέτηση, και **αυτό είναι το συμβόλαιο**: το `cellBaselineYMm`
+ * βάζει την πρώτη γραμμή βάσης στο `y + περιθώριο + ύψος` και κάθε επόμενη ένα `βήμα`
+ * χαμηλότερα, οπότε το κείμενο πιάνει ακριβώς `2×περιθώριο + ύψος + (n−1)×βήμα`. Δύο
+ * διαφορετικοί τύποι εδώ και εκεί θα σήμαιναν κείμενο που ξεχειλίζει από τη γραμμή που
+ * φτιάχτηκε **για αυτό** — και το σύμπτωμα θα φαινόταν μόνο σε αναδιπλωμένα κελιά.
+ */
+function wrappedCellHeightMm(lineCount: number, cellStyle: TableCellStyle): number {
+  const stepMm = cellStyle.textHeightMm * CHARACTER_METRICS.LINE_HEIGHT_RATIO;
+  return cellStyle.margins.vMm * 2 + cellStyle.textHeightMm + Math.max(lineCount - 1, 0) * stepMm;
+}
+
+/** Το ωφέλιμο πλάτος ενός κελιού που απλώνεται σε `colSpan` στήλες, μείον τα περιθώριά του. */
+function cellContentWidthMm(
+  widthsMm: readonly number[],
+  colIndex: number,
+  colSpan: number,
+  cellStyle: TableCellStyle,
+): number {
+  let total = 0;
+  for (let i = colIndex; i < Math.min(colIndex + colSpan, widthsMm.length); i++) total += widthsMm[i];
+  return total - cellStyle.margins.hMm * 2;
+}
+
+/**
+ * Το ύψος που **ζητά το περιεχόμενο** μιας γραμμής — `0` όταν κανένα κελί δεν αναδιπλώνεται.
+ *
+ * ## 🔴 Ποια κελιά μετρούν, και γιατί όχι όλα
+ * - **Καλυμμένα** από συγχώνευση: δεν υπάρχουν ως γεωμετρία (ίδια εξαίρεση με το `hugWidthMm`).
+ * - **`rowSpan > 1`**: ένα κελί που απλώνεται σε τρεις γραμμές δεν λέει τίποτα για το ύψος
+ *   της **καθεμιάς** — δεν υπάρχει σωστή κατανομή, μόνο αυθαίρετη. Το Excel αποτυγχάνει εδώ
+ *   ολοκληρωτικά (τεκμηριωμένο: το AutoFit **δεν λειτουργεί** σε συγχωνευμένα κελιά).
+ * - **`colSpan > 1` με `rowSpan === 1`**: **μετρά κανονικά**, με το συνολικό πλάτος του
+ *   εύρους. Ανήκει ακριβώς σε μία γραμμή, άρα η ερώτηση έχει σαφή απάντηση — και εδώ ο
+ *   ΝΕΣΤΩΡ κάνει σωστά αυτό που το Excel δεν κάνει καθόλου.
+ *
+ * ## Γιατί επιστρέφει 0 όταν δεν υπάρχει αναδίπλωση — και γιατί αυτό είναι δομικό
+ * Κανένας πίνακας στον δίσκο σήμερα δεν έχει `overflow: 'wrap'`. Ο βρόχος βγαίνει στο πρώτο
+ * `resolveCellOverflow` και **καμία** αναδίπλωση δεν υπολογίζεται: μηδέν κόστος, και —
+ * κυρίως — **byte-ταυτόσημα ύψη** με πριν το §58 για κάθε υπάρχον σχέδιο.
+ */
+function contentHeightMm(
+  model: TableModel,
+  style: TableStyle,
+  row: TableRow,
+  rowIndex: number,
+  widthsMm: readonly number[],
+  merges: MergeIndex,
+  measure: TableTextMeasurer,
+): number {
+  let tallest = 0;
+  model.columns.forEach((column, colIndex) => {
+    const key = cellKey(row.id, column.id);
+    if (merges.covered.has(key)) return;
+    const span = merges.anchors.get(key);
+    if ((span?.rowSpan ?? 1) > 1) return;
+
+    const cell = model.cells.get(key);
+    if (resolveCellOverflow(cell?.styleOverride?.overflow, column.overflow) !== 'wrap') return;
+
+    const overrides = { column: column.styleOverride, row: row.styleOverride, cell: cell?.styleOverride };
+    const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], overrides);
+    const text = cellDisplayText(cell, resolveCellNumberFormat(overrides, column.valueType));
+    if (!text) return;
+
+    const lines = resolveVisibleCellContent({
+      text,
+      availableWidthMm: cellContentWidthMm(widthsMm, colIndex, span?.colSpan ?? 1, cellStyle),
+      style: cellStyle,
+      overflow: 'wrap',
+      numeric: false,
+      runs: cell?.runs,
+      measure,
+    }).lines.length;
+
+    tallest = Math.max(tallest, wrappedCellHeightMm(lines, cellStyle));
+  });
+  return tallest;
+}
+
+/**
+ * Ύψη γραμμών: **ρητό `heightMm` ⇒ καρφωμένο**· απόν ⇒ **αυτόματο** (περιεχόμενο, με δάπεδο
+ * το προεπιλεγμένο του στυλ).
+ *
+ * 🔴 Το δάπεδο δεν είναι λεπτομέρεια: χωρίς αυτό, μια γραμμή με **λίγο** κείμενο θα ζητούσε
+ * ύψος μικρότερο από το `defaultRowHeightMm` και **κάθε πίνακας του έργου θα συρρικνωνόταν**
+ * την ημέρα που μπήκε η αναδίπλωση — μεταβολή γεωμετρίας οντότητας σε σχέδια που κανείς δεν
+ * άγγιξε. Το αυτόματο ύψος **μεγαλώνει** τη γραμμή· ποτέ δεν τη μικραίνει.
+ */
+function measureRows(
+  model: TableModel,
+  style: TableStyle,
+  widthsMm: readonly number[],
+  merges: MergeIndex,
+  measure: TableTextMeasurer,
+): number[] {
+  return model.rows.map((row, rowIndex) => {
+    if (row.heightMm !== undefined) return Math.max(row.heightMm, 0);
+    const content = contentHeightMm(model, style, row, rowIndex, widthsMm, merges, measure);
+    return Math.max(style.defaultRowHeightMm, content, 0);
+  });
 }
 
 /** Το στάδιο μέτρησης — καθαρή συνάρτηση, χωρίς παρενέργειες. */
@@ -191,9 +294,16 @@ export function measureTable(
 ): TableMeasurement {
   const merges = buildMergeIndex(model);
   const measure = resolveTableTextMeasurer(options);
+  // 🔴 ADR-739 §58 Γ2 — **οι στήλες ΠΡΩΤΑ, και αυτό λύνει τον κύκλο.** Η αναδίπλωση χρειάζεται
+  // πλάτος για να βρει πλήθος γραμμών, και το `hug` χρειάζεται περιεχόμενο για να βρει πλάτος:
+  // αν το `hug` ρωτούσε το αναδιπλωμένο περιεχόμενο, οι δύο θα περίμεναν ο ένας τον άλλον.
+  // Ο κύκλος σπάει με σειρά, όχι με επανάληψη: το `hug` μετρά το κείμενο **αδιάσπαστο**
+  // (ίδια επιλογή με το `width: max-content` του CSS), οπότε μια `hug` στήλη βγαίνει αρκετά
+  // πλατιά ώστε να μην αναδιπλώνει ποτέ. Δηλωμένο, όχι σιωπηλό.
+  const columnWidthsMm = measureColumns(model, style, merges, measure, options?.availableWidthMm);
   return {
-    columnWidthsMm: measureColumns(model, style, merges, measure, options?.availableWidthMm),
-    rowHeightsMm: measureRows(model, style),
+    columnWidthsMm,
+    rowHeightsMm: measureRows(model, style, columnWidthsMm, merges, measure),
     merges,
   };
 }

@@ -76,7 +76,7 @@ function runOf(spec: CellSpec): TableTextRun {
     rows: [ROW],
     cells: [['r1', 'c1', { kind: 'text', value: spec.value, ...(spec.runs && { runs: spec.runs }) }]],
   });
-  const run = layoutTable(model, STYLE, { measureText }).cells[0]?.text;
+  const run = layoutTable(model, STYLE, { measureText }).cells[0]?.texts[0];
   if (!run) throw new Error('η διάταξη δεν παρήγαγε κείμενο');
   return run;
 }

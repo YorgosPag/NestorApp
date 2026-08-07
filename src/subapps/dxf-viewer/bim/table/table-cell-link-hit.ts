@@ -29,7 +29,8 @@ import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';
 import type { Point2D } from '../../rendering/types/Types';
 import type { SceneUnits } from '../../utils/scene-units';
 import type { TableEntity } from '../../types/table-entity';
-import type { TableTextLinkSpan } from './table-layout-types';
+import type { TableTextLinkSpan, TableTextRun } from './table-layout-types';
+import type { TableFramePoint } from '../../types/table-entity';
 import {
   computeTableEntityGeometryLive,
   tableCellAtFrame,
@@ -66,9 +67,28 @@ export function resolveTableCellLinkAtWorld(
   const cell = geometry.layout.cells.find(
     (c) => c.rowId === hit.rowId && c.colId === hit.colId,
   );
-  const run = cell?.text;
-  const links = run?.links;
-  if (!run || !links?.length) return null;
+  if (!cell) return null;
+
+  // 🔴 ADR-739 §58 Γ2 — **κάθε οπτική γραμμή δοκιμάζεται χωριστά.** Ένα αναδιπλωμένο κελί έχει
+  // N γραμμές βάσης, και ο έλεγχος είναι ούτως ή άλλως ανά γραμμή (η κάθετη ζώνη ορίζεται ως
+  // προς τη **δική της** βάση). Με ένα μόνο run, ο βρόχος τρέχει ακριβώς μία φορά και η πράξη
+  // είναι η ταυτόσημη σημερινή.
+  for (const run of cell.texts) {
+    const span = linkSpanAt(run, frame);
+    if (span) return { rowId: hit.rowId, colId: hit.colId, span };
+  }
+  return null;
+}
+
+/**
+ * Ο σύνδεσμος **αυτής** της οπτικής γραμμής κάτω από το σημείο, ή `null`.
+ *
+ * Οι δύο έλεγχοι (κάθετη ζώνη γραμμάτων · οριζόντιο εύρος τμήματος) ήταν πάντα ανά γραμμή
+ * βάσης — απλώς μέχρι το §58 υπήρχε μόνο μία. Εξαγωγή χωρίς καμία αλλαγή αριθμητικής.
+ */
+function linkSpanAt(run: TableTextRun, frame: TableFramePoint): TableTextLinkSpan | null {
+  const links = run.links;
+  if (!links?.length) return null;
 
   // Κάθετα: η ζώνη ανιούσας→κατιούσας γύρω από τη γραμμή βάσης (`+v` = προς τα κάτω).
   const belowBaselineMm = frame.v - run.position.y;
@@ -81,8 +101,8 @@ export function resolveTableCellLinkAtWorld(
 
   // Οριζόντια: σχετικά με την **άγκυρα** του κειμένου, η ίδια σύμβαση με το `offsetMm`.
   const fromAnchorMm = frame.u - run.position.x;
-  const span = links.find(
-    (s) => fromAnchorMm >= s.offsetMm && fromAnchorMm <= s.offsetMm + s.advanceMm,
+  return (
+    links.find((s) => fromAnchorMm >= s.offsetMm && fromAnchorMm <= s.offsetMm + s.advanceMm)
+    ?? null
   );
-  return span ? { rowId: hit.rowId, colId: hit.colId, span } : null;
 }

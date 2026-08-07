@@ -104,7 +104,7 @@ describe('κελί χωρίς μορφοποίηση — ΕΝΑ `fillText`, ο �
     // χρειαζόταν το συνολικό πλάτος, που **δεν μετριέται** για μη υπογραμμισμένα κελιά. Άρα η
     // άγκυρα πρέπει να μείνει ακριβώς αυτή της διάταξης, χωρίς καμία πρόσθεση.
     const centered = paint({ value: 'ΠΕΡΙΓΡΑΦΗ', align: 'center' });
-    const run = layoutOf({ value: 'ΠΕΡΙΓΡΑΦΗ', align: 'center' }).cells[0].text!;
+    const run = layoutOf({ value: 'ΠΕΡΙΓΡΑΦΗ', align: 'center' }).cells[0].texts[0]!;
     // ⚠️ Ωμό `run.position.x`, χωρίς `pxPerMm`: η προβολή του καταγραφέα είναι ταυτοτική (η
     // κλίμακα ζει μέσα στο πραγματικό `toScreen`), ενώ οι **μετατοπίσεις** κομματιών περνούν
     // ρητά από το `pxPerMm`. Ίδια σύμβαση με το `table-link-paint.test.ts`, που γι' αυτόν
@@ -131,7 +131,7 @@ describe('🔴 κελί με τμήματα — ένα πέρασμα ανά τ�
 
   it('🔴 κάθε κομμάτι πέφτει ΑΚΡΙΒΩΣ στο mm που είπε το SSoT', () => {
     const log = paint(spec);
-    const run = layoutOf(spec).cells[0].text!;
+    const run = layoutOf(spec).cells[0].texts[0]!;
     const pieces = tableTextPieces(run);
     for (let i = 0; i < pieces.length; i++) {
       expect(log.texts[i].at.x).toBeCloseTo(
@@ -145,7 +145,7 @@ describe('🔴 κελί με τμήματα — ένα πέρασμα ανά τ�
     // μετρήθηκε καβαλά το επόμενο. Με τον διπλασιαστή των έντονων, μια βαφή που αγνοεί το
     // `bold` θα άφηνε το «CC» στο μισό της σωστής απόστασης.
     const log = paint(spec);
-    const pieces = tableTextPieces(layoutOf(spec).cells[0].text!);
+    const pieces = tableTextPieces(layoutOf(spec).cells[0].texts[0]!);
     for (let i = 1; i < pieces.length; i++) {
       expect(log.texts[i].at.x - log.texts[i - 1].at.x).toBeCloseTo(
         pieces[i - 1].advanceMm! * RECORDER_PX_PER_MM, 6,
@@ -226,7 +226,7 @@ describe('🔴 σύνδεσμος που διασχίζει όριο στυλ �
 
   it('🔴 οι δύο λωρίδες εφάπτονται και μαζί καλύπτουν ακριβώς τον σύνδεσμο', () => {
     const log = paint(spec);
-    const link = layoutOf(spec).cells[0].text!.links![0];
+    const link = layoutOf(spec).cells[0].texts[0]!.links![0];
     const total = log.clips.reduce((sum, c) => sum + c.widthPx, 0);
     expect(total).toBeCloseTo(link.advanceMm * RECORDER_PX_PER_MM, 6);
     expect(log.clips[0].at.x + log.clips[0].widthPx).toBeCloseTo(log.clips[1].at.x, 6);

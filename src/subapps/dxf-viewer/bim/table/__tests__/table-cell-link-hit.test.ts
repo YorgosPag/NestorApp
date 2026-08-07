@@ -53,7 +53,7 @@ function entityWith(value: TableCell['value']): TableEntity {
 
 /** Το run της διάταξης — η αναφορά από την οποία παράγονται όλα τα σημεία δοκιμής. */
 function runOf(value: TableCell['value']) {
-  const run = layoutTable(modelWith(value), STYLE).cells[0]?.text;
+  const run = layoutTable(modelWith(value), STYLE).cells[0]?.texts[0];
   if (!run) throw new Error('κανένα run');
   return run;
 }

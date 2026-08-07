@@ -64,16 +64,19 @@ function cell(
     rect: { x: 0, y: 0, w: 40, h: 8 },
     style: style(fillColorHex),
     hAlign: 'left',
-    text: {
-      position: { x: 1, y: 6 },
-      text,
-      heightMm: 3,
-      colorHex: INK,
-      hAlign: 'left',
-      bold: false,
-      italic: false,
-      underline: false,
-    },
+    // ADR-739 §58 Γ2 — **πίνακας** γραμμών· ένα στοιχείο για κελί που δεν αναδιπλώνεται.
+    texts: [
+      {
+        position: { x: 1, y: 6 },
+        text,
+        heightMm: 3,
+        colorHex: INK,
+        hAlign: 'left',
+        bold: false,
+        italic: false,
+        underline: false,
+      },
+    ],
     rowSpan: 1,
     colSpan: 1,
   };

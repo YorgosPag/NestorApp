@@ -56,7 +56,7 @@ function paint(value: TableCell['value']): PaintLog {
 
 /** Το τμήμα-σύνδεσμος όπως το αποφάσισε η **διάταξη** — η αναφορά του ζωγράφου. */
 function spanOf(value: string) {
-  const links = layoutTable(modelWith(value), STYLE).cells[0]?.text?.links;
+  const links = layoutTable(modelWith(value), STYLE).cells[0]?.texts[0]?.links;
   if (!links?.length) throw new Error(`κανένα τμήμα-σύνδεσμος για: ${value}`);
   return links[0];
 }

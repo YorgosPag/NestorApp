@@ -162,13 +162,13 @@ describe('layoutTable — κελιά και στοίχιση', () => {
       columns: [col('a', { kind: 'fixed', widthMm: 10 })],
       rows: [row('r1')],
     });
-    expect(layoutTable(empty, STANDARD, { measureText }).cells[0].text).toBeUndefined();
+    expect(layoutTable(empty, STANDARD, { measureText }).cells[0].texts[0]).toBeUndefined();
   });
 
   it('η στήλη καθορίζει την οριζόντια στοίχιση όταν το κελί δεν έχει άποψη', () => {
     const layout = layoutTable(model, STANDARD, { measureText });
-    expect(layout.cells[0].text?.hAlign).toBe('left');
-    expect(layout.cells[1].text?.hAlign).toBe('right');
+    expect(layout.cells[0].texts[0]?.hAlign).toBe('left');
+    expect(layout.cells[1].texts[0]?.hAlign).toBe('right');
   });
 
   it('η παράκαμψη του κελιού νικά τη στήλη', () => {
@@ -177,7 +177,7 @@ describe('layoutTable — κελιά και στοίχιση', () => {
       rows: [row('r1')],
       cells: [['r1', 'a', { kind: 'text', value: 'X', styleOverride: { align: 'MR' } }]],
     });
-    expect(layoutTable(overridden, STANDARD, { measureText }).cells[0].text?.hAlign).toBe('right');
+    expect(layoutTable(overridden, STANDARD, { measureText }).cells[0].texts[0]?.hAlign).toBe('right');
   });
 
   /**
@@ -194,8 +194,8 @@ describe('layoutTable — κελιά και στοίχιση', () => {
     });
     const layout = layoutTable(sheet, DETAIL_SHEET, { measureText });
     const [header, data] = layout.cells;
-    expect(header.text?.position.y).toBeCloseTo(DETAIL_SHEET_TEXT_HEIGHT_MM, 6);
-    expect(data.text?.position.y).toBeCloseTo(
+    expect(header.texts[0]?.position.y).toBeCloseTo(DETAIL_SHEET_TEXT_HEIGHT_MM, 6);
+    expect(data.texts[0]?.position.y).toBeCloseTo(
       DETAIL_SHEET_HEADER_HEIGHT_MM + DETAIL_SHEET_BASELINE_INSET_MM + DETAIL_SHEET_TEXT_HEIGHT_MM,
       6,
     );
@@ -215,7 +215,7 @@ describe('layoutTable — κελιά και στοίχιση', () => {
       .filter((c) => c.rowId !== 'h')
       .forEach((cell, i) => {
         const n = i + 1; // ο ADR-622 μετρά τις γραμμές δεδομένων από το 1
-        expect(cell.text?.position.y).toBeCloseTo(
+        expect(cell.texts[0]?.position.y).toBeCloseTo(
           DETAIL_SHEET_ROW_HEIGHT_MM * n + DETAIL_SHEET_TEXT_HEIGHT_MM,
           6,
         );
@@ -440,7 +440,7 @@ describe('layoutTable — κατακόρυφα: το ύψος γραμμής δ�
   });
 
   it('το κείμενο ζωγραφίζεται ολόκληρο — καμία κατακόρυφη περικοπή', () => {
-    const run = layoutTable(model, TALL_TEXT, { measureText }).cells[0].text;
+    const run = layoutTable(model, TALL_TEXT, { measureText }).cells[0].texts[0];
     expect(run?.text).toBe('Χ');
     expect(run?.heightMm).toBe(9);
     // Καμία σήμανση: η περικοπή είναι αποκλειστικά οριζόντια (100mm στήλη — χωράει άνετα).

@@ -208,7 +208,7 @@ describe('η διάταξη κουβαλά τα τμήματα — καμία έ
     layoutTable(
       createTableModel({ columns: [column], rows: [row], cells: [['r1', 'c1', cell]] }),
       style,
-    ).cells[0]?.text;
+    ).cells[0]?.texts[0];
 
   it('το κελί της οθόνης του Giorgio φτάνει με τμήμα-σύνδεσμο', () => {
     const run = runFor({ kind: 'text', value: 'georgios.pagonis@gmail.com' });

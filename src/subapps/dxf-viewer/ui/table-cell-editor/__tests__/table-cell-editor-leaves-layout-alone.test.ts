@@ -108,7 +108,7 @@ describe('🔴 ADR-739 Φ.Δ βήμα 6 — ο επεκτεταμένος επε
   it('το `TableTextRun.text` μένει ΠΕΡΙΚΟΜΜΕΝΟ όσο ο επεξεργαστής δείχνει το πλήρες κείμενο', () => {
     const entity = entityWith(CELL);
     const frame = editorFrameFor(entity, LONG_TEXT);
-    const run = layoutTable(modelWith(CELL), STANDARD).cells[0]?.text;
+    const run = layoutTable(modelWith(CELL), STANDARD).cells[0]?.texts[0];
 
     // Ο επεξεργαστής δείχνει ΟΛΟ το κείμενο…
     expect(frame.expanded).toBe(true);
@@ -130,7 +130,7 @@ describe('🔴 ADR-739 Φ.Δ βήμα 6 — ο επεκτεταμένος επε
 
     const committed = setPersistedCellText(entity.model, 'r1', 'c1', `${LONG_TEXT} ΚΑΙ ΑΛΛΟ`).model;
     const run = layoutTable(modelWith({ kind: 'text', value: `${LONG_TEXT} ΚΑΙ ΑΛΛΟ` }), STANDARD)
-      .cells[0]?.text;
+      .cells[0]?.texts[0];
 
     expect(getPersistedCellText(committed, 'r1', 'c1')).toBe(`${LONG_TEXT} ΚΑΙ ΑΛΛΟ`);
     expect(run?.clipped).toBe(true);

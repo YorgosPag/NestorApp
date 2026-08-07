@@ -174,8 +174,8 @@ describe('🔴 stampTableText — τα ΓΡΑΜΜΑΤΑ γέρνουν, όχι �
     const { log } = paintCells(entity);
 
     const expected = geometry.layout.cells
-      .filter((c) => c.text)
-      .map((c) => toScreen(c.text!.position.x, c.text!.position.y));
+      .filter((c) => c.texts.length > 0)
+      .map((c) => toScreen(c.texts[0].position.x, c.texts[0].position.y));
 
     expect(log.texts).toHaveLength(expected.length);
     log.texts.forEach((painted, i) => {

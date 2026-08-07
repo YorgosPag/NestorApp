@@ -77,7 +77,9 @@ export function collectTableCellLinks(
   const rowOrder = orderIndex(layout.rows);
   const colOrder = orderIndex(layout.columns);
 
-  const withLinks = layout.cells.filter((cell) => cell.text?.links?.length);
+  // ADR-739 §58 Γ2 — ένα αναδιπλωμένο κελί μπορεί να έχει διευθύνσεις σε **οποιαδήποτε** από
+  // τις γραμμές του· το φίλτρο ρωτά «έχει έστω μία;».
+  const withLinks = layout.cells.filter((cell) => cell.texts.some((run) => run.links?.length));
   withLinks.sort(
     (a, b) =>
       (rowOrder.get(a.rowId) ?? 0) - (rowOrder.get(b.rowId) ?? 0)
@@ -90,7 +92,7 @@ export function collectTableCellLinks(
     // ερώτηση). Υποβαθμίζουμε σε κενή ονομασία αντί να πετάξουμε τον σύνδεσμο: ο χρήστης
     // **βλέπει** το μπλε κείμενο, οπότε μια λίστα που το παραλείπει θα ήταν το ελάττωμα.
     const reference = tableCellReference(model, cell.rowId, cell.colId);
-    for (const span of cell.text?.links ?? []) {
+    for (const span of cell.texts.flatMap((run) => run.links ?? [])) {
       entries.push({
         rowId: cell.rowId,
         colId: cell.colId,

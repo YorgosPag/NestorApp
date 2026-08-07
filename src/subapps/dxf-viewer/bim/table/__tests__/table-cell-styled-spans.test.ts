@@ -334,7 +334,7 @@ describe('η διάταξη κουβαλά τα τμήματα — καμία έ
     layoutTable(
       createTableModel({ columns: [column], rows: [row], cells: [['r1', 'c1', cell]] }),
       style,
-    ).cells[0]?.text;
+    ).cells[0]?.texts[0];
 
   it('🔴 κελί ΧΩΡΙΣ runs δεν αποκτά το πεδίο καθόλου — σχήμα αμετάβλητο', () => {
     const run = runFor({ kind: 'text', value: 'ΠΕΡΙΓΡΑΦΗ' });
@@ -376,7 +376,7 @@ describe('η διάταξη κουβαλά τα τμήματα — καμία έ
       layoutTable(
         createTableModel({ columns: [column], rows: [row], cells: [['r1', 'c1', cell]] }),
         underlined,
-      ).cells[0]?.text;
+      ).cells[0]?.texts[0];
 
     // ⚠️ Η λέξη δεν είναι τυχαία. Μετρημένο με τον πραγματικό μετρητή (opentype, tier 1):
     // στο «ΤΕΣΤ» τα έντονα είναι **στενότερα** (6,222 vs 6,267) — τα έντονα δεν είναι

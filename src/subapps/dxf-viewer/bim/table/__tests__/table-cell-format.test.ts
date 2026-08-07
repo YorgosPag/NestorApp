@@ -188,7 +188,7 @@ describe('🔴 η αποθηκευμένη τιμή δεν αλλάζει ΠΟΤ
 
     // (α) ο καμβάς δείχνει ΗΜΕΡΟΜΗΝΙΑ
     const layout = layoutTable(resolveTableModel(model), STANDARD, { measureText });
-    expect(layout.cells[0].text?.text).toBe('05/08/2026');
+    expect(layout.cells[0].texts[0]?.text).toBe('05/08/2026');
 
     // (β) η γραμμή τύπων δείχνει το ΠΗΓΑΙΟ
     expect(cellInputText(model, 'r1', 'cA')).toBe('=DATE(2026;8;5)');
@@ -220,7 +220,7 @@ describe('🔴 η αποθηκευμένη τιμή δεν αλλάζει ΠΟΤ
     const model = commitCellWrites(writeCellInput(base, 'r1', 'cB', '=A1*3'));
 
     const layout = layoutTable(resolveTableModel(model), STANDARD, { measureText });
-    expect(layout.cells[0].text?.text).toBe('0,33');
+    expect(layout.cells[0].texts[0]?.text).toBe('0,33');
     expect(model.cells.find(([, c]) => c === 'cB')?.[2].value).toBe(1);
   });
 });
@@ -322,8 +322,8 @@ describe('🔴 το πλάτος μετριέται πάνω στο ΜΟΡΦΟΠ
       merges: [],
     };
     const layout = layoutTable(resolveTableModel(model), STANDARD, { measureText });
-    expect(layout.cells[0].text?.text).toBe('05/08/2026');
-    expect(layout.cells[0].text?.clipped ?? false).toBe(false);
+    expect(layout.cells[0].texts[0]?.text).toBe('05/08/2026');
+    expect(layout.cells[0].texts[0]?.clipped ?? false).toBe(false);
   });
 });
 
@@ -349,7 +349,7 @@ describe('🔴 τύπος που επιστρέφει ημερομηνία δε�
   }
 
   const painted = (model: PersistedTableModel): string | undefined =>
-    layoutTable(resolveTableModel(model), STANDARD, { measureText }).cells[0].text?.text;
+    layoutTable(resolveTableModel(model), STANDARD, { measureText }).cells[0].texts[0]?.text;
 
   it('🔴 Η ΠΛΗΓΗ ΤΗΣ Φ3 ΚΛΕΙΝΕΙ: `=DATE(2026,8,5)` σε ΣΚΕΤΟ κελί δείχνει ημερομηνία', () => {
     const model = typedInto('=DATE(2026,8,5)');

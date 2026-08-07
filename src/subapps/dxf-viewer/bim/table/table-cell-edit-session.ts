@@ -39,7 +39,7 @@ import {
   resolveTableCellWriteRoute,
 } from './write-back/table-cell-write-route';
 import type { TableCellLayout, TableRectMm } from './table-layout-types';
-import { cellBaselineYMm } from './table-layout-place';
+import { cellBaselineYMm } from './table-layout-align';
 import type { TableCellStyle } from './table-style';
 import {
   computeTableEntityGeometryLive,
@@ -195,7 +195,7 @@ function buildEditTarget(
     rectMm: rect,
     style,
     hAlign: cell.hAlign,
-    // Η γραμμή βάσης έρχεται από τη ΜΙΑ συνάρτηση που τη γνωρίζει (`table-layout-place`),
+    // Η γραμμή βάσης έρχεται από τη ΜΙΑ συνάρτηση που τη γνωρίζει (`table-layout-align`),
     // ξαναβασισμένη στην κορυφή του κελιού.
     baselineFromTopMm: cellBaselineYMm(rect, style.align, style) - rect.y,
     clickOffsetMm,

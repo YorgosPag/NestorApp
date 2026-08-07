@@ -54,23 +54,26 @@ function cell(over: Partial<TableCellStyle> = {}): TableCellLayout {
     rect: { x: 0, y: 0, w: 40, h: 8 },
     style: resolved,
     hAlign: 'left',
-    text: {
-      position: { x: 1, y: 6 },
-      text: TEXT,
-      heightMm: resolved.textHeightMm,
-      colorHex: resolved.textColorHex,
-      hAlign: 'left',
-      bold: resolved.bold,
-      italic: resolved.italic,
-      ...(resolved.fontFamily !== undefined && { fontFamily: resolved.fontFamily }),
-      // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — το `advanceMm` **δεν είναι προαιρετικό** όταν υπάρχει
-      // υπογράμμιση: το `TableTextRun` είναι ένωση και ο μεταγλωττιστής το απαιτεί. Εδώ
-      // αναπαράγεται ό,τι θα μετρούσε ο `TableTextMeasurer` της διάταξης, με το πλάτος
-      // χαρακτήρα του καταγραφέα — άρα η δοκιμή ελέγχει τον ζωγράφο, όχι τη γραμματοσειρά.
-      ...(resolved.underline
-        ? { underline: true as const, advanceMm: TEXT.length * RECORDER_CHAR_PX / PX_PER_MM }
-        : { underline: false as const }),
-    },
+    // ADR-739 §58 Γ2 — **πίνακας** γραμμών· ένα στοιχείο για κελί που δεν αναδιπλώνεται.
+    texts: [
+      {
+        position: { x: 1, y: 6 },
+        text: TEXT,
+        heightMm: resolved.textHeightMm,
+        colorHex: resolved.textColorHex,
+        hAlign: 'left',
+        bold: resolved.bold,
+        italic: resolved.italic,
+        ...(resolved.fontFamily !== undefined && { fontFamily: resolved.fontFamily }),
+        // 🔴 ADR-739 Φ.Ε/Φ2 βήμα 4 — το `advanceMm` **δεν είναι προαιρετικό** όταν υπάρχει
+        // υπογράμμιση: το `TableTextRun` είναι ένωση και ο μεταγλωττιστής το απαιτεί. Εδώ
+        // αναπαράγεται ό,τι θα μετρούσε ο `TableTextMeasurer` της διάταξης, με το πλάτος
+        // χαρακτήρα του καταγραφέα — άρα η δοκιμή ελέγχει τον ζωγράφο, όχι τη γραμματοσειρά.
+        ...(resolved.underline
+          ? { underline: true as const, advanceMm: TEXT.length * RECORDER_CHAR_PX / PX_PER_MM }
+          : { underline: false as const }),
+      },
+    ],
     rowSpan: 1,
     colSpan: 1,
   };

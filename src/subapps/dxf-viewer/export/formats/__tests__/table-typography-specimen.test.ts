@@ -276,7 +276,7 @@ describe('ADR-739 Φ2/4 — το σενάριο ΟΝΤΩΣ δηλώνει επτ
 
   it('η διάταξη επιλύει κάθε παράκαμψη κελιού σε διαφορετικό run', () => {
     for (const s of SPECIMENS) {
-      const run = specCell(s.no)?.text;
+      const run = specCell(s.no)?.texts[0];
       if (!run) throw new Error(`η διάταξη δεν έβγαλε κείμενο για τη γραμμή ${s.no}`);
       expect(run.bold).toBe(s.override.bold ?? false);
       expect(run.italic).toBe(s.override.italic ?? false);
@@ -287,7 +287,7 @@ describe('ADR-739 Φ2/4 — το σενάριο ΟΝΤΩΣ δηλώνει επτ
 
   it('🔴 η στήλη Α/Α μένει ΚΑΝΟΝΙΚΗ — είναι η σταθερή αναφορά δίπλα σε κάθε δείγμα', () => {
     for (const s of SPECIMENS) {
-      const run = LAYOUT.cells.find((c) => c.rowId === `r_${s.no}` && c.colId === 'c_no')?.text;
+      const run = LAYOUT.cells.find((c) => c.rowId === `r_${s.no}` && c.colId === 'c_no')?.texts[0];
       expect(run?.bold).toBe(false);
       expect(run?.italic).toBe(false);
       expect(run?.underline).toBe(false);
@@ -296,7 +296,7 @@ describe('ADR-739 Φ2/4 — το σενάριο ΟΝΤΩΣ δηλώνει επτ
 
   it('καμία γραμμή δεν περικόπτεται — μια περικοπή θα διαβαζόταν ως αποτυχία', () => {
     for (const s of SPECIMENS) {
-      expect(specCell(s.no)?.text?.text).toBe(s.sample);
+      expect(specCell(s.no)?.texts[0]?.text).toBe(s.sample);
       expect(specCell(s.no)?.text?.clipped).toBeFalsy();
     }
   });

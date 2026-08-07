@@ -220,7 +220,7 @@ describe('ADR-739 Φ1 — το μολύβι του περιγράμματος φ
 
 describe('ADR-739 Φ1 — τυπογραφία κελιού → οντότητα κειμένου', () => {
   it('το χρώμα του κειμένου είναι του κελιού, όχι της οντότητας', () => {
-    const expected = headerCell().text?.colorHex;
+    const expected = headerCell().texts[0]?.colorHex;
     expect(expected).toBeTruthy();
     expect(exportedText('Α/Α').color).toBe(expected);
     expect(exportedText('Α/Α').color).not.toBe(ENTITY.color);
@@ -228,8 +228,8 @@ describe('ADR-739 Φ1 — τυπογραφία κελιού → οντότητα
 
   it('το ΕΝΤΟΝΟ της κεφαλίδας ταξιδεύει· τα δεδομένα μένουν κανονικά', () => {
     // Πρώτα η προϋπόθεση: η διάταξη ΟΝΤΩΣ διαφοροποιεί τις δύο γραμμές.
-    expect(headerCell().text?.bold).toBe(true);
-    expect(dataCell().text?.bold).toBe(false);
+    expect(headerCell().texts[0]?.bold).toBe(true);
+    expect(dataCell().texts[0]?.bold).toBe(false);
 
     const boldRun = exportedText('Α/Α').textNode?.paragraphs[0]?.runs[0];
     const plainRun = exportedText('1').textNode?.paragraphs[0]?.runs[0];
@@ -282,7 +282,7 @@ describe('🔴 ADR-739 §38 — καμία εξαγόμενη οντότητα �
     // **κενό** κελί, όπου run δεν υπάρχει καθόλου.
     for (const cell of LAYOUT.cells) {
       expect(parseHex(cell.style.textColorHex)).not.toBeNull();
-      if (cell.text) expect(parseHex(cell.text.colorHex)).not.toBeNull();
+      if (cell.texts[0]) expect(parseHex(cell.texts[0].colorHex)).not.toBeNull();
     }
   });
 
@@ -330,8 +330,8 @@ const TYPO_EXPORTED: Entity[] = decomposeTable(TYPO_ENTITY, MM_TO_WORLD, 'mm');
 
 const typoHeaderRun = () => {
   const cell = TYPO_LAYOUT.cells.find((c) => c.rowId === 'rh' && c.colId === 'c1');
-  if (!cell?.text) throw new Error('η διάταξη δεν έβγαλε κείμενο κεφαλίδας');
-  return cell.text;
+  if (!cell?.texts[0]) throw new Error('η διάταξη δεν έβγαλε κείμενο κεφαλίδας');
+  return cell.texts[0];
 };
 
 function typoExportedText(content: string): TextEntity {
