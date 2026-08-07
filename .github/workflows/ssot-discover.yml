@@ -71,3 +71,76 @@ jobs:
         if: success()
         run: |
           echo "::notice title=SSoT Discover Ratchet::No new duplicates / anti-patterns / registry gaps"
+
+  # ===========================================================================
+  # CHECK 3.44 / ADR-772 §9 — Στρώμα 2 της πύλης λεξιλογίου διευθύνσεων.
+  #
+  # ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΝΕΟ WORKFLOW: ένα νέο αρχείο `.github/workflows/*.yml`
+  # ΑΠΑΙΤΕΙ εγγραφή στο `.ci-gate-tiers.json` (tier + why + πρόθεμα `T<tier>` στο
+  # `name:`), αλλιώς η CHECK 3.37 γίνεται κόκκινη (ADR-757). Το μητρώο παρακολουθεί
+  # **αρχεία** workflow, όχι jobs — άρα ένα job εδώ αφήνει τις 29 πύλες αμετάβλητες.
+  # Ίδια κίνηση με το ADR-770 Στρώμα 2/2β μέσα στο `ui-contrast-ratchet.yml`.
+  # Η οικογένεια ταιριάζει: το 3.18 ρωτά «υπάρχει διπλότυπο SSoT;», το 3.44 ρωτά
+  # «μιλά κάποιος το λεξιλόγιο διευθύνσεων χωρίς να είναι στο SSoT;» — και οι
+  # σκανδάλες `src/**/*.ts(x)` είναι ήδη οι σωστές.
+  #
+  # ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΟ JOB: η σάρωση χρειάζεται τον TypeScript parser (node_modules),
+  # ενώ το job παραπάνω δηλώνει ρητά ότι δεν εγκαθιστά τίποτα.
+  # ===========================================================================
+  address-vocabulary:
+    name: 🏛️ Address Vocabulary Coverage (CHECK 3.44)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # typescript + jest μόνο. Η πύλη κάνει `ts.createSourceFile`, ποτέ Program —
+      # ΔΕΝ είναι type-check (CLAUDE.md N.17).
+      - name: 📦 Install dependencies (TypeScript parser + jest)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Το Στρώμα 1 (pre-commit) βλέπει ΜΟΝΟ τα δοχεία του πίνακα. Ένας νέος τύπος
+      # οπουδήποτε αλλού στο `src/` που έγινε έκτο λεξιλόγιο είναι αόρατος εκεί —
+      # δηλωμένο όριο, και ο λόγος ύπαρξης αυτού του βήματος (~30s, 20k δηλώσεις).
+      - name: 🏛️ CHECK 3.44 — πλήρης σάρωση src/ (Στρώμα 2)
+        run: pnpm run address-vocabulary:check
+
+      - name: 🧪 Σουίτα μετάλλαξης — CHECK 3.44 (31 tests, 12/12 μεταλλάξεις)
+        run: pnpm run test:address-vocabulary
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Address Vocabulary Coverage::Κανένα αδήλωτο διοικητικό πεδίο· καμία νέα αδήλωτη στήλη λεξιλογίου"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.44 — ADR-772 §9"
+            echo ""
+            echo "**unmapped-administrative-field** (μηδενική ανοχή) — ένα δοχείο απέκτησε"
+            echo "πεδίο διοικητικής ιεραρχίας που καμία γραμμή του πίνακα δεν διεκδικεί."
+            echo "Πρόσθεσε γραμμή στο \`ADMIN_LEVEL_VOCABULARY\`, ή δήλωσε ρητά \`NOT_STORED\`."
+            echo "⚠️ Αν πρόκειται για \`communityId\` σε \`ProjectAddress\`: **μην** το"
+            echo "χαρτογραφήσεις — είναι η ανοιχτή σύγκρουση τομέα του ADR-772 §5."
+            echo ""
+            echo "**unregistered-vocabulary** (ratchet) — νέος τύπος μιλά την ιεραρχία χωρίς"
+            echo "να είναι στήλη του \`VocabularyContainers\`."
+            echo ""
+            echo "Αναφορά: \`npm run address-vocabulary:report\`"
+            echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run address-vocabulary:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -678,6 +678,16 @@ register_area "CSS Token Authority Gate (CHECK 3.43)" \
     "scripts/__tests__/check-css-token-authority\.test\.js" \
     "npm run test:css-token-authority"
 
+# CHECK 3.44 (ADR-772 §9) — η πύλη λεξιλογίου διευθύνσεων. Στη σκανδάλη μπαίνουν ΚΑΙ τα
+# ΔΟΧΕΙΑ, όχι μόνο ο κώδικας της πύλης: η σουίτα στήνει μίνι-repo από τα ΠΡΑΓΜΑΤΙΚΑ αρχεία
+# (`FIXTURE_FILES`), οπότε μια αλλαγή σε δοχείο μπορεί να ακυρώσει μια μετάλλαξη — π.χ. αν
+# χαθεί η γραμμή που η Μ1 αντικαθιστά, το test θα «περνούσε» χωρίς να ελέγξει τίποτα.
+# Γι' αυτό το `miniRepo` ουρλιάζει όταν μια μετάλλαξη δεν αλλάζει τίποτα.
+register_area "Address Vocabulary Gate (CHECK 3.44)" \
+    "^(scripts/check-address-vocabulary-coverage\.js$|scripts/lib/address-vocabulary/.*\.js$|\.address-vocabulary-baseline\.json$|src/utils/address/administrative-hierarchy-vocabulary\.ts$|src/types/(ContactFormTypes|contacts|project/addresses)\.ts$|src/types/contacts/contracts\.ts$|src/components/shared/addresses/address-with-hierarchy-config\.ts$)" \
+    "scripts/__tests__/address-vocabulary-gate\.test\.js" \
+    "npm run test:address-vocabulary"
+
 # ─── Canary: a convention-driven pattern that matches NOTHING must FAIL, not pass ───
 # Guards the exact trap this repo has paid for twice: a scan reports "clean" because its
 # file list was silently empty (bad path / renamed convention / moved folder). Without this,

@@ -28,6 +28,7 @@
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
  *   SKIP_CI_TIER_COVERAGE          '1' = bypass CHECK 3.37 (CI gate tier coverage)
+ *   SKIP_ADDRESS_VOCABULARY        '1' = bypass CHECK 3.44 (address vocabulary coverage)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -261,6 +262,20 @@ if (!process.env.SKIP_CSS_TOKEN_AUTHORITY && cssAuthorityTriggers.length > 0)
   // — το σχήμα «0 = κανείς δεν κοίταξε», γεννημένο στη σκανδάλη αντί στον σαρωτή.
   addThread('3.43', 'CSS token authority', 'scripts/check-css-token-authority.js',
     stagedCssForAuthority.length > 0 ? stagedCssForAuthority : ['--all']);
+
+// CHECK 3.44 (ADR-772 §9) — «αυτό το διοικητικό πεδίο έχει γραμμή στον πίνακα;». Το
+// ADR-772 έφτιαξε τον πίνακα λεξιλογίου (8 επίπεδα × 5 δοχεία)· τίποτα δεν εμπόδιζε ένα
+// δοχείο να αποκτήσει ΕΝΑΤΟ πεδίο χωρίς γραμμή — ο μετατροπέας δεν το μεταφέρει, τίποτα
+// δεν σκάει, και η σιωπηλή απώλεια επιστρέφει «φαινομενικά λυμένη». Το 3.7 φρουρεί τα
+// ιδιωτικά ζεύγη μετατροπέα, όχι τα πεδία· το 3.18 σαρώνει `src/config|utils|lib` σε
+// -maxdepth 1 και ΔΕΝ ανοίγει ποτέ το `src/types/**`, όπου ζουν τα δοχεία.
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ, ΟΧΙ ΕΔΩ: η πύλη λύνει μόνη της ποια αρχεία είναι τα
+// δοχεία (από τον ίδιο τον πίνακα) και βγαίνει αμέσως αν κανένα δεν είναι staged. Λίστα
+// μονοπατιών εδώ θα ήταν δεύτερη αυθεντία που αποκλίνει σιωπηλά — το ακριβές σχήμα των
+// δύο λιστών namespace του CHECK 3.34. Κόστος όταν δεν αφορά: ~0,2s.
+// Στρώμα 2 (πλήρες `src/`, ~30s) = job στο υπάρχον `ssot-discover.yml`.
+if (!process.env.SKIP_ADDRESS_VOCABULARY && srcTsFiles.length > 0)
+  addThread('3.44', 'Address vocabulary', 'scripts/check-address-vocabulary-coverage.js', srcTsFiles);
 
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);

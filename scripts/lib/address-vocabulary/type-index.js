@@ -49,6 +49,32 @@ const propName = (node) => {
 
 const scriptKindFor = (file) => (file.endsWith('.tsx') || file.endsWith('.jsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
 
+/** Το **πρώτο** μπλοκ σχολίων ενός αρχείου — εκεί και μόνο εκεί δηλώνεται η παραγωγή. */
+const LEADING_COMMENT = /^\s*(\/\*[\s\S]*?\*\/|(?:\/\/[^\n]*\n)+)/;
+const GENERATED_MARKER = /@generated|auto-generated|automatically generated/i;
+
+/**
+ * Είναι το αρχείο **παραγόμενο**;
+ *
+ * 🔑 Γιατί έχει σημασία εδώ: ένα παραγόμενο αρχείο δεν είναι **απόφαση**, είναι
+ * **προβολή** άλλου SSoT. Το `src/types/i18n.ts` παράγεται από τα 100 locale JSON και
+ * δηλώνει `municipality`, `municipalityId`, `settlementId`… — που είναι **κλειδιά
+ * μετάφρασης**, όχι πεδία διεύθυνσης. Χωρίς αυτόν τον διαχωρισμό ήταν **1 στα 5**
+ * ευρήματα, δηλαδή **20% ψευδώς θετικά** σε μπλοκάρουσα πύλη (πήχης Google: <10%) —
+ * μετρημένο, όχι υποθετικό. Η φρεσκάδα του φρουρείται ήδη από το CHECK 3.33 και η
+ * χειροκίνητη επεξεργασία του απαγορεύεται ρητά στην επικεφαλίδα του.
+ *
+ * ⚠️ Ο δείκτης διαβάζεται **μόνο** από το πρώτο μπλοκ σχολίων: «do not edit» κάπου στη
+ * μέση ενός αρχείου είναι πρόζα, όχι δήλωση. Μετρημένο: το χαλαρό κριτήριο έβγαζε **21**
+ * αρχεία, το αυστηρό **11** — και τα 11 είναι όντως παραγόμενα ή πρότυπα.
+ * ⚠️ ΔΕΝ είναι σιωπηλή εξαίρεση: μετριέται ως ρητή κατάσταση `generated-artifact`, οπότε
+ * ένα αρχείο που «γίνεται» παραγόμενο για να ξεφύγει αλλάζει **ορατά** τον αριθμό.
+ */
+function isGeneratedSource(text) {
+  const match = LEADING_COMMENT.exec(text);
+  return !!match && GENERATED_MARKER.test(match[0]);
+}
+
 /**
  * Τα μέλη ενός τύπου-αντικειμένου + τα ονόματα των βάσεών του.
  *
@@ -102,6 +128,7 @@ function readTypeShape(node, sourceFile) {
 function parseFile(absFile, relFile) {
   const source = fs.readFileSync(absFile, 'utf8');
   const sourceFile = ts.createSourceFile(relFile, source, ts.ScriptTarget.Latest, true, scriptKindFor(relFile));
+  const generated = isGeneratedSource(source);
 
   const declarations = new Map();
   const imports = new Map();
@@ -116,6 +143,7 @@ function parseFile(absFile, relFile) {
           name: node.name.text,
           file: relFile,
           line: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
+          generated,
           ...shape,
         });
       }
@@ -144,7 +172,7 @@ function parseFile(absFile, relFile) {
     }
   }
 
-  return { file: relFile, declarations, imports, starReexports, namedReexports };
+  return { file: relFile, generated, declarations, imports, starReexports, namedReexports };
 }
 
 /**
@@ -256,4 +284,35 @@ function createResolver(projectRoot) {
   return { load, resolveType, effectiveFields, heritageClosure, resolveFile, parseFile };
 }
 
-module.exports = { createResolver, parseFile, readTypeShape };
+/**
+ * «Άνοιξε **κάθε** δοχείο του πίνακα» — **μία** φορά, για **τρεις** καταναλωτές.
+ *
+ * ⚠️ ΓΡΑΦΤΗΚΕ ΕΠΕΙΔΗ Η ΠΥΛΗ 3.28 (jscpd / N.18) ΤΟ ΕΠΙΑΣΕ: ο ίδιος βρόχος «λύσε τον
+ * ειδικευτή → λύσε τον τύπο → πάρε την κλειστότητα κληρονομιάς» ήταν γραμμένος **τρεις**
+ * φορές (κριτής δοχείων · σκανδάλη Στρώματος 1 · κλειδιά εξαίρεσης). Τρεις υλοποιήσεις
+ * του «ποια είναι τα δοχεία» είναι το ακριβές σχήμα που το ADR-749 αποσυναρμολόγησε —
+ * τέσσερις μηχανές SSoT με τρεις διαφορετικούς αριθμούς για το ίδιο δέντρο. Η πύλη το
+ * είπε **πριν** γραφτεί το «done», που είναι όλος ο λόγος ύπαρξής της.
+ *
+ * @returns {{container:object, decl:object|null, reason:string|null, heritage:Set<string>}[]}
+ *   `decl === null` ⇒ **δηλωμένη αποτυχία** με `reason`· ποτέ σιωπηλή παράλειψη.
+ */
+function resolveContainerDeclarations(table, resolver) {
+  return table.containers.map((container) => {
+    const from = container.specifier
+      ? resolver.resolveFile(container.specifier, table.file)
+      : table.file;
+    if (!from) {
+      return { container, decl: null, heritage: new Set(), reason: `ανεπίλυτος ειδικευτής "${container.specifier}"` };
+    }
+    const hit = resolver.resolveType(container.typeName, from);
+    if (hit.status !== 'found') {
+      return { container, decl: null, heritage: new Set(), reason: hit.reason };
+    }
+    return { container, decl: hit.decl, heritage: resolver.heritageClosure(hit.decl), reason: null };
+  });
+}
+
+module.exports = {
+  createResolver, parseFile, readTypeShape, isGeneratedSource, resolveContainerDeclarations,
+};

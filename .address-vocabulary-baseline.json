@@ -1,0 +1,31 @@
+{
+  "adr": "ADR-772 §9 (CHECK 3.42)",
+  "generated_from": [
+    "src/utils/address/administrative-hierarchy-vocabulary.ts",
+    "src/**/*.ts(x)"
+  ],
+  "note": "ΔΕΝ είναι δείκτης υγείας: μετρά τύπους που μιλούν τη διοικητική ιεραρχία χωρίς να είναι στήλη του VocabularyContainers. Η θεραπεία είναι στήλη στον πίνακα (αλλαγή τομέα, ADR-772 §5/§6), όχι μικρότερος αριθμός. Τα zero-tolerance ευρήματα ΔΕΝ μπαίνουν ποτέ εδώ — το buildPayload τα απορρίπτει.",
+  "zero_tolerance_states": [
+    "unmapped-administrative-field",
+    "unanalyzable-container"
+  ],
+  "ratcheted_states": [
+    "unregistered-vocabulary"
+  ],
+  "violation_count": 4,
+  "by_state": {
+    "below-vocabulary-threshold": 20095,
+    "unanalyzable-heritage": 213,
+    "unregistered-vocabulary": 4,
+    "registered-vocabulary": 5,
+    "base-of-registered": 1,
+    "generated-artifact": 1
+  },
+  "violations": [
+    "unregistered-vocabulary::src/components/contacts/pickers/AdministrativeAddressPicker.tsx::AdministrativeAddress",
+    "unregistered-vocabulary::src/components/contacts/relationships/hooks/useDerivedWorkAddresses.ts::DerivedWorkAddress",
+    "unregistered-vocabulary::src/types/ContactFormTypes.ts::ContactFormData",
+    "unregistered-vocabulary::src/types/ContactFormTypes.ts::IndividualAddress"
+  ],
+  "declarations": []
+}

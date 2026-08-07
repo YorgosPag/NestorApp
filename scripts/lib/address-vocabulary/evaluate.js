@@ -40,10 +40,17 @@
  * αποσαφήνιση. Μια **ταυτότητα** μπορεί να προέλθει **μόνο** από το σύνολο δεδομένων της
  * ιεραρχίας. Μία ταυτότητα είναι *αναφορά*· **δύο** σημαίνει ότι ο τύπος κουβαλά τα
  * κλειδιά της ιεραρχίας, δηλαδή **είναι** λεξιλόγιο. Στα μετρημένα δεδομένα αυτό
- * αφαιρεί **και τους τέσσερις** παραγόμενους i18n (κανένας δεν έχει `*Id`) χωρίς καμία
- * εξαίρεση αρχείου, το `ContactAddressMapPreviewProps` (0), το `CompanyAddressSnapshot`
+ * αφαιρεί **τρεις από τους τέσσερις** παραγόμενους i18n, το `ContactAddressMapPreviewProps`
+ * (0 ταυτότητες — δέχεται τρία **ονόματα** για αποσαφήνιση), το `CompanyAddressSnapshot`
  * (1) και το `RegionOverrideTarget` του BIM (1 — όπου «region» σημαίνει *περιοχή
  * περιβλήματος*, άλλος τομέας με ίδια λέξη).
+ *
+ * 🔴 Ο **τέταρτος** i18n επέζησε — και η διόρθωση δεν ήταν να χαλαρώσει το κριτήριο:
+ * το `I18n_Common_Audit_Fields` **έχει** `settlementId` και `municipalityId` (κλειδιά
+ * μετάφρασης με το ίδιο όνομα). Έμενε **1 στα 5 = 20%**. Λύθηκε με τη ρητή κατάσταση
+ * `generated-artifact` (βλ. `isGeneratedSource`): παραγόμενο αρχείο είναι **προβολή**
+ * άλλου SSoT, όχι απόφαση — η φρεσκάδα του φρουρείται ήδη από το CHECK 3.33.
+ * Τελικό: **4 ευρήματα, 4 πραγματικά, 0% ψευδώς θετικά.**
  *
  * ⚠️ ΤΑ ΚΑΤΩΦΛΙΑ ΔΕΝ ΧΑΛΑΡΩΝΟΥΝ ΓΙΑ ΝΑ ΓΙΝΕΙ ΠΡΑΣΙΝΟ. Μπήκαν **πριν** μετρηθεί το
  * αποτέλεσμα των υποψηφίων και δικαιολογούνται από **τι είναι** μια ταυτότητα, όχι από
@@ -53,6 +60,8 @@
  */
 
 'use strict';
+
+const { resolveContainerDeclarations } = require('./type-index');
 
 /** ≥3 διοικητικά πεδία … */
 const VOCABULARY_MIN_FIELDS = 3;
@@ -115,31 +124,25 @@ function evaluateContainers(table, resolver) {
   const findings = [];
   let judged = 0;
 
-  for (const container of table.containers) {
-    const from = container.specifier
-      ? resolver.resolveFile(container.specifier, table.file)
-      : table.file;
-    const hit = from ? resolver.resolveType(container.typeName, from) : null;
-
-    if (!hit || hit.status !== 'found') {
+  for (const { container, decl, reason } of resolveContainerDeclarations(table, resolver)) {
+    if (!decl) {
       findings.push({
         state: 'unanalyzable-container',
         id: `${container.key}::${container.typeName}`,
         file: table.file,
         line: 0,
-        detail: `το δοχείο \`${container.key}\` (${container.typeName}) δεν άνοιξε: `
-          + `${hit ? hit.reason : `ανεπίλυτος ειδικευτής "${container.specifier}"`}`,
+        detail: `το δοχείο \`${container.key}\` (${container.typeName}) δεν άνοιξε: ${reason}`,
       });
       continue;
     }
 
-    const { fields, unresolvedBases } = resolver.effectiveFields(hit.decl);
+    const { fields, unresolvedBases } = resolver.effectiveFields(decl);
     for (const u of unresolvedBases) {
       findings.push({
         state: 'unanalyzable-container',
         id: `${container.key}::extends ${u.base}`,
-        file: hit.decl.file,
-        line: hit.decl.line,
+        file: decl.file,
+        line: decl.line,
         detail: `το \`${container.typeName}\` κληρονομεί από \`${u.base}\`, που δεν άνοιξε: ${u.reason}`,
       });
     }
@@ -182,21 +185,23 @@ function evaluateTree(declarations, table, resolver, registeredKeys, baseKeys) {
 
   for (const decl of declarations) {
     const key = `${decl.file}::${decl.name}`;
-    const { fields, unresolvedBases } = resolver.effectiveFields(decl);
+    const { fields, unresolvedBases, opaqueBases } = resolver.effectiveFields(decl);
     const verdict = classifyVocabulary(fields.map((f) => f.name), adminNames);
 
     if (!verdict.isVocabulary) {
-      // Ένας τύπος που **θα** ήταν λεξιλόγιο αν άνοιγε η βάση του δεν επιτρέπεται να
-      // περάσει ως «κάτω από το κατώφλι»: αυτό θα ήταν «0 = κανείς δεν κοίταξε».
-      if (unresolvedBases.length && verdict.admin.length) {
-        bump('unanalyzable-heritage');
-        findings.push({
-          state: 'unanalyzable-heritage', id: key, file: decl.file, line: decl.line,
-          detail: `ανεπίλυτη βάση \`${unresolvedBases[0].base}\`: ${unresolvedBases[0].reason}`,
-        });
-      } else bump('below-vocabulary-threshold');
+      // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ. Ένας τύπος με **ανεπίλυτη** βάση δεν είναι «κάτω από το
+      // κατώφλι» — είναι «δεν ξέρω»: τα πεδία της βάσης λείπουν από τη μέτρηση, οπότε
+      // ένα λεξιλόγιο μπορεί να κρύβεται εκεί. Μετράται χωριστά ώστε το τυφλό σημείο
+      // να έχει **αριθμό** (μετρημένο: 186 από 20.319· κανένα με διοικητικό πεδίο
+      // σήμερα). Δεν μπλοκάρει και δεν απαριθμείται — 186 γραμμές θορύβου θα έκρυβαν
+      // τα 4 πραγματικά — αλλά ΔΕΝ σιωπά, που είναι η διαφορά από το «0 = κανείς δεν
+      // κοίταξε». Ίδιο πρότυπο με το `unanalyzable: 194` του CHECK 3.35.
+      if (unresolvedBases.length || opaqueBases.length) bump('unanalyzable-heritage');
+      else bump('below-vocabulary-threshold');
       continue;
     }
+    // Παραγόμενο αρχείο = **προβολή** άλλου SSoT, όχι απόφαση. Βλ. `isGeneratedSource`.
+    if (decl.generated) { bump('generated-artifact'); continue; }
     if (registeredKeys.has(key)) { bump('registered-vocabulary'); continue; }
     if (baseKeys.has(key)) { bump('base-of-registered'); continue; }
 
