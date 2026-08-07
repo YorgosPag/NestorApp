@@ -22,8 +22,8 @@ import {
   AlignCenter, AlignLeft, AlignRight,
   AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart,
   BetweenHorizontalEnd, BetweenHorizontalStart, BetweenVerticalEnd, BetweenVerticalStart,
-  Columns3, Copy, Euro, Percent, RefreshCw, RotateCcw, Rows3, Scissors, Shrink,
-  SquareDashedMousePointer, UnfoldVertical, WrapText,
+  Columns3, Copy, Euro, IndentDecrease, IndentIncrease, Percent, RefreshCw, RotateCcw,
+  Rows3, Scissors, Shrink, SquareDashedMousePointer, UnfoldVertical, WrapText,
 } from 'lucide-react';
 
 /** Πλάτος/ύψος ανά μέγεθος κουμπιού — ίδιος πίνακας με το `RibbonButtonIcon`. */
@@ -122,6 +122,12 @@ export function resolveTableRibbonIcon(
     // ίδια εντολή σε άλλο συμφραζόμενο, όπως τα Β/Ι/Υ που η κεφαλίδα εξηγεί παραπάνω.
     case 'table-wrap-text': return <WrapText width={px} height={px} className={className} />;
     case 'table-shrink-text': return <Shrink width={px} height={px} className={className} />;
+    // ── §59 Δ2: η εσοχή ──────────────────────────────────────────────────────────────
+    // `IndentDecrease`/`IndentIncrease` της lucide — **οι ίδιες γλυφές** με του Excel και του
+    // Word (γραμμές κειμένου + βέλος προς τα μέσα/έξω). Καμία δική μας ζωγραφιά: ο χρήστης
+    // αναγνωρίζει το σχήμα πριν διαβάσει το tooltip, που είναι όλο το ζητούμενο του §56.
+    case 'table-indent-decrease': return <IndentDecrease width={px} height={px} className={className} />;
+    case 'table-indent-increase': return <IndentIncrease width={px} height={px} className={className} />;
     // `UnfoldVertical` (βέλη που ανοίγουν κατακόρυφα) και **όχι** `RotateCcw`/`RefreshCw`:
     // εκείνα σημαίνουν ήδη «επαναφορά μορφοποίησης» και «ανανέωση δεσμού» στον **ίδιο** πίνακα.
     case 'table-row-autofit': return <UnfoldVertical width={px} height={px} className={className} />;

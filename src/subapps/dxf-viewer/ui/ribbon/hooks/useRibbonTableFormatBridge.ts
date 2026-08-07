@@ -64,6 +64,7 @@ import {
   readTableOverflowToggle,
   writeTableClipboardCommand,
   writeTableDecimalStep,
+  writeTableIndentStep,
   writeTableFontFamily,
   writeTableFormatToggle,
 } from './bridge/table-format-field-routing';
@@ -206,6 +207,11 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
     // και θα κατέληγαν στο `stepTextHeight`: η «Αντιγραφή» θα μεγάλωνε τη γραμματοσειρά. Δεύτερη
     // εμφάνιση της ίδιας παγίδας — δες `writeTableClipboardCommand`.
     if (writeTableClipboardCommand(port, commandKey)) return;
+    // 🔴 §59 Δ2 — **και η εσοχή πριν από τον γενικό κλάδο, για την ΙΔΙΑ αιτία, τέταρτη φορά.**
+    // Τα `indentIncrease`/`indentDecrease` ζουν κι αυτά μέσα στο `actions`: ανάποδα, η «Αύξηση
+    // εσοχής» θα μεγάλωνε τη γραμματοσειρά. Η επανάληψη του σχήματος είναι ο λόγος που κάθε
+    // ειδικός γραφέας επιστρέφει `boolean` — η σειρά είναι το συμβόλαιο, όχι σύμπτωση.
+    if (writeTableIndentStep(port, commandKey)) return;
     if (isTableFormatActionKey(commandKey)) {
       if (commandKey === TABLE_FORMAT_RIBBON_KEYS.actions.reset) port.reset();
       else port.stepTextHeight(STEP_DIRECTION[commandKey]);

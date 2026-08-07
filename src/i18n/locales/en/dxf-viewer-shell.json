@@ -5560,6 +5560,10 @@
           "wrap": "Wrap Text",
           "shrink": "Shrink to Fit"
         },
+        "indent": {
+          "increase": "Increase Indent",
+          "decrease": "Decrease Indent"
+        },
         "numberFormat": {
           "accounting": "Accounting number format",
           "percent": "Percent style",

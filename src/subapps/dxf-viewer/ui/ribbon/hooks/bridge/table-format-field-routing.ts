@@ -45,10 +45,15 @@ import {
   isTableOverflowActive,
   nextTableOverflow,
 } from '../../../../bim/table/table-overflow-ops';
+// 🔴 ADR-739 §59 Δ2 — τι σημαίνει ένα σκαλί εσοχής. Το **ίδιο** module που θα ρωτούσε κάθε άλλη
+// επιφάνεια: το ξεπάτωμα στο μηδέν (σβήσιμο πεδίου, όχι ρητό `0`) είναι κανόνας του μοντέλου,
+// όχι της κορδέλας — δες την κεφαλίδα του `nextTableIndentLevel`.
+import { nextTableIndentLevel } from '../../../../bim/table/table-indent-ops';
 import {
   TABLE_FORMAT_ALIGN_CHOICE,
   TABLE_FORMAT_CLIPBOARD_COMMAND,
   TABLE_FORMAT_DECIMAL_DIRECTION,
+  TABLE_FORMAT_INDENT_DIRECTION,
   TABLE_FORMAT_NUMBER_COMMAND,
   TABLE_FORMAT_OVERFLOW_CHOICE,
   TABLE_FORMAT_RIBBON_KEYS,
@@ -192,6 +197,44 @@ export function writeTableDecimalStep(
 
   const next = stepTableNumberFormatDecimals(port.numberFormat().current, direction);
   if (next !== null) port.setField('numberFormat', next);
+  return true;
+}
+
+/**
+ * 🔴 ADR-739 §59 Δ2 — **ένα σκαλί εσοχής**· `false` ⇒ δεν ήταν δικό μου κλειδί.
+ *
+ * ## ⚠️ ΠΡΕΠΕΙ ΝΑ ΚΛΗΘΕΙ **ΠΡΙΝ** ΤΟΝ ΓΕΝΙΚΟ ΚΛΑΔΟ ΤΩΝ `actions` — τέταρτη φορά
+ * Τα δύο κλειδιά ζουν μέσα στο `TABLE_FORMAT_RIBBON_KEYS.actions`, άρα ο
+ * `isTableFormatActionKey` τα δέχεται, και ο κλάδος του στέλνει ό,τι δεν είναι «επαναφορά» στο
+ * `stepTextHeight`. Ανάποδα, η «Αύξηση εσοχής» θα **μεγάλωνε τη γραμματοσειρά**, χωρίς κανένα
+ * σφάλμα και με το κουμπί να φαίνεται ότι δουλεύει. Ίδια παγίδα με τα δεκαδικά (§56) και το
+ * πρόχειρο (§57)· ρητή άγκυρα στο `useRibbonTableFormatBridge.test.tsx`.
+ *
+ * ## Η ανάγνωση περνά από το γενικό `state()` — και ΔΕΝ χρειάστηκε μέλος θύρας
+ * Το `indentLevel` ζει **και** στο `TableAxisStyleOverride` **και** στο `TableCellStyle`, άρα
+ * ανήκει στην τομή `TableCellStyleKey` που δέχονται το `state()` και το `setField()`. Είναι
+ * ακριβώς η κατάσταση του `align`/`fontFamily` του §56 («δεν χρειάστηκαν τίποτα») και το
+ * αντίθετο του ξεχειλίσματος, που ζει μόνο στο στενότερο σκέλος και χρειάστηκε **δύο** μέλη.
+ *
+ * ⚠️ **Ανάμεικτος στόχος διαβάζεται ως `0`**, όχι ως «μην κάνεις τίποτα»: ο χρήστης που πατά
+ * «Αύξηση» πάνω σε ανάμεικτη επιλογή ζητά «βάλ' τα όλα ένα σκαλί μέσα». Ο κανόνας ζει στο
+ * `nextTableIndentLevel`, όχι εδώ.
+ */
+export function writeTableIndentStep(
+  port: TableFormatPort | null,
+  commandKey: string,
+): boolean {
+  const direction = TABLE_FORMAT_INDENT_DIRECTION[commandKey];
+  if (direction === undefined) return false;
+  if (!port) return true;
+
+  const state = port.state('indentLevel');
+  const current = !state || state.mixed ? null : state.value ?? null;
+  const next = nextTableIndentLevel(current, direction);
+  // `null` ⇒ **καμία εγγραφή** (είμαστε στο άκρο)· `undefined` ⇒ **σβήσιμο** του πεδίου, που
+  // είναι πραγματική εγγραφή και δεν επιτρέπεται να μπερδευτεί με το πρώτο. Δύο διαφορετικές
+  // «κενές» τιμές, δύο διαφορετικές πράξεις — γι' αυτό ο έλεγχος είναι ρητά `!== null`.
+  if (next !== null) port.setField('indentLevel', next);
   return true;
 }
 

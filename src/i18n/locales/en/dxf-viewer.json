@@ -946,8 +946,7 @@
         "byColor": "Put Selected Cell Color On Top",
         "byFontColor": "Put Selected Font Color On Top",
         "custom": "Custom Sort..."
-      },
-      "notImplementedHint": "Not available yet"
+      }
     },
     "headerMenu": {
       "columnTitle": "Column {label}",
@@ -1003,8 +1002,7 @@
       "alignRight": "Align Right",
       "alignTop": "Top Align",
       "alignMiddle": "Middle Align",
-      "alignBottom": "Bottom Align",
-      "notImplementedHint": "Not available yet"
+      "alignBottom": "Bottom Align"
     },
     "merge": {
       "trigger": "Merge and center",

@@ -672,3 +672,92 @@ describe('🔴 ADR-767 Δ3 — «Δεδομένα»: ορατό μόνο σε δ
     expect(calls).toEqual([['refresh']]);
   });
 });
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🔴 ADR-739 §59 Δ2 — Η ΕΣΟΧΗ
+// ──────────────────────────────────────────────────────────────────────────────
+
+const indentState = (
+  value: number | undefined,
+  mixed: boolean,
+): TableFormatState<number> => ({ value, mixed, overridden: true });
+
+describe('useRibbonTableFormatBridge §59 Δ2 — εσοχή', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  /**
+   * 🔴 **Η ΠΑΓΙΔΑ ΤΩΝ `actions` ΓΙΑ ΤΕΤΑΡΤΗ ΦΟΡΑ** (δεκαδικά §56 · αντιγραφή §57 ·
+   * `autoFitRowHeight` §58 Γ2 · εσοχή εδώ).
+   *
+   * Τα δύο κλειδιά ζουν μέσα στο `TABLE_FORMAT_RIBBON_KEYS.actions`, άρα ο φύλακας
+   * `isTableFormatActionKey` τα δέχεται — και ο γενικός κλάδος στέλνει ό,τι δεν είναι
+   * «επαναφορά» στο `stepTextHeight`. Χωρίς την προτεραιότητα του `writeTableIndentStep`, η
+   * «Αύξηση εσοχής» θα καλούσε `stepTextHeight(undefined)`: θα **μεγάλωνε τη γραμματοσειρά**,
+   * χωρίς κανένα σφάλμα και με το κουμπί να φαίνεται ότι δουλεύει.
+   *
+   * ⚠️ Ο δεύτερος ισχυρισμός (`stepTextHeight` δεν κλήθηκε) **δεν** είναι πλεονασμός του
+   * πρώτου: μια υλοποίηση που καλούσε **και τα δύο** θα περνούσε τον έλεγχο ισότητας μόνο αν
+   * αυτός απαριθμεί ολόκληρη την ακολουθία — και η ακολουθία είναι ακριβώς αυτό που αλλάζει
+   * σιωπηλά όταν κάποιος μετακινήσει τον κλάδο.
+   */
+  it('🔴 Η ΕΣΟΧΗ ΔΕΝ ΠΕΦΤΕΙ ΣΤΟ `stepTextHeight` — η σειρά των κλάδων είναι ο μηχανισμός', () => {
+    const { port, calls } = fakePort({
+      state: (() => indentState(0, false)) as TableFormatPort['state'],
+    });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.indentIncrease); });
+    expect(calls).toEqual([['setField', 'indentLevel', 1]]);
+    expect(calls.some(([name]) => name === 'stepTextHeight')).toBe(false);
+  });
+
+  /**
+   * 🔴 Η επιστροφή στο μηδέν **σβήνει το πεδίο**, δεν γράφει ρητό `0`. Ένα ρητό `0` στο κελί
+   * νικά την εσοχή που δηλώνει η γραμμή ή η στήλη — δηλαδή η «Μείωση» μέχρι τέρμα θα άφηνε
+   * αόρατη παράκαμψη που ακυρώνει σιωπηλά την κληρονομιά.
+   */
+  it('🔴 «Μείωση» από το 1 ⇒ `setField(undefined)` = ΣΒΗΣΙΜΟ, όχι ρητό μηδέν', () => {
+    const { port, calls } = fakePort({
+      state: (() => indentState(1, false)) as TableFormatPort['state'],
+    });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.indentDecrease); });
+    expect(calls).toEqual([['setField', 'indentLevel', undefined]]);
+  });
+
+  it('στο άκρο ⇒ ΚΑΜΙΑ εγγραφή (κανένα βήμα undo που δεν αλλάζει τίποτα)', () => {
+    const { port, calls } = fakePort({
+      state: (() => indentState(0, false)) as TableFormatPort['state'],
+    });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.indentDecrease); });
+    expect(calls).toEqual([]);
+  });
+
+  it('ανάμεικτος στόχος ⇒ ισοπέδωση προς την κατεύθυνση του κουμπιού', () => {
+    const { port, calls } = fakePort({
+      state: (() => indentState(undefined, true)) as TableFormatPort['state'],
+    });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_FORMAT_RIBBON_KEYS.actions.indentIncrease); });
+    expect(calls).toEqual([['setField', 'indentLevel', 1]]);
+  });
+
+  /**
+   * ⚠️ **Καμία `aria-pressed`.** Η εσοχή είναι στεπερ, όχι διακόπτης: ένα toggle θα έδειχνε
+   * «πατημένο» για επίπεδο 1 και για επίπεδο 9 το ίδιο. Ο φύλακας toggle **δεν** πρέπει να
+   * δέχεται τα κλειδιά της.
+   */
+  it('⚠️ ΔΕΝ είναι toggle — το `onToggle` δεν τα αναγνωρίζει', () => {
+    const { port, calls } = fakePort({
+      state: (() => indentState(0, false)) as TableFormatPort['state'],
+    });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.actions.indentIncrease, true); });
+    expect(calls).toEqual([]);
+  });
+});

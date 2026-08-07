@@ -19,6 +19,7 @@
 import { makeKeySetGuard } from './make-key-set-guard';
 import type { TableAlignChoice } from '../../../../bim/table/table-align-ops';
 import type { TableOverflowChoice } from '../../../../bim/table/table-overflow-ops';
+import type { TableIndentStepDirection } from '../../../../bim/table/table-indent-ops';
 import type {
   TableDecimalStepDirection,
   TableNumberFormatCommandId,
@@ -102,6 +103,24 @@ export const TABLE_FORMAT_RIBBON_KEYS = {
     /** §56 — ένα σκαλί ακρίβειας· στεπερ, ποτέ διακόπτης (καμία `aria-pressed`). */
     decimalUp: 'tableFormat.actions.decimalUp',
     decimalDown: 'tableFormat.actions.decimalDown',
+    /**
+     * 🔴 ADR-739 §59 Δ2 — **Αύξηση / Μείωση εσοχής**: ένα σκαλί = **3 πλάτη κενού**
+     * (ECMA-376 §18.8.1, αυτούσιο).
+     *
+     * ## Γιατί `actions` και όχι `toggles`, παρότι η εσοχή **έχει** κατάσταση
+     * Η κατάσταση είναι **αριθμός**, όχι δίτιμο: «είναι πατημένη η εσοχή;» δεν έχει απάντηση σε
+     * επίπεδο 3. Είναι ακριβώς η ίδια διάκριση με τα δεκαδικά από πάνω — στεπερ, όχι διακόπτες,
+     * καμία `aria-pressed`. Ένα toggle εδώ θα έδειχνε «πατημένο» για επίπεδο 1 και για επίπεδο
+     * 9 το ίδιο, δηλαδή θα έλεγε ψέματα σε κάθε κελί εκτός του πρώτου σκαλιού.
+     *
+     * ⚠️ **ΠΑΓΙΔΑ ΤΩΝ `actions`, ΤΕΤΑΡΤΗ ΦΟΡΑ.** Ζουν μέσα σε αυτό το αντικείμενο, άρα ο
+     * {@link isTableFormatActionKey} τα δέχεται — και ο γενικός κλάδος του bridge στέλνει ό,τι
+     * δεν είναι «επαναφορά» στο `stepTextHeight`. Χωρίς ρητή δρομολόγηση **πριν** από εκείνον, η
+     * «Αύξηση εσοχής» θα **μεγάλωνε τη γραμματοσειρά** (`STEP_DIRECTION[indentIncrease]` =
+     * `undefined` ⇒ βήμα προς το πουθενά), χωρίς κανένα σφάλμα. Δες {@link writeTableIndentStep}.
+     */
+    indentIncrease: 'tableFormat.actions.indentIncrease',
+    indentDecrease: 'tableFormat.actions.indentDecrease',
     /**
      * 🔴 ADR-739 §57 — η ομάδα «Πρόχειρο». **Actions και όχι toggles**: δεν έχουν κατάσταση να
      * δείξουν — μια περιοχή δεν είναι «αντιγραμμένη» ή «μη αντιγραμμένη», απλώς αντιγράφεται.
@@ -267,6 +286,21 @@ export const TABLE_FORMAT_DECIMAL_DIRECTION: Readonly<
 > = {
   [TABLE_FORMAT_RIBBON_KEYS.actions.decimalUp]: 1,
   [TABLE_FORMAT_RIBBON_KEYS.actions.decimalDown]: -1,
+};
+
+/**
+ * 🔴 §59 Δ2 — «ένα σκαλί μέσα» / «ένα σκαλί έξω» για την **εσοχή**.
+ *
+ * ⚠️ **Τρίτος** ξεχωριστός χάρτης προς `1 | -1` σε αυτό το αρχείο (μέγεθος · ακρίβεια · εσοχή),
+ * και η επανάληψη είναι σκόπιμη: είναι **τρεις διαφορετικές ερωτήσεις** με τρεις διαφορετικούς
+ * τύπους προορισμού. Ένας κοινός χάρτης θα δεχόταν σιωπηλά το κλειδί του ενός στη διαδρομή του
+ * άλλου — δηλαδή θα ήταν ακριβώς η παγίδα των `actions` **γραμμένη ως χαρακτηριστικό**.
+ */
+export const TABLE_FORMAT_INDENT_DIRECTION: Readonly<
+  Record<string, TableIndentStepDirection>
+> = {
+  [TABLE_FORMAT_RIBBON_KEYS.actions.indentIncrease]: 1,
+  [TABLE_FORMAT_RIBBON_KEYS.actions.indentDecrease]: -1,
 };
 
 /**
