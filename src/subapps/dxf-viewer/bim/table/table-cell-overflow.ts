@@ -55,9 +55,12 @@
 
 import type { TableCellOverflow, TableCellTextRun } from '../../types/table';
 import { fittingPrefixLengthByChar, type TextWidthMeasure } from '../text/text-fit';
+import { wrapTextToLines } from '../text/text-wrap-lines';
+import { sliceCellTextRuns } from './table-cell-run-ops';
 import {
   fittingPrefixLengthAcrossSpans,
   resolveCellStyledSpans,
+  styledPrefixWidthMm,
   styledSpansWidthMm,
 } from './table-cell-styled-spans';
 import type { TableTextMeasurer, TableTextStyleSpan } from './table-layout-types';
@@ -98,7 +101,11 @@ export const CELL_CLIP_ELLIPSIS = '…';
 export const CELL_CLIP_NUMERIC_FILL = '#';
 
 /** Οι τιμές που η μηχανή **όντως** ξέρει να εκτελέσει σήμερα (βλ. {@link resolveCellOverflow}). */
-const SUPPORTED_OVERFLOW: ReadonlySet<string> = new Set<TableCellOverflow>(['clip', 'shrink']);
+const SUPPORTED_OVERFLOW: ReadonlySet<string> = new Set<TableCellOverflow>([
+  'clip',
+  'shrink',
+  'wrap',
+]);
 
 /**
  * 🔴 ADR-739 §58 Γ1 — **το κάτω όριο της σμίκρυνσης, και γιατί υπάρχει ενώ το Excel δεν έχει.**
@@ -140,6 +147,17 @@ export function resolveCellOverflow(
     : DEFAULT_TABLE_CELL_OVERFLOW;
 }
 
+/**
+ * 🔴 ADR-739 §58 Γ2 — οι λειτουργίες που παράγουν **μία** οπτική γραμμή.
+ *
+ * Ο τύπος δεν είναι ευκολία: κάνει τη {@link resolveVisibleCellText} **ανίκανη να κληθεί**
+ * για `'wrap'`. Χωρίς αυτόν, ένας μελλοντικός καλών θα ζητούσε μονογραμμική απάντηση για
+ * αναδιπλούμενο κελί και θα έπαιρνε σιωπηλά την πρώτη γραμμή — δηλαδή θα ζωγράφιζε ένα
+ * τρίτο του περιεχομένου χωρίς κανένα σφάλμα. Ο μεταγλωττιστής το απαγορεύει αντί να το
+ * φυλάει ένα σχόλιο.
+ */
+export type SingleLineOverflow = Exclude<TableCellOverflow, 'wrap'>;
+
 /** Ό,τι χρειάζεται ο κανόνας — γεωμετρία + τυπογραφία + φύση τιμής. Καμία κατάσταση διεπαφής. */
 export interface CellTextFitInput {
   /** Το **ακέραιο** κείμενο του κελιού (`cellText(cell)`) — ποτέ ήδη κομμένο. */
@@ -148,7 +166,8 @@ export interface CellTextFitInput {
   readonly availableWidthMm: number;
   /** Το τελικό στυλ του κελιού — δίνει ύψος, οικογένεια και βάρος στη μέτρηση. */
   readonly style: TableCellStyle;
-  readonly overflow: TableCellOverflow;
+  /** 🔴 Στενότερος από το `TableCellOverflow` — δες {@link SingleLineOverflow}. */
+  readonly overflow: SingleLineOverflow;
   /**
    * Είναι **αριθμός** η τιμή του κελιού;
    *
@@ -248,6 +267,133 @@ export function resolveVisibleCellText(input: CellTextFitInput): VisibleCellText
     case 'clip':
       return clipToFit(input, spans);
   }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ADR-739 §58 Γ2 — ΤΟ ΟΡΑΤΟ ΠΕΡΙΕΧΟΜΕΝΟ: μία ή ΠΟΛΛΕΣ γραμμές
+// ──────────────────────────────────────────────────────────────────────────────
+
+/** Μία **οπτική γραμμή** ενός κελιού, μαζί με το πού αρχίζει στο ακέραιο κείμενο. */
+export interface VisibleCellLine extends VisibleCellText {
+  /**
+   * Ο δείκτης του πρώτου χαρακτήρα στο **ακέραιο** κείμενο του κελιού.
+   *
+   * 🔴 Χωρίς αυτόν οι **διευθύνσεις** (ADR-751) δεν μπορούν να τοποθετηθούν σε αναδιπλωμένο
+   * κελί: ο ανιχνευτής τρέχει πάνω στο ακέραιο κείμενο (ώστε ένα κομμένο e-mail να οδηγεί
+   * στο πλήρες), οπότε κάποιος πρέπει να ξέρει ποιο κομμάτι του βλέπει κάθε γραμμή.
+   * `0` για μονογραμμικά κελιά — δηλαδή για κάθε πίνακα που υπάρχει σήμερα.
+   */
+  readonly start: number;
+}
+
+/**
+ * Ό,τι **φαίνεται** σε ένα κελί: μία γραμμή για `clip`/`shrink`, N για `wrap`.
+ *
+ * Είναι η **μία** δημόσια απάντηση στο «τι ζωγραφίζεται εδώ». Το {@link resolveVisibleCellText}
+ * μένει εξαγόμενο γιατί απαντά σε **στενότερη** ερώτηση (μία γραμμή) και το δηλώνει στον
+ * τύπο του — δεν είναι δεύτερη είσοδος στο ίδιο πρόβλημα.
+ */
+export interface VisibleCellContent {
+  /** Οι ορατές γραμμές, με τη σειρά. **Κενός πίνακας** για κενό κελί — ποτέ μία κενή γραμμή. */
+  readonly lines: readonly VisibleCellLine[];
+  /** Ο συντελεστής σμίκρυνσης — **ένας για όλο το κελί**, ποτέ ανά γραμμή. */
+  readonly heightScale: number;
+}
+
+const NO_CONTENT: VisibleCellContent = { lines: [], heightScale: 1 };
+
+/** Ό,τι χρειάζεται η απόφαση για **ολόκληρο** το περιεχόμενο του κελιού. */
+export interface CellContentFitInput extends Omit<CellTextFitInput, 'overflow'> {
+  readonly overflow: TableCellOverflow;
+  /**
+   * Πάνω φράγμα οπτικών γραμμών όταν το κελί αναδιπλώνεται. Απόν ⇒ χωρίς όριο πέρα από την
+   * άμυνα του `wrapTextToLines`.
+   *
+   * Το δίνει ο καλών όταν το ύψος της γραμμής είναι **καρφωμένο**: τότε ό,τι δεν χωρά
+   * κατακόρυφα δεν έχει νόημα να υπολογιστεί, και — κυρίως — δεν πρέπει να ζωγραφιστεί έξω
+   * από το κελί. Δες `table-layout-place.ts`.
+   */
+  readonly maxLines?: number;
+}
+
+/**
+ * 🔴 ADR-739 §58 Γ2 — **το ορατό περιεχόμενο ενός κελιού.** Η μία είσοδος για τα τέσσερα
+ * backends.
+ *
+ * ## Γιατί η αναδίπλωση ΔΕΝ περικόπτει οριζόντια
+ * Στο `'wrap'` το κείμενο σπάει αντί να κοπεί, οπότε ο δείκτης «…» δεν εμφανίζεται **ποτέ**
+ * από πλάτος. Εμφανίζεται μόνο όταν το ύψος είναι **καρφωμένο** και οι γραμμές δεν χωρούν —
+ * και τότε είναι η σωστή ένδειξη, στην **τελευταία** ορατή γραμμή: εκεί ακριβώς σταματά ό,τι
+ * βλέπει ο αναγνώστης του σχεδίου.
+ *
+ * ## Η αναλλοίωτη που κρατά τα σημερινά αρχεία ανέπαφα
+ * Για `'clip'` και `'shrink'` επιστρέφεται **ακριβώς μία** γραμμή, παραγόμενη από την ίδια
+ * `resolveVisibleCellText` που υπήρχε πριν — byte-για-byte η σημερινή απόφαση.
+ */
+export function resolveVisibleCellContent(input: CellContentFitInput): VisibleCellContent {
+  if (!input.text) return NO_CONTENT;
+  if (input.overflow !== 'wrap') {
+    const single = resolveVisibleCellText({ ...input, overflow: input.overflow });
+    return single.text || single.clipped
+      ? { lines: [{ ...single, start: 0 }], heightScale: single.heightScale }
+      : NO_CONTENT;
+  }
+  return wrapToFit(input);
+}
+
+/**
+ * ADR-739 §58 Γ2 — η **αναδίπλωση**: το κείμενο σπασμένο σε γραμμές που χωρούν στο πλάτος.
+ *
+ * 🔴 **Ο βρόχος δεν είναι εδώ.** Ζει στο `bim/text/text-wrap-lines.ts` μαζί με την
+ * ισορρόπηση, και αυτό το module του δίνει μόνο ό,τι ξέρει μόνο αυτό: πώς μετριέται ένα
+ * **ετερογενές** εύρος (ADR-753). Ένα δεύτερο `while` εδώ θα ήταν το τρίτο αντίγραφο του
+ * ίδιου σχήματος (N.18 / CHECK 3.28).
+ *
+ * Ο μετρητής εύρους είναι η διαφορά δύο **μετρημένων προθεμάτων** — η ίδια πράξη που ήδη
+ * τοποθετεί τους συνδέσμους (`styledPrefixWidthMm`). Το kerning διατηρείται μέσα σε κάθε
+ * ομοιογενές τμήμα και χάνεται μόνο στα όρια, ακριβώς όπως δηλώνει το
+ * `table-cell-styled-spans.ts`: καμία υλοποίηση δεν μπορεί να το ανακτήσει, γιατί δύο
+ * `fillText` με άλλη γραμματοσειρά δεν έχουν κοινό ζεύγος.
+ */
+function wrapToFit(input: CellContentFitInput): VisibleCellContent {
+  const full = spansOf(input, input.text, input.text.length);
+  const wrapped = wrapTextToLines({
+    text: input.text,
+    availableWidth: input.availableWidthMm,
+    rangeWidth: (from, to) =>
+      styledPrefixWidthMm(full, to, input.measure) - styledPrefixWidthMm(full, from, input.measure),
+    ...(input.maxLines !== undefined && { maxLines: input.maxLines }),
+  });
+
+  const lines = wrapped.map((line, index) => {
+    // 🔴 Η **τελευταία** γραμμή, όταν το φράγμα ύψους έκοψε περιεχόμενο, δεν δείχνει το δικό
+    // της κομμάτι αλλά **ό,τι χωράει από ΟΛΟ το υπόλοιπο** — με τον δείκτη «…». Αλλιώς ο
+    // αναγνώστης του σχεδίου δεν έχει κανένα σημάδι ότι το κελί κρύβει κείμενο, που είναι
+    // ακριβώς η αστοχία για την οποία υπάρχει το `CELL_CLIP_ELLIPSIS`.
+    const truncated = index === wrapped.length - 1 && line.end < input.text.length;
+    const from = line.start;
+    const to = truncated ? input.text.length : line.end;
+
+    const single = resolveVisibleCellText({
+      ...input,
+      text: truncated ? input.text.slice(from) : line.text,
+      // Ο ΙΔΙΟΣ κανόνας περικοπής — δεν υπάρχει δεύτερος τρόπος να μπει ένας δείκτης.
+      overflow: 'clip',
+      runs: sliceCellTextRuns(input.runs, from, to),
+      // Ένας αριθμός δεν αναδιπλώνεται ποτέ σε πολλές γραμμές· ένα «####» πάνω σε κομμάτι
+      // κειμένου θα ήταν ανοησία.
+      numeric: false,
+      // 🔴 Μη περικομμένη γραμμή: **καμία δεύτερη κρίση χωρητικότητας.** Το «χωράει;» το
+      // απάντησε ήδη ο βρόχος αναδίπλωσης, μετρώντας εύρη του **ίδιου** αλφαριθμητικού. Μια
+      // επαναμέτρηση της γραμμής ως αυτόνομου string είναι **άλλη πράξη** (χάνει τα ζεύγη
+      // kerning στα άκρα) και μπορεί να πει «δεν χωρά» για γραμμή που μόλις χώρεσε — δηλαδή
+      // ένα «…» που εμφανίζεται από στρογγυλοποίηση. Δύο όργανα, ένα ερώτημα: απαγορευμένο.
+      availableWidthMm: truncated ? input.availableWidthMm : Number.POSITIVE_INFINITY,
+    });
+    return { ...single, start: from };
+  });
+
+  return { lines, heightScale: 1 };
 }
 
 /**

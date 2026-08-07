@@ -98,17 +98,20 @@ describe('wrapTextToLines — greedy', () => {
     expect(wrap('ΤΜΗΜΑ Φ12-Φ16', 6, false)).toEqual(['ΤΜΗΜΑ', 'Φ12-', 'Φ16']);
   });
 
-  it('τηρεί το φράγμα γραμμών ΧΩΡΙΣ να χάνει κείμενο', () => {
+  it('🔴 το φράγμα επιστρέφει ΜΟΝΟ όσες χωρούν — και το λέει με το `end`', () => {
+    const text = 'Α Β Γ Δ Ε Ζ';
     const lines = wrapTextToLines({
-      text: 'Α Β Γ Δ Ε Ζ',
+      text,
       availableWidth: 1,
-      rangeWidth: monospace('Α Β Γ Δ Ε Ζ'),
+      rangeWidth: monospace(text),
       maxLines: 2,
       balance: false,
     });
     expect(lines).toHaveLength(2);
-    // Ό,τι δεν χώρεσε μπαίνει ακέραιο στην τελευταία: φράγμα ≠ άδεια απώλειας δεδομένων.
-    expect(lines.map((l) => l.text).join('')).toContain('Ζ');
+    // 🔴 Η τελευταία γραμμή ΔΕΝ καταπίνει το υπόλοιπο: θα έβγαινε πλατύτερη από το κουτί και
+    // ο καλών δεν θα είχε πώς να μάθει ότι κρύβεται κείμενο. Το `end` είναι το σήμα.
+    expect(lines[lines.length - 1].end).toBeLessThan(text.length);
+    expect(lines.every((l) => l.text.length <= 1)).toBe(true);
   });
 
   it('οι δείκτες δείχνουν στο ΑΡΧΙΚΟ κείμενο (τα runs/links του κελιού τους χρειάζονται)', () => {
@@ -163,6 +166,33 @@ describe('🏆 wrapTextToLines — ισορρόπηση (text-wrap: balance)', (
       const joined = wrap(text, width, true).join('').replace(/\s+/gu, '');
       expect(joined).toBe(text.replace(/\s+/gu, ''));
     }
+  });
+
+  it('🔴 ΔΕΝ «κερδίζει» χτυπώντας το φράγμα γραμμών — το σφάλμα του ενός χαρακτήρα ανά γραμμή', () => {
+    // Με `maxLines`, ένα απειροελάχιστο δοκιμαστικό πλάτος δίνει ακριβώς `maxLines` γραμμές
+    // — δηλαδή «≤ στόχος» — και η δυαδική αναζήτηση το δεχόταν ως επιτυχία. Το αποτέλεσμα
+    // ήταν «Ε / Ν / Α / ΔΥΟ ΤΡΙΑ…» αντί για κανονικές γραμμές. Και τα δύο κριτήρια της
+    // ισορρόπησης ίσχυαν κατά γράμμα· έλειπε η σιωπηρή προϋπόθεση «χώρεσε ολόκληρο».
+    const text = 'ΕΝΑ ΔΥΟ ΤΡΙΑ ΤΕΣΣΕΡΑ ΠΕΝΤΕ ΕΞΙ';
+    const withCap = wrapTextToLines({
+      text,
+      availableWidth: 9,
+      rangeWidth: monospace(text),
+      maxLines: 4,
+      balance: true,
+    });
+    // Καμία γραμμή δεν επιτρέπεται να έχει έναν χαρακτήρα όσο υπάρχουν ευκαιρίες λέξης.
+    expect(withCap.every((l) => l.text.length > 1)).toBe(true);
+    // Και το αποτέλεσμα είναι ταυτόσημο με το greedy: η ισορρόπηση απλώς δεν εφαρμόζεται.
+    expect(withCap.map((l) => l.text)).toEqual(
+      wrapTextToLines({
+        text,
+        availableWidth: 9,
+        rangeWidth: monospace(text),
+        maxLines: 4,
+        balance: false,
+      }).map((l) => l.text),
+    );
   });
 
   it('δεν εφαρμόζεται σε μία γραμμή ούτε πάνω από το φράγμα', () => {

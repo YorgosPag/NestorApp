@@ -254,9 +254,21 @@ describe('resolveCellOverflow — ίδια σειρά προτεραιότητα
 
   it('🔴 άγνωστη τιμή (αρχείο από μελλοντική έκδοση) ⇒ προεπιλογή, ΠΟΤΕ κατάρρευση', () => {
     // Το `PersistedTableModel` περνά από `JSON.parse`: δεν υπάρχει καμία εγγύηση τύπου στην
-    // άλλη άκρη. Ένας πίνακας αποθηκευμένος με μελλοντικό `'wrap'` πρέπει να ανοίγει.
-    const fromFuture = 'wrap' as TableCellOverflow;
+    // άλλη άκρη. Ένας πίνακας με μελλοντική τιμή πρέπει να **ανοίγει**.
+    //
+    // ⚠️ Μέχρι το §58 το παράδειγμα εδώ ήταν το `'wrap'` — και έπαψε να ισχύει τη στιγμή που
+    // το `'wrap'` απέκτησε μηχανή. Το δείγμα είναι πλέον τιμή που **δεν** σχεδιάζεται.
+    const fromFuture = 'justify' as TableCellOverflow;
     expect(resolveCellOverflow(fromFuture, undefined)).toBe(DEFAULT_TABLE_CELL_OVERFLOW);
     expect(resolveCellOverflow(undefined, fromFuture)).toBe(DEFAULT_TABLE_CELL_OVERFLOW);
+  });
+
+  it('🔴 ADR-739 §58 — οι δύο νέες τιμές είναι ΕΚΤΕΛΕΣΙΜΕΣ, όχι απλώς δηλωμένες', () => {
+    // Αν αυτό γυρίσει σε `'clip'`, κάποιος έσβησε την τιμή από το `SUPPORTED_OVERFLOW` και
+    // κάθε αναδίπλωση του έργου πέφτει **σιωπηλά** σε περικοπή — ακριβώς το «ψέμα του τύπου»
+    // που προειδοποιεί το `types/table.ts`. Συνέβη **μία φορά** γράφοντας το §58: η τιμή
+    // μπήκε στο union και ξεχάστηκε από το σύνολο, και κανένα άλλο test δεν το είδε.
+    expect(resolveCellOverflow('wrap', undefined)).toBe('wrap');
+    expect(resolveCellOverflow('shrink', undefined)).toBe('shrink');
   });
 });

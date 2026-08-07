@@ -181,12 +181,16 @@ function greedyLines(
     start = cut + (TRIM_START.exec(text.slice(cut))?.[0].length ?? 0);
   }
 
-  // Ό,τι απέμεινε πάνω από το φράγμα μπαίνει ακέραιο στην τελευταία γραμμή: το φράγμα
-  // προστατεύει από ατέρμονο βρόχο, δεν είναι άδεια να **χαθεί** κείμενο του χρήστη.
-  if (start < text.length && out.length > 0) {
-    const last = out[out.length - 1];
-    out[out.length - 1] = { text: text.slice(last.start), start: last.start, end: text.length };
-  }
+  // 🔴 Ό,τι απέμεινε πάνω από το φράγμα **ΔΕΝ καταπίνεται** από την τελευταία γραμμή.
+  //
+  // Η πρώτη εκδοχή το έκανε, «για να μη χαθεί κείμενο του χρήστη» — και ήταν λάθος με τον
+  // χειρότερο τρόπο: η τελευταία γραμμή έβγαινε **πλατύτερη από το κελί** και, επειδή το
+  // `end` έφτανε στο τέλος του κειμένου, ο καλών **δεν είχε πώς να καταλάβει** ότι κόπηκε
+  // κάτι. Δηλαδή το κελί ζωγράφιζε πάνω στο περίγραμμα, χωρίς κανέναν δείκτη «…».
+  //
+  // Η σύμβαση είναι πλέον ρητή: επιστρέφονται **μόνο οι γραμμές που χωρούν**, και το
+  // `end` της τελευταίας λέει πού σταμάτησαν. Τι γίνεται με το υπόλοιπο είναι **πολιτική**
+  // και ανήκει στον καλούντα — στον πίνακα είναι ο δείκτης περικοπής (`wrapToFit`).
   return out;
 }
 
@@ -221,10 +225,34 @@ function balanceWidth(
   for (let i = 0; i < BALANCE_ITERATIONS; i++) {
     const mid = (lo + hi) / 2;
     if (!(mid > 0)) break;
-    if (greedyLines(input, opportunities, mid, maxLines).length <= targetLines) hi = mid;
+    const candidate = greedyLines(input, opportunities, mid, maxLines);
+    if (candidate.length <= targetLines && coversAll(candidate, input.text)) hi = mid;
     else lo = mid;
   }
   return hi;
+}
+
+/**
+ * 🔴 Κάλυψε το αποτέλεσμα **ΟΛΟ** το κείμενο, ή σταμάτησε στο φράγμα;
+ *
+ * ## Το σφάλμα που υπάρχει για να μην ξανασυμβεί (μετρημένο)
+ * Χωρίς αυτόν τον έλεγχο, η ισορρόπηση **κέρδιζε χτυπώντας το φράγμα**: για απειροελάχιστο
+ * δοκιμαστικό πλάτος το greedy σταματούσε στο `maxLines`, το πλήθος έβγαινε «≤ στόχος», η
+ * δυαδική αναζήτηση το δεχόταν ως επιτυχία και συνέκλινε στο **μικρότερο δυνατό** πλάτος.
+ * Το αποτέλεσμα στην οθόνη ήταν κελί με **έναν χαρακτήρα ανά γραμμή**:
+ * ```
+ *   Ε        αντί για      ΕΝΑ ΔΥΟ
+ *   Ν                      ΤΡΙΑ ΤΕΣΣΕΡΑ
+ *   Α                      ΠΕΝΤΕ ΕΞΙ
+ *   ΔΥΟ ΤΡΙΑ…
+ * ```
+ * Το ύπουλο είναι ότι **και τα δύο** κριτήρια της ισορρόπησης ικανοποιούνταν κατά γράμμα —
+ * «ίδιο πλήθος γραμμών», «ελάχιστο πλάτος». Έλειπε η **σιωπηρή** προϋπόθεση που κανείς δεν
+ * γράφει, γιατί χωρίς φράγμα ισχύει από μόνη της: *ότι το κείμενο χώρεσε ολόκληρο*.
+ */
+function coversAll(lines: readonly WrappedLine[], text: string): boolean {
+  const last = lines[lines.length - 1];
+  return last !== undefined && last.end >= text.length;
 }
 
 /**
@@ -248,7 +276,14 @@ export function wrapTextToLines(input: WrapTextInput): readonly WrappedLine[] {
   const opportunities = lineBreakOpportunities(text);
   const greedy = greedyLines(input, opportunities, availableWidth, maxLines);
 
-  if (input.balance === false || greedy.length < 2 || greedy.length > BALANCE_MAX_LINES) {
+  // 🔴 Καμία ισορρόπηση όταν το κείμενο **δεν χώρεσε ολόκληρο**: εκεί δεν υπάρχει «ίδιο πλήθος
+  // γραμμών» να διατηρηθεί — το πλήθος το ορίζει το φράγμα, όχι το περιεχόμενο. Δες `coversAll`.
+  if (
+    input.balance === false
+    || greedy.length < 2
+    || greedy.length > BALANCE_MAX_LINES
+    || !coversAll(greedy, text)
+  ) {
     return greedy;
   }
   return greedyLines(
