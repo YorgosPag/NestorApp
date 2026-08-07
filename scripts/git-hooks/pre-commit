@@ -647,7 +647,7 @@ register_area "UI Contrast Gate (CHECK 3.38)" \
     "npm run test:text-primary-ratchet"
 
 register_area "Theme Pairing Gate (CHECK 3.39)" \
-    "^(scripts/check-theme-pairing-ratchet\.js$|scripts/lib/contrast/(ts-token-palette|theme-pairing|css-token-themes)\.js$|\.theme-pairing-baseline\.json$)" \
+    "^(scripts/check-theme-pairing-ratchet\.js$|scripts/lib/contrast/(ts-token-palette|theme-pairing|palette-ledger|css-token-themes)\.js$|\.theme-pairing-baseline\.json$)" \
     "scripts/__tests__/check-theme-pairing-ratchet\.test\.js" \
     "npm run test:theme-pairing"
 
@@ -668,6 +668,18 @@ register_area "State Channel Gate (CHECK 3.41)" \
     "^(scripts/check-state-channel-distinctness\.js$|scripts/lib/contrast/(cvd|state-marks)\.js$|src/subapps/dxf-viewer/config/color-config\.ts$|src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state\.ts$)" \
     "(check-state-channel-distinctness|table-bound-mark-corner)\.test\." \
     "npm run test:state-channel"
+
+# CHECK 3.45 (ADR-771 Φ.3) — η πύλη ΚΑΙ οι δύο άγκυρες μαζί, γιατί καθεμία απαντά μισή
+# ερώτηση: η πύλη ότι ένα ΑΝΕΦΙΚΤΟ κατώφλι ζητιέται μέσα από υπογραφή που μπορεί να πει
+# «απέτυχα»· η `ink-verdict` ότι ο κλάδος αποτυχίας είναι ΖΩΝΤΑΝΟΣ σήμερα (cinema4d 7,46 < 9,0)·
+# η `wall-contrast-casing` ότι ο καμβάς ΟΝΤΩΣ ζωγραφίζει τη διάσωση. Χωρίς την τρίτη, η πύλη
+# θα ήταν πράσινη πάνω σε renderer που παίρνει την ετυμηγορία και την αγνοεί.
+# ⚠️ Στη σκανδάλη μπαίνουν ΚΑΙ οι είσοδοι-SSoT (θέματα καμβά, `variables.css`, το παλέτο του
+# τοίχου): αλλάζουν την ετυμηγορία για ΟΛΟΥΣ, χωρίς να αγγίζουν καμία γραμμή της πύλης.
+register_area "Contrast Promise Gate (CHECK 3.45)" \
+    "^(scripts/check-contrast-promise-reachability\.js$|scripts/lib/contrast-promise/.*\.js$|src/subapps/dxf-viewer/config/(adaptive-entity-color|canvas-theme)\.ts$|src/subapps/dxf-viewer/bim/(walls/wall-render-palette|renderers/bim-contrast-casing|renderers/WallRenderer)\.ts$|src/styles/design-system/generated/variables\.css$)" \
+    "(check-contrast-promise-reachability|ink-verdict|wall-contrast-casing)\.test\." \
+    "npm run test:contrast-promise"
 
 # CHECK 3.43 (ADR-774) — «αυτό που μοιάζει με token, ΕΙΝΑΙ token;». Η baseline μπαίνει ΕΠΙΤΗΔΕΣ
 # στη σκανδάλη: μια χειροκίνητη επεξεργασία της (αντί για `--write-baseline`) θα άλλαζε το

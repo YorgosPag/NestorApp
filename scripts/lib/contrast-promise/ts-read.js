@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+/**
+ * **Πρωτογενείς αναγνώσεις AST** για την πύλη CHECK 3.45 — τίποτα που να ξέρει από αντίθεση.
+ *
+ * Εξήχθη επειδή το **CHECK 3.28 (jscpd, N.18) έπιασε δύο κλώνους μέσα στο ίδιο commit**:
+ * η «αρχικοποίηση ενός `const NAME = …`» ήταν γραμμένη **δύο φορές με δύο ονόματα**
+ * (`initializerOf` / `declarationInitializer`), και το προοίμιο διάσχισης των ονομαστικών
+ * εισαγωγών **άλλες δύο**. Ακριβώς το sibling clone που ο έλεγχος πιάνει *ανεξάρτητα
+ * ονόματος* — και που αργότερα θα απέκλινε σιωπηλά.
+ *
+ * ⚠️ Ο διαχωρισμός δεν είναι αισθητικός: εδώ ζουν οι **αναγνώσεις**, στα άλλα δύο modules οι
+ * **ερωτήσεις** (ποιες επιφάνειες · ποιες υποσχέσεις). Ένα module που απαντούσε και τα δύο θα
+ * ήταν module χωρίς ερώτηση.
+ */
+
+'use strict';
+
+const fs = require('node:fs');
+const ts = require('typescript');
+
+/**
+ * Το AST ενός αρχείου πηγής — **parse-only**, ποτέ `tsc` (N.17): καμία επίλυση τύπων, καμία
+ * ανάγνωση `tsconfig`, μηδέν πρόγραμμα. Μερικά ms ανά αρχείο.
+ */
+function parseSource(absFile) {
+  return ts.createSourceFile(
+    absFile, fs.readFileSync(absFile, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS,
+  );
+}
+
+/**
+ * Η αρχικοποίηση ενός `const NAME = …` οπουδήποτε μέσα στο αρχείο, ή `null`.
+ *
+ * Ψάχνει σε **όλο** το δέντρο και όχι μόνο στα top-level statements: το `export const` είναι
+ * `VariableStatement → VariableDeclarationList → VariableDeclaration`, και μια σταθερά μπορεί
+ * κάλλιστα να ζει μέσα σε μπλοκ.
+ */
+function initializerOf(sourceFile, name) {
+  let found = null;
+  const visit = (node) => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.name.text === name) {
+      found = node.initializer ?? null;
+    }
+    if (found === null) ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(sourceFile, visit);
+  return found;
+}
+
+/**
+ * Κάθε **ονομαστική** εισαγωγή του αρχείου, με το τοπικό ΚΑΙ το αρχικό όνομα χωριστά —
+ * το `import { f as g }` είναι ο λόγος που τα δύο δεν ταυτίζονται, και ο λόγος που ένας
+ * σαρωτής που κοιτά μόνο το ένα βγάζει **σιωπηλή απουσία**.
+ */
+function* namedImports(sourceFile) {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isImportDeclaration(statement) || statement.importClause === undefined) continue;
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const bindings = statement.importClause.namedBindings;
+    if (bindings === undefined || !ts.isNamedImports(bindings)) continue;
+    for (const element of bindings.elements) {
+      yield {
+        local: element.name.text,
+        original: (element.propertyName ?? element.name).text,
+        moduleSpecifier: statement.moduleSpecifier.text,
+      };
+    }
+  }
+}
+
+module.exports = { initializerOf, namedImports, parseSource };

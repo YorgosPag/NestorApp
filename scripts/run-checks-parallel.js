@@ -237,6 +237,19 @@ const stateChannelTriggers = allFiles.filter(
 if (!process.env.SKIP_STATE_CHANNEL && stateChannelTriggers.length > 0)
   addThread('3.41', 'State channel distinctness', 'scripts/check-state-channel-distinctness.js');
 
+// CHECK 3.45 (ADR-771 Φ.3) — «αυτό το κατώφλι αντίθεσης είναι ΕΦΙΚΤΟ;». Το
+// `WALL_LINE_CONTRAST = 9.0` είναι ΑΝΕΦΙΚΤΟ στο preset `cinema4d` (#555555, μέγιστο δυνατό
+// 7,46:1) — και η `adaptColorToBackground` επέστρεφε σιωπηλά το άκρο: η συνάρτηση απαντά,
+// άρα κανείς δεν ρώτησε αν πέτυχε. Καμία πύλη δεν το έβλεπε: τα 3.38/3.39/3.40 κρίνουν
+// κλάσεις · δηλώσεις · υπολογισμένες τιμές CSS, ενώ εδώ το κατώφλι είναι ΑΡΙΘΜΟΣ σε TS.
+// ⚠️ ΔΥΟ επιφάνειες-κριτές: τα 9 preset θέματα ΚΑΙ το μαθηματικό φράγμα του `custom`
+// (4,58:1) — ένα κατώφλι 7,0 περνά όλα τα preset και σπάει στον πρώτο χρήστη.
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΖΕΙ ΜΕΣΑ ΣΤΗΝ ΠΥΛΗ, ΟΧΙ ΕΔΩ, και όταν πυροδοτεί ο έλεγχος είναι ΠΑΝΤΑ
+// πλήρης (~2,7s): μια νέα μεσοτονική επιφάνεια κάνει ανέφικτες υποσχέσεις σε αρχεία που
+// κανείς δεν σταδιοποίησε. Κόστος όταν δεν αφορά: ~0,05s (προφίλτρο κειμένου).
+if (!process.env.SKIP_CONTRAST_PROMISE && allFiles.length > 0)
+  addThread('3.45', 'Contrast promise reachability', 'scripts/check-contrast-promise-reachability.js', allFiles);
+
 // CHECK 3.43 (ADR-774) — «αυτό που μοιάζει με token, ΕΙΝΑΙ token;». Στα `.css` του `src/`
 // υπάρχουν 125 `var(--x, #hex)` όπου το `--x` δεν ορίζεται πουθενά ⇒ το hex είναι η τιμή,
 // ΠΑΝΤΑ, μονοθεματικό — και το `var()` γύρω του είναι ακριβώς αυτό που το κάνει αόρατο.

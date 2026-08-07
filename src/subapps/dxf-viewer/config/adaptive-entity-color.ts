@@ -266,16 +266,123 @@ export const SATURATED_LINE_THRESHOLD = 0.4;
  * αλλά **χωρίς ξέπλυμα** ζωηρών χρωμάτων: κορεσμένα (≥ {@link SATURATED_LINE_THRESHOLD}) παίρνουν
  * μόνο το standard {@link MIN_ENTITY_CONTRAST} (κόκκινο override μένει κόκκινο). `brightContrast`
  * = το επιθετικό κατώφλι για τα γκρι (βλ. `WALL_LINE_CONTRAST`).
+ *
+ * ⚠️ **ΛΕΠΤΟΣ WRAPPER, ΟΧΙ ΔΕΥΤΕΡΟ ΣΩΜΑ** (ADR-771 Φ.3): ο κανόνας ζει **μία φορά**, στην
+ * {@link adaptStructuralLineInkForCanvas}· εδώ πετιέται μόνο η ετυμηγορία. Έτσι οι ~20 BIM
+ * renderers που καλούν αυτή την υπογραφή μένουν **αμετάβλητοι**, και ταυτόχρονα είναι
+ * **αδύνατο** οι δύο πόρτες να δώσουν διαφορετικό χρώμα.
  */
 export function adaptStructuralLineColorForCanvas(colorHex: string, brightContrast: number): string {
+  return adaptStructuralLineInkForCanvas(colorHex, brightContrast).ink;
+}
+
+// ============================================================================
+// INK VERDICT — «απάντησα» ΔΕΝ σημαίνει «πέτυχα» (ADR-771 Φ.3)
+// ============================================================================
+
+/**
+ * 🔴 **Η ετυμηγορία ενός μελανιού**: τι βγήκε **και** αν κρατήθηκε η υπόσχεση.
+ *
+ * ## Το γεγονός που τη γέννησε
+ * Η {@link adaptColorToBackground} έχει έναν κλάδο που **παραδίδεται σιωπηλά**:
+ *
+ * ```ts
+ * if (contrastRatio(target, bgHex) < minContrast) return target;   // ← καλύτερη προσπάθεια
+ * ```
+ *
+ * Επιστρέφει χρώμα, άρα ο καλών **δεν έχει τρόπο να ρωτήσει αν πέτυχε** — νέα μορφή του
+ * «0 = κανείς δεν κοίταξε»: *η συνάρτηση απαντά, άρα κανείς δεν ρώτησε αν πέτυχε*.
+ *
+ * Ο κλάδος **δεν είναι θεωρητικός**, μετρήθηκε (2026-08-07, με βαθμονόμηση λευκό/μαύρο = 21,00):
+ * το θέμα καμβά `cinema4d` λύνεται σε **`#555555`** (`--canvas-themes-cinema4d`), όπου το
+ * **μέγιστο δυνατό** είναι **7,46:1** ενώ το `WALL_LINE_CONTRAST` δηλώνει **9,0**. Δηλαδή σε
+ * ένα από τα **δικά μας** preset θέματα οι τοίχοι αθετούν σιωπηλά την υπόσχεση του έργου.
+ * Και το φράγμα είναι δομικό: το χειρότερο δυνατό γκρι δίνει **4,58:1**, άρα **κάθε** κατώφλι
+ * πάνω από αυτό είναι αθετήσιμο από μια απλή επιλογή `custom` χρώματος.
+ *
+ * ## 🔴 ΤΡΕΙΣ ρητές καταστάσεις, ποτέ δύο
+ * Το `sufficient: boolean` θα ήταν σιωπηλή απόρριψη με άλλο όνομα: ένα μη αναγνωρίσιμο
+ * χρώμα (`rgba(...)`, σκουπίδι, άκυρο φόντο) **δεν είναι αποτυχία** — είναι **αμέτρητο**, και
+ * το να το βάψεις ως αποτυχία γεννά ψευδώς θετικό ακριβώς εκεί που δεν ξέρεις τίποτα.
+ *
+ * | κατάσταση | σημασία | τι κάνει ο καταναλωτής |
+ * |---|---|---|
+ * | `sufficient` | μετρήθηκε, φτάνει το κατώφλι | ζωγραφίζει κανονικά |
+ * | `shortfall` | μετρήθηκε, **δεν** το φτάνει | διάσωση (casing — δες `bim-contrast-casing.ts`) |
+ * | `unmeasurable` | δεν αναλύεται μελάνι ή επιφάνεια | ζωγραφίζει κανονικά· **καμία αξίωση** |
+ *
+ * ## Γιατί το `achieved` υπάρχει ΚΑΙ στην επιτυχία
+ * Είναι η θέση της **APCA (WCAG 3)**, ρητή στην τεκμηρίωσή της: επιστρέφει τιμή `Lc`, όχι
+ * pass/fail, γιατί *«a strict pass/fail with a blanket contrast ratio is not instructive»*.
+ * Μια ετυμηγορία που κρύβει τη μέτρησή της αναγκάζει τον επόμενο να την ξανακάνει.
+ */
+export type InkVerdict =
+  | { readonly kind: 'sufficient'; readonly ink: string; readonly achieved: number; readonly required: number }
+  | { readonly kind: 'shortfall'; readonly ink: string; readonly achieved: number; readonly required: number }
+  | { readonly kind: 'unmeasurable'; readonly ink: string; readonly required: number };
+
+/**
+ * 🔑 **Η ΜΕΤΡΗΣΗ, ΟΧΙ Η ΘΥΜΗΣΗ.** Η ετυμηγορία υπολογίζεται από το χρώμα που **όντως
+ * επιστράφηκε**, ποτέ από «ποιον κλάδο πήρα». Λογιστική κλάδων μπορεί να αποκλίνει από το
+ * αποτέλεσμα (και αποκλίνει, στην πρώτη αναδιάταξη)· μια μέτρηση του αποτελέσματος **δεν
+ * μπορεί** — αν η {@link adaptColorToBackground} αλλάξει αύριο, η ετυμηγορία ακολουθεί δωρεάν.
+ *
+ * Είναι ο ίδιος κανόνας που το ίδιο το έργο εφαρμόζει στις πύλες του: βαθμονόμησε με γνωστή
+ * τιμή, μετά κρίνε — ποτέ ετυμηγορία από βιβλιοθηκάριο κατάστασης.
+ */
+function verdictFor(ink: string, surfaceHex: string, required: number): InkVerdict {
+  if (!parseHex(ink) || !parseHex(surfaceHex)) return { kind: 'unmeasurable', ink, required };
+  const achieved = contrastRatio(ink, surfaceHex);
+  return achieved >= required
+    ? { kind: 'sufficient', ink, achieved, required }
+    : { kind: 'shortfall', ink, achieved, required };
+}
+
+const _verdictCache = new Map<string, InkVerdict>();
+
+/**
+ * Η {@link adaptColorForSurface} **με ετυμηγορία**. Ίδιο μελάνι, ίδιο κλειδί μνήμης — απλώς
+ * λέει και **αν** κρατήθηκε η υπόσχεση.
+ *
+ * ⚠️ **Απομνημονεύεται το ΑΝΤΙΚΕΙΜΕΝΟ, όχι μόνο το χρώμα.** Ο καλών είναι ζωγράφος καμβά:
+ * 3 σημεία × N τοίχοι × 60 fps. Ένα νέο αντικείμενο ανά κλήση θα ήταν δέσμευση σε βρόχο
+ * καρέ — ακριβώς το σχήμα που ο ADR-040 απαγορεύει. Με τη μνήμη, η σταθερή κατάσταση είναι
+ * **μηδέν δεσμεύσεις**: επιστρέφεται η ίδια αναφορά.
+ */
+export function adaptInkForSurface(
+  colorHex: string,
+  surfaceHex: string,
+  minContrast: number = MIN_ENTITY_CONTRAST,
+): InkVerdict {
+  const key = `${colorHex}|${surfaceHex}|${minContrast}`;
+  const hit = _verdictCache.get(key);
+  if (hit !== undefined) return hit;
+  const out = verdictFor(adaptColorForSurface(colorHex, surfaceHex, minContrast), surfaceHex, minContrast);
+  _verdictCache.set(key, out);
+  return out;
+}
+
+/**
+ * Η {@link adaptStructuralLineColorForCanvas} **με ετυμηγορία** — και το **ΕΝΑ σώμα** των δύο.
+ *
+ * ⚠️ Η εκδοχή που επιστρέφει χρώμα είναι πλέον **λεπτός wrapper πάνω σε αυτή** (`.ink`), ώστε
+ * οι δύο πόρτες να **μην μπορούν** να αποκλίνουν: δύο σώματα του ίδιου κανόνα είναι sibling
+ * clone (CHECK 3.28) και, χειρότερα, δύο σημεία που θα δώσουν διαφορετική απάντηση στην πρώτη
+ * ρύθμιση. Ίδιο σχήμα με το ζεύγος {@link adaptColorForSurface}/{@link adaptEntityColorForCanvas}.
+ *
+ * Μία ανάγνωση του ζωντανού CSS ανά κλήση — ακριβώς όσες και πριν.
+ */
+export function adaptStructuralLineInkForCanvas(colorHex: string, brightContrast: number): InkVerdict {
   const c = parseHex(colorHex);
-  if (!c) return colorHex; // non-hex (rgba) → pass-through
-  if (saturation(c) >= SATURATED_LINE_THRESHOLD) return adaptEntityColorForCanvas(colorHex);
-  return adaptEntityColorForCanvas(colorHex, brightContrast);
+  // Κορεσμένο (user V/G override) ⇒ standard κατώφλι· το mix-προς-λευκό θα το ξέπλενε.
+  // Μη αναγνωρίσιμο ⇒ το κατώφλι που ζητήθηκε· η ετυμηγορία θα βγει `unmeasurable` ούτως ή άλλως.
+  const required = c && saturation(c) >= SATURATED_LINE_THRESHOLD ? MIN_ENTITY_CONTRAST : brightContrast;
+  return adaptInkForSurface(colorHex, resolveDxfCanvasBackgroundHex(), required);
 }
 
 /** Test hook — καθαρίζει τα memo caches (π.χ. όταν αλλάζει το background στο test). */
 export function _clearAdaptiveColorCache(): void {
   _cache.clear();
   _fillCache.clear();
+  _verdictCache.clear();
 }

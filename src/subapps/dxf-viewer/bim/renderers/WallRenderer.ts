@@ -40,7 +40,10 @@ import { useDrawingScaleStore } from '../../state/drawing-scale-store';
 import { isPointInPolygon } from '../../utils/geometry/GeometryUtils';
 import { drawBimHoverHalo } from './bim-hover-halo';
 // ADR-509 — background-adaptive entity color (near-black wall visible on dark canvas).
-import { adaptEntityColorForCanvas, adaptStructuralLineColorForCanvas } from '../../config/adaptive-entity-color';
+import { adaptEntityColorForCanvas, adaptStructuralLineInkForCanvas } from '../../config/adaptive-entity-color';
+// ADR-771 Φ.3 — όπου το WALL_LINE_CONTRAST είναι ΑΝΕΦΙΚΤΟ στην επιφάνεια (μετρημένο: cinema4d
+// #555555 ⇒ μέγιστο 7,46:1 < 9,0), το casing δίνει στη γραμμή δικό της φόντο ⇒ τοπικά 21:1.
+import { strokeWithContrastCasing } from './bim-contrast-casing';
 import { getWallGrips, wallGripGlyphShape } from '../walls/wall-grips';
 import { gripKindOf } from '../../hooks/grip-kinds';
 import { drawEntityDimLabel } from '../labels/bim-dim-labels';
@@ -237,8 +240,12 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash([]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(wall.color ?? '#000000', WALL_LINE_CONTRAST);
-    strokePlanLineSegments(this.ctx, (p) => this.worldToScreen(p), segs);
+    strokeWithContrastCasing(
+      this.ctx,
+      adaptStructuralLineInkForCanvas(wall.color ?? '#000000', WALL_LINE_CONTRAST),
+      RENDER_LINE_WIDTHS.THIN,
+      () => strokePlanLineSegments(this.ctx, (p) => this.worldToScreen(p), segs),
+    );
     this.ctx.restore();
   }
 
@@ -311,8 +318,12 @@ export class WallRenderer extends BaseEntityRenderer {
     // ξέπλυμα ζωηρών V/G overrides: near-black #2b2f36 → ανοιχτό γκρι· κόκκινο override → μένει.
     // Armed-selection keeps the ORANGE stroke that applyPhaseStyle already set — skip the
     // category-colour override so the whole member reads orange (fill + edge). Giorgio 2026-07-21.
-    if (_edgeColor !== null && !armedHighlight) this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(_edgeColor, WALL_LINE_CONTRAST);
-    this.ctx.stroke();
+    // ADR-771 Φ.3 — `null` ⇒ «δεν ορίζω μελάνι εδώ», δηλαδή ένα σκέτο stroke χωρίς άγγιγμα του
+    // strokeStyle: ακριβώς η παλιά συμπεριφορά της οπλισμένης επιλογής.
+    const _edgeInk = _edgeColor !== null && !armedHighlight
+      ? adaptStructuralLineInkForCanvas(_edgeColor, WALL_LINE_CONTRAST)
+      : null;
+    strokeWithContrastCasing(this.ctx, _edgeInk, _edgePx, () => this.ctx.stroke());
     return _edgeColor;
   }
 
@@ -377,13 +388,15 @@ export class WallRenderer extends BaseEntityRenderer {
     this.ctx.save();
     this.ctx.setLineDash(AXIS_DASH as unknown as number[]);
     this.ctx.lineWidth = RENDER_LINE_WIDTHS.THIN;
-    if (edgeColor !== null) {
-      this.ctx.strokeStyle = adaptStructuralLineColorForCanvas(edgeColor, WALL_LINE_CONTRAST);
-    }
     const runs = clipPolylineOutsidePolygons(axis, this.columnFootprints);
-    for (const run of runs) {
-      strokePolyline(this.ctx, (p) => this.worldToScreen(p), run);
-    }
+    // ADR-771 Φ.3 — το casing κληρονομεί το `setLineDash` ⇒ διάστικτος άξονας παίρνει
+    // διάστικτο casing (συμπαγές θα γέμιζε τα κενά και θα έσβηνε το ίδιο το μοτίβο).
+    strokeWithContrastCasing(
+      this.ctx,
+      edgeColor !== null ? adaptStructuralLineInkForCanvas(edgeColor, WALL_LINE_CONTRAST) : null,
+      RENDER_LINE_WIDTHS.THIN,
+      () => { for (const run of runs) strokePolyline(this.ctx, (p) => this.worldToScreen(p), run); },
+    );
     this.ctx.restore();
   }
 
