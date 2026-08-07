@@ -22,10 +22,15 @@
  * ## Το τρίτο κουμπί ζει αλλού — και σωστά
  * Το «Αυτόματο ύψος γραμμής» **δεν** είναι τιμή του {@link TableCellOverflow}: δεν απαντά στο
  * «τι γίνεται όταν δεν χωράει» αλλά στο «ποιος κατέχει το ύψος» — και γράφει σε **γραμμή**,
- * όχι σε κελί. Ζει στο `table-row-column-ops.ts` ({@link clearTableRowHeights}).
+ * όχι σε κελί. Ζει στο **`table-row-height-ops.ts`** ({@link clearTableRowHeights}).
+ *
+ * ⚠️ **ΔΙΟΡΘΩΣΗ (§58 Γ2)**: εδώ έγραφε «ζει στο `table-row-column-ops.ts`». Η **πρόθεση** ήταν
+ * σωστή (ίδιος άξονας, ίδιο μοντέλο), το **μέγεθος** όχι: εκείνο το αρχείο είναι 446/500 γραμμές
+ * (N.7.1) και απαντά σε άλλη ερώτηση — «πόσες γραμμές υπάρχουν», όχι «ποιος ορίζει το ύψος τους».
  *
  * @module subapps/dxf-viewer/bim/table/table-overflow-ops
  * @see bim/table/table-cell-overflow.ts — τι **κάνει** η κάθε τιμή (η μηχανή)
+ * @see bim/table/table-row-height-ops.ts — το αδελφό SSoT («ποιος κατέχει το ύψος»)
  * @see docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md §58
  */
 
