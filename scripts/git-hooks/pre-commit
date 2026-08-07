@@ -683,9 +683,19 @@ register_area "State Channel Gate (CHECK 3.41)" \
 # μετάβαση σε APCA/CIE L* θα περνούσε πράσινη — και το `table-ink.ts` μπαίνει ΚΑΙ ΑΥΤΟ στη
 # σκανδάλη επειδή η ομάδα Γ κλειδώνει εκεί τη Φ.4 ως «δεν έγινε» (το μελάνι κελιού ΔΕΝ
 # επιτρέπεται να εξαρτηθεί από μέγεθος ή βάρος κειμένου· δες ADR-771 §6.7).
+#
+# ➕ ADR-771 Φ.2 — η ΤΕΤΑΡΤΗ άγκυρα (`table-sheet-paint`) μπαίνει ΕΠΙΣΗΣ εδώ, για τον ίδιο λόγο:
+# η Φ.2 πρόσθεσε **παρουσιάσιμη επιφάνεια** (`TABLE_SHEET_HEX`) στο ΙΔΙΟ `table-ink.ts` που η
+# πύλη ήδη διαβάζει. Πύλη «κάθε επιφάνεια που παρουσιάζουμε αντέχει τις υποσχέσεις μας;» ·
+# άγκυρα «ο καμβάς ΟΝΤΩΣ στρώνει αυτή την επιφάνεια — μία φορά, πρώτος, ως πολύγωνο, και ΠΟΤΕ
+# στο παραδοτέο;». Χωρίς την άγκυρα η πύλη θα ήταν πράσινη πάνω σε ζωγράφο που είτε δεν
+# ζωγραφίζει καθόλου, είτε ζωγραφίζει πάνω από το κείμενο.
+# ⚠️ Στη σκανδάλη μπαίνουν ΚΑΙ ο ζωγράφος, ΚΑΙ ο `TableRenderer` (εκεί ζει το z-order, που η
+# άγκυρα διαβάζει στατικά), ΚΑΙ το store της επιφάνειας: και τα τρία αλλάζουν το αποτέλεσμα
+# χωρίς να αγγίξουν γραμμή της πύλης.
 register_area "Contrast Promise Gate (CHECK 3.45)" \
-    "^(scripts/check-contrast-promise-reachability\.js$|scripts/lib/contrast-promise/.*\.js$|src/subapps/dxf-viewer/config/(adaptive-entity-color|canvas-theme)\.ts$|src/subapps/dxf-viewer/bim/(walls/wall-render-palette|renderers/bim-contrast-casing|renderers/WallRenderer|table/table-ink)\.ts$|src/styles/design-system/generated/variables\.css$)" \
-    "(check-contrast-promise-reachability|ink-verdict|wall-contrast-casing|ink-polarity-doctrine)\.test\." \
+    "^(scripts/check-contrast-promise-reachability\.js$|scripts/lib/contrast-promise/.*\.js$|src/subapps/dxf-viewer/config/(adaptive-entity-color|canvas-theme)\.ts$|src/subapps/dxf-viewer/bim/(walls/wall-render-palette|renderers/bim-contrast-casing|renderers/WallRenderer|table/table-ink)\.ts$|src/subapps/dxf-viewer/rendering/entities/(TableRenderer\.ts|table/stamp-table-sheet\.ts)$|src/subapps/dxf-viewer/systems/table-surface/table-surface-mode\.ts$|src/styles/design-system/generated/variables\.css$)" \
+    "(check-contrast-promise-reachability|ink-verdict|wall-contrast-casing|ink-polarity-doctrine|table-sheet-paint)\.test\." \
     "npm run test:contrast-promise"
 
 # CHECK 3.46 (ADR-775) — «ΜΠΟΡΕΙ αυτή η σουίτα e2e να περάσει;». Στη σκανδάλη μπαίνουν ΚΑΙ οι

@@ -289,13 +289,19 @@ jobs:
       # πολικότητας σε σταθερές (#757575/#767676), απορρίπτοντας ρητά CIE L* και APCA, και ότι
       # το μελάνι κελιού ΔΕΝ εξαρτάται από μέγεθος/βάρος. Τρέχει εδώ γιατί το Layer 1 είναι
       # σκανδαλισμένο: μια αλλαγή μεζούρας μπορεί να έρθει από αρχείο που κανείς δεν στάδιοποίησε.
-      - name: 🧪 Mutation suite — CHECK 3.45 (28 tests) + άγκυρες (16 + 6 + 13)
+      # Η τέταρτη άγκυρα (ADR-771 Φ.2) κλειδώνει την ΕΠΙΦΑΝΕΙΑ: ότι ο ζωγράφος του φύλλου
+      # καλείται μηδέν ή μία φορά, πρώτος στο z-order, ως πολύγωνο που ακολουθεί τη στροφή, με
+      # το χρώμα της γεωμετρίας — και ΠΟΤΕ στο παραδοτέο. Τρέχει εδώ για τον ίδιο λόγο με τις
+      # άλλες: το z-order ζει στον `TableRenderer`, που μπορεί να αλλάξει από άλλη γραμμή
+      # εργασίας χωρίς να αγγίξει τίποτα σκανδαλισμένο.
+      - name: 🧪 Mutation suite — CHECK 3.45 (30 tests) + άγκυρες (16 + 6 + 13 + 24)
         run: >
           pnpm exec jest
           scripts/__tests__/check-contrast-promise-reachability.test.js
           src/subapps/dxf-viewer/config/__tests__/ink-verdict.test.ts
           src/subapps/dxf-viewer/bim/renderers/__tests__/wall-contrast-casing.test.ts
           src/subapps/dxf-viewer/config/__tests__/ink-polarity-doctrine.test.ts
+          src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-sheet-paint.test.ts
 
       # ⚠️ Και αυτή χρειάζεται το `fetch-depth: 0`: η ομάδα Π τραβά με `git show eff100ba:`
       # το ΠΡΑΓΜΑΤΙΚΟ `design-system/tokens/colors.ts` και απαιτεί να βγει το μετρημένο

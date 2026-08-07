@@ -122,6 +122,31 @@ describe('Μ0 — το ζωντανό δέντρο', () => {
     expect(limits.worstPreset.max).toBeCloseTo(7.46, 1);
     expect(limits.customCeiling).toBeCloseTo(4.58, 2);
   });
+
+  /**
+   * 🔴 **ADR-771 Φ.2 — Η ΕΠΙΦΑΝΕΙΑ ΠΟΥ ΘΑ ΕΙΧΕ ΞΕΦΥΓΕΙ.**
+   *
+   * Μέχρι τη Φ.2 ο σαρωτής ζητούσε **ονομαστικά** το `TABLE_PAPER_HEX`. Η Φ.2 πρόσθεσε το
+   * `TABLE_SHEET_HEX` **στο ίδιο αρχείο**, και ένας σαρωτής που απαριθμεί ονόματα θα έμενε
+   * πράσινος πάνω σε επιφάνεια που **κανείς δεν έκρινε** — η «δεύτερη αυθεντία που αποκλίνει
+   * σιωπηλά» που προειδοποιεί η κεφαλίδα του `presentable-surfaces.js`, εμφανιζόμενη μέσα
+   * στο αρχείο που την προειδοποιεί.
+   *
+   * Το κριτήριο έγινε **ανακάλυψη** (`TABLE_<X>_HEX`). Αυτό το test το κλειδώνει: μια
+   * επιστροφή στην απαρίθμηση αφήνει το `sheet` έξω και πέφτει εδώ.
+   */
+  it('🔴 ΚΑΘΕ σταθερή επιφάνεια πίνακα κρίνεται — ανακάλυψη, όχι απαρίθμηση', () => {
+    const keys = presentableSurfaces(REPO_ROOT)
+      .filter((s) => s.origin === TABLE_INK)
+      .map((s) => s.key)
+      .sort();
+    expect(keys).toEqual(['paper', 'sheet']);
+  });
+
+  it('η ανακάλυψη είναι fail-closed: καμία σταθερά ⇒ σκάει, ποτέ «0 επιφάνειες»', () => {
+    const ink = read(REPO_ROOT, TABLE_INK).split('export const TABLE_').join('const TABLE_');
+    expect(() => presentableSurfaces(miniRepo({ [TABLE_INK]: ink }))).toThrow(/TABLE_\*_HEX/);
+  });
 });
 
 // ── Μ1..Μ9 — ΜΙΑ ΜΕΤΑΛΛΑΞΗ ΑΝΑ ΡΗΤΗ ΚΑΤΑΣΤΑΣΗ ───────────────────────────────────────────

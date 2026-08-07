@@ -30,7 +30,7 @@ const ts = require('typescript');
 
 const { hexToRgb } = require('../contrast/cvd');
 const { contrastRatio } = require('../contrast/wcag-contrast');
-const { initializerOf, parseSource } = require('./ts-read');
+const { exportedStringConstants, initializerOf, parseSource } = require('./ts-read');
 
 const CANVAS_THEME_TS = 'src/subapps/dxf-viewer/config/canvas-theme.ts';
 const VARIABLES_CSS = 'src/styles/design-system/generated/variables.css';
@@ -177,11 +177,29 @@ function presentableSurfaces(repoRoot) {
   }
   out.push({ key: 'custom(default)', hex: customDefault.text.toLowerCase(), origin: CANVAS_THEME_TS });
 
-  const paper = initializerOf(parseSource(path.join(repoRoot, TABLE_INK_TS)), 'TABLE_PAPER_HEX');
-  if (paper === null || !ts.isStringLiteral(paper)) {
-    throw new Error(`Το TABLE_PAPER_HEX δεν βρέθηκε στο ${TABLE_INK_TS}`);
+  // 🔴 ADR-771 Φ.2 — **ΑΝΑΚΑΛΥΨΗ, ΟΧΙ ΑΠΑΡΙΘΜΗΣΗ.** Μέχρι τη Φ.2 αυτό ζητούσε ονομαστικά το
+  // `TABLE_PAPER_HEX`, γιατί ήταν η μόνη σταθερή επιφάνεια του πίνακα. Η Φ.2 πρόσθεσε το
+  // `TABLE_SHEET_HEX` **στο ίδιο αρχείο** — και ένας σαρωτής που ζητά ονόματα δεν θα την
+  // έβλεπε ποτέ, δηλαδή θα έμενε πράσινος πάνω σε επιφάνεια που κανείς δεν έκρινε. Είναι
+  // ακριβώς η «δεύτερη αυθεντία που αποκλίνει σιωπηλά» που προειδοποιεί η κεφαλίδα αυτού του
+  // αρχείου, εμφανιζόμενη **μέσα** στο αρχείο που την προειδοποιεί.
+  //
+  // Το κριτήριο είναι το ίδιο σχήμα με τις υποσχέσεις του `promise-sites.js` («κάθε εξαγόμενη
+  // συνάρτηση με παράμετρο …contrast… **είναι** υπόσχεση»): κάθε εξαγόμενο `TABLE_<X>_HEX`
+  // **είναι** παρουσιάσιμη επιφάνεια. Μια τρίτη καλύπτεται δωρεάν.
+  const inkAst = parseSource(path.join(repoRoot, TABLE_INK_TS));
+  let tableSurfaces = 0;
+  for (const { name, value } of exportedStringConstants(inkAst)) {
+    const match = /^TABLE_(\w+)_HEX$/.exec(name);
+    if (match === null) continue;
+    out.push({ key: match[1].toLowerCase(), hex: value.toLowerCase(), origin: TABLE_INK_TS });
+    tableSurfaces++;
   }
-  out.push({ key: 'paper', hex: paper.text.toLowerCase(), origin: TABLE_INK_TS });
+  // Fail-closed: μηδέν επιφάνειες σημαίνει ότι το αρχείο μετονομάστηκε ή αναδιαρθρώθηκε, όχι
+  // ότι ο πίνακας έπαψε να παρουσιάζεται. Σιωπηλό «0» εδώ = μια επιφάνεια λιγότερη στην κρίση.
+  if (tableSurfaces === 0) {
+    throw new Error(`Καμία σταθερά TABLE_*_HEX δεν βρέθηκε στο ${TABLE_INK_TS}`);
+  }
 
   return out;
 }

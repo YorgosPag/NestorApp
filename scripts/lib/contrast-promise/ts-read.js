@@ -68,4 +68,29 @@ function* namedImports(sourceFile) {
   }
 }
 
-module.exports = { initializerOf, namedImports, parseSource };
+/**
+ * Κάθε `export const NAME = '…'` του αρχείου, ως `{ name, value }`.
+ *
+ * Υπάρχει για να μπορεί ένας καταναλωτής να **ανακαλύψει** σταθερές αντί να τις απαριθμήσει.
+ * Το {@link initializerOf} απαντά «δώσε μου **αυτό** το όνομα», δηλαδή απαιτεί να ξέρεις εκ
+ * των προτέρων τι υπάρχει — και αυτό ακριβώς είναι η χειρόγραφη λίστα που αποκλίνει σιωπηλά
+ * (σχήμα CHECK 3.34 / 3.37). Εδώ η ερώτηση αντιστρέφεται: «τι **υπάρχει**;».
+ *
+ * ⚠️ Μόνο **εξαγόμενες** και μόνο **κυριολεκτικές συμβολοσειρές**: μια μη εξαγόμενη σταθερά
+ * δεν είναι συμβόλαιο, και μια υπολογισμένη τιμή δεν διαβάζεται χωρίς `tsc` (N.17).
+ */
+function* exportedStringConstants(sourceFile) {
+  for (const statement of sourceFile.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    const exported = statement.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+    if (exported !== true) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name)) continue;
+      const init = declaration.initializer;
+      if (init === undefined || !ts.isStringLiteral(init)) continue;
+      yield { name: declaration.name.text, value: init.text };
+    }
+  }
+}
+
+module.exports = { exportedStringConstants, initializerOf, namedImports, parseSource };
