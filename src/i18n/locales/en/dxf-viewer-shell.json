@@ -5538,7 +5538,8 @@
         "textColor": "Font colour",
         "fillColor": "Fill colour",
         "merge": "Merge cells",
-        "borders": "Borders"
+        "borders": "Borders",
+        "formatPainter": "Format Painter"
       }
     },
     "tooltips": {

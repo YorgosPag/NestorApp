@@ -991,6 +991,10 @@
       "increaseDecimal": "Increase Decimal",
       "decreaseDecimal": "Decrease Decimal",
       "formatPainter": "Format Painter",
+      "formatPainterHint": "Single click: one use · Double click: lock · Esc: cancel",
+      "formatPainterArmedOnce": "Format Painter active — single use",
+      "formatPainterArmedLocked": "Format Painter locked — paints as many cells as you like",
+      "formatPainterLock": "Locked",
       "align": "Alignment",
       "alignMenuLabel": "Cell alignment",
       "alignLeft": "Align Left",
@@ -1183,6 +1187,18 @@
       "pasteEmpty": "The clipboard has no text to paste",
       "readDenied": "The browser did not allow reading the clipboard. Use Ctrl+V inside the cell.",
       "writeDenied": "The browser did not allow writing to the clipboard. Use Ctrl+C inside the cell."
+    },
+    "writeBack": {
+      "unwritableOrdinal": "The row number is calculated by the table — it cannot be written.",
+      "unwritableComputed": "This column is calculated from other data — it cannot be written.",
+      "unwritableIdentity": "This column is the entity identity — it cannot be written.",
+      "unwritableNoOwner": "No command owns this column yet — the change was not written.",
+      "cellLocked": "The cell is locked. Unlock it to change its content.",
+      "notBound": "The cell is not fed by a source — there is no entity to update.",
+      "sourceUnavailable": "The table source is unavailable — nothing was written.",
+      "sourceMoved": "The source changed since the table read this row. Refresh the table and try again.",
+      "invalidValue": "Invalid value for this column — nothing was written.",
+      "ownerRefused": "The owner did not accept the change — nothing was written."
     },
     "functionArguments": {
       "title": "Function Arguments",
