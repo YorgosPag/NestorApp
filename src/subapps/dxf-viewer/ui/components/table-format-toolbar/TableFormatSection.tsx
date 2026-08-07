@@ -43,7 +43,6 @@ import {
   Italic,
   RotateCcw,
   Underline,
-  WrapText,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { TableAxisColorMenu } from './TableAxisColorMenu';
@@ -114,9 +113,7 @@ export const TABLE_FORMAT_SIZE_SLOTS = 2;
 export const TABLE_FORMAT_UNDERLINE_SLOTS = 1;
 /** Επαναφορά — το **τρίτο τμήμα**, μέρος 2. */
 export const TABLE_FORMAT_RESET_SLOTS = 1;
-/** Αναδίπλωση κειμένου (χωρίς πράξη). */
-export const TABLE_FORMAT_WRAP_SLOTS = 1;
-/** Πινέλο μορφοποίησης (χωρίς πράξη). */
+/** Πινέλο μορφοποίησης. */
 export const TABLE_FORMAT_PAINTER_SLOTS = 1;
 
 /**
@@ -240,33 +237,18 @@ export function TableFormatSizeButtons(props: TableFormatSectionProps): React.Re
 }
 
 /**
- * **Σειρά 1, θέση 8** — Αναδίπλωση κειμένου. **Ανενεργή, και αυτό είναι το σωστό.**
+ * **Σειρά 1, θέση 8** — Αναδίπλωση κειμένου.
  *
- * Το μοντέλο έχει `TableCellOverflow` με τιμή `'clip'` και μόνο: «αναδίπλωση» δεν είναι κουμπί
- * που λείπει, είναι **διάταξη πολλαπλών γραμμών** που δεν υπάρχει (ύψος γραμμής που μεγαλώνει,
- * μέτρηση ανά λέξη, σπάσιμο στο πλάτος του κελιού). Ένα κουμπί που «δουλεύει» χωρίς αυτά θα
- * έγραφε πεδίο που κανείς ζωγράφος δεν διαβάζει — δηλαδή θα υποσχόταν ό,τι δεν κάνει.
+ * 🔴 **ΜΕΤΑΚΟΜΙΣΕ (ADR-739 §58 Γ2) στο `TableOverflowButtons.tsx`, ΚΑΙ ΕΝΕΡΓΟΠΟΙΗΘΗΚΕ.** Εδώ
+ * έγραφε «*ανενεργή, και αυτό είναι το σωστό: το μοντέλο έχει `TableCellOverflow` με τιμή
+ * `'clip'` και μόνο*». Η αιτία εξαφανίστηκε — το §58 έγραψε ολόκληρη τη μηχανή (γραμμοκοπή,
+ * ισορρόπηση, ύψος από περιεχόμενο, τέσσερα backends) και η ένωση έχει τρεις τιμές.
  *
- * Μένει **ορατό και εστιάσιμο** επειδή ο ιδιοκτήτης ζήτησε όψη 1:1 τώρα και λειτουργία
- * σταδιακά: η θέση 8 του Excel πρέπει να είναι η θέση 8 και εδώ, αλλιώς την επόμενη φορά που
- * θα αποκτήσει πράξη θα μετακινηθούν όλα τα διπλανά.
+ * Η **θέση δεν άλλαξε** (ακριβώς όπως προέβλεπε το παλιό σχόλιο), αλλά το κουμπί δεν έμεινε
+ * εδώ: δεν διαβάζει τίποτα από το {@link TableFormatSectionProps} — ούτε το διάβαζε ποτέ — και
+ * το ξεχείλισμα έχει **δικό του** γραφέα, γιατί δεν είναι πεδίο του `TableCellStyle`. Ίδια
+ * κίνηση και ίδιο κριτήριο με το πινέλο (ADR-768 Βήμα 5).
  */
-export function TableFormatWrapButton(props: TableFormatSectionProps): React.ReactElement {
-  const { rovingOf } = props;
-  const { t } = useTranslation('dxf-viewer');
-
-  return (
-    <ToolbarButton
-      roving={rovingOf(0)}
-      title={t('table.formatToolbar.wrapText')}
-      hint={t('table.formatToolbar.notImplementedHint')}
-      disabled
-      onActivate={() => undefined}
-    >
-      <WrapText size={15} />
-    </ToolbarButton>
-  );
-}
 
 /**
  * **Σειρά 2, θέση 9** — Πινέλο μορφοποίησης.

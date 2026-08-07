@@ -104,7 +104,7 @@ import {
   tableToolbarExtrasProps,
   type TableToolbarExtrasState,
 } from './table-format-toolbar/table-toolbar-extras';
-import type { TableAxisStyleOverride } from '../../types/table';
+import type { TableAxisStyleOverride, TableCellOverflow } from '../../types/table';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type { TableBorderCommandId } from '../../bim/table/table-range-border-ops';
 import type { TableDiagonalCommandId } from '../../bim/table/table-cell-diagonal-ops';
@@ -163,6 +163,13 @@ export interface TableRangeFormatActions {
     key: K,
     value: TableAxisStyleOverride[K] | undefined,
   ) => void;
+  /**
+   * 🔴 ADR-739 §58 Γ2 — ο γραφέας του **ξεχειλίσματος**· ξεχωριστός από το {@link onSetField}.
+   *
+   * Δεν χωρά εκεί: το `overflow` **δεν είναι** `keyof TableAxisStyleOverride` — ζει μόνο στο
+   * `TableCellStyleOverride`. Ιδια ακριβώς δήλωση με το `onSetOverflow` του μενού των ζωνών δείκτη.
+   */
+  readonly onSetOverflow: (bounds: TableCellRangeBounds, value: TableCellOverflow) => void;
 }
 
 /**
@@ -334,6 +341,14 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
       [runOnRange, formatActions],
     );
 
+    /** 🔴 §58 Γ2 — το ξεχείλισμα, στον **ίδιο** δρόμο εκτέλεσης με κάθε άλλη εντολή της γραμμής. */
+    const setToolbarOverflow = useCallback(
+      (value: TableCellOverflow): void => {
+        runOnRange((bounds) => formatActions.onSetOverflow(bounds, value));
+      },
+      [runOnRange, formatActions],
+    );
+
     /**
      * 🔑 Οι έξι εντολές, τυλιγμένες στον **έναν** δρόμο εκτέλεσης.
      *
@@ -386,7 +401,7 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
               παγωμένη από τον στόχο, ο γραφέας τυλίγεται στο {@link runOnRange} όπως κάθε άλλη
               εντολή της γραμμής (εφαρμογή → ξαναρώτημα → κλείσιμο μόνο του μενού).
             */
-            {...tableToolbarExtrasProps(target.toolbar, setToolbarField)}
+            {...tableToolbarExtrasProps(target.toolbar, setToolbarField, setToolbarOverflow)}
             merge={{
               state: target.merge,
               onApply: (id) => runOnRange((bounds) => onApplyMerge(bounds, id)),

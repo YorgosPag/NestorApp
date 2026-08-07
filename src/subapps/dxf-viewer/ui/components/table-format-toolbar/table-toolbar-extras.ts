@@ -22,13 +22,18 @@
  * @see ui/table-cell-editor/table-format-commands.ts — ο ΕΝΑΣ γραφέας
  */
 
-import type { TableAxisStyleOverride, TableCellAlign } from '../../../types/table';
+import type {
+  TableAxisStyleOverride,
+  TableCellAlign,
+  TableCellOverflow,
+} from '../../../types/table';
 import type { TableFontControlsState } from './TableFontControls';
 import type { TableNumberFormatState } from './TableNumberFormatSection';
 import type {
   TableAlignHostProps,
   TableFontHostProps,
   TableNumberFormatHostProps,
+  TableOverflowHostProps,
 } from './TableFormatToolbar';
 
 /**
@@ -52,6 +57,14 @@ export interface TableToolbarExtrasState {
   readonly numberFormat: TableNumberFormatState;
   /** `null` ⇒ **ανάμεικτος** στόχος (ή στόχος που δεν επιβίωσε) — δες `TableAlignMenu`. */
   readonly align: TableCellAlign | null;
+  /**
+   * 🔴 ADR-739 §58 Γ2 — τι ξεχείλισμα ισχύει· `null` ⇒ ανάμεικτος στόχος.
+   *
+   * Ταξιδεύει **μαζί** με τα άλλα τρία και όχι σε δικό του prop του ξενιστή, γιατί η ίδια
+   * υπόδειξη ισχύει αυτούσια: εμφανίζονται και εξαφανίζονται **μαζί** (καμία υποδοχή δίνει τρία
+   * από τα τέσσερα), οπότε μια κατάσταση «τρία από τα τέσσερα» δεν πρέπει να είναι εκφράσιμη.
+   */
+  readonly overflow: TableCellOverflow | null;
 }
 
 /**
@@ -66,11 +79,23 @@ export type TableToolbarFieldWriter = <K extends keyof TableAxisStyleOverride>(
   value: TableAxisStyleOverride[K] | undefined,
 ) => void;
 
-/** Τα τρία props του {@link TableFormatToolbar}, έτοιμα να απλωθούν. */
+/**
+ * 🔴 ADR-739 §58 Γ2 — ο γραφέας του **ξεχειλίσματος**, όπως τον βλέπει η γραμμή: χωρίς στόχο.
+ *
+ * ⚠️ **Δεύτερη παράμετρος και όχι κλειδί του {@link TableToolbarFieldWriter}**, παρότι και τα
+ * δύο γράφουν «ένα πεδίο του κελιού»: το `overflow` **δεν είναι** `keyof TableAxisStyleOverride`
+ * — ζει μόνο στο `TableCellStyleOverride` και έχει δικό του γραφέα
+ * ({@link setTableFormatOverflow}), που γράφει **πάντα** σε επίπεδο κελιού. Χωμένο στον γενικό
+ * γραφέα θα απαιτούσε cast, δηλαδή θα έκανε εκφράσιμη μια εγγραφή που το μοντέλο απορρίπτει.
+ */
+export type TableToolbarOverflowWriter = (value: TableCellOverflow) => void;
+
+/** Τα τέσσερα props του {@link TableFormatToolbar}, έτοιμα να απλωθούν. */
 export interface TableToolbarExtrasProps {
   readonly fonts: TableFontHostProps;
   readonly numberFormat: TableNumberFormatHostProps;
   readonly align: TableAlignHostProps;
+  readonly overflow: TableOverflowHostProps;
 }
 
 /**
@@ -85,8 +110,13 @@ export interface TableToolbarExtrasProps {
 export function tableToolbarExtrasProps(
   state: TableToolbarExtrasState,
   setField: TableToolbarFieldWriter,
+  setOverflow: TableToolbarOverflowWriter,
 ): TableToolbarExtrasProps {
   return {
+    overflow: {
+      current: state.overflow,
+      onSetOverflow: setOverflow,
+    },
     fonts: {
       state: state.fonts,
       fonts: state.fontNames,

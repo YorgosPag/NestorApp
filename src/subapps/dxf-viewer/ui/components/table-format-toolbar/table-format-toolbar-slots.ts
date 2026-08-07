@@ -33,8 +33,8 @@ import {
   TABLE_FORMAT_SIZE_SLOTS,
   TABLE_FORMAT_TOGGLE_SLOTS,
   TABLE_FORMAT_UNDERLINE_SLOTS,
-  TABLE_FORMAT_WRAP_SLOTS,
 } from './TableFormatSection';
+import { TABLE_OVERFLOW_SLOTS } from './TableOverflowButtons';
 
 /**
  * Το split button συγχώνευσης είναι **δύο** εστιάσιμα μισά, όχι ένα (`ToolbarSplitButton`).
@@ -51,6 +51,15 @@ export interface TableToolbarPresence {
   readonly align: boolean;
   readonly borders: boolean;
   readonly merge: boolean;
+  /**
+   * 🔴 §58 Γ2 — **δικό του σκέλος, όχι μέρος του `format`.**
+   *
+   * Μέχρι το §58 η θέση της αναδίπλωσης κρατιόταν από το `format`, γιατί το κουμπί ήταν
+   * ανενεργό placeholder μέσα στο `TableFormatSection`. Τώρα το ξεχείλισμα έχει **δικό του**
+   * prop στο δοχείο και **δικό του** γραφέα — μια παρουσία που εξακολουθούσε να διαβάζεται από
+   * το `format` θα σήμαινε ότι τα δύο κουμπιά καταλαμβάνουν θέσεις roving χωρίς να αποδίδονται.
+   */
+  readonly overflow: boolean;
 }
 
 /**
@@ -65,7 +74,8 @@ export interface TableToolbarSlots {
   readonly fontControls: number;
   readonly sizeSteps: number;
   readonly numberKinds: number;
-  readonly wrapText: number;
+  /** §58 Γ2 — **δύο** θέσεις πλέον (αναδίπλωση · σμίκρυνση), όχι μία. */
+  readonly overflow: number;
   // ── Σειρά 2 ────────────────────────────────────────────────────────────────
   readonly toggles: number;
   readonly align: number;
@@ -95,13 +105,13 @@ export function planTableToolbarSlots(presence: TableToolbarPresence): TableTool
     return at;
   };
 
-  const { fonts, format, numberFormat, align, borders, merge } = presence;
+  const { fonts, format, numberFormat, align, borders, merge, overflow } = presence;
 
   return {
     fontControls: take(TABLE_FONT_CONTROL_SLOTS, fonts),
     sizeSteps: take(TABLE_FORMAT_SIZE_SLOTS, format),
     numberKinds: take(TABLE_NUMBER_KIND_SLOTS, numberFormat),
-    wrapText: take(TABLE_FORMAT_WRAP_SLOTS, format),
+    overflow: take(TABLE_OVERFLOW_SLOTS, overflow),
 
     toggles: take(TABLE_FORMAT_TOGGLE_SLOTS, format),
     align: take(TABLE_ALIGN_SLOTS, align),

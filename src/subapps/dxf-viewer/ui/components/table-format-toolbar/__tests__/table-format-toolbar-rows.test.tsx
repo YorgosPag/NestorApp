@@ -11,6 +11,11 @@
  * παράλληλα, οπότε ένα test που τα διαβάζει θα κοκκίνιζε για λόγο άσχετο με τη διάταξη. Ο
  * έλεγχος γίνεται σε **δομή** (σειρές, πλήθη, `tabindex`), που είναι ακριβώς το ζητούμενο.
  *
+ * 🔴 **ΜΙΑ ΡΗΤΗ ΕΞΑΙΡΕΣΗ (§58 Γ2)**: ο έλεγχος «ποιο κουμπί είναι σε ποια θέση» διαβάζει
+ * `aria-label`. Εκεί η ερώτηση **είναι** η ταυτότητα του κουμπιού — μια δομική μέτρηση θα
+ * περνούσε πράσινη με την αναδίπλωση και τη σμίκρυνση ανεστραμμένες, δηλαδή με τη δική μας
+ * προσθήκη να έχει καταλάβει τη θέση που το Excel δίνει στην αναδίπλωση.
+ *
  * @see ui/components/table-format-toolbar/table-format-toolbar-slots.ts — η αρίθμηση θέσεων
  */
 
@@ -83,6 +88,17 @@ const NUMBERS: TableNumberFormatState = { current: { kind: 'general' }, explicit
 
 const noop = (): void => {};
 
+/** Οι έξι παρουσίες + η έβδομη του §58 Γ2 — μία δήλωση, τρεις καλούντες. */
+const ALL_PRESENT = {
+  fonts: true,
+  format: true,
+  numberFormat: true,
+  align: true,
+  borders: true,
+  merge: true,
+  overflow: true,
+} as const;
+
 function renderFullToolbar(): { readonly rows: readonly HTMLElement[] } {
   const surfaceRef = React.createRef<HTMLDivElement>();
   const props: TableFormatToolbarProps = {
@@ -107,6 +123,8 @@ function renderFullToolbar(): { readonly rows: readonly HTMLElement[] } {
     },
     numberFormat: { state: NUMBERS, onSetNumberFormat: noop },
     align: { current: 'ML', onSetAlign: noop },
+    // 🔴 §58 Γ2 — το τέταρτο τμήμα: αναδίπλωση + σμίκρυνση, στο τέλος της σειράς 1.
+    overflow: { current: 'clip', onSetOverflow: noop },
     merge: { state: { merged: false, canMerge: true }, onApply: noop },
   };
 
@@ -122,12 +140,27 @@ describe('🔴 §55 — δύο σειρές, θέσεις του Excel', () => {
   });
 
   /**
-   * Σειρά 1: `[Γραμματοσειρά ▾][Μέγεθος ▾]  A↑ A↓ │ λογιστική % 000 │ αναδίπλωση` = **8**.
-   * Είναι οι οκτώ θέσεις του Excel, μία προς μία.
+   * Σειρά 1: `[Γραμματοσειρά ▾][Μέγεθος ▾] A↑ A↓ │ λογιστική % 000 │ αναδίπλωση σμίκρυνση` = **9**.
+   *
+   * Οι **οκτώ** θέσεις του Excel, μία προς μία, **συν** τη σμίκρυνση — που το Excel κρύβει στον
+   * διάλογο «Μορφοποίηση κελιών» (§58 Γ2). Μπαίνει **τελευταία** ακριβώς ώστε να μη μετακινηθεί
+   * καμία από τις οκτώ· το επόμενο test το κλειδώνει ονομαστικά.
    */
-  it('σειρά 1 = 8 κουμπιά (οι 8 θέσεις του Excel)', () => {
+  it('σειρά 1 = 9 κουμπιά (οι 8 θέσεις του Excel + η σμίκρυνση του ΝΕΣΤΟΡΑ)', () => {
     const { rows } = renderFullToolbar();
-    expect(within(rows[0]).getAllByRole('button')).toHaveLength(8);
+    expect(within(rows[0]).getAllByRole('button')).toHaveLength(9);
+  });
+
+  /**
+   * 🔴 §58 Γ2 — **η αναδίπλωση κρατά τη θέση 8, η σμίκρυνση μπαίνει 9η.**
+   *
+   * Δες την κεφαλίδα για το γιατί **αυτός** ο έλεγχος διαβάζει ονόματα ενώ οι υπόλοιποι όχι.
+   */
+  it('🔴 η ΑΝΑΔΙΠΛΩΣΗ είναι η θέση 8 και η ΣΜΙΚΡΥΝΣΗ η 9η — ποτέ ανάποδα', () => {
+    const { rows } = renderFullToolbar();
+    const rowOne = within(rows[0]).getAllByRole('button');
+    expect(rowOne[7]).toHaveAttribute('aria-label', 'Αναδίπλωση κειμένου');
+    expect(rowOne[8]).toHaveAttribute('aria-label', 'Σμίκρυνση ώστε να χωρά');
   });
 
   /**
@@ -141,13 +174,25 @@ describe('🔴 §55 — δύο σειρές, θέσεις του Excel', () => {
     expect(within(rows[1]).getAllByRole('button')).toHaveLength(14);
   });
 
-  it('🔴 τα δύο χειριστήρια χωρίς πράξη είναι ΑΝΕΝΕΡΓΑ αλλά ΠΑΡΟΝΤΑ (θέση 1:1)', () => {
+  /**
+   * 🔴 **ΤΟ ΝΟΥΜΕΡΟ ΕΠΕΣΕ ΑΠΟ 2 ΣΕ 1 — ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΠΑΡΑΔΟΤΕΟ.**
+   *
+   * Το §55 κράτησε **δύο** placeholders «όψη 1:1 τώρα, λειτουργία σταδιακά»: αναδίπλωση και
+   * πινέλο. Το ADR-768 έδωσε μηχανή στο πινέλο (μένει σβηστό μόνο **χωρίς οπλισμένη πηγή**,
+   * δηλαδή κατάσταση και όχι έλλειψη)· το §58 Γ2 έδωσε μηχανή στην αναδίπλωση.
+   *
+   * ⚠️ Ο έλεγχος μένει **ακριβής** και δεν χαλαρώνει σε «≤ 2»: αν κάποιος ξαναπροσθέσει κουμπί
+   * χωρίς πράξη, αυτό εδώ κοκκινίζει. Μια ανισότητα θα ήταν άδεια για ακριβώς αυτό.
+   */
+  it('🔴 δεν έμεινε ΚΑΝΕΝΑ κουμπί «χωρίς πράξη» — το τελευταίο σβηστό είναι κατάσταση', () => {
     const { rows } = renderFullToolbar();
     const all = [
       ...within(rows[0]).getAllByRole('button'),
       ...within(rows[1]).getAllByRole('button'),
     ];
-    expect(all.filter((button) => button.getAttribute('aria-disabled') === 'true')).toHaveLength(2);
+    const disabled = all.filter((button) => button.getAttribute('aria-disabled') === 'true');
+    expect(disabled).toHaveLength(1);
+    expect(disabled[0]).toHaveAttribute('aria-label', 'Πινέλο μορφοποίησης');
   });
 });
 
@@ -183,22 +228,31 @@ describe('🔴 §55 — ΕΝΑ γραμμικό roving πάνω από ΔΥΟ σ
 
 describe('🔴 §55 — η αρίθμηση θέσεων παράγεται από την ΠΑΡΟΥΣΙΑ', () => {
   it('απόν τμήμα δεν καταναλώνει θέσεις — το σύνολο μικραίνει ακριβώς κατά το πλήθος του', () => {
-    const all = planTableToolbarSlots({
-      fonts: true, format: true, numberFormat: true, align: true, borders: true, merge: true,
-    });
-    const withoutFonts = planTableToolbarSlots({
-      fonts: false, format: true, numberFormat: true, align: true, borders: true, merge: true,
-    });
+    const all = planTableToolbarSlots(ALL_PRESENT);
+    const withoutFonts = planTableToolbarSlots({ ...ALL_PRESENT, fonts: false });
 
     expect(all.total - withoutFonts.total).toBe(2);
   });
 
+  /**
+   * 🔴 §58 Γ2 — **το ξεχείλισμα είναι δικό του σκέλος παρουσίας, όχι μέρος του `format`.**
+   *
+   * Μέχρι το §58 η θέση της αναδίπλωσης διαβαζόταν από το `format`, γιατί το κουμπί ήταν
+   * ανενεργό placeholder μέσα στο `TableFormatSection`. Χωρίς αυτόν τον έλεγχο, μια υποδοχή που
+   * δίνει `format` **χωρίς** `overflow` θα δέσμευε **δύο** θέσεις roving για κουμπιά που δεν
+   * αποδίδονται — δηλαδή δύο «τρύπες» στη σειρά των βελών, που καμία οπτική επιθεώρηση δεν πιάνει.
+   */
+  it('🔴 το `overflow` δεσμεύει ΔΥΟ θέσεις, και μόνο όταν είναι παρόν', () => {
+    const all = planTableToolbarSlots(ALL_PRESENT);
+    const withoutOverflow = planTableToolbarSlots({ ...ALL_PRESENT, overflow: false });
+
+    expect(all.total - withoutOverflow.total).toBe(2);
+  });
+
   it('🔴 καμία θέση δεν δίνεται δύο φορές: η σειρά είναι αυστηρά αύξουσα', () => {
-    const slots = planTableToolbarSlots({
-      fonts: true, format: true, numberFormat: true, align: true, borders: true, merge: true,
-    });
+    const slots = planTableToolbarSlots(ALL_PRESENT);
     const order = [
-      slots.fontControls, slots.sizeSteps, slots.numberKinds, slots.wrapText,
+      slots.fontControls, slots.sizeSteps, slots.numberKinds, slots.overflow,
       slots.toggles, slots.align, slots.colors, slots.borders, slots.decimals,
       slots.formatPainter, slots.underline, slots.merge, slots.reset,
     ];

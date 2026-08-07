@@ -11,12 +11,15 @@
  * Μέχρι το §55 η γραμμή ήταν **μία** και τα κουμπιά μπαίνανε «με τη σειρά που γράφτηκαν». Ο
  * ιδιοκτήτης μέτρησε τη διάταξη πάνω σε στιγμιότυπο του Excel και ζήτησε ταύτιση θέση-θέση:
  * ```
- *   σειρά 1:  [Γραμματοσειρά ▾][Μέγεθος ▾]  A↑ A↓  │ λογιστική  %  000 │ αναδίπλωση
+ *   σειρά 1:  [Γραμματοσειρά ▾][Μέγεθος ▾]  A↑ A↓  │ λογιστική  %  000 │ αναδίπλωση σμίκρυνση
  *   σειρά 2:  B  I  ≡▾ │ γέμισμα▾  A▾  περιγράμματα▾ │ .0←  .00→  πινέλο ‖ ΝΕΣΤΩΡ: Υ  ⧉▾  ↺
  * ```
- * Ό,τι δεν έχει ακόμη πράξη μπαίνει **ανενεργό** (αναδίπλωση, πινέλο): απόφαση του ιδιοκτήτη
- * «όψη 1:1 τώρα, λειτουργία σταδιακά». Η θέση κρατιέται ώστε η μέρα που θα αποκτήσει πράξη να
- * μη μετακινήσει τα διπλανά της.
+ * ⚠️ **Η φράση «ό,τι δεν έχει ακόμη πράξη μπαίνει ανενεργό» ΕΠΑΨΕ ΝΑ ΙΣΧΥΕΙ** (§58 Γ2 · ADR-768
+ * Βήμα 5): και τα δύο placeholders — αναδίπλωση, πινέλο — απέκτησαν τη μηχανή τους και
+ * **ενεργοποιήθηκαν χωρίς να μετακινηθούν**, ακριβώς όπως προέβλεπε η απόφαση του ιδιοκτήτη
+ * «όψη 1:1 τώρα, λειτουργία σταδιακά». Δίπλα στην αναδίπλωση μπήκε η **σμίκρυνση**, που το
+ * Excel κρύβει στον διάλογο «Μορφοποίηση κελιών» — στο **τέλος** της σειράς, ώστε καμία θέση
+ * του Excel να μη μετακινηθεί.
  *
  * ⚠️ **Η μία συνειδητή απόκλιση** είναι το τρίτο τμήμα στο τέλος της σειράς 2 (υπογράμμιση,
  * συγχώνευση, επαναφορά): τρία χειριστήρια που το Excel δεν έχει και που ο ιδιοκτήτης είχε
@@ -107,9 +110,14 @@ import {
   TableFormatSizeButtons,
   TableFormatToggles,
   TableFormatUnderlineButton,
-  TableFormatWrapButton,
   type TableFormatSectionProps,
 } from './TableFormatSection';
+// 🔴 ADR-739 §58 Γ2 — δικό του αρχείο επειδή δεν διαβάζει τίποτα από το `format` και έχει δικό
+// του γραφέα (το ξεχείλισμα δεν είναι πεδίο του `TableCellStyle`) — δες την κεφαλίδα του.
+import {
+  TableOverflowButtons,
+  type TableOverflowButtonsProps,
+} from './TableOverflowButtons';
 import { planTableToolbarSlots, type TableToolbarSlots } from './table-format-toolbar-slots';
 import styles from './TableFormatToolbar.module.css';
 
@@ -137,6 +145,9 @@ export type TableNumberFormatHostProps = Omit<TableNumberFormatSectionProps, 'ro
 
 /** Η στοίχιση όπως τη δίνει ο ξενιστής (§55). */
 export type TableAlignHostProps = Omit<TableAlignMenuProps, 'roving'>;
+
+/** §58 Γ2 — τα δύο κουμπιά ξεχειλίσματος όπως τα δίνει ο ξενιστής. */
+export type TableOverflowHostProps = Omit<TableOverflowButtonsProps, 'rovingOf'>;
 
 /** Το split button συγχώνευσης όπως το δίνει ο ξενιστής (ADR-755). */
 export type TableMergeMenuHostProps = Omit<TableMergeMenuProps, 'rovingApply' | 'rovingMenu'>;
@@ -168,6 +179,15 @@ export interface TableFormatToolbarProps {
   readonly numberFormat?: TableNumberFormatHostProps;
   /** §55 — η **στοίχιση** (σειρά 2, θέση 3). */
   readonly align?: TableAlignHostProps;
+  /**
+   * 🔴 §58 Γ2 — **αναδίπλωση + σμίκρυνση** (σειρά 1, τέλος)· απόν ⇒ δεν αποδίδονται καθόλου.
+   *
+   * Ξεχωριστό από το {@link format} παρότι κάθεται στην ίδια γραμμή: το ξεχείλισμα **δεν είναι
+   * πεδίο του `TableCellStyle`** και έχει δικό του γραφέα — δες την κεφαλίδα του
+   * `TableOverflowButtons`. Ένα πεδίο μέσα στο `TableFormatSnapshot` θα ανάγκαζε κάθε υποδοχή
+   * να το γεμίσει από **άλλη** αλυσίδα κληρονομιάς από τα υπόλοιπα οκτώ.
+   */
+  readonly overflow?: TableOverflowHostProps;
   /** ADR-755 — η **συγχώνευση**· πράξη περιοχής, ισχύει και στις δύο υποδοχές. */
   readonly merge?: TableMergeMenuHostProps;
   /**
@@ -182,7 +202,7 @@ export interface TableFormatToolbarProps {
 
 export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactElement | null {
   const { anchorX, anchorY, scope, label, surfaceRef } = props;
-  const { format, fonts, numberFormat, align, merge, borders } = props;
+  const { format, fonts, numberFormat, align, merge, borders, overflow } = props;
   const { t } = useTranslation('dxf-viewer');
 
   /**
@@ -199,6 +219,7 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
     align: align !== undefined,
     borders: borders !== undefined,
     merge: merge !== undefined,
+    overflow: overflow !== undefined,
   });
   const roving = useRovingToolbar(slots.total);
 
@@ -264,8 +285,8 @@ function offsetOf(roving: RovingToolbar, base: number): (index: number) => Rovin
  * και η γραμμή θα φαινόταν χαλασμένη σε κάθε υποδοχή που δεν δίνει τυπογραφία.
  */
 function ToolbarRowOne({ toolbar, slots, roving }: ToolbarRowProps): React.ReactElement | null {
-  const { fonts, format, numberFormat } = toolbar;
-  if (!fonts && !format && !numberFormat) return null;
+  const { fonts, format, numberFormat, overflow } = toolbar;
+  if (!fonts && !format && !numberFormat && !overflow) return null;
 
   return (
     <span className={styles.row}>
@@ -287,9 +308,16 @@ function ToolbarRowOne({ toolbar, slots, roving }: ToolbarRowProps): React.React
         <TableNumberKindButtons {...numberFormat} rovingOf={offsetOf(roving, slots.numberKinds)} />
       ) : null}
 
-      <Separator when={format !== undefined} />
-      {format ? (
-        <TableFormatWrapButton {...format} rovingOf={offsetOf(roving, slots.wrapText)} />
+      {/* §58 Γ2 — «τι γίνεται όταν δεν χωράει»: **τρίτη** ερώτηση της σειράς 1, μετά την
+          τυπογραφία και τον αριθμό — γι' αυτό δικός της διαχωριστής. */}
+      <Separator
+        when={
+          overflow !== undefined
+          && (fonts !== undefined || format !== undefined || numberFormat !== undefined)
+        }
+      />
+      {overflow ? (
+        <TableOverflowButtons {...overflow} rovingOf={offsetOf(roving, slots.overflow)} />
       ) : null}
     </span>
   );

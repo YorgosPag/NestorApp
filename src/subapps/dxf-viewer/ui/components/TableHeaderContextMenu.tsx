@@ -48,7 +48,7 @@ import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
 // 🔴 ADR-739 §55 — τα τρία νέα τμήματα χτίζονται **μία** φορά για τις δύο υποδοχές (δες την
 // κεφαλίδα του module): εδώ αλλάζει μόνο ο τυλιχτής εκτέλεσης.
 import { tableToolbarExtrasProps } from './table-format-toolbar/table-toolbar-extras';
-import type { TableAxisStyleOverride } from '../../types/table';
+import type { TableAxisStyleOverride, TableCellOverflow } from '../../types/table';
 import type {
   TableHeaderAction,
   TableHeaderContextMenuHandle,
@@ -69,7 +69,7 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     onInsertBefore, onInsertAfter, onDelete, resolveState,
     resolveFormat, onToggleFormat, onStepTextHeight, onResetFormat,
     onSetTextColor, onSetFillColor,
-    resolveToolbar, onSetFormatField,
+    resolveToolbar, onSetFormatField, onSetOverflow,
     resolveBorderMenu, resolveMergeMenu, onClosed,
   }, ref) => {
     const triggerRef = useRef<HTMLSpanElement>(null);
@@ -313,6 +313,17 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     );
 
     /**
+     * 🔴 §58 Γ2 — το ξεχείλισμα, στον **ίδιο** {@link runFormat}: είναι πράξη μορφοποίησης, άρα
+     * κλείνει το μενού και αφήνει τη γραμμή ακριβώς όπως τα Β/Ι/Υ (§28.13).
+     */
+    const setToolbarOverflow = useCallback(
+      (value: TableCellOverflow): void => {
+        runFormat((hit) => onSetOverflow(hit, value));
+      },
+      [runFormat, onSetOverflow],
+    );
+
+    /**
      * ADR-750 Φ3 — μια εντολή περιγράμματος: **ίδια σειρά** με το {@link runFormat}.
      *
      * Ξεχωριστός χειριστής και όχι κοινός, επειδή ανανεώνεται **άλλη** ερώτηση: η μορφοποίηση
@@ -406,8 +417,8 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
             onSetTextColor: (value) => runFormat((hit) => onSetTextColor(hit, value)),
             onSetFillColor: (value) => runFormat((hit) => onSetFillColor(hit, value)),
           }}
-          /* 🔴 §55 — τα τρία τμήματα, από τον **κοινό** builder με το μενού της περιοχής. */
-          {...tableToolbarExtrasProps(target.toolbar, setToolbarField)}
+          /* 🔴 §55/§58 — τα τέσσερα τμήματα, από τον **κοινό** builder με το μενού της περιοχής. */
+          {...tableToolbarExtrasProps(target.toolbar, setToolbarField, setToolbarOverflow)}
           merge={{
             ...target.merge,
             // Ίδια σειρά με κάθε άλλη εντολή: εφαρμογή → ξαναρώτημα → κλείσιμο μενού.
