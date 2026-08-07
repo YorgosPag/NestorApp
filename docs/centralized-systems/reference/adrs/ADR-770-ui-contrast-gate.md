@@ -479,14 +479,23 @@ SSoT· είναι κατάλογος που θα αποκλίνει (άγκυρ�
 **Νέα**
 ```
 scripts/lib/contrast/ts-token-palette.js       AST reader των token modules (νέο SSoT)
-scripts/lib/contrast/theme-pairing.js          η μηχανή (4 ομάδες, 9 καταστάσεις)
+scripts/lib/contrast/theme-pairing.js          η ΚΡΙΣΗ — «είναι σπασμένο;» (5 ομάδες, 11 καταστάσεις)
+scripts/lib/contrast/palette-ledger.js         η ΛΟΓΙΣΤΙΚΗ — «το ρώτησε κανείς;» (08/08)
 scripts/check-theme-pairing-ratchet.js         η πύλη
-.theme-pairing-baseline.json                   35 παραβιάσεις / 43 δηλώσεις
-scripts/__tests__/check-theme-pairing-ratchet.test.js   29 tests
+.theme-pairing-baseline.json                   35 παραβιάσεις / 54 δηλώσεις
+scripts/__tests__/check-theme-pairing-ratchet.test.js   37 tests, 9/9 μεταλλάξεις
 ```
+⚠️ **Δύο modules, δύο ερωτήσεις.** Η λογιστική εξήχθη 2026-08-08: «**είναι σπασμένο;**» και
+«**το ρώτησε κανείς;**» είναι διαφορετικές ευθύνες, και η δεύτερη είναι που κρατά το «0
+παραβιάσεις» από το να σημαίνει «δεν κοίταξα». Η εξαγωγή κράτησε τη μηχανή στις **456**
+γραμμές (N.7.1 — **EXTRACT, ποτέ trim**). Τα κατηγορήματα (`SEMANTIC_ROLES`, `form`,
+`alpha < 1`) έρχονται από τον **ταξινομητή ρόλων**, όχι από αντίγραφο.
+
 **Τροποποιημένα**: `css-token-themes.js` (+`foregroundTokens`, κοινό `tokensMatching`) ·
-`run-checks-parallel.js` (+3.39) · `pre-commit` (+1 `register_area`) · `package.json` (+4) ·
-`ui-contrast-ratchet.yml` (+2 βήματα).
+`runtime-matrix.js` (−`evaluateTranslucent`, −1 κατάσταση) ·
+`check-tailwind-theme-classes-ratchet.js` (−1 εξάρτηση) ·
+`run-checks-parallel.js` (+3.39) · `pre-commit` (+1 `register_area`, +`palette-ledger` στη
+σκανδάλη) · `package.json` (+4) · `ui-contrast-ratchet.yml` (+2 βήματα).
 
 ⚠️ **ΚΑΝΕΝΑ νέο workflow — σκόπιμα.** Νέο workflow απαιτεί εγγραφή στο `.ci-gate-tiers.json`
 αλλιώς **μπλοκάρει το CHECK 3.37** (ADR-757). Ίδιο ADR, ίδιο ερώτημα, ίδιο tier, ίδιες
