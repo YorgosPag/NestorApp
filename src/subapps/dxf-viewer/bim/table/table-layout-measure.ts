@@ -38,6 +38,14 @@ import { resolveCellStyle, type TableCellStyle, type TableStyle } from './table-
 // εσοχή που δεν ζωγραφίζεται, ή το αντίστροφο.
 import { resolveCellHAlign } from './table-layout-align';
 import { tableIndentOffsetMm } from './table-indent-ops';
+// 🔴 ADR-739 §59 Δ1 — η **οριοθέτηση γερμένου μπλοκ** και το μέγιστο μήκος γραμμής. Ο ΙΔΙΟΣ
+// κριτής που ρωτά η τοποθέτηση: δύο εκφράσεις της ίδιας τριγωνομετρίας θα έδιναν στήλη
+// μετρημένη για άλλη γωνία από αυτήν που ζωγραφίζεται.
+import {
+  maxLineLengthMm,
+  rotatedTextExtentMm,
+  tableTextRotationDeg,
+} from './table-rotation-ops';
 import type { TableTextMeasurer } from './table-layout-types';
 
 /** Ο προεπιλεγμένος μετρητής: το SSoT πλάτους κειμένου του renderer (ADR-557). */
@@ -115,7 +123,17 @@ function naturalCellWidthMm(
   // όχι μετρημένο μέγεθος, άρα δεν μπορεί να εξαρτηθεί από το πλάτος που η ίδια καθορίζει —
   // ο κύκλος που φοβόταν η προειδοποίηση των `margins` δεν σχηματίζεται (δες `table-style.ts`).
   const indentMm = tableIndentOffsetMm(cellStyle, resolveCellHAlign(overrides, column.align), measure);
-  return styledSpansWidthMm(spans) + marginsMm + indentMm;
+  // 🏆 ADR-739 §59 Δ1 — **και η στροφή, από την ίδια οριοθέτηση.** Το `hug` μετρά το κείμενο
+  // **αδιάσπαστο** (§58.7), άρα το μπλοκ είναι μία γραμμή: μήκος = τα τμήματα + η εσοχή,
+  // πάχος = ένα ύψος κεφαλαίου. Σε 90° η οριοθέτηση δίνει **το πάχος** ως πλάτος, δηλαδή η
+  // `hug` στήλη με κάθετο κείμενο βγαίνει **στενή** — αν μετρούσαμε το αδιάσπαστο μήκος
+  // οριζόντια, θα έβγαινε τεράστια. Είναι το ακριβές σημείο όπου η φάση θα χαλούσε σιωπηλά.
+  const extent = rotatedTextExtentMm(
+    styledSpansWidthMm(spans) + indentMm,
+    cellStyle.textHeightMm,
+    tableTextRotationDeg(cellStyle),
+  );
+  return extent.widthMm + marginsMm;
 }
 
 /**
@@ -203,9 +221,19 @@ function measureColumns(
  * διαφορετικοί τύποι εδώ και εκεί θα σήμαιναν κείμενο που ξεχειλίζει από τη γραμμή που
  * φτιάχτηκε **για αυτό** — και το σύμπτωμα θα φαινόταν μόνο σε αναδιπλωμένα κελιά.
  */
-function wrappedCellHeightMm(lineCount: number, cellStyle: TableCellStyle): number {
+function wrappedCellHeightMm(
+  lineCount: number,
+  cellStyle: TableCellStyle,
+  /** 🔴 §59 Δ1 — το **μήκος** του μπλοκ κατά μήκος της γραμμής βάσης (η πλατύτερη γραμμή). */
+  lengthMm: number,
+  rotationDeg: number,
+): number {
   const stepMm = cellStyle.textHeightMm * CHARACTER_METRICS.LINE_HEIGHT_RATIO;
-  return cellStyle.margins.vMm * 2 + cellStyle.textHeightMm + Math.max(lineCount - 1, 0) * stepMm;
+  const thicknessMm = cellStyle.textHeightMm + Math.max(lineCount - 1, 0) * stepMm;
+  // Με `rotationDeg = 0` η οριοθέτηση επιστρέφει το πάχος **αυτούσιο** και η έκφραση είναι
+  // κυριολεκτικά η προηγούμενη — κανένας κλάδος-εξαίρεση, κανένας πίνακας δεν μετακινείται.
+  return cellStyle.margins.vMm * 2
+    + rotatedTextExtentMm(lengthMm, thicknessMm, rotationDeg).heightMm;
 }
 
 /** Το ωφέλιμο πλάτος ενός κελιού που απλώνεται σε `colSpan` στήλες, μείον τα περιθώριά του. */
@@ -254,28 +282,52 @@ function contentHeightMm(
     if ((span?.rowSpan ?? 1) > 1) return;
 
     const cell = model.cells.get(key);
-    if (resolveCellOverflow(cell?.styleOverride?.overflow, column.overflow) !== 'wrap') return;
+    const overflow = resolveCellOverflow(cell?.styleOverride?.overflow, column.overflow);
 
     const overrides = { column: column.styleOverride, row: row.styleOverride, cell: cell?.styleOverride };
     const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], overrides);
+    const rotationDeg = tableTextRotationDeg(cellStyle);
+    // 🔴 §58 Γ2 + §59 Δ1 — **η πρόωρη έξοδος καλύπτει πλέον ΔΥΟ αιτίες.** Ούτε αναδίπλωση ούτε
+    // στροφή ⇒ το ύψος δεν εξαρτάται από το περιεχόμενο και ο βρόχος βγαίνει χωρίς να μετρήσει
+    // τίποτα: μηδέν κόστος και **byte-ταυτόσημα** ύψη για κάθε πίνακα που υπάρχει στον δίσκο.
+    if (overflow !== 'wrap' && rotationDeg === 0) return;
+
     const text = cellDisplayText(cell, resolveCellNumberFormat(overrides, column.valueType));
     if (!text) return;
 
-    const lines = resolveVisibleCellContent({
+    const content = resolveVisibleCellContent({
       text,
       // 🔴 §59 Δ2 — **το ίδιο** ωφέλιμο πλάτος που θα δει η τοποθέτηση (`placeTexts`), εσοχή
       // συμπεριλαμβανομένη. Χωρίς αυτήν, η μέτρηση θα έλεγε «τρεις γραμμές» και η τοποθέτηση
       // θα έβγαζε τέσσερις — δηλαδή κείμενο που ξεχειλίζει από τη γραμμή που φτιάχτηκε γι' αυτό.
-      availableWidthMm: cellContentWidthMm(widthsMm, colIndex, span?.colSpan ?? 1, cellStyle)
-        - tableIndentOffsetMm(cellStyle, resolveCellHAlign(overrides, column.align), measure),
+      //
+      // 🔴 §59 Δ1 — και το ίδιο μήκος-κατά-μήκος-της-βάσης (`maxLineLengthMm`). Ο **ίδιος**
+      // τύπος και στα δύο στάδια είναι το συμβόλαιο του §58: δύο διαφορετικά ωφέλιμα μήκη εδώ
+      // και εκεί σημαίνουν κείμενο που ξεχειλίζει από τη γραμμή που φτιάχτηκε γι' αυτό.
+      availableWidthMm: maxLineLengthMm(
+        cellContentWidthMm(widthsMm, colIndex, span?.colSpan ?? 1, cellStyle)
+          - tableIndentOffsetMm(cellStyle, resolveCellHAlign(overrides, column.align), measure),
+        rotationDeg,
+      ),
       style: cellStyle,
-      overflow: 'wrap',
+      // Ο **πραγματικός** τρόπος του κελιού, όχι καρφωτό `'wrap'`: από το §59 ο βρόχος τρέχει
+      // και για κελιά που απλώς γέρνουν, και εκεί η αναδίπλωση δεν έχει ζητηθεί.
+      overflow,
       numeric: false,
       runs: cell?.runs,
       measure,
-    }).lines.length;
+    });
 
-    tallest = Math.max(tallest, wrappedCellHeightMm(lines, cellStyle));
+    // Το μήκος του μπλοκ = η **πλατύτερη** γραμμή. Σε γωνία `0` δεν συμμετέχει καθόλου στο
+    // ύψος (η οριοθέτηση το πολλαπλασιάζει με `sin 0`), οπότε η μέτρησή του είναι δωρεάν
+    // ακρίβεια για την περίπτωση που μετρά, και μηδενική επιρροή στην περίπτωση που δεν μετρά.
+    const lengthMm = content.lines.reduce(
+      (widest, line) => Math.max(widest, styledSpansWidthMm(line.spans)), 0,
+    );
+    tallest = Math.max(
+      tallest,
+      wrappedCellHeightMm(content.lines.length, cellStyle, lengthMm, rotationDeg),
+    );
   });
   return tallest;
 }

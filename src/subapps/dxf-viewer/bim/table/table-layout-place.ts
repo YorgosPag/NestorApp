@@ -25,11 +25,14 @@ import type {
   TableModel,
 } from '../../types/table';
 import {
-  anchorXMm,
+  cellTextPositionMm,
   fittingLineCount,
-  multilineBaselineYMm,
   resolveCellHAlign,
 } from './table-layout-align';
+// 🔴 ADR-739 §59 Δ1 — η **κανονικοποιημένη** γωνία του κελιού και το μέγιστο μήκος γραμμής που
+// επιτρέπει το πλάτος της στήλης. Ο ΙΔΙΟΣ κριτής που ρωτά ο μετρητής: δύο κοψίματα της γωνίας
+// θα σήμαιναν κείμενο ζωγραφισμένο σε άλλη γωνία από αυτήν που μετρήθηκε.
+import { maxLineLengthMm, tableTextRotationDeg } from './table-rotation-ops';
 // 🔴 ADR-739 §59 Δ2 — πόσο είναι ένα σκαλί εσοχής, και πότε δεν ισχύει καθόλου. Το **ίδιο**
 // module που ρωτά ο μετρητής: η εσοχή μπαίνει στο `hug` πλάτος και αφαιρείται από το ωφέλιμο,
 // οπότε δύο απαντήσεις θα έδιναν κομμένο κείμενο σε στήλη που είχε μετρηθεί αρκετά πλατιά.
@@ -120,6 +123,14 @@ interface PlaceTextInput {
    * να ξεχαστεί ο κανόνας του κέντρου — δηλαδή στήλη μετρημένη με εσοχή που δεν ζωγραφίζεται.
    */
   readonly indentMm: number;
+  /**
+   * 🔴 ADR-739 §59 Δ1 — η **κανονικοποιημένη** γωνία του κειμένου, σε μοίρες (θετικές = πάνω).
+   *
+   * Έτοιμη και όχι ξαναδιαβασμένη από το `style`: ο μετρητής την έχει ήδη κόψει στα όρια, και
+   * ένα δεύτερο κόψιμο εδώ θα ήταν δεύτερη ευκαιρία να διαφωνήσουν — με σύμπτωμα κείμενο
+   * ζωγραφισμένο σε άλλη γωνία από αυτήν με την οποία μετρήθηκε η στήλη.
+   */
+  readonly rotationDeg: number;
   readonly overflow: TableCellOverflow;
   /** `typeof cell.value === 'number'` — βλ. `CellTextFitInput.numeric` για το γιατί. */
   readonly numeric: boolean;
@@ -162,7 +173,13 @@ function placeTexts(input: PlaceTextInput): TableTextRun[] {
     // σπρωγμένο μέσα χωρίς αντίστοιχη συρρίκνωση του διαθέσιμου χώρου θα ξεχείλιζε από την
     // απέναντι ακμή — και η περικοπή (βήμα 5) δεν θα το έβλεπε, γιατί εκείνη ρωτά **αυτό** το
     // νούμερο. Είναι το ίδιο ζεύγος «άγκυρα + ωφέλιμο πλάτος» που κρατά ήδη τα περιθώρια συνεπή.
-    availableWidthMm: rect.w - style.margins.hMm * 2 - input.indentMm,
+    //
+    // 🔴 §59 Δ1 — και το ωφέλιμο πλάτος γίνεται **μήκος κατά μήκος της γραμμής βάσης** όταν το
+    // κείμενο γέρνει: το ίδιο ορθογώνιο επιτρέπει μεγαλύτερο κείμενο σε γωνία. Στις ±90° το
+    // πηλίκο απειρίζεται — δηλωμένο, όχι διαρροή (δες `maxLineLengthMm`).
+    availableWidthMm: maxLineLengthMm(
+      rect.w - style.margins.hMm * 2 - input.indentMm, input.rotationDeg,
+    ),
     style,
     overflow: input.overflow,
     numeric: input.numeric,
@@ -236,10 +253,18 @@ function placeLine(
   });
 
   const base: TableTextRunBase = {
-    position: {
-      x: anchorXMm(rect, hAlign, style.margins.hMm, input.indentMm),
-      y: multilineBaselineYMm(rect, align, drawnStyle, content.lines.length, index),
-    },
+    // 🔴 §59 Δ1+Δ2 — στοίχιση + εσοχή + κατανομή γραμμών + στροφή, από **ένα** σημείο. Με
+    // `rotationDeg = 0` και `indentMm = 0` δίνει byte-ταυτόσημη θέση με πριν τις δύο φάσεις.
+    position: cellTextPositionMm({
+      rect,
+      hAlign,
+      align,
+      style: drawnStyle,
+      indentMm: input.indentMm,
+      rotationDeg: input.rotationDeg,
+      lineCount: content.lines.length,
+      index,
+    }),
     text: visible.text,
     heightMm: drawnStyle.textHeightMm,
     colorHex: style.textColorHex,
@@ -251,6 +276,9 @@ function placeLine(
     ...(style.fontFamily !== undefined && { fontFamily: style.fontFamily }),
     // Παρόν μόνο όταν αληθεύει — δες τη σημείωση σχήματος στο `TableTextRun.clipped`.
     ...(visible.clipped && { clipped: true as const }),
+    // 🔴 §59 Δ1 — ίδια σύμβαση «απόν όταν είναι η προεπιλογή»: κάθε πίνακας που υπάρχει σήμερα
+    // παράγει run **χωρίς** το πεδίο, άρα byte-ταυτόσημο σχήμα με πριν τη φάση.
+    ...(input.rotationDeg !== 0 && { rotationDeg: input.rotationDeg }),
     // Ίδια σύμβαση: απόν στα κελιά χωρίς διεύθυνση, δηλαδή στα σχεδόν όλα.
     ...(links.length > 0 && { links }),
     // 🔴 ADR-753 Φ2 — ίδια σύμβαση, τρίτη φορά: ένα μόνο τμήμα δεν λέει τίποτα που το ίδιο το
@@ -326,6 +354,7 @@ export function placeCells(
       // ακριβώς στο επίπεδο 4. Δες `resolveCellHAlign`.
       const hAlign = resolveCellHAlign(overrides, column.align);
       const indentMm = tableIndentOffsetMm(cellStyle, hAlign, measure);
+      const rotationDeg = tableTextRotationDeg(cellStyle);
 
       out.push({
         rowId: row.id,
@@ -349,12 +378,13 @@ export function placeCells(
           hAlign,
           style: cellStyle,
           indentMm,
+          rotationDeg,
           // Ίδια σειρά προτεραιότητας με τη στοίχιση: κελί → στήλη → προεπιλογή.
           overflow: resolveCellOverflow(cell?.styleOverride?.overflow, column.overflow),
           numeric: typeof cell?.value === 'number',
           runs: cell?.runs,
           measure,
-          maxLines: fittingLineCount(rect, cellStyle),
+          maxLines: fittingLineCount(rect, cellStyle, rotationDeg),
         }),
         rowSpan: span?.rowSpan ?? 1,
         colSpan: span?.colSpan ?? 1,

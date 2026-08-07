@@ -18,6 +18,7 @@
  * @see bim/text/text-lines.ts — το SSoT της κατανομής πολλαπλών γραμμών
  */
 
+import type { Point2D } from '../../rendering/types/Types';
 import type { ScheduleColumnAlign } from '../schedule/types';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
 import type { TableCellAlign } from '../../types/table';
@@ -79,26 +80,63 @@ export function verticalBand(align: TableCellAlign): 'top' | 'middle' | 'bottom'
   return 'middle';
 }
 
-/**
- * Το x του σημείου αγκύρωσης, σύμφωνα με την οριζόντια στοίχιση, τα περιθώρια **και την εσοχή**.
- *
- * 🔴 ADR-739 §59 Δ2 — η εσοχή σπρώχνει **προς τα μέσα**, δηλαδή σε **αντίθετες** κατευθύνσεις
- * στα δύο άκρα: δεξιά στοίχιση με εσοχή απομακρύνεται από τη **δεξιά** ακμή. Ένα σκέτο `+`
- * και στις δύο περιπτώσεις θα έβγαζε το δεξιά στοιχισμένο κείμενο **έξω** από το κελί, και το
- * σύμπτωμα θα φαινόταν μόνο σε στήλες ποσών — δηλαδή σε κάθε πίνακα ποσοτήτων.
- *
- * Το κέντρο δεν δέχεται ποτέ εσοχή· ο κανόνας δεν γράφεται εδώ, τον έχει ήδη απαντήσει το
- * {@link tableIndentOffsetMm} επιστρέφοντας `0` (δες εκεί για το γιατί).
- */
-export function anchorXMm(
-  rect: TableRectMm,
-  hAlign: TextAlign,
-  marginHMm: number,
-  indentMm: number,
-): number {
-  if (hAlign === 'left') return rect.x + marginHMm + indentMm;
-  if (hAlign === 'right') return rect.x + rect.w - marginHMm - indentMm;
+/** Το x του σημείου αγκύρωσης, σύμφωνα με την οριζόντια στοίχιση και τα περιθώρια. */
+export function anchorXMm(rect: TableRectMm, hAlign: TextAlign, marginHMm: number): number {
+  if (hAlign === 'left') return rect.x + marginHMm;
+  if (hAlign === 'right') return rect.x + rect.w - marginHMm;
   return rect.x + rect.w / 2;
+}
+
+/**
+ * 🔴 ADR-739 §59 Δ1+Δ2 — **Η ΤΕΛΙΚΗ ΘΕΣΗ μιας οπτικής γραμμής κειμένου**: στοίχιση, περιθώρια,
+ * **εσοχή**, κατανομή πολλαπλών γραμμών **και στροφή**, σε μία έκφραση.
+ *
+ * ## Γιατί ΜΙΑ συνάρτηση και όχι τρεις προσθέσεις στον καλούντα
+ * Οι τρεις μετατοπίσεις **δεν είναι ανεξάρτητες**: η εσοχή τρέχει κατά μήκος της γραμμής
+ * βάσης, η απόσταση γραμμών **κάθετα** σε αυτήν, και η γραμμή βάσης είναι γερμένη. Ένας
+ * καλών που τις πρόσθετε ξεχωριστά στο `x` και στο `y` θα άπλωνε τις γραμμές **οριζόντια** κάτω
+ * από γερμένο κείμενο και θα έσπρωχνε την εσοχή **πλάγια** ως προς τα γράμματά της — το ίδιο
+ * ακριβώς σχήμα ελαττώματος που η Φ.Ε έκλεισε για την υπογράμμιση (§28.10.3) και το ADR-753
+ * για τα τμήματα (`offsetAnchor`).
+ *
+ * ```
+ *   διεύθυνση γραμμής βάσης :  (  cosθ, −sinθ )      ← θ>0 γέρνει ΠΡΟΣ ΤΑ ΠΑΝΩ (y-κάτω πλαίσιο)
+ *   κάθετη, «προς τα κάτω»  :  (  sinθ,  cosθ )
+ *
+ *   θέση = άγκυρα + εσοχή·(διεύθυνση) + απόστασηΓραμμής·(κάθετη)
+ * ```
+ *
+ * 🔑 **Με `θ = 0` εκφυλίζεται σε `{ x + εσοχή, y + απόσταση }`** — δηλαδή **ακριβώς** στην
+ * αριθμητική που είχε το `placeLine` πριν από αυτή τη φάση, και σε αυτήν που έχει το §58 για
+ * πολλαπλές γραμμές. Κανένας κλάδος-εξαίρεση, καμία μετακίνηση σε κανέναν υπάρχοντα πίνακα.
+ *
+ * ⚠️ **Η εσοχή έχει ΠΡΟΣΗΜΟ, όχι μόνο μέτρο**: σπρώχνει **προς τα μέσα**, άρα σε δεξιά
+ * στοίχιση κινείται **αντίθετα** στη γραμμή βάσης. Ένα σκέτο `+` και στις δύο περιπτώσεις
+ * μεταγλωττίζεται μια χαρά και βγάζει το δεξιά στοιχισμένο κείμενο **έξω** από το κελί — ορατό
+ * μόνο σε στήλες ποσών, δηλαδή σε κάθε πίνακα ποσοτήτων. Το κέντρο δεν παίρνει ποτέ εσοχή, και
+ * ο κανόνας δεν ξαναγράφεται εδώ: το `tableIndentOffsetMm` επιστρέφει ήδη `0` εκεί.
+ */
+export function cellTextPositionMm(input: {
+  readonly rect: TableRectMm;
+  readonly hAlign: TextAlign;
+  readonly align: TableCellAlign;
+  /** Το **ζωγραφισμένο** στυλ (μετά τη σμίκρυνση) — η γραμμή βάσης ορίζεται ως προς αυτό. */
+  readonly style: TableCellStyle;
+  readonly indentMm: number;
+  readonly rotationDeg: number;
+  readonly lineCount: number;
+  readonly index: number;
+}): Point2D {
+  const { rect, hAlign, align, style, indentMm, rotationDeg, lineCount, index } = input;
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const along = hAlign === 'right' ? -indentMm : indentMm;
+  const perp = multilineBaselineDeltaMm(align, style, lineCount, index);
+  return {
+    x: anchorXMm(rect, hAlign, style.margins.hMm) + along * cos + perp * sin,
+    y: cellBaselineYMm(rect, align, style) - along * sin + perp * cos,
+  };
 }
 
 /**
@@ -143,8 +181,30 @@ export function multilineBaselineYMm(
   lineCount: number,
   index: number,
 ): number {
-  const single = cellBaselineYMm(rect, align, style);
-  if (lineCount <= 1) return single;
+  return cellBaselineYMm(rect, align, style)
+    + multilineBaselineDeltaMm(align, style, lineCount, index);
+}
+
+/**
+ * 🔴 ADR-739 §59 Δ1 — η **απόσταση** της i-οστής γραμμής από τη γραμμή βάσης της μονής, σε mm
+ * **κάθετα στη γραμμή βάσης**. Μηδέν για μονογραμμικό κελί.
+ *
+ * ## Γιατί εξήχθη από το {@link multilineBaselineYMm}
+ * Μέχρι το §59 η κατανομή ήταν πάντα κατακόρυφη, οπότε «απόσταση» και «y» ήταν το ίδιο νούμερο.
+ * Με στροφή δεν είναι: η απόσταση πρέπει να **περιστραφεί** πριν προστεθεί, αλλιώς οι γραμμές
+ * ενός γερμένου κελιού απλώνονται κατακόρυφα ενώ τα γράμματά τους τρέχουν πλάγια — και το
+ * αποτέλεσμα δεν είναι «λίγο λάθος», είναι γραμμές που **τέμνονται μεταξύ τους**.
+ *
+ * Εξαγωγή, όχι διπλότυπο: το {@link multilineBaselineYMm} μένει και **την καλεί**, ώστε ο
+ * κατακόρυφος δρόμος (in-cell επεξεργαστής) να μην αποκτήσει δεύτερη διατύπωση του κανόνα.
+ */
+export function multilineBaselineDeltaMm(
+  align: TableCellAlign,
+  style: TableCellStyle,
+  lineCount: number,
+  index: number,
+): number {
+  if (lineCount <= 1) return 0;
 
   const stepMm = style.textHeightMm * CHARACTER_METRICS.LINE_HEIGHT_RATIO;
   const { topAdd } = resolveMultilineExtents(
@@ -152,7 +212,7 @@ export function multilineBaselineYMm(
     lineCount,
     CHARACTER_METRICS.LINE_HEIGHT_RATIO,
   );
-  return single - topAdd * style.textHeightMm + index * stepMm;
+  return index * stepMm - topAdd * style.textHeightMm;
 }
 
 /**
@@ -180,10 +240,32 @@ const VERTICAL_BAND_TO_ROW: Readonly<Record<'top' | 'middle' | 'bottom', TextRow
  * Ποτέ κάτω από `1`: ένα κελί που δεν χωρά ούτε μία γραμμή πρέπει να δείξει **κάτι**
  * (περικομμένο, με «…»), όχι να αδειάσει σιωπηλά.
  */
-export function fittingLineCount(rect: TableRectMm, style: TableCellStyle): number {
+export function fittingLineCount(
+  rect: TableRectMm,
+  style: TableCellStyle,
+  /**
+   * 🔴 §59 Δ1 — η γωνία του κειμένου. Το «πάχος» του μπλοκ μεγαλώνει **κάθετα στη γραμμή
+   * βάσης**, άρα σε γερμένο κελί δεν το περιορίζει (μόνο) το ύψος.
+   *
+   * ```
+   *     0°  →  διαθέσιμο πάχος = ωφέλιμο ΥΨΟΣ    (ακριβές· η σημερινή έκφραση)
+   *   ±90°  →  διαθέσιμο πάχος = ωφέλιμο ΠΛΑΤΟΣ  (ακριβές)
+   *   αλλού →  η προβολή του ορθογωνίου στον άξονα του πάχους — **άνω φράγμα**
+   * ```
+   * Στις ενδιάμεσες γωνίες η προβολή είναι **γενναιόδωρη**, και αυτή είναι η σωστή φορά
+   * σφάλματος: το `maxLines` είναι **φράγμα περικοπής**, οπότε το να είναι χαλαρό σημαίνει «μην
+   * κόψεις κείμενο που ίσως χωρά» — και η πραγματική περικοπή παραμένει ορατή μέσω του
+   * `clipped`. Ένα σφιχτό φράγμα θα έσβηνε γραμμές που ζωγραφίζονται μια χαρά.
+   */
+  rotationDeg = 0,
+): number {
   const stepMm = style.textHeightMm * CHARACTER_METRICS.LINE_HEIGHT_RATIO;
   if (!(stepMm > 0)) return 1;
-  const usableMm = rect.h - style.margins.vMm * 2 - style.textHeightMm;
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cos = Math.abs(Math.cos(rad));
+  const sin = Math.abs(Math.sin(rad));
+  const extentMm = (rect.h - style.margins.vMm * 2) * cos + (rect.w - style.margins.hMm * 2) * sin;
+  const usableMm = extentMm - style.textHeightMm;
   // 🔴 Η ανοχή ΔΕΝ είναι καλλωπισμός — είναι η προϋπόθεση ώστε μέτρηση και τοποθέτηση να
   // συμφωνούν. Η μέτρηση έφτιαξε τη γραμμή **ακριβώς** για `n` γραμμές, οπότε το πηλίκο εδώ
   // είναι θεωρητικά `n − 1`· σε IEEE-754 βγαίνει `n − 1 − ε` και το `floor` επιστρέφει

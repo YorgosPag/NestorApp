@@ -28,7 +28,7 @@ import {
   nextTableIndentLevel,
   tableIndentOffsetMm,
 } from '../table-indent-ops';
-import { anchorXMm, resolveCellHAlign } from '../table-layout-align';
+import { anchorXMm, cellTextPositionMm, resolveCellHAlign } from '../table-layout-align';
 import { baseCellStyle, resolveCellStyle } from '../table-style';
 import { layoutTable } from '../table-layout';
 import { resolveTableModel } from '../table-model-helpers';
@@ -151,11 +151,31 @@ describe('tableIndentOffsetMm — τρία πλάτη κενού ανά σκαλ
 // Η ΑΓΚΥΡΑ — προς τα πού
 // ──────────────────────────────────────────────────────────────────────────────
 
-describe('anchorXMm — η εσοχή σπρώχνει ΠΡΟΣ ΤΑ ΜΕΣΑ, όχι πάντα δεξιά', () => {
-  const INDENT = 6;
+describe('cellTextPositionMm — η εσοχή σπρώχνει ΠΡΟΣ ΤΑ ΜΕΣΑ, όχι πάντα δεξιά', () => {
+  const LEVEL = 1;
+  /** Ένα σκαλί σε mm για το δείγμα — `6` με τον μετρητή του αρχείου (3 κενά × 2mm). */
+  const INDENT = stepMmAt(2);
+
+  /**
+   * ⚠️ Η **αλυσίδα ολόκληρη**, όχι σκέτο νούμερο: το `cellTextPositionMm` δέχεται εσοχή
+   * **ήδη κριμένη** ως προς τη στοίχιση, και ο κριτής είναι το `tableIndentOffsetMm`. Ένα
+   * χειρόγραφο `indentMm: 6` εδώ θα δοκίμαζε μια κατάσταση που η διάταξη **δεν παράγει ποτέ**
+   * (εσοχή σε κεντραρισμένο κελί) — δηλαδή θα ζητούσε από τη γεωμετρία να ξαναγράψει έναν
+   * κανόνα που ζει, σωστά, ένα επίπεδο πιο πάνω.
+   */
+  const at = (hAlign: 'left' | 'center' | 'right') => cellTextPositionMm({
+    rect: RECT,
+    hAlign,
+    align: 'ML' as TableCellAlign,
+    style: styleWith(LEVEL),
+    indentMm: tableIndentOffsetMm(styleWith(LEVEL), hAlign, measure),
+    rotationDeg: 0,
+    lineCount: 1,
+    index: 0,
+  });
 
   it('αριστερά ⇒ μακριά από την ΑΡΙΣΤΕΡΗ ακμή', () => {
-    expect(anchorXMm(RECT, 'left', 1, INDENT)).toBe(RECT.x + 1 + INDENT);
+    expect(at('left').x).toBe(RECT.x + 1 + INDENT);
   });
 
   /**
@@ -163,17 +183,27 @@ describe('anchorXMm — η εσοχή σπρώχνει ΠΡΟΣ ΤΑ ΜΕΣΑ, �
    * βγάζει το δεξιά στοιχισμένο κείμενο **έξω** από το κελί.
    */
   it('🔴 δεξιά ⇒ μακριά από τη ΔΕΞΙΑ ακμή (αντίθετο πρόσημο)', () => {
-    expect(anchorXMm(RECT, 'right', 1, INDENT)).toBe(RECT.x + RECT.w - 1 - INDENT);
+    expect(at('right').x).toBe(RECT.x + RECT.w - 1 - INDENT);
   });
 
   it('κέντρο ⇒ ο άξονας του κελιού, ανεπηρέαστος', () => {
-    expect(anchorXMm(RECT, 'center', 1, INDENT)).toBe(RECT.x + RECT.w / 2);
+    expect(at('center').x).toBe(RECT.x + RECT.w / 2);
   });
 
-  it('μηδενική εσοχή ⇒ **ταυτόσημο** με πριν τη φάση, σε κάθε στοίχιση', () => {
-    expect(anchorXMm(RECT, 'left', 1, 0)).toBe(RECT.x + 1);
-    expect(anchorXMm(RECT, 'right', 1, 0)).toBe(RECT.x + RECT.w - 1);
-    expect(anchorXMm(RECT, 'center', 1, 0)).toBe(RECT.x + RECT.w / 2);
+  it('μηδενική εσοχή ⇒ **ταυτόσημο** με το γυμνό `anchorXMm`, σε κάθε στοίχιση', () => {
+    const plain = (hAlign: 'left' | 'center' | 'right') => cellTextPositionMm({
+      rect: RECT,
+      hAlign,
+      align: 'ML' as TableCellAlign,
+      style: styleWith(0),
+      indentMm: 0,
+      rotationDeg: 0,
+      lineCount: 1,
+      index: 0,
+    }).x;
+    expect(plain('left')).toBe(anchorXMm(RECT, 'left', 1));
+    expect(plain('right')).toBe(anchorXMm(RECT, 'right', 1));
+    expect(plain('center')).toBe(anchorXMm(RECT, 'center', 1));
   });
 });
 
