@@ -27,10 +27,18 @@
     --primary-foreground: 214 95% 97%;
 
     /* 🏢 ENTERPRISE: Themed Link Colors (Gmail/Outlook/Salesforce pattern) - ADR-074 */
-    /* WCAG AA Compliant: Light mode contrast ≥4.5:1 */
-    --link-color: 221 83% 53%;           /* #3b82f6 Blue-500 - Light mode */
-    --link-color-hover: 217 91% 60%;     /* #2563eb Blue-600 */
-    --link-color-visited: 271 81% 56%;   /* #8b5cf6 Purple-500 */
+    /* ⚠️ CORRECTED 2026-08-07 (ADR-759 §4.12.2). This block previously claimed
+       "WCAG AA Compliant: Light mode contrast ≥4.5:1". Measured against this
+       theme's own --background, NONE of the three reaches 4.5:1, and the two
+       hex/Tailwind labels were SWAPPED (they described each other's colour,
+       making hover look darker than base when it is lighter).
+       Values below are conversions of the HSL triples, not aspirations.
+       Reproduce: node scripts/lib/contrast/wcag-contrast.js consumers, or
+       `npm run measure:text-primary`. Raising these to AA is a token decision,
+       deliberately NOT taken here. */
+    --link-color: 221 83% 53%;           /* #2463eb ≈ Blue-600 · on --background 4.28:1 · on --card 4.54:1 */
+    --link-color-hover: 217 91% 60%;     /* #3c83f6 ≈ Blue-500 · on --background 3.01:1 · on --card 3.19:1 */
+    --link-color-visited: 271 81% 56%;   /* #9234ea ≈ Purple-600 · on --background 4.45:1 · on --card 4.72:1 */
 
     --secondary: 213 88% 96%; /* ✅ ENTERPRISE: Refined blue secondary (was grey) */
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -206,10 +214,15 @@
   }
 
   .dark {
-    --background: 220 20% 11%; /* #1e293b */
+    /* ⚠️ Hex comments below were BOTH wrong (fixed 2026-08-07, ADR-759 §4.12.2).
+       They claimed #1e293b / #293345; the real conversions of these HSL triples
+       are #161a22 / #1d283a. A stale hex comment is worse than none: it was
+       read as fact while reasoning about contrast. Never read a colour from a
+       comment — convert the token. Cross-check: `npm run measure:text-primary`. */
+    --background: 220 20% 11%; /* #161a22 */
     --foreground: 210 40% 98%;
 
-    --card: 217 33% 17%; /* #293345 */
+    --card: 217 33% 17%; /* #1d283a */
     --card-foreground: 210 40% 98%;
 
     --popover: 220 20% 11%;
@@ -219,10 +232,13 @@
     --primary-foreground: 210 40% 98%;
 
     /* 🏢 ENTERPRISE: Themed Link Colors for Dark Mode (Gmail/Outlook/Salesforce pattern) - ADR-074 */
-    /* WCAG AA Compliant: Dark mode contrast 8.7:1 (bright blue on dark slate) */
-    --link-color: 213 94% 68%;           /* #60a5fa Blue-400 - Dark mode */
-    --link-color-hover: 212 96% 78%;     /* #93c5fd Blue-300 */
-    --link-color-visited: 270 95% 75%;   /* #c4b5fd Purple-300 */
+    /* ⚠️ CORRECTED 2026-08-07 (ADR-759 §4.12.2). Previously claimed a single
+       "8.7:1" that matches no actual pair. Real measured ratios per token are
+       inline below — all three clear AA on both --background and --card, so
+       the dark link palette is genuinely fine; only the number was invented. */
+    --link-color: 213 94% 68%;           /* #61a6fa ≈ Blue-400 · on --background 6.92:1 · on --card 5.89:1 */
+    --link-color-hover: 212 96% 78%;     /* #91c3fd ≈ Blue-300 · on --background 9.48:1 · on --card 8.07:1 */
+    --link-color-visited: 270 95% 75%;   /* #bf83fc ≈ Purple-400 · on --background 6.53:1 · on --card 5.55:1 */
     
     --secondary: 217 27% 11%;
     --secondary-foreground: 210 40% 98%;
@@ -240,7 +256,7 @@
        (217 33% 17%). blue-400 — the same step --link-color takes for dark. */
     --slider-accent: 213 94% 68%;
 
-    --border: 217 19% 27%; /* 🏢 ENTERPRISE: Matches Tailwind gray-700 (#374151) exactly */
+    --border: 217 19% 27%; /* #384252 — ≈ Tailwind gray-700 (#374151), off by 1/255 per channel. Said "exactly" until 2026-08-07; it is not. */
     --input: 217 19% 35%; /* Λίγο πιο ανοιχτό για dark mode */
     --ring: 210 40% 98%;
 

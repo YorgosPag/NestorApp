@@ -20,6 +20,49 @@ import {
   type FilterButtonProps,
 } from './action-button-config';
 
+/**
+ * Shared body of a toolbar button that can carry a count badge.
+ *
+ * Extracted 2026-08-07 (ADR-759 §4.12.3): ToolbarDeleteButton and
+ * ToolbarArchiveButton carried byte-identical 14-line bodies — a real clone
+ * flagged by CHECK 3.28 (jscpd, 62 tokens). The clone PRE-DATES this change
+ * (verified against HEAD); it surfaced only because the file was touched.
+ *
+ * ⚠️ Behaviour note: both call sites guarded the badge with `{badge && …}`.
+ * In React that renders a literal `0` when `badge === 0`, painting a stray
+ * zero next to the label. This helper uses the `badge != null && badge > 0`
+ * guard that ToolbarDeleteFilterButton already used — so `badge={0}` now
+ * renders nothing, which is what every call site intended.
+ *
+ * Deliberately NOT applied to the icon+label-only buttons in this file: that
+ * shape is two lines of idiomatic JSX, below every duplication threshold, and
+ * wrapping it would add indirection without removing duplication.
+ */
+function ToolbarButtonBody({
+  icon,
+  label,
+  badge,
+}: {
+  icon: React.ReactNode;
+  label: React.ReactNode;
+  badge?: number;
+}) {
+  return (
+    <>
+      {icon}
+      <span className="hidden md:inline">{label}</span>
+      {badge != null && badge > 0 && (
+        <CommonBadge
+          status="company"
+          customLabel={badge.toString()}
+          variant="secondary"
+          className="ml-auto"
+        />
+      )}
+    </>
+  );
+}
+
 // ╭───────��─────────────────────────────────────╮
 // │           CRUD Toolbar Buttons              │
 // ╰─────────────────────────────────────────────╯
@@ -106,16 +149,11 @@ export function ToolbarDeleteButton({
       disabled={disabled}
       className={buttonClassName}
     >
-      <Trash2 className={iconSizes.sm} />
-      <span className="hidden md:inline">{defaultChildren}</span>
-      {badge && (
-        <CommonBadge
-          status="company"
-          customLabel={badge.toString()}
-          variant="secondary"
-          className="ml-auto"
-        />
-      )}
+      <ToolbarButtonBody
+        icon={<Trash2 className={iconSizes.sm} />}
+        label={defaultChildren}
+        badge={badge}
+      />
     </Button>
   );
 }
@@ -137,18 +175,13 @@ export function ToolbarArchiveButton({
       size={size}
       onClick={onClick}
       disabled={disabled}
-      className={cn(BUTTON_CATEGORIES.utility, "text-[hsl(var(--text-warning))]flex items-center gap-2 min-w-[100px] justify-start", className)}
+      className={cn(BUTTON_STYLES.variants.archiveUtility, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
-      <Archive className={iconSizes.sm} />
-      <span className="hidden md:inline">{defaultChildren}</span>
-      {badge && (
-        <CommonBadge
-          status="company"
-          customLabel={badge.toString()}
-          variant="secondary"
-          className="ml-auto"
-        />
-      )}
+      <ToolbarButtonBody
+        icon={<Archive className={iconSizes.sm} />}
+        label={defaultChildren}
+        badge={badge}
+      />
     </Button>
   );
 }
@@ -370,7 +403,7 @@ export function ToolbarArchivedFilterButton({
   const defaultChildren = children ?? actions.archived;
   const buttonClassName = active
     ? cn(BUTTON_CATEGORIES.primary, "flex items-center gap-2 min-w-[100px] justify-start", className)
-    : cn(BUTTON_CATEGORIES.utility, "text-[hsl(var(--text-warning))]flex items-center gap-2 min-w-[100px] justify-start", className);
+    : cn(BUTTON_STYLES.variants.archiveUtility, "flex items-center gap-2 min-w-[100px] justify-start", className);
 
   return (
     <Button
@@ -431,7 +464,7 @@ export function ToolbarRefreshButton({
       size={size}
       onClick={onClick}
       disabled={disabled}
-      className={cn(BUTTON_CATEGORIES.utility, "text-primaryflex items-center gap-2 min-w-[100px] justify-start", className)}
+      className={cn(BUTTON_STYLES.variants.refresh, "flex items-center gap-2 min-w-[100px] justify-start", className)}
     >
       <RefreshCw className={iconSizes.sm} />
       <span className="hidden md:inline">{defaultChildren}</span>

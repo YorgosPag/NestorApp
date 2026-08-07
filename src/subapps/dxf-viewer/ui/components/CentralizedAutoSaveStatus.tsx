@@ -188,12 +188,24 @@ export function CentralizedAutoSaveStatus() {
 
       {/* Status Message */}
       <article className={PANEL_LAYOUT.FLEX_UTILS.FLEX_1_MIN_0}>
-        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${getStatusColor().split(' ')[0]}`} style={centralizedAutoSaveStatusStyles.statusMessage.primary}>
+        {/*
+          🎨 ADR-759 §4.12.2 (measured 2026-08-07): these two elements carried an
+          inline `style` whose ONLY non-redundant contribution was a hardcoded
+          light-theme colour (`#1e293b` / `#64748b`, from the static
+          `foundations.ts` palette). Inline styles beat classes on specificity,
+          so the *correct* semantic class below (`--text-success` → green) was
+          overpainted with near-black — measured 1.01:1 on this card in the
+          default dark theme, i.e. the heading was invisible.
+          Everything else the inline style set (font-size, font-weight) is
+          already expressed by the classes, so removing it is lossless.
+          This is N.3 (no inline styles) with a live cost attached.
+        */}
+        <h3 className={`${PANEL_LAYOUT.TYPOGRAPHY.SM} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${getStatusColor().split(' ')[0]}`}>
           {getStatusMessage()}
         </h3>
 
         {lastSaved && saveStatus === 'saved' && (
-          <time className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`} style={centralizedAutoSaveStatusStyles.statusMessage.secondary}>
+          <time className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.NORMAL} ${colors.text.muted} ${PANEL_LAYOUT.MARGIN.TOP_XS}`}>
             {t('autoSave.lastSaved')} {formatLastSaveTime(lastSaved)}
           </time>
         )}

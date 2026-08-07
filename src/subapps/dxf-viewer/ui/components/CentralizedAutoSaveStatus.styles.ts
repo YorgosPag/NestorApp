@@ -156,11 +156,14 @@ export const centralizedAutoSaveStatusStyles = {
   // Compact container
   compactContainer: statusIndicatorComponents.container,
 
-  // Status messages
-  statusMessage: {
-    primary: statusIndicatorComponents.text.primary,
-    secondary: statusIndicatorComponents.text.secondary
-  },
+  // ❌ REMOVED (ADR-759 §4.12.2, 2026-08-07): `statusMessage.{primary,secondary}`
+  // re-exported `statusIndicatorComponents.text.*`, whose `color` is a static
+  // light-theme hex from `foundations.ts` (`#1e293b` / `#64748b`). Applied as an
+  // inline style it outranked the component's own semantic colour class and
+  // painted the auto-save heading at 1.01:1 in the default dark theme.
+  // The component now relies on its classes alone. Do not reintroduce a colour
+  // here: a JS token object cannot follow `.dark`, so any colour it carries is
+  // theme-blind by construction.
 
   // Settings indicators (fallback to basic styles)
   settingsDots: {

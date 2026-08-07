@@ -77,13 +77,34 @@ export const BUTTON_STYLES = {
     restore: BUTTON_CATEGORIES.secondary,
 
     // Utility Actions (Dark with colored text for differentiation)
+    //
+    // ⚠️ INK, NOT SURFACE (ADR-759 §4.12.2 — measured 2026-08-07).
+    // Every entry below MUST use a purpose-named *text* token
+    // (`--text-success` / `--text-warning` / `--text-info`), never `--primary`.
+    // `--primary` is a *surface* colour: in the default (dark) theme it resolves
+    // to `217 33% 17%` — byte-identical to `--card` — so `text-primary` renders
+    // at 1.00:1 there, i.e. invisible, on all 23 surface tokens (worst 1.48:1).
+    // `--text-info` was measured on the same 23 surfaces: 0 failures, worst
+    // 3.90:1 — strictly better than `--text-success`/`--text-warning`, which
+    // this map already trusts.
     call: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-success))]`,
-    email: `${BUTTON_CATEGORIES.utility} text-primary`,
-    sms: `${BUTTON_CATEGORIES.utility} text-primary`,
+    // Deliberately NOT named `archive`: that key is already taken above by a
+    // different composition (`BUTTON_CATEGORIES.warning`, used by
+    // ActionButtons.tsx). This is the *utility-flavoured* archive shared by
+    // ToolbarArchiveButton and ToolbarArchivedFilterButton, both of which
+    // hand-rolled this exact string — and both lost the same space.
+    archiveUtility: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-warning))]`,
+    email: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-info))]`,
+    sms: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-info))]`,
     export: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-success))]`,
     import: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-warning))]`,
-    help: `${BUTTON_CATEGORIES.utility} text-primary`,
-    sort: `${BUTTON_CATEGORIES.utility} text-primary`,
+    help: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-info))]`,
+    // `refresh` was missing from this map, so ToolbarRefreshButton hand-rolled
+    // the same string inline — and the hand-rolled copy lost a space
+    // (`text-primaryflex`), silently killing both the colour and the flex
+    // layout. The gap in the map *was* the bug; the typo was its symptom.
+    refresh: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-info))]`,
+    sort: `${BUTTON_CATEGORIES.utility} text-[hsl(var(--text-info))]`,
   }
 } as const;
 
