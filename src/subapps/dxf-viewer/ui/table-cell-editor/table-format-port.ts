@@ -51,9 +51,11 @@ import type { TextHeightStepDirection } from '../../bim/table/table-text-height-
 import type { TableAxisStyleOverride } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableAxisColorState } from '../components/table-format-toolbar/table-color-menu-selection';
+import type { TableNumberFormatState } from '../components/table-format-toolbar/TableNumberFormatSection';
 import type { TableToggleFormatKey } from '../components/table-format-toolbar/TableFormatSection';
 import type { TableBindingPort } from './use-table-binding-actions';
 import type { TableFormatPainterPort } from './use-table-format-painter-actions';
+import type { TableMenuClipboardActions } from './use-table-menu-clipboard';
 import type { TableBorderActions } from './use-table-border-actions';
 import type { TableMergeActions } from './use-table-merge-actions';
 
@@ -129,6 +131,31 @@ export interface TableFormatPort {
   readonly stepTextHeight: (direction: TextHeightStepDirection) => void;
   /** Το τρέχον ύψος κειμένου σε sheet-mm· `null` όταν τα κελιά δεν συμφωνούν ή δεν υπάρχει στόχος. */
   readonly textHeightMm: () => number | null;
+  /**
+   * 🔴 ADR-739 §56 / ADR-760 — **τι μορφή αριθμού ισχύει** στον στόχο.
+   *
+   * ## Γιατί ΔΙΚΟ ΤΟΥ μέλος και όχι `state('numberFormat')`
+   * Δεν **γίνεται**: το {@link TableFormatPort.state} δέχεται `TableCellStyleKey`, που είναι η
+   * τομή `keyof TableAxisStyleOverride & keyof TableCellStyle` — και το `numberFormat` ζει μόνο
+   * στο πρώτο σκέλος, επειδή έχει **δική του** αλυσίδα κληρονομιάς (κελί▸γραμμή▸στήλη▸
+   * `valueType`). Είναι ο ίδιος αποκλεισμός που τεκμηριώνει ήδη το `table-format-payload.ts`,
+   * και η ίδια αιτία που το χρώμα χρειάστηκε το {@link TableFormatPort.colorState}: όταν η
+   * ερώτηση δεν χωρά στο γενικό λεξιλόγιο, αποκτά δικό της μέλος αντί να παραμορφωθεί.
+   *
+   * Χωρίς στόχο ⇒ `EMPTY_TABLE_NUMBER_FORMAT_STATE` (κανένα κουμπί πατημένο), ποτέ μαντεψιά.
+   * ⚠️ Η **εγγραφή** δεν αποκτά μέλος: το `setField('numberFormat', …)` δουλεύει ήδη, γιατί
+   * εκείνο δέχεται `keyof TableAxisStyleOverride` — το ευρύτερο από τα δύο σκέλη.
+   */
+  readonly numberFormat: () => TableNumberFormatState;
+  /**
+   * 🔴 ADR-739 §56 — **ποιες γραμματοσειρές υπάρχουν**, τη στιγμή της κλήσης.
+   *
+   * Getter και όχι συνδρομή, για τον λόγο που το τεκμηριώνει ήδη το `use-toolbar-font-names.ts`:
+   * ο κάτοχος της θύρας ζει μέσα στον `CanvasSection`, όπου κάθε συνδρομή είναι re-render του
+   * orchestrator (ADR-040 κανόνας #1). Η **γνώση** μένει μία (`collectAvailableFontNames`) — εδώ
+   * περνά μόνο το κανάλι, ώστε η κορδέλα να μη χρειαστεί δεύτερη πρόσβαση στον `levelManager`.
+   */
+  readonly fontNames: () => readonly string[];
   readonly reset: () => void;
   /** Υπάρχει **οτιδήποτε** να επαναφερθεί; (`some`, όχι `every` — δες `canResetTableFormatScope`.) */
   readonly canReset: () => boolean;
@@ -156,6 +183,20 @@ export interface TableFormatPort {
    * έπεσε το χέρι;»). Ζει στο `use-table-format-painter-click.ts`.
    */
   readonly painter: TableFormatPainterPort;
+  /**
+   * 🔴 ADR-739 §57 — **το πρόχειρο**: αποκοπή, αντιγραφή, και «Επικόλληση Ειδική».
+   *
+   * ⚠️ Περνά **αυτούσιο** το συμβόλαιο του §54 (`TableMenuClipboardActions`), όπως ακριβώς
+   * περνούν αυτούσια τα `borders` / `merge`: οι πράξεις του είναι ήδη παραμετρικές ως προς τα
+   * **όρια**, οπότε η κορδέλα δεν χρειάζεται τίποτα δικό της — μόνο το {@link
+   * TableFormatPort.bounds} να τους δώσει τον στόχο. Ένα δεύτερο, «για την κορδέλα» συμβόλαιο θα
+   * ήταν δεύτερη απάντηση στο «τι σημαίνει αντιγραφή», με το μενού δεξιού κλικ να λέει άλλα.
+   *
+   * 🔑 Ο λόγος που η **ίδια** θύρα κουβαλά και το πινέλο: στο Excel το «Πινέλο μορφοποίησης»
+   * ζει **μέσα** στην ομάδα «Πρόχειρο», και όχι τυχαία — είναι κι αυτό αντιγραφή, απλώς μόνο της
+   * όψης. Το §57 τα ξαναενώνει και στη δική μας κορδέλα.
+   */
+  readonly clipboard: TableMenuClipboardActions;
 }
 
 let port: TableFormatPort | null = null;

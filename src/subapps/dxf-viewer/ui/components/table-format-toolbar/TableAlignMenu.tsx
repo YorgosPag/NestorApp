@@ -9,19 +9,18 @@
  * το μενού χωρίς να το σκεπάζει. Έξι θέσεις εδώ θα έσπρωχναν τα περιγράμματα και τη συγχώνευση
  * εκτός οθόνης στα δεξιά — δηλαδή θα χαλούσαν το 1:1 που είναι όλος ο λόγος αυτής της δουλειάς.
  *
- * ## 🔴 Η ΜΙΑ ΤΙΜΗ, ΟΙ ΔΥΟ ΕΡΩΤΗΣΕΙΣ
+ * ## 🔴 Η ΜΙΑ ΤΙΜΗ, ΟΙ ΔΥΟ ΕΡΩΤΗΣΕΙΣ — και ΠΟΥ ζει η απάντηση
  * Το `TableCellAlign` είναι **ένα** γράμμα κάθετης + **ένα** οριζόντιας θέσης (`'ML'`, `'TR'`,
  * DXF group code 170). Άρα «στοίχισε αριστερά» δεν είναι εγγραφή ενός πεδίου: είναι
- * **αντικατάσταση του μισού** και διατήρηση του άλλου μισού. Γραμμένο ως έξι σταθερές
- * (`'TL'`,`'TC'`,…) το μενού θα ισοπέδωνε σιωπηλά την κάθετη θέση σε κάθε πάτημα — και ο
- * χρήστης θα έχανε το «κέντρο» του κελιού πατώντας «δεξιά».
+ * **αντικατάσταση του μισού** και διατήρηση του άλλου μισού.
  *
- * ⚠️ **Μία αποδεκτή ισοπέδωση, ρητά δηλωμένη**: όταν ο στόχος είναι **ανάμεικτος** δεν υπάρχει
- * «άλλο μισό» να κρατηθεί — η εγγραφή είναι μία τιμή για όλα τα κελιά. Ξεκινά τότε από την
- * προεπιλογή της κλάσης δεδομένων (`'ML'`, `table-style-presets.ts`). Είναι η ίδια φύση με την
- * ισοπέδωση μεγεθών του `stepAxisTextHeight` (Α2), όχι ελάττωμα εδώ.
+ * ⚠️ **Ο κανόνας ΔΕΝ ζει πια εδώ** (§56). Ήταν ιδιωτικός σε αυτό το αρχείο όσο η στοίχιση είχε
+ * **μία** επιφάνεια· η κορδέλα είναι η δεύτερη, και τα έξι κουμπιά της ρωτούν **το ίδιο**.
+ * Μετακόμισε αυτούσιος στο {@link ../../../bim/table/table-align-ops} — μαζί με το γιατί.
+ * Εδώ μένει **μόνο** η εμφάνιση και η μετάφραση του πατήματος σε επιλογή.
  *
  * @module subapps/dxf-viewer/ui/components/table-format-toolbar/TableAlignMenu
+ * @see bim/table/table-align-ops.ts — τι κάνει το πάτημα (SSoT)
  * @see types/table.ts — οι 9 θέσεις του `ACAD_TABLE`
  */
 
@@ -36,6 +35,13 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  MIXED_BASE_TABLE_ALIGN,
+  isTableAlignActive,
+  nextTableAlign,
+  tableAlignHorizontal,
+  type TableAlignChoice,
+} from '../../../bim/table/table-align-ops';
 import type { TableCellAlign } from '../../../types/table';
 import { ToolbarButton } from './ToolbarButton';
 import { ToolbarListItem, ToolbarListPanel } from './ToolbarListPanel';
@@ -55,9 +61,6 @@ export interface TableAlignMenuProps {
 /** Ένα κουμπί με βελάκι· το πάνελ έχει δικό του κατακόρυφο roving. */
 export const TABLE_ALIGN_SLOTS = 1;
 
-/** Από πού ξεκινά η σύνθεση όταν δεν υπάρχει «τρέχουσα» τιμή — δες την ⚠️ της κεφαλίδας. */
-const MIXED_BASE_ALIGN: TableCellAlign = 'ML';
-
 /**
  * Οι έξι επιλογές σε **μία** λίστα, με τον άξονα ως ετικέτα.
  *
@@ -67,20 +70,15 @@ const MIXED_BASE_ALIGN: TableCellAlign = 'ML';
  * επιλογή (εικονίδιο, `autoFocus`, roving) έπρεπε να γίνει **δύο** φορές, και η δεύτερη θα
  * ξεχνιόταν. Η διακριτή ένωση κρατά τους δύο άξονες **τύπους** χωριστούς εκεί που πρέπει (τα
  * γράμματα δεν ανακατεύονται) και την **απόδοση** μία.
+ *
+ * 🔑 §56 — η ένωση **είναι** το {@link TableAlignChoice} του SSoT, εμπλουτισμένο με ό,τι
+ * χρειάζεται η οθόνη. Ένα παράλληλο `axis`/`code` εδώ θα ήταν δεύτερος ορισμός του «ποιες
+ * επιλογές υπάρχουν», και η κορδέλα θα μπορούσε κάποτε να προσφέρει άλλες έξι.
  */
-type AlignOption =
-  | {
-    readonly axis: 'horizontal';
-    readonly code: 'L' | 'C' | 'R';
-    readonly labelKey: string;
-    readonly Icon: typeof AlignLeft;
-  }
-  | {
-    readonly axis: 'vertical';
-    readonly code: 'T' | 'M' | 'B';
-    readonly labelKey: string;
-    readonly Icon: typeof AlignLeft;
-  };
+type AlignOption = TableAlignChoice & {
+  readonly labelKey: string;
+  readonly Icon: typeof AlignLeft;
+};
 
 /** Πρώτα η οριζόντια (η σειρά του Excel: αριστερά → δεξιά), μετά η κάθετη. */
 const ALIGN_OPTIONS: readonly AlignOption[] = [
@@ -101,11 +99,11 @@ export function TableAlignMenu(props: TableAlignMenuProps): React.ReactElement {
   const control = useToolbarPanel();
   const listRoving = useRovingToolbar(ALIGN_OPTIONS.length, 'vertical');
 
-  const base = current ?? MIXED_BASE_ALIGN;
   // Το εικονίδιο του κουμπιού λέει την **οριζόντια** θέση: είναι αυτή που βλέπει ο χρήστης στο
   // κείμενο του κελιού, ενώ η κάθετη φαίνεται μόνο σε ψηλές γραμμές.
+  const shownHorizontal = tableAlignHorizontal(current ?? MIXED_BASE_TABLE_ALIGN);
   const TriggerIcon = ALIGN_OPTIONS.find(
-    (option) => option.axis === 'horizontal' && option.code === horizontalOf(base),
+    (option) => option.axis === 'horizontal' && option.code === shownHorizontal,
   )?.Icon ?? AlignLeft;
 
   return (
@@ -145,10 +143,10 @@ export function TableAlignMenu(props: TableAlignMenuProps): React.ReactElement {
                 role="menuitemradio"
                 label={t(option.labelKey)}
                 icon={<option.Icon size={15} aria-hidden="true" />}
-                selected={isAlignSelected(option, current)}
+                selected={isTableAlignActive(current, option)}
                 autoFocus={index === 0}
                 roving={listRoving.itemProps(index)}
-                onSelect={() => control.runAndClose(() => onSetAlign(alignWith(option, base)))}
+                onSelect={() => control.runAndClose(() => onSetAlign(nextTableAlign(current, option)))}
               />
             </React.Fragment>
           ))}
@@ -158,53 +156,3 @@ export function TableAlignMenu(props: TableAlignMenuProps): React.ReactElement {
   );
 }
 
-/**
- * Οι εννιά θέσεις ως **πλέγμα**, γραμμένες μία φορά.
- *
- * Η προφανής εναλλακτική — `` `${vertical}${horizontal}` `` — δίνει σωστό αποτέλεσμα αλλά
- * στηρίζεται στο ότι ο μεταγλωττιστής θα συμπεράνει τύπο template literal από τα συμφραζόμενα.
- * Το πλέγμα δεν στηρίζεται σε τίποτα: μια θέση που λείπει είναι **σφάλμα μεταγλώττισης**, και
- * το σχήμα του διαβάζεται όπως ακριβώς το ζωγραφίζει το group code 170.
- */
-const ALIGN_GRID: Readonly<Record<'T' | 'M' | 'B', Readonly<Record<'L' | 'C' | 'R', TableCellAlign>>>> = {
-  T: { L: 'TL', C: 'TC', R: 'TR' },
-  M: { L: 'ML', C: 'MC', R: 'MR' },
-  B: { L: 'BL', C: 'BC', R: 'BR' },
-};
-
-/**
- * Η επιλογή εφαρμοσμένη πάνω στην τρέχουσα τιμή: αλλάζει **μόνο** ο άξονάς της.
- *
- * Ο έλεγχος του άξονα δεν είναι αμυντικός — είναι ο τρόπος που ο μεταγλωττιστής στενεύει την
- * ένωση ώστε το `code` να είναι νόμιμο κλειδί του {@link ALIGN_GRID} σε κάθε κλάδο.
- */
-function alignWith(option: AlignOption, base: TableCellAlign): TableCellAlign {
-  return option.axis === 'horizontal'
-    ? ALIGN_GRID[verticalOf(base)][option.code]
-    : ALIGN_GRID[option.code][horizontalOf(base)];
-}
-
-/** Ανάμεικτος στόχος ⇒ **καμία** επιλογή τσεκαρισμένη: η ερώτηση δεν έχει μία απάντηση. */
-function isAlignSelected(option: AlignOption, current: TableCellAlign | null): boolean {
-  if (current === null) return false;
-  return option.axis === 'horizontal'
-    ? horizontalOf(current) === option.code
-    : verticalOf(current) === option.code;
-}
-
-/** Τα δύο μισά, χωρίς `charAt` σε θέση όπου ο τύπος πρέπει να επιβιώσει. */
-function verticalOf(align: TableCellAlign): 'T' | 'M' | 'B' {
-  return align === 'TL' || align === 'TC' || align === 'TR'
-    ? 'T'
-    : align === 'ML' || align === 'MC' || align === 'MR'
-      ? 'M'
-      : 'B';
-}
-
-function horizontalOf(align: TableCellAlign): 'L' | 'C' | 'R' {
-  return align === 'TL' || align === 'ML' || align === 'BL'
-    ? 'L'
-    : align === 'TC' || align === 'MC' || align === 'BC'
-      ? 'C'
-      : 'R';
-}

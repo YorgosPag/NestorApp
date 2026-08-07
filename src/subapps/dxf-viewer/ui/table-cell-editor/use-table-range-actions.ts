@@ -43,8 +43,11 @@
  */
 
 import { useCallback, useMemo, type ClipboardEvent } from 'react';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useNotifications } from '@/providers/NotificationProvider';
+// ⚠️ ADR-739 §57 — **καμία μετάφραση και καμία ειδοποίηση εδώ πλέον.** Το μοναδικό μήνυμα που
+// έστελνε αυτό το αρχείο («το πρόχειρο δεν περιέχει κείμενο») μετακόμισε στον ΕΝΑ εφαρμοστή
+// (`use-table-paste-apply.ts`), μαζί με τα υπόλοιπα τέσσερα. Ο κανόνας είναι ο ίδιος με το §54:
+// οι διαδρομές επικόλλησης οφείλουν να λένε **τα ίδια**, και ο μόνος τρόπος να μην αποκλίνουν
+// είναι να μην έχουν τι να πουν μόνες τους.
 // 🔴 ADR-739 §48.12 — **ο ΕΝΑΣ ορισμός** του «ποια περιοχή εννοεί ο χρήστης τώρα», κοινός με
 // τον ζωγράφο. Δες το `currentBounds` παρακάτω για το γιατί έπρεπε να είναι κυριολεκτικά ο ίδιος.
 import { tableEffectiveRangeBounds } from '../../bim/table/table-effective-range';
@@ -65,11 +68,17 @@ import { selectWholeTable } from './table-select-all-action';
 // απαντήσεις στο «πώς κωδικοποιείται κελί με στηλοθέτη μέσα του».
 import {
   clearTableRange,
-  clipboardTextToTableGrid,
-  pasteTsvIntoTable,
   tableRangeToClipboardText,
 } from '../../bim/table/table-range-clipboard';
-import { useTablePasteReport } from './use-table-paste-report';
+// 🔴 ADR-739 §57 — το εσωτερικό πρόχειρο. Το `Ctrl+C`/`Ctrl+V` **οφείλει** να το γεμίζει και να
+// το διαβάζει όπως το κουμπί της κορδέλας: αλλιώς η ίδια αντιγραφή θα έδινε τύπους και μορφή από
+// το ποντίκι και γυμνές τιμές από το πληκτρολόγιο, από **το ίδιο** αντίγραφο.
+import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
+import { captureTableClipboard } from '../../bim/table/table-clipboard-payload';
+import { resolveTablePasteSource } from '../../bim/table/table-clipboard-resolve';
+import { FULL_TABLE_PASTE } from '../../bim/table/table-clipboard-paste';
+import { getTableClipboard, setTableClipboard } from '../../state/table-clipboard-store';
+import { useTablePasteApply } from './use-table-paste-apply';
 import type { TableCursorMove } from '../../bim/table/table-cell-navigation';
 import {
   setTableCellSelection,
@@ -116,8 +125,6 @@ export interface TableRangeActions {
 
 export function useTableRangeActions(params: UseTableRangeActionsParams): TableRangeActions {
   const { cursor, entity, levelManager, execute } = params;
-  const { t } = useTranslation('dxf-viewer');
-  const notifications = useNotifications();
 
   /**
    * Τα τρέχοντα όρια της επιλογής, **τη στιγμή της κλήσης**.
@@ -240,9 +247,18 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
       if (tsv === null) return false;
       event.preventDefault();
       event.clipboardData.setData('text/plain', tsv);
+      // 🔴 §57 — **το δεύτερο πρόχειρο, στην ίδια αναπνοή** (ίδιος κανόνας με τη διαδρομή του
+      // μενού· δες την κεφαλίδα του `use-table-menu-clipboard.ts`). Το `bounds` ξαναρωτιέται
+      // από την ίδια πηγή που παρήγαγε το TSV, ώστε το αποτύπωμα και το φορτίο να περιγράφουν
+      // **κατά ταυτότητα** το ίδιο ορθογώνιο.
+      const bounds = currentBounds();
+      if (bounds && entity) {
+        const payload = captureTableClipboard(entity.model, resolveTableStyle(entity), bounds);
+        if (payload) setTableClipboard(payload);
+      }
       return true;
     },
-    [ownsClipboard, rangeAsTsv],
+    [ownsClipboard, rangeAsTsv, currentBounds, entity],
   );
 
   const onCopy = useCallback(
@@ -274,24 +290,24 @@ export function useTableRangeActions(params: UseTableRangeActionsParams): TableR
     [writeRangeToClipboard, clearSelection],
   );
 
-  // §54 — **η ίδια** αναφορά με τη διαδρομή του μενού· δες `use-table-paste-report.ts`.
-  const reportPaste = useTablePasteReport();
+  // §57 — **ο ίδιος** εφαρμοστής με τις άλλες δύο διαδρομές· δες `use-table-paste-apply.ts`.
+  const applyPaste = useTablePasteApply({ levelManager, execute });
 
   const onPaste = useCallback(
     (event: ClipboardEvent<HTMLElement>) => {
       if (!ownsClipboard() || !cursor || !entity) return;
       event.preventDefault();
-      const text = event.clipboardData.getData('text/plain');
-      const grid = clipboardTextToTableGrid(text);
-      if (grid.length === 0) {
-        notifications.info(t('table.clipboard.pasteEmpty'));
-        return;
-      }
-      const result = pasteTsvIntoTable(entity.model, cursor.position, grid);
-      commitModel(entity, result.model);
-      reportPaste(result);
+      // 🔑 Εδώ το κείμενο υπάρχει **πάντα** (είναι το `clipboardData` του συμβάντος), οπότε ο
+      // επιλυτής δεν βλέπει ποτέ `null` σε αυτή τη διαδρομή: το «τυφλό» φορτίο είναι δομικά
+      // αδύνατο στο `Ctrl+V`, και αυτό είναι ακριβώς το πλεονέκτημα που τεκμηριώνει η κεφαλίδα.
+      const source = resolveTablePasteSource(
+        event.clipboardData.getData('text/plain'),
+        getTableClipboard(),
+        FULL_TABLE_PASTE,
+      );
+      applyPaste(entity, cursor.position, source, FULL_TABLE_PASTE);
     },
-    [ownsClipboard, cursor, entity, commitModel, reportPaste, notifications, t],
+    [ownsClipboard, cursor, entity, applyPaste],
   );
 
   return useMemo(

@@ -43,6 +43,7 @@ import {
   tableRangeToClipboardText,
 } from '../../../bim/table/table-range-clipboard';
 import { getTableCopyMarquee } from '../../../state/table-copy-marquee-store';
+import { __resetTableClipboardForTests } from '../../../state/table-clipboard-store';
 import { cellText, getCell, resolveTableModel } from '../../../bim/table/table-model-helpers';
 import type { ICommand } from '../../../core/commands';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
@@ -124,6 +125,11 @@ const textAt = (m: PersistedTableModel, rowId: string, colId: string): string =>
 beforeEach(() => {
   warning.mockClear();
   info.mockClear();
+  // 🔴 ADR-739 §57 — **υποχρεωτικό**: το εσωτερικό πρόχειρο είναι store επιπέδου module, άρα
+  // επιβιώνει μεταξύ tests. Χωρίς αυτό, η αντιγραφή του §2 άφηνε φορτίο που έκανε τα tests του
+  // §3/§4 να περνούν από τον κλάδο «τυφλής» επικόλλησης — δηλαδή **δύο άγκυρες θα μετρούσαν
+  // άλλη συμπεριφορά από αυτή που δηλώνει το όνομά τους**, ανάλογα με τη σειρά εκτέλεσης.
+  __resetTableClipboardForTests();
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -240,14 +246,83 @@ describe('επικόλληση — ασύγχρονη ανάγνωση, ρητή
 });
 
 // ──────────────────────────────────────────────────────────────────────────────
+// 3β. ADR-739 §57 — το ΕΣΩΤΕΡΙΚΟ πρόχειρο
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('§57 — το φορτίο της εφαρμογής και το αποτύπωμά του', () => {
+  /** Αντιγράφει πραγματικά, ώστε να υπάρχει φορτίο **και** να ξέρουμε το αποτύπωμά του. */
+  async function copyFirst(harness: Harness): Promise<string> {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    stubClipboard({ writeText });
+    const { result } = renderClipboard(harness);
+    await act(async () => { await result.current.copy(A1_B2); });
+    return String(writeText.mock.calls[0][0]);
+  }
+
+  it('🔴 άρνηση ανάγνωσης ΜΕ φορτίο ⇒ επικολλά το δικό μας και ΤΟ ΛΕΕΙ (το Sheets παραιτείται εδώ)', async () => {
+    const harness = createHarness();
+    await copyFirst(harness);
+
+    stubClipboard({ readText: jest.fn().mockRejectedValue(new Error('NotAllowedError')) });
+    const { result } = renderClipboard(harness);
+    await act(async () => { await result.current.paste(A1_B2); });
+
+    expect(harness.commands).toHaveLength(1);
+    // Ενημέρωση («επικολλήθηκε το τελευταίο αντίγραφο»), ΟΧΙ προειδοποίηση άρνησης.
+    expect(info).toHaveBeenCalledTimes(1);
+    expect(warning).not.toHaveBeenCalled();
+  });
+
+  it('🔴 ΞΕΝΟ κείμενο στο πρόχειρο ⇒ το φορτίο αγνοείται, νικά ο έξω κόσμος', async () => {
+    const harness = createHarness();
+    await copyFirst(harness);
+
+    stubClipboard({ readText: jest.fn().mockResolvedValue('ΑΛΛΟ') });
+    const { result } = renderClipboard(harness);
+    await act(async () => { await result.current.paste(A1_B2); });
+
+    expect(textAt(harness.currentModel(), 'r0', 'c0')).toBe('ΑΛΛΟ');
+  });
+
+  it('🔴 «Επικόλληση Μορφοποίησης» πάνω σε ΞΕΝΟ κείμενο αρνείται — ποτέ σβήσιμο δεδομένων', async () => {
+    const harness = createHarness();
+    await copyFirst(harness);
+
+    stubClipboard({ readText: jest.fn().mockResolvedValue('ΑΛΛΟ') });
+    const { result } = renderClipboard(harness);
+    await act(async () => {
+      await result.current.pasteAs(A1_B2, { content: 'none', facets: new Set(['fill']) });
+    });
+
+    expect(harness.commands).toHaveLength(0);
+    expect(warning).toHaveBeenCalledTimes(1);
+    // Το κρίσιμο: ο στόχος ΔΕΝ πήρε το ξένο κείμενο ως «τιμές».
+    expect(textAt(harness.currentModel(), 'r0', 'c0')).toBe('a\tb');
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
 // 4. Η σημαία λέει την αλήθεια
 // ──────────────────────────────────────────────────────────────────────────────
 
 describe('canPaste — δηλώνει ΙΚΑΝΟΤΗΤΑ, όχι περιεχόμενο', () => {
-  it('χωρίς `readText` στο περιβάλλον ⇒ `false` (το item μένει γκρίζο)', () => {
+  it('χωρίς `readText` στο περιβάλλον ΚΑΙ χωρίς φορτίο ⇒ `false` (το item μένει γκρίζο)', () => {
     stubClipboard({});
     const { result } = renderClipboard(createHarness());
     expect(result.current.canPaste()).toBe(false);
+  });
+
+  it('🔴 §57 — χωρίς `readText` αλλά ΜΕ δικό μας φορτίο ⇒ `true`: η εντολή μένει ζωντανή', async () => {
+    const harness = createHarness();
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    stubClipboard({ writeText });
+    const first = renderClipboard(harness);
+    await act(async () => { await first.result.current.copy(A1_B2); });
+
+    // Firefox/Safari χωρίς χειρονομία επικόλλησης: `readText` ανύπαρκτο.
+    stubClipboard({ writeText });
+    const { result } = renderClipboard(harness);
+    expect(result.current.canPaste()).toBe(true);
   });
 
   it('με `readText` ⇒ `true` — «μπορεί να επιχειρηθεί», και η αποτυχία λέγεται μετά', () => {

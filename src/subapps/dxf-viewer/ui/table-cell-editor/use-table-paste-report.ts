@@ -15,8 +15,20 @@
  *  - **τι δεν χώρεσε** (προειδοποίηση, ανά πράξη) — αφορά *αυτά* τα δεδομένα·
  *  - **τι δεν μεταφέρεται ποτέ** (ενημέρωση, μία φορά) — αφορά τον κανόνα του συστήματος.
  *
+ * ## 🔴 ADR-739 §57 — ΤΟ ΔΕΥΤΕΡΟ ΜΗΝΥΜΑ ΕΓΙΝΕ **ΨΕΥΔΕΣ** ΚΑΙ ΧΡΕΙΑΣΤΗΚΕ ΦΥΛΑΚΑΣ
+ * Το `pastePlainText` λέει κατά λέξη «*η μορφοποίηση δεν μεταφέρεται*». Ίσχυε απόλυτα όσο η
+ * **μόνη** πηγή επικόλλησης ήταν TSV. Με το εσωτερικό πρόχειρο (§57) η επικόλληση **μέσα στον
+ * ΝΕΣΤΩΡ** μεταφέρει τύπους, χρώματα, περιγράμματα και μορφή αριθμού — δηλαδή το μήνυμα θα
+ * διέψευδε ό,τι μόλις είδε ο χρήστης στην οθόνη του.
+ *
+ * Γι' αυτό ο καλών **οφείλει** να δηλώσει από πού ήρθαν τα δεδομένα. Παράμετρος και όχι
+ * προαιρετική σημαία με προεπιλογή: η προεπιλογή θα ήταν σιωπηλά λάθος για όποια νέα διαδρομή
+ * ξεχνούσε να την περάσει, και το σύμπτωμα («μου λέει ότι χάθηκε η μορφή ενώ δεν χάθηκε») δεν
+ * δείχνει ποτέ προς την αιτία.
+ *
  * @module subapps/dxf-viewer/ui/table-cell-editor/use-table-paste-report
  * @see bim/table/table-range-clipboard.ts — ποιος παράγει τα νούμερα
+ * @see bim/table/table-clipboard-resolve.ts — ποιος αποφασίζει αν είναι εξωτερική
  */
 
 import { useCallback } from 'react';
@@ -42,12 +54,12 @@ export function __resetTablePlainTextNoticeForTests(): void {
   plainTextNoticeShown = false;
 }
 
-export function useTablePasteReport(): (result: TablePasteResult) => void {
+export function useTablePasteReport(): (result: TablePasteResult, external: boolean) => void {
   const { t } = useTranslation('dxf-viewer');
   const notifications = useNotifications();
 
   return useCallback(
-    (result: TablePasteResult) => {
+    (result: TablePasteResult, external: boolean) => {
       const parts: string[] = [];
       if (result.fittedRows < result.offeredRows) {
         parts.push(
@@ -73,7 +85,9 @@ export function useTablePasteReport(): (result: TablePasteResult) => void {
           duration: 6000,
         });
       }
-      if (!plainTextNoticeShown) {
+      // §57 — **μόνο** για δεδομένα του έξω κόσμου. Δες την κεφαλίδα: μέσα στον ΝΕΣΤΩΡ η
+      // μορφοποίηση **μεταφέρεται**, οπότε εδώ το μήνυμα θα ήταν διάψευση της ίδιας της οθόνης.
+      if (external && !plainTextNoticeShown) {
         plainTextNoticeShown = true;
         notifications.info(t('table.clipboard.pastePlainText'), { duration: 8000 });
       }

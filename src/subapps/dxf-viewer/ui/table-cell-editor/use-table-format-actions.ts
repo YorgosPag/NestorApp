@@ -51,8 +51,14 @@ import {
 } from '../../bim/table/table-format-scope';
 import { getAllLayers } from '../../stores/LayerStore';
 import { tableFormatCommands } from './table-format-commands';
-import { resolveTableFormatSnapshot } from './table-format-snapshot';
+import {
+  resolveTableFormatSnapshot,
+  resolveTableNumberFormatState,
+} from './table-format-snapshot';
 import { useLiveTable } from './use-live-table';
+// 🔴 ADR-739 §56 — η κορδέλα χρειάζεται τη λίστα γραμματοσειρών, και τη χρειάζεται με **getter**.
+// Το ίδιο hook που ήδη τροφοδοτεί τα δύο μενού δεξιού κλικ — τρίτος καταναλωτής, μία γνώση.
+import { useToolbarFontNames } from './use-toolbar-font-names';
 import { resolveSelectedTable } from './table-entity-lookup';
 import { useTableBorderActions } from './use-table-border-actions';
 import { useTableMergeActions } from './use-table-merge-actions';
@@ -60,6 +66,9 @@ import { useTableStructureActions } from './use-table-structure-actions';
 import { useTableBindingActions } from './use-table-binding-actions';
 // 🔴 ADR-768 Βήμα 5 — το πινέλο μορφοποίησης: **δύο** πράξεις («ρούφα», «σβήσε») + το `Esc` του.
 import { useTableFormatPainterActions } from './use-table-format-painter-actions';
+// 🔴 ADR-739 §57 — το πρόχειρο. **Το ίδιο** hook που τροφοδοτεί το μενού δεξιού κλικ (§54):
+// τρίτος καταναλωτής, μία υλοποίηση — δες το σχόλιο του μέλους στη θύρα.
+import { useTableMenuClipboard } from './use-table-menu-clipboard';
 import { useLiveTableMutation } from './use-table-model-commit';
 import {
   getTableCellCursor,
@@ -168,6 +177,13 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
   // τι να ρουφήξει. Το `bounds()` το λέει ήδη (`null` χωρίς δρομέα) — η συμφωνία των δύο
   // ορισμάτων είναι δομική, όχι σύμπτωση.
   const painter = useTableFormatPainterActions({ liveTable: cursorTable, bounds });
+  // 🔴 ADR-739 §57 — **`cursorTable`, όχι `table`**, με τον ίδιο ακριβώς λόγο που το ζητά το
+  // πινέλο από πάνω: η αντιγραφή περιοχής προϋποθέτει **περιοχή**, και περιοχή υπάρχει μόνο μέσα
+  // σε συνεδρία κελιού. Ένας απλώς επιλεγμένος πίνακας δεν έχει τι να αντιγράψει — και το
+  // `bounds()` το λέει ήδη (`null` χωρίς δρομέα), οπότε η συμφωνία των δύο είναι δομική.
+  const clipboard = useTableMenuClipboard({ levelManager, execute, liveTable: cursorTable });
+  // 🔴 ADR-739 §56 — δες την κεφαλίδα του `use-toolbar-font-names.ts` για το γιατί getter.
+  const fontNames = useToolbarFontNames(levelManager);
 
   /**
    * Ό,τι απαντά η θύρα **αυτή τη στιγμή**. Απλό αντικείμενο, ξαναφτιαγμένο ανά render —
@@ -201,6 +217,13 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
       const range = tableFormatNumericRange(target.model, target.style, target.scope, 'textHeightMm');
       return range && range.min === range.max ? range.min : null;
     },
+    // 🔴 ADR-739 §56 — **η υπάρχουσα ανάγνωση**, τρίτος καταναλωτής. Το `resolveTableNumberFormat
+    // State` γράφτηκε στο §55 για το mini toolbar και ήξερε ήδη και τα τέσσερα επίπεδα
+    // κληρονομιάς· μια «φθηνότερη» ανάγνωση εδώ θα ήταν το σημείο όπου η κορδέλα και η γραμμή
+    // δεξιού κλικ θα έλεγαν άλλα για το ίδιο κελί.
+    numberFormat: (): ReturnType<TableFormatPort['numberFormat']> =>
+      resolveTableNumberFormatState(formatTarget()),
+    fontNames,
     reset: (): void => commands.reset(formatTarget()),
     canReset: (): boolean => {
       const live = cursorTable();
@@ -212,6 +235,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     structure,
     binding,
     painter,
+    clipboard,
   };
 
   /**
@@ -248,6 +272,8 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     setField: ((key, value) => latest.current.setField(key, value)) as TableFormatPort['setField'],
     stepTextHeight: (direction) => latest.current.stepTextHeight(direction),
     textHeightMm: () => latest.current.textHeightMm(),
+    numberFormat: () => latest.current.numberFormat(),
+    fontNames: () => latest.current.fontNames(),
     reset: () => latest.current.reset(),
     canReset: () => latest.current.canReset(),
     get borders() { return latest.current.borders; },
@@ -255,6 +281,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     get structure() { return latest.current.structure; },
     get binding() { return latest.current.binding; },
     get painter() { return latest.current.painter; },
+    get clipboard() { return latest.current.clipboard; },
   }), []);
 
   useEffect(() => {

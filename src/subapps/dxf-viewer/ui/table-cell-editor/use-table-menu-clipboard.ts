@@ -27,9 +27,17 @@
  * `table-range-clipboard.ts` (τις ίδιες με το πληκτρολόγιο), και η εγγραφή περνά από το
  * `useLiveTableMutation` / `useTableModelCommit`: ένα `UpdateEntityCommand`, ένα `Ctrl+Z` (§6.6).
  *
+ * ## 🔴 ADR-739 §57 — ΔΥΟ ΠΡΟΧΕΙΡΑ ΓΡΑΦΟΝΤΑΙ ΜΑΖΙ, ΠΑΝΤΑ
+ * Η αντιγραφή γεμίζει **και** το πρόχειρο του λειτουργικού (TSV, ώστε το Excel να διαβάζει)
+ * **και** τη μνήμη της εφαρμογής (τύποι + μορφή, που το TSV δεν χωρά). Οι δύο εγγραφές ζουν στην
+ * **ίδια** συνάρτηση ({@link writeRange}) και όχι σε δύο βήματα του καλούντος: αλλιώς κάποια
+ * διαδρομή θα έγραφε το ένα και θα ξεχνούσε το άλλο, και το αποτύπωμα —που είναι όλη η
+ * ταυτοποίηση— θα έδειχνε σε φορτίο που δεν υπάρχει ή σε φορτίο μπαγιάτικο.
+ *
  * @module subapps/dxf-viewer/ui/table-cell-editor/use-table-menu-clipboard
  * @see ui/table-cell-editor/use-table-range-actions.ts — η διαδρομή του πληκτρολογίου
  * @see bim/table/table-range-clipboard.ts — οι καθαρές πράξεις (κοινές με εκείνη)
+ * @see bim/table/table-clipboard-resolve.ts — ο ΕΝΑΣ κανόνας «από πού έρχεται η επικόλληση»
  */
 
 import { useCallback, useMemo } from 'react';
@@ -37,8 +45,6 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useNotifications } from '@/providers/NotificationProvider';
 import {
   clearTableRange,
-  clipboardTextToTableGrid,
-  pasteTsvIntoTable,
   tableRangeToClipboardText,
 } from '../../bim/table/table-range-clipboard';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
@@ -46,8 +52,14 @@ import { tableRangeCellRefs, type TableCellRangeBounds } from '../../bim/table/t
 // 🔴 ADR-739 §48 — τα «μυρμήγκια» της αντιγραμμένης περιοχής, **μόνο** στην αντιγραφή· δες
 // τον λόγο στο `use-table-range-actions.ts` (η αποκοπή δεν υπόσχεται περιοχή που άδειασε).
 import { setTableCopyMarquee } from '../../state/table-copy-marquee-store';
-import { useLiveTableMutation, useTableModelCommit } from './use-table-model-commit';
-import { useTablePasteReport } from './use-table-paste-report';
+// 🔴 ADR-739 §57 — το εσωτερικό πρόχειρο: τι κρατιέται, πού, και πότε ισχύει.
+import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
+import { captureTableClipboard } from '../../bim/table/table-clipboard-payload';
+import { resolveTablePasteSource } from '../../bim/table/table-clipboard-resolve';
+import { FULL_TABLE_PASTE, type TablePasteRequest } from '../../bim/table/table-clipboard-paste';
+import { getTableClipboard, setTableClipboard } from '../../state/table-clipboard-store';
+import { useLiveTableMutation } from './use-table-model-commit';
+import { useTablePasteApply } from './use-table-paste-apply';
 import type { TableEntity } from '../../types/table-entity';
 import type { ICommand } from '../../core/commands';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
@@ -64,15 +76,26 @@ export interface TableMenuClipboardActions {
    * Έχει νόημα να προσφερθεί «Επικόλληση»;
    *
    * Συνάρτηση και όχι σταθερά: η απάντηση διαβάζεται τη στιγμή που **ανοίγει** το μενού, μαζί
-   * με κάθε άλλη σημαία του στόχου. Λέει «μπορεί να **επιχειρηθεί** ανάγνωση», όχι «υπάρχει
-   * κάτι στο πρόχειρο» — το δεύτερο απαιτεί ασύγχρονη ανάγνωση με άδεια, δηλαδή θα ζητούσε
-   * άδεια προχείρου κάθε φορά που ο χρήστης κάνει δεξί κλικ. Ο χρήστης μαθαίνει το άδειο
-   * πρόχειρο από το μήνυμα, όχι από γκρίζο item που θα ήταν εξίσου μαντεψιά.
+   * με κάθε άλλη σημαία του στόχου. Λέει «μπορεί να **επιχειρηθεί**», όχι «υπάρχει κάτι στο
+   * πρόχειρο **του συστήματος**» — το δεύτερο απαιτεί ασύγχρονη ανάγνωση με άδεια, δηλαδή θα
+   * ζητούσε άδεια προχείρου κάθε φορά που ο χρήστης κάνει δεξί κλικ. Ο χρήστης μαθαίνει το
+   * άδειο πρόχειρο από το μήνυμα, όχι από γκρίζο item που θα ήταν εξίσου μαντεψιά.
+   *
+   * §57 — δες τη {@link canPaste} για τον **δεύτερο** λόγο που προστέθηκε (δικό μας φορτίο).
    */
   readonly canPaste: () => boolean;
   readonly copy: (bounds: TableCellRangeBounds) => Promise<void>;
   readonly cut: (bounds: TableCellRangeBounds) => Promise<void>;
+  /** Σκέτη «Επικόλληση» — δηλαδή {@link pasteAs} με το {@link FULL_TABLE_PASTE}. */
   readonly paste: (bounds: TableCellRangeBounds) => Promise<void>;
+  /**
+   * 🔴 §57 — **«Επικόλληση Ειδική»**: τιμές / τύποι / μορφές / υποσύνολο όψεων.
+   *
+   * Ξεχωριστή μέθοδος από το {@link paste} και όχι προαιρετικό όρισμα: το δεύτερο θα σήμαινε
+   * ότι κάθε υπάρχων καλών «ζητά σιωπηλά την προεπιλογή», δηλαδή ότι μια αλλαγή της
+   * προεπιλογής αλλάζει συμπεριφορά σε σημεία που κανείς δεν κοίταξε.
+   */
+  readonly pasteAs: (bounds: TableCellRangeBounds, request: TablePasteRequest) => Promise<void>;
 }
 
 export function useTableMenuClipboard(
@@ -81,9 +104,8 @@ export function useTableMenuClipboard(
   const { levelManager, execute, liveTable } = params;
   const { t } = useTranslation('dxf-viewer');
   const notifications = useNotifications();
-  const commitModel = useTableModelCommit({ levelManager, execute });
   const applyModel = useLiveTableMutation({ levelManager, execute, liveTable });
-  const reportPaste = useTablePasteReport();
+  const applyPaste = useTablePasteApply({ levelManager, execute });
 
   /**
    * Γράφει την περιοχή στο πρόχειρο και **δηλώνει αν το ανέλαβε**.
@@ -103,6 +125,12 @@ export function useTableMenuClipboard(
         notifications.warning(t('table.clipboard.writeDenied'));
         return null;
       }
+      // 🔴 §57 — **το δεύτερο πρόχειρο, στην ίδια αναπνοή.** Δες την κεφαλίδα για το γιατί εδώ
+      // και όχι στους καλούντες. Η αποτυχία φόρτωσης (μπαγιάτικα όρια) **δεν** ακυρώνει την
+      // αντιγραφή: το κείμενο γράφτηκε ήδη έξω και είναι χρήσιμο — απλώς δεν θα υπάρχει πλούσιο
+      // φορτίο, και ο επιλυτής θα το δει ως «ξένο κείμενο», που είναι η αλήθεια.
+      const payload = captureTableClipboard(live.model, resolveTableStyle(live), bounds);
+      if (payload) setTableClipboard(payload);
       return live;
     },
     [liveTable, notifications, t],
@@ -128,35 +156,43 @@ export function useTableMenuClipboard(
     [writeRange, applyModel],
   );
 
-  const paste = useCallback(
-    async (bounds: TableCellRangeBounds) => {
-      const text = await readClipboardText();
-      if (text === null) {
-        notifications.warning(t('table.clipboard.readDenied'));
-        return;
-      }
-      const grid = clipboardTextToTableGrid(text);
-      if (grid.length === 0) {
-        notifications.info(t('table.clipboard.pasteEmpty'));
-        return;
-      }
+  const pasteAs = useCallback(
+    async (bounds: TableCellRangeBounds, request: TablePasteRequest) => {
       const live = liveTable();
       // Η γωνία της επικόλλησης είναι το **πάνω-αριστερά** κελί του στόχου — το πρώτο που
       // απαριθμεί ο ΕΝΑΣ ορισμός των κελιών μιας περιοχής, ποτέ δεύτερη αριθμητική.
       const anchor = live ? tableRangeCellRefs(resolveTableModel(live.model), bounds)[0] : undefined;
       if (!live || anchor === undefined) return;
 
-      const result = pasteTsvIntoTable(live.model, anchor, grid);
-      commitModel(live, result.model);
-      reportPaste(result);
+      // §57 — ο κανόνας των πέντε καταστάσεων ζει **καθαρός** και κοινός με το `Ctrl+V`· εδώ
+      // μένει μόνο η ασύγχρονη ανάγνωση, που είναι η μία πραγματική διαφορά αυτής της διαδρομής.
+      const source = resolveTablePasteSource(await readClipboardText(), getTableClipboard(), request);
+      applyPaste(live, anchor, source, request);
     },
-    [liveTable, commitModel, reportPaste, notifications, t],
+    [liveTable, applyPaste],
+  );
+
+  const paste = useCallback(
+    (bounds: TableCellRangeBounds) => pasteAs(bounds, FULL_TABLE_PASTE),
+    [pasteAs],
   );
 
   return useMemo(
-    () => ({ canPaste: canReadClipboard, copy, cut, paste }),
-    [copy, cut, paste],
+    () => ({ canPaste, copy, cut, paste, pasteAs }),
+    [copy, cut, paste, pasteAs],
   );
+}
+
+/**
+ * Έχει νόημα να προσφερθεί «Επικόλληση»;
+ *
+ * §57 — **δύο** λόγοι πλέον, όχι ένας: ή μπορεί να επιχειρηθεί ανάγνωση του προχείρου του
+ * συστήματος, ή κρατάμε δικό μας φορτίο. Ο δεύτερος είναι που κρατά την εντολή ζωντανή στον
+ * Firefox/Safari, όπου η ανάγνωση χωρίς χειρονομία επικόλλησης δεν είναι καν διαθέσιμη — και
+ * είναι ακριβώς η περίπτωση όπου το Google Sheets παραιτείται.
+ */
+function canPaste(): boolean {
+  return canReadClipboard() || getTableClipboard() !== null;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

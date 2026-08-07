@@ -1,0 +1,49 @@
+/**
+ * ADR-739 §57 — το πτυσσόμενο της «Επικόλλησης», **μέσα** στο δοχείο του χειριστηρίου.
+ *
+ * 🔴 Γιατί εδώ και όχι σε portal: ο ίδιος λόγος με τα άλλα τρία πάνελ του mini toolbar — και,
+ * στην κορδέλα, ένας **δεύτερος** που είναι ακόμη πιο αυστηρός. Ο φύλακας συνεδρίας ρωτά
+ * `closest('[data-table-session-keepalive]')` πάνω στο `document.activeElement`· ένα portal
+ * προσαρτάται στο `document.body`, δηλαδή **έξω** από το panel της κορδέλας που φέρει το σημάδι
+ * ⇒ το κλικ σε item θα έκλεινε τη συνεδρία κελιού και θα εξαφάνιζε την ίδια την καρτέλα.
+ * (Ακριβώς αυτό κάνει το `RibbonSplitDropdown` της κορδέλας, γι' αυτό ΔΕΝ χρησιμοποιείται εδώ.)
+ *
+ * Ό,τι είναι κοινό με τα άλλα τρία έρχεται με `composes` — ο κανόνας ζει μία φορά.
+ */
+
+.anchor {
+  composes: anchor from './table-toolbar-panel.module.css';
+}
+
+.item {
+  composes: item from './table-toolbar-panel.module.css';
+}
+
+.itemIcon {
+  composes: itemIcon from './table-toolbar-panel.module.css';
+}
+
+.separator {
+  composes: separator from './table-toolbar-panel.module.css';
+}
+
+/*
+ * Σταθερό πλάτος για την πιο μακριά ετικέτα («Επικόλληση επιλεγμένων όψεων»): με `min-width:
+ * auto` το μενού θα άλλαζε πλάτος ανά γλώσσα και οι εντολές θα μετακινούνταν κάτω από τον δείκτη.
+ */
+.panel {
+  composes: panel from './table-toolbar-panel.module.css';
+  min-width: 236px;
+}
+
+/*
+ * Η επικεφαλίδα της ενότητας όψεων. `role="presentation"` στο DOM — δεν είναι εντολή, άρα δεν
+ * παίρνει hover ούτε δείκτη· υπάρχει για να μη διαβάζονται τα πέντε checkbox ως συνέχεια των
+ * τεσσάρων εντολών από πάνω.
+ */
+.heading {
+  padding: 4px 8px 2px;
+  font-size: 11px;
+  opacity: 0.65;
+  white-space: nowrap;
+}
