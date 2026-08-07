@@ -373,11 +373,14 @@ export function useTableCellDoubleClickEditor(
         mode,
         draft: cursor.draft,
         initialText: target.cell.text,
-        // 🔴 ADR-767 Δ1 — **ο στόχος το ξέρει ήδη**: το `resolveTableCellEditTargetById` ρωτά
-        // τον ΕΝΑ κριτή (`isBoundCellWritable`). Ένας δεύτερος έλεγχος εδώ θα ήταν δεύτερη
-        // απάντηση στο «γράφεται;» μέσα στην ίδια χειρονομία — και θα μπορούσε να διαφωνήσει
-        // με τον φρουρό του `buildTableCellEditCommand`, δίνοντας πεδίο που δέχεται
+        // 🔴 ADR-769 Δ7 — **ο στόχος το ξέρει ήδη**: το `resolveTableCellEditTargetById` ρωτά
+        // τον ΕΝΑ κριτή (`resolveTableCellWriteRoute`). Ένας δεύτερος έλεγχος εδώ θα ήταν
+        // δεύτερη απάντηση στο «γράφεται;» μέσα στην ίδια χειρονομία — και θα μπορούσε να
+        // διαφωνήσει με τον φρουρό του `buildTableCellEditCommand`, δίνοντας πεδίο που δέχεται
         // πληκτρολόγηση και commit που τη ρίχνει στο κενό.
+        //
+        // ⚠️ Κελί **γράψιμης** δεμένης στήλης ανοίγει **κανονικά**: η τιμή πάει στην οντότητα
+        // μέσω του `attemptWriteBack` παραπάνω, όχι στο μοντέλο.
         readOnly: target.cell.readOnly,
         caretIndex: cursor.caretIndex,
         // ADR-754 §4 — η **αφορμή** για να ξαναμπεί ο κέρσορας εκεί· δες το store.
