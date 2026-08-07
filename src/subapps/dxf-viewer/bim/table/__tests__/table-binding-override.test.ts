@@ -157,7 +157,10 @@ describe('Δ2 — το refresh ΔΕΝ πατάει τον άνθρωπο', () =>
     const overridden = commitCellWrites(overrideBoundCell(model, 'r1', 'cX', 9999));
     const after = refreshTableBinding({ model: overridden, binding, context: ctx([P1, P2_MOVED]) });
     if (after.status !== 'refreshed') throw new Error('expected refreshed');
-    expect(cellOf(after.model, 'r2', 'cX')?.value).toBe(4500);
+    // ADR-769 §11 — **μονάδες ΟΘΟΝΗΣ** στο κελί (4500 mm ⇒ 4,5 m)· η **ωμή** τιμή ζει στο
+    // `sourceValue`, που είναι η βάση σύγκρισης με την πηγή. Δες `table-binding-cells`.
+    expect(cellOf(after.model, 'r2', 'cX')?.value).toBe(4.5);
+    expect(cellOf(after.model, 'r2', 'cX')?.bound?.sourceValue).toBe(4500);
     expect(cellOf(after.model, 'r1', 'cX')?.value).toBe(9999);
   });
 

@@ -20,9 +20,15 @@
  */
 
 import { writePersistedCells } from '../table-cell-content';
+// 🔴 ADR-769 §11 — ο ΕΜΠΡΟΣ δρόμος των μονάδων, τον οποίο ο δεσμός δεν καλούσε ποτέ.
+import { formatCellForXlsx } from '../../schedule/exporters/value-formatters';
 import type { CellWrite, CellWriteTarget, PendingCellWrites } from '../table-cell-content';
-import type { ExportableTable, ScheduleCellValue } from '../../schedule/types';
-import type { PersistedTableModel, TableCell } from '../../../types/table';
+import type {
+  ExportableTable,
+  ScheduleCellValue,
+  ScheduleColumnValueType,
+} from '../../schedule/types';
+import type { PersistedTableModel, TableCell, TableRow, TableRowId } from '../../../types/table';
 
 /** Πόσες γραμμές δεδομένων έχει ο πίνακας και πόσες έδωσε η πηγή — δήλωση, όχι διόρθωση. */
 export interface BoundRowCoverage {
@@ -40,8 +46,44 @@ export interface BoundFillResult {
   readonly rowCoverage: BoundRowCoverage;
 }
 
-/** Το κελί όπως το βλέπει ο γραφέας: ποια τιμή δίνει η πηγή τώρα. */
-type FreshByCell = ReadonlyMap<string, ScheduleCellValue>;
+/**
+ * 🔴 ADR-769 §11 — **δύο τιμές, δύο ερωτήσεις**, και η σύγχυσή τους ήταν το σφάλμα ×1000.
+ *
+ * - `raw`   — τι έδωσε η **πηγή**, σε μονάδες αποθήκης. Η βάση του CAS (Δ2/Δ3).
+ * - `shown` — τι **βλέπει και γράφει ο άνθρωπος**, σε μονάδες οθόνης.
+ *
+ * Ταυτόσημες σε κάθε στήλη που δεν αλλάζει μονάδα (`text`, `count`) — και ακριβώς γι' αυτό η
+ * διαφορά τους έμεινε αόρατη μέχρι να χρειαστεί ο πίνακας συντεταγμένων.
+ */
+interface BoundFreshValue {
+  readonly raw: ScheduleCellValue;
+  readonly shown: ScheduleCellValue;
+}
+
+/** Το κελί όπως το βλέπει ο γραφέας: ποια τιμή δίνει η πηγή τώρα, στις δύο όψεις της. */
+type FreshByCell = ReadonlyMap<string, BoundFreshValue>;
+
+/**
+ * 🔴 **Η ΑΝΤΙΣΤΟΙΧΙΣΗ ΓΡΑΜΜΩΝ, ΣΕ ΕΝΑ ΣΗΜΕΙΟ** — η σειρά των γραμμών `data` **είναι** η σειρά
+ * των γραμμών της πηγής (ADR-767 §5 βήμα 3· ADR-769 Δ3 «εντοπισμός με θέση»).
+ *
+ * Εξήχθη (ADR-769) επειδή η Φ.Η χρειάζεται την **αντίστροφη** ανάγνωση: «σε ποια γραμμή της
+ * πηγής αντιστοιχεί αυτό το `rowId`;». Δύο υλοποιήσεις του ίδιου φίλτρου θα ήταν δύο ορισμοί
+ * του «ποια γραμμή είναι δεδομένο» — και η πρώτη φορά που θα διαφωνούσαν, ο πίνακας θα
+ * **μετακινούσε λάθος κορυφή**, δηλαδή η ακριβώς η βλάβη που το Δ3 υπάρχει για να αποκλείσει.
+ */
+export function boundDataRows(model: PersistedTableModel): readonly TableRow[] {
+  return model.rows.filter((row) => row.rowClass === 'data');
+}
+
+/**
+ * Ο δείκτης αυτής της γραμμής **μέσα στις γραμμές δεδομένων** — δηλαδή ο δείκτης της
+ * αντίστοιχης γραμμής της πηγής. `-1` όταν η γραμμή δεν είναι δεδομένο (κεφαλίδα, σύνολο)
+ * ή δεν υπάρχει: ρητό, ποτέ `0` που θα διαβαζόταν ως «η πρώτη».
+ */
+export function boundSourceRowIndex(model: PersistedTableModel, rowId: TableRowId): number {
+  return boundDataRows(model).findIndex((row) => row.id === rowId);
+}
 
 const cellId = (target: CellWriteTarget): string => `${target.rowId} ${target.colId}`;
 
@@ -60,33 +102,62 @@ function normalize(value: ScheduleCellValue | undefined): ScheduleCellValue {
 }
 
 /**
+ * 🔴 ADR-769 §11 — **Η ΜΟΝΑΔΑ ΤΗΣ ΟΘΟΝΗΣ, ΟΧΙ ΤΗΣ ΑΠΟΘΗΚΗΣ.**
+ *
+ * ## Το σφάλμα που κλείνει (μετρημένο με εκτέλεση, 08/08)
+ * Μέχρι σήμερα ο δεσμός έγραφε στο κελί την **ωμή** τιμή της πηγής. Ο πίνακας συντεταγμένων
+ * έδειχνε `391698400` — χιλιοστά — ενώ το **CSV και το PDF του ίδιου πίνακα** έδειχναν
+ * `391698.400`. Δύο απαντήσεις στο «τι λέει αυτό το κελί», και η μία πάει στο παραδοτέο.
+ *
+ * Το ADR-769 Δ4 το ανέδειξε επειδή η γραφή **απαιτεί** την απάντηση: ο χρήστης γράφει ό,τι
+ * βλέπει, οπότε αν η οθόνη λέει χιλιοστά και ο αντίστροφος μετατροπέας περιμένει μέτρα, κάθε
+ * επεξεργασία πολλαπλασιάζει επί **1000**, σιωπηλά, σε πίνακα που **υπογράφεται**.
+ *
+ * ## Γιατί `formatCellForXlsx` και όχι `formatCellForDisplay`
+ * Ο πρώτος κρατά **αριθμό** (`391698.4`), ο δεύτερος δίνει **κείμενο** (`"391698.400"`).
+ * Αριθμός σημαίνει ότι οι τύποι (`SUM`) εξακολουθούν να αθροίζουν τη στήλη και ότι η
+ * μορφοποίηση των δεκαδικών μένει δουλειά του ADR-760 (`numberFormat`), όπου ανήκει — αντί να
+ * ψηθεί στο περιεχόμενο. 🏆 Και είναι **ο ίδιος** που ο `parseCellToStore` δηλώνει ρητά
+ * αντίστροφό του: ο κύκλος ήταν σχεδιασμένος σωστά, έλειπε το μισό του.
+ *
+ * ⚠️ Το {@link TableCellBinding.sourceValue} μένει **ωμό** — είναι η βάση σύγκρισης με φρέσκια
+ * ανάγνωση **της πηγής** (Δ2, merge base). Μορφοποιημένη βάση θα σύγκρινε μήλα με πορτοκάλια
+ * και θα κήρυσσε σύγκρουση σε κάθε refresh.
+ */
+function shownValue(raw: ScheduleCellValue, valueType: ScheduleColumnValueType): ScheduleCellValue {
+  return formatCellForXlsx(raw, valueType);
+}
+
+/**
  * Ποια κελιά γράφονται και με τι — ένα πέρασμα πάνω στις **δεμένες** στήλες × τις γραμμές
  * δεδομένων που η πηγή καλύπτει.
  */
 function planWrites(model: PersistedTableModel, table: ExportableTable): {
   targets: CellWriteTarget[];
-  fresh: Map<string, ScheduleCellValue>;
+  fresh: Map<string, BoundFreshValue>;
   unknownSourceKeys: string[];
   rowCoverage: BoundRowCoverage;
 } {
-  const sourceKeys = new Set(table.columns.map((column) => column.key));
+  const sourceColumns = new Map(table.columns.map((column) => [column.key, column]));
   const bound = model.columns.flatMap((column) =>
     column.sourceKey === undefined ? [] : [{ colId: column.id, sourceKey: column.sourceKey }]);
   const unknownSourceKeys = bound
-    .filter((column) => !sourceKeys.has(column.sourceKey))
+    .filter((column) => !sourceColumns.has(column.sourceKey))
     .map((column) => column.sourceKey);
 
-  const dataRows = model.rows.filter((row) => row.rowClass === 'data');
+  const dataRows = boundDataRows(model);
   const covered = Math.min(dataRows.length, table.rows.length);
 
   const targets: CellWriteTarget[] = [];
-  const fresh = new Map<string, ScheduleCellValue>();
+  const fresh = new Map<string, BoundFreshValue>();
   for (let i = 0; i < covered; i += 1) {
     for (const column of bound) {
-      if (!sourceKeys.has(column.sourceKey)) continue;
+      const sourceColumn = sourceColumns.get(column.sourceKey);
+      if (sourceColumn === undefined) continue;
       const target: CellWriteTarget = { rowId: dataRows[i].id, colId: column.colId };
       targets.push(target);
-      fresh.set(cellId(target), normalize(table.rows[i].cells[column.sourceKey]));
+      const raw = normalize(table.rows[i].cells[column.sourceKey]);
+      fresh.set(cellId(target), { raw, shown: shownValue(raw, sourceColumn.valueType) });
     }
   }
 
@@ -114,23 +185,28 @@ function planWrites(model: PersistedTableModel, table: ExportableTable): {
 function boundCellWrite(fresh: FreshByCell): CellWrite {
   return {
     update: (existing, target) => {
-      const next = fresh.get(cellId(target)) ?? null;
+      const { raw, shown } = freshAt(fresh, target);
       const bound = existing.bound;
 
       if (bound?.overridden !== true) {
-        if (existing.value === next && bound?.sourceValue === next && existing.kind === 'text') return null;
-        return { ...existing, kind: 'text', value: next, formula: undefined, bound: { sourceValue: next } };
+        if (existing.value === shown && bound?.sourceValue === raw && existing.kind === 'text') return null;
+        return { ...existing, kind: 'text', value: shown, formula: undefined, bound: { sourceValue: raw } };
       }
 
       // Παρακαμμένο: η ανθρώπινη τιμή δεν αγγίζεται ΠΟΤΕ από εδώ.
-      if (bound.sourceValue === next) return null;
-      return { ...existing, bound: { sourceValue: next, overridden: true, conflict: true } };
+      if (bound.sourceValue === raw) return null;
+      return { ...existing, bound: { sourceValue: raw, overridden: true, conflict: true } };
     },
     create: (target) => {
-      const next = fresh.get(cellId(target)) ?? null;
-      return { kind: 'text', value: next, bound: { sourceValue: next } };
+      const { raw, shown } = freshAt(fresh, target);
+      return { kind: 'text', value: shown, bound: { sourceValue: raw } };
     },
   };
+}
+
+/** Κελί εκτός κάλυψης ⇒ **κενό και στις δύο όψεις** — ποτέ ωμό σε μία και κενό στην άλλη. */
+function freshAt(fresh: FreshByCell, target: CellWriteTarget): BoundFreshValue {
+  return fresh.get(cellId(target)) ?? { raw: null, shown: null };
 }
 
 /** Ποια παρακαμμένα κελιά θα βρουν **άλλη** τιμή στην πηγή — υπολογισμένο πριν τη γραφή. */
@@ -144,7 +220,8 @@ function findConflicts(
   );
   return targets.filter((target) => {
     const bound = cells.get(cellId(target))?.bound;
-    return bound?.overridden === true && bound.sourceValue !== (fresh.get(cellId(target)) ?? null);
+    // Η σύγκρουση κρίνεται στην **ωμή** τιμή: η βάση συγκρίνεται με την πηγή, όχι με την οθόνη.
+    return bound?.overridden === true && bound.sourceValue !== freshAt(fresh, target).raw;
   });
 }
 

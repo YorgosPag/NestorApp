@@ -58,6 +58,23 @@ export function cellText(cell: TableCell | undefined): string {
 }
 
 /**
+ * Το **αποθηκευμένο** κελί με αυτή την ταυτότητα, ή `undefined` όταν είναι κενό.
+ *
+ * 🔴 Ο αραιός χάρτης σημαίνει ότι «απών» **είναι** «κενός» — γι' αυτό το `undefined` δεν είναι
+ * σφάλμα και κάθε καταναλωτής οφείλει να το δέχεται. Εξήχθη εδώ (ADR-769) επειδή η ίδια γραμμή
+ * `model.cells.find(([r, c]) => …)` ζούσε αυτούσια σε **πέντε** αρχεία: μία γραμμή δεν την
+ * πιάνει το jscpd (min-tokens 50, N.18), αλλά είναι ο ορισμός του αραιού χάρτη — και την ημέρα
+ * που η αποθήκευση αποκτήσει ευρετήριο, τα πέντε αντίγραφα θα το προσπερνούσαν σιωπηλά.
+ */
+export function findPersistedCell(
+  model: PersistedTableModel,
+  rowId: TableRowId,
+  colId: TableColumnId,
+): TableCell | undefined {
+  return model.cells.find(([r, c]) => r === rowId && c === colId)?.[2];
+}
+
+/**
  * Το κείμενο ενός κελιού απευθείας από το **ταξιδεύον** σχήμα — χωρίς να περάσει από
  * `resolveTableModel` (που θα έχτιζε/κρατούσε `Map` απομνημόνευσης άσκοπα για μία απλή
  * ανάγνωση). Ίδια σημασιολογία με {@link cellText}: κενό κελί ⇒ κενό αλφαριθμητικό.
@@ -67,8 +84,7 @@ export function getPersistedCellText(
   rowId: TableRowId,
   colId: TableColumnId,
 ): string {
-  const entry = model.cells.find(([r, c]) => r === rowId && c === colId);
-  return cellText(entry?.[2]);
+  return cellText(findPersistedCell(model, rowId, colId));
 }
 
 /**

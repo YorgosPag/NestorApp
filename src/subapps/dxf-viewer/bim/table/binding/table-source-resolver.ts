@@ -23,8 +23,13 @@
  * @see docs/centralized-systems/reference/adrs/ADR-767-table-bound-mode.md §4 Δ7
  */
 
-import { buildCoordinateTable } from '../../../systems/topography/deliverables/survey-tables';
-import type { ExportableTable } from '../../schedule/types';
+import {
+  buildCoordinateTable,
+  COORDINATE_COLUMNS,
+  COORDINATE_WRITE_BACK,
+} from '../../../systems/topography/deliverables/survey-tables';
+import type { ExportableTable, ScheduleColumnDef } from '../../schedule/types';
+import type { TableColumnWriteBack } from '../write-back/table-write-back-plan';
 import type { TopoPoint } from '../../../systems/topography/topo-types';
 import type { TableSourceKind, TableSourceRef } from '../../../types/table-source-ref';
 
@@ -104,15 +109,41 @@ function notWired(kind: TableSourceKind): SourceResolver {
 }
 
 /**
+ * 🔴 ADR-769 Δ2 — **μία καταχώρηση ανά πηγή, τρεις ερωτήσεις**.
+ *
+ * Οι τρεις ταξιδεύουν μαζί επειδή απαντούν για το **ίδιο** πράγμα και οι δύο τελευταίες
+ * κλειδώνονται στην πρώτη από τον τύπο (το `CoordinateColumnKey` **παράγεται** από το
+ * `COORDINATE_COLUMNS`). Χωριστά μητρώα θα ήταν **δύο χειρόγραφες λίστες** — το σχήμα που το
+ * repo πλήρωσε τέσσερις φορές (CHECK 3.34: δύο λίστες namespace με απόκλιση **63**·
+ * CHECK 3.37: συγκεντρωτής με **18** ενώ το δέντρο είχε **26**).
+ */
+interface TableSourceEntry {
+  /** «Δώσε μου τα δεδομένα» — η μόνη ερώτηση που χρειάζεται τη σκηνή. */
+  readonly resolve: SourceResolver;
+  /**
+   * Τι στήλες **παράγει** αυτή η πηγή — για το `valueType` της μετατροπής μονάδων, χωρίς να
+   * χρειαστεί να επιλυθούν δεδομένα. Ο φρουρός γραφής κρίνει τη **δομή** πριν από την τιμή
+   * (ADR-769 §4), οπότε δεν επιτρέπεται να εξαρτάται από το αν η πηγή απάντησε.
+   */
+  readonly columns: readonly ScheduleColumnDef[];
+  /** Ποια στήλη γράφεται και σε ποιο πεδίο του ιδιοκτήτη — ή **γιατί όχι** (Δ2). */
+  readonly writeBack: Readonly<Record<string, TableColumnWriteBack>>;
+}
+
+/**
  * 🔴 **Το μητρώο.** `Record<TableSourceKind, …>` ⇒ νέος κλάδος στην ένωση **δεν μεταγλωττίζεται**
  * μέχρι να δηλωθεί εδώ τι τον επιλύει. Η πύλη είναι ο μεταγλωττιστής, όχι σαρωτής.
  */
-const SOURCE_RESOLVERS: Readonly<Record<TableSourceKind, SourceResolver>> = {
-  'survey-coordinates': resolveSurveyCoordinates,
-  'survey-plot-boundary': notWired('survey-plot-boundary'),
-  'survey-volumes': notWired('survey-volumes'),
-  'survey-tolerance': notWired('survey-tolerance'),
-  'bim-schedule': notWired('bim-schedule'),
+const SOURCE_ENTRIES: Readonly<Record<TableSourceKind, TableSourceEntry>> = {
+  'survey-coordinates': {
+    resolve: resolveSurveyCoordinates,
+    columns: COORDINATE_COLUMNS,
+    writeBack: COORDINATE_WRITE_BACK,
+  },
+  'survey-plot-boundary': { resolve: notWired('survey-plot-boundary'), columns: [], writeBack: {} },
+  'survey-volumes': { resolve: notWired('survey-volumes'), columns: [], writeBack: {} },
+  'survey-tolerance': { resolve: notWired('survey-tolerance'), columns: [], writeBack: {} },
+  'bim-schedule': { resolve: notWired('bim-schedule'), columns: [], writeBack: {} },
 };
 
 /** Επιλύει τον δεσμό σε δεδομένα — ή λέει **ονομαστικά** γιατί δεν μπόρεσε. */
@@ -120,5 +151,35 @@ export function resolveTableSource(
   ref: TableSourceRef,
   context: TableSourceContext,
 ): TableSourceResolution {
-  return SOURCE_RESOLVERS[ref.kind](ref, context);
+  return SOURCE_ENTRIES[ref.kind].resolve(ref, context);
+}
+
+/**
+ * 🔴 ADR-769 Δ2 — **γράφεται αυτή η στήλη, και πού;**
+ *
+ * Άγνωστο `sourceKey` (πηγή χωρίς παραγωγό, στήλη που η πηγή δεν έχει, χειρόγραφο κλειδί που
+ * απέκλινε) απαντά **`no-owner`** και όχι σιωπή: «κανείς δεν κατέχει αυτή τη στήλη» είναι
+ * ακριβώς η αλήθεια και στις τρεις περιπτώσεις, και ο χρήστης παίρνει λόγο αντί για τίποτα.
+ *
+ * ⚠️ Το προεπιλεγμένο **δεν** είναι `computed`: αυτό θα ήταν ισχυρισμός ότι η τιμή παράγεται
+ * από κάτι — ψέμα που θα επιβίωνε (ADR-769 §4 Δ2).
+ */
+export function tableSourceColumnWriteBack(
+  kind: TableSourceKind,
+  sourceKey: string,
+): TableColumnWriteBack {
+  return SOURCE_ENTRIES[kind].writeBack[sourceKey] ?? { kind: 'unwritable', reason: 'no-owner' };
+}
+
+/**
+ * Ο ορισμός στήλης της πηγής — `undefined` όταν η πηγή δεν παράγει τέτοια στήλη.
+ *
+ * Ο μόνος καταναλωτής είναι η μετατροπή μονάδων (`valueType`), και **δεν** μαντεύει: στήλη
+ * που η πηγή δεν έχει έχει ήδη απαντηθεί `no-owner` από πάνω.
+ */
+export function tableSourceColumn(
+  kind: TableSourceKind,
+  sourceKey: string,
+): ScheduleColumnDef | undefined {
+  return SOURCE_ENTRIES[kind].columns.find((column) => column.key === sourceKey);
 }

@@ -200,10 +200,22 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     expect(result.status).toBe('refreshed');
     if (result.status !== 'refreshed') return;
 
+    // 🔴 ADR-769 §11 — **το κελί κρατά ό,τι ΒΛΕΠΕΙ ο άνθρωπος**: η στήλη `x` είναι
+    // `dimension-mm-to-m`, άρα 1000 mm ⇒ `1` m. Ο αύξων αριθμός (`count`) δεν αλλάζει μονάδα
+    // και γι' αυτό ακριβώς η βλάβη έμεινε αόρατη επί μία φάση: η μισή γραμμή φαινόταν σωστή.
     expect(cellOf(result.model, 'r1', 'cIdx')?.value).toBe(1);
-    expect(cellOf(result.model, 'r1', 'cX')?.value).toBe(1000);
+    expect(cellOf(result.model, 'r1', 'cX')?.value).toBe(1);
     expect(cellOf(result.model, 'r2', 'cIdx')?.value).toBe(2);
-    expect(cellOf(result.model, 'r2', 'cX')?.value).toBe(4000);
+    expect(cellOf(result.model, 'r2', 'cX')?.value).toBe(4);
+  });
+
+  it('🔴 ADR-769 §11 — η ΒΑΣΗ μένει ΩΜΗ ενώ το κελί δείχνει μονάδες οθόνης', () => {
+    const result = refreshTableBinding({ model: boundModel(), binding: binding(''), context: ctx([P1, P2]) });
+    if (result.status !== 'refreshed') throw new Error('expected refreshed');
+    // Οι δύο πρέπει να **διαφέρουν** εδώ: ίδιες τιμές θα σήμαιναν ότι κάποιος από τους δύο
+    // δρόμους ξέχασε τη μονάδα του — και ο CAS του Δ3 συγκρίνει τη βάση με **την πηγή**.
+    expect(cellOf(result.model, 'r2', 'cX')?.value).toBe(4);
+    expect(cellOf(result.model, 'r2', 'cX')?.bound?.sourceValue).toBe(4000);
   });
 
   it('🔴 η γραμμή ΚΕΦΑΛΙΔΑΣ δεν αγγίζεται — τα δεδομένα πάνε σε γραμμές δεδομένων', () => {
@@ -218,7 +230,9 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     // Ένα κατασκευασμένο `0.000` σε πίνακα συντεταγμένων που υπογράφεται είναι δηλωμένη
     // μέτρηση που κανείς δεν πήρε — και ρέει κατευθείαν σε νομικό παραδοτέο.
     expect(cellOf(result.model, 'r2', 'cZ')?.value).toBeNull();
-    expect(cellOf(result.model, 'r1', 'cZ')?.value).toBe(3000);
+    // 3000 mm ⇒ 3 m στην οθόνη (ADR-769 §11). Το κενό μένει **κενό** και στις δύο μονάδες:
+    // ο μετατροπέας δεν γεννά `0` από `null` — αυτό θα ήταν το ίδιο ψέμα με άλλο πρόσωπο.
+    expect(cellOf(result.model, 'r1', 'cZ')?.value).toBe(3);
   });
 
   it('κάθε γεμισμένο κελί κρατά τη ΒΑΣΗ του (sourceValue) — αλλιώς δεν υπάρχει συγχώνευση αργότερα', () => {
@@ -276,7 +290,7 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     });
     expect(second.status).toBe('refreshed');
     if (second.status !== 'refreshed') return;
-    expect(cellOf(second.model, 'r2', 'cX')?.value).toBe(4500);
+    expect(cellOf(second.model, 'r2', 'cX')?.value).toBe(4.5);
     expect(second.binding.revision).not.toBe(first.binding.revision);
   });
 
@@ -345,13 +359,16 @@ describe('refreshTableBinding — η ορχήστρα του §5', () => {
     if (seeded.status !== 'refreshed') throw new Error('expected refreshed');
 
     // Τύπος που αθροίζει τη δεμένη στήλη X (B2:B3 = οι δύο γραμμές δεδομένων).
+    // 🔴 ADR-769 §11 — η **απόδειξη** ότι η μονάδα οθόνης έπρεπε να μπει ως **αριθμός** και όχι
+    // ως κείμενο: το `SUM` εξακολουθεί να αθροίζει τη δεμένη στήλη (1 + 4 = 5 m). Με
+    // `formatCellForDisplay` το κελί θα κρατούσε `"1.000"` και ο τύπος θα έδινε **μηδέν**.
     const withFormula = commitCellWrites(writeCellInput(seeded.model, 'r1', 'cSum', '=SUM(B2:B3)'));
-    expect(cellOf(withFormula, 'r1', 'cSum')?.value).toBe(5000);
+    expect(cellOf(withFormula, 'r1', 'cSum')?.value).toBe(5);
 
     const moved = refreshTableBinding({
       model: withFormula, binding: seeded.binding, context: ctx([P1, P2_MOVED]),
     });
     if (moved.status !== 'refreshed') throw new Error('expected refreshed');
-    expect(cellOf(moved.model, 'r1', 'cSum')?.value).toBe(5500);
+    expect(cellOf(moved.model, 'r1', 'cSum')?.value).toBe(5.5);
   });
 });
