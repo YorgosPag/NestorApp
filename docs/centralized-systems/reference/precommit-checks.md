@@ -1932,3 +1932,55 @@ npm run test:contrast-promise      # 50 tests (28 πύλης + 16 + 6 άγκυρ
 Όταν αγγίζεις legacy file → καθάρισε όσα violations μπορείς. Δεν είναι υποχρεωτικό, αλλά σταδιακά φτάνουμε στο 0.
 
 **ΜΗΔΕΝΙΚΗ ΑΝΟΧΗ για νέα violations. Legacy: gradual cleanup.**
+
+---
+
+## CHECK 3.46 — E2E Executability (ADR-775)
+
+**Ερώτημα**: «**ΜΠΟΡΕΙ** αυτή η σουίτα e2e να περάσει;» — πριν καν ρωτήσει κανείς αν *περνάει*.
+**Μηχανισμός**: ⛔ **ZERO TOLERANCE**, καμία baseline, ποτέ.
+
+### Γιατί υπάρχει
+Μέχρι 08/08/2026 **κανένα** workflow δεν έτρεχε `playwright test`. **369 tests σε 5 αρχεία**
+(μετρημένο με `--list`) δεν εκτελούνταν **πουθενά**, άρα κανείς δεν μάθαινε ότι **δεν μπορούν**.
+Δεν έλειπε πύλη — **έλειπε η εκτέλεση**.
+
+### Τρεις ανεξάρτητες ομάδες, ποτέ μία με «ή»
+
+| | Ερώτηση | Βλάβη όταν σπάει |
+|---|---|---|
+| **Α** ταυτότητα πελάτη | ο UA κάθε project περνά τα **πραγματικά** `BLOCKED_BOT_PATTERNS`; | **403 χωρίς σώμα** |
+| **Β** ταυτότητα golden | το `snapshotPathTemplate` ξεχωρίζει `{projectName}`+`{platform}`; | σύγκριση με golden **άλλου** project/OS |
+| **Γ** στόχος εντολής | κάθε `playwright test <φίλτρο>` δείχνει σε **υπαρκτό** spec; | «No tests found» = **0 κάλυψη** |
+
+Καταστάσεις: `bot-blocked` · `agent-unresolved` · `agent-clear` · `ambiguous-golden` ·
+`golden-distinct` · `golden-default` · `phantom-target` · `target-resolved` · `whole-suite`.
+**Κλειστή λογιστική fail-closed**: κάθε project κρίνεται από **Α ΚΑΙ Β**, το άθροισμα πρέπει να
+κλείνει, άγνωστη κατάσταση ⇒ `throw` με όνομα.
+
+### 🔴 Ο αριθμός του ADR-770 §13 ήταν λάθος — **0/7, όχι 7/7**
+Τα **device descriptors του Playwright περιέχουν `userAgent`**, άρα κάθε `...devices[...]`
+στέλνει ήδη πραγματικό Chrome UA. Η διάγνωση ίσχυε **μόνο** για τον driver του 3.40
+(`newContext()` χωρίς descriptor). ⚠️ **Δεν ακυρώνει την πύλη — τη δικαιολογεί**: η προστασία
+είναι **τυχαία**. Μετρημένο με πραγματικό browser: σκέτο `newContext()` ⇒ `HeadlessChrome/143`
+⇒ **403**.
+
+### Παγίδες
+- ⚠️ **ΜΗΝ** λύσεις κόκκινο αφαιρώντας pattern από το `src/middleware.ts` — **κώδικας
+  ασφαλείας**. Δώσε στο project device descriptor.
+- ⚠️ **ΜΗΝ** το κάνεις ratchet: baseline μετατρέπει το «μπορεί να περάσει;» σε «μπορούσε χθες;».
+- ⚠️ **ΜΗΝ** χτίσεις πάνω στο `playwright test --list --reporter=json`: το `config.projects[].use`
+  έρχεται **ΚΕΝΟ** (μετρημένο, 1.57.0) ⇒ **«0 παραβιάσεις, πάντα»**.
+- ⚠️ Η ομάδα Γ κρίνει **φίλτρο**, όχι μονοπάτι (το Playwright τα ερμηνεύει ως regex).
+
+### Εντολές
+```
+npm run e2e:check                # η πύλη
+npm run e2e:report               # + πλήρης λογιστική ανά κατάσταση
+npm run test:e2e-executability   # 33 tests, 11/11 μεταλλάξεις στην ΙΔΙΑ την πύλη
+```
+**Layer 1**: `run-checks-parallel.js` + `pre-commit` (σκανδάλη, ~2s) ·
+**Layer 2**: `.github/workflows/e2e-executability.yml` (**Tier 2**, άνευ όρων) ·
+**Escape**: `SKIP_E2E_EXECUTABILITY=1`
+
+🔶 **Ανοιχτό (ADR-775 §11)**: *ποιο workflow **εκτελεί** `playwright test`;* — απόφαση Giorgio.
