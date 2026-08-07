@@ -1,0 +1,85 @@
+name: T2 🎭 E2E Executability (CHECK 3.46)
+
+# =============================================================================
+# Layer 2 του CHECK 3.46 — ADR-775. «Μπορεί αυτή η σουίτα e2e να περάσει;»
+#
+# ΤΙ ΡΩΤΑΕΙ — ΤΡΕΙΣ ΑΝΕΞΑΡΤΗΤΕΣ ΟΜΑΔΕΣ, ΠΟΤΕ ΜΙΑ ΜΕ «Ή»
+# ------------------------------------------------------
+#   Α. ο user-agent κάθε project περνά τα ΠΡΑΓΜΑΤΙΚΑ `BLOCKED_BOT_PATTERNS` του
+#      `src/middleware.ts`;                                     ⇒ αλλιώς 403 χωρίς σώμα
+#   Β. κάθε ρητό `snapshotPathTemplate` ξεχωρίζει {projectName} + {platform};
+#                                          ⇒ αλλιώς σύγκριση με golden άλλου project/OS
+#   Γ. κάθε npm script `playwright test <φίλτρο>` δείχνει σε υπαρκτό spec;
+#                                                    ⇒ αλλιώς «No tests found» = 0 κάλυψη
+#
+# ΓΙΑΤΙ ΥΠΑΡΧΕΙ
+# -------------
+# Μέχρι 08/08/2026 ΚΑΝΕΝΑ workflow δεν έτρεχε `playwright test` (μετρημένο: η μόνη αναφορά
+# playwright σε όλο το `.github/workflows/` ήταν ένα `playwright install` μέσα στο job του
+# CHECK 3.40). 369 tests σε 5 αρχεία δεν εκτελούνταν πουθενά — άρα κανείς δεν μάθαινε ότι
+# δεν ΜΠΟΡΟΥΝ να περάσουν. Δεν έλειπε μια πύλη· έλειπε η ΕΚΤΕΛΕΣΗ.
+#
+# ⚠️ ΑΥΤΟ ΤΟ WORKFLOW ΔΕΝ ΤΡΕΧΕΙ ΤΑ E2E. Απαντά μόνο «μπορούν;» — στατικά, σε ~2s, χωρίς
+# browser και χωρίς dev server. Το «τρέχει κανείς τα e2e;» είναι ξεχωριστή απόφαση με
+# ξεχωριστό κόστος (ADR-775 §7): θέλει πρώτα golden ανά project/πλατφόρμα, που σήμερα
+# υπάρχουν μόνο για `visual-dxf`/`win32`.
+#
+# ΓΙΑΤΙ ΚΑΙ ΣΤΟ CI, ΑΦΟΥ ΤΡΕΧΕΙ ΣΤΟ PRE-COMMIT
+# --------------------------------------------
+# Το Layer 1 σκανδαλίζεται από staged αρχεία. Η ομάδα Α όμως εξαρτάται από ΔΥΟ αρχεία που
+# αλλάζουν ανεξάρτητα: ένα νέο pattern στο `src/middleware.ts` μπορεί να σπάσει ένα project
+# χωρίς κανείς να αγγίξει το `playwright.config.ts` — και αντίστροφα. Τρέχει ΑΝΕΥ ΟΡΩΝ, όπως
+# τα CHECK 3.33/3.34/3.36/3.37.
+#
+# ΔΕΝ ΕΙΝΑΙ RATCHET — καμία baseline, ποτέ. «Ανεκτό πλήθος projects που δεν μπορούν να
+# τρέξουν» δεν σημαίνει τίποτα: ή τρέχουν, ή δεν τρέχουν.
+#
+# ΟΤΑΝ ΚΟΚΚΙΝΙΣΕΙ: το μήνυμα ονομάζει τη ρητή κατάσταση (bot-blocked · agent-unresolved ·
+# ambiguous-golden · phantom-target). ΠΟΤΕ μη λύσεις κόκκινο αφαιρώντας pattern από το
+# `src/middleware.ts` — είναι κώδικας ασφαλείας· δώσε στο project device descriptor.
+# =============================================================================
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-executability-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  executability:
+    name: 🎭 Εκτελεσιμότητα σουίτας e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ Χρειάζεται `typescript` (AST parse-only, ΠΟΤΕ tsc — N.17) και `@playwright/test`
+      # (μόνο για τα device descriptors). **Καμία εγκατάσταση browser**: η πύλη δεν ανοίγει
+      # σελίδα. `--ignore-scripts` όπως στο deadcode-ratchet.yml.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🎭 CHECK 3.46 — μπορεί η σουίτα e2e να περάσει;
+        run: node scripts/check-e2e-executability.js --verbose
+
+      # Η πύλη που δεν δοκιμάζεται είναι πύλη που κανείς δεν εμπιστεύεται (ADR-587 §6.1:
+      # 11 κόκκινα tests έμειναν στο main επί 6 commits επειδή κανένα gate δεν τα έτρεχε).
+      # 33 tests · 11/11 μεταλλάξεις στην ΙΔΙΑ την πύλη κόκκινες.
+      - name: 🧪 Mutation suite — CHECK 3.46 (33 tests)
+        run: npx jest scripts/__tests__/check-e2e-executability.test.js --ci

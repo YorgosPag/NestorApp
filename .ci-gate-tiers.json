@@ -1,7 +1,7 @@
 {
   "adr": "ADR-757",
   "check": "3.37",
-  "updated": "2026-08-05",
+  "updated": "2026-08-08",
   "doc": "docs/centralized-systems/reference/adrs/ADR-757-ci-gate-tiers.md",
   "namePrefix": "T{tier} ",
   "aggregator": {
@@ -28,94 +28,10 @@
   },
   "gates": [
     {
-      "file": "docker-build.yml",
-      "name": "T1 🚀 Build & Deploy Docker Image",
-      "tier": 1,
-      "why": "Η ΜΟΝΑΔΙΚΗ πύλη που φράζει την παραγωγή: κόκκινο = το Netcup δεν παίρνει την εικόνα."
-    },
-    {
-      "file": "ts-error-gate.yml",
-      "name": "T2 🎯 TypeScript Error Gate (ADR-027)",
-      "tier": 2,
-      "why": "Σφάλματα τύπων στο main — ορθότητα, όχι τάση."
-    },
-    {
-      "file": "dxf-tsc-ratchet.yml",
-      "name": "T2 🧊 DXF Viewer TS Error Ratchet (CHECK 3.29)",
-      "tier": 2,
-      "why": "Το root tsconfig εξαιρεί το subapp· αυτή είναι η ΜΟΝΗ πύλη που το τυπολογεί."
-    },
-    {
-      "file": "firestore-rules.yml",
-      "name": "T2 🔒 Firestore Rules (ADR-298)",
-      "tier": 2,
-      "why": "Κανόνες πρόσβασης δεδομένων — κόκκινο σημαίνει πιθανή διαρροή tenant."
-    },
-    {
-      "file": "firestore-tenant-scope.yml",
-      "name": "T2 🔐 Firestore Tenant Scope (CHECK 3.35)",
-      "tier": 2,
-      "why": "Αφιλτράριστο query = δεδομένα άλλης εταιρείας στην οθόνη (ADR-747)."
-    },
-    {
-      "file": "storage-rules.yml",
-      "name": "T2 🔒 Storage Rules (ADR-301 / ADR-657)",
-      "tier": 2,
-      "why": "Δικαιώματα αρχείων — ίδια κατηγορία με τους κανόνες Firestore."
-    },
-    {
-      "file": "functions-integration.yml",
-      "name": "T2 🔬 Functions Integration (ADR-327)",
-      "tier": 2,
-      "why": "Συμβόλαιο cloud functions — σπάει λειτουργία, όχι μετρική."
-    },
-    {
-      "file": "service-integration.yml",
-      "name": "T2 🔗 Service Integration (ADR-745)",
-      "tier": 2,
-      "why": "Η ΡΑΦΗ: κώδικας υπηρεσίας παραγωγής vs ζωντανά firestore.rules. Κόκκινο = η εγγραφή απορρίπτεται ή προσγειώνεται σε λάθος μισθωτή — αόρατο στην οθόνη, άρα ορθότητα (T2), όχι παραγωγή. Οι σουίτες υπήρχαν από 01/08 χωρίς ΚΑΜΙΑ πύλη να τις τρέχει (ADR-587 §6.1: anchor χωρίς gate = σχόλιο)."
-    },
-    {
-      "file": "i18n-governance.yml",
-      "name": "T2 🌐 i18n Governance (ADR-279)",
-      "tier": 2,
-      "why": "Ωμά κλειδιά στην οθόνη του χρήστη."
-    },
-    {
-      "file": "i18n-shell-slice.yml",
-      "name": "T2 🧩 i18n Shell Slice Freshness (CHECK 3.34)",
-      "tier": 2,
-      "why": "Μπαγιάτικο slice = ωμό κλειδί στο πρώτο καρέ (ADR-744)."
-    },
-    {
-      "file": "capability-anchors.yml",
-      "name": "T2 ⚓ DXF Entity Capability Anchors (CHECK 5C)",
-      "tier": 2,
-      "why": "Νέος τύπος οντότητας χωρίς απαντημένες ικανότητες = σιωπηλά σπασμένη συμπεριφορά (ADR-587)."
-    },
-    {
-      "file": "formula-library-partition.yml",
-      "name": "T2 🧮 Table Formula Library Partition (CHECK 5D)",
-      "tier": 2,
-      "why": "Εξαγωγή της βιβλιοθήκης χωρίς ετυμηγορία = μη ντετερμινιστική συνάρτηση που μπαίνει σιωπηλά στο μητρώο, δηλαδή κελί που αλλάζει μόνο του σε παραδοτέο σχέδιο (ADR-739 §49). Ορθότητα, όχι παραγωγή: δεν φαίνεται στην οθόνη — φαίνεται στη δεύτερη εκτύπωση."
-    },
-    {
-      "file": "jscpd-ratchet.yml",
-      "name": "T2 🧬 jscpd Clone Ratchet (CHECK 3.28)",
-      "tier": 2,
-      "why": "Νέος κλώνος = δεύτερη πηγή αλήθειας που θα αποκλίνει (ADR-584)."
-    },
-    {
-      "file": "ssot-discover.yml",
-      "name": "T2 🧬 SSoT Discover Ratchet (ADR-314)",
-      "tier": 2,
-      "why": "Δομικές παραβιάσεις SSoT στους 3 πυρηνικούς φακέλους."
-    },
-    {
-      "file": "deadcode-ratchet.yml",
-      "name": "T2 🪦 Dead-code Ratchet (CHECK 3.22)",
-      "tier": 2,
-      "why": "Νεκρός κώδικας που συντηρείται σαν ζωντανός."
+      "file": "a11y-ratchet.yml",
+      "name": "T3 ♿ A11y Test-Coverage Ratchet (ADR-598 G11)",
+      "tier": 3,
+      "why": "Κάλυψη τεστ προσβασιμότητας — τάση, όχι λειτουργική βλάβη."
     },
     {
       "file": "barrel-deadcode-ratchet.yml",
@@ -124,46 +40,16 @@
       "why": "Το knip βλέπει κάθε barrel ως entry point· αυτή η πύλη ρωτά ποιος εισάγει ΕΚΤΟΣ barrel (ADR-700)."
     },
     {
-      "file": "knip-deps-ratchet.yml",
-      "name": "T2 📚 knip Dependency-Hygiene Ratchet (ADR-598 G15)",
-      "tier": 2,
-      "why": "Αδήλωτες/αχρησιμοποίητες εξαρτήσεις — σπάνε το build αλλού, όχι εδώ."
-    },
-    {
-      "file": "dependency-audit.yml",
-      "name": "T2 🛡️ Dependency-CVE Audit (ADR-598 G2)",
-      "tier": 2,
-      "why": "Γνωστές ευπάθειες σε εξαρτήσεις."
-    },
-    {
-      "file": "license-audit.yml",
-      "name": "T2 ⚖️ License Audit (ADR-598 G13)",
-      "tier": 2,
-      "why": "GPL/AGPL εξάρτηση = νομικό πρόβλημα, όχι μετρική (N.5)."
-    },
-    {
-      "file": "gitleaks-scan.yml",
-      "name": "T2 🔐 Secret Scan (ADR-598 G12)",
-      "tier": 2,
-      "why": "ΚΟΚΚΙΝΟ ΕΠΙΤΗΔΕΣ (ADR-598 §7, 28/07): 3 γνήσια διαπιστευτήρια στο ιστορικό, rotation αναβάλλεται μέχρι την παραγωγή."
-    },
-    {
       "file": "bundle-ratchet.yml",
       "name": "T2 📦 Bundle-Size Ratchet (ADR-598 G6)",
       "tier": 2,
       "why": "Το μέγεθος που κατεβάζει ο χρήστης· κατώφλι, όχι τάση."
     },
     {
-      "file": "eslint-ratchet.yml",
-      "name": "T2 🧹 ESLint Warning Ratchet (ADR-598 ΦΑΣΗ 1)",
+      "file": "capability-anchors.yml",
+      "name": "T2 ⚓ DXF Entity Capability Anchors (CHECK 5C)",
       "tier": 2,
-      "why": "Ratchet προειδοποιήσεων — μόνο μειώνεται."
-    },
-    {
-      "file": "depcruise-ratchet.yml",
-      "name": "T2 🕸️ Dependency-Graph Ratchet (ADR-598 G9+G10)",
-      "tier": 2,
-      "why": "Κυκλικές/απαγορευμένες εξαρτήσεις στον γράφο."
+      "why": "Νέος τύπος οντότητας χωρίς απαντημένες ικανότητες = σιωπηλά σπασμένη συμπεριφορά (ADR-587)."
     },
     {
       "file": "ci-gate-tiers.yml",
@@ -178,10 +64,130 @@
       "why": "Κάλυψη τεστ — κινείται αργά, δεν σπάει τίποτα σήμερα."
     },
     {
-      "file": "type-coverage-ratchet.yml",
-      "name": "T3 🔤 Type-Coverage Ratchet (ADR-598 G5)",
-      "tier": 3,
-      "why": "Ποσοστό τυποποίησης — μετρική τάσης."
+      "file": "deadcode-ratchet.yml",
+      "name": "T2 🪦 Dead-code Ratchet (CHECK 3.22)",
+      "tier": 2,
+      "why": "Νεκρός κώδικας που συντηρείται σαν ζωντανός."
+    },
+    {
+      "file": "depcruise-ratchet.yml",
+      "name": "T2 🕸️ Dependency-Graph Ratchet (ADR-598 G9+G10)",
+      "tier": 2,
+      "why": "Κυκλικές/απαγορευμένες εξαρτήσεις στον γράφο."
+    },
+    {
+      "file": "dependency-audit.yml",
+      "name": "T2 🛡️ Dependency-CVE Audit (ADR-598 G2)",
+      "tier": 2,
+      "why": "Γνωστές ευπάθειες σε εξαρτήσεις."
+    },
+    {
+      "file": "docker-build.yml",
+      "name": "T1 🚀 Build & Deploy Docker Image",
+      "tier": 1,
+      "why": "Η ΜΟΝΑΔΙΚΗ πύλη που φράζει την παραγωγή: κόκκινο = το Netcup δεν παίρνει την εικόνα."
+    },
+    {
+      "file": "dxf-tsc-ratchet.yml",
+      "name": "T2 🧊 DXF Viewer TS Error Ratchet (CHECK 3.29)",
+      "tier": 2,
+      "why": "Το root tsconfig εξαιρεί το subapp· αυτή είναι η ΜΟΝΗ πύλη που το τυπολογεί."
+    },
+    {
+      "file": "e2e-executability.yml",
+      "name": "T2 🎭 E2E Executability (CHECK 3.46)",
+      "tier": 2,
+      "why": "Κόκκινο = η σουίτα e2e ΔΕΝ ΜΠΟΡΕΙ να περάσει (403 από τον δικό μας bot-blocker, golden άλλου project/OS, ή εντολή που δείχνει στο πουθενά) — ελάττωμα αόρατο στην οθόνη."
+    },
+    {
+      "file": "eslint-ratchet.yml",
+      "name": "T2 🧹 ESLint Warning Ratchet (ADR-598 ΦΑΣΗ 1)",
+      "tier": 2,
+      "why": "Ratchet προειδοποιήσεων — μόνο μειώνεται."
+    },
+    {
+      "file": "firestore-rules.yml",
+      "name": "T2 🔒 Firestore Rules (ADR-298)",
+      "tier": 2,
+      "why": "Κανόνες πρόσβασης δεδομένων — κόκκινο σημαίνει πιθανή διαρροή tenant."
+    },
+    {
+      "file": "firestore-tenant-scope.yml",
+      "name": "T2 🔐 Firestore Tenant Scope (CHECK 3.35)",
+      "tier": 2,
+      "why": "Αφιλτράριστο query = δεδομένα άλλης εταιρείας στην οθόνη (ADR-747)."
+    },
+    {
+      "file": "formula-library-partition.yml",
+      "name": "T2 🧮 Table Formula Library Partition (CHECK 5D)",
+      "tier": 2,
+      "why": "Εξαγωγή της βιβλιοθήκης χωρίς ετυμηγορία = μη ντετερμινιστική συνάρτηση που μπαίνει σιωπηλά στο μητρώο, δηλαδή κελί που αλλάζει μόνο του σε παραδοτέο σχέδιο (ADR-739 §49). Ορθότητα, όχι παραγωγή: δεν φαίνεται στην οθόνη — φαίνεται στη δεύτερη εκτύπωση."
+    },
+    {
+      "file": "functions-integration.yml",
+      "name": "T2 🔬 Functions Integration (ADR-327)",
+      "tier": 2,
+      "why": "Συμβόλαιο cloud functions — σπάει λειτουργία, όχι μετρική."
+    },
+    {
+      "file": "gitleaks-scan.yml",
+      "name": "T2 🔐 Secret Scan (ADR-598 G12)",
+      "tier": 2,
+      "why": "ΚΟΚΚΙΝΟ ΕΠΙΤΗΔΕΣ (ADR-598 §7, 28/07): 3 γνήσια διαπιστευτήρια στο ιστορικό, rotation αναβάλλεται μέχρι την παραγωγή."
+    },
+    {
+      "file": "i18n-governance.yml",
+      "name": "T2 🌐 i18n Governance (ADR-279)",
+      "tier": 2,
+      "why": "Ωμά κλειδιά στην οθόνη του χρήστη."
+    },
+    {
+      "file": "i18n-shell-slice.yml",
+      "name": "T2 🧩 i18n Shell Slice Freshness (CHECK 3.34)",
+      "tier": 2,
+      "why": "Μπαγιάτικο slice = ωμό κλειδί στο πρώτο καρέ (ADR-744)."
+    },
+    {
+      "file": "jscpd-ratchet.yml",
+      "name": "T2 🧬 jscpd Clone Ratchet (CHECK 3.28)",
+      "tier": 2,
+      "why": "Νέος κλώνος = δεύτερη πηγή αλήθειας που θα αποκλίνει (ADR-584)."
+    },
+    {
+      "file": "knip-deps-ratchet.yml",
+      "name": "T2 📚 knip Dependency-Hygiene Ratchet (ADR-598 G15)",
+      "tier": 2,
+      "why": "Αδήλωτες/αχρησιμοποίητες εξαρτήσεις — σπάνε το build αλλού, όχι εδώ."
+    },
+    {
+      "file": "license-audit.yml",
+      "name": "T2 ⚖️ License Audit (ADR-598 G13)",
+      "tier": 2,
+      "why": "GPL/AGPL εξάρτηση = νομικό πρόβλημα, όχι μετρική (N.5)."
+    },
+    {
+      "file": "service-integration.yml",
+      "name": "T2 🔗 Service Integration (ADR-745)",
+      "tier": 2,
+      "why": "Η ΡΑΦΗ: κώδικας υπηρεσίας παραγωγής vs ζωντανά firestore.rules. Κόκκινο = η εγγραφή απορρίπτεται ή προσγειώνεται σε λάθος μισθωτή — αόρατο στην οθόνη, άρα ορθότητα (T2), όχι παραγωγή. Οι σουίτες υπήρχαν από 01/08 χωρίς ΚΑΜΙΑ πύλη να τις τρέχει (ADR-587 §6.1: anchor χωρίς gate = σχόλιο)."
+    },
+    {
+      "file": "ssot-discover.yml",
+      "name": "T2 🧬 SSoT Discover Ratchet (ADR-314)",
+      "tier": 2,
+      "why": "Δομικές παραβιάσεις SSoT στους 3 πυρηνικούς φακέλους."
+    },
+    {
+      "file": "storage-rules.yml",
+      "name": "T2 🔒 Storage Rules (ADR-301 / ADR-657)",
+      "tier": 2,
+      "why": "Δικαιώματα αρχείων — ίδια κατηγορία με τους κανόνες Firestore."
+    },
+    {
+      "file": "ts-error-gate.yml",
+      "name": "T2 🎯 TypeScript Error Gate (ADR-027)",
+      "tier": 2,
+      "why": "Σφάλματα τύπων στο main — ορθότητα, όχι τάση."
     },
     {
       "file": "type-complexity-ratchet.yml",
@@ -190,10 +196,10 @@
       "why": "Χρόνος/πολυπλοκότητα type instantiation — μετρική τάσης."
     },
     {
-      "file": "a11y-ratchet.yml",
-      "name": "T3 ♿ A11y Test-Coverage Ratchet (ADR-598 G11)",
+      "file": "type-coverage-ratchet.yml",
+      "name": "T3 🔤 Type-Coverage Ratchet (ADR-598 G5)",
       "tier": 3,
-      "why": "Κάλυψη τεστ προσβασιμότητας — τάση, όχι λειτουργική βλάβη."
+      "why": "Ποσοστό τυποποίησης — μετρική τάσης."
     },
     {
       "file": "ui-contrast-ratchet.yml",

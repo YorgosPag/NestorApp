@@ -676,10 +676,28 @@ register_area "State Channel Gate (CHECK 3.41)" \
 # θα ήταν πράσινη πάνω σε renderer που παίρνει την ετυμηγορία και την αγνοεί.
 # ⚠️ Στη σκανδάλη μπαίνουν ΚΑΙ οι είσοδοι-SSoT (θέματα καμβά, `variables.css`, το παλέτο του
 # τοίχου): αλλάζουν την ετυμηγορία για ΟΛΟΥΣ, χωρίς να αγγίζουν καμία γραμμή της πύλης.
+#
+# ➕ ADR-771 Φ.4 — η ΤΡΙΤΗ άγκυρα (`ink-polarity-doctrine`) μπαίνει στην ΙΔΙΑ περιοχή αντί σε
+# δική της, γιατί απαντά την ίδια οικογένεια ερωτήσεων για τα ΙΔΙΑ αρχεία: πύλη «το κατώφλι
+# είναι εφικτό;» · άγκυρα «η ΜΕΖΟΥΡΑ που το μετρά είναι ακόμη η WCAG 2;». Χωρίς αυτήν, μια
+# μετάβαση σε APCA/CIE L* θα περνούσε πράσινη — και το `table-ink.ts` μπαίνει ΚΑΙ ΑΥΤΟ στη
+# σκανδάλη επειδή η ομάδα Γ κλειδώνει εκεί τη Φ.4 ως «δεν έγινε» (το μελάνι κελιού ΔΕΝ
+# επιτρέπεται να εξαρτηθεί από μέγεθος ή βάρος κειμένου· δες ADR-771 §6.7).
 register_area "Contrast Promise Gate (CHECK 3.45)" \
-    "^(scripts/check-contrast-promise-reachability\.js$|scripts/lib/contrast-promise/.*\.js$|src/subapps/dxf-viewer/config/(adaptive-entity-color|canvas-theme)\.ts$|src/subapps/dxf-viewer/bim/(walls/wall-render-palette|renderers/bim-contrast-casing|renderers/WallRenderer)\.ts$|src/styles/design-system/generated/variables\.css$)" \
-    "(check-contrast-promise-reachability|ink-verdict|wall-contrast-casing)\.test\." \
+    "^(scripts/check-contrast-promise-reachability\.js$|scripts/lib/contrast-promise/.*\.js$|src/subapps/dxf-viewer/config/(adaptive-entity-color|canvas-theme)\.ts$|src/subapps/dxf-viewer/bim/(walls/wall-render-palette|renderers/bim-contrast-casing|renderers/WallRenderer|table/table-ink)\.ts$|src/styles/design-system/generated/variables\.css$)" \
+    "(check-contrast-promise-reachability|ink-verdict|wall-contrast-casing|ink-polarity-doctrine)\.test\." \
     "npm run test:contrast-promise"
+
+# CHECK 3.46 (ADR-775) — «ΜΠΟΡΕΙ αυτή η σουίτα e2e να περάσει;». Στη σκανδάλη μπαίνουν ΚΑΙ οι
+# δύο αρχεία-αυθεντίες που η πύλη ΔΙΑΒΑΖΕΙ αλλά δεν κατέχει: το `playwright.config.ts` (ποιος
+# UA στέλνεται, πού γράφονται τα golden) και το `src/middleware.ts` (ποιος UA μπλοκάρεται).
+# ⚠️ Αλλάζουν ΑΝΕΞΑΡΤΗΤΑ: ένα νέο bot pattern μπορεί να σπάσει ένα project χωρίς να αγγίξει
+# κανείς το config — γι' αυτό το Layer 2 τρέχει άνευ όρων. Το `package.json` μπαίνει επειδή
+# εκεί ζουν οι εντολές της ομάδας Γ (τρία scripts έδειχναν σε spec διαγραμμένο εδώ και μήνες).
+register_area "E2E Executability Gate (CHECK 3.46)" \
+    "^(scripts/check-e2e-executability\.js$|scripts/lib/e2e-executability/.*\.js$|playwright\.config\.ts$|src/middleware\.ts$|package\.json$)" \
+    "check-e2e-executability\.test\." \
+    "npm run test:e2e-executability"
 
 # CHECK 3.43 (ADR-774) — «αυτό που μοιάζει με token, ΕΙΝΑΙ token;». Η baseline μπαίνει ΕΠΙΤΗΔΕΣ
 # στη σκανδάλη: μια χειροκίνητη επεξεργασία της (αντί για `--write-baseline`) θα άλλαζε το

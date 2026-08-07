@@ -276,6 +276,30 @@ if (!process.env.SKIP_CSS_TOKEN_AUTHORITY && cssAuthorityTriggers.length > 0)
   addThread('3.43', 'CSS token authority', 'scripts/check-css-token-authority.js',
     stagedCssForAuthority.length > 0 ? stagedCssForAuthority : ['--all']);
 
+// CHECK 3.46 (ADR-775) — «ΜΠΟΡΕΙ αυτή η σουίτα e2e να περάσει;», πριν καν ρωτήσει κανείς
+// αν περνάει. Μέχρι 08/08 ΚΑΝΕΝΑ workflow δεν έτρεχε `playwright test`: 369 tests σε 5
+// αρχεία δεν εκτελούνταν πουθενά, άρα κανείς δεν μάθαινε ότι δεν μπορούν. Δεν έλειπε πύλη
+// — έλειπε η ΕΚΤΕΛΕΣΗ.
+// ⚠️ ΤΡΕΙΣ ομάδες, ΟΧΙ μία με «ή»: Α ο UA περνά τα ΠΡΑΓΜΑΤΙΚΑ BLOCKED_BOT_PATTERNS του
+// `src/middleware.ts` (⇒ αλλιώς 403 χωρίς σώμα) · Β το `snapshotPathTemplate` ξεχωρίζει
+// {projectName}+{platform} (⇒ αλλιώς σύγκριση με golden άλλου project/OS) · Γ κάθε
+// `playwright test <φίλτρο>` δείχνει σε υπαρκτό spec (⇒ αλλιώς «No tests found» = 0 κάλυψη).
+// 🔑 Ο αριθμός του ADR-770 §13 («τα 7 projects είναι δομικά σπασμένα») ήταν ΛΑΘΟΣ: μετρημένο
+// 0/7 — τα device descriptors του Playwright ΠΕΡΙΕΧΟΥΝ userAgent. Η προστασία υπάρχει αλλά
+// είναι ΤΥΧΑΙΑ, και αυτό ακριβώς κλειδώνει η ομάδα Α.
+// Σκανδάλη: τα δύο αρχεία-αυθεντίες, το package.json, τα e2e specs, ή η ίδια η πύλη (~2s).
+// Δηλωμένο κενό: νέο spec που δεν σταδιοποιήθηκε — το κλείνει το Layer 2 (άνευ όρων).
+const e2eExecTriggers = allFiles.filter(
+  f => f === 'playwright.config.ts'
+    || f === 'src/middleware.ts'
+    || f === 'package.json'
+    || f === 'scripts/check-e2e-executability.js'
+    || f.startsWith('scripts/lib/e2e-executability/')
+    || /(^|\/)e2e\/.*\.spec\.tsx?$|\.e2e\.spec\.tsx?$/.test(f)
+);
+if (!process.env.SKIP_E2E_EXECUTABILITY && e2eExecTriggers.length > 0)
+  addThread('3.46', 'E2E executability', 'scripts/check-e2e-executability.js');
+
 // CHECK 3.44 (ADR-772 §9) — «αυτό το διοικητικό πεδίο έχει γραμμή στον πίνακα;». Το
 // ADR-772 έφτιαξε τον πίνακα λεξιλογίου (8 επίπεδα × 5 δοχεία)· τίποτα δεν εμπόδιζε ένα
 // δοχείο να αποκτήσει ΕΝΑΤΟ πεδίο χωρίς γραμμή — ο μετατροπέας δεν το μεταφέρει, τίποτα

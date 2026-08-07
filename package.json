@@ -102,7 +102,7 @@
     "test:css-token-authority": "jest scripts/__tests__/check-css-token-authority.test.js --verbose",
     "contrast-promise:check": "node scripts/check-contrast-promise-reachability.js --all",
     "contrast-promise:report": "node scripts/check-contrast-promise-reachability.js --all --verbose",
-    "test:contrast-promise": "jest scripts/__tests__/check-contrast-promise-reachability.test.js src/subapps/dxf-viewer/config/__tests__/ink-verdict.test.ts src/subapps/dxf-viewer/bim/renderers/__tests__/wall-contrast-casing.test.ts --verbose",
+    "test:contrast-promise": "jest scripts/__tests__/check-contrast-promise-reachability.test.js src/subapps/dxf-viewer/config/__tests__/ink-verdict.test.ts src/subapps/dxf-viewer/bim/renderers/__tests__/wall-contrast-casing.test.ts src/subapps/dxf-viewer/config/__tests__/ink-polarity-doctrine.test.ts --verbose",
     "runtime-contrast:check": "node scripts/check-runtime-contrast-ratchet.js",
     "runtime-contrast:report": "node scripts/check-runtime-contrast-ratchet.js --report",
     "runtime-contrast:baseline": "node scripts/check-runtime-contrast-ratchet.js --write-baseline",
@@ -225,9 +225,6 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
-    "test:visual": "playwright test e2e/grid-visual-regression.spec.ts",
-    "test:visual:update": "playwright test e2e/grid-visual-regression.spec.ts --update-snapshots",
-    "test:visual:headed": "playwright test e2e/grid-visual-regression.spec.ts --headed",
     "test:visual:report": "playwright show-report",
     "test:visual:dxf": "playwright test src/subapps/dxf-viewer/e2e/dxf-visual-regression.spec.ts --project=visual-dxf --workers=1",
     "test:visual:dxf:update": "playwright test src/subapps/dxf-viewer/e2e/dxf-visual-regression.spec.ts --project=visual-dxf --update-snapshots --workers=1",
@@ -283,7 +280,10 @@
     "a11y-coverage:baseline": "node scripts/check-a11y-test-coverage-ratchet.js --write-baseline",
     "knip-deps:check": "node scripts/check-knip-deps-ratchet.js --check",
     "knip-deps:baseline": "node scripts/check-knip-deps-ratchet.js --write-baseline",
-    "validate:i18n-manifest": "node scripts/validate-i18n-manifest.js"
+    "validate:i18n-manifest": "node scripts/validate-i18n-manifest.js",
+    "e2e:check": "node scripts/check-e2e-executability.js",
+    "e2e:report": "node scripts/check-e2e-executability.js --verbose",
+    "test:e2e-executability": "jest scripts/__tests__/check-e2e-executability.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

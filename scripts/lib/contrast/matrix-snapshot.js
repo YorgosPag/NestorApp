@@ -15,8 +15,12 @@
  *     με override ⇒ `200`. Χωρίς αυτή τη γραμμή η πύλη θα ανέφερε **«0 παραβιάσεις»**
  *     για κάθε διαδρομή — δηλαδή θα γεννούσε μόνη της την επόμενη εμφάνιση του
  *     «0 = κανείς δεν κοίταξε».
- *     ⚠️ Το ίδιο ισχύει για τα **7 υπάρχοντα projects** του `playwright.config.ts`:
- *     κανένα δεν θέτει `userAgent`, άρα είναι δομικά σπασμένα ανεξάρτητα από browsers.
+ *     🔴 **ΔΙΟΡΘΩΣΗ 08/08 (ADR-775 §2)**: εδώ έγραφε «*το ίδιο ισχύει για τα 7 υπάρχοντα
+ *     projects — είναι δομικά σπασμένα*». **ΨΕΥΔΕΣ, μετρημένο: 0/7.** Τα device
+ *     descriptors του Playwright **περιέχουν** `userAgent`, οπότε κάθε
+ *     `...devices['Desktop Chrome']` στέλνει ήδη πραγματικό Chrome UA. Η διάγνωση ισχύει
+ *     **μόνο εδώ**, επειδή αυτός ο driver καλεί `newContext()` **χωρίς** descriptor.
+ *     Φρουρείται πλέον από το **CHECK 3.46**, που κρίνει και αυτόν τον UA.
  *
  *  2. **Οι browsers του Playwright μπορεί να λείπουν.** Στο μηχάνημα ανάπτυξης δεν
  *     υπάρχει καν ο φάκελος `ms-playwright` (μετρημένο) — και **κανένα** workflow δεν
@@ -35,10 +39,25 @@
 
 const HARNESS_PATH = '/test-harness/contrast-matrix';
 
-/** Πραγματικός UA του Chrome — βλ. εμπόδιο 1. ΜΗΝ τον αφαιρέσεις. */
-const REAL_CHROME_UA =
+/**
+ * Πραγματικός UA του Chrome — βλ. εμπόδιο 1. **ΜΗΝ τον αφαιρέσεις.**
+ *
+ * ⚠️ Χρησιμοποιείται **μόνο** αν λείπει το device descriptor. Η αυθεντία είναι το
+ * `devices['Desktop Chrome'].userAgent` της **εγκατεστημένης** βιβλιοθήκης — μια χειρόγραφη
+ * σταθερά είναι δεύτερη αλήθεια που **ήδη είχε αποκλίνει**: εδώ έγραφε `Chrome/140.0.0.0`
+ * ενώ το playwright 1.57 δίνει `Chrome/143.0.7499.4` (ADR-775 §2).
+ */
+const FALLBACK_CHROME_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-  + 'Chrome/140.0.0.0 Safari/537.36';
+  + 'Chrome/143.0.7499.4 Safari/537.36';
+
+/** Ο UA που ΔΕΝ μπλοκάρεται, από τη βιβλιοθήκη όποτε υπάρχει. */
+function realChromeUserAgent(devices) {
+  const descriptor = devices && devices['Desktop Chrome'];
+  return (descriptor && typeof descriptor.userAgent === 'string')
+    ? descriptor.userAgent
+    : FALLBACK_CHROME_UA;
+}
 
 const NAV_TIMEOUT_MS = 300_000;
 
@@ -78,12 +97,14 @@ async function launchBrowser(chromium) {
 async function collectSnapshots({ chromium } = {}) {
   // eslint-disable-next-line global-require -- προαιρετική εξάρτηση: το module πρέπει να
   // φορτώνεται (και να δοκιμάζεται) χωρίς playwright εγκατεστημένο.
-  const pw = chromium || require('playwright').chromium;
+  // eslint-disable-next-line global-require
+  const lib = chromium ? { chromium } : require('playwright');
+  const pw = lib.chromium;
   const url = baseUrl() + HARNESS_PATH;
   const browser = await launchBrowser(pw);
   try {
     const context = await browser.newContext({
-      userAgent: REAL_CHROME_UA,
+      userAgent: realChromeUserAgent(lib.devices),
       viewport: { width: 1440, height: 900 },
       colorScheme: 'light',
     });
@@ -122,6 +143,7 @@ module.exports = {
   launchBrowser,
   baseUrl,
   HARNESS_PATH,
-  REAL_CHROME_UA,
+  realChromeUserAgent,
+  FALLBACK_CHROME_UA,
   NAV_TIMEOUT_MS,
 };
