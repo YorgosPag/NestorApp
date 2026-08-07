@@ -54,6 +54,14 @@ on:
       - 'scripts/check-theme-pairing-ratchet.js'
       - 'src/styles/design-tokens/modules/**'
       - '.theme-pairing-baseline.json'
+      - 'scripts/check-runtime-contrast-ratchet.js'
+      - 'src/app/test-harness/contrast-matrix/**'
+      - '.runtime-contrast-baseline.json'
+      # CHECK 3.41 (ADR-771 Φ.1) — τα δύο αρχεία που ΟΡΙΖΟΥΝ τα σημάδια ζωντάνιας.
+      # Το `scripts/lib/contrast/**` παραπάνω καλύπτει ήδη `cvd.js` + `state-marks.js`.
+      - 'scripts/check-state-channel-distinctness.js'
+      - 'src/subapps/dxf-viewer/config/color-config.ts'
+      - 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
       - '.github/workflows/ui-contrast-ratchet.yml'
   push:
     branches: [main]
@@ -67,6 +75,14 @@ on:
       - 'scripts/check-theme-pairing-ratchet.js'
       - 'src/styles/design-tokens/modules/**'
       - '.theme-pairing-baseline.json'
+      - 'scripts/check-runtime-contrast-ratchet.js'
+      - 'src/app/test-harness/contrast-matrix/**'
+      - '.runtime-contrast-baseline.json'
+      # CHECK 3.41 (ADR-771 Φ.1) — τα δύο αρχεία που ΟΡΙΖΟΥΝ τα σημάδια ζωντάνιας.
+      # Το `scripts/lib/contrast/**` παραπάνω καλύπτει ήδη `cvd.js` + `state-marks.js`.
+      - 'scripts/check-state-channel-distinctness.js'
+      - 'src/subapps/dxf-viewer/config/color-config.ts'
+      - 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
 
 concurrency:
   group: ui-contrast-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
@@ -123,6 +139,19 @@ jobs:
       - name: 🔍 CHECK 3.39 — theme pairing ratchet (ADR-770 Στρώμα 2)
         run: node scripts/check-theme-pairing-ratchet.js
 
+      # CHECK 3.41 (ADR-771 Φ.1) — «ξέρω ΠΟΙΟ είναι ποιο χωρίς να δω χρώμα;» (WCAG 1.4.1).
+      # Ίδιο workflow, για τον ίδιο λόγο με το 3.39: νέο αρχείο workflow θα απαιτούσε εγγραφή
+      # στο `.ci-gate-tiers.json` ή το CHECK 3.37 μπλοκάρει (ADR-757) — και δεν υπάρχει λόγος
+      # να πληρωθεί: ίδια ερώτηση («διαβάζεται;»), ίδιο tier, ένα AST parse (~120ms).
+      #
+      # ⚠️ Τρέχει ΑΝΕΥ ΟΡΩΝ, όχι μόνο όταν αγγιχτεί το config. Το `--all` δεν έχει νόημα εδώ
+      # (η είσοδος είναι ΕΝΑ αρχείο), αλλά η εκτέλεση σε κάθε PR του workflow κλείνει την
+      # περίπτωση «κάποιος άλλαξε το UI_COLORS.WARNING/ERROR από αλλού»: τα σημάδια δανείζονται
+      # πρωτογενή χρώματα, οπότε το ζεύγος μπορεί να χαλάσει χωρίς να αγγιχτεί κανένα από τα
+      # δύο αρχεία-σκανδάλη του Layer 1. Δηλωμένο κενό του hook, κλεισμένο εδώ.
+      - name: 🔍 CHECK 3.41 — state channel distinctness (ADR-771 Φ.1)
+        run: node scripts/check-state-channel-distinctness.js --verbose
+
       # The gate's own mutation suite. A gate whose tests never run is a gate
       # nobody can trust — ADR-587 §6.1, paid for with 11 red tests that sat on
       # main for six commits because `unit.yml` was disabled and
@@ -142,3 +171,109 @@ jobs:
 
       - name: 🧪 Mutation suite — CHECK 3.39 (29 tests)
         run: pnpm exec jest scripts/__tests__/check-theme-pairing-ratchet.test.js
+
+      # CHECK 3.40 / Στρώμα 2β — η ίδια μηχανή κρίσης, τροφοδοτημένη με ΣΥΝΘΕΤΙΚΑ
+      # στιγμιότυπα. Δεν χρειάζεται browser: η σουίτα χτίζει τα στιγμιότυπα από το
+      # ΠΡΑΓΜΑΤΙΚΟ `globals.css` και τα ΠΡΑΓΜΑΤΙΚΑ token modules, οπότε τρέχει εδώ,
+      # στο φθηνό μπλοκ, και φρουρεί όλη τη λογική (8/8 μεταλλάξεις).
+      # Ο browser χρειάζεται μόνο για τη ΣΥΛΛΟΓΗ, και αυτή ζει στο ξεχωριστό job.
+      - name: 🧪 Mutation suite — CHECK 3.40 (52 tests, χωρίς browser)
+        run: pnpm exec jest scripts/__tests__/check-runtime-contrast-ratchet.test.js
+
+      # ⚠️ ΔΥΟ σουίτες, όχι μία — και είναι οι δύο μισές της ίδιας απόδειξης:
+      #   · η πρώτη βεβαιώνει ότι οι δύο καταστάσεις ΔΗΛΩΝΟΥΝ διαφορετική γωνία·
+      #   · η δεύτερη ότι ο καμβάς την ΤΙΜΑ (ένας ζωγράφος που αγνοεί το πεδίο θα άφηνε
+      #     την πύλη πράσινη ενώ η οθόνη δείχνει το ίδιο ακριβώς ελάττωμα).
+      # Η ομάδα Π τραβά τον ιστορικό κώδικα με `git show 5baa83ba:` — γι' αυτό αυτό το job
+      # έχει `fetch-depth: 0` παραπάνω· με ρηχό checkout τρία tests γίνονται κόκκινα για
+      # λόγο άσχετο με την αντίθεση.
+      - name: 🧪 Mutation suite — CHECK 3.41 (16 tests) + άγκυρα ζωγράφου (7 tests)
+        run: >
+          pnpm exec jest
+          scripts/__tests__/check-state-channel-distinctness.test.js
+          src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-bound-mark-corner.test.ts
+
+  # ═══════════════════════════════════════════════════════════════════════════════
+  # CHECK 3.40 / ADR-770 Στρώμα 2β — η ΜΕΤΡΗΣΗ σε πραγματικό browser.
+  #
+  # Ξεχωριστό JOB, ίδιο workflow — και αυτό είναι σκόπιμο δύο φορές:
+  #   · Νέο WORKFLOW θα απαιτούσε εγγραφή στο `.ci-gate-tiers.json` (ADR-757/CHECK 3.37)·
+  #     το μητρώο παρακολουθεί **αρχεία workflow**, όχι jobs, οπότε ένα νέο job αφήνει
+  #     τις 29 πύλες αμετάβλητες. Ίδια απόφαση με το 3.39.
+  #   · Ξεχωριστό job (και όχι βήμα) επειδή αυτό εδώ χρειάζεται πλήρες `pnpm install`
+  #     **με** scripts, τον Next dev server και έναν browser: ~8 λεπτά έναντι 250ms.
+  #     Ανακατεμένα, το ακριβό θα καθυστερούσε το φθηνό που φρουρεί τα ίδια ερωτήματα.
+  #
+  # ⚠️ ΤΟ HARNESS ΕΙΝΑΙ DEV-ONLY (`isTestHarnessRouteEnabled` ⇒ 404 σε production build).
+  # Γι' αυτό τρέχει `next dev`, όχι `next build && next start`.
+  #
+  # ⚠️ ΚΑΝΕΝΑ `continue-on-error`. Δοκιμάστηκε αλλού και κόστισε: το
+  # `coverage-ratchet.yml` κράτησε 11 tests κόκκινα στο main επί έξι commits
+  # (ADR-587 §6.1). Η ιεράρχηση tier αλλάζει το μέσο ειδοποίησης, ΟΧΙ την αυστηρότητα.
+  # ═══════════════════════════════════════════════════════════════════════════════
+  runtime-contrast:
+    name: 🎨 CHECK 3.40 — runtime contrast matrix (ADR-770 Στρώμα 2β)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      # ⚠️ pnpm, ΠΟΤΕ `npm ci`: το repo δεν έχει καθόλου `package-lock.json` και το
+      # `engines` λέει κατά λέξη `"npm": "please-use-pnpm"`.
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ ΧΩΡΙΣ `--ignore-scripts` εδώ, αντίθετα από το φθηνό job: ο Next dev server
+      # πρέπει όντως να σηκωθεί, άρα χρειάζεται τα postinstall builds.
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ⚠️ ΚΑΝΕΝΑ workflow δεν έτρεχε ποτέ playwright σε αυτό το repo (μετρημένο
+      # 2026-08-07) — και τοπικά δεν υπάρχει καν ο φάκελος `ms-playwright`. Άρα τα 7
+      # υπάρχοντα projects του `playwright.config.ts` δεν έχουν εκτελεστεί ποτέ σε CI.
+      # Μόνο chromium: το πλέγμα μετρά υπολογισμένα χρώματα, που δεν διαφέρουν ανά μηχανή.
+      - name: 🌐 Install chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: 🚀 Start dev server
+        run: pnpm run dev > /tmp/dev-server.log 2>&1 &
+
+      # Ο turbopack θέλει 60-190s για κρύα διαδρομή (μετρημένο). Η αναμονή είναι για το
+      # ΙΔΙΟ το harness, όχι για τη ρίζα: το «ο server απαντά» δεν σημαίνει «η διαδρομή
+      # μεταγλωττίστηκε». ⚠️ ΥΠΟΧΡΕΩΤΙΚΟΣ πραγματικός user-agent — το `src/middleware.ts`
+      # μπλοκάρει το `headlesschrome` με 403 χωρίς σώμα, χωρίς εξαίρεση για development.
+      - name: ⏳ Wait for the harness route
+        run: |
+          UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" \
+              http://localhost:3000/test-harness/contrast-matrix || echo 000)
+            [ "$code" = "200" ] && echo "harness έτοιμο μετά ${i}0s" && exit 0
+            sleep 10
+          done
+          echo "::error::το harness δεν απάντησε 200 σε 600s (τελευταίος κώδικας $code)"
+          tail -80 /tmp/dev-server.log
+          exit 1
+
+      - name: 🔍 CHECK 3.40 — runtime contrast ratchet
+        run: node scripts/check-runtime-contrast-ratchet.js --snapshot /tmp/snapshot.json
+
+      # Το στιγμιότυπο ανεβαίνει ΠΑΝΤΑ: όταν η πύλη κοκκινίσει, η διαφορά εξηγείται από
+      # τα υπολογισμένα χρώματα — και χωρίς αυτά η αιτιολόγηση θα ήταν εικασία.
+      - name: 📤 Upload snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-contrast-snapshot
+          path: /tmp/snapshot.json
+          if-no-files-found: warn

@@ -241,8 +241,14 @@ fi
 # and never reorder slots to "look nicer" (the ORDER is the CVD mechanism).
 # ═══════════════════════════════════════════════════════════════════════════════
 
+# ⚠️ ADR-771 Φ.1 — Η ΣΚΑΝΔΑΛΗ ΠΕΡΙΛΑΜΒΑΝΕΙ ΚΑΙ ΤΗ ΜΗΧΑΝΗ, ΟΧΙ ΜΟΝΟ ΤΑ ΔΕΔΟΜΕΝΑ.
+# Οι πίνακες Machado 2009 και η απόσταση OKLab έφυγαν από εδώ σε `scripts/lib/contrast/cvd.js`
+# (SSoT — δεύτερη πύλη ρωτά την ίδια ερώτηση). Η εξαγωγή όμως μετακίνησε ένα εξάρτημα ΕΞΩ από
+# τη σκανδάλη: με σκανδάλη μόνο στο `globals.css`, μια αλλαγή στους ίδιους τους πίνακες
+# προσομοίωσης δεν θα ξυπνούσε ΚΑΜΙΑ πύλη — δηλαδή το μοντέλο που ΟΡΙΖΕΙ τι περνά θα άλλαζε
+# ανέλεγκτο. Το κατώφλι είναι βαθμονομημένο στο μοντέλο· το μοντέλο είναι μέρος του προτύπου.
 if [[ -z "${SKIP_CHART_PALETTE:-}" ]] && [[ -f "scripts/validate-chart-palette.js" ]]; then
-    if echo "$STAGED_FILES" | grep -q '^src/app/globals\.css$'; then
+    if echo "$STAGED_FILES" | grep -qE '^(src/app/globals\.css|scripts/lib/contrast/cvd\.js|scripts/validate-chart-palette\.js)$'; then
         node scripts/validate-chart-palette.js
         if [[ $? -ne 0 ]]; then
             echo ""
@@ -644,6 +650,14 @@ register_area "Theme Pairing Gate (CHECK 3.39)" \
     "^(scripts/check-theme-pairing-ratchet\.js$|scripts/lib/contrast/(ts-token-palette|theme-pairing|css-token-themes)\.js$|\.theme-pairing-baseline\.json$)" \
     "scripts/__tests__/check-theme-pairing-ratchet\.test\.js" \
     "npm run test:theme-pairing"
+
+# CHECK 3.41 (ADR-771 Φ.1) — η πύλη ΚΑΙ η άγκυρα του ζωγράφου μαζί: η πρώτη βεβαιώνει ότι
+# οι δύο καταστάσεις ΔΗΛΩΝΟΥΝ διαφορετική γωνία, η δεύτερη ότι ο καμβάς την ΤΙΜΑ. Χωριστά,
+# καθεμία αφήνει ανοιχτό το μισό ελάττωμα.
+register_area "State Channel Gate (CHECK 3.41)" \
+    "^(scripts/check-state-channel-distinctness\.js$|scripts/lib/contrast/(cvd|state-marks)\.js$|src/subapps/dxf-viewer/config/color-config\.ts$|src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state\.ts$)" \
+    "(check-state-channel-distinctness|table-bound-mark-corner)\.test\." \
+    "npm run test:state-channel"
 
 # ─── Canary: a convention-driven pattern that matches NOTHING must FAIL, not pass ───
 # Guards the exact trap this repo has paid for twice: a scan reports "clean" because its

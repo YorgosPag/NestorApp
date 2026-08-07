@@ -191,6 +191,22 @@ const themePairingTriggers = allFiles.filter(
 if (!process.env.SKIP_THEME_PAIRING && themePairingTriggers.length > 0)
   addThread('3.39', 'Theme pairing ratchet', 'scripts/check-theme-pairing-ratchet.js');
 
+// CHECK 3.41 (ADR-771 Φ.1) — «ξέρω ΠΟΙΟ είναι ποιο χωρίς να δω χρώμα;». Η «παράκαμψη»
+// και η «σύγκρουση» κελιού ζωγραφίζονταν ως ΤΑΥΤΟΣΗΜΟ τρίγωνο, στην ίδια γωνία, στο ίδιο
+// μέγεθος — μόνη διαφορά η απόχρωση (WCAG 1.4.1). Καμία πύλη δεν τα κοίταζε: το 3.32
+// μετρά ΜΟΝΟ την παλέτα γραφημάτων, τα 3.38/3.39 κλάσεις και δηλώσεις tokens.
+// ⚠️ ΔΥΟ κανόνες, ΟΧΙ ένας με «ή»: το ζεύγος `#f59e0b`↔`#ef4444` δίνει ΔE 13,9 σε CVD,
+// δηλαδή ΠΑΝΩ από το κατώφλι 8 — ένα «σχήμα Ή χρώμα» θα έμενε πράσινο πάνω στο ίδιο το
+// ελάττωμα. Το Κ1 (ταυτότητα) δεν έχει χρωματική διέξοδο σε καμία τιμή ΔE.
+// Σκανδάλη: το config των σημαδιών ή ο ζωγράφος τους (~120ms, ένα AST parse).
+const stateChannelTriggers = allFiles.filter(
+  f => f === 'src/subapps/dxf-viewer/config/color-config.ts'
+    || f === 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
+    || f.startsWith('scripts/lib/contrast/')
+);
+if (!process.env.SKIP_STATE_CHANNEL && stateChannelTriggers.length > 0)
+  addThread('3.41', 'State channel distinctness', 'scripts/check-state-channel-distinctness.js');
+
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);
 
