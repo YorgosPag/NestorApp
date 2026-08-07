@@ -38,10 +38,13 @@
  */
 
 import { classifyBoundCell } from './table-binding-state';
+// 🔴 ADR-769 Δ7 — ο ΙΔΙΟΣ κριτής γραψιμότητας που απαντά στον επεξεργαστή και στον φρουρό.
+import { tableSourceColumnWriteBack } from './table-source-resolver';
 import type { TableBoundCellState } from './table-binding-state';
 import type { TableCellLayout, TableColumnLayout, TableRectMm } from '../table-layout-types';
 import type {
   PersistedTableModel,
+  TableBinding,
   TableCell,
   TableColumnId,
   TableRowId,
@@ -58,6 +61,16 @@ export interface BoundColumnStrip {
   /** Αριστερή ακμή της στήλης (sheet-mm από την αρχή του πίνακα). */
   readonly xMm: number;
   readonly widthMm: number;
+  /**
+   * 🔴 ADR-769 Δ7 — **δέχεται αυτή η στήλη γραφή που θα φτάσει στην οντότητα;**
+   *
+   * Η **γραψιμότητα φαίνεται πριν τη γραφή** (πρότυπο ArchiCAD). Ζει στη λωρίδα και όχι σε
+   * σημάδι κελιού για τον **ίδιο** λόγο με τον δεσμό (Δ8): η γραψιμότητα είναι ιδιότητα
+   * **ΣΤΗΛΗΣ** (ADR-769 Δ2), οπότε ένα σημάδι ανά κελί θα δήλωνε γεγονός που το σχήμα δεν
+   * έχει — και θα ήταν 800 σημάδια σε τοπογραφικό 200 κορυφών για να ειπωθεί κάτι που ισχύει
+   * σε ολόκληρη τη στήλη.
+   */
+  readonly writable: boolean;
 }
 
 /** Οι δύο **εξαιρέσεις** που αξίζουν σημάδι κελιού — ποτέ το «δεμένο» και ποτέ το «ελεύθερο». */
@@ -81,18 +94,27 @@ export interface BoundExceptionMark {
  */
 export function boundColumnStripsMm(
   model: PersistedTableModel,
+  binding: TableBinding | undefined,
   columns: readonly TableColumnLayout[],
 ): readonly BoundColumnStrip[] {
-  const bound = new Set<TableColumnId>();
+  const bound = new Map<TableColumnId, boolean>();
   for (const column of model.columns) {
-    if (column.sourceKey !== undefined) bound.add(column.id);
+    if (column.sourceKey === undefined) continue;
+    // ⚠️ Η γραψιμότητα ρωτιέται από το **μητρώο της πηγής** (ADR-769 Δ2) και δεν ξαναγράφεται
+    // εδώ. Πίνακας που δηλώνει `sourceKey` χωρίς δεσμό είναι ασυνεπής ⇒ **ποτέ** γράψιμος:
+    // δεν υπάρχει πηγή να πει ποιος κατέχει τη στήλη.
+    const writable =
+      binding !== undefined &&
+      tableSourceColumnWriteBack(binding.sourceRef.kind, column.sourceKey).kind === 'writable';
+    bound.set(column.id, writable);
   }
   if (bound.size === 0) return [];
 
   const strips: BoundColumnStrip[] = [];
   for (const column of columns) {
-    if (!bound.has(column.id)) continue;
-    strips.push({ colId: column.id, xMm: column.xMm, widthMm: column.widthMm });
+    const writable = bound.get(column.id);
+    if (writable === undefined) continue;
+    strips.push({ colId: column.id, xMm: column.xMm, widthMm: column.widthMm, writable });
   }
   return strips;
 }

@@ -29,12 +29,29 @@ import {
   boundExceptionMarks,
 } from '../binding/table-bound-marks';
 import type { TableCellLayout, TableColumnLayout } from '../table-layout-types';
-import type { PersistedTableModel, TableCellEntry, TableColumn, TableRow } from '../../../types/table';
+import type {
+  PersistedTableModel,
+  TableBinding,
+  TableCellEntry,
+  TableColumn,
+  TableRow,
+} from '../../../types/table';
 import type { TableCellStyle } from '../table-style';
 
 // ─── Σκηνικό ──────────────────────────────────────────────────────────────────
 
 const STYLE = {} as TableCellStyle;
+
+/**
+ * ADR-769 Δ7 — δεσμός στον **πίνακα συντεταγμένων**: εκεί το `index` είναι `ordinal`
+ * (ποτέ γράψιμο) και το `x` είναι **γράψιμο**. Οι δύο δεμένες στήλες του σκηνικού πέφτουν
+ * επίτηδες σε **διαφορετική** πλευρά, ώστε η λωρίδα να μην μπορεί να περάσει με σταθερά.
+ */
+const BINDING: TableBinding = {
+  mode: 'bound',
+  sourceRef: { kind: 'survey-coordinates' },
+  revision: 'r0',
+};
 
 /** Στήλες: `cIdx`/`cX` δεμένες (έχουν `sourceKey`), `cNote` **ελεύθερη**. */
 function model(cells: TableCellEntry[]): PersistedTableModel {
@@ -73,7 +90,7 @@ function cellLayout(rowId: string, colId: string, y: number): TableCellLayout {
 
 describe('boundColumnStripsMm — το «δεμένο» σημαδεύεται ανά στήλη (Δ8)', () => {
   it('μία λωρίδα ανά στήλη ΜΕ sourceKey — η ελεύθερη στήλη δεν παίρνει καμία', () => {
-    const strips = boundColumnStripsMm(model([]), COLUMNS);
+    const strips = boundColumnStripsMm(model([]), BINDING, COLUMNS);
 
     expect(strips.map((s) => s.colId)).toEqual(['cIdx', 'cX']);
   });
@@ -83,10 +100,12 @@ describe('boundColumnStripsMm — το «δεμένο» σημαδεύεται �
     // πίνακα: δρομέας, ζώνες, μυρμήγκια). Αν γεννιόταν εδώ σε mm, θα χόντραινε με το zoom
     // και θα έπρεπε να μπει `pxPerMm` σε καθαρή συνάρτηση του μοντέλου — δηλαδή η γεωμετρία
     // θα μάθαινε την κλίμακα της οθόνης. Ο ζωγράφος κατέχει το πάχος, εδώ ζει το «ποιες».
-    const [idx, x] = boundColumnStripsMm(model([]), COLUMNS);
+    const [idx, x] = boundColumnStripsMm(model([]), BINDING, COLUMNS);
 
-    expect(idx).toEqual({ colId: 'cIdx', xMm: 0, widthMm: 15 });
-    expect(x).toEqual({ colId: 'cX', xMm: 15, widthMm: 25 });
+    // ADR-769 Δ7 — το `writable` ταξιδεύει δίπλα στο εύρος: είναι **κρίση**, όχι γεωμετρία,
+    // και γι' αυτό ζει εδώ και όχι στον ζωγράφο (που δεν ξέρει τι είναι `sourceKey`).
+    expect(idx).toEqual({ colId: 'cIdx', xMm: 0, widthMm: 15, writable: false });
+    expect(x).toEqual({ colId: 'cX', xMm: 15, widthMm: 25, writable: true });
   });
 
   it('🔴 ΤΟ ΠΛΗΘΟΣ ΕΙΝΑΙ O(ΣΤΗΛΕΣ), ΟΧΙ O(ΚΕΛΙΑ) — 200 γραμμές δίνουν ΠΑΛΙ 2 σημάδια', () => {
@@ -96,7 +115,7 @@ describe('boundColumnStripsMm — το «δεμένο» σημαδεύεται �
       many.push([`r${i}`, 'cX', { kind: 'text', value: i, bound: { sourceValue: i } }]);
     }
 
-    expect(boundColumnStripsMm(model(many), COLUMNS)).toHaveLength(2);
+    expect(boundColumnStripsMm(model(many), BINDING, COLUMNS)).toHaveLength(2);
   });
 
   it('πίνακας ΧΩΡΙΣ καμία δεμένη στήλη δεν γεννά λωρίδα — τίποτα να ζωγραφιστεί', () => {
@@ -105,13 +124,13 @@ describe('boundColumnStripsMm — το «δεμένο» σημαδεύεται �
       columns: model([]).columns.map(({ sourceKey: _drop, ...rest }) => rest),
     };
 
-    expect(boundColumnStripsMm(free, COLUMNS)).toEqual([]);
+    expect(boundColumnStripsMm(free, BINDING, COLUMNS)).toEqual([]);
   });
 
   it('στήλη του μοντέλου που ΔΕΝ υπάρχει στη διάταξη αγνοείται αντί να μαντευτεί', () => {
     const missing = COLUMNS.filter((c) => c.id !== 'cX');
 
-    expect(boundColumnStripsMm(model([]), missing).map((s) => s.colId)).toEqual(['cIdx']);
+    expect(boundColumnStripsMm(model([]), BINDING, missing).map((s) => s.colId)).toEqual(['cIdx']);
   });
 });
 

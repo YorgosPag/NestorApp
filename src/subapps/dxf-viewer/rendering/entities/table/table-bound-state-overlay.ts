@@ -68,7 +68,9 @@ export function stampTableBoundStateOverlay(
   visibleCells: readonly TableCellLayout[],
 ): void {
   const model = entity.model;
-  const strips = boundColumnStripsMm(model, columns);
+  // 🔴 ADR-769 Δ7 — ο δεσμός ταξιδεύει μαζί: η **γραψιμότητα** της στήλης απαντιέται από το
+  // μητρώο **της πηγής**, οπότε η λωρίδα δεν μπορεί να κριθεί από το μοντέλο μόνο του.
+  const strips = boundColumnStripsMm(model, entity.binding, columns);
   const marks = boundExceptionMarks(model, visibleCells);
   if (strips.length === 0 && marks.length === 0) return;
 

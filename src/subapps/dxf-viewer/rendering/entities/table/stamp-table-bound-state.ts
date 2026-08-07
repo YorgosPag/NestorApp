@@ -98,8 +98,15 @@ function stampColumnStrips(
   const hex = stale ? TABLE_BOUND_STATE.staleHex : TABLE_BOUND_STATE.columnHex;
 
   ctx.save();
-  ctx.fillStyle = hexToRgba(hex, TABLE_BOUND_STATE.columnAlpha);
   for (const strip of strips) {
+    // 🔴 ADR-769 Δ7 — **η γραψιμότητα φαίνεται πριν τη γραφή**: έντονη λωρίδα = «γράψε μου
+    // και θα το πω στην οντότητα», ξεθωριασμένη = «μόνο διαβάζεις» (Revit: *greyed out*).
+    // Το `fillStyle` μπαίνει **ανά λωρίδα** και όχι μία φορά έξω, γιατί η ένταση είναι πλέον
+    // ιδιότητα **της στήλης**, όχι της κλήσης.
+    ctx.fillStyle = hexToRgba(
+      hex,
+      strip.writable ? TABLE_BOUND_STATE.columnAlpha : TABLE_BOUND_STATE.readOnlyColumnAlpha,
+    );
     // Ο μπαγιάτικος δεσμός ζωγραφίζεται **σπασμένος**: το ίδιο σχήμα, κομμένο. Δεύτερο
     // σχήμα θα ήταν δεύτερο λεξιλόγιο για την ίδια οικογένεια πληροφορίας.
     if (stale) stampDashedStrip(rc, strip, thicknessMm);

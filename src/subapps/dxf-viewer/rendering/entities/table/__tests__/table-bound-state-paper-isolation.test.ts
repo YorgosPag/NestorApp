@@ -70,8 +70,8 @@ function recorder(): Recorder {
 }
 
 const STRIPS: readonly BoundColumnStrip[] = [
-  { colId: 'cIdx', xMm: 0, widthMm: 15 },
-  { colId: 'cX', xMm: 15, widthMm: 25 },
+  { colId: 'cIdx', xMm: 0, widthMm: 15, writable: false },
+  { colId: 'cX', xMm: 15, widthMm: 25, writable: true },
 ];
 const MARKS: readonly BoundExceptionMark[] = [
   { rowId: 'r1', colId: 'cX', state: 'overridden', rect: { x: 15, y: 8, w: 25, h: 6 } },
