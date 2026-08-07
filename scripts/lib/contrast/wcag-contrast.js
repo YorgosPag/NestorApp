@@ -65,6 +65,35 @@ function toHex(rgb) {
   return '#' + rgb.map((v) => v.toString(16).padStart(2, '0')).join('');
 }
 
+/**
+ * Parse a browser `getComputedStyle` colour — `rgb(30, 41, 59)` or `rgb(0, 0, 0, 0.5)`
+ * / `rgba(0, 0, 0, 0.5)` — into `{ rgb: [r,g,b], alpha }`. Returns null for anything
+ * else (`''`, `color(display-p3 …)`, keywords).
+ *
+ * Needed by ADR-770 Στρώμα 2β: the browser is the only thing that can resolve
+ * `hsl(var(--x))`, `color-mix()` or an `rgba()` literal, and it always answers in this
+ * one serialisation. Lives HERE, next to `compositeOver`, because "what is this colour"
+ * and "what does it look like over that one" are one question asked twice — a second
+ * parser in the runtime gate would be the ADR-749 shape all over again.
+ *
+ * ⚠️ Chrome serialises fully-opaque colours as `rgb(...)` and translucent ones as
+ * `rgba(...)`, but `rgb(r g b / a)` is also legal CSS Color 4 output. Both accepted:
+ * relying on the function NAME to tell you about alpha is a trap.
+ */
+function parseComputedColor(css) {
+  const m = /^rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/i
+    .exec(String(css || '').trim());
+  if (!m) return null;
+  const raw = m[4];
+  const alpha = raw === undefined
+    ? 1
+    : raw.endsWith('%') ? parseFloat(raw) / 100 : parseFloat(raw);
+  return {
+    rgb: [Math.round(+m[1]), Math.round(+m[2]), Math.round(+m[3])],
+    alpha: Number.isFinite(alpha) ? alpha : 1,
+  };
+}
+
 /** WCAG 2.1 grade for body text (<18.66px / non-bold). */
 function grade(ratio) {
   if (ratio >= 7) return 'AAA';
@@ -75,6 +104,7 @@ function grade(ratio) {
 
 module.exports = {
   parseHslToken,
+  parseComputedColor,
   hslToRgb,
   relativeLuminance,
   contrastRatio,

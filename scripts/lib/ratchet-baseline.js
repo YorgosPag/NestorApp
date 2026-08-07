@@ -189,6 +189,122 @@ function compareSets(currentIds, baselineIds) {
   };
 }
 
+/**
+ * Το control-flow των **set-shaped** ratchets (CHECK 3.39 / 3.40 και ό,τι έρθει).
+ *
+ * 🔑 ΓΙΑΤΙ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΟ `runRatchetCli`: εκείνο συγκρίνει **έναν αριθμό** με
+ * κατεύθυνση και ανοχή (typed %, bytes). Αυτά εδώ συγκρίνουν **δύο σύνολα ταυτοτήτων**
+ * (παραβιάσεις + κλειστό σύνολο δηλώσεων), όπου «5 → 5» μπορεί να κρύβει **ανταλλαγή**
+ * — το μάθημα του ADR-749. Η αριθμητική ανοχή δεν έχει νόημα· η ταυτότητα έχει.
+ *
+ * ⚠️ ΓΙΑΤΙ ΓΡΑΦΤΗΚΕ: το CHECK 3.28 (jscpd, N.18) **έπιασε** τις δύο πύλες να είναι
+ * δίδυμα — 4 μπλοκ, ~50 γραμμές κοινού control-flow. Ήταν ακριβώς το λάθος που ο
+ * κανόνας N.18 περιγράφει: «κεντρικοποιείς το Α, γράφεις το Β ως δίδυμο». Η πύλη το
+ * είπε πριν γραφτεί το «done», που είναι όλος ο λόγος ύπαρξής της.
+ *
+ * Descriptor:
+ *   adr           — «ADR-770 Στρώμα 2 (CHECK 3.39)»
+ *   skipEnv       — όνομα env που παρακάμπτει (π.χ. 'SKIP_THEME_PAIRING')
+ *   baselineFile  — απόλυτο μονοπάτι της baseline
+ *   measure()     — sync ή async· επιστρέφει `{ violationIds, declarations, violations }`
+ *   buildPayload(m)
+ *   printReport(m)
+ *   printFailure({ addedViolations, addedDeclarations, measured })
+ *   labels        — `{ violations, declarations }` για τα μηνύματα
+ *   commands      — `{ report, baseline, seed }`
+ */
+/**
+ * Η αναφορά αποτυχίας ενός set-shaped ratchet.
+ *
+ * ⚠️ Ζει ΕΔΩ και όχι στις πύλες γιατί το CHECK 3.28 το έπιασε **δύο φορές**: η πρώτη
+ * εξαγωγή μετακίνησε το control-flow αλλά άφησε το *σχήμα εκτύπωσης* διπλό (ίδια δομή,
+ * άλλα κείμενα). «Ίδια δομή με άλλες λέξεις» είναι κλώνος — το token-based jscpd δεν
+ * ξεγελιέται από τη μετάφραση, και είχε δίκιο.
+ *
+ * Ό,τι διαφέρει ανά πύλη είναι **κείμενο**, άρα δεδομένα του descriptor:
+ *   messages.worse            — μία γραμμή: τι χειροτέρεψε
+ *   messages.newDeclLabel     — ετικέτα για κάθε νέα δήλωση
+ *   messages.newDeclAdvice[]  — γιατί μπλοκάρει, ακόμα κι αν σήμερα περνά
+ */
+function printSetFailure(descriptor, { addedViolations, addedDeclarations, measured }) {
+  const M = descriptor.messages;
+  const byId = new Map((measured.violations || []).map((f) => [descriptor.violationId(f), f]));
+
+  console.error(`❌ ${descriptor.adr} — ${M.worse}\n`);
+
+  for (const id of addedDeclarations) console.error(`   🚫 ${M.newDeclLabel}  ${id}`);
+  if (addedDeclarations.length) {
+    console.error('');
+    for (const line of M.newDeclAdvice) console.error(`      ${line}`);
+    console.error('');
+  }
+
+  for (const id of addedViolations) {
+    const f = byId.get(id);
+    console.error(`   🚫 ${f ? `${f.file}:${f.line}` : id}`);
+    console.error(`      [${f ? f.state : '—'}] ${f ? f.detail : ''}`);
+  }
+}
+
+async function runSetRatchetCli(descriptor, argv = process.argv) {
+  if (descriptor.skipEnv && process.env[descriptor.skipEnv]) return process.exit(0);
+  const args = argv.slice(2);
+  const L = descriptor.labels;
+  const file = descriptor.baselineFile;
+
+  let measured;
+  try {
+    measured = await descriptor.measure(args);
+  } catch (e) {
+    console.error(`❌ ${descriptor.adr} — αδύνατη η μέτρηση: ${e.message}`);
+    return process.exit(1); // fail-closed: ποτέ «καθαρό» χωρίς μέτρηση
+  }
+
+  if (args.includes('--report')) {
+    descriptor.printReport(measured);
+    return process.exit(0);
+  }
+
+  if (args.includes('--write-baseline')) {
+    writeBaselineFile(file, descriptor.buildPayload(measured));
+    console.log(`✅ Baseline: ${rel(file)}`);
+    console.log(`   ${measured.violationIds.length} ${L.violations} · ${measured.declarations.length} ${L.declarations}`);
+    return process.exit(0);
+  }
+
+  const baseline = loadBaseline(file);
+  const usable = baseline && !baseline.__invalid
+    && Array.isArray(baseline.violations) && Array.isArray(baseline.declarations);
+  if (!usable) {
+    const why = baseline ? baseline.__invalid || 'λείπει πεδίο "violations"/"declarations"' : 'λείπει';
+    console.error(`❌ ${descriptor.adr} — baseline ${why}: ${rel(file)}`);
+    console.error(`   Δημιούργησε: ${descriptor.commands.seed}`);
+    return process.exit(1); // fail-closed: χαλασμένη baseline ΠΟΤΕ δεν διαβάζεται ως «0»
+  }
+
+  const v = compareSets(measured.violationIds, baseline.violations);
+  const d = compareSets(measured.declarations, baseline.declarations);
+
+  if (v.added.length || d.added.length) {
+    printSetFailure(descriptor, { addedViolations: v.added, addedDeclarations: d.added, measured });
+    console.error(`\n   Αναφορά: ${descriptor.commands.report}`);
+    console.error(`   Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: ${descriptor.commands.baseline}`);
+    if (descriptor.skipEnv) {
+      console.error(`   Έμμεση διαφυγή (αιτιολόγησε στον Giorgio): ${descriptor.skipEnv}=1`);
+    }
+    return process.exit(1);
+  }
+
+  const progress = v.removed.length || d.removed.length
+    ? `  ⬇ ${v.removed.length} ${L.violations} / ${d.removed.length} ${L.declarations} λιγότερες — κλείδωσέ το: ${descriptor.commands.baseline}`
+    : '';
+  console.log(
+    `✅ ${descriptor.adr} — ${v.currentCount} ${L.violations} / ${d.currentCount} ${L.declarations} `
+    + `(baseline ${v.baselineCount}/${d.baselineCount})${progress}`,
+  );
+  return process.exit(0);
+}
+
 module.exports = {
   PROJECT_ROOT,
   rel,
@@ -198,5 +314,6 @@ module.exports = {
   isRegression,
   compareSets,
   runRatchetCli,
+  runSetRatchetCli,
   printHelp,
 };

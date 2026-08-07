@@ -69,7 +69,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { PROJECT_ROOT, loadBaseline, writeBaselineFile, compareSets } = require('./lib/ratchet-baseline');
+const { PROJECT_ROOT, runSetRatchetCli } = require('./lib/ratchet-baseline');
 const { readTokenPalette, semanticEntries, TOKEN_MODULES_DIR } = require('./lib/contrast/ts-token-palette');
 const { readThemes, GLOBALS_CSS } = require('./lib/contrast/css-token-themes');
 const { evaluate, RATCHETED_STATES } = require('./lib/contrast/theme-pairing');
@@ -142,81 +142,43 @@ function printReport(m) {
   }
 }
 
-function printFailure({ addedViolations, addedDeclarations, byId }) {
-  console.error('❌ CHECK 3.39 (ADR-770 Στρώμα 2) — το θεματικό ζευγάρωμα χειροτέρεψε\n');
+/**
+ * Το control-flow ζει στο `runSetRatchetCli` (SSoT) — **όχι** εδώ. Το CHECK 3.28 (jscpd)
+ * έπιασε αυτή την πύλη και την 3.40 να είναι δίδυμα σε 4 μπλοκ / ~50 γραμμές· η κοινή
+ * μηχανή είναι η απάντηση που ο N.18 απαιτεί, όχι δύο «σχεδόν ίδια» αρχεία.
+ */
+const DESCRIPTOR = {
+  adr: 'CHECK 3.39',
+  skipEnv: 'SKIP_THEME_PAIRING',
+  get baselineFile() { return baselineFile(); },
+  measure,
+  buildPayload,
+  printReport,
+  violationId,
+  labels: { violations: 'παραβιάσεις', declarations: 'σημασιολογικές δηλώσεις' },
+  messages: {
+    worse: 'το θεματικό ζευγάρωμα χειροτέρεψε',
+    newDeclLabel: 'ΝΕΑ ΜΟΝΟΘΕΜΑΤΙΚΗ ΔΗΛΩΣΗ',
+    newDeclAdvice: [
+      'Ένα σταθερό hex δεν μπορεί να ισχύει και στα δύο θέματα. Ακόμα κι αν',
+      'σήμερα τυχαίνει να περνά, θα σπάσει μόλις μετακινηθεί μια επιφάνεια.',
+      'Γράψε το όπως το `semanticColors` στο ίδιο αρχείο:  hsl(var(--token))',
+    ],
+  },
+  commands: {
+    report: 'npm run theme-pairing:report',
+    baseline: 'npm run theme-pairing:baseline',
+    seed: 'node scripts/check-theme-pairing-ratchet.js --write-baseline',
+  },
+};
 
-  for (const id of addedDeclarations) {
-    console.error(`   🚫 ΝΕΑ ΜΟΝΟΘΕΜΑΤΙΚΗ ΔΗΛΩΣΗ  ${id}`);
-  }
-  if (addedDeclarations.length) {
-    console.error('\n      Ένα σταθερό hex δεν μπορεί να ισχύει και στα δύο θέματα. Ακόμα κι αν');
-    console.error('      σήμερα τυχαίνει να περνά, θα σπάσει μόλις μετακινηθεί μια επιφάνεια.');
-    console.error(`      Γράψε το όπως το ${'`semanticColors`'} στο ίδιο αρχείο:  hsl(var(--token))\n`);
-  }
+const main = (argv = process.argv) => runSetRatchetCli(DESCRIPTOR, argv);
 
-  for (const id of addedViolations) {
-    const f = byId.get(id);
-    console.error(`   🚫 ${f ? `${f.file}:${f.line}` : id}`);
-    console.error(`      [${f ? f.state : '—'}] ${f ? f.detail : ''}`);
-  }
-
-  console.error('\n   Αναφορά: npm run theme-pairing:report');
-  console.error('   Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: npm run theme-pairing:baseline');
-  console.error('   Έμμεση διαφυγή (αιτιολόγησε στον Giorgio): SKIP_THEME_PAIRING=1 git commit ...');
+if (require.main === module) {
+  main().catch((e) => {
+    console.error(`❌ CHECK 3.39 — απρόσμενο σφάλμα: ${e.message}`);
+    process.exit(1);
+  });
 }
-
-function main(argv = process.argv) {
-  if (process.env.SKIP_THEME_PAIRING) return process.exit(0);
-  const args = argv.slice(2);
-
-  let m;
-  try {
-    m = measure();
-  } catch (e) {
-    console.error(`❌ CHECK 3.39 — αδύνατη η μέτρηση: ${e.message}`);
-    return process.exit(1); // fail-closed
-  }
-
-  if (args.includes('--report')) {
-    printReport(m);
-    return process.exit(0);
-  }
-
-  if (args.includes('--write-baseline')) {
-    writeBaselineFile(baselineFile(), buildPayload(m));
-    console.log(`✅ Baseline: ${path.relative(PROJECT_ROOT, baselineFile())}`);
-    console.log(`   ${m.violationIds.length} παραβιάσεις · ${m.declarations.length} σημασιολογικές δηλώσεις`);
-    return process.exit(0);
-  }
-
-  const baseline = loadBaseline(baselineFile());
-  if (!baseline || baseline.__invalid || !Array.isArray(baseline.violations) || !Array.isArray(baseline.declarations)) {
-    const why = baseline ? baseline.__invalid || 'λείπει πεδίο "violations"/"declarations"' : 'λείπει';
-    console.error(`❌ CHECK 3.39 — baseline ${why}: ${path.relative(PROJECT_ROOT, baselineFile())}`);
-    console.error('   Δημιούργησε: node scripts/check-theme-pairing-ratchet.js --write-baseline');
-    // fail-closed: χαλασμένη baseline ΠΟΤΕ δεν διαβάζεται ως «0 παραβιάσεις»
-    return process.exit(1);
-  }
-
-  const v = compareSets(m.violationIds, baseline.violations);
-  const d = compareSets(m.declarations, baseline.declarations);
-
-  if (v.added.length || d.added.length) {
-    printFailure({
-      addedViolations: v.added,
-      addedDeclarations: d.added,
-      byId: new Map(m.violations.map((f) => [violationId(f), f])),
-    });
-    return process.exit(1);
-  }
-
-  const progress = v.removed.length || d.removed.length
-    ? `  ⬇ ${v.removed.length} παραβιάσεις / ${d.removed.length} δηλώσεις λιγότερες — κλείδωσέ το: npm run theme-pairing:baseline`
-    : '';
-  console.log(`✅ CHECK 3.39 — ${v.currentCount} παραβιάσεις / ${d.currentCount} σημασιολογικές δηλώσεις (baseline ${v.baselineCount}/${d.baselineCount})${progress}`);
-  return process.exit(0);
-}
-
-if (require.main === module) main();
 
 module.exports = { measure, buildPayload, violationId, declarationIds, baselineFile, main };

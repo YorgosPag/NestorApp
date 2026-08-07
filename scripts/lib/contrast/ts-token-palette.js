@@ -153,11 +153,50 @@ function detectDeclaredPair(leaves) {
 }
 
 /**
+ * Παράγει τη **δομική** ανάλυση (δηλωμένα + θεματικά ζεύγη) από **επίπεδες**
+ * καταχωρήσεις — ανεξάρτητα από το πώς μαζεύτηκαν.
+ *
+ * 🔑 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΟ `walkObject`: το Στρώμα 2β (ADR-770 §13) παράγει τις
+ * ίδιες καταχωρήσεις από **εκτέλεση** στον browser, όχι από AST. Χωρίς αυτή τη
+ * συνάρτηση, η αναγνώριση ζεύγους θα γραφτεί δεύτερη φορά — και δύο υλοποιήσεις του
+ * «τι είναι ζεύγος» είναι το ακριβές σχήμα που το ADR-749 αποσυναρμολόγησε (τέσσερις
+ * μηχανές SSoT, τρεις διαφορετικοί αριθμοί για το ίδιο δέντρο).
+ *
+ * Η ομαδοποίηση ανά γονικό μονοπάτι είναι ισοδύναμη με τη διάσχιση: το `walkObject`
+ * καλούσε το `detectDeclaredPair` για τα φύλλα **ενός επιπέδου**, που είναι εξ ορισμού
+ * τα φύλλα με κοινό γονέα.
+ *
+ * @param {object[]} entries καταχωρήσεις με `{file, path, key, segments, form, hex?}`
+ */
+function derivePairs(entries) {
+  const declaredPairs = [];
+  const byParent = new Map();
+  for (const e of entries) {
+    const parentKey = `${e.file}::${e.segments.slice(0, -1).join('.')}`;
+    if (!byParent.has(parentKey)) byParent.set(parentKey, []);
+    byParent.get(parentKey).push({ key: e.key, entry: e, value: e });
+  }
+  for (const [parentKey, leaves] of byParent) {
+    const pair = detectDeclaredPair(leaves);
+    if (!pair) continue;
+    const [file, parentPath] = parentKey.split('::');
+    declaredPairs.push({
+      file,
+      path: parentPath,
+      surface: pair.surface.entry,
+      foregrounds: pair.foregrounds.map((l) => l.entry),
+      borders: pair.borders.map((l) => l.entry),
+    });
+  }
+  declaredPairs.sort((a, b) => `${a.file}::${a.path}`.localeCompare(`${b.file}::${b.path}`));
+  return { declaredPairs, themedPairs: collectThemedPairs(entries) };
+}
+
+/**
  * Περπάτησε ένα object literal και μάζεψε κάθε φύλλο-συμβολοσειρά με το ΠΛΗΡΕΣ μονοπάτι
  * του, μαζί με τα δηλωμένα ζεύγη που συναντά στην πορεία.
  */
 function walkObject(node, prefix, file, sourceFile, out) {
-  const leaves = [];
   for (const prop of node.properties) {
     if (!ts.isPropertyAssignment(prop)) continue;
     const key = propertyName(prop);
@@ -183,19 +222,11 @@ function walkObject(node, prefix, file, sourceFile, out) {
       ...value,
     };
     out.entries.push(entry);
-    leaves.push({ key, entry, value });
   }
-
-  const pair = detectDeclaredPair(leaves);
-  if (pair) {
-    out.declaredPairs.push({
-      file,
-      path: prefix.join('.'),
-      surface: pair.surface.entry,
-      foregrounds: pair.foregrounds.map((l) => l.entry),
-      borders: pair.borders.map((l) => l.entry),
-    });
-  }
+  // ⚠️ Η αναγνώριση ζεύγους ΔΕΝ γίνεται εδώ: γίνεται μία φορά, στο `derivePairs`, από
+  // τις επίπεδες καταχωρήσεις — ώστε ο AST reader και το runtime του Στρώματος 2β να
+  // μοιράζονται **την ίδια** απάντηση στο «τι είναι ζεύγος». Δύο υλοποιήσεις που
+  // τυχαίνει να συμφωνούν σήμερα είναι το σχήμα του ADR-749, όχι SSoT.
 }
 
 /**
@@ -220,25 +251,29 @@ function collectThemedPairs(entries) {
 }
 
 /**
- * Διάβασε ΟΛΑ τα design-token modules.
+ * Διάβασε μια **ρητή λίστα** αρχείων TypeScript και μάζεψε κάθε δήλωση-συμβολοσειρά.
  *
+ * 🔑 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΟ `readTokenPalette`: το CHECK 3.42 (ADR-773 §8)
+ * διαβάζει **άλλα** αρχεία — την allowlist του CHECK 3.26, δηλαδή την αυθεντία χρώματος
+ * σε χώρο **κλάσεων** αντί για hex. Ίδια διάσχιση, ίδια ταξινόμηση ρόλου, ίδια δομική
+ * ανάλυση· **μόνο** η λίστα εισόδου αλλάζει. Χωρίς αυτή την εξαγωγή, ο ίδιος walker θα
+ * γραφόταν δεύτερη φορά — το ακριβές σχήμα που το `derivePairs` υπάρχει για να μην
+ * επαναληφθεί (ADR-749: τέσσερις μηχανές, τρεις αριθμοί για το ίδιο δέντρο).
+ *
+ * Fail-closed: αρχείο που δεν υπάρχει **σκάει**. Ο καλών ξέρει ποια αρχεία ζήτησε· μια
+ * σιωπηλή παράλειψη θα γινόταν «λιγότερες δηλώσεις», δηλαδή «καθαρότερο».
+ *
+ * @param {string[]} relFiles διαδρομές σχετικές με τη ρίζα
  * @param {string} [repoRoot]
- * @returns {{source:string, files:string[], entries:object[], declaredPairs:object[], themedPairs:object[]}}
  */
-function readTokenPalette(repoRoot = process.cwd()) {
-  const dir = path.join(repoRoot, TOKEN_MODULES_DIR);
-  if (!fs.existsSync(dir)) {
-    throw new Error(`ts-token-palette: δεν βρέθηκε ο φάκελος ${TOKEN_MODULES_DIR} — fail-closed.`);
-  }
-  const files = fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))
-    .sort();
-
-  const out = { source: TOKEN_MODULES_DIR, files: [], entries: [], declaredPairs: [] };
-  for (const name of files) {
-    const rel = `${TOKEN_MODULES_DIR}/${name}`;
-    const src = fs.readFileSync(path.join(dir, name), 'utf8');
+function readPaletteFromFiles(relFiles, repoRoot = process.cwd()) {
+  const out = { files: [], entries: [], declaredPairs: [] };
+  for (const rel of relFiles) {
+    const abs = path.join(repoRoot, rel);
+    if (!fs.existsSync(abs)) {
+      throw new Error(`ts-token-palette: δεν βρέθηκε το αρχείο ${rel} — fail-closed.`);
+    }
+    const src = fs.readFileSync(abs, 'utf8');
     const sourceFile = ts.createSourceFile(rel, src, ts.ScriptTarget.Latest, true);
     out.files.push(rel);
 
@@ -255,8 +290,29 @@ function readTokenPalette(repoRoot = process.cwd()) {
     ts.forEachChild(sourceFile, visit);
   }
 
-  out.themedPairs = collectThemedPairs(out.entries);
+  // Μία μηχανή για τη δομική ανάλυση — κοινή με το Στρώμα 2β (ADR-770 §13).
+  Object.assign(out, derivePairs(out.entries));
   return out;
+}
+
+/**
+ * Διάβασε ΟΛΑ τα design-token modules.
+ *
+ * @param {string} [repoRoot]
+ * @returns {{source:string, files:string[], entries:object[], declaredPairs:object[], themedPairs:object[]}}
+ */
+function readTokenPalette(repoRoot = process.cwd()) {
+  const dir = path.join(repoRoot, TOKEN_MODULES_DIR);
+  if (!fs.existsSync(dir)) {
+    throw new Error(`ts-token-palette: δεν βρέθηκε ο φάκελος ${TOKEN_MODULES_DIR} — fail-closed.`);
+  }
+  const files = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith('.ts') && !f.endsWith('.d.ts'))
+    .sort()
+    .map((name) => `${TOKEN_MODULES_DIR}/${name}`);
+
+  return { source: TOKEN_MODULES_DIR, ...readPaletteFromFiles(files, repoRoot) };
 }
 
 /** Οι καταχωρήσεις που ισχυρίζονται ΣΗΜΑΣΙΟΛΟΓΙΚΟ ρόλο — οι μόνες που κρίνονται. */
@@ -268,7 +324,10 @@ function semanticEntries(palette) {
 
 module.exports = {
   readTokenPalette,
+  readPaletteFromFiles,
   semanticEntries,
+  derivePairs,
+  collectThemedPairs,
   classifyRole,
   classifyValue,
   TOKEN_MODULES_DIR,
