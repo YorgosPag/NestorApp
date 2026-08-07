@@ -34,6 +34,10 @@
  */
 
 import type { Point2D } from '../../rendering/types/Types';
+// ADR-769 Δ1 — ΕΝΑ λεξιλόγιο για το «ποιο πεδίο γράφεται»: ο περιγραφέας στήλης
+// (`COORDINATE_WRITE_BACK`) και ο μεταφραστής μιλάνε τον ΙΔΙΟ τύπο. Τοπικό `'x' | 'y'` εδώ θα
+// ήταν δεύτερο λεξιλόγιο με μεταφραστή στη μέση — η παγίδα «2 λεξιλόγια ρόλων» του ADR-694.
+import type { TableWriteBackField } from '../../bim/table/write-back/table-write-back-plan';
 import type { TopoDefinition, TopoPoint, TopoSurfaceId } from './topo-types';
 import { getTopoDefinition } from './TopoPointStore';
 import { getTopoSurface } from './topo-surface';
@@ -131,6 +135,39 @@ export function moveSurveyPoint(
   return points.map((p, i) =>
     i === pointIndex ? { ...p, x: p.x + worldDelta.x, y: p.y + worldDelta.y } : p,
   );
+}
+
+/**
+ * ADR-769 Δ1 — **η γέφυρα από ΑΠΟΛΥΤΗ τιμή σε delta**: ο πίνακας λέει «η κορυφή 14 είναι στο
+ * X = 391.698,5», η λαβή λέει «μετακινήθηκε κατά +100». Ίδια πράξη, δύο διατυπώσεις.
+ *
+ * ## 🔑 Γιατί ΕΔΩ, και γιατί η εντολή δεν αγγίζεται
+ * Το `MoveTopoSurveyPointCommand` (ADR-662 §13) είναι **ήδη** ο ιδιοκτήτης, undoable, με το
+ * γραπτό συμβόλαιο των τριών βημάτων (πηγή → παράγωγο → εξαρτημένα) και με `reconcile`
+ * **σύγχρονα μέσα** στην εντολή. Δεύτερο εργοστάσιο πάνω του θα ήταν δεύτερο μονοπάτι γραφής
+ * που μπορεί να αποκλίνει· ένας **καθαρός μεταφραστής δίπλα στο `moveSurveyPoint`** αφήνει
+ * την εντολή ανέγγιχτη και τεσταρισμένη, και ζει δίπλα στη συνάρτηση που κάνει την πράξη.
+ *
+ * 🔴 **Το υψόμετρο δεν αγγίζεται** — ο άξονας που δεν γράφεται παίρνει delta **μηδέν**, όχι
+ * την τρέχουσα τιμή του: το delta είναι διάνυσμα, και «μηδέν» είναι η μόνη διατύπωση του
+ * «αυτό δεν το ζήτησε κανείς».
+ *
+ * @param absoluteWorldMm η **απόλυτη** τιμή σε WORLD mm (ο καλών έχει ήδη κάνει τη μετατροπή
+ *   μονάδων μέσω του `parseCellToStore` — ADR-769 Δ4).
+ * @returns `null` όταν ο δείκτης είναι εκτός ορίων — ρητό σήμα, ποτέ σιωπηλό `{0,0}` που θα
+ *   διαβαζόταν ως «τίποτα δεν άλλαξε» ενώ η αλήθεια είναι «δεν βρέθηκε η κορυφή».
+ */
+export function surveyPointDeltaForField(
+  points: readonly TopoPoint[],
+  pointIndex: number,
+  field: TableWriteBackField,
+  absoluteWorldMm: number,
+): Point2D | null {
+  const point = points[pointIndex];
+  if (point === undefined) return null;
+  return field === 'x'
+    ? { x: absoluteWorldMm - point.x, y: 0 }
+    : { x: 0, y: absoluteWorldMm - point.y };
 }
 
 /**

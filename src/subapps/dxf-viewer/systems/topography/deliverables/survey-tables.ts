@@ -18,6 +18,7 @@ import type {
   ExportableTableRow,
   ScheduleColumnDef,
 } from '../../../bim/schedule/types';
+import type { TableColumnWriteBack } from '../../../bim/table/write-back/table-write-back-plan';
 import { areaMm2ToM2, lengthMmToM, volumeMm3ToM3 } from '../../../utils/scene-units';
 import { polygonArea, polygonPerimeter } from '../../../bim/geometry/shared/polygon-utils';
 import type { TinSampler } from '../tin-sampler';
@@ -26,11 +27,18 @@ import type { ToleranceCheck } from './greek-survey-rules';
 
 const KEY = 'topography.deliverables.col';
 
-function col(
-  key: string,
+/**
+ * ⚠️ **Γενικό στο `K` επίτηδες** (ADR-769 Δ2): κρατά το κλειδί ως **κυριολεκτικό τύπο**, ώστε
+ * το σύνολο των στηλών ενός πίνακα να **παράγεται** από τον ίδιο τον πίνακα
+ * (`(typeof COORDINATE_COLUMNS)[number]['key']`) αντί να ξαναγραφτεί με το χέρι. Δεύτερη
+ * χειρόγραφη λίστα θα απέκλινε σιωπηλά — το repo το πλήρωσε τέσσερις φορές (CHECK 3.34/3.37).
+ * Για τους υπόλοιπους καλούντες η αλλαγή είναι διαφανής (στενότερος τύπος, ίδια τιμή).
+ */
+function col<K extends string>(
+  key: K,
   valueType: ScheduleColumnDef['valueType'],
   align: ScheduleColumnDef['align'],
-): ScheduleColumnDef {
+): ScheduleColumnDef & { readonly key: K } {
   return { key, i18nKey: `${KEY}.${key}`, valueType, align };
 }
 
@@ -43,13 +51,49 @@ function col(
  * native τους σύστημα και δεν αλλάζει προβολή πουθενά. Άρα ο πίνακας είναι μια αλλαγή ΜΟΝΑΔΑΣ
  * (mm → m), όχι μετασχηματισμός συντεταγμένων — γι' αυτό το M7 ΔΕΝ χρειάστηκε proj4 (§10, N.5).
  */
-export const COORDINATE_COLUMNS: readonly ScheduleColumnDef[] = [
+export const COORDINATE_COLUMNS = [
   col('index', 'count', 'right'),
   col('x', 'dimension-mm-to-m', 'right'),
   col('y', 'dimension-mm-to-m', 'right'),
   col('z', 'dimension-mm-to-m', 'right'),
   col('code', 'text', 'left'),
-];
+] as const satisfies readonly ScheduleColumnDef[];
+
+/** Τα κλειδιά του πίνακα συντεταγμένων — **παράγονται** από τον πίνακα, ποτέ ξαναγραμμένα. */
+export type CoordinateColumnKey = (typeof COORDINATE_COLUMNS)[number]['key'];
+
+/**
+ * 🔴 **ADR-769 Δ2 — η ΑΝΤΙΣΤΡΟΦΗ κατεύθυνση: ποιο κελί γράφει σε ποια ιδιότητα.**
+ *
+ * ## Γιατί ζει ΕΔΩ, τρεις γραμμές κάτω από τον εμπρός χάρτη
+ * Ο {@link buildCoordinateTable} είναι **αυθαίρετος κώδικας** — αναμειγνύει άμεσες παραμέτρους
+ * (`x: p.x`) με παράγωγα (`index: i + 1`). Η αντιστροφή **δεν εξάγεται αυτόματα**, πρέπει να
+ * δηλωθεί· και αν δηλωνόταν σε άλλο αρχείο, οι δύο κατευθύνσεις θα ήταν **δύο χειρόγραφες
+ * λίστες που αποκλίνουν σιωπηλά**. Δίπλα-δίπλα, ο ίδιος αναγνώστης τις βλέπει και τις δύο.
+ *
+ * ## 🔑 Ο τύπος ΑΠΑΙΤΕΙ απάντηση για κάθε στήλη
+ * `Record<CoordinateColumnKey, …>` με το κλειδί **παραγόμενο** από τον πίνακα: νέα στήλη χωρίς
+ * απόφαση γραψιμότητας **δεν μεταγλωττίζεται**. Άγκυρα και σε χρόνο εκτέλεσης (ο πράκτορας δεν
+ * τρέχει `tsc` — N.17), στο `survey-coordinate-write-back.test.ts`.
+ *
+ * ## Οι αποφάσεις, μία-μία
+ * | στήλη | | γιατί |
+ * |---|---|---|
+ * | `index` | `unwritable: ordinal` | αύξων αριθμός γραμμής. Revit: *«calculated values… are not parameters, only values»* ⇒ **ποτέ** |
+ * | `x`·`y` | **γράψιμες** | ο ιδιοκτήτης υπάρχει: `MoveTopoSurveyPointCommand` (ADR-662 §13), undoable, με cascade |
+ * | `z` | `unwritable: no-owner` | ⚠️ **ΟΧΙ παράγωγο — παράμετρος χωρίς ιδιοκτήτη.** Γραφή υψομέτρου είναι **δήλωση μέτρησης** (ADR-720) και αλλάζει το {@link TopoPoint.zSource} (ADR-731: *«αληθινός αριθμός αγνώστου γονέα»*). Θέλει **δική της απόφαση**, όχι παρενέργεια |
+ * | `code` | `unwritable: no-owner` | καμία εντολή δεν κατέχει το feature code σήμερα |
+ *
+ * 🔴 Το `no-owner` **δεν είναι παράλειψη — είναι η άρνηση να πούμε ψέματα**: δηλώνοντάς τα
+ * `computed` θα κρύβαμε ότι είναι πραγματικές παράμετροι, και το ψέμα θα επιβίωνε στον χρόνο.
+ */
+export const COORDINATE_WRITE_BACK: Readonly<Record<CoordinateColumnKey, TableColumnWriteBack>> = {
+  index: { kind: 'unwritable', reason: 'ordinal' },
+  x: { kind: 'writable', field: 'x' },
+  y: { kind: 'writable', field: 'y' },
+  z: { kind: 'unwritable', reason: 'no-owner' },
+  code: { kind: 'unwritable', reason: 'no-owner' },
+};
 
 /**
  * ⚠️ ADR-720 — a point measured in plan only writes `null` in the Ζ column, i.e. an EMPTY cell —
