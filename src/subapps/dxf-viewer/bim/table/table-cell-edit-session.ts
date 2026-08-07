@@ -28,11 +28,16 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { ICommand, ISceneManager } from '../../core/commands';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TableCell, TableColumnId, TableRowId } from '../../types/table';
+import type { TableColumnId, TableRowId } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
-// 🔴 ADR-767 Δ1 — ο ΕΝΑΣ κριτής του «γράφεται αυτό το κελί;». Η κρίση υπήρχε από τις 07/08
-// και **κανείς δεν τη ρωτούσε** (§11.2 #4): αυτό το import είναι όλη η διόρθωση.
-import { isBoundCellWritable } from './binding/table-binding-state';
+// 🔴 ADR-769 Δ7 — ο ΕΝΑΣ κριτής του «**πού πάει** η γραφή αυτού του κελιού;». Διαδέχεται το
+// δυαδικό `isBoundCellWritable` του ADR-767 Δ1, το οποίο **καταναλώνει** από μέσα: η Φ.Η
+// πρόσθεσε τρίτη απάντηση («γράφεται, αλλά στην οντότητα») και μια δεύτερη ανάγνωση εδώ θα
+// ήταν ακριβώς το σφάλμα του §11.2 #4 ανάποδα — read-only πεδίο πάνω από γραφέα που δέχεται.
+import {
+  isTableCellTypeable,
+  resolveTableCellWriteRoute,
+} from './write-back/table-cell-write-route';
 import type { TableCellLayout, TableRectMm } from './table-layout-types';
 import { cellBaselineYMm } from './table-layout-place';
 import type { TableCellStyle } from './table-style';
@@ -194,27 +199,17 @@ function buildEditTarget(
     // ξαναβασισμένη στην κορυφή του κελιού.
     baselineFromTopMm: cellBaselineYMm(rect, style.align, style) - rect.y,
     clickOffsetMm,
-    // 🔴 ADR-767 Δ1 — ρωτιέται **ο ίδιος κριτής** που ήδη απαντά στον φραγμό εξαγωγής και
+    // 🔴 ADR-769 Δ7 — ρωτιέται **ο ίδιος κριτής** που ήδη απαντά στον φρουρό της εντολής και
     // στον ζωγράφο. Ένας δεύτερος έλεγχος `cell.bound?.overridden` εδώ θα ήταν η δεύτερη
     // ερμηνεία των ίδιων σημαιών, δηλαδή δύο απαντήσεις στο «γράφεται;» μέσα στην ίδια
     // χειρονομία: read-only επεξεργαστής πάνω από γραφέα που δέχεται (ή το αντίστροφο).
-    readOnly: !isBoundCellWritable(persistedCell(entity.model, cell.rowId, cell.colId)),
+    //
+    // ⚠️ Κελί συντεταγμένης **δέχεται** πληκτρολόγηση: η γραφή έχει παραλήπτη, απλώς δεν
+    // είναι το μοντέλο. Δες `isTableCellTypeable`.
+    readOnly: !isTableCellTypeable(
+      resolveTableCellWriteRoute(entity.model, entity.binding, cell.rowId, cell.colId),
+    ),
   };
-}
-
-/**
- * Το **αποθηκευμένο** κελί με αυτή την ταυτότητα, ή `undefined` όταν είναι κενό.
- *
- * Το `TableCellLayout` της διάταξης κουβαλά ό,τι χρειάζεται η **ζωγραφική** (ορθογώνιο,
- * στυλ, στοίχιση) — όχι τα μεταδεδομένα δεσμού. Η ερώτηση «τρέφεται από πηγή;» απαντιέται
- * από το μοντέλο, που είναι και η μόνη αλήθεια γι' αυτό.
- */
-function persistedCell(
-  model: TableEntity['model'],
-  rowId: TableRowId,
-  colId: TableColumnId,
-): TableCell | undefined {
-  return model.cells.find(([r, c]) => r === rowId && c === colId)?.[2];
 }
 
 /**
@@ -241,10 +236,17 @@ export function buildTableCellEditCommand(
   // εγγραφής — πληκτρολόγιο, μελλοντική επιφάνεια, προγραμματιστική κλήση — πέφτει στον
   // ίδιο τοίχο. Ένας φρουρός μόνο στο UI θα ήταν ευγενική παράκληση.
   //
-  // ⚠️ **`null`, ΠΟΤΕ εξαίρεση.** Δεμένο κελί που δεν γράφεται είναι **φυσιολογική
-  // κατάσταση**, όχι σφάλμα προγραμματισμού — και το `null` σημαίνει ήδη «καμία εντολή,
-  // κανένα βήμα undo», δηλαδή δεν γεννιέται καμία νέα σημασιολογία για τον καλούντα.
-  if (!isBoundCellWritable(persistedCell(entity.model, rowId, colId))) return null;
+  // ⚠️ **`null`, ΠΟΤΕ εξαίρεση.** Δεμένο κελί που δεν γράφεται **στο μοντέλο** είναι
+  // **φυσιολογική κατάσταση**, όχι σφάλμα προγραμματισμού — και το `null` σημαίνει ήδη «καμία
+  // εντολή, κανένα βήμα undo», δηλαδή δεν γεννιέται καμία νέα σημασιολογία για τον καλούντα.
+  //
+  // 🔴 ADR-769 — καλύπτει **και** τη διαδρομή `'owner'`: εκείνη η τιμή ανήκει στην οντότητα και
+  // περνά από το `useTableCellWriteBack`. Αν γραφόταν **και** εδώ, ο πίνακας θα κρατούσε
+  // αντίγραφο της τιμής δίπλα στην πηγή — δηλαδή θα έσπαγε το Α2 («ΕΝΑΣ ιδιοκτήτης») τη στιγμή
+  // ακριβώς που το υλοποιεί.
+  if (resolveTableCellWriteRoute(entity.model, entity.binding, rowId, colId).kind !== 'model') {
+    return null;
+  }
   // 🔴 ADR-739 Φ.Ζ — **η γραφή και ο επαναϋπολογισμός είναι ΕΝΑΣ μετασχηματισμός**, μέσα
   // στην ίδια εντολή. Δεν είναι λεπτομέρεια υλοποίησης: αν ο επαναϋπολογισμός γινόταν σε
   // δεύτερη εντολή, ένα `Ctrl+Z` θα ανέτρεπε τα αποτελέσματα αφήνοντας τον τύπο — ή το

@@ -83,6 +83,8 @@ import { useTableModelCommit } from './use-table-model-commit';
 // 🔴 ADR-763 Φ2.4.1 — ο ΕΝΑΣ εξυπηρετητής του «δέσμευσε και βγες». Δικό του module για τον
 // ίδιο λόγο με τα υπόλοιπα τέσσερα: αυτό το αρχείο είναι στα όρια των 500 γραμμών (N.7.1).
 import { useTableCellCommitRequest } from './use-table-cell-commit-request';
+// 🔴 ADR-769 Δ1 — δεμένο κελί σε **γράψιμη** στήλη: ο πίνακας ΖΗΤΑΕΙ αντί να κρατήσει.
+import { useTableCellWriteBack } from './use-table-cell-write-back';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
@@ -149,20 +151,20 @@ export function useTableCellDoubleClickEditor(
    * δύο διαδοχικές επεξεργασίες — που πλέον είναι ο **κανόνας**, αφού το Tab γράφει
    * κελί-κελί — να μη γράφουν πάνω σε μπαγιάτικο μοντέλο.
    */
+  const attemptWriteBack = useTableCellWriteBack(levelManager);
+
   const commitText = useCallback(
     (nextText: string) => {
       if (!cursor) return;
       const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
       const entity = resolveTableById(levelManager, cursor.entityId);
       if (!entity || !currentLevelId || !setLevelScene) return;
+      // 🔴 ADR-769 Δ1 — **πρώτα ο ιδιοκτήτης**: αν το κελί τρέφεται από πηγή και η στήλη
+      // γράφεται, η τιμή πάει στην **οντότητα**, όχι στο μοντέλο. `false` ⇒ κανονικό κελί.
+      const { rowId, colId } = cursor.position;
+      if (attemptWriteBack(entity, rowId, colId, nextText)) { clearTableCopyMarquee(); return; }
       const sceneManager = createLevelSceneManagerAdapter(getLevelScene, setLevelScene, currentLevelId);
-      const command = buildTableCellEditCommand(
-        entity,
-        cursor.position.rowId,
-        cursor.position.colId,
-        nextText,
-        sceneManager,
-      );
+      const command = buildTableCellEditCommand(entity, rowId, colId, nextText, sceneManager);
       if (!command) return;
       execute(command);
       // 🔴 ADR-739 §48 — το γράψιμο σε κελί σβήνει τα μυρμήγκια (Excel parity). Δεύτερο σημείο
@@ -171,7 +173,7 @@ export function useTableCellDoubleClickEditor(
       // όλες οι διαδρομές που παράγουν εντολή πίνακα από τη διεπαφή του κελιού.
       clearTableCopyMarquee();
     },
-    [cursor, levelManager, execute],
+    [cursor, levelManager, execute, attemptWriteBack],
   );
 
   /**
