@@ -62,6 +62,13 @@ on:
       - 'scripts/check-state-channel-distinctness.js'
       - 'src/subapps/dxf-viewer/config/color-config.ts'
       - 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
+      # CHECK 3.43 (ADR-774) — τα CSS Modules, η ΟΓΔΟΗ αρχή χρώματος. Τα `src/**/*.ts(x)`
+      # παραπάνω είναι ΗΔΗ σκανδάλη και χρειάζονται: εκεί ζουν 139 ορισμοί custom properties
+      # (style objects, `setProperty`) — μια διαγραφή τους κάνει αδέσποτα αρχεία `.css`.
+      - 'src/**/*.css'
+      - 'scripts/check-css-token-authority.js'
+      - 'scripts/lib/css-vars/**'
+      - '.css-token-authority-baseline.json'
       # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή: οι ΚΛΑΣΕΙΣ της κεντρικής αρχής χρώματος.
       # Το `.ssot-registry.json` είναι σκανδάλη επειδή η allowlist του ΕΙΝΑΙ η εμβέλεια της
       # πύλης· το `tailwind.config.ts` επειδή είναι η ΑΥΘΕΝΤΙΑ των τιμών (δεν κρατάμε πίνακα).
@@ -90,6 +97,11 @@ on:
       - 'scripts/check-state-channel-distinctness.js'
       - 'src/subapps/dxf-viewer/config/color-config.ts'
       - 'src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state.ts'
+      # CHECK 3.43 (ADR-774) — δες το σχόλιο στο `pull_request` παραπάνω.
+      - 'src/**/*.css'
+      - 'scripts/check-css-token-authority.js'
+      - 'scripts/lib/css-vars/**'
+      - '.css-token-authority-baseline.json'
       # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή: οι ΚΛΑΣΕΙΣ της κεντρικής αρχής χρώματος.
       # Το `.ssot-registry.json` είναι σκανδάλη επειδή η allowlist του ΕΙΝΑΙ η εμβέλεια της
       # πύλης· το `tailwind.config.ts` επειδή είναι η ΑΥΘΕΝΤΙΑ των τιμών (δεν κρατάμε πίνακα).
@@ -166,6 +178,18 @@ jobs:
       - name: 🔍 CHECK 3.41 — state channel distinctness (ADR-771 Φ.1)
         run: node scripts/check-state-channel-distinctness.js --verbose
 
+      # CHECK 3.43 (ADR-774) — τα CSS Modules είναι η ΟΓΔΟΗ αρχή χρώματος, που το ADR-773
+      # δεν χαρτογράφησε. Ίδιο workflow, ίδιος λόγος με τα 3.39/3.40/3.41: νέο αρχείο workflow
+      # θα απαιτούσε εγγραφή στο `.ci-gate-tiers.json`, αλλιώς μπλοκάρει το CHECK 3.37
+      # (ADR-757). Το μητρώο παρακολουθεί ΑΡΧΕΙΑ workflow, όχι steps ⇒ 29 πύλες αμετάβλητες.
+      #
+      # ⚠️ Τρέχει `--all` ΑΝΕΥ ΟΡΩΝ, και αυτό ΔΕΝ είναι πλεονασμός: ο δείκτης ορισμών είναι
+      # ΚΑΘΟΛΙΚΟΣ. Μια διαγραφή στο `globals.css` ή σε ένα style object κάνει αδέσποτα αρχεία
+      # `.css` που κανείς δεν σταδιοποίησε — το Layer 1, που σαρώνει μόνο τα staged, είναι
+      # ΔΟΜΙΚΑ ανίκανο να το δει. Δηλωμένο κενό του hook, κλεισμένο εδώ. ~3s.
+      - name: 🔍 CHECK 3.43 — CSS token authority, FULL tree (ADR-774)
+        run: node scripts/check-css-token-authority.js --all
+
       # The gate's own mutation suite. A gate whose tests never run is a gate
       # nobody can trust — ADR-587 §6.1, paid for with 11 red tests that sat on
       # main for six commits because `unit.yml` was disabled and
@@ -222,6 +246,13 @@ jobs:
           pnpm exec jest
           scripts/__tests__/check-state-channel-distinctness.test.js
           src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-bound-mark-corner.test.ts
+
+      # ⚠️ Και αυτή η σουίτα χρειάζεται το `fetch-depth: 0` παραπάνω: η ομάδα Π τραβά με
+      # `git show 5baa83ba:` το ΠΡΑΓΜΑΤΙΚΟ `EnterpriseTable.module.css` και αποδεικνύει ότι
+      # κανένα από τα ονόματα που επικαλούνταν δεν οριζόταν πουθενά — δηλαδή ότι τα 22 hex
+      # ήταν ΠΑΝΤΑ η τιμή. Με ρηχό checkout η απόδειξη εξαφανίζεται σιωπηλά.
+      - name: 🧪 Mutation suite — CHECK 3.43 (27 tests)
+        run: pnpm exec jest scripts/__tests__/check-css-token-authority.test.js
 
       # ⚠️ Και αυτή χρειάζεται το `fetch-depth: 0`: η ομάδα Π τραβά με `git show eff100ba:`
       # το ΠΡΑΓΜΑΤΙΚΟ `design-system/tokens/colors.ts` και απαιτεί να βγει το μετρημένο

@@ -1,0 +1,69 @@
+{
+  "_meta": {
+    "check": "CHECK 3.43",
+    "adr": "ADR-774",
+    "description": "Αρχή του χρώματος στα CSS Modules — `var()` που δείχνει σε ανύπαρκτο custom property με σταθερό χρώμα ως fallback (Κ2), και μπλοκ `prefers-color-scheme` που βάφουν (Κ3). Ανά αρχείο και ανά κατάσταση.",
+    "generatedBy": "node scripts/check-css-token-authority.js --write-baseline",
+    "totalDanglingLiteralColor": 125,
+    "totalOsThemeChromatic": 2,
+    "totalFiles": 15,
+    "definedCustomProperties": 415,
+    "census": {
+      "defined": 480,
+      "runtime-namespace": 6,
+      "dangling-token-fallback": 6,
+      "dangling-literal-color": 125,
+      "dangling-non-color": 42,
+      "os-theme-chromatic": 2
+    },
+    "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ — είναι «πόσα χρώματα δεν ελέγχει η αρχή θεμάτων». Η θεραπεία είναι ΟΡΙΣΜΟΣ του token στο globals.css (ή χρήση υπάρχοντος), όχι μικρότερος αριθμός. Το stylelint θα έβγαζε PASS σε ΟΛΑ αυτά. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό."
+  },
+  "files": {
+    "src/subapps/dxf-viewer/canvas-v2/overlays/RulerCornerBox.module.css": {
+      "dangling-literal-color": 6
+    },
+    "src/subapps/dxf-viewer/debug/layout-debug/DebugOverlay.module.css": {
+      "dangling-literal-color": 5,
+      "os-theme-chromatic": 1
+    },
+    "src/subapps/dxf-viewer/systems/properties/PropertiesPalette.module.css": {
+      "dangling-literal-color": 28
+    },
+    "src/subapps/dxf-viewer/systems/properties/QuickPropertiesHoverPopover.module.css": {
+      "dangling-literal-color": 4
+    },
+    "src/subapps/dxf-viewer/systems/properties/QuickPropertiesMiniPanel.module.css": {
+      "dangling-literal-color": 18
+    },
+    "src/subapps/dxf-viewer/ui/components/dxf-context-menu/DxfContextMenu.module.css": {
+      "dangling-literal-color": 5
+    },
+    "src/subapps/dxf-viewer/ui/components/GuideColorPalette.module.css": {
+      "dangling-literal-color": 1
+    },
+    "src/subapps/dxf-viewer/ui/components/table-format-toolbar/border-dialog/TableBorderDialog.module.css": {
+      "dangling-literal-color": 9
+    },
+    "src/subapps/dxf-viewer/ui/components/table-format-toolbar/table-toolbar-panel.module.css": {
+      "dangling-literal-color": 2
+    },
+    "src/subapps/dxf-viewer/ui/components/table-format-toolbar/TableAxisColorMenu.module.css": {
+      "dangling-literal-color": 8
+    },
+    "src/subapps/dxf-viewer/ui/components/table-format-toolbar/TableBorderMenu.module.css": {
+      "dangling-literal-color": 1
+    },
+    "src/subapps/dxf-viewer/ui/components/table-format-toolbar/TableFormatToolbar.module.css": {
+      "dangling-literal-color": 6
+    },
+    "src/subapps/dxf-viewer/ui/match-properties/match-properties-dialog.module.css": {
+      "dangling-literal-color": 2
+    },
+    "src/subapps/geo-canvas/ui/design-system/performance/PerformanceComponents.module.css": {
+      "dangling-literal-color": 30
+    },
+    "src/subapps/dxf-viewer/theme/tokens.color.css": {
+      "os-theme-chromatic": 1
+    }
+  }
+}

@@ -236,6 +236,32 @@ const stateChannelTriggers = allFiles.filter(
 if (!process.env.SKIP_STATE_CHANNEL && stateChannelTriggers.length > 0)
   addThread('3.41', 'State channel distinctness', 'scripts/check-state-channel-distinctness.js');
 
+// CHECK 3.43 (ADR-774) — «αυτό που μοιάζει με token, ΕΙΝΑΙ token;». Στα `.css` του `src/`
+// υπάρχουν 125 `var(--x, #hex)` όπου το `--x` δεν ορίζεται πουθενά ⇒ το hex είναι η τιμή,
+// ΠΑΝΤΑ, μονοθεματικό — και το `var()` γύρω του είναι ακριβώς αυτό που το κάνει αόρατο.
+// 🔑 Ο κανόνας `no-unknown-custom-properties` του stylelint — το βιομηχανικό πρότυπο —
+// τεκμηριώνει ΚΑΤΑ ΛΕΞΗ ότι το `var(--foo, #f00)` «δεν είναι πρόβλημα». Εδώ είμαστε
+// αυστηρότεροι, με μετρημένο λόγο. Τα CSS Modules δεν είναι καμία από τις επτά αρχές του
+// ADR-773: είναι η ΟΓΔΟΗ, αχαρτογράφητη.
+// ⚠️ ΤΡΕΙΣ κανόνες, ΟΧΙ ένας με «ή»: Κ1 (χωρίς fallback ⇒ κληρονομεί αυθαίρετο χρώμα,
+// ZERO-TOL στο 0) · Κ2 (σκληρό χρώμα, ratchet) · Κ3 (`prefers-color-scheme` ρωτά το
+// ΛΕΙΤΟΥΡΓΙΚΟ, ενώ το θέμα εδώ το ορίζει η κλάση `.dark`).
+// Σκανδάλη: σταδιοποιημένο `.css` ή τα ίδια τα αρχεία της πύλης. Τα `.css` αλλάζουν σπάνια,
+// οπότε πληρώνουμε τον ΠΛΗΡΗ δείκτη ορισμών (~3s) και παίρνουμε σωστή απάντηση, αντί για
+// φθηνή προσέγγιση — ένας χειρόγραφος κατάλογος πηγών αποκλίνει σιωπηλά (3.34, 3.37).
+const cssAuthorityTriggers = allFiles.filter(
+  f => /^src\/.*\.css$/.test(f)
+    || f === 'scripts/check-css-token-authority.js'
+    || f.startsWith('scripts/lib/css-vars/')
+);
+const stagedCssForAuthority = cssAuthorityTriggers.filter(f => /^src\/.*\.css$/.test(f));
+if (!process.env.SKIP_CSS_TOKEN_AUTHORITY && cssAuthorityTriggers.length > 0)
+  // Αλλαγή στην ΙΔΙΑ την πύλη χωρίς staged `.css` ⇒ `--all`. Αλλιώς η πύλη θα ανέφερε
+  // «κανένα staged .css» και θα περνούσε πράσινη πάνω στην αλλαγή του ίδιου της του κριτηρίου
+  // — το σχήμα «0 = κανείς δεν κοίταξε», γεννημένο στη σκανδάλη αντί στον σαρωτή.
+  addThread('3.43', 'CSS token authority', 'scripts/check-css-token-authority.js',
+    stagedCssForAuthority.length > 0 ? stagedCssForAuthority : ['--all']);
+
 if (queryFiles.length > 0)
   addBash('3.10', 'Firestore companyId', 'scripts/check-firestore-companyid.sh', queryFiles);
 

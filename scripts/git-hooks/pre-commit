@@ -669,6 +669,15 @@ register_area "State Channel Gate (CHECK 3.41)" \
     "(check-state-channel-distinctness|table-bound-mark-corner)\.test\." \
     "npm run test:state-channel"
 
+# CHECK 3.43 (ADR-774) — «αυτό που μοιάζει με token, ΕΙΝΑΙ token;». Η baseline μπαίνει ΕΠΙΤΗΔΕΣ
+# στη σκανδάλη: μια χειροκίνητη επεξεργασία της (αντί για `--write-baseline`) θα άλλαζε το
+# κριτήριο χωρίς να το ελέγξει κανείς. Το ίδιο και τα `lib/css-vars/**` — η εξαγωγή σε SSoT
+# μετακινεί εξαρτήματα ΕΞΩ από σκανδάλες, μάθημα πληρωμένο στη Φ.1 (CHECK 3.32 / `cvd.js`).
+register_area "CSS Token Authority Gate (CHECK 3.43)" \
+    "^(scripts/check-css-token-authority\.js$|scripts/lib/css-vars/.*\.js$|\.css-token-authority-baseline\.json$)" \
+    "scripts/__tests__/check-css-token-authority\.test\.js" \
+    "npm run test:css-token-authority"
+
 # ─── Canary: a convention-driven pattern that matches NOTHING must FAIL, not pass ───
 # Guards the exact trap this repo has paid for twice: a scan reports "clean" because its
 # file list was silently empty (bad path / renamed convention / moved folder). Without this,
