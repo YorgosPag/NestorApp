@@ -36,6 +36,26 @@ const ref = db.collection(\`\${dynamicName}\`);
 docRef.doc(entityId);`,
   },
 
+  // ADR-772 — ο ΕΝΑΣ μετατροπέας διεύθυνσης ↔ διοικητικής ιεραρχίας.
+  // Το σήμα είναι ο **ορισμός συνάρτησης**, όχι η κλήση: μια τρίτη εκδοχή του pattern που
+  // στόχευε αναθέσεις `<επίπεδο>Name: x.<πεδίο>` πυροδοτούσε σε **τρία νόμιμα** αρχεία που
+  // απλώς συγχωνεύουν αποτέλεσμα γεωκωδικοποίησης — απορρίφθηκε πριν μπει (>10% ψευδώς θετικά).
+  'administrative-hierarchy-vocabulary': {
+    shouldMatch: `// Scanner must catch a NEW private converter pair:
+function toHierarchyValue(addr) { return { settlementName: addr.city }; }
+function fromHierarchyValue (val) { return { city: val.settlementName }; }
+function toHierarchyFromAddr(addr) { return {}; }
+function hierarchyToPartial(h, extra) { return {}; }
+function hierarchyToResolved(h) { return {}; }
+function branchToResolvedFields(addr) { return {}; }
+function toResolvedFromAddr(addr) { return {}; }`,
+    shouldSkip: `// Scanner must pass SSoT-routed projection:
+import { projectAddressVocabulary, storedAddressToResolved } from '@/utils/address/administrative-hierarchy';
+const hierarchy = projectAddressVocabulary(addr, 'projectAddress', 'form', { includePostal: true, clearedIdsAsNull: true });
+const resolved = storedAddressToResolved(addr, 'companyAddress');
+const back = hierarchyToResolvedAddress(hierarchy);`,
+  },
+
   'enterprise-id': {
     shouldMatch: `// Scanner must catch direct crypto.randomUUID usage:
 const id = crypto.randomUUID();

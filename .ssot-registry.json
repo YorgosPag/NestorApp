@@ -1319,7 +1319,7 @@
     },
     "contact-address-info-builder": {
       "ssotFile": "src/utils/contacts/address-info-builder.ts",
-      "description": "The ONE producer of the derived contact addresses[]. ADR-332 D15 — this conversion existed three times (EnterpriseContactSaver flat, buildAddressesFromCompany, mappers/company buildAddresses); two dropped the whole administrative hierarchy and one also dropped neighborhood. Different function names made it invisible to name-based discovery.",
+      "description": "The ONE producer of the derived contact addresses[]. ADR-332 D15 — this conversion existed three times (EnterpriseContactSaver flat, buildAddressesFromCompany, mappers/company buildAddresses); two dropped the whole administrative hierarchy and one also dropped neighborhood. Different function names made it invisible to name-based discovery. ADR-772: the HIERARCHY_PROJECTION table MOVED OUT of this file to the neutral utils/address/administrative-hierarchy-vocabulary - the administrative hierarchy is not a contacts concept and projects/buildings needed the same mapping. This file is now a CONSUMER; FlatAddressFormFields is re-exported from here for backward compat.",
       "forbiddenPatterns": [
         "function\\s+(buildAddressInfoFromFlatFields|buildAddressInfoListFromCompanyAddresses)\\s*\\(",
         "buildAddressesFromCompany\\s*\\(",
@@ -5380,6 +5380,22 @@
       ],
       "addedDate": "2026-08-04",
       "addedByAdr": "ADR-751",
+      "tier": 3
+    },
+    "administrative-hierarchy-vocabulary": {
+      "ssotFile": "src/utils/address/administrative-hierarchy-vocabulary.ts",
+      "description": "ADR-772 - THE table mapping the 8 Greek administrative levels (Kallikratis) across all 6 address vocabularies (AddressWithHierarchyValue form / ProjectAddress / CompanyAddress / AddressInfo / flat contact form / ResolvedAddressFields). Measured 2026-08-08 PER DIRECTION: four private to/from converter pairs carried 5/8, 6/8 and 8/8 admin levels and 0-2 of 8 identities, each silently dropping the rest - the screen asked, the storage kept whatever the converter remembered, with NO message. Name-based grep called three of them '8/8' because the type name appeared in casts. The ancestor HIERARCHY_PROJECTION (ADR-332 D15) solved this for contacts only. Do NOT hand-write a to/from hierarchy pair: call projectAddressVocabulary() from utils/address/administrative-hierarchy. A hand-written reverse is a sibling clone invisible to name-based ssot:discover and often below the jscpd 50-token floor (ADR-584 / N.18). Anchor: utils/address/__tests__/administrative-hierarchy-round-trip.test.ts (29 tests, 12/12 mutations red). NOTE: a third pattern was drafted and DELIBERATELY DROPPED - it matched '<level>Name: x.<field>' assignments, which fire on three LEGITIMATE files (FrontageAddressCreateDialog, LocationInlineForm, useProjectLocations) that merge geocoder results back into hierarchy slots. It could not tell a hand-written converter from a legitimate merge, i.e. >10% false positives on a blocking gate. Function DEFINITIONS are the unambiguous signal; call sites are not.",
+      "forbiddenPatterns": [
+        "function\\s+(toHierarchyValue|fromHierarchyValue|toHierarchyFromAddr|hierarchyToPartial)\\s*\\(",
+        "function\\s+(hierarchyToResolved|branchToResolvedFields|toResolvedFromAddr)\\s*\\("
+      ],
+      "allowlist": [
+        "src/utils/address/administrative-hierarchy-vocabulary.ts",
+        "src/utils/address/administrative-hierarchy.ts",
+        "src/components/projects/tabs/locations/location-converters.ts",
+        "src/components/contacts/dynamic/CompanyAddressesSection.tsx",
+        "src/components/building-management/tabs/GeneralTabContent/building-addresses-card/BuildingAddressesEditor.tsx"
+      ],
       "tier": 3
     }
   }
