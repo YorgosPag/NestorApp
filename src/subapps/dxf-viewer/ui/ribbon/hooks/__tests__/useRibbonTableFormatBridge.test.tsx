@@ -68,6 +68,10 @@ function fakePort(
     // αυτά θα έσκαγε ως `TypeError` αντί να απαντήσει, δηλαδή ακριβώς το «σιωπηλό undefined»
     // που η κεφαλίδα αυτού του fake υπόσχεται ότι δεν επιτρέπει.
     numberFormat: () => ({ current: null, explicit: false }),
+    // ADR-739 §58 G2 -- ta dyo mele tou xexeilismatos, me tin idia arxi: oudeteres
+    // proepiloges, pote apousia.
+    overflow: () => null,
+    setOverflow: record('setOverflow'),
     fontNames: () => [],
     reset: record('reset'),
     canReset: () => false,
@@ -80,6 +84,9 @@ function fakePort(
       deleteAxis: record('deleteAxis'),
       canDeleteAxis: () => true,
       selectAll: record('selectAll'),
+      // §58 G2 -- proepilogi «kamia grammi den einai karfwmeni»: to koumpi den exei ti na kanei.
+      autoFitRowHeight: record('autoFitRowHeight'),
+      canAutoFitRowHeight: () => false,
       ...structureOverrides,
     },
     // 🔴 ADR-767 Δ3 — προεπιλογή «στατικός πίνακας»: το panel «Δεδομένα» οφείλει να είναι
@@ -258,6 +265,131 @@ describe('useRibbonTableFormatBridge §56 — στοίχιση', () => {
     expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.left)).toBe(false);
     expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.bottom)).toBe(true);
     expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.align.top)).toBe(false);
+  });
+});
+
+describe('useRibbonTableFormatBridge §58 Γ2 — αναδίπλωση / σμίκρυνση', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  it('πατημένο είναι ΜΟΝΟ το κουμπί που ισχύει', () => {
+    setTableFormatPort(portWithScope({ overflow: () => 'wrap' }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap)).toBe(true);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.overflow.shrink)).toBe(false);
+  });
+
+  it('`clip` (η προεπιλογή) ⇒ ΚΑΝΕΝΑ από τα δύο πατημένο — δεν έχει δικό του κουμπί', () => {
+    setTableFormatPort(portWithScope({ overflow: () => 'clip' }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap)).toBe(false);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.overflow.shrink)).toBe(false);
+  });
+
+  /**
+   * 🔴 **ΤΡΙΤΗ ΕΜΦΑΝΙΣΗ ΤΗΣ ΠΑΓΙΔΑΣ ΤΟΥ §56 (β)** — γι' αυτό η άγκυρα είναι ρητή.
+   *
+   * Το `port.overflow()` κωδικοποιεί το «χωρίς στόχο» ως `null`, **την ίδια τιμή** με το
+   * «ανάμεικτο». Η καρτέλα μένει ορατή ένα καρέ αφότου κλείσει ο δρομέας (§52), οπότε χωρίς τον
+   * φύλακα `scope()` τα δύο κουμπιά θα γίνονταν **indeterminate** για επιλογή που δεν υπάρχει.
+   */
+  it('🔴 ΧΩΡΙΣ ΣΤΟΧΟ ⇒ `false`, ΠΟΤΕ `null` — αλλιώς «ανάμεικτο» χωρίς επιλογή', () => {
+    setTableFormatPort(fakePort({ scope: () => null, overflow: () => null }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap)).toBe(false);
+  });
+
+  it('ανάμεικτος στόχος (με scope) ⇒ `null` και στα δύο κουμπιά', () => {
+    setTableFormatPort(portWithScope({ overflow: () => null }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap)).toBeNull();
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.overflow.shrink)).toBeNull();
+  });
+
+  /**
+   * 🔴 **Η ΑΜΟΙΒΑΙΑ ΑΠΟΚΛΕΙΣΤΙΚΟΤΗΤΑ, ΟΠΩΣ ΤΗ ΒΛΕΠΕΙ Η ΚΟΡΔΕΛΑ.**
+   *
+   * Η κορδέλα δεν γράφει κανέναν κανόνα «ξετσέκαρε το άλλο»: στέλνει **μία** τιμή της ένωσης,
+   * που βγαίνει από το SSoT. Το test κλειδώνει ότι η τιμή είναι `'shrink'` και **όχι** κάτι
+   * σύνθετο — αν κάποτε το `overflow` γίνει δύο σημαίες, εδώ κοκκινίζει.
+   */
+  it('🔴 «σμίκρυνση» πάνω σε αναδιπλωμένο ⇒ γράφεται ΣΚΕΤΟ `shrink`', () => {
+    const { port, calls } = portWithScope({ overflow: () => 'wrap' });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.overflow.shrink, true); });
+    expect(calls).toEqual([['setOverflow', 'shrink']]);
+  });
+
+  it('ξαναπάτημα του ΙΔΙΟΥ ⇒ ξεπάτωμα στην προεπιλογή `clip`', () => {
+    const { port, calls } = portWithScope({ overflow: () => 'wrap' });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap, true); });
+    expect(calls).toEqual([['setOverflow', 'clip']]);
+  });
+
+  /**
+   * ⚠️ Ανάμεικτος στόχος ⇒ **εφαρμογή**, ποτέ ξεπάτωμα — η σύμβαση κάθε toolbar του Office.
+   */
+  it('ανάμεικτος στόχος + πάτημα ⇒ ΕΦΑΡΜΟΓΗ σε όλα', () => {
+    const { port, calls } = portWithScope({ overflow: () => null });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap, true); });
+    expect(calls).toEqual([['setOverflow', 'wrap']]);
+  });
+
+  /**
+   * 🔴 Το `setField` **δεν** επιτρέπεται να δει ποτέ το `overflow`: δεν είναι
+   * `keyof TableAxisStyleOverride`, και μια τέτοια κλήση θα έγραφε πεδίο που ο γραφέας του
+   * άξονα δεν ξέρει — σιωπηλά, χωρίς σφάλμα.
+   */
+  it('🔴 ΔΕΝ περνά ποτέ από το `setField`', () => {
+    const { port, calls } = portWithScope({ overflow: () => 'clip' });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap, true); });
+    expect(calls.some(([name]) => name === 'setField')).toBe(false);
+  });
+});
+
+describe('useRibbonTableFormatBridge §58 Γ2 — «Αυτόματο ύψος γραμμής»', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  it('καρφωμένη γραμμή ⇒ η εντολή εκτελείται', () => {
+    const { port, calls } = fakePort({}, { canAutoFitRowHeight: () => true });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_PROPERTIES_RIBBON_KEYS.actions.autoFitRowHeight); });
+    expect(calls).toEqual([['autoFitRowHeight']]);
+  });
+
+  /**
+   * 🔴 **Ο ΦΥΛΑΚΑΣ ΕΙΝΑΙ Η ΔΙΑΦΟΡΑ ΑΠΟ ΤΟ EXCEL.**
+   *
+   * Στο Excel το «AutoFit Row Height» είναι **πάντα** πατήσιμο και πάντα σιωπηλό. Εδώ, χωρίς
+   * καρφωμένη γραμμή δεν υπάρχει τίποτα να επαναφερθεί — και μια εγγραφή θα γεννούσε βήμα
+   * `Ctrl+Z` που δεν αναιρεί τίποτα ορατό.
+   */
+  it('🔴 καμία καρφωμένη γραμμή ⇒ ΚΑΜΙΑ εγγραφή, κανένα βήμα undo', () => {
+    const { port, calls } = fakePort({}, { canAutoFitRowHeight: () => false });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_PROPERTIES_RIBBON_KEYS.actions.autoFitRowHeight); });
+    expect(calls).toEqual([]);
+  });
+
+  /**
+   * 🔴 Η **παγίδα των `actions`** στην πλευρά της «Ιδιότητες Πίνακα»: το κλειδί περνά από τον
+   * `isTablePropertiesActionKey`, οπότε χωρίς ρητό κλάδο θα έπεφτε στα `STRUCTURE_INSERT` /
+   * `STRUCTURE_DELETE` και θα ήταν σιωπηλό no-op — κουμπί που «δεν κάνει τίποτα».
+   */
+  it('🔴 ΔΕΝ πέφτει σε `insertAxis` / `deleteAxis`', () => {
+    const { port, calls } = fakePort({}, { canAutoFitRowHeight: () => true });
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onAction(TABLE_PROPERTIES_RIBBON_KEYS.actions.autoFitRowHeight); });
+    expect(calls.some(([name]) => name === 'insertAxis' || name === 'deleteAxis')).toBe(false);
   });
 });
 

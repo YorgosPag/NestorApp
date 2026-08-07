@@ -22,16 +22,30 @@
  * το ίδιο της το όνομα το λέει. Μέχρι το §56 καθόταν δίπλα στα περιγράμματα, που είναι άλλη
  * ερώτηση (πώς πλαισιώνεται, όχι πού κάθεται το κείμενο).
  *
+ * ## 🔴 ΤΟ ΞΕΧΕΙΛΙΣΜΑ ΜΠΗΚΕ (§58 Γ2) — και η θέση του είναι του Excel
+ * ⚠️ Εδώ έγραφε: «*Αναδίπλωση κειμένου: το `TableCellOverflow` έχει σήμερα **μία** τιμή
+ * (`'clip'`)… δική της φάση*». **Η αιτία εξαφανίστηκε**: το §58 έγραψε ολόκληρη τη μηχανή
+ * (γραμμοκοπή, ισορρόπηση, ύψος από περιεχόμενο, τέσσερα backends) και η ένωση έχει πλέον τρεις
+ * τιμές. Το κουμπί κάθεται στο **τέλος της σειράς 1**, ακριβώς όπου το βάζει το Excel:
+ * ```
+ *   σειρά 1:  πάνω     μέση     κάτω   │  αναδίπλωση  σμίκρυνση
+ *   σειρά 2:  αριστερά κέντρο   δεξιά  │  συγχώνευση
+ * ```
+ * 🏆 Η **σμίκρυνση** δεν υπάρχει στην κορδέλα του Excel (μόνο στον διάλογο «Μορφοποίηση
+ * κελιών»). Μπαίνει **μετά** την αναδίπλωση, ώστε καμία θέση του Excel να μη μετακινηθεί — ίδια
+ * αρχή με το «τρίτο τμήμα» του mini toolbar (§55).
+ *
  * ## Τι ΔΕΝ υπάρχει εδώ, και γιατί
  * · **Προσανατολισμός** (γωνία κειμένου) και **εσοχή ±**: δεν υπάρχουν στο μοντέλο κελιού —
  *   ούτε ως πεδίο, ούτε ως μηχανή απόδοσης. Κουμπί χωρίς πράξη είναι υπόσχεση που δεν τηρείται
  *   (§52: «δεν έλειπε κουμπί, έλειπε η πράξη»).
- * · **Αναδίπλωση κειμένου**: το `TableCellOverflow` έχει σήμερα **μία** τιμή (`'clip'`) και το
- *   ίδιο του το σχόλιο απαιτεί «κάθε νέα τιμή μπαίνει **μαζί** με τη μηχανή της» — εδώ η μηχανή
- *   αλλάζει **ύψος γραμμής**, δηλαδή γεωμετρία οντότητας. Δική της φάση, με απόφαση ιδιοκτήτη.
+ * · **«Αυτόματο ύψος γραμμής»**: υπάρχει, αλλά στην καρτέλα **«Ιδιότητες Πίνακα»** — γράφει σε
+ *   *γραμμή*, όχι σε κελί, και το Excel το βάζει κι εκείνο στην ομάδα «Κελιά» (*Format ▸ AutoFit
+ *   Row Height*), ποτέ στη «Στοίχιση».
  *
  * @module subapps/dxf-viewer/ui/ribbon/data/contextual-table-format-align-panel
- * @see bim/table/table-align-ops.ts — τι κάνει το πάτημα (SSoT)
+ * @see bim/table/table-align-ops.ts — τι κάνει το πάτημα στοίχισης (SSoT)
+ * @see bim/table/table-overflow-ops.ts — τι κάνει το πάτημα ξεχειλίσματος (SSoT)
  */
 
 import type { RibbonButton, RibbonPanelDef } from '../types/ribbon-types';
@@ -57,6 +71,28 @@ function alignButton(commandKey: string, id: string, icon: string): RibbonButton
   };
 }
 
+/**
+ * 🔴 §58 Γ2 — ένα κουμπί ξεχειλίσματος. **Ίδιο σχήμα, άλλο πρόθεμα κλειδιού** από το
+ * {@link alignButton}.
+ *
+ * Δεν συγχωνεύεται με εκείνο σε μια κοινή «toggleButton(prefix, …)»: θα ήταν παράμετρος που
+ * κρύβει ότι πρόκειται για **δύο διαφορετικές ερωτήσεις** (πού κάθεται το κείμενο · τι γίνεται
+ * όταν δεν χωράει) με δύο διαφορετικούς φύλακες στον bridge — και το πρώτο ορθογραφικό λάθος σε
+ * ένα πρόθεμα θα έδινε κουμπί που κανένας φύλακας δεν δέχεται, δηλαδή σιωπή.
+ */
+function overflowButton(commandKey: string, id: string, icon: string): RibbonButton {
+  return {
+    type: 'toggle',
+    size: 'small',
+    command: {
+      id: `tableFormat.overflow.${id}`,
+      labelKey: `ribbon.commands.tableFormat.overflow.${id}`,
+      icon,
+      commandKey,
+    },
+  };
+}
+
 const MERGE_WIDGET_COMMAND = {
   id: 'tableFormat.merge',
   labelKey: 'ribbon.commands.tableFormat.merge',
@@ -76,6 +112,10 @@ export const TABLE_FORMAT_ALIGN_PANEL: RibbonPanelDef = {
         alignButton(TABLE_FORMAT_RIBBON_KEYS.align.top, 'top', 'table-align-top'),
         alignButton(TABLE_FORMAT_RIBBON_KEYS.align.middle, 'middle', 'table-align-middle'),
         alignButton(TABLE_FORMAT_RIBBON_KEYS.align.bottom, 'bottom', 'table-align-bottom'),
+        // §58 Γ2 — η θέση της αναδίπλωσης στο Excel: **τέλος της σειράς 1** της ομάδας
+        // «Στοίχιση». Η σμίκρυνση ακολουθεί (δεν υπάρχει στην κορδέλα του Excel — δες κεφαλίδα).
+        overflowButton(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap, 'wrap', 'table-wrap-text'),
+        overflowButton(TABLE_FORMAT_RIBBON_KEYS.overflow.shrink, 'shrink', 'table-shrink-text'),
       ],
     },
     {

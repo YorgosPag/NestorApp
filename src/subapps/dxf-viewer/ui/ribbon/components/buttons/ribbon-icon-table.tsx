@@ -22,8 +22,8 @@ import {
   AlignCenter, AlignLeft, AlignRight,
   AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, AlignVerticalJustifyStart,
   BetweenHorizontalEnd, BetweenHorizontalStart, BetweenVerticalEnd, BetweenVerticalStart,
-  Columns3, Copy, Euro, Percent, RefreshCw, RotateCcw, Rows3, Scissors,
-  SquareDashedMousePointer,
+  Columns3, Copy, Euro, Percent, RefreshCw, RotateCcw, Rows3, Scissors, Shrink,
+  SquareDashedMousePointer, UnfoldVertical, WrapText,
 } from 'lucide-react';
 
 /** Πλάτος/ύψος ανά μέγεθος κουμπιού — ίδιος πίνακας με το `RibbonButtonIcon`. */
@@ -116,6 +116,15 @@ export function resolveTableRibbonIcon(
     case 'table-align-top': return <AlignVerticalJustifyStart width={px} height={px} className={className} />;
     case 'table-align-middle': return <AlignVerticalJustifyCenter width={px} height={px} className={className} />;
     case 'table-align-bottom': return <AlignVerticalJustifyEnd width={px} height={px} className={className} />;
+
+    // ── §58 Γ2: «τι γίνεται όταν δεν χωράει» + «ποιος κατέχει το ύψος» ───────────────
+    // Το `WrapText` είναι **το ίδιο** εικονίδιο με το mini toolbar (`TableFormatSection`):
+    // ίδια εντολή σε άλλο συμφραζόμενο, όπως τα Β/Ι/Υ που η κεφαλίδα εξηγεί παραπάνω.
+    case 'table-wrap-text': return <WrapText width={px} height={px} className={className} />;
+    case 'table-shrink-text': return <Shrink width={px} height={px} className={className} />;
+    // `UnfoldVertical` (βέλη που ανοίγουν κατακόρυφα) και **όχι** `RotateCcw`/`RefreshCw`:
+    // εκείνα σημαίνουν ήδη «επαναφορά μορφοποίησης» και «ανανέωση δεσμού» στον **ίδιο** πίνακα.
+    case 'table-row-autofit': return <UnfoldVertical width={px} height={px} className={className} />;
 
     // ── §56 / ADR-760: η ομάδα «Αριθμός» ─────────────────────────────────────────────
     case 'table-number-accounting': return <Euro width={px} height={px} className={className} />;

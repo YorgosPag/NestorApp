@@ -18,6 +18,7 @@
 
 import { makeKeySetGuard } from './make-key-set-guard';
 import type { TableAlignChoice } from '../../../../bim/table/table-align-ops';
+import type { TableOverflowChoice } from '../../../../bim/table/table-overflow-ops';
 import type {
   TableDecimalStepDirection,
   TableNumberFormatCommandId,
@@ -59,6 +60,28 @@ export const TABLE_FORMAT_RIBBON_KEYS = {
     top: 'tableFormat.align.top',
     middle: 'tableFormat.align.middle',
     bottom: 'tableFormat.align.bottom',
+  },
+  /**
+   * 🔴 ADR-739 §58 Γ2 — **«τι γίνεται όταν το κείμενο δεν χωράει»**: δύο κουμπιά, μία ερώτηση.
+   *
+   * ## Γιατί ΔΥΟ toggles και όχι ένα με βελάκι
+   * Είναι τα δύο κουτάκια του «Μορφοποίηση κελιών ▸ Στοίχιση» του Excel, που **ξετσεκάρουν το
+   * ένα το άλλο**. Η αμοιβαία αποκλειστικότητα δεν γράφεται πουθενά ως κώδικας: την κάνει **μη
+   * εκφράσιμη** ο τύπος `TableCellOverflow` (ένωση, ποτέ δύο σημαίες) — δες
+   * `bim/table/table-overflow-ops.ts`.
+   *
+   * ## 🏆 Η «Σμίκρυνση» ΔΕΝ ΥΠΑΡΧΕΙ στην κορδέλα του Excel — και μπαίνει επίτηδες
+   * Το *Shrink to Fit* του Excel ζει **μόνο** στον διάλογο «Μορφοποίηση κελιών», δηλαδή τρία
+   * κλικ μακριά, ενώ η *Wrap Text* είναι κουμπί πρώτης γραμμής. Η θέση της εδώ είναι **μετά**
+   * την αναδίπλωση, ώστε καμία θέση του Excel να μη μετακινηθεί — ίδια ακριβώς αρχή με το
+   * «τρίτο τμήμα» του mini toolbar (§55).
+   *
+   * 🔑 Και δεν είναι πολυτέλεια: χωρίς **ορατό** κουμπί σμίκρυνσης, ένα κελί σε `'shrink'` δεν
+   * θα είχε καμία ένδειξη και καμία διέξοδο — η αναδίπλωση θα φαινόταν απλώς «σβηστή».
+   */
+  overflow: {
+    wrap: 'tableFormat.overflow.wrap',
+    shrink: 'tableFormat.overflow.shrink',
   },
   /**
    * 🔴 ADR-739 §56 / ADR-760 — τα **τρία «τι είδους αριθμός»**, στη σειρά του Excel.
@@ -105,6 +128,18 @@ export const TABLE_PROPERTIES_RIBBON_KEYS = {
     deleteColumn: 'tableProps.actions.deleteColumn',
     selectAll: 'tableProps.actions.selectAll',
     /**
+     * 🔴 ADR-739 §58 Γ2 — **«Αυτόματο ύψος γραμμής»**.
+     *
+     * Ζει εδώ και **όχι** στη «Μορφοποίηση», γιατί απαντά στο «τι **σχήμα** έχει ο πίνακας» και
+     * γράφει σε **γραμμή**. Είναι και η θέση του Excel: *Home ▸ Cells ▸ Format ▸ AutoFit Row
+     * Height* — ομάδα «Κελιά», ποτέ «Στοίχιση».
+     *
+     * ⚠️ `action` και όχι `toggle`: το αντίθετό του («κάρφωσε το τρέχον ύψος») **δεν είναι
+     * εκφράσιμο σε αυτό το επίπεδο** — θα απαιτούσε τη διάταξη, δηλαδή στυλ + μετρητή, που δεν
+     * υπάρχουν στο μοντέλο. Ένα toggle που δεν ξε-τσεκάρεται είναι κουμπί που λέει ψέματα.
+     */
+    autoFitRowHeight: 'tableProps.actions.autoFitRowHeight',
+    /**
      * 🔴 ADR-767 Δ3 — «Ανανέωση»: ο πίνακας **ξαναρωτά** την πηγή του.
      *
      * Ζει στην καρτέλα «Ιδιότητες Πίνακα» και όχι στη «Μορφοποίηση», γιατί απαντά στο «τι
@@ -149,6 +184,10 @@ export type TableFormatActionKey =
 export type TableFormatAlignKey =
   typeof TABLE_FORMAT_RIBBON_KEYS.align[keyof typeof TABLE_FORMAT_RIBBON_KEYS.align];
 
+/** §58 Γ2 — τα δύο «τι γίνεται όταν δεν χωράει». */
+export type TableFormatOverflowKey =
+  typeof TABLE_FORMAT_RIBBON_KEYS.overflow[keyof typeof TABLE_FORMAT_RIBBON_KEYS.overflow];
+
 /** §56 — τα τρία «τι είδους αριθμός». */
 export type TableFormatNumberKey =
   typeof TABLE_FORMAT_RIBBON_KEYS.numberFormat[keyof typeof TABLE_FORMAT_RIBBON_KEYS.numberFormat];
@@ -189,6 +228,21 @@ export const TABLE_FORMAT_ALIGN_CHOICE: Readonly<Record<TableFormatAlignKey, Tab
   [TABLE_FORMAT_RIBBON_KEYS.align.top]: { axis: 'vertical', code: 'T' },
   [TABLE_FORMAT_RIBBON_KEYS.align.middle]: { axis: 'vertical', code: 'M' },
   [TABLE_FORMAT_RIBBON_KEYS.align.bottom]: { axis: 'vertical', code: 'B' },
+};
+
+/**
+ * 🔴 §58 Γ2 — **ποιο κουμπί ζητά ποια τιμή ξεχειλίσματος.**
+ *
+ * Χάρτης προς το {@link TableOverflowChoice} του SSoT, που είναι `Exclude<…, 'clip'>`: το
+ * «περικοπή» **δεν έχει κουμπί** και δεν επιτρέπεται να αποκτήσει εγγραφή εδώ — είναι η
+ * προεπιλογή στην οποία επιστρέφεις **ξεπατώνοντας**, ακριβώς όπως στο Excel, όπου δεν υπάρχει
+ * κουμπί «μην αναδιπλώνεις». Ο τύπος το κάνει μη εκφράσιμο αντί να το φυλάει σχόλιο.
+ */
+export const TABLE_FORMAT_OVERFLOW_CHOICE: Readonly<
+  Record<TableFormatOverflowKey, TableOverflowChoice>
+> = {
+  [TABLE_FORMAT_RIBBON_KEYS.overflow.wrap]: 'wrap',
+  [TABLE_FORMAT_RIBBON_KEYS.overflow.shrink]: 'shrink',
 };
 
 /** §56 — το κλειδί κορδέλας → η εντολή του SSoT. Ίδιο σχήμα με το {@link TABLE_FORMAT_TOGGLE_FIELD}. */
@@ -254,6 +308,10 @@ export const isTableFormatAlignKey = makeKeySetGuard<TableFormatAlignKey>(
 
 export const isTableFormatNumberKey = makeKeySetGuard<TableFormatNumberKey>(
   Object.keys(TABLE_FORMAT_NUMBER_COMMAND) as readonly TableFormatNumberKey[],
+);
+
+export const isTableFormatOverflowKey = makeKeySetGuard<TableFormatOverflowKey>(
+  Object.keys(TABLE_FORMAT_OVERFLOW_CHOICE) as readonly TableFormatOverflowKey[],
 );
 
 export const isTableFormatActionKey = makeKeySetGuard<TableFormatActionKey>(

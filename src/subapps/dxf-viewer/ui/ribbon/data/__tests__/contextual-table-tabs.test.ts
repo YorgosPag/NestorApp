@@ -35,6 +35,7 @@ import {
   isTableFormatActionKey,
   isTableFormatAlignKey,
   isTableFormatNumberKey,
+  isTableFormatOverflowKey,
   isTableFormatToggleKey,
   isTablePropertiesActionKey,
 } from '../../hooks/bridge/table-format-command-keys';
@@ -142,7 +143,7 @@ describe('Καλωδίωση εντολών — καμία εντολή χωρί
    * Η ερώτηση που κάνει το test μένει **η ίδια** («κάθε toggle έχει παραλήπτη στον bridge») —
    * αυτό που διορθώνεται είναι ότι ρωτούσε **λάθος** τους δύο από τους τρεις παραλήπτες.
    */
-  it('κάθε toggle ανήκει σε ΕΝΑΝ από τους τρεις φύλακες μορφοποίησης', () => {
+  it('κάθε toggle ανήκει σε ΕΝΑΝ από τους τέσσερις φύλακες μορφοποίησης', () => {
     const orphans = allButtons(CONTEXTUAL_TABLE_FORMAT_TAB)
       .filter((b) => b.type === 'toggle')
       .filter((b) => {
@@ -151,6 +152,9 @@ describe('Καλωδίωση εντολών — καμία εντολή χωρί
           isTableFormatToggleKey(commandKey)
           || isTableFormatAlignKey(commandKey)
           || isTableFormatNumberKey(commandKey)
+          // §58 Γ2 — **τέταρτη** οικογένεια: αναδίπλωση / σμίκρυνση. Δικός της φύλακας, γιατί
+          // ρωτά άλλο πεδίο του μοντέλου με άλλη αλυσίδα κληρονομιάς (κελί ▸ στήλη, ποτέ στυλ).
+          || isTableFormatOverflowKey(commandKey)
         );
       })
       .map((b) => b.command.id);

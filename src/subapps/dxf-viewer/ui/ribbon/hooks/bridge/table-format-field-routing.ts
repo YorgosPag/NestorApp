@@ -38,14 +38,23 @@ import {
   nextTableNumberFormat,
   stepTableNumberFormatDecimals,
 } from '../../../../bim/table/table-number-format-ops';
+// 🔴 ADR-739 §58 Γ2 — τι σημαίνει το πάτημα στα δύο κουμπιά ξεχειλίσματος. **Το ίδιο** module
+// που ρωτά και το mini toolbar: μια δεύτερη γραφή του κανόνα θα ήταν δύο ευκαιρίες να μάθει η
+// μία επιφάνεια «άλλη» αμοιβαία αποκλειστικότητα, με κάθε πλευρά να δουλεύει.
+import {
+  isTableOverflowActive,
+  nextTableOverflow,
+} from '../../../../bim/table/table-overflow-ops';
 import {
   TABLE_FORMAT_ALIGN_CHOICE,
   TABLE_FORMAT_CLIPBOARD_COMMAND,
   TABLE_FORMAT_DECIMAL_DIRECTION,
   TABLE_FORMAT_NUMBER_COMMAND,
+  TABLE_FORMAT_OVERFLOW_CHOICE,
   TABLE_FORMAT_RIBBON_KEYS,
   isTableFormatAlignKey,
   isTableFormatNumberKey,
+  isTableFormatOverflowKey,
 } from './table-format-command-keys';
 import type { TableFormatPort } from '../../../table-cell-editor/table-format-port';
 import type { RibbonComboboxOption } from '../../types/ribbon-types';
@@ -98,7 +107,31 @@ export function readTableNumberToggle(
 }
 
 /**
- * Πάτημα κουμπιού στοίχισης ή αριθμού· `false` ⇒ **δεν ήταν δικό μου κλειδί**.
+ * 🔴 §58 Γ2 — **ΤΟ ΞΕΧΕΙΛΙΣΜΑ ΩΣ ΚΑΤΑΣΤΑΣΗ ΚΟΥΜΠΙΟΥ.**
+ *
+ * ⚠️ **Ο φύλακας `scope()` ΔΕΝ είναι πλεονασμός** — τρίτη εμφάνιση της ίδιας παγίδας, μετά τη
+ * μορφή αριθμού (§56 β). Το `port.overflow()` κωδικοποιεί το «χωρίς στόχο» ως `null`, δηλαδή
+ * **την ίδια τιμή** με το «ανάμεικτο». Στο mini toolbar είναι ακίνδυνο (η γραμμή δεν αποδίδεται
+ * καθόλου χωρίς στόχο)· **στην κορδέλα αποδίδεται** — η καρτέλα μένει ορατή ένα καρέ αφότου
+ * κλείσει ο δρομέας (§52), οπότε χωρίς τον φύλακα τα δύο κουμπιά θα δήλωναν «τα κελιά
+ * διαφωνούν» για επιλογή που δεν υπάρχει.
+ *
+ * 🔑 Σε **ανάμεικτο** στόχο η απάντηση είναι `null` και για τα δύο κουμπιά — καμία θέση δεν
+ * είναι η αλήθεια, ίδια σύμβαση με τη στοίχιση.
+ */
+export function readTableOverflowToggle(
+  port: TableFormatPort | null,
+  commandKey: string,
+): RibbonToggleState {
+  if (!isTableFormatOverflowKey(commandKey)) return false;
+  if (!port || port.scope() === null) return false;
+  const current = port.overflow();
+  if (current === null) return null;
+  return isTableOverflowActive(current, TABLE_FORMAT_OVERFLOW_CHOICE[commandKey]);
+}
+
+/**
+ * Πάτημα κουμπιού στοίχισης, αριθμού ή ξεχειλίσματος· `false` ⇒ **δεν ήταν δικό μου κλειδί**.
  *
  * ⚠️ Το `nextValue` της κορδέλας αγνοείται και εδώ, για τον λόγο που τεκμηριώνει ήδη το
  * `onToggle` του bridge: η κορδέλα το υπολογίζει ως `!current`, και σε ανάμεικτο στόχο το
@@ -108,7 +141,11 @@ export function writeTableFormatToggle(
   port: TableFormatPort | null,
   commandKey: string,
 ): boolean {
-  if (!port) return isTableFormatAlignKey(commandKey) || isTableFormatNumberKey(commandKey);
+  if (!port) {
+    return isTableFormatAlignKey(commandKey)
+      || isTableFormatNumberKey(commandKey)
+      || isTableFormatOverflowKey(commandKey);
+  }
 
   if (isTableFormatAlignKey(commandKey)) {
     const state = port.state('align');
@@ -122,6 +159,15 @@ export function writeTableFormatToggle(
     // `undefined` ⇒ **σβήσε** το πεδίο (ξεπάτημα ⇒ κληρονομιά). Το `setField` δέχεται ήδη τις
     // τρεις καταστάσεις αυτούσιες — καμία μετάφραση δεν χρειάζεται εδώ.
     port.setField('numberFormat', nextTableNumberFormat(current, TABLE_FORMAT_NUMBER_COMMAND[commandKey]));
+    return true;
+  }
+
+  if (isTableFormatOverflowKey(commandKey)) {
+    // 🔑 Η **αμοιβαία αποκλειστικότητα** δεν γράφεται εδώ και δεν επιτρέπεται να γραφτεί: το
+    // `nextTableOverflow` επιστρέφει **μία** τιμή της ένωσης, οπότε «σμίκρυνση πάνω σε
+    // αναδιπλωμένο» σβήνει την αναδίπλωση **δομικά**. Ένα χειροκίνητο «ξετσέκαρε το άλλο» εδώ
+    // θα ήταν κανόνας που η δεύτερη επιφάνεια μπορεί να ξεχάσει.
+    port.setOverflow(nextTableOverflow(port.overflow(), TABLE_FORMAT_OVERFLOW_CHOICE[commandKey]));
     return true;
   }
 

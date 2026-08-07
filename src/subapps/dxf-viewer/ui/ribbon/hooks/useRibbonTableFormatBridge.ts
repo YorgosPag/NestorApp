@@ -48,6 +48,7 @@ import {
   isTableFormatAlignKey,
   isTableFormatComboboxKey,
   isTableFormatNumberKey,
+  isTableFormatOverflowKey,
   isTableFormatToggleKey,
   isTablePropertiesActionKey,
   isTablePropertiesComboboxKey,
@@ -60,6 +61,7 @@ import {
   readTableAlignToggle,
   readTableFontFamilyCombobox,
   readTableNumberToggle,
+  readTableOverflowToggle,
   writeTableClipboardCommand,
   writeTableDecimalStep,
   writeTableFontFamily,
@@ -158,14 +160,15 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
   };
 
   /**
-   * §56 — **τρεις οικογένειες διακοπτών, μία σύμβαση**: `null` = μεικτό, `false` = δεν ισχύει
-   * (ή δεν υπάρχει στόχος). Οι δύο νέες ζουν στο `table-format-field-routing.ts`, γιατί
+   * §56 / §58 — **τέσσερις οικογένειες διακοπτών, μία σύμβαση**: `null` = μεικτό, `false` = δεν
+   * ισχύει (ή δεν υπάρχει στόχος). Οι τρεις νέες ζουν στο `table-format-field-routing.ts`, γιατί
    * ρωτούν **άλλα** πεδία του μοντέλου με άλλες αλυσίδες κληρονομιάς.
    */
   const getToggleState = (commandKey: string): RibbonToggleState => {
     const port = getTableFormatPort();
     if (isTableFormatAlignKey(commandKey)) return readTableAlignToggle(port, commandKey);
     if (isTableFormatNumberKey(commandKey)) return readTableNumberToggle(port, commandKey);
+    if (isTableFormatOverflowKey(commandKey)) return readTableOverflowToggle(port, commandKey);
     if (!isTableFormatToggleKey(commandKey)) return NULL_TOGGLE;
     const state = port?.state(TABLE_FORMAT_TOGGLE_FIELD[commandKey]);
     if (!state) return NULL_TOGGLE;
@@ -218,6 +221,14 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
     // ένας έλεγχος ανά επιφάνεια θα ήταν N ευκαιρίες να ξεχαστεί.
     if (commandKey === TABLE_PROPERTIES_RIBBON_KEYS.actions.refreshBinding) {
       port.binding.refresh();
+      return;
+    }
+    // 🔴 ADR-739 §58 Γ2 — «Αυτόματο ύψος γραμμής». Ο φύλακας «υπάρχει τι να επαναφερθεί;»
+    // ρωτιέται **εδώ** και όχι μόνο μέσα, με τον ίδιο λόγο που τον ρωτά και η διαγραφή από
+    // κάτω: η κορδέλα δεν έχει «γκρίζο» για actions, άρα ένα πάτημα χωρίς καρφωμένο ύψος θα
+    // γεννούσε βήμα `Ctrl+Z` που δεν αναιρεί τίποτα ορατό.
+    if (commandKey === TABLE_PROPERTIES_RIBBON_KEYS.actions.autoFitRowHeight) {
+      if (port.structure.canAutoFitRowHeight()) port.structure.autoFitRowHeight();
       return;
     }
     const insert = STRUCTURE_INSERT[commandKey];

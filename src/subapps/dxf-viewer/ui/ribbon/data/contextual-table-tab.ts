@@ -51,6 +51,16 @@ const STRUCTURE_COMMANDS: readonly { readonly key: string; readonly name: string
   { key: actions.insertColumnRight, name: 'insertColumnRight', icon: 'table-col-insert-right' },
   { key: actions.deleteRow, name: 'deleteRow', icon: 'table-row-delete' },
   { key: actions.deleteColumn, name: 'deleteColumn', icon: 'table-col-delete' },
+  /**
+   * 🔴 ADR-739 §58 Γ2 — **«Αυτόματο ύψος γραμμής»**: το ύψος ξαναγίνεται παράγωγο του
+   * περιεχομένου. Η θέση είναι του Excel (*Home ▸ Cells ▸ Format ▸ AutoFit Row Height*): ομάδα
+   * που μιλά για **γραμμές**, ποτέ «Στοίχιση».
+   *
+   * 🏆 Σε αντίθεση με το Excel, το κουμπί **απαντά**: ο bridge το εκτελεί μόνο όταν κάποια
+   * γραμμή του στόχου είναι όντως καρφωμένη, ώστε να μη γεννηθεί `Ctrl+Z` που δεν αναιρεί
+   * τίποτα ορατό.
+   */
+  { key: actions.autoFitRowHeight, name: 'autoFitRowHeight', icon: 'table-row-autofit' },
 ];
 
 function structureButton(command: { key: string; name: string; icon: string }): RibbonButton {
