@@ -20,6 +20,7 @@ import { makeKeySetGuard } from './make-key-set-guard';
 import type { TableAlignChoice } from '../../../../bim/table/table-align-ops';
 import type { TableOverflowChoice } from '../../../../bim/table/table-overflow-ops';
 import type { TableIndentStepDirection } from '../../../../bim/table/table-indent-ops';
+import type { TableRotationPreset } from '../../../../bim/table/table-rotation-ops';
 import type {
   TableDecimalStepDirection,
   TableNumberFormatCommandId,
@@ -83,6 +84,21 @@ export const TABLE_FORMAT_RIBBON_KEYS = {
   overflow: {
     wrap: 'tableFormat.overflow.wrap',
     shrink: 'tableFormat.overflow.shrink',
+  },
+  /**
+   * 🔴 ADR-739 §59 Δ1 — **ο ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ**: οι δύο περιστροφές των 90°.
+   *
+   * `toggles` και όχι `actions`, σε αντίθεση με την εσοχή δίπλα τους — και η διαφορά δεν είναι
+   * γούστο: η γωνία **έχει** δίτιμη απάντηση ανά κουμπί («είναι αυτό το κελί κατακόρυφο προς
+   * τα πάνω;»), ενώ η εσοχή είναι αριθμός επιπέδων και δεν έχει. Η κορδέλα οφείλει να δείξει
+   * **ποια** περιστροφή ισχύει (`aria-pressed`) και **καμία** σε ανάμεικτο στόχο.
+   *
+   * ⚠️ Τα υπόλοιπα τρία preset του Excel και η **ελεύθερη γωνία** δεν έχουν κουμπί — δηλωμένο
+   * κενό με λόγο, δες `bim/table/table-rotation-ops.ts`.
+   */
+  rotation: {
+    up: 'tableFormat.rotation.up',
+    down: 'tableFormat.rotation.down',
   },
   /**
    * 🔴 ADR-739 §56 / ADR-760 — τα **τρία «τι είδους αριθμός»**, στη σειρά του Excel.
@@ -207,6 +223,10 @@ export type TableFormatAlignKey =
 export type TableFormatOverflowKey =
   typeof TABLE_FORMAT_RIBBON_KEYS.overflow[keyof typeof TABLE_FORMAT_RIBBON_KEYS.overflow];
 
+/** §59 Δ1 — οι δύο περιστροφές των 90°. */
+export type TableFormatRotationKey =
+  typeof TABLE_FORMAT_RIBBON_KEYS.rotation[keyof typeof TABLE_FORMAT_RIBBON_KEYS.rotation];
+
 /** §56 — τα τρία «τι είδους αριθμός». */
 export type TableFormatNumberKey =
   typeof TABLE_FORMAT_RIBBON_KEYS.numberFormat[keyof typeof TABLE_FORMAT_RIBBON_KEYS.numberFormat];
@@ -262,6 +282,20 @@ export const TABLE_FORMAT_OVERFLOW_CHOICE: Readonly<
 > = {
   [TABLE_FORMAT_RIBBON_KEYS.overflow.wrap]: 'wrap',
   [TABLE_FORMAT_RIBBON_KEYS.overflow.shrink]: 'shrink',
+};
+
+/**
+ * 🔴 §59 Δ1 — **ποιο κουμπί ζητά ποια περιστροφή.**
+ *
+ * Χάρτης προς το {@link TableRotationPreset} του SSoT και **όχι** προς σκέτα `90` / `-90`: ο
+ * αριθμός εδώ θα ήταν δεύτερη δήλωση του «πόσο είναι μια κατακόρυφη κεφαλίδα», και η μέρα που
+ * αλλάξει (π.χ. σε προεπιλογή ±45 για λοξές κεφαλίδες) θα άλλαζε το ένα σημείο και όχι το άλλο.
+ */
+export const TABLE_FORMAT_ROTATION_PRESET: Readonly<
+  Record<TableFormatRotationKey, TableRotationPreset>
+> = {
+  [TABLE_FORMAT_RIBBON_KEYS.rotation.up]: 'up',
+  [TABLE_FORMAT_RIBBON_KEYS.rotation.down]: 'down',
 };
 
 /** §56 — το κλειδί κορδέλας → η εντολή του SSoT. Ίδιο σχήμα με το {@link TABLE_FORMAT_TOGGLE_FIELD}. */
@@ -346,6 +380,10 @@ export const isTableFormatNumberKey = makeKeySetGuard<TableFormatNumberKey>(
 
 export const isTableFormatOverflowKey = makeKeySetGuard<TableFormatOverflowKey>(
   Object.keys(TABLE_FORMAT_OVERFLOW_CHOICE) as readonly TableFormatOverflowKey[],
+);
+
+export const isTableFormatRotationKey = makeKeySetGuard<TableFormatRotationKey>(
+  Object.keys(TABLE_FORMAT_ROTATION_PRESET) as readonly TableFormatRotationKey[],
 );
 
 export const isTableFormatActionKey = makeKeySetGuard<TableFormatActionKey>(

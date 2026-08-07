@@ -26,6 +26,46 @@ import {
   Rows3, Scissors, Shrink, SquareDashedMousePointer, UnfoldVertical, WrapText,
 } from 'lucide-react';
 
+/**
+ * 🔴 **ADR-739 §59 Δ1** — ένα **γερμένο «A»**: η γλυφή του «Προσανατολισμού» του Excel.
+ *
+ * Δεν είναι παραλλαγή του {@link tableGlyphSvg} με παράμετρο, και ο λόγος είναι ότι απαντά σε
+ * **άλλη ερώτηση**: εκείνο ζωγραφίζει *σύμβολα που δεν μεταφράζονται* (`000`, `.00→`), εδώ το
+ * γράμμα είναι **αδιάφορο** — σημασία έχει η **γωνία**. Μια κοινή συνάρτηση με δύο προαιρετικές
+ * παραμέτρους θα έκρυβε ότι πρόκειται για δύο διαφορετικά πράγματα που τυχαίνει να είναι κείμενο
+ * σε SVG.
+ *
+ * Η μικρή διαγώνιος από κάτω είναι η **γραμμή βάσης** που δείχνει και το Excel: χωρίς αυτήν, ένα
+ * γερμένο γράμμα σε 16px διαβάζεται ως τυχαίο σχήμα και όχι ως «γέρνει το κείμενο».
+ */
+function tableRotatedGlyphSvg(size: RibbonTableIconSize, deg: number): React.ReactElement {
+  const px = sizePx[size];
+  return (
+    <svg width={px} height={px} viewBox="0 0 24 24" aria-hidden="true">
+      <text
+        x="12"
+        y="10"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="13"
+        fontWeight="600"
+        fill="currentColor"
+        stroke="none"
+        transform={`rotate(${deg} 12 10)`}
+      >
+        A
+      </text>
+      <path
+        d={deg < 0 ? 'M4 20 L20 15' : 'M4 15 L20 20'}
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
 /** Πλάτος/ύψος ανά μέγεθος κουμπιού — ίδιος πίνακας με το `RibbonButtonIcon`. */
 const sizePx = { large: 28, small: 16 } as const;
 
@@ -128,6 +168,15 @@ export function resolveTableRibbonIcon(
     // αναγνωρίζει το σχήμα πριν διαβάσει το tooltip, που είναι όλο το ζητούμενο του §56.
     case 'table-indent-decrease': return <IndentDecrease width={px} height={px} className={className} />;
     case 'table-indent-increase': return <IndentIncrease width={px} height={px} className={className} />;
+    // ── §59 Δ1: ο προσανατολισμός ────────────────────────────────────────────────────
+    // 🔴 **Ζωγραφισμένα εδώ, και είναι απόφαση.** Η lucide **δεν έχει** γλυφή στροφής κειμένου
+    // (επαληθεύτηκε: μόνο `RotateCcw` / `RotateCw` / `Rotate3d`), και τα δύο πρώτα είναι ήδη
+    // **πιασμένα** μέσα σε αυτόν τον ίδιο διακόπτη — `RotateCcw` = «επαναφορά μορφοποίησης»,
+    // `RefreshCw` = «ανανέωση δεσμού». Η ίδια γλυφή για δύο διαφορετικές εντολές στην ίδια
+    // καρτέλα είναι χειρότερη από καμία. Ένα γερμένο «A» είναι **ακριβώς** αυτό που δείχνει το
+    // μενού «Προσανατολισμός» του Excel, και το αρχείο έχει ήδη τη μηχανή ({@link tableGlyphSvg}).
+    case 'table-rotate-text-up': return tableRotatedGlyphSvg(size, -45);
+    case 'table-rotate-text-down': return tableRotatedGlyphSvg(size, 45);
     // `UnfoldVertical` (βέλη που ανοίγουν κατακόρυφα) και **όχι** `RotateCcw`/`RefreshCw`:
     // εκείνα σημαίνουν ήδη «επαναφορά μορφοποίησης» και «ανανέωση δεσμού» στον **ίδιο** πίνακα.
     case 'table-row-autofit': return <UnfoldVertical width={px} height={px} className={className} />;

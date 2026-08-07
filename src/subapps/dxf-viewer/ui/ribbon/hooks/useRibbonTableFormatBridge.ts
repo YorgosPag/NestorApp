@@ -49,6 +49,7 @@ import {
   isTableFormatComboboxKey,
   isTableFormatNumberKey,
   isTableFormatOverflowKey,
+  isTableFormatRotationKey,
   isTableFormatToggleKey,
   isTablePropertiesActionKey,
   isTablePropertiesComboboxKey,
@@ -62,6 +63,7 @@ import {
   readTableFontFamilyCombobox,
   readTableNumberToggle,
   readTableOverflowToggle,
+  readTableRotationToggle,
   writeTableClipboardCommand,
   writeTableDecimalStep,
   writeTableIndentStep,
@@ -170,6 +172,7 @@ export function useRibbonTableFormatBridge(): RibbonTableFormatBridge {
     if (isTableFormatAlignKey(commandKey)) return readTableAlignToggle(port, commandKey);
     if (isTableFormatNumberKey(commandKey)) return readTableNumberToggle(port, commandKey);
     if (isTableFormatOverflowKey(commandKey)) return readTableOverflowToggle(port, commandKey);
+    if (isTableFormatRotationKey(commandKey)) return readTableRotationToggle(port, commandKey);
     if (!isTableFormatToggleKey(commandKey)) return NULL_TOGGLE;
     const state = port?.state(TABLE_FORMAT_TOGGLE_FIELD[commandKey]);
     if (!state) return NULL_TOGGLE;

@@ -29,6 +29,9 @@
  * @see bim/table/table-number-format-ops.ts — τι κάνει το πάτημα αριθμού (SSoT)
  */
 
+// 🔴 Το ΕΝΑ σεντινέλι «καμία επιλογή» του έργου. Το Radix Select δεσμεύει το `''` για δική του
+// χρήση, οπότε ένα `<SelectItem value="">` είναι δομικά ανέκφραστο — δες `readTableFontFamilyCombobox`.
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import {
   isTableAlignActive,
   nextTableAlign,
@@ -49,6 +52,13 @@ import {
 // επιφάνεια: το ξεπάτωμα στο μηδέν (σβήσιμο πεδίου, όχι ρητό `0`) είναι κανόνας του μοντέλου,
 // όχι της κορδέλας — δες την κεφαλίδα του `nextTableIndentLevel`.
 import { nextTableIndentLevel } from '../../../../bim/table/table-indent-ops';
+// 🔴 ADR-739 §59 Δ1 — τι σημαίνει το πάτημα των δύο περιστροφών. Το **ίδιο** module που ρωτά η
+// μηχανή διάταξης για την κανονικοποίηση της γωνίας: μια δεύτερη γραφή του «ίδια ⇒ ξεπάτωμα»
+// θα ήταν δύο ευκαιρίες να μάθει κάθε επιφάνεια άλλον κανόνα, με κάθε πλευρά να «δουλεύει».
+import {
+  isTableTextRotationActive,
+  nextTableTextRotation,
+} from '../../../../bim/table/table-rotation-ops';
 import {
   TABLE_FORMAT_ALIGN_CHOICE,
   TABLE_FORMAT_CLIPBOARD_COMMAND,
@@ -57,9 +67,11 @@ import {
   TABLE_FORMAT_NUMBER_COMMAND,
   TABLE_FORMAT_OVERFLOW_CHOICE,
   TABLE_FORMAT_RIBBON_KEYS,
+  TABLE_FORMAT_ROTATION_PRESET,
   isTableFormatAlignKey,
   isTableFormatNumberKey,
   isTableFormatOverflowKey,
+  isTableFormatRotationKey,
 } from './table-format-command-keys';
 import type { TableFormatPort } from '../../../table-cell-editor/table-format-port';
 import type { RibbonComboboxOption } from '../../types/ribbon-types';
@@ -136,7 +148,30 @@ export function readTableOverflowToggle(
 }
 
 /**
- * Πάτημα κουμπιού στοίχισης, αριθμού ή ξεχειλίσματος· `false` ⇒ **δεν ήταν δικό μου κλειδί**.
+ * 🔴 §59 Δ1 — **Ο ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ ΩΣ ΚΑΤΑΣΤΑΣΗ ΚΟΥΜΠΙΟΥ.**
+ *
+ * ⚠️ **Κανένας φύλακας `scope()` εδώ, και είναι απόφαση** — σε αντίθεση με τη μορφή αριθμού
+ * (§56 β) και το ξεχείλισμα (§58 Γ2). Εκείνα διαβάζονται από **δικά τους μέλη** της θύρας, που
+ * κωδικοποιούν το «χωρίς στόχο» με την **ίδια** τιμή που σημαίνει «ανάμεικτο» (`null`), οπότε
+ * χωρίς φύλακα τα κουμπιά γίνονταν indeterminate για επιλογή που δεν υπάρχει. Η γωνία περνά
+ * από το γενικό `state()`, που απαντά `null` **μόνο** όταν δεν υπάρχει στόχος και σηματοδοτεί
+ * το ανάμεικτο με ρητό `mixed: true`: οι δύο καταστάσεις είναι **διακριτές στον τύπο**, άρα ο
+ * φύλακας δεν έχει τι να προσθέσει. Ίδια δομή με τα έξι κουμπιά στοίχισης από πάνω.
+ */
+export function readTableRotationToggle(
+  port: TableFormatPort | null,
+  commandKey: string,
+): RibbonToggleState {
+  if (!isTableFormatRotationKey(commandKey)) return false;
+  const state = port?.state('textRotationDeg');
+  if (!state) return false;
+  if (state.mixed) return null;
+  return isTableTextRotationActive(state.value ?? null, TABLE_FORMAT_ROTATION_PRESET[commandKey]);
+}
+
+/**
+ * Πάτημα κουμπιού στοίχισης, αριθμού, ξεχειλίσματος ή **προσανατολισμού**· `false` ⇒ **δεν ήταν
+ * δικό μου κλειδί**.
  *
  * ⚠️ Το `nextValue` της κορδέλας αγνοείται και εδώ, για τον λόγο που τεκμηριώνει ήδη το
  * `onToggle` του bridge: η κορδέλα το υπολογίζει ως `!current`, και σε ανάμεικτο στόχο το
@@ -149,7 +184,8 @@ export function writeTableFormatToggle(
   if (!port) {
     return isTableFormatAlignKey(commandKey)
       || isTableFormatNumberKey(commandKey)
-      || isTableFormatOverflowKey(commandKey);
+      || isTableFormatOverflowKey(commandKey)
+      || isTableFormatRotationKey(commandKey);
   }
 
   if (isTableFormatAlignKey(commandKey)) {
@@ -173,6 +209,20 @@ export function writeTableFormatToggle(
     // αναδιπλωμένο» σβήνει την αναδίπλωση **δομικά**. Ένα χειροκίνητο «ξετσέκαρε το άλλο» εδώ
     // θα ήταν κανόνας που η δεύτερη επιφάνεια μπορεί να ξεχάσει.
     port.setOverflow(nextTableOverflow(port.overflow(), TABLE_FORMAT_OVERFLOW_CHOICE[commandKey]));
+    return true;
+  }
+
+  if (isTableFormatRotationKey(commandKey)) {
+    const state = port.state('textRotationDeg');
+    const current = !state || state.mixed ? null : state.value ?? null;
+    // 🔑 Η **αμοιβαία αποκλειστικότητα** των δύο περιστροφών δεν γράφεται εδώ και δεν
+    // χρειάζεται: το πεδίο είναι **ένας αριθμός**, οπότε «προς τα πάνω» πάνω σε «προς τα κάτω»
+    // απλώς γράφει `+90`. Ίδια αρχή με το ξεχείλισμα από πάνω — τη δουλειά την κάνει το σχήμα
+    // των δεδομένων, όχι κώδικας που η δεύτερη επιφάνεια μπορεί να ξεχάσει.
+    port.setField(
+      'textRotationDeg',
+      nextTableTextRotation(current, TABLE_FORMAT_ROTATION_PRESET[commandKey]),
+    );
     return true;
   }
 
@@ -274,13 +324,36 @@ export function writeTableClipboardCommand(
  *
  * ## Οι τρεις καταστάσεις της τιμής
  * ```
- *   ανάμεικτο       →  null  →  η κορδέλα δείχνει κενό πεδίο (η συμπεριφορά του Excel)
- *   κληρονομεί      →  ''    →  η επιλογή «Αυτόματη»
+ *   ανάμεικτο       →  null                →  η κορδέλα δείχνει κενό πεδίο (συμπεριφορά Excel)
+ *   κληρονομεί      →  SELECT_CLEAR_VALUE  →  η επιλογή «Αυτόματη»
  *   ρητή οικογένεια →  όνομα
  * ```
- * ⚠️ Το κενό αλφαριθμητικό είναι **τιμή** και όχι «τίποτα»: είναι η ταυτότητα της επιλογής
- * «Αυτόματη» στη λίστα, ώστε το combobox να μπορεί να τη δείξει **επιλεγμένη**. Η ίδια σύμβαση
- * με το `TableFontControls` του mini toolbar (`key: ''`).
+ *
+ * ## 🔴 ΓΙΑΤΙ `SELECT_CLEAR_VALUE` ΚΑΙ ΟΧΙ `''` — ΔΙΟΡΘΩΣΗ ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ (2026-08-08)
+ * Εδώ έγραφε `value: ''` με την αιτιολόγηση *«το κενό αλφαριθμητικό είναι **τιμή** και όχι
+ * “τίποτα”: είναι η ταυτότητα της επιλογής “Αυτόματη”»*. Η **πρόθεση** ήταν σωστή· η **τιμή**
+ * όχι: το Radix Select δεσμεύει το `''` ως «καμία επιλογή» και το χρησιμοποιεί για να καθαρίζει
+ * το πεδίο — άρα ένα `<SelectItem value="">` είναι δομικά ανέκφραστο. Ο φύλακας του
+ * `components/ui/select.tsx` **πετά ρητά** σε dev, και η καρτέλα «Μορφοποίηση» **δεν
+ * αποδιδόταν καθόλου**.
+ *
+ * ⚠️ Η αστοχία ήταν **αόρατη σε κάθε πύλη**: το κλειδί υπάρχει, τα tests του bridge περνούσαν
+ * (ρωτούν τη **λίστα**, όχι το Radix), και ο μεταγλωττιστής δέχεται κάθε `string`. Την είδε
+ * **άνθρωπος ανοίγοντας την καρτέλα** — το ίδιο σχήμα με τα ωμά ελληνικά του N.11.
+ *
+ * Το `SELECT_CLEAR_VALUE` (`'__clear__'`) είναι το **υπάρχον SSoT** του έργου γι' αυτό ακριβώς
+ * το ερώτημα (`@/config/domain-constants`) και το ίδιο το μήνυμα του φύλακα το ονομάζει. Ένα
+ * δεύτερο τοπικό σεντινέλι εδώ θα ήταν η δεύτερη απάντηση στο «πώς λέγεται το τίποτα σε ένα
+ * dropdown» — και θα ξανάσπαγε στον επόμενο φύλακα.
+ *
+ * 🔑 Το σεντινέλι **δεν διαρρέει στο μοντέλο**: το {@link writeTableFontFamily} το μεταφράζει σε
+ * `undefined` (= σβήσε το πεδίο) πριν φτάσει στη θύρα, με τον **ίδιο** φύλακα
+ * (`isSelectClearValue`) που ορίζει το SSoT. Η κατεύθυνση ανάγνωσης και η κατεύθυνση εγγραφής
+ * ρωτούν το ίδιο πράγμα, άρα δεν μπορούν να διαφωνήσουν.
+ *
+ * ⚠️ Το mini toolbar (`TableFontControls`) κρατά το `key: ''` και **σωστά**: εκείνο δεν είναι
+ * Radix Select — είναι το δικό μας `ToolbarCombobox`, όπου το `key` είναι σκέτο κλειδί React και
+ * η πράξη ταξιδεύει σε `onSelect`. Δεν υπάρχει τιμή να συγκρουστεί με τίποτα.
  *
  * ## Γιατί οι επιλογές είναι `isLiteralLabel`
  * Τα ονόματα γραμματοσειρών **δεν** είναι κλειδιά i18n — είναι δεδομένα της σκηνής. Χωρίς τη
@@ -290,7 +363,7 @@ export function writeTableClipboardCommand(
 export function readTableFontFamilyCombobox(port: TableFormatPort | null): RibbonComboboxState {
   const state = port?.state('fontFamily');
   const options: readonly RibbonComboboxOption[] = [
-    { value: '', labelKey: 'ribbon.commands.tableFormat.automaticFont' },
+    { value: SELECT_CLEAR_VALUE, labelKey: 'ribbon.commands.tableFormat.automaticFont' },
     ...(port?.fontNames() ?? []).map((font) => ({
       value: font,
       labelKey: font,
@@ -301,12 +374,18 @@ export function readTableFontFamilyCombobox(port: TableFormatPort | null): Ribbo
   if (!state) return { value: null, options };
   // `null` σημαίνει «μεικτό» και για τα δύο combobox της καρτέλας — δες `getComboboxState`.
   if (state.mixed) return { value: null, options };
-  return { value: state.value ?? '', options };
+  return { value: state.value ?? SELECT_CLEAR_VALUE, options };
 }
 
-/** Γράφει την οικογένεια· `''` ⇒ **σβήσε** το πεδίο (η «Αυτόματη» ⇒ κληρονομιά). */
+/**
+ * Γράφει την οικογένεια· **η «Αυτόματη» σβήνει το πεδίο** (⇒ κληρονομιά).
+ *
+ * Ο φύλακας είναι ο `isSelectClearValue` του SSoT και όχι σύγκριση με literal: το σεντινέλι
+ * ορίζεται σε **ένα** σημείο, και μια τοπική `=== '__clear__'` θα ήταν αντίγραφό του που
+ * επιβιώνει σιωπηλά αν αυτό αλλάξει.
+ */
 export function writeTableFontFamily(port: TableFormatPort, value: string): void {
-  port.setField('fontFamily', value === '' ? undefined : value);
+  port.setField('fontFamily', isSelectClearValue(value) ? undefined : value);
 }
 
 /** Είναι το κλειδί της οικογένειας; Ρωτιέται και από τους δύο δρόμους του combobox. */

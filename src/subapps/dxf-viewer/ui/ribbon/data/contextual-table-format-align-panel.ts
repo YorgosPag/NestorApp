@@ -109,6 +109,24 @@ function overflowButton(commandKey: string, id: string, icon: string): RibbonBut
 }
 
 /**
+ * 🔴 §59 Δ1 — ένα κουμπί **προσανατολισμού**. `toggle` και όχι `action`, σε αντίθεση με την
+ * εσοχή από κάτω: η γωνία **έχει** δίτιμη απάντηση ανά κουμπί («είναι αυτό το κελί κατακόρυφο
+ * προς τα πάνω;»), η εσοχή είναι αριθμός επιπέδων και δεν έχει.
+ */
+function rotationButton(commandKey: string, id: string, icon: string): RibbonButton {
+  return {
+    type: 'toggle',
+    size: 'small',
+    command: {
+      id: `tableFormat.rotation.${id}`,
+      labelKey: `ribbon.commands.tableFormat.rotation.${id}`,
+      icon,
+      commandKey,
+    },
+  };
+}
+
+/**
  * 🔴 §59 Δ2 — ένα κουμπί **εσοχής**. `action` και όχι `toggle`: η εσοχή είναι **αριθμός**
  * επιπέδων, όχι δίτιμο — «είναι πατημένη;» δεν έχει απάντηση σε επίπεδο 3. Ίδια ακριβώς
  * διάκριση με τα δεκαδικά της ομάδας «Αριθμός», που είναι κι εκείνα στεπερ.
@@ -145,6 +163,13 @@ export const TABLE_FORMAT_ALIGN_PANEL: RibbonPanelDef = {
         alignButton(TABLE_FORMAT_RIBBON_KEYS.align.top, 'top', 'table-align-top'),
         alignButton(TABLE_FORMAT_RIBBON_KEYS.align.middle, 'middle', 'table-align-middle'),
         alignButton(TABLE_FORMAT_RIBBON_KEYS.align.bottom, 'bottom', 'table-align-bottom'),
+        // 🔴 §59 Δ1 — **η θέση του «Προσανατολισμού» στο Excel**: αμέσως μετά τις τρεις
+        // κατακόρυφες στοιχίσεις και **πριν** την αναδίπλωση. Εκεί είναι ένα πτυσσόμενο με πέντε
+        // προεπιλογές· εδώ είναι τα **δύο** που έχουν νόημα σε σχέδιο, γιατί το `type: 'split'`
+        // είναι δομικά αδύνατο σε contextual καρτέλα πίνακα (§57) και ένα πτυσσόμενο με δύο
+        // επιλογές είναι δύο κλικ για ό,τι κάνει το ένα.
+        rotationButton(TABLE_FORMAT_RIBBON_KEYS.rotation.up, 'up', 'table-rotate-text-up'),
+        rotationButton(TABLE_FORMAT_RIBBON_KEYS.rotation.down, 'down', 'table-rotate-text-down'),
         // §58 Γ2 — η θέση της αναδίπλωσης στο Excel: **τέλος της σειράς 1** της ομάδας
         // «Στοίχιση». Η σμίκρυνση ακολουθεί (δεν υπάρχει στην κορδέλα του Excel — δες κεφαλίδα).
         overflowButton(TABLE_FORMAT_RIBBON_KEYS.overflow.wrap, 'wrap', 'table-wrap-text'),

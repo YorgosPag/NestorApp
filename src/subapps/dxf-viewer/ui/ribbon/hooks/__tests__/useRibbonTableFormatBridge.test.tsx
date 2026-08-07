@@ -19,6 +19,10 @@
  */
 
 import { renderHook, act } from '@testing-library/react';
+// 🔴 Το ΕΝΑ σεντινέλι «καμία επιλογή» του έργου — δες την άγκυρα «καμία επιλογή δεν έχει ΚΕΝΗ
+// τιμή». Εισάγεται αντί να γραφτεί literal, ώστε το test να ρωτά **το SSoT** και όχι ένα
+// αντίγραφό του που επιβιώνει σιωπηλά αν εκείνο αλλάξει.
+import { SELECT_CLEAR_VALUE } from '@/config/domain-constants';
 import { useRibbonTableFormatBridge } from '../useRibbonTableFormatBridge';
 import {
   TABLE_FORMAT_RIBBON_KEYS,
@@ -501,17 +505,39 @@ describe('useRibbonTableFormatBridge §56 — οικογένεια γραμμα�
     const state = bridge().current.getComboboxState(TABLE_FORMAT_RIBBON_KEYS.fontFamily);
     expect(state?.value).toBe('Arial');
     expect(state?.options).toEqual([
-      { value: '', labelKey: 'ribbon.commands.tableFormat.automaticFont' },
+      { value: SELECT_CLEAR_VALUE, labelKey: 'ribbon.commands.tableFormat.automaticFont' },
       { value: 'Arial', labelKey: 'Arial', isLiteralLabel: true },
       { value: 'ISOCPEUR', labelKey: 'ISOCPEUR', isLiteralLabel: true },
     ]);
   });
 
-  it('κληρονομεί ⇒ η τιμή είναι `\'\'` (η «Αυτόματη» επιλεγμένη)· μεικτό ⇒ `null` (κενό πεδίο)', () => {
+  /**
+   * 🔴 **ΤΟ ΚΕΝΟ ΑΛΦΑΡΙΘΜΗΤΙΚΟ ΕΙΝΑΙ ΑΠΑΓΟΡΕΥΜΕΝΟ — και ΚΑΜΙΑ πύλη δεν το έβλεπε.**
+   *
+   * Μέχρι τις 2026-08-08 η «Αυτόματη» είχε `value: ''`. Το Radix Select **δεσμεύει** το `''` ως
+   * «καμία επιλογή», οπότε ένα `<SelectItem value="">` είναι δομικά ανέκφραστο: ο φύλακας του
+   * `components/ui/select.tsx` πετά ρητά σε dev και **ολόκληρη η καρτέλα «Μορφοποίηση» δεν
+   * αποδιδόταν**.
+   *
+   * ⚠️ Ούτε ο μεταγλωττιστής (κάθε `string` είναι δεκτό) ούτε αυτά εδώ τα tests το έπιαναν:
+   * ρωτούσαν τη **λίστα**, όχι το Radix — και μάλιστα **κλείδωναν το λάθος** (`toBe('')`). Το
+   * βρήκε **άνθρωπος ανοίγοντας την καρτέλα**, το ίδιο σχήμα με τα ωμά ελληνικά του N.11.
+   *
+   * Η άγκυρα ελέγχει πλέον το **σεντινέλι του SSoT**, όχι κάποιο literal: μια επιστροφή στο `''`
+   * σπάει εδώ πριν φτάσει στην οθόνη.
+   */
+  it('🔴 καμία επιλογή δεν έχει ΚΕΝΗ τιμή — το Radix τη δεσμεύει', () => {
+    setTableFormatPort(fakePort({ fontNames: () => ['Arial'] }).port);
+    const state = bridge().current.getComboboxState(TABLE_FORMAT_RIBBON_KEYS.fontFamily);
+    expect(state?.options.some((o) => o.value === '')).toBe(false);
+  });
+
+  it('κληρονομεί ⇒ η τιμή είναι το σεντινέλι (η «Αυτόματη» επιλεγμένη)· μεικτό ⇒ `null`', () => {
     setTableFormatPort(fakePort({
       state: (() => ({ value: undefined, mixed: false, overridden: false })) as TableFormatPort['state'],
     }).port);
-    expect(bridge().current.getComboboxState(TABLE_FORMAT_RIBBON_KEYS.fontFamily)?.value).toBe('');
+    expect(bridge().current.getComboboxState(TABLE_FORMAT_RIBBON_KEYS.fontFamily)?.value)
+      .toBe(SELECT_CLEAR_VALUE);
 
     setTableFormatPort(fakePort({
       state: (() => ({ value: undefined, mixed: true, overridden: false })) as TableFormatPort['state'],
@@ -523,7 +549,7 @@ describe('useRibbonTableFormatBridge §56 — οικογένεια γραμμα�
     const { port, calls } = fakePort();
     setTableFormatPort(port);
     const api = bridge().current;
-    act(() => { api.onComboboxChange(TABLE_FORMAT_RIBBON_KEYS.fontFamily, ''); });
+    act(() => { api.onComboboxChange(TABLE_FORMAT_RIBBON_KEYS.fontFamily, SELECT_CLEAR_VALUE); });
     expect(calls).toEqual([['setField', 'fontFamily', undefined]]);
 
     act(() => { api.onComboboxChange(TABLE_FORMAT_RIBBON_KEYS.fontFamily, 'ISOCPEUR'); });
@@ -759,5 +785,78 @@ describe('useRibbonTableFormatBridge §59 Δ2 — εσοχή', () => {
     const api = bridge().current;
     act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.actions.indentIncrease, true); });
     expect(calls).toEqual([]);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 🔴 ADR-739 §59 Δ1 — Ο ΠΡΟΣΑΝΑΤΟΛΙΣΜΟΣ
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('useRibbonTableFormatBridge §59 Δ1 — προσανατολισμός', () => {
+  afterEach(() => { __resetTableFormatPortForTests(); });
+
+  const rotationPort = (value: number | undefined, mixed: boolean) => fakePort({
+    state: (() => ({ value, mixed, overridden: true })) as TableFormatPort['state'],
+  });
+
+  it('«προς τα πάνω» σε οριζόντιο κελί ⇒ +90', () => {
+    const { port, calls } = rotationPort(0, false);
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.rotation.up, true); });
+    expect(calls).toEqual([['setField', 'textRotationDeg', 90]]);
+  });
+
+  /** Το ξεπάτωμα **σβήνει** το πεδίο — ρητό `0` θα νικούσε τη γραμμή/στήλη αόρατα. */
+  it('🔴 ξαναπάτημα ⇒ `setField(undefined)` = ΣΒΗΣΙΜΟ, ποτέ ρητό μηδέν', () => {
+    const { port, calls } = rotationPort(90, false);
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.rotation.up, false); });
+    expect(calls).toEqual([['setField', 'textRotationDeg', undefined]]);
+  });
+
+  /**
+   * 🔑 Η **αμοιβαία αποκλειστικότητα** δεν γράφεται πουθενά: το πεδίο είναι ένας αριθμός, οπότε
+   * το «πάνω» πάνω σε «κάτω» απλώς γράφει `+90`. Ένα χειροκίνητο «ξετσέκαρε το άλλο» θα ήταν
+   * κανόνας που η δεύτερη επιφάνεια μπορεί να ξεχάσει — και η διαφωνία τους θα ήταν αόρατη.
+   */
+  it('🔑 «πάνω» πάνω σε «κάτω» ⇒ +90, χωρίς κανένα ρητό ξετσέκαρισμα', () => {
+    const { port, calls } = rotationPort(-90, false);
+    setTableFormatPort(port);
+    const api = bridge().current;
+    act(() => { api.onToggle(TABLE_FORMAT_RIBBON_KEYS.rotation.up, true); });
+    expect(calls).toEqual([['setField', 'textRotationDeg', 90]]);
+  });
+
+  it('η κατάσταση: πατημένο μόνο εκείνο που ισχύει', () => {
+    setTableFormatPort(rotationPort(90, false).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.rotation.up)).toBe(true);
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.rotation.down)).toBe(false);
+  });
+
+  /**
+   * 🔴 Ανάμεικτος στόχος ⇒ `null` (indeterminate) και για τα **δύο** κουμπιά: καμία γωνία δεν
+   * είναι η αλήθεια, και ένα πατημένο κουμπί θα έλεγε ψέματα για τα μισά κελιά.
+   */
+  it('🔴 ανάμεικτος στόχος ⇒ `null` και στα δύο κουμπιά', () => {
+    setTableFormatPort(rotationPort(undefined, true).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.rotation.up)).toBeNull();
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.rotation.down)).toBeNull();
+  });
+
+  /**
+   * ⚠️ **Χωρίς στόχο ⇒ `false`, ΠΟΤΕ `null`.** Η καρτέλα ζει ένα καρέ αφότου κλείσει ο δρομέας
+   * (§52)· ένα `null` εκεί θα δήλωνε «τα κελιά διαφωνούν» για επιλογή που δεν υπάρχει. Εδώ ο
+   * φύλακας **δεν** χρειάζεται `scope()` όπως ο αριθμός και το ξεχείλισμα: το γενικό `state()`
+   * απαντά `null` για «χωρίς στόχο» και σηματοδοτεί το ανάμεικτο με ρητό `mixed`, άρα οι δύο
+   * καταστάσεις είναι διακριτές **στον τύπο**.
+   */
+  it('⚠️ χωρίς στόχο ⇒ `false`, όχι indeterminate', () => {
+    setTableFormatPort(fakePort({ state: () => null }).port);
+    const api = bridge().current;
+    expect(api.getToggleState(TABLE_FORMAT_RIBBON_KEYS.rotation.up)).toBe(false);
   });
 });
