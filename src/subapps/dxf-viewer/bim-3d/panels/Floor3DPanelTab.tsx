@@ -9,6 +9,7 @@ import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, Focus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useLevelsOptional } from '../../systems/levels/useLevels';
 import { useBim3DEntitiesStore } from '../stores/Bim3DEntitiesStore';
 import type { BuildingVisMode, ElevationReference } from '../stores/Bim3DEntitiesStore';
@@ -165,9 +166,18 @@ function BuildingSelector() {
       <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
         {t('floatingPanel.buildings.label')}
       </span>
+      {/*
+        🔴 ADR-739 §60 (Boy Scout, N.0.2) — **ΤΟ ΚΕΝΟ ΑΛΦΑΡΙΘΜΗΤΙΚΟ ΕΙΝΑΙ ΝΑΡΚΗ.**
+        Το Radix Select **δεσμεύει** το `''` ως «καμία επιλογή»: ένα `<SelectItem value="">` πετά
+        ρητά σε dev (`components/ui/select.tsx`) και **ολόκληρη η επιφάνεια δεν αποδίδεται**. Η
+        ίδια γραμμή, σε άλλο αρχείο, έριξε την καρτέλα «Μορφοποίηση» (ADR-739 §59.6.3) και το
+        βρήκε **άνθρωπος ανοίγοντάς την** — ο μεταγλωττιστής δέχεται κάθε `string` και καμία
+        πύλη δεν το βλέπει. Το σεντινέλι είναι το **υπάρχον** `SELECT_CLEAR_VALUE`, με τον
+        φύλακα `isSelectClearValue` στη γραφή ώστε να **μη διαρρέει** στο store.
+      */}
       <Select
-        value={activeBuildingId ?? ''}
-        onValueChange={(v) => setActiveBuildingId(v === '' ? null : v)}
+        value={activeBuildingId ?? SELECT_CLEAR_VALUE}
+        onValueChange={(v) => setActiveBuildingId(isSelectClearValue(v) ? null : v)}
       >
         <SelectTrigger
           className="h-7 w-full border-white/15 bg-white/10 text-xs text-white/80 hover:bg-white/15"
@@ -176,7 +186,9 @@ function BuildingSelector() {
           <SelectValue placeholder={t('floatingPanel.buildings.allBuildings')} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">{t('floatingPanel.buildings.allBuildings')}</SelectItem>
+          <SelectItem value={SELECT_CLEAR_VALUE}>
+            {t('floatingPanel.buildings.allBuildings')}
+          </SelectItem>
           {buildings.map((b) => (
             <SelectItem key={b.id} value={b.id}>
               {b.name ?? b.id}

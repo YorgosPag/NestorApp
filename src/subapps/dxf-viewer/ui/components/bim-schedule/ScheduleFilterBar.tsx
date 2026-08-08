@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 
@@ -177,10 +178,16 @@ export function ScheduleFilterBar({
           <legend className="text-sm font-medium text-foreground">
             {t('dxf-schedule:filters.building.label')}
           </legend>
+          {/*
+            🔴 ADR-739 §60 (Boy Scout, N.0.2) — δες την ίδια διόρθωση στο `Floor3DPanelTab.tsx`:
+            το Radix Select **δεσμεύει** το `''`, οπότε ένα `<SelectItem value="">` ρίχνει
+            ολόκληρη την επιφάνεια σε dev. Είναι η **ίδια** γραμμή που έριξε την καρτέλα
+            «Μορφοποίηση» (§59.6.3), με τη διαφορά ότι εδώ δεν την είχε δει ακόμη κανείς.
+          */}
           <Select
-            value={criteria.buildingIds?.[0] ?? ''}
+            value={criteria.buildingIds?.[0] ?? SELECT_CLEAR_VALUE}
             onValueChange={(v) =>
-              onChange({ ...criteria, buildingIds: v === '' ? undefined : [v] })
+              onChange({ ...criteria, buildingIds: isSelectClearValue(v) ? undefined : [v] })
             }
           >
             <SelectTrigger
@@ -190,7 +197,7 @@ export function ScheduleFilterBar({
               <SelectValue placeholder={t('dxf-schedule:filters.building.all')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('dxf-schedule:filters.building.all')}</SelectItem>
+              <SelectItem value={SELECT_CLEAR_VALUE}>{t('dxf-schedule:filters.building.all')}</SelectItem>
               {availableBuildings!.map((b) => (
                 <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
               ))}
