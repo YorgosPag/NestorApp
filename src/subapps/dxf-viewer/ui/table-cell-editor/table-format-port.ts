@@ -48,13 +48,18 @@ import type {
 import type { TableCellStyle } from '../../bim/table/table-style';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
-import type { TableAxisStyleOverride, TableCellOverflow } from '../../types/table';
+import type {
+  PersistedTableModel,
+  TableAxisStyleOverride,
+  TableCellOverflow,
+} from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { TableAxisColorState } from '../components/table-format-toolbar/table-color-menu-selection';
 import type { TableNumberFormatState } from '../components/table-format-toolbar/TableNumberFormatSection';
 import type { TableToggleFormatKey } from '../components/table-format-toolbar/TableFormatSection';
 import type { TableBindingPort } from './use-table-binding-actions';
 import type { TableFormatPainterPort } from './use-table-format-painter-actions';
+import type { FormatTarget } from './table-format-snapshot';
 import type { TableMenuClipboardActions } from './use-table-menu-clipboard';
 import type { TableBorderActions } from './use-table-border-actions';
 import type { TableMergeActions } from './use-table-merge-actions';
@@ -209,6 +214,45 @@ export interface TableFormatPort {
   readonly reset: () => void;
   /** Υπάρχει **οτιδήποτε** να επαναφερθεί; (`some`, όχι `every` — δες `canResetTableFormatScope`.) */
   readonly canReset: () => boolean;
+  /**
+   * 🔴 ADR-739 §60 — **ΤΟ «ΟΚ» ΕΝΟΣ ΔΙΑΛΟΓΟΥ**: ένα έτοιμο μοντέλο, ένα `Ctrl+Z`.
+   *
+   * ## Γιατί υπάρχει, και γιατί είναι το **μόνο** νέο μέλος της Φάσης Ε
+   * Κάθε άλλο μέλος εδώ δέχεται **πρόθεση** («κάνε το έντονο») και παράγει μία εντολή. Ένας
+   * διάλογος με «ΟΚ / Άκυρο» δουλεύει αντίστροφα: επεξεργάζεται **προσχέδιο** και παραδίδει το
+   * αποτέλεσμα **μία** φορά. Δεκαπέντε αλλαγές μέσα στον διάλογο = ένα βήμα αναίρεσης, όπως στο
+   * Excel — και το «Άκυρο» είναι σκέτη απόρριψη μιας τοπικής μεταβλητής.
+   *
+   * ## 🔴 ΜΕΤΑΚΟΜΙΣΕ, ΔΕΝ ΓΕΝΝΗΘΗΚΕ (N.0.2)
+   * Ζούσε ως `borders.commitModel` από το ADR-750 Φ6, και **ποτέ δεν ήταν πράξη
+   * περιγραμμάτων**: δεν παίρνει μολύβι, δεν ξέρει ακμές, δεν αγγίζει το `table-edges`. Ήταν
+   * εκεί επειδή ο πρώτος διάλογος του έργου τύχαινε να είναι ο διάλογος περιγραμμάτων. Με
+   * **δεύτερο** διάλογο, δύο μέλη με το ίδιο σώμα σε δύο υπο-αντικείμενα θα ήταν δύο πόρτες
+   * προς την ίδια ουρά — και η μέρα που η μία μάθαινε φύλακα (π.χ. «μη γράφεις σε κλειδωμένο
+   * κελί») θα άφηνε την άλλη πίσω, σιωπηλά.
+   *
+   * ⚠️ Γράφει στον πίνακα **του δρομέα** (`cursorTable`), όχι στον απλώς επιλεγμένο: ένα
+   * προσχέδιο γεννιέται πάντα από στόχο μορφοποίησης, και στόχος υπάρχει μόνο μέσα σε συνεδρία
+   * κελιού. Η ίδια συμφωνία με το {@link TableFormatPort.bounds}, που απαντά `null` χωρίς δρομέα.
+   *
+   * 🔑 Περνά από την **ίδια** ουρά με κάθε άλλη πράξη, οπότε ο φύλακας του no-op by-reference
+   * ισχύει: «άνοιξα, πείραξα, το ξαναέφερα όπως ήταν, ΟΚ» **δεν** γεννά βήμα αναίρεσης.
+   */
+  readonly commitModel: (model: PersistedTableModel) => void;
+  /**
+   * 🔴 ADR-739 §60 — **η ΑΦΕΤΗΡΙΑ ενός προσχεδίου**: μοντέλο + στυλ + στόχος + χρώματα σχεδίου,
+   * σε μία ερώτηση, **τη στιγμή που ο χρήστης πατά** (ADR-040 κανόνας #2).
+   *
+   * ## Γιατί ο **υπάρχων** `FormatTarget` και όχι νέο σχήμα
+   * Είναι ακριβώς ό,τι κατασκευάζουν ήδη και οι τρεις υποδοχές μορφοποίησης, με τον ίδιο κανόνα
+   * «τι διάλεξε ο χρήστης → πού γράφεται» (§52). Ένα `{bounds, model, style}` — όπως το παλιό
+   * `borders.resolveDialogTarget` — θα ήταν **δεύτερη** απάντηση στο ίδιο ερώτημα και θα έχανε
+   * το `scope`, δηλαδή τη διαφορά ανάμεσα σε «γράψε στα κελιά» και «γράψε στη στήλη». Ο
+   * διάλογος γράφει **στυλ**: χωρίς `scope` θα ισοπέδωνε κάθε μαρκαρισμένη στήλη σε κελιά.
+   *
+   * `null` χωρίς δρομέα ⇒ ο διάλογος **δεν ανοίγει**, αντί να ανοίξει πάνω σε φάντασμα.
+   */
+  readonly formatTarget: () => FormatTarget | null;
   readonly borders: TableBorderActions;
   readonly merge: TableMergeActions;
   readonly structure: TableStructurePort;

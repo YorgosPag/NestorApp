@@ -51,12 +51,8 @@ import { useLiveTableMutation } from './use-table-model-commit';
 import { useCommandHistory } from '../../core/commands';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
 import type { TableBorderSpec } from '../../types/table-edges';
-import type { PersistedTableModel } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
-import type {
-  TableBorderDialogTarget,
-} from '../components/table-format-toolbar/border-dialog/TableBorderDialog';
 
 export interface UseTableBorderActionsParams {
   readonly levelManager: LevelManagerLike;
@@ -91,24 +87,6 @@ export interface TableBorderActions {
    * `null` όταν δεν υπάρχει ζωντανός πίνακας (μπαγιάτικο μενού μετά από undo).
    */
   readonly resolvePencil: () => TableBorderSpec | null;
-  /**
-   * ADR-750 Φ6 — η **αφετηρία του προσχεδίου** του διαλόγου «Περισσότερα περιγράμματα…»:
-   * όρια + ζωντανό μοντέλο + ενεργό στυλ, σε μία ερώτηση.
-   *
-   * Ίδια σύμβαση με το {@link resolvePencil}: **συνάρτηση**, γιατί απαντιέται τη στιγμή που ο
-   * χρήστης πατά (ADR-040 κανόνας #2). `null` χωρίς ζωντανό πίνακα ⇒ ο διάλογος δεν ανοίγει,
-   * αντί να ανοίξει πάνω σε μοντέλο που δεν υπάρχει πια.
-   */
-  readonly resolveDialogTarget: (bounds: TableCellRangeBounds) => TableBorderDialogTarget | null;
-  /**
-   * ADR-750 Φ6 — το «ΟΚ» του διαλόγου: **ένα** έτοιμο μοντέλο, **ένα** commit.
-   *
-   * Δεν παίρνει μετασχηματιστή (όπως κάθε άλλη πράξη εδώ) επειδή η δουλειά έχει ήδη γίνει: ο
-   * διάλογος κράτησε ολόκληρο το προσχέδιο. Περνά όμως από την **ίδια** ουρά, ώστε ο φύλακας
-   * του no-op by-reference να ισχύει και εδώ — «άνοιξα, πείραξα, το ξαναέφερα όπως ήταν, ΟΚ»
-   * δεν γεννά βήμα αναίρεσης.
-   */
-  readonly commitModel: (model: PersistedTableModel) => void;
 }
 
 export function useTableBorderActions(params: UseTableBorderActionsParams): TableBorderActions {
@@ -150,14 +128,17 @@ export function useTableBorderActions(params: UseTableBorderActionsParams): Tabl
         if (!live) return null;
         return resolveTableBorderPencil(resolveTableStyle(live), tableBorderPencilChoice());
       },
-      resolveDialogTarget: (bounds) => {
-        const live = liveTable();
-        if (!live) return null;
-        return { bounds, model: live.model, style: resolveTableStyle(live) };
-      },
-      commitModel: (nextModel) => {
-        runOnLive(() => nextModel);
-      },
+      // 🔴 ADR-739 §60 — **ΔΥΟ μέλη έφυγαν από εδώ, και κανένα δεν ήταν πράξη περιγραμμάτων.**
+      //
+      //   commitModel        δεν παίρνει μολύβι, δεν ξέρει ακμές — είναι «ένα προσχέδιο, ένα
+      //                      commit», δηλαδή ό,τι κάνει **κάθε** διάλογος
+      //   resolveDialogTarget επέστρεφε {όρια, μοντέλο, στυλ} — και του έλειπε το `scope`, που
+      //                      είναι ακριβώς η διαφορά «γράψε στα κελιά» / «γράψε στη στήλη»
+      //
+      // Ήταν εδώ επειδή ο πρώτος διάλογος του έργου τύχαινε να είναι ο διάλογος περιγραμμάτων.
+      // Ζουν πλέον στη θύρα (`commitModel` / `formatTarget`), μία πόρτα για κάθε διάλογο· οι δύο
+      // υποδοχές δεξιού κλικ τα ζητούν από το `useLiveTableMutation` και το `formatTarget` που
+      // **ήδη είχαν** — δηλαδή η μετακόμιση αφαίρεσε πόρτες αντί να προσθέσει.
     }),
     [liveTable, runOnLive],
   );

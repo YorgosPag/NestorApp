@@ -236,6 +236,14 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
       commands.setOverflow(formatTarget(), value),
     fontNames,
     reset: (): void => commands.reset(formatTarget()),
+    // 🔴 ADR-739 §60 — το «ΟΚ» ενός διαλόγου: **ένα** έτοιμο μοντέλο, μέσα από την ίδια ουρά
+    // (`applyFormat`) με κάθε άλλη πράξη μορφοποίησης. Δες το μέλος της θύρας για το γιατί
+    // μετακόμισε εδώ από το `borders`.
+    commitModel: (model: PersistedTableModel): void => applyFormat(() => model),
+    // 🔴 ADR-739 §60 — η αφετηρία κάθε προσχεδίου. **Ο ίδιος** `formatTarget` που τροφοδοτεί
+    // ήδη κάθε ανάγνωση αυτής της θύρας: μια δεύτερη κατασκευή στόχου για τον διάλογο θα άφηνε
+    // ανοιχτό το παράθυρο να διαβάσει ο διάλογος **άλλο** μοντέλο από τα κουμπιά δίπλα του.
+    formatTarget,
     canReset: (): boolean => {
       const live = cursorTable();
       const current = scope();
@@ -289,6 +297,8 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     fontNames: () => latest.current.fontNames(),
     reset: () => latest.current.reset(),
     canReset: () => latest.current.canReset(),
+    commitModel: (model) => latest.current.commitModel(model),
+    formatTarget: () => latest.current.formatTarget(),
     get borders() { return latest.current.borders; },
     get merge() { return latest.current.merge; },
     get structure() { return latest.current.structure; },
