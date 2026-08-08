@@ -964,7 +964,8 @@
       "insertColumnRight": "Insert column right",
       "insertColumnsRight": "Insert {count} columns right",
       "deleteColumn": "Delete column",
-      "deleteColumns": "Delete {count} columns"
+      "deleteColumns": "Delete {count} columns",
+      "formatCells": "Format Cells..."
     },
     "formatToolbar": {
       "columnLabel": "Format column {label}",
@@ -1063,16 +1064,6 @@
       },
       "dialog": {
         "menuItem": "More Borders…",
-        "title": "Format Cells",
-        "tabs": {
-          "number": "Number",
-          "alignment": "Alignment",
-          "font": "Font",
-          "border": "Border",
-          "fill": "Fill",
-          "protection": "Protection",
-          "disabledHint": "Available in a future phase"
-        },
         "line": {
           "section": "Line",
           "style": "Style:",
@@ -1101,8 +1092,6 @@
         },
         "helpText": "The border style selected can be applied by clicking the presets, preview diagram or the buttons above.",
         "mixedEdge": "Mixed border",
-        "ok": "OK",
-        "cancel": "Cancel",
         "lineStyles": {
           "none": "None",
           "hairlineDotted": "Dotted, hairline",
@@ -1119,6 +1108,90 @@
           "thickSolid": "Solid, thick",
           "double": "Double line"
         }
+      }
+    },
+    "formatCells": {
+      "title": "Format Cells",
+      "ok": "OK",
+      "cancel": "Cancel",
+      "mixed": "Varies",
+      "tabs": {
+        "number": "Number",
+        "alignment": "Alignment",
+        "font": "Font",
+        "border": "Border",
+        "fill": "Fill",
+        "protection": "Protection",
+        "disabledHint": "Available in a future phase"
+      },
+      "launcher": {
+        "number": "Format Cells: Number",
+        "alignment": "Format Cells: Alignment"
+      },
+      "number": {
+        "category": "Category",
+        "sample": "Sample",
+        "sampleExample": "Example (the cell is empty)",
+        "decimals": "Decimal places",
+        "currency": "Currency symbol",
+        "dateStyle": "Date type",
+        "angleUnit": "Angle unit",
+        "grouping": "Use 1000 separator",
+        "kinds": {
+          "general": "General",
+          "whole": "Whole number",
+          "decimal": "Decimal number",
+          "currency": "Currency",
+          "percent": "Percentage",
+          "angle": "Angle",
+          "date": "Date",
+          "text": "Text"
+        },
+        "dateStyles": {
+          "short": "Short numeric",
+          "medium": "Abbreviated month",
+          "long": "Full month",
+          "iso": "ISO 8601",
+          "monthYear": "Month and year",
+          "year": "Year"
+        },
+        "angleUnits": {
+          "degrees": "Decimal degrees",
+          "dms": "Degrees, minutes, seconds",
+          "grads": "Gradians",
+          "radians": "Radians",
+          "surveyor": "Surveyor's units"
+        }
+      },
+      "alignment": {
+        "textAlignment": "Text alignment",
+        "textControl": "Text control",
+        "orientation": "Orientation",
+        "degrees": "Degrees",
+        "indent": "Indent",
+        "wrap": "Wrap text",
+        "shrink": "Shrink to fit",
+        "horizontal": {
+          "label": "Horizontal",
+          "left": "Left",
+          "center": "Center",
+          "right": "Right"
+        },
+        "vertical": {
+          "label": "Vertical",
+          "top": "Top",
+          "middle": "Middle",
+          "bottom": "Bottom"
+        }
+      },
+      "origin": {
+        "cell": "Set on these cells",
+        "row": "Set by the row",
+        "column": "Set by the column",
+        "rowClass": "Set by the table style",
+        "valueType": "Set by the column data type",
+        "mixed": "Varies per cell",
+        "reset": "Reset"
       }
     },
     "colorMenu": {

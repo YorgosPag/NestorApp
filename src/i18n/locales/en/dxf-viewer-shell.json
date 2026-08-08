@@ -5574,7 +5574,11 @@
           "grouping": "Comma style"
         },
         "decimalUp": "Increase decimal places",
-        "decimalDown": "Decrease decimal places"
+        "decimalDown": "Decrease decimal places",
+        "formatCells": {
+          "number": "Format Cells: Number",
+          "alignment": "Format Cells: Alignment"
+        }
       }
     },
     "tooltips": {
