@@ -150,6 +150,17 @@ const MERGE_WIDGET_COMMAND = {
   commandKey: '',
 } as const;
 
+/**
+ * 🔴 §60 — το **βελάκι γωνίας** της ομάδας. Widget και όχι κουμπί κορδέλας, για τον ίδιο λόγο με
+ * τη συγχώνευση: ανοίγει ολόκληρη επιφάνεια (τον διάλογο «Μορφοποίηση κελιών») και κρατά τον
+ * κύκλο ζωής της, κάτι που το `commandKey` της κορδέλας δεν εκφράζει.
+ */
+const FORMAT_CELLS_ALIGN_WIDGET_COMMAND = {
+  id: 'tableFormat.formatCells.alignment',
+  labelKey: 'ribbon.commands.tableFormat.formatCells.alignment',
+  commandKey: '',
+} as const;
+
 export const TABLE_FORMAT_ALIGN_PANEL: RibbonPanelDef = {
   id: 'table-format-align',
   labelKey: 'ribbon.panels.tableAlign',
@@ -192,6 +203,15 @@ export const TABLE_FORMAT_ALIGN_PANEL: RibbonPanelDef = {
         // γραμμές», «αναίρεση») που **ήδη υπάρχει** (`TableMergeMenu`). Ξαναγράψιμό του για την
         // κορδέλα θα ήταν δεύτερη υλοποίηση της ίδιας εντολής.
         { type: 'widget', size: 'small', widgetId: 'table-merge', command: MERGE_WIDGET_COMMAND },
+        // 🔴 §60 — **το βελάκι γωνίας, τελευταίο**: στο Excel ζει στην κάτω δεξιά γωνία της
+        // ομάδας και ανοίγει το «Μορφοποίηση κελιών» στην καρτέλα «Στοίχιση». Εκεί ζουν τα δύο
+        // χειριστήρια που δεν χωρούν σε κουμπί — η **ελεύθερη γωνία** και η **εσοχή με τιμή**.
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'table-format-cells-align',
+          command: FORMAT_CELLS_ALIGN_WIDGET_COMMAND,
+        },
       ],
     },
   ],

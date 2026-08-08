@@ -30,6 +30,9 @@ import { useTableRangeMenu } from '../../ui/table-cell-editor/use-table-range-me
 // ζει σε άλλο κλαδί του δέντρου (`DxfViewerTopBar`) και δεν μπορεί να πάρει props από εδώ
 // χωρίς να ανεβεί η κατάσταση στον orchestrator (παλινδρόμηση ADR-040/532).
 import { useTableFormatActions } from '../../ui/table-cell-editor/use-table-format-actions';
+// 🔴 ADR-739 §61 — `Ctrl+1`: ο **ένας** ιδιοκτήτης της σημασίας «Μορφοποίηση κελιών». Δες τη
+// σημείωση μέσα στον χειριστή για το γιατί κρίνεται πριν τον φύλακα εστίασης.
+import { claimTableFormatCellsShortcut } from '../../ui/table-cell-editor/table-format-cells-shortcut';
 import { useTableLinkMenu } from '../../ui/table-cell-editor/use-table-link-menu';
 import { useTableLinkShortcut } from '../../ui/table-cell-editor/use-table-link-shortcut';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
@@ -71,10 +74,25 @@ export function useCanvasSectionUI({
 }: Params) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // 🔴 ADR-739 §61 — ΤΟ `Ctrl+1` ΚΡΙΝΕΤΑΙ **ΠΡΙΝ** ΤΟΝ ΦΥΛΑΚΑ ΕΣΤΙΑΣΗΣ, ΚΑΙ ΟΧΙ ΤΥΧΑΙΑ.
+      //
+      // Το πλήκτρο έχει δύο νόμιμους ιδιοκτήτες (Excel: Μορφοποίηση κελιών · AutoCAD: Παλέτα
+      // Ιδιοτήτων) και τους ξεχωρίζει η **συνεδρία πίνακα**, όχι το πού βρίσκεται η εστίαση:
+      //   · με δρομέα σε κελί η εστίαση είναι `<textarea>` ⇒ ο φύλακας από κάτω θα έβγαινε
+      //     νωρίς και το πλήκτρο δεν θα έκανε **τίποτα** (τρύπα, όχι σύγκρουση — δες το module
+      //     της συντόμευσης για τη μέτρηση)·
+      //   · με ανοιχτή συνεδρία και εστίαση σε **κουμπί** του mini toolbar, ο φύλακας θα το
+      //     άφηνε να περάσει και θα άνοιγε την Παλέτα Ιδιοτήτων μέσα σε πίνακα.
+      // Άρα η ερώτηση δεν είναι «γράφει κάπου ο χρήστης;» αλλά «υπάρχει στόχος μορφοποίησης;»,
+      // και την απαντά **ένας** ιδιοκτήτης — αυτός εδώ δεν μαθαίνει τίποτα για πίνακες.
+      if (e.ctrlKey && e.key === '1') {
+        e.preventDefault();
+        if (!claimTableFormatCellsShortcut()) PropertiesPaletteStore.toggle();
+        return;
+      }
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') return;
       if (e.key === 'F11') { e.preventDefault(); PropertiesPaletteStore.toggle(); return; }
-      if (e.ctrlKey && e.key === '1') { e.preventDefault(); PropertiesPaletteStore.toggle(); return; }
     };
     window.addEventListener('keydown', handler, { capture: true });
     return () => window.removeEventListener('keydown', handler, { capture: true });

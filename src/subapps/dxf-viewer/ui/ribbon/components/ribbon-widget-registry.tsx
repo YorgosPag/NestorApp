@@ -122,6 +122,12 @@ import {
   RibbonTablePasteWidget,
   RibbonTableTextColorWidget,
 } from './table/RibbonTableFormatWidgets';
+// 🔴 ADR-739 §60 — τα **δύο βελάκια γωνίας**: ο ίδιος διάλογος «Μορφοποίηση κελιών», η δική του
+// καρτέλα ο καθένας. Η θέση και ο αριθμός τους είναι του Excel.
+import {
+  RibbonTableFormatCellsAlignWidget,
+  RibbonTableFormatCellsNumberWidget,
+} from './table/RibbonTableFormatCellsWidget';
 
 /** Ένα widget όπως το ζητά το ribbon: χωρίς props, με σταθερό `key`. */
 type WidgetFactory = () => React.ReactNode;
@@ -156,6 +162,13 @@ const CORE_WIDGETS: Readonly<Record<string, WidgetFactory>> = {
   // κορδέλας: εκείνο ζωγραφίζει το πτυσσόμενό του σε **portal**, που ο φύλακας συνεδρίας κελιού
   // δεν αναγνωρίζει ⇒ το κλικ σε item θα έκλεινε τη συνεδρία και θα εξαφάνιζε την καρτέλα.
   'table-paste': () => <RibbonTablePasteWidget key="table-paste-widget" />,
+  // 🔴 ADR-739 §60 — ο **ίδιος** διάλογος, δύο εκκινητές: το `initialTab` είναι όλη η διαφορά.
+  'table-format-cells-number': () => (
+    <RibbonTableFormatCellsNumberWidget key="table-format-cells-number-widget" />
+  ),
+  'table-format-cells-align': () => (
+    <RibbonTableFormatCellsAlignWidget key="table-format-cells-align-widget" />
+  ),
   'visual-style-select': () => <VisualStyleSelect key="visual-style-select-widget" />,
   'glass-quality-select': () => <GlassQualitySelect key="glass-quality-select-widget" />,
   'mesh-wire-mode-select': () => <MeshWireModeSelect key="mesh-wire-mode-select-widget" />,

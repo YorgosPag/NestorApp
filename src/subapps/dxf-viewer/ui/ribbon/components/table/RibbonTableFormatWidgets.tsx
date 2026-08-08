@@ -205,14 +205,11 @@ export function RibbonTableBordersWidget(): React.ReactElement {
       onApplyDiagonal={(commandId) => run((target) => getTableFormatPort()?.borders.applyDiagonal(target, commandId))}
       resolvePencil={() => getTableFormatPort()?.borders.resolvePencil() ?? null}
       moreBorders={{
-        // ADR-750 Φ6 — ο διάλογος ξαναρωτά τα **ίδια** όρια τη στιγμή του ανοίγματος: ένα undo
+        // ADR-750 Φ6 — ο διάλογος ξαναρωτά τον **ίδιο** στόχο τη στιγμή του ανοίγματος: ένα undo
         // ενόσω η κορδέλα ήταν ορατή σημαίνει «δεν ανοίγει», ποτέ διάλογος πάνω σε φάντασμα.
-        resolveTarget: () => {
-          const live = getTableFormatPort();
-          const target = live?.bounds();
-          return live && target ? live.borders.resolveDialogTarget(target) : null;
-        },
-        onCommit: (model) => getTableFormatPort()?.borders.commitModel(model),
+        // 🔴 §61 — το `onCommit` **έφυγε**: με έναν ξενιστή υπάρχει ένας καλών, και εκείνος περνά
+        // από το `TableFormatPort.commitModel`. Δες `TableBorderDialogLaunch`.
+        resolveTarget: () => getTableFormatPort()?.formatTarget() ?? null,
       }}
     />
   );

@@ -35,6 +35,16 @@
 import type { RibbonPanelDef } from '../types/ribbon-types';
 import { TABLE_FORMAT_RIBBON_KEYS } from '../hooks/bridge/table-format-command-keys';
 
+/**
+ * 🔴 §60 — το **βελάκι γωνίας** της ομάδας «Αριθμός». Widget και όχι κουμπί κορδέλας: ανοίγει
+ * ολόκληρη επιφάνεια και κρατά τον κύκλο ζωής της.
+ */
+const FORMAT_CELLS_NUMBER_WIDGET_COMMAND = {
+  id: 'tableFormat.formatCells.number',
+  labelKey: 'ribbon.commands.tableFormat.formatCells.number',
+  commandKey: '',
+} as const;
+
 export const TABLE_FORMAT_NUMBER_PANEL: RibbonPanelDef = {
   id: 'table-format-number',
   labelKey: 'ribbon.panels.tableNumber',
@@ -102,6 +112,16 @@ export const TABLE_FORMAT_NUMBER_PANEL: RibbonPanelDef = {
             commandKey: TABLE_FORMAT_RIBBON_KEYS.actions.decimalUp,
             action: TABLE_FORMAT_RIBBON_KEYS.actions.decimalUp,
           },
+        },
+        // 🔴 §60 — **το βελάκι γωνίας**: εδώ κλείνει το κενό που δήλωνε η κεφαλίδα («τι ΔΕΝ
+        // υπάρχει ακόμη»). Το πτυσσόμενο κατηγορίας **δεν** μπήκε στην κορδέλα και δεν πρόκειται:
+        // ένα combobox οκτώ ειδών οφείλει να απαντά και το «με πόσα δεκαδικά; ποιο νόμισμα;»,
+        // δηλαδή είναι ο διάλογος σε μικρογραφία. Το Excel κάνει **ακριβώς** το ίδιο.
+        {
+          type: 'widget',
+          size: 'small',
+          widgetId: 'table-format-cells-number',
+          command: FORMAT_CELLS_NUMBER_WIDGET_COMMAND,
         },
       ],
     },

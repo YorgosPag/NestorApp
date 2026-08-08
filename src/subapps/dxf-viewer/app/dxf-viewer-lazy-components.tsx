@@ -93,6 +93,11 @@ export const TableRangeOverwriteConfirmDialog = React.lazy(() => import('../ui/d
 export const TableMergeDiscardConfirmDialog = React.lazy(() => import('../ui/dialogs/TableMergeDiscardConfirmDialog').then(mod => ({ default: mod.TableMergeDiscardConfirmDialog })));
 // ADR-763 — «Εισαγωγή συνάρτησης» (fx της γραμμής τύπων), parity με τον ομώνυμο διάλογο του Excel.
 export const TableInsertFunctionDialog = React.lazy(() => import('../ui/dialogs/TableInsertFunctionDialog').then(mod => ({ default: mod.TableInsertFunctionDialog })));
+// 🔴 ADR-739 §61 — «Μορφοποίηση κελιών»: ο **ΕΝΑΣ** ξενιστής των πέντε υποδοχών (δύο βελάκια
+// κορδέλας · «Περισσότερα περιγράμματα…» · δεξί κλικ σε κελιά και σε ζώνες δείκτη · `Ctrl+1`).
+// Μέχρι το §60 κάθε εκκινητής ζωγράφιζε τον δικό του — αδύνατο για συντόμευση, που δεν έχει
+// component. Gate-at-mount: ο host ακούει μόνο το ελαφρύ store.
+export const TableFormatCellsDialogHost = React.lazy(() => import('../ui/components/table-format-toolbar/format-cells-dialog/TableFormatCellsDialogHost').then(mod => ({ default: mod.TableFormatCellsDialogHost })));
 // ADR-763 Φ2 — «Ορίσματα συνάρτησης»: το δεύτερο βήμα της ίδιας εντολής, όπου η κλήση γεμίζει.
 //
 // 🔴 Ο ΜΟΝΟΣ ΔΙΑΛΟΓΟΣ ΤΟΥ ΑΡΧΕΙΟΥ ΜΕ PRELOAD — ΚΑΙ ΔΕΝ ΕΙΝΑΙ ΒΕΛΤΙΣΤΟΠΟΙΗΣΗ ΤΑΧΥΤΗΤΑΣ.
