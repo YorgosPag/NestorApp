@@ -1,5 +1,22 @@
 /**
- * ADR-750 Φ6 — **η διάταξη του διαλόγου «Μορφοποίηση κελιών → Περίγραμμα»**.
+ * ADR-750 Φ6 / ADR-739 §60 — **η διάταξη του διαλόγου «Μορφοποίηση κελιών»** (τρεις ζωντανές
+ * καρτέλες: Αριθμός · Στοίχιση · Περίγραμμα).
+ *
+ * 🔴 **ΚΑΘΕ ΚΑΝΟΝΑΣ ΕΔΩ ΧΡΗΣΙΜΟΠΟΙΕΙ ΟΡΙΣΜΕΝΟ TOKEN** — `hsl(var(--border))`, ποτέ
+ * `var(--color-border, rgba(...))`. Το δεύτερο σχήμα είναι το ελάττωμα που μετρά η **CHECK 3.43**
+ * (ADR-774): το `--color-border` **δεν ορίζεται πουθενά**, άρα το σκληρό `rgba()` του fallback
+ * είναι *πάντα* η τιμή — μονοθεματικό χρώμα με μεταμφίεση token.
+ *
+ * ⚠️ Μέχρι τις 2026-08-08 αυτό το σχόλιο έλεγε ότι οι παλιοί κανόνες «είναι στη baseline».
+ * **Δεν ήταν**: το αρχείο δεν υπήρχε καθόλου στο `.css-token-authority-baseline.json`, και η
+ * πύλη το ονόμασε **ΝΕΟ ΑΡΧΕΙΟ** μόλις σταδιοποιήθηκε. Οι **9** χρήσεις μεταφέρθηκαν σε
+ * `hsl(var(--border))` / `hsl(var(--accent))` — **καμία baseline δεν γράφτηκε**: το ζητούμενο
+ * ήταν το χρώμα να ακολουθεί το θέμα, όχι ο αριθμός να γίνει αποδεκτός.
+ *
+ * Το `var(--color-primary, currentColor)` στα πατημένα κουμπιά μένει **σκόπιμα**: το fallback
+ * του δεν είναι σταθερό χρώμα (άρα δεν είναι Κ2), και το `currentColor` ακολουθεί το κείμενο —
+ * ενώ το `--primary` στο **σκοτεινό** θέμα λύνεται σε `217 33% 17%`, δηλαδή περίγραμμα σχεδόν
+ * ταυτόσημο με την επιφάνεια (η ίδια εκστρατεία, ADR-770/CHECK 3.38).
  *
  * Η διάταξη είναι **μετρημένη** από στιγμιότυπα ελληνικού Excel (2026-08-04), όχι επινοημένη:
  * αριστερά η ομάδα «Γραμμή» (listbox 2×7 + χρώμα), δεξιά τα «Υποδείγματα» από πάνω και το proxy
@@ -72,7 +89,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  border-bottom: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  border-bottom: 1px solid hsl(var(--border));
   margin-bottom: 12px;
 }
 
@@ -88,8 +105,8 @@
 }
 
 .tabSelected {
-  border-color: var(--color-border, rgba(127, 127, 127, 0.35));
-  background: var(--color-accent, rgba(127, 127, 127, 0.14));
+  border-color: hsl(var(--border));
+  background: hsl(var(--accent));
   font-weight: 600;
 }
 
@@ -108,7 +125,7 @@
   grid-auto-columns: 1fr;
   gap: 2px;
   padding: 4px;
-  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  border: 1px solid hsl(var(--border));
   border-radius: 6px;
 }
 
@@ -127,7 +144,7 @@
 
 .styleOptionSelected {
   border-color: var(--color-primary, currentColor);
-  background: var(--color-accent, rgba(127, 127, 127, 0.18));
+  background: hsl(var(--accent));
 }
 
 .styleLine {
@@ -174,7 +191,7 @@
   gap: 6px;
   width: 100%;
   padding: 4px 6px;
-  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  border: 1px solid hsl(var(--border));
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -185,7 +202,7 @@
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.25));
+  border: 1px solid hsl(var(--border));
 }
 
 /* Στο δεξί άκρο του πλαισίου, όπως κάθε combo — η ένδειξη «υπάρχει λίστα από κάτω». */
@@ -244,7 +261,7 @@
   gap: 3px;
   padding: 5px;
   font-size: 11px;
-  border: 1px solid var(--color-border, rgba(127, 127, 127, 0.35));
+  border: 1px solid hsl(var(--border));
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -294,7 +311,7 @@
 
 .edgeButtonPressed {
   border-color: var(--color-primary, currentColor);
-  background: var(--color-accent, rgba(127, 127, 127, 0.2));
+  background: hsl(var(--accent));
 }
 
 .edgeButton[aria-disabled='true'] {
@@ -348,4 +365,165 @@
   font-size: 11px;
   line-height: 1.35;
   opacity: 0.7;
+}
+
+/* ══ ADR-739 §60 — κοινά της καρτέλας ═══════════════════════════════════════ */
+
+/**
+ * Το δοχείο της ενεργής καρτέλας.
+ *
+ * ⚠️ Ελάχιστο ύψος, ώστε η εναλλαγή καρτέλας να **μη μεταπηδά** την παλέτα: η «Στοίχιση» είναι
+ * ψηλότερη από τον «Αριθμό» με άδειο κελί, και μια παλέτα που αλλάζει ύψος κάτω από το χέρι
+ * μετακινεί το κουμπί «ΟΚ» τη στιγμή που ο χρήστης πάει να το πατήσει.
+ */
+.tabPanel {
+  min-height: 230px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.selectTrigger {
+  height: 28px;
+  font-size: 12px;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ══ Καρτέλα «Αριθμός» ══════════════════════════════════════════════════════ */
+
+.kindList {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 3px;
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+}
+
+.kindOption {
+  padding: 3px 8px;
+  font-size: 12px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.kindOptionSelected {
+  border-color: hsl(var(--border));
+  background: hsl(var(--accent));
+  font-weight: 600;
+}
+
+/**
+ * Το «Δείγμα» — πλαίσιο με **μονόχωρη** γραφή.
+ *
+ * Το μονόχωρο δεν είναι αισθητική: ο χρήστης συγκρίνει `1.234,50` με `1.234,5` αλλάζοντας ένα
+ * δεκαδικό, και σε αναλογική γραμματοσειρά η διαφορά χάνεται στο πλάτος των ψηφίων.
+ */
+.sampleBox {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+}
+
+.sampleValue {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 13px;
+  min-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+/* ══ Η προέλευση (§60) ══════════════════════════════════════════════════════ */
+
+.originNote {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: hsl(var(--muted-foreground));
+}
+
+.originIcon {
+  flex-shrink: 0;
+}
+
+.originReset {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  padding: 2px 6px;
+  font-size: 11px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.originReset[aria-disabled='true'] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ══ Ο επιλογέας γωνίας ═════════════════════════════════════════════════════ */
+
+.dialRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dial {
+  width: 96px;
+  height: 118px;
+  flex-shrink: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.dialTick {
+  stroke: hsl(var(--muted-foreground));
+  stroke-width: 1;
+}
+
+.dialPointer {
+  stroke: hsl(var(--foreground));
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* Ανάμεικτος στόχος: ο δείκτης υπάρχει αλλά **δηλώνει** ότι δεν μιλά για όλα τα κελιά. */
+.dialPointerMixed {
+  stroke: hsl(var(--muted-foreground));
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+  stroke-linecap: round;
+}
+
+.dialHub {
+  fill: hsl(var(--foreground));
+}
+
+.degreesInput {
+  width: 82px;
+  height: 28px;
+  font-size: 12px;
 }

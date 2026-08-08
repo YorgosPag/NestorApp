@@ -1,46 +1,63 @@
 'use client';
 
 /**
- * ADR-750 Φ6 — **«Περισσότερα περιγράμματα…»**: το «Μορφοποίηση κελιών → Περίγραμμα» του Excel.
+ * 🔴 ADR-739 §60 / ADR-750 Φ6 — **ο διάλογος «Μορφοποίηση κελιών»**: η ΤΡΙΤΗ επιφάνεια
+ * μορφοποίησης, δίπλα στο floating mini toolbar και στην contextual κορδέλα.
+ *
+ * ## 🔑 ΕΝΑΣ διάλογος, ΤΡΕΙΣ πελάτες — και έτσι ακριβώς το κάνει το Excel
+ * Γεννήθηκε στο ADR-750 Φ6 ως «Περισσότερα περιγράμματα…» με **μία** ζωντανή καρτέλα και πέντε
+ * δηλωμένες. Το §60 ζωντάνεψε τις δύο που είχαν αποκτήσει πελάτη:
+ * ```
+ *   Αριθμός    ← ADR-760 §9 «Στάδιο 2»: πόσα δεκαδικά; ποιο νόμισμα; ποια μορφή ημερομηνίας;
+ *   Στοίχιση   ← ADR-739 §59: η ΕΛΕΥΘΕΡΗ γωνία και η ΕΣΟΧΗ (η κορδέλα δίνει μόνο preset)
+ *   Περίγραμμα ← ADR-750 Φ6, αμετάβλητη
+ * ```
+ * Δεν «ενοποιήθηκε» τίποτα από ευκολία: το ίδιο παράθυρο του Excel έχει καρτέλα *Αριθμός* **και**
+ * καρτέλα *Στοίχιση*, και η δεύτερη περιέχει ακριβώς τον επιλογέα γωνίας (`Μοίρες`, −90..+90) και
+ * το spinner `Εσοχή` — επαληθευμένο στην τεκμηρίωση της Microsoft, όχι υποτεθειμένο.
  *
  * ## 🔑 Το προσχέδιο ΕΙΝΑΙ ένα `PersistedTableModel` — και είναι δωρεάν
  * Ο διάλογος έχει «ΟΚ / Άκυρο», άρα τίποτα δεν αγγίζει το ζωντανό μοντέλο πριν το ΟΚ. Ο
- * πειρασμός είναι μια δεύτερη, «ελαφριά» αναπαράσταση («ποιες θέσεις άναψαν»), που θα ήταν
- * **δεύτερο μοντέλο περιγραμμάτων** και η μετάφρασή του το σημείο απόκλισης. Δεν χρειάζεται:
- * όλες οι πράξεις της μηχανής είναι καθαρές `model → model` **με εγγύηση by-reference**, οπότε
- * ένα τοπικό `useState<PersistedTableModel>` κάνει ακριβώς τη δουλειά — και το «Άκυρο» είναι
- * σκέτη απόρριψη μιας τοπικής μεταβλητής.
+ * πειρασμός είναι μια δεύτερη, «ελαφριά» αναπαράσταση («ποια πεδία πείραξε ο χρήστης»), που θα
+ * ήταν **δεύτερο μοντέλο μορφοποίησης** και η μετάφρασή του το σημείο απόκλισης. Δεν χρειάζεται:
+ * κάθε γραφέας είναι καθαρός `model → model` **με εγγύηση by-reference**, οπότε ένα τοπικό
+ * `useState<PersistedTableModel>` κάνει ακριβώς τη δουλειά — και το «Άκυρο» είναι σκέτη
+ * απόρριψη μιας τοπικής μεταβλητής.
  *
- * ## ⚠️ ΤΟ ΜΟΛΥΒΙ ΕΙΝΑΙ ΚΑΤΑΣΤΑΣΗ ΤΟΥ ΔΙΑΛΟΓΟΥ, ΟΧΙ ΙΔΙΟΤΗΤΑ ΤΩΝ ΑΚΜΩΝ
- * Αλλαγή στυλ ή χρώματος **δεν** πειράζει ό,τι έχει ήδη τοποθετηθεί: αφορά τις **επόμενες**
- * θέσεις που θα πατηθούν. Γι' αυτό το `pencil` υπολογίζεται τη στιγμή της πράξης και δεν
- * υπάρχει πουθενά εδώ «ξαναβάψε τα πάντα». Το αντίθετο μοντέλο είναι εύκολο να γραφτεί κατά
- * λάθος και αδύνατο να ξεγραφτεί: ο χρήστης που βάζει λεπτές εσωτερικές και μετά διαλέγει παχύ
- * για το εξωτερικό θα έχανε σιωπηλά τις εσωτερικές του.
+ * 🔑 Και το ίδιο ισχύει για τις **αναγνώσεις**: οι τρεις καρτέλες ρωτούν το προσχέδιο με τις
+ * **ίδιες** συναρτήσεις που ρωτούν το ζωντανό μοντέλο η κορδέλα και το mini toolbar. Καμία
+ * «κατάσταση διαλόγου» δεν υπάρχει — άρα καμία δεν μπορεί να αποκλίνει.
  *
  * ## Ένα commit, ένα `Ctrl+Z`
- * Το ΟΚ παραδίδει **ένα** μοντέλο στον {@link onCommit}, που περνά από το `useLiveTableMutation`
- * — την ίδια διαδρομή με κάθε άλλη αλλαγή πίνακα (ADR-739 §6.6). Είκοσι κλικ μέσα στον διάλογο
+ * Το ΟΚ παραδίδει **ένα** μοντέλο στον {@link onCommit} (θύρα: `TableFormatPort.commitModel`),
+ * που περνά από την ίδια ουρά με κάθε άλλη αλλαγή πίνακα (§6.6). Είκοσι κλικ μέσα στον διάλογο
  * = ένα βήμα αναίρεσης. Και αν το προσχέδιο γύρισε **ίδιο** by-reference, δεν γεννιέται καν
  * εντολή: «άνοιξα, πείραξα, το ξαναέφερα όπως ήταν, ΟΚ» δεν αφήνει ίχνος.
  *
  * ## 🔑 Φ6β — ΑΙΩΡΟΥΜΕΝΟ, ΟΧΙ MODAL (Giorgio, 2026-08-06)
  * Ήταν Radix `Dialog`: backdrop, focus trap, `pointer-events: none` στο υπόλοιπο δέντρο. Δηλαδή
- * ο χρήστης **δεν έβλεπε** τον πίνακα για τον οποίο μιλά ο διάλογος — και το παράθυρο δεν
- * μετακινούνταν για να τον ξεσκεπάσει. Το ίδιο το `@/components/ui/dialog` το γράφει: πάνελ που
- * πρέπει να συνυπάρχει με ό,τι είναι από πίσω **δεν είναι dialog**, και ούτε `modal={false}` το
- * σώζει (ο Radix κλείνει στο πρώτο κλικ εκτός — δηλαδή τη στιγμή που αγγίζεις τον πίνακα).
+ * ο χρήστης **δεν έβλεπε** τον πίνακα για τον οποίο μιλά ο διάλογος. Το Excel κλειδώνει την
+ * οθόνη επειδή ο διάλογός του είναι λειτουργικό σύστημα του 1995· η ίδια εργασία σε
+ * AutoCAD/Revit γίνεται από modeless παλέτα. Ίδια κίνηση με τον Διαχειριστή Στρώσεων (ADR-723).
  *
- * ⚠️ Η **σημασιολογία μένει ακέραιη**: εξακολουθεί να υπάρχει προσχέδιο με «ΟΚ / Άκυρο». Αυτό
- * που έφυγε είναι η *modality* του κελύφους, όχι η δέσμευση. Το Excel κλειδώνει την οθόνη επειδή
- * ο διάλογός του είναι λειτουργικό σύστημα του 1995· η ίδια εργασία σε AutoCAD/Revit γίνεται από
- * modeless παλέτα. Ίδια κίνηση με τον Διαχειριστή Στρώσεων (ADR-723) — και για τον ίδιο λόγο.
+ * ## 🔴 ΤΟ ΣΗΜΑΔΙ ΣΥΝΕΔΡΙΑΣ ΔΕΝ ΕΙΝΑΙ ΠΡΟΑΙΡΕΤΙΚΟ — και η Φ6 δεν το χρειαζόταν
+ * Ο διάλογος περιγραμμάτων ζούσε **μέσα** στο mini toolbar, που φέρει ήδη το
+ * {@link TABLE_CELL_SESSION_MARKER} — άρα το `closest()` του φύλακα το έβρισκε δωρεάν. Ο ίδιος
+ * διάλογος **από την κορδέλα** ζει μέσα σε panel που φέρει μόνο το *keepalive* σημάδι, το οποίο
+ * λέει άλλο πράγμα: «δέσμευσε, αλλά μη με κλείσεις» ⇒ ο φύλακας **ανακτά** το πληκτρολόγιο,
+ * δηλαδή ξαναεστιάζει το κελί — και κλέβει την εστίαση από κάθε πεδίο που μόλις πάτησε ο
+ * χρήστης. Με **επτά** πτυσσόμενα, ένα αριθμητικό πεδίο και τρία κουτάκια αυτό δεν είναι
+ * ενόχληση — είναι διάλογος που **δεν συμπληρώνεται**.
  *
- * @module subapps/dxf-viewer/ui/components/table-format-toolbar/border-dialog/TableBorderDialog
- * @see bim/table/table-border-dialog-draft.ts — οι μεταλλάξεις
- * @see bim/table/table-border-dialog-positions.ts — οι αναγνώσεις
+ * ⚠️ Ο περιτυλιγμένος `<div>` υπάρχει **μόνο** γι' αυτό: το `FloatingPanel` δεν απλώνει
+ * αυθαίρετα `data-*` γνωρίσματα στη ρίζα του, και η ρίζα του είναι `fixed` — άρα ο περιτυλιγμένος
+ * δεν έχει καμία επίπτωση στη διάταξη. Δεν είναι «div soup» (N.4): είναι **φορέας δήλωσης**,
+ * και το σχόλιο είναι ο λόγος του.
+ *
+ * @module subapps/dxf-viewer/ui/components/table-format-toolbar/format-cells-dialog/TableFormatCellsDialog
+ * @see bim/table/table-border-dialog-draft.ts — οι μεταλλάξεις της καρτέλας «Περίγραμμα»
+ * @see bim/table/table-format-scope.ts — οι γραφείς των δύο νέων καρτελών
  * @see docs/centralized-systems/reference/adrs/ADR-750-table-cell-borders.md §8.2 · §9.2 · §21
- * @see ADR-723 — modeless παλέτα · ADR-364 — Escape bus
  */
 
 import React, { useCallback, useId, useMemo, useState } from 'react';
@@ -49,133 +66,102 @@ import { FloatingPanel, isFocusInsidePanel } from '@/components/ui/floating';
 import { Button } from '@/components/ui/button';
 import { ESC_PRIORITY, useEscapeHandler } from '../../../../systems/escape-bus';
 import { PanelPositionCalculator } from '../../../../config/panel-tokens';
-import { resolveLinetypePatternMm } from '../../../../rendering/linetype-dash-resolver';
-import {
-  tableBorderStylePencil,
-  tableBorderStylePreset,
-  type TableBorderStyleId,
-} from '../../../../bim/table/table-border-style-catalog';
-import {
-  applyTableBorderDialogPreset,
-  toggleTableBorderDialogPosition,
-  type TableBorderDialogPresetId,
-} from '../../../../bim/table/table-border-dialog-draft';
-import {
-  tableBorderDialogSnapshot,
-  type TableBorderDialogPositionId,
-} from '../../../../bim/table/table-border-dialog-positions';
-import type { TableCellRangeBounds } from '../../../../bim/table/table-cell-range';
-import type { TableStyle } from '../../../../bim/table/table-style';
+import { TABLE_CELL_SESSION_MARKER } from '../../../table-cell-editor/table-cell-session-focus';
+import { tableFormatScopeBounds } from '../../../../bim/table/table-format-scope';
+import type { FormatTarget } from '../../../table-cell-editor/table-format-snapshot';
 import type { PersistedTableModel } from '../../../../types/table';
-import { TABLE_BORDER_DIALOG_KEY } from './table-border-dialog-labels';
-import { TableBorderDialogTabs } from './TableBorderDialogTabs';
-import { TableBorderStyleListbox } from './TableBorderStyleListbox';
-import { TableBorderDialogColor } from './TableBorderDialogColor';
-import { TableBorderDialogPresets } from './TableBorderDialogPresets';
-import { TableBorderProxyWidget } from './TableBorderProxyWidget';
-import styles from './TableBorderDialog.module.css';
-
-/**
- * Η θέση του listbox που είναι επιλεγμένη στο **άνοιγμα**.
- *
- * `'none'` επειδή αυτό δείχνει το μετρημένο στιγμιότυπο ελληνικού Excel (2026-08-04) — όχι
- * επειδή είναι η βολική προεπιλογή. Ονομασμένη σταθερά ακριβώς για να αλλάζει με **μία**
- * γραμμή αν ο ιδιοκτήτης αποφασίσει αλλιώς αφού το δει στην οθόνη.
- */
-const INITIAL_TABLE_BORDER_STYLE_ID: TableBorderStyleId = 'none';
+import {
+  TABLE_FORMAT_CELLS_KEY,
+  type TableFormatCellsTabId,
+} from './table-format-cells-labels';
+import { TableFormatCellsTabs } from './TableFormatCellsTabs';
+import { TableFormatCellsBorderTab } from './TableFormatCellsBorderTab';
+import { TableFormatCellsNumberTab } from './TableFormatCellsNumberTab';
+import { TableFormatCellsAlignTab } from './TableFormatCellsAlignTab';
+import styles from './TableFormatCellsDialog.module.css';
 
 /**
  * DOM `id` της ρίζας. Είναι **όνομα παραγωγής**, όχι `data-testid`: απαντά στην ερώτηση
  * «βρίσκεται η εστίαση μέσα στην παλέτα;» που κρίνει αν το `Escape` ανήκει εδώ ή στον καμβά.
  */
-const BORDER_PANEL_DOM_ID = 'dxf-table-border-panel';
+const FORMAT_CELLS_PANEL_DOM_ID = 'dxf-table-format-cells-panel';
 
 /**
  * Μέγεθος αναφοράς — **μετρημένο** από το κέλυφος που αντικαταστάθηκε (`size="lg"` ⇒ 672px
- * μέγιστο πλάτος) και από το ύψος του περιεχομένου στο στιγμιότυπο της Φ6.
+ * μέγιστο πλάτος) και από το ύψος του περιεχομένου.
  *
  * ⚠️ Δεν επιβάλλεται ως ύψος (χωρίς `resizable`/`persistenceKey` η παλέτα παίρνει ύψος από το
- * περιεχόμενο). Χρησιμεύει σε **δύο** υπολογισμούς που δεν έχουν άλλη πηγή: το αρχικό κεντράρισμα
- * και τα όρια συρσίματος. Λάθος τιμή εδώ δεν σπάει τίποτα — απλώς μετατοπίζει λίγο το κέντρο.
+ * περιεχόμενο). Χρησιμεύει σε **δύο** υπολογισμούς που δεν έχουν άλλη πηγή: το αρχικό
+ * κεντράρισμα και τα όρια συρσίματος. Λάθος τιμή εδώ δεν σπάει τίποτα — μετατοπίζει το κέντρο.
  */
-const BORDER_PANEL_SIZE = { width: 600, height: 430 } as const;
+const FORMAT_CELLS_PANEL_SIZE = { width: 600, height: 430 } as const;
 
 /**
- * 🔴 ADR-750 §21.10 — εδώ ήταν `cn(styles.panel, 'overflow-visible')`, και η αιτιολόγησή του
- * **αποδείχθηκε ψευδής με μέτρηση**. Μένει γραμμένη γιατί είναι το μάθημα, όχι το σφάλμα.
+ * Ό,τι χρειάζεται ο διάλογος για να δουλέψει — **παγωμένο στο άνοιγμα**, από τον καλούντα.
  *
- * Το §21.8 έγραφε «χωρίς αυτό το "Χρώμα:" είναι πρακτικά νεκρό»: η ρίζα είναι `<Card>`, το
- * `Card` φέρει `overflow-hidden`, άρα η `absolute` παλέτα κόβεται. Ο συλλογισμός ήταν σωστός
- * — και **ελλιπής**. Η ζωντανή μέτρηση (2026-08-07) βρήκε ότι ο πραγματικός ψαλιδιστής ήταν
- * **ένα επίπεδο πιο μέσα**: το `<section className={styles.layout}>` παρακάτω, που γίνεται
- * δοχείο κύλισης από το `globals.css:1105` (`overflow-x: hidden` σε κάθε `<section>` ⇒ ο
- * άλλος άξονας υπολογίζεται `auto`). Η παλέτα κοβόταν στο **μηδέν** στο `y=989` από ένα
- * `<section>` που τελείωνε στο `y=985` — με το `overflow-visible` της ρίζας ενεργό.
- *
- * 🔑 **Το μάθημα**: ένα `overflow` σε πρόγονο δεν είναι κάτι που «διορθώνεται» — είναι κάτι
- * που **θα ξανασυμβεί** στον επόμενο πρόγονο. Γι' αυτό η παλέτα μετακόμισε στο top layer
- * ({@link AnchoredPopover}) αντί να κυνηγάμε ψαλιδιστές έναν-έναν. Με το popup εκτός δέντρου,
- * το `overflow-hidden` της βάσης δεν έχει τίποτα να κόψει και η παράκαμψη έφυγε: μια
- * παράκαμψη που δεν κάνει τίποτα είναι χειρότερη από καμία, γιατί την επόμενη φορά κάποιος θα
- * τη διαβάσει ως απόδειξη ότι το ψαλίδισμα έχει αντιμετωπιστεί.
+ * 🔑 Είναι ο **υπάρχων** {@link FormatTarget} και όχι νέο σχήμα: κάθε υποδοχή (ζώνες δείκτη ·
+ * περιοχή κελιών · κορδέλα) τον κατασκευάζει ήδη, με τον ίδιο ακριβώς κανόνα «τι διάλεξε ο
+ * χρήστης → πού γράφεται» (§52). Ένα δικό μας `{bounds, model, style}` θα ήταν **δεύτερη**
+ * απάντηση στο ίδιο ερώτημα — και θα έχανε το `scope`, δηλαδή τη διαφορά ανάμεσα σε «γράψε στα
+ * κελιά» και «γράψε στη στήλη».
  */
-const PANEL_CLASSNAME = styles.panel;
+export type TableFormatCellsTarget = FormatTarget;
 
-/** Ό,τι χρειάζεται ο διάλογος για να δουλέψει — **παγωμένο στο άνοιγμα**, από τον καλούντα. */
-export interface TableBorderDialogTarget {
-  readonly bounds: TableCellRangeBounds;
-  /** Το ζωντανό μοντέλο τη στιγμή του ανοίγματος — η **αφετηρία** του προσχεδίου. */
-  readonly model: PersistedTableModel;
-  /** Το ενεργό στυλ του πίνακα — η κληρονομιά κάθε πεδίου που ο χρήστης δεν άγγιξε (Α20). */
-  readonly style: TableStyle;
-}
-
-export interface TableBorderDialogProps extends TableBorderDialogTarget {
+export interface TableFormatCellsDialogProps {
+  readonly target: TableFormatCellsTarget;
+  /**
+   * 🔴 ADR-739 §61 — Ποια καρτέλα δείχνει **τώρα**. Ελεγχόμενη, ποτέ `initialTab` + `useState`.
+   *
+   * ## Γιατί αντιστράφηκε η ιδιοκτησία
+   * Μέχρι το §60 ήταν `initialTab` και η τρέχουσα καρτέλα ζούσε εδώ. Δούλευε όσο η καρτέλα ήταν
+   * **είσοδος**: κάθε εκκινητής ήξερε τη δική του και κανείς δεν ρωτούσε ποια βλέπει ο χρήστης.
+   *
+   * Το §61 έφερε δύο υποδοχές **χωρίς** καρτέλα (`Ctrl+1`, δεξί κλικ ▸ «Μορφοποίηση κελιών…»),
+   * που κατά το Excel ανοίγουν στην **τελευταία που είδε ο χρήστης**. Η «τελευταία» δεν μπορεί
+   * να είναι γνωστή σε κανέναν αν ζει σε `useState` ενός component που μόλις ξεμόνταρε — άρα η
+   * καρτέλα ανέβηκε στο store, και εδώ μένει ό,τι είναι όντως δικό του: η **απόδοση**.
+   */
+  readonly tab: TableFormatCellsTabId;
+  /** Ο χρήστης πάτησε άλλη καρτέλα. Ο καλών γράφει **και** την οθόνη **και** τη μνήμη. */
+  readonly onTabSelect: (tab: TableFormatCellsTabId) => void;
   /** Το ΟΚ: **ένα** μοντέλο, **ένα** commit. */
   readonly onCommit: (model: PersistedTableModel) => void;
   /** Άκυρο / Escape / `✕` — και τα τρία σημαίνουν το ίδιο: πέτα το προσχέδιο. */
   readonly onClose: () => void;
 }
 
-export function TableBorderDialog({
-  bounds, model, style, onCommit, onClose,
-}: TableBorderDialogProps): React.ReactElement {
+export function TableFormatCellsDialog(
+  props: TableFormatCellsDialogProps,
+): React.ReactElement {
+  const { target, tab, onTabSelect, onCommit, onClose } = props;
   const { t } = useTranslation('dxf-viewer');
   const panelId = useId();
   const hintId = useId();
-  const helpId = useId();
 
-  const [draft, setDraft] = useState<PersistedTableModel>(model);
-  const [styleId, setStyleId] = useState<TableBorderStyleId>(INITIAL_TABLE_BORDER_STYLE_ID);
-  const [colorHex, setColorHex] = useState<string | undefined>(undefined);
+  const [draft, setDraft] = useState<PersistedTableModel>(target.model);
 
   /**
-   * Το μολύβι **που θα εφαρμοστεί στο επόμενο κλικ**.
+   * Ο στόχος ως **ορθογώνιο** — ό,τι δέχεται η καρτέλα «Περίγραμμα».
    *
-   * Περνά από την ίδια `tableBorderStylePencil` που θα εκτελέσει η πράξη — και το `dashMm`
-   * λύνεται εδώ επειδή η μηχανή είναι επίτηδες ντετερμινιστική (η μετάφραση ονόματος → μοτίβο
-   * θέλει το `LinetypeRegistry`, δηλαδή κατάσταση).
+   * Υπολογίζεται από το **προσχέδιο** και όχι από το αρχικό μοντέλο, και αυτό είναι ουδέτερο
+   * σήμερα (καμία καρτέλα δεν προσθέτει ή σβήνει γραμμές) αλλά **σωστό αύριο**: η μέρα που ο
+   * διάλογος αποκτήσει δομική πράξη, ένα παγωμένο ορθογώνιο θα έδειχνε σε δείκτες που δεν
+   * υπάρχουν πια.
    */
-  const pencil = useMemo(() => {
-    const pen = tableBorderStylePreset(styleId)?.pen;
-    const dashMm = pen ? resolveLinetypePatternMm(pen.linetypeName) : [];
-    return tableBorderStylePencil(styleId, style, dashMm, colorHex);
-  }, [styleId, style, colorHex]);
-
-  const snapshot = useMemo(() => tableBorderDialogSnapshot(draft, bounds), [draft, bounds]);
-
-  const toggle = useCallback(
-    (id: TableBorderDialogPositionId) => {
-      setDraft((current) => toggleTableBorderDialogPosition(current, bounds, id, pencil));
-    },
-    [bounds, pencil],
+  const bounds = useMemo(
+    () => tableFormatScopeBounds(draft, target.scope),
+    [draft, target.scope],
   );
 
-  const applyPreset = useCallback(
-    (preset: TableBorderDialogPresetId) => {
-      setDraft((current) => applyTableBorderDialogPreset(current, bounds, preset, pencil));
-    },
-    [bounds, pencil],
+  /**
+   * Το προσχέδιο **όπως το βλέπουν οι αναγνώσεις**: ο ίδιος στόχος, με το μοντέλο του διαλόγου.
+   *
+   * Ο τύπος είναι ο ίδιος {@link FormatTarget} που δέχονται όλες οι υπάρχουσες αναγνώσεις, οπότε
+   * καμία καρτέλα δεν χρειάζεται να μάθει ότι υπάρχει «προσχέδιο».
+   */
+  const draftTarget = useMemo<FormatTarget>(
+    () => ({ ...target, model: draft }),
+    [target, draft],
   );
 
   /**
@@ -188,9 +174,9 @@ export function TableBorderDialog({
    * Σημασιολογικά είναι **Άκυρο**: το προσχέδιο πετιέται, όπως και με το `✕`.
    */
   useEscapeHandler({
-    id: 'table-border-panel',
+    id: 'table-format-cells-panel',
     priority: ESC_PRIORITY.FOCUSED_PALETTE,
-    canHandle: () => isFocusInsidePanel(BORDER_PANEL_DOM_ID),
+    canHandle: () => isFocusInsidePanel(FORMAT_CELLS_PANEL_DOM_ID),
     handle: (): boolean => {
       onClose();
       return true;
@@ -203,92 +189,69 @@ export function TableBorderDialog({
    */
   const getClientPosition = useCallback(
     () => PanelPositionCalculator.getCenteredPosition(
-      BORDER_PANEL_SIZE.width, BORDER_PANEL_SIZE.height,
+      FORMAT_CELLS_PANEL_SIZE.width, FORMAT_CELLS_PANEL_SIZE.height,
     ),
     [],
   );
   const draggableOptions = useMemo(() => ({ getClientPosition }), [getClientPosition]);
 
   return (
-    <FloatingPanel
-      id={BORDER_PANEL_DOM_ID}
-      data-testid={BORDER_PANEL_DOM_ID}
-      className={PANEL_CLASSNAME}
-      dimensions={BORDER_PANEL_SIZE}
-      draggableOptions={draggableOptions}
-      aria-describedby={helpId}
-      onClose={onClose}
-    >
-      <FloatingPanel.Header title={t(`${TABLE_BORDER_DIALOG_KEY}.title`)} />
-      <FloatingPanel.Content>
-        <TableBorderDialogTabs panelId={panelId} hintId={hintId} />
+    <div {...TABLE_CELL_SESSION_MARKER}>
+      <FloatingPanel
+        id={FORMAT_CELLS_PANEL_DOM_ID}
+        data-testid={FORMAT_CELLS_PANEL_DOM_ID}
+        className={styles.panel}
+        dimensions={FORMAT_CELLS_PANEL_SIZE}
+        draggableOptions={draggableOptions}
+        onClose={onClose}
+      >
+        <FloatingPanel.Header title={t(`${TABLE_FORMAT_CELLS_KEY}.title`)} />
+        <FloatingPanel.Content>
+          <TableFormatCellsTabs
+            panelId={panelId}
+            hintId={hintId}
+            active={tab}
+            onSelect={onTabSelect}
+          />
 
-        <section
-          id={panelId}
-          role="tabpanel"
-          aria-labelledby={`${panelId}-tab-border`}
-          className={styles.layout}
-        >
-          <fieldset className={styles.section}>
-            <legend className={styles.sectionTitle}>
-              {t(`${TABLE_BORDER_DIALOG_KEY}.line.section`)}
-            </legend>
-            <span className={styles.fieldLabel}>{t(`${TABLE_BORDER_DIALOG_KEY}.line.style`)}</span>
-            <TableBorderStyleListbox
-              selected={styleId}
-              onSelect={setStyleId}
-              colorHex={colorHex}
-              label={t(`${TABLE_BORDER_DIALOG_KEY}.line.style`)}
-            />
-            <TableBorderDialogColor
-              selected={colorHex}
-              onSelect={setColorHex}
-              resolvedHex={pencil.colorHex}
-            />
-          </fieldset>
-
-          <div className={styles.section}>
-            <fieldset className={styles.section}>
-              <legend className={styles.sectionTitle}>
-                {t(`${TABLE_BORDER_DIALOG_KEY}.presets.section`)}
-              </legend>
-              <TableBorderDialogPresets bounds={bounds} onApply={applyPreset} />
-            </fieldset>
-
-            <fieldset className={styles.section}>
-              <legend className={styles.sectionTitle}>
-                {t(`${TABLE_BORDER_DIALOG_KEY}.border.section`)}
-              </legend>
-              <TableBorderProxyWidget snapshot={snapshot} onToggle={toggle} />
-            </fieldset>
-          </div>
-        </section>
-
-        {/*
-          Το κείμενο βοήθειας **είναι** η περιγραφή της παλέτας: δηλώνει τη ροή («πρώτα στυλ,
-          μετά πού»). Ήταν `DialogDescription`· τώρα το `helpId` ταξιδεύει ρητά ως
-          `aria-describedby` στη ρίζα, ώστε ο αναγνώστης οθόνης να το ακούει στο άνοιγμα όπως και
-          πριν. Χωρίς αυτή τη σύνδεση η αλλαγή κελύφους θα ήταν **σιωπηλή απώλεια** a11y.
-        */}
-        <p id={helpId} className={styles.help}>
-          {t(`${TABLE_BORDER_DIALOG_KEY}.helpText`)}
-        </p>
-
-        <footer className={styles.footer}>
-          <Button variant="outline" size="sm" onClick={onClose}>
-            {t(`${TABLE_BORDER_DIALOG_KEY}.cancel`)}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              onCommit(draft);
-              onClose();
-            }}
+          <section
+            id={panelId}
+            role="tabpanel"
+            aria-labelledby={`${panelId}-tab-${tab}`}
+            className={styles.tabPanel}
           >
-            {t(`${TABLE_BORDER_DIALOG_KEY}.ok`)}
-          </Button>
-        </footer>
-      </FloatingPanel.Content>
-    </FloatingPanel>
+            {tab === 'number' ? (
+              <TableFormatCellsNumberTab target={draftTarget} onDraft={setDraft} />
+            ) : null}
+            {tab === 'alignment' ? (
+              <TableFormatCellsAlignTab target={draftTarget} onDraft={setDraft} />
+            ) : null}
+            {tab === 'border' && bounds !== null ? (
+              <TableFormatCellsBorderTab
+                bounds={bounds}
+                draft={draft}
+                style={target.style}
+                onDraft={setDraft}
+              />
+            ) : null}
+          </section>
+
+          <footer className={styles.footer}>
+            <Button variant="outline" size="sm" onClick={onClose}>
+              {t(`${TABLE_FORMAT_CELLS_KEY}.cancel`)}
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                onCommit(draft);
+                onClose();
+              }}
+            >
+              {t(`${TABLE_FORMAT_CELLS_KEY}.ok`)}
+            </Button>
+          </footer>
+        </FloatingPanel.Content>
+      </FloatingPanel>
+    </div>
   );
 }
