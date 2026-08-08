@@ -48,7 +48,13 @@ import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
 // 🔴 ADR-739 §55 — τα τρία νέα τμήματα χτίζονται **μία** φορά για τις δύο υποδοχές (δες την
 // κεφαλίδα του module): εδώ αλλάζει μόνο ο τυλιχτής εκτέλεσης.
 import { tableToolbarExtrasProps } from './table-format-toolbar/table-toolbar-extras';
-import type { TableAxisStyleOverride, TableCellOverflow } from '../../types/table';
+import { useTableHeaderMenuCommands } from './use-table-header-menu-commands';
+// 🔴 ADR-739 §62 — ο τύπος του χτυπήματος χρησιμοποιείται στην υπογραφή του `open` παρακάτω και
+// **δεν ήταν εισηγμένος**: όταν το ADR-755 μετακόμισε το συμβόλαιο στο `table-header-menu-types`,
+// η δήλωση έφυγε και η **χρήση** έμεινε. Αόρατο επί μήνες γιατί το root `tsconfig` εξαιρεί
+// ολόκληρο το subapp (N.17) — το βλέπει μόνο το CHECK 3.29 στο CI, και το αρχείο δεν είναι στη
+// baseline του, δηλαδή ήταν ζωντανό σφάλμα σε αναμονή.
+import type { TableIndicatorHit } from '../../bim/table/table-indicator-geometry';
 import type {
   TableHeaderAction,
   TableHeaderContextMenuHandle,
@@ -66,7 +72,7 @@ export type {
 
 const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, TableHeaderMenuProps>(
   ({
-    onInsertBefore, onInsertAfter, onDelete, resolveState,
+    onInsertBefore, onInsertAfter, onDelete, onFormatCells, resolveState,
     resolveFormat, onToggleFormat, onStepTextHeight, onResetFormat,
     onSetTextColor, onSetFillColor,
     resolveToolbar, onSetFormatField, onSetOverflow,
@@ -251,115 +257,22 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
     }, [target]);
 
     /**
-     * Μια πράξη μορφοποίησης: εκτελείται και **μετά κλείνει ολόκληρη η επιφάνεια**.
+     * 🔴 ADR-739 §62 — **η εκτέλεση εντολής μετακόμισε**, ολόκληρη, στο
+     * {@link useTableHeaderMenuCommands}: πέντε τυλιχτές που δεν ξέρουν τίποτα από trigger,
+     * Radix ή escape-bus — μόνο «εφάρμοσε → ξαναρώτησε → κλείσε **μόνο** το μενού».
      *
-     * ## 🔴 ΑΝΑΤΡΟΠΗ ΤΟΥ ΡΙΣΚΟΥ 1 — ΑΠΟΦΑΣΗ ΙΔΙΟΚΤΗΤΗ (2026-08-03)
-     * Μέχρι σήμερα εδώ γινόταν `setTarget({ …target, format: resolveFormat(…) })`: η πράξη
-     * εκτελούνταν, η κατάσταση των κουμπιών ανανεωνόταν, και **το μενού έμενε ανοιχτό**. Ήταν
-     * σχεδιασμένο, όχι τυχαίο — το §28.7 το ονομάζει «ρίσκο 1» και ολόκληρος ο φύλακας
-     * {@link keepOpenOnToolbar} γράφτηκε γι' αυτό, με επιχείρημα ότι «η μορφοποίηση είναι
-     * κατεξοχήν επαναλαμβανόμενη πράξη».
-     *
-     * Ο ιδιοκτήτης το ανέτρεψε ρητά: «όταν κάνω κλικ πάνω σε εντολές του toolbar **το κάτω
-     * μενού να κλείνει**, όπως στο Excel». Και το Excel πράγματι κλείνει **και τις δύο**
-     * επιφάνειες μετά από μία εντολή. Καταγράφεται ως ανατροπή ώστε να μη «διορθωθεί» πίσω
-     * από κάποιον που θα διαβάσει μόνο το §28.7 ή τα παλιά σχόλια του toolbar.
-     *
-     * ## 🔴 ΤΟ ΜΗ ΠΡΟΦΑΝΕΣ: ο φύλακας ΔΕΝ αφαιρείται — γίνεται ΠΡΟΫΠΟΘΕΣΗ
-     * Η «προφανής» υλοποίηση είναι να σβήσει κανείς τον `keepOpenOnToolbar` και να αφήσει το
-     * Radix να κλείσει μόνο του. **Θα έσπαγε την ίδια την εντολή**: το `DismissableLayer`
-     * κλείνει στο `pointerdown`, δηλαδή **πριν** το `click`. Το toolbar θα ξεμόνταρε ενδιάμεσα
-     * και το `onClick` του κουμπιού **δεν θα έτρεχε ποτέ** — μενού που κλείνει χωρίς να έχει
-     * γίνει τίποτα, η χειρότερη δυνατή εκδοχή.
-     *
-     * Άρα η σειρά είναι ρητή και αντίστροφη από τη διαίσθηση:
-     * `pointerdown` ⇒ ο φύλακας **κρατά** ανοιχτό · `click` ⇒ εκτελείται η πράξη ⇒ **μετά**
-     * κλείνουμε εμείς. Το κλείσιμο περνά από το {@link handleOpenChange} (§27.7: **ένας**
-     * δρόμος), άρα η εστίαση επιστρέφει στο κελί ακριβώς όπως και στα δομικά items.
-     *
-     * ## 🔴 Η κατάσταση των κουμπιών ΞΑΝΑΡΩΤΙΕΤΑΙ — γιατί η γραμμή ΔΕΝ φεύγει
-     * Ο ιδιοκτήτης διόρθωσε το εύρος μέσα στην ίδια συνεδρία: φεύγει **μόνο** το μενού. Άρα η
-     * γραμμή μένει στην οθόνη και ένα «Β» που δεν φώτιζε μετά το πάτημα θα έδειχνε ότι η πράξη
-     * απέτυχε ενώ έχει ήδη εφαρμοστεί στον καμβά.
-     *
-     * 🔴 Η ανανέωση γίνεται εδώ, **έξω** από τον updater του `setTarget`. Ένα
-     * `setTarget(prev => { action(prev.hit); … })` θα εκτελούσε την πράξη **δύο φορές** σε
-     * StrictMode (ο updater καλείται δύο φορές επίτηδες) — δύο εντολές, δύο βήματα undo, και
-     * ένα «Β» που ανάβει και σβήνει μόνο του.
+     * ⚠️ Ο **ένας** δρόμος εξόδου ({@link closeMenuKeepToolbar}) μένει εδώ και περνά μέσα ως
+     * παράμετρος: ζει από τον κύκλο ζωής (`isOpen`, `onClosed`), και ένα δεύτερο σώμα εκεί θα
+     * ήταν ακριβώς η ασυμμετρία που ο ένας δρόμος του §27.7 υπάρχει για να λείπει.
      */
-    const runFormat = useCallback((action: TableHeaderAction) => {
-      if (!target) return;
-      action(target.hit);
-      // §55 — **και τα δύο** στιγμιότυπα της γραμμής, με μία εγγραφή state: ένα «Α↑» αλλάζει
-      // ταυτόχρονα το κουμπί μεγέθους και την τιμή του combobox, και δύο ξεχωριστές ανανεώσεις
-      // θα άφηναν τη γραμμή να δείχνει δύο διαφορετικές αλήθειες για ένα καρέ.
-      setTarget({ ...target, format: resolveFormat(target.hit), toolbar: resolveToolbar(target.hit) });
-      closeMenuKeepToolbar();
-    }, [target, resolveFormat, resolveToolbar, closeMenuKeepToolbar]);
-
-    /**
-     * 🔴 §55 — ο γραφέας των τεσσάρων νέων πεδίων, τυλιγμένος στον **ίδιο** {@link runFormat}:
-     * είναι πράξεις μορφοποίησης άξονα, άρα οφείλουν να κλείνουν το μενού και να αφήνουν τη
-     * γραμμή ακριβώς όπως τα Β/Ι/Υ (§28.13).
-     */
-    const setToolbarField = useCallback(
-      <K extends keyof TableAxisStyleOverride>(
-        key: K,
-        value: TableAxisStyleOverride[K] | undefined,
-      ): void => {
-        runFormat((hit) => onSetFormatField(hit, key, value));
-      },
-      [runFormat, onSetFormatField],
+    const {
+      runFormat, setToolbarField, setToolbarOverflow, runBorder, runMerge,
+    } = useTableHeaderMenuCommands(
+      { resolveFormat, resolveToolbar, resolveBorderMenu, resolveMergeMenu, onSetFormatField, onSetOverflow },
+      target,
+      setTarget,
+      closeMenuKeepToolbar,
     );
-
-    /**
-     * 🔴 §58 Γ2 — το ξεχείλισμα, στον **ίδιο** {@link runFormat}: είναι πράξη μορφοποίησης, άρα
-     * κλείνει το μενού και αφήνει τη γραμμή ακριβώς όπως τα Β/Ι/Υ (§28.13).
-     */
-    const setToolbarOverflow = useCallback(
-      (value: TableCellOverflow): void => {
-        runFormat((hit) => onSetOverflow(hit, value));
-      },
-      [runFormat, onSetOverflow],
-    );
-
-    /**
-     * ADR-750 Φ3 — μια εντολή περιγράμματος: **ίδια σειρά** με το {@link runFormat}.
-     *
-     * Ξεχωριστός χειριστής και όχι κοινός, επειδή ανανεώνεται **άλλη** ερώτηση: η μορφοποίηση
-     * ξαναρωτά το στυλ του άξονα, το περίγραμμα ξαναρωτά τις ρητές ακμές. Ένας χειριστής που
-     * ξαναρωτούσε και τα δύο θα διέτρεχε όλα τα κελιά του άξονα **και** όλες τις ακμές της
-     * περιοχής σε κάθε πάτημα — διπλάσια δουλειά, με τη μισή να απαντά σε ερώτηση που κανείς
-     * δεν έκανε.
-     */
-    const runBorder = useCallback((action: TableHeaderAction) => {
-      if (!target) return;
-      action(target.hit);
-      setTarget({ ...target, borders: resolveBorderMenu(target.hit) });
-      closeMenuKeepToolbar();
-    }, [target, resolveBorderMenu, closeMenuKeepToolbar]);
-
-    /**
-     * 🔴 ADR-755 — μια εντολή **συγχώνευσης**: ίδια σειρά, με **μία** αναγκαστική αντιστροφή.
-     *
-     * Εδώ το μενού κλείνει **πριν** την πράξη, όχι μετά — και είναι το μοναδικό σημείο όπου
-     * σπάει το μοτίβο των {@link runFormat} / {@link runBorder}. Ο λόγος είναι μετρήσιμος: η
-     * συγχώνευση μπορεί να ανοίξει **modal διάλογο** («θα κρατηθεί μόνο η επάνω αριστερή
-     * τιμή»). Με το μενού ακόμη ανοιχτό, ο διάλογος θα γεννιόταν κάτω από ένα Radix
-     * `FocusScope` που επαναφέρει κάθε εστίαση στο `role="menu"` — δηλαδή ο χρήστης θα έβλεπε
-     * ερώτηση που **δεν μπορεί να απαντήσει με πληκτρολόγιο**.
-     *
-     * Η ανανέωση της κατάστασης γίνεται **μετά** το `await`, με updater: το κουμπί οφείλει να
-     * δείξει πατημένο μόλις η συγχώνευση γραφτεί, αλλά η γραμμή μπορεί στο μεταξύ να έχει
-     * φύγει (`Escape`) — γι' αυτό ο έλεγχος `prev` και όχι κλεισμένο `target`.
-     */
-    const runMerge = useCallback((action: () => void | Promise<void>) => {
-      if (!target) return;
-      closeMenuKeepToolbar();
-      void Promise.resolve(action()).then(() => {
-        setTarget((prev) => (prev ? { ...prev, merge: resolveMergeMenu(prev.hit) } : prev));
-      });
-    }, [target, resolveMergeMenu, closeMenuKeepToolbar]);
 
     /**
      * 🔴 Το toolbar είναι «έξω» για το Radix — και δεν επιτρέπεται να κλείνει το μενού **ΕΔΩ**.
@@ -453,6 +366,16 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
             onInsertBefore={() => run(onInsertBefore)}
             onInsertAfter={() => run(onInsertAfter)}
             onDelete={() => run(onDelete)}
+            /*
+              🔴 ADR-739 §61 — **`run`, όχι `runFormat`.** Η διαφορά δεν είναι λεπτομέρεια: ο
+              `runFormat` εκτελεί, **ξαναρωτά** τα δύο στιγμιότυπα της γραμμής και κλείνει μόνο
+              το μενού. Εδώ δεν εκτελείται καμία πράξη — **ανοίγει διάλογο**, και η γραμμή δεν
+              έχει τίποτα να ξαναρωτήσει μέχρι το «ΟΚ». Το `run` περνά από τον έναν δρόμο εξόδου
+              του Radix (§27.7), δηλαδή ολόκληρη η επιφάνεια φεύγει — ακριβώς όπως και στα τρία
+              δομικά items, και για τον ίδιο λόγο με τη συγχώνευση: με το `role="menu"` ζωντανό,
+              το `FocusScope` επαναφέρει κάθε εστίαση σε αυτό και ο διάλογος δεν συμπληρώνεται.
+            */
+            onFormatCells={() => run(onFormatCells)}
           />
         </DxfMenuContent>
       </DropdownMenu>

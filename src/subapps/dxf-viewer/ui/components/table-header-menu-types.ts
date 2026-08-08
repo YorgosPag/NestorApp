@@ -43,6 +43,19 @@ export interface TableHeaderMenuProps {
   readonly onInsertBefore: TableHeaderAction;
   readonly onInsertAfter: TableHeaderAction;
   readonly onDelete: TableHeaderAction;
+  /**
+   * 🔴 ADR-739 §61 — **«Μορφοποίηση κελιών…»** και στις ζώνες δείκτη.
+   *
+   * Είναι θέση του Excel, όχι συμμετρία: το δεξί κλικ σε αριθμό γραμμής ή γράμμα στήλης δείχνει
+   * εκεί «Format Cells…» **μετά** τη «Διαγραφή», μαζί με «Ύψος γραμμής…» / «Πλάτος στήλης…».
+   * Το ότι εδώ η ίδια χειρονομία δίνει επιπλέον mini toolbar δεν αναιρεί την ανάγκη: η γραμμή
+   * δείχνει τα **εννιά** χειριστήρια, ο διάλογος δείχνει ό,τι δεν χωρά σε κουμπί (ελεύθερη
+   * γωνία, εσοχή, δεκαδικά, νόμισμα).
+   *
+   * ⚠️ `TableHeaderAction` όπως τα τρία δομικά: ο στόχος γεννιέται **από το χτύπημα**, τη στιγμή
+   * του πατήματος, ώστε ένα undo ενόσω το μενού ήταν ανοιχτό να σημαίνει «δεν ανοίγει».
+   */
+  readonly onFormatCells: TableHeaderAction;
   readonly resolveState: (hit: TableIndicatorHit) => TableHeaderMenuState;
   /** Η κατάσταση των χειριστηρίων μορφοποίησης — ξαναρωτιέται **μετά από κάθε** πάτημα. */
   readonly resolveFormat: (hit: TableIndicatorHit) => TableFormatSnapshot;

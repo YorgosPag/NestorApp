@@ -20,7 +20,9 @@
  */
 
 import { resolveTableModel } from '../../../bim/table/table-model-helpers';
-import { rangeLabel, tableBorderTargetBounds } from '../use-table-range-menu';
+// 🔴 ADR-739 §61 — οι δύο καθαρές συναρτήσεις **εξήχθησαν** από το `use-table-range-menu.ts`
+// (470/500, N.7.1) στο ομώνυμο module. Το όνομα αυτής της σουίτας το είχε ήδη προβλέψει.
+import { rangeLabel, tableBorderTargetBounds } from '../table-range-menu-target';
 import type { TableSelectionSpan } from '../../../bim/table/table-cell-range';
 import type { CellSpan, PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
 

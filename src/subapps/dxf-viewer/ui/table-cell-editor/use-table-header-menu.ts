@@ -82,6 +82,9 @@ import {
   type FormatTarget,
 } from './table-format-snapshot';
 import { useToolbarFontNames } from './use-toolbar-font-names';
+// 🔴 ADR-739 §61 — η **τέταρτη** υποδοχή του διαλόγου «Μορφοποίηση κελιών». Η υποδοχή δεν
+// ζωγραφίζει τίποτα: λέει `open(…)` με τον στόχο του άξονα που πατήθηκε.
+import { openTableFormatCellsDialog } from '../../state/table-format-cells-dialog-store';
 import { getAllLayers } from '../../stores/LayerStore';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
@@ -335,6 +338,11 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       onInsertBefore: (hit) => runAxisAction(axisTarget(hit), insertAt('before')),
       onInsertAfter: (hit) => runAxisAction(axisTarget(hit), insertAt('after')),
       onDelete: (hit) => runAxisAction(axisTarget(hit), deleteAxisTarget),
+      // 🔴 ADR-739 §61 — «Μορφοποίηση κελιών…»: **ο ίδιος** `formatTarget` με τα εννιά
+      // χειριστήρια της γραμμής, δηλαδή ο στόχος κουβαλά το `scope` του άξονα — χωρίς αυτό ο
+      // διάλογος θα ισοπέδωνε μια μαρκαρισμένη στήλη σε κελιά. Χωρίς καρτέλα επίτηδες: το Excel
+      // ανοίγει στην **τελευταία που είδε ο χρήστης** (δες την κεφαλίδα του store).
+      onFormatCells: (hit) => openTableFormatCellsDialog({ target: formatTarget(hit) }),
       resolveState: (hit) => resolveHeaderState(liveTable()?.model ?? null, axisTarget(hit)),
       resolveFormat: (hit) => resolveTableFormatSnapshot(formatTarget(hit)),
       // 🔴 §52 — τα πέντε σώματα **μετακόμισαν** στο `table-format-commands.ts` τη στιγμή που
@@ -377,11 +385,14 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
           // του μπλοκ: αν το undo έσβησε τον άξονα, ο διάλογος δεν ανοίγει (αντί να ανοίξει
           // πάνω σε μοντέλο που δεν υπάρχει).
           moreBorders: {
-            resolveTarget: () => {
-              const b = axisBounds(hit);
-              return b ? borderActions.resolveDialogTarget(b) : null;
-            },
-            onCommit: borderActions.commitModel,
+            // 🔴 §60 — **ο ίδιος** στόχος με κάθε άλλη πράξη μορφοποίησης αυτού του μενού. Ήταν
+            // `borderActions.resolveDialogTarget(axisBounds(hit))`, που έδινε {όρια, μοντέλο,
+            // στυλ} και **έχανε το `scope`** — δηλαδή ο διάλογος, ανοιγμένος πάνω σε
+            // μαρκαρισμένη στήλη, θα έγραφε στα κελιά της αντί στη στήλη.
+            // 🔴 §61 — το `onCommit` **έφυγε**: έδειχνε στο `applyFormat` **αυτού** του hook, που
+            // είναι μετρημένα η **ίδια** ουρά με το `TableFormatPort.commitModel`. Με έναν
+            // ξενιστή υπάρχει ένας καλών, άρα η δεύτερη πόρτα δεν έχει πια λόγο ύπαρξης.
+            resolveTarget: () => formatTarget(hit),
           },
         };
       },
@@ -408,7 +419,7 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
     }),
     [
       runAxisAction, axisTarget, liveTable, formatCommands, formatTarget, axisBounds,
-      borderActions, mergeActions, toolbarState,
+      borderActions, mergeActions, toolbarState, applyFormat,
     ],
   );
 

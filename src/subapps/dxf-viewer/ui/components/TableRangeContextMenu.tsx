@@ -42,7 +42,9 @@
  * αυτής της διπλοεγγραφής, όχι απώλεια λειτουργίας.
  *
  * ## 🔑 ΟΨΗ 1:1 ΤΩΡΑ, ΛΕΙΤΟΥΡΓΙΑ ΣΤΑΔΙΑΚΑ — ρητή απόφαση ιδιοκτήτη
- * Δεκαπέντε items, από τα οποία **έξι** έχουν πράξη σήμερα. Τα υπόλοιπα εμφανίζονται γκρίζα,
+ * Δεκαπέντε items, από τα οποία **επτά** έχουν πράξη σήμερα (§61: «Μορφοποίηση κελιών…» — το
+ * item υπήρχε γκρίζο από το §43, στη μετρημένη θέση του Excel· δεν μετακινήθηκε, **άνοιξε**).
+ * Τα υπόλοιπα εμφανίζονται γκρίζα,
  * όπως ακριβώς η «Γρήγορη ανάλυση» είναι γκρίζα και μέσα στο ίδιο το Excel: ο χρήστης μαθαίνει
  * **πού** ζει η εντολή πριν αυτή υπάρξει, και δεν πατά ποτέ κάτι που δεν κάνει τίποτα. Η
  * ενεργοποίηση γράφεται σε **ένα** σημείο (δες {@link TableRangeMenuItems}), οπότε είναι
@@ -91,194 +93,36 @@ import {
   TableRangeMenuItems,
   type TableRangeMenuActions,
 } from './table-range-menu/TableRangeMenuItems';
-import type { TableRangeMenuEnabled } from './table-range-menu/table-range-menu-commands';
-import {
-  TableFormatToolbar,
-  type TableBorderMenuHostProps,
-  type TableFormatSnapshot,
-  type TableToggleFormatKey,
-} from './table-format-toolbar/TableFormatToolbar';
+import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
 // 🔴 ADR-739 §55 — τα τρία νέα τμήματα (τυπογραφία / αριθμός / στοίχιση) χτίζονται **μία**
 // φορά για τις δύο υποδοχές: δες την κεφαλίδα του module για το γιατί όχι δύο φορές το JSX.
-import {
-  tableToolbarExtrasProps,
-  type TableToolbarExtrasState,
-} from './table-format-toolbar/table-toolbar-extras';
+import { tableToolbarExtrasProps } from './table-format-toolbar/table-toolbar-extras';
 import type { TableAxisStyleOverride, TableCellOverflow } from '../../types/table';
-import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
-import type { TableBorderCommandId } from '../../bim/table/table-range-border-ops';
-import type { TableDiagonalCommandId } from '../../bim/table/table-cell-diagonal-ops';
-import type {
-  TableMergeCommandId,
-  TableMergeState,
-} from '../../bim/table/table-range-merge-ops';
 import type { TableCellRangeBounds } from '../../bim/table/table-cell-range';
+import type {
+  TableRangeMenuProps,
+  TableRangeMenuTarget,
+  TableRangeContextMenuHandle,
+} from './table-range-menu/table-range-menu-types';
 
 /**
- * 🔑 Ο τύπος του **στόχου** ταξιδεύει μαζί με το μενού: ο καλών (`use-table-range-menu.ts`)
- * γεμίζει το {@link TableRangeMenuTarget.commands} και οφείλει να μπορεί να ονομάσει τον τύπο
- * χωρίς να ξέρει ότι υπάρχει φάκελος `table-range-menu/`.
- */
-export type { TableRangeMenuEnabled, TableRangeMenuActions };
-
-/**
- * 🔴 ADR-739 §52 — οι **πέντε** εντολές μορφοποίησης, παραμετρικές ως προς τα όρια.
+ * 🔑 Επανεξαγωγή: οι καλούντες εισάγουν το συμβόλαιο από **ένα** σημείο, όπως και πριν την
+ * εξαγωγή του §61 — καμία υπάρχουσα διαδρομή εισαγωγής δεν αλλάζει. Ίδια ακριβώς κίνηση με το
+ * αδελφό μενού των ζωνών δείκτη, όταν εκείνο έβγαλε τους τύπους του στο ADR-755.
  *
- * Ένα αντικείμενο και όχι πέντε props, για τον ίδιο λόγο που το ADR-750 έβαλε τα περιγράμματα
- * σε ένα: ο τύπος **είναι** το συμβόλαιο, και μια κατάσταση «τρεις από τις πέντε» δεν πρέπει
- * να είναι εκφράσιμη. Παραμετρικές ως προς τα **όρια** (και όχι δεμένες) επειδή ο κανόνας
- * ξαναρωτήματος του {@link TableRangeMenuProps.resolveTarget} απαιτεί να ξαναδοθούν φρέσκα
- * μετά από κάθε πράξη — ένα undo ενόσω η γραμμή ήταν ανοιχτή δεν επιτρέπεται να γράψει σε
- * κελιά που δεν υπάρχουν.
+ * Ο τύπος του **στόχου** ταξιδεύει μαζί με το μενού: ο καλών (`use-table-range-menu.ts`) γεμίζει
+ * το `TableRangeMenuTarget.commands` και οφείλει να μπορεί να ονομάσει τον τύπο χωρίς να ξέρει
+ * ότι υπάρχει φάκελος `table-range-menu/`.
  */
-export interface TableRangeFormatActions {
-  readonly onToggle: (bounds: TableCellRangeBounds, key: TableToggleFormatKey) => void;
-  readonly onStepSize: (
-    bounds: TableCellRangeBounds,
-    direction: TextHeightStepDirection,
-  ) => void;
-  readonly onReset: (bounds: TableCellRangeBounds) => void;
-  readonly onSetTextColor: (bounds: TableCellRangeBounds, value: string | undefined) => void;
-  readonly onSetFillColor: (
-    bounds: TableCellRangeBounds,
-    value: string | null | undefined,
-  ) => void;
-  /**
-   * 🔴 ADR-739 §55 — ο **ΕΝΑΣ** γραφέας των τεσσάρων υπόλοιπων πεδίων (γραμματοσειρά, μέγεθος,
-   * αριθμητική μορφή, στοίχιση).
-   *
-   * Ένας χειριστής με το **κλειδί ως όρισμα** και όχι τέσσερα props: και τα τέσσερα
-   * χειριστήρια καταλήγουν στο ίδιο `setField(target, key, value)` του
-   * `table-format-commands.ts`, οπότε τέσσερις υπογραφές θα ήταν τέσσερις ευκαιρίες να πάρει
-   * κάποια από αυτές δικό της δρόμο εγγραφής. Η γενική παράμετρος κρατά την αντιστοίχιση
-   * κλειδί↔τιμή σφιχτή — καμία δήλωση χωρίς απόδειξη.
-   *
-   * ⚠️ Τα **δύο χρώματα** κρατούν δικά τους props (από τη Φ.Ε): η υπογραφή τους κωδικοποιεί
-   * τις **τρεις καταστάσεις** του γεμίσματος (`hex` / `null` / `undefined`) στο ίδιο το
-   * συμβόλαιο της επιφάνειας, πληροφορία που ένας γενικός γραφέας δεν φέρνει στο μάτι του
-   * αναγνώστη.
-   */
-  readonly onSetField: <K extends keyof TableAxisStyleOverride>(
-    bounds: TableCellRangeBounds,
-    key: K,
-    value: TableAxisStyleOverride[K] | undefined,
-  ) => void;
-  /**
-   * 🔴 ADR-739 §58 Γ2 — ο γραφέας του **ξεχειλίσματος**· ξεχωριστός από το {@link onSetField}.
-   *
-   * Δεν χωρά εκεί: το `overflow` **δεν είναι** `keyof TableAxisStyleOverride` — ζει μόνο στο
-   * `TableCellStyleOverride`. Ιδια ακριβώς δήλωση με το `onSetOverflow` του μενού των ζωνών δείκτη.
-   */
-  readonly onSetOverflow: (bounds: TableCellRangeBounds, value: TableCellOverflow) => void;
-}
-
-/**
- * 🔴 Οι **έξι** εντολές δεδομένων του μενού (Excel 1:1), παραμετρικές ως προς τα όρια.
- *
- * Ένα αντικείμενο και όχι έξι props — ίδιος λόγος με το {@link TableRangeFormatActions}: ο
- * τύπος **είναι** το συμβόλαιο. Παραμετρικές ως προς τα όρια για τον ίδιο λόγο κι εκεί: το
- * μενού μπορεί να ξαναρωτήσει μετά από πράξη, και μια δεμένη κλειστότητα θα κρατούσε όρια που
- * ένα `Ctrl+Z` έχει ήδη διαγράψει.
- *
- * ⚠️ Ο **τύπος επιστροφής** δέχεται `Promise` όπως και η συγχώνευση: η εισαγωγή και η διαγραφή
- * κελιών ρωτούν πριν μετακινήσουν περιεχόμενο, και ο {@link runOnRange} οφείλει να ξαναρωτήσει
- * την κατάσταση **αφού** απαντηθεί η ερώτηση, ποτέ ενόσω ο διάλογος είναι ανοιχτός.
- */
-export interface TableRangeCommandActions {
-  readonly onCut: (bounds: TableCellRangeBounds) => void | Promise<void>;
-  readonly onCopy: (bounds: TableCellRangeBounds) => void | Promise<void>;
-  readonly onPaste: (bounds: TableCellRangeBounds) => void | Promise<void>;
-  readonly onInsert: (bounds: TableCellRangeBounds) => void | Promise<void>;
-  readonly onDelete: (bounds: TableCellRangeBounds) => void | Promise<void>;
-  readonly onClearContents: (bounds: TableCellRangeBounds) => void | Promise<void>;
-}
-
-/**
- * Ο στόχος, **παγωμένος στο άνοιγμα**: τα όρια που θα γραφτούν, το όνομα που φαίνεται και το τι
- * έχει νόημα να πατηθεί. Όλα μαζί, ώστε να μην μπορούν να αποκλίνουν μεταξύ τους — ίδια
- * σύμβαση με το `OpenTarget` του μενού των ζωνών.
- */
-export interface TableRangeMenuTarget {
-  readonly bounds: TableCellRangeBounds;
-  /** `C3` για ένα κελί, `B2:D4` για περιοχή — η γλώσσα του χρήστη, ποτέ «ακμή» (Α5). */
-  readonly label: string;
-  readonly canReset: boolean;
-  /** ADR-750 Φ5 (Α2) — υπάρχει διαγώνιος να σβηστεί; Ίδια σύμβαση με το {@link canReset}. */
-  readonly canClearDiagonals: boolean;
-  /**
-   * ADR-755 — τι ισχύει για τη **συγχώνευση**. Ανανεώνεται μετά από κάθε εντολή, γιατί η
-   * γραμμή εργαλείων επιβιώνει του μενού και το κουμπί οφείλει να δείξει πατημένο.
-   */
-  readonly merge: TableMergeState;
-  /** ADR-755 — το dropdown περιγραμμάτων, σε μία ερώτηση (ίδιο σχήμα με το μενού ζωνών). */
-  readonly borders: TableBorderMenuHostProps;
-  /**
-   * 🔴 ADR-739 §52 — **τι δείχνουν τα εννιά χειριστήρια μορφοποίησης** για αυτά τα κελιά.
-   *
-   * Έλειπε μέχρι το §52 — όχι από παράλειψη: δεν υπήρχε γραφέας για το
-   * `TableCell.styleOverride`, οπότε το τμήμα θα ήταν εννιά κουμπιά που δεν κάνουν τίποτα.
-   * Δες την κεφαλίδα του `TableFormatSection`.
-   */
-  readonly format: TableFormatSnapshot;
-  /**
-   * 🔴 ADR-739 §55 — **τυπογραφία, αριθμητική μορφή και στοίχιση** για αυτά τα κελιά.
-   *
-   * Έλειπε μέχρι το §55 για τον ίδιο λόγο που έλειπε και το {@link format} μέχρι το §52: τα
-   * τμήματα υπήρχαν στη γραμμή ως **προαιρετικά** props και κανείς δεν τα τροφοδοτούσε, άρα
-   * δεν αποδίδονταν καθόλου. Δεν έλειπε κουμπί — έλειπε η **ανάγνωση**.
-   */
-  readonly toolbar: TableToolbarExtrasState;
-  /**
-   * 🔴 **Ποιες εντολές δεδομένων έχουν νόημα ΤΩΡΑ** — π.χ. δεν υπάρχει τίποτα να επικολληθεί.
-   *
-   * Ζει στον **στόχο** και όχι σε prop, επειδή είναι ακριβώς το είδος της απάντησης που ο
-   * στόχος υπάρχει για να παγώνει: εξαρτάται από τα ίδια τα όρια *και* από τη στιγμή, και
-   * ξαναρωτιέται μετά από κάθε πράξη μέσω του {@link TableRangeMenuProps.resolveTarget}. Μια
-   * σταθερή τιμή σε prop θα ήταν μπαγιάτικη ακριβώς εκεί που μετράει: μετά από «Αποκοπή», η
-   * «Επικόλληση» γίνεται πατήσιμη — και το μενού επιβιώνει για την **επόμενη** εντολή.
-   *
-   * Ό,τι λείπει από τον χάρτη μένει γκρίζο· δες τον έναν κανόνα στο {@link TableRangeMenuItems}.
-   */
-  readonly commands: TableRangeMenuEnabled;
-}
-
-export interface TableRangeMenuProps {
-  readonly onApplyBorder: (bounds: TableCellRangeBounds, commandId: TableBorderCommandId) => void;
-  readonly onResetBorders: (bounds: TableCellRangeBounds) => void;
-  /**
-   * ADR-750 Φ5 (Α2) — οι **διαγώνιοι**.
-   *
-   * ⚠️ Αυτή η υποδοχή δείχνει τις **εντολές** (13 + 4), όχι τη ζώνη σχεδίασης του μολυβιού:
-   * το μολύβι είναι **εργαλείο**, όχι εντολή, και ζει σε ένα σημείο — τη γραμμή εργαλείων.
-   * Δύο σημεία ρύθμισης του ίδιου μολυβιού θα ήταν δύο απαντήσεις στο «με τι γράφω τώρα».
-   * Το ίδιο κάνουν AutoCAD και Excel: ο πένα ρυθμίζεται μία φορά, εφαρμόζεται από παντού.
-   */
-  readonly onApplyDiagonal: (
-    bounds: TableCellRangeBounds,
-    commandId: TableDiagonalCommandId,
-  ) => void;
-  /** ADR-755 — μία από τις τέσσερις εντολές συγχώνευσης· ασύγχρονη όταν ρωτά (δες §4). */
-  readonly onApplyMerge: (
-    bounds: TableCellRangeBounds,
-    commandId: TableMergeCommandId,
-  ) => void | Promise<void>;
-  /** ADR-739 §52 — οι πέντε εντολές μορφοποίησης κελιών (Β/Ι/Υ, χρώματα, μέγεθος, επαναφορά). */
-  readonly formatActions: TableRangeFormatActions;
-  /**
-   * Οι **έξι εντολές δεδομένων** του μενού. Ένα prop, όχι έξι — δες
-   * {@link TableRangeCommandActions}.
-   */
-  readonly rangeActions: TableRangeCommandActions;
-  /** Ξαναρωτά την κατάσταση μετά από εντολή — η γραμμή επιβιώνει και οφείλει να λέει αλήθεια. */
-  readonly resolveTarget: (bounds: TableCellRangeBounds) => TableRangeMenuTarget | null;
-  /** Το μενού έκλεισε — με ή χωρίς ενέργεια. Εδώ επιστρέφει η εστίαση στο κελί. */
-  readonly onClosed: () => void;
-}
-
-export interface TableRangeContextMenuHandle {
-  open: (x: number, y: number, target: TableRangeMenuTarget) => void;
-  close: () => void;
-}
+export type { TableRangeMenuActions };
+export type { TableRangeMenuEnabled } from './table-range-menu/table-range-menu-commands';
+export type {
+  TableRangeCommandActions,
+  TableRangeContextMenuHandle,
+  TableRangeFormatActions,
+  TableRangeMenuProps,
+  TableRangeMenuTarget,
+} from './table-range-menu/table-range-menu-types';
 
 const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, TableRangeMenuProps>(
   ({
@@ -364,8 +208,19 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
         onInsert: () => runOnRange(rangeActions.onInsert),
         onDelete: () => runOnRange(rangeActions.onDelete),
         onClearContents: () => runOnRange(rangeActions.onClearContents),
+        /*
+          🔴 ADR-739 §61 — «Μορφοποίηση κελιών…»: **ο ίδιος** δρόμος εκτέλεσης με κάθε άλλη
+          εντολή, και αυτό είναι το ζητούμενο, όχι σύμπτωση. Το {@link runOnRange} κλείνει το
+          μενού **πριν** εκτελέσει, ακριβώς όπως επιβάλλει η συγχώνευση όταν ανοίγει διάλογο: με
+          το `role="menu"` ζωντανό, το `FocusScope` του Radix επαναφέρει κάθε εστίαση σε αυτό —
+          δηλαδή ο χρήστης θα έβλεπε επτά πτυσσόμενα που **δεν συμπληρώνονται με πληκτρολόγιο**.
+
+          Η γραμμή εργαλείων από πάνω επιβιώνει, όπως σε κάθε άλλη εντολή (§28.13, απόφαση
+          ιδιοκτήτη): φέρει το ίδιο σημάδι συνεδρίας με τον διάλογο, άρα τα δύο συνυπάρχουν.
+        */
+        onFormatCells: () => runOnRange(formatActions.onOpenFormatCells),
       }),
-      [runOnRange, rangeActions],
+      [runOnRange, rangeActions, formatActions],
     );
 
     return (

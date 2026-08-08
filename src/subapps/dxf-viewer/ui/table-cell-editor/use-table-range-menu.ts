@@ -29,7 +29,6 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, type RefObject } from 'react';
-import { columnLetter } from '@/lib/spreadsheet/column-letter';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import { clearTableRange } from '../../bim/table/table-range-clipboard';
 // 🔴 ADR-739 §52 — η μορφοποίηση **κελιών**: ο ίδιος στόχος, οι ίδιες πέντε εντολές, το ίδιο
@@ -42,6 +41,9 @@ import {
   resolveTableFormatSnapshot,
   resolveTableToolbarExtrasState,
 } from './table-format-snapshot';
+// 🔴 ADR-739 §61 — η **πέμπτη** υποδοχή του διαλόγου «Μορφοποίηση κελιών», και η κανονική του
+// Excel. Η υποδοχή δεν ζωγραφίζει τίποτα: λέει `open(…)` με τον στόχο του κανόνα Α22.
+import { openTableFormatCellsDialog } from '../../state/table-format-cells-dialog-store';
 import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
 import { getAllLayers } from '../../stores/LayerStore';
 import { useLiveTableMutation } from './use-table-model-commit';
@@ -49,9 +51,14 @@ import { useCommandHistory } from '../../core/commands';
 import {
   resolveTableSelectionBounds,
   type TableCellRangeBounds,
-  type TableCellRef,
-  type TableSelectionSpan,
 } from '../../bim/table/table-cell-range';
+// 🔴 §61 — η καθαρή γεωμετρία δεικτών (Α22 + ονομασία `B2:D4`) **εξήχθη**: αυτό το αρχείο ήταν
+// στα 470/500 (N.7.1) και η υποδοχή «Μορφοποίηση κελιών…» χρειαζόταν χώρο. Εξαγωγή, ποτέ trim.
+import {
+  rangeLabel,
+  sameTableRangeBounds,
+  tableBorderTargetBounds,
+} from './table-range-menu-target';
 import {
   tableEventWorldPoint,
   tablePointerHitAtWorld,
@@ -83,7 +90,6 @@ import type {
   TableRangeMenuTarget,
 } from '../components/TableRangeContextMenu';
 import type { TableToolbarExtrasState } from '../components/table-format-toolbar/table-toolbar-extras';
-import type { TableModel } from '../../types/table';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
 
@@ -145,7 +151,7 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       const selection = getTableCellCursor()?.selection;
       if (!live || !selection || selection.kind === 'range') return null;
       const selected = resolveTableSelectionBounds(resolveTableModel(live.model), selection);
-      return selected && sameBounds(selected, bounds) ? selection.kind : null;
+      return selected && sameTableRangeBounds(selected, bounds) ? selection.kind : null;
     },
     [liveTable],
   );
@@ -219,6 +225,11 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         clearContents: true,
         insert: axis !== null,
         delete: axis !== null && structure.canDeleteAxis(axis),
+        // 🔴 §61 — **πάντα**: ο στόχος υπάρχει (αλλιώς το μενού δεν θα είχε ανοίξει καν), και ο
+        // διάλογος δουλεύει σε κάθε περιοχή, χωρίς προϋπόθεση επιλογής ή άξονα. Ο μοναδικός
+        // τρόπος να μην ανοίξει είναι ένα `Ctrl+Z` **ανάμεσα** στο άνοιγμα και το πάτημα — και
+        // τον χειρίζεται ο `formatTarget`, που τότε επιστρέφει `null`.
+        formatCells: true,
       };
     },
     [structuralAxis, clipboard, structure],
@@ -252,12 +263,14 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         // ADR-750 Φ6 — ο διάλογος ξαναρωτά τα **ίδια** όρια τη στιγμή του ανοίγματος: ένα undo
         // ενόσω το μενού ήταν ανοιχτό σημαίνει «δεν ανοίγει», ποτέ διάλογος πάνω σε φάντασμα.
         moreBorders: {
-          resolveTarget: () => borderActions.resolveDialogTarget(bounds),
-          onCommit: borderActions.commitModel,
+          // 🔴 §60 — δες την ίδια γραμμή στο `use-table-header-menu.ts`: ο στόχος είναι ο
+          // **ίδιος** με κάθε άλλη πράξη μορφοποίησης, και κουβαλά το `scope`.
+          // 🔴 §61 — το `onCommit` έφυγε (ένας ξενιστής ⇒ ένας καλών ⇒ μία πόρτα προς την ουρά).
+          resolveTarget: () => formatTarget(bounds),
         },
       },
     }),
-    [borderActions, mergeActions, formatTarget, toolbarState, menuCommands],
+    [borderActions, mergeActions, formatTarget, toolbarState, menuCommands, applyFormat],
   );
 
   /**
@@ -359,6 +372,10 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
         onSetField: (bounds, key, value) => formatCommands.setField(formatTarget(bounds), key, value),
         // 🔴 §58 Γ2 — δικός του γραφέας: το `overflow` δεν είναι `keyof TableAxisStyleOverride`.
         onSetOverflow: (bounds, value) => formatCommands.setOverflow(formatTarget(bounds), value),
+        // 🔴 §61 — «Μορφοποίηση κελιών…»: **ο ίδιος** `formatTarget` με τις εννιά εντολές από
+        // πάνω, δηλαδή ο κανόνας Α22 αυτούσιος (στόχος τα όρια του δεξιού κλικ, όχι η επιλογή).
+        // Χωρίς καρτέλα **επίτηδες**: το Excel ανοίγει στην τελευταία που είδε ο χρήστης.
+        onOpenFormatCells: (bounds) => openTableFormatCellsDialog({ target: formatTarget(bounds) }),
       },
       /*
         🔴 §54 — οι **έξι εντολές δεδομένων**, παραμετρικές ως προς τα όρια για τον ίδιο λόγο
@@ -400,67 +417,4 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
   );
 
   return useMemo(() => ({ ref: menuRef, props }), [props]);
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Καθαροί βοηθοί
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * Τα όρια που θα βαφτούν: η τρέχουσα επιλογή αν το κελί ανήκει σε αυτήν, αλλιώς το κελί μόνο
- * του. Και τα δύο περνούν από τον **ΕΝΑ** δρόμο ερμηνείας επιλογής (Α22, δες την κεφαλίδα).
- *
- * Η επιλογή περνά ως **όρισμα** και δεν διαβάζεται από το store εδώ μέσα: έτσι ο κανόνας Α22
- * είναι καθαρή συνάρτηση και ελέγχεται με τέσσερα σχήματα σε τέσσερις γραμμές, αντί να απαιτεί
- * στημένο store και προσποιητό δρομέα. Ο καλών κάνει την **μία** ανάγνωση, τη στιγμή του
- * συμβάντος (ADR-040 κανόνας #2).
- *
- * `null` όταν το κελί δεν υπάρχει στο μοντέλο — μπαγιάτικη αναφορά μετά από undo.
- */
-export function tableBorderTargetBounds(
-  model: TableModel,
-  cell: TableCellRef,
-  selection: TableSelectionSpan | null | undefined,
-): TableCellRangeBounds | null {
-  const cellBounds = resolveTableSelectionBounds(model, { from: cell, to: cell, kind: 'range' });
-  if (!cellBounds) return null;
-
-  const selected = selection ? resolveTableSelectionBounds(model, selection) : null;
-  return selected && contains(selected, cellBounds) ? selected : cellBounds;
-}
-
-/**
- * Είναι **το ίδιο** ορθογώνιο; — «περιέχει και περιέχεται», χωρίς τέταρτη σύγκριση δεικτών.
- *
- * Γραμμένο πάνω στο {@link contains} και όχι με τέσσερα `===`: ο ορισμός της ισότητας ορίων
- * μένει **ένας**, και η μέρα που τα όρια αποκτήσουν πέμπτο πεδίο δεν αφήνει πίσω της μια
- * σύγκριση που το αγνοεί σιωπηλά.
- */
-function sameBounds(a: TableCellRangeBounds, b: TableCellRangeBounds): boolean {
-  return contains(a, b) && contains(b, a);
-}
-
-/** Περιέχει το `outer` ολόκληρο το `inner`; Σύγκριση ορθογωνίων σε δείκτες, τίποτα άλλο. */
-function contains(outer: TableCellRangeBounds, inner: TableCellRangeBounds): boolean {
-  return (
-    outer.firstRow <= inner.firstRow
-    && outer.lastRow >= inner.lastRow
-    && outer.firstCol <= inner.firstCol
-    && outer.lastCol >= inner.lastCol
-  );
-}
-
-/**
- * `C3` για ένα κελί, `B2:D4` για περιοχή — **η γλώσσα του χρήστη** (Α5: δεν μαθαίνει ποτέ τη
- * λέξη «ακμή»). Το γράμμα βγαίνει από το ίδιο SSoT με τις ζώνες δείκτη (`columnLetter`), ώστε
- * ο τίτλος του μενού να λέει ακριβώς ό,τι δείχνει η λωρίδα από πάνω.
- */
-export function rangeLabel(bounds: TableCellRangeBounds): string {
-  const start = cellName(bounds.firstRow, bounds.firstCol);
-  const end = cellName(bounds.lastRow, bounds.lastCol);
-  return start === end ? start : `${start}:${end}`;
-}
-
-function cellName(rowIndex: number, colIndex: number): string {
-  return `${columnLetter(colIndex)}${rowIndex + 1}`;
 }

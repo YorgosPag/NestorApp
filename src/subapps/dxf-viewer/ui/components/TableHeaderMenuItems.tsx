@@ -28,7 +28,7 @@
  */
 
 import React from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   DxfMenuIcon,
@@ -65,6 +65,8 @@ export interface TableHeaderMenuItemsProps {
   readonly onInsertBefore: () => void;
   readonly onInsertAfter: () => void;
   readonly onDelete: () => void;
+  /** 🔴 ADR-739 §61 — «Μορφοποίηση κελιών…»· δες τη θέση του παρακάτω. */
+  readonly onFormatCells: () => void;
 }
 
 /**
@@ -74,7 +76,7 @@ export interface TableHeaderMenuItemsProps {
  * (Esc / κλικ έξω) όχι.
  */
 export function TableHeaderMenuItems({
-  isColumn, state, onInsertBefore, onInsertAfter, onDelete,
+  isColumn, state, onInsertBefore, onInsertAfter, onDelete, onFormatCells,
 }: TableHeaderMenuItemsProps): React.ReactElement {
   const { t } = useTranslation('dxf-viewer');
   const { label, count, canInsert, canDelete } = state;
@@ -152,6 +154,25 @@ export function TableHeaderMenuItems({
       <DxfMenuItem destructive disabled={!canDelete} onClick={onDelete}>
         <DxfMenuIcon><Trash2 size={16} /></DxfMenuIcon>
         <DxfMenuLabel>{deleteLabel}</DxfMenuLabel>
+      </DxfMenuItem>
+
+      <DxfMenuSeparator />
+
+      {/*
+        🔴 ADR-739 §61 — **ΜΕΤΑ τη διαγραφή, και αυτό είναι μέτρηση, όχι αισθητική.**
+
+        Η ισχυρή τοπική σύμβαση («η καταστροφική εντολή τελευταία») λέει το αντίθετο· η σειρά του
+        Excel στη λωρίδα γραμμής/στήλης είναι ρητή και ο ιδιοκτήτης παρήγγειλε **1:1 με το
+        Excel**: `… Εισαγωγή · Διαγραφή · Απαλοιφή περιεχομένων · **Μορφοποίηση κελιών…** · Ύψος
+        γραμμής… · Απόκρυψη`. Άρα το item κάθεται εδώ, σε **δική του** ομάδα — που είναι και ο
+        λόγος που η διαγραφή δεν παύει να είναι οπτικά απομονωμένη.
+
+        ⚠️ Ποτέ γκρίζο: ο στόχος υπάρχει (αλλιώς το μενού δεν θα είχε ανοίξει), και η μορφοποίηση
+        δεν έχει την προϋπόθεση «όλα ή τίποτα» που φρουρεί τη διαγραφή (§42).
+      */}
+      <DxfMenuItem onClick={onFormatCells}>
+        <DxfMenuIcon><SlidersHorizontal size={16} /></DxfMenuIcon>
+        <DxfMenuLabel>{t('table.headerMenu.formatCells')}</DxfMenuLabel>
       </DxfMenuItem>
     </>
   );
