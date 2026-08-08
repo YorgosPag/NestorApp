@@ -30,6 +30,9 @@ on:
       - 'src/**/*.tsx'
       - 'scripts/ssot-discover.sh'
       - 'scripts/check-ssot-discover-ratchet.js'
+      # CHECK 3.48 (ADR-778) — η ίδια η πύλη είναι είσοδος: αλλαγή στο κριτήριο πρέπει να
+      # ξανακρίνει ολόκληρο το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
+      - 'scripts/check-empty-select-item.js'
       - '.ssot-discover-baseline.json'
       - '.ssot-registry.json'
       - '.github/workflows/ssot-discover.yml'
@@ -40,6 +43,9 @@ on:
       - 'src/**/*.tsx'
       - 'scripts/ssot-discover.sh'
       - 'scripts/check-ssot-discover-ratchet.js'
+      # CHECK 3.48 (ADR-778) — η ίδια η πύλη είναι είσοδος: αλλαγή στο κριτήριο πρέπει να
+      # ξανακρίνει ολόκληρο το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
+      - 'scripts/check-empty-select-item.js'
       - '.ssot-discover-baseline.json'
       - '.ssot-registry.json'
 
@@ -130,7 +136,7 @@ jobs:
         if: failure()
         run: |
           {
-            echo "### CHECK 3.44 — ADR-772 §9"
+            echo "### CHECK 3.44 — ADR-772 §9 (address vocabulary)"
             echo ""
             echo "**unmapped-administrative-field** (μηδενική ανοχή) — ένα δοχείο απέκτησε"
             echo "πεδίο διοικητικής ιεραρχίας που καμία γραμμή του πίνακα δεν διεκδικεί."
@@ -143,4 +149,160 @@ jobs:
             echo ""
             echo "Αναφορά: \`npm run address-vocabulary:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run address-vocabulary:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # CHECK 3.48 / ADR-778 — Στρώμα 2 της πύλης του κενού `SelectItem`.
+  #
+  # ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΝΕΟ WORKFLOW: ίδιος λόγος με το 3.44 από πάνω — το
+  # μητρώο του `.ci-gate-tiers.json` παρακολουθεί **αρχεία** workflow, όχι jobs,
+  # οπότε ένα job εδώ αφήνει τις 31 πύλες αμετάβλητες (ADR-757 / CHECK 3.37).
+  # Η οικογένεια ταιριάζει: η θεραπεία είναι το SSoT σεντινέλι
+  # `SELECT_CLEAR_VALUE` (`config/domain-constants.ts`) και το κεντρικό
+  # `<ClearableSelect>` — δηλαδή «χρησιμοποιείς το SSoT ή το ξαναγράφεις;».
+  # ⚠️ ΔΕΝ μπήκε στο `ui-contrast-ratchet.yml`: εκείνο είναι workflow **χρώματος**,
+  # και μια αποτυχία Select εκεί θα αναφερόταν ως αποτυχία αντίθεσης (το ίδιο
+  # λάθος που απέφυγε ρητά το ADR-775 §Λ2).
+  #
+  # ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΚΑΘΟΛΟΥ ΔΕΥΤΕΡΟ ΣΤΡΩΜΑ — δηλωμένα:
+  # Το κριτήριο είναι **τοπικό** σε ένα JSX στοιχείο ενός αρχείου· δεν υπάρχει
+  # καθολική είσοδος που να μπορεί να κάνει παράβαση ένα αρχείο που κανείς δεν
+  # σταδιοποίησε (σε αντίθεση με το 3.43, όπου ο δείκτης ορισμών είναι καθολικός).
+  # Άρα το Στρώμα 1 είναι **πλήρες** για ό,τι περνά από hook. Αυτό εδώ κλείνει
+  # ακριβώς ό,τι **δεν** πέρασε: επεξεργασία από το web UI του GitHub, commit από
+  # μηχάνημα χωρίς hooks, ή `SKIP_EMPTY_SELECT_ITEM=1`.
+  # ===========================================================================
+  empty-select-item:
+    name: 🎛️ Empty SelectItem Gate (CHECK 3.48)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # `@typescript-eslint/parser` μόνο — ο ίδιος σκελετός AST με το CHECK 3.23.
+      # ΔΕΝ είναι type-check (CLAUDE.md N.17): ούτε `tsc`, ούτε Program.
+      - name: 📦 Install dependencies (JSX parser + jest)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🎛️ CHECK 3.48 — πλήρης σάρωση src/ (~23s, 614 στοιχεία)
+        run: pnpm run empty-select-item:check
+
+      - name: 🧪 Σουίτα μετάλλαξης — CHECK 3.48 (17 tests, απόδειξη σε πραγματικό ιστορικό)
+        run: pnpm run test:empty-select-item
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=Empty SelectItem Gate::Κανένα <SelectItem value=\"\"> — καμία επιφάνεια δεν πέφτει σε χρόνο εκτέλεσης"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.48 — ADR-778 (empty SelectItem)"
+            echo ""
+            echo "Το Radix Select **δεσμεύει** το \`''\` ως «καμία επιλογή»: ένα"
+            echo "\`<SelectItem value=\"\">\` πετά σε χρόνο εκτέλεσης και **ρίχνει ολόκληρη**"
+            echo "την επιφάνεια που το φιλοξενεί. Χτύπησε τρεις φορές (ADR-739 §59.6.3 / §60.7.3)."
+            echo ""
+            echo "**Λύση (SSoT):**"
+            echo "\`\`\`tsx"
+            echo "import { SELECT_CLEAR_VALUE, isSelectClearValue } from '@/config/domain-constants';"
+            echo "<SelectItem value={SELECT_CLEAR_VALUE}>Καμία επιλογή</SelectItem>"
+            echo "// onValueChange: if (isSelectClearValue(v)) setDraft(undefined)"
+            echo "\`\`\`"
+            echo ""
+            echo "Ή χρησιμοποίησε το \`<ClearableSelect>\` (\`@/components/ui/clearable-select\`),"
+            echo "που κάνει το \`''\` **δομικά αδύνατο** ως τιμή item."
+            echo ""
+            echo "Απογραφή: \`npm run empty-select-item:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # CHECK 3.49 / ADR-779 — Στρώμα 2 της πύλης ταυτότητας ADR.
+  #
+  # ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΝΕΟ WORKFLOW: ίδιος λόγος με το 3.44 και το 3.48 από
+  # πάνω — το μητρώο του `.ci-gate-tiers.json` παρακολουθεί **αρχεία** workflow,
+  # όχι jobs, οπότε ένα job εδώ αφήνει τις 31 πύλες αμετάβλητες (CHECK 3.37).
+  # Η οικογένεια ταιριάζει κατά γράμμα: το ερώτημα «απαντά αυτό το αναγνωριστικό
+  # σε ΕΝΑ πράγμα;» είναι η ίδια ερώτηση SSoT που κάνει όλο το workflow.
+  #
+  # ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΔΕΥΤΕΡΟ ΣΤΡΩΜΑ — δηλωμένα: η σκανδάλη του Στρώματος 1 είναι
+  # «staged αρχείο με όνομα ADR-*». Αυτό είναι **πλήρες** για ό,τι περνά από
+  # hook (σύγκρουση γεννιέται μόνο με προσθήκη/μετονομασία εγγράφου ADR), αλλά
+  # δεν βλέπει: επεξεργασία από το web UI του GitHub, commit από μηχάνημα χωρίς
+  # hooks, ή `SKIP_ADR_IDENTITY=1`. Άρα εδώ τρέχει **άνευ όρων**.
+  # ===========================================================================
+  adr-identity:
+    name: 🔢 ADR Identity Gate (CHECK 3.49)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        # Το `fetch-depth: 0` ΔΕΝ χρειάζεται: η πύλη ρωτά το **index** (`git ls-files`),
+        # δηλαδή το δέντρο του commit — ποτέ ιστορικό.
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (jest για τη σουίτα μετάλλαξης)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🔢 CHECK 3.49 — ratchet ταυτότητας ADR (~0,5s)
+        run: pnpm run adr-identity:check
+
+      - name: 🧪 Σουίτα μετάλλαξης — CHECK 3.49 (19 tests, μίνι-repo με πραγματικό git)
+        run: pnpm run test:adr-identity
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=ADR Identity Gate::Καμία ΝΕΑ σύγκρουση αριθμού ADR και κανένα νέο σπίτι ADR"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.49 — ADR-779 (ταυτότητα ADR)"
+            echo ""
+            echo "Ένας αριθμός ADR **έπαψε να προσδιορίζει ένα έγγραφο**."
+            echo ""
+            echo "**Δύο καταστάσεις, ΔΥΟ διαφορετικές θεραπείες:**"
+            echo ""
+            echo "- \`collided-same-home\` — δύο συντάκτες πήραν τον ίδιο αριθμό."
+            echo "  Θεραπεία: **bumping** — ο ΝΕΟΤΕΡΟΣ (αυτός με τις λιγότερες αναφορές)"
+            echo "  παίρνει τον επόμενο ελεύθερο. Ποτέ μετονομασία εγγράφου που ήδη"
+            echo "  αναφέρεται: η πρακτική είναι ρητή — *«keep the numbering stable, never renumber»*."
+            echo "- \`collided-cross-home\` — ο χώρος αριθμών **διχάστηκε** σε δύο φακέλους."
+            echo "  Θεραπεία: **ΕΝΑ σπίτι**. Μετονομασία δεν λύνει τίποτα εδώ."
+            echo ""
+            echo "**Νέο ΣΠΙΤΙ ADR** μπλοκάρει ακόμα κι αν σήμερα δεν συγκρούεται τίποτα:"
+            echo "από τη στιγμή που τα έγγραφα ζουν σε δεύτερο φάκελο, δύο συντάκτες"
+            echo "μπορούν να πάρουν τον ίδιο αριθμό **χωρίς κανείς να κάνει λάθος**."
+            echo ""
+            echo "Απογραφή: \`npm run adr-identity:report\`"
+            echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run adr-identity:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"

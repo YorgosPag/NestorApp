@@ -24,11 +24,13 @@
  *   STAGED_AUDIT_CATALOGS_TRIGGER  audit-value-catalog changes
  *   SSOT_DISCOVER_FULL             '1' = run full ssot-discover scan
  *   SKIP_NATIVE_TOOLTIP / SKIP_TABS_IMPORT / SKIP_NO_FLASH  bypass specific checks
+ *   SKIP_EMPTY_SELECT_ITEM                                  bypass CHECK 3.48
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
  *   SKIP_CI_TIER_COVERAGE          '1' = bypass CHECK 3.37 (CI gate tier coverage)
  *   SKIP_ADDRESS_VOCABULARY        '1' = bypass CHECK 3.44 (address vocabulary coverage)
+ *   SKIP_ADR_IDENTITY              '1' = bypass CHECK 3.49 (ADR number identity)
  *   CHECK_WORKER_TIMEOUT_MS        per-worker timeout ms (default 60000)
  *
  * Exit: 0 = all pass, 1 = any fail.
@@ -107,6 +109,12 @@ if (tsFiles.length > 0) {
   addThread('3.13', 'i18n resolver',            'scripts/check-i18n-resolver-reachability.js', tsFiles);
   if (!skipTooltip)
     addThread('3.23', 'Native tooltip',         'scripts/check-native-tooltip.js',             tsFiles);
+  // CHECK 3.48 (ADR-778) — κενό <SelectItem>: το Radix δεσμεύει το '' και το item ΡΙΧΝΕΙ ΟΛΗ
+  // την επιφάνεια. Χτύπησε ΤΡΕΙΣ φορές (§59.6.3 έριξε την καρτέλα «Μορφοποίηση»· το βρήκε
+  // άνθρωπος). Ο τύπος δέχεται το '' και ο έλεγχος χρόνου εκτέλεσης πετά ΚΑΤΑ ΤΗΝ ΑΠΟΔΟΣΗ,
+  // δηλαδή αφού προσγειωθεί. Ίδιος σκελετός AST με το 3.23 — καμία νέα μηχανή. ZERO-TOL.
+  if (!process.env.SKIP_EMPTY_SELECT_ITEM)
+    addThread('3.48', 'Empty SelectItem',       'scripts/check-empty-select-item.js',          tsFiles);
   if (!skipTabs)
     addThread('3.24', 'Tabs import ratchet',    'scripts/check-tabs-import-ratchet.js',        tsFiles);
   if (!skipFlash)
@@ -299,6 +307,54 @@ const e2eExecTriggers = allFiles.filter(
 );
 if (!process.env.SKIP_E2E_EXECUTABILITY && e2eExecTriggers.length > 0)
   addThread('3.46', 'E2E executability', 'scripts/check-e2e-executability.js');
+
+// CHECK 3.47 (ADR-776) — «αυτό το αρχείο test το τρέχει ΑΚΡΙΒΩΣ ΕΝΑΣ;»: όχι κανένας, όχι δύο.
+// Το default `jest.config.js` σάρωνε με glob όλο το δέντρο και επικαλυπτόταν με τα ΤΕΣΣΕΡΑ
+// sibling configs, ενώ η χειρόγραφη λίστα εξαιρέσεων ανέφερε ΕΝΑ. Μετρημένο: 3362 tracked
+// αρχεία test ⇒ 14 σε δύο projects (η μία εκτέλεση με `jsdom` αντί `node`, δηλαδή δομικά
+// αδύνατο να περάσει) + 7 build artifacts κάτω από το gitignored `functions/lib/`.
+// ⚠️ Το `projects` API του jest ΔΕΝ αρκεί: #14019 «runs tests twice if projects have rootDir
+// set to the root of the repository» (και τα 4 configs μας) — closed as not planned — και το
+// jest δεν προειδοποιεί ΠΟΤΕ για επικάλυψη. Η εγγύηση θέλει πύλη, όχι μετακόμιση.
+// ⚠️ ΔΕΝ είναι ratchet: όλα διορθώθηκαν στο ίδιο commit, οπότε baseline θα κλείδωνε το
+// ελάττωμα αντί να το λύσει.
+// Σκανδάλη: κάθε jest config, κάθε .gitignore (αυθεντία του «τι δεν είναι πηγή»), το
+// playwright.config.ts, η ίδια η πύλη, ή staged `.spec.` (η ΜΟΝΗ μορφή που μπορεί να
+// προσγειωθεί ορφανή, αφού το default διεκδικεί ό,τι άλλο έχει σχήμα test). ~2,2s.
+// Δηλωμένο κενό: build artifact που κανείς δεν σταδιοποίησε — το κλείνει το Layer 2.
+const jestPartitionTriggers = allFiles.filter(
+  f => /^jest\.config.*\.js$/.test(f)
+    || f === '.gitignore'
+    || f.endsWith('/.gitignore')
+    || f === 'playwright.config.ts'
+    || f === 'scripts/check-jest-partition.js'
+    || f.startsWith('scripts/lib/jest-partition/')
+    || /\.spec\.[jt]sx?$/.test(f)
+);
+if (!process.env.SKIP_JEST_PARTITION && jestPartitionTriggers.length > 0)
+  addThread('3.47', 'Jest partition', 'scripts/check-jest-partition.js');
+
+// CHECK 3.49 (ADR-779) — «απαντά ο αριθμός ADR-NNN σε ΕΝΑ έγγραφο;». Μετρημένο 2026-08-08:
+// **60 αριθμοί** διεκδικούνται από περισσότερα του ενός έγγραφα, σε **8 σπίτια** — το ADR-320
+// υπάρχει με το ΙΔΙΟ όνομα αρχείου σε δύο σπίτια. Δηλαδή «δες το ADR-294» δεν προσδιορίζει
+// έγγραφο, και το ADR-294 είναι ο ίδιος ο κανόνας N.12 του CLAUDE.md.
+// 🔴 Ο κανόνας ΥΠΗΡΧΕ και δεν τον εκτελούσε κανείς: το CLAUDE.md ζητά «use the next sequential
+// number» και παραδέχεται ρητά ότι ο δηλωμένος επόμενος παλιώνει («stale by 357 … by 18, so
+// verify with `ls` instead of trusting it») — δηλαδή αναθέτει σε άνθρωπο έλεγχο που καμία
+// μηχανή δεν κάνει. Σχήμα CHECK 3.36: «ένα anchor χωρίς gate είναι σχόλιο».
+// Πρακτική των μεγάλων (ερευνήθηκε): οι αριθμοί είναι ΑΜΕΤΑΒΛΗΤΟΙ («never renumber»), η
+// σύγκρουση λύνεται με **bumping** (RFC-0000), και η αποτροπή είναι **CI lint duplicate numbers**
+// (adrs-core `check_all`). Η πύλη δεν επινοεί πολιτική — εκτελεί τη γραμμένη.
+// ⚠️ RATCHET, ΟΧΙ zero-tol: 60 υπάρχουσες ⇒ μονίμως κόκκινο ⇒ παρακάμπτεται με SKIP_.
+// Σκανδάλη: staged αρχείο με βασικό όνομα `ADR-<ψηφία>` — ακριβώς η μόνη στιγμή που γεννιέται
+// σύγκρουση (η αυθεντία της πύλης είναι το index του git). ~0,5s.
+const adrIdentityTriggers = allFiles.filter(
+  f => /(^|\/)ADR-\d+/.test(f)
+    || f === 'scripts/check-adr-identity.js'
+    || f.startsWith('scripts/lib/adr-identity/')
+);
+if (!process.env.SKIP_ADR_IDENTITY && adrIdentityTriggers.length > 0)
+  addThread('3.49', 'ADR identity', 'scripts/check-adr-identity.js');
 
 // CHECK 3.44 (ADR-772 §9) — «αυτό το διοικητικό πεδίο έχει γραμμή στον πίνακα;». Το
 // ADR-772 έφτιαξε τον πίνακα λεξιλογίου (8 επίπεδα × 5 δοχεία)· τίποτα δεν εμπόδιζε ένα

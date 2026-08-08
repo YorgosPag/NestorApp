@@ -185,6 +185,9 @@
     "barrel-deadcode:baseline": "node --max-old-space-size=4096 scripts/check-barrel-deadcode-ratchet.js --write-baseline",
     "test:barrel-deadcode": "jest scripts/__tests__/check-barrel-deadcode-ratchet.test.js",
     "deadcode:delete": "node scripts/delete-deadcode.js",
+    "empty-select-item:check": "node scripts/check-empty-select-item.js --all",
+    "empty-select-item:report": "node scripts/check-empty-select-item.js --report",
+    "test:empty-select-item": "jest scripts/__tests__/check-empty-select-item.test.js --verbose",
     "native-tooltip:audit": "node scripts/check-native-tooltip.js --all",
     "native-tooltip:baseline": "node scripts/check-native-tooltip.js --write-baseline",
     "tabs-import:audit": "node scripts/check-tabs-import-ratchet.js --all",
@@ -283,7 +286,14 @@
     "validate:i18n-manifest": "node scripts/validate-i18n-manifest.js",
     "e2e:check": "node scripts/check-e2e-executability.js",
     "e2e:report": "node scripts/check-e2e-executability.js --verbose",
-    "test:e2e-executability": "jest scripts/__tests__/check-e2e-executability.test.js --verbose"
+    "test:e2e-executability": "jest scripts/__tests__/check-e2e-executability.test.js --verbose",
+    "jest-partition:check": "node scripts/check-jest-partition.js",
+    "jest-partition:report": "node scripts/check-jest-partition.js --verbose",
+    "test:jest-partition": "jest scripts/__tests__/check-jest-partition.test.js --verbose",
+    "adr-identity:check": "node scripts/check-adr-identity.js",
+    "adr-identity:report": "node scripts/check-adr-identity.js --report",
+    "adr-identity:baseline": "node scripts/check-adr-identity.js --write-baseline",
+    "test:adr-identity": "jest scripts/__tests__/check-adr-identity.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",
