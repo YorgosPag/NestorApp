@@ -1128,6 +1128,10 @@
         "number": "Format Cells: Number",
         "alignment": "Format Cells: Alignment"
       },
+      "refusal": {
+        "targetMissing": "The table is no longer available, so nothing was applied. Close the dialog and select cells again.",
+        "targetChanged": "The table changed after this dialog opened, so nothing was applied — this prevents overwriting the change that happened in between. Close the dialog and open it again."
+      },
       "number": {
         "category": "Category",
         "sample": "Sample",
