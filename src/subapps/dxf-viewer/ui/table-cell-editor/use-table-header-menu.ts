@@ -302,6 +302,8 @@ export function useTableHeaderMenu(params: UseTableHeaderMenuParams): TableHeade
       const scope = formatScope(hit);
       if (!live || !scope) return null;
       return {
+        // 🔴 ADR-739 §63 — δες `FormatTarget.entityId`: ο στόχος κουβαλά **ποιος** πίνακας.
+        entityId: live.id,
         model: live.model,
         style: resolveTableStyle(live),
         scope,

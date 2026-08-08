@@ -46,7 +46,8 @@ import {
   type TableFormatCellsRequest,
 } from '../../../../state/table-format-cells-dialog-store';
 import { getTableFormatPort } from '../../../table-cell-editor/table-format-port';
-import { TableFormatCellsDialog } from './TableFormatCellsDialog';
+import { TableFormatCellsDialog, type TableFormatCellsTarget } from './TableFormatCellsDialog';
+import type { TableFormatCommitPlan } from '../../../../bim/table/table-format-commit-plan';
 import type { PersistedTableModel } from '../../../../types/table';
 
 /** Gate-at-mount: ο βαρύς διάλογος ζει μόνο όσο υπάρχει αίτημα. */
@@ -92,9 +93,21 @@ function TableFormatCellsDialogMount({
 /**
  * Η **μία** πόρτα προς την ουρά εντολών (§6.6): ένα μοντέλο, ένα βήμα `Ctrl+Z`.
  *
- * Χωρίς θύρα ⇒ τίποτα, ποτέ σφάλμα: ο διάλογος μπορεί να επιβιώσει ένα καρέ μετά το ξεμοντάρισμα
- * του καμβά, και μια αποτυχία εκεί δεν είναι κατάσταση που ο χρήστης μπορεί να διορθώσει.
+ * 🔴 ADR-739 §63 — **περνά τον στόχο και επιστρέφει το πλάνο.** Ήταν
+ * `getTableFormatPort()?.commitModel(model)` με τιμή επιστροφής `void`: η θύρα ξαναμάντευε πού
+ * γράφει (τον πίνακα του δρομέα) και ο διάλογος έκλεινε ό,τι κι αν γινόταν. Δες
+ * `bim/table/table-format-commit-plan.ts`.
+ *
+ * ⚠️ **Χωρίς θύρα ⇒ `target-missing`, ποτέ σιωπή και ποτέ εξαίρεση.** Ο διάλογος μπορεί να
+ * επιβιώσει ένα καρέ μετά το ξεμοντάρισμα του καμβά· εκεί ο πίνακας είναι όντως άφταστος, που
+ * είναι **ακριβώς** αυτό που σημαίνει η κατάσταση. Ένα `undefined`-και-κλείσε θα ήταν η ίδια
+ * σιωπηλή απώλεια με άλλο όνομα.
  */
-function commitDraft(model: PersistedTableModel): void {
-  getTableFormatPort()?.commitModel(model);
+function commitDraft(
+  target: TableFormatCellsTarget,
+  model: PersistedTableModel,
+): TableFormatCommitPlan {
+  const port = getTableFormatPort();
+  if (!port) return { status: 'refused', reason: 'target-missing' };
+  return port.commitModel(target, model);
 }

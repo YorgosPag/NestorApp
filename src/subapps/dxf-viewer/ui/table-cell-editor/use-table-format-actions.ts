@@ -60,7 +60,13 @@ import { useLiveTable } from './use-live-table';
 // 🔴 ADR-739 §56 — η κορδέλα χρειάζεται τη λίστα γραμματοσειρών, και τη χρειάζεται με **getter**.
 // Το ίδιο hook που ήδη τροφοδοτεί τα δύο μενού δεξιού κλικ — τρίτος καταναλωτής, μία γνώση.
 import { useToolbarFontNames } from './use-toolbar-font-names';
-import { resolveSelectedTable } from './table-entity-lookup';
+import { resolveSelectedTable, resolveTableById } from './table-entity-lookup';
+// 🔴 ADR-739 §63 — η **απόφαση** «γράφεται αυτό το προσχέδιο;» ζει σε καθαρή συνάρτηση, χωρίς
+// σκηνή· εδώ μένει μόνο η ανάγνωση της σκηνής και η εκτέλεση του πλάνου **αυτούσιου**.
+import {
+  planTableFormatCommit,
+  type TableFormatCommitPlan,
+} from '../../bim/table/table-format-commit-plan';
 import { useTableBorderActions } from './use-table-border-actions';
 import { useTableMergeActions } from './use-table-merge-actions';
 import { useTableStructureActions } from './use-table-structure-actions';
@@ -70,7 +76,7 @@ import { useTableFormatPainterActions } from './use-table-format-painter-actions
 // 🔴 ADR-739 §57 — το πρόχειρο. **Το ίδιο** hook που τροφοδοτεί το μενού δεξιού κλικ (§54):
 // τρίτος καταναλωτής, μία υλοποίηση — δες το σχόλιο του μέλους στη θύρα.
 import { useTableMenuClipboard } from './use-table-menu-clipboard';
-import { useLiveTableMutation } from './use-table-model-commit';
+import { useLiveTableMutation, useTableModelCommit } from './use-table-model-commit';
 import {
   getTableCellCursor,
   subscribeTableCellCursor,
@@ -154,6 +160,9 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     const current = scope();
     if (!live || !current) return null;
     return {
+      // 🔴 ADR-739 §63 — **ποιος** πίνακας, μαζί με **τι** μοντέλο: οι δύο μαζί είναι ο στόχος.
+      // Χωριστά, το «πού γράφω» ξαναμαντεύεται τη στιγμή της γραφής (δες `FormatTarget.entityId`).
+      entityId: live.id,
       model: live.model,
       style: resolveTableStyle(live),
       scope: current,
@@ -163,6 +172,10 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
 
   // Η ΙΔΙΑ ουρά με το mini toolbar: ένα `UpdateEntityCommand`, ένα `Ctrl+Z` (§6.6).
   const applyFormat = useLiveTableMutation({ levelManager, execute, liveTable: cursorTable });
+  // 🔴 ADR-739 §63 — ο δεσμευτής που δέχεται **ρητή οντότητα**, για το «ΟΚ» του αιωρούμενου
+  // διαλόγου. **Η ίδια** ουρά με το `applyFormat` (το `useLiveTableMutation` το καταναλώνει από
+  // μέσα) — ό,τι αλλάζει είναι **ποιος** ρωτιέται για τον πίνακα: εκεί ο δρομέας, εδώ ο στόχος.
+  const commitEntityModel = useTableModelCommit({ levelManager, execute });
   const commands = useMemo(() => tableFormatCommands(applyFormat), [applyFormat]);
 
   // ⚠️ **Αυτούσια** τα υπάρχοντα συμβόλαια — η κορδέλα ξαναχρησιμοποιεί τα ίδια components
@@ -236,10 +249,36 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
       commands.setOverflow(formatTarget(), value),
     fontNames,
     reset: (): void => commands.reset(formatTarget()),
-    // 🔴 ADR-739 §60 — το «ΟΚ» ενός διαλόγου: **ένα** έτοιμο μοντέλο, μέσα από την ίδια ουρά
-    // (`applyFormat`) με κάθε άλλη πράξη μορφοποίησης. Δες το μέλος της θύρας για το γιατί
-    // μετακόμισε εδώ από το `borders`.
-    commitModel: (model: PersistedTableModel): void => applyFormat(() => model),
+    // 🔴 ADR-739 §60/§63 — το «ΟΚ» ενός διαλόγου: **ένα** έτοιμο μοντέλο, μέσα από την ίδια ουρά
+    // με κάθε άλλη πράξη μορφοποίησης. Δες το μέλος της θύρας για το γιατί μετακόμισε εδώ από το
+    // `borders`.
+    //
+    // 🔴 §63 — **ΡΩΤΑ ΤΟΝ ΣΤΟΧΟ, ΟΧΙ ΤΟΝ ΔΡΟΜΕΑ.** Ήταν `applyFormat(() => model)`, δηλαδή
+    // `useLiveTableMutation` πάνω σε `cursorTable` — που **ξαναμάντευε** πού γράφει τη στιγμή του
+    // πατήματος. Για κουμπί ή item μενού είναι ισοδύναμο (γεννιούνται και εκτελούνται στο ίδιο
+    // συμβάν)· για **αιωρούμενο διάλογο** ήταν τρεις σιωπηλές καταστάσεις. Η ανάγνωση της σκηνής
+    // μένει εδώ (`resolveTableById`, ADR-040 κανόνας #2: getter τη στιγμή της κλήσης) και η
+    // **κρίση** φεύγει στο καθαρό πλάνο.
+    //
+    // ⚠️ Οι τύποι των παραμέτρων γράφονται **ρητά**, όπως σε κάθε άλλο μέλος αυτού του literal: το
+    // `answers` δεν έχει δηλωμένο τύπο (επίτηδες — δες την κεφαλίδα του), οπότε παραλειπόμενες
+    // δηλώσεις θα ήταν implicit `any` (N.2).
+    commitModel: (
+      target: Parameters<TableFormatPort['commitModel']>[0],
+      model: PersistedTableModel,
+    ): TableFormatCommitPlan => {
+      const live = resolveTableById(levelManager, target.entityId);
+      const plan = planTableFormatCommit({
+        liveModel: live?.model ?? null,
+        baseModel: target.model,
+        draftModel: model,
+      });
+      // Το πλάνο εκτελείται **αυτούσιο** (πρότυπο `fromPlan`): ό,τι εγκρίθηκε είναι ό,τι
+      // γράφεται. Το `live` είναι μη-null σε αυτόν τον κλάδο κατά κατασκευή — το `target-missing`
+      // είναι ακριβώς η περίπτωση όπου δεν είναι.
+      if (plan.status === 'accepted' && live) commitEntityModel(live, plan.model);
+      return plan;
+    },
     // 🔴 ADR-739 §60 — η αφετηρία κάθε προσχεδίου. **Ο ίδιος** `formatTarget` που τροφοδοτεί
     // ήδη κάθε ανάγνωση αυτής της θύρας: μια δεύτερη κατασκευή στόχου για τον διάλογο θα άφηνε
     // ανοιχτό το παράθυρο να διαβάσει ο διάλογος **άλλο** μοντέλο από τα κουμπιά δίπλα του.
@@ -297,7 +336,7 @@ export function useTableFormatActions(params: UseTableFormatActionsParams): void
     fontNames: () => latest.current.fontNames(),
     reset: () => latest.current.reset(),
     canReset: () => latest.current.canReset(),
-    commitModel: (model) => latest.current.commitModel(model),
+    commitModel: (target, model) => latest.current.commitModel(target, model),
     formatTarget: () => latest.current.formatTarget(),
     get borders() { return latest.current.borders; },
     get merge() { return latest.current.merge; },

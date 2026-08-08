@@ -169,6 +169,8 @@ export function useTableRangeMenu(params: UseTableRangeMenuParams): TableRangeMe
       const live = liveTable();
       if (!live) return null;
       return {
+        // 🔴 ADR-739 §63 — δες `FormatTarget.entityId`: ο στόχος κουβαλά **ποιος** πίνακας.
+        entityId: live.id,
         model: live.model,
         style: resolveTableStyle(live),
         scope: { kind: 'range' as const, bounds },

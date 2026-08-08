@@ -29,6 +29,7 @@
  */
 
 import type { TableBorderDialogPositionId } from '../../../../bim/table/table-border-dialog-positions';
+import type { TableFormatCommitRefusal } from '../../../../bim/table/table-format-commit-plan';
 import type { TableBorderDialogPresetId } from '../../../../bim/table/table-border-dialog-draft';
 import type { TableFormatOrigin } from '../../../../bim/table/table-format-origin';
 import type { TableCellAlign } from '../../../../types/table';
@@ -102,6 +103,26 @@ export const TABLE_FORMAT_CELLS_TAB_KEY: Readonly<Record<TableFormatCellsTabId, 
   border: `${TABLE_FORMAT_CELLS_KEY}.tabs.border`,
   fill: `${TABLE_FORMAT_CELLS_KEY}.tabs.fill`,
   protection: `${TABLE_FORMAT_CELLS_KEY}.tabs.protection`,
+};
+
+/**
+ * 🔴 ADR-739 §63 — **γιατί το «ΟΚ» δεν έγραψε.** Λόγος άρνησης → κλειδί μηνύματος.
+ *
+ * ## Γιατί δύο μηνύματα και όχι ένα «κάτι πήγε λάθος»
+ * Οι δύο καταστάσεις έχουν **διαφορετική επόμενη κίνηση** για τον χρήστη: στο `target-missing`
+ * δεν υπάρχει τίποτα να ξαναπροσπαθήσει (ο πίνακας έφυγε), στο `target-changed` υπάρχει
+ * (ξανανοίγει τον διάλογο πάνω στην τρέχουσα κατάσταση). Ένα κοινό μήνυμα θα τον άφηνε να
+ * μαντεύει ποια από τις δύο συνέβη — δηλαδή θα ήταν σιωπή με λέξεις.
+ *
+ * ⚠️ Ρητός χάρτης, όχι ``t(`${ROOT}.refusal.${reason}`)``: οι ταυτότητες έχουν **παύλα**
+ * (`target-missing`), και ένα δυναμικό κλειδί θα ήταν αόρατο στην CHECK 3.8 **και** στον
+ * generator του shell slice — δες την κεφαλίδα αυτού του αρχείου.
+ */
+export const TABLE_FORMAT_COMMIT_REFUSAL_KEY: Readonly<
+  Record<TableFormatCommitRefusal, string>
+> = {
+  'target-missing': `${TABLE_FORMAT_CELLS_KEY}.refusal.targetMissing`,
+  'target-changed': `${TABLE_FORMAT_CELLS_KEY}.refusal.targetChanged`,
 };
 
 // ──────────────────────────────────────────────────────────────────────────────

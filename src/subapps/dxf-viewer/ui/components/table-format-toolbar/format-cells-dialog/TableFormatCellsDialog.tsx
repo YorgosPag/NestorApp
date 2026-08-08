@@ -72,8 +72,13 @@ import type { FormatTarget } from '../../../table-cell-editor/table-format-snaps
 import type { PersistedTableModel } from '../../../../types/table';
 import {
   TABLE_FORMAT_CELLS_KEY,
+  TABLE_FORMAT_COMMIT_REFUSAL_KEY,
   type TableFormatCellsTabId,
 } from './table-format-cells-labels';
+import type {
+  TableFormatCommitPlan,
+  TableFormatCommitRefusal,
+} from '../../../../bim/table/table-format-commit-plan';
 import { TableFormatCellsTabs } from './TableFormatCellsTabs';
 import { TableFormatCellsBorderTab } from './TableFormatCellsBorderTab';
 import { TableFormatCellsNumberTab } from './TableFormatCellsNumberTab';
@@ -124,8 +129,18 @@ export interface TableFormatCellsDialogProps {
   readonly tab: TableFormatCellsTabId;
   /** Ο χρήστης πάτησε άλλη καρτέλα. Ο καλών γράφει **και** την οθόνη **και** τη μνήμη. */
   readonly onTabSelect: (tab: TableFormatCellsTabId) => void;
-  /** Το ΟΚ: **ένα** μοντέλο, **ένα** commit. */
-  readonly onCommit: (model: PersistedTableModel) => void;
+  /**
+   * Το ΟΚ: **ένα** μοντέλο, **ένα** commit — και **μία απάντηση**.
+   *
+   * 🔴 ADR-739 §63 — επιστρέφει το πλάνο, ποτέ `void`. Ο διάλογος είναι **αιωρούμενος**, άρα ζει
+   * πέρα από τη συνεδρία που τον γέννησε: ανάμεσα στο άνοιγμα και το «ΟΚ» ο πίνακας μπορεί να
+   * έχει φύγει ή να έχει αλλάξει. Ένα `void` σήμαινε ότι ο διάλογος έκλεινε **ό,τι κι αν γινόταν**
+   * — και ο χρήστης πίστευε ότι εφάρμοσε. Δες `bim/table/table-format-commit-plan.ts`.
+   */
+  readonly onCommit: (
+    target: TableFormatCellsTarget,
+    model: PersistedTableModel,
+  ) => TableFormatCommitPlan;
   /** Άκυρο / Escape / `✕` — και τα τρία σημαίνουν το ίδιο: πέτα το προσχέδιο. */
   readonly onClose: () => void;
 }
@@ -139,6 +154,16 @@ export function TableFormatCellsDialog(
   const hintId = useId();
 
   const [draft, setDraft] = useState<PersistedTableModel>(target.model);
+
+  /**
+   * 🔴 ADR-739 §63 — **ο λόγος που το «ΟΚ» δεν έγραψε**· `null` όσο δεν έχει απορριφθεί τίποτα.
+   *
+   * Ζει σε `useState` και όχι σε store, σε αντίθεση με την καρτέλα (§61): η καρτέλα είναι **μνήμη**
+   * που οφείλει να επιβιώσει του κλεισίματος, ενώ αυτό είναι **γεγονός μιας προσπάθειας** — και
+   * μια άρνηση που επιβίωνε του κλεισίματος θα εμφανιζόταν στο επόμενο άνοιγμα, όπου δεν σημαίνει
+   * τίποτα.
+   */
+  const [refusal, setRefusal] = useState<TableFormatCommitRefusal | null>(null);
 
   /**
    * Ο στόχος ως **ορθογώνιο** — ό,τι δέχεται η καρτέλα «Περίγραμμα».
@@ -236,6 +261,18 @@ export function TableFormatCellsDialog(
             ) : null}
           </section>
 
+          {/*
+            🔴 ADR-739 §63 — η άρνηση είναι **μέρος του διαλόγου**, όχι ειδοποίηση που περνά.
+            Ζει δίπλα στα κουμπιά (εκεί κοιτάζει ο χρήστης όταν πατά «ΟΚ» και δεν κλείνει) και
+            είναι `role="alert"`, ώστε ο αναγνώστης οθόνης να το ανακοινώσει χωρίς να μετακινηθεί
+            η εστίαση — ο χρήστης μένει πάνω στο κουμπί που μόλις πάτησε.
+          */}
+          {refusal !== null ? (
+            <p role="alert" className={styles.refusal}>
+              {t(TABLE_FORMAT_COMMIT_REFUSAL_KEY[refusal])}
+            </p>
+          ) : null}
+
           <footer className={styles.footer}>
             <Button variant="outline" size="sm" onClick={onClose}>
               {t(`${TABLE_FORMAT_CELLS_KEY}.cancel`)}
@@ -243,7 +280,16 @@ export function TableFormatCellsDialog(
             <Button
               size="sm"
               onClick={() => {
-                onCommit(draft);
+                const plan = onCommit(target, draft);
+                // 🔴 §63 — **ΤΟ ΚΛΕΙΣΙΜΟ ΕΞΑΡΤΑΤΑΙ ΑΠΟ ΤΗΝ ΑΠΑΝΤΗΣΗ.** Ήταν άνευ όρων: ο διάλογος
+                // έκλεινε ακόμη κι όταν δεν γράφτηκε τίποτα. Σε άρνηση μένει ανοιχτός **κρατώντας
+                // το προσχέδιο** — ο χρήστης δεν χάνει οκτώ ρυθμίσεις για να μάθει ότι απέτυχε.
+                if (plan.status === 'refused') {
+                  setRefusal(plan.reason);
+                  return;
+                }
+                // Το `unchanged` κλείνει κανονικά: «άνοιξα, πείραξα, το ξαναέφερα όπως ήταν, ΟΚ»
+                // είναι επιτυχία που δεν έχει τι να γράψει, όχι αποτυχία (§60).
                 onClose();
               }}
             >
