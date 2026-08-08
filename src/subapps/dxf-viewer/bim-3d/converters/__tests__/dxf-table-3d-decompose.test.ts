@@ -293,3 +293,52 @@ describe('ADR-739 Φ.Θ — η σύνδεση με τον χτίστη του ο
     expect(sink.textEntities).toHaveLength(0);
   });
 });
+
+/**
+ * 🔴 ADR-739 §60 — **Η ΑΓΚΥΡΑ ΠΟΥ ΕΛΕΙΠΕ ΑΠΟ ΤΟ §59.**
+ *
+ * Το §59 έδωσε στο κελί **ελεύθερη γωνία** και δήλωσε ρητά στον απολογισμό του (§8.1) ότι η
+ * αλυσίδα προς το 3Δ είναι *«δομικά σωστή αλλά ανέλεγκτη»*:
+ * ```
+ *   decomposeTable → makeText({rotationDeg}) → TextEntity.rotation
+ *                  → projectSceneEntityText → DxfText.rotation → layoutTextGlyphs
+ * ```
+ * Είναι ακριβώς το σχήμα «η υπόθεση ήταν σωστή αλλά κανείς δεν ρώτησε» που το ίδιο το §58 Γ2
+ * κατέγραψε — και το επικίνδυνο εδώ είναι ότι μια σπασμένη αλυσίδα **δεν φαίνεται**: το κείμενο
+ * φτάνει, απλώς κάθεται οριζόντιο. Καμία πύλη, κανένα κόκκινο, μια γερμένη κεφαλίδα που ίσιωσε.
+ *
+ * ⚠️ Ο έλεγχος είναι **συγκριτικός** (γερμένο vs ίσιο) και όχι απόλυτος: μια μελλοντική αλλαγή
+ * σύμβασης προσήμου ή μονάδας θα ήταν αλλαγή **της γλώσσας**, όχι απώλεια. Αυτό που δεν
+ * επιτρέπεται να ξανασυμβεί είναι η γωνία να **εξαφανιστεί**.
+ */
+describe('ADR-739 §60 — η ΓΩΝΙΑ ΚΕΛΙΟΥ φτάνει στο 3Δ', () => {
+  const rotated = (deg: number): TableEntity => ({
+    ...ENTITY,
+    model: toPersistedTableModel(createTableModel({
+      columns: COLUMNS,
+      rows: [
+        { id: 'rh', rowClass: 'header', styleOverride: { textRotationDeg: deg } },
+        { id: 'rd', rowClass: 'data' },
+      ],
+      cells: CELLS,
+    })),
+  }) as TableEntity;
+
+  const rotationOfHeader = (deg: number): number | undefined => headerText(
+    decomposeTableForUnderlay3D(rotated(deg), SCALE, 'mm', DARK_SURFACE).texts,
+  ).rotation;
+
+  it('🔴 κάθετη κεφαλίδα ΔΕΝ ισιώνει στη διαδρομή προς το 3Δ', () => {
+    const straight = rotationOfHeader(0) ?? 0;
+    const vertical = rotationOfHeader(90) ?? 0;
+    expect(vertical).not.toBe(straight);
+    expect(Math.abs(vertical - straight)).toBeCloseTo(90, 6);
+  });
+
+  it('🔴 Η ΕΛΕΥΘΕΡΗ γωνία φτάνει ΑΥΤΟΥΣΙΑ — όχι στρογγυλεμένη στα preset των 90°', () => {
+    // Η υπεροχή του §59 είναι η **αυθαίρετη** γωνία (το AutoCAD έχει enum τεσσάρων τιμών). Μια
+    // διαδρομή που την κβάντιζε σιωπηλά θα ακύρωνε ακριβώς αυτό, και θα φαινόταν να δουλεύει.
+    const straight = rotationOfHeader(0) ?? 0;
+    expect(Math.abs((rotationOfHeader(37) ?? 0) - straight)).toBeCloseTo(37, 6);
+  });
+});
