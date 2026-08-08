@@ -1,0 +1,89 @@
+name: T2 🧩 Jest Partition (CHECK 3.47)
+
+# =============================================================================
+# Layer 2 του CHECK 3.47 — ADR-776. «Αυτό το αρχείο test το τρέχει ΑΚΡΙΒΩΣ ΕΝΑΣ;»
+#
+# ΤΙ ΡΩΤΑΕΙ — ΤΡΕΙΣ ΚΑΤΑΣΤΑΣΕΙΣ ΠΑΡΑΒΑΣΗΣ, ΚΛΕΙΣΤΗ ΛΟΓΙΣΤΙΚΗ
+# -----------------------------------------------------------
+#   ⛔ multi-owned    δύο εκτελεστές ⇒ τρέχει 2×, η μία με λάθος environment
+#   ⛔ build-artifact μεταγλωττισμένο διπλότυπο ⇒ μπαγιάτικος κώδικας, μη ντετερμινιστικό
+#   ⛔ unowned        κανένας εκτελεστής ⇒ γράφτηκε, δεν τρέχει, κανείς δεν το μαθαίνει
+# Οι πέντε νόμιμες καταστάσεις απαριθμούνται κι αυτές· το άθροισμα ΠΡΕΠΕΙ να κλείνει.
+#
+# ΓΙΑΤΙ ΥΠΑΡΧΕΙ
+# -------------
+# Το `npx jest storage` επέστρεφε 125 κόκκινα άσχετα με την αλλαγή που έτρεχε. Το default
+# `jest.config.js` σάρωνε με glob όλο το δέντρο και επικαλυπτόταν με τα ΤΕΣΣΕΡΑ sibling
+# configs, ενώ η χειρόγραφη λίστα εξαιρέσεων ανέφερε ΕΝΑ (1 στα 4). Μετρημένο σε 3362
+# tracked αρχεία test: 14 σε δύο projects + 7 build artifacts κάτω από το gitignored
+# `functions/lib/`. Τα sibling θέλουν `node`, το default είναι `jsdom` ⇒ η δεύτερη εκτέλεση
+# ήταν ΔΟΜΙΚΑ ΑΔΥΝΑΤΟ να περάσει.
+#
+# ⚠️ ΤΟ `projects` API ΤΟΥ JEST ΔΕΝ ΑΡΚΕΙ — ερευνήθηκε πριν γραφτεί γραμμή:
+#   jestjs/jest#14019 «Jest will run tests twice if projects have their rootDir explicitly
+#   set to the root of the repository» (και τα 4 configs μας), CLOSED AS NOT PLANNED·
+#   jestjs/jest#4410 (`--listTests` διπλότυπα)· και το jest δεν προειδοποιεί ΠΟΤΕ για
+#   επικάλυψη. Ακόμα και η επίσημη λύση δεν δίνει εγγύηση — η εγγύηση θέλει πύλη.
+#
+# ΓΙΑΤΙ ΚΑΙ ΣΤΟ CI, ΑΦΟΥ ΤΡΕΧΕΙ ΣΤΟ PRE-COMMIT
+# --------------------------------------------
+# Το Layer 1 σκανδαλίζεται από staged αρχεία. Ένα build artifact όμως ΔΕΝ σταδιοποιείται
+# ποτέ (είναι gitignored), και ένα νέο sibling config μπορεί να προσγειωθεί χωρίς να
+# αγγίξει κανένα spec. Τρέχει ΑΝΕΥ ΟΡΩΝ, όπως τα CHECK 3.33/3.34/3.36/3.37/3.46.
+#
+# ΔΕΝ ΕΙΝΑΙ RATCHET — καμία baseline, ποτέ. Δεν υπάρχει «λιγότερα διπλοεκτελούμενα από
+# χθες»: όλα τα ευρήματα διορθώθηκαν στο ίδιο commit, οπότε baseline θα κλείδωνε το
+# ελάττωμα αντί να το λύσει.
+#
+# ⚠️ ΔΕΝ ΤΡΕΧΕΙ TESTS. Απαντά «ποιος τα τρέχει;», όχι «περνάνε;». Και δεν απαντά ούτε
+# «τα εκτελεί κάποιο workflow;» — αυτό είναι το ανοιχτό ερώτημα του ADR-775 §11 για τα 5
+# `playwright-owned`, και είναι απόφαση Giorgio.
+#
+# ΟΤΑΝ ΚΟΚΚΙΝΙΣΕΙ: ΠΟΤΕ μη λύσεις το κόκκινο με χειρόγραφη εξαίρεση στο `jest.config.js` —
+# οι εξαιρέσεις ΠΑΡΑΓΟΝΤΑΙ (`scripts/lib/jest-partition/derived-ignores.js`), και η
+# χειρόγραφη λίστα είναι ακριβώς αυτό που απέκλινε 1 στα 4.
+# =============================================================================
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jest-partition-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  partition:
+    name: 🧩 Διαμέριση ιδιοκτησίας των test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # ⚠️ Χρειάζεται το ΕΓΚΑΤΕΣΤΗΜΕΝΟ `jest-util` (ο matcher είναι του jest, ποτέ δικός μας —
+      # ένας χειρόγραφος μεταφραστής extglob→regex θα ήταν δεύτερη διάλεκτος που αποκλίνει
+      # σιωπηλά) και `typescript` για AST parse-only του playwright.config.ts (ΠΟΤΕ tsc, N.17).
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🧩 CHECK 3.47 — κάθε test σε ακριβώς έναν εκτελεστή;
+        run: node scripts/check-jest-partition.js --verbose
+
+      # Η πύλη που δεν δοκιμάζεται είναι πύλη που κανείς δεν εμπιστεύεται (ADR-587 §6.1).
+      # 24 tests · 9 μεταλλάξεις στις ΕΙΣΟΔΟΥΣ (μίνι-repo με πραγματικό `git init`) + Μ0.
+      - name: 🧪 Mutation suite — CHECK 3.47 (24 tests)
+        run: npx jest scripts/__tests__/check-jest-partition.test.js --ci

@@ -1,3 +1,22 @@
+// 🔴 ΔΙΑΜΕΡΙΣΗ ΤΩΝ TEST (ADR-776 / CHECK 3.47) — ΜΗΝ ξαναγράψεις χειρόγραφη λίστα εδώ.
+//
+// Η προηγούμενη λίστα ήταν χειρόγραφη και **είχε αποκλίνει: 1 στα 4**. Ανέφερε μόνο το
+// `tests/firestore-rules`, ενώ υπάρχουν ΤΕΣΣΕΡΑ sibling configs — άρα 14 αρχεία έτρεχαν
+// **δύο φορές**, τη μία με `jsdom` αντί για `node`, δηλαδή με βεβαιότητα κόκκινα. Το
+// `jest.config.storage-rules.js` μάλιστα **γράφει στην κεφαλίδα του** ότι το default το
+// εξαιρεί· δεν το εξαίρεσε ποτέ. Οδηγία σε σχόλιο δεν είναι πύλη.
+//
+// Πλέον οι εξαιρέσεις **παράγονται** από δύο αυθεντίες (βλ. `derived-ignores.js`):
+//   (α) το `testMatch` των ίδιων των `jest.config.<κάτι>.js` — η δήλωση ιδιοκτησίας τους·
+//   (β) τα `.gitignore` — «το jest δεν τρέχει ΠΟΤΕ αρχείο που αγνοεί το git» (7 μεταγλωττισμένα
+//       διπλότυπα κάτω από `functions/lib/` έτρεχαν σε κάθε `npx jest`, μπαγιάτικα).
+// Νέο sibling config ⇒ καλύπτεται **δωρεάν**, χωρίς να το θυμηθεί κανείς.
+//
+// Οι τρεις γραμμές που μένουν χειρόγραφες είναι το **σύνορο του Playwright** (ADR-775) και
+// είναι σκόπιμες. Ότι συμφωνούν με το `playwright.config.ts` το αποδεικνύει η πύλη
+// `scripts/check-jest-partition.js`, όχι αυτό το σχόλιο.
+const { derivedTestPathIgnorePatterns } = require('./scripts/lib/jest-partition/derived-ignores');
+
 /** @type {import('jest').Config} */
 const config = {
   testEnvironment: 'jsdom',
@@ -6,11 +25,12 @@ const config = {
     '**/?(*.)+(spec|test).[jt]s?(x)'
   ],
   testPathIgnorePatterns: [
-    '/node_modules/',
+    // ── σύνορο Playwright (χειρόγραφο εκ σχεδιασμού· η πύλη επαληθεύει τη συμφωνία) ──
     '/e2e/',
     '\\.spec\\.(ts|tsx|js|jsx)$',
     'visual-cross-browser',
-    'tests/firestore-rules'
+    // ── ιδιοκτησία αδελφών + build output (παραγόμενα) ──
+    ...derivedTestPathIgnorePatterns(__dirname)
   ],
   moduleNameMapper: {
     // =================================================================
