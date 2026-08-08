@@ -34,6 +34,8 @@ import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformSt
 import { renderAxisCutLines } from '../../systems/axis-cut/axis-cut-line-renderer';
 import { perfStart, perfEnd } from '../../debug/perf-line-profile';
 import { LassoStore, computeLassoMode } from '../../systems/cursor/LassoStore';
+// ADR-775 §13 — η απογραφή ζωγραφικής: το σήμα ετοιμότητας παράγεται από την ΠΡΑΞΗ, όχι από τα δεδομένα.
+import { recordPaint } from '../../systems/paint-census/paint-census-store';
 // File-size SRP split (N.7.1) — bitmap-cache dirty/invalidate store subscriptions live in a
 // dedicated lifecycle hook (isolate / LayerStore / fonts / LWDISPLAY / background / BIM settings).
 import { useDxfCanvasCacheInvalidation } from './useDxfCanvasCacheInvalidation';
@@ -328,6 +330,13 @@ export function useDxfCanvasRenderer(params: DxfCanvasRendererParams) {
           }
         });
       }
+
+      // 🔴 ADR-775 §13 — ΤΟ ΚΑΡΕ ΟΛΟΚΛΗΡΩΘΗΚΕ. Η απογραφή μπαίνει **εδώ**, τελευταία μέσα στο
+      // `try`: ένα πέρασμα που πέταξε εξαίρεση στη μέση δεν είναι καρέ, και μια απογραφή που το
+      // μετρούσε θα ξαναέλεγε — με άλλη διατύπωση — το ίδιο ψέμα που τη γέννησε (σήμα
+      // ετοιμότητας που βεβαιώνει κάτι άλλο από αυτό που φωτογραφίζεται). Κόστος: μία αύξηση
+      // ακεραίου· η ειδοποίηση συνδρομητών είναι μάνταλο στο πρώτο καρέ (βλ. paint-census-store).
+      recordPaint('dxf-canvas');
     } catch (error) {
       logger.error('Failed to render DXF scene', { error });
     }

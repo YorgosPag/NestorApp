@@ -78,6 +78,34 @@ function isSidebarCollapsedRoute(pathname: string): boolean {
   return SIDEBAR_COLLAPSED_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
 }
 
+/**
+ * 🔴 ADR-775 §13 — Διαδρομές **γυμνής επιφάνειας**: κανένα κέλυφος εφαρμογής, καθόλου.
+ *
+ * ## Γιατί ΟΧΙ απλώς «κλειστό sidebar»
+ * Το `/test-harness/dxf-perf` είναι στη λίστα από πάνω με **αντίθετο** σκεπτικό, γραμμένο
+ * ρητά (ADR-726 §13.1): προσαρτά τον **ίδιο** viewer με το `/dxf/viewer` και οφείλει να
+ * μετρά τη **γεωμετρία που παραδίδεται**, άρα θέλει το κέλυφος. Το
+ * `/test-harness/dxf-canvas` είναι το ακριβώς αντίθετο πράγμα: προσαρτά **μόνο τον
+ * ζωγράφο**, και η φωτογραφία του είναι **συμβόλαιο** για τον ζωγράφο.
+ *
+ * ## Το πρότυπο (Skia GM · Rive)
+ * Ένα golden image test αποδίδει σε **καμβά σταθερού μεγέθους**: καμία μπάρα, κανένα
+ * sidebar, καμία γλώσσα. Ό,τι μπαίνει στο κάδρο και **δεν** το ζωγράφισε ο ζωγράφος είναι
+ * μελλοντικό ψευδώς-θετικό. Μετρημένο 2026-08-08: με το κέλυφος μέσα στο κάδρο, η καθαρή
+ * διαφορά της σουίτας ήταν **0 δομικά pixels** και **100%** θόρυβος κελύφους (αλλαγή
+ * γλώσσας el→en, νέα μπάρα «All jobs», token θέματος της εκστρατείας ADR-770) — δηλαδή
+ * 43 tests που έσπαγαν για λόγους **άσχετους με το DXF**.
+ *
+ * ⚠️ Η απομόνωση γίνεται **εδώ** και όχι με αδιαφανές `z-index` πάνω στο harness: ένα
+ * καπάκι κρύβει το κέλυφος **μέχρι** κάποιο μελλοντικό στοιχείο να πάρει μεγαλύτερο
+ * `z-index`, οπότε το κέλυφος επιστρέφει στο κάδρο **σιωπηλά**. Εδώ δεν αποδίδεται καθόλου.
+ */
+const BARE_SURFACE_ROUTES = ['/test-harness/dxf-canvas'] as const;
+
+function isBareSurfaceRoute(pathname: string): boolean {
+  return BARE_SURFACE_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));
+}
+
 interface ConditionalAppShellProps {
   children: React.ReactNode;
 }
@@ -209,6 +237,12 @@ export function ConditionalAppShell({ children }: ConditionalAppShellProps) {
   const isStandaloneRoute = isAuthRoute(pathname);
 
   const sidebarDefaultOpen = !isSidebarCollapsedRoute(pathname);
+
+  // ADR-775 §13 — γυμνή επιφάνεια: ελέγχεται ΠΡΩΤΗ και επιστρέφει τα children ωμά. Το
+  // `TooltipProvider` μένει από πάνω για να κρατηθεί ένα και μόνο σημείο εξόδου.
+  if (isBareSurfaceRoute(pathname)) {
+    return <TooltipProvider delayDuration={300}>{children}</TooltipProvider>;
+  }
 
   return (
     <TooltipProvider delayDuration={300}>

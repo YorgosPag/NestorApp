@@ -2,12 +2,36 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import styles from './DxfCanvasHarness.module.css';
 import type { DxfScene } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/dxf-types';
 import type { ViewTransform, Point2D } from '@/subapps/dxf-viewer/rendering/types/Types';
 import type { DxfCanvas as DxfCanvasType, DxfCanvasRef } from '@/subapps/dxf-viewer/canvas-v2/dxf-canvas/DxfCanvas';
 import type { GridSettings, RulerSettings } from '@/subapps/dxf-viewer/canvas-v2/layer-canvas/layer-types';
 import type { PreviewCanvas as PreviewCanvasType, PreviewCanvasHandle } from '@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas';
 import type { ExtendedSceneEntity } from '@/subapps/dxf-viewer/hooks/drawing/drawing-types';
+// 🔴 ADR-775 §13 — ΤΟ ΔΟΚΙΜΑΣΤΗΡΙΟ ΟΦΕΙΛΕΙ ΤΑ ΙΔΙΑ ΣΥΜΦΡΑΖΟΜΕΝΑ ΜΕ ΤΗΝ ΠΑΡΑΓΩΓΗ.
+// Ο `DxfCanvas` καλεί `useCursor()` (μέσω `useCentralizedMouseHandlers`) ήδη από το
+// `83729ea4` — δηλαδή **πριν καν γεννηθεί** η σουίτα e2e. Χωρίς `CursorSystem` πάνω του
+// πετούσε «useCursor must be used within a CursorSystem», η σελίδα αντικαθιστούσε τον εαυτό
+// της με το route error boundary, και **κάθε** golden φωτογράφιζε τη σελίδα σφάλματος: η
+// σουίτα ήταν δομικά ανίκανη να προσαρτήσει καμβά από την πρώτη της μέρα.
+// ⚠️ Ο πάροχος είναι ο **παραγωγικός** (ίδιος με `DxfViewerApp.tsx`) και όχι διπλότυπο
+// δοκιμών: ένα ψεύτικο context θα δοκίμαζε τον εαυτό του.
+// ⚠️ ΔΥΟ πάροχοι, με τη σειρά ΤΗΣ ΠΑΡΑΓΩΓΗΣ (`DxfViewerApp`: SnapProvider ⊃ CursorSystem).
+// Είναι **ακριβώς** όσοι απαιτεί η διαδρομή του καμβά — `useCursor` (DxfCanvas) και
+// `useSnapContext` (useCentralizedMouseHandlers + useSnapManager) — και κανείς παραπάνω:
+// ένα δοκιμαστήριο που σέρνει μαζί του Firestore/auth παύει να δοκιμάζει τον ζωγράφο.
+import { CursorSystem } from '@/subapps/dxf-viewer/systems/cursor';
+import { SnapProvider } from '@/subapps/dxf-viewer/snapping/context/SnapContext';
+// ADR-040 Φάση XXII.B — το ζωντανό SSoT του μετασχηματισμού· ο ζωγράφος διαβάζει ΑΠΟ ΕΔΩ.
+import {
+  updateImmediateTransform,
+  getImmediateTransform,
+} from '@/subapps/dxf-viewer/systems/cursor/ImmediateTransformStore';
+// 🔑 SSoT κόσμος→οθόνη (άγκυρα: κάτω-αριστερή γωνία της περιοχής σχεδίασης + αναστροφή Y).
+import { CoordinateTransforms } from '@/subapps/dxf-viewer/rendering/core/CoordinateTransforms';
+import { useHasPainted } from '@/subapps/dxf-viewer/systems/paint-census/use-has-painted';
+import { getPaintCount } from '@/subapps/dxf-viewer/systems/paint-census/paint-census-store';
 
 const PreviewCanvas = dynamic(
   () => import('@/subapps/dxf-viewer/canvas-v2/preview-canvas/PreviewCanvas').then(m => m.PreviewCanvas),
@@ -39,6 +63,14 @@ declare global {
       removeSceneEntity: (id: string) => void;
       showSnap: (type: string, wx: number, wy: number) => void;
       hideSnap: () => void;
+      /**
+       * ADR-775 §13 — πόσα καρέ **ολοκλήρωσε** ο ζωγράφος του DXF καμβά.
+       *
+       * Εκτεθειμένο ώστε ένα test να μπορεί να διαγνώσει τη διαφορά ανάμεσα σε «δεν φόρτωσε»
+       * και «φόρτωσε αλλά δεν ζωγράφισε» — οι δύο καταστάσεις παρήγαγαν **ταυτόσημη** άδεια
+       * φωτογραφία επί τρεις μήνες.
+       */
+      paintCount: () => number;
     };
   }
 }
@@ -95,6 +127,9 @@ export default function DxfCanvasHarness() {
   const [snapResult, setSnapResult] = useState<{ point: { x: number; y: number }; type: string } | null>(null);
   const selectedEntityIdsRef = useRef<string[]>([]);
   selectedEntityIdsRef.current = selectedEntityIds;
+  // 🔴 ADR-775 §13 — το σήμα ετοιμότητας το παράγει ο ΖΩΓΡΑΦΟΣ. Μάνταλο: ένα re-render
+  // συνολικά, όχι ένα ανά καρέ (βλ. paint-census-store, «γιατί μόνο στο πρώτο καρέ»).
+  const painterReady = useHasPainted('dxf-canvas');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -112,9 +147,28 @@ export default function DxfCanvasHarness() {
       .catch(e => setError(String(e)));
   }, [urlParams.fixture]);
 
-  const handleTransformChange = useCallback((t: ViewTransform) => {
+  /**
+   * 🔴 ADR-775 §13 — Ο ΖΩΓΡΑΦΟΣ ΔΙΑΒΑΖΕΙ ΤΟ SSoT, ΟΧΙ ΤΟ REACT STATE.
+   *
+   * Από το ADR-040 Φάση XXII.B το `transform` **έπαψε** να είναι prop του `DxfCanvas`: ο
+   * βρόχος καλεί `getImmediateTransform()`. Το δοκιμαστήριο όμως κρατούσε τον μετασχηματισμό
+   * **μόνο** σε React state, οπότε `fitToView` / `zoomIn` / `zoomOut` ενημέρωναν κάτι που
+   * **κανείς δεν διάβαζε** — μετρημένο 2026-08-08: μετά από `fitToView` το `paintCount`
+   * έμεινε `3` και τα pixels **ταυτόσημα**. Κάθε test ζουμ/κάδρου ήταν δομικά νεκρό, ακόμη
+   * κι όταν ο καμβάς προσαρτήθηκε.
+   *
+   * Γράφουμε **και στα δύο**: στο SSoT για τον ζωγράφο (ίδια κίνηση με το παραγωγικό
+   * `useViewportManager.setTransform`), και σε React state επειδή `PreviewCanvas` και
+   * `SnapIndicatorOverlay` δέχονται ακόμη `transform` ως prop.
+   */
+  const applyTransform = useCallback((t: ViewTransform) => {
+    updateImmediateTransform(t);
     setTransform(t);
   }, []);
+
+  const handleTransformChange = useCallback((t: ViewTransform) => {
+    applyTransform(t);
+  }, [applyTransform]);
 
   const handleEntitySelect = useCallback((entityId: string | null) => {
     setSelectedEntityIds(entityId ? [entityId] : []);
@@ -153,17 +207,19 @@ export default function DxfCanvasHarness() {
   }), [selectedEntityIds]);
 
   const handleWheelZoom = useCallback((wheelDelta: number, center: Point2D) => {
-    setTransform(prev => {
-      const factor = wheelDelta < 0 ? 1.5 : 0.667;
-      const newScale = Math.max(0.001, Math.min(500, prev.scale * factor));
-      const ratio = newScale / prev.scale;
-      return {
-        scale: newScale,
-        offsetX: center.x - (center.x - prev.offsetX) * ratio,
-        offsetY: center.y - (center.y - prev.offsetY) * ratio,
-      };
+    // Το «προηγούμενο» διαβάζεται από το SSoT και όχι από το React state: μετά τη διόρθωση
+    // του ADR-775 §13 το state είναι **καθρέφτης**, και ένα ζουμ που συνθέτει πάνω σε
+    // καθρέφτη θα ξαναγεννούσε την ίδια απόκλιση από την πρώτη χειρονομία.
+    const prev = getImmediateTransform();
+    const factor = wheelDelta < 0 ? 1.5 : 0.667;
+    const newScale = Math.max(0.001, Math.min(500, prev.scale * factor));
+    const ratio = newScale / prev.scale;
+    applyTransform({
+      scale: newScale,
+      offsetX: center.x - (center.x - prev.offsetX) * ratio,
+      offsetY: center.y - (center.y - prev.offsetY) * ratio,
     });
-  }, []);
+  }, [applyTransform]);
 
   useEffect(() => {
     window.__dxfTest = {
@@ -171,14 +227,29 @@ export default function DxfCanvasHarness() {
       zoomIn: () => canvasRef.current?.zoomAtScreenPoint(2, { x: 640, y: 400 }),
       zoomOut: () => canvasRef.current?.zoomAtScreenPoint(0.5, { x: 640, y: 400 }),
       getRef: () => canvasRef.current,
-      isReady: () => !!(canvasRef.current && scene),
+      // ADR-775 §13 — «έτοιμο» σημαίνει **ζωγράφισε**. Το παλιό `canvasRef && scene` ήταν
+      // αληθές και σε σελίδα που δεν είχε προσαρτήσει ποτέ καμβά.
+      isReady: () => !!(canvasRef.current && scene) && getPaintCount('dxf-canvas') > 0,
+      paintCount: () => getPaintCount('dxf-canvas'),
       selectEntities: (ids: string[]) => setSelectedEntityIds(ids),
       clearSelection: () => setSelectedEntityIds([]),
       getSelectedEntityIds: () => selectedEntityIdsRef.current,
-      worldToScreen: (wx: number, wy: number) => {
-        const t = canvasRef.current?.getTransform() ?? transform;
-        return { x: wx * t.scale + t.offsetX, y: t.offsetY - wy * t.scale };
-      },
+      /**
+       * 🔴 ADR-775 §13 — ΤΟ SSoT, ΟΧΙ ΧΕΙΡΟΓΡΑΦΟΣ ΤΥΠΟΣ.
+       *
+       * Ήταν `{ x: wx*scale + offsetX, y: offsetY − wy*scale }` — ένας τύπος που **δεν
+       * υπάρχει πουθενά αλλού στην εφαρμογή**. Ο ζωγράφος αγκυρώνει στην κάτω-αριστερή γωνία
+       * της **περιοχής σχεδίασης** (`DRAWING_AREA_CHROME`), δηλαδή `area.bottom − offsetY −
+       * wy·scale`. Μετρημένο 2026-08-08 στον αρχικό μετασχηματισμό (`offsetY=770`,
+       * viewport 800): ο χειρόγραφος τύπος έλεγε `y=670`, ο ζωγράφος ζωγράφιζε στο `y=−70`
+       * — **740px σφάλμα**. Κάθε test hover / click / επιλογής της σουίτας στόχευε επί
+       * τρεις μήνες σε λάθος pixel, και «δεν βρέθηκε οντότητα» ήταν το **αναμενόμενο**
+       * αποτέλεσμα ενός υγιούς renderer.
+       *
+       * Δεύτερος τύπος για την ίδια ερώτηση = δεύτερη αλήθεια που αποκλίνει σιωπηλά.
+       */
+      worldToScreen: (wx: number, wy: number) =>
+        CoordinateTransforms.worldToScreen({ x: wx, y: wy }, getImmediateTransform(), HARNESS_VIEWPORT),
       drawPreview: (entity: Record<string, unknown>) =>
         previewCanvasRef.current?.drawPreview(entity as unknown as ExtendedSceneEntity),
       clearPreview: () => previewCanvasRef.current?.clear(),
@@ -203,13 +274,28 @@ export default function DxfCanvasHarness() {
   }
 
   return (
+    <SnapProvider>
+    <CursorSystem>
     <main className="fixed inset-0 overflow-hidden bg-background">
       {scene ? (
-        <section data-testid="dxf-canvas-ready" className="relative w-full h-full">
+        // 🔴 ADR-775 §13 — ΔΥΟ ΞΕΧΩΡΙΣΤΑ testid, ΠΟΤΕ ΕΝΑ ΜΕ «Ή».
+        // `dxf-canvas-painting` = «τα δεδομένα έφτασαν, ο ζωγράφος δεν έχει βγάλει καρέ» ·
+        // `dxf-canvas-ready`    = «ολοκληρώθηκε καρέ». Ένα μόνο testid που σήμαινε και τα δύο
+        // είναι ακριβώς η βλάβη: το test περίμενε το σήμα, το έβρισκε, και φωτογράφιζε το
+        // τίποτα. Το `dxf-canvas-painting` **δεν είναι διακοσμητικό** — είναι το πράγμα που
+        // ένα timeout μπορεί να δείξει με το δάχτυλο αντί να σιωπήσει.
+        <section
+          data-testid={painterReady ? 'dxf-canvas-ready' : 'dxf-canvas-painting'}
+          className={styles.surface}
+        >
+          {/* ⚠️ ΚΑΝΕΝΑ `transform` prop: από το ADR-040 XXII.B ο `DxfCanvas` ΔΕΝ το δέχεται
+              (διαβάζει το ImmediateTransformStore). Περνώντας το, έπεφτε στο `{...props}`
+              και κατέληγε ως attribute πάνω στο ίδιο το `<canvas>` — θόρυβος που έμοιαζε
+              με ενσύρματη σύνδεση και δεν ήταν. Το `PreviewCanvas`/`SnapIndicatorOverlay`
+              το δέχονται κανονικά και το κρατούν. */}
           <DxfCanvas
             ref={canvasRef}
             scene={scene}
-            transform={transform}
             onTransformChange={handleTransformChange}
             onWheelZoom={handleWheelZoom}
             onEntitySelect={handleEntitySelect}
@@ -236,5 +322,7 @@ export default function DxfCanvasHarness() {
         <div data-testid="loading" className="fixed inset-0" />
       )}
     </main>
+    </CursorSystem>
+    </SnapProvider>
   );
 }

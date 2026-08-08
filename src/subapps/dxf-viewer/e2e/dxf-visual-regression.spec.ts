@@ -20,6 +20,8 @@ declare global {
       removeSceneEntity: (id: string) => void;
       showSnap: (type: string, wx: number, wy: number) => void;
       hideSnap: () => void;
+      /** ADR-775 §13 — καρέ που ΟΛΟΚΛΗΡΩΣΕ ο ζωγράφος. `0` = δεν ζωγράφισε ποτέ. */
+      paintCount: () => number;
     };
   }
 }
@@ -28,9 +30,32 @@ const BASE_URL = '/test-harness/dxf-canvas';
 const CANVAS_READY = '[data-testid="dxf-canvas-ready"]';
 const SCREENSHOT_OPTIONS = { threshold: 0.01, maxDiffPixelRatio: 0.001 };
 
+/**
+ * 🔴 ADR-775 §13 — Η ΕΠΙΦΑΝΕΙΑ ΤΟΥ ΖΩΓΡΑΦΟΥ, ΟΧΙ Η ΣΕΛΙΔΑ.
+ *
+ * Κάθε assertion αυτής της σουίτας φωτογράφιζε `page`, δηλαδή **ολόκληρη την εφαρμογή** με
+ * ετικέτα DXF. Μετρημένο 2026-08-08: η καθαρή διαφορά ανάμεσα σε golden και τρέχον ήταν
+ * ομοιόμορφη μετατόπιση φόντου `(5,2,−5)` σε **100%** της περιοχής και **0 δομικά pixels** —
+ * ολόκληρος ο θόρυβος ερχόταν από το κέλυφος (γλώσσα el→en, νέα μπάρα «All jobs», token
+ * θέματος της εκστρατείας ADR-770). Ένα συμβόλαιο που σπάει όταν αλλάξει μια μπάρα **δεν
+ * είναι** συμβόλαιο για τον ζωγράφο.
+ *
+ * Το πρότυπο είναι τα **GM tests** του Skia: απόδοση σε καμβά σταθερού μεγέθους, τίποτα άλλο
+ * μέσα στο κάδρο. Ο locator είναι ο ΙΔΙΟΣ με το σήμα ετοιμότητας, και αυτό είναι σκόπιμο:
+ * φωτογραφίζεται **ακριβώς** η επιφάνεια που δήλωσε ότι ζωγράφισε.
+ */
+function surface(page: Page) {
+  return page.locator(CANVAS_READY);
+}
+
 async function loadHarness(page: Page, path = BASE_URL): Promise<void> {
   await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.locator(CANVAS_READY).waitFor({ timeout: 120000 });
+  // 🔴 ADR-775 §13 — ΡΗΤΗ επιβεβαίωση ότι ζωγραφίστηκε καρέ. Το `CANVAS_READY` το εγγυάται
+  // ήδη (μπαίνει από το `paintCount > 0`), αλλά μια μελλοντική παλινδρόμηση που θα το
+  // ξανασυνέδεε με τα ΔΕΔΟΜΕΝΑ θα ήταν πάλι **σιωπηλή** — και ακριβώς αυτή η σιωπή κόστισε
+  // τρεις μήνες και 39 άκυρα golden. Δύο ανεξάρτητες ερωτήσεις, ποτέ μία.
+  expect(await page.evaluate(() => window.__dxfTest.paintCount())).toBeGreaterThan(0);
   await page.waitForTimeout(300);
 }
 
@@ -42,13 +67,13 @@ async function fitAndWait(page: Page): Promise<void> {
 test.describe('DXF Canvas Visual Regression', () => {
   test('idle — DXF loaded, default transform', async ({ page }) => {
     await loadHarness(page);
-    await expect(page).toHaveScreenshot('idle.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('idle.png', SCREENSHOT_OPTIONS);
   });
 
   test('fit-to-view — scene fitted to viewport', async ({ page }) => {
     await loadHarness(page);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('fit-to-view.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('fit-to-view.png', SCREENSHOT_OPTIONS);
   });
 
   test('zoom-2x — 1.5× zoom in from fit', async ({ page }) => {
@@ -56,7 +81,7 @@ test.describe('DXF Canvas Visual Regression', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.zoomIn());
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('zoom-2x.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('zoom-2x.png', SCREENSHOT_OPTIONS);
   });
 
   test('zoom-0.5x — 0.67× zoom out from fit', async ({ page }) => {
@@ -64,7 +89,7 @@ test.describe('DXF Canvas Visual Regression', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.zoomOut());
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('zoom-0.5x.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('zoom-0.5x.png', SCREENSHOT_OPTIONS);
   });
 
   test('hover-entity — crosshair over scene center', async ({ page }) => {
@@ -72,7 +97,7 @@ test.describe('DXF Canvas Visual Regression', () => {
     await fitAndWait(page);
     await page.mouse.move(640, 400);
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('hover-entity.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('hover-entity.png', SCREENSHOT_OPTIONS);
   });
 
   test('selection-box — drag marquee over scene', async ({ page }) => {
@@ -82,14 +107,14 @@ test.describe('DXF Canvas Visual Regression', () => {
     await page.mouse.down();
     await page.mouse.move(700, 500, { steps: 5 });
     await page.waitForTimeout(100);
-    await expect(page).toHaveScreenshot('selection-box.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('selection-box.png', SCREENSHOT_OPTIONS);
     await page.mouse.up();
   });
 
   test('ruler-grid — rulers and grid active', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?rulers=1&grid=1`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('ruler-grid.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('ruler-grid.png', SCREENSHOT_OPTIONS);
   });
 });
 
@@ -97,37 +122,37 @@ test.describe('Phase 2 — Entity Rendering', () => {
   test('entity-line — horizontal + diagonal + vertical lines', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-line`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('entity-line.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-line.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-circle — large + small concentric circles', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-circle`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('entity-circle.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-circle.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-arc — semicircle + quarter arc (CCW flag)', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-arc`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('entity-arc.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-arc.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-polyline — closed polygon + open path', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-polyline`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('entity-polyline.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-polyline.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-text — normal label + 45° rotated text', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-text`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('entity-text.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-text.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-angle — 90° + 45° angle measurements', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-angle`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('entity-angle.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-angle.png', SCREENSHOT_OPTIONS);
   });
 });
 
@@ -138,7 +163,7 @@ test.describe('Phase 3 — Selection', () => {
     const pos = await page.evaluate(() => window.__dxfTest.worldToScreen(250, 200));
     await page.mouse.click(pos.x, pos.y);
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('click-to-select.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('click-to-select.png', SCREENSHOT_OPTIONS);
   });
 
   test('multi-select — two entities selected programmatically', async ({ page }) => {
@@ -146,7 +171,7 @@ test.describe('Phase 3 — Selection', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.selectEntities(['line-bottom', 'circle-1']));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('multi-select.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('multi-select.png', SCREENSHOT_OPTIONS);
   });
 
   test('select-all — Ctrl+A selects every entity', async ({ page }) => {
@@ -154,7 +179,7 @@ test.describe('Phase 3 — Selection', () => {
     await fitAndWait(page);
     await page.keyboard.press('Control+a');
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('select-all.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('select-all.png', SCREENSHOT_OPTIONS);
   });
 
   test('deselect — clearSelection returns to unselected state', async ({ page }) => {
@@ -164,7 +189,7 @@ test.describe('Phase 3 — Selection', () => {
     await page.waitForTimeout(200);
     await page.evaluate(() => window.__dxfTest.clearSelection());
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('deselect.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('deselect.png', SCREENSHOT_OPTIONS);
   });
 
   test('select-then-delete — Delete key removes selected entity', async ({ page }) => {
@@ -174,7 +199,7 @@ test.describe('Phase 3 — Selection', () => {
     await page.waitForTimeout(200);
     await page.keyboard.press('Delete');
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('select-then-delete.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('select-then-delete.png', SCREENSHOT_OPTIONS);
   });
 });
 
@@ -189,7 +214,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
       start: { x: 150, y: 150 }, end: { x: 350, y: 220 },
     }));
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('draw-line-preview.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('draw-line-preview.png', SCREENSHOT_OPTIONS);
   });
 
   test('draw-circle-preview — circle with radius arm cursor', async ({ page }) => {
@@ -204,7 +229,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
       showPreviewMeasurements: true,
     }));
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('draw-circle-preview.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('draw-circle-preview.png', SCREENSHOT_OPTIONS);
   });
 
   test('draw-arc-preview — 3-point arc with construction lines', async ({ page }) => {
@@ -221,7 +246,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
       constructionLineMode: 'polyline',
     }));
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('draw-arc-preview.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('draw-arc-preview.png', SCREENSHOT_OPTIONS);
   });
 
   test('draw-polyline-preview — open polyline in progress', async ({ page }) => {
@@ -238,7 +263,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
       closed: false,
     }));
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('draw-polyline-preview.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('draw-polyline-preview.png', SCREENSHOT_OPTIONS);
   });
 
   test('draw-rectangle-preview — closed polyline rectangle', async ({ page }) => {
@@ -255,7 +280,7 @@ test.describe('Phase 4 — Drawing Tool Previews', () => {
       closed: true,
     }));
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('draw-rectangle-preview.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('draw-rectangle-preview.png', SCREENSHOT_OPTIONS);
   });
 });
 
@@ -267,7 +292,7 @@ test.describe('Phase 5 — Entity Operations', () => {
       center: { x: 340, y: 260 },
     }));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('entity-moved.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-moved.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-copied — line duplicated with offset', async ({ page }) => {
@@ -279,7 +304,7 @@ test.describe('Phase 5 — Entity Operations', () => {
       start: { x: 100, y: 130 }, end: { x: 400, y: 130 },
     }));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('entity-copied.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-copied.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-multi-removed — arc and text removed from scene', async ({ page }) => {
@@ -290,7 +315,7 @@ test.describe('Phase 5 — Entity Operations', () => {
       window.__dxfTest.removeSceneEntity('text-1');
     });
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('entity-multi-removed.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-multi-removed.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-color-changed — circle color updated to cyan', async ({ page }) => {
@@ -300,7 +325,7 @@ test.describe('Phase 5 — Entity Operations', () => {
       color: '#00ffff', lineWidth: 3,
     }));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('entity-color-changed.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-color-changed.png', SCREENSHOT_OPTIONS);
   });
 
   test('entity-added — new large circle added to scene', async ({ page }) => {
@@ -312,7 +337,7 @@ test.describe('Phase 5 — Entity Operations', () => {
       center: { x: 250, y: 200 }, radius: 120,
     }));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('entity-added.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('entity-added.png', SCREENSHOT_OPTIONS);
   });
 });
 
@@ -322,7 +347,7 @@ test.describe('Phase 6 — Snap Indicators', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.showSnap('endpoint', 100, 100));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('snap-endpoint.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('snap-endpoint.png', SCREENSHOT_OPTIONS);
   });
 
   test('snap-midpoint — triangle marker at line midpoint', async ({ page }) => {
@@ -330,7 +355,7 @@ test.describe('Phase 6 — Snap Indicators', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.showSnap('midpoint', 250, 100));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('snap-midpoint.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('snap-midpoint.png', SCREENSHOT_OPTIONS);
   });
 
   test('snap-center — circle marker at entity center', async ({ page }) => {
@@ -338,7 +363,7 @@ test.describe('Phase 6 — Snap Indicators', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.showSnap('center', 250, 200));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('snap-center.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('snap-center.png', SCREENSHOT_OPTIONS);
   });
 
   test('snap-intersection — X marker at corner intersection', async ({ page }) => {
@@ -346,7 +371,7 @@ test.describe('Phase 6 — Snap Indicators', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.showSnap('intersection', 400, 300));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('snap-intersection.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('snap-intersection.png', SCREENSHOT_OPTIONS);
   });
 
   test('snap-perpendicular — right-angle marker on line', async ({ page }) => {
@@ -354,7 +379,7 @@ test.describe('Phase 6 — Snap Indicators', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.showSnap('perpendicular', 100, 200));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('snap-perpendicular.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('snap-perpendicular.png', SCREENSHOT_OPTIONS);
   });
 
   test('snap-grid — dot marker at grid point', async ({ page }) => {
@@ -362,14 +387,14 @@ test.describe('Phase 6 — Snap Indicators', () => {
     await fitAndWait(page);
     await page.evaluate(() => window.__dxfTest.showSnap('grid', 200, 150));
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('snap-grid.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('snap-grid.png', SCREENSHOT_OPTIONS);
   });
 });
 
 test.describe('Phase 7 — Edge Cases', () => {
   test('empty-scene — canvas renders with no entities', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=empty-scene`);
-    await expect(page).toHaveScreenshot('empty-scene.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('empty-scene.png', SCREENSHOT_OPTIONS);
   });
 
   test('extreme-zoom-in — 16× zoom shows sub-entity detail', async ({ page }) => {
@@ -380,7 +405,7 @@ test.describe('Phase 7 — Edge Cases', () => {
       await page.waitForTimeout(100);
     }
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('extreme-zoom-in.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('extreme-zoom-in.png', SCREENSHOT_OPTIONS);
   });
 
   test('extreme-zoom-out — 0.06× zoom shows scene as small cluster', async ({ page }) => {
@@ -391,13 +416,13 @@ test.describe('Phase 7 — Edge Cases', () => {
       await page.waitForTimeout(100);
     }
     await page.waitForTimeout(200);
-    await expect(page).toHaveScreenshot('extreme-zoom-out.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('extreme-zoom-out.png', SCREENSHOT_OPTIONS);
   });
 
   test('dense-scene — 34 overlapping entities render without corruption', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=dense-scene`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('dense-scene.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('dense-scene.png', SCREENSHOT_OPTIONS);
   });
 
   test('loading-state — blank canvas before fixture resolves', async ({ page }) => {
@@ -408,7 +433,7 @@ test.describe('Phase 7 — Edge Cases', () => {
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.locator('[data-testid="loading"]').waitFor({ timeout: 15000 });
     await page.waitForTimeout(300);
-    await expect(page).toHaveScreenshot('loading-state.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('loading-state.png', SCREENSHOT_OPTIONS);
   });
 });
 
@@ -416,19 +441,19 @@ test.describe('Phase 8 — Text Rendering', () => {
   test('text-entity-normal — plain text entity with height + color', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-text`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('text-entity-normal.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('text-entity-normal.png', SCREENSHOT_OPTIONS);
   });
 
   test('text-entity-rotated — text rotated 45 degrees', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=entity-text`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('text-entity-rotated.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('text-entity-rotated.png', SCREENSHOT_OPTIONS);
   });
 
   test('text-mtext-multiline — mtext block + colored text + small label', async ({ page }) => {
     await loadHarness(page, `${BASE_URL}?fixture=text-mtext-multiline`);
     await fitAndWait(page);
-    await expect(page).toHaveScreenshot('text-mtext-multiline.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('text-mtext-multiline.png', SCREENSHOT_OPTIONS);
   });
 
   test('text-layer-hidden — text on hidden layer not rendered', async ({ page }) => {
@@ -438,6 +463,6 @@ test.describe('Phase 8 — Text Rendering', () => {
       window.__dxfTest.updateSceneEntity('text-small', { visible: false }),
     );
     await page.waitForTimeout(150);
-    await expect(page).toHaveScreenshot('text-layer-hidden.png', SCREENSHOT_OPTIONS);
+    await expect(surface(page)).toHaveScreenshot('text-layer-hidden.png', SCREENSHOT_OPTIONS);
   });
 });
