@@ -19,7 +19,12 @@ import i18next from 'i18next';
 import ICU from 'i18next-icu';
 import { initReactI18next, I18nextProvider } from 'react-i18next';
 import elDxfViewer from '@/i18n/locales/el/dxf-viewer.json';
-import { TableFormatCellsDialog } from '../format-cells-dialog/TableFormatCellsDialog';
+import {
+  TableFormatCellsDialog,
+  type TableFormatCellsDialogProps,
+} from '../format-cells-dialog/TableFormatCellsDialog';
+import { TABLE_FORMAT_COMMIT_REFUSAL_KEY } from '../format-cells-dialog/table-format-cells-labels';
+import type { TableFormatCommitPlan } from '@/subapps/dxf-viewer/bim/table/table-format-commit-plan';
 import {
   TABLE_ALIGN_CODES,
   type TableFormatCellsTabId,
@@ -81,7 +86,8 @@ function persisted(): PersistedTableModel {
 const SCOPE = { kind: 'range' as const, bounds: { firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 } };
 
 function target(): FormatTarget {
-  return { model: persisted(), style: STANDARD, scope: SCOPE, layerColors: [] };
+  // §63 — ο στόχος κουβαλά **ποιος** πίνακας, όχι μόνο τι μοντέλο.
+  return { entityId: 'entity-1', model: persisted(), style: STANDARD, scope: SCOPE, layerColors: [] };
 }
 
 /**
@@ -93,13 +99,17 @@ function target(): FormatTarget {
  */
 function DialogHarness(props: {
   readonly startTab: TableFormatCellsTabId;
-  readonly onCommit: (model: PersistedTableModel) => void;
+  readonly onCommit: TableFormatCellsDialogProps['onCommit'];
   readonly onClose: () => void;
 }): React.ReactElement {
   const [tab, setTab] = React.useState<TableFormatCellsTabId>(props.startTab);
+  // 🔴 §63 — ο στόχος είναι **σταθερός** ανά mount, όπως στην παραγωγή (`key={request.id}`): ένα
+  // `target()` ανά render θα έδινε νέο `model` by-reference σε κάθε πάτημα καρτέλας, δηλαδή θα
+  // κατέστρεφε ακριβώς τη βάση σύγκρισης που κρίνει το πλάνο δέσμευσης.
+  const [fixedTarget] = React.useState(target);
   return (
     <TableFormatCellsDialog
-      target={target()}
+      target={fixedTarget}
       tab={tab}
       onTabSelect={setTab}
       onCommit={props.onCommit}
@@ -108,8 +118,18 @@ function DialogHarness(props: {
   );
 }
 
-function renderDialog(startTab: TableFormatCellsTabId = 'number') {
-  const onCommit = jest.fn();
+/**
+ * @param plan τι απαντά η θύρα στο «ΟΚ». Προεπιλογή: **δέχεται** — ό,τι έκανε πάντα η θύρα πριν
+ *   το §63 της δώσει τη δυνατότητα να αρνηθεί.
+ */
+function renderDialog(
+  startTab: TableFormatCellsTabId = 'number',
+  plan: TableFormatCommitPlan | null = null,
+) {
+  const onCommit = jest.fn(
+    (_t: FormatTarget, model: PersistedTableModel): TableFormatCommitPlan =>
+      plan ?? { status: 'accepted', model },
+  );
   const onClose = jest.fn();
   render(
     <DialogHarness startTab={startTab} onCommit={onCommit} onClose={onClose} />,
@@ -118,10 +138,14 @@ function renderDialog(startTab: TableFormatCellsTabId = 'number') {
   return { onCommit, onClose };
 }
 
-/** Το μοντέλο που παραδόθηκε στο ΟΚ — και **μόνο** αυτό (η άγκυρα «ένα commit»). */
-function committed(onCommit: jest.Mock): PersistedTableModel {
+/**
+ * Το μοντέλο που παραδόθηκε στο ΟΚ — και **μόνο** αυτό (η άγκυρα «ένα commit»).
+ *
+ * §63 — **δεύτερο** όρισμα: το πρώτο είναι ο στόχος, ώστε η θύρα να μη μαντεύει πού γράφει.
+ */
+function committed(onCommit: ReturnType<typeof renderDialog>['onCommit']): PersistedTableModel {
   expect(onCommit).toHaveBeenCalledTimes(1);
-  return onCommit.mock.calls[0][0] as PersistedTableModel;
+  return onCommit.mock.calls[0][1];
 }
 
 function clickOk(): void {
@@ -181,7 +205,7 @@ describe('§60 — η καρτέλα «Αριθμός»', () => {
 
     const model = committed(onCommit);
     const state = resolveTableNumberFormatState({
-      model, style: STANDARD, scope: SCOPE, layerColors: [],
+      entityId: 'entity-1', model, style: STANDARD, scope: SCOPE, layerColors: [],
     });
     expect(state.current?.kind).toBe('percent');
     expect(state.explicit).toBe(true);
@@ -196,7 +220,7 @@ describe('§60 — η καρτέλα «Αριθμός»', () => {
 
     const model = committed(onCommit);
     const state = resolveTableNumberFormatState({
-      model, style: STANDARD, scope: SCOPE, layerColors: [],
+      entityId: 'entity-1', model, style: STANDARD, scope: SCOPE, layerColors: [],
     });
     expect(state.current?.kind).toBe('decimal');
   });
@@ -208,6 +232,56 @@ describe('§60 — η καρτέλα «Αριθμός»', () => {
 
     expect(onCommit).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // ── §63. ΤΟ «ΟΚ» ΕΝΟΣ ΑΙΩΡΟΥΜΕΝΟΥ ΔΙΑΛΟΓΟΥ ──────────────────────────────────
+  //
+  // 🔴 Το ελάττωμα που κλείνουν αυτές οι τρεις άγκυρες: ο διάλογος έκλεινε **άνευ όρων** μετά το
+  // «ΟΚ», ενώ η θύρα ρωτούσε τον **δρομέα** για το πού γράφει. Με `Escape` έξω από την παλέτα η
+  // συνεδρία πέθαινε, το `commitModel` έπεφτε σε `if (!live) return`, και ο χρήστης έβλεπε τον
+  // διάλογο να κλείνει — δηλαδή **σιωπηλή απώλεια εργασίας που έμοιαζε με επιτυχία**.
+
+  it('🔴 §63 ο ΣΤΟΧΟΣ ταξιδεύει με το «ΟΚ» — η θύρα δεν μαντεύει ποτέ πού γράφει', () => {
+    const { onCommit } = renderDialog();
+    fireEvent.click(screen.getByRole('option', { name: 'Ποσοστό' }));
+    clickOk();
+
+    // Πρώτο όρισμα = ο στόχος, **με ταυτότητα οντότητας**. Χωρίς αυτό, το «ποιος πίνακας»
+    // ξαναμαντεύεται τη στιγμή της γραφής από κατάσταση που ο διάλογος δεν ελέγχει.
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    expect(onCommit.mock.calls[0][0].entityId).toBe('entity-1');
+  });
+
+  it('🔴 §63 ΑΡΝΗΣΗ ⇒ ο διάλογος ΜΕΝΕΙ ανοιχτός και ΛΕΕΙ γιατί — ποτέ σιωπηλό κλείσιμο', () => {
+    const { onCommit, onClose } = renderDialog('number', {
+      status: 'refused',
+      reason: 'target-changed',
+    });
+    fireEvent.click(screen.getByRole('option', { name: 'Ποσοστό' }));
+    clickOk();
+
+    expect(onCommit).toHaveBeenCalledTimes(1);
+    // 🔴 Η ουσία: **δεν** έκλεισε. Ο χρήστης κρατά τις ρυθμίσεις του.
+    expect(onClose).not.toHaveBeenCalled();
+    // Και μαθαίνει τον λόγο, ανακοινώσιμα.
+    const alert = screen.getByRole('alert');
+    expect(alert.textContent).toBe(
+      elDxfViewer.table.formatCells.refusal.targetChanged,
+    );
+    // Η ταυτότητα του κλειδιού ελέγχεται ρητά: ένα λάθος κλειδί θα έβαφε ωμό κείμενο και το
+    // παραπάνω `toBe` θα το έλεγε, αλλά αυτό εδώ δείχνει **ποιο** κλειδί οφείλει να είναι.
+    expect(TABLE_FORMAT_COMMIT_REFUSAL_KEY['target-changed'])
+      .toBe('table.formatCells.refusal.targetChanged');
+  });
+
+  it('🔴 §63 «τίποτα δεν άλλαξε» ΔΕΝ είναι άρνηση — κλείνει κανονικά, χωρίς μήνυμα', () => {
+    // Η διάκριση δεν είναι λεπτολογία: «άνοιξα, πείραξα, το ξαναέφερα όπως ήταν, ΟΚ» είναι
+    // **επιτυχία που δεν έχει τι να γράψει** (§60). Μήνυμα εκεί θα ήταν ψεύτικος συναγερμός.
+    const { onClose } = renderDialog('number', { status: 'unchanged' });
+    clickOk();
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('🏆 το «Δείγμα» ονομάζεται ΠΑΡΑΔΕΙΓΜΑ όταν το κελί είναι κενό', () => {

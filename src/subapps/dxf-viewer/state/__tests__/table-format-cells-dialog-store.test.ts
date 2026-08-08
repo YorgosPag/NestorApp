@@ -38,6 +38,8 @@ beforeEach(() => {
  */
 function target(tag: string): FormatTarget {
   return {
+    // §63 — ο στόχος κουβαλά **ποιος** πίνακας· εδώ αρκεί σταθερή ταυτότητα.
+    entityId: `entity-${tag}`,
     model: { tag } as unknown as PersistedTableModel,
     style: {} as FormatTarget['style'],
     scope: { kind: 'range', bounds: { firstRow: 0, lastRow: 0, firstCol: 0, lastCol: 0 } },

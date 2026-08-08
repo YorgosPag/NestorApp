@@ -60,7 +60,7 @@ const range = (
 ): TableFormatScope => ({ kind: 'range', bounds: { firstRow, lastRow, firstCol, lastCol } });
 
 function target(m: PersistedTableModel, scope: TableFormatScope): FormatTarget {
-  return { model: m, style: STYLE, scope, layerColors: [] };
+  return { entityId: 'entity-1', model: m, style: STYLE, scope, layerColors: [] };
 }
 
 const numberCell = (

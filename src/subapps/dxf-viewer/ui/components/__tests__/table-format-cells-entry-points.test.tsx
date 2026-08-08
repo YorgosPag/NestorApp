@@ -68,6 +68,8 @@ beforeEach(() => {
 
 function target(kind: 'range' | 'column'): FormatTarget {
   return {
+    // §63 — ο στόχος κουβαλά **ποιος** πίνακας.
+    entityId: 'entity-1',
     model: {} as PersistedTableModel,
     style: {} as FormatTarget['style'],
     scope: kind === 'range'

@@ -37,6 +37,8 @@ import {
   setTableFormatPort,
 } from '@/subapps/dxf-viewer/ui/table-cell-editor/table-format-port';
 import { fakeTableFormatPort } from '@/subapps/dxf-viewer/ui/table-cell-editor/__tests__/fake-table-format-port';
+import type { FormatTarget } from '@/subapps/dxf-viewer/ui/table-cell-editor/table-format-snapshot';
+import type { TableFormatCommitPlan } from '@/subapps/dxf-viewer/bim/table/table-format-commit-plan';
 import { __resetTableFormatCellsDialogForTests } from '@/subapps/dxf-viewer/state/table-format-cells-dialog-store';
 import {
   BUILTIN_TABLE_STYLES,
@@ -136,7 +138,15 @@ beforeEach(() => {
 function renderToolbar(scenario: Scenario = {}) {
   const model = scenario.model ?? persisted(1, 1);
   const target = scenario.target ?? SINGLE_CELL;
-  const onCommit = jest.fn();
+  /**
+   * 🔴 ADR-739 §63 — το «ΟΚ» παίρνει `(target, model)` και **επιστρέφει πλάνο**. Ένα σκέτο
+   * `jest.fn()` θα επέστρεφε `undefined` και ο διάλογος θα έσκαγε στο `plan.status` — δηλαδή το
+   * ίδιο το test αποδεικνύει ότι ο καλών **οφείλει** να κρίνει την απάντηση.
+   */
+  const onCommit = jest.fn(
+    (_target: FormatTarget, model: PersistedTableModel): TableFormatCommitPlan =>
+      ({ status: 'accepted', model }),
+  );
   const surfaceRef = React.createRef<HTMLDivElement>();
   const noop = (): void => {};
 
@@ -186,6 +196,8 @@ function renderToolbar(scenario: Scenario = {}) {
           // `scope`, δηλαδή τη διαφορά «γράψε στα κελιά» / «γράψε στη στήλη». Το παλιό
           // `{bounds, model, style}` το έχανε — και ο διάλογος δεν είναι πια μόνο περιγράμματα.
           resolveTarget: () => ({
+            // 🔴 ADR-739 §63 — ο στόχος κουβαλά **ποιος** πίνακας, όχι μόνο τι μοντέλο.
+            entityId: 'table-under-test',
             model,
             style: STANDARD,
             scope: { kind: 'range' as const, bounds: target },
@@ -539,7 +551,8 @@ describe('ADR-750 Φ6 — «Χρώμα:»: το κενό που ΚΑΝΕΝΑ tes
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Πάνω περίγραμμα' })); });
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'OK' })); });
 
-    const committed = onCommit.mock.calls[0][0] as PersistedTableModel;
+    // §63 — το μοντέλο είναι το **δεύτερο** όρισμα: το πρώτο είναι πλέον ο στόχος.
+    const committed = onCommit.mock.calls[0][1];
     const index = buildTableEdgeIndex(committed.edges);
     const [key] = tableRangeSideEdges(committed, SINGLE_CELL, 'top');
     expect(index.get(key)?.colorHex).toBe(redBase);
@@ -581,7 +594,8 @@ describe('ADR-750 Φ6 — ΟΚ / Άκυρο: το προσχέδιο δεν δι
     expect(onCommit).toHaveBeenCalledTimes(1);
 
     // Και η ακμή είναι όντως εκεί — όχι απλώς «κλήθηκε κάτι».
-    const committed = onCommit.mock.calls[0][0] as PersistedTableModel;
+    // §63 — το μοντέλο είναι το **δεύτερο** όρισμα: το πρώτο είναι πλέον ο στόχος.
+    const committed = onCommit.mock.calls[0][1];
     const index = buildTableEdgeIndex(committed.edges);
     const keys = tableRangeSideEdges(committed, SINGLE_CELL, 'top');
     expect(keys.length).toBeGreaterThan(0);
