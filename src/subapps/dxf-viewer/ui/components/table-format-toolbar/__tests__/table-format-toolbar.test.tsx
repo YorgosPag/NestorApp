@@ -49,6 +49,7 @@ import {
   type TableHeaderContextMenuHandle,
 } from '../../TableHeaderContextMenu';
 import { isTableCellSessionElement } from '../../../table-cell-editor/table-cell-session-focus';
+import { headerMenuProps } from './table-header-menu-props.fixture';
 
 // Ίδιο μοτίβο με `use-translation-prefixed-key-resolution.test.tsx`: ο πραγματικός
 // `loadNamespace` κάνει δυναμικό import αρχείων που δεν χρειάζονται εδώ — το bundle το
@@ -220,64 +221,12 @@ function getToolbarButtons(): HTMLButtonElement[] {
  * η εντολή χάνεται σιωπηλά.
  */
 describe('🔴 ΤΟ ΚΡΙΣΙΜΟΤΕΡΟ: πάτημα «Β» ⇒ εκτελεί, φεύγει ΜΟΝΟ το μενού, η γραμμή ΜΕΝΕΙ', () => {
-  const noop = (): void => {};
-  const NO_FORMAT: TableToggleFormatState = { active: false, mixed: false, explicit: false };
-  /** Ό,τι χρειάζεται το `TableHeaderContextMenu` με αδρανείς χειριστές — βλ. sibling test. */
-  const menuProps = {
-    onInsertBefore: noop,
-    onInsertAfter: noop,
-    onDelete: noop,
-    resolveState: () => ({ label: 'B', axisLabel: 'B', count: 1, canInsert: true, canDelete: true }),
-    resolveFormat: (): TableFormatSnapshot => ({
-      bold: NO_FORMAT,
-      italic: NO_FORMAT,
-      underline: NO_FORMAT,
-      textColor: {
-        current: '#111111', mixed: false, explicit: false, inheritedColor: '#111111', inheritedMixed: false,
-        drawingColors: [],
-      },
-      fillColor: {
-        current: undefined, mixed: false, explicit: false, inheritedColor: undefined, inheritedMixed: false,
-        drawingColors: [],
-      },
-      canReset: false,
-    }),
-    onStepTextHeight: noop,
-    onResetFormat: noop,
-    // ADR-739 Φ.Ε/Φ4 + Φ4β — δες το σχόλιο στο sibling test.
-    onSetTextColor: noop,
-    onSetFillColor: noop,
-    // ADR-739 §55 — τα τρία νέα τμήματα της γραμμής· αδρανή εδώ, δοκιμάζονται στο
-    // `table-toolbar-extras.test.ts` και στο `table-format-snapshot-readers.test.ts`.
-    resolveToolbar: () => ({
-      fonts: { family: { current: undefined, mixed: false }, size: { current: undefined, mixed: false } },
-      fontNames: [],
-      numberFormat: { current: null, explicit: false },
-      align: null,
-    }),
-    onSetFormatField: noop,
-    // ADR-750 Φ3 — δες το σχόλιο στο sibling test.
-    /**
-     * ADR-750 Φ5 — το dropdown περιγραμμάτων ως **μία** απάντηση (Φ3/Φ5 refactor).
-     *
-     * `resolvePencil: () => null` ⇒ η ζώνη σχεδίασης δεν αποδίδεται καθόλου: αυτές οι σουίτες
-     * δοκιμάζουν τη γραμμή μορφοποίησης, όχι το μολύβι, και μια ζώνη με εφευρημένο μολύβι θα
-     * ήταν θόρυβος σε κάθε `getByRole` τους. Το μολύβι έχει δική του σουίτα.
-     */
-    resolveBorderMenu: () => ({
-      canReset: false,
-      canClearDiagonals: false,
-      onApply: noop,
-      onReset: noop,
-      onApplyDiagonal: noop,
-      resolvePencil: () => null,
-    }),
-    // ADR-755 — το split button συγχώνευσης· ίδιο σχήμα «μία απάντηση» με τα περιγράμματα.
-    resolveMergeMenu: () => ({
-      state: { merged: false, canMerge: true },
-      onApply: noop,
-    }),
-  };
+  /**
+   * ADR-739 §64 — ο σκελετός **εξήχθη**: το §64 τον χρειάστηκε σε δεύτερη σουίτα
+   * (`yield-to-persistent-surface.test.tsx`) και η αντιγραφή θα ήταν sibling clone γεννημένος
+   * μέσα στο ίδιο commit — ακριβώς ό,τι μετρά το CHECK 3.28 (N.18).
+   */
+  const menuProps = headerMenuProps;
 
   it('🔴 «Β»: onToggleFormat(hit,"bold") κλήθηκε ΚΑΙ ΜΕΤΑ onClosed — το μενού φεύγει από το DOM', async () => {
     const onToggleFormat = jest.fn();

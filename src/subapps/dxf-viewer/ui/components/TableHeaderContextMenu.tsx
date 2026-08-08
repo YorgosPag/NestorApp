@@ -45,6 +45,9 @@ import { useKeepOpenOnSurface } from './dxf-context-menu/use-keep-open-on-surfac
 import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
 import { TableHeaderMenuItems } from './TableHeaderMenuItems';
 import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
+// 🔴 ADR-739 §64 — η εφήμερη επιφάνεια υποχωρεί στη μόνιμη. Η γνώση ΔΕΝ ζει στο item που
+// πατήθηκε: οι υποδοχές του διαλόγου είναι πέντε (§61) — δες την κεφαλίδα του module.
+import { useYieldToPersistentSurface } from './table-format-toolbar/use-yield-to-persistent-surface';
 // 🔴 ADR-739 §55 — τα τρία νέα τμήματα χτίζονται **μία** φορά για τις δύο υποδοχές (δες την
 // κεφαλίδα του module): εδώ αλλάζει μόνο ο τυλιχτής εκτέλεσης.
 import { tableToolbarExtrasProps } from './table-format-toolbar/table-toolbar-extras';
@@ -159,6 +162,17 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
       setIsOpen(false);
       onClosed();
     }, [isOpen, onClosed]);
+
+    /**
+     * 🔴 ADR-739 §64 — όσο ζει ο διάλογος «Μορφοποίηση κελιών», η γραμμή **δεν** ζει.
+     *
+     * `setTarget(null)` και όχι `handleOpenChange(false)`: το μενού έχει **ήδη** κλείσει από
+     * τον {@link closeMenuKeepToolbar}, και ο δεύτερος δρόμος θα ξανακαλούσε το `onClosed()` —
+     * δηλαδή θα ξαναζωντάνευε τη συνεδρία κελιού πάνω σε ανοιχτό διάλογο. Δες την κεφαλίδα του
+     * `use-yield-to-persistent-surface` για το γιατί η γνώση δεν ζει στο item που πατήθηκε.
+     */
+    const dismissToolbar = useCallback(() => { setTarget(null); }, []);
+    useYieldToPersistentSurface(dismissToolbar);
 
     /**
      * Όσο ζει **μόνη** της η γραμμή, το «κλικ έξω» είναι δική μας ευθύνη.

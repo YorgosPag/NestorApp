@@ -94,6 +94,9 @@ import {
   type TableRangeMenuActions,
 } from './table-range-menu/TableRangeMenuItems';
 import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
+// 🔴 ADR-739 §64 — η εφήμερη επιφάνεια υποχωρεί στη μόνιμη. Δες την κεφαλίδα του module για
+// το γιατί η γνώση ΔΕΝ ζει στο item «Μορφοποίηση κελιών…» (οι υποδοχές είναι πέντε, όχι μία).
+import { useYieldToPersistentSurface } from './table-format-toolbar/use-yield-to-persistent-surface';
 // 🔴 ADR-739 §55 — τα τρία νέα τμήματα (τυπογραφία / αριθμός / στοίχιση) χτίζονται **μία**
 // φορά για τις δύο υποδοχές: δες την κεφαλίδα του module για το γιατί όχι δύο φορές το JSX.
 import { tableToolbarExtrasProps } from './table-format-toolbar/table-toolbar-extras';
@@ -144,6 +147,16 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
     // `pointerDownOutside` — και το `DismissableLayer` κλείνει στο `pointerdown`, δηλαδή ΠΡΙΝ
     // το `click`. Χωρίς τον φύλακα, το `onClick` της εντολής δεν θα έτρεχε ποτέ.
     const keepOpenOnToolbar = useKeepOpenOnSurface(toolbarRef);
+
+    /**
+     * 🔴 ADR-739 §64 — όσο ζει ο διάλογος «Μορφοποίηση κελιών», η γραμμή **δεν** ζει.
+     *
+     * `setTarget(null)` και όχι `onOpenChange(false)`: το μενού έχει **ήδη** κλείσει από το
+     * {@link runOnRange}, και το `onOpenChange` θα ξανακαλούσε το `onClosed` — δηλαδή θα
+     * ξαναζωντάνευε τη συνεδρία κελιού **δεύτερη** φορά, πάνω σε ανοιχτό διάλογο.
+     */
+    const dismissToolbar = useCallback(() => { setTarget(null); }, [setTarget]);
+    useYieldToPersistentSurface(dismissToolbar);
 
     /**
      * Μια εντολή της γραμμής: **κλείνει το μενού, εκτελεί, ξαναρωτά**.
