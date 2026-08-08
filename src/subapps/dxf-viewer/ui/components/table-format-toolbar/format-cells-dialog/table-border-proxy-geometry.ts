@@ -21,7 +21,7 @@
  * λείπει από τους υποψηφίους — και το κλικ πάει στην επόμενη πλησιέστερη, αντί να μη κάνει
  * τίποτα σε μια αόρατη ζώνη.
  *
- * @module subapps/dxf-viewer/ui/components/table-format-toolbar/border-dialog/table-border-proxy-geometry
+ * @module subapps/dxf-viewer/ui/components/table-format-toolbar/format-cells-dialog/table-border-proxy-geometry
  * @see bim/table/table-border-dialog-positions.ts — ποιες θέσεις υπάρχουν και ποιες έχουν νόημα
  */
 

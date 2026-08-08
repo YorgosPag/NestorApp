@@ -33,7 +33,7 @@
  * μπορεί να ανακοινωθεί σωστά. Κρύβεται από τον αναγνώστη (και από το `Tab`) αντί να του
  * υποσχεθεί κάτι που δεν μπορεί να τηρήσει.
  *
- * @module subapps/dxf-viewer/ui/components/table-format-toolbar/border-dialog/TableBorderProxyWidget
+ * @module subapps/dxf-viewer/ui/components/table-format-toolbar/format-cells-dialog/TableBorderProxyWidget
  * @see bim/table/table-border-dialog-positions.ts — διαθεσιμότητα + τρέχουσα κατάσταση
  */
 
@@ -50,14 +50,14 @@ import { tableLinePreviewStrokeWidth } from '../TableLinePreview';
 import {
   TABLE_BORDER_DIALOG_EDGE_KEY,
   TABLE_BORDER_DIALOG_KEY,
-} from './table-border-dialog-labels';
+} from './table-format-cells-labels';
 import {
   TABLE_BORDER_PROXY_BOX,
   nearestTableBorderDialogPosition,
   tableBorderProxyLine,
   tableBorderProxyLineLength,
 } from './table-border-proxy-geometry';
-import styles from './TableBorderDialog.module.css';
+import styles from './TableFormatCellsDialog.module.css';
 
 /** Τα τρία κουμπιά **αριστερά** της ζώνης, από πάνω προς τα κάτω (μετρημένη διάταξη Excel). */
 const SIDE_COLUMN: readonly TableBorderDialogPositionId[] = ['top', 'insideH', 'bottom'];

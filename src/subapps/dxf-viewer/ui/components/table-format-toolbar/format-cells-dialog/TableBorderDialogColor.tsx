@@ -18,7 +18,7 @@
  * ⚠️ Το `grid` είναι **υποχρεωτικό** όρισμα του πλέγματος και κόστισε ήδη ένα ζωντανό
  * `TypeError` στη Φ5 (145 πράσινα tests, κανένα δεν άνοιξε τη γραμμή χρώματος).
  *
- * @module subapps/dxf-viewer/ui/components/table-format-toolbar/border-dialog/TableBorderDialogColor
+ * @module subapps/dxf-viewer/ui/components/table-format-toolbar/format-cells-dialog/TableBorderDialogColor
  */
 
 import React, { useCallback, useId, useState } from 'react';
@@ -32,8 +32,8 @@ import { colorGridFor } from '../../../color/aci-color-grid';
 import { getRecentColorsStore } from '../../../color/RecentColorsStore';
 import { TableColorSwatchGrid } from '../TableColorSwatchGrid';
 import { TableColorDialog } from '../TableColorDialog';
-import { TABLE_BORDER_DIALOG_KEY } from './table-border-dialog-labels';
-import styles from './TableBorderDialog.module.css';
+import { TABLE_BORDER_DIALOG_KEY } from './table-format-cells-labels';
+import styles from './TableFormatCellsDialog.module.css';
 
 /** Το κοινό «δέρμα» κάθε αναδυόμενης επιφάνειας — ίδιο με του πάνελ της μπάρας. */
 const SURFACE_SKIN = 'border border-border rounded-lg bg-popover text-popover-foreground shadow-md';

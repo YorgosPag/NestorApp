@@ -12,7 +12,7 @@
  * `aria-disabled` και όχι `disabled`: το κουμπί μένει ανακοινώσιμο και εστιάσιμο, ίδια σύμβαση
  * με κάθε ανενεργό στοιχείο της μπάρας (Α19) — ο χρήστης μαθαίνει ότι υπάρχει «Πλέγμα».
  *
- * @module subapps/dxf-viewer/ui/components/table-format-toolbar/border-dialog/TableBorderDialogPresets
+ * @module subapps/dxf-viewer/ui/components/table-format-toolbar/format-cells-dialog/TableBorderDialogPresets
  */
 
 import React from 'react';
@@ -25,8 +25,8 @@ import type { TableCellRangeBounds } from '../../../../bim/table/table-cell-rang
 import {
   TABLE_BORDER_DIALOG_KEY,
   TABLE_BORDER_DIALOG_PRESETS,
-} from './table-border-dialog-labels';
-import styles from './TableBorderDialog.module.css';
+} from './table-format-cells-labels';
+import styles from './TableFormatCellsDialog.module.css';
 
 export interface TableBorderDialogPresetsProps {
   readonly bounds: TableCellRangeBounds;

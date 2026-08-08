@@ -29,7 +29,7 @@
  * @see docs/centralized-systems/reference/adrs/ADR-750-table-cell-borders.md §9.2 · §18 (Α19/Α21)
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Grid2x2, RotateCcw, SquarePen } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
@@ -47,28 +47,35 @@ import {
   TableBorderPencilPanel,
 } from './TableBorderPencilPanel';
 import { tableBorderMenuItems } from './table-border-menu-items';
-import {
-  TableBorderDialog,
-  type TableBorderDialogTarget,
-} from './border-dialog/TableBorderDialog';
-import { TABLE_BORDER_DIALOG_KEY } from './border-dialog/table-border-dialog-labels';
-import type { PersistedTableModel } from '../../../types/table';
+import type { TableFormatCellsTarget } from './format-cells-dialog/TableFormatCellsDialog';
+import { TABLE_BORDER_DIALOG_KEY } from './format-cells-dialog/table-format-cells-labels';
+// 🔴 ADR-739 §61 — **ένας** διάλογος, **ένας** ξενιστής: η υποδοχή λέει `open(…)` και σταματά.
+import { openTableFormatCellsDialog } from '../../../state/table-format-cells-dialog-store';
 import { useToolbarPanel } from './use-toolbar-panel';
 import { useRovingToolbar, type RovingItemProps } from './use-roving-toolbar';
 import panel from './TableBorderMenu.module.css';
 import toolbar from './TableFormatToolbar.module.css';
 
 /**
- * ADR-750 Φ6 — ό,τι χρειάζεται το «Περισσότερα περιγράμματα…» για να ανοίξει και να δεσμεύσει.
+ * ADR-750 Φ6 — ό,τι χρειάζεται το «Περισσότερα περιγράμματα…» για να **ανοίξει**.
  *
  * 🔑 **Getter, όχι στιγμιότυπο** (ADR-040 κανόνας #2): το μοντέλο, τα όρια και το στυλ
  * διαβάζονται τη στιγμή που ο χρήστης πατά — ένα μενού που έμεινε ανοιχτό όσο έτρεχε ένα
  * `Ctrl+Z` θα άνοιγε αλλιώς διάλογο πάνω σε πίνακα που δεν υπάρχει πια. `null` ⇒ δεν ανοίγει.
+ *
+ * ## 🔴 §61 — ΤΟ `onCommit` ΕΦΥΓΕ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ Η ΟΥΣΙΑ ΤΗΣ ΑΛΛΑΓΗΣ
+ * Ήταν `{ resolveTarget, onCommit }`. Το `onCommit` έδειχνε στο `applyFormat` **αυτής** της
+ * υποδοχής — δηλαδή, μετρημένα, στην **ίδια** ουρά με το `TableFormatPort.commitModel`
+ * (`useLiveTableMutation` πάνω σε `useLiveTable`, ο πίνακας του **δρομέα**, και στα δύο). Ήταν
+ * δεύτερη **πόρτα** προς μία ουρά, ακριβώς ό,τι το §60 ονόμασε ελάττωμα όταν μετακόμισε το
+ * `commitModel` από το `borders` στη θύρα — και το άφησε ζωντανό επειδή τότε υπήρχαν τρεις
+ * καλούντες. Με **έναν** ξενιστή υπάρχει **ένας** καλών, οπότε το μέλος δεν έχει πια λόγο.
+ *
+ * ⚠️ Ο **στόχος** δεν μπορεί να φύγει με τον ίδιο τρόπο και δεν πρέπει: ο κανόνας Α22 δίνει
+ * στόχο που μπορεί να είναι **έξω** από την επιλογή, άρα δεν παράγεται από τη θύρα.
  */
 export interface TableBorderDialogLaunch {
-  readonly resolveTarget: () => TableBorderDialogTarget | null;
-  /** **Ένα** commit, **ένα** `Ctrl+Z` — η ίδια διαδρομή με κάθε άλλη αλλαγή πίνακα. */
-  readonly onCommit: (model: PersistedTableModel) => void;
+  readonly resolveTarget: () => TableFormatCellsTarget | null;
 }
 
 export interface TableBorderMenuProps {
@@ -118,14 +125,15 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
   const moreBordersIndex = pencilBase + TABLE_PENCIL_ROW_COUNT;
   const roving2 = useRovingToolbar(moreBordersIndex + (moreBorders ? 1 : 0), 'vertical');
 
-  /**
-   * Ο στόχος του **ανοιχτού** διαλόγου· `null` ⇒ δεν υπάρχει καν στο δέντρο.
+  /*
+   * 🔴 ADR-739 §60 → §61 — ΤΟ ΤΑΞΙΔΙ ΤΗΣ ΙΔΙΟΚΤΗΣΙΑΣ, ΣΕ ΤΡΕΙΣ ΓΡΑΜΜΕΣ.
    *
-   * Ζει εδώ και όχι μέσα στον διάλογο ώστε το πάνελ να μπορεί να **κλείσει** πάνω στο πάτημα
-   * (όπως κάθε άλλη εντολή του): ο διάλογος αποδίδεται **έξω** από το `isOpen`, αλλιώς θα
-   * ξεμοντάριζε στο ίδιο καρέ που ανοίγει.
+   * Φ6: σκέτο `useState` εδώ — υπήρχε **ένας** εκκινητής, οπότε «ποιος κρατά τον διάλογο» δεν
+   * ήταν καν ερώτηση. §60: τρεις εκκινητές ⇒ τρία ανεξάρτητα state ⇒ δύο προσχέδια από το ίδιο
+   * μοντέλο, όπου το δεύτερο «ΟΚ» έσβηνε **σιωπηλά** τη δουλειά του πρώτου ⇒ store ιδιοκτησίας.
+   * §61: **πέντε** υποδοχές, δύο από τις οποίες δεν είναι components ⇒ store **κατάστασης** και
+   * ένας ξενιστής. Εδώ δεν μένει τίποτα: το πάνελ κλείνει και λέει `open(…)`.
    */
-  const [dialogTarget, setDialogTarget] = useState<TableBorderDialogTarget | null>(null);
 
   return (
     <span className={panel.anchor}>
@@ -220,25 +228,18 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
                 roving={roving2.itemProps(moreBordersIndex)}
                 label={t(`${TABLE_BORDER_DIALOG_KEY}.menuItem`)}
                 icon={<SquarePen size={15} aria-hidden="true" />}
-                onActivate={() => runAndClose(() => setDialogTarget(moreBorders.resolveTarget()))}
+                // 🔴 §61 — `tab: 'border'`: το στοιχείο λέγεται «Περισσότερα περιγράμματα…», άρα
+                // οφείλει να προσγειώσει τον χρήστη στα περιγράμματα. Είναι μία από τις **τρεις**
+                // υποδοχές που **δηλώνουν** καρτέλα — οι άλλες δύο (`Ctrl+1`, δεξί κλικ) ζητούν
+                // την τελευταία που είδε ο χρήστης, όπως το Excel.
+                onActivate={() => runAndClose(() => openTableFormatCellsDialog({
+                  target: moreBorders.resolveTarget(),
+                  tab: 'border',
+                }))}
               />
             </>
           ) : null}
         </div>
-      ) : null}
-
-      {/*
-        🔴 ΕΞΩ από το `isOpen`: το στοιχείο κλείνει το πάνελ πριν ανοίξει τον διάλογο (ίδια
-        σύμβαση με κάθε άλλη εντολή), άρα ένας διάλογος **μέσα** στο πάνελ θα ξεμοντάριζε στο
-        ίδιο καρέ που γεννιέται. Μοντάρεται μόνο όταν υπάρχει στόχος, ώστε κάθε άνοιγμα να
-        ξεκινά από **φρέσκο** προσχέδιο — χωρίς effect επαναφοράς που μπορεί να ξεχαστεί.
-      */}
-      {moreBorders && dialogTarget ? (
-        <TableBorderDialog
-          {...dialogTarget}
-          onCommit={moreBorders.onCommit}
-          onClose={() => setDialogTarget(null)}
-        />
       ) : null}
     </span>
   );

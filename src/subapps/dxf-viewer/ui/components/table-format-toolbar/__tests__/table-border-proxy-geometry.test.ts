@@ -11,7 +11,7 @@ import {
   nearestTableBorderDialogPosition,
   tableBorderProxyLine,
   tableBorderProxyLineLength,
-} from '../border-dialog/table-border-proxy-geometry';
+} from '../format-cells-dialog/table-border-proxy-geometry';
 import {
   TABLE_BORDER_DIALOG_POSITIONS,
   type TableBorderDialogPositionId,

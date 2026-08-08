@@ -30,10 +30,19 @@ import { buildTableEdgeIndex } from '@/subapps/dxf-viewer/bim/table/table-edge-m
 import { tableRangeSideEdges } from '@/subapps/dxf-viewer/bim/table/table-range-border-ops';
 import { resolveTableBorderPencil } from '@/subapps/dxf-viewer/bim/table/table-border-pencil';
 import { tableBorderPencilChoice } from '@/subapps/dxf-viewer/state/table-border-pencil-store';
+// 🔴 ADR-739 §61 — ο ΕΝΑΣ ξενιστής + η θύρα που παίρνει το «ΟΚ». Δες το σχόλιο στο `renderToolbar`.
+import { TableFormatCellsDialogHost } from '../format-cells-dialog/TableFormatCellsDialogHost';
+import {
+  __resetTableFormatPortForTests,
+  setTableFormatPort,
+} from '@/subapps/dxf-viewer/ui/table-cell-editor/table-format-port';
+import { fakeTableFormatPort } from '@/subapps/dxf-viewer/ui/table-cell-editor/__tests__/fake-table-format-port';
+import { __resetTableFormatCellsDialogForTests } from '@/subapps/dxf-viewer/state/table-format-cells-dialog-store';
 import {
   BUILTIN_TABLE_STYLES,
   BUILTIN_TABLE_STYLE_IDS,
 } from '@/subapps/dxf-viewer/bim/table/table-style-presets';
+import type { TableFormatPort } from '@/subapps/dxf-viewer/ui/table-cell-editor/table-format-port';
 import type { TableFormatSnapshot, TableToggleFormatState } from '../TableFormatToolbar';
 import type { TableCellRangeBounds } from '@/subapps/dxf-viewer/bim/table/table-cell-range';
 import type { TableStyle } from '@/subapps/dxf-viewer/bim/table/table-style';
@@ -115,12 +124,40 @@ interface Scenario {
   readonly target?: TableCellRangeBounds;
 }
 
+/**
+ * 🔴 Module-level stores ⇒ **υποχρεωτικός** μηδενισμός (η παγίδα #8 του handoff): χωρίς αυτόν
+ * ένας διάλογος που έμεινε ανοιχτός από προηγούμενο test θα «άνοιγε» μόνος του στο επόμενο.
+ */
+beforeEach(() => {
+  __resetTableFormatCellsDialogForTests();
+  __resetTableFormatPortForTests();
+});
+
 function renderToolbar(scenario: Scenario = {}) {
   const model = scenario.model ?? persisted(1, 1);
   const target = scenario.target ?? SINGLE_CELL;
   const onCommit = jest.fn();
   const surfaceRef = React.createRef<HTMLDivElement>();
   const noop = (): void => {};
+
+  /*
+    🔴 ADR-739 §61 — Ο ΔΙΑΛΟΓΟΣ ΔΕΝ ΖΩΓΡΑΦΙΖΕΤΑΙ ΠΙΑ ΑΠΟ ΤΗΝ ΥΠΟΔΟΧΗ.
+    Το «ΟΚ» περνά από **έναν** δρόμο — τη θύρα — και το test τον ασκεί ολόκληρο: υποδοχή →
+    store → ξενιστής → `commitModel`. Ένα prop `onCommit` στην υποδοχή, όπως πριν, θα έμενε
+    πράσινο ακόμη κι αν κανείς δεν είχε μοντάρει ποτέ τον ξενιστή.
+  */
+  setTableFormatPort(fakeTableFormatPort({
+    commitModel: onCommit,
+    // Το «Πινέλο Μορφοποίησης» (ADR-768) ζει **μέσα** στην ίδια γραμμή και ρωτά τη θύρα σε κάθε
+    // απόδοση. Δηλώνεται ρητά «δεν οπλίζεται», όχι σιωπηλά: το πινέλο δεν είναι το αντικείμενο
+    // αυτής της σουίτας, και μια σιωπηλή προεπιλογή θα έκρυβε τη μέρα που θα γίνει.
+    painter: {
+      state: () => 'idle',
+      canArm: () => false,
+      arm: () => {},
+      disarm: () => {},
+    } as TableFormatPort['painter'],
+  }));
 
   render(
     <TableFormatToolbar
@@ -145,13 +182,23 @@ function renderToolbar(scenario: Scenario = {}) {
         canClearDiagonals: true,
         resolvePencil: () => resolveTableBorderPencil(STANDARD, tableBorderPencilChoice()),
         moreBorders: {
-          resolveTarget: () => ({ bounds: target, model, style: STANDARD }),
-          onCommit,
+          // 🔴 ADR-739 §60 — ο στόχος είναι πλέον ο **υπάρχων** `FormatTarget`: κουβαλά και το
+          // `scope`, δηλαδή τη διαφορά «γράψε στα κελιά» / «γράψε στη στήλη». Το παλιό
+          // `{bounds, model, style}` το έχανε — και ο διάλογος δεν είναι πια μόνο περιγράμματα.
+          resolveTarget: () => ({
+            model,
+            style: STANDARD,
+            scope: { kind: 'range' as const, bounds: target },
+            layerColors: [],
+          }),
         },
       }}
     />,
     wrapper,
   );
+  // Ο ξενιστής μοντάρεται **χωριστά**, όπως ακριβώς στην παραγωγή (`DxfViewerDialogs`): δεν
+  // είναι παιδί καμίας υποδοχής, και αυτό είναι όλη η αλλαγή του §61.
+  render(<TableFormatCellsDialogHost />, wrapper);
   return { onCommit };
 }
 
@@ -277,18 +324,26 @@ describe('ADR-750 Φ6β — ΑΙΩΡΟΥΜΕΝΟ κέλυφος, όχι modal', 
     expect(grid.closest('[data-table-cell-cursor="true"]')).not.toBeNull();
   });
 
-  it('🔑 η περιγραφή ΔΕΝ χάθηκε μαζί με το `DialogDescription`', () => {
+  /**
+   * 🔴 ADR-739 §60 — η περιγραφή **μετακόμισε από τη ρίζα στο `<fieldset>`** των θέσεων.
+   *
+   * Όσο ο διάλογος ήταν μία καρτέλα, «πρώτα στυλ, μετά πού» περιέγραφε ολόκληρη την παλέτα. Με
+   * τρεις ζωντανές, μια περιγραφή στη ρίζα θα ανακοινωνόταν και ανοίγοντας τον «Αριθμό» —
+   * δηλαδή θα έλεγε ψέματα στα δύο τρίτα των περιπτώσεων. Η άγκυρα κρατά την **ουσία** (η
+   * οδηγία υπάρχει και είναι συνδεδεμένη), όχι τη θέση της.
+   */
+  it('🔑 η περιγραφή ΔΕΝ χάθηκε — ζει στην ομάδα που περιγράφει', () => {
     renderToolbar();
     openDialog();
-    const panel = screen.getByRole('dialog', { name: /Μορφοποίηση κελιών/ });
-    const describedBy = panel.getAttribute('aria-describedby');
+    const group = screen.getByRole('group', { name: 'Περίγραμμα' });
+    const describedBy = group.getAttribute('aria-describedby');
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy ?? '')?.textContent ?? '').toContain('υποδείγματα');
   });
 });
 
-describe('ADR-750 Φ6 — οι έξι καρτέλες', () => {
-  it('🔴 πέντε ανενεργές αλλά ΑΝΑΚΟΙΝΩΣΙΜΕΣ, μόνο η «Περίγραμμα» επιλεγμένη', () => {
+describe('ADR-739 §60 — οι έξι καρτέλες, ΤΡΕΙΣ ζωντανές', () => {
+  it('🔴 τρεις ανενεργές αλλά ΑΝΑΚΟΙΝΩΣΙΜΕΣ, μόνο η «Περίγραμμα» επιλεγμένη στο άνοιγμα', () => {
     renderToolbar();
     openDialog();
 
@@ -296,7 +351,15 @@ describe('ADR-750 Φ6 — οι έξι καρτέλες', () => {
     expect(border).toHaveAttribute('aria-selected', 'true');
     expect(border).not.toHaveAttribute('aria-disabled');
 
-    for (const name of ['Αριθμός', 'Στοίχιση', 'Γραμματοσειρά', 'Γέμισμα', 'Προστασία']) {
+    // ✅ §60 — ζωντάνεψαν **στη θέση τους**: ο χρήστης δεν χρειάστηκε να ξαναμάθει πού είναι
+    // τίποτα. Είναι ακριβώς ο λόγος που η Φ6 δήλωσε και τις έξι από την πρώτη μέρα.
+    for (const name of ['Αριθμός', 'Στοίχιση']) {
+      const tab = screen.getByRole('tab', { name });
+      expect(tab).not.toHaveAttribute('aria-disabled');
+      expect(tab).toHaveAttribute('aria-selected', 'false');
+    }
+
+    for (const name of ['Γραμματοσειρά', 'Γέμισμα', 'Προστασία']) {
       const tab = screen.getByRole('tab', { name });
       expect(tab).toHaveAttribute('aria-disabled', 'true');
       // `aria-disabled`, ΠΟΤΕ `disabled`: αλλιώς ο αναγνώστης δεν μαθαίνει ποτέ ότι υπάρχει.
@@ -308,9 +371,25 @@ describe('ADR-750 Φ6 — οι έξι καρτέλες', () => {
   it('ο λόγος της απενεργοποίησης ταξιδεύει με `aria-describedby`', () => {
     renderToolbar();
     openDialog();
-    const hintId = screen.getByRole('tab', { name: 'Αριθμός' }).getAttribute('aria-describedby');
+    const hintId = screen.getByRole('tab', { name: 'Γραμματοσειρά' }).getAttribute('aria-describedby');
     expect(hintId).toBeTruthy();
     expect(document.getElementById(hintId ?? '')).toHaveTextContent('Διαθέσιμο σε επόμενη φάση');
+  });
+
+  /**
+   * 🔴 Η **εναλλαγή** είναι η νέα λειτουργία, άρα χρειάζεται τη δική της άγκυρα: μέχρι το §60 η
+   * λέξη «καρτέλα» ήταν διακοσμητική (μία ζωντανή, καμία μετάβαση).
+   */
+  it('το κλικ σε ζωντανή καρτέλα αλλάζει περιεχόμενο· σε ανενεργή ΔΕΝ κάνει τίποτα', () => {
+    renderToolbar();
+    openDialog();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Αριθμός' }));
+    expect(screen.getByRole('tab', { name: 'Αριθμός' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('listbox', { name: 'Κατηγορία' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Προστασία' }));
+    expect(screen.getByRole('tab', { name: 'Αριθμός' })).toHaveAttribute('aria-selected', 'true');
   });
 });
 

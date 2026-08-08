@@ -19,7 +19,7 @@
  * ετικέτες μένουν δύο λίστες που η άγκυρα του `table-border-style-catalog.test.ts` συγκρίνει —
  * και ένα ωμό κλειδί θα φαινόταν σε test με `getByRole('option', { name })`.
  *
- * @module subapps/dxf-viewer/ui/components/table-format-toolbar/border-dialog/TableBorderStyleListbox
+ * @module subapps/dxf-viewer/ui/components/table-format-toolbar/format-cells-dialog/TableBorderStyleListbox
  * @see bim/table/table-border-style-catalog.ts — οι 14 ταυτότητες και η σειρά τους
  */
 
@@ -34,8 +34,8 @@ import {
 } from '../../../../bim/table/table-border-style-catalog';
 import { TableLinePreview } from '../TableLinePreview';
 import { useRovingToolbar } from '../use-roving-toolbar';
-import { TABLE_BORDER_DIALOG_KEY } from './table-border-dialog-labels';
-import styles from './TableBorderDialog.module.css';
+import { TABLE_BORDER_DIALOG_KEY } from './table-format-cells-labels';
+import styles from './TableFormatCellsDialog.module.css';
 
 export interface TableBorderStyleListboxProps {
   readonly selected: TableBorderStyleId;
