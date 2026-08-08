@@ -249,3 +249,63 @@ describe('Ο πίνακας ΔΕΝ μεγαλώνει μόνος του', () => 
     expect(result).toMatchObject({ offeredRows: 2, fittedRows: 1 });
   });
 });
+
+/**
+ * 🔴 ADR-739 §60 — **Η ΑΓΚΥΡΑ ΠΟΥ ΕΛΕΙΠΕ ΑΠΟ ΤΟ §59** (απολογισμός §8.3).
+ *
+ * Η «Επικόλληση Μορφών» και το **πινέλο μορφοποίησης** καλούν τον **ίδιο** `paintTableFormat`
+ * με τις ίδιες όψεις — άρα τα δύο νέα πεδία του §59 (εσοχή, γωνία) καλύπτονταν **δομικά** από
+ * τις άγκυρες του πινέλου. Δομικά, όχι **ρητά**: κανένα test αυτού του αρχείου δεν ανέφερε τη
+ * λέξη, και το §59 το δήλωσε ειλικρινά ως ημιτελές.
+ *
+ * ⚠️ Το επικίνδυνο δεν είναι να σπάσει η κοινή μηχανή — είναι να **αποκτήσει δικό της χάρτη
+ * όψεων** η μία διαδρομή. Ο χάρτης `FACET_BY_STYLE_KEY` είναι ένας· τη μέρα που κάποιος
+ * προσθέσει «γρήγορη» απαρίθμηση πεδίων στο πρόχειρο, αυτά τα δύο είναι ακριβώς όσα θα
+ * ξεχαστούν — είναι τα τελευταία που μπήκαν και τα μόνα που δεν έχουν ορατό κουμπί ΟΝ/ΟFF.
+ */
+describe('§60 — η εσοχή και η γωνία ΤΑΞΙΔΕΥΟΥΝ με τις «Μορφές»', () => {
+  /** Πηγή: το κελί A1 δηλώνει **ρητά** εσοχή 3 σκαλιά και γωνία 37°. */
+  function withIndentAndRotation(): PersistedTableModel {
+    const base = model();
+    return {
+      ...base,
+      cells: [
+        ['r1' as TableRowId, 'c0' as TableColumnId, {
+          kind: 'text',
+          value: 'πηγή',
+          styleOverride: { indentLevel: 3, textRotationDeg: 37 },
+        }],
+      ],
+    };
+  }
+
+  it('🔴 «Μορφές» μεταφέρει ΚΑΙ την εσοχή ΚΑΙ τη γωνία', () => {
+    const after = roundTrip(withIndentAndRotation(), at(1, 0), { row: 4, col: 0 }, FORMATS);
+    const override = overrideAt(after, 4, 0);
+    expect(override?.indentLevel).toBe(3);
+    expect(override?.textRotationDeg).toBe(37);
+  });
+
+  it('🔑 ανήκουν στην όψη «Στοίχιση» — ζητώντας ΜΟΝΟ το γέμισμα ΔΕΝ ταξιδεύουν', () => {
+    // Είναι η απόδειξη ότι ο χάρτης όψεων είναι πραγματικά ένας: αν κάποιο από τα δύο έπεφτε
+    // σε λάθος όψη (ή σε καμία), το «μόνο γέμισμα» θα το κουβαλούσε λαθραία και η επιλογή
+    // όψεων — το πράγμα που το Excel δεν μπορεί να εκφράσει — θα ήταν ψέμα.
+    const after = roundTrip(withIndentAndRotation(), at(1, 0), { row: 4, col: 0 }, {
+      content: 'none',
+      facets: facets('fill'),
+    });
+    expect(overrideAt(after, 4, 0)?.indentLevel).toBeUndefined();
+    expect(overrideAt(after, 4, 0)?.textRotationDeg).toBeUndefined();
+  });
+
+  it('🔴 ζητώντας ΜΟΝΟ τη «Στοίχιση» ταξιδεύουν — και τίποτα άλλο δεν κρύβεται μαζί τους', () => {
+    const after = roundTrip(withIndentAndRotation(), at(1, 0), { row: 4, col: 0 }, {
+      content: 'none',
+      facets: facets('alignment'),
+    });
+    const override = overrideAt(after, 4, 0);
+    expect(override?.indentLevel).toBe(3);
+    expect(override?.textRotationDeg).toBe(37);
+    expect(override?.fillColorHex).toBeUndefined();
+  });
+});

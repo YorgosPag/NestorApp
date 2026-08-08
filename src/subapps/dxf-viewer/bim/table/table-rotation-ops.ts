@@ -184,7 +184,7 @@ export function isTableTextRotationActive(
   current: number | null,
   preset: TableRotationPreset,
 ): boolean {
-  return current !== null && clampRotationDeg(current) === PRESET_DEG[preset];
+  return current !== null && clampTableTextRotationDeg(current) === PRESET_DEG[preset];
 }
 
 /**
@@ -196,7 +196,27 @@ export function isTableTextRotationActive(
  * — και η διαφωνία θα ήταν κείμενο που ζωγραφίζεται σε άλλη γωνία από αυτήν που μετρήθηκε.
  */
 export function tableTextRotationDeg(style: TableCellStyle): number {
-  return clampRotationDeg(style.textRotationDeg);
+  return clampTableTextRotationDeg(style.textRotationDeg);
+}
+
+/**
+ * 🔴 ADR-739 §60 — **Η γωνία μέσα στα όρια**· μη πεπερασμένη ⇒ οριζόντιο (η ασφαλής, ορατή
+ * απάντηση).
+ *
+ * Ήταν ιδιωτική (`clampRotationDeg`) και έγινε δημόσια όταν απέκτησε **δεύτερο είδος**
+ * καταναλωτή: η **ελεύθερη γωνία** του διαλόγου «Μορφοποίηση κελιών». Μέχρι το §59 η μόνη πηγή
+ * τιμής ήταν τα δύο preset, δηλαδή τιμές που ήταν **εξ ορισμού** εντός ορίων· ο διάλογος
+ * δέχεται πληκτρολόγηση, άρα το κόψιμο πρέπει να είναι ερώτηση που μπορεί να κάνει και η
+ * επιφάνεια.
+ *
+ * ⚠️ **ΔΕΝ στρογγυλοποιεί**, και είναι απόφαση: η ίδια συνάρτηση τροφοδοτεί τη **γεωμετρία**
+ * ({@link tableTextRotationDeg} → μέτρηση, τοποθέτηση, ζωγράφος, εξαγωγή). Μια στρογγυλοποίηση
+ * εδώ θα κβάντιζε σιωπηλά μια νόμιμη γωνία 45,5° σε **κάθε** διαδρομή απόδοσης. Το ακέραιο
+ * βήμα είναι σύμβαση **του χειριστηρίου** και ζει εκεί.
+ */
+export function clampTableTextRotationDeg(deg: number): number {
+  if (!Number.isFinite(deg)) return 0;
+  return Math.min(Math.max(deg, -MAX_TABLE_TEXT_ROTATION_DEG), MAX_TABLE_TEXT_ROTATION_DEG);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -211,12 +231,6 @@ export function tableTextRotationDeg(style: TableCellStyle): number {
  * στο άλλο — και το σύμπτωμα θα ήταν οριοθέτηση που δεν είναι ορθογώνιο.
  */
 function trigOf(deg: number): { readonly cos: number; readonly sin: number } {
-  const rad = (clampRotationDeg(deg) * Math.PI) / 180;
+  const rad = (clampTableTextRotationDeg(deg) * Math.PI) / 180;
   return { cos: Math.abs(Math.cos(rad)), sin: Math.abs(Math.sin(rad)) };
-}
-
-/** Η γωνία μέσα στα όρια· μη πεπερασμένη ⇒ οριζόντιο (η ασφαλής, ορατή απάντηση). */
-function clampRotationDeg(deg: number): number {
-  if (!Number.isFinite(deg)) return 0;
-  return Math.min(Math.max(deg, -MAX_TABLE_TEXT_ROTATION_DEG), MAX_TABLE_TEXT_ROTATION_DEG);
 }

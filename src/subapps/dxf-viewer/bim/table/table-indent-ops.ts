@@ -91,7 +91,7 @@ export function nextTableIndentLevel(
   current: number | null,
   direction: TableIndentStepDirection,
 ): number | undefined | null {
-  const from = clampIndentLevel(current ?? 0);
+  const from = clampTableIndentLevel(current ?? 0);
   const next = from + direction;
   if (next < 0 || next > MAX_TABLE_INDENT_LEVEL) return null;
   return next === 0 ? undefined : next;
@@ -115,7 +115,7 @@ export function tableIndentOffsetMm(
   hAlign: TextAlign,
   measure: TableTextMeasurer,
 ): number {
-  const level = clampIndentLevel(style.indentLevel);
+  const level = clampTableIndentLevel(style.indentLevel);
   if (level === 0 || hAlign === 'center') return 0;
   const stepMm = measure(' '.repeat(TABLE_INDENT_SPACES), style.textHeightMm, {
     fontFamily: style.fontFamily,
@@ -128,13 +128,17 @@ export function tableIndentOffsetMm(
 /**
  * Το σκαλί μέσα στα όρια, ως **ακέραιος**.
  *
- * Ιδιωτικό και μοιρασμένο ανάμεσα στις δύο εξαγόμενες: το μοντέλο δέχεται `number` (ένα
+ * Μοιρασμένο ανάμεσα σε **όλους** τους καταναλωτές: το μοντέλο δέχεται `number` (ένα
  * `indentLevel: 2.5` ή `-1` είναι εκφράσιμο σε αποθηκευμένο αρχείο που έγραψε άλλη έκδοση), και
- * ο μόνος τρόπος να μην απαντήσουν οι δύο διαφορετικά είναι να ρωτούν την ίδια συνάρτηση.
+ * ο μόνος τρόπος να μην απαντήσουν διαφορετικά είναι να ρωτούν την ίδια συνάρτηση.
  * Χωρίς το `Math.floor`, ένα κλασματικό σκαλί θα ζωγραφιζόταν κανονικά και **κανένα** κουμπί δεν
  * θα μπορούσε να το επαναφέρει στο μηδέν.
+ *
+ * 🔴 ADR-739 §60 — έγινε **δημόσια** όταν απέκτησε τρίτο καταναλωτή: το spinner εσοχής του
+ * διαλόγου «Μορφοποίηση κελιών». Μέχρι το §59 η μόνη πηγή τιμής ήταν το `nextTableIndentLevel`,
+ * που παράγει **εξ ορισμού** έγκυρα σκαλιά· ο διάλογος δέχεται πληκτρολόγηση.
  */
-function clampIndentLevel(level: number): number {
+export function clampTableIndentLevel(level: number): number {
   if (!Number.isFinite(level)) return 0;
   return Math.min(Math.max(Math.floor(level), 0), MAX_TABLE_INDENT_LEVEL);
 }
