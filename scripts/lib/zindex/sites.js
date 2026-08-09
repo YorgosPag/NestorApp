@@ -232,6 +232,31 @@ function scanSources(repoRoot, definedNames, byCssVar) {
 }
 
 /**
+ * Ποια από τα δοθέντα σύμβολα εμφανίζονται **κάπου** στο `src/`.
+ *
+ * 🔑 ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΔΕΥΤΕΡΟΣ WALKER: η απόδειξη «αυτή η ξένη διαδρομή δεν
+ * εκτελείται ποτέ» (μέτρο `unreachable` του συνόρου) είναι **η ίδια** διάσχιση πηγής με
+ * τη σάρωση των τριών διαλέκτων. Δεύτερος walker θα ήταν δεύτερη απάντηση στο ερώτημα
+ * «ποια είναι τα αρχεία πηγής;» — το σχήμα ADR-749.
+ *
+ * ⚠️ Επιστρέφει ΠΟΙΑ βρέθηκαν, όχι «βρέθηκε κάτι»: ο καλών πρέπει να μπορεί να
+ * **ονομάσει** το σύμβολο που ακύρωσε τη δήλωση, αλλιώς το μήνυμα λέει «κάτι άλλαξε».
+ */
+function findSymbolsInSrc(repoRoot, symbols) {
+  const present = new Set();
+  if (!symbols || symbols.length === 0) return present;
+  const srcDir = path.join(repoRoot, 'src');
+  if (!fs.existsSync(srcDir)) return present;
+  for (const full of walkSourceFiles(srcDir)) {
+    if (!SOURCE_EXT.has(path.extname(full))) continue;
+    const text = fs.readFileSync(full, 'utf8');
+    for (const symbol of symbols) if (!present.has(symbol) && text.includes(symbol)) present.add(symbol);
+    if (present.size === symbols.length) break;
+  }
+  return present;
+}
+
+/**
  * ⛔ ΚΛΕΙΣΤΗ ΛΟΓΙΣΤΙΚΗ, FAIL-CLOSED. Κάθε εύρημα οφείλει να έχει **ονομασμένη**
  * κατάσταση. Ένα αντικείμενο που ξεφεύγει θα μετριόταν σιωπηλά ως «τίποτα», και ένα
  * άθροισμα που κλείνει χωρίς να ρωτά «ποιος κρίθηκε;» επικυρώνει τον εαυτό του
@@ -273,6 +298,8 @@ module.exports = {
   classify,
   scanCss,
   scanSources,
+  findSymbolsInSrc,
+  listCssFiles,
   assertClosed,
   scanAll,
 };

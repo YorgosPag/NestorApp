@@ -36,11 +36,16 @@ const {
 const {
   STATES, ZERO_TOLERANCE, RATCHETED,
   findCssDeclarations, findParallelScaleDefs, findTsSites,
-  stripImportant, classify, assertClosed,
+  stripImportant, classify, assertClosed, findSymbolsInSrc,
 } = require('../lib/zindex/sites');
+const {
+  FOREIGN_STATES, FOREIGN_ZERO_TOLERANCE, censusNodeModules, readBoundary, parseRules,
+} = require('../lib/zindex/foreign');
 
 const REPO_ROOT = path.join(__dirname, '..', '..');
 const VARIABLES_CSS = 'src/styles/design-system/generated/variables.css';
+const REGISTRY = '.zindex-foreign.json';
+const BOUNDARY = 'src/app/foreign-boundary.css';
 
 /**
  * Τα αρχεία που **ορίζουν** την απάντηση — πραγματικά, αντιγραμμένα αυτούσια.
@@ -53,14 +58,50 @@ const FIXTURE_FILES = [
   'src/app/globals.css',                                         // token · reference · local · raw
   'src/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css',   // 6 scale-token, 3 ρόλοι
   'src/styles/design-tokens/modules/layout-utilities-constants.ts', // raw · runtime · reference
+  REGISTRY,                                                      // το μητρώο του συνόρου
+  BOUNDARY,                                                      // το ίδιο το σύνορο
 ];
+
+const writeFile = (root, rel, body) => {
+  const dest = path.join(root, rel);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, body);
+};
+
+/**
+ * ΤΟ ΨΕΥΤΙΚΟ `node_modules` — παράγεται **από το μητρώο**, ένα αρχείο ανά πακέτο.
+ *
+ * 🔑 ΓΙΑΤΙ ΠΑΡΑΓΕΤΑΙ ΚΑΙ ΔΕΝ ΓΡΑΦΕΤΑΙ ΜΕ ΤΟ ΧΕΡΙ: η συμφωνία «μητρώο == πραγματικό
+ * node_modules» ελέγχεται **ζωντανά** στο Σ0· εδώ μας ενδιαφέρει η **αντίδραση σε
+ * αλλαγή**. Ένα δέντρο παραγόμενο από το μητρώο ξεκινά εξ ορισμού σε συμφωνία, οπότε
+ * κάθε μετάλλαξη (ανέβασμα αριθμού, νέο πακέτο, σβήσιμο πακέτου) απομονώνεται **καθαρά**
+ * — δεν συγχέεται με προϋπάρχουσα απόκλιση. Το ίδιο σκεπτικό με το μίνι-repo των Μ.
+ *
+ * `pkgEdits` = `{ 'όνομα': αριθμός | null }` — `null` σβήνει το πακέτο.
+ */
+function writeFakeModules(root, registryJson, pkgEdits = {}) {
+  const values = Object.fromEntries(
+    Object.entries(registryJson.packages).map(([pkg, e]) => [pkg, e.observedMax]),
+  );
+  Object.assign(values, pkgEdits);
+  const deps = {};
+  for (const [pkg, max] of Object.entries(values)) {
+    if (max === null) continue;
+    deps[pkg] = '*';
+    writeFile(root, path.join('node_modules', ...pkg.split('/'), 'dist', 'stub.css'),
+      `.stub { z-index: ${max}; }\n`);
+  }
+  writeFile(root, 'package.json', JSON.stringify({ name: 'mini', dependencies: deps }, null, 2));
+}
 
 /**
  * Μίνι-repo με τα ΑΚΡΙΒΗ μονοπάτια που περιμένει ο σαρωτής.
- * `edits` = `{ 'σχετικό/μονοπάτι': (πηγή) => νέα πηγή }` — μία αλλαγή, πραγματικό αρχείο.
+ * `edits`    = `{ 'σχετικό/μονοπάτι': (πηγή) => νέα πηγή }` — μία αλλαγή, πραγματικό αρχείο.
+ * `pkgEdits` = `{ 'πακέτο': αριθμός | null }` — μία αλλαγή στο ψεύτικο `node_modules`.
  */
-function miniRepo(edits = {}) {
+function miniRepo(edits = {}, pkgEdits = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'zx350-'));
+  let registryJson = null;
   for (const rel of FIXTURE_FILES) {
     let source = fs.readFileSync(path.join(REPO_ROOT, rel), 'utf8');
     if (edits[rel]) {
@@ -70,14 +111,22 @@ function miniRepo(edits = {}) {
       if (next === source) throw new Error(`η μετάλλαξη στο ${rel} ΔΕΝ άλλαξε τίποτα.`);
       source = next;
     }
-    const dest = path.join(root, rel);
-    fs.mkdirSync(path.dirname(dest), { recursive: true });
-    fs.writeFileSync(dest, source);
+    if (rel === REGISTRY) registryJson = JSON.parse(source);
+    writeFile(root, rel, source);
   }
+  writeFakeModules(root, registryJson, pkgEdits);
   return root;
 }
 
-const run = (edits = {}, args = []) => gate.measure(args, miniRepo(edits));
+const run = (edits = {}, args = [], pkgEdits = {}) => gate.measure(args, miniRepo(edits, pkgEdits));
+
+/**
+ * Η **ζωντανή** μέτρηση, υπολογισμένη ΜΙΑ φορά.
+ * ⚠️ Η απογραφή του πραγματικού `node_modules` κοστίζει ~6s· δεκατρία test που την
+ * ξανατρέχουν θα έκαναν τη σουίτα να διαρκεί περισσότερο από την ίδια την πύλη.
+ */
+let LIVE;
+const live = async () => { LIVE = LIVE || await gate.measure([], REPO_ROOT); return LIVE; };
 
 /** Προσάρτηση κανόνα CSS στο τέλος — ο φθηνότερος τρόπος να «γράψει κάτι» ένας άνθρωπος. */
 const appendCss = (rule) => (source) => `${source}\n${rule}\n`;
@@ -106,7 +155,7 @@ function delta(census) {
 
 describe('Μ0 — το ζωντανό δέντρο και η βάση των μεταλλάξεων', () => {
   it('η λογιστική κλείνει, ΚΑΙ έχει κρίνει σημεία (ο παρονομαστής)', async () => {
-    const m = await gate.measure([]);
+    const m = await live();
     const total = Object.values(m.census).reduce((a, b) => a + b, 0);
     expect(total).toBe(m.found.length);
     // ⚠️ Χωρίς αυτή τη γραμμή, ένας σαρωτής που δεν άνοιξε κανένα αρχείο θα ήταν
@@ -117,12 +166,12 @@ describe('Μ0 — το ζωντανό δέντρο και η βάση των μ�
   it('το ζωντανό δέντρο ΔΕΝ έχει καμία παραβίαση μηδενικής ανοχής', async () => {
     // Αν αυτό γίνει κόκκινο, η πύλη μπλοκάρει **χωρίς** baseline — και σωστά:
     // ένα `unknown-token` βάφει `z-index: auto`, δηλαδή σιωπηλά λάθος στρώση.
-    const m = await gate.measure([]);
+    const m = await live();
     expect(m.zero).toEqual([]);
   });
 
   it('η ίδια η κλίμακα είναι διατεταγμένη — ο αυτοέλεγχος περνά ζωντανά', async () => {
-    const m = await gate.measure([]);
+    const m = await live();
     expect(m.disorder).toEqual([]);
   });
 
@@ -244,6 +293,27 @@ describe('Π — ο πραγματικός κώδικας', () => {
     expect(byRole.viewerTransient).toBe(10000);
   });
 
+  it('Π1β — η ΣΕΙΡΑ της νέας κορυφής είναι ακριβώς η σειρά που ίσχυε πριν', () => {
+    // ADR-780 Φάση Β: επτά επιφάνειες πάνω από 10000 μετανάστευσαν σε ρόλους. Η
+    // απόδειξη «μηδενικής οπτικής αλλαγής» ΔΕΝ είναι «ίδιος αριθμός» (οι αριθμοί
+    // έπεσαν από 2147483647), είναι **ίδια ΣΕΙΡΑ** — γι' αυτό γράφεται χειρόγραφα, με
+    // τον παλιό αριθμό δίπλα, ως δεύτερη φωνή.
+    const byRole = Object.fromEntries(readScale(REPO_ROOT).map((r) => [r.role, r.value]));
+    const order = [
+      ['viewerTransient', 10000],      // ήταν 10000       (αμετάβλητο)
+      ['viewerPrompt', 10001],         // ήταν 10001       (αμετάβλητο)
+      ['appDrawerScrim', 10100],       // ήταν 99998
+      ['appDrawer', 10101],            // ήταν 99999
+      ['eyedropperCapture', 10200],    // ήταν 2147483646
+      ['eyedropperLoupe', 10201],      // ήταν 2147483647
+      ['debugOverlay', 10300],         // ήταν 2147483646  (ΙΣΟΒΑΘΜΙΑ — λύθηκε σκόπιμα)
+      ['devtoolsGuard', 10400],        // ήταν 2147483647  (ΙΣΟΒΑΘΜΙΑ — λύθηκε σκόπιμα)
+    ];
+    for (const [role, value] of order) expect(byRole[role]).toBe(value);
+    // Και ο ρόλος που ΔΕΝ υπάρχει πια: καμία κλίμακα των μεγάλων δεν έχει MAX_INT.
+    expect(byRole.critical).toBeUndefined();
+  });
+
   it('Π2 — ΚΑΘΕ ρόλος παράγει όνομα που ΥΠΑΡΧΕΙ στο variables.css', () => {
     // 🔑 Η **μοναδική** αντιστάθμιση για το δηλωμένο όριο του `cssVarNameOf`: αντιγράφει
     // τη γραμματική του generator. Αν οι δύο γραμματικές αποκλίνουν, αυτό γίνεται
@@ -306,7 +376,7 @@ describe('Κ — τα όρια, γραμμένα ρητά', () => {
   });
 
   it('Κ1β — και ο ζωντανός κανόνας του globals.css δεν παράγει εύρημα 99999', async () => {
-    const m = await gate.measure([]);
+    const m = await live();
     expect(m.found.filter((f) => f.file === GLOBALS && f.raw.includes('99999'))).toEqual([]);
   });
 
@@ -327,13 +397,18 @@ describe('Κ — τα όρια, γραμμένα ρητά', () => {
       .toBe(STATES.SCALE_TOKEN);
   });
 
-  it('Κ3β — και οι ΕΞΙ `2147483647 !important` του globals.css μετρώνται ωμές', async () => {
-    // Είναι ακριβώς οι έξι που **νικούν** το `--z-index-critical` (ο αγωγός CSS το
-    // στρογγυλοποιεί σε 2147480000, ADR-780 §4.4). Η πύλη ήταν πράσινη πάνω τους.
-    const m = await gate.measure([]);
-    const six = m.found.filter((f) => f.file === GLOBALS && f.raw.startsWith('2147483647'));
-    expect(six).toHaveLength(6);
-    expect(six.every((f) => f.state === STATES.RAW_LITERAL)).toBe(true);
+  it('Κ3β — καμία ωμή MAX_INT δεν έμεινε ζωντανή, και οι έξι ζητούν τον ρόλο devtoolsGuard', async () => {
+    // 🔴 ΙΣΤΟΡΙΚΟ, ΚΑΙ ΓΙ' ΑΥΤΟ ΜΕΝΕΙ: μέχρι το ADR-780 Φάση Α αυτές οι έξι δηλώσεις
+    // ήταν ωμές **και** αόρατες, γιατί `Number('2147483647 !important')` = NaN. Στη
+    // Φάση Β μετανάστευσαν σε ρόλο — αλλά η άγκυρα ΔΕΝ διαγράφεται, αλλάζει **φορά**:
+    // τώρα κλειδώνει ότι **κανένα** MAX_INT δεν επέζησε πουθενά στο δέντρο. Ένα test
+    // που σβήνεται μαζί με το εύρημα αφήνει τον δρόμο ανοιχτό για την επιστροφή του.
+    const m = await live();
+    const maxInt = m.found.filter((f) => stripImportant(f.raw).startsWith('214748364'));
+    expect(maxInt).toEqual([]);
+    const guard = m.found.filter((f) => f.file === GLOBALS && f.raw.includes('--z-index-devtools-guard'));
+    expect(guard).toHaveLength(6);
+    expect(guard.every((f) => f.state === STATES.SCALE_TOKEN)).toBe(true);
   });
 
   it('Κ4 — έκφραση TS ΔΕΝ είναι ωμός αριθμός (δηλωμένο όριο: δεν αποτιμάται)', () => {
@@ -411,5 +486,212 @@ describe('Κ — τα όρια, γραμμένα ρητά', () => {
     for (const s of [...ZERO_TOLERANCE, ...RATCHETED]) {
       expect(Object.values(STATES)).toContain(s);
     }
+  });
+
+  it('Κ14 — τα ΔΥΟ κατάστιχα δεν μοιράζονται όνομα κατάστασης', () => {
+    // Αν μοιράζονταν, ένα «0» του ενός θα διαβαζόταν ως απάντηση του άλλου — και η
+    // κλειστή λογιστική θα έκλεινε **μετρώντας λάθος πράγμα**.
+    const shared = Object.values(STATES).filter((s) => Object.values(FOREIGN_STATES).includes(s));
+    expect(shared).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Σ — ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ (ADR-780 Φάση Β), μεταλλάξεις στις ΕΙΣΟΔΟΥΣ
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Σ — το σύνορο των τρίτων', () => {
+  /** `{ foreign-drifted: +1 }` — μόνο οι κάδοι που άλλαξαν, με πρόσημο. */
+  let FBASE;
+  beforeAll(async () => { FBASE = (await run()).foreign.census; });
+  const fdelta = (census) => {
+    const out = {};
+    for (const state of Object.values(FOREIGN_STATES)) {
+      const d = census[state] - FBASE[state];
+      if (d !== 0) out[state] = d;
+    }
+    return out;
+  };
+
+  it('Σ0 — ΤΟ ΜΗΤΡΩΟ ΣΥΜΦΩΝΕΙ ΜΕ ΤΟ ΠΡΑΓΜΑΤΙΚΟ node_modules, και έχει κρίνει πακέτα', async () => {
+    // 🔑 Η ΜΟΝΗ ΑΓΚΥΡΑ ΠΟΥ ΡΩΤΑΕΙ ΤΟΝ ΑΛΗΘΙΝΟ ΔΙΣΚΟ. Όλα τα Σ παρακάτω τρέχουν σε
+    // παραγόμενο δέντρο, άρα αποδεικνύουν **αντίδραση**, όχι **συμφωνία**. Χωρίς αυτό,
+    // το μητρώο θα μπορούσε να έχει αποκλίνει από την πραγματικότητα και η σουίτα να
+    // είναι ολόκληρη πράσινη — ακριβώς το σχήμα των δύο λιστών namespace του CHECK 3.34.
+    const m = await live();
+    const blocking = m.foreign.findings.filter((f) => FOREIGN_ZERO_TOLERANCE.includes(f.state));
+    expect(blocking).toEqual([]);
+    expect(m.foreign.censusRan).toBe(true);
+    // Ο παρονομαστής: μια απογραφή που δεν άνοιξε κανένα πακέτο θα ήταν εξίσου «πράσινη».
+    expect(m.foreign.findings.length).toBeGreaterThanOrEqual(10);
+  });
+
+  it('Σ1 — νέο πακέτο με z-index ≥ κατώφλι ⇒ ⛔ foreign-undeclared, και η πύλη ΠΕΤΑΕΙ', async () => {
+    // Το σενάριο «κάποιος έκανε npm i μια βιβλιοθήκη με 9999».
+    await expect(run({}, [], { 'νέο-πακέτο': 9999 })).rejects.toThrow(/ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ/);
+    const m = await run({}, ['--report'], { 'νέο-πακέτο': 9999 });
+    expect(fdelta(m.foreign.census)).toEqual({ [FOREIGN_STATES.UNDECLARED]: 1 });
+  });
+
+  it('Σ2 — npm update που ανεβάζει τον αριθμό ⇒ ⛔ foreign-drifted', async () => {
+    // Αυτό είναι το ΠΡΑΓΜΑΤΙΚΟ σενάριο που καμία τεκμηρίωση των μεγάλων δεν πιάνει:
+    // το δάμασμα υπάρχει, αλλά ο τρίτος άλλαξε κάτω από τα πόδια μας.
+    await expect(run({}, [], { sonner: 1999999999 })).rejects.toThrow(/ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ/);
+    const m = await run({}, ['--report'], { sonner: 1999999999 });
+    expect(fdelta(m.foreign.census)).toEqual({
+      [FOREIGN_STATES.DRIFTED]: 1, [FOREIGN_STATES.CLAMPED]: -1,
+    });
+  });
+
+  it('Σ3 — πακέτο που έφυγε αλλά η δήλωση έμεινε ⇒ ⛔ foreign-orphan-declaration', async () => {
+    // Δήλωση που σαπίζει: λέει «το δαμάσαμε» για κάτι που δεν υπάρχει, και το επόμενο
+    // μάτι τη διαβάζει ως κάλυψη.
+    const m = await run({}, ['--report'], { 'react-modern-gantt': null });
+    expect(fdelta(m.foreign.census)).toEqual({
+      [FOREIGN_STATES.ORPHAN_DECLARATION]: 1, [FOREIGN_STATES.CONTAINED]: -1,
+    });
+  });
+
+  it('Σ4 — δηλωμένο δάμασμα που ΔΕΝ υπάρχει στο CSS ⇒ ⛔ foreign-unverified', async () => {
+    // «Το δηλώσαμε» ≠ «το κάναμε». Η δήλωση επαληθεύεται στο ΙΔΙΟ το stylesheet.
+    const edits = { [BOUNDARY]: (s) => s.replace('[data-sonner-toaster] {', '[data-sonner-toaster-XX] {') };
+    await expect(run(edits)).rejects.toThrow(/ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ/);
+    const m = await run(edits, ['--report']);
+    expect(fdelta(m.foreign.census)).toEqual({
+      [FOREIGN_STATES.UNVERIFIED]: 1, [FOREIGN_STATES.CLAMPED]: -1,
+    });
+  });
+
+  it('Σ4β — δάμασμα ΧΩΡΙΣ !important ⇒ ⛔ foreign-unverified (ο τρίτος θα το νικούσε)', async () => {
+    const edits = {
+      [BOUNDARY]: (s) => s.replace(
+        'z-index: var(--z-index-toast) !important;', 'z-index: var(--z-index-toast);',
+      ),
+    };
+    const m = await run(edits, ['--report']);
+    expect(fdelta(m.foreign.census)).toEqual({
+      [FOREIGN_STATES.UNVERIFIED]: 1, [FOREIGN_STATES.CLAMPED]: -1,
+    });
+  });
+
+  it('Σ5 — δηλωμένος περιορισμός χωρίς isolation:isolate ⇒ ⛔ foreign-unverified', async () => {
+    const edits = { [BOUNDARY]: (s) => s.replace('.fc {\n  isolation: isolate;\n}', '.fc {\n  overflow: hidden;\n}') };
+    const m = await run(edits, ['--report']);
+    // Δύο πακέτα (@fullcalendar/core + timegrid) μοιράζονται τη ρίζα `.fc`.
+    expect(fdelta(m.foreign.census)).toEqual({
+      [FOREIGN_STATES.UNVERIFIED]: 2, [FOREIGN_STATES.CONTAINED]: -2,
+    });
+  });
+
+  it('Σ6 — «δεν φορτώνεται» που ΦΟΡΤΩΘΗΚΕ ⇒ ⛔ foreign-reachable', async () => {
+    // Η δήλωση `unreachable` δεν είναι υπόσχεση — είναι πρόταση για το `src/`, και
+    // ελέγχεται εκεί. Μόλις κάποιος καλέσει τη διαδρομή, η δήλωση παύει να ισχύει.
+    const edits = { [UTILS]: (s) => `${s}\nexport const probe = useOverlayPosition;\n` };
+    await expect(run(edits)).rejects.toThrow(/ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ/);
+    const m = await run(edits, ['--report']);
+    expect(fdelta(m.foreign.census)).toEqual({
+      [FOREIGN_STATES.REACHABLE]: 1, [FOREIGN_STATES.UNREACHABLE]: -1,
+    });
+  });
+
+  it('Σ7 — δικός μας κανόνας που ΝΙΚΑ το δάμασμα ⇒ ⛔ foreign-clamp-overridden', async () => {
+    // Ακριβώς το ελάττωμα που έλυσε η Φάση Β: ο περιορισμός του sonner ζούσε σε πιο
+    // ειδικό επιλογέα με τη θέση μέσα του, άρα εξαρτιόταν από το `position` prop.
+    const edits = {
+      [GLOBALS]: appendCss('[data-sonner-toaster][data-position="bottom-right"] { z-index: 9999 !important; }'),
+    };
+    await expect(run(edits)).rejects.toThrow(/ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ/);
+    const m = await run(edits, ['--report']);
+    expect(fdelta(m.foreign.census)).toEqual({ [FOREIGN_STATES.CLAMP_OVERRIDDEN]: 1 });
+  });
+
+  it('Σ7β — δικός μας κανόνας πάνω σε ΠΕΡΙΟΡΙΣΜΕΝΗ ρίζα ΔΕΝ είναι εύρημα', async () => {
+    // 🔴 ΜΕΤΡΗΜΕΝΟ ΨΕΥΔΩΣ ΘΕΤΙΚΟ (2026-08-09): η πρώτη γραφή μάζευε επιλογείς και από
+    // τα μέτρα `contain` και κατήγγειλε το υπαρκτό `.rmg-gantt-chart { z-index: 20
+    // !important }` του `globals.css`. Ένα δικό μας z-index στη ρίζα ενός
+    // περιορισμένου πακέτου αποφασίζει πού ζωγραφίζεται η ΔΙΚΗ ΜΑΣ επιφάνεια — το
+    // `isolation` δεν το αφορά. Φρουρός που πυροδοτεί σε σωστό κώδικα είναι ο δρόμος
+    // προς το `SKIP_`.
+    const m = await run({ [GLOBALS]: appendCss('.rmg-gantt-chart { z-index: 30 !important; }') }, ['--report']);
+    expect(fdelta(m.foreign.census)).toEqual({});
+  });
+
+  it('Σ8 — μέτρο ΧΩΡΙΣ λόγο ΠΕΤΑΕΙ (πρότυπο CHECK 3.35: δηλώνεις ⇒ λες γιατί)', async () => {
+    const edits = { [REGISTRY]: (s) => s.replace(/"why": "Κάνει portal στο body[^"]*"/, '"why": "γιατί"') };
+    await expect(run(edits, ['--report'])).rejects.toThrow(/χωρίς λόγο/);
+  });
+
+  it('Σ9 — η αναγνώριση εντός ζώνης ΔΕΝ επιτρέπεται να ξεπερνά τη ζώνη της', async () => {
+    // Το `acknowledge` δεν είναι «αγνόησέ το»: δηλώνει ΖΩΝΗ της κλίμακας και η πύλη
+    // επιβάλλει το όριο. Το jspdf είναι ακριβώς στο 1000 = ρόλος dropdown· ένα +1
+    // βγαίνει από τη ζώνη και μπλοκάρει.
+    const m = await run({}, ['--report'], { jspdf: 1001 });
+    expect(fdelta(m.foreign.census)).toEqual({
+      [FOREIGN_STATES.DRIFTED]: 1, [FOREIGN_STATES.ACKNOWLEDGED]: -1,
+    });
+    const m2 = await run(
+      { [REGISTRY]: (s) => s.replace('"observedMax": 1000,\n      "measures": [\n        {\n          "kind": "acknowledge"', '"observedMax": 1001,\n      "measures": [\n        {\n          "kind": "acknowledge"') },
+      ['--report'], { jspdf: 1001 },
+    );
+    expect(fdelta(m2.foreign.census)).toEqual({
+      [FOREIGN_STATES.UNVERIFIED]: 1, [FOREIGN_STATES.ACKNOWLEDGED]: -1,
+    });
+  });
+
+  it('Σ10 — η ΑΠΟΓΡΑΦΗ είναι fail-closed: χωρίς node_modules ΠΕΤΑΕΙ, δεν λέει «καθαρό»', () => {
+    const bare = fs.mkdtempSync(path.join(os.tmpdir(), 'zx350-bare-'));
+    fs.writeFileSync(path.join(bare, 'package.json'), '{"dependencies":{}}');
+    expect(() => censusNodeModules(bare)).toThrow(/δεν υπάρχει node_modules/);
+  });
+
+  it('Σ11 — χωρίς απογραφή, οι τρεις καταστάσεις της ΔΕΝ τίθενται, και το λέμε', () => {
+    // ⚠️ Το `withCensus:false` δεν είναι «γρήγορη εκδοχή» — είναι ΛΙΓΟΤΕΡΕΣ ΕΡΩΤΗΣΕΙΣ.
+    // Η αναφορά το τυπώνει με ⏭, γιατί αλλιώς το «0» διαβάζεται ως «καθαρό».
+    const root = miniRepo({}, { 'νέο-πακέτο': 9999 });
+    const withCensus = gate.measureForeign(root, true);
+    const without = gate.measureForeign(root, false);
+    expect(withCensus.census[FOREIGN_STATES.UNDECLARED]).toBe(1);
+    expect(without.census[FOREIGN_STATES.UNDECLARED]).toBe(0);
+    expect(without.censusRan).toBe(false);
+  });
+
+  it('Σ12 — η σκανδάλη της απογραφής πιάνει ΜΟΝΟ ό,τι μπορεί να την αλλάξει', () => {
+    const yes = ['package.json', 'package-lock.json', '.zindex-foreign.json', BOUNDARY,
+      'scripts/lib/zindex/foreign.js', 'scripts/check-zindex-scale.js'];
+    for (const f of yes) expect(gate.touchesForeignCensus([f], BOUNDARY)).toBe(true);
+    // Ένα οποιοδήποτε αρχείο πηγής ΔΕΝ μπορεί να αλλάξει το τι γράφει ένα πακέτο.
+    expect(gate.touchesForeignCensus(['src/app/page.tsx'], BOUNDARY)).toBe(false);
+  });
+
+  it('Σ13 — η λογιστική του συνόρου είναι fail-closed και ΞΕΝΗ προς την πρώτη', async () => {
+    const m = await run();
+    const total = Object.values(m.foreign.census).reduce((a, b) => a + b, 0);
+    expect(total).toBe(m.foreign.findings.length);
+    for (const f of m.foreign.findings) expect(Object.values(FOREIGN_STATES)).toContain(f.state);
+  });
+
+  it('Σ14 — το σύνορο ΔΕΝ γράφει ωμό αριθμό: κάθε clamp ζητά ρόλο της κλίμακας', () => {
+    // Αλλιώς λύνουμε το πρόβλημα των μαγικών αριθμών με έναν μαγικό αριθμό.
+    const boundary = readBoundary(REPO_ROOT, BOUNDARY);
+    const raw = [...boundary].filter(([, r]) => r.role && r.role.startsWith('ΩΜΟ:'));
+    expect(raw).toEqual([]);
+    expect([...boundary].filter(([, r]) => r.role).length).toBeGreaterThan(0);
+  });
+
+  it('Σ15 — τα σύμβολα-απόδειξη ΔΕΝ πρέπει να ταιριάζουν κατά τύχη', () => {
+    // 🔴 ΜΕΤΡΗΜΕΝΟ (2026-08-09): το σκέτο «stats.module» ταιριάζει στο άσχετο
+    // `stats.modules` του ai-pipeline και γεννούσε ψευδές `foreign-reachable`. Το
+    // σύμβολο ΠΡΕΠΕΙ να κουβαλά τη διαδρομή του πακέτου.
+    expect(findSymbolsInSrc(REPO_ROOT, ['stats.module']).has('stats.module')).toBe(true);
+    expect(findSymbolsInSrc(REPO_ROOT, ['libs/stats.module']).has('libs/stats.module')).toBe(false);
+    const registry = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, REGISTRY), 'utf8'));
+    const evidence = Object.values(registry.packages)
+      .flatMap((e) => e.measures).filter((mm) => mm.evidence).flatMap((mm) => mm.evidence);
+    expect([...findSymbolsInSrc(REPO_ROOT, evidence)]).toEqual([]);
+  });
+
+  it('Σ16 — ο αναλυτής κανόνων δεν μπερδεύει σχόλιο με δήλωση', () => {
+    expect(parseRules('/* .fake { z-index: 9; } */ .real { z-index: 1; }').map((r) => r.selector))
+      .toEqual(['.real']);
   });
 });

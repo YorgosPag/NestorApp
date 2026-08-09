@@ -47,7 +47,12 @@ const path = require('path');
 
 const { runSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
 const { readScale, findScaleDisorder, GLOBAL_LAYER_FLOOR } = require('./lib/zindex/scale');
-const { STATES, ZERO_TOLERANCE, RATCHETED, scanAll } = require('./lib/zindex/sites');
+const {
+  STATES, ZERO_TOLERANCE, RATCHETED, scanAll, findSymbolsInSrc, listCssFiles,
+} = require('./lib/zindex/sites');
+const {
+  FOREIGN_STATES, FOREIGN_ZERO_TOLERANCE, evaluateForeign, REGISTRY_FILE,
+} = require('./lib/zindex/foreign');
 
 const CHECK = 'CHECK 3.50';
 const ADR = 'ADR-780';
@@ -55,6 +60,12 @@ const BASELINE = path.join(PROJECT_ROOT, '.zindex-scale-baseline.json');
 
 /** Ταυτότητα παράβασης: **αρχείο + ρόλος του σφάλματος**, ποτέ ο αριθμός γραμμής μόνος. */
 const violationId = (v) => `${v.file}|${v.state}|${v.raw}`;
+
+/**
+ * Τρέχει η απογραφή του `node_modules`; **Προεπιλογή: ναι** — fail-closed. Μόνο η
+ * σκανδάλη του Layer 1 τη σβήνει, και τότε η αναφορά το **δηλώνει ρητά**.
+ */
+let foreignCensusRequested = true;
 
 /**
  * ⛔ Οι zero-tolerance μπλοκάρουν **πριν** μπει στο παιχνίδι η baseline, και δεν
@@ -79,12 +90,29 @@ function partition(found) {
  * απεδείκνυε μόνο ότι ο κώδικας εκτελείται· μετάλλαξη στην **είσοδο** αποδεικνύει ότι η
  * πύλη απαντά το ερώτημα. Κανένας άλλος καταναλωτής δεν περνά δεύτερο όρισμα.
  */
+/**
+ * Το **δεύτερο κατάστιχο**: το σύνορο των τρίτων (ADR-780 Φάση Β).
+ *
+ * 🔑 ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΝΕΑ ΠΥΛΗ: είναι το **ίδιο ερώτημα** μία στάθμη πιο έξω — «ζητά
+ * κάθε καθολική στρώση από τη ΜΙΑ κλίμακα;». Ξεχωριστή πύλη θα σήμαινε νέο workflow, νέα
+ * εγγραφή στο `.ci-gate-tiers.json` και δεύτερος αριθμός για την ίδια αλήθεια. Το ADR-780
+ * γεννήθηκε ακριβώς από «δύο απαντήσεις σε ένα ερώτημα».
+ *
+ * Η απογραφή του `node_modules` (~6s) τρέχει όταν αλλάζουν **οι εξαρτήσεις ή το ίδιο το
+ * σύνορο** — τα μόνα γεγονότα που μπορούν να τη μεταβάλουν — και **άνευ όρων** στο CI.
+ */
+function measureForeign(repoRoot, withCensus) {
+  return evaluateForeign(repoRoot, readScale(repoRoot), { findSymbolsInSrc, listCssFiles }, { withCensus });
+}
+
 async function measure(args = [], repoRoot = PROJECT_ROOT) {
   const reporting = args.includes('--report');
   const roles = readScale(repoRoot);
   const disorder = findScaleDisorder(roles);
   const { found, census } = scanAll(repoRoot, roles);
   const { zero, ratcheted } = partition(found);
+  const foreign = measureForeign(repoRoot, foreignCensusRequested);
+  const foreignZero = foreign.findings.filter((f) => FOREIGN_ZERO_TOLERANCE.includes(f.state));
 
   if (disorder.length && !reporting) {
     const lines = disorder.map((d) => `      • ${d.detail}`).join('\n');
@@ -96,6 +124,13 @@ async function measure(args = [], repoRoot = PROJECT_ROOT) {
       `${zero.length} παραβίαση(εις) μηδενικής ανοχής — ΔΕΝ μπαίνουν σε baseline:\n${lines}`,
     );
   }
+  if (foreignZero.length && !reporting) {
+    const lines = foreignZero.map((f) => `      • ${f.pkg}  [${f.state}]  ${f.detail}`).join('\n');
+    throw new Error(
+      `ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ — ${foreignZero.length} παραβίαση(εις) μηδενικής ανοχής `
+      + `(μητρώο: ${REGISTRY_FILE}, σύνορο: ${foreign.registry.boundaryStylesheet}):\n${lines}`,
+    );
+  }
 
   return {
     roles,
@@ -103,6 +138,8 @@ async function measure(args = [], repoRoot = PROJECT_ROOT) {
     found,
     zero,
     disorder,
+    foreign,
+    foreignZero,
     violations: ratcheted,
     violationIds: [...new Set(ratcheted.map(violationId))],
     declarations: roles.map((r) => `${r.role}=${r.value}`),
@@ -164,7 +201,29 @@ function printReport(m) {
   for (const [file, n] of [...byFile].sort((a, b) => b[1] - a[1])) {
     console.log(`    ${String(n).padStart(3)}  ${file}`);
   }
+  printForeignReport(m.foreign);
   console.log('\n  Θεραπεία: ΡΟΛΟΣ, όχι μικρότερος αριθμός — var(--z-index-<ρόλος>).');
+}
+
+/**
+ * ⚠️ ΟΤΑΝ Η ΑΠΟΓΡΑΦΗ ΔΕΝ ΕΤΡΕΞΕ, ΤΟ ΛΕΜΕ ΠΡΩΤΑ ΚΑΙ ΜΕ ⏭. Οι τρεις καταστάσεις που τη
+ * χρειάζονται θα τυπώνονταν αλλιώς «0», δηλαδή «κανείς δεν κοίταξε» ντυμένο ως «καθαρό».
+ */
+function printForeignReport(foreign) {
+  console.log(`\n  ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ (${REGISTRY_FILE} → ${foreign.registry.boundaryStylesheet}):`);
+  if (!foreign.censusRan) {
+    console.log('    ⏭️  Η ΑΠΟΓΡΑΦΗ ΤΟΥ node_modules ΔΕΝ ΕΤΡΕΞΕ — οι καταστάσεις undeclared/');
+    console.log('        drifted/orphan-declaration ΔΕΝ τέθηκαν. Τρέχει άνευ όρων στο CI (--all).');
+  }
+  const mark = (s) => (FOREIGN_ZERO_TOLERANCE.includes(s) ? '⛔' : '✅');
+  for (const state of Object.values(FOREIGN_STATES)) {
+    console.log(`    ${mark(state)} ${state.padEnd(28)} ${String(foreign.census[state]).padStart(3)}`);
+  }
+  const total = Object.values(foreign.census).reduce((a, b) => a + b, 0);
+  console.log(`       ${'ΣΥΝΟΛΟ'.padEnd(29)} ${String(total).padStart(3)}`);
+  for (const f of foreign.findings) {
+    console.log(`      ${String(f.observed).padStart(10)}  ${f.pkg.padEnd(24)} ${f.state}`);
+  }
 }
 
 const DESCRIPTOR = {
@@ -201,8 +260,34 @@ const DESCRIPTOR = {
  * Το `variables.css` ΔΕΝ χρειάζεται να απαριθμηθεί — περιέχει `z-index` και το πιάνει
  * το προφίλτρο κειμένου παρακάτω.
  */
-const AUTHORITY_FILES = ['design-tokens.json', 'scripts/check-zindex-scale.js'];
+const AUTHORITY_FILES = [
+  'design-tokens.json',
+  'scripts/check-zindex-scale.js',
+  '.zindex-foreign.json',
+  'package.json',
+  'package-lock.json',
+  'pnpm-lock.yaml',
+];
 const AUTHORITY_DIRS = ['scripts/lib/zindex/'];
+
+/**
+ * Τα **μόνα** γεγονότα που μπορούν να μεταβάλουν την απογραφή του `node_modules`: αλλαγή
+ * εξαρτήσεων, αλλαγή του μητρώου, αλλαγή του ίδιου του συνόρου, ή αλλαγή του κώδικα που
+ * κρίνει. Οτιδήποτε άλλο αφήνει την απάντηση **αποδεδειγμένα** ίδια — γι' αυτό η
+ * παράλειψη εδώ δεν είναι έκπτωση, είναι συμπέρασμα.
+ *
+ * ⚠️ Η ΑΛΛΑΓΗ ΤΗΣ ΙΔΙΑΣ ΤΗΣ ΠΥΛΗΣ ΕΙΝΑΙ ΣΚΑΝΔΑΛΗ (μάθημα CHECK 3.43): αλλιώς το νέο
+ * κριτήριο θα έβγαινε πράσινο **πάνω στην αλλαγή του εαυτού του**.
+ */
+function touchesForeignCensus(files, boundaryStylesheet) {
+  const census = new Set([
+    'package.json', 'package-lock.json', 'pnpm-lock.yaml', '.zindex-foreign.json', boundaryStylesheet,
+  ]);
+  return files.some((f) => {
+    const rel = f.split(path.sep).join('/');
+    return census.has(rel) || rel.startsWith('scripts/lib/zindex/') || rel === 'scripts/check-zindex-scale.js';
+  });
+}
 
 /** Οι τρεις διάλεκτοι σε μορφή κειμένου — ό,τι δεν τις γράφει, δεν δηλώνει στρώση. */
 const LAYERING_MARKERS = ['z-index', 'zIndex', 'z-['];
@@ -247,9 +332,22 @@ if (require.main === module) {
     console.log(`⏭️  ${CHECK} — καμία σταδιοποιημένη αλλαγή δηλώνει στρώση`);
     process.exit(0);
   }
+  if (staged.length > 0) {
+    const { boundaryStylesheet } = require('./lib/zindex/foreign').readRegistry(PROJECT_ROOT);
+    foreignCensusRequested = touchesForeignCensus(staged, boundaryStylesheet);
+  }
   runSetRatchetCli(DESCRIPTOR, process.argv.filter((a) => !staged.includes(a)));
 }
 
 module.exports = {
-  DESCRIPTOR, measure, buildPayload, violationId, touchesLayering, CHECK, ADR, BASELINE,
+  DESCRIPTOR,
+  measure,
+  measureForeign,
+  buildPayload,
+  violationId,
+  touchesLayering,
+  touchesForeignCensus,
+  CHECK,
+  ADR,
+  BASELINE,
 };

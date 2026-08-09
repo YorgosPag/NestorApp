@@ -1,0 +1,138 @@
+{
+  "_description": "ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ (ADR-780 Φάση Β) — μία δήλωση ανά πακέτο που γράφει καθολική στρώση. Το CHECK 3.50 συγκρίνει ΑΥΤΟ το αρχείο με απογραφή του ίδιου του node_modules: νέο πακέτο ⇒ foreign-undeclared, npm update που ανεβάζει τον αριθμό ⇒ foreign-drifted, δήλωση που σαπίζει ⇒ foreign-orphan-declaration. ΔΕΝ είναι ratchet — καμία baseline, ποτέ.",
+  "_authority": "package.json ▸ dependencies + node_modules. Καμία χειρόγραφη λίστα πακέτων: αυτό ακριβώς αποτυγχάνει σιωπηλά (CHECK 3.34: δύο λίστες namespace απέκλιναν κατά 63).",
+  "_doctrine": "ΠΕΡΙΟΡΙΣΜΟΣ (isolation:isolate) για ό,τι ζωγραφίζεται στη θέση του — δεν χρειάζεται να ξέρουμε τι αριθμούς γράφει η βιβλιοθήκη, ούτε σήμερα ούτε αύριο. ΔΑΜΑΣΜΑ (z-index: var(--z-index-<ρόλος>) !important) ΜΟΝΟ για ό,τι δραπετεύει στο ROOT (portal στο body ή position:fixed πάνω στο ίδιο του το δοχείο), όπου ο περιορισμός είναι δομικά αδύνατος.",
+  "_measured": "2026-08-09 — 11 πακέτα ≥1000 σε 116 άμεσα runtime dependencies.",
+
+  "boundaryStylesheet": "src/app/foreign-boundary.css",
+  "floor": 1000,
+
+  "packages": {
+    "sonner": {
+      "observedMax": 999999999,
+      "measures": [
+        {
+          "kind": "clamp",
+          "selector": "[data-sonner-toaster]",
+          "role": "toast",
+          "why": "Κάνει portal στο body με position:fixed, άρα ΔΕΝ υπάρχει δικός μας πρόγονος να το φράξει· ο περιορισμός είναι δομικά αδύνατος. Ρόλος toast (1700) — είναι ακριβώς αυτό που ζωγραφίζει. ΠΡΟΣΟΧΗ: μέχρι το ADR-780 Φάση Β ο περιορισμός ζούσε στον επιλογέα [data-position=\"top-right\"], δηλαδή δούλευε κατά τύχη· ένα bottom-right επανέφερε σιωπηλά το 999999999."
+        }
+      ]
+    },
+
+    "maplibre-gl": {
+      "observedMax": 99999,
+      "measures": [
+        {
+          "kind": "clamp",
+          "selector": ".maplibregl-pseudo-fullscreen",
+          "role": "modal",
+          "why": "Ο FullscreenControl βάζει την κλάση πάνω στο ΙΔΙΟ ΤΟΥ το δοχείο (_container.classList.toggle) μαζί με position:fixed !important, άρα ο αριθμός λύνεται στον ΓΟΝΕΑ του χάρτη — ένα stacking context δεν περιορίζει τον εαυτό του. Ρόλος modal: γεμίζει το viewport αλλά μένει κάτω από ειδοποιήσεις και tooltips."
+        },
+        {
+          "kind": "contain",
+          "selector": ".maplibregl-map",
+          "why": "Κάθε άλλο εσωτερικό της (.maplibregl-cooperative-gesture-screen = 99999, controls, popups) ζωγραφίζεται μέσα στο δοχείο, άρα το isolation το κάνει τοπικό χωρίς να χρειάζεται να απαριθμήσουμε αριθμούς που μπορεί να αλλάξουν σε αναβάθμιση."
+        }
+      ]
+    },
+
+    "@fullcalendar/core": {
+      "observedMax": 9999,
+      "measures": [
+        {
+          "kind": "contain",
+          "selector": ".fc",
+          "why": "Το .fc-popover δηλώνει 9999, δηλαδή ισοβαθμεί με τον ρόλο viewerMenu της κλίμακάς μας. Ένα «+2 ακόμη» ημερολογίου δεν επιτρέπεται να ανταγωνίζεται τα μενού του χώρου εργασίας· ζωγραφίζεται στη θέση του, άρα ο περιορισμός αρκεί."
+        }
+      ]
+    },
+
+    "@fullcalendar/timegrid": {
+      "observedMax": 9999,
+      "measures": [
+        {
+          "kind": "contain",
+          "selector": ".fc",
+          "why": "Το .fc-timegrid-more-link δηλώνει 9999 και ζει κάτω από την ΙΔΙΑ ρίζα .fc με το core — μία δήλωση isolation τα καλύπτει και τα δύο πακέτα, γι' αυτό ο επιλογέας είναι ο ίδιος."
+        }
+      ]
+    },
+
+    "react-modern-gantt": {
+      "observedMax": 1002,
+      "measures": [
+        {
+          "kind": "contain",
+          "selector": ".rmg-gantt-chart",
+          "why": "Τα .rmg-progress-handle (1001), .rmg-progress-tooltip (1002) και .rmg-tooltip (1000) πέφτουν μέσα στη ζώνη dropdown της κλίμακάς μας. Ζωγραφίζονται στη θέση τους μέσα στο διάγραμμα, άρα ο περιορισμός τα κάνει τοπικά χωρίς καμία οπτική αλλαγή."
+        }
+      ]
+    },
+
+    "next": {
+      "observedMax": 2147483647,
+      "measures": [
+        {
+          "kind": "dev-only",
+          "why": "Το next-devtools δηλώνει :host { --top-z-index: 2147483647 } και το χρησιμοποιεί ΜΕΣΑ στο shadow root του, άρα ο host nextjs-portal μένει z-index:auto και ΔΕΝ ανταγωνίζεται τίποτα. Ισχύει το αντίστροφο: εμείς ΤΟΝ ΑΝΕΒΑΖΟΥΜΕ σκόπιμα με τον ρόλο devtoolsGuard (10400) στο src/app/globals.css, ώστε το overlay σφαλμάτων να μη θάβεται από επιφάνεια της εφαρμογής. Δεν αποστέλλεται σε παραγωγή."
+        }
+      ]
+    },
+
+    "@react-aria/overlays": {
+      "observedMax": 100000,
+      "measures": [
+        {
+          "kind": "unreachable",
+          "evidence": ["useOverlayPosition"],
+          "why": "Το 100000 γράφεται ΜΟΝΟ από το useOverlayPosition, που τοποθετεί overlay με inline style. Η εφαρμογή καταναλώνει useOverlay / useDialog / FocusScope (ColorDialogShell) και δίνει η ίδια τη στρώση από την κλίμακα. Αν κάποιος καλέσει useOverlayPosition, η πύλη γίνεται κόκκινη — γιατί τότε το 100000 όντως προσγειώνεται."
+        }
+      ]
+    },
+
+    "pdfjs-dist": {
+      "observedMax": 100000,
+      "measures": [
+        {
+          "kind": "unreachable",
+          "evidence": ["pdf_viewer.css"],
+          "why": "Το 100000 ζει αποκλειστικά στο web/pdf_viewer.css (και στο legacy δίδυμό του), δηλαδή στο έτοιμο UI του pdf.js. Η εφαρμογή χρησιμοποιεί ΜΟΝΟ τη μηχανή απόδοσης και ΔΕΝ εισάγει αυτό το stylesheet, οπότε ο κανόνας δεν υπάρχει καν στο document."
+        }
+      ]
+    },
+
+    "three": {
+      "observedMax": 10000,
+      "measures": [
+        {
+          "kind": "unreachable",
+          "evidence": ["libs/stats.module", "lil-gui"],
+          "why": "Οι δύο τιμές (stats.module 10000 · lil-gui 1001) ζουν στο three/examples/jsm/libs, δηλαδή σε βοηθήματα επίδειξης που δεν μπαίνουν στο bundle αν δεν εισαχθούν ρητά. ΠΡΟΣΟΧΗ: το σύμβολο-απόδειξη ΠΡΕΠΕΙ να περιέχει τη διαδρομή — σκέτο «stats.module» ταιριάζει στο άσχετο stats.modules του ai-pipeline και γεννά ψευδή συναγερμό (μετρημένο 2026-08-09)."
+        }
+      ]
+    },
+
+    "docx-preview": {
+      "observedMax": 1000,
+      "measures": [
+        {
+          "kind": "unreachable",
+          "evidence": ["renderComments"],
+          "why": "Το z-index:1000 ανήκει στο <className>-comment-popover, που παράγεται ΜΟΝΟ όταν είναι ενεργή η επιλογή renderComments — και δηλώνεται ούτως ή άλλως display:none. Η εφαρμογή περνά μόνο className: 'docx-preview-wrapper' (DocxPreview.tsx)."
+        }
+      ]
+    },
+
+    "jspdf": {
+      "observedMax": 1000,
+      "measures": [
+        {
+          "kind": "acknowledge",
+          "withinRole": "dropdown",
+          "why": "Το 1000 είναι το προσωρινό δοχείο απόδοσης της .html(), τοποθετημένο ΕΚΤΟΣ οθόνης (left:-100000px) όσο διαρκεί η παραγωγή του PDF. Δεν το φράζουμε γιατί δεν υπάρχει δικός μας πρόγονος (μπαίνει στο body) και δεν το δαμάζουμε γιατί το 1000 ΕΙΝΑΙ ακριβώς ο ρόλος dropdown της κλίμακας — αναγνωρίζεται μέσα στη ζώνη του, και η πύλη μπλοκάρει αν ποτέ τον ξεπεράσει."
+        }
+      ]
+    }
+  }
+}

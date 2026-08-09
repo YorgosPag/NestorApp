@@ -123,7 +123,13 @@ export interface DesignTokens {
   zIndex_viewerPalette: string;
   zIndex_viewerMenu: string;
   zIndex_viewerTransient: string;
-  zIndex_critical: string;
+  zIndex_viewerPrompt: string;
+  zIndex_appDrawerScrim: string;
+  zIndex_appDrawer: string;
+  zIndex_eyedropperCapture: string;
+  zIndex_eyedropperLoupe: string;
+  zIndex_debugOverlay: string;
+  zIndex_devtoolsGuard: string;
   canvas_background_dxf: string;
   canvas_background_dxf_image: string;
   canvas_background_layer: string;
@@ -259,7 +265,13 @@ export const designTokens: DesignTokens = {
   zIndex_viewerPalette: 'var(--z-index-viewer-palette)',
   zIndex_viewerMenu: 'var(--z-index-viewer-menu)',
   zIndex_viewerTransient: 'var(--z-index-viewer-transient)',
-  zIndex_critical: 'var(--z-index-critical)',
+  zIndex_viewerPrompt: 'var(--z-index-viewer-prompt)',
+  zIndex_appDrawerScrim: 'var(--z-index-app-drawer-scrim)',
+  zIndex_appDrawer: 'var(--z-index-app-drawer)',
+  zIndex_eyedropperCapture: 'var(--z-index-eyedropper-capture)',
+  zIndex_eyedropperLoupe: 'var(--z-index-eyedropper-loupe)',
+  zIndex_debugOverlay: 'var(--z-index-debug-overlay)',
+  zIndex_devtoolsGuard: 'var(--z-index-devtools-guard)',
   canvas_background_dxf: 'var(--canvas-background-dxf)',
   canvas_background_dxf_image: 'var(--canvas-background-dxf-image)',
   canvas_background_layer: 'var(--canvas-background-layer)',
@@ -317,8 +329,20 @@ export const zIndexScale = {
   viewerMenu: 9999,
   /** Transient workspace surfaces the user just aimed at (mini toolbar, quick-properties panel) */
   viewerTransient: 10000,
-  /** Critical system overlays only */
-  critical: 2147483647,
+  /** Modal command prompt of the workspace - blocks the transient surfaces below it */
+  viewerPrompt: 10001,
+  /** Scrim of the application-shell drawer - dims the workspace, including its transient surfaces */
+  appDrawerScrim: 10100,
+  /** Application-shell drawer panel (notifications) - outranks the whole workspace */
+  appDrawer: 10101,
+  /** Full-viewport pointer capture of the eyedropper - must swallow every gesture of the app */
+  eyedropperCapture: 10200,
+  /** Eyedropper loupe - rides ABOVE its own capture surface (that is the whole point of the pair) */
+  eyedropperLoupe: 10201,
+  /** Developer debug overlays (pointer-events:none) - above EVERY product surface, otherwise they measure what they cannot see */
+  debugOverlay: 10300,
+  /** NOT A PRODUCT LAYER. The framework dev overlay (nextjs-portal) hosts its own 2147483647 INSIDE its shadow root, so the host element itself stays z-index:auto and any product surface buries it. This rung exists only to raise that host above our ceiling. Never use it for product UI. */
+  devtoolsGuard: 10400,
 } as const;
 
 export type ZIndexRole = keyof typeof zIndexScale;

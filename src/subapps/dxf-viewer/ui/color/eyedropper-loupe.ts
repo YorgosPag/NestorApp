@@ -59,7 +59,7 @@ function applyContainerStyles(el: HTMLDivElement): void {
     boxShadow: '0 4px 20px rgba(0,0,0,0.55)',
     border: '1.5px solid rgba(255,255,255,0.22)',
     pointerEvents: 'none',
-    zIndex: '2147483647',
+    zIndex: 'var(--z-index-eyedropper-loupe)',
     overflow: 'hidden',
     backgroundColor: '#111',
   });
@@ -109,6 +109,22 @@ function renderZoom(
   ctx.drawImage(source, Math.round(x) - half, Math.round(y) - half, ZOOM_SOURCE, ZOOM_SOURCE, 0, 0, LOUPE_SIZE, LOUPE_SIZE);
 }
 
+/**
+ * Χαράζει **μόνο** το σχήμα του σταυρονήματος — καμία απόφαση μελανιού, κανένα `stroke()`.
+ *
+ * Τα δύο περάσματα (σκούρο από κάτω, φωτεινό από πάνω) χάραζαν το **ίδιο ακριβώς** path με
+ * αντιγραμμένες γραμμές· ένα τρίτο πέρασμα ή μια αλλαγή στο μήκος του βραχίονα θα έπρεπε να
+ * γραφτεί δύο φορές, και η δεύτερη θα ήταν αυτή που θα ξεχνιόταν. Η γεωμετρία λέγεται τώρα
+ * **μία** φορά και τα περάσματα διαφέρουν μόνο σε ό,τι τα κάνει διαφορετικά: πένα και χρώμα.
+ */
+function traceCrosshairPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, arm: number): void {
+  ctx.beginPath();
+  ctx.moveTo(cx - arm, cy);
+  ctx.lineTo(cx + arm, cy);
+  ctx.moveTo(cx, cy - arm);
+  ctx.lineTo(cx, cy + arm);
+}
+
 function renderCrosshair(ctx: CanvasRenderingContext2D): void {
   const cx = LOUPE_SIZE / 2;
   const cy = LOUPE_SIZE / 2;
@@ -118,20 +134,12 @@ function renderCrosshair(ctx: CanvasRenderingContext2D): void {
   // Dark shadow stroke for contrast on any background
   ctx.strokeStyle = 'rgba(0,0,0,0.75)';
   ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(cx - arm, cy);
-  ctx.lineTo(cx + arm, cy);
-  ctx.moveTo(cx, cy - arm);
-  ctx.lineTo(cx, cy + arm);
+  traceCrosshairPath(ctx, cx, cy, arm);
   ctx.stroke();
   // Bright white inner stroke
   ctx.strokeStyle = 'rgba(255,255,255,0.9)';
   ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - arm, cy);
-  ctx.lineTo(cx + arm, cy);
-  ctx.moveTo(cx, cy - arm);
-  ctx.lineTo(cx, cy + arm);
+  traceCrosshairPath(ctx, cx, cy, arm);
   ctx.stroke();
   ctx.restore();
 }

@@ -82,7 +82,7 @@ async function openDomEyedropper(): Promise<EyedropperResult> {
       inset: '0',
       pointerEvents: 'all',
       background: 'transparent',
-      zIndex: '2147483646',
+      zIndex: 'var(--z-index-eyedropper-capture)',
     });
     document.body.appendChild(captureOverlay);
 

@@ -205,8 +205,17 @@
     "viewerPalette": { "value": "9900", "type": "zIndex", "description": "Persistent workspace palettes (Properties) - outlive the surfaces below them" },
     "viewerMenu": { "value": "9999", "type": "zIndex", "description": "Workspace context menus and hover popovers - summoned, dismissed on any gesture" },
     "viewerTransient": { "value": "10000", "type": "zIndex", "description": "Transient workspace surfaces the user just aimed at (mini toolbar, quick-properties panel)" },
+    "viewerPrompt": { "value": "10001", "type": "zIndex", "description": "Modal command prompt of the workspace - blocks the transient surfaces below it" },
 
-    "critical": { "value": "2147483647", "type": "zIndex", "description": "Critical system overlays only" }
+    "appDrawerScrim": { "value": "10100", "type": "zIndex", "description": "Scrim of the application-shell drawer - dims the workspace, including its transient surfaces" },
+    "appDrawer": { "value": "10101", "type": "zIndex", "description": "Application-shell drawer panel (notifications) - outranks the whole workspace" },
+
+    "eyedropperCapture": { "value": "10200", "type": "zIndex", "description": "Full-viewport pointer capture of the eyedropper - must swallow every gesture of the app" },
+    "eyedropperLoupe": { "value": "10201", "type": "zIndex", "description": "Eyedropper loupe - rides ABOVE its own capture surface (that is the whole point of the pair)" },
+
+    "debugOverlay": { "value": "10300", "type": "zIndex", "description": "Developer debug overlays (pointer-events:none) - above EVERY product surface, otherwise they measure what they cannot see", "restrictedTo": ["src/subapps/dxf-viewer/debug/"] },
+
+    "devtoolsGuard": { "value": "10400", "type": "zIndex", "description": "NOT A PRODUCT LAYER. The framework dev overlay (nextjs-portal) hosts its own 2147483647 INSIDE its shadow root, so the host element itself stays z-index:auto and any product surface buries it. This rung exists only to raise that host above our ceiling. Never use it for product UI.", "restrictedTo": ["src/app/globals.css"] }
   },
   "canvas": {
     "_description": "🎨 ENTERPRISE CANVAS THEME - ADR-004 Single Source of Truth for DXF Viewer Canvas",

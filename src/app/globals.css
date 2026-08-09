@@ -5,6 +5,10 @@
 /* 🏢 ENTERPRISE: Message Content Styling (Telegram-compatible HTML rendering) */
 @import '../styles/design-system/components/message-content.css';
 
+/* 🚧 ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ (ADR-780 Φάση Β) — η ΜΙΑ θέση όπου δαμάζεται ξένη στρώση.
+   Μητρώο: .zindex-foreign.json · φρουρός: CHECK 3.50 (δεύτερο κατάστιχο). */
+@import './foreign-boundary.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -55,6 +59,18 @@
     --border: 220 13% 91%; /* 🏢 ENTERPRISE: Matches Tailwind gray-200 (#e5e7eb) exactly */
     --input: 220 13% 81%; /* Πιο σκούρο για ορατότητα */
     --ring: 222.2 47.4% 11.2%;
+
+    /* 🎯 ADR-774 §4.3 — ΑΠΟΚΛΕΙΣΤΙΚΟ token δείκτη εστίασης, ποτέ επαναχρησιμοποίηση accent.
+       Πρακτική και των ΤΡΙΩΝ: Adobe Spectrum `focus-indicator-color`, Microsoft Fluent 2
+       `colorStrokeFocus1/2`, IBM Carbon `$focus`. Ο λόγος δεν είναι αισθητικός: αν ο δείκτης
+       εστίασης δανείζεται το χρώμα «πληροφορίας» ή «τονισμού», τότε μια αλλαγή ΕΚΕΙΝΟΥ
+       μετακινεί σιωπηλά ΚΑΘΕ δαχτυλίδι εστίασης της εφαρμογής — δύο σημασίες σε ένα token
+       (ADR-749). ⚠️ ΜΗΝ το αντικαταστήσεις με `--ring`: το `--ring` εδώ είναι ΜΟΝΟΧΡΩΜΟ
+       (#0f172a/#f8fafc) και θα έσβηνε το μπλε της εστίασης.
+       Τιμή: ό,τι ήδη είχε διαλέξει άνθρωπος με το χέρι στα CSS Modules — φωτεινό #3b82f6
+       (διαφορά 1/255), σκοτεινό #60a5fa (13/255). Επί --popover: 3,38:1 · 6,78:1, δηλαδή
+       ≥3:1 και στα δύο (WCAG 2.4.11). Ίδιο σκαλί με το --slider-accent (ADR-682 §5.5). */
+    --focus-ring: 217 91% 60%;   /* blue-500 — έντονο σε φωτεινές επιφάνειες */
     
     --radius: 0.5rem;
 
@@ -259,6 +275,9 @@
     --border: 217 19% 27%; /* #384252 — ≈ Tailwind gray-700 (#374151), off by 1/255 per channel. Said "exactly" until 2026-08-07; it is not. */
     --input: 217 19% 35%; /* Λίγο πιο ανοιχτό για dark mode */
     --ring: 210 40% 98%;
+
+    /* 🎯 ADR-774 §4.3 — το σκοτεινό σκέλος του δείκτη εστίασης (βλ. σχόλιο στο :root). */
+    --focus-ring: 217 91% 70%;   /* blue-400 — πιο φωτεινό, ώστε να ξεχωρίζει από το --popover */
 
     /* Semantic Status Colors - Dark Mode */
     --status-success: 142 76% 36%;    /* Darker green for dark mode */
@@ -507,7 +526,9 @@
     width: auto !important;
     height: auto !important;
     pointer-events: none !important;
-    z-index: var(--z-index-toast) !important;
+    /* ⚠️ Η ΣΤΡΩΣΗ ΔΕΝ ΖΕΙ ΕΔΩ. Ήταν θεσιακή, άρα τυχαία: ένα position="bottom-right"
+       επανέφερε σιωπηλά το 999999999 του sonner. Το δάμασμα είναι πλέον
+       θεσιοανεξάρτητο στο src/app/foreign-boundary.css (ADR-780 Φάση Β). */
   }
 
   [data-sonner-toaster][data-position="top-right"] [data-sonner-toast] {
@@ -1335,7 +1356,7 @@ nextjs-portal,
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  z-index: 2147483647 !important; /* Maximum z-index - above EVERYTHING */
+  z-index: var(--z-index-devtools-guard) !important; /* Maximum z-index - above EVERYTHING */
   user-select: text !important; /* Allow text selection */
   -webkit-user-select: text !important;
 }
@@ -1381,12 +1402,24 @@ nextjs-portal,
 }
 
 /* =============================================================
-   🏢 ENTERPRISE: Next.js Error Overlay - FULL INTERACTIVITY
+   🏢 ΤΟ ΣΥΝΟΡΟ ΤΟΥ ΕΡΓΑΛΕΙΟΥ ΑΝΑΠΤΥΞΗΣ — Next.js dev overlay
+   ADR-780 Φάση Β · μητρώο: .zindex-foreign.json ▸ "next"
 
-   Ensures the error overlay is ALWAYS:
-   - Above all other elements (z-index: 2147483647)
-   - Fully clickable (pointer-events: auto)
-   - Text selectable (user-select: text)
+   Εξασφαλίζει ότι το overlay σφαλμάτων είναι ΠΑΝΤΑ:
+   - Πάνω από κάθε δική μας επιφάνεια  (z-index: var(--z-index-devtools-guard))
+   - Πλήρως κλικαρίσιμο                (pointer-events: auto)
+   - Επιλέξιμο ως κείμενο              (user-select: text)
+
+   🔑 ΓΙΑΤΙ ΧΡΕΙΑΖΕΤΑΙ ΚΑΘΟΛΟΥ, ΜΕΤΡΗΜΕΝΟ (2026-08-09): το `next-devtools` δηλώνει
+   `:host { --top-z-index: 2147483647 }` και το χρησιμοποιεί **ΜΕΣΑ στο shadow root**
+   του. Ο host `nextjs-portal` μένει έτσι `z-index: auto`, δηλαδή **οποιαδήποτε** δική
+   μας επιφάνεια με στρώση τον θάβει. Το MAX_INT εδώ ήταν συνέπεια του ότι η δική μας
+   οροφή ήταν 2147483647 (eyedropper) και 999999999 (αδάμαστο sonner). Με τους τρίτους
+   δαμασμένους και την κλίμακα να κλείνει στο 10300, ο φρουρός χρειάζεται **μία σκάλα
+   πάνω**: `devtoolsGuard = 10400`.
+
+   ⚠️ ΜΗΝ ΧΑΜΗΛΩΣΕΙΣ ΤΟΝ ΡΟΛΟ και ΜΗΝ γράψεις εδώ ωμό αριθμό: λάθος κίνηση κρύβει το
+   overlay σφαλμάτων και ο επόμενος που θα δει λευκή οθόνη δεν θα ξέρει γιατί.
    ============================================================= */
 
 /* Main Next.js portal container - allow pass-through by default */
@@ -1410,7 +1443,7 @@ nextjs-portal [role="alertdialog"] {
   pointer-events: auto !important;
   user-select: text !important;
   -webkit-user-select: text !important;
-  z-index: 2147483647 !important;
+  z-index: var(--z-index-devtools-guard) !important;
 }
 
 /* Ensure ALL elements inside the dialog are interactive */
@@ -1462,7 +1495,7 @@ div[style*="position: fixed"][style*="bottom"][style*="left"],
 [class*="NextjsIssues"],
 /* Generic dev overlay buttons */
 button[style*="position: fixed"][style*="bottom"] {
-  z-index: 2147483647 !important; /* Maximum z-index */
+  z-index: var(--z-index-devtools-guard) !important; /* Maximum z-index */
   pointer-events: auto !important;
   cursor: pointer !important;
   isolation: isolate !important;
@@ -1472,7 +1505,7 @@ button[style*="position: fixed"][style*="bottom"] {
 div:has(> button[data-nextjs-toast]),
 div:has(> [data-nextjs-build-indicator]) {
   pointer-events: auto !important;
-  z-index: 2147483647 !important;
+  z-index: var(--z-index-devtools-guard) !important;
 }
 
 /* 🚨 CRITICAL: Prevent ANY element from blocking the bottom-left corner */
@@ -1492,7 +1525,7 @@ NEXTJS-PORTAL,
 [class^="__next"],
 #__next-build-watcher {
   pointer-events: auto !important;
-  z-index: 2147483647 !important;
+  z-index: var(--z-index-devtools-guard) !important;
 }
 
 /* Specific rule for the small red issue button */
@@ -1503,7 +1536,7 @@ body > button[style*="fixed"][style*="bottom"],
 /* Shadow DOM elements */
 ::part(toast),
 ::part(issue-button) {
-  z-index: 2147483647 !important;
+  z-index: var(--z-index-devtools-guard) !important;
   pointer-events: auto !important;
   cursor: pointer !important;
 }

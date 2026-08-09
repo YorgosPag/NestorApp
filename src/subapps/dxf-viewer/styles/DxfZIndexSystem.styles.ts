@@ -48,7 +48,6 @@ interface DxfZIndexHierarchy {
     readonly import: number;
     readonly settings: number;
     readonly help: number;
-    readonly critical: number;
   };
 }
 
@@ -59,7 +58,6 @@ interface DxfComponentStyles {
   readonly collaborationOverlay: CSSProperties;
   readonly importModal: CSSProperties;
   readonly baseModal: CSSProperties;
-  readonly criticalModal: CSSProperties;
 }
 
 interface DxfOverlayStyles {
@@ -116,14 +114,21 @@ export const dxfZIndex: DxfZIndexHierarchy = {
 
   /**
    * 🎯 MODAL LAYERS: Dialog and modal management
-   * Standard → Import → Settings → Help → Critical Emergency
+   * Standard → Import → Settings → Help
+   *
+   * 🔴 ΤΟ `critical` ΑΦΑΙΡΕΘΗΚΕ (ADR-780 Φάση Β, 2026-08-09) — ήταν **δεύτερος** ρόλος
+   * με το ίδιο όνομα: `critical` σήμαινε **1500** εδώ και **2147483647** στην κλίμακα
+   * (`design-tokens.json ▸ zIndex`). Ακριβώς το σχήμα που γέννησε το ADR-780 (§2.1:
+   * δύο λεξιλόγια, ίδιο όνομα ρόλου, διαφορετικός αριθμός) — και το 1500 ήταν επιπλέον
+   * ταυτόσημο με τον ρόλο `popover`, δηλαδή δύο ονόματα για ένα σκαλί.
+   * Μετρημένο πριν τη διαγραφή: `criticalModal`, `CRITICAL_MODAL` και
+   * `createModalZIndex('critical')` είχαν **ΜΗΔΕΝ** καταναλωτές σε όλο το `src/`.
    */
   modals: {
     base: globalZIndex.modal,              // 1400 - Standard modals
     import: globalZIndex.modal + 10,       // 1410 - DXF import modal
     settings: globalZIndex.modal + 20,     // 1420 - Settings modal
-    help: globalZIndex.modal + 30,         // 1430 - Help modal
-    critical: globalZIndex.modal + 100     // 1500 - Critical system modals (max priority)
+    help: globalZIndex.modal + 30          // 1430 - Help modal
   }
 } as const;
 
@@ -136,7 +141,7 @@ export const dxfZIndex: DxfZIndexHierarchy = {
  * Eliminates hardcoded 999999 με intelligent modal management
  */
 export const createModalZIndex = (
-  modalType: 'base' | 'import' | 'settings' | 'help' | 'critical' = 'base',
+  modalType: 'base' | 'import' | 'settings' | 'help' = 'base',
   stackOffset: number = 0
 ): number => {
   const baseZIndex = dxfZIndex.modals[modalType];
@@ -255,22 +260,6 @@ export const dxfComponentStyles: DxfComponentStyles = {
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: dxfZIndex.modals.base
-  } as const,
-
-  /**
-   * 🎯 CRITICAL MODAL: Emergency system modals
-   */
-  criticalModal: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: UI_COLORS.MODAL_OVERLAY_CRITICAL,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: dxfZIndex.modals.critical
   } as const
 } as const;
 
@@ -371,7 +360,7 @@ export const createLayerCanvasStyle = (
  * 🎯 MODAL BACKDROP STYLE: Dynamic modal backdrop creation
  */
 export const createModalBackdropStyle = (
-  modalType: 'base' | 'import' | 'settings' | 'help' | 'critical' = 'base',
+  modalType: 'base' | 'import' | 'settings' | 'help' = 'base',
   opacity: number = 0.5
 ): CSSProperties => {
   const baseStyle = dxfComponentStyles.baseModal;
@@ -580,8 +569,7 @@ export const DXF_ZINDEX = {
 
   // Modals
   IMPORT_MODAL: dxfZIndex.modals.import,
-  SETTINGS_MODAL: dxfZIndex.modals.settings,
-  CRITICAL_MODAL: dxfZIndex.modals.critical
+  SETTINGS_MODAL: dxfZIndex.modals.settings
 } as const;
 
 /**
@@ -590,7 +578,7 @@ export const DXF_ZINDEX = {
  * Features Implemented:
  * ✅ Professional DXF-specific z-index hierarchy (eliminates 999999 chaos)
  * ✅ Canvas layering system (Background → DXF → Layer → Overlays)
- * ✅ Modal management hierarchy (Base → Import → Settings → Critical)
+ * ✅ Modal management hierarchy (Base → Import → Settings → Help)
  * ✅ Collaboration overlay positioning
  * ✅ Dynamic style utilities (pointer events, positioning, backdrop)
  * ✅ Accessibility compliance (ARIA attributes, roles, labels)

@@ -14,7 +14,7 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 2147483646;
+  z-index: var(--z-index-debug-overlay);
   font-family: var(--font-family-mono, 'SF Mono', 'Monaco', 'Cascadia Code', monospace);
 }
 
@@ -236,7 +236,7 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 2147483646;
+  z-index: var(--z-index-debug-overlay);
 }
 
 .cornerMarkerBase {

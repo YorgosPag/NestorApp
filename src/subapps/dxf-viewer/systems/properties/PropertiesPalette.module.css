@@ -2,6 +2,37 @@
  * Properties Palette — ADR-357 Phase 10
  * AutoCAD-style Full Properties Panel (F11 / Ctrl+1).
  * Fixed right-side panel, persistent, shows all entity properties.
+ *
+ * ──────────────────────────────────────────────────────────────────────────────
+ * 🎨 ΧΡΩΜΑ — ADR-774 §4.3, εκστρατεία Π1 (2026-08-09)
+ *
+ * Το αρχείο είχε **δύο** συστήματα χρώματος ταυτόχρονα: `var(--αδέσποτο, φωτεινό-hex)`
+ * για το φωτεινό θέμα **και** 21 χειρόγραφες `:global(.dark)` δηλώσεις για το σκοτεινό.
+ * Δούλευε — αλλά ήταν παράλληλο σύστημα: κάθε αλλαγή έπρεπε να γίνει **δύο φορές**, και
+ * τα `--color-*` ονόματα **δεν ορίζονταν πουθενά** (CHECK 3.43, 28 ευρήματα εδώ).
+ *
+ * Τώρα ένα: τα θεματικά tokens του `globals.css`. Τα `:global(.dark)` μπλοκ **διαγράφηκαν**
+ * — δεν χρειάζονται, γιατί το token **είναι** το ζεύγος.
+ *
+ * 🔑 ΟΙ ΤΡΙΧΕΣ ΚΑΙ ΟΙ ΑΠΟΧΡΩΣΕΙΣ ΕΙΝΑΙ `color-mix()`, ΟΧΙ ΑΔΙΑΦΑΝΑ TOKENS.
+ * Το χειρόγραφο ζεύγος ήταν `rgba(0,0,0,α)` στο φωτεινό και `rgba(255,255,255,α)` στο
+ * σκοτεινό — δηλαδή «**μελάνι της επιφάνειας σε α%**», με τα ίδια α. Το
+ * `color-mix(in srgb, hsl(var(--popover-foreground)) α%, transparent)` το λέει **μία φορά**
+ * και **αυτοαντιστρέφεται**: στο φωτεινό το foreground είναι σκούρο ⇒ σκούρα τρίχα, στο
+ * σκοτεινό είναι ανοιχτό ⇒ ανοιχτή τρίχα. Είναι ο μηχανισμός «state layer» του Material 3
+ * (αδιαφάνεια του χρώματος **περιεχομένου**), εδώ και για τρίχες. Baseline 05/2023.
+ * ⚠️ ΜΗΝ τα αντικαταστήσεις με `hsl(var(--border))`: αδιαφανές token σβήνει τον μηχανισμό
+ * και δίνει συμπαγή γραμμή εκεί που ήθελες υπαινιγμό.
+ *
+ * ⚠️ ΤΟ 62% ΤΟΥ ΣΒΗΣΜΕΝΟΥ ΚΕΙΜΕΝΟΥ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟ, ΟΧΙ ΑΙΣΘΗΤΙΚΟ. Είναι το μικρότερο
+ * ποσοστό που **δεν είναι χειρότερο από το χειρόγραφο σε κανένα θέμα**: 4,89:1 φωτεινό
+ * (ήταν 4,83) · 7,05:1 σκοτεινό (ήταν 6,63). Το σκέτο `hsl(var(--muted-foreground))`
+ * έδινε **4,41:1**, δηλαδή **κάτω** από το 4,5:1 του WCAG 1.4.3 σε ετικέτες 10px.
+ *
+ * ⚠️ ΤΟ `--focus-ring` ΕΙΝΑΙ ΑΠΟΚΛΕΙΣΤΙΚΟ, ΜΗΝ ΤΟ ΓΥΡΙΣΕΙΣ ΣΕ `--primary`. Σε αυτή την
+ * εφαρμογή το `--primary` είναι **σκούρα επιφάνεια** (#0f172a/#1d283a), ταυτόσημη με το
+ * `--card` στο σκοτεινό — CHECK 3.38 υπάρχει ακριβώς γι' αυτό.
+ * ──────────────────────────────────────────────────────────────────────────────
  */
 
 .palette {
@@ -15,17 +46,13 @@
   display: flex;
   flex-direction: column;
   border-radius: 6px;
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
-  background: var(--color-surface, #fff);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 15%, transparent);
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  /* Η πτώση σκιάς δεν έχει ετυμηγορία αντίθεσης — μένει σκόπιμα μη-θεματική (ADR-770). */
+  box-shadow: 0 8px 24px rgb(0 0 0 / 16%);
   font-size: 12px;
   line-height: 1.4;
-}
-
-:global(.dark) .palette {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: #1c1c1f;
-  color: #f4f4f5;
 }
 
 /* ── Header ── */
@@ -34,18 +61,13 @@
   align-items: center;
   justify-content: space-between;
   padding: 7px 10px 6px;
-  border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  border-bottom: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   flex-shrink: 0;
-}
-
-:global(.dark) .header {
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #a1a1aa;
 }
 
 .headerTitle {
@@ -54,12 +76,18 @@
   gap: 6px;
 }
 
+/*
+ * Το σήμα τύπου οντότητας. ⚠️ Το κείμενο **δεν** είναι πια μπλε, και αυτό είναι διόρθωση:
+ * μπλε 10px πάνω σε μπλε 12% έδινε **3,20:1**, κάτω από το 4,5:1 του WCAG 1.4.3. Καμία
+ * υπάρχουσα μπλε απόχρωση δεν το λύνει **και στα δύο** θέματα (μετρήθηκαν 4). Η ταυτότητα
+ * «πληροφορία» μένει στην **απόχρωση του φόντου** — πρότυπο tag του Carbon. 14,53:1 · 13,77:1.
+ */
 .entityBadge {
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
-  background: var(--color-accent, rgba(59, 130, 246, 0.12));
-  color: var(--color-primary, #3b82f6);
+  background: color-mix(in srgb, hsl(var(--focus-ring)) 12%, transparent);
+  color: hsl(var(--popover-foreground));
   padding: 1px 5px;
   border-radius: 3px;
   letter-spacing: 0.03em;
@@ -74,29 +102,25 @@
   width: 18px;
   height: 18px;
   border-radius: 3px;
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   transition: background 0.1s;
 }
 
 .closeBtn:hover {
-  background: var(--color-accent, rgba(0, 0, 0, 0.08));
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 8%, transparent);
 }
 
 /* ── Entity type label (no selection / unsupported) ── */
 .emptyMsg {
   padding: 16px 12px;
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   font-size: 11px;
   text-align: center;
 }
 
 /* ── Property groups ── */
 .group {
-  border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.06));
-}
-
-:global(.dark) .group {
-  border-color: rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 6%, transparent);
 }
 
 .groupHeader {
@@ -107,22 +131,17 @@
   justify-content: space-between;
   width: 100%;
   padding: 5px 10px;
-  background: var(--color-muted-bg, rgba(0, 0, 0, 0.02));
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 2%, transparent);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   box-sizing: border-box;
 }
 
-:global(.dark) .groupHeader {
-  background: rgba(255, 255, 255, 0.04);
-  color: #a1a1aa;
-}
-
 .groupHeader:hover {
-  background: var(--color-accent, rgba(0, 0, 0, 0.05));
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 5%, transparent);
 }
 
 .chevron {
@@ -155,11 +174,7 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-muted-foreground, #71717a);
-}
-
-:global(.dark) .label {
-  color: #a1a1aa;
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
 }
 
 .inputWrap {
@@ -169,16 +184,21 @@
   gap: 4px;
 }
 
+/*
+ * Το γέμισμα του πεδίου είναι **5% μελάνι**: το χειρόγραφο ήθελε «ένα σκαλί από το πάνελ»
+ * και στα δύο θέματα (φωτ #fafafa σε #fff = πιο σκούρο· σκοτ #27272a σε #1c1c1f = πιο
+ * ανοιχτό). Το `color-mix` το κάνει με μία δήλωση. Το πεδίο το ταυτοποιεί το **περίγραμμα**.
+ */
 .input,
 .select {
   flex: 1;
   min-width: 0;
   height: 22px;
   padding: 0 6px;
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.2));
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 20%, transparent);
   border-radius: 3px;
-  background: var(--color-input-bg, #fafafa);
-  color: var(--color-foreground, #18181b);
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 5%, transparent);
+  color: hsl(var(--popover-foreground));
   font-size: 11px;
   outline: none;
   transition: border-color 0.15s;
@@ -186,37 +206,19 @@
 
 .input:focus,
 .select:focus {
-  border-color: var(--color-primary, #3b82f6);
-  background: #fff;
+  border-color: hsl(var(--focus-ring));
+  background: hsl(var(--popover));
 }
 
 .inputReadonly {
   composes: input;
-  background: var(--color-muted-bg, rgba(0, 0, 0, 0.03));
-  color: var(--color-muted-foreground, #71717a);
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 3%, transparent);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   cursor: default;
 }
 
-:global(.dark) .input,
-:global(.dark) .select {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: #27272a;
-  color: #f4f4f5;
-}
-
-:global(.dark) .inputReadonly {
-  background: rgba(255, 255, 255, 0.04);
-  color: #a1a1aa;
-}
-
-:global(.dark) .input:focus,
-:global(.dark) .select:focus {
-  border-color: #60a5fa;
-  background: #1c1c1f;
-}
-
 .unit {
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   font-size: 10px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -226,7 +228,7 @@
   width: 14px;
   height: 14px;
   border-radius: 2px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 20%, transparent);
   flex-shrink: 0;
   background: var(--qp-swatch, transparent);
 }
@@ -237,54 +239,68 @@
   justify-content: flex-end;
   gap: 6px;
   padding: 6px 10px 8px;
-  border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  border-top: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 8%, transparent);
   flex-shrink: 0;
   position: sticky;
   bottom: 0;
-  background: var(--color-surface, #fff);
+  background: hsl(var(--popover));
 }
 
-:global(.dark) .footer {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: #1c1c1f;
-}
-
+/*
+ * ⚠️ Το `border: 1px solid transparent` στη βάση **δεν είναι διακοσμητικό**: το `.btnCancel`
+ * αποκτά ορατό περίγραμμα και χωρίς αυτό τα δύο κουμπιά θα είχαν διαφορά ύψους 2px
+ * (το `all: unset` επαναφέρει το `box-sizing` σε `content-box`).
+ */
 .btn {
   all: unset;
+  box-sizing: border-box;
   cursor: pointer;
   height: 22px;
   padding: 0 10px;
+  border: 1px solid transparent;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 500;
   transition: background 0.1s;
 }
 
+/*
+ * Δευτερεύον κουμπί = **απαλό γέμισμα + περίγραμμα**, πρότυπο Secondary του Fluent 2 και
+ * Tertiary του Carbon. ⚠️ Το περίγραμμα ΔΕΝ μπήκε για συμμόρφωση — το WCAG 1.4.11 λέει ρητά
+ * ότι «*if a control has visible content … a border … is not required*», και το κουμπί έχει
+ * ετικέτα. Μπήκε επειδή **σκέτο** γέμισμα από token έπεφτε στο σκοτεινό σε **1,00:1**,
+ * δηλαδή το κουμπί γινόταν ταυτόσημο με το πάνελ (χειρόγραφο: 1,63:1). Με το περίγραμμα:
+ * 1,94:1 φωτεινό · 2,64:1 σκοτεινό — **καλύτερο από το χειρόγραφο και στα δύο**.
+ */
 .btnCancel {
   composes: btn;
-  background: var(--color-secondary, #f4f4f5);
-  color: var(--color-secondary-foreground, #18181b);
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 8%, transparent);
+  border-color: color-mix(in srgb, hsl(var(--popover-foreground)) 30%, transparent);
+  color: hsl(var(--popover-foreground));
 }
 
 .btnCancel:hover {
-  background: var(--color-secondary-hover, #e4e4e7);
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 14%, transparent);
 }
 
+/*
+ * 🔴 ΔΙΟΡΘΩΣΗ ΠΡΑΓΜΑΤΙΚΟΥ ΣΦΑΛΜΑΤΟΣ. Το κουμπί ήταν `#3b82f6` με λευκό κείμενο =
+ * **3,68:1**, κάτω από το 4,5:1 του WCAG 1.4.3, **και στα δύο θέματα** (ήταν καρφωμένο).
+ * Το `--status-info` (#2463eb, ίδιο και στα δύο) δίνει **4,76:1 / 4,94:1**.
+ * ⚠️ ΜΗΝ το γυρίσεις σε `--text-info`: εκείνο φωτίζει στο σκοτεινό (#6da2f8) και το λευκό
+ * κείμενο πέφτει σε **2,57:1**. Ένα **συμπαγές** κουμπί θέλει σταθερό βάθος, όχι θεματικό.
+ */
 .btnApply {
   composes: btn;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
+  background: hsl(var(--status-info));
+  color: hsl(var(--primary-foreground));
 }
 
+/*
+ * Το hover σκουραίνει **και στα δύο** θέματα: η επιφάνεια αναφοράς είναι το ίδιο το κουμπί,
+ * όχι η σελίδα, και το σκούρυνμα μόνο **αυξάνει** την αντίθεση με το κείμενο ⇒ αποδεδειγμένα
+ * ασφαλές χωρίς δεύτερη μέτρηση ανά θέμα.
+ */
 .btnApply:hover {
-  background: var(--color-primary-hover, #2563eb);
-}
-
-:global(.dark) .btnCancel {
-  background: #3f3f46;
-  color: #f4f4f5;
-}
-
-:global(.dark) .btnCancel:hover {
-  background: #52525b;
+  background: color-mix(in srgb, hsl(var(--status-info)) 85%, black);
 }

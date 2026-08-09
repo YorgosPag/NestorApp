@@ -80,6 +80,16 @@ export const createPortalConfig = {
 /**
  * Get appropriate z-index για component types
  * Replaces hardcoded z-index values (9999, 2147483647, etc.)
+ *
+ * 🔴 ΔΕΝ ΥΠΑΡΧΕΙ ΠΛΕΟΝ ΣΚΑΛΙ «ΜΕΓΙΣΤΟ» (ADR-780 Φάση Β, 2026-08-09). Ο ρόλος `critical`
+ * (2147483647) **διαγράφηκε** από την κλίμακα: υπήρχε μόνο επειδή ένα αδάμαστο `sonner`
+ * (999999999) όριζε τη δική μας οροφή. Με τους τρίτους δαμασμένους στο σύνορο
+ * (`src/app/foreign-boundary.css`), καμία κλίμακα σχεδιαστικού συστήματος δεν χρειάζεται
+ * MAX_INT — και καμία των μεγάλων δεν έχει (MUI κορυφή 1500· Atlas/Salt/Atlaskit ~1800).
+ * Τα ονόματα `critical`/`emergency`/`maximum`/`topmost` **είναι** το λεξιλόγιο του
+ * «z-index arms race» που το ADR-780 υπάρχει για να σταματήσει· διατηρούνται ως συμβόλαιο
+ * του API αλλά απαντούν πλέον με την **κορυφή του κελύφους της εφαρμογής** (`tooltip`).
+ * Αν χρειάζεσαι κάτι πάνω από αυτό, ζήτα **ρόλο** — μην ξαναφτιάξεις σκάλα.
  */
 export const getZIndexForComponent = (componentType: string): number => {
   switch (componentType.toLowerCase()) {
@@ -100,10 +110,9 @@ export const getZIndexForComponent = (componentType: string): number => {
       return portalComponents.zIndex.overlay;
     case 'critical':
     case 'emergency':
-      return portalComponents.zIndex.critical;
     case 'maximum':
     case 'topmost':
-      return zIndex.critical; // 🏢 ENTERPRISE: Use centralized zIndex.critical as maximum
+      return zIndex.tooltip; // βλ. κεφαλίδα: το σκαλί «μέγιστο» καταργήθηκε (ADR-780 Φ.Β)
     default:
       return portalComponents.zIndex.dropdown; // Safe default
   }

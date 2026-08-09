@@ -126,7 +126,13 @@
   --z-index-viewer-palette: 9900;
   --z-index-viewer-menu: 9999;
   --z-index-viewer-transient: 10000;
-  --z-index-critical: 2147483647;
+  --z-index-viewer-prompt: 10001;
+  --z-index-app-drawer-scrim: 10100;
+  --z-index-app-drawer: 10101;
+  --z-index-eyedropper-capture: 10200;
+  --z-index-eyedropper-loupe: 10201;
+  --z-index-debug-overlay: 10300;
+  --z-index-devtools-guard: 10400;
   --canvas-background-dxf: #000000;
   --canvas-background-dxf-image: none;
   --canvas-background-layer: transparent;

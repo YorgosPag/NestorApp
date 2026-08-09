@@ -188,7 +188,7 @@ export const PromptDialog: React.FC = () => {
       {/* Dialog container */}
       <div
         className="fixed inset-0 flex items-center justify-center"
-        style={{ zIndex: 10001 }}
+        style={{ zIndex: 'var(--z-index-viewer-prompt)' }}
         onClick={handleBackdropClick}
       >
         {/* Dialog box — soft scale + fade in */}
