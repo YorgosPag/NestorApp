@@ -33,7 +33,9 @@ export const migrateDropdownPosition = (
     height?: number;
     zIndex?: number;
   },
-  variant: PortalVariant = 'dropdown'
+  // Boy Scout (ADR-780 Φάση Β): διατηρείται για τη θέση του στην υπογραφή — οι
+  // καταναλωτές το περνούν, αλλά η μετάφραση θέσης δεν το χρειάζεται.
+  _variant: PortalVariant = 'dropdown'
 ): DropdownPosition => {
   return {
     top: legacyPosition.top,

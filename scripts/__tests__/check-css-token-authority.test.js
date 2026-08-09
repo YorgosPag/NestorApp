@@ -339,3 +339,110 @@ describe('Λογιστική — ο παρονομαστής κλείνει', ()
     expect(chromaticDeclarationsIn('.a { font-size: 12px; }')).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Θ — οι υποσχέσεις της ΘΕΡΑΠΕΙΑΣ (ADR-774 §4.3, εκστρατεία Π1)
+// ---------------------------------------------------------------------------
+/**
+ * 🔑 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΑΥΤΗ Η ΟΜΑΔΑ — **η πύλη 3.43 δεν μπορεί να απαντήσει την ερώτηση.**
+ *
+ * Το 3.43 ρωτά «**υπάρχει** αυτό το custom property;». Μόλις η θεραπεία δείξει σε υπαρκτό
+ * token, η πύλη γίνεται **μονίμως πράσινη** σε αυτά τα σημεία — και μένει πράσινη ακόμα κι
+ * αν κάποιος αλλάξει την **τιμή** του token και το κείμενο γίνει αδιάβαστο. Δηλαδή η ίδια η
+ * επιτυχία της θεραπείας **σβήνει** τον φρουρό.
+ *
+ * ⚠️ ΚΑΙ ΤΟ ΧΕΙΡΟΤΕΡΟ, ΜΕΤΡΗΜΕΝΟ: το Κ1 (ZERO-TOL) πιάνει τη **διαγραφή** ενός token, γιατί
+ * το `hsl(var(--focus-ring))` δεν έχει fallback ⇒ γίνεται `dangling-no-fallback`. **ΔΕΝ**
+ * πιάνει όμως τη διαγραφή **του ενός από τα δύο θέματα**: αν σβήσει μόνο το σκέλος του
+ * `.dark`, το όνομα εξακολουθεί να «ορίζεται» και η πύλη λέει ✅ ενώ ο δείκτης εστίασης
+ * κληρονομεί το φωτεινό μπλε πάνω σε σκοτεινό πάνελ. Αυτό το πιάνει **μόνο** το Θ1.
+ *
+ * ΠΟΙΟΣ ΤΑ ΤΡΕΧΕΙ (επαληθεύτηκε εκτελώντας, όχι διαβάζοντας):
+ *   · CI — `ui-contrast-ratchet.yml`, βήμα «Mutation suite — CHECK 3.43», σκανδάλη
+ *     `src/**\/*.css` ⇒ **κάθε** αλλαγή στο `globals.css` το ξυπνά. Αυτή είναι η κάλυψη.
+ *   · pre-commit — μόνο όταν αλλάζει η ίδια η πύλη (`scripts/lib/css-vars/**` κ.λπ.).
+ *     🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ**: αλλαγή **μόνο** στο `globals.css` **δεν** τρέχει αυτά τα tests
+ *     τοπικά — τα πιάνει το CI. Δεν «διορθώνεται» με πλάτεμα της σκανδάλης του hook: θα
+ *     έτρεχε 27 tests σε κάθε commit που αγγίζει οποιοδήποτε `.css`.
+ *
+ * ⚠️ ΤΑ ΚΑΤΩΦΛΙΑ ΕΙΝΑΙ ΣΤΑΘΕΡΕΣ ΚΥΡΙΟΛΕΞΙΕΣ, ΠΟΤΕ ΥΠΟΛΟΓΙΣΜΟΙ ΑΠΟ ΤΗΝ ΠΗΓΗ ΠΟΥ ΚΡΙΝΕΤΑΙ.
+ * Ένα test που παράγει το αναμενόμενο από το `globals.css` θα έμενε πράσινο πάνω σε κάθε
+ * αλλαγή του `globals.css` — δηλαδή ακριβώς πάνω στην αλλαγή που φυλάει.
+ */
+describe('Θ — οι υποσχέσεις της θεραπείας Π1 (ό,τι η πύλη ΔΕΝ βλέπει)', () => {
+  const { readThemes } = require('../lib/contrast/css-token-themes');
+  const {
+    parseHslToken, hslToRgb, contrastRatio, compositeOver, toHex,
+  } = require('../lib/contrast/wcag-contrast');
+
+  const themes = readThemes(REPO_ROOT);
+  const rgbOf = (theme, name) => {
+    const raw = themes[theme].get(name);
+    if (!raw || /var\(/.test(raw)) return null;
+    const hsl = parseHslToken(raw);
+    return hsl ? hslToRgb(hsl) : null;
+  };
+  const ratio = (theme, fg, bg) => contrastRatio(rgbOf(theme, fg), rgbOf(theme, bg));
+
+  // ΒΑΘΜΟΝΟΜΗΣΗ — γνωστή τιμή από ΣΧΟΛΙΟ της πηγής (globals.css: «Tailwind gray-200 (#e5e7eb)»).
+  // Αν αυτό σπάσει, κανένας αριθμός παρακάτω δεν είναι έγκυρος και το ξέρουμε ΠΡΙΝ τον διαβάσουμε.
+  test('Θ0 — η ανάγνωση των θεμάτων είναι βαθμονομημένη', () => {
+    expect(toHex(rgbOf('light', '--border'))).toBe('#e5e7eb');
+    expect(toHex(rgbOf('dark', '--background'))).toBe('#161a22');
+  });
+
+  test('Θ1 — το --focus-ring ορίζεται σε ΚΑΙ ΤΑ ΔΥΟ θέματα (το Κ1 βλέπει μόνο «υπάρχει»)', () => {
+    expect(rgbOf('light', '--focus-ring')).not.toBeNull();
+    expect(rgbOf('dark', '--focus-ring')).not.toBeNull();
+    // Και ΔΙΑΦΟΡΕΤΙΚΑ: ίδια τιμή στα δύο θέματα σημαίνει ότι κάποιος αντέγραψε το ένα σκέλος.
+    expect(rgbOf('light', '--focus-ring')).not.toEqual(rgbOf('dark', '--focus-ring'));
+  });
+
+  test('Θ2 — ο δείκτης εστίασης πιάνει 3:1 επί του πάνελ, και στα δύο (WCAG 2.4.11)', () => {
+    expect(ratio('light', '--focus-ring', '--popover')).toBeGreaterThanOrEqual(3);
+    expect(ratio('dark', '--focus-ring', '--popover')).toBeGreaterThanOrEqual(3);
+  });
+
+  test('Θ3 — το κείμενο του κουμπιού «Εφαρμογή» πιάνει 4,5:1 (το σφάλμα που διορθώθηκε)', () => {
+    // ΗΤΑΝ: λευκό επί #3b82f6 = 3,68:1, κάτω από το WCAG 1.4.3, ΚΑΙ ΣΤΑ ΔΥΟ θέματα.
+    expect(ratio('light', '--primary-foreground', '--status-info')).toBeGreaterThanOrEqual(4.5);
+    expect(ratio('dark', '--primary-foreground', '--status-info')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('Θ4 — το κύριο κείμενο του πάνελ πιάνει 4,5:1 και στα δύο', () => {
+    expect(ratio('light', '--popover-foreground', '--popover')).toBeGreaterThanOrEqual(4.5);
+    expect(ratio('dark', '--popover-foreground', '--popover')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  test('Θ5 — το σβησμένο κείμενο στο 62% δεν είναι ΧΕΙΡΟΤΕΡΟ από το χειρόγραφο', () => {
+    // Οι δύο σταθερές είναι το ΜΕΤΡΗΜΕΝΟ χειρόγραφο πριν τη θεραπεία:
+    //   φωτεινό  #71717a επί #ffffff = 4,83:1
+    //   σκοτεινό #a1a1aa επί #1c1c1f = 6,63:1
+    const HANDWRITTEN = { light: 4.83, dark: 6.63 };
+    const ALPHA = 0.62; // ΤΟ ΙΔΙΟ ποσοστό που γράφουν τα τρία CSS Modules.
+    for (const theme of ['light', 'dark']) {
+      const painted = compositeOver(
+        rgbOf(theme, '--popover-foreground'), rgbOf(theme, '--popover'), ALPHA,
+      );
+      const r = contrastRatio(painted, rgbOf(theme, '--popover'));
+      expect(r).toBeGreaterThanOrEqual(4.5);              // WCAG 1.4.3, ετικέτες 10px
+      expect(r).toBeGreaterThanOrEqual(HANDWRITTEN[theme]); // …και καμία οπισθοδρόμηση
+    }
+  });
+
+  test('Θ6 — κανένα από τα τρία αρχεία δεν ξαναποκτά χειρόγραφο δεύτερο θέμα', () => {
+    // Η ΔΟΜΙΚΗ άγκυρα, όχι αριθμητική: το ελάττωμα του Π1 δεν ήταν «λάθος χρώμα», ήταν
+    // «ΔΥΟ συστήματα». Ένα `:global(.dark)` που ξαναβάφει είναι η επιστροφή του δεύτερου.
+    const DIR = path.join(REPO_ROOT, 'src/subapps/dxf-viewer/systems/properties');
+    const FILES = [
+      'PropertiesPalette.module.css',
+      'QuickPropertiesMiniPanel.module.css',
+      'QuickPropertiesHoverPopover.module.css',
+    ];
+    for (const f of FILES) {
+      const css = stripCommentsKeepingLines(fs.readFileSync(path.join(DIR, f), 'utf8'));
+      expect({ file: f, darkOverrides: (css.match(/:global\(\.dark\)/g) || []).length })
+        .toEqual({ file: f, darkOverrides: 0 });
+    }
+  });
+});

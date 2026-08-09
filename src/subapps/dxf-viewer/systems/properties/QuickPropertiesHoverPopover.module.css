@@ -1,6 +1,15 @@
 /**
  * Quick Properties Hover Popover — ADR-357 §4 G9 Phase 8
  * AutoCAD-style hover tooltip with entity properties.
+ *
+ * 🎨 ΧΡΩΜΑ — ADR-774 §4.3, εκστρατεία Π1 (2026-08-09). Πλήρες σκεπτικό + μετρήσεις **μία
+ * φορά**, στην κεφαλίδα του `PropertiesPalette.module.css`. Εδώ 4 χειρόγραφες
+ * `:global(.dark)` δηλώσεις διαγράφηκαν.
+ *
+ * ⚠️ Η επιφάνεια είναι **σκόπιμα ημιδιαφανής** (96% + `backdrop-filter`) — είναι παγωμένο
+ * γυαλί πάνω από τον καμβά, όχι αδιαφανές πάνελ. Το `color-mix(… 96%, transparent)`
+ * διατηρεί ακριβώς το χειρόγραφο 0.96 και **ταυτόχρονα** το κάνει θεματικό.
+ * ΜΗΝ το γυρίσεις σε σκέτο `hsl(var(--popover))`: θα σβήσει το γυαλί.
  */
 
 .popover {
@@ -10,18 +19,13 @@
   user-select: none;
   min-width: 180px;
   border-radius: 6px;
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
-  background: var(--color-surface, rgba(255, 255, 255, 0.96));
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 12%, transparent);
+  background: color-mix(in srgb, hsl(var(--popover)) 96%, transparent);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
   padding: 6px 10px;
   font-size: 11px;
   line-height: 1.4;
   backdrop-filter: blur(4px);
-}
-
-:global(.dark) .popover {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(24, 24, 27, 0.96);
 }
 
 .list {
@@ -41,7 +45,7 @@
 .label {
   width: 68px;
   flex-shrink: 0;
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -50,7 +54,7 @@
 .value {
   flex: 1;
   font-weight: 500;
-  color: var(--color-foreground, #18181b);
+  color: hsl(var(--popover-foreground));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -59,20 +63,12 @@
   gap: 5px;
 }
 
-:global(.dark) .label {
-  color: #a1a1aa;
-}
-
-:global(.dark) .value {
-  color: #f4f4f5;
-}
-
 .colorSwatch {
   display: inline-block;
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 20%, transparent);
   flex-shrink: 0;
   background: var(--qp-color-swatch);
 }

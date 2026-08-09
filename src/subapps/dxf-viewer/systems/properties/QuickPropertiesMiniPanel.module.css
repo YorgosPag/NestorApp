@@ -1,6 +1,14 @@
 /**
  * Quick Properties Mini-Panel — ADR-357 §4 G9 Phase 9
  * AutoCAD-style double-click property editor.
+ *
+ * 🎨 ΧΡΩΜΑ — ADR-774 §4.3, εκστρατεία Π1 (2026-08-09). Το **σκεπτικό, οι μετρήσεις και τα
+ * «μην το κάνεις»** ζουν **μία φορά**, στην κεφαλίδα του `PropertiesPalette.module.css`
+ * (ίδια οικογένεια επιφάνειας, ίδια tokens, ίδια ποσοστά). Εδώ μόνο η περίληψη:
+ *   • 15 χειρόγραφες `:global(.dark)` δηλώσεις **διαγράφηκαν** — το token **είναι** το ζεύγος.
+ *   • τρίχες/αποχρώσεις = `color-mix()` με το `--popover-foreground` (αυτοαντιστρέφεται).
+ *   • σβησμένο κείμενο **62%** = μετρημένο, όχι αισθητικό (4,89:1 / 7,05:1).
+ *   • `.btnApply` = `--status-info`: το `#3b82f6` με λευκό ήταν **3,68:1**, κάτω από το WCAG.
  */
 
 .panel {
@@ -8,17 +16,12 @@
   z-index: var(--z-index-viewer-transient);
   min-width: 220px;
   border-radius: 6px;
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.15));
-  background: var(--color-surface, #fff);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 15%, transparent);
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
   font-size: 12px;
   line-height: 1.4;
-}
-
-:global(.dark) .panel {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: #1c1c1f;
-  color: #f4f4f5;
 }
 
 .header {
@@ -26,17 +29,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 6px 10px 5px;
-  border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  border-bottom: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
   font-weight: 600;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--color-muted-foreground, #71717a);
-}
-
-:global(.dark) .header {
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #a1a1aa;
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
 }
 
 .closeBtn {
@@ -48,12 +46,12 @@
   width: 18px;
   height: 18px;
   border-radius: 3px;
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   transition: background 0.1s;
 }
 
 .closeBtn:hover {
-  background: var(--color-accent, rgba(0, 0, 0, 0.08));
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 8%, transparent);
 }
 
 .body {
@@ -72,14 +70,10 @@
 .label {
   width: 72px;
   flex-shrink: 0;
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-:global(.dark) .label {
-  color: #a1a1aa;
 }
 
 .inputWrap {
@@ -95,10 +89,10 @@
   min-width: 0;
   height: 24px;
   padding: 0 6px;
-  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.2));
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 20%, transparent);
   border-radius: 4px;
-  background: var(--color-input-bg, #fafafa);
-  color: var(--color-foreground, #18181b);
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 5%, transparent);
+  color: hsl(var(--popover-foreground));
   font-size: 11px;
   outline: none;
   transition: border-color 0.15s;
@@ -106,25 +100,12 @@
 
 .input:focus,
 .select:focus {
-  border-color: var(--color-primary, #3b82f6);
-  background: #fff;
-}
-
-:global(.dark) .input,
-:global(.dark) .select {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: #27272a;
-  color: #f4f4f5;
-}
-
-:global(.dark) .input:focus,
-:global(.dark) .select:focus {
-  border-color: #60a5fa;
-  background: #1c1c1f;
+  border-color: hsl(var(--focus-ring));
+  background: hsl(var(--popover));
 }
 
 .unit {
-  color: var(--color-muted-foreground, #71717a);
+  color: color-mix(in srgb, hsl(var(--popover-foreground)) 62%, transparent);
   font-size: 10px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -134,7 +115,7 @@
   width: 16px;
   height: 16px;
   border-radius: 3px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 20%, transparent);
   flex-shrink: 0;
   background: var(--qp-mini-swatch, transparent);
 }
@@ -144,18 +125,17 @@
   justify-content: flex-end;
   gap: 6px;
   padding: 5px 10px 8px;
-  border-top: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  border-top: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 8%, transparent);
 }
 
-:global(.dark) .footer {
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
+/* Το διαφανές περίγραμμα κρατά ίδιο ύψος με το `.btnCancel` που έχει ορατό — βλ. αδελφό αρχείο. */
 .btn {
   all: unset;
+  box-sizing: border-box;
   cursor: pointer;
   height: 24px;
   padding: 0 12px;
+  border: 1px solid transparent;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 500;
@@ -164,34 +144,26 @@
 
 .btnCancel {
   composes: btn;
-  background: var(--color-secondary, #f4f4f5);
-  color: var(--color-secondary-foreground, #18181b);
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 8%, transparent);
+  border-color: color-mix(in srgb, hsl(var(--popover-foreground)) 30%, transparent);
+  color: hsl(var(--popover-foreground));
 }
 
 .btnCancel:hover {
-  background: var(--color-secondary-hover, #e4e4e7);
+  background: color-mix(in srgb, hsl(var(--popover-foreground)) 14%, transparent);
 }
 
 .btnApply {
   composes: btn;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
+  background: hsl(var(--status-info));
+  color: hsl(var(--primary-foreground));
 }
 
 .btnApply:hover {
-  background: var(--color-primary-hover, #2563eb);
+  background: color-mix(in srgb, hsl(var(--status-info)) 85%, black);
 }
 
 .btnApply:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-:global(.dark) .btnCancel {
-  background: #3f3f46;
-  color: #f4f4f5;
-}
-
-:global(.dark) .btnCancel:hover {
-  background: #52525b;
 }

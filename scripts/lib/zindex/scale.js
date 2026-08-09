@@ -85,7 +85,20 @@ function readScale(repoRoot = PROJECT_ROOT) {
     if (!Number.isInteger(value)) {
       throw new Error(`design-tokens.json ▸ zIndex.${key}: "${token.value}" δεν είναι ακέραιος`);
     }
-    roles.push({ role: key, value, cssVar: cssVarNameOf(key), description: token.description || '' });
+    roles.push({
+      role: key,
+      value,
+      cssVar: cssVarNameOf(key),
+      description: token.description || '',
+      // Ρόλος **περιορισμένης χρήσης**: μόνο αρχεία κάτω από αυτά τα προθέματα επιτρέπεται
+      // να τον ζητούν. Υπάρχει επειδή η κλίμακα απέκτησε σκαλιά που **δεν είναι στρώση
+      // προϊόντος** (`devtoolsGuard` = άμυνα του dev overlay· `debugOverlay` = εργαλείο).
+      // Χωρίς επιβολή, ο πρώτος που θα χρειαστεί «λίγο πιο πάνω» θα άρπαζε την κορυφή —
+      // ακριβώς το «z-index arms race» που η κλίμακα υπάρχει για να σταματήσει.
+      restrictedTo: Array.isArray(token.restrictedTo) && token.restrictedTo.length
+        ? token.restrictedTo
+        : null,
+    });
   }
   if (roles.length === 0) {
     throw new Error('design-tokens.json ▸ zIndex: κανένας ρόλος — η κλίμακα είναι κενή');

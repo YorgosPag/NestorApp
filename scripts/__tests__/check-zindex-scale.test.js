@@ -269,6 +269,27 @@ describe('Μ — μεταλλάξεις στις εισόδους', () => {
     await expect(run(edits)).rejects.toThrow(/δεν είναι διατεταγμένη/);
   });
 
+  it('Μ13 — ρόλος ΠΕΡΙΟΡΙΣΜΕΝΗΣ ΧΡΗΣΗΣ έξω από την περιοχή του ⇒ zero-tol, η πύλη ΠΕΤΑΕΙ', async () => {
+    // 🔑 ADR-780 Φάση Β: η κλίμακα απέκτησε σκαλιά που **δεν είναι στρώση προϊόντος**
+    // (`devtoolsGuard` = άμυνα του dev overlay· `debugOverlay` = εργαλείο) και είναι, εξ
+    // ορισμού, τα ψηλότερα. Χωρίς επιβολή, ο πρώτος που θα χρειαστεί «λίγο πιο πάνω από
+    // όλα» αρπάζει την κορυφή — και σε δύο κινήσεις το «z-index arms race» ξαναγεννιέται
+    // **μέσα** στην κλίμακα που το σταμάτησε. Ένα `restrictedTo` που δεν το επιβάλλει
+    // κανείς θα ήταν σχόλιο (μάθημα CHECK 3.36).
+    const edits = { [RIBBON]: appendCss('.zx-probe { z-index: var(--z-index-devtools-guard); }') };
+    await expect(run(edits)).rejects.toThrow(/μηδενικής ανοχής/);
+    const m = await run(edits, ['--report']);
+    // ⚠️ ΕΠΑΝΑΤΑΞΙΝΟΜΗΣΗ, ΟΧΙ ΠΡΟΣΘΗΚΗ: μία χρήση δεν γίνεται δύο σημεία.
+    expect(delta(m.census)).toEqual({ [STATES.RESTRICTED_ROLE_MISUSE]: 1 });
+  });
+
+  it('Μ13β — ο ΙΔΙΟΣ ρόλος ΜΕΣΑ στην περιοχή του είναι απλό scale-token', async () => {
+    // Η αντίστροφη κατεύθυνση: χωρίς αυτό, ένας φρουρός που πυροδοτεί **πάντα** θα ήταν
+    // εξίσου «πράσινος» στο Μ13 και θα έκανε το `globals.css` μονίμως κόκκινο.
+    const m = await run({ [GLOBALS]: appendCss('.zx-probe { z-index: var(--z-index-devtools-guard); }') });
+    expect(delta(m.census)).toEqual({ [STATES.SCALE_TOKEN]: 1 });
+  });
+
   it('Μ12 — δύο ρόλοι με την ΙΔΙΑ τιμή πετάνε (γνησίως αύξουσα, όχι μη-φθίνουσα)', () => {
     const roles = [{ role: 'a', value: 1000 }, { role: 'b', value: 1000 }];
     // Δύο ονόματα για ένα σκαλί ⇒ η σειρά τους αποφασίζεται από τη σειρά DOM,
@@ -291,6 +312,17 @@ describe('Π — ο πραγματικός κώδικας', () => {
     expect(byRole.viewerPalette).toBe(9900);
     expect(byRole.viewerMenu).toBe(9999);
     expect(byRole.viewerTransient).toBe(10000);
+  });
+
+  it('Π1γ — οι δύο ΜΗ-ΠΡΟΪΟΝΤΙΚΟΙ ρόλοι είναι δηλωμένοι ως περιορισμένοι', () => {
+    // Χειρόγραφο: αν κάποιος αφαιρέσει το `restrictedTo`, η πύλη σταματά σιωπηλά να
+    // ρωτά — και το σκαλί «πάνω από όλα» γίνεται ελεύθερα διαθέσιμο.
+    const byRole = Object.fromEntries(readScale(REPO_ROOT).map((r) => [r.role, r.restrictedTo]));
+    expect(byRole.devtoolsGuard).toEqual(['src/app/globals.css']);
+    expect(byRole.debugOverlay).toEqual(['src/subapps/dxf-viewer/debug/']);
+    // Και κανένας ρόλος **προϊόντος** δεν είναι περιορισμένος — αλλιώς θα ήταν άχρηστος.
+    expect(byRole.modal).toBeNull();
+    expect(byRole.viewerTransient).toBeNull();
   });
 
   it('Π1β — η ΣΕΙΡΑ της νέας κορυφής είναι ακριβώς η σειρά που ίσχυε πριν', () => {
@@ -617,7 +649,17 @@ describe('Σ — το σύνορο των τρίτων', () => {
   });
 
   it('Σ8 — μέτρο ΧΩΡΙΣ λόγο ΠΕΤΑΕΙ (πρότυπο CHECK 3.35: δηλώνεις ⇒ λες γιατί)', async () => {
-    const edits = { [REGISTRY]: (s) => s.replace(/"why": "Κάνει portal στο body[^"]*"/, '"why": "γιατί"') };
+    // ⚠️ Μέσω JSON, ΟΧΙ με regex πάνω στο κείμενο: το `why` του sonner περιέχει
+    // εισαγωγικά με διαφυγή (`\"top-right\"`), οπότε ένα `[^"]*` κόβει στη μέση και
+    // παράγει άκυρο JSON — η «μετάλλαξη» θα απεδείκνυε τότε ότι σκάει ο parser, όχι
+    // ότι η πύλη απαιτεί λόγο.
+    const edits = {
+      [REGISTRY]: (s) => {
+        const json = JSON.parse(s);
+        json.packages.sonner.measures[0].why = 'γιατί';
+        return JSON.stringify(json, null, 2);
+      },
+    };
     await expect(run(edits, ['--report'])).rejects.toThrow(/χωρίς λόγο/);
   });
 

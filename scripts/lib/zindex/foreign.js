@@ -42,6 +42,9 @@ const fs = require('fs');
 const path = require('path');
 
 const { GLOBAL_LAYER_FLOOR, PROJECT_ROOT } = require('./scale');
+// Η απογραφή ζει χωριστά: αγγίζει τον δίσκο, είναι το μόνο ακριβό βήμα (~6s), και είναι
+// άλλη ευθύνη («ποιος ξένος γράφει στρώση;») από την κρίση («τι κάναμε γι' αυτό;»).
+const { FOREIGN_PATTERN, censusNodeModules } = require('./foreign-census');
 
 const REGISTRY_FILE = '.zindex-foreign.json';
 
@@ -70,85 +73,6 @@ const FOREIGN_ZERO_TOLERANCE = Object.freeze([
   FOREIGN_STATES.CLAMP_OVERRIDDEN,
 ]);
 
-const SCANNABLE = /\.(css|js|mjs|cjs)$/;
-const MAX_WALK_DEPTH = 7;
-const toPosix = (p) => p.split(path.sep).join('/');
-
-// ---------------------------------------------------------------------------
-// Η ΑΠΟΓΡΑΦΗ — τι δηλώνει το ίδιο το node_modules
-// ---------------------------------------------------------------------------
-
-/**
- * ⚠️ ΤΟ ΙΔΙΟ ΜΟΤΙΒΟ ΠΙΑΝΕΙ **ΚΑΙ** CSS **ΚΑΙ** JS. Δεν είναι χαλαρότητα: το `sonner`
- * γράφει `z-index: 999999999` σε `styles.css` **και** στο `dist/index.js` (τα στυλ του
- * εγχέονται ως `<style>` από JS), και το `@react-aria/overlays` το γράφει **μόνο** ως
- * `zIndex: 100000` σε αντικείμενο JS. Πύλη που διαβάζει μόνο `.css` θα έλεγε «καθαρό»
- * για το μισό οικοσύστημα — το ίδιο σφάλμα με τις τρεις διαλέκτους του πρώτου
- * καταστίχου, μια στάθμη πιο έξω.
- */
-const FOREIGN_PATTERN = /z-?index\s*:\s*['"]?(\d{4,})/gi;
-
-function walkPackage(dir, depth, onFile) {
-  if (depth > MAX_WALK_DEPTH) return;
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === '.git' || entry.name === '.bin') continue;
-      walkPackage(full, depth + 1, onFile);
-    } else if (SCANNABLE.test(entry.name)) {
-      onFile(full);
-    }
-  }
-}
-
-/**
- * Ο πλήρης κατάλογος των πακέτων που δηλώνουν καθολική στρώση, με τη **μέγιστη** τιμή
- * τους και ένα αποδεικτικό αρχείο. Αυθεντία των πακέτων = το `package.json`, ποτέ
- * χειρόγραφη λίστα (μια λίστα εδώ θα ήταν ακριβώς ό,τι το μητρώο υπάρχει για να ελέγχει).
- */
-function censusNodeModules(repoRoot = PROJECT_ROOT, floor = GLOBAL_LAYER_FLOOR) {
-  const pkgJson = path.join(repoRoot, 'package.json');
-  const deps = Object.keys(JSON.parse(fs.readFileSync(pkgJson, 'utf8')).dependencies || {});
-  const modulesRoot = path.join(repoRoot, 'node_modules');
-  if (!fs.existsSync(modulesRoot)) {
-    throw new Error(
-      'CHECK 3.50 / σύνορο: δεν υπάρχει node_modules — η απογραφή δεν μπορεί να τρέξει και '
-      + 'μια πύλη που δεν βρήκε την αυθεντία της δεν επιτρέπεται να απαντήσει «καθαρό».',
-    );
-  }
-
-  const census = new Map();
-  for (const dep of deps) {
-    const dir = path.join(modulesRoot, ...dep.split('/'));
-    if (!fs.existsSync(dir)) continue;
-    walkPackage(dir, 0, (full) => {
-      let text;
-      try {
-        text = fs.readFileSync(full, 'utf8');
-      } catch {
-        return;
-      }
-      FOREIGN_PATTERN.lastIndex = 0;
-      let m;
-      while ((m = FOREIGN_PATTERN.exec(text)) !== null) {
-        const value = Number(m[1]);
-        if (value < floor) continue;
-        const prev = census.get(dep);
-        if (!prev || value > prev.max) {
-          census.set(dep, { pkg: dep, max: value, evidenceFile: toPosix(path.relative(repoRoot, full)) });
-        }
-      }
-    });
-  }
-  return census;
-}
-
 // ---------------------------------------------------------------------------
 // ΤΟ ΣΥΝΟΡΟ ΜΑΣ — τι κάνουμε γι' αυτό, διαβασμένο από το ΙΔΙΟ το CSS
 // ---------------------------------------------------------------------------
@@ -173,6 +97,31 @@ const zIndexOf = (body) => {
   return m ? m[2].trim() : null;
 };
 
+/**
+ * Σπάει λίστα επιλογέων σε **επιτόπιους** επιλογείς, αγνοώντας κόμματα μέσα σε
+ * παρενθέσεις (`:not(a, b)`).
+ *
+ * 🔑 ΓΙΑΤΙ ΥΠΑΡΧΕΙ: ζωντανή παρατήρηση (2026-08-09) έδειξε ότι ο αγωγός CSS **συγχωνεύει**
+ * κανόνες με ταυτόσημο σώμα — τα τρία ξεχωριστά `isolation: isolate` του συνόρου
+ * σερβίρονται ως **ένας** κανόνας `.maplibregl-map, .fc, .rmg-gantt-chart`. Η πύλη
+ * διαβάζει την **πηγή**, όχι το σερβιρισμένο, οπότε δεν την αφορά σήμερα· την αφορά όμως
+ * ο άνθρωπος που αύριο θα γράψει τη λίστα με το χέρι για συντομία. Χωρίς αυτό, η δήλωση
+ * «περιόρισα το `.fc`» θα γινόταν σιωπηλά ⛔ `foreign-unverified` πάνω σε **σωστό** CSS.
+ */
+function splitSelectorList(selector) {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  for (const ch of selector) {
+    if (ch === '(') depth += 1;
+    if (ch === ')') depth -= 1;
+    if (ch === ',' && depth === 0) { parts.push(current.trim()); current = ''; continue; }
+    current += ch;
+  }
+  parts.push(current.trim());
+  return parts.filter(Boolean);
+}
+
 /** Οι δηλώσεις του συνόρου: `{ selector → { role, important, isolated } }`. */
 function readBoundary(repoRoot, boundaryFile) {
   const full = path.join(repoRoot, boundaryFile);
@@ -182,14 +131,16 @@ function readBoundary(repoRoot, boundaryFile) {
   const map = new Map();
   for (const rule of parseRules(fs.readFileSync(full, 'utf8'))) {
     const z = zIndexOf(rule.body);
-    const entry = map.get(rule.selector) || { role: null, important: false, isolated: false };
-    if (z) {
-      const varMatch = z.match(/var\(\s*--z-index-([a-z0-9-]+)/i);
-      entry.role = varMatch ? varMatch[1] : `ΩΜΟ:${z}`;
-      entry.important = /!\s*important/i.test(z);
+    for (const selector of splitSelectorList(rule.selector)) {
+      const entry = map.get(selector) || { role: null, important: false, isolated: false };
+      if (z) {
+        const varMatch = z.match(/var\(\s*--z-index-([a-z0-9-]+)/i);
+        entry.role = varMatch ? varMatch[1] : `ΩΜΟ:${z}`;
+        entry.important = /!\s*important/i.test(z);
+      }
+      if (hasIsolation(rule.body)) entry.isolated = true;
+      map.set(selector, entry);
     }
-    if (hasIsolation(rule.body)) entry.isolated = true;
-    map.set(rule.selector, entry);
   }
   return map;
 }
@@ -462,8 +413,9 @@ module.exports = {
   FOREIGN_STATES,
   FOREIGN_ZERO_TOLERANCE,
   FOREIGN_PATTERN,
-  censusNodeModules,
+  censusNodeModules,   // επανεξαγωγή: οι καταναλωτές ρωτούν ΜΙΑ πόρτα (ADR-780 Φ.Β)
   parseRules,
+  splitSelectorList,
   readBoundary,
   readRegistry,
   findCompetingRules,

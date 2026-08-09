@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { CollaborationUser, Annotation } from './CollaborationManager';
 import { isFeatureEnabled } from '../config/experimental-features';
-import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfZIndexSystem.styles';
+import { dxfComponentStyles, dxfAccessibility } from '../styles/DxfSurface.styles';
 import { UI_COLORS } from '../config/color-config';
 import { PANEL_LAYOUT } from '../config/panel-tokens';
 // 🏢 ADR-XXX: Centralized viewport defaults

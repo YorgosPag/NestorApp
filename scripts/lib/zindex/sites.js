@@ -46,10 +46,15 @@ const STATES = Object.freeze({
   RAW_LITERAL: 'raw-literal',
   UNKNOWN_TOKEN: 'unknown-token',
   PARALLEL_SCALE: 'parallel-scale',
+  RESTRICTED_ROLE_MISUSE: 'restricted-role-misuse',
 });
 
 /** Οι καταστάσεις που **μπλοκάρουν** χωρίς baseline (ZERO-TOL). */
-const ZERO_TOLERANCE = Object.freeze([STATES.UNKNOWN_TOKEN, STATES.PARALLEL_SCALE]);
+const ZERO_TOLERANCE = Object.freeze([
+  STATES.UNKNOWN_TOKEN,
+  STATES.PARALLEL_SCALE,
+  STATES.RESTRICTED_ROLE_MISUSE,
+]);
 /** Η κατάσταση που κρατιέται σε **baseline** και μόνο μειώνεται (RATCHET). */
 const RATCHETED = Object.freeze([STATES.RAW_LITERAL]);
 
@@ -279,10 +284,42 @@ function assertClosed(found) {
   return census;
 }
 
+/**
+ * ⛔ ΟΙ ΠΕΡΙΟΡΙΣΜΕΝΟΙ ΡΟΛΟΙ — επιβολή, όχι σχόλιο.
+ *
+ * 🔑 ΓΙΑΤΙ ΥΠΑΡΧΕΙ (ADR-780 Φάση Β): η κλίμακα απέκτησε σκαλιά που **δεν είναι στρώση
+ * προϊόντος** — `devtoolsGuard` (άμυνα του dev overlay του Next.js) και `debugOverlay`
+ * (εργαλείο ανάπτυξης). Είναι, εξ ορισμού, τα **ψηλότερα**. Χωρίς επιβολή, ο πρώτος που
+ * θα χρειαστεί «λίγο πιο πάνω από όλα» θα άρπαζε την κορυφή, και σε δύο κινήσεις θα
+ * ξαναγεννιόταν το «z-index arms race» **μέσα** στην κλίμακα που το σταμάτησε.
+ *
+ * ⚠️ ΕΙΝΑΙ **ΕΠΑΝΑΤΑΞΙΝΟΜΗΣΗ**, ΟΧΙ ΠΡΟΣΘΗΚΗ: η κατάσταση αντικαθιστά το `scale-token`
+ * του **ίδιου** ευρήματος, ώστε η κλειστή λογιστική να μη μετακινηθεί (μια χρήση δεν
+ * γίνεται ξαφνικά δύο σημεία).
+ */
+function markRestrictedMisuse(found, roles) {
+  const restricted = new Map(
+    roles.filter((r) => r.restrictedTo).map((r) => [r.cssVar, r.restrictedTo]),
+  );
+  if (restricted.size === 0) return found;
+  return found.map((f) => {
+    if (f.state !== STATES.SCALE_TOKEN) return f;
+    const varMatch = f.raw.match(/var\(\s*(--z-index-[a-z0-9-]+)/i);
+    const allowed = varMatch && restricted.get(varMatch[1]);
+    if (!allowed || allowed.some((prefix) => f.file.startsWith(prefix))) return f;
+    return {
+      ...f,
+      state: STATES.RESTRICTED_ROLE_MISUSE,
+      detail: `${varMatch[1]} είναι ρόλος περιορισμένης χρήσης — επιτρέπεται μόνο σε: ${allowed.join(', ')}`,
+    };
+  });
+}
+
 function scanAll(repoRoot, roles) {
   const byCssVar = indexByCssVar(roles);
   const definedNames = buildDefinitionIndex(repoRoot);
-  const found = [...scanCss(repoRoot, definedNames, byCssVar), ...scanSources(repoRoot, definedNames, byCssVar)];
+  const raw = [...scanCss(repoRoot, definedNames, byCssVar), ...scanSources(repoRoot, definedNames, byCssVar)];
+  const found = markRestrictedMisuse(raw, roles);
   found.sort((a, b) => (a.file === b.file ? a.line - b.line : a.file.localeCompare(b.file)));
   return { found, census: assertClosed(found) };
 }
@@ -300,6 +337,7 @@ module.exports = {
   scanSources,
   findSymbolsInSrc,
   listCssFiles,
+  markRestrictedMisuse,
   assertClosed,
   scanAll,
 };

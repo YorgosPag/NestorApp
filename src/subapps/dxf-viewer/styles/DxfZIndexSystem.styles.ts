@@ -15,9 +15,7 @@
  * - Performance-optimized z-index calculations
  */
 
-import type { CSSProperties } from 'react';
 import { zIndex as globalZIndex } from '../../../styles/design-tokens';
-import { UI_COLORS, withOpacity } from '../config/color-config';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -49,23 +47,6 @@ interface DxfZIndexHierarchy {
     readonly settings: number;
     readonly help: number;
   };
-}
-
-interface DxfComponentStyles {
-  readonly canvasContainer: CSSProperties;
-  readonly dxfCanvas: CSSProperties;
-  readonly layerCanvas: CSSProperties;
-  readonly collaborationOverlay: CSSProperties;
-  readonly importModal: CSSProperties;
-  readonly baseModal: CSSProperties;
-}
-
-interface DxfOverlayStyles {
-  readonly selectionMarquee: CSSProperties;
-  readonly crosshair: CSSProperties;
-  readonly snapIndicator: CSSProperties;
-  readonly cursorTooltip: CSSProperties;
-  readonly zoomWindow: CSSProperties;
 }
 
 // ============================================================================
@@ -169,274 +150,6 @@ export const createCanvasZIndex = (
   const baseZIndex = dxfZIndex.canvas[canvasType];
   return baseZIndex + layerOffset;
 };
-
-// ============================================================================
-// 🎯 MAIN DXF COMPONENT STYLES
-// ============================================================================
-
-/**
- * 🏢 ENTERPRISE DXF COMPONENT STYLES
- * Complete styling system που αντικαθιστά όλα τα hardcoded z-index values
- */
-export const dxfComponentStyles: DxfComponentStyles = {
-  /**
-   * 🎯 CANVAS CONTAINER: Main DXF viewer container
-   */
-  canvasContainer: {
-    position: 'relative',
-    width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-    zIndex: dxfZIndex.canvas.background
-  } as const,
-
-  /**
-   * 🎯 DXF CANVAS: Main content rendering layer
-   */
-  dxfCanvas: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: dxfZIndex.canvas.dxfCanvas,
-    pointerEvents: 'auto'
-  } as const,
-
-  /**
-   * 🎯 LAYER CANVAS: Interactive drawing layer
-   */
-  layerCanvas: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: dxfZIndex.canvas.layerCanvas,
-    pointerEvents: 'auto' // Dynamic: 'none' during drawing tools
-  } as const,
-
-  /**
-   * 🎯 COLLABORATION OVERLAY: Multi-user interaction layer
-   */
-  collaborationOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    zIndex: dxfZIndex.ui.collaboration,
-    pointerEvents: 'auto'
-  } as const,
-
-  /**
-   * 🎯 IMPORT MODAL: DXF file import dialog
-   * Replaces hardcoded zIndex: 999999 με professional hierarchy
-   */
-  importModal: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: UI_COLORS.MODAL_OVERLAY_MEDIUM,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: dxfZIndex.modals.import
-  } as const,
-
-  /**
-   * 🎯 BASE MODAL: Standard modal styling
-   */
-  baseModal: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: UI_COLORS.MODAL_OVERLAY_LIGHT,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: dxfZIndex.modals.base
-  } as const
-} as const;
-
-// ============================================================================
-// 🎯 DXF OVERLAY STYLES
-// ============================================================================
-
-/**
- * 🎯 DXF OVERLAY SYSTEM: Professional overlay styling
- */
-export const dxfOverlayStyles: DxfOverlayStyles = {
-  /**
-   * 🎯 SELECTION MARQUEE: Selection rectangle overlay
-   */
-  selectionMarquee: {
-    position: 'absolute',
-    border: `1px dashed ${UI_COLORS.INDICATOR_BLUE}`,
-    backgroundColor: UI_COLORS.SELECTION_MARQUEE_BG,
-    pointerEvents: 'none',
-    zIndex: dxfZIndex.overlays.selection
-  } as const,
-
-  /**
-   * 🎯 CROSSHAIR: Drawing crosshair overlay
-   */
-  crosshair: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    pointerEvents: 'none',
-    zIndex: dxfZIndex.overlays.crosshair
-  } as const,
-
-  /**
-   * 🎯 SNAP INDICATOR: Object snap visual feedback
-   */
-  snapIndicator: {
-    position: 'absolute',
-    pointerEvents: 'none',
-    zIndex: dxfZIndex.overlays.snap,
-    color: UI_COLORS.BRIGHT_GREEN,
-    fontSize: '12px',
-    fontFamily: 'monospace'
-  } as const,
-
-  /**
-   * 🎯 CURSOR TOOLTIP: Coordinate display and command feedback
-   */
-  cursorTooltip: {
-    position: 'absolute',
-    backgroundColor: UI_COLORS.MODAL_OVERLAY_HEAVY,
-    color: UI_COLORS.WHITE,
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '11px',
-    fontFamily: 'monospace',
-    pointerEvents: 'none',
-    zIndex: dxfZIndex.overlays.cursor,
-    whiteSpace: 'nowrap'
-  } as const,
-
-  /**
-   * 🎯 ZOOM WINDOW: Magnification window overlay
-   */
-  zoomWindow: {
-    position: 'absolute',
-    border: `2px solid ${UI_COLORS.INDICATOR_BLUE}`,
-    backgroundColor: 'hsl(var(--background) / 0.9)', // ✅ ENTERPRISE: CSS variable (adapts to dark mode)
-    borderRadius: '4px',
-    overflow: 'hidden',
-    pointerEvents: 'none',
-    zIndex: dxfZIndex.overlays.zoom
-  } as const
-} as const;
-
-// ============================================================================
-// 🎯 DYNAMIC STYLING UTILITIES
-// ============================================================================
-
-/**
- * 🎯 LAYER CANVAS POINTER EVENTS: Dynamic interaction control
- * Professional approach για drawing tool interaction management
- */
-export const createLayerCanvasStyle = (
-  isDrawingTool: boolean = false,
-  customZIndex?: number
-): CSSProperties => {
-  return {
-    ...dxfComponentStyles.layerCanvas,
-    pointerEvents: isDrawingTool ? 'none' : 'auto',
-    zIndex: customZIndex || dxfZIndex.canvas.layerCanvas
-  } as const;
-};
-
-/**
- * 🎯 MODAL BACKDROP STYLE: Dynamic modal backdrop creation
- */
-export const createModalBackdropStyle = (
-  modalType: 'base' | 'import' | 'settings' | 'help' = 'base',
-  opacity: number = 0.5
-): CSSProperties => {
-  const baseStyle = dxfComponentStyles.baseModal;
-
-  return {
-    ...baseStyle,
-    backgroundColor: withOpacity(UI_COLORS.BLACK, opacity),
-    zIndex: dxfZIndex.modals[modalType]
-  } as const;
-};
-
-/**
- * 🎯 OVERLAY POSITIONING: Dynamic overlay positioning με bounds checking
- */
-export const createOverlayPositionStyle = (
-  x: number,
-  y: number,
-  overlayType: 'selection' | 'crosshair' | 'snap' | 'cursor' | 'zoom'
-): CSSProperties => {
-  // Map overlay type to actual dxfOverlayStyles keys
-  const overlayTypeMap: Record<string, keyof DxfOverlayStyles> = {
-    selection: 'selectionMarquee',
-    crosshair: 'crosshair',
-    snap: 'snapIndicator',
-    cursor: 'cursorTooltip',
-    zoom: 'zoomWindow'
-  };
-
-  const styleKey = overlayTypeMap[overlayType] || 'crosshair';
-  const baseStyle = dxfOverlayStyles[styleKey];
-
-  return {
-    ...baseStyle,
-    left: `${Math.max(0, x)}px`,
-    top: `${Math.max(0, y)}px`
-  } as const;
-};
-
-// ============================================================================
-// 🎯 ACCESSIBILITY UTILITIES
-// ============================================================================
-
-/**
- * 🎯 DXF ACCESSIBILITY: Enterprise accessibility support για DXF components
- */
-export const dxfAccessibility = {
-  /**
-   * Canvas accessibility
-   */
-  getCanvasProps: (canvasType: 'dxf' | 'layer', isInteractive: boolean = true) => ({
-    role: 'img',
-    'aria-label': `${canvasType} canvas for DXF drawing`,
-    'aria-hidden': !isInteractive,
-    tabIndex: isInteractive ? 0 : -1
-  } as const),
-
-  /**
-   * Modal accessibility
-   */
-  getModalProps: (modalTitle: string) => ({
-    role: 'dialog',
-    'aria-modal': true,
-    'aria-labelledby': `${modalTitle.toLowerCase().replace(/\s+/g, '-')}-title`,
-    'aria-describedby': `${modalTitle.toLowerCase().replace(/\s+/g, '-')}-description`
-  } as const),
-
-  /**
-   * Overlay accessibility
-   */
-  getOverlayProps: (overlayType: string, isVisible: boolean = true) => ({
-    role: 'complementary',
-    'aria-label': `${overlayType} overlay`,
-    'aria-hidden': !isVisible,
-    'aria-live': 'polite' as const
-  } as const)
-} as const;
 
 // ============================================================================
 // 🎯 PERFORMANCE OPTIMIZATION
@@ -545,11 +258,7 @@ export const getDxfZIndexInfo = () => ({
 // 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY
 // ============================================================================
 
-export type {
-  DxfZIndexHierarchy,
-  DxfComponentStyles,
-  DxfOverlayStyles
-};
+export type { DxfZIndexHierarchy };
 
 // ============================================================================
 // 🎯 CONSTANTS EXPORT - QUICK ACCESS
@@ -573,28 +282,12 @@ export const DXF_ZINDEX = {
 } as const;
 
 /**
- * ✅ ENTERPRISE DXF Z-INDEX SYSTEM COMPLETE
+ * ✅ Η ΙΕΡΑΡΧΙΑ. Τα **στυλ** των επιφανειών (`dxfComponentStyles`, `dxfOverlayStyles`,
+ * `dxfAccessibility`, δυναμικά utilities) ζουν στο αδελφό `DxfSurface.styles.ts` —
+ * χωρίστηκαν στο ADR-780 Φάση Β όταν το ενιαίο αρχείο έφτασε τις 600 γραμμές (N.7.1).
  *
- * Features Implemented:
- * ✅ Professional DXF-specific z-index hierarchy (eliminates 999999 chaos)
- * ✅ Canvas layering system (Background → DXF → Layer → Overlays)
- * ✅ Modal management hierarchy (Base → Import → Settings → Help)
- * ✅ Collaboration overlay positioning
- * ✅ Dynamic style utilities (pointer events, positioning, backdrop)
- * ✅ Accessibility compliance (ARIA attributes, roles, labels)
- * ✅ Performance optimization (z-index memoization, cache management)
- * ✅ TypeScript strict typing με readonly properties
- * ✅ Integration με global design-tokens.ts
- * ✅ Development validation tools (hierarchy checking, debugging)
- * ✅ Zero hardcoded values (all values semantic and parameterized)
- * ✅ CAD software standards compliance (AutoCAD/SolidWorks patterns)
- *
- * This system completely eliminates hardcoded z-index chaos στο DXF Viewer
- * και establishes professional layering architecture που follows CAD industry standards.
- * All 20+ components can now use centralized, semantic z-index management.
- *
- * Usage Examples:
- * - DxfImportModal: style={dxfComponentStyles.importModal} (replaces zIndex: 999999)
- * - CollaborationOverlay: style={dxfComponentStyles.collaborationOverlay} (replaces zIndex: 10)
- * - LayerCanvas: style={createLayerCanvasStyle(isDrawingTool)} (dynamic pointer events)
+ * ΤΙ ΑΠΑΝΤΑ ΕΔΩ: «ποιο κάθεται πάνω από ποιο», παραγόμενο από το SSoT
+ * (`design-tokens.json ▸ zIndex` → `zIndexScale` → `globalZIndex`).
+ * ⚠️ Κάτω από το 1000 οι αριθμοί είναι **τοπική** στοίβαξη μέσα στο δοχείο του canvas —
+ * δεν είναι καθολικό στρώμα και γι' αυτό δεν ζητούν ρόλο (CHECK 3.50, `local-stacking`).
  */
