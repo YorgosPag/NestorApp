@@ -3718,7 +3718,10 @@ Result: `CanvasContext` transform change → `DxfViewerContent` re-renders (it c
 - **Production guard**: `DxfCanvasHarness.prod.ts` stub + webpack alias in `next.config.js` — DXF viewer tree excluded from production bundle (zero CI/memory impact)
 - **Baseline snapshots**: `src/subapps/dxf-viewer/e2e/__snapshots__/` (7 PNG, generated 2026-05-10)
 
-Run: `npm run test:visual:dxf` | Update baselines: `npm run test:visual:dxf:update`
+Run: `npm run test:visual:dxf` | Νέες βάσεις: **διαλογή**, όχι μαζική αποδοχή —
+`npm run golden:capture` → `npm run golden:triage` → οπτική έγκριση → `npm run golden:apply`
+(ADR-775 §15· το `--update-snapshots` σε όλη τη σουίτα **αφαιρέθηκε**: ήταν η αιτία των 39
+άκυρων golden).
 
 ---
 

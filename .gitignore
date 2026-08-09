@@ -141,6 +141,10 @@ ngrok-bin/
 reports/visual/
 reports/junit/
 
+# ADR-775 §15 — διαλογή golden: υποψήφια + φύλλο έγκρισης (παράγονται τοπικά)
+reports/golden-triage/
+reports/visual-candidates*.json
+
 # DXF Viewer jest test reports (generated locally — html/junit artifacts)
 src/subapps/dxf-viewer/reports/
 
@@ -208,3 +212,8 @@ firestore.rules.compiled
 /public/people-2d/
 /public/vehicles-2d/
 /public/plants-2d/
+
+# CHECK 3.29 (ADR-663) — τοπική αναφορά τύπων. Το CI την ανεβάζει ως artifact·
+# στον δίσκο είναι παράγωγο μιας εκτέλεσης, όχι πηγή αλήθειας.
+/.dxf-tsc-report.json
+/.dxf-tsc-report.md

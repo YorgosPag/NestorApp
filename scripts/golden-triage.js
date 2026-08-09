@@ -268,13 +268,16 @@ function commandSheet() {
   console.log(`  αυτο-γραμμένα    : ${quarantined.length} (μετακινήθηκαν σε καραντίνα)`);
   console.log(`  μεταφερόμενα     : ${items.filter((i) => i.carried).length}`
     + ' (από προηγούμενη παρτίδα — σταθερότητα ΑΓΝΩΣΤΗ)');
-  console.log(`  σύγκριση με προηγούμενο πέρασμα: ${previous ? `${previous} εικόνες` : 'καμία'}`);
-  if (previous) {
-    const unstable = items.filter((i) => i.stability === 'unstable'
-      || i.stability === 'size-mismatch');
-    console.log(`  ${unstable.length ? C.red(`ΑΣΤΑΘΗ: ${unstable.length}`) : C.green('όλα σταθερά')}`
-      + (unstable.length ? ` — ${unstable.map((i) => i.name).join(', ')}` : ''));
-  }
+  // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΤΥΠΩΝΕΤΑΙ ΠΑΝΤΑ. Η πρώτη γραφή έλεγε «όλα σταθερά» φιλτράροντας για
+  // `unstable` — και επειδή **καμία** σύγκριση δεν είχε εκτελεστεί (το `pixelmatch` έσκαγε ως
+  // ESM), το φίλτρο έβρισκε 0 και τύπωνε πράσινο. «0 άσταθα» χωρίς «από πόσα» είναι «δεν
+  // κοίταξα», όχι «καθαρά».
+  const compared = items.filter((i) => i.stability !== 'άγνωστη');
+  const unstable = compared.filter((i) => i.stability === 'unstable'
+    || i.stability === 'size-mismatch');
+  console.log(`  σταθερότητα      : συγκρίθηκαν ${compared.length}/${items.length}`
+    + ` · άσταθα ${unstable.length}`
+    + (unstable.length ? ` — ${unstable.map((i) => i.name).join(', ')}` : ''));
   console.log(`  ${C.green('ΑΝΟΙΞΕ')} : ${path.join(OUT_DIR, 'index.html')}\n`);
 }
 

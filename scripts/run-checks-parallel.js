@@ -374,11 +374,20 @@ if (!process.env.SKIP_ADR_IDENTITY && adrIdentityTriggers.length > 0)
 // μπορεί να προσγειωθεί σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο του `src/`, άρα λίστα φακέλων εδώ θα ήταν
 // σωστή σήμερα και θα απέκλινε σιωπηλά αύριο. Όταν πυροδοτεί, ο έλεγχος είναι ΠΑΝΤΑ πλήρης
 // (~4,7s) — ένας νέος ρόλος ξαναταξινομεί αρχεία που κανείς δεν σταδιοποίησε.
+// ⚠️ ΤΟ ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ (ADR-780 Φάση Β) ΠΡΟΣΘΕΤΕΙ ΤΡΕΙΣ ΕΙΣΟΔΟΥΣ ΕΚΤΟΣ `src/`: το
+// μητρώο και τα δύο αρχεία εξαρτήσεων. Χωρίς αυτά, ένα `npm i` που φέρνει βιβλιοθήκη με
+// `z-index: 99999` δεν θα άγγιζε ΚΑΝΕΝΑ αρχείο πηγής και θα περνούσε αθέατο μέχρι το CI.
+// Η απογραφή του `node_modules` (~6s) τρέχει ΜΟΝΟ όταν πυροδοτούν αυτά — η ίδια η πύλη
+// το αποφασίζει (`touchesForeignCensus`), όχι αυτή η λίστα.
 const zIndexScaleTriggers = allFiles.filter(
   f => /^src\/.*\.(css|ts|tsx)$/.test(f)
     || f === 'design-tokens.json'
     || f === 'scripts/check-zindex-scale.js'
     || f.startsWith('scripts/lib/zindex/')
+    || f === '.zindex-foreign.json'
+    || f === 'package.json'
+    || f === 'package-lock.json'
+    || f === 'pnpm-lock.yaml'
 );
 if (!process.env.SKIP_ZINDEX_SCALE && zIndexScaleTriggers.length > 0)
   addThread('3.50', 'z-index scale', 'scripts/check-zindex-scale.js', zIndexScaleTriggers);
