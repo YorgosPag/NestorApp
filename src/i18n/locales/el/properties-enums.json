@@ -274,5 +274,16 @@
     "inspection": "Σε επιθεώρηση",
     "maintenance": "Υπό συντήρηση",
     "draft": "Ημιτελές"
+  },
+  "offerKind": {
+    "sell": "Πώληση",
+    "leaseOut": "Ενοικίαση",
+    "exchange": "Αντιπαροχή"
+  },
+  "offerLifecycle": {
+    "active": "Ενεργή",
+    "reserved": "Δεσμευμένη",
+    "closed": "Ολοκληρώθηκε",
+    "withdrawn": "Αποσύρθηκε"
   }
 }

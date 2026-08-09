@@ -72,7 +72,7 @@ export function TopoReviewPanel(props: TopoReviewPanelProps): React.JSX.Element 
       dimensions={PANEL_DIMENSIONS}
       onClose={onClose}
       draggableOptions={{ getClientPosition }}
-      className="z-[9999] w-80"
+      className="z-[var(--z-index-viewer-menu)] w-80"
       data-testid={testId}
     >
       <FloatingPanel.Header showClose icon={icon}>

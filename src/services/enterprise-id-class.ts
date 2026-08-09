@@ -45,12 +45,12 @@ import {
   isValidEnterpriseId,
   parseEnterpriseId,
 } from './enterprise-id-parse';
-import { BimEntityIdGenerators } from './enterprise-id-bim-generators';
+import { PublicRegistryIdGenerators } from './enterprise-id-public-registry-generators';
 
 // Alias for compact generator methods
 const P = ENTERPRISE_ID_PREFIXES;
 
-export class EnterpriseIdService extends BimEntityIdGenerators {
+export class EnterpriseIdService extends PublicRegistryIdGenerators {
   private readonly config: IdGenerationConfig;
   private readonly generatedIds = new Set<string>();
   private readonly cache = new Map<string, EnterpriseId>();
@@ -144,6 +144,8 @@ export class EnterpriseIdService extends BimEntityIdGenerators {
   generateAddressId(): string { return this.generateId(P.ADDRESS).id; }
   generateOpportunityId(): string { return this.generateId(P.OPPORTUNITY).id; }
   generateLandownerId(): string { return this.generateId(P.LANDOWNER).id; }
+  // ADR-777 Α1/Α11/Α20 — γη, δημόσιο κτίριο, διάθεση: ζουν στο
+  // PublicRegistryIdGenerators (διακομιστής μόνο, SPEC-777A §14.4).
   /** ADR-759 Φ2 — survey_records doc id. */
   generateSurveyRecordId(): string { return this.generateId(P.SURVEY_RECORD).id; }
   /**

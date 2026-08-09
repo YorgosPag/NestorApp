@@ -20,6 +20,9 @@
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { CoordinateTransforms as CT } from '../../rendering/core/CoordinateTransforms';
+// ADR-650 §M10f — το ορατό DISPLAY ορθογώνιο ζει σε SSoT: το ίδιο ερώτημα το κάνει και το
+// υπόβαθρο χάρτη, και δύο αντίγραφα θα ήταν ακριβώς ο κλώνος που πιάνει το CHECK 3.28 (N.18).
+import { visibleDisplayRect } from '../../rendering/core/visible-display-rect';
 // ADR-726 Φ2 — sizing + πύλη + clear ζουν στο ΕΝΑ primitive· εδώ δηλώνεται μόνο «painter ή null».
 import {
   paintOverlayDispatchFrame,
@@ -51,22 +54,6 @@ export interface TopoGridUnderlayCanvasProps {
 /** Padding (px) from the frame edge to the coordinate numbering. */
 const LABEL_EDGE_PAD = 4;
 
-/**
- * The **DISPLAY** rectangle currently visible, derived from the two opposite screen corners.
- *
- * ⚠️ ADR-650 §M10f — αυτό ΔΕΝ είναι WORLD: το `screenToWorld` κάνει screen→**σκηνή**, και η σκηνή
- * είναι το display frame του κτιρίου. Σε γεωαναφερμένο έργο τα δύο απέχουν ~4·10⁸ mm. Το ότι
- * λεγόταν «world» ήταν ακριβώς η αιτία που ο κάναβος τύπωνε τοπικές συντεταγμένες με ετικέτα
- * ΕΓΣΑ: το `buildTopoGrid` ρωτιόταν σε λάθος σύστημα.
- */
-function visibleDisplayRect(transform: ViewTransform, viewport: { width: number; height: number }): WorldRectMm {
-  const a = CT.screenToWorld({ x: 0, y: 0 }, transform, viewport);
-  const b = CT.screenToWorld({ x: viewport.width, y: viewport.height }, transform, viewport);
-  return {
-    minX: Math.min(a.x, b.x), maxX: Math.max(a.x, b.x),
-    minY: Math.min(a.y, b.y), maxY: Math.max(a.y, b.y),
-  };
-}
 
 /** Draw a small «+» at every round grid intersection (τα `crosses` έρχονται ήδη σε display frame). */
 function drawCrosses(

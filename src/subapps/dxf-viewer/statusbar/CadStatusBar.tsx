@@ -303,7 +303,7 @@ function PolarToggleWithPopover({ id, label, fkey, description, toggle }: {
     <CadToggleWithPopover
       id={id} label={label} fkey={fkey} description={description} toggle={toggle}
       popoverLabel={t('cadDock.statusBar.polarSettingsTitle')}
-      contentClassName="z-[1800] w-56 p-3 space-y-3"
+      contentClassName="z-[var(--z-index-tooltip)] w-56 p-3 space-y-3"
     >
       <>
           <p className="text-xs font-semibold">{t('cadDock.statusBar.polarSettingsTitle')}</p>
@@ -474,7 +474,7 @@ function OsnapToggleWithPopover({ id, label, fkey, description, toggle, enabledM
     <CadToggleWithPopover
       id={id} label={label} fkey={fkey} description={description} toggle={toggle}
       popoverLabel={t('cadDock.statusBar.osnapSettingsTitle')}
-      contentClassName="z-[1800] w-auto p-2"
+      contentClassName="z-[var(--z-index-tooltip)] w-auto p-2"
     >
       <ProSnapToolbar
         enabledModes={enabledModes}

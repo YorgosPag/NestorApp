@@ -151,7 +151,7 @@ export function StatusBarEditableCombobox({
             <span aria-hidden="true">▾</span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="z-[1800] min-w-[5rem]">
+        <DropdownMenuContent align="end" className="z-[var(--z-index-tooltip)] min-w-[5rem]">
           {presets.map((preset) => (
             <DropdownMenuItem
               key={preset.value}

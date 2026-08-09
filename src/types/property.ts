@@ -4,6 +4,7 @@ import type { Timestamp } from 'firebase/firestore';
 import type { LegalPhase } from '@/types/legal-contracts';
 import type { PaymentSummary } from '@/types/payment-plan';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
+import type { OfferKind, PropertyOffer } from '@/types/property-offers';
 import type { AllocationSpaceType, SpaceInclusionType } from '@/config/domain-constants';
 import type {
   OrientationType,
@@ -298,6 +299,54 @@ export interface LinkedSpace {
 }
 
 // =============================================================================
+// 🏢 SHARED SPECIFICATION FIELDS (SSoT)
+// =============================================================================
+
+/**
+ * Πεδία **προδιαγραφής** ταυτόσημα σε {@link Property} (μοντέλο) και
+ * {@link PropertyDoc} (έγγραφο Firestore κατά τη μετάβαση).
+ *
+ * Ο **καθρέφτης** των δύο τύπων είναι σκόπιμος — η **αντιγραφή** των πεδίων
+ * τους δεν ήταν: ζουν εδώ **μία** φορά και τα δύο τα κληρονομούν, ώστε ένα νέο
+ * πεδίο προδιαγραφής να μην μπορεί να προστεθεί στον έναν και να ξεχαστεί
+ * στον άλλον.
+ */
+export interface PropertySpecificationFields {
+  // === CONDITION & READINESS ===
+  /** Physical condition of the unit */
+  condition?: ConditionType;
+
+  /** Year of last renovation */
+  renovationYear?: number;
+
+  /** Expected delivery date */
+  deliveryDate?: Timestamp;
+
+  // === SYSTEMS (with override capability) ===
+  systemsOverride?: Partial<{
+    heatingType: HeatingType;
+    heatingFuel: FuelType;
+    coolingType: CoolingType;
+    waterHeating: WaterHeatingType;
+  }>;
+
+  // === ENERGY PERFORMANCE ===
+  energy?: {
+    class: EnergyClassType;
+    certificateId?: string;
+    certificateDate?: Timestamp;
+    validUntil?: Timestamp;
+  };
+
+  // === MATERIALS & FINISHES ===
+  finishes?: {
+    flooring?: FlooringType[];
+    windowFrames?: FrameType;
+    glazing?: GlazingType;
+  };
+}
+
+// =============================================================================
 // 🏢 UNIT INTERFACE (Physical Truth)
 // =============================================================================
 
@@ -312,7 +361,7 @@ export interface LinkedSpace {
  * @future Move sales data to SalesAsset type in /sales module
  */
 
-export interface Property {
+export interface Property extends PropertySpecificationFields {
   // === EXISTING FIELDS ===
   id: string;
   name: string;
@@ -383,6 +432,31 @@ export interface Property {
    */
   commercial?: PropertyCommercialData;
 
+  /**
+   * **ΔΙΑΘΕΣΕΙΣ** — «ένα ακίνητο, πολλές διαθέσεις» (ADR-777 Α20).
+   *
+   * Εδώ ζει η **αλήθεια**: πώληση, εκμίσθωση και **αντιπαροχή** μπορούν να
+   * συνυπάρχουν, καθεμιά με **δικό της** κύκλο ζωής. Το `commercialStatus` από
+   * πάνω είναι **προβολή** τους σε λεξιλόγιο επτά τιμών που **δεν έχει λέξη για
+   * την αντιπαροχή** — γι' αυτό η ερώτηση «τι προσφέρει;» απαντιέται από το
+   * {@link offerKinds}, ποτέ από το `commercialStatus`.
+   *
+   * @since ADR-777 Α20
+   */
+  offers?: PropertyOffer[];
+
+  /**
+   * ⚠️ **ΠΑΡΑΓΟΜΕΝΟ — μην το γράψεις.** Τα **ζωντανά** είδη διάθεσης, επίπεδα,
+   * για `array-contains` και για `firestore.rules` (που δεν κάνουν import).
+   *
+   * Γράφεται **μόνο** από το `property-mutation-gateway`, μαζί με το
+   * `commercialStatus`. Ίδιο πρότυπο με το `commercial.ownerContactIds`
+   * (ADR-244 Φ3).
+   *
+   * @since ADR-777 Α20
+   */
+  offerKinds?: OfferKind[];
+
   propertyName?: string; // ✅ ENTERPRISE FIX: Optional fallback property for backward compatibility
 
   // === NEW EXTENDED FIELDS (v1.0.5) ===
@@ -422,38 +496,8 @@ export interface Property {
     quality?: ViewQuality;
   }>;
 
-  // === CONDITION & READINESS ===
-  /** Physical condition of the unit */
-  condition?: ConditionType;
-
-  /** Year of last renovation */
-  renovationYear?: number;
-
-  /** Expected delivery date */
-  deliveryDate?: Timestamp;
-
-  // === SYSTEMS (with override capability) ===
-  systemsOverride?: Partial<{
-    heatingType: HeatingType;
-    heatingFuel: FuelType;
-    coolingType: CoolingType;
-    waterHeating: WaterHeatingType;
-  }>;
-
-  // === ENERGY PERFORMANCE ===
-  energy?: {
-    class: EnergyClassType;
-    certificateId?: string;
-    certificateDate?: Timestamp;
-    validUntil?: Timestamp;
-  };
-
-  // === MATERIALS & FINISHES ===
-  finishes?: {
-    flooring?: FlooringType[];
-    windowFrames?: FrameType;
-    glazing?: GlazingType;
-  };
+  // === CONDITION · SYSTEMS · ENERGY · FINISHES ===
+  // Κληρονομούνται από το PropertySpecificationFields (SSoT) — μην τα ξαναγράψεις εδώ.
 
   // === FEATURES (Arrays, NOT booleans) ===
   /** Interior features like 'fireplace', 'jacuzzi' */
@@ -496,7 +540,7 @@ export interface Property {
  * Firestore Document type - allows missing fields for backward compatibility
  * Used when reading from Firestore during migration period
  */
-export interface PropertyDoc {
+export interface PropertyDoc extends PropertySpecificationFields {
   // Legacy fields - all optional
   id?: string;
   name?: string;
@@ -528,26 +572,8 @@ export interface PropertyDoc {
 
   // Additional extended fields (optional during migration)
   operationalStatus?: OperationalStatus;
-  condition?: ConditionType;
-  renovationYear?: number;
-  deliveryDate?: Timestamp;
-  systemsOverride?: Partial<{
-    heatingType: HeatingType;
-    heatingFuel: FuelType;
-    coolingType: CoolingType;
-    waterHeating: WaterHeatingType;
-  }>;
-  energy?: {
-    class: EnergyClassType;
-    certificateId?: string;
-    certificateDate?: Timestamp;
-    validUntil?: Timestamp;
-  };
-  finishes?: {
-    flooring?: FlooringType[];
-    windowFrames?: FrameType;
-    glazing?: GlazingType;
-  };
+  // condition · renovationYear · deliveryDate · systemsOverride · energy · finishes
+  // κληρονομούνται από το PropertySpecificationFields (SSoT).
   propertyAmenities?: AmenityCodeType[];
   linkedSpaces?: LinkedSpace[];
 
@@ -559,6 +585,11 @@ export interface PropertyDoc {
   // Commercial fields (ADR-197, ADR-230)
   commercialStatus?: CommercialStatus;
   commercial?: Partial<PropertyCommercialData>; // includes legalPhase via ADR-230
+
+  // Διαθέσεις (ADR-777 Α20). Το `offerKinds` είναι ΠΑΡΑΓΟΜΕΝΟ — γράφεται μόνο
+  // από το property-mutation-gateway, ποτέ από καταναλωτή.
+  offers?: PropertyOffer[];
+  offerKinds?: OfferKind[];
 
   // Legacy fields that might exist in old documents
   status?: LegacySalesStatus;

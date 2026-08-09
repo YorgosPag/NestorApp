@@ -26,6 +26,12 @@ export const generateWorkspaceId = () => enterpriseIdService.generateWorkspaceId
 export const generateAddressId = () => enterpriseIdService.generateAddressId();
 export const generateOpportunityId = () => enterpriseIdService.generateOpportunityId();
 export const generateLandownerId = () => enterpriseIdService.generateLandownerId();
+/** ADR-777 Α1 — id ΓΗΣ (`land_*`). 🔴 Διακομιστής μόνο (SPEC-777A §14.4). */
+export const generatePublicLandId = () => enterpriseIdService.generatePublicLandId();
+/** ADR-777 Α11 — id δημόσιου κτιρίου (`pbld_*`). 🔴 Διακομιστής μόνο. */
+export const generatePublicBuildingId = () => enterpriseIdService.generatePublicBuildingId();
+/** ADR-777 Α20 — id διάθεσης (`offr_*`). Μία φορά, στη γέννηση της διάθεσης. */
+export const generatePropertyOfferId = () => enterpriseIdService.generatePropertyOfferId();
 /** ADR-759 Φ2 — survey_records doc id (`srv_*`). */
 export const generateSurveyRecordId = () => enterpriseIdService.generateSurveyRecordId();
 /** ADR-759 Φ2β — repeating survey-record rows (`svact_*` / `svapr_*` / `svdeed_*`). */

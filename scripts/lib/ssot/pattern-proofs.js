@@ -56,6 +56,52 @@ const resolved = storedAddressToResolved(addr, 'companyAddress');
 const back = hierarchyToResolvedAddress(hierarchy);`,
   },
 
+  // ADR-777 Α20 — Η ΠΡΟΒΟΛΗ διαθέσεων → `commercialStatus` γίνεται σε ΕΝΑ σημείο.
+  // 🔑 Το σήμα είναι ο **ορισμός** (`const x = (…)` / `function`), όχι η κλήση: κάθε
+  // καταναλωτής **οφείλει** να καλεί το `deriveCommercialStatus(offers)`, οπότε pattern
+  // πάνω στην κλήση θα πυροδοτούσε σε κάθε νόμιμη χρήση. Ομοίως το δεύτερο pattern πιάνει
+  // **ανακήρυξη** πίνακα λεξιλογίου, όχι ανάγνωσή του.
+  // ⚠️ Ο λόγος που ο φρουρός δεν είναι πολυτέλεια: η προβολή είναι **ρητά lossy** (η
+  // αντιπαροχή δεν έχει τιμή στο επτάτιμο λεξιλόγιο), άρα ένα δεύτερο αντίγραφο θα
+  // διαφωνούσε **σιωπηλά** ακριβώς εκεί που το πρώτο χάνει πληροφορία.
+  'location-provenance': {
+    shouldMatch: `// Scanner must catch a SECOND vocabulary / ranking of location provenance:
+const locationProvenanceRank = (p) => (p === 'survey' ? 4 : 1);
+const placeFactRank = function (s) { return s === 'declared' ? 2 : 1; };
+const outranksForLocation = (a, b) => a > b;
+const outranksForFact = async (a, b) => a > b;
+const locationKnowledgeStep = (p) => (p ? 1 : 0);
+const LOCATION_PROVENANCES = ['geocoded', 'manual', 'drawn', 'osm', 'survey', 'bim'];
+const LOCATION_PROVENANCE_RANK = { survey: 4, osm: 3 };
+const STEP_OF_PROVENANCE = { geocoded: 1, osm: 4 };
+const PLACE_FACT_RANK = { declared: 2 };`,
+    shouldSkip: `// Scanner must pass SSoT-routed consumption:
+import { outranksForLocation, locationKnowledgeStep } from '@/lib/location/location-provenance';
+import type { LocationProvenance, PlaceFactSource } from '@/lib/location/location-provenance';
+const mayReplace = outranksForLocation(candidate.provenance, current.provenance);
+const step = locationKnowledgeStep(positionProvenance(land.position), hasSurveyDocument);
+// Type-only declarations must NOT fire — they are not a second ranking:
+type LocalProvenance = LocationProvenance;
+const rank: number = locationProvenanceRank(provenance);`,
+  },
+
+  'property-offer-derivation': {
+    shouldMatch: `// Scanner must catch a SECOND implementation of the projection:
+const deriveCommercialStatus = (offers) => offers.length ? 'for-sale' : 'unavailable';
+const deriveOfferKinds = (offers) => offers.map(o => o.kind);
+const hasDuplicateLiveOfferKind = function (offers) { return false; };
+const OFFER_KINDS = ['sell', 'leaseOut', 'exchange'];
+const OFFER_LIFECYCLES = ['active', 'closed'];
+const LIVE_OFFER_LIFECYCLES = ['active'];`,
+    shouldSkip: `// Scanner must pass SSoT-routed consumption:
+import { deriveCommercialStatus, deriveOfferKinds } from '@/lib/offers/derive-commercial-status';
+import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
+payload.commercialStatus = deriveCommercialStatus(offers);
+payload.offerKinds = deriveOfferKinds(offers);
+if (hasDuplicateLiveOfferKind(offers)) throw new ConflictingLiveOffersError();
+const label = OFFER_KINDS.map((kind) => t(\`offerKind.\${kind}\`));`,
+  },
+
   'enterprise-id': {
     shouldMatch: `// Scanner must catch direct crypto.randomUUID usage:
 const id = crypto.randomUUID();

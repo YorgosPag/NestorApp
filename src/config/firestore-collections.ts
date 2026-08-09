@@ -23,6 +23,25 @@ export const COLLECTIONS = {
   PROJECTS: process.env.NEXT_PUBLIC_PROJECTS_COLLECTION || 'projects',
   BUILDINGS: process.env.NEXT_PUBLIC_BUILDINGS_COLLECTION || 'buildings',
   PROPERTIES: process.env.NEXT_PUBLIC_PROPERTIES_COLLECTION || 'properties',
+
+  /**
+   * 🌍 ADR-777 Α1 — Η **ΓΗ**: το μόνο πράγμα που κρατά θέση. IDs `land_*`.
+   *
+   * 🔴 **ΚΟΙΝΟ ΕΠΙΠΕΔΟ Α — χωρίς `companyId`.** Δηλωμένο ρητά ως `public-world` στο
+   * `services/firestore/tenant-config.ts` (SPEC-777A §13.1/§14.4· CHECK 3.35). Ο πελάτης
+   * **διαβάζει**· γράφει **μόνο ο διακομιστής**, μετά από επαλήθευση πηγής.
+   */
+  PUBLIC_LANDS: process.env.NEXT_PUBLIC_PUBLIC_LANDS_COLLECTION || 'public_lands',
+
+  /**
+   * 🌍 ADR-777 Α11 — «Το κτίριο του κόσμου». IDs `pbld_*`.
+   *
+   * ⚠️ **ΔΕΝ είναι το `BUILDINGS`** παραπάνω: εκείνο είναι το εμπορικό κτίριο μέσα σε έργο
+   * ενός πελάτη (`projectId` + `companyId`, επίπεδο Β). Αυτό είναι το **φυσικό γεγονός**,
+   * κοινό σε όλους — και η ύπαρξη **μίας** ταυτότητας ανά φυσικό κτίριο είναι ακριβώς αυτό
+   * που κάνει δυνατή τη συνάντηση προσφοράς και ζήτησης (SPEC-777A §14.5).
+   */
+  PUBLIC_BUILDINGS: process.env.NEXT_PUBLIC_PUBLIC_BUILDINGS_COLLECTION || 'public_buildings',
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
   /**
    * ADR-759 Φ2 — institutional/legal plot data as declared by a surveyor on a date

@@ -62,7 +62,7 @@ export function ClashReportPanel(): React.ReactElement | null {
       dimensions={CLASH_PANEL_DIMENSIONS}
       onClose={() => clashReportStore.reset()}
       draggableOptions={{ getClientPosition: getClashPanelPosition }}
-      className="z-[9999] w-72"
+      className="z-[var(--z-index-viewer-menu)] w-72"
       data-testid="clash-report-panel"
     >
       <FloatingPanel.Header showClose icon={<ShieldAlert className="text-[hsl(var(--text-destructive))]" />}>

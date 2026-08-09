@@ -19,7 +19,7 @@
  */
 
 import type React from 'react';
-import { portalComponents } from '@/styles/design-tokens';
+import { zIndex } from '@/styles/design-tokens';
 
 /**
  * ADR-513 §direct-distance-entry — pure predicate: ένα πλήκτρο ενεργοποιεί το heads-up άνοιγμα του
@@ -40,7 +40,8 @@ export function boxStyle(x: number, y: number, box: number): React.CSSProperties
     top: `${y}px`,
     width: `${box}px`,
     height: `${box}px`,
-    zIndex: portalComponents.overlay.controls.zIndex() + 90,
+    // ADR-780 Φ.Γ — δες `DynamicInputContainer`: το `+ 90` έδινε τυχαία ισοβαθμία στο 1600.
+    zIndex: zIndex.dynamicInput,
   };
 }
 

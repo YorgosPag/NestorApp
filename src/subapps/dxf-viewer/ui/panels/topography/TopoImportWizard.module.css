@@ -8,7 +8,7 @@
   justify-content: center;
   background: rgb(0 0 0 / 45%);
   /* Above the floating panels (1700) — the wizard is modal. */
-  z-index: 1800;
+  z-index: var(--z-index-tooltip);
 }
 
 .dialog {

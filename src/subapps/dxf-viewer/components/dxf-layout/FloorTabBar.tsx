@@ -19,14 +19,23 @@
  * @see docs/centralized-systems/reference/adrs/ADR-399-dxf-floor-navigation-tabs.md
  */
 
-import React from 'react';
-import { Layers } from 'lucide-react';
+import React, { useSyncExternalStore } from 'react';
+import { Layers, Map as MapIcon } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useFloorTabs, type FloorTab } from '../../hooks/data/useFloorTabs';
 import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
+import {
+  getBasemapAvailability,
+  subscribeBasemapAvailability,
+} from '../../systems/basemap/basemap-availability';
+import {
+  getBasemapState,
+  subscribeBasemap,
+  toggleBasemapEnabled,
+} from '../../systems/basemap/basemap-store';
 
 const TAB_BASE_CLASS =
   `flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ROUNDED.TOP} ` +
@@ -56,6 +65,54 @@ const AllFloorsTab: React.FC<AllFloorsTabProps> = ({ active, label, ariaLabel, o
     >
       <Layers size={13} aria-hidden="true" />
       <span>{label}</span>
+    </button>
+  );
+};
+
+/**
+ * Το υπόβαθρο χάρτη — **διακόπτης**, όχι καρτέλα.
+ *
+ * Κάθεται πρώτο-αριστερά και δεν αλλάζει ενεργό όροφο: ο χρήστης συνεχίζει να σχεδιάζει
+ * κανονικά ενώ βλέπει πού βρίσκεται πάνω στον χάρτη. Γι' αυτό είναι `aria-pressed` (κατάσταση
+ * ενός κουμπιού) και **όχι** `role="tab"` με `aria-selected` όπως οι όροφοι — δύο διαφορετικά
+ * πράγματα δεν επιτρέπεται να ανακοινώνονται στον αναγνώστη οθόνης με το ίδιο όνομα.
+ *
+ * ⚠️ Ανενεργό όταν το έργο δεν είναι γεωαναφερμένο, με τον λόγο **μέσα** στην ετικέτα
+ * προσβασιμότητας. Ένα ανενεργό κουμπί χωρίς εξήγηση είναι η χειρότερη εκδοχή: ο χρήστης
+ * βλέπει λειτουργία που δεν μπορεί να πατήσει και δεν μαθαίνει ποτέ γιατί.
+ */
+const BasemapTab: React.FC = () => {
+  const { t } = useTranslation('dxf-viewer-shell');
+  const colors = useSemanticColors();
+  const availability = useSyncExternalStore(
+    subscribeBasemapAvailability,
+    getBasemapAvailability,
+    getBasemapAvailability,
+  );
+  const { enabled } = useSyncExternalStore(subscribeBasemap, getBasemapState, getBasemapState);
+
+  const unavailable = availability === 'unknown';
+  const active = enabled && !unavailable;
+  const stateClass = active
+    ? `${colors.bg.info} ${colors.text.inverse}`
+    : `${colors.text.muted} ${PANEL_LAYOUT.INTERACTIVE.HOVER}`;
+
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      disabled={unavailable}
+      aria-label={unavailable ? t('basemap.unavailableHint') : t('basemap.toggleAria')}
+      onClick={toggleBasemapEnabled}
+      className={`${TAB_BASE_CLASS} ${stateClass} disabled:cursor-not-allowed disabled:opacity-40`}
+    >
+      <MapIcon size={13} aria-hidden="true" />
+      <span>{t('basemap.label')}</span>
+      {active && availability === 'approximate' && (
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.inverse} ${PANEL_LAYOUT.OPACITY['70']}`}>
+          {t('basemap.approximateBadge')}
+        </span>
+      )}
     </button>
   );
 };
@@ -131,13 +188,9 @@ export const FloorTabBar: React.FC = () => {
       }}
       className={`shrink-0 ${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.OVERFLOW.X_AUTO}`}
     >
-      {/* Phase B — «Όλοι οι όροφοι», πρώτη αριστερά. */}
-      <AllFloorsTab
-        active={allActive}
-        label={t('floorTabs.allFloors')}
-        ariaLabel={t('floorTabs.allFloorsAria')}
-        onSelect={onSelectAllFloors}
-      />
+      {/* Ο χάρτης πρώτος-αριστερά (Giorgio 2026-08-09): είναι το πλαίσιο μέσα στο οποίο
+          διαβάζονται όλα τα υπόλοιπα — «πού είμαι» πριν από «ποιον όροφο βλέπω». */}
+      <BasemapTab />
       {tabs.map((tab) => (
         <FloorTabButton
           key={tab.floorId}
@@ -150,6 +203,14 @@ export const FloorTabBar: React.FC = () => {
           onToggleVisible={onToggleFloorVisible}
         />
       ))}
+      {/* Phase B — «Όλοι οι όροφοι», πλέον ΤΕΛΕΥΤΑΙΑ (Giorgio 2026-08-09): είναι σύνοψη όλων
+          των προηγούμενων καρτελών, οπότε κάθεται στο τέλος τους — όχι πριν από αυτές. */}
+      <AllFloorsTab
+        active={allActive}
+        label={t('floorTabs.allFloors')}
+        ariaLabel={t('floorTabs.allFloorsAria')}
+        onSelect={onSelectAllFloors}
+      />
     </nav>
   );
 };

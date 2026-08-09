@@ -24,6 +24,70 @@ import type { DxfToThreeConverter } from '../converters/DxfToThreeConverter';
 import type { ViewportCamera } from '../viewport/viewport-types';
 import type { ViewCubeEngine } from '../viewport/view-cube/view-cube';
 import type { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
+import { disposeMeshReveal } from '../reveal/mesh-reveal-fade'; // ADR-693 Φ2
+
+/**
+ * Structural shape of everything torn down here: an overlay/layer owns GPU resources and
+ * answers `dispose()`. Typed by SHAPE and not by class on purpose — this module is the
+ * teardown order, not the layer catalogue, and importing 14 concrete classes to call one
+ * method on each would make it depend on every subsystem it merely closes.
+ */
+interface SceneDisposable {
+  dispose(): void;
+}
+
+/**
+ * Overlays and scene layers — the first half of `ThreeJsSceneManager.dispose()`.
+ *
+ * Runs BEFORE {@link disposeSceneManagerResources}: an overlay may hold a reference into the
+ * renderer/scene it decorates, so the decorations leave first and the machinery second — the
+ * same order the in-class implementation used.
+ */
+export interface SceneOverlayDisposeDeps {
+  readonly faceHighlighter: SceneDisposable;
+  readonly faceHoverHighlighter: SceneDisposable;
+  readonly dxfBackdrop: SceneDisposable;
+  readonly hoverBeautyCache: SceneDisposable;
+  /** ADR-358 Q19 — store subscription teardown, paired with its highlighter. */
+  readonly stairSubUnsub: () => void;
+  readonly stairSubElementHighlighter: SceneDisposable;
+  /** ADR-715 — το ίδιο ζευγάρι για το «Τμήμα». */
+  readonly buriedPartUnsub: () => void;
+  readonly buriedPartHighlighter: SceneDisposable;
+  /** ADR-558 — Cinema-4D-style ground grid. */
+  readonly gridFloor: SceneDisposable;
+  /** Υπόβαθρο χάρτη — υφές πλακιδίων στην κάρτα γραφικών. */
+  readonly basemapLayer: SceneDisposable;
+  readonly terrainLayer: SceneDisposable;
+  readonly terrainContourLayer: SceneDisposable;
+  readonly terrainCutCapLayer: SceneDisposable;
+  readonly pointCloudLayer: SceneDisposable;
+  readonly autoBreaklineLayer: SceneDisposable;
+}
+
+export function disposeSceneOverlayLayers(deps: SceneOverlayDisposeDeps): void {
+  // ADR-539 + ADR-516 Phase 2 + ADR-549 Φ3 — release face overlays + caches.
+  deps.faceHighlighter.dispose();
+  deps.faceHoverHighlighter.dispose();
+  deps.dxfBackdrop.dispose();
+  deps.hoverBeautyCache.dispose();
+  // Subscription + overlay always fall together: an overlay that survives its store keeps
+  // painting from state nobody updates any more.
+  deps.stairSubUnsub();
+  deps.stairSubElementHighlighter.dispose();
+  deps.buriedPartUnsub();
+  deps.buriedPartHighlighter.dispose();
+  deps.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
+  // Χωρίς αυτό, κάθε άνοιγμα/κλείσιμο της 3Δ προβολής αφήνει πίσω τις υφές των πλακιδίων στη
+  // μνήμη της κάρτας γραφικών — διαρροή που δεν φαίνεται ως σφάλμα, μόνο ως σταδιακή επιβράδυνση.
+  deps.basemapLayer.dispose();
+  deps.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
+  deps.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.
+  deps.terrainCutCapLayer.dispose(); // ADR-665 M2 — drop the storey/scope subs + free the cap geometry.
+  deps.pointCloudLayer.dispose(); // ADR-650 M8β/Β — drop store sub + free the cloud buffers + material.
+  deps.autoBreaklineLayer.dispose(); // ADR-650 M8β/Γ — drop the review sub + free the candidate lines.
+  disposeMeshReveal(); // ADR-693 Φ2 — free any in-flight reveal veil (per-instance material + geometry).
+}
 
 export interface SceneManagerDisposeDeps {
   readonly renderer: THREE.WebGLRenderer;

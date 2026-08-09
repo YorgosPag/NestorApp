@@ -111,4 +111,4 @@ const STATUS_BAR_SWATCH =
   'h-3 w-3 shrink-0 rounded-[2px] border border-border';
 const RIBBON_SWATCH = 'h-4 w-4 shrink-0 rounded-sm border border-border';
 
-const POPOVER_CONTENT_CLASS = 'z-[1800] w-[320px] p-0';
+const POPOVER_CONTENT_CLASS = 'z-[var(--z-index-tooltip)] w-[320px] p-0';

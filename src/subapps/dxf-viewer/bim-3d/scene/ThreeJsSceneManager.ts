@@ -6,6 +6,7 @@ import type { RenderFrameContext } from './scene-render-frame';
 import { DxfBackdropCache } from './dxf-backdrop-cache'; import type { HoverBeautyCache } from './hover-beauty-cache';
 import { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
+import { BasemapGroundLayer } from './basemap/BasemapGroundLayer'; // υπόβαθρο χάρτη (OSM) κάτω από τον κάναβο
 import type { TerrainSceneLayer } from './terrain/TerrainSceneLayer'; // ADR-650 M4 — topographic surface
 import type { TerrainContourLayer } from './terrain/TerrainContourLayer'; // ADR-650 M10d — draped 3D contours
 import type { TerrainCutCapLayer } from './terrain/TerrainCutCapLayer'; // ADR-665 M2 — earth poche cap
@@ -48,12 +49,12 @@ import { cycleKeyboardFocus as a11yCycleFocus, selectFocusedEntity as a11ySelect
 import { applyLightPresetToScene, updateSunDirection } from '../lighting/apply-light-preset';
 import { type ReducedMotionOverride } from '../accessibility/use-reduced-motion';
 import { WaypointDragHandleRenderer } from '../animation/WaypointDragHandle';
-import { disposeSceneManagerResources } from './scene-dispose';
+import { disposeSceneManagerResources, disposeSceneOverlayLayers } from './scene-dispose';
 import { getWaypointHandlesRoot as wpHandlesRoot, setWaypointHoverState as wpHoverState, setWaypointDragAxisLock as wpAxisLock, pickWaypointAxisArrow as wpPickAxisArrow } from './scene-manager-waypoint';
 import { isSceneDirtyFromState, buildSceneDirtyState } from './scene-dirty-state';
 import { RedrawLevel, escalateRedraw } from './scene-redraw-level';
 import { renderTickFrame, isSceneRenderDisabledByDiagFlag, captureFrameDataURL } from './scene-manager-tick';
-import { tickMeshReveal, isMeshRevealActive, disposeMeshReveal } from '../reveal/mesh-reveal-fade'; // ADR-693 Φ2
+import { tickMeshReveal, isMeshRevealActive } from '../reveal/mesh-reveal-fade'; // ADR-693 Φ2 (η απόρριψη ζει στο scene-dispose)
 import { recordMarkDirty as diagRecordMarkDirty } from './bim3d-perf-diag'; // 🔬 ADR-549 Phase 0 (revertible)
 import { createSceneRenderingSubsystems } from './scene-rendering-subsystems';
 import { buildSceneManagerParts } from './scene-manager-construct';
@@ -79,6 +80,7 @@ export class ThreeJsSceneManager {
   readonly viewport: ViewportCamera;
   readonly bimLayer: BimSceneLayer;
   private readonly gridFloor: Cinema4DGridFloor; // ADR-558 — Cinema-4D-style ground grid (post-FX underlay)
+  private readonly basemapLayer: BasemapGroundLayer; // υπόβαθρο χάρτη (post-FX underlay, κάτω από τον κάναβο)
   private readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   private readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped 3D contour lines
   private readonly terrainCutCapLayer: TerrainCutCapLayer; // ADR-665 M2 — earth poche on the level cut
@@ -199,7 +201,7 @@ export class ThreeJsSceneManager {
     this.faceHighlighter = parts.faceHighlighter; this.faceHoverHighlighter = parts.faceHoverHighlighter;
     this.stairSubElementHighlighter = parts.stairSubElementHighlighter; this.stairSubUnsub = parts.stairSubUnsub;
     this.buriedPartHighlighter = parts.buriedPartHighlighter; this.buriedPartUnsub = parts.buriedPartUnsub;
-    this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.terrainLayer = parts.terrainLayer;
+    this.poi = parts.poi; this.gridFloor = parts.gridFloor; this.basemapLayer = parts.basemapLayer; this.terrainLayer = parts.terrainLayer;
     this.terrainContourLayer = parts.terrainContourLayer;
     this.terrainCutCapLayer = parts.terrainCutCapLayer;
     this.pointCloudLayer = parts.pointCloudLayer;
@@ -468,16 +470,15 @@ export class ThreeJsSceneManager {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
-    this.faceHighlighter.dispose(); this.faceHoverHighlighter.dispose(); this.dxfBackdrop.dispose(); this.hoverBeautyCache.dispose(); // ADR-539 + ADR-516 Phase 2 + ADR-549 Φ3 — release face overlays + caches.
-    this.stairSubUnsub(); this.stairSubElementHighlighter.dispose(); // ADR-358 Q19 — drop store subs + release the sub-element overlay.
-    this.buriedPartUnsub(); this.buriedPartHighlighter.dispose(); // ADR-715 — ίδιο ζευγάρι για το «Τμήμα».
-    this.gridFloor.dispose(); // ADR-558 — unregister overlay + free grid geometry/material.
-    this.terrainLayer.dispose(); // ADR-650 M4 — drop store subs + free the terrain mesh geometry.
-    this.terrainContourLayer.dispose(); // ADR-650 M10d — drop store subs + free the contour line geometry.
-    this.terrainCutCapLayer.dispose(); // ADR-665 M2 — drop the storey/scope subs + free the cap geometry.
-    this.pointCloudLayer.dispose(); // ADR-650 M8β/Β — drop store sub + free the cloud buffers + material.
-    this.autoBreaklineLayer.dispose(); // ADR-650 M8β/Γ — drop the review sub + free the candidate lines.
-    disposeMeshReveal(); // ADR-693 Φ2 — free any in-flight reveal veil (per-instance material + geometry).
+    disposeSceneOverlayLayers({ // overlays/layers first — they hold references into the machinery below.
+      faceHighlighter: this.faceHighlighter, faceHoverHighlighter: this.faceHoverHighlighter,
+      dxfBackdrop: this.dxfBackdrop, hoverBeautyCache: this.hoverBeautyCache,
+      stairSubUnsub: this.stairSubUnsub, stairSubElementHighlighter: this.stairSubElementHighlighter,
+      buriedPartUnsub: this.buriedPartUnsub, buriedPartHighlighter: this.buriedPartHighlighter,
+      gridFloor: this.gridFloor, basemapLayer: this.basemapLayer, terrainLayer: this.terrainLayer,
+      terrainContourLayer: this.terrainContourLayer, terrainCutCapLayer: this.terrainCutCapLayer,
+      pointCloudLayer: this.pointCloudLayer, autoBreaklineLayer: this.autoBreaklineLayer,
+    });
     // ADR-040 Phase XXIII — no rafHandle: BimViewport3D unregisters the scheduler BEFORE dispose(), so no in-flight tick races teardown.
     disposeSceneManagerResources({
       renderer: this.renderer,

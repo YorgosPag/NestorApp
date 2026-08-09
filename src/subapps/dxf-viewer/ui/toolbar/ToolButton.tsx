@@ -175,7 +175,7 @@ const ToolButtonInner: React.FC<ToolButtonProps> = ({ tool, isActive, onClick, o
         {showDropdown && createPortal(
           <nav
             ref={(el) => { portalNodeRef.current = el; }}
-            className="fixed bg-popover text-popover-foreground rounded-md shadow-lg z-[9999] min-w-max border border-border py-1 max-h-[70vh] overflow-y-auto"
+            className="fixed bg-popover text-popover-foreground rounded-md shadow-lg z-[var(--z-index-viewer-menu)] min-w-max border border-border py-1 max-h-[70vh] overflow-y-auto"
             style={{ top: dropdownPos.top, left: dropdownPos.left }}
           >
             {tool.dropdownOptions!.map((option, index) => {

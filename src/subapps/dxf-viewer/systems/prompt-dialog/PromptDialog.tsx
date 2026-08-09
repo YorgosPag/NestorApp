@@ -177,7 +177,7 @@ export const PromptDialog: React.FC = () => {
       <div
         className={`fixed inset-0 ${colors.bg.modalBackdrop}`}
         style={{
-          zIndex: 10000,
+          zIndex: 'var(--z-index-viewer-transient)',
           opacity: isVisible ? 1 : 0,
           transition: 'opacity 350ms cubic-bezier(0.16, 1, 0.3, 1)',
         }}

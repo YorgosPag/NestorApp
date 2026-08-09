@@ -501,3 +501,50 @@ export async function seedLegacyBuilding(
     });
   });
 }
+
+// ---------------------------------------------------------------------------
+// ADR-777 επίπεδο Α — ΚΟΙΝΟ ΦΥΣΙΚΟ ΓΕΓΟΝΟΣ (χωρίς companyId, ΕΞ ΟΡΙΣΜΟΥ)
+// ---------------------------------------------------------------------------
+//
+// 🔴 ΔΕΝ χρησιμοποιούν `baseDoc()` — και αυτό είναι ΤΟ ΝΟΗΜΑ, όχι παράλειψη.
+// Το `baseDoc()` βάζει `companyId` σε κάθε έγγραφο· εδώ η **απουσία** του είναι η
+// ίδια η απόφαση Α11 (SPEC-777A §13.1: «κτίριο που δεν ανήκει σε κανέναν»). Ένας
+// seeder που περνούσε από το `baseDoc()` θα δοκίμαζε τους κανόνες πάνω σε έγγραφο
+// **που δεν μοιάζει με την παραγωγή** — και θα έλεγε «πράσινο» για λάθος πράγμα.
+
+/** ADR-777 Α1 — δημόσια ΓΗ (`public_lands`). Καμία εμβέλεια μισθωτή. */
+export async function seedPublicLand(
+  env: RulesTestEnvironment,
+  landId: string,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('public_lands').doc(landId).set({
+      position: { kind: 'known', provenance: 'osm', point: { lat: 40.64, lng: 22.94 }, locatedAt: '2026-08-09T00:00:00.000Z', osmRef: { elementType: 'way', elementId: '123456', seenAt: '2026-08-09T00:00:00.000Z' } },
+      displayAddress: null,
+      areaSqm: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      // NOTE: κανένα companyId — Α11, δημόσιο επίπεδο Α
+    });
+  });
+}
+
+/** ADR-777 Α11 — δημόσιο ΚΤΙΡΙΟ (`public_buildings`). Καμία εμβέλεια μισθωτή. */
+export async function seedPublicBuilding(
+  env: RulesTestEnvironment,
+  buildingId: string,
+  landId: string,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('public_buildings').doc(buildingId).set({
+      landId,
+      footprint: { kind: 'unknown' },
+      floorsAboveGround: null,
+      constructionYear: null,
+      useCode: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      // NOTE: κανένα companyId — Α11, δημόσιο επίπεδο Α
+    });
+  });
+}

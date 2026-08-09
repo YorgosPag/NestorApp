@@ -65,7 +65,7 @@ export function TableCellLinkTooltip() {
     <output
       aria-label={t('tableCellLink.ariaLabel', { action, target: span.text })}
       style={{ left: hovered.clientX + 16, top: hovered.clientY + 18 }}
-      className="fixed z-[2400] pointer-events-none select-none flex items-center gap-1.5 rounded-sm border border-border bg-popover/95 px-1.5 py-1 text-[11px] text-popover-foreground shadow-sm"
+      className="fixed z-[var(--z-index-pointer-badge)] pointer-events-none select-none flex items-center gap-1.5 rounded-sm border border-border bg-popover/95 px-1.5 py-1 text-[11px] text-popover-foreground shadow-sm"
     >
       <span className="font-medium">{action}</span>
       {/* Ο προορισμός όπως τον έγραψε ο χρήστης, όχι το `href`: το `tel:2310788493` δεν λέει

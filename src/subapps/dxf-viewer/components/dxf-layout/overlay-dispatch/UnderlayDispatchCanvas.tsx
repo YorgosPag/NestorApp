@@ -29,6 +29,7 @@ import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useOverlayZoneDispatch } from './use-overlay-zone-dispatch';
 import { useGridUnderlayPainter } from '../GridUnderlayCanvas';
+import { useBasemapPainter } from '../useBasemapPainter';
 // Deep import (ΟΧΙ το barrel `floorplan-background/index`): το barrel τραβά τη
 // levels/firestore αλυσίδα — περιττή εδώ και δηλητήριο για τα jsdom tests του shell.
 import { useFloorplanBackgroundPainter } from '../../../floorplan-background/components/FloorplanBackgroundCanvas';
@@ -54,13 +55,20 @@ export function UnderlayDispatchCanvas({
   cad,
   className,
 }: UnderlayDispatchCanvasProps) {
+  const basemap = useBasemapPainter();
   const grid = useGridUnderlayPainter(gridSettings);
   const floorplan = useFloorplanBackgroundPainter(floorId, cad);
 
-  // z-συμβόλαιο ζώνης Α: grid ΚΑΤΩ, κάτοψη ΠΑΝΩ (Giorgio 2026-06-05 — ΜΗΝ αντιστρέψεις).
+  // z-συμβόλαιο ζώνης Α: χάρτης ΤΕΛΕΥΤΑΙΟΣ ΑΠΟ ΚΑΤΩ, μετά grid, κάτοψη ΠΑΝΩ
+  // (Giorgio 2026-06-05 για τα δύο τελευταία — ΜΗΝ αντιστρέψεις).
+  //
+  // Ο χάρτης μπαίνει ΠΡΩΤΟΣ γιατί είναι υπόβαθρο **αναφοράς**: ο κάνναβος σχεδίασης και η
+  // κάτοψη είναι εργαλεία δουλειάς και οφείλουν να μένουν αναγνώσιμα από πάνω του. Αντίστροφη
+  // σειρά θα έκρυβε τον κάναβο κάτω από αεροφωτογραφία τη μέρα που θα προστεθεί πάροχος με
+  // `kind: 'aerial'` — δηλαδή η βλάβη θα γεννιόταν από αλλαγή που δεν αγγίζει αυτό το αρχείο.
   const painters = useMemo(
-    () => [grid, floorplan.painter],
-    [grid, floorplan.painter],
+    () => [basemap, grid, floorplan.painter],
+    [basemap, grid, floorplan.painter],
   );
 
   // Κοινός zone μηχανισμός (SSoT — use-overlay-zone-dispatch): ΕΝΑ scheduler frame

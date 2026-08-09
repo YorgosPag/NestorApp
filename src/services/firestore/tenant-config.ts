@@ -35,25 +35,33 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   USER_NOTIFICATION_SETTINGS: { mode: 'userId', fieldName: 'userId' },
 
   // --- system (no tenant filter) ---
-  SYSTEM:           { mode: 'none', fieldName: '' },
-  CONFIG:           { mode: 'none', fieldName: '' },
-  NAVIGATION:       { mode: 'none', fieldName: '' },
-  SETTINGS:         { mode: 'none', fieldName: '' },
-  COUNTERS:         { mode: 'none', fieldName: '' },
-  ESCO_CACHE:       { mode: 'none', fieldName: '' },
-  ESCO_SKILLS_CACHE:{ mode: 'none', fieldName: '' },
-  AI_CHAT_HISTORY:  { mode: 'none', fieldName: '' },
-  AUDIT:            { mode: 'none', fieldName: '' },
-  TRANSLATIONS:     { mode: 'none', fieldName: '' },
-  LOCALES:          { mode: 'none', fieldName: '' },
-  SECURITY_ROLES:            { mode: 'none', fieldName: '' },
-  EMAIL_DOMAIN_POLICIES:     { mode: 'none', fieldName: '' },
-  COUNTRY_SECURITY_POLICIES: { mode: 'none', fieldName: '' },
+  // ⚠️ Το `unscopedReason` ΔΕΝ είναι σχόλιο: ο τύπος `TenantFieldConfig` το απαιτεί
+  // (SPEC-777A §14.4 κανόνας 3). Νέα εγγραφή `mode: 'none'` χωρίς αυτό ΔΕΝ χτίζει.
+  SYSTEM:           { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Καθολικές ρυθμίσεις πλατφόρμας — ίδιες για κάθε μισθωτή.' },
+  CONFIG:           { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Καθολική διαμόρφωση εφαρμογής — δεν ανήκει σε μισθωτή.' },
+  NAVIGATION:       { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Δομή πλοήγησης της εφαρμογής — κοινή σε όλους.' },
+  SETTINGS:         { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Ρυθμίσεις επιπέδου πλατφόρμας.' },
+  COUNTERS:         { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Μετρητές ακολουθιών· το κλειδί εγγράφου φέρει ήδη την εμβέλεια.' },
+  ESCO_CACHE:       { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Κρυφή μνήμη δημόσιας ταξινομίας ESCO — δημόσιο δεδομένο τρίτου.' },
+  ESCO_SKILLS_CACHE:{ mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Κρυφή μνήμη δημόσιας ταξινομίας ESCO — δημόσιο δεδομένο τρίτου.' },
+  AI_CHAT_HISTORY:  { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Το ιστορικό φέρει δική του εμβέλεια στο κλειδί εγγράφου.' },
+  AUDIT:            { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Ίχνος ελέγχου· φιλτράρεται στους κανόνες Firestore, όχι στο ερώτημα.' },
+  TRANSLATIONS:     { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Μεταφράσεις διεπαφής — κοινές σε όλους τους μισθωτές.' },
+  LOCALES:          { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Κατάλογος γλωσσών — κοινός σε όλους.' },
+  SECURITY_ROLES:            { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Ορισμοί ρόλων πλατφόρμας (ADR-702) — κοινό λεξιλόγιο.' },
+  EMAIL_DOMAIN_POLICIES:     { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Πολιτικές τομέα email σε επίπεδο πλατφόρμας.' },
+  COUNTRY_SECURITY_POLICIES: { mode: 'none', fieldName: '', unscopedCategory: 'system', unscopedReason: 'Πολιτικές ασφαλείας ανά χώρα — κοινές σε όλους.' },
 
   // --- DXF / CAD Viewer (no tenant filter — files are project-scoped) ---
-  CAD_FILES:              { mode: 'none', fieldName: '' },
-  DXF_OVERLAY_LEVELS:     { mode: 'none', fieldName: '' },
-  PROJECT_FLOORPLANS:     { mode: 'none', fieldName: '' },
+  CAD_FILES:              { mode: 'none', fieldName: '', unscopedCategory: 'project-scoped', unscopedReason: 'Τα αρχεία CAD ανήκουν σε έργο· η απομόνωση γίνεται μέσω του έργου.' },
+  DXF_OVERLAY_LEVELS:     { mode: 'none', fieldName: '', unscopedCategory: 'project-scoped', unscopedReason: 'Επίπεδα επικάλυψης δεμένα σε αρχείο CAD, όχι σε μισθωτή.' },
+  PROJECT_FLOORPLANS:     { mode: 'none', fieldName: '', unscopedCategory: 'project-scoped', unscopedReason: 'Κατόψεις δεμένες σε έργο· η απομόνωση γίνεται μέσω του έργου.' },
+
+  // --- ADR-777 Α11/Α12 επίπεδο Α: ΚΟΙΝΟ ΦΥΣΙΚΟ ΓΕΓΟΝΟΣ -----------------------
+  // 🔴 ΔΕΝ είναι «ξεχασμένο companyId» — είναι ρητή κατηγορία (SPEC-777A §13.1).
+  // Ο πελάτης ΔΙΑΒΑΖΕΙ· γράφει ΜΟΝΟ ο διακομιστής (§14.4 κανόνες 1-2, firestore.rules).
+  PUBLIC_LANDS:     { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α1/Α11 — η ΓΗ είναι φυσικό γεγονός, κοινό σε όλους· υπάρχει πριν τη διεκδικήσει οποιοσδήποτε και δεν ανήκει σε κανέναν. Read-only από τον πελάτη.' },
+  PUBLIC_BUILDINGS: { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α11 — «το κτίριο του κόσμου». Κοινή ταυτότητα ώστε προσφορά και ζήτηση να δείχνουν στο ΙΔΙΟ πράγμα (§14.5). Read-only από τον πελάτη.' },
 } as const;
 
 /** Default tenant configuration for collections not in the override map */

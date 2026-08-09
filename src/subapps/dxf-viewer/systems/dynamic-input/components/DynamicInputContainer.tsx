@@ -2,7 +2,7 @@
 
 import React, { ReactNode } from 'react';
 import { PANEL_LAYOUT } from '../../../config/panel-tokens';
-import { portalComponents } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
+import { zIndex } from '@/styles/design-tokens';  // ✅ ENTERPRISE: Centralized z-index hierarchy
 import type { Point2D } from '../../../rendering/types/Types';
 
 interface DynamicInputContainerProps {
@@ -18,7 +18,10 @@ export function DynamicInputContainer({ position, showInput, children }: Dynamic
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
-        zIndex: portalComponents.overlay.controls.zIndex() + 90  // ✅ ENTERPRISE: Centralized z-index (1600)
+        // ADR-780 Φ.Γ: ήταν `controls.zIndex() + 90`, δηλαδή `popover + 10 + 90` = **1600**
+        // — ΤΥΧΑΙΑ ισοβαθμία με τον ρόλο `skipLink`, μέσω ΔΙΠΛΗΣ αριθμητικής που κανένα
+        // από τα δύο σημεία δεν έβλεπε. Σε ισοβαθμία τη σειρά την αποφασίζει το DOM.
+        zIndex: zIndex.dynamicInput
       }}
     >
       <div className={`bg-transparent ${PANEL_LAYOUT.SPACING.MD} ${PANEL_LAYOUT.LAYOUT_DIMENSIONS.PANEL_MIN_WIDTH_SM}`}>

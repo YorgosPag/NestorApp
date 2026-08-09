@@ -143,7 +143,10 @@ export interface MutableUIElementSettings {
   enabled: boolean;        // ✅ NOT readonly - can be modified by debug system
   readonly visible: boolean;
   readonly opacity: number;
-  readonly zIndex?: number;
+  // 🗑️ ΔΙΑΓΡΑΦΗΚΕ `zIndex?: number` (ADR-780 Φάση Γ): **κανείς** δεν το διάβαζε ποτέ
+  // (μετρημένο — μηδέν `settings.zIndex` στον υποφάκελο). Ένα πεδίο στρώσης που κανένας
+  // ζωγράφος δεν συμβουλεύεται δηλώνει στρώση **που δεν συμβαίνει**: μετριόταν από την
+  // πύλη ως ωμή δήλωση 2000, ενώ ο ρόλος του overlay εντοπισμού σφαλμάτων είναι άλλος.
 }
 
 export interface RulerDebugSettings extends MutableUIElementSettings {
@@ -213,7 +216,6 @@ export const DEFAULT_RULER_DEBUG_SETTINGS: RulerDebugSettings = {
   enabled: false,              // OFF by default
   visible: true,
   opacity: 1.0,
-  zIndex: 2000,                // Very high priority for debug overlay
 
   mode: 'full',                // Full enterprise mode by default
 

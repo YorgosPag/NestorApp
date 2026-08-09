@@ -46,7 +46,7 @@ export function AutoAreaResultPanel(): React.ReactElement | null {
   return (
     <aside
       style={{ left, top } as React.CSSProperties}
-      className="fixed z-[9999] w-64 rounded-lg border border-border bg-popover/95 shadow-xl backdrop-blur-sm pointer-events-auto"
+      className="fixed z-[var(--z-index-viewer-menu)] w-64 rounded-lg border border-border bg-popover/95 shadow-xl backdrop-blur-sm pointer-events-auto"
       role="status"
       aria-live="polite"
     >

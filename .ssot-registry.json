@@ -805,6 +805,18 @@
         "src/config/report-builder/domain-defs-spaces.ts"
       ]
     },
+    "property-offer-derivation": {
+      "ssotFile": "src/lib/offers/derive-commercial-status.ts",
+      "description": "ADR-777 Α20 — Το `commercialStatus` και το `offerKinds` ενός ακινήτου είναι ΠΑΡΑΓΟΜΕΝΑ από τις ΔΙΑΘΕΣΕΙΣ (`offers`), και παράγονται σε ΕΝΑ σημείο: `deriveCommercialStatus` / `deriveOfferKinds`. Απαγορεύεται δεύτερη υλοποίηση της προβολής — δηλαδή χειρόγραφη αντιστοίχιση είδους/κύκλου ζωής σε κατάσταση (`kind === 'sell' ? 'for-sale' : …`), ή δεύτερος υπολογισμός του offerKinds. 🔴 ΓΙΑΤΙ: η προβολή είναι ΡΗΤΑ LOSSY — το `COMMERCIAL_STATUSES` έχει 7 τιμές και ΚΑΜΙΑ δεν σημαίνει αντιπαροχή (η Α20 απαγορεύει όγδοη: 3 → 7 listed τιμές, combinatorial explosion). Ένα δεύτερο αντίγραφο της αντιστοίχισης θα διαφωνούσε ΣΙΩΠΗΛΑ ακριβώς εκεί που η πρώτη χάνει πληροφορία — το σχήμα του ADR-749 στην ακριβέστερή του μορφή. ⚠️ Η γραφή περνά ΜΟΝΟ από το property-mutation-gateway (`DerivedFieldWriteError`): αυτό είναι επιβολή ΧΡΟΝΟΥ ΕΚΤΕΛΕΣΗΣ, ίδιο επίπεδο με το read-only παραμέτρου του Revit· η compile-time άμυνα είναι ο τύπος `PropertyOffersUpdate` (`?: never`) και ισχύει για τους ΝΕΟΥΣ καλούντες — ο τύπος `updates` παραμένει `Record<string, unknown>` για τους 6 υπάρχοντες, και δηλώνεται ρητά ως όριο.",
+      "forbiddenPatterns": [
+        "(deriveCommercialStatus|deriveOfferKinds|hasDuplicateLiveOfferKind)\\s*(=|:)\\s*(\\(|function|async)",
+        "(OFFER_KINDS|OFFER_LIFECYCLES|LIVE_OFFER_LIFECYCLES)\\s*(=|:)\\s*\\["
+      ],
+      "allowlist": [
+        "src/lib/offers/derive-commercial-status.ts",
+        "src/types/property-offers.ts"
+      ]
+    },
     "operational-statuses": {
       "ssotFile": "src/constants/operational-statuses.ts",
       "description": "Operational statuses must import from @/constants/operational-statuses — no inline re-declaration",
@@ -5409,6 +5421,18 @@
       "allowlist": [
         "src/lib/properties/price-resolver.ts",
         "src/hooks/usePublicPropertyViewer.ts"
+      ],
+      "tier": 3
+    },
+    "location-provenance": {
+      "ssotFile": "src/lib/location/location-provenance.ts",
+      "description": "ADR-777 Α1/Α11 (SPEC-777A §13.3 · §14.3 · §21.4) — Η ΠΡΟΕΛΕΥΣΗ ΤΗΣ ΘΕΣΗΣ και η ΚΑΤΑΤΑΞΗ των πηγών ζουν σε ΕΝΑ σημείο: 'src/lib/location/location-provenance.ts'. Απαγορεύεται δεύτερη δήλωση του λεξιλογίου ('geocoded'/'manual'/'drawn'/'osm'/'survey'/'bim'), δεύτερος πίνακας κατάταξης, ή δεύτερη υλοποίηση των outranksForLocation/outranksForFact/locationKnowledgeStep. 🔴 ΓΙΑΤΙ: η κατάταξη ΔΕΝ είναι εμφάνιση — ΕΙΝΑΙ ο κανόνας συγχώνευσης του §14.3 ('ανεβαίνει στο Α μόνο αν επαληθευτεί από ισχυρότερη πηγή'), δηλαδή αποφασίζει ΠΟΙΟΣ ΕΧΕΙ ΔΙΚΑΙΩΜΑ ΝΑ ΞΑΝΑΓΡΑΨΕΙ ΤΟ ΚΟΙΝΟ ΕΠΙΠΕΔΟ Α — που το βλέπουν ΟΛΟΙ οι πελάτες ταυτόχρονα (§14.4). Ένα δεύτερο αντίγραφο θα διαφωνούσε σιωπηλά ακριβώς εκεί που κρίνεται η αντικατάσταση. ⚠️ Η ΠΙΟ ΑΚΡΙΒΗ ΠΑΓΙΔΑ, ΜΕΤΡΗΜΕΝΗ: ο πίνακας του §21.4 αριθμεί τα σκαλοπάτια 0-6, ΑΛΛΑ το σκαλοπάτι 5 ('document-only') δίνει ΜΗΔΕΝ θέση ενώ το 4 ('osm') δίνει σχήμα. Όποιος ξαναγράψει την κατάταξη διαβάζοντας τον πίνακα ως σειρά αξιοπιστίας θα αφήσει ένα ΑΝΥΠΑΡΚΤΟ στοιχείο θέσης να σβήσει ένα ΥΠΑΡΚΤΟ. Γι' αυτό η σκάλα (locationKnowledgeStep, μόνο για την οθόνη) και η κατάταξη (outranksForLocation, ο κανόνας) είναι ΞΕΧΩΡΙΣΤΕΣ συναρτήσεις και ΔΕΝ επιτρέπεται να ενοποιηθούν.",
+      "forbiddenPatterns": [
+        "(outranksForLocation|outranksForFact|locationKnowledgeStep|locationProvenanceRank|placeFactRank)\\s*(=|:)\\s*(\\(|function|async)",
+        "(LOCATION_PROVENANCES|LOCATION_PROVENANCE_RANK|STEP_OF_PROVENANCE|PLACE_FACT_RANK)\\s*(=|:)\\s*[\\[{]"
+      ],
+      "allowlist": [
+        "src/lib/location/location-provenance.ts"
       ],
       "tier": 3
     }

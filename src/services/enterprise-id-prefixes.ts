@@ -25,8 +25,22 @@ export const ENTERPRISE_ID_PREFIXES = {
   RELATIONSHIP: 'rel',
   MEMBER: 'mbr',
   LANDOWNER: 'lown',         // ADR-244: Property ownership
+  PUBLIC_LAND: 'land',       // ADR-777 Α1: η ΓΗ — το ΜΟΝΟ πράγμα που κρατά θέση. Δημόσια, χωρίς
+                             // companyId. 🔴 ΠΟΤΕ OSM id (SPEC-777A §13.2): τα OSM id αλλάζουν όταν
+                             // εθελοντές ξανασχεδιάζουν, και μια ζήτηση κρεμασμένη εκεί εξαφανίζεται
+                             // ΣΙΩΠΗΛΑ. Δική μας ταυτότητα που ΔΕΙΧΝΕΙ στο OSM, ποτέ που ΕΙΝΑΙ.
+  PUBLIC_BUILDING: 'pbld',   // ADR-777 Α11: «το κτίριο του κόσμου» — δημόσια οντότητα, κανενός.
+                             // ⚠️ ΞΕΧΩΡΙΣΤΟ από το `bldg` (BUILDING): εκείνο είναι το εμπορικό
+                             // κτίριο ΜΕΣΑ σε έργο ενός πελάτη (επίπεδο Β). Κοινό πρόθεμα θα
+                             // σήμαινε ότι δύο πράγματα με διαφορετική ορατότητα και διαφορετικό
+                             // γραφέα μοιράζονται χώρο ταυτοτήτων — η σύγχυση θα ήταν ΜΗ ΑΝΙΧΝΕΥΣΙΜΗ.
   OWNERSHIP_TABLE: 'owntbl',  // ADR-235: Ownership percentage tables (deterministic composite key)
   TITLE_BLOCK_BINDING: 'tbb', // ADR-745 Φ3β: title-block cell → entity provenance (composite key)
+  PROPERTY_OFFER: 'offr',     // ADR-777 Α20: ΔΙΑΘΕΣΗ — «ένα ακίνητο, πολλές διαθέσεις». Στοιχείο
+                              // πίνακα μέσα στο Property, ΟΧΙ έγγραφο — και παίρνει ταυτότητα για
+                              // τον ίδιο λόγο με τις γραμμές του ADR-759 Φ2β: μια διάθεση επιβιώνει
+                              // αναδιάταξης, κλεισίματος και επαναδημοσίευσης. Χωρίς σταθερή
+                              // ταυτότητα, «απόσυρε τις άλλες» (Α20 σημείο 4) δεν έχει υποκείμενο.
   SURVEY_RECORD: 'srv',       // ADR-759 Φ2: survey_records collection — institutional/legal plot data
                               // declared by a surveyor on a date. NOT `topo` (ADR-650) — that is TIN
                               // surface GEOMETRY per floor. Two meanings, two prefixes (ADR-759 §Ζ.2).

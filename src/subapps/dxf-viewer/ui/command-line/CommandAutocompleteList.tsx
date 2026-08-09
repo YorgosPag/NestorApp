@@ -37,7 +37,7 @@ export function CommandAutocompleteList({
     <ul
       role="listbox"
       aria-label="command suggestions"
-      className="absolute bottom-full left-0 mb-0.5 w-52 max-h-48 overflow-y-auto rounded border border-border bg-popover shadow-lg z-[2000] text-xs"
+      className="absolute bottom-full left-0 mb-0.5 w-52 max-h-48 overflow-y-auto rounded border border-border bg-popover shadow-lg z-[var(--z-index-elevated-dropdown)] text-xs"
     >
       {matches.map((entry, idx) => (
         <li

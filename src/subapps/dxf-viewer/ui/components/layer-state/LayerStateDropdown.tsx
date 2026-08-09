@@ -179,7 +179,7 @@ const TRIGGER_CLASS =
 
 const LABEL_CLASS = 'truncate flex-1 text-left font-medium';
 
-const POPOVER_CONTENT_CLASS = 'z-[1800] w-[320px] p-0';
+const POPOVER_CONTENT_CLASS = 'z-[var(--z-index-tooltip)] w-[320px] p-0';
 
 const ICON_BUTTON_CLASS =
   'inline-flex items-center justify-center h-6 w-6 rounded ' +

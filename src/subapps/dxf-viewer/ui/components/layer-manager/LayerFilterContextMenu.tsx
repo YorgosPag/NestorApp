@@ -45,7 +45,7 @@ export function LayerFilterContextMenu({
   return (
     <nav
       role="menu"
-      style={{ position: 'fixed', top: y, left: x, zIndex: 9999 }}
+      style={{ position: 'fixed', top: y, left: x, zIndex: 'var(--z-index-viewer-menu)' }}
       className={`${colors.bg.muted} ${getStatusBorder('muted')} ${PANEL_LAYOUT.PADDING.LEFT_SM} ${PANEL_LAYOUT.PADDING.RIGHT_SM} ${PANEL_LAYOUT.PADDING.VERTICAL_XS}`}
       aria-label={t('layerFilters.aria.contextMenu')}
     >

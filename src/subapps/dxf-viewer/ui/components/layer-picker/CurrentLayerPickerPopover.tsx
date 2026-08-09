@@ -364,7 +364,7 @@ function LayerRowContextMenu({
 }): React.ReactElement {
   const { t } = useTranslation('dxf-viewer-shell');
   return (
-    <ContextMenuContent className="z-[1900] w-56">
+    <ContextMenuContent className="z-[var(--z-index-elevated-menu)] w-56">
       <ContextMenuItem
         onSelect={() => actions.selectLayer(layerId)}
         disabled={isFrozen || isLockBlocked}

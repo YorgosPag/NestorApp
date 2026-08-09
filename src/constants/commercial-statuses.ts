@@ -110,6 +110,15 @@ export const FINALIZED_COMMERCIAL_STATUSES = [
   'rented',
 ] as const satisfies readonly CommercialStatus[];
 
+/**
+ * Η κατάσταση «πωλήθηκε», ονομασμένη — για **ερωτήματα** Firestore, όπου δεν
+ * μπορεί να μπει κατηγόρημα και ένα ωμό `'sold'` αποκλίνει σιωπηλά.
+ *
+ * @see ADR-777 Α20 — το `commercialStatus` είναι πλέον ΠΑΡΑΓΟΜΕΝΟ από τις
+ *      διαθέσεις, άρα κάθε τιμή σε ερώτημα οφείλει να προέρχεται από εδώ.
+ */
+export const SOLD_COMMERCIAL_STATUS: CommercialStatus = 'sold';
+
 /** Returns `true` if `value` represents an active market listing. */
 export function isListedCommercialStatus(
   value: unknown,

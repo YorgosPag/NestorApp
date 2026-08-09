@@ -196,8 +196,14 @@ describe('canvas painters — subscribeImmediateTransformFrame (ιδίωμα Hom
 });
 
 // ─── 5. Συμπεριφορά: UnderlayDispatchCanvas split-effect (ρίσκο κριτικής #9) ────
-// ADR-732 Batch 2: η συμπεριφορά του πρώην GridUnderlayCanvas ζει στον καμβά ζώνης Α —
-// το grid pass είναι το painters[0] (κάτω από την κάτοψη, Giorgio 2026-06-05).
+// ADR-732 Batch 2: η συμπεριφορά του πρώην GridUnderlayCanvas ζει στον καμβά ζώνης Α.
+//
+// ⚠️ Η ΣΕΙΡΑ ΤΗΣ ΖΩΝΗΣ Α ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ, και οι δείκτες εδώ την κλειδώνουν:
+//   painters[0] = υπόβαθρο χάρτη (Giorgio 2026-08-09 — υπόβαθρο αναφοράς, τελείως από κάτω)
+//   painters[1] = κάνναβος σχεδίασης (Giorgio 2026-06-05 — κάτω από την κάτοψη)
+//   painters[2] = κάτοψη ορόφου
+// Ο χάρτης μπήκε ΠΡΩΤΟΣ ώστε ο κάνναβος — εργαλείο δουλειάς — να μένει αναγνώσιμος πάνω του.
+// Αν κάποιος αντιστρέψει τη σειρά, αυτές οι τρεις άγκυρες είναι που θα το πουν.
 describe('UnderlayDispatchCanvas — repaint σε transform tick ΚΑΙ σε content change', () => {
   const gridOn = { enabled: true, size: 10 } as unknown as GridSettings;
   const gridOff = { enabled: false, size: 10 } as unknown as GridSettings;
@@ -233,15 +239,23 @@ describe('UnderlayDispatchCanvas — repaint σε transform tick ΚΑΙ σε con
     rerender(<UnderlayDispatchCanvas gridSettings={gridOn} viewport={viewport} floorId={null} />);
 
     expect(framePaints).toHaveBeenCalled();
-    // Το grid pass είναι το painters[0]· με enabled=true ΔΕΝ είναι null (η πύλη θα ζωγραφίσει).
+    // Το grid pass είναι το painters[1]· με enabled=true ΔΕΝ είναι null (η πύλη θα ζωγραφίσει).
     const [, painters] = framePaints.mock.calls.at(-1) as [unknown, Array<unknown>];
-    expect(painters[0]).not.toBeNull();
+    expect(painters[1]).not.toBeNull();
   });
 
-  it('χωρίς floorId το floorplan pass (painters[1]) είναι null — η ζώνη δεν πληρώνει τίποτα', () => {
+  it('χωρίς floorId το floorplan pass (painters[2]) είναι null — η ζώνη δεν πληρώνει τίποτα', () => {
     render(<UnderlayDispatchCanvas gridSettings={gridOn} viewport={viewport} floorId={null} />);
     const [, painters] = framePaints.mock.calls.at(-1) as [unknown, Array<unknown>];
-    expect(painters).toHaveLength(2);
-    expect(painters[1]).toBeNull();
+    expect(painters).toHaveLength(3);
+    expect(painters[2]).toBeNull();
+  });
+
+  it('σβηστό υπόβαθρο χάρτη ⇒ painters[0] είναι null — μηδέν κόστος στη ζώνη', () => {
+    // Προεπιλογή του store: `enabled: false`. Η άγκυρα κλειδώνει ότι ο χάρτης είναι opt-in και
+    // ότι ένα σβηστό υπόβαθρο δεν κοστίζει ούτε κλήση painter (πύλη ADR-726 Φ2).
+    render(<UnderlayDispatchCanvas gridSettings={gridOn} viewport={viewport} floorId={null} />);
+    const [, painters] = framePaints.mock.calls.at(-1) as [unknown, Array<unknown>];
+    expect(painters[0]).toBeNull();
   });
 });

@@ -51,8 +51,13 @@ export type PostFxOverlayKind = 'underlay' | 'gizmo';
  * paints on top. The grid is the reference GROUND and must sit beneath all content; it registers at
  * `GROUND`, every other overlay stays at `CONTENT`. Explicit z-order (Figma z-index / Revit draw-
  * order / C4D object-order), never accidental construction order. (ADR-558 — DXF-above-grid fix.)
+ *
+ * `BASEMAP` κάθεται ΚΑΤΩ από το `GROUND`: ο χάρτης είναι υπόβαθρο **αναφοράς**, ενώ ο κάνναβος
+ * είναι εργαλείο **δουλειάς** και οφείλει να παραμένει αναγνώσιμος πάνω του. Είναι η ίδια
+ * απόφαση που παίρνει η ζώνη Α του 2Δ (`UnderlayDispatchCanvas`) — ένα σχήμα στρώσης, δύο
+ * προβολές, ώστε ο χρήστης να μη βλέπει διαφορετική σειρά ανάλογα με το πού κοιτάζει.
  */
-export const OVERLAY_ORDER = { GROUND: -100, CONTENT: 0 } as const;
+export const OVERLAY_ORDER = { BASEMAP: -200, GROUND: -100, CONTENT: 0 } as const;
 
 /** A registered overlay: its depth/AO class + its z-order within the collection. */
 interface OverlayEntry {

@@ -50,7 +50,7 @@ export function SelectionCyclingPopover({ onSelectEntity }: SelectionCyclingPopo
       role="listbox"
       aria-label={t('selectionCycling.label')}
       style={{ left: state.clientX + 14, top: state.clientY + 14 }}
-      className="fixed z-[2500] min-w-[180px] max-h-56 overflow-y-auto rounded border border-border bg-popover shadow-lg text-xs py-0.5"
+      className="fixed z-[var(--z-index-pointer-menu)] min-w-[180px] max-h-56 overflow-y-auto rounded border border-border bg-popover shadow-lg text-xs py-0.5"
       onMouseLeave={() => setHoveredEntity(currentId)}
     >
       {state.candidates.map((candidate, idx) => {

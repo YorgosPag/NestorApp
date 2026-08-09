@@ -134,7 +134,7 @@ function TableLinkPickerBody({
 
   return (
     <div
-      className="fixed inset-0 z-[2600] flex items-start justify-center bg-black/20 pt-[12vh]"
+      className="fixed inset-0 z-[var(--z-index-picker-overlay)] flex items-start justify-center bg-black/20 pt-[12vh]"
       onMouseDown={closeTableLinkPicker}
     >
       <section

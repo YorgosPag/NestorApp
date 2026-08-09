@@ -864,6 +864,17 @@
     "allFloorsAria": "Show all floors stacked in 3D",
     "floorVisibleAria": "Show floor {floor} in the all-floors view"
   },
+  "basemap": {
+    "label": "Map",
+    "toggleAria": "Show or hide the map backdrop beneath the drawing",
+    "unavailableAria": "Map unavailable: the project is not geo-referenced",
+    "unavailableHint": "This project is not geo-referenced — its position on the map is unknown. Import a survey with coordinates, or align the drawing.",
+    "approximateBadge": "approximate",
+    "approximateHint": "Position derived from the project address and is approximate. For drawing accuracy, align the drawing to the survey.",
+    "sources": {
+      "osmStandard": "OpenStreetMap"
+    }
+  },
   "toolbarStatus": {
     "tool": "Tool",
     "zoom": "Zoom",

@@ -3,6 +3,7 @@ import 'server-only';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { scopeQueryToCompany } from '@/lib/firestore/tenant-scoped-query';
 import { COLLECTIONS, SUBCOLLECTIONS } from '@/config/firestore-collections';
+import { SOLD_COMMERCIAL_STATUS } from '@/constants/commercial-statuses';
 import type { Project, ProjectStatus } from '@/types/project';
 import type { ProjectUpdatePayload } from '@/services/projects-client.service';
 import type {
@@ -161,7 +162,10 @@ async function countSoldProperties(projectId: string): Promise<number> {
   const snapshot = await db
     .collection(COLLECTIONS.PROPERTIES)
     .where('projectId', '==', projectId)
-    .where('commercialStatus', '==', 'sold')
+    // Boy Scout (ADR-777 Α20): ωμό literal → SSoT. Το `commercialStatus` είναι
+    // πλέον ΠΑΡΑΓΟΜΕΝΟ, οπότε η τιμή πρέπει να προέρχεται από το λεξιλόγιο που
+    // την παράγει — αλλιώς ένα literal εδώ αποκλίνει σιωπηλά από την προβολή.
+    .where('commercialStatus', '==', SOLD_COMMERCIAL_STATUS)
     .select()
     .get();
   return snapshot.size;

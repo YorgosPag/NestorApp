@@ -142,6 +142,86 @@ export function immutableMatrix(): readonly CoverageCell[] {
 }
 
 /**
+ * Τα τρία κελιά «καμία εγγραφή από πελάτη» για κάθε δοσμένο persona.
+ *
+ * 🔴 **Εξήχθη επειδή το CHECK 3.28 (jscpd) το έπιασε ΜΕΣΑ σε αυτή τη δουλειά**
+ * (2026-08-10, ADR-777 Β1): το `publicWorldMatrix` και το `adminWriteOnlyMatrix`
+ * έγραφαν **τα ίδια έξι κελιά** λέξη προς λέξη. Δύο πρότυπα με **αντίθετη**
+ * πολιτική ανάγνωσης μοιράζονται **ταυτόσημη** πολιτική εγγραφής — και αυτό είναι
+ * ουσιαστικό, όχι σύμπτωση: «γράφει μόνο ο διακομιστής» είναι **μία** απόφαση.
+ *
+ * ⚠️ Δέχεται λίστα personas αντί να την υποθέτει, γιατί τα δύο πρότυπα καλύπτουν
+ * **διαφορετικό** σύνολο: το `admin_write_only` αρνείται τον ανώνυμο με
+ * `missing_claim` (δεν έφτασε καν στον έλεγχο εγγραφής), ενώ το `public_world` τον
+ * αρνείται με `server_only` (πέρασε την ανάγνωση, κόπηκε στην εγγραφή). **Ίδια
+ * έκβαση, διαφορετική αιτία** — και η αιτία είναι ο λόγος που το μητρώο την καταγράφει.
+ */
+function serverOnlyWriteCells(personas: readonly Persona[]): readonly CoverageCell[] {
+  return personas.flatMap((persona) => [
+    cell(persona, 'create', 'deny', 'server_only'),
+    cell(persona, 'update', 'deny', 'server_only'),
+    cell(persona, 'delete', 'deny', 'server_only'),
+  ]);
+}
+
+/**
+ * Canonical matrix για το πρότυπο `public_world` — **ADR-777 επίπεδο Α**.
+ *
+ * Rule shape: `allow read: if true;` + `allow write: if false;`
+ *
+ * 🔴 **ΕΙΝΑΙ ΤΟ ΑΝΤΙΣΤΡΟΦΟ ΤΟΥ `denyAllMatrix`, ΚΑΙ Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ ΣΚΟΠΙΜΗ.**
+ * Εκεί όλα απαγορεύονται· εδώ η **ανάγνωση είναι ανοιχτή σε όλους, ακόμη και σε
+ * ανώνυμο**, γιατί το επίπεδο Α είναι «ό,τι θα ήταν αληθές ακόμη κι αν έσβηναν όλοι
+ * οι λογαριασμοί» (SPEC-777A §14.1). Δεν υπάρχει τίποτα ιδιωτικό να διαρρεύσει.
+ *
+ * 🔑 **Το `cross_tenant_admin × read: allow` ΔΕΝ είναι παράλειψη — είναι η άγκυρα.**
+ * Σε κάθε άλλη συλλογή αυτό το κελί είναι `deny (cross_tenant)`. Εδώ πρέπει να είναι
+ * `allow`, γιατί **αυτός ακριβώς είναι ο σκοπός**: προσφορά και ζήτηση από
+ * **διαφορετικούς** πελάτες οφείλουν να δείχνουν στο **ίδιο** κτίριο (§14.5). Αν
+ * κάποιος «διορθώσει» αυτό το κελί σε deny, το ταίριασμα γίνεται δομικά αδύνατο.
+ *
+ * ⚠️ Και το `super_admin × create/update/delete: deny (server_only)` είναι δεσμευτικό:
+ * **κανένας ρόλος** δεν δικαιολογεί εγγραφή από πελάτη σε δεδομένο που το βλέπουν
+ * όλοι (§14.4 κανόνες 1-2). Ο διαχειριστής που πρέπει να γράψει, γράφει από τον
+ * διακομιστή — όπου η **πηγή μπορεί να επαληθευτεί**.
+ */
+export function publicWorldMatrix(): readonly CoverageCell[] {
+  /**
+   * **ΚΑΘΕ** persona διαβάζει. Γραμμένο ως λίστα και όχι ως δεκατρείς γραμμές
+   * `cell(...)` για δύο λόγους, ο δεύτερος μετρημένος:
+   *  (α) η **πρόθεση** γίνεται αναγνώσιμη — «όλοι, χωρίς εξαίρεση» — αντί να πρέπει
+   *      να συγκρίνει κανείς δεκατρείς σχεδόν ίδιες γραμμές για να δει ποιος λείπει·
+   *  (β) η κυριολεκτική μορφή **ήταν κλώνος** του `immutableMatrix` (CHECK 3.28, 8
+   *      γραμμές / 52 tokens): τα δύο πρότυπα ξεκινούν με ταυτόσημα κελιά ανάγνωσης
+   *      και **αποκλίνουν μόνο στη συνέχεια** — ακριβώς το είδος ομοιότητας που
+   *      διαβάζεται ως «ίδιο πράγμα» ενώ δεν είναι.
+   */
+  const READERS: readonly Persona[] = [
+    'super_admin',
+    'same_tenant_admin',
+    'same_tenant_user',
+    'cross_tenant_admin',
+    'cross_tenant_user',
+    'external_user',
+    'anonymous',
+  ];
+  /** Η αφιλτράριστη λίστα δοκιμάζεται σε δείγμα personas — ίδια πολιτική, μία απόφαση. */
+  const LISTERS: readonly Persona[] = ['super_admin', 'same_tenant_admin', 'cross_tenant_admin', 'anonymous'];
+
+  return [
+    ...READERS.map((persona) => cell(persona, 'read', 'allow')),
+    ...LISTERS.map((persona) => cell(persona, 'list', 'allow')),
+    ...serverOnlyWriteCells(['super_admin', 'same_tenant_admin', 'anonymous']),
+    ...serverOnlyWriteCells(['same_tenant_user', 'cross_tenant_admin']).filter(
+      // Το `delete` για αυτούς τους δύο δεν προσθέτει πληροφορία: η πολιτική είναι
+      // ήδη αποδεδειγμένη ανά ρόλο από τα παραπάνω. Κρατούνται create/update ώστε
+      // να καλύπτονται και οι δύο κατευθύνσεις μισθωτή.
+      (c) => c.operation !== 'delete',
+    ),
+  ];
+}
+
+/**
  * Canonical matrix for the `admin_write_only` pattern — reads follow tenant
  * isolation, but **every client-side write is denied** at the rule level
  * because mutations happen exclusively via Firebase Admin SDK on the server.
@@ -167,6 +247,10 @@ export function adminWriteOnlyMatrix(): readonly CoverageCell[] {
     cell('anonymous', 'read', 'deny', 'missing_claim'),
     cell('anonymous', 'list', 'deny', 'missing_claim'),
     // Writes: server-only. Every persona denies at rule level.
+    // ⚠️ ΓΡΑΜΜΕΝΑ ΡΗΤΑ, ΕΠΙΤΗΔΕΣ — δες τη σημείωση στο `serverOnlyWriteCells`:
+    // η αντικατάστασή τους με τον βοηθό ΜΕΤΡΗΘΗΚΕ και γεννούσε ΝΕΟ κλώνο με το
+    // `roleDualMatrix` (τα δύο μπλοκ γίνονταν συνεχόμενα). Καθαρό μείον σε κλώνους
+    // ΔΕΝ υπάρχει εδώ χωρίς να αγγιχτεί ολόκληρη η οικογένεια των 4 πινάκων.
     cell('super_admin', 'create', 'deny', 'server_only'),
     cell('super_admin', 'update', 'deny', 'server_only'),
     cell('super_admin', 'delete', 'deny', 'server_only'),

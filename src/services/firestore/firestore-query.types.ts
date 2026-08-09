@@ -37,11 +37,53 @@ export interface TenantContext {
 /** Tenant isolation strategy per collection */
 export type TenantIsolationMode = 'companyId' | 'tenantId' | 'userId' | 'none';
 
-/** Per-collection tenant field configuration */
-export interface TenantFieldConfig {
-  readonly mode: TenantIsolationMode;
-  readonly fieldName: string;
-}
+/**
+ * Γιατί μια συλλογή δεν φέρει φίλτρο μισθωτή.
+ *
+ * 🔴 **ΔΥΟ ΠΟΛΥ ΔΙΑΦΟΡΕΤΙΚΑ ΠΡΑΓΜΑΤΑ, ΠΟΥ ΜΕΧΡΙ ΣΗΜΕΡΑ ΕΛΕΓΑΝ ΤΗΝ ΙΔΙΑ ΛΕΞΗ.**
+ * Το `mode: 'none'` σήμαινε ταυτόχρονα «ρύθμιση συστήματος που τη γράφει ο διαχειριστής»
+ * και — από το ADR-777 και μετά — «**φυσικό γεγονός που το διαβάζει όλος ο κόσμος**».
+ * Η δεύτερη κατηγορία έχει ασφαλιστική συνέπεια που η πρώτη δεν έχει: ένα λάθος εκεί
+ * είναι λάθος για **όλους τους πελάτες ταυτόχρονα** (SPEC-777A §14.4).
+ *
+ * Μία λέξη για δύο νοήματα είναι το σχήμα του ADR-749. Εδώ ονομάζονται.
+ */
+export type UnscopedCategory =
+  /** Ρυθμίσεις / καθολικά singletons — γράφει ο διαχειριστής, διαβάζει ο πιστοποιημένος. */
+  | 'system'
+  /** Δεδομένα δεμένα σε έργο/αρχείο, όχι σε μισθωτή. */
+  | 'project-scoped'
+  /**
+   * **Κοινό φυσικό γεγονός** (SPEC-777A Α11/Α12 επίπεδο Α): το βλέπουν όλοι, το
+   * γράφει **μόνο ο διακομιστής**, δεν ανήκει σε κανέναν.
+   */
+  | 'public-world';
+
+/**
+ * Per-collection tenant field configuration.
+ *
+ * 🔑 **Διακριτή ένωση, όχι επίπεδη δομή — και ο λόγος είναι επιβολή.** Το SPEC-777A
+ * §14.4 κανόνας 3 απαιτεί η μη-tenant-scoped συλλογή να δηλώνεται **ρητά, με γραπτό
+ * λόγο**. Ως σχόλιο, αυτό είναι οδηγία που κάποιος θα παραλείψει· ως **τύπος**, το
+ * `mode: 'none'` **δεν μεταγλωττίζεται** χωρίς κατηγορία και αιτιολόγηση.
+ *
+ * Είναι το ίδιο ιδίωμα με το `Record<X, true>` που ήδη χρησιμοποιεί το έργο
+ * (`PROVENANCE_ACTIVITY_PRESENCE`): ο μεταγλωττιστής, όχι μια πύλη, είναι ο φθηνότερος
+ * φρουρός όταν μπορεί να απαντήσει την ερώτηση.
+ */
+export type TenantFieldConfig =
+  | {
+      readonly mode: Exclude<TenantIsolationMode, 'none'>;
+      readonly fieldName: string;
+    }
+  | {
+      readonly mode: 'none';
+      readonly fieldName: '';
+      /** Σε ποια από τις τρεις κατηγορίες ανήκει — βλ. {@link UnscopedCategory}. */
+      readonly unscopedCategory: UnscopedCategory;
+      /** Ο γραπτός λόγος. **Υποχρεωτικός** (§14.4 κανόνας 3), όπως στο CHECK 3.35. */
+      readonly unscopedReason: string;
+    };
 
 // ============================================================================
 // QUERY OPTIONS

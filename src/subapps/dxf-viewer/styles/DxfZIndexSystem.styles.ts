@@ -39,13 +39,13 @@ interface DxfZIndexHierarchy {
     readonly collaboration: number;
     readonly toolbar: number;
     readonly sidebar: number;
-    readonly notifications: number;
+    // 🗑️ `notifications` — ΜΗΔΕΝ καταναλωτές (ADR-780 Φ.Γ).
   };
   readonly modals: {
     readonly base: number;
     readonly import: number;
-    readonly settings: number;
-    readonly help: number;
+    // 🗑️ `settings` · `help` — ΜΗΔΕΝ καταναλωτές (ADR-780 Φ.Γ). Ήταν `modal + 20/+30`,
+    // δηλαδή δύο σκαλιά που **δεν ζωγράφιζε κανείς** αλλά έσπαγαν τη μονοτονία της κλίμακας.
   };
 }
 
@@ -89,8 +89,10 @@ export const dxfZIndex: DxfZIndexHierarchy = {
   ui: {
     collaboration: globalZIndex.docked + 5,    // 15 - Collaboration overlay
     toolbar: globalZIndex.sticky,              // 1100 - Toolbars, panels
-    sidebar: globalZIndex.sticky + 10,         // 1110 - Side panels
-    notifications: globalZIndex.toast          // 1700 - Status notifications
+    // ADR-780 Φ.Γ: ήταν `sticky + 10`. Η αριθμητική ΔΕΝ μετακινείται μαζί με τον ρόλο της —
+    // μετά τη συμπίεση της κλίμακας θα έδινε τιμή **ταυτόσημη με τον `banner`**, δηλαδή δύο
+    // επιφάνειες σε ένα σκαλί με τη σειρά τους να την αποφασίζει το DOM.
+    sidebar: globalZIndex.workspaceSidePanel   // Floating workspace side palette
   },
 
   /**
@@ -106,180 +108,29 @@ export const dxfZIndex: DxfZIndexHierarchy = {
    * `createModalZIndex('critical')` είχαν **ΜΗΔΕΝ** καταναλωτές σε όλο το `src/`.
    */
   modals: {
-    base: globalZIndex.modal,              // 1400 - Standard modals
-    import: globalZIndex.modal + 10,       // 1410 - DXF import modal
-    settings: globalZIndex.modal + 20,     // 1420 - Settings modal
-    help: globalZIndex.modal + 30          // 1430 - Help modal
+    base: globalZIndex.modal,              // Standard modals
+    // ADR-780 Φ.Γ: ήταν `modal + 10`· μετά τη συμπίεση θα έπεφτε πάνω στον `canvasSnap`.
+    // Τα `settings` (+20) και `help` (+30) είχαν **ΜΗΔΕΝ** καταναλωτές και διαγράφηκαν —
+    // νεκρό σκαλί δεν αποκτά ρόλο, φεύγει.
+    import: globalZIndex.viewerImportModal // DXF import surface
   }
 } as const;
 
-// ============================================================================
-// 🎯 DYNAMIC Z-INDEX UTILITIES
-// ============================================================================
-
-/**
- * 🎯 MODAL Z-INDEX CALCULATOR: Professional modal stacking
- * Eliminates hardcoded 999999 με intelligent modal management
- */
-export const createModalZIndex = (
-  modalType: 'base' | 'import' | 'settings' | 'help' = 'base',
-  stackOffset: number = 0
-): number => {
-  const baseZIndex = dxfZIndex.modals[modalType];
-  return baseZIndex + stackOffset;
-};
-
-/**
- * 🎯 OVERLAY Z-INDEX CALCULATOR: Dynamic overlay positioning
- */
-export const createOverlayZIndex = (
-  overlayType: 'selection' | 'crosshair' | 'snap' | 'cursor' | 'zoom',
-  priority: number = 0
-): number => {
-  const baseZIndex = dxfZIndex.overlays[overlayType];
-  return baseZIndex + priority;
-};
-
-/**
- * 🎯 CANVAS Z-INDEX CALCULATOR: Canvas layer management
- */
-export const createCanvasZIndex = (
-  canvasType: 'background' | 'dxfCanvas' | 'layerCanvas',
-  layerOffset: number = 0
-): number => {
-  const baseZIndex = dxfZIndex.canvas[canvasType];
-  return baseZIndex + layerOffset;
-};
-
-// ============================================================================
-// 🎯 PERFORMANCE OPTIMIZATION
-// ============================================================================
-
-/**
- * 🎯 Z-INDEX MEMOIZATION: Performance-optimized z-index caching
- */
-const zIndexCache = new Map<string, number>();
-
-export const getMemoizedZIndex = (
-  componentType: string,
-  subType: string = 'default',
-  offset: number = 0
-): number => {
-  const key = `${componentType}-${subType}-${offset}`;
-
-  if (!zIndexCache.has(key)) {
-    let baseZIndex: number;
-
-    // Calculate base z-index based on component type
-    switch (componentType) {
-      case 'modal':
-        baseZIndex = dxfZIndex.modals[subType as keyof typeof dxfZIndex.modals] || dxfZIndex.modals.base;
-        break;
-      case 'overlay':
-        baseZIndex = dxfZIndex.overlays[subType as keyof typeof dxfZIndex.overlays] || dxfZIndex.overlays.selection;
-        break;
-      case 'canvas':
-        baseZIndex = dxfZIndex.canvas[subType as keyof typeof dxfZIndex.canvas] || dxfZIndex.canvas.background;
-        break;
-      case 'ui':
-        baseZIndex = dxfZIndex.ui[subType as keyof typeof dxfZIndex.ui] || dxfZIndex.ui.collaboration;
-        break;
-      default:
-        baseZIndex = 0;
-    }
-
-    zIndexCache.set(key, baseZIndex + offset);
-  }
-
-  return zIndexCache.get(key)!;
-};
-
-/**
- * 🎯 CACHE MANAGEMENT: Memory optimization utilities
- */
-export const clearDxfZIndexCache = (): void => {
-  zIndexCache.clear();
-};
-
-export const getDxfZIndexCacheStats = () => ({
-  size: zIndexCache.size,
-  keys: Array.from(zIndexCache.keys()),
-  values: Array.from(zIndexCache.values())
-});
-
-// ============================================================================
-// 🎯 VALIDATION UTILITIES
-// ============================================================================
-
-/**
- * 🎯 Z-INDEX VALIDATION: Development-time validation για z-index consistency
- */
-export const validateDxfZIndexHierarchy = (): boolean => {
-  const allZIndices = [
-    ...Object.values(dxfZIndex.canvas),
-    ...Object.values(dxfZIndex.overlays),
-    ...Object.values(dxfZIndex.ui),
-    ...Object.values(dxfZIndex.modals)
-  ].sort((a, b) => a - b);
-
-  // Check for duplicates
-  for (let i = 1; i < allZIndices.length; i++) {
-    if (allZIndices[i] === allZIndices[i - 1]) {
-      console.warn(`Duplicate z-index found: ${allZIndices[i]}`);
-      return false;
-    }
-  }
-
-  // Check for proper hierarchy
-  const canvasMax = Math.max(...Object.values(dxfZIndex.canvas));
-  const overlayMin = Math.min(...Object.values(dxfZIndex.overlays));
-
-  if (canvasMax >= overlayMin) {
-    console.warn('Canvas z-index overlaps with overlay z-index');
-    return false;
-  }
-
-  return true;
-};
-
-/**
- * 🎯 DEBUG INFO: Development utilities για z-index debugging
- */
-export const getDxfZIndexInfo = () => ({
-  hierarchy: dxfZIndex,
-  validation: validateDxfZIndexHierarchy(),
-  cacheStats: getDxfZIndexCacheStats(),
-  maxZIndex: Math.max(...Object.values(dxfZIndex.modals)),
-  layerCount: Object.keys(dxfZIndex).length,
-  totalLayers: Object.values(dxfZIndex).reduce((total, group) => total + Object.keys(group).length, 0)
-});
-
-// ============================================================================
-// 🔒 TYPE EXPORTS - ENTERPRISE TYPE SAFETY
-// ============================================================================
-
-export type { DxfZIndexHierarchy };
-
-// ============================================================================
-// 🎯 CONSTANTS EXPORT - QUICK ACCESS
-// ============================================================================
-
-/**
- * 🎯 QUICK ACCESS CONSTANTS: Common z-index values για immediate use
- */
-export const DXF_ZINDEX = {
-  // Canvas layers
-  DXF_CANVAS: dxfZIndex.canvas.dxfCanvas,
-  LAYER_CANVAS: dxfZIndex.canvas.layerCanvas,
-
-  // Common overlays
-  COLLABORATION: dxfZIndex.ui.collaboration,
-  CROSSHAIR: dxfZIndex.overlays.crosshair,
-
-  // Modals
-  IMPORT_MODAL: dxfZIndex.modals.import,
-  SETTINGS_MODAL: dxfZIndex.modals.settings
-} as const;
+// 🗑️ ΔΙΑΓΡΑΦΗΚΑΝ (ADR-780 Φάση Γ) — **ΜΗΔΕΝ καταναλωτές, μετρημένο**:
+//   createModalZIndex · createOverlayZIndex · createCanvasZIndex · getMemoizedZIndex
+//   clearDxfZIndexCache · getDxfZIndexCacheStats · validateDxfZIndexHierarchy
+//   getDxfZIndexInfo · DXF_ZINDEX
+//
+// 🔑 ΔΕΝ ΗΤΑΝ ΑΠΛΩΣ ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ — ΗΤΑΝ **ΕΡΓΟΣΤΑΣΙΑ** ΤΗΣ ΕΚΤΗΣ ΚΛΙΜΑΚΑΣ. Και τα
+// πέντε `create*ZIndex(τύπος, offset)` επέστρεφαν `ρόλος + αριθμός`, δηλαδή παρήγαγαν
+// σκαλιά που **δεν υπάρχουν στην κλίμακα** — ακριβώς το σχήμα που το ADR-780 Φ.Γ βρήκε
+// στο `portal-overlay.ts` (17 σκαλιά με `modal + 50…90`). Ένα τέτοιο σκαλί δεν
+// μετακινείται μαζί με τον ρόλο του, άρα **σπάει τη μονοτονία** που κάνει κάθε μελλοντική
+// επαναρίθμηση αποδείξιμη. Νεκρά σήμερα· ο πρώτος που τα καλούσε αύριο θα τα ξαναγεννούσε.
+//
+// ⚠️ Το `validateDxfZIndexHierarchy` έλεγχε διπλότυπα με `console.warn` — **ακριβώς** ό,τι
+// κάνει σήμερα ο `findScaleDisorder` του CHECK 3.50, αλλά **χωρίς να το τρέχει κανείς**.
+// Ένας έλεγχος που δεν εκτελείται είναι σχόλιο (μάθημα CHECK 3.36).
 
 /**
  * ✅ Η ΙΕΡΑΡΧΙΑ. Τα **στυλ** των επιφανειών (`dxfComponentStyles`, `dxfOverlayStyles`,

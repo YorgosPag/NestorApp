@@ -52,6 +52,75 @@ interface OverlayToolbarProps {
   disableFloating?: boolean; // 🔺 NEW: Disable floating positioning when used inside DraggableOverlayToolbar
 }
 
+/**
+ * 🔴 ΤΕΣΣΕΡΑ ΔΙΔΥΜΑ ΚΟΥΜΠΙΑ — ΤΟ ΕΠΙΑΣΕ ΤΟ CHECK 3.28, ΟΧΙ ΑΝΘΡΩΠΟΣ (ADR-584 / N.18).
+ *
+ * Τα Duplicate · Delete · Undo · Redo ήταν γραμμένα **τέσσερις φορές** με μόνη διαφορά το
+ * εικονίδιο, τον χειριστή και **μία** κλάση χρώματος. Το jscpd τα ανέφερε ως 3 κλώνους
+ * (66-74 tokens) όταν το αρχείο μπήκε σε diff για μια αλλαγή **σχολίου** — δηλαδή το
+ * διπλότυπο ζούσε εδώ ήδη, και η πύλη diff το είδε μόλις το αρχείο πέρασε από μπροστά της.
+ *
+ * ⚠️ Το `tone` είναι **δύο τιμές, όχι ελεύθερη κλάση**: το μοναδικό σημείο που αποκλίνει
+ * είναι το μελάνι του Delete. Ένα `className?: string` θα ξανάνοιγε τον δρόμο για πέμπτη
+ * παραλλαγή που κανείς δεν θα συνέκρινε — το ίδιο σχήμα που γέννησε τα τέσσερα.
+ */
+const ToolbarIconButton: React.FC<{
+  onClick: () => void;
+  disabled?: boolean;
+  icon: React.ComponentType<{ className?: string }>;
+  tooltip: string;
+  tone?: 'default' | 'error';
+}> = ({ onClick, disabled = false, icon: Icon, tooltip, tone = 'default' }) => {
+  const iconSizes = useIconSizes();
+  const { quick, getStatusBorder } = useBorderTokens();
+  const colors = useSemanticColors();
+  const ink = tone === 'error' ? colors.text.error : colors.text.secondary;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={onClick}
+          disabled={disabled}
+          className={`
+            ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
+            flex items-center justify-center
+            ${colors.bg.secondary} ${ink} ${getStatusBorder('default')}
+            disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
+          `}
+        >
+          <Icon className={iconSizes.sm} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+};
+
+/**
+ * Ο δεύτερος κλώνος (74 tokens): «κάθετος διαχωριστής, μετά ετικέτα, μετά σειρά κουμπιών»
+ * — γραμμένο ξανά σε κάθε τμήμα της μπάρας. Η `label` είναι **προαιρετική** επειδή τα δύο
+ * τελευταία τμήματα (ενέργειες · αναίρεση) δεν έχουν επικεφαλίδα· χωρίς αυτό θα έμεναν
+ * εκτός και ο κλώνος θα επέζησε στα μισά.
+ */
+const ToolbarGroup: React.FC<{ label?: string; children: React.ReactNode }> = ({ label, children }) => {
+  const iconSizes = useIconSizes();
+  const { quick } = useBorderTokens();
+  const colors = useSemanticColors();
+
+  return (
+    <>
+      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
+      <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
+        {label && (
+          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{label}</span>
+        )}
+        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>{children}</div>
+      </div>
+    </>
+  );
+};
+
 export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
   mode, onModeChange, currentStatus, onStatusChange, currentKind, onKindChange,
   snapEnabled, onSnapToggle, selectedOverlayId, onDuplicate, onDelete,
@@ -160,7 +229,9 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
     top: dragPosition.y,
     transform: 'none', // Override center transform when dragging
     cursor: isDragging ? 'grabbing' : 'auto',
-    zIndex: portalComponents.overlay.controls.zIndex()  // ✅ ENTERPRISE: Centralized z-index (80)
+    // ⚠️ Το σχόλιο εδώ έλεγε «(80)». Η πραγματική τιμή ήταν **1510** (ADR-780 Φ.Γ) — ένας
+    // χειρόγραφος αριθμός σε σχόλιο που κανείς δεν επέβαλλε, λάθος κατά **έναν παράγοντα 19**.
+    zIndex: portalComponents.overlay.controls.zIndex()
   };
 
   return (
@@ -212,12 +283,8 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
           ))}
         </div>
 
-      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
-
         {/* Status Palette */}
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.status')}</span>
-          <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
+        <ToolbarGroup label={t('toolbar.status')}>
             {OVERLAY_STATUS_KEYS.map(status => (
               <Tooltip key={status}>
                 <TooltipTrigger asChild>
@@ -233,15 +300,10 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 <TooltipContent>{t(STATUS_LABELS[status])}</TooltipContent>
               </Tooltip>
             ))}
-          </div>
-        </div>
-
-      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
+        </ToolbarGroup>
 
         {/* Kind Selection */}
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.SM}`}>
-          <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} ${colors.text.muted}`}>{t('toolbar.type')}</span>
-          <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
+        <ToolbarGroup label={t('toolbar.type')}>
             {(Object.keys(KIND_LABELS) as OverlayKind[]).map(kind => {
               const Icon = kindIcons[kind];
               return (
@@ -265,89 +327,40 @@ export const OverlayToolbar: React.FC<OverlayToolbarProps> = ({
                 </Tooltip>
               );
             })}
-          </div>
-        </div>
-
-      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
+        </ToolbarGroup>
 
         {/* Actions */}
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onDuplicate}
-                disabled={!selectedOverlayId}
-                className={`
-                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                  flex items-center justify-center
-                  ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-                `}
-              >
-                <Copy className={iconSizes.sm} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('toolbar.duplicate', { key: getShortcutDisplayLabel('overlayDuplicate') })}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onDelete}
-                disabled={!selectedOverlayId}
-                className={`
-                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                  flex items-center justify-center
-                  ${colors.bg.secondary} ${colors.text.error} ${getStatusBorder('default')}
-                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-                `}
-              >
-                <X className={iconSizes.sm} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('toolbar.delete', { key: getShortcutDisplayLabel('delete') })}</TooltipContent>
-          </Tooltip>
-        </div>
-
-      <Separator orientation="vertical" className={`${iconSizes.lg} ${quick.separatorV}`} />
+        <ToolbarGroup>
+          <ToolbarIconButton
+            onClick={onDuplicate}
+            disabled={!selectedOverlayId}
+            icon={Copy}
+            tooltip={t('toolbar.duplicate', { key: getShortcutDisplayLabel('overlayDuplicate') })}
+          />
+          <ToolbarIconButton
+            onClick={onDelete}
+            disabled={!selectedOverlayId}
+            icon={X}
+            tone="error"
+            tooltip={t('toolbar.delete', { key: getShortcutDisplayLabel('delete') })}
+          />
+        </ToolbarGroup>
 
         {/* Undo/Redo */}
-        <div className={`flex items-center ${PANEL_LAYOUT.GAP.XS}`}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onUndo}
-                disabled={!canUndo}
-                className={`
-                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                  flex items-center justify-center
-                  ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-                `}
-              >
-                <RotateCcw className={iconSizes.sm} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('toolbar.undo', { key: getShortcutDisplayLabel('undo') })}</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={onRedo}
-                disabled={!canRedo}
-                className={`
-                  ${iconSizes.xl} ${PANEL_LAYOUT.SPACING.NONE} ${quick.button} ${PANEL_LAYOUT.TRANSITION.COLORS} ${PANEL_LAYOUT.DURATION['150']}
-                  flex items-center justify-center
-                  ${colors.bg.secondary} ${colors.text.secondary} ${getStatusBorder('default')}
-                  disabled:${PANEL_LAYOUT.OPACITY['50']} disabled:${PANEL_LAYOUT.CURSOR.NOT_ALLOWED}
-                `}
-              >
-                <RotateCw className={iconSizes.sm} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>{t('toolbar.redo', { key: getShortcutDisplayLabel('redo') })}</TooltipContent>
-          </Tooltip>
-        </div>
+        <ToolbarGroup>
+          <ToolbarIconButton
+            onClick={onUndo}
+            disabled={!canUndo}
+            icon={RotateCcw}
+            tooltip={t('toolbar.undo', { key: getShortcutDisplayLabel('undo') })}
+          />
+          <ToolbarIconButton
+            onClick={onRedo}
+            disabled={!canRedo}
+            icon={RotateCw}
+            tooltip={t('toolbar.redo', { key: getShortcutDisplayLabel('redo') })}
+          />
+        </ToolbarGroup>
       </div>
     </TooltipProvider>
   );

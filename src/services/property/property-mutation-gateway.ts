@@ -2,6 +2,28 @@ import type { CommercialStatus, LinkedSpace } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 import { normalizePropertyType } from '@/constants/property-types';
 import { normalizeCommercialStatus as normalizeCommercialStatusSSoT } from '@/constants/commercial-statuses';
+import {
+  InvalidCommercialStatusError,
+  InvalidPropertyTypeError,
+  PropertyMutationPolicyError,
+} from './property-mutation-errors';
+import { applyOfferProjectionsForWrite } from './property-offer-write-projection';
+
+// Επανεξαγωγή (ADR-777 Α20 — N.7.1 split): οι κλάσεις σφαλμάτων και η προβολή
+// διαθέσεων μετακόμισαν σε leaf modules ώστε το gateway να μείνει κάτω από τις
+// 500 γραμμές ΚΑΙ να σπάσει ο κύκλος gateway ↔ projection. Επανεξάγονται εδώ
+// **αυτούσιες**, ώστε κανένας από τους υπάρχοντες καταναλωτές να μην αλλάξει
+// import — το σπάσιμο είναι εσωτερικό, όχι αλλαγή δημόσιου API.
+export {
+  PropertyMutationPolicyError,
+  InvalidPropertyTypeError,
+  InvalidCommercialStatusError,
+} from './property-mutation-errors';
+export {
+  ConflictingLiveOffersError,
+  DerivedFieldWriteError,
+  type PropertyOffersUpdate,
+} from './property-offer-write-projection';
 import { ENTITY_TYPES } from '@/config/domain-constants';
 import {
   createProperty as createPropertyRecord,
@@ -70,6 +92,7 @@ interface GuardedPropertyCreateInput {
   readonly propertyData: Record<string, unknown>;
 }
 
+
 interface GuardedPropertyLinkInput {
   readonly propertyId: string;
   readonly currentProperty: PropertyMutationCurrentState;
@@ -105,26 +128,7 @@ interface GuardedPropertyCoverageInput {
 }
 
 
-export class PropertyMutationPolicyError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'PropertyMutationPolicyError';
-  }
-}
 
-export class InvalidPropertyTypeError extends PropertyMutationPolicyError {
-  constructor(rawValue: unknown) {
-    super(`Invalid property type: ${String(rawValue)}. Must match a canonical PropertyType (see src/constants/property-types.ts).`);
-    this.name = 'InvalidPropertyTypeError';
-  }
-}
-
-export class InvalidCommercialStatusError extends PropertyMutationPolicyError {
-  constructor(rawValue: unknown) {
-    super(`Invalid commercial status: ${String(rawValue)}. Must match a canonical CommercialStatus (see src/constants/commercial-statuses.ts).`);
-    this.name = 'InvalidCommercialStatusError';
-  }
-}
 
 function isBlank(value: unknown): boolean {
   return typeof value !== 'string' || value.trim().length === 0;
@@ -147,9 +151,15 @@ function readCurrentCommercialStatus(
  * Null/undefined values and missing keys are passed through untouched — the
  * caller controls whether a field is being set at all.
  *
- * Currently covers: `type` (PropertyType), `commercialStatus` (CommercialStatus).
+ * Currently covers: `type` (PropertyType), `commercialStatus` (CommercialStatus),
+ * και οι **ΔΙΑΘΕΣΕΙΣ** (ADR-777 Α20) μέσω {@link applyOfferProjectionsForWrite}.
  */
 function normalizeEnumFieldsForWrite(payload: Record<string, unknown>): void {
+  // ΠΡΩΤΑ οι διαθέσεις: παράγουν το `commercialStatus`, οπότε πρέπει να έχει
+  // γραφτεί πριν κανονικοποιηθεί παρακάτω. (Η παραγωγή δίνει ήδη canonical τιμή,
+  // άρα η κανονικοποίηση είναι idempotent — αλλά η σειρά είναι συμβόλαιο.)
+  applyOfferProjectionsForWrite(payload);
+
   if ('type' in payload && payload.type !== null && payload.type !== undefined) {
     const canonical = normalizePropertyType(payload.type);
     if (!canonical) {
@@ -170,6 +180,7 @@ function normalizeEnumFieldsForWrite(payload: Record<string, unknown>): void {
     payload.commercialStatus = canonical;
   }
 }
+
 
 function assertKnownPropertyContext(context: PropertyMutationContext): void {
   if (context.intent === 'create') {

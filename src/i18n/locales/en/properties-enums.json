@@ -274,5 +274,16 @@
     "inspection": "Under Inspection",
     "maintenance": "Under Maintenance",
     "draft": "Incomplete"
+  },
+  "offerKind": {
+    "sell": "Sale",
+    "leaseOut": "Rental",
+    "exchange": "Land-for-Property Exchange"
+  },
+  "offerLifecycle": {
+    "active": "Active",
+    "reserved": "Reserved",
+    "closed": "Closed",
+    "withdrawn": "Withdrawn"
   }
 }

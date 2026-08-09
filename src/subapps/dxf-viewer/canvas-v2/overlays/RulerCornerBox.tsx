@@ -349,7 +349,7 @@ const RulerCornerBox = memo(function RulerCornerBox({
         align="end"
         sideOffset={8}
         alignOffset={80}
-        className={`${styles.menuContent} z-[1800]`}
+        className={`${styles.menuContent} z-[var(--z-index-tooltip)]`}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { onZoomToFit(); closeMenu(); }}>

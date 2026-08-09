@@ -33,6 +33,7 @@ import {
   crmDirectMatrix,
   immutableMatrix,
   overrideCells,
+  publicWorldMatrix,
   roleDualMatrix,
   tenantDirectMatrix,
   tenantStateMachineMatrix,
@@ -99,6 +100,9 @@ export type RulesPattern =
   | 'tenant_state_machine' // tenant-scoped + state-machine-gated writes (files lifecycle)
   | 'ownership'            // ownerId == request.auth.uid
   | 'system_global'        // read-only for every authenticated user
+  | 'public_world'         // ADR-777 επίπεδο Α — read για ΟΛΟΥΣ (και ανώνυμο)· κάθε εγγραφή πελάτη deny.
+                           // ⚠️ ΔΕΝ είναι `system_global`: εκείνο απαιτεί ΠΙΣΤΟΠΟΙΗΣΗ. Εδώ ο ανώνυμος
+                           // ΠΡΕΠΕΙ να διαβάζει — ο επισκέπτης που ψάχνει στον χάρτη δεν έχει λογαριασμό.
   | 'role_dual'            // user-created vs system-generated split
   | 'field_allowlist'      // update restricted to a set of allowed fields
   | 'deny_all'             // allow read,write: if false — no client access (Admin SDK only)
@@ -147,6 +151,22 @@ export interface CollectionCoverage {
  * `FIRESTORE_RULES_PENDING` into this array incrementally.
  */
 export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
+  {
+    // ADR-777 Α1 — Η ΓΗ. Το μόνο πράγμα που κρατά θέση, κοινό σε όλους.
+    collection: 'public_lands',
+    pattern: 'public_world',
+    testFile: 'tests/firestore-rules/suites/public-lands.rules.test.ts',
+    rulesRange: [967, 971],
+    matrix: publicWorldMatrix(),
+  },
+  {
+    // ADR-777 Α11 — «Το κτίριο του κόσμου». Μία ταυτότητα ανά φυσικό κτίριο.
+    collection: 'public_buildings',
+    pattern: 'public_world',
+    testFile: 'tests/firestore-rules/suites/public-buildings.rules.test.ts',
+    rulesRange: [972, 976],
+    matrix: publicWorldMatrix(),
+  },
   {
     collection: 'projects',
     pattern: 'tenant_direct',

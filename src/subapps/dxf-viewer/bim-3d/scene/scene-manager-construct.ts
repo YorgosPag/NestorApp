@@ -14,6 +14,8 @@ import { DxfBackdropCache } from './dxf-backdrop-cache';
 import { HoverBeautyCache } from './hover-beauty-cache';
 import type { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
+import { BasemapGroundLayer } from './basemap/BasemapGroundLayer'; // υπόβαθρο χάρτη (OSM) κάτω από τον κάναβο
+import { getRendererViewportSize } from './scene-setup';
 import type { IdleDetector } from '../lighting/idle-detector';
 import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { ShadowModulator } from '../lighting/shadow-modulator';
@@ -82,6 +84,7 @@ export interface SceneManagerParts {
   readonly buriedPartUnsub: () => void;
   readonly poi: ReturnType<typeof createPoi>;
   readonly gridFloor: Cinema4DGridFloor;
+  readonly basemapLayer: BasemapGroundLayer; // υπόβαθρο χάρτη — αδερφός του καννάβου, ένα σκαλί κάτω
   readonly terrainLayer: TerrainSceneLayer; // ADR-650 M4 — topographic surface (TIN → mesh)
   readonly terrainContourLayer: TerrainContourLayer; // ADR-650 M10d — draped contour lines (once, real z)
   readonly terrainCutCapLayer: TerrainCutCapLayer; // ADR-665 M2 — earth poche on the level cut
@@ -172,6 +175,16 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // (AO-immune, depth-tested → occluded by the building). World-locked grid in true perspective +
   // soft horizon fade (cell step + fade radii scale with the camera distance).
   const gridFloor = new Cinema4DGridFloor(scene, () => viewport.camera, () => viewport.target);
+
+  // Υπόβαθρο χάρτη — ο αδερφός του καννάβου, ένα σκαλί πιο κάτω (`OVERLAY_ORDER.BASEMAP`).
+  // Καταναλώνει το ΙΔΙΟ store και την ΙΔΙΑ αλυσίδα προβολής με το 2Δ: ο χρήστης δεν μπορεί να
+  // βρει τον χάρτη αναμμένο στη μία προβολή και σβηστό στην άλλη.
+  const basemapLayer = new BasemapGroundLayer(
+    scene,
+    () => viewport.camera,
+    () => viewport.target,
+    () => getRendererViewportSize(renderer.domElement).height,
+  );
 
   // ADR-665 — τα topo layers ξαναφτιάχνουν τα materials τους σε κάθε rebuild (ένα φρέσκο material
   // ξεκινά με `clippingPlanes = null`), οπότε ο ΜΟΝΑΔΙΚΟΣ ιδιοκτήτης των planes πρέπει να τα
@@ -265,7 +278,7 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
     selectionHighlighter, hoverHighlighter, faceHighlighter, faceHoverHighlighter,
     stairSubElementHighlighter, stairSubUnsub,
     buriedPartHighlighter, buriedPartUnsub,
-    poi, gridFloor, terrainLayer, terrainContourLayer, terrainCutCapLayer, pointCloudLayer, autoBreaklineLayer,
+    poi, gridFloor, basemapLayer, terrainLayer, terrainContourLayer, terrainCutCapLayer, pointCloudLayer, autoBreaklineLayer,
     animationManager, canonicalViewService,
     keyboardFocusManager, focusOutlineRenderer, focusUnsub, viewCube,
     envStoreUnsub, bgModeUnsub, sectionController, waypointDragHandleRenderer,

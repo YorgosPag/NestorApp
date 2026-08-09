@@ -29,7 +29,7 @@ export function OverlapCountBadge() {
     <output
       aria-label={`${t('selectionCycling.overlapBadge', { count: state.count })} — ${t('selectionCycling.overlapBadgeHint')}`}
       style={{ left: state.clientX + 16, top: state.clientY - 10 }}
-      className="fixed z-[2400] pointer-events-none select-none flex items-center gap-0.5 rounded-sm border border-border bg-popover/90 px-1 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm"
+      className="fixed z-[var(--z-index-pointer-badge)] pointer-events-none select-none flex items-center gap-0.5 rounded-sm border border-border bg-popover/90 px-1 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm"
     >
       <span aria-hidden="true">⧉</span>
       <span className="font-mono">{state.count}</span>
