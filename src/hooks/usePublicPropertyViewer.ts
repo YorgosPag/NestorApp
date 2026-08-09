@@ -11,6 +11,7 @@ import {
   isDisplayableInSalesDashboard,
   normalizeCommercialStatus,
 } from '@/constants/commercial-statuses';
+import { getEffectivePrice } from '@/lib/properties/price-resolver';
 
 // ============================================================================
 // 🏢 PUBLIC VIEWING ELIGIBILITY — SSoT gate (ADR-287 Batch 18)
@@ -103,9 +104,16 @@ export function usePublicPropertyViewer() {
     const hasPriceFilter = filters.priceRange.min != null || filters.priceRange.max != null;
     if (hasPriceFilter) {
       filtered = filtered.filter(property => {
-        const price = property.price || 0;
-        const minOk = filters.priceRange.min == null || price >= filters.priceRange.min;
-        const maxOk = filters.priceRange.max == null || price <= filters.priceRange.max;
+        // ADR-777 Α6/Α7 — SSoT τιμής. Το `property.price` είναι @deprecated flat
+        // πεδίο: το φίλτρο διάβαζε ΑΛΛΟ πεδίο από αυτό που δείχνει η κάρτα, και
+        // το `|| 0` έλεγε ότι «δεν έχει τιμή» = «κοστίζει 0 €».
+        const resolved = getEffectivePrice(property);
+        // Χωρίς λυμένη τιμή δεν υπάρχει αριθμός να συγκριθεί με το εύρος —
+        // δεν το βαφτίζουμε 0. (Το gate εγγυάται ήδη askingPrice > 0· η
+        // περίπτωση μένει ρητή αντί για σιωπηλή.)
+        if (!resolved) return false;
+        const minOk = filters.priceRange.min == null || resolved.amount >= filters.priceRange.min;
+        const maxOk = filters.priceRange.max == null || resolved.amount <= filters.priceRange.max;
         return minOk && maxOk;
       });
     }
@@ -137,14 +145,29 @@ export function usePublicPropertyViewer() {
       return hasMarketStatus || isReady;
     };
 
+    // ADR-777 Α6/Α7 + Α5 (κλειστή λογιστική) — τα αθροίσματα διαβάζουν τον SSoT
+    // τιμής, όχι το @deprecated flat `p.price`. Το `p.price || 0` έκανε ΔΥΟ
+    // ζημιές: αγνοούσε το `commercial.askingPrice` (⇒ το ταμπλό έδειχνε
+    // ΜΙΚΡΟΤΕΡΗ αξία από την αληθινή, στα ίδια ακίνητα που η πύλη απέδειξε ότι
+    // έχουν τιμή) και μετρούσε τα άτιμα ως 0 στον παρονομαστή του μέσου όρου.
+    const resolvedAmounts = availableProps
+      .map(getEffectivePrice)
+      .filter((r): r is NonNullable<typeof r> => r !== null)
+      .map(r => r.amount);
+    const totalValue = resolvedAmounts.reduce((sum, amount) => sum + amount, 0);
+
     return {
       totalProperties: availableProps.length,
       availableProperties: availableProps.filter(isAvailableForTransaction).length,
       soldProperties: 0, // Δεν εμφανίζουμε sold properties
-      totalValue: availableProps.reduce((sum, p) => sum + (p.price || 0), 0),
+      totalValue,
       totalArea: availableProps.reduce((sum, p) => sum + (p.area || 0), 0),
-      averagePrice: availableProps.length > 0 ?
-        availableProps.reduce((sum, p) => sum + (p.price || 0), 0) / availableProps.length : 0,
+      // Ο μέσος όρος διαιρεί με όσα ΕΧΟΥΝ τιμή — αλλιώς κάθε άτιμο ακίνητο
+      // τραβούσε τον μέσο όρο προς τα κάτω σαν να κόστιζε μηδέν.
+      averagePrice: resolvedAmounts.length > 0 ? totalValue / resolvedAmounts.length : 0,
+      /** Α5 — η λογιστική κλείνει ρητά: πόσα μετρήθηκαν και πόσα όχι. */
+      pricedProperties: resolvedAmounts.length,
+      unpricedProperties: availableProps.length - resolvedAmounts.length,
       // 🏢 ENTERPRISE: Group by effective status (market or operational)
       propertiesByStatus: tallyBy(availableProps, p => p.status || p.operationalStatus || 'unknown'),
       propertiesByType: tallyBy(availableProps, p => p.type),

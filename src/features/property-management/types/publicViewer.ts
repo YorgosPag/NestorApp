@@ -85,6 +85,19 @@ export interface PublicDashboardStats {
   totalValue: number;
   totalArea: number;
   averagePrice: number;
+  /**
+   * ADR-777 Α5 — **η κλειστή λογιστική της τιμής**: πόσα ακίνητα συνεισέφεραν στο
+   * `totalValue`/`averagePrice` και πόσα όχι. Χωρίς αυτά τα δύο, ένα ταμπλό που δείχνει
+   * «Συνολική αξία 2.4M» δεν λέει **αν** ο αριθμός αφορά όλα τα ακίνητα ή τα μισά.
+   *
+   * ⚠️ Ήταν το σημείο όπου η λογιστική **σταματούσε στα μισά**: το hook τα υπολόγιζε ήδη,
+   * αλλά δεν υπήρχαν εδώ ⇒ κάθε καταναλωτής που τυπίζεται ως `PublicDashboardStats` τα
+   * έβλεπε **αόρατα** (ανάθεση από μεταβλητή δεν ενεργοποιεί excess-property check, άρα
+   * τίποτα δεν έσκαγε). Ένα σύνολο που δεν λέει **ποιος μετρήθηκε** επικυρώνει τον εαυτό
+   * του — το ίδιο σχήμα «0 = κανείς δεν κοίταξε» που κυνηγούν οι πύλες του repo.
+   */
+  pricedProperties: number;
+  unpricedProperties: number;
   propertiesByStatus: Record<string, number>;
   propertiesByType: Record<string, number>;
   propertiesByFloor: Record<string, number>;
