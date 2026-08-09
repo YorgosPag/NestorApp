@@ -119,12 +119,15 @@ describe('Κ4 — ο μετρητής και ο χάρτης απαντούν α
 describe('Κ5 — άγνωστη κατάσταση ΣΚΑΕΙ με όνομα, δεν πέφτει σε «κανένα σχήμα»', () => {
   it('άγνωστη προέλευση ⇒ σφάλμα, ΟΧΙ σιωπηλό «none»', () => {
     const rogue = { kind: 'known', provenance: 'telepathy', point: POINT, locatedAt: AT } as unknown as ListingPosition;
-    expect(() => listingMapShape(rogue)).toThrow(/άγνωστη προέλευση/);
+    // ⚠️ Το μήνυμα είναι **αγγλικό επίτηδες**: είναι μήνυμα προγραμματιστή σε `src/lib`,
+    // δεν φτάνει ποτέ σε οθόνη (σύμβαση N.11). Η άγκυρα κλειδώνει ότι **ονομάζει** την
+    // αιτία — όχι τη γλώσσα.
+    expect(() => listingMapShape(rogue)).toThrow(/unknown position provenance/);
   });
 
   it('άγνωστη ακρίβεια ⇒ σφάλμα με όνομα', () => {
     const rogue = { kind: 'known', provenance: 'geocoded', point: POINT, locatedAt: AT, accuracy: 'vibes' } as unknown as ListingPosition;
-    expect(() => listingMapShape(rogue)).toThrow(/άγνωστη ακρίβεια/);
+    expect(() => listingMapShape(rogue)).toThrow(/unknown geocoder accuracy/);
   });
 
   it('🔑 γιατί έχει σημασία: ένα σιωπηλό «none» θα ΜΕΤΡΙΟΤΑΝ ως «χωρίς δηλωμένη θέση»', () => {

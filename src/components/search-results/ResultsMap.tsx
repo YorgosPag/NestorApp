@@ -57,8 +57,36 @@ const RADIUS = { pin: 7, ring: 7, neighbourhood: 34, city: 90 } as const;
 
 const SOURCE_ID = 'public-listings';
 
+/**
+ * Το ορθογώνιο που περικλείει **ό,τι ζωγραφίζεται** — ή `null` αν δεν ζωγραφίζεται τίποτα.
+ *
+ * 🔴 **Χωρίς αυτό ο χάρτης δείχνει την προεπιλογή του, δηλαδή ΑΛΛΟ ΜΕΡΟΣ.** Βρέθηκε
+ * ζωντανά (στιγμιότυπο 2026-08-10): έξι σωστά σχήματα στη Θεσσαλονίκη, με τον χάρτη
+ * καρφωμένο στην κεντρική Ελλάδα ⇒ **οθόνη που φαίνεται άδεια ενώ έχει αποτελέσματα**.
+ * Είναι η ίδια οικογένεια σφάλματος με τη σιωπηλή εξαφάνιση της Α5: το να μην τα δείχνεις
+ * και το να μην πας εκεί που είναι, καταλήγουν στην ίδια εντύπωση.
+ */
+function boundsOf(data: ReturnType<typeof listingsToGeoJson>): [[number, number], [number, number]] | null {
+  let west = Infinity, south = Infinity, east = -Infinity, north = -Infinity;
+
+  for (const feature of data.features) {
+    const coords: Array<[number, number]> = feature.geometry.type === 'Point'
+      ? [feature.geometry.coordinates as [number, number]]
+      : (feature.geometry.coordinates[0] as Array<[number, number]>);
+    for (const [lng, lat] of coords) {
+      if (lng < west) west = lng;
+      if (lng > east) east = lng;
+      if (lat < south) south = lat;
+      if (lat > north) north = lat;
+    }
+  }
+
+  return Number.isFinite(west) ? [[west, south], [east, north]] : null;
+}
+
 export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProps) {
   const data = useMemo(() => listingsToGeoJson(listings), [listings]);
+  const bounds = useMemo(() => boundsOf(data), [data]);
 
   // `hsl(var(--chart-1))` δεν το καταλαβαίνει το MapLibre — θέλει συγκεκριμένο χρώμα.
   const mark = `hsl(${readRootCssVar('--chart-1', '210 80% 50%')})`;
@@ -73,7 +101,14 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
     const target = map as unknown as {
       on: (ev: string, layer: string, cb: (e: { features?: Array<{ properties?: Record<string, unknown> }> }) => void) => void;
       getCanvas: () => HTMLCanvasElement;
+      fitBounds: (b: [[number, number], [number, number]], o?: Record<string, unknown>) => void;
     };
+
+    // ⚠️ `padding` **υποχρεωτικό**: χωρίς αυτό μια πινέζα στην άκρη κάθεται πάνω στο
+    // σύνορο και μοιάζει κομμένη· και `maxZoom`, γιατί ΕΝΑ αποτέλεσμα δίνει ορθογώνιο
+    // μηδενικού εμβαδού — ο χάρτης θα ζουμάριζε σε επίπεδο δρόμου, ισχυρισμός
+    // ακρίβειας που το ίδιο το σχήμα μπορεί να μην κάνει.
+    if (bounds) target.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 0 });
     for (const layerId of CLICKABLE_LAYER_IDS) {
       target.on('click', layerId, (event) => {
         const id = event.features?.[0]?.properties?.id;
@@ -82,7 +117,7 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
       target.on('mouseenter', layerId, () => { target.getCanvas().style.cursor = 'pointer'; });
       target.on('mouseleave', layerId, () => { target.getCanvas().style.cursor = ''; });
     }
-  }, [onSelect]);
+  }, [onSelect, bounds]);
 
   return (
     /*
