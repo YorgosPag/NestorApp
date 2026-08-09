@@ -15,6 +15,7 @@ import type { Property, LinkedSpace } from '@/types/property';
 import type { SpaceInclusionType } from '@/config/domain-constants';
 import type { SaleLineItem } from '@/services/sales-accounting/types';
 import type { BatchResolveResponse } from '@/types/spaces';
+import { priceSortKey } from '@/lib/properties/price-resolver';
 
 // =============================================================================
 // TYPES
@@ -114,8 +115,14 @@ export function useLinkedSpacesForSale(unit: Property): UseLinkedSpacesForSaleRe
           let resolvedPrice = ls.salePrice ?? 0;
           const resolvedArea = fetched?.area ?? 0;
 
-          if (resolvedPrice === 0) {
-            resolvedPrice = fetched?.commercial?.askingPrice ?? 0;
+          if (resolvedPrice === 0 && fetched) {
+            // The negotiated `salePrice` wins; the space's own price is only a
+            // suggestion when none was agreed — and WHICH price that is belongs
+            // to the resolver (ADR-777 Α6), not to this hook. Reading
+            // `commercial.askingPrice` alone skipped `finalPrice` and the
+            // legacy flat field. The terminal 0 stays: this is a write-side
+            // form default meaning "not set yet", not a displayed price.
+            resolvedPrice = priceSortKey(fetched) ?? 0;
           }
 
           const hasValidArea = resolvedArea > 0;

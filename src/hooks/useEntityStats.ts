@@ -33,10 +33,14 @@ export interface BaseEntityStats {
   totalArea: number;
   /** Average area per item */
   averageArea: number;
-  /** Total monetary value across all items */
+  /** Total monetary value — sums only the items that HAVE a value */
   totalValue: number;
-  /** Average monetary value per item */
+  /** Average monetary value over the items that have one (see `valuedCount`) */
   averageValue: number;
+  /** How many items contributed a value to `totalValue`. */
+  valuedCount: number;
+  /** How many items were skipped because `getValue` returned `null`. */
+  unvaluedCount: number;
   /** Distribution by status field */
   byStatus: Record<string, number>;
   /** Distribution by type field */
@@ -48,8 +52,15 @@ export interface BaseEntityStats {
 export interface EntityStatsConfig<T> {
   /** Extract numeric area value from an item (default: 0) */
   getArea?: (item: T) => number;
-  /** Extract numeric price/value from an item (default: 0) */
-  getValue?: (item: T) => number;
+  /**
+   * Extract the monetary value of an item.
+   *
+   * Return `null` when the item genuinely has none — it is then left out of
+   * both the sum and the average's denominator. Returning `0` instead states
+   * that the item is worth nothing, which drags the average down and makes an
+   * incomplete total look complete.
+   */
+  getValue?: (item: T) => number | null;
   /** Extract status string from an item (default: 'unknown') */
   getStatus?: (item: T) => string;
   /** Extract type string from an item (default: 'unknown') */
@@ -90,13 +101,24 @@ export function useEntityStats<T>(
         averageArea: 0,
         totalValue: 0,
         averageValue: 0,
+        valuedCount: 0,
+        unvaluedCount: 0,
         byStatus: {},
         byType: {},
       };
     }
 
     const totalArea = getArea ? sumBy(items, getArea) : 0;
-    const totalValue = getValue ? sumBy(items, getValue) : 0;
+
+    // Items whose `getValue` returns `null` are absent from the sum AND from
+    // the average's denominator. `sumBy` is deliberately not taught about
+    // `null` — it has many callers in other domains, and this is the one place
+    // that needs the distinction.
+    const values = getValue
+      ? items.map(getValue).filter((v): v is number => v != null)
+      : [];
+    const totalValue = values.reduce((sum, value) => sum + value, 0);
+    const valuedCount = values.length;
 
     const byStatus = getStatus ? groupBy(items, getStatus) : {};
     const byType = getType ? groupBy(items, getType) : {};
@@ -106,7 +128,9 @@ export function useEntityStats<T>(
       totalArea,
       averageArea: avg(totalArea, total),
       totalValue,
-      averageValue: avg(totalValue, total),
+      averageValue: avg(totalValue, valuedCount),
+      valuedCount,
+      unvaluedCount: getValue ? total - valuedCount : 0,
       byStatus,
       byType,
     };

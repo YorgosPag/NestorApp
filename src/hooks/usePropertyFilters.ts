@@ -12,6 +12,7 @@ import {
   matchesArrayFilter,
   matchesFeatures
 } from '@/components/core/AdvancedFilters';
+import { priceSortKey, totalPrice } from '@/lib/properties/price-resolver';
 import { tallyBy } from '@/utils/collection-utils';
 
 
@@ -79,7 +80,11 @@ export function usePropertyFilters(
       const statusMatch = matchesArrayFilter(property.status, status);
 
       // 🏢 CENTRALIZED: Range filters using matchesNumericRange
-      const priceMatch = matchesNumericRange(property.price, priceRange);
+      // ADR-777 Α6 — the filter must read the SAME price the card displays. It
+      // read the @deprecated flat `property.price`, so a unit priced through
+      // `commercial.askingPrice` was filtered on a field it does not use.
+      // `matchesNumericRange` already drops a null against an active range.
+      const priceMatch = matchesNumericRange(priceSortKey(property), priceRange);
       const areaMatch = matchesNumericRange(property.area, areaRange);
 
       // 🏢 CENTRALIZED: Features filter using matchesFeatures
@@ -109,14 +114,19 @@ export function usePropertyFilters(
       return searchMatch && projectMatch && buildingMatch && floorMatch && typeMatch && statusMatch && priceMatch && areaMatch && featuresMatch && coverageMatch;
     });
     
+    // ADR-777 Α5/Α6 — the totals read the price SSoT, and the average divides by
+    // the units that actually have a price. `p.price || 0` both ignored
+    // `commercial.askingPrice` and counted priceless units as costing nothing.
+    const priced = totalPrice(filtered);
+
     // 🎯 DOMAIN SEPARATION: Stats use operationalStatus where available
     const calculatedStats: PropertyStats = {
       totalProperties: filtered.length,
       // availableProperties = operationalStatus 'ready' (Physical readiness)
       availableProperties: filtered.filter(p => p.operationalStatus === 'ready').length,
-      totalValue: filtered.reduce((sum, p) => sum + (p.price || 0), 0),
+      totalValue: priced.total,
       totalArea: filtered.reduce((sum, p) => sum + (p.area || 0), 0),
-      averagePrice: filtered.length > 0 ? filtered.reduce((sum, p) => sum + (p.price || 0), 0) / filtered.length : 0,
+      averagePrice: priced.average,
       // propertiesByStatus uses operationalStatus (not sales status)
       propertiesByStatus: tallyBy(filtered, p => p.operationalStatus || 'draft'),
       propertiesByType: tallyBy(filtered, p => p.type),

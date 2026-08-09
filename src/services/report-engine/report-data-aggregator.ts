@@ -8,6 +8,7 @@ import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { tallyBy, sumBy, sumByKey, countBy, rate, avg, groupByKey } from '@/utils/collection-utils';
+import { totalPrice } from '@/lib/properties/price-resolver';
 import { computeEVM } from './evm-calculator';
 import type { EVMResult } from './evm-calculator';
 import { computeAgingBuckets } from './aging-calculator';
@@ -26,6 +27,7 @@ import {
   buildPricePerSqm, buildBOQVariance, buildTopBuyers, computeCompleteness,
   buildOverdueInstallments,
 } from './report-aggregator.helpers';
+import { fetchCompanyUnits } from './report-aggregator.queries';
 import { nowISO } from '@/lib/date-local';
 
 const logger = createModuleLogger('ReportDataAggregator');
@@ -144,15 +146,17 @@ export class ReportDataAggregator {
   static async getSalesReport(filter: ReportFilter): Promise<SalesReportData> {
     const db = getAdminFirestore();
 
-    const unitsSnap = await db.collection(COLLECTIONS.PROPERTIES)
-      .where('companyId', '==', filter.companyId).get();
-    const units = unitsSnap.docs.map(d => d.data() as UnitDoc);
+    const units = await fetchCompanyUnits(filter);
 
     const sold = units.filter(u => u.commercialStatus === 'sold');
     const forSale = units.filter(u => u.commercialStatus === 'for_sale');
 
+    // Revenue is what was actually paid — `finalPrice`, deliberately NOT the
+    // display-price resolver (which prefers the asking price). See ADR-777 §8.2
+    // open item #4: the "price of a sold unit" question is still undecided.
     const totalRevenue = sumBy(sold, u => u.commercial?.finalPrice ?? 0);
-    const pipelineValue = sumBy(forSale, u => u.commercial?.askingPrice ?? 0);
+    // Pipeline value IS the displayed price of listed units → ADR-777 Α6 SSoT.
+    const pipelineValue = totalPrice(forSale).total;
 
     const unitsWithPayment = units.filter(u => u.commercial?.paymentSummary);
     const avgCoverage = unitsWithPayment.length > 0
@@ -265,7 +269,9 @@ export class ReportDataAggregator {
     const storageSold = countBy(storage, s => s.status === 'sold');
 
     const storageTotalArea = sumBy(storage, s => s.area ?? 0);
-    const storageTotalValue = sumBy(storage, s => s.price ?? 0);
+    // ADR-777 Α6 — spaces carry `commercial.askingPrice` too (types/spaces.ts),
+    // so the flat `price` alone under-reports the portfolio.
+    const storageTotalValue = totalPrice(storage).total;
 
     // Linked vs unlinked: spaces that have a buildingId are "linked"
     const linkedParking = countBy(parking, p => !!p.buildingId);
@@ -283,7 +289,7 @@ export class ReportDataAggregator {
         byZone: tallyBy(parking, p => p.locationZone ?? 'unknown'),
         byBuilding: tallyBy(parking, p => p.buildingId ?? 'unassigned'),
         utilizationRate: rate(parkingOccupied, parking.length),
-        totalValue: sumBy(parking, p => p.price ?? 0),
+        totalValue: totalPrice(parking).total,
         soldCount: parkingSold,
         salesRate: rate(parkingSold, parking.length),
       },
@@ -420,12 +426,8 @@ export class ReportDataAggregator {
 
   /** Financial overview report (aging + portfolio EVM) */
   static async getFinancialReport(filter: ReportFilter): Promise<FinancialReportData> {
-    const db = getAdminFirestore();
-
     // Receivables from units
-    const unitsSnap = await db.collection(COLLECTIONS.PROPERTIES)
-      .where('companyId', '==', filter.companyId).get();
-    const units = unitsSnap.docs.map(d => d.data() as UnitDoc);
+    const units = await fetchCompanyUnits(filter);
 
     const totalReceivables = sumBy(units, u => u.commercial?.paymentSummary?.totalAmount ?? 0);
     const totalCollected = sumBy(units, u => u.commercial?.paymentSummary?.paidAmount ?? 0);

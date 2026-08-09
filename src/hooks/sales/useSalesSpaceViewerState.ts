@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState, useCallback } from 'react';
+import { priceSortKey, totalPrice } from '@/lib/properties/price-resolver';
 import type {
   SalesSpaceFilterState,
   SalesSpaceDashboardStats,
@@ -48,21 +49,26 @@ export interface UseSalesSpaceViewerStateOptions<
 // 🏢 FILTERING
 // =============================================================================
 
-/** Price actually used for sales: the commercial asking price, else the base price. */
-function effectivePrice(item: SalesSpaceItem): number {
-  return item.commercial?.askingPrice ?? item.price ?? 0;
-}
-
 function matchesBuilding(item: SalesSpaceItem, building: string): boolean {
   // `building` is the deprecated name-based key (Storage only). Matching both
   // keeps legacy records filterable; spaces without it simply never match on it.
   return item.buildingId === building || item.building === building;
 }
 
+/**
+ * Range predicate with SQL comparison semantics for a missing value.
+ *
+ * An inactive range passes everything. An ACTIVE range compared against `null`
+ * is unknown, not true — so the item drops out, exactly as `WHERE price >= x`
+ * drops a NULL row. The previous code substituted `0`, which let every
+ * priceless unit through any filter with a lower bound of zero.
+ */
 function matchesRange(
-  value: number,
+  value: number | null,
   range: { min: number | null; max: number | null }
 ): boolean {
+  if (range.min === null && range.max === null) return true;
+  if (value === null) return false;
   if (range.min !== null && value < range.min) return false;
   if (range.max !== null && value > range.max) return false;
   return true;
@@ -88,7 +94,7 @@ function applyFilters<TItem extends SalesSpaceItem, TFilters extends SalesSpaceF
     if (filters.building !== 'all' && !matchesBuilding(item, filters.building)) return false;
     if (filters.floor !== 'all' && item.floor !== filters.floor) return false;
 
-    if (!matchesRange(effectivePrice(item), filters.priceRange)) return false;
+    if (!matchesRange(priceSortKey(item), filters.priceRange)) return false;
     if (!matchesRange(item.area ?? 0, filters.areaRange)) return false;
 
     if (options.matchesExtraFilters && !options.matchesExtraFilters(item, filters)) {
@@ -107,17 +113,18 @@ function applyFilters<TItem extends SalesSpaceItem, TFilters extends SalesSpaceF
 
 function computeDashboardStats(items: SalesSpaceItem[]): SalesSpaceDashboardStats {
   const available = items.filter((item) => item.status === 'available');
-  const prices = available.map(effectivePrice).filter((p) => p > 0);
   const areas = available.map((item) => item.area ?? 0).filter((a) => a > 0);
 
-  const totalPrice = prices.reduce((sum, p) => sum + p, 0);
+  // ADR-777 Α5/Α6 — the sum and its denominator both come from the resolver,
+  // which skips units with no price instead of entering them as zero.
+  const priced = totalPrice(available);
   const totalArea = areas.reduce((sum, a) => sum + a, 0);
 
   return {
     availableCount: available.length,
-    averagePrice: prices.length > 0 ? totalPrice / prices.length : 0,
-    totalValue: totalPrice,
-    averagePricePerSqm: totalArea > 0 ? totalPrice / totalArea : 0,
+    averagePrice: priced.average,
+    totalValue: priced.total,
+    averagePricePerSqm: totalArea > 0 ? priced.total / totalArea : 0,
   };
 }
 

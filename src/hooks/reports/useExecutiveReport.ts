@@ -184,6 +184,9 @@ function buildRevenueTrend(units: Property[]): RevenueTrendPoint[] {
   const revenueByMonth = tallyByValue(soldThisYear, u => {
     const d = new Date(u.saleDate!);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    // Realized revenue is `finalPrice` — deliberately NOT the display-price
+    // resolver, which prefers the asking price. ADR-777 §8.2 open item #4 (the
+    // price of a sold unit) is still undecided; changing it here would decide it.
   }, u => u.commercial?.finalPrice ?? u.price ?? 0);
 
   return monthLabels.map(({ key, label }) => ({

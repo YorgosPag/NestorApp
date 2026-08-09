@@ -7,13 +7,17 @@
  */
 
 import { useMemo } from 'react';
+import { priceSortKey, type PricedPropertyLike } from '@/lib/properties/price-resolver';
 import { useEntityStats, countBy, rate } from './useEntityStats';
 
-/** Minimal shape required by usePropertiesStats — compatible with PropertyStatsInput and Property */
-interface PropertyStatsInput {
+/**
+ * Minimal shape required by usePropertiesStats — compatible with Property.
+ *
+ * Extends `PricedPropertyLike` so the value stats can ask the price SSoT
+ * instead of reading the @deprecated flat `price` field (ADR-777 Α6).
+ */
+interface PropertyStatsInput extends PricedPropertyLike {
   area?: number;
-  price?: number;
-  status?: string;
   type?: string;
   propertyCoverage?: { hasPhotos?: boolean; hasFloorplans?: boolean; hasDocuments?: boolean };
 }
@@ -49,7 +53,9 @@ const AVAILABLE_STATUSES = ['for-sale', 'for-rent'];
 const SOLD_STATUSES = ['sold', 'rented'];
 
 const getArea = (u: PropertyStatsInput): number => u.area || 0;
-const getValue = (u: PropertyStatsInput): number => u.price || 0;
+// ADR-777 Α5/Α6 — the resolved price, not the @deprecated flat field. `null`
+// keeps a priceless unit out of the sum AND out of the average's denominator.
+const getValue = (u: PropertyStatsInput): number | null => priceSortKey(u);
 const getStatus = (u: PropertyStatsInput): string => u.status || 'unknown';
 const getType = (u: PropertyStatsInput): string => u.type || 'unknown';
 

@@ -11,6 +11,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
 import type { Property, CommercialStatus } from '@/types/property';
 import { isDisplayableInSalesDashboard } from '@/constants/commercial-statuses';
+import { priceSortKey } from '@/lib/properties/price-resolver';
 
 // =============================================================================
 // 🏢 TYPES
@@ -162,11 +163,16 @@ export function useSalesPropertiesViewerState(
     }
 
     // Advanced filter: price range
-    if (filters.priceRange.min !== null) {
-      result = result.filter(u => (u.commercial?.askingPrice ?? 0) >= (filters.priceRange.min ?? 0));
-    }
-    if (filters.priceRange.max !== null) {
-      result = result.filter(u => (u.commercial?.askingPrice ?? 0) <= (filters.priceRange.max ?? Infinity));
+    // ADR-777 Α6 — resolved price, not raw `askingPrice`: a rented unit prices
+    // through `rentPrice` and used to read as "0", passing every lower bound.
+    // A unit with no price answers neither bound, so it drops out (SQL rule).
+    if (filters.priceRange.min !== null || filters.priceRange.max !== null) {
+      const { min, max } = filters.priceRange;
+      result = result.filter(u => {
+        const amount = priceSortKey(u);
+        if (amount === null) return false;
+        return (min === null || amount >= min) && (max === null || amount <= max);
+      });
     }
 
     // Advanced filter: area range

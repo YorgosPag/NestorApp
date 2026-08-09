@@ -8,6 +8,7 @@
 
 import { useMemo } from 'react';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
+import { priceSortKey } from '@/lib/properties/price-resolver';
 import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
 
 export interface ParkingStats {
@@ -41,7 +42,10 @@ export interface ParkingStats {
 }
 
 const getArea = (p: ParkingSpot): number => p.area || 0;
-const getValue = (p: ParkingSpot): number => p.price || 0;
+// ADR-777 Α5/Α6 — `p.price || 0` ignored `commercial.askingPrice` (which
+// `types/spaces.ts` declares for parking) and counted priceless spots as
+// costing nothing. `null` keeps them out of both the sum and the average.
+const getValue = (p: ParkingSpot): number | null => priceSortKey(p);
 const getStatus = (p: ParkingSpot): string => p.status || 'unknown';
 const getType = (p: ParkingSpot): string => p.type || 'unknown';
 

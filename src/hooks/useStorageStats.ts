@@ -8,10 +8,14 @@
 
 import { useMemo } from 'react';
 import type { Storage } from '@/types/storage/contracts';
+import { priceSortKey } from '@/lib/properties/price-resolver';
 import { useEntityStats, countBy, groupBy, rate } from './useEntityStats';
 
 const getArea = (s: Storage): number => s.area || 0;
-const getValue = (s: Storage): number => s.price || 0;
+// ADR-777 Α5/Α6 — `s.price || 0` ignored `commercial.askingPrice` (which
+// `types/spaces.ts` declares for storage) and counted priceless units as
+// costing nothing. `null` keeps them out of both the sum and the average.
+const getValue = (s: Storage): number | null => priceSortKey(s);
 const getStatus = (s: Storage): string => s.status || 'unknown';
 const getType = (s: Storage): string => s.type || 'unknown';
 
