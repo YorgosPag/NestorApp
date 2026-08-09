@@ -14,6 +14,11 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { formatCurrency } from '@/lib/intl-utils';
+import {
+  resolveDisplayPrice,
+  type MissingPriceReason,
+  type ResolvedPrice,
+} from '@/lib/properties/price-resolver';
 import type { Property } from '@/types/property-viewer';
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
@@ -63,37 +68,59 @@ export function buildPropertyBadges(
 }
 
 /**
- * Context-aware price stat(s) per commercialStatus (ADR-197 + rentPrice).
- * Shared by both Property views — was duplicated + self-cloned.
+ * Why-no-price → label key.
+ *
+ * Rule 18: the absence is NAMED, and each name is a different fact — a unit
+ * that is off the market is not a unit whose price nobody recorded. Rule 9:
+ * the missing thing is SHOWN as a state, never silently blanked and never
+ * papered over with "contact us" (ADR-777 Α6).
+ */
+export const MISSING_PRICE_LABEL_KEYS: Record<MissingPriceReason, string> = {
+  'not-listed': 'card.price.notListed',
+  'sale-price-missing': 'card.price.saleMissing',
+  'rent-price-missing': 'card.price.rentMissing',
+};
+
+/** Whole-euro money formatting — one rule, so every card reads the same. */
+export const formatPriceAmount = (amount: number): string =>
+  formatCurrency(amount, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+/** One price → one StatItem. Rent carries its period; sale does not. */
+function priceStatItem(price: ResolvedPrice, labelKey: string, t: TFn): StatItem {
+  const amount = formatPriceAmount(price.amount);
+  return {
+    icon: NAVIGATION_ENTITIES.price.icon,
+    iconColor: NAVIGATION_ENTITIES.price.color,
+    label: t(labelKey),
+    value: price.role === 'rent' ? t('card.stats.rentValue', { amount }) : amount,
+    valueColor: NAVIGATION_ENTITIES.price.color,
+  };
+}
+
+/**
+ * Context-aware price stat(s) for a Property card.
+ *
+ * The rule of WHICH price to show is NOT decided here — it belongs to the
+ * `price-resolver` SSoT, which also reports where each amount came from and,
+ * when there is none, why. This function only turns that verdict into rows.
+ *
+ * @see lib/properties/price-resolver — the single price rule
+ * @see ADR-777 Α6 — the price is displayed; absence is named, never "contact us"
  */
 export function buildPropertyPriceStats(property: Property, t: TFn): StatItem[] {
-  const cs = property.commercialStatus;
-  const salePrice = property.commercial?.askingPrice ?? property.price;
-  const rentPrice = property.commercial?.rentPrice;
-  const fmt = (n: number) => formatCurrency(n, 'EUR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-  const priceIcon = NAVIGATION_ENTITIES.price.icon;
-  const priceColor = NAVIGATION_ENTITIES.price.color;
-  const items: StatItem[] = [];
+  const resolved = resolveDisplayPrice(property);
+  if (resolved.kind === 'missing') return [];
 
-  const pushSale = (label: string) => {
-    if (salePrice && salePrice > 0) {
-      items.push({ icon: priceIcon, iconColor: priceColor, label: t(label), value: fmt(salePrice), valueColor: priceColor });
-    }
-  };
-  const pushRent = () => {
-    if (rentPrice && rentPrice > 0) {
-      items.push({ icon: priceIcon, iconColor: priceColor, label: t('card.stats.rent'), value: `${fmt(rentPrice)}/μήνα`, valueColor: priceColor });
-    }
-  };
+  const { headline, secondary } = resolved;
+  // A sale headline standing alone is simply "Price"; alongside a rent it is "Sale".
+  const headlineKey =
+    headline.role === 'rent'
+      ? 'card.stats.rent'
+      : secondary
+        ? 'card.stats.sale'
+        : 'card.stats.price';
 
-  if (cs === 'for-rent') {
-    pushRent();
-  } else if (cs === 'for-sale-and-rent') {
-    pushSale('card.stats.sale');
-    pushRent();
-  } else {
-    pushSale('card.stats.price');
-  }
-
+  const items = [priceStatItem(headline, headlineKey, t)];
+  if (secondary) items.push(priceStatItem(secondary, 'card.stats.rent', t));
   return items;
 }

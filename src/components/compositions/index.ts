@@ -4,7 +4,9 @@
 export * from './ContactCard';
 export * from './NotificationCard';
 export * from './StorageCard';
-export * from './PropertyCard';
+// PropertyCard removed 2026-08-09 (ADR-777 Α6): dead duplicate of the live
+// features/property-grid card — zero importers, and it read the @deprecated
+// flat `price` field. The live card resolves via lib/properties/price-resolver.
 export * from './TaskCard';
 export * from './UserCard';
 

@@ -14,7 +14,10 @@ import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-ente
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized floor label formatting (Ισόγειο, Υπόγειο, κλπ.)
-import { formatFloorLabel, formatCurrency } from '@/lib/intl-utils';
+import { formatFloorLabel } from '@/lib/intl-utils';
+// 🏢 SSoT: WHICH price to show is decided once, in the resolver (ADR-777 Α6)
+import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
+import { MISSING_PRICE_LABEL_KEYS, formatPriceAmount } from '@/domain/cards/property/property-card-shared';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
@@ -52,6 +55,7 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   // 🏢 ENTERPRISE: i18n hook
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
+  const price = resolveDisplayPrice(property);
 
   return (
     <article className={`w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
@@ -92,8 +96,26 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
           />
         </header>
 
-        <aside className={`text-2xl font-bold ${colors.text.info} mb-3`} role="region" aria-label={t('card.aria.propertyPrice')}>
-          <span itemProp="price">{property.price ? formatCurrency(property.price) : t('card.contactUs')}</span>
+        <aside className="mb-3" role="region" aria-label={t('card.aria.propertyPrice')}>
+          {price.kind === 'priced' ? (
+            <>
+              <span className={`text-2xl font-bold ${colors.text.info}`} itemProp="price">
+                {price.headline.role === 'rent'
+                  ? t('card.stats.rentValue', { amount: formatPriceAmount(price.headline.amount) })
+                  : formatPriceAmount(price.headline.amount)}
+              </span>
+              {price.secondary && (
+                <span className={`ml-2 text-base font-medium ${colors.text.muted}`}>
+                  {t('card.stats.rentValue', { amount: formatPriceAmount(price.secondary.amount) })}
+                </span>
+              )}
+            </>
+          ) : (
+            /* ADR-777 Α6: the absence is named, never sold as "contact us". */
+            <span className={`text-base font-medium ${colors.text.muted}`}>
+              {t(MISSING_PRICE_LABEL_KEYS[price.reason])}
+            </span>
+          )}
         </aside>
 
         <section className={`flex flex-wrap items-center gap-2 sm:gap-4 ${colors.text.muted} text-sm mb-4`} aria-label={t('card.aria.propertyFeatures')}>

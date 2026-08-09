@@ -884,9 +884,15 @@
       "sale": "Πώληση",
       "rent": "Ενοίκιο",
       "salePricePerSqm": "Πώληση/τ.μ.",
-      "rentPricePerSqm": "Ενοίκιο/τ.μ."
+      "rentPricePerSqm": "Ενοίκιο/τ.μ.",
+      "rentValue": "{amount}/μήνα"
     },
-    "ariaLabel": ""
+    "ariaLabel": "",
+    "price": {
+      "notListed": "Δεν διατίθεται",
+      "saleMissing": "Η τιμή δεν έχει καταχωρηθεί",
+      "rentMissing": "Το ενοίκιο δεν έχει καταχωρηθεί"
+    }
   },
   "buttons": {
     "cancel": "Ακύρωση"

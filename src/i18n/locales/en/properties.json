@@ -884,9 +884,15 @@
       "sale": "Sale",
       "rent": "Rent",
       "salePricePerSqm": "Sale/sqm",
-      "rentPricePerSqm": "Rent/sqm"
+      "rentPricePerSqm": "Rent/sqm",
+      "rentValue": "{amount}/month"
     },
-    "ariaLabel": ""
+    "ariaLabel": "",
+    "price": {
+      "notListed": "Not available",
+      "saleMissing": "Price not recorded",
+      "rentMissing": "Rent not recorded"
+    }
   },
   "buttons": {
     "cancel": "Cancel"
