@@ -10,8 +10,11 @@
 import {
   resolveDisplayPrice,
   getEffectivePrice,
+  totalPrice,
+  priceSortKey,
   type PricedPropertyLike,
 } from '@/lib/properties/price-resolver';
+import { compareNumericNullsLast } from '@/lib/array-utils';
 
 /** Minimal builder — nothing is defaulted that the resolver reads. */
 function unit(p: PricedPropertyLike): PricedPropertyLike {
@@ -275,5 +278,92 @@ describe('Κ8 — getEffectivePrice remains a faithful projection', () => {
         expect(projected).toBeNull();
       }
     }
+  });
+});
+
+// =============================================================================
+// Κ9 — COLLECTIONS: the accounting must close, and absence must not be a zero
+// =============================================================================
+
+describe('Κ9 — totalPrice keeps a closed accounting', () => {
+  const mixed: PricedPropertyLike[] = [
+    { commercialStatus: 'for-sale', commercial: { askingPrice: 100_000 } },
+    { commercialStatus: 'for-sale', commercial: { askingPrice: 200_000 } },
+    { commercialStatus: 'for-sale' }, // listed, price never recorded
+    { commercialStatus: 'unavailable' }, // off the market
+  ];
+
+  it('sums only the units that have a price', () => {
+    expect(totalPrice(mixed).total).toBe(300_000);
+  });
+
+  it('divides the average by the PRICED units, not by all of them', () => {
+    // The defect this pins: 300.000/4 = 75.000 would report an average that no
+    // unit is offered at, because two units that have no price were counted as
+    // costing nothing.
+    expect(totalPrice(mixed).average).toBe(150_000);
+  });
+
+  it('reports both counts so the total can be read honestly', () => {
+    const result = totalPrice(mixed);
+    expect(result.pricedCount).toBe(2);
+    expect(result.unpricedCount).toBe(2);
+  });
+
+  it('closes the accounting for EVERY shape it is given', () => {
+    const shapes: PricedPropertyLike[][] = [
+      [],
+      mixed,
+      [{ commercialStatus: 'for-rent', commercial: { rentPrice: 750 } }],
+      [{ status: 'for-sale', price: 42 }, {}, { commercial: null }],
+      [{ commercialStatus: 'for-sale', commercial: { askingPrice: 0 } }],
+    ];
+    for (const shape of shapes) {
+      const result = totalPrice(shape);
+      expect(result.pricedCount + result.unpricedCount).toBe(shape.length);
+    }
+  });
+
+  it('reports zero — not NaN — when nothing in the set has a price', () => {
+    const result = totalPrice([{ commercialStatus: 'unavailable' }, {}]);
+    expect(result).toEqual({ total: 0, average: 0, pricedCount: 0, unpricedCount: 2 });
+  });
+
+  it('counts a rent-priced unit, because rent IS its price', () => {
+    const result = totalPrice([{ commercialStatus: 'for-rent', commercial: { rentPrice: 750 } }]);
+    expect(result).toEqual({ total: 750, average: 750, pricedCount: 1, unpricedCount: 0 });
+  });
+});
+
+// =============================================================================
+// Κ10 — ORDERING: "no price" is null, never zero
+// =============================================================================
+
+describe('Κ10 — priceSortKey', () => {
+  it('returns the resolved amount, agreeing with getEffectivePrice', () => {
+    const u = unit({ commercialStatus: 'for-sale', commercial: { askingPrice: 185_000 } });
+    expect(priceSortKey(u)).toBe(185_000);
+    expect(priceSortKey(u)).toBe(getEffectivePrice(u)?.amount);
+  });
+
+  it('returns null — NOT 0 — for a unit with no price', () => {
+    // 0 would rank the unit as the cheapest one in the table.
+    expect(priceSortKey(unit({ commercialStatus: 'for-sale' }))).toBeNull();
+    expect(priceSortKey(unit({}))).toBeNull();
+  });
+
+  it('keeps unpriced units last in BOTH directions', () => {
+    const rows: PricedPropertyLike[] = [
+      { commercialStatus: 'for-sale' }, // no price
+      { commercialStatus: 'for-sale', commercial: { askingPrice: 300 } },
+      { commercialStatus: 'for-sale', commercial: { askingPrice: 100 } },
+    ];
+    const by = (dir: 'asc' | 'desc') =>
+      [...rows]
+        .sort((a, b) => compareNumericNullsLast(priceSortKey(a), priceSortKey(b), dir))
+        .map(priceSortKey);
+
+    expect(by('asc')).toEqual([100, 300, null]);
+    expect(by('desc')).toEqual([300, 100, null]);
   });
 });

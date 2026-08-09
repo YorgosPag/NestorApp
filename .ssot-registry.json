@@ -5397,6 +5397,20 @@
         "src/components/building-management/tabs/GeneralTabContent/building-addresses-card/BuildingAddressesEditor.tsx"
       ],
       "tier": 3
+    },
+    "property-price-resolver": {
+      "ssotFile": "src/lib/properties/price-resolver.ts",
+      "description": "ADR-777 A6 (2026-08-09) - the ONE rule for \"which number is the price of this unit, and what does it mean when there isn't one\". `resolveDisplayPrice` returns a discriminated union (priced{headline,secondary} / missing{reason}) where every amount carries its `source`; `getEffectivePrice` is its thin projection; `totalPrice` sums a collection with CLOSED accounting (pricedCount + unpricedCount === length, average divided by the priced ones); `priceSortKey` returns `number | null` for comparators. Input is the STRUCTURAL type `PricedPropertyLike`, so both `Property` shapes AND parking/storage satisfy it - do NOT write an adapter. WHY THIS ENTRY EXISTS: the module was written, tested (38 tests) and then re-implemented privately in 24 other places, because nothing recorded that it is the SSoT - it was absent from this registry and from docs/centralized-systems/README.md. Phi5 measured what that costs: on the public dashboard the same omission produced THREE simultaneous defects (understated total, a price filter reading a DIFFERENT field from the card, and an average divided by units that have no price). `src/types/spaces.ts` declares `commercial.askingPrice` for parking and storage too, so a bare `s.price` is not a legacy fallback - it is silent loss of the real price. NEVER write `?? 0` for a price: \"has no price\" is not \"costs 0 EUR\", and a 0 ranks the unit as the cheapest one in any sorted table. DELIBERATELY NARROW, measured 2026-08-09: the obvious pattern `commercial\\?\\.askingPrice\\s*\\?\\?` matches 12 lines in 8 files and ALL TWELVE are legitimate (dialog form defaults, a revert payload snapshot, a dirty-check, and the two sites waiting on ADR-777 SS8.2 open item #4) = 100% false positives, far past Google's <=10% bar for a blocking check - exactly the zero-signal trap CLAUDE.md N.12 warns about. A bare `\\.price\\s*\\|\\|\\s*0` is worse: 7 of its 9 hits are COMMENTS, including the ones documenting this very fix (the CHECK 3.50 K7b lesson - a comment describing the old shape must not be counted as the old shape). So the three patterns below pin only shapes that no legitimate caller has: asking-then-flat chaining, a stats `getValue` reading the flat field, and a `sumBy` over it. NOT GUARDED HERE, GUARDED BY REVIEW: whether a given site is asking \"what is the price?\" (must use this SSoT) or displaying a NAMED field (\"Asking price: X\") is semantic, and regex cannot see it - `SalesPropertyListCard` and `SaleInfoContent` are correct as they stand. Revenue is NOT the display price either: `useExecutiveReport` and `report-data-aggregator.totalRevenue` read `finalPrice` on purpose.",
+      "forbiddenPatterns": [
+        "commercial\\?\\.askingPrice\\s*\\?\\?\\s*\\w+(\\?)?\\.price",
+        "get(Value|Price)\\s*=\\s*\\([^)]*\\)\\s*(:\\s*number\\s*)?=>\\s*\\w+\\.price\\s*(\\|\\||\\?\\?)\\s*0",
+        "sumBy\\([^,]+,\\s*\\w+\\s*=>\\s*\\w+\\.price\\s*(\\?\\?|\\|\\|)\\s*0\\)"
+      ],
+      "allowlist": [
+        "src/lib/properties/price-resolver.ts",
+        "src/hooks/usePublicPropertyViewer.ts"
+      ],
+      "tier": 3
     }
   }
 }

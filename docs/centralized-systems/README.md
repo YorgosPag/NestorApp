@@ -76,6 +76,7 @@
 - **[🇪🇺 ESCO Professional Classification](reference/adrs/ADR-132-esco-professional-classification.md)** - EU ESCO occupations + skills taxonomy (ADR-132)
 - **[👷 Attendance QR + GPS Verification](reference/adrs/ADR-170-attendance-qr-gps-verification.md)** - QR Code + GPS Geofencing + Photo Verification (ADR-170)
 - **[📏 BOQ / Quantity Surveying](reference/adrs/ADR-175-quantity-surveying-measurements-system.md)** - Σύστημα Επιμετρήσεων: ΑΤΟΕ categories, cost engine, governance, UI (ADR-175)
+- **[💶 Property Price Resolver (ADR-777 Α6)](reference/adrs/ADR-777-unified-property-map-search.md)** — `src/lib/properties/price-resolver.ts`: ο **ΕΝΑΣ** κανόνας για «ποιος αριθμός είναι η τιμή αυτής της μονάδας, και τι σημαίνει όταν δεν υπάρχει». `resolveDisplayPrice` (διακριτή ένωση priced/missing, κάθε ποσό με `source`) · `getEffectivePrice` (προβολή) · `totalPrice` (άθροισμα με **κλειστή λογιστική**) · `priceSortKey` (`number | null` για comparators). Δέχεται **δομικά** και τα δύο `Property` **και** parking/storage — μην γράψεις adapter. ⚠️ **ΠΟΤΕ `?? 0` σε τιμή**: «δεν έχει τιμή» ≠ «κοστίζει 0 €», και το 0 την κατατάσσει ως τη φθηνότερη.
 
 ### 🧮 **ACCOUNTING SUBAPP** ✨ **NEW — Phase 1 Complete**
 - **[📋 Founding Decision (ADR-ACC-000)](../../src/subapps/accounting/docs/adrs/ADR-ACC-000-founding-decision.md)** - Enterprise Accounting Subapp architecture
@@ -174,6 +175,7 @@
 | **Data & State** | [Alert Engine](data-systems/alert-engine.md), [State Management](data-systems/state-management.md) |
 | **Contact / CRM** | [ESCO Classification](reference/adrs/ADR-132-esco-professional-classification.md), [Personas](reference/adrs/ADR-121-contact-persona-system.md) |
 | **Components** | [Photo System](ui-systems/photo-system.md), [Search](ui-systems/search-system.md) |
+| **Τιμή ακινήτου** | `src/lib/properties/price-resolver.ts` — [ADR-777 Α6](reference/adrs/ADR-777-unified-property-map-search.md) · εμφάνιση · άθροισμα · ταξινόμηση · φίλτρο, **από ένα σημείο** |
 
 ### 📖 **RECOMMENDED READING ORDER**
 

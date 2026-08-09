@@ -40,3 +40,39 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
 export function compareStrings(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
+
+/** Sort direction for the nullable comparators below. */
+export type SortDirection = 'asc' | 'desc';
+
+/**
+ * Numeric comparator that keeps "no value" at the END in BOTH directions.
+ *
+ * `null`/`undefined` means the value is unknown, not small. Substituting `0`
+ * ranks a record with no data as the cheapest/smallest one and lets a sort
+ * invent an order that the data does not contain.
+ *
+ * The both-directions rule is deliberate and follows the spreadsheet
+ * convention (Excel places blanks last in ascending AND descending sorts)
+ * rather than the SQL default, where NULLs flip to the front under `DESC`.
+ * A user sorting a table is looking for an extreme; a record with no value is
+ * a candidate for neither end, so it belongs after the answers either way.
+ *
+ * @example
+ * rows.sort((a, b) => compareNumericNullsLast(key(a), key(b), 'desc'));
+ */
+export function compareNumericNullsLast(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  direction: SortDirection = 'asc',
+): number {
+  const aMissing = a === null || a === undefined;
+  const bMissing = b === null || b === undefined;
+
+  // Missing values never take part in the ordering — they are appended.
+  if (aMissing || bMissing) {
+    if (aMissing && bMissing) return 0;
+    return aMissing ? 1 : -1;
+  }
+
+  return direction === 'asc' ? a - b : b - a;
+}

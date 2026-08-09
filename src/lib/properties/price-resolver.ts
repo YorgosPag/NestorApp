@@ -183,7 +183,79 @@ export function resolveDisplayPrice(input: PricedPropertyLike): DisplayPrice {
 }
 
 // =============================================================================
-// 4. LEGACY SURFACE — kept so existing callers stay untouched
+// 4. COLLECTIONS — summing and ordering, with the absence still named
+// =============================================================================
+
+/**
+ * The result of pricing a collection, with its accounting closed.
+ *
+ * `pricedCount + unpricedCount === items.length` for every input. A total that
+ * does not say how many units it covers is a claim, not a measurement: the same
+ * "€2.4M" means something different over 10 units than over 40, and the reader
+ * cannot tell the two apart from the number alone.
+ *
+ * This mirrors what SQL has always done — `SUM` skips NULL, and `COUNT(col)`
+ * next to `COUNT(*)` is what tells you how much of the column was actually
+ * there. We keep both counts rather than making the caller subtract.
+ */
+export interface PriceTotals {
+  /** Sum over the units that HAVE a price. Never inflated by absent ones. */
+  total: number;
+  /** `total / pricedCount` — the denominator excludes unpriced units. */
+  average: number;
+  /** How many units contributed a number. */
+  pricedCount: number;
+  /** How many were skipped because they have no displayable price. */
+  unpricedCount: number;
+}
+
+/**
+ * Total and average price across a collection.
+ *
+ * Exists so that no caller ever writes `sum + (getEffectivePrice(u)?.amount ?? 0)`.
+ * That idiom is the bug this module was created to remove, only spelled with an
+ * extra step: it re-enters an unpriced unit as a zero, dragging the average down
+ * and making the total look like a complete measurement of an incomplete set.
+ *
+ * @see ADR-777 — decision Α5 (the accounting closes explicitly)
+ */
+export function totalPrice(items: readonly PricedPropertyLike[]): PriceTotals {
+  let total = 0;
+  let pricedCount = 0;
+
+  for (const item of items) {
+    const resolved = getEffectivePrice(item);
+    if (resolved) {
+      total += resolved.amount;
+      pricedCount += 1;
+    }
+  }
+
+  return {
+    total,
+    average: pricedCount > 0 ? total / pricedCount : 0,
+    pricedCount,
+    unpricedCount: items.length - pricedCount,
+  };
+}
+
+/**
+ * Comparison key for ordering by price — `null` when the unit has none.
+ *
+ * `null`, never `0`. A unit whose price was never recorded is not the cheapest
+ * one; it is not an answer to "cheapest" or to "most expensive" either. Callers
+ * order it with {@link compareNumericNullsLast}, which keeps such units at the
+ * end in BOTH directions — the convention every spreadsheet uses for blanks,
+ * and the only one under which sorting cannot invent a ranking.
+ *
+ * @see lib/array-utils — `compareNumericNullsLast`
+ */
+export function priceSortKey(input: PricedPropertyLike): number | null {
+  return getEffectivePrice(input)?.amount ?? null;
+}
+
+// =============================================================================
+// 5. LEGACY SURFACE — kept so existing callers stay untouched
 // =============================================================================
 
 /** @see PriceRole — same union, kept under its original name. */

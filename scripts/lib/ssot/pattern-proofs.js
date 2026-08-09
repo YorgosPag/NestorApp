@@ -663,4 +663,38 @@ type TableFormulaNodeEvaluator = (node: TableFormulaNode) => TableFormulaValue;
 interface TableFormulaEngineProps { readonly engine: TableFormulaEngine }
 const doc = 'δες @formulajs/formulajs για τον κατάλογο συναρτήσεων';`,
   },
+  // ADR-777 Α6 — ο ΕΝΑΣ κανόνας τιμής. Η απόδειξη ζωής μετράει διπλά εδώ: **δύο από τα τρία**
+  // patterns πιάνουν ΜΗΔΕΝ γραμμές στο `src/` σήμερα, γιατί το Φ4 τα καθάρισε όλα στο ίδιο
+  // commit. Χωρίς εκτελεσμένο παράδειγμα θα ήταν αδρανείς φρουροί — και το N.12 καταγράφει ότι
+  // **606 από τα 671** patterns ήδη είναι. Αυτά τα fixtures είναι η διαφορά ανάμεσα σε
+  // «καθαρό» και «κανείς δεν κοίταξε».
+  //
+  // ⚠️ Το `shouldSkip` κρατά ΕΠΙΤΗΔΕΣ τις **νόμιμες** χρήσεις που η προφανής (και απορριφθείσα)
+  // εκδοχή του pattern θα έπιανε: προεπιλογές φόρμας, στιγμιότυπο payload, έλεγχος αλλαγής,
+  // έσοδα από `finalPrice`, και **σχόλιο που περιγράφει την παλιά αλυσίδα** — μάθημα CHECK 3.50
+  // (`Κ7β`): ένα σχόλιο που τεκμηριώνει τη βλάβη δεν επιτρέπεται να μετριέται ως η βλάβη.
+  'property-price-resolver': {
+    shouldMatch: `// (α) Η αλυσίδα «ζητούμενη, αλλιώς το flat πεδίο» — ο resolver την κατέχει:
+const price = spot.commercial?.askingPrice ?? spot.price ?? 0;
+const p2 = data.commercial?.askingPrice ?? data.price;
+// (β) stats accessor που διαβάζει το @deprecated flat πεδίο:
+const getValue = (s: Storage): number => s.price || 0;
+const getPrice = (p) => p.price ?? 0;
+// (γ) άθροισμα πάνω στο flat πεδίο:
+const storageTotalValue = sumBy(storage, s => s.price ?? 0);`,
+    shouldSkip: `// Κανονική χρήση — πάντα μέσα από τον SSoT:
+import { getEffectivePrice, priceSortKey, totalPrice } from '@/lib/properties/price-resolver';
+const price = getEffectivePrice(spot)?.amount ?? null;
+const getValue = (s: Storage): number | null => priceSortKey(s);
+const totals = totalPrice(units);
+
+// 🔑 ΝΟΜΙΜΑ, μετρημένα 2026-08-09 — γι' αυτό τα patterns ΔΕΝ είναι το σκέτο \`askingPrice ??\`:
+const [askingPrice, setAskingPrice] = useState<number>(unit.commercial?.askingPrice ?? 0);
+askingPrice: unit.commercial?.askingPrice ?? null,
+const priceChanged = parsed !== (property.commercial?.askingPrice ?? null);
+const totalRevenue = sumBy(sold, u => u.commercial?.finalPrice ?? 0);
+
+// Και ΣΧΟΛΙΟ που περιγράφει την παλιά αλυσίδα — δεν είναι η αλυσίδα:
+// ADR-777 Α5/Α6 — το \`s.price || 0\` αγνοούσε το commercial.askingPrice.`,
+  },
 };
