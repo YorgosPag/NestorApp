@@ -18,10 +18,18 @@
  * και άχρηστο: θα συμφωνούσε με **οποιαδήποτε** τιμή. Τα Π γράφουν τους πέντε αριθμούς
  * με το χέρι, ώστε μια αθόρυβη αλλαγή τιμής να έχει **δεύτερη φωνή** να τη διαψεύσει.
  *
- * ⚠️ ΤΟ ΜΙΝΙ-REPO ΔΕΝ ΕΙΝΑΙ ΚΑΘΑΡΟ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ: κουβαλά τα **πραγματικά**
- * αρχεία, άρα και ζωντανές ωμές δηλώσεις. Οι μεταλλάξεις κρίνονται στη **διαφορά της
- * απογραφής**, όχι στο σύνολο· να τις συγκρίναμε με το κενό σύνολο θα σήμαινε είτε
- * ψεύτικο κόκκινο είτε — χειρότερα — προσαρμογή του κριτηρίου μέχρι να «βγει» ο αριθμός.
+ * ⚠️ ΤΟ ΜΙΝΙ-REPO ΚΟΥΒΑΛΑ ΤΑ **ΠΡΑΓΜΑΤΙΚΑ** ΑΡΧΕΙΑ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ ΝΟΗΜΑ. Οι
+ * μεταλλάξεις κρίνονται στη **διαφορά της απογραφής**, όχι στο σύνολο· να τις συγκρίναμε
+ * με το κενό σύνολο θα σήμαινε είτε ψεύτικο κόκκινο είτε — χειρότερα — προσαρμογή του
+ * κριτηρίου μέχρι να «βγει» ο αριθμός.
+ *
+ * 🔑 ΜΕΧΡΙ ΤΗ **ΦΑΣΗ Γ** Η ΒΑΣΗ ΗΤΑΝ ΒΡΩΜΙΚΗ, ΚΑΙ ΔΥΟ TEST ΣΤΗΡΙΖΟΝΤΑΝ ΣΕ ΑΥΤΟ. Η Φάση Γ
+ * μηδένισε το `raw-literal` (κάθε επιφάνεια ζητά πλέον ρόλο) και τα έκανε κόκκινα: το Μ0
+ * απαιτούσε `raw-literal > 0` στη βάση, και το Μ10 **θεράπευε** μια ζωντανή ωμή δήλωση
+ * του `layoutUtilities.zIndex` που η ίδια η Φάση Γ έσβησε (⇒ «η μετάλλαξη ΔΕΝ άλλαξε
+ * τίποτα»). Δεν ήταν σπασμένη πύλη — ήταν **επιτυχία** που ακύρωσε την υπόθεση των test.
+ * Και τα δύο ξαναγράφτηκαν ώστε η απόδειξη ζωής ενός κάδου να έρχεται από **μετάλλαξη**
+ * και όχι από προϋπάρχουσα βρωμιά, δηλαδή να μην ξανασπάσουν στην επόμενη εκκαθάριση.
  */
 
 const fs = require('fs');
@@ -30,7 +38,7 @@ const path = require('path');
 
 const gate = require('../check-zindex-scale');
 const {
-  readScale, findScaleDisorder, cssVarNameOf, toKebabCase,
+  readScale, findScaleDisorder, orderIdentities, cssVarNameOf, toKebabCase,
   GLOBAL_LAYER_FLOOR, KEYWORDS,
 } = require('../lib/zindex/scale');
 const {
@@ -49,15 +57,16 @@ const BOUNDARY = 'src/app/foreign-boundary.css';
 
 /**
  * Τα αρχεία που **ορίζουν** την απάντηση — πραγματικά, αντιγραμμένα αυτούσια.
- * Επιλέχθηκαν επειδή μεταξύ τους εκθέτουν **και τις έξι** μη-μηδενικές καταστάσεις
- * του ζωντανού δέντρου, όχι επειδή είναι βολικά.
+ * Επιλέχθηκαν επειδή μεταξύ τους εκθέτουν **και τις τέσσερις** μη-μηδενικές καταστάσεις
+ * του ζωντανού δέντρου, όχι επειδή είναι βολικά. (Ήταν έξι πριν τη Φάση Γ: το
+ * `raw-literal` μηδένισε παντού, και το `keyword` ήταν ήδη μηδέν — δες Μ0 και Μ8.)
  */
 const FIXTURE_FILES = [
   'design-tokens.json',                                          // η αυθεντία
   VARIABLES_CSS,                                                 // ο δείκτης ορισμών
-  'src/app/globals.css',                                         // token · reference · local · raw
+  'src/app/globals.css',                                         // token · reference · local
   'src/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css',   // 6 scale-token, 3 ρόλοι
-  'src/styles/design-tokens/modules/layout-utilities-constants.ts', // raw · runtime · reference
+  'src/styles/design-tokens/modules/layout-utilities-constants.ts', // runtime · reference
   REGISTRY,                                                      // το μητρώο του συνόρου
   BOUNDARY,                                                      // το ίδιο το σύνορο
 ];
@@ -175,12 +184,17 @@ describe('Μ0 — το ζωντανό δέντρο και η βάση των μ�
     expect(m.disorder).toEqual([]);
   });
 
-  it('το μίνι-repo μετράει και τις έξι μη-μηδενικές καταστάσεις (η βάση είναι χρήσιμη)', () => {
+  it('το μίνι-repo μετράει και τις τέσσερις μη-μηδενικές καταστάσεις (η βάση είναι χρήσιμη)', () => {
     expect(BASE[STATES.SCALE_TOKEN]).toBeGreaterThan(0);
     expect(BASE[STATES.SCALE_REFERENCE]).toBeGreaterThan(0);
     expect(BASE[STATES.RUNTIME_PROPERTY]).toBeGreaterThan(0);
     expect(BASE[STATES.LOCAL_STACKING]).toBeGreaterThan(0);
-    expect(BASE[STATES.RAW_LITERAL]).toBeGreaterThan(0);
+    // ⚠️ ADR-780 Φάση Γ: ΜΗΔΕΝ πλέον — κάθε επιφάνεια ζητά ρόλο. Ο κάδος ΔΕΝ είναι νεκρός,
+    // και η διάκριση έχει σημασία: τα Μ1 (CSS) και Μ2 (Tailwind σε TS) τον ασκούν στις δύο
+    // διαλέκτους, και το Μ10 αποδεικνύει ότι η θεραπευμένη γραφή του **ίδιου** σημείου δεν
+    // τον αγγίζει. Ίδιο πρότυπο με το `keyword` του Μ8: απόδειξη ζωής από **μετάλλαξη**,
+    // όχι από προϋπάρχουσα βρωμιά — ώστε η επόμενη εκκαθάριση να μη γίνει κόκκινο test.
+    expect(BASE[STATES.RAW_LITERAL]).toBe(0);
     expect(BASE[STATES.UNKNOWN_TOKEN]).toBe(0);
     expect(BASE[STATES.PARALLEL_SCALE]).toBe(0);
   });
@@ -253,18 +267,34 @@ describe('Μ — μεταλλάξεις στις εισόδους', () => {
     expect(delta(m.census)).toEqual({ [STATES.RUNTIME_PROPERTY]: 1 });
   });
 
-  it('Μ10 — η ΘΕΡΑΠΕΙΑ φαίνεται: ωμό → ρόλος μειώνει το raw-literal', async () => {
+  it('Μ10 — η ΘΕΡΑΠΕΙΑ φαίνεται: το ΙΔΙΟ σημείο, ωμό vs ρόλος, δίνει άλλη ετυμηγορία', async () => {
     // Η αντίστροφη κατεύθυνση. Χωρίς αυτό, μια πύλη που μετρά μόνο «χειροτέρεψε;»
     // δεν αποδεικνύει ποτέ ότι η σωστή πράξη **αναγνωρίζεται** ως σωστή.
-    const m = await run({ [UTILS]: (s) => s.replace("modal: 'z-[1000]'", "modal: 'z-[var(--z-index-modal)]'") });
-    expect(delta(m.census)).toEqual({ [STATES.RAW_LITERAL]: -1, [STATES.SCALE_TOKEN]: 1 });
+    //
+    // ⚠️ ΓΙΑΤΙ ΖΕΥΓΟΣ ΓΡΑΦΩΝ ΚΑΙ ΟΧΙ «ΘΕΡΑΠΕΥΣΕ ΜΙΑ ΥΠΑΡΧΟΥΣΑ»: μέχρι τη Φάση Γ αυτό το
+    // test θεράπευε τη **ζωντανή** ωμή δήλωση `modal: 'z-[1000]'` του `layoutUtilities.zIndex`.
+    // Η Φάση Γ έσβησε ολόκληρο το μπλοκ (0 καταναλωτές) και το test έγινε κόκκινο με «η
+    // μετάλλαξη ΔΕΝ άλλαξε τίποτα» — ο φρουρός του CHECK 3.44/Μ11 έκανε ακριβώς τη δουλειά
+    // του. Δεμένο σε **συγκεκριμένη** γραμμή, το test ζούσε όσο ζούσε το ελάττωμα· δεμένο
+    // στο **ζεύγος γραφών** μένει έγκυρο όσο υπάρχουν οι δύο τρόποι να γραφτεί μια στρώση.
+    const raw = await run({ [UTILS]: (s) => `${s}\nexport const probe = 'z-[1000]';\n` });
+    const cured = await run({ [UTILS]: (s) => `${s}\nexport const probe = 'z-[var(--z-index-modal)]';\n` });
+    expect(delta(raw.census)).toEqual({ [STATES.RAW_LITERAL]: 1 });
+    // Ότι το `RAW_LITERAL` ΛΕΙΠΕΙ από το delta είναι το μισό της απόδειξης: η θεραπευμένη
+    // γραφή δεν αφήνει ωμή δήλωση πίσω της, δεν την «μετακινεί» απλώς σε άλλον κάδο.
+    expect(delta(cured.census)).toEqual({ [STATES.SCALE_TOKEN]: 1 });
   });
 
   it('Μ11 — ρόλος εκτός σειράς ⇒ ο ΑΥΤΟΕΛΕΓΧΟΣ της κλίμακας πετάει', async () => {
     // Η σειρά των κλειδιών στο JSON **είναι** το ανθρώπινο νόημα· κανένας
     // μεταγλωττιστής δεν έχει γνώμη για τη σειρά κλειδιών ενός JSON.
+    // ⚠️ Η ΜΕΤΑΛΛΑΞΗ ΣΤΟΧΕΥΕΙ ΤΟΝ **ΡΟΛΟ**, ΟΧΙ ΤΗΝ ΤΙΜΗ (μάθημα ADR-780 Φάση Γ): η
+    // πρώτη γραφή έγραφε `"viewerPalette": { "value": "9900"` κατά λέξη και **έσπασε** με
+    // την επαναρίθμηση — όχι επειδή η πύλη χάλασε, αλλά επειδή το test καρφωνόταν σε
+    // αριθμό που η ίδια η Φάση Γ αλλάζει σκόπιμα. Ένα test που εμποδίζει τη θεραπεία
+    // είναι λάθος test· το έπιασε ο φρουρός «η μετάλλαξη ΔΕΝ άλλαξε τίποτα».
     const edits = {
-      'design-tokens.json': (s) => s.replace('"viewerPalette": { "value": "9900"', '"viewerPalette": { "value": "8000"'),
+      'design-tokens.json': (s) => s.replace(/("viewerPalette": \{ "value": ")\d+/, '$11'),
     };
     await expect(run(edits)).rejects.toThrow(/δεν είναι διατεταγμένη/);
   });
@@ -303,15 +333,27 @@ describe('Μ — μεταλλάξεις στις εισόδους', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Π — ο πραγματικός κώδικας', () => {
-  it('Π1 — οι πέντε ρόλοι του viewer έχουν ΑΚΡΙΒΩΣ τις τιμές που έβαφε ο κώδικας πριν', () => {
-    // Χειρόγραφα, επίτηδες: αυτοί οι πέντε αριθμοί ΕΙΝΑΙ η απόδειξη ότι η μετανάστευση
-    // ήταν μηδενικής οπτικής αλλαγής (ADR-780 §5.4). Αν αλλάξουν, κάτι μετακινήθηκε.
+  it('Π1 — οι ρόλοι του viewer κρατούν τη ΣΕΙΡΑ των ωμών αριθμών που αντικατέστησαν', () => {
+    // 🔑 ΑΓΚΥΡΑ **ΣΕΙΡΑΣ**, ΟΧΙ ΤΙΜΗΣ — ΚΑΙ Η ΑΛΛΑΓΗ ΕΙΝΑΙ ΤΟ ΘΕΩΡΗΜΑ ΤΗΣ ΦΑΣΗΣ Γ.
+    // Μέχρι τη Φάση Β αυτό το test έγραφε `toBe(9000)`…`toBe(10000)`, δηλαδή κλείδωνε
+    // **αριθμούς**. Ήταν σωστό όσο οι αριθμοί δεν άλλαζαν — και έγινε **εμπόδιο στη
+    // θεραπεία** τη στιγμή που η κλίμακα συμπιέστηκε (10400 → 1310). Η αναλλοίωτη μιας
+    // στρώσης ΔΕΝ είναι ο αριθμός της· είναι **ποιος κάθεται πάνω από ποιον**. Γι' αυτό
+    // εδώ γράφεται η σειρά, με τον ωμό αριθμό της Φάσης Β δίπλα ως δεύτερη φωνή.
     const byRole = Object.fromEntries(readScale(REPO_ROOT).map((r) => [r.role, r.value]));
-    expect(byRole.viewerModal).toBe(9000);
-    expect(byRole.viewerModalNested).toBe(9001);
-    expect(byRole.viewerPalette).toBe(9900);
-    expect(byRole.viewerMenu).toBe(9999);
-    expect(byRole.viewerTransient).toBe(10000);
+    const ascending = [
+      'viewerModal',        // ωμό 9000
+      'viewerModalNested',  // ωμό 9001
+      'viewerPalette',      // ωμό 9900
+      'viewerMenu',         // ωμό 9999
+      'viewerTransient',    // ωμό 10000
+      'viewerPrompt',       // ωμό 10001
+    ];
+    for (let i = 1; i < ascending.length; i += 1) {
+      expect(byRole[ascending[i]]).toBeGreaterThan(byRole[ascending[i - 1]]);
+    }
+    // …και ολόκληρη η ομάδα κάθεται πάνω από το ψηλότερο σκαλί του **φλοιού**, όπως πριν.
+    expect(byRole.viewerModal).toBeGreaterThan(byRole.tooltip);
   });
 
   it('Π1γ — οι δύο ΜΗ-ΠΡΟΪΟΝΤΙΚΟΙ ρόλοι είναι δηλωμένοι ως περιορισμένοι', () => {
@@ -331,19 +373,39 @@ describe('Π — ο πραγματικός κώδικας', () => {
     // έπεσαν από 2147483647), είναι **ίδια ΣΕΙΡΑ** — γι' αυτό γράφεται χειρόγραφα, με
     // τον παλιό αριθμό δίπλα, ως δεύτερη φωνή.
     const byRole = Object.fromEntries(readScale(REPO_ROOT).map((r) => [r.role, r.value]));
-    const order = [
-      ['viewerTransient', 10000],      // ήταν 10000       (αμετάβλητο)
-      ['viewerPrompt', 10001],         // ήταν 10001       (αμετάβλητο)
-      ['appDrawerScrim', 10100],       // ήταν 99998
-      ['appDrawer', 10101],            // ήταν 99999
-      ['eyedropperCapture', 10200],    // ήταν 2147483646
-      ['eyedropperLoupe', 10201],      // ήταν 2147483647
-      ['debugOverlay', 10300],         // ήταν 2147483646  (ΙΣΟΒΑΘΜΙΑ — λύθηκε σκόπιμα)
-      ['devtoolsGuard', 10400],        // ήταν 2147483647  (ΙΣΟΒΑΘΜΙΑ — λύθηκε σκόπιμα)
+    const ascending = [
+      'viewerTransient',    // ήταν 10000
+      'viewerPrompt',       // ήταν 10001
+      'appDrawerScrim',     // ήταν 99998
+      'appDrawer',          // ήταν 99999
+      'eyedropperCapture',  // ήταν 2147483646
+      'eyedropperLoupe',    // ήταν 2147483647
+      'debugOverlay',       // ήταν 2147483646  (ΙΣΟΒΑΘΜΙΑ — λύθηκε σκόπιμα, Φάση Β)
+      'devtoolsGuard',      // ήταν 2147483647  (ΙΣΟΒΑΘΜΙΑ — λύθηκε σκόπιμα, Φάση Β)
     ];
-    for (const [role, value] of order) expect(byRole[role]).toBe(value);
+    for (let i = 1; i < ascending.length; i += 1) {
+      expect(byRole[ascending[i]]).toBeGreaterThan(byRole[ascending[i - 1]]);
+    }
     // Και ο ρόλος που ΔΕΝ υπάρχει πια: καμία κλίμακα των μεγάλων δεν έχει MAX_INT.
     expect(byRole.critical).toBeUndefined();
+  });
+
+  it('Π1δ — Η ΣΥΜΠΙΕΣΗ: η κορυφή είναι ΕΝΤΟΣ της πρακτικής των μεγάλων', () => {
+    // 🏆 ADR-780 ΦΑΣΗ Γ, ΧΕΙΡΟΓΡΑΦΑ ΕΠΙΤΗΔΕΣ. Η κλίμακα έφτανε στο **10400** — έξω από
+    // **κάθε** μετρημένη κλίμακα της βιομηχανίας (Shoelace 1000 · Atlas 1070 · Bootstrap
+    // 1090 · MUI 1500 · Salt 1500 · OutSystems **20**). Η ζώνη πάνω από το 1800 ήταν
+    // **δύο παράλληλες σκάλες** (1900-2600 σε Tailwind, 9000-10400 σε CSS modules) που
+    // έκαναν την ίδια δουλειά με διαφορετικούς αριθμούς.
+    //
+    // ⚠️ ΤΟ ΟΡΙΟ ΤΟΥ 1500 ΔΕΝ ΕΙΝΑΙ ΑΙΣΘΗΤΙΚΟ: είναι η κορυφή των **δύο** ψηλότερων
+    // κλιμάκων που μετρήθηκαν (MUI, Salt). Πάνω από αυτό, ο επόμενος που θα γράψει
+    // «λίγο πιο πάνω» ξαναρχίζει το arms race — και ο μόνος τρόπος να μη συμβεί είναι
+    // να **μη χωράει** συναισθηματικά ένας μεγαλύτερος αριθμός.
+    const roles = readScale(REPO_ROOT);
+    const top = roles[roles.length - 1];
+    expect(top.value).toBeLessThanOrEqual(1500);
+    // Καμία τιμή MAX_INT-τάξης πουθενά στην κλίμακα — ούτε ως «προσωρινή».
+    expect(roles.every((r) => r.value < 100000)).toBe(true);
   });
 
   it('Π2 — ΚΑΘΕ ρόλος παράγει όνομα που ΥΠΑΡΧΕΙ στο variables.css', () => {
@@ -501,7 +563,9 @@ describe('Κ — τα όρια, γραμμένα ρητά', () => {
     const noRoot = miniRepo({ 'design-tokens.json': (s) => s.replace('"zIndex"', '"zIndexOLD"') });
     expect(() => readScale(noRoot)).toThrow(/λείπει η ρίζα "zIndex"/);
 
-    const notInt = miniRepo({ 'design-tokens.json': (s) => s.replace('"viewerPalette": { "value": "9900"', '"viewerPalette": { "value": "ψηλά"') });
+    // Ίδιο μάθημα με το Μ11: στόχευση κατά **ρόλο**, ώστε το test να επιβιώνει κάθε
+    // μονότονη επαναρίθμηση — και να σπάει μόνο όταν σπάει η **συμπεριφορά**.
+    const notInt = miniRepo({ 'design-tokens.json': (s) => s.replace(/("viewerPalette": \{ "value": ")\d+/, '$1ψηλά') });
     expect(() => readScale(notInt)).toThrow(/δεν είναι ακέραιος/);
   });
 
@@ -735,5 +799,90 @@ describe('Σ — το σύνορο των τρίτων', () => {
   it('Σ16 — ο αναλυτής κανόνων δεν μπερδεύει σχόλιο με δήλωση', () => {
     expect(parseRules('/* .fake { z-index: 9; } */ .real { z-index: 1; }').map((r) => r.selector))
       .toEqual(['.real']);
+  });
+
+  it('Σ17 — ΤΟ ΔΗΛΩΜΕΝΟ ΚΕΝΟ ΤΩΝ ΕΜΜΕΣΩΝ: το Sentry feedback (100000) μένει αφόρτωτο', () => {
+    // 🔴 ADR-780 Φάση Γ, §5.2 — ΜΕΤΡΗΜΕΝΟ: πλήρης σάρωση του store (125,0s / 206.235
+    // αρχεία) βρήκε **15** πακέτα ≥1000, ενώ η απογραφή βλέπει **11**. Το χειρότερο από
+    // τα τέσσερα που λείπουν είναι το `@sentry-internal/feedback` με **100000** — και
+    // είναι αόρατο **όχι** επειδή ο σαρωτής είναι ρηχός, αλλά επειδή δεν είναι **άμεσο**
+    // dependency: έρχεται μέσα από το `@sentry/nextjs`, που ΕΙΝΑΙ runtime και ΤΡΕΧΕΙ
+    // στον browser (`sentry.client.config.ts`).
+    //
+    // Σήμερα δεν φορτώνεται, γιατί το Sentry v8+ φέρνει το widget **μόνο** αν το
+    // `feedbackIntegration()` δηλωθεί ρητά. Απέχουμε **μία γραμμή** από το να θαφτεί
+    // ολόκληρη η εφαρμογή κάτω από το 100000, με **κάθε** πύλη πράσινη. Ένα σχόλιο δεν
+    // θα το θυμόταν κανείς — γι' αυτό είναι άγκυρα (μάθημα CHECK 3.36).
+    const files = ['sentry.client.config.ts', 'src/lib/telemetry/sentry.ts'];
+    for (const rel of files) {
+      const full = path.join(REPO_ROOT, rel);
+      if (!fs.existsSync(full)) continue;
+      expect(fs.readFileSync(full, 'utf8')).not.toMatch(/feedbackIntegration/);
+    }
+    // Και το ίδιο το πακέτο ΔΕΝ είναι άμεσο — αν γίνει, η απογραφή θα το δει μόνη της
+    // και θα απαιτήσει εγγραφή στο μητρώο· τότε αυτή η άγκυρα έχει κάνει τη δουλειά της.
+    const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+    expect(Object.keys(pkg.dependencies || {})).not.toContain('@sentry-internal/feedback');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Δ — Η ΔΙΑΤΑΞΗ ΩΣ ΤΑΥΤΟΤΗΤΑ (ADR-780 Φάση Γ)
+//
+// 🏆 Το όργανο που κάνει την επαναρίθμηση **αποδείξιμη** αντί για παρατηρήσιμη. Χωρίς
+// αυτές τις άγκυρες, το `orderIdentities` είναι ισχυρισμός: κανείς δεν θα μάθαινε αν μια
+// «απλοποίηση» το ξαναγύριζε σε `ρόλος=τιμή` (και θα ζητούσε ανθρώπινη επαλήθευση για
+// κάθε αριθμό) ή σε σκέτο rank (και θα ανέφερε N αλλαγές για **μία** παρεμβολή).
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Δ — η ΔΙΑΤΑΞΗ είναι η ταυτότητα, όχι η τιμή', () => {
+  const scale = (...pairs) => pairs.map(([role, value]) => ({ role, value }));
+
+  it('Δ1 — ΜΟΝΟΤΟΝΗ ΕΠΑΝΑΡΙΘΜΗΣΗ ⇒ ΤΑΥΤΟΣΗΜΕΣ ταυτότητες (ΤΟ ΘΕΩΡΗΜΑ)', () => {
+    // Αν η απεικόνιση παλιά→νέα τιμή είναι γνησίως αύξουσα, **κάθε** ζεύγος κρατά τη
+    // σχετική του διάταξη — και τα ζεύγη που κανείς δεν φωτογράφησε. Άρα η πύλη οφείλει
+    // να μείνει σιωπηλή: αυτό ΕΙΝΑΙ η απόδειξη μηδενικής οπτικής αλλαγής.
+    const before = scale(['base', 0], ['docked', 10], ['modal', 1400], ['tooltip', 9999], ['guard', 2147483647]);
+    const after = scale(['base', 0], ['docked', 10], ['modal', 1000], ['tooltip', 1010], ['guard', 1020]);
+    expect(orderIdentities(after)).toEqual(orderIdentities(before));
+  });
+
+  it('Δ2 — ΑΝΑΔΙΑΤΑΞΗ ⇒ διαφορετικές ταυτότητες, και ΟΝΟΜΑΖΕΙ ποιες', () => {
+    const before = scale(['a', 1000], ['b', 1100], ['c', 1200]);
+    const after = scale(['a', 1000], ['c', 1100], ['b', 1200]); // b και c αντιστράφηκαν
+    const added = orderIdentities(after).filter((d) => !orderIdentities(before).includes(d));
+    // Δύο εγγραφές αλλάζουν — όχι όλες: η πύλη δείχνει **πού** σπάει, όχι «κάτι άλλαξε».
+    expect(added).toEqual(['c|πάνω-από:a|ζώνη:global', 'b|πάνω-από:c|ζώνη:global']);
+  });
+
+  it('Δ3 — ΠΑΡΕΜΒΟΛΗ ρόλου αλλάζει ΑΚΡΙΒΩΣ μία εγγραφή και προσθέτει μία', () => {
+    // ⚠️ Αυτό είναι ο λόγος που η ταυτότητα κουβαλά τον **γείτονα** και όχι απόλυτο rank:
+    // με rank, μια παρεμβολή στη μέση θα μετακινούσε **όλους** τους από πάνω και θα
+    // ανέφερε N αλλαγές για μία πράξη — θόρυβος που σπρώχνει σε τυφλό reseed.
+    const before = scale(['a', 1000], ['c', 1200]);
+    const after = scale(['a', 1000], ['b', 1100], ['c', 1200]);
+    const added = orderIdentities(after).filter((d) => !orderIdentities(before).includes(d));
+    expect(added).toEqual(['b|πάνω-από:a|ζώνη:global', 'c|πάνω-από:b|ζώνη:global']);
+  });
+
+  it('Δ4 — ΜΕΤΑΚΙΝΗΣΗ ΚΑΤΩ ΑΠΟ ΤΟ ΚΑΤΩΦΛΙ αλλάζει ταυτότητα, ΑΚΟΜΑ ΚΑΙ ΜΕ ΙΔΙΑ ΣΕΙΡΑ', () => {
+    // 🔴 Χωρίς τη ζώνη, αυτό θα περνούσε σιωπηλά: η σειρά μένει ίδια, αλλά ο ρόλος πέφτει
+    // κάτω από το `GLOBAL_LAYER_FLOOR` ⇒ κάθε ωμή δήλωση της περιοχής του αλλάζει
+    // κατάσταση από `raw-literal` σε `local-stacking`, δηλαδή **η πύλη σταματά να ρωτά**.
+    // Και το `MODAL_Z_INDEX_THRESHOLD` (=50) του `modal-presence-detect.ts` κρίνει
+    // «είναι modal;» με **αριθμό**: μια συμπίεση κάτω από αυτό σπάει την ανίχνευση modal
+    // χωρίς καμία δήλωση να φαίνεται λάθος.
+    const before = scale(['a', 10], ['b', GLOBAL_LAYER_FLOOR]);
+    const after = scale(['a', 10], ['b', GLOBAL_LAYER_FLOOR - 1]);
+    expect(orderIdentities(after)).not.toEqual(orderIdentities(before));
+    expect(orderIdentities(after)[1]).toContain('ζώνη:local');
+  });
+
+  it('Δ5 — η ΠΡΑΓΜΑΤΙΚΗ κλίμακα: κάθε ταυτότητα μοναδική, ο πρώτος χωρίς γείτονα', () => {
+    const ids = orderIdentities(readScale(REPO_ROOT));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids[0]).toContain('πάνω-από:—');
+    // Η μοναδικότητα δεν είναι διακοσμητική: ο συγκριτής του ratchet είναι **συνόλου**,
+    // άρα δύο ταυτόσημες εγγραφές θα μετριόνταν ως μία και η λογιστική θα ψευδόταν.
   });
 });

@@ -46,7 +46,9 @@
 const path = require('path');
 
 const { runSetRatchetCli, PROJECT_ROOT } = require('./lib/ratchet-baseline');
-const { readScale, findScaleDisorder, GLOBAL_LAYER_FLOOR } = require('./lib/zindex/scale');
+const {
+  readScale, findScaleDisorder, orderIdentities, GLOBAL_LAYER_FLOOR,
+} = require('./lib/zindex/scale');
 const {
   STATES, ZERO_TOLERANCE, RATCHETED, scanAll, findSymbolsInSrc, listCssFiles,
 } = require('./lib/zindex/sites');
@@ -142,7 +144,8 @@ async function measure(args = [], repoRoot = PROJECT_ROOT) {
     foreignZero,
     violations: ratcheted,
     violationIds: [...new Set(ratcheted.map(violationId))],
-    declarations: roles.map((r) => `${r.role}=${r.value}`),
+    // Η **ΔΙΑΤΑΞΗ**, όχι οι τιμές — δες `orderIdentities` και το σχόλιο του `buildPayload`.
+    declarations: orderIdentities(roles),
   };
 }
 
@@ -151,8 +154,10 @@ function buildPayload(m) {
     description:
       `${CHECK} (${ADR}) — η κλίμακα z-index. \`violations\` = ΕΝΑ αναγνωριστικό ανά (αρχείο, `
       + 'κατάσταση, ωμή τιμή) που δηλώνει καθολική στρώση χωρίς να τη ζητά από την κλίμακα. '
-      + '`declarations` = οι ΡΟΛΟΙ της κλίμακας με τις τιμές τους: αλλαγή τιμής ρόλου μπλοκάρει, '
-      + 'γιατί μετακινεί σιωπηλά κάθε επιφάνεια που τον ζητά. '
+      + '`declarations` = η ΔΙΑΤΑΞΗ της κλίμακας (κάθε ρόλος με τον αμέσως από κάτω του και τη '
+      + 'ζώνη του), ΟΧΙ οι τιμές: αναδιάταξη ή μετακίνηση πάνω/κάτω από το κατώφλι μπλοκάρει, '
+      + 'ενώ μια ΜΟΝΟΤΟΝΗ επαναρίθμηση περνά πράσινη — γιατί είναι αποδεδειγμένα μηδενικής '
+      + 'οπτικής αλλαγής (δες scripts/lib/zindex/scale.js ▸ orderIdentities). '
       + 'ΤΑ ZERO-TOLERANCE (unknown-token, parallel-scale) ΔΕΝ ΜΠΑΙΝΟΥΝ ΠΟΤΕ ΕΔΩ. '
       + 'ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ — δες την κεφαλίδα του scripts/check-zindex-scale.js.',
     adr: ADR,
@@ -234,14 +239,17 @@ const DESCRIPTOR = {
   buildPayload,
   printReport,
   violationId,
-  labels: { violations: 'ωμές δηλώσεις στρώσης', declarations: 'ρόλοι κλίμακας' },
+  labels: { violations: 'ωμές δηλώσεις στρώσης', declarations: 'σκαλιά διάταξης' },
   messages: {
     worse: 'μια επιφάνεια δηλώνει καθολική στρώση χωρίς να τη ζητά από την κλίμακα',
-    newDeclLabel: 'ΡΟΛΟΣ ΚΛΙΜΑΚΑΣ:',
+    newDeclLabel: 'ΔΙΑΤΑΞΗ ΚΛΙΜΑΚΑΣ:',
     newDeclAdvice: [
-      'Νέος ρόλος ή αλλαγμένη τιμή στο design-tokens.json ▸ zIndex.',
-      'Αν είναι σκόπιμο: npm run build:tokens ΚΑΙ μετά reseed της baseline.',
-      'Αλλαγή τιμής υπάρχοντος ρόλου μετακινεί ΚΑΘΕ επιφάνεια που τον ζητά — επαλήθευσε ζωντανά.',
+      'Η ΣΕΙΡΑ των ρόλων άλλαξε στο design-tokens.json ▸ zIndex (νέος ρόλος, αναδιάταξη,',
+      'ή μετακίνηση πάνω/κάτω από το κατώφλι καθολικού στρώματος).',
+      'ΜΟΝΟΤΟΝΗ επαναρίθμηση ΔΕΝ φτάνει ποτέ εδώ: η διάταξη μένει ίδια, άρα καμία επιφάνεια',
+      'δεν μετακινείται σε σχέση με καμία άλλη — η πύλη το αποδεικνύει, δεν το εμπιστεύεται.',
+      'Αν φτάσεις εδώ, ΚΑΤΙ ΑΛΛΑΞΕ ΣΤΗ ΣΧΕΤΙΚΗ ΣΕΙΡΑ. Αν είναι σκόπιμο: npm run build:tokens',
+      'ΚΑΙ μετά reseed — αλλά πρώτα ονόμασε ΠΟΙΟ ζεύγος αντιστράφηκε και γιατί επιτρέπεται.',
     ],
   },
   commands: {
