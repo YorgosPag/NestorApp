@@ -285,7 +285,7 @@ jobs:
       # `git show 5baa83ba:` το ΠΡΑΓΜΑΤΙΚΟ `EnterpriseTable.module.css` και αποδεικνύει ότι
       # κανένα από τα ονόματα που επικαλούνταν δεν οριζόταν πουθενά — δηλαδή ότι τα 22 hex
       # ήταν ΠΑΝΤΑ η τιμή. Με ρηχό checkout η απόδειξη εξαφανίζεται σιωπηλά.
-      - name: 🧪 Mutation suite — CHECK 3.43 (27 tests)
+      - name: 🧪 Mutation suite — CHECK 3.43 (41 tests, Θ7-Θ13 = 7/7 μεταλλάξεις)
         run: pnpm exec jest scripts/__tests__/check-css-token-authority.test.js
 
       # ⚠️ ΤΡΕΙΣ σουίτες μαζί, επίτηδες — καθεμία απαντά διαφορετική ερώτηση και μόνες τους

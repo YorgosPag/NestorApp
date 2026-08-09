@@ -33,10 +33,27 @@
   transform: scale(0.95);
 }
 
-/* ===== FOCUS STATE (Accessibility) ===== */
+/**
+ * ===== FOCUS STATE (Accessibility) =====
+ *
+ * 🔴 ΤΟ ΜΟΝΟ ΣΗΜΕΙΟ ΑΥΤΟΥ ΤΟΥ ΑΡΧΕΙΟΥ ΠΟΥ ΚΑΘΕΤΑΙ ΣΕ ΕΠΙΦΑΝΕΙΑ ΠΟΥ ΔΕΝ ΕΛΕΓΧΟΥΜΕ.
+ *
+ * Το `.cornerBox` παίρνει `backgroundColor` ως **inline style** από τις ρυθμίσεις χάρακα, δηλαδή
+ * από το θέμα καμβά που διαλέγει ο ΧΡΗΣΤΗΣ. Το υπόλοιπο αρχείο (το μενού) ζει μέσα σε
+ * `PopoverContent` = `bg-popover`, δικό μας. Δύο επιφάνειες, **δύο μηχανισμοί** — όχι ένας
+ * κανόνας παντού «για συνέπεια».
+ *
+ * Το προηγούμενο μονό μπλε μετρήθηκε στο **1,01:1** στο κάτω άκρο του preset `cinema4d`. Το
+ * ζεύγος ακραίων δεν μπορεί να πέσει κάτω από **4,61:1 σε καμία** επιλογή του χρήστη.
+ * Σκεπτικό, μετρήσεις και η απόκλιση από το Fluent: `globals.css`, δίπλα στα δύο tokens.
+ *
+ * ⚠️ ΜΗΝ το γυρίσεις σε `--focus-ring`: εκείνο είναι αποδεδειγμένο επί `--popover`, **αναπόδεικτο**
+ * εδώ. ⚠️ ΜΗΝ αφαιρέσεις το ένα σκέλος — η εγγύηση είναι το ΖΕΥΓΟΣ, όχι το χρώμα.
+ */
 .cornerBox:focus-visible {
-  outline: 2px solid var(--color-primary, #3b82f6);
+  outline: 2px solid hsl(var(--focus-ring-canvas-outer));
   outline-offset: -2px;
+  box-shadow: inset 0 0 0 4px hsl(var(--focus-ring-canvas-inner));
 }
 
 /* ===== CONTENT LAYOUT ===== */
@@ -101,7 +118,7 @@
 }
 
 .menuItem:hover {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 .menuItemIcon {
@@ -135,7 +152,7 @@
 .menuSeparator {
   height: 1px;
   margin: 4px 0;
-  background-color: var(--color-border, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 /* ===== ZOOM PRESETS GRID ===== */
@@ -153,15 +170,26 @@
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.15s ease;
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.05));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 5%, transparent);
 }
 
+/* Το hover του κουμπιού ζουμ ήταν ήδη ΜΠΛΕ (rgba(59,130,246,.3)), όχι ουδέτερο — κρατά την
+   ταυτότητα του τονισμού, γι' αυτό μπλέκει το `--focus-ring` και όχι το μελάνι της επιφάνειας.
+   Ίδιο ιδίωμα με το `PropertiesPalette.module.css` (Π1), όπου το επιλεγμένο πεδίο είναι
+   `color-mix(… --focus-ring 12%, transparent)`. */
 .zoomPresetButton:hover {
-  background-color: var(--color-accent, rgba(59, 130, 246, 0.3));
+  background-color: color-mix(in srgb, hsl(var(--focus-ring)) 30%, transparent);
 }
 
+/**
+ * 🔴 ΠΡΑΓΜΑΤΙΚΟ ΣΦΑΛΜΑ ΠΡΟΣΒΑΣΙΜΟΤΗΤΑΣ, ΔΙΟΡΘΩΜΕΝΟ — δεν ήταν θέμα θεματοποίησης.
+ * Λευκό κείμενο επί `#3b82f6` δίνει **3,68:1**· το WCAG 1.4.3 απαιτεί 4,5:1. Το `--status-info`
+ * δίνει **5,17:1** και στα δύο θέματα. Ταυτόσημη διόρθωση με το κουμπί «Εφαρμογή» του Π1.
+ * ⚠️ ΜΗΝ το γυρίσεις σε `--primary`: εκεί το `--primary` είναι ΣΚΟΥΡΑ ΕΠΙΦΑΝΕΙΑ, ταυτόσημη με
+ * το `--card` στο σκοτεινό θέμα (CHECK 3.38 / ADR-682 §5.5).
+ */
 .zoomPresetButton.active {
-  background-color: var(--color-primary, #3b82f6);
+  background-color: hsl(var(--status-info));
   color: white;
 }
 

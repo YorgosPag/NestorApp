@@ -90,7 +90,10 @@
   height: 16px;
   flex: none;
   padding: 0;
-  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
+  /* ADR-774 §4.5/Φ.2 — μελάνι της επιφάνειας 20%, ώστε ένα **λευκό** δείγμα σε φωτεινό θέμα
+     (και ένα μαύρο σε σκοτεινό) να μην εξαφανίζεται. Το προηγούμενο λευκό 20% έκανε ακριβώς
+     το αντίθετο στο φωτεινό: Δ=3/255. */
+  border: 1px solid color-mix(in srgb, hsl(var(--popover-foreground)) 20%, transparent);
   border-radius: 2px;
   cursor: pointer;
 }
@@ -101,7 +104,18 @@
      κάτω από τον δείκτη δεν αλλάζει την ώρα που τον στοχεύεις. */
   transform: scale(1.35);
   outline: none;
-  box-shadow: 0 0 0 1px var(--color-background, #000), 0 0 0 2px currentColor;
+  /**
+   * ADR-774 §4.5/Φ.2 — το εσωτερικό 1px ΔΕΝ είναι «μαύρο», είναι **κενό**: χωρίζει το δείγμα
+   * από το εξωτερικό δαχτυλίδι, ώστε ένα σκούρο δείγμα να μη συγχωνεύεται με αυτό (ιδίωμα
+   * knockout των επιλογέων χρώματος του Office/Figma). Άρα οφείλει να είναι **η επιφάνεια**.
+   * Το σταθερό `#000` το πετύχαινε κατά τύχη μόνο στο σκοτεινό (Δ=34/255)· στο φωτεινό
+   * ζωγράφιζε **μαύρη γραμμή** (Δ=254/255). Με το `--popover` είναι αληθινό κενό, Δ=0, παντού.
+   *
+   * 🔑 Χάρη σε αυτό το κενό, το ΕΞΩΤΕΡΙΚΟ δαχτυλίδι έχει και από τις δύο πλευρές του χρώμα
+   * επιφάνειας — δηλαδή κρίνεται έναντι **γνωστού** φόντου, όχι έναντι του αυθαίρετου χρώματος
+   * του δείγματος. Γι' αυτό εδώ αρκεί ένα χρώμα, ενώ στον καμβά χρειάστηκε ζεύγος.
+   */
+  box-shadow: 0 0 0 1px hsl(var(--popover)), 0 0 0 2px currentColor;
 }
 
 /**
@@ -144,12 +158,12 @@
  * — είναι «δεν υπάρχει μία απάντηση», που είναι η αλήθεια.
  */
 .swatchVaries {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.12));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 12%, transparent);
   background-image: linear-gradient(
     to bottom,
     transparent calc(50% - 1px),
-    var(--color-muted-foreground, rgba(255, 255, 255, 0.55)) calc(50% - 1px),
-    var(--color-muted-foreground, rgba(255, 255, 255, 0.55)) calc(50% + 1px),
+    color-mix(in srgb, hsl(var(--popover-foreground)) 55%, transparent) calc(50% - 1px),
+    color-mix(in srgb, hsl(var(--popover-foreground)) 55%, transparent) calc(50% + 1px),
     transparent calc(50% + 1px)
   );
   background-repeat: no-repeat;
@@ -157,9 +171,15 @@
   background-position: center;
 }
 
-/* Το τρέχον χρώμα, **πλαισιωμένο** — ίδια σημασιολογία με το πορτοκαλί πλαίσιο του Excel. */
+/**
+ * Το τρέχον χρώμα, **πλαισιωμένο** — ίδια σημασιολογία με το πορτοκαλί πλαίσιο του Excel.
+ * Εσωτερικό = κενό στην επιφάνεια (βλ. `.swatch:hover` παραπάνω). Εξωτερικό = το αποκλειστικό
+ * token εστίασης/επιλογής, μετρημένο επί `--popover`: **3,38:1 φωτεινό · 6,78:1 σκοτεινό**
+ * (≥3:1, WCAG 2.4.11). Το προηγούμενο σταθερό `#0088cb` έδινε 3,62 / 4,47 — δούλευε, αλλά ήταν
+ * **τέταρτο** μπλε δίπλα στα τρία που ήδη έχει η εφαρμογή, χωρίς κανείς να το έχει αποφασίσει.
+ */
 .swatchSelected {
-  box-shadow: 0 0 0 1px var(--color-background, #000), 0 0 0 2px var(--color-primary, #0088cb);
+  box-shadow: 0 0 0 1px hsl(var(--popover)), 0 0 0 2px hsl(var(--focus-ring));
 }
 
 /**
@@ -192,7 +212,7 @@
 
 .command:hover,
 .command:focus-visible {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 .commandSwatch {

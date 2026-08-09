@@ -445,4 +445,130 @@ describe('Θ — οι υποσχέσεις της θεραπείας Π1 (ό,τ�
         .toEqual({ file: f, darkOverrides: 0 });
     }
   });
+
+  /* ═══════════════════════ Π2 — το chrome του καμβά (ADR-774 §4.5/Φ.2) ═══════════════════════
+   *
+   * 🔴 ΕΔΩ Η ΠΥΛΗ ΕΙΝΑΙ ΑΚΟΜΑ ΠΙΟ ΤΥΦΛΗ ΑΠ' ΟΤΙ ΣΤΟ Π1, ΚΑΙ ΤΟ ΞΕΡΟΥΜΕ ΜΕΤΡΗΜΕΝΑ.
+   * Το CHECK 3.43 κρίνει `var(--αδέσποτο, <χρώμα>)`. Το `GuideColorPalette.module.css` είχε
+   * **οκτώ** σταθερά λευκά **χωρίς καθόλου `var()`** — άρα ούτε καν υποψήφια για την πύλη — και
+   * κάθε ένα από αυτά ήταν αόρατο στο φωτεινό θέμα. Δηλαδή η κατηγορία μπορεί να επιστρέψει
+   * **χωρίς ο αριθμός της baseline να κουνηθεί καθόλου**. Μόνο δομική άγκυρα το πιάνει.
+   */
+
+  const P2_FILES = [
+    'canvas-v2/overlays/RulerCornerBox.module.css',
+    'ui/components/dxf-context-menu/DxfContextMenu.module.css',
+    'ui/components/GuideColorPalette.module.css',
+    'ui/match-properties/match-properties-dialog.module.css',
+    'ui/components/table-format-toolbar/TableAxisColorMenu.module.css',
+    'ui/components/table-format-toolbar/TableFormatToolbar.module.css',
+    'ui/components/table-format-toolbar/table-toolbar-panel.module.css',
+    'ui/components/table-format-toolbar/TableBorderMenu.module.css',
+  ];
+  const readP2 = (rel) => stripCommentsKeepingLines(
+    fs.readFileSync(path.join(REPO_ROOT, 'src/subapps/dxf-viewer', rel), 'utf8'),
+  );
+
+  test('Θ7 — το ζεύγος του καμβά ορίζεται, είναι τα ΔΥΟ ΑΚΡΑ, και ΔΕΝ αντιστρέφεται ανά θέμα', () => {
+    // Η σταθερότητα ΕΙΝΑΙ η ορθότητα: η επιφάνεια είναι ο καμβάς, που δεν ακολουθεί το θέμα
+    // της εφαρμογής (preset `light` = λευκός καμβάς με σκοτεινή εφαρμογή). Το Fluent τα
+    // αντιστρέφει γιατί εκεί η επιφάνεια ΑΚΟΛΟΥΘΕΙ το θέμα· εδώ αντιστροφή θα ήταν συσχέτιση
+    // με λάθος μεταβλητή. Αν κάποιος «διορθώσει» προσθέτοντας override στο `.dark`, σπάει εδώ.
+    expect(toHex(rgbOf('light', '--focus-ring-canvas-outer'))).toBe('#ffffff');
+    expect(toHex(rgbOf('light', '--focus-ring-canvas-inner'))).toBe('#000000');
+    // Η ΑΠΟΥΣΙΑ ΑΠΟ ΤΟ `.dark` ΕΙΝΑΙ Η ΕΓΓΥΗΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ. Το `readThemes` διαβάζει τα δύο
+    // μπλοκ **χωριστά**, οπότε ένα token ορισμένο μόνο στο `:root` λείπει από τον χάρτη του
+    // σκοτεινού· αυτό ακριβώς σημαίνει «κληρονομείται αυτούσιο και στα δύο». Αν κάποιος
+    // προσθέσει override στο `.dark` — δηλαδή αντιστρέψει το ζεύγος όπως το Fluent — σπάει εδώ.
+    expect(themes.dark.has('--focus-ring-canvas-outer')).toBe(false);
+    expect(themes.dark.has('--focus-ring-canvas-inner')).toBe(false);
+  });
+
+  test('Θ8 — το ζεύγος έχει ΚΑΤΩ ΟΡΙΟ ≥4,5:1 σε ΚΑΘΕ γκρι που μπορεί να διαλέξει ο χρήστης', () => {
+    // Η ΥΠΟΣΧΕΣΗ, όχι δείγμα: σάρωση και των 256 ουδέτερων. Το χειρότερο είναι το γκρι όπου
+    // εξισώνονται τα δύο άκρα (L = √(1,05·0,05) − 0,05 ⇒ #757575 ⇒ 4,61:1).
+    const inner = rgbOf('light', '--focus-ring-canvas-inner');
+    const outer = rgbOf('light', '--focus-ring-canvas-outer');
+    let floor = Infinity;
+    for (let v = 0; v <= 255; v += 1) {
+      const bg = [v, v, v];
+      floor = Math.min(floor, Math.max(contrastRatio(inner, bg), contrastRatio(outer, bg)));
+    }
+    expect(floor).toBeGreaterThanOrEqual(4.5);
+    // …και τα δύο σκέλη ξεχωρίζουν ΜΕΤΑΞΥ ΤΟΥΣ, ώστε ο δείκτης να μένει αντιληπτός ως ΣΧΗΜΑ
+    // ακόμα κι αν το ένα χαθεί μέσα στο φόντο. Αυτό είναι ο μηχανισμός, όχι το χρώμα.
+    expect(contrastRatio(inner, outer)).toBeGreaterThanOrEqual(20);
+  });
+
+  test('Θ9 — στο preset `cinema4d` ένα ΜΟΝΟ μπλε αποτυγχάνει· το ζεύγος περνά', () => {
+    // Ο λόγος ύπαρξης του ζεύγους, με ΠΡΑΓΜΑΤΙΚΟ preset της λίστας μας — όχι υπόθεση. Το
+    // #868686 είναι το κάτω άκρο της διαβάθμισης του cinema4d· το #3b82f6 ήταν το παλιό χρώμα.
+    const CINEMA4D_GRADIENT_BOTTOM = [0x86, 0x86, 0x86];
+    const OLD_SINGLE_BLUE = [0x3b, 0x82, 0xf6];
+    expect(contrastRatio(OLD_SINGLE_BLUE, CINEMA4D_GRADIENT_BOTTOM)).toBeLessThan(3);
+    const pair = Math.max(
+      contrastRatio(rgbOf('light', '--focus-ring-canvas-inner'), CINEMA4D_GRADIENT_BOTTOM),
+      contrastRatio(rgbOf('light', '--focus-ring-canvas-outer'), CINEMA4D_GRADIENT_BOTTOM),
+    );
+    expect(pair).toBeGreaterThanOrEqual(3);
+  });
+
+  test('Θ10 — το κόκκινο του μενού πιάνει 4,5:1 σε ΑΜΦΟΤΕΡΑ τα φόντα του, και στα δύο θέματα', () => {
+    // Το κείμενο κάθεται είτε στο πάνελ είτε στο φόντο hover. Ένα test σε ΕΝΑ από τα δύο θα
+    // ήταν πράσινο πάνω στο ελάττωμα. Τα υπάρχοντα tokens ΟΛΑ αποτυγχάνουν κάπου:
+    //   --text-error 3,51 φωτ · --destructive 1,74 σκοτ · --status-error 3,63 σκοτ.
+    const INK_SHARE = 0.80; // ΤΟ ΙΔΙΟ ποσοστό που γράφει το DxfContextMenu.module.css
+    for (const theme of ['light', 'dark']) {
+      const ink = compositeOver(
+        rgbOf(theme, '--popover-foreground'), rgbOf(theme, '--text-error'), 1 - INK_SHARE,
+      );
+      expect(contrastRatio(ink, rgbOf(theme, '--popover'))).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(ink, rgbOf(theme, '--bg-error'))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  test('Θ11 — το μελάνι της προειδοποίησης πιάνει 4,5:1 στο δοχείο της, και στα δύο', () => {
+    // ⚠️ ΤΟ ΠΡΟΦΑΝΕΣ ΖΕΥΓΟΣ ΕΙΝΑΙ ΛΑΘΟΣ: `--text-warning` επί `--bg-warning` δίνει **1,61:1**
+    // στο φωτεινό. Τα ονόματα μοιάζουν· δεν είναι ζεύγος. Η ίδια η αποτυχία κατοχυρώνεται
+    // παρακάτω, ώστε μια μελλοντική «απλοποίηση» προς αυτό να σπάσει εδώ και να διαβάσει γιατί.
+    for (const theme of ['light', 'dark']) {
+      expect(ratio(theme, '--foreground', '--bg-warning')).toBeGreaterThanOrEqual(4.5);
+    }
+    // 🔑 ΚΑΙ ΤΟ ΣΧΗΜΑ ΤΗΣ ΑΠΟΤΥΧΙΑΣ ΕΙΝΑΙ ΤΟ ΜΑΘΗΜΑ: το προφανές ζεύγος δεν είναι «λίγο
+    // χειρότερο», είναι σπασμένο ΣΤΟ ΕΝΑ θέμα και μια χαρά στο άλλο — γι' αυτό η μηχανική
+    // μετονομασία *φαίνεται* να δουλεύει σε όποιο θέμα τύχει να κοιτάς.
+    expect(ratio('light', '--text-warning', '--bg-warning')).toBeLessThan(4.5); // μετρημένο 1,61
+    expect(ratio('dark', '--text-warning', '--bg-warning')).toBeGreaterThanOrEqual(4.5); // 7,15
+  });
+
+  test('Θ12 — το state layer στο 10% είναι ΟΡΑΤΟ και στα δύο θέματα (ήταν 1/255 στο φωτεινό)', () => {
+    // Το ελάττωμα δεν ήταν «λάθος χρώμα», ήταν «αόρατο». Κατώφλι σε /255, όχι σε λόγο
+    // αντίθεσης: μια επιφάνεια hover δεν είναι κείμενο — το ερώτημα είναι αν τη ΒΛΕΠΕΙΣ.
+    const ALPHA = 0.10;  // ΤΟ ΙΔΙΟ ποσοστό που γράφουν τα CSS Modules του Π2
+    for (const theme of ['light', 'dark']) {
+      const surface = rgbOf(theme, '--popover');
+      const painted = compositeOver(rgbOf(theme, '--popover-foreground'), surface, ALPHA);
+      const delta = Math.max(...[0, 1, 2].map((i) => Math.abs(painted[i] - surface[i])));
+      expect(delta).toBeGreaterThanOrEqual(8);
+      // …και η ΠΑΛΙΑ μορφή αποδεδειγμένα δεν το πετύχαινε: λευκό 10% στο φωτεινό = 1/255.
+      if (theme === 'light') {
+        const old = compositeOver([255, 255, 255], surface, ALPHA);
+        expect(Math.max(...[0, 1, 2].map((i) => Math.abs(old[i] - surface[i])))).toBeLessThan(8);
+      }
+    }
+  });
+
+  test('Θ13 — κανένα από τα 8 αρχεία του Π2 δεν ξαναποκτά σταθερό ασπρόμαυρο state layer', () => {
+    // Η ΔΟΜΙΚΗ άγκυρα — η μόνη που πιάνει την επιστροφή της κατηγορίας, γιατί ένα ωμό
+    // `rgba(255,255,255,α)` ΔΕΝ έχει `var()` και άρα **δεν μετριέται πουθενά** στη baseline.
+    // ⚠️ Τα σχόλια αφαιρούνται ΠΡΩΤΑ: τρία από αυτά τα αρχεία *περιγράφουν* την παλιά μορφή
+    // στην τεκμηρίωσή τους, και μια τεκμηρίωση του ελαττώματος δεν είναι το ελάττωμα
+    // (το μάθημα `Κ7β` του CHECK 3.50).
+    const FIXED_BW_LAYER = /rgba\(\s*(?:255\s*,\s*255\s*,\s*255|0\s*,\s*0\s*,\s*0)\s*,/g;
+    for (const rel of P2_FILES) {
+      const hits = (readP2(rel).match(FIXED_BW_LAYER) || []).length;
+      expect({ file: rel, fixedBlackWhiteLayers: hits })
+        .toEqual({ file: rel, fixedBlackWhiteLayers: 0 });
+    }
+  });
 });

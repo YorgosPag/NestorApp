@@ -71,14 +71,21 @@
   position: relative;
 }
 
+/**
+ * ADR-774 §4.5/Φ.2 — state layers. Η κεφαλίδα του αρχείου το έλεγε ήδη: η επιφάνεια είναι
+ * `bg-popover`, «ώστε οι δύο επιφάνειες να ακολουθούν **μαζί** το θέμα». Το λευκό α% δεν το
+ * έκανε — στο φωτεινό θέμα ήταν λευκό πάνω σε σχεδόν λευκό (Δ=1/255 · 3/255).
+ * Τα ποσοστά **δεν ξαναδιαλέχθηκαν**: 10% / 18% όπως ήταν, ώστε να μείνει άθικτη η σχέση
+ * «πατημένο εντονότερο από hover» (Δ 23 έναντι 41, και στα δύο θέματα).
+ */
 .button:hover,
 .button:focus-visible {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 /* Πατημένο = η τιμή ισχύει σε ΟΛΗ τη σειρά. */
 .buttonActive {
-  background-color: var(--color-accent, rgba(255, 255, 255, 0.18));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 18%, transparent);
 }
 
 /**
@@ -86,8 +93,8 @@
  * ψέματα· εδώ φαίνεται ότι η απάντηση δεν είναι μία (Figma «Mixed», Revit «<varies>»).
  */
 .buttonMixed {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
-  box-shadow: inset 0 0 0 1px var(--color-border, rgba(255, 255, 255, 0.25));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, hsl(var(--popover-foreground)) 25%, transparent);
 }
 
 .button[aria-disabled='true'] {
@@ -139,10 +146,15 @@
   align-items: center;
   justify-content: center;
   line-height: 0;
-  color: var(--color-accent-foreground, currentColor);
+  /* Το `var(--color-accent-foreground, …)` ήταν αδέσποτο και **πάντα** έπεφτε στο fallback:
+     γράφεται πλέον αυτό που όντως ίσχυε — μηδέν οπτική αλλαγή, ένα αδέσποτο όνομα λιγότερο. */
+  color: currentColor;
   /* Φωτοστέφανο: το σήμα περνά πάνω από ενεργό ΚΑΙ ανενεργό φόντο — ίδια τεχνική με τους
-     δείκτες του ΟΣ, όπου το περίγραμμα ζωγραφίζεται πρώτο και πλατύτερο. */
-  filter: drop-shadow(0 0 1px var(--color-background, rgba(0, 0, 0, 0.9)));
+     δείκτες του ΟΣ, όπου το περίγραμμα ζωγραφίζεται πρώτο και πλατύτερο.
+     ADR-774 §4.5/Φ.2: ο ρόλος του είναι **κενό στο χρώμα της επιφάνειας**, όχι «μαύρο». Και οι
+     δύο καταστάσεις κάτω από το σήμα κάθονται στο `--popover`, άρα αυτή ΕΙΝΑΙ η επιφάνεια. Το
+     σταθερό μαύρο ήταν σωστό μόνο για σκοτεινό θέμα· στο φωτεινό ζωγράφιζε μαύρη άλω. */
+  filter: drop-shadow(0 0 1px hsl(var(--popover)));
 }
 
 /**
@@ -156,7 +168,7 @@
   width: 1px;
   align-self: stretch;
   margin: 2px 3px;
-  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 12%, transparent);
 }
 
 /**

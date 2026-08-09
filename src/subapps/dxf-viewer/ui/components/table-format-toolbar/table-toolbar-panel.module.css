@@ -72,9 +72,11 @@
   white-space: nowrap;
 }
 
+/* ADR-774 §4.5/Φ.2 — state layer, όχι χρώμα. Το πάνελ φοράει `bg-popover` (βλ. ToolbarListPanel),
+   άρα η επιφάνεια ακολουθεί το θέμα· το λευκό 10% ήταν αόρατο στο φωτεινό (Δ=1/255). */
 .item:hover,
 .item:focus-visible {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 /*
@@ -99,5 +101,5 @@
 .separator {
   height: 1px;
   margin: 4px 2px;
-  background-color: var(--color-border, rgba(255, 255, 255, 0.12));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 12%, transparent);
 }

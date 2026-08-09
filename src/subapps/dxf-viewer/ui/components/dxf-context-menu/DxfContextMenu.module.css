@@ -26,13 +26,25 @@
   transition: background-color 0.15s ease;
 }
 
+/**
+ * 🔑 STATE LAYER, ΟΧΙ ΧΡΩΜΑ — ADR-774 §4.5/Φ.2.
+ *
+ * Το μενού αποδίδεται μέσα σε `DropdownMenuContent`/`ContextMenuContent`, δηλαδή πάνω στο
+ * `bg-popover` — **δική μας** επιφάνεια, οπότε η αντίθεση αποδεικνύεται. Η προηγούμενη μορφή
+ * (`rgba(255,255,255,.1)`) έλεγε «άσπρο 10%», που στο **φωτεινό** θέμα είναι άσπρο πάνω σε
+ * σχεδόν άσπρο: μετρημένο **Δ=1/255 (1,01:1)** — δηλαδή το hover του μενού ήταν **αόρατο**.
+ * Το `color-mix` λέει «**μελάνι της επιφάνειας** σε 10%» και αυτοαντιστρέφεται: **Δ=23/255 και
+ * στα δύο** θέματα. Το σκοτεινό μένει **ταυτόσημο** με πριν.
+ * ⚠️ ΜΗΝ το αντικαταστήσεις με αδιαφανές token: το `--muted` πάνω στο `--popover` δίνει
+ * **Δ=2/255 στο σκοτεινό** (ορίστηκε σχετικά με το `--background`, όχι με το `--popover`).
+ */
 .menuItem:hover {
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 .menuItem:focus {
   outline: none;
-  background-color: var(--color-muted, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 /* ===== DISABLED STATE ===== */
@@ -42,14 +54,34 @@
   pointer-events: none;
 }
 
-/* ===== DESTRUCTIVE STATE ===== */
+/**
+ * ===== DESTRUCTIVE STATE =====
+ *
+ * 🔴 ΤΟ ΚΟΚΚΙΝΟ ΜΕΝΟΥ ΔΕΝ ΛΥΝΕΤΑΙ ΜΕ ΚΑΝΕΝΑ ΥΠΑΡΧΟΝ TOKEN — μετρημένο επί `--popover`,
+ * με απαίτηση ≥4,5:1 (WCAG 1.4.3, είναι **κείμενο**):
+ *   `--text-error`    φωτεινό **3,51:1** 🔴  ·  σκοτεινό 6,19:1
+ *   `--destructive`   φωτεινό **3,49:1** 🔴  ·  σκοτεινό **1,74:1** 🔴 (σκούρο μπορντό)
+ *   `--status-error`  φωτεινό **4,45:1** 🔴  ·  σκοτεινό **3,63:1** 🔴
+ * Δηλαδή η «μηχανική μετονομασία» προς το προφανές token θα άφηνε το φωτεινό θέμα σπασμένο.
+ * Το κόκκινο **σκουραίνει προς το μελάνι της επιφάνειας**: 80% κρατά την ταυτότητα του κόκκινου
+ * και δίνει **4,91 / 7,51:1** επί `--popover` και **4,80 / 7,00:1** επί του φόντου hover — τα
+ * τέσσερα μετρημένα, όχι εκτιμημένα.
+ *
+ * 🔴 ΚΑΙ ΤΟ ΦΟΝΤΟ HOVER ΗΤΑΝ ΣΠΑΣΜΕΝΟ, ΣΕ ΚΑΘΕ ΘΕΜΑ — ήταν `var(--bg-error, …)`. Το
+ * `--bg-error` **υπάρχει**, αλλά είναι **τριάδα HSL** (`0 86% 97%`): αντικαθίσταται ωμή, οπότε
+ * το `background-color: 0 86% 97%` είναι *invalid at computed-value time* και η δήλωση **πέφτει**
+ * — και το fallback **δεν** σώζει, γιατί ισχύει μόνο όταν το token **λείπει**. Άρα το hover δεν
+ * έβαφε **τίποτα**. Κάθε άλλος καταναλωτής της εφαρμογής το τυλίγει σωστά (`hsl(var(--bg-error))`).
+ * ⚠️ Καμία πύλη δεν το βλέπει: το CHECK 3.43 ρωτά «υπάρχει το token;» — υπάρχει. Δεν ρωτά
+ * «είναι γραμμένο σε μορφή που παράγει χρώμα;».
+ */
 .menuItemDestructive {
-  color: var(--color-destructive, hsl(0 84% 60%));
+  color: color-mix(in srgb, hsl(var(--text-error)) 80%, hsl(var(--popover-foreground)));
 }
 
 .menuItemDestructive:hover {
-  background-color: var(--bg-error, hsl(0 84% 60% / 0.15));
-  color: var(--color-destructive, hsl(0 84% 60%));
+  background-color: hsl(var(--bg-error));
+  color: color-mix(in srgb, hsl(var(--text-error)) 80%, hsl(var(--popover-foreground)));
 }
 
 /* ===== MENU ITEM ICON ===== */
@@ -102,7 +134,7 @@
 .menuSeparator {
   height: 1px;
   margin: 4px 0;
-  background-color: var(--color-border, rgba(255, 255, 255, 0.1));
+  background-color: color-mix(in srgb, hsl(var(--popover-foreground)) 10%, transparent);
 }
 
 /* ===== HIDDEN TRIGGER (for portal positioning) ===== */
