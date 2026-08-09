@@ -109,12 +109,11 @@ export const layoutUtilities = {
   // Dynamic height utilities για scroll containers & responsive sizing
   maxHeight: (value: string | number): string => typeof value === 'number' ? `${value}px` : value,
 
-  // ✅ ENTERPRISE FIX: Z-index utilities για ComboBox.tsx
-  zIndex: {
-    dropdown: 'z-50',
-    modal: 'z-[1000]',
-    tooltip: 'z-[2000]',
-  },
+  // 🗑️ ΔΙΑΓΡΑΦΗΚΕ (ADR-780 Φάση Γ): `zIndex: { dropdown:'z-50', modal:'z-[1000]',
+  // tooltip:'z-[2000]' }` — γραμμένο «για ComboBox.tsx», με **μηδέν** καταναλωτές
+  // (μετρημένο: κανένα `layoutUtilities.zIndex` σε όλο το `src/`). Ήταν το λεξιλόγιο #3
+  // των πέντε του §2.1 — αυτό που έδινε **modal 1000 · tooltip 2000** ενώ η κλίμακα λέει
+  // **1400 · 1800**. Δεν τοκενοποιήθηκε: νεκρός κώδικας δεν αποκτά ρόλο, φεύγει.
 
   // Dynamic positioning utilities για absolute/relative positioning
   position: (top: string, left: string): { top: string; left: string } => ({ top, left }),

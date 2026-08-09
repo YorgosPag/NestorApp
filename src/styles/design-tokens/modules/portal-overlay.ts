@@ -62,15 +62,10 @@ const portalComponentsBase = {
     }),
   },
 
-  // 🏢 ENTERPRISE: Modal z-index uses centralized values
-  modal: {
-    backdrop: {
-      zIndex: (customZIndex?: number) => customZIndex || zIndex.modal,
-    },
-    content: {
-      zIndex: (customZIndex?: number) => (customZIndex || zIndex.modal) + 1,
-    },
-  },
+  // 🗑️ ΔΙΑΓΡΑΦΗΚΕ `modal: { backdrop, content }` (ADR-780 Φάση Γ): **μηδέν** καταναλωτές
+  // (μετρημένο). Το `content` παρήγαγε `zIndex.modal + 1` — ένα σκαλί που δεν υπάρχει στην
+  // κλίμακα, δηλαδή η ίδια αριθμητική που έκρυβε την έκτη κλίμακα παρακάτω. Ο ρόλος
+  // `viewerModalNested` κάνει **ρητά** αυτή τη δουλειά, για όποιον τη χρειαστεί.
 
   // 🏢 ENTERPRISE: Reference to centralized zIndex (no duplicates!)
   // All values come from the main zIndex object defined at line ~382
@@ -107,35 +102,38 @@ export const portalComponentsExtended = {
       overflowY: 'auto' as const,
     },
   },
+  /**
+   * 🔴 ΕΔΩ ΖΟΥΣΕ Η **ΕΚΤΗ** ΚΛΙΜΑΚΑ — ΑΟΡΑΤΗ, ΓΙΑΤΙ ΗΤΑΝ **ΑΡΙΘΜΗΤΙΚΗ** (ADR-780 Φάση Γ).
+   *
+   * Μέχρι σήμερα αυτό το μπλοκ παρήγαγε **17** σκαλιά με offsets πάνω σε ρόλους
+   * (`zIndex.modal + 50…90`, `zIndex.popover + 10…50`, `zIndex.banner + 10`) — δηλαδή
+   * **περισσότερα σκαλιά από όλη την κλίμακα των Shoelace ή του Atlas**, ανάμεσα στα
+   * 1450 και 1550. Το CHECK 3.50 τα έβλεπε ως `scale-reference` = **✅ πράσινα**: «έκφραση
+   * TS, δεν αποτιμάται» είναι δηλωμένο όριο, και αποδείχθηκε ότι **είχε περιεχόμενο**.
+   *
+   * 🔑 ΓΙΑΤΙ ΕΠΡΕΠΕ ΝΑ ΦΥΓΕΙ ΠΡΙΝ ΤΗ ΣΥΜΠΙΕΣΗ, ΚΑΙ ΕΙΝΑΙ ΑΙΤΙΑ ΟΧΙ ΠΡΟΤΙΜΗΣΗ: η απόδειξη
+   * «μηδενικής οπτικής αλλαγής» στηρίζεται σε **μονότονη** απεικόνιση των τιμών. Ένα
+   * `modal + 50` **δεν** μετακινείται μαζί με τον `modal`: με βήμα 10, το `modal(1040)+50`
+   * γίνεται **1090** και προσπερνά τα `popover`·`skipLink`·`toast`·`tooltip` που πριν ήταν
+   * **από πάνω** του. Η επαναρίθμηση θα είχε αντιστρέψει **τέσσερα** ζεύγη με την πύλη
+   * **πράσινη** — το σχήμα «0 = κανείς δεν κοίταξε», μια στάθμη πιο μέσα.
+   *
+   * ⚠️ **12 από τα 17 ήταν ΝΕΚΡΑ** (μετρημένο: μηδέν καταναλωτές για `base`·`fullscreen`·
+   * `crosshair`·`selection`·`tooltip`·`search`·`searchResults`·`zoom`·`floatingPanel`·
+   * `debug.zIndex`·`debug.info`·`canvas.*`) και διαγράφηκαν. Τα **5** που ζωγράφιζαν
+   * όντως έγιναν **ρόλοι** στο `design-tokens.json`, με **ταυτόσημες** τιμές.
+   * Τα σχόλια `// 1450` ήταν **χειρόγραφος καθρέφτης** — το ίδιο σχήμα που η Φάση Α
+   * έσβησε από το `layout.ts`: μια δεύτερη γραφή του αριθμού που κανείς δεν επέβαλλε.
+   */
   overlay: {
     ...portalComponentsBase.overlay,
-    // CAD Overlay Hierarchy: Uses zIndex.overlay (1300) as base, with +50 increments
-    base: { zIndex: () => zIndex.overlay },                    // 1300
-    fullscreen: { zIndex: () => zIndex.modal },                // 1400
-    crosshair: { zIndex: () => zIndex.modal + 50 },            // 1450
-    selection: { zIndex: () => zIndex.modal + 60 },            // 1460
-    tooltip: { zIndex: () => zIndex.modal + 70 },              // 1470
-    snap: { zIndex: () => zIndex.modal + 80 },                 // 1480
-    search: { zIndex: () => zIndex.modal + 90 },               // 1490
-    searchResults: { zIndex: () => zIndex.popover },           // 1500
-    controls: { zIndex: () => zIndex.popover + 10 },           // 1510
-    zoom: { zIndex: () => zIndex.popover + 20 },               // 1520
-    calibration: { zIndex: () => zIndex.popover + 30 },        // 1530
-    // ✅ ENTERPRISE FIX: Debug overlays above calibration
+    snap: { zIndex: () => zIndex.canvasSnap },
+    controls: { zIndex: () => zIndex.canvasControls },
+    calibration: { zIndex: () => zIndex.canvasCalibration },
     debug: {
-      zIndex: () => zIndex.popover + 40,                       // 1540
-      info: { zIndex: () => zIndex.popover + 41 },             // 1541
-      main: { zIndex: () => zIndex.popover + 42 },             // 1542
-      controls: { zIndex: () => zIndex.popover + 43 }          // 1543
+      main: { zIndex: () => zIndex.debugLayoutMap },
+      controls: { zIndex: () => zIndex.debugLayoutMapControls },
     },
-    floatingPanel: { zIndex: () => zIndex.popover + 50 }       // 1550
-  },
-  canvas: {
-    fullscreen: { zIndex: () => zIndex.modal },                // 1400
-    layers: {
-      dxf: { zIndex: () => zIndex.banner },                    // 1200
-      layer: { zIndex: () => zIndex.banner + 10 }              // 1210
-    }
   },
   // 🏢 ENTERPRISE: Positioning utilities for dropdown/portal placement
   positioning: {

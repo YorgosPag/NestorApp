@@ -99,7 +99,7 @@ export const componentSizes = {
       shadowElevated: 'shadow-lg',       // Sub-menus
       sideOffset: 4,                     // Radix numeric prop (px)
       zIndex: 'z-50',                    // Standard dropdown layer
-      zIndexElevated: 'z-[2000]',        // Above FloatingPanel (1700)
+      zIndexElevated: 'z-[var(--z-index-elevated-dropdown)]',        // Above FloatingPanel (ρόλος `toast`)
     },
 
     // === MENU ITEM PADDING (3 distinct patterns) ===

@@ -340,8 +340,8 @@ export const performanceMonitorUtilities = {
   // This ensures solid, opaque backgrounds for draggable panels
   // ✅ CRITICAL: pointer-events-auto ensures panels work even when parent has pointer-events-none
   getOverlayContainerClasses: () => 'fixed bg-card border border-border rounded-lg shadow-lg pointer-events-auto',
-  // ✅ ENTERPRISE FIX: Use higher z-index (1700) to ensure panels are ALWAYS above canvas overlays
-  getOverlayContainerStyles: () => ({ zIndex: zIndex.toast }),  // 1700 - above all canvas elements
+  // ✅ ENTERPRISE FIX: ρόλος `toast` — panels ALWAYS above canvas overlays (ADR-780: ποτέ αριθμός σε σχόλιο)
+  getOverlayContainerStyles: () => ({ zIndex: zIndex.toast }),  // above all canvas elements
   // 🏢 ENTERPRISE: Standardized 8px padding (p-2) for consistent spacing across all floating panels
   getOverlayHeaderClasses: () => 'flex items-center justify-between p-2 border-b border-border cursor-grab pointer-events-auto',
   // ✅ ENTERPRISE FIX: Removed inline backgroundColor - using Tailwind classes for consistency

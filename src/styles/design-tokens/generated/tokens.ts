@@ -110,14 +110,31 @@ export interface DesignTokens {
   zIndex_base: string;
   zIndex_docked: string;
   zIndex_dropdown: string;
+  zIndex_geoPanelProperties: string;
+  zIndex_geoPanelLayers: string;
+  zIndex_geoPanelTools: string;
   zIndex_sticky: string;
+  zIndex_workspaceSidePanel: string;
   zIndex_banner: string;
   zIndex_overlay: string;
   zIndex_modal: string;
+  zIndex_modalContent: string;
+  zIndex_viewerImportModal: string;
+  zIndex_canvasSnap: string;
   zIndex_popover: string;
+  zIndex_canvasControls: string;
+  zIndex_canvasCalibration: string;
+  zIndex_debugLayoutMap: string;
+  zIndex_debugLayoutMapControls: string;
   zIndex_skipLink: string;
+  zIndex_dynamicInput: string;
   zIndex_toast: string;
   zIndex_tooltip: string;
+  zIndex_elevatedMenu: string;
+  zIndex_elevatedDropdown: string;
+  zIndex_pointerBadge: string;
+  zIndex_pointerMenu: string;
+  zIndex_pickerOverlay: string;
   zIndex_viewerModal: string;
   zIndex_viewerModalNested: string;
   zIndex_viewerPalette: string;
@@ -252,14 +269,31 @@ export const designTokens: DesignTokens = {
   zIndex_base: 'var(--z-index-base)',
   zIndex_docked: 'var(--z-index-docked)',
   zIndex_dropdown: 'var(--z-index-dropdown)',
+  zIndex_geoPanelProperties: 'var(--z-index-geo-panel-properties)',
+  zIndex_geoPanelLayers: 'var(--z-index-geo-panel-layers)',
+  zIndex_geoPanelTools: 'var(--z-index-geo-panel-tools)',
   zIndex_sticky: 'var(--z-index-sticky)',
+  zIndex_workspaceSidePanel: 'var(--z-index-workspace-side-panel)',
   zIndex_banner: 'var(--z-index-banner)',
   zIndex_overlay: 'var(--z-index-overlay)',
   zIndex_modal: 'var(--z-index-modal)',
+  zIndex_modalContent: 'var(--z-index-modal-content)',
+  zIndex_viewerImportModal: 'var(--z-index-viewer-import-modal)',
+  zIndex_canvasSnap: 'var(--z-index-canvas-snap)',
   zIndex_popover: 'var(--z-index-popover)',
+  zIndex_canvasControls: 'var(--z-index-canvas-controls)',
+  zIndex_canvasCalibration: 'var(--z-index-canvas-calibration)',
+  zIndex_debugLayoutMap: 'var(--z-index-debug-layout-map)',
+  zIndex_debugLayoutMapControls: 'var(--z-index-debug-layout-map-controls)',
   zIndex_skipLink: 'var(--z-index-skip-link)',
+  zIndex_dynamicInput: 'var(--z-index-dynamic-input)',
   zIndex_toast: 'var(--z-index-toast)',
   zIndex_tooltip: 'var(--z-index-tooltip)',
+  zIndex_elevatedMenu: 'var(--z-index-elevated-menu)',
+  zIndex_elevatedDropdown: 'var(--z-index-elevated-dropdown)',
+  zIndex_pointerBadge: 'var(--z-index-pointer-badge)',
+  zIndex_pointerMenu: 'var(--z-index-pointer-menu)',
+  zIndex_pickerOverlay: 'var(--z-index-picker-overlay)',
   zIndex_viewerModal: 'var(--z-index-viewer-modal)',
   zIndex_viewerModalNested: 'var(--z-index-viewer-modal-nested)',
   zIndex_viewerPalette: 'var(--z-index-viewer-palette)',
@@ -303,46 +337,80 @@ export const zIndexScale = {
   docked: 10,
   /** Dropdowns, selects, menus */
   dropdown: 1000,
+  /** Geo-canvas properties panel */
+  geoPanelProperties: 1010,
+  /** Geo-canvas layers panel - over the properties panel */
+  geoPanelLayers: 1020,
+  /** Geo-canvas tools panel - topmost of the three geo panels */
+  geoPanelTools: 1030,
   /** Sticky headers, toolbars */
-  sticky: 1100,
+  sticky: 1040,
+  /** Floating workspace side palette of the DXF viewer - above the toolbars it docks against */
+  workspaceSidePanel: 1050,
   /** Notification banners */
-  banner: 1200,
+  banner: 1060,
   /** Overlays, backdrops */
-  overlay: 1300,
-  /** Modal dialogs */
-  modal: 1400,
+  overlay: 1070,
+  /** Modal dialogs (the BACKDROP rung) */
+  modal: 1080,
+  /** Card of a modal - one rung above its OWN backdrop, so DOM order never decides it */
+  modalContent: 1090,
+  /** DXF import surface - a modal opened over the standard modal rung */
+  viewerImportModal: 1100,
+  /** CAD snap indicator - reads the geometry under the cursor, so it clears the modal rung it is measured against */
+  canvasSnap: 1110,
   /** Popovers, floating cards */
-  popover: 1500,
+  popover: 1120,
+  /** Floating canvas toolbar and viewport controls */
+  canvasControls: 1130,
+  /** Coordinate calibration overlay - the user aims at the drawing THROUGH it */
+  canvasCalibration: 1140,
+  /** Layout debug map - measures what it draws over, so it must sit above the canvas controls */
+  debugLayoutMap: 1150,
+  /** Controls of the layout debug map - rides above its own map, same pairing logic as the eyedropper loupe */
+  debugLayoutMapControls: 1160,
   /** Accessibility skip links */
-  skipLink: 1600,
+  skipLink: 1170,
+  /** CAD dynamic input field pinned to the cursor - the user TYPES into it, so hiding it means typing blind */
+  dynamicInput: 1180,
   /** Toast notifications */
-  toast: 1700,
+  toast: 1190,
   /** Tooltips - highest UI layer of the APPLICATION SHELL */
-  tooltip: 1800,
+  tooltip: 1200,
+  /** Context menu summoned from a floating surface - clears the tooltip rung below it */
+  elevatedMenu: 1210,
+  /** Select/DropdownMenu content of the shell - the default portal rung opens BEHIND floating panels, so every elevated dropdown lands here */
+  elevatedDropdown: 1220,
+  /** Badge/tooltip pinned to the pointer (pointer-events:none) - annotates whatever sits under the cursor */
+  pointerBadge: 1230,
+  /** Listbox pinned to the pointer - the user PICKS from it, so it outranks the badge that merely annotates */
+  pointerMenu: 1240,
+  /** Command-palette style picker with its own backdrop - dims every elevated surface above */
+  pickerOverlay: 1250,
   /** DXF workspace modal surface (backdrop AND card share this rung; DOM order decides between them) */
-  viewerModal: 9000,
+  viewerModal: 1260,
   /** A modal opened FROM a workspace modal (function arguments over insert-function) */
-  viewerModalNested: 9001,
+  viewerModalNested: 1270,
   /** Persistent workspace palettes (Properties) - outlive the surfaces below them */
-  viewerPalette: 9900,
+  viewerPalette: 1280,
   /** Workspace context menus and hover popovers - summoned, dismissed on any gesture */
-  viewerMenu: 9999,
+  viewerMenu: 1290,
   /** Transient workspace surfaces the user just aimed at (mini toolbar, quick-properties panel) */
-  viewerTransient: 10000,
+  viewerTransient: 1300,
   /** Modal command prompt of the workspace - blocks the transient surfaces below it */
-  viewerPrompt: 10001,
+  viewerPrompt: 1310,
   /** Scrim of the application-shell drawer - dims the workspace, including its transient surfaces */
-  appDrawerScrim: 10100,
+  appDrawerScrim: 1320,
   /** Application-shell drawer panel (notifications) - outranks the whole workspace */
-  appDrawer: 10101,
+  appDrawer: 1330,
   /** Full-viewport pointer capture of the eyedropper - must swallow every gesture of the app */
-  eyedropperCapture: 10200,
+  eyedropperCapture: 1340,
   /** Eyedropper loupe - rides ABOVE its own capture surface (that is the whole point of the pair) */
-  eyedropperLoupe: 10201,
+  eyedropperLoupe: 1350,
   /** Developer debug overlays (pointer-events:none) - above EVERY product surface, otherwise they measure what they cannot see */
-  debugOverlay: 10300,
+  debugOverlay: 1360,
   /** NOT A PRODUCT LAYER. The framework dev overlay (nextjs-portal) hosts its own 2147483647 INSIDE its shadow root, so the host element itself stays z-index:auto and any product surface buries it. This rung exists only to raise that host above our ceiling. Never use it for product UI. */
-  devtoolsGuard: 10400,
+  devtoolsGuard: 1370,
 } as const;
 
 export type ZIndexRole = keyof typeof zIndexScale;

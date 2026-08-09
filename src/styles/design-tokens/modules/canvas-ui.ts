@@ -10,6 +10,54 @@ import { borderRadius } from './borders';
 import { zIndex, breakpoints } from './layout';
 import { layoutUtilities } from './layout-utilities-constants';
 
+/**
+ * Το **ορθογώνιο συρσίματος**: ίδια γεωμετρία από δύο σημεία, διαφορετικό μελάνι.
+ *
+ * 🔴 ΤΟ ΕΠΙΑΣΕ ΤΟ CHECK 3.28 (ADR-584 / N.18), ΟΧΙ ΑΝΘΡΩΠΟΣ — και το βρήκε επειδή το αρχείο
+ * μπήκε σε diff για **άλλη** αλλαγή (ADR-780 Φ.Γ). Τα `marquee.positioned` και
+ * `zoomWindow.positioned` ήταν **ταυτόσημα σε 8 από 10 γραμμές**: ίδιο `Math.min`/`Math.abs`
+ * και για τους δύο άξονες, ίδιο `pointerEvents`, ίδιο `zIndex` — διέφεραν **μόνο** στο
+ * περίγραμμα και στο γέμισμα. *Μια πύλη diff δεν είναι απογραφή: δείχνει ό,τι περνά μπροστά της.*
+ */
+const dragRectangle = (
+  startX: number, startY: number, endX: number, endY: number,
+  ink: { border: string; backgroundColor: string },
+): React.CSSProperties => ({
+  position: 'absolute',
+  left: `${Math.min(startX, endX)}px`,
+  top: `${Math.min(startY, endY)}px`,
+  width: `${Math.abs(endX - startX)}px`,
+  height: `${Math.abs(endY - startY)}px`,
+  border: ink.border,
+  backgroundColor: ink.backgroundColor,
+  pointerEvents: 'none',
+  zIndex: zIndex.overlay,
+});
+
+/**
+ * Η **σταθερή μπάρα** του dashboard: header και footer είναι η ίδια επιφάνεια, αγκυρωμένη
+ * στην αντίθετη ακμή. Διέφεραν μόνο σε `top`/`bottom` και `borderBottom`/`borderTop`.
+ *
+ * ⚠️ Η `edge` είναι **δύο τιμές, όχι ελεύθερο αντικείμενο στυλ**: αν δεχόταν αυθαίρετο
+ * override, θα ξανάνοιγε τον δρόμο για τρίτη παραλλαγή που κανείς δεν θα συνέκρινε — το
+ * ίδιο σχήμα που γέννησε τα δύο.
+ */
+const dashboardBar = (
+  edge: 'top' | 'bottom', height: number, sidebarWidth: number, sidebarCollapsed: boolean,
+): React.CSSProperties => ({
+  position: 'fixed',
+  [edge]: 0,
+  left: sidebarCollapsed ? spacing['3xl'] : layoutUtilities.pixels(sidebarWidth),
+  right: 0,
+  height: layoutUtilities.pixels(height),
+  display: 'flex',
+  alignItems: 'center',
+  padding: `0 ${spacing.lg}`,
+  backgroundColor: colors.background.primary,
+  [edge === 'top' ? 'borderBottom' : 'borderTop']: `1px solid ${colors.border.primary}`,
+  zIndex: zIndex.sticky,
+});
+
 export const canvasUI = {
   container: {
     backgroundColor: colors.background.primary,
@@ -128,34 +176,22 @@ export const canvasUI = {
     },
 
     marquee: {
-      positioned: (startX: number, startY: number, endX: number, endY: number): React.CSSProperties => ({
-        position: 'absolute',
-        left: `${Math.min(startX, endX)}px`,
-        top: `${Math.min(startY, endY)}px`,
-        width: `${Math.abs(endX - startX)}px`,
-        height: `${Math.abs(endY - startY)}px`,
-        border: `2px dashed ${colors.primary[500]}`,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        pointerEvents: 'none',
-        zIndex: zIndex.overlay
-      })
+      positioned: (startX: number, startY: number, endX: number, endY: number): React.CSSProperties =>
+        dragRectangle(startX, startY, endX, endY, {
+          border: `2px dashed ${colors.primary[500]}`,
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        })
     },
 
     // ADR-515: το νεκρό `snapIndicator.positioned` (10px circle, κανένας consumer)
     // αφαιρέθηκε — το ζωντανό snap marker = `SnapIndicatorOverlay` + snap-visual-config SSoT.
 
     zoomWindow: {
-      positioned: (startX: number, startY: number, endX: number, endY: number): React.CSSProperties => ({
-        position: 'absolute',
-        left: `${Math.min(startX, endX)}px`,
-        top: `${Math.min(startY, endY)}px`,
-        width: `${Math.abs(endX - startX)}px`,
-        height: `${Math.abs(endY - startY)}px`,
-        border: `2px solid ${colors.blue["600"]}`,
-        backgroundColor: 'rgba(59, 130, 246, 0.05)',
-        pointerEvents: 'none',
-        zIndex: zIndex.overlay
-      })
+      positioned: (startX: number, startY: number, endX: number, endY: number): React.CSSProperties =>
+        dragRectangle(startX, startY, endX, endY, {
+          border: `2px solid ${colors.blue["600"]}`,
+          backgroundColor: 'rgba(59, 130, 246, 0.05)',
+        })
     },
 
     // ✅ ENTERPRISE FIX: Missing floating panel positioning for TestResultsModal
@@ -182,7 +218,9 @@ export const canvasUI = {
           backgroundColor: colors.background.secondary,
           borderRadius: borderRadius.lg,
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-          zIndex: zIndex.modal + 1
+          // ADR-780 Φ.Γ: ήταν `modal + 1`. Το «+1» ΕΙΝΑΙ η πρόθεση («η κάρτα πάνω από το
+          // ΔΙΚΟ ΤΗΣ backdrop»), αλλά γραμμένη ως αριθμητική σπάει σε κάθε επαναρίθμηση.
+          zIndex: zIndex.modalContent
         }
       }
     },
@@ -319,32 +357,10 @@ export const canvasUI = {
         pointerEvents: isCollapsed ? 'none' : 'auto',
         transition: `opacity ${animation.duration.fast} ${animation.easing.ease}`,
       }),
-      dashboardHeader: (height: number, sidebarWidth: number, sidebarCollapsed: boolean): React.CSSProperties => ({
-        position: 'fixed',
-        top: 0,
-        left: sidebarCollapsed ? spacing['3xl'] : layoutUtilities.pixels(sidebarWidth),
-        right: 0,
-        height: layoutUtilities.pixels(height),
-        display: 'flex',
-        alignItems: 'center',
-        padding: `0 ${spacing.lg}`,
-        backgroundColor: colors.background.primary,
-        borderBottom: `1px solid ${colors.border.primary}`,
-        zIndex: zIndex.sticky,
-      }),
-      dashboardFooter: (height: number, sidebarWidth: number, sidebarCollapsed: boolean): React.CSSProperties => ({
-        position: 'fixed',
-        bottom: 0,
-        left: sidebarCollapsed ? spacing['3xl'] : layoutUtilities.pixels(sidebarWidth),
-        right: 0,
-        height: layoutUtilities.pixels(height),
-        display: 'flex',
-        alignItems: 'center',
-        padding: `0 ${spacing.lg}`,
-        backgroundColor: colors.background.primary,
-        borderTop: `1px solid ${colors.border.primary}`,
-        zIndex: zIndex.sticky,
-      }),
+      dashboardHeader: (height: number, sidebarWidth: number, sidebarCollapsed: boolean): React.CSSProperties =>
+        dashboardBar('top', height, sidebarWidth, sidebarCollapsed),
+      dashboardFooter: (height: number, sidebarWidth: number, sidebarCollapsed: boolean): React.CSSProperties =>
+        dashboardBar('bottom', height, sidebarWidth, sidebarCollapsed),
       dashboardMainContent: (
         sidebarWidth: number,
         sidebarCollapsed: boolean,
