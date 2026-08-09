@@ -4,16 +4,16 @@
     "adr": "ADR-774",
     "description": "Αρχή του χρώματος στα CSS Modules — `var()` που δείχνει σε ανύπαρκτο custom property με σταθερό χρώμα ως fallback (Κ2), και μπλοκ `prefers-color-scheme` που βάφουν (Κ3). Ανά αρχείο και ανά κατάσταση.",
     "generatedBy": "node scripts/check-css-token-authority.js --write-baseline",
-    "totalDanglingLiteralColor": 66,
+    "totalDanglingLiteralColor": 36,
     "totalOsThemeChromatic": 2,
-    "totalFiles": 11,
+    "totalFiles": 10,
     "definedCustomProperties": 423,
     "census": {
-      "defined": 581,
+      "defined": 537,
       "runtime-namespace": 6,
-      "dangling-token-fallback": 6,
-      "dangling-literal-color": 66,
-      "dangling-non-color": 42,
+      "dangling-token-fallback": 4,
+      "dangling-literal-color": 36,
+      "dangling-non-color": 34,
       "os-theme-chromatic": 2
     },
     "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ — είναι «πόσα χρώματα δεν ελέγχει η αρχή θεμάτων». Η θεραπεία είναι ΟΡΙΣΜΟΣ του token στο globals.css (ή χρήση υπάρχοντος), όχι μικρότερος αριθμός. Το stylelint θα έβγαζε PASS σε ΟΛΑ αυτά. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό."
@@ -46,9 +46,6 @@
     },
     "src/subapps/dxf-viewer/ui/match-properties/match-properties-dialog.module.css": {
       "dangling-literal-color": 2
-    },
-    "src/subapps/geo-canvas/ui/design-system/performance/PerformanceComponents.module.css": {
-      "dangling-literal-color": 30
     },
     "src/subapps/dxf-viewer/theme/tokens.color.css": {
       "os-theme-chromatic": 1
