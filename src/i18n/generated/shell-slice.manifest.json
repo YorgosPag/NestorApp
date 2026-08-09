@@ -39,7 +39,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "f18644ea3071606a35a44a9f03c0d94e79954fb1d9cf11b921450c6ca3f492a0",
+  "inputsSha256": "a6a7228a71166803a652a994c2f7e7f76bc0e5464eed534f762a312e40de8311",
   "languages": [
     "el"
   ],
@@ -86,7 +86,7 @@
     "src/components/admin/ai-inbox/AIInboxUnauthorized.tsx": "6885abb33ef4bc225b52ecedc57236f460c244507146f0311b44277dfdcc033a",
     "src/components/admin/layout/AdminSidebar.tsx": "87dd25e552d47f892d6e252d8c76b5247601823baa35155e829543412d7d3384",
     "src/components/app-header.tsx": "ce7ac01d3dbe5d06dea0c29bc271f47d67f1f7855b3036f08d6bc4f3f26c3083",
-    "src/components/app-sidebar.tsx": "4869b4b75f490039bb26bed18a18433619a56c86cb4cb62957774f77275ae265",
+    "src/components/app-sidebar.tsx": "81de2275b5a0b18f89a52d4fd53868897f8a50ae14b77560dfdf509cd4217a02",
     "src/components/core/AdvancedFilters/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/dashboard/DashboardHome.tsx": "8981a612d99c035e787f2d50ec4977399e9eb05388000193b36bc7098bab9973",
     "src/components/dashboard/DashboardWelcome.tsx": "664e054ae71015831d86ea4cf203f32bef47fccffdf4f7db1908158df9dd31bc",
@@ -129,7 +129,7 @@
     "src/components/sidebar/sidebar-badge.tsx": "269baa7a33c29e10d15ad0713ede7cb63b45b93c1b6b8a704767f782786ff258",
     "src/components/sidebar/sidebar-hidden-row.tsx": "f34d0930399338e834228f06f1fa210d3bd287d562898d5e740bd38e24db63a8",
     "src/components/sidebar/sidebar-logo.tsx": "85b01702d19d6acbd0d3e3e770633aec28433a73902ec25dfd98b99643b03eff",
-    "src/components/sidebar/sidebar-menu-item.tsx": "7c03d2837fc78d9be318bc1703788f27fd4cc07bd58a97391eccb82fa527710e",
+    "src/components/sidebar/sidebar-menu-item.tsx": "7a5d872e35721b0ea265b52795c4c5d72adab89bee52730b322821a8244bd7d3",
     "src/components/sidebar/sidebar-menu-section.tsx": "f35575e03fd8fe355bfaef36ed22e57435cad8a43d38515795db03e1e78af415",
     "src/components/sidebar/sidebar-reveal-banner.tsx": "dd752d43459552ac84f59bda594c368d84d6031182003c2dec47fe7030c0fa69",
     "src/components/theme-provider.tsx": "b9a5f36934f8c5eef2c1da3a70f720e6f9b10568307b362cb1a70d8d7b61cf10",
@@ -269,7 +269,6 @@
     "src/i18n/bundle-registry.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/config.ts": "5a4d52b43b7c769dba3f48b960cda6ba058ba2f3a79e03d3b30c29079f0c3270",
     "src/i18n/hooks/useTranslation.ts": "fb516bf7023132029c162d56a700e858cca755233456684efbb5f3012c773af5",
-    "src/i18n/hooks/useTranslationLazy.ts": "83038e2582b5cd891eb0024597f6d8b81094470e69fd0dd0c7c8c5d679af37f5",
     "src/i18n/lazy-config.ts": "e9eb278736edf9f74be6b024f467c8148d921d26c34389f7879cb9f88eb9fea1",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
@@ -490,7 +489,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 413,
+    "shellFiles": 412,
     "sliceBytes": 187910
   },
   "unresolvableKeys": [
@@ -3495,6 +3494,12 @@
         "jobs.switch.hiddenCount",
         "jobs.switch.restoreAll",
         "jobs.switch.tooltip",
+        "legal.dataDeletion",
+        "legal.legalLinks",
+        "legal.privacyPolicy",
+        "legal.termsOfService",
+        "menu.main",
+        "menu.tools",
         "module.account",
         "module.accounting",
         "module.admin",
@@ -3536,13 +3541,24 @@
         "newInvoice",
         "newProject",
         "operatorInbox",
+        "pages.navigation",
         "roleManagement",
         "search",
         "searchBackfill",
         "setup",
         "user.name"
       ],
-      "prefixes": [],
+      "prefixes": [
+        "accounting",
+        "admin",
+        "badges",
+        "crm",
+        "menu",
+        "pages",
+        "reports",
+        "sidebar",
+        "tools"
+      ],
       "whole": true
     },
     "onboarding": {

@@ -18,7 +18,7 @@ import type { MenuItem } from "@/types/sidebar"
 import type { JobRevealView } from "@/hooks/useJobFilteredNavigation"
 import { TRANSITION_PRESETS } from '@/components/ui/effects'
 import { useIconSizes } from '@/hooks/useIconSizes'
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy'
+import { useTranslation } from '@/i18n/hooks/useTranslation'
 import { preloadOnHover, getPreloadableRouteFromHref } from '@/utils/preloadRoutes'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -96,19 +96,39 @@ export function SidebarMenuItem({
 }: SidebarMenuItemProps) {
   const { state, isMobile, setOpenMobile, setOpen } = useSidebar();
   const iconSizes = useIconSizes();
-  const { t, isLoading } = useTranslationLazy('navigation');
+  const { t } = useTranslation('navigation');
   const [popoverOpen, setPopoverOpen] = React.useState(false);
   const closeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isCollapsed = state === 'collapsed';
 
+  /**
+   * 🔴 ΕΔΩ ΕΓΡΑΦΕ `if (isLoading) return title;` — ΚΑΙ ΑΥΤΟ ΗΤΑΝ ΤΟ ΩΜΟ ΚΛΕΙΔΙ.
+   *
+   * Ο παλιός `useTranslationLazy` αρχικοποιούσε την ετοιμότητά του σε `useState(false)`
+   * και τη γύριζε **μόνο μέσα σε `useEffect`**. Το `useEffect` **δεν τρέχει ΠΟΤΕ σε SSR**,
+   * άρα στον server το `isLoading` ήταν `true` **για πάντα** και αυτή η γραμμή επέστρεφε
+   * το ίδιο το κλειδί. Οι τίτλοι έρχονται από το `smart-navigation-factory.ts` και είναι
+   * **71 dotted κλειδιά** (`pages.home`, `sidebar.spaces`, `tools.legal`, …), οπότε το
+   * HTML που έστελνε ο server έβαφε **17 ωμά κλειδιά σε ΚΑΘΕ διαδρομή** — το πλαϊνό μενού
+   * ζει στο root layout. Μετρημένο 2026-08-09 με σκέτο `curl` σε 6 διαδρομές.
+   *
+   * Και το χειρότερο: **η μετάφραση ΗΤΑΝ ήδη εκεί.** Το `navigation` ταξιδεύει **ολόκληρο**
+   * στο σύγχρονο shell slice (`shell-slice.el.json → navigation.pages.home === "Αρχική"`).
+   * Δεν έλειπαν δεδομένα — το component **αρνιόταν να τα δει**.
+   *
+   * ⚠️ ΜΗΝ ΞΑΝΑΒΑΛΕΙΣ ΦΡΟΥΡΟ ΕΤΟΙΜΟΤΗΤΑΣ ΕΔΩ. Είναι η ίδια αρχή που απαγορεύει το
+   * CHECK 3.25 (ADR-267/300) — εκείνο όμως κοιτάζει μόνο `*PageContent.tsx`, ενώ αυτός ο
+   * φρουρός ήταν σε **επίπεδο τιμής** μέσα σε helper, άρα εκτός εμβέλειάς του.
+   *
+   * Ο κανονικός `useTranslation` αρχικοποιεί **σύγχρονα** (`isBundleComplete`), άρα είναι
+   * σωστός σε SSR· και επιστρέφει το ίδιο το κλειδί όταν όντως λείπει, οπότε ο έλεγχος
+   * `translated === title` παρακάτω καλύπτει την αστοχία χωρίς να χρειάζεται φρουρός.
+   */
   const translateTitle = (title: string): string => {
-    if (isLoading) return title;
-    if (title.includes('.')) {
-      const translated = t(title);
-      return translated === title ? title : translated;
-    }
-    return title;
+    if (!title.includes('.')) return title;
+    const translated = t(title);
+    return translated === title ? title : translated;
   };
 
   const handleNavigationClick = (href: string) => {

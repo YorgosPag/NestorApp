@@ -429,7 +429,9 @@ The application reaches "Google-grade direction" only when all of the following 
 - `src/i18n/config.ts`
 - `src/i18n/lazy-config.ts`
 - `src/i18n/hooks/useTranslation.ts`
-- `src/i18n/hooks/useTranslationLazy.ts`
+- ~~`src/i18n/hooks/useTranslationLazy.ts`~~ — **ΔΙΑΓΡΑΦΗΚΕ 2026-08-09** (ADR-744 §12). Αρχικοποιούσε
+  την ετοιμότητά του σε `useState(false)` και τη διόρθωνε μόνο σε `useEffect`, που δεν τρέχει σε SSR
+  ⇒ κάθε φρουρός `if (isLoading)` από κάτω ήταν άνευ όρων στον server. Χρησιμοποίησε `useTranslation`.
 - `src/i18n/hooks/useNamespace.ts`
 - `src/providers/NotificationProvider.tsx`
 - `src/types/i18n.ts`

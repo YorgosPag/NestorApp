@@ -16,7 +16,7 @@ import { SidebarRevealBanner } from "@/components/sidebar/sidebar-reveal-banner"
 import { useJobFilteredNavigation } from "@/hooks/useJobFilteredNavigation"
 import { useSidebarState } from "@/hooks/useSidebarState"
 import { useBuildingsNoUnits } from "@/contexts/BuildingsNoUnitsContext"
-import { useTranslationLazy } from "@/i18n/hooks/useTranslationLazy"
+import { useTranslation } from "@/i18n/hooks/useTranslation"
 import { MapPin } from "lucide-react"
 import { useSidebar } from "@/components/ui/sidebar"
 import { HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects"
@@ -25,7 +25,11 @@ import '@/lib/design-system';
 export function AppSidebar() {
   const iconSizes = useIconSizes()
     const { expandedItems, toggleExpanded, isItemActive } = useSidebarState()
-    const { t } = useTranslationLazy('navigation')
+    // 🔴 ADR-744 — ΟΧΙ `useTranslationLazy`. Εκείνος αρχικοποιεί την ετοιμότητά του σε
+    // `useState(false)` και τη διορθώνει μόνο μέσα σε `useEffect`, που **δεν τρέχει σε SSR**.
+    // Εδώ δεν υπήρχε φρουρός `isLoading`, οπότε το αρχείο δούλευε **κατά τύχη** — επειδή το
+    // `navigation` ταξιδεύει ΟΛΟΚΛΗΡΟ στο shell slice. Ήταν οπλισμένο, όχι σπασμένο.
+    const { t } = useTranslation('navigation')
     const { isMobile, setOpenMobile } = useSidebar()
 
     // 🏢 ADR-748 Φάση 3: τα δύο διαδοχικά φίλτρα (δικαίωμα → ενεργή δουλειά)

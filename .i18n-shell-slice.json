@@ -22,7 +22,18 @@
       "reason": "resolveI18nMessage() calls i18n.exists(...) before every i18n.t(...) and its final statement is `return message`. A key that has not loaded fails exists(), so the function returns the original string — it is structurally incapable of painting a raw key, and there is nothing to slice."
     },
     "src/components/sidebar/sidebar-menu-item.tsx": {
-      "reason": "translateTitle() is triple-guarded: it returns early while isLoading, only calls t() when the title contains a dot, and falls back to the untranslated title when t() returns the key unchanged. Measured: the titles come from MODAL_SELECT_MAIN_NAVIGATION_LABELS (src/subapps/dxf-viewer/config/modal-select.ts), whose values are literal Greek strings with no dot ('Κτίρια', 'Έργα'), so t() is never reached today. Those hardcoded labels are separate i18n debt — see ADR-744 §9, not this gate's scope."
+      "prefixes": [
+        "navigation:pages",
+        "navigation:sidebar",
+        "navigation:tools",
+        "navigation:menu",
+        "navigation:reports",
+        "navigation:accounting",
+        "navigation:crm",
+        "navigation:admin",
+        "navigation:badges"
+      ],
+      "reason": "🔴 THIS ENTRY PREVIOUSLY CLAIMED THE OPPOSITE, AND THE CLAIM WAS FALSE. It read: 'the titles come from MODAL_SELECT_MAIN_NAVIGATION_LABELS, whose values are literal Greek strings with no dot, so t() is never reached today' — i.e. it declared ZERO key contribution. Measured 2026-08-09: the titles reaching translateTitle() come from src/config/smart-navigation-factory.ts, which supplies 71 distinct DOTTED values ('pages.home', 'sidebar.spaces', 'tools.legal', …) under exactly the 9 roots listed above, and all 71 resolve to a string in locales/el/navigation.json. The constant the old reason named lives in src/subapps/dxf-viewer/config/modal-select.ts and never reaches this component. Consequence of the false claim: the sidebar's keys were in NO namespace's `wants`, so they survived in the slice only because the `navigation` migration ledger entry ships that namespace WHOLE — the moment ADR-744 §8 retires that entry, all 71 would have vanished silently from every route. (A second, independent bug made this invisible for longer: `scripts/lib/i18n-namespace-extract.js` matches /useTranslation\\(/, which `useTranslationLazy(` does not match, so the generator could not see this file at all until the hook was migrated.) THE PREFIXES ABOVE ARE A FALSIFIABLE CLAIM, unlike prose: every dotted value in smart-navigation-factory.ts must start with one of these 9 roots — re-verify when you touch either file."
     },
     "src/components/ui/ProductTour/product-tour-overlay.tsx": {
       "prefixes": ["common-shared:productTour"],
