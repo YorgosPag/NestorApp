@@ -208,7 +208,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
 
     // Enterprise notification
     const notification = document.createElement('div');
-    notification.className = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${colors.bg.success} text-white p-6 rounded-lg shadow-2xl z-[10000] animate-pulse ${getStatusBorder('success')}`;
+    notification.className = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${colors.bg.success} text-white p-6 rounded-lg shadow-2xl z-[var(--z-index-viewer-transient)] animate-pulse ${getStatusBorder('success')}`;
     notification.innerHTML = `
       <div class="flex items-center space-x-3">
         <span class="text-2xl">🎯</span>

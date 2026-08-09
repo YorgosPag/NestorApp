@@ -91,7 +91,7 @@ export function ErrorReportingDashboard({
   };
 
   return (
-    <div className={`fixed ${positionClasses[position]} z-[9999]`}>
+    <div className={`fixed ${positionClasses[position]} z-[var(--z-index-viewer-menu)]`}>
       {/* Minimized View */}
       {isMinimized && (
         <div
@@ -234,7 +234,7 @@ export function ErrorReportingDashboard({
 
       {/* Error Detail Modal */}
       {selectedError && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[var(--z-index-viewer-transient)] p-4">
           <div className={`${colors.bg.backgroundSecondary} ${colors.text.inverted} ${radius.lg} max-w-4xl w-full max-h-[90vh] overflow-y-auto`}>
             <div className="flex items-center justify-between p-4 border-b ${getStatusBorder('muted')}">
               <h3 className="font-semibold">{t('errorTracking.errorDetails')}</h3>

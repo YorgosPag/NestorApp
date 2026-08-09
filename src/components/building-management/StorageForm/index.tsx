@@ -61,7 +61,7 @@ export function StorageForm({ unit, building, onSave, onCancel, formType }: Stor
   const modalContent = (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center p-4"
-      style={{ zIndex: 9999 }}
+      style={{ zIndex: 'var(--z-index-viewer-menu)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
       role="dialog"
       aria-modal="true"

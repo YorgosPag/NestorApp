@@ -187,7 +187,7 @@ export const ChartTooltip: React.FC<TooltipProps> = ({
 
   return (
     <div
-      className={`absolute z-[1000] rounded-md px-3 py-2 text-xs shadow-md pointer-events-none max-w-[200px] whitespace-nowrap ${semanticColors.bg.card} ${semanticColors.text.primary} ${semanticColors.border.default} border ${className}`}
+      className={`absolute z-[var(--z-index-dropdown)] rounded-md px-3 py-2 text-xs shadow-md pointer-events-none max-w-[200px] whitespace-nowrap ${semanticColors.bg.card} ${semanticColors.text.primary} ${semanticColors.border.default} border ${className}`}
       data-chart-tooltip="true"
       data-x={x + 10}
       data-y={y - 10}

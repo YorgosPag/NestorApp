@@ -109,7 +109,7 @@ const SelectContent = React.forwardRef<
   const { quick } = useBorderTokens();
   const dropdown = useDropdownTokens();
 
-  // 🏢 ENTERPRISE: z-index must be ABOVE floating panels (1700)
+  // 🏢 ENTERPRISE: z-index must be ABOVE floating panels (ρόλος `toast`) — δες ADR-780 Φ.Γ
   // Pattern: Autodesk/Adobe - dropdown content always on top
   // Using centralized tokens for z-index, max-height, shadow
   // 🏢 ENTERPRISE: Width EXACTLY matches trigger width (not min-width)

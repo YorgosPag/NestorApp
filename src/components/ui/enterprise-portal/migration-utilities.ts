@@ -106,7 +106,7 @@ export const getZIndexForComponent = (componentType: string): number => {
       return portalComponents.zIndex.modal;
     case 'notification':
     case 'toast':
-      return zIndex.toast; // 🏢 ENTERPRISE: Use centralized zIndex.toast (1700)
+      return zIndex.toast; // 🏢 ENTERPRISE: Use centralized zIndex.toast (ADR-780: ΡΟΛΟΣ, όχι αριθμός)
     case 'overlay':
     case 'backdrop':
       return portalComponents.zIndex.overlay;

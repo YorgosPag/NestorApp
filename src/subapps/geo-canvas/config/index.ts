@@ -362,9 +362,11 @@ export const GEO_CANVAS_ZINDEX = {
 
   // Panel ordering (draggable panels)
   PANEL_COORDINATES: zIndex.dropdown,     // 1000
-  PANEL_PROPERTIES: zIndex.dropdown + 1,  // 1001
-  PANEL_LAYERS: zIndex.dropdown + 2,      // 1002
-  PANEL_TOOLS: zIndex.dropdown + 3,       // 1003
+  // ADR-780 Φ.Γ: ήταν `dropdown + 1/2/3`. Επέζησαν της συμπίεσης **κατά τύχη** (ο
+  // `dropdown` έμεινε 1000)· μια παρεμβολή ρόλου στο 1005 θα τα έσπαγε σιωπηλά.
+  PANEL_PROPERTIES: zIndex.geoPanelProperties,
+  PANEL_LAYERS: zIndex.geoPanelLayers,
+  PANEL_TOOLS: zIndex.geoPanelTools,
 
   // Search UI
   SEARCH_RESULTS: zIndex.dropdown,    // 1000
