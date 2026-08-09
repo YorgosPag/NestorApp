@@ -232,12 +232,19 @@ export default function DxfCanvasHarness() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // 🔴 ADR-775 §15 — ΔΥΟ ΔΙΑΚΟΠΤΕΣ ΓΙΑ ΤΟ ΙΔΙΟ ΠΡΑΓΜΑ, ΚΑΙ Ο ΕΝΑΣ ΗΤΑΝ ΠΑΝΤΑ ΚΛΕΙΣΤΟΣ.
+  // Το `?grid=1` άναβε το `gridSettings`, αλλά ο ζωγράφος ρωτά το `renderOptions.showGrid`
+  // (`dxf-canvas-renderer.ts` → `cacheInputs.showGrid`) — που ήταν **καρφωμένο `false`**.
+  // Άρα το test `ruler-grid` («rulers and grid active») παρήγαγε εικόνα **byte-ταυτόσημη** με
+  // το `fit-to-view`: μετρημένο 2026-08-09, ίδιο sha256. Ένα test που δεν μπορεί να δείξει το
+  // αντικείμενό του δεν αποτυγχάνει ποτέ — και μια βάση από αυτό κλειδώνει την απουσία ως
+  // «σωστή».
   const renderOptions = useMemo(() => ({
-    showGrid: false,
+    showGrid: urlParams.grid,
     showLayerNames: false,
     wireframeMode: false,
     selectedEntityIds,
-  }), [selectedEntityIds]);
+  }), [selectedEntityIds, urlParams.grid]);
 
   const handleWheelZoom = useCallback((wheelDelta: number, center: Point2D) => {
     // Το «προηγούμενο» διαβάζεται από το SSoT και όχι από το React state: μετά τη διόρθωση
