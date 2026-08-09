@@ -453,7 +453,7 @@ describe('🔴 αριστερό κλικ στη ζώνη — επιλογή ΟΛ
         containerRef: harness.containerRef,
         transformRef: harness.transformRef,
         onSelectTo: jest.fn(),
-        onSelectAll: jest.fn(),
+        onCornerPress: jest.fn(),
         // ADR-739 §26.15 — «δέσμευσε ό,τι γράφεται πριν κουνηθεί ο δρομέας». Εδώ η συνεδρία
         // είναι σε πλοήγηση, άρα δεν γράφεται τίποτα· το συμβόλαιο ελέγχεται στο
         // `table-cell-pointer-session-survival.test.tsx`.
@@ -772,7 +772,7 @@ describe('🔴 πολλαπλή επιλογή άξονα — η πράξη ακ
         containerRef: harness.containerRef,
         transformRef: harness.transformRef,
         onSelectTo: jest.fn(),
-        onSelectAll: jest.fn(),
+        onCornerPress: jest.fn(),
         onCommitPending: jest.fn(),
       }),
     );
@@ -938,7 +938,7 @@ describe('🔴 πολλαπλή επιλογή άξονα — ΚΑΙ η μορφ
         containerRef: harness.containerRef,
         transformRef: harness.transformRef,
         onSelectTo: jest.fn(),
-        onSelectAll: jest.fn(),
+        onCornerPress: jest.fn(),
         onCommitPending: jest.fn(),
       }),
     );

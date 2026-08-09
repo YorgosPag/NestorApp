@@ -52,7 +52,11 @@ export interface TablePointerHarnessProps {
   /** Το μοντέλο που φτάνει στο commit — το **μόνο** πράγμα που θα δει ο χρήστης. */
   readonly onCommitModel?: (entity: TableEntity, model: PersistedTableModel) => void;
   readonly onSelectTo?: (cell: TableCellRef) => void;
-  readonly onSelectAll?: () => void;
+  /**
+   * 🔴 §43 + §66 — το πάτημα στη γωνία. Ένα prop, γιατί είναι **ένα** πάτημα: το `selectAll`
+   * και το όπλισμα της μετακίνησης ζουν και τα δύο πίσω από αυτόν τον χειριστή στην παραγωγή.
+   */
+  readonly onCornerPress?: (event: MouseEvent, container: HTMLElement) => void;
   readonly onCommitPending?: () => void;
   readonly onPreviewModel?: (entity: TableEntity, model: PersistedTableModel) => void;
 }
@@ -76,7 +80,7 @@ export function TablePointerHarness(props: TablePointerHarnessProps): React.Reac
     containerRef,
     transformRef,
     onSelectTo: props.onSelectTo ?? (() => undefined),
-    onSelectAll: props.onSelectAll ?? (() => undefined),
+    onCornerPress: props.onCornerPress ?? (() => undefined),
     onCommitPending: props.onCommitPending ?? (() => undefined),
     onPreviewModel: props.onPreviewModel ?? (() => undefined),
     onCommitModel: props.onCommitModel ?? (() => undefined),

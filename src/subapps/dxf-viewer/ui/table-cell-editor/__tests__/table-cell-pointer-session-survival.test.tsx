@@ -87,8 +87,8 @@ function TableSessionHarness(props: HarnessProps): React.ReactElement {
     containerRef,
     transformRef,
     onSelectTo: props.onSelectTo,
-    // ADR-739 §43 — η γωνία «επιλογή όλων»· αυτά τα harness δεν την αφορούν.
-    onSelectAll: jest.fn(),
+    // ADR-739 §43/§66 — το πάτημα στη γωνία· αυτά τα harness δεν το αφορούν.
+    onCornerPress: jest.fn(),
     onCommitPending: props.onCommitPending,
   });
 

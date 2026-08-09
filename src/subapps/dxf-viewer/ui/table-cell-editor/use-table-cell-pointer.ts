@@ -89,11 +89,13 @@ import { useTableContainerMouseDown } from './use-table-container-mousedown';
 // σχήμα με τις τρεις πρώτες — όλη η λογική σε δικό της module, εδώ μόνο ο φρουρός.
 import { tryTablePointModeMouseDown } from './table-point-mode-pointer';
 import { tryTableFillHandleMouseDown } from './table-fill-handle-drag';
+// ADR-739 §66 — η **πέμπτη** χειρονομία: μετακίνηση της οντότητας από τη γωνία. Εδώ μένει μόνο
+// ο τερματισμός· την ίδια τη σύρση την οπλίζει ο ιδιοκτήτης των γραφέων σκηνής (`onCornerPress`).
+import { endTableMoveDrag } from './table-move-drag';
 // ADR-739 §31.9 — η **δεύτερη** χειρονομία του πίνακα: σύρσιμο διαχωριστικού στηλών.
 import {
-  beginTableAxisResize,
   endTableAxisResizeDrag,
-  type TableResizeAxis,
+  tryTableAxisResizeMouseDown,
 } from './table-axis-resize-drag';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 // ADR-739 §26.15 — ο ΕΝΑΣ ορισμός του «ανήκω στη συνεδρία», και στις δύο μορφές του:
@@ -127,18 +129,20 @@ export interface UseTableCellPointerParams {
   /** `Shift+κλικ` — δεύτερη γωνία περιοχής, χωρίς να κουνηθεί το ενεργό κελί. */
   readonly onSelectTo: (cell: TableCellRef) => void;
   /**
-   * 🔴 ADR-739 §43 — **κλικ στο τετραγωνάκι της γωνίας**: όλα τα κελιά αυτού του πίνακα.
+   * 🔴 ADR-739 §43 + §66 — **το πάτημα στο τετραγωνάκι της γωνίας**: ΜΙΑ ερώτηση, δύο
+   * συνέπειες — μαρκάρει όλα τα κελιά **και** οπλίζει τη μετακίνηση της οντότητας.
    *
-   * Είναι **κυριολεκτικά** ο ίδιος χειριστής με το `Ctrl+A` (`rangeActions.selectAll`), και
-   * αυτό είναι όλη η προδιαγραφή: *η γωνία είναι δεύτερη πόρτα στην ίδια εντολή*. Ένα δεύτερο
-   * `setTableCellSelection` εδώ θα ήταν sibling clone (N.18) — και, χειρότερα, δεύτερη άποψη
-   * για το τι σημαίνει «όλα» τη μέρα που ο ορισμός αλλάξει.
+   * Το §43 έφερε την πρώτη (η γωνία είναι δεύτερη πόρτα στο `Ctrl+A`: *κυριολεκτικά* ο ίδιος
+   * χειριστής, ποτέ δεύτερο `setTableCellSelection` — αλλιώς δεύτερη άποψη για το τι σημαίνει
+   * «όλα» τη μέρα που ο ορισμός αλλάξει). Το §66 έφερε τη δεύτερη, και οι δύο ζουν σε **ένα**
+   * prop επειδή είναι **ένα** πάτημα: το κλικ εκτελεί την εντολή του κουμπιού, το σύρσιμο
+   * μετακινεί: ο διαχωρισμός είναι απόσταση σε px και ζει στο `table-move-drag`, όχι εδώ.
    *
    * ⚠️ **Υποχρεωτικό, όχι προαιρετικό με no-op**: μια προεπιλογή θα έκανε το κουμπί να
    * ζωγραφίζεται, να δίνει δείκτη `pointer` και να μην κάνει τίποτα — δηλαδή ακριβώς το
    * ελάττωμα που ήρθε να διορθώσει, αλλά αυτή τη φορά με πράσινα tests από πάνω του.
    */
-  readonly onSelectAll: () => void;
+  readonly onCornerPress: (event: MouseEvent, container: HTMLElement) => void;
   /**
    * 🔴 ADR-739 §26.15 — **δέσμευσε ό,τι γράφεται τώρα, πριν κουνηθεί ο δρομέας**. No-op σε
    * πλοήγηση (δεν γράφεται τίποτα) και ιδεμποτής (μια δεύτερη κλήση με ίδιο κείμενο δεν
@@ -169,38 +173,9 @@ export interface UseTableCellPointerParams {
 
 export function useTableCellPointer(params: UseTableCellPointerParams): void {
   const {
-    cursor, entity, liveTable, containerRef, transformRef, onSelectTo, onSelectAll,
+    cursor, entity, liveTable, containerRef, transformRef, onSelectTo, onCornerPress,
     onCommitPending, onPreviewModel, onCommitModel,
   } = params;
-
-  /**
-   * 🔴 ADR-739 §31.9 — ξεκινά τη σύρση μεγέθους από το διαχωριστικό, σε **όποιον** άξονα.
-   *
-   * Ζει σε δικό του σταθεροποιημένο χειριστή για τον **ίδιο** λόγο με το `handleMouseDown`
-   * (§27.16 Ε6): διαβάζει τη ζωντανή οντότητα τη στιγμή του συμβάντος, όχι στιγμιότυπο —
-   * και η ίδια η σύρση γράφει το μοντέλο, δηλαδή παράγει νέα οντότητα σε κάθε καρέ.
-   *
-   * ⚠️ **Ένας** χειριστής για τους δύο άξονες, όχι δύο σχεδόν-ίδιοι (Giorgio 2026-08-04): το
-   * μόνο που αλλάζει είναι η παράμετρος `axis`, και δύο `useEventCallback` με ταυτόσημο σώμα
-   * θα ήταν sibling clone — μαζί με το ρίσκο να ξεχαστεί το `onCommitPending()` στον έναν.
-   */
-  const onResizeAxisEdge = useEventCallback((
-    axis: TableResizeAxis,
-    edgeIndex: number,
-    container: HTMLElement,
-  ): void => {
-    if (!entity) return;
-    // Ό,τι γράφεται στο κελί δεσμεύεται πρώτα: η σύρση αλλάζει τη διάταξη κάτω από τον δρομέα.
-    onCommitPending();
-    beginTableAxisResize(axis, {
-      entity,
-      edgeIndex,
-      container,
-      transformRef,
-      preview: onPreviewModel,
-      commit: onCommitModel,
-    });
-  });
 
   /**
    * 🔴 ADR-739 §27.16 Ε6 — **Ο ΧΕΙΡΙΣΤΗΣ ΕΧΕΙ ΣΤΑΘΕΡΗ ΤΑΥΤΟΤΗΤΑ, ΚΑΙ ΕΙΝΑΙ ΔΟΜΙΚΟ.**
@@ -303,18 +278,19 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // 🔴 ADR-739 §31.9 — **το διαχωριστικό ανάμεσα σε δύο γράμματα**: σύρσιμο πλάτους, όχι
     // επιλογή στήλης. Μπαίνει **πριν** από τη ζώνη γιατί είναι η πιο ειδική περίπτωση· η
     // γεωμετρία της ζώνης έχει ήδη παραιτηθεί στα ίδια pixel, οπότε εδώ δεν υπάρχει
-    // διεκδίκηση — μόνο δρομολόγηση.
-    if (pointerHit?.where === 'column-edge' || pointerHit?.where === 'row-edge') {
-      claimTableCellSessionPointerDown();
-      // §27.15 — και η χειρονομία: χωρίς αυτό το body-drag του ADR-560 armάρει στα 3px και
-      // το σύρσιμο του διαχωριστικού θα **μετακινούσε τον πίνακα**.
-      claimTableCellPointerGesture();
-      if (!primary) return;
-      if (pointerHit.where === 'column-edge') {
-        onResizeAxisEdge('column', pointerHit.columnIndex, container);
-      } else {
-        onResizeAxisEdge('row', pointerHit.rowIndex, container);
-      }
+    // διεκδίκηση — μόνο δρομολόγηση. §66: όλη η χειρονομία (δηλώσεις μαζί) ζει στο module της.
+    if (
+      tryTableAxisResizeMouseDown({
+        entity,
+        hit: pointerHit,
+        primary,
+        container,
+        transformRef,
+        commitPending: onCommitPending,
+        preview: onPreviewModel,
+        commit: onCommitModel,
+      })
+    ) {
       return;
     }
 
@@ -336,10 +312,12 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     }
 
     // 🔴 ADR-739 §43 — **ΤΟ ΤΕΤΡΑΓΩΝΑΚΙ ΤΗΣ ΓΩΝΙΑΣ**: όλα τα κελιά, με ένα κλικ (Excel parity).
+    // 🔴 §66 — **και η μετακίνηση του πίνακα**, όταν το χέρι σύρει αντί να πατήσει.
     if (pointerHit?.where === 'select-all-corner') {
       claimTableCellSessionPointerDown();
-      // §27.15 — και η χειρονομία, για τον ίδιο λόγο με τη ζώνη: χωρίς αυτό το body-drag του
-      // ADR-560 armάρει στα 3 px και ένα κλικ με μικροκίνηση θα **μετακινούσε τον πίνακα**.
+      // §27.15 — και η χειρονομία, όπως στη ζώνη: η δήλωση φυλάει τη σύρση επιλογής κελιών από
+      // το body-drag του ADR-560. ⚠️ §66: **δεν** είναι αυτή που εμποδίζει τη μετακίνηση εδώ —
+      // το §29 σβήνει το hover, άρα το body-drag είναι ήδη δομικά αδύνατο σε λειτουργία πίνακα.
       claimTableCellPointerGesture();
       // §27.14 — το δεξί δηλώνει και παραδίδεται· το μενού το ανοίγει ο δρομολογητής στο
       // `contextmenu` (δες `use-table-range-menu`), που τώρα βρίσκει ζωντανό δρομέα.
@@ -348,8 +326,9 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // δεν δεσμεύει (`use-table-cell-session-keys`, `case 'selectAll'`), γιατί η επιλογή είναι
       // κατάσταση **διεπαφής** και δεν αγγίζει το μοντέλο (§6.6) — ούτε μετακινεί τον δρομέα,
       // άρα το πρόχειρο μένει εκεί που το άφησε ο χρήστης. Ένα `onCommitPending()` εδώ θα έκανε
-      // τη γωνία να συμπεριφέρεται **αλλιώς από το ίδιο της το πλήκτρο**.
-      onSelectAll();
+      // τη γωνία να συμπεριφέρεται **αλλιώς από το ίδιο της το πλήκτρο**. Το ίδιο ισχύει και για
+      // τη μετακίνηση: αλλάζει τη **θέση** της οντότητας, όχι κελί.
+      onCornerPress(event, container);
       return;
     }
 
@@ -492,6 +471,8 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // §36 ΦΑΣΗ 3 — και το **φάντασμα** σβήνει μαζί: ζει σε store που ο ζωγράφος διαβάζει με
       // getter, άρα θα επιβίωνε της συνεδρίας του ως προεπισκόπηση χωρίς σύρση.
       endTableRangeTransferDrag();
+      // §66 — και η μετακίνηση: ίδιος κύκλος ζωής, ίδιο σημείο τερματισμού.
+      endTableMoveDrag();
     },
   });
 }

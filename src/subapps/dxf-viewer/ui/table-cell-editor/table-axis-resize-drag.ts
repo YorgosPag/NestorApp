@@ -48,7 +48,15 @@ import {
   resizeTableColumnLeftOfEdge,
   resizeTableRowAboveEdge,
 } from '../../bim/table/table-entity-grips';
-import { tableEventWorldPoint } from './table-cell-pointer-hit';
+import { tableEventWorldPoint, type TablePointerHit } from './table-cell-pointer-hit';
+// §66 — ο ΕΝΑΣ κύκλος ζωής χειρονομίας, κοινός με τη μετακίνηση (CHECK 3.28 τον μέτρησε).
+import { createTablePointerDragSession } from './table-pointer-drag-session';
+// §66 — ο ΕΝΑΣ ορισμός του «αυτό το πάτημα ανήκει στη συνεδρία», και στις δύο μορφές του. Ήρθε
+// μαζί με τη δρομολόγηση: οι δηλώσεις είναι μέρος του «το κατανάλωσα εγώ», όχι του καλούντος.
+import {
+  claimTableCellPointerGesture,
+  claimTableCellSessionPointerDown,
+} from './table-cell-session-focus';
 // 🔴 Giorgio 2026-08-04 — η **ζωντανή ένδειξη μεγέθους** («Πλάτος: 14,14 (104 pixel)»).
 import { tableResizeReadoutText } from '../../bim/table/table-resize-readout';
 import {
@@ -83,8 +91,12 @@ export interface TableAxisResizeStart {
   readonly commit: (edgeMm: number | null) => void;
 }
 
-/** Οι ακροατές της τρέχουσας σύρσης· `null` όταν δεν σέρνεται τίποτα. */
-let activeTeardown: (() => void) | null = null;
+/**
+ * Η **δική** της συνεδρία σύρσης. §66 — ο σκελετός (ακροατές σύλληψης, «ένας κύκλος τη φορά»,
+ * ιδεμποτής τερματισμός) εξήχθη όταν η μετακίνηση τον έκανε **πέμπτο** αντίγραφο και το CHECK
+ * 3.28 τον μέτρησε· κοινός ο **μηχανισμός**, ποτέ η κατάσταση.
+ */
+const session = createTablePointerDragSession();
 
 /**
  * Ξεκινά σύρση μεγέθους (πλάτος στήλης **ή** ύψος γραμμής). Ιδεμποτής ως προς την προηγούμενη:
@@ -92,9 +104,6 @@ let activeTeardown: (() => void) | null = null;
  * δεν υπάρχουν, ούτε καν σε διαφορετικούς άξονες (το χέρι είναι ένα).
  */
 export function startTableAxisResizeDrag(start: TableAxisResizeStart): void {
-  if (typeof document === 'undefined') return;
-  endTableAxisResizeDrag();
-
   // Η τελευταία **έγκυρη** θέση. `null` ⇒ το χέρι δεν κουνήθηκε ⇒ καμία εντολή στο τέλος.
   let lastEdgeMm: number | null = null;
 
@@ -114,14 +123,7 @@ export function startTableAxisResizeDrag(start: TableAxisResizeStart): void {
     start.commit(edge);
   };
 
-  document.addEventListener('mousemove', onMove, { capture: true });
-  document.addEventListener('mouseup', onUp, { capture: true });
-
-  activeTeardown = () => {
-    document.removeEventListener('mousemove', onMove, { capture: true });
-    document.removeEventListener('mouseup', onUp, { capture: true });
-    activeTeardown = null;
-  };
+  session.start({ onMove, onUp });
 }
 
 /**
@@ -130,12 +132,12 @@ export function startTableAxisResizeDrag(start: TableAxisResizeStart): void {
  * ζουν στο `document` και **δεν** θα έφευγαν μόνοι τους.
  */
 export function endTableAxisResizeDrag(): void {
-  activeTeardown?.();
+  session.end();
 }
 
 /** Test helper — «σέρνεται κάτι τώρα;», χωρίς να εκτεθεί ο ίδιος ο κύκλος ζωής. */
 export function isTableAxisResizeDragging(): boolean {
-  return activeTeardown !== null;
+  return session.isActive();
 }
 
 /** Ό,τι χρειάζεται το {@link beginTableAxisResize} — γεωμετρία **και** οι δύο γραφείς. */
@@ -193,6 +195,49 @@ export function beginTableAxisResize(
       if (model) commit(entity, model);
     },
   });
+}
+
+/**
+ * 🔴 §31.9 — **Η ΔΡΟΜΟΛΟΓΗΣΗ ΤΟΥ ΠΑΤΗΜΑΤΟΣ**: «έπεσε σε διαχωριστικό; τότε είναι δικό μου».
+ *
+ * Ίδιο σχήμα με τους δύο αδελφούς φρουρούς που ήδη καλεί ο `use-table-cell-pointer` πριν από
+ * τους κλάδους του (`tryTablePointModeMouseDown`, `tryTableFillHandleMouseDown`): ο pointer
+ * ρωτά, το module απαντά `true` όταν κατανάλωσε τη χειρονομία. Μετακόμισε εδώ (§66) όταν ο
+ * pointer ξαναχτύπησε τις 500 γραμμές του N.7.1 — **εξαγωγή σε υπεύθυνο module**, όχι
+ * ψαλίδισμα σχολίων, και σε αυτό ακριβώς το module ανήκε εξαρχής: εδώ ζει η χειρονομία.
+ *
+ * ⚠️ **Ένας** χειριστής για τους δύο άξονες, όχι δύο σχεδόν-ίδιοι (Giorgio 2026-08-04): το
+ * μόνο που αλλάζει είναι η παράμετρος `axis`, και δύο σώματα με ταυτόσημο περιεχόμενο θα ήταν
+ * sibling clone — μαζί με το ρίσκο να ξεχαστεί το `commitPending()` στον έναν.
+ */
+export interface TableAxisResizePress {
+  readonly entity: TableEntity;
+  /** Η **μία** απάντηση «πού έπεσε;» του §29 — ο pointer την έχει ήδη πληρώσει. */
+  readonly hit: TablePointerHit | null;
+  /** Αριστερό πλήκτρο· το δεξί δηλώνει και παραδίδεται (§27.14). */
+  readonly primary: boolean;
+  readonly container: HTMLElement;
+  readonly transformRef: RefObject<ViewTransform>;
+  /** §26.15 — ό,τι γράφεται δεσμεύεται πριν αλλάξει η διάταξη κάτω από τον δρομέα. */
+  readonly commitPending: () => void;
+  readonly preview: (entity: TableEntity, model: TableEntity['model']) => void;
+  readonly commit: (entity: TableEntity, model: TableEntity['model']) => void;
+}
+
+/** `true` όταν το πάτημα ήταν διαχωριστικό και καταναλώθηκε εδώ. */
+export function tryTableAxisResizeMouseDown(press: TableAxisResizePress): boolean {
+  const { entity, hit, primary, container, transformRef, commitPending, preview, commit } = press;
+  if (hit?.where !== 'column-edge' && hit?.where !== 'row-edge') return false;
+  claimTableCellSessionPointerDown();
+  // §27.15 — και η χειρονομία: χωρίς αυτό το body-drag του ADR-560 armάρει στα 3px και
+  // το σύρσιμο του διαχωριστικού θα **μετακινούσε τον πίνακα**.
+  claimTableCellPointerGesture();
+  if (!primary) return true;
+  commitPending();
+  const axis: TableResizeAxis = hit.where === 'column-edge' ? 'column' : 'row';
+  const edgeIndex = hit.where === 'column-edge' ? hit.columnIndex : hit.rowIndex;
+  beginTableAxisResize(axis, { entity, edgeIndex, container, transformRef, preview, commit });
+  return true;
 }
 
 /**

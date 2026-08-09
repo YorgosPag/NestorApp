@@ -33,14 +33,12 @@ import { useCallback, useMemo } from 'react';
 import type React from 'react';
 // ADR-751 Φ8.γ — `Alt+Enter` σε πλοήγηση· η απόφαση «ένας / πολλοί / κανένας» ζει στον
 // επιλυτή, εδώ μένει μόνο η αντίδραση της διεπαφής στην περίπτωση «πολλοί».
-import { activateTableCellLink } from '../../bim/table/table-link-interaction-2d';
-import { openTableLinkPicker } from '../../state/table-link-picker-store';
 // ADR-711 — το SSoT του «ποιος κατέχει το πληκτρολόγιο». ΜΗΝ γράψεις δεύτερο scope.
 import { useModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope';
 import { createLevelSceneManagerAdapter } from '../../systems/entity-creation/LevelSceneManagerAdapter';
 import { useCommandHistory } from '../../core/commands';
 import { resolveTableById } from './table-entity-lookup';
-import { toggleTableFormulaAbsoluteRef } from './table-point-mode-keys';
+import { useTableCursorCommands } from './use-table-cursor-commands';
 import { useLiveTable } from './use-live-table';
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import { buildTableCellEditCommand } from '../../bim/table/table-cell-edit-session';
@@ -80,12 +78,14 @@ import { useTableModeCanvasWiring } from './use-table-mode-canvas-wiring';
 // ADR-739 §31.9 — ο ΕΝΑΣ δεσμευτής «οντότητα + νέο μοντέλο ⇒ μία εντολή», κοινός με το μενού
 // ζωνών· η σύρση πλάτους τον καλεί **μία** φορά, στο `mouseup`.
 import { useTableModelCommit } from './use-table-model-commit';
+import { useTableSceneWriters } from './use-table-scene-writers'; // §66 — γραφείς σκηνής
+import { beginTableMove } from './table-move-drag'; // §66 — η πέμπτη χειρονομία
+import { useEventCallback } from '@/hooks/useEventCallback';
 // 🔴 ADR-763 Φ2.4.1 — ο ΕΝΑΣ εξυπηρετητής του «δέσμευσε και βγες». Δικό του module για τον
 // ίδιο λόγο με τα υπόλοιπα τέσσερα: αυτό το αρχείο είναι στα όρια των 500 γραμμών (N.7.1).
 import { useTableCellCommitRequest } from './use-table-cell-commit-request';
 // 🔴 ADR-769 Δ1 — δεμένο κελί σε **γράψιμη** στήλη: ο πίνακας ΖΗΤΑΕΙ αντί να κρατήσει.
 import { useTableCellWriteBack } from './use-table-cell-write-back';
-import type { TableEntity } from '../../types/table-entity';
 import type { LevelManagerLike } from '../../hooks/canvas/canvas-click-types';
 import type { ViewTransform } from '../../rendering/types/Types';
 
@@ -296,21 +296,28 @@ export function useTableCellDoubleClickEditor(
    */
   const commitTableModel = useTableModelCommit({ levelManager, execute });
 
-  const previewTableModel = useCallback(
-    (entity: TableEntity, model: TableEntity['model']): void => {
-      const { currentLevelId, getLevelScene, setLevelScene } = levelManager;
-      if (!currentLevelId || !setLevelScene) return;
-      const scene = getLevelScene(currentLevelId);
-      if (!scene) return;
-      // Νέο αντικείμενο οντότητας ⇒ οι απομνημονεύσεις της διάταξης ακυρώνονται από μόνες
-      // τους (η ταυτότητα ΕΙΝΑΙ η έκδοση, δες `resizeTableColumnLeftOfEdge`).
-      setLevelScene(currentLevelId, {
-        ...scene,
-        entities: scene.entities.map((e) => (e.id === entity.id ? { ...entity, model } : e)),
-      });
-    },
-    [levelManager],
-  );
+  // §66 — οι γραφείς σκηνής (προεπισκόπηση μοντέλου **και** θέσης, commit θέσης) ζουν σε δικό
+  // τους module: ήταν ένα ιδιωτικό `useCallback` όσο ο μόνος καταναλωτής έγραφε μοντέλο.
+  const sceneWriters = useTableSceneWriters({ levelManager, execute });
+
+  /**
+   * 🔴 ADR-739 §43 + §66 — **ΤΟ ΠΑΤΗΜΑ ΣΤΗ ΓΩΝΙΑ**: μαρκάρει τα πάντα και οπλίζει τη μετακίνηση.
+   *
+   * Το `selectAll` είναι **κυριολεκτικά** ο ίδιος χειριστής με το `Ctrl+A` — η γωνία είναι
+   * δεύτερη πόρτα στην ίδια εντολή, ποτέ δεύτερη εντολή. Η σύρση που ακολουθεί δεν το αναιρεί:
+   * μετακινεί έναν πίνακα ολόκληρο επιλεγμένο, ακριβώς όπως στο Excel.
+   */
+  const onCornerPress = useEventCallback((event: MouseEvent, container: HTMLElement): void => {
+    rangeActions.selectAll();
+    if (!liveEntity) return;
+    beginTableMove(event, {
+      entity: liveEntity,
+      container,
+      transformRef,
+      preview: sceneWriters.previewPosition,
+      commit: sceneWriters.commitPosition,
+    });
+  });
 
   useTableCellPointer({
     cursor,
@@ -319,11 +326,9 @@ export function useTableCellDoubleClickEditor(
     containerRef,
     transformRef,
     onSelectTo: rangeActions.selectTo,
-    // 🔴 ADR-739 §43 — **ο ΙΔΙΟΣ** χειριστής με το `Ctrl+A` (δες τις δύο άλλες κλήσεις του
-    // παρακάτω): η γωνία είναι δεύτερη πόρτα στην ίδια εντολή, όχι δεύτερη εντολή.
-    onSelectAll: rangeActions.selectAll,
+    onCornerPress,
     onCommitPending: commitPendingDraft,
-    onPreviewModel: previewTableModel,
+    onPreviewModel: sceneWriters.previewModel,
     onCommitModel: commitTableModel,
   });
 
@@ -333,33 +338,9 @@ export function useTableCellDoubleClickEditor(
   // ανάγνωση σκηνής θα μπορούσε να δει άλλο (ή σβησμένο) πίνακα μέσα στο ίδιο render.
   const { target, anchor } = useTableCellAnchor({ cursor, entity: liveEntity, containerRef });
 
-  /**
-   * ADR-751 Φ8.γ — `Alt+Enter`: άνοιξε τη διεύθυνση του κελιού του δρομέα (Google Sheets).
-   *
-   * Η `ambiguous` δεν ανοίγει τίποτα — **ρωτά**. Κελί με δύο διευθύνσεις δεν έχει μία σωστή
-   * απάντηση, και το να διαλέγαμε την πρώτη θα καλούσε λάθος άνθρωπο σιωπηλά.
-   */
-  const openCursorCellLink = useCallback(() => {
-    if (!liveEntity || !cursor) return;
-    const { rowId, colId } = cursor.position;
-    const outcome = activateTableCellLink(liveEntity, rowId, colId);
-    if (outcome.kind === 'ambiguous') {
-      openTableLinkPicker({ links: outcome.links, scope: 'cell' });
-    }
-  }, [liveEntity, cursor]);
-
-  /**
-   * 🔴 ADR-754 Γ3 — `F4`: κλείδωσε/ξεκλείδωσε την αναφορά του δρομέα.
-   *
-   * Δηλώνεται **εδώ** και όχι μέσα στα δύο πεδία επειδή εδώ ζει η **οντότητα**, και επειδή τα
-   * δύο πεδία οφείλουν να κάνουν το ίδιο πράγμα: δύο κατασκευές του ίδιου χειριστή θα ήταν
-   * sibling clone (CHECK 3.28) και δύο ευκαιρίες να αποκλίνουν. Ίδια στάση με το `onCommit`,
-   * το `onMove` και κάθε άλλη ενέργεια της συνεδρίας.
-   */
-  const toggleAbsoluteRef = useCallback(() => {
-    if (!liveEntity || !cursor) return;
-    toggleTableFormulaAbsoluteRef(liveEntity, cursor.draft);
-  }, [liveEntity, cursor]);
+  // ADR-739 §66 — οι δύο εντολές που χρειάζονται ΜΟΝΟ δρομέα+οντότητα (χωρίς DOM)
+  // ζουν στο `use-table-cursor-commands`, κατά το κριτήριο της κεφαλίδας αυτού του αρχείου.
+  const { openCursorCellLink, toggleAbsoluteRef } = useTableCursorCommands(liveEntity, cursor);
 
   const overlay = useMemo<TableCellOverlayMount | null>(() => {
     if (!cursor || !target || !anchor) return null;

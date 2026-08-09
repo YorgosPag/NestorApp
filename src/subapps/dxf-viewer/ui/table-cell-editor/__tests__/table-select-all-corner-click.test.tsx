@@ -62,7 +62,12 @@ function CornerHarness({ entity }: { readonly entity: TableEntity }): React.Reac
     // 🔑 **Η ΙΔΙΑ γραμμή με την παραγωγή.** Το `useTableRangeActions.selectAll` κάνει ακριβώς
     // αυτό (μετά τον φύλακα «υπάρχει δρομέας;», που εδώ ισχύει εξ ορισμού). Δεν είναι δεύτερη
     // υλοποίηση: ο ΕΝΑΣ γραφέας είναι το `selectWholeTable` και τον καλούν και οι δύο.
-    onSelectAll: () => {
+    //
+    // 🔴 §66 — το πάτημα στη γωνία **οπλίζει και τη μετακίνηση**. Εδώ δεν στήνεται, επίτηδες:
+    // αυτό το αρχείο φυλάει ότι το κλικ φτάνει στην **επιλογή**, και η μετακίνηση έχει το δικό
+    // της δίχτυ (`table-move-drag`). Ένα harness που έκανε και τα δύο θα άφηνε ασαφές ποιο από
+    // τα δύο έσπασε όταν κοκκινίσει.
+    onCornerPress: () => {
       selectWholeTable(resolveTableModel(entity.model));
     },
     onCommitPending: jest.fn(),
