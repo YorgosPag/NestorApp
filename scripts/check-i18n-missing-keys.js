@@ -26,6 +26,8 @@ const fs = require('fs');
 const path = require('path');
 const {
   loadNamespaceBundles,
+  loadCompatNamespaces,
+  withCompatNamespaces,
   extractNamespaces,
   extractTCalls,
 } = require('./lib/i18n-namespace-extract');
@@ -37,6 +39,14 @@ const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-missing-keys-baseline.json');
 // Resolve shared namespace bundles (e.g. COMMON_NAMESPACES) once, so
 // useTranslation(<CONST>) call sites are checked, not silently skipped.
 const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
+
+// ADR-280 compat splits: the runtime hook loads `declared + splits` and searches
+// the key in ALL of them (useTranslation.ts → resolveAllNamespaces /
+// resolveAcrossNamespaces). This gate must ask the SAME question, or it reports
+// "missing" for keys the app resolves — and the only way to satisfy it would be to
+// COPY the keys back into the parent namespace, undoing the ADR-280 split. See
+// scripts/lib/i18n-namespace-extract.js → loadCompatNamespaces (ADR-744 §12).
+const COMPAT_NAMESPACES = loadCompatNamespaces(REPO_ROOT);
 
 // Colors
 const RED = '\x1b[0;31m';
@@ -126,9 +136,11 @@ for (const file of files) {
   if (/(__tests__|\.test\.|\.spec\.|\.stories\.|scripts\/|\.config\.)/.test(file)) continue;
 
   const content = fs.readFileSync(file, 'utf8');
-  const namespaces = extractNamespaces(content, NAMESPACE_BUNDLES);
+  const declaredNamespaces = extractNamespaces(content, NAMESPACE_BUNDLES);
 
-  if (namespaces.length === 0) continue;
+  if (declaredNamespaces.length === 0) continue;
+
+  const namespaces = withCompatNamespaces(declaredNamespaces, COMPAT_NAMESPACES);
 
   const tCalls = extractTCalls(content);
   if (tCalls.length === 0) continue;

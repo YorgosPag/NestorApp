@@ -63,6 +63,90 @@ function loadNamespaceBundles(repoRoot) {
 }
 
 /**
+ * Parse `src/i18n/namespace-compat.ts` into a Map of
+ * parentNamespace -> string[] of ADR-280 split namespaces.
+ *
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ (ADR-744 §12 / ADR-280): ο **χρόνος εκτέλεσης** φορτώνει
+ * `δηλωμένα namespaces + compat splits` — αυτό κάνει το `resolveAllNamespaces()`
+ * του `src/i18n/hooks/useTranslation.ts`, και μετά το `resolveAcrossNamespaces()`
+ * ψάχνει το κλειδί σε **όλα** τους. Ένας στατικός έλεγχος που κοιτάζει **μόνο** τα
+ * δηλωμένα λέει «λείπει» για κλειδί που η εφαρμογή **βρίσκει κανονικά**.
+ *
+ * Μετρημένο 2026-08-09: με τη μετανάστευση 22 components από τον καταργημένο
+ * `useTranslationLazy` (τον οποίο το `extractNamespaces` ΔΕΝ έβλεπε), το CHECK 3.8
+ * απέκτησε ορατότητα και ανέφερε **113 λείποντα κλειδιά** στο `geo-canvas`. Από αυτά
+ * τα **97 υπάρχουν** στο `geo-canvas-drawing`, δηλαδή ήταν **ψευδώς θετικά** — και η
+ * «διόρθωσή» τους θα ήταν να **αντιγραφούν** τα 97 κλειδιά στο `geo-canvas.json`,
+ * δηλαδή να **καταστραφεί το ίδιο το split** που όρισε το ADR-280.
+ *
+ * ⚠️ ΜΗΝ γράψεις χειρόγραφη λίστα ζευγών εδώ. Αυθεντία είναι το
+ * `COMPAT_NAMESPACE_MAP` του `namespace-compat.ts` — δεύτερο αντίγραφο θα απέκλινε
+ * σιωπηλά, ακριβώς όπως οι δύο λίστες namespace του CHECK 3.34 που είχαν αποκλίνει
+ * κατά 63 χωρίς καμία πύλη να τις συγκρίνει.
+ *
+ * @param {string} repoRoot absolute path to the repository root
+ * @returns {Map<string, string[]>}
+ */
+function loadCompatNamespaces(repoRoot) {
+  const compat = new Map();
+  const file = path.join(repoRoot, 'src', 'i18n', 'namespace-compat.ts');
+  if (!fs.existsSync(file)) return compat;
+
+  let src;
+  try {
+    src = fs.readFileSync(file, 'utf8');
+  } catch {
+    return compat;
+  }
+
+  // Στάδιο 1 — οι δηλώσεις: `export const X_COMPATIBILITY_NAMESPACES = [...] as const;`
+  const constants = new Map();
+  const declRegex =
+    /export\s+const\s+([A-Z][A-Z0-9_]*)\s*=\s*\[([\s\S]*?)\]\s*as\s+const/g;
+  for (const decl of src.matchAll(declRegex)) {
+    const namespaces = [];
+    for (const m of decl[2].matchAll(/['"]([a-zA-Z0-9_-]+)['"]/g)) {
+      namespaces.push(m[1]);
+    }
+    if (namespaces.length > 0) constants.set(decl[1], namespaces);
+  }
+
+  // Στάδιο 2 — ο πίνακας: `const COMPAT_NAMESPACE_MAP: … = { parent: CONST, … };`
+  const mapMatch = src.match(
+    /const\s+COMPAT_NAMESPACE_MAP\s*:[^=]*=\s*\{([\s\S]*?)\n\};/,
+  );
+  if (!mapMatch) return compat;
+
+  for (const entry of mapMatch[1].matchAll(
+    /['"]?([a-zA-Z0-9_-]+)['"]?\s*:\s*([A-Z][A-Z0-9_]*)\s*,/g,
+  )) {
+    const resolved = constants.get(entry[2]);
+    if (resolved) compat.set(entry[1], resolved);
+  }
+
+  return compat;
+}
+
+/**
+ * Ο ίδιος υπολογισμός με το `resolveAllNamespaces()` του runtime hook: δηλωμένα
+ * namespaces **συν** τα ADR-280 compat splits τους. Ένα στατικό εργαλείο που ρωτά
+ * «υπάρχει αυτό το κλειδί;» οφείλει να ψάχνει **εκεί που ψάχνει η εφαρμογή**.
+ *
+ * @param {readonly string[]} namespaces δηλωμένα namespaces του αρχείου
+ * @param {Map<string, string[]>} [compat] result of loadCompatNamespaces()
+ * @returns {string[]} de-duplicated namespace list
+ */
+function withCompatNamespaces(namespaces, compat) {
+  if (!compat || compat.size === 0) return [...new Set(namespaces)];
+  const all = [...namespaces];
+  for (const ns of namespaces) {
+    const splits = compat.get(ns);
+    if (splits) all.push(...splits);
+  }
+  return [...new Set(all)];
+}
+
+/**
  * Extract the i18n namespaces a file loads from its `useTranslation(...)` calls.
  * Handles three call shapes:
  *   1. single literal   — useTranslation('files')
@@ -183,6 +267,8 @@ function stripComments(content) {
 
 module.exports = {
   loadNamespaceBundles,
+  loadCompatNamespaces,
+  withCompatNamespaces,
   extractNamespaces,
   extractTCalls,
   stripComments,
