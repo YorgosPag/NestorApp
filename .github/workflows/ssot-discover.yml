@@ -44,6 +44,12 @@ on:
       - 'scripts/check-zindex-scale.js'
       - 'scripts/lib/zindex/**'
       - '.zindex-scale-baseline.json'
+      # ADR-780 Φάση Β — το ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ: το μητρώο και τα αρχεία εξαρτήσεων είναι
+      # είσοδοι της απογραφής του node_modules. Ένα npm i με z-index: 99999 δεν αγγίζει
+      # κανένα αρχείο πηγής — χωρίς αυτά θα περνούσε αθέατο.
+      - '.zindex-foreign.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - '.ssot-discover-baseline.json'
       - '.ssot-registry.json'
       - '.github/workflows/ssot-discover.yml'
@@ -68,6 +74,12 @@ on:
       - 'scripts/check-zindex-scale.js'
       - 'scripts/lib/zindex/**'
       - '.zindex-scale-baseline.json'
+      # ADR-780 Φάση Β — το ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ: το μητρώο και τα αρχεία εξαρτήσεων είναι
+      # είσοδοι της απογραφής του node_modules. Ένα npm i με z-index: 99999 δεν αγγίζει
+      # κανένα αρχείο πηγής — χωρίς αυτά θα περνούσε αθέατο.
+      - '.zindex-foreign.json'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
       - '.ssot-discover-baseline.json'
       - '.ssot-registry.json'
 
@@ -199,8 +211,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # ⚠️ fetch-depth: 0 — ΟΧΙ προεπιλογή, και ΜΟΝΟ σε αυτό το job (τα άλλα δύο
+      # δεν διαβάζουν ιστορικό). Η ομάδα Π τραβά με `git show 8318b50d:<αρχείο>`
+      # τις ΠΡΑΓΜΑΤΙΚΕΣ νάρκες του ADR-739 §59/§60 και απαιτεί μπλοκ στις γραμμές
+      # 179/193. Με ρηχό checkout το αντικείμενο δεν υπάρχει (`fatal: invalid
+      # object name`) και η βαθμονόμηση σκάει — η πύλη γίνεται μονίμως κόκκινη για
+      # λόγο άσχετο με τα `SelectItem`, δηλαδή σταματά να λέει οτιδήποτε.
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
@@ -378,9 +398,15 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: 🧱 CHECK 3.50 — πλήρης σάρωση (3 διάλεκτοι, ~5s)
-        run: pnpm run zindex-scale:check
+        run: pnpm run zindex-scale:check   # + απογραφή node_modules (σύνορο τρίτων, ~6s)
 
-      - name: 🧪 Σουίτα μετάλλαξης — CHECK 3.50 (37 tests, 12 μεταλλάξεις στις εισόδους)
+      # ⚠️ ΣΕ ΕΙΣΑΓΩΓΙΚΑ ΜΕ ΛΟΓΟ: το `tests: ` (άνω τελεία + κενό) μέσα σε unquoted YAML
+      # scalar διαβάζεται ως ΕΜΦΩΛΕΥΜΕΝΟ mapping — «Nested mappings are not allowed in
+      # compact mappings». Το αρχείο γινόταν ΑΠΑΡΣΑΡΙΣΤΟ, δηλαδή το workflow δεν θα έτρεχε
+      # ΚΑΘΟΛΟΥ στο GitHub και οι τρεις πύλες του (3.18 · 3.48 · 3.49 · 3.50) θα ήταν
+      # σιωπηλά νεκρές — «0 = κανείς δεν κοίταξε», στη χειρότερη μορφή του: πύλη που
+      # ΝΟΜΙΖΕΙΣ ότι τρέχει. Το βρήκε το knip, που φορτώνει τα workflows ως εισόδους.
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.50 (61 tests: 14 μεταλλάξεις κλίμακας + 17 συνόρου)"
         run: pnpm run test:zindex-scale
 
       - name: ✅ Summary
