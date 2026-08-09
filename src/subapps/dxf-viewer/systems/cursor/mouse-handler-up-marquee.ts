@@ -16,6 +16,7 @@ import { UniversalMarqueeSelector } from '../selection/UniversalMarqueeSelection
 import { EventBus } from '../events/EventBus';
 import { TOLERANCE_CONFIG } from '../../config/tolerance-config';
 import type { CentralizedMouseHandlersProps } from './mouse-handler-types';
+import type { ViewTransform } from '../../rendering/types/Types';
 // ADR-358 Phase 9D-5b-ii Sub-D — Entity type bridge for performSelection narrow.
 import type { Entity, SceneModel } from '../../types/entities';
 // ADR-408 — circuits are derived (not scene entities), so the marquee selector can't see
@@ -35,7 +36,17 @@ import { resolveRepeatedClickCycle } from '../selection/resolve-repeated-click-c
 
 export interface MarqueeContext {
   cursor: ReturnType<typeof import('./CursorSystem').useCursor>;
-  transform: CentralizedMouseHandlersProps['transform'];
+  /**
+   * ADR-040 Φάση XXII.B — **δεν είναι prop**, και γι' αυτό δεν δηλώνεται σαν prop.
+   *
+   * Το `transform` αφαιρέθηκε από το `CentralizedMouseHandlersProps` (ως prop έμενε φρέσκο
+   * μόνο όσο το DxfCanvas ξανα-render-άρονταν ανά καρέ)· ο καλών το διαβάζει πλέον από το
+   * SSoT **τη στιγμή του συμβάντος** (`getImmediateTransform()` στο `mouse-handler-up`).
+   * Η indexed-access δήλωση που ζούσε εδώ έδειχνε σε πεδίο που **δεν υπάρχει** — έμενε ως
+   * τύπος σφάλματος, δηλαδή το συμβόλαιο του context ήταν άγραφο ακριβώς στο πεδίο που
+   * καθορίζει **κάθε** μετατροπή οθόνης→κόσμου αυτού του module.
+   */
+  transform: ViewTransform;
   viewport: CentralizedMouseHandlersProps['viewport'];
   canvasRef: CentralizedMouseHandlersProps['canvasRef'];
   colorLayers: CentralizedMouseHandlersProps['colorLayers'];

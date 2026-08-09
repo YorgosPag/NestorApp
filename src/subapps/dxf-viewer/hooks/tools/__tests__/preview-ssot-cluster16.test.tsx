@@ -174,13 +174,13 @@ describe('useEditFencePreview', () => {
   it('gates isActive on phase !== idle', () => {
     renderHook(() => useEditFencePreview({
       store: fakeStore({ phase: 'idle', ...idleFields }),
-      colors: EXTEND_COLORS, transform: TRANSFORM, getCanvas: () => null,
+      colors: EXTEND_COLORS, getCanvas: () => null,
     }));
     expect(lastIsActive()).toBe(false);
 
     renderHook(() => useEditFencePreview({
       store: fakeStore({ phase: 'picking', ...idleFields }),
-      colors: EXTEND_COLORS, transform: TRANSFORM, getCanvas: () => null,
+      colors: EXTEND_COLORS, getCanvas: () => null,
     }));
     expect(lastIsActive()).toBe(true);
   });
@@ -188,7 +188,7 @@ describe('useEditFencePreview', () => {
   it('paints the pickbox + arrow with the resolved colour, skips when idle', () => {
     const state: EditFencePreviewState = { phase: 'picking', ...idleFields };
     renderHook(() => useEditFencePreview({
-      store: fakeStore(state), colors: EXTEND_COLORS, transform: TRANSFORM, getCanvas: () => null,
+      store: fakeStore(state), colors: EXTEND_COLORS, getCanvas: () => null,
     }));
     const active = makeRecordingCtx();
     lastDraw()(makeFrame(active.ctx, { x: 5, y: 5 }));

@@ -89,7 +89,12 @@ function makeCanvas(): { canvas: HTMLCanvasElement; mock: MockCtx } {
  */
 const CLIP_CALLS = ['save', 'beginPath', 'rect(30,0,970,770)', 'clip'];
 
-const TRANSFORM = { scale: 1, offsetX: 0, offsetY: 0 };
+// ADR-040 Φάση XXII.B — δεν υπάρχει σταθερά `TRANSFORM` εδώ, και η απουσία της είναι το θέμα:
+// τα tests περνούσαν ένα `transform` prop με ΑΛΛΗ τιμή από το `CANON`, ώστε η επόμενη γραμμή να
+// αποδεικνύει ότι ο hook αγνοεί το prop και διαβάζει το ζωντανό SSoT. Το prop **αφαιρέθηκε** από
+// το `CanvasGhostPreviewConfig`, οπότε την ίδια εγγύηση δίνει πλέον ο **μεταγλωττιστής**: δεν
+// μπορεί καν να δοθεί. Ο ισχυρισμός `frame.transform === CANON.transform` μένει και αποδεικνύει
+// το θετικό μισό — ότι το καρέ έρχεται από το `getCanonicalPreviewFrame`.
 const CANON = { viewport: { width: 1000, height: 800 }, transform: { scale: 3, offsetX: 7, offsetY: 9 } };
 
 beforeEach(() => {
@@ -105,20 +110,20 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const { canvas, mock } = makeCanvas();
     const draw = jest.fn();
     renderHook(() =>
-      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, draw }),
     );
     expect(draw).toHaveBeenCalledTimes(1);
     const frame = draw.mock.calls[0][0];
     expect(frame.ctx).toBe(mock.ctx);
     expect(frame.viewport).toEqual(CANON.viewport);
-    expect(frame.transform).toBe(CANON.transform); // LIVE transform, not the prop
+    expect(frame.transform).toBe(CANON.transform); // LIVE transform από το SSoT (ADR-040 Φ.XXII.B)
     expect(frame.effectiveCursor).toEqual({ x: 50, y: 60 }); // live realtime world (raw)
   });
 
   it("DPR-clears before draw in 'on-gate-exit' mode", () => {
     const { canvas, mock } = makeCanvas();
     renderHook(() =>
-      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw: jest.fn() }),
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, draw: jest.fn() }),
     );
     expect(mock.calls).toEqual([
       'setTransform(1,0,0,1,0,0)',
@@ -133,8 +138,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const { canvas, mock } = makeCanvas();
     renderHook(() =>
       useCanvasGhostPreview({
-        isActive: true, getCanvas: () => canvas, transform: TRANSFORM,
-        clearMode: 'skip-clear', draw: jest.fn(),
+        isActive: true, getCanvas: () => canvas,        clearMode: 'skip-clear', draw: jest.fn(),
       }),
     );
     // no clear; delegate draws layered — μόνο το clip της περιοχής σχεδίασης.
@@ -148,8 +152,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const draw = jest.fn(() => { mock.calls.push('draw'); });
     renderHook(() =>
       useCanvasGhostPreview({
-        isActive: true, getCanvas: () => canvas, transform: TRANSFORM,
-        clearMode: 'skip-clear', draw,
+        isActive: true, getCanvas: () => canvas,        clearMode: 'skip-clear', draw,
       }),
     );
     // Η ζώνη: πλήρης καμβάς 1000×800 μείον αριστερός χάρακας 30 και κάτω χάρακας 30.
@@ -162,8 +165,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const draw = jest.fn();
     renderHook(() =>
       useCanvasGhostPreview({
-        isActive: true, getCanvas: () => canvas, transform: TRANSFORM,
-        useImmediateSnap: true, draw,
+        isActive: true, getCanvas: () => canvas,        useImmediateSnap: true, draw,
       }),
     );
     expect(draw.mock.calls[0][0].effectiveCursor).toEqual({ x: 111, y: 222 });
@@ -174,8 +176,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const draw = jest.fn();
     renderHook(() =>
       useCanvasGhostPreview({
-        isActive: true, getCanvas: () => canvas, transform: TRANSFORM,
-        cursorMode: 'none', draw,
+        isActive: true, getCanvas: () => canvas,        cursorMode: 'none', draw,
       }),
     );
     // No subscription to the 60fps world stream while 'none' (cursor comes via props).
@@ -192,7 +193,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const { canvas } = makeCanvas();
     const draw = jest.fn();
     renderHook(() =>
-      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, draw }),
     );
     expect(draw).toHaveBeenCalledTimes(1); // initial paint
     expect(worldCb).not.toBeNull(); // subscribed to the realtime world SSoT
@@ -207,7 +208,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const { canvas } = makeCanvas();
     const draw = jest.fn();
     renderHook(() =>
-      useCanvasGhostPreview({ isActive: false, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+      useCanvasGhostPreview({ isActive: false, getCanvas: () => canvas, draw }),
     );
     expect(mockSubscribeWorld).not.toHaveBeenCalled();
     expect(draw).not.toHaveBeenCalled();
@@ -222,7 +223,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const { canvas } = makeCanvas();
     const draw = jest.fn();
     renderHook(() =>
-      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, draw }),
     );
     expect(draw).toHaveBeenCalledTimes(1); // initial paint
     expect(transformCb).not.toBeNull(); // subscribed to the transform SSoT
@@ -236,7 +237,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     mockSubscribeTransform.mockReturnValue(unsub);
     const { canvas } = makeCanvas();
     const { unmount } = renderHook(() =>
-      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, transform: TRANSFORM, draw: jest.fn() }),
+      useCanvasGhostPreview({ isActive: true, getCanvas: () => canvas, draw: jest.fn() }),
     );
     unmount();
     expect(unsub).toHaveBeenCalledTimes(1);
@@ -247,7 +248,7 @@ describe('ADR-398 §4 / ADR-040 Φ12 — useCanvasGhostPreview', () => {
     const draw = jest.fn();
     const { rerender } = renderHook(
       ({ active }: { active: boolean }) =>
-        useCanvasGhostPreview({ isActive: active, getCanvas: () => canvas, transform: TRANSFORM, draw }),
+        useCanvasGhostPreview({ isActive: active, getCanvas: () => canvas, draw }),
       { initialProps: { active: true } },
     );
     expect(draw).toHaveBeenCalledTimes(1);

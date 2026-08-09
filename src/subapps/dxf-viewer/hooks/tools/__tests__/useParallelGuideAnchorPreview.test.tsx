@@ -91,7 +91,7 @@ describe('useParallelGuideAnchorPreview', () => {
   it('anchor === null → isActive false, draw is a no-op (καμία πινελιά)', () => {
     renderHook(() =>
       useParallelGuideAnchorPreview({
-        anchor: null, refGuide: GUIDE_Y, transform: TRANSFORM, getCanvas: () => null,
+        anchor: null, refGuide: GUIDE_Y, getCanvas: () => null,
       }),
     );
 
@@ -109,7 +109,7 @@ describe('useParallelGuideAnchorPreview', () => {
     const anchor: Point2D = { x: 5, y: 7 };
     renderHook(() =>
       useParallelGuideAnchorPreview({
-        anchor, refGuide: GUIDE_Y, transform: TRANSFORM, getCanvas: () => null,
+        anchor, refGuide: GUIDE_Y, getCanvas: () => null,
       }),
     );
 
@@ -131,7 +131,7 @@ describe('useParallelGuideAnchorPreview', () => {
     const cursor: Point2D = { x: 40, y: 60 };
     renderHook(() =>
       useParallelGuideAnchorPreview({
-        anchor, refGuide: null, transform: TRANSFORM, getCanvas: () => null,
+        anchor, refGuide: null, getCanvas: () => null,
       }),
     );
 
@@ -155,7 +155,7 @@ describe('useParallelGuideAnchorPreview', () => {
   it('ΔΕΝ ενεργοποιεί useImmediateSnap — ο περιορισμός ζει στο resolveParallelCursor', () => {
     renderHook(() =>
       useParallelGuideAnchorPreview({
-        anchor: { x: 1, y: 1 }, refGuide: GUIDE_Y, transform: TRANSFORM, getCanvas: () => null,
+        anchor: { x: 1, y: 1 }, refGuide: GUIDE_Y, getCanvas: () => null,
       }),
     );
 
@@ -169,7 +169,7 @@ describe('ΟΡΘΟ + ΒΗΜΑ — η γραμμή τελειώνει στο ΠΕ
   function drawWith(cursor: Point2D): void {
     renderHook(() =>
       useParallelGuideAnchorPreview({
-        anchor, refGuide: GUIDE_Y, transform: TRANSFORM, getCanvas: () => null,
+        anchor, refGuide: GUIDE_Y, getCanvas: () => null,
       }),
     );
     lastConfig().draw(makeFrame({} as CanvasRenderingContext2D, cursor));
@@ -203,7 +203,7 @@ describe('ΛΕΥΚΟ HUD ΜΗΚΟΥΣ — κοινός painter + πύλη ΜΗΚ
   function drawWith(cursor: Point2D): void {
     renderHook(() =>
       useParallelGuideAnchorPreview({
-        anchor, refGuide: GUIDE_Y, transform: TRANSFORM, getCanvas: () => null,
+        anchor, refGuide: GUIDE_Y, getCanvas: () => null,
       }),
     );
     lastConfig().draw(makeFrame({} as CanvasRenderingContext2D, cursor));

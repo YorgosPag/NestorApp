@@ -44,9 +44,11 @@ beforeEach(() => {
 });
 
 describe('useWysiwygPlacementGhost (primitive)', () => {
+  // ADR-040 Φ.XXII.B — χωρίς `transform`: ο hook το διαβάζει από το SSoT στην κλήση. Εδώ ζούσε
+  // ακόμη ένα, και **δεν** το κατήγγειλε ο μεταγλωττιστής μόνο επειδή ταξιδεύει με spread (ο
+  // έλεγχος πλεοναζόντων ιδιοτήτων ισχύει για φρέσκα object literals, όχι για spread).
   const baseCfg = {
     isActive: true,
-    transform: {} as ViewTransform,
     getCanvas: () => null,
   };
 
@@ -101,7 +103,7 @@ describe('createBridgeStorePlacementGhostHook (factory)', () => {
 
   it('builds from the bridge store (overrides + sceneUnits) and paints the entity', () => {
     const { hook, buildDefaultParams, buildEntity } = makeSpec({ ok: true, entity });
-    renderHook(() => hook({ isAwaitingPosition: true, transform: {} as ViewTransform, getCanvas: () => null }));
+    renderHook(() => hook({ isAwaitingPosition: true, getCanvas: () => null }));
     lastDraw()(makeFrame({ x: 3, y: 4 }));
     expect(buildDefaultParams).toHaveBeenCalledWith({ x: 3, y: 4 }, overrides, 'mm');
     expect(buildEntity).toHaveBeenCalledWith(params, 'layer-test');
@@ -111,7 +113,7 @@ describe('createBridgeStorePlacementGhostHook (factory)', () => {
 
   it('skips when there is no effective cursor', () => {
     const { hook, buildDefaultParams } = makeSpec({ ok: true, entity });
-    renderHook(() => hook({ isAwaitingPosition: true, transform: {} as ViewTransform, getCanvas: () => null }));
+    renderHook(() => hook({ isAwaitingPosition: true, getCanvas: () => null }));
     lastDraw()(makeFrame(null));
     expect(buildDefaultParams).not.toHaveBeenCalled();
     expect(mockRender).not.toHaveBeenCalled();
@@ -119,14 +121,14 @@ describe('createBridgeStorePlacementGhostHook (factory)', () => {
 
   it('skips paint when the entity build fails (ok: false)', () => {
     const { hook } = makeSpec({ ok: false, hardErrors: ['bad'] });
-    renderHook(() => hook({ isAwaitingPosition: true, transform: {} as ViewTransform, getCanvas: () => null }));
+    renderHook(() => hook({ isAwaitingPosition: true, getCanvas: () => null }));
     lastDraw()(makeFrame({ x: 3, y: 4 }));
     expect(mockRender).not.toHaveBeenCalled();
   });
 
   it('gates the harness on isAwaitingPosition', () => {
     const { hook } = makeSpec({ ok: true, entity });
-    renderHook(() => hook({ isAwaitingPosition: false, transform: {} as ViewTransform, getCanvas: () => null }));
+    renderHook(() => hook({ isAwaitingPosition: false, getCanvas: () => null }));
     expect(mockHarness.mock.calls.at(-1)![0].isActive).toBe(false);
   });
 });
