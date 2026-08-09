@@ -194,8 +194,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # ⚠️ fetch-depth: 0 — ΟΧΙ προεπιλογή. Η σουίτα τραβά με `git show <καρφωμένο>:`
+      # τον `useTranslationLazy.ts` και τον καταναλωτή του ΠΡΙΝ τη διόρθωση — είναι η
+      # απόδειξη ότι η πύλη πιάνει το πραγματικό ελάττωμα, όχι ένα fixture. Με ρηχό
+      # checkout το αντικείμενο δεν υπάρχει (`fatal: invalid object name`).
+      # 🔴 Προστέθηκε ΠΡΙΝ κοκκινίσει: η ίδια παράλειψη έκανε ήδη μονίμως κόκκινες τις
+      # 3.46 (e2e-executability.yml) και 3.48 (ssot-discover.yml) — αυτό το job απλώς
+      # δεν είχε τρέξει ακόμα, γιατί τα commits του ADR-781 ήταν unpushed.
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4

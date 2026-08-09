@@ -29,6 +29,7 @@ const { PROJECT_ROOT } = require('../lib/jest-partition/jest-configs');
 const { literalDirectoryPrefixOf } = require('../lib/jest-partition/jest-configs');
 const {
   derivedTestPathIgnorePatterns,
+  gitIgnoredDirectoryPrefixes,
   prefixToPattern,
   siblingOwnedPrefixes,
 } = require('../lib/jest-partition/derived-ignores');
@@ -289,6 +290,31 @@ describe('Κ — τα σημεία που πληρώθηκαν', () => {
     );
     expect(target).toBeDefined();
     expect(target.owners).toEqual(['jest.config.js']);
+  });
+
+  it('Κ2β 🔴 δηλωμένος φάκελος εξαιρείται ΚΑΙ ΟΤΑΝ ΔΕΝ ΥΠΑΡΧΕΙ ΣΤΟΝ ΔΙΣΚΟ', () => {
+    // 🔴 Η ΑΓΚΥΡΑ ΠΟΥ ΕΛΕΙΠΕ, ΚΑΙ ΤΟ ΚΕΝΟ ΤΗΣ ΕΙΧΕ ΗΔΗ ΚΟΣΤΙΣΕΙ. Το Π3 από κάτω ρωτά το
+    // ΠΡΑΓΜΑΤΙΚΟ `jest.config.js`, δηλαδή τον δίσκο ΑΥΤΟΥ του μηχανήματος — και εδώ ο
+    // `functions/lib/` υπάρχει (χτισμένος), οπότε ήταν πράσινο. Σε καθαρό clone του CI δεν
+    // υπάρχει, το `statSync` πετούσε, η εξαίρεση δεν παραγόταν και το CHECK 3.47 ήταν
+    // ΜΟΝΙΜΩΣ ΚΟΚΚΙΝΟ. Χειρότερα: η λίστα εξαιρέσεων ΑΛΛΑΖΕ ανάλογα με το αν είχες τρέξει
+    // build ⇒ δύο διαφορετικά σύνολα test, τοπικά και στο CI, χωρίς κανένα σήμα.
+    // Το `.gitignore` spec: τελική κάθετος ⇒ «matches directories only» — ΔΗΛΩΣΗ, όχι εικασία.
+    const root = miniRepo({
+      ...baseTree(),
+      // δηλωμένος φάκελος (`lib/`) — και ΚΑΝΕΝΑ `functions/lib/` στον δίσκο: η συνθήκη CI
+      'functions/.gitignore': 'lib/\nnode_modules/\n',
+      // αμφίσημη εγγραφή (χωρίς κάθετο) — και επίσης απούσα
+      '.gitignore': 'node_modules/\n/build\n',
+    });
+    const prefixes = gitIgnoredDirectoryPrefixes(root);
+
+    expect(fs.existsSync(path.join(root, 'functions', 'lib'))).toBe(false);
+    expect(prefixes).toContain('functions/lib/');
+
+    // ⚠️ Η άλλη κατεύθυνση, ΣΤΟ ΙΔΙΟ test: χωρίς αυτήν η διόρθωση θα μπορούσε να είναι
+    // «δέξου τα πάντα», που θα έσβηνε σιωπηλά σουίτες — το αρχικό φόβητρο του σχολίου.
+    expect(prefixes.some((prefix) => prefix.startsWith('build'))).toBe(false);
   });
 
   it('Κ3 και τα ΤΕΣΣΕΡΑ αδέλφια παράγουν εξαίρεση — όχι ένα, όπως η χειρόγραφη λίστα', () => {

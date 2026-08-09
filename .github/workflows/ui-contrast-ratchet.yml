@@ -160,37 +160,24 @@ jobs:
           cache: 'pnpm'
 
       # ── Dependency-free steps FIRST ──────────────────────────────────────────
-      # The gate itself is pure Node (filesystem walk + colour arithmetic). Running
-      # it before the install means a broken lockfile can never mask a real
-      # contrast regression — the cheap, load-bearing check always reports.
+      # Running the checks that need NOTHING installed before the install means a
+      # broken lockfile can never mask a real contrast regression — the cheap,
+      # load-bearing checks always report.
+      #
+      # 🔴 «Dependency-free» ΣΗΜΑΙΝΕΙ «δεν κάνει `require` πακέτου», ΟΧΙ «είναι φθηνό».
+      # Μέχρι 08/08 τρία βήματα κάθονταν εδώ ΛΑΘΟΣ (3.39 · 3.41 · 3.45): το σχόλιο
+      # έγραφε «pure Node (AST walk …)» — αλλά ο **AST walk ΕΙΝΑΙ ο parser της
+      # TypeScript** (`ts-token-palette.js:27` · `state-marks.js:25` ·
+      # `contrast-promise/ts-read.js:19`). Το job έσκαγε με `Error: Cannot find module
+      # 'typescript'` στο ΠΡΩΤΟ από τα τρία, οπότε τα άλλα δύο — και οι έξι σουίτες
+      # μετάλλαξης από κάτω — **δεν εκτελέστηκαν ποτέ**. Πριν προσθέσεις βήμα εδώ:
+      # `grep -rn "require('typescript')" scripts/lib/<το lib σου>`. Ένα CSS parse
+      # είναι όντως pure Node· ένα AST parse ποτέ.
 
-      # The full scan Layer 1 deliberately skips. ~8s.
+      # The full scan Layer 1 deliberately skips. ~8s. Pure Node: filesystem walk +
+      # colour arithmetic, κανένα `require` πακέτου.
       - name: 🔍 CHECK 3.38 — text-primary ratchet, FULL tree (ADR-770)
         run: node scripts/check-text-primary-ratchet.js --all
-
-      # CHECK 3.39 / Στρώμα 2 — the OTHER route to the same invisible text. Also pure
-      # Node (AST walk over 12 token modules + one CSS parse), so it belongs in the
-      # dependency-free block: ~250ms, and it fails closed if the baseline is missing.
-      #
-      # ⚠️ It lives in THIS workflow on purpose rather than in a new one. A new
-      # workflow would need an entry in `.ci-gate-tiers.json` or CHECK 3.37 blocks
-      # the commit (ADR-757) — and there is no reason to pay that: same ADR, same
-      # question ("is this readable?"), same tier, same inputs.
-      - name: 🔍 CHECK 3.39 — theme pairing ratchet (ADR-770 Στρώμα 2)
-        run: node scripts/check-theme-pairing-ratchet.js
-
-      # CHECK 3.41 (ADR-771 Φ.1) — «ξέρω ΠΟΙΟ είναι ποιο χωρίς να δω χρώμα;» (WCAG 1.4.1).
-      # Ίδιο workflow, για τον ίδιο λόγο με το 3.39: νέο αρχείο workflow θα απαιτούσε εγγραφή
-      # στο `.ci-gate-tiers.json` ή το CHECK 3.37 μπλοκάρει (ADR-757) — και δεν υπάρχει λόγος
-      # να πληρωθεί: ίδια ερώτηση («διαβάζεται;»), ίδιο tier, ένα AST parse (~120ms).
-      #
-      # ⚠️ Τρέχει ΑΝΕΥ ΟΡΩΝ, όχι μόνο όταν αγγιχτεί το config. Το `--all` δεν έχει νόημα εδώ
-      # (η είσοδος είναι ΕΝΑ αρχείο), αλλά η εκτέλεση σε κάθε PR του workflow κλείνει την
-      # περίπτωση «κάποιος άλλαξε το UI_COLORS.WARNING/ERROR από αλλού»: τα σημάδια δανείζονται
-      # πρωτογενή χρώματα, οπότε το ζεύγος μπορεί να χαλάσει χωρίς να αγγιχτεί κανένα από τα
-      # δύο αρχεία-σκανδάλη του Layer 1. Δηλωμένο κενό του hook, κλεισμένο εδώ.
-      - name: 🔍 CHECK 3.41 — state channel distinctness (ADR-771 Φ.1)
-        run: node scripts/check-state-channel-distinctness.js --verbose
 
       # CHECK 3.43 (ADR-774) — τα CSS Modules είναι η ΟΓΔΟΗ αρχή χρώματος, που το ADR-773
       # δεν χαρτογράφησε. Ίδιο workflow, ίδιος λόγος με τα 3.39/3.40/3.41: νέο αρχείο workflow
@@ -204,24 +191,49 @@ jobs:
       - name: 🔍 CHECK 3.43 — CSS token authority, FULL tree (ADR-774)
         run: node scripts/check-css-token-authority.js --all
 
-      # CHECK 3.45 (ADR-771 Φ.3) — «η υπόσχεση αντίθεσης είναι εφικτή, ή τουλάχιστον
-      # ΛΕΓΕΤΑΙ όταν αθετείται;». Ίδιο workflow, ίδιος λόγος με τα 3.41/3.42/3.43: νέο αρχείο
-      # workflow θα απαιτούσε εγγραφή στο `.ci-gate-tiers.json`, αλλιώς μπλοκάρει το CHECK
-      # 3.37. Το μητρώο παρακολουθεί ΑΡΧΕΙΑ workflow, όχι steps ⇒ 29 πύλες αμετάβλητες.
-      # ⚠️ ΑΝΕΥ ΟΡΩΝ `--all`, όπως και στο hook: οι επιφάνειες είναι ΚΑΘΟΛΙΚΕΣ. ~2,7s.
-      - name: 🔍 CHECK 3.45 — contrast promise reachability, FULL subapp (ADR-771 Φ.3)
-        run: node scripts/check-contrast-promise-reachability.js --all --verbose
-
       # The gate's own mutation suite. A gate whose tests never run is a gate
       # nobody can trust — ADR-587 §6.1, paid for with 11 red tests that sat on
       # main for six commits because `unit.yml` was disabled and
       # `coverage-ratchet.yml` was `continue-on-error`.
       #
-      # ⚠️ jest is the ONLY reason this workflow installs anything. `--ignore-scripts`
-      # mirrors deadcode-ratchet.yml: no postinstall build is needed to run tests
-      # that never import the app.
-      - name: 📦 Install dependencies (jest only)
+      # ⚠️ ΔΥΟ λόγοι, όχι ένας: (α) jest για τις σουίτες μετάλλαξης· (β) `typescript`
+      # + `tailwindcss`, που τα ΙΔΙΑ τα κριτήρια των 3.39/3.41/3.42/3.45 απαιτούν.
+      # (Το σχόλιο εδώ έγραφε «jest is the ONLY reason» μέχρι 08/08 — και ήταν ακριβώς
+      # η πεποίθηση που κράτησε τρεις πύλες πάνω από αυτή τη γραμμή, όπου έσκαγαν.)
+      # `--ignore-scripts` mirrors deadcode-ratchet.yml: no postinstall build is
+      # needed to run gates and tests that never import the app.
+      - name: 📦 Install dependencies (jest + TypeScript parser + Tailwind)
         run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # CHECK 3.39 / Στρώμα 2 — the OTHER route to the same invisible text: ~250ms,
+      # AST walk πάνω σε 12 token modules + ένα CSS parse, fails closed χωρίς baseline.
+      # ⚠️ ΜΕΤΑ το install: ο walk περνά από `ts-token-palette.js`, που κάνει
+      # `require('typescript')`.
+      #
+      # ⚠️ Ζει σε ΑΥΤΟ το workflow επίτηδες, όχι σε νέο. Νέο αρχείο workflow θα απαιτούσε
+      # εγγραφή στο `.ci-gate-tiers.json`, αλλιώς μπλοκάρει το CHECK 3.37 (ADR-757) — και
+      # δεν υπάρχει λόγος να πληρωθεί: ίδιο ADR, ίδια ερώτηση («διαβάζεται;»), ίδιο tier.
+      - name: 🔍 CHECK 3.39 — theme pairing ratchet (ADR-770 Στρώμα 2)
+        run: node scripts/check-theme-pairing-ratchet.js
+
+      # CHECK 3.41 (ADR-771 Φ.1) — «ξέρω ΠΟΙΟ είναι ποιο χωρίς να δω χρώμα;» (WCAG 1.4.1).
+      # ⚠️ ΜΕΤΑ το install: το `state-marks.js` κάνει `require('typescript')` (~120ms parse).
+      #
+      # ⚠️ Τρέχει ΑΝΕΥ ΟΡΩΝ, όχι μόνο όταν αγγιχτεί το config. Το `--all` δεν έχει νόημα εδώ
+      # (η είσοδος είναι ΕΝΑ αρχείο), αλλά η εκτέλεση σε κάθε PR κλείνει την περίπτωση
+      # «κάποιος άλλαξε το UI_COLORS.WARNING/ERROR από αλλού»: τα σημάδια δανείζονται
+      # πρωτογενή χρώματα, οπότε το ζεύγος μπορεί να χαλάσει χωρίς να αγγιχτεί κανένα από τα
+      # δύο αρχεία-σκανδάλη του Layer 1. Δηλωμένο κενό του hook, κλεισμένο εδώ.
+      - name: 🔍 CHECK 3.41 — state channel distinctness (ADR-771 Φ.1)
+        run: node scripts/check-state-channel-distinctness.js --verbose
+
+      # CHECK 3.45 (ADR-771 Φ.3) — «η υπόσχεση αντίθεσης είναι εφικτή, ή τουλάχιστον
+      # ΛΕΓΕΤΑΙ όταν αθετείται;». ~2,7s.
+      # ⚠️ ΜΕΤΑ το install: `contrast-promise/ts-read.js` + `promise-sites.js` +
+      # `presentable-surfaces.js` κάνουν `require('typescript')` (parse-only, ΠΟΤΕ tsc — N.17).
+      # ⚠️ ΑΝΕΥ ΟΡΩΝ `--all`, όπως και στο hook: οι επιφάνειες είναι ΚΑΘΟΛΙΚΕΣ.
+      - name: 🔍 CHECK 3.45 — contrast promise reachability, FULL subapp (ADR-771 Φ.3)
+        run: node scripts/check-contrast-promise-reachability.js --all --verbose
 
       # CHECK 3.42 (ADR-773 §8) — η ΠΕΜΠΤΗ αρχή χρώματος: «οι ΚΛΑΣΕΙΣ που παράγει η κεντρική
       # αρχή είναι θεματικές;». Ίδιο workflow, ίδιος λόγος με τα 3.39/3.41/3.43: το μητρώο του
@@ -331,6 +343,31 @@ jobs:
     name: 🎨 CHECK 3.40 — runtime contrast matrix (ADR-770 Στρώμα 2β)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    # 🔴 ΨΕΥΤΙΚΑ ΔΙΑΠΙΣΤΕΥΤΗΡΙΑ, ΕΠΙΤΗΔΕΣ — και ο λόγος είναι μετρημένος, όχι εικασία.
+    # Μέχρι 08/08 αυτό το job ανέφερε «το harness δεν απάντησε 200 σε 600s»· ο server
+    # ΣΗΚΩΝΟΤΑΝ κανονικά και η διαδρομή απαντούσε **500**:
+    #   FirebaseError: auth/invalid-api-key  at src/lib/firebase.ts:51 `getAuth(app)`
+    # μέσα από την αλυσίδα module-evaluation
+    #   global-error.tsx → ErrorBoundary → ErrorTracker → error-tracker-integrations
+    #   → enterprise-api-client → lib/firebase
+    # δηλαδή το `/test-harness/contrast-matrix`, που ΔΕΝ αγγίζει Firebase πουθενά, το
+    # σέρνει μέσω του καθολικού error boundary. Χωρίς `apiKey` το `getAuth` πετά ΚΑΤΑ
+    # ΤΗΝ ΑΠΟΤΙΜΗΣΗ του module, πριν προλάβει να αποδοθεί οτιδήποτε.
+    #
+    # ⚠️ ΔΕΝ είναι μυστικά και ΔΕΝ πρέπει να γίνουν: η πύλη μετρά **υπολογισμένα χρώματα**
+    # σε μια στατική διαδρομή — δεν διαβάζει, δεν γράφει και δεν αυθεντικοποιεί τίποτα.
+    # Το `getAuth` δεν κάνει δικτυακή κλήση· απαιτεί μόνο να ΥΠΑΡΧΕΙ κλειδί. Πραγματικά
+    # διαπιστευτήρια εδώ θα ήταν επιφάνεια επίθεσης χωρίς κανένα αντάλλαγμα.
+    # ⚠️ ΜΗΝ «λύσεις» μελλοντικό κόκκινο βάζοντας εδώ secrets του παραγωγικού project.
+    env:
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-contrast-harness-no-network
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci.invalid
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-contrast-harness
+      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ci-contrast-harness.appspot.com
+      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '0'
+      NEXT_PUBLIC_FIREBASE_APP_ID: '1:0:web:0'
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4

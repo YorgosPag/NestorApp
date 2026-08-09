@@ -58,7 +58,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # ⚠️ fetch-depth: 0 — ΟΧΙ προεπιλογή. Η ομάδα Π της σουίτας τραβά με
+      # `git show f589c22e:<αρχείο>` το ΚΑΡΦΩΜΕΝΟ ιστορικό που είχε όντως το
+      # ελαττωματικό `snapshotPathTemplate` και τα νεκρά scripts. Με ρηχό checkout
+      # (depth 1) το αντικείμενο δεν υπάρχει (`fatal: invalid object name`) και τα
+      # Π3/Π4 γίνονται κόκκινα για λόγο άσχετο με την εκτελεσιμότητα — δηλαδή η
+      # πύλη αυτοακυρώνεται: κόκκινη πάντα, άρα δεν λέει τίποτα για τον κώδικα.
+      # Ίδιο μπλοκ με το ui-contrast-ratchet.yml, όπου το ίδιο πληρώθηκε πρώτο.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:

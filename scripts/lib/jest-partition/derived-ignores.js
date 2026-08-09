@@ -105,9 +105,29 @@ function literalIgnoreEntries(gitignoreFile) {
 /**
  * (β) Τα προθέματα που **δεν είναι πηγή** — φάκελοι που αγνοεί το git.
  *
- * Κρατιούνται μόνο όσες εγγραφές **υπάρχουν στον δίσκο ως φάκελος**: το `.gitignore` δεν
- * ξεχωρίζει αρχείο από φάκελο όταν λείπει η τελική κάθετος (`/build`), και μια εξαίρεση που
- * μαντεύει λάθος θα έσβηνε σιωπηλά σουίτες.
+ * **ΔΥΟ ΔΡΟΜΟΙ ΓΙΑ ΤΟ «ΕΙΝΑΙ ΦΑΚΕΛΟΣ;», ΚΑΙ Η ΣΕΙΡΑ ΤΟΥΣ ΕΙΝΑΙ ΣΥΜΒΟΛΑΙΟ:**
+ *
+ * **(1) Το ίδιο το `.gitignore` το ΔΗΛΩΝΕΙ** — τελική κάθετος. Το spec του git είναι ρητό:
+ * «*If there is a separator at the end of the pattern then the pattern will only match
+ * directories*». Το `lib/` **είναι** δήλωση φακέλου, και μια δήλωση δεν χρειάζεται
+ * επιβεβαίωση από τον δίσκο.
+ *
+ * **(2) Δεν το δηλώνει** (`/build`, χωρίς κάθετο) ⇒ αμφίσημο ⇒ **μόνο τότε** ρωτάμε τον
+ * δίσκο, γιατί μια εξαίρεση που μαντεύει λάθος θα έσβηνε σιωπηλά σουίτες.
+ *
+ * 🔴 **Η ΠΡΩΤΗ ΓΡΑΦΗ ΡΩΤΟΥΣΕ ΤΟΝ ΔΙΣΚΟ ΚΑΙ ΓΙΑ ΤΙΣ ΔΥΟ, ΚΑΙ ΤΟ ΠΛΗΡΩΣΕ ΣΤΟ CI.** Το
+ * `functions/.gitignore` γράφει `lib/` — δηλωμένος φάκελος — αλλά σε **καθαρό clone** ο
+ * `functions/lib/` δεν έχει χτιστεί, το `statSync` πετούσε, η εξαίρεση **δεν παραγόταν**,
+ * και το Π3 έπεφτε με `Expected substring: "functions/lib/"`. Δηλαδή η λίστα εξαιρέσεων
+ * **άλλαζε ανάλογα με το αν είχες τρέξει build** — ακριβώς η μη-ντετερμινιστικότητα που
+ * ολόκληρο το CHECK 3.47 υπάρχει για να εξαλείψει, αναπαραγμένη **μέσα στο όργανό** του.
+ * Και ήταν χειρότερη από ένα κόκκινο test: τοπικά (με χτισμένο `functions/lib/`) το jest
+ * εξαιρούσε τα 7 build artifacts, στο CI **όχι** — δύο διαφορετικά σύνολα test, χωρίς
+ * κανένα σήμα.
+ *
+ * ⚠️ **ΜΗΝ «απλοποιήσεις» σε σκέτο `statSync`** για να φύγει ένα κόκκινο: θα ξαναφέρει
+ * ακριβώς αυτό. Και **ΜΗΝ** αφαιρέσεις τον έλεγχο δίσκου για τις **χωρίς** κάθετο — εκεί
+ * είναι η μόνη διαθέσιμη ένδειξη.
  */
 function gitIgnoredDirectoryPrefixes(root = PROJECT_ROOT) {
   const owners = [{ base: root, file: path.join(root, '.gitignore') }];
@@ -120,16 +140,24 @@ function gitIgnoredDirectoryPrefixes(root = PROJECT_ROOT) {
   const prefixes = new Set();
   for (const { base, file } of owners) {
     for (const raw of literalIgnoreEntries(file)) {
+      const declaresDirectory = raw.endsWith('/');
       const relative = raw.replace(/^\/+/, '').replace(/\/+$/, '');
       if (relative === '') continue;
       const absolute = path.join(base, relative);
-      let stat;
-      try {
-        stat = fs.statSync(absolute);
-      } catch {
-        continue; // δεν υπάρχει σήμερα — δεν υπάρχει τίποτα να εξαιρεθεί
+
+      // (2) Αμφίσημη εγγραφή (`/build`) — ο δίσκος είναι η μόνη ένδειξη που έχουμε.
+      // (1) Δηλωμένος φάκελος (`lib/`) — η δήλωση αρκεί· ο δίσκος μπορεί να μην τον έχει
+      //     ακόμα (καθαρό clone πριν το build) και η εξαίρεση οφείλει να ισχύει ούτως ή άλλως.
+      if (!declaresDirectory) {
+        let stat;
+        try {
+          stat = fs.statSync(absolute);
+        } catch {
+          continue; // δεν υπάρχει και δεν δηλώνεται — τίποτα δεν μπορεί να ειπωθεί
+        }
+        if (!stat.isDirectory()) continue;
       }
-      if (!stat.isDirectory()) continue;
+
       prefixes.add(`${toPosix(path.relative(root, absolute))}/`);
     }
   }
