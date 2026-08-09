@@ -383,6 +383,31 @@ const zIndexScaleTriggers = allFiles.filter(
 if (!process.env.SKIP_ZINDEX_SCALE && zIndexScaleTriggers.length > 0)
   addThread('3.50', 'z-index scale', 'scripts/check-zindex-scale.js', zIndexScaleTriggers);
 
+// CHECK 3.51 (ADR-781) — ωμά i18n κλειδιά στο SSR HTML, ΣΤΑΤΙΚΟ μισό (Κ1 + Κ2).
+// 17 ωμά κλειδιά × 141 διαδρομές, μόνιμα, στην παραγωγή: ο `useTranslationLazy`
+// αρχικοποιούσε την ετοιμότητά του σε `useState(false)` και τη διόρθωνε ΜΟΝΟ σε
+// `useEffect` — που δεν τρέχει ποτέ σε SSR. 🔴 Η ΜΕΤΑΦΡΑΣΗ ΗΤΑΝ ΗΔΗ ΕΚΕΙ, γι' αυτό
+// καμία από τις πέντε πύλες i18n δεν το είδε: όλες ρωτούν «υπάρχει το κλειδί;».
+// ⚠️ ZERO-TOL, ΚΑΜΙΑ baseline — και οι δύο πληθυσμοί μετρήθηκαν 0 (Κ1: 0/14.751
+// αρχεία · Κ2: 0/606 βάσιμα κρινόμενα σημεία κλήσης). Layer 1 ~1,5s: ο Κ2 διαβάζει
+// την κλειστότητα από το ΜΑΝΙΦΕΣΤΟ, χωρίς γράφο.
+// ⚠️ Η ΣΚΑΝΔΑΛΗ ΠΕΡΙΛΑΜΒΑΝΕΙ ΤΗ ΣΥΜΒΑΣΗ ΤΟΥ NEXT.JS (`src/app/**/{page,layout}.tsx`)
+// και ΟΧΙ μόνο το manifest: ένα ΝΕΟ layout αλλάζει «ό,τι ζωγραφίζει πάντα» και το
+// manifest το μαθαίνει μόνο ΜΕΤΑ. Λίστα από manifest και μόνο θα ήταν τυφλή ακριβώς
+// στη στιγμή που έχει σημασία.
+// ⚠️ Ο ΧΡΗΣΜΟΣ (Χ) ΔΕΝ τρέχει εδώ — χρειάζεται ζωντανό server (Layer 2, CI).
+const ssrRawKeysTriggers = allFiles.filter(
+  f => /^src\/app\/.*\/(page|layout)\.tsx$/.test(f)
+    || /^src\/i18n\//.test(f)
+    || /^src\/.*\.tsx?$/.test(f)
+    || f === '.i18n-shell-slice.json'
+    || f === 'scripts/check-i18n-ssr-raw-keys.js'
+    || f.startsWith('scripts/lib/i18n-ssr/')
+    || f.startsWith('scripts/lib/i18n/')
+);
+if (!process.env.SKIP_I18N_SSR_RAW_KEYS && ssrRawKeysTriggers.length > 0)
+  addThread('3.51', 'i18n SSR raw keys', 'scripts/check-i18n-ssr-raw-keys.js', ssrRawKeysTriggers);
+
 // CHECK 3.44 (ADR-772 §9) — «αυτό το διοικητικό πεδίο έχει γραμμή στον πίνακα;». Το
 // ADR-772 έφτιαξε τον πίνακα λεξιλογίου (8 επίπεδα × 5 δοχεία)· τίποτα δεν εμπόδιζε ένα
 // δοχείο να αποκτήσει ΕΝΑΤΟ πεδίο χωρίς γραμμή — ο μετατροπέας δεν το μεταφέρει, τίποτα

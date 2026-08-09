@@ -62,6 +62,14 @@ on:
       - 'scripts/lib/module-graph/**'
       - '.i18n-shell-slice.json'
       - '.github/workflows/i18n-shell-slice.yml'
+      # CHECK 3.51 (ADR-781) — η ίδια η πύλη και η baseline της. Χωρίς αυτά, μια
+      # αλλαγή ΣΤΟ ΚΡΙΤΗΡΙΟ δεν θα έτρεχε το κριτήριο (σχήμα CHECK 3.43).
+      - 'scripts/check-i18n-ssr-raw-keys.js'
+      - 'scripts/check-i18n-ssr-oracle.js'
+      - 'scripts/lib/i18n-ssr/**'
+      - 'scripts/lib/i18n/**'
+      - 'src/middleware.ts'
+      - '.i18n-ssr-oracle-baseline.json'
   push:
     branches: [main]
     paths:
@@ -77,6 +85,14 @@ on:
       - 'scripts/lib/module-graph/**'
       - '.i18n-shell-slice.json'
       - '.github/workflows/i18n-shell-slice.yml'
+      # CHECK 3.51 (ADR-781) — η ίδια η πύλη και η baseline της. Χωρίς αυτά, μια
+      # αλλαγή ΣΤΟ ΚΡΙΤΗΡΙΟ δεν θα έτρεχε το κριτήριο (σχήμα CHECK 3.43).
+      - 'scripts/check-i18n-ssr-raw-keys.js'
+      - 'scripts/check-i18n-ssr-oracle.js'
+      - 'scripts/lib/i18n-ssr/**'
+      - 'scripts/lib/i18n/**'
+      - 'src/middleware.ts'
+      - '.i18n-ssr-oracle-baseline.json'
   workflow_dispatch:
 
 concurrency:
@@ -152,4 +168,214 @@ jobs:
             echo ""
             echo "**Runtime proof red** → a key the shell can request resolves to nothing. The"
             echo "failure names it, and that name is the string the user would have seen."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # CHECK 3.51 (ADR-781) — ωμά i18n κλειδιά στο SSR HTML
+  # ===========================================================================
+  # ΔΥΟ jobs, γιατί απαντούν ΔΥΟ διαφορετικά ερωτήματα και έχουν ΔΥΟ διαφορετικά
+  # κόστη. Το στατικό μισό τρέχει σε δευτερόλεπτα και δεν χρειάζεται τίποτα· ο
+  # ΧΡΗΣΜΟΣ χρειάζεται πραγματικό build και πραγματικό server.
+  #
+  # 🔴 ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `docker-build.yml` (Tier 1), ΠΟΥ ΚΑΝΕΙ ΗΔΗ ΤΟ BUILD:
+  # μια πύλη ΠΟΙΟΤΗΤΑΣ δεν κουμπώνει στον αγωγό ΚΥΚΛΟΦΟΡΙΑΣ. Αλλιώς ένα ωμό
+  # κλειδί μπλοκάρει το deploy στο Netcup, και η αποτυχία αναφέρεται στον Giorgio
+  # ως «απέτυχε το Build & Deploy» — ακριβώς το λάθος που το ADR-775 απέφυγε
+  # ρητά όταν αρνήθηκε να βάλει την πύλη e2e μέσα σε workflow χρώματος.
+  # Είναι επίσης η πρακτική presubmit-vs-release: ο έλεγχος μπλοκάρει το merge,
+  # όχι την κυκλοφορία.
+  #
+  # ⚠️ ΚΑΝΕΝΑ ΝΕΟ WORKFLOW ΑΡΧΕΙΟ: το CHECK 3.37 παρακολουθεί **αρχεία**, όχι
+  # jobs — το μητρώο `.ci-gate-tiers.json` μένει στις 31 πύλες (επαληθεύτηκε
+  # ΕΚΤΕΛΩΝΤΑΣ το 3.37, όχι αντιγράφοντας τον αριθμό).
+
+  ssr-raw-keys-static:
+    name: 🔒 i18n SSR raw keys — static (CHECK 3.51 Κ1+Κ2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (TypeScript parser)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # `--all` ξαναχτίζει τον γράφο (~20s) αντί να εμπιστευτεί το manifest: ένα
+      # ΝΕΟ layout αλλάζει «ό,τι ζωγραφίζει πάντα», και το manifest το μαθαίνει
+      # μόνο ΜΕΤΑ τη regeneration. Το Layer 1 τρέχει με το manifest για ταχύτητα
+      # και αυτό είναι ΔΗΛΩΜΕΝΟ όριο, όχι παράλειψη.
+      - name: 🔎 CHECK 3.51 Κ1+Κ2 — πλήρης σάρωση
+        run: pnpm run i18n-ssr:check-full
+
+      - name: 🧪 Gate self-test
+        run: pnpm exec jest scripts/__tests__/check-i18n-ssr-raw-keys.test.js
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.51 — ο server μπορεί να βάψει ωμό i18n κλειδί"
+            echo ""
+            echo "**Κ1** — ένα module παραδίδει \`t\` μαζί με σημαία ετοιμότητας που"
+            echo "γράφεται ΜΟΝΟ μέσα σε \`useEffect\`. Το \`useEffect\` **δεν τρέχει σε SSR**,"
+            echo "άρα στον server η σημαία μένει για πάντα ο σπόρος της."
+            echo "Θεραπεία: αρχικοποίησε ΣΥΓΧΡΟΝΑ, όπως το \`src/i18n/hooks/useTranslation.ts\`:"
+            echo '```ts'
+            echo 'const [ready] = useState(() => nsList.every(ns => isBundleComplete(lang, ns)));'
+            echo '```'
+            echo ""
+            echo "**Κ2** — ένα σημείο κλήσης στην κλειστότητα των layouts δεν απαντιέται"
+            echo "από το \`shell-slice.el.json\` που ΣΤΕΛΝΕΤΑΙ. Αυτό το αρχείο ζωγραφίζεται"
+            echo "σε **κάθε** διαδρομή."
+            echo "Θεραπεία: πρόσθεσε το κλειδί στα locales και \`npm run generate:i18n-shell-slice\`."
+            echo ""
+            echo "⚠️ Το CHECK 3.34 μένει ΠΡΑΣΙΝΟ και στις δύο περιπτώσεις: εκείνο ρωτά αν το"
+            echo "artifact είναι ό,τι θα παρήγαγε ο generator, όχι αν ΑΡΚΕΙ."
+            echo ""
+            echo "Αναφορά: \`npm run i18n-ssr:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  ssr-raw-keys-oracle:
+    name: 🔮 i18n SSR raw keys — ο ΧΡΗΣΜΟΣ (CHECK 3.51 Χ)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Πρότυπο Next.js CI: το `.next/cache` κάνει τα επόμενα builds αυξητικά.
+      - name: 💾 Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('src/**/*.ts', 'src/**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+
+      - name: 🏗️ Build (παράγει τον ίδιο server που πάει στην παραγωγή)
+        run: pnpm run build:ci
+
+      # 🔑 Ο STANDALONE SERVER, ΟΧΙ `next dev` ΚΑΙ ΟΧΙ `next start`.
+      # Το `next.config` δηλώνει `output: 'standalone'`, δηλαδή **αυτό ακριβώς**
+      # είναι ο server που μπαίνει στο Docker image και φτάνει στο Netcup. Ο
+      # χρησμός οφείλει να ρωτήσει **τον server που στέλνεται**, όχι έναν
+      # ισοδύναμό του: σε dev το πρώτο αίτημα μεταγλωττίζει (μετρημένο **167s**
+      # για το `/`) και το αποτέλεσμα εξαρτάται από τη σειρά, ενώ το `next start`
+      # με standalone output είναι ρητά μη υποστηριζόμενο από το Next.js.
+      # Τα `static` και `public` αντιγράφονται όπως ορίζει η τεκμηρίωση του
+      # standalone — χωρίς αυτά ο server σηκώνεται αλλά σερβίρει σπασμένη σελίδα,
+      # που ο χρησμός θα ανέφερε ως `probe-unproven` (σωστά, αλλά για λάθος λόγο).
+      - name: 🚀 Σήκωσε τον server που ΟΝΤΩΣ στέλνεται
+        run: |
+          cp -r public .next/standalone/public 2>/dev/null || true
+          mkdir -p .next/standalone/.next
+          cp -r .next/static .next/standalone/.next/static
+          node .next/standalone/server.js > /tmp/next-start.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -s -o /dev/null -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36" http://127.0.0.1:3000/; then
+              echo "server up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error title=CHECK 3.51 Χ::ο server δεν σηκώθηκε σε 60s"
+          cat /tmp/next-start.log
+          exit 1
+
+      # ⚠️ 127.0.0.1 και ΟΧΙ localhost: το `fetch` του Node λύνει πρώτα σε `::1`
+      # και ένας server που ακούει IPv4 δίνει ECONNREFUSED — δηλαδή «unreachable»
+      # για λόγο που δεν είναι η εφαρμογή. Μετρημένο, όχι υποθετικό.
+      - name: 🔮 CHECK 3.51 Χ — ο χρησμός σε ΟΛΕΣ τις διαδρομές
+        env:
+          I18N_SSR_ORACLE_BASE_URL: http://127.0.0.1:3000
+          I18N_SSR_ORACLE_CONCURRENCY: '4'
+          I18N_SSR_ORACLE_TIMEOUT_MS: '60000'
+        run: node scripts/check-i18n-ssr-oracle.js
+
+      - name: 🧪 Gate self-test
+        run: pnpm exec jest scripts/__tests__/check-i18n-ssr-oracle.test.js
+
+      # 🔑 ΠΡΩΤΗ ΥΙΟΘΕΤΗΣΗ ΚΑΙ ΚΑΘΕ ΝΟΜΙΜΗ ΔΙΟΡΘΩΣΗ, ΧΩΡΙΣ ΧΕΙΡΩΝΑΚΤΙΚΗ ΜΕΤΡΗΣΗ.
+      # Η baseline είναι **μέτρηση ενός συγκεκριμένου server**, και ο σωστός server
+      # είναι **αυτός** — το standalone artifact που πάει στο Netcup. Ένας άνθρωπος
+      # που θα τη μετρούσε στο μηχάνημά του θα κωδικοποιούσε **άλλο** περιβάλλον.
+      # Γι' αυτό, όταν η πύλη είναι κόκκινη, το job παράγει την **υποψήφια** baseline
+      # εδώ και τη δίνει ως artifact: η σπορά γίνεται download + commit, χωρίς κανείς
+      # να χρειάζεται να στήσει production build τοπικά.
+      # ⚠️ Το `--write-baseline` **αρνείται** αν υπάρχει `route-unreachable` ή
+      # `probe-unproven` — τότε δεν υπάρχει τίποτα να σπαρεί, και ο λόγος είναι στην
+      # αναφορά. Αυτό είναι η εγγύηση, όχι σφάλμα.
+      - name: 📤 Υποψήφια baseline + πλήρης αναφορά (μόνο όταν είναι κόκκινη)
+        if: failure()
+        env:
+          I18N_SSR_ORACLE_BASE_URL: http://127.0.0.1:3000
+          I18N_SSR_ORACLE_CONCURRENCY: '4'
+          I18N_SSR_ORACLE_TIMEOUT_MS: '60000'
+        # ⚠️ ΜΙΑ σάρωση, όχι δύο: το artifact **είναι** η αναφορά (κρατά `by_state`
+        # και ολόκληρη τη λίστα ταυτοτήτων). Ένα δεύτερο `--report` θα ξαναχτυπούσε
+        # και τις 141 διαδρομές για να τυπώσει ό,τι μόλις γράφτηκε.
+        run: |
+          node scripts/check-i18n-ssr-oracle.js --write-baseline --quiet 2>&1 | tee /tmp/seed.log || true
+          {
+            echo '### CHECK 3.51 Χ — υποψήφια baseline από ΑΥΤΗ την εκτέλεση'
+            echo ''
+            echo 'Κατέβασε το artifact `i18n-ssr-oracle-baseline-candidate`, βάλε το'
+            echo 'στη ρίζα ως `.i18n-ssr-oracle-baseline.json` και κάνε commit.'
+            echo ''
+            echo '```'
+            cat /tmp/seed.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 📎 Ανέβασε την υποψήφια baseline
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i18n-ssr-oracle-baseline-candidate
+          path: .i18n-ssr-oracle-baseline.json
+          if-no-files-found: ignore
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.51 Χ — ο server στέλνει ωμό i18n κλειδί"
+            echo ""
+            echo "Ο ΧΡΗΣΜΟΣ είναι η **αυθεντία**: δεν μπορεί να είναι πράσινος πάνω σε"
+            echo "σπασμένη οθόνη, γιατί **είναι** η οθόνη."
+            echo ""
+            echo "| κατάσταση | σημασία |"
+            echo "|---|---|"
+            echo "| \`raw-key\` 🔴 | ο server έστειλε κυριολεκτικά ένα κλειδί locale ως κείμενο ή \`aria-label\` |"
+            echo "| \`probe-unproven\` ⛔ | καμία μεταφρασμένη τιμή στη σελίδα — ο χρησμός **δεν απέδειξε ότι κοίταξε** |"
+            echo "| \`route-unreachable\` ⛔ | 403/500/timeout. Αν είναι 403 με ΚΕΝΟ σώμα → \`BLOCKED_BOT_PATTERNS\` στο \`src/middleware.ts\`. **ΜΗΝ** αφαιρέσεις pattern: είναι κώδικας ασφαλείας. |"
+            echo ""
+            echo "Αναφορά: \`npm run i18n-ssr-oracle:report\`"
+            echo "Reseed **μόνο** μετά από νόμιμη διόρθωση: \`npm run i18n-ssr-oracle:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"

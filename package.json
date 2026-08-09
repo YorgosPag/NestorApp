@@ -296,6 +296,11 @@
     "adr-identity:baseline": "node scripts/check-adr-identity.js --write-baseline",
     "test:adr-identity": "jest scripts/__tests__/check-adr-identity.test.js --verbose",
     "zindex-scale:check": "node scripts/check-zindex-scale.js",
+    "i18n-ssr:report": "node scripts/check-i18n-ssr-raw-keys.js --report",
+    "i18n-ssr:check-full": "node scripts/check-i18n-ssr-raw-keys.js --all",
+    "i18n-ssr-oracle:report": "node scripts/check-i18n-ssr-oracle.js --report",
+    "i18n-ssr-oracle:baseline": "node scripts/check-i18n-ssr-oracle.js --write-baseline",
+    "test:i18n-ssr": "jest scripts/__tests__/check-i18n-ssr-raw-keys.test.js scripts/__tests__/check-i18n-ssr-oracle.test.js --verbose",
     "zindex-scale:report": "node scripts/check-zindex-scale.js --report",
     "zindex-scale:baseline": "node scripts/check-zindex-scale.js --write-baseline",
     "test:zindex-scale": "jest scripts/__tests__/check-zindex-scale.test.js --verbose"
