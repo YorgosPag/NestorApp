@@ -1,4 +1,5 @@
 export { CompactToolbar } from './CompactToolbar';
+export { ResponsiveCompactToolbar } from './ResponsiveCompactToolbar';
 export {
   buildingsToolbarConfig as buildingsConfig,
   projectsToolbarConfig as projectsConfig,
@@ -13,6 +14,7 @@ export {
   tasksToolbarConfig as tasksConfig,
 } from './configs';
 export { iconColors, getIconColor } from './icon-colors';
+export type { ResponsiveCompactToolbarProps } from './ResponsiveCompactToolbar';
 export type {
   CompactToolbarProps,
   CompactToolbarConfig,

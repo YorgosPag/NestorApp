@@ -27,6 +27,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
 import type { SpaceColumn, SpaceActions, SpaceActionState, SortDirection } from './types';
+import { compareSortValues } from '@/lib/array-utils';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -101,21 +102,9 @@ export function BuildingSpaceTable<T>({
     const { direction } = sort;
     const extractor = column.sortValue;
 
-    return [...items].sort((a, b) => {
-      const av = extractor(a);
-      const bv = extractor(b);
-
-      // Numeric comparison
-      if (typeof av === 'number' && typeof bv === 'number') {
-        return direction === 'asc' ? av - bv : bv - av;
-      }
-
-      // String comparison (locale-aware for Greek)
-      const sa = String(av).toLowerCase();
-      const sb = String(bv).toLowerCase();
-      const cmp = sa.localeCompare(sb, 'el');
-      return direction === 'asc' ? cmp : -cmp;
-    });
+    // One comparator for every sortable list in the app: absent values last in
+    // both directions, Greek collation pinned explicitly. See `lib/array-utils`.
+    return [...items].sort((a, b) => compareSortValues(extractor(a), extractor(b), direction));
   }, [items, sort, columns]);
 
   // ============================================================================

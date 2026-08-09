@@ -244,11 +244,11 @@ export function totalPrice(items: readonly PricedPropertyLike[]): PriceTotals {
  *
  * `null`, never `0`. A unit whose price was never recorded is not the cheapest
  * one; it is not an answer to "cheapest" or to "most expensive" either. Callers
- * order it with {@link compareNumericNullsLast}, which keeps such units at the
+ * order it with {@link compareSortValues}, which keeps such units at the
  * end in BOTH directions — the convention every spreadsheet uses for blanks,
  * and the only one under which sorting cannot invent a ranking.
  *
- * @see lib/array-utils — `compareNumericNullsLast`
+ * @see lib/array-utils — `compareSortValues`
  */
 export function priceSortKey(input: PricedPropertyLike): number | null {
   return getEffectivePrice(input)?.amount ?? null;

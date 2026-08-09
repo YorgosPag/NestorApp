@@ -20,6 +20,7 @@ import { useDeletionGuard } from '@/hooks/useDeletionGuard';
 import { Car, CheckCircle, Euro, Ruler } from 'lucide-react';
 import type { DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import type { ParkingSpot, ParkingSpotType, ParkingSpotStatus, ParkingLocationZone } from '@/types/parking';
+import { totalPrice } from '@/lib/properties/price-resolver';
 import type { LinkableItem } from '../shared';
 import type {
   ParkingApiData,
@@ -247,29 +248,28 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const handleSaveEdit = useCallback(async () => {
     if (!editingId || !editNumber.trim()) return;
     setSaving(true);
+
+    // ΕΝΑ αντικείμενο, δύο παραλήπτες: η εγγραφή και η ειδοποίηση realtime. Ήταν
+    // γραμμένο δύο φορές, κι έτσι ένα πεδίο μπορούσε να γραφτεί στη βάση και να
+    // ΜΗΝ ταξιδέψει στην οθόνη — μια απόκλιση που φαίνεται σαν «δεν αποθηκεύτηκε».
+    const updates = {
+      number: editNumber.trim(),
+      type: editType,
+      status: editStatus,
+      floor: editFloor.trim() || undefined,
+      area: editArea ? parseFloat(editArea) : undefined,
+      price: editPrice ? parseFloat(editPrice) : undefined,
+    };
+
     try {
       const result = await updateParkingWithPolicy<ParkingMutationResult>({
         parkingSpotId: editingId,
-        payload: {
-          number: editNumber.trim(),
-          type: editType,
-          status: editStatus,
-          floor: editFloor.trim() || undefined,
-          area: editArea ? parseFloat(editArea) : undefined,
-          price: editPrice ? parseFloat(editPrice) : undefined,
-        },
+        payload: updates,
       });
       if (result?.id) {
         RealtimeService.dispatch('PARKING_UPDATED', {
           parkingSpotId: editingId,
-          updates: {
-            number: editNumber.trim(),
-            type: editType,
-            status: editStatus,
-            floor: editFloor.trim() || undefined,
-            area: editArea ? parseFloat(editArea) : undefined,
-            price: editPrice ? parseFloat(editPrice) : undefined,
-          },
+          updates,
           timestamp: Date.now(),
         });
         setEditingId(null);
@@ -373,7 +373,8 @@ export function useParkingTabState({ buildingId, projectId }: UseParkingTabState
   const stats = useMemo(() => ({
     total: parkingSpots.length,
     available: parkingSpots.filter(s => s.status === 'available').length,
-    totalValue: parkingSpots.reduce((sum, s) => sum + (s.price || 0), 0),
+    // ADR-777 Α5/Α6 — the price SSoT, not the @deprecated flat field.
+    totalValue: totalPrice(parkingSpots).total,
     totalArea: parkingSpots.reduce((sum, s) => sum + (s.area || 0), 0),
   }), [parkingSpots]);
 

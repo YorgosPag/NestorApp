@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { useSortState } from '@/hooks/useSortState';
+import React, { useMemo } from 'react';
+import { useEntityListState } from '@/hooks/useEntityListState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Warehouse } from 'lucide-react';
 import type { Storage } from '@/types/storage/contracts';
@@ -17,13 +17,15 @@ const logger = createModuleLogger('StoragesList');
 import { StoragesListHeader } from './StoragesListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { StorageListCard } from '@/domain';
-import { CompactToolbar } from '@/components/core/CompactToolbar';
+import { ResponsiveCompactToolbar } from '@/components/core/CompactToolbar';
 import { storagesToolbarConfig } from '@/components/core/CompactToolbar/configs';
 import type { SortField } from '@/components/core/CompactToolbar/types';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { StorageStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
+import { compareSortValues } from '@/lib/array-utils';
+import { priceSortKey } from '@/lib/properties/price-resolver';
 
 interface StoragesListProps {
   storages: Storage[];
@@ -42,26 +44,14 @@ export function StoragesList({
   const { t } = useTranslation('storage');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [showToolbar, setShowToolbar] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
-  const toggleFavorite = (storageId: string) => {
-    setFavorites(prev =>
-      prev.includes(storageId)
-        ? prev.filter(id => id !== storageId)
-        : [...prev, storageId]
-    );
-  };
+  // Η κατάσταση που κρατά ΚΑΘΕ σελίδα λίστας — μία δήλωση, δες `useEntityListState`.
+  const list = useEntityListState<SortField>({ defaultSortField: 'name' });
 
   // 🏢 ENTERPRISE: Filter storages using centralized search + status quick filter
   const filteredStorages = useMemo(() => {
     return storages.filter(storage => {
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(storage.status)) {
+      if (list.selectedStatuses.length > 0 && !list.selectedStatuses.includes(storage.status)) {
         return false;
       }
       return matchesSearchTerm(
@@ -76,16 +66,16 @@ export function StoragesList({
           storage.area,
           storage.price
         ],
-        searchTerm
+        list.searchTerm
       );
     });
-  }, [storages, searchTerm, selectedStatuses]);
+  }, [storages, list.searchTerm, list.selectedStatuses]);
 
   const sortedStorages = [...filteredStorages].sort((a, b) => {
-    let aValue: string | number;
-    let bValue: string | number;
+    let aValue: string | number | null;
+    let bValue: string | number | null;
 
-    switch (sortBy) {
+    switch (list.sortBy) {
       case 'name':
         aValue = a.name.toLowerCase();
         bValue = b.name.toLowerCase();
@@ -95,8 +85,8 @@ export function StoragesList({
         bValue = b.area;
         break;
       case 'value':
-        aValue = a.price || 0;
-        bValue = b.price || 0;
+        aValue = priceSortKey(a);
+        bValue = priceSortKey(b);
         break;
       case 'status':
         aValue = a.status.toLowerCase();
@@ -122,73 +112,37 @@ export function StoragesList({
         return 0;
     }
 
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc'
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    } else {
-      return sortOrder === 'asc'
-        ? (aValue as number) - (bValue as number)
-        : (bValue as number) - (aValue as number);
-    }
+    // Ένας συγκριτής για κάθε ταξινομήσιμη λίστα: «δεν έχει τιμή» πάει τελευταίο
+    // ΚΑΙ στις δύο φορές (ADR-777 Α6 · σύμβαση φύλλου εργασίας για τα κενά), και
+    // το κείμενο συγκρίνεται με ΡΗΤΟ ελληνικό locale. Δες `lib/array-utils`.
+    return compareSortValues(aValue, bValue, list.sortOrder);
   });
 
   return (
     <EntityListColumn hasBorder aria-label={t('storages.list.ariaLabel')}>
       <StoragesListHeader
         storages={sortedStorages}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        showToolbar={showToolbar}
-        onToolbarToggle={setShowToolbar}
+        searchTerm={list.searchTerm}
+        onSearchChange={list.setSearchTerm}
+        showToolbar={list.showToolbar}
+        onToolbarToggle={list.setShowToolbar}
       />
 
-      {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
-      <div className="hidden md:block">
-        <CompactToolbar
-          config={storagesToolbarConfig}
-          selectedItems={selectedItems}
-          onSelectionChange={setSelectedItems}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
-          sortBy={sortBy}
-          onSortChange={onSortChange}
-          onNewItem={() => onNewItem?.()}
-          onEditItem={(id) => logger.info('Edit storage', { id })}
-          onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
-          onExport={() => logger.info('Export storages')}
-          onRefresh={() => logger.info('Refresh storages')}
-        />
-      </div>
-
-      {/* CompactToolbar - Toggleable on Mobile */}
-      <div className="md:hidden">
-        {showToolbar && (
-          <CompactToolbar
-            config={storagesToolbarConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={onSortChange}
-            onNewItem={() => onNewItem?.()}
-            onEditItem={(id) => logger.info('Edit storage', { id })}
-            onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
-            onExport={() => logger.info('Export storages')}
-            onRefresh={() => logger.info('Refresh storages')}
-          />
-        )}
-      </div>
+      {/* Πάντα ορατή σε desktop, πίσω από τον διακόπτη σε κινητό — ΜΙΑ φορά τα props */}
+      <ResponsiveCompactToolbar
+        {...list.toolbarBindings}
+        config={storagesToolbarConfig}
+        onNewItem={() => onNewItem?.()}
+        onEditItem={(id) => logger.info('Edit storage', { id })}
+        onDeleteItems={(ids) => logger.info('Delete storages', { ids })}
+        onExport={() => logger.info('Export storages')}
+        onRefresh={() => logger.info('Refresh storages')}
+      />
 
       {/* 🏢 ENTERPRISE: Quick Filters for Storage Status */}
       <StorageStatusQuickFilters
-        selectedTypes={selectedStatuses}
-        onTypeChange={setSelectedStatuses}
+        selectedTypes={list.selectedStatuses}
+        onTypeChange={list.setSelectedStatuses}
         compact
       />
 
@@ -199,9 +153,9 @@ export function StoragesList({
               key={storage.id}
               storage={storage}
               isSelected={selectedStorage?.id === storage.id}
-              isFavorite={favorites.includes(storage.id)}
+              isFavorite={list.favorites.includes(storage.id)}
               onSelect={() => onSelectStorage?.(storage)}
-              onToggleFavorite={() => toggleFavorite(storage.id)}
+              onToggleFavorite={() => list.toggleFavorite(storage.id)}
             />
           ))}
 
@@ -209,8 +163,8 @@ export function StoragesList({
             <div className={cn("text-center py-8", colors.text.muted)}>
               <Warehouse className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
               <p>{t('storages.list.noResults')}</p>
-              {searchTerm && (
-                <p className="text-sm">{t('storages.list.noResultsForTerm', { term: searchTerm })}</p>
+              {list.searchTerm && (
+                <p className="text-sm">{t('storages.list.noResultsForTerm', { term: list.searchTerm })}</p>
               )}
             </div>
           )}

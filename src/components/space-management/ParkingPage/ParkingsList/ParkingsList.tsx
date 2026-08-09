@@ -7,8 +7,8 @@
  * Ακολουθεί το exact pattern από StoragesList.tsx
  */
 
-import React, { useState, useMemo } from 'react';
-import { useSortState } from '@/hooks/useSortState';
+import React, { useMemo } from 'react';
+import { useEntityListState } from '@/hooks/useEntityListState';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Car } from 'lucide-react';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
@@ -24,13 +24,15 @@ const logger = createModuleLogger('ParkingsList');
 import { ParkingsListHeader } from './ParkingsListHeader';
 // 🏢 ENTERPRISE: Using centralized domain card
 import { ParkingListCard } from '@/domain';
-import { CompactToolbar } from '@/components/core/CompactToolbar';
+import { ResponsiveCompactToolbar } from '@/components/core/CompactToolbar';
 import { parkingToolbarConfig } from '@/components/core/CompactToolbar/configs';
 import type { SortField } from '@/components/core/CompactToolbar/types';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import { ParkingStatusQuickFilters } from '@/components/shared/SpaceStatusQuickFilters';
+import { compareSortValues } from '@/lib/array-utils';
+import { priceSortKey } from '@/lib/properties/price-resolver';
 
 interface ParkingsListProps {
   parkingSpots: ParkingSpot[];
@@ -49,26 +51,14 @@ export function ParkingsList({
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const { sortBy, sortOrder, onSortChange } = useSortState<SortField>('name');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [showToolbar, setShowToolbar] = useState(false);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
 
-  const toggleFavorite = (parkingId: string) => {
-    setFavorites(prev =>
-      prev.includes(parkingId)
-        ? prev.filter(id => id !== parkingId)
-        : [...prev, parkingId]
-    );
-  };
+  // Η κατάσταση που κρατά ΚΑΘΕ σελίδα λίστας — μία δήλωση, δες `useEntityListState`.
+  const list = useEntityListState<SortField>({ defaultSortField: 'name' });
 
   // 🏢 ENTERPRISE: Filter parking spots using centralized search + status quick filter
   const filteredParkingSpots = useMemo(() => {
     return parkingSpots.filter(parking => {
-      if (selectedStatuses.length > 0 && !selectedStatuses.includes(parking.status ?? '')) {
+      if (list.selectedStatuses.length > 0 && !list.selectedStatuses.includes(parking.status ?? '')) {
         return false;
       }
       return matchesSearchTerm(
@@ -82,16 +72,16 @@ export function ParkingsList({
           parking.area,
           parking.price
         ],
-        searchTerm
+        list.searchTerm
       );
     });
-  }, [parkingSpots, searchTerm, selectedStatuses]);
+  }, [parkingSpots, list.searchTerm, list.selectedStatuses]);
 
   const sortedParkingSpots = [...filteredParkingSpots].sort((a, b) => {
-    let aValue: string | number;
-    let bValue: string | number;
+    let aValue: string | number | null;
+    let bValue: string | number | null;
 
-    switch (sortBy) {
+    switch (list.sortBy) {
       case 'name':
         aValue = (a.number || '').toLowerCase();
         bValue = (b.number || '').toLowerCase();
@@ -101,8 +91,8 @@ export function ParkingsList({
         bValue = b.area || 0;
         break;
       case 'value':
-        aValue = a.price || 0;
-        bValue = b.price || 0;
+        aValue = priceSortKey(a);
+        bValue = priceSortKey(b);
         break;
       case 'status':
         aValue = (a.status || '').toLowerCase();
@@ -128,73 +118,37 @@ export function ParkingsList({
         return 0;
     }
 
-    if (typeof aValue === 'string' && typeof bValue === 'string') {
-      return sortOrder === 'asc'
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    } else {
-      return sortOrder === 'asc'
-        ? (aValue as number) - (bValue as number)
-        : (bValue as number) - (aValue as number);
-    }
+    // Ένας συγκριτής για κάθε ταξινομήσιμη λίστα: «δεν έχει τιμή» πάει τελευταίο
+    // ΚΑΙ στις δύο φορές (ADR-777 Α6 · σύμβαση φύλλου εργασίας για τα κενά), και
+    // το κείμενο συγκρίνεται με ΡΗΤΟ ελληνικό locale. Δες `lib/array-utils`.
+    return compareSortValues(aValue, bValue, list.sortOrder);
   });
 
   return (
     <EntityListColumn hasBorder aria-label={t('parkings.list.ariaLabel')}>
       <ParkingsListHeader
         parkingSpots={sortedParkingSpots}  // 🏢 ENTERPRISE: Περνάμε filtered results για δυναμικό count
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        showToolbar={showToolbar}
-        onToolbarToggle={setShowToolbar}
+        searchTerm={list.searchTerm}
+        onSearchChange={list.setSearchTerm}
+        showToolbar={list.showToolbar}
+        onToolbarToggle={list.setShowToolbar}
       />
 
-      {/* CompactToolbar - Always visible on Desktop, Toggleable on Mobile */}
-      <div className="hidden md:block">
-        <CompactToolbar
-          config={parkingToolbarConfig}
-          selectedItems={selectedItems}
-          onSelectionChange={setSelectedItems}
-          searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
-          activeFilters={activeFilters}
-          onFiltersChange={setActiveFilters}
-          sortBy={sortBy}
-          onSortChange={onSortChange}
-          onNewItem={() => onNewItem?.()}
-          onEditItem={(id) => logger.info('Edit parking', { id })}
-          onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
-          onExport={() => logger.info('Export parking')}
-          onRefresh={() => logger.info('Refresh parking')}
-        />
-      </div>
-
-      {/* CompactToolbar - Toggleable on Mobile */}
-      <div className="md:hidden">
-        {showToolbar && (
-          <CompactToolbar
-            config={parkingToolbarConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={onSortChange}
-            onNewItem={() => onNewItem?.()}
-            onEditItem={(id) => logger.info('Edit parking', { id })}
-            onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
-            onExport={() => logger.info('Export parking')}
-            onRefresh={() => logger.info('Refresh parking')}
-          />
-        )}
-      </div>
+      {/* Πάντα ορατή σε desktop, πίσω από τον διακόπτη σε κινητό — ΜΙΑ φορά τα props */}
+      <ResponsiveCompactToolbar
+        {...list.toolbarBindings}
+        config={parkingToolbarConfig}
+        onNewItem={() => onNewItem?.()}
+        onEditItem={(id) => logger.info('Edit parking', { id })}
+        onDeleteItems={(ids) => logger.info('Delete parking', { ids })}
+        onExport={() => logger.info('Export parking')}
+        onRefresh={() => logger.info('Refresh parking')}
+      />
 
       {/* 🏢 ENTERPRISE: Quick Filters for Parking Status */}
       <ParkingStatusQuickFilters
-        selectedTypes={selectedStatuses}
-        onTypeChange={setSelectedStatuses}
+        selectedTypes={list.selectedStatuses}
+        onTypeChange={list.setSelectedStatuses}
         compact
       />
 
@@ -205,9 +159,9 @@ export function ParkingsList({
               key={parking.id}
               parking={parking}
               isSelected={selectedParking?.id === parking.id}
-              isFavorite={favorites.includes(parking.id)}
+              isFavorite={list.favorites.includes(parking.id)}
               onSelect={() => onSelectParking?.(parking)}
-              onToggleFavorite={() => toggleFavorite(parking.id)}
+              onToggleFavorite={() => list.toggleFavorite(parking.id)}
             />
           ))}
 
@@ -215,8 +169,8 @@ export function ParkingsList({
             <div className={cn("text-center py-8", colors.text.muted)}>
               <Car className={`${iconSizes.xl3} mx-auto mb-2 opacity-50`} />
               <p>{t('parkings.list.noResults')}</p>
-              {searchTerm && (
-                <p className="text-sm">{t('parkings.list.noResultsForTerm', { term: searchTerm })}</p>
+              {list.searchTerm && (
+                <p className="text-sm">{t('parkings.list.noResultsForTerm', { term: list.searchTerm })}</p>
               )}
             </div>
           )}

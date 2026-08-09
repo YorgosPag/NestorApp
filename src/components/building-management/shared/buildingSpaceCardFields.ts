@@ -15,6 +15,7 @@
  */
 
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { priceSortKey, type PricedPropertyLike } from '@/lib/properties/price-resolver';
 import type { SpaceCardField } from './types';
 
 // ============================================================================
@@ -72,14 +73,22 @@ export function buildAreaField<T>(
 
 /**
  * Field 4: Formatted price.
- * Uses formatCurrencyWhole for whole-number currency display.
+ *
+ * Takes NO price accessor on purpose. Which field holds "the price" is one
+ * rule owned by the `price-resolver` SSoT (ADR-777 Α6), so there is nothing
+ * for a caller to supply — and nothing for three callers to disagree about.
+ * Each of them used to pass the @deprecated flat `.price`, which silently
+ * ignored `commercial.askingPrice` on units that have one.
+ *
+ * Absence renders as a dash, never as "0 €".
+ *
+ * @see lib/properties/price-resolver
  */
-export function buildPriceField<T>(
+export function buildPriceField<T extends PricedPropertyLike>(
   label: string,
-  getPrice: (item: T) => number | undefined,
 ): SpaceCardField<T> {
   return {
     label,
-    render: (item) => formatCurrencyWhole(getPrice(item)),
+    render: (item) => formatCurrencyWhole(priceSortKey(item)),
   };
 }

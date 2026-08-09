@@ -41,28 +41,43 @@ export function compareStrings(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
-/** Sort direction for the nullable comparators below. */
+/** Sort direction for the comparator below. */
 export type SortDirection = 'asc' | 'desc';
 
+/** What a sortable column may hand back for one row. */
+export type SortableValue = string | number | null | undefined;
+
 /**
- * Numeric comparator that keeps "no value" at the END in BOTH directions.
+ * The comparator for a sortable column — text, number, or absent.
  *
- * `null`/`undefined` means the value is unknown, not small. Substituting `0`
- * ranks a record with no data as the cheapest/smallest one and lets a sort
- * invent an order that the data does not contain.
+ * Every sortable list in the app asks this one question, and until now three of
+ * them answered it privately: `BuildingSpaceTable`, `ParkingsList` and
+ * `StoragesList` carried the same twenty lines, which CHECK 3.28 measured as
+ * one clone. The three rules they have to agree on are none of them obvious:
  *
- * The both-directions rule is deliberate and follows the spreadsheet
- * convention (Excel places blanks last in ascending AND descending sorts)
- * rather than the SQL default, where NULLs flip to the front under `DESC`.
- * A user sorting a table is looking for an extreme; a record with no value is
- * a candidate for neither end, so it belongs after the answers either way.
+ * 1. **Absent values go last in BOTH directions.** `null`/`undefined` means the
+ *    value is unknown, not small — substituting `0` ranks a record with no data
+ *    as the cheapest one and lets a sort invent an order the data does not
+ *    contain. Both directions is deliberate: it follows the spreadsheet
+ *    convention (Excel puts blanks last ascending AND descending), not the SQL
+ *    default where NULLs flip to the front under `DESC`. Someone sorting a
+ *    table is looking for an extreme, and a record with no value is a candidate
+ *    for neither end.
+ * 2. **Text is compared under an EXPLICIT locale.** A bare `localeCompare(b)`
+ *    uses the runtime's default, so the same two rows could order one way on
+ *    the server and another in the browser, and differently again for a user
+ *    with another system language. Greek is pinned because it is the language
+ *    these lists hold: only under `el` does «Ά» sort next to «Α» rather than
+ *    after «Ω».
+ * 3. **Mixed types fall back to text**, so a column returning a number for some
+ *    rows and a string for others still yields a total order.
  *
  * @example
- * rows.sort((a, b) => compareNumericNullsLast(key(a), key(b), 'desc'));
+ * rows.sort((a, b) => compareSortValues(key(a), key(b), sortOrder));
  */
-export function compareNumericNullsLast(
-  a: number | null | undefined,
-  b: number | null | undefined,
+export function compareSortValues(
+  a: SortableValue,
+  b: SortableValue,
   direction: SortDirection = 'asc',
 ): number {
   const aMissing = a === null || a === undefined;
@@ -74,5 +89,10 @@ export function compareNumericNullsLast(
     return aMissing ? 1 : -1;
   }
 
-  return direction === 'asc' ? a - b : b - a;
+  if (typeof a === 'number' && typeof b === 'number') {
+    return direction === 'asc' ? a - b : b - a;
+  }
+
+  const cmp = String(a).toLowerCase().localeCompare(String(b).toLowerCase(), 'el');
+  return direction === 'asc' ? cmp : -cmp;
 }

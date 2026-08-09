@@ -45,6 +45,7 @@ import { getStatusBadgeClasses } from './parking-tab-config';
 import { ParkingQuickCreateSheet } from '../dialogs/ParkingQuickCreateSheet';
 import { ParkingEditRow } from './parking-tab-forms';
 import { useHasAnyParking } from '@/hooks/useHasAnyUnits';
+import { priceSortKey } from '@/lib/properties/price-resolver';
 
 // Re-export types for backward compatibility
 export type { ParkingTabContentProps } from './parking-tab-config';
@@ -80,7 +81,7 @@ export function ParkingTabContent({ building }: { building: Building }) {
     { key: 'type', label: t('general.fields.type'), width: 'w-28', sortValue: (s) => s.type || 'standard', render: (s) => <span className={colors.text.muted}>{t(`types.${s.type || 'standard'}`)}</span> },
     { key: 'floor', label: t('general.fields.floor'), width: 'w-20', sortValue: (s) => s.floor || '', render: (s) => <span className={colors.text.muted}>{s.floor || '—'}</span> },
     { key: 'area', label: 'm²', width: 'w-20', sortValue: (s) => s.area || 0, render: (s) => <span className="font-mono text-xs">{s.area ? `${s.area}` : '—'}</span> },
-    { key: 'price', label: t('general.fields.price'), width: 'w-24', sortValue: (s) => s.price || 0, render: (s) => <span className="font-mono text-xs">{formatCurrencyWhole(s.price)}</span> },
+    { key: 'price', label: t('general.fields.price'), width: 'w-24', sortValue: (s) => priceSortKey(s), render: (s) => <span className="font-mono text-xs">{formatCurrencyWhole(priceSortKey(s))}</span> },
     { key: 'status', label: t('general.fields.status'), width: 'w-28', sortValue: (s) => s.status || '', render: (s) => getStatusBadge(s.status) },
   ], [t, colors.text.muted]);
 
@@ -88,8 +89,19 @@ export function ParkingTabContent({ building }: { building: Building }) {
     buildTypeCodeField(t('general.fields.type'), (s) => t(`types.${s.type || 'standard'}`), (s) => s.code),
     buildFloorField(t('general.fields.floor'), (s) => s.floor),
     buildAreaField((s) => s.area),
-    buildPriceField(t('general.fields.price'), (s) => s.price),
+    buildPriceField(t('general.fields.price')),
   ], [t]);
+
+  // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
+  // της ίδιας καρτέλας να μη μπορούν να προσφέρουν διαφορετικές.
+  const spaceActions = useMemo(() => ({
+    onView: (s: ParkingSpot) => router.push(ENTITY_ROUTES.spaces.parking(s.id)),
+    onEdit: state.startEdit,
+    onUnlink: state.handleUnlinkClick,
+    onDelete: state.handleDeleteClick,
+  }), [router, state.startEdit, state.handleUnlinkClick, state.handleDeleteClick]);
+
+  const spaceActionState = { unlinkingId: state.unlinkingId, deletingId: state.deletingId };
 
   if (state.loading) {
     return (
@@ -230,13 +242,8 @@ export function ParkingTabContent({ building }: { building: Building }) {
             getName={(s) => s.number || s.code || s.id}
             renderStatus={(s) => getStatusBadge(s.status)}
             fields={parkingCardFields}
-            actions={{
-              onView: (s) => router.push(ENTITY_ROUTES.spaces.parking(s.id)),
-              onEdit: state.startEdit,
-              onUnlink: state.handleUnlinkClick,
-              onDelete: state.handleDeleteClick,
-            }}
-            actionState={{ unlinkingId: state.unlinkingId, deletingId: state.deletingId }}
+            actions={spaceActions}
+            actionState={spaceActionState}
           />
           <footer className={cn("text-xs", colors.text.muted)}>
             {state.filteredSpots.length} {tBuilding('tabs.labels.parking')}
@@ -248,13 +255,8 @@ export function ParkingTabContent({ building }: { building: Building }) {
             items={state.filteredSpots}
             columns={parkingColumns}
             getKey={(s) => s.id}
-            actions={{
-              onView: (s) => router.push(ENTITY_ROUTES.spaces.parking(s.id)),
-              onEdit: state.startEdit,
-              onUnlink: state.handleUnlinkClick,
-              onDelete: state.handleDeleteClick,
-            }}
-            actionState={{ unlinkingId: state.unlinkingId, deletingId: state.deletingId }}
+            actions={spaceActions}
+            actionState={spaceActionState}
             editingId={state.editingId}
             renderEditRow={() => (
               <ParkingEditRow state={state} t={t} />

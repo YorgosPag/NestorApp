@@ -29,13 +29,14 @@ import type { Building } from '@/types/building/contracts';
 import type { Property, PropertyType } from '@/types/property';
 import { UnitQuickCreateSheet } from '../dialogs/UnitQuickCreateSheet';
 import { PropertyInlineEditRow } from './PropertyInlineEditRow';
-import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner, buildTypeCodeField, buildFloorField, buildAreaField, buildPriceField } from '../shared';
-import type { SpaceColumn, SpaceCardField, LinkableItem } from '../shared';
+import { BuildingSpaceTable, BuildingSpaceCardGrid, BuildingSpaceConfirmDialog, BuildingSpaceLinkDialog, BuildingSpaceWarningBanner } from '../shared';
+import type { LinkableItem } from '../shared';
+import { usePropertyTabColumns, usePropertyTabCardFields, renderUnitStatusBadge } from './property-tab-columns';
 import { ENTITY_ROUTES } from '@/lib/routes';
 import { usePropertyDeletionGuard } from '@/hooks/usePropertyDeletionGuard';
 import {
   UNIT_TYPES_FOR_FILTER, UNIT_STATUSES_FOR_FILTER,
-  UNIT_STATUS_COLOR_MAP, getPropertyTypeLabel, getPropertyStatusLabel,
+  getPropertyTypeLabel, getPropertyStatusLabel,
 } from './property-tab-constants';
 import type { FloorRecord } from './property-tab-constants';
 import { usePropertyInlineEdit } from './usePropertyInlineEdit';
@@ -48,6 +49,7 @@ import { RealtimeService } from '@/services/realtime/RealtimeService';
 import { createStaleCache } from '@/lib/stale-cache';
 import type { UnitsApiData } from '@/types/api/building-spaces.api.types';
 import { useHasAnyUnits } from '@/hooks/useHasAnyUnits';
+import { totalPrice } from '@/lib/properties/price-resolver';
 
 // ADR-300: Module-level caches — keyed by buildingId, survive re-navigation
 const buildingPropertiesCache = createStaleCache<Property[]>('building-properties-tab');
@@ -151,7 +153,8 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
   const stats = useMemo(() => ({
     total: units.length,
     available: units.filter(u => u.status === 'for-sale' || u.status === 'for-rent').length,
-    totalValue: units.reduce((sum, u) => sum + (u.price || 0), 0),
+    // ADR-777 Α5/Α6 — the price SSoT, not the @deprecated flat field.
+    totalValue: totalPrice(units).total,
     totalArea: units.reduce((sum, u) => sum + (u.areas?.gross || u.areas?.net || u.area || 0), 0),
   }), [units]);
 
@@ -270,26 +273,22 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
     await fetchProperties();
   }, [building.id, fetchProperties, t, units]);
 
-  const getStatusBadge = (status: string) => (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${UNIT_STATUS_COLOR_MAP[status] || UNIT_STATUS_COLOR_MAP.unavailable}`}>
-      {getPropertyStatusLabel(status, tUnits)}
-    </span>
-  );
+  // Η παρουσίαση μιας γραμμής μονάδας ζει στο `property-tab-columns` (ADR-184),
+  // όπως ήδη κάνει η αδελφή καρτέλα στάθμευσης με το `parking-tab-config`.
+  const unitColumns = usePropertyTabColumns(t, tUnits, colors.text.muted);
+  const unitCardFields = usePropertyTabCardFields(tUnits);
+  const getStatusBadge = (status: string) => renderUnitStatusBadge(status, tUnits);
 
-  const unitColumns: SpaceColumn<Property>[] = useMemo(() => [
-    { key: 'name', label: t('tabs.floors.name'), sortValue: (u) => u.name, render: (u) => <span className="font-medium">{u.name}</span> },
-    { key: 'type', label: t('tabs.labels.properties'), width: 'w-28', sortValue: (u) => u.type, render: (u) => <span className={colors.text.muted}>{getPropertyTypeLabel(u.type, tUnits)}</span> },
-    { key: 'floor', label: t('tabs.floors.number'), width: 'w-20', sortValue: (u) => u.floor || '', render: (u) => <span className={cn("font-mono text-sm", colors.text.muted)}>{u.floor}</span> },
-    { key: 'area', label: 'm²', width: 'w-20', sortValue: (u) => u.areas?.gross || u.areas?.net || u.area || 0, render: (u) => { const a = u.areas?.gross || u.areas?.net || u.area; return <span className="font-mono text-xs">{a ? `${a}` : '—'}</span>; } },
-    { key: 'status', label: t('tabs.labels.details'), width: 'w-28', sortValue: (u) => u.status, render: (u) => getStatusBadge(u.status) },
-  ], [t, tUnits]);
+  // Ίδιες ενέργειες σε κάρτες ΚΑΙ πίνακα — γραμμένες μία φορά, ώστε οι δύο όψεις
+  // της ίδιας καρτέλας να μη μπορούν να προσφέρουν διαφορετικές.
+  const spaceActions = useMemo(() => ({
+    onView: (u: Property) => router.push(ENTITY_ROUTES.properties.withId(u.id)),
+    onEdit: edit.startEdit,
+    onUnlink: handleUnlinkClick,
+    onDelete: handleDeleteClick,
+  }), [router, edit.startEdit, handleUnlinkClick, handleDeleteClick]);
 
-  const unitCardFields: SpaceCardField<Property>[] = useMemo(() => [
-    buildTypeCodeField(tUnits('card.stats.type'), (u) => getPropertyTypeLabel(u.type, tUnits), (u) => u.code),
-    buildFloorField(tUnits('card.stats.floor'), (u) => u.floor != null ? String(u.floor) : undefined),
-    buildAreaField((u) => u.areas?.gross || u.areas?.net || u.area),
-    buildPriceField(tUnits('table.price'), (u) => u.price),
-  ], [tUnits]);
+  const spaceActionState = { unlinkingId, deletingId };
 
   if (loading) {
     return (
@@ -427,13 +426,8 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
             getName={(u) => u.name || u.code || u.id}
             renderStatus={(u) => getStatusBadge(u.status)}
             fields={unitCardFields}
-            actions={{
-              onView: (u) => router.push(ENTITY_ROUTES.properties.withId(u.id)),
-              onEdit: edit.startEdit,
-              onUnlink: handleUnlinkClick,
-              onDelete: handleDeleteClick,
-            }}
-            actionState={{ unlinkingId, deletingId }}
+            actions={spaceActions}
+            actionState={spaceActionState}
           />
           <footer className={cn("text-xs", colors.text.muted)}>
             {filteredUnits.length} {t('tabs.labels.units')}
@@ -445,13 +439,8 @@ export function PropertiesTabContent({ building, onActiveUnitsCountChange }: Pro
             items={filteredUnits}
             columns={unitColumns}
             getKey={(u) => u.id}
-            actions={{
-              onView: (u) => router.push(ENTITY_ROUTES.properties.withId(u.id)),
-              onEdit: edit.startEdit,
-              onUnlink: handleUnlinkClick,
-              onDelete: handleDeleteClick,
-            }}
-            actionState={{ unlinkingId, deletingId }}
+            actions={spaceActions}
+            actionState={spaceActionState}
             editingId={edit.editingId}
             renderEditRow={() => <PropertyInlineEditRow edit={edit} tUnits={tUnits} />}
           />

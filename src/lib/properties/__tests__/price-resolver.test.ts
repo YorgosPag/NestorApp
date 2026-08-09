@@ -14,7 +14,7 @@ import {
   priceSortKey,
   type PricedPropertyLike,
 } from '@/lib/properties/price-resolver';
-import { compareNumericNullsLast } from '@/lib/array-utils';
+import { compareSortValues } from '@/lib/array-utils';
 
 /** Minimal builder — nothing is defaulted that the resolver reads. */
 function unit(p: PricedPropertyLike): PricedPropertyLike {
@@ -360,7 +360,7 @@ describe('Κ10 — priceSortKey', () => {
     ];
     const by = (dir: 'asc' | 'desc') =>
       [...rows]
-        .sort((a, b) => compareNumericNullsLast(priceSortKey(a), priceSortKey(b), dir))
+        .sort((a, b) => compareSortValues(priceSortKey(a), priceSortKey(b), dir))
         .map(priceSortKey);
 
     expect(by('asc')).toEqual([100, 300, null]);

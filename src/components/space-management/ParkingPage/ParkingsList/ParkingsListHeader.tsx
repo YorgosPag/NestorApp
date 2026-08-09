@@ -12,6 +12,7 @@ import { Car } from 'lucide-react';
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
 import type { ParkingSpot } from '@/hooks/useFirestoreParkingSpots';
 import { useIconSizes } from '@/hooks/useIconSizes';
+import { totalPrice } from '@/lib/properties/price-resolver';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
@@ -39,7 +40,8 @@ export function ParkingsListHeader({
   const occupiedCount = parkingSpots.filter(p => p.status === 'occupied').length;
   const soldCount = parkingSpots.filter(p => p.status === 'sold').length;
   const totalArea = parkingSpots.reduce((sum, p) => sum + (p.area || 0), 0);
-  const totalValue = parkingSpots.reduce((sum, p) => sum + (p.price || 0), 0);
+  // ADR-777 Α5/Α6 — the price SSoT, not the @deprecated flat field.
+  const totalValue = totalPrice(parkingSpots).total;
 
   return (
     <div>

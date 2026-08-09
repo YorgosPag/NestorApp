@@ -7,6 +7,7 @@
  */
 
 import type { ReactNode } from 'react';
+import type { SortableValue } from '@/lib/array-utils';
 
 // ============================================================================
 // TABLE COLUMN DEFINITION
@@ -33,16 +34,27 @@ export interface SpaceColumn<T> {
    * Extract a sortable value from the item.
    * When provided, the column header becomes clickable for A→Z / Z→A sorting.
    * Returns string (lexicographic) or number (numeric) for proper comparison.
+   *
+   * Return `null` when the item has no value for this column — the row is then
+   * placed at the END of the table in BOTH directions, the way a spreadsheet
+   * treats blank cells. Returning `0` instead would rank a unit with no
+   * recorded price as the cheapest one.
    */
-  sortValue?: (item: T) => string | number;
+  sortValue?: (item: T) => SortableValue;
 }
 
 // ============================================================================
 // SORT DIRECTION
 // ============================================================================
 
-/** Sort direction for column headers */
-export type SortDirection = 'asc' | 'desc';
+/**
+ * Sort direction for column headers.
+ *
+ * Re-exported, not re-declared: the comparator that consumes it lives in
+ * `lib/array-utils`, and two identical unions in two files are two things that
+ * can drift apart. Existing importers of `./types` keep working unchanged.
+ */
+export type { SortDirection, SortableValue } from '@/lib/array-utils';
 
 // ============================================================================
 // CARD FIELD DEFINITION
