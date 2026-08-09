@@ -8,7 +8,7 @@
   position: fixed;
   right: 12px;
   top: 68px;
-  z-index: 9900;
+  z-index: var(--z-index-viewer-palette);
   width: 260px;
   max-height: calc(100vh - 88px);
   overflow-y: auto;

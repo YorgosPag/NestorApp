@@ -31,12 +31,21 @@
   --cp-easing-in: cubic-bezier(0.4, 0, 1, 1);
   --cp-easing-out: cubic-bezier(0, 0, 0.2, 1);
 
-  /* ===== Z-INDEX ===== */
-  --cp-z-base: 1;
-  --cp-z-dropdown: 1000;
-  --cp-z-popover: 9998;
-  --cp-z-modal: 9999;
-  --cp-z-tooltip: 10000;
+  /* ===== Z-INDEX — ΔΙΑΓΡΑΦΗΚΕ 2026-08-08 (ADR-780 / CHECK 3.50) =====
+     Εδώ ζούσε ΟΛΟΚΛΗΡΗ δεύτερη κλίμακα στρώσης:
+         --cp-z-base 1 · --cp-z-dropdown 1000 · --cp-z-popover 9998
+         --cp-z-modal 9999 · --cp-z-tooltip 10000
+     🔴 Και ήταν χειρότερη από «δύο αλήθειες, η μία ανώνυμη» (ADR-749): έδινε τα ΙΔΙΑ
+     ονόματα ρόλων με ΔΙΑΦΟΡΕΤΙΚΟΥΣ αριθμούς — `modal` 9999 έναντι 1400 της κλίμακας,
+     `tooltip` 10000 έναντι 1800. Όποιος διάβαζε «tooltip» εδώ και «tooltip» εκεί έπαιρνε
+     δύο απαντήσεις, και καμία πύλη δεν τις συνέκρινε.
+     Η διαγραφή είναι ασφαλής, επαληθευμένη ΤΡΕΙΣ φορές ανεξάρτητα (2026-08-08):
+       (α) κανένα αρχείο δεν εισάγει αυτό το stylesheet (grep σε όλο το repo)·
+       (β) οι κλάσεις .cp-popover/.cp-modal/.cp-modal-backdrop έχουν ΜΗΔΕΝ καταναλωτές·
+       (γ) ΖΩΝΤΑΝΑ, στο /dxf/viewer, το getPropertyValue('--cp-z-*') επιστρέφει ΚΕΝΟ —
+           δηλαδή το αρχείο δεν φορτώνεται καν. Τίποτα δεν έβαφε με αυτούς τους αριθμούς.
+     ⚠️ Αν κάποτε καλωδιωθεί αυτό το stylesheet, οι τρεις κλάσεις θέλουν ρόλο από την
+     κλίμακα (var(--z-index-*)), ΟΧΙ επαναφορά αυτού του μπλοκ. */
 
   /* ===== SHADOWS ===== */
   --cp-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -167,7 +176,7 @@
   border: 1px solid var(--cp-border-primary);
   border-radius: var(--cp-radius);
   box-shadow: var(--cp-shadow-xl);
-  z-index: var(--cp-z-popover);
+  z-index: var(--z-index-popover);
 }
 
 /* ===== MODAL STYLING ===== */
@@ -176,12 +185,14 @@
   border: 2px solid var(--cp-border-secondary);
   border-radius: var(--cp-radius-lg);
   box-shadow: var(--cp-shadow-2xl);
-  z-index: var(--cp-z-modal);
+  z-index: var(--z-index-modal);
 }
 
 .cp-modal-backdrop {
   background-color: rgb(0 0 0 / 0.5);
-  z-index: calc(var(--cp-z-modal) - 1);
+  /* ⚠️ `overlay` (1300), ΟΧΙ `calc(modal - 1)`: η κλίμακα έχει ΟΝΟΜΑ γι' αυτό ακριβώς το
+     στρώμα («Overlays, backdrops»). Το calc έφτιαχνε σκαλί που δεν υπάρχει πουθενά. */
+  z-index: var(--z-index-overlay);
 }
 
 /* ===== FOCUS RING ===== */

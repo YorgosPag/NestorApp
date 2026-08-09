@@ -24,7 +24,11 @@
 
   --ribbon-radius: 2px;
   --ribbon-tab-radius: 6px;
-  --ribbon-z-context-menu: 1100;
+  /* 🔴 ΤΟ `--ribbon-z-context-menu: 1100` ΔΙΑΓΡΑΦΗΚΕ (2026-08-08, ADR-780 / CHECK 3.50).
+     Ήταν **δεύτερο λεξιλόγιο στρώσης** δίπλα στη μία κλίμακα, με τιμή που **ήδη** είχε
+     όνομα εκεί: το 1100 είναι ακριβώς ο ρόλος `sticky` του `design-tokens.json`. Οι τρεις
+     καταναλωτές ζητούν πλέον `var(--z-index-sticky)` — **ταυτόσημη υπολογισμένη τιμή**,
+     μηδέν οπτική αλλαγή, και ένα λεξιλόγιο λιγότερο που μπορεί να αποκλίνει σιωπηλά. */
 }
 
 /* ADR-345 — Route-scoped global-header tweak.
@@ -635,7 +639,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   position: fixed;
   top: var(--dxf-dropdown-top, -9999px);
   left: var(--dxf-dropdown-left, -9999px);
-  z-index: var(--ribbon-z-context-menu);
+  z-index: var(--z-index-sticky);
   background: var(--ribbon-bg);
   color: var(--ribbon-text);
   border: 1px solid var(--ribbon-separator);
@@ -704,7 +708,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   position: absolute;
   top: -4px;
   left: 100%;
-  z-index: var(--ribbon-z-context-menu);
+  z-index: var(--z-index-sticky);
   background: var(--ribbon-bg);
   color: var(--ribbon-text);
   border: 1px solid var(--ribbon-separator);
@@ -785,7 +789,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 
 .dxf-ribbon-context-menu {
   position: fixed;
-  z-index: var(--ribbon-z-context-menu);
+  z-index: var(--z-index-sticky);
   background: var(--ribbon-bg);
   border: 1px solid var(--ribbon-separator);
   border-radius: var(--ribbon-radius);
@@ -1224,7 +1228,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9000;
+  z-index: var(--z-index-viewer-modal);
 }
 
 .dxf-modal-card {
@@ -1431,7 +1435,7 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 
 .dxf-insert-fn-card {
   position: fixed;
-  z-index: 9000;
+  z-index: var(--z-index-viewer-modal);
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
@@ -1646,7 +1650,10 @@ html[data-dxf-header-hidden="true"] header.sticky.top-0 {
 
 .dxf-fn-args-card {
   position: fixed;
-  z-index: 9001;
+  /* ⚠️ `viewerModalNested`, ΟΧΙ `viewerModal`: αυτή η κάρτα ανοίγει ΑΠΟ την
+     `.dxf-insert-fn-card` και οφείλει να κάθεται πάνω της. Το ένα σκαλί διαφοράς
+     (9001 vs 9000) ΕΙΝΑΙ ο μηχανισμός — μην τα ενοποιήσεις. */
+  z-index: var(--z-index-viewer-modal-nested);
   background: #ffffff;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
