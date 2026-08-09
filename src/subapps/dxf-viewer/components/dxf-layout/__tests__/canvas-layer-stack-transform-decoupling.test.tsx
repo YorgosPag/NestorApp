@@ -46,7 +46,8 @@ jest.mock('../../../rendering/core/immediate-transform-frame', () => ({
 import { UnderlayDispatchCanvas } from '../overlay-dispatch/UnderlayDispatchCanvas';
 import { updateImmediateTransform } from '../../../systems/cursor/ImmediateTransformStore';
 import { computeRulerOriginTransform } from '../../../systems/rulers-grid/ruler-origin';
-import { RULERS_GRID_CONFIG } from '../../../systems/rulers-grid/config';
+import { CoordinateTransforms } from '../../../rendering/core/CoordinateTransforms';
+import { getDrawingAreaRect } from '../../../rendering/core/drawing-area';
 import type { GridSettings } from '../../../canvas-v2';
 
 const SRC_ROOT = path.resolve(__dirname, '..');
@@ -111,13 +112,48 @@ describe('mouse handlers — getImmediateTransform() στην κλήση, όχι
 
 // ─── 3. Zoom-reset αγκύρωση: ΕΝΑΣ SSoT helper σε ΔΥΟ σημεία (εύρημα #1) ─────────
 describe('zoom-reset — ρητή αγκύρωση, όχι interception', () => {
-  it('computeRulerOriginTransform: world(0,0) στην κάτω-αριστερή γωνία χαράκων', () => {
-    const t = computeRulerOriginTransform(600);
-    expect(t).toEqual({
-      scale: 1,
-      offsetX: RULERS_GRID_CONFIG.DEFAULT_RULER_WIDTH,
-      offsetY: 600 - RULERS_GRID_CONFIG.DEFAULT_RULER_HEIGHT,
-    });
+  /**
+   * 🔴 ADR-775 §14 — Η ΑΓΚΥΡΑ ΡΩΤΑ ΤΟ ΣΥΜΒΟΛΑΙΟ, ΟΧΙ ΤΗΝ ΥΛΟΠΟΙΗΣΗ.
+   *
+   * ⚠️ Η προηγούμενη εκδοχή έγραφε `expect(t).toEqual({ offsetX: DEFAULT_RULER_WIDTH,
+   * offsetY: 600 − DEFAULT_RULER_HEIGHT })` — δηλαδή **αντέγραφε τη συνάρτηση** και ονόμαζε
+   * το αποτέλεσμα «κάτω-αριστερή γωνία» χωρίς να ρωτήσει ποτέ **πού καταλήγει** το world(0,0)
+   * στην οθόνη. Ήταν ταυτολογία: πράσινη και για τη σωστή και για τη λάθος υλοποίηση — και
+   * ήταν **πράσινη επί μήνες πάνω σε διπλή μετατόπιση** που έβγαζε την αρχή του κόσμου στην
+   * **ΠΑΝΩ**-αριστερή γωνία.
+   *
+   * Πλέον περνά τον μετασχηματισμό μέσα από τον **ένα** τύπο και ελέγχει τη γωνία.
+   */
+  it('computeRulerOriginTransform: το world(0,0) προσγειώνεται ΟΝΤΩΣ κάτω-αριστερά', () => {
+    const viewport = { width: 800, height: 600 };
+    const area = getDrawingAreaRect(viewport);
+
+    const at = CoordinateTransforms.worldToScreen(
+      { x: 0, y: 0 },
+      computeRulerOriginTransform(),
+      viewport,
+    );
+
+    expect(at).toEqual({ x: area.x, y: area.bottom });
+    // Και ρητά: ΚΑΤΩ, όχι πάνω — η ακριβής βλάβη που ζούσε εδώ.
+    expect(at.y).toBeGreaterThan(viewport.height / 2);
+  });
+
+  /**
+   * Το συμπλήρωμα: θετικό world y πρέπει να ανεβαίνει **μέσα** στο κάδρο. Χωρίς αυτό, ένας
+   * μετασχηματισμός που στέλνει κάθε σχέδιο εκτός οθόνης θα περνούσε το πρώτο test.
+   */
+  it('computeRulerOriginTransform: θετικές συντεταγμένες μένουν ΜΕΣΑ στο κάδρο', () => {
+    const viewport = { width: 800, height: 600 };
+    const at = CoordinateTransforms.worldToScreen(
+      { x: 400, y: 300 },
+      computeRulerOriginTransform(),
+      viewport,
+    );
+    expect(at.x).toBeGreaterThanOrEqual(0);
+    expect(at.x).toBeLessThanOrEqual(viewport.width);
+    expect(at.y).toBeGreaterThanOrEqual(0);
+    expect(at.y).toBeLessThanOrEqual(viewport.height);
   });
 
   it('resetToOrigin ΚΑΙ DxfCanvas bootstrap καλούν τον ΙΔΙΟ helper', () => {

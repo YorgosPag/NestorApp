@@ -298,7 +298,7 @@ export const DxfCanvas = React.memo(React.forwardRef<DxfCanvasRef, DxfCanvasProp
     if (!viewport.width || !viewport.height || !onTransformChange) return;
     const t = getImmediateTransform();
     if (t.offsetX === 0 && t.offsetY === 0 && t.scale === 1) {
-      onTransformChange(computeRulerOriginTransform(viewport.height));
+      onTransformChange(computeRulerOriginTransform());
     }
   }, [viewport.width, viewport.height, onTransformChange]);
 

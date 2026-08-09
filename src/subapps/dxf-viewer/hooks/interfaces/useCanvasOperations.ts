@@ -197,14 +197,13 @@ export const useCanvasOperations = (): CanvasOperations => {
    */
   const resetToOrigin = useCallback(() => {
     if (context?.setTransform) {
-      const canvasHeight = getCanvas()?.getBoundingClientRect().height ?? 0;
-      context.setTransform(
-        canvasHeight > 0
-          ? computeRulerOriginTransform(canvasHeight)
-          : { scale: 1, offsetX: 0, offsetY: 0 },
-      );
+      // ADR-775 §14 — η αγκύρωση ΔΕΝ εξαρτάται από το ύψος του καμβά: το `area.bottom` το
+      // γνωρίζει ήδη ο ένας τύπος (`CoordinateTransforms`). Η παλιά διακλάδωση «ύψος > 0 ;
+      // helper : {0,0,1}» είχε **τη σωστή τιμή γραμμένη στο fallback** και τη λάθος στον
+      // κύριο κλάδο — τα δύο σκέλη διαφωνούσαν και κανείς δεν τα σύγκρινε.
+      context.setTransform(computeRulerOriginTransform());
     }
-  }, [context, getCanvas]);
+  }, [context]);
 
   /**
    * 🏢 ENTERPRISE: Fit To View
