@@ -874,28 +874,6 @@
   "navigation": {
     "units": "Units"
   },
-  "card": {
-    "stats": {
-      "condition": "Upkeep condition",
-      "building": "Building",
-      "floor": "Floor",
-      "area": "Area",
-      "price": "Price",
-      "sale": "Sale",
-      "rent": "Rent",
-      "soldFor": "Sold price",
-      "askedFor": "Asked",
-      "salePricePerSqm": "Sale/sqm",
-      "rentPricePerSqm": "Rent/sqm",
-      "rentValue": "{amount}/month"
-    },
-    "ariaLabel": "",
-    "price": {
-      "notListed": "Not available",
-      "saleMissing": "Price not recorded",
-      "rentMissing": "Rent not recorded"
-    }
-  },
   "buttons": {
     "cancel": "Cancel"
   },

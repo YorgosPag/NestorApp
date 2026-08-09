@@ -17,7 +17,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatFloorLabel } from '@/lib/intl-utils';
 // 🏢 SSoT: WHICH price to show is decided once, in the resolver (ADR-777 Α6)
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
-import { MISSING_PRICE_LABEL_KEYS, formatPriceAmount } from '@/domain/cards/property/property-card-shared';
+import { MISSING_PRICE_LABEL_KEYS, buildCardPriceText } from '@/domain/cards/property/property-card-shared';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
 import type { PropertyStatus } from '@/core/types/BadgeTypes';
@@ -56,6 +56,8 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { badgeStatus, labelKey } = resolvePropertyBadge(property.commercialStatus, property.status);
   const price = resolveDisplayPrice(property);
+  // ADR-777 Α21: η διατύπωση κάθε ποσού ζει δίπλα στον κανόνα που το επιλέγει.
+  const priceText = buildCardPriceText(price, t);
 
   return (
     <article className={`w-full flex flex-col ${colors.bg.primary} ${radius.xl} shadow-md ring-1 ${colors.border.muted} overflow-hidden group cursor-pointer ${COMPLEX_HOVER_EFFECTS.FEATURE_CARD}`} itemScope itemType="https://schema.org/RealEstateProperty">
@@ -97,16 +99,14 @@ export function PropertyCard({ property, onViewFloorPlan }: { property: Property
         </header>
 
         <aside className="mb-3" role="region" aria-label={t('card.aria.propertyPrice')}>
-          {price.kind === 'priced' ? (
+          {priceText ? (
             <>
               <span className={`text-2xl font-bold ${colors.text.info}`} itemProp="price">
-                {price.headline.role === 'rent'
-                  ? t('card.stats.rentValue', { amount: formatPriceAmount(price.headline.amount) })
-                  : formatPriceAmount(price.headline.amount)}
+                {priceText.headline}
               </span>
-              {price.secondary && (
+              {priceText.secondary && (
                 <span className={`ml-2 text-base font-medium ${colors.text.muted}`}>
-                  {t('card.stats.rentValue', { amount: formatPriceAmount(price.secondary.amount) })}
+                  {priceText.secondary}
                 </span>
               )}
             </>

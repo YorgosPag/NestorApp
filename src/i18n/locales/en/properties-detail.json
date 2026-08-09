@@ -10,7 +10,15 @@
       "price": "Price",
       "type": "Type",
       "bedrooms": "Bedrooms",
-      "bathrooms": "Bathrooms"
+      "bathrooms": "Bathrooms",
+      "condition": "Upkeep condition",
+      "sale": "Sale",
+      "rent": "Rent",
+      "soldFor": "Sold price",
+      "askedFor": "Asked",
+      "salePricePerSqm": "Sale/sqm",
+      "rentPricePerSqm": "Rent/sqm",
+      "rentValue": "{amount}/month"
     },
     "ariaLabel": "Property card {name}",
     "aria": {
@@ -22,6 +30,11 @@
       "propertyActions": "Property Actions",
       "favorite": "Add to favorites",
       "moreDetails": "More details"
+    },
+    "price": {
+      "notListed": "Not available",
+      "saleMissing": "Price not recorded",
+      "rentMissing": "Rent not recorded"
     }
   },
   "fields": {
@@ -67,8 +80,7 @@
     }
   },
   "fieldLocking": {
-    "soldBanner": "This unit has been sold/rented — critical fields are locked (contracts, cadastre)",
-    "reservedBanner": "This unit is reserved — basic identity fields are locked"
+    "serverReject": "This property contains locked fields that cannot be changed in its current commercial state."
   },
   "entityCode": {
     "infoTitle": "Coding System",
@@ -260,9 +272,6 @@
     "buildingRequired": "This property must be linked to a building before it can be reserved or sold.",
     "areaRequired": "This property must have an area defined before it can be reserved or sold.",
     "unsavedProperty": "Property has not been saved yet."
-  },
-  "fieldLocking": {
-    "serverReject": "This property contains locked fields that cannot be changed in its current commercial state."
   },
   "inlineEdit": {
     "updated": "Property updated successfully"

@@ -16,6 +16,7 @@ import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/compon
 import { formatCurrency } from '@/lib/intl-utils';
 import {
   resolveDisplayPrice,
+  type DisplayPrice,
   type MissingPriceReason,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
@@ -137,6 +138,46 @@ function priceLabelKeys(
   return {
     headline: secondary ? 'card.stats.sale' : 'card.stats.price',
     secondary: secondary ? 'card.stats.rent' : null,
+  };
+}
+
+/**
+ * The two price texts for a COMPACT card (one big headline + one context line),
+ * as opposed to the stat rows of {@link buildPropertyPriceStats}.
+ *
+ * Exists so that `PropertyCard` stops deciding the wording itself. It used to
+ * wrap **both** amounts in `card.stats.rentValue` — correct while a secondary
+ * could only be a rent, and wrong the moment a sold unit put its asking price
+ * there: 200.000 € would have been printed as **«200.000 €/μήνα»**. The rule of
+ * what each number MEANS belongs next to the rule of which number to show.
+ *
+ * @returns `null` when there is no displayable price — the caller names the
+ *          absence via {@link MISSING_PRICE_LABEL_KEYS}.
+ */
+export function buildCardPriceText(
+  price: DisplayPrice,
+  t: TFn,
+): { headline: string; secondary: string | null } | null {
+  if (price.kind === 'missing') return null;
+
+  const format = (p: ResolvedPrice): string => {
+    const amount = formatPriceAmount(p.amount);
+    if (p.source === 'commercial.rentPrice') {
+      return t('card.stats.rentValue', { amount });
+    }
+    return amount;
+  };
+
+  const { headline, secondary } = price;
+
+  return {
+    headline: format(headline),
+    secondary: secondary
+      ? secondary.source === 'commercial.askingPrice'
+        // Sold: the asking price is context, not a second offer.
+        ? `${t('card.stats.askedFor')} ${format(secondary)}`
+        : format(secondary)
+      : null,
   };
 }
 
