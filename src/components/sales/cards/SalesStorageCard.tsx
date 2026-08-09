@@ -12,6 +12,7 @@ import { DollarSign, Calculator, Layers } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { salesSpaceCardPricing, salesSpaceStatusBadge } from '@/components/sales/shared/sales-space-page';
 import type { Storage } from '@/types/storage/contracts';
 import '@/lib/design-system';
 
@@ -28,21 +29,6 @@ interface SalesStorageCardProps {
 }
 
 // =============================================================================
-// 🏢 STATUS → BADGE VARIANT MAPPING
-// =============================================================================
-
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info';
-
-const STATUS_BADGE: Record<string, { variant: BadgeVariant; labelKey: string }> = {
-  available:   { variant: 'success',     labelKey: 'storage:status.available' },
-  occupied:    { variant: 'info',        labelKey: 'storage:status.occupied' },
-  reserved:    { variant: 'warning',     labelKey: 'storage:status.reserved' },
-  sold:        { variant: 'destructive', labelKey: 'storage:status.sold' },
-  maintenance: { variant: 'secondary',   labelKey: 'storage:status.maintenance' },
-  unavailable: { variant: 'default',     labelKey: 'storage:status.unavailable' },
-};
-
-// =============================================================================
 // 🏢 COMPONENT
 // =============================================================================
 
@@ -56,16 +42,18 @@ export function SalesStorageCard({
   const { t } = useTranslation(COMMON_NAMESPACES);
 
   const status = storage.status ?? 'available';
-  const badgeConfig = STATUS_BADGE[status] ?? STATUS_BADGE.available;
 
-  const badges = useMemo(() => [{
-    label: t(badgeConfig.labelKey, { defaultValue: status }),
-    variant: badgeConfig.variant,
-  }], [t, badgeConfig, status]);
+  // Το χρώμα μιας κατάστασης είναι κοινό και για τους δύο χώρους — δες
+  // `sales-space-page`. Ήταν γραμμένο δύο φορές και μπορούσε να αποκλίνει.
+  const badges = useMemo(
+    () => [salesSpaceStatusBadge('storage', status, t)],
+    [t, status],
+  );
 
-  const price = storage.commercial?.askingPrice ?? storage.price ?? 0;
+  // ADR-777 Α6 — the ONE shared pricing helper, so this card and the storage
+  // detail panel cannot disagree about the same unit.
+  const { price, pricePerSqm } = salesSpaceCardPricing(storage);
   const area = storage.area ?? 0;
-  const pricePerSqm = price > 0 && area > 0 ? Math.round(price / area) : null;
 
   const stats = useMemo(() => {
     const items = [
@@ -85,7 +73,7 @@ export function SalesStorageCard({
         icon: DollarSign,
         iconColor: 'text-[hsl(var(--text-success))]',
         label: t('storage:general.fields.price'),
-        value: formatCurrencyWhole(price > 0 ? price : null),
+        value: formatCurrencyWhole(price),
       },
     ];
 

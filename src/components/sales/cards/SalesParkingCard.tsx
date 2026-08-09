@@ -12,6 +12,7 @@ import { DollarSign, Calculator, MapPin, Car } from 'lucide-react';
 import { ListCard } from '@/design-system/components/ListCard/ListCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { formatCurrencyWhole } from '@/lib/intl-utils';
+import { salesSpaceCardPricing, salesSpaceStatusBadge } from '@/components/sales/shared/sales-space-page';
 import type { ParkingSpot } from '@/types/parking';
 import '@/lib/design-system';
 
@@ -28,20 +29,6 @@ interface SalesParkingCardProps {
 }
 
 // =============================================================================
-// 🏢 STATUS → BADGE VARIANT MAPPING
-// =============================================================================
-
-type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info';
-
-const STATUS_BADGE: Record<string, { variant: BadgeVariant; labelKey: string }> = {
-  available:   { variant: 'success',     labelKey: 'parking:status.available' },
-  occupied:    { variant: 'info',        labelKey: 'parking:status.occupied' },
-  reserved:    { variant: 'warning',     labelKey: 'parking:status.reserved' },
-  sold:        { variant: 'destructive', labelKey: 'parking:status.sold' },
-  maintenance: { variant: 'secondary',   labelKey: 'parking:status.maintenance' },
-};
-
-// =============================================================================
 // 🏢 COMPONENT
 // =============================================================================
 
@@ -55,14 +42,17 @@ export function SalesParkingCard({
   const { t } = useTranslation(COMMON_NAMESPACES);
 
   const status = spot.status ?? 'available';
-  const badgeConfig = STATUS_BADGE[status] ?? STATUS_BADGE.available;
 
-  const badges = useMemo(() => [{
-    label: t(badgeConfig.labelKey, { defaultValue: status }),
-    variant: badgeConfig.variant,
-  }], [t, badgeConfig, status]);
+  // Το χρώμα μιας κατάστασης είναι κοινό και για τους δύο χώρους — δες
+  // `sales-space-page`. Ήταν γραμμένο δύο φορές και μπορούσε να αποκλίνει.
+  const badges = useMemo(
+    () => [salesSpaceStatusBadge('parking', status, t)],
+    [t, status],
+  );
 
-  const price = spot.commercial?.askingPrice ?? spot.price ?? 0;
+  // ADR-777 Α6 — the ONE shared pricing helper, so this card and the parking
+  // detail panel cannot disagree about the same unit.
+  const { price } = salesSpaceCardPricing(spot);
   const area = spot.area ?? 0;
 
   const stats = useMemo(() => {
@@ -85,7 +75,7 @@ export function SalesParkingCard({
         icon: DollarSign,
         iconColor: 'text-[hsl(var(--text-success))]',
         label: t('parking:general.fields.price'),
-        value: formatCurrencyWhole(price > 0 ? price : null),
+        value: formatCurrencyWhole(price),
       },
     ];
 

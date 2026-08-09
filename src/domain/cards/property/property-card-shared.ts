@@ -124,3 +124,46 @@ export function buildPropertyPriceStats(property: Property, t: TFn): StatItem[] 
   if (secondary) items.push(priceStatItem(secondary, 'card.stats.rent', t));
   return items;
 }
+
+/** Per-role presentation of a €/m² row. Rent is warned-coloured, sale is not. */
+const PRICE_PER_SQM_PRESENTATION = {
+  sale: { labelKey: 'card.stats.salePricePerSqm', iconColor: NAVIGATION_ENTITIES.price.color },
+  rent: { labelKey: 'card.stats.rentPricePerSqm', iconColor: 'text-[hsl(var(--text-warning))]' },
+} as const;
+
+/**
+ * Price-per-m² stat(s) for a Property card — sales views only.
+ *
+ * Derived from the SAME verdict as {@link buildPropertyPriceStats}, so the two
+ * rows on a card can never disagree about which prices the unit has. Reading
+ * `commercial.askingPrice`/`rentPrice` directly here (as this did before) meant
+ * a unit priced through `finalPrice` or the legacy flat field showed an
+ * absolute price with no €/m² beside it, and a rented unit carrying a stale
+ * asking price advertised a sale rate it is not offered at.
+ *
+ * @see ADR-777 Α6 — one price rule, consumed everywhere
+ */
+export function buildPropertyPricePerSqmStats(
+  property: Property,
+  displayArea: number,
+  t: TFn,
+): StatItem[] {
+  if (!(displayArea > 0)) return [];
+
+  const resolved = resolveDisplayPrice(property);
+  if (resolved.kind === 'missing') return [];
+
+  const prices = [resolved.headline, resolved.secondary].filter(
+    (p): p is ResolvedPrice => p !== null,
+  );
+
+  return prices.map((price) => {
+    const { labelKey, iconColor } = PRICE_PER_SQM_PRESENTATION[price.role];
+    return {
+      icon: NAVIGATION_ENTITIES.price.icon,
+      iconColor,
+      label: t(labelKey),
+      value: `${formatPriceAmount(Math.round(price.amount / displayArea))}/m²`,
+    };
+  });
+}

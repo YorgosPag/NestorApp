@@ -19,7 +19,6 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
 import { formatNumber, formatFloorLabel } from '@/lib/intl-utils';
-import { formatCurrencyWhole } from '@/lib/intl-domain';
 import { buildCardSubtitle } from '@/domain/cards/shared/card-subtitle';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Property } from '@/types/property-viewer';
@@ -27,7 +26,11 @@ import { ENTITY_TYPES } from '@/config/domain-constants';
 import '@/lib/design-system';
 
 import type { CardViewModel } from '../shared/card-model.types';
-import { buildPropertyBadges, buildPropertyPriceStats } from './property-card-shared';
+import {
+  buildPropertyBadges,
+  buildPropertyPriceStats,
+  buildPropertyPricePerSqmStats,
+} from './property-card-shared';
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
 
@@ -143,26 +146,10 @@ export function usePropertyGridModel(property: Property, showCommercialPrices = 
 
     items.push(...buildPropertyPriceStats(property, t));
 
-    // Commercial prices per sqm — sales pages only
+    // Commercial prices per sqm — sales pages only. Same resolver verdict as the
+    // absolute price rows above, so the two can never disagree (ADR-777 Α6).
     if (showCommercialPrices && displayArea) {
-      const askingPrice = property.commercial?.askingPrice;
-      const rentPrice = property.commercial?.rentPrice;
-      if (askingPrice && askingPrice > 0) {
-        items.push({
-          icon: NAVIGATION_ENTITIES.price.icon,
-          iconColor: NAVIGATION_ENTITIES.price.color,
-          label: t('card.stats.salePricePerSqm'),
-          value: `${formatCurrencyWhole(Math.round(askingPrice / displayArea))}/m²`,
-        });
-      }
-      if (rentPrice && rentPrice > 0) {
-        items.push({
-          icon: NAVIGATION_ENTITIES.price.icon,
-          iconColor: 'text-[hsl(var(--text-warning))]',
-          label: t('card.stats.rentPricePerSqm'),
-          value: `${formatCurrencyWhole(Math.round(rentPrice / displayArea))}/m²`,
-        });
-      }
+      items.push(...buildPropertyPricePerSqmStats(property, displayArea, t));
     }
 
     return items;

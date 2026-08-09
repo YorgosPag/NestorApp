@@ -16,6 +16,7 @@
  * @see SalesSpaceSidebar.tsx — το κοινό sidebar που δέχεται αυτά τα props
  */
 
+import { priceSortKey } from '@/lib/properties/price-resolver';
 import type { SalesSpaceItem } from '@/types/sales-shared';
 
 /** Το κομμάτι της κατάστασης που ταΐζει το sidebar ενός βοηθητικού χώρου. */
@@ -65,16 +66,65 @@ export interface SalesSpaceCardPricing {
 }
 
 /**
- * Η εμπορική τιμή κατισχύει της βασικής· η τιμή/τ.μ. υπάρχει μόνο όταν υπάρχουν
- * ΚΑΙ τιμή ΚΑΙ θετικό εμβαδόν (αλλιώς θα ήταν διαίρεση με το μηδέν ή ψέμα).
+ * Ποια τιμή δείχνεται είναι κανόνας του `price-resolver` (ADR-777 Α6) — εδώ
+ * μόνο συνδυάζεται με το εμβαδόν. Η τιμή/τ.μ. υπάρχει μόνο όταν υπάρχουν ΚΑΙ
+ * τιμή ΚΑΙ θετικό εμβαδόν (αλλιώς θα ήταν διαίρεση με το μηδέν ή ψέμα).
+ *
+ * @see lib/properties/price-resolver — ο ΕΝΑΣ κανόνας τιμής
  */
 export function salesSpaceCardPricing(item: SalesSpaceItem): SalesSpaceCardPricing {
-  const price = item.commercial?.askingPrice ?? item.price ?? null;
+  const price = priceSortKey(item);
   const hasArea = typeof item.area === 'number' && item.area > 0;
 
   return {
     price,
     pricePerSqm: hasArea && price ? price / (item.area as number) : null,
+  };
+}
+
+// =============================================================================
+// ΚΑΤΑΣΤΑΣΗ → ΣΗΜΑΝΣΗ
+// =============================================================================
+
+export type SalesSpaceBadgeVariant =
+  | 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'info';
+
+/**
+ * Το variant κάθε κατάστασης — ΚΟΙΝΟ, ό,τι κι αν είναι ο χώρος.
+ *
+ * «Πουλημένο» δεν βάφεται αλλιώς επειδή τυχαίνει να είναι αποθήκη αντί για
+ * θέση στάθμευσης. Ζούσε δύο φορές (μία σε κάθε κάρτα) και μπορούσε να
+ * αποκλίνει σιωπηλά — ο χρήστης θα έβλεπε το ίδιο νόημα με δύο χρώματα.
+ */
+const STATUS_VARIANT: Record<string, SalesSpaceBadgeVariant> = {
+  available: 'success',
+  occupied: 'info',
+  reserved: 'warning',
+  sold: 'destructive',
+  maintenance: 'secondary',
+  unavailable: 'default',
+};
+
+export interface SalesSpaceBadge {
+  label: string;
+  variant: SalesSpaceBadgeVariant;
+}
+
+/**
+ * Η σήμανση κατάστασης μιας κάρτας βοηθητικού χώρου.
+ *
+ * @param namespace — το i18n namespace του χώρου (`'parking'` | `'storage'`)
+ * @param status — η κατάσταση· άγνωστη πέφτει στη «διαθέσιμη», όπως πριν
+ * @param t — ο μεταφραστής του καλούντος
+ */
+export function salesSpaceStatusBadge(
+  namespace: string,
+  status: string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): SalesSpaceBadge {
+  return {
+    label: t(`${namespace}:status.${status}`, { defaultValue: status }),
+    variant: STATUS_VARIANT[status] ?? STATUS_VARIANT.available,
   };
 }
 
