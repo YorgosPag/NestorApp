@@ -18,7 +18,7 @@ interface MapRef {
   current: unknown | null;
 }
 import { Upload, FileText, Layers, Building, Check, X, Bell, BarChart, Settings } from 'lucide-react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -64,7 +64,7 @@ export function ProfessionalDrawingInterface({
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t, isLoading } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'upload' | 'polygon' | 'auto-detect' | 'property-manager' | 'monitoring-dashboard' | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);

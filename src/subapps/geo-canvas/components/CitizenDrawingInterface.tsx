@@ -17,7 +17,7 @@ const { useState, useCallback, useEffect } = React;
 
 import { MapPin, Hexagon, Trash2, Check, X, Search, Building2, Settings } from 'lucide-react';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { GEO_COLORS } from '../config/color-config';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -69,7 +69,7 @@ export function CitizenDrawingInterface({
   onLayerRemove,
   onAddNewBoundary
 }: CitizenDrawingInterfaceProps) {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();

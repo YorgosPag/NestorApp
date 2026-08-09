@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -41,7 +41,7 @@ export const RealEstateSetupPanel: React.FC<RealEstateSetupPanelProps> = ({
   onStartDrawing,
   onClose
 }) => {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

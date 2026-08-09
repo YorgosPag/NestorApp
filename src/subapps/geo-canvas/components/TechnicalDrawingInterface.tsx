@@ -5,7 +5,7 @@ import { Ruler, ExternalLink, Settings, Database, AlertTriangle, X } from 'lucid
 import { CraneIcon } from '@/subapps/dxf-viewer/components/icons';
 import { useCentralizedPolygonSystem } from '../systems/polygon-system';
 import { useRealEstateMatching } from '@/services/real-estate-monitor/useRealEstateMatching';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { HOVER_BACKGROUND_EFFECTS, INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import type { RealEstatePolygon } from '@geo-alert/core';
@@ -39,7 +39,7 @@ export function TechnicalDrawingInterface({
   const iconSizes = useIconSizes();
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const [selectedTool, setSelectedTool] = useState<'dxf-viewer' | 'precision' | 'settings' | 'automated-alerts' | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
 

@@ -3,7 +3,7 @@ const { useRef, useEffect, useState, useCallback } = React;
 import type { Map as MaplibreMapType } from 'maplibre-gl';
 import type { GeoCoordinate } from '../types';
 import type { FloorPlanControlPoint } from '../floor-plan-system/types/control-points';
-import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
+import { useTranslation } from '../../../i18n/hooks/useTranslation';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '../../../ui-adapters/react/useSemanticColors';
 // ? ENTERPRISE: GeoJSON types for administrative boundaries
@@ -14,8 +14,8 @@ import type { PolygonType, UniversalPolygon } from '@geo-alert/core/polygon-syst
 // Local polygon extensions for InteractiveMap compatibility
 type LocalPolygonType = PolygonType | 'complex';
 // Enterprise Services & Hooks
-import { elevationService } from '../services/map/ElevationService';
 import { getAllMapStyleUrls, type MapStyleType } from '../services/map/MapStyleManager';
+import { useHoveredElevation } from '../hooks/map/useHoveredElevation';
 import { useMapInteractions, type TransformState, type DrawingData, type MapInstance, type GeoPolygon } from '../hooks/map/useMapInteractions';
 import { useMapState } from '../hooks/map/useMapState';
 // Centralized Systems
@@ -98,12 +98,10 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   const colors = useSemanticColors();
 
   // 🎯 ENTERPRISE: CENTRALIZED STATE MANAGEMENT
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const { getStatusBorder } = useBorderTokens();
   // 🏢 ENTERPRISE: Proper type for MapLibre map reference
   const mapRef = useRef<MaplibreMapType | null>(null);
-  // 🔧 FIX: Ref to avoid stale closure in async elevation callback
-  const hoveredCoordinateRef = useRef<GeoCoordinate | null>(null);
 
   // Centralized map state management
   const mapState = useMapState({
@@ -194,46 +192,10 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
     cancelDrawing
   });
 
-  // 🔧 FIX: Sync ref so async elevation callback always reads current coordinate
-  useEffect(() => {
-    hoveredCoordinateRef.current = mapState.hoveredCoordinate;
-  }, [mapState.hoveredCoordinate]);
-
-  // 🎯 BUSINESS LOGIC: ELEVATION HANDLING
-  // Uses ref to avoid stale closure — no mapState.hoveredCoordinate in deps
-  const fetchElevationForCoordinate = useCallback(async (lng: number, lat: number) => {
-    try {
-      const result = await elevationService.getElevation(lng, lat);
-
-      if (result !== null) {
-        const previous = hoveredCoordinateRef.current;
-        if (!previous) return;
-
-        const isSameCoordinate =
-          Math.abs(previous.lat - lat) < 0.0001 &&
-          Math.abs(previous.lng - lng) < 0.0001;
-
-        if (isSameCoordinate) {
-          mapState.setHoveredCoordinate({ ...previous, alt: result });
-        }
-      }
-    } catch (error) {
-      console.warn('Elevation fetch error:', error);
-    }
-  }, [mapState.setHoveredCoordinate]);
-
-  // Throttled elevation fetching
-  useEffect(() => {
-    const hovered = mapState.hoveredCoordinate;
-    if (!hovered || hovered.alt !== undefined) return;
-
-    const { lng, lat } = hovered;
-    const timeoutId = setTimeout(() => {
-      fetchElevationForCoordinate(lng, lat);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [mapState.hoveredCoordinate, fetchElevationForCoordinate]);
+  // 🎯 ΥΨΟΜΕΤΡΟ: μία κλήση, όλη η ευθύνη στο `useHoveredElevation` (N.7.1 — εξαγωγή).
+  // Ο container δεν χρειάζεται να ξέρει τον χρονισμό, το ref, ούτε τον έλεγχο ταυτότητας
+  // σημείου· χρειάζεται να ξέρει ότι το `alt` συμπληρώνεται μόνο του.
+  useHoveredElevation(mapState.hoveredCoordinate, mapState.setHoveredCoordinate);
 
   // 🎯 BUSINESS LOGIC: POLYGON CLOSURE HANDLER
   const handleLegacyPolygonClosure = useCallback(() => {

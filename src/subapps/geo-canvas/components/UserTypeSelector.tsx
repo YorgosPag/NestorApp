@@ -3,7 +3,7 @@
 import React from 'react';
 import type { UserType } from '@/auth';
 import { Users, Briefcase, HardHat } from 'lucide-react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { HOVER_BORDER_EFFECTS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -30,23 +30,14 @@ export function UserTypeSelector({ currentType, onSelect, disabled }: UserTypeSe
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t, isLoading } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
 
-  // ✅ ENTERPRISE: Return loading state while translations load
-  if (isLoading) {
-    return (
-      <div className={`${colors.bg.primary} rounded-lg shadow-sm ${quick.card} p-6`}>
-        <div className="animate-pulse">
-          <div className={`${iconSizes.lg} ${colors.bg.hover} rounded mb-4`} />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className={`${iconSizes.xl8} ${colors.bg.hover} rounded-lg`} />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // 🔴 ΔΙΑΓΡΑΜΜΕΝΟΣ ΦΡΟΥΡΟΣ ΑΠΟΔΟΣΗΣ (ADR-744 / αρχή CHECK 3.25 — ADR-267/300).
+  // Το `isLoading` ερχόταν από τον `useTranslationLazy`, που το αρχικοποιούσε σε
+  // `useState(false)` και το διόρθωνε ΜΟΝΟ μέσα σε `useEffect` — άρα ήταν `true` για
+  // πάντα σε SSR. Ο φρουρός δεν προστάτευε από ωμό κλειδί· αντάλλασσε ένα καρέ κειμένου
+  // με ένα κενό καρέ σε κάθε remount. Ο κανονικός `useTranslation` υποβαθμίζεται σωστά
+  // μόνος του (compat ADR-280 → cross-namespace ADR-716 → τηλεμετρία).
 
   const userTypes: Array<{
     type: UserType;

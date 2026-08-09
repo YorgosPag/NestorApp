@@ -7,7 +7,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { AlertTriangle, Settings, Bell, Plus } from 'lucide-react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS, HOVER_BORDER_EFFECTS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -42,7 +42,7 @@ export function AlertManagementPanel({
   className = '',
   onClose
 }: AlertManagementPanelProps) {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const colors = useSemanticColors();
   const { quick, getStatusBorder } = useBorderTokens();
   const [activeTab, setActiveTab] = useState<'create' | 'manage' | 'preferences'>('create');

@@ -5,7 +5,7 @@ const { useState, useCallback } = React;
 import { Tag, Palette, Eye, EyeOff, Info } from 'lucide-react';
 // 🏢 ENTERPRISE: Centralized navigation entities for building icon
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
+import { useTranslation } from '../../../i18n/hooks/useTranslation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { INTERACTIVE_PATTERNS, HOVER_TEXT_EFFECTS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import {
@@ -48,7 +48,7 @@ export function PropertyStatusManager({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t, isLoading } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const [selectedStatuses, setSelectedStatuses] = useState<PropertyStatus[]>(getAllStatuses());
   const [colorScheme, setColorScheme] = useState<'status' | 'price' | 'type'>('status');
   const [showLegend, setShowLegend] = useState(true);
@@ -105,17 +105,12 @@ export function PropertyStatusManager({
     return selectedStatuses.includes(status);
   }, [selectedStatuses]);
 
-  // ✅ ENTERPRISE: Return loading state while translations load (AFTER all hooks)
-  if (isLoading) {
-    return (
-      <div className={`${colors.bg.card} p-4 ${className}`}>
-        <div className="animate-pulse">
-          <div className={`h-6 ${colors.bg.secondary} rounded mb-4`} />
-          <div className={`h-32 ${colors.bg.secondary} rounded`} />
-        </div>
-      </div>
-    );
-  }
+  // 🔴 ΔΙΑΓΡΑΜΜΕΝΟΣ ΦΡΟΥΡΟΣ ΑΠΟΔΟΣΗΣ (ADR-744 / αρχή CHECK 3.25 — ADR-267/300).
+  // Το `isLoading` ερχόταν από τον `useTranslationLazy`, που το αρχικοποιούσε σε
+  // `useState(false)` και το διόρθωνε ΜΟΝΟ μέσα σε `useEffect` — άρα ήταν `true` για
+  // πάντα σε SSR. Ο φρουρός δεν προστάτευε από ωμό κλειδί· αντάλλασσε ένα καρέ κειμένου
+  // με ένα κενό καρέ σε κάθε remount. Ο κανονικός `useTranslation` υποβαθμίζεται σωστά
+  // μόνος του (compat ADR-280 → cross-namespace ADR-716 → τηλεμετρία).
 
   return (
     <div className={`${colors.bg.card} p-4 ${className}`}>
