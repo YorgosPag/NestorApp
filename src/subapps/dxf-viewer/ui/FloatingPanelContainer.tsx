@@ -4,7 +4,7 @@
 const DEBUG_FLOATING_PANEL_CONTAINER = false;
 
 import React, { useImperativeHandle, forwardRef } from 'react';
-import { useTranslationLazy } from '../../../i18n/hooks/useTranslationLazy';
+import { useTranslation } from '../../../i18n/hooks/useTranslation';
 import { useBorderTokens } from '../../../hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PanelTabs } from './components/PanelTabs';
@@ -53,7 +53,7 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   const colors = useSemanticColors();
 
   // Debug logging removed for performance - was causing excessive console output on every render
-  const { t, ready, isLoading } = useTranslationLazy('dxf-viewer');
+  const { t } = useTranslation('dxf-viewer');
 
   // ✅ ΒΗΜΑ 1: Extracted state to custom hook
   const { activePanel, expandedKeys, setActivePanel, setExpandedKeys } = useFloatingPanelState();
@@ -120,16 +120,17 @@ const FloatingPanelContainerInner = forwardRef<FloatingPanelHandleType, Floating
   // Imperative handle for parent control
   useImperativeHandle(ref, () => handleMethods, [handleMethods]);
 
-  // Don't render panels until translations are ready
-  if (isLoading) {
-    return (
-      <div className={`fixed ${PANEL_LAYOUT.POSITION.RIGHT_4} ${PANEL_LAYOUT.POSITION.TOP_4} ${colors.bg.overlay} backdrop-blur-sm ${quick.card} ${getStatusBorder('default')} ${PANEL_LAYOUT.SHADOW.XL} ${PANEL_LAYOUT.WIDTH.PANEL_SM}`}>
-        <div className={`${PANEL_LAYOUT.SPACING.LG} text-center ${colors.text.muted}`}>
-          Loading translations...
-        </div>
-      </div>
-    );
-  }
+  // 🔴 ΕΔΩ ΗΤΑΝ ΦΡΟΥΡΟΣ ΑΠΟΔΟΣΗΣ `if (isLoading) return <«Loading translations...»>`.
+  // Διαγράφηκε για τρεις ανεξάρτητους λόγους (ADR-744 / ADR-267 / N.11):
+  //   1. Είναι ακριβώς το σχήμα που απαγορεύει η αρχή του CHECK 3.25 — ανταλλάσσει ένα
+  //      καρέ ωμού κειμένου με ένα κενό καρέ σε **κάθε** remount.
+  //   2. Το `isLoading` ερχόταν από τον `useTranslationLazy`, που το αρχικοποιούσε σε
+  //      `useState(false)` και το διόρθωνε μόνο σε `useEffect` — δηλαδή ήταν `true`
+  //      **για πάντα** σε SSR. Ο φρουρός δεν προστάτευε· έκρυβε.
+  //   3. Ζωγράφιζε **σκληρό αγγλικό string** («Loading translations...») — παράβαση N.11
+  //      αόρατη σε κάθε στατικό εργαλείο, γιατί ζούσε μέσα σε κλάδο που «δεν έτρεχε ποτέ».
+  // Ο κανονικός `useTranslation` υποβαθμίζεται σωστά μόνος του (compat ADR-280 →
+  // cross-namespace ADR-716 → τηλεμετρία), άρα δεν χρειάζεται φρουρός.
 
   return (
     // 🏢 ENTERPRISE: bg.card for consistency with ListCard backgrounds

@@ -17,7 +17,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/hooks/useSemanticColors';  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 // Enterprise Canvas UI Migration - Phase B
 import { canvasUI } from '@/styles/design-tokens/canvas';
 // ✅ ENTERPRISE: Centralized copy-to-clipboard hook
@@ -52,7 +52,7 @@ export const TestResultsModal: React.FC<TestResultsModalProps> = ({
   const iconSizes = useIconSizes();
   const { getStatusBorder, getDirectionalBorder, getMultiDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
-  const { t } = useTranslationLazy('dxf-viewer');
+  const { t } = useTranslation('dxf-viewer');
   const { copy, copied } = useCopyToClipboard(PANEL_LAYOUT.TIMING.COPY_FEEDBACK_RESET);
   const [activeTab, setActiveTab] = React.useState<'summary' | 'details' | 'raw'>('summary');
 
@@ -325,7 +325,7 @@ const SummaryTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
 const DetailsTab: React.FC<{ report: UnifiedTestReport }> = ({ report }) => {
   const colors = useSemanticColors();  // ✅ ENTERPRISE: Background centralization - ZERO DUPLICATES
   const { getStatusBorder, getDirectionalBorder } = useBorderTokens(); // ✅ ENTERPRISE FIX: Add missing border tokens
-  const { t } = useTranslationLazy('dxf-viewer');
+  const { t } = useTranslation('dxf-viewer');
   const [expandedTests, setExpandedTests] = React.useState<Set<number>>(new Set());
 
   const toggleExpand = (index: number) => {
