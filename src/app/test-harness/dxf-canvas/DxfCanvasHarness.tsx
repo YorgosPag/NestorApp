@@ -115,13 +115,55 @@ const RULER_SETTINGS: RulerSettings = {
   unit: 'mm',
 };
 
+/** Το σχέδιο που φορτώνεται όταν το URL δεν ζητά άλλο. */
+const DEFAULT_FIXTURE = 'regression-scene';
+
+interface HarnessUrlParams {
+  rulers: boolean;
+  grid: boolean;
+  fixture: string;
+}
+
+/**
+ * Οι παράμετροι της διαδρομής, διαβασμένες **σύγχρονα**. Στον server (`window === undefined`)
+ * επιστρέφει τις προεπιλογές· εκεί το `scene` είναι ακόμη `null`, άρα τίποτα από αυτά δεν
+ * αποδίδεται και δεν υπάρχει hydration mismatch.
+ */
+function readUrlParams(): HarnessUrlParams {
+  if (typeof window === 'undefined') {
+    return { rulers: false, grid: false, fixture: DEFAULT_FIXTURE };
+  }
+  const params = new URLSearchParams(window.location.search);
+  return {
+    rulers: params.get('rulers') === '1',
+    grid: params.get('grid') === '1',
+    fixture: params.get('fixture') ?? DEFAULT_FIXTURE,
+  };
+}
+
 export default function DxfCanvasHarness() {
   const canvasRef = useRef<DxfCanvasRef>(null);
   const previewCanvasRef = useRef<PreviewCanvasHandle>(null);
   const [scene, setScene] = useState<DxfScene | null>(null);
   const [transform, setTransform] = useState<ViewTransform>(INITIAL_TRANSFORM);
   const [error, setError] = useState<string | null>(null);
-  const [urlParams, setUrlParams] = useState({ rulers: false, grid: false, fixture: 'regression-scene' });
+  // 🔴 ADR-775 §15 — ΤΟ ΣΧΕΔΙΟ ΔΙΑΒΑΖΕΤΑΙ ΣΤΟ ΠΡΩΤΟ RENDER, ΟΧΙ ΣΕ `useEffect`.
+  //
+  // Ήταν `useState({ …, fixture: 'regression-scene' })` + ένα `useEffect` που διάβαζε το URL
+  // **μετά** το mount. Άρα το effect του `fetch` έτρεχε **δύο** φορές: πρώτα για το
+  // **προεπιλεγμένο** σχέδιο, μετά για το ζητούμενο. Το προεπιλεγμένο προλάβαινε να
+  // **ζωγραφιστεί**, το `paintCount` γινόταν >0, το `dxf-canvas-ready` εμφανιζόταν — και η
+  // φωτογραφία έπιανε **άλλο σχέδιο από αυτό που ζήτησε το test**.
+  //
+  // ⚠️ Μετρημένο 2026-08-09 σε δύο διαδοχικά περάσματα: το `entity-circle` έδωσε μία φορά τους
+  // ομόκεντρους κύκλους του (μελάνι 8.802) και μία φορά το **προεπιλεγμένο** σχέδιο (11.573 —
+  // ο αριθμός του §13.5). Τέσσερα tests, ~0,7% διαφορά, **χωρίς καμία ένδειξη αποτυχίας**.
+  // Ίδια οικογένεια με το σήμα ετοιμότητας του §13: η πύλη έλεγε «έτοιμο» για κάτι άλλο.
+  //
+  // Ο lazy initializer τρέχει στο **πρώτο** render του πελάτη, όπου το `window` υπάρχει· στον
+  // server επιστρέφει τις προεπιλογές και **δεν** γεννά hydration mismatch, γιατί όσο το
+  // `scene` είναι `null` τίποτα από αυτά δεν αποδίδεται.
+  const [urlParams] = useState(readUrlParams);
   const [activeTool, setActiveTool] = useState<string>('select');
   const [selectedEntityIds, setSelectedEntityIds] = useState<string[]>([]);
   const [snapResult, setSnapResult] = useState<{ point: { x: number; y: number }; type: string } | null>(null);
@@ -130,15 +172,6 @@ export default function DxfCanvasHarness() {
   // 🔴 ADR-775 §13 — το σήμα ετοιμότητας το παράγει ο ΖΩΓΡΑΦΟΣ. Μάνταλο: ένα re-render
   // συνολικά, όχι ένα ανά καρέ (βλ. paint-census-store, «γιατί μόνο στο πρώτο καρέ»).
   const painterReady = useHasPainted('dxf-canvas');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setUrlParams({
-      rulers: params.get('rulers') === '1',
-      grid: params.get('grid') === '1',
-      fixture: params.get('fixture') ?? 'regression-scene',
-    });
-  }, []);
 
   useEffect(() => {
     fetch(`/test-fixtures/dxf/${urlParams.fixture}.json`)
@@ -286,6 +319,11 @@ export default function DxfCanvasHarness() {
         // ένα timeout μπορεί να δείξει με το δάχτυλο αντί να σιωπήσει.
         <section
           data-testid={painterReady ? 'dxf-canvas-ready' : 'dxf-canvas-painting'}
+          // 🔴 ADR-775 §15 — ΠΟΙΟ σχέδιο ζωγραφίστηκε, όχι μόνο ΟΤΙ ζωγραφίστηκε.
+          // Η αφαίρεση του race (lazy init) κάνει τη βλάβη αδύνατη· αυτό εδώ την κάνει
+          // **λέξιμη**. Χωρίς το ζεύγος, μια μελλοντική επαναφορά του `useEffect` θα ξαναγύριζε
+          // σιωπηλά λάθος σχέδιο — και τα golden θα το κλείδωναν ως «σωστό».
+          data-fixture={urlParams.fixture}
           className={styles.surface}
         >
           {/* ⚠️ ΚΑΝΕΝΑ `transform` prop: από το ADR-040 XXII.B ο `DxfCanvas` ΔΕΝ το δέχεται

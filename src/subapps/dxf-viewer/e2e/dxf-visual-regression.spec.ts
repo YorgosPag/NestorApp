@@ -48,9 +48,21 @@ function surface(page: Page) {
   return page.locator(CANVAS_READY);
 }
 
+/** Το σχέδιο που ζητά μια διαδρομή του δοκιμαστηρίου — ή το προεπιλεγμένο. */
+function requestedFixture(path: string): string {
+  return new URL(path, 'http://localhost').searchParams.get('fixture') ?? 'regression-scene';
+}
+
 async function loadHarness(page: Page, path = BASE_URL): Promise<void> {
   await page.goto(path, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.locator(CANVAS_READY).waitFor({ timeout: 120000 });
+  // 🔴 ADR-775 §15 — ΠΟΙΟ σχέδιο, όχι μόνο ΟΤΙ ζωγραφίστηκε.
+  // Το δοκιμαστήριο έφερνε πρώτα το **προεπιλεγμένο** σχέδιο (η ανάγνωση του URL γινόταν σε
+  // `useEffect`, μετά το πρώτο `fetch`). Το προεπιλεγμένο προλάβαινε να ζωγραφιστεί, το σήμα
+  // ετοιμότητας άναβε, και η φωτογράφιση έπιανε **άλλο σχέδιο** — μετρημένο σε δύο διαδοχικά
+  // περάσματα, σε 4 tests, χωρίς καμία ένδειξη αποτυχίας. Η αιτία διορθώθηκε· αυτό εδώ είναι
+  // το δίχτυ που θα μιλήσει αν επανέλθει.
+  await expect(page.locator(CANVAS_READY)).toHaveAttribute('data-fixture', requestedFixture(path));
   // 🔴 ADR-775 §13 — ΡΗΤΗ επιβεβαίωση ότι ζωγραφίστηκε καρέ. Το `CANVAS_READY` το εγγυάται
   // ήδη (μπαίνει από το `paintCount > 0`), αλλά μια μελλοντική παλινδρόμηση που θα το
   // ξανασυνέδεε με τα ΔΕΔΟΜΕΝΑ θα ήταν πάλι **σιωπηλή** — και ακριβώς αυτή η σιωπή κόστισε
