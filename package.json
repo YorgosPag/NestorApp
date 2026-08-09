@@ -293,7 +293,11 @@
     "adr-identity:check": "node scripts/check-adr-identity.js",
     "adr-identity:report": "node scripts/check-adr-identity.js --report",
     "adr-identity:baseline": "node scripts/check-adr-identity.js --write-baseline",
-    "test:adr-identity": "jest scripts/__tests__/check-adr-identity.test.js --verbose"
+    "test:adr-identity": "jest scripts/__tests__/check-adr-identity.test.js --verbose",
+    "zindex-scale:check": "node scripts/check-zindex-scale.js",
+    "zindex-scale:report": "node scripts/check-zindex-scale.js --report",
+    "zindex-scale:baseline": "node scripts/check-zindex-scale.js --write-baseline",
+    "test:zindex-scale": "jest scripts/__tests__/check-zindex-scale.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

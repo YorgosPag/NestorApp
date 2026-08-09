@@ -33,6 +33,17 @@ on:
       # CHECK 3.48 (ADR-778) — η ίδια η πύλη είναι είσοδος: αλλαγή στο κριτήριο πρέπει να
       # ξανακρίνει ολόκληρο το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
       - 'scripts/check-empty-select-item.js'
+      # CHECK 3.50 (ADR-780) — μια ωμή `z-index: 9999` προσγειώνεται εξίσου σε `.css`, και
+      # τα `.css` ΔΕΝ ήταν σκανδάλη αυτού του workflow. ⚠️ ΔΗΛΩΜΕΝΗ ΣΥΝΕΠΕΙΑ: ένα PR που
+      # αγγίζει μόνο `.css` ξυπνά πλέον και τα τέσσερα αδέλφια jobs. Προτιμήθηκε από το
+      # εναλλακτικό — να τρέχει το 3.50 μόνο σε PR που αγγίζουν TS — γιατί εκείνο θα ήταν
+      # Layer 2 τυφλό ακριβώς στη μισή του επιφάνεια (ADR-780 §4.3: μία επιφάνεια, τρεις
+      # διάλεκτοι· το `.css` είναι η μία από τις τρεις).
+      - 'src/**/*.css'
+      - 'design-tokens.json'
+      - 'scripts/check-zindex-scale.js'
+      - 'scripts/lib/zindex/**'
+      - '.zindex-scale-baseline.json'
       - '.ssot-discover-baseline.json'
       - '.ssot-registry.json'
       - '.github/workflows/ssot-discover.yml'
@@ -46,6 +57,17 @@ on:
       # CHECK 3.48 (ADR-778) — η ίδια η πύλη είναι είσοδος: αλλαγή στο κριτήριο πρέπει να
       # ξανακρίνει ολόκληρο το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
       - 'scripts/check-empty-select-item.js'
+      # CHECK 3.50 (ADR-780) — μια ωμή `z-index: 9999` προσγειώνεται εξίσου σε `.css`, και
+      # τα `.css` ΔΕΝ ήταν σκανδάλη αυτού του workflow. ⚠️ ΔΗΛΩΜΕΝΗ ΣΥΝΕΠΕΙΑ: ένα PR που
+      # αγγίζει μόνο `.css` ξυπνά πλέον και τα τέσσερα αδέλφια jobs. Προτιμήθηκε από το
+      # εναλλακτικό — να τρέχει το 3.50 μόνο σε PR που αγγίζουν TS — γιατί εκείνο θα ήταν
+      # Layer 2 τυφλό ακριβώς στη μισή του επιφάνεια (ADR-780 §4.3: μία επιφάνεια, τρεις
+      # διάλεκτοι· το `.css` είναι η μία από τις τρεις).
+      - 'src/**/*.css'
+      - 'design-tokens.json'
+      - 'scripts/check-zindex-scale.js'
+      - 'scripts/lib/zindex/**'
+      - '.zindex-scale-baseline.json'
       - '.ssot-discover-baseline.json'
       - '.ssot-registry.json'
 
@@ -305,4 +327,94 @@ jobs:
             echo ""
             echo "Απογραφή: \`npm run adr-identity:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run adr-identity:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ===========================================================================
+  # CHECK 3.50 / ADR-780 — Στρώμα 2 της πύλης της κλίμακας z-index.
+  #
+  # ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΕ ΝΕΟ WORKFLOW: ίδιος λόγος με τα 3.44 / 3.48 / 3.49 από
+  # πάνω — το μητρώο του `.ci-gate-tiers.json` παρακολουθεί **αρχεία** workflow,
+  # όχι jobs, οπότε ένα job εδώ αφήνει τις 31 πύλες αμετάβλητες (CHECK 3.37).
+  # Η οικογένεια ταιριάζει κατά γράμμα: το ερώτημα «ζητά κάθε επιφάνεια τη ΜΙΑ
+  # κλίμακα;» **είναι** η ερώτηση SSoT που κάνει όλο το workflow. Βρέθηκαν ΠΕΝΤΕ
+  # λεξιλόγια στρώσης, δύο από τα οποία δίνουν διαφορετικό αριθμό στο ΙΔΙΟ όνομα
+  # ρόλου — δηλαδή διπλότυπο SSoT με ονόματα, που είναι ακριβώς το 3.18 σε άλλο
+  # πεδίο. ⚠️ ΔΕΝ μπήκε στο `ui-contrast-ratchet.yml`: εκείνο είναι workflow
+  # **χρώματος** και μια αποτυχία στρώσης εκεί θα αναφερόταν ως αποτυχία
+  # αντίθεσης (το λάθος που απέφυγε ρητά το ADR-775 §Λ2).
+  #
+  # ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΔΕΥΤΕΡΟ ΣΤΡΩΜΑ — δηλωμένα, και ΔΕΝ είναι μόνο «hooks που δεν
+  # έτρεξαν»: η σκανδάλη του Στρώματος 1 είναι προφίλτρο **κειμένου** πάνω στα
+  # σταδιοποιημένα αρχεία. Ένας νέος ρόλος στο `design-tokens.json` ή μια
+  # διαγραφή ορισμού στο `variables.css` ξανακρίνει αρχεία που **κανείς δεν
+  # σταδιοποίησε** — και τα δύο ΕΙΝΑΙ στη σκανδάλη, αλλά το `--all` εδώ είναι η
+  # μόνη εγγύηση όταν η αλλαγή έρθει από το web UI του GitHub, από μηχάνημα
+  # χωρίς hooks, ή με `SKIP_ZINDEX_SCALE=1`. Τρέχει **άνευ όρων** (~5s).
+  # ===========================================================================
+  zindex-scale:
+    name: 🧱 z-index Scale Gate (CHECK 3.50)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # jest μόνο, για τη σουίτα μετάλλαξης. Η ίδια η πύλη είναι Node stdlib:
+      # διαβάζει JSON + κείμενο, ΔΕΝ κάνει parse TypeScript και ΔΕΝ είναι
+      # type-check (CLAUDE.md N.17).
+      - name: 📦 Install dependencies (jest για τη σουίτα μετάλλαξης)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🧱 CHECK 3.50 — πλήρης σάρωση (3 διάλεκτοι, ~5s)
+        run: pnpm run zindex-scale:check
+
+      - name: 🧪 Σουίτα μετάλλαξης — CHECK 3.50 (37 tests, 12 μεταλλάξεις στις εισόδους)
+        run: pnpm run test:zindex-scale
+
+      - name: ✅ Summary
+        if: success()
+        run: |
+          echo "::notice title=z-index Scale Gate::Καμία ΝΕΑ ωμή στρώση, κανένα αδέσποτο token, κανένα δεύτερο λεξιλόγιο"
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.50 — ADR-780 (κλίμακα z-index)"
+            echo ""
+            echo "**Θεραπεία: ΡΟΛΟΣ, όχι μικρότερος αριθμός.**"
+            echo "\`\`\`css"
+            echo "z-index: var(--z-index-viewer-menu);   /* όχι 9999 */"
+            echo "\`\`\`"
+            echo ""
+            echo "**ΤΡΕΙΣ καταστάσεις, ΤΡΕΙΣ διαφορετικές θεραπείες:**"
+            echo ""
+            echo "- \`raw-literal\` (ratchet) — ωμός αριθμός ≥1000. Ζήτησέ τον από την κλίμακα."
+            echo "  Αν δεν υπάρχει ρόλος γι' αυτό που κάνεις, **πρόσθεσε ρόλο** στο"
+            echo "  \`design-tokens.json ▸ zIndex\` και τρέξε \`npm run build:tokens\`."
+            echo "- \`unknown-token\` (**μηδενική ανοχή**) — το \`var(--x)\` δείχνει σε όνομα που"
+            echo "  **δεν ορίζεται πουθενά** ⇒ *invalid at computed-value time* ⇒ \`z-index: auto\`."
+            echo "  Δεν είναι λάθος τιμή· είναι **καμία** τιμή. Δεν μπαίνει ΠΟΤΕ σε baseline."
+            echo "- \`parallel-scale\` (**μηδενική ανοχή**) — δεύτερο λεξιλόγιο στρώσης δίπλα"
+            echo "  στη μία κλίμακα. Αυτό ήταν η **ρίζα**: \`--cp-z-tooltip: 10000\` έναντι"
+            echo "  \`--z-index-tooltip: 1800\` — δύο ονόματα, ένας ρόλος, δύο αριθμοί."
+            echo ""
+            echo "⚠️ **Ο αριθμός της baseline ΔΕΝ είναι δείκτης υγείας**: μετρά «όσα σημεία δεν"
+            echo "ζητούν ακόμη από την κλίμακα». Ένα bump 9999→9998 θα τον μείωνε και δεν θα"
+            echo "διόρθωνε τίποτα."
+            echo ""
+            echo "Απογραφή: \`npm run zindex-scale:report\`"
+            echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run zindex-scale:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"
