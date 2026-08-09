@@ -17,10 +17,11 @@
 'use client';
 
 import React from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
+import { computeAccuracyStats } from './accuracy-stats';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -75,28 +76,16 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
 
   // ========================================================================
   // 🧮 ACCURACY STATISTICS CALCULATION
   // ========================================================================
 
-  const accuracyStats = React.useMemo(() => {
-    if (!controlPoints || controlPoints.length === 0) return null;
-
-    const accuracyValues = controlPoints
-      .map(cp => cp.accuracy)
-      .filter((value): value is number => typeof value === 'number');
-    if (accuracyValues.length === 0) return null;
-
-    const avgAccuracy = accuracyValues.reduce((sum, acc) => sum + acc, 0) / accuracyValues.length;
-    const bestAccuracy = Math.min(...accuracyValues);
-
-    return {
-      avg: avgAccuracy.toFixed(2),
-      best: bestAccuracy.toFixed(2)
-    };
-  }, [controlPoints]);
+  // 🎯 SSoT: ο υπολογισμός ζει στο `accuracy-stats.ts` — ήταν γραμμένος και εδώ και στο
+  // `GeoAccuracyLegend.tsx` (CHECK 3.28 / N.0.2). Ο SSoT επιστρέφει και `worst`· εδώ δεν
+  // εμφανίζεται, και αυτό είναι σωστό: η **προβολή** ανήκει στο component, ο **υπολογισμός** όχι.
+  const accuracyStats = React.useMemo(() => computeAccuracyStats(controlPoints), [controlPoints]);
 
   // ========================================================================
   // 🎨 RENDER STATUS INDICATORS

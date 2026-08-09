@@ -16,7 +16,7 @@
 'use client';
 
 import React from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -76,7 +76,7 @@ export const GeoCoordinateDisplay: React.FC<GeoCoordinateDisplayProps> = ({
 }) => {
   const iconSizes = useIconSizes();
   const colors = useSemanticColors();
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
 
   // ========================================================================
   // 🎨 RENDER MAP STYLE NAMES

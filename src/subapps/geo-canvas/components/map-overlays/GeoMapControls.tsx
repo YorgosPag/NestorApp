@@ -18,7 +18,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
@@ -83,7 +83,7 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
   mapLoaded,
   className = ''
 }) => {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();

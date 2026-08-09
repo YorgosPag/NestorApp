@@ -16,7 +16,7 @@
 'use client';
 
 import React from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
@@ -24,6 +24,7 @@ import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
 import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
+import { computeAccuracyStats } from './accuracy-stats';
 import { GEO_COLORS } from '../../config/color-config';
 
 // ============================================================================
@@ -81,35 +82,26 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslationLazy('geo-canvas');
-
-  // Early return if no control points
-  if (!showAccuracyCircles || !controlPoints || controlPoints.length === 0) {
-    return null;
-  }
+  const { t } = useTranslation('geo-canvas');
 
   // ========================================================================
   // 🧮 ACCURACY STATISTICS CALCULATION
   // ========================================================================
 
-  const accuracyStats = React.useMemo(() => {
-    if (!controlPoints || controlPoints.length === 0) return null;
+  // 🎯 SSoT: ο υπολογισμός ζει στο `accuracy-stats.ts` — ήταν γραμμένος και εδώ και στο
+  // `GeoStatusBar.tsx` (CHECK 3.28 / N.0.2). Δύο overlays στον ΙΔΙΟ χάρτη δεν επιτρέπεται
+  // να διαφωνήσουν επειδή κάποιος άλλαξε το ένα αντίγραφο.
+  //
+  // ⚠️ ΤΟ `useMemo` ΑΝΕΒΗΚΕ ΠΑΝΩ ΑΠΟ ΤΟ EARLY RETURN — ΗΤΑΝ ΚΑΤΩ, ΚΑΙ ΑΥΤΟ ΗΤΑΝ ΠΑΡΑΒΙΑΣΗ
+  // ΤΩΝ RULES OF HOOKS: όταν το `controlPoints` περνούσε από κενό σε μη κενό, το component
+  // εκτελούσε **διαφορετικό πλήθος hooks** μεταξύ δύο renders («Rendered fewer hooks than
+  // expected»). Προϋπήρχε· διορθώθηκε εδώ κατά τον κανόνα N.0.2, επειδή το αρχείο άνοιξε.
+  const accuracyStats = React.useMemo(() => computeAccuracyStats(controlPoints), [controlPoints]);
 
-    const accuracyValues = controlPoints
-      .map(cp => cp.accuracy)
-      .filter((value): value is number => typeof value === 'number');
-    if (accuracyValues.length === 0) return null;
-
-    const avgAccuracy = accuracyValues.reduce((sum, acc) => sum + acc, 0) / accuracyValues.length;
-    const bestAccuracy = Math.min(...accuracyValues);
-    const worstAccuracy = Math.max(...accuracyValues);
-
-    return {
-      avg: avgAccuracy.toFixed(2),
-      best: bestAccuracy.toFixed(2),
-      worst: worstAccuracy.toFixed(2)
-    };
-  }, [controlPoints]);
+  // Early return if no control points — ΜΕΤΑ από όλα τα hooks, ποτέ ανάμεσά τους.
+  if (!showAccuracyCircles || !controlPoints || controlPoints.length === 0) {
+    return null;
+  }
 
   // ========================================================================
   // 🎨 RENDER ACCURACY LEVEL ITEMS
