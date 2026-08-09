@@ -27,6 +27,15 @@
 |-----|----------|---------------------|------------|------|
 | **ADR-001** | Select/Dropdown Component | `@/components/ui/select` (Radix) | `EnterpriseComboBox` | 2026-01-01 |
 
+| **ADR-781** | Ωμά i18n κλειδιά στο SSR HTML — **CHECK 3.51** | `scripts/lib/i18n-ssr/**` + `scripts/lib/i18n/locale-keys.js` | φρουρός render πάνω σε ετοιμότητα ns | 2026-08-09 |
+
+> **🚫 ΑΠΑΓΟΡΕΥΣΗ (ADR-781)**: **ΜΗΝ** αρχικοποιείς ετοιμότητα μετάφρασης σε **σταθερά** που διορθώνει
+> **μόνο** `useEffect` — δεν τρέχει σε SSR. Αρχικοποίησε **σύγχρονα**, όπως το `src/i18n/hooks/useTranslation.ts`:
+> `useState(() => nsList.every(ns => isBundleComplete(lang, ns)))`.
+> Το περιστατικό: **17 ωμά κλειδιά × 141 διαδρομές**, μόνιμα, στην παραγωγή, με **και τις πέντε** πύλες i18n
+> πράσινες — γιατί όλες ρωτούν «**υπάρχει** το κλειδί;» και η μετάφραση **ήταν ήδη εκεί**.
+> **SSoT κλειδιών locale**: `scripts/lib/i18n/locale-keys.js` (μην γράψεις τρίτο flatten).
+
 > **🚫 PROHIBITION**: Νέα Select/Dropdown implementations **ΑΠΑΓΟΡΕΥΟΝΤΑΙ** εκτός Radix Select.
 >
 > **📍 Full Details**: [ADR Index](reference/adr-index.md#adr-001-selectdropdown-component)

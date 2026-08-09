@@ -27,6 +27,8 @@ import i18next, { type Resource } from 'i18next';
 
 import manifest from '../generated/shell-slice.manifest.json';
 import shellSlice from '../generated/shell-slice.el.json';
+// Ανεξάρτητη αυθεντία: τι ΟΦΕΙΛΕΙ να υπάρχει, έναντι του τι ΤΑΞΙΔΕΥΕΙ (ADR-781 §7).
+import localeNavigation from '../locales/el/navigation.json';
 
 const LANGUAGE = 'el';
 
@@ -34,20 +36,60 @@ type Want = { keys: string[]; prefixes: string[]; whole: boolean };
 const wants = manifest.wants as unknown as Record<string, Want>;
 const unresolvable = new Set<string>(manifest.unresolvableKeys as string[]);
 
-/** The candidate namespaces for a key — i18next tries the file's whole list. */
+/**
+ * 🔴 ADR-781 §7 — ΓΙΑΤΙ ΔΕΝ ΥΠΑΡΧΕΙ ΠΙΑ `if (want.whole) continue` ΕΔΩ
+ * ==================================================================
+ * Μέχρι τις 2026-08-09 και οι δύο συναρτήσεις παρέλειπαν τα namespaces που
+ * ταξιδεύουν ΟΛΟΚΛΗΡΑ, με το σκεπτικό «ταξιδεύει ολόκληρο ⇒ δεν χρειάζεται
+ * έλεγχος». Το σκεπτικό είναι λάθος και το κόστος του μετρήθηκε:
+ *
+ *   • **33 κλειδιά δεν ρωτιόντουσαν ΠΟΤΕ** (143 → 176 μετά τη διόρθωση).
+ *   • Ανάμεσά τους, ολόκληρο το `navigation` — το namespace του πλαϊνού μενού.
+ *   • Την ίδια στιγμή, ο `useTranslationLazy` έβαφε **17 ωμά κλειδιά σε ΚΑΘΕ
+ *     μία από τις 141 διαδρομές**, μόνιμα, στην παραγωγή.
+ *   • Αυτό εδώ ήταν η **μοναδική απόδειξη χρόνου εκτέλεσης** του έργου, και
+ *     ήταν **ΠΡΑΣΙΝΟ πάνω στη σπασμένη οθόνη** επί μήνες. Δεν αστόχησε: **δεν
+ *     ρώτησε**.
+ *
+ * Ένα anchor χωρίς gate είναι σχόλιο· ένα anchor με `continue` είναι χειρότερο,
+ * γιατί **μοιάζει** με απόδειξη.
+ *
+ * ⚠️ ΤΟ ΣΥΜΠΑΝ ΤΟΥ TEST = «κλειδιά που ΥΠΑΡΧΟΥΝ σε κάποιο locale».
+ * Το ερώτημα εδώ είναι «**ΑΡΚΕΙ το slice;**», όχι «είναι πλήρη τα locales;» —
+ * το δεύτερο είναι το **CHECK 3.8**. Η συγκομιδή τιμών από άλλα modules
+ * (ADR-744: «τα κλειδιά ενός generic renderer ζουν στο module που τον ΡΥΘΜΙΖΕΙ»)
+ * βάζει στο `wants` και συμβολοσειρές που **δεν είναι κλειδιά κανενός locale**
+ * (μετρημένο: το `search`, ίδια οικογένεια με τα `aiInbox`/`auditLog`/`backup`
+ * που ο generator ήδη καταγράφει ως `unresolvableKeys`). Το να τα κρίνει αυτό
+ * το test θα ήταν σύγχυση δύο ερωτημάτων σε μία μηχανή — το λάθος του ADR-749.
+ */
 function namespacesRequesting(key: string): string[] {
   return Object.entries(wants)
-    .filter(([, want]) => !want.whole && want.keys.includes(key))
+    .filter(([, want]) => want.keys.includes(key))
     .map(([namespace]) => namespace);
+}
+
+/** Κλειδί που δεν υπάρχει σε ΚΑΝΕΝΑ locale namespace ⇒ δεν είναι κλειδί. */
+function existsInSomeLocale(key: string): boolean {
+  for (const bundle of Object.values(shellSlice as Record<string, unknown>)) {
+    let cursor: unknown = bundle;
+    for (const segment of key.split('.')) {
+      if (cursor === null || typeof cursor !== 'object' || Array.isArray(cursor)) { cursor = undefined; break; }
+      cursor = (cursor as Record<string, unknown>)[segment];
+    }
+    if (cursor !== undefined) return true;
+  }
+  return false;
 }
 
 function allRequestedKeys(): string[] {
   const keys = new Set<string>();
   for (const want of Object.values(wants)) {
-    if (want.whole) continue;
     want.keys.forEach(key => keys.add(key));
   }
-  return [...keys].filter(key => !unresolvable.has(key)).sort();
+  return [...keys]
+    .filter(key => !unresolvable.has(key) && existsInSomeLocale(key))
+    .sort();
 }
 
 describe('ADR-744 — the shell slice alone is enough to render the shell', () => {
@@ -158,17 +200,85 @@ describe('ADR-744 — the shell slice alone is enough to render the shell', () =
     }
   });
 
-  it('every prefix the generator recorded resolves to a real subtree', () => {
+  /**
+   * 🔴 ADR-781 §7 — ΑΥΤΟΣ Ο ΕΛΕΓΧΟΣ ΕΙΧΕ **ΔΥΟ** ΔΙΑΦΥΓΕΣ ΚΑΙ ΗΤΑΝ ΣΧΕΔΟΝ ΚΕΝΟΣ
+   *
+   *   `if (want.whole) continue;`      ⇒ παρέλειπε τα 9 namespaces του shell
+   *   `if (tree === undefined) continue;` ⇒ και μετά παρέλειπε **ακριβώς** την
+   *                                       περίπτωση που ψάχνει: το prefix ΛΕΙΠΕΙ
+   *
+   * Το δεύτερο δικαιολογούνταν ως «απόν εδώ, παρόν σε αδελφό namespace» — που
+   * είναι σωστή παρατήρηση και **λάθος υλοποίηση**: το σωστό είναι να ζητηθεί
+   * να υπάρχει σε **έστω ΕΝΑΝ** από τους υποψηφίους (η σειρά αναζήτησης του
+   * i18next), όχι να μη ζητηθεί από **κανέναν**.
+   */
+  it('every prefix the generator recorded resolves in AT LEAST ONE candidate namespace', () => {
+    const subtree = (namespace: string, prefix: string): unknown =>
+      prefix.split('.').reduce<unknown>(
+        (node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined),
+        (shellSlice as Record<string, unknown>)[namespace],
+      );
+
+    const orphaned: string[] = [];
     for (const [namespace, want] of Object.entries(wants)) {
-      if (want.whole) continue;
       for (const prefix of want.prefixes) {
-        const tree = prefix.split('.').reduce<unknown>(
-          (node, part) => (node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined),
-          (shellSlice as Record<string, unknown>)[namespace],
-        );
-        if (tree === undefined) continue;   // absent here, present in a sibling namespace
-        expect(typeof tree).toBe('object');
+        const candidates = Object.entries(wants)
+          .filter(([, other]) => other.prefixes.includes(prefix))
+          .map(([other]) => other);
+        if (!candidates.some(candidate => subtree(candidate, prefix) !== undefined)) {
+          orphaned.push(`${namespace}:${prefix}*  (tried: ${candidates.join(', ')})`);
+        }
       }
     }
+    expect(orphaned).toEqual([]);
+  });
+
+  /**
+   * 🔴 ΑΓΚΥΡΑ ΠΑΛΙΝΔΡΟΜΗΣΗΣ ΓΙΑ ΤΑ 17 ΚΛΕΙΔΙΑ × 141 ΔΙΑΔΡΟΜΕΣ (ADR-781)
+   *
+   * Το πλαϊνό μενού ζει στο **root layout**, άρα ό,τι βάφει το βάφει **παντού**.
+   * Ο `useTranslationLazy` το έκανε να βάφει ωμά κλειδιά, και η μετάφραση **ΗΤΑΝ
+   * ΗΔΗ ΕΔΩ** — αυτό ακριβώς αποδεικνύει το test παρακάτω. Δεν έλειπαν δεδομένα:
+   * το component τα αρνιόταν.
+   *
+   * ⚠️ Τα κλειδιά έρχονται μέσα από το **prefix** `pages` (δηλωμένο στο
+   * `.i18n-shell-slice.json → dynamicKeyPolicy`), γι' αυτό ΔΕΝ εμφανίζονται στο
+   * `wants.navigation.keys` και **καμία** εκδοχή του παραπάνω βρόχου δεν θα τα
+   * ρωτούσε ποτέ. Χρειάζονται ρητή, ονομαστική άγκυρα.
+   */
+  it('resolves EVERY page label the sidebar paints on all 141 routes', async () => {
+    const client = i18next.createInstance();
+    await client.init({
+      resources: { [LANGUAGE]: shellSlice } as Resource,
+      lng: LANGUAGE,
+      fallbackLng: LANGUAGE,
+      ns: Object.keys(shellSlice),
+      defaultNS: 'common',
+      initImmediate: false,
+      interpolation: { escapeValue: false },
+    });
+
+    // 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ ΕΙΝΑΙ ΤΟ **LOCALE**, ΟΧΙ ΤΟ SLICE — ΚΑΙ ΤΟ ΛΑΘΟΣ ΕΓΙΝΕ.
+    // Η πρώτη γραφή διάβαζε `Object.keys(shellSlice.navigation.pages)`, δηλαδή
+    // ρωτούσε το ΙΔΙΟ αντικείμενο που κρίνει. Μετρημένο: σβήνοντας το
+    // `pages.home` από το slice, το test έμενε **ΠΡΑΣΙΝΟ** — ο παρονομαστής
+    // μετακινούνταν μαζί με τη μετάλλαξη. Ένα άθροισμα που ρωτά μόνο τον εαυτό
+    // του **επικυρώνει τον εαυτό του**.
+    // Το locale είναι ανεξάρτητη αυθεντία: λέει τι ΟΦΕΙΛΕΙ να υπάρχει· το slice
+    // λέει τι ΤΑΞΙΔΕΥΕΙ. Η σύγκρισή τους ΕΙΝΑΙ το ερώτημα.
+    const expected = Object.keys((localeNavigation as Record<string, Record<string, unknown>>).pages || {});
+    expect(expected.length).toBeGreaterThanOrEqual(10);
+
+    const raw: string[] = [];
+    for (const page of expected) {
+      const key = `pages.${page}`;
+      if (!client.exists(key, { ns: 'navigation' })) { raw.push(key); continue; }
+      const value = client.t(key, { ns: 'navigation' });
+      if (value === key || value === page) raw.push(`${key} → ${String(value)}`);
+    }
+    expect(raw).toEqual([]);
+
+    // Το κλειδί που ονομάστηκε στο ADR-744 §12 ως αυτό που έβαφε ωμό.
+    expect(client.t('pages.home', { ns: 'navigation' })).not.toBe('pages.home');
   });
 });

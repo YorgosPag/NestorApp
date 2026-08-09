@@ -57,6 +57,9 @@
  */
 const fs = require('fs');
 const path = require('path');
+// ADR-781 §3 — το ισοπέδωμα κλειδιών είναι SSoT. Ήταν ιδιωτικό εδώ· η ταυτότητα
+// των δύο υλοποιήσεων αποδείχθηκε σε 101 namespaces / 31.361 κλειδιά, 0 διαφορές.
+const { flattenAnswerableKeys } = require('./lib/i18n/locale-keys');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const LOCALE_DIR = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
@@ -102,19 +105,6 @@ function readServiceFormNamespaces() {
 //    semantics, walks each namespace in turn and resolves the dotted key path
 //    against the namespace's own root object.
 // ---------------------------------------------------------------------------
-function flatten(obj, prefix, sink) {
-  if (obj === null || typeof obj !== 'object') return;
-  for (const k of Object.keys(obj)) {
-    const key = prefix ? `${prefix}.${k}` : k;
-    const v = obj[k];
-    if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
-      flatten(v, key, sink);
-    } else {
-      sink.add(key);
-    }
-  }
-}
-
 function loadNamespaceIndex(namespaces) {
   const index = new Map(); // ns -> Set of dotted keys
   for (const ns of namespaces) {
@@ -123,7 +113,7 @@ function loadNamespaceIndex(namespaces) {
     if (fs.existsSync(file)) {
       try {
         const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-        flatten(data, '', set);
+        flattenAnswerableKeys(data, set);
       } catch {
         // corrupt JSON — other checks will flag; leave this ns empty
       }
