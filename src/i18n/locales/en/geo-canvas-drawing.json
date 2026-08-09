@@ -53,7 +53,10 @@
       "cadEnvironment": "CAD Environment",
       "fullDxfViewer": "🛠️ Open full DXF Viewer in new tab with all CAD tools",
       "ultraPrecision": " Ultra-precision mode: Click for millimeter accuracy points",
-      "advancedSettings": " Advanced settings for technical users"
+      "advancedSettings": " Advanced settings for technical users",
+      "stats": {
+        "technicalDrawings": "Technical drawings"
+      }
     },
     "professional": {
       "title": "🏢 Professional Tools",
@@ -62,13 +65,18 @@
         "property": "Property",
         "propertyManual": "Manual",
         "autoDetectAuto": "Automatic",
-        "monitoringMarket": "Market"
+        "monitoringMarket": "Market",
+        "complete": "Complete",
+        "cancel": "Cancel",
+        "detectRooms": "Auto-detect rooms"
       },
       "uploadFloorPlan": "📁 Upload floor plan in DXF, PDF, PNG, or JPG format",
       "addPropertyPoints": "🏢 Click to add points to the property. Double click to complete",
       "autoDetectRooms": "🤖 Automatic room detection from uploaded floor plan",
       "propertyManager": "🏘️ Property status management with color coding and statistics",
-      "marketDashboard": "Dashboard for real estate market monitoring and analytics"
+      "marketDashboard": "Dashboard for real estate market monitoring and analytics",
+      "floorPlanLabel": "Floor plan",
+      "sizeLabel": "Size"
     },
     "citizen": {
       "title": "👥 Citizen Tools",
@@ -154,7 +162,8 @@
       "processingLabel": "Processing:",
       "formats": "Formats:",
       "cadTools": "CAD Tools:",
-      "dxfViewerLabel": "DXF Viewer"
+      "dxfViewerLabel": "DXF Viewer",
+      "properties": "Properties"
     },
     "actions": {
       "automateAll": "Automate All",

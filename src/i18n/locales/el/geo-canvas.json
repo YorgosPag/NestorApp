@@ -455,7 +455,9 @@
       "watercolor": "Ζωγραφική",
       "toner": "Ασπρόμαυρο",
       "coordinatePicking": "Επιλογή Συντεταγμένων",
-      "pickGeographicPointBtn": "Επιλογή Γεωγραφικού Σημείου"
+      "pickGeographicPointBtn": "Επιλογή Γεωγραφικού Σημείου",
+      "selectMapStyle": "Επιλογή στυλ χάρτη",
+      "mapControls": "Χειριστήρια χάρτη"
     },
     "status": {
       "mapLoaded": "Χάρτης Φορτώθηκε",
@@ -492,7 +494,7 @@
     }
   },
   "accuracy": {
-    "legend": "Μύημα Ακρίβειας",
+    "legend": "Υπόμνημα Ακρίβειας",
     "visualization": "Οπτικοποίηση:",
     "types": {
       "circles": "○ Κύκλοι",
@@ -510,10 +512,12 @@
       "showIndicators": "👁️ Εμφάνιση Δεικτών"
     },
     "stats": {
-      "avgAccuracy": "Μέση Ακρίβεια:",
-      "best": "Καλύτερη:",
-      "format": "±{value}m"
-    }
+      "avgAccuracy": "Μέση Ακρίβεια",
+      "best": "Καλύτερη",
+      "format": "±{value}m",
+      "worst": "Χειρότερη"
+    },
+    "statistics": "Στατιστικά ακρίβειας"
   },
   "floorPlanControlPoints": {
     "title": "Σημεία Ελέγχου",
@@ -533,7 +537,8 @@
       "points": "Σημεία:",
       "readyForGeoreferencing": "Έτοιμο για γεωαναφορά",
       "needMorePoints": "Χρειάζονται {count} ακόμα σημεία",
-      "transformationQuality": "Ποιότητα Μετασχηματισμού:"
+      "transformationQuality": "Ποιότητα Μετασχηματισμού:",
+      "lowAccuracyWarning": "Χαμηλή ακρίβεια μετασχηματισμού — προσθέστε ή διορθώστε σημεία ελέγχου."
     },
     "instructions": {
       "idle": "Κάντε κλικ στο 'Προσθήκη Σημείου Ελέγχου' για να ξεκινήσετε",
@@ -575,6 +580,14 @@
     "confirm": {
       "clearAll": "Είστε σίγουροι ότι θέλετε να διαγράψετε όλα τα σημεία ελέγχου;",
       "delete": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το σημείο ελέγχου;"
+    },
+    "manualInput": {
+      "description": "Καταχωρίστε χειροκίνητα ένα ζεύγος συντεταγμένων: τη θέση στο σχέδιο και την αντίστοιχη γεωγραφική θέση.",
+      "dxfCoordinates": "Συντεταγμένες σχεδίου (DXF)",
+      "geoCoordinates": "Γεωγραφικές συντεταγμένες",
+      "longitude": "Γεωγραφικό μήκος",
+      "latitude": "Γεωγραφικό πλάτος",
+      "addPoint": "Προσθήκη σημείου"
     }
   },
   "floorPlanLayer": {

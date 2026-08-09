@@ -53,7 +53,10 @@
       "cadEnvironment": "Περιβάλλον CAD",
       "fullDxfViewer": "🛠️ Άνοιγμα πλήρους DXF Viewer σε νέο tab με όλα τα CAD εργαλεία",
       "ultraPrecision": " Λειτουργία υπερ-ακρίβειας: Κάντε κλικ για σημεία με ακρίβεια χιλιοστού",
-      "advancedSettings": " Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες"
+      "advancedSettings": " Προχωρημένες ρυθμίσεις για τεχνικούς χρήστες",
+      "stats": {
+        "technicalDrawings": "Τεχνικά σχέδια"
+      }
     },
     "professional": {
       "title": "🏢 Εργαλεία Επαγγελματία",
@@ -62,13 +65,18 @@
         "property": "Ακίνητο",
         "propertyManual": "Χειροκίνητα",
         "autoDetectAuto": "Αυτόματα",
-        "monitoringMarket": "Αγορά"
+        "monitoringMarket": "Αγορά",
+        "complete": "Ολοκλήρωση",
+        "cancel": "Ακύρωση",
+        "detectRooms": "Αυτόματη ανίχνευση δωματίων"
       },
       "uploadFloorPlan": "📁 Μεταφόρτωση κάτοψης σε μορφή DXF, PDF, PNG, ή JPG",
       "addPropertyPoints": "🏢 Κάντε κλικ για να προσθέσετε σημεία στο ακίνητο. Διπλό κλικ για ολοκλήρωση",
       "autoDetectRooms": "🤖 Αυτόματη ανίχνευση δωματίων από τη μεταφορτωμένη κάτοψη",
       "propertyManager": "🏘️ Διαχείριση κατάστασης ακινήτων με χρωματική κωδικοποίηση και στατιστικά",
-      "marketDashboard": "Πίνακας Ελέγχου για παρακολούθηση αγοράς ακινήτων και αναλυτικά στοιχεία"
+      "marketDashboard": "Πίνακας Ελέγχου για παρακολούθηση αγοράς ακινήτων και αναλυτικά στοιχεία",
+      "floorPlanLabel": "Κάτοψη",
+      "sizeLabel": "Μέγεθος"
     },
     "citizen": {
       "title": "👥 Εργαλεία Πολίτη",
@@ -154,7 +162,8 @@
       "processingLabel": "Επεξεργασία:",
       "formats": "Μορφές:",
       "cadTools": "Εργαλεία CAD:",
-      "dxfViewerLabel": "DXF Viewer"
+      "dxfViewerLabel": "DXF Viewer",
+      "properties": "Ακίνητα"
     },
     "actions": {
       "automateAll": "Αυτοματοποίηση Όλων",

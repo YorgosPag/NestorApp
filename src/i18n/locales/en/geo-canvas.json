@@ -455,7 +455,9 @@
       "watercolor": "Watercolor",
       "toner": "Black & White",
       "coordinatePicking": "Coordinate Picking",
-      "pickGeographicPointBtn": "Pick Geographic Point"
+      "pickGeographicPointBtn": "Pick Geographic Point",
+      "selectMapStyle": "Select map style",
+      "mapControls": "Map controls"
     },
     "status": {
       "mapLoaded": "Map Loaded",
@@ -492,7 +494,7 @@
     }
   },
   "accuracy": {
-    "legend": " Accuracy Legend",
+    "legend": "Accuracy Legend",
     "visualization": "Visualization:",
     "types": {
       "circles": "○ Circles",
@@ -510,10 +512,12 @@
       "showIndicators": "👁️ Show Indicators"
     },
     "stats": {
-      "avgAccuracy": "Avg Accuracy:",
-      "best": "Best:",
-      "format": "±{value}m"
-    }
+      "avgAccuracy": "Avg Accuracy",
+      "best": "Best",
+      "format": "±{value}m",
+      "worst": "Worst"
+    },
+    "statistics": "Accuracy statistics"
   },
   "floorPlanControlPoints": {
     "title": "Control Points",
@@ -533,7 +537,8 @@
       "points": "Points:",
       "readyForGeoreferencing": "Ready for georeferencing",
       "needMorePoints": "Need {count} more point{plural}",
-      "transformationQuality": "Transformation Quality:"
+      "transformationQuality": "Transformation Quality:",
+      "lowAccuracyWarning": "Low transformation accuracy — add or correct control points."
     },
     "instructions": {
       "idle": "Click 'Add Control Point' to start picking points",
@@ -575,6 +580,14 @@
     "confirm": {
       "clearAll": "Are you sure you want to delete all control points?",
       "delete": "Are you sure you want to delete this control point?"
+    },
+    "manualInput": {
+      "description": "Enter one coordinate pair manually: the position on the drawing and its matching geographic position.",
+      "dxfCoordinates": "Drawing coordinates (DXF)",
+      "geoCoordinates": "Geographic coordinates",
+      "longitude": "Longitude",
+      "latitude": "Latitude",
+      "addPoint": "Add point"
     }
   },
   "floorPlanLayer": {
