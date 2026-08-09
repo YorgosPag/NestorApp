@@ -21,7 +21,7 @@
 import { safeJsonParse } from '@/lib/json-utils';
 import { triggerExportDownload } from '@/lib/exports/trigger-export-download';
 import React, { useState, useRef, useEffect } from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { useGeoTransformation } from '../hooks/useGeoTransformation';
@@ -67,7 +67,7 @@ export const FloorPlanControlPointPicker: React.FC<FloorPlanControlPointPickerPr
   // HOOKS
   // ===================================================================
 
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const { confirm, dialogProps } = useConfirmDialog();
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();

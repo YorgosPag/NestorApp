@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { INTERACTIVE_PATTERNS, HOVER_SHADOWS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -67,7 +67,7 @@ export function FloorPlanUploadButton({
 }: FloorPlanUploadButtonProps) {
   const iconSizes = useIconSizes();
   const { quick, radius } = useBorderTokens();
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const colors = useSemanticColors();
 
   return (

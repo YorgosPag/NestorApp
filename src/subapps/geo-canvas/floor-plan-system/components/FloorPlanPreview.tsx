@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { ParserResult } from '../types';
@@ -34,7 +34,7 @@ export interface FloorPlanPreviewProps {
 }
 
 export function FloorPlanPreview({ result, file, className = '' }: FloorPlanPreviewProps) {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const { quick, getStatusBorder, getDirectionalBorder } = useBorderTokens();
   const colors = useSemanticColors();
 

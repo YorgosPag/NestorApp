@@ -17,7 +17,7 @@
 import React, { useCallback } from 'react';
 import { Clock } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import {
@@ -93,7 +93,7 @@ export function FloorPlanUploadModal({
   const iconSizes = useIconSizes();
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
 
   /**
    * 🏢 ADR-054: File upload handler - receives validated files from FileUploadZone

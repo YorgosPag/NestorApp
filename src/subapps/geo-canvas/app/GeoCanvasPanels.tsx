@@ -123,14 +123,15 @@ export function SystemStatusPanel({ t, colors, borders, iconSizes }: SystemStatu
 
 interface FoundationViewProps {
   t: (key: string) => string;
-  isLoading: boolean;
   colors: PanelColors;
   iconSizes: UseIconSizesReturn;
   userType?: UserType;
   onUserTypeSelect: (type: 'citizen' | 'professional' | 'technical') => void;
 }
 
-export function FoundationView({ t, isLoading, colors, iconSizes, userType, onUserTypeSelect }: FoundationViewProps) {
+// `isLoading` αφαιρέθηκε: ήταν δηλωμένο στο interface και **δεν χρησιμοποιούνταν ποτέ** στο
+// σώμα — νεκρό prop που κρατούσε ζωντανή την αλυσίδα του καταργημένου `useTranslationLazy`.
+export function FoundationView({ t, colors, iconSizes, userType, onUserTypeSelect }: FoundationViewProps) {
   return (
     <div className="absolute inset-0 flex items-center justify-center">
       <div className="text-center max-w-4xl p-4 sm:p-8 w-full">

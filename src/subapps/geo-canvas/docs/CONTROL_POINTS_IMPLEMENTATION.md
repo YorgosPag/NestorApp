@@ -275,7 +275,7 @@ export interface FloorPlanControlPointPickerProps {
 
 **Key Changes:**
 - ✅ Accepts `controlPoints` prop (no internal hook call)
-- ✅ i18n translations via `useTranslationLazy`
+- ✅ i18n translations via `useTranslation`
 - ✅ Debug logs για transformation state
 - ✅ Fixed text colors (`text-gray-600` → `text-gray-800/900`)
 

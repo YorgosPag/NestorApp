@@ -24,7 +24,7 @@ import { PolygonSystemProvider } from '../systems/polygon-system';
 import { useFloorPlanUpload } from '../floor-plan-system/hooks/useFloorPlanUpload';
 import { useFloorPlanControlPoints } from '../floor-plan-system/hooks/useFloorPlanControlPoints';
 import { useGeoTransformation } from '../floor-plan-system/hooks/useGeoTransformation';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSnapEngine } from '../floor-plan-system/snapping';
 import { useUserRole, useUserType } from '@/auth';
@@ -51,7 +51,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
   const borders = useBorderTokens();
   const colors = useSemanticColors();
   const isMobile = useIsMobile();
-  const { t, isLoading } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const { user } = useUserRole();
   const { setUserType, isCitizen, isProfessional, isTechnical } = useUserType();
   const [activeView, setActiveView] = useState<'foundation' | 'georeferencing' | 'map'>('georeferencing');
@@ -140,16 +140,13 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
         : null;
 
 
-  if (isLoading) {
-    return (
-      <div className={`dark w-full h-full flex items-center justify-center ${colors.bg.secondary}`}>
-        <div className="text-center">
-          <AnimatedSpinner size="large" className="mx-auto mb-4" />
-          <p className="text-white">{t('loadingStates.loadingTranslations')}</p>
-        </div>
-      </div>
-    );
-  }
+  // 🔴 ΕΔΩ ΗΤΑΝ ΦΡΟΥΡΟΣ ΑΠΟΔΟΣΗΣ `if (isLoading)` που ζωγράφιζε spinner με ετικέτα
+  // `t('loadingStates.loadingTranslations')` — δηλαδή περίμενε τις μεταφράσεις **βάφοντας
+  // μια μετάφραση**. Αν όντως δεν είχαν φτάσει, η ετικέτα του ίδιου του φρουρού θα ήταν
+  // ωμό κλειδί. Διαγράφηκε: ο `useTranslationLazy` κρατούσε το `isLoading` `true` για
+  // πάντα σε SSR (αρχικοποίηση σε `useState(false)`, διόρθωση μόνο σε `useEffect`), και η
+  // αρχή του CHECK 3.25 (ADR-267/300) απαγορεύει το κλείδωμα απόδοσης στην ετοιμότητα
+  // namespace — ανταλλάσσει ωμό κείμενο με κενή οθόνη σε κάθε remount.
 
   return (
     <PolygonSystemProvider initialRole="citizen">
@@ -217,7 +214,7 @@ export function GeoCanvasContent(props: GeoCanvasAppProps) {
           {/* CANVAS / MAP AREA */}
           <div className={`flex-1 ${colors.bg.backgroundSecondary} relative`}>
             {activeView === 'foundation' && (
-              <FoundationView t={t} isLoading={isLoading} colors={colors} iconSizes={iconSizes} userType={user?.userType} onUserTypeSelect={handleUserTypeSelect} />
+              <FoundationView t={t} colors={colors} iconSizes={iconSizes} userType={user?.userType} onUserTypeSelect={handleUserTypeSelect} />
             )}
 
             {activeView === 'georeferencing' && (

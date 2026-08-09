@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -49,7 +49,7 @@ export const ManualInputTab: React.FC<ManualInputTabProps> = ({
   onInputChange,
   onAddManualPoint
 }) => {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();

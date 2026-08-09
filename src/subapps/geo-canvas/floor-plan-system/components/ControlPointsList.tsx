@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { CheckCircle, AlertTriangle, MapPin } from 'lucide-react';
-import { useTranslationLazy } from '@/i18n/hooks/useTranslationLazy';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useIconSizes } from '@/hooks/useIconSizes';
@@ -51,7 +51,7 @@ interface PointsStatusProps {
 }
 
 export const PointsStatus: React.FC<PointsStatusProps> = ({ pointsCount, hasMinPoints }) => {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
 
@@ -99,7 +99,7 @@ interface TransformationQualityProps {
 }
 
 export const TransformationQuality: React.FC<TransformationQualityProps> = ({ transformation }) => {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
 
@@ -169,7 +169,7 @@ export const ControlPointsList: React.FC<ControlPointsListProps> = ({
   editing,
   onDelete
 }) => {
-  const { t } = useTranslationLazy('geo-canvas');
+  const { t } = useTranslation('geo-canvas');
   const { quick, getStatusBorder } = useBorderTokens();
   const colors = useSemanticColors();
   const iconSizes = useIconSizes();
