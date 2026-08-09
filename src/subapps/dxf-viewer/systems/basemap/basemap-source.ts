@@ -16,7 +16,15 @@
  * ο επόμενος θα παραβιάσει καλόπιστα προσθέτοντας «λίγο prefetch για ομαλότητα». Ως πεδίο, η
  * παραβίαση απαιτεί να **αλλάξει ο πίνακας** — δηλαδή να το δει άνθρωπος.
  *
- * @see https://operations.osmfoundation.org/policies/tiles/ — η πολιτική που κωδικοποιείται εδώ
+ * ## ⚠️ Η απόδοση είναι ΥΠΟΧΡΕΩΣΗ, όχι διακόσμηση
+ * Η οδηγία απόδοσης του OSMF απαιτεί η μνεία να είναι *«legible and understandable, taking into
+ * consideration the font, size, colour, **contrast**, positioning and amount of time that it is
+ * visible»*. Δηλαδή η ίδια η άδεια ζητά ακριβώς αυτό που φρουρούν οι πύλες 3.38-3.43 αυτού του
+ * αποθετηρίου: αναγνωσιμότητα, όχι ύπαρξη. Ένα σβηστό γκρι πάνω σε φωτεινό πλακίδιο **δεν**
+ * συμμορφώνεται, όσο κι αν το κείμενο υπάρχει στο DOM.
+ *
+ * @see https://operations.osmfoundation.org/policies/tiles/ — η πολιτική πλακιδίων
+ * @see https://osmfoundation.org/wiki/Licence/Attribution_Guidelines — η οδηγία απόδοσης
  */
 
 /** Τα αναγνωριστικά των παρόχων. Κλειστό σύνολο — νέος πάροχος = νέα γραμμή στον πίνακα. */
@@ -24,6 +32,26 @@ export type BasemapSourceId = 'osm-standard';
 
 /** Τι είδους περιεχόμενο δείχνει ένας πάροχος — ο χρήστης επιλέγει με βάση αυτό. */
 export type BasemapImageryKind = 'street' | 'aerial' | 'topographic';
+
+/**
+ * Ένα κομμάτι της απόδοσης: κείμενο, και **προαιρετικά** ο σύνδεσμος που του αναλογεί.
+ *
+ * ## Γιατί κομμάτια και όχι μία συμβολοσειρά
+ * Η οδηγία απόδοσης του OSMF δεν ζητά «ένα κείμενο κάπου»· ζητά η **λέξη** `OpenStreetMap` να
+ * είναι σύνδεσμος προς `openstreetmap.org/copyright`, γιατί εκεί ζει η άδεια (ODbL) και οι πηγές
+ * των δεδομένων. Με μία συμβολοσειρά, ο ζωγράφος θα έπρεπε να **μαντέψει** ποιο υποσύνολο του
+ * κειμένου γίνεται σύνδεσμος — δηλαδή να ξαναγράψει την πολιτική του παρόχου σε regex.
+ *
+ * Και δεν είναι υποθετικό: μέσα σε αυτό το αποθετήριο υπάρχει ήδη πάροχος με **τρεις** δικαιούχους
+ * σε μία γραμμή (`© Stadia Maps, Stamen Design, OpenMapTiles © OpenStreetMap contributors`, δες
+ * `subapps/geo-canvas/services/map/MapStyleManager.ts`). Καθένας τους δικαιούται **δικό του**
+ * σύνδεσμο. Ως πίνακας κομματιών, ο δεύτερος πάροχος είναι γραμμή· ως συμβολοσειρά, είναι parser.
+ */
+export interface BasemapAttributionSegment {
+  readonly text: string;
+  /** Όταν υπάρχει, το `text` αποδίδεται ως σύνδεσμος προς αυτή τη διεύθυνση. */
+  readonly href?: string;
+}
 
 export interface BasemapSource {
   readonly id: BasemapSourceId;
@@ -37,10 +65,13 @@ export interface BasemapSource {
   /** Το βαθύτερο επίπεδο που σερβίρει ο πάροχος. Αίτημα πέραν αυτού είναι βέβαιο 404. */
   readonly maxZoom: number;
   /**
-   * Κείμενο απόδοσης, **υποχρεωτικό** και μη μεταφράσιμο: είναι νομικός όρος χρήσης και εμπορικό
-   * σήμα του παρόχου, όχι μήνυμα διεπαφής. Γι' αυτό δεν περνά από `t()`.
+   * Η απόδοση, **υποχρεωτική** και μη μεταφράσιμη: είναι νομικός όρος χρήσης και εμπορικό σήμα
+   * του παρόχου, όχι μήνυμα διεπαφής. Γι' αυτό δεν περνά από `t()`.
+   *
+   * ⚠️ Κενός πίνακας **δεν** σημαίνει «δεν χρειάζεται απόδοση» — σημαίνει «κανείς δεν την έγραψε».
+   * Ο τύπος δεν μπορεί να το απαγορεύσει· η άγκυρα `Α1` το κάνει, για **κάθε** γραμμή του πίνακα.
    */
-  readonly attribution: string;
+  readonly attribution: readonly BasemapAttributionSegment[];
   /**
    * Πόσους δακτυλίους πλακιδίων **γύρω** από το ορατό επιτρέπεται να ζητήσουμε προληπτικά.
    * `0` = μόνο ό,τι βλέπει ο χρήστης αυτή τη στιγμή.
@@ -67,7 +98,13 @@ export const BASEMAP_SOURCES: Readonly<Record<BasemapSourceId, BasemapSource>> =
     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     tileSizePx: 256,
     maxZoom: 19,
-    attribution: '© OpenStreetMap contributors',
+    // Η οδηγία του OSMF δέχεται ρητά την ιστορική μορφή «© OpenStreetMap contributors» και ζητά
+    // η λέξη «OpenStreetMap» να είναι σύνδεσμος προς τη σελίδα πνευματικών δικαιωμάτων.
+    attribution: [
+      { text: '© ' },
+      { text: 'OpenStreetMap', href: 'https://www.openstreetmap.org/copyright' },
+      { text: ' contributors' },
+    ],
     // Η πολιτική του OSMF απαγορεύει ΚΑΘΕ προληπτικό αίτημα. Δες την επικεφαλίδα.
     maxPrefetchRing: 0,
     hasServiceLevelAgreement: false,

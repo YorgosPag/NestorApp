@@ -6129,3 +6129,52 @@ orchestrator (`CanvasSection.tsx`) **δεν άγγιξε τίποτα** — κα
 **Files**: MOD `canvas-v2/dxf-canvas/dxf-canvas-renderer.ts` (+1 κλήση), `components/layout/ConditionalAppShell.tsx`
 (διαδρομή **γυμνής επιφάνειας** για το harness)· NEW `systems/paint-census/paint-census-store.ts` +
 `use-has-painted.ts`, `testing/paint-recorder.ts` (εξαγωγή του καταγραφέα από το test του πίνακα).
+
+---
+
+## 2026-08-10 — νέο micro-leaf: η **απόδοση του παρόχου χάρτη**, ένα mount για δύο προβολές (ADR-782 §14, CHECK 6B stage)
+
+Η εγγραφή υπάρχει επειδή άλλαξε αρχείο του **CHECK 6B** (`components/dxf-layout/CanvasLayerStack.tsx`):
+προστέθηκε **ένα** leaf, `<BasemapAttributionLeaf/>`, αδερφός του `CanvasLayerStack3dLeaf`. Πλήρης
+απόφαση (γιατί η μνεία του OpenStreetMap είναι **όρος της άδειας** και όχι στοιχείο διεπαφής):
+**ADR-782 §14**.
+
+**Το συμβόλαιο τηρείται κατά γράμμα.** Το leaf εγγράφεται **μόνο** σε δύο stores χαμηλής
+συχνότητας — τον διακόπτη/αδιαφάνεια/πάροχο του υποβάθρου και τη διαθεσιμότητα γεωαναφοράς. Καμία
+εξάρτηση από `transform`: η απόδοση είναι αγκυρωμένη στην **οθόνη**, όχι στον κόσμο, οπότε το
+pan/zoom δεν την αγγίζει καθόλου — ίδιο σχήμα με το `NorthArrowLeaf` (ADR-656 M12). Ο Shell μένει
+`useSyncExternalStore`-free (CHECK 6C): περνά **μόνο** κλάσεις θέσης.
+
+🔑 **Ένα mount, δύο προβολές — το πρότυπο είναι ήδη εδώ.** Ο `CanvasLayerStack` ζει και στο 2Δ και
+στο 3Δ (το `BimViewport3D` είναι leaf **μέσα** του), οπότε η μνεία προσαρτάται **μία φορά**,
+ακριβώς όπως ο `UnifiedPerformanceHudLeaf` (ADR-366 §B.5.U), που λύνει το ίδιο πρόβλημα. Δύο
+mounts — ένα ανά προβολή — θα ήταν **δύο πλακέτες** τη στιγμή που το 3Δ ζωγραφίζει από πάνω.
+
+⚠️ **Το `z-[55]` δεν είναι μαγικός αριθμός**: το `BimViewport3D` κάθεται σε `absolute inset-0 z-50`,
+άρα οτιδήποτε οφείλει να φαίνεται **και** στο 3Δ πρέπει να το ξεπερνά. Ήταν ωμό στο
+`PerformanceHUD.tsx` και θα ξαναγραφόταν ωμό εδώ — **δύο σημεία με τον ίδιο αριθμό και κανένα να
+λέει γιατί**. Έγινε `PANEL_LAYOUT.Z_INDEX['55']` και το καταναλώνουν και τα δύο. Μένει κάτω από το
+κατώφλι 1000 της κλίμακας του **ADR-780**, άρα σκόπιμα `local-stacking`: ταξινομεί αδέρφια μέσα
+στον καμβά, δεν δηλώνει καθολική στρώση προϊόντος (CHECK 3.50 επαληθεύτηκε πράσινο, 0/40).
+
+🔴 **Το leaf δεν είναι διακοσμητικό — ξεκλειδώνει τη ζωγραφική.** Οι δύο ζωγράφοι του υποβάθρου
+(`useBasemapPainter`, `BasemapGroundLayer`) ρωτούν πλέον τη **ΜΙΑ** απόφαση
+`resolveBasemapPaint()`, που αρνείται με `refusal: 'unattributed'` όταν καμία επιφάνεια δεν έχει
+δηλώσει ότι αποδίδει. Άρα η διαγραφή αυτού του mount **σβήνει τον χάρτη**, σιωπηλά — γι' αυτό η
+άγκυρα `Α6β` διαβάζει τον `CanvasLayerStack.tsx` και απαιτεί το mount να υπάρχει.
+
+⚠️ **Η προσθήκη έσπασε το όριο N.7.1 και λύθηκε με ΕΞΑΓΩΓΗ, όχι με ψαλίδισμα σχολίων**: ο
+`CanvasLayerStack.tsx` πήγε **496 → 503** γραμμές. Τα δύο HUD βγήκαν σε
+`canvas-layer-stack-hud-leaves.tsx` (**497** γραμμές πλέον ο Shell, +1 από το HEAD), με κριτήριο
+ένταξης **μετρήσιμο και όχι αισθητικό**: εδώ μπαίνει ό,τι κάθεται **πάνω από το z-50** του 3Δ
+viewport. Το `NorthArrowLeaf` είναι κι εκείνο screen-anchored αλλά ζει στο `z-30`, δηλαδή **κάτω**
+από το 3Δ — HUD **μίας** προβολής, και **δεν** μετακινήθηκε. Η σειρά DOM διατηρήθηκε ακέραιη (τα
+δύο mounts ήταν ήδη γειτονικά).
+
+**Files**: MOD `components/dxf-layout/CanvasLayerStack.tsx` (−2 mounts, +1),
+`components/dxf-layout/useBasemapPainter.ts` (καταναλώνει τη ΜΙΑ απόφαση + εγγραφή στο μητρώο
+επιφανειών), `bim-3d/scene/basemap/BasemapGroundLayer.ts` (ίδιο + μηδενισμός υπογραφής στον κλάδο
+άρνησης), `bim-3d/performance/PerformanceHUD.tsx` (ωμό `z-[55]` → token), `config/panel-tokens.ts`
+(+`Z_INDEX['55']`)· NEW `components/dxf-layout/BasemapAttributionLeaf.tsx`,
+`systems/basemap/basemap-paint-decision.ts`, `systems/basemap/basemap-attribution-surface.ts`,
+`components/dxf-layout/canvas-layer-stack-hud-leaves.tsx`.

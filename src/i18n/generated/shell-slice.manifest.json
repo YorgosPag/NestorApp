@@ -1,8 +1,8 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "8ed6d64aea4e9020f1605a8a57020a182c5bb78439acec318bb0b8186f9f8228",
-    "src/i18n/generated/shell-slice.whole.json": "5fbab353a5df2ffcf0f3fbeda2e663d5da19fc988e55e935bea8c9ea4e5eee3c"
+    "src/i18n/generated/shell-slice.el.json": "784ecc650bf1ab11cdba740c55831e011dd57d84aba5e4212eaa5597e13e3160",
+    "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
     "dynamic": [
@@ -37,9 +37,10 @@
     "common-status",
     "common-validation",
     "landing",
-    "navigation"
+    "navigation",
+    "search-results"
   ],
-  "inputsSha256": "fa4c786b2a75ba9fa01aa4d2346aa6a56eff2e1e33fe1c1c16d157c7c16fa0d8",
+  "inputsSha256": "8f516d362ee28defa4aa42a1e63cae0afd0ae1f23cafb8dc87a8ac075f8e2314",
   "languages": [
     "el"
   ],
@@ -59,7 +60,8 @@
     "landing",
     "navigation",
     "onboarding",
-    "projects"
+    "projects",
+    "search-results"
   ],
   "shellFiles": {
     "src/api/notificationClient.ts": "048d34aa4acec745ae14aa31a61c903866077d4d9a46ab8a90629d340aea38a0",
@@ -272,7 +274,7 @@
     "src/i18n/lazy-config.ts": "e9eb278736edf9f74be6b024f467c8148d921d26c34389f7879cb9f88eb9fea1",
     "src/i18n/namespace-bundles.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/i18n/namespace-compat.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
-    "src/i18n/namespace-loaders.ts": "9a3e8e306122b397870918420a994da9be8e9da528a5235562bcfa98577000f0",
+    "src/i18n/namespace-loaders.ts": "c9cac37d10ac9fbbab3a20ea363f42c783d1ebed75e6887e3dc66c2ef5fe2e49",
     "src/i18n/pseudo-post-processor.ts": "54fa081677bd35c50b24ed5914d8c0a343b23f82fa50f33ac0ac931e011a165c",
     "src/lib/a11y/keyboard-scope.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/a11y/use-dialog-focus-restore.ts": "8fd6edd13dfa0351fa57df3a923d8a5bbcf9c8887d24ad13f6a7654922c08b47",
@@ -343,12 +345,13 @@
     "src/services/company/company-name-resolver.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/document-template.service.ts": "9c090cd456b28d009fe7fc9d61976e215cbc5830f2b246f8dbd77f9b4e1a62a9",
     "src/services/enterprise-id-bim-generators.ts": "0fed035d018624aa6b02bbf9bca5091580adce34ab469a774a418b87cb782907",
-    "src/services/enterprise-id-class.ts": "2a1548dd787fb5968a05096da7bd8e15fdfbcd2a0f34265b503790a3c2aeb2ca",
+    "src/services/enterprise-id-class.ts": "b888dd0cc947a8f5e8ac31ff1f6dca10c322f0a2968e131d91c94b77cddc808d",
     "src/services/enterprise-id-composite-keys.ts": "0fed035d018624aa6b02bbf9bca5091580adce34ab469a774a418b87cb782907",
     "src/services/enterprise-id-convenience.ts": "8638e7a8d454b751842f9f6fc67a623e6be81979c7ff555a67e18111dbc388c9",
     "src/services/enterprise-id-deterministic.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/enterprise-id-parse.ts": "0fed035d018624aa6b02bbf9bca5091580adce34ab469a774a418b87cb782907",
     "src/services/enterprise-id-prefixes.ts": "fa88a353db0dc7b23e647ee2ae02ec3fb3c0282ca4f5a023f2f1766a1de20b86",
+    "src/services/enterprise-id-public-registry-generators.ts": "693adeb4e52f0a5b3866fcdb8be26e2e2763e6f8638a69ede03e4caa40a97cf0",
     "src/services/enterprise-id-singleton.ts": "af633d79955de13a3b98f19e7145f0762dcf7eea2565a9d135054a12e59d5d42",
     "src/services/entity-audit.service.ts": "b90a476b3ff36884be6c05feae9ca9d35acf8a1c1f8ad2834a95b59f9f9ea523",
     "src/services/file-approval.service.ts": "71ad3b0dbb0b80c20b6c172d48b78d2a70605e7b3f07a18a5035a6f2186eaf6e",
@@ -490,8 +493,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 413,
-    "sliceBytes": 187910
+    "shellFiles": 414,
+    "sliceBytes": 190722
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",
@@ -748,6 +751,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/el/reports-extended.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/reports.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/saved-reports.json",
+    "src/i18n/namespace-loaders.ts → ./locales/el/search-results.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/settings.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/showcase.json",
     "src/i18n/namespace-loaders.ts → ./locales/el/storage.json",
@@ -849,6 +853,7 @@
     "src/i18n/namespace-loaders.ts → ./locales/en/reports-extended.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/reports.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/saved-reports.json",
+    "src/i18n/namespace-loaders.ts → ./locales/en/search-results.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/settings.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/showcase.json",
     "src/i18n/namespace-loaders.ts → ./locales/en/storage.json",
@@ -3578,6 +3583,11 @@
       ],
       "prefixes": [],
       "whole": false
+    },
+    "search-results": {
+      "keys": [],
+      "prefixes": [],
+      "whole": true
     }
   }
 }

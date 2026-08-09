@@ -62,6 +62,12 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // Ο πελάτης ΔΙΑΒΑΖΕΙ· γράφει ΜΟΝΟ ο διακομιστής (§14.4 κανόνες 1-2, firestore.rules).
   PUBLIC_LANDS:     { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α1/Α11 — η ΓΗ είναι φυσικό γεγονός, κοινό σε όλους· υπάρχει πριν τη διεκδικήσει οποιοσδήποτε και δεν ανήκει σε κανέναν. Read-only από τον πελάτη.' },
   PUBLIC_BUILDINGS: { mode: 'none', fieldName: '', unscopedCategory: 'public-world', unscopedReason: 'ADR-777 Α11 — «το κτίριο του κόσμου». Κοινή ταυτότητα ώστε προσφορά και ζήτηση να δείχνουν στο ΙΔΙΟ πράγμα (§14.5). Read-only από τον πελάτη.' },
+
+  // --- ADR-777 Α3/Α5: ΔΗΜΟΣΙΕΥΜΕΝΗ ΠΡΟΒΟΛΗ ----------------------------------
+  // 🔴 Άλλη κατηγορία από τις δύο παραπάνω, ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ Ο ΚΥΚΛΟΣ ΖΩΗΣ: η γη
+  // υπάρχει ακόμη κι αν σβήσουν όλοι οι λογαριασμοί· η αγγελία σβήνει μαζί με την
+  // απόσυρσή της. Βλ. `UnscopedCategory.published-projection`.
+  PUBLIC_LISTINGS:  { mode: 'none', fieldName: '', unscopedCategory: 'published-projection', unscopedReason: 'ADR-777 Α3/Α5/Α20 — προβολή ανάγνωσης της δημοσιευμένης αγγελίας, με κλειστό σχήμα ΧΩΡΙΣ καμία ταυτότητα πελάτη. Το Firestore δεν φιλτράρει πεδία στην ανάγνωση, οπότε η απομόνωση επιτυγχάνεται με ΤΟ ΤΙ ΓΡΑΦΕΤΑΙ, όχι με where(). Read-only από τον πελάτη· γράφει μόνο ο διακομιστής.' },
 } as const;
 
 /** Default tenant configuration for collections not in the override map */

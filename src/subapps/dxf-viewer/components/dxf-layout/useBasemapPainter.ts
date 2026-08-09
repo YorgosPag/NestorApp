@@ -29,8 +29,12 @@ import {
   subscribeBasemapAvailability,
 } from '../../systems/basemap/basemap-availability';
 import { getBasemapState, subscribeBasemap } from '../../systems/basemap/basemap-store';
+import {
+  hasBasemapAttributionSurface,
+  subscribeBasemapAttributionSurface,
+} from '../../systems/basemap/basemap-attribution-surface';
+import { resolveBasemapPaint } from '../../systems/basemap/basemap-paint-decision';
 import { getBasemapDisplayProjector, worldMmToGeographic } from '../../systems/basemap/basemap-projection';
-import { resolveBasemapSource } from '../../systems/basemap/basemap-source';
 import { chooseZoomLevel, tilesForDisplayRect } from '../../systems/basemap/basemap-tile-model';
 import { paintBasemap } from '../../systems/basemap/basemap-painter';
 import { subscribeTileReady } from '../../systems/basemap/basemap-tile-cache';
@@ -53,15 +57,24 @@ export function useBasemapPainter(): OverlayDispatchPainter | null {
     getBasemapAvailability,
     getBasemapAvailability,
   );
+  // Η επιφάνεια απόδοσης προσαρτάται σε `useEffect`, δηλαδή **μετά** το πρώτο render αυτού του
+  // hook. Χωρίς αυτή την εγγραφή ο painter θα έμενε `null` μέχρι την επόμενη άσχετη αλλαγή —
+  // δηλαδή «ο χάρτης εμφανίζεται μόνο αν κουνήσεις κάτι», βλάβη που θα κυνηγιόταν στο δίκτυο.
+  const attributed = useSyncExternalStore(
+    subscribeBasemapAttributionSurface,
+    hasBasemapAttributionSurface,
+    hasBasemapAttributionSurface,
+  );
 
   const [tileTick, setTileTick] = useState(0);
   useEffect(() => subscribeTileReady(() => setTileTick((tick) => tick + 1)), []);
 
   return useMemo<OverlayDispatchPainter | null>(() => {
-    // «Δεν ξέρω πού είσαι» ⇒ κανένας χάρτης. Δες `basemap-availability` για το γιατί μια
-    // ζωγραφική εδώ θα έδειχνε Ατλαντικό κάτω από το κτίριο.
-    if (!state.enabled || availability === 'unknown' || state.opacity <= 0) return null;
-    const source = resolveBasemapSource(state.sourceId);
+    // Η ΜΙΑ απόφαση (`basemap-paint-decision`) — «σβηστό», «χωρίς θέση» και «χωρίς απόδοση»
+    // καταλήγουν όλα εδώ ως `null`, δηλαδή μηδέν κόστος για τη ζώνη (πύλη ADR-726 Φ2).
+    const decision = resolveBasemapPaint();
+    if (!decision.show) return null;
+    const { source, opacity } = decision.content;
 
     return (ctx, transform, viewport) => {
       const projector = getBasemapDisplayProjector();
@@ -81,10 +94,13 @@ export function useBasemapPainter(): OverlayDispatchPainter | null {
         source,
         tiles: selection.tiles,
         projector,
-        opacity: state.opacity,
+        opacity,
       });
     };
     // `tileTick` είναι εξάρτηση **σκοπίμως**: αλλάζει την ταυτότητα του painter ώστε η ζώνη να
     // ξαναζωγραφίσει μόλις φτάσει πλακίδιο. Δες την επικεφαλίδα.
-  }, [state.enabled, state.opacity, state.sourceId, availability, tileTick]);
+    //
+    // Τα υπόλοιπα είναι οι **είσοδοι** της `resolveBasemapPaint`: δεν διαβάζονται εδώ πια, αλλά
+    // μια αλλαγή τους αλλάζει την απόφαση, άρα οφείλει να ξαναχτίσει τον painter.
+  }, [state.enabled, state.opacity, state.sourceId, availability, attributed, tileTick]);
 }

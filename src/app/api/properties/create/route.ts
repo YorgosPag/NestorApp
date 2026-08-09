@@ -7,6 +7,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import { createEntity } from '@/lib/firestore/entity-creation.service';
 import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-normalizer';
 import { deriveMultiLevelFields } from '@/services/multi-level.service';
+import { republishListing } from '@/services/listings/publish-public-listing';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import type { PropertyType } from '@/types/property';
@@ -202,6 +203,17 @@ export const POST = withStandardRateLimit(
         });
 
         // ADR-029 Phase D: search_documents written by Cloud Function onPropertyWrite.
+
+        // 📢 ADR-777 Α3/Α5 — η δημόσια προβολή γεννιέται μαζί με το ακίνητο.
+        // ⚠️ Ένα ΝΕΟ ακίνητο σχεδόν ποτέ δεν είναι δημοσιεύσιμο τη στιγμή της
+        // δημιουργίας (`operationalStatus: 'draft'`), οπότε το συνηθισμένο αποτέλεσμα
+        // εδώ είναι `'withdrawn'` — δηλαδή «καμία προβολή», που είναι το **σωστό**.
+        // Καλείται παρ' όλα αυτά ώστε να μην υπάρχει διαδρομή γραφής χωρίς απάντηση.
+        await republishListing(
+          adminDb,
+          result.id,
+          { ...entitySpecificFields, id: result.id } as Parameters<typeof republishListing>[2],
+        );
 
         return apiSuccess<PropertyCreateResponse>(
           { propertyId: result.id },

@@ -27,6 +27,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { Source, Layer } from 'react-map-gl/maplibre';
 import { InteractiveMap } from '@/subapps/geo-canvas/components/InteractiveMap';
+import { PolygonSystemProvider } from '@/subapps/geo-canvas/systems/polygon-system';
 import type { MapInstance } from '@/subapps/geo-canvas/hooks/map/useMapInteractions';
 import { readRootCssVar } from '@/subapps/dxf-viewer/config/color-config';
 import { listingsToGeoJson } from '@/lib/listings/listings-geojson';
@@ -84,6 +85,15 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
   }, [onSelect]);
 
   return (
+    /*
+     * 🔴 **Ο `PolygonSystemProvider` ΔΕΝ είναι προαιρετικός** — ο `InteractiveMap` πετά
+     * ρητά χωρίς αυτόν. Το έμαθα ζωντανά (η σελίδα μεταγλωττίστηκε και **έσκασε**), και
+     * είναι το ίδιο ακριβώς που κάνει ο `AddressMap` σε παραγωγή (γρ. 298).
+     *
+     * 🔑 Είναι επίσης η **θέση** όπου θα κουμπώσει το «σχεδίασε την περιοχή σου» της Α4
+     * §27.4 — το σύστημα πολυγώνων είναι ήδη εδώ, δεν χρειάζεται να μετακομίσει τίποτα.
+     */
+    <PolygonSystemProvider>
     <InteractiveMap
       transformState={{ controlPoints: [], isCalibrated: false, quality: null, rmsError: null, matrix: null }}
       showStatusBar={false}
@@ -151,6 +161,7 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
         />
       </Source>
     </InteractiveMap>
+    </PolygonSystemProvider>
   );
 }
 

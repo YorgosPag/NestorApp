@@ -1,0 +1,55 @@
+{
+  "page": {
+    "title": "Search results",
+    "loading": "Loading listings…",
+    "error": "Listings could not be loaded"
+  },
+  "ledger": {
+    "summary": "{total} properties · {mapped} on the map · {unmapped} with no declared location",
+    "empty": "No listings yet — and the map says so, instead of looking empty without explanation.",
+    "imbalanced": "The count does not balance — this is a defect, not a state."
+  },
+  "unmapped": {
+    "heading_one": "{count} more — it may be here, it may not",
+    "heading_other": "{count} more — they may be here, they may not",
+    "hint": "These are not filtered out when you move the map: we cannot exclude them from an area we do not know they belong to.",
+    "reason": {
+      "neverAsked": "The location has not been recorded yet",
+      "ownerDeclined": "The owner has not declared a location"
+    }
+  },
+  "map": {
+    "label": "Results map",
+    "legendTitle": "What each shape means",
+    "shape": {
+      "outline": "Surveyed outline",
+      "pin": "Exact address",
+      "pinWithRing": "Street without a number",
+      "shadedCircle": "Area / neighbourhood",
+      "shadedCity": "City only — not an address",
+      "none": "No declared location"
+    }
+  },
+  "list": {
+    "label": "Results list",
+    "empty": "No property matches the filters"
+  },
+  "card": {
+    "areaSqm": "{value} m²",
+    "floor": "Floor {value}",
+    "groundFloor": "Ground floor",
+    "bedrooms_one": "{count} bedroom",
+    "bedrooms_other": "{count} bedrooms",
+    "noImage": "No photo",
+    "priceMissing": {
+      "notListed": "Not available",
+      "salePriceMissing": "No sale price recorded",
+      "rentPriceMissing": "No rent recorded"
+    },
+    "offer": {
+      "sell": "Sale",
+      "leaseOut": "Rent",
+      "exchange": "Land-for-flats"
+    }
+  }
+}

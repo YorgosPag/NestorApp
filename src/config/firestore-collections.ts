@@ -42,6 +42,23 @@ export const COLLECTIONS = {
    * που κάνει δυνατή τη συνάντηση προσφοράς και ζήτησης (SPEC-777A §14.5).
    */
   PUBLIC_BUILDINGS: process.env.NEXT_PUBLIC_PUBLIC_BUILDINGS_COLLECTION || 'public_buildings',
+
+  /**
+   * 🌍 ADR-777 Α3/Α5/Α20 — **Η ΠΡΟΒΟΛΗ ΑΝΑΓΝΩΣΗΣ της αγγελίας.** IDs = **το ίδιο το
+   * `propertyId`** (σχέση 1:1, ταυτότητα καθρεφτισμένη — **καμία νέα γεννήτρια**, N.6).
+   *
+   * 🔴 **ΔΕΝ είναι το `PROPERTIES`, και η διαφορά είναι ασφάλεια, όχι ταξινόμηση.**
+   * Το Firestore δεν έχει έλεγχο ανάγνωσης **σε επίπεδο πεδίου** — «*you either
+   * retrieve the full document, or nothing*» (τεκμηρίωση Google). Άρα το δημόσιο σκέλος
+   * πάνω στο `properties` έδινε στον ανώνυμο επισκέπτη **ολόκληρο** το έγγραφο:
+   * `companyId` · `createdBy` · `_lastModifiedByName` (**ονοματεπώνυμο**) · `projectId`.
+   * Το σχόλιο δίπλα του έγραφε «*no companyId leak*» — εγγύηση **χωρίς μηχανισμό**.
+   *
+   * Εδώ η διαρροή είναι **δομικά αδύνατη**: το σχήμα (`types/public-listing.ts`) είναι
+   * κλειστό και δεν περιέχει καμία ταυτότητα πελάτη. Γράφει **μόνο ο διακομιστής**·
+   * δηλωμένη `public-world` στο `services/firestore/tenant-config.ts` (CHECK 3.35).
+   */
+  PUBLIC_LISTINGS: process.env.NEXT_PUBLIC_PUBLIC_LISTINGS_COLLECTION || 'public_listings',
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
   /**
    * ADR-759 Φ2 — institutional/legal plot data as declared by a surveyor on a date

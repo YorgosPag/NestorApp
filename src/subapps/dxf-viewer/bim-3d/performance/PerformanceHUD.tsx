@@ -5,12 +5,16 @@
  *
  * ADR-040 micro-leaf: 1 useSyncExternalStore → PerformanceHUDStore.
  * Renders mini pill or expanded panel depending on store state + viewport width.
- * Absolute-positioned inside viewport: bottom-[66px] right-4 z-[55].
+ * Absolute-positioned inside viewport: bottom-[66px] right-4 + `PANEL_LAYOUT.Z_INDEX['55']`.
+ * Το 55 είναι SSoT token (ADR-782 Φ2): «πάνω από το BimViewport3D (z-50)», δηλαδή HUD που ζει
+ * και στις δύο προβολές. Ήταν ωμό `z-[55]` εδώ και ξαναγράφτηκε ωμό στην απόδοση υποβάθρου —
+ * δύο σημεία με τον ίδιο αριθμό και κανένα να λέει γιατί.
  */
 
 import { useSyncExternalStore, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { usePerformanceHUDStore } from './PerformanceHUDStore';
 import { usePerformanceHistoryStore } from './PerformanceHistoryStore';
 import { PerformanceHUDMini } from './PerformanceHUDMini';
@@ -78,7 +82,7 @@ export function PerformanceHUD({ canvas, projectId, userId, companyId }: Perform
   if (!enabled) return null;
 
   return (
-    <div className="absolute bottom-[66px] right-4 z-[55]">
+    <div className={`absolute bottom-[66px] right-4 ${PANEL_LAYOUT.Z_INDEX['55']}`}>
       {/* ≥1024px: mini or expanded */}
       <div className="hidden lg:block">
         {expanded ? (

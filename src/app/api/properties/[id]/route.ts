@@ -26,6 +26,7 @@ import {
   deactivatePropertyContactLinks,
 } from './property-contact-links';
 import { validateCommercialTransaction } from './property-commercial-validation';
+import { republishPublicProjection, type ListingProperty } from './property-publish-projection';
 import { normalizePropertyWritePayload } from '@/lib/firestore/property-write-normalizer';
 import {
   PropertyPatchSchema,
@@ -226,6 +227,10 @@ export const PATCH = entityIdRoute<ApiSuccessResponse<PropertyMutationResult>>({
             companyId: ctx.companyId,
           }).catch(() => { /* fire-and-forget */ });
         }
+
+        // ADR-777 Α3/Α5 — η δημόσια προβολή. Awaited (όχι fire-and-forget) και ποτέ
+        // δεν πετά· το «γιατί» ζει στο property-publish-projection.
+        await republishPublicProjection(adminDb, id, { ...existing, ...updateData } as ListingProperty);
 
         return apiSuccess<PropertyMutationResult>({ id, _v: versionResult.newVersion }, 'Property updated');
       } catch (error) {

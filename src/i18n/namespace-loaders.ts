@@ -47,6 +47,7 @@ function getElLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-detail': return () => import('./locales/el/properties-detail.json');
     case 'properties-enums': return () => import('./locales/el/properties-enums.json');
     case 'properties-viewer': return () => import('./locales/el/properties-viewer.json');
+    case 'search-results': return () => import('./locales/el/search-results.json');
     case 'crm': return () => import('./locales/el/crm.json');
     case 'crm-inbox': return () => import('./locales/el/crm-inbox.json');
     case 'navigation': return () => import('./locales/el/navigation.json');
@@ -157,6 +158,7 @@ function getEnLoader(namespace: Namespace): NamespaceLoader | null {
     case 'properties-detail': return () => import('./locales/en/properties-detail.json');
     case 'properties-enums': return () => import('./locales/en/properties-enums.json');
     case 'properties-viewer': return () => import('./locales/en/properties-viewer.json');
+    case 'search-results': return () => import('./locales/en/search-results.json');
     case 'crm': return () => import('./locales/en/crm.json');
     case 'crm-inbox': return () => import('./locales/en/crm-inbox.json');
     case 'navigation': return () => import('./locales/en/navigation.json');

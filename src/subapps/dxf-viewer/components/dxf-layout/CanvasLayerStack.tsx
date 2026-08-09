@@ -36,7 +36,7 @@ import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPr
 // ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush material palette (leaf, gate σε activeTool).
 import { FinishPaint2DPanel } from './FinishPaint2DPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
-import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf'; import { UnifiedPerformanceHudLeaf } from './UnifiedPerformanceHudLeaf';
+import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf'; import { CanvasStackHudLeaves } from './canvas-layer-stack-hud-leaves';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
 // ADR-575/640 — GROUP + BLOCK container selection affordances (overlays + gizmos), grouped
 // out of this shell to keep it under the 500-line budget (N.7.1). ADR-040 leaves inside.
@@ -467,8 +467,9 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
             getCanvasEl={() => dxfCanvasRef?.current?.getCanvas?.() ?? null}
           />
           <CanvasLayerStack3dLeaf />
-          {/* ADR-366 §B.5.U — unified 2D+3D Performance HUD (sibling leaf, lives in both modes). */}
-          <UnifiedPerformanceHudLeaf getCanvas2D={() => dxfCanvasRef?.current?.getCanvas?.() ?? null} />
+          {/* ADR-040 — τα HUD που ζουν ΚΑΙ ΣΤΙΣ ΔΥΟ προβολές (πάνω από το 3Δ viewport, z-50):
+              απόδοση παρόχου χάρτη (ADR-782 §14) + Performance HUD (ADR-366 §B.5.U). */}
+          <CanvasStackHudLeaves getCanvas2D={() => dxfCanvasRef?.current?.getCanvas?.() ?? null} />
           <Focus2DOverlayLeaf scene={dxfScene} viewport={viewport} />
           {/* ADR-732 ζώνη Β — analytical (ADR-552) + envelope (ADR-396 P4) + mep-wires
               (ADR-408 Φ7) + proposals (ADR-554) σε ΕΝΑΝ καμβά z-[11] (πάνω από dxf z10,

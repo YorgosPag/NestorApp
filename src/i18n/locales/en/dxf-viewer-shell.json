@@ -871,6 +871,7 @@
     "unavailableHint": "This project is not geo-referenced — its position on the map is unknown. Import a survey with coordinates, or align the drawing.",
     "approximateBadge": "approximate",
     "approximateHint": "Position derived from the project address and is approximate. For drawing accuracy, align the drawing to the survey.",
+    "attributionAria": "Map data credit",
     "sources": {
       "osmStandard": "OpenStreetMap"
     }

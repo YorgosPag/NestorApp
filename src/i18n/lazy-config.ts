@@ -38,6 +38,7 @@ export const SUPPORTED_NAMESPACES = [
   'properties-detail',
   'properties-enums',
   'properties-viewer',
+  'search-results',   // ADR-777 A3 — δημοσια οθονη 2 (χαρτης + λιστα)
   'crm',
   'navigation',
   'auth',

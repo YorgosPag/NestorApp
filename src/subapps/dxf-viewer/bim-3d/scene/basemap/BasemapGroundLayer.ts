@@ -21,13 +21,14 @@
 import * as THREE from 'three';
 import { registerPostFxOverlay, OVERLAY_ORDER } from '../post-fx-overlay-pass';
 import { worldToDxfPlan } from '../../viewport/coordinate-transforms';
-import { getBasemapAvailability } from '../../../systems/basemap/basemap-availability';
-import { getBasemapState } from '../../../systems/basemap/basemap-store';
+import {
+  resolveBasemapPaint,
+  type BasemapContent,
+} from '../../../systems/basemap/basemap-paint-decision';
 import {
   getBasemapDisplayProjector,
   worldMmToGeographic,
 } from '../../../systems/basemap/basemap-projection';
-import { resolveBasemapSource } from '../../../systems/basemap/basemap-source';
 import { chooseZoomLevel, tilesForDisplayRect } from '../../../systems/basemap/basemap-tile-model';
 import { buildTileWarpMesh } from '../../../systems/basemap/basemap-warp';
 import { getTileImage } from '../../../systems/basemap/basemap-tile-cache';
@@ -85,11 +86,22 @@ export class BasemapGroundLayer {
     );
   }
 
-  /** Πάροχος overlay: ανανεώνει και επιστρέφει τη ρίζα, ή τίποτα όταν ο χάρτης δεν ισχύει. */
+  /**
+   * Πάροχος overlay: ανανεώνει και επιστρέφει τη ρίζα, ή τίποτα όταν ο χάρτης δεν ισχύει.
+   *
+   * Η άρνηση έρχεται από τη **ΜΙΑ** απόφαση (`basemap-paint-decision`) — την ίδια που ρωτά και
+   * ο ζωγράφος του 2Δ. Περιλαμβάνει τον όρο της άδειας: χωρίς επιφάνεια απόδοσης στην οθόνη,
+   * αυτό το στρώμα **δεν** ζωγραφίζει, όσο κι αν ο χρήστης έχει ανάψει τον χάρτη αλλού.
+   */
   private overlayRoots(): readonly THREE.Object3D[] {
-    const state = getBasemapState();
-    if (!state.enabled || state.opacity <= 0 || getBasemapAvailability() === 'unknown') {
+    if (!resolveBasemapPaint().show) {
       this.clearTiles();
+      // ⚠️ Η υπογραφή μηδενίζεται **εδώ** και όχι μέσα στο `clearTiles`: εκείνο καλείται και από
+      // το `rebuild`, όπου ο μηδενισμός θα ακύρωνε την υπογραφή που μόλις γράφτηκε ⇒ ξαναχτίσιμο
+      // δεκάδων γεωμετριών σε **κάθε** καρέ. Χωρίς τον μηδενισμό όμως, ένα σβήσιμο-και-άναμμα
+      // χωρίς κίνηση κάμερας θα υπολόγιζε την ίδια υπογραφή, θα έβγαινε νωρίς, και ο χάρτης θα
+      // έμενε άδειος μέχρι ο χρήστης να κουνήσει την προβολή.
+      this.signature = '';
       return [];
     }
     this.refresh();
@@ -98,8 +110,9 @@ export class BasemapGroundLayer {
 
   /** Ξαναχτίζει τα πλακίδια αν — και μόνο αν — άλλαξε το σύνολο ή έφτασαν εικόνες που έλειπαν. */
   private refresh(): void {
-    const state = getBasemapState();
-    const source = resolveBasemapSource(state.sourceId);
+    const decision = resolveBasemapPaint();
+    if (!decision.show) return;
+    const { source, opacity } = decision.content;
     const camera = this.getCamera();
     const target = this.getTarget();
     const distanceM = camera.position.distanceTo(target);
@@ -113,10 +126,10 @@ export class BasemapGroundLayer {
     const zoom = chooseZoomLevel({ pixelsPerMm, devicePixelRatio: 1, latitude, source });
     const selection = tilesForDisplayRect(rect, zoom, projector);
 
-    const signature = tileSetSignature(source.id, state.opacity, selection.tiles);
+    const signature = tileSetSignature(source.id, opacity, selection.tiles);
     if (signature === this.signature && !this.pendingTiles) return;
     this.signature = signature;
-    this.rebuild(selection.tiles, projector, pixelsPerMm, state.opacity);
+    this.rebuild(decision.content, selection.tiles, projector, pixelsPerMm);
   }
 
   /** Το ορατό ορθογώνιο σε mm κάτοψης, γύρω από τον στόχο της κάμερας. */
@@ -142,13 +155,13 @@ export class BasemapGroundLayer {
 
   /** Καταστρέφει τα τρέχοντα πλακίδια και χτίζει τα νέα. */
   private rebuild(
+    content: BasemapContent,
     tiles: readonly TileId[],
     projector: ReturnType<typeof getBasemapDisplayProjector>,
     pixelsPerMm: number,
-    opacity: number,
   ): void {
     this.clearTiles();
-    const source = resolveBasemapSource(getBasemapState().sourceId);
+    const { source, opacity } = content;
     let missing = false;
     for (const tile of tiles) {
       const image = getTileImage(source, tile);

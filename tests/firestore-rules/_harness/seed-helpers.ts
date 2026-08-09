@@ -548,3 +548,34 @@ export async function seedPublicBuilding(
     });
   });
 }
+
+/**
+ * ADR-777 Α3/Α5 — δημοσιευμένη ΠΡΟΒΟΛΗ αγγελίας (`public_listings`).
+ *
+ * 🔴 **Το seed είναι ΤΟ ΙΔΙΟ ΤΟ ΣΥΜΒΟΛΑΙΟ, όχι δείγμα.** Είναι το πλήρες σχήμα του
+ * `PublicListing` — και **κανένα** πεδίο ταυτότητας πελάτη. Ένα seed που «τυχαίνει»
+ * να έχει `companyId` θα δοκίμαζε τους κανόνες πάνω σε έγγραφο που δεν μοιάζει με
+ * αυτό που γράφει η παραγωγή, δηλαδή θα έβαφε πράσινο κάτι που δεν ελέγχθηκε.
+ */
+export async function seedPublicListing(
+  env: RulesTestEnvironment,
+  listingId: string,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('public_listings').doc(listingId).set({
+      id: listingId,
+      commercialStatus: 'for-sale',
+      commercial: { askingPrice: 200000, finalPrice: null, rentPrice: null },
+      coverImage: null,
+      type: 'maisonette',
+      areaSqm: 95,
+      offerKinds: ['sell'],
+      position: { kind: 'unknown', reason: 'never-asked' },
+      floor: 1,
+      bedrooms: 3,
+      title: 'Μεζονέτα 95 τ.μ.',
+      projectedAt: '2026-08-10T10:00:00.000Z',
+      // NOTE: κανένα companyId / createdBy / _lastModifiedByName — αυτό ΕΙΝΑΙ η άμυνα.
+    });
+  });
+}

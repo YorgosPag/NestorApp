@@ -168,6 +168,20 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     matrix: publicWorldMatrix(),
   },
   {
+    // ADR-777 Α3/Α5/Α20 — Η ΠΡΟΒΟΛΗ της αγγελίας προς τον κόσμο.
+    //
+    // ⚠️ Ίδιο ΣΧΗΜΑ κανόνα με το `public_world` (read: true / write: false), αλλά
+    // ΔΙΑΦΟΡΕΤΙΚΗ κατηγορία στο `tenant-config.ts` (`published-projection`): η γη
+    // υπάρχει ακόμη κι αν σβήσουν όλοι οι λογαριασμοί· η αγγελία σβήνει μαζί με την
+    // απόσυρσή της. Ο πίνακας είναι ο ίδιος επειδή το **ερώτημα ασφαλείας** είναι το
+    // ίδιο — όχι επειδή τα δύο πράγματα είναι το ίδιο.
+    collection: 'public_listings',
+    pattern: 'public_world',
+    testFile: 'tests/firestore-rules/suites/public-listings.rules.test.ts',
+    rulesRange: [1002, 1006],
+    matrix: publicWorldMatrix(),
+  },
+  {
     collection: 'projects',
     pattern: 'tenant_direct',
     testFile: 'tests/firestore-rules/suites/projects.rules.test.ts',
