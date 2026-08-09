@@ -202,8 +202,43 @@ export interface DesignTokens {\n`;
   }
   ts += `};\n\n`;
 
-  ts += `export default designTokens;\n`;
+  ts += `export default designTokens;\n\n`;
+  ts += generateZIndexScale(tokens);
 
+  return ts;
+}
+
+/**
+ * Ο ΑΡΙΘΜΗΤΙΚΟΣ πίνακας z-index — η μία αυθεντία για τη σειρά στρώσης.
+ *
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΟ `designTokens`: εκείνο δίνει `'var(--z-index-toast)'`,
+ * δηλαδή **συμβολοσειρά για CSS**. Ο κώδικας όμως κάνει **αριθμητική** πάνω στη σειρά
+ * (`DxfZIndexSystem.styles.ts` γράφει `globalZIndex.modal + 10`), και μια συμβολοσειρά
+ * `var(...)` δεν προσθέτεται. Γι' αυτό το `styles/design-tokens/modules/layout.ts`
+ * κρατούσε **χειρόγραφο αντίγραφο** των ίδιων αριθμών με το σχόλιο «Synced with
+ * design-tokens.json» — και **τίποτα δεν επέβαλλε αυτόν τον συγχρονισμό**. Δύο αλήθειες
+ * για το ίδιο ερώτημα, η μία αναγκασμένη να πέσει έξω σιωπηλά (σχήμα ADR-749).
+ *
+ * ⚠️ Οι τιμές είναι **ακέραιοι**, όχι συμβολοσειρές: το `z-index` του CSS είναι
+ * `<integer>`, και ένας αριθμός επιτρέπει στον μεταγλωττιστή να ελέγξει τη σύγκριση.
+ *
+ * ⚠️ Η **σειρά** των κλειδιών είναι η σειρά του `design-tokens.json` — και είναι
+ * **συμβόλαιο**, όχι αισθητική: το CHECK 3.50 απαιτεί μονότονη αύξηση, ώστε ένας νέος
+ * ρόλος να μην μπορεί να μπει σε λάθος σκαλί χωρίς να μπλοκάρει.
+ */
+function generateZIndexScale(tokens) {
+  const scale = tokens.zIndex || {};
+  let ts = `/**\n * 🤖 AUTO-GENERATED — η ΜΙΑ αριθμητική κλίμακα z-index.\n`;
+  ts += ` * Πηγή: design-tokens.json ▸ zIndex.  Εντολή: npm run build:tokens\n`;
+  ts += ` * ΜΗΝ γράψεις δεύτερη κλίμακα δίπλα σε αυτή — δες CHECK 3.50.\n */\n`;
+  ts += `export const zIndexScale = {\n`;
+  for (const [key, token] of Object.entries(scale)) {
+    if (!token || typeof token !== 'object' || token.value === undefined) continue;
+    ts += `  /** ${token.description || ''} */\n`;
+    ts += `  ${key}: ${Number(token.value)},\n`;
+  }
+  ts += `} as const;\n\n`;
+  ts += `export type ZIndexRole = keyof typeof zIndexScale;\n`;
   return ts;
 }
 
@@ -351,4 +386,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { main, generateCSS, generateTypeScript, generateTailwindConfig };
+module.exports = { main, generateCSS, generateTypeScript, generateTailwindConfig, generateZIndexScale };

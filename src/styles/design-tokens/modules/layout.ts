@@ -5,25 +5,32 @@
 import { colors, spacing, typography, shadows, animation, transitions, semanticColors } from './foundations';
 import { borders } from './borders';
 import { componentSizes } from './component-sizes';
+import { zIndexScale } from '../generated/tokens';
 
-// 🏢 ENTERPRISE Z-INDEX HIERARCHY - Single Source of Truth
-// Synced with design-tokens.json (see ADR-002 in centralized_systems.md)
+/**
+ * 🏢 ENTERPRISE Z-INDEX HIERARCHY — το TS πρόσωπο της **μίας** κλίμακας.
+ *
+ * 🔴 ΜΕΧΡΙ ΤΙΣ 2026-08-08 ΑΥΤΟ ΗΤΑΝ ΧΕΙΡΟΓΡΑΦΟ ΑΝΤΙΓΡΑΦΟ, με το σχόλιο «Synced with
+ * design-tokens.json» — μια **ανάθεση σε άνθρωπο**, που **καμία πύλη δεν επέβαλλε**. Οι
+ * αριθμοί έτυχε να συμφωνούν· τίποτα δεν εγγυόταν ότι θα συνεχίσουν. Είναι το σχήμα
+ * ADR-749 (δύο αλήθειες για το ίδιο ερώτημα) και το σχήμα του CHECK 3.34 (δύο λίστες
+ * namespace που είχαν **αποκλίνει κατά 63** χωρίς κανείς να τις συγκρίνει).
+ *
+ * Πλέον **παράγεται** από το `design-tokens.json` (`npm run build:tokens`), δηλαδή η
+ * ίδια πηγή που δίνει και τα `--z-index-*` του CSS. Ένας ρόλος που προστίθεται εκεί
+ * εμφανίζεται εδώ **μόνος του**.
+ *
+ * ⚠️ ΜΗΝ ξαναγράψεις αριθμό εδώ. Πρόσθεσε τον ρόλο στο `design-tokens.json` και τρέξε
+ * `npm run build:tokens`. Το CHECK 3.50 μπλοκάρει ωμούς αριθμούς.
+ *
+ * Τα `hide`/`auto` **δεν** είναι στρώσεις — είναι CSS λέξεις-κλειδιά (`z-index: auto`
+ * σημαίνει «μη δημιουργείς stacking context»), οπότε δεν ανήκουν σε διατεταγμένη
+ * κλίμακα και μένουν εδώ.
+ */
 export const zIndex = {
   hide: -1,
   auto: 'auto',
-  base: 0,
-  docked: 10,
-  dropdown: 1000,
-  sticky: 1100,
-  banner: 1200,
-  overlay: 1300,
-  modal: 1400,
-  popover: 1500,
-  skipLink: 1600,
-  toast: 1700,
-  tooltip: 1800,
-  // 🚨 CRITICAL: Use only for system-level overlays (debuggers, error handlers)
-  critical: 2147483647,
+  ...zIndexScale,
 } as const;
 
 // ============================================================================

@@ -198,7 +198,14 @@
     "popover": { "value": "1500", "type": "zIndex", "description": "Popovers, floating cards" },
     "skipLink": { "value": "1600", "type": "zIndex", "description": "Accessibility skip links" },
     "toast": { "value": "1700", "type": "zIndex", "description": "Toast notifications" },
-    "tooltip": { "value": "1800", "type": "zIndex", "description": "Tooltips - highest UI layer" },
+    "tooltip": { "value": "1800", "type": "zIndex", "description": "Tooltips - highest UI layer of the APPLICATION SHELL" },
+
+    "viewerModal": { "value": "9000", "type": "zIndex", "description": "DXF workspace modal surface (backdrop AND card share this rung; DOM order decides between them)" },
+    "viewerModalNested": { "value": "9001", "type": "zIndex", "description": "A modal opened FROM a workspace modal (function arguments over insert-function)" },
+    "viewerPalette": { "value": "9900", "type": "zIndex", "description": "Persistent workspace palettes (Properties) - outlive the surfaces below them" },
+    "viewerMenu": { "value": "9999", "type": "zIndex", "description": "Workspace context menus and hover popovers - summoned, dismissed on any gesture" },
+    "viewerTransient": { "value": "10000", "type": "zIndex", "description": "Transient workspace surfaces the user just aimed at (mini toolbar, quick-properties panel)" },
+
     "critical": { "value": "2147483647", "type": "zIndex", "description": "Critical system overlays only" }
   },
   "canvas": {

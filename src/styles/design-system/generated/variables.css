@@ -121,6 +121,11 @@
   --z-index-skip-link: 1600;
   --z-index-toast: 1700;
   --z-index-tooltip: 1800;
+  --z-index-viewer-modal: 9000;
+  --z-index-viewer-modal-nested: 9001;
+  --z-index-viewer-palette: 9900;
+  --z-index-viewer-menu: 9999;
+  --z-index-viewer-transient: 10000;
   --z-index-critical: 2147483647;
   --canvas-background-dxf: #000000;
   --canvas-background-dxf-image: none;

@@ -118,6 +118,11 @@ export interface DesignTokens {
   zIndex_skipLink: string;
   zIndex_toast: string;
   zIndex_tooltip: string;
+  zIndex_viewerModal: string;
+  zIndex_viewerModalNested: string;
+  zIndex_viewerPalette: string;
+  zIndex_viewerMenu: string;
+  zIndex_viewerTransient: string;
   zIndex_critical: string;
   canvas_background_dxf: string;
   canvas_background_dxf_image: string;
@@ -249,6 +254,11 @@ export const designTokens: DesignTokens = {
   zIndex_skipLink: 'var(--z-index-skip-link)',
   zIndex_toast: 'var(--z-index-toast)',
   zIndex_tooltip: 'var(--z-index-tooltip)',
+  zIndex_viewerModal: 'var(--z-index-viewer-modal)',
+  zIndex_viewerModalNested: 'var(--z-index-viewer-modal-nested)',
+  zIndex_viewerPalette: 'var(--z-index-viewer-palette)',
+  zIndex_viewerMenu: 'var(--z-index-viewer-menu)',
+  zIndex_viewerTransient: 'var(--z-index-viewer-transient)',
   zIndex_critical: 'var(--z-index-critical)',
   canvas_background_dxf: 'var(--canvas-background-dxf)',
   canvas_background_dxf_image: 'var(--canvas-background-dxf-image)',
@@ -268,3 +278,47 @@ export const designTokens: DesignTokens = {
 };
 
 export default designTokens;
+
+/**
+ * 🤖 AUTO-GENERATED — η ΜΙΑ αριθμητική κλίμακα z-index.
+ * Πηγή: design-tokens.json ▸ zIndex.  Εντολή: npm run build:tokens
+ * ΜΗΝ γράψεις δεύτερη κλίμακα δίπλα σε αυτή — δες CHECK 3.50.
+ */
+export const zIndexScale = {
+  /** Base content layer */
+  base: 0,
+  /** Docked panels, sidebars */
+  docked: 10,
+  /** Dropdowns, selects, menus */
+  dropdown: 1000,
+  /** Sticky headers, toolbars */
+  sticky: 1100,
+  /** Notification banners */
+  banner: 1200,
+  /** Overlays, backdrops */
+  overlay: 1300,
+  /** Modal dialogs */
+  modal: 1400,
+  /** Popovers, floating cards */
+  popover: 1500,
+  /** Accessibility skip links */
+  skipLink: 1600,
+  /** Toast notifications */
+  toast: 1700,
+  /** Tooltips - highest UI layer of the APPLICATION SHELL */
+  tooltip: 1800,
+  /** DXF workspace modal surface (backdrop AND card share this rung; DOM order decides between them) */
+  viewerModal: 9000,
+  /** A modal opened FROM a workspace modal (function arguments over insert-function) */
+  viewerModalNested: 9001,
+  /** Persistent workspace palettes (Properties) - outlive the surfaces below them */
+  viewerPalette: 9900,
+  /** Workspace context menus and hover popovers - summoned, dismissed on any gesture */
+  viewerMenu: 9999,
+  /** Transient workspace surfaces the user just aimed at (mini toolbar, quick-properties panel) */
+  viewerTransient: 10000,
+  /** Critical system overlays only */
+  critical: 2147483647,
+} as const;
+
+export type ZIndexRole = keyof typeof zIndexScale;

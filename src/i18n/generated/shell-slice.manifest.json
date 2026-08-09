@@ -39,7 +39,7 @@
     "landing",
     "navigation"
   ],
-  "inputsSha256": "cda496eb65089e9a3c5d7b8570c3a4ec9f833293766782d3259dd7385a12569e",
+  "inputsSha256": "f18644ea3071606a35a44a9f03c0d94e79954fb1d9cf11b921450c6ca3f492a0",
   "languages": [
     "el"
   ],
@@ -404,10 +404,11 @@
     "src/stores/notificationCenter.ts": "c4f8f29729db4f02dbacd6bf6178ab476ee82489f80ebb86893f83434e98db98",
     "src/stores/voiceCommandStore.ts": "336596aa084185b15bada8f4231a7b8f91e0c4a2dd109e1532f37a0d1800fbeb",
     "src/styles/design-tokens/core/spacing.ts": "3b07162c1cdd384cf1db5c5d03c6157c268621800a541299de8791b01fbe0067",
+    "src/styles/design-tokens/generated/tokens.ts": "054312cdbc0efc13780b4781b423da8bc07b7f393488023b8464d612ba64faed",
     "src/styles/design-tokens/modules/borders.ts": "2a1dca295361b01d1a3e117c7fac45a8b42486290f7dce13bf5d894a97fa35d3",
     "src/styles/design-tokens/modules/component-sizes.ts": "187394e5a79ecaf614f254cdf4c8c0febb6a85267515abb294c4f4d73f603794",
     "src/styles/design-tokens/modules/foundations.ts": "3748a0c74a99cddef63cff715dd573379d532bbe5b97b67ab013377bfa3e6d4d",
-    "src/styles/design-tokens/modules/layout.ts": "ff704dd3c97caf4b642f303d678a7bee137d4742ed829e0ff7d43fcff005e30e",
+    "src/styles/design-tokens/modules/layout.ts": "c83938265a4bba7d2dfddd2da5a5da470601bd10a69f49ffb0036133261e6344",
     "src/styles/design-tokens/modules/portal-overlay.ts": "b5d469f1ea794f783e3e0f3399e150c9d99f9f4bec66573b6c994b52d9fc8e8e",
     "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts": "31f5c90a905b757963db4bf4b4cebaa8ac532bf982c978a5927d128ef1d6c9d7",
     "src/subapps/dxf-viewer/config/color-config.ts": "4548f1ee64570a3565b06c3ed2cb92eb78d736e62fb4cfd4664ebbe60c6b3bf5",
@@ -489,7 +490,7 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 138,
     "routeBoundaries": 0,
-    "shellFiles": 412,
+    "shellFiles": 413,
     "sliceBytes": 187910
   },
   "unresolvableKeys": [
