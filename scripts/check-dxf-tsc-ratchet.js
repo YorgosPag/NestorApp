@@ -36,10 +36,25 @@
  * reports the source/test split because source errors are what ADR-663 §4 is
  * burning down.
  *
+ * ── Η ΠΥΛΗ ΠΟΥ ΔΕΝ ΜΙΛΟΥΣΕ (09/08/2026, ADR-757 ΦΑΣΗ Β #2) ───────────────────
+ * Στις 08/08 αυτή η πύλη ανέφερε άνοδο σε **191 αρχεία**, τύπωσε **20** και
+ * «… and 171 more». Η διάγνωση ήταν δομικά αδύνατη — και η αιτία **δεν** ήταν η
+ * περικοπή: το `parseErrors()` πετούσε τον **κωδικό TS**, τη γραμμή, τη στήλη
+ * και το μήνυμα την ώρα του parse, κρατώντας μόνο ένα πλήθος. Ακόμη κι αν
+ * τύπωνε και τα 191 ονόματα, το ερώτημα «ένα αίτιο που διαχέεται ή συσσώρευση;»
+ * θα έμενε αναπάντητο, γιατί **η απάντηση δεν επιβίωνε του μετρητή**.
+ *
+ * Η ανάγνωση μετακόμισε στο `lib/tsc-diagnostics.js` (SSoT, κλειστή λογιστική)
+ * και η αφήγηση στο `lib/tsc-report.js`. Εδώ έμεινε **μόνο η κρίση**.
+ * ⚠️ **Το κριτήριο ΔΕΝ άλλαξε**: ίδιο regex, ίδια `compare()`, ίδια baseline,
+ * ίδιοι κωδικοί εξόδου. Άλλαξε μόνο το τι λέει η πύλη όταν μπλοκάρει.
+ *
  * CLI:
  *   node scripts/check-dxf-tsc-ratchet.js                  # smoke
  *   node scripts/check-dxf-tsc-ratchet.js --full           # type-check + compare
  *   node scripts/check-dxf-tsc-ratchet.js --write-baseline # lock current counts
+ *   … --report <f.json>   γράψε την πλήρη αναφορά (ΠΑΝΤΑ, και στο πράσινο)
+ *   … --summary <f.md>    γράψε το markdown για το $GITHUB_STEP_SUMMARY
  *
  * Env:
  *   DXF_TSC_FULL=1            — force --full behavior even without the flag.
@@ -56,6 +71,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const tsc = require('./lib/tsc-runner');
+const diag = require('./lib/tsc-diagnostics');
+const report = require('./lib/tsc-report');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const DEFAULT_BASELINE_FILE = path.join(PROJECT_ROOT, '.dxf-tsc-baseline.json');
@@ -74,8 +91,12 @@ const TSC_HEAP_MB = tsc.resolveHeapMb();
 /** A file whose errors do not count toward the source total (still ratcheted). */
 const TEST_FILE_RE = /(__tests__|\.test\.|\.spec\.)/;
 
-/** `path/to/file.ts(12,34): error TS2345: ...` — the only shape tsc emits per error. */
-const TSC_ERROR_RE = /^(.+?)\((\d+),(\d+)\):\s+error\s+(TS\d+):/;
+/**
+ * `path/to/file.ts(12,34): error TS2345: ...` — the only shape tsc emits per error.
+ * ⚠️ Δεν ορίζεται πλέον εδώ: **μία** διάλεκτος, στο `lib/tsc-diagnostics.js`.
+ * Το ψευδώνυμο μένει γιατί το εξάγει το module (καταναλωτές + test suite).
+ */
+const TSC_ERROR_RE = diag.TSC_DIAGNOSTIC_RE;
 
 function getBaselineFile() {
   return process.env.DXF_TSC_BASELINE_FILE
@@ -88,12 +109,21 @@ function getProject() {
 }
 
 function parseArgs(argv) {
-  const out = { full: false, writeBaseline: false, help: false };
-  for (const a of argv.slice(2)) {
+  const out = { full: false, writeBaseline: false, help: false, report: null, summary: null };
+  const rest = argv.slice(2);
+  for (let i = 0; i < rest.length; i += 1) {
+    const a = rest[i];
     if (a === '--full') out.full = true;
     else if (a === '--write-baseline') out.writeBaseline = true;
     else if (a === '--help' || a === '-h') out.help = true;
-    else throw new Error(`Unknown argument: ${a}`);
+    else if (a === '--report' || a === '--summary') {
+      const value = rest[i + 1];
+      // Μια σημαία που δέχεται σιωπηλά κενή τιμή γράφει την αναφορά σε αρχείο
+      // με όνομα «--full» και μετά κανείς δεν τη βρίσκει. Fail closed.
+      if (!value || value.startsWith('--')) throw new Error(`${a} requires a file path`);
+      out[a === '--report' ? 'report' : 'summary'] = value;
+      i += 1;
+    } else throw new Error(`Unknown argument: ${a}`);
   }
   if (process.env.DXF_TSC_FULL === '1') out.full = true;
   return out;
@@ -107,6 +137,10 @@ Usage:
   node scripts/check-dxf-tsc-ratchet.js --full           # type-check + compare
   node scripts/check-dxf-tsc-ratchet.js --write-baseline # lock current counts
   DXF_TSC_FULL=1 node scripts/check-dxf-tsc-ratchet.js
+
+Visibility (γράφονται ΠΑΝΤΑ, και στο πράσινο):
+  --report <f.json>   πλήρης αναφορά: κωδικός TS + γραμμή/στήλη/μήνυμα ανά αρχείο
+  --summary <f.md>    markdown για το $GITHUB_STEP_SUMMARY
 
 Baseline file: ${path.relative(PROJECT_ROOT, getBaselineFile())}
 Project:       ${getProject()}
@@ -133,49 +167,72 @@ function isTestFile(file) {
  * parseable output combined with a non-zero exit is what we treat as failure.
  */
 function runTsc(project = getProject()) {
-  const run = tsc.runTsc({
-    args: ['--noEmit', '-p', project],
+  // `--pretty false` ΡΗΤΑ, όχι κληρονομημένο από το «δεν είμαστε TTY»: με pretty
+  // ο tsc βάφει ANSI και σπάει το διαγνωστικό σε πολλές γραμμές — ο parser θα
+  // μετρούσε **λιγότερα** σφάλματα και η πύλη θα ανέφερε πρόοδο που δεν έγινε.
+  // Το ότι σήμερα το CI τυχαίνει να είναι non-TTY δεν είναι εγγύηση· είναι τύχη.
+  return tsc.runTsc({
+    args: ['--noEmit', '--pretty', 'false', '-p', project],
     cwd: PROJECT_ROOT,
     heapMb: TSC_HEAP_MB,
     maxBufferMb: 64,
   });
-  if (run.outcome !== tsc.TSC_OUTCOME.RAN) {
-    throw new Error('\n' + tsc.formatTscFailure(run));
-  }
-  // The process survived, but survival is not a measurement: no diagnostics AND
-  // a failure exit ⇒ tsc itself broke (bad project path, missing binary). Fail
-  // closed rather than reporting a triumphant zero errors.
-  if (!TSC_ERROR_RE.test(run.stdout) && run.status !== 0) {
-    throw new Error('\n' + tsc.formatTscFailure({
-      ...run,
-      outcome: tsc.TSC_OUTCOME.NO_DIAGNOSTICS,
-      detail: `tsc exited ${run.status} over ${project} without emitting a single parseable diagnostic line.`,
-    }));
-  }
-  return run.stdout;
 }
 
-/** Parse tsc output → per-file error counts + source/test totals. */
-function parseErrors(stdout) {
-  const byFile = {};
-  let total = 0;
-  for (const line of String(stdout).split(/\r?\n/)) {
-    const m = TSC_ERROR_RE.exec(line);
-    if (!m) continue; // continuation lines of a multi-line diagnostic
-    const file = normalizeFile(m[1]);
-    byFile[file] = (byFile[file] || 0) + 1;
-    total += 1;
-  }
+/** tsc output → ό,τι χρειάζεται η κρίση **και** ό,τι χρειάζεται η αφήγηση. */
+function analyzeTsc(stdout) {
+  const analysis = diag.parseDiagnostics(stdout);
+  const byFile = diag.countByFile(analysis.errors, normalizeFile);
   let sourceErrors = 0;
   let testErrors = 0;
   for (const [file, count] of Object.entries(byFile)) {
     if (isTestFile(file)) testErrors += count;
     else sourceErrors += count;
   }
-  // Sorted keys keep the baseline diff readable when it is regenerated.
-  const sorted = {};
-  for (const k of Object.keys(byFile).sort()) sorted[k] = byFile[k];
-  return { totalErrors: total, sourceErrors, testErrors, byFile: sorted };
+  return {
+    analysis,
+    counts: { totalErrors: analysis.errors.length, sourceErrors, testErrors, byFile },
+  };
+}
+
+/**
+ * Parse tsc output → per-file error counts + source/test totals.
+ * Το **συμβόλαιο μέτρησης** της baseline: τέσσερα πεδία, ούτε ένα παραπάνω.
+ * Η απόδειξη ότι δεν άλλαξε αριθμό ζει στο test `Κ1` (ισοδυναμία με το ιστορικό
+ * regex πάνω σε πραγματική έξοδο).
+ */
+function parseErrors(stdout) {
+  return analyzeTsc(stdout).counts;
+}
+
+/**
+ * Τρέξε τον μεταγλωττιστή και **απόδειξε ότι μέτρησες**.
+ *
+ * Η επιβίωση της διεργασίας δεν είναι μέτρηση: κανένα διαγνωστικό ΚΑΙ έξοδος
+ * με σφάλμα ⇒ ο ίδιος ο tsc έσπασε (λάθος project, απών binary). Fail closed,
+ * αντί για θριαμβευτικό μηδέν.
+ *
+ * ⚠️ Το ερώτημα «βρέθηκε διαγνωστικό;» απαντιέται πλέον από **το ίδιο το parse**.
+ * Πριν ρωτιόταν με `TSC_ERROR_RE.test(stdout)` πάνω σε ΟΛΟ το stdout — regex
+ * αγκυρωμένο σε `^` **χωρίς** σημαία `m`, δηλαδή ρωτούσε «αρχίζει το stdout με
+ * διαγνωστικό;». Οποιαδήποτε γραμμή θορύβου πριν το πρώτο σφάλμα (npm/npx) το
+ * έκανε ψευδές ⇒ ψευδές UNKNOWN. Δεν ήταν ψευδώς πράσινο, αλλά ήταν η ίδια
+ * ρίζα: δύο ερωτήσεις για το ίδιο πράγμα, με δύο διαφορετικές απαντήσεις.
+ */
+function measure(project = getProject()) {
+  const run = runTsc(project);
+  if (run.outcome !== tsc.TSC_OUTCOME.RAN) {
+    throw new Error('\n' + tsc.formatTscFailure(run));
+  }
+  const measured = analyzeTsc(run.stdout);
+  if (measured.analysis.errors.length === 0 && measured.analysis.global.length === 0 && run.status !== 0) {
+    throw new Error('\n' + tsc.formatTscFailure({
+      ...run,
+      outcome: tsc.TSC_OUTCOME.NO_DIAGNOSTICS,
+      detail: `tsc exited ${run.status} over ${project} without emitting a single parseable diagnostic line.`,
+    }));
+  }
+  return { ...measured, run };
 }
 
 function loadBaseline(filePath = getBaselineFile()) {
@@ -203,6 +260,9 @@ function writeBaseline(counts, filePath = getBaselineFile()) {
     adr: 'ADR-663',
     check: 'CHECK 3.29',
     project: getProject(),
+    // Το περιβάλλον που ΠΑΡΗΓΑΓΕ αυτούς τους αριθμούς. Χωρίς αυτό η επόμενη
+    // σύγκριση δεν ξεχωρίζει «χειροτέρεψε ο κώδικας» από «άλλαξε ο κριτής».
+    environment: tsc.describeEnvironment(),
     totalErrors: counts.totalErrors,
     sourceErrors: counts.sourceErrors,
     testErrors: counts.testErrors,
@@ -256,47 +316,114 @@ function requireBaseline() {
   return baseline;
 }
 
-function runFull() {
+/**
+ * Γράψε την αναφορά και τη σύνοψη **αν ζητήθηκαν** — σε κάθε έκβαση, πράσινη,
+ * κόκκινη ή UNKNOWN. Μια αναφορά που υπάρχει μόνο στην αποτυχία δεν έχει με τι
+ * να συγκριθεί όταν έρθει η αποτυχία.
+ */
+function emitArtifacts(args, payload) {
+  if (args.report) {
+    fs.writeFileSync(args.report, JSON.stringify(payload, null, 2) + '\n');
+    console.log(`📄 Αναφορά: ${args.report}`);
+  }
+  if (args.summary) {
+    fs.writeFileSync(args.summary, report.renderMarkdown(payload) + '\n');
+    console.log(`📝 Σύνοψη: ${args.summary}`);
+  }
+}
+
+/** Το κοινό μέρος του payload — μία θέση, ώστε pass/fail/unknown να μη διαφωνούν. */
+function reportBase(baseline) {
+  return {
+    check: 'CHECK 3.29',
+    adr: 'ADR-663',
+    project: getProject(),
+    heapMb: TSC_HEAP_MB,
+    baseline,
+    environment: tsc.describeEnvironment(),
+    environmentDrift: tsc.environmentDrift(baseline ? baseline.environment : null),
+    normalize: normalizeFile,
+  };
+}
+
+function reportUnknown(args, baseline, error) {
+  const payload = report.buildReport({
+    ...reportBase(baseline),
+    verdict: 'unknown',
+    measurement: { measured: false, outcome: tsc.TSC_OUTCOME.NO_DIAGNOSTICS, detail: String(error.message || error).trim() },
+  });
+  emitArtifacts(args, payload);
+}
+
+function runFull(args = { report: null, summary: null }) {
   const baseline = requireBaseline();
 
   const t0 = Date.now();
-  let current;
+  let measured;
   try {
-    current = parseErrors(runTsc());
+    measured = measure();
   } catch (e) {
     console.error(`❌ CHECK 3.29 — ${e.message}`);
+    reportUnknown(args, baseline, e);
     process.exit(1);
   }
-  const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+  const elapsedSeconds = Number(((Date.now() - t0) / 1000).toFixed(1));
+  const current = measured.counts;
 
   const { regressions, cleaned } = compare(baseline, current);
+  const payload = report.buildReport({
+    ...reportBase(baseline),
+    verdict: regressions.length === 0 ? 'pass' : 'fail',
+    measurement: { measured: true, outcome: tsc.TSC_OUTCOME.RAN, detail: null },
+    elapsedSeconds,
+    current,
+    regressions,
+    cleaned,
+    analysis: measured.analysis,
+  });
+  emitArtifacts(args, payload);
+
   if (regressions.length === 0) {
-    const fixed = baseline.totalErrors - current.totalErrors;
-    const trend =
-      fixed > 0
-        ? ` (−${fixed} vs baseline across ${cleaned.length} file(s) — run dxf:tsc:baseline to lock progress)`
-        : '';
-    console.log(
-      `✅ CHECK 3.29 OK — errors:${current.totalErrors}/${baseline.totalErrors}` +
-        ` (source:${current.sourceErrors} test:${current.testErrors})${trend} (${elapsed}s)`,
-    );
+    printPass(baseline, current, cleaned, elapsedSeconds);
     process.exit(0);
   }
+  printFail(payload, regressions, args);
+  process.exit(1);
+}
 
+function printPass(baseline, current, cleaned, elapsedSeconds) {
+  const fixed = baseline.totalErrors - current.totalErrors;
+  const trend =
+    fixed > 0
+      ? ` (−${fixed} vs baseline across ${cleaned.length} file(s) — run dxf:tsc:baseline to lock progress)`
+      : '';
+  console.log(
+    `✅ CHECK 3.29 OK — errors:${current.totalErrors}/${baseline.totalErrors}` +
+      ` (source:${current.sourceErrors} test:${current.testErrors})${trend} (${elapsedSeconds}s)`,
+  );
+}
+
+function printFail(payload, regressions, args) {
   console.error(`❌ CHECK 3.29 FAIL — TypeScript errors rose in ${regressions.length} file(s):`);
-  for (const r of regressions.slice(0, 20)) {
+  for (const r of regressions.slice(0, report.CONSOLE_LIMIT)) {
     const tag = r.isNew ? ' [NEW FILE — zero tolerance]' : '';
     console.error(`   ${r.file}: ${r.baseline} → ${r.current} (+${r.delta})${tag}`);
   }
-  if (regressions.length > 20) console.error(`   … and ${regressions.length - 20} more.`);
+  // ΚΑΝΟΝΑΣ 3: κάθε περικοπή ονομάζει τη συνέχειά της. Το σκέτο «… and N more»
+  // ήταν αδιέξοδο — η πληροφορία δεν υπήρχε πουθενά αλλού (ADR-757 §7.2).
+  if (regressions.length > report.CONSOLE_LIMIT) {
+    console.error(`   … και ${regressions.length - report.CONSOLE_LIMIT} ακόμη — ΟΛΑ στην αναφορά, κανένα χαμένο.`);
+  }
+  for (const line of report.renderConsoleCensus(payload, { reportPath: args.report })) {
+    console.error(line);
+  }
   console.error(``);
   console.error(`Reproduce locally:`);
-  console.error(`  npm run dxf:tsc:check`);
-  console.error(`  (raw: NODE_OPTIONS="--max-old-space-size=${TSC_HEAP_MB}" npx tsc --noEmit -p ${getProject()})`);
+  console.error(`  npm run dxf:tsc:report      # πλήρης αναφορά σε JSON + markdown`);
+  console.error(`  (raw: NODE_OPTIONS="--max-old-space-size=${TSC_HEAP_MB}" npx tsc --noEmit --pretty false -p ${getProject()})`);
   console.error(``);
   console.error(`Fix the types — do NOT reach for \`any\` / \`as any\` / \`@ts-ignore\` (CLAUDE.md).`);
   console.error(`If a rise is genuinely intentional debt, refresh: npm run dxf:tsc:baseline`);
-  process.exit(1);
 }
 
 function runSmoke() {
@@ -309,17 +436,26 @@ function runSmoke() {
 }
 
 function main() {
-  const args = parseArgs(process.argv);
+  let args;
+  try {
+    args = parseArgs(process.argv);
+  } catch (e) {
+    // Μια πύλη που απαντά σε τυπογραφικό με stack trace διδάσκει ότι η έξοδός της
+    // δεν διαβάζεται. Καθαρό μήνυμα + `--help`, ίδιος κωδικός εξόδου.
+    console.error(`❌ CHECK 3.29 — ${e.message}`);
+    console.error(`   node scripts/check-dxf-tsc-ratchet.js --help`);
+    process.exit(1);
+  }
   if (args.help) {
     printHelp();
     process.exit(0);
   }
   if (args.writeBaseline) {
-    writeBaseline(parseErrors(runTsc()));
+    writeBaseline(measure().counts);
     process.exit(0);
   }
   if (args.full) {
-    runFull();
+    runFull(args);
     return;
   }
   runSmoke();
@@ -329,6 +465,9 @@ function main() {
 module.exports = {
   parseArgs,
   parseErrors,
+  analyzeTsc,
+  measure,
+  emitArtifacts,
   normalizeFile,
   isTestFile,
   loadBaseline,

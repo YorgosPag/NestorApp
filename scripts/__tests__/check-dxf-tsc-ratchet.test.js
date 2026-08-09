@@ -71,7 +71,9 @@ describe('parseArgs', () => {
   });
 
   it('defaults to smoke mode (no flags set)', () => {
-    expect(parseArgs(['node', 'script'])).toEqual({ full: false, writeBaseline: false, help: false });
+    expect(parseArgs(['node', 'script'])).toEqual({
+      full: false, writeBaseline: false, help: false, report: null, summary: null,
+    });
   });
 
   it('parses --full, --write-baseline and --help', () => {
@@ -79,6 +81,21 @@ describe('parseArgs', () => {
     expect(parseArgs(['node', 'x', '--write-baseline']).writeBaseline).toBe(true);
     expect(parseArgs(['node', 'x', '--help']).help).toBe(true);
     expect(parseArgs(['node', 'x', '-h']).help).toBe(true);
+  });
+
+  it('parses the visibility flags with their file paths', () => {
+    const a = parseArgs(['node', 'x', '--full', '--report', 'r.json', '--summary', 's.md']);
+    expect(a).toMatchObject({ full: true, report: 'r.json', summary: 's.md' });
+  });
+
+  // Μια σημαία που δέχεται σιωπηλά κενή τιμή γράφει την αναφορά σε αρχείο με
+  // όνομα «--summary» και μετά κανείς δεν τη βρίσκει — ακριβώς η κλάση «η
+  // πληροφορία υπάρχει αλλά πουθενά όπου να τη δει άνθρωπος».
+  it('refuses a visibility flag without a path instead of swallowing the next flag', () => {
+    expect(() => parseArgs(['node', 'x', '--report'])).toThrow(/--report requires a file path/);
+    expect(() => parseArgs(['node', 'x', '--report', '--summary', 's.md'])).toThrow(
+      /--report requires a file path/,
+    );
   });
 
   it('throws on an unknown argument rather than silently ignoring it', () => {

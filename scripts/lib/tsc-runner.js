@@ -198,9 +198,60 @@ function runTsc({ args, cwd = PROJECT_ROOT, heapMb = resolveHeapMb(), maxBufferM
   };
 }
 
+/**
+ * ── ΤΟ ΠΕΡΙΒΑΛΛΟΝ ΤΗΣ ΜΕΤΡΗΣΗΣ ──────────────────────────────────────────────
+ * Μια baseline είναι σύγκριση **δύο μετρήσεων**, και μια σύγκριση δύο μετρήσεων
+ * σε **διαφορετικά περιβάλλοντα** δεν μετρά τον κώδικα — μετρά τη διαφορά των
+ * περιβαλλόντων. Ο μεταγλωττιστής είναι ο κριτής· αν αλλάξει έκδοση ή λειτουργικό,
+ * ο ίδιος κώδικας δίνει άλλον αριθμό:
+ *   · **έκδοση TypeScript** — κάθε minor προσθέτει ελέγχους (νέα σφάλματα σε
+ *     αμετάβλητο κώδικα είναι το ΚΑΝΟΝΙΚΟ, όχι το εξαιρετικό)·
+ *   · **λειτουργικό** — το Linux έχει **διάκριση πεζών/κεφαλαίων** στα μονοπάτια·
+ *     ένα `import './Foo'` για αρχείο `foo.ts` περνά στα Windows και σκάει με
+ *     TS2307 στο ubuntu, σε **όσα αρχεία** το κάνουν, ανεξάρτητα μεταξύ τους.
+ *
+ * Γι' αυτό το περιβάλλον **γράφεται μέσα στη baseline**. Χωρίς αυτό, ο μόνος
+ * τρόπος να ξεχωρίσει κανείς το «χειροτέρεψε ο κώδικας» από το «άλλαξε ο κριτής»
+ * είναι η μνήμη ενός ανθρώπου — και ακριβώς αυτή η μνήμη έλειπε επί 3,5 εβδομάδες.
+ */
+function describeEnvironment(env = process.env) {
+  let typescript = null;
+  try {
+    typescript = require('typescript/package.json').version;
+  } catch {
+    typescript = null; // δεν εγκαταστάθηκε — αξίζει να φαίνεται, όχι να μαντεύεται
+  }
+  return {
+    typescript,
+    node: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    ci: Boolean(env.CI),
+  };
+}
+
+/** Τα ΟΝΟΜΑΤΙΣΜΕΝΑ πεδία που, αν διαφέρουν, καθιστούν τη σύγκριση αναξιόπιστη. */
+const COMPARABLE_KEYS = Object.freeze(['typescript', 'platform']);
+
+/**
+ * @returns {{comparable: boolean|null, drift: {key:string,baseline:unknown,current:unknown}[]}}
+ * `comparable: null` σημαίνει «η baseline δεν κατέγραψε περιβάλλον» — **άγνωστο**,
+ * που δεν επιτρέπεται να διαβαστεί ως «ίδιο».
+ */
+function environmentDrift(baselineEnv, currentEnv = describeEnvironment()) {
+  if (!baselineEnv) return { comparable: null, drift: [] };
+  const drift = COMPARABLE_KEYS
+    .filter((k) => baselineEnv[k] !== currentEnv[k])
+    .map((k) => ({ key: k, baseline: baselineEnv[k], current: currentEnv[k] }));
+  return { comparable: drift.length === 0, drift };
+}
+
 module.exports = {
   PROJECT_ROOT,
   TSC_OUTCOME,
+  COMPARABLE_KEYS,
+  describeEnvironment,
+  environmentDrift,
   OOM_SIGNATURES,
   CI_TSC_HEAP_MB,
   MIN_TSC_HEAP_MB,

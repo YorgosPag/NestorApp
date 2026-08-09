@@ -71,7 +71,35 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: 🧊 CHECK 3.29 — DXF Viewer tsc error ratchet (full project type-check)
-        run: node scripts/check-dxf-tsc-ratchet.js --full
+        run: |
+          node scripts/check-dxf-tsc-ratchet.js --full \
+            --report /tmp/dxf-tsc-report.json \
+            --summary /tmp/dxf-tsc-summary.md
+
+      # ─────────────────────────────────────────────────────────────────────
+      # Η ΑΝΑΦΟΡΑ ΑΝΕΒΑΙΝΕΙ ΠΑΝΤΑ — `if: always()`, όπως το στιγμιότυπο του
+      # CHECK 3.40. Στις 08/08 αυτή η πύλη ανέφερε άνοδο σε **191 αρχεία**,
+      # τύπωσε 20 και «… and 171 more»: η λίστα των 171 και ΚΑΘΕ κωδικός
+      # σφάλματος TS **δεν υπήρχαν πουθενά**, ούτε στο log ούτε σε artifact.
+      # Η διάγνωση ήταν δομικά αδύνατη — ίδιο σχήμα με το ADR-757 §7.2.
+      #
+      # ⚠️ Και στο ΠΡΑΣΙΝΟ: μια πράσινη εκτέλεση είναι η βαθμονόμηση της
+      # επόμενης κόκκινης. Αναφορά που υπάρχει μόνο στην αποτυχία δεν έχει με
+      # τι να συγκριθεί ακριβώς τότε που χρειάζεται.
+      - name: 📎 Ανέβασε την πλήρη αναφορά
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dxf-tsc-report
+          path: |
+            /tmp/dxf-tsc-report.json
+            /tmp/dxf-tsc-summary.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: 📝 Σύνοψη στο job summary
+        if: always()
+        run: cat /tmp/dxf-tsc-summary.md >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: ✅ Summary
         if: success()
