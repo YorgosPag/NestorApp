@@ -13,10 +13,20 @@
  * μόνο Alert με δυναμική bulletlist των πεδίων που λείπουν. Λιγότερος οπτικός
  * θόρυβος όταν λείπουν πολλά requirements ταυτόχρονα.
  *
- * **SSoT**: Η λίστα των καταστάσεων που απαιτούν δεδομένα για sales dashboards
- * προέρχεται αποκλειστικά από το `LISTED_COMMERCIAL_STATUSES` μέσω
- * `requiresAskingPrice()` / `requiresGrossArea()` helpers στο
+ * **SSoT**: Οι καταστάσεις που απαιτούν δεδομένα προέρχονται αποκλειστικά από
+ * τα `requiresAskingPrice()` / `requiresRentPrice()` στο
  * `@/constants/commercial-statuses`. Καμία duplicated λίστα.
+ *
+ * 🔑 **Η ΣΥΜΦΩΝΙΑ ΜΕ ΤΗΝ ΠΥΛΗ ΕΙΝΑΙ ΠΛΕΟΝ ΑΠΟΔΕΙΞΙΜΗ** (ADR-777 §8.2 #1,
+ * 2026-08-09). Αυτό το alert και το `isDisplayableInSalesDashboard`
+ * καταναλώνουν **τα ίδια δύο κατηγορήματα**, οπότε «ο alert έσβησε» σημαίνει
+ * όντως «το ακίνητο θα εμφανιστεί». Μέχρι τις 2026-08-09 η πύλη απαιτούσε
+ * `askingPrice` **χωρίς κλάδο κατάστασης**: για `for-rent` το alert έσβηνε με
+ * ενοίκιο+εμβαδόν και το ακίνητο **δεν εμφανιζόταν ποτέ**. Το σχόλιο της
+ * πύλης δήλωνε τότε συμφωνία — δήλωση που δεν ίσχυε.
+ * ⚠️ Το προηγούμενο κείμενο εδώ παρέπεμπε σε `requiresGrossArea()`:
+ * **δεν υπήρξε ποτέ τέτοια συνάρτηση**· το εμβαδόν ζητείται ανεξαρτήτως
+ * κατάστασης, όπως κάνει και η πύλη.
  *
  * **Reuse**: Creation flow (`AddPropertyDialog` — askingPrice undefined στο
  * form, gross area ως `formData.area` → αποθηκεύεται ως `property.area` top-

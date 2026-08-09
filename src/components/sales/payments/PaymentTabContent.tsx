@@ -39,6 +39,7 @@ import type { Property } from '@/types/property';
 import type { PropertyOwnerEntry } from '@/types/ownership-table';
 import type { CreateInstallmentInput, CreatePaymentPlanInput } from '@/types/payment-plan';
 import { formatOwnerNames, getPrimaryBuyerContactId } from '@/lib/ownership/owner-utils';
+import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import '@/lib/design-system';
@@ -109,17 +110,24 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  // ── Auto-refetch when sale price changes ──
-  const prevPriceRef = useRef(unit.commercial?.askingPrice ?? unit.commercial?.finalPrice ?? 0);
+  // ── Auto-refetch when the unit's effective price changes ──
+  // ADR-777 §8.2 #3: αυτή η σκανδάλη ΔΕΝ ζωγραφίζει τιμή — ρωτά «άλλαξε;».
+  // Ρωτούσε όμως με `askingPrice ?? finalPrice`, δηλαδή με την ΑΝΤΙΘΕΤΗ σειρά
+  // από τη γραμμή του `suggestedAmount` στο ΙΔΙΟ αρχείο. Πλέον και οι δύο
+  // ρωτούν τον SSoT, οπότε ξαναφορτώνει όταν αλλάζει η τιμή που ΟΝΤΩΣ ισχύει.
+  // Η τιμή υπολογίζεται ΕΞΩ από το effect ώστε ο πίνακας εξαρτήσεων να είναι ο
+  // ίδιος ο αριθμός — όχι το αντικείμενο `unit`, που αλλάζει ταυτότητα σε κάθε
+  // render και θα ξαναέτρεχε το effect χωρίς να έχει αλλάξει τίποτα.
+  const effectivePriceAmount = getEffectivePrice(unit)?.amount ?? 0;
+  const prevPriceRef = useRef(effectivePriceAmount);
   useEffect(() => {
-    const currentPrice = unit.commercial?.askingPrice ?? unit.commercial?.finalPrice ?? 0;
-    if (currentPrice !== prevPriceRef.current && currentPrice > 0) {
-      prevPriceRef.current = currentPrice;
+    if (effectivePriceAmount !== prevPriceRef.current && effectivePriceAmount > 0) {
+      prevPriceRef.current = effectivePriceAmount;
       // Delay slightly so the server-side resync has time to complete
       const timer = setTimeout(() => refetch(), 800);
       return () => clearTimeout(timer);
     }
-  }, [unit.commercial?.askingPrice, unit.commercial?.finalPrice, refetch]);
+  }, [effectivePriceAmount, refetch]);
 
   const handlePayInstallment = useCallback((index: number) => {
     setSelectedInstallmentIdx(index);
@@ -175,7 +183,12 @@ export function PaymentTabContent({ unit }: PaymentTabContentProps) {
   const allOwners = (unit.commercial?.owners as PropertyOwnerEntry[] | null) ?? [];
   const buyerContactId = getPrimaryBuyerContactId(allOwners) ?? '';
   const buyerName = formatOwnerNames(allOwners) ?? '';
-  const suggestedAmount = unit.commercial?.finalPrice ?? unit.commercial?.askingPrice ?? 0;
+  // ADR-777 §8.2 #3: αυτή η γραμμή έλεγε `finalPrice ?? askingPrice` ενώ η
+  // σκανδάλη παραπάνω έλεγε το αντίστροφο — το αρχείο αντιφάσκει με τον εαυτό
+  // του. Πλέον είναι ΚΥΡΙΟΛΕΚΤΙΚΑ ο ίδιος αριθμός: μία ανάγνωση, δύο χρήσεις.
+  // Το `?? 0` έμεινε στον υπολογισμό επίτηδες — εδώ δεν ζωγραφίζεται τιμή,
+  // αρχικοποιείται αριθμητικό πεδίο φόρμας (δηλωμένη εξαίρεση, ADR-777 §8.4).
+  const suggestedAmount = effectivePriceAmount;
 
   // No plan yet
   if (!plan) {

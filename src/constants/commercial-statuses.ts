@@ -152,22 +152,61 @@ export function requiresRentPrice(
 // 3b. DISPLAY ELIGIBILITY GATE — Single SSoT for sales/rental dashboards
 // =============================================================================
 //
-// Εμφάνιση σε sales dashboards & customer-facing listings (public vetrina)
-// απαιτεί και τα τρία:
+// Εμφάνιση σε sales/rental dashboards & customer-facing listings απαιτεί:
 //   1) listed commercialStatus (for-sale / for-rent / for-sale-and-rent)
-//   2) askingPrice > 0
+//   2) **τις τιμές που ζητά Η ΙΔΙΑ Η ΚΑΤΑΣΤΑΣΗ** — μέσω `requiresAskingPrice`
+//      / `requiresRentPrice`, δηλαδή ΤΑ ΙΔΙΑ δύο κατηγορήματα που καταναλώνει
+//      και ο `SalesDashboardRequirementsAlert`
 //   3) grossArea > 0
 //
-// Coerent με το UX contract του `SalesDashboardRequirementsAlert`: όταν ο
-// alert εμφανίζεται, το property δεν πρέπει να εμφανίζεται στις δημόσιες
-// λίστες/πίνακες. Ένας κοινός gate evita drift ανάμεσα σε UI promise και
-// query behavior (Google pattern: UI = contract).
+// 🔴 ΓΙΑΤΙ ΤΟ (2) ΓΡΑΦΤΗΚΕ ΞΑΝΑ (ADR-777 §8.2 ανοιχτό #1, 2026-08-09).
+// Μέχρι σήμερα αυτό το gate απαιτούσε `askingPrice > 0` **χωρίς κανέναν κλάδο
+// για την κατάσταση**, ενώ ο κώδικας δηλώνει σε ΤΕΣΣΕΡΑ σημεία ότι μια
+// ενοικίαση δεν έχει τιμή πώλησης:
+//   (α) `requiresAskingPrice` παραπάνω **εξαιρεί ρητά** το `for-rent`
+//   (β) `requiresRentPrice` υπάρχει ως ξεχωριστός κανόνας
+//   (γ) `PropertyCommercialPriceFields` **δεν ζωγραφίζει καν** το πεδίο
+//       askingPrice όταν η κατάσταση είναι `for-rent`
+//   (δ) το ίδιο component περνά `askingPrice: undefined` στο alert εκεί
+// ⇒ ένα ακίνητο **μόνο προς ενοικίαση** δεν περνούσε ΠΟΤΕ αυτή την πύλη, και
+// ο ιδιοκτήτης **δεν είχε καμία ενέργεια** να το διορθώσει: το πεδίο που του
+// ζητούσε σιωπηλά η πύλη **δεν υπάρχει στην οθόνη του**. Δεν ήταν δύσκολο —
+// ήταν αδύνατο εκ κατασκευής.
+//
+// 🔴 ΚΑΙ Ο ΙΣΧΥΡΙΣΜΟΣ ΣΥΜΦΩΝΙΑΣ ΗΤΑΝ ΨΕΥΔΗΣ. Το προηγούμενο σχόλιο εδώ έλεγε
+// «Coerent με το UX contract του `SalesDashboardRequirementsAlert` … evita
+// drift ανάμεσα σε UI promise και query behavior». Για `for-rent` το alert
+// **σβήνει** μόλις συμπληρωθούν ενοίκιο + εμβαδόν — δηλαδή **υπόσχεται**
+// εμφάνιση που η πύλη αρνιόταν. Ένα σχόλιο που δηλώνει συμφωνία δεν είναι
+// συμφωνία· η συμφωνία είναι να **καταναλώνουν τα ίδια κατηγορήματα**, που
+// είναι ακριβώς αυτό που κάνουν τώρα οι δύο πλευρές.
+// (Το ίδιο σχόλιο παρέπεμπε και σε `requiresGrossArea()` — συνάρτηση που
+// **δεν υπήρξε ποτέ**· το εμβαδόν ζητείται ανεξαρτήτως κατάστασης.)
+//
+// ⚠️ ΔΗΛΩΜΕΝΗ ΣΥΝΕΠΕΙΑ ΓΙΑ ΤΟ `for-sale-and-rent`: η συμμετρία το κάνει
+// **αυστηρότερο** — ζητά ΚΑΙ τιμή πώλησης ΚΑΙ ενοίκιο, όπως ακριβώς ζητά και
+// το alert. Ένα διπλό listing με μία μόνο τιμή **κόβει σιωπηλά τη μισή
+// προσφορά** (ίδιο σκεπτικό με το `secondary` του price-resolver), οπότε
+// σύμφωνα με την απόφαση του Giorgio (2026-08-09) δεν δημοσιεύεται — αλλά ο
+// ιδιοκτήτης **το μαθαίνει** από το alert.
+//
+// @see ADR-777 Α6/Α7 · §8.2 ανοιχτό #1 — απόφαση Giorgio 2026-08-09
 
 /** Input contract για το display-eligibility gate. Agnostic σε data shape. */
 export interface SalesDisplayEligibilityInput {
   commercialStatus?: CommercialStatus | string | null;
   askingPrice?: number | null;
+  /**
+   * Μηνιαίο ενοίκιο. Απαιτείται **μόνο** για τις καταστάσεις που το ζητούν
+   * (`requiresRentPrice`) — και τότε είναι εξίσου δεσμευτικό με το askingPrice.
+   */
+  rentPrice?: number | null;
   grossArea?: number | null;
+}
+
+/** Θετικός, πεπερασμένος αριθμός. `null` / `0` / αρνητικό / NaN → όχι τιμή. */
+function isPositiveAmount(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 /**
@@ -176,31 +215,31 @@ export interface SalesDisplayEligibilityInput {
  *
  * Συμπεριφορά:
  *   - Listed status required (μέσω `isListedCommercialStatus`).
- *   - `askingPrice` πρέπει να είναι **θετικός αριθμός** (> 0). null/0/negative → excluded.
- *   - `grossArea` πρέπει να είναι **θετικός αριθμός** (> 0). null/0/negative → excluded.
+ *   - `askingPrice > 0` **μόνο αν** `requiresAskingPrice(status)`.
+ *   - `rentPrice > 0` **μόνο αν** `requiresRentPrice(status)`.
+ *   - `grossArea > 0` **πάντα** (ανεξαρτήτως κατάστασης).
  *
  * Η σειρά είναι μη-σημασιολογική (όλα required), αλλά short-circuit για
  * performance σε μεγάλες λίστες: status πρώτο (φθηνό string check).
  *
- * @see SalesDashboardRequirementsAlert — UI counterpart του gate.
+ * @see SalesDashboardRequirementsAlert — καταναλώνει τα **ίδια** κατηγορήματα.
  * @see ADR-287 Batch 18 — SSoT for sales dashboard display eligibility.
  */
 export function isDisplayableInSalesDashboard(
   input: SalesDisplayEligibilityInput,
 ): boolean {
-  if (!isListedCommercialStatus(input.commercialStatus)) return false;
+  const status = input.commercialStatus;
+  if (!isListedCommercialStatus(status)) return false;
 
-  const price = input.askingPrice;
-  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+  if (requiresAskingPrice(status) && !isPositiveAmount(input.askingPrice)) {
     return false;
   }
 
-  const area = input.grossArea;
-  if (typeof area !== 'number' || !Number.isFinite(area) || area <= 0) {
+  if (requiresRentPrice(status) && !isPositiveAmount(input.rentPrice)) {
     return false;
   }
 
-  return true;
+  return isPositiveAmount(input.grossArea);
 }
 
 // =============================================================================

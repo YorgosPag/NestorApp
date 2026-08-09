@@ -8,6 +8,8 @@
  * Decision matrix (driven by `commercialStatus`, legacy `status` as fallback):
  *   - `for-rent`, `rented`  → `commercial.rentPrice`
  *   - `for-sale-and-rent`   → sale as headline, rent as secondary (BOTH exist)
+ *   - `sold`                → `commercial.finalPrice` as headline, the asking
+ *                             price as secondary **when it differs**
  *   - all other statuses    → `commercial.askingPrice ?? commercial.finalPrice ?? legacy price`
  *
  * **Absence is a STATE, never a zero.** `resolveDisplayPrice` returns an
@@ -85,8 +87,15 @@ export type MissingPriceReason =
   | 'rent-price-missing';
 
 /**
- * The display verdict. `secondary` is non-null only for `for-sale-and-rent`,
- * where a single number would silently drop half the offer.
+ * The display verdict.
+ *
+ * `secondary` carries the second number that the reader would otherwise have
+ * to go and find. It is non-null in exactly two situations, and they are
+ * distinguishable from `source` alone — no caller needs to know the status:
+ *   - `for-sale-and-rent` → secondary is the **rent**; a single number would
+ *     silently drop half the offer.
+ *   - `sold`              → secondary is the **asking price**, and only when it
+ *     differs from what the unit actually sold for. Equal numbers say nothing.
  */
 export type DisplayPrice =
   | { kind: 'priced'; headline: ResolvedPrice; secondary: ResolvedPrice | null }
@@ -101,6 +110,22 @@ const PURE_RENT_STATUSES: ReadonlySet<string> = new Set(['for-rent', 'rented']);
 
 /** The one status that legitimately carries two prices at the same time. */
 const DUAL_STATUS = 'for-sale-and-rent';
+
+/**
+ * The closed sale. Its headline is the **contract** price, not the one we
+ * asked for: 185.000 € is what changed hands, 200.000 € is what we hoped for.
+ *
+ * Before ADR-777 §8.2 #3 (decided by Giorgio, 2026-08-09) this module answered
+ * `askingPrice → finalPrice` here, so a sold unit displayed the number it did
+ * NOT sell for — while `SalesSoldPageContent` and `PaymentTabContent` answered
+ * `finalPrice → askingPrice` privately, and `PaymentTabContent` disagreed with
+ * ITSELF (`:115` vs `:178`). Same unit, three answers, one click apart.
+ *
+ * ⚠️ `rented` is deliberately NOT here even though it is `FINALIZED` too: its
+ * closing number is the **rent**, which `PURE_RENT_STATUSES` already answers.
+ * `finalPrice` is a sale figure and would be the wrong side of the deal.
+ */
+const SOLD_STATUS = 'sold';
 
 /** Closed deals — a missing price here is a data gap, not "not on the market". */
 const FINALIZED_STATUSES: ReadonlySet<string> = new Set<string>(
@@ -143,6 +168,41 @@ function resolveRentPrice(input: PricedPropertyLike): ResolvedPrice | null {
   return pickPriced('rent', [[commercial.rentPrice, 'commercial.rentPrice']]);
 }
 
+/**
+ * A sold unit: the contract price leads, the asking price follows as context.
+ *
+ * Two deliberate rules:
+ *   - **No `finalPrice` recorded → fall back to the ordinary sale chain.** A
+ *     sale whose contract figure nobody typed in still has a number worth
+ *     showing; hiding it would punish the reader for a data gap.
+ *   - **An asking price equal to the final one is dropped.** "Sold 200.000,
+ *     asked 200.000" is not a second fact, it is the same fact twice.
+ */
+function resolveSoldPrice(input: PricedPropertyLike): DisplayPrice {
+  const commercial = input.commercial ?? {};
+
+  const contract = pickPriced('sale', [
+    [commercial.finalPrice, 'commercial.finalPrice'],
+  ]);
+
+  if (!contract) {
+    const fallback = resolveSalePrice(input);
+    return fallback
+      ? { kind: 'priced', headline: fallback, secondary: null }
+      : { kind: 'missing', reason: 'sale-price-missing' };
+  }
+
+  const asked = pickPriced('sale', [
+    [commercial.askingPrice, 'commercial.askingPrice'],
+  ]);
+
+  return {
+    kind: 'priced',
+    headline: contract,
+    secondary: asked && asked.amount !== contract.amount ? asked : null,
+  };
+}
+
 /** Name the absence. A unit off the market is not the same as a forgotten price. */
 function missingReasonFor(statusKey: string): MissingPriceReason {
   if (PURE_RENT_STATUSES.has(statusKey)) return 'rent-price-missing';
@@ -166,6 +226,10 @@ export function resolveDisplayPrice(input: PricedPropertyLike): DisplayPrice {
     return rent
       ? { kind: 'priced', headline: rent, secondary: null }
       : { kind: 'missing', reason: 'rent-price-missing' };
+  }
+
+  if (statusKey === SOLD_STATUS) {
+    return resolveSoldPrice(input);
   }
 
   const sale = resolveSalePrice(input);

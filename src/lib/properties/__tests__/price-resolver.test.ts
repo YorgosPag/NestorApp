@@ -367,3 +367,105 @@ describe('Κ10 — priceSortKey', () => {
     expect(by('desc')).toEqual([300, 100, null]);
   });
 });
+
+// =============================================================================
+// Κ11 — A SOLD UNIT LEADS WITH THE CONTRACT PRICE (ADR-777 §8.2 #3)
+// =============================================================================
+//
+// Απόφαση Giorgio, 2026-08-09: για πωλημένο ακίνητο «η τιμή» είναι αυτή που
+// γράφτηκε στο συμβόλαιο, και δίπλα της — μόνο όταν διαφέρει — αυτή που
+// ζητούσαμε. Πριν από αυτό, ο resolver απαντούσε `askingPrice → finalPrice`,
+// δηλαδή έδειχνε το νούμερο για το οποίο το ακίνητο ΔΕΝ πουλήθηκε, ενώ δύο
+// άλλα αρχεία απαντούσαν ιδιωτικά το αντίστροφο.
+
+describe('Κ11 — sold: contract price leads, asking price is context', () => {
+  it('πουλήθηκε 185.000 ενώ ζητούσε 200.000 → 185.000 μπροστά, 200.000 δίπλα', () => {
+    const result = resolveDisplayPrice(
+      unit({
+        commercialStatus: 'sold',
+        commercial: { askingPrice: 200_000, finalPrice: 185_000 },
+      }),
+    );
+
+    expect(result).toEqual({
+      kind: 'priced',
+      headline: { role: 'sale', amount: 185_000, source: 'commercial.finalPrice' },
+      secondary: { role: 'sale', amount: 200_000, source: 'commercial.askingPrice' },
+    });
+  });
+
+  it('ίδια τιμή ζήτησης και πώλησης → καμία δεύτερη γραμμή', () => {
+    // «Πουλήθηκε 200.000, ζητούσε 200.000» δεν είναι δεύτερο γεγονός.
+    const result = resolveDisplayPrice(
+      unit({
+        commercialStatus: 'sold',
+        commercial: { askingPrice: 200_000, finalPrice: 200_000 },
+      }),
+    );
+
+    expect(result).toEqual({
+      kind: 'priced',
+      headline: { role: 'sale', amount: 200_000, source: 'commercial.finalPrice' },
+      secondary: null,
+    });
+  });
+
+  it('πωλημένο χωρίς καταχωρημένη τελική τιμή → δείχνει ό,τι υπάρχει', () => {
+    // Κενό δεδομένων δεν τιμωρεί τον αναγνώστη με άδεια οθόνη.
+    const result = resolveDisplayPrice(
+      unit({ commercialStatus: 'sold', commercial: { askingPrice: 200_000 } }),
+    );
+
+    expect(result).toEqual({
+      kind: 'priced',
+      headline: { role: 'sale', amount: 200_000, source: 'commercial.askingPrice' },
+      secondary: null,
+    });
+  });
+
+  it('πωλημένο χωρίς καμία τιμή → ονομασμένη απουσία, όχι μηδέν', () => {
+    expect(resolveDisplayPrice(unit({ commercialStatus: 'sold' }))).toEqual({
+      kind: 'missing',
+      reason: 'sale-price-missing',
+    });
+  });
+
+  it('η κεφαλή είναι αυτή που μετράει σε σύνολα και ταξινόμηση', () => {
+    const u = unit({
+      commercialStatus: 'sold',
+      commercial: { askingPrice: 200_000, finalPrice: 185_000 },
+    });
+    expect(getEffectivePrice(u)).toEqual({ amount: 185_000, mode: 'sale' });
+    expect(priceSortKey(u)).toBe(185_000);
+    expect(totalPrice([u])).toEqual({
+      total: 185_000,
+      average: 185_000,
+      pricedCount: 1,
+      unpricedCount: 0,
+    });
+  });
+});
+
+// =============================================================================
+// Κ12 — `rented` ΔΕΝ ΑΚΟΛΟΥΘΕΙ ΤΟ `sold`, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΣΚΟΠΙΜΟ
+// =============================================================================
+
+describe('Κ12 — a rented unit closes on its RENT, not on a sale figure', () => {
+  it('rented με ενοίκιο και σκουπιδο-finalPrice → δείχνει το ενοίκιο', () => {
+    // Και τα δύο είναι FINALIZED, αλλά κλείνουν σε διαφορετική πλευρά της
+    // συμφωνίας. Αν το `rented` έμπαινε στον κλάδο του `sold`, μια
+    // ενοικιασμένη μονάδα θα διαφήμιζε τιμή πώλησης.
+    const result = resolveDisplayPrice(
+      unit({
+        commercialStatus: 'rented',
+        commercial: { rentPrice: 500, finalPrice: 185_000 },
+      }),
+    );
+
+    expect(result).toEqual({
+      kind: 'priced',
+      headline: { role: 'rent', amount: 500, source: 'commercial.rentPrice' },
+      secondary: null,
+    });
+  });
+});

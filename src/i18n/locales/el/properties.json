@@ -883,6 +883,8 @@
       "price": "Τιμή",
       "sale": "Πώληση",
       "rent": "Ενοίκιο",
+      "soldFor": "Τιμή πώλησης",
+      "askedFor": "Ζητούσε",
       "salePricePerSqm": "Πώληση/τ.μ.",
       "rentPricePerSqm": "Ενοίκιο/τ.μ.",
       "rentValue": "{amount}/μήνα"

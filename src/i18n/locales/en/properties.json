@@ -883,6 +883,8 @@
       "price": "Price",
       "sale": "Sale",
       "rent": "Rent",
+      "soldFor": "Sold price",
+      "askedFor": "Asked",
       "salePricePerSqm": "Sale/sqm",
       "rentPricePerSqm": "Rent/sqm",
       "rentValue": "{amount}/month"

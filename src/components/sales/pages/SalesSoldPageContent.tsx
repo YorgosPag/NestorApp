@@ -26,6 +26,7 @@ import {
   salesPerSqmValue,
 } from '@/components/sales/shared';
 import { useSalesPropertiesListPage } from '@/components/sales/shared/use-sales-properties-list-page';
+import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import '@/lib/design-system';
 
 function SalesSoldContent() {
@@ -98,7 +99,11 @@ function SalesSoldContent() {
           emptyMessage={t('sales.sold.noResults')}
           renderCard={unit => {
             const area = unit.areas?.gross ?? unit.area ?? 0;
-            const price = unit.commercial?.finalPrice ?? unit.commercial?.askingPrice ?? null;
+            // ADR-777 §8.2 #3: η σειρά `finalPrice → askingPrice` ήταν σωστή
+            // αλλά γραμμένη ΕΔΩ — τρίτη ιδιωτική απάντηση για την ίδια
+            // ερώτηση. Πλέον τη δίνει ο SSoT, που για `sold` οδηγεί με την
+            // τιμή συμβολαίου. Ίδιο αποτέλεσμα, ένας ιδιοκτήτης του κανόνα.
+            const price = getEffectivePrice(unit)?.amount ?? null;
             return (
               <SalesGridCard
                 key={unit.id}

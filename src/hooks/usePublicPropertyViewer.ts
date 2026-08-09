@@ -66,6 +66,9 @@ export function usePublicPropertyViewer() {
       return isDisplayableInSalesDashboard({
         commercialStatus,
         askingPrice: property.commercial?.askingPrice ?? property.price,
+        // ADR-777 §8.2 #1: η πύλη ζητά τη τιμή που ζητά Η ΚΑΤΑΣΤΑΣΗ. Χωρίς
+        // αυτό, ένα ακίνητο μόνο προς ενοικίαση δεν εμφανιζόταν ΠΟΤΕ.
+        rentPrice: property.commercial?.rentPrice,
         grossArea: nestedGross ?? property.area,
       });
     });

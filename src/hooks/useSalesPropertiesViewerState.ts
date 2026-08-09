@@ -98,6 +98,7 @@ export function useSalesPropertiesViewerState(
   const salesUnits = useMemo(() => {
     return (allUnits as Property[]).filter(unit => {
       const askingPrice = unit.commercial?.askingPrice;
+      const rentPrice = unit.commercial?.rentPrice;
       const finalPrice = unit.commercial?.finalPrice;
       const grossArea = unit.areas?.gross ?? unit.area;
 
@@ -108,9 +109,12 @@ export function useSalesPropertiesViewerState(
       }
 
       // viewScope === 'available'
+      // ADR-777 §8.2 #1: το gate ζητά askingPrice ΚΑΙ/Ή rentPrice ανάλογα με
+      // την κατάσταση — μια ενοικίαση δεν έχει τιμή πώλησης να δώσει.
       if (isDisplayableInSalesDashboard({
         commercialStatus: unit.commercialStatus,
         askingPrice,
+        rentPrice,
         grossArea,
       })) {
         return true;

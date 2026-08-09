@@ -107,21 +107,50 @@ function priceStatItem(price: ResolvedPrice, labelKey: string, t: TFn): StatItem
  * @see lib/properties/price-resolver — the single price rule
  * @see ADR-777 Α6 — the price is displayed; absence is named, never "contact us"
  */
+/**
+ * The two words for a priced pair, chosen from the FIELD each amount was read
+ * from — never from its position in the pair.
+ *
+ * The previous version hardcoded the second row as "Rent", which was true only
+ * while `secondary` could only ever be a rent. The moment a sold unit began
+ * carrying its asking price there (ADR-777 §8.2 #3), that row would have
+ * labelled 200.000 € as **rent**. Position is not meaning; `source` is.
+ *
+ * The three branches are exhaustive by construction of `resolveDisplayPrice`:
+ * a rent headline never has a secondary, a `finalPrice` headline can only be a
+ * sold unit, and everything else is the ordinary sale chain.
+ */
+function priceLabelKeys(
+  headline: ResolvedPrice,
+  secondary: ResolvedPrice | null,
+): { headline: string; secondary: string | null } {
+  if (headline.source === 'commercial.finalPrice') {
+    // Sold: what it went for, and — only when different — what we asked.
+    return { headline: 'card.stats.soldFor', secondary: secondary ? 'card.stats.askedFor' : null };
+  }
+
+  if (headline.role === 'rent') {
+    return { headline: 'card.stats.rent', secondary: null };
+  }
+
+  // A sale headline standing alone is simply "Price"; alongside a rent it is "Sale".
+  return {
+    headline: secondary ? 'card.stats.sale' : 'card.stats.price',
+    secondary: secondary ? 'card.stats.rent' : null,
+  };
+}
+
 export function buildPropertyPriceStats(property: Property, t: TFn): StatItem[] {
   const resolved = resolveDisplayPrice(property);
   if (resolved.kind === 'missing') return [];
 
   const { headline, secondary } = resolved;
-  // A sale headline standing alone is simply "Price"; alongside a rent it is "Sale".
-  const headlineKey =
-    headline.role === 'rent'
-      ? 'card.stats.rent'
-      : secondary
-        ? 'card.stats.sale'
-        : 'card.stats.price';
+  const labels = priceLabelKeys(headline, secondary);
 
-  const items = [priceStatItem(headline, headlineKey, t)];
-  if (secondary) items.push(priceStatItem(secondary, 'card.stats.rent', t));
+  const items = [priceStatItem(headline, labels.headline, t)];
+  if (secondary && labels.secondary) {
+    items.push(priceStatItem(secondary, labels.secondary, t));
+  }
   return items;
 }
 
@@ -153,9 +182,13 @@ export function buildPropertyPricePerSqmStats(
   const resolved = resolveDisplayPrice(property);
   if (resolved.kind === 'missing') return [];
 
-  const prices = [resolved.headline, resolved.secondary].filter(
-    (p): p is ResolvedPrice => p !== null,
-  );
+  // A secondary earns its own €/m² row only when it is a DIFFERENT side of the
+  // deal. On a sold unit both amounts are sale figures, so the pair would print
+  // twice under one label ("Sale/m²") with two different numbers — a row the
+  // reader cannot interpret. The rate that matters there is the one it sold at.
+  const { headline, secondary } = resolved;
+  const prices: ResolvedPrice[] =
+    secondary && secondary.role !== headline.role ? [headline, secondary] : [headline];
 
   return prices.map((price) => {
     const { labelKey, iconColor } = PRICE_PER_SQM_PRESENTATION[price.role];
