@@ -459,6 +459,10 @@
       "selectMapStyle": "Επιλογή στυλ χάρτη",
       "mapControls": "Χειριστήρια χάρτη"
     },
+    "basemap": {
+      "map": "Χάρτης",
+      "satellite": "Δορυφόρος"
+    },
     "status": {
       "mapLoaded": "Χάρτης Φορτώθηκε",
       "mapLoading": "Φόρτωση...",

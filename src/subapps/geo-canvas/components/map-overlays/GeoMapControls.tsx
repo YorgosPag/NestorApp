@@ -23,7 +23,9 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useIconSizes } from '@/hooks/useIconSizes';
-import { Map, Mountain, Moon, Flag, Palette, Circle, Satellite, ChevronDown, MapPin } from 'lucide-react';
+import { ChevronDown, MapPin } from 'lucide-react';
+import { MAP_STYLES, type MapStyleType } from '../../services/map/MapStyleManager';
+import { MAP_STYLE_CATALOG } from '../../config/map-chrome';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -40,10 +42,10 @@ export interface GeoMapControlsProps {
   onStopCoordinatePicking: () => void;
 
   /** Current map style */
-  currentMapStyle: 'osm' | 'satellite' | 'terrain' | 'dark' | 'greece' | 'watercolor' | 'toner';
+  currentMapStyle: MapStyleType;
 
   /** Map style change handler */
-  onMapStyleChange: (style: 'osm' | 'satellite' | 'terrain' | 'dark' | 'greece' | 'watercolor' | 'toner') => void;
+  onMapStyleChange: (style: MapStyleType) => void;
 
   /** Map loading state */
   mapLoaded: boolean;
@@ -53,18 +55,13 @@ export interface GeoMapControlsProps {
 }
 
 // ============================================================================
-// 🎯 MAP STYLE CONFIGURATION
+// 🎯 ΤΑ ΥΠΟΒΑΘΡΑ — ΑΠΟ ΤΟ SSoT, ΟΧΙ ΞΑΝΑΓΡΑΜΜΕΝΑ
 // ============================================================================
-
-const MAP_STYLE_OPTIONS = [
-  { value: 'osm', labelKey: 'openStreetMap', icon: Map },
-  { value: 'satellite', labelKey: 'satellite', icon: Satellite },
-  { value: 'terrain', labelKey: 'terrain', icon: Mountain },
-  { value: 'dark', labelKey: 'darkMode', icon: Moon },
-  { value: 'greece', labelKey: 'greece', icon: Flag },
-  { value: 'watercolor', labelKey: 'watercolor', icon: Palette },
-  { value: 'toner', labelKey: 'toner', icon: Circle }
-] as const;
+//
+// ⚠️ Εδώ ζούσε δικός του πίνακας `MAP_STYLE_OPTIONS` — **τέταρτο** αντίγραφο του ίδιου
+// λεξιλογίου (μαζί με τον union του `MapStyleManager`, τον inline πίνακα και τα
+// εικονίδια του `GeoCoordinateDisplay`). Πλέον σειρά = {@link MAP_STYLES},
+// εικονίδιο + ετικέτα = {@link MAP_STYLE_CATALOG}.
 
 // ============================================================================
 // 🌍 GEO-MAP CONTROLS COMPONENT
@@ -131,11 +128,10 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
   // ========================================================================
 
   const renderMapStyleControls = () => {
-    // Get current style name for display
-    const currentStyleOption = MAP_STYLE_OPTIONS.find(opt => opt.value === currentMapStyle);
-    const currentStyleName = currentStyleOption
-      ? t(`map.controls.${currentStyleOption.labelKey}`)
-      : t('map.controls.openStreetMap');
+    // Το τρέχον υπόβαθρο — ο κατάλογος είναι `Record` πάνω στο κλειστό λεξιλόγιο,
+    // οπότε δεν υπάρχει «δεν βρέθηκε»: ο τύπος το εγγυάται.
+    const CurrentIcon = MAP_STYLE_CATALOG[currentMapStyle].icon;
+    const currentStyleName = t(MAP_STYLE_CATALOG[currentMapStyle].labelKey);
 
     return (
       <div className={`${colors.bg.secondary} bg-opacity-90 rounded-lg p-2`} role="group" aria-label={t('map.controls.mapStyle')}>
@@ -160,34 +156,34 @@ export const GeoMapControls: React.FC<GeoMapControlsProps> = ({
             type="button"
           >
             <span className="flex items-center gap-2">
-              {currentMapStyle && (() => {
-                const option = MAP_STYLE_OPTIONS.find(opt => opt.value === currentMapStyle);
-                const IconComponent = option?.icon;
-                return IconComponent ? <IconComponent className={iconSizes.xs} /> : null;
-              })()}
-              {currentMapStyle ? t(`map.controls.${MAP_STYLE_OPTIONS.find(opt => opt.value === currentMapStyle)?.labelKey}`) : t('map.controls.selectMapStyle')}
+              <CurrentIcon className={iconSizes.xs} />
+              {currentStyleName}
             </span>
             <ChevronDown className={`${iconSizes.xs} transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {isDropdownOpen && (
             <div className={`absolute top-full left-0 right-0 z-50 ${colors.bg.primary} ${quick.card} mt-1 py-1 max-h-48 overflow-y-auto`}>
-              {MAP_STYLE_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => {
-                    onMapStyleChange(option.value as typeof currentMapStyle);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:${colors.bg.hover} transition-colors ${
-                    currentMapStyle === option.value ? colors.bg.accent : ''
-                  }`}
-                  type="button"
-                >
-                  <option.icon className={iconSizes.sm} />
-                  {t(`map.controls.${option.labelKey}`)}
-                </button>
-              ))}
+              {MAP_STYLES.map((style) => {
+                const entry = MAP_STYLE_CATALOG[style];
+                const StyleIcon = entry.icon;
+                return (
+                  <button
+                    key={style}
+                    onClick={() => {
+                      onMapStyleChange(style);
+                      setIsDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:${colors.bg.hover} transition-colors ${
+                      currentMapStyle === style ? colors.bg.accent : ''
+                    }`}
+                    type="button"
+                  >
+                    <StyleIcon className={iconSizes.sm} />
+                    {t(entry.labelKey)}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

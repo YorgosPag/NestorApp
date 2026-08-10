@@ -21,7 +21,28 @@ import type { StyleSpecification } from 'maplibre-gl';
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 // ============================================================================
 
-export type MapStyleType = 'osm' | 'satellite' | 'terrain' | 'dark' | 'greece' | 'watercolor' | 'toner';
+/**
+ * Τα διαθέσιμα υπόβαθρα, **σε σειρά παρουσίασης**.
+ *
+ * 🔑 **Ο πίνακας είναι η αυθεντία, ο τύπος παράγεται** — ίδιο ιδίωμα με τα
+ * `COMMERCIAL_STATUSES` / `OFFER_KINDS` του υπόλοιπου κώδικα. Μέχρι σήμερα υπήρχε
+ * **μόνο** ο τύπος, οπότε η **σειρά** ήταν ξαναγραμμένη με το χέρι σε **τρία** σημεία
+ * (`GeoCoordinateDisplay:109` inline πίνακας · `GeoCoordinateDisplay:52` εικονίδια ·
+ * `GeoMapControls:59` `MAP_STYLE_OPTIONS`) και ο ίδιος ο union σε **τέσσερα** ακόμη.
+ * Πέντε λίστες για ένα λεξιλόγιο: το σχήμα που η CHECK 3.34 μέτρησε να έχει αποκλίνει
+ * **κατά 63**. Τώρα η προσθήκη υποβάθρου γίνεται **εδώ, μία φορά**.
+ */
+export const MAP_STYLES = [
+  'osm',
+  'satellite',
+  'terrain',
+  'dark',
+  'greece',
+  'watercolor',
+  'toner',
+] as const;
+
+export type MapStyleType = (typeof MAP_STYLES)[number];
 export type MapStyleUrl = string | StyleSpecification;
 
 export interface MapStyleDefinition {

@@ -146,8 +146,14 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
     <PolygonSystemProvider>
     <InteractiveMap
       transformState={{ controlPoints: [], isCalibrated: false, quality: null, rmsError: null, matrix: null }}
-      showStatusBar={false}
-      showMapControls={false}
+      /*
+       * 🔑 **Ένα όνομα, όχι δύο σημαίες.** Ήταν `showStatusBar={false}` +
+       * `showMapControls={false}` — και **δεν αρκούσε**: ο `GeoCoordinateDisplay`
+       * αποδιδόταν χωρίς καμία συνθήκη, οπότε ο επισκέπτης που ψάχνει σπίτι έβλεπε
+       * γεωγραφικό μήκος, πλάτος, **υψόμετρο** και **επτά** στυλ χάρτη. Το `showcase`
+       * αφήνει **δύο** υπόβαθρα με λέξεις («Χάρτης» / «Δορυφόρος»), και **τίποτα άλλο**.
+       */
+      chrome="showcase"
       className="h-full w-full"
       onMapReady={handleMapReady}
     >

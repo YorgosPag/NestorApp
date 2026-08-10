@@ -16,53 +16,32 @@
  */
 
 import React, { memo } from 'react';
-import type { GeoCoordinate } from '../types';
-import type { PolygonType, UniversalPolygon } from '@geo-alert/core/polygon-system/types';
-import { InteractiveMapContainer } from './InteractiveMapContainer';
-// 🏢 ENTERPRISE: Import proper types for type safety
-import type { TransformState, MapInstance } from '../hooks/map/useMapInteractions';
+import {
+  InteractiveMapContainer,
+  type InteractiveMapContainerProps,
+} from './InteractiveMapContainer';
 
 // ============================================================================
 // 🎯 ENTERPRISE INTERFACE
 // ============================================================================
 
-export interface InteractiveMapProps {
-  onCoordinateClick?: (coordinate: GeoCoordinate) => void;
-  showControlPoints?: boolean;
-  showTransformationPreview?: boolean;
-  isPickingCoordinates?: boolean;
-  transformState: TransformState;
-  className?: string;
-  onPolygonComplete?: () => void;
-  onMapReady?: (map: MapInstance) => void;
-  /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
-  children?: React.ReactNode;
-  /** Hide GeoStatusBar (for non-DXF contexts like AddressMap) */
-  showStatusBar?: boolean;
-  /** Hide GeoMapControls (coordinate picker & style selector) */
-  showMapControls?: boolean;
-  searchMarker?: {
-    lat: number;
-    lng: number;
-    address?: string;
-  } | null;
-  enablePolygonDrawing?: boolean;
-  defaultPolygonMode?: PolygonType;
-  onPolygonCreated?: (polygon: UniversalPolygon) => void;
-  onPolygonModified?: (polygon: UniversalPolygon) => void;
-  onPolygonDeleted?: (polygonId: string) => void;
-  administrativeBoundaries?: {
-    feature: GeoJSON.Feature | GeoJSON.FeatureCollection;
-    visible: boolean;
-    style?: {
-      strokeColor?: string;
-      strokeWidth?: number;
-      strokeOpacity?: number;
-      fillColor?: string;
-      fillOpacity?: number;
-    };
-  }[];
-}
+/**
+ * Τα props της ρίζας σύνθεσης **ΕΙΝΑΙ** τα props του container — όχι «τα ίδια», *αυτά*.
+ *
+ * 🔴 **Ήταν χειρόγραφο αντίγραφο 40 γραμμών, και το component είναι σκέτο pass-through**
+ * (`<InteractiveMapContainer {...props} />`). Δύο δηλώσεις για ένα σχήμα, με **μηδέν**
+ * μηχανισμό να τις κρατά ίδιες: κάθε νέο prop έπρεπε να γραφτεί **δύο φορές** και η
+ * παράλειψη δεν θα ήταν σφάλμα μεταγλώττισης — θα ήταν prop που ο καλών **δεν μπορεί να
+ * περάσει**, σιωπηλά. Το `chrome` (ADR-777 §8.13.2) ήταν ακριβώς αυτή η περίπτωση: μπήκε
+ * και στα δύο επειδή κάποιος **θυμήθηκε**.
+ *
+ * ⚠️ Η αντιγραφή είχε **ήδη αποκλίνει** σε δύο σημεία, και προς τη λάθος κατεύθυνση —
+ * `defaultPolygonMode` δεχόταν `PolygonType` ενώ ο container δέχεται `PolygonType |
+ * 'complex'`. Δηλαδή η ρίζα απαγόρευε τιμή που ο παραλήπτης **υποστηρίζει**.
+ *
+ * Το ελάττωμα το έπιασε η **CHECK 3.28** (jscpd, ADR-583) πάνω σε αυτό ακριβώς το commit.
+ */
+export type InteractiveMapProps = InteractiveMapContainerProps;
 
 // ============================================================================
 // 🏢 ENTERPRISE COMPOSITION ROOT

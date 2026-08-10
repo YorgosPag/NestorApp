@@ -31,6 +31,8 @@ import {
 import { InteractiveMapPresentation } from './InteractiveMapPresentation';
 // Configuration
 import { GEOGRAPHIC_CONFIG } from '../../../config/geographic-config';
+// Το ακροατήριο του χάρτη — ΕΝΑ όνομα, όχι Ν σημαίες (ADR-777 §2.2)
+import { MAP_CHROME, type MapChromePreset } from '../config/map-chrome';
 
 // 🎯 ENTERPRISE TYPE DEFINITIONS
 export interface InteractiveMapContainerProps {
@@ -63,8 +65,15 @@ export interface InteractiveMapContainerProps {
       fillOpacity?: number;
     };
   }[];
-  showStatusBar?: boolean;
-  showMapControls?: boolean;
+  /**
+   * **Το ακροατήριο του χάρτη** — από αυτό παράγεται *κάθε* overlay.
+   *
+   * 🔴 Αντικατέστησε τα `showStatusBar` / `showMapControls`. Δεν ήταν ανεπαρκή επειδή
+   * απέκλιναν: ήταν **δύο** σημαίες για **τρία** πάνελ, και το τρίτο
+   * (`GeoCoordinateDisplay`) δεν είχε καμία — γι' αυτό ο δημόσιος χάρτης έβγαζε
+   * συντεταγμένες. Δες `config/map-chrome.ts`.
+   */
+  chrome?: MapChromePreset;
   /** 🗺️ ENTERPRISE: Children elements (markers, layers) to render inside the map */
   children?: React.ReactNode;
 }
@@ -90,10 +99,13 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
   onPolygonModified,
   onPolygonDeleted,
   administrativeBoundaries = [],
-  showStatusBar = true, // 🗺️ ENTERPRISE: Hide for non-DXF contexts
-  showMapControls = true, // 🗺️ ENTERPRISE: Hide coordinate picker & style selector
+  // Προεπιλογή `workspace`: είναι **ακριβώς** ό,τι έδιναν οι παλιές προεπιλογές
+  // (`showStatusBar = true`, `showMapControls = true`) ⇒ ο `GeoCanvasContent`, που δεν
+  // περνούσε τίποτα, μένει **ταυτόσημος**.
+  chrome = 'workspace',
   children // 🗺️ ENTERPRISE: Children markers/layers
 }) => {
+  const capabilities = MAP_CHROME[chrome];
   // 🎯 ENTERPRISE: CENTRALIZED DESIGN TOKENS
   const colors = useSemanticColors();
 
@@ -381,7 +393,8 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
         {children}
       </InteractiveMapPresentation>
 
-      {/* Enterprise Map Overlays */}
+      {/* Enterprise Map Overlays — ΚΑΘΕ ένα φρουρείται από το ακροατήριο (§2.2) */}
+      {capabilities.accuracyLegend && (
       <GeoAccuracyLegend
         controlPoints={transformState.controlPoints}
         showAccuracyCircles={mapState.showAccuracyCircles}
@@ -389,15 +402,19 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
         onToggleAccuracyCircles={mapState.toggleAccuracyVisualization}
         onVisualizationModeChange={mapState.setAccuracyVisualizationMode}
       />
+      )}
 
       <GeoCoordinateDisplay
         hoveredCoordinate={mapState.hoveredCoordinate}
         currentMapStyle={mapState.currentMapStyle}
         onMapStyleChange={(newStyle: MapStyleType) => mapInteractionHandlers.handleMapStyleChange(newStyle, mapState.setCurrentMapStyle, mapState.setMapLoaded)}
         clickMode={mapState.clickMode}
+        basemaps={capabilities.basemaps}
+        basemapSwitcher={capabilities.basemapSwitcher}
+        coordinateReadout={capabilities.coordinateReadout}
       />
 
-      {showMapControls && (
+      {capabilities.pickerControls && (
         <GeoMapControls
           clickMode={mapState.clickMode}
           onStartCoordinatePicking={mapState.startCoordinatePicking}
@@ -408,7 +425,7 @@ export const InteractiveMapContainer: React.FC<InteractiveMapContainerProps> = (
         />
       )}
 
-      {showStatusBar && (
+      {capabilities.statusBar && (
         <GeoStatusBar
           mapLoaded={mapState.mapLoaded}
           isCalibrated={transformState.isCalibrated}

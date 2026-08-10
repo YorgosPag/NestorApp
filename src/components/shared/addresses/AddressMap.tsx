@@ -307,8 +307,12 @@ export const AddressMap: React.FC<AddressMapProps> = memo(({
                 matrix: null
               }}
               onMapReady={handleMapReady}
-              showStatusBar={false}
-              showMapControls={false}
+              /*
+               * `embedded`: **εσωτερική** οθόνη. Οι συντεταγμένες μένουν — εκεί είναι
+               * **εργαλείο** του επαγγελματία, όχι θόρυβος (ADR-777 §2.2). Ταυτόσημο
+               * με τις δύο σημαίες που αντικατέστησε.
+               */
+              chrome="embedded"
               className="w-full h-full rounded-lg overflow-hidden"
             >
               {/* Draggable Marker Mode */}

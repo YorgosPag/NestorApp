@@ -22,6 +22,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 import { computeAccuracyStats } from './accuracy-stats';
+import { MAP_OVERLAY_SURFACE } from './overlay-surface';
 
 // ============================================================================
 // 🎯 ENTERPRISE TYPE DEFINITIONS
@@ -160,7 +161,7 @@ export const GeoStatusBar: React.FC<GeoStatusBarProps> = ({
 
   return (
     <footer
-      className={`absolute bottom-4 right-4 ${colors.bg.secondary} bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
+      className={`absolute bottom-4 right-4 ${MAP_OVERLAY_SURFACE} ${className}`}
       aria-label={t('map.status.statusBar')}
     >
       <div className="text-sm space-y-2">

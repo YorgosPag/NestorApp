@@ -459,6 +459,10 @@
       "selectMapStyle": "Select map style",
       "mapControls": "Map controls"
     },
+    "basemap": {
+      "map": "Map",
+      "satellite": "Satellite"
+    },
     "status": {
       "mapLoaded": "Map Loaded",
       "mapLoading": "Loading...",

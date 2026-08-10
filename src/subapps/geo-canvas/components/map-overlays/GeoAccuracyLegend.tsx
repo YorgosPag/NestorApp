@@ -23,6 +23,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { INTERACTIVE_PATTERNS, HOVER_BACKGROUND_EFFECTS } from '@/components/ui/effects';
 import { getDynamicBackgroundClass } from '@/components/ui/utils/dynamic-styles';
 import { interactiveMapStyles } from '../InteractiveMap.styles';
+import { MAP_OVERLAY_SURFACE } from './overlay-surface';
 import type { FloorPlanControlPoint } from '../../floor-plan-system/types/control-points';
 import { computeAccuracyStats } from './accuracy-stats';
 import { GEO_COLORS } from '../../config/color-config';
@@ -186,7 +187,7 @@ export const GeoAccuracyLegend: React.FC<GeoAccuracyLegendProps> = ({
 
   return (
     <aside
-      className={`absolute top-4 left-4 ${colors.bg.secondary} bg-opacity-90 text-white p-3 rounded-lg shadow-lg ${className}`}
+      className={`absolute top-4 left-4 ${MAP_OVERLAY_SURFACE} ${className}`}
       aria-label={t('accuracy.legend')}
     >
       <div className="text-sm">
