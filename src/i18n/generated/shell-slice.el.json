@@ -3053,10 +3053,6 @@
           "description": "Διαχείριση αρχείων και εγγράφων",
           "title": "Αρχεία"
         },
-        "geoCanvas": {
-          "description": "Γεωχωρικό σύστημα χαρτών",
-          "title": "Geo-Canvas"
-        },
         "legal": {
           "description": "Νομικά έγγραφα και υποχρεώσεις",
           "title": "Νομικά"

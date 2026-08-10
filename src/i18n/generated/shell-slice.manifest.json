@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "6d8ada46407d330aa1efe5fff7234537a4efd84f46d94ee477646ee36a6c8201",
+    "src/i18n/generated/shell-slice.el.json": "9a3b4c7a0065f71925d013d4f1c39ab0cda3e80d7087a210ef7ebb122c54259e",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -40,7 +40,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "20b5083765df07f224458213b294ea670101eca2b61022b44c069dae852026a2",
+  "inputsSha256": "92bed590958bfa420e5d38815abc55c2b004db25420c1226af2909106e0186ef",
   "languages": [
     "el"
   ],
@@ -90,7 +90,7 @@
     "src/components/app-header.tsx": "ce7ac01d3dbe5d06dea0c29bc271f47d67f1f7855b3036f08d6bc4f3f26c3083",
     "src/components/app-sidebar.tsx": "81de2275b5a0b18f89a52d4fd53868897f8a50ae14b77560dfdf509cd4217a02",
     "src/components/core/AdvancedFilters/types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
-    "src/components/dashboard/DashboardHome.tsx": "8981a612d99c035e787f2d50ec4977399e9eb05388000193b36bc7098bab9973",
+    "src/components/dashboard/DashboardHome.tsx": "0659f9c525f4f90347c709b73e57d55a7bc8ff632c0b019a041384b5c034ddea",
     "src/components/dashboard/DashboardWelcome.tsx": "664e054ae71015831d86ea4cf203f32bef47fccffdf4f7db1908158df9dd31bc",
     "src/components/dashboard/NavigationCard.tsx": "ec5f73e03e24670e836f64d80d4476078c28caeb6c32976c632d55fe1b941d14",
     "src/components/dashboard/NavigationGrid.tsx": "9df78c55920a239c3c5fd689a2d40e8eefacd7ef6770991d1dd7f529069b60d6",
@@ -205,7 +205,7 @@
     "src/config/notification-events.ts": "9f9a48c1ff56319e5aca60cb7ee7d279d4dca400e58221d229b81c49e01aca68",
     "src/config/notification-keys.ts": "d2e8d464ddc860d07e32c60966579815c9927c966a3dc86fdf70f76d45393c7e",
     "src/config/persona-config.ts": "1abb294d59594082c369ad1d3e4513cbd9bbbfc88a8825714e9fc8b9eb7dd5eb",
-    "src/config/smart-navigation-factory.ts": "89ee275eec124df0cca9a27b4e028091e9a3043549c2621ed75c4521a5a27965",
+    "src/config/smart-navigation-factory.ts": "2330e71522d999ff57b805e27a1fd234c1532f9ddd760952c0e79330c5eee86c",
     "src/config/study-groups-config.ts": "41192820acc6d25d54956ba341ce18882fe953806049ef129e8c08674404baef",
     "src/config/upload-entry-points/entries-studies.ts": "cedfad81cd497f6cd1a557ae8a648765d20ca9f96c3f46c292e45986d13e866c",
     "src/config/upload-entry-points/types.ts": "e2390571a6776657d666000c4dd92c24dc50c960998d4ebec5ee4bcb9bf0e2d1",
@@ -491,10 +491,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 138,
+    "matchedKeys": 136,
     "routeBoundaries": 0,
     "shellFiles": 414,
-    "sliceBytes": 190681
+    "sliceBytes": 190540
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",
@@ -3401,8 +3401,6 @@
         "home.modules.dxfViewer.title",
         "home.modules.files.description",
         "home.modules.files.title",
-        "home.modules.geoCanvas.description",
-        "home.modules.geoCanvas.title",
         "home.modules.legal.description",
         "home.modules.legal.title",
         "home.modules.projects.description",
