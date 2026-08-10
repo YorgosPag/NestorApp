@@ -11,7 +11,6 @@ import {
   Calculator,
   FolderTree,
   FileText,
-  MapPin,
   Construction,
 } from 'lucide-react';
 import { useAuth } from '@/auth';
@@ -113,14 +112,6 @@ function useToolsTiles(t: (key: string) => string): NavigationTile[] {
       icon: FileText,
       href: '/legal-documents',
       colorVariant: 'purple',
-    },
-    {
-      title: t('home.modules.geoCanvas.title'),
-      description: t('home.modules.geoCanvas.description'),
-      icon: MapPin,
-      href: '/geo/canvas',
-      badge: 'ENTERPRISE',
-      colorVariant: 'green',
     },
     {
       title: t('home.modules.dxfViewer.title'),

@@ -26,6 +26,7 @@ import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useFloorTabs, type FloorTab } from '../../hooks/data/useFloorTabs';
+import { BasemapSettingsPopover } from './BasemapSettingsPopover';
 import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
 import {
   getBasemapAvailability,
@@ -189,8 +190,15 @@ export const FloorTabBar: React.FC = () => {
       className={`shrink-0 ${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.OVERFLOW.X_AUTO}`}
     >
       {/* Ο χάρτης πρώτος-αριστερά (Giorgio 2026-08-09): είναι το πλαίσιο μέσα στο οποίο
-          διαβάζονται όλα τα υπόλοιπα — «πού είμαι» πριν από «ποιον όροφο βλέπω». */}
-      <BasemapTab />
+          διαβάζονται όλα τα υπόλοιπα — «πού είμαι» πριν από «ποιον όροφο βλέπω».
+
+          ⚠️ Split control (ADR-782 §18): ο διακόπτης και οι ρυθμίσεις είναι **δύο αδελφά
+          κουμπιά**, όχι ένθετα — κουμπί μέσα σε κουμπί είναι άκυρο HTML και ο αναγνώστης οθόνης
+          δεν μπορεί να τα ξεχωρίσει. Το `role="group"` τα ανακοινώνει ως ΕΝΑ χειριστήριο. */}
+      <span role="group" aria-label={t('basemap.label')} className={`flex items-center ${PANEL_LAYOUT.GAP.HALF}`}>
+        <BasemapTab />
+        <BasemapSettingsPopover />
+      </span>
       {tabs.map((tab) => (
         <FloorTabButton
           key={tab.floorId}

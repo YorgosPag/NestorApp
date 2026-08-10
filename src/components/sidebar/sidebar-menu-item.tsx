@@ -134,7 +134,7 @@ export function SidebarMenuItem({
   const handleNavigationClick = (href: string) => {
     if (isMobile) {
       setOpenMobile(false);
-    } else if (href === '/dxf/viewer' || href === '/geo/canvas') {
+    } else if (href === '/dxf/viewer') {
       setOpen(false);
     }
   };

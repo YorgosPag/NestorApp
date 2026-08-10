@@ -62,9 +62,6 @@ export function LanguageSwitcher() {
 
       // Preload route-specific namespaces to avoid fallback-to-el
       const { loadNamespace } = await import('@/i18n/lazy-config');
-      if (window.location.pathname.includes('/geo/canvas')) {
-        await loadNamespace('geo-canvas', nextLanguage);
-      }
       if (window.location.pathname.startsWith('/admin')) {
         await loadNamespace('admin', nextLanguage);
       }

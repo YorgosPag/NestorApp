@@ -72,7 +72,7 @@ const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password
  * so the harness would measure a viewport the real route never has. Same list, one
  * answer: the measured geometry must be the shipped geometry.
  */
-const SIDEBAR_COLLAPSED_ROUTES = ['/dxf/viewer', '/geo/canvas', '/test-harness/dxf-perf'] as const;
+const SIDEBAR_COLLAPSED_ROUTES = ['/dxf/viewer', '/test-harness/dxf-perf'] as const;
 
 function isSidebarCollapsedRoute(pathname: string): boolean {
   return SIDEBAR_COLLAPSED_ROUTES.some(route => pathname === route || pathname.startsWith(`${route}/`));

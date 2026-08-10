@@ -874,6 +874,15 @@
     "attributionAria": "Map data credit",
     "sources": {
       "osmStandard": "OpenStreetMap"
+    },
+    "settings": {
+      "openAria": "Map backdrop settings",
+      "title": "Map backdrop",
+      "opacity": "Opacity",
+      "opacityHint": "The drawing must remain the readable layer. Lower value = more discreet map.",
+      "provider": "Provider",
+      "providerSingleHint": "One provider available.",
+      "unavailable": "This project is not geo-referenced — the settings have nothing to affect."
     }
   },
   "toolbarStatus": {

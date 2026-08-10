@@ -95,7 +95,6 @@ const NAVIGATION_LABELS = {
   users: 'sidebar.users',
   keyboard_shortcuts: 'tools.shortcuts',
   shortcuts: 'tools.shortcuts',
-  geo_canvas: 'tools.geoCanvas',
   dxf_viewer: 'tools.dxf',
   login: 'pages.login',
   debug: 'sidebar.debug',

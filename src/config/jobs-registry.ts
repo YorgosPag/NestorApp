@@ -178,8 +178,8 @@ export const JOBS: Readonly<Record<JobId, JobDefinition>> = {
       'bim_animations:animations:update',
       'bim_animations:animations:delete',
     ],
-    sidebar: ['/dxf/viewer', '/geo/canvas', '/buildings'],
-    dashboardTiles: ['dxf/viewer', 'geo/canvas', 'buildings'],
+    sidebar: ['/dxf/viewer', '/buildings'],
+    dashboardTiles: ['dxf/viewer', 'buildings'],
     ownsDxfViewer: true,
   },
 
