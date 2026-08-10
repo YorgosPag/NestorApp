@@ -11,6 +11,34 @@
  */
 export const nowISO = (): string => new Date().toISOString();
 
+/**
+ * **Σήμερα, ως ΗΜΕΡΟΛΟΓΙΑΚΗ ημερομηνία του χρήστη** — `YYYY-MM-DD`.
+ *
+ * 🔴 **ΔΕΝ είναι `nowISO().slice(0, 10)`, και η διαφορά είναι πραγματικό σφάλμα.**
+ * Το `nowISO()` δίνει **UTC**· η Ελλάδα είναι UTC+2/+3. Άρα κάθε βράδυ, από τις
+ * 21:00 (ή 22:00 με θερινή ώρα) μέχρι τα μεσάνυχτα, το κόψιμο δίνει την **επόμενη**
+ * ημέρα — και ο άνθρωπος που ρωτά «τι υπάρχει **σήμερα**» παίρνει απάντηση για αύριο.
+ *
+ * 🔑 **Γιατί εδώ και όχι στον καταναλωτή**: το ADR-777 Α9 χρειάστηκε *«σημερινή
+ * ημερομηνία ISO»* ως **ρητή παράμετρο** της μηχανής ταιριάσματος (η μηχανή είναι
+ * καθαρή και **δεν διαβάζει ρολόι**). Γραμμένο στον καταναλωτή, θα ξαναγραφόταν σε
+ * κάθε επόμενη οθόνη — και η πιθανότερη παραλλαγή είναι ακριβώς το λανθασμένο
+ * `slice(0, 10)`. Το SSoT ημερομηνίας είναι **εδώ**· ο κανόνας το λέει ρητά.
+ *
+ * ⚠️ Χρησιμοποιεί τα **τοπικά** πεδία (`getFullYear`/`getMonth`/`getDate`), όχι
+ * μορφοποίηση με locale: το `toLocaleDateString` αλλάζει **σειρά και διαχωριστικό**
+ * ανά περιβάλλον, και το αποτέλεσμα εδώ οφείλει να είναι **ταξινομήσιμο ISO** —
+ * το συγκρίνουν λεξικογραφικά οι άξονες χρόνου της ζήτησης (`from <= todayDate`).
+ *
+ * @see ADR-777 §7 Α9 — `matchDemandAgainstListing(demand, facts, todayDate)`
+ */
+export function todayLocalDate(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 export function normalizeToDate(val: unknown): Date | null {
   if (!val) return null;
   // Firestore Timestamp (client or admin SDK) — both expose toDate()
