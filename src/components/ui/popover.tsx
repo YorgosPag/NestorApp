@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
 import { useDropdownTokens } from '@/hooks/useDropdownTokens'
 import { componentSizes } from '@/styles/design-tokens'
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership'
 import '@/lib/design-system';
 
 const Popover = PopoverPrimitive.Root
@@ -24,7 +26,7 @@ const PopoverAnchor = PopoverPrimitive.Anchor
 const PopoverContent = React.forwardRef<
   React.ComponentRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "center", sideOffset = componentSizes.dropdown.content.sideOffset, ...props }, ref) => {
+>(({ className, align = "center", sideOffset = componentSizes.dropdown.content.sideOffset, onEscapeKeyDown, ...props }, ref) => {
   const { quick } = useBorderTokens();
   const dropdown = useDropdownTokens();
 
@@ -39,6 +41,8 @@ const PopoverContent = React.forwardRef<
         className
       )}
       {...props}
+      // ADR-364 §10.15 — δήλωση Κ3: ο Radix κατέχει νόμιμα το Esc εδώ (μετρημένο shadow-owner).
+      onEscapeKeyDown={withRadixEscapeOwner('ui/popover-content', onEscapeKeyDown)}
     />
   </PopoverPrimitive.Portal>
   );

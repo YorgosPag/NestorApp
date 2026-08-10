@@ -14,6 +14,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation'
 // ADR-711 — modal keyboard ownership + focus restore (κοινό με το dialog.tsx).
 import { ModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope'
 import { useDialogFocusRestore } from '@/lib/a11y/use-dialog-focus-restore'
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership'
 import '@/lib/design-system';
 
 // ╭─────────────────────────────────────────────╮
@@ -96,7 +98,7 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+>(({ side = "right", className, children, onOpenAutoFocus, onCloseAutoFocus, onEscapeKeyDown, ...props }, ref) => {
   const colors = useSemanticColors();
   const sheetVariants = createSheetVariants(colors);
   // ADR-711 — ίδιο κενό Radix με το Dialog (κοινός hook, όχι αντιγραμμένη λογική).
@@ -110,6 +112,8 @@ const SheetContent = React.forwardRef<
         className={cn(sheetVariants({ side }), className)}
         {...props}
         {...autoFocusHandlers}
+        // ADR-364 §10.15 — δήλωση Κ3 (μετρημένο shadow-owner, όπως ο Dialog).
+        onEscapeKeyDown={withRadixEscapeOwner('ui/sheet-content', onEscapeKeyDown)}
       >
         <ModalKeyboardScope />
         {children}

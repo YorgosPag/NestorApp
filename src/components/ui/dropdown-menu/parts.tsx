@@ -7,6 +7,8 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useDropdownTokens } from '@/hooks/useDropdownTokens';
 import { componentSizes } from '@/styles/design-tokens';
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership';
 import {
   DropdownMenuPortal,
   PrimitiveSubTrigger,
@@ -67,7 +69,7 @@ DropdownMenuSubContent.displayName = PrimitiveSubContent.displayName;
 export const DropdownMenuContent = React.forwardRef<
   React.ComponentRef<typeof PrimitiveContent>,
   React.ComponentPropsWithoutRef<typeof PrimitiveContent>
->(({ className, sideOffset, ...props }, ref) => {
+>(({ className, sideOffset, onEscapeKeyDown, ...props }, ref) => {
   const { quick } = useBorderTokens();
   const dropdown = useDropdownTokens();
 
@@ -81,6 +83,8 @@ export const DropdownMenuContent = React.forwardRef<
           className
         )}
         {...props}
+        // ADR-364 §10.15 — δήλωση Κ3 (μετρημένο shadow-owner· το Radix κλείνει το μενού με Esc).
+        onEscapeKeyDown={withRadixEscapeOwner('ui/dropdown-menu-content', onEscapeKeyDown)}
       />
     </DropdownMenuPortal>
   );

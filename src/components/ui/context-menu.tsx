@@ -18,6 +18,8 @@ import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
 import { Check, ChevronRight, Circle } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -87,7 +89,7 @@ ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName;
 const ContextMenuContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
->(({ className, ...props }, ref) => (
+>(({ className, onEscapeKeyDown, ...props }, ref) => (
   <ContextMenuPrimitive.Portal>
     <ContextMenuPrimitive.Content
       ref={ref}
@@ -101,6 +103,8 @@ const ContextMenuContent = React.forwardRef<
         className
       )}
       {...props}
+      // ADR-364 §10.15 — δήλωση Κ3 (μετρημένο shadow-owner, ίδια κλάση με τα υπόλοιπα Radix layers).
+      onEscapeKeyDown={withRadixEscapeOwner('ui/context-menu-content', onEscapeKeyDown)}
     />
   </ContextMenuPrimitive.Portal>
 ));

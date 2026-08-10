@@ -9,6 +9,8 @@ import { useDropdownTokens } from "@/hooks/useDropdownTokens"
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from "@/hooks/useBorderTokens"
 import { useSemanticColors } from "@/ui-adapters/react/useSemanticColors"
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from "@/components/ui/radix-escape-ownership"
 import '@/lib/design-system';
 
 const Select = SelectPrimitive.Root
@@ -105,7 +107,7 @@ SelectScrollDownButton.displayName =
 const SelectContent = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = "popper", ...props }, ref) => {
+>(({ className, children, position = "popper", onEscapeKeyDown, ...props }, ref) => {
   const { quick } = useBorderTokens();
   const dropdown = useDropdownTokens();
 
@@ -126,6 +128,8 @@ const SelectContent = React.forwardRef<
         )}
         position={position}
         {...props}
+        // ADR-364 §10.15 — δήλωση Κ3 (μετρημένο shadow-owner· το Radix κλείνει τη λίστα με Esc).
+        onEscapeKeyDown={withRadixEscapeOwner('ui/select-content', onEscapeKeyDown)}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport

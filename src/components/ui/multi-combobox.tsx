@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import * as PopoverPrimitive from '@radix-ui/react-popover';
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership';
 import { Checkbox } from '@/components/ui/checkbox';
 import { X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -190,6 +192,9 @@ function MultiComboboxContent({ state, searchPlaceholder, emptyMessage, clearAll
       className="z-50 min-w-[var(--radix-popover-trigger-width)] rounded-md border bg-popover p-0 shadow-md"
       align="start"
       sideOffset={4}
+      // ADR-364 §10.15 — δήλωση Κ3. Αυτό το αρχείο χρησιμοποιεί το **ωμό** Radix primitive και όχι
+      // το κοινό `PopoverContent`, οπότε δεν κληρονομεί τη δήλωση — έπρεπε να τη ζητήσει ρητά.
+      onEscapeKeyDown={withRadixEscapeOwner('ui/multi-combobox-content')}
     >
       <MultiComboboxSearch value={state.search} onChange={state.setSearch} placeholder={searchPlaceholder} onKeyDown={handleKeyDown} />
       <ul role="listbox" aria-multiselectable className="max-h-60 overflow-y-auto p-1">

@@ -5,6 +5,8 @@ import * as TooltipPrimitive from "@radix-ui/react-tooltip"
 
 import { cn } from "@/lib/utils"
 import { useBorderTokens } from '@/hooks/useBorderTokens'
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership'
 import '@/lib/design-system';
 
 const TooltipProvider = TooltipPrimitive.Provider
@@ -16,7 +18,7 @@ const TooltipTrigger = TooltipPrimitive.Trigger
 const TooltipContent = React.forwardRef<
   React.ComponentRef<typeof TooltipPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof TooltipPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => {
+>(({ className, sideOffset = 4, onEscapeKeyDown, ...props }, ref) => {
   const { quick } = useBorderTokens();
 
   return (
@@ -29,6 +31,8 @@ const TooltipContent = React.forwardRef<
         className
       )}
       {...props}
+      // ADR-364 §10.15 — δήλωση Κ3 (μετρημένο shadow-owner: το Radix κλείνει το tooltip με Esc).
+      onEscapeKeyDown={withRadixEscapeOwner('ui/tooltip-content', onEscapeKeyDown)}
     />
   </TooltipPrimitive.Portal>
   );

@@ -15,6 +15,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation'
 // ADR-711 — modal keyboard ownership + focus restore. ΕΝΑ σημείο για 170 αρχεία.
 import { ModalKeyboardScope } from '@/lib/a11y/use-modal-keyboard-scope'
 import { useDialogFocusRestore } from '@/lib/a11y/use-dialog-focus-restore'
+// ADR-364 §10.15 — δήλωση Κ3 ιδιοκτησίας Esc. ΕΝΑ module για όλα τα Radix wrappers.
+import { withRadixEscapeOwner } from '@/components/ui/radix-escape-ownership'
 import '@/lib/design-system';
 
 // =============================================================================
@@ -99,7 +101,7 @@ interface DialogContentProps extends
 const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, hideCloseButton = false, size, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => {
+>(({ className, children, hideCloseButton = false, size, onOpenAutoFocus, onCloseAutoFocus, onEscapeKeyDown, ...props }, ref) => {
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
   // ADR-711 Ε2 — ο Radix επαναφέρει το focus ΜΟΝΟ στον <DialogTrigger>· 161/170 αρχεία
@@ -118,6 +120,9 @@ const DialogContent = React.forwardRef<
         )}
         {...props}
         {...autoFocusHandlers}
+        // ADR-364 §10.15 — δήλωση Κ3: ο Radix κατέχει νόμιμα το Esc εδώ. Χωρίς αυτήν, ΚΑΘΕ
+        // διάλογος της εφαρμογής τυπώνει SHADOW-OWNER σε dev (μετρημένο, όχι συναγόμενο).
+        onEscapeKeyDown={withRadixEscapeOwner('ui/dialog-content', onEscapeKeyDown)}
       >
         {/* ADR-711 Ε1/Ε4 — μέσα στο Content, ώστε mount === «ανοιχτό». Πιο ψηλά θα
             κρατούσε το scope μόνιμα πατημένο (η συνάρτηση του DialogContent τρέχει
