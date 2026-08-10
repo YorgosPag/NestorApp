@@ -1,11 +1,42 @@
 const { withSentryConfig } = require('@sentry/nextjs');
 
+/**
+ * [DEV] Κατάλογος build ανά στιγμιότυπο — λύνει τη σύγκρουση δύο `next dev` στο ΙΔΙΟ working tree.
+ *
+ * Πριν το Next 16, `next dev` και `next build` γράφουν και οι δύο μέσα στο ίδιο `.next`. Δύο dev
+ * servers στον ίδιο φάκελο ξαναγράφουν ο ένας τα chunks του άλλου: ο δεύτερος κερδίζει, ο πρώτος
+ * μένει με μανιφέστο που δεν υπάρχει και απαντά 500 —
+ *   ENOENT: … open '.next/server/app/(light)/search/results/page/app-build-manifest.json'
+ * Το working tree μοιράζεται με άλλους agents, οπότε «τρέχε ΕΝΑΝ server» είναι ανάθεση σε άνθρωπο,
+ * όχι εγγύηση· έχει ήδη αποτύχει δύο φορές. Με ξεχωριστό distDir η σύγκρουση γίνεται αδύνατη.
+ *
+ * Χρήση:  NEXT_DIST_DIR=.next-3100 npx next dev --turbopack --port 3100
+ * Χωρίς τη μεταβλητή η συμπεριφορά είναι **αμετάβλητη** (`.next`) — Docker/CI/standalone ανέπαφα.
+ *
+ * ⚠️ Ο φρουρός δεν είναι πολυτέλεια: το Next **καθαρίζει** τον κατάλογο build. Ένα `NEXT_DIST_DIR=src`
+ * από τυπογραφικό θα έσβηνε πηγαίο κώδικα. Δεκτά μόνο ονόματα που ξεκινούν με `.next`.
+ */
+const DIST_DIR_PATTERN = /^\.next[A-Za-z0-9._-]*$/;
+const resolveDistDir = () => {
+  const requested = process.env.NEXT_DIST_DIR;
+  if (!requested) return '.next';
+  if (!DIST_DIR_PATTERN.test(requested)) {
+    throw new Error(
+      `[next.config] NEXT_DIST_DIR="${requested}" απορρίφθηκε. Το Next καθαρίζει τον κατάλογο build, ` +
+        `οπότε δεκτά είναι μόνο ονόματα που ταιριάζουν στο ${DIST_DIR_PATTERN} (π.χ. ".next-3100").`
+    );
+  }
+  return requested;
+};
+
 /** @type {import('next').NextConfig} */
 // Vercel rebuild trigger: 2026-03-23
 const nextConfig = {
   // [COOLIFY] Standalone output: self-contained Node server for Docker deployment.
   // Creates .next/standalone with only necessary files — smaller image, no full node_modules.
   output: 'standalone',
+
+  distDir: resolveDistDir(),
 
   // [FAST] FAST DEV MODE - Skip checks για άμεσο startup
   typescript: {

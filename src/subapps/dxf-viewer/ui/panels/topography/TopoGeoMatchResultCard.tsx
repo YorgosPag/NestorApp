@@ -73,6 +73,19 @@ function ProofRow(props: { readonly term: string; readonly value: string }): Rea
 }
 
 /**
+ * The measured residual as centimetres — or `null` when there is no measurement to show.
+ *
+ * 🔴 The ONE place the card turns `rmsMm` into text, so «δεν μετρήθηκε» cannot be rendered as
+ * «0.0» in one row and correctly in another. Before ADR-782 §16 the engine reported `0` for an
+ * unmeasured residual and this card printed it: the REJECTED proposal (0 of 84 points landed)
+ * showed «Μέση απόκλιση: 0.0 εκ.» while the PERFECT one showed 0.5 — the evidence list ranking
+ * the candidates backwards, beside the button that rewrites `Project.basePoint`.
+ */
+function rmsCm(result: GeoMatchResult): string | null {
+  return result.rmsMm === null ? null : (result.rmsMm * MM_TO_CM).toFixed(1);
+}
+
+/**
  * Which gate refused → its explanation key. Written out for the same reason as the method
  * keys: a template-literal key is invisible to the static i18n checks.
  */
@@ -102,13 +115,17 @@ function refusalText(result: GeoMatchResult, t: TFn): string {
   return t(FAILURE_KEY[result.failure], {
     inliers: result.inliers,
     required: result.required,
-    cm: (result.rmsMm * MM_TO_CM).toFixed(1),
+    // Only `residualTooLarge` reads `{cm}`, and that gate fires strictly AFTER the count gate,
+    // so it is never reached without a measurement. The empty string is the honest filler for
+    // the two messages that ignore the parameter — never a fabricated «0.0».
+    cm: rmsCm(result) ?? '',
   });
 }
 
 /** The measured evidence behind an accepted proposal. */
 function ProofList(props: { readonly result: GeoMatchResult; readonly t: TFn }): React.JSX.Element {
   const { result, t } = props;
+  const cm = rmsCm(result);
   return (
     <dl className={styles.proofList}>
       <ProofRow
@@ -119,7 +136,9 @@ function ProofList(props: { readonly result: GeoMatchResult; readonly t: TFn }):
       />
       <ProofRow
         term={t('topography.geoRef.match.proof.rms')}
-        value={t('topography.geoRef.match.proof.rmsValue', { cm: (result.rmsMm * MM_TO_CM).toFixed(1) })}
+        value={cm === null
+          ? t('topography.geoRef.match.proof.rmsUnmeasured')
+          : t('topography.geoRef.match.proof.rmsValue', { cm })}
       />
       <ProofRow
         term={t('topography.geoRef.match.proof.rotation')}

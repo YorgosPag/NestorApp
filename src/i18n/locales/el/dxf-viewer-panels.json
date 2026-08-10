@@ -1077,6 +1077,7 @@
           "inliersValue": "{inliers} από {matchable} (απαιτούνταν {required})",
           "rms": "Μέση απόκλιση",
           "rmsValue": "{cm} εκ.",
+          "rmsUnmeasured": "— (κανένα σημείο δεν ταίριαξε)",
           "rotation": "Στροφή",
           "rotationValue": "{deg}°",
           "hypotheses": "Υποθέσεις που ελέγχθηκαν",

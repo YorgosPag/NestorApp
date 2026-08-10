@@ -13,6 +13,8 @@
 
 # next.js
 /.next/
+# Κατάλογοι build ανά dev στιγμιότυπο (NEXT_DIST_DIR, βλ. next.config.js) — π.χ. .next-3100
+/.next-*/
 /out/
 
 # production

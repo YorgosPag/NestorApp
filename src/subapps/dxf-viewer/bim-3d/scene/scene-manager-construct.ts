@@ -15,7 +15,6 @@ import { HoverBeautyCache } from './hover-beauty-cache';
 import type { BimSceneLayer } from './BimSceneLayer';
 import { Cinema4DGridFloor } from './grid/cinema4d-grid-floor'; // ADR-558 — Cinema-4D-style ground grid
 import { BasemapGroundLayer } from './basemap/BasemapGroundLayer'; // υπόβαθρο χάρτη (OSM) κάτω από τον κάναβο
-import { getRendererViewportSize } from './scene-setup';
 import type { IdleDetector } from '../lighting/idle-detector';
 import type { SSAOModulator } from '../lighting/ssao-modulator';
 import type { ShadowModulator } from '../lighting/shadow-modulator';
@@ -179,11 +178,15 @@ export function buildSceneManagerParts(deps: SceneManagerConstructDeps): SceneMa
   // Υπόβαθρο χάρτη — ο αδερφός του καννάβου, ένα σκαλί πιο κάτω (`OVERLAY_ORDER.BASEMAP`).
   // Καταναλώνει το ΙΔΙΟ store και την ΙΔΙΑ αλυσίδα προβολής με το 2Δ: ο χρήστης δεν μπορεί να
   // βρει τον χάρτη αναμμένο στη μία προβολή και σβηστό στην άλλη.
+  // ⚠️ Το `markDirty` ΔΕΝ είναι προαιρετικό εδώ: είναι το μόνο στρώμα με **ασύγχρονο** πόρο
+  // (πλακίδια από δίκτυο) και η σκηνή είναι on-demand — χωρίς αίτημα καρέ όταν φτάνουν, ο χάρτης
+  // δεν εμφανίζεται ποτέ. Ίδιο πρότυπο με τα `TerrainSceneLayer` / `PointCloudSceneLayer` (§17).
   const basemapLayer = new BasemapGroundLayer(
     scene,
     () => viewport.camera,
     () => viewport.target,
-    () => getRendererViewportSize(renderer.domElement).height,
+    () => renderer.domElement,
+    markDirty,
   );
 
   // ADR-665 — τα topo layers ξαναφτιάχνουν τα materials τους σε κάθε rebuild (ένα φρέσκο material

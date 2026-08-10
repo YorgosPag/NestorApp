@@ -2,6 +2,53 @@
 
 **STATUS: ACTIVE**
 
+- 🔴 **10/08 — 12 ωμά κλειδιά σε παραγωγή: το σχήμα πληθυντικού `_one/_other` ΔΕΝ λύνεται με ICU**
+  **Μετρημένο, όχι υποτεθειμένο.** Το repo τρέχει **`i18next-icu`** (`src/i18n/config.ts:8`,
+  `lazy-config.ts:3`). Εκτελεσμένο πείραμα με i18next+ICU:
+  `t('suffix', {count})` όπου το locale έχει `suffix_one`/`suffix_other` → επιστρέφει **`"suffix"`**
+  (το ωμό κλειδί)· το ICU inline `{count, plural, one {#} other {#}}` → σωστό κείμενο.
+  **Το βρήκε ΑΝΘΡΩΠΟΣ σε στιγμιότυπο** (`unmapped.heading` κάτω αριστερά στο `/search/results`),
+  όχι πύλη — 12η εμφάνιση του σχήματος.
+
+  **Γιατί καμία πύλη δεν το βλέπει** (η ουσία, όχι το σύμπτωμα): το CHECK **3.8** ρωτά «**υπάρχει**
+  το κλειδί;» και είναι **plural-aware κατά i18next**, δηλαδή δέχεται το `heading_one` ως απάντηση
+  για το `t('heading')`. Ο **χρόνος εκτέλεσης** όμως είναι **ICU**, που δεν έχει έννοια suffix.
+  **Δύο απαντήσεις σε ένα ερώτημα** (σχήμα ADR-749): η πύλη λέει «καλυμμένο», η οθόνη βάφει το κλειδί.
+  Το CHECK **3.51** (ωμά κλειδιά στο SSR HTML) δεν τα πιάνει γιατί οι σειρές αυτές ζωγραφίζονται
+  **μετά την ενυδάτωση**.
+
+  **Κατάσταση:** **14** σπασμένες βάσεις × 2 γλώσσες σε **9 αρχεία locale**. **2 διορθώθηκαν**
+  (10/08, ADR-777: `search-results :: unmapped.heading` · `card.bedrooms`). **Μένουν 12**, με
+  **ονομαστικά** σημεία κλήσης — όλα βάφουν ωμό κλειδί **σήμερα**:
+
+  | Κλειδί | Σημείο κλήσης |
+  |---|---|
+  | `addresses :: mapStatus.stale` | `components/shared/addresses/AddressMapStatusChip.tsx:67` |
+  | `common-shared :: search.resultsCount` | `components/search/GlobalSearchDialog.tsx:472` |
+  | `trash :: trashCount` | `components/shared/trash/TrashActionsBar.tsx:72` |
+  | `contacts-lifecycle :: trash.trashCount` | `components/contacts/trash/TrashActionsBar.tsx:102` |
+  | `properties-viewer :: trash.trashCount` | `components/properties/trash/PropertyTrashActionsBar.tsx:100` |
+  | `trash :: restoreSuccess` · `permanentDeleteSuccess` | `hooks/useStoragesTrashState.ts:43,46` · `hooks/useBuildingsTrashState.ts:39` · `hooks/usePropertiesTrashState.ts:127` · `components/contacts/page/useContactsTrashState.ts:62` |
+  | `contacts-lifecycle :: trash.restoreSuccess` | `components/contacts/trash/TrashActionsBar.tsx:64-65` · `properties/trash/PropertyTrashActionsBar.tsx:63-64` |
+  | `quotes :: rfqs.comments.count` · `textFindReplace :: results.count` · `textFonts :: missingBanner.{title,affectedCount}` | (χωρίς μετρημένο σημείο κλήσης — έλεγξε πριν διορθώσεις) |
+
+  ⚠️ **Υπάρχει ήδη χειροκίνητη παράκαμψη, και είναι ΜΙΣΗ**: το σχήμα
+  `count === 1 ? t('X_one') : t('X', { count })` (6 σημεία). Το **πρώτο** σκέλος λύνεται επειδή το
+  `X_one` είναι **κυριολεκτικό** κλειδί· το **δεύτερο** βγάζει ωμό. Κάποιος συνάντησε τη βλάβη, την
+  παρέκαμψε **για το ένα**, και η μισή διόρθωση κρύβει τη μισή βλάβη. **Η διόρθωση απλοποιεί**:
+  σκέτο `t('X', { count })` μόλις το κλειδί γίνει ICU.
+
+  **Θεραπεία (μηχανική):** κάθε `X_one`/`X_other` → **ένα** κλειδί `X` με
+  `{count, plural, one {…} other {…}}` (χρησιμοποίησε `#`, όχι `{count}`, μέσα στα σκέλη), **και στις
+  δύο** γλώσσες· μετά `npm run generate:i18n-types` **και** `npm run generate:i18n-shell-slice`
+  (αλλάζουν **κλειδιά**, άρα και οι δύο παραγόμενες προβολές μπαγιατεύουν — CHECK 3.33 / 3.34).
+
+  🔶 **ΥΠΟΨΗΦΙΑ ΠΥΛΗ (η πραγματική θεραπεία):** ένας έλεγχος «**κανένα κλειδί locale δεν τελειώνει σε
+  `_zero|_one|_two|_few|_many|_other`**» είναι **ZERO-TOL, ~50ms, χωρίς baseline** — το σχήμα είναι
+  **δομικά** ανίκανο να λυθεί όσο τρέχει ICU, άρα δεν υπάρχει «λιγότερα από χθες». **ΜΗΝ** το γράψεις
+  ως ratchet. **ΜΗΝ** το λύσεις αφαιρώντας το ICU plugin (το ICU είναι η επιλογή του repo — CHECK 3.9
+  φρουρεί ήδη τη σύνταξή του σε **όλα** τα locale JSON).
+
 - 🔶 **10/08 — η απόδοση «© OpenStreetMap contributors» ζει σε ΤΡΙΑ υποσυστήματα (ADR-782 §14.2)**
   Μετρημένο με grep γράφοντας την απόδοση του υποβάθρου: το ίδιο **νομικό** αλφαριθμητικό υπάρχει
   σε **4 σημεία / 3 τομείς** — `subapps/dxf-viewer/systems/basemap/basemap-source.ts` (πλέον ως

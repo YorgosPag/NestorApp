@@ -69,8 +69,18 @@ export interface GeoMatchScore {
   readonly inliers: number;
   /** Drawing points tested (the denominator the acceptance gate uses). */
   readonly total: number;
-  /** RMS residual over the inliers only, in mm. `0` when there are no inliers. */
-  readonly rmsMm: number;
+  /**
+   * RMS residual over the inliers only, in mm — or `null` when NOTHING landed.
+   *
+   * 🔴 `null`, never `0`. An RMS over zero inliers is 0/0: it is not a small residual, it is
+   * the absence of a measurement, and a `number` cannot say that. Encoding it as `0` produced
+   * exactly the defect this type now forbids — a rejected proposal (0 of 84 points) reporting
+   * «Μέση απόκλιση 0.0 εκ.» while the perfect one reported 0.5, so the evidence list ranked the
+   * candidates BACKWARDS, next to the button that rewrites `Project.basePoint` for every floor.
+   * Same rule as `null ≠ 0` in BI (Tableau/Looker) and as Revit's blank `<varies>`: absence is
+   * not a value on the scale.
+   */
+  readonly rmsMm: number | null;
   /** `inliers / total`, or 0 for an empty candidate set. */
   readonly inlierRatio: number;
 }
@@ -188,7 +198,7 @@ export function scoreGeoReference(
 ): GeoMatchScore {
   const total = localPoints.length;
   if (total === 0 || index.points.length === 0) {
-    return { inliers: 0, total, rmsMm: 0, inlierRatio: 0 };
+    return { inliers: 0, total, rmsMm: null, inlierRatio: 0 };
   }
 
   const sink = collect ? (local: Point2D, world: Point2D) => collect({ local, world }) : undefined;
@@ -197,7 +207,7 @@ export function scoreGeoReference(
   return {
     inliers: tally.inliers,
     total,
-    rmsMm: tally.inliers > 0 ? Math.sqrt(tally.sumSq / tally.inliers) : 0,
+    rmsMm: tally.inliers > 0 ? Math.sqrt(tally.sumSq / tally.inliers) : null,
     inlierRatio: tally.inliers / total,
   };
 }

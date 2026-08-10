@@ -32,7 +32,7 @@ describe('autoMatchToSurvey — analytic branches', () => {
 
     expect(result.method).toBe('identity-restore');
     expect(result.inliers).toBe(93);
-    expect(result.rmsMm).toBeLessThan(1);
+    expect(result.rmsMm!).toBeLessThan(1);
     expect(result.geo?.originWorld).toEqual(EGSA_ORIGIN);
     expect(result.geo?.rotationDeg).toBe(0);
   });
@@ -65,7 +65,7 @@ describe('autoMatchToSurvey — analytic branches', () => {
 
     expect(result.method).not.toBe('identity-restore');
     expect(result.geo).not.toBeNull();
-    expect(result.rmsMm).toBeLessThanOrEqual(MAX_RMS_MM);
+    expect(result.rmsMm!).toBeLessThanOrEqual(MAX_RMS_MM);
   });
 });
 
@@ -91,7 +91,7 @@ describe('autoMatchToSurvey — γ: blind match of a moved and rotated drawing',
     expect(Math.abs(result.geo!.originWorld.x - TRUE_TRANSLATION.x)).toBeLessThan(5);
     expect(Math.abs(result.geo!.originWorld.y - TRUE_TRANSLATION.y)).toBeLessThan(5);
     expect(result.inliers).toBeGreaterThanOrEqual(70);
-    expect(result.rmsMm).toBeLessThanOrEqual(MAX_RMS_MM);
+    expect(result.rmsMm!).toBeLessThanOrEqual(MAX_RMS_MM);
   });
 });
 
@@ -384,7 +384,7 @@ describe('proposeRobustCenterAlignment — ζ: the estimate is measured, never s
     expect(result.method).toBe('robust-center');
     expect(result.failure).toBeNull();
     expect(result.inliers).toBe(70);
-    expect(result.rmsMm).toBeLessThanOrEqual(MAX_RMS_MM);
+    expect(result.rmsMm!).toBeLessThanOrEqual(MAX_RMS_MM);
   });
 
   /**

@@ -19,12 +19,13 @@
     ]
   },
   "include": [
+    ".next/types/**/*.ts",
     "next-env.d.ts",
+    "src/**/*.d.ts",
     "src/app/**/*.ts",
     "src/app/**/*.tsx",
     "src/middleware.ts",
-    "src/**/*.d.ts",
-    ".next/types/**/*.ts"
+    ".next-3100/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

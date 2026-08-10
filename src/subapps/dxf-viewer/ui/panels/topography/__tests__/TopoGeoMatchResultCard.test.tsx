@@ -41,7 +41,7 @@ function result(over: Partial<GeoMatchResult>): GeoMatchResult {
     inliers: 0,
     matchable: 84,
     required: 26,
-    rmsMm: 0,
+    rmsMm: null,
     rotationDeg: 0,
     scaleEstimate: 1,
     suggestedUnitScale: null,
@@ -65,7 +65,8 @@ describe('TopoGeoMatchResultCard — η απόδειξη πριν την εφα�
     );
 
     // Η άρνηση, με τους ΑΡΙΘΜΟΥΣ — «0 ενώ χρειάζονται 26» και όχι σκέτο «δεν ταίριαξε».
-    expect(screen.getByText(`${TOO_FEW}(inliers=0,required=26,cm=0.0)`)).toBeInTheDocument();
+    // Το `cm` είναι ΚΕΝΟ: το μήνυμα δεν το διαβάζει, και δεν κατασκευάζουμε «0.0» για να το γεμίσουμε.
+    expect(screen.getByText(`${TOO_FEW}(inliers=0,required=26,cm=)`)).toBeInTheDocument();
 
     // ΚΑΙ το κουμπί: ο μηχανικός επιτρέπεται να πάρει πρόχειρη αφετηρία — ΕΝ ΓΝΩΣΕΙ ΤΟΥ.
     expect(screen.getByRole('button', { name: APPLY_KEY })).toBeInTheDocument();
@@ -100,6 +101,42 @@ describe('TopoGeoMatchResultCard — η απόδειξη πριν την εφα�
 
     expect(screen.queryByRole('button', { name: APPLY_KEY })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'topography.geoRef.match.dismiss' })).toBeInTheDocument();
+  });
+
+  /**
+   * 🎯 ADR-782 §16 — η άγκυρα που έλειπε: «τι δείχνει η κάρτα όταν `inliers === 0`».
+   *
+   * Ζωντανά, στο πραγματικό έργο: η ΑΠΟΡΡΙΠΤΕΑ πρόταση (0 από 84) έδειχνε «Μέση απόκλιση 0.0 εκ.»
+   * και η ΤΕΛΕΙΑ (84 από 84) «0.5 εκ.» — η λίστα απόδειξης κατέτασσε **ανάποδα**, δίπλα στο κουμπί
+   * που ξαναγράφει το `Project.basePoint` κάθε ορόφου. Το test ελέγχει ΚΑΙ ΤΑ ΔΥΟ σκέλη: ότι
+   * λείπει η ψεύτικη μέτρηση, ΚΑΙ ότι η αληθινή εξακολουθεί να εμφανίζεται — αλλιώς μια κάρτα που
+   * δεν δείχνει ποτέ απόκλιση θα ήταν επίσης «πράσινη».
+   */
+  it('🎯 Κ5: με μηδέν inliers η «Μέση απόκλιση» λέει ότι ΔΕΝ μετρήθηκε — ποτέ «0.0»', () => {
+    render(
+      <TopoGeoMatchResultCard
+        result={result({ method: 'robust-center', inliers: 0, rmsMm: null, failure: 'too-few-inliers' })}
+        onApply={noop}
+        onDismiss={noop}
+      />,
+    );
+
+    expect(screen.getByText('topography.geoRef.match.proof.rmsUnmeasured')).toBeInTheDocument();
+    // Η συγκεκριμένη ψευδής τιμή που εμφανιζόταν ζωντανά.
+    expect(screen.queryByText('topography.geoRef.match.proof.rmsValue(cm=0.0)')).not.toBeInTheDocument();
+  });
+
+  it('🎯 Κ6: με inliers > 0 η μέτρηση ΕΜΦΑΝΙΖΕΤΑΙ — το «—» είναι σήμα, όχι συνήθεια', () => {
+    render(
+      <TopoGeoMatchResultCard
+        result={result({ method: 'identity-restore', inliers: 84, rmsMm: 4.3, failure: null })}
+        onApply={noop}
+        onDismiss={noop}
+      />,
+    );
+
+    expect(screen.getByText('topography.geoRef.match.proof.rmsValue(cm=0.4)')).toBeInTheDocument();
+    expect(screen.queryByText('topography.geoRef.match.proof.rmsUnmeasured')).not.toBeInTheDocument();
   });
 
   it('Κ4: το «Αυτόματο κούμπωμα» ονομάζεται ως ΕΚΤΙΜΗΣΗ, όχι ως ταύτιση', () => {

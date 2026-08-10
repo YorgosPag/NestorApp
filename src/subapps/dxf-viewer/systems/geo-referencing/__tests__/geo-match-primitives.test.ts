@@ -211,6 +211,24 @@ describe('geo-match-gates', () => {
     expect(applyAcceptanceGates({ ...base, inliers: 90, secondBestInliers: 70 }).reason).toBe('ambiguous');
   });
 
+  /**
+   * 🎯 ADR-782 §16 — why the nullable residual cannot change a verdict.
+   *
+   * `rmsMm === null` happens exactly when nothing landed, and `required ≥ MIN_INLIERS = 8`, so
+   * the COUNT gate always answers first. This pins the ORDER (the reason the change is safe) and
+   * the FAIL-CLOSED handling (what happens if the scorer's contract ever drifts) as two separate
+   * facts — an unmeasured residual must never be read as «it fits».
+   */
+  it('🎯 αμέτρητο residual: η πύλη πλήθους απαντά ΠΡΩΤΗ, και το null είναι fail-closed', () => {
+    // The live shape: robust-center, 0 of 84 landed, nothing measured.
+    expect(applyAcceptanceGates({ inliers: 0, matchable: 84, rmsMm: null, secondBestInliers: 0 }))
+      .toEqual({ accepted: false, reason: 'too-few-inliers', required: 26 });
+
+    // Unreachable today (8 landings always measure something) — and refused, never accepted.
+    expect(applyAcceptanceGates({ inliers: 90, matchable: 93, rmsMm: null, secondBestInliers: 0 }).accepted)
+      .toBe(false);
+  });
+
   it('keeps the absolute floor of 8 inliers however small the survey', () => {
     expect(requiredInliers(4)).toBe(8);
     expect(applyAcceptanceGates({ inliers: 4, matchable: 4, rmsMm: 0, secondBestInliers: 0 }).accepted).toBe(false);

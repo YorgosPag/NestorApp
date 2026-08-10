@@ -99,7 +99,8 @@ export interface GeoMatchResult {
   readonly matchable: number;
   /** Inliers this candidate had to reach. */
   readonly required: number;
-  readonly rmsMm: number;
+  /** RMS residual of the fit, canonical mm — `null` when nothing landed. See {@link GeoMatchScore.rmsMm}. */
+  readonly rmsMm: number | null;
   readonly rotationDeg: number;
   /** DIAGNOSTIC — never applied. Far from 1 ⇒ `unit-mismatch`. */
   readonly scaleEstimate: number;
@@ -140,7 +141,9 @@ function toPoint2D(p: LocalCandidatePoint | TopoPoint): Point2D {
 /** A result carrying no reference — the shape both refusals share. */
 function noMatch(method: 'unit-mismatch' | 'needs-manual', partial: Partial<GeoMatchResult>): GeoMatchResult {
   return {
-    method, geo: null, inliers: 0, matchable: 0, required: 0, rmsMm: 0, rotationDeg: 0,
+    // `rmsMm: null` — a refusal landed nothing, so it measured nothing. `0` here would print
+    // «Μέση απόκλιση 0.0 εκ.» on a card that is explaining why there is no match.
+    method, geo: null, inliers: 0, matchable: 0, required: 0, rmsMm: null, rotationDeg: 0,
     scaleEstimate: 1, suggestedUnitScale: null, layerName: null, hypotheses: 0, failure: null,
     ...partial,
   };
@@ -198,7 +201,7 @@ interface MatchContext {
 class FailureLog {
   private recorded: Partial<GeoMatchResult> | null = null;
 
-  record(verdict: GateVerdict, score: { inliers: number; rmsMm: number }): void {
+  record(verdict: GateVerdict, score: { inliers: number; rmsMm: number | null }): void {
     if (this.recorded !== null || verdict.accepted || score.inliers === 0) return;
     this.recorded = {
       failure: verdict.reason,

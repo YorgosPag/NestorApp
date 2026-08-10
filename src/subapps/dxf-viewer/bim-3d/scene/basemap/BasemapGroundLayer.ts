@@ -16,11 +16,20 @@
  * Η μέθοδος ανανέωσης καλείται σε κάθε καρέ. Χωρίς τη σύγκριση υπογραφής, κάθε καρέ θα
  * κατέστρεφε και θα ξανάφτιαχνε δεκάδες γεωμετρίες και υφές — δηλαδή ο χάρτης θα δούλευε σωστά
  * και θα ρίχνει τα καρέ στο μηδέν, βλάβη που δεν φαίνεται ως σφάλμα αλλά ως «βαρύ πρόγραμμα».
+ *
+ * ## 🔴 «Σε κάθε καρέ» ΔΕΝ σημαίνει τίποτα σε σκηνή on-demand (ADR-782 §17)
+ * Η σκηνή ζωγραφίζει μόνο όταν κάποιος **ζητήσει** καρέ (`scene-dirty-state.ts`). Ο
+ * `getTileImage` ξεκινά τη φόρτωση και επιστρέφει `null`, άρα το πρώτο καρέ βρίσκει **μηδέν**
+ * πλακίδια· χωρίς αίτημα redraw όταν φτάσουν, **δεύτερο καρέ δεν υπάρχει** και ο χάρτης δεν
+ * εμφανίζεται ποτέ. Γι' αυτό αυτό το στρώμα δέχεται `requestRedraw` — το **ίδιο** `markDirty` που
+ * παίρνουν ήδη τα έξι αδέρφια του (`TerrainSceneLayer`, `PointCloudSceneLayer`, …), και ήταν
+ * **το μόνο** που δεν το έπαιρνε ενώ είναι **το μόνο** με ασύγχρονο πόρο.
  */
 
 import * as THREE from 'three';
 import { registerPostFxOverlay, OVERLAY_ORDER } from '../post-fx-overlay-pass';
-import { worldToDxfPlan } from '../../viewport/coordinate-transforms';
+import { getPixelWorldSize, worldToDxfPlan } from '../../viewport/coordinate-transforms';
+import { subscribeBasemapPaint } from '../../../systems/basemap/basemap-invalidation';
 import {
   resolveBasemapPaint,
   type BasemapContent,
@@ -42,18 +51,32 @@ import type { TileId } from '../../../systems/basemap/web-mercator';
 const BASEMAP_ELEVATION_MM = -10;
 
 /**
+ * Πόσο πιο πλατιά από το ορατό ύψος ζητούνται πλακίδια.
+ *
+ * Το έδαφος το βλέπει η κάμερα **λοξά**, οπότε το αποτύπωμά της στο οριζόντιο επίπεδο είναι πάντα
+ * μεγαλύτερο από το ορατό ύψος στον στόχο. Ρητός λόγος αντί για σύμπτωση: η προηγούμενη
+ * διατύπωση ζητούσε «±απόσταση κάμερας», που σε γωνία 50° βγαίνει **1,07×** το ορατό ύψος — ένα
+ * περιθώριο που κανείς δεν είχε επιλέξει και που **δεν ορίζεται καθόλου** για ορθογραφική κάμερα.
+ */
+const GROUND_COVERAGE = 1.1;
+
+/**
  * Ισοδύναμη κλίμακα «εικονοστοιχεία ανά mm» για την τρισδιάστατη κάμερα.
  *
- * Το 3Δ δεν έχει `scale` όπως το 2Δ· έχει **απόσταση**. Η μετάφραση είναι: ένα αντικείμενο στην
- * απόσταση του στόχου καλύπτει τόσα εικονοστοιχεία όσα το ύψος του παραθύρου δια το ορατό ύψος
- * στη θέση του στόχου. Αυτό δίνει στον κοινό επιλογέα επιπέδου την **ίδια** ερώτηση που του
- * κάνει το 2Δ, οπότε οι δύο προβολές δεν ζητούν διαφορετική λεπτομέρεια για την ίδια σκηνή.
+ * Το 3Δ δεν έχει `scale` όπως το 2Δ· η μετάφραση περνά από το **μέγεθος ενός εικονοστοιχείου σε
+ * μονάδες σκηνής**, που είναι SSoT ({@link getPixelWorldSize}) και **γνωρίζει και τις δύο
+ * κάμερες**. Έτσι ο κοινός επιλογέας επιπέδου δέχεται την ίδια ερώτηση που του κάνει το 2Δ.
+ *
+ * 🔴 Η προηγούμενη εκδοχή ήταν **κλώνος του SSoT με λειψό το σκέλος ortho** (`instanceof
+ * PerspectiveCamera` ⇒ αλλιώς `0`), δηλαδή σε ορθογραφική προβολή —κάτοψη, όψεις, κανονικές
+ * γωνίες— το υπόβαθρο έσβηνε **σιωπηλά**. Το σχόλιο του ίδιου του SSoT καταγράφει ότι το ίδιο
+ * ακριβώς σφάλμα είχε ήδη πληρωθεί μία φορά αλλού (ADR-363: ετικέτες που φούσκωναν σε δεκάδες
+ * μέτρα). N.18 / CHECK 3.28: ένας κλώνος με λιγότερους κλάδους δεν είναι απλοποίηση, είναι βλάβη.
  */
-function pixelsPerMmForCamera(camera: THREE.Camera, distanceM: number, viewportHeightPx: number): number {
-  if (!(camera instanceof THREE.PerspectiveCamera) || distanceM <= 0) return 0;
-  const visibleHeightM = 2 * distanceM * Math.tan((camera.fov * Math.PI) / 360);
-  if (visibleHeightM <= 0) return 0;
-  return viewportHeightPx / (visibleHeightM * 1000);
+function pixelsPerMmForCamera(camera: THREE.Camera, distanceM: number, canvas: HTMLElement): number {
+  const metresPerPixel = getPixelWorldSize(distanceM, camera, canvas);
+  if (!Number.isFinite(metresPerPixel) || metresPerPixel <= 0) return 0;
+  return 1 / (metresPerPixel * 1000);
 }
 
 /** Η υπογραφή ενός συνόλου πλακιδίων — αλλάζει μόνο όταν αλλάζει πραγματικά τι πρέπει να δείχνει. */
@@ -67,6 +90,7 @@ function tileSetSignature(sourceId: string, opacity: number, tiles: readonly Til
 export class BasemapGroundLayer {
   private readonly root = new THREE.Group();
   private readonly unregister: () => void;
+  private readonly unsubscribe: () => void;
   private signature = '';
   /** Πλακίδια που ζητήθηκαν αλλά δεν είχαν φτάσει — αναγκάζουν επανέλεγχο στο επόμενο καρέ. */
   private pendingTiles = false;
@@ -75,7 +99,8 @@ export class BasemapGroundLayer {
     scene: THREE.Object3D,
     private readonly getCamera: () => THREE.Camera,
     private readonly getTarget: () => THREE.Vector3,
-    private readonly getViewportHeightPx: () => number,
+    private readonly getCanvas: () => HTMLElement,
+    requestRedraw: () => void,
   ) {
     this.root.visible = false; // overlay-owned (συμβόλαιο ADR-537)
     this.unregister = registerPostFxOverlay(
@@ -84,6 +109,14 @@ export class BasemapGroundLayer {
       'underlay',
       OVERLAY_ORDER.BASEMAP,
     );
+    /**
+     * ⚠️ Το αίτημα redraw είναι **ΣΚΕΤΟ**, χωρίς προϋπόθεση «μας αφορά;». Η μόνη πηγή που θα
+     * μπορούσε να φιλτραριστεί είναι η άφιξη πλακιδίου, και για να ξεχωρίσει ποια πλακίδια είναι
+     * δικά μας θα χρειαζόταν **δεύτερη λογιστική** δίπλα στον cache — ακριβώς αυτό που ο cache
+     * αποφεύγει εκπέμποντας συμβάν **χωρίς όρισμα**. Το κόστος ενός περιττού καρέ σε σκηνή
+     * on-demand είναι ένα καρέ· το κόστος μιας χαμένης ειδοποίησης είναι χάρτης που δεν εμφανίζεται.
+     */
+    this.unsubscribe = subscribeBasemapPaint(requestRedraw);
   }
 
   /**
@@ -116,11 +149,12 @@ export class BasemapGroundLayer {
     const camera = this.getCamera();
     const target = this.getTarget();
     const distanceM = camera.position.distanceTo(target);
-    const pixelsPerMm = pixelsPerMmForCamera(camera, distanceM, this.getViewportHeightPx());
+    const canvas = this.getCanvas();
+    const pixelsPerMm = pixelsPerMmForCamera(camera, distanceM, canvas);
     if (pixelsPerMm <= 0) return;
 
     const projector = getBasemapDisplayProjector();
-    const rect = this.visibleRectAround(target, distanceM);
+    const rect = this.visibleRectAround(target, pixelsPerMm, canvas);
     const centreDisplay = { x: (rect.minX + rect.maxX) / 2, y: (rect.minY + rect.maxY) / 2 };
     const latitude = this.latitudeAt(centreDisplay, projector);
     const zoom = chooseZoomLevel({ pixelsPerMm, devicePixelRatio: 1, latitude, source });
@@ -132,12 +166,18 @@ export class BasemapGroundLayer {
     this.rebuild(decision.content, selection.tiles, projector, pixelsPerMm);
   }
 
-  /** Το ορατό ορθογώνιο σε mm κάτοψης, γύρω από τον στόχο της κάμερας. */
-  private visibleRectAround(target: THREE.Vector3, distanceM: number) {
+  /**
+   * Το ορατό ορθογώνιο σε mm κάτοψης, γύρω από τον στόχο της κάμερας.
+   *
+   * 🔑 Μέτρο είναι το **ορατό ύψος στο επίπεδο του στόχου** — ποσότητα που ορίζεται και για τις
+   * δύο κάμερες — και όχι η **απόσταση** της κάμερας, που για ορθογραφική **δεν λέει τίποτα** για
+   * το τι φαίνεται (μια ορθογραφική κάμερα 500 m πίσω μπορεί να δείχνει 10 m). Το ταβάνι πλήθους
+   * του μοντέλου προστατεύει ούτως ή άλλως από υπερβολή.
+   */
+  private visibleRectAround(target: THREE.Vector3, pixelsPerMm: number, canvas: HTMLElement) {
     const plan = worldToDxfPlan(target);
-    // Ο συντελεστής καλύπτει με άνεση το οπτικό πεδίο χωρίς να ζητά πλακίδια πολύ έξω από αυτό·
-    // το ταβάνι πλήθους του μοντέλου προστατεύει ούτως ή άλλως από υπερβολή.
-    const halfSpanMm = Math.max(distanceM, 1) * 1000;
+    const viewportHeightPx = Math.max(canvas.clientHeight, 1);
+    const halfSpanMm = Math.max((viewportHeightPx / pixelsPerMm) * GROUND_COVERAGE, 1_000);
     return {
       minX: plan.x - halfSpanMm, maxX: plan.x + halfSpanMm,
       minY: plan.y - halfSpanMm, maxY: plan.y + halfSpanMm,
@@ -196,6 +236,7 @@ export class BasemapGroundLayer {
 
   dispose(): void {
     this.unregister();
+    this.unsubscribe();
     this.clearTiles();
   }
 }

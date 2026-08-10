@@ -65,7 +65,8 @@ export function requiredInliers(matchable: number): number {
 export interface GateInput {
   readonly inliers: number;
   readonly matchable: number;
-  readonly rmsMm: number;
+  /** RMS residual of the fit, canonical mm — `null` when nothing landed, so nothing was measured. */
+  readonly rmsMm: number | null;
   /** Inliers of the best materially different rival. `0` when the search found none. */
   readonly secondBestInliers: number;
 }
@@ -89,7 +90,13 @@ export function applyAcceptanceGates(input: GateInput): GateVerdict {
   const required = requiredInliers(input.matchable);
 
   if (input.inliers < required) return { accepted: false, reason: 'too-few-inliers', required };
-  if (input.rmsMm > MAX_RMS_MM) return { accepted: false, reason: 'residual-too-large', required };
+  // `rmsMm === null` means «no landings, nothing measured» — and `required ≥ MIN_INLIERS = 8`,
+  // so the count gate above has already refused every such candidate. It is therefore NOT a
+  // reachable branch today but a FAIL-CLOSED one: if the scorer ever hands an unmeasured residual
+  // to a candidate that cleared the count, the honest answer is refusal, never «it fits».
+  if (input.rmsMm === null || input.rmsMm > MAX_RMS_MM) {
+    return { accepted: false, reason: 'residual-too-large', required };
+  }
   if (input.secondBestInliers * UNIQUENESS_FACTOR > input.inliers) {
     return { accepted: false, reason: 'ambiguous', required };
   }

@@ -1077,6 +1077,7 @@
           "inliersValue": "{inliers} of {matchable} (required {required})",
           "rms": "Mean deviation",
           "rmsValue": "{cm} cm",
+          "rmsUnmeasured": "— (no points matched)",
           "rotation": "Rotation",
           "rotationValue": "{deg}°",
           "hypotheses": "Hypotheses tested",

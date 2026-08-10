@@ -10,8 +10,7 @@
     "imbalanced": "The count does not balance — this is a defect, not a state."
   },
   "unmapped": {
-    "heading_one": "{count} more — it may be here, it may not",
-    "heading_other": "{count} more — they may be here, they may not",
+    "heading": "{count, plural, one {# more — it may be here, it may not} other {# more — they may be here, they may not}}",
     "hint": "These are not filtered out when you move the map: we cannot exclude them from an area we do not know they belong to.",
     "reason": {
       "neverAsked": "The location has not been recorded yet",
@@ -38,8 +37,7 @@
     "areaSqm": "{value} m²",
     "floor": "Floor {value}",
     "groundFloor": "Ground floor",
-    "bedrooms_one": "{count} bedroom",
-    "bedrooms_other": "{count} bedrooms",
+    "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}",
     "noImage": "No photo",
     "priceMissing": {
       "notListed": "Not available",

@@ -50,7 +50,7 @@ describe('scoreGeoReference — identity-restore (ADR-650 §M10e Σκέλος Α
     expect(score.inliers).toBe(93);
     expect(score.total).toBe(93);
     expect(score.inlierRatio).toBe(1);
-    expect(score.rmsMm).toBeLessThan(1);
+    expect(score.rmsMm!).toBeLessThan(1);
   });
 
   test('the restore is exact, not merely inside tolerance', () => {
@@ -120,8 +120,33 @@ describe('scoreGeoReference — rejects what it should reject', () => {
     const index = buildPointSetIndex([], TOLERANCE_MM);
     const geo: GeoReference = { originWorld: { x: 0, y: 0 }, rotationDeg: 0 };
 
-    expect(scoreGeoReference([], index, geo)).toEqual({ inliers: 0, total: 0, rmsMm: 0, inlierRatio: 0 });
+    expect(scoreGeoReference([], index, geo)).toEqual({ inliers: 0, total: 0, rmsMm: null, inlierRatio: 0 });
     expect(scoreGeoReference([{ x: 1, y: 1 }], index, geo).inliers).toBe(0);
+  });
+
+  /**
+   * 🎯 ADR-782 §16 — the regression this file exists to stop from coming back.
+   *
+   * A candidate that lands NOTHING has no residual: RMS over zero inliers is 0/0. Reporting it
+   * as `0` made the WORST proposal print the BEST number in the proof card, right next to the
+   * button that rewrites `Project.basePoint`. The distinction the assertion draws — `null` and
+   * not `0` — is the whole fix, and `toBe(0)` would pass on the broken version.
+   */
+  test('🎯 μηδέν inliers ⇒ rmsMm === null (απουσία μέτρησης), ΠΟΤΕ 0', () => {
+    const locals = makeLocalSurvey();
+    // Real, non-empty sets on both sides — this is the LIVE shape of the defect, not an edge case.
+    const index = buildPointSetIndex(toWorld(locals, SOURCE_ORIGIN), TOLERANCE_MM);
+
+    // The «robust-center» failure mode: an offset that puts the drawing kilometres away.
+    const nowhereNear = fromOnePointPair({ x: 0, y: 0 }, { x: 0, y: 0 });
+    const score = scoreGeoReference(locals, index, nowhereNear);
+
+    expect(score.inliers).toBe(0);
+    expect(score.rmsMm).toBeNull();
+    expect(score.rmsMm).not.toBe(0);
+    // …while a candidate that DID land reports a real number, so `null` is a signal, not a habit.
+    expect(scoreGeoReference(locals, index, fromOnePointPair({ x: 0, y: 0 }, SOURCE_ORIGIN)).rmsMm)
+      .toEqual(expect.any(Number));
   });
 });
 

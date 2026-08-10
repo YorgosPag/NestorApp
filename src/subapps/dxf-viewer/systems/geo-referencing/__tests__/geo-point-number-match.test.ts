@@ -125,7 +125,7 @@ describe('autoMatchToSurvey — prefers the numbering channel over the blind sea
 
     expect(result.method).toBe('point-number');
     expect(result.hypotheses).toBe(0); // nothing was guessed
-    expect(result.rmsMm).toBeLessThan(1);
+    expect(result.rmsMm!).toBeLessThan(1);
     expect(result.geo!.rotationDeg).toBeCloseTo(ROTATION_DEG, 6);
   });
 });
