@@ -471,7 +471,7 @@ export default function AuthActionPage() {
                 {goToLoginButton}
                 <button
                   type="button"
-                  onClick={() => router.push('/')}
+                  onClick={() => router.push(AUTH_ROUTES.home)}
                   className={`${typography.body.sm} ${colors.text.info} ${INTERACTIVE_PATTERNS.BUTTON_LINK_HOVER}`}
                 >
                   {t('action.buttons.goToHome')}

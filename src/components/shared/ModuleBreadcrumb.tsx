@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
+import { AUTH_ROUTES } from '@/lib/routes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -116,8 +117,11 @@ export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
   const { t } = useTranslation('navigation');
   const colors = useSemanticColors();
 
-  // Don't render on home page
-  if (!pathname || pathname === '/') return null;
+  // Καμία διαδρομή πάνω στην ίδια την αρχική.
+  // ⚠️ Η σύγκριση πάει από το SSoT: η αρχική του συνδεδεμένου μετακόμισε από `/` σε
+  // `/dashboard` (ADR-777 §8.13). Ωμό `'/'` εδώ θα σήμαινε ότι το breadcrumb ζωγραφίζει
+  // «Αρχική › Dashboard» **πάνω στην ίδια την αρχική**.
+  if (!pathname || pathname === AUTH_ROUTES.home) return null;
 
   const segments = pathname.split('/').filter(Boolean);
   if (segments.length === 0) return null;
@@ -149,7 +153,7 @@ export function ModuleBreadcrumb({ className }: ModuleBreadcrumbProps) {
     >
       {/* Home — always first */}
       <Link
-        href="/"
+        href={AUTH_ROUTES.home}
         className={cn("flex items-center gap-1 hover:text-foreground transition-colors", colors.text.muted)}
       >
         <Home className="h-3.5 w-3.5 text-[hsl(var(--text-info))]" />

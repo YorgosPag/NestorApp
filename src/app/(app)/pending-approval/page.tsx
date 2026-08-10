@@ -17,6 +17,7 @@ import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { PageLoadingState } from '@/core/states';
+import { AUTH_ROUTES } from '@/lib/routes';
 
 export default function PendingApprovalPage() {
   const { user, loading, signOut, refreshToken } = useAuth();
@@ -31,7 +32,8 @@ export default function PendingApprovalPage() {
       return;
     }
     if (user.companyId) {
-      router.replace('/');
+      // SSoT: ΟΧΙ ωμό `/` — εκεί ζει πλέον η ΔΗΜΟΣΙΑ οθόνη (ADR-777 §8.13).
+      router.replace(AUTH_ROUTES.home);
     }
   }, [user, loading, router]);
 

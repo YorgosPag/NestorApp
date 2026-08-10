@@ -73,6 +73,7 @@ import {
 } from "lucide-react";
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import { createModuleLogger } from '@/lib/telemetry';
+import { AUTH_ROUTES } from '@/lib/routes';
 const logger = createModuleLogger('smart-navigation-factory');
 
 // 🏢 ENTERPRISE: i18n translation keys for navigation labels
@@ -370,7 +371,9 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
         baseItems: [
           {
             icon: Home,
-            href: "/",
+            // SSoT: η αρχική του συνδεδεμένου (ADR-777 §8.13). Ωμό `/` θα έστελνε τον
+            // επαγγελματία στη ΔΗΜΟΣΙΑ οθόνη αναζήτησης από το μενού του χώρου του.
+            href: AUTH_ROUTES.home,
             badge: null,
             smartConfig: {
               priority: 'critical',

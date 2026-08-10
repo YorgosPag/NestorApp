@@ -13,12 +13,21 @@ import { createStaleCache } from '@/lib/stale-cache';
 const authCache = createStaleCache<boolean>('dashboard-auth');
 
 /**
- * Main Page — ADR-179: Hybrid Navigation Dashboard
+ * `/dashboard` — **ο χώρος εργασίας** (ADR-179: Hybrid Navigation Dashboard).
  *
- * Authenticated users → Dashboard Home (SAP Fiori-style navigation tiles)
- * Unauthenticated users → Redirect to /login
+ * Συνδεδεμένος → Dashboard Home (πλακίδια πλοήγησης, ύφος SAP Fiori)
+ * Ανώνυμος → `/login`
+ *
+ * 🔴 **ΜΕΤΑΚΟΜΙΣΕ ΑΠΟ ΤΟ `/` (2026-08-11, ADR-777 §8.13).** Όσο ζούσε στη ρίζα, το
+ * `router.replace('/login')` παρακάτω χτυπούσε **κάθε ανώνυμο επισκέπτη του
+ * nestorconstruct.gr** — δηλαδή η δημόσια πόρτα του προϊόντος ήταν **κλειδαριά**. Η
+ * ρίζα ανήκει πλέον στην **οθόνη 1** (Α3). Η ανακατεύθυνση **εδώ** παραμένει σωστή:
+ * αυτή η σελίδα *είναι* πίσω από τη σύνδεση.
+ *
+ * ⚠️ Καμία «αρχική» δεν δείχνει σε literal `'/'`: όλες περνούν από
+ * {@link AUTH_ROUTES}`.home`, που είναι το ένα σημείο που μετακόμισε.
  */
-export default function MainPage() {
+export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 

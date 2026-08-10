@@ -7,6 +7,7 @@ import { useAuth } from '@/auth';
 import { useTranslation } from '@/i18n';
 import { Button } from '@/components/ui/button';
 import { PageLoadingState } from '@/core/states';
+import { AUTH_ROUTES } from '@/lib/routes';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,8 @@ export default function OnboardingOrganizationPage() {
         return;
       }
 
-      router.replace('/');
+      // SSoT: η αρχική του συνδεδεμένου μετακόμισε στο /dashboard (ADR-777 §8.13).
+      router.replace(AUTH_ROUTES.home);
     } catch {
       setError('Σφάλμα σύνδεσης');
     } finally {

@@ -1,4 +1,23 @@
+/**
+ * Το κέλυφος των **δημόσιων** οθονών (ADR-777 §8.12 · §8.13).
+ *
+ * 🔴 **ΤΟ `<main>` ΕΦΥΓΕ ΑΠΟ ΕΔΩ, ΚΑΙ ΗΤΑΝ ΕΛΑΤΤΩΜΑ.** Το §8.12.10 #5 το είχε
+ * μετρήσει και **δηλώσει ανοιχτό**: αυτό το αρχείο απέδιδε `<main>` **και** οι τρεις
+ * δημόσιες σελίδες αποδίδουν δικό τους ⇒ **δύο landmarks `main` ανά σελίδα**, ενώ το
+ * WCAG επιτρέπει **ένα**. (Πριν τη μετακόμιση του κελύφους ήταν **τρία** — η
+ * μετακόμιση δεν το γέννησε, το **αποκάλυψε**.) Ο ιδιοκτήτης του `<main>` είναι η
+ * **σελίδα**, γιατί μόνο εκείνη ξέρει τι είναι το κύριο περιεχόμενό της.
+ *
+ * 🔑 **ΓΙΑΤΙ ΕΓΙΝΕ ΣΤΗΛΗ FLEX.** Η κεφαλίδα καταναλώνει ύψος. Η οθόνη 2 είναι
+ * **χάρτης + λίστα σε πλήρες παράθυρο**: με `h-screen` κάτω από κεφαλίδα, το κάτω
+ * μέρος του χάρτη θα έβγαινε **εκτός οθόνης** και θα εμφανιζόταν μπάρα κύλισης σε
+ * επιφάνεια που σχεδιάστηκε να μην κυλά. Πλέον το ύψος το κατέχει **το κέλυφος** και
+ * οι σελίδες ζητούν `flex-1` — δηλαδή «ό,τι περισσεύει», που είναι η **μόνη** εκδοχή
+ * που μένει σωστή όταν αλλάξει το ύψος της κεφαλίδας.
+ */
+
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
+import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';
 
 export default function LightLayout({
   children,
@@ -6,10 +25,9 @@ export default function LightLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className={`min-h-screen w-full ${COLOR_BRIDGE.bg.primary}`}>
-      <main className="w-full max-w-full">
-        {children}
-      </main>
+    <div className={`flex min-h-screen w-full flex-col ${COLOR_BRIDGE.bg.primary}`}>
+      <PublicSiteHeader />
+      {children}
     </div>
   );
 }
