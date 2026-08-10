@@ -44,6 +44,12 @@ on:
       - 'scripts/check-zindex-scale.js'
       - 'scripts/lib/zindex/**'
       - '.zindex-scale-baseline.json'
+      # CHECK 3.52 (ADR-777 §8.12) — το σύνορο κελύφους. Η ίδια η πύλη και οι δηλώσεις της
+      # είναι είσοδοι: αλλαγή στο κριτήριο ή στο κλειστό σύνολο των route groups πρέπει να
+      # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
+      - 'scripts/check-shell-boundary.js'
+      - 'scripts/lib/shell-boundary/**'
+      - '.shell-boundary.json'
       # ADR-780 Φάση Β — το ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ: το μητρώο και τα αρχεία εξαρτήσεων είναι
       # είσοδοι της απογραφής του node_modules. Ένα npm i με z-index: 99999 δεν αγγίζει
       # κανένα αρχείο πηγής — χωρίς αυτά θα περνούσε αθέατο.
@@ -74,6 +80,12 @@ on:
       - 'scripts/check-zindex-scale.js'
       - 'scripts/lib/zindex/**'
       - '.zindex-scale-baseline.json'
+      # CHECK 3.52 (ADR-777 §8.12) — το σύνορο κελύφους. Η ίδια η πύλη και οι δηλώσεις της
+      # είναι είσοδοι: αλλαγή στο κριτήριο ή στο κλειστό σύνολο των route groups πρέπει να
+      # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
+      - 'scripts/check-shell-boundary.js'
+      - 'scripts/lib/shell-boundary/**'
+      - '.shell-boundary.json'
       # ADR-780 Φάση Β — το ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ: το μητρώο και τα αρχεία εξαρτήσεων είναι
       # είσοδοι της απογραφής του node_modules. Ένα npm i με z-index: 99999 δεν αγγίζει
       # κανένα αρχείο πηγής — χωρίς αυτά θα περνούσε αθέατο.
@@ -443,4 +455,63 @@ jobs:
             echo ""
             echo "Απογραφή: \`npm run zindex-scale:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run zindex-scale:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  shell-boundary:
+    name: 🧱 Shell Boundary Gate (CHECK 3.52)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        # ⚠️ ΠΛΗΡΕΣ ιστορικό: ο κανόνας Κ2 ρωτά το git (`git grep --untracked`) για την
+        # αντίστροφη κλειστότητα των δημόσιων hooks. Ρηχό checkout αρκεί για grep, αλλά το
+        # `fetch-depth: 0` κρατά τη συμπεριφορά ταυτόσημη με το pre-commit.
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (jest + typescript για το AST της κλειστότητας)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Το Layer 1 πυροδοτεί μόνο σε staged page/layout·
+      # ένα νέο route group ή μια αλλαγή στις δηλώσεις ξανακρίνει αρχεία που κανείς δεν
+      # σταδιοποίησε.
+      - name: 🧱 CHECK 3.52 — πλήρες σύνορο κελύφους (Κ1 + Κ2 + Κ3)
+        run: pnpm run shell-boundary:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.52 (21 tests: 8 μεταλλάξεις εισόδων + 6 άγκυρες κριτηρίου + 4 στο πραγματικό δέντρο)"
+        run: pnpm run test:shell-boundary
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.52 — ADR-777 §8.12 (σύνορο κελύφους)"
+            echo ""
+            echo "**Το «φοράει κέλυφος;» το απαντά Η ΙΕΡΑΡΧΙΑ ΦΑΚΕΛΩΝ, όχι λίστα διαδρομών.**"
+            echo ""
+            echo "| κατάσταση | τι σημαίνει | θεραπεία |"
+            echo "|---|---|---|"
+            echo "| \`ungrouped-page\` | σελίδα εκτός κάθε route group ⇒ κληρονομεί ό,τι τύχει | βάλ' τη σε \`(app)\` / \`(light)\` / \`(auth)\` / \`(bare)\` |"
+            echo "| \`public-surface-wearing-shell\` | σελίδα που διαβάζει τη **δημόσια προβολή** ζει σε group με κέλυφος | μετακίνησέ τη σε group \`wearsShell: false\` |"
+            echo "| \`shell-mismatch\` | η δομή διαφωνεί με τη δήλωση | λείπει/μετακινήθηκε ο ιδιοκτήτης-layout |"
+            echo "| \`undeclared-group\` | νέο route group χωρίς γραμμή στο μητρώο | δήλωσέ το στο \`.shell-boundary.json\` **με λόγο** |"
+            echo "| \`shell-outside-owner\` | κάποιος άλλος εισάγει \`AppSidebar\`/\`AppHeader\` | το κέλυφος έχει **έναν** ιδιοκτήτη |"
+            echo ""
+            echo "⚠️ **ΜΗΝ** το κάνεις ratchet και **ΜΗΝ** προσθέσεις group χωρίς λόγο —"
+            echo "ο λόγος **είναι** η απάντηση."
+            echo ""
+            echo "Απογραφή: \`npm run shell-boundary:report\`"
           } >> "$GITHUB_STEP_SUMMARY"

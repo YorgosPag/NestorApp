@@ -8,7 +8,7 @@ import {
   formatEurShort,
   readClickedRowKey,
   truncateLabel,
-} from '@/app/procurement/analytics/_components/chart-utils';
+} from '@/app/(app)/procurement/analytics/_components/chart-utils';
 
 const BASE_FILTERS = {
   from: '2026-01-01',

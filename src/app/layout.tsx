@@ -7,7 +7,6 @@ import { AuthProvider, UserRoleProvider } from "@/auth";
 import { cn } from "@/lib/utils";
 import { I18nProvider } from '@/components/providers/I18nProvider';
 import { TourProvider, TourRenderer } from '@/components/ui/ProductTour';
-import { ConditionalAppShell } from '@/components/layout/ConditionalAppShell';
 import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
 
 /**
@@ -24,17 +23,21 @@ import { SuperAdminCompanyProvider } from '@/contexts/SuperAdminCompanyContext';
  * - AuthProvider: Firebase authentication
  * - UserRoleProvider: Role-based access
  *
- * HEAVY PROVIDERS MOVED TO ConditionalAppShell (only for app routes):
- * - WorkspaceProvider: Firestore queries
- * - FloorplanProvider: Complex state
- * - NotificationProvider: Real-time subscriptions
- * - SharedPropertiesProvider: Data caching
+ * 🔑 ΤΑ ΒΑΡΙΑ PROVIDERS ΖΟΥΝ ΣΤΟ `(app)/layout.tsx` — ADR-777 §8.12.
+ * WorkspaceProvider · FloorplanProvider · NotificationProvider · CacheProvider ·
+ * WebSocketProvider · SharedPropertiesProvider · NavigationProvider ·
+ * PhotoPreviewProvider · BuildingsNoUnitsProvider · ActiveJobProvider.
  *
- * This architecture ensures auth routes (/login) have minimal bundle size
- * and don't trigger unnecessary Firestore queries.
+ * Το «ποιος τα παίρνει» **δεν το αποφασίζει πλέον λίστα διαδρομών** αλλά η ιεραρχία
+ * φακέλων του Next.js. Ο `ConditionalAppShell` που το έκρινε από `pathname` ήταν
+ * **δομικά τυφλός** στα route groups (ένα group είναι ΦΑΚΕΛΟΣ, δεν εμφανίζεται ποτέ
+ * στο `pathname`) και διαγράφηκε μαζί με τις τρεις λίστες του.
+ *
+ * ⚠️ Ό,τι μένει εδώ το φοράει **ΚΑΘΕ** διαδρομή, δημόσια ή όχι — γι' αυτό μένουν μόνο
+ * όσα δεν έχουν νόημα να λείπουν: θέμα, μεταφράσεις, ταυτότητα, ρόλος, tours.
  *
  * @file layout.tsx
- * @updated 2026-01-27 - ADR-040 Provider Separation
+ * @updated 2026-08-10 - ADR-777 §8.12 μετακόμιση κελύφους σε route group
  */
 
 
@@ -78,13 +81,9 @@ export default function RootLayout({
               <AuthProvider>
                 <SuperAdminCompanyProvider>
                 <UserRoleProvider>
-                  {/* 🏢 ENTERPRISE: ConditionalAppShell handles:
-                      - Route-based layout (auth vs app)
-                      - Heavy providers (Workspace, Floorplan, Notification, SharedProperties)
-                      - Global components (NotificationDrawer, ToasterClient, GlobalErrorSetup) */}
-                  <ConditionalAppShell>
-                    {children}
-                  </ConditionalAppShell>
+                  {/* 🔑 ΚΑΝΕΝΑ ΚΕΛΥΦΟΣ ΕΔΩ. Το layout του route group αποφασίζει
+                      (ADR-777 §8.12): `(app)` φοράει · `(auth)`/`(light)`/`(bare)` όχι. */}
+                  {children}
                 </UserRoleProvider>
                 </SuperAdminCompanyProvider>
               </AuthProvider>

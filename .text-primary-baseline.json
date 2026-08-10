@@ -9,10 +9,10 @@
     "note": "ΤΟ ΠΛΗΘΟΣ ΔΕΝ ΕΙΝΑΙ ΔΕΙΚΤΗΣ ΥΓΕΙΑΣ. Ο σαρωτής αποδεικνύει βλάβη, όχι υγεία (το φόντο είναι ερώτημα προγόνων ⇒ browser). Η θεραπεία είναι ρόλοι on-* (Material 3), όχι μικρότερος αριθμός — ADR-759 §4.12.2. Άνοιξε ΑΥΤΟ το αρχείο πριν επικαλεστείς αριθμό."
   },
   "files": {
-    "src/app/onboarding/organization/page.tsx": {
+    "src/app/(app)/onboarding/organization/page.tsx": {
       "theme-surface": 1
     },
-    "src/app/pending-approval/page.tsx": {
+    "src/app/(app)/pending-approval/page.tsx": {
       "theme-surface": 1
     },
     "src/components/account/SessionsList.tsx": {

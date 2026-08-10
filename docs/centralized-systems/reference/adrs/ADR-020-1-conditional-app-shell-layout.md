@@ -2,15 +2,44 @@
 
 | Metadata | Value |
 |----------|-------|
-| **Status** | APPROVED |
+| **Status** | ⛔ **SUPERSEDED από ADR-777 §8.12** *(2026-08-10)* |
 | **Date** | 2026-01-01 |
 | **Category** | Security & Auth |
-| **Canonical Location** | `ConditionalAppShell` |
+| **Canonical Location** | `src/app/(app)/layout.tsx` — route group, **όχι component** |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
 
 ---
 
-## Summary
+## ⛔ ΑΝΤΙΚΑΤΑΣΤΑΘΗΚΕ — διάβασε **ADR-777 §8.12**
 
-- **Canonical**: `ConditionalAppShell`
-- **Pattern**: Auth routes → standalone layout
+Ο `ConditionalAppShell` **διαγράφηκε** στις 2026-08-10.
+
+### Γιατί
+
+Έκρινε «γυμνή σελίδα;» από **τρεις χειρόγραφες λίστες `pathname`**. **Ένα route group είναι
+ΦΑΚΕΛΟΣ και δεν εμφανίζεται ΠΟΤΕ στο `pathname`** ⇒ ο φρουρός ήταν **δομικά τυφλός** στο
+`(light)`. Δεν απέκλινε η λίστα του — **δεν ρωτήθηκε ποτέ**.
+
+Μετρημένο πριν την αντικατάσταση: **51 από 53** διαδρομές σέρβιραν το κέλυφος, μαζί με τις
+**τρεις δημόσιες οθόνες ακινήτων**, το `/oauth/consent` (του οποίου το docblock έλεγε το
+αντίθετο) και τη **σελίδα 404**.
+
+### Τι ισχύει τώρα
+
+Το ερώτημα «φοράει κέλυφος;» το απαντά **η ιεραρχία φακέλων του Next.js**:
+
+| route group | κέλυφος | τι ζει εκεί |
+|---|---|---|
+| `(app)` | ✅ | η εφαρμογή πίσω από τη σύνδεση (137 σελίδες) |
+| `(auth)` | ❌ | σύνδεση / συγκατάθεση OAuth |
+| `(light)` | ❌ | οι δημόσιες οθόνες ακινήτων (ADR-777) |
+| `(bare)` | ❌ | golden-image συμβόλαια (ADR-775 §13) |
+
+Δηλώσεις: `.shell-boundary.json` · Φρουρός: **CHECK 3.52** (`scripts/check-shell-boundary.js`).
+
+⚠️ **ΜΗΝ αναβιώσεις λίστα διαδρομών γι' αυτό το ερώτημα.** Θα ήταν **δεύτερη αλήθεια** δίπλα σε
+αυτήν που δίνει το framework (ADR-749) — και το CHECK 3.52 θα το μπλοκάρει.
+
+> Το `SIDEBAR_COLLAPSED_ROUTES` **επέζησε** και ζει στο `(app)/layout.tsx`: απαντά **άλλο**
+> ερώτημα — «ανοιχτό ή κλειστό sidebar», όχι «υπάρχει sidebar» — και είναι νόμιμα
+> pathname-based.

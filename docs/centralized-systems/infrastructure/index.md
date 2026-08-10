@@ -95,18 +95,23 @@ function ProtectedPage() {
 
 ### Decision
 
-Auth routes use standalone layout, app routes use shell layout.
+⛔ **SUPERSEDED από ADR-777 §8.12 (2026-08-10).** Ο `ConditionalAppShell` **διαγράφηκε**: έκρινε
+«γυμνή σελίδα;» από χειρόγραφες λίστες `pathname`, και ένα route group είναι **ΦΑΚΕΛΟΣ** που δεν
+εμφανίζεται ποτέ στο `pathname` — άρα ήταν **δομικά τυφλός** στις δημόσιες οθόνες.
 
-### Canonical Component
+### Canonical: **route group, όχι component**
 
-```typescript
-import { ConditionalAppShell } from '@/components/layout/ConditionalAppShell';
+Το «φοράει κέλυφος;» το απαντά η ιεραρχία φακέλων του Next.js:
 
-// Auto-detects route type
-<ConditionalAppShell>
-  {children}
-</ConditionalAppShell>
 ```
+src/app/(app)/layout.tsx     ✅ κέλυφος (sidebar + header + providers)
+src/app/(auth)/layout.tsx    ❌ σύνδεση / OAuth consent
+src/app/(light)/layout.tsx   ❌ δημόσιες οθόνες ακινήτων
+src/app/(bare)/layout.tsx    ❌ golden-image συμβόλαια (ADR-775 §13)
+```
+
+Δηλώσεις: `.shell-boundary.json` · Φρουρός: **CHECK 3.52**
+(`npm run shell-boundary:report`).
 
 ---
 

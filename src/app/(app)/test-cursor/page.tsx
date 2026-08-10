@@ -23,7 +23,12 @@ const TestCursorPageClient = () => {
 
   useEffect(() => {
     // Import the component only on client side
-    import('../../subapps/dxf-viewer/ui/CursorSettingsPanel')
+    // ADR-777 §8.12 — ΑΛΙΑΣ, ΟΧΙ ΣΧΕΤΙΚΟ ΜΟΝΟΠΑΤΙ. Το `../../subapps/…` έδειχνε έξω από
+    // το `src/app` και **έσπασε σιωπηλά** όταν η σελίδα μετακόμισε ένα επίπεδο βαθύτερα
+    // (`(app)/`): έγινε `src/app/subapps/…`, που δεν υπάρχει ⇒ 500. Ήταν το **μοναδικό**
+    // σπασμένο σχετικό import σε 940 αρχεία, και το βρήκε η φωτογραφία διαδρομών — όχι
+    // ο μεταγλωττιστής, γιατί το `import()` λύνεται σε χρόνο εκτέλεσης.
+    import('@/subapps/dxf-viewer/ui/CursorSettingsPanel')
       .then((module) => {
         setCursorComponent(() => module.default as React.ComponentType<CursorSettingsPanelProps>);
       })

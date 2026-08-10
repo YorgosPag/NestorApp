@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { RfqDetailClient } from '@/app/procurement/rfqs/[id]/RfqDetailClient';
+import { RfqDetailClient } from '@/app/(app)/procurement/rfqs/[id]/RfqDetailClient';
 
 interface ProjectScopedRfqDetailPageProps {
   params: Promise<{ id: string; rfqId: string }>;

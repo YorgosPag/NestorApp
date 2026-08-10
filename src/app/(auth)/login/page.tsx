@@ -19,7 +19,7 @@ import { AuthForm } from '@/auth';
 import { cn } from '@/lib/design-system';
 
 export default function LoginPage() {
-  // NOTE: No <main> here - ConditionalAppShell already provides the <main> wrapper
+  // NOTE: No <main> here — το `(auth)/layout.tsx` παρέχει το <main> wrapper (ADR-777 §8.12)
   // This avoids nested <main> tags which cause HTML semantic issues
   return (
     <section className={cn('min-h-screen bg-background flex items-center justify-center')}>

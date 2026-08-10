@@ -2,7 +2,7 @@
   "generated": "2026-07-08T19:49:30.806Z",
   "knipVersion": "6",
   "files": [
-    "src/app/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts",
+    "src/app/(bare)/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts",
     "src/components/contacts/pickers/AdministrativeAddressPicker.tsx",
     "src/components/properties/dialogs/PropertyDeletionGuardDialog.tsx",
     "src/hooks/useDebouncedCallback.ts",

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { QuoteReviewClient } from '@/app/procurement/quotes/[id]/review/QuoteReviewClient';
+import { QuoteReviewClient } from '@/app/(app)/procurement/quotes/[id]/review/QuoteReviewClient';
 
 interface ProjectScopedQuoteReviewPageProps {
   params: Promise<{ id: string; quoteId: string }>;

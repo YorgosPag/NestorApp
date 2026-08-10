@@ -32,7 +32,7 @@ import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { nowISO } from '@/lib/date-local';
 import { isRoleBypass } from '@/lib/auth/roles';
-import { canTransition, TRIAGE_STATUSES } from '@/app/admin/bim-diagnostics/lib/triage-fsm';
+import { canTransition, TRIAGE_STATUSES } from '@/app/(app)/admin/bim-diagnostics/lib/triage-fsm';
 import type {
   PerformanceDiagnostic,
   TriageHistoryEntry,

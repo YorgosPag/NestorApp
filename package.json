@@ -309,7 +309,10 @@
     "test:i18n-ssr": "jest scripts/__tests__/check-i18n-ssr-raw-keys.test.js scripts/__tests__/check-i18n-ssr-oracle.test.js --verbose",
     "zindex-scale:report": "node scripts/check-zindex-scale.js --report",
     "zindex-scale:baseline": "node scripts/check-zindex-scale.js --write-baseline",
-    "test:zindex-scale": "jest scripts/__tests__/check-zindex-scale.test.js --verbose"
+    "test:zindex-scale": "jest scripts/__tests__/check-zindex-scale.test.js --verbose",
+    "shell-boundary:check": "node scripts/check-shell-boundary.js --all",
+    "shell-boundary:report": "node scripts/check-shell-boundary.js --report",
+    "test:shell-boundary": "jest scripts/__tests__/check-shell-boundary.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

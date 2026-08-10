@@ -323,7 +323,17 @@ export default function AuthActionPage() {
   // RENDER
   // ==========================================================================
 
-  // NOTE: Using <section> instead of <main> - ConditionalAppShell already provides the <main> wrapper
+  // SSoT: το ίδιο κουμπί ζωγραφίζεται και στο success και στο error branch
+  const goToLoginButton = (
+    <Button
+      onClick={() => router.push(AUTH_ROUTES.login)}
+      className={layout.widthFull}
+    >
+      {t('action.buttons.goToLogin')}
+    </Button>
+  );
+
+  // NOTE: Using <section> instead of <main> — το `(auth)/layout.tsx` παρέχει το <main> wrapper (ADR-777 §8.12)
   // This avoids nested <main> tags which cause HTML semantic issues
   return (
     <section
@@ -451,24 +461,14 @@ export default function AuthActionPage() {
             {/* Success Actions */}
             {state.status === 'success' && (
               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
-                <Button
-                  onClick={() => router.push(AUTH_ROUTES.login)}
-                  className={layout.widthFull}
-                >
-                  {t('action.buttons.goToLogin')}
-                </Button>
+                {goToLoginButton}
               </nav>
             )}
 
             {/* Error Actions */}
             {state.status === 'error' && (
               <nav className={`${layout.flexColGap2} ${layout.textCenter}`}>
-                <Button
-                  onClick={() => router.push(AUTH_ROUTES.login)}
-                  className={layout.widthFull}
-                >
-                  {t('action.buttons.goToLogin')}
-                </Button>
+                {goToLoginButton}
                 <button
                   type="button"
                   onClick={() => router.push('/')}

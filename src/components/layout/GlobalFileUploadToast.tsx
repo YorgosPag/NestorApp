@@ -5,7 +5,7 @@
  *
  * Subscribes once to FILE_UPDATED (status=ready) and shows a toast for every
  * file that completes uploading, regardless of which hook/service triggered it.
- * Mounted once in ConditionalAppShell — covers all upload paths in the app.
+ * Mounted once in `app/(app)/layout.tsx` — covers all upload paths in the app shell (ADR-777 §8.12).
  */
 
 import { useEffect } from 'react';

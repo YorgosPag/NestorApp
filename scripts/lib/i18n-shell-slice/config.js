@@ -37,12 +37,19 @@ const DEFAULTS = Object.freeze({
    * exactly the rot this ADR exists to remove — it would go stale the same way
    * `CRITICAL_NAMESPACES` did.
    *
-   * `src/app/page.tsx` earns its place as the one PAGE in the set: it is the
-   * application's cold-entry route, reached with no prior navigation, so nothing
-   * carries a loading state for it. Deeper routes stay out — covering them means
-   * per-route slices, which this machinery already supports (ADR-744 §8, Φ4).
+   * `src/app/(app)/page.tsx` earns its place as the one PAGE in the set: it is the
+   * application's cold-entry route (URL `/`), reached with no prior navigation, so
+   * nothing carries a loading state for it. Deeper routes stay out — covering them
+   * means per-route slices, which this machinery already supports (ADR-744 §8, Φ4).
+   *
+   * ⚠️ ADR-777 §8.12 — ΤΟ ΜΟΝΟΠΑΤΙ ΑΛΛΑΞΕ ΜΕ ΤΗ ΜΕΤΑΚΟΜΙΣΗ ΤΟΥ ΚΕΛΥΦΟΥΣ. Το URL
+   * παραμένει `/`· ένα route group `(app)` είναι ΦΑΚΕΛΟΣ και δεν εμφανίζεται στο URL.
+   * Το πρώτο pattern βρίσκει μόνο του κάθε νέο layout (`(app)`, `(auth)`, `(bare)`)·
+   * το δεύτερο είναι ΚΥΡΙΟΛΕΚΤΙΚΟ και έπρεπε να ενημερωθεί με το χέρι — και το
+   * `resolveRoots` (plan.js:76) ΠΕΤΑΕΙ «shell root not found» αν δεν υπάρχει, δηλαδή
+   * η αστοχία είναι ΘΟΡΥΒΩΔΗΣ, όχι σιωπηλή. Μην αφαιρέσεις αυτόν τον φρουρό.
    */
-  shellRoots: ['src/app/**/layout.tsx', 'src/app/page.tsx'],
+  shellRoots: ['src/app/**/layout.tsx', 'src/app/(app)/page.tsx'],
   extraShellRoots: [],
 
   /**

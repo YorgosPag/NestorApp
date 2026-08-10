@@ -40,7 +40,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "30258006b061b82765d504cdc81a0be6bd677235854c361ed8b531232123c903",
+  "inputsSha256": "bd5d7edeac068378506ee8d3333af795d5a032a1ecf741324ae4c1b0862cfe3b",
   "languages": [
     "el"
   ],
@@ -65,14 +65,17 @@
   ],
   "shellFiles": {
     "src/api/notificationClient.ts": "048d34aa4acec745ae14aa31a61c903866077d4d9a46ab8a90629d340aea38a0",
+    "src/app/(app)/account/layout.tsx": "d1376ab8a14ece47f533ce7217bcee1ff1019fcd629aede776c8a8682127309c",
+    "src/app/(app)/admin/layout.tsx": "f32631e240f9572a87fbaad86622e2730dada7877d258dfdebb340eada2c2516",
+    "src/app/(app)/dxf/viewer/layout.tsx": "5d8006221c9a546e995faff3a451269dd788fb8feb4a320e620d2790aa41aabc",
+    "src/app/(app)/layout.tsx": "b2b82d8a8c715afc8e8f9f5751ae7da0367a9a8b55658542d41e940bfca3cf2f",
+    "src/app/(app)/page.tsx": "2155927eb431b315d6546b656b9ec915bcc7f9755f5db0d2fcf7db8fe166c3c2",
+    "src/app/(app)/projects/[id]/procurement/layout.tsx": "027d8caaef44164d814c6ef84558a2e05c9583057f2b5d69f75013960330e8d0",
+    "src/app/(app)/settings/layout.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
+    "src/app/(auth)/layout.tsx": "af086ffccdedc8e92a619ff08c6b5477bce392ebe0f79316d5362f4199233115",
+    "src/app/(bare)/layout.tsx": "d8d5e14aafe05d5f4e38db737cd7a168263b583637b6206dfb97e3b6ec286e52",
     "src/app/(light)/layout.tsx": "dea3f6a964d6fce80e1872b09ac1276ced1f024a8f1726b0ca2c91367877a102",
-    "src/app/account/layout.tsx": "d1376ab8a14ece47f533ce7217bcee1ff1019fcd629aede776c8a8682127309c",
-    "src/app/admin/layout.tsx": "f32631e240f9572a87fbaad86622e2730dada7877d258dfdebb340eada2c2516",
-    "src/app/dxf/viewer/layout.tsx": "5d8006221c9a546e995faff3a451269dd788fb8feb4a320e620d2790aa41aabc",
-    "src/app/layout.tsx": "77fe29affd51e23e54372d593741b18569cfac9df968ba6431af3c2e70213fc3",
-    "src/app/page.tsx": "2155927eb431b315d6546b656b9ec915bcc7f9755f5db0d2fcf7db8fe166c3c2",
-    "src/app/projects/[id]/procurement/layout.tsx": "027d8caaef44164d814c6ef84558a2e05c9583057f2b5d69f75013960330e8d0",
-    "src/app/settings/layout.tsx": "7165b8f99bc1e9004968558fe04e8d5ac9fadc0f8b660f386481e7de27c50b35",
+    "src/app/layout.tsx": "0d263d8a651b972cc5959ac1bda7806bb7cf816490940b23cee75b82add9937e",
     "src/auth/contexts/AuthContext.tsx": "26d03cf803cfcd0b2faec71f1b72865f14636356c7c2e338dd8b2f8d2484e54c",
     "src/auth/contexts/UserRoleContext.tsx": "e9f0191504136d5f89f5323948cfa06c7ae545467227af1753b532a9b1a7306a",
     "src/auth/contexts/auth-context/auth-context-errors.ts": "9d2f51a2f97927908dbc989a10596fa748dff25fc61f6d6d90ba11376ae6ca9a",
@@ -106,9 +109,9 @@
     "src/components/header/voice-assistant-button.tsx": "c56a417da0fd30f53ba7046c5293b0f09395d03f3149675787f6d1ca109f9e05",
     "src/components/job/HiddenItemsBadge.tsx": "4a787cd073d257838351379574abe8e8dd222efca9c44e05fb0fdb3ff3e7b58d",
     "src/components/job/JobSuggestion.tsx": "bdd9cb6b23c4638221afe6dbf1bab3c0d46ab7fe51cf07bb56a72be1ded45b8d",
-    "src/components/layout/ConditionalAppShell.tsx": "2d9d98812c342e090146b890ff33b66690df25d62c89d7f50f438ccfa9846839",
     "src/components/layout/GlobalFileUploadToast.tsx": "7cae2db1e766efa8e05167f60c4f91bc9452b08876818300e8dd556a9ff1224d",
     "src/components/layout/MainContentBridge.tsx": "e8121902acdf603283864771a1fc590ff1476ce6362b24959aa9ae88d5afdab6",
+    "src/components/layout/useRoutePrefetch.ts": "5cc279891bb43b1a78a7d8b44ad72a3f5d8060f2c64c094ad9f9ace3509cbdb4",
     "src/components/navigation/config/navigation-entities/entity-config.ts": "666ab670bc40fb30383e288c56ed288bcc5532ac8fbfdb2e0748f135718e2a9f",
     "src/components/navigation/config/navigation-entities/types.ts": "bbe5490a114cd615bf893141d249c2a0896202f151c0ad42fb8fd1f2fd1d3929",
     "src/components/navigation/core/NavigationContext.tsx": "43b1306da36d3c6ba72da69f1621b229c88bd5cc753f4e30b2d9750a2d1a937a",
@@ -480,20 +483,23 @@
     "src/utils/preloadRoutes.ts": "abf75a95040cffe88cc0f8872ae323ec711810800a5c5bcc12eff3b7a936aec0"
   },
   "shellRoots": [
+    "src/app/(app)/account/layout.tsx",
+    "src/app/(app)/admin/layout.tsx",
+    "src/app/(app)/dxf/viewer/layout.tsx",
+    "src/app/(app)/layout.tsx",
+    "src/app/(app)/page.tsx",
+    "src/app/(app)/projects/[id]/procurement/layout.tsx",
+    "src/app/(app)/settings/layout.tsx",
+    "src/app/(auth)/layout.tsx",
+    "src/app/(bare)/layout.tsx",
     "src/app/(light)/layout.tsx",
-    "src/app/account/layout.tsx",
-    "src/app/admin/layout.tsx",
-    "src/app/dxf/viewer/layout.tsx",
-    "src/app/layout.tsx",
-    "src/app/page.tsx",
-    "src/app/projects/[id]/procurement/layout.tsx",
-    "src/app/settings/layout.tsx"
+    "src/app/layout.tsx"
   ],
   "stats": {
     "dynamicBoundaries": 18,
     "matchedKeys": 136,
     "routeBoundaries": 0,
-    "shellFiles": 414,
+    "shellFiles": 417,
     "sliceBytes": 197023
   },
   "unresolvableKeys": [
@@ -665,7 +671,7 @@
     "theme.toggle"
   ],
   "unresolvedSpecs": [
-    "src/app/dxf/viewer/layout.tsx → @/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css",
+    "src/app/(app)/dxf/viewer/layout.tsx → @/subapps/dxf-viewer/ui/ribbon/styles/ribbon-tokens.css",
     "src/app/layout.tsx → ./globals.css",
     "src/i18n/config.ts → ./generated/shell-slice.el.json",
     "src/i18n/config.ts → ./generated/shell-slice.whole.json",
