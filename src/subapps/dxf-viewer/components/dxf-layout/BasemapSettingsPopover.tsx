@@ -45,9 +45,11 @@ import {
   subscribeBasemap,
 } from '../../systems/basemap/basemap-store';
 import {
+  getApproximateAnchor,
   getBasemapAvailability,
   subscribeBasemapAvailability,
 } from '../../systems/basemap/basemap-availability';
+import { ANCHOR_ORIGIN_LABEL_KEY } from '../../systems/basemap/basemap-anchor-labels';
 import { BASEMAP_SOURCES, type BasemapSourceId } from '../../systems/basemap/basemap-source';
 
 /** Η αδιαφάνεια ζει στο [0,1]· ο χρήστης σκέφτεται σε ποσοστά. */
@@ -115,6 +117,12 @@ export const BasemapSettingsPopover: React.FC = () => {
     getBasemapAvailability,
   );
 
+  const anchor = useSyncExternalStore(
+    subscribeBasemapAvailability,
+    getApproximateAnchor,
+    getApproximateAnchor,
+  );
+
   const unavailable = availability === 'unknown';
 
   return (
@@ -157,6 +165,23 @@ export const BasemapSettingsPopover: React.FC = () => {
           label={t('basemap.settings.provider')}
           singleHint={t('basemap.settings.providerSingleHint')}
         />
+
+        {/*
+          ADR-782 §21 — η **προέλευση** της θέσης, μόνο όταν είναι κατά προσέγγιση. Σε
+          γεωαναφερμένο έργο δεν υπάρχει τίποτα να δηλωθεί: η θέση ΕΙΝΑΙ η μετρημένη.
+          Εδώ ξεπερνάμε Revit/ArchiCAD, που δηλώνουν «κατά προσέγγιση» χωρίς να λένε ποτέ
+          από πού την πήραν — δες την επικεφαλίδα του `project-anchor-resolution`.
+        */}
+        {availability === 'approximate' && anchor && (
+          <section className={`flex flex-col ${PANEL_LAYOUT.GAP.XS}`}>
+            <h4 className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM}`}>
+              {t('basemap.settings.anchorOrigin')}
+            </h4>
+            <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
+              {t(ANCHOR_ORIGIN_LABEL_KEY[anchor.originKey])}
+            </p>
+          </section>
+        )}
       </PopoverContent>
     </Popover>
   );

@@ -25,17 +25,24 @@
  * @see ADR-332 §3.4 Suggestion trigger algorithm
  */
 
+import { SUGGESTION_DEFAULTS } from '@/lib/geocoding/geocoding-thresholds';
 import type {
   GeocodingApiResponse,
   ResolvedAddressFields,
   SuggestionTrigger,
 } from '../types';
 
-/** Default threshold values from ADR-332 §3.4. */
-export const SUGGESTION_DEFAULTS = {
-  lowConfidenceThreshold: 0.7,
-  ambiguousConfidenceGap: 0.15,
-} as const;
+/**
+ * Default threshold values from ADR-332 §3.4.
+ *
+ * ⚠️ Οι τιμές **μετακόμισαν** στο `@/lib/geocoding/geocoding-thresholds` (ADR-782 §21): η ερώτηση
+ * «πότε εμπιστεύομαι μια απάντηση του γεωκωδικοποιητή;» είναι ερώτηση **τομέα**, όχι αυτής της
+ * οθόνης, και ο viewer DXF την κάνει πλέον κι εκείνος. Όσο ζούσε εδώ, ο δεύτερος καταναλωτής
+ * είχε μόνο δύο επιλογές: εισαγωγή από βάθος πέντε φακέλων ξένης οθόνης, ή **δεύτερο `0.7`**.
+ *
+ * Το re-export μένει ώστε καμία υπάρχουσα εισαγωγή να μην αλλάξει.
+ */
+export { SUGGESTION_DEFAULTS };
 
 /**
  * Retry priority for the orchestrating hook (`useAddressSuggestions`). When

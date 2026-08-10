@@ -25,7 +25,7 @@ import {
   setBasemapEnabled,
   setBasemapOpacity,
 } from '../../../systems/basemap/basemap-store';
-import { setApproximateAnchor } from '../../../systems/basemap/basemap-availability';
+import { setProjectAnchor } from '../../../systems/basemap/basemap-availability';
 import {
   hasBasemapAttributionSurface,
   resetBasemapAttributionSurfaces,
@@ -35,19 +35,19 @@ import { resolveBasemapPaint } from '../../../systems/basemap/basemap-paint-deci
 /** Το έργο ξέρει πού είναι, ο χάρτης είναι αναμμένος — η κατάσταση όπου η μνεία είναι υποχρεωτική. */
 function mapIsOn(): void {
   setBasemapEnabled(true);
-  setApproximateAnchor({ lat: 40.64, lon: 22.94, originKey: 'test' });
+  setProjectAnchor({ kind: 'anchored', anchor: { lat: 40.64, lon: 22.94, originKey: 'projectAddressGeocoded' } });
 }
 
 beforeEach(() => {
   resetBasemapStore();
   resetBasemapAttributionSurfaces();
-  setApproximateAnchor(null);
+  setProjectAnchor(null);
 });
 
 afterAll(() => {
   resetBasemapStore();
   resetBasemapAttributionSurfaces();
-  setApproximateAnchor(null);
+  setProjectAnchor(null);
 });
 
 describe('Α8 — η μνεία φαίνεται ΟΣΟ ο χάρτης είναι αναμμένος', () => {

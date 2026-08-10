@@ -19,7 +19,7 @@
 import * as THREE from 'three';
 import { BasemapGroundLayer } from '../BasemapGroundLayer';
 import { resetBasemapStore, setBasemapEnabled } from '../../../../systems/basemap/basemap-store';
-import { setApproximateAnchor } from '../../../../systems/basemap/basemap-availability';
+import { setProjectAnchor } from '../../../../systems/basemap/basemap-availability';
 import { resetBasemapAttributionSurfaces } from '../../../../systems/basemap/basemap-attribution-surface';
 
 /** Καμβάς με ύψος — το jsdom δίνει `clientHeight === 0`, που θα έκρυβε κάθε υπολογισμό κλίμακας. */
@@ -39,7 +39,7 @@ function buildLayer(requestRedraw: () => void): BasemapGroundLayer {
 
 beforeEach(() => {
   resetBasemapStore();
-  setApproximateAnchor(null);
+  setProjectAnchor(null);
   resetBasemapAttributionSurfaces();
 });
 

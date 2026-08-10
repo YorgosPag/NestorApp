@@ -25,24 +25,24 @@ import {
   setBasemapEnabled,
   setBasemapOpacity,
 } from '../basemap-store';
-import { setApproximateAnchor } from '../basemap-availability';
+import { setProjectAnchor } from '../basemap-availability';
 import { BASEMAP_SOURCES } from '../basemap-source';
 
 /** Φέρνει το έργο σε κατάσταση «ξέρω πού είσαι» χωρίς να αγγίξει τη γεωαναφορά του έργου. */
 function locateApproximately(): void {
-  setApproximateAnchor({ lat: 40.64, lon: 22.94, originKey: 'test' });
+  setProjectAnchor({ kind: 'anchored', anchor: { lat: 40.64, lon: 22.94, originKey: 'projectAddressGeocoded' } });
 }
 
 beforeEach(() => {
   resetBasemapStore();
   resetBasemapAttributionSurfaces();
-  setApproximateAnchor(null);
+  setProjectAnchor(null);
 });
 
 afterAll(() => {
   resetBasemapStore();
   resetBasemapAttributionSurfaces();
-  setApproximateAnchor(null);
+  setProjectAnchor(null);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -158,7 +158,7 @@ describe('Α4 — η ασυμμετρία των δύο ερωτημάτων ε�
       },
     ]) {
       resetBasemapStore();
-      setApproximateAnchor(null);
+      setProjectAnchor(null);
       setup();
       expect(resolveBasemapPaint()).toEqual(resolveBasemapContent());
     }

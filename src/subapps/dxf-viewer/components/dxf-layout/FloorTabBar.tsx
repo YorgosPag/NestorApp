@@ -30,8 +30,10 @@ import { BasemapSettingsPopover } from './BasemapSettingsPopover';
 import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
 import {
   getBasemapAvailability,
+  getProjectAnchorRefusal,
   subscribeBasemapAvailability,
 } from '../../systems/basemap/basemap-availability';
+import { ANCHOR_REFUSAL_HINT_KEY } from '../../systems/basemap/basemap-anchor-labels';
 import {
   getBasemapState,
   subscribeBasemap,
@@ -92,8 +94,21 @@ const BasemapTab: React.FC = () => {
   );
   const { enabled } = useSyncExternalStore(subscribeBasemap, getBasemapState, getBasemapState);
 
+  // Ο λόγος ζει στο ΙΔΙΟ store με τη διαθεσιμότητα, οπότε η υπάρχουσα εγγραφή τον καλύπτει.
+  const refusal = useSyncExternalStore(
+    subscribeBasemapAvailability,
+    getProjectAnchorRefusal,
+    getProjectAnchorRefusal,
+  );
+
   const unavailable = availability === 'unknown';
   const active = enabled && !unavailable;
+
+  // ⚠️ Η γενική υπόδειξη μένει ως **πάτωμα**, όχι ως εναλλακτική στιλ: όσο η ανάγνωση εκκρεμεί (ή
+  // απέτυχε) δεν υπάρχει διαπιστωμένος λόγος, και το να ονομάσουμε έναν θα ήταν εφεύρεση.
+  const unavailableLabel = refusal
+    ? t(ANCHOR_REFUSAL_HINT_KEY[refusal])
+    : t('basemap.unavailableHint');
   const stateClass = active
     ? `${colors.bg.info} ${colors.text.inverse}`
     : `${colors.text.muted} ${PANEL_LAYOUT.INTERACTIVE.HOVER}`;
@@ -103,7 +118,7 @@ const BasemapTab: React.FC = () => {
       type="button"
       aria-pressed={active}
       disabled={unavailable}
-      aria-label={unavailable ? t('basemap.unavailableHint') : t('basemap.toggleAria')}
+      aria-label={unavailable ? unavailableLabel : t('basemap.toggleAria')}
       onClick={toggleBasemapEnabled}
       className={`${TAB_BASE_CLASS} ${stateClass} disabled:cursor-not-allowed disabled:opacity-40`}
     >

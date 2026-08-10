@@ -882,7 +882,20 @@
       "opacityHint": "The drawing must remain the readable layer. Lower value = more discreet map.",
       "provider": "Provider",
       "providerSingleHint": "One provider available.",
-      "unavailable": "This project is not geo-referenced — the settings have nothing to affect."
+      "unavailable": "This project is not geo-referenced — the settings have nothing to affect.",
+      "anchorOrigin": "Location provenance"
+    },
+    "anchorOrigin": {
+      "geocoded": "From the project address, resolved automatically to coordinates.",
+      "pinned": "From a pin placed manually on the project address.",
+      "stored": "From coordinates stored with the address, with no recorded accuracy."
+    },
+    "unavailableReason": {
+      "noAddress": "This project has no registered address. Add one in the project locations tab.",
+      "noCoordinates": "The project address has never been resolved to coordinates. Open the locations tab and resolve it on the map.",
+      "invalidCoordinates": "The coordinates stored with the address are not a valid point. Correct them in the locations tab.",
+      "tooCoarse": "The address resolved only to a settlement centre — kilometres away from the building. Add street and number in the locations tab.",
+      "lowConfidence": "The address resolution has low confidence. Check its details in the locations tab."
     }
   },
   "toolbarStatus": {

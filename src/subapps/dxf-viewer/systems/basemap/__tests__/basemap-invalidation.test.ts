@@ -30,7 +30,7 @@ jest.mock('../basemap-tile-cache', () => ({
 
 import { getBasemapPaintVersion, subscribeBasemapPaint } from '../basemap-invalidation';
 import { resetBasemapStore, setBasemapEnabled, setBasemapOpacity, setBasemapSource } from '../basemap-store';
-import { setApproximateAnchor } from '../basemap-availability';
+import { setProjectAnchor } from '../basemap-availability';
 import {
   registerBasemapAttributionSurface,
   resetBasemapAttributionSurfaces,
@@ -44,7 +44,7 @@ function emitTileReady(): void {
 beforeEach(() => {
   // Πρώτα η επαναφορά, μετά οι εγγραφές: η ίδια η επαναφορά ειδοποιεί, και θα μετριόταν ως αλλαγή.
   resetBasemapStore();
-  setApproximateAnchor(null);
+  setProjectAnchor(null);
   resetBasemapAttributionSurfaces();
   tileUnsubscribeCalls = 0;
 });
@@ -66,7 +66,7 @@ describe('subscribeBasemapPaint — μία λίστα εισόδων, δύο κ�
     const listener = jest.fn();
     const unsubscribe = subscribeBasemapPaint(listener);
 
-    setApproximateAnchor({ lat: 40.66, lon: 22.9, originKey: 'test' });
+    setProjectAnchor({ kind: 'anchored', anchor: { lat: 40.66, lon: 22.9, originKey: 'projectAddressGeocoded' } });
 
     expect(listener).toHaveBeenCalled();
     unsubscribe();

@@ -16,7 +16,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BasemapSettingsPopover } from '../BasemapSettingsPopover';
 import { getBasemapState, resetBasemapStore } from '../../../systems/basemap/basemap-store';
-import { setApproximateAnchor } from '../../../systems/basemap/basemap-availability';
+import { setProjectAnchor } from '../../../systems/basemap/basemap-availability';
 import { BASEMAP_SOURCES } from '../../../systems/basemap/basemap-source';
 
 jest.mock('@/i18n', () => ({
@@ -28,7 +28,7 @@ const UNAVAILABLE = 'basemap.settings.unavailable';
 
 beforeEach(() => {
   resetBasemapStore();
-  setApproximateAnchor(null);
+  setProjectAnchor(null);
 });
 
 describe('BasemapSettingsPopover — οι ρυθμίσεις υποβάθρου (ADR-782 §18)', () => {
@@ -42,7 +42,7 @@ describe('BasemapSettingsPopover — οι ρυθμίσεις υποβάθρου 
   });
 
   it('🎯 Ρ2: με κατά προσέγγιση θέση ενεργοποιείται και η αδιαφάνεια ΓΡΑΦΕΤΑΙ στο store', async () => {
-    setApproximateAnchor({ lat: 40.66, lon: 22.9, originKey: 'test' });
+    setProjectAnchor({ kind: 'anchored', anchor: { lat: 40.66, lon: 22.9, originKey: 'projectAddressGeocoded' } });
     const user = userEvent.setup();
     render(<BasemapSettingsPopover />);
 
@@ -57,7 +57,7 @@ describe('BasemapSettingsPopover — οι ρυθμίσεις υποβάθρου 
   });
 
   it('🎯 Ρ3: με ΕΝΑΝ πάροχο δεν προσφέρεται λίστα επιλογής — χειριστήριο που δεν κάνει τίποτα', async () => {
-    setApproximateAnchor({ lat: 40.66, lon: 22.9, originKey: 'test' });
+    setProjectAnchor({ kind: 'anchored', anchor: { lat: 40.66, lon: 22.9, originKey: 'projectAddressGeocoded' } });
     const user = userEvent.setup();
     render(<BasemapSettingsPopover />);
 
@@ -71,7 +71,7 @@ describe('BasemapSettingsPopover — οι ρυθμίσεις υποβάθρου 
   });
 
   it('Ρ4: το πάνελ ονομάζει την αδιαφάνεια και εξηγεί γιατί δεν πρέπει να ανέβει άσκοπα', async () => {
-    setApproximateAnchor({ lat: 40.66, lon: 22.9, originKey: 'test' });
+    setProjectAnchor({ kind: 'anchored', anchor: { lat: 40.66, lon: 22.9, originKey: 'projectAddressGeocoded' } });
     const user = userEvent.setup();
     render(<BasemapSettingsPopover />);
 

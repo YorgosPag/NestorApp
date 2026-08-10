@@ -40,6 +40,7 @@ import { FoundationPersistenceHost } from './FoundationPersistenceHost';
 import { GridGuidePersistenceHost } from './GridGuidePersistenceHost';
 import { TopoPersistenceHost } from './TopoPersistenceHost';
 import { GeoReferenceHost } from './GeoReferenceHost';
+import { ProjectAnchorHost } from './ProjectAnchorHost';
 import { HostingReconcilerHost } from './HostingReconcilerHost';
 import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { FurniturePersistenceHost } from './FurniturePersistenceHost';
@@ -239,6 +240,8 @@ export function DxfViewerTopBar({
       />
       {/* ADR-650 M10 — geo-referencing: υδατώνει το project transform (ΕΓΣΑ↔local) από το Project doc. */}
       <GeoReferenceHost projectId={projectId} />
+      {/* ADR-782 §21 — κατά προσέγγιση θέση από τη ΔΗΛΩΜΕΝΗ διεύθυνση (ποτέ στο geo-reference). */}
+      <ProjectAnchorHost projectId={projectId} />
       <HostingReconcilerHost levelManager={levelManager} />
       <BeamPersistenceHost
         primarySelectedId={primarySelectedId}

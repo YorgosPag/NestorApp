@@ -31,6 +31,28 @@ export type BasemapAvailability =
   | 'unknown';
 
 /**
+ * Από πού προήλθε η κατά προσέγγιση θέση — **κλειστό σύνολο**, όχι ελεύθερο κείμενο.
+ *
+ * 🔑 Η προέλευση **ταξιδεύει μαζί με την τιμή** και φτάνει στην οθόνη. Αυτό είναι το σημείο όπου
+ * ξεπερνάμε τους μεγάλους: το Revit («Location» από Internet Mapping Service) και το ArchiCAD
+ * («Project Location») δηλώνουν κι εκείνα τη θέση ως **κατά προσέγγιση** — αλλά κανένα από τα δύο
+ * δεν λέει ποτέ *από πού* την πήρε ούτε *πόσο* την εμπιστεύεται. Ο χρήστης βλέπει έναν αριθμό
+ * γεωγραφικού πλάτους και δεν έχει τρόπο να ξεχωρίσει «το βρήκε ο γεωκωδικοποιητής στην πόρτα»
+ * από «το κάρφωσε κάποιος με το χέρι πέρσι».
+ *
+ * ⚠️ Είναι **union και όχι `string`** επίτηδες: το πεδίο καταλήγει σε `t()`, οπότε ένας ελεύθερος
+ * τύπος θα επέτρεπε ωμό ελληνικό κείμενο να φτάσει στην οθόνη (N.11). Έτσι η παράβαση είναι
+ * **δομικά αδύνατη** αντί να φυλάσσεται από κανόνα που κάποιος πρέπει να θυμηθεί.
+ */
+export type ApproximateAnchorOrigin =
+  /** Ο γεωκωδικοποιητής επέλυσε τη διεύθυνση του έργου και η απάντηση πέρασε τα κατώφλια. */
+  | 'projectAddressGeocoded'
+  /** Άνθρωπος μετακίνησε την πινέζα στον χάρτη — ανθρώπινη πρόθεση, υπερισχύει του αυτόματου. */
+  | 'projectAddressPinned'
+  /** Αποθηκευμένες συντεταγμένες χωρίς μεταδεδομένα ποιότητας — δεκτές, αλλά **δηλωμένες** ως τέτοιες. */
+  | 'projectAddressStored';
+
+/**
  * Προσωρινή άγκυρα, όταν υπάρχει: το κέντρο μιας κατά προσέγγιση θέσης σε WGS84.
  *
  * Ζει σε **δικό** της χώρο και **όχι** στο `geo-reference-store` επίτηδες. Εκείνο το store είναι
@@ -42,19 +64,76 @@ export interface ApproximateAnchor {
   readonly lat: number;
   readonly lon: number;
   /** Από πού προήλθε — εμφανίζεται στον χρήστη ώστε να ξέρει τι εμπιστεύεται. */
-  readonly originKey: string;
+  readonly originKey: ApproximateAnchorOrigin;
 }
 
-const anchorStore = createExternalStore<ApproximateAnchor | null>(null);
+/**
+ * Γιατί η διεύθυνση του έργου **δεν** έδωσε θέση — ονομασμένα, γιατί έχουν **διαφορετική θεραπεία**
+ * και η θεραπεία είναι το μόνο που ενδιαφέρει τον χρήστη μπροστά σε έναν σβηστό χάρτη.
+ *
+ * ⚠️ Ένα `null` εδώ θα ήταν το ίδιο λάθος που η επικεφαλίδα αυτού του αρχείου περιγράφει για το
+ * `boolean`: ο χρήστης μαθαίνει ότι δεν γίνεται, ποτέ γιατί, και συμπεραίνει ότι «χάλασε».
+ */
+export type ProjectAnchorRefusal =
+  /** Το έργο δεν έχει καμία καταχωρημένη διεύθυνση — θεραπεία: καταχώριση στην καρτέλα τοποθεσιών. */
+  | 'no-address'
+  /** Υπάρχει διεύθυνση, αλλά ποτέ δεν επιλύθηκε σε συντεταγμένες — θεραπεία: γεωκωδικοποίηση εκεί. */
+  | 'no-coordinates'
+  /** Οι αποθηκευμένες συντεταγμένες δεν είναι έγκυρο σημείο της Γης (ή είναι το σεντόνι `0,0`). */
+  | 'invalid-coordinates'
+  /**
+   * Η επίλυση έδειξε **κέντρο οικισμού**, όχι κτίριο. Χειρότερη ακρίβεια από το «οικοδομικό
+   * τετράγωνο» που δηλώνει η επικεφαλίδα — χάρτης χιλιόμετρα μακριά, **που μοιάζει σωστός**.
+   */
+  | 'too-coarse'
+  /** Ο ίδιος ο γεωκωδικοποιητής δεν στέκεται πίσω από την απάντησή του (κατώφλι ADR-332 §3.4). */
+  | 'low-confidence';
 
-/** Δήλωση κατά προσέγγιση θέσης (π.χ. μετά από γεωκωδικοποίηση της διεύθυνσης του έργου). */
-export function setApproximateAnchor(anchor: ApproximateAnchor | null): void {
-  anchorStore.set(anchor);
+/**
+ * Η **μία** απάντηση στο «πού βρίσκεται, κατά προσέγγιση, αυτό το έργο;».
+ *
+ * ⚠️ Ένα store για την τιμή **και** δεύτερο για τον λόγο θα ήταν δύο αλήθειες για ένα ερώτημα, που
+ * αποκλίνουν την πρώτη φορά που κάποιος γράψει στο ένα (σχήμα ADR-749). Η άρνηση **είναι** μέρος
+ * της απάντησης, όχι η απουσία της.
+ */
+export type ProjectAnchorResolution =
+  | { readonly kind: 'anchored'; readonly anchor: ApproximateAnchor }
+  | { readonly kind: 'refused'; readonly reason: ProjectAnchorRefusal };
+
+/** `null` = **δεν ρωτήθηκε ακόμη** (κανένα έργο ή εκκρεμεί η ανάγνωση) — διαφορετικό από «αρνήθηκε». */
+const anchorStore = createExternalStore<ProjectAnchorResolution | null>(null);
+
+/**
+ * Ο **μοναδικός** γραφέας της κατά προσέγγιση θέσης. Καλείται από τον `ProjectAnchorHost`.
+ *
+ * ⚠️ `null` σημαίνει «καθάρισε — δεν υπάρχει ενεργό έργο», **όχι** «δεν βρέθηκε θέση»· γι' αυτό
+ * υπάρχει το `{ kind: 'refused' }`.
+ */
+export function setProjectAnchor(resolution: ProjectAnchorResolution | null): void {
+  anchorStore.set(resolution);
+}
+
+/** Η πλήρης απάντηση (θέση **ή** λόγος άρνησης), ή `null` όσο δεν έχει ρωτηθεί. */
+export function getProjectAnchor(): ProjectAnchorResolution | null {
+  return anchorStore.get();
 }
 
 /** Η ενεργή κατά προσέγγιση άγκυρα, αν υπάρχει. */
 export function getApproximateAnchor(): ApproximateAnchor | null {
-  return anchorStore.get();
+  const resolution = anchorStore.get();
+  return resolution?.kind === 'anchored' ? resolution.anchor : null;
+}
+
+/**
+ * Ο λόγος που η διεύθυνση δεν έδωσε θέση, όταν υπάρχει τέτοιος λόγος.
+ *
+ * Δεν σταθμίζεται εδώ με τη γεωαναφορά επίτηδες: ένα γεωαναφερμένο έργο **έχει** χάρτη, οπότε ο
+ * λόγος είναι απλώς άσχετος — και η επιφάνεια που τον δείχνει ρωτά ούτως ή άλλως πρώτα τη
+ * {@link getBasemapAvailability}. Σταθμίζοντάς τον εδώ, η ίδια πληροφορία θα κρινόταν σε δύο σημεία.
+ */
+export function getProjectAnchorRefusal(): ProjectAnchorRefusal | null {
+  const resolution = anchorStore.get();
+  return resolution?.kind === 'refused' ? resolution.reason : null;
 }
 
 /**
@@ -66,7 +145,7 @@ export function getApproximateAnchor(): ApproximateAnchor | null {
  */
 export function getBasemapAvailability(): BasemapAvailability {
   if (!isIdentityGeoReference(getGeoReference())) return 'exact';
-  if (anchorStore.get()) return 'approximate';
+  if (anchorStore.get()?.kind === 'anchored') return 'approximate';
   return 'unknown';
 }
 
