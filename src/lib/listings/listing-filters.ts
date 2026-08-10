@@ -96,7 +96,34 @@ const PARAM = {
   areaMin: 'amin',
   areaMax: 'amax',
   bedroomsMin: 'beds',
+  lat: 'lat',
+  lng: 'lng',
+  radiusKm: 'r',
 } as const;
+
+/**
+ * Διεύθυνση → γεωγραφικό φίλτρο, ή `null`.
+ *
+ * ⚠️ **Απαιτούνται ΚΑΙ ΤΑ ΔΥΟ σκέλη της συντεταγμένης.** Ένα μισό ζεύγος (`lat` χωρίς
+ * `lng`) δεν είναι «σχεδόν σωστό» — είναι σημείο πάνω σε μεσημβρινό μηδέν, δηλαδή
+ * κάπου στον Ατλαντικό, και ο χάρτης θα το ζωγράφιζε **με απόλυτη σιγουριά**. Είναι
+ * το ίδιο ελάττωμα που ο τύπος `PlacePosition` απαγορεύει με το ρητό `unknown`.
+ *
+ * ⚠️ **Ακτίνα ≤ 0 ⇒ αγνοείται ολόκληρο το φίλτρο**, δεν «διορθώνεται» σε 0 χλμ.:
+ * ακτίνα μηδέν φιλτράρει **τα πάντα** και ο επισκέπτης θα έβλεπε άδεια οθόνη χωρίς
+ * να ξέρει ότι έφταιγε μια παράμετρος στη διεύθυνση.
+ */
+function readGeoFilter(params: URLSearchParams): ListingGeoFilter | null {
+  const lat = readNumber(params, PARAM.lat);
+  const lng = readNumber(params, PARAM.lng);
+  if (lat === null || lng === null) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+
+  const radiusKm = readNumber(params, PARAM.radiusKm) ?? DEFAULT_SEARCH_RADIUS_KM;
+  if (radiusKm <= 0) return null;
+
+  return { center: { lat, lng }, radiusKm };
+}
 
 function readNumber(params: URLSearchParams, key: string): number | null {
   const raw = params.get(key);
@@ -122,6 +149,7 @@ export function parseListingFilters(params: URLSearchParams): ListingFilters {
     areaMin: readNumber(params, PARAM.areaMin),
     areaMax: readNumber(params, PARAM.areaMax),
     bedroomsMin: readNumber(params, PARAM.bedroomsMin),
+    near: readGeoFilter(params),
   };
 }
 
@@ -145,6 +173,14 @@ export function serializeListingFilters(filters: ListingFilters): URLSearchParam
   ];
   for (const [key, value] of numbers) {
     if (value !== null) params.set(key, String(value));
+  }
+  // ⚠️ Τα τρία γεωγραφικά γράφονται **μαζί ή καθόλου**: μια διεύθυνση με `lat` χωρίς
+  // `lng` δεν είναι μερικώς χρήσιμη, είναι μη αναγνώσιμη από το `readGeoFilter` — και
+  // θα ταξίδευε σιωπηλά σε κάθε κοινοποιημένο σύνδεσμο.
+  if (filters.near !== null) {
+    params.set(PARAM.lat, String(filters.near.center.lat));
+    params.set(PARAM.lng, String(filters.near.center.lng));
+    params.set(PARAM.radiusKm, String(filters.near.radiusKm));
   }
   return params;
 }
@@ -176,6 +212,26 @@ export function matchesListingFilters(listing: PublicListing, filters: ListingFi
 
   if (filters.bedroomsMin !== null) {
     if (listing.bedrooms === null || listing.bedrooms < filters.bedroomsMin) return false;
+  }
+
+  // 🔴 Ο ΓΕΩΓΡΑΦΙΚΟΣ ΑΞΟΝΑΣ — τελευταίος επίτηδες: είναι ο **μόνος** που κοστίζει
+  // τριγωνομετρία, και τα φθηνά φίλτρα έχουν ήδη αποκλείσει ό,τι μπορούσαν.
+  if (filters.near !== null) {
+    // ⚠️ **Η αγγελία ΧΩΡΙΣ θέση ΔΕΝ αποκλείεται εδώ — και αυτό δεν είναι παράλειψη.**
+    // Είναι ο κανόνας Α5 §4.1 σε κώδικα: *«δεν φιλτράρονται όταν μετακινείς τον
+    // χάρτη· δεν μπορούμε να τις αποκλείσουμε από περιοχή που δεν ξέρουμε αν τους
+    // ανήκει»*. Ένα `return false` εδώ θα τις **εξαφάνιζε** — δηλαδή θα μετέτρεπε το
+    // «δεν ξέρουμε πού είναι» σε «δεν είναι εδώ», που είναι διαφορετικός ισχυρισμός
+    // και **ψευδής**. Μένουν, και τις μετρά η κλειστή λογιστική.
+    if (listing.position.kind === 'known') {
+      const metres = haversineDistance(
+        filters.near.center.lat,
+        filters.near.center.lng,
+        listing.position.point.lat,
+        listing.position.point.lng
+      );
+      if (metres > filters.near.radiusKm * 1000) return false;
+    }
   }
   return true;
 }

@@ -20,10 +20,14 @@ interface ResultsListProps {
   readonly unmapped: readonly PublicListing[];
   readonly highlightedId: string | null;
   readonly onHover: (id: string | null) => void;
-  readonly onSelect: (id: string) => void;
+  /**
+   * Τα ενεργά φίλτρα ως ερώτημα. Περνά **αναλλοίωτο** και στα δύο μέρη της λίστας,
+   * ώστε η επιστροφή από την οθόνη 3 να βρίσκει **την ίδια** αναζήτηση (Α3).
+   */
+  readonly filterQuery: string;
 }
 
-export function ResultsList({ mapped, unmapped, highlightedId, onHover, onSelect }: ResultsListProps) {
+export function ResultsList({ mapped, unmapped, highlightedId, onHover, filterQuery }: ResultsListProps) {
   const { t } = useTranslation(['search-results']);
   const isEmpty = mapped.length === 0 && unmapped.length === 0;
 
@@ -40,7 +44,7 @@ export function ResultsList({ mapped, unmapped, highlightedId, onHover, onSelect
                 listing={listing}
                 isHighlighted={listing.id === highlightedId}
                 onHover={onHover}
-                onSelect={onSelect}
+                filterQuery={filterQuery}
               />
             ))}
           </ul>
@@ -51,7 +55,7 @@ export function ResultsList({ mapped, unmapped, highlightedId, onHover, onSelect
         ⛔ ΣΤΟ ΤΕΛΟΣ ΤΗΣ ΛΙΣΤΑΣ, ΜΕΣΑ ΣΤΟ ΙΔΙΟ ΠΛΑΙΣΙΟ — ποτέ δεύτερη επιφάνεια
         (Α5 §4.2, κανόνας 21). Και ποτέ φιλτραρισμένη από την κίνηση του χάρτη.
       */}
-      <UnmappedListingsRow listings={unmapped} />
+      <UnmappedListingsRow listings={unmapped} filterQuery={filterQuery} />
     </section>
   );
 }

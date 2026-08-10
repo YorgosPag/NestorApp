@@ -49,7 +49,16 @@ const CLICKABLE_LAYER_IDS = [
 interface ResultsMapProps {
   readonly listings: readonly PublicListing[];
   readonly highlightedId: string | null;
-  readonly onSelect: (id: string) => void;
+  /**
+   * Κλικ σε σχήμα → επιλογή στη λίστα. **Προαιρετικό, και η απουσία έχει νόημα.**
+   *
+   * 🔴 Η **οθόνη 3** δείχνει τον ίδιο χάρτη για **μία** αγγελία: εκεί δεν υπάρχει
+   * λίστα να επιλεγεί, και ο επισκέπτης είναι **ήδη** πάνω στο ακίνητο. Χωρίς αυτό,
+   * ο χάρτης θα έβαφε δείκτη «χεράκι» πάνω σε σχήμα που **δεν κάνει τίποτα** — μια
+   * υπόσχεση διάδρασης που δεν τηρείται, δηλαδή το ίδιο είδος ψέματος με την πινέζα
+   * πάνω σε πόλη. Ο ζωγράφος είναι **ένας**· αλλάζει το ερώτημα, όχι ο χάρτης.
+   */
+  readonly onSelect?: (id: string) => void;
 }
 
 /** Ακτίνες σε pixel. **Κατηγορικά διακριτές**, όχι διαβαθμίσεις που μοιάζουν. */
@@ -109,6 +118,12 @@ export function ResultsMap({ listings, highlightedId, onSelect }: ResultsMapProp
     // μηδενικού εμβαδού — ο χάρτης θα ζουμάριζε σε επίπεδο δρόμου, ισχυρισμός
     // ακρίβειας που το ίδιο το σχήμα μπορεί να μην κάνει.
     if (bounds) target.fitBounds(bounds, { padding: 64, maxZoom: 15, duration: 0 });
+
+    // ⚠️ Χωρίς καταναλωτή επιλογής **δεν δένεται τίποτα** — ούτε κλικ, ούτε δείκτης.
+    // Βλ. {@link ResultsMapProps.onSelect}: δείκτης «χεράκι» χωρίς αποτέλεσμα είναι
+    // υπόσχεση που δεν τηρείται.
+    if (!onSelect) return;
+
     for (const layerId of CLICKABLE_LAYER_IDS) {
       target.on('click', layerId, (event) => {
         const id = event.features?.[0]?.properties?.id;

@@ -23,7 +23,11 @@ import React, { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicListings, useListingLedger } from '@/services/realtime/hooks/usePublicListings';
-import { applyListingFilters, parseListingFilters } from '@/lib/listings/listing-filters';
+import {
+  applyListingFilters,
+  parseListingFilters,
+  serializeListingFilters,
+} from '@/lib/listings/listing-filters';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
 import { ListingLedgerBar } from './ListingLedgerBar';
 import { ResultsList } from './ResultsList';
@@ -41,6 +45,16 @@ export function SearchResultsContent() {
   );
 
   const visible = useMemo(() => applyListingFilters(listings, filters), [listings, filters]);
+
+  /**
+   * Τα φίλτρα **ξανα-σειριοποιημένα**, όχι η ωμή διεύθυνση.
+   *
+   * 🔑 Η διαφορά είναι πραγματική: το `parse → serialize` **κανονικοποιεί** (πετά
+   * άγνωστες παραμέτρους, μισά γεωγραφικά ζεύγη, ακτίνες ≤ 0). Αν περνούσαμε τη
+   * διεύθυνση αυτούσια, ένας κοινοποιημένος σύνδεσμος με σκουπίδια θα τα κουβαλούσε
+   * σε **κάθε** επόμενη σελίδα — και θα ήταν **δύο** αλήθειες για το τι ζητήθηκε.
+   */
+  const filterQuery = useMemo(() => serializeListingFilters(filters).toString(), [filters]);
 
   // ⚠️ Η διαίρεση γίνεται ΜΙΑ φορά και τα δύο μέρη προκύπτουν από την ΙΔΙΑ κρίση —
   // αλλιώς μια αγγελία θα μπορούσε να λείπει και από τα δύο, ή να είναι και στα δύο.
@@ -76,7 +90,7 @@ export function SearchResultsContent() {
             unmapped={unmapped}
             highlightedId={highlightedId}
             onHover={setHighlightedId}
-            onSelect={setHighlightedId}
+            filterQuery={filterQuery}
           />
         </div>
         <div className="min-h-0" aria-label={t('search-results:map.label')}>

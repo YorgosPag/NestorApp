@@ -7,6 +7,7 @@ import {
   serializeListingFilters,
   applyListingFilters,
   EMPTY_LISTING_FILTERS,
+  DEFAULT_SEARCH_RADIUS_KM,
 } from '../listing-filters';
 import { listingsToGeoJson } from '../listings-geojson';
 import type { PublicListing } from '@/types/public-listing';
@@ -39,6 +40,11 @@ describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και ε
       priceMin: 100000, priceMax: 300000,
       areaMin: 50, areaMax: null,
       bedroomsMin: 2,
+      // ⚠️ Ρητό `null`, ποτέ παραλειπόμενο: ο γεωγραφικός άξονας (ADR-777 Α3, οθόνη 1)
+      // είναι **υποχρεωτικό** πεδίο του κλειστού σχήματος. Ένα `undefined` εδώ θα
+      // περνούσε τον έλεγχο `!== null` και θα έσκαγε στη σειριοποίηση — που είναι
+      // ακριβώς ό,τι έκανε την πρώτη φορά, και γι' αυτό γράφεται.
+      near: null,
     };
     expect(parseListingFilters(serializeListingFilters(filters))).toEqual(filters);
   });
@@ -56,6 +62,82 @@ describe('Φ1 — τα φίλτρα ζουν στη διεύθυνση και ε
     const parsed = parseListingFilters(new URLSearchParams('pmin=abc&amin='));
     expect(parsed.priceMin).toBeNull();
     expect(parsed.areaMin).toBeNull();
+  });
+});
+
+// ============================================================================
+// Γ — Ο ΓΕΩΓΡΑΦΙΚΟΣ ΑΞΟΝΑΣ (ADR-777 Α3, η οθόνη 1 μιλά στην οθόνη 2)
+// ============================================================================
+
+/** Θεσσαλονίκη, κέντρο. Οι αποστάσεις παρακάτω μετρήθηκαν από αυτό το σημείο. */
+const THESSALONIKI = { lat: 40.6403, lng: 22.9439 } as const;
+
+function atPoint(id: string, lat: number, lng: number): PublicListing {
+  return listing({
+    id,
+    position: { kind: 'known', provenance: 'manual', point: { lat, lng }, locatedAt: AT },
+  });
+}
+
+describe('Γ1 — διεύθυνση ⇄ γεωγραφικό φίλτρο', () => {
+  it('γράψιμο → ανάγνωση επιστρέφει το ΙΔΙΟ σημείο και την ίδια ακτίνα', () => {
+    const near = { center: THESSALONIKI, radiusKm: 25 };
+    const parsed = parseListingFilters(
+      serializeListingFilters({ ...EMPTY_LISTING_FILTERS, near })
+    );
+    expect(parsed.near).toEqual(near);
+  });
+
+  it('🔴 ΜΙΣΟ ζεύγος συντεταγμένων αγνοείται — δεν γίνεται σημείο στον Ατλαντικό', () => {
+    // `lat` χωρίς `lng` θα σήμαινε μεσημβρινός μηδέν. Ο χάρτης θα το ζωγράφιζε με
+    // απόλυτη σιγουριά — το ίδιο ελάττωμα που ο τύπος `PlacePosition` απαγορεύει
+    // με το ρητό `unknown`.
+    expect(parseListingFilters(new URLSearchParams('lat=40.64')).near).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('lng=22.94')).near).toBeNull();
+  });
+
+  it('🔴 ακτίνα ≤ 0 ΑΚΥΡΩΝΕΙ το φίλτρο, δεν «διορθώνεται» σε 0 χλμ', () => {
+    // Ακτίνα μηδέν φιλτράρει τα πάντα: ο επισκέπτης θα έβλεπε άδεια οθόνη χωρίς να
+    // ξέρει ότι έφταιγε μια παράμετρος στη διεύθυνση.
+    expect(parseListingFilters(new URLSearchParams('lat=40.64&lng=22.94&r=0')).near).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('lat=40.64&lng=22.94&r=-5')).near).toBeNull();
+  });
+
+  it('χωρίς ακτίνα ⇒ η προεπιλογή, όχι «άπειρο» ούτε «μηδέν»', () => {
+    expect(parseListingFilters(new URLSearchParams('lat=40.64&lng=22.94')).near?.radiusKm)
+      .toBe(DEFAULT_SEARCH_RADIUS_KM);
+  });
+
+  it('αδύνατη συντεταγμένη αγνοείται — ξένος σύνδεσμος δεν σκάει την οθόνη', () => {
+    expect(parseListingFilters(new URLSearchParams('lat=91&lng=22.94')).near).toBeNull();
+    expect(parseListingFilters(new URLSearchParams('lat=40.64&lng=181')).near).toBeNull();
+  });
+});
+
+describe('Γ2 — η εφαρμογή του φίλτρου', () => {
+  const near = { center: THESSALONIKI, radiusKm: 10 };
+
+  it('μέσα στην ακτίνα ⇒ περνά· έξω ⇒ κόβεται', () => {
+    const inside = atPoint('in', 40.6503, 22.9539);   // ~1,3 χλμ
+    const outside = atPoint('out', 41.0, 23.5);        // ~60 χλμ
+    const result = applyListingFilters([inside, outside], { ...EMPTY_LISTING_FILTERS, near });
+    expect(result.map((l) => l.id)).toEqual(['in']);
+  });
+
+  it('🔴 Η ΑΓΓΕΛΙΑ ΧΩΡΙΣ ΘΕΣΗ **ΔΕΝ** ΕΞΑΦΑΝΙΖΕΤΑΙ — Α5 §4.1, η σημαντικότερη άγκυρα', () => {
+    // *«Δεν φιλτράρονται όταν μετακινείς τον χάρτη: δεν μπορούμε να τις αποκλείσουμε
+    // από περιοχή που δεν ξέρουμε αν τους ανήκει.»* Ένα `return false` εκεί θα
+    // μετέτρεπε το «δεν ξέρουμε πού είναι» σε «δεν είναι εδώ» — άλλος ισχυρισμός,
+    // και ψευδής. Είναι και ο λόγος που η λογιστική έχει ΔΥΟ κάδους, όχι έναν.
+    const unlocated = listing({ id: 'nowhere' });
+    const far = atPoint('far', 41.0, 23.5);
+    const result = applyListingFilters([unlocated, far], { ...EMPTY_LISTING_FILTERS, near });
+    expect(result.map((l) => l.id)).toEqual(['nowhere']);
+  });
+
+  it('χωρίς `near` ⇒ ο άξονας δεν κρίνει τίποτα', () => {
+    const far = atPoint('far', 41.0, 23.5);
+    expect(applyListingFilters([far], EMPTY_LISTING_FILTERS)).toHaveLength(1);
   });
 });
 

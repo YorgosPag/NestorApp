@@ -17,11 +17,15 @@
  */
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { listingDetailHref } from '@/lib/listings/listing-routes';
 import type { PublicListing, UnknownPositionReason } from '@/types/public-listing';
 
 interface UnmappedListingsRowProps {
   readonly listings: readonly PublicListing[];
+  /** Τα ενεργά φίλτρα ως ερώτημα — ταξιδεύουν και από εδώ προς την οθόνη 3. */
+  readonly filterQuery: string;
 }
 
 const REASON_KEY: Record<UnknownPositionReason, string> = {
@@ -33,7 +37,7 @@ function reasonOf(listing: PublicListing): UnknownPositionReason | null {
   return listing.position.kind === 'unknown' ? listing.position.reason : null;
 }
 
-export function UnmappedListingsRow({ listings }: UnmappedListingsRowProps) {
+export function UnmappedListingsRow({ listings, filterQuery }: UnmappedListingsRowProps) {
   const { t } = useTranslation(['search-results']);
   const [expanded, setExpanded] = useState(false);
 
@@ -61,7 +65,18 @@ export function UnmappedListingsRow({ listings }: UnmappedListingsRowProps) {
             const reason = reasonOf(listing);
             return (
               <li key={listing.id} className="text-sm text-foreground">
-                <span className="font-medium">{listing.title}</span>
+                {/*
+                  🔑 **Και αυτές οδηγούν στην οθόνη 3.** Το ότι δεν ξέρουμε πού είναι
+                  ένα ακίνητο δεν το κάνει λιγότερο ακίνητο — αν ήταν απλό κείμενο,
+                  θα τιμωρούνταν στη διεπαφή για δικό ΜΑΣ κενό, που είναι ακριβώς ο
+                  ισχυρισμός που η Α5 §4.1 απαγορεύει.
+                */}
+                <Link
+                  href={listingDetailHref(listing.id, filterQuery)}
+                  className="font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {listing.title}
+                </Link>
                 {reason && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {t(`search-results:${REASON_KEY[reason]}`)}

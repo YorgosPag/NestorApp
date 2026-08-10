@@ -1,4 +1,24 @@
 {
+  "landing": {
+    "title": "Where are you looking?",
+    "search": {
+      "label": "Search area",
+      "placeholder": "City, area, or street with number",
+      "submit": "Search",
+      "searching": "Locating the area…",
+      "notFound": "We could not locate that area. Try a city, or a street with a number.",
+      "failed": "Area lookup did not respond. Please try again shortly."
+    },
+    "coverage": {
+      "heading": "What we cover today",
+      "loading": "Counting what we can answer…",
+      "error": "We could not measure coverage — so we declare none.",
+      "noSupply": "There are no listings yet. We will not ask you to search for something that does not exist.",
+      "noLocation": "{total, plural, one {# listing} other {# listings}} — none with a declared location yet. That is why we do not ask you «where»: the filter would have nothing to work on.",
+      "partial": "{total, plural, one {# listing} other {# listings}} · {mapped} with a declared location · {unmapped} without. Area search filters only the former — the rest always appear."
+    },
+    "browseAll": "Browse all listings"
+  },
   "page": {
     "title": "Search results",
     "loading": "Loading listings…",
@@ -48,6 +68,75 @@
       "sell": "Sale",
       "leaseOut": "Rent",
       "exchange": "Land-for-flats"
+    }
+  },
+  "detail": {
+    "back": "Back to results",
+    "loading": "Loading listing…",
+    "absent": {
+      "title": "This listing is no longer published",
+      "body": "The link is not wrong — the property has been withdrawn from the public list. That does not mean it does not exist; it means we are not publishing it right now."
+    },
+    "error": {
+      "title": "The listing could not be loaded",
+      "body": "This is not the same as «does not exist»: something did not respond. Please try again shortly."
+    },
+    "price": {
+      "heading": "Price",
+      "role": {
+        "asking": "Asking price",
+        "final": "Final sale price",
+        "rent": "Monthly rent",
+        "legacy": "Recorded price"
+      }
+    },
+    "media": {
+      "absent": "There is no image for this property yet. We do not put someone else's photo in its place: it would show a different property and be read as this one."
+    },
+    "attributes": {
+      "heading": "Property details",
+      "ledger": "{declared} of {total} details declared",
+      "undeclared": "Not declared",
+      "label": {
+        "type": "Type",
+        "areaSqm": "Area",
+        "floor": "Floor",
+        "bedrooms": "Bedrooms"
+      }
+    },
+    "offers": {
+      "heading": "What is on offer"
+    },
+    "position": {
+      "heading": "Where it is",
+      "precision": "What exactly we know",
+      "source": "Where the location comes from",
+      "unknown": "We have no location for this property — which is why there is no map here.",
+      "meaning": {
+        "outline": "We hold the actual outline. What you see is surveyed, not inferred.",
+        "pin": "Exact address — the pin points at the building.",
+        "pinWithRing": "We know the street, not the number. The property is somewhere along it.",
+        "shadedCircle": "We know the area, not the address. The shaded zone is not the property.",
+        "shadedCity": "We only know the city. We shade the city instead of dropping a pin, because a pin here would be an address we do not have."
+      },
+      "provenance": {
+        "survey": "Surveyed plan",
+        "bim": "Measured from a BIM model",
+        "osm": "Public map (OpenStreetMap)",
+        "drawn": "Hand-drawn outline",
+        "manual": "Pin placed by a person",
+        "geocoded": "Inferred from the address"
+      }
+    },
+    "open": {
+      "heading": "What we do not publish yet",
+      "intro": "We say it instead of staying silent: silence on these reads as «it has none», which would be false.",
+      "legality": "Legality and its provenance. It does not exist in the system yet, and we do not guess it: an engineer's certificate is mandatory at transfer, so a guess here would become a problem at the notary.",
+      "floorplan": "Floor plan. There is no field for it in the public projection — it is not empty, it is missing.",
+      "dossier": "Document dossier. The documents exist, but publishing them is a separate decision that has not been taken."
+    },
+    "provenance": {
+      "projectedAt": "This page was rebuilt: {value}"
     }
   }
 }

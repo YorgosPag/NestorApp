@@ -1,0 +1,258 @@
+'use client';
+
+/**
+ * **Η ΟΘΟΝΗ 3** — ένα ακίνητο, ολόκληρη η αλήθεια που έχουμε γι' αυτό (ADR-777 Α3).
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΕΥΡΗΜΑ ΠΟΥ ΑΛΛΑΞΕ ΤΟΝ ΣΧΕΔΙΑΣΜΟ ΤΗΣ — μετρημένο πριν γραφτεί γραμμή
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η **Α3** περιγράφει την οθόνη 3 ως *«τα **υπόλοιπα** πεδία»*. Το κλειστό σχήμα
+ * {@link PublicListing} έχει **12** πεδία και η κάρτα της οθόνης 2 δείχνει ήδη **8**.
+ * ⇒ **Δεν υπάρχουν «υπόλοιπα πεδία».**
+ *
+ * Άρα η οθόνη 3 **δεν** είναι πλουσιότερη κάρτα. Είναι η βαθμίδα της **Α7** όπου τα
+ * **ίδια** δεδομένα αποκτούν **προέλευση και όρια**:
+ *
+ * | Η κάρτα λέει | Η σελίδα λέει επιπλέον |
+ * |---|---|
+ * | δύο αριθμοί τιμής | **τι είναι** ο καθένας (ζητούμενη · τελική · ενοίκιο) — Α21 |
+ * | εμβαδόν/όροφος/ύπνοδ. **όταν υπάρχουν** | **και όταν λείπουν**, με κλειστή λογιστική |
+ * | (καθόλου) το είδος | το **5ο βασικό πεδίο** του §25.6 |
+ * | σχήμα στον χάρτη | **τι σημαίνει** το σχήμα, και **από πού** ξέρουμε τη θέση |
+ * | — | **τι δεν δημοσιεύουμε ακόμη**, ονομαστικά |
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * ⚠️ ΣΕΛΙΔΑ, ΠΟΤΕ ΦΥΛΛΟ — ΚΑΙ ΣΤΟ ΚΙΝΗΤΟ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Η **Α3** το γράφει ρητά στη γραμμή της οθόνης 3 (*«σελίδα — **ποτέ φύλλο**»*), και
+ * η **§26.3** απαγορεύει *«κανένα φύλλο πάνω σε φύλλο»*. Η διάταξη είναι **μία
+ * στήλη** που πλαταίνει σε δύο στο desktop: το κινητό δεν είναι υποβαθμισμένη εκδοχή,
+ * είναι **η βασική** — *«οι περισσότεροι μπαίνουν από κινητό»*.
+ *
+ * 🔑 **Ο σύνδεσμος επιστροφής κουβαλά τα φίλτρα** που είχε ο επισκέπτης. Χωρίς αυτό,
+ * η επιστροφή από **κοινοποιημένο** σύνδεσμο — όπου δεν υπάρχει «πίσω» — θα έδειχνε
+ * άλλη λίστα από αυτήν που άφησε (Α3: **75%** των αποτυχιών ήταν ακριβώς εδώ).
+ */
+
+import React from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { usePublicListing } from '@/services/realtime/hooks/usePublicListings';
+import {
+  parseListingFilters,
+  serializeListingFilters,
+} from '@/lib/listings/listing-filters';
+import { searchResultsHref } from '@/lib/listings/listing-routes';
+import { formatDateTime } from '@/lib/intl-formatting';
+import type { PublicListing } from '@/types/public-listing';
+import { ListingPriceBlock } from './ListingPriceBlock';
+import { ListingAttributeList } from './ListingAttributeList';
+import { ListingPositionSection } from './ListingPositionSection';
+import { ListingOpenSubjects } from './ListingOpenSubjects';
+
+interface ListingDetailContentProps {
+  /** Η ταυτότητα από τη διεύθυνση. **Ίδια με το `propertyId`** (σχέση 1:1). */
+  readonly id: string;
+}
+
+/**
+ * Μήνυμα που καταλαμβάνει τη σελίδα — για τις **δύο** καταστάσεις που δεν έχουν
+ * περιεχόμενο να δείξουν, και που **δεν είναι η ίδια**: η μία δεν πρόκειται να
+ * αλλάξει, η άλλη μπορεί.
+ */
+function DetailNotice({
+  titleKey,
+  bodyKey,
+  backHref,
+}: {
+  readonly titleKey: string;
+  readonly bodyKey: string;
+  readonly backHref: string;
+}) {
+  const { t } = useTranslation(['search-results']);
+
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center gap-3 p-6">
+      <h1 className="text-2xl font-semibold text-foreground">{t(titleKey)}</h1>
+      <p className="text-base text-muted-foreground">{t(bodyKey)}</p>
+      <nav className="mt-2">
+        <Link
+          href={backHref}
+          className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+        >
+          {t('search-results:detail.back')}
+        </Link>
+      </nav>
+    </main>
+  );
+}
+
+/** Η εικόνα εξωφύλλου, **ή η ονομασμένη απουσία της** — ποτέ ξένο placeholder (§25.5.2). */
+function CoverImage({ listing }: { readonly listing: PublicListing }) {
+  const { t } = useTranslation(['search-results']);
+
+  if (listing.coverImage === null) {
+    return (
+      <p className="rounded-lg border border-dashed border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+        {t('search-results:detail.media.absent')}
+      </p>
+    );
+  }
+
+  return (
+    /*
+      ⚠️ `width`/`height` **υποχρεωτικά** στο σχήμα, και εδώ φαίνεται γιατί: χωρίς
+      αυτά ο περιηγητής δεν κρατά τον χώρο πριν φορτώσει η εικόνα και το περιεχόμενο
+      «πηδά» — το CLS < 0,1 που η Α19 δεσμεύτηκε **αριθμητικά**.
+      eslint-disable-next-line @next/next/no-img-element -- η πηγή είναι εξωτερική
+      και δεν περνά από τον optimizer· βλ. ADR-777 §8.11.
+    */
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={listing.coverImage.url}
+      width={listing.coverImage.width}
+      height={listing.coverImage.height}
+      alt={t(listing.coverImage.altKey)}
+      className="w-full rounded-lg border border-border object-cover"
+    />
+  );
+}
+
+export function ListingDetailContent({ id }: ListingDetailContentProps) {
+  const { t } = useTranslation(['search-results']);
+  const searchParams = useSearchParams();
+  const lookup = usePublicListing(id);
+
+  /**
+   * Τα φίλτρα **κανονικοποιημένα**, όχι η ωμή διεύθυνση: ό,τι δεν αναγνωρίζει το
+   * `parseListingFilters` δεν έχει λόγο να ταξιδέψει πίσω στην οθόνη 2.
+   */
+  const backHref = React.useMemo(() => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    return searchResultsHref(serializeListingFilters(parseListingFilters(params)).toString());
+  }, [searchParams]);
+
+  if (lookup.state === 'loading') {
+    return (
+      <main className="mx-auto w-full max-w-3xl p-6">
+        <p className="text-sm text-muted-foreground">{t('search-results:detail.loading')}</p>
+      </main>
+    );
+  }
+
+  // 🔴 Οι δύο αστοχίες **δεν** συγχωνεύονται: «δεν δημοσιεύεται» δεν θεραπεύεται με
+  // ξαναδοκιμή, «δεν απάντησε» θεραπεύεται μόνο με αυτήν.
+  if (lookup.state === 'absent') {
+    return (
+      <DetailNotice
+        titleKey="search-results:detail.absent.title"
+        bodyKey="search-results:detail.absent.body"
+        backHref={backHref}
+      />
+    );
+  }
+
+  if (lookup.state === 'error') {
+    return (
+      <DetailNotice
+        titleKey="search-results:detail.error.title"
+        bodyKey="search-results:detail.error.body"
+        backHref={backHref}
+      />
+    );
+  }
+
+  return <ListingDetailBody listing={lookup.listing} backHref={backHref} />;
+}
+
+/**
+ * Η σελίδα όταν **υπάρχει** αγγελία.
+ *
+ * ⚠️ Ξεχωριστή από τον ενορχηστρωτή **επίτηδες**: εκείνος απαντά *«σε ποια κατάσταση
+ * είμαστε;»*, αυτή *«πώς μοιάζει ένα ακίνητο;»*. Δύο ερωτήματα σε μία συνάρτηση
+ * σημαίνει ότι κάθε αλλαγή διάταξης ξαναδιαβάζει λογική καταστάσεων — και το όριο των
+ * **40 γραμμών** (N.7.1) υπάρχει ακριβώς για να μη συμβαίνει αυτό.
+ */
+function ListingDetailBody({
+  listing,
+  backHref,
+}: {
+  readonly listing: PublicListing;
+  readonly backHref: string;
+}) {
+  const { t } = useTranslation(['search-results']);
+
+  return (
+    <main className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+      <nav className="mb-4">
+        <Link
+          href={backHref}
+          className="text-sm text-muted-foreground underline-offset-2 hover:underline"
+        >
+          {t('search-results:detail.back')}
+        </Link>
+      </nav>
+
+      {/* Ο τίτλος είναι κείμενο του κατόχου — **όχι** κλειδί i18n (σχήμα προβολής). */}
+      <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{listing.title}</h1>
+
+      {/*
+        ΜΙΑ στήλη που πλαταίνει σε δύο — το κινητό είναι η **βασική** εκδοχή (Α3),
+        όχι υποβαθμισμένη· και **ποτέ φύλλο**, σε καμία διάσταση οθόνης.
+      */}
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="flex flex-col gap-4">
+          <CoverImage listing={listing} />
+          <ListingPositionSection listing={listing} />
+        </div>
+
+        <aside className="flex flex-col gap-4">
+          <ListingPriceBlock listing={listing} />
+          <ListingOffers listing={listing} />
+          <ListingAttributeList listing={listing} />
+          <ListingOpenSubjects />
+        </aside>
+      </div>
+
+      {/*
+        Κανόνας 18 — **πότε** ανακατασκευάστηκε αυτή η προβολή. Δεν είναι λεπτομέρεια
+        μηχανικού: η σελίδα διαβάζει μια **προβολή**, όχι το ίδιο το ακίνητο, και ο
+        επισκέπτης δικαιούται να ξέρει πόσο παλιά είναι η αλήθεια που του δείχνουμε.
+      */}
+      <footer className="mt-6 text-xs text-muted-foreground">
+        {t('search-results:detail.provenance.projectedAt', {
+          value: formatDateTime(listing.projectedAt),
+        })}
+      </footer>
+    </main>
+  );
+}
+
+/** Οι **διαθέσεις** (Α20) — ποτέ το lossy `commercialStatus`, αλλιώς η αντιπαροχή σιωπά. */
+function ListingOffers({ listing }: { readonly listing: PublicListing }) {
+  const { t } = useTranslation(['search-results']);
+
+  return (
+    <section
+      aria-labelledby="listing-offers-heading"
+      className="rounded-lg border border-border bg-card p-4"
+    >
+      <h2 id="listing-offers-heading" className="text-sm font-medium text-muted-foreground">
+        {t('search-results:detail.offers.heading')}
+      </h2>
+      <ul className="mt-2 flex flex-wrap gap-1">
+        {listing.offerKinds.map((kind) => (
+          <li
+            key={kind}
+            className="rounded bg-secondary px-2 py-1 text-sm text-secondary-foreground"
+          >
+            {t(`search-results:card.offer.${kind}`)}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

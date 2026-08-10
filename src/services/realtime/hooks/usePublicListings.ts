@@ -23,7 +23,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
@@ -68,6 +68,90 @@ export function usePublicListings(): PublicListingsState {
   }, []);
 
   return { listings, loading, error };
+}
+
+// ============================================================================
+// Η ΜΙΑ ΑΓΓΕΛΙΑ — αδελφός, όχι δεύτερη ανάγνωση
+// ============================================================================
+
+/**
+ * **Τι ξέρουμε για τη μία αγγελία** — τέσσερις **ρητές** καταστάσεις.
+ *
+ * 🔴 **Το `absent` ΔΕΝ είναι σφάλμα, και η διάκριση δεν είναι λεπτολογία.** Η
+ * συλλογή είναι **προβολή**: μια αγγελία φεύγει από εκεί όταν το ακίνητο **πάψει να
+ * είναι δημοσιεύσιμο** (`publish-public-listing`). Δηλαδή «δεν υπάρχει» σημαίνει
+ * *«δεν δημοσιεύεται πια»* — πληροφορία που ο επισκέπτης **δικαιούται**, ιδίως όταν
+ * έφτασε εδώ από κοινοποιημένο σύνδεσμο. Ένα κοινό «κάτι πήγε στραβά» θα τον έστελνε
+ * να ξαναδοκιμάσει κάτι που **δεν πρόκειται** να αλλάξει.
+ *
+ * ⚠️ Ίδια σχεδίαση με το `SubmitState` του `PlaceSearchBox` και το `DisplayPrice`:
+ * **ποτέ** `boolean` + `null` για δύο διαφορετικές αποτυχίες.
+ */
+export type PublicListingLookup =
+  | { readonly state: 'loading' }
+  | { readonly state: 'found'; readonly listing: PublicListing }
+  | { readonly state: 'absent' }
+  | { readonly state: 'error'; readonly message: string };
+
+/**
+ * Η **μία** αγγελία, ζωντανά — η ανάγνωση της **οθόνης 3**.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔑 ΓΙΑΤΙ ΑΔΕΛΦΟΣ ΚΑΙ ΟΧΙ ΦΙΛΤΡΟ ΠΑΝΩ ΣΤΟ {@link usePublicListings}
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το να διαβάσει η οθόνη 3 **ολόκληρη** τη συλλογή και να κρατήσει ένα έγγραφο θα
+ * ήταν σωστό σήμερα (**6** αγγελίες) και **δομικά λάθος** αύριο: η **Α0** δεσμεύει
+ * *«μοντέλο για την τελική κλίμακα, οθόνη σταδιακά»*, και σε 60.000 αγγελίες το
+ * άνοιγμα **μιας** σελίδας ακινήτου θα κατέβαζε **όλες** τις άλλες.
+ *
+ * ⚠️ **Δεν είναι δεύτερη ανάγνωση**: ίδια συλλογή, ίδια σταθερά, ίδιο σχήμα, ίδιο
+ * αρχείο. Είναι η **ίδια** πηγή ρωτημένη πιο στενά — η διάκριση που ο κανόνας 19
+ * ονομάζει «*μετακινούμε καταναλωτές, όχι αρχεία*». Μια **δεύτερη** ανάγνωση θα ήταν
+ * άλλη πηγή ή άλλο κριτήριο δημοσίευσης· εδώ δεν υπάρχει κριτήριο, γιατί το εφάρμοσε
+ * ήδη ο διακομιστής **μία φορά** (βλ. κεφαλίδα αρχείου).
+ *
+ * 🔴 **Ζωντανά, όχι εφάπαξ**: ο ίδιος γραφέας που σβήνει την αγγελία όταν πάψει να
+ * είναι δημοσιεύσιμη θα την **εξαφανίσει από την ανοιχτή σελίδα** — αντί ο επισκέπτης
+ * να κοιτά επί ώρα μια τιμή που δεν ισχύει.
+ */
+export function usePublicListing(id: string): PublicListingLookup {
+  const [lookup, setLookup] = useState<PublicListingLookup>({ state: 'loading' });
+
+  useEffect(() => {
+    // ⚠️ Κενή ταυτότητα ⇒ το `doc()` **πετά**. Η διαδρομή `/listing/` χωρίς τμήμα δεν
+    // ταιριάζει καν στο route, αλλά η άμυνα είναι φθηνή και η εναλλακτική είναι
+    // λευκή οθόνη από εξαίρεση μέσα σε effect.
+    if (id.trim() === '') {
+      setLookup({ state: 'absent' });
+      return;
+    }
+
+    setLookup({ state: 'loading' });
+
+    // tenant-scope-exempt: `public_listings` είναι δηλωμένη `published-projection` στο
+    // `services/firestore/tenant-config.ts` — κλειστό σχήμα ΧΩΡΙΣ ταυτότητα πελάτη.
+    // Ανάγνωση **ενός** εγγράφου κατά ταυτότητα: δεν υπάρχει ερώτημα να φιλτραριστεί,
+    // και ο κανόνας `read: if true` το επιτρέπει ρητά (άγκυρα: `public-listings.rules.test.ts`).
+    const unsubscribe = onSnapshot(
+      doc(db, COLLECTIONS.PUBLIC_LISTINGS, id),
+      (snapshot) => {
+        setLookup(
+          snapshot.exists()
+            ? { state: 'found', listing: snapshot.data() as PublicListing }
+            : { state: 'absent' }
+        );
+      },
+      (err: Error) => {
+        logger.error('Δεν φορτώθηκε η δημόσια αγγελία', { data: { id }, error: err.message });
+        setLookup({ state: 'error', message: err.message });
+      }
+    );
+
+    return () => unsubscribe();
+  }, [id]);
+
+  return lookup;
 }
 
 /**
