@@ -178,14 +178,36 @@ export async function seedAttendanceEvent(
   projectId: string,
   opts?: AttendanceSeedOptions,
 ): Promise<void> {
+  await seedAttendanceDoc(env, 'attendance_events', eventId, opts, {
+    projectId,
+    contactId: `contact-${eventId}`,
+    eventType: 'check_in',
+    method: 'manual',
+    timestamp: new Date(),
+    recordedBy: 'seed-system',
+  });
+}
+
+/**
+ * Ο κοινός **φάκελος** των δύο σπορέων παρουσίας: προέλευση, χρόνος, και το
+ * `companyId` **υπό όρο** (το `skipCompanyId` τροφοδοτεί τα legacy-fallback σκέλη).
+ *
+ * 🔴 **Εξήχθη γιατί το CHECK 3.28 τον έπιασε ως κλώνο** (9 γραμμές / 51 tokens,
+ * προϋπάρχων στο `HEAD`). Οι δύο σπορείς διαφέρουν **μόνο** στη συλλογή και στα
+ * πεδία του σώματος — ό,τι τους περιβάλλει ήταν γραμμένο δύο φορές, μαζί με τη
+ * λεπτή συνθήκη του `skipCompanyId` που είναι ακριβώς το είδος κανόνα που
+ * αποκλίνει όταν κάποιος διορθώσει τον έναν.
+ */
+async function seedAttendanceDoc(
+  env: RulesTestEnvironment,
+  collection: string,
+  docId: string,
+  opts: AttendanceSeedOptions | undefined,
+  body: Record<string, unknown>,
+): Promise<void> {
   await withSeedContext(env, async (ctx) => {
     const doc: Record<string, unknown> = {
-      projectId,
-      contactId: `contact-${eventId}`,
-      eventType: 'check_in',
-      method: 'manual',
-      timestamp: new Date(),
-      recordedBy: 'seed-system',
+      ...body,
       createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
       createdAt: new Date(),
       ...opts?.overrides,
@@ -193,7 +215,7 @@ export async function seedAttendanceEvent(
     if (!opts?.skipCompanyId) {
       doc.companyId = opts?.companyId ?? SAME_TENANT_COMPANY_ID;
     }
-    await ctx.firestore().collection('attendance_events').doc(eventId).set(doc);
+    await ctx.firestore().collection(collection).doc(docId).set(doc);
   });
 }
 
@@ -211,20 +233,11 @@ export async function seedAttendanceQrToken(
   projectId: string,
   opts?: AttendanceSeedOptions,
 ): Promise<void> {
-  await withSeedContext(env, async (ctx) => {
-    const doc: Record<string, unknown> = {
-      projectId,
-      tokenHash: `hmac-${tokenId}`,
-      status: 'active',
-      expiresAt: new Date(Date.now() + 86_400_000),
-      createdBy: opts?.createdBy ?? DEFAULT_CREATED_BY,
-      createdAt: new Date(),
-      ...opts?.overrides,
-    };
-    if (!opts?.skipCompanyId) {
-      doc.companyId = opts?.companyId ?? SAME_TENANT_COMPANY_ID;
-    }
-    await ctx.firestore().collection('attendance_qr_tokens').doc(tokenId).set(doc);
+  await seedAttendanceDoc(env, 'attendance_qr_tokens', tokenId, opts, {
+    projectId,
+    tokenHash: `hmac-${tokenId}`,
+    status: 'active',
+    expiresAt: new Date(Date.now() + 86_400_000),
   });
 }
 
@@ -578,4 +591,82 @@ export async function seedPublicListing(
       // NOTE: κανένα companyId / createdBy / _lastModifiedByName — αυτό ΕΙΝΑΙ η άμυνα.
     });
   });
+}
+
+/**
+ * ADR-777 Α9 — **ΖΗΤΗΣΗ** (`property_demands`). Επίπεδο Β, ιδιωτικό ανά **χρήστη**.
+ *
+ * 🔴 **Το αντίθετο των τριών από πάνω, και το seed πρέπει να το δείχνει.** Οι
+ * `public_*` seeders γράφουν σχόλιο «κανένα companyId — δημόσιο επίπεδο Α». Εδώ
+ * υπάρχει `authorUserId` και **είναι το πεδίο που κρίνει τα πάντα**: ο κανόνας δεν
+ * ρωτά ρόλο, δεν ρωτά μισθωτή, ρωτά **ποιος**.
+ *
+ * ⚠️ Ο κάτοχος δίνεται ρητά (`authorUserId`) αντί να προεπιλεγεί: μια σουίτα που
+ * σπέρνει «τον χρήστη» χωρίς να πει ποιον, δοκιμάζει τον κανόνα πάνω σε ταυτότητα
+ * που κανείς δεν διάλεξε — και τότε το πράσινο δεν σημαίνει τίποτα.
+ */
+export async function seedPropertyDemand(
+  env: RulesTestEnvironment,
+  demandId: string,
+  authorUserId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('property_demands').doc(demandId).set({
+      id: demandId,
+      authorUserId,
+      authorCompanyId: null,
+      mandate: { kind: 'self' },
+      seeks: ['sell'],
+      place: { kind: 'near', center: { lat: 40.64, lng: 22.94 }, radiusKm: 5 },
+      timing: { kind: 'now' },
+      features: {
+        types: [],
+        priceMax: 250000,
+        priceMin: null,
+        areaMin: 80,
+        areaMax: null,
+        bedroomsMin: 3,
+        floorMin: null,
+        floorMax: null,
+      },
+      proximity: [],
+      lifeContext: 'family',
+      lifecycle: 'active',
+      affirmedAt: '2026-08-11T09:00:00.000Z',
+      createdAt: '2026-08-11T09:00:00.000Z',
+      updatedAt: '2026-08-11T09:00:00.000Z',
+      ...(opts?.overrides ?? {}),
+    });
+  });
+}
+
+/** Το πλήρες σχήμα μιας **νέας** ζήτησης, για δοκιμές `create`. */
+export function propertyDemandCreatePayload(
+  authorUserId: string,
+): Record<string, unknown> {
+  return {
+    authorUserId,
+    authorCompanyId: null,
+    mandate: { kind: 'self' },
+    seeks: ['leaseOut'],
+    place: { kind: 'anywhere' },
+    timing: { kind: 'whenever' },
+    features: {
+      types: [],
+      priceMax: null,
+      priceMin: null,
+      areaMin: null,
+      areaMax: null,
+      bedroomsMin: null,
+      floorMin: null,
+      floorMax: null,
+    },
+    proximity: [],
+    lifeContext: null,
+    lifecycle: 'active',
+    affirmedAt: '2026-08-11T09:00:00.000Z',
+    createdAt: '2026-08-11T09:00:00.000Z',
+    updatedAt: '2026-08-11T09:00:00.000Z',
+  };
 }

@@ -21,6 +21,7 @@
  */
 
 import type { CoverageCell } from './coverage-manifest';
+import type { Persona } from './personas';
 import { cell } from './coverage-matrices';
 
 // ---------------------------------------------------------------------------
@@ -187,6 +188,80 @@ export function ownerOnlyMatrix(): readonly CoverageCell[] {
     cell('super_admin', 'delete', 'deny', 'insufficient_role'),
     cell('same_tenant_admin', 'delete', 'deny', 'insufficient_role'),
     cell('cross_tenant_admin', 'delete', 'deny', 'insufficient_role'),
+    cell('anonymous', 'delete', 'deny', 'missing_claim'),
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// ADR-777 Α9 — ιδιοκτησία σε ΠΕΔΙΟ (`property_demands`)
+// ---------------------------------------------------------------------------
+
+/**
+ * Matrix για ιδιοκτησία που ζει σε **πεδίο του εγγράφου**, όχι στο docId.
+ *
+ * 🔴 **ΓΙΑΤΙ ΔΕΝ ΕΙΝΑΙ ΤΟ {@link ownerOnlyMatrix} — τρεις μετρημένες διαφορές, όχι
+ * ύφος.** Εκεί η ιδιοκτησία είναι το **μονοπάτι** (`isOwner(userId)`, όπου το `userId`
+ * είναι η μεταβλητή διαδρομής)· εδώ είναι **δεδομένο**
+ * (`resource.data.authorUserId == request.auth.uid`). Οι συνέπειες αντιστρέφονται:
+ *
+ * | | `ownerOnlyMatrix` (docId) | εδώ (πεδίο) |
+ * |---|---|---|
+ * | **create** | **deny για όλους** — ο harness παράγει φρέσκο docId, οπότε το uid δεν ταιριάζει ποτέ | **allow** για όποιον γράφει **το δικό του** uid — και αυτή είναι η πραγματική πράξη: ο καθένας φτιάχνει τη ζήτησή του |
+ * | **list** | deny για όλους — κανόνας μονοπατιού | **allow στον κάτοχο** με φίλτρο στο uid του· ο καθένας οφείλει να μπορεί να δει **τις δικές του** |
+ * | **delete** | allow στον κάτοχο | **deny σε όλους** — η απόσυρση είναι `lifecycle: 'withdrawn'` |
+ *
+ * 🔑 Το `create` είναι η **σημαντική** γραμμή. Ο πίνακας δηλώνει `deny` για κάθε
+ * persona **εκτός** του κατόχου, επειδή το φορτίο δημιουργίας φέρει **το uid του
+ * κατόχου** — δηλαδή το κελί αποδεικνύει κάτι συγκεκριμένο και σκληρό:
+ * **δεν μπορείς να γεννήσεις ζήτηση στο όνομα άλλου.** Ότι ο *καθένας* μπορεί να
+ * γεννήσει τη **δική** του δεν είναι κελί πίνακα — είναι ξεχωριστή άγκυρα στη σουίτα,
+ * γιατί απαιτεί **άλλο φορτίο ανά persona** και ένας πίνακας με ένα φορτίο δεν μπορεί
+ * να το εκφράσει.
+ *
+ * ⚠️ Ο λόγος άρνησης για πιστοποιημένο μη-κάτοχο είναι `not_owner` — υπάρχει ήδη στο
+ * λεξιλόγιο (ADR-652, `block_library`) και σημαίνει ακριβώς αυτό: «*πιστοποιημένος,
+ * σωστός μισθωτής, ο ρόλος δεν παίζει ρόλο — ιδιωτικό έγγραφο*». Το `insufficient_role`
+ * θα ήταν **λάθος**: κανένας ρόλος, ούτε ο `super_admin`, δεν ανοίγει αυτή την πόρτα.
+ *
+ * @since 2026-08-11 (ADR-777 Α9)
+ */
+export function authorOwnedMatrix(): readonly CoverageCell[] {
+  /** Πιστοποιημένοι που **δεν** είναι ο κάτοχος — μαζί ο `super_admin`. */
+  const NON_OWNERS: readonly Persona[] = [
+    'super_admin',
+    'same_tenant_admin',
+    'cross_tenant_admin',
+    'cross_tenant_user',
+    'external_user',
+  ];
+
+  return [
+    // ── READ: μόνο ο κάτοχος. Ο super_admin ΔΕΝ εξαιρείται, και είναι σκόπιμο:
+    //    το §12.7(α) απαγορεύει «καμία διαδρομή που να το κάνει εργαλείο πίεσης».
+    cell('same_tenant_user', 'read', 'allow'),
+    ...NON_OWNERS.map((p) => cell(p, 'read', 'deny', 'not_owner')),
+    cell('anonymous', 'read', 'deny', 'missing_claim'),
+
+    // ── LIST: με φίλτρο στο uid του κατόχου. Ο κάτοχος περνά· οι άλλοι όχι,
+    //    ακόμη κι όταν ΟΝΟΜΑΖΟΥΝ το uid του — «rules are not filters».
+    cell('same_tenant_user', 'list', 'allow'),
+    ...NON_OWNERS.map((p) => cell(p, 'list', 'deny', 'not_owner')),
+    cell('anonymous', 'list', 'deny', 'missing_claim'),
+
+    // ── CREATE: το φορτίο φέρει το uid του κατόχου ⇒ μόνο εκείνος.
+    cell('same_tenant_user', 'create', 'allow'),
+    ...NON_OWNERS.map((p) => cell(p, 'create', 'deny', 'not_owner')),
+    cell('anonymous', 'create', 'deny', 'missing_claim'),
+
+    // ── UPDATE: μόνο ο κάτοχος, και χωρίς να αλλάξει το `authorUserId`.
+    cell('same_tenant_user', 'update', 'allow'),
+    ...NON_OWNERS.map((p) => cell(p, 'update', 'deny', 'not_owner')),
+    cell('anonymous', 'update', 'deny', 'missing_claim'),
+
+    // ── DELETE: ΚΑΝΕΙΣ, ούτε ο κάτοχος. Μια σβησμένη ζήτηση δεν μπορεί να
+    //    αποδείξει ότι μετρήθηκε σωστά στο άθροισμα που πουλάμε (Ε2).
+    cell('same_tenant_user', 'delete', 'deny', 'server_only'),
+    ...NON_OWNERS.map((p) => cell(p, 'delete', 'deny', 'server_only')),
     cell('anonymous', 'delete', 'deny', 'missing_claim'),
   ];
 }

@@ -71,6 +71,7 @@ import {
   ownershipTablesMatrix,
 } from './coverage-matrices-boq';
 import {
+  authorOwnedMatrix,
   companiesMatrix,
   ownerOnlyMatrix,
   usersMatrix,
@@ -180,6 +181,24 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/public-listings.rules.test.ts',
     rulesRange: [1002, 1006],
     matrix: publicWorldMatrix(),
+  },
+  {
+    // ADR-777 Α9 — Η ΖΗΤΗΣΗ. **Το αντίθετο των τριών από πάνω.**
+    //
+    // 🔴 Οι τρεις προηγούμενες εγγραφές λένε `read: if true`. Αυτή είναι η μόνη
+    // συλλογή του ADR-777 που **κανείς** δεν διαβάζει πέρα από τον κάτοχό της —
+    // ούτε ο `super_admin`. Το SPEC-777A §14.2 ονομάζει ρητά τις «ζητήσεις» στο
+    // επίπεδο Β («αυστηρά ιδιωτικό»), και το SPEC-777B §12.7(α) απαιτεί «καμία
+    // διαδρομή που να το κάνει εργαλείο πίεσης».
+    //
+    // ⚠️ Πρότυπο `ownership`, αλλά ΟΧΙ `ownerOnlyMatrix`: εκεί ο κάτοχος είναι το
+    // **docId**· εδώ είναι **πεδίο**. Τρία κελιά αντιστρέφονται — βλ.
+    // `authorOwnedMatrix`.
+    collection: 'property_demands',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/property-demands.rules.test.ts',
+    rulesRange: [1032, 1043],
+    matrix: authorOwnedMatrix(),
   },
   {
     collection: 'projects',
