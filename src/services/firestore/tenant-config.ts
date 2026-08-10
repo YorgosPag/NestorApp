@@ -33,6 +33,12 @@ const TENANT_OVERRIDES: Partial<Record<CollectionKey, TenantFieldConfig>> = {
   // --- userId collections ---
   NOTIFICATIONS:              { mode: 'userId', fieldName: 'userId' },
   USER_NOTIFICATION_SETTINGS: { mode: 'userId', fieldName: 'userId' },
+  // 🎯 ADR-777 Α9 — Η ΖΗΤΗΣΗ. Επίπεδο Β (SPEC-777A §14.2, που ονομάζει ρητά τις
+  // «ζητήσεις» στο ιδιωτικό επίπεδο) — αλλά ανήκει σε ΑΝΘΡΩΠΟ, όχι σε εταιρεία, γιατί
+  // ο ιδιώτης που ψάχνει σπίτι δεν έχει καμία. Το `authorCompanyId` του εγγράφου είναι
+  // ΑΠΟΔΟΣΗ (ποιο γραφείο το κατέγραψε), ΟΧΙ δεύτερο πεδίο απομόνωσης: δύο άξονες
+  // απομόνωσης για ένα έγγραφο σημαίνει δύο απαντήσεις στο «ποιος το βλέπει;».
+  PROPERTY_DEMANDS:           { mode: 'userId', fieldName: 'authorUserId' },
 
   // --- system (no tenant filter) ---
   // ⚠️ Το `unscopedReason` ΔΕΝ είναι σχόλιο: ο τύπος `TenantFieldConfig` το απαιτεί

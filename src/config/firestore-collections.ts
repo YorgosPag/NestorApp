@@ -59,6 +59,24 @@ export const COLLECTIONS = {
    * δηλωμένη `public-world` στο `services/firestore/tenant-config.ts` (CHECK 3.35).
    */
   PUBLIC_LISTINGS: process.env.NEXT_PUBLIC_PUBLIC_LISTINGS_COLLECTION || 'public_listings',
+
+  /**
+   * 🎯 ADR-777 Α9 — **Η ΖΗΤΗΣΗ** ως οντότητα πρώτης τάξεως. IDs `dmnd_*`.
+   *
+   * 🔴 **ΕΠΙΠΕΔΟ Β, ΟΧΙ ΔΗΜΟΣΙΑ** (SPEC-777A §14.2, που ονομάζει ρητά τις *«ζητήσεις»*
+   * στο ιδιωτικό επίπεδο). Είναι η **μόνη** από τις τέσσερις συλλογές του ADR-777 που
+   * **δεν** διαβάζεται από τον κόσμο: `mode: 'userId'` στο `tenant-config.ts`, γιατί
+   * μια ζήτηση ανήκει σε **άνθρωπο** — όχι σε εταιρεία, όχι σε κανέναν.
+   *
+   * Ό,τι φτάνει σε τρίτους είναι το **επίπεδο Γ**: το ανώνυμο άθροισμα, που
+   * **παράγεται** (`lib/demand/demand-aggregate.ts`) και **δεν αποθηκεύεται εδώ**.
+   *
+   * ⚠️ **ΔΕΝ είναι το `LEADS` ούτε το `OPPORTUNITIES`.** Εκείνα είναι CRM ενός
+   * πωλητή — «πιθανός **πελάτης**», με στάδια χοάνης και εμβέλεια εταιρείας. Αυτό
+   * είναι δήλωση προσώπου για **ακίνητο**, ζει ανεξάρτητα από το αν κάποιος την
+   * κυνηγά, και ταιριάζεται από **μηχανή**, όχι από πωλητή.
+   */
+  PROPERTY_DEMANDS: process.env.NEXT_PUBLIC_PROPERTY_DEMANDS_COLLECTION || 'property_demands',
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
   /**
    * ADR-759 Φ2 — institutional/legal plot data as declared by a surveyor on a date

@@ -29,6 +29,17 @@
 export const FIELDS = {
   // 🏢 OWNERSHIP & TENANT ISOLATION
   COMPANY_ID: 'companyId',
+  /**
+   * ADR-777 Α9 — το πεδίο απομόνωσης του `property_demands`.
+   *
+   * 🔑 **Δεύτερο πεδίο απομόνωσης, και είναι σκόπιμο.** Το `tenant-config.ts` το
+   * δηλώνει `mode: 'userId'`: μια **ζήτηση ανήκει σε ΑΝΘΡΩΠΟ**, όχι σε εταιρεία —
+   * όπως ήδη τα `NOTIFICATIONS`. Ζει εδώ γιατί το `FIELDS.*` είναι μία από τις
+   * **τέσσερις** αυθεντίες που διαβάζει η CHECK 3.35· ένα χειρόγραφο
+   * `'authorUserId'` στο ερώτημα θα ήταν **πέμπτη**, δηλαδή ακριβώς ο τύπος
+   * απόκλισης που η πύλη υπάρχει για να πιάνει.
+   */
+  AUTHOR_USER_ID: 'authorUserId',
 
   // 📊 STATUS & STATE
   STATUS: 'status',

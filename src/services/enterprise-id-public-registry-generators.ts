@@ -57,4 +57,15 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
    * διάθεσης αποσύρει τις άλλες»: χωρίς αυτήν, το «οι άλλες» δεν ονομάζεται.
    */
   generatePropertyOfferId(): string { return this.generateId(P.PROPERTY_OFFER).id; }
+
+  /**
+   * ADR-777 Α9 — id μιας ΖΗΤΗΣΗΣ (`dmnd_*`).
+   *
+   * 🔴 **Σε αντίθεση με τη γη και το δημόσιο κτίριο, αυτή ΔΕΝ είναι ταυτότητα του
+   * επιπέδου Α — άρα ΔΕΝ περιορίζεται στον διακομιστή.** Η ζήτηση είναι **επίπεδο Β**
+   * (SPEC-777A §14.2): ιδιωτικό δεδομένο **ενός ανθρώπου**, όχι κοινό γεγονός. Ένα
+   * λάθος εδώ αφορά **έναν** χρήστη· ένα λάθος στο `land_*` αφορά **όλους ταυτόχρονα**
+   * (§14.4). Γι' αυτό μοιράζεται το αρχείο αλλά **όχι** τον περιορισμό.
+   */
+  generatePropertyDemandId(): string { return this.generateId(P.PROPERTY_DEMAND).id; }
 }
