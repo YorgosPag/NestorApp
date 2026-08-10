@@ -281,6 +281,59 @@ describe('Κ — άγκυρες κριτηρίου', () => {
 // Π — το ΠΡΑΓΜΑΤΙΚΟ repo (δεύτερη φωνή, χειρόγραφη)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Κ7 — 🔴 ΤΟ ΚΕΙΜΕΝΟ ΒΡΙΣΚΕΙ, Ο AST ΑΠΟΦΑΣΙΖΕΙ (ADR-777 §8.13)
+// ---------------------------------------------------------------------------
+//
+// Το Κ3 έπαιρνε την έξοδο του `git grep --fixed-strings` **ως ετυμηγορία**. Ένα
+// αρχείο που απλώς **ονομάζει** το σύμβολο κελύφους σε **σχόλιο** —για να εξηγήσει
+// ότι δεν το εισάγει— καταγγελλόταν ως `shell-outside-owner`. Πιάστηκε ζωντανά στο
+// `PublicSiteHeader.tsx`, αρχείο που τεκμηριώνει ρητά το σύνορο.
+//
+// ⚠️ Το docblock του `public-surface.js` δήλωνε ήδη ότι «το κείμενο βρίσκει, ο AST
+// αποφασίζει» — ίσχυε για τον Κ2 και ΟΧΙ για τον Κ3. Ένα σχόλιο που δηλώνει κάλυψη
+// δεν είναι κάλυψη· γι' αυτό η άγκυρα είναι **δύο κατευθύνσεων**.
+
+describe('Κ7 — αναφορά σε σχόλιο ΔΕΝ είναι εισαγωγή, εισαγωγή ΠΑΝΤΑ πιάνεται', () => {
+  test('Κ7α — σχόλιο που ονομάζει το σύμβολο κελύφους ⇒ ΚΑΜΙΑ παραβίαση', () => {
+    const { result } = miniRepo((files) => {
+      files['src/components/public-site/PublicSiteHeader.tsx'] =
+        '/**\n' +
+        " * ΔΕΝ είναι το '@/components/app-header' και δεν επιτρέπεται να γίνει:\n" +
+        " * το CHECK 3.52 φρουρεί ότι το '@/components/app-sidebar' το εισάγει μόνο ο ιδιοκτήτης.\n" +
+        ' */\n' +
+        'export const PublicSiteHeader = () => null;\n';
+      files['src/app/(light)/page.tsx'] =
+        "import { PublicSiteHeader } from '@/components/public-site/PublicSiteHeader';\n" +
+        'export default function P() { return PublicSiteHeader; }\n';
+    });
+
+    expect(blockingStates(result)).toEqual([]);
+    expect(result.ledgers.symbols[GATE.SYMBOL_STATES.OUTSIDE_OWNER]).toBe(0);
+  });
+
+  test('Κ7β — ΠΡΑΓΜΑΤΙΚΗ εισαγωγή εκτός ιδιοκτήτη ⇒ ΚΟΚΚΙΝΟ (η άγκυρα δεν είναι κενή)', () => {
+    const { result } = miniRepo((files) => {
+      files['src/components/public-site/PublicSiteHeader.tsx'] =
+        "import { AppHeader } from '@/components/app-header';\n" +
+        'export const PublicSiteHeader = () => AppHeader;\n';
+    });
+
+    expect(blockingStates(result)).toContain(GATE.SYMBOL_STATES.OUTSIDE_OWNER);
+  });
+
+  test('Κ7γ — ούτε ο ίδιος ο ιδιοκτήτης χάνεται: μένει owner-site', () => {
+    const { result } = miniRepo((files) => {
+      files['src/components/public-site/PublicSiteHeader.tsx'] =
+        "// βλ. '@/components/app-sidebar' — δεν το εισάγουμε εδώ\n" +
+        'export const PublicSiteHeader = () => null;\n';
+    });
+
+    expect(result.owner.state).toBe(GATE.OWNER_STATES.OK);
+    expect(result.ledgers.symbols[GATE.SYMBOL_STATES.OWNER_SITE]).toBe(1);
+  });
+});
+
 describe('Π — το πραγματικό δέντρο', () => {
   test('Π1 — το σύνορο του repo είναι καθαρό μετά τη μετακόμιση ADR-777 §8.12', () => {
     const result = GATE.analyse(REPO);

@@ -140,9 +140,22 @@ function auditGroups(projectRoot, cfg) {
   return findings;
 }
 
-/** Κ3 — κάθε σημείο εισαγωγής συμβόλου κελύφους, κρινόμενο κατά ιδιοκτήτη. */
+/**
+ * Κ3 — κάθε σημείο εισαγωγής συμβόλου κελύφους, κρινόμενο κατά ιδιοκτήτη.
+ *
+ * ⚠️ **Ο υποψήφιος βγαίνει από κείμενο, η ΕΤΥΜΗΓΟΡΙΑ από AST** ({@link PS.shellImportSites}).
+ * Μέχρι 2026-08-11 έπαιρνε την έξοδο του `git grep` **αυτούσια**, οπότε αρχείο που
+ * απλώς **ονόμαζε** το σύμβολο σε **σχόλιο** καταγγελλόταν. Το docblock του
+ * `public-surface.js` δήλωνε ήδη ότι «*το κείμενο βρίσκει, ο AST αποφασίζει*» — ίσχυε
+ * για τον Κ2 και **όχι** για τον Κ3. *Ένα σχόλιο που δηλώνει κάλυψη δεν είναι κάλυψη.*
+ */
 function auditShellSymbols(projectRoot, cfg) {
-  const hits = PS.gitGrepFiles(projectRoot, cfg.shellSymbols);
+  const hits = PS.shellImportSites(
+    projectRoot,
+    cfg.owner,
+    cfg.shellSymbols,
+    PS.createResolveContext(projectRoot),
+  );
   return hits.map(rel => {
     if (rel === cfg.owner) return { state: SYMBOL_STATES.OWNER_SITE, file: rel };
     if (/__tests__|\.(test|spec)\.[jt]sx?$/.test(rel)) return { state: SYMBOL_STATES.TEST_SITE, file: rel };

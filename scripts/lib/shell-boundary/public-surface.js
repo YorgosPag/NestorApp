@@ -137,6 +137,50 @@ function namesOf(imp) {
 }
 
 /**
+ * Τα αρχεία που **ΕΙΣΑΓΟΥΝ ΠΡΑΓΜΑΤΙΚΑ** ένα από τα δηλωμένα module κελύφους.
+ *
+ * 🔴 **ΓΙΑΤΙ ΔΕΝ ΑΡΚΕΙ ΤΟ `gitGrepFiles` (ADR-777 §8.13, μετρημένο).** Το Κ3 έπαιρνε
+ * την έξοδο του grep **ως ετυμηγορία**, ενώ το `git grep --fixed-strings` κοιτάζει
+ * **ωμό κείμενο**: ένα αρχείο που απλώς **ονομάζει** το `@/components/app-header`
+ * μέσα σε **σχόλιο** —για να εξηγήσει ότι *δεν* το εισάγει— καταγγελλόταν ως
+ * `shell-outside-owner`. Πιάστηκε ζωντανά στο `PublicSiteHeader.tsx`, αρχείο που
+ * τεκμηριώνει ρητά το σύνορο. **Φρουρός που πυροδοτεί σε σωστό κώδικα είναι ο
+ * δρόμος προς το `SKIP_`** (μάθημα CHECK 3.50 `Σ7β`), και το ίδιο σφάλμα έχει
+ * όνομα και στην CHECK 3.50 `Κ7β`: *σχόλιο που τεκμηριώνει τη βλάβη δεν είναι η
+ * βλάβη*.
+ *
+ * 🔑 **Καμία νέα μηχανή.** Το grep μένει **προφίλτρο** — ακριβώς ο ρόλος που ήδη
+ * παίζει στο {@link seedFiles} μία συνάρτηση παρακάτω — και την απάντηση τη δίνει το
+ * **ίδιο** `importedModulesOf` που χρησιμοποιεί το Κ2. Η ασυμμετρία «Κ2 με AST, Κ3 με
+ * κείμενο» **μέσα στην ίδια πύλη** ήταν το ελάττωμα.
+ *
+ * ⚠️ **Fail-closed:** αν το αρχείο δεν αναλύεται, μετριέται **ως** σημείο εισαγωγής.
+ * Ένα zero-tolerance σύνορο δεν επιτρέπεται να διαβάσει «δεν μπόρεσα να κοιτάξω» ως
+ * «καθαρό» — είναι το σχήμα «0 = κανείς δεν κοίταξε» που κυνηγά όλο το repo.
+ */
+function shellImportSites(projectRoot, ownerRel, specifiers, ctx) {
+  const ownerAbs = toPosix(path.resolve(projectRoot, ownerRel));
+  const shellFiles = new Set(
+    specifiers
+      .map(spec => MG.resolveSpecifier(spec, ownerAbs, ctx))
+      .filter(hit => hit.kind === 'internal')
+      .map(hit => toPosix(hit.file)),
+  );
+  const specSet = new Set(specifiers);
+
+  return gitGrepFiles(projectRoot, specifiers).filter(rel => {
+    const abs = toPosix(path.resolve(projectRoot, rel));
+    try {
+      return importedModulesOf(abs, ctx).some(
+        imp => specSet.has(imp.spec) || (imp.file !== null && shellFiles.has(imp.file)),
+      );
+    } catch {
+      return true; // αδιαφανές ⇒ μετριέται, ποτέ σιωπηλή απαλλαγή
+    }
+  });
+}
+
+/**
  * Σπόροι: τα αρχεία που εισάγουν **ονομαστικά** ένα από τα δηλωμένα αντιδραστικά hooks
  * από το δηλωμένο module. Επαληθευμένα με AST, όχι με κείμενο.
  */
@@ -197,6 +241,7 @@ function computePublicReaching(projectRoot, hookDecls) {
 
 module.exports = {
   gitGrepFiles,
+  shellImportSites,
   createResolveContext,
   importedModulesOf,
   seedFiles,
