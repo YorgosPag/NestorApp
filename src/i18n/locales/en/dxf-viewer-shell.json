@@ -896,6 +896,26 @@
       "invalidCoordinates": "The coordinates stored with the address are not a valid point. Correct them in the locations tab.",
       "tooCoarse": "The address resolved only to a settlement centre — kilometres away from the building. Add street and number in the locations tab.",
       "lowConfidence": "The address resolution has low confidence. Check its details in the locations tab."
+    },
+    "placement": {
+      "title": "Map placement",
+      "start": "Place on the map",
+      "surfaceAria": "Manual basemap placement surface",
+      "rotateAria": "Rotate the basemap around the centre of the view",
+      "reset": "Reset",
+      "done": "Done",
+      "pairs": "Matches: {done} of 2",
+      "scaleMismatch": "The two matches are not the same distance apart ({ratio}×). The map is never scaled — check the points you picked.",
+      "appliedHint": "The position was adjusted by hand on the map. It is not recorded as the project geo-reference.",
+      "tool": {
+        "drag": "Drag",
+        "match": "Match points"
+      },
+      "hint": {
+        "drag": "Drag the map until it sits under the drawing. The compass rotates it.",
+        "matchDrawing": "Pick a known point on the drawing.",
+        "matchMap": "Now pick the same point on the map."
+      }
     }
   },
   "toolbarStatus": {

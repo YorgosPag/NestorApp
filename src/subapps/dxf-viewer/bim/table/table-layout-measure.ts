@@ -224,12 +224,21 @@ function measureColumns(
 function wrappedCellHeightMm(
   lineCount: number,
   cellStyle: TableCellStyle,
+  /**
+   * 🔴 ADR-753 Φ4 — **το ύψος του ΨΗΛΟΤΕΡΟΥ τμήματος**, όχι του κελιού.
+   *
+   * Χωρίς `runs` είναι κυριολεκτικά το `cellStyle.textHeightMm` (ένα τμήμα, το κελί ολόκληρο —
+   * η αναλλοίωτη του `table-cell-styled-spans`), άρα **κανένας υπάρχων πίνακας δεν μετακινείται
+   * ούτε κατά ένα mm**. Με runs, είναι η μόνη τιμή που κάνει τη γραμμή να χωρέσει ό,τι θα
+   * ζωγραφιστεί μέσα της.
+   */
+  textHeightMm: number,
   /** 🔴 §59 Δ1 — το **μήκος** του μπλοκ κατά μήκος της γραμμής βάσης (η πλατύτερη γραμμή). */
   lengthMm: number,
   rotationDeg: number,
 ): number {
-  const stepMm = cellStyle.textHeightMm * CHARACTER_METRICS.LINE_HEIGHT_RATIO;
-  const thicknessMm = cellStyle.textHeightMm + Math.max(lineCount - 1, 0) * stepMm;
+  const stepMm = textHeightMm * CHARACTER_METRICS.LINE_HEIGHT_RATIO;
+  const thicknessMm = textHeightMm + Math.max(lineCount - 1, 0) * stepMm;
   // Με `rotationDeg = 0` η οριοθέτηση επιστρέφει το πάχος **αυτούσιο** και η έκφραση είναι
   // κυριολεκτικά η προηγούμενη — κανένας κλάδος-εξαίρεση, κανένας πίνακας δεν μετακινείται.
   return cellStyle.margins.vMm * 2
@@ -287,10 +296,16 @@ function contentHeightMm(
     const overrides = { column: column.styleOverride, row: row.styleOverride, cell: cell?.styleOverride };
     const cellStyle = resolveCellStyle(style.rowClasses[row.rowClass], overrides);
     const rotationDeg = tableTextRotationDeg(cellStyle);
-    // 🔴 §58 Γ2 + §59 Δ1 — **η πρόωρη έξοδος καλύπτει πλέον ΔΥΟ αιτίες.** Ούτε αναδίπλωση ούτε
-    // στροφή ⇒ το ύψος δεν εξαρτάται από το περιεχόμενο και ο βρόχος βγαίνει χωρίς να μετρήσει
-    // τίποτα: μηδέν κόστος και **byte-ταυτόσημα** ύψη για κάθε πίνακα που υπάρχει στον δίσκο.
-    if (overflow !== 'wrap' && rotationDeg === 0) return;
+    // 🔴 §58 Γ2 + §59 Δ1 + **ADR-753 Φ4** — η πρόωρη έξοδος καλύπτει πλέον **ΤΡΕΙΣ** αιτίες.
+    // Ούτε αναδίπλωση, ούτε στροφή, ούτε μορφοποίηση ανά χαρακτήρα ⇒ το ύψος δεν εξαρτάται από
+    // το περιεχόμενο και ο βρόχος βγαίνει χωρίς να μετρήσει τίποτα: μηδέν κόστος και
+    // **byte-ταυτόσημα** ύψη για κάθε πίνακα που υπάρχει στον δίσκο.
+    //
+    // Η τρίτη αιτία είναι το ελάττωμα του ADR-753 §15.5, αυτούσιο: ένα «A↑» σε δύο χαρακτήρες
+    // ζωγράφιζε ψηλότερο κείμενο μέσα σε γραμμή που **δεν το είχε μετρήσει ποτέ**, οπότε το
+    // κείμενο έβγαινε έξω από τη γραμμή. Ένα κελί με `runs` έχει, εξ ορισμού, ύψος που
+    // εξαρτάται από το περιεχόμενό του.
+    if (overflow !== 'wrap' && rotationDeg === 0 && cell?.runs === undefined) return;
 
     const text = cellDisplayText(cell, resolveCellNumberFormat(overrides, column.valueType));
     if (!text) return;
@@ -324,9 +339,28 @@ function contentHeightMm(
     const lengthMm = content.lines.reduce(
       (widest, line) => Math.max(widest, styledSpansWidthMm(line.spans)), 0,
     );
+    // 🔴 ADR-753 Φ4 — **το ψηλότερο τμήμα ολόκληρου του κελιού**, με δάπεδο το ύψος του κελιού.
+    //
+    // Το δάπεδο δεν είναι άμυνα: ένα run μπορεί να δηλώνει **μικρότερο** ύψος, και τότε το
+    // κελί δεν επιτρέπεται να συρρικνωθεί — η γραμμή περιέχει και τους άβαφους χαρακτήρες, που
+    // κληρονομούν το κελί. Ίδιος κανόνας με το δάπεδο του `measureRows`: το αυτόματο ύψος
+    // **μεγαλώνει**, ποτέ δεν μικραίνει.
+    //
+    // ⚠️ **ΔΗΛΩΜΕΝΟ ΟΡΙΟ (ADR-753 §15.5):** ένα ύψος για **ολόκληρο** το κελί, όχι ανά γραμμή.
+    // Σε αναδιπλωμένο κελί με ψηλό τμήμα στη **δεύτερη** γραμμή, η γραμμή χωρά — αλλά οι
+    // γραμμές βάσης παραμένουν ισαπέχουσες (`cellBaselineYMm`), οπότε το ψηλό γράμμα μπορεί να
+    // ακουμπήσει την από πάνω του. Ανά-γραμμή βήμα σημαίνει ότι η βάση της γραμμής k παύει να
+    // είναι `k × βήμα` — δηλαδή αλλάζουν **τρία** συζευγμένα σημεία (εδώ, `cellBaselineYMm`,
+    // και ο **αντίστροφος** `fittingLineCount`, που σήμερα διαιρεί). Δεν γίνεται μισό.
+    const textHeightMm = content.lines.reduce(
+      (tallestSpan, line) => line.spans.reduce(
+        (best, span) => Math.max(best, span.heightMm), tallestSpan,
+      ),
+      cellStyle.textHeightMm,
+    );
     tallest = Math.max(
       tallest,
-      wrappedCellHeightMm(content.lines.length, cellStyle, lengthMm, rotationDeg),
+      wrappedCellHeightMm(content.lines.length, cellStyle, textHeightMm, lengthMm, rotationDeg),
     );
   });
   return tallest;

@@ -66,6 +66,11 @@ import { flattenToSingleLine } from './TableCellEditorOverlay';
 // 🔴 ADR-754 §4 — η **ίδια** τοποθέτηση κέρσορα με τον επεξεργαστή κελιού.
 import { useTableCellCaret } from './use-table-cell-caret';
 import { useTableCellSessionKeys } from './use-table-cell-session-keys';
+// 🔴 ADR-739 §67 — ο **ΙΔΙΟΣ** χειριστής δεξιού κλικ με τον επεξεργαστή κελιού: τα δύο πεδία της
+// συνεδρίας έχουν ακριβώς το ίδιο ελάττωμα (ζουν έξω από το δοχείο του δρομολογητή) και του
+// αξίζει **μία** λύση — αλλιώς η επόμενη αλλαγή κανόνα θα εφαρμοστεί στο ένα και θα ξεχαστεί
+// στο άλλο, και η απόκλιση θα είναι αόρατη όσο κάθε πλευρά δουλεύει.
+import { useTableTextContextMenu } from './use-table-text-context-menu';
 import {
   activeTableCellSessionCaret,
   TABLE_CELL_SESSION_MARKER,
@@ -284,6 +289,16 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
     restartTableCellCursorSession,
   );
 
+  /**
+   * 🔴 ADR-739 §67 — το δεξί κλικ μέσα στη γραμμή τύπων.
+   *
+   * ⚠️ Σε **πλοήγηση** το μενού ανοίγει κι εδώ, αλλά οι δύο εντολές που **γράφουν** (αποκοπή,
+   * επικόλληση) μένουν γκρίζες: το πεδίο δείχνει τότε το **δεσμευμένο** κείμενο και δεν υπάρχει
+   * πρόχειρο να αλλάξει. Η αντιγραφή δουλεύει, γιατί τα γράμματα που μαρκάρει ο χρήστης είναι
+   * μπροστά του — ακριβώς αυτό που ζητά η γραμμή τύπων: **ανάγνωση χωρίς γραφή**.
+   */
+  const handleContextMenu = useTableTextContextMenu();
+
   return (
     <TextEditorAnchorLayer {...anchor}>
       <section
@@ -354,6 +369,8 @@ export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
+          // 🔴 ADR-739 §67 — Excel parity, ο ίδιος χειριστής με το κελί (δες παραπάνω).
+          onContextMenu={handleContextMenu}
         />
         {message === null ? null : (
           <output

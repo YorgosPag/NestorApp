@@ -116,6 +116,8 @@ function renderToolbar(borders?: {
       surfaceRef={surfaceRef}
       format={{
         format: FORMAT,
+        showUnderline: true,
+        showFormatPainter: true,
         onToggle: noop,
         onStepSize: noop,
         onReset: noop,
@@ -150,7 +152,7 @@ describe('ADR-750 Φ3 — το dropdown στο toolbar', () => {
       <TableFormatToolbar
         anchorX={10} anchorY={10} scope="column" label="B" surfaceRef={surfaceRef}
         format={{
-          format: FORMAT, onToggle: noop, onStepSize: noop, onReset: noop,
+          showUnderline: true, showFormatPainter: true, format: FORMAT, onToggle: noop, onStepSize: noop, onReset: noop,
           onSetTextColor: noop, onSetFillColor: noop,
         }}
       />,

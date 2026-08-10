@@ -46,9 +46,12 @@ import {
   DxfMenuSubContent,
   DxfMenuSubTrigger,
 } from '../dxf-context-menu/DxfContextMenu';
+// 🔴 ADR-739 §67 — η **μία** εντολή μενού. Ήταν το ιδιωτικό `RangeMenuCommand` εδώ· το CHECK
+// 3.28 το έπιασε ως δίδυμο του μενού κειμένου (13 γρ. / 106 tokens) και εξήχθη. Το αυλάκι των
+// 16px, που κρατά τις ετικέτες στοιχισμένες, ζει πλέον σε ένα σημείο.
+import { DxfMenuCommandItem } from '../dxf-context-menu/DxfMenuCommandItem';
 import {
   TABLE_RANGE_MENU_GROUPS,
-  type TableRangeMenuCommandEntry,
   type TableRangeMenuCommandId,
   type TableRangeMenuEnabled,
   type TableRangeMenuEntry,
@@ -139,24 +142,6 @@ function commandHandlers(
   };
 }
 
-/** Μια εντολή: εικονίδιο (ή κενό αυλάκι) + ετικέτα. Το `disabled` το έκρινε ο καλών. */
-function RangeMenuCommand({
-  entry, onSelect,
-}: {
-  readonly entry: TableRangeMenuCommandEntry;
-  readonly onSelect: (() => void) | undefined;
-}): React.ReactElement {
-  const { t } = useTranslation('dxf-viewer');
-  const Icon = COMMAND_ICONS[entry.id];
-
-  return (
-    <DxfMenuItem disabled={!onSelect} onSelect={onSelect}>
-      <DxfMenuIcon>{Icon ? <Icon size={ICON_SIZE} aria-hidden="true" /> : null}</DxfMenuIcon>
-      <DxfMenuLabel>{t(entry.labelKey)}</DxfMenuLabel>
-    </DxfMenuItem>
-  );
-}
-
 /**
  * «Φίλτρο ▶» / «Ταξινόμηση ▶» — **η όψη πρώτα**.
  *
@@ -219,7 +204,13 @@ function RangeMenuEntry({
   // μπορεί να ανοίξει, ό,τι απαγόρευσε ο καλών δεν μπορεί να ανοίξει — καμία τρίτη διαδρομή.
   const handler = handlers[entry.id];
   const isEnabled = handler !== undefined && enabled[entry.id] !== false;
-  return <RangeMenuCommand entry={entry} onSelect={isEnabled ? handler : undefined} />;
+  return (
+    <DxfMenuCommandItem
+      icon={COMMAND_ICONS[entry.id]}
+      labelKey={entry.labelKey}
+      onSelect={isEnabled ? handler : undefined}
+    />
+  );
 }
 
 /**

@@ -18,11 +18,15 @@
 
 import {
   clearCellRunStyles,
-  hasCellRunStyles,
   remapCellTextRuns,
-  resolveCellRunFormat,
   setCellRunStyleField,
 } from '../table-cell-run-ops';
+// ADR-753 Φ4 (N.7.1) — η **ανάγνωση** μετακόμισε σε αδελφό αρχείο όταν το `table-cell-run-ops`
+// πέρασε τις 500 γραμμές. Ίδιες συναρτήσεις, ίδια συμπεριφορά, άλλη διαδρομή εισαγωγής.
+import {
+  hasCellRunStyles,
+  resolveCellRunFormat,
+} from '../table-cell-run-state';
 import type { TableCellTextRun, TableTextRunStyle } from '../../../types/table';
 
 // ── Εργαλεία ────────────────────────────────────────────────────────────────

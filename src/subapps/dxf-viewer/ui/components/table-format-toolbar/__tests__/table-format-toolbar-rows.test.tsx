@@ -97,6 +97,11 @@ const ALL_PRESENT = {
   borders: true,
   merge: true,
   overflow: true,
+  // 🔴 ADR-753 Φ4 — τα τέσσερα χειριστήρια του `format` που μπορεί να λείπουν μεμονωμένα.
+  formatFill: true,
+  formatUnderline: true,
+  formatPainter: true,
+  formatReset: true,
 } as const;
 
 function renderFullToolbar(): { readonly rows: readonly HTMLElement[] } {
@@ -109,6 +114,8 @@ function renderFullToolbar(): { readonly rows: readonly HTMLElement[] } {
     surfaceRef,
     format: {
       format: FORMAT,
+      showUnderline: true,
+      showFormatPainter: true,
       onToggle: noop,
       onStepSize: noop,
       onReset: noop,
@@ -253,7 +260,9 @@ describe('🔴 §55 — η αρίθμηση θέσεων παράγεται απ
     const slots = planTableToolbarSlots(ALL_PRESENT);
     const order = [
       slots.fontControls, slots.sizeSteps, slots.numberKinds, slots.overflow,
-      slots.toggles, slots.align, slots.colors, slots.borders, slots.decimals,
+      // 🔴 ADR-753 Φ4 — τα δύο χρώματα είναι **δύο** μετρητές πλέον: το γέμισμα μπορεί να
+      // λείπει (mini toolbar επεξεργασίας κελιού) χωρίς να μετακινήσει το χρώμα κειμένου.
+      slots.toggles, slots.align, slots.fillColor, slots.textColor, slots.borders, slots.decimals,
       slots.formatPainter, slots.underline, slots.merge, slots.reset,
     ];
 

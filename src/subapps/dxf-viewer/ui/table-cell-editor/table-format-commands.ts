@@ -55,6 +55,28 @@ export type TableFormatApply = (
 export interface TableFormatCommandTarget {
   readonly style: TableStyle;
   readonly scope: TableFormatScope;
+  /**
+   * 🔴 ADR-753 Φ4 — **τι πρέπει να ισχύει στο μοντέλο ΠΡΙΝ γραφτεί αυτή η εντολή.**
+   *
+   * ## Γιατί ζει στον στόχο και όχι στον καλούντα
+   * Είναι ο κανόνας Α22 του §63 («ο στόχος **ταξιδεύει με το αίτημα**») στη μόνη του μορφή που
+   * έλειπε: μέχρι τώρα ο στόχος έλεγε *πού* γράφεται μια εντολή· από τη Φ4 υπάρχει στόχος που
+   * ορίζεται πάνω σε κείμενο το οποίο **δεν έχει φτάσει ακόμη στο μοντέλο** (το πρόχειρο του
+   * δρομέα). Οι δείκτες ενός τέτοιου στόχου δεν σημαίνουν τίποτα χωρίς εκείνο το κείμενο, άρα
+   * η προετοιμασία **είναι μέρος του στόχου** — όχι ξεχωριστό βήμα που κάθε καλών οφείλει να
+   * θυμηθεί (και ο δεύτερος θα ξεχνούσε, σιωπηλά).
+   *
+   * ## Γιατί ΜΕΣΑ στην ίδια μεταβολή
+   * Ένα ξεχωριστό `apply` θα ήταν **δεύτερο** βήμα αναίρεσης, και τα δύο θα μπορούσαν να
+   * αναιρεθούν χωριστά: runs που δείχνουν σε κείμενο που μόλις αναιρέθηκε. Εδώ η προετοιμασία
+   * και η μορφοποίηση είναι **ένας** μετασχηματισμός — ίδια αιτιολόγηση με την ατομικότητα
+   * γραφής+επαναϋπολογισμού της Φ.Ζ.
+   *
+   * Απόν ⇒ τίποτα να προετοιμαστεί (οι δύο υποδοχές που δείχνουν κελιά). Η υλοποίηση οφείλει
+   * να επιστρέφει το **ίδιο** μοντέλο by-reference όταν δεν χρειάστηκε αλλαγή, αλλιώς κάθε
+   * πάτημα θα γεννούσε βήμα undo για το τίποτα.
+   */
+  readonly prepare?: (model: PersistedTableModel) => PersistedTableModel;
 }
 
 /**
@@ -102,6 +124,22 @@ export interface TableFormatCommands {
 
 /** Δένει τις πέντε εντολές σε **έναν** δεσμευτή. */
 export function tableFormatCommands(apply: TableFormatApply): TableFormatCommands {
+  /**
+   * 🔴 **Η ΜΟΝΗ πόρτα προς τον δεσμευτή** — και γι' αυτό η προετοιμασία του στόχου δεν μπορεί
+   * να ξεχαστεί.
+   *
+   * ⚠️ Καμία εντολή δεν επιτρέπεται να καλέσει το `apply` κατευθείαν: η προετοιμασία
+   * ({@link TableFormatCommandTarget.prepare}) θα παραλειπόταν **σιωπηλά** για εκείνη και μόνο,
+   * δηλαδή ένα από τα έξι κουμπιά θα έγραφε runs πάνω σε κείμενο που δεν υπάρχει ακόμη. Μία
+   * πόρτα σημαίνει ότι η επόμενη εντολή την παίρνει δωρεάν.
+   */
+  const applyTo = (
+    target: TableFormatCommandTarget,
+    mutate: (model: PersistedTableModel) => PersistedTableModel,
+  ): void => {
+    apply((model) => mutate(target.prepare ? target.prepare(model) : model));
+  };
+
   return {
     /**
      * 🔴 §27.17 — **μία** απόφαση για όλον τον στόχο, όχι μία ανά κομμάτι του.
@@ -114,29 +152,29 @@ export function tableFormatCommands(apply: TableFormatApply): TableFormatCommand
     toggle: (target, key) => {
       if (!target) return;
       const { style, scope } = target;
-      apply((model) => setTableFormatField(
+      applyTo(target, (model) => setTableFormatField(
         model, scope, key, nextBooleanFormat(resolveTableFormatState(model, style, scope, key)),
       ));
     },
     stepSize: (target, direction) => {
       if (!target) return;
       const { style, scope } = target;
-      apply((model) => stepTableFormatTextHeight(model, style, scope, direction));
+      applyTo(target, (model) => stepTableFormatTextHeight(model, style, scope, direction));
     },
     reset: (target) => {
       if (!target) return;
       const { scope } = target;
-      apply((model) => clearTableFormatScope(model, scope));
+      applyTo(target, (model) => clearTableFormatScope(model, scope));
     },
     setField: (target, key, value) => {
       if (!target) return;
       const { scope } = target;
-      apply((model) => setTableFormatField(model, scope, key, value));
+      applyTo(target, (model) => setTableFormatField(model, scope, key, value));
     },
     setOverflow: (target, value) => {
       if (!target) return;
       const { scope } = target;
-      apply((model) => setTableFormatOverflow(model, scope, value));
+      applyTo(target, (model) => setTableFormatOverflow(model, scope, value));
     },
   };
 }

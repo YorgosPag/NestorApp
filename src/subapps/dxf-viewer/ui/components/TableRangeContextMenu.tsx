@@ -78,22 +78,23 @@
 import { forwardRef, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DxfMenuContent,
-  DxfMenuHiddenTrigger,
   DxfMenuItem,
   DxfMenuLabel,
   DxfMenuSeparator,
 } from './dxf-context-menu/DxfContextMenu';
+// 🔴 ADR-739 §67 — το **κέλυφος** και ο **δρόμος εκτέλεσης** εξήχθησαν όταν γεννήθηκε το τέταρτο
+// μενού (κειμένου) και το CHECK 3.28 μέτρησε 26+23 γραμμές διδύμου. Καμία αλλαγή συμπεριφοράς
+// εδώ: ίδιος κρυφός πυροδότης, ίδιος φύλακας «κλικ πάνω στη γραμμή», ίδια σειρά εκτέλεσης.
+import { AnchoredMenuShell } from './dxf-context-menu/AnchoredMenuShell';
 import { useAnchoredContextMenu } from './dxf-context-menu/use-anchored-context-menu';
-import { useKeepOpenOnSurface } from './dxf-context-menu/use-keep-open-on-surface';
-import { TABLE_CELL_SESSION_MARKER } from '../table-cell-editor/table-cell-session-focus';
+import { useRunMenuCommand } from './dxf-context-menu/use-run-menu-command';
 import {
   TableRangeMenuItems,
   type TableRangeMenuActions,
 } from './table-range-menu/TableRangeMenuItems';
-import { TableFormatToolbar } from './table-format-toolbar/TableFormatToolbar';
+// 🔴 §67 — η **αγκύρωση** της γραμμής (θέση + «κρέμεται από τον στόχο, όχι από το `isOpen`»),
+// κοινή πλέον με το μενού κειμένου. Τα **διαμερίσματα** μένουν εδώ: εκεί ζει η διαφορά.
+import { AnchoredFormatToolbar } from './table-format-toolbar/AnchoredFormatToolbar';
 // 🔴 ADR-739 §64 — η εφήμερη επιφάνεια υποχωρεί στη μόνιμη. Δες την κεφαλίδα του module για
 // το γιατί η γνώση ΔΕΝ ζει στο item «Μορφοποίηση κελιών…» (οι υποδοχές είναι πέντε, όχι μία).
 import { useYieldToPersistentSurface } from './table-format-toolbar/use-yield-to-persistent-surface';
@@ -143,11 +144,6 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
     const { triggerRef, isOpen, target, onOpenChange, anchor, setTarget, closeMenuKeepTarget } =
       useAnchoredContextMenu<TableRangeMenuTarget>(ref, onClosed);
 
-    // 🔴 Το toolbar ζει σε **δικό του** portal, άρα κάθε πάτημα κουμπιού φτάνει εδώ ως
-    // `pointerDownOutside` — και το `DismissableLayer` κλείνει στο `pointerdown`, δηλαδή ΠΡΙΝ
-    // το `click`. Χωρίς τον φύλακα, το `onClick` της εντολής δεν θα έτρεχε ποτέ.
-    const keepOpenOnToolbar = useKeepOpenOnSurface(toolbarRef);
-
     /**
      * 🔴 ADR-739 §64 — όσο ζει ο διάλογος «Μορφοποίηση κελιών», η γραμμή **δεν** ζει.
      *
@@ -159,25 +155,27 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
     useYieldToPersistentSurface(dismissToolbar);
 
     /**
-     * Μια εντολή της γραμμής: **κλείνει το μενού, εκτελεί, ξαναρωτά**.
+     * Μια εντολή της γραμμής: **κλείνει το μενού, εκτελεί, ξαναρωτά** — ο ΕΝΑΣ δρόμος, κοινός
+     * πλέον με το μενού κειμένου (§67). Το γιατί η σειρά είναι η προδιαγραφή —η συγχώνευση
+     * ανοίγει modal, και με ζωντανό `role="menu"` το `FocusScope` του Radix καταπίνει κάθε
+     * εστίαση— ζει στην κεφαλίδα του {@link useRunMenuCommand}.
      *
-     * Το κλείσιμο προηγείται γιατί η συγχώνευση μπορεί να ανοίξει modal διάλογο — με το μενού
-     * ακόμη ανοιχτό, το `FocusScope` του Radix θα επανέφερε κάθε εστίαση στο `role="menu"` και
-     * ο χρήστης θα έβλεπε ερώτηση που δεν μπορεί να απαντήσει με πληκτρολόγιο.
-     *
-     * Η ανανέωση γίνεται με updater και έλεγχο `prev`: η γραμμή μπορεί να έχει φύγει (`Escape`)
-     * όσο έτρεχε η ασύγχρονη πράξη.
+     * ⚠️ Ο τυλιχτής δουλεύει πάνω στον **στόχο**, οπότε οι εντολές που θέλουν μόνο τα όρια τα
+     * παίρνουν εδώ ({@link runOnBounds}). Η διάκριση μένει ρητή αντί να «απλοποιηθεί» σε έναν:
+     * το `resolveTarget` του συμβολαίου δέχεται όρια, ο κοινός μηχανισμός δέχεται στόχο.
      */
+    const runOnTarget = useRunMenuCommand<TableRangeMenuTarget>({
+      target,
+      closeMenuKeepTarget,
+      setTarget,
+      refresh: (prev) => resolveTarget(prev.bounds),
+    });
+
     const runOnRange = useCallback(
       (action: (bounds: TableCellRangeBounds) => void | Promise<void>) => {
-        if (!target) return;
-        const { bounds } = target;
-        closeMenuKeepTarget();
-        void Promise.resolve(action(bounds)).then(() => {
-          setTarget((prev) => (prev ? resolveTarget(prev.bounds) ?? prev : prev));
-        });
+        runOnTarget((current) => action(current.bounds));
       },
-      [target, closeMenuKeepTarget, setTarget, resolveTarget],
+      [runOnTarget],
     );
 
     /**
@@ -239,61 +237,60 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
     return (
       <>
         {/*
-          ⚠️ Κρέμεται από το `target`, ΟΧΙ από το `isOpen` — ίδια απόφαση με το μενού των ζωνών:
-          η γραμμή επιβιώνει του μενού για την **επόμενη** εντολή και φεύγει μόνο με `Escape` /
-          κλικ έξω / νέο δεξί κλικ.
+          Η **αγκύρωση** και ο φρουρός «κρέμεται από τον στόχο, όχι από το `isOpen`» ζουν πλέον
+          στο κοινό {@link AnchoredFormatToolbar} (§67). Εδώ μένουν **τα διαμερίσματα**, που
+          είναι και η πραγματική διαφορά από το μενού κειμένου: εκείνο δείχνει μόνο τυπογραφία.
         */}
-        {target && anchor ? (
-          <TableFormatToolbar
-            anchorX={anchor.x}
-            anchorY={anchor.y}
-            scope="range"
-            label={target.label}
-            surfaceRef={toolbarRef}
+        <AnchoredFormatToolbar
+          anchor={anchor}
+          label={target?.label ?? null}
+          surfaceRef={toolbarRef}
+          sections={target === null ? {} : {
             /*
               🔴 ADR-739 §52 — **τα ίδια εννιά χειριστήρια με τη ζώνη δείκτη**, με άλλον στόχο
               μέσα τους. Κάθε εντολή περνά από το {@link runOnRange}: εφαρμογή → ξαναρώτημα →
               κλείσιμο **μόνο** του μενού· η γραμμή μένει, γιατί η μορφοποίηση είναι κατεξοχήν
               επαναλαμβανόμενη πράξη (έντονα, μετά πλάγια, μετά ένα μέγεθος πάνω).
             */
-            format={{
+            format: {
               format: target.format,
+              // 🔴 ADR-753 Φ4 — στόχος **κελιά**: και τα εννιά χειριστήρια έχουν νόημα. Η
+              // διαφορά με το μενού κειμένου δηλώνεται εδώ, όχι μέσα στη γραμμή.
+              showUnderline: true,
+              showFormatPainter: true,
               onToggle: (key) => runOnRange((bounds) => formatActions.onToggle(bounds, key)),
               onStepSize: (dir) => runOnRange((bounds) => formatActions.onStepSize(bounds, dir)),
               onReset: () => runOnRange((bounds) => formatActions.onReset(bounds)),
               onSetTextColor: (v) => runOnRange((bounds) => formatActions.onSetTextColor(bounds, v)),
               onSetFillColor: (v) => runOnRange((bounds) => formatActions.onSetFillColor(bounds, v)),
-            }}
+            },
             /*
               🔴 §55 — τα τρία τμήματα, χτισμένα από τον **κοινό** builder: η κατάσταση έρχεται
               παγωμένη από τον στόχο, ο γραφέας τυλίγεται στο {@link runOnRange} όπως κάθε άλλη
               εντολή της γραμμής (εφαρμογή → ξαναρώτημα → κλείσιμο μόνο του μενού).
             */
-            {...tableToolbarExtrasProps(target.toolbar, setToolbarField, setToolbarOverflow)}
-            merge={{
+            ...tableToolbarExtrasProps(target.toolbar, setToolbarField, setToolbarOverflow),
+            merge: {
               state: target.merge,
               onApply: (id) => runOnRange((bounds) => onApplyMerge(bounds, id)),
-            }}
-            borders={{
+            },
+            borders: {
               ...target.borders,
               onApply: (id) => runOnRange((bounds) => onApplyBorder(bounds, id)),
               onReset: () => runOnRange((bounds) => onResetBorders(bounds)),
               onApplyDiagonal: (id) => runOnRange((bounds) => onApplyDiagonal(bounds, id)),
-            }}
-          />
-        ) : null}
+            },
+          }}
+        />
 
-        <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
-          <DropdownMenuTrigger asChild>
-            <DxfMenuHiddenTrigger ref={triggerRef} {...TABLE_CELL_SESSION_MARKER} />
-          </DropdownMenuTrigger>
-
+        <AnchoredMenuShell
+          isOpen={isOpen}
+          onOpenChange={onOpenChange}
+          triggerRef={triggerRef}
+          surfaceRef={toolbarRef}
+        >
           {target ? (
-            <DxfMenuContent
-              {...TABLE_CELL_SESSION_MARKER}
-              onPointerDownOutside={keepOpenOnToolbar}
-              onFocusOutside={keepOpenOnToolbar}
-            >
+            <>
               {/*
                 🔑 Ο τίτλος **μένει**, παρότι το Excel δεν τον έχει (Α22): εκεί το δεξί κλικ
                 *μετακινεί* την επιλογή, οπότε το «ποια περιοχή» φαίνεται στην ίδια την οθόνη.
@@ -306,9 +303,9 @@ const TableRangeContextMenuInner = forwardRef<TableRangeContextMenuHandle, Table
               <DxfMenuSeparator />
 
               <TableRangeMenuItems actions={menuActions} enabled={target.commands} />
-            </DxfMenuContent>
+            </>
           ) : null}
-        </DropdownMenu>
+        </AnchoredMenuShell>
       </>
     );
   },

@@ -74,6 +74,20 @@ import {
   type TableSelectionSpan,
 } from './table-cell-range';
 import { axisTargetOf } from './table-axis-action-target';
+// 🔴 ADR-753 Φ4 — ο **τρίτος** γραφέας. Δες την κεφαλίδα του για το γιατί τα runs δεν
+// ξαναγράφονται εδώ και γιατί η κληρονομιά ταξιδεύει ως όρισμα.
+import {
+  cellRunNumericRangeAt,
+  clearCellRunRange,
+  hasCellRunRangeStyles,
+  resolveCellRunState,
+  setCellRunField,
+} from './table-chars-style-ops';
+import {
+  isTableTextRunStyleKey,
+  type TableTextRange,
+  type TableTextRunStyleKey,
+} from './table-cell-run-ops';
 import {
   nextTextHeightFromRange,
   stepAxisTextHeight,
@@ -85,18 +99,40 @@ import type {
   PersistedTableModel,
   TableAxisStyleOverride,
   TableCellOverflow,
+  TableTextRunStyle,
 } from '../../types/table';
 
 /**
  * Πού πάει η επόμενη εντολή μορφοποίησης.
  *
- * Διακριτή ένωση και όχι «άξονας + προαιρετικά όρια»: οι δύο περιπτώσεις δεν έχουν κοινό
- * πυρήνα δεδομένων (ταυτότητες άξονα ≠ ορθογώνιο δεικτών), και ένα σχήμα με προαιρετικά πεδία
- * θα επέτρεπε την κατάσταση «άξονας **και** όρια», που δεν σημαίνει τίποτα.
+ * Διακριτή ένωση και όχι «άξονας + προαιρετικά όρια»: οι τρεις περιπτώσεις δεν έχουν κοινό
+ * πυρήνα δεδομένων (ταυτότητες άξονα ≠ ορθογώνιο δεικτών ≠ εύρος χαρακτήρων), και ένα σχήμα με
+ * προαιρετικά πεδία θα επέτρεπε την κατάσταση «άξονας **και** όρια», που δεν σημαίνει τίποτα.
+ *
+ * ## 🔴 ADR-753 Φ4 — ΓΙΑΤΙ ΤΡΙΤΟ ΣΚΕΛΟΣ ΚΑΙ ΟΧΙ ΠΡΟΑΙΡΕΤΙΚΟ ΠΕΔΙΟ ΣΤΟ `range`
+ * Ένα `range: { bounds, chars? }` θα δούλευε **και** θα ήταν το χειρότερο σχήμα: κάθε
+ * υπάρχων καταναλωτής θα συνέχιζε να μεταγλωττίζεται και θα **αγνοούσε σιωπηλά** το νέο
+ * πεδίο, δηλαδή θα έβαφε ολόκληρο το κελί ακριβώς όπως πριν — το ελάττωμα που η Φ4 υπάρχει
+ * για να κλείσει, ξαναγεννημένο ως προεπιλογή. Με τρίτο σκέλος ο **μεταγλωττιστής**
+ * υποχρεώνει καθέναν να απαντήσει, και οι απαντήσεις γράφτηκαν όλες: δες τις οκτώ συναρτήσεις
+ * από κάτω, όπου η επανάληψη «τα γράμματα ζουν μέσα σε ένα κελί» δίνει σε πέντε από αυτές την
+ * απάντηση **δωρεάν**, μέσα από το {@link tableFormatScopeBounds}.
  */
 export type TableFormatScope =
   | { readonly kind: 'axis'; readonly axis: TableStyleAxis; readonly ids: readonly string[] }
-  | { readonly kind: 'range'; readonly bounds: TableCellRangeBounds };
+  | { readonly kind: 'range'; readonly bounds: TableCellRangeBounds }
+  /**
+   * 🔴 ADR-753 Φ4 — **οι μαρκαρισμένοι χαρακτήρες** μέσα στο κελί που γράφεται.
+   *
+   * Το `cell` είναι **ταυτότητα**, όχι ορθογώνιο: τα runs ζουν πάνω στο κελί που γράφει ο
+   * επεξεργαστής — το ίδιο ακριβώς που δέχεται και το **κείμενό** του. Ένα ορθογώνιο εδώ θα
+   * επέτρεπε την κατάσταση «γράμματα σε δύο κελιά», που δεν υπάρχει: η επιλογή κειμένου ζει
+   * μέσα σε **ένα** πεδίο του DOM.
+   *
+   * ⚠️ Οι δείκτες είναι θέσεις χαρακτήρων του `TableCell.value` — δες
+   * `bim/table/table-cell-run-ops.ts` για το τι σημαίνει αυτό όταν αλλάξει το κείμενο.
+   */
+  | { readonly kind: 'chars'; readonly cell: TableCellRef; readonly range: TableTextRange };
 
 /**
  * Η επιλογή του χρήστη → ο στόχος. `null` όταν η επιλογή είναι μπαγιάτικη (undo, διαγραφή
@@ -131,11 +167,47 @@ export function tableFormatScopeOf(
 }
 
 /**
+ * 🔴 ADR-753 Φ4 — **οι μαρκαρισμένοι χαρακτήρες ως στόχος**· `null` όταν το κελί δεν λύνεται
+ * στο μοντέλο (undo έσβησε τη γραμμή ενόσω ήταν ανοιχτή η γραμμή εργαλείων).
+ *
+ * Χωριστός κατασκευαστής από το {@link tableFormatScopeOf} και **όχι** τέταρτο όρισμα εκεί:
+ * εκείνο διαβάζει την επιλογή του **πλέγματος** (`TableSelectionSpan`), που γεννιέται από τον
+ * καμβά και το πληκτρολόγιο. Η επιλογή **χαρακτήρων** γεννιέται από ένα πεδίο του DOM, δεν
+ * υπάρχει καν στο μοντέλο, και δεν συνυπάρχει ποτέ με τις άλλες δύο — ο χρήστης ή δείχνει
+ * κελιά ή δείχνει γράμματα. Ένα προαιρετικό όρισμα θα ένωνε δύο κόσμους που δεν συναντιούνται.
+ *
+ * ⚠️ **Καμία κανονικοποίηση των δεικτών εδώ**: την κάνει ο κάθε αναγνώστης/γραφέας πάνω στο
+ * **πραγματικό μήκος** του κειμένου (`clampRange`), που είναι η μόνη αυθεντία. Δεύτερο clamp
+ * εδώ θα ήταν δεύτερη άποψη για το τι είναι μπαγιάτικος δείκτης.
+ */
+export function tableCharsFormatScopeOf(
+  model: PersistedTableModel,
+  cell: TableCellRef,
+  range: TableTextRange,
+): TableFormatScope | null {
+  const resolved = resolveTableModel(model);
+  // Ο ίδιος φρουρός επιβίωσης με το `tableFormatScopeOf`: το κελί πρέπει να υπάρχει **ως
+  // γεωμετρία**, αλλιώς δεν υπάρχει στόχος — και ο καλών σβήνει αντί να γράψει στο πουθενά.
+  return resolveTableCellRange(resolved, cell, cell) === null
+    ? null
+    : { kind: 'chars', cell, range };
+}
+
+/**
  * Θέτει **ένα** πεδίο στον στόχο, όποιος κι αν είναι. Οι τρεις καταστάσεις (`undefined`
  * αφαιρεί · `null` ρητά κανένα · αλλιώς ρητή τιμή) ταξιδεύουν αυτούσιες προς τον γραφέα.
  *
- * Η εγγύηση **by-reference στο no-op** επιβιώνει και στα δύο σκέλη: την κρατά ο κάθε γραφέας,
+ * Η εγγύηση **by-reference στο no-op** επιβιώνει και στα τρία σκέλη: την κρατά ο κάθε γραφέας,
  * και το `writeEachAxis` την κρατά και στον πληθυντικό.
+ *
+ * ## 🔴 ADR-753 Φ4 — ΤΑ ΓΡΑΜΜΑΤΑ ΔΕΝ ΔΕΧΟΝΤΑΙ ΚΑΘΕ ΠΕΔΙΟ, ΚΑΙ ΑΥΤΟ ΕΙΝΑΙ ΤΟ EXCEL
+ * Το `align`, το `fillColorHex`, η μορφή αριθμού και η εσοχή **δεν** έχουν νόημα ανά
+ * χαρακτήρα. Η σωστή απάντηση γι' αυτά δεν είναι «τίποτα» — είναι **το κελί**: μετρημένο στο
+ * Excel, σε λειτουργία επεξεργασίας με μαρκαρισμένα γράμματα το κουβαδάκι βάφει ολόκληρο το
+ * κελί ενώ το «Α» με το χρώμα βάφει μόνο τα γράμματα. Ο διαχωρισμός **δεν** γράφεται εδώ ως
+ * λίστα ονομάτων: τον ξέρει ήδη ο {@link isTableTextRunStyleKey}, το ίδιο `Record` που
+ * ελέγχει ο μεταγλωττιστής και που ρωτά ήδη ο γραφέας κελιών για την **αντίστροφη**
+ * κατεύθυνση (ισοπέδωση των runs).
  */
 export function setTableFormatField<K extends keyof TableAxisStyleOverride>(
   model: PersistedTableModel,
@@ -143,10 +215,23 @@ export function setTableFormatField<K extends keyof TableAxisStyleOverride>(
   key: K,
   value: TableAxisStyleOverride[K] | undefined,
 ): PersistedTableModel {
-  return scope.kind === 'axis'
-    ? writeEachAxis(model, scope.ids, (next, id) =>
-        setAxisStyleField(next, scope.axis, id, key, value))
-    : setRangeStyleField(model, scope.bounds, key, value);
+  if (scope.kind === 'axis') {
+    return writeEachAxis(model, scope.ids, (next, id) =>
+      setAxisStyleField(next, scope.axis, id, key, value));
+  }
+  if (scope.kind === 'chars' && isTableTextRunStyleKey(key)) {
+    // Η μετατροπή είναι **η ίδια η απόδειξη** που μόλις έτρεξε: ο φρουρός από πάνω δηλώνει ότι
+    // το πεδίο υπάρχει στο λεξιλόγιο των runs, και ο τύπος `_RunAndCellValuesAgree` του
+    // `table-chars-style-ops.ts` κρατά τις **τιμές** των δύο λεξιλογίων ταυτόσημες. Χωρίς
+    // εκείνον τον έλεγχο αυτή η γραμμή θα ήταν ευχή· με αυτόν είναι μετάφραση.
+    return setCellRunField(
+      model, scope.cell, scope.range,
+      key as TableTextRunStyleKey,
+      value as TableTextRunStyle[TableTextRunStyleKey],
+    );
+  }
+  const bounds = tableFormatScopeBounds(model, scope);
+  return bounds === null ? model : setRangeStyleField(model, bounds, key, value);
 }
 
 /**
@@ -172,6 +257,16 @@ export function tableFormatScopeBounds(
   scope: TableFormatScope,
 ): TableCellRangeBounds | null {
   if (scope.kind === 'range') return scope.bounds;
+  // 🔴 ADR-753 Φ4 — **τα γράμματα ζουν μέσα σε ΕΝΑ κελί, και αυτό είναι το ορθογώνιό τους.**
+  //
+  // Η μετάφραση δεν είναι παραχώρηση· είναι η σωστή απάντηση, και τη δίνει **δωρεάν** σε πέντε
+  // καταναλωτές: «τι ξεχείλισμα ισχύει;», «τι μορφή αριθμού;», «ποια περιγράμματα;», «ποια
+  // συγχώνευση;», «ποιο γέμισμα;» είναι όλες ερωτήσεις **κελιού** — και ο χρήστης που δείχνει
+  // γράμματα δείχνει, αναγκαστικά, και το κελί που τα περιέχει. Το κούμπωμα σε ολόκληρη
+  // συγχώνευση περνά από τον ΕΝΑ ορισμό ({@link resolveTableCellRange}), όπως και ο δρομέας.
+  if (scope.kind === 'chars') {
+    return resolveTableCellRange(resolveTableModel(model), scope.cell, scope.cell);
+  }
   if (scope.ids.length === 0) return null;
 
   const resolved = resolveTableModel(model);
@@ -183,16 +278,35 @@ export function tableFormatScopeBounds(
   return resolveTableSelectionBounds(resolved, extendTableSelectionTo(first, last.to));
 }
 
-/** Τι δείχνει ένα χειριστήριο για τον στόχο — `null` όταν ο στόχος δεν επιβίωσε. */
+/**
+ * Τι δείχνει ένα χειριστήριο για τον στόχο — `null` όταν ο στόχος δεν επιβίωσε.
+ *
+ * ## 🔴 ADR-753 Φ4 — τα γράμματα διαβάζονται **πάνω** στην απάντηση του κελιού
+ * Ένα run δηλώνει μόνο ό,τι διαφέρει· χωρίς δήλωση, τα γράμματα είναι ό,τι λέει το κελί — και
+ * το κελί ό,τι λένε γραμμή, στήλη και κλάση. Διαβάζοντας **μόνο** τα runs, το κουμπί θα έλεγε
+ * «όχι έντονα» για επιλογή μέσα σε κελί που το στυλ του γράφει έντονο, δηλαδή θα διέψευδε την
+ * οθόνη. Γι' αυτό η απάντηση του κελιού υπολογίζεται **πρώτη** και μπαίνει ως βάση: μία
+ * αλυσίδα κληρονομιάς, ένας επιλυτής της.
+ */
 export function resolveTableFormatState<K extends TableCellStyleKey>(
   model: PersistedTableModel,
   style: TableStyle,
   scope: TableFormatScope,
   key: K,
 ): TableFormatState<TableCellStyle[K]> | null {
-  return scope.kind === 'axis'
-    ? resolveAxesFormat(model, style, scope.axis, scope.ids, key)
-    : resolveRangeFormat(model, style, scope.bounds, key);
+  if (scope.kind === 'axis') return resolveAxesFormat(model, style, scope.axis, scope.ids, key);
+
+  const bounds = tableFormatScopeBounds(model, scope);
+  if (bounds === null) return null;
+  const cellState = resolveRangeFormat(model, style, bounds, key);
+  if (cellState === null || scope.kind === 'range') return cellState;
+
+  // Η μετατροπή γυρίζει την ένωση πίσω στο συγκεκριμένο πεδίο. Είναι ασφαλής επειδή ο
+  // αναγνώστης **δεν αλλάζει πεδίο**: επιστρέφει τιμές του ίδιου `key` που του δόθηκε (ή την
+  // κληρονομιά του). Δες `_RunAndCellValuesAgree` για το γιατί τα δύο λεξιλόγια συμφωνούν.
+  return resolveCellRunState(
+    model, scope.cell, scope.range, key, cellState,
+  ) as TableFormatState<TableCellStyle[K]>;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -275,28 +389,32 @@ export function setTableFormatOverflow(
 /**
  * «Επαναφορά μορφοποίησης».
  *
- * ⚠️ Τα δύο σκέλη **δεν κάνουν το ίδιο πράγμα**, και σωστά: ο άξονας σβήνει τη δική του
+ * ⚠️ Τα τρία σκέλη **δεν κάνουν το ίδιο πράγμα**, και σωστά: ο άξονας σβήνει τη δική του
  * παράκαμψη (το `ByLayer` του AutoCAD)· η περιοχή σβήνει τις παρακάμψεις **των κελιών** και τα
- * runs τους, χωρίς ποτέ να αγγίξει άξονα. Δες την κεφαλίδα του `clearRangeStyleOverride` για
- * το γιατί μια «επαναφορά» που καθάριζε και τον άξονα θα ήταν καταστροφική.
+ * runs τους, χωρίς ποτέ να αγγίξει άξονα· τα **γράμματα** σβήνουν μόνο τα runs τους, χωρίς
+ * ποτέ να αγγίξουν το κελί. Δες την κεφαλίδα του `clearRangeStyleOverride` για το γιατί μια
+ * «επαναφορά» που καθάριζε και τον άξονα θα ήταν καταστροφική — και το ίδιο ισχύει, ένα
+ * επίπεδο πιο μέσα, για μια «επαναφορά γραμμάτων» που ξεγύμνωνε ολόκληρο το κελί.
  */
 export function clearTableFormatScope(
   model: PersistedTableModel,
   scope: TableFormatScope,
 ): PersistedTableModel {
-  return scope.kind === 'axis'
-    ? writeEachAxis(model, scope.ids, (next, id) => clearAxisStyleOverride(next, scope.axis, id))
-    : clearRangeStyleOverride(model, scope.bounds);
+  if (scope.kind === 'axis') {
+    return writeEachAxis(model, scope.ids, (next, id) => clearAxisStyleOverride(next, scope.axis, id));
+  }
+  if (scope.kind === 'chars') return clearCellRunRange(model, scope.cell, scope.range);
+  return clearRangeStyleOverride(model, scope.bounds);
 }
 
-/** Έχει ο στόχος **οτιδήποτε** να επαναφέρει; `some` και στα δύο σκέλη — δες τους γραφείς. */
+/** Έχει ο στόχος **οτιδήποτε** να επαναφέρει; `some` και στα τρία σκέλη — δες τους γραφείς. */
 export function canResetTableFormatScope(
   model: PersistedTableModel,
   scope: TableFormatScope,
 ): boolean {
-  return scope.kind === 'axis'
-    ? hasAnyAxisStyleOverride(model, scope.axis, scope.ids)
-    : hasAnyRangeStyleOverride(model, scope.bounds);
+  if (scope.kind === 'axis') return hasAnyAxisStyleOverride(model, scope.axis, scope.ids);
+  if (scope.kind === 'chars') return hasCellRunRangeStyles(model, scope.cell, scope.range);
+  return hasAnyRangeStyleOverride(model, scope.bounds);
 }
 
 /**
@@ -327,12 +445,14 @@ export function stepTableFormatTextHeight(
       stepAxisTextHeight(next, style, scope.axis, id, direction));
   }
 
-  const range = resolveCellsNumericRange(
-    model, style, tableRangeCellRefs(model, scope.bounds), 'textHeightMm',
-  );
+  // 🔴 Η **σκάλα** είναι μία (`nextTextHeightFromRange`) και ο κανόνας «ΟΛΑ ξεκινούν από το
+  // κοινό άκρο» επίσης — αλλάζει μόνο *ποιοι* είναι οι «όλοι»: κελιά ή γράμματα. Δύο σώματα
+  // εδώ θα ήταν δύο σκάλες που τυχαίνει να συμφωνούν.
+  const range = tableFormatNumericRange(model, style, scope, 'textHeightMm');
   if (!range) return model;
   const next = nextTextHeightFromRange(range, direction);
-  return next === null ? model : setRangeStyleField(model, scope.bounds, 'textHeightMm', next);
+  if (next === null) return model;
+  return setTableFormatField(model, scope, 'textHeightMm', next);
 }
 
 /**
@@ -349,10 +469,17 @@ export function tableFormatNumericRange(
   scope: TableFormatScope,
   key: TableCellNumericKey,
 ): TableNumericRange | null {
-  if (scope.kind === 'range') {
-    return resolveCellsNumericRange(
-      model, style, tableRangeCellRefs(model, scope.bounds), key,
-    );
+  if (scope.kind !== 'axis') {
+    const bounds = tableFormatScopeBounds(model, scope);
+    if (bounds === null) return null;
+    const cells = resolveCellsNumericRange(model, style, tableRangeCellRefs(model, bounds), key);
+    // 🔴 ADR-753 Φ4 — τα **γράμματα** έχουν δικά τους άκρα **μόνο** για πεδίο που υπάρχει στο
+    // λεξιλόγιό τους. Η εσοχή και η γωνία κειμένου είναι αριθμοί του **κελιού**: εκεί η
+    // απάντηση του κελιού δεν είναι υποκατάστατο — **είναι** η απάντηση.
+    if (scope.kind === 'range' || !isTableTextRunStyleKey(key) || cells === null) return cells;
+    // Η κληρονομιά κάθε άβαφου χαρακτήρα είναι η τιμή **του κελιού** — και ο στόχος εδώ είναι
+    // ένα κελί, οπότε τα δύο άκρα του συμπίπτουν και το `min` **είναι** εκείνη η τιμή.
+    return cellRunNumericRangeAt(model, scope.cell, scope.range, key, cells.min);
   }
 
   let combined: TableNumericRange | null = null;

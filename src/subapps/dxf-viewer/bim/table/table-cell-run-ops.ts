@@ -29,16 +29,24 @@
  * που δεν αναιρεί τίποτα — και ακύρωση των `WeakMap` μνημών χωρίς λόγο. Την ίδια εγγύηση δίνουν
  * ήδη `setPersistedCellText`, `setAxisStyleField` και `setTableEdges`.
  *
+ * ## 🔴 ADR-753 Φ4 — Η **ΑΝΑΓΝΩΣΗ** ΜΕΤΑΚΟΜΙΣΕ (N.7.1)
+ * Η ενότητα «τι δείχνει το κουμπί» ζει πλέον στο `table-cell-run-state.ts`: η Φ4 πρόσθεσε τον
+ * δεύτερο αναγνώστη και το αρχείο πέρασε τις **500 γραμμές**. Η τομή είναι η ίδια που ονόμαζαν
+ * ήδη οι δύο επικεφαλίδες («πώς αλλάζει» / «τι ισχύει»), και η ίδια που έχει ένα επίπεδο έξω ο
+ * πίνακας (`table-cell-style-scan.ts`).
+ *
+ * ⚠️ Τρεις συναρτήσεις της «μίας μηχανικής» ({@link expandStyles}, {@link effectiveRange},
+ * {@link clampRange}) **εξάγονται** γι' αυτόν τον έναν καταναλωτή. Δεν είναι δημόσιο API: είναι
+ * ο μόνος τρόπος να μη διπλασιαστεί ο κανόνας «πού κοιτά ο δρομέας» — δύο εκφράσεις του θα
+ * σήμαιναν κουμπί που **δείχνει** την κατάσταση ενός χαρακτήρα και **γράφει** σε άλλον.
+ *
  * @module subapps/dxf-viewer/bim/table/table-cell-run-ops
  * @see types/table.ts — `TableCellTextRun`, `TableTextRunStyle` και το γιατί δείκτες
+ * @see bim/table/table-cell-run-state.ts — η ανάγνωση (τι δείχνει το χειριστήριο)
  * @see bim/table/table-axis-style-ops.ts — η ίδια δουλειά ένα επίπεδο έξω (άξονας)
  * @see docs/centralized-systems/reference/adrs/ADR-753-table-cell-rich-text.md
  */
 
-// ADR-739 — το σχήμα απόκρισης ενός χειριστηρίου ζει στον κοινό σαρωτή. Ερχόταν μέχρι τώρα
-// από το `table-axis-style-ops.ts` (εκεί γεννήθηκε), αλλά τα runs **δεν** έχουν άξονα: η
-// εξάρτηση ήταν σύζευξη με γείτονα αντί με τον ορισμό. Ίδιος τύπος, σωστότερη διαδρομή.
-import type { TableFormatState } from './table-cell-style-scan';
 import type { TableCellTextRun, TableTextRunStyle } from '../../types/table';
 
 /**
@@ -62,6 +70,17 @@ const RUN_STYLE_KEY_SET: Record<keyof TableTextRunStyle, true> = {
 };
 
 export type TableTextRunStyleKey = keyof TableTextRunStyle;
+
+/**
+ * Τα πεδία ενός run που ο ζωγράφος επιλύει σε **αριθμό**.
+ *
+ * Παράγεται από τον ίδιο τον τύπο, ίδια οικογένεια λύσης με το `TableCellNumericKey` του
+ * κελιού: μια χειρόγραφη ένωση `'textHeightMm' | …` θα έμενε πίσω σιωπηλά την ημέρα που ένα
+ * πεδίο αλλάξει τύπο.
+ */
+export type TableTextRunNumericKey = {
+  [K in TableTextRunStyleKey]: NonNullable<TableTextRunStyle[K]> extends number ? K : never;
+}[TableTextRunStyleKey];
 
 /** Τα κλειδιά ως πίνακας — μία φορά, από το σύνολο που ελέγχει ο μεταγλωττιστής. */
 const RUN_STYLE_KEYS = Object.keys(RUN_STYLE_KEY_SET) as readonly TableTextRunStyleKey[];
@@ -229,68 +248,6 @@ export function sliceCellTextRuns(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Ανάγνωση — η κατάσταση του κουμπιού
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * Τι δείχνει ένα χειριστήριο του toolbar για την **τρέχουσα επιλογή**.
- *
- * 🔴 Το `inherited` δεν είναι ευκολία — είναι η διαφορά ανάμεσα στην αλήθεια και στο ψέμα.
- * Διαβάζοντας **μόνο** τα runs, το κουμπί θα έλεγε «όχι έντονα» για επιλογή μέσα σε κελί που
- * το **στυλ** του γράφει έντονο: δηλαδή θα διέψευδε ό,τι βλέπει ο χρήστης στην οθόνη. Είναι
- * ακριβώς το μάθημα που είναι ήδη γραμμένο στο `resolveAxisFormat` — και ο λόγος που εκείνο
- * διατρέχει τα επιλυμένα στυλ αντί για τις παρακάμψεις.
- *
- * Το σχήμα απόκρισης είναι το **ίδιο** {@link TableFormatState} κάθε χειριστηρίου, όχι δίδυμό του:
- * οι τρεις ερωτήσεις («τι ισχύει / συμφωνούν; / ποιος το είπε;») είναι οι ίδιες τρεις, και δύο
- * σχήματα θα ήταν ο structural clone που πιάνει το CHECK 3.28 ανεξάρτητα ονομάτων (N.18).
- *
- * ## Κενή επιλογή = ο δρομέας
- * `start === end` (κέρσορας χωρίς επιλογή) απαντά για τον χαρακτήρα **αριστερά** — ίδιος
- * κανόνας με τη μετατόπιση, ώστε «τι θα πάρει ό,τι γράψω τώρα» και «τι δείχνει το κουμπί» να
- * είναι η ίδια απάντηση. Δύο κανόνες εδώ θα σήμαιναν κουμπί που δεν προβλέπει το αποτέλεσμά του.
- */
-export function resolveCellRunFormat<K extends TableTextRunStyleKey>(
-  runs: readonly TableCellTextRun[] | undefined,
-  textLength: number,
-  range: TableTextRange,
-  key: K,
-  inherited: NonNullable<TableTextRunStyle[K]>,
-): TableFormatState<NonNullable<TableTextRunStyle[K]>> {
-  const styles = expandStyles(runs, textLength);
-  const { start, end } = clampRange(range, textLength);
-  const from = start === end ? Math.max(0, start - 1) : start;
-  const to = start === end ? from + 1 : end;
-
-  let value: NonNullable<TableTextRunStyle[K]> | undefined;
-  let overridden = false;
-  let mixed = false;
-
-  for (let i = from; i < to; i += 1) {
-    const declared = styles[i]?.[key];
-    const current = (declared ?? inherited) as NonNullable<TableTextRunStyle[K]>;
-    if (declared !== undefined) overridden = true;
-    if (i === from) value = current;
-    else if (current !== value) mixed = true;
-  }
-
-  // Εύρος εκτός κειμένου (κενό κελί, μπαγιάτικη επιλογή): κληρονομιά, τίποτα ρητό.
-  if (value === undefined) return { value: inherited, mixed: false, overridden: false };
-  return { value: mixed ? undefined : value, mixed, overridden };
-}
-
-/** Δηλώνει το κελί **οτιδήποτε** ρητά σε αυτό το εύρος; Η ερώτηση της «Απαλοιφής». */
-export function hasCellRunStyles(
-  runs: readonly TableCellTextRun[] | undefined,
-  textLength: number,
-  range: TableTextRange,
-): boolean {
-  if (!runs || runs.length === 0) return false;
-  const { start, end } = clampRange(range, textLength);
-  return runs.some((run) => run.start < end && run.end > start);
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
 // Ιδιωτικά — η μία μηχανική
 // ──────────────────────────────────────────────────────────────────────────────
 
@@ -323,7 +280,7 @@ function editStyles(
  * κόστος της ανοχής είναι μηδέν (η τελευταία εγγραφή κερδίζει)· το κόστος της εμπιστοσύνης θα
  * ήταν σιωπηλά κατεστραμμένο κείμενο.
  */
-function expandStyles(
+export function expandStyles(
   runs: readonly TableCellTextRun[] | undefined,
   textLength: number,
 ): (TableTextRunStyle | undefined)[] {
@@ -425,8 +382,27 @@ function sameOrNew(
   return identical ? previous : next;
 }
 
+/**
+ * 🔴 **Ποιους χαρακτήρες κοιτά ΜΙΑ ΑΝΑΓΝΩΣΗ** — ο ΕΝΑΣ κανόνας, για κάθε αναγνώστη.
+ *
+ * Δύο αναγνώστες ρωτούν διαφορετικά πράγματα για την **ίδια** διαδρομή («συμφωνούν;» και
+ * «ποια τα άκρα;»), και ο κανόνας «κενή επιλογή ⇒ ο χαρακτήρας **αριστερά**» πρέπει να είναι
+ * ένας: δύο εκφράσεις του θα σήμαιναν κουμπί που **δείχνει** την κατάσταση ενός χαρακτήρα και
+ * **γράφει** σε άλλον — απόκλιση ορατή μόνο με τον δρομέα σε ένα συγκεκριμένο σημείο.
+ *
+ * ⚠️ Το `to` μπορεί να ξεπεράσει το `textLength` στο **κενό** κείμενο (`from = to = 0` ⇒ ο
+ * βρόχος δεν τρέχει), και αυτό είναι σωστό: `styles[i]` είναι τότε `undefined` και ο κάθε
+ * αναγνώστης πέφτει στην κληρονομιά — καμία ειδική περίπτωση σε δύο σημεία.
+ */
+export function effectiveRange(range: TableTextRange, textLength: number): { from: number; to: number } {
+  const { start, end } = clampRange(range, textLength);
+  if (start !== end) return { from: start, to: end };
+  const from = Math.max(0, start - 1);
+  return { from, to: Math.min(from + 1, Math.max(0, textLength)) };
+}
+
 /** Το εύρος μέσα στα όρια του κειμένου, με τα άκρα σε σειρά. Μπαγιάτικη επιλογή ⇒ κενό. */
-function clampRange(range: TableTextRange, textLength: number): TableTextRange {
+export function clampRange(range: TableTextRange, textLength: number): TableTextRange {
   const limit = Math.max(0, textLength);
   const lo = Math.min(range.start, range.end);
   const hi = Math.max(range.start, range.end);

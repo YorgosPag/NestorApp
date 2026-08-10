@@ -27,10 +27,11 @@ import {
   TABLE_NUMBER_KIND_SLOTS,
 } from './TableNumberFormatSection';
 import {
-  TABLE_FORMAT_COLOR_SLOTS,
+  TABLE_FORMAT_FILL_COLOR_SLOTS,
   TABLE_FORMAT_PAINTER_SLOTS,
   TABLE_FORMAT_RESET_SLOTS,
   TABLE_FORMAT_SIZE_SLOTS,
+  TABLE_FORMAT_TEXT_COLOR_SLOTS,
   TABLE_FORMAT_TOGGLE_SLOTS,
   TABLE_FORMAT_UNDERLINE_SLOTS,
 } from './TableFormatSection';
@@ -60,6 +61,22 @@ export interface TableToolbarPresence {
    * το `format` θα σήμαινε ότι τα δύο κουμπιά καταλαμβάνουν θέσεις roving χωρίς να αποδίδονται.
    */
   readonly overflow: boolean;
+  /**
+   * 🔴 ADR-753 Φ4 — **τα τέσσερα χειριστήρια του `format` που μπορεί να λείπουν μεμονωμένα.**
+   *
+   * Μέχρι τη Φ4 η μορφοποίηση ήταν **αδιαίρετη**: ή και τα εννιά χειριστήρια, ή κανένα. Το mini
+   * toolbar της **επεξεργασίας κελιού** έδειξε ότι η υπόθεση ήταν λάθος — εκεί ο χρήστης
+   * δείχνει γράμματα, και το Excel εμφανίζει **μόνο** τα χειριστήρια που έχουν νόημα ανά
+   * χαρακτήρα (μετρημένο από τον ιδιοκτήτη πάνω σε στιγμιότυπο).
+   *
+   * ⚠️ Χωριστά πεδία και όχι ένα `format: 'all' | 'text-edit'`: μια ονομασμένη «εκδοχή» θα
+   * κωδικοποιούσε **πολιτική** μέσα στην αρίθμηση θέσεων, δηλαδή ο επόμενος ξενιστής θα έπρεπε
+   * ή να χωρέσει σε μία από τις δύο ή να προσθέσει τρίτη. Η παρουσία μένει **δεδομένο**.
+   */
+  readonly formatFill: boolean;
+  readonly formatUnderline: boolean;
+  readonly formatPainter: boolean;
+  readonly formatReset: boolean;
 }
 
 /**
@@ -79,7 +96,9 @@ export interface TableToolbarSlots {
   // ── Σειρά 2 ────────────────────────────────────────────────────────────────
   readonly toggles: number;
   readonly align: number;
-  readonly colors: number;
+  /** 🔴 ADR-753 Φ4 — **δύο** μετρητές πλέον: το γέμισμα μπορεί να λείπει χωρίς το μελάνι. */
+  readonly fillColor: number;
+  readonly textColor: number;
   readonly borders: number;
   readonly decimals: number;
   readonly formatPainter: number;
@@ -106,6 +125,7 @@ export function planTableToolbarSlots(presence: TableToolbarPresence): TableTool
   };
 
   const { fonts, format, numberFormat, align, borders, merge, overflow } = presence;
+  const { formatFill, formatUnderline, formatPainter, formatReset } = presence;
 
   return {
     fontControls: take(TABLE_FONT_CONTROL_SLOTS, fonts),
@@ -115,14 +135,17 @@ export function planTableToolbarSlots(presence: TableToolbarPresence): TableTool
 
     toggles: take(TABLE_FORMAT_TOGGLE_SLOTS, format),
     align: take(TABLE_ALIGN_SLOTS, align),
-    colors: take(TABLE_FORMAT_COLOR_SLOTS, format),
+    // 🔴 ADR-753 Φ4 — τα τέσσερα προαιρετικά απαιτούν **και** το διαμέρισμα: χωρίς `format` δεν
+    // υπάρχει κατάσταση να δείξουν, όσο κι αν ο ξενιστής τα ζήτησε.
+    fillColor: take(TABLE_FORMAT_FILL_COLOR_SLOTS, format && formatFill),
+    textColor: take(TABLE_FORMAT_TEXT_COLOR_SLOTS, format),
     borders: take(TABLE_BORDER_SLOTS, borders),
     decimals: take(TABLE_DECIMAL_SLOTS, numberFormat),
-    formatPainter: take(TABLE_FORMAT_PAINTER_SLOTS, format),
+    formatPainter: take(TABLE_FORMAT_PAINTER_SLOTS, format && formatPainter),
 
-    underline: take(TABLE_FORMAT_UNDERLINE_SLOTS, format),
+    underline: take(TABLE_FORMAT_UNDERLINE_SLOTS, format && formatUnderline),
     merge: take(TABLE_MERGE_SLOTS, merge),
-    reset: take(TABLE_FORMAT_RESET_SLOTS, format),
+    reset: take(TABLE_FORMAT_RESET_SLOTS, format && formatReset),
 
     total: cursor,
   };

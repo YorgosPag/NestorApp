@@ -77,7 +77,16 @@ export interface TableFormatSectionProps {
   readonly format: TableFormatSnapshot;
   readonly onToggle: (key: TableToggleFormatKey) => void;
   readonly onStepSize: (direction: TextHeightStepDirection) => void;
-  readonly onReset: () => void;
+  /**
+   * 🔴 ADR-753 Φ4 — **προαιρετικός: απόν ⇒ το κουμπί δεν αποδίδεται καθόλου.**
+   *
+   * Ο κανόνας των διαμερισμάτων του δοχείου («μην υπόσχεσαι ό,τι δεν κάνεις»), ένα επίπεδο πιο
+   * μέσα. Το mini toolbar της **επεξεργασίας κελιού** δεν έχει «Επαναφορά», γιατί δεν την έχει
+   * ούτε το Excel εκεί — και η απουσία του **χειριστή** είναι η δήλωση, όχι μια δεύτερη σημαία
+   * δίπλα σε έναν χειριστή που κανείς δεν καλεί. Ένας ξενιστής που δίνει χειριστή τον οποίο η
+   * γραμμή δεν εμφανίζει (ή το αντίστροφο) γίνεται έτσι **μη εκφράσιμος**.
+   */
+  readonly onReset?: () => void;
   /**
    * ADR-739 Φ.Ε/Φ4 — το χρώμα **κειμένου** του άξονα, σε **μία** εντολή:
    * `hex` ρητό χρώμα · `undefined` «Αυτόματο» (αφαίρεση του πεδίου ⇒ κληρονομιά).
@@ -94,8 +103,33 @@ export interface TableFormatSectionProps {
    * Ένα prop και όχι τρία: είναι η δοκτρίνα που το ίδιο το `types/table.ts` γράφει για το
    * μοντέλο («**ένα** πεδίο, τρεις απαντήσεις — ποτέ δεύτερο παράλληλο boolean»), εφαρμοσμένη
    * ένα επίπεδο ψηλότερα. Τρεις εντολές θα ήταν τρεις δρόμοι προς την ίδια εγγραφή.
+   *
+   * 🔴 ADR-753 Φ4 — **προαιρετικός**, ίδιος κανόνας με το {@link onReset}: το γέμισμα είναι
+   * ιδιότητα του **κελιού**, και το mini toolbar της επεξεργασίας δείχνει γράμματα. Το Excel
+   * δεν το εμφανίζει εκεί, και ο ιδιοκτήτης το επιβεβαίωσε πάνω σε στιγμιότυπο.
    */
-  readonly onSetFillColor: (value: string | null | undefined) => void;
+  readonly onSetFillColor?: (value: string | null | undefined) => void;
+  /**
+   * 🔴 ADR-753 Φ4 — **η υπογράμμιση**· `false` ⇒ δεν αποδίδεται.
+   *
+   * ## Γιατί σημαία και όχι απουσία χειριστή, όπως τα δύο από πάνω
+   * Ο κανόνας παραμένει **ένας**: *το χειριστήριο αποδίδεται όταν ο ξενιστής έδωσε ό,τι
+   * χρειάζεται για να δουλέψει.* Για τα δύο από πάνω, «ό,τι χρειάζεται» **είναι** ο χειριστής
+   * τους. Η υπογράμμιση όμως μοιράζεται τον {@link onToggle} με τα Β/Ι — η παρουσία της δεν
+   * **λέγεται** από κανένα prop, και γι' αυτό (και μόνο γι' αυτό) δηλώνεται ρητά.
+   *
+   * **Υποχρεωτική**, όχι προαιρετική με προεπιλογή: μια προεπιλογή θα σήμαινε ότι ο επόμενος
+   * ξενιστής παίρνει σιωπηλά μια απόφαση διεπαφής που δεν πήρε ποτέ κανείς.
+   */
+  readonly showUnderline: boolean;
+  /**
+   * 🔴 ADR-753 Φ4 — **το πινέλο μορφοποίησης**· `false` ⇒ δεν αποδίδεται.
+   *
+   * Σημαία για τον ίδιο ακριβώς λόγο με το {@link showUnderline}, στην ακραία του μορφή: το
+   * κουμπί **δεν διαβάζει τίποτα** από αυτό το αντικείμενο (ADR-768 Βήμα 5 — διαβάζει μόνο του
+   * τη θύρα), οπότε δεν υπάρχει κανένα prop του οποίου η απουσία θα μπορούσε να το δηλώσει.
+   */
+  readonly showFormatPainter: boolean;
   /** Η θέση roving του **i-οστού** χειριστηρίου **αυτού του θραύσματος**· ο γονέας ξέρει το offset. */
   readonly rovingOf: (index: number) => RovingItemProps;
 }
@@ -105,8 +139,18 @@ const ROW_TOGGLES: readonly TableToggleFormatKey[] = ['bold', 'italic'];
 
 /** Β · Ι */
 export const TABLE_FORMAT_TOGGLE_SLOTS = ROW_TOGGLES.length;
-/** Κάθε split button χρώματος είναι **δύο** εστιάσιμα μισά, όχι ένα — και τα χρώματα είναι δύο. */
-export const TABLE_FORMAT_COLOR_SLOTS = 4;
+/**
+ * Κάθε split button χρώματος είναι **δύο** εστιάσιμα μισά, όχι ένα.
+ *
+ * 🔴 ADR-753 Φ4 — ήταν **ένα** `TABLE_FORMAT_COLOR_SLOTS = 4` για τα δύο χρώματα μαζί. Η
+ * διάσπαση δεν είναι καλλωπισμός: από τη στιγμή που το γέμισμα μπορεί να **λείπει** (mini
+ * toolbar επεξεργασίας), ένας κοινός μετρητής θα κρατούσε τις δύο θέσεις του δεσμευμένες και
+ * το `→` θα σταματούσε σε κουμπί που δεν υπάρχει — ακριβώς ό,τι προειδοποιεί το
+ * `table-format-toolbar-slots.ts` («κανένα πλήθος δεν γράφεται με το χέρι»).
+ */
+export const TABLE_FORMAT_FILL_COLOR_SLOTS = 2;
+/** Το χρώμα **κειμένου** — δες {@link TABLE_FORMAT_FILL_COLOR_SLOTS}. */
+export const TABLE_FORMAT_TEXT_COLOR_SLOTS = 2;
 /** A↑ · A↓ */
 export const TABLE_FORMAT_SIZE_SLOTS = 2;
 /** Υ — το **τρίτο τμήμα**, μέρος 1 (δες {@link TableFormatUnderlineButton}). */
@@ -175,7 +219,12 @@ export function TableFormatToggles(props: TableFormatSectionProps): React.ReactE
 }
 
 /**
- * **Σειρά 2, θέσεις 4-5** — Χρώμα γεμίσματος, μετά Χρώμα γραμματοσειράς.
+ * **Σειρά 2, θέση 4** — Χρώμα γεμίσματος· `null` όταν ο ξενιστής δεν το προσφέρει.
+ *
+ * 🔴 ADR-753 Φ4 — ήταν **ένα** θραύσμα με τα δύο χρώματα μαζί (`TableFormatColors`). Χώρισαν
+ * όταν το γέμισμα απέκτησε ξενιστή που **δεν** το δείχνει: ένα θραύσμα που αποδίδει άλλοτε ένα
+ * και άλλοτε δύο χειριστήρια θα έπρεπε να δηλώνει **μεταβλητό** πλήθος θέσεων roving, δηλαδή θα
+ * έσπαγε τον κανόνα «κάθε τμήμα δηλώνει το δικό του» ακριβώς εκεί που τον χρειάζεται.
  *
  * ## 🔴 Η ΣΕΙΡΑ ΑΝΤΙΣΤΡΑΦΗΚΕ ΜΕ ΡΗΤΗ ΕΝΤΟΛΗ (§55) — η ιστορία μένει
  * Εδώ έγραφε: «*η σειρά είναι αντίστροφη επίτηδες: το χρώμα κειμένου γράφτηκε πρώτο και η μνήμη
@@ -188,26 +237,39 @@ export function TableFormatToggles(props: TableFormatSectionProps): React.ReactE
  * Το επιχείρημα της μνήμης χεριού δεν ήταν λάθος — ήταν **λιγότερο βαρύ** από την ταύτιση με το
  * εργαλείο που ο χρήστης ξέρει ήδη, και μόνο ο ιδιοκτήτης μπορούσε να ζυγίσει τα δύο.
  */
-export function TableFormatColors(props: TableFormatSectionProps): React.ReactElement {
-  const { format, onSetTextColor, onSetFillColor, rovingOf } = props;
+export function TableFormatFillColor(props: TableFormatSectionProps): React.ReactElement | null {
+  const { format, onSetFillColor, rovingOf } = props;
+  if (!onSetFillColor) return null;
 
   return (
-    <>
-      <TableAxisColorMenu
-        role="fill"
-        rovingApply={rovingOf(0)}
-        rovingMenu={rovingOf(1)}
-        state={format.fillColor}
-        onSet={onSetFillColor}
-      />
-      <TableAxisColorMenu
-        role="ink"
-        rovingApply={rovingOf(2)}
-        rovingMenu={rovingOf(3)}
-        state={format.textColor}
-        onSet={onSetTextColor}
-      />
-    </>
+    <TableAxisColorMenu
+      role="fill"
+      rovingApply={rovingOf(0)}
+      rovingMenu={rovingOf(1)}
+      state={format.fillColor}
+      onSet={onSetFillColor}
+    />
+  );
+}
+
+/**
+ * **Σειρά 2, θέση 5** — Χρώμα γραμματοσειράς· δες {@link TableFormatFillColor} για τη σειρά.
+ *
+ * Χωρίς φρουρό: το χρώμα **κειμένου** είναι το μόνο από τα δύο που έχει νόημα και ανά
+ * χαρακτήρα, άρα το δίνει **κάθε** ξενιστής — και ένα προαιρετικό prop που κανείς δεν
+ * παραλείπει ποτέ θα ήταν φρουρός χωρίς απόδειξη ζωής (ADR-749 §5).
+ */
+export function TableFormatTextColor(props: TableFormatSectionProps): React.ReactElement {
+  const { format, onSetTextColor, rovingOf } = props;
+
+  return (
+    <TableAxisColorMenu
+      role="ink"
+      rovingApply={rovingOf(0)}
+      rovingMenu={rovingOf(1)}
+      state={format.textColor}
+      onSet={onSetTextColor}
+    />
   );
 }
 
@@ -282,7 +344,13 @@ export function TableFormatSizeButtons(props: TableFormatSectionProps): React.Re
  * ⚠️ Δύο θραύσματα και όχι ένα, επειδή **ανάμεσά τους** μπαίνει η συγχώνευση — που είναι
  * ξεχωριστό, προαιρετικό διαμέρισμα του δοχείου και μπορεί να λείπει.
  */
-export function TableFormatUnderlineButton(props: TableFormatSectionProps): React.ReactElement {
+export function TableFormatUnderlineButton(
+  props: TableFormatSectionProps,
+): React.ReactElement | null {
+  // 🔴 ADR-753 Φ4 — το Excel **δεν** έχει υπογράμμιση στο mini toolbar της επεξεργασίας κελιού,
+  // και ο ιδιοκτήτης το μέτρησε. Ο ΝΕΣΤΩΡ την κρατά στις **δύο** υποδοχές που δείχνουν κελιά.
+  if (!props.showUnderline) return null;
+
   return (
     <ToggleButton
       section={props}
@@ -301,9 +369,13 @@ export function TableFormatUnderlineButton(props: TableFormatSectionProps): Reac
  * τμήματος (καθαρίζει ό,τι έγραψαν όλα τα προηγούμενα), και μια αναιρετική πράξη δίπλα στα
  * κουμπιά που αναιρεί είναι ένα λάθος κλικ μακριά από το να σβήσει τη δουλειά του χρήστη.
  */
-export function TableFormatResetButton(props: TableFormatSectionProps): React.ReactElement {
+export function TableFormatResetButton(
+  props: TableFormatSectionProps,
+): React.ReactElement | null {
   const { format, onReset, rovingOf } = props;
   const { t } = useTranslation('dxf-viewer');
+  // Απών χειριστής ⇒ ο ξενιστής δεν προσφέρει την πράξη· δες {@link TableFormatSectionProps.onReset}.
+  if (!onReset) return null;
 
   return (
     <ToolbarButton

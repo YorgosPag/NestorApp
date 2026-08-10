@@ -103,6 +103,9 @@ import {
   TABLE_CELL_EDITOR_WRITING_STYLE,
 } from './table-cell-editor-vars';
 import { useTableCellSessionKeys } from './use-table-cell-session-keys';
+// 🔴 ADR-739 §67 — το δεξί κλικ **μέσα** στο κουτί. Χωρίς αυτό ο browser δείχνει το δικό του
+// μενού: το κουτί ζει έξω από το δοχείο όπου ακούει ο δρομολογητής του καμβά (δες τη θύρα).
+import { useTableTextContextMenu } from './use-table-text-context-menu';
 import {
   TABLE_CELL_SESSION_MARKER,
   useTableCellSessionBlur,
@@ -288,6 +291,16 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     restartTableCellCursorSession,
   );
 
+  /**
+   * 🔴 ADR-739 §67 — **το δεξί κλικ μέσα στο κείμενο.**
+   *
+   * Σε **πλοήγηση** δεν φτάνει ποτέ εδώ: το κέλυφος είναι `pointer-events-none` και το συμβάν
+   * πέφτει στον καμβά, όπου ο δρομολογητής ανοίγει κανονικά το μενού **περιοχής**. Σε **γραφή**
+   * το κουτί είναι πατήσιμο (τοποθέτηση κέρσορα) — και ακριβώς τότε γεννιόταν το ελάττωμα, γιατί
+   * το κουτί ζει **έξω** από το δοχείο όπου ακούει εκείνος ο δρομολογητής.
+   */
+  const handleContextMenu = useTableTextContextMenu();
+
   const writing = mode !== 'nav';
 
   return (
@@ -325,6 +338,9 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        // 🔴 ADR-739 §67 — Excel parity: μενού **κειμένου** + mini toolbar, ποτέ το native του
+        // browser. Το `preventDefault` το κάνει ο χειριστής **μόνο** αν άνοιξε μενού.
+        onContextMenu={handleContextMenu}
         // 🔴 ADR-739 Φ.Δ βήμα 8 — τα **φυσικά** συμβάντα προχείρου του browser, όχι
         // πλήκτρα. Σε πλοήγηση τα αναλαμβάνει η **περιοχή** (TSV)· σε γραφή τα αφήνουν
         // αυτούσια στον browser, που αντιγράφει κείμενο **μέσα** στο κελί σωστά και

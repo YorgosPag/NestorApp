@@ -338,6 +338,10 @@ const TableHeaderContextMenuInner = forwardRef<TableHeaderContextMenuHandle, Tab
           surfaceRef={toolbarRef}
           format={{
             format: target.format,
+            // 🔴 ADR-753 Φ4 — ο στόχος εδώ είναι **άξονας**, δηλαδή κελιά: και τα εννιά
+            // χειριστήρια έχουν νόημα. Δηλώνεται ρητά ώστε η επόμενη προσθήκη να μη μαντέψει.
+            showUnderline: true,
+            showFormatPainter: true,
             onToggle: (key) => runFormat((hit) => onToggleFormat(hit, key)),
             onStepSize: (direction) => runFormat((hit) => onStepTextHeight(hit, direction)),
             onReset: () => runFormat(onResetFormat),

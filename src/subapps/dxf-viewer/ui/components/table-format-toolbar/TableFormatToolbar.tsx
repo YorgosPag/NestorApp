@@ -105,9 +105,10 @@ import {
 // γνώση μορφοποίησης: δεν μοιράζεται το `TableFormatSectionProps` με τα υπόλοιπα θραύσματα.
 import { TableFormatPainterButton } from './TableFormatPainterButton';
 import {
-  TableFormatColors,
+  TableFormatFillColor,
   TableFormatResetButton,
   TableFormatSizeButtons,
+  TableFormatTextColor,
   TableFormatToggles,
   TableFormatUnderlineButton,
   type TableFormatSectionProps,
@@ -220,6 +221,13 @@ export function TableFormatToolbar(props: TableFormatToolbarProps): React.ReactE
     borders: borders !== undefined,
     merge: merge !== undefined,
     overflow: overflow !== undefined,
+    // 🔴 ADR-753 Φ4 — η παρουσία των τεσσάρων διαβάζεται **από τα ίδια props** που κρίνουν και
+    // τα θραύσματα (απών χειριστής · ρητή σημαία). Ένα δεύτερο κριτήριο εδώ θα ήταν η κλασική
+    // απόκλιση «η αρίθμηση λέει ναι, ο ζωγράφος λέει όχι»: στάση `Tab` σε κουμπί που δεν υπάρχει.
+    formatFill: format?.onSetFillColor !== undefined,
+    formatReset: format?.onReset !== undefined,
+    formatUnderline: format?.showUnderline === true,
+    formatPainter: format?.showFormatPainter === true,
   });
   const roving = useRovingToolbar(slots.total);
 
@@ -332,6 +340,8 @@ function ToolbarRowOne({ toolbar, slots, roving }: ToolbarRowProps): React.React
 function ToolbarRowTwo({ toolbar, slots, roving }: ToolbarRowProps): React.ReactElement | null {
   const { format, align, borders, numberFormat, merge } = toolbar;
   const hasStart = Boolean(format || align || borders || numberFormat);
+  // 🔴 ADR-753 Φ4 — **τι υπάρχει όντως** στο τρίτο τμήμα, όχι «υπάρχει μορφοποίηση;».
+  const hasThird = Boolean(format?.showUnderline || merge || format?.onReset);
   if (!hasStart && !merge) return null;
 
   return (
@@ -345,7 +355,12 @@ function ToolbarRowTwo({ toolbar, slots, roving }: ToolbarRowProps): React.React
         ομαδοποίησή τους στη σειρά 2 του Excel.
       */}
       <Separator when={format !== undefined || align !== undefined} />
-      {format ? <TableFormatColors {...format} rovingOf={offsetOf(roving, slots.colors)} /> : null}
+      {format ? (
+        <TableFormatFillColor {...format} rovingOf={offsetOf(roving, slots.fillColor)} />
+      ) : null}
+      {format ? (
+        <TableFormatTextColor {...format} rovingOf={offsetOf(roving, slots.textColor)} />
+      ) : null}
       {borders ? <TableBorderMenu roving={roving.itemProps(slots.borders)} {...borders} /> : null}
 
       <Separator when={numberFormat !== undefined && hasStart} />
@@ -360,14 +375,21 @@ function ToolbarRowTwo({ toolbar, slots, roving }: ToolbarRowProps): React.React
         ⚠️ Ο φρουρός `format ?` μένει: όταν λείπει ο στόχος μορφοποίησης, λείπει και το πινέλο.
         Έτσι η θέση 9 του Excel δεν μετακινείται όταν το τμήμα εμφανίζεται μερικώς.
       */}
-      {format ? <TableFormatPainterButton roving={roving.itemProps(slots.formatPainter)} /> : null}
+      {format?.showFormatPainter ? (
+        <TableFormatPainterButton roving={roving.itemProps(slots.formatPainter)} />
+      ) : null}
 
       {/*
         ‖ **Το τρίτο τμήμα**: υπογράμμιση, συγχώνευση, επαναφορά — ό,τι έχει ο ΝΕΣΤΩΡ παραπάνω
         από το Excel. Ο διαχωριστής δεν είναι διακόσμηση: κρατά τις εννιά θέσεις του Excel
         καθαρές στα αριστερά του.
+
+        🔴 ADR-753 Φ4 — ο όρος ήταν `format || merge`, δηλαδή «υπάρχει μορφοποίηση» ⇒ «υπάρχει
+        τρίτο τμήμα». Έπαψε να ισχύει τη στιγμή που η μορφοποίηση μπορεί να έρθει **χωρίς
+        κανένα** από τα τρία (mini toolbar επεξεργασίας κελιού): η γραμμή θα τελείωνε με
+        διαχωριστή που δεν χωρίζει τίποτα — δηλαδή θα δήλωνε ένα τμήμα που δεν υπάρχει.
       */}
-      <Separator when={Boolean(format || merge) && hasStart} />
+      <Separator when={hasThird && hasStart} />
       {format ? (
         <TableFormatUnderlineButton {...format} rovingOf={offsetOf(roving, slots.underline)} />
       ) : null}

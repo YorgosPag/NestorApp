@@ -104,6 +104,8 @@ function renderAxisToolbar(state: TableMergeState = FREE) {
       surfaceRef={surfaceRef}
       format={{
         format: FORMAT,
+        showUnderline: true,
+        showFormatPainter: true,
         onToggle: noop,
         onStepSize: noop,
         onReset: noop,

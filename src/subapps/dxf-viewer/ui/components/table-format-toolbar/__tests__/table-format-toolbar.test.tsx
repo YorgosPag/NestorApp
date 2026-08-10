@@ -161,6 +161,8 @@ function renderToolbar(overrides: ToolbarOverrides = {}) {
       surfaceRef={surfaceRef}
       format={formatSection === null ? undefined : formatSection ?? {
         format: format ?? SAMPLE_FORMAT,
+        showUnderline: true,
+        showFormatPainter: true,
         onToggle,
         onStepSize,
         onReset,
