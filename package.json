@@ -312,7 +312,11 @@
     "test:zindex-scale": "jest scripts/__tests__/check-zindex-scale.test.js --verbose",
     "shell-boundary:check": "node scripts/check-shell-boundary.js --all",
     "shell-boundary:report": "node scripts/check-shell-boundary.js --report",
-    "test:shell-boundary": "jest scripts/__tests__/check-shell-boundary.test.js --verbose"
+    "test:shell-boundary": "jest scripts/__tests__/check-shell-boundary.test.js --verbose",
+    "adr-section-refs:check": "node scripts/check-adr-section-refs.js --all",
+    "adr-section-refs:report": "node scripts/check-adr-section-refs.js --report",
+    "adr-section-refs:baseline": "node scripts/check-adr-section-refs.js --write-baseline",
+    "test:adr-section-refs": "jest scripts/__tests__/check-adr-section-refs.test.js --verbose"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",

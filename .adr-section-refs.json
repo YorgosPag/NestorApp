@@ -1,0 +1,34 @@
+{
+  "$schema-note": "CHECK 3.53 — κλειστό σύνολο δηλώσεων. Πρότυπο Kubernetes KEP: φυλάσσεται ό,τι δηλώνεται εδώ, όχι κάθε ADR του δέντρου. Μια οικογένεια που σπάει σε SPEC ΧΩΡΙΣ γραμμή εδώ δεν φυλάσσεται — γι' αυτό η κατάσταση «unbonded» τυπώνεται πάντα.",
+  "$why-not-all": "Μόλις 8/824 έγγραφα έχουν YAML frontmatter. Καθολική επιβολή θα παρήγαγε θόρυβο πολύ πάνω από τον πήχη <10% ψευδώς θετικών, και μια μονίμως κόκκινη πύλη παρακάμπτεται με SKIP_ — δηλαδή γίνεται διακοσμητική (δοκιμάστηκε και απορρίφθηκε ρητά στο CHECK 3.39).",
+  "families": {
+    "ADR-739": {
+      "why": "Χώρος ονομάτων, όχι έγγραφο: 1.104 εξωτερικοί δείκτες §NN από tracked αρχεία (996 σε src/subapps, 82 σε docs, 5 στο .ssot-registry.json, 1 στο ίδιο το CLAUDE.md), 1.394 εσωτερικοί και 586 φασικοί. Επτά είχαν ήδη αποκλίνει πριν γραφτεί η πύλη.",
+      "hub": "docs/centralized-systems/reference/adrs/ADR-739-canvas-table-system.md",
+      "members": [
+        "docs/centralized-systems/reference/adrs/specs/SPEC-739A-model-and-rendering.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-739B1-cell-and-text.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-739B2-structure-and-pointer.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-739C-formulas.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-739D-excel-parity.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-739-CHANGELOG.md"
+      ],
+      "phases": {
+        "$note": "Το φασικό λεξιλόγιο (Φ.Α…Φ.Θ) ΔΕΝ έχει άγκυρα — οι φάσεις δεν είναι συνεχόμενες (Φ.Ε = §28+§34+§35) και το «Β» έχει δύο σημασίες («Φάση Β» = απορρόφηση ADR-622 · «ΕΠΙΠΕΔΟ Β» = δεσμός γραμμής→οντοτήτων). Δρομολογείται ρητά, δεν μπλοκάρει."
+      }
+    },
+    "ADR-777": {
+      "why": "Το §0.4 του ίδιου του εγγράφου ορίζει «συμβόλαιο δεσμών» και δηλώνει ότι η κλειστή λογιστική ενοτήτων είναι «μηχανικά ελέγξιμη και όχι υπόσχεση» — και μέχρι το CHECK 3.53 ΚΑΜΙΑ πύλη δεν το εκτελούσε. Σχήμα CHECK 3.36: ένα anchor χωρίς gate είναι σχόλιο.",
+      "hub": "docs/centralized-systems/reference/adrs/ADR-777-unified-property-map-search.md",
+      "members": [
+        "docs/centralized-systems/reference/adrs/specs/SPEC-777A-land-building-property-hierarchy.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-777B-demand-market-matching.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-777C-configurator-materials-revenue.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-777D-screens-desktop-mobile.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-777-CHANGELOG.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-777-QA.md",
+        "docs/centralized-systems/reference/adrs/specs/SPEC-777-RESEARCH.md"
+      ]
+    }
+  }
+}

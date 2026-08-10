@@ -50,6 +50,15 @@ on:
       - 'scripts/check-shell-boundary.js'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
+      # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
+      # έγγραφα είναι είσοδοι: η διαγραφή μιας επικεφαλίδας κάνει αδέσποτους δείκτες σε
+      # αρχεία που κανείς δεν άγγιξε (996 από τους 1.104 ζουν στο `src/subapps`, που ήδη
+      # καλύπτεται παραπάνω). Η πύλη και το κλειστό σύνολο δηλώσεων επίσης.
+      - 'docs/centralized-systems/reference/adrs/**/*.md'
+      - 'scripts/check-adr-section-refs.js'
+      - 'scripts/lib/adr-sections/**'
+      - '.adr-section-refs.json'
+      - '.adr-section-refs-baseline.json'
       # ADR-780 Φάση Β — το ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ: το μητρώο και τα αρχεία εξαρτήσεων είναι
       # είσοδοι της απογραφής του node_modules. Ένα npm i με z-index: 99999 δεν αγγίζει
       # κανένα αρχείο πηγής — χωρίς αυτά θα περνούσε αθέατο.
@@ -86,6 +95,15 @@ on:
       - 'scripts/check-shell-boundary.js'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
+      # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
+      # έγγραφα είναι είσοδοι: η διαγραφή μιας επικεφαλίδας κάνει αδέσποτους δείκτες σε
+      # αρχεία που κανείς δεν άγγιξε (996 από τους 1.104 ζουν στο `src/subapps`, που ήδη
+      # καλύπτεται παραπάνω). Η πύλη και το κλειστό σύνολο δηλώσεων επίσης.
+      - 'docs/centralized-systems/reference/adrs/**/*.md'
+      - 'scripts/check-adr-section-refs.js'
+      - 'scripts/lib/adr-sections/**'
+      - '.adr-section-refs.json'
+      - '.adr-section-refs-baseline.json'
       # ADR-780 Φάση Β — το ΣΥΝΟΡΟ ΤΩΝ ΤΡΙΤΩΝ: το μητρώο και τα αρχεία εξαρτήσεων είναι
       # είσοδοι της απογραφής του node_modules. Ένα npm i με z-index: 99999 δεν αγγίζει
       # κανένα αρχείο πηγής — χωρίς αυτά θα περνούσε αθέατο.
@@ -514,4 +532,64 @@ jobs:
             echo "ο λόγος **είναι** η απάντηση."
             echo ""
             echo "Απογραφή: \`npm run shell-boundary:report\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  adr-section-refs:
+    name: 🔗 ADR Section Identity Gate (CHECK 3.53)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        # ⚠️ ΠΛΗΡΕΣ ιστορικό: η πύλη διαβάζει το **index του git** (`git ls-files`), όχι τον
+        # δίσκο — ο δίσκος βλέπει untracked προσχέδια ⇒ άλλο αποτέλεσμα ανά εκτέλεση.
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (jest για τη σουίτα μετάλλαξης)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ. Το Layer 1 πυροδοτεί μόνο σε staged ADR/SPEC· η
+      # διαγραφή μιας επικεφαλίδας κάνει αδέσποτους δείκτες σε **αρχεία που κανείς δεν
+      # σταδιοποίησε** (996 από τους 1.104 ζουν στο `src/subapps`).
+      - name: 🔗 CHECK 3.53 — ταυτότητα ενοτήτων ADR (~2s)
+        run: pnpm run adr-section-refs:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.53"
+        run: pnpm run test:adr-section-refs
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.53 — ταυτότητα ενοτήτων ADR (ADR-739 §0.3 / ADR-777 §0.4)"
+            echo ""
+            echo "**Ο αριθμός ενότητας είναι ΣΥΜΒΟΛΑΙΟ — δεν επαναριθμείται ποτέ.**"
+            echo "Δείχνουν σε αυτόν ~2.500 δείκτες, 996 μόνο στο \`src/subapps\`."
+            echo ""
+            echo "| κατάσταση | τι σημαίνει | θεραπεία |"
+            echo "|---|---|---|"
+            echo "| \`dangling-section\` | ο δείκτης δεν υπάρχει **πουθενά** στην οικογένεια | διόρθωσε τον **δείκτη** — μην τον σβήσεις |"
+            echo "| \`ambiguous-section\` | δύο επικεφαλίδες με το ίδιο ID ⇒ ο δείκτης δεν προσδιορίζει θέση | δώσε στη **δεύτερη** δικό της, μοναδικό ID |"
+            echo "| \`prose-only\` | υπάρχει ως κείμενο, όχι ως επικεφαλίδα ⇒ καμία άγκυρα | κάνε την πραγματική επικεφαλίδα |"
+            echo "| \`orphan-section\` | ⛔ ενότητα εκτός \`sections:\` του αρχείου της | δήλωσέ την στο frontmatter |"
+            echo "| \`broken-bond\` | ⛔ λείπει \`parent:\` ή ο αντίστροφος δεσμός | συμβόλαιο ADR-777 §0.4 |"
+            echo ""
+            echo "⚠️ **ΜΗΝ** λύσεις κόκκινο σβήνοντας τον δείκτη χωρίς να δεις τι εννοούσε —"
+            echo "ο δείκτης είναι **η ερώτηση**, όχι ο θόρυβος."
+            echo ""
+            echo "Απογραφή: \`npm run adr-section-refs:report\`"
+            echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run adr-section-refs:baseline\`"
           } >> "$GITHUB_STEP_SUMMARY"
