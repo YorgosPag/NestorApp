@@ -36,6 +36,43 @@ else
     ! -path "*/i18n/locales/*")
 fi
 
+# =============================================================================
+# Ο ΑΞΟΝΑΣ ΑΠΟΜΟΝΩΣΗΣ ΔΕΝ ΕΙΝΑΙ ΠΑΝΤΑ Η ΕΤΑΙΡΕΙΑ — ΡΩΤΑ ΤΗΝ ΑΥΘΕΝΤΙΑ
+# =============================================================================
+# Ο έλεγχος παραπάνω ρωτά «υπάρχει η λέξη companyId;». Για τις συλλογές που το
+# `tenant-config.ts` δηλώνει `mode: 'userId'` (NOTIFICATIONS · PROPERTY_DEMANDS)
+# η σωστή απάντηση ΔΕΝ περιέχει companyId: μια ζήτηση ανήκει σε ΑΝΘΡΩΠΟ, και δύο
+# άξονες απομόνωσης για ένα έγγραφο σημαίνει δύο απαντήσεις στο «ποιος το βλέπει;».
+#
+# ⚠️ ΔΕΝ ΧΑΛΑΡΩΝΕΙ ΤΙΠΟΤΑ. Το εναλλακτικό πεδίο γίνεται δεκτό ΜΟΝΟ όταν το ίδιο
+# μπλοκ ονομάζει τη ΣΥΓΚΕΚΡΙΜΕΝΗ συλλογή που το SSoT δηλώνει userId-scoped, και
+# ΜΟΝΟ με το fieldName που δηλώνει εκείνο. Ένα `where('userId')` πάνω στα contacts
+# παραμένει παραβίαση. Η αυθεντία είναι το `tenant-config.ts` — η ίδια που διαβάζει
+# η CHECK 3.35 (ADR-747) — ποτέ χειρόγραφη λίστα εδώ.
+#
+# 🔑 Δεκτό και το ψευδώνυμο `FIELDS.<CONST>`: το SSoT των ονομάτων πεδίων είναι
+# υποχρεωτικό (ADR-747), οπότε ο ΣΩΣΤΟΣ κώδικας γράφει σταθερά και όχι literal —
+# κριτήριο μόνο σε literal θα μπλόκαρε ακριβώς όσους κάνουν το σωστό.
+# =============================================================================
+TENANT_CONFIG="$PROJECT_ROOT/src/services/firestore/tenant-config.ts"
+FIELD_CONSTANTS="$PROJECT_ROOT/src/config/firestore-field-constants.ts"
+
+declare -A USER_SCOPED_FIELD
+
+if [[ -f "$TENANT_CONFIG" ]]; then
+  while IFS= read -r line; do
+    key=$(echo "$line" | sed -n "s/^[[:space:]]*\([A-Z0-9_]*\):.*/\1/p")
+    field=$(echo "$line" | sed -n "s/.*fieldName:[[:space:]]*'\([^']*\)'.*/\1/p")
+    [[ -z "$key" || -z "$field" ]] && continue
+    alias_const=""
+    if [[ -f "$FIELD_CONSTANTS" ]]; then
+      alias_const=$(grep -oE "^[[:space:]]*[A-Z0-9_]+:[[:space:]]*'${field}'" "$FIELD_CONSTANTS" 2>/dev/null \
+        | head -1 | sed -n "s/^[[:space:]]*\([A-Z0-9_]*\):.*/\1/p")
+    fi
+    USER_SCOPED_FIELD["$key"]="${field}${alias_const:+|FIELDS\.$alias_const}"
+  done < <(grep -E "mode:[[:space:]]*'userId'" "$TENANT_CONFIG")
+fi
+
 # Count violations per file
 declare -A FILE_VIOLATIONS
 TOTAL_VIOLATIONS=0
@@ -56,7 +93,21 @@ for file in $INPUT_FILES; do
     # Get 12-line block from query( start
     block=$(sed -n "${lineno},$((lineno+11))p" "$file" 2>/dev/null)
     if echo "$block" | grep -q "where(" && ! echo "$block" | grep -q "companyId"; then
-      count=$((count + 1))
+      # Δεύτερη ερώτηση: μήπως η συλλογή είναι απομονωμένη ανά ΑΝΘΡΩΠΟ; Το μπλοκ
+      # πρέπει να ονομάζει ΚΑΙ τη συλλογή ΚΑΙ το πεδίο που δηλώνει το SSoT — αν
+      # ονομάζει τη συλλογή χωρίς το πεδίο, είναι παραβίαση (αφιλτράριστη λίστα).
+      scoped_ok=0
+      for scoped_key in "${!USER_SCOPED_FIELD[@]}"; do
+        if echo "$block" | grep -q "COLLECTIONS\.${scoped_key}\b"; then
+          if echo "$block" | grep -qE "${USER_SCOPED_FIELD[$scoped_key]}"; then
+            scoped_ok=1
+          fi
+          break
+        fi
+      done
+      if [[ $scoped_ok -eq 0 ]]; then
+        count=$((count + 1))
+      fi
     fi
   done < <(grep -n "query(" "$file" 2>/dev/null)
 
