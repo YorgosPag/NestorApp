@@ -11,7 +11,7 @@
  * 🔴 If one of these goes red, the answer is never to relax a threshold in `geo-match-gates`.
  */
 
-import { autoMatchToSurvey } from '../geo-auto-match';
+import { autoMatchToSurvey, proposeRobustCenterAlignment } from '../geo-auto-match';
 import { MAX_RMS_MM } from '../geo-match-gates';
 import {
   EGSA_ORIGIN, LAYERS, LAYER_ID, LAYER_NAME,
@@ -299,6 +299,134 @@ describe('autoMatchToSurvey — στ: the false-positive guard', () => {
   it('returns needs-manual for empty inputs instead of inventing a reference', () => {
     expect(autoMatchToSurvey({ entities: [], layersById: LAYERS, surveyPoints: [] }).method).toBe('needs-manual');
     expect(autoMatchToSurvey({
+      entities: pointEntities(scatter(10, 1000, 1)), layersById: LAYERS, surveyPoints: [],
+    }).geo).toBeNull();
+  });
+});
+
+/**
+ * ζ — ADR-782 §15: «Αυτόματο κούμπωμα» as a PROPOSAL.
+ *
+ * These pin the defect measured on a real project on 2026-08-10: the robust-centre estimate
+ * wrote `Project.basePoint` **23,185 m** off and reported success, because nothing ever scored
+ * it. The claim under test is not «the estimate is good» — it is not, and is not meant to be.
+ * The claim is that it is now MEASURED BY THE SAME VERIFIER as every other branch, and that its
+ * verdict travels with it.
+ */
+describe('proposeRobustCenterAlignment — ζ: the estimate is measured, never silent', () => {
+  /**
+   * ζ1 — THE REGRESSION, in the shape it actually happened.
+   *
+   * A topographic DXF is far larger than the plot it surveys: the drawing carries neighbouring
+   * blocks, a legend and a coordinate table, while the survey is 84 vertices of one site. So the
+   * centre of the drawing and the centre of the survey are NOT the same physical point, and
+   * pairing them lands the plan tens of metres away — here ~91 m, on the real project 23,185 m.
+   *
+   * Both halves of the claim matter: the proposal still carries `geo` (the engineer may take a
+   * rough start knowingly), AND it carries the gate that refused it.
+   */
+  it('ζ1: a drawing wider than its survey produces an estimate that FAILS the gates, with the reason attached', () => {
+    const survey = scatter(84, 120_000, 4711, EGSA_ORIGIN);
+    const local = survey.map((p) => ({ x: p.x - EGSA_ORIGIN.x, y: p.y - EGSA_ORIGIN.y }));
+    // The rest of the sheet: geometry the survey does not cover, which drags the drawing centre.
+    const elsewhere = scatter(200, 400_000, 88).map((p) => ({ x: p.x + 300_000, y: p.y + 60_000 }));
+
+    const result = proposeRobustCenterAlignment({
+      entities: pointEntities([...local, ...elsewhere]),
+      layersById: LAYERS,
+      sourceOrigin: EGSA_ORIGIN,
+      surveyPoints: surveyPoints(survey),
+    });
+
+    expect(result.method).toBe('robust-center');
+    expect(result.geo).not.toBeNull();          // the estimate is still offered…
+    expect(result.failure).toBe('too-few-inliers'); // …carrying the verdict that refused it
+    expect(result.inliers).toBeLessThan(result.required);
+    // The whole point of the card: the numbers exist and are the verifier's, not the estimator's.
+    expect(result.required).toBeGreaterThan(0);
+    expect(result.matchable).toBe(84);
+  });
+
+  /**
+   * ζ2 — the counterpart that makes ζ1 an indictment rather than a curiosity: on the SAME input,
+   * the analytic answer is available, exact, and free. This is the pairing the user never saw.
+   */
+  it('ζ2: on the same input the cascade answers exactly, which is why the silent estimate was a defect', () => {
+    const survey = scatter(84, 120_000, 4711, EGSA_ORIGIN);
+    const local = survey.map((p) => ({ x: p.x - EGSA_ORIGIN.x, y: p.y - EGSA_ORIGIN.y }));
+    const elsewhere = scatter(200, 400_000, 88).map((p) => ({ x: p.x + 300_000, y: p.y + 60_000 }));
+    const input = {
+      entities: pointEntities([...local, ...elsewhere]),
+      layersById: LAYERS,
+      sourceOrigin: EGSA_ORIGIN,
+      surveyPoints: surveyPoints(survey),
+    };
+
+    const exact = autoMatchToSurvey(input);
+    expect(exact.method).toBe('identity-restore');
+    expect(exact.inliers).toBe(84);
+    expect(exact.failure).toBeNull();
+    expect(exact.geo?.originWorld).toEqual(EGSA_ORIGIN);
+
+    const estimate = proposeRobustCenterAlignment(input);
+    expect(estimate.inliers).toBeLessThan(exact.inliers);
+  });
+
+  it('ζ3: when the centres really do coincide, the estimate passes the gates and carries no failure', () => {
+    const world = scatter(70, 150_000, 31, EGSA_ORIGIN);
+
+    const result = proposeRobustCenterAlignment({
+      entities: pointEntities(world),
+      layersById: LAYERS,
+      surveyPoints: surveyPoints(world),
+    });
+
+    expect(result.method).toBe('robust-center');
+    expect(result.failure).toBeNull();
+    expect(result.inliers).toBe(70);
+    expect(result.rmsMm).toBeLessThanOrEqual(MAX_RMS_MM);
+  });
+
+  /**
+   * ζ4 — «the SAME verifier» has to mean something checkable. The estimate is judged against the
+   * cascade's candidate points, not against the bbox centres its own estimator used: a guess
+   * allowed to pick its own evidence cannot fail.
+   */
+  it('ζ4: is judged against the same achievable maximum as the cascade, on identical input', () => {
+    const survey = scatter(50, 120_000, 5, EGSA_ORIGIN);
+    const input = {
+      entities: pointEntities(scatter(120, 300_000, 6)),
+      layersById: LAYERS,
+      surveyPoints: surveyPoints(survey),
+    };
+
+    expect(proposeRobustCenterAlignment(input).matchable).toBe(autoMatchToSurvey(input).matchable);
+  });
+
+  /**
+   * ζ5 — the cascade must NOT be able to return `robust-center`. It is a separate entry on
+   * purpose: a centroid guess appended as a fifth branch would essentially never pass the gates,
+   * i.e. a guard with no way of proving it is alive (ADR-749 §5).
+   */
+  it('ζ5: the cascade never returns robust-center — it is a separate entry, not a dormant branch', () => {
+    const world = scatter(70, 150_000, 31, EGSA_ORIGIN);
+    const inputs = [
+      { entities: pointEntities(world), layersById: LAYERS, surveyPoints: surveyPoints(world) },
+      {
+        entities: pointEntities(scatter(90, 150_000, 111)),
+        layersById: LAYERS,
+        surveyPoints: surveyPoints(scatter(90, 150_000, 999_999).map((p) => place(p, 0, EGSA_ORIGIN))),
+      },
+    ];
+
+    for (const input of inputs) expect(autoMatchToSurvey(input).method).not.toBe('robust-center');
+  });
+
+  it('ζ6: returns needs-manual with no reference for empty inputs, like every other entry', () => {
+    expect(proposeRobustCenterAlignment({
+      entities: [], layersById: LAYERS, surveyPoints: [],
+    }).method).toBe('needs-manual');
+    expect(proposeRobustCenterAlignment({
       entities: pointEntities(scatter(10, 1000, 1)), layersById: LAYERS, surveyPoints: [],
     }).geo).toBeNull();
   });

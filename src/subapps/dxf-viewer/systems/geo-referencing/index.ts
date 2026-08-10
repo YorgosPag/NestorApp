@@ -28,8 +28,12 @@ export {
 export type { AutoAlignResult } from './geo-auto-align';
 export { autoAlignByRobustCenters } from './geo-auto-align';
 
-// ADR-650 §M10e — automatic drawing↔survey matching. `autoMatchToSurvey` is the ONLY entry
-// point a consumer needs; the stages below it are exported for tests and diagnostics.
+// ADR-650 §M10e / §M10h — automatic drawing↔survey matching. There are TWO consumer entry
+// points, and both return a PROPOSAL: `autoMatchToSurvey` (the four-branch cascade) and
+// `proposeRobustCenterAlignment` (the rough centre estimate, scored by the same verifier).
+// Only the first is re-exported here — the panel imports the second from its module directly,
+// and a barrel export nobody imports is dead weight the ADR-700 ratchet counts (see below).
+// The stages under the cascade are exported for tests and diagnostics.
 export type { GeoMatchMethod, GeoMatchResult, AutoMatchInput } from './geo-auto-match';
 export { autoMatchToSurvey } from './geo-auto-match';
 export type { GeoMatchScore, PointSetIndex } from './geo-point-index';

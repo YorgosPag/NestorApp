@@ -284,8 +284,20 @@ describe('5. Η ρητή εξαίρεση απαιτεί ΛΟΓΟ', () => {
     expect(isExempt(lines, 2)).toBe(false);   // ΟΧΙ το επόμενο
   });
 
-  test('πραγματικό αρχείο: usePublicProperties έχει τεκμηριωμένη εξαίρεση', () => {
-    const file = path.resolve(__dirname, '..', '..', 'src/services/realtime/hooks/usePublicProperties.ts');
+  // ⚠️ **Η άγκυρα άλλαξε αρχείο, όχι κριτήριο** (2026-08-10, ADR-777 Β2β): έδειχνε στο
+  // `usePublicProperties.ts`, που **διαγράφηκε** — ήταν η ανώνυμη ανάγνωση του
+  // `properties` που διέρρεε ολόκληρο το έγγραφο. Ο διάδοχός του στην ίδια αλυσίδα
+  // είναι ο γραφέας της δημόσιας προβολής, που φέρει τεκμηριωμένη εξαίρεση για το
+  // `projectId` ως όριο μισθωτή.
+  //
+  // 🔑 **Ο επόμενος υποψήφιος απορρίφθηκε ΜΕ ΜΕΤΡΗΣΗ**: το
+  // `services/realtime/hooks/usePublicListings.ts` φέρει κι αυτό σχόλιο
+  // `tenant-scope-exempt`, αλλά ο σαρωτής επιστρέφει γι' αυτό **μηδέν sites** — δεν
+  // καλεί `query()`, διαβάζει σκέτο `collection()`. Άγκυρα πάνω του θα ήταν
+  // `[].some(...) === false`, δηλαδή **μονίμως κόκκινη**· και το σχόλιο εξαίρεσης εκεί
+  // είναι, αυστηρά, τεκμηρίωση για άνθρωπο — καμία πύλη δεν το διαβάζει.
+  test('πραγματικό αρχείο: ο γραφέας της δημόσιας προβολής έχει τεκμηριωμένη εξαίρεση', () => {
+    const file = path.resolve(__dirname, '..', '..', 'src/services/listings/publish-public-listing.ts');
     const sites = scanFile(file, ctx);
     expect(sites.some((s) => s.status === 'exempt')).toBe(true);
     expect(sites.some((s) => s.status === 'violation')).toBe(false);

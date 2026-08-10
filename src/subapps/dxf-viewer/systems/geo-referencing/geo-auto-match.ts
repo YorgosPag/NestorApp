@@ -20,9 +20,24 @@
  *   - `needs-manual`  — nothing passed. The correct outcome for unrelated files, and the one
  *     the false-positive test pins down.
  *
- * 🔴 NEVER AUTO-APPLIES. This function returns a proposal. The engineer presses «Εφαρμογή».
- * The whole value of the proof card is that a human sees the evidence before the project's
- * base point changes.
+ * ## The FIFTH way, and why it is not in the cascade (ADR-650 §M10h)
+ * `robust-center` — {@link proposeRobustCenterAlignment} — is the engineer's own «Αυτόματο
+ * κούμπωμα»: centre of the drawing onto centre of the survey. It is deliberately NOT a branch
+ * of {@link autoMatchToSurvey}, for a reason the cascade's own ordering explains: every branch
+ * there is tried because it might be RIGHT, and a centroid guess essentially never passes the
+ * gates. Appending it would add a branch that can never fire — a guard with no way of proving
+ * it is alive (ADR-749 §5). It is a separate entry because it answers a different request:
+ * «give me a rough start I will refine», not «tell me where this drawing goes».
+ *
+ * 🔴 NEVER AUTO-APPLIES — and that now holds for ALL FIVE. Both entry points return a proposal;
+ * the engineer presses «Εφαρμογή». The whole value of the proof card is that a human sees the
+ * evidence before the project's base point changes.
+ *
+ * 🔴 Measured, 2026-08-10 (ADR-782 §15): before `robust-center` existed, «Αυτόματο κούμπωμα»
+ * wrote `Project.basePoint` and reported SUCCESS without ever being scored. On a real project it
+ * landed the drawing **23,185 m** off — while `identity-restore`, free and available, scored
+ * **84/84 inliers at 0,43 mm RMS**. The estimator was not wrong to be an estimate; it was wrong
+ * to be unmeasured. One verifier, or the number means nothing.
  *
  * Pure module — zero React/DOM/store deps, zero randomness. Same inputs, same answer, always.
  *
@@ -35,6 +50,8 @@ import type { Entity } from '../../types/entities';
 import type { SceneLayer } from '../../types/scene-types';
 import type { TopoPoint } from '../topography/topo-types';
 import { fromOnePointPair, IDENTITY_GEO_REFERENCE, type GeoReference } from './geo-transform';
+import { autoAlignByRobustCenters } from './geo-auto-align';
+import { sceneEntityCenters } from './geo-ref-scene-points';
 import { buildPointSetIndex, scoreGeoReference, type GeoMatchScore, type PointSetIndex } from './geo-point-index';
 import {
   collectCandidatePoints, dominantLayerName, selectBasisSample, strideSample,
@@ -56,6 +73,7 @@ export type GeoMatchMethod =
   | 'already-aligned'
   | 'point-number'
   | 'congruent-pairs'
+  | 'robust-center'
   | 'unit-mismatch'
   | 'needs-manual';
 
@@ -91,7 +109,14 @@ export interface GeoMatchResult {
   readonly layerName: string | null;
   /** Hypotheses scored by the blind branch (0 for the analytic ones) — work done, for the card. */
   readonly hypotheses: number;
-  /** Which gate refused, when nothing was accepted. */
+  /**
+   * Which gate refused.
+   *
+   * ⚠️ `geo !== null` and `failure !== null` are NOT mutually exclusive, and the one pairing
+   * where they coexist is deliberate: `robust-center` is offered WITH its refusal attached,
+   * because a rough start the engineer knowingly accepts is a legitimate workflow — while a
+   * rough start applied silently is the defect this field exists to make visible.
+   */
   readonly failure: GateFailure | null;
 }
 
@@ -269,13 +294,26 @@ function tryCongruent(frame: readonly LocalCandidatePoint[], ctx: MatchContext):
  * project field, or moves an entity.
  */
 export function autoMatchToSurvey(input: AutoMatchInput): GeoMatchResult {
+  const ctx = buildMatchContext(input);
+  if (!ctx) return noMatch('needs-manual', {});
+  return runBranches(input, ctx);
+}
+
+/**
+ * The shared setup of BOTH entry points, or `null` when there is nothing to match against.
+ *
+ * Extracted the moment there were two callers: the drawing point set, the survey index and the
+ * achievable maximum are what «measured by the SAME verifier» actually MEANS. A second copy here
+ * would let the two entries drift into judging different point sets while both reporting an
+ * inlier count — two numbers that look comparable and are not (N.18 / CHECK 3.28).
+ */
+function buildMatchContext(input: AutoMatchInput): MatchContext | null {
   const toleranceMm = input.toleranceMm ?? DEFAULT_TOLERANCE_MM;
   const all = collectCandidatePoints(input.entities);
   const worldXY = input.surveyPoints.map(toPoint2D);
+  if (all.length === 0 || worldXY.length === 0) return null;
 
-  if (all.length === 0 || worldXY.length === 0) return noMatch('needs-manual', {});
-
-  const ctx: MatchContext = {
+  return {
     all,
     allXY: all.map(toPoint2D),
     index: buildPointSetIndex(worldXY, toleranceMm),
@@ -285,8 +323,42 @@ export function autoMatchToSurvey(input: AutoMatchInput): GeoMatchResult {
     layersById: input.layersById,
     failures: new FailureLog(),
   };
+}
 
-  return runBranches(input, ctx);
+/**
+ * The FIFTH way — «Αυτόματο κούμπωμα» as a PROPOSAL: the robust centre of the drawing mapped
+ * onto the robust centre of the survey, then **scored and judged like everything else**.
+ *
+ * Returns the estimate together with its verdict rather than swallowing it, because the two
+ * possible outcomes are both useful and neither may be silent:
+ *   - gates pass  → `failure === null`, an ordinary accepted proposal;
+ *   - gates fail  → `geo` still carries the estimate and `failure` names the gate, so the card
+ *     shows «0 από 84 (απαιτούνταν 26)» next to the «Εφαρμογή» button. The engineer may still
+ *     take it as a starting point — knowingly, which is the entire difference.
+ *
+ * ⚠️ The ESTIMATE reads entity bbox centres ({@link sceneEntityCenters}); the VERIFICATION reads
+ * `ctx.allXY` — the same candidate points every other branch is measured on. The asymmetry is
+ * the point: a guess judged by its own choice of evidence cannot fail.
+ */
+export function proposeRobustCenterAlignment(input: AutoMatchInput): GeoMatchResult {
+  const ctx = buildMatchContext(input);
+  if (!ctx) return noMatch('needs-manual', {});
+
+  const aligned = autoAlignByRobustCenters(sceneEntityCenters(input.entities), ctx.worldXY);
+  if (!aligned) return noMatch('needs-manual', { matchable: ctx.matchable });
+
+  const score = scoreGeoReference(ctx.allXY, ctx.index, aligned.geo);
+  const verdict = applyAcceptanceGates({
+    inliers: score.inliers, matchable: ctx.matchable, rmsMm: score.rmsMm, secondBestInliers: 0,
+  });
+
+  return {
+    ...accepted('robust-center', aligned.geo, score, {
+      matchable: ctx.matchable, required: verdict.required,
+      scaleEstimate: 1, layerName: null, hypotheses: 0,
+    }),
+    failure: verdict.reason,
+  };
 }
 
 /** The ordered cascade. Split out so {@link autoMatchToSurvey} stays a readable setup step. */

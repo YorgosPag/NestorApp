@@ -1030,7 +1030,7 @@
       "title": "Geo-referencing (snap onto terrain)",
       "hint": "Snap the plan onto the survey (real ΕΓΣΑ'87 coordinates) so the building sits on the ground on every floor.",
       "autoAlign": "Auto-align",
-      "autoAlignHint": "Quick estimate: matches the building center to the terrain center. Refine it with a common point.",
+      "autoAlignHint": "Quick estimate: matches the building center to the terrain center. It shows the evidence — it applies nothing without you.",
       "point1": "Point 1 (translation)",
       "point2": "Point 2 (rotation — optional)",
       "pick": "Pick on the plan",
@@ -1060,6 +1060,7 @@
           "alreadyAligned": "Already in ΕΓΣΑ",
           "pointNumber": "Surveyor's point numbering",
           "congruentPairs": "Geometric match",
+          "robustCenter": "Drawing centre onto survey centre",
           "unitMismatch": "Different units",
           "needsManual": "Manual geo-referencing required"
         },
@@ -1067,7 +1068,8 @@
           "identityRestore": "The drawing kept its original coordinates at import — the match is exact, not estimated.",
           "alreadyAligned": "The drawing is already drawn in ΕΓΣΑ'87 — no translation is needed.",
           "pointNumber": "Matched from the surveyor's own point numbers — known correspondences, not a guess.",
-          "congruentPairs": "Matched geometrically, without labels. Check the evidence before applying."
+          "congruentPairs": "Matched geometrically, without labels. Check the evidence before applying.",
+          "robustCenter": "An estimate, not a measurement: it pairs the centre of the drawing with the centre of the survey, without knowing which point is which. Check how many points landed before applying it."
         },
         "proof": {
           "layer": "Layer",
@@ -1090,7 +1092,6 @@
         }
       },
       "status": {
-        "autoDone": "Auto-align done.",
         "autoNoData": "Both plan and survey points are required.",
         "applied": "Geo-reference applied.",
         "needPoint": "Pick a point and enter its ΕΓΣΑ coordinate.",

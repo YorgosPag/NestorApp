@@ -25,7 +25,6 @@ import type { PropertyStats } from '@/types/property';
 // ============================================================================
 
 const mockUseSharedProperties = jest.fn();
-const mockUsePublicProperties = jest.fn();
 const mockUsePolygonHandlers = jest.fn();
 const mockUseGuardedPropertyMutation = jest.fn();
 const mockNotifySuccess = jest.fn();
@@ -35,9 +34,9 @@ jest.mock('@/contexts/SharedPropertiesProvider', () => ({
   useSharedProperties: (...args: unknown[]) => mockUseSharedProperties(...args),
 }));
 
-jest.mock('@/services/realtime/hooks/usePublicProperties', () => ({
-  usePublicProperties: (...args: unknown[]) => mockUsePublicProperties(...args),
-}));
+// ⚠️ **Καμία προσομοίωση δημόσιου hook** — ο `usePublicPropertyViewer` έχασε το
+// ανώνυμο σκέλος του (ADR-777 Β2β): διέρρεε ολόκληρο το έγγραφο και, μετρημένα,
+// παρήγαγε **πάντα κενή** λίστα. Πλέον διαβάζει **μόνο** το `useSharedProperties`.
 
 jest.mock('../usePolygonHandlers', () => ({
   usePolygonHandlers: (...args: unknown[]) => mockUsePolygonHandlers(...args),
@@ -144,8 +143,6 @@ beforeEach(() => {
     isLoading: false,
     forceDataRefresh: jest.fn(),
   });
-
-  mockUsePublicProperties.mockReturnValue({ properties: [], loading: false });
 
   mockUsePolygonHandlers.mockReturnValue({
     handlePolygonCreated: jest.fn(),

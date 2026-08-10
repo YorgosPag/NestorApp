@@ -117,7 +117,13 @@ async function removeOrphanListings(
 }
 
 async function handle(request: NextRequest, ctx: AuthContext, dryRun: boolean) {
-  if (!isRoleBypass(ctx.role)) {
+  // ⚠️ `ctx.globalRole`, ΠΟΤΕ `ctx.role`: το `AuthContext` (lib/auth/types.ts:262) **δεν
+  // έχει** πεδίο `role`. Το `ctx.role` έδινε `undefined` ⇒ `PREDEFINED_ROLES[undefined]`
+  // ⇒ `isRoleBypass` = `false` ⇒ **403 για ΚΑΘΕ χρήστη, συμπεριλαμβανομένου του
+  // super_admin** — δηλαδή η επανασύνθεση ήταν δομικά μη εκτελέσιμη. Το βρήκε η
+  // **εκτέλεση**, όχι η ανάγνωση (2026-08-10, ADR-777 Β2β). Και τα **20** άλλα admin
+  // routes γράφουν ήδη `ctx.globalRole` — αυτό ήταν το μοναδικό που απέκλινε.
+  if (!isRoleBypass(ctx.globalRole)) {
     return NextResponse.json({ error: 'super_admin only' }, { status: 403 });
   }
   try {

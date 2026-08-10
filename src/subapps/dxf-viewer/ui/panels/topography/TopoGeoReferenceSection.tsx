@@ -31,9 +31,9 @@ import {
 import {
   fromOnePointPair, fromTwoPointPairs, pointPairScaleRatio,
 } from '../../../systems/geo-referencing/geo-transform';
-import { autoAlignByRobustCenters } from '../../../systems/geo-referencing/geo-auto-align';
-import { sceneEntityCenters } from '../../../systems/geo-referencing/geo-ref-scene-points';
-import { autoMatchToSurvey, type GeoMatchResult } from '../../../systems/geo-referencing/geo-auto-match';
+import {
+  autoMatchToSurvey, proposeRobustCenterAlignment, type GeoMatchResult,
+} from '../../../systems/geo-referencing/geo-auto-match';
 import { TopoGeoMatchResultCard } from './TopoGeoMatchResultCard';
 import {
   persistProjectGeoReference, clearProjectGeoReference,
@@ -98,19 +98,30 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
     }
   }, [projectId, t]);
 
-  const onAutoAlign = React.useCallback(async () => {
+  /**
+   * ADR-782 §15 — «Αυτόματο κούμπωμα» is a PROPOSAL, exactly like the matcher.
+   *
+   * 🔴 It used to call `setGeoReference` + `persist` here and report SUCCESS, without the
+   * estimate ever being scored. Measured on a real project: it moved `Project.basePoint`
+   * **23,185 m** and said «ολοκληρώθηκε», while the same subsystem's verifier would have
+   * answered «0 inliers από 84, απαιτούνται 26». Nothing writes from this handler any more —
+   * the evidence goes to the same card, and «Εφαρμογή» is the engineer's.
+   */
+  const onAutoAlign = React.useCallback(() => {
     const scene = currentLevelId ? getLevelScene(currentLevelId) : null;
-    const localPts = scene ? sceneEntityCenters(scene.entities) : [];
-    const terrainPts = getTopoState().surfaces.existing.points.map((p) => ({ x: p.x, y: p.y }));
-    const res = autoAlignByRobustCenters(localPts, terrainPts);
-    if (!res) {
+    const surveyPoints = getTopoState().surfaces.existing.points;
+    if (!scene || scene.entities.length === 0 || surveyPoints.length === 0) {
       setStatus({ text: t('topography.geoRef.status.autoNoData'), error: true });
       return;
     }
-    setGeoReference(res.geo);
-    await persist(res.geo);
-    setStatus({ text: t('topography.geoRef.status.autoDone'), error: false });
-  }, [currentLevelId, getLevelScene, persist, t]);
+    setStatus(null);
+    setMatch(proposeRobustCenterAlignment({
+      entities: scene.entities,
+      layersById: scene.layersById,
+      ...(scene.sourceOrigin ? { sourceOrigin: scene.sourceOrigin } : {}),
+      surveyPoints,
+    }));
+  }, [currentLevelId, getLevelScene, t]);
 
   const onAutoMatch = React.useCallback(() => {
     const scene = currentLevelId ? getLevelScene(currentLevelId) : null;
@@ -211,15 +222,19 @@ export function TopoGeoReferenceSection(): React.JSX.Element {
         >
           {t(matching ? 'topography.geoRef.match.running' : 'topography.geoRef.match.run')}
         </button>
-        {match && (
-          <TopoGeoMatchResultCard result={match} onApply={onApplyMatch} onDismiss={onDismissMatch} />
-        )}
       </section>
 
       <button type="button" className={styles.generateButton} onClick={onAutoAlign}>
         {t('topography.geoRef.autoAlign')}
       </button>
       <p className={styles.subtitle}>{t('topography.geoRef.autoAlignHint')}</p>
+
+      {/* ONE card for BOTH producers, below both buttons. It used to live inside the matcher's
+          section — with «Αυτόματο κούμπωμα» now proposing too, a card rendered there would
+          describe the button underneath it. */}
+      {match && (
+        <TopoGeoMatchResultCard result={match} onApply={onApplyMatch} onDismiss={onDismissMatch} />
+      )}
 
       <PointRow slot={0} labelKey="topography.geoRef.point1" local={pick.points[0]}
         armed={pickActive && pick.armedSlot === 0} egsa={egsa[0]} onArm={onArm} onEgsa={onEgsa} t={t} />

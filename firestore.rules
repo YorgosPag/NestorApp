@@ -1015,25 +1015,42 @@ service cloud.firestore {
     // 🔐 Invariants: project, buildingId, floorId, name, id cannot be changed by client
     // 📅 Implemented: 2026-01-24
     match /properties/{propertyId} {
-      // 📖 READ PUBLIC: Anyone can read if listed for sale/rent (public listing)
-      // 🔒 SECURITY: Only publicly-listed properties exposed — no companyId leak
-      allow read: if resource.data.commercialStatus in ['for-sale', 'for-rent', 'for-sale-and-rent'];
-
-      // 📖 READ PUBLIC (ΔΙΑΘΕΣΕΙΣ) — ADR-777 Α20
-      // Το σκέλος από πάνω μιλά το ΠΑΛΙΟ λεξιλόγιο των επτά τιμών, που **δεν έχει
-      // λέξη για την αντιπαροχή** (και η Α20 απαγορεύει όγδοη: 3 → 7 listed τιμές).
-      // Άρα ένα ακίνητο **μόνο προς αντιπαροχή** παράγει `commercialStatus:
-      // 'unavailable'` — αληθές για το παλιό λεξιλόγιο, αλλά θα το έκανε αόρατο.
-      // Το `offerKinds` είναι ο άξονας όπου **δεν χάνεται τίποτα**.
+      // =======================================================================
+      // 🔴 ΤΑ ΔΥΟ ΔΗΜΟΣΙΑ ΣΚΕΛΗ ΑΦΑΙΡΕΘΗΚΑΝ — ADR-777 Β2β (2026-08-10)
+      // =======================================================================
+      // Εδώ ζούσαν δύο `allow read` που δεν ζητούσαν `isAuthenticated()`:
       //
-      // ⚠️ Η ΦΥΛΑΞΗ ΚΛΕΙΔΙΟΥ ΕΙΝΑΙ ΥΠΟΧΡΕΩΤΙΚΗ, ΟΧΙ ΑΜΥΝΤΙΚΟΤΗΤΑ: πρόσβαση σε
-      // κλειδί που λείπει είναι **σφάλμα** και αρνείται ΟΛΟΚΛΗΡΟ το σκέλος. Το ίδιο
-      // αρχείο το πλήρωσε ήδη (2026-08-05, `project` → `projectId`), αφήνοντας το
-      // δημόσιο σκέλος ως τη μόνη διαδρομή ανάγνωσης. Κάθε έγγραφο γραμμένο πριν
-      // την Α20 **δεν έχει** `offerKinds`.
-      allow read: if resource.data.keys().hasAny(['offerKinds'])
-                  && resource.data.offerKinds.hasAny(['sell', 'leaseOut', 'exchange']);
-
+      //   allow read: if resource.data.commercialStatus in ['for-sale', ...];
+      //   allow read: if resource.data.keys().hasAny(['offerKinds']) && ...;
+      //
+      // Το σχόλιο του πρώτου έγραφε «*no companyId leak*». **Η εγγύηση δεν είχε
+      // μηχανισμό, και δεν μπορούσε να έχει:** «*Reads are performed at the document
+      // level. You either retrieve the full document, or you retrieve nothing… It is
+      // impossible using security rules alone to prevent users from reading specific
+      // fields within a document*» (τεκμηρίωση Google, *Control access to specific
+      // fields*). Μετρημένο στη ζωντανή βάση: κάθε δημοσιευμένο έγγραφο έδινε στον
+      // ανώνυμο `companyId` · `createdBy` (uid) · `_lastModifiedByName`
+      // (**ονοματεπώνυμο**) · `linkedCompanyId` · `projectId` · `buildingId` · `code` ·
+      // `levelData`.
+      //
+      // 🔑 **Και δεν έδειχνε τίποτα σε αντάλλαγμα.** Ο μόνος καταναλωτής
+      // (`usePublicProperties` → `usePublicPropertyViewer`) χαρτογραφούσε τα έγγραφα σε
+      // `RealtimeUnit`, τύπο **χωρίς** `commercial`/`areas`, και τα περνούσε από το
+      // `isDisplayableInSalesDashboard`, που απαιτεί `askingPrice > 0` (ή `rentPrice`).
+      // Καμία από τις τρεις listed καταστάσεις δεν μπορούσε να το ικανοποιήσει ⇒ η
+      // ανώνυμη λίστα ήταν **πάντα κενή**. Διέρρεε τα πάντα και εμφάνιζε τίποτα.
+      //
+      // Η αντικατάσταση είναι η **προβολή ανάγνωσης** `public_listings` (παραπάνω):
+      // κλειστό σχήμα, γραμμένο από τον διακομιστή, **χωρίς πεδίο να διαρρεύσει**.
+      // Σύσταση της ίδιας τεκμηρίωσης: «*separate public and private data into
+      // different collections*».
+      //
+      // ⚠️ **ΜΗΝ ξαναπροσθέσεις δημόσιο σκέλος εδώ.** Άγκυρα: τα τέσσερα tests
+      // «ο ΑΝΩΝΥΜΟΣ δεν διαβάζει ΔΗΜΟΣΙΕΥΜΕΝΟ ακίνητο» στο `properties.rules.test.ts`,
+      // που σπέρνουν **και τα τρία** σχήματα που πυροδοτούσαν τα σκέλη — γιατί ο
+      // πίνακας personas ήταν πράσινος πάνω στη διαρροή επί μήνες, σπέρνοντας έγγραφο
+      // χωρίς κανένα από τα δύο πεδία.
+      //
       // 📖 READ PRIVATE: Authenticated users from project's company
       // 🔒 SECURITY: Tenant-scoped - prevents cross-tenant data leak
       allow read: if isAuthenticated()

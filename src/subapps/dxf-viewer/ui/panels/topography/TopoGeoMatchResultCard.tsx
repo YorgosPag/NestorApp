@@ -40,6 +40,7 @@ const METHOD_LABEL_KEY: Readonly<Record<GeoMatchMethod, string>> = {
   'already-aligned': 'topography.geoRef.match.method.alreadyAligned',
   'point-number': 'topography.geoRef.match.method.pointNumber',
   'congruent-pairs': 'topography.geoRef.match.method.congruentPairs',
+  'robust-center': 'topography.geoRef.match.method.robustCenter',
   'unit-mismatch': 'topography.geoRef.match.method.unitMismatch',
   'needs-manual': 'topography.geoRef.match.method.needsManual',
 };
@@ -50,6 +51,7 @@ const METHOD_HINT_KEY: Readonly<Partial<Record<GeoMatchMethod, string>>> = {
   'already-aligned': 'topography.geoRef.match.methodHint.alreadyAligned',
   'point-number': 'topography.geoRef.match.methodHint.pointNumber',
   'congruent-pairs': 'topography.geoRef.match.methodHint.congruentPairs',
+  'robust-center': 'topography.geoRef.match.methodHint.robustCenter',
 };
 
 export interface TopoGeoMatchResultCardProps {
@@ -143,6 +145,12 @@ export function TopoGeoMatchResultCard(props: TopoGeoMatchResultCardProps): Reac
   const applicable = result.geo !== null;
   const hintKey = METHOD_HINT_KEY[result.method];
   const hint = hintKey ? t(hintKey) : refusalText(result, t);
+  /**
+   * A proposal that is applicable AND failed a gate — today only `robust-center`. The refusal
+   * is shown NEXT TO the «Εφαρμογή» button rather than instead of it: the engineer is allowed
+   * to accept a rough start, but never without reading what it scored.
+   */
+  const failedGate = applicable && result.failure !== null;
 
   return (
     <section className={`${styles.proofCard} ${applicable ? '' : styles.proofCardRefused}`}>
@@ -151,6 +159,9 @@ export function TopoGeoMatchResultCard(props: TopoGeoMatchResultCardProps): Reac
         {`${t('topography.geoRef.match.method.label')}: ${t(METHOD_LABEL_KEY[result.method])}`}
       </p>
       <p className={applicable ? styles.subtitle : `${styles.status} ${styles.statusError}`}>{hint}</p>
+      {failedGate && (
+        <p className={`${styles.status} ${styles.statusError}`}>{refusalText(result, t)}</p>
+      )}
 
       {applicable && <ProofList result={result} t={t} />}
 

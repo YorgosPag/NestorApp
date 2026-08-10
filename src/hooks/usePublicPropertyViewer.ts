@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useSharedProperties } from '@/contexts/SharedPropertiesProvider';
-import { usePublicProperties } from '@/services/realtime/hooks/usePublicProperties';
 import type { Property } from '@/types/property-viewer';
 import type { FilterState } from '@/types/property-viewer';
 import { DEFAULT_FILTERS } from '@/types/property-viewer';
@@ -27,17 +26,38 @@ import { getEffectivePrice } from '@/lib/properties/price-resolver';
 // ============================================================================
 
 /**
- * Hook για το public Properties page - read-only mirror του Units page
- * Φιλτράρει μόνο τα actively available ακίνητα (for-sale, for-rent, for-sale-and-rent)
- * Απενεργοποιεί όλες τις edit capabilities
+ * Hook για το `/properties` — **read-only mirror** του Units page: ίδια δεδομένα,
+ * μηδέν δυνατότητα επεξεργασίας. Φιλτράρει τα actively available ακίνητα μέσω του
+ * SSoT gate και απενεργοποιεί κάθε edit capability.
+ *
+ * ⚠️ **«Public» εδώ σημαίνει «read-only», ΟΧΙ «ανώνυμος»** — και μέχρι τις 2026-08-10
+ * σήμαινε και τα δύο, λανθασμένα:
+ *
+ * Ο hook είχε **δεύτερη πηγή**, ένα `usePublicProperties()` που ρωτούσε απευθείας το
+ * `properties` χωρίς σύνδεση, ως εφεδρικό όταν ο χρήστης δεν ήταν συνδεδεμένος. Το
+ * σκέλος **αφαιρέθηκε ολόκληρο** (ADR-777 Β2β), και ο λόγος δεν είναι καθαριότητα:
+ *
+ *  1. **Διέρρεε.** Το Firestore δεν έχει έλεγχο ανάγνωσης σε επίπεδο πεδίου, οπότε ο
+ *     ανώνυμος έπαιρνε ΟΛΟΚΛΗΡΟ το έγγραφο — `companyId`, `createdBy`,
+ *     `_lastModifiedByName` (ονοματεπώνυμο), `projectId`, `code`, `levelData`.
+ *  2. **Και δεν έδειχνε τίποτα.** Το εφεδρικό χαρτογραφούσε σε `RealtimeUnit`, τύπο
+ *     **χωρίς** `commercial`/`areas`, και το `isDisplayableInSalesDashboard` παρακάτω
+ *     απαιτεί την τιμή που ζητά η κατάσταση ⇒ **καμία** από τις τρεις listed
+ *     καταστάσεις δεν περνούσε ποτέ. Η ανώνυμη λίστα ήταν **δομικά κενή**.
+ *
+ * 🔑 **Δεν αντικαταστάθηκε από προσαρμογέα, και αυτό μετρήθηκε:** ο τύπος
+ * {@link Property} απαιτεί `building` · `project` · `buildingId` · `floorId` ·
+ * `vertices` — **ακριβώς** τα εσωτερικά αναγνωριστικά που η προβολή
+ * `types/public-listing.ts` υπάρχει για να **μη** δημοσιεύει. Ένας προσαρμογέας
+ * `PublicListing → Property` θα ήταν υποχρεωμένος να τα **επινοήσει**, δηλαδή να
+ * παραγάγει ψεύτικο `Property` για να τροφοδοτήσει έναν viewer κλειδωμένο πάνω σε
+ * `floorId` που δεν υπάρχει. Η δημόσια επιφάνεια είναι οι οθόνες `/search`,
+ * `/search/results`, `/listing/[id]`, που διαβάζουν `usePublicListings`.
+ *
+ * ⇒ Ο hook κάνει πλέον **μία** δουλειά: τον συνδεδεμένο read-only viewer.
  */
 export function usePublicPropertyViewer() {
-  const { properties: allProperties, floors, isLoading: authLoading } = useSharedProperties();
-  const { properties: publicProps, loading: publicLoading } = usePublicProperties();
-
-  // When user is not authenticated (allProperties empty), fall back to public Firestore query
-  const isLoading = allProperties.length > 0 ? authLoading : publicLoading;
-  const sourceProperties = allProperties.length > 0 ? allProperties : (publicProps as unknown as Property[]);
+  const { properties: allProperties, floors, isLoading } = useSharedProperties();
 
   // Local state για UI controls
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
@@ -50,10 +70,16 @@ export function usePublicPropertyViewer() {
 
   // Φιλτράρουμε properties για public view μέσω SSoT gate.
   // ADR-287 Batch 18: ενιαίος κανόνας εμφάνισης σε public vetrina & sales dashboards.
+  //
+  // 🔑 **Μία πηγή, άρα σωστή εξάρτηση ΕΚ ΚΑΤΑΣΚΕΥΗΣ.** Μέχρι τις 2026-08-10 εδώ
+  // υπήρχε ένα `sourceProperties = allProperties.length > 0 ? allProperties :
+  // publicProps`, ενώ το memo εξαρτιόταν **μόνο** από το `allProperties` — δηλαδή η
+  // άφιξη των δημόσιων δεδομένων δεν ξανα-υπολόγιζε ποτέ τη λίστα. Το ενδιάμεσο
+  // ψευδώνυμο ήταν ο μηχανισμός: έκρυβε ποια είσοδο διαβάζει πραγματικά το memo.
   const publicProperties = useMemo(() => {
-    if (!Array.isArray(sourceProperties)) return [];
+    if (!Array.isArray(allProperties)) return [];
 
-    return sourceProperties.filter((property: Property) => {
+    return allProperties.filter((property: Property) => {
       // ADR-197: commercialStatus is source of truth. Legacy `status`
       // normalized as migration fallback.
       const commercialStatus =
