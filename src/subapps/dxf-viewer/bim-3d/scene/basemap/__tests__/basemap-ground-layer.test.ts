@@ -102,12 +102,26 @@ describe('BasemapGroundLayer — καμία δεύτερη μηχανή κλίμ
    */
   const source = raw.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
-  it('🎯 Γ4: ρωτά τον SSoT `getPixelWorldSize` αντί να ξαναγράφει τον υπολογισμό', () => {
-    expect(source).toContain('getPixelWorldSize');
+  it('🎯 Γ4: ρωτά τον SSoT κλίμακας αντί να ξαναγράφει τον υπολογισμό', () => {
+    expect(source).toContain('cameraSceneUnitsPerPixel');
   });
 
   it('🎯 Γ5: δεν διακλαδίζει σε τύπο κάμερας — εκεί ζούσε το χαμένο σκέλος ortho', () => {
     expect(source).not.toContain('PerspectiveCamera');
     expect(source).not.toContain('camera.fov');
+  });
+
+  /**
+   * 🎯 Γ6 — η **δεύτερη** μηχανή που δεν επιτρέπεται να ξαναγεννηθεί (ADR-782 §19).
+   *
+   * Το «πόσο έδαφος βλέπω;» απαντιόταν εδώ με αριθμητική πάνω στην απόσταση κάμερας-στόχου, και
+   * η απάντηση ήταν λάθος κατά μία τάξη μεγέθους σε κάθε λοξή θέαση. Ζει πλέον στο
+   * `ground-footprint.ts` με **δικές του** άγκυρες (`Φ1`-`Φ8`, βαθμονομημένες αναλυτικά).
+   * Η άγκυρα είναι στην πηγή για τον ίδιο λόγο με το `Γ4`: το ερώτημα δεν είναι «βγάζει σωστό
+   * νούμερο;» αλλά «**ρωτάει, ή ξαναγράφει την ερώτηση;**».
+   */
+  it('🎯 Γ6: ρωτά τον SSoT αποτυπώματος — καμία δεύτερη αριθμητική «τι έδαφος βλέπω»', () => {
+    expect(source).toContain('computeGroundFootprintMm');
+    expect(source).not.toContain('clientHeight');
   });
 });

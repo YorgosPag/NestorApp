@@ -24,11 +24,23 @@
  * εμφανίζεται ποτέ. Γι' αυτό αυτό το στρώμα δέχεται `requestRedraw` — το **ίδιο** `markDirty` που
  * παίρνουν ήδη τα έξι αδέρφια του (`TerrainSceneLayer`, `PointCloudSceneLayer`, …), και ήταν
  * **το μόνο** που δεν το έπαιρνε ενώ είναι **το μόνο** με ασύγχρονο πόρο.
+ *
+ * ## 🔴 …και το καρέ που ζητήθηκε ζωγράφιζε ΛΑΘΟΣ ΕΚΤΑΣΗ (ADR-782 §19)
+ * Ο κύκλος ειδοποίησης του §17 ήταν πραγματικός και διορθώθηκε — αλλά **δεν ήταν το μόνο** που
+ * έλειπε, και οι άγκυρές του δεν μπορούσαν να το δουν: κλειδώνουν «ζητήθηκε καρέ;», όχι «**ποια
+ * έκταση** ζητήθηκε». Ζωντανή μέτρηση: κάμερα **19,5 m** από τον στόχο ζητούσε ορθογώνιο
+ * **40 × 40 m** ενώ η οθόνη έδειχνε εκατοντάδες μέτρα, σε επίπεδο **19** (μέγιστο του παρόχου)
+ * ⇒ ένα πλακίδιο, κηλίδα γύρω από τον στόχο, κρυμμένη κάτω από το ανάγλυφο. Και τα δύο μεγέθη
+ * —έκταση **και** κλίμακα— προέκυπταν από την **απόσταση στον στόχο**, ποσότητα που περιγράφει
+ * την κάμερα μόνο όταν κοιτάζει κάθετα. Πλέον η έκταση έρχεται από το
+ * {@link computeGroundFootprintMm} (τομή ακτίνων με το επίπεδο εδάφους) και η κλίμακα μετριέται
+ * **στο κέντρο εκείνης της έκτασης**.
  */
 
 import * as THREE from 'three';
 import { registerPostFxOverlay, OVERLAY_ORDER } from '../post-fx-overlay-pass';
-import { getPixelWorldSize, worldToDxfPlan } from '../../viewport/coordinate-transforms';
+import { cameraSceneUnitsPerPixel } from '../../viewport/coordinate-transforms';
+import { computeGroundFootprintMm } from '../../viewport/ground-footprint';
 import { subscribeBasemapPaint } from '../../../systems/basemap/basemap-invalidation';
 import {
   resolveBasemapPaint,
@@ -51,32 +63,23 @@ import type { TileId } from '../../../systems/basemap/web-mercator';
 const BASEMAP_ELEVATION_MM = -10;
 
 /**
- * Πόσο πιο πλατιά από το ορατό ύψος ζητούνται πλακίδια.
+ * Ισοδύναμη κλίμακα «εικονοστοιχεία ανά mm» **στο σημείο του εδάφους που κοιτάζει η κάμερα**.
  *
- * Το έδαφος το βλέπει η κάμερα **λοξά**, οπότε το αποτύπωμά της στο οριζόντιο επίπεδο είναι πάντα
- * μεγαλύτερο από το ορατό ύψος στον στόχο. Ρητός λόγος αντί για σύμπτωση: η προηγούμενη
- * διατύπωση ζητούσε «±απόσταση κάμερας», που σε γωνία 50° βγαίνει **1,07×** το ορατό ύψος — ένα
- * περιθώριο που κανείς δεν είχε επιλέξει και που **δεν ορίζεται καθόλου** για ορθογραφική κάμερα.
+ * Το 3Δ δεν έχει `scale` όπως το 2Δ· η μετάφραση περνά από το SSoT
+ * {@link cameraSceneUnitsPerPixel}, που γνωρίζει **και τις δύο** κάμερες. Έτσι ο κοινός επιλογέας
+ * επιπέδου δέχεται την ίδια ερώτηση που του κάνει το 2Δ.
+ *
+ * 🔑 Το σημείο μέτρησης είναι το **κέντρο του ορατού εδάφους**, όχι ο στόχος της κάμερας. Σε λοξή
+ * θέαση τα δύο απέχουν πολύ, και η κλίμακα στον στόχο —που μπορεί να κάθεται στην κορυφή ενός
+ * κτιρίου— περιγράφει επιφάνεια που δεν ζωγραφίζουμε. Δεν είναι ακρίβεια για την ακρίβεια:
+ * ζητώντας κλίμακα πιο λεπτομερή από την πραγματική, το επίπεδο ανεβαίνει στο μέγιστο του παρόχου
+ * και τα πλακίδια καλύπτουν ελάχιστο έδαφος (μετρημένο: **επίπεδο 19** για έκταση εκατοντάδων
+ * μέτρων, ADR-782 §19).
  */
-const GROUND_COVERAGE = 1.1;
-
-/**
- * Ισοδύναμη κλίμακα «εικονοστοιχεία ανά mm» για την τρισδιάστατη κάμερα.
- *
- * Το 3Δ δεν έχει `scale` όπως το 2Δ· η μετάφραση περνά από το **μέγεθος ενός εικονοστοιχείου σε
- * μονάδες σκηνής**, που είναι SSoT ({@link getPixelWorldSize}) και **γνωρίζει και τις δύο
- * κάμερες**. Έτσι ο κοινός επιλογέας επιπέδου δέχεται την ίδια ερώτηση που του κάνει το 2Δ.
- *
- * 🔴 Η προηγούμενη εκδοχή ήταν **κλώνος του SSoT με λειψό το σκέλος ortho** (`instanceof
- * PerspectiveCamera` ⇒ αλλιώς `0`), δηλαδή σε ορθογραφική προβολή —κάτοψη, όψεις, κανονικές
- * γωνίες— το υπόβαθρο έσβηνε **σιωπηλά**. Το σχόλιο του ίδιου του SSoT καταγράφει ότι το ίδιο
- * ακριβώς σφάλμα είχε ήδη πληρωθεί μία φορά αλλού (ADR-363: ετικέτες που φούσκωναν σε δεκάδες
- * μέτρα). N.18 / CHECK 3.28: ένας κλώνος με λιγότερους κλάδους δεν είναι απλοποίηση, είναι βλάβη.
- */
-function pixelsPerMmForCamera(camera: THREE.Camera, distanceM: number, canvas: HTMLElement): number {
-  const metresPerPixel = getPixelWorldSize(distanceM, camera, canvas);
-  if (!Number.isFinite(metresPerPixel) || metresPerPixel <= 0) return 0;
-  return 1 / (metresPerPixel * 1000);
+function pixelsPerMmAt(camera: THREE.Camera, canvas: HTMLElement, worldPoint: THREE.Vector3): number {
+  const mmPerPixel = cameraSceneUnitsPerPixel(camera, canvas, worldPoint, 'mm');
+  if (!Number.isFinite(mmPerPixel) || mmPerPixel <= 0) return 0;
+  return 1 / mmPerPixel;
 }
 
 /** Η υπογραφή ενός συνόλου πλακιδίων — αλλάζει μόνο όταν αλλάζει πραγματικά τι πρέπει να δείχνει. */
@@ -147,14 +150,16 @@ export class BasemapGroundLayer {
     if (!decision.show) return;
     const { source, opacity } = decision.content;
     const camera = this.getCamera();
-    const target = this.getTarget();
-    const distanceM = camera.position.distanceTo(target);
     const canvas = this.getCanvas();
-    const pixelsPerMm = pixelsPerMmForCamera(camera, distanceM, canvas);
+
+    // Το ορατό έδαφος βγαίνει από τη ΓΕΩΜΕΤΡΙΑ της κάμερας (ADR-782 §19), όχι από την απόσταση
+    // στον στόχο: σε λοξή θέαση η οθόνη πατάει στο έδαφος τραπέζιο που φτάνει ως τον ορίζοντα.
+    const rect = computeGroundFootprintMm(camera, this.getTarget(), BASEMAP_ELEVATION_MM);
+    if (!rect) return;
+    const pixelsPerMm = pixelsPerMmAt(camera, canvas, rect.centreWorld);
     if (pixelsPerMm <= 0) return;
 
     const projector = getBasemapDisplayProjector();
-    const rect = this.visibleRectAround(target, pixelsPerMm, canvas);
     const centreDisplay = { x: (rect.minX + rect.maxX) / 2, y: (rect.minY + rect.maxY) / 2 };
     const latitude = this.latitudeAt(centreDisplay, projector);
     const zoom = chooseZoomLevel({ pixelsPerMm, devicePixelRatio: 1, latitude, source });
@@ -164,24 +169,6 @@ export class BasemapGroundLayer {
     if (signature === this.signature && !this.pendingTiles) return;
     this.signature = signature;
     this.rebuild(decision.content, selection.tiles, projector, pixelsPerMm);
-  }
-
-  /**
-   * Το ορατό ορθογώνιο σε mm κάτοψης, γύρω από τον στόχο της κάμερας.
-   *
-   * 🔑 Μέτρο είναι το **ορατό ύψος στο επίπεδο του στόχου** — ποσότητα που ορίζεται και για τις
-   * δύο κάμερες — και όχι η **απόσταση** της κάμερας, που για ορθογραφική **δεν λέει τίποτα** για
-   * το τι φαίνεται (μια ορθογραφική κάμερα 500 m πίσω μπορεί να δείχνει 10 m). Το ταβάνι πλήθους
-   * του μοντέλου προστατεύει ούτως ή άλλως από υπερβολή.
-   */
-  private visibleRectAround(target: THREE.Vector3, pixelsPerMm: number, canvas: HTMLElement) {
-    const plan = worldToDxfPlan(target);
-    const viewportHeightPx = Math.max(canvas.clientHeight, 1);
-    const halfSpanMm = Math.max((viewportHeightPx / pixelsPerMm) * GROUND_COVERAGE, 1_000);
-    return {
-      minX: plan.x - halfSpanMm, maxX: plan.x + halfSpanMm,
-      minY: plan.y - halfSpanMm, maxY: plan.y + halfSpanMm,
-    };
   }
 
   /** Το γεωγραφικό πλάτος στο κέντρο του ορατού — καθορίζει την παραμόρφωση Mercator. */
