@@ -32,7 +32,29 @@
 import type { OfferKind } from '@/types/property-offers';
 import { OFFER_KINDS } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
+import type { GeoPoint } from '@/types/geo/coordinates';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
+import { haversineDistance } from '@/components/projects/ika/map-shared/geo-math';
+
+/**
+ * **Ο γεωγραφικός άξονας** — η απάντηση της οθόνης 1 στο *«πού ψάχνεις;»* (Α3).
+ *
+ * 🔑 **Σημείο + ακτίνα, ΠΟΤΕ όνομα τόπου.** Το {@link PublicListing} **δεν κουβαλά
+ * καμία λέξη τόπου** (μετρημένο: κουβαλά `position` και `title`, τίποτα άλλο), οπότε
+ * ένα φίλτρο «πόλη = Θεσσαλονίκη» θα έπρεπε είτε να ψάξει στον **τίτλο** — που είναι
+ * κείμενο του κατόχου, όχι διεύθυνση — είτε να γεννήσει νέο πεδίο, που είναι
+ * **απόφαση δημοσιοποίησης** και δεν ανήκει σε ένα αρχείο φίλτρων.
+ *
+ * Το κείμενο του επισκέπτη λύνεται σε **σημείο** από τον υπάρχοντα geocoder
+ * (`/api/geocoding`, ανώνυμα προσβάσιμος) **πριν** φτάσει εδώ. Έτσι το φίλτρο
+ * συγκρίνει **γεωμετρία με γεωμετρία** — το μόνο πράγμα που και οι δύο πλευρές
+ * ξέρουν με βεβαιότητα.
+ */
+export interface ListingGeoFilter {
+  readonly center: GeoPoint;
+  /** Ακτίνα σε **χιλιόμετρα**. Πάντα > 0 — το 0 δεν είναι «παντού», είναι «πουθενά». */
+  readonly radiusKm: number;
+}
 
 /** Κλειστό σχήμα — κάθε φίλτρο της οθόνης 2, και κανένα άλλο. */
 export interface ListingFilters {
@@ -44,7 +66,12 @@ export interface ListingFilters {
   readonly areaMin: number | null;
   readonly areaMax: number | null;
   readonly bedroomsMin: number | null;
+  /** `null` = «όπου να 'ναι». Δες {@link ListingGeoFilter}. */
+  readonly near: ListingGeoFilter | null;
 }
+
+/** Προεπιλεγμένη ακτίνα όταν η διεύθυνση δεν τη δηλώνει. Πόλη-κλίμακα. */
+export const DEFAULT_SEARCH_RADIUS_KM = 10;
 
 export const EMPTY_LISTING_FILTERS: ListingFilters = {
   offerKinds: [],
@@ -54,6 +81,7 @@ export const EMPTY_LISTING_FILTERS: ListingFilters = {
   areaMin: null,
   areaMax: null,
   bedroomsMin: null,
+  near: null,
 };
 
 // ============================================================================
