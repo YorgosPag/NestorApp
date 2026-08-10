@@ -3,46 +3,37 @@
 /**
  * ADR-399 — Building Floor Navigation Tabs (presentational strip).
  *
- * Οριζόντια μπάρα καρτελών ορόφων, ακριβώς κάτω από το status bar και πάνω από
- * τον καμβά (mount: `NormalView.tsx`). Μία καρτέλα ανά όροφο του κτιρίου· κλικ →
+ * Οριζόντια μπάρα καρτελών ορόφων, μέσα στη γραμμή πλαισίου του θεατή
+ * (mount: `ViewerContextStrip`). Μία καρτέλα ανά όροφο του κτιρίου· κλικ →
  * μετάβαση/lazy-provision του αντίστοιχου level. Όλη η λογική ζει στο
  * {@link useFloorTabs}· εδώ μόνο rendering.
  *
- * Phase B — καρτέλα «Όλοι οι όροφοι» ΠΡΩΤΗ-αριστερά: στοιβάζει όλο το κτίριο σε
- * 3Δ (`floor3DScope='all'`). Phase C — checkbox στην αρχή κάθε καρτέλας ορόφου
- * που ορίζει αν ο όροφος εμφανίζεται μέσα στο «Όλοι» (κοινό SSoT με Floor3DPanel
- * → `floorVisibilityModes`).
+ * ⚠️ **Το χειριστήριο του υποβάθρου ΔΕΝ ζει πια εδώ** (ADR-782 §25). Ζούσε μέσα σε αυτό το
+ * `<nav>`, οπότε το `return null` για «έργο χωρίς ορόφους» έσβηνε μαζί και μια **project-level**
+ * λειτουργία — μαζί με τον λόγο άρνησής της. Μετακόμισε στο `BasemapControlGroup`, αδελφό αυτού
+ * του component μέσα στη λωρίδα. **Μην το ξαναφέρεις εδώ**: το `role="tablist"` δέχεται μόνο
+ * `role="tab"` ως παιδιά, και ο χάρτης δεν είναι καρτέλα ορόφου.
  *
- * Styling: αμιγώς centralized tokens (useSemanticColors + useBorderTokens +
- * PANEL_LAYOUT) — καμία inline style, σημασιολογικό `<nav>` (κανόνες N.3/N.4).
+ * Phase B — καρτέλα «Όλοι οι όροφοι» **ΤΕΛΕΥΤΑΙΑ** (μετακινήθηκε 2026-08-09, ADR-782 §10: είναι
+ * σύνοψη των προηγούμενων καρτελών): στοιβάζει όλο το κτίριο σε 3Δ (`floor3DScope='all'`).
+ * Phase C — checkbox στην αρχή κάθε καρτέλας ορόφου που ορίζει αν ο όροφος εμφανίζεται μέσα στο
+ * «Όλοι» (κοινό SSoT με Floor3DPanel → `floorVisibilityModes`).
+ *
+ * Styling: αμιγώς centralized tokens (useSemanticColors + PANEL_LAYOUT + το κοινό
+ * {@link CONTEXT_STRIP_CHIP_CLASS}) — καμία inline style, σημασιολογικό `<nav>` (N.3/N.4). Το
+ * **πλαίσιο** της λωρίδας (περίγραμμα/φόντο/αποστάσεις) ανήκει στο `ViewerContextStrip`.
  *
  * @see docs/centralized-systems/reference/adrs/ADR-399-dxf-floor-navigation-tabs.md
  */
 
-import React, { useSyncExternalStore } from 'react';
-import { Layers, Map as MapIcon } from 'lucide-react';
+import React from 'react';
+import { Layers } from 'lucide-react';
 import { useTranslation } from '@/i18n';
-import { useBorderTokens } from '@/hooks/useBorderTokens';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useFloorTabs, type FloorTab } from '../../hooks/data/useFloorTabs';
-import { BasemapSettingsPopover } from './BasemapSettingsPopover';
 import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
-import { getProjectAnchorRefusal } from '../../systems/basemap/basemap-availability';
-import {
-  getBasemapAvailability,
-  subscribeBasemapAvailability,
-} from '../../systems/basemap/basemap-frame';
-import { ANCHOR_REFUSAL_HINT_KEY } from '../../systems/basemap/basemap-anchor-labels';
-import {
-  getBasemapState,
-  subscribeBasemap,
-  toggleBasemapEnabled,
-} from '../../systems/basemap/basemap-store';
-
-const TAB_BASE_CLASS =
-  `flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.COMPACT} ${PANEL_LAYOUT.ROUNDED.TOP} ` +
-  `${PANEL_LAYOUT.TYPOGRAPHY.XS} ${PANEL_LAYOUT.FONT_WEIGHT.MEDIUM} whitespace-nowrap ${PANEL_LAYOUT.INTERACTIVE.TRANSITION}`;
+import { CONTEXT_STRIP_CHIP_CLASS as TAB_BASE_CLASS } from './context-strip-chip';
 
 interface AllFloorsTabProps {
   active: boolean;
@@ -68,67 +59,6 @@ const AllFloorsTab: React.FC<AllFloorsTabProps> = ({ active, label, ariaLabel, o
     >
       <Layers size={13} aria-hidden="true" />
       <span>{label}</span>
-    </button>
-  );
-};
-
-/**
- * Το υπόβαθρο χάρτη — **διακόπτης**, όχι καρτέλα.
- *
- * Κάθεται πρώτο-αριστερά και δεν αλλάζει ενεργό όροφο: ο χρήστης συνεχίζει να σχεδιάζει
- * κανονικά ενώ βλέπει πού βρίσκεται πάνω στον χάρτη. Γι' αυτό είναι `aria-pressed` (κατάσταση
- * ενός κουμπιού) και **όχι** `role="tab"` με `aria-selected` όπως οι όροφοι — δύο διαφορετικά
- * πράγματα δεν επιτρέπεται να ανακοινώνονται στον αναγνώστη οθόνης με το ίδιο όνομα.
- *
- * ⚠️ Ανενεργό όταν το έργο δεν είναι γεωαναφερμένο, με τον λόγο **μέσα** στην ετικέτα
- * προσβασιμότητας. Ένα ανενεργό κουμπί χωρίς εξήγηση είναι η χειρότερη εκδοχή: ο χρήστης
- * βλέπει λειτουργία που δεν μπορεί να πατήσει και δεν μαθαίνει ποτέ γιατί.
- */
-const BasemapTab: React.FC = () => {
-  const { t } = useTranslation('dxf-viewer-shell');
-  const colors = useSemanticColors();
-  const availability = useSyncExternalStore(
-    subscribeBasemapAvailability,
-    getBasemapAvailability,
-    getBasemapAvailability,
-  );
-  const { enabled } = useSyncExternalStore(subscribeBasemap, getBasemapState, getBasemapState);
-
-  // Ο λόγος ζει στο ΙΔΙΟ store με τη διαθεσιμότητα, οπότε η υπάρχουσα εγγραφή τον καλύπτει.
-  const refusal = useSyncExternalStore(
-    subscribeBasemapAvailability,
-    getProjectAnchorRefusal,
-    getProjectAnchorRefusal,
-  );
-
-  const unavailable = availability === 'unknown';
-  const active = enabled && !unavailable;
-
-  // ⚠️ Η γενική υπόδειξη μένει ως **πάτωμα**, όχι ως εναλλακτική στιλ: όσο η ανάγνωση εκκρεμεί (ή
-  // απέτυχε) δεν υπάρχει διαπιστωμένος λόγος, και το να ονομάσουμε έναν θα ήταν εφεύρεση.
-  const unavailableLabel = refusal
-    ? t(ANCHOR_REFUSAL_HINT_KEY[refusal])
-    : t('basemap.unavailableHint');
-  const stateClass = active
-    ? `${colors.bg.info} ${colors.text.inverse}`
-    : `${colors.text.muted} ${PANEL_LAYOUT.INTERACTIVE.HOVER}`;
-
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      disabled={unavailable}
-      aria-label={unavailable ? unavailableLabel : t('basemap.toggleAria')}
-      onClick={toggleBasemapEnabled}
-      className={`${TAB_BASE_CLASS} ${stateClass} disabled:cursor-not-allowed disabled:opacity-40`}
-    >
-      <MapIcon size={13} aria-hidden="true" />
-      <span>{t('basemap.label')}</span>
-      {active && availability === 'approximate' && (
-        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.inverse} ${PANEL_LAYOUT.OPACITY['70']}`}>
-          {t('basemap.approximateBadge')}
-        </span>
-      )}
     </button>
   );
 };
@@ -182,8 +112,6 @@ const FloorTabButton: React.FC<FloorTabButtonProps> = ({
 
 export const FloorTabBar: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
-  const { getDirectionalBorder } = useBorderTokens();
-  const colors = useSemanticColors();
   const {
     visible, tabs, activeFloorId, onSelectTab,
     floor3DScope, onSelectAllFloors, floorVisibilityModes, onToggleFloorVisible,
@@ -202,18 +130,10 @@ export const FloorTabBar: React.FC = () => {
         e.preventDefault();
         FloorManagementDialogStore.open();
       }}
-      className={`shrink-0 ${getDirectionalBorder('muted', 'top')} ${colors.bg.backgroundSecondary} ${PANEL_LAYOUT.SPACING.HORIZONTAL_SM} ${PANEL_LAYOUT.PADDING.VERTICAL_XS} flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.OVERFLOW.X_AUTO}`}
+      // Οι όροφοι είναι το μέρος που **πληθαίνει**, οπότε η οριζόντια κύλιση ζει εδώ και όχι
+      // στη λωρίδα: αλλιώς ένα κτίριο με πολλούς ορόφους θα έσπρωχνε τον χάρτη εκτός οθόνης.
+      className={`flex min-w-0 items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.OVERFLOW.X_AUTO}`}
     >
-      {/* Ο χάρτης πρώτος-αριστερά (Giorgio 2026-08-09): είναι το πλαίσιο μέσα στο οποίο
-          διαβάζονται όλα τα υπόλοιπα — «πού είμαι» πριν από «ποιον όροφο βλέπω».
-
-          ⚠️ Split control (ADR-782 §18): ο διακόπτης και οι ρυθμίσεις είναι **δύο αδελφά
-          κουμπιά**, όχι ένθετα — κουμπί μέσα σε κουμπί είναι άκυρο HTML και ο αναγνώστης οθόνης
-          δεν μπορεί να τα ξεχωρίσει. Το `role="group"` τα ανακοινώνει ως ΕΝΑ χειριστήριο. */}
-      <span role="group" aria-label={t('basemap.label')} className={`flex items-center ${PANEL_LAYOUT.GAP.HALF}`}>
-        <BasemapTab />
-        <BasemapSettingsPopover />
-      </span>
       {tabs.map((tab) => (
         <FloorTabButton
           key={tab.floorId}

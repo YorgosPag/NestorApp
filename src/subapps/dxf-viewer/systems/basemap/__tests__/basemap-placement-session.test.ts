@@ -22,6 +22,7 @@ import {
   resetBasemapPlacementSession,
   setBasemapPlacementTool,
   setPlacementPendingDrawing,
+  subscribeBasemapPlacementSession,
 } from '../basemap-placement-session';
 import {
   getBasemapPlacement,
@@ -126,5 +127,77 @@ describe('ADR-782 §23 — συνεδρία τοποθέτησης', () => {
 
     endBasemapPlacement();
     expect(getBasemapPlacement()).toEqual(DURING);
+  });
+});
+
+/**
+ * ADR-782 §26 — το «Τέλος» **ειδοποιεί** και **δεν σβήνει** τους συνδρομητές.
+ *
+ * 🔴 Ζωντανό εύρημα (Giorgio, 2026-08-10): το `endBasemapPlacement` καλούσε `store.reset(IDLE)`,
+ * που είναι **teardown δοκιμών** — αλλάζει τιμή χωρίς ειδοποίηση **και** κάνει `listeners.clear()`.
+ * Οι `Σ1`/`Σ8` παραπάνω ήταν **πράσινες** πάνω σε αυτό, γιατί ρωτούσαν **την τιμή** (`get()`) και
+ * ποτέ **αν το έμαθε κανείς**. Ο διακόπτης, το πάνελ και η επιφάνεια που κρατά τον δείκτη
+ * διαβάζουν όλοι με `useSyncExternalStore` — δηλαδή με **συνδρομή**.
+ *
+ * ⚠️ Η `Ω2` είναι η ουσιώδης και η μόνη που πιάνει τη **δεύτερη**, χειρότερη συνέπεια: μετά το
+ * «Τέλος» καμία επόμενη αλλαγή δεν έφτανε ποτέ σε κανέναν, άρα το πάνελ έμενε παγωμένο στην οθόνη
+ * με **τα τέσσερα κουμπιά του αδρανή** και τον καμβά όμηρο μέχρι την ανανέωση σελίδας.
+ */
+describe('ADR-782 §26 — το κλείσιμο είναι runtime API, όχι teardown', () => {
+  it('Ω1 — το «Τέλος» ΕΙΔΟΠΟΙΕΙ τους συνδρομητές (αλλιώς το πάνελ δεν κρύβεται ποτέ)', () => {
+    beginBasemapPlacement();
+    const listener = jest.fn();
+    subscribeBasemapPlacementSession(listener);
+
+    endBasemapPlacement();
+
+    expect(listener).toHaveBeenCalled();
+    expect(isBasemapPlacementActive()).toBe(false);
+  });
+
+  it('Ω2 — οι συνδρομητές ΕΠΙΒΙΩΝΟΥΝ του κλεισίματος: η επόμενη αλλαγή φτάνει κι αυτή', () => {
+    beginBasemapPlacement();
+    const listener = jest.fn();
+    subscribeBasemapPlacementSession(listener);
+
+    endBasemapPlacement();
+    listener.mockClear();
+
+    // Δεύτερο άνοιγμα: χωρίς αυτό, ο χρήστης ξανάνοιγε το εργαλείο και **δεν εμφανιζόταν τίποτα**.
+    beginBasemapPlacement();
+    expect(listener).toHaveBeenCalled();
+
+    listener.mockClear();
+    setBasemapPlacementTool('match');
+    expect(listener).toHaveBeenCalled();
+  });
+
+  it('Ω3 — το Esc που κλείνει τη συνεδρία ακολουθεί τον ΙΔΙΟ δρόμο (κοινός καλών)', () => {
+    beginBasemapPlacement();
+    const listener = jest.fn();
+    subscribeBasemapPlacementSession(listener);
+
+    expect(escapeBasemapPlacement()).toBe(true);
+
+    expect(listener).toHaveBeenCalled();
+    expect(isBasemapPlacementActive()).toBe(false);
+
+    // Και μετά από Esc, ο συνδρομητής είναι ακόμη εκεί.
+    listener.mockClear();
+    beginBasemapPlacement();
+    expect(listener).toHaveBeenCalled();
+  });
+
+  it('Ω4 — το teardown δοκιμών ΔΙΑΤΗΡΕΙ τη σημασία του: ρίχνει τους συνδρομητές', () => {
+    beginBasemapPlacement();
+    const listener = jest.fn();
+    subscribeBasemapPlacementSession(listener);
+
+    // Σκόπιμη διαφορά: αυτό ΔΕΝ είναι πράξη χρήστη, είναι απομόνωση δοκιμών (`ExternalStore.reset`).
+    resetBasemapPlacementSession();
+    listener.mockClear();
+
+    beginBasemapPlacement();
+    expect(listener).not.toHaveBeenCalled();
   });
 });

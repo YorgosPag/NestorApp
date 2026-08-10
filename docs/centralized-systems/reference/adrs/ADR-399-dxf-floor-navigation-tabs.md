@@ -63,7 +63,7 @@
 - `src/subapps/dxf-viewer/components/dxf-layout/FloorTabBar.tsx` — presentational `<nav role="tablist">`, centralized tokens.
 
 **MOD**
-- `src/subapps/dxf-viewer/components/dxf-layout/NormalView.tsx` — mount `<FloorTabBar />` ανάμεσα σε `StandaloneStatusBar` και `CanvasSection`.
+- `src/subapps/dxf-viewer/components/dxf-layout/NormalView.tsx` — mount ανάμεσα σε `StandaloneStatusBar` και `CanvasSection`. ⚠️ **Από 2026-08-10 (ADR-782 §25) το `NormalView` προσαρτά `<ViewerContextStrip />`**, που περιέχει το `<FloorTabBar />` ως **ένα** από δύο περιεχόμενα. Η μπάρα ορόφων **δεν** είναι πια ο ιδιοκτήτης της λωρίδας — δες το changelog της ίδιας ημέρας.
 - `src/components/properties/shared/useFloorsByBuilding.ts` — additive `longName?` + `kind?` στο `FloorOption` (μη-breaking για ADR-329 consumers).
 - `src/i18n/locales/{el,en}/dxf-viewer-shell.json` — `floorTabs.ariaLabel`, `floorTabs.emptyBadge`.
 
@@ -198,3 +198,19 @@ import floorplan (Wizard, entityType='floor')
   **+CENTRALIZATION (FULL SSoT, Giorgio audit «θα το έκανε έτσι η Google;»):** οι 3 παραπάνω fixes ήταν 3 παράλληλα patches της ΙΔΙΑΣ απόφασης («πότε auto-fit;») σε 3 αρχεία — γι' αυτό το bug είχε 3 αιτίες. **Ενοποιήθηκαν σε ΕΝΑ SSoT:** NEW pure `systems/zoom/viewport-autofit-policy.ts` (`resolveAutoFitAction → 'initial'|'fit'|'skip'` + `isDegenerateRestoreScale`, 10 jest) + NEW `hooks/canvas/useViewportAutoFit.ts` (ΕΝΑ hook κατέχει state hasFittedOnce/prevLevel/prevFile + όλα τα triggers scene/level/file/bg, **delegates** fit στο calculation SSoT: `EventBus.emit('canvas-fit-to-view')` [→ useFitToView → FitToViewService] / `zoomToFit(bgBounds)` / `canvas-restore-viewport`). **DELETED** `useFloorplanAutoFit.ts` + `app/useAutoFitOnFileChange.ts`· **αφαιρέθηκε** το auto-fit block + 5 params + 2 interfaces + 2 imports από `useCanvasEffects.ts`. Mount ΜΙΑ φορά στο `CanvasSection` (single point με όλα τα inputs). ADR-040-safe (μηδέν νέα subscriptions· delegation στο υπάρχον canonical EventBus path). 7 MOD/NEW + 2 DELETE. tsc clean, 10 jest.
 
 - **2026-07-26 (🔴 ROOT-CAUSE — ο cross-floor guard ήταν στη ΛΑΘΟΣ πλευρά της πόρτας· βλ. ADR-714)** — Ο `isCrossFloorSceneLink` αυτού του ADR καλούνταν **μόνο** στο load path (`useLevelSceneLoader`). Το `linkSceneToLevel`, που **γράφει** το `sceneFileId`, είχε μόνο idempotency check — καμία επαλήθευση ορόφου. Άρα η λάθος σύνδεση γραφόταν ελεύθερα στη βάση και ο guard την ανακάλυπτε αργότερα, όταν το μόνο που μπορούσε να κάνει ήταν να κρατήσει τον όροφο άδειο. Αποτέλεσμα (2026-07-26): δύο επίπεδα (`lvl_2a7ff5cc`, `lvl_dabeb3bb`) έδειχναν στο ίδιο `file_751f0286` → **ένα** `.scene.json`, δύο γραφείς, 1169 DXF οντότητες → 0. **Το ADR-714 επεκτείνει τον ΙΔΙΟ κανόνα σε τρία ακόμη σημεία επιβολής** — write path του client (`linkSceneToLevel` + `executeSceneSave`) και **server-side 409** στο `/api/dxf-levels` (PATCH+POST), όπου ο ίδιος pure `isCrossFloorSceneLink` εκτελείται αυτούσιος (dependency-free). Επιπλέον: όταν το load path πιάσει cross-floor link, **σπάει** πλέον τον λάθος σύνδεσμο (`sceneFileId: null` + toast) αντί να τον αφήνει να ξανα-αποτυγχάνει κάθε συνεδρία. Ο predicate αυτού του ADR **δεν άλλαξε** — άλλαξε το πού επιβάλλεται.
+
+- **2026-08-10 (🔴 Η μπάρα ορόφων έπαψε να είναι ιδιοκτήτης της λωρίδας — ADR-782 §25)** — Ο διακόπτης
+  του υποβάθρου χάρτη (μπήκε εδώ στις 2026-08-09, ADR-782 §10) ζούσε **μέσα** στο `<nav
+  role="tablist">` αυτού του ADR. Το `return null` του `visible = !!buildingId` έσβηνε έτσι μια
+  **project-level** λειτουργία μαζί με τους ορόφους: **έργο χωρίς κτίριο δεν μπορούσε να δει χάρτη
+  ποτέ, ούτε να μάθει γιατί.** **Fix:** νέος `ViewerContextStrip` κρατά το πλαίσιο της λωρίδας
+  (περίγραμμα/φόντο/αποστάσεις) και προσαρτά **δύο** παιδιά — `BasemapControlGroup` (ανά **έργο**,
+  πάντα) + `FloorTabBar` (ανά **κτίριο**). Το `<nav>` κρατά **μόνο** τις καρτέλες, την οριζόντια
+  κύλιση και το δεξί κλικ → «Όροφοι». ⚠️ **Καμία οπτική αλλαγή** (ίδια σειρά, ίδια μορφή πλακιδίου —
+  το `TAB_BASE_CLASS` μετακόμισε σε SSoT `context-strip-chip.ts` και το μοιράζονται τα δύο
+  components). ⚠️ **ΜΗΝ ξαναβάλεις μη-`tab` παιδί στο `tablist`**: τα *required owned elements* του
+  ARIA είναι αποκλειστικά `role="tab"`. 🔶 **Ανοιχτό, προϋπάρχον**: το checkbox ορατότητας της Φάσης
+  C κάθεται **μέσα** στο `tablist` — δεύτερη παραβίαση `aria-required-children`, μη μετρημένη με
+  axe, θέλει απόφαση **αυτού** του ADR (πού πάει η ορατότητα ορόφου). Άγκυρες: `Ζ1`-`Ζ6` στο
+  `viewer-context-strip.test.tsx` (**6/6 μεταλλάξεις κόκκινες** πάνω στο ιστορικό ελάττωμα) — μέχρι
+  σήμερα το `FloorTabBar` **δεν είχε κανένα test**.
