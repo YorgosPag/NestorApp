@@ -37,19 +37,30 @@ const DEFAULTS = Object.freeze({
    * exactly the rot this ADR exists to remove — it would go stale the same way
    * `CRITICAL_NAMESPACES` did.
    *
-   * `src/app/(app)/page.tsx` earns its place as the one PAGE in the set: it is the
-   * application's cold-entry route (URL `/`), reached with no prior navigation, so
-   * nothing carries a loading state for it. Deeper routes stay out — covering them
-   * means per-route slices, which this machinery already supports (ADR-744 §8, Φ4).
+   * Η **μία ΣΕΛΙΔΑ** του συνόλου δικαιολογείται από ένα κριτήριο, όχι από τη
+   * διεύθυνσή της: είναι η **ψυχρή είσοδος** (URL `/`), όπου φτάνει κανείς **χωρίς
+   * προηγούμενη πλοήγηση**, άρα τίποτα δεν κουβαλά κατάσταση φόρτωσης γι' αυτήν.
+   * Βαθύτερες διαδρομές μένουν έξω — η κάλυψή τους σημαίνει per-route slices, που
+   * αυτή η μηχανή ήδη υποστηρίζει (ADR-744 §8, Φ4).
    *
-   * ⚠️ ADR-777 §8.12 — ΤΟ ΜΟΝΟΠΑΤΙ ΑΛΛΑΞΕ ΜΕ ΤΗ ΜΕΤΑΚΟΜΙΣΗ ΤΟΥ ΚΕΛΥΦΟΥΣ. Το URL
-   * παραμένει `/`· ένα route group `(app)` είναι ΦΑΚΕΛΟΣ και δεν εμφανίζεται στο URL.
-   * Το πρώτο pattern βρίσκει μόνο του κάθε νέο layout (`(app)`, `(auth)`, `(bare)`)·
-   * το δεύτερο είναι ΚΥΡΙΟΛΕΚΤΙΚΟ και έπρεπε να ενημερωθεί με το χέρι — και το
-   * `resolveRoots` (plan.js:76) ΠΕΤΑΕΙ «shell root not found» αν δεν υπάρχει, δηλαδή
-   * η αστοχία είναι ΘΟΡΥΒΩΔΗΣ, όχι σιωπηλή. Μην αφαιρέσεις αυτόν τον φρουρό.
+   * ⚠️ ADR-777 §8.12 — ΤΟ ΜΟΝΟΠΑΤΙ ΑΛΛΑΞΕ ΜΕ ΤΗ ΜΕΤΑΚΟΜΙΣΗ ΤΟΥ ΚΕΛΥΦΟΥΣ. Ένα route
+   * group είναι ΦΑΚΕΛΟΣ και δεν εμφανίζεται στο URL. Το πρώτο pattern βρίσκει μόνο
+   * του κάθε νέο layout· το δεύτερο είναι ΚΥΡΙΟΛΕΚΤΙΚΟ και ενημερώνεται με το χέρι —
+   * και το `resolveRoots` (plan.js:76) **ΠΕΤΑΕΙ** «shell root not found» αν δεν
+   * υπάρχει, δηλαδή η αστοχία είναι ΘΟΡΥΒΩΔΗΣ, όχι σιωπηλή. Μην αφαιρέσεις τον φρουρό.
+   *
+   * 🔴 **ADR-777 §8.13 — Η ΨΥΧΡΗ ΕΙΣΟΔΟΣ ΑΛΛΑΞΕ ΚΑΤΟΧΟ, ΟΧΙ ΚΡΙΤΗΡΙΟ.** Το `/`
+   * σέρβιρε το ταμπλό (`(app)/page.tsx`) και ανακατεύθυνε κάθε ανώνυμο στη σύνδεση.
+   * Πλέον σερβίρει τη **δημόσια** οθόνη αναζήτησης (`(light)/page.tsx`) — που είναι
+   * **η πραγματική ψυχρή είσοδος του προϊόντος**: εκεί προσγειώνεται ο επισκέπτης του
+   * nestorconstruct.gr, χωρίς καμία προηγούμενη πλοήγηση. Το `/dashboard` βγήκε από το
+   * σύνολο **επίτηδες**: φτάνει κανείς μετά από σύνδεση, δηλαδή **με** μετάβαση, και
+   * τα namespaces του (`common`·`navigation`·`dashboard`) ταξιδεύουν ούτως ή άλλως
+   * ολόκληρα από το μητρώο μετανάστευσης — άρα η αφαίρεση κοστίζει **μηδέν bytes**.
+   * ⚠️ Ο φρουρός **λειτούργησε**: η μετακίνηση του αρχείου έκανε τον generator να
+   * **αρνηθεί** να παραγάγει, αντί να βγάλει σιωπηλά μικρότερο slice.
    */
-  shellRoots: ['src/app/**/layout.tsx', 'src/app/(app)/page.tsx'],
+  shellRoots: ['src/app/**/layout.tsx', 'src/app/(light)/page.tsx'],
   extraShellRoots: [],
 
   /**

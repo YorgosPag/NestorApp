@@ -19,6 +19,11 @@
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
 
   "dynamicKeyPolicy": {
+    "src/components/search/CoverageStatement.tsx": {
+      "prefixes": ["search-results:landing.coverage"],
+      "reason": "ADR-777 §8.13 — έγινε ορατό στον generator όταν η ΨΥΧΡΗ ΕΙΣΟΔΟΣ μετακόμισε σε src/app/(light)/page.tsx (η δημόσια οθόνη 1). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ, όχι πρόζα: η μόνη δυναμική κλήση είναι t(coverageKey(coverage), …) και το coverageKey είναι switch ΧΩΡΙΣ default πάνω στο ListingCoverage['state'] — τρεις κλάδοι, τρία ΚΥΡΙΟΛΕΚΤΙΚΑ κλειδιά, όλα κάτω από ΑΥΤΟ το πρόθεμα: landing.coverage.noSupply · .noLocation · .partial. Το αδέρφι τους .heading/.loading/.error είναι ήδη κυριολεκτικά στο ίδιο αρχείο, οπότε το πρόθεμα ταξιδεύει ούτως ή άλλως. ⚠️ Τέταρτη κατάσταση στο CoverageState ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ εκεί (switch χωρίς default πάνω σε union) — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά, που είναι ακριβώς ο λόγος που το πρόθεμα είναι ασφαλές. Ξαναεπαλήθευσέ το αν αγγίξεις το coverageKey.",
+      "$note": "Το namespace search-results ταξιδεύει ούτως ή άλλως ΟΛΟΚΛΗΡΟ (guaranteedNamespaces), οπότε σήμερα το κόστος είναι μηδέν· η εγγραφή υπάρχει για τη μέρα που θα αποσυρθεί εκείνη — αλλιώς τα τρία κλειδιά θα εξαφανίζονταν ΣΙΩΠΗΛΑ, ίδιο σχήμα με τα 71 του sidebar."
+    },
     "src/providers/NotificationProvider.tsx": {
       "reason": "resolveI18nMessage() calls i18n.exists(...) before every i18n.t(...) and its final statement is `return message`. A key that has not loaded fails exists(), so the function returns the original string — it is structurally incapable of painting a raw key, and there is nothing to slice."
     },

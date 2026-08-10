@@ -138,5 +138,256 @@
     "provenance": {
       "projectedAt": "This page was rebuilt: {value}"
     }
+  },
+  "site": {
+    "brand": "Nestor",
+    "signIn": "Sign in",
+    "nav": "Main navigation",
+    "home": "Home"
+  },
+  "demand": {
+    "door": {
+      "label": "I am looking",
+      "hint": "Tell us what you are looking for — and we will tell you what exists nearby, even when nothing matches."
+    },
+    "list": {
+      "title": "My requests",
+      "lead": "Each request is a standing order: it waits for the match — and tells you what exists nearby while it waits.",
+      "create": "New request",
+      "empty": "You have no requests yet.",
+      "emptyHint": "A request is worth making even when nothing matches today: you learn what exists nearby, what blocks it, and how many others are looking for the same.",
+      "loading": "Loading your requests…",
+      "error": "Your requests could not be loaded. Please try again shortly.",
+      "open": "Open",
+      "countLabel": "{count, plural, one {# request} other {# requests}}"
+    },
+    "affirm": {
+      "action": "Still looking",
+      "busy": "Recording…",
+      "done": "Recorded. Your request counts in the anonymous total again.",
+      "failed": "The confirmation was not recorded. Please try again.",
+      "fresh": "Recently confirmed.",
+      "stale": "Over {days} days without confirmation — it does not count in the anonymous total.",
+      "staleWhy": "The request stays yours forever. What goes stale is our claim to third parties that someone is looking — and it comes back with one click."
+    },
+    "lifecycle": {
+      "label": "Status",
+      "active": "Looking",
+      "paused": "Paused",
+      "fulfilled": "Found it",
+      "withdrawn": "Withdrawn",
+      "pause": "Pause",
+      "resume": "Resume",
+      "fulfil": "Found it",
+      "withdraw": "Withdraw",
+      "withdrawNote": "Withdrawing deletes nothing — the request stays in your list and stops looking.",
+      "failed": "The status did not change. Please try again."
+    },
+    "form": {
+      "title": "What are you looking for?",
+      "lead": "We only ask what the matching needs. Anything you leave empty means “not a condition” — not “zero”.",
+      "editTitle": "Edit request",
+      "submit": "Submit request",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "failed": "The request was not saved. Please try again shortly.",
+      "optional": "optional",
+      "notEditableHere": "This request defines its area in a way this screen does not yet compose ({placeKind}). Its remaining details are shown normally.",
+      "seeks": {
+        "legend": "What kind of transaction?",
+        "help": "Pick at least one. Without it, the request would match everything.",
+        "sell": "I want to buy",
+        "leaseOut": "I want to rent",
+        "exchange": "I am looking for land for a build-to-share deal"
+      },
+      "place": {
+        "legend": "Where?",
+        "anywhere": "Anywhere — I care about what, not where",
+        "near": "In this area",
+        "queryLabel": "Area",
+        "queryPlaceholder": "City, area, or street with number",
+        "resolve": "Locate",
+        "resolving": "Locating…",
+        "resolved": "Located: {label}",
+        "notFound": "We could not locate that area. Try a city, or a street with a number.",
+        "failed": "The lookup did not respond. Please try again shortly.",
+        "radiusLabel": "Radius (km)",
+        "notYet": "Two more ways to say “where” are coming: an area drawn on the map, and a specific building. Their model already exists; the data and the drawing surface do not."
+      },
+      "timing": {
+        "legend": "When do you need it?",
+        "help": "No property portal asks this. We know what is being built — so we can meet supply that does not exist yet.",
+        "now": "Now",
+        "window": "In a specific period",
+        "whenever": "Whenever it comes up",
+        "wheneverHint": "The request never expires. We will only ask you to confirm that you are still looking.",
+        "fromLabel": "From",
+        "toLabel": "To"
+      },
+      "features": {
+        "legend": "What property?",
+        "typesLabel": "Property types",
+        "typesHelp": "None selected means “any type”.",
+        "priceLegend": "Amount (€)",
+        "priceMin": "From",
+        "priceMax": "To",
+        "priceHelp": "The amount is judged against the price that applies to each listing — sale or rent.",
+        "areaLegend": "Area (m²)",
+        "areaMin": "From",
+        "areaMax": "To",
+        "bedroomsMin": "Bedrooms, at least",
+        "bedroomsHelp": "0 means “a studio is fine”.",
+        "floorLegend": "Floor",
+        "floorMin": "From",
+        "floorMax": "To",
+        "floorHelp": "0 is the ground floor — a real value, not “any”."
+      },
+      "proximity": {
+        "legend": "What do you want nearby?",
+        "help": "Points of interest are not sourced yet. Your requirement is recorded now and will be judged as soon as the measurements exist.",
+        "add": "Add requirement",
+        "remove": "Remove",
+        "distanceLabel": "Within (metres)",
+        "kindLabel": "What"
+      },
+      "lifeContext": {
+        "legend": "Who is it for?",
+        "help": "Optional. It is never judged in the matching — it only fills the blanks below, and you can change all of them.",
+        "none": "I would rather not say",
+        "family": "Family",
+        "workRelocation": "Relocating for work",
+        "student": "Student",
+        "filled": "{count, plural, one {# field was filled in} other {# fields were filled in}} — change them freely.",
+        "filledNone": "Nothing changed: you had already filled them in."
+      }
+    },
+    "lifeContextName": {
+      "family": "Family",
+      "workRelocation": "Relocating for work",
+      "student": "Student"
+    },
+    "proximityKind": {
+      "school": "School",
+      "supermarket": "Supermarket",
+      "busStop": "Bus stop",
+      "trainStation": "Train station"
+    },
+    "invariant": {
+      "heading": "The request cannot be saved yet:",
+      "seeks-empty": "Pick at least one kind of transaction — otherwise the request matches everything.",
+      "seeks-duplicated": "The same kind of transaction was declared twice.",
+      "window-inverted": "The “to” date is before the “from” date.",
+      "range-inverted": "A range has its lower bound above its upper bound.",
+      "radius-not-positive": "The radius must be greater than zero.",
+      "outline-degenerate": "The drawn area encloses nothing.",
+      "proximity-not-positive": "A neighbourhood distance is zero or negative.",
+      "proximity-duplicated": "The same kind of neighbourhood requirement was declared twice."
+    },
+    "formBlocker": {
+      "place-unresolved": "Press “Locate” so the area resolves to a point on the map.",
+      "window-incomplete": "Fill in both ends of the period."
+    },
+    "answer": {
+      "heading": "What exists today",
+      "checking": "Searching…",
+      "matched": "{count, plural, one {# listing matches} other {# listings match}}.",
+      "seeResults": "See the results",
+      "none": "No listing matches today.",
+      "nothingToJudge": "There is no published listing to judge yet. Your request is waiting — and it will meet the first one that matches.",
+      "nearButUnreachable": "There {count, plural, one {is # listing close} other {are # listings close}} to your request, but none within a distance worth suggesting.",
+      "noMatch": "{count, plural, one {# listing was judged} other {# listings were judged}} and none comes close. The request stays open.",
+      "blockedByUnknowns": "We cannot judge yet — and that is not the same as “nothing exists”.",
+      "blockedByUnknownsWhy": "What is missing is our data, not properties.",
+      "axesLostHeading": "The link above is broader than your request — it ignores:",
+      "balanceError": "The results ledger does not balance. We do not show a number we cannot stand behind."
+    },
+    "axisLost": {
+      "timing": "the timing you asked for",
+      "area-outline": "the exact shape of the area",
+      "place-identity": "the specific property",
+      "floor-range": "the floor",
+      "proximity": "the neighbourhood requirements"
+    },
+    "concession": {
+      "heading": "How much is missing",
+      "lead": "We do not just say “no” — we say how much.",
+      "sentence": "With {amount} there {count, plural, one {is # listing} other {are # listings}}.",
+      "amount": {
+        "price-ceiling": "+{value}",
+        "price-floor": "{value} lower minimum",
+        "area-floor": "{value} m² less",
+        "area-ceiling": "{value} m² more",
+        "bedrooms-floor": "{value, plural, one {# bedroom} other {# bedrooms}} fewer",
+        "search-radius": "{value} m more radius"
+      },
+      "more": "{count, plural, one {# more suggestion} other {# more suggestions}}",
+      "unreachable": "There are close ones, but the concession needed is large — we are not suggesting it.",
+      "multiAxis": "{count, plural, one {# listing differs} other {# listings differ}} in two things at once — one change is not enough.",
+      "unquantified": "{count, plural, one {# listing is close} other {# listings are close}} on an axis that is not measured in an amount."
+    },
+    "blocker": {
+      "heading": "What stopped them",
+      "offer-kind": "A different kind of transaction",
+      "property-type": "A different property type",
+      "other-place": "A different property than the one you asked for",
+      "place-unresolved": "We do not know yet which building they belong to",
+      "position-unknown": "They have no declared position on the map",
+      "availability-unknown": "We do not know yet when they become available",
+      "proximity-unknown": "We have not measured what is around them yet",
+      "price-above": "Above your amount",
+      "price-below": "Below the minimum you set",
+      "area-below": "Smaller than the minimum",
+      "area-above": "Larger than the maximum",
+      "bedrooms-below": "Fewer bedrooms",
+      "floor-outside": "Floor outside the range",
+      "outside-radius": "Outside the radius",
+      "outside-area": "Outside the area you drew",
+      "not-available-then": "Not available in the period you asked for",
+      "proximity-too-far": "Farther away than you asked",
+      "count": "{count}"
+    },
+    "competition": {
+      "heading": "How many others want the same",
+      "count": "{count, plural, one {# more person is looking} other {# more people are looking}} for something similar.",
+      "none": "Nobody else is looking for something similar right now.",
+      "hidden": "We do not give a number when it describes fewer than {minCount} people.",
+      "hiddenWhy": "A small number describes individuals. Anonymity is not a hope — it is a threshold."
+    },
+    "desktopOnly": {
+      "title": "Creating a request happens on a computer",
+      "body": "The form asks four axes at once — place, time, features and neighbourhood. On a narrow screen it would be half a form, and half a request meets nothing.",
+      "what": "From here you can view and manage the ones you already have.",
+      "back": "My requests"
+    },
+    "detail": {
+      "createdAt": "Created",
+      "updatedAt": "Updated",
+      "notFound": "This request does not exist.",
+      "notFoundHint": "Either it does not exist, or it is not yours. Requests are strictly private.",
+      "loading": "Loading the request…",
+      "error": "The request could not be loaded. Please try again shortly.",
+      "criteria": "Your criteria",
+      "edit": "Edit"
+    },
+    "summary": {
+      "anywhere": "Anywhere",
+      "near": "Within {radiusKm} km",
+      "area": "In a drawn area",
+      "place": "At a specific property",
+      "now": "Now",
+      "window": "From {fromDate} to {toDate}",
+      "whenever": "Whenever it comes up",
+      "anyType": "Any type",
+      "noPriceLimit": "No amount limit",
+      "priceUpTo": "Up to {priceMax} €",
+      "priceFrom": "From {priceMin} €",
+      "priceRange": "{priceMin} – {priceMax} €"
+    },
+    "space": {
+      "title": "My space",
+      "checking": "Checking your identity…",
+      "signInNeeded": "Sign in to see your requests."
+    }
   }
 }
