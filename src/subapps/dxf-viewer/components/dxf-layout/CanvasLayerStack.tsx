@@ -29,14 +29,12 @@ import {
   PreviewCanvasMounts,
   type LayerCanvasPassthroughProps,
 } from './canvas-layer-stack-leaves';
-import { PolygonCropPreviewSubscriber } from './LassoCropPreviewSubscriber'; import { LassoFreehandPreviewSubscriber } from './LassoFreehandPreviewSubscriber';
-import { SketchFreehandPreviewSubscriber } from './SketchFreehandPreviewSubscriber'; import { DistMeasureOverlayLeaf } from './DistMeasureOverlayLeaf'; // ADR-658 «Μολύβι» + ADR-680 εφήμερο «Μέτρημα» live-overlay leaves (micro-leaf, ADR-040)
-import { ZoomWindowSubscriber } from './leaves/ZoomWindowSubscriber';
+import { CanvasStackPreviewLeaves } from './canvas-layer-stack-preview-leaves';
 import { AutoAreaResultPanel } from './AutoAreaResultPanel'; import { AutoAreaPreviewOverlay } from './AutoAreaPreviewOverlay'; import { ClashReportPanel } from './ClashReportPanel';
 // ADR-449 PART B Slice C — «Βαφή σοβά» 2D paintbrush material palette (leaf, gate σε activeTool).
 import { FinishPaint2DPanel } from './FinishPaint2DPanel';
 import { RegionPerimeterPreviewOverlay } from './RegionPerimeterPreviewOverlay';
-import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf'; import { CanvasStackHudLeaves } from './canvas-layer-stack-hud-leaves';
+import { CanvasNumericInputOverlay } from '../../systems/canvas-numeric-input/CanvasNumericInputOverlay'; import { BasemapPlacementLeaf } from './BasemapPlacementLeaf'; import { DynamicInputSubscriber } from './DynamicInputSubscriber'; import { CanvasLayerStack3dLeaf } from './canvas-layer-stack-3d-leaf'; import { CanvasStackHudLeaves } from './canvas-layer-stack-hud-leaves';
 import { ViewMode3DToggleButton } from '../../bim-3d/viewport/ViewMode3DToggleButton'; import { Focus2DOverlayLeaf } from './Focus2DOverlayLeaf'; import { SelectionCursorIcon } from '../../accessibility/SelectionCursorIcon';
 // ADR-575/640 — GROUP + BLOCK container selection affordances (overlays + gizmos), grouped
 // out of this shell to keep it under the 500-line budget (N.7.1). ADR-040 leaves inside.
@@ -449,11 +447,14 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               Balancing) — εξαγωγή σε leaf ώστε ο shell να μένει <500 γραμμές (N.7.1).
               Ίδια σειρά render (z-order αμετάβλητο), ίδιο data flow. STAGE ADR-040. */}
           <CanvasLayerStack2DOverlays viewport={viewport} />
-          <PolygonCropPreviewSubscriber viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          <LassoFreehandPreviewSubscriber viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          <SketchFreehandPreviewSubscriber viewport={viewport} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          <DistMeasureOverlayLeaf viewport={viewport} sceneUnits={dxfScene?.units ?? 'mm'} className={`absolute inset-0 w-full h-full pointer-events-none ${PANEL_LAYOUT.Z_INDEX['20']}`} />
-          <ZoomWindowSubscriber className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.POINTER_EVENTS.NONE} ${PANEL_LAYOUT.Z_INDEX['20']}`} />
+          {/* Εφήμερα preview overlays z-20 (λάσο/μολύβι/μέτρημα/zoom-window) — το κριτήριο
+              ένταξης και ο λόγος εξαγωγής ζουν στο ίδιο το leaf. STAGE ADR-040. */}
+          <CanvasStackPreviewLeaves viewport={viewport} sceneUnits={dxfScene?.units ?? 'mm'} />
+          {/* ADR-782 §23 — χειροκίνητη τοποθέτηση υποβάθρου. Κάθεται στο z-30 (ΠΑΝΩ από τα
+              overlays του 2Δ, ΚΑΤΩ από το 3Δ viewport του z-50): όσο η συνεδρία τρέχει, ο δείκτης
+              ανήκει σε αυτήν και κανένα εργαλείο σχεδίασης δεν μπορεί να ξεκινήσει ταυτόχρονα.
+              Το ίδιο leaf επιστρέφει `null` εκτός συνεδρίας — μηδέν κόστος, καμία επιφάνεια. */}
+          <BasemapPlacementLeaf className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['30']}`} />
           <CanvasNumericInputOverlay />
           <DynamicInputSubscriber
             activeTool={activeTool}

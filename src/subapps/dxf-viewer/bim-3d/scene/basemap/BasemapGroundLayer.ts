@@ -46,10 +46,8 @@ import {
   resolveBasemapPaint,
   type BasemapContent,
 } from '../../../systems/basemap/basemap-paint-decision';
-import {
-  getBasemapDisplayProjector,
-  worldMmToGeographic,
-} from '../../../systems/basemap/basemap-projection';
+import { getBasemapDisplayProjector } from '../../../systems/basemap/basemap-frame';
+import { worldMmToGeographic } from '../../../systems/basemap/basemap-projection';
 import { chooseZoomLevel, tilesForDisplayRect } from '../../../systems/basemap/basemap-tile-model';
 import { buildTileWarpMesh } from '../../../systems/basemap/basemap-warp';
 import { getTileImage } from '../../../systems/basemap/basemap-tile-cache';

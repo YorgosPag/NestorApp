@@ -7,7 +7,7 @@
  *
  * | | ακούει |
  * |---|---|
- * | 2Δ (`useBasemapPainter`) | κατάσταση · διαθεσιμότητα · επιφάνεια απόδοσης · **άφιξη πλακιδίου** |
+ * | 2Δ (`useBasemapPainter`) | κατάσταση · πλαίσιο · επιφάνεια απόδοσης · **άφιξη πλακιδίου** |
  * | 3Δ (`BasemapGroundLayer`) | **τίποτα** |
  *
  * Η τρισδιάστατη σκηνή είναι **on-demand** (`scene-dirty-state.ts`: «single master rAF +
@@ -42,7 +42,7 @@
 import { createExternalStore } from '@/lib/state/createExternalStore';
 
 import { subscribeBasemap } from './basemap-store';
-import { subscribeBasemapAvailability } from './basemap-availability';
+import { subscribeBasemapFrame } from './basemap-frame';
 import { subscribeBasemapAttributionSurface } from './basemap-attribution-surface';
 import { subscribeTileReady } from './basemap-tile-cache';
 
@@ -52,7 +52,7 @@ import { subscribeTileReady } from './basemap-tile-cache';
  */
 const SOURCES: readonly ((listener: () => void) => () => void)[] = [
   subscribeBasemap,
-  subscribeBasemapAvailability,
+  subscribeBasemapFrame,
   subscribeBasemapAttributionSurface,
   subscribeTileReady,
 ];

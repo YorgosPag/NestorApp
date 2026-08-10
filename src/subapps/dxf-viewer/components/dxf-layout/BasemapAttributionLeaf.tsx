@@ -39,7 +39,7 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import {
   getBasemapAvailability,
   subscribeBasemapAvailability,
-} from '../../systems/basemap/basemap-availability';
+} from '../../systems/basemap/basemap-frame';
 import { getBasemapState, subscribeBasemap } from '../../systems/basemap/basemap-store';
 import { registerBasemapAttributionSurface } from '../../systems/basemap/basemap-attribution-surface';
 import { resolveBasemapContent } from '../../systems/basemap/basemap-paint-decision';

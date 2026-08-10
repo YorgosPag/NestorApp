@@ -21,6 +21,9 @@ import type {
   ProjectBasePoint,
 } from '@/types/project-elevation.schemas';
 export type { ProjectSurveyPoint, ProjectBasePoint } from '@/types/project-elevation.schemas';
+// ADR-782 §24 — υπόβαθρο, ΟΧΙ γεωαναφορά: ξεχωριστό αρχείο σχήματος επίτηδες (δες το docblock του).
+import type { ProjectBasemapPlacement } from '@/types/project-basemap-placement.schemas';
+export type { ProjectBasemapPlacement } from '@/types/project-basemap-placement.schemas';
 
 // ADR-376 Phase C.2 — Per-project Opening Tag Style override (DXF Viewer BIM)
 import type { OpeningTagStyle } from '@/subapps/dxf-viewer/bim/services/opening-tag-style-service';
@@ -156,6 +159,19 @@ export interface Project extends SoftDeletableFields {
   basePoint?: ProjectBasePoint;
   /** Rotation true-north → project grid, DEGREES. Default 0. */
   northRotation?: number;
+
+  // ─── ADR-782 §24 — Χειροκίνητη τοποθέτηση ΥΠΟΒΑΘΡΟΥ (ποτέ γεωαναφορά) ────
+  /**
+   * Πού κάθεται η τοπική αρχή (0,0) του σχεδίου πάνω στη Γη **για τον χάρτη** — ΜΕΤΡΑ ΕΓΣΑ'87
+   * + μοίρες. `null`/απόν = ο χρήστης δεν τοποθέτησε τίποτα με το χέρι, ο χάρτης ακολουθεί τη
+   * δηλωμένη διεύθυνση.
+   *
+   * ⚠️ **ΔΕΝ είναι γεωαναφορά και δεν προάγεται ποτέ σε τέτοια** (απόφαση Giorgio 2026-08-10,
+   * ADR-782 §23.1): είναι θέση που εκτιμήθηκε **με το μάτι** πάνω σε χάρτη εθελοντικής
+   * χαρτογράφησης και δεν έχει καμία δουλειά σε πίνακες συντεταγμένων, εξαγωγή IFC ή τοπογραφικά
+   * παραδοτέα. Τα τρία πεδία ADR-369 από πάνω είναι εκείνα, και μένουν ανέγγιχτα.
+   */
+  basemapPlacement?: ProjectBasemapPlacement | null;
 
   // ─── ADR-376 Phase C.2 — Per-project Opening Tag Style override ──────────
   /**

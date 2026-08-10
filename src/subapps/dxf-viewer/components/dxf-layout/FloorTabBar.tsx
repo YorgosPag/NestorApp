@@ -28,11 +28,11 @@ import { PANEL_LAYOUT } from '../../config/panel-tokens';
 import { useFloorTabs, type FloorTab } from '../../hooks/data/useFloorTabs';
 import { BasemapSettingsPopover } from './BasemapSettingsPopover';
 import { FloorManagementDialogStore } from '../../stores/FloorManagementDialogStore';
+import { getProjectAnchorRefusal } from '../../systems/basemap/basemap-availability';
 import {
   getBasemapAvailability,
-  getProjectAnchorRefusal,
   subscribeBasemapAvailability,
-} from '../../systems/basemap/basemap-availability';
+} from '../../systems/basemap/basemap-frame';
 import { ANCHOR_REFUSAL_HINT_KEY } from '../../systems/basemap/basemap-anchor-labels';
 import {
   getBasemapState,

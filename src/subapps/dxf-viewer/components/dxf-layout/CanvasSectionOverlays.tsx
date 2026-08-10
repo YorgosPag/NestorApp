@@ -52,6 +52,13 @@ import {
   TableCellLinkContextMenu,
   type TableCellLinkContextMenuHandle,
 } from '../../ui/components/TableCellLinkContextMenu';
+// 🔴 ADR-739 §67 — δεξί κλικ **μέσα** σε πεδίο κειμένου της συνεδρίας (κελί ή γραμμή τύπων):
+// **μόνο** το mini toolbar, χωρίς μενού (§67.10, μετρημένο στο Excel). Ανοίγει imperative μέσω
+// θύρας — αλλά τη θύρα του **δεν** τη ρωτά ο δρομολογητής του καμβά: τη ρωτούν τα ίδια τα πεδία.
+import {
+  TableTextMiniToolbar,
+  type TableTextToolbarHandle,
+} from '../../ui/components/TableTextMiniToolbar';
 import { TableLinkPicker } from '../../ui/components/TableLinkPicker';
 import { SelectionCyclingPopover } from '../../systems/selection/SelectionCyclingPopover';
 // ADR-659 — overlap «⧉ N» badge (store-driven leaf, no props).
@@ -89,6 +96,13 @@ type TableLinkMenuMount = {
   props: Omit<React.ComponentProps<typeof TableCellLinkContextMenu>, 'ref'>;
 };
 
+// ADR-739 §67 — η τέταρτη επιφάνεια δεξιού κλικ πίνακα, ίδιο συμβόλαιο μονταρίσματος με τα
+// τρία μενού από πάνω — με τη διαφορά ότι εδώ δεν υπάρχει μενού, μόνο η γραμμή εργαλείων.
+type TableTextToolbarMount = {
+  ref: React.RefObject<TableTextToolbarHandle | null>;
+  props: Omit<React.ComponentProps<typeof TableTextMiniToolbar>, 'ref'>;
+};
+
 export interface CanvasSectionOverlaysProps {
   drawingMenuRef: React.RefObject<DrawingContextMenuHandle | null>;
   guideMenuRef: React.RefObject<GuideContextMenuHandle | null>;
@@ -115,6 +129,9 @@ export interface CanvasSectionOverlaysProps {
   // μονταρισμένο πάντα, ανοίγει imperative μέσω ref, αόρατο όσο δεν έχει στόχο.
   tableRangeMenu: TableRangeMenuMount;
   tableLinkMenu: TableLinkMenuMount;
+  // ADR-739 §67 — η γραμμή του κειμένου: ίδια σύμβαση με τα τρία από πάνω (μονταρισμένη πάντα,
+  // αόρατη όσο δεν έχει στόχο), αλλά η θύρα της ανοίγει από τα **πεδία**, όχι από τον καμβά.
+  tableTextToolbar: TableTextToolbarMount;
   selectionCycling: CyclingProps;
 }
 
@@ -172,6 +189,14 @@ export const CanvasSectionOverlays: React.FC<CanvasSectionOverlaysProps> = (p) =
       <TableCellLinkContextMenu
         ref={p.tableLinkMenu.ref as React.Ref<TableCellLinkContextMenuHandle>}
         {...p.tableLinkMenu.props}
+      />
+      {/* 🔴 ADR-739 §67 — δεξί κλικ ΜΕΣΑ σε πεδίο κειμένου της συνεδρίας: **μόνο** το mini
+          toolbar τυπογραφίας, χωρίς μενού — ακριβώς όπως το Excel σε κατάσταση Επεξεργασίας
+          (§67.10). Χωρίς αυτό ο browser έδειχνε το native μενού του, γιατί τα δύο πεδία ζουν
+          εκτός του δοχείου όπου ακούει ο δρομολογητής δεξιού κλικ του καμβά. */}
+      <TableTextMiniToolbar
+        ref={p.tableTextToolbar.ref as React.Ref<TableTextToolbarHandle>}
+        {...p.tableTextToolbar.props}
       />
       {/* ADR-357 Phase 15 — G13 Selection Cycling popover (portal, micro-leaf, ADR-040) */}
       <SelectionCyclingPopover {...p.selectionCycling} />

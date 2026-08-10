@@ -12,6 +12,7 @@ import {
   ProjectBasePointSchema,
   ProjectNorthRotationSchema,
 } from '@/types/project-elevation.schemas';
+import { ProjectBasemapPlacementSchema } from '@/types/project-basemap-placement.schemas';
 
 export const ProjectUpdateSchema = z.object({
   name: z.string().max(500).optional(),
@@ -44,6 +45,15 @@ export const ProjectUpdateSchema = z.object({
   surveyPoint: ProjectSurveyPointSchema.optional(),
   basePoint: ProjectBasePointSchema.optional(),
   northRotation: ProjectNorthRotationSchema.optional(),
+  // ADR-782 §24 — η **χειροκίνητη τοποθέτηση υποβάθρου**, δηλωμένη ρητά για τον ίδιο λόγο με το
+  // ζεύγος Ο.Τ./ΟΙΚ. από πάνω: το `.passthrough()` θα την άφηνε να περάσει «επειδή δεν την
+  // κοιτάζει κανείς», δηλαδή χωρίς όριο μεγέθους και χωρίς ίχνος στο συμβόλαιο — και μιλάμε για
+  // συντεταγμένες, όπου μια τιμή εκτός πλανήτη δεν σπάει τίποτα ορατά: απλώς ο χάρτης δεν
+  // ζωγραφίζεται ποτέ ξανά και κανείς δεν ξέρει γιατί.
+  // ⚠️ **ΔΕΝ** είναι γεωαναφορά (§23.1) — δες το docblock του σχήματος πριν τη συνδέσεις με το
+  // `basePoint`/`northRotation` από πάνω. `nullable` επίτηδες: η **επαναφορά** είναι νόμιμη
+  // ενέργεια του χρήστη, όχι απουσία πεδίου.
+  basemapPlacement: ProjectBasemapPlacementSchema.nullable().optional(),
   _v: z.number().int().optional(),
 }).passthrough();
 

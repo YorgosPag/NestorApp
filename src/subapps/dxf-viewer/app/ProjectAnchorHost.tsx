@@ -23,9 +23,16 @@
  *
  * ADR-040: μηδέν εγγραφές υψηλής συχνότητας — ένα `useEffect` ανά αλλαγή έργου (CHECK 6B/6C).
  *
+ * ⚠️ **Η χειροκίνητη τοποθέτηση ΔΕΝ καθαρίζεται πια εδώ** (ADR-782 §24): από τη στιγμή που
+ * αποκτά μονιμότητα, ο κύκλος ζωής της είναι υδάτωση **και** καθαρισμός, και οι δύο σε ένα
+ * effect με την ίδια εξάρτηση `projectId`. Δύο host που έγραφαν στο ίδιο store θα έλυναν τη σειρά
+ * τους με **σειρά προσάρτησης**. Ο καθαρισμός **μετακόμισε** στον `BasemapPlacementHost` — δεν
+ * προστέθηκε δεύτερος.
+ *
  * @see ../systems/basemap/project-anchor-persistence.ts — η ανάγνωση
  * @see ../systems/basemap/project-anchor-resolution.ts — η κρίση (καθαρή)
  * @see ./GeoReferenceHost.tsx — ο δίδυμος για την **ακριβή** γεωαναφορά
+ * @see ./BasemapPlacementHost.tsx — ο ιδιοκτήτης της χειροκίνητης τοποθέτησης
  */
 
 import * as React from 'react';

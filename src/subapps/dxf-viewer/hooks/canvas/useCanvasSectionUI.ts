@@ -34,6 +34,10 @@ import { useTableFormatActions } from '../../ui/table-cell-editor/use-table-form
 // σημείωση μέσα στον χειριστή για το γιατί κρίνεται πριν τον φύλακα εστίασης.
 import { claimTableFormatCellsShortcut } from '../../ui/table-cell-editor/table-format-cells-shortcut';
 import { useTableLinkMenu } from '../../ui/table-cell-editor/use-table-link-menu';
+// 🔴 ADR-739 §67 — η **τέταρτη** θύρα δεξιού κλικ πίνακα, και η μόνη που **δεν** ρωτιέται από τον
+// δρομολογητή του καμβά: τα δύο πεδία κειμένου της συνεδρίας ζουν εκτός του δοχείου του, οπότε
+// τη ρωτούν τα ίδια τα πεδία μέσω `onContextMenu`. Δες `table-text-menu-port.ts`.
+import { useTableTextToolbar } from '../../ui/table-cell-editor/use-table-text-toolbar';
 import { useTableLinkShortcut } from '../../ui/table-cell-editor/use-table-link-shortcut';
 import { useAutoAreaMouseMove } from './useAutoAreaMouseMove';
 import { useRegionPerimeterMouseMove } from './useRegionPerimeterMouseMove';
@@ -107,6 +111,10 @@ export function useCanvasSectionUI({
   // ADR-751 Φ8.β — τρίτη θύρα δεξιού κλικ (PRIORITY 1.44): σύνδεσμος μέσα σε κελί. Χωρίς
   // παραμέτρους επίτηδες — ο στόχος έρχεται από το hover store, όχι από νέο hit-test.
   const tableLinkMenu = useTableLinkMenu();
+  // 🔴 ADR-739 §67 — τέταρτη θύρα: δεξί κλικ **μέσα** στο κείμενο που γράφεται. Χωρίς
+  // `containerRef`/`transformRef` επίτηδες — δεν κάνει hit-test: το πεδίο του το δίνει το ίδιο το
+  // συμβάν, και το κελί το ξέρει ο δρομέας.
+  const tableTextToolbar = useTableTextToolbar({ levelManager });
   // ADR-751 Φ8.γ — `Ctrl+Shift+K`: η λίστα όλων των διευθύνσεων του επιλεγμένου πίνακα
   // (μοτίβο VS Code «Open Detected Link…»). Χωρίς επιστρεφόμενη τιμή: η επιφάνεια είναι
   // micro-leaf πάνω σε store, όχι μονταρισμένο ref.
@@ -159,5 +167,5 @@ export function useCanvasSectionUI({
   // region preview (τρέχει ΤΕΛΕΥΤΑΙΟ → οδηγεί το ΙΔΙΟ RegionPerimeterPreviewStore όταν
   // είναι ενεργό το εργαλείο μπάνιου· αλλιώς καθαρό passthrough).
   const { handleMouseMoveWithBathroomPreview } = useBathroomAutoArrangeMouseMove({ handleMouseMove: handleMouseMoveWithRegionPreview, activeTool, levelManager });
-  return { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableLinkMenu, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
+  return { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableLinkMenu, tableTextToolbar, handleDoubleClick, handleMouseMoveWithAutoArea: handleMouseMoveWithBathroomPreview };
 }

@@ -109,6 +109,11 @@ export interface ProjectUpdatePayload extends ProjectPayloadSharedFields {
   surveyPoint?: ProjectSurveyPoint;
   basePoint?: ProjectBasePoint;
   northRotation?: number;
+  /**
+   * ADR-782 §24 — χειροκίνητη τοποθέτηση **υποβάθρου** (μόνο η οθόνη του χάρτη).
+   * ⚠️ **ΠΟΤΕ** γεωαναφορά (§23.1) — δεν συνδέεται με τα τρία πεδία από πάνω.
+   */
+  basemapPlacement?: import('@/types/project-basemap-placement.schemas').ProjectBasemapPlacement | null;
 }
 
 /**

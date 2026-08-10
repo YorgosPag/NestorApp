@@ -6178,3 +6178,43 @@ viewport. Το `NorthArrowLeaf` είναι κι εκείνο screen-anchored α�
 (+`Z_INDEX['55']`)· NEW `components/dxf-layout/BasemapAttributionLeaf.tsx`,
 `systems/basemap/basemap-paint-decision.ts`, `systems/basemap/basemap-attribution-surface.ts`,
 `components/dxf-layout/canvas-layer-stack-hud-leaves.tsx`.
+
+---
+
+## 2026-08-11 — νέο micro-leaf που **κατέχει τον δείκτη**: η χειροκίνητη τοποθέτηση υποβάθρου (ADR-782 §23/§24, CHECK 6B stage)
+
+Η χειροκίνητη τοποθέτηση του υποβάθρου (`BasemapPlacementLeaf`) μπαίνει στον `CanvasLayerStack`
+στη ζώνη **`z-30`**: **πάνω** από τα εφήμερα preview overlays του 2Δ (`z-20`), **κάτω** από το
+`BimViewport3D` (`z-50`).
+
+🔑 **Είναι το πρώτο leaf αυτής της ζώνης που ΔΕΝ είναι `pointer-events-none`.** Όσο τρέχει η
+συνεδρία τοποθέτησης, ο δείκτης **ανήκει σε αυτήν** — έτσι κανένα εργαλείο σχεδίασης δεν μπορεί
+να ξεκινήσει χειρονομία ταυτόχρονα με τη μετακίνηση του χάρτη. Εκτός συνεδρίας το leaf επιστρέφει
+`null`: **μηδέν κόστος, καμία επιφάνεια που να κλέβει κλικ**.
+
+ADR-040: το leaf **self-subscribes** στο δικό του store (`basemap-placement-store`) και
+**self-gates**· ο shell δεν απέκτησε καμία συνδρομή (CHECK 6C πράσινο).
+
+⚠️ **Η προσθήκη ξαναέσπασε το όριο N.7.1 και λύθηκε ξανά με ΕΞΑΓΩΓΗ, όχι με ψαλίδισμα**: ο
+`CanvasLayerStack.tsx` πήγε **497 → 502** γραμμές. Βγήκαν τα **τέσσερα εφήμερα preview overlays**
+της ζώνης `z-20` σε `canvas-layer-stack-preview-leaves.tsx` (`CanvasStackPreviewLeaves`), με
+κριτήριο ένταξης **μετρήσιμο, όχι αισθητικό**: εδώ μπαίνει ό,τι ζωγραφίζει **ό,τι δεν έχει
+δεσμευτεί ακόμη** — λάσο, μολύβι, ζωντανό μέτρημα, παράθυρο zoom — δηλαδή `z-20` **και**
+`pointer-events-none` **και** σβήνει μόλις τελειώσει η χειρονομία.
+
+🔴 **Το `BasemapPlacementLeaf` ΔΕΝ μπήκε σε αυτό το group παρότι είναι κι εκείνο εφήμερο**, και ο
+λόγος είναι ακριβώς ο παραπάνω: ζει στο `z-30` και **δέχεται** συμβάντα δείκτη. Το όριο δεν είναι
+«μοιάζουν» — είναι η ζώνη στρώσης μαζί με την ιδιοκτησία του δείκτη· ίδιο κριτήριο με το
+`CanvasStackHudLeaves` (2026-08-10). Η σειρά DOM διατηρήθηκε ακέραιη (τα πέντε mounts ήταν ήδη
+γειτονικά) ⇒ **z-order αμετάβλητο**, ίδια props, ίδιες κλάσεις — τοποθέτηση, όχι αλλαγή.
+
+⚠️ Η κοινή κλάση της ζώνης γράφεται **μία φορά** στο νέο leaf (`PREVIEW_LAYER_CLASS`): ήταν
+τέσσερις ταυτόσημες συμβολοσειρές σε τέσσερις γραμμές, δηλαδή τέσσερα σημεία που μπορούσαν να
+αποκλίνουν χωρίς κανείς να το δει. Το `ZoomWindowSubscriber` κρατά τη **δική** του γραφή (μέσα
+από `INSET`/`POINTER_EVENTS` tokens) ώστε η εξαγωγή να μην κρύβει σιωπηλή αλλαγή κλάσης.
+
+**Files**: MOD `components/dxf-layout/CanvasLayerStack.tsx` (+1 mount, −5 mounts, 498 γρ.),
+`components/dxf-layout/CanvasSection.tsx`, `components/dxf-layout/CanvasSectionOverlays.tsx`
+(mount του πάνελ τοποθέτησης)· NEW `components/dxf-layout/canvas-layer-stack-preview-leaves.tsx`,
+`components/dxf-layout/BasemapPlacementLeaf.tsx`, `components/dxf-layout/BasemapPlacementPanel.tsx`,
+`hooks/canvas/use-basemap-placement-interaction.ts`.

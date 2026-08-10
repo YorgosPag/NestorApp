@@ -41,6 +41,7 @@ import { GridGuidePersistenceHost } from './GridGuidePersistenceHost';
 import { TopoPersistenceHost } from './TopoPersistenceHost';
 import { GeoReferenceHost } from './GeoReferenceHost';
 import { ProjectAnchorHost } from './ProjectAnchorHost';
+import { BasemapPlacementHost } from './BasemapPlacementHost';
 import { HostingReconcilerHost } from './HostingReconcilerHost';
 import { MepFixturePersistenceHost } from './MepFixturePersistenceHost';
 import { FurniturePersistenceHost } from './FurniturePersistenceHost';
@@ -242,6 +243,8 @@ export function DxfViewerTopBar({
       <GeoReferenceHost projectId={projectId} />
       {/* ADR-782 §21 — κατά προσέγγιση θέση από τη ΔΗΛΩΜΕΝΗ διεύθυνση (ποτέ στο geo-reference). */}
       <ProjectAnchorHost projectId={projectId} />
+      {/* ADR-782 §24 — μονιμότητα της χειροκίνητης τοποθέτησης υποβάθρου (ποτέ στο basePoint). */}
+      <BasemapPlacementHost projectId={projectId} />
       <HostingReconcilerHost levelManager={levelManager} />
       <BeamPersistenceHost
         primarySelectedId={primarySelectedId}

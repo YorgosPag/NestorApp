@@ -39,7 +39,8 @@
  * `Α6` — διαβάζει τα δύο αρχεία των ζωγράφων και απαιτεί να μην την εισάγουν.
  */
 
-import { getBasemapAvailability, type BasemapAvailability } from './basemap-availability';
+import type { BasemapAvailability } from './basemap-availability';
+import { getBasemapAvailability } from './basemap-frame';
 import { getBasemapState } from './basemap-store';
 import { hasBasemapAttributionSurface } from './basemap-attribution-surface';
 import { resolveBasemapSource, type BasemapSource } from './basemap-source';

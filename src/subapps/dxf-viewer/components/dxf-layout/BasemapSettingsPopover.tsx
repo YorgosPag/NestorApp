@@ -31,7 +31,7 @@
  */
 
 import React, { useSyncExternalStore } from 'react';
-import { Settings2 } from 'lucide-react';
+import { Move, Settings2 } from 'lucide-react';
 import { useTranslation } from '@/i18n';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -44,11 +44,14 @@ import {
   setBasemapSource,
   subscribeBasemap,
 } from '../../systems/basemap/basemap-store';
+import { getApproximateAnchor } from '../../systems/basemap/basemap-availability';
 import {
-  getApproximateAnchor,
   getBasemapAvailability,
+  getBasemapFrame,
   subscribeBasemapAvailability,
-} from '../../systems/basemap/basemap-availability';
+  subscribeBasemapFrame,
+} from '../../systems/basemap/basemap-frame';
+import { beginBasemapPlacement } from '../../systems/basemap/basemap-placement-session';
 import { ANCHOR_ORIGIN_LABEL_KEY } from '../../systems/basemap/basemap-anchor-labels';
 import { BASEMAP_SOURCES, type BasemapSourceId } from '../../systems/basemap/basemap-source';
 
@@ -123,6 +126,10 @@ export const BasemapSettingsPopover: React.FC = () => {
     getApproximateAnchor,
   );
 
+  // Ασφαλές ως `getSnapshot`: η `getBasemapFrame` είναι απομνημονευμένη (άγκυρα `Φ7`).
+  const frame = useSyncExternalStore(subscribeBasemapFrame, getBasemapFrame, getBasemapFrame);
+  const frameSource = frame?.source ?? null;
+
   const unavailable = availability === 'unknown';
 
   return (
@@ -180,7 +187,37 @@ export const BasemapSettingsPopover: React.FC = () => {
             <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
               {t(ANCHOR_ORIGIN_LABEL_KEY[anchor.originKey])}
             </p>
+            {/*
+              ADR-782 §23 — δεύτερη γραμμή **μόνο** όταν η θέση έχει διορθωθεί με το χέρι. Είναι
+              άλλο ερώτημα από την προέλευση της άγκυρας: εκείνη λέει από πού ήρθε το γεωγραφικό
+              πλάτος/μήκος, αυτή τι καθορίζει τη θέση **και τη στροφή** του χάρτη τώρα.
+            */}
+            {frameSource === 'manual-placement' && (
+              <p className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.muted}`}>
+                {t('basemap.placement.appliedHint')}
+              </p>
+            )}
           </section>
+        )}
+
+        {/*
+          ADR-782 §23 — είσοδος στη χειροκίνητη τοποθέτηση. **Μόνο** σε κατά προσέγγιση θέση: σε
+          γεωαναφερμένο έργο ο χάρτης ακολουθεί το τοπογραφικό, και σε άγνωστη θέση δεν υπάρχει
+          χάρτης να συρθεί. Ένα κουμπί που εμφανιζόταν πάντα θα ήταν χειριστήριο που στις δύο
+          από τις τρεις καταστάσεις δεν μπορεί να κάνει τίποτα (ADR-749 §5, σε μορφή διεπαφής).
+        */}
+        {availability === 'approximate' && (
+          <button
+            type="button"
+            onClick={beginBasemapPlacement}
+            className={`flex items-center ${PANEL_LAYOUT.GAP.XS} ${PANEL_LAYOUT.SPACING.COMPACT} ` +
+              `${PANEL_LAYOUT.ROUNDED.TOP} ${PANEL_LAYOUT.TYPOGRAPHY.XS} ` +
+              `${colors.text.primary} ${PANEL_LAYOUT.INTERACTIVE.HOVER} ` +
+              PANEL_LAYOUT.INTERACTIVE.TRANSITION}
+          >
+            <Move size={13} aria-hidden="true" />
+            {t('basemap.placement.start')}
+          </button>
         )}
       </PopoverContent>
     </Popover>

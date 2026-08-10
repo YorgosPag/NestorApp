@@ -421,7 +421,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
     onSnapOverrideMenuRequest: (x: number, y: number) => drawingMenuRef.current?.open(x, y),
   });
   // ADR-739 Φ.Δ βήμα 9 — το `tableHeaderMenu` είναι ΜΟΝΟ ref+props για μοντάρισμα· τη σύνδεση με το δεξί κλικ την κάνει θύρα module (`table-header-menu-port`) — καμία νέα συνδρομή εδώ (ADR-040).
-  const { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableLinkMenu, handleDoubleClick, handleMouseMoveWithAutoArea } = useCanvasSectionUI({
+  const { textEditor, tableCellEditor, tableHeaderMenu, tableRangeMenu, tableLinkMenu, tableTextToolbar, handleDoubleClick, handleMouseMoveWithAutoArea } = useCanvasSectionUI({
     transformRef, containerRef, activeTool, executeCommand,
     getSelectedEntityIds, dxfScene, handleMouseMove: unified.handleMouseMove,
     levelManager, currentOverlays, transformScale: transform.scale,
@@ -489,6 +489,7 @@ export const CanvasSection: React.FC<DXFViewerLayoutProps & { overlayMode: Overl
         tableHeaderMenu={tableHeaderMenu}
         tableRangeMenu={tableRangeMenu}
         tableLinkMenu={tableLinkMenu}
+        tableTextToolbar={tableTextToolbar}
         selectionCycling={{ onSelectEntity: handleCycleEntitySelect }}
       />
     </>

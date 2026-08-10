@@ -22,8 +22,11 @@
  * αντίστροφη, μια ασυμμετρία ανάμεσα στις δύο θα εμφανιζόταν ως **ολίσθηση του υποβάθρου κατά
  * το zoom** — βλάβη που μοιάζει με σφάλμα κάμερας και θα κυνηγιόταν εκεί.
  *
- * Καθαρό module — μηδέν React/DOM/δίκτυο. Η **μία** συνάρτηση που διαβάζει store είναι η
- * {@link getBasemapDisplayProjector}, στο πρότυπο του `getTopoDisplayProjector`.
+ * **Καθαρό module — μηδέν React/DOM/δίκτυο και, από το §23, μηδέν ανάγνωση store.** Ο προβολέας
+ * του υποβάθρου ζει στο `basemap-frame.ts`, γιατί η επιλογή του **δεν** είναι βήμα της αλυσίδας
+ * μονάδων: είναι κρίση προτεραιότητας ανάμεσα σε τρεις πηγές θέσης. ⚠️ Και δεν επιτρέπεται να
+ * ζει εδώ: εκείνο το module καταναλώνει τη {@link geographicToWorldMm} αυτού, άρα η αντίστροφη
+ * εξάρτηση θα έκλεινε κύκλο.
  */
 
 import type { Point2D } from '../../rendering/types/Types';
@@ -31,7 +34,7 @@ import { mmToSceneUnits } from '../../utils/scene-units';
 import { ggrs87ToWgs84, wgs84ToGgrs87 } from '../geo-referencing/ggrs87-datum';
 import { geographicToGrid, gridToGeographic } from '../geo-referencing/egsa87-projection';
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
-import { getTopoDisplayProjector, projectWorldPoint } from '../topography/topo-display-frame';
+import { projectWorldPoint } from '../topography/topo-display-frame';
 
 /** Μέτρα → canonical mm, μέσω του SSoT μονάδων (ADR-462) — ποτέ ένα inline `× 1000`. */
 function metresToMm(metres: number): number {
@@ -64,22 +67,6 @@ export function geographicToWorldMm(lat: number, lon: number): Point2D {
 export function worldMmToGeographic(x: number, y: number): { lat: number; lon: number } {
   const local = gridToGeographic(mmToMetres(x), mmToMetres(y));
   return ggrs87ToWgs84(local.lat, local.lon);
-}
-
-/**
- * Ο ενεργός προβολέας «κόσμος → χαρτί», ή `null` όταν το έργο **δεν** είναι γεωαναφερμένο.
- *
- * Είναι σκόπιμα ο **ίδιος** που χρησιμοποιεί κάθε τοπογραφικό προϊόν: αν ο χάρτης κρατούσε δικό
- * του αντίγραφο, θα υπήρχαν δύο απαντήσεις στο ερώτημα «πού κάθεται ο κόσμος πάνω στο χαρτί» —
- * και η μέρα που ο χρήστης θα ευθυγράμμιζε ξανά το έργο, η μία θα ενημερωνόταν και η άλλη όχι.
- *
- * ⚠️ Το `null` εδώ σημαίνει «**ταυτοτικός**», όχι «σφάλμα». Ο καταναλωτής όμως πρέπει να
- * ξεχωρίσει δύο πράγματα που το `null` **δεν** διακρίνει: «το έργο δεν έχει γεωαναφορά» (άρα ο
- * χάρτης δεν ξέρει πού είναι) από «η γεωαναφορά είναι ταυτοτική» (θεωρητικά δυνατό). Τη διάκριση
- * την κάνει το store της γεωαναφοράς, όχι αυτό το module.
- */
-export function getBasemapDisplayProjector(): WorldToDisplayProjector | null {
-  return getTopoDisplayProjector();
 }
 
 /**
