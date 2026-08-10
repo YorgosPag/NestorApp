@@ -9,35 +9,35 @@
  *
  * ## Τι εγγράφεται και τι όχι
  * Εδώ ζουν **μόνο** εγγραφές χαμηλής συχνότητας: ο διακόπτης/αδιαφάνεια/πάροχος, η
- * διαθεσιμότητα γεωαναφοράς, και η άφιξη πλακιδίων. Το `transform` **δεν** είναι εξάρτηση: το
- * διαβάζει ο μηχανισμός της ζώνης τη στιγμή του καρέ (ADR-040 XXII.B), οπότε το pan/zoom δεν
- * περνά ποτέ από React.
+ * διαθεσιμότητα γεωαναφοράς, η επιφάνεια απόδοσης και η άφιξη πλακιδίων. Το `transform` **δεν**
+ * είναι εξάρτηση: το διαβάζει ο μηχανισμός της ζώνης τη στιγμή του καρέ (ADR-040 XXII.B), οπότε
+ * το pan/zoom δεν περνά ποτέ από React.
  *
- * ## Γιατί η άφιξη πλακιδίου αλλάζει **ταυτότητα**
+ * 🔑 **Οι τέσσερις πηγές δεν απαριθμούνται ΕΔΩ** (ADR-782 §17). Ζουν μία φορά, στο
+ * `basemap-invalidation.ts`, γιατί ο **ίδιος** κατάλογος χρειάζεται και στο 3Δ
+ * (`BasemapGroundLayer`) — και όσο ήταν γραμμένος μόνο εδώ, το 3Δ άκουγε **μηδέν** από τις
+ * τέσσερις. Δύο αντίγραφα του «τι αλλάζει την απόφαση» είναι το ίδιο σχήμα που έλυσε το
+ * `basemap-paint-decision.ts` για το «ποια είναι η απόφαση».
+ *
+ * ## Γιατί μια αλλαγή εισόδου αλλάζει **ταυτότητα** του painter
  * Ο μηχανισμός της ζώνης ξαναζωγραφίζει όταν αλλάξει η ταυτότητα της λίστας painters, το
  * viewport, ή το transform. Ένα πλακίδιο που φτάνει από το δίκτυο δεν είναι κανένα από τα τρία —
  * χωρίς τον μετρητή, ο χάρτης θα εμφανιζόταν μόνο την **επόμενη φορά που ο χρήστης θα κουνούσε
  * την οθόνη**: βλάβη που μοιάζει με «αργεί ο χάρτης» και θα κυνηγιόταν στο δίκτυο.
  */
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import type { OverlayDispatchPainter } from './overlay-dispatch/overlay-dispatch-frame';
 import { visibleDisplayRect } from '../../rendering/core/visible-display-rect';
 import { unprojectDisplayPoint } from '../../systems/topography/topo-display-frame';
 import {
-  getBasemapAvailability,
-  subscribeBasemapAvailability,
-} from '../../systems/basemap/basemap-availability';
-import { getBasemapState, subscribeBasemap } from '../../systems/basemap/basemap-store';
-import {
-  hasBasemapAttributionSurface,
-  subscribeBasemapAttributionSurface,
-} from '../../systems/basemap/basemap-attribution-surface';
+  getBasemapPaintVersion,
+  subscribeBasemapPaint,
+} from '../../systems/basemap/basemap-invalidation';
 import { resolveBasemapPaint } from '../../systems/basemap/basemap-paint-decision';
 import { getBasemapDisplayProjector, worldMmToGeographic } from '../../systems/basemap/basemap-projection';
 import { chooseZoomLevel, tilesForDisplayRect } from '../../systems/basemap/basemap-tile-model';
 import { paintBasemap } from '../../systems/basemap/basemap-painter';
-import { subscribeTileReady } from '../../systems/basemap/basemap-tile-cache';
 
 /** Πυκνότητα οθόνης, με ασφαλή τιμή εκτός browser (δοκιμές σε jsdom/node). */
 function devicePixelRatio(): number {
@@ -51,23 +51,21 @@ function devicePixelRatio(): number {
  * σβηστό υπόβαθρο ο κοινός καμβάς της ζώνης δεν πληρώνει ούτε καθαρισμό.
  */
 export function useBasemapPainter(): OverlayDispatchPainter | null {
-  const state = useSyncExternalStore(subscribeBasemap, getBasemapState, getBasemapState);
-  const availability = useSyncExternalStore(
-    subscribeBasemapAvailability,
-    getBasemapAvailability,
-    getBasemapAvailability,
+  /**
+   * Μία εγγραφή για **όλες** τις εισόδους. Οι επιμέρους τιμές δεν διαβάζονταν ποτέ εδώ — ήταν
+   * σήματα ακύρωσης μεταμφιεσμένα σε κατάσταση· ο μετρητής το λέει ρητά.
+   *
+   * ⚠️ Παραμένει `useSyncExternalStore` και **όχι** `useEffect` + `useState`: η επιφάνεια απόδοσης
+   * εγγράφεται σε `useEffect`, δηλαδή **μετά** το πρώτο render αυτού του hook, και μόνο το
+   * `useSyncExternalStore` εγγυάται ότι μια αλλαγή ανάμεσα σε render και effect δεν χάνεται.
+   * Χωρίς αυτό ο painter θα έμενε `null` μέχρι την επόμενη άσχετη αλλαγή — «ο χάρτης εμφανίζεται
+   * μόνο αν κουνήσεις κάτι».
+   */
+  const paintVersion = useSyncExternalStore(
+    subscribeBasemapPaint,
+    getBasemapPaintVersion,
+    getBasemapPaintVersion,
   );
-  // Η επιφάνεια απόδοσης προσαρτάται σε `useEffect`, δηλαδή **μετά** το πρώτο render αυτού του
-  // hook. Χωρίς αυτή την εγγραφή ο painter θα έμενε `null` μέχρι την επόμενη άσχετη αλλαγή —
-  // δηλαδή «ο χάρτης εμφανίζεται μόνο αν κουνήσεις κάτι», βλάβη που θα κυνηγιόταν στο δίκτυο.
-  const attributed = useSyncExternalStore(
-    subscribeBasemapAttributionSurface,
-    hasBasemapAttributionSurface,
-    hasBasemapAttributionSurface,
-  );
-
-  const [tileTick, setTileTick] = useState(0);
-  useEffect(() => subscribeTileReady(() => setTileTick((tick) => tick + 1)), []);
 
   return useMemo<OverlayDispatchPainter | null>(() => {
     // Η ΜΙΑ απόφαση (`basemap-paint-decision`) — «σβηστό», «χωρίς θέση» και «χωρίς απόδοση»
@@ -97,10 +95,8 @@ export function useBasemapPainter(): OverlayDispatchPainter | null {
         opacity,
       });
     };
-    // `tileTick` είναι εξάρτηση **σκοπίμως**: αλλάζει την ταυτότητα του painter ώστε η ζώνη να
-    // ξαναζωγραφίσει μόλις φτάσει πλακίδιο. Δες την επικεφαλίδα.
-    //
-    // Τα υπόλοιπα είναι οι **είσοδοι** της `resolveBasemapPaint`: δεν διαβάζονται εδώ πια, αλλά
-    // μια αλλαγή τους αλλάζει την απόφαση, άρα οφείλει να ξαναχτίσει τον painter.
-  }, [state.enabled, state.opacity, state.sourceId, availability, attributed, tileTick]);
+    // `paintVersion` είναι η **μοναδική** εξάρτηση, σκοπίμως: αλλάζει ταυτότητα του painter όταν —
+    // και μόνο όταν — άλλαξε κάτι που επηρεάζει το τι ζωγραφίζεται (διακόπτης · αδιαφάνεια ·
+    // πάροχος · διαθεσιμότητα · επιφάνεια απόδοσης · άφιξη πλακιδίου). Δες την επικεφαλίδα.
+  }, [paintVersion]);
 }

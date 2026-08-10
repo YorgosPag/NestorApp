@@ -45,7 +45,6 @@ import {
   PenTool,
   FileText,
   Construction,
-  MapPin,
   Layout,
   DollarSign,
   Users as UsersIcon,
@@ -215,6 +214,30 @@ export type NavigationItemPriority = 'critical' | 'high' | 'medium' | 'low';
 export type NavigationEnvironment = 'development' | 'production' | 'staging';
 
 /**
+ * ✅ ENTERPRISE: Smart factory configuration — **μία** δήλωση, δύο σχήματα τη δανείζονται.
+ *
+ * Ήταν γραμμένη δύο φορές inline (`SmartNavigationItem` + `NavigationConfigBase`), byte-identical:
+ * το σχήμα με τίτλο και το σχήμα χωρίς τίτλο περιγράφουν την **ίδια** ρύθμιση, οπότε μια νέα
+ * επιλογή έπρεπε να προστεθεί σε δύο θέσεις — και θα ξεχνιόταν στη μία.
+ */
+export interface SmartNavigationConfig {
+  /** Priority για smart ordering */
+  priority?: NavigationItemPriority;
+  /** Explicit display order (overrides priority-based sorting) */
+  displayOrder?: number;
+  /** Feature flag για conditional display */
+  featureFlag?: string;
+  /** Required permissions */
+  permissions?: string[];
+  /** Environment visibility */
+  environments?: NavigationEnvironment[];
+  /** Analytics tracking key */
+  analyticsKey?: string;
+  /** Custom metadata */
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * ✅ ENTERPRISE: Enhanced navigation item configuration
  * Extends base MenuItem με smart factory features
  */
@@ -225,22 +248,7 @@ export interface SmartNavigationItem {
   badge?: string | null;
   subItems?: SmartNavigationItem[];
   /** Smart factory configuration */
-  smartConfig?: {
-    /** Priority για smart ordering */
-    priority?: NavigationItemPriority;
-    /** Explicit display order (overrides priority-based sorting) */
-    displayOrder?: number;
-    /** Feature flag για conditional display */
-    featureFlag?: string;
-    /** Required permissions */
-    permissions?: string[];
-    /** Environment visibility */
-    environments?: NavigationEnvironment[];
-    /** Analytics tracking key */
-    analyticsKey?: string;
-    /** Custom metadata */
-    metadata?: Record<string, unknown>;
-  };
+  smartConfig?: SmartNavigationConfig;
 }
 
 /**
@@ -252,15 +260,7 @@ interface NavigationConfigBase {
   href: string;
   badge?: string | null;
   subItems?: NavigationConfigBase[];
-  smartConfig?: {
-    priority?: NavigationItemPriority;
-    displayOrder?: number;
-    featureFlag?: string;
-    permissions?: string[];
-    environments?: NavigationEnvironment[];
-    analyticsKey?: string;
-    metadata?: Record<string, unknown>;
-  };
+  smartConfig?: SmartNavigationConfig;
 }
 
 /**
@@ -615,17 +615,6 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
                 href: '/obligations'
               }
             ]
-          },
-          {
-            icon: MapPin,
-            href: "/geo/canvas",
-            badge: null,
-            smartConfig: {
-              priority: 'medium',
-              displayOrder: 100,
-              analyticsKey: 'nav_geo_canvas',
-              featureFlag: 'geo_canvas_enabled'
-            }
           }
         ],
         defaultSmartConfig: {
@@ -837,7 +826,6 @@ function getLabelKeyForPath(path: string): string {
 
     // Tools paths
     'files': 'file_manager',
-    'geo/canvas': 'geo_canvas',
     'dxf/viewer': 'dxf_viewer',
     'login': 'login',
     'debug': 'debug'

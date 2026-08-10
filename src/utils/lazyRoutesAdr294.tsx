@@ -306,11 +306,6 @@ export const lazyRoutesAdr294 = {
     { loadingType: 'form', ssr: false }
   ),
 
-  GeoCanvas: createLazyRoute(
-    () => import('@/components/geo/pages/GeoCanvasPageContent').then(mod => ({ default: mod.GeoCanvasPageContent })),
-    { loadingType: 'spinner', ssr: false }
-  ),
-
   PublicPO: createLazyRoute(
     () => import('@/components/shared/pages/PublicPOPageContent').then(mod => ({ default: mod.PublicPOPageContent })),
     { loadingType: 'spinner', ssr: false }
