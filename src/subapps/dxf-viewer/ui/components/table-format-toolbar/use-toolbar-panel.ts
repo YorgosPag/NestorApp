@@ -21,6 +21,7 @@
  */
 
 import { useCallback, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { focusUnlessTableCellFieldOwnsKeyboard } from '../../table-cell-editor/table-cell-keyboard-ownership';
 
 export interface ToolbarPanelController {
   readonly isOpen: boolean;
@@ -43,7 +44,12 @@ export function useToolbarPanel(): ToolbarPanelController {
 
   const close = useCallback(() => {
     setIsOpen(false);
-    triggerRef.current?.focus();
+    // 🔴 ADR-753 §25.6 — η επιστροφή στον trigger είναι σωστή **μόνο για όποιον του είχε δώσει
+    // την εστίαση**. Από τη στιγμή που το `mousedown` δεν τη μετακινεί πια, ο χρήστης ποντικιού
+    // δεν την έδωσε ποτέ — και ένα άνευ όρου `focus()` εδώ θα την **έκλεβε** από το κελί,
+    // ξαναγεννώντας το ίδιο ελάττωμα από δεύτερη πόρτα. Δες
+    // {@link focusUnlessTableCellFieldOwnsKeyboard}.
+    focusUnlessTableCellFieldOwnsKeyboard(triggerRef.current);
   }, []);
 
   const toggle = useCallback(() => setIsOpen((open) => !open), []);

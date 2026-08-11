@@ -33,6 +33,7 @@ import React from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
+import { keepTableCellKeyboardOwnership } from '../../table-cell-editor/table-cell-keyboard-ownership';
 import type { RovingItemProps } from './use-roving-toolbar';
 import styles from './TableFormatToolbar.module.css';
 
@@ -138,6 +139,12 @@ export function ToolbarButton({
           tabIndex={roving.tabIndex}
           onKeyDown={roving.onKeyDown}
           onFocus={roving.onFocus}
+          // 🔴 ADR-753 §25.6 — το **πάτημα του ποντικιού** δεν παίρνει το πληκτρολόγιο από το
+          // κελί. Χωρίς αυτό, το `Enter` που ακολουθεί ξαναπατά το κουμπί αντί να δεσμεύσει
+          // (μετρημένο ζωντανά: `aria-pressed` true→false, το κελί αδέσμευτο). Η διαδρομή του
+          // πληκτρολογίου **δεν** αγγίζεται: εκεί δεν εκδίδεται ποτέ `mousedown` — δες τη
+          // μέτρηση στην κεφαλίδα του `table-cell-keyboard-ownership.ts`.
+          onMouseDown={keepTableCellKeyboardOwnership}
           className={cn(
             styles.button,
             state?.active && !state.mixed && styles.buttonActive,

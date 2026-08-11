@@ -27,6 +27,7 @@ import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
+import { keepTableCellKeyboardOwnership } from '../../table-cell-editor/table-cell-keyboard-ownership';
 import type { RovingItemProps } from './use-roving-toolbar';
 import styles from './table-toolbar-panel.module.css';
 import toolbar from './TableFormatToolbar.module.css';
@@ -67,6 +68,11 @@ export function ToolbarSplitButton(props: ToolbarSplitButtonProps): React.ReactE
         tabIndex={rovingApply.tabIndex}
         onKeyDown={rovingApply.onKeyDown}
         onFocus={rovingApply.onFocus}
+        // 🔴 ADR-753 §25.6 — και τα **δύο** μισά, για τον ίδιο λόγο που το `ref` γράφεται σε δύο
+        // θέσεις (δες την κεφαλίδα): ένα από τα δύο που θα το ξεχνούσε θα έδινε «το `Enter`
+        // δεσμεύει μετά το κύριο μισό, αλλά όχι μετά το βελάκι» — ασυμμετρία που καμία οπτική
+        // επιθεώρηση δεν πιάνει.
+        onMouseDown={keepTableCellKeyboardOwnership}
         className={cn(
           toolbar.button,
           styles.splitMain,
@@ -94,6 +100,7 @@ export function ToolbarSplitButton(props: ToolbarSplitButtonProps): React.ReactE
         tabIndex={rovingMenu.tabIndex}
         onKeyDown={rovingMenu.onKeyDown}
         onFocus={rovingMenu.onFocus}
+        onMouseDown={keepTableCellKeyboardOwnership}
         className={cn(toolbar.button, styles.splitArrow, isOpen && toolbar.buttonActive)}
         aria-label={menuLabel}
         aria-haspopup="menu"

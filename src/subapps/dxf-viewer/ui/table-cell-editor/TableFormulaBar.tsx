@@ -76,6 +76,7 @@ import {
   TABLE_CELL_SESSION_MARKER,
   useTableCellSessionBlur,
 } from './table-cell-session-focus';
+import { keepTableCellKeyboardOwnership } from './table-cell-keyboard-ownership';
 import { FORMULA_PREFIX } from '../../bim/table/formula/table-formula-lex';
 import { openInsertFunctionDialog } from '../../state/insert-function-dialog-store';
 import {
@@ -168,21 +169,22 @@ function diagnosisMessage(
  * τον δρόμο της εξόδου: **δέσμευση και κλείσιμο δρομέα** — δηλαδή το κουμπί «Άκυρο» θα
  * δέσμευε, ένα καρέ πριν προλάβει να ακυρώσει.
  *
- * ## Γιατί ΕΔΩ επιτρέπεται το `preventDefault`, ενώ το `table-cell-session-focus.ts` το απαγορεύει
- * Εκείνη η απαγόρευση αφορά τον **καμβά**: εκεί ο ιδιοκτήτης του ποντικιού είναι το σχέδιο, και
- * ένα `preventDefault` στο `mousedown` σκοτώνει το σύρσιμο λαβών και τη μετακίνηση οντότητας.
- * Εδώ ο στόχος είναι ένα `<button>` σε επικάλυψη DOM που **δεν** συμμετέχει σε καμία
- * χειρονομία σχεδίασης — δεν υπάρχει προεπιλεγμένη ενέργεια να χαθεί πέρα από τη μεταφορά
- * εστίασης, που είναι ακριβώς αυτή που δεν θέλουμε. Είναι το πρότυπο μοτίβο κάθε toolbar πάνω
- * από επεξεργαστή κειμένου (ProseMirror, Slate, Quill), για τον ίδιο λόγο.
+ * ## 🔴 ADR-753 §25.6 — ΕΦΥΓΕ ΑΠΟ ΕΔΩ· ζούσε σε ΕΝΑ αρχείο και το χρειάζονταν ΔΥΟ
+ * Ο ορισμός ήταν τοπικός (`keepFocusInField`) και σωστός — και ακριβώς γι' αυτό το mini
+ * toolbar, που έχει το **ίδιο ακριβώς** πρόβλημα με τα ίδια ακριβώς λόγια, δεν τον είχε: το
+ * «Έντονα» έπαιρνε το πληκτρολόγιο και το `Enter` ξαναπατούσε το κουμπί. Δύο επιφάνειες πάνω
+ * από τον **ίδιο** επεξεργαστή δεν επιτρέπεται να απαντούν διαφορετικά στο «ποιος κατέχει το
+ * πληκτρολόγιο;». Ο ορισμός είναι πλέον **ένας**, στο
+ * {@link keepTableCellKeyboardOwnership} — και εκεί έγινε **υπό όρο**, που είναι γνήσια
+ * βελτίωση και για τα τρία κουμπιά εδώ: όταν κανένα πεδίο δεν κρατά το πληκτρολόγιο, δεν
+ * υπάρχει `blur` να προκληθεί ούτε εστίαση να διατηρηθεί, και το κουμπί οφείλει να μπορεί να
+ * εστιαστεί κανονικά (WAI-ARIA APG).
  *
  * ⚠️ Belt-and-suspenders (N.7.2 #4): τα κουμπιά φέρουν **επίσης** το
  * {@link TABLE_CELL_SESSION_MARKER}. Αν κάποια μηχανή μεταφέρει την εστίαση παρά το
  * `preventDefault`, ο φύλακας θα δει μέλος της συνεδρίας και πάλι δεν θα κλείσει.
  */
-const keepFocusInField = (event: React.MouseEvent<HTMLButtonElement>): void => {
-  event.preventDefault();
-};
+const keepFocusInField = keepTableCellKeyboardOwnership;
 
 export function TableFormulaBar(props: TableFormulaBarProps): React.ReactElement {
   const {
