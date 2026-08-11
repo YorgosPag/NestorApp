@@ -38,6 +38,7 @@ import { useFormContext } from 'react-hook-form';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePlaceResolver } from '@/hooks/geo/usePlaceResolver';
+import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
 import { FormFieldset } from '@/components/shared/forms/form-field-primitives';
 import type { OwnerPropertyFormValues } from '@/lib/owner-property/owner-property-form-values';
 
@@ -53,6 +54,7 @@ export function OwnerPropertyPlaceField(): React.ReactElement {
 
   const answer = form.watch('placeAnswer');
   const query = form.watch('placeQuery');
+  const placeRef = form.watch('placeRef');
   const point = form.watch('placePoint');
 
   // 🔑 **Η προσφορά κρατά ΚΑΙ την ακρίβεια** — σε αντίθεση με τη ζήτηση, όπου δεν
@@ -136,6 +138,28 @@ export function OwnerPropertyPlaceField(): React.ReactElement {
           {state === 'error' && (
             <p className="text-sm text-foreground">{t(`${K}.form.placeFailed`)}</p>
           )}
+
+          {/*
+            🔴 **ΕΔΩ ΣΥΝΑΝΤΙΕΤΑΙ Η ΠΡΟΣΦΟΡΑ ΜΕ ΤΗ ΖΗΤΗΣΗ** (§14.5).
+            Η διεύθυνση παραπάνω απαντά *«πού είναι»*· αυτό απαντά *«ποιο **πράγμα**
+            είναι»* — και μόνο το δεύτερο μπορεί να ταιριάξει με μια ζήτηση Ζ3/Ζ5
+            («*ψάχνω **αυτό** το κτίριο*»). Δύο διαμερίσματα στο ίδιο σημείο έχουν
+            **ίδιες** συντεταγμένες και **ίδια** ταυτότητα κτιρίου· η θέση δεν τα
+            ξεχωρίζει από ένα τρίτο απέναντι, η ταυτότητα ναι.
+
+            ⚠️ **Προαιρετικό, όπως το τοπογραφικό** (§21.4): *επιλογή, ποτέ
+            προϋπόθεση*. Ο κάτοχος που το προσπερνά δημοσιεύει κανονικά.
+          */}
+          <fieldset className="space-y-2 border-t border-border pt-3">
+            <legend className="text-sm font-medium text-foreground">
+              {t(`${K}.form.placeLinkLegend`)}
+            </legend>
+            <p className="text-sm text-muted-foreground">{t(`${K}.form.placeLinkHelp`)}</p>
+            <PlaceIdentityField
+              chosen={placeRef ?? null}
+              onChosen={(ref) => form.setValue('placeRef', ref, { shouldDirty: true })}
+            />
+          </fieldset>
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">{t(`${K}.form.placeDeclinedNote`)}</p>

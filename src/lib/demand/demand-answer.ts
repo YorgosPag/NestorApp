@@ -92,6 +92,33 @@ export const NO_LISTING_KNOWLEDGE: ListingKnowledge = {
   proximityMetres: new Map(),
 };
 
+/**
+ * **Ό,τι ξέρουμε ΣΗΜΕΡΑ**, αντλημένο από τις ίδιες τις αγγελίες.
+ *
+ * ✅ **Το πρώτο από τα τρία κενά έκλεισε (2026-08-11).** Ο πίνακας στην κορυφή αυτού
+ * του αρχείου έγραφε *«δεσμός επιπέδου Α — ❌ **άδειο** ⇒ `place-unresolved`»*. Πλέον
+ * το `PublicListing.place` υπάρχει και γεμίζει από τον κάτοχο, οπότε μια ζήτηση
+ * **Ζ3/Ζ5** έχει επιτέλους με τι να συγκριθεί.
+ *
+ * 🔑 **Ο χάρτης μένει ΑΡΑΙΟΣ, και αυτό είναι το σωστό.** Μια αγγελία χωρίς δεσμό
+ * **δεν μπαίνει** — άρα η μηχανή εξακολουθεί να λέει `place-unresolved` **γι' αυτήν**,
+ * ονομαστικά. Το κενό δεν εξαφανίστηκε· έπαψε να είναι **καθολικό**.
+ *
+ * ⚠️ **Τα άλλα δύο κενά μένουν, με τα ονόματά τους** — διαθεσιμότητα (θέλει άντληση
+ * από BIM) και αποστάσεις γειτονιάς (θέλει ερώτημα Overpass ανά αγγελία). Ένας κενός
+ * `Map` για αυτά λέει *«δεν ρωτήσαμε»*, ποτέ *«δεν υπάρχει»*.
+ */
+export function knowledgeFromListings(
+  listings: readonly PublicListing[],
+): ListingKnowledge {
+  const places = new Map<string, ListingMatchFacts['place']>();
+  for (const listing of listings) {
+    if (listing.place !== null) places.set(listing.id, listing.place);
+  }
+
+  return { places, availability: new Map(), proximityMetres: new Map() };
+}
+
 /** Αγγελίες + γνώση → οι είσοδοι της μηχανής. */
 export function listingFactsFrom(
   listings: readonly PublicListing[],

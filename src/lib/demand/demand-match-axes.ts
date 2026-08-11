@@ -16,8 +16,8 @@
  *
  * 🔑 **Τα κοινά πρωτόγονα έρχονται από τους υπάρχοντες SSoT, ποτέ ξαναγραμμένα:**
  * `withinRange` (`listing-filters.ts`) · `getEffectivePrice` (`price-resolver.ts`) ·
- * `haversineDistance` (`geo-math.ts`) · `isPointInGeoOutline` (`geo-ring.ts`). Έτσι ο
- * χάρτης, η λίστα και η μηχανή **δεν μπορούν** να διαφωνήσουν για το ίδιο ερώτημα.
+ * `distanceMeters` (`lib/geo/geo-distance.ts`) · `isPointInGeoOutline` (`geo-ring.ts`).
+ * Έτσι ο χάρτης, η λίστα και η μηχανή **δεν μπορούν** να διαφωνήσουν για το ίδιο ερώτημα.
  *
  * **Layering**: leaf — καθαρές συναρτήσεις, καμία εξάρτηση από React/Firestore.
  */
@@ -25,7 +25,7 @@
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { withinRange } from '@/lib/listings/listing-filters';
 import { isPointInGeoOutline } from '@/lib/geo/geo-ring';
-import { haversineDistance } from '@/components/projects/ika/map-shared/geo-math';
+import { distanceMeters } from '@/lib/geo/geo-distance';
 import type { PublicListing } from '@/types/public-listing';
 import type { DemandTiming, PropertyDemand } from '@/types/property-demand';
 import {
@@ -141,12 +141,7 @@ export function spatialOutcome(
     return { blockers: inside ? [] : ['outside-area'], distanceOverMetres: null };
   }
 
-  const metres = haversineDistance(
-    place.center.lat,
-    place.center.lng,
-    position.point.lat,
-    position.point.lng,
-  );
+  const metres = distanceMeters(place.center, position.point);
   const limitMetres = place.radiusKm * 1000;
   if (metres <= limitMetres) return { blockers: [], distanceOverMetres: null };
   return { blockers: ['outside-radius'], distanceOverMetres: metres - limitMetres };

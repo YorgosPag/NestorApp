@@ -50,7 +50,7 @@ import { EMPTY_LISTING_FILTERS } from '@/lib/listings/listing-filters';
 import { serializeListingFilters } from '@/lib/listings/listing-filters';
 import { searchResultsHref } from '@/lib/listings/listing-routes';
 import { geoOutlineBoundingCircle } from '@/lib/geo/geo-ring';
-import { haversineDistance } from '@/components/projects/ika/map-shared/geo-math';
+import { distanceMeters } from '@/lib/geo/geo-distance';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import type { DemandPlace, PropertyDemand } from '@/types/property-demand';
 
@@ -124,7 +124,7 @@ type ProjectedGeo = ListingFilters['near'];
 
 /** Απόσταση σε μέτρα, μέσω του **μοναδικού** SSoT απόστασης του έργου. */
 function metresBetween(a: GeoPoint, b: GeoPoint): number {
-  return haversineDistance(a.lat, a.lng, b.lat, b.lng);
+  return distanceMeters(a, b);
 }
 
 /**

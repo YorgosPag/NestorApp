@@ -34,7 +34,7 @@ import { OFFER_KINDS } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 import type { GeoPoint } from '@/types/geo/coordinates';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
-import { haversineDistance } from '@/components/projects/ika/map-shared/geo-math';
+import { distanceMeters } from '@/lib/geo/geo-distance';
 
 /**
  * **Ο γεωγραφικός άξονας** — η απάντηση της οθόνης 1 στο *«πού ψάχνεις;»* (Α3).
@@ -239,12 +239,7 @@ export function matchesListingFilters(listing: PublicListing, filters: ListingFi
     // «δεν ξέρουμε πού είναι» σε «δεν είναι εδώ», που είναι διαφορετικός ισχυρισμός
     // και **ψευδής**. Μένουν, και τις μετρά η κλειστή λογιστική.
     if (listing.position.kind === 'known') {
-      const metres = haversineDistance(
-        filters.near.center.lat,
-        filters.near.center.lng,
-        listing.position.point.lat,
-        listing.position.point.lng
-      );
+      const metres = distanceMeters(filters.near.center, listing.position.point);
       if (metres > filters.near.radiusKm * 1000) return false;
     }
   }

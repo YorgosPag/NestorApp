@@ -45,7 +45,7 @@
  */
 
 import { z } from 'zod';
-import type { GeoPoint } from '@/types/geo/coordinates';
+import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
 import type { OfferKind } from '@/types/property-offers';
 import { OFFER_KINDS } from '@/types/property-offers';
 import {
@@ -66,58 +66,62 @@ import { DEFAULT_SEARCH_RADIUS_KM } from '@/lib/listings/listing-filters';
 // =============================================================================
 
 /**
- * 🔶 **ΔΗΛΩΜΕΝΟ ΚΕΝΟ, ΜΕ ΟΝΟΜΑ ΚΑΙ ΜΕ ΛΟΓΟ ΓΙΑ ΤΟ ΚΑΘΕΝΑ.**
+ * ✅ **ΤΟ ΚΕΝΟ ΕΚΛΕΙΣΕ** — και οι **τέσσερις** μορφές του {@link DemandPlace} συντάσσονται.
  *
- * Το **μοντέλο** ({@link DemandPlace}) έχει **τέσσερις** μορφές. Η **φόρμα** προσφέρει
- * **δύο**, και η διαφορά **δεν** είναι παράλειψη — είναι άρνηση να γεννηθεί χειριστήριο
- * που **δεν μπορεί να χρησιμοποιηθεί**:
+ * Μέχρι τις 2026-08-11 εδώ ζούσαν **δύο** μορφές, με γραπτό λόγο για κάθε απουσία:
  *
- * | Μορφή | Γιατί όχι σήμερα |
- * |---|---|
- * | **Ζ3/Ζ5** `place` | Το **επίπεδο Α είναι άδειο** (`public_lands`/`public_buildings`, μετρημένο). Ένας επιλογέας κτιρίου θα άνοιγε **κενή λίστα** — φρουρός χωρίς απόδειξη ζωής (ADR-749 §5, 606 αδρανείς) |
- * | **Ζ4** `area` | Απαιτεί **επιφάνεια σχεδίασης**. Το σύστημα πολυγώνων υπάρχει, αλλά ζει στο `subapps/geo-canvas` — άλλο subapp, με **ανοιχτή δουλειά τρίτου** πάνω του (ADR-782). Μια βιαστική προσάρτηση εκεί θα ήταν ακριβώς η «μισή φόρμα» που το §2253 του ADR απαγορεύει |
+ * | Μορφή | Γιατί έλειπε | Τι το ξεκλείδωσε |
+ * |---|---|---|
+ * | **Ζ3/Ζ5** `place` | *«το **επίπεδο Α είναι άδειο** … ένας επιλογέας κτιρίου θα άνοιγε **κενή λίστα**»* | ο **γραφέας** του επιπέδου Α: η ταυτότητα γεννιέται **κατ' απαίτηση**, άρα δεν υπάρχει λίστα να είναι κενή — ο άνθρωπος **δείχνει** και ο τόπος αποκτά ταυτότητα εκείνη τη στιγμή (§13.5) |
+ * | **Ζ4** `area` | *«απαιτεί **επιφάνεια σχεδίασης** … ζει στο `subapps/geo-canvas`, με ανοιχτή δουλειά τρίτου (ADR-782)»* | η **δική μας** επιφάνεια (`components/geo/PlaceMap`), που χρειάστηκε ούτως ή άλλως για τη χειρονομία `drawn` του §13.6 — **μηδέν** νέα εξάρτηση, **καμία** επαφή με το ξένο subapp |
  *
- * 🔑 **Και τα δύο ξεκλειδώνουν με ΔΕΔΟΜΕΝΑ/ΕΠΙΦΑΝΕΙΑ, όχι με αλλαγή μοντέλου.** Η
- * σειρά είναι γραμμένη στον χάρτη υλοποίησης: το επίπεδο Α έρχεται **μετά** από αυτή
- * την οθόνη και **ξεκλειδώνει** τη Ζ3/Ζ5. Όταν έρθει, αυτή η λίστα μεγαλώνει και
- * **ο μεταγλωττιστής δείχνει** κάθε σημείο που την υποθέτει.
+ * 🔑 **Και τα δύο ξεκλείδωσαν με ΔΕΔΟΜΕΝΑ/ΕΠΙΦΑΝΕΙΑ, ακριβώς όπως προβλεπόταν** — το
+ * μοντέλο δεν άλλαξε ούτε κατά ένα πεδίο. Η πρόβλεψη του Β1 («*αυτή η λίστα μεγαλώνει
+ * και ο μεταγλωττιστής δείχνει κάθε σημείο που την υποθέτει*») επαληθεύτηκε κατά λέξη.
  */
-export const FORM_PLACE_KINDS = ['anywhere', 'near'] as const satisfies readonly DemandPlace['kind'][];
+export const FORM_PLACE_KINDS = [
+  'anywhere',
+  'near',
+  'place',
+  'area',
+] as const satisfies readonly DemandPlace['kind'][];
 
 export type FormPlaceKind = (typeof FORM_PLACE_KINDS)[number];
 
-/** Οι μορφές που **υπάρχουν στο μοντέλο** αλλά η φόρμα δεν συντάσσει. */
-export const PLACE_KINDS_NOT_IN_FORM = ['area', 'place'] as const satisfies readonly DemandPlace['kind'][];
+/**
+ * Οι μορφές που **υπάρχουν στο μοντέλο** αλλά η φόρμα δεν συντάσσει.
+ *
+ * ✅ **Κενό από τις 2026-08-11.** Παραμένει ως **ρητή δήλωση** και δεν διαγράφεται: το
+ * `satisfies` κρατά το κενό σύνολο **δεμένο** με το `DemandPlace['kind']`, οπότε μια
+ * **πέμπτη** μορφή χώρου που θα προστεθεί αύριο έχει ήδη εδώ τη θέση της να δηλωθεί
+ * ως «δεν συντάσσεται ακόμη» — αντί να προστεθεί σιωπηλά και να λείπει από την οθόνη
+ * χωρίς κανείς να το πει. Ο έλεγχος ολότητας του `demand-form-values.test.ts` το
+ * διαβάζει.
+ */
+export const PLACE_KINDS_NOT_IN_FORM = [] as const satisfies readonly DemandPlace['kind'][];
 
 // =============================================================================
 // 2. ΤΟ ΣΧΗΜΑ — zod, και **μόνο** σχήμα
 // =============================================================================
 
 /**
- * Αριθμός ή «δεν το έθεσε».
- *
- * ⚠️ **Το κενό πεδίο γίνεται `null`, ΠΟΤΕ `0`.** Είναι το ίδιο συμβόλαιο με το
- * {@link DemandFeatures}: *«αν το `floorMin` ήταν `0` για αδιάφορο, καμία ζήτηση δεν
- * θα μπορούσε να ζητήσει **ισόγειο**»*. Και ο `Number('')` είναι **0** — δηλαδή η
- * αφελής μετατροπή παράγει ακριβώς το λάθος που ο τύπος υπάρχει για να αποτρέψει.
+ * ⚠️ Το «αριθμός ή δεν το έθεσε» και το «σημείο ή δεν δείχτηκε» **δεν ζουν πια εδώ**:
+ * είναι κοινά με τη φόρμα της προσφοράς (Α14) και το CHECK 3.28 τα ονόμασε ως κλώνο
+ * μέσα στο ίδιο commit. Ζουν στο `@/lib/forms/form-primitives`, όπου γράφεται **μία**
+ * φορά η απόφαση *«το κενό πεδίο γίνεται `null`, ΠΟΤΕ `0`»* — εδώ ο μάρτυράς της
+ * είναι το `floorMin: 0` = **ισόγειο** ({@link DemandFeatures}).
  */
-const optionalNumber = z
-  .union([z.number(), z.string(), z.null(), z.undefined()])
-  .transform((raw) => {
-    if (raw === null || raw === undefined) return null;
-    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
-    const trimmed = raw.trim();
-    if (trimmed === '') return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-  });
+const optionalNumber = optionalNumberSchema;
 
-/** Ημερομηνία ISO `YYYY-MM-DD` ή κενό. **Ποτέ `Date`** — βλ. {@link DemandTiming}. */
+/**
+ * Ημερομηνία ISO `YYYY-MM-DD` ή κενό. **Ποτέ `Date`** — βλ. {@link DemandTiming}.
+ *
+ * Μένει **τοπικό** επίτηδες: έχει έναν καταναλωτή, και ένα πρωτόγονο με έναν
+ * καταναλωτή δεν είναι κοινό λεξιλόγιο.
+ */
 const isoDate = z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/);
 
-const geoPoint: z.ZodType<GeoPoint | null> = z
-  .object({ lat: z.number(), lng: z.number() })
-  .nullable();
+const geoPoint = geoPointSchema;
 
 /**
  * Το σχήμα της φόρμας. **Επίπεδο**, με διακριτές τιμές ως ετικέτες — όχι ενώσεις.
@@ -137,6 +141,18 @@ export const demandFormSchema = z.object({
   /** Το λυμένο σημείο. `null` = δεν έχει γεωκωδικοποιηθεί **ακόμη**. */
   placeCenter: geoPoint,
   radiusKm: optionalNumber,
+  /**
+   * **Ζ3/Ζ5** — η ταυτότητα του τόπου στο **επίπεδο Α**. `null` = δεν έχει δειχθεί ακόμη.
+   *
+   * ⚠️ Το κρατά η φόρμα ως **επίπεδο πεδίο** για τον ίδιο λόγο με την ακτίνα: ο
+   * άνθρωπος που διάλεξε κτίριο, δοκίμασε «οπουδήποτε» και γύρισε πίσω **βρίσκει το
+   * κτίριό του**. Η μετάφραση προς διακριτή ένωση γίνεται στο {@link placeFrom}.
+   */
+  placeRef: z
+    .object({ landId: z.string(), buildingId: z.string().nullable() })
+    .nullable(),
+  /** **Ζ4** — το σχεδιασμένο περίγραμμα. `null` = δεν έχει σχεδιαστεί ακόμη. */
+  placeOutline: z.array(z.object({ lat: z.number(), lng: z.number() })).nullable(),
 
   // ── ΧΡΟΝΟΣ ──────────────────────────────────────────────────────────────
   timingKind: z.enum(['now', 'window', 'whenever']),
@@ -181,6 +197,8 @@ export const EMPTY_DEMAND_FORM: DemandFormValues = {
   placeQuery: '',
   placeCenter: null,
   radiusKm: DEFAULT_SEARCH_RADIUS_KM,
+  placeRef: null,
+  placeOutline: null,
   timingKind: 'now',
   fromDate: '',
   toDate: '',
@@ -213,7 +231,14 @@ export type DemandDraft = Pick<
   'seeks' | 'place' | 'timing' | 'features' | 'proximity' | 'lifeContext'
 >;
 
-/** Ο χωρικός άξονας — επίπεδα πεδία → διακριτή ένωση. */
+/**
+ * Ο χωρικός άξονας — επίπεδα πεδία → διακριτή ένωση.
+ *
+ * ⚠️ **Κάθε μορφή απαιτεί το δικό της συστατικό, και χωρίς αυτό πέφτει σε `anywhere`.**
+ * Δεν είναι σιωπηλή απώλεια: η υποβολή είναι **φραγμένη** όσο λείπει (δες
+ * {@link demandFormBlockers}) — εδώ η επιστροφή είναι απλώς **ολική**, γιατί μια
+ * καθαρή συνάρτηση δεν επιτρέπεται να υποθέσει ότι κάποιος άλλος κοίταξε.
+ */
 function placeFrom(values: DemandFormParsed): DemandPlace {
   if (values.placeKind === 'near' && values.placeCenter !== null) {
     return {
@@ -224,9 +249,23 @@ function placeFrom(values: DemandFormParsed): DemandPlace {
       radiusKm: values.radiusKm ?? DEFAULT_SEARCH_RADIUS_KM,
     };
   }
-  // 🔑 `near` **χωρίς λυμένο σημείο** πέφτει σε `anywhere`, και δεν είναι σιωπηλή
-  // απώλεια: το κουμπί υποβολής είναι απενεργοποιημένο όσο η περιοχή δεν έχει λυθεί
-  // (βλ. `demandFormBlockers`). Εδώ η επιστροφή είναι απλώς **ολική**.
+
+  // **Ζ3/Ζ5** — δείχνει σε ταυτότητα του επιπέδου Α. Ο λόγος που το επίπεδο Α υπάρχει.
+  if (values.placeKind === 'place' && values.placeRef !== null) {
+    return {
+      kind: 'place',
+      landId: values.placeRef.landId,
+      buildingId: values.placeRef.buildingId,
+    };
+  }
+
+  // **Ζ4** — σχεδιασμένη περιοχή. Προέλευση **πάντα ανθρώπινη**, άρα επιτρέπεται σχήμα
+  // (ODbL, §13.4): περίγραμμα αντλημένο από OSM **δεν** φτάνει ποτέ εδώ, γιατί ο
+  // επιλογέας κτιρίου παράγει `placeRef`, όχι `placeOutline`.
+  if (values.placeKind === 'area' && values.placeOutline !== null && values.placeOutline.length >= 3) {
+    return { kind: 'area', outline: values.placeOutline };
+  }
+
   return { kind: 'anywhere' };
 }
 
@@ -288,16 +327,28 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
   }
 
   const near = demand.place.kind === 'near' ? demand.place : null;
+  const identified = demand.place.kind === 'place' ? demand.place : null;
+  const drawn = demand.place.kind === 'area' ? demand.place : null;
   const window = demand.timing.kind === 'window' ? demand.timing : null;
 
   return {
     kind: 'editable',
     values: {
       seeks: [...demand.seeks],
-      placeKind: near === null ? 'anywhere' : 'near',
+      // ⚠️ **Η μορφή διαβάζεται από την οντότητα, όχι συνάγεται από το τι είναι
+      // γεμάτο.** Ένα `near === null ? 'anywhere' : 'near'` ήταν σωστό όσο υπήρχαν
+      // δύο μορφές· με τέσσερις θα έστελνε κάθε Ζ3/Ζ5 και κάθε Ζ4 πίσω ως
+      // «οπουδήποτε» — δηλαδή θα **έσβηνε τον τόπο** κάθε φορά που κάποιος άνοιγε τη
+      // ζήτησή του για επεξεργασία.
+      placeKind: demand.place.kind,
       placeQuery: '',
       placeCenter: near?.center ?? null,
       radiusKm: near?.radiusKm ?? DEFAULT_SEARCH_RADIUS_KM,
+      placeRef:
+        identified === null
+          ? null
+          : { landId: identified.landId, buildingId: identified.buildingId },
+      placeOutline: drawn === null ? null : drawn.outline.map((vertex) => ({ ...vertex })),
       timingKind: demand.timing.kind,
       fromDate: window?.fromDate ?? '',
       toDate: window?.toDate ?? '',
@@ -331,6 +382,17 @@ export function demandFormFrom(demand: PropertyDemand): DemandFormLoad {
 export const DEMAND_FORM_BLOCKERS = [
   /** Διάλεξε «σε αυτή την περιοχή» αλλά η περιοχή δεν έχει λυθεί σε σημείο. */
   'place-unresolved',
+  /**
+   * **Ζ3/Ζ5** — διάλεξε «αυτό το κτίριο» αλλά **δεν έχει δείξει** ποιο.
+   *
+   * ⚠️ **Ξεχωριστό εμπόδιο από το `place-unresolved`, επίτηδες.** Εκείνο σημαίνει
+   * «*το κείμενό σου δεν έγινε σημείο*» και θεραπεύεται με **ξαναγράψιμο**· αυτό
+   * σημαίνει «*δεν έδειξες τόπο*» και θεραπεύεται με **κλικ στον χάρτη**. Κοινός
+   * κωδικός θα έστελνε τον άνθρωπο να διορθώσει πεδίο που δεν υπάρχει στην οθόνη του.
+   */
+  'place-not-identified',
+  /** **Ζ4** — διάλεξε «αυτή την περιοχή» αλλά το σχήμα δεν έχει τρεις κορυφές. */
+  'area-not-drawn',
   /** Διάλεξε παράθυρο αλλά λείπει άκρο. */
   'window-incomplete',
 ] as const;
@@ -343,6 +405,12 @@ export function demandFormBlockers(values: DemandFormParsed): DemandFormBlocker[
 
   if (values.placeKind === 'near' && values.placeCenter === null) {
     found.push('place-unresolved');
+  }
+  if (values.placeKind === 'place' && values.placeRef === null) {
+    found.push('place-not-identified');
+  }
+  if (values.placeKind === 'area' && (values.placeOutline === null || values.placeOutline.length < 3)) {
+    found.push('area-not-drawn');
   }
   if (values.timingKind === 'window' && (values.fromDate === '' || values.toDate === '')) {
     found.push('window-incomplete');

@@ -55,6 +55,7 @@ import type { PropertyType } from '@/types/property';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { PublicListing, ListingPosition, UnknownPositionReason } from '@/types/public-listing';
 import { outranksForLocation } from '@/lib/location/location-provenance';
+import type { PlaceRef } from '@/types/geo/public-place';
 
 // ============================================================================
 // ΕΙΣΟΔΟΙ — δομικές, ΟΧΙ δεμένες σε ονομασμένο τύπο
@@ -96,6 +97,15 @@ export interface ProjectableProperty {
    * πριν υπάρξει το ερώτημα, άρα η έλλειψη είναι **δικό μας** χρέος, όχι επιλογή τους.
    */
   readonly locationDisclosure?: 'declined' | null;
+  /**
+   * **Σε ποιον τόπο του επιπέδου Α ανήκει** — ο ισχυρισμός του κατόχου (§14.3).
+   *
+   * ⚠️ **Ξεχωριστό από τη ΘΕΣΗ, και δεν συνάγεται από αυτήν.** Η θέση απαντά *«πού
+   * είναι πάνω στον χάρτη;»*· ο δεσμός απαντά *«ποιο **πράγμα** είναι;»*. Δύο
+   * αγγελίες στο ίδιο σημείο μπορεί να είναι δύο διαμερίσματα του **ίδιου** κτιρίου
+   * — και η ταυτότητα είναι που το λέει, όχι οι συντεταγμένες.
+   */
+  readonly placeRef?: PlaceRef | null;
 }
 
 /**
@@ -287,6 +297,11 @@ export function buildPublicListing(
     areaSqm: numberOrNull(property.areas?.gross) ?? numberOrNull(property.area),
     offerKinds: projectedOfferKinds(property),
     position: resolveListingPosition(place, property.locationDisclosure),
+    // 🔑 **Ο δεσμός προς το επίπεδο Α ταξιδεύει ΑΥΤΟΥΣΙΟΣ** — καμία κρίση, καμία
+    // λύση, καμία εικασία. Είναι δήλωση του κατόχου («*το ακίνητό μου είναι σε αυτό
+    // το κτίριο*»), και η **επαλήθευσή** της είναι άλλο ερώτημα (§14.3): εδώ απλώς
+    // δεν χάνεται, ώστε η Ζ3/Ζ5 να έχει με τι να συγκρίνει.
+    place: property.placeRef ?? null,
     floor: numberOrNull(property.floor),
     bedrooms: numberOrNull(property.layout?.bedrooms),
     title: (property.name ?? '').trim(),

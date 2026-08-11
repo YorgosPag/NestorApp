@@ -39,7 +39,7 @@ function demand(overrides: Partial<PropertyDemand> = {}): PropertyDemand {
 
 /**
  * Απόσταση μεγίστου κύκλου με **σφαιρικό νόμο συνημιτόνων** — ανεξάρτητη υλοποίηση
- * από τη `haversineDistance` που χρησιμοποιεί ο κώδικας. Ίδια ακτίνα Γης, ώστε η
+ * από τη `distanceMeters` που χρησιμοποιεί ο κώδικας. Ίδια ακτίνα Γης, ώστε η
  * σύγκριση να μετρά τον **αλγόριθμο** και όχι τη σταθερά.
  */
 function greatCircleKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {

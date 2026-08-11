@@ -213,7 +213,10 @@
         "notFound": "We could not locate that area. Try a city, or a street with a number.",
         "failed": "The lookup did not respond. Please try again shortly.",
         "radiusLabel": "Radius (km)",
-        "notYet": "Two more ways to say “where” are coming: an area drawn on the map, and a specific building. Their model already exists; the data and the drawing surface do not."
+        "place": "This building or plot",
+        "area": "This area on the map",
+        "identityChosen": "Chosen place: {label}",
+        "identityChange": "Change place"
       },
       "timing": {
         "legend": "When do you need it?",
@@ -286,7 +289,9 @@
     },
     "formBlocker": {
       "place-unresolved": "Press “Locate” so the area resolves to a point on the map.",
-      "window-incomplete": "Fill in both ends of the period."
+      "window-incomplete": "Fill in both ends of the period.",
+      "place-not-identified": "Show on the map which building or plot you mean.",
+      "area-not-drawn": "Draw the area — at least three vertices."
     },
     "answer": {
       "heading": "What exists today",
@@ -456,7 +461,9 @@
       "placeResolved": "Located: {label}",
       "placeNotFound": "No such address was found. Try writing it differently.",
       "placeFailed": "Locating did not complete. Please try again shortly.",
-      "placeDeclinedNote": "The property will appear in the list marked as having no stated location."
+      "placeDeclinedNote": "The property will appear in the list marked as having no stated location.",
+      "placeLinkLegend": "Which building or plot?",
+      "placeLinkHelp": "Optional. If you point at it, your listing meets the people searching for THIS building — not just the area."
     },
     "media": {
       "label": "Photos and floor plans",
@@ -511,5 +518,66 @@
       "floor": "Floor {floor}",
       "bedrooms": "{count, plural, one {# bedroom} other {# bedrooms}}"
     }
+  },
+  "place": {
+    "legend": "Which place?",
+    "mode": {
+      "pick": "Pick a building from the map",
+      "pin": "Drop a pin",
+      "draw": "Draw the outline"
+    },
+    "modeHint": {
+      "pick": "Click on the building. If it is missing from the map, drop a pin or draw it.",
+      "pin": "Click where the place is.",
+      "draw": "Click vertex by vertex. At least three."
+    },
+    "picker": {
+      "searching": "Looking for what is here…",
+      "found": "Building found",
+      "none": "There is no building at this point on the map. Drop a pin or draw the outline.",
+      "unavailable": "The map did not answer. Try again shortly — change nothing.",
+      "outsideArea": "This point is outside the area we cover.",
+      "noAddress": "No recorded address"
+    },
+    "draw": {
+      "vertices": "Vertices: {count}",
+      "undo": "Undo vertex",
+      "clear": "Clear",
+      "tooFew": "At least three vertices are needed.",
+      "area": "Area: {sqm} m²"
+    },
+    "target": {
+      "legend": "What are you pointing at?",
+      "land": "Plot / land",
+      "building": "Building"
+    },
+    "confirm": "Use this place",
+    "working": "Recording the place…",
+    "created": "The place was recorded.",
+    "reused": "The place already existed — you point at the same identity.",
+    "chosen": "Chosen place",
+    "change": "Change place",
+    "duplicate": {
+      "title": "A place is already recorded here",
+      "body": "The point you showed falls inside a place we already know: {label}. Is it the same one?",
+      "same": "Yes, the same",
+      "distinct": "No, it is a different one"
+    },
+    "defect": {
+      "point-off-earth": "These coordinates are not valid.",
+      "point-outside-served-area": "The point is outside the area we cover.",
+      "outline-too-few-vertices": "The shape needs at least three vertices.",
+      "outline-outside-served-area": "The shape extends outside the area we cover.",
+      "outline-degenerate": "The shape encloses no area — the vertices are almost on one line.",
+      "outline-self-intersecting": "The shape crosses itself. Redraw it without crossing edges.",
+      "query-empty": "Type an address or area."
+    },
+    "rejection": {
+      "osm-absent": "This building no longer exists on the public map. Pick another or draw it.",
+      "osm-not-a-building": "What you picked is not a building.",
+      "address-not-found": "We could not locate that address."
+    },
+    "failed": "The place was not recorded. Try again.",
+    "attribution": "Map data © OpenStreetMap contributors"
   }
 }

@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "6927501ff6561273a2acd99ff712cbfcef91e5cade981f88684394443dfe95ec",
+    "src/i18n/generated/shell-slice.el.json": "f506e96b5fec1af1320f5301c4bb4fd0474b2ec2152e646a53c5b2c8e9f8d1d6",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -40,7 +40,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7776c5d0219eb1796b51e32c7f9c9272ec3b71ef44b00518a2e51339256f169b",
+  "inputsSha256": "01d3d20edf853582b646667d3d308e71aa66f0df536c32860f874e84a4e4082d",
   "languages": [
     "el"
   ],
@@ -119,7 +119,6 @@
     "src/components/private-space/PrivateSpaceShell.tsx": "90fd6864d94bf6828a3d53f2a54428bff8f6fbfea8d9444e6dbc3460fba5cbb8",
     "src/components/projects/ika/contracts-defaults.ts": "72acc11a1ec0cd49e03ca1efb478002f5560e6e48532e1f04bdbba464822b2f2",
     "src/components/projects/ika/contracts.ts": "f1facec65b1974a3e949e578b725cd630ef6ac5bde747417c5010a7ae5041db3",
-    "src/components/projects/ika/map-shared/geo-math.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/components/projects/procurement/BackToProjectLink.tsx": "26df99b73ad6e2bec78e9b3f8afb2c7a5b76515a5909bba242c393ab32a21861",
     "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
@@ -309,6 +308,7 @@
     "src/lib/firestore-now.ts": "d458cf6b92bfd24efb82d099b7f3bff825a6d19eb381e464e47551d5746421be",
     "src/lib/firestore/converters/contact.converter.ts": "5460ed2389be30ed576545f1d1eee65569aeb77af54fb3c54084b640a8a16383",
     "src/lib/firestore/utils.ts": "af6d371b2ca638535e40bf36a5d686df2027d9a06f5415419d76de5b2fc84e33",
+    "src/lib/geo/geo-distance.ts": "e78fe737a138f0f2f1ed455d7bf2a979141bad15537cf76b3f64618685cffef3",
     "src/lib/geocoding/geocoding-service.ts": "6a8aabb6d451e9ef7810fefefe3aef614032d7e2cfca35dbe2c1bfadfd09da91",
     "src/lib/geocoding/geocoding-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/intl-domain.ts": "0980bb7d12043530ae65d338ce5643384fcd733994f0387aa342d5c448b4cccc",
@@ -316,7 +316,7 @@
     "src/lib/intl-utils.ts": "926a8c5f3e1e00f67ec39e339d2897159cda589c191fce2bcb881d04eb1e60eb",
     "src/lib/json-utils.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/listings/listing-coverage.ts": "01e2eeed0cb00c7d501432df25edf4e07e7d3c24c9e3c6509aff1b2deeaa913c",
-    "src/lib/listings/listing-filters.ts": "ea8402c3833652befbb5543d93d90812c7b90fb6f2bc506ab554a9579356e49b",
+    "src/lib/listings/listing-filters.ts": "204656705af6a6e036326ca7a850014d0174d80ec90bd130928e5826f39b4971",
     "src/lib/listings/listing-map-shape.ts": "10781da0d2016406c2389a524898b7c497fc759056875a698840e738119800ab",
     "src/lib/listings/listing-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
@@ -426,7 +426,7 @@
     "src/styles/design-tokens/modules/layout.ts": "c83938265a4bba7d2dfddd2da5a5da470601bd10a69f49ffb0036133261e6344",
     "src/styles/design-tokens/modules/portal-overlay.ts": "b5d469f1ea794f783e3e0f3399e150c9d99f9f4bec66573b6c994b52d9fc8e8e",
     "src/subapps/dxf-viewer/bim/services/opening-tag-style-service.ts": "31f5c90a905b757963db4bf4b4cebaa8ac532bf982c978a5927d128ef1d6c9d7",
-    "src/subapps/dxf-viewer/config/color-config.ts": "4548f1ee64570a3565b06c3ed2cb92eb78d736e62fb4cfd4664ebbe60c6b3bf5",
+    "src/subapps/dxf-viewer/config/color-config.ts": "c1633ba4970319aa1d311dd11bf1f1a6a11dd6a82cb62a052d2326922a34b8ce",
     "src/subapps/dxf-viewer/config/color-math.ts": "b835d0310b123eaf65883a0cb8e4f4c7a3182c966a3f15e354140e19ccc10bf3",
     "src/subapps/dxf-viewer/config/dxf-timing.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/subapps/dxf-viewer/config/modal-select.ts": "a1c478d8cb6d0656503b57d91b950f17d4ee2f48fd195eaac6fbcbdf729d10c9",
@@ -518,7 +518,7 @@
     "matchedKeys": 105,
     "routeBoundaries": 0,
     "shellFiles": 435,
-    "sliceBytes": 220443
+    "sliceBytes": 224976
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",

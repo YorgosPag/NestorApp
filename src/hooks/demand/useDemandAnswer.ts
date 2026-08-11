@@ -34,7 +34,7 @@ import { todayLocalDate, nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
   answerDemand,
-  NO_LISTING_KNOWLEDGE,
+  knowledgeFromListings,
   type DemandAnswer,
 } from '@/lib/demand/demand-answer';
 import { DEMAND_DISCLOSURE, type DemandDisclosure } from '@/lib/demand/demand-aggregate';
@@ -87,10 +87,11 @@ export function useDemandAnswer(demand: PropertyDemand | null): DemandAnswerStat
       answer: answerDemand({
         demand,
         listings,
-        // 🔶 Τα τρία δηλωμένα κενά (επίπεδο Α · διαθεσιμότητα · αποστάσεις POI). Η
-        // μηχανή τα λέει **ονομαστικά** (`place-unresolved`/`availability-unknown`/
-        // `proximity-unknown`) αντί να υποθέσει — και η οθόνη τα μεταφράζει.
-        knowledge: NO_LISTING_KNOWLEDGE,
+        // ✅ Ο **δεσμός επιπέδου Α** αντλείται πλέον από τις ίδιες τις αγγελίες: μια
+        // ζήτηση Ζ3/Ζ5 έχει με τι να συγκριθεί. 🔶 Τα άλλα **δύο** κενά μένουν
+        // (διαθεσιμότητα · αποστάσεις POI) και η μηχανή τα λέει **ονομαστικά**
+        // (`availability-unknown` / `proximity-unknown`) αντί να υποθέσει.
+        knowledge: knowledgeFromListings(listings),
         // Ο πελάτης δεν βλέπει ζητήσεις άλλων· βλ. {@link useDemandCompetition}.
         otherDemands: [],
         todayDate: todayLocalDate(),

@@ -82,6 +82,7 @@ describe('🔴 Ο — η προσφορά του ιδιώτη ΦΤΑΝΕΙ στ�
           point: { lat: 40.1, lng: 22.1 },
           label: 'κάπου',
           accuracy: null,
+          link: null,
         },
       }),
     );

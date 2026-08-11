@@ -44,7 +44,7 @@
 
 import { z } from 'zod';
 
-import type { GeoPoint } from '@/types/geo/coordinates';
+import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import { PROPERTY_TYPES } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind, type PropertyOffer } from '@/types/property-offers';
@@ -60,27 +60,15 @@ import type {
 // =============================================================================
 
 /**
- * Αριθμός ή «δεν το έθεσε».
- *
- * ⚠️ **Το κενό πεδίο γίνεται `null`, ΠΟΤΕ `0`** — και εδώ η διάκριση έχει **δύο**
- * υπαρκτούς μάρτυρες: `floor: 0` είναι **ισόγειο** και `bedrooms: 0` είναι
- * **γκαρσονιέρα**. Ο `Number('')` είναι **0**, δηλαδή η αφελής μετατροπή παράγει
- * ακριβώς το λάθος που ο τύπος υπάρχει για να αποτρέψει.
+ * ⚠️ Το «αριθμός ή δεν το έθεσε» και το «σημείο ή δεν δείχτηκε» **δεν ζουν πια εδώ**:
+ * είναι κοινά με τη φόρμα της ζήτησης (Α9) και το CHECK 3.28 τα ονόμασε ως κλώνο μέσα
+ * στο ίδιο commit. Ζουν στο `@/lib/forms/form-primitives` — εδώ οι μάρτυρες της
+ * απόφασης *«κενό ⇒ `null`, ΠΟΤΕ `0`»* είναι `floor: 0` = **ισόγειο** και
+ * `bedrooms: 0` = **γκαρσονιέρα**.
  */
-const optionalNumber = z
-  .union([z.number(), z.string(), z.null(), z.undefined()])
-  .transform((raw) => {
-    if (raw === null || raw === undefined) return null;
-    if (typeof raw === 'number') return Number.isFinite(raw) ? raw : null;
-    const trimmed = raw.trim();
-    if (trimmed === '') return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-  });
+const optionalNumber = optionalNumberSchema;
 
-const geoPoint: z.ZodType<GeoPoint | null> = z
-  .object({ lat: z.number(), lng: z.number() })
-  .nullable();
+const geoPoint = geoPointSchema;
 
 /**
  * Οι δύο **έγκυρες απαντήσεις** στο ερώτημα της θέσης (Α5 §3).
@@ -131,6 +119,16 @@ export const ownerPropertyFormSchema = z.object({
   placePoint: geoPoint,
   /** Η ακρίβεια που ανέφερε ο γεωκωδικοποιητής. `null` ⇒ **χειροκίνητο** σημείο. */
   placeAccuracy: z.enum(GEOCODING_ACCURACIES as unknown as [GeocodingAccuracy, ...GeocodingAccuracy[]]).nullable(),
+  /**
+   * **Ο δεσμός προς το επίπεδο Α** — «το ακίνητό μου είναι ΣΕ ΑΥΤΟ το κτίριο».
+   *
+   * 🔑 Είναι το πεδίο που κάνει την προσφορά να συναντά τη ζήτηση (§14.5), και
+   * μένει **προαιρετικό**: ο κάτοχος που δεν θέλει να δείξει κτίριο δημοσιεύει
+   * κανονικά — *επιλογή, ποτέ προϋπόθεση* (ίδιος κανόνας με το τοπογραφικό, §21.4).
+   */
+  placeRef: z
+    .object({ landId: z.string(), buildingId: z.string().nullable() })
+    .nullable(),
 
   // ── §25.6: ΦΩΤΟΓΡΑΦΙΑ / ΚΑΤΟΨΗ ──────────────────────────────────────────
   /**
@@ -178,6 +176,7 @@ export const EMPTY_OWNER_PROPERTY_FORM: OwnerPropertyFormValues = {
   placeQuery: '',
   placePoint: null,
   placeAccuracy: null,
+  placeRef: null,
   media: [],
 };
 
@@ -262,6 +261,9 @@ function placeFrom(values: OwnerPropertyFormParsed): OwnerPropertyPlace {
       point: values.placePoint,
       label: values.placeQuery.trim(),
       accuracy: values.placeAccuracy,
+      // ⛔ Ο δεσμός ζει **μόνο** στον κλάδο `declared`: το `declined` δεν μπορεί να
+      // τον κουβαλήσει, γιατί το να δείξεις δημόσιο κτίριο **είναι** αποκάλυψη θέσης.
+      link: values.placeRef,
     };
   }
   return { kind: 'declined' };
@@ -328,6 +330,7 @@ export function ownerPropertyFormFrom(
     placeQuery: declared?.label ?? '',
     placePoint: declared?.point ?? null,
     placeAccuracy: declared?.accuracy ?? null,
+    placeRef: declared?.link ?? null,
     media: property.media.map((item) => ({ ...item })),
   };
 }

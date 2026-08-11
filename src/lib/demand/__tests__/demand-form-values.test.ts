@@ -23,7 +23,11 @@ import {
 } from '../demand-form-values';
 import { validateDemandForm } from '../demand-form-validation';
 import { DEMAND_LIFE_PRESETS, applyLifePreset } from '../demand-life-presets';
-import { DEMAND_LIFE_CONTEXTS, NO_DEMAND_FEATURES } from '@/types/property-demand';
+import {
+  DEMAND_LIFE_CONTEXTS,
+  NO_DEMAND_FEATURES,
+  type PropertyDemand,
+} from '@/types/property-demand';
 import { demand } from './demand-fixtures';
 
 /** Οι τιμές που περνούν από zod — ό,τι δέχεται η μετάφραση. */
@@ -76,27 +80,63 @@ describe('🔴 Ρ — ζήτηση → φόρμα → ζήτηση είναι Τ
     expect(demandDraftFrom(parse(roundTrip.values))).toEqual(original);
   });
 
-  it('🔴 μορφή χώρου ΕΚΤΟΣ φόρμας ⇒ ονομασμένη άρνηση, ΠΟΤΕ σιωπηλή πτώση σε «anywhere»', () => {
-    // Χωρίς αυτό, ένα άνοιγμα για επεξεργασία θα μετέτρεπε «αυτό το κτίριο» σε
-    // «οπουδήποτε» — και θα αποθηκευόταν έτσι με το πρώτο «Αποθήκευση».
-    for (const kind of PLACE_KINDS_NOT_IN_FORM) {
-      const source =
-        kind === 'place'
-          ? demand({ place: { kind: 'place', landId: 'land_1', buildingId: null } })
-          : demand({
-              place: {
-                kind: 'area',
-                outline: [
-                  { lat: 40.6, lng: 22.9 },
-                  { lat: 40.7, lng: 22.9 },
-                  { lat: 40.7, lng: 23.0 },
-                ],
-              },
-            });
+  /**
+   * 🔴 **Η ΑΓΚΥΡΑ ΠΟΥ ΑΝΤΙΚΑΤΕΣΤΗΣΕ ΕΝΑΝ ΦΡΟΥΡΟ ΠΟΥ ΕΓΙΝΕ ΚΕΝΟΣ.**
+   *
+   * Μέχρι τις 2026-08-11 εδώ έτρεχε βρόχος πάνω στο `PLACE_KINDS_NOT_IN_FORM` και
+   * απαιτούσε **ονομασμένη άρνηση**. Όταν η λίστα **άδειασε**, ο βρόχος έγινε
+   * **μηδέν επαναλήψεις** και το test πράσινο **χωρίς να ρωτά τίποτα** — ακριβώς το
+   * σχήμα «0 = κανείς δεν κοίταξε», μέσα σε test που υπήρχε για να το κυνηγά.
+   *
+   * Η ερώτηση **αντιστράφηκε μαζί με τη συμπεριφορά**: πλέον και οι τέσσερις μορφές
+   * **οφείλουν να επιβιώνουν** του κύκλου ζήτηση → φόρμα → ζήτηση. Είναι η ίδια
+   * ανησυχία (*«ένα άνοιγμα για επεξεργασία θα μετέτρεπε “αυτό το κτίριο” σε
+   * “οπουδήποτε” και θα αποθηκευόταν έτσι με το πρώτο Αποθήκευση»*) — με τη διαφορά
+   * ότι τώρα η σωστή απάντηση δεν είναι άρνηση, είναι **διατήρηση**.
+   */
+  it('🔴 ΚΑΘΕ μορφή χώρου επιβιώνει του κύκλου ζήτηση → φόρμα → ζήτηση', () => {
+    const outline = [
+      { lat: 40.6, lng: 22.9 },
+      { lat: 40.7, lng: 22.9 },
+      { lat: 40.7, lng: 23.0 },
+    ];
 
+    const places = [
+      { kind: 'anywhere' },
+      { kind: 'near', center: { lat: 40.64, lng: 22.94 }, radiusKm: 7 },
+      { kind: 'place', landId: 'land_1', buildingId: 'pbld_1' },
+      { kind: 'area', outline },
+    ] as const satisfies readonly PropertyDemand['place'][];
+
+    // Ολότητα: κάθε μορφή του μοντέλου δοκιμάζεται — αλλιώς η άγκυρα θα «ξεχνούσε»
+    // ακριβώς εκείνη που κάποιος πρόσθεσε χωρίς να τη συνδέσει.
+    expect(places.map((place) => place.kind).sort()).toEqual([...FORM_PLACE_KINDS].sort());
+
+    for (const place of places) {
+      const source = demand({ place });
       const load = demandFormFrom(source);
-      expect(load).toEqual({ kind: 'place-not-editable', placeKind: kind });
+
+      if (load.kind !== 'editable') throw new Error(`${place.kind}: αναμενόταν editable`);
+      expect(demandDraftFrom(parse(load.values)).place).toEqual(place);
     }
+  });
+
+  /**
+   * ⚠️ Ο κλάδος `place-not-editable` **δεν έγινε νεκρός** επειδή άδειασε η λίστα — έγινε
+   * **ανενεργός**, και η διαφορά μετριέται: μια **πέμπτη** μορφή χώρου που θα
+   * προστεθεί αύριο χωρίς να δηλωθεί οφείλει να συναντήσει **ονομασμένη άρνηση**, όχι
+   * σιωπηλή πτώση σε «οπουδήποτε». Χωρίς αυτή την άγκυρα, ο φρουρός θα ήταν κώδικας
+   * που κανείς δεν εκτέλεσε ποτέ (ADR-749 §5).
+   */
+  it('🔑 άγνωστη μορφή χώρου ⇒ ονομασμένη άρνηση, ΠΟΤΕ σιωπηλή πτώση σε «anywhere»', () => {
+    const fromTheFuture = demand({
+      place: { kind: 'parcel-cluster' } as unknown as PropertyDemand['place'],
+    });
+
+    expect(demandFormFrom(fromTheFuture)).toEqual({
+      kind: 'place-not-editable',
+      placeKind: 'parcel-cluster',
+    });
   });
 
   it('🔑 οι δύο λίστες μορφών χώρου δεν επικαλύπτονται και καλύπτουν το μοντέλο', () => {

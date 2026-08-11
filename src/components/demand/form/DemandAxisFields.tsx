@@ -35,6 +35,8 @@ import {
   DemandOptionsField,
 } from './demand-field-primitives';
 import { DemandPlaceResolver } from './DemandPlaceResolver';
+import { PlaceIdentityField } from '@/components/geo/PlaceIdentityField';
+import { DemandAreaOutline } from './DemandAreaOutline';
 import { DemandProximityField } from './DemandProximityField';
 
 const NS = 'search-results';
@@ -64,10 +66,20 @@ export function DemandSeeksField(): React.ReactElement {
   );
 }
 
-/** **ΧΩΡΟΣ** (Ζ1 · Ζ2 · Ζ4 · Ζ5) — με το δηλωμένο κενό γραμμένο στην οθόνη. */
+/**
+ * **ΧΩΡΟΣ** (Ζ1 · Ζ2 · Ζ3 · Ζ4 · Ζ5) — και οι **τέσσερις** μορφές του μοντέλου.
+ *
+ * ✅ Το δηλωμένο κενό **έκλεισε** (2026-08-11): μέχρι τότε εδώ στεκόταν μια πρόταση
+ * που έλεγε στον άνθρωπο ότι *«δύο ακόμη τρόποι έρχονται»*. Ήταν ειλικρινής όσο το
+ * επίπεδο Α ήταν άδειο· τώρα η ταυτότητα γεννιέται **κατ' απαίτηση** (§13.5) και δεν
+ * υπάρχει λίστα να ανοίξει κενή — ο άνθρωπος **δείχνει** στον χάρτη.
+ */
 export function DemandPlaceField(): React.ReactElement {
   const { t } = useTranslation([NS]);
-  const placeKind = useFormContext<DemandFormValues>().watch('placeKind');
+  const { watch, setValue } = useFormContext<DemandFormValues>();
+  const placeKind = watch('placeKind');
+  const placeRef = watch('placeRef');
+  const placeOutline = watch('placeOutline');
 
   return (
     <DemandFieldset legend={t(`${NS}:demand.form.place.legend`)}>
@@ -81,12 +93,28 @@ export function DemandPlaceField(): React.ReactElement {
       {placeKind === 'near' && <DemandPlaceResolver />}
 
       {/*
-        🔶 Το δηλωμένο κενό, **ειπωμένο στον άνθρωπο** και όχι μόνο σε σχόλιο. Οι
-        μορφές Ζ3/Ζ4/Ζ5 υπάρχουν στο μοντέλο· λείπουν τα δεδομένα (επίπεδο Α) και η
-        επιφάνεια σχεδίασης. Ένας επιλογέας που ανοίγει κενή λίστα θα ήταν φρουρός
-        χωρίς απόδειξη ζωής (ADR-749 §5) — μια πρόταση είναι ειλικρινέστερη.
+        **Ζ3/Ζ5** — «αυτό το κτίριο». Ο επιλογέας δίνει ταυτότητα του **επιπέδου Α**,
+        δηλαδή ακριβώς το πράγμα στο οποίο δείχνει και μια προσφορά (§14.5). Ο
+        `target` είναι `building` γιατί αυτή είναι η ερώτηση της Ζ3/Ζ5· η γη έρχεται
+        μαζί, γιατί **αυτή** κρατά τη θέση (Α1).
       */}
-      <p className="text-sm text-muted-foreground">{t(`${NS}:demand.form.place.notYet`)}</p>
+      {placeKind === 'place' && (
+        <PlaceIdentityField
+          chosen={placeRef}
+          onChosen={(ref) => setValue('placeRef', ref, { shouldDirty: true })}
+        />
+      )}
+
+      {/*
+        **Ζ4** — «μόνο αυτό το κομμάτι της». Η **ίδια** επιφάνεια σχεδίασης με τη
+        χειρονομία `drawn` του §13.6 — μία επιφάνεια, δύο χρήσεις.
+      */}
+      {placeKind === 'area' && (
+        <DemandAreaOutline
+          outline={placeOutline}
+          onDrawn={(outline) => setValue('placeOutline', outline, { shouldDirty: true })}
+        />
+      )}
     </DemandFieldset>
   );
 }

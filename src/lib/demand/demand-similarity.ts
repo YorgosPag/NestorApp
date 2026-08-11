@@ -42,7 +42,7 @@
 
 import type { PropertyDemand } from '@/types/property-demand';
 import type { ListingFilters } from '@/lib/listings/listing-filters';
-import { haversineDistance } from '@/components/projects/ika/map-shared/geo-math';
+import { distanceMeters } from '@/lib/geo/geo-distance';
 import { listingFiltersFromDemand } from './demand-listing-filters';
 
 // =============================================================================
@@ -93,7 +93,7 @@ function rangesIntersect(
 function areasIntersect(a: ListingFilters['near'], b: ListingFilters['near']): boolean {
   if (a === null || b === null) return true;
 
-  const metres = haversineDistance(a.center.lat, a.center.lng, b.center.lat, b.center.lng);
+  const metres = distanceMeters(a.center, b.center);
   return metres <= (a.radiusKm + b.radiusKm) * 1000;
 }
 
