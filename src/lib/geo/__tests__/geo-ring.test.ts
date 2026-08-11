@@ -12,11 +12,8 @@
  */
 
 import { geoOutlineBoundingCircle, isPointInGeoOutline } from '../geo-ring';
-import { haversineDistance } from '@/components/projects/ika/map-shared/geo-math';
-import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
-
-const metres = (a: GeoPoint, b: GeoPoint): number =>
-  haversineDistance(a.lat, a.lng, b.lat, b.lng);
+import { distanceMeters as metres } from '@/lib/geo/geo-distance';
+import type { GeoOutline } from '@/types/geo/coordinates';
 
 /** Τετράγωνο 0,02° × 0,02° γύρω από τη Θεσσαλονίκη. */
 const SQUARE: GeoOutline = [
