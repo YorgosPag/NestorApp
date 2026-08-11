@@ -136,6 +136,35 @@ export function captureTableFormatBrush(
 // ──────────────────────────────────────────────────────────────────────────────
 
 /**
+ * 🔴 ADR-753 §29 — **ΤΙ ΚΑΝΕΙ Ο ΖΩΓΡΑΦΟΣ ΜΕ ΤΗ ΜΟΡΦΟΠΟΙΗΣΗ ΧΑΡΑΚΤΗΡΩΝ ΠΟΥ ΒΡΙΣΚΕΙ.**
+ *
+ * Δύο καλούντες, **δύο διαφορετικές ερωτήσεις** — και μέχρι το §29 έπαιρναν μία απάντηση:
+ *
+ * ```
+ *   πινέλο / «Επικόλληση Μορφών»  →  «βάψε ΞΕΝΟ περιεχόμενο»      →  'flatten'
+ *   πλήρες Ctrl+V                 →  «αναπαρήγαγε το κελί-πηγή»    →  'preserve'
+ * ```
+ *
+ * ## Γιατί `'flatten'` για το πινέλο — και γιατί ΔΕΝ αλλάζει
+ * Τα runs νικούν το κελί στην επίλυση. Βάφοντας «μπλε» πάνω σε κελί με κόκκινα γράμματα, το
+ * βάψιμο θα ήταν **αόρατο ακριβώς εκεί που ο χρήστης είχε μορφοποιήσει**. Είναι και η
+ * τεκμηριωμένη συμπεριφορά του Excel: το Format Painter *«replaces all formatting in the target
+ * cell — it doesn't merge styles»*.
+ *
+ * ## 🔴 Γιατί `'preserve'` για την επικόλληση — η αιτία του §29
+ * Στο πλήρες `Ctrl+V` τα runs **δεν είναι ξένα**: μόλις γράφτηκαν από το `transferredCell`, από
+ * **την ίδια πηγή** που παρήγαγε και το πινέλο. Δεν υπάρχει σύγκρουση να λυθεί — υπάρχει μόνο
+ * ένα κελί που πρέπει να ξαναγίνει ό,τι ήταν. Ισοπεδώνοντάς τα, ο ζωγράφος έσβηνε στην αμέσως
+ * επόμενη γραμμή ό,τι είχε μόλις ταξιδέψει σωστά: το κείμενο και το γέμισμα προσγειώνονταν, τα
+ * χρώματα των γραμμάτων **όχι**. Το ανέφερε ο ιδιοκτήτης από την οθόνη, με τη σουίτα πράσινη.
+ *
+ * ⚠️ **Καμία προεπιλογή, επίτηδες.** Ένας τρίτος καλών οφείλει να **απαντήσει** — μια σιωπηλή
+ * προεπιλογή θα σήμαινε ότι η επόμενη διαδρομή επικόλλησης ξαναγεννά το ίδιο ελάττωμα χωρίς
+ * καμία γραμμή να το δηλώνει.
+ */
+export type TableRunsPaintPolicy = 'flatten' | 'preserve';
+
+/**
  * Βάφει τον στόχο με το φορτωμένο πινέλο. Επιστρέφει το **ίδιο** μοντέλο by-reference όταν
  * τίποτα δεν άλλαξε — καμία εντολή, κανένα βήμα undo για το τίποτα.
  *
@@ -148,6 +177,7 @@ export function paintTableFormat(
   style: TableStyle,
   brush: TableFormatBrush,
   target: TableCellRangeBounds,
+  runsPolicy: TableRunsPaintPolicy,
 ): PersistedTableModel {
   const resolved = resolveTableModel(model);
   const slots = tileTableTarget(resolved, target, {
@@ -161,7 +191,7 @@ export function paintTableFormat(
   const byTarget = new Map<string, TableTiledSlot>();
   for (const slot of slots) byTarget.set(`${slot.rowIndex} ${slot.colIndex}`, slot);
 
-  const withCells = paintCellOverrides(model, style, brush, slots, byTarget);
+  const withCells = paintCellOverrides(model, style, brush, slots, byTarget, runsPolicy);
   return brush.facets.has('borders')
     ? paintEdges(withCells, style, brush, slots)
     : withCells;
@@ -184,6 +214,7 @@ function paintCellOverrides(
   brush: TableFormatBrush,
   slots: readonly TableTiledSlot[],
   byTarget: ReadonlyMap<string, TableTiledSlot>,
+  runsPolicy: TableRunsPaintPolicy,
 ): PersistedTableModel {
   const painted = new Map<string, PaintedCell>();
 
@@ -195,7 +226,10 @@ function paintCellOverrides(
       const slot = byTarget.get(`${cell.rowIndex} ${cell.colIndex}`);
       if (slot === undefined) return;
       const source = tableFormatBrushCellAt(brush, slot.patternRow, slot.patternCol);
-      painted.set(`${cell.ref.rowId} ${cell.ref.colId}`, paintedCellOf(style, brush, source, cell));
+      painted.set(
+        `${cell.ref.rowId} ${cell.ref.colId}`,
+        paintedCellOf(style, brush, source, cell, runsPolicy),
+      );
     },
   );
 
@@ -231,6 +265,7 @@ function paintedCellOf(
   brush: TableFormatBrush,
   source: TableCellFormatPayload,
   target: TableResolvedCell,
+  runsPolicy: TableRunsPaintPolicy,
 ): PaintedCell {
   // Τι θα έδειχνε ο στόχος **χωρίς** δική του παράκαμψη — ο ΕΝΑΣ επιλυτής, με το `cell` έξω.
   const inherited = resolveCellStyle(style.rowClasses[target.rowClass], {
@@ -246,7 +281,13 @@ function paintedCellOf(
     override = patched(override, key, value);
     // Τα runs νικούν το κελί στην επίλυση· χωρίς ισοπέδωση, το βαμμένο πεδίο θα ήταν αόρατο
     // ακριβώς εκεί που ο χρήστης είχε μορφοποιήσει γράμματα. Ο ΕΝΑΣ ισοπεδωτής.
-    if (target.cell !== undefined) runs = runsWithoutField({ ...target.cell, runs }, key);
+    //
+    // 🔴 ADR-753 §29 — **εκτός αν τα runs ΗΡΘΑΝ με το περιεχόμενο.** Δες το
+    // {@link TableRunsPaintPolicy}: στο πλήρες `Ctrl+V` δεν υπάρχει σύγκρουση να λυθεί, γιατί
+    // τα γράμματα και το πινέλο βγήκαν από **το ίδιο** κελί-πηγή.
+    if (runsPolicy === 'flatten' && target.cell !== undefined) {
+      runs = runsWithoutField({ ...target.cell, runs }, key);
+    }
   }
 
   if (brush.facets.has('numberFormat')) {

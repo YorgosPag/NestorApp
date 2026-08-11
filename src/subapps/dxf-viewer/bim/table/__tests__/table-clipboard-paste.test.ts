@@ -30,7 +30,9 @@ import type { TableCellRangeBounds } from '../table-cell-range';
 import type { TableFormatFacetSet } from '../table-format-payload';
 import type {
   PersistedTableModel,
+  TableCellEntry,
   TableCellStyleOverride,
+  TableCellTextRun,
   TableColumnId,
   TableFormatFacet,
   TableRowId,
@@ -307,5 +309,55 @@ describe('§60 — η εσοχή και η γωνία ΤΑΞΙΔΕΥΟΥΝ με 
     expect(override?.indentLevel).toBe(3);
     expect(override?.textRotationDeg).toBe(37);
     expect(override?.fillColorHex).toBeUndefined();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 🔴 **ΥΠΟΣΧΕΣΗ 5 — ADR-753 §29: η μορφοποίηση ΑΝΑ ΧΑΡΑΚΤΗΡΑ ταξιδεύει με το κείμενό της.**
+ *
+ * Μέχρι το §29 **καμία** άγκυρα αυτού του αρχείου δεν ανέφερε τη λέξη `runs` — δηλαδή το
+ * ερώτημα «επιβιώνει η μορφοποίηση γραμμάτων μιας επικόλλησης;» δεν είχε τεθεί ποτέ. Το
+ * σύμπτωμα το ανέφερε ο **ιδιοκτήτης** από την οθόνη, με όλη τη σουίτα πράσινη: το κλασικό
+ * «0 = κανείς δεν κοίταξε».
+ *
+ * ## 🔑 ΤΡΙΑ ΣΚΕΛΗ, ΚΑΙ ΤΟ ΤΡΙΤΟ ΕΙΝΑΙ ΤΟ ΔΙΑΓΝΩΣΤΙΚΟ
+ * Χωρίζονται επίτηδες σε «φορτώνει;» · «επιβιώνει με ΠΛΗΡΗ επικόλληση;» · «επιβιώνει ΧΩΡΙΣ
+ * μορφή;». Ένα ενιαίο test θα έλεγε μόνο «χάλασε»· τα τρία μαζί **ονομάζουν τον ένοχο**, γιατί
+ * η μόνη διαφορά μεταξύ του δεύτερου και του τρίτου είναι το αν κλήθηκε ο **ζωγράφος**.
+ */
+describe('ΥΠΟΣΧΕΣΗ 5 — ADR-753 §29: η μορφοποίηση ΑΝΑ ΧΑΡΑΚΤΗΡΑ επιβιώνει της επικόλλησης', () => {
+  const RED = '#ff0000';
+
+  /** A2 = «ΝΕΣΤΩΡ», με τους **τρεις πρώτους** χαρακτήρες κόκκινους και έντονους. */
+  function withRuns(): PersistedTableModel {
+    const m = type(model(), 1, 0, 'ΝΕΣΤΩΡ');
+    const runs: readonly TableCellTextRun[] = [
+      { start: 0, end: 3, style: { textColorHex: RED, bold: true } },
+    ];
+    return {
+      ...m,
+      cells: m.cells.map(([rowId, colId, cell]): TableCellEntry =>
+        rowId === 'r1' && colId === 'c0' ? [rowId, colId, { ...cell, runs }] : [rowId, colId, cell],
+      ),
+    };
+  }
+
+  it('βάση: το πρόχειρο ΦΟΡΤΩΝΕΙ τη μορφοποίηση χαρακτήρων', () => {
+    const payload = captureTableClipboard(withRuns(), STYLE, at(1, 0));
+    expect(payload?.cells[0]?.runs?.[0]?.style.textColorHex).toBe(RED);
+  });
+
+  it('🔴 ΠΛΗΡΗΣ επικόλληση: τα κόκκινα γράμματα προσγειώνονται κόκκινα', () => {
+    const after = roundTrip(withRuns(), at(1, 0), { row: 3, col: 0 }, FULL);
+    expect(read(after, 3, 0)).toBe('ΝΕΣΤΩΡ');
+    expect(cellAt(after, 3, 0)?.runs?.[0]?.style.textColorHex).toBe(RED);
+    expect(cellAt(after, 3, 0)?.runs?.[0]?.style.bold).toBe(true);
+  });
+
+  it('🔑 ΔΙΑΓΝΩΣΤΙΚΟ: χωρίς όψεις μορφής τα ίδια runs επιβιώνουν ⇒ ένοχος ο ζωγράφος', () => {
+    const after = roundTrip(withRuns(), at(1, 0), { row: 3, col: 0 }, FORMULAS);
+    expect(cellAt(after, 3, 0)?.runs?.[0]?.style.textColorHex).toBe(RED);
   });
 });

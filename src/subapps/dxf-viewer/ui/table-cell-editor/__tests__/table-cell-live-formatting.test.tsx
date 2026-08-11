@@ -19,6 +19,8 @@
  * @see docs/centralized-systems/reference/adrs/ADR-753-table-cell-rich-text.md §28
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react';
 
@@ -333,5 +335,40 @@ describe('Ε — οι χειριστές εισόδου εκτελούνται �
     const event = new Event('beforeinput', { bubbles: true, cancelable: true });
     field.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ΟΜΑΔΑ ΣΤ — Η ΕΠΙΛΟΓΗ ΔΕΝ ΣΒΗΝΕΙ ΤΟ ΧΡΩΜΑ (§28.13)
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 🔴 **Το ελάττωμα που βρήκε ο ιδιοκτήτης πάνω στην πρώτη δουλεύουσα εκδοχή** (2026-08-11):
+ * μαρκάροντας βαμμένα γράμματα, ο browser τα έβαφε με το **δικό του** `highlighttext` — άρα η
+ * μορφοποίηση εξαφανιζόταν **τη μόνη στιγμή που ο χρήστης την επιθεωρεί**, πριν πατήσει την
+ * επόμενη εντολή. Το Excel κρατά το μελάνι κάτω από ημιδιαφανές highlight.
+ *
+ * ⚠️ **Δηλωμένο όριο της άγκυρας**: το jsdom δεν υπολογίζει ψευδοστοιχεία, οπότε **κανένα**
+ * test δεν μπορεί να μετρήσει το ζωγραφισμένο χρώμα μιας επιλογής. Ό,τι κλειδώνεται εδώ είναι
+ * τα **δύο μισά** που μαζί κάνουν τη δουλειά: ότι το πεδίο **φέρει** την κλάση, και ότι το
+ * φύλλο στυλ **δηλώνει** `color: inherit` και για τα τμήματα. Η ζωγραφιά επαληθεύεται στην
+ * οθόνη (§28.12) — και ο κανόνας μετρήθηκε ζωντανά ότι **γίνεται δεκτός** από τον μηχανισμό
+ * CSS, δηλαδή δεν πετάγεται σιωπηλά ως άκυρος.
+ */
+describe('ΣΤ — η επιλογή κρατά το χρώμα του τμήματος', () => {
+  test('ΣΤ1: το πεδίο φέρει την κλάση που μεταφέρει τον κανόνα', () => {
+    const field = mountEditor({ draft: 'ΝΕΣΤΩΡ', initialText: 'ΝΕΣΤΩΡ', runs: OMEGA_RHO });
+    expect(field.className).toContain('richField');
+  });
+
+  test('ΣΤ2: ο κανόνας δηλώνει `color: inherit` ΚΑΙ για τα τμήματα, όχι μόνο για το κουτί', () => {
+    const css = readFileSync(join(__dirname, '..', 'TableCellEditor.module.css'), 'utf8');
+    // Χωρίς τον δεύτερο επιλογέα ο κανόνας θα ίσχυε μόνο για κείμενο εκτός τμήματος — δηλαδή
+    // για τίποτα, αφού κάθε χαρακτήρας ζει μέσα σε `span`.
+    expect(css).toContain('.richField::selection');
+    expect(css).toContain('.richField *::selection');
+    expect(css).toContain('color: inherit');
+    // ⚠️ Κανένα σταθερό χρώμα: θα ήταν τρίτη αυθεντία για το μελάνι (δες την κεφαλίδα του CSS).
+    expect(css).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
   });
 });

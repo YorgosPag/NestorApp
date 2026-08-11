@@ -132,7 +132,10 @@ function paintOnce(
   // ιστορικό — αλλά το πινέλο έχει ήδη καταναλωθεί, και είναι το σωστό (§40.8).
   if (!bounds) return;
 
-  const nextModel = paintTableFormat(live.model, resolveTableStyle(live), brush, bounds);
+  // 🔴 ADR-753 §29 — `'flatten'`: το πινέλο βάφει **ξένο** περιεχόμενο. Χωρίς ισοπέδωση, το
+  // βάψιμο θα ήταν αόρατο ακριβώς πάνω στα γράμματα που ο χρήστης είχε μορφοποιήσει — και είναι
+  // η τεκμηριωμένη συμπεριφορά του Excel («replaces all formatting, doesn't merge»).
+  const nextModel = paintTableFormat(live.model, resolveTableStyle(live), brush, bounds, 'flatten');
   // 🔴 Α5 — **ΧΩΡΙΣ ΔΕΥΤΕΡΟ ΦΥΛΑΚΑ «άλλαξε κάτι;», ΚΑΙ ΕΙΝΑΙ ΑΠΟΦΑΣΗ.**
   //
   // Η πρώτη γραφή έβαζε εδώ `if (nextModel !== live.model)`. Ο έλεγχος με μεταλλάξεις τον

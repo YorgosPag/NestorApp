@@ -36,7 +36,10 @@ jest.mock('@/providers/NotificationProvider', () => ({
 }));
 
 import { useTableMenuClipboard } from '../use-table-menu-clipboard';
-import { buildTableEntity } from '../../../bim/table/build-table-entity';
+import {
+  createTableClipboardHarness,
+  type TableClipboardHarness,
+} from './table-clipboard-harness';
 import {
   clipboardTextToTableGrid,
   pasteTsvIntoTable,
@@ -45,13 +48,9 @@ import {
 import { getTableCopyMarquee } from '../../../state/table-copy-marquee-store';
 import { __resetTableClipboardForTests } from '../../../state/table-clipboard-store';
 import { cellText, getCell, resolveTableModel } from '../../../bim/table/table-model-helpers';
-import type { ICommand } from '../../../core/commands';
 import type { TableCellRangeBounds } from '../../../bim/table/table-cell-range';
 import type { PersistedTableModel } from '../../../types/table';
-import type { TableEntity } from '../../../types/table-entity';
-import type { LevelManagerLike } from '../../../hooks/canvas/canvas-click-types';
 
-const LEVEL_ID = 'level-1';
 const A1_B2: TableCellRangeBounds = { firstRow: 0, lastRow: 1, firstCol: 0, lastCol: 1 };
 
 /** Δύο × δύο κελιά, με **στηλοθέτη μέσα** στο ένα — ο λόγος ύπαρξης του quoting. */
@@ -72,46 +71,17 @@ function model(): PersistedTableModel {
   };
 }
 
-interface Harness {
-  readonly levelManager: LevelManagerLike;
-  readonly liveTable: () => TableEntity | null;
-  readonly execute: (command: ICommand) => void;
-  readonly commands: ICommand[];
-  readonly currentModel: () => PersistedTableModel;
-}
-
-function createHarness(): Harness {
-  const table: TableEntity = {
-    ...buildTableEntity({ x: 0, y: 0 }, {}, 'table-1', 'layer-0'),
-    model: model(),
-  };
-  let scene = { entities: [table] } as unknown as ReturnType<LevelManagerLike['getLevelScene']>;
-
-  const levelManager = {
-    currentLevelId: LEVEL_ID,
-    getLevelScene: () => scene,
-    setLevelScene: (_id: string, next: typeof scene) => { scene = next; },
-  } as unknown as LevelManagerLike;
-
-  const liveTable = (): TableEntity | null => {
-    const found = scene?.entities.find((e) => e.id === 'table-1');
-    return (found as unknown as TableEntity) ?? null;
-  };
-
-  const commands: ICommand[] = [];
-  // Η εντολή εκτελείται **στ' αλήθεια**: η σκηνή γράφεται από την κανονική διαδρομή, αλλιώς
-  // το test θα μετρούσε προθέσεις αντί για αποτέλεσμα (ADR-587).
-  const execute = (command: ICommand): void => { commands.push(command); command.execute(); };
-
-  return { levelManager, liveTable, execute, commands, currentModel: () => liveTable()!.model };
-}
+// 🔴 ADR-753 §29 — το στήσιμο της σκηνής **εξήχθη** στο `table-clipboard-harness.ts` όταν το
+// ζήτησε και η διαδρομή του πληκτρολογίου. Δες την κεφαλίδα του για το γιατί δύο αντίγραφα θα
+// μετρούσαν τις δύο διαδρομές σε **διαφορετικό κόσμο** ενώ θα ισχυρίζονταν ότι λένε τα ίδια.
+const createHarness = (): TableClipboardHarness => createTableClipboardHarness(model());
 
 /** Στήνει `navigator.clipboard` με ρητή συμπεριφορά ανά test — ποτέ σιωπηλό κενό. */
 function stubClipboard(impl: Partial<Clipboard>): void {
   Object.defineProperty(navigator, 'clipboard', { value: impl, configurable: true });
 }
 
-function renderClipboard(harness: Harness) {
+function renderClipboard(harness: TableClipboardHarness) {
   return renderHook(() => useTableMenuClipboard({
     levelManager: harness.levelManager,
     execute: harness.execute,
@@ -251,7 +221,7 @@ describe('επικόλληση — ασύγχρονη ανάγνωση, ρητή
 
 describe('§57 — το φορτίο της εφαρμογής και το αποτύπωμά του', () => {
   /** Αντιγράφει πραγματικά, ώστε να υπάρχει φορτίο **και** να ξέρουμε το αποτύπωμά του. */
-  async function copyFirst(harness: Harness): Promise<string> {
+  async function copyFirst(harness: TableClipboardHarness): Promise<string> {
     const writeText = jest.fn().mockResolvedValue(undefined);
     stubClipboard({ writeText });
     const { result } = renderClipboard(harness);

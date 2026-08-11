@@ -150,6 +150,9 @@ import { useTableCellRichContent } from './use-table-cell-rich-content';
 // ADR-767 Δ1 — η άρνηση γραφής σε δεμένο κελί. **Native** ακροατής· δες την κεφαλίδα του
 // για το γιατί το `onBeforeInput` του React ΔΕΝ πυροδοτείται.
 import { useTableCellInputGuard } from './use-table-cell-input-guard';
+// 🔴 ADR-753 §28.13 — ο ΜΟΝΟΣ κανόνας του επεξεργαστή που δεν μπορεί να ζήσει σε custom
+// property: το `::selection` είναι ψευδοστοιχείο. Δες την κεφαλίδα του αρχείου.
+import styles from './TableCellEditor.module.css';
 import {
   flattenToSingleLine,
   TABLE_CELL_RICH_MARKER,
@@ -444,6 +447,8 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         // θα κέρδιζε σε ειδικότητα και η ένδειξη δεν θα ζωγραφιζόταν ποτέ.
         className={cn(
           'box-border border-0',
+          // 🔴 ADR-753 §28.13 — η επιλογή δεν σβήνει το χρώμα των γραμμάτων (Excel parity).
+          styles.richField,
           writing
             ? 'bg-clip-padding'
             // Πλοήγηση: κρατά την ΕΣΤΙΑΣΗ (άρα και τα πλήκτρα), χάνει την όψη και το

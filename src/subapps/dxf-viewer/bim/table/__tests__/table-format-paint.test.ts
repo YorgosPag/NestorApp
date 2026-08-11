@@ -17,7 +17,11 @@
  * @see ../table-format-paint.ts
  */
 
-import { captureTableFormatBrush, paintTableFormat } from '../table-format-paint';
+import {
+  captureTableFormatBrush,
+  paintTableFormat,
+  type TableRunsPaintPolicy,
+} from '../table-format-paint';
 import { readTableCellFormat } from '../table-format-read';
 import { ALL_TABLE_FORMAT_FACETS } from '../table-format-payload';
 import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
@@ -81,10 +85,13 @@ function paint(
   source: TableCellRangeBounds,
   target: TableCellRangeBounds,
   which: TableFormatFacetSet = ALL_TABLE_FORMAT_FACETS,
+  // 🔴 ADR-753 §29 — το **πινέλο** ισοπεδώνει· η προεπιλογή εδώ είναι η σημασιολογία που
+  // ελέγχει αυτή η σουίτα. Η άλλη κατάσταση έχει δική της άγκυρα, παρακάτω.
+  runsPolicy: TableRunsPaintPolicy = 'flatten',
 ): PersistedTableModel {
   const brush = captureTableFormatBrush(m, STYLE, source, which);
   if (!brush) throw new Error('το πινέλο δεν φόρτωσε');
-  return paintTableFormat(m, STYLE, brush, target);
+  return paintTableFormat(m, STYLE, brush, target, runsPolicy);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -267,5 +274,51 @@ describe('ΑΠΛΩΜΑ ΜΟΤΙΒΟΥ — γραμμές 6/7/8 της προδι
 
     expect([3, 4, 5, 6].map((row) => overrideAt(after, row)?.bold ?? false))
       .toEqual([true, false, true, false]);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 🔴 **ADR-753 §29 — ΟΙ ΔΥΟ ΚΑΤΑΣΤΑΣΕΙΣ ΤΟΥ {@link TableRunsPaintPolicy}, ΚΑΘΕΜΙΑ ΜΟΝΗ ΤΗΣ.**
+ *
+ * Μέχρι το §29 η ισοπέδωση ήταν **τεκμηριωμένη αλλά αφύλακτη**: καμία άγκυρα αυτής της σουίτας
+ * δεν ανέφερε τη λέξη `runs`. Δηλαδή και οι δύο κατευθύνσεις μπορούσαν να σπάσουν σιωπηλά — η
+ * μία έσπασε πράγματι, και τη βρήκε ο **ιδιοκτήτης** στην οθόνη.
+ *
+ * ⚠️ Οι δύο άγκυρες είναι **αντικριστές επίτηδες**: μια πολιτική που ισοπεδώνει *πάντα* και μια
+ * που διατηρεί *πάντα* περνούν και οι δύο ένα μονόπλευρο test. Μόνο το ζεύγος αποδεικνύει ότι η
+ * παράμετρος **διαβάζεται**.
+ */
+describe('ADR-753 §29 — η πολιτική για τη μορφοποίηση ΧΑΡΑΚΤΗΡΩΝ', () => {
+  const RED = '#ff0000';
+
+  /** Κελί r3 με τους τρεις πρώτους χαρακτήρες κόκκινους. */
+  function withRuns(): PersistedTableModel {
+    const base = model();
+    return {
+      ...base,
+      cells: [
+        ['r3', 'c0', {
+          kind: 'text',
+          value: 'ΝΕΣΤΩΡ',
+          runs: [{ start: 0, end: 3, style: { textColorHex: RED } }],
+        }],
+      ],
+    } as PersistedTableModel;
+  }
+
+  const runColorAt = (m: PersistedTableModel, row: number): string | undefined =>
+    m.cells.find(([rowId, colId]) => rowId === `r${row}` && colId === 'c0')?.[2]
+      .runs?.[0]?.style.textColorHex;
+
+  it("🔴 'flatten' (πινέλο): το βάψιμο ΣΒΗΝΕΙ το χρώμα των γραμμάτων — αλλιώς θα ήταν αόρατο", () => {
+    const after = paint(withRuns(), at(0), at(3), facets('text'),'flatten');
+    expect(runColorAt(after, 3)).toBeUndefined();
+  });
+
+  it("🔴 'preserve' (πλήρες Ctrl+V): τα ίδια γράμματα ΚΡΑΤΟΥΝ το χρώμα τους", () => {
+    const after = paint(withRuns(), at(0), at(3), facets('text'),'preserve');
+    expect(runColorAt(after, 3)).toBe(RED);
   });
 });

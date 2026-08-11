@@ -43,7 +43,7 @@
  */
 
 import { tableClipboardCellAt, type TableClipboardPayload } from './table-clipboard-payload';
-import { paintTableFormat } from './table-format-paint';
+import { paintTableFormat, type TableRunsPaintPolicy } from './table-format-paint';
 import { clipboardTextToTableGrid, pasteTsvIntoTable, type TablePasteResult } from './table-range-clipboard';
 import { isBlankCell, transferredCell } from './table-range-transfer';
 import { tileTableTarget, type TableTiledSlot } from './table-range-tiling';
@@ -109,9 +109,35 @@ export function pasteTableClipboard(
   // θα έγραφε πάνω σε κελιά που δεν υπάρχουν ακόμη στον αραιό χάρτη.
   const model2 = request.facets.size === 0
     ? content.model
-    : paintTableFormat(content.model, style, { ...payload.brush, facets: request.facets }, region);
+    : paintTableFormat(
+        content.model,
+        style,
+        { ...payload.brush, facets: request.facets },
+        region,
+        runsPolicyFor(request.content),
+      );
 
   return content.model === model2 ? content : { ...content, model: model2 };
+}
+
+/**
+ * 🔴 ADR-753 §29 — **Η ΜΟΡΦΟΠΟΙΗΣΗ ΧΑΡΑΚΤΗΡΩΝ ΕΠΙΒΙΩΝΕΙ ΟΤΑΝ ΗΡΘΕ ΜΑΖΙ ΜΕ ΤΟ ΚΕΙΜΕΝΟ ΤΗΣ.**
+ *
+ * Η απάντηση **παράγεται** από το `content` και δεν είναι δεύτερη σημαία: η ερώτηση του ζωγράφου
+ * («είναι ξένα αυτά τα γράμματα;») έχει ήδη απαντηθεί από το ποιο περιεχόμενο ταξίδεψε.
+ *
+ * ```
+ *   'formulas' →  το κελί-πηγή αναπαράγεται ΟΛΟΚΛΗΡΟ, τα runs γράφτηκαν ήδη  →  'preserve'
+ *   'values'   →  ταξίδεψε ΜΟΝΟ κείμενο· καμία μορφοποίηση γραμμάτων δεν ήρθε →  'flatten'
+ *   'none'     →  «Επικόλληση Μορφών» πάνω σε ΞΕΝΟ περιεχόμενο                →  'flatten'
+ * ```
+ *
+ * ⚠️ Το `'values'` **δεν** είναι παράλειψη: το «Τιμές» του Excel δίνει ενιαία μορφοποίηση, και
+ * τα runs που θα έβρισκε ο ζωγράφος θα ήταν του **παλιού** κειμένου του στόχου — δείκτες σε
+ * γράμματα που μόλις αντικαταστάθηκαν.
+ */
+function runsPolicyFor(content: TablePasteContent): TableRunsPaintPolicy {
+  return content === 'formulas' ? 'preserve' : 'flatten';
 }
 
 /**
