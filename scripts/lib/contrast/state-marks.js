@@ -96,6 +96,21 @@ function readPrimitives(source) {
 }
 
 /**
+ * Το `color-config.ts` **μία φορά**: το AST του και ο χάρτης των πρωτογενών χρωμάτων.
+ *
+ * ⚠️ Εξήχθη επειδή το **CHECK 3.28** το έπιασε ως κλώνο τη στιγμή που προστέθηκε η δεύτερη
+ * οικογένεια (ADR-782 §27.4): δύο αναγνώστες, δύο ταυτόσημα προοίμια `readFileSync` +
+ * `createSourceFile` + `readPrimitives`. Δεν ήταν στιλιστικό — δύο σημεία που ανοίγουν το ίδιο
+ * αρχείο μπορούν να αποκλίνουν σε **ποιο** αρχείο ανοίγουν.
+ */
+function parseColorConfig(repoRoot) {
+  const file = path.join(repoRoot, COLOR_CONFIG_PATH);
+  const text = fs.readFileSync(file, 'utf8');
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  return { source, primitives: readPrimitives(source) };
+}
+
+/**
  * Τα σημάδια κατάστασης, **ως δεδομένα**.
  *
  * Κάθε εγγραφή: `{ id, carrier, variant, hex }`.
@@ -105,11 +120,7 @@ function readPrimitives(source) {
  *   που όντως ζωγραφίζονται.
  */
 function readBoundStateMarks(repoRoot = process.cwd()) {
-  const file = path.join(repoRoot, COLOR_CONFIG_PATH);
-  const text = fs.readFileSync(file, 'utf8');
-  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
-
-  const primitives = readPrimitives(source);
+  const { source, primitives } = parseColorConfig(repoRoot);
   const bound = propsOf(findConstObject(source, 'TABLE_BOUND_STATE'));
   if (bound.size === 0) {
     throw new Error(`TABLE_BOUND_STATE δεν βρέθηκε στο ${COLOR_CONFIG_PATH}`);
@@ -154,4 +165,56 @@ function readBoundStateMarks(repoRoot = process.cwd()) {
   return marks;
 }
 
-module.exports = { readBoundStateMarks, COLOR_CONFIG_PATH };
+/**
+ * Τα σημάδια της **αντιστοίχισης υποβάθρου** (`BASEMAP_CORRESPONDENCE_MARKS`, ADR-782 §27.4).
+ *
+ * ## Γιατί το `variant` είναι `<σχήμα>:<μοτίβο>` και ΔΕΝ περιέχει μέγεθος
+ * Είναι **ακριβώς** τα δύο πεδία που ζωγραφίζει ο
+ * `components/dxf-layout/BasemapCorrespondenceMarksLeaf.tsx` — το `shape` επιλέγει `<rect>` ή
+ * `<circle>`, το `dash` γίνεται `strokeDasharray`. Το μέγεθος **σκόπιμα** μένει έξω: αν
+ * συμμετείχε, δύο ταυτόσημα σχήματα θα περνούσαν το Κ1 επειδή το ένα είναι μεγαλύτερο — και το
+ * μέγεθος δεν είναι διακριτικό κανάλι (ίδιος λόγος με το `markSizePx` της πρώτης οικογένειας).
+ *
+ * Και οι τρεις μοιράζονται **ένα** hex ⇒ το Κ2 δεν έχει τίποτα να κρίνει, **εκ κατασκευής**.
+ */
+function readCorrespondenceMarks(source, primitives) {
+  const spec = propsOf(findConstObject(source, 'BASEMAP_CORRESPONDENCE_MARKS'));
+  if (spec.size === 0) {
+    throw new Error(`BASEMAP_CORRESPONDENCE_MARKS δεν βρέθηκε στο ${COLOR_CONFIG_PATH}`);
+  }
+  const hex = resolveValue(spec.get('hex') ?? null, primitives);
+  const marks = [];
+  for (const [id, node] of propsOf(spec.get('states') ?? null)) {
+    const state = propsOf(node);
+    const shape = resolveValue(state.get('shape') ?? null, primitives);
+    const dash = resolveValue(state.get('dash') ?? null, primitives);
+    marks.push({ id, carrier: 'basemap-mark', variant: `${shape}:${dash}`, hex });
+  }
+  if (marks.length === 0) {
+    throw new Error(`BASEMAP_CORRESPONDENCE_MARKS.states είναι κενό στο ${COLOR_CONFIG_PATH}`);
+  }
+  return marks;
+}
+
+/**
+ * **Όλες** οι οικογένειες καταστάσεων, ρητά ονομασμένες.
+ *
+ * 🔑 **Οικογένεια, όχι ένας σωρός.** Η κρίση τρέχει **ανά οικογένεια** γιατί και οι δύο κανόνες
+ * ρωτούν κάτι που έχει νόημα μόνο μέσα σε μία: το Κ1 ρωτά «ποιο είναι ποιο **από αυτά που
+ * βλέπω μαζί**;» και το Κ2 «η διαφορά που **υπόσχομαι**». Ένα κελί πίνακα και ένα σημάδι
+ * χάρτη δεν συνυπάρχουν ποτέ στην ίδια επιφάνεια — μια σύγκριση μεταξύ τους θα απαιτούσε
+ * χρωματική απόσταση για υπόσχεση που **κανείς δεν έδωσε**, δηλαδή θόρυβος που τελειώνει σε
+ * `SKIP_`.
+ *
+ * Η προσθήκη είναι **ρητή** και αυτό είναι ο σχεδιασμός: μια νέα οικογένεια πρέπει να γραφτεί
+ * εδώ για να κριθεί — ποτέ να συμπεριληφθεί κατά λάθος από γενικό σαρωτή.
+ */
+function readStateMarkFamilies(repoRoot = process.cwd()) {
+  const { source, primitives } = parseColorConfig(repoRoot);
+  return [
+    { id: 'table-bound-state', marks: readBoundStateMarks(repoRoot) },
+    { id: 'basemap-correspondence', marks: readCorrespondenceMarks(source, primitives) },
+  ];
+}
+
+module.exports = { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH };

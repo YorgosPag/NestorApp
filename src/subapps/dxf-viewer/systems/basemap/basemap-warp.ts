@@ -31,8 +31,12 @@ import { tileFractionToGeographic, type TileId } from './web-mercator';
 /**
  * Ανοχή σε εικονοστοιχεία οθόνης. Το μισό εικονοστοιχείο είναι το κατώφλι κάτω από το οποίο η
  * παραμόρφωση δεν μπορεί να γίνει ορατή — αυστηρότερο θα ξόδευε τρίγωνα για το τίποτα.
+ *
+ * ⚠️ **Εξαγόμενη επίτηδες**: είναι η **υπόσχεση** που ελέγχει η άγκυρα `Ψ6` του ζωγράφου (ADR-782
+ * §27.7). Αντιγραμμένο `0.5` μέσα σε test θα ήταν **δεύτερη αυθεντία** — χαλάρωση εδώ θα άφηνε
+ * την άγκυρα πράσινη πάνω σε πλέγμα που δεν εγγυάται πια τίποτα.
  */
-const TOLERANCE_PX = 0.5;
+export const WARP_TOLERANCE_PX = 0.5;
 
 /** Το ταβάνι υποδιαίρεσης: 8×8 = 128 τρίγωνα ανά πλακίδιο, ήδη υπερβολικό για γήινες κλίμακες. */
 const MAX_DIVISIONS = 8;
@@ -93,8 +97,8 @@ function centreDeviationMm(
  */
 function chooseDivisions(deviationMm: number, pixelsPerMm: number): number {
   const deviationPx = deviationMm * pixelsPerMm;
-  if (!Number.isFinite(deviationPx) || deviationPx <= TOLERANCE_PX) return 1;
-  const needed = Math.ceil(Math.sqrt(deviationPx / TOLERANCE_PX));
+  if (!Number.isFinite(deviationPx) || deviationPx <= WARP_TOLERANCE_PX) return 1;
+  const needed = Math.ceil(Math.sqrt(deviationPx / WARP_TOLERANCE_PX));
   return Math.min(MAX_DIVISIONS, Math.max(1, needed));
 }
 

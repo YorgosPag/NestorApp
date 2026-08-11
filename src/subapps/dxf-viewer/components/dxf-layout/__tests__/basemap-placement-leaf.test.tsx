@@ -38,6 +38,9 @@ import { useViewMode3DStore } from '../../../bim-3d/stores/ViewMode3DStore';
 
 const SURFACE = 'basemap.placement.surfaceAria';
 
+/** Οι διαστάσεις του καμβά — από το ίδιο SSoT που δίνει ο shell σε κάθε overlay (ADR-782 §27.4). */
+const VIEWPORT = { width: 800, height: 600 };
+
 function anchorTheProject(): void {
   setProjectAnchor({
     kind: 'anchored',
@@ -46,7 +49,7 @@ function anchorTheProject(): void {
 }
 
 function renderLeaf(): HTMLElement | null {
-  const { container } = render(<BasemapPlacementLeaf />);
+  const { container } = render(<BasemapPlacementLeaf viewport={VIEWPORT} />);
   return container.querySelector(`[aria-label="${SURFACE}"]`);
 }
 
@@ -153,7 +156,7 @@ describe('ADR-782 §27 — τα κουμπιά του πάνελ ΔΕΝ είνα
 
   it('Π0 — ΜΑΡΤΥΡΑΣ: pointerdown στην ΙΔΙΑ την επιφάνεια ΚΑΤΑΓΡΑΦΕΙ σημείο (αλλιώς τα Λ6/Λ7 δεν αποδεικνύουν τίποτα)', () => {
     act(() => setBasemapPlacementTool('match'));
-    const { container } = render(<BasemapPlacementLeaf />);
+    const { container } = render(<BasemapPlacementLeaf viewport={VIEWPORT} />);
     const surface = container.querySelector(`[aria-label="${SURFACE}"]`) as HTMLElement;
 
     fireEvent.pointerDown(surface, { clientX: 120, clientY: 90, pointerId: 1 });
@@ -163,7 +166,7 @@ describe('ADR-782 §27 — τα κουμπιά του πάνελ ΔΕΝ είνα
 
   it('Λ6 — σε ΑΝΤΙΣΤΟΙΧΙΣΗ, κλικ σε κουμπί του πάνελ ΔΕΝ καταγράφεται ως σημείο', () => {
     act(() => setBasemapPlacementTool('match'));
-    const { container } = render(<BasemapPlacementLeaf />);
+    const { container } = render(<BasemapPlacementLeaf viewport={VIEWPORT} />);
 
     fireEvent.pointerDown(panelButton(container, 'basemap.placement.done'), {
       clientX: 400, clientY: 560, pointerId: 2,
@@ -175,7 +178,7 @@ describe('ADR-782 §27 — τα κουμπιά του πάνελ ΔΕΝ είνα
 
   it('Λ6β — και ΔΕΝ ολοκληρώνει ζεύγος: ο χάρτης δεν πηδά στη θέση του κουμπιού', () => {
     act(() => setBasemapPlacementTool('match'));
-    const { container } = render(<BasemapPlacementLeaf />);
+    const { container } = render(<BasemapPlacementLeaf viewport={VIEWPORT} />);
     const surface = container.querySelector(`[aria-label="${SURFACE}"]`) as HTMLElement;
 
     // Πρώτο, νόμιμο κλικ πάνω στην επιφάνεια: εκκρεμεί σημείο σχεδίου.
@@ -192,7 +195,7 @@ describe('ADR-782 §27 — τα κουμπιά του πάνελ ΔΕΝ είνα
   });
 
   it('Λ7 — σε ΣΥΡΣΙΜΟ, κλικ σε κουμπί του πάνελ ΔΕΝ ξεκινά χειρονομία', () => {
-    const { container } = render(<BasemapPlacementLeaf />);
+    const { container } = render(<BasemapPlacementLeaf viewport={VIEWPORT} />);
 
     fireEvent.pointerDown(panelButton(container, 'basemap.placement.reset'), {
       clientX: 400, clientY: 560, pointerId: 5,

@@ -454,7 +454,7 @@ export const CanvasLayerStack = React.memo(function CanvasLayerStack({
               overlays του 2Δ, ΚΑΤΩ από το 3Δ viewport του z-50): όσο η συνεδρία τρέχει, ο δείκτης
               ανήκει σε αυτήν και κανένα εργαλείο σχεδίασης δεν μπορεί να ξεκινήσει ταυτόχρονα.
               Το ίδιο leaf επιστρέφει `null` εκτός συνεδρίας — μηδέν κόστος, καμία επιφάνεια. */}
-          <BasemapPlacementLeaf className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['30']}`} />
+          <BasemapPlacementLeaf viewport={viewport} className={`absolute ${PANEL_LAYOUT.INSET['0']} w-full h-full ${PANEL_LAYOUT.Z_INDEX['30']}`} />
           <CanvasNumericInputOverlay />
           <DynamicInputSubscriber
             activeTool={activeTool}

@@ -48,6 +48,8 @@ import {
 import { makeWorldToDisplayProjector, type GeoReference } from '../../systems/geo-referencing/geo-transform';
 import { useBasemapPlacementInteraction } from '../../hooks/canvas/use-basemap-placement-interaction';
 import { BasemapPlacementPanel } from './BasemapPlacementPanel';
+import { BasemapCorrespondenceMarksLeaf } from './BasemapCorrespondenceMarksLeaf';
+import type { Viewport } from '../../rendering/types/Types';
 
 /** Απόσταση της λαβής από τον άξονα, σε εικονοστοιχεία οθόνης. */
 const HANDLE_RADIUS_PX = 96;
@@ -138,7 +140,21 @@ function usePlaceableFrame(): BasemapFrame | null {
   return frame;
 }
 
-export const BasemapPlacementLeaf: React.FC<{ readonly className?: string }> = ({ className }) => {
+interface BasemapPlacementLeafProps {
+  readonly className?: string;
+  /**
+   * Οι διαστάσεις του καμβά — **η ίδια** τιμή που παίρνει κάθε άλλο overlay αγκυρωμένο στον
+   * κόσμο (`CanvasLayerStack2DOverlays`).
+   *
+   * ⚠️ Είναι prop και **όχι** μέτρηση της ίδιας της επιφάνειας με `getBoundingClientRect`: μια
+   * δεύτερη πηγή για το «πόσο μεγάλος είναι ο καμβάς» θα σήμαινε ότι το σημάδι μπορεί να
+   * προσγειωθεί αλλού από εκεί που κλικάρισε ο χρήστης — ακριβώς η κλάση σφάλματος που αυτό
+   * το επίπεδο υπάρχει για να κάνει ορατή.
+   */
+  readonly viewport: Viewport;
+}
+
+export const BasemapPlacementLeaf: React.FC<BasemapPlacementLeafProps> = ({ className, viewport }) => {
   const { t } = useTranslation('dxf-viewer-shell');
   const session = useSyncExternalStore(
     subscribeBasemapPlacementSession,
@@ -168,6 +184,12 @@ export const BasemapPlacementLeaf: React.FC<{ readonly className?: string }> = (
       onPointerCancel={handlers.onPointerUp}
       className={`${className ?? ''} ${session.tool === 'drag' ? 'cursor-grab' : 'cursor-crosshair'}`}
     >
+      {/*
+        🔴 ADR-782 §27.4 — **ο χρήστης βλέπει τι έδειξε.** Πρώτο παιδί επίτηδες: τα σημάδια
+        είναι το υπόστρωμα της συνεδρίας και το πάνελ κάθεται από πάνω τους. Το ίδιο το leaf
+        είναι πύλη (`return null` εκτός `match`), οπότε στο «Σύρσιμο» δεν κοστίζει τίποτα.
+      */}
+      <BasemapCorrespondenceMarksLeaf session={session} geo={frame.geo} viewport={viewport} />
       {session.tool === 'drag' && (
         <RotateHandle
           geo={frame.geo}

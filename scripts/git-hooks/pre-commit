@@ -661,12 +661,14 @@ register_area "Theme Classes Gate (CHECK 3.42)" \
     "scripts/__tests__/check-tailwind-theme-classes-ratchet\.test\.js" \
     "npm run test:theme-classes"
 
-# CHECK 3.41 (ADR-771 Φ.1) — η πύλη ΚΑΙ η άγκυρα του ζωγράφου μαζί: η πρώτη βεβαιώνει ότι
+# CHECK 3.41 (ADR-771 Φ.1 · ADR-782 §27.4) — μαζί με τις άγκυρες των ζωγράφων. Η ΔΕΥΤΕΡΗ
+# οικογένεια (σημάδια αντιστοίχισης υποβάθρου) φέρνει τον δικό της ζωγράφο: το λεξιλόγιο
+# μπορεί να δηλώνει κύκλο ενώ το DOM βάφει τετράγωνο: η πρώτη βεβαιώνει ότι
 # οι δύο καταστάσεις ΔΗΛΩΝΟΥΝ διαφορετική γωνία, η δεύτερη ότι ο καμβάς την ΤΙΜΑ. Χωριστά,
 # καθεμία αφήνει ανοιχτό το μισό ελάττωμα.
 register_area "State Channel Gate (CHECK 3.41)" \
-    "^(scripts/check-state-channel-distinctness\.js$|scripts/lib/contrast/(cvd|state-marks)\.js$|src/subapps/dxf-viewer/config/color-config\.ts$|src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state\.ts$)" \
-    "(check-state-channel-distinctness|table-bound-mark-corner)\.test\." \
+    "^(scripts/check-state-channel-distinctness\.js$|scripts/lib/contrast/(cvd|state-marks)\.js$|src/subapps/dxf-viewer/config/color-config\.ts$|src/subapps/dxf-viewer/rendering/entities/table/stamp-table-bound-state\.ts$|src/subapps/dxf-viewer/components/dxf-layout/(BasemapCorrespondenceMarksLeaf\.tsx|basemap-correspondence-marks\.ts)$)" \
+    "(check-state-channel-distinctness|table-bound-mark-corner|basemap-correspondence-marks)\.test\." \
     "npm run test:state-channel"
 
 # CHECK 3.45 (ADR-771 Φ.3) — η πύλη ΚΑΙ οι δύο άγκυρες μαζί, γιατί καθεμία απαντά μισή

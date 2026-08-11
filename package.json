@@ -95,7 +95,7 @@
     "test:theme-pairing": "jest scripts/__tests__/check-theme-pairing-ratchet.test.js --verbose",
     "state-channel:check": "node scripts/check-state-channel-distinctness.js",
     "state-channel:report": "node scripts/check-state-channel-distinctness.js --verbose",
-    "test:state-channel": "jest scripts/__tests__/check-state-channel-distinctness.test.js src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-bound-mark-corner.test.ts --verbose",
+    "test:state-channel": "jest scripts/__tests__/check-state-channel-distinctness.test.js src/subapps/dxf-viewer/rendering/entities/table/__tests__/table-bound-mark-corner.test.ts src/subapps/dxf-viewer/components/dxf-layout/__tests__/basemap-correspondence-marks.test.tsx --verbose",
     "css-token-authority:check": "node scripts/check-css-token-authority.js --all",
     "css-token-authority:report": "node scripts/check-css-token-authority.js --report",
     "css-token-authority:baseline": "node scripts/check-css-token-authority.js --write-baseline",

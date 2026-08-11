@@ -29,11 +29,28 @@
  * αποκτούν ταυτότητα επειδή απέχουν χρωματικά. Το Κ2 δεν έχει γεωμετρική διέξοδο: ένα χρώμα
  * που *δηλώνεται* διαφορετικό αλλά δεν *φαίνεται* διαφορετικό είναι ψεύτικη υπόσχεση.
  *
+ * ## ΟΙΚΟΓΕΝΕΙΕΣ (ADR-782 §27.4 — η δεύτερη προστέθηκε 11/08)
+ * | # | Οικογένεια | Καταστάσεις | Κανάλι ταυτότητας |
+ * |---|---|---|---|
+ * | 1 | `table-bound-state` (ADR-767/769/771 Φ.1) | ζωντάνια δεσμού + 2 εξαιρέσεις | ένταση · μοτίβο · **γωνία** |
+ * | 2 | `basemap-correspondence` (ADR-782 §27.4) | σημείο σχεδίου · εκκρεμές · σημείο χάρτη | **σχήμα** · μοτίβο |
+ *
+ * 🔑 **Η κρίση τρέχει ΑΝΑ ΟΙΚΟΓΕΝΕΙΑ.** Και οι δύο κανόνες έχουν νόημα μόνο ανάμεσα σε
+ * καταστάσεις που ο χρήστης βλέπει **μαζί**: ένα κελί πίνακα και ένα σημάδι χάρτη δεν
+ * συνυπάρχουν ποτέ, οπότε μια σύγκριση μεταξύ τους θα απαιτούσε χρωματική απόσταση για
+ * υπόσχεση που **κανείς δεν έδωσε** — θόρυβος που καταλήγει σε `SKIP_`. Δες
+ * `readStateMarkFamilies`.
+ *
+ * ⚠️ Η δεύτερη οικογένεια πάει **παραπέρα** από την πρώτη: και οι τρεις καταστάσεις της έχουν
+ * **ταυτόσημο** hex, άρα το Κ2 δεν έχει τίποτα να κρίνει **εκ κατασκευής** και το Κ1 δεν έχει
+ * χρωματική διέξοδο ούτε καν στη θεωρία. Δεν είναι αυστηρότητα για την αυστηρότητα: εκεί τα
+ * δύο σημάδια **επικαλύπτονται εκ σχεδιασμού** όταν η προσαρμογή είναι τέλεια.
+ *
  * ## ⚠️ ΤΙ ΔΕΝ ΚΑΝΕΙ
  * Δεν κρίνει **αντίθεση** των σημαδιών με το φόντο — αυτό είναι άλλη ερώτηση (1.4.11) και
- * άλλος ιδιοκτήτης (`adaptive-entity-color`). Δεν σαρώνει άλλες οικογένειες καταστάσεων· ο
- * αναγνώστης (`lib/contrast/state-marks.js`) είναι εσκεμμένα στοχευμένος, ώστε μια δεύτερη
- * οικογένεια να **προστεθεί ρητά** αντί να συμπεριληφθεί κατά λάθος και να γεννήσει θόρυβο.
+ * άλλος ιδιοκτήτης (`adaptive-entity-color`). Δεν σαρώνει οικογένειες που δεν έχουν γραφτεί
+ * ρητά στον αναγνώστη (`lib/contrast/state-marks.js`), ώστε μια νέα να **προστεθεί ρητά** αντί
+ * να συμπεριληφθεί κατά λάθος και να γεννήσει θόρυβο.
  *
  * Usage:  node scripts/check-state-channel-distinctness.js [--verbose]
  * Escape: SKIP_STATE_CHANNEL=1
@@ -42,7 +59,7 @@
 'use strict';
 
 const { hexToRgb, worstCvdDeltaE, deltaE } = require('./lib/contrast/cvd');
-const { readBoundStateMarks, COLOR_CONFIG_PATH } = require('./lib/contrast/state-marks');
+const { readStateMarkFamilies, COLOR_CONFIG_PATH } = require('./lib/contrast/state-marks');
 
 /**
  * Το ίδιο κατώφλι με το CHECK 3.32 — **επίτηδες**. Δύο κατώφλια για την ίδια ερώτηση («είναι
@@ -126,31 +143,39 @@ function main() {
   const verbose = process.argv.includes('--verbose');
   console.log(C.bold('\nCHECK 3.41 — διακριτότητα καναλιού κατάστασης (ADR-771 Φ.1)\n'));
 
-  let marks;
+  let families;
   try {
-    marks = readBoundStateMarks();
+    families = readStateMarkFamilies();
   } catch (err) {
     console.error(C.red(`  [FAIL] Ανάγνωση ${COLOR_CONFIG_PATH}: ${err.message}`));
     return 1;
   }
 
-  if (verbose) {
-    for (const m of marks) {
-      console.log(C.dim(`    ${m.id.padEnd(18)} ${m.carrier.padEnd(14)} ${String(m.variant).padEnd(22)} ${m.hex}`));
+  const failures = [];
+  let total = 0;
+  for (const family of families) {
+    total += family.marks.length;
+    if (verbose) {
+      console.log(C.dim(`  ── ${family.id} (${family.marks.length})`));
+      for (const m of family.marks) {
+        console.log(C.dim(`    ${m.id.padEnd(18)} ${m.carrier.padEnd(14)} ${String(m.variant).padEnd(22)} ${m.hex}`));
+      }
     }
-    console.log('');
+    // 🔑 Ανά οικογένεια, ΠΟΤΕ όλα μαζί — δες `readStateMarkFamilies` για το γιατί.
+    for (const f of [...checkIdentity(family.marks), ...checkColourPromise(family.marks, verbose)]) {
+      failures.push({ ...f, family: family.id });
+    }
   }
-
-  const failures = [...checkIdentity(marks), ...checkColourPromise(marks, verbose)];
+  if (verbose) console.log('');
 
   if (failures.length === 0) {
-    console.log(C.green(`  [PASS] Κ1 ταυτότητα      ${marks.length} καταστάσεις, κάθε ζεύγος διακρίνεται χωρίς χρώμα`));
+    console.log(C.green(`  [PASS] Κ1 ταυτότητα      ${total} καταστάσεις σε ${families.length} οικογένειες, κάθε ζεύγος διακρίνεται χωρίς χρώμα`));
     console.log(C.green('  [PASS] Κ2 υπόσχεση       κάθε χρωματική διαφορά επιβιώνει σε protan + deutan'));
     console.log(C.green('\n✓ CHECK 3.41 PASS\n'));
     return 0;
   }
 
-  for (const f of failures) console.error(C.red(`  [FAIL] ${f.rule}  ${f.detail}`));
+  for (const f of failures) console.error(C.red(`  [FAIL] ${f.rule}  [${f.family}]  ${f.detail}`));
   console.error(
     C.red(`\n✗ CHECK 3.41 FAIL — ${failures.length} παραβίαση(εις) στο ${COLOR_CONFIG_PATH}\n`),
   );

@@ -6218,3 +6218,32 @@ ADR-040: το leaf **self-subscribes** στο δικό του store (`basemap-pl
 (mount του πάνελ τοποθέτησης)· NEW `components/dxf-layout/canvas-layer-stack-preview-leaves.tsx`,
 `components/dxf-layout/BasemapPlacementLeaf.tsx`, `components/dxf-layout/BasemapPlacementPanel.tsx`,
 `hooks/canvas/use-basemap-placement-interaction.ts`.
+
+---
+
+## 2026-08-11 — **gate-at-mount** για τα σημάδια αντιστοίχισης υποβάθρου (ADR-782 §27.4, CHECK 6B stage)
+
+Το εργαλείο «Αντιστοίχιση» απέκτησε ορατά σημάδια. Είναι αγκυρωμένα στον **κόσμο** ⇒ κινούνται με
+pan/zoom ⇒ χρειάζονται `transform`, που είναι **υψηλής συχνότητας**.
+
+🔴 **Γιατί ΔΕΝ μπήκε στο `BasemapPlacementLeaf`.** Εκείνο αποδίδει την **αδιαφανή στον δείκτη
+επιφάνεια**, τη λαβή στροφής και το πάνελ. Ένα `useTransformValue()` εκεί θα ξανααπέδιδε
+**ολόκληρο** το υποδέντρο σε κάθε καρέ συρσίματος — δηλαδή θα πλήρωνε με το πάνελ και τη λαβή
+μια συνδρομή που χρειάζονται **μόνο** τα σημάδια. Η κεφαλίδα του ίδιου του leaf δηλώνει «το
+`transform` δεν διαβάζεται καθόλου σε render», και **παραμένει αληθής**.
+
+**Το πρότυπο είναι του `BasePointPickMarkerOverlay`**: ο **εξωτερικός** κρίνει αν υπάρχει κάτι να
+ζωγραφιστεί με **μηδέν** συνδρομές· ο **εσωτερικός** προσαρτάται μόνο τότε και είναι ο μόνος που
+ακούει το `transform`. Στο «Σύρσιμο» — όπου τα ζεύγη υπάρχουν αλλά κανείς δεν τα επεξεργάζεται —
+δεν προσαρτάται **τίποτα**, άρα το πιο συχνό καρέ πληρώνει **μηδέν**.
+
+⚠️ Το `viewport` περνά ως **prop** από τον shell, όπως σε κάθε άλλο overlay αγκυρωμένο στον κόσμο
+(`CanvasLayerStack2DOverlays`) — **όχι** μέτρηση της ίδιας της επιφάνειας με `getBoundingClientRect`.
+Δεύτερη πηγή για το «πόσο μεγάλος είναι ο καμβάς» θα σήμαινε ότι το σημάδι μπορεί να προσγειωθεί
+αλλού από εκεί που κλικάρισε ο χρήστης — ακριβώς η κλάση σφάλματος που τα σημάδια υπάρχουν για να
+κάνουν **ορατή**.
+
+**Files**: MOD `components/dxf-layout/CanvasLayerStack.tsx` (+1 prop),
+`components/dxf-layout/BasemapPlacementLeaf.tsx` (+1 mount, +1 prop)· NEW
+`components/dxf-layout/BasemapCorrespondenceMarksLeaf.tsx`,
+`components/dxf-layout/basemap-correspondence-marks.ts` (καθαρή γεωμετρία, μηδέν React).

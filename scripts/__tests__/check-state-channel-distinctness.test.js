@@ -18,7 +18,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { readBoundStateMarks, COLOR_CONFIG_PATH } = require('../lib/contrast/state-marks');
+const { readBoundStateMarks, readStateMarkFamilies, COLOR_CONFIG_PATH } = require('../lib/contrast/state-marks');
 const { checkIdentity, checkColourPromise, CVD_TARGET } = require('../check-state-channel-distinctness');
 const { hexToRgb, worstCvdDeltaE } = require('../lib/contrast/cvd');
 
@@ -234,12 +234,108 @@ describe('Κ — δηλωμένα όρια', () => {
     expect(rulesOf(failures)).not.toContain('Κ1');
   });
 
-  it('Κ3: ΔΕΝ σαρώνει άλλες οικογένειες καταστάσεων — μόνο TABLE_BOUND_STATE', () => {
+  it('Κ3: ο αναγνώστης του δεσμού επιστρέφει ΜΟΝΟ τη δική του οικογένεια', () => {
+    // ⚠️ Από 11/08 η πύλη κρίνει ΔΥΟ οικογένειες (ADR-782 §27.4) — αλλά καθεμία **χωριστά**,
+    // και ο `readBoundStateMarks` παραμένει στοχευμένος. Δες Κ5 για το σύνορο.
     const { marks } = run(liveConfigSource());
     expect(marks).toHaveLength(5);
   });
 
   it('Κ4: απουσία TABLE_BOUND_STATE ⇒ σφάλμα, ΠΟΤΕ σιωπηλό πράσινο', () => {
     expect(() => run('export const SOMETHING_ELSE = {} as const;')).toThrow(/TABLE_BOUND_STATE/);
+  });
+
+  it('Κ5: οι οικογένειες ΔΕΝ διασταυρώνονται — καμία υπόσχεση δεν δόθηκε μεταξύ τους', () => {
+    // Οι δύο οικογένειες δεν συνυπάρχουν ποτέ σε επιφάνεια. Αν κρίνονταν μαζί, το μαντζέντα
+    // του χάρτη θα έπρεπε να απέχει ΔE≥8 από κάθε χρώμα κελιού — απαίτηση για υπόσχεση που
+    // κανείς δεν έδωσε, δηλαδή θόρυβος που τελειώνει σε `SKIP_`.
+    const families = readStateMarkFamilies(miniRepo(liveConfigSource()));
+    const carriers = families.map((f) => new Set(f.marks.map((m) => m.carrier)));
+    expect(carriers[0]).not.toEqual(carriers[1]);
+
+    const merged = families.flatMap((f) => f.marks);
+    const perFamily = families.flatMap((f) => [...checkIdentity(f.marks), ...checkColourPromise(f.marks, false)]);
+    expect(perFamily).toEqual([]);
+    // Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η ενωμένη λίστα ΕΧΕΙ ζεύγη να συγκρίνει — αλλιώς το «καμία παραβίαση»
+    // παραπάνω θα σήμαινε «κανείς δεν κοίταξε» αντί για «κρίθηκαν χωριστά».
+    expect(merged.length).toBeGreaterThan(families[0].marks.length);
+  });
+});
+
+// ─── Μ6..Μ9 — η ΔΕΥΤΕΡΗ οικογένεια: τα σημάδια αντιστοίχισης υποβάθρου ────────
+
+/**
+ * ADR-782 §27.4. Η οικογένεια πάει **παραπέρα** από την πρώτη: και οι τρεις καταστάσεις έχουν
+ * **ταυτόσημο** hex, άρα το Κ2 δεν έχει τίποτα να κρίνει και το Κ1 δεν έχει χρωματική διέξοδο
+ * ούτε στη θεωρία. Οι μεταλλάξεις εδώ αφαιρούν **το μοναδικό** κανάλι κάθε φορά.
+ */
+describe('Μ6..Μ9 — basemap-correspondence', () => {
+  const runBasemap = (configSource) => {
+    const family = readStateMarkFamilies(miniRepo(configSource)).find(
+      (f) => f.id === 'basemap-correspondence',
+    );
+    return {
+      marks: family.marks,
+      failures: [...checkIdentity(family.marks), ...checkColourPromise(family.marks, false)],
+    };
+  };
+
+  it('Μ0β: το ζωντανό δέντρο εκθέτει τρεις καταστάσεις με ΕΝΑ χρώμα και τρία διακριτικά', () => {
+    const { marks, failures } = runBasemap(liveConfigSource());
+    expect(marks.map((m) => m.id).sort()).toEqual(['drawingPending', 'drawingSettled', 'mapSettled']);
+    expect(new Set(marks.map((m) => m.hex)).size).toBe(1);
+    expect(new Set(marks.map((m) => m.variant)).size).toBe(3);
+    expect(failures).toEqual([]);
+  });
+
+  it('Μ6: ο κύκλος του χάρτη γίνεται τετράγωνο ⇒ Κ1 μπλοκ (η ταυτότητα ζούσε ΜΟΝΟ στο σχήμα)', () => {
+    const mutated = liveConfigSource().replace(
+      "mapSettled: { shape: 'circle', dash: 'solid' }",
+      "mapSettled: { shape: 'square', dash: 'solid' }",
+    );
+    expect(mutated).not.toBe(liveConfigSource());
+    const { failures } = runBasemap(mutated);
+    expect(rulesOf(failures)).toContain('Κ1');
+    expect(failures[0].detail).toMatch(/drawingSettled|mapSettled/);
+  });
+
+  it('Μ7: το εκκρεμές παύει να είναι διάστικτο ⇒ Κ1 μπλοκ (πέφτει πάνω στο ολοκληρωμένο)', () => {
+    const mutated = liveConfigSource().replace(
+      "drawingPending: { shape: 'square', dash: 'dashed' }",
+      "drawingPending: { shape: 'square', dash: 'solid' }",
+    );
+    expect(mutated).not.toBe(liveConfigSource());
+    expect(rulesOf(runBasemap(mutated).failures)).toContain('Κ1');
+  });
+
+  it('Μ8: χρωματική «λύση» στο ίδιο σχήμα ΔΕΝ σώζει το Κ1 — καμία τιμή ΔE δεν το κάνει', () => {
+    // Ο ακριβής πειρασμός: «είναι διαφορετικό χρώμα, άρα ξεχωρίζει». Δεν ξεχωρίζει η
+    // ΤΑΥΤΟΤΗΤΑ. Το ζεύγος έχει τεράστια χρωματική απόσταση και το Κ1 μπλοκάρει ΠΑΝΤΩΣ.
+    const mutated = liveConfigSource()
+      .replace(
+        "mapSettled: { shape: 'circle', dash: 'solid' }",
+        "mapSettled: { shape: 'square', dash: 'solid' }",
+      )
+      .replace('hex: UI_COLORS.MAGENTA,', "hex: UI_COLORS.MAGENTA, unusedHex: '#00ff00',");
+    const { failures } = runBasemap(mutated);
+    expect(rulesOf(failures)).toContain('Κ1');
+  });
+
+  it('Μ9: απουσία BASEMAP_CORRESPONDENCE_MARKS ⇒ σφάλμα, ΠΟΤΕ σιωπηλό πράσινο', () => {
+    const mutated = liveConfigSource().replace(
+      'export const BASEMAP_CORRESPONDENCE_MARKS = {',
+      'const BASEMAP_CORRESPONDENCE_MARKS_DISABLED = {',
+    );
+    expect(mutated).not.toBe(liveConfigSource());
+    expect(() => runBasemap(mutated)).toThrow(/BASEMAP_CORRESPONDENCE_MARKS/);
+  });
+
+  it('Μ10: κενές καταστάσεις ⇒ σφάλμα — μια οικογένεια χωρίς μέλη είναι «κανείς δεν κοίταξε»', () => {
+    const mutated = liveConfigSource().replace(
+      /states: \{[\s\S]*?\n  \},\n\} as const;/,
+      'states: {},\n} as const;',
+    );
+    expect(mutated).not.toBe(liveConfigSource());
+    expect(() => runBasemap(mutated)).toThrow(/states/);
   });
 });

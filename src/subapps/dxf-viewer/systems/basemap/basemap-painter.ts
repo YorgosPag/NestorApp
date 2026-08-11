@@ -26,8 +26,14 @@ import { getTileImage } from './basemap-tile-cache';
 import type { BasemapSource } from './basemap-source';
 import type { TileId } from './web-mercator';
 
-/** Διαστολή του clip προς τα έξω, σε εικονοστοιχεία — δες την επικεφαλίδα για το γιατί. */
-const SEAM_BLEED_PX = 0.5;
+/**
+ * Διαστολή του clip προς τα έξω, σε εικονοστοιχεία — δες την επικεφαλίδα για το γιατί.
+ *
+ * ⚠️ **Εξαγόμενη επίτηδες**: η άγκυρα `Ψ7` (ADR-782 §27.7) μετρά ότι η διαστολή **συμβαίνει** και
+ * είναι **προς τα έξω** κατά ακριβώς αυτή την τιμή. Χωρίς εξαγωγή, το test θα αντέγραφε τον
+ * αριθμό και μια σιωπηλή μείωσή του σε μηδέν θα άφηνε τις 128 ραφές ανά πλακίδιο με πράσινη πύλη.
+ */
+export const SEAM_BLEED_PX = 0.5;
 
 export interface BasemapPaintOptions {
   readonly source: BasemapSource;
