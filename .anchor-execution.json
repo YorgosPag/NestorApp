@@ -1,0 +1,29 @@
+{
+  "adr": "ADR-783",
+  "check": "3.54",
+  "updated": "2026-08-11",
+  "doc": "docs/centralized-systems/reference/adrs/ADR-783-anchor-execution.md",
+  "why": "Το κλειστό σύνολο δηλώσεων: κάθε αρχείο test που ΔΕΝ έχει μπλοκάροντα εκτελεστή οφείλει να το λέει ΕΔΩ, με λόγο. Χωρίς αυτό μια εξαίρεση θα ήταν σιωπηλή — και η σιωπή είναι ακριβώς το ελάττωμα που κυνηγά η πύλη. Νέα εγγραφή = πράξη ορατή στο diff, ποτέ παράπλευρη συνέπεια.",
+  "exempt": [
+    {
+      "file": "src/subapps/dxf-viewer/e2e/dxf-visual-regression.spec.ts",
+      "why": "ADR-775 §12: μετρήθηκε ένα προς ένα ότι ΚΑΙ ΤΑ 39 committed golden δείχνουν σελίδα σφάλματος (22) ή τελείως κενό καμβά (17) — μηδέν σχέδιο. Εκτέλεση σήμερα θα κλείδωνε άκυρες βάσεις σύγκρισης για τρίτη φορά. Άρση ΜΟΝΟ μετά τη διόρθωση του σήματος ετοιμότητας (ADR-775 §12.4) και παραγωγή Linux golden σε Docker (§11 δρόμος β) — απόφαση Giorgio."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/e2e/bim-3d-visual-regression.spec.ts",
+      "why": "ADR-775 §11/§12: ίδια σουίτα visual, golden της ίδιας γενιάς και της ίδιας μαζικής παραγωγής. Ισχύει αυτούσιος ο λόγος του dxf-visual-regression — απόφαση Giorgio."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/e2e/visual-cross-browser.spec.ts",
+      "why": "ADR-775 §11 δρόμος γ (και τα 7 projects, golden ανά project × πλατφόρμα): το κόστος είναι μετρημένο και ΜΗ εγκεκριμένο. Τα 5 γενικά projects δεν έχουν testMatch ⇒ ενεργοποίηση σήμερα δίνει ~172 βέβαιες αποτυχίες — απόφαση Giorgio."
+    },
+    {
+      "file": "src/subapps/dxf-viewer/floorplan-background/components/__tests__/FloorplanBackgroundCanvas.e2e.spec.ts",
+      "why": "ADR-775 §11 δρόμος β: visual regression με screenshot diff σε ζωντανή σελίδα (/demo/floorplan-background-image). Δεν έχει committed binary fixtures (τα παράγει το ίδιο), αλλά χρειάζεται browsers + Docker εικόνα δοκιμών για ντετερμινιστικό rendering, που δεν υπάρχει ακόμη — απόφαση Giorgio."
+    },
+    {
+      "file": "src/components/contacts/e2e/contact-mutation-impact.e2e.spec.ts",
+      "why": "ADR-775 §11 δρόμος α: δεν αγγίζει golden (χτίζει τις απαντήσεις με page.route), άρα είναι ο πρώτος υποψήφιος για ενεργοποίηση. Χρειάζεται ζωντανή εφαρμογή στον runner + εγκατεστημένους browsers (~10-20′), κόστος ΜΗ εγκεκριμένο — απόφαση Giorgio."
+    }
+  ]
+}

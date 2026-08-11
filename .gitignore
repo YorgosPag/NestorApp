@@ -219,3 +219,8 @@ firestore.rules.compiled
 # στον δίσκο είναι παράγωγο μιας εκτέλεσης, όχι πηγή αλήθειας.
 /.dxf-tsc-report.json
 /.dxf-tsc-report.md
+
+# ADR-783 — τα ΓΕΓΟΝΟΤΑ μιας εκτέλεσης της σουίτας, όχι απόφαση. Η baseline
+# (.jest-suite-baseline.json) ΕΙΝΑΙ απόφαση και κομμιτάρεται· αυτά όχι.
+/.jest-first-run.json
+/.jest-suite-results.json

@@ -18,18 +18,21 @@ name: T2 ⚓ DXF Entity Capability Anchors (CHECK 5C)
 # each grew the domain without answering the anchors → 7 suites / 11 tests red on
 # main. They then survived ~6 commits, because all three layers were blind:
 #   • pre-commit had no registered area for them (fixed: CHECK 5C, Layer 1);
-#   • `unit.yml` — the workflow that would gate jest — is DISABLED (unit.yml.disabled);
+#   • `unit.yml` — the workflow that would gate jest — was DISABLED (unit.yml.disabled);
 #   • `coverage-ratchet.yml` runs the whole suite but with `continue-on-error: true`,
 #     and gates coverage %, NOT pass/fail. Failing assertions still execute the code,
 #     so coverage never dropped and the check stayed green while main was red.
 # Net: nothing in CI could turn a red anchor into a red build. This workflow does.
 #
-# Scope note (deliberate)
-# -----------------------
-# This gates the ~20 `*-coverage.test.ts` anchors ONLY (~41s locally) — not the full
-# jest suite. Restoring a full blocking unit gate is a separate, larger decision
-# (Giorgio's): it changes every PR and needs the whole suite green first. This
-# workflow closes the specific hole that let 11 red tests live for 6 commits.
+# Scope note (deliberate) — ΕΝΗΜΕΡΩΘΗΚΕ 2026-08-11, ADR-783
+# ---------------------------------------------------------
+# This gates the ~20 `*-coverage.test.ts` anchors ONLY (~41s) — fast feedback, and it also
+# runs the gate's own self-test. The "separate, larger decision" named here (a full blocking
+# unit gate) WAS TAKEN in ADR-783: `jest-suite.yml` now runs the whole suite unconditionally
+# and blocks by result-ratchet (known debt declared, every NEW red blocks), and CHECK 3.54
+# guards that no test file can go back to being un-reddenable. `unit.yml.disabled` was
+# deleted there — a second file claiming to gate jest is a second truth (ADR-749).
+# This workflow stays: it is the fast net above the slow one, not a duplicate of it.
 #
 # Test selection is CONVENTION-driven (`*-coverage.test.ts`), not a hand-written
 # manifest — a new anchor named per convention is gated automatically. The hook's

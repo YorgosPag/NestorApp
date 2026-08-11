@@ -1,9 +1,18 @@
 'use strict';
 
 /**
- * ADR-757 — Ανάγνωση των ΔΥΟ πεδίων ενός workflow που αφορούν την ιεράρχηση πυλών:
+ * ADR-757 — Ο **ΜΟΝΟΣ** αναγνώστης αρχείων workflow του έργου.
+ *
+ * Ξεκίνησε με δύο πεδία για την ιεράρχηση πυλών:
  *   1. το `name:` (αυτό που βλέπει ο άνθρωπος στο email και στο Actions UI)
  *   2. τη λίστα `on.workflow_run.workflows:` (αυτό που παρακολουθεί ο συγκεντρωτής)
+ *
+ * ΑΠΟ ΤΟ ADR-783 (CHECK 3.54) διαβάζει και **τι εκτελεί** ένα workflow:
+ *   3. τα `on:` κλειδιά + τα `paths:` φίλτρα (πότε ξυπνά)
+ *   4. τα βήματα `run:` με τα `continue-on-error`/`if` τους (τι τρέχει, και αν μπορεί
+ *      να κοκκινίσει)
+ * Ζουν **εδώ** και όχι σε δεύτερο αρχείο: ένας δεύτερος αναγνώστης YAML θα ήταν η
+ * «δεύτερη διάλεκτος» του ADR-749 — τέσσερις μηχανές, πέντε διάλεκτοι, τρεις αριθμοί.
  *
  * ΓΙΑΤΙ ΟΧΙ ΠΛΗΡΗΣ YAML PARSER: το έργο δεν έχει εξάρτηση yaml/js-yaml και δεν προστίθεται
  * μία για δύο πεδία (N.5 — κάθε πακέτο θέλει έλεγχο άδειας και συντήρηση). Ο αναγνώστης εδώ
@@ -139,10 +148,108 @@ function readWorkflowRunWatchList(filePath) {
     .map((line) => scalar(line.body.slice(2).trim()));
 }
 
+/**
+ * Οι **αυτόματες** σκανδάλες ενός workflow και τα φίλτρα διαδρομών τους.
+ *
+ * ⚠️ Το `workflow_dispatch` **δεν** είναι αυτόματη σκανδάλη: ένα workflow που ξυπνά μόνο
+ * με το χέρι δεν εκτελεί τίποτα σε κανένα PR — και αν κάποιος το μετρήσει ως εκτελεστή,
+ * η πύλη λέει «εκτελείται» για κάτι που **κανείς δεν τρέχει ποτέ**.
+ *
+ * @param {string} filePath
+ * @returns {{ automatic: string[], pathFiltered: boolean }}
+ *   `automatic` = όσα από `push`/`pull_request`/`schedule`/`workflow_run` υπάρχουν·
+ *   `pathFiltered` = **κάθε** αυτόματη σκανδάλη έχει `paths:` ⇒ υπάρχει αλλαγή που δεν
+ *   την ξυπνά (δηλωμένο κενό, όχι παράβαση).
+ */
+function readWorkflowTriggers(filePath) {
+  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+  const onIndex = findKey(lines, 'on', 0);
+  if (onIndex === -1) return { automatic: [], pathFiltered: false };
+
+  const onChildren = childLines(lines, onIndex);
+  const topIndent = onChildren.length > 0 ? onChildren[0].indent : 0;
+  const AUTOMATIC = ['push', 'pull_request', 'pull_request_target', 'schedule', 'workflow_run'];
+
+  const automatic = [];
+  let filtered = 0;
+  for (let i = 0; i < onChildren.length; i += 1) {
+    if (onChildren[i].indent !== topIndent) continue;
+    const key = onChildren[i].body.replace(/:.*$/, '').trim();
+    if (!AUTOMATIC.includes(key)) continue;
+    automatic.push(key);
+    if (findKey(childLines(onChildren, i), 'paths') !== -1) filtered += 1;
+  }
+  return { automatic, pathFiltered: automatic.length > 0 && filtered === automatic.length };
+}
+
+/**
+ * Κάθε βήμα με `run:` του workflow, με **ό,τι κρίνει αν μπορεί να κοκκινίσει**.
+ *
+ * 🔴 Το `continue-on-error` διαβάζεται σε **δύο** επίπεδα (βήμα ΚΑΙ job) επειδή αυτό
+ * ακριβώς είναι το ελάττωμα που γέννησε το ADR-783: το `coverage-ratchet.yml` **τρέχει**
+ * ολόκληρη τη σουίτα με `continue-on-error: true` στο βήμα ⇒ 3.259 αρχεία test
+ * εκτελούνται και **κανένα δεν μπορεί να κοκκινίσει τίποτα**.
+ *
+ * Το `if:` μετριέται κι αυτό: βήμα υπό συνθήκη **δεν** είναι εγγύηση εκτέλεσης (τα
+ * βήματα `seed` του coverage-ratchet τρέχουν μόνο σε χειροκίνητο dispatch).
+ *
+ * @param {string} filePath
+ * @returns {{ job: string, run: string, continueOnError: boolean, conditional: boolean }[]}
+ */
+function readWorkflowRunSteps(filePath) {
+  const lines = significantLines(fs.readFileSync(filePath, 'utf8'));
+  const jobsIndex = findKey(lines, 'jobs', 0);
+  if (jobsIndex === -1) return [];
+
+  const jobLines = childLines(lines, jobsIndex);
+  const jobIndent = jobLines.length > 0 ? jobLines[0].indent : 0;
+  const steps = [];
+
+  for (let i = 0; i < jobLines.length; i += 1) {
+    if (jobLines[i].indent !== jobIndent) continue;
+    const job = jobLines[i].body.replace(/:.*$/, '').trim();
+    const body = childLines(jobLines, i);
+    const stepsIndex = findKey(body, 'steps');
+    if (stepsIndex === -1) continue;
+
+    // `continue-on-error` του job: ΜΟΝΟ στο άμεσο επίπεδο του job, ποτέ μέσα στα steps.
+    const jobIndentBody = body.length > 0 ? body[0].indent : 0;
+    const jobContinue = body.some(
+      (l) => l.indent === jobIndentBody && /^continue-on-error:\s*true\b/.test(l.body),
+    );
+
+    const stepLines = childLines(body, stepsIndex);
+    const starts = stepLines.reduce((acc, l, idx) => (l.body.startsWith('- ') ? [...acc, idx] : acc), []);
+    starts.forEach((start, n) => {
+      const end = n + 1 < starts.length ? starts[n + 1] : stepLines.length;
+      const chunk = stepLines.slice(start, end).map((l) => l.body.replace(/^- /, ''));
+      const runIndex = chunk.findIndex((b) => b.startsWith('run:'));
+      if (runIndex === -1) return;
+
+      // `run: |` / `run: >` ⇒ το σώμα είναι οι γραμμές που ακολουθούν. Το `>` (folded)
+      // ενώνει με ΚΕΝΟ: μια εντολή σπασμένη σε γραμμές είναι ΜΙΑ εντολή, και αν διαβαστεί
+      // ως πολλές, το «pnpm exec jest» μόνο του μοιάζει με ΟΛΗ τη σουίτα (μετρημένο λάθος).
+      let run = chunk[runIndex].slice('run:'.length).trim();
+      if (/^[|>][-+]?$/.test(run) || run === '') {
+        run = chunk.slice(runIndex + 1).join(run.startsWith('>') ? ' ' : '\n');
+      }
+      steps.push({
+        job,
+        run,
+        continueOnError: jobContinue || chunk.some((b) => /^continue-on-error:\s*true\b/.test(b)),
+        conditional: chunk.some((b) => /^if:/.test(b)),
+      });
+    });
+  }
+  return steps;
+}
+
 module.exports = {
   listWorkflowFiles,
   readWorkflowName,
   readWorkflowRunWatchList,
+  readWorkflowRunSteps,
+  readWorkflowTriggers,
   // εκτεθειμένα για τα tests — η αυστηρότητα του αναγνώστη ΕΙΝΑΙ ο μηχανισμός
   significantLines,
   scalar,

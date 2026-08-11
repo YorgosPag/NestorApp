@@ -70,6 +70,13 @@ jobs:
       # The expensive step. Produces coverage/coverage-summary.json. CI only.
       # continue-on-error: coverage must be collected even if some suites fail;
       # the ratchet gate — not this step — is the authority on pass/fail.
+      #
+      # ⚠️ ADR-783: ΑΥΤΟ ΤΟ `continue-on-error` ΕΙΝΑΙ ΣΩΣΤΟ ΕΔΩ ΚΑΙ ΗΤΑΝ ΤΟ ΜΟΝΟ ΔΙΧΤΥ.
+      # Μέχρι 11/08 ήταν το μοναδικό workflow που έτρεχε ολόκληρη τη σουίτα ⇒ 3.259 από τα
+      # 3.453 αρχεία test εκτελούνταν σε κάθε PR και η αποτυχία τους δεν κοκκίνιζε τίποτα.
+      # Η pass/fail ετυμηγορία ζει πλέον στο `jest-suite.yml` (T2)· εδώ μένει η ΚΑΛΥΨΗ (T3).
+      # ΜΗΝ αφαιρέσεις το `continue-on-error`: θα έκανε αυτό το workflow να αναφέρει αποτυχία
+      # test ως αποτυχία κάλυψης — το ακριβές λάθος που απέφυγε ρητά το ADR-775.
       - name: 🧪 Jest coverage
         run: pnpm run test:coverage
         continue-on-error: true

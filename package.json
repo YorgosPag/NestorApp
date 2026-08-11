@@ -316,7 +316,12 @@
     "adr-section-refs:check": "node scripts/check-adr-section-refs.js --all",
     "adr-section-refs:report": "node scripts/check-adr-section-refs.js --report",
     "adr-section-refs:baseline": "node scripts/check-adr-section-refs.js --write-baseline",
-    "test:adr-section-refs": "jest scripts/__tests__/check-adr-section-refs.test.js --verbose"
+    "test:adr-section-refs": "jest scripts/__tests__/check-adr-section-refs.test.js --verbose",
+    "anchor-execution:check": "node scripts/check-anchor-execution.js --all",
+    "anchor-execution:report": "node scripts/check-anchor-execution.js --report",
+    "test:anchor-execution": "jest scripts/__tests__/check-anchor-execution.test.js --verbose",
+    "jest-suite:report": "node scripts/check-jest-suite-ratchet.js --report",
+    "jest-suite:baseline": "node scripts/check-jest-suite-ratchet.js --write-baseline"
   },
   "dependencies": {
     "@ai-sdk/openai": "3.0.48",
