@@ -12,7 +12,7 @@
  * @see ContactsList.tsx for reference implementation
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Package } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,22 +20,27 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
-import { CompactToolbar, procurementConfig } from '@/components/core/CompactToolbar';
+// ADR-784 §10.4 / CHECK 3.28 — ο SSoT της ζεύξης desktop/mobile ΥΠΗΡΧΕ ήδη· εδώ ήταν γραμμένη με το χέρι.
+import { ResponsiveCompactToolbar, procurementConfig } from '@/components/core/CompactToolbar';
 import { POStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { PurchaseOrderListCard, PurchaseOrderGridCard } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
 
 import type { PurchaseOrder, PurchaseOrderStatus } from '@/types/procurement';
-import { useSortState } from '@/hooks/useSortState';
+import { useSlimListState } from './shared/use-slim-list-state';
 import { matchesSearchTerm } from '@/lib/search/search';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // ============================================================================
 // PROPS
 // ============================================================================
+
+/** Το κλειστό λεξιλόγιο ταξινόμησης — δηλώνεται ΜΙΑ φορά και είναι ΚΑΙ ο φύλακας του toolbar. */
+const PO_SORT_KEYS = ['date', 'number', 'status', 'value'] as const;
 
 interface PurchaseOrderListProps {
   purchaseOrders: PurchaseOrder[];
@@ -76,17 +81,16 @@ export function PurchaseOrderList({
   const { t } = useTranslation(['procurement', 'common']);
   const colors = useSemanticColors();
 
-  // Sort state via centralized hook
-  const { sortBy, sortOrder, onSortChange } = useSortState<'date' | 'number' | 'status' | 'value'>('date');
-
-  // CompactToolbar local state (mirrors ContactsList)
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [showToolbar, setShowToolbar] = useState(false);
-
-  // Quick-filter chips state — single-select mirroring ContactTypeQuickFilters
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  // ADR-784 §10.4 / CHECK 3.28 — κατάσταση λίστας + φύλακας ταξινόμησης σε ΕΝΑ σημείο.
+  // Τα τσιπάκια κατάστασης παραγγελίας ΕΙΝΑΙ το `selectedFilter` του κοινού hook.
+  const {
+    sortBy, sortOrder, onSortChange,
+    selectedItems, setSelectedItems,
+    searchTerm, setSearchTerm,
+    activeFilters, setActiveFilters,
+    showToolbar, setShowToolbar,
+    selectedFilter: selectedStatuses, setSelectedFilter: setSelectedStatuses,
+  } = useSlimListState(PO_SORT_KEYS, 'date');
 
   // Filter pipeline: status chips → search (poNumber + supplierId raw) → sort.
   // Supplier-name lookup happens per-card via useContactById (cards render their own name);
@@ -143,11 +147,6 @@ export function PurchaseOrderList({
     if (selectedPOId && onDeletePOs) onDeletePOs([selectedPOId]);
   };
 
-  const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
-    if (newSortBy === 'date' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'value') {
-      onSortChange(newSortBy, newSortOrder);
-    }
-  };
 
   return (
     <EntityListColumn hasBorder aria-label={t('list.ariaLabel')}>
@@ -165,45 +164,23 @@ export function PurchaseOrderList({
           hideSearch
         />
 
-        {/* Desktop: always visible */}
-        <div className="hidden md:block">
-          <CompactToolbar
-            config={procurementConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={renderSortChange}
-            hasSelectedContact={!!selectedPOId}
-            onNewItem={handleNewItem}
-            onEditItem={handleEditItem}
-            onDeleteItems={handleDeleteItems}
-          />
-        </div>
-
-        {/* Mobile: toggle */}
-        <div className="md:hidden">
-          {showToolbar && (
-            <CompactToolbar
-              config={procurementConfig}
-              selectedItems={selectedItems}
-              onSelectionChange={setSelectedItems}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              activeFilters={activeFilters}
-              onFiltersChange={setActiveFilters}
-              sortBy={sortBy}
-              onSortChange={renderSortChange}
-              hasSelectedContact={!!selectedPOId}
-              onNewItem={handleNewItem}
-              onEditItem={handleEditItem}
-              onDeleteItems={handleDeleteItems}
-            />
-          )}
-        </div>
+        {/* Desktop πάντα ορατή· κινητό πίσω από τον διακόπτη — η ζεύξη ζει στον SSoT. */}
+        <ResponsiveCompactToolbar
+          showOnMobile={showToolbar}
+          config={procurementConfig}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          activeFilters={activeFilters}
+          onFiltersChange={setActiveFilters}
+          sortBy={sortBy}
+          onSortChange={onSortChange}
+          hasSelectedContact={!!selectedPOId}
+          onNewItem={handleNewItem}
+          onEditItem={handleEditItem}
+          onDeleteItems={handleDeleteItems}
+        />
       </div>
 
       {/* Quick-filter chips — PO status */}
@@ -216,7 +193,7 @@ export function PurchaseOrderList({
       {/* List */}
       <ScrollArea className="flex-1">
         {viewMode === 'grid' && !loading && sorted.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
+          <div className={`gap-3 p-3 grid ${gridPatterns.cards.tile}`}>
             {sorted.map((entry) => (
               <PurchaseOrderGridCard
                 key={entry.po.id}

@@ -9,26 +9,30 @@
  * @see ADR-267 §Phase J — Procurement SSoT alignment
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ScrollText } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
-import { CompactToolbar, agreementsConfig } from '@/components/core/CompactToolbar';
+// ADR-784 §10.4 / CHECK 3.28 — ο SSoT της ζεύξης desktop/mobile ΥΠΗΡΧΕ ήδη· εδώ ήταν γραμμένη με το χέρι.
+import { ResponsiveCompactToolbar, agreementsConfig } from '@/components/core/CompactToolbar';
 import { AgreementStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { AgreementListCard, AgreementGridCard } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
 
-import { useSortState } from '@/hooks/useSortState';
+// ADR-784 §10.4 / CHECK 3.28 — κατάσταση, ταξινόμηση και σώμα λίστας ζουν σε ΕΝΑ σημείο.
+import { useSlimListState } from '../shared/use-slim-list-state';
+import { useSortedRows } from '../shared/use-sorted-rows';
+import { SlimListBody } from '../shared/SlimListBody';
 import { matchesSearchTerm } from '@/lib/search/search';
 import { makeAgreementPredicate, type AgreementFilter } from '@/subapps/procurement/utils/quick-filter-predicates';
 
 import type { FrameworkAgreement } from '@/subapps/procurement/types/framework-agreement';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
+
+/** Το κλειστό λεξιλόγιο ταξινόμησης — δηλώνεται ΜΙΑ φορά και είναι ΚΑΙ ο φύλακας του toolbar. */
+const AGREEMENT_SORT_KEYS = ['name', 'number', 'status', 'date'] as const;
 
 interface AgreementSlimListProps {
   agreements: FrameworkAgreement[];
@@ -54,14 +58,15 @@ export function AgreementSlimList({
   viewMode = 'list',
 }: AgreementSlimListProps) {
   const { t } = useTranslation('procurement');
-  const colors = useSemanticColors();
 
-  const { sortBy, sortOrder, onSortChange } = useSortState<'name' | 'number' | 'status' | 'date'>('name');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [showToolbar, setShowToolbar] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<string[]>([]);
+  const {
+    sortBy, sortOrder, onSortChange,
+    selectedItems, setSelectedItems,
+    searchTerm, setSearchTerm,
+    activeFilters, setActiveFilters,
+    showToolbar, setShowToolbar,
+    selectedFilter, setSelectedFilter,
+  } = useSlimListState(AGREEMENT_SORT_KEYS, 'name');
 
   const filtered = useMemo(() => {
     const filterValue = (selectedFilter[0] ?? '') as AgreementFilter;
@@ -73,28 +78,12 @@ export function AgreementSlimList({
     });
   }, [agreements, selectedFilter, searchTerm]);
 
-  const sorted = useMemo(() => {
-    const dir = sortOrder === 'asc' ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'number':
-          return a.agreementNumber.localeCompare(b.agreementNumber) * dir;
-        case 'status':
-          return a.status.localeCompare(b.status) * dir;
-        case 'date':
-          return ((a.validUntil?.toMillis?.() ?? 0) - (b.validUntil?.toMillis?.() ?? 0)) * dir;
-        case 'name':
-        default:
-          return a.title.localeCompare(b.title) * dir;
-      }
-    });
-  }, [filtered, sortBy, sortOrder]);
-
-  const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
-    if (newSortBy === 'name' || newSortBy === 'number' || newSortBy === 'status' || newSortBy === 'date') {
-      onSortChange(newSortBy, newSortOrder);
-    }
-  };
+  const sorted = useSortedRows(filtered, sortBy, sortOrder, {
+    name: (a, b) => a.title.localeCompare(b.title),
+    number: (a, b) => a.agreementNumber.localeCompare(b.agreementNumber),
+    status: (a, b) => a.status.localeCompare(b.status),
+    date: (a, b) => (a.validUntil?.toMillis?.() ?? 0) - (b.validUntil?.toMillis?.() ?? 0),
+  });
 
   const handleEditItem = () => { if (selectedAgreementId && onEditAgreement) onEditAgreement(selectedAgreementId); };
   const handleDeleteItems = () => { if (selectedAgreementId && onDeleteAgreement) onDeleteAgreement(selectedAgreementId); };
@@ -113,42 +102,22 @@ export function AgreementSlimList({
           onToolbarToggle={setShowToolbar}
           hideSearch
         />
-        <div className="hidden md:block">
-          <CompactToolbar
-            config={agreementsConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={renderSortChange}
-            hasSelectedContact={!!selectedAgreementId}
-            onNewItem={onCreateNew}
-            onEditItem={handleEditItem}
-            onDeleteItems={handleDeleteItems}
-          />
-        </div>
-        <div className="md:hidden">
-          {showToolbar && (
-            <CompactToolbar
-              config={agreementsConfig}
-              selectedItems={selectedItems}
-              onSelectionChange={setSelectedItems}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              activeFilters={activeFilters}
-              onFiltersChange={setActiveFilters}
-              sortBy={sortBy}
-              onSortChange={renderSortChange}
-              hasSelectedContact={!!selectedAgreementId}
-              onNewItem={onCreateNew}
-              onEditItem={handleEditItem}
-              onDeleteItems={handleDeleteItems}
-            />
-          )}
-        </div>
+        <ResponsiveCompactToolbar
+          showOnMobile={showToolbar}
+          config={agreementsConfig}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          activeFilters={activeFilters}
+          onFiltersChange={setActiveFilters}
+          sortBy={sortBy}
+          onSortChange={onSortChange}
+          hasSelectedContact={!!selectedAgreementId}
+          onNewItem={onCreateNew}
+          onEditItem={handleEditItem}
+          onDeleteItems={handleDeleteItems}
+        />
       </div>
 
       <AgreementStatusQuickFilters
@@ -158,46 +127,27 @@ export function AgreementSlimList({
       />
 
       <ScrollArea className="flex-1">
-        {loading ? (
-          <div className="flex flex-col gap-2 p-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 rounded-md" />
-            ))}
-          </div>
-        ) : sorted.length === 0 ? (
-          <div className={cn('flex flex-col items-center gap-2 py-12 px-4 text-center', colors.text.muted)}>
-            <ScrollText className="h-8 w-8 opacity-40" aria-hidden />
-            <p className="text-sm">
-              {searchTerm || selectedFilter.length > 0
-                ? t('hub.frameworkAgreements.emptySearch')
-                : t('hub.frameworkAgreements.noAgreementsYet')}
-            </p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
-            {sorted.map((a) => (
-              <AgreementGridCard
-                key={a.id}
+        <SlimListBody
+          loading={loading}
+          items={sorted}
+          viewMode={viewMode}
+          emptyIcon={ScrollText}
+          emptyMessage={searchTerm || selectedFilter.length > 0
+            ? t('hub.frameworkAgreements.emptySearch')
+            : t('hub.frameworkAgreements.noAgreementsYet')}
+          keyOf={(a) => a.id}
+          renderItem={(a, mode) => {
+            const Card = mode === 'grid' ? AgreementGridCard : AgreementListCard;
+            return (
+              <Card
                 agreement={a}
                 vendorName={vendorNamesById.get(a.vendorContactId) ?? null}
                 isSelected={a.id === selectedAgreementId}
                 onSelect={() => onSelectAgreement(a)}
               />
-            ))}
-          </div>
-        ) : (
-          <div className="p-2 space-y-2">
-            {sorted.map((a) => (
-              <AgreementListCard
-                key={a.id}
-                agreement={a}
-                vendorName={vendorNamesById.get(a.vendorContactId) ?? null}
-                isSelected={a.id === selectedAgreementId}
-                onSelect={() => onSelectAgreement(a)}
-              />
-            ))}
-          </div>
-        )}
+            );
+          }}
+        />
       </ScrollArea>
     </EntityListColumn>
   );

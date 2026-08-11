@@ -153,6 +153,7 @@ export function ServiceFormRenderer({
             </div>
 
             {/* Section Fields */}
+            {/* catalog-exempt: πεδία φόρμας από ορισμό ενότητας. Η φόρμα δύο στηλών είναι απόφαση αναγνωσιμότητας, όχι συσκευασία καρτών. */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-4">
               {section.fields.map((field) => {
                 // 🌐 Translate field label, placeholder, helpText if they're i18n keys

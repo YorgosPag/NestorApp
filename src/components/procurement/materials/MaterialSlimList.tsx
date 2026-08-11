@@ -9,26 +9,30 @@
  * @see ADR-267 §Phase J — Procurement SSoT alignment
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Layers } from 'lucide-react';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
 
 import { GenericListHeader } from '@/components/shared/GenericListHeader';
-import { CompactToolbar, materialsConfig } from '@/components/core/CompactToolbar';
+// ADR-784 §10.4 / CHECK 3.28 — ο SSoT της ζεύξης desktop/mobile ΥΠΗΡΧΕ ήδη· εδώ ήταν γραμμένη με το χέρι.
+import { ResponsiveCompactToolbar, materialsConfig } from '@/components/core/CompactToolbar';
 import { MaterialStatusQuickFilters } from '@/components/shared/TypeQuickFilters';
 import { MaterialListCard, MaterialGridCard } from '@/domain';
 import { EntityListColumn } from '@/core/containers';
 
-import { useSortState } from '@/hooks/useSortState';
+// ADR-784 §10.4 / CHECK 3.28 — κατάσταση, ταξινόμηση και σώμα λίστας ζουν σε ΕΝΑ σημείο.
+import { useSlimListState } from '../shared/use-slim-list-state';
+import { useSortedRows } from '../shared/use-sorted-rows';
+import { SlimListBody } from '../shared/SlimListBody';
 import { matchesSearchTerm } from '@/lib/search/search';
 import { makeMaterialPredicate, type MaterialFilter } from '@/subapps/procurement/utils/quick-filter-predicates';
 
 import type { Material } from '@/subapps/procurement/types/material';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
-import { cn } from '@/lib/utils';
+
+/** Το κλειστό λεξιλόγιο ταξινόμησης — δηλώνεται ΜΙΑ φορά και είναι ΚΑΙ ο φύλακας του toolbar. */
+const MATERIAL_SORT_KEYS = ['name', 'number', 'value', 'date'] as const;
 
 interface MaterialSlimListProps {
   materials: Material[];
@@ -52,14 +56,15 @@ export function MaterialSlimList({
   viewMode = 'list',
 }: MaterialSlimListProps) {
   const { t } = useTranslation('procurement');
-  const colors = useSemanticColors();
 
-  const { sortBy, sortOrder, onSortChange } = useSortState<'name' | 'number' | 'value' | 'date'>('name');
-  const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
-  const [showToolbar, setShowToolbar] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<string[]>([]);
+  const {
+    sortBy, sortOrder, onSortChange,
+    selectedItems, setSelectedItems,
+    searchTerm, setSearchTerm,
+    activeFilters, setActiveFilters,
+    showToolbar, setShowToolbar,
+    selectedFilter, setSelectedFilter,
+  } = useSlimListState(MATERIAL_SORT_KEYS, 'name');
 
   const filtered = useMemo(() => {
     const filterValue = (selectedFilter[0] ?? '') as MaterialFilter;
@@ -71,31 +76,13 @@ export function MaterialSlimList({
     });
   }, [materials, selectedFilter, searchTerm]);
 
-  const sorted = useMemo(() => {
-    const dir = sortOrder === 'asc' ? 1 : -1;
-    return [...filtered].sort((a, b) => {
-      switch (sortBy) {
-        case 'number':
-          return a.code.localeCompare(b.code) * dir;
-        case 'value':
-          return ((a.lastPrice ?? 0) - (b.lastPrice ?? 0)) * dir;
-        case 'date': {
-          const aTs = a.lastPurchaseDate?.toMillis?.() ?? 0;
-          const bTs = b.lastPurchaseDate?.toMillis?.() ?? 0;
-          return (aTs - bTs) * dir;
-        }
-        case 'name':
-        default:
-          return a.name.localeCompare(b.name) * dir;
-      }
-    });
-  }, [filtered, sortBy, sortOrder]);
+  const sorted = useSortedRows(filtered, sortBy, sortOrder, {
+    name: (a, b) => a.name.localeCompare(b.name),
+    number: (a, b) => a.code.localeCompare(b.code),
+    value: (a, b) => (a.lastPrice ?? 0) - (b.lastPrice ?? 0),
+    date: (a, b) => (a.lastPurchaseDate?.toMillis?.() ?? 0) - (b.lastPurchaseDate?.toMillis?.() ?? 0),
+  });
 
-  const renderSortChange = (newSortBy: string, newSortOrder: 'asc' | 'desc') => {
-    if (newSortBy === 'name' || newSortBy === 'number' || newSortBy === 'value' || newSortBy === 'date') {
-      onSortChange(newSortBy, newSortOrder);
-    }
-  };
 
   const handleEditItem = () => { if (selectedMaterialId && onEditMaterial) onEditMaterial(selectedMaterialId); };
   const handleDeleteItems = () => { if (selectedMaterialId && onDeleteMaterial) onDeleteMaterial(selectedMaterialId); };
@@ -114,42 +101,22 @@ export function MaterialSlimList({
           onToolbarToggle={setShowToolbar}
           hideSearch
         />
-        <div className="hidden md:block">
-          <CompactToolbar
-            config={materialsConfig}
-            selectedItems={selectedItems}
-            onSelectionChange={setSelectedItems}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            activeFilters={activeFilters}
-            onFiltersChange={setActiveFilters}
-            sortBy={sortBy}
-            onSortChange={renderSortChange}
-            hasSelectedContact={!!selectedMaterialId}
-            onNewItem={onCreateNew}
-            onEditItem={handleEditItem}
-            onDeleteItems={handleDeleteItems}
-          />
-        </div>
-        <div className="md:hidden">
-          {showToolbar && (
-            <CompactToolbar
-              config={materialsConfig}
-              selectedItems={selectedItems}
-              onSelectionChange={setSelectedItems}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-              activeFilters={activeFilters}
-              onFiltersChange={setActiveFilters}
-              sortBy={sortBy}
-              onSortChange={renderSortChange}
-              hasSelectedContact={!!selectedMaterialId}
-              onNewItem={onCreateNew}
-              onEditItem={handleEditItem}
-              onDeleteItems={handleDeleteItems}
-            />
-          )}
-        </div>
+        <ResponsiveCompactToolbar
+          showOnMobile={showToolbar}
+          config={materialsConfig}
+          selectedItems={selectedItems}
+          onSelectionChange={setSelectedItems}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          activeFilters={activeFilters}
+          onFiltersChange={setActiveFilters}
+          sortBy={sortBy}
+          onSortChange={onSortChange}
+          hasSelectedContact={!!selectedMaterialId}
+          onNewItem={onCreateNew}
+          onEditItem={handleEditItem}
+          onDeleteItems={handleDeleteItems}
+        />
       </div>
 
       <MaterialStatusQuickFilters
@@ -159,44 +126,26 @@ export function MaterialSlimList({
       />
 
       <ScrollArea className="flex-1">
-        {loading ? (
-          <div className="flex flex-col gap-2 p-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-14 rounded-md" />
-            ))}
-          </div>
-        ) : sorted.length === 0 ? (
-          <div className={cn('flex flex-col items-center gap-2 py-12 px-4 text-center', colors.text.muted)}>
-            <Layers className="h-8 w-8 opacity-40" aria-hidden />
-            <p className="text-sm">
-              {searchTerm || selectedFilter.length > 0
-                ? t('hub.materialCatalog.emptySearch')
-                : t('hub.materialCatalog.noMaterialsYet')}
-            </p>
-          </div>
-        ) : viewMode === 'grid' ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-3">
-            {sorted.map((m) => (
-              <MaterialGridCard
-                key={m.id}
+        <SlimListBody
+          loading={loading}
+          items={sorted}
+          viewMode={viewMode}
+          emptyIcon={Layers}
+          emptyMessage={searchTerm || selectedFilter.length > 0
+            ? t('hub.materialCatalog.emptySearch')
+            : t('hub.materialCatalog.noMaterialsYet')}
+          keyOf={(m) => m.id}
+          renderItem={(m, mode) => {
+            const Card = mode === 'grid' ? MaterialGridCard : MaterialListCard;
+            return (
+              <Card
                 material={m}
                 isSelected={m.id === selectedMaterialId}
                 onSelect={() => onSelectMaterial(m)}
               />
-            ))}
-          </div>
-        ) : (
-          <div className="p-2 space-y-2">
-            {sorted.map((m) => (
-              <MaterialListCard
-                key={m.id}
-                material={m}
-                isSelected={m.id === selectedMaterialId}
-                onSelect={() => onSelectMaterial(m)}
-              />
-            ))}
-          </div>
-        )}
+            );
+          }}
+        />
       </ScrollArea>
     </EntityListColumn>
   );

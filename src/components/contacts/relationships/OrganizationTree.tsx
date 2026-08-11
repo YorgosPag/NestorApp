@@ -29,6 +29,7 @@ import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effect
 // 🪝 Import contact name hook
 import { useContactName } from './hooks/useContactName';
 import { isNonEmptyArray } from '@/lib/type-guards';
+import { gridPatterns } from '@/styles/design-tokens';
 
 const logger = createModuleLogger('OrganizationTree');
 
@@ -249,7 +250,7 @@ export const OrganizationTree: React.FC<OrganizationTreeProps> = ({
     return (
       <div className="mb-2">
         <h4 className={`text-sm font-medium ${colors.text.primary} mb-2`}>{t('relationships.organizationTree.departmentsAndEmployees')}</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className={`gap-2 grid ${gridPatterns.cards.tile}`}>
           {Object.entries(tree.departments).map(([department, employees]) => (
             <div
               key={department}

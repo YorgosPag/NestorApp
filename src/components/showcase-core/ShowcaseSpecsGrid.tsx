@@ -19,6 +19,7 @@
  */
 
 import React from 'react';
+import { gridPatterns } from '@/styles/design-tokens';
 
 export interface ShowcaseSpecsGridRow {
   label: string;
@@ -35,7 +36,10 @@ export function ShowcaseSpecsGrid({ title, rows }: ShowcaseSpecsGridProps) {
   return (
     <section className="bg-[hsl(var(--showcase-surface))] rounded-xl shadow-sm p-5 border border-[hsl(var(--showcase-border))]">
       <h2 className="text-lg font-semibold text-[hsl(var(--showcase-fg))] mb-4">{title}</h2>
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+      {/* ADR-784 §10 — δάπεδο 15rem μετρημένο από την ΙΔΙΑ τη σειρά: ελληνική ετικέτα ~150 px
+          + κενό 12 + τιμή ~80 ≈ 242 px. Η σκάλα έδινε δύο στήλες των 176 px σε παράθυρο 700 px
+          με ανοιχτό πλευρικό μενού — στριμωγμένες κάτω από το δάπεδο. */}
+      <dl className={`grid gap-x-6 gap-y-3 text-sm ${gridPatterns.cards.tile}`}>
         {rows.map(({ label, value }) => (
           <div
             key={label}

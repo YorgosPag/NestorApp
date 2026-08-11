@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { HOVER_TEXT_EFFECTS, HOVER_BORDER_EFFECTS, TRANSITION_PRESETS } from "@/components/ui/effects";
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import '@/lib/design-system';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // 🏢 ENTERPRISE: Lead data can come from Opportunity which has optional fields
 interface SendEmailModalProps {
@@ -51,7 +52,7 @@ export default function SendEmailModal({ lead, isOpen, onClose, onEmailSent }: S
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
             <label className={`block text-sm font-medium ${colors.text.secondary} mb-3`}>{t('modal.selectType')}</label>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className={`gap-3 grid ${gridPatterns.cards.tile}`}>
               {templates.map((template) => (
                 <button
                   key={template.id}

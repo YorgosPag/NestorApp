@@ -43,7 +43,7 @@ const path = require('node:path');
 const LADDER = /\b(?:sm|md|lg|xl|2xl):grid-cols-\d/;
 
 /** Το εγγενές ίχνος — είτε ωμό είτε μέσω του SSoT. */
-const INTRINSIC = /repeat\(auto-fill|gridPatterns\.cards\.(?:media|tile)/;
+const INTRINSIC = /repeat\(auto-fill|gridPatterns\.cards\.(?:media|tile|chip)/;
 
 /** Δηλώνει αυτό το className πλέγμα με στήλες; (η **εμβέλεια** της πύλης) */
 const DECLARES_COLUMNS = /grid-cols-|gridPatterns\.cards/;
@@ -87,6 +87,9 @@ const DECLARED_GAPS = [
  * απαγορεύει. Το έπιασε η άγκυρα `Μ4`. Ο πρώτος χαρακτήρας του λόγου δεν μπορεί να είναι
  * αστερίσκος.
  */
+/** Τα ίχνη σχολίου της JS/TS. Το `{/* … *​/}` του JSX περιέχει το ίδιο `/* … *​/`. */
+const COMMENT_SPAN = /\/\*[\s\S]*?\*\/|\/\/[^\n]*/g;
+
 const EXEMPT = /\/\/\s*catalog-exempt:\s*\S+|\/\*[^*]*catalog-exempt:\s*[^*\s]\S*/;
 const ALL_STATES = [...RATCHETED_STATES, ...CLEAN_STATES, ...DECLARED_GAPS];
 
@@ -140,8 +143,16 @@ function unwrap(n) {
   return cur;
 }
 
-/** Αλυσίδες που **δεν** αλλάζουν το «γνωστό μήκος»: `X.filter(…).map(…)`. */
-const LENGTH_PRESERVING = new Set(['filter', 'slice', 'sort', 'reverse', 'toSorted']);
+/**
+ * Αλυσίδες που **δεν** αλλάζουν το «γνωστό μήκος»: `X.filter(…).map(…)`.
+ *
+ * 🔴 **Το `map` προστέθηκε από ΜΕΤΡΗΣΗ (ADR-784 §10).** Το `Array.prototype.map` είναι
+ * **εξ ορισμού** διατηρητικό του μήκους, και η απουσία του ήταν το μισό ενός μετρημένου
+ * ψευδώς θετικού — δες το σκεπτικό πάνω από τον κλάδο `Identifier` της `collectionKind`.
+ * ⚠️ Δεν συγχέεται με το `.map()` **των παιδιών**: εκεί το `map` είναι ο **δείκτης** του
+ * καταλόγου, εδώ είναι ένας **κρίκος** προς τη βάση της αλυσίδας.
+ */
+const LENGTH_PRESERVING = new Set(['filter', 'slice', 'sort', 'reverse', 'toSorted', 'map']);
 
 /**
  * Είναι η συλλογή που περνά από `.map()` **στατικά γνωστού μήκους**;
@@ -157,7 +168,7 @@ const LENGTH_PRESERVING = new Set(['filter', 'slice', 'sort', 'reverse', 'toSort
  * μεταγλώττιση: δεδομένα από props, state, ερώτημα. Αυτό είναι το ερώτημα που ξεχωρίζει
  * τον κατάλογο από τη σειρά.
  */
-function collectionKind(node, root) {
+function collectionKind(node, root, seen = new Set()) {
   const n = unwrap(node);
   if (!n) return 'unknown';
 
@@ -173,22 +184,42 @@ function collectionKind(node, root) {
   if (n.type === 'CallExpression'
     && n.callee?.type === 'MemberExpression'
     && LENGTH_PRESERVING.has(n.callee.property?.name)) {
-    return collectionKind(n.callee.object, root);
+    return collectionKind(n.callee.object, root, seen);
   }
 
-  // Ταυτότητα: λύνεται **μέσα στο αρχείο**. Ένα `const TILES = [...]` είναι σταθερό μήκος·
-  // ένα `properties` που έρχεται από hook δεν λύνεται εδώ και μένει «άγνωστο» — σωστά.
+  /**
+   * Ταυτότητα: λύνεται **μέσα στο αρχείο**. Ένα `const TILES = [...]` είναι σταθερό μήκος·
+   * ένα `properties` που έρχεται από hook δεν λύνεται εδώ και μένει «άγνωστο» — σωστά.
+   *
+   * 🔴 **Ο ΛΥΤΗΣ ΚΑΤΕΒΑΙΝΕΙ ΣΤΟΝ ΑΡΧΙΚΟΠΟΙΗΤΗ — ΜΕΤΡΗΜΕΝΟ ΨΕΥΔΩΣ ΘΕΤΙΚΟ (ADR-784 §10).**
+   * Η πρώτη γραφή ρωτούσε **μόνο** «είναι ο αρχικοποιητής κυριολεκτικός πίνακας;». Το
+   * `PropertyStatusDemoPageContent` γράφει `const DEMO_PROPERTIES = DEMO_PROPERTY_DEFS.map(…)`
+   * πάνω σε τοπικό `const [...] as const` **έξι** στοιχείων: ο αρχικοποιητής είναι
+   * `CallExpression`, άρα ο έλεγχος απαντούσε «άγνωστο» και η πύλη κατήγγειλε **σταθερή
+   * αρίτητα έξι** ως κατάλογο. Αν κάποιος «διόρθωνε» εκείνο το πλέγμα σε εγγενές, ο αριθμός
+   * της πύλης θα **έπεφτε** και η οθόνη θα **χαλούσε** — ακριβώς η αστοχία που το ADR-784
+   * γράφει ότι φοβάται.
+   *
+   * ⚠️ Η αναδρομή **μόνο** μετατρέπει «άγνωστο» σε «σταθερό»/«εισαγόμενο» όταν η αλυσίδα
+   * καταλήγει αποδεδειγμένα σε κυριολεκτικό πίνακα ή σε εισαγωγή· δεν μπορεί να κρύψει
+   * αληθινό εύρημα. Το `seen` υπάρχει για τον αυτοαναφορικό ορισμό (`const a = a.filter(…)`),
+   * που θα ήταν **άπειρη** αναδρομή, δηλαδή πύλη που κρεμάει αντί να απαντά.
+   */
   if (n.type === 'Identifier') {
-    let fixed = false;
+    if (seen.has(n.name)) return 'unknown';
+    seen.add(n.name);
+    let init = null;
     let imported = false;
     walk(root, (d) => {
       if (d.type === 'VariableDeclarator'
-        && d.id?.type === 'Identifier' && d.id.name === n.name
-        && unwrap(d.init)?.type === 'ArrayExpression') fixed = true;
+        && d.id?.type === 'Identifier' && d.id.name === n.name && d.init) init = d.init;
       if (d.type === 'ImportDeclaration'
         && (d.specifiers || []).some((s) => s.local?.name === n.name)) imported = true;
     });
-    if (fixed) return 'fixed';
+    if (init) {
+      const kind = collectionKind(init, root, seen);
+      if (kind !== 'unknown') return kind;
+    }
     /**
      * 🔴 **ΕΙΣΑΓΟΜΕΝΗ ΣΥΛΛΟΓΗ — ΟΝΟΜΑΖΕΤΑΙ, ΔΕΝ ΜΑΝΤΕΥΕΤΑΙ.** Το `ALL_CONTACT_TYPES.map(…)`
      * του `ContactTypeSelector` είναι **κλειστό λεξιλόγιο** σταθερού μήκους, και το
@@ -251,11 +282,33 @@ function classify(text, kind) {
 }
 
 
-/** Οι δύο γραμμές πάνω από τη δήλωση + η ίδια — εκεί ζει μια εξαίρεση. */
-function lineComment(source, line) {
-  const NL = String.fromCharCode(10);
-  const lines = source.split(NL);
-  return lines.slice(Math.max(0, line - 3), line).join(NL);
+/**
+ * Το **συνεχόμενο μπλοκ σχολίων ακριβώς από πάνω** — εκεί ζει μια εξαίρεση.
+ *
+ * 🔴 **ΗΤΑΝ ΠΑΡΑΘΥΡΟ ΔΥΟ ΓΡΑΜΜΩΝ ΚΑΙ ΤΟ ΑΝΕΤΡΕΨΕ Η ΧΡΗΣΗ (ADR-784 §10).** Μια εξαίρεση με
+ * **πραγματικό** λόγο δεν χωράει σε δύο γραμμές· γραμμένη σε τέσσερις, ο δείκτης έβγαινε εκτός
+ * παραθύρου και η εξαίρεση **δεν καταχωρούνταν σιωπηλά**. Το αποτέλεσμα ήταν fail-closed (η
+ * πύλη συνέχιζε να μετρά παραβίαση, δεν έχανε τίποτα), αλλά ο μηχανισμός που απαιτεί
+ * **υποχρεωτικό λόγο** πίεζε προς **ρηχό** λόγο — δηλαδή προς ακριβώς αυτό που απαγορεύει.
+ *
+ * ⚠️ Το μπλοκ είναι **αυστηρότερο** από το σταθερό παράθυρο, όχι χαλαρότερο: μια γραμμή
+ * **κώδικα** ανάμεσα κόβει το μπλοκ, ενώ το παράθυρο των τριών γραμμών θα διάβαζε σχόλιο που
+ * ανήκει σε **προηγούμενο** αδελφό στοιχείο και θα το χάριζε σε αυτό εδώ.
+ */
+function precedingComment(source, startOffset) {
+  let best = null;
+  for (const m of source.matchAll(COMMENT_SPAN)) {
+    const end = m.index + m[0].length;
+    if (end > startOffset) break;
+    best = { text: m[0], end };
+  }
+  if (!best) return '';
+  /**
+   * Ανάμεσα στο σχόλιο και τη δήλωση επιτρέπονται **μόνο** κενά και τα αγκύλια που κλείνουν
+   * τη μορφή JSX της εξαίρεσης. Οτιδήποτε άλλο σημαίνει ότι το σχόλιο ανήκει σε **άλλο**
+   * στοιχείο — και ένα δανεικό σχόλιο θα ήταν εξαίρεση που κανείς δεν έγραψε γι' αυτό εδώ.
+   */
+  return /^[\s{}()]*$/.test(source.slice(best.end, startOffset)) ? best.text : '';
 }
 
 /** Σαρώνει **ένα** αρχείο. Επιστρέφει τα ευρήματα + τον μετρητή του τυφλού σημείου. */
@@ -297,7 +350,7 @@ function scanFile(filePath, source) {
     let state = classify(text, mappedChildrenKind(node, ast));
     // Η εξαίρεση κρίνεται ΤΕΛΕΥΤΑΙΑ και ΜΟΝΟ πάνω σε παραβίαση: δεν επιτρέπεται να
     // «καθαρίσει» κατάσταση που ήδη ήταν σωστή — αυτό θα αλλοίωνε τη λογιστική.
-    if (state === 'catalog-window-ladder' && EXEMPT.test(lineComment(source, open.loc?.start?.line ?? 0))) {
+    if (state === 'catalog-window-ladder' && EXEMPT.test(precedingComment(source, open.range?.[0] ?? 0))) {
       state = 'catalog-exempt';
     }
     if (!ALL_STATES.includes(state)) {

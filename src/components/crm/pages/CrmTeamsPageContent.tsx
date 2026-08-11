@@ -36,6 +36,7 @@ import { ModuleBreadcrumb } from '@/components/shared/ModuleBreadcrumb';
 import { PageContainer } from '@/core/containers';
 // 🏢 ADR-300: Stale-while-revalidate — prevents navigation flash on remount
 import { createStaleCache } from '@/lib/stale-cache';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // ADR-300: Module-level cache survives React unmount/remount (navigation)
 const teamsCache = createStaleCache<DisplayTeam[]>('crm-teams');
@@ -225,7 +226,7 @@ export function CrmTeamsPageContent() {
           </div>
         </section>
       ) : (
-        <section className={cn('grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4')} role="region" aria-label={t('teams.title')}>
+        <section className={cn('grid gap-6 p-4', gridPatterns.cards.tile)} role="region" aria-label={t('teams.title')}>
           {teams.map((team) => (
             <Card key={team.id} className={cn('flex flex-col')}>
               <CardHeader>

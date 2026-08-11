@@ -16,6 +16,7 @@
  */
 
 import { SalesGridEmpty } from './SalesGridCard';
+import { gridPatterns } from '@/styles/design-tokens';
 
 interface SalesCardGridProps<T> {
   items: readonly T[];
@@ -34,7 +35,7 @@ export function SalesCardGrid<T>({
 }: SalesCardGridProps<T>) {
   return (
     <section
-      className="flex-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 p-2 overflow-y-auto"
+      className={`flex-1 gap-2 p-2 overflow-y-auto grid ${gridPatterns.cards.tile}`}
       aria-label={ariaLabel}
     >
       {items.map(renderCard)}

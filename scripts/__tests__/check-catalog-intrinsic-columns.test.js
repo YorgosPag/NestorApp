@@ -143,6 +143,69 @@ describe('Μ1-Μ7 · μεταλλάξεις στις εισόδους', () => {
     </div>`, 'const TILES = ["a", "b", "c"];');
     expect(stateOf(src)).toBe('fixed-arity-ladder');
   });
+
+  /**
+   * 🔴 **ΜΕΤΡΗΜΕΝΟ ΨΕΥΔΩΣ ΘΕΤΙΚΟ (ADR-784 §10).** Ακριβές σχήμα του
+   * `PropertyStatusDemoPageContent`: σταθερός πίνακας **έξι** στοιχείων περνά από `.map()`
+   * και το αποτέλεσμα ονομάζεται. Ο πρώτος λύτης ρωτούσε μόνο «είναι ο αρχικοποιητής
+   * κυριολεκτικός πίνακας;» ⇒ «άγνωστο» ⇒ **σταθερή αρίτητα κατηγορούμενη ως κατάλογος**.
+   * Η μετάλλαξη αλλάζει **μία** λέξη — τη βάση της αλυσίδας — και η ετυμηγορία γυρίζει.
+   */
+  it('Μ8 · `const X = ΣΤΑΘΕΡΟ.map(…)` ⇒ σταθερής αρίτητας· από props ⇒ παραβίαση', () => {
+    const body = `    <div className="grid grid-cols-1 lg:grid-cols-3">
+      {ROWS.map((r) => <span key={r.id}>{r.id}</span>)}
+    </div>`;
+    const fixed = wrap(body, 'const DEFS = [{ id: "a" }, { id: "b" }];\nconst ROWS = DEFS.map((d) => ({ ...d }));');
+    const dynamic = fixed.replace('const ROWS = DEFS.map', 'const ROWS = externalDefs.map');
+    expect(fixed).not.toBe(dynamic);
+    expect(stateOf(fixed)).toBe('fixed-arity-ladder');
+    expect(stateOf(dynamic)).toBe('catalog-window-ladder');
+  });
+
+  /**
+   * 🔴 **Ο ΛΟΓΟΣ ΠΡΕΠΕΙ ΝΑ ΧΩΡΑΕΙ.** Το αρχικό παράθυρο ήταν **δύο γραμμές**: μια εξαίρεση με
+   * πραγματικό σκεπτικό, γραμμένη σε τέσσερις, **δεν καταχωρούνταν σιωπηλά**. Fail-closed
+   * (μετρούνταν ως παραβίαση, δεν χανόταν), αλλά ο μηχανισμός που **απαιτεί** λόγο πίεζε προς
+   * **ρηχό** λόγο — δηλαδή προς αυτό ακριβώς που απαγορεύει.
+   */
+  it('Μ9 · ΠΟΛΥΓΡΑΜΜΙΚΟΣ λόγος καταχωρείται· χωρίς τον δείκτη ⇒ ΟΧΙ', () => {
+    const withReason = wrap(`    <section>
+      {/* catalog-exempt: πίνακας υποδοχών σταθερής αρίτητας, όχι κατάλογος — το πλήθος
+          των κελιών ΕΙΝΑΙ το maxPhotos, και κάθε υποδοχή δηλώνει σταθερές διαστάσεις
+          σε pixel, οπότε ελάχιστο πλάτος στήλης δεν έχει τι να επηρεάσει. */}
+      <div className="grid grid-cols-1 lg:grid-cols-3">
+        {props.items.map((c) => <span key={c}>{c}</span>)}
+      </div>
+    </section>`);
+    const without = withReason.replace('catalog-exempt: πίνακας', 'ΣΗΜΕΙΩΣΗ: πίνακας');
+    expect(withReason).not.toBe(without);
+    expect(stateOf(withReason)).toBe('catalog-exempt');
+    expect(stateOf(without)).toBe('catalog-window-ladder');
+  });
+
+  /**
+   * 🔴 **Η ΕΞΑΙΡΕΣΗ ΔΕΝ ΔΑΝΕΙΖΕΤΑΙ.** Ο εντοπισμός είναι «το σχόλιο ΑΜΕΣΩΣ από πάνω»: αν
+   * παρεμβάλλεται **κώδικας**, το σχόλιο ανήκει σε άλλο στοιχείο. Το σταθερό παράθυρο τριών
+   * γραμμών μπορούσε να χαρίσει σε ένα πλέγμα την αιτιολογία του **προηγούμενου** αδελφού.
+   */
+  it('Μ10 · σχόλιο εξαίρεσης χωρισμένο με ΚΩΔΙΚΑ ΔΕΝ μεταφέρεται στο επόμενο πλέγμα', () => {
+    const src = wrap(`    <section>
+      {/* catalog-exempt: ανήκει στο ΑΠΟ ΠΑΝΩ στοιχείο */}
+      <p>κάτι άλλο</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3">
+        {props.items.map((c) => <span key={c}>{c}</span>)}
+      </div>
+    </section>`);
+    expect(stateOf(src)).toBe('catalog-window-ladder');
+  });
+
+  it('Μ11 · αυτοαναφορικός ορισμός ΔΕΝ κρεμάει την πύλη — απαντά «άγνωστο»', () => {
+    // Πύλη που κρεμάει δεν είναι αυστηρότερη· είναι πύλη που κανείς δεν τρέχει.
+    const src = wrap(`    <div className="grid grid-cols-1 lg:grid-cols-3">
+      {rows.map((r) => <span key={r}>{r}</span>)}
+    </div>`, 'const rows = rows.filter(Boolean);');
+    expect(stateOf(src)).toBe('catalog-window-ladder');
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -198,5 +261,26 @@ describe('Κ1-Κ6 · συμβόλαια', () => {
       {props.items.map((c) => <span key={c}>{c}</span>)}
     </div>`);
     expect(stateOf(src)).toBe('catalog-window-ladder');
+  });
+
+  it('Κ7 · το ΤΡΙΤΟ ελάχιστο του SSoT μετρά ως εγγενές, όπως τα άλλα δύο', () => {
+    // Αν το `chip` έλειπε από το ίχνος, κάθε μεταναστευμένο τσιπάκι θα φαινόταν «χωρίς
+    // στήλες» και θα έβγαινε ΣΙΩΠΗΛΑ εκτός εμβέλειας — δηλαδή η πύλη θα τύφλωνε ακριβώς
+    // εκεί που η δουλειά πέτυχε. Ίδιο μάθημα με το Κ3.
+    for (const track of ['media', 'tile', 'chip']) {
+      expect(classify(`grid gridPatterns.cards.${track}`, 'unknown')).toBe('catalog-intrinsic');
+    }
+  });
+
+  it('Κ8 · η εξαίρεση καθαρίζει ΜΟΝΟ παραβίαση — ποτέ κατάσταση που ήταν ήδη σωστή', () => {
+    // Αλλιώς η λογιστική θα μετακινούνταν: μια σταθερή αρίτητα θα εμφανιζόταν ως «εξαιρεμένη»
+    // και ο κάδος των εξαιρέσεων θα έπαυε να μετρά αποφάσεις, μετρώντας σχόλια.
+    const src = wrap(`    <section>
+      {/* catalog-exempt: λόγος που δεν έπρεπε να χρειαστεί */}
+      <div className="grid grid-cols-1 lg:grid-cols-3">
+        {[1, 2, 3].map((n) => <b key={n} />)}
+      </div>
+    </section>`);
+    expect(stateOf(src)).toBe('fixed-arity-ladder');
   });
 });

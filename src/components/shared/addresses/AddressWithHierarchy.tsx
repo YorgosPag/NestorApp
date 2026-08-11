@@ -442,6 +442,9 @@ export function AddressWithHierarchy({
           }
         </Button>
         {isHierarchyOpen && (
+          /* catalog-exempt: πεδία φόρμας διοικητικής ιεραρχίας (ετικέτα + συνδυαστικό πλαίσιο),
+             όχι κάρτες. Το πλάτος του πεδίου το ορίζει η φόρμα και το ζευγάρωμα ετικέτας-πεδίου,
+             όχι δηλωμένο δάπεδο κάρτας — ίδια απόφαση με το `AdministrativeAddressPicker`. */
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 mt-3 animate-in fade-in-0 slide-in-from-top-2 duration-200">
             {visibleFields.map(field => {
               const currentName = current[field.nameField] as string;

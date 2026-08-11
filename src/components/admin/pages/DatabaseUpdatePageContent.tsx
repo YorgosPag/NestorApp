@@ -36,6 +36,7 @@ import {
   CONTACT_ASSIGNMENTS, STATUS_ASSIGNMENTS
 } from './database-update-data';
 import { nowISO } from '@/lib/date-local';
+import { gridPatterns } from '@/styles/design-tokens';
 
 const logger = createModuleLogger('DatabaseUpdatePage');
 
@@ -210,7 +211,8 @@ export function DatabaseUpdatePageContent() {
           <CardTitle className="flex items-center gap-2"><Users className={iconSizes.md} />{t('databaseUpdate.roleAssignmentsPreview')}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* ADR-784 §10 — το πλήθος στηλών το απαντά το ΠΡΑΓΜΑΤΙΚΟ πλάτος του δοχείου. */}
+            <div className={`grid gap-4 ${gridPatterns.cards.tile}`}>
             {Object.entries(CONTACT_ASSIGNMENTS).slice(0, 9).map(([id, assignment]) => (
               <div key={id} className={`p-3 ${quick.card}`}>
                 <div className={cn("font-mono text-xs", colors.text.muted)}>{id.slice(0, 8)}...</div>

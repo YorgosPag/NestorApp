@@ -23,3 +23,6 @@ export type {
 
 export { ShowcaseSpecsGrid, pushSpecRow } from './ShowcaseSpecsGrid';
 export type { ShowcaseSpecsGridProps, ShowcaseSpecsGridRow } from './ShowcaseSpecsGrid';
+
+export { ShowcaseMediaGrid } from './ShowcaseMediaGrid';
+export type { ShowcaseMediaGridItem, ShowcaseMediaGridProps } from './ShowcaseMediaGrid';

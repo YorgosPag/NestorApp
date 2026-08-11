@@ -14,6 +14,7 @@ import { ReportSection } from '@/components/reports/core';
 import { cn } from '@/lib/utils';
 import type { ExportDomainCard, ExportDomain } from './types';
 import type { ExportFormat } from '@/components/reports/core/ReportExportBar';
+import { gridPatterns } from '@/styles/design-tokens';
 
 interface ExportDomainGridProps {
   domains: ExportDomainCard[];
@@ -32,7 +33,7 @@ export function ExportDomainGrid({ domains, onExport, exportingDomains }: Export
       id="export-domain-grid"
       collapsible={false}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`gap-4 grid ${gridPatterns.cards.tile}`}>
         {domains.map((domain) => {
           const Icon = domain.icon;
           const isExporting = exportingDomains.has(domain.domain);

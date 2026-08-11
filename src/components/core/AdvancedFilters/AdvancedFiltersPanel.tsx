@@ -135,6 +135,8 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
             <CardContent className={`!p-2 !m-0 ${spacing.spaceBetween.sm}`}>
               {/* Render filter rows */}
               {config.rows.map(row => (
+                /* catalog-exempt: σειρά πεδίων φίλτρου — το scan.js ονομάζει ΑΥΤΟ το πλέγμα ως
+                   την περίπτωση που γέννησε τη ρήτρα: πεδίο φόρμας δεν είναι κάρτα. */
                 <div key={row.id} className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 ${layout.filterGridGap} items-end w-full min-w-0 overflow-hidden`}>
                   {row.fields.map(field => (
                     <FilterField
@@ -159,6 +161,7 @@ export function AdvancedFiltersPanel<T extends GenericFilterState>({
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className={`!mt-2 !p-2 ${quick.card} ${colors.bg.primary} animate-in fade-in-0 zoom-in-95`}>
+                    {/* catalog-exempt: ζεύγη πλαισίου-ελέγχου με ετικέτα. Το πλάτος τους το ορίζει το μήκος της ετικέτας, όχι δηλωμένο δάπεδο — δεν υπάρχει ελάχιστο να μετρηθεί από τις δηλώσεις τους. */}
                     <div className={`grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 ${layout.filterGridGap} w-full min-w-0 overflow-hidden`}>
                       {config.advancedFilters.options.map(option => (
                         <div key={option.id} className={`flex items-center ${spacing.gap.sm}`}>

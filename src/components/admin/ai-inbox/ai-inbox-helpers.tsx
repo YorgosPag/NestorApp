@@ -20,6 +20,7 @@ import { useTypography } from '@/hooks/useTypography';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FirestoreishTimestamp } from '@/types/crm';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // SSoT re-exports — consumers can import from here or directly from shared
 export { getIntentBadgeVariant, getConfidenceBadgeVariant } from '@/components/admin/shared/intent-badge-utils';
@@ -188,7 +189,8 @@ export const AttachmentDisplay = ({ attachments }: AttachmentDisplayProps) => {
       </div>
 
       {/* Attachments Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {/* ADR-784 §10 — το πλήθος στηλών το απαντά το ΠΡΑΓΜΑΤΙΚΟ πλάτος του δοχείου. */}
+      <div className={`grid gap-2 ${gridPatterns.cards.tile}`}>
         {attachments.map((url, index) => {
           const filename = url.split('/').pop() || `attachment-${index + 1}`;
           const fileInfo = getFileTypeInfo(url);

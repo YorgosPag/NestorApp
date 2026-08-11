@@ -7,6 +7,7 @@ import { BuildingCard } from '../BuildingCard';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { Building } from '../BuildingsPageContent';
 import { groupByKey } from '@/utils/collection-utils';
+import { gridPatterns } from '@/styles/design-tokens';
 import '@/lib/design-system';
 
 interface BuildingsGroupedViewProps {
@@ -14,6 +15,62 @@ interface BuildingsGroupedViewProps {
   filteredBuildings: Building[];
   selectedBuilding: Building | null;
   setSelectedBuilding: (building: Building | null) => void;
+}
+
+/**
+ * Το πλέγμα καρτών — **ένα**, όχι τρία.
+ *
+ * 🔴 Ήταν γραμμένο **τρεις φορές** (πλέγμα · κατά τύπο · κατά κατάσταση) και οι δύο τελευταίες
+ * ήταν **χαρακτήρα προς χαρακτήρα** ίδιες. Το ονόμασε το **CHECK 3.28** (ADR-584) όταν το αρχείο
+ * ακουμπήθηκε για τη μετανάστευση του ADR-784 §10 — δηλαδή το βρήκε **άλλη ερώτηση**, όπως και
+ * τα πέντε `MediaGrid` του §10.4.
+ */
+function BuildingsCardGrid({ buildings, selectedBuilding, setSelectedBuilding }: {
+  buildings: Building[];
+  selectedBuilding: Building | null;
+  setSelectedBuilding: (building: Building | null) => void;
+}) {
+  return (
+    <div className={`grid gap-2 ${gridPatterns.cards.tile}`}>
+      {buildings.map((building) => (
+        <BuildingCard
+          key={building.id}
+          building={building}
+          isSelected={selectedBuilding?.id === building.id}
+          onClick={() => setSelectedBuilding(building)}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Ομαδοποιημένη προβολή. Η **μόνη** διαφορά ανάμεσα στο «κατά τύπο» και στο «κατά κατάσταση»
+ * ήταν το κλειδί ομαδοποίησης και το πρόθεμα του κλειδιού μετάφρασης — άρα είναι **παράμετροι**,
+ * όχι δεύτερο σώμα.
+ */
+function BuildingsGroups({ groups, labelOf, selectedBuilding, setSelectedBuilding }: {
+  groups: Record<string, Building[]>;
+  labelOf: (groupKey: string) => string;
+  selectedBuilding: Building | null;
+  setSelectedBuilding: (building: Building | null) => void;
+}) {
+  return (
+    <div className="flex-1 p-2 overflow-auto">
+      {Object.entries(groups).map(([groupKey, buildingsOfGroup]) => (
+        <div key={groupKey} className="mb-2">
+          <h2 className="text-xl font-bold mb-2 capitalize border-b pb-2">
+            {labelOf(groupKey)} ({buildingsOfGroup.length})
+          </h2>
+          <BuildingsCardGrid
+            buildings={buildingsOfGroup}
+            selectedBuilding={selectedBuilding}
+            setSelectedBuilding={setSelectedBuilding}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function BuildingsGroupedView({
@@ -31,61 +88,34 @@ export function BuildingsGroupedView({
   if (viewMode === 'grid') {
     return (
       <div className="flex-1 p-2 overflow-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-          {filteredBuildings.map((building) => (
-            <BuildingCard
-              key={building.id}
-              building={building}
-              isSelected={selectedBuilding?.id === building.id}
-              onClick={() => setSelectedBuilding(building)}
-            />
-          ))}
-        </div>
+        <BuildingsCardGrid
+          buildings={filteredBuildings}
+          selectedBuilding={selectedBuilding}
+          setSelectedBuilding={setSelectedBuilding}
+        />
       </div>
     );
   }
 
   if (viewMode === 'byType') {
     return (
-      <div className="flex-1 p-2 overflow-auto">
-        {Object.entries(groupedByType).map(([type, buildingsOfType]) => (
-          <div key={type} className="mb-2">
-            <h2 className="text-xl font-bold mb-2 capitalize border-b pb-2">{t(`category.${type}`, { defaultValue: type })} ({buildingsOfType.length})</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {buildingsOfType.map((building) => (
-                <BuildingCard
-                  key={building.id}
-                  building={building}
-                  isSelected={selectedBuilding?.id === building.id}
-                  onClick={() => setSelectedBuilding(building)}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <BuildingsGroups
+        groups={groupedByType}
+        labelOf={(type) => t(`category.${type}`, { defaultValue: type })}
+        selectedBuilding={selectedBuilding}
+        setSelectedBuilding={setSelectedBuilding}
+      />
     );
   }
 
   if (viewMode === 'byStatus') {
     return (
-      <div className="flex-1 p-2 overflow-auto">
-        {Object.entries(groupedByStatus).map(([status, buildingsOfStatus]) => (
-          <div key={status} className="mb-2">
-            <h2 className="text-xl font-bold mb-2 capitalize border-b pb-2">{t(`status.${status}`, { defaultValue: status })} ({buildingsOfStatus.length})</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {buildingsOfStatus.map((building) => (
-                <BuildingCard
-                  key={building.id}
-                  building={building}
-                  isSelected={selectedBuilding?.id === building.id}
-                  onClick={() => setSelectedBuilding(building)}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <BuildingsGroups
+        groups={groupedByStatus}
+        labelOf={(status) => t(`status.${status}`, { defaultValue: status })}
+        selectedBuilding={selectedBuilding}
+        setSelectedBuilding={setSelectedBuilding}
+      />
     );
   }
 

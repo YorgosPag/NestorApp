@@ -5,6 +5,7 @@ import { NavigationCard, type ColorVariant } from './NavigationCard';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { cn } from '@/lib/utils';
 import '@/lib/design-system';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // ============================================================================
 // Navigation Grid — Responsive CSS Grid wrapper for tiles (ADR-179)
@@ -34,7 +35,7 @@ export function NavigationGrid({ sectionLabel, tiles }: NavigationGridProps) {
       <h2 className={cn("text-sm font-medium mb-4", colors.text.muted)}>
         {sectionLabel}
       </h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className={`gap-4 grid ${gridPatterns.cards.tile}`}>
         {tiles.map((tile) => (
           <NavigationCard
             key={tile.href}

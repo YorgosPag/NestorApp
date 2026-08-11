@@ -25,6 +25,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { EmailTemplatesService } from '@/services/email-templates.service';
 import type { EmailTemplateType } from '@/types/email-templates';
 import type { TemplateSelectorProps } from '../types';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // ============================================================================
 // TEMPLATE SELECTOR COMPONENT
@@ -190,7 +191,7 @@ export const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       </Label>
 
       {/* Templates Grid */}
-      <nav className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" role="group" aria-label={t('email.availableTemplates')}>
+      <nav className={`gap-3 grid ${gridPatterns.cards.tile}`} role="group" aria-label={t('email.availableTemplates')}>
         {availableTemplates.map(renderTemplateButton)}
       </nav>
 

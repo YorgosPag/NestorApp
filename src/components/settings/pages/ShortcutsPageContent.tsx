@@ -120,6 +120,13 @@ export function ShortcutsPageContent() {
                         {filteredShortcuts.map(group => (
                             <div key={group.categoryKey}>
                                 <h3 className="text-xl font-semibold mb-4 border-b pb-2">{group.categoryLabel}</h3>
+                                {/* catalog-exempt: ΔΙΑΤΑΞΗ ΑΝΑΓΝΩΣΗΣ, όχι κατάλογος καρτών —
+                                    κάθε κελί είναι «πρόταση … πλήκτρο», και το δάπεδό του το
+                                    ορίζει το ΜΗΚΟΣ ΤΗΣ ΠΡΟΤΑΣΗΣ, που δεν προκύπτει από καμία
+                                    δήλωση του component. Το πλακίδιο μετρήθηκε και
+                                    απορρίφθηκε: σε δοχείο ~800 px με κενό 32 px δίνει τρεις
+                                    στήλες των 234 px, ενώ οι ελληνικές περιγραφές θέλουν ~250
+                                    px — δηλαδή η «διόρθωση» θα ΑΝΑΔΙΠΛΩΝΕ ό,τι σήμερα χωράει. */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-3">
                                     {group.shortcuts.map(shortcut => (
                                         <div key={shortcut.key} className={`flex items-center justify-between p-2 rounded-md ${INTERACTIVE_PATTERNS.SUBTLE_HOVER}`}>

@@ -24,6 +24,7 @@ import { PageLoadingState, PageErrorState } from '@/core/states';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { toggleContactFavoriteWithPolicy } from '@/services/contact-mutation-gateway';
 import { useContactsPageState } from './page/useContactsPageState';
+import { gridPatterns } from '@/styles/design-tokens';
 
 const DeleteContactDialog = dynamic(
   () => import('./dialogs/DeleteContactDialog').then(mod => ({ default: mod.DeleteContactDialog })),
@@ -275,7 +276,7 @@ export function ContactsPageContent() {
           <>
             {/* Grid view */}
             <section
-              className="w-full p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 overflow-y-auto"
+              className={`w-full p-2 gap-2 overflow-y-auto grid ${gridPatterns.cards.tile}`}
               role="region"
               aria-label={t('page.views.gridView')}
             >

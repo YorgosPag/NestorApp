@@ -28,6 +28,9 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { getEntityIcon } from '../search-backfill/search-backfill-types';
 import { useSearchBackfillState } from '../search-backfill/useSearchBackfillState';
+// ADR-784 §10.4 / CHECK 3.28 — τα πλακίδια στατιστικών ήταν γραμμένα τρεις φορές εδώ.
+import { MigrationStatTiles } from '../search-backfill/MigrationStatTiles';
+import { gridPatterns } from '@/styles/design-tokens';
 
 export function SearchBackfillPageContent() {
   const { t } = useTranslation('admin');
@@ -82,7 +85,7 @@ export function SearchBackfillPageContent() {
                   {t('searchBackfill.indexStatus.inCollection', { collection: s.status.currentIndex.collection })}
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className={`gap-3 grid ${gridPatterns.cards.chip}`}>
                 {Object.entries(s.status.currentIndex.byEntityType).map(([type, count]) => {
                   const Icon = getEntityIcon(type);
                   return (
@@ -261,19 +264,15 @@ export function SearchBackfillPageContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {[
+            <MigrationStatTiles
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+              tiles={[
                 { id: 'total', value: s.parkingMigrationResult.stats.total, label: t('searchBackfill.stats.total'), color: 'blue' },
                 { id: 'migrated', value: s.parkingMigrationResult.stats.migrated, label: t('searchBackfill.stats.migrated'), color: 'green' },
                 { id: 'alreadyCorrect', value: s.parkingMigrationResult.stats.alreadyCorrect, label: t('searchBackfill.stats.alreadyCorrect'), color: 'gray' },
                 { id: 'errors', value: s.parkingMigrationResult.stats.errors, label: t('searchBackfill.stats.errors'), color: 'red' },
-              ].map(({ id, value, label, color }) => (
-                <div key={id} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
-                  <div className={`text-2xl font-bold text-${color}-600`}>{value}</div>
-                  <div className={cn('text-sm', colors.text.muted)}>{label}</div>
-                </div>
-              ))}
-            </div>
+              ]}
+            />
             <div className={cn('mt-4 text-sm', colors.text.muted)}>
               {s.parkingMigrationResult.message} | {t('searchBackfill.results.duration', { ms: s.parkingMigrationResult.executionTimeMs })}
             </div>
@@ -293,20 +292,16 @@ export function SearchBackfillPageContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              {[
+            <MigrationStatTiles
+              className="grid grid-cols-2 sm:grid-cols-5 gap-4"
+              tiles={[
                 { id: 'total', value: s.migrationResult.stats.total, label: t('searchBackfill.stats.total'), color: 'blue' },
                 { id: 'migrated', value: s.migrationResult.stats.migrated, label: t('searchBackfill.stats.migrated'), color: 'green' },
                 { id: 'skipped', value: s.migrationResult.stats.skipped, label: t('searchBackfill.stats.skipped'), color: 'yellow' },
                 { id: 'noCreator', value: s.migrationResult.stats.noCreator, label: t('searchBackfill.stats.noCreator'), color: 'orange' },
                 { id: 'errors', value: s.migrationResult.stats.errors, label: t('searchBackfill.stats.errors'), color: 'red' },
-              ].map(({ id, value, label, color }) => (
-                <div key={id} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
-                  <div className={`text-2xl font-bold text-${color}-600`}>{value}</div>
-                  <div className={cn('text-sm', colors.text.muted)}>{label}</div>
-                </div>
-              ))}
-            </div>
+              ]}
+            />
             <div className={cn('mt-4 text-sm', colors.text.muted)}>
               {t('searchBackfill.results.durationTimestamp', { ms: s.migrationResult.duration, timestamp: s.migrationResult.timestamp })}
             </div>
@@ -326,19 +321,15 @@ export function SearchBackfillPageContent() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-              {[
+            <MigrationStatTiles
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6"
+              tiles={[
                 { id: 'processed', value: s.result.totalStats.processed, label: t('searchBackfill.stats.processed'), color: 'blue' },
                 { id: 'indexed', value: s.result.totalStats.indexed, label: t('searchBackfill.stats.indexed'), color: 'green' },
                 { id: 'skipped', value: s.result.totalStats.skipped, label: t('searchBackfill.stats.skipped'), color: 'yellow' },
                 { id: 'errors', value: s.result.totalStats.errors, label: t('searchBackfill.stats.errors'), color: 'red' },
-              ].map(({ id, value, label, color }) => (
-                <div key={id} className={`text-center p-3 rounded-lg bg-${color}-500/10`}>
-                  <div className={`text-2xl font-bold text-${color}-600`}>{value}</div>
-                  <div className={cn('text-sm', colors.text.muted)}>{label}</div>
-                </div>
-              ))}
-            </div>
+              ]}
+            />
 
             <h4 className="font-medium mb-3">{t('searchBackfill.results.byEntityType')}</h4>
             <div className="space-y-2">

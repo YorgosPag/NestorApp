@@ -53,6 +53,7 @@ import { TrashView } from './TrashView';
 import { ArchiveView } from './ArchiveView';
 import { MediaGallery } from './media';
 import { FloorplanGallery } from './media/FloorplanGallery';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // ============================================================================
 // TYPES
@@ -444,7 +445,7 @@ function GalleryView(props: EntityFilesContentProps) {
 
   // Document Card Gallery
   return (
-    <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
+    <section className={`gap-4 p-4 grid ${gridPatterns.cards.tile}`}>
       {props.filteredFiles.map((file) => (
         <article
           key={file.id}

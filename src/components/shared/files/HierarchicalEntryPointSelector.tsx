@@ -39,6 +39,12 @@ import '@/lib/design-system';
 
 // 🏢 ENTERPRISE: Extracted card components
 import { EntryCard, GroupCard, getIcon } from './hierarchical-entry-cards';
+import { gridPatterns } from '@/styles/design-tokens';
+// ADR-784 §10.7 / CHECK 3.28 — κοινό συμβόλαιο + κοινό πεδίο τίτλου με τον UploadEntryPointSelector.
+import {
+  EntryPointCustomTitleInput,
+  type EntryPointSelectorBaseProps,
+} from './entry-point-selector-shared';
 
 // Re-exports for backward compatibility
 export { EntryCard, GroupCard } from './hierarchical-entry-cards';
@@ -50,17 +56,11 @@ export type { EntryCardProps, GroupCardProps } from './hierarchical-entry-cards'
 
 type ViewState = 'groups' | 'entries' | 'search';
 
-export interface HierarchicalEntryPointSelectorProps {
-  entityType: EntityType;
-  selectedEntryPointId?: string;
-  onSelect: (entryPoint: UploadEntryPoint) => void;
-  className?: string;
-  language?: 'el' | 'en';
-  customTitle?: string;
-  onCustomTitleChange?: (title: string) => void;
-  categoryFilter?: FileCategory;
-  excludeCategories?: FileCategory[];
-  allowedEntryPointIds?: string[];
+/**
+ * ADR-784 §10.7 — τα δέκα κοινά props ζουν στη **βάση**· εδώ μένει ό,τι είναι ειδικό για την
+ * ιεραρχική παρουσίαση (πλοήγηση σε ορόφους).
+ */
+export interface HierarchicalEntryPointSelectorProps extends EntryPointSelectorBaseProps {
   floors?: FloorInfo[];
   onNavigateToFloors?: () => void;
   navigateToFloorsLabel?: string;
@@ -171,32 +171,14 @@ export function HierarchicalEntryPointSelector({
 
   if (visibleGroups.length === 0 && ungroupedEntries.length === 0) return null;
 
-  // ── Custom title input (shared) ──────────────────────────────────────────
+  // ── Custom title input — ADR-784 §10.7 / CHECK 3.28: ΕΝΑ πεδίο, κοινό με τον UploadEntryPointSelector
   const renderCustomTitleInput = (htmlId: string) => (
     selectedEntryPoint?.requiresCustomTitle ? (
-      <div className="space-y-2">
-        <label htmlFor={htmlId} className="block text-sm font-medium text-foreground">
-          {t('upload.documentTitle')} <span className="text-destructive">*</span>
-        </label>
-        <input
-          id={htmlId}
-          type="text"
-          value={customTitle}
-          onChange={(e) => onCustomTitleChange?.(e.target.value)}
-          placeholder={t('upload.customTitlePlaceholder')}
-          required
-          className={cn(
-            'w-full px-2 py-2 rounded-md border bg-background text-foreground',
-            `placeholder:${colors.text.muted}`,
-            'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-            'transition-colors',
-            customTitle.trim() === '' ? 'border-destructive/50 focus:ring-destructive' : 'border-border'
-          )}
-          aria-required="true"
-          aria-invalid={customTitle.trim() === ''}
-        />
-        <p className={cn("text-xs", colors.text.muted)}>{t('upload.customTitleHint')}</p>
-      </div>
+      <EntryPointCustomTitleInput
+        htmlId={htmlId}
+        customTitle={customTitle}
+        onCustomTitleChange={onCustomTitleChange}
+      />
     ) : null
   );
 
@@ -217,7 +199,7 @@ export function HierarchicalEntryPointSelector({
     return (
       <section className={cn('space-y-3', className)} role="radiogroup" aria-label={t('upload.selectDocumentType')}>
         <h3 className="text-sm font-semibold text-foreground">{t('upload.selectDocumentType')}</h3>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className={`gap-2 grid ${gridPatterns.cards.chip}`}>
           {allowedEntries.map((ep) => (
             <EntryCard key={ep.id} entryPoint={ep} isSelected={selectedEntryPointId === ep.id} currentLanguage={currentLanguage} onSelect={onSelect} freeTitleLabel={t('upload.freeTitle')} />
           ))}
@@ -239,7 +221,7 @@ export function HierarchicalEntryPointSelector({
           {searchResults.length === 0 ? (
             <p className={cn("py-6 text-center text-sm", colors.text.muted)}>{t('upload.noSearchResults')}</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className={`gap-2 grid ${gridPatterns.cards.chip}`}>
               {searchResults.map((ep) => (
                 <EntryCard key={ep.id} entryPoint={ep} isSelected={selectedEntryPointId === ep.id} currentLanguage={currentLanguage} showGroupBadge onSelect={onSelect} freeTitleLabel={t('upload.freeTitle')} />
               ))}
@@ -254,7 +236,7 @@ export function HierarchicalEntryPointSelector({
           {ungroupedEntries.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">{t('studies.generalDocuments')}</h3>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              <div className={`gap-2 grid ${gridPatterns.cards.chip}`}>
                 {ungroupedEntries.map((ep) => (
                   <EntryCard key={ep.id} entryPoint={ep} isSelected={selectedEntryPointId === ep.id} currentLanguage={currentLanguage} onSelect={onSelect} freeTitleLabel={t('upload.freeTitle')} />
                 ))}
@@ -265,7 +247,7 @@ export function HierarchicalEntryPointSelector({
           {visibleGroups.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-foreground">{t('studies.studyCategories')}</h3>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className={`gap-2 grid ${gridPatterns.cards.tile}`}>
                 {visibleGroups.map((group) => (
                   <GroupCard key={group.group} group={group} count={groupEntryCounts.get(group.group) ?? 0} currentLanguage={currentLanguage} onGroupClick={handleGroupClick} entriesCountLabel={t('studies.entriesCount', { count: groupEntryCounts.get(group.group) ?? 0 })} />
                 ))}
@@ -329,7 +311,7 @@ export function HierarchicalEntryPointSelector({
           {activeGroupEntries.length === 0 ? (
             <p className={cn("py-6 text-center text-sm", colors.text.muted)}>{t('upload.noSearchResults')}</p>
           ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            <div className={`gap-2 grid ${gridPatterns.cards.chip}`}>
               {activeGroupEntries.map((ep) => (
                 <EntryCard key={ep.id} entryPoint={ep} isSelected={selectedEntryPointId === ep.id} currentLanguage={currentLanguage} onSelect={onSelect} freeTitleLabel={t('upload.freeTitle')} />
               ))}

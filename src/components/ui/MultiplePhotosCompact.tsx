@@ -55,6 +55,11 @@ export function MultiplePhotosCompact(props: MultiplePhotosCompactProps) {
       {/* Header αφαιρέθηκε - δεν θέλουμε το "Φωτογραφία" text και Image icon */}
 
       {/* Compact Grid - Dynamic Layout */}
+      {/* catalog-exempt: ΠΙΝΑΚΑΣ ΥΠΟΔΟΧΩΝ σταθερής αρίτητας, όχι κατάλογος: το πλήθος των
+          κελιών ΕΙΝΑΙ το `maxPhotos` (το `visibleSlots` γεμίζει τόσες υποδοχές, κενές ή όχι),
+          και κάθε υποδοχή δηλώνει ΣΤΑΘΕΡΕΣ διαστάσεις σε pixel (240×320, και ύψος 300 από το
+          δεύτερο σκαλί). Ένα ελάχιστο πλάτος στήλης δεν έχει τι να επηρεάσει όταν το κελί
+          αρνείται να αλλάξει μέγεθος — θα ήταν δήλωση χωρίς αποτέλεσμα. */}
       <main className={maxPhotos === 1 ? "flex justify-center" : "flex flex-col space-y-4 sm:grid sm:grid-cols-3 sm:gap-8 sm:p-2 sm:space-y-0"} role="main" aria-label={t('photos.management.gallery')}>
         {/*
           🚨 Το `index` έρχεται από το visibleSlots (ADR-596 SSoT) και είναι η

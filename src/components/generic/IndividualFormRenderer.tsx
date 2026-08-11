@@ -122,7 +122,8 @@ export function IndividualFormRenderer({
         <div key={section.id} className="space-y-6 md:space-y-4">
           {/* Section Header αφαιρέθηκε - δεν θέλουμε το Camera εικονίδιο και το κείμενο "Φωτογραφία" */}
 
-          {/* Section Fields - Special layout for communication section */}
+          {/* catalog-exempt: πεδία φόρμας ατόμου, όχι κάρτες — η φόρμα δύο στηλών είναι
+              απόφαση αναγνωσιμότητας και το πλάτος πεδίου το ορίζει η φόρμα, όχι δάπεδο κάρτας. */}
           <div className={section.id === 'communication'
             ? "w-full space-y-4"
             : "w-full grid grid-cols-1 md:grid-cols-2 gap-4"

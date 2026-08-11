@@ -75,7 +75,7 @@ function walkSource(dir: string, out: string[] = []): string[] {
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('Κ1-Κ2 · η γραμματική του εγγενούς καταλόγου', () => {
-  const tracks = [gridPatterns.cards.media, gridPatterns.cards.tile];
+  const tracks = [gridPatterns.cards.media, gridPatterns.cards.tile, gridPatterns.cards.chip];
 
   it.each(tracks)(
     'Κ1 · %s χρησιμοποιεί auto-fill, ΠΟΤΕ auto-fit',
@@ -118,8 +118,8 @@ describe('Κ3 · κάθε ελάχιστο εμφανίζεται ΑΚΡΙΒΩΣ
       }
     }
 
-    // Δύο οικογένειες καρτών ⇒ δύο ελάχιστα, το καθένα σε ΜΙΑ θέση.
-    expect([...occurrences.keys()].sort()).toEqual(['15rem', '20rem']);
+    // ΤΡΕΙΣ οικογένειες καρτών ⇒ τρία ελάχιστα, το καθένα σε ΜΙΑ θέση (ADR-784 §10).
+    expect([...occurrences.keys()].sort()).toEqual(['10rem', '15rem', '20rem']);
     for (const [min, files] of occurrences) {
       expect(`${min}: ${files.join(', ')}`).toBe(
         `${min}: src/styles/design-tokens/modules/layout.ts`,
@@ -127,10 +127,58 @@ describe('Κ3 · κάθε ελάχιστο εμφανίζεται ΑΚΡΙΒΩΣ
     }
   });
 
-  it('Κ3β · τα δύο ελάχιστα ΔΙΑΦΕΡΟΥΝ — δύο οικογένειες καρτών, μετρημένο', () => {
-    // Η κάρτα με εικόνα 192 px και το συμπαγές πλακίδιο χωρίς εικόνα ΔΕΝ έχουν το ίδιο δάπεδο.
-    // Μια σύμπτυξη σε έναν αριθμό θα ήταν ισοπέδωση, όχι κεντρικοποίηση.
-    expect(gridPatterns.cards.media).not.toBe(gridPatterns.cards.tile);
+  it('Κ3β · τα τρία ελάχιστα ΔΙΑΦΕΡΟΥΝ — τρεις οικογένειες καρτών, μετρημένο', () => {
+    // Η κάρτα με εικόνα 192 px, το συμπαγές πλακίδιο και το τσιπάκι εικονιδίου-και-ετικέτας
+    // ΔΕΝ έχουν το ίδιο δάπεδο. Μια σύμπτυξη σε έναν αριθμό θα ήταν ισοπέδωση.
+    const minima = [gridPatterns.cards.media, gridPatterns.cards.tile, gridPatterns.cards.chip];
+    expect(new Set(minima).size).toBe(minima.length);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Κ3γ — 🔴 ΤΟ ΤΡΙΤΟ ΕΛΑΧΙΣΤΟ ΗΤΑΝ ΑΝΑΓΚΗ, ΟΧΙ ΠΡΟΤΙΜΗΣΗ (ADR-784 §10)
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('Κ3γ · το τσιπάκι αναπαράγει τη σκάλα που έστειλε ο σχεδιαστής', () => {
+  /**
+   * Ο κανόνας του `repeat(auto-fill, minmax(X, 1fr))`: χωράνε `n` στήλες όσο
+   * `n·X + (n−1)·gap ≤ container`, δηλαδή `n = ⌊(container + gap) / (X + gap)⌋`.
+   *
+   * ⚠️ Αυτό είναι **αριθμητική**, όχι διάταξη — το jsdom δεν λύνει `grid` (Π4). Αποδεικνύει
+   * ότι ο **αριθμός** που διαλέχτηκε είναι ο σωστός· ότι η μηχανή τον εφαρμόζει το αποδεικνύει
+   * η ζωντανή μέτρηση.
+   */
+  const columns = (containerPx: number, minPx: number, gapPx: number): number =>
+    Math.floor((containerPx + gapPx) / (minPx + gapPx));
+
+  /**
+   * ⚠️ **ΥΠΟΛΟΓΙΖΕΤΑΙ ΜΕΣΑ ΣΤΟ TEST, ΠΟΤΕ ΣΕ ΕΠΙΠΕΔΟ `describe`.** Η πρώτη γραφή το έκανε στο
+   * σώμα του `describe` και μια άσχετη μετάλλαξη (αφαίρεση του φρουρού `min(100%)`) **σκότωνε
+   * ολόκληρη τη σουίτα** με «Test suite failed to run»: η μετάλλαξη πιανόταν, αλλά **καμία
+   * ονομασμένη άγκυρα δεν το έλεγε**, δηλαδή το test έχανε ακριβώς την ιδιότητα για την οποία
+   * υπάρχει — να ονομάζει τι έσπασε. Το έπιασε η μετάλλαξη `Μμ3`.
+   */
+  const minPx = (track: string): number => {
+    const m = track.match(/min\(100%,(\d+)rem\)/);
+    return m ? Number(m[1]) * 16 : Number.NaN;
+  };
+
+  const GAP = 8; // `gap-2`, το κενό που ήδη χρησιμοποιούν τα πλέγματα των επιλογέων
+
+  it.each([
+    [344, 2], // κινητό — η σκάλα έλεγε `grid-cols-2`
+    [600, 3], // σκαλί `sm` — η σκάλα έλεγε `sm:grid-cols-3`
+    [800, 4], // σκαλί `lg` — η σκάλα έλεγε `lg:grid-cols-4`
+  ])('Κ3γ · δοχείο %i px ⇒ %i στήλες, ΑΚΡΙΒΩΣ όσες έλεγε η σκάλα', (container, expected) => {
+    expect(columns(container, minPx(gridPatterns.cards.chip), GAP)).toBe(expected);
+  });
+
+  it('Κ3γβ · το ΠΛΑΚΙΔΙΟ θα κατέρρεε σε μία στήλη στο κινητό — γι΄ αυτό χρειάστηκε τρίτο', () => {
+    // Η απόδειξη ότι ο τρίτος αριθμός δεν είναι γούστο: το υπάρχον ελάχιστο δίνει ΜΙΑ στήλη
+    // εκεί που ο σχεδιαστής έστειλε δύο, δηλαδή ένα τσιπάκι με εικονίδιο 40 px θα έπιανε
+    // ολόκληρη τη γραμμή του κινητού.
+    expect(columns(344, minPx(gridPatterns.cards.tile), GAP)).toBe(1);
+    expect(columns(344, minPx(gridPatterns.cards.chip), GAP)).toBe(2);
   });
 });
 
@@ -195,10 +243,36 @@ describe('Κ6 · δύο ερωτήματα, δύο μηχανισμοί', () => 
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('Κ7 · η δηλωμένη αυθεντία έχει καταναλωτές', () => {
-  it('Κ7 · και οι τέσσερις κατάλογοι τη ρωτούν', () => {
+  it('Κ7 · και οι τέσσερις αρχικοί κατάλογοι τη ρωτούν', () => {
     // Ένας φρουρός που δεν τον καλεί κανείς είναι σχόλιο (ADR-749 §5 — 606 αδρανείς).
     const consumers = CATALOGS.filter((rel) => read(rel).includes('gridPatterns.cards'));
     expect(consumers).toHaveLength(CATALOGS.length);
+  });
+
+  /**
+   * 🔴 **Η ΜΕΤΑΝΑΣΤΕΥΣΗ ΤΩΝ 44 (ADR-784 §10).** Ο αριθμός **δεν** καρφώνεται: μια χειρόγραφη
+   * λίστα καταναλωτών θα ήταν **δεύτερη αυθεντία** που αποκλίνει σιωπηλά (σχήμα των δύο
+   * λιστών namespace του CHECK 3.34, που είχαν αποκλίνει κατά 63). Η άγκυρα ρωτά **τον δίσκο**
+   * και απαιτεί τάξη μεγέθους: αν οι καταναλωτές πέσουν κάτω από 20, κάποιος ξήλωσε τη
+   * μετανάστευση χωρίς να το πει.
+   */
+  it('Κ7β · η αυθεντία έχει ΔΕΚΑΔΕΣ καταναλωτές μετά τη μετανάστευση', () => {
+    const consumers = walkSource(SRC).filter(
+      (f) => withoutComments(readFileSync(f, 'utf8')).includes('gridPatterns.cards'),
+    );
+    expect(consumers.length).toBeGreaterThanOrEqual(20);
+  });
+
+  /**
+   * 🔴 **ΤΟ ΠΛΕΓΜΑ ΠΟΛΥΜΕΣΩΝ ΤΟΥ SHOWCASE ΗΤΑΝ ΓΡΑΜΜΕΝΟ ΠΕΝΤΕ ΦΟΡΕΣ.** Τέσσερα ιδιωτικά
+   * `MediaGrid` (ένα ανά showcase client) συν το `ShowcasePhotoGrid` — και ο τύπος δεδομένων
+   * τους ήταν **ήδη** ένας (ADR-698), δηλαδή η αιτία της αντιγραφής είχε ήδη εξαλειφθεί.
+   */
+  it('Κ7γ · κανένα ιδιωτικό αντίγραφο του πλέγματος πολυμέσων δεν επέζησε', () => {
+    const offenders = walkSource(SRC).filter(
+      (f) => /function\s+MediaGrid\s*\(/.test(withoutComments(readFileSync(f, 'utf8'))),
+    );
+    expect(offenders).toEqual([]);
   });
 });
 
@@ -221,13 +295,13 @@ describe('Κ8 · οι κλάσεις του καταλόγου ΓΙΝΟΝΤΑΙ 
     const postcss = require('postcss');
     const tailwind = require('tailwindcss');
 
-    const raw = `<div class="${gridPatterns.cards.media} ${gridPatterns.cards.tile}"></div>`;
+    const raw = `<div class="${gridPatterns.cards.media} ${gridPatterns.cards.tile} ${gridPatterns.cards.chip}"></div>`;
     const result = await postcss([
       tailwind({ content: [{ raw, extension: 'html' }], theme: {}, plugins: [] }),
     ]).process('@tailwind utilities;', { from: undefined });
 
     const emitted = result.css.match(/grid-template-columns:[^;}]+/g) ?? [];
-    expect(emitted).toHaveLength(2);
+    expect(emitted).toHaveLength(3);
     for (const rule of emitted) {
       expect(rule).toContain('auto-fill');
       expect(rule).toMatch(/min\(100%/);

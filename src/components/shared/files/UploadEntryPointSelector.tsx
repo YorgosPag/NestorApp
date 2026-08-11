@@ -35,32 +35,22 @@ import type { UploadEntryPoint } from '@/config/upload-entry-points';
 import { getSortedEntryPoints, getFilteredContactEntryPoints } from '@/config/upload-entry-points';
 import * as LucideIcons from 'lucide-react';
 import '@/lib/design-system';
+import { gridPatterns } from '@/styles/design-tokens';
+// ADR-784 §10.7 / CHECK 3.28 — κοινό συμβόλαιο + κοινό πεδίο τίτλου με τον HierarchicalEntryPointSelector.
+import {
+  EntryPointCustomTitleInput,
+  type EntryPointSelectorBaseProps,
+} from './entry-point-selector-shared';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface UploadEntryPointSelectorProps {
-  /** Entity type για filtering entry points */
-  entityType: EntityType;
-  /** Currently selected entry point ID */
-  selectedEntryPointId?: string;
-  /** Callback when entry point is selected */
-  onSelect: (entryPoint: UploadEntryPoint) => void;
-  /** Optional CSS class */
-  className?: string;
-  /** Display language */
-  language?: 'el' | 'en';
-  /** 🏢 ENTERPRISE: Custom title για "Άλλο Έγγραφο" (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ) */
-  customTitle?: string;
-  /** 🏢 ENTERPRISE: Callback when custom title changes */
-  onCustomTitleChange?: (title: string) => void;
-  /** 🏢 ENTERPRISE: Filter to show only specific categories (e.g., 'photos' for PhotosTab) */
-  categoryFilter?: FileCategory;
-  /** 🏢 ENTERPRISE: Exclude specific categories (e.g., ['photos', 'videos'] for DocumentsTab) */
-  excludeCategories?: FileCategory[];
-  /** 🏢 ENTERPRISE: Whitelist specific entry point IDs — shows ONLY these */
-  allowedEntryPointIds?: string[];
+/**
+ * ADR-784 §10.7 — τα δέκα κοινά props ζουν στη **βάση**· εδώ μένει ό,τι είναι ειδικό για τη ροή
+ * μεταφόρτωσης (φιλτράρισμα κατά πρόσωπο επαφής, ADR-121).
+ */
+export interface UploadEntryPointSelectorProps extends EntryPointSelectorBaseProps {
   /** 🏢 ENTERPRISE: Contact type for persona-aware filtering (individual/company/service) */
   contactType?: ContactType;
   /** 🎭 ENTERPRISE: Active personas for individual contacts (ADR-121) */
@@ -192,7 +182,7 @@ export function UploadEntryPointSelector({
           {t('upload.noSearchResults')}
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        <div className={`gap-2 grid ${gridPatterns.cards.chip}`}>
           {filteredEntryPoints.map((entryPoint) => {
             const Icon = getIcon(entryPoint.icon);
             const isSelected = selectedEntryPointId === entryPoint.id;
@@ -284,35 +274,13 @@ export function UploadEntryPointSelector({
 
       {/* 🏢 ENTERPRISE: Custom Title Input (ΤΕΛΕΙΩΤΙΚΗ ΕΝΤΟΛΗ)
           Displayed when selected entry point requires custom title */}
+      {/* ADR-784 §10.7 / CHECK 3.28 — ΕΝΑ πεδίο, κοινό με τον HierarchicalEntryPointSelector. */}
       {selectedEntryPoint?.requiresCustomTitle && (
-        <div className="space-y-2">
-          <label htmlFor="custom-title" className="block text-sm font-medium text-foreground">
-            {t('upload.documentTitle')} <span className="text-destructive">*</span>
-          </label>
-          <input
-            id="custom-title"
-            type="text"
-            value={customTitle}
-            onChange={(e) => onCustomTitleChange?.(e.target.value)}
-            placeholder={t('upload.customTitlePlaceholder')}
-            required
-            className={cn(
-              'w-full px-2 py-2 rounded-md border bg-background text-foreground',
-              `placeholder:${colors.text.muted}`,
-              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-              'transition-colors',
-              customTitle.trim() === ''
-                ? 'border-destructive/50 focus:ring-destructive'
-                : 'border-border'
-            )}
-            aria-required="true"
-            aria-invalid={customTitle.trim() === ''}
-            aria-describedby="custom-title-hint"
-          />
-          <p id="custom-title-hint" className={cn("text-xs", colors.text.muted)}>
-            {t('upload.customTitleHint')}
-          </p>
-        </div>
+        <EntryPointCustomTitleInput
+          htmlId="custom-title"
+          customTitle={customTitle}
+          onCustomTitleChange={onCustomTitleChange}
+        />
       )}
     </section>
   );

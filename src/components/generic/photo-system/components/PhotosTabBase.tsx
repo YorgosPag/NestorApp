@@ -46,6 +46,7 @@ import { usePhotosTabState } from '../hooks/usePhotosTabState';
 import { usePhotosTabUpload } from '../hooks/usePhotosTabUpload';
 import { useEntityFiles } from '@/components/shared/files/hooks/useEntityFiles';
 import { usePhotosCategories } from '../hooks/usePhotosCategories';
+import { usePhotoCategoryLabel } from '../hooks/usePhotoCategoryLabel';
 import { getPhotosTabConfig, getGridClasses } from '../config/photos-tab-config';
 
 // Types
@@ -98,15 +99,8 @@ function PhotosTabStats({ totalCount: _totalCount, categoryStats, categories }: 
   const iconSizes = useIconSizes();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-
-  // 🏢 ENTERPRISE: Translate category label if it's an i18n key
-  const translateLabel = (label: string): string => {
-    if (label.includes('.')) {
-      const translated = t(label);
-      return translated === label ? label : translated;
-    }
-    return label;
-  };
+  // ADR-784 §10.4 / CHECK 3.28 — ο μεταφραστής ετικέτας ζει σε ΕΝΑ σημείο.
+  const translateLabel = usePhotoCategoryLabel();
 
   if (!categories || categories.length === 0) {
     return null;
@@ -118,6 +112,10 @@ function PhotosTabStats({ totalCount: _totalCount, categoryStats, categories }: 
         <Camera className={iconSizes.md} />
         {t('photos.overview')}
       </h3>
+      {/* catalog-exempt: ΚΛΕΙΣΤΟ ΛΕΞΙΛΟΓΙΟ — το `config.categories` είναι πάντα ένα από τα
+          σταθερά `*_PHOTO_CATEGORIES` των ΤΕΣΣΑΡΩΝ στοιχείων, και το τέσσερα της σκάλας ΕΙΝΑΙ
+          το πλήθος του λεξιλογίου. Ο εγγενής κατάλογος μετρήθηκε και απορρίφθηκε: δοχείο
+          ~312 px στο κινητό με κενό 16 px δίνει ΜΙΑ στήλη εκεί που ο σχεδιαστής έστειλε δύο. */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {categories.map((category) => {
           const stat = categoryStats.find((s) => s.categoryId === category.id);
@@ -157,15 +155,8 @@ function PhotosTabCategories({
   const colors = useSemanticColors();
   // 🏢 ENTERPRISE: i18n hook for translations
   const { t } = useTranslation(['building', 'building-address', 'building-filters', 'building-storage', 'building-tabs', 'building-timeline']);
-
-  // 🏢 ENTERPRISE: Translate category label if it's an i18n key
-  const translateLabel = (label: string): string => {
-    if (label.includes('.')) {
-      const translated = t(label);
-      return translated === label ? label : translated;
-    }
-    return label;
-  };
+  // ADR-784 §10.4 / CHECK 3.28 — ο ίδιος μεταφραστής με το `PhotosTabStats`, όχι δεύτερο σώμα.
+  const translateLabel = usePhotoCategoryLabel();
 
   return (
     <nav className="flex flex-wrap gap-2 mb-4" role="tablist">

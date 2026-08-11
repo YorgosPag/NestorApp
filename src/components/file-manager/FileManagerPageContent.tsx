@@ -78,6 +78,7 @@ import { FileManagerErrorView } from './FileManagerErrorView';
 import '@/lib/design-system';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import type { FileRecord } from '@/types/file-record';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // ============================================================================
 // Re-exports for backward compatibility
@@ -293,7 +294,7 @@ export function FileManagerPageContent() {
                         </p>
                       </section>
                     ) : viewMode === 'gallery' ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
+                      <div className={`gap-4 p-4 grid ${gridPatterns.cards.tile}`}>
                         {filteredFiles.map((file) => (
                           <FileCard
                             key={file.id}

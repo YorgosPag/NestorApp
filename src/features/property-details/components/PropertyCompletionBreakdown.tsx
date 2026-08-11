@@ -28,6 +28,7 @@ import { useIconSizes } from '@/hooks/useIconSizes';
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { gridPatterns } from '@/styles/design-tokens';
 import type {
   CompletionAssessment,
   FieldKey,
@@ -212,7 +213,8 @@ export function PropertyCompletionBreakdown({
       </p>
       <ul
         className={cn(
-          'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 w-full',
+          'grid w-full',
+          gridPatterns.cards.tile,
           spacing.gap.sm,
         )}
       >

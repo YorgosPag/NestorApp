@@ -21,6 +21,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ProjectGridCard } from '@/domain';
 import '@/lib/design-system';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // 🏢 ENTERPRISE: View mode type (matches useProjectsPageState)
 type ProjectsViewMode = 'list' | 'grid' | 'byType' | 'byStatus';
@@ -89,6 +90,60 @@ export function ProjectViewSwitch({
     };
   };
 
+  /**
+   * 🔴 ADR-784 §10.7 / CHECK 3.28 — **ΤΟ ΣΥΡΤΑΡΙ ΤΟΥ ΚΙΝΗΤΟΥ ΓΡΑΦΟΤΑΝ ΔΥΟ ΦΟΡΕΣ.**
+   *
+   * Η προβολή πλέγματος και η προβολή λίστας κατέληγαν στο **ίδιο ακριβώς** συρτάρι με τις
+   * λεπτομέρειες του έργου — δεκατέσσερις γραμμές props η καθεμία. Δύο αντίγραφα σημαίνει ότι
+   * ένα prop μπορούσε να προστεθεί στο ένα και να **λείπει σιωπηλά** στο άλλο, δηλαδή η ίδια
+   * οθόνη να συμπεριφέρεται αλλιώς ανάλογα με το πώς την άνοιξες.
+   */
+  const mobileSlideIn = (
+    <MobileDetailsSlideIn
+      isOpen={!!selectedProject}
+      onClose={() => onSelectProject(null)}
+      title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
+      actionButtons={
+        <button
+          onClick={() => selectedProject && onDeleteProject?.(selectedProject)}
+          className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
+          aria-label={t('viewSwitch.deleteLabel')}
+        >
+          <Trash2 className={iconSizes.sm} />
+        </button>
+      }
+    >
+      {selectedProject && (
+        <ProjectDetails
+          project={getProjectWithCompanyName(selectedProject)}
+          initialTab={initialTab}
+          onNewProject={onNewProject}
+          onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
+          isEditing={isEditingProject}
+          onSetEditing={setIsEditingProject}
+          isCreateMode={isCreateMode}
+          onProjectCreated={onProjectCreated}
+          onCancelCreate={onCancelCreate}
+          onDraftStatusChange={onDraftStatusChange}
+          isTrashMode={isTrashMode}
+        />
+      )}
+    </MobileDetailsSlideIn>
+  );
+
+  /** Ο ίδιος κατάλογος σε δύο δοχεία (desktop split · κινητό πλήρους πλάτους) — **μία** δήλωση. */
+  const projectsListPanel = (
+    <ProjectsList
+      projects={projects}
+      selectedProject={selectedProject}
+      onSelectProject={(p) => onSelectProject(toggleSelect(selectedProject, p))}
+      companies={companies}
+      onNewProject={onNewProject}
+      onEditProject={selectedProject && !isTrashMode ? handleEditProject : undefined}
+      onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
+    />
+  );
+
   // 🏢 ENTERPRISE: Grid View Rendering - Using proper GridCard (PR: Enterprise Grid System)
   // Uses ProjectGridCard (vertical layout) for grid view
   if (viewMode === 'grid') {
@@ -97,7 +152,7 @@ export function ProjectViewSwitch({
         {/* 🖥️ DESKTOP & MOBILE: Grid layout */}
         <ScrollArea className="flex-1 w-full">
           <section
-            className={cn(spacing.padding.sm, "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4", spacing.gap.sm)}
+            className={cn(spacing.padding.sm, "grid", gridPatterns.cards.tile, spacing.gap.sm)}
             aria-label={t('grid.ariaLabel')}
           >
             {projects.map((project: Project) => (
@@ -113,37 +168,7 @@ export function ProjectViewSwitch({
           </section>
         </ScrollArea>
 
-        {/* 📱 MOBILE: Slide-in ProjectDetails when project is selected */}
-        <MobileDetailsSlideIn
-          isOpen={!!selectedProject}
-          onClose={() => onSelectProject(null)}
-          title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
-          actionButtons={
-            <button
-              onClick={() => selectedProject && onDeleteProject?.(selectedProject)}
-              className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
-              aria-label={t('viewSwitch.deleteLabel')}
-            >
-              <Trash2 className={iconSizes.sm} />
-            </button>
-          }
-        >
-          {selectedProject && (
-            <ProjectDetails
-              project={getProjectWithCompanyName(selectedProject)}
-              initialTab={initialTab}
-              onNewProject={onNewProject}
-              onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-              isEditing={isEditingProject}
-            onSetEditing={setIsEditingProject}
-            isCreateMode={isCreateMode}
-            onProjectCreated={onProjectCreated}
-            onCancelCreate={onCancelCreate}
-            onDraftStatusChange={onDraftStatusChange}
-            isTrashMode={isTrashMode}
-            />
-          )}
-        </MobileDetailsSlideIn>
+        {mobileSlideIn}
       </>
     );
   }
@@ -153,15 +178,7 @@ export function ProjectViewSwitch({
     <>
       {/* 🖥️ DESKTOP: Standard split layout */}
       <div className={cn("hidden md:flex flex-1 min-h-0", spacing.gap.sm)}>
-        <ProjectsList
-            projects={projects}
-            selectedProject={selectedProject}
-            onSelectProject={(p) => onSelectProject(toggleSelect(selectedProject, p))}
-            companies={companies}
-            onNewProject={onNewProject}
-            onEditProject={selectedProject && !isTrashMode ? handleEditProject : undefined}
-            onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-        />
+        {projectsListPanel}
         <ProjectDetails
           project={selectedProject ? getProjectWithCompanyName(selectedProject) : null}
           initialTab={initialTab}
@@ -179,48 +196,10 @@ export function ProjectViewSwitch({
 
       {/* 📱 MOBILE: Show only ProjectsList when no project is selected */}
       <div className={`md:hidden w-full ${selectedProject ? 'hidden' : 'block'}`}>
-        <ProjectsList
-            projects={projects}
-            selectedProject={selectedProject}
-            onSelectProject={(p) => onSelectProject(toggleSelect(selectedProject, p))}
-            companies={companies}
-            onNewProject={onNewProject}
-            onEditProject={selectedProject && !isTrashMode ? handleEditProject : undefined}
-            onDeleteProject={selectedProject && onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-        />
+        {projectsListPanel}
       </div>
 
-      {/* 📱 MOBILE: Slide-in ProjectDetails when project is selected */}
-      <MobileDetailsSlideIn
-        isOpen={!!selectedProject}
-        onClose={() => onSelectProject(null)}
-        title={selectedProject ? getProjectWithCompanyName(selectedProject).name : t('viewSwitch.detailsTitle')}
-        actionButtons={
-          <button
-            onClick={() => selectedProject && onDeleteProject?.(selectedProject)}
-            className={cn(spacing.padding.sm, "rounded-md border border-border text-destructive", colors.bg.primary, INTERACTIVE_PATTERNS.SUBTLE_HOVER)}
-            aria-label={t('viewSwitch.deleteLabel')}
-          >
-            <Trash2 className={iconSizes.sm} />
-          </button>
-        }
-      >
-        {selectedProject && (
-          <ProjectDetails
-            project={getProjectWithCompanyName(selectedProject)}
-            initialTab={initialTab}
-            onNewProject={onNewProject}
-            onDeleteProject={onDeleteProject ? () => onDeleteProject(selectedProject) : undefined}
-            isEditing={isEditingProject}
-            onSetEditing={setIsEditingProject}
-            isCreateMode={isCreateMode}
-            onProjectCreated={onProjectCreated}
-            onCancelCreate={onCancelCreate}
-            onDraftStatusChange={onDraftStatusChange}
-            isTrashMode={isTrashMode}
-          />
-        )}
-      </MobileDetailsSlideIn>
+      {mobileSlideIn}
     </>
   );
 }

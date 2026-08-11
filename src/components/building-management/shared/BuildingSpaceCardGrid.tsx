@@ -17,6 +17,7 @@ import { INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { BuildingSpaceActions } from './BuildingSpaceActions';
 import type { SpaceCardField, SpaceActions, SpaceActionState } from './types';
+import { gridPatterns } from '@/styles/design-tokens';
 import '@/lib/design-system';
 
 // ============================================================================
@@ -57,7 +58,7 @@ export function BuildingSpaceCardGrid<T>({
   const hasActions = actions && (actions.onView || actions.onEdit || actions.onUnlink || actions.onDelete);
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+    <section className={`grid gap-2 ${gridPatterns.cards.tile}`}>
       {items.map((item) => {
         const key = getKey(item);
 
