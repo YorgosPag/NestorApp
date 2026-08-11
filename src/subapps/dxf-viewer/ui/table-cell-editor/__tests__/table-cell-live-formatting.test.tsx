@@ -20,10 +20,23 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 
 jest.mock('@/i18n/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+/**
+ * 🔴 Ο γραφέας του προχείρου, κατασκοπευμένος — δες την **ομάδα Ε**.
+ *
+ * Το `requireActual` κρατά **όλες** τις υπόλοιπες εξαγωγές ζωντανές: ο επεξεργαστής καλεί έξι
+ * ακόμη πράγματα από αυτό το store, και ένα σκέτο `jest.mock` θα τα έκανε `undefined` — δηλαδή
+ * θα αντικαθιστούσε το ελάττωμα που κυνηγάμε με ένα δικό μας.
+ */
+const setDraftSpy = jest.fn();
+jest.mock('../../../state/table-cell-cursor-store', () => ({
+  ...jest.requireActual('../../../state/table-cell-cursor-store'),
+  setTableCellCursorDraft: (value: string) => setDraftSpy(value),
 }));
 
 import { TableCellEditorOverlay } from '../TableCellEditorOverlay';
@@ -89,6 +102,23 @@ function mountEditor(overrides: {
       onCut={NOOP}
       onPaste={NOOP}
       onOpenLink={NOOP}
+    />,
+  );
+  const field = document.querySelector<HTMLElement>('[data-table-rich-text="true"]');
+  if (!field) throw new Error('ο πλούσιος επεξεργαστής δεν αποδόθηκε');
+  return field;
+}
+
+/** Το ίδιο, με δεμένο (read-only) κελί — δες την ομάδα Ε. */
+function mountEditorReadOnly(): HTMLElement {
+  render(
+    <TableCellEditorOverlay
+      entityId="tbl-1" rowId="r1" colId="c1" mode="edit"
+      draft="ΤΙΜΗ" initialText="ΤΙΜΗ" cellStyle={CELL_STYLE}
+      caretRevision={0} anchor={ANCHOR} readOnly
+      onCommit={NOOP} onMove={NOOP} onClear={NOOP} onHistory={NOOP} onExtend={NOOP}
+      onSelectAll={NOOP} onToggleAbsoluteRef={NOOP}
+      onCopy={NOOP} onCut={NOOP} onPaste={NOOP} onOpenLink={NOOP}
     />,
   );
   const field = document.querySelector<HTMLElement>('[data-table-rich-text="true"]');
@@ -247,5 +277,61 @@ describe('Δ — η πλατύτερη τυπογραφία', () => {
       style: { ...CELL_STYLE, bold: false },
     });
     expect(widest).toEqual({ heightMm: CELL_STYLE.textHeightMm, bold: true });
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ΟΜΑΔΑ Ε — 🔴 ΟΙ ΧΕΙΡΙΣΤΕΣ **ΕΚΤΕΛΟΥΝΤΑΙ**, ΔΕΝ ΑΡΚΕΙ ΝΑ ΥΠΑΡΧΟΥΝ
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 🔴 **ΓΙΑΤΙ ΥΠΑΡΧΕΙ ΑΥΤΗ Η ΟΜΑΔΑ — ΤΗΝ ΓΕΝΝΗΣΕ ΜΕΤΡΗΜΕΝΗ ΑΣΤΟΧΙΑ, ΟΧΙ ΠΡΟΒΛΕΨΗ.**
+ *
+ * Στη διάρκεια του §28 ο επεξεργαστής έμεινε **χωρίς την εισαγωγή** του
+ * `setTableCellCursorDraft`. Η εφαρμογή έσκαγε στο **πρώτο πάτημα πλήκτρου** μέσα σε κελί
+ * (`ReferenceError: setTableCellCursorDraft is not defined`) — και **και τα 608 tests του
+ * φακέλου ήταν πράσινα**, γιατί κανένα δεν **εκτελούσε** τον χειριστή: όλα απέδιδαν το
+ * component, διάβαζαν DOM, πατούσαν πλήκτρα που δρομολογούνται αλλού.
+ *
+ * Ένας χειριστής που **υπάρχει** δεν είναι χειριστής που **δουλεύει**. Ο μεταγλωττιστής θα το
+ * έπιανε, αλλά ο N.17 τον απαγορεύει στον πράκτορα — άρα η άγκυρα είναι το **μόνο** όργανο
+ * που μένει, και οφείλει να πυροδοτεί **πραγματικά συμβάντα** στο **πραγματικό** στοιχείο.
+ */
+describe('Ε — οι χειριστές εισόδου εκτελούνται πάνω στο πραγματικό στοιχείο', () => {
+  beforeEach(() => setDraftSpy.mockClear());
+
+  test('Ε1: ένα `input` φτάνει στο πρόχειρο — ο δρόμος που έσπαγε', () => {
+    const field = mountEditor({ draft: 'ΝΕΣΤΩΡ', initialText: 'ΝΕΣΤΩΡ', runs: OMEGA_RHO });
+    field.textContent = 'ΝΕΣΤΩΡΑ';
+    fireEvent.input(field);
+    expect(setDraftSpy).toHaveBeenCalledWith('ΝΕΣΤΩΡΑ');
+  });
+
+  test('Ε2: η αλλαγή γραμμής ισοπεδώνεται πριν φτάσει στο μοντέλο', () => {
+    const field = mountEditor({ draft: '', initialText: '' });
+    field.textContent = 'ΠΡΩΤΗ\nΔΕΥΤΕΡΗ';
+    fireEvent.input(field);
+    expect(setDraftSpy).toHaveBeenCalledWith('ΠΡΩΤΗ ΔΕΥΤΕΡΗ');
+  });
+
+  test('Ε3: το τέλος σύνθεσης IME ξαναδιαβάζει το πεδίο — ο δεύτερος δρόμος', () => {
+    const field = mountEditor({ draft: 'Α', initialText: 'Α' });
+    field.textContent = 'Ά';
+    fireEvent.compositionEnd(field);
+    expect(setDraftSpy).toHaveBeenCalledWith('Ά');
+  });
+
+  test('Ε4: δεμένο κελί ΑΡΝΕΙΤΑΙ την είσοδο — και η άρνηση είναι εκτελεσμένη, όχι δηλωμένη', () => {
+    const field = mountEditorReadOnly();
+    const event = new Event('beforeinput', { bubbles: true, cancelable: true });
+    field.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  test('Ε5: γράψιμο κελί ΔΕΝ αρνείται — αλλιώς ο φύλακας θα έκλεινε τα πάντα', () => {
+    const field = mountEditor({ draft: 'Α', initialText: 'Α' });
+    const event = new Event('beforeinput', { bubbles: true, cancelable: true });
+    field.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
   });
 });

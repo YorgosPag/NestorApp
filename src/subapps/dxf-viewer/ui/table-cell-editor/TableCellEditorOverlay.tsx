@@ -147,6 +147,9 @@ import {
 // 🔴 ADR-753 §28 — **τι** πρέπει να δείχνει το πεδίο, και **ποιος** το γράφει στο DOM.
 import { tableCellEditorSpans } from './table-cell-editor-spans';
 import { useTableCellRichContent } from './use-table-cell-rich-content';
+// ADR-767 Δ1 — η άρνηση γραφής σε δεμένο κελί. **Native** ακροατής· δες την κεφαλίδα του
+// για το γιατί το `onBeforeInput` του React ΔΕΝ πυροδοτείται.
+import { useTableCellInputGuard } from './use-table-cell-input-guard';
 import {
   flattenToSingleLine,
   TABLE_CELL_RICH_MARKER,
@@ -216,6 +219,8 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
   // Αντίστροφα, το `setSelectionRange` θα ζητούσε χαρακτήρα σε δέντρο που δεν γράφτηκε ακόμη
   // και θα έπεφτε στη θέση 0 — δηλαδή το διπλό κλικ θα έβαζε τον κέρσορα πάντα στην αρχή.
   useTableCellRichContent(inputRef, spans, composingRef);
+  // 🔴 ADR-767 Δ1 — δεμένο κελί: βλέπω και αντιγράφω, δεν πληκτρολογώ.
+  useTableCellInputGuard(inputRef, readOnly);
 
   /**
    * Η εστίαση στο στήσιμο — ο αντικαταστάτης του `autoFocus`, που **δεν υπάρχει** για κουτί
@@ -343,26 +348,6 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
    */
   const handleContextMenu = useTableTextContextMenu();
 
-  /**
-   * 🔴 ADR-767 Δ1 — **η άρνηση γραφής σε δεμένο κελί, εκφρασμένη στο `beforeinput`.**
-   *
-   * Είναι το ακριβές ισοδύναμο του `readOnly` ενός πεδίου φόρμας, και **όχι** κατά προσέγγιση:
-   * το `beforeinput` προηγείται **κάθε** μεταβολής περιεχομένου — πληκτρολόγηση, επικόλληση,
-   * αποκοπή, drag-drop, IME, undo του browser — οπότε ένα `preventDefault` εδώ τις κλείνει
-   * **όλες** με έναν κανόνα. Η επιλογή και η αντιγραφή δεν περνούν από αυτό, άρα μένουν
-   * ελεύθερες, που είναι ακριβώς η προδιαγραφή («βλέπω και αντιγράφω, δεν πληκτρολογώ»).
-   *
-   * ⚠️ Ο φρουρός παραμένει **διπλός** (N.7.2 #4): εδώ ζει η παρουσίαση, ο πραγματικός φύλακας
-   * ζει στο `buildTableCellEditCommand`. Το ένα χωρίς το άλλο είναι ή ευγενική παράκληση ή
-   * μυστήριο.
-   */
-  const handleBeforeInput = useCallback(
-    (event: React.FormEvent<TableRichTextField>) => {
-      if (readOnly) event.preventDefault();
-    },
-    [readOnly],
-  );
-
   const handleCompositionStart = useCallback(() => {
     composingRef.current = true;
   }, []);
@@ -424,7 +409,6 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
         // μένουν, όπως σε κάθε φύλλο υπολογισμού. Δες τον χειριστή και την κεφαλίδα του
         // στοιχείου για το γιατί **δεν** εκφράζεται με `contentEditable={false}`.
         aria-readonly={readOnly}
-        onBeforeInput={handleBeforeInput}
         // Ο ρόλος λέγεται, δεν μαντεύεται: ένα πεδίο που απλώς αγνοεί τα πλήκτρα είναι
         // μυστήριο για κάθε χρήστη και **αόρατο** σε αναγνώστη οθόνης.
         aria-label={t(readOnly ? 'table.cellEditor.boundCellAriaLabel' : 'table.cellEditor.cellAriaLabel')}
