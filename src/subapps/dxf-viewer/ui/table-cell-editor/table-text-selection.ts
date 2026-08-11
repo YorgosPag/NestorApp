@@ -37,6 +37,7 @@
  */
 
 import type { TableTextField } from '../components/table-text-menu/table-text-toolbar-types';
+import type { TableTextAnchoredRange } from '../../bim/table/table-cell-run-ops';
 
 /**
  * Ό,τι μάρκαρε ο χρήστης, **κανονικοποιημένο** και με τη βάση σύγκρισής του.
@@ -44,13 +45,14 @@ import type { TableTextField } from '../components/table-text-menu/table-text-to
  * Τα άκρα είναι πάντα σε σειρά (`start <= end`), ώστε κανένας καταναλωτής να μη χρειάζεται να
  * θυμάται την **ανάποδη σύρση** — το DOM δίνει `selectionStart <= selectionEnd` και ξεχωριστά
  * το `selectionDirection`, αλλά η μορφοποίηση δεν έχει φορά.
+ *
+ * ## 🔴 ADR-753 §25 — ΕΙΝΑΙ ο τύπος του καθαρού επιπέδου, όχι δίδυμός του
+ * Το «δείκτες + η βάση τους» δηλωνόταν **δύο** φορές: εδώ (ανάγνωση από το DOM) και, άγραφα,
+ * στον στόχο-γράμματα του `table-format-scope.ts`. Δύο δηλώσεις της ίδιας τριάδας είναι δύο
+ * ευκαιρίες να ταξιδέψει η μία χωρίς την άλλη — και ταξίδεψε (§25). Ένα ψευδώνυμο και όχι
+ * `extends`: δεν προστίθεται **τίποτα** εδώ, και μια κενή επέκταση θα δήλωνε ότι προστίθεται.
  */
-export interface TableTextSelection {
-  readonly start: number;
-  readonly end: number;
-  /** Το κείμενο του πεδίου τη στιγμή του παγώματος — δες την κεφαλίδα. */
-  readonly text: string;
-}
+export type TableTextSelection = TableTextAnchoredRange;
 
 /**
  * Η τρέχουσα επιλογή του πεδίου.

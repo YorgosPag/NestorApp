@@ -30,9 +30,16 @@
  * οι δύο δρόμοι συμφωνούν. Δέχεται λοιπόν **δομικά** τα δύο πεδία που χρειάζεται· ίδιο μοτίβο
  * με το `TableAxisTarget`, που είναι σκόπιμα το δομικό υποσύνολο του `TableIndicatorHit`.
  *
+ * ## Τι ζει ΔΙΠΛΑ και όχι εδώ
+ * Το **ξεχείλισμα** (`table-format-overflow-scope.ts`): είναι η μόνη πράξη μορφοποίησης που δεν
+ * μιλά αυτό το λεξιλόγιο — το `overflow` δεν είναι πεδίο του `TableCellStyle`, άρα δεν περνά
+ * ούτε από το {@link setTableFormatField} ούτε από το {@link resolveTableFormatState}. Δες την
+ * κεφαλίδα του για το γιατί η τομή δεν είναι το μέγεθος.
+ *
  * @module subapps/dxf-viewer/bim/table/table-format-scope
  * @see bim/table/table-axis-style-ops.ts — ο γραφέας του άξονα
  * @see bim/table/table-range-style-ops.ts — ο γραφέας των κελιών
+ * @see bim/table/table-format-overflow-scope.ts — ό,τι δεν χωρά στο γενικό λεξιλόγιο
  */
 
 import {
@@ -51,17 +58,12 @@ import {
   setRangeStyleField,
 } from './table-range-style-ops';
 import {
-  forEachResolvedCellStyle,
   resolveCellsNumericRange,
   type TableCellNumericKey,
   type TableCellStyleKey,
   type TableFormatState,
   type TableNumericRange,
 } from './table-cell-style-scan';
-// 🔴 ADR-739 §58 Γ2 — η **επίλυση** του ξεχειλίσματος (κελί ▸ στήλη ▸ προεπιλογή) δεν
-// ξαναγράφεται εδώ: είναι ο ίδιος `resolveCellOverflow` που ρωτούν ο μετρητής, ο ζωγράφος, η
-// εξαγωγή και το πινέλο. Μια πέμπτη έκφραση της προτεραιότητας θα ήταν αόρατη όσο συμφωνεί.
-import { resolveCellOverflow } from './table-cell-overflow';
 import {
   extendTableSelectionTo,
   resolveTableCellRange,
@@ -85,7 +87,7 @@ import {
 } from './table-chars-style-ops';
 import {
   isTableTextRunStyleKey,
-  type TableTextRange,
+  type TableTextAnchoredRange,
   type TableTextRunStyleKey,
 } from './table-cell-run-ops';
 import {
@@ -98,7 +100,6 @@ import type { TableCellStyle, TableStyle } from './table-style';
 import type {
   PersistedTableModel,
   TableAxisStyleOverride,
-  TableCellOverflow,
   TableTextRunStyle,
 } from '../../types/table';
 
@@ -131,8 +132,27 @@ export type TableFormatScope =
    *
    * ⚠️ Οι δείκτες είναι θέσεις χαρακτήρων του `TableCell.value` — δες
    * `bim/table/table-cell-run-ops.ts` για το τι σημαίνει αυτό όταν αλλάξει το κείμενο.
+   *
+   * 🔴 ADR-753 §25 — το `range` είναι **αγκυρωμένο** ({@link TableTextAnchoredRange}): κουβαλά
+   * το κείμενο πάνω στο οποίο μετρήθηκε. Χωρίς αυτό, ο στόχος ήταν δύο αριθμοί που ο καλών
+   * όφειλε να **θυμηθεί** να συνοδεύσει με το σωστό κείμενο — και δεν το θυμήθηκε: οι δείκτες
+   * διαβάζονταν από το πεδίο του DOM ενώ το κείμενο γραφόταν από το πρόχειρο του δρομέα.
    */
-  | { readonly kind: 'chars'; readonly cell: TableCellRef; readonly range: TableTextRange };
+  | {
+    readonly kind: 'chars';
+    readonly cell: TableCellRef;
+    readonly range: TableTextAnchoredRange;
+  };
+
+/**
+ * Το σκέλος «γράμματα», ονομασμένο.
+ *
+ * 🔴 ADR-753 §25 — ο κατασκευαστής του ({@link tableCharsFormatScopeOf}) το επιστρέφει
+ * **αστένευτο**, ώστε ο ιδιοκτήτης να μπορεί να διαβάσει τη **βάση των δεικτών** χωρίς δεύτερο
+ * αντίγραφό της. Πριν, ο κατασκευαστής επέστρεφε την πλατιά ένωση, ο ιδιοκτήτης δεν είχε
+ * πρόσβαση στο κείμενο, και το ξαναζητούσε από **άλλη πηγή** — που είναι ακριβώς το ελάττωμα.
+ */
+export type TableCharsFormatScope = Extract<TableFormatScope, { readonly kind: 'chars' }>;
 
 /**
  * Η επιλογή του χρήστη → ο στόχος. `null` όταν η επιλογή είναι μπαγιάτικη (undo, διαγραφή
@@ -183,8 +203,8 @@ export function tableFormatScopeOf(
 export function tableCharsFormatScopeOf(
   model: PersistedTableModel,
   cell: TableCellRef,
-  range: TableTextRange,
-): TableFormatScope | null {
+  range: TableTextAnchoredRange,
+): TableCharsFormatScope | null {
   const resolved = resolveTableModel(model);
   // Ο ίδιος φρουρός επιβίωσης με το `tableFormatScopeOf`: το κελί πρέπει να υπάρχει **ως
   // γεωμετρία**, αλλιώς δεν υπάρχει στόχος — και ο καλών σβήνει αντί να γράψει στο πουθενά.
@@ -307,83 +327,6 @@ export function resolveTableFormatState<K extends TableCellStyleKey>(
   return resolveCellRunState(
     model, scope.cell, scope.range, key, cellState,
   ) as TableFormatState<TableCellStyle[K]>;
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 🔴 ADR-739 §58 Γ2 — το ΞΕΧΕΙΛΙΣΜΑ: δικά του μέλη, όχι `setField` / `state`
-// ──────────────────────────────────────────────────────────────────────────────
-
-/**
- * **Τι ξεχείλισμα ισχύει** στον στόχο· `null` όταν τα κελιά διαφωνούν ή ο στόχος δεν επιβίωσε.
- *
- * ## Γιατί ΔΕΝ περνά από το {@link resolveTableFormatState}
- * Το `overflow` **δεν είναι πεδίο** του `TableCellStyle` — ο τύπος `TableCellStyleKey` είναι η
- * τομή `keyof TableAxisStyleOverride & keyof TableCellStyle` και το πετάει και από τα δύο άκρα:
- * ζει **μόνο** στο `TableCellStyleOverride` (κελί) και στο `TableColumn.overflow` (στήλη). Ο
- * αποκλεισμός είναι σκόπιμος και τεκμηριωμένος στο `types/table.ts`: το ξεχείλισμα δεν είναι
- * τυπογραφία, είναι **απόφαση διάταξης** που καταναλώνεται μία φορά στο στάδιο `place`.
- *
- * Είναι η **ίδια** κατάσταση που έφερε το `numberFormat` (ADR-760) και το χρώμα (§34): όταν η
- * ερώτηση δεν χωρά στο γενικό λεξιλόγιο, αποκτά δικό της μέλος αντί να παραμορφωθεί.
- *
- * 🔑 Ο βρόχος είναι ο **ΕΝΑΣ** ({@link forEachResolvedCellStyle}): το `TableResolvedCell` κουβαλά
- * ήδη `overrides` + `column`, δηλαδή ακριβώς τα δύο επίπεδα που ρωτά ο `resolveCellOverflow`.
- *
- * ⚠️ Ο στόχος-**άξονας** μεταφράζεται σε ορθογώνιο ({@link tableFormatScopeBounds}): «τι
- * ξεχειλίζει αυτή η στήλη;» είναι ερώτηση **κελιών**, και μια μαρκαρισμένη στήλη είναι τα κελιά
- * της — ίδια μετάφραση με τη μορφή αριθμού.
- */
-export function resolveTableFormatOverflow(
-  model: PersistedTableModel,
-  style: TableStyle,
-  scope: TableFormatScope,
-): TableCellOverflow | null {
-  const bounds = tableFormatScopeBounds(model, scope);
-  if (bounds === null) return null;
-
-  let value: TableCellOverflow | undefined;
-  let mixed = false;
-  const visited = forEachResolvedCellStyle(
-    model, style, tableRangeCellRefs(model, bounds), (cell) => {
-      const current = resolveCellOverflow(cell.overrides.cell?.overflow, cell.column.overflow);
-      if (value === undefined) value = current;
-      else if (current !== value) mixed = true;
-    },
-  );
-
-  return !visited || mixed || value === undefined ? null : value;
-}
-
-/**
- * Γράφει το ξεχείλισμα — **πάντα σε επίπεδο ΚΕΛΙΟΥ**, όποιος κι αν είναι ο στόχος.
- *
- * ## 🔴 Η ΜΟΝΗ ΠΡΑΞΗ ΜΟΡΦΟΠΟΙΗΣΗΣ ΠΟΥ ΔΕΝ ΑΚΟΛΟΥΘΕΙ ΤΟ ΣΚΕΛΟΣ ΤΟΥ ΣΤΟΧΟΥ — και γιατί
- * Κάθε άλλο πεδίο γράφεται εκεί που δείχνει η **πρόθεση της επιλογής** (§52: μαρκαρισμένη στήλη
- * ⇒ `TableColumn.styleOverride`). Το ξεχείλισμα **δεν μπορεί**, και ο λόγος είναι μετρήσιμος,
- * όχι αισθητικός:
- *
- * 1. **Υπάρχει ήδη γραφέας, και γράφει κελιά.** Το πινέλο μορφοποίησης (ADR-768 Φ3) γράφει
- *    `overflow` στο `TableCell.styleOverride` μέσα στην όψη `'alignment'`. Δεύτερος γραφέας σε
- *    **άλλο επίπεδο** θα ήταν δύο απαντήσεις στο «πού ζει η αναδίπλωση αυτού του κελιού» — και
- *    η διαφωνία τους θα ήταν αόρατη, γιατί κάθε πλευρά της δουλεύει.
- * 2. **Το `TableColumn.overflow` ΔΕΝ είναι μέρος του `styleOverride`.** Άρα το
- *    {@link clearTableFormatScope} («Επαναφορά μορφοποίησης») **δεν μπορεί να το σβήσει**: ο
- *    χρήστης θα δημιουργούσε με ένα κλικ κατάσταση που η ορατή αναιρετική πράξη δεν αναιρεί.
- * 3. **Η στήλη χάνει από το κελί.** Ένα `'wrap'` γραμμένο στη στήλη είναι σιωπηλά ανίσχυρο σε
- *    κάθε κελί που δηλώνει ήδη δικό του ξεχείλισμα — δηλαδή το κουμπί θα «δούλευε» παντού εκτός
- *    από εκεί που ο χρήστης είχε ήδη ασχοληθεί.
- *
- * ⚠️ Το `TableColumn.overflow` **δεν καταργείται**: παραμένει η προεπιλογή που κληρονομεί κάθε
- * νέα στήλη (`insertTableColumn`) και που διαβάζει η επίλυση. Απλώς **καμία επιφάνεια δεν το
- * γράφει** — και αυτό είναι δηλωμένο, όχι σιωπηλά απόν.
- */
-export function setTableFormatOverflow(
-  model: PersistedTableModel,
-  scope: TableFormatScope,
-  value: TableCellOverflow | undefined,
-): PersistedTableModel {
-  const bounds = tableFormatScopeBounds(model, scope);
-  return bounds === null ? model : setRangeStyleField(model, bounds, 'overflow', value);
 }
 
 /**

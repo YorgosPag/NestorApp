@@ -33,8 +33,8 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import {
   resolveTableFormatState,
   setTableFormatField,
-  setTableFormatOverflow,
 } from '../../../../bim/table/table-format-scope';
+import { setTableFormatOverflow } from '../../../../bim/table/table-format-overflow-scope';
 import { resolveTableStyleFieldOrigin } from '../../../../bim/table/table-format-origin';
 import {
   nextTableAlign,

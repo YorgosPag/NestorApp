@@ -43,13 +43,13 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
 import {
   canResetTableFormatScope,
-  resolveTableFormatOverflow,
   resolveTableFormatState,
   tableFormatNumericRange,
   tableFormatScopeBounds,
   tableFormatScopeOf,
   type TableFormatScope,
 } from '../../bim/table/table-format-scope';
+import { resolveTableFormatOverflow } from '../../bim/table/table-format-overflow-scope';
 import { getAllLayers } from '../../stores/LayerStore';
 import { tableFormatCommands } from './table-format-commands';
 import {

@@ -29,10 +29,10 @@ import {
   clearTableFormatScope,
   resolveTableFormatState,
   setTableFormatField,
-  setTableFormatOverflow,
   stepTableFormatTextHeight,
   type TableFormatScope,
 } from '../../bim/table/table-format-scope';
+import { setTableFormatOverflow } from '../../bim/table/table-format-overflow-scope';
 import type { TableStyle } from '../../bim/table/table-style';
 import type { TextHeightStepDirection } from '../../bim/table/table-text-height-scale';
 import type {

@@ -35,6 +35,7 @@ import {
   clearCellRunStyles,
   isTableTextRunStyleKey,
   setCellRunStyleField,
+  type TableTextAnchoredRange,
   type TableTextRange,
   type TableTextRunNumericKey,
   type TableTextRunStyleKey,
@@ -95,16 +96,21 @@ type TableCellStyleValue = TableCellStyle[TableCellStyleKey];
  * το εύρος έρχεται από ένα πεδίο του DOM, και η μόνη άμυνα απέναντι σε μπαγιάτικους δείκτες
  * είναι να τους κόψει η **αλήθεια του μοντέλου** (`clampRange`). Ο συγχρονισμός των δύο
  * κειμένων είναι ευθύνη του καλούντος — δες `ui/table-cell-editor/table-text-draft-sync.ts`.
+ *
+ * 🔴 ADR-753 §25 — **και επαληθεύεται**: το εύρος είναι {@link TableTextAnchoredRange}, δηλαδή
+ * κουβαλά τη βάση του, και ο {@link writeRuns} αρνείται όταν αυτή δεν είναι το κείμενο του
+ * κελιού. Το clamp μόνο του **δεν αρκεί**: κόβει δείκτες που ξεφεύγουν, όχι δείκτες που
+ * **χωράνε και δείχνουν αλλού**.
  */
 export function setCellRunField(
   model: PersistedTableModel,
   ref: TableCellRef,
-  range: TableTextRange,
+  range: TableTextAnchoredRange,
   key: TableTextRunStyleKey,
   value: TableTextRunStyle[TableTextRunStyleKey],
 ): PersistedTableModel {
-  return writeRuns(model, ref, (cell) =>
-    setCellRunStyleField(cell.runs, cellText(cell).length, range, key, value));
+  return writeRuns(model, ref, range, (cell, textLength) =>
+    setCellRunStyleField(cell.runs, textLength, range, key, value));
 }
 
 /**
@@ -119,10 +125,10 @@ export function setCellRunField(
 export function clearCellRunRange(
   model: PersistedTableModel,
   ref: TableCellRef,
-  range: TableTextRange,
+  range: TableTextAnchoredRange,
 ): PersistedTableModel {
-  return writeRuns(model, ref, (cell) =>
-    clearCellRunStyles(cell.runs, cellText(cell).length, range));
+  return writeRuns(model, ref, range, (cell, textLength) =>
+    clearCellRunStyles(cell.runs, textLength, range));
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -220,8 +226,25 @@ function cellAt(model: PersistedTableModel, ref: TableCellRef): TableCell | unde
 }
 
 /**
- * Ο κοινός σκελετός κάθε εγγραφής: πάρε τα runs, άφησε τον καλούντα να τα μετασχηματίσει,
- * γράψε **μόνο** αν άλλαξαν.
+ * Ο κοινός σκελετός κάθε εγγραφής: **επαλήθευσε τη βάση**, πάρε τα runs, άφησε τον καλούντα να
+ * τα μετασχηματίσει, γράψε **μόνο** αν άλλαξαν.
+ *
+ * ## 🔴 ADR-753 §25 — Η ΕΠΑΛΗΘΕΥΣΗ ΤΗΣ ΒΑΣΗΣ, ΚΑΙ ΓΙΑΤΙ ΕΙΝΑΙ ΕΔΩ
+ * Αυτό είναι το **ένα** σημείο όπου η ερώτηση «σε ποιο κείμενο δείχνουν αυτοί οι δείκτες;»
+ * αποκτά απάντηση από το μοντέλο ({@link cellText}). Άρα είναι και το μόνο σημείο που μπορεί
+ * να τη **συγκρίνει** με τη βάση που δήλωσε ο καλών. Ο έλεγχος γραμμένος στον καλούντα θα
+ * ήταν προϋπόθεση που κάθε νέα επιφάνεια οφείλει να θυμάται — και η πρώτη που θα την ξεχνούσε
+ * θα έβαφε σιωπηλά **άλλα γράμματα**, μία κίνηση μακριά από την αιτία (§25).
+ *
+ * ⚠️ **Άρνηση, όχι εξαίρεση, και όχι «κάνε ό,τι μπορείς».** Δείκτες πάνω σε άλλο κείμενο δεν
+ * είναι «σχεδόν σωστοί»· δείχνουν αλλού — η ίδια σύμβαση με το `isStaleTableTextSelection`
+ * («μπαγιάτικο ⇒ σιωπή»). Το `clampRange` **δεν** καλύπτει αυτό: κόβει δείκτες που **ξεφεύγουν**
+ * από το μήκος, ενώ εδώ το πρόβλημα είναι δείκτες που **χωράνε** και δείχνουν σε λάθος γράμματα.
+ *
+ * ⚠️ Ο κανόνας ισχύει **μόνο για τις εγγραφές**. Οι αναγνώσεις (τι δείχνει το κουμπί) μένουν
+ * σκόπιμα με σκέτο clamp: εκεί μια μικρή απόκλιση —π.χ. ένας χαρακτήρας που προστέθηκε στο
+ * **τέλος** του προχείρου— αφήνει τους δείκτες να δείχνουν στα ίδια γράμματα, και μια άρνηση θα
+ * αντικαθιστούσε μια **σωστή** ένδειξη με την κληρονομιά του κελιού.
  *
  * ⚠️ Το `runs` **αφαιρείται** αντί να τεθεί `undefined` όταν δεν έμεινε τίποτα — η ίδια
  * απόφαση με το `asTextCell` της Φ.Ζ: ένα πεδίο με τιμή `undefined` επιβιώνει σε
@@ -231,11 +254,14 @@ function cellAt(model: PersistedTableModel, ref: TableCellRef): TableCell | unde
 function writeRuns(
   model: PersistedTableModel,
   ref: TableCellRef,
-  next: (cell: TableCell) => TableCell['runs'],
+  range: TableTextAnchoredRange,
+  next: (cell: TableCell, textLength: number) => TableCell['runs'],
 ): PersistedTableModel {
   return writePersistedCellStyles(model, [{ rowId: ref.rowId, colId: ref.colId }], {
     update: (existing) => {
-      const runs = next(existing);
+      const text = cellText(existing);
+      if (text !== range.text) return null;
+      const runs = next(existing, text.length);
       if (runs === existing.runs) return null;
       const { runs: _dropped, ...rest } = existing;
       return runs === undefined ? rest : { ...rest, runs };

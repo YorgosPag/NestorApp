@@ -36,7 +36,10 @@ import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import { resolveTableStyle } from '../../bim/table/table-entity-geometry';
 import { findPersistedCell } from '../../bim/table/table-cell-content';
 import { isFormulaInput } from '../../bim/table/formula/table-formula-parse';
-import { tableCharsFormatScopeOf, type TableFormatScope } from '../../bim/table/table-format-scope';
+import {
+  tableCharsFormatScopeOf,
+  type TableCharsFormatScope,
+} from '../../bim/table/table-format-scope';
 import {
   resolveTableSelectionBounds,
   type TableCellRangeBounds,
@@ -170,9 +173,18 @@ export function useTableTextToolbar(params: UseTableTextToolbarParams): TableTex
    *    χρήστης μπορεί να πληκτρολογεί `=SUM(` **αυτή τη στιγμή** πάνω σε κελί κειμένου, και
    *    μέχρι τη δέσμευση το μοντέλο δεν το ξέρει. Ο κριτής είναι ο **ίδιος** που θα κρίνει και
    *    τη γραφή ({@link isFormulaInput}), όχι δεύτερη σύγκριση με `=`.
+   *
+   * 🔴 **ADR-753 §25 — ΤΟ ΣΚΕΛΟΣ ΚΟΥΒΑΛΑ ΤΟ ΚΕΙΜΕΝΟ ΤΟΥ.** Ο τύπος επιστροφής είναι το
+   * αστένευτο {@link TableCharsFormatScope} και όχι η πλατιά ένωση, ώστε ο καλών να διαβάζει τη
+   * **βάση των δεικτών** από τον ίδιο τον στόχο. Δες το `prepare` του {@link formatTarget}: εκεί
+   * ζούσε το ελάττωμα, γιατί το κείμενο ζητιόταν από **αλλού**.
    */
   const charsScope = useCallback(
-    (model: PersistedTableModel, cell: TableCellRef, draft: string): TableFormatScope | null => {
+    (
+      model: PersistedTableModel,
+      cell: TableCellRef,
+      draft: string,
+    ): TableCharsFormatScope | null => {
       const field = fieldRef.current;
       const selection = selectionRef.current;
       if (!field || !selection) return null;
@@ -214,10 +226,24 @@ export function useTableTextToolbar(params: UseTableTextToolbarParams): TableTex
       // οι δείκτες **δεν σημαίνουν τίποτα** χωρίς το κείμενό τους, ενώ ο στόχος-κελί δεν έχει
       // δείκτες. Ένα άνευ όρου συγχρονισμό θα έβαζε το πληκτρολογημένο κείμενο στο **ίδιο**
       // βήμα αναίρεσης με κάθε πάτημα «Β», χωρίς κανένα κέρδος ορθότητας.
+      //
+      // 🔴🔴 **ADR-753 §25 — ΤΟ ΚΕΙΜΕΝΟ ΕΙΝΑΙ ΤΟΥ ΣΤΟΧΟΥ, ΟΧΙ ΤΟΥ ΔΡΟΜΕΑ.**
+      //
+      // Εδώ έγραφε `draft: cursor.draft`, δηλαδή το κείμενο ερχόταν από το **store** ενώ οι
+      // δείκτες του `chars.range` είχαν μετρηθεί στο **πεδίο του DOM**. Κανείς δεν συνέκρινε τα
+      // δύο, και το συμβόλαιο του `PendingDraftSync.draft` λέει ρητά «*το κείμενο που βλέπει ο
+      // χρήστης αυτή τη στιγμή στο πεδίο*» — που **δεν** είναι το πρόχειρο σε κατάσταση
+      // πλοήγησης (εκεί το πρόχειρο είναι `''` και η γραμμή τύπων δείχνει το δεσμευμένο κείμενο).
+      // Μετρημένο: το «Β» από τη γραμμή τύπων σε πλοήγηση **άδειαζε το κελί**· και μια απόκλιση
+      // κατά **πρόθεμα** έβαφε `[2,4)` πάνω σε κοντύτερο κείμενο, που η επόμενη δέσμευση
+      // μετέτρεπε σε `[2,6)` μέσω του `remapCellTextRuns` — τα «τέσσερα έντονα αντί για δύο».
+      //
+      // Η βάση **ταξιδεύει τώρα μέσα στον στόχο** (ADR-769: «η βάση σύγκρισης ταξιδεύει με το
+      // αίτημα»), οπότε δεν υπάρχει δεύτερη πηγή να διαλέξει λάθος κανείς.
       ...(chars === null ? {} : {
         prepare: (next: PersistedTableModel) => tableModelWithPendingDraft(next, {
           cell,
-          draft: cursor.draft,
+          draft: chars.range.text,
           binding: live.binding,
         }),
       }),

@@ -20,11 +20,13 @@
 
 import {
   clearTableFormatScope,
-  resolveTableFormatOverflow,
-  setTableFormatOverflow,
   tableFormatScopeOf,
   type TableFormatScope,
 } from '../table-format-scope';
+import {
+  resolveTableFormatOverflow,
+  setTableFormatOverflow,
+} from '../table-format-overflow-scope';
 import { nextTableOverflow } from '../table-overflow-ops';
 import { hierarchicalTableStyle } from './hierarchical-table-style-fixture';
 import type { PersistedTableModel } from '../../../types/table';

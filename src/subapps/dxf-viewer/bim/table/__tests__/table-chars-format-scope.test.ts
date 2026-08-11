@@ -48,9 +48,15 @@ function model(cell?: Partial<TableCell>): PersistedTableModel {
   };
 }
 
-/** Ο στόχος «τα γράμματα 2-3», δηλαδή το `ΣΤ` του `ΝΕΣΤΩΡ`. */
+/**
+ * Ο στόχος «τα γράμματα 2-3», δηλαδή το `ΣΤ` του `ΝΕΣΤΩΡ`.
+ *
+ * 🔴 ADR-753 §25 — το εύρος δηλώνει **πάνω σε ποιο κείμενο μετρήθηκε**. Δεν είναι τυπικότητα
+ * του test: είναι η ίδια δήλωση που οφείλει να κάνει κάθε επιφάνεια, και ο γραφέας την
+ * επαληθεύει (δες την ομάδα «η βάση των δεικτών»).
+ */
 function middle(m: PersistedTableModel = model({})): TableFormatScope {
-  const scope = tableCharsFormatScopeOf(m, AT, { start: 2, end: 4 });
+  const scope = tableCharsFormatScopeOf(m, AT, { start: 2, end: 4, text: TEXT });
   if (scope === null) throw new Error('ο στόχος όφειλε να υπάρχει');
   return scope;
 }
@@ -67,13 +73,62 @@ function readBack(runs: readonly TableCellTextRun[] | undefined, length: number)
 const cellOf = (m: PersistedTableModel): TableCell | undefined => m.cells[0]?.[2];
 
 describe('🔴 tableCharsFormatScopeOf — ο κατασκευαστής', () => {
-  it('δίνει σκέλος `chars` με το κελί και το εύρος αυτούσια', () => {
-    expect(middle()).toEqual({ kind: 'chars', cell: AT, range: { start: 2, end: 4 } });
+  it('δίνει σκέλος `chars` με το κελί και το εύρος αυτούσια — **μαζί με τη βάση του**', () => {
+    expect(middle())
+      .toEqual({ kind: 'chars', cell: AT, range: { start: 2, end: 4, text: TEXT } });
   });
 
   it('🔴 κελί που δεν λύνεται ⇒ `null` — ο καλών σβήνει, δεν γράφει στο πουθενά', () => {
-    expect(tableCharsFormatScopeOf(model({}), { rowId: 'χ', colId: 'ψ' }, { start: 0, end: 1 }))
-      .toBeNull();
+    expect(tableCharsFormatScopeOf(
+      model({}), { rowId: 'χ', colId: 'ψ' }, { start: 0, end: 1, text: TEXT },
+    )).toBeNull();
+  });
+});
+
+/**
+ * 🔴 ADR-753 §25 — **Η ΒΑΣΗ ΤΩΝ ΔΕΙΚΤΩΝ ΕΠΑΛΗΘΕΥΕΤΑΙ, ΔΕΝ ΥΠΟΤΙΘΕΤΑΙ.**
+ *
+ * Η ζωντανή βλάβη: οι δείκτες διαβάζονταν από το πεδίο του DOM ενώ το κείμενο που έφτανε στο
+ * μοντέλο ερχόταν από το πρόχειρο του δρομέα. Όταν το δεύτερο ήταν **πρόθεμα** του πρώτου, το
+ * `[2,4)` προσγειωνόταν σε κοντύτερο κείμενο και η επόμενη δέσμευση το άπλωνε ως τα άκρα
+ * (`remapCellTextRuns`) — «τέσσερα έντονα αντί για δύο».
+ *
+ * ⚠️ Το `clampRange` **δεν** το πιάνει, και αυτό είναι το όλο νόημα αυτής της ομάδας: κόβει
+ * δείκτες που **ξεφεύγουν**, όχι δείκτες που **χωράνε και δείχνουν αλλού**.
+ */
+describe('🔴 §25 — η βάση των δεικτών: γραφή πάνω σε ΑΛΛΟ κείμενο ⇒ ΑΡΝΗΣΗ', () => {
+  /** Ο ίδιος στόχος, αλλά μετρημένος πάνω σε **πρόθεμα** του πραγματικού κειμένου. */
+  const staleBase = (m: PersistedTableModel): TableFormatScope => {
+    const scope = tableCharsFormatScopeOf(m, AT, { start: 2, end: 4, text: 'ΝΕΣΤ' });
+    if (scope === null) throw new Error('ο στόχος όφειλε να υπάρχει');
+    return scope;
+  };
+
+  it('🔴 «Β» με μπαγιάτικη βάση δεν γράφει ΤΙΠΟΤΑ — ίδιο μοντέλο by-reference', () => {
+    const before = model({});
+    expect(setTableFormatField(before, staleBase(before), 'bold', true)).toBe(before);
+  });
+
+  it('🔴 και η ΑΠΑΛΟΙΦΗ αρνείται — δεν σβήνει μορφοποίηση που δεν στόχευσε ο χρήστης', () => {
+    const painted = model({ runs: [{ start: 0, end: 6, style: { bold: true } }] });
+    expect(clearTableFormatScope(painted, staleBase(painted))).toBe(painted);
+  });
+
+  it('🔴 και το `A↑` — κάθε γραφέας περνά από τον ίδιο φρουρό, όχι ο καθένας τον δικό του', () => {
+    const before = model({});
+    expect(stepTableFormatTextHeight(before, STYLE, staleBase(before), 1)).toBe(before);
+  });
+
+  it('✅ ΙΔΙΑ βάση ⇒ γράφει κανονικά — ο φρουρός δεν είναι μπλόκο, είναι ερώτηση', () => {
+    const next = setTableFormatField(model({}), middle(), 'bold', true);
+    expect(readBack(cellOf(next)?.runs, TEXT.length)).toEqual(['.', '.', 'Β', 'Β', '.', '.']);
+  });
+
+  it('🔴 η ΑΝΑΓΝΩΣΗ ΔΕΝ αρνείται — αλλιώς ένας χαρακτήρας παραπάνω θα έσβηνε την ένδειξη', () => {
+    // Δηλωμένη ασυμμετρία: το κουμπί οφείλει να δείχνει την κατάσταση των **ίδιων** γραμμάτων
+    // όσο η απόκλιση δεν τα μετακινεί· η γραφή είναι που δεν επιτρέπεται να μαντέψει.
+    const half = model({ runs: [{ start: 2, end: 4, style: { bold: true } }] });
+    expect(resolveTableFormatState(half, STYLE, staleBase(half), 'bold')?.value).toBe(true);
   });
 });
 

@@ -33,12 +33,12 @@
 
 import {
   canResetTableFormatScope,
-  resolveTableFormatOverflow,
   resolveTableFormatState,
   setTableFormatField,
   tableFormatScopeBounds,
   type TableFormatScope,
 } from '../../bim/table/table-format-scope';
+import { resolveTableFormatOverflow } from '../../bim/table/table-format-overflow-scope';
 import { collectDrawingColors } from '../../bim/table/table-drawing-colors';
 // 🔴 ADR-739 §55 — η μορφή αριθμού **δεν** είναι πεδίο του `TableCellStyle`: κληρονομείται με
 // δική της αλυσίδα (κελί→γραμμή→στήλη→`valueType`), οπότε διαβάζεται με τον ΕΝΑ βρόχο πάνω στα
