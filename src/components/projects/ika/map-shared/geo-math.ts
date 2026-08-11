@@ -1,46 +1,20 @@
 /**
  * =============================================================================
- * Geo Math Utilities — Haversine & GeoJSON Circle Generation
+ * Geo Math Utilities — GeoJSON Circle Generation
  * =============================================================================
  *
- * SSOT for geographic calculations used across IKA map components
- * and the geofence-service backend.
+ * Map-specific geometry for the IKA map components.
+ *
+ * ⚠️ Η **απόσταση** δεν ζει πια εδώ. Ήταν μία από **τέσσερις** υλοποιήσεις με **δύο**
+ * ακτίνες Γης, και το σχόλιο αυτού του αρχείου έγραφε *«same as geofence-service.ts»*
+ * — υπόσχεση χωρίς μηχανισμό. Ενοποιήθηκε στο `@/lib/geo/geo-distance`, όπου
+ * τεκμηριώνεται και η μέτρηση.
  *
  * @module components/projects/ika/map-shared/geo-math
  * @enterprise ADR-170 — QR Code + GPS Geofencing + Photo Verification
  */
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-/** WGS-84 mean Earth radius in meters (same as geofence-service.ts) */
-export const EARTH_RADIUS_METERS = 6_371_008.8;
-
-// =============================================================================
-// HAVERSINE DISTANCE
-// =============================================================================
-
-/**
- * Calculate the great-circle distance between two lat/lng points.
- * Uses the Haversine formula — accurate for the ranges we need (< 10 km).
- */
-export function haversineDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-
-  return EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+import { EARTH_RADIUS_METERS } from '@/lib/geo/geo-distance';
 
 // =============================================================================
 // GEOJSON CIRCLE

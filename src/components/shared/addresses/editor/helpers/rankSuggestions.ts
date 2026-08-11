@@ -18,6 +18,7 @@
  * @see ADR-332 §3.4 Suggestion trigger algorithm
  */
 
+import { distanceMeters } from '@/lib/geo/geo-distance';
 import type {
   GeocodingAlternative,
   GeocodingApiResponse,
@@ -43,23 +44,11 @@ const DEFAULTS = {
   confidenceWeight: 0.7,
 } as const;
 
-const EARTH_RADIUS_M = 6_371_000;
-
-function toRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
-/** Great-circle distance in meters via the Haversine formula. */
-export function haversineDistanceM(a: MapCenter, b: MapCenter): number {
-  const dLat = toRadians(b.lat - a.lat);
-  const dLng = toRadians(b.lng - a.lng);
-  const lat1 = toRadians(a.lat);
-  const lat2 = toRadians(b.lat);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
-  return 2 * EARTH_RADIUS_M * Math.asin(Math.min(1, Math.sqrt(h)));
-}
+// ⚠️ Η **απόσταση** δεν ζει πια εδώ: `@/lib/geo/geo-distance` (SSoT). Ήταν μία από
+// τέσσερις υλοποιήσεις, και η **μόνη** με ακτίνα 6 371 000 μαζί με το
+// `overpass-housenumber`. Η αλλαγή σε 6 371 008,8 είναι **1,4·10⁻⁶** σχετικά και
+// **ομοιόμορφος** συντελεστής κλίμακας ⇒ η **κατάταξη** εδώ μένει κατά λέξη ίδια
+// (το `proximityCapM` είναι το μόνο απόλυτο κατώφλι, και 5 km ± 7 mm).
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -86,7 +75,7 @@ function scoreCandidate(
   if (!opts.mapCenter) {
     return { rankScore: candidate.confidence, distanceFromCenterM: null };
   }
-  const distance = haversineDistanceM(opts.mapCenter, {
+  const distance = distanceMeters(opts.mapCenter, {
     lat: candidate.lat,
     lng: candidate.lng,
   });

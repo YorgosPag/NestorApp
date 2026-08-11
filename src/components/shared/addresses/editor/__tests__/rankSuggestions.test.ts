@@ -5,16 +5,16 @@
  *   - top + alternatives merged
  *   - default scoring (confidence-only when no mapCenter)
  *   - proximity-aware reorder when mapCenter provided
- *   - haversineDistanceM accuracy
  *   - distance is null when no mapCenter
  *   - originalRank preserved
  *   - confidenceWeight + proximityCapM honored
+ *
+ * ⚠️ Οι δοκιμές της ίδιας της **απόστασης** μετακόμισαν μαζί με τη συνάρτηση, στο
+ * `src/lib/geo/__tests__/geo-distance.test.ts`. Εδώ δοκιμάζεται η **κατάταξη**, που
+ * είναι το ερώτημα αυτού του αρχείου.
  */
 
-import {
-  haversineDistanceM,
-  rankSuggestions,
-} from '../helpers/rankSuggestions';
+import { rankSuggestions } from '../helpers/rankSuggestions';
 import type {
   GeocodingAlternative,
   GeocodingApiResponse,
@@ -52,26 +52,6 @@ function makeAlt(overrides: Partial<GeocodingAlternative>): GeocodingAlternative
   const { alternatives: _drop, ...rest } = base;
   return { ...rest, ...overrides };
 }
-
-describe('haversineDistanceM', () => {
-  it('returns 0 for identical points', () => {
-    expect(haversineDistanceM({ lat: 40, lng: 22 }, { lat: 40, lng: 22 })).toBe(0);
-  });
-
-  it('approximates Athens → Thessaloniki distance (~300 km)', () => {
-    const athens = { lat: 37.9838, lng: 23.7275 };
-    const thessaloniki = { lat: 40.6401, lng: 22.9444 };
-    const d = haversineDistanceM(athens, thessaloniki);
-    expect(d).toBeGreaterThan(290_000);
-    expect(d).toBeLessThan(310_000);
-  });
-
-  it('is symmetric', () => {
-    const a = { lat: 40.0, lng: 22.0 };
-    const b = { lat: 41.0, lng: 23.0 };
-    expect(haversineDistanceM(a, b)).toBeCloseTo(haversineDistanceM(b, a), 5);
-  });
-});
 
 describe('rankSuggestions — without mapCenter', () => {
   it('returns top + alternatives in confidence-desc order', () => {

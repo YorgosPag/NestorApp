@@ -13,13 +13,11 @@
 import 'server-only';
 
 import type { GeofenceConfig, GeofenceVerificationResult } from '@/components/projects/ika/contracts';
+import { distanceMeters as greatCircleMeters } from '@/lib/geo/geo-distance';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-/** Earth's mean radius in meters (WGS-84) */
-const EARTH_RADIUS_METERS = 6_371_008.8;
 
 /** Minimum valid geofence radius (meters) */
 export const MIN_GEOFENCE_RADIUS = 50;
@@ -28,48 +26,16 @@ export const MIN_GEOFENCE_RADIUS = 50;
 export const MAX_GEOFENCE_RADIUS = 500;
 
 // =============================================================================
-// HAVERSINE DISTANCE
+// HAVERSINE DISTANCE — ⚠️ ΔΕΝ ΖΕΙ ΠΙΑ ΕΔΩ
 // =============================================================================
-
-/**
- * Convert degrees to radians.
- */
-function toRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
-/**
- * Calculate the great-circle distance between two GPS coordinates
- * using the Haversine formula.
- *
- * @param lat1 - Latitude of point 1 (decimal degrees)
- * @param lng1 - Longitude of point 1 (decimal degrees)
- * @param lat2 - Latitude of point 2 (decimal degrees)
- * @param lng2 - Longitude of point 2 (decimal degrees)
- * @returns Distance in meters
- *
- * @see https://en.wikipedia.org/wiki/Haversine_formula
- */
-export function calculateHaversineDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number {
-  const dLat = toRadians(lat2 - lat1);
-  const dLng = toRadians(lng2 - lng1);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return EARTH_RADIUS_METERS * c;
-}
+//
+// Ήταν μία από **τέσσερις** υλοποιήσεις του ίδιου τύπου στο δέντρο, με **δύο**
+// διαφορετικές ακτίνες Γης. Ενοποιήθηκε στο `@/lib/geo/geo-distance`, όπου
+// τεκμηριώνεται η μέτρηση. **Καμία αλλαγή συμπεριφοράς**: ίδιος τύπος (μορφή
+// `atan2`), ίδια ακτίνα (6 371 008,8).
+//
+// Το `calculateHaversineDistance` ήταν εξαγόμενο με **έναν** καταναλωτή, μέσα στο
+// ίδιο αρχείο — δηλαδή εξαγωγή που κανείς δεν ζήτησε ποτέ.
 
 // =============================================================================
 // GEOFENCE VERIFICATION
@@ -90,11 +56,9 @@ export function isWithinGeofence(
   geofence: GeofenceConfig,
   gpsAccuracy: number | null
 ): GeofenceVerificationResult {
-  const distanceMeters = calculateHaversineDistance(
-    workerLat,
-    workerLng,
-    geofence.latitude,
-    geofence.longitude
+  const distanceMeters = greatCircleMeters(
+    { lat: workerLat, lng: workerLng },
+    { lat: geofence.latitude, lng: geofence.longitude }
   );
 
   return {

@@ -11,43 +11,25 @@
  */
 
 import { createModuleLogger } from '@/lib/telemetry';
-import { getErrorMessage } from '@/lib/error-utils';
+import { distanceMeters } from '@/lib/geo/geo-distance';
+import {
+  overpassQuerySeconds,
+  runOverpassQuery,
+  type OverpassElement,
+} from '@/lib/geo/osm/overpass-client';
 
 const logger = createModuleLogger('overpass-housenumber');
 
-const OVERPASS_BASE_URL = process.env.OVERPASS_BASE_URL || 'https://overpass-api.de/api/interpreter';
-const OVERPASS_TIMEOUT_MS = parseInt(process.env.OVERPASS_TIMEOUT_MS || '6000', 10);
+// ⚠️ **Οι ακτίνες μένουν ΕΔΩ, ο μεταφορέας έφυγε.** Είναι η στρατηγική **αυτής** της
+// ερώτησης («πόσο μακριά δέχομαι να ψάξω για αριθμό»), όχι ιδιότητα του Overpass. Το
+// endpoint, το χρονόμετρο και ο χειρισμός σφάλματος ζουν στο `lib/geo/osm/overpass-client`.
 const OVERPASS_RADIUS_METERS = parseInt(process.env.OVERPASS_RADIUS_METERS || '60', 10);
 const OVERPASS_FALLBACK_RADIUS_METERS = parseInt(process.env.OVERPASS_FALLBACK_RADIUS_METERS || '120', 10);
-const USER_AGENT = process.env.GEOCODING_USER_AGENT || 'NestorPagonisApp/1.0 (geocoding)';
 
-interface OverpassElement {
-  type: string;
-  id: number;
-  lat?: number;
-  lon?: number;
-  center?: { lat: number; lon: number };
-  tags?: Record<string, string>;
-}
-
-interface OverpassResponse {
-  elements: OverpassElement[];
-}
-
-/**
- * Haversine distance in meters — small-enough radius that flat-earth would also
- * suffice, but the formula is cheap and keeps us honest at the poles.
- */
-function distanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
+// ⚠️ Η **απόσταση** δεν ζει πια εδώ: `@/lib/geo/geo-distance` (SSoT). Ήταν μία από
+// τέσσερις υλοποιήσεις με δύο ακτίνες Γης — και εδώ χρησιμοποιείται μόνο για να
+// **διαλέξει τον πλησιέστερο**, δηλαδή ομοιόμορφος συντελεστής κλίμακας: η επιλογή
+// είναι κατά λέξη η ίδια.
 
 function buildOverpassQuery(lat: number, lon: number, street: string | undefined, radius: number): string {
   const streetFilter = street?.trim()
@@ -60,7 +42,7 @@ function buildOverpassQuery(lat: number, lon: number, street: string | undefined
   // `out center tags` returns the geometric centroid for ways/relations so we can
   // measure distance uniformly.
   return `
-    [out:json][timeout:${Math.floor(OVERPASS_TIMEOUT_MS / 1000)}];
+    [out:json][timeout:${overpassQuerySeconds()}];
     (
       node["addr:housenumber"]${streetFilter}(around:${radius},${lat},${lon});
       way["addr:housenumber"]${streetFilter}(around:${radius},${lat},${lon});
@@ -70,30 +52,11 @@ function buildOverpassQuery(lat: number, lon: number, street: string | undefined
   `.trim();
 }
 
-async function runOverpassQuery(query: string): Promise<OverpassElement[]> {
-  try {
-    const response = await fetch(OVERPASS_BASE_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': USER_AGENT,
-      },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS),
-    });
-    if (!response.ok) {
-      logger.warn('Overpass non-OK response', { data: { status: response.status } });
-      return [];
-    }
-    const data = (await response.json()) as OverpassResponse;
-    return data.elements ?? [];
-  } catch (error) {
-    logger.warn('Overpass fetch error', { error: getErrorMessage(error) });
-    return [];
-  }
-}
-
-function pickNearest(elements: OverpassElement[], lat: number, lon: number): string | null {
+function pickNearest(
+  elements: readonly OverpassElement[],
+  lat: number,
+  lon: number,
+): string | null {
   const withCoords = elements
     .map(el => {
       const elLat = el.lat ?? el.center?.lat;
@@ -102,7 +65,7 @@ function pickNearest(elements: OverpassElement[], lat: number, lon: number): str
       if (elLat === undefined || elLon === undefined || !housenumber) return null;
       return {
         housenumber,
-        distance: distanceMeters(lat, lon, elLat, elLon),
+        distance: distanceMeters({ lat, lng: lon }, { lat: elLat, lng: elLon }),
       };
     })
     .filter((e): e is { housenumber: string; distance: number } => e !== null)
