@@ -87,6 +87,12 @@
       "realTimeUpdates": "Ενημερώσεις πραγματικού χρόνου"
     },
     "selectPropertyToViewMedia": "Επιλέξτε ακίνητο για προβολή",
+    "narrow": {
+      "backToList": "Πίσω στη λίστα",
+      "showDetails": "Στοιχεία",
+      "detailsTitle": "Στοιχεία ακινήτου",
+      "closeDetails": "Κλείσιμο στοιχείων"
+    },
     "media": {
       "floorplans": "Κάτοψη",
       "photos": "Φωτογραφίες",

@@ -43,6 +43,7 @@ import {
 } from '@/components/core/AdvancedFilters';
 import type { PropertyFilterState } from '@/components/core/AdvancedFilters';
 import type { ViewMode as CoreViewMode } from '@/core/headers';
+import { gridPatterns } from '@/styles/design-tokens';
 import '@/lib/design-system';
 
 export function PropertyGridView() {
@@ -204,9 +205,22 @@ export function PropertyGridView() {
 
       {/* Properties Grid/List */}
       <main className="w-full px-4 py-8 overflow-x-hidden">
-        <div className="w-full max-w-screen-sm mx-auto overflow-hidden">
+        {/*
+          ADR-777 §8.21 — Η «προβολή πλέγματος» ΔΕΝ ΗΤΑΝ ΠΛΕΓΜΑ.
+          Και οι δύο τιμές του `viewMode` αποδίδονταν σε κάθετη στοίβα μιας στήλης, μέσα σε
+          δοχείο καθηλωμένο στα 640 px: σε οθόνη 2560 px ο χρήστης έβλεπε 640 px στη μέση και
+          1920 px κενό, με τη «λίστα» και το «πλέγμα» να διαφέρουν ΜΟΝΟ στην κάρτα. Το πλήθος
+          στηλών το απαντά πλέον η μηχανή διάταξης από το πραγματικό πλάτος του γονέα.
+        */}
+        <div className="w-full overflow-hidden">
           {filteredProperties.length > 0 ? (
-            <ul className="flex flex-col gap-4" role="list" aria-label={t('grid.header.title')}>
+            <ul
+              className={`grid ${gridPatterns.cards.gap} ${
+                viewMode === 'grid' ? gridPatterns.cards.media : gridPatterns.cards.single
+              }`}
+              role="list"
+              aria-label={t('grid.header.title')}
+            >
               {filteredProperties.map((property) => (
                 <li key={property.id} className="w-full min-w-0 overflow-hidden">
                   {viewMode === 'grid'

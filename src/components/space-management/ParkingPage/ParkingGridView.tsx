@@ -23,6 +23,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Using centralized domain card
 import { ParkingGridCard } from '@/domain';
+import { gridPatterns } from '@/styles/design-tokens';
 import '@/lib/design-system';
 
 // =============================================================================
@@ -77,7 +78,9 @@ export function ParkingGridView({
     <ScrollArea className="h-full flex-1">
       {/* 🏢 ENTERPRISE: Full-width responsive grid */}
       <div className="w-full p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+        {/* ADR-777 §8.21 — το πλήθος στηλών το απαντά το ΠΡΑΓΜΑΤΙΚΟ πλάτος αυτού του pane,
+            όχι το παράθυρο: εδώ μέσα ζούμε σε `ScrollArea flex-1`. */}
+        <div className={`grid ${gridPatterns.cards.gap} ${gridPatterns.cards.tile}`}>
           {parkingSpots.map((parking) => (
             <ParkingGridCard
               key={parking.id}

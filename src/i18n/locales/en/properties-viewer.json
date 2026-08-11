@@ -87,6 +87,12 @@
       "realTimeUpdates": "Real-time updates"
     },
     "selectPropertyToViewMedia": "Select a property to view",
+    "narrow": {
+      "backToList": "Back to list",
+      "showDetails": "Details",
+      "detailsTitle": "Property details",
+      "closeDetails": "Close details"
+    },
     "media": {
       "floorplans": "Floorplan",
       "photos": "Photos",

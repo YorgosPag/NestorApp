@@ -9,6 +9,7 @@ import { ListLayout } from './components/ListLayout';
 import { GridLayout } from './components/GridLayout';
 // 🏢 ENTERPRISE: Centralized layout spacing tokens
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
+import { useViewportClass } from '@/hooks/media/useViewportClass';
 import '@/lib/design-system';
 
 export function ReadOnlyPropertyViewerLayout({
@@ -26,6 +27,17 @@ export function ReadOnlyPropertyViewerLayout({
   ...viewerProps
 }: ReadOnlyPropertyViewerLayoutProps) {
   const layout = useLayoutClasses();
+
+  /**
+   * **Η μία ερώτηση πλάτους του θεατή** — ρωτιέται εδώ, μία φορά, και ταξιδεύει προς τα κάτω
+   * (ίδιο πρότυπο με το `SearchResultsContent` της οθόνης 2).
+   *
+   * ⚠️ Οδηγεί **συμπεριφορά**, ποτέ σχήμα: πίσω κουμπί, κλείσιμο φύλλου, αναφορά. Το «ποιο
+   * πάνελ φαίνεται» το απαντούν το CSS (`md`) και η **κατάσταση επιλογής** — δες
+   * `features/read-only-viewer/viewer-panes.ts`.
+   */
+  const viewport = useViewportClass();
+
   return (
     <>
       {showDashboard && <div className="shrink-0 px-4"><PropertyDashboard stats={stats} /></div>}
@@ -41,6 +53,7 @@ export function ReadOnlyPropertyViewerLayout({
             handlePolygonSelect={handlePolygonSelect}
             hoveredPropertyId={hoveredPropertyId}
             onHoverProperty={onHoverProperty}
+            viewport={viewport}
             viewerProps={{
               ...viewerProps,
               onSelectFloor,

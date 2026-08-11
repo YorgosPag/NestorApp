@@ -78,6 +78,17 @@ import styles from './ResultsSheet.module.css';
  * 🔑 Κανένας αριθμός δεν ζει εδώ — μόνο η **σχέση** «άγκυρα = στάση − ηρεμία», που είναι
  * η αριθμητική του ίδιου του μηχανισμού (βλ. `ResultsSheet.module.css`).
  */
+/**
+ * Η καταχώριση **στην ουρά ιστορικού** που ανήκει σε αυτό το φύλλο.
+ *
+ * ⚠️ Η συμβολοσειρά είναι **αμετάβλητη επίτηδες**: μέχρι τις 2026-08-11 ζούσε μέσα στο
+ * `useSheetBackDismiss` ως μοναδικό, σταθερά γραμμένο κλειδί. Ο μηχανισμός απέκτησε δεύτερο
+ * καταναλωτή (ο θεατής, ADR-777 §8.20), οπότε η **ταυτότητα** μετακόμισε στον καλούντα —
+ * αλλά η τιμή έμεινε **ίδια χαρακτήρα προς χαρακτήρα**, ώστε η αλλαγή να είναι αποδεδειγμένα
+ * χωρίς συνέπεια για ανοιχτές καρτέλες.
+ */
+const RESULTS_SHEET_HISTORY_KEY = '__resultsSheetExpanded';
+
 const STOP_ANCHOR_CLASS: Readonly<Record<BottomSheetStop, string>> = {
   peek: 'top-0',
   half: 'top-[calc(var(--sheet-half)-var(--sheet-peek))]',
@@ -98,7 +109,12 @@ export function ResultsSheet({ viewport, children }: ResultsSheetProps) {
   const { scrollerRef, stop, snapTo } = useSheetSnap(isSheet);
 
   const dismiss = useCallback(() => snapTo(BOTTOM_SHEET_DISMISS_STOP), [snapTo]);
-  useSheetBackDismiss({ active: isSheet, expanded: stop !== BOTTOM_SHEET_DISMISS_STOP, dismiss });
+  useSheetBackDismiss({
+    historyKey: RESULTS_SHEET_HISTORY_KEY,
+    active: isSheet,
+    expanded: stop !== BOTTOM_SHEET_DISMISS_STOP,
+    dismiss,
+  });
 
   const moreList = stepStop(stop, 1);
   const moreMap = stepStop(stop, -1);

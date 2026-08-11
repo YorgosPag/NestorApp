@@ -37,10 +37,18 @@ import { useEffect, useRef } from 'react';
 
 import { pushHistoryMarker } from '@/lib/url-query-state';
 
-/** Το κλειδί μας μέσα στο `history.state` — **δίπλα** στα κλειδιά του Next, ποτέ αντί γι' αυτά. */
-export const SHEET_HISTORY_KEY = '__resultsSheetExpanded';
-
 interface SheetBackDismissOptions {
+  /**
+   * Το κλειδί μας μέσα στο `history.state` — **δίπλα** στα κλειδιά του Next, ποτέ αντί γι' αυτά.
+   *
+   * 🔑 **Το φέρνει ο καλών, και είναι υποχρεωτικό.** Ο **μηχανισμός** («μια κατάσταση που
+   * ανοίγει σαν σελίδα οφείλει να κλείνει με το πίσω κουμπί») είναι κοινός· η **ταυτότητα**
+   * της επιφάνειας δεν είναι. Μέχρι τις 2026-08-11 το κλειδί ήταν **σταθερά γραμμένο εδώ**
+   * με όνομα μιας συγκεκριμένης οθόνης — σωστό όσο υπήρχε **ένας** καταναλωτής, και
+   * σιωπηλά ψευδές από τον δεύτερο. Μια προεπιλογή θα έκρυβε ακριβώς αυτό το ερώτημα, γι'
+   * αυτό δεν υπάρχει: κάθε επιφάνεια **ονομάζει** την καταχώρισή της.
+   */
+  readonly historyKey: string;
   /** `false` όταν δεν υπάρχει φύλλο (ευρεία οθόνη ή «μετράω ακόμη») — τότε δεν αγγίζεται η ουρά. */
   readonly active: boolean;
   /** `true` όταν το φύλλο έχει φύγει από τη στάση ηρεμίας. */
@@ -57,7 +65,12 @@ interface SheetBackDismissOptions {
  * μέσω `history.back()`. Αν η `dismiss` δεν ήταν ταυτοδύναμη θα χρειαζόταν σημαία «ποιος
  * ξεκίνησε», δηλαδή ακριβώς το είδος κατάστασης που γεννά τις αναπηδήσεις.
  */
-export function useSheetBackDismiss({ active, expanded, dismiss }: SheetBackDismissOptions): void {
+export function useSheetBackDismiss({
+  historyKey,
+  active,
+  expanded,
+  dismiss,
+}: SheetBackDismissOptions): void {
   const ownsEntry = useRef(false);
   const dismissRef = useRef(dismiss);
   dismissRef.current = dismiss;
@@ -79,7 +92,7 @@ export function useSheetBackDismiss({ active, expanded, dismiss }: SheetBackDism
     if (!active) return;
 
     if (expanded && !ownsEntry.current) {
-      pushHistoryMarker({ [SHEET_HISTORY_KEY]: true });
+      pushHistoryMarker({ [historyKey]: true });
       ownsEntry.current = true;
       return;
     }
@@ -90,5 +103,5 @@ export function useSheetBackDismiss({ active, expanded, dismiss }: SheetBackDism
       ownsEntry.current = false;
       window.history.back();
     }
-  }, [active, expanded]);
+  }, [active, expanded, historyKey]);
 }

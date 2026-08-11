@@ -24,6 +24,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 // 🏢 ENTERPRISE: Using centralized domain card
 import { StorageGridCard } from '@/domain';
+import { gridPatterns } from '@/styles/design-tokens';
 
 // =============================================================================
 // 🏢 TYPES
@@ -77,7 +78,9 @@ export function StorageGridView({
     <ScrollArea className="h-full flex-1">
       {/* 🏢 ENTERPRISE: Full-width responsive grid */}
       <div className="w-full p-2">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-2">
+        {/* ADR-777 §8.21 — το πλήθος στηλών το απαντά το ΠΡΑΓΜΑΤΙΚΟ πλάτος αυτού του pane,
+            όχι το παράθυρο: εδώ μέσα ζούμε σε `ScrollArea flex-1`. */}
+        <div className={`grid ${gridPatterns.cards.gap} ${gridPatterns.cards.tile}`}>
           {storages.map((storage) => (
             <StorageGridCard
               key={storage.id}

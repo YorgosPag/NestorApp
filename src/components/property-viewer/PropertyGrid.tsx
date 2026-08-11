@@ -17,6 +17,7 @@ import { PropertyGridCard } from '@/domain';
 import { usePublicPropertyViewer } from '@/hooks/usePublicPropertyViewer';
 // 🏢 ADR-051: Use centralized usePropertyGridFilters from Enterprise Filter System
 import { usePropertyGridFilters } from '@/components/core/AdvancedFilters';
+import { gridPatterns } from '@/styles/design-tokens';
 import '@/lib/design-system';
 
 
@@ -82,9 +83,10 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
 
         {/* Properties Grid - Full width with 8px padding matching list layout */}
         <div className="w-full p-2 overflow-y-auto flex-1">
-          {/* 🏢 ENTERPRISE: Responsive Grid - 1 col (mobile), 2 cols (tablet), 3 cols (desktop), 4 cols (xl) */}
-          {/* NO max-width constraint - grid expands to fill available space */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+          {/* ADR-777 §8.21 — αυτό το πλέγμα ζει σε split pane (λίστα+λεπτομέρειες): το παράθυρο
+              μπορεί να είναι 2560 px ενώ το δοχείο είναι 600 px. Το πλήθος στηλών το απαντά το
+              ΠΡΑΓΜΑΤΙΚΟ πλάτος του γονέα, χωρίς να ρωτηθεί κανείς. */}
+          <div className={`grid ${gridPatterns.cards.gap} ${gridPatterns.cards.tile}`}>
             {displayProperties.map((property: Property) => (
               <PropertyGridCard
                 key={property.id}
@@ -102,7 +104,7 @@ export function PropertyGrid({ properties, onSelect, selectedPropertyIds, enhanc
   // 🔒 STANDARD MODE: Original PropertyGrid functionality (backward compatible)
   return (
     <ScrollArea className="h-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 p-4">
+      <div className={`grid ${gridPatterns.cards.gap} ${gridPatterns.cards.tile} p-4`}>
         {displayProperties.map(prop => (
           <PropertyGridCard
             key={prop.id}
