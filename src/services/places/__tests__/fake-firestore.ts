@@ -44,6 +44,17 @@ export class FakeFirestore {
   /** Πόσες εγγραφές έγιναν — ώστε οι άγκυρες να μετρούν **πράξεις**, όχι μόνο κατάσταση. */
   public writes = 0;
 
+  /**
+   * Η βάση **δεν απαντά**.
+   *
+   * 🔴 **Υπάρχει επειδή το «δεν μάθαμε» χρειάζεται ΑΠΟΔΕΙΞΗ ΖΩΗΣ** (ADR-749 §5). Κάθε
+   * καταναλωτής του επιπέδου Α οφείλει να ξεχωρίζει *«δεν υπάρχει»* από *«δεν
+   * ρωτήθηκε επιτυχώς»* (SPEC-777A §13.7.2 #5) — και ένας κλάδος που **καμία** άγκυρα
+   * δεν μπορεί να πυροδοτήσει είναι φρουρός χωρίς απόδειξη ζωής, όσο σωστά κι αν
+   * γράφτηκε.
+   */
+  public failReads = false;
+
   private bucket(name: string): Map<string, Doc> {
     const existing = this.store.get(name);
     if (existing !== undefined) return existing;
@@ -81,9 +92,17 @@ export class FakeDocRef {
     public readonly id: string,
   ) {}
 
-  async get(): Promise<{ data: () => Doc | undefined }> {
+  /**
+   * ⚠️ **Το `exists` ΕΙΝΑΙ μέρος του συμβολαίου, όχι ευκολία.** Το Admin SDK το εκθέτει
+   * ως **ιδιότητα** (όχι μέθοδο, όπως ο πελάτης), και ο κώδικας που ρωτά *«υπάρχει
+   * αυτός ο τόπος;»* ρωτά **αυτό**. Ένας πλαστός που έδινε μόνο `data()` θα ανάγκαζε
+   * τον καταναλωτή να ρωτήσει αλλιώς **μέσα στο test** απ' ό,τι στην παραγωγή — δηλαδή
+   * θα δοκίμαζε κώδικα που κανείς δεν εκτελεί.
+   */
+  async get(): Promise<{ exists: boolean; data: () => Doc | undefined }> {
+    if (this.db.failReads) throw new Error('FAKE_FIRESTORE_UNAVAILABLE');
     const found = this.bucket.get(this.id);
-    return { data: () => found };
+    return { exists: found !== undefined, data: () => found };
   }
 
   async create(doc: Doc): Promise<void> {

@@ -18,7 +18,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { ENTERPRISE_ID_PREFIXES } from '@/services/enterprise-id-prefixes';
 import { enterpriseIdType, isValidEnterpriseId } from '@/services/enterprise-id-parse';
-import type { OsmReference, PublicBuilding, PublicLand } from '@/types/geo/public-place';
+import type { OsmReference, PlaceRef, PublicBuilding, PublicLand } from '@/types/geo/public-place';
 
 /**
  * Το **πρόθεμα της ταυτότητας ΕΙΝΑΙ ο διαχωριστής τύπου.**
@@ -71,4 +71,70 @@ export async function readPlaceOsmRef(
   return building?.footprint.kind === 'known' && building.footprint.provenance === 'osm'
     ? building.footprint.osmRef
     : null;
+}
+
+// ============================================================================
+// ΕΠΑΛΗΘΕΥΣΗ ΔΕΣΜΟΥ — «δείχνει αυτός ο δεσμός κάπου;»
+// ============================================================================
+
+/**
+ * Οι **πέντε ρητές** ετυμηγορίες για έναν δεσμό επιπέδου Β → Α.
+ *
+ * 🔴 **Το `unavailable` ΔΕΝ είναι υποπερίπτωση του «δεν υπάρχει», και η διάκριση έχει
+ * ήδη πληρωθεί μία φορά** (SPEC-777A §13.7.2 εύρημα #5: το `fetchOsmBuildingOutline`
+ * συγχώνευε *«δεν έχει σχήμα»* με *«δεν απάντησε»*, **11** άγκυρες ήταν πράσινες, και
+ * το βρήκε **ζωντανή δοκιμή**). Εδώ η συνέπεια θα ήταν χειρότερη: μια στιγμιαία
+ * αστοχία της βάσης θα έλεγε στον επαγγελματία *«αυτό το κτίριο δεν υπάρχει»* και θα
+ * τον έστελνε να **φτιάξει δεύτερη ταυτότητα** για φυσικό πράγμα που έχει ήδη μία —
+ * δηλαδή θα παρήγαγε ακριβώς το διπλότυπο που όλο το επίπεδο Α υπάρχει για να αποτρέψει.
+ */
+export type PlaceRefVerdict =
+  | 'exists'
+  /** Η ταυτότητα δεν είναι καν `land_*`/`pbld_*` — σφάλμα **πελάτη**, όχι κόσμου. */
+  | 'not-a-place-id'
+  | 'land-absent'
+  /** Η γη υπάρχει, το **κτίριο** που δηλώθηκε όχι — ο δεσμός θα κρεμόταν στο κενό. */
+  | 'building-absent'
+  /** **Δεν μάθαμε.** Ούτε ναι ούτε όχι — ο καλών οφείλει να απαντήσει 503, ποτέ 422. */
+  | 'unavailable';
+
+/**
+ * **Δείχνει αυτός ο δεσμός σε τόπο που υπάρχει;**
+ *
+ * 🔑 **Ο διακομιστής επαληθεύει ΥΠΑΡΞΗ, όχι ΑΛΗΘΕΙΑ.** Το §14.3 λέει ότι ο χρήστης
+ * *«δεν αλλάζει το κοινό — **προτείνει**»*: το αν το κτίριο του πελάτη **είναι** εκείνο
+ * το κτίριο είναι **ισχυρισμός** του, και κανένα ερώτημα βάσης δεν μπορεί να τον κρίνει.
+ * Αυτό που **μπορεί** να κριθεί, και οφείλει, είναι αν ο δεσμός δείχνει **κάπου**.
+ *
+ * ⚠️ **Χωρίς αυτόν τον έλεγχο η βλάβη είναι ΑΟΡΑΤΗ**: ένας δεσμός προς ανύπαρκτη
+ * ταυτότητα δεν σπάει τίποτα — ταξιδεύει στη δημόσια αγγελία, **φαίνεται** λυμένος, και
+ * απλώς δεν ταιριάζει ποτέ με καμία ζήτηση. Η μηχανή θα έλεγε «καμία αντιστοιχία» και
+ * θα είχε δίκιο· κανείς δεν θα ρωτούσε γιατί.
+ */
+export async function verifyPlaceRef(
+  adminDb: AdminFirestore,
+  ref: PlaceRef,
+): Promise<PlaceRefVerdict> {
+  if (placeKindOf(ref.landId) !== 'land') return 'not-a-place-id';
+  if (ref.buildingId !== null && placeKindOf(ref.buildingId) !== 'building') {
+    return 'not-a-place-id';
+  }
+
+  try {
+    const land = await adminDb.collection(COLLECTIONS.PUBLIC_LANDS).doc(ref.landId).get();
+    if (!land.exists) return 'land-absent';
+
+    if (ref.buildingId === null) return 'exists';
+
+    const building = await adminDb
+      .collection(COLLECTIONS.PUBLIC_BUILDINGS)
+      .doc(ref.buildingId)
+      .get();
+
+    return building.exists ? 'exists' : 'building-absent';
+  } catch {
+    // ⚠️ **Καταπίνεται η αιτία, ΟΧΙ η διάκριση.** Ο καλών χρειάζεται να ξέρει ότι η
+    // ερώτηση **δεν απαντήθηκε** — το τι έφταιξε το καταγράφει το στρώμα του δικτύου.
+    return 'unavailable';
+  }
 }

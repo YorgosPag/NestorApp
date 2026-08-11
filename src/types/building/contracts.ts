@@ -3,6 +3,8 @@ import type { BuildingFeatureKey } from './features';
 // 🏢 ENTERPRISE: Multi-address support (ADR-167)
 import type { BuildingAddressReference, ProjectAddress } from '../project/addresses';
 import type { PropertyType } from '@/types/property';
+// ADR-777 §14.5 — ο δεσμός του επιπέδου Β προς το κοινό επίπεδο Α
+import type { PlaceRef } from '@/types/geo/public-place';
 // ADR-287 — PriorityLevel SSoT (shared across Building/Project domains)
 import type { PriorityLevel } from '@/constants/priority-levels';
 // ADR-287 — SSoT imports (χρειάζονται locally για use στο Building interface,
@@ -68,6 +70,31 @@ export type {
     addressConfigs?: BuildingAddressReference[];
     /** Primary address ID from project addresses */
     primaryProjectAddressId?: string;
+
+    /**
+     * **Ο ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΚΟΙΝΟ ΚΤΙΡΙΟ** — «*αυτό το κτίριό μου **είναι** εκείνο*».
+     * (ADR-777 · SPEC-777A §14.3 · §14.5 · Β3, 2026-08-11)
+     *
+     * 🔴 **Είναι το μισό της §14.5 που έλειπε.** Ο **ιδιώτης** δήλωνε τον τόπο του από
+     * την Α14· ο **επαγγελματίας** —δηλαδή η πλειοψηφία του αποθέματος— **δεν είχε πού**,
+     * οπότε κάθε αγγελία εταιρείας έφτανε στη μηχανή ταιριάσματος με `place: null` και
+     * μια ζήτηση Ζ3/Ζ5 απαντούσε `place-unresolved` **για όλες**.
+     *
+     * 🔑 **Στο ΚΤΙΡΙΟ και όχι στο ακίνητο, με λόγο**: όλα τα διαμερίσματα ενός κτιρίου
+     * βρίσκονται στο **ίδιο** φυσικό κτίριο. Μία δήλωση ανά ακίνητο θα ήταν **N
+     * αντίγραφα** του ίδιου γεγονότος — ακριβώς το «χωρίς διπλότυπα» που το §14.5
+     * ονομάζει πρώτο κριτήριο. Η προβολή το κατεβάζει στην αγγελία
+     * (`collectPlaceKnowledge`), δεν το αντιγράφει στο έγγραφο.
+     *
+     * ⚠️ **Δείχνει από το Β προς το Α, ΠΟΤΕ αντίστροφα** (§14.4 κανόνας 4). Το κοινό
+     * κτίριο δεν μαθαίνει ποτέ ποιος το διεκδίκησε: το `read: if true` σημαίνει ότι
+     * ό,τι γραφτεί εκεί το βλέπει **κάθε ανώνυμος**.
+     *
+     * ⚠️ **Ισχυρισμός, όχι απόδειξη** (§14.3: *«ο χρήστης δεν αλλάζει το κοινό —
+     * προτείνει»*). Ο διακομιστής επαληθεύει μόνο ότι ο τόπος **υπάρχει**· ότι είναι
+     * **αυτός** ο τόπος το λέει ο άνθρωπος.
+     */
+    placeRef?: PlaceRef | null;
 
     totalArea: number;
     builtArea?: number;

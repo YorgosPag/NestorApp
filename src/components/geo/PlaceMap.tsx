@@ -71,8 +71,16 @@ const TRACE_LINE = {
 export interface PlaceMapProps {
   /** Πού κοιτάζει ο χάρτης όταν ανοίγει. */
   readonly center: GeoPoint;
-  /** Ο άνθρωπος πάτησε εδώ. */
-  readonly onPick: (point: GeoPoint) => void;
+  /**
+   * Ο άνθρωπος πάτησε εδώ.
+   *
+   * ⚠️ **Προαιρετικό, και η απουσία είναι ΝΟΗΜΑ**: ο ίδιος χάρτης χρησιμεύει και ως
+   * **απάντηση** (η καρτέλα του τόπου δείχνει το περίγραμμα ενός τόπου που έχει ήδη
+   * επιλεγεί). Ένα `onPick={() => {}}` εκεί θα ήταν χειριστήριο που **δέχεται** κλικ
+   * και τα πετά — δηλαδή επιφάνεια που υπόσχεται πράξη χωρίς να την κάνει. Χωρίς
+   * `onPick` ο δείκτης μένει προεπιλεγμένος και δεν προσκαλείται κανείς να πατήσει.
+   */
+  readonly onPick?: (point: GeoPoint) => void;
   /** Κλειστό σχήμα προς εμφάνιση — κτίριο OSM (**ζωντανά**) ή ολοκληρωμένο σχέδιο. */
   readonly outline?: GeoOutline | null;
   /** Οι κορυφές που **σχεδιάζονται τώρα** — ανοιχτή γραμμή, όχι σχήμα. */
@@ -92,12 +100,14 @@ export function PlaceMap({
   disabled = false,
   heightClass = 'h-80',
 }: PlaceMapProps): React.ReactElement {
+  const interactive = onPick !== undefined && !disabled;
+
   const handleClick = useCallback(
     (event: MapLayerMouseEvent) => {
-      if (disabled) return;
-      onPick({ lat: event.lngLat.lat, lng: event.lngLat.lng });
+      if (!interactive) return;
+      onPick?.({ lat: event.lngLat.lat, lng: event.lngLat.lng });
     },
-    [disabled, onPick],
+    [interactive, onPick],
   );
 
   return (
@@ -107,7 +117,7 @@ export function PlaceMap({
         style={{ width: '100%', height: '100%' }}
         mapStyle={OSM_MAP_STYLE}
         onClick={handleClick}
-        cursor={disabled ? 'default' : 'crosshair'}
+        cursor={interactive ? 'crosshair' : 'default'}
         attributionControl={false}
       >
         {outline !== null && outline.length >= 3 && (

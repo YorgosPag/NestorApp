@@ -104,17 +104,6 @@ export function projectableFromOwnerProperty(
      * είναι πρόθεση και γίνεται **δεδομένο**.
      */
     locationDisclosure: property.place.kind === 'declined' ? 'declined' : null,
-
-    /**
-     * 🔑 **ΕΔΩ ΚΛΕΙΝΕΙ Ο ΚΥΚΛΟΣ ΤΟΥ §14.5.** Ο δεσμός του κατόχου προς το επίπεδο Α
-     * ταξιδεύει **αυτούσιος** στη δημόσια προβολή, και από εκεί τον διαβάζει η μηχανή
-     * ταιριάσματος. Είναι η **μόνη** γραμμή που κάνει το «*ψάχνω **αυτό** το κτίριο*»
-     * και το «*προσφέρω **αυτό** το διαμέρισμα*» να δείχνουν στο **ίδιο** πράγμα.
-     *
-     * ⚠️ Το `declined` **δεν έχει** δεσμό — ο τύπος το κάνει αδύνατο, δες
-     * {@link OwnerPropertyPlace}.
-     */
-    placeRef: property.place.kind === 'declared' ? property.place.link : null,
   };
 }
 
@@ -132,13 +121,23 @@ export function projectableFromOwnerProperty(
  * αλλάζει το κοινό, **προτείνει**»*). Ένα `verifiedAt` εδώ θα ήταν ισχυρισμός που
  * κανείς δεν έκανε.
  *
+ * 🔑 **ΕΔΩ ΚΛΕΙΝΕΙ Ο ΚΥΚΛΟΣ ΤΟΥ §14.5** — ο δεσμός προς το επίπεδο Α φεύγει από **αυτή**
+ * τη συνάρτηση, δίπλα στη θέση, γιατί και τα δύο απαντούν *«τι ξέρουμε για τον τόπο
+ * του;»*. Ο ιδιώτης **δεν έχει αλυσίδα** να ανέβει: η δήλωσή του **είναι** η γνώση.
+ *
+ * ⚠️ *(Β3, 2026-08-11: ήταν πεδίο του `ProjectableProperty` και μετακόμισε εδώ — όχι
+ * για τάξη, αλλά επειδή ο **επαγγελματίας** δεν είχε πού να το γράψει και το πεδίο
+ * έμενε σιωπηλά `null` για κάθε αγγελία εταιρείας. Δες {@link PlaceKnowledge.ref}.)*
+ *
+ * ⚠️ Το `declined` **δεν έχει** δεσμό — ο τύπος το κάνει αδύνατο, δες `OwnerPropertyPlace`.
+ *
  * @param locatedAt — η στιγμή της προβολής, ίδια για κάθε υποψήφια του ίδιου περάσματος
  */
 export function placeKnowledgeFromOwnerProperty(
   property: OwnerProperty,
   locatedAt: string,
 ): PlaceKnowledge {
-  if (property.place.kind !== 'declared') return { candidates: [] };
+  if (property.place.kind !== 'declared') return { candidates: [], ref: null };
 
   const candidate = addressToPositionCandidate(
     {
@@ -150,5 +149,8 @@ export function placeKnowledgeFromOwnerProperty(
     locatedAt,
   );
 
-  return { candidates: candidate === null ? [] : [candidate] };
+  return {
+    candidates: candidate === null ? [] : [candidate],
+    ref: property.place.link,
+  };
 }

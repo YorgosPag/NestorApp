@@ -45,7 +45,7 @@ export async function createBuildingWithCodeRetry(
 export async function updateBuildingWithPolicy({
   buildingId,
   updates,
-}: GuardedBuildingUpdateInput): Promise<{ success: boolean; error?: string; _v?: number }> {
+}: GuardedBuildingUpdateInput): Promise<{ success: boolean; error?: string; errorCode?: string; _v?: number }> {
   return updateBuilding(buildingId, updates);
 }
 

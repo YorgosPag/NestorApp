@@ -30,6 +30,7 @@
 import React, { useState } from 'react';
 
 import { PlaceChooser } from '@/components/geo/PlaceChooser';
+import { PlaceSummary } from '@/components/geo/PlaceSummary';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import type { PlaceTarget } from '@/lib/places/place-claim';
@@ -58,18 +59,24 @@ export function PlaceIdentityField({
 
   if (chosen !== null && !editing) {
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm text-foreground">
-          {t(`${NS}:demand.form.place.identityChosen`, {
-            // Η ταυτότητα **είναι** η ετικέτα μέχρι να διαβαστεί η καρτέλα του τόπου:
-            // ένα `pbld_*` δεν είναι φιλικό, αλλά είναι **αληθές** — και δεν
-            // επινοείται όνομα που κανείς δεν έδωσε.
-            label: chosen.buildingId ?? chosen.landId,
-          })}
-        </span>
-        <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
-          {t(`${NS}:demand.form.place.identityChange`)}
-        </Button>
+      <div className="space-y-2 rounded-lg border border-border bg-card p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium text-foreground">{t(`${NS}:place.chosen`)}</p>
+          <Button type="button" size="sm" variant="outline" onClick={() => setEditing(true)}>
+            {t(`${NS}:place.change`)}
+          </Button>
+        </div>
+        {/*
+          🔴 **ΕΔΩ ΕΠΑΨΕ ΝΑ ΦΑΙΝΕΤΑΙ ΩΜΟ `pbld_*`** (Β3, 2026-08-11). Η ταυτότητα
+          **δεν κρύβεται** — μεταφέρεται σε δεύτερη γραμμή από το {@link PlaceSummary},
+          γιατί είναι το **μόνο** πράγμα που ταιριάζει προσφορά με ζήτηση (§14.5).
+          Αυτό που άλλαξε είναι ότι δεν είναι πια **το μόνο** που βλέπει ο άνθρωπος.
+
+          ⚠️ Το περίγραμμα ζωγραφίζεται εδώ επίτηδες: ο επιλογέας του §13.6 μπορεί
+          κάλλιστα να πιάσει το **διπλανό** κτίριο, και το σχήμα είναι η μόνη
+          επαλήθευση που δεν απαιτεί από τον άνθρωπο να διαβάσει αναγνωριστικό.
+        */}
+        <PlaceSummary place={chosen} withOutline />
       </div>
     );
   }

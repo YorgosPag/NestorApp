@@ -34,6 +34,7 @@ import {
   type ListingPositionCandidate,
   type AddressLike,
 } from './public-listing-projection';
+import type { PlaceRef } from '@/types/geo/public-place';
 
 const logger = createModuleLogger('publish-public-listing');
 
@@ -47,36 +48,80 @@ export type PublishOutcome = 'published' | 'withdrawn' | 'failed';
  * ⚠️ **Διαβάζει με Admin SDK επίτηδες.** Ο ανώνυμος επισκέπτης **δεν** έχει —και δεν
  * πρέπει να αποκτήσει— πρόσβαση στα `buildings`/`projects`. Η ανάλυση γίνεται εδώ
  * **μία φορά**, και ό,τι φτάνει στον κόσμο είναι μόνο το **αποτέλεσμα**.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΔΥΟ ΕΡΩΤΗΣΕΙΣ, **ΕΝΑ** ΑΝΕΒΑΣΜΑ — και γι' αυτό ζουν στην ίδια συνάρτηση (Β3)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * *«**Πού** είναι;»* → οι διευθύνσεις του **έργου** (υποψήφιες θέσεις).
+ * *«**Ποιο πράγμα** είναι;»* → ο δεσμός του **κτιρίου** προς το επίπεδο Α.
+ *
+ * Είναι διαφορετικές ερωτήσεις με **διαφορετική** απάντηση, αλλά η διαδρομή προς την
+ * απάντηση είναι **η ίδια αλυσίδα**. Δύο ξεχωριστά ανεβάσματα θα διάβαζαν **δύο φορές**
+ * το ίδιο έγγραφο κτιρίου — και, χειρότερα, θα μπορούσαν να **αποκλίνουν** στο ποιο
+ * κτίριο θεωρούν «το» κτίριο του ακινήτου.
+ *
+ * 🔑 **Ο δεσμός ζει στο ΚΤΙΡΙΟ, όχι στο ακίνητο** (§14.4 κανόνας 4 · §21.6): το επίπεδο
+ * Α είναι κοινό και **δεν κουβαλά ποτέ** ταυτότητα πελάτη, άρα ο δεσμός δείχνει **από
+ * το Β προς το Α** και ποτέ αντίστροφα. Και είναι στο κτίριο επειδή **εκεί** είναι
+ * αληθής: όλα τα διαμερίσματα ενός κτιρίου βρίσκονται στο **ίδιο** φυσικό κτίριο, και
+ * μια δήλωση ανά ακίνητο θα ήταν N αντίγραφα του ίδιου γεγονότος (§14.5, «χωρίς
+ * διπλότυπα»).
+ *
+ * ⚠️ **Το έγγραφο του κτιρίου διαβάζεται τώρα ΚΑΙ όταν το ακίνητο ξέρει το έργο του.**
+ * Πριν τη Β3 το ανέβασμα σταματούσε στο `property.projectId`· αυτό αρκούσε για τη
+ * **θέση**, αλλά ο **δεσμός** ζει ένα σκαλί πιο κάτω. Ένα επιπλέον read ανά ακίνητο με
+ * `buildingId` είναι το **κόστος του να έχει διεύθυνση η μισή αγορά** — και δεν
+ * πληρώνεται καθόλου για ακίνητα χωρίς κτίριο.
+ *
+ * 🔶 **Δηλωμένο όριο**: ακίνητο **χωρίς** `buildingId` δεν αποκτά δεσμό. Δεν
+ * «κληρονομεί» από το έργο, γιατί ένα έργο μπορεί να έχει **πολλά** κτίρια σε
+ * **διαφορετικές** γη — μια τέτοια κληρονομιά θα ήταν εικασία, ακριβώς αυτό που
+ * απαγορεύει το §13.3.
  */
 export async function collectPlaceKnowledge(
   adminDb: AdminFirestore,
   property: { buildingId?: string | null; projectId?: string | null },
   locatedAt: string
 ): Promise<PlaceKnowledge> {
-  const projectId = await resolveProjectId(adminDb, property);
-  if (!projectId) return { candidates: [] };
+  const building = await readBuildingDoc(adminDb, property.buildingId ?? null);
+  const ref = building?.placeRef ?? null;
+
+  const projectId = property.projectId ?? building?.projectId ?? null;
+  if (!projectId) return { candidates: [], ref };
 
   const snap = await adminDb.collection(COLLECTIONS.PROJECTS).doc(projectId).get();
-  if (!snap.exists) return { candidates: [] };
+  if (!snap.exists) return { candidates: [], ref };
 
   const addresses = (snap.data()?.addresses ?? []) as AddressLike[];
   const candidates = addresses
     .map((address) => addressToPositionCandidate(address, locatedAt))
     .filter((c): c is ListingPositionCandidate => c !== null);
 
-  return { candidates };
+  return { candidates, ref };
 }
 
-/** Το έργο του ακινήτου — απευθείας, ή μέσω του κτιρίου του. */
-async function resolveProjectId(
-  adminDb: AdminFirestore,
-  property: { buildingId?: string | null; projectId?: string | null }
-): Promise<string | null> {
-  if (property.projectId) return property.projectId;
-  if (!property.buildingId) return null;
+/** Ό,τι χρειάζεται η αλυσίδα από το κτίριο — **δύο** πεδία, όχι ολόκληρο το έγγραφο. */
+interface BuildingChainFacts {
+  readonly projectId: string | null;
+  readonly placeRef: PlaceRef | null;
+}
 
-  const building = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(property.buildingId).get();
-  return building.exists ? ((building.data()?.projectId as string | undefined) ?? null) : null;
+/** Το έγγραφο του κτιρίου, **μία φορά** — ή `null` αν δεν υπάρχει κτίριο να ρωτηθεί. */
+async function readBuildingDoc(
+  adminDb: AdminFirestore,
+  buildingId: string | null
+): Promise<BuildingChainFacts | null> {
+  if (!buildingId) return null;
+
+  const snap = await adminDb.collection(COLLECTIONS.BUILDINGS).doc(buildingId).get();
+  if (!snap.exists) return null;
+
+  const data = snap.data() ?? {};
+  return {
+    projectId: (data.projectId as string | undefined) ?? null,
+    placeRef: (data.placeRef as PlaceRef | undefined) ?? null,
+  };
 }
 
 /**

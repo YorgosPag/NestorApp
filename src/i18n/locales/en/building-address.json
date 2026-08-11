@@ -38,6 +38,17 @@
     }
   },
   "address": {
+    "placeLink": {
+      "title": "The public building",
+      "help": "Point to which building on the map this is. The link is what makes your listings meet the people looking for THIS building.",
+      "none": "Not linked to a public building.",
+      "clear": "Remove link",
+      "saving": "Saving the link…",
+      "saved": "The link was saved.",
+      "rejected": "That place does not exist. Pick again.",
+      "unverified": "We could not verify the place. Try again shortly — change nothing.",
+      "failed": "The link was not saved. Try again."
+    },
     "types": {
       "site": "Site",
       "entrance": "Entrance",

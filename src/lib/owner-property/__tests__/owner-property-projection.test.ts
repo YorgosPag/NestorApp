@@ -119,7 +119,7 @@ describe('🔑 Θ — «υποχρεωτικό ΕΡΩΤΗΜΑ, όχι υποχρ
     // κάθε εγγράφου που γράφτηκε πριν υπάρξει το ερώτημα.
     const neverAsked = buildPublicListing(
       { ...projectableFromOwnerProperty(validOwnerProperty()), locationDisclosure: null },
-      { candidates: [] },
+      { candidates: [], ref: null },
       AT,
     );
 

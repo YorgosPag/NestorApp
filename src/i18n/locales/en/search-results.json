@@ -214,9 +214,7 @@
         "failed": "The lookup did not respond. Please try again shortly.",
         "radiusLabel": "Radius (km)",
         "place": "This building or plot",
-        "area": "This area on the map",
-        "identityChosen": "Chosen place: {label}",
-        "identityChange": "Change place"
+        "area": "This area on the map"
       },
       "timing": {
         "legend": "When do you need it?",
@@ -578,6 +576,20 @@
       "address-not-found": "We could not locate that address."
     },
     "failed": "The place was not recorded. Try again.",
-    "attribution": "Map data © OpenStreetMap contributors"
+    "attribution": "Map data © OpenStreetMap contributors",
+    "summary": {
+      "loading": "Reading the place…",
+      "absent": "This place does not exist. Pick again.",
+      "danglingBuilding": "The land exists, but the building that was recorded is gone. Pick the building again.",
+      "error": "The place could not be read. Try again shortly.",
+      "landOnly": "Land, no building",
+      "area": "Area: {sqm} m²",
+      "identity": "Identity: {id}",
+      "floors": "Floors: {floors}",
+      "constructionYear": "Built: {year}",
+      "outlineNone": "This place has no shape on the public map.",
+      "outlineUnavailable": "The shape did not load — the map did not answer. Try again shortly.",
+      "outlineFailed": "We cannot show the shape of this place."
+    }
   }
 }

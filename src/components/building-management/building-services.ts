@@ -19,60 +19,49 @@ import { createModuleLogger } from '@/lib/telemetry';
 
 const logger = createModuleLogger('BuildingServices');
 
-/**
- * 🏢 ENTERPRISE: Building update payload type
- * Type-safe updates for building modifications
- */
-export interface BuildingUpdatePayload {
-  /** ADR-233 §3.4: locked building identifier (e.g. "Κτήριο Α") */
-  code?: string;
-  name?: string;
-  description?: string;
-  totalArea?: number;
-  builtArea?: number;
-  floors?: number;
-  units?: number;
-  totalValue?: number;
-  startDate?: string;
-  completionDate?: string;
-  address?: string;
-  city?: string;
-  status?: string;
-  projectId?: string | null;      // 🏢 ENTERPRISE: Link building to project
-  // 🔒 SECURITY: companyId is TENANT field (immutable) — use linkedCompanyId for association
-  linkedCompanyId?: string | null; // 🏢 ENTERPRISE: Company association (contact ID)
-  linkedCompanyName?: string | null; // 🏢 ENTERPRISE: Company display name
-  company?: string | null;         // 🏢 ENTERPRISE: Legacy company display name
-  addresses?: ProjectAddress[];    // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-  category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
-  /** ADR-396 P8: κλιματική ζώνη ΚΕΝΑΚ (ΤΟΤΕΕ 20701-3) — έλεγχος U_max θερμοπρόσοψης. */
-  climateZone?: 'A' | 'B' | 'C' | 'D';
-  /** ADR-451 — building has a foundation datum below the lowest storey (default true). */
-  hasFoundation?: boolean;
-  /** ADR-451 — METRES — foundation depth below the lowest storey FFL. */
-  foundationDepth?: number;
-  /** ADR-489 §6.2 — `foundationDepth` παράγεται δυναμικά (Auto, default true) ή χειροκίνητη υπέρβαση. */
-  foundationDepthAuto?: boolean;
-  /**
-   * ADR-713 — METRES — πόσο κάτω από το FFL του χαμηλότερου ορόφου είναι η στάθμη
-   * **τελειωμένου εδάφους** (≥0, default 0). Όριο ΟΨΗΣ: πάνω της επένδυση/σοβάς, κάτω της
-   * στεγάνωση. **Διαφορετικό** από το `foundationDepth`, που είναι ογκομετρικό (ADR-712).
-   */
-  gradeDropBelowBase?: number;
-  /** ADR-461 — building has a stair-penthouse special level above the top storey (default true when ≥1 storey). */
-  hasStairPenthouse?: boolean;
-  /** ADR-461 — METRES — stair-penthouse (απόληξη κλιμακοστασίου) storey height (default 2.40). */
-  stairPenthouseHeight?: number;
-  /**
-   * ADR-456 — δομοστατικές ρυθμίσεις κτιρίου (κανονισμός + προεπιλ. κατηγορία
-   * σκυροδέματος). Inline shape (όχι import από dxf-viewer subapp — dependency
-   * direction)· ταυτίζεται με `StructuralSettings` στο subapp.
-   */
-  structuralSettings?: {
-    codeId: 'eurocode' | 'greek-legacy';
-    defaultConcreteGrade: string;
-  };
+/** Ό,τι επιστρέφει μια αποτυχημένη μεταβολή κτιρίου — **μία** διατύπωση, δύο καλούντες. */
+interface BuildingMutationFailure {
+  readonly success: false;
+  readonly error: string;
+  readonly errorCode?: string;
 }
+
+/**
+ * **Η μία διατύπωση της αποτυχίας.**
+ *
+ * 🔴 Ήταν γραμμένη **δύο φορές** πανομοιότυπα (δημιουργία · ενημέρωση) και το εντόπισε
+ * το **CHECK 3.28** μέσα στο ίδιο commit που τις έκανε ταυτόσημες. Ο `errorCode` είναι
+ * ο λόγος που έχει σημασία: χωρίς αυτόν κάθε αποτυχία γίνεται «κάτι πήγε στραβά», και
+ * η οθόνη δεν μπορεί να ξεχωρίσει «*δεν υπάρχει*» (**μην ξαναδοκιμάσεις το ίδιο**) από
+ * «*δεν μάθαμε*» (**ξαναδοκίμασε, μην αλλάξεις τίποτα**).
+ *
+ * *(Ίδιο ιδίωμα με το `reportProjectionFailure` του `publish-public-listing.ts`.)*
+ */
+function reportBuildingMutationFailure(
+  operation: string,
+  error: unknown,
+): BuildingMutationFailure {
+  const isApiError = ApiClientError.isApiClientError(error);
+  const message = error instanceof Error ? error.message : String(error);
+  const statusCode = isApiError ? error.statusCode : undefined;
+  const errorCode = isApiError ? error.errorCode : undefined;
+
+  logger.error(`${operation} failed: ${message}`, { statusCode, errorCode });
+  return { success: false, error: message, errorCode };
+}
+
+/**
+ * 🏢 ENTERPRISE: Τα σχήματα καλωδίου ζουν σε **ένα** αρχείο τύπων.
+ *
+ * 🔴 Ήταν γραμμένα **δύο φορές** (εδώ + `app/api/buildings/building-update.handler.ts`)
+ * και **είχαν ήδη αποκλίνει**· το εντόπισε το **CHECK 3.28**, όχι άνθρωπος. Τα
+ * re-exports μένουν ώστε οι υπάρχοντες καταναλωτές να μη μετακομίσουν στην ίδια πράξη
+ * (ADR-777 κανόνας 19: *μετακινούμε καταναλωτές, όχι αρχεία* — και όχι στο ίδιο βήμα).
+ */
+export type {
+  BuildingUpdatePayload,
+  BuildingCreatePayload,
+} from '@/types/building/mutation-payloads';
 
 /**
  * 🏗️ ENTERPRISE: Ενημέρωση κτιρίου μέσω API (Admin SDK)
@@ -85,7 +74,7 @@ export interface BuildingUpdatePayload {
 export async function updateBuilding(
   buildingId: string,
   updates: BuildingUpdatePayload & { _v?: number }
-): Promise<{ success: boolean; error?: string; _v?: number }> {
+): Promise<{ success: boolean; error?: string; errorCode?: string; _v?: number }> {
   try {
     logger.info('Updating building via API', { buildingId });
 
@@ -121,40 +110,10 @@ export async function updateBuilding(
     if (ApiClientError.isApiClientError(error) && error.statusCode === 409) {
       throw error;
     }
-    const msg = error instanceof Error ? error.message : String(error);
-    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
-    logger.error(`updateBuilding failed: ${msg}`, { statusCode });
-    return {
-      success: false,
-      error: msg,
-    };
+    // 🔴 **Ο κωδικός ΔΕΝ πεταγόταν από εδώ** — και χωρίς αυτόν η οθόνη δεν μπορούσε να
+    // ξεχωρίσει «*αυτός ο τόπος δεν υπάρχει*» (422) από «*δεν επαληθεύσαμε*» (503).
+    return reportBuildingMutationFailure('updateBuilding', error);
   }
-}
-
-/**
- * 🏢 ENTERPRISE: Building create payload type
- * Type-safe data for building creation
- */
-export interface BuildingCreatePayload {
-  /** ADR-233 §3.4: locked building identifier (e.g. "Κτήριο Α") */
-  code: string;
-  name: string;
-  description?: string;
-  address?: string;
-  city?: string;
-  totalArea?: number;
-  builtArea?: number;
-  floors?: number;
-  units?: number;
-  totalValue?: number;
-  startDate?: string;
-  completionDate?: string;
-  status?: string;
-  projectId?: string | null;
-  companyId: string;
-  company?: string;
-  addresses?: ProjectAddress[];  // 🏢 ENTERPRISE: Multi-address support (ADR-167)
-  category?: 'mixed' | 'residential' | 'commercial' | 'industrial';
 }
 
 /**
@@ -196,15 +155,7 @@ export async function createBuilding(
     return { success: true, buildingId };
 
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    const statusCode = ApiClientError.isApiClientError(error) ? error.statusCode : undefined;
-    const errorCode = ApiClientError.isApiClientError(error) ? error.errorCode : undefined;
-    logger.error(`createBuilding failed: ${msg}`, { statusCode, errorCode });
-    return {
-      success: false,
-      error: msg,
-      errorCode,
-    };
+    return reportBuildingMutationFailure('createBuilding', error);
   }
 }
 

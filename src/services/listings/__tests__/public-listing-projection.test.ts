@@ -17,7 +17,7 @@ import {
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 
 const AT = '2026-08-10T10:00:00.000Z';
-const NO_PLACE: PlaceKnowledge = { candidates: [] };
+const NO_PLACE: PlaceKnowledge = { candidates: [], ref: null };
 
 /** Πραγματικό έγγραφο: `prop_2d612992…` «Μεζονέτα 95 τ.μ.» (χωρίς offerKinds — προ Α20). */
 const REAL_MAISONETTE: ProjectableProperty = {
@@ -168,7 +168,10 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
   it('🔑 ο ΔΕΣΜΟΣ προς το επίπεδο Α ταξιδεύει αυτούσιος — ζήτηση και προσφορά δείχνουν στο ΙΔΙΟ', () => {
     const ref = { landId: 'land_1', buildingId: 'pbld_1' };
 
-    const linked = buildPublicListing({ ...REAL_MAISONETTE, placeRef: ref }, NO_PLACE, AT)!;
+    // ⚠️ Ο δεσμός έρχεται από τη **γνώση τόπου**, όχι από το ακίνητο (Β3): ο ιδιώτης
+    // τον δηλώνει στο δικό του έγγραφο, ο επαγγελματίας τον κληρονομεί από το κτίριο,
+    // και το `buildPublicListing` έχει **μία** είσοδο για ένα πεδίο εξόδου.
+    const linked = buildPublicListing(REAL_MAISONETTE, { candidates: [], ref }, AT)!;
     expect(linked.place).toEqual(ref);
 
     // …και η απουσία μένει **ρητή**, ποτέ `undefined`.

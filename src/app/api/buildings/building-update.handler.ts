@@ -24,6 +24,12 @@ import { getErrorMessage } from '@/lib/error-utils';
 import { withVersionCheck, ConflictError } from '@/lib/firestore/version-check';
 import { POLICY_ERROR_CODES } from '@/lib/policy';
 import { geocode } from '@/app/api/geocoding/geocoding-engine';
+import { verifyPlaceRef } from '@/services/places/public-place-read.service';
+import type { PlaceRef } from '@/types/geo/public-place';
+// 🔴 **Το σχήμα καλωδίου γράφεται ΜΙΑ φορά** — ήταν αντιγραμμένο εδώ και στον πελάτη,
+// και τα δύο αντίγραφα **είχαν ήδη αποκλίνει** (`addresses` · `category`). Το εντόπισε
+// το CHECK 3.28, όχι άνθρωπος.
+import type { BuildingUpdatePayload } from '@/types/building/mutation-payloads';
 
 const logger = createModuleLogger('BuildingUpdate');
 
@@ -75,33 +81,41 @@ async function geocodePrimaryAddress(
 }
 
 // ============================================================================
-// TYPES
+// ΔΕΣΜΟΣ ΠΡΟΣ ΤΟ ΕΠΙΠΕΔΟ Α (ADR-777 §14.5)
 // ============================================================================
 
-interface BuildingUpdatePayload {
-  /** ADR-233 §3.4: locked building identifier (e.g. "Κτήριο Α") */
-  code?: string;
-  name?: string;
-  description?: string;
-  address?: string;
-  city?: string;
-  totalArea?: number;
-  builtArea?: number;
-  floors?: number;
-  units?: number;
-  totalValue?: number;
-  startDate?: string;
-  completionDate?: string;
-  status?: string;
-  projectId?: string | null;
-  linkedCompanyId?: string | null;
-  linkedCompanyName?: string | null;
-  company?: string | null;
-  addresses?: Record<string, unknown>[];
-  category?: string;
-  /** ADR-396 P8: κλιματική ζώνη ΚΕΝΑΚ (passthrough → Firestore· no allowlist). */
-  climateZone?: 'A' | 'B' | 'C' | 'D';
+/**
+ * **Κάθε ετυμηγορία απαντιέται ρητά** — καμία `default`, καμία σιωπή.
+ *
+ * 🔴 **Το «δεν μάθαμε» φεύγει ως 503 και ΠΟΤΕ ως 422**, και δεν είναι λεπτολογία: ένα
+ * 422 λέει στον επαγγελματία *«αυτός ο τόπος δεν υπάρχει»* και τον στέλνει να
+ * **φτιάξει δεύτερη ταυτότητα** για φυσικό κτίριο που έχει ήδη μία — δηλαδή να
+ * παραγάγει ακριβώς το διπλότυπο που όλο το επίπεδο Α υπάρχει για να αποτρέψει
+ * (§14.5). Το 503 λέει *«ξαναδοκίμασε, **μην αλλάξεις τίποτα**»*, όπως ήδη κάνει το
+ * `/api/places/resolve`.
+ */
+async function assertPlaceRefResolvable(
+  adminDb: ReturnType<typeof requireAdminFirestore>,
+  ref: PlaceRef,
+): Promise<void> {
+  const verdict = await verifyPlaceRef(adminDb, ref);
+
+  switch (verdict) {
+    case 'exists':
+      return;
+    case 'not-a-place-id':
+      throw new ApiError(422, 'placeRef is not a level-A identity', 'PLACE_REF_MALFORMED');
+    case 'land-absent':
+    case 'building-absent':
+      throw new ApiError(422, `placeRef points to a place that does not exist (${verdict})`, 'PLACE_REF_ABSENT');
+    case 'unavailable':
+      throw new ApiError(503, 'Could not verify placeRef — try again', 'PLACE_REF_UNVERIFIED');
+  }
 }
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 interface BuildingUpdateResponse {
   buildingId: string;
@@ -157,6 +171,18 @@ export const PATCH = withStandardRateLimit(
             throw new ApiError(409, `Building code "${cleanUpdates.code}" already exists in this project`, POLICY_ERROR_CODES.DUPLICATE_CODE);
           }
         }
+      }
+
+      // 🔗 ADR-777 §14.5 — ο δεσμός προς το επίπεδο Α επαληθεύεται **πριν** γραφτεί.
+      //
+      // 🔴 Χωρίς αυτό η βλάβη είναι **αόρατη**: ένας δεσμός προς ανύπαρκτη ταυτότητα
+      // ταξιδεύει στη δημόσια αγγελία, **φαίνεται** λυμένος, και απλώς δεν ταιριάζει
+      // ποτέ με καμία ζήτηση Ζ3/Ζ5. Η μηχανή θα έλεγε «καμία αντιστοιχία» και θα είχε
+      // δίκιο — κανείς δεν θα ρωτούσε γιατί.
+      //
+      // ⚠️ **Η άρση του δεσμού (`null`) δεν επαληθεύεται** — δεν υπάρχει τι να υπάρχει.
+      if (cleanUpdates.placeRef) {
+        await assertPlaceRefResolvable(adminDb, cleanUpdates.placeRef as PlaceRef);
       }
 
       // Auto-geocode lat/lon when addresses are saved (for weather alerts)
@@ -224,6 +250,14 @@ export const PATCH = withStandardRateLimit(
       if (error instanceof ConflictError) {
         return NextResponse.json(error.body, { status: error.statusCode });
       }
+      // 🔴 **Μια ΚΡΙΜΕΝΗ απάντηση δεν ξαναγίνεται «κάτι πήγε στραβά».** Μέχρι σήμερα
+      // αυτό το `catch` κατάπινε **κάθε** `ApiError` που έριχνε το ίδιο το σώμα —
+      // ακόμη και το `400 Building ID is required` δέκα γραμμές πιο πάνω — και το
+      // ξαναπετούσε ως **500**. Δηλαδή «*το αίτημά σου ήταν λάθος*» και «*ο
+      // διακομιστής μας έσπασε*» έφταναν στον άνθρωπο **ταυτόσημα**, και μόνο το
+      // δεύτερο τον καλεί να ξαναδοκιμάσει. (ADR-777 Β3 — ίδιο σχήμα με τη διάκριση
+      // `absent` ⇄ `unavailable` του §13.7.2.)
+      if (error instanceof ApiError) throw error;
       logger.error('[Buildings] Error updating building', { error });
       throw new ApiError(500, getErrorMessage(error, 'Failed to update building'));
     }
