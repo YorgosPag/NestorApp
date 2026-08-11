@@ -213,7 +213,9 @@ function ToolbarCombobox(props: ToolbarComboboxProps): React.ReactElement {
               role="option"
               label={option.label}
               selected={option.selected}
-              autoFocus={index === 0}
+              // 🔴 §26.8 — **υπό όρο**: εστιάζει τον πρώτο μόνο όταν το πληκτρολόγιο δεν το
+              // κρατούσε ήδη το κελί τη στιγμή που άνοιξε η λίστα.
+              autoFocus={index === 0 && control.mayTakeKeyboard}
               roving={listRoving.itemProps(index)}
               onSelect={() => control.runAndClose(option.onSelect)}
             />

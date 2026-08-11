@@ -144,7 +144,9 @@ export function TableAlignMenu(props: TableAlignMenuProps): React.ReactElement {
                 label={t(option.labelKey)}
                 icon={<option.Icon size={15} aria-hidden="true" />}
                 selected={isTableAlignActive(current, option)}
-                autoFocus={index === 0}
+                // 🔴 §26.8 — **υπό όρο**: εστιάζει τον πρώτο μόνο όταν το πληκτρολόγιο δεν το
+                // κρατούσε ήδη το κελί τη στιγμή που άνοιξε το πάνελ.
+                autoFocus={index === 0 && control.mayTakeKeyboard}
                 roving={listRoving.itemProps(index)}
                 onSelect={() => control.runAndClose(() => onSetAlign(nextTableAlign(current, option)))}
               />

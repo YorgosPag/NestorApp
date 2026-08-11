@@ -52,6 +52,7 @@ import { Check, ClipboardPaste } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
+import { TABLE_CELL_PANEL_SURFACE } from '../../table-cell-editor/table-cell-keyboard-ownership';
 import {
   ALL_TABLE_FORMAT_FACETS,
   TABLE_FORMAT_FACETS,
@@ -158,7 +159,8 @@ export function TablePasteMenu(props: TablePasteMenuProps): React.ReactElement {
             styles.panel,
             'border border-border rounded-lg bg-popover text-popover-foreground shadow-md',
           )}
-          {...TABLE_CELL_SESSION_MARKER}
+          // 🔴 ADR-753 §26.8 — σημάδι **και** φρουρός πατήματος, μία φορά για όλο το πάνελ.
+          {...TABLE_CELL_PANEL_SURFACE}
         >
           {PASTE_COMMANDS.map((command, index) => (
             <button
@@ -167,7 +169,9 @@ export function TablePasteMenu(props: TablePasteMenuProps): React.ReactElement {
               role="menuitem"
               className={styles.item}
               aria-disabled={!canPaste || undefined}
-              autoFocus={index === 0}
+              // 🔴 §26.8 — **υπό όρο**: η εστίαση του πρώτου είναι σωστή για όποιον άνοιξε το
+              // πάνελ με πληκτρολόγιο, και κλοπή για όποιον έγραφε στο κελί (δες §26.8).
+              autoFocus={index === 0 && panel.mayTakeKeyboard}
               onClick={() => {
                 if (canPaste) panel.runAndClose(() => onPaste(command.request));
               }}

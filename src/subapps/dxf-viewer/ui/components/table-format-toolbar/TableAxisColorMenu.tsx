@@ -79,13 +79,15 @@
  */
 
 import React, {
-  useCallback, useId, useRef, useState, useSyncExternalStore, type KeyboardEvent,
+  useCallback, useState, useSyncExternalStore, type KeyboardEvent,
 } from 'react';
 import { Baseline, PaintBucket, Palette } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
+import { TABLE_CELL_PANEL_SURFACE } from '../../table-cell-editor/table-cell-keyboard-ownership';
 import { getRecentColorsStore } from '../../color/RecentColorsStore';
+import { useToolbarPanel } from './use-toolbar-panel';
 import { normalizeHexColor } from '../../../config/color-math';
 import { toolbarColorStoreFor } from '../../../state/table-toolbar-color-store';
 import { colorGridFor } from '../../color/aci-color-grid';
@@ -144,10 +146,19 @@ export type TableAxisColorMenuProps =
 export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactElement {
   const { role, rovingApply, rovingMenu, state } = props;
   const { t } = useTranslation('dxf-viewer');
-  const [isOpen, setIsOpen] = useState(false);
+  /*
+   * 🔴 ADR-753 §26.8 — **ο ΤΕΤΑΡΤΟΣ κύκλος ζωής πάνελ έγινε ο ίδιος με τους τρεις άλλους.**
+   *
+   * Ήταν χειρόγραφος (`useState` + `useId` + `useRef` + δικό του `Escape`) και είχε ήδη
+   * αποκλίνει σε **δύο** σημεία που το §25.6 είχε διορθώσει παντού αλλού: το `Escape` έκανε
+   * ωμό `triggerRef.current?.focus()` (κλοπή, όταν το πληκτρολόγιο το κρατά το κελί), και το
+   * κλείσιμο μετά την επιλογή χρώματος **δεν επέστρεφε ποτέ** την εστίαση, ούτε καν στον
+   * χρήστη πληκτρολογίου που της την είχε δώσει. Δύο αντίθετα λάθη από την ίδια αιτία: τέταρτο
+   * αντίγραφο μιας απόφασης που ζει κεντρικά (N.18 / CHECK 3.28).
+   */
+  const panel = useToolbarPanel();
+  const { isOpen, panelId, triggerRef, close } = panel;
   const [dialogDraft, setDialogDraft] = useState<string | null>(null);
-  const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const panelId = useId();
 
   const keys = colorMenuKeys(role);
   const isFill = role === 'fill';
@@ -192,8 +203,8 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
     store.set(hex);
     getRecentColorsStore().addColor(hex);
     onSet(hex);
-    setIsOpen(false);
-  }, [store, onSet]);
+    close();
+  }, [store, onSet, close]);
 
   /**
    * «Αυτόματο» — δεν περνά από το {@link pick} και δεν γράφει στη μνήμη: το «τελευταίο χρώμα»
@@ -202,8 +213,8 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
    */
   const chooseAutomatic = useCallback(() => {
     onSet(undefined);
-    setIsOpen(false);
-  }, [onSet]);
+    close();
+  }, [onSet, close]);
 
   /**
    * 🔴 ADR-739 §38 — «Αυτόματο»: **ρητή** επιλογή του χρήστη, όχι απουσία επιλογής. Γράφει το
@@ -215,8 +226,8 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
    */
   const chooseAutoContrast = useCallback(() => {
     onSet(AUTOMATIC_TABLE_INK);
-    setIsOpen(false);
-  }, [onSet]);
+    close();
+  }, [onSet, close]);
 
   /**
    * «Κανένα γέμισμα» — ίδιο σκεπτικό, αλλά ο έλεγχος του ρόλου **δεν είναι αμυντικός**: είναι
@@ -227,16 +238,22 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
   const chooseNone = useCallback(() => {
     if (props.role !== 'fill') return;
     props.onSet(null);
-    setIsOpen(false);
-  }, [props]);
+    close();
+  }, [props, close]);
 
-  // Το `Escape` κλείνει **το πάνελ**, όχι όλη τη γραμμή: ένα `Escape` = ένα επίπεδο.
+  /**
+   * Το `Escape` κλείνει **το πάνελ**, όχι όλη τη γραμμή: ένα `Escape` = ένα επίπεδο — και αυτό
+   * το ξέρει ήδη το {@link useToolbarPanel}. Εδώ μένει **μόνο** ό,τι είναι δικό του: όσο ο
+   * διάλογος «Περισσότερα χρώματα…» είναι μπροστά, το `Escape` **ανήκει σε εκείνον**.
+   *
+   * Περιτύλιγμα και όχι αντίγραφο: αν ο κεντρικός κύκλος ζωής μάθει κάτι καινούργιο για το
+   * κλείσιμο, το μαθαίνει και αυτό το πάνελ — που είναι ακριβώς αυτό που **δεν** έγινε όσο ήταν
+   * γραμμένο με το χέρι.
+   */
   const onPanelKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Escape' || dialogDraft !== null) return;
-    event.stopPropagation();
-    setIsOpen(false);
-    triggerRef.current?.focus();
-  }, [dialogDraft]);
+    if (dialogDraft !== null) return;
+    panel.onPanelKeyDown(event);
+  }, [dialogDraft, panel]);
 
   const TriggerIcon = isFill ? PaintBucket : Baseline;
 
@@ -256,7 +273,7 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
         onMainClick={() => pick(lastColor)}
         isOpen={isOpen}
         panelId={panelId}
-        onToggleMenu={() => setIsOpen((open) => !open)}
+        onToggleMenu={panel.toggle}
         triggerRef={triggerRef}
       >
         <TriggerIcon size={15} aria-hidden="true" />
@@ -278,7 +295,10 @@ export function TableAxisColorMenu(props: TableAxisColorMenuProps): React.ReactE
             styles.panel,
             'border border-border rounded-lg bg-popover text-popover-foreground shadow-md',
           )}
-          {...TABLE_CELL_SESSION_MARKER}
+          // 🔴 ADR-753 §26.8 — ένας φρουρός για **όλο** το χρωματολόγιο: τις γραμμές εντολών,
+          // τα χρώματα του σχεδίου, τα **78** δείγματα του πλέγματος και το «Περισσότερα
+          // χρώματα…». Το `mousedown` αναδύεται — δεν χρειάζεται κανένα από αυτά να το ξέρει.
+          {...TABLE_CELL_PANEL_SURFACE}
         >
           {/*
             🔑 Η υπόδειξη λέει **τι** κληρονομείς. Όταν το γέμισμα κληρονομεί κενό, οι δύο

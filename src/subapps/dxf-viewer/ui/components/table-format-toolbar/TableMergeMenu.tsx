@@ -36,6 +36,7 @@ import { TableCellsMerge, TableCellsSplit } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
+import { TABLE_CELL_PANEL_SURFACE } from '../../table-cell-editor/table-cell-keyboard-ownership';
 import {
   TABLE_MERGE_COMMANDS,
   TABLE_MERGE_PRIMARY_COMMAND,
@@ -118,7 +119,8 @@ export function TableMergeMenu(props: TableMergeMenuProps): React.ReactElement {
             styles.panel,
             'border border-border rounded-lg bg-popover text-popover-foreground shadow-md',
           )}
-          {...TABLE_CELL_SESSION_MARKER}
+          // 🔴 ADR-753 §26.8 — σημάδι **και** φρουρός πατήματος, μία φορά για όλο το πάνελ.
+          {...TABLE_CELL_PANEL_SURFACE}
         >
           {TABLE_MERGE_COMMANDS.map((command, index) => {
             const disabled = isTableMergeCommandDisabled(command.id, state);
@@ -135,7 +137,11 @@ export function TableMergeMenu(props: TableMergeMenuProps): React.ReactElement {
                   aria-disabled={disabled || undefined}
                   // Ο πρώτος εστιάζεται με το άνοιγμα· τα υπόλοιπα μέσω των βελών του browser
                   // στο `role="menu"` — δεν στήνεται δεύτερο roving μέσα σε τέσσερα items.
-                  autoFocus={index === 0}
+                  //
+                  // 🔴 §26.8 — **υπό όρο**: αν το πληκτρολόγιο το κρατούσε το κελί όταν άνοιξε
+                  // το πάνελ, το `autoFocus` θα το έκλεβε — και μάλιστα χωρίς να περάσει ποτέ
+                  // από `mousedown`, δηλαδή πίσω από την πλάτη του φρουρού.
+                  autoFocus={index === 0 && panel.mayTakeKeyboard}
                   onClick={() => {
                     if (!disabled) panel.runAndClose(() => onApply(command.id));
                   }}

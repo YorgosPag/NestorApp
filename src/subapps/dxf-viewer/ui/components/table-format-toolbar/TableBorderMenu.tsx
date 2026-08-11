@@ -34,6 +34,7 @@ import { Grid2x2, RotateCcw, SquarePen } from 'lucide-react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
+import { TABLE_CELL_PANEL_SURFACE } from '../../table-cell-editor/table-cell-keyboard-ownership';
 import type { TableBorderCommandId } from '../../../bim/table/table-range-border-ops';
 import {
   TABLE_DIAGONAL_COMMANDS,
@@ -167,7 +168,10 @@ export function TableBorderMenu(props: TableBorderMenuProps): React.ReactElement
             panel.panel,
             'border border-border rounded-lg bg-popover text-popover-foreground shadow-md',
           )}
-          {...TABLE_CELL_SESSION_MARKER}
+          // 🔴 ADR-753 §26.8 — ένας φρουρός για **όλο** το πάνελ: τις 13 εντολές, τις 4
+          // διαγωνίους, και τα flyout του μολυβιού μαζί με τα 78 δείγματα χρώματος μέσα τους.
+          // Ένας ανά κουμπί θα ήταν ~100 σημεία που πρέπει να «θυμούνται».
+          {...TABLE_CELL_PANEL_SURFACE}
         >
           {items.map(({ command, labelKey, startsGroup }, index) => (
             <React.Fragment key={command.id}>

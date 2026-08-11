@@ -30,6 +30,7 @@ import React, { type KeyboardEvent } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TABLE_CELL_SESSION_MARKER } from '../../table-cell-editor/table-cell-session-focus';
+import { TABLE_CELL_PANEL_SURFACE } from '../../table-cell-editor/table-cell-keyboard-ownership';
 import type { RovingItemProps } from './use-roving-toolbar';
 import styles from './table-toolbar-panel.module.css';
 
@@ -66,7 +67,10 @@ export function ToolbarListPanel(props: ToolbarListPanelProps): React.ReactEleme
         'border border-border rounded-lg bg-popover text-popover-foreground shadow-md',
         className,
       )}
-      {...TABLE_CELL_SESSION_MARKER}
+      // 🔴 ADR-753 §26.8 — **ΕΠΙΦΑΝΕΙΑ**, όχι σκέτο σημάδι: το σημάδι ταυτότητας μαζί με τον
+      // φρουρό «το πάτημα του ποντικιού δεν μετακινεί το πληκτρολόγιο», μία φορά για **όλα** τα
+      // στοιχεία μέσα (το `mousedown` αναδύεται). Τα ίδια τα στοιχεία κρατούν σκέτο το σημάδι.
+      {...TABLE_CELL_PANEL_SURFACE}
     >
       {children}
     </div>
