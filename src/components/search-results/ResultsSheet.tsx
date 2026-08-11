@@ -120,10 +120,23 @@ export function ResultsSheet({ viewport, children }: ResultsSheetProps) {
    */
   const holdInnerScroll = stop !== 'full';
 
+  /**
+   * **Η αναφορά της συμπεριφοράς** — τρεις ειλικρινείς απαντήσεις, ποτέ δύο.
+   *
+   * ⚠️ Η πρώτη γραφή έλεγε `isSheet ? stop : 'column'`, δηλαδή στον διακομιστή ανέφερε
+   * **«στήλη»** ενώ **δεν είχε μετρήσει τίποτα**: η ίδια σύμπτυξη του «δεν ξέρω» στο
+   * «ευρεία» που γέννησε εξαρχής το `useViewportClass`, αναπαραγμένη ένα επίπεδο πιο κάτω.
+   * Το είδε η **ζωντανή** επαλήθευση, διαβάζοντας `column` στο SSR **κάθε** συσκευής —
+   * καμία σουίτα δεν το έπιασε, γιατί καμία δεν ρωτούσε «τι λες όταν δεν ξέρεις;».
+   *
+   * 🔑 Δεν αλλάζει **τίποτα** γεωμετρικό (Ζ4): είναι αναφορά, όχι απόφαση.
+   */
+  const reportedState = viewport === 'measuring' ? 'measuring' : isSheet ? stop : 'column';
+
   return (
     <div
       ref={scrollerRef}
-      data-sheet-state={isSheet ? stop : 'column'}
+      data-sheet-state={reportedState}
       className={cn(
         styles.scroller,
         // ΣΤΕΝΗ — επικάλυψη πάνω στον χάρτη· η κύλιση ΕΙΝΑΙ η χειρονομία του φύλλου.

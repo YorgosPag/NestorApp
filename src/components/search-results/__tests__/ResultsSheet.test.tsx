@@ -106,6 +106,14 @@ describe('ResultsSheet — ποια διάταξη αποδίδεται ανά V
     expect(scroller.querySelector('header')).toHaveClass('md:hidden');
   });
 
+  it('Ζ12: «ΜΕΤΡΑΩ ΑΚΟΜΗ» το ΛΕΕΙ — δεν το συμπτύσσει σε «στήλη»', () => {
+    // 🔴 Η πρώτη γραφή ανέφερε `column` στον διακομιστή κάθε συσκευής: η ίδια σύμπτυξη
+    // του «δεν ξέρω» στο «ευρεία» που γέννησε εξαρχής το `useViewportClass`.
+    expect(mountSheet('measuring').scroller).toHaveAttribute('data-sheet-state', 'measuring');
+    expect(mountSheet('narrow').scroller).toHaveAttribute('data-sheet-state', 'peek');
+    expect(mountSheet('wide').scroller).toHaveAttribute('data-sheet-state', 'column');
+  });
+
   it('Ζ4: «ΜΕΤΡΑΩ ΑΚΟΜΗ» ⇒ ΤΑΥΤΟΣΗΜΟ σχήμα με τις δύο άλλες (CLS = 0 εκ κατασκευής)', () => {
     const shapeOf = (viewport: 'measuring' | 'narrow' | 'wide'): string => {
       const { scroller, unmount } = mountSheet(viewport);
