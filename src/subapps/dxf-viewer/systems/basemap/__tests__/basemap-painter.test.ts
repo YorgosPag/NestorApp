@@ -30,8 +30,9 @@
 
 import { paintBasemap, SEAM_BLEED_PX } from '../basemap-painter';
 import { buildTileWarpMesh, WARP_TOLERANCE_PX } from '../basemap-warp';
-import { geographicToDisplayMm } from '../basemap-projection';
-import { chooseZoomLevel } from '../basemap-tile-model';
+import { geographicToDisplayMm, geographicToWorldMm } from '../basemap-projection';
+import { chooseZoomLevel, tilesForDisplayRect } from '../basemap-tile-model';
+import { visibleDisplayRect } from '../../../rendering/core/visible-display-rect';
 import { BASEMAP_SOURCES } from '../basemap-source';
 import {
   geographicToTileFraction,
@@ -396,6 +397,37 @@ function pipelineZoom(testCase: { readonly devicePixelRatio: number; readonly sc
   });
 }
 
+/**
+ * **Ολόκληρος ο αγωγός** για μια κλίμακα: ορατό ορθογώνιο → επιλογή επιπέδου → επιλογή πλακιδίων.
+ *
+ * 🔴 Χωρίς αυτό, η άγκυρα διαλέγει **μόνη της** πλακίδιο και ρωτά μόνο ό,τι σκέφτηκε ο συγγραφέας.
+ * Η πρώτη γραφή του `Ψ6β` το έκανε ακριβώς αυτό και **κλείδωσε ψέμα** — δες την επικεφαλίδα του.
+ */
+function pipelineSelection(scale: number, devicePixelRatio: number) {
+  const transform = { ...TRANSFORM, scale, offsetX: 0, offsetY: 0 };
+  const visible = visibleDisplayRect(transform, VIEWPORT);
+  const width = visible.maxX - visible.minX;
+  const height = visible.maxY - visible.minY;
+  const centre = geographicToWorldMm(THESSALONIKI.lat, THESSALONIKI.lon);
+  const rect = {
+    minX: centre.x - width / 2, maxX: centre.x + width / 2,
+    minY: centre.y - height / 2, maxY: centre.y + height / 2,
+  };
+  const zoom = pipelineZoom({ devicePixelRatio, scale });
+  return tilesForDisplayRect(rect, zoom, null);
+}
+
+/**
+ * Ο κεντρικός μεσημβρινός της ΕΓΣΑ'87 (Εγκάρσια Mercator). Η προβολή έχει νόημα σε **στενή
+ * ζώνη** γύρω του — έξω από αυτήν δεν είναι «λίγο ανακριβής», είναι **χωρίς νόημα**.
+ */
+const EGSA87_CENTRAL_MERIDIAN = 24;
+
+/** Πόσο μακριά από τον κεντρικό μεσημβρινό κάθεται η ΒΔ γωνία του πλακιδίου, σε μοίρες. */
+function meridianDistanceDeg(tile: TileId): number {
+  return Math.abs(tileFractionToGeographic(tile.x, tile.y, tile.z).lon - EGSA87_CENTRAL_MERIDIAN);
+}
+
 /** Πού ακούμπησε ο ζωγράφος το κέντρο του πρώτου κελιού, και πού λέει η αλυσίδα ότι είναι. */
 function cellCentreError(scale: number, tile: TileId): { readonly errorPx: number; readonly divisions: number } {
   const transform = { ...TRANSFORM, scale };
@@ -429,39 +461,45 @@ describe('Ψ6 — το εσωτερικό σημείο κάτω από την υ
     expect(verdicts.filter((v) => !v.endsWith('true'))).toEqual([]);
   });
 
-  it('Ψ6β — 🔶 ΔΗΛΩΜΕΝΟ: η υποδιαίρεση είναι ΑΔΡΑΝΗΣ σε όλο το ρεαλιστικό εύρος', () => {
-    // Μετρημένο, όχι υποτιθέμενο: το `chooseZoomLevel` δίνει πάντα επίπεδο του οποίου το
-    // πλακίδιο βγαίνει ~150-580 px, και σε τέτοιο μέγεθος η καμπυλότητα Mercator ↔ ΕΓΣΑ'87
-    // είναι πολύ κάτω από το μισό εικονοστοιχείο. Άρα ΟΛΟ το μηχάνημα υποδιαίρεσης (ταβάνι
-    // 8×8, 128 τρίγωνα) δεν ενεργοποιείται ΠΟΤΕ στην πράξη — δηλαδή είναι φρουρός χωρίς
-    // απόδειξη ζωής (ADR-749 §5), και η άγκυρα το λέει αντί να το αφήνει να διαβάζεται ως
-    // ενεργή εγγύηση. Αν αλλάξει πάροχος, μέγεθος πλακιδίου ή ταβάνι πλήθους, ΣΠΑΕΙ εδώ.
-    const divisions = PIPELINE_CASES.map((testCase) => {
-      const z = pipelineZoom(testCase);
-      return buildTileWarpMesh(thessalonikiTile(z), null, testCase.scale).divisions;
+  it('Ψ6β — το ΣΥΝΟΡΟ: όσο τα πλακίδια είναι κοντά στον μεσημβρινό, το πλέγμα δεν χρειάζεται τίποτα', () => {
+    /**
+     * 🔴 **Η πρώτη γραφή αυτής της άγκυρας ΚΛΕΙΔΩΝΕ ΨΕΜΑ.** Έλεγε «`divisions === 1` σε όλο το
+     * ρεαλιστικό εύρος» — και ήταν αληθές **μόνο για το δείγμα κλιμάκων που διάλεξα**
+     * (`1e-5 … 1`), το οποίο δεν έφτανε ποτέ σε **πλήρες zoom-out**. Επιπλέον διάλεγε **μόνη
+     * της** το πλακίδιο (`thessalonikiTile(z)`) αντί να ρωτήσει τον αγωγό ποια πλακίδια θα
+     * ζητούσε — δηλαδή ρωτούσε μόνο εκεί που ήξερε ήδη την απάντηση.
+     *
+     * Πλέον περνά ολόκληρος ο αγωγός και το κριτήριο είναι **γεωγραφικό**: όσο τα επιλεγμένα
+     * πλακίδια κάθονται κοντά στον κεντρικό μεσημβρινό της ΕΓΣΑ'87, το πλέγμα μένει 1×1.
+     */
+    const nearMeridian = [1e-6, 1e-5, 1e-4, 1e-3, 0.01, 0.1, 1].map((scale) => {
+      const selection = pipelineSelection(scale, 1);
+      const tile = selection.tiles[Math.floor(selection.tiles.length / 2)];
+      const divisions = buildTileWarpMesh(tile, null, scale).divisions;
+      return { scale, far: meridianDistanceDeg(tile), divisions };
     });
 
-    expect(divisions.length).toBe(14);
-    expect([...new Set(divisions)]).toEqual([1]);
+    expect(nearMeridian.length).toBe(7);
+    // παρονομαστής: όλα ΟΝΤΩΣ μέσα στη ζώνη, αλλιώς η άγκυρα δεν δοκιμάζει αυτό που λέει
+    expect(nearMeridian.filter((r) => r.far > 30)).toEqual([]);
+    expect([...new Set(nearMeridian.map((r) => r.divisions))]).toEqual([1]);
   });
 
-  it('Ψ6γ — 🔴 ΔΗΛΩΜΕΝΟ: πάνω από το ταβάνι υποδιαίρεσης η υπόσχεση αθετείται ΣΙΩΠΗΛΑ', () => {
-    // Το `MAX_DIVISIONS = 8` είναι ταβάνι ΧΩΡΙΣ φωνή: όταν η ανοχή απαιτεί περισσότερα, το
-    // `chooseDivisions` επιστρέφει 8 και κανείς δεν μαθαίνει ότι τα 0,5 px δεν ισχύουν πια —
-    // ακριβώς το σχήμα που πλήρωσε το CHECK 3.45 (ανέφικτο κατώφλι, σιωπηλή αποτυχία).
-    // Η άγκυρα το ΚΑΤΑΓΡΑΦΕΙ και ταυτόχρονα αποδεικνύει ότι ο αγωγός ΔΕΝ παράγει το ζεύγος.
-    const beyondCeiling = { z: 12, scale: 4 };
-    const tile = thessalonikiTile(beyondCeiling.z);
-    const { errorPx, divisions } = cellCentreError(beyondCeiling.scale, tile);
+  it('Ψ6γ — 🔴 ΖΩΝΤΑΝΟ: σε πλήρες zoom-out ο αγωγός ζητά πλακίδια ΕΚΤΟΣ ζώνης ΕΓΣΑ\'87', () => {
+    // Το εύρημα ΔΕΝ είναι το ταβάνι υποδιαίρεσης — είναι ότι σε πλήρες zoom-out ζητούνται
+    // πλακίδια από την ΑΛΛΗ ΑΚΡΗ ΤΟΥ ΠΛΑΝΗΤΗ (μετρημένο: γ.μ. −180°, δηλαδή 204° μακριά από
+    // τον κεντρικό μεσημβρινό) και περνούν από Εγκάρσια Mercator που εκεί δεν ορίζεται. Το
+    // πλέγμα κολλάει στο ταβάνι προσπαθώντας να «ισιώσει» κάτι που δεν είναι καμπυλότητα.
+    // Καμία υποδιαίρεση δεν το λύνει: το ταβάνι ΠΡΟΣΤΑΤΕΥΕΙ από 128 τρίγωνα σε πλακίδια που
+    // δεν έπρεπε να ζητηθούν. Η θεραπεία είναι ΟΡΙΟ ΖΩΝΗΣ — απόφαση τομέα (ADR-782 §27.7).
+    const selection = pipelineSelection(1e-8, 1);
+    const tile = selection.tiles[Math.floor(selection.tiles.length / 2)];
 
-    expect(divisions).toBe(8);                               // κόλλησε στο ταβάνι
-    expect(errorPx).toBeGreaterThan(WARP_TOLERANCE_PX * 100); // δύο τάξεις μεγέθους εκτός
-    // …και γι' αυτό δεν είναι σφάλμα σήμερα: με αυτή την κλίμακα ο αγωγός ζητά ΑΛΛΟ επίπεδο.
-    const chosen = chooseZoomLevel({
-      pixelsPerMm: beyondCeiling.scale, devicePixelRatio: 1, latitude: THESSALONIKI.lat, source: OSM,
-    });
-    expect(chosen).not.toBe(beyondCeiling.z);
-    expect(chosen).toBe(OSM.maxZoom);
+    expect(selection.tiles.length).toBeGreaterThan(0);   // παρονομαστής
+    expect(meridianDistanceDeg(tile)).toBeGreaterThan(90); // η ΑΙΤΙΑ, ονομασμένη
+    const { errorPx, divisions } = cellCentreError(1e-8, tile);
+    expect(divisions).toBe(8);                             // κόλλησε στο ταβάνι
+    expect(errorPx).toBeGreaterThan(WARP_TOLERANCE_PX * 100);
   });
 });
 
