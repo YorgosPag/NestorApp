@@ -147,7 +147,11 @@ import {
 // 🔴 ADR-753 §28 — **τι** πρέπει να δείχνει το πεδίο, και **ποιος** το γράφει στο DOM.
 import { tableCellEditorSpans } from './table-cell-editor-spans';
 import { useTableCellRichContent } from './use-table-cell-rich-content';
-import { TABLE_CELL_RICH_MARKER } from './table-text-field-ops';
+import {
+  flattenToSingleLine,
+  TABLE_CELL_RICH_MARKER,
+  tableTextFieldValue,
+} from './table-text-field-ops';
 import type { TableRichTextField } from '../components/table-text-menu/table-text-toolbar-types';
 import { useTableCellSessionKeys } from './use-table-cell-session-keys';
 // 🔴 ADR-739 §67 — το δεξί κλικ **μέσα** στο κουτί. Χωρίς αυτό ο browser δείχνει το δικό του
@@ -161,6 +165,8 @@ import {
   cancelTableCellCursorSession,
   closeTableCellCursor,
   restartTableCellCursorSession,
+  setTableCellCursorDraft,
+  setTableCellCursorMode,
 } from '../../state/table-cell-cursor-store';
 import type { TableCellEditorOverlayProps } from './table-cell-editor-overlay-types';
 
@@ -175,7 +181,7 @@ import type { TableCellEditorOverlayProps } from './table-cell-editor-overlay-ty
  *
  * ⚠️ **Ένας** ορισμός, δύο ονόματα στο ίδιο σύμβολο — ποτέ δεύτερο σώμα.
  */
-export { flattenToSingleLine } from './table-text-field-ops';
+export { flattenToSingleLine };
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
   const {
