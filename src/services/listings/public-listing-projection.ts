@@ -44,8 +44,13 @@
  * περίπτωση όπου τα δύο σκέλη δεν συμπίπτουν.
  */
 
-import { LISTED_COMMERCIAL_STATUSES, type CommercialStatus } from '@/constants/commercial-statuses';
+import {
+  FINALIZED_COMMERCIAL_STATUSES,
+  LISTED_COMMERCIAL_STATUSES,
+  type CommercialStatus,
+} from '@/constants/commercial-statuses';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
+import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import type { PropertyType } from '@/types/property';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { PublicListing, ListingPosition, UnknownPositionReason } from '@/types/public-listing';
@@ -133,6 +138,34 @@ export function isPubliclyListed(property: ProjectableProperty): boolean {
   if (typeof status === 'string' && (LISTED_COMMERCIAL_STATUSES as readonly string[]).includes(status)) {
     return true;
   }
+
+  // 🔴 **ΤΟ ΚΛΕΙΣΙΜΟ ΚΟΒΕΙ ΤΟ ΔΕΥΤΕΡΟ ΣΚΕΛΟΣ — αλλιώς πουλημένα ακίνητα μένουν στην
+  // αγορά.** Βρέθηκε με μέτρηση γράφοντας την **Α14** (2026-08-11), και είναι
+  // *ακριβώς* ο κίνδυνος που το σχόλιο του `projectedOfferKinds` ονομάζει δέκα
+  // γραμμές πιο κάτω — αλλά εκεί ονομάζεται μόνο για το **παραγόμενο** σκέλος:
+  //
+  //   «το `sold` **αποδεικνύει** `['sell']`, οπότε ένα σκέλος “έχει είδος ⇒ δημόσιο”
+  //    θα έβγαζε **πουλημένα ακίνητα στην αγορά**»
+  //
+  // Το ίδιο ισχύει για το **δηλωμένο** `offerKinds`, και για τον ίδιο ακριβώς λόγο:
+  // το `LIVE_OFFER_LIFECYCLES` περιλαμβάνει σκόπιμα το `closed` (*«μετράει για το τι
+  // ΕΙΝΑΙ σήμερα το ακίνητο»* — έτσι παράγεται το `sold`), οπότε το `deriveOfferKinds`
+  // μιας πουλημένης μονάδας επιστρέφει `['sell']`. «Τι είναι» και «τι διαφημίζεται»
+  // είναι **δύο ερωτήσεις**, και μόνο η πρώτη απαντιέται από τον κύκλο ζωής.
+  //
+  // ⚠️ **ΜΗΔΕΝ αλλαγή συμπεριφοράς για τα σημερινά δεδομένα, μετρημένη:** κανένα
+  // έγγραφο δεν έχει ακόμη `offerKinds` (§8.5), άρα ο βρόχος επέστρεφε ήδη `false`
+  // για κάθε `sold`/`rented`. Η γραμμή δεν διορθώνει ζωντανό ελάττωμα — **αποτρέπει
+  // το πρώτο**: οι αγγελίες της Α14 είναι τα **πρώτα** έγγραφα του συστήματος που
+  // γράφουν πραγματικά αυτό το πεδίο.
+  //
+  // 🔑 Χρησιμοποιεί το **υπάρχον** `FINALIZED_COMMERCIAL_STATUSES` και όχι δύο ωμά
+  // αλφαριθμητικά: μια όγδοη τελική κατάσταση οφείλει να κληρονομήσει τον κανόνα
+  // χωρίς να τη θυμηθεί κανείς.
+  if (typeof status === 'string' && (FINALIZED_COMMERCIAL_STATUSES as readonly string[]).includes(status)) {
+    return false;
+  }
+
   return (property.offerKinds ?? []).some((kind) => PUBLIC_OFFER_KINDS.has(kind));
 }
 
@@ -180,6 +213,46 @@ function numberOrNull(value: number | null | undefined): number | null {
 }
 
 /**
+ * Ο άξονας των διαθέσεων για την προβολή — **το νέο λεξιλόγιο νικά όταν υπάρχει**.
+ *
+ * 🔴 **Η ΑΣΥΜΜΕΤΡΙΑ ΠΟΥ ΔΙΟΡΘΩΝΕΙ, μετρημένη 2026-08-11.** Η {@link isPubliclyListed}
+ * δέχεται **δύο** λεξιλόγια· αυτή η γραμμή δεχόταν **ένα**. Η ίδια συνάρτηση προβολής
+ * απαντούσε *«δημοσιεύεται;»* σε δύο γλώσσες και *«τι είδους διάθεση;»* σε μία — και η
+ * δεύτερη **σιωπούσε**. Ζωντανή μέτρηση: **6/6** δημόσιες αγγελίες με σωστό
+ * `commercialStatus` και `offerKinds: []`, δηλαδή **έξι κάρτες χωρίς είδος διάθεσης
+ * και όλες οι πύλες πράσινες**.
+ *
+ * 🔑 **ΚΡΙΤΗΡΙΟ ΕΦΕΔΡΕΙΑΣ: ΚΕΝΟ, ΟΧΙ ΑΠΟΝ — και είναι ΑΠΟΔΕΙΞΙΜΟ, όχι προτίμηση.**
+ * Ο μοναδικός παραγωγός των δύο πεδίων (`property-offer-write-projection.ts`) τα
+ * βγάζει **από τον ίδιο πίνακα `offers`** στην ίδια πράξη. Άρα:
+ *
+ *   `commercialStatus ∈ LISTED` ⇒ υπήρχε **ενεργή** `sell`/`leaseOut` ⇒ `offerKinds ≠ []`
+ *
+ * ⇒ ο συνδυασμός «**listed κατάσταση ΚΑΙ κενό `offerKinds`**» είναι **ακριβώς και μόνο**
+ * το έγγραφο που γράφτηκε **πριν** την Α20. Δεν χρειάζεται να μαντέψουμε αν το κενό
+ * σημαίνει «σβήστηκε» ή «δεν γράφτηκε ποτέ»: ο γραφέας **δεν μπορεί** να το παράγει.
+ *
+ * ⛔ **ΔΕΝ επιτρέπεται να τροφοδοτήσει την {@link isPubliclyListed}** — και ο λόγος έχει
+ * όνομα: το `sold` **αποδεικνύει** `['sell']`, οπότε ένα δεύτερο σκέλος «έχει είδος ⇒
+ * δημόσιο» θα έβγαζε **πουλημένα ακίνητα στην αγορά**. Το κριτήριο δημοσίευσης είναι η
+ * ένωση των **δύο σκελών των κανόνων Firestore** — η μετάφραση **δεν είναι σκέλος
+ * κανόνα**, είναι ανάγνωση του ίδιου γεγονότος σε άλλη γλώσσα.
+ *
+ * ⚠️ Το φίλτρο `PUBLIC_OFFER_KINDS` μένει στο **δηλωμένο** σκέλος: εκεί η τιμή έρχεται
+ * ωμή από Firestore (`readonly string[]`) και μπορεί να είναι λέξη που δεν ξέρουμε. Το
+ * παραγόμενο σκέλος είναι **ήδη** `OfferKind[]` από κλειστό πίνακα — δεύτερο φίλτρο εκεί
+ * θα ήταν φρουρός που δεν μπορεί να πυροδοτήσει (ADR-749 §5).
+ */
+function projectedOfferKinds(property: ProjectableProperty): OfferKind[] {
+  const declared = (property.offerKinds ?? []).filter(
+    (kind): kind is OfferKind => PUBLIC_OFFER_KINDS.has(kind)
+  );
+  if (declared.length > 0) return declared;
+
+  return offerKindsFromLegacyStatus(property.commercialStatus ?? property.status);
+}
+
+/**
  * Ακίνητο + τόπος → **δημόσια αγγελία**, ή `null` αν δεν δημοσιεύεται.
  *
  * 🔑 **Το `null` δεν είναι σφάλμα — είναι εντολή διαγραφής.** Ο γραφέας το μεταφράζει
@@ -212,7 +285,7 @@ export function buildPublicListing(
     coverImage: null,
     type: (property.type ?? 'apartment') as PropertyType,
     areaSqm: numberOrNull(property.areas?.gross) ?? numberOrNull(property.area),
-    offerKinds: (property.offerKinds ?? []).filter((k): k is OfferKind => PUBLIC_OFFER_KINDS.has(k)),
+    offerKinds: projectedOfferKinds(property),
     position: resolveListingPosition(place, property.locationDisclosure),
     floor: numberOrNull(property.floor),
     bedrooms: numberOrNull(property.layout?.bedrooms),

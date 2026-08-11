@@ -23,8 +23,11 @@
  * είναι αλήθεια** — και μια δηλωμένη σιωπή που δεν ενημερώνεται γίνεται το σχόλιο που
  * λέει ψέματα (σχήμα CHECK 3.47: *«το σχόλιο ΕΛΕΓΕ ΨΕΜΑΤΑ»*).
  *
- * ⛔ **Το «Προσφέρω» παραμένει απόν, με τον ίδιο αρχικό λόγο**: η **Α14** δεν έχει
- * υλοποιηθεί. Ο κανόνας δεν χαλάρωσε — **η μία από τις δύο προϋποθέσεις εκπληρώθηκε**.
+ * ✅ **ΚΑΙ Η ΠΟΡΤΑ «ΠΡΟΣΦΕΡΩ» ΑΝΟΙΞΕ (2026-08-11, Α14).** Ο κανόνας δεν χαλάρωσε ποτέ:
+ * απαιτούσε **διαδρομή** και **οντότητα**, και πλέον υπάρχουν και οι δύο (`/offers`,
+ * `ownp_*`). Οι **δύο** πόρτες του ιδιώτη είναι πλέον συμμετρικές — «ζητώ» και
+ * «προσφέρω» — και μαζί με τη «σύνδεση» του επαγγελματία καλύπτουν **και τα τρία**
+ * ακροατήρια που περνούν από αυτή τη γραμμή.
  *
  * 🔑 **Η πόρτα δείχνει στον κατάλογο, ΟΧΙ στη φόρμα.** Ο ανώνυμος που θα πατούσε
  * «Ζητώ» και θα προσγειωνόταν σε φόρμα δημιουργίας θα έπαιρνε ανακατεύθυνση στη
@@ -44,6 +47,7 @@ import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { AUTH_ROUTES } from '@/lib/routes';
 import { SEARCH_LANDING_ROUTE } from '@/lib/listings/listing-routes';
 import { MY_DEMANDS_ROUTE } from '@/lib/demand/demand-routes';
+import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
 
 export function PublicSiteHeader() {
   const { t } = useTranslation(['search-results']);
@@ -75,6 +79,24 @@ export function PublicSiteHeader() {
             className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
           >
             {t('search-results:demand.door.label')}
+          </Link>
+
+          {/*
+            ✅ **Η ΤΡΙΤΗ ΠΟΡΤΑ — «ΠΡΟΣΦΕΡΩ» (2026-08-11, Α14).** Η δεύτερη προϋπόθεση
+            εκπληρώθηκε: υπάρχουν πλέον **και διαδρομή** (`/offers`) **και οντότητα**
+            (`ownp_*`), οπότε ο σύνδεσμος **ανοίγει** — δεν είναι 404. Ίδιος κανόνας
+            με το «Ζητώ»: *«μια πόρτα που δεν ανοίγει είναι χειρότερη από καμία
+            πόρτα»*.
+
+            🔑 Δείχνει στον **κατάλογο**, ποτέ στη φόρμα: η δημιουργία είναι
+            **αποκλειστικά desktop** (Α8), ενώ η πόρτα οφείλει να ανοίγει σε **κάθε**
+            συσκευή.
+          */}
+          <Link
+            href={MY_OFFERS_ROUTE}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground"
+          >
+            {t('search-results:offer.door.label')}
           </Link>
 
           {/*

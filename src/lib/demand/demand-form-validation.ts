@@ -1,45 +1,35 @@
 /**
- * @fileoverview **ΤΙ ΛΕΙΠΕΙ ΑΠΟ ΤΗ ΦΟΡΜΑ** — όλα μαζί, ποτέ ένα τη φορά.
- * @related ADR-777 §7 (Α9 · Α14 §17.2) · types/property-demand.ts
+ * @fileoverview **ΤΙ ΛΕΙΠΕΙ ΑΠΟ ΤΗ ΦΟΡΜΑ ΖΗΤΗΣΗΣ** — όλα μαζί, ποτέ ένα τη φορά.
+ * @related ADR-777 §7 (Α9 · Α14 §17.2) · types/property-demand.ts · lib/forms/draft-validation.ts
  * @module lib/demand/demand-form-validation
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΓΙΑΤΙ ΑΠΛΗ ΣΥΝΑΡΤΗΣΗ ΚΑΙ ΟΧΙ `Resolver` ΤΟΥ react-hook-form
+ * 🔴 ΤΟ ΣΩΜΑ ΕΞΗΧΘΗ — ΚΑΙ Ο ΛΟΓΟΣ ΕΙΝΑΙ ΜΕΤΡΗΜΕΝΟΣ
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Ένας `Resolver` αναφέρει σφάλματα **ανά πεδίο, στην υποβολή**. Η **Α14 §17.2**
- * όμως δεσμεύτηκε στο αντίθετο: *«η φόρμα **μικραίνει** όσο δίνεις περισσότερα»*, και
- * το ίδιο το `demandInvariantViolations` τεκμηριώνει ότι επιστρέφει **όλες** τις
- * παραβιάσεις γιατί *«μια φόρμα που διορθώνεται ένα σφάλμα τη φορά είναι η φόρμα που
- * η Α14 §17.2 δεσμεύτηκε να μη φτιάξει — ο χρήστης δεν μπορεί να ξέρει πόσο κοντά
- * είναι αν του λέμε ένα-ένα»*.
+ * Μέχρι την **Α14** (2026-08-11) ο σκελετός ζούσε εδώ. Η **δεύτερη** φόρμα του
+ * ADR-777 (η **προσφορά του ιδιώτη**) απαντά το **ίδιο** ερώτημα για άλλο λεξιλόγιο,
+ * με **ταυτόσημο** σκελετό — δηλαδή θα ήταν κλώνος που **μπλοκάρει το CHECK 3.28**,
+ * και ο κανόνας **N.0.2** ζητά να φτιαχτεί το SSoT **πριν** το δεύτερο αντίγραφο, όχι
+ * μετά.
  *
- * Άρα εδώ υπολογίζεται **ολόκληρη η εικόνα, συνεχώς**, και η οθόνη τη δείχνει ως
- * λίστα. Το `react-hook-form` μένει αυτό που κάνει καλά — **κατάσταση πεδίων** — και
- * δεν του ανατίθεται πολιτική που δεν είναι δική του.
+ * Ο σκελετός, οι τρεις ερωτήσεις και η **σειρά-συμβόλαιο** ζουν πλέον στο
+ * {@link validateDraftForm}. Εδώ μένει **μόνο** το λεξιλόγιο της ζήτησης — που είναι
+ * ακριβώς ό,τι διαφέρει.
  *
- * *(Δευτερεύον, αλλά πραγματικό: το `@hookform/resolvers` **δεν είναι εγκατεστημένο**,
- * και δεν εγκαταστάθηκε — το δέντρο μοιράζεται με άλλον agent και ένα `npm install`
- * αγγίζει `package.json` + `package-lock.json`. Μηδέν νέα εξάρτηση.)*
- *
- * ────────────────────────────────────────────────────────────────────────────
- * 🔴 ΔΥΟ ΚΡΙΤΕΣ, ΔΥΟ ΕΡΩΤΗΣΕΙΣ — και **κανένας** δεν ξαναγράφτηκε εδώ
- * ────────────────────────────────────────────────────────────────────────────
- *
- * | Ερώτηση | Ποιος απαντά | Πού ζει |
- * |---|---|---|
- * | «είναι αριθμός αυτό που πληκτρολόγησε;» | `demandFormSchema` (zod) | `demand-form-values.ts` |
- * | «λείπει κάτι για να **φτιαχτεί** ζήτηση;» | `demandFormBlockers` | `demand-form-values.ts` |
- * | «είναι **έγκυρη** ζήτηση;» | `demandInvariantViolations` | **`types/property-demand.ts`** |
- *
- * Το τρίτο είναι το σημαντικό: είναι η **ίδια** συνάρτηση που φρουρεί την **πύλη
- * γραφής** (`property-demand.service.ts`). Δεύτερο σύνολο κανόνων εδώ θα απέκλινε
- * στην πρώτη αλλαγή, και ο χρήστης θα έβλεπε «αποθηκεύεται…» και μετά αποτυχία
- * **χωρίς πεδίο** — το χειρότερο δυνατό μήνυμα.
+ * ⚠️ **Ο τρίτος κριτής ΔΕΝ άλλαξε και δεν επιτρέπεται να αλλάξει**: το
+ * {@link demandInvariantViolations} είναι η **ίδια** συνάρτηση που φρουρεί την πύλη
+ * γραφής (`property-demand.service.ts`). Δεύτερο σύνολο κανόνων θα απέκλινε στην
+ * πρώτη αλλαγή, και ο χρήστης θα έβλεπε «αποθηκεύεται…» και μετά αποτυχία **χωρίς
+ * πεδίο**.
  *
  * **Layering**: leaf — καθαρή συνάρτηση.
  */
 
+import {
+  validateDraftForm,
+  type DraftFormValidation,
+} from '@/lib/forms/draft-validation';
 import {
   demandInvariantViolations,
   type DemandInvariant,
@@ -54,55 +44,24 @@ import {
 } from './demand-form-values';
 
 /**
- * Η πλήρης εικόνα της φόρμας — **ποτέ boolean**.
+ * Η πλήρης εικόνα της φόρμας ζήτησης.
  *
- * 🔑 Τα τρία σκέλη είναι **χωριστά** επειδή έχουν διαφορετική θεραπεία για τον
- * άνθρωπο: το `malformed` σημαίνει «αυτό δεν είναι αριθμός», το `blockers` «λείπει
- * βήμα», το `violations` «αντιφάσκεις». Ένα κοινό «η φόρμα δεν είναι έγκυρη» θα τον
- * έστελνε να ψάξει.
+ * 🔑 **Ψευδώνυμο του γενικού τύπου με το λεξιλόγιο δεμένο** — ώστε οι καταναλωτές να
+ * μη γράφουν τρεις παραμέτρους τύπου, και ώστε ένα μελλοντικό πέμπτο σκέλος στον
+ * γενικό τύπο να φτάσει εδώ **χωρίς** να το θυμηθεί κανείς.
  */
-export type DemandFormValidation =
-  | {
-      readonly kind: 'ready';
-      readonly draft: DemandDraft;
-    }
-  | {
-      readonly kind: 'incomplete';
-      /** Πεδία που δεν διαβάζονται καν ως σχήμα (π.χ. γράμματα σε αριθμό). */
-      readonly malformed: readonly string[];
-      /** Λείπει βήμα της φόρμας — δεν είναι άκυρη ζήτηση, δεν είναι ζήτηση **ακόμη**. */
-      readonly blockers: readonly DemandFormBlocker[];
-      /** Αντιφάσεις της ίδιας της ζήτησης. **Όλες**, ποτέ η πρώτη. */
-      readonly violations: readonly DemandInvariant[];
-    };
+export type DemandFormValidation = DraftFormValidation<
+  DemandDraft,
+  DemandFormBlocker,
+  DemandInvariant
+>;
 
-/**
- * **Τιμές φόρμας → μπορεί να σταλεί;**
- *
- * ⚠️ **Το `malformed` κόβει πριν από τα άλλα δύο, και είναι σειρά-συμβόλαιο**: όταν
- * το σχήμα δεν διαβάζεται, οι κανόνες θα έκριναν **τιμές που δεν υπάρχουν**. Ίδιο
- * πρότυπο με τη σειρά ταξινόμησης του CHECK 3.47: μια ερώτηση που δεν μπορεί να τεθεί
- * δεν απαντιέται «όχι» — δεν τίθεται.
- */
+/** **Τιμές φόρμας ζήτησης → μπορεί να σταλεί;** */
 export function validateDemandForm(values: DemandFormValues): DemandFormValidation {
-  const parsed = demandFormSchema.safeParse(values);
-
-  if (!parsed.success) {
-    return {
-      kind: 'incomplete',
-      malformed: [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))],
-      blockers: [],
-      violations: [],
-    };
-  }
-
-  const blockers = demandFormBlockers(parsed.data);
-  const draft = demandDraftFrom(parsed.data);
-  const violations = demandInvariantViolations(draft);
-
-  if (blockers.length > 0 || violations.length > 0) {
-    return { kind: 'incomplete', malformed: [], blockers, violations };
-  }
-
-  return { kind: 'ready', draft };
+  return validateDraftForm(values, {
+    schema: demandFormSchema,
+    blockersOf: demandFormBlockers,
+    draftOf: demandDraftFrom,
+    violationsOf: demandInvariantViolations,
+  });
 }

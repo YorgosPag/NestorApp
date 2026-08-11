@@ -94,11 +94,50 @@ export async function republishListing(
   property: ProjectableProperty & { buildingId?: string | null; projectId?: string | null }
 ): Promise<PublishOutcome> {
   const now = nowISO();
-  const ref = adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(propertyId);
 
   try {
     const place = await collectPlaceKnowledge(adminDb, property, now);
-    const listing = buildPublicListing({ ...property, id: propertyId }, place, now);
+    return await writeListingProjection(adminDb, propertyId, property, place, now);
+  } catch (error) {
+    return reportProjectionFailure(propertyId, error);
+  }
+}
+
+/**
+ * **Ο ΠΥΡΗΝΑΣ: ακίνητο + ΗΔΗ ΛΥΜΕΝΟΣ τόπος → προβολή, ή διαγραφή.**
+ *
+ * 🔴 **Εξήχθη επειδή υπάρχουν ΔΥΟ πηγές και ΜΙΑ έξοδος** (ADR-777 Α14, 2026-08-11).
+ * Ο επαγγελματίας γράφει σε `properties` και ο τόπος του λύνεται **ανεβαίνοντας την
+ * αλυσίδα της Α1** (ακίνητο → κτίριο → έργο)· ο **ιδιώτης** γράφει σε
+ * `owner_properties` και ο τόπος του είναι **η δική του δήλωση** — δεν υπάρχει
+ * αλυσίδα να ανέβει.
+ *
+ * 🔑 **Η διαφορά είναι ΑΚΡΙΒΩΣ ΜΙΑ ΠΑΡΑΜΕΤΡΟΣ, και γι' αυτό η εξαγωγή είναι η σωστή
+ * πράξη αντί για δεύτερο γραφέα**: το κριτήριο δημοσίευσης, η επίλυση θέσης με
+ * `outranksForLocation`, το ολικό `set`, η διαγραφή-ως-απόσυρση και η λογιστική
+ * αποτυχίας μένουν **ένα** πράγμα. Ένας δεύτερος γραφέας θα ήταν το σχήμα του
+ * **ADR-749** στην πιο ακριβή του μορφή: δύο μηχανές που γράφουν στην **ίδια**
+ * δημόσια συλλογή.
+ *
+ * ⚠️ **Δέχεται τη στιγμή ως όρισμα** αντί να καλέσει η ίδια `nowISO()`: το
+ * `projectedAt` της αγγελίας και το `locatedAt` της υποψήφιας θέσης οφείλουν να είναι
+ * **η ίδια** στιγμή. Δύο κλήσεις ρολογιού στο ίδιο πέρασμα παράγουν έγγραφο που λέει
+ * ότι η θέση εντοπίστηκε **πριν** ή **μετά** την προβολή που την περιέχει.
+ *
+ * ⚠️ **Δεν πετά ποτέ** — ίδιο συμβόλαιο με τον καλούντα: η αποτυχία της δημόσιας
+ * προβολής δεν ακυρώνει την αποθήκευση του κατόχου.
+ */
+export async function writeListingProjection(
+  adminDb: AdminFirestore,
+  listingId: string,
+  property: ProjectableProperty,
+  place: PlaceKnowledge,
+  projectedAt: string
+): Promise<PublishOutcome> {
+  const ref = adminDb.collection(COLLECTIONS.PUBLIC_LISTINGS).doc(listingId);
+
+  try {
+    const listing = buildPublicListing({ ...property, id: listingId }, place, projectedAt);
 
     if (!listing) {
       await ref.delete();
@@ -108,12 +147,17 @@ export async function republishListing(
     await ref.set(listing);
     return 'published';
   } catch (error) {
-    logger.error('Η προβολή δεν ενημερώθηκε — η αγγελία μένει ΜΠΑΓΙΑΤΙΚΗ μέχρι την επανασύνθεση', {
-      propertyId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return 'failed';
+    return reportProjectionFailure(listingId, error);
   }
+}
+
+/** Η **μία** διατύπωση της αποτυχίας — ώστε να μη γραφτεί σε κάθε γραφέα ξανά. */
+function reportProjectionFailure(listingId: string, error: unknown): PublishOutcome {
+  logger.error('Η προβολή δεν ενημερώθηκε — η αγγελία μένει ΜΠΑΓΙΑΤΙΚΗ μέχρι την επανασύνθεση', {
+    propertyId: listingId,
+    error: error instanceof Error ? error.message : String(error),
+  });
+  return 'failed';
 }
 
 /**

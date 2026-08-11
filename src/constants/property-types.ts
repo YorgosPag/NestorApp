@@ -65,6 +65,28 @@ export type PropertyTypeCanonical = (typeof PROPERTY_TYPES)[number];
 export const CREATABLE_PROPERTY_TYPES: readonly PropertyTypeCanonical[] =
   PROPERTY_TYPES.filter((t) => t !== 'storage');
 
+/**
+ * Discriminator — `true` αν το `type` είναι **κανονική** τιμή του {@link PROPERTY_TYPES}.
+ *
+ * 🔴 **Χρειάζεται επειδή το `PropertyType` ΔΕΝ είναι μόνο οι κανονικές τιμές**: η ένωση
+ * περιλαμβάνει και `DEPRECATED_PROPERTY_TYPES` και `LegacyGreekPropertyType` για
+ * συμβατότητα με παλιά έγγραφα Firestore. Άρα το {@link PROPERTY_TYPE_I18N_KEYS}
+ * —που καλύπτει **μόνο** τις κανονικές— είναι **μερική** απεικόνιση, και μια οθόνη
+ * που το δεικτοδοτεί χωρίς έλεγχο βάφει `undefined` ⇒ **ωμό κλειδί** ή κενό κελί.
+ *
+ * ⚠️ Ζει **εδώ, δίπλα στον πίνακα**, και όχι στην οθόνη που το χρειάστηκε πρώτη: δύο
+ * οθόνες με χειρόγραφο `includes(...)` θα ήταν δύο αυθεντίες για το «τι είναι κανονικό
+ * είδος» — ίδιο σχήμα με τον {@link isStandaloneUnitType} από κάτω, γι' αυτό και ίδια
+ * θέση.
+ *
+ * @see ADR-777 Α14 — η κάρτα της προσφοράς ήταν ο πρώτος καταναλωτής.
+ */
+export function isCanonicalPropertyType(type: unknown): type is PropertyTypeCanonical {
+  return (
+    typeof type === 'string' && (PROPERTY_TYPES as readonly string[]).includes(type)
+  );
+}
+
 // =============================================================================
 // 2. STANDALONE DISCRIMINATOR — ADR-284 Family B
 // =============================================================================

@@ -292,6 +292,39 @@ export const STORAGE_RULES_COVERAGE: readonly StorageCoverageEntry[] = [
   },
 
   // -------------------------------------------------------------------------
+  // Path 5b: ADR-777 Α14 — τα αρχεία της προσφοράς του ιδιώτη
+  // storage.rules lines 469-486
+  //
+  // Ίδιο ΠΡΟΤΥΠΟ με το `temp` (owner_based_no_superadmin) και **διαφορετικός λόγος**:
+  // εκεί το αρχείο είναι εφήμερο και θα μετακινηθεί σε canonical διαδρομή· εδώ είναι
+  // το ΤΕΚΜΗΡΙΟ του κατόχου (κάτοψη, φωτογραφίες) και ζει όσο η αγγελία. Η άρνηση
+  // στον `super_admin` δεν είναι αντιγραφή προτύπου: είναι η ίδια απόφαση με τον
+  // κανόνα Firestore του `owner_properties` — το αρχείο δείχνει το σπίτι ενός
+  // ανθρώπου, και το §12.7(α) απαγορεύει κάθε διαδρομή που γίνεται εργαλείο πίεσης.
+  //
+  // ⚠️ ΤΟ ΠΡΟΤΥΠΟ ΤΟΥ `temp` ΔΕΝ ΕΧΕΙ ΤΟ BUG ΤΟΥ `temp` ΕΔΩ: εκείνο συνδύαζε
+  // `allow read, write` με `isValidFileSize()` (που σε read βλέπει `request.resource
+  // == null`). Εδώ τα δύο είναι ΞΕΧΩΡΙΣΤΑ σκέλη εξ αρχής — δες το σχόλιο διόρθωσης
+  // της 2026-07-26 στο ίδιο αρχείο.
+  // -------------------------------------------------------------------------
+  {
+    pathId: 'owner_property_media',
+    pattern: 'owner_based_no_superadmin',
+    rulesRange: [469, 486],
+    testFile: 'tests/storage-rules/suites/owner-property-media.storage.test.ts',
+    matrix: [
+      // ο κάτοχος (same_tenant_user uid == path userId)
+      ...allowAll('same_tenant_user'),
+      // super_admin: ΚΑΜΙΑ παράκαμψη — μόνο `isOwner`, και το uid δεν ταιριάζει
+      ...denyAll('super_admin', 'not_owner'),
+      // πιστοποιημένος μη-κάτοχος
+      ...denyAll('same_tenant_admin', 'not_owner'),
+      // ανώνυμος
+      ...denyAll('anonymous', 'missing_claim'),
+    ] as const,
+  },
+
+  // -------------------------------------------------------------------------
   // Path 6: Asset packs — ADR-655 gated content libraries
   // storage.rules lines 514-522
   //

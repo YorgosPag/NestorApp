@@ -1,0 +1,219 @@
+/**
+ * @fileoverview **ΤΟ ΚΡΙΤΗΡΙΟ ΟΛΟΚΛΗΡΩΣΗΣ ΤΗΣ Α14** — η προσφορά του ιδιώτη γίνεται δημόσια αγγελία.
+ * @related ADR-777 §7 (Α1 · Α3 · Α5 · Α14 · Α20) · services/listings/public-listing-projection.ts
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΙ ΑΠΟΔΕΙΚΝΥΕΙ ΑΥΤΗ Η ΣΟΥΙΤΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το handoff έθεσε το κριτήριο κατά λέξη: *«αν ένας ιδιώτης δεν μπορεί να ανεβάσει το
+ * διαμέρισμά του και **να το δει να εμφανίζεται στα αποτελέσματα**, δεν έχει
+ * τελειώσει»*.
+ *
+ * Η δημόσια οθόνη διαβάζει **αποκλειστικά** το `public_listings`, και εκεί γράφει
+ * **αποκλειστικά** το `buildPublicListing`. Άρα το κριτήριο είναι **ελέγξιμο σε
+ * καθαρές συναρτήσεις**: αν η μετάφραση δίνει αγγελία που το `buildPublicListing`
+ * δέχεται, με **σχήμα** και **θέση**, τότε το ακίνητο **είναι** στα αποτελέσματα.
+ */
+
+import {
+  placeKnowledgeFromOwnerProperty,
+  projectableFromOwnerProperty,
+} from '../owner-property-projection';
+import {
+  buildPublicListing,
+  isPubliclyListed,
+} from '@/services/listings/public-listing-projection';
+import { offerOf, validOwnerProperty } from './owner-property-fixtures';
+
+const AT = '2026-08-11T12:00:00.000Z';
+
+/** Η **πλήρης** διαδρομή, όπως την εκτελεί ο γραφέας στον διακομιστή. */
+function publish(property: Parameters<typeof projectableFromOwnerProperty>[0]) {
+  return buildPublicListing(
+    projectableFromOwnerProperty(property),
+    placeKnowledgeFromOwnerProperty(property, AT),
+    AT,
+  );
+}
+
+// =============================================================================
+// Ο — ΤΟ ΚΡΙΤΗΡΙΟ ΟΛΟΚΛΗΡΩΣΗΣ
+// =============================================================================
+
+describe('🔴 Ο — η προσφορά του ιδιώτη ΦΤΑΝΕΙ στα αποτελέσματα', () => {
+  it('Ο1 — πλήρης αγγελία ⇒ δημοσιεύεται, με ταυτότητα το ίδιο το `ownp_*`', () => {
+    const listing = publish(validOwnerProperty());
+
+    expect(listing).not.toBeNull();
+    expect(listing?.id).toBe('ownp_a');
+  });
+
+  it('Ο2 — τα «5 βασικά + 3 ειδικά» του §25.6 φτάνουν ΟΛΑ στην κάρτα', () => {
+    const listing = publish(validOwnerProperty());
+
+    expect(listing?.type).toBe('apartment');
+    expect(listing?.areaSqm).toBe(92);
+    expect(listing?.floor).toBe(3);
+    expect(listing?.bedrooms).toBe(2);
+    expect(listing?.title).toBe('Διαμέρισμα 92 τ.μ.');
+    expect(listing?.offerKinds).toEqual(['sell']);
+    expect(listing?.commercial.askingPrice).toBe(210_000);
+    expect(listing?.position.kind).toBe('known');
+  });
+
+  it('🔑 Ο3 — η ΘΕΣΗ κουβαλά την ακρίβειά της (Α5: το σχήμα ΕΙΝΑΙ η ακρίβεια)', () => {
+    const listing = publish(validOwnerProperty());
+
+    expect(listing?.position).toEqual({
+      kind: 'known',
+      provenance: 'geocoded',
+      point: { lat: 40.63, lng: 22.95 },
+      locatedAt: AT,
+      accuracy: 'exact',
+    });
+  });
+
+  it('Ο4 — σημείο ΧΩΡΙΣ ακρίβεια ⇒ προέλευση `manual`, ποτέ ψεύτικο `center`', () => {
+    const listing = publish(
+      validOwnerProperty({
+        place: {
+          kind: 'declared',
+          point: { lat: 40.1, lng: 22.1 },
+          label: 'κάπου',
+          accuracy: null,
+        },
+      }),
+    );
+
+    expect(listing?.position).toMatchObject({ kind: 'known', provenance: 'manual' });
+  });
+});
+
+// =============================================================================
+// Θ — Η ΘΕΣΗ ΠΟΥ ΔΕΝ ΔΗΛΩΘΗΚΕ — ο γραφέας που «δεν υπήρχε»
+// =============================================================================
+
+describe('🔑 Θ — «υποχρεωτικό ΕΡΩΤΗΜΑ, όχι υποχρεωτική ΑΠΑΝΤΗΣΗ» (Α5 §3)', () => {
+  it('Θ1 — άρνηση θέσης ⇒ ΔΗΜΟΣΙΕΥΕΤΑΙ, με λόγο `owner-declined`', () => {
+    const listing = publish(validOwnerProperty({ place: { kind: 'declined' } }));
+
+    // Η αγγελία **δεν εξαφανίζεται** — μπαίνει στον μετρητή των «χωρίς θέση» (Α5 §4.1).
+    expect(listing).not.toBeNull();
+    expect(listing?.position).toEqual({ kind: 'unknown', reason: 'owner-declined' });
+  });
+
+  /**
+   * 🔴 **Η διάκριση που ήταν ΜΗ ΠΑΡΑΤΗΡΗΣΙΜΗ μέχρι σήμερα.**
+   *
+   * Το `public-listing-projection.ts` δηλώνει ότι *«κανένας γραφέας δεν υπάρχει
+   * σήμερα»* για το `locationDisclosure`. Αυτή η δοκιμή είναι η απόδειξη ότι πλέον
+   * υπάρχει: **δύο** ακίνητα χωρίς συντεταγμένες δίνουν **διαφορετικό** λόγο, ανάλογα
+   * με το αν ο άνθρωπος **ρωτήθηκε και είπε όχι**.
+   */
+  it('🔴 Θ2 — «ρωτήθηκε και δεν είπε» ΞΕΧΩΡΙΖΕΙ από «δεν ρωτήθηκε ποτέ»', () => {
+    const declined = publish(validOwnerProperty({ place: { kind: 'declined' } }));
+
+    // Ο παρονομαστής: το **παλιό** ακίνητο (χωρίς `locationDisclosure`) — η κατάσταση
+    // κάθε εγγράφου που γράφτηκε πριν υπάρξει το ερώτημα.
+    const neverAsked = buildPublicListing(
+      { ...projectableFromOwnerProperty(validOwnerProperty()), locationDisclosure: null },
+      { candidates: [] },
+      AT,
+    );
+
+    expect(declined?.position).toEqual({ kind: 'unknown', reason: 'owner-declined' });
+    expect(neverAsked?.position).toEqual({ kind: 'unknown', reason: 'never-asked' });
+  });
+});
+
+// =============================================================================
+// Α — Η ΑΠΟΣΥΡΣΗ ΣΥΜΒΑΙΝΕΙ
+// =============================================================================
+
+describe('Α — η απόσυρση εκφράζεται ως «καμία διάθεση», όχι ως δεύτερο κριτήριο', () => {
+  it('Α1 — αποσυρμένη αγγελία ⇒ `null` ⇒ ο γραφέας ΣΒΗΝΕΙ τη δημόσια προβολή', () => {
+    expect(publish(validOwnerProperty({ lifecycle: 'withdrawn' }))).toBeNull();
+  });
+
+  it('Α2 — και επιστρέφει ΑΥΤΟΥΣΙΑ με την επαναφορά (καμία απώλεια)', () => {
+    const property = validOwnerProperty({ lifecycle: 'withdrawn' });
+    const back = publish({ ...property, lifecycle: 'listed' });
+
+    expect(back).not.toBeNull();
+    expect(back?.commercial.askingPrice).toBe(210_000);
+  });
+});
+
+// =============================================================================
+// Π — ΤΟ ΕΛΑΤΤΩΜΑ ΠΟΥ ΒΡΕΘΗΚΕ ΜΕΤΡΩΝΤΑΣ (2026-08-11)
+// =============================================================================
+
+/**
+ * 🔴 **Η Α14 είναι η πρώτη που γράφει πραγματικά `offerKinds` στην παραγωγή.**
+ *
+ * Το `LIVE_OFFER_LIFECYCLES` περιλαμβάνει **σκόπιμα** το `closed` (έτσι παράγεται το
+ * `sold`), οπότε το `deriveOfferKinds` μιας πουλημένης μονάδας επιστρέφει `['sell']`
+ * — και το δεύτερο σκέλος του `isPubliclyListed` θα το κρατούσε **στην αγορά**.
+ *
+ * Το ελάττωμα ήταν **λανθάνον** (κανένα σημερινό έγγραφο δεν έχει `offerKinds`) και
+ * η Α14 θα ήταν το **πρώτο** που το ζωντάνευε.
+ */
+describe('🔴 Π — πουλημένο ΔΕΝ μένει στην αγορά', () => {
+  it('Π1 — κλεισμένη πώληση ⇒ ΔΕΝ δημοσιεύεται', () => {
+    const sold = validOwnerProperty({
+      offers: [offerOf('sell', 210_000, 'closed')],
+    });
+
+    // Ο παρονομαστής: το `offerKinds` **όντως** περιέχει `sell` (το `closed` είναι
+    // «ζωντανό» για την παραγωγή κατάστασης) — άρα το σκέλος **δοκιμάζεται**.
+    const projectable = projectableFromOwnerProperty(sold);
+    expect(projectable.offerKinds).toEqual(['sell']);
+    expect(projectable.commercialStatus).toBe('sold');
+
+    expect(isPubliclyListed(projectable)).toBe(false);
+    expect(publish(sold)).toBeNull();
+  });
+
+  it('Π2 — και το ίδιο για ενοικιασμένο', () => {
+    const rented = validOwnerProperty({ offers: [offerOf('leaseOut', 800, 'closed')] });
+    expect(publish(rented)).toBeNull();
+  });
+
+  it('🔑 Π3 — η ΑΝΤΙΠΑΡΟΧΗ δημοσιεύεται, παρότι προβάλλεται σε `unavailable`', () => {
+    const exchange = validOwnerProperty({ offers: [offerOf('exchange', 45)] });
+    const projectable = projectableFromOwnerProperty(exchange);
+
+    // Το παλιό λεξιλόγιο **δεν έχει λέξη** γι' αυτήν…
+    expect(projectable.commercialStatus).toBe('unavailable');
+    // …και ο νέος άξονας την κρατά ορατή. Αυτό είναι ολόκληρη η Α20.
+    expect(publish(exchange)?.offerKinds).toEqual(['exchange']);
+  });
+
+  it('Π4 — κρατημένο (`reserved`) ΠΑΡΑΜΕΝΕΙ ορατό — δεν είναι τελική κατάσταση', () => {
+    const reserved = validOwnerProperty({ offers: [offerOf('sell', 210_000, 'reserved')] });
+    expect(publish(reserved)).not.toBeNull();
+  });
+});
+
+// =============================================================================
+// Ι — Ο,ΤΙ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ ΝΑ ΦΥΓΕΙ
+// =============================================================================
+
+describe('🔴 Ι — το ιδιωτικό ΔΕΝ ταξιδεύει στη δημόσια αγγελία', () => {
+  it('Ι1 — καμία διεύθυνση, κανένα αρχείο, καμία ταυτότητα κατόχου', () => {
+    const listing = publish(validOwnerProperty());
+    const flat = JSON.stringify(listing);
+
+    expect(flat).not.toContain('Εγνατίας');
+    expect(flat).not.toContain('katopsi.pdf');
+    expect(flat).not.toContain('user-1');
+  });
+
+  it('🔑 Ι2 — και η εικόνα μένει `null`: κανόνας 31 (Α19) — ποτέ ανέβασμα χρήστη', () => {
+    // Ο ιδιοκτήτης **έχει** ανεβάσει αρχείο (`SAMPLE_MEDIA` στο fixture), και παρ' όλα
+    // αυτά η κάρτα δεν το δείχνει. Είναι δέσμευση, όχι παράλειψη.
+    expect(validOwnerProperty().media).toHaveLength(1);
+    expect(publish(validOwnerProperty())?.coverImage).toBeNull();
+  });
+});

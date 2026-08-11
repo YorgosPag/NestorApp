@@ -17,18 +17,24 @@ import {
   deriveCommercialStatus,
   deriveOfferKinds,
   hasDuplicateLiveOfferKind,
+  offerKindsFromLegacyStatus,
   offerKindsWithoutLegacyProjection,
+  STATUSES_THAT_PROVE_NO_OFFER_KIND,
 } from '../derive-commercial-status';
 import {
   OFFER_KINDS,
   OFFER_LIFECYCLES,
   type ExchangeOffer,
   type LeaseOutOffer,
+  type OfferKind,
   type OfferLifecycle,
   type PropertyOffer,
   type SellOffer,
 } from '@/types/property-offers';
-import { COMMERCIAL_STATUSES } from '@/constants/commercial-statuses';
+import {
+  COMMERCIAL_STATUSES,
+  type CommercialStatus,
+} from '@/constants/commercial-statuses';
 
 // =============================================================================
 // ΒΟΗΘΗΤΙΚΑ
@@ -301,5 +307,169 @@ describe('Π — ισοδυναμία με τα 6 δοκιμαστικά ακί�
     // Η παραγωγή δίνει listed status· η ΠΥΛΗ ΕΜΦΑΝΙΣΗΣ είναι που τα κρύβει,
     // επειδή λείπει η τιμή. Δύο διαφορετικά ερωτήματα — και πρέπει να μείνουν δύο.
     expect(deriveCommercialStatus([leaseOut('active', null)])).toBe('for-rent');
+  });
+});
+
+// =============================================================================
+// Κ9 — Η ΑΝΤΙΣΤΡΟΦΗ: ο πλήρης πίνακας, ΧΕΙΡΟΓΡΑΦΟΣ
+// =============================================================================
+//
+// 🔑 **ΔΕΥΤΕΡΗ ΦΩΝΗ.** Οι προσδοκίες γράφτηκαν διαβάζοντας τους **κλάδους** της
+// `deriveCommercialStatus` — όχι καλώντας τον πίνακα που ελέγχεται. Ένα test που
+// έγραφε `expect(fn(s)).toEqual(TABLE[s])` θα επικύρωνε τον εαυτό του.
+
+describe('Κ9 — offerKindsFromLegacyStatus: ό,τι ΑΠΟΔΕΙΚΝΥΕΙ η κατάσταση', () => {
+  const TABLE: ReadonlyArray<readonly [CommercialStatus, readonly OfferKind[], string]> = [
+    ['for-sale',          ['sell'],             'ενεργή sell — βέβαιο'],
+    ['for-rent',          ['leaseOut'],         'ενεργή leaseOut — βέβαιο'],
+    ['for-sale-and-rent', ['leaseOut', 'sell'], 'ενεργές ΚΑΙ ΟΙ ΔΥΟ — βέβαιο'],
+    ['sold',              ['sell'],             'κλεισμένη sell — βέβαιο'],
+    ['rented',            ['leaseOut'],         'κλεισμένη leaseOut — βέβαιο'],
+    ['reserved',          [],                   'sell Ή leaseOut — ΔΙΑΖΕΥΞΗ, δεν ονομάζεται'],
+    ['unavailable',       [],                   'καμία ζωντανή Ή μόνο exchange — ΔΙΑΖΕΥΞΗ'],
+  ];
+
+  it.each(TABLE)('%s → [%s] (%s)', (status, expected) => {
+    expect(offerKindsFromLegacyStatus(status)).toEqual(expected);
+  });
+
+  it('🔑 ΚΛΕΙΣΤΗ ΚΑΛΥΨΗ — κρίνονται και οι 7 τιμές, καμία δεν ξεφεύγει', () => {
+    expect(TABLE.map(([status]) => status).sort()).toEqual([...COMMERCIAL_STATUSES].sort());
+  });
+
+  it('οι πίνακες είναι ΤΑΞΙΝΟΜΗΜΕΝΟΙ — ίδιο συμβόλαιο με το deriveOfferKinds', () => {
+    for (const status of COMMERCIAL_STATUSES) {
+      const kinds = offerKindsFromLegacyStatus(status);
+      expect(kinds).toEqual([...kinds].sort());
+    }
+  });
+
+  it('επιστρέφει ΝΕΟ πίνακα — ο πίνακας-πηγή δεν μολύνεται από τον καλούντα', () => {
+    const first = offerKindsFromLegacyStatus('for-sale-and-rent');
+    first.push('exchange');
+    expect(offerKindsFromLegacyStatus('for-sale-and-rent')).toEqual(['leaseOut', 'sell']);
+  });
+
+  it('περνά από τον υπάρχοντα resolver — ελληνικά και legacy aliases, ΟΧΙ δεύτερος parser', () => {
+    expect(offerKindsFromLegacyStatus('προς πώληση')).toEqual(['sell']);
+    expect(offerKindsFromLegacyStatus('available')).toEqual(['sell']);
+    expect(offerKindsFromLegacyStatus('  SOLD  ')).toEqual(['sell']);
+  });
+
+  it('άγνωστη / μη-συμβολοσειρά είσοδος ⇒ κενό, ποτέ σφάλμα (έρχεται από Firestore)', () => {
+    expect(offerKindsFromLegacyStatus('κάτι τυχαίο')).toEqual([]);
+    expect(offerKindsFromLegacyStatus(null)).toEqual([]);
+    expect(offerKindsFromLegacyStatus(undefined)).toEqual([]);
+    expect(offerKindsFromLegacyStatus(42)).toEqual([]);
+    expect(offerKindsFromLegacyStatus('')).toEqual([]);
+  });
+});
+
+// =============================================================================
+// Κ10 — Η ΑΓΝΟΙΑ ΕΙΝΑΙ ΟΝΟΜΑΣΜΕΝΗ, ΚΑΙ ΠΑΡΑΓΟΜΕΝΗ ΑΠΟ ΜΙΑ ΠΗΓΗ
+// =============================================================================
+
+describe('Κ10 — STATUSES_THAT_PROVE_NO_OFFER_KIND', () => {
+  it('είναι ΑΚΡΙΒΩΣ οι δύο διαζεύξεις — χειρόγραφα', () => {
+    expect([...STATUSES_THAT_PROVE_NO_OFFER_KIND].sort()).toEqual(['reserved', 'unavailable']);
+  });
+
+  it('συμφωνεί με τη συνάρτηση για ΚΑΘΕ κατάσταση — μία αλήθεια, όχι δύο λίστες', () => {
+    for (const status of COMMERCIAL_STATUSES) {
+      const namesNothing = offerKindsFromLegacyStatus(status).length === 0;
+      expect(STATUSES_THAT_PROVE_NO_OFFER_KIND.includes(status)).toBe(namesNothing);
+    }
+  });
+});
+
+// =============================================================================
+// Θ — ΤΟ ΘΕΩΡΗΜΑ: η μετάφραση ΠΟΤΕ δεν ισχυρίζεται περισσότερα (125 σχήματα)
+// =============================================================================
+//
+// 🏆 **ΑΠΟΔΕΙΞΗ, ΟΧΙ ΔΕΙΓΜΑ.** Κάθε είδος διάθεσης μπορεί να λείπει ή να έχει έναν
+// από τους 4 κύκλους ζωής ⇒ **5³ = 125** εξαντλητικά σχήματα (το invariant «μία
+// ζωντανή ανά είδος» τα κρατά όλα έγκυρα). Για καθένα ελέγχεται ότι
+//
+//   offerKindsFromLegacyStatus(deriveCommercialStatus(offers)) ⊆ deriveOfferKinds(offers)
+//
+// δηλαδή η επιστροφή στο νέο λεξιλόγιο **ποτέ δεν ονομάζει είδος που οι διαθέσεις
+// δεν έχουν**. Τα MLS λύνουν την ίδια μετανάστευση με χαρτογράφηση σε υπολογιστικό
+// φύλλο — **χωρίς κανένα αντικειμενικό κριτήριο ορθότητας**. Εδώ υπάρχει.
+
+describe('Θ — ορθότητα της αντιστροφής σε ΟΛΑ τα 125 σχήματα διαθέσεων', () => {
+  type Slot = OfferLifecycle | 'absent';
+  const SLOTS: readonly Slot[] = [...OFFER_LIFECYCLES, 'absent'];
+
+  const ALL_SHAPES: ReadonlyArray<readonly [string, PropertyOffer[]]> = SLOTS.flatMap((s) =>
+    SLOTS.flatMap((l) =>
+      SLOTS.map((e): readonly [string, PropertyOffer[]] => {
+        const offers: PropertyOffer[] = [];
+        if (s !== 'absent') offers.push(sell(s));
+        if (l !== 'absent') offers.push(leaseOut(l));
+        if (e !== 'absent') offers.push(exchange(e));
+        return [`sell:${s} · leaseOut:${l} · exchange:${e}`, offers];
+      })
+    )
+  );
+
+  it('παράγονται πράγματι 125 σχήματα — ο παρονομαστής δηλώνεται', () => {
+    expect(ALL_SHAPES).toHaveLength(125);
+  });
+
+  it.each(ALL_SHAPES)('%s — η μετάφραση είναι ΥΠΟΣΥΝΟΛΟ των πραγματικών ειδών', (_label, offers) => {
+    const truth = new Set(deriveOfferKinds(offers));
+    const translated = offerKindsFromLegacyStatus(deriveCommercialStatus(offers));
+
+    for (const kind of translated) {
+      expect(truth.has(kind)).toBe(true);
+    }
+  });
+
+  it('🔴 και ΔΕΝ ισχύει ΚΕΝΑ: σε 70 από τα 125 η μετάφραση ονομάζει είδος', () => {
+    // 🔑 Χωρίς αυτόν τον αριθμό το θεώρημα παραπάνω ισχύει **κενά**: μια συνάρτηση
+    // που επιστρέφει πάντα `[]` το περνά καθαρή. Το «⊆» χρειάζεται πληθάριθμο.
+    //
+    // Ο παρονομαστής είναι **χειρόγραφος**, από τους κλάδους της παραγωγής:
+    //   sell=closed                     → sold      →  1×5×5 = 25
+    //   sell≠closed & lease=closed      → rented    →  4×1×5 = 20
+    //   sell=active & lease=active      → for-s&r   →  1×1×5 =  5
+    //   sell=active & lease∈{wd,absent} → for-sale  →  1×2×5 = 10
+    //   lease=active & sell∈{wd,absent} → for-rent  →  2×1×5 = 10
+    //                                                        ─────
+    //                                                          70
+    // Τα υπόλοιπα 55 είναι οι δύο διαζεύξεις: `reserved` (35) · `unavailable` (20).
+    const naming = ALL_SHAPES.filter(
+      ([, offers]) => offerKindsFromLegacyStatus(deriveCommercialStatus(offers)).length > 0
+    );
+    expect(naming).toHaveLength(70);
+    expect(ALL_SHAPES.length - naming.length).toBe(55);
+  });
+});
+
+// =============================================================================
+// Π2 — ΤΑ 6 ΔΟΚΙΜΑΣΤΙΚΑ: τι θα δει η οθόνη ΜΕΤΑ τη διόρθωση
+// =============================================================================
+//
+// ⚠️ Ο παρονομαστής είναι η **σημερινή τιμή στη βάση** (ζωντανή μέτρηση
+// `firestore_query` στο `public_listings`, 6/6), όχι κάτι που υπολογίζει ο κώδικας.
+
+describe('Π2 — τα 6 δημόσια έγγραφα αποκτούν είδος διάθεσης', () => {
+  const LIVE: ReadonlyArray<readonly [string, CommercialStatus, readonly OfferKind[]]> = [
+    ['Μεζονέτα 95 τ.μ.',   'for-sale',          ['sell']],
+    ['Διαμέρισμα 95 τ.μ.', 'for-sale',          ['sell']],
+    ['ΔΟΚΙΜΗ Α',           'for-rent',          ['leaseOut']],
+    ['ΔΟΚΙΜΗ Β',           'for-rent',          ['leaseOut']],
+    ['ΔΟΚΙΜΗ Γ',           'for-sale-and-rent', ['leaseOut', 'sell']],
+    ['ΔΟΚΙΜΗ Δ',           'for-sale-and-rent', ['leaseOut', 'sell']],
+  ];
+
+  it.each(LIVE)('%s (%s) → [%s]', (_title, status, expected) => {
+    expect(offerKindsFromLegacyStatus(status)).toEqual(expected);
+  });
+
+  it('🔴 κανένα από τα 6 δεν μένει πια με κενό άξονα', () => {
+    for (const [, status] of LIVE) {
+      expect(offerKindsFromLegacyStatus(status).length).toBeGreaterThan(0);
+    }
   });
 });

@@ -129,7 +129,26 @@ export type GeocodingOutcome =
   | { kind: 'not-found' }
   | { kind: 'error'; reason: GeocodingFailureReason };
 
-export type GeocodingAccuracy = 'exact' | 'interpolated' | 'approximate' | 'center';
+/**
+ * Πόσο ακριβής είναι μια γεωκωδικοποιημένη θέση — από την πιο ισχυρή στην πιο ασθενή.
+ *
+ * ⚠️ **Πίνακας πρώτα, τύπος παραγόμενος** (ADR-777 Α14, 2026-08-11): μέχρι τότε
+ * υπήρχε **μόνο** ο τύπος, δηλαδή καμία τιμή δεν ήταν διαθέσιμη σε **χρόνο
+ * εκτέλεσης** — και κάθε καταναλωτής που χρειάζεται τις τιμές (επικύρωση φόρμας,
+ * `z.enum`, επιλογέας) όφειλε να τις **ξαναγράψει με το χέρι**. Δύο χειρόγραφες
+ * λίστες για ένα λεξιλόγιο είναι το σχήμα που το CHECK 3.34 μέτρησε να έχει
+ * αποκλίνει **κατά 63**. Η παραγωγή του τύπου από τον πίνακα είναι το **ίδιο ιδίωμα**
+ * με τα `PROPERTY_TYPES` · `OFFER_KINDS` · `COMMERCIAL_STATUSES`, και είναι
+ * σημασιολογικά **ταυτόσημη** με την προηγούμενη ένωση.
+ */
+export const GEOCODING_ACCURACIES = [
+  'exact',
+  'interpolated',
+  'approximate',
+  'center',
+] as const;
+
+export type GeocodingAccuracy = (typeof GEOCODING_ACCURACIES)[number];
 
 // =============================================================================
 // RESOLVED FIELDS — Nominatim address normalized to ELSTAT keys

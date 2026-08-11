@@ -175,7 +175,22 @@ export const BasemapPlacementLeaf: React.FC<{ readonly className?: string }> = (
           onPointerDown={handlers.onRotateHandleDown}
         />
       )}
-      <nav className="absolute bottom-2 left-1/2 -translate-x-1/2">
+      {/*
+        🔴 ADR-782 §27 — **το πάνελ δεν είναι καμβάς.** Η επιφάνεια καταναλώνει κάθε γεγονός
+        δείκτη, και η μπάρα εργαλείων ζει **μέσα** της: χωρίς αυτό το σύνορο, το `pointerdown`
+        πάνω σε κουμπί έφτανε **πρώτο** στον χειριστή της επιφάνειας — σε `match` καταγραφόταν ως
+        σημείο (και με εκκρεμές σημείο **ολοκλήρωνε ζεύγος** στη θέση του κουμπιού, δηλαδή ο
+        χάρτης πήδαγε σε ό,τι έτυχε), σε `drag` ξεκινούσε χειρονομία με `setPointerCapture`.
+
+        ⚠️ Η αποκλειστικότητα ήταν σχεδιασμένη προς **τα κάτω** (να μην διαρρέει κλικ στον καμβά)
+        και κανείς δεν ρώτησε για τη διεπαφή **μέσα** της. Η λαβή στροφής είχε ήδη την απάντηση
+        (`start()` κλείνει με `stopPropagation()`) — αλλά ως λύση **ενός σημείου**, όχι ως σύνορο.
+        Άγκυρες: `Λ6`·`Λ6β`·`Λ7`, με μάρτυρα `Π0`.
+      */}
+      <nav
+        onPointerDown={(event) => event.stopPropagation()}
+        className="absolute bottom-2 left-1/2 -translate-x-1/2"
+      >
         <BasemapPlacementPanel />
       </nav>
     </section>

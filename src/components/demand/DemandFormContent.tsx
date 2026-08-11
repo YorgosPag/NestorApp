@@ -34,10 +34,14 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { FormProvider, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 
 import { useAuth } from '@/auth/hooks/useAuth';
-import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  DraftFormShell,
+  type DraftFormProps,
+  type DraftSubmitState,
+} from '@/components/shared/forms/DraftFormShell';
 import {
   EMPTY_DEMAND_FORM,
   type DemandDraft,
@@ -55,12 +59,6 @@ import {
   DemandTimingField,
 } from './form/DemandAxisFields';
 import { DemandLifeContextField } from './form/DemandLifeContextField';
-import { DemandFormIssues } from './form/DemandFormIssues';
-
-const NS = 'search-results';
-
-/** Οι τρεις καταστάσεις υποβολής. **Ποτέ** `boolean` + `string`. */
-type SubmitState = 'idle' | 'saving' | 'failed';
 
 /**
  * Δημιουργία → η ταυτότητα που γεννήθηκε, ή `null` σε αποτυχία.
@@ -84,21 +82,20 @@ async function saveExisting(demandId: string, draft: DemandDraft): Promise<strin
   return outcome.kind === 'done' ? demandId : null;
 }
 
-export interface DemandFormContentProps {
-  /** Οι αρχικές τιμές — κενή φόρμα, ή οι τιμές υπάρχουσας ζήτησης. */
-  readonly initialValues?: DemandFormValues;
-  /** `null` = δημιουργία· διαφορετικά η ταυτότητα που ενημερώνεται. */
-  readonly editingId?: string | null;
-}
+/**
+ * ⚠️ **Η υπογραφή έρχεται από το κοινό {@link DraftFormProps}** (ADR-777 Α14): ήταν
+ * ταυτόσημη με της προσφοράς και το **CHECK 3.28** τη μέτρησε ως κλώνο. Το ψευδώνυμο
+ * μένει ώστε οι καταναλωτές (`DemandCreationGate`) να μη μάθουν τη γενική μορφή.
+ */
+export type DemandFormContentProps = DraftFormProps<DemandFormValues>;
 
 export function DemandFormContent({
   initialValues = EMPTY_DEMAND_FORM,
   editingId = null,
 }: DemandFormContentProps): React.ReactElement {
-  const { t } = useTranslation([NS]);
   const router = useRouter();
   const { user } = useAuth();
-  const [submitState, setSubmitState] = React.useState<SubmitState>('idle');
+  const [submitState, setSubmitState] = React.useState<DraftSubmitState>('idle');
 
   const form = useForm<DemandFormValues>({ defaultValues: initialValues });
 
@@ -134,50 +131,22 @@ export function DemandFormContent({
     router.push(demandDetailHref(saved));
   }
 
-  const K = `${NS}:demand.form`;
-
   return (
-    <FormProvider {...form}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-semibold text-foreground">
-            {t(editingId === null ? `${K}.title` : `${K}.editTitle`)}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t(`${K}.lead`)}</p>
-        </header>
-
-        <DemandSeeksField />
-        <DemandPlaceField />
-        <DemandTimingField />
-        <DemandFeaturesField />
-        <DemandNeighbourhoodField />
-        <DemandLifeContextField />
-
-        <DemandFormIssues validation={validation} />
-
-        {submitState === 'failed' && (
-          <p className="text-sm text-foreground">{t(`${K}.failed`)}</p>
-        )}
-
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="submit"
-            disabled={validation.kind !== 'ready' || submitState === 'saving'}
-            className="rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground disabled:opacity-50"
-          >
-            {submitState === 'saving'
-              ? t(`${K}.saving`)
-              : t(editingId === null ? `${K}.submit` : `${K}.save`)}
-          </button>
-          <button
-            type="button"
-            onClick={() => router.push(MY_DEMANDS_ROUTE)}
-            className="rounded-md border border-border px-4 py-2 font-medium text-foreground"
-          >
-            {t(`${K}.cancel`)}
-          </button>
-        </div>
-      </form>
-    </FormProvider>
+    <DraftFormShell
+      keyBase="demand"
+      form={form}
+      editing={editingId !== null}
+      validation={validation}
+      submitState={submitState}
+      onSubmit={handleSubmit}
+      onCancel={() => router.push(MY_DEMANDS_ROUTE)}
+    >
+      <DemandSeeksField />
+      <DemandPlaceField />
+      <DemandTimingField />
+      <DemandFeaturesField />
+      <DemandNeighbourhoodField />
+      <DemandLifeContextField />
+    </DraftFormShell>
   );
 }

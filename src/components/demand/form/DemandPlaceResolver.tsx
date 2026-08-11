@@ -30,62 +30,39 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { geocodeAddressDetailed } from '@/lib/geocoding/geocoding-service';
-import { createModuleLogger } from '@/lib/telemetry';
+import { usePlaceResolver } from '@/hooks/geo/usePlaceResolver';
 import type { DemandFormValues } from '@/lib/demand/demand-form-values';
 import { DemandNumberField } from './demand-field-primitives';
 
-const logger = createModuleLogger('DemandPlaceResolver');
 const NS = 'search-results';
-
-/**
- * Οι τέσσερις καταστάσεις — **ρητές**, ποτέ ένα `boolean` + ένα `string`.
- *
- * Ίδιο ιδίωμα με το `SubmitState` του `PlaceSearchBox`: το `not-found` και το `error`
- * έχουν **διαφορετική θεραπεία** για τον χρήστη.
- */
-type ResolveState = 'idle' | 'resolving' | 'not-found' | 'error';
 
 export function DemandPlaceResolver(): React.ReactElement {
   const { t } = useTranslation([NS]);
   const form = useFormContext<DemandFormValues>();
   const inputId = React.useId();
-  const [state, setState] = React.useState<ResolveState>('idle');
 
   const query = form.watch('placeQuery');
   const center = form.watch('placeCenter');
 
-  async function handleResolve(): Promise<void> {
-    const trimmed = (query ?? '').trim();
-    if (trimmed === '') return;
-
-    setState('resolving');
-    // ⚠️ Ελεύθερο κείμενο → `city`: η μηχανή δοκιμάζει **free-form πρώτα**, οπότε
-    // «Εγνατίας 147, Θεσσαλονίκη» λύνεται το ίδιο καλά με σκέτο «Θεσσαλονίκη».
-    const outcome = await geocodeAddressDetailed({ city: trimmed });
-
-    if (outcome.kind === 'found') {
-      form.setValue(
-        'placeCenter',
-        { lat: outcome.result.lat, lng: outcome.result.lng },
-        { shouldDirty: true },
-      );
-      setState('idle');
-      return;
-    }
-
-    // 🔴 **Η αποτυχία ΣΒΗΝΕΙ το προηγούμενο σημείο.** Αλλιώς ο άνθρωπος που άλλαξε
-    // περιοχή και δεν εντοπίστηκε η νέα θα αποθήκευε ζήτηση για την **παλιά** —
-    // σιωπηλά, και με το σωστό κείμενο στην οθόνη.
-    form.setValue('placeCenter', null, { shouldDirty: true });
-
-    if (outcome.kind === 'not-found') {
-      setState('not-found');
-      return;
-    }
-    logger.warn('Ο εντοπισμός περιοχής απέτυχε', { data: { reason: outcome.reason } });
-    setState('error');
-  }
+  // 🔑 **Η ζήτηση κρατά ΜΟΝΟ το σημείο** — η ακρίβεια δεν την αφορά: το ερώτημα είναι
+  // «γύρω από πού ψάχνεις;», και η ακτίνα το απαντά ούτως ή άλλως κατά προσέγγιση.
+  // ⚠️ Και το **κείμενο δεν αποθηκεύεται**: ένα «Θεσσαλονίκη» θα έπρεπε να ξαναλυθεί
+  // σε κάθε ταίριασμα, με αποτέλεσμα που αλλάζει όταν αλλάξει ο πάροχος.
+  const { state, resolve, reset } = usePlaceResolver({
+    onFound: React.useCallback(
+      (place) =>
+        form.setValue(
+          'placeCenter',
+          { lat: place.lat, lng: place.lng },
+          { shouldDirty: true },
+        ),
+      [form],
+    ),
+    onCleared: React.useCallback(
+      () => form.setValue('placeCenter', null, { shouldDirty: true }),
+      [form],
+    ),
+  });
 
   const busy = state === 'resolving';
   const K = `${NS}:demand.form.place`;
@@ -106,7 +83,7 @@ export function DemandPlaceResolver(): React.ReactElement {
             // συντεταγμένες που δεν αντιστοιχούν σε ό,τι διαβάζει ο άνθρωπος.
             onChange: () => {
               if (center !== null) form.setValue('placeCenter', null, { shouldDirty: true });
-              if (state !== 'idle') setState('idle');
+              if (state !== 'idle') reset();
             },
           })}
           placeholder={t(`${K}.queryPlaceholder`)}
@@ -115,7 +92,7 @@ export function DemandPlaceResolver(): React.ReactElement {
         />
         <button
           type="button"
-          onClick={handleResolve}
+          onClick={() => void resolve(query ?? '')}
           disabled={busy || (query ?? '').trim() === ''}
           className="rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground disabled:opacity-50"
         >

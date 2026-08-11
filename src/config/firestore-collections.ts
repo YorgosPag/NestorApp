@@ -77,6 +77,31 @@ export const COLLECTIONS = {
    * κυνηγά, και ταιριάζεται από **μηχανή**, όχι από πωλητή.
    */
   PROPERTY_DEMANDS: process.env.NEXT_PUBLIC_PROPERTY_DEMANDS_COLLECTION || 'property_demands',
+
+  /**
+   * 🎯 ADR-777 Α14 — **Η ΠΡΟΣΦΟΡΑ ΤΟΥ ΙΔΙΩΤΗ**: το ακίνητο όπως το δηλώνει ο ίδιος ο
+   * κάτοχός του. IDs `ownp_*`.
+   *
+   * 🔴 **ΕΠΙΠΕΔΟ Β, ΙΔΙΩΤΙΚΟ ΑΝΑ ΑΝΘΡΩΠΟ** — `mode: 'userId'` (`ownerUserId`) στο
+   * `tenant-config.ts`, το **ίδιο** σχήμα με το `PROPERTY_DEMANDS`. Το SPEC-777A
+   * §14.2 ορίζει το επίπεδο Β ως *«αυστηρά ιδιωτικό ανά **εταιρεία/χρήστη**»*: οι
+   * δύο λέξεις είναι οι δύο τιμές του `TenantIsolationMode`, και ο ιδιώτης είναι η
+   * δεύτερη.
+   *
+   * ⚠️ **ΔΕΝ είναι το `PROPERTIES`, και δεν μπορεί να γίνει.** Μετρημένο πριν γραφτεί
+   * γραμμή: το `assertPropertyCreatePolicy` απαιτεί `projectId` **πάντα** και το
+   * `assertUpstreamChainExists` απαιτεί **Project → Company** να υπάρχουν (ADR-284
+   * §3.1) ⇒ ένα διαμέρισμα ιδιώτη θα χρειαζόταν **τέσσερα** συνθετικά έγγραφα· και ο
+   * κανόνας `read` του `properties` περνά από αναζήτηση έργου→εταιρείας, οπότε
+   * έγγραφο χωρίς έργο θα ήταν αναγνώσιμο **από κανέναν**. Πλήρης ανάλυση των τριών
+   * δρόμων: `types/owner-property.ts`.
+   *
+   * 🔑 **Και ΔΕΝ είναι διπλότυπο**: και οι δύο συλλογές τροφοδοτούν την **ίδια**
+   * μηχανή προβολής (`buildPublicListing`), που δέχεται **δομικό** τύπο ακριβώς για
+   * να έχει πολλές πηγές και **μία** έξοδο — το `public_listings`.
+   */
+  OWNER_PROPERTIES: process.env.NEXT_PUBLIC_OWNER_PROPERTIES_COLLECTION || 'owner_properties',
+
   FLOORS: process.env.NEXT_PUBLIC_FLOORS_COLLECTION || 'floors',
   /**
    * ADR-759 Φ2 — institutional/legal plot data as declared by a surveyor on a date

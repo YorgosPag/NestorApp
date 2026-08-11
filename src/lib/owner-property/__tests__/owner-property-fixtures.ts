@@ -1,0 +1,83 @@
+/**
+ * @fileoverview **Τα σχήματα των δοκιμών της προσφοράς** — γραμμένα μία φορά.
+ * @related ADR-777 §7 (Α14) · types/owner-property.ts
+ *
+ * 🔑 **Εξήχθησαν από την πρώτη στιγμή, όχι μετά**: τρεις σουίτες (invariants ·
+ * μετάφραση φόρμας · προβολή) χτίζουν την **ίδια** αγγελία, και τρία αντίγραφα θα
+ * ήταν κλώνος που μπλοκάρει το **CHECK 3.28** — το ίδιο μάθημα που πλήρωσε η Α9 με
+ * τα `demand-fixtures.ts`.
+ */
+
+import type {
+  OwnerProperty,
+  OwnerPropertyDraft,
+  OwnerPropertyMedia,
+} from '@/types/owner-property';
+import type { OfferKind, OfferLifecycle, PropertyOffer } from '@/types/property-offers';
+
+/** Μια διάθεση με ρητό ποσό — **μία** γεννήτρια για τα τρία είδη. */
+export function offerOf(
+  kind: OfferKind,
+  amount: number | null,
+  lifecycle: OfferLifecycle = 'active',
+  id = `offr_${kind}`,
+): PropertyOffer {
+  switch (kind) {
+    case 'sell':
+      return { id, kind, lifecycle, askingPrice: amount };
+    case 'leaseOut':
+      return { id, kind, lifecycle, rentPrice: amount };
+    case 'exchange':
+      return { id, kind, lifecycle, percentage: amount };
+  }
+}
+
+export const SAMPLE_MEDIA: OwnerPropertyMedia = {
+  storagePath: 'owner_properties/user-1/ownp_a/katopsi.pdf',
+  fileName: 'katopsi.pdf',
+  sizeBytes: 128_000,
+  uploadedAt: '2026-08-11T09:00:00.000Z',
+};
+
+/**
+ * Ένα **έγκυρο** προσχέδιο — η βάση κάθε δοκιμής.
+ *
+ * ⚠️ Έχει **δηλωμένη** θέση με `accuracy`, ώστε η προβολή να μπορεί να αποδείξει ότι
+ * η προέλευση γίνεται `geocoded`. Ένα προσχέδιο χωρίς αυτήν θα έκανε τη σχετική
+ * δοκιμή πράσινη επειδή **δεν υπάρχει τι να κριθεί**.
+ */
+export function validDraft(
+  overrides: Partial<OwnerPropertyDraft> = {},
+): OwnerPropertyDraft {
+  return {
+    title: 'Διαμέρισμα 92 τ.μ.',
+    type: 'apartment',
+    areaSqm: 92,
+    floor: 3,
+    bedrooms: 2,
+    offers: [offerOf('sell', 210_000)],
+    place: {
+      kind: 'declared',
+      point: { lat: 40.63, lng: 22.95 },
+      label: 'Εγνατίας 147, Θεσσαλονίκη',
+      accuracy: 'exact',
+    },
+    media: [SAMPLE_MEDIA],
+    ...overrides,
+  };
+}
+
+/** Μια **έγκυρη** αγγελία — προσχέδιο + τα γεγονότα του συστήματος. */
+export function validOwnerProperty(
+  overrides: Partial<OwnerProperty> = {},
+): OwnerProperty {
+  return {
+    id: 'ownp_a',
+    ownerUserId: 'user-1',
+    ...validDraft(),
+    lifecycle: 'listed',
+    createdAt: '2026-08-11T09:00:00.000Z',
+    updatedAt: '2026-08-11T09:00:00.000Z',
+    ...overrides,
+  };
+}

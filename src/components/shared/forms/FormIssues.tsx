@@ -1,10 +1,9 @@
 'use client';
 
 /**
- * **ΤΙ ΛΕΙΠΕΙ — ΟΛΑ ΜΑΖΙ** (Α14 §17.2).
- *
- * @related ADR-777 §7 (Α9 · Α14) · lib/demand/demand-form-validation.ts
- * @module components/demand/form/DemandFormIssues
+ * @fileoverview **ΤΙ ΛΕΙΠΕΙ — ΟΛΑ ΜΑΖΙ** (Α14 §17.2), για κάθε φόρμα του ADR-777.
+ * @related ADR-777 §7 (Α9 · Α14) · lib/forms/draft-validation.ts · CLAUDE.md N.18
+ * @module components/shared/forms/FormIssues
  *
  * ────────────────────────────────────────────────────────────────────────────
  * 🔴 ΤΡΕΙΣ ΟΜΑΔΕΣ, ΓΙΑΤΙ ΕΧΟΥΝ ΤΡΕΙΣ ΔΙΑΦΟΡΕΤΙΚΕΣ ΘΕΡΑΠΕΙΕΣ
@@ -12,44 +11,51 @@
  *
  * | Ομάδα | Τι λέει στον άνθρωπο |
  * |---|---|
- * | `blockers` | *«λείπει βήμα»* — π.χ. πάτησε «Εντοπισμός». **Δεν είναι άκυρη ζήτηση· δεν είναι ζήτηση ακόμη.** |
- * | `violations` | *«αντιφάσκεις»* — το «έως» πριν το «από». Η ζήτηση **υπάρχει** και είναι λάθος. |
+ * | `blockers` | *«λείπει βήμα»* — π.χ. πάτησε «Εντοπισμός». **Δεν είναι άκυρο· δεν είναι ακόμη.** |
+ * | `violations` | *«αντιφάσκεις»* — το «έως» πριν το «από», πώληση χωρίς τιμή. **Υπάρχει και είναι λάθος.** |
  * | `malformed` | *«αυτό δεν είναι αριθμός»* — σπάνιο, αλλά δεν σιωπά |
  *
  * Ένα κοινό «η φόρμα δεν είναι έγκυρη» θα τον έστελνε να **ψάξει** — που είναι
- * ακριβώς το φράγμα που η Α14 δεσμεύτηκε να μη στήσει.
+ * ακριβώς το φράγμα που η **Α14** δεσμεύτηκε να μη στήσει.
  *
  * ⚠️ **`aria-live="polite"`**: η λίστα αλλάζει καθώς πληκτρολογεί ο άνθρωπος, χωρίς
  * κανένα γεγονός εστίασης. Χωρίς την ανακοίνωση, ο χρήστης αναγνώστη οθόνης θα
  * μάθαινε ότι κάτι λείπει **μόνο** πατώντας ένα κουμπί που δεν αντιδρά.
  *
- * ⚠️ **Το `range-inverted` δεν ονομάζει ΠΟΙΟ εύρος — δηλωμένο όριο.** Το κλειστό
- * σύνολο `DEMAND_INVARIANTS` έχει **έναν** κωδικό για τα τρία εύρη (ποσό · εμβαδόν ·
- * όροφος), και το μήνυμά του είναι αντίστοιχα γενικό. Δεν «διορθώνεται» εδώ με δεύτερο
- * έλεγχο ποιο εύρος φταίει: θα ήταν **δεύτερος κριτής** για ερώτηση που ήδη απαντά η
- * οντότητα — το σχήμα ADR-749. Η σωστή θεραπεία, όταν χρειαστεί, είναι **τρεις
- * κωδικοί στο μοντέλο**.
+ * 🔴 **Εξήχθη (ADR-777 Α14, 2026-08-11)**: η φόρμα προσφοράς εμφανίζει τις **ίδιες
+ * τρεις** ομάδες με άλλα κλειδιά. Δεύτερη γραφή θα ήταν κλώνος που μπλοκάρει το
+ * **CHECK 3.28**, και —χειρότερα— θα απέκλινε στην προσβασιμότητα: η μία λίστα θα
+ * ανακοίνωνε και η άλλη όχι, και **και οι δύο θα «δούλευαν»**.
  */
 
 import React from 'react';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import type { DemandFormValidation } from '@/lib/demand/demand-form-validation';
+import type { DraftFormValidation } from '@/lib/forms/draft-validation';
 
 const NS = 'search-results';
 
-export function DemandFormIssues({
+/**
+ * **Οι κωδικοί γίνονται κλειδιά i18n** (N.11) — δεν υπάρχει ωμό κείμενο πουθενά.
+ *
+ * @param keyBase — η ρίζα του λεξιλογίου, π.χ. `demand` ή `offer`. Από αυτήν
+ *                  παράγονται τα `<base>.formBlocker.*` · `<base>.invariant.*` και η
+ *                  επικεφαλίδα — **ένα** όρισμα, ώστε να μην μπορούν να αποκλίνουν.
+ */
+export function FormIssues<TDraft, TBlocker extends string, TViolation extends string>({
   validation,
+  keyBase,
 }: {
-  validation: DemandFormValidation;
+  validation: DraftFormValidation<TDraft, TBlocker, TViolation>;
+  keyBase: string;
 }): React.ReactElement | null {
   const { t } = useTranslation([NS]);
 
   if (validation.kind === 'ready') return null;
 
   const messages: readonly string[] = [
-    ...validation.blockers.map((blocker) => t(`${NS}:demand.formBlocker.${blocker}`)),
-    ...validation.violations.map((violation) => t(`${NS}:demand.invariant.${violation}`)),
+    ...validation.blockers.map((blocker) => t(`${NS}:${keyBase}.formBlocker.${blocker}`)),
+    ...validation.violations.map((violation) => t(`${NS}:${keyBase}.invariant.${violation}`)),
     // Τα `malformed` είναι **ονόματα πεδίων**, όχι μηνύματα: εμφανίζονται μόνο όταν
     // το σχήμα δεν διαβάζεται καθόλου, κατάσταση που η ίδια η φόρμα κάνει σχεδόν
     // αδύνατη (τα αριθμητικά πεδία είναι `type="number"` και ελεγχόμενα).
@@ -59,12 +65,9 @@ export function DemandFormIssues({
   if (messages.length === 0) return null;
 
   return (
-    <section
-      aria-live="polite"
-      className="rounded-md border border-border bg-card p-4"
-    >
+    <section aria-live="polite" className="rounded-md border border-border bg-card p-4">
       <h2 className="text-sm font-semibold text-foreground">
-        {t(`${NS}:demand.invariant.heading`)}
+        {t(`${NS}:${keyBase}.invariant.heading`)}
       </h2>
       <ul className="mt-2 flex list-disc flex-col gap-1 pl-5 text-sm text-foreground">
         {messages.map((message) => (

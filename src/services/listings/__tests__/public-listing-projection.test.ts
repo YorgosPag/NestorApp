@@ -14,6 +14,7 @@ import {
   type ProjectableProperty,
   type PlaceKnowledge,
 } from '../public-listing-projection';
+import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 
 const AT = '2026-08-10T10:00:00.000Z';
 const NO_PLACE: PlaceKnowledge = { candidates: [] };
@@ -193,5 +194,130 @@ describe('Κ7 — η προέλευση συνάγεται από ΤΑ ΔΕΔΟ�
     // Αντιγραμμένο από τη ζωντανή βάση (proj_2497601f…, addresses[0]).
     const real = { street: 'Εγνατίας', number: '147', city: 'Θεσσαλονίκη', postalCode: '54622', isPrimary: true };
     expect(addressToPositionCandidate(real, AT)).toBeNull();
+  });
+});
+
+// =============================================================================
+// Κ6 — 🔴 Η ΑΣΥΜΜΕΤΡΙΑ ΤΩΝ ΔΥΟ ΛΕΞΙΛΟΓΙΩΝ, ΚΛΕΙΣΤΗ
+// =============================================================================
+//
+// Η `isPubliclyListed` δεχόταν **δύο** λεξιλόγια, η γραμμή του `offerKinds` **ένα**.
+// Ζωντανή μέτρηση 2026-08-11: **6/6** δημόσιες αγγελίες με σωστό `commercialStatus`
+// και `offerKinds: []` ⇒ έξι κάρτες **χωρίς είδος διάθεσης**, όλες οι πύλες πράσινες.
+
+describe('Κ6 — η προβολή μιλά και τα ΔΥΟ λεξιλόγια στο offerKinds', () => {
+  it('🔴 ΤΟ ΕΛΑΤΤΩΜΑ: πραγματικό έγγραφο προ-Α20 δεν βγαίνει πια με κενό άξονα', () => {
+    const listing = buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!;
+    expect(listing.offerKinds).toEqual(['sell']);
+  });
+
+  it.each([
+    ['for-sale', ['sell']],
+    ['for-rent', ['leaseOut']],
+    ['for-sale-and-rent', ['leaseOut', 'sell']],
+  ] as const)('%s χωρίς offerKinds → [%s]', (commercialStatus, expected) => {
+    const listing = buildPublicListing({ id: 'p', commercialStatus }, NO_PLACE, AT)!;
+    expect(listing.offerKinds).toEqual(expected);
+  });
+
+  it('🔑 ΤΟ ΝΕΟ ΛΕΞΙΛΟΓΙΟ ΝΙΚΑ ΟΤΑΝ ΥΠΑΡΧΕΙ — η εφεδρεία δεν το σκεπάζει ποτέ', () => {
+    // Έγγραφο μετά την Α20: πώληση ενεργή ΚΑΙ αντιπαροχή. Το παλιό λεξιλόγιο θα
+    // έλεγε μόνο `['sell']` — και θα έσβηνε σιωπηλά την αντιπαροχή.
+    const listing = buildPublicListing(
+      { id: 'p', commercialStatus: 'for-sale', offerKinds: ['exchange', 'sell'] },
+      NO_PLACE,
+      AT
+    )!;
+    expect(listing.offerKinds).toEqual(['exchange', 'sell']);
+  });
+
+  it('offerKinds με ΜΟΝΟ άγνωστη λέξη ⇒ πέφτει στην εφεδρεία, δεν μένει κενό', () => {
+    const listing = buildPublicListing(
+      { id: 'p', commercialStatus: 'for-rent', offerKinds: ['barter'] },
+      NO_PLACE,
+      AT
+    )!;
+    expect(listing.offerKinds).toEqual(['leaseOut']);
+  });
+
+  it('η ωμή άγνωστη λέξη ΔΕΝ διαρρέει ποτέ στο δημόσιο έγγραφο', () => {
+    const listing = buildPublicListing(
+      { id: 'p', commercialStatus: 'unavailable', offerKinds: ['barter', 'exchange'] },
+      NO_PLACE,
+      AT
+    )!;
+    expect(listing.offerKinds).toEqual(['exchange']);
+  });
+
+  it('εφεδρικό πεδίο `status` όταν λείπει το `commercialStatus` — ίδια αλυσίδα με τη γρ. 203', () => {
+    const listing = buildPublicListing({ id: 'p', status: 'for-rent' }, NO_PLACE, AT)!;
+    expect(listing.offerKinds).toEqual(['leaseOut']);
+  });
+});
+
+// =============================================================================
+// Κ7 — ⛔ Η ΜΕΤΑΦΡΑΣΗ ΔΕΝ ΕΙΝΑΙ ΣΚΕΛΟΣ ΚΑΝΟΝΑ ΔΗΜΟΣΙΕΥΣΗΣ
+// =============================================================================
+//
+// 🔴 Η **μοναδική** επικίνδυνη χρήση της αντιστροφής: το `sold` **αποδεικνύει**
+// `['sell']`, οπότε αν η εφεδρεία τροφοδοτούσε την `isPubliclyListed`, κάθε
+// **πουλημένο** ακίνητο θα έβγαινε ξανά **στην αγορά**. Οι άγκυρες παρακάτω είναι
+// ο λόγος που η εφεδρεία ζει **μετά** την πύλη και ποτέ μέσα της.
+
+describe('Κ7 — καμία κατάσταση δεν αποκτά δημοσίευση από την εφεδρεία', () => {
+  it.each(['sold', 'rented', 'reserved', 'unavailable'] as const)(
+    '⛔ %s χωρίς offerKinds ⇒ ΚΑΜΙΑ προβολή (η μετάφραση δεν δημοσιεύει)',
+    (commercialStatus) => {
+      const property: ProjectableProperty = { id: 'p', commercialStatus };
+      expect(isPubliclyListed(property)).toBe(false);
+      expect(buildPublicListing(property, NO_PLACE, AT)).toBeNull();
+    }
+  );
+
+  it('🔑 και η απόδειξη ότι η άγκυρα ΔΕΝ είναι κενή: το sold ΟΝΤΩΣ ονομάζει είδος', () => {
+    // Αν η μετάφραση επέστρεφε `[]` για το `sold`, η άγκυρα παραπάνω θα περνούσε
+    // για λάθος λόγο — «πράσινο επειδή κανείς δεν κοίταξε».
+    expect(offerKindsFromLegacyStatus('sold')).toEqual(['sell']);
+  });
+});
+
+// ============================================================================
+// Κ8 — ΤΟ ΔΗΛΩΜΕΝΟ `offerKinds` ΔΕΝ ΑΝΑΣΤΑΙΝΕΙ ΠΟΥΛΗΜΕΝΟ  (ADR-777 Α14, 2026-08-11)
+// ============================================================================
+//
+// 🔴 Το Κ7 φρουρεί τη **μετάφραση** (`offerKindsFromLegacyStatus`). Αυτό εδώ φρουρεί
+// το **δηλωμένο** πεδίο — και είναι **άλλη διαδρομή προς το ίδιο ελάττωμα**:
+//
+//   `LIVE_OFFER_LIFECYCLES` περιλαμβάνει ΣΚΟΠΙΜΑ το `closed` (έτσι παράγεται το
+//   `sold`), άρα `deriveOfferKinds` πουλημένης μονάδας ⇒ `['sell']` ⇒ το δεύτερο
+//   σκέλος της πύλης θα την κρατούσε **στην αγορά**.
+//
+// ⚠️ Μέχρι σήμερα ήταν **λανθάνον**: κανένα έγγραφο δεν έγραφε `offerKinds`. Η **Α14**
+// (προσφορά ιδιώτη) είναι το ΠΡΩΤΟ που το γράφει πραγματικά — άρα η άγκυρα μπήκε
+// **πριν** το πρώτο ζωντανό έγγραφο, όχι μετά το πρώτο περιστατικό.
+
+describe('Κ8 — δηλωμένο offerKinds + τελική κατάσταση ⇒ ΚΑΜΙΑ προβολή', () => {
+  it.each(['sold', 'rented'] as const)(
+    '⛔ %s ΜΕ δηλωμένο offerKinds ⇒ δεν δημοσιεύεται',
+    (commercialStatus) => {
+      const property: ProjectableProperty = {
+        id: 'p',
+        commercialStatus,
+        offerKinds: ['sell', 'leaseOut'],
+      };
+      expect(isPubliclyListed(property)).toBe(false);
+      expect(buildPublicListing(property, NO_PLACE, AT)).toBeNull();
+    }
+  );
+
+  it('🔑 ο παρονομαστής: η ΙΔΙΑ δήλωση σε ΜΗ τελική κατάσταση ΔΗΜΟΣΙΕΥΕΤΑΙ', () => {
+    // Χωρίς αυτό, η άγκυρα παραπάνω θα ήταν πράσινη ακόμη κι αν το `offerKinds`
+    // αγνοούνταν ολότελα — «πράσινο επειδή κανείς δεν κοίταξε».
+    const live: ProjectableProperty = {
+      id: 'p',
+      commercialStatus: 'unavailable',
+      offerKinds: ['exchange'],
+    };
+    expect(isPubliclyListed(live)).toBe(true);
   });
 });

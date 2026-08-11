@@ -75,7 +75,8 @@ function DetailNotice({
   const { t } = useTranslation(['search-results']);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center gap-3 p-6">
+    // `flex-1` αντί για `min-h-screen` — το ύψος το κατέχει το `(light)/layout.tsx`.
+    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-3 p-6">
       <h1 className="text-2xl font-semibold text-foreground">{t(titleKey)}</h1>
       <p className="text-base text-muted-foreground">{t(bodyKey)}</p>
       <nav className="mt-2">

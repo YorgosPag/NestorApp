@@ -1,0 +1,201 @@
+'use client';
+
+/**
+ * @fileoverview **Η ΜΙΑ ΑΓΓΕΛΙΑ** — θέαση, επεξεργασία, απόσυρση, και **ο δρόμος προς τον κόσμο**.
+ * @related ADR-777 §7 (Α5 · Α14 · Α22) · §8.16 · lib/listings/listing-routes.ts
+ * @module components/owner-property/OwnerPropertyDetailContent
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΤΟ ΚΡΙΤΗΡΙΟ ΟΛΟΚΛΗΡΩΣΗΣ ΤΗΣ Α14 ΚΛΕΙΝΕΙ **ΕΔΩ**
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * > *«Αν ένας ιδιώτης δεν μπορεί να ανεβάσει το διαμέρισμά του και **να το δει να
+ * > εμφανίζεται στα αποτελέσματα**, δεν έχει τελειώσει.»*
+ *
+ * Ο σύνδεσμος προς τη **δημόσια** αγγελία (`listingDetailHref`) είναι το σημείο όπου
+ * ο κύκλος κλείνει και γίνεται **επαληθεύσιμος από τον ίδιο τον άνθρωπο** — όχι από
+ * εμάς. Και εμφανίζεται **μόνο** όταν η αγγελία είναι πραγματικά δημοσιευμένη, γιατί
+ * ένας σύνδεσμος προς κενή σελίδα είναι χειρότερος από κανέναν.
+ *
+ * 🔑 **Ο ίδιος κριτής με τον διακομιστή**, όπως και στην κάρτα: η σύνθεση
+ * `projectableFromOwnerProperty` → `isPubliclyListed`. Καμία δεύτερη ανάγνωση, κανένα
+ * δεύτερο κατηγόρημα.
+ *
+ * ⚠️ **Η απόσυρση ΔΕΝ διαγράφει** (`lifecycle: 'withdrawn'`), και το λέει η ίδια η
+ * οθόνη: η αγγελία φεύγει από τον χάρτη και **μένει στον κατάλογό του**. Ένα κουμπί
+ * «διαγραφή» θα ήταν μη αναστρέψιμη πράξη πάνω στη δουλειά του ανθρώπου, για ανάγκη
+ * που το `lifecycle` καλύπτει πλήρως.
+ */
+
+import React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { useAuth } from '@/auth/hooks/useAuth';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { listingDetailHref } from '@/lib/listings/listing-routes';
+import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
+import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
+import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
+import { isPubliclyListed } from '@/services/listings/public-listing-projection';
+import { setOwnerListingLifecycle } from '@/services/owner-property/owner-property.service';
+import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
+import type { OwnerProperty } from '@/types/owner-property';
+
+import { OwnerPropertyCard } from './OwnerPropertyCard';
+import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
+
+const NS = 'search-results';
+const K = `${NS}:offer`;
+
+/** Οι τρεις καταστάσεις του κουμπιού κύκλου ζωής. **Ποτέ** `boolean` + `string`. */
+type LifecycleState = 'idle' | 'busy' | 'failed';
+
+/**
+ * **Απόσυρση / επαναφορά** — ένα κουμπί, δύο κατευθύνσεις.
+ *
+ * ⚠️ **Δεν είναι αισιόδοξο, σε αντίθεση με το «ψάχνω ακόμη» της ζήτησης.** Εκεί η
+ * πράξη αγγίζει **ένα πεδίο** και η αναμονή είναι θόρυβος· εδώ αλλάζει **τι βλέπει ο
+ * κόσμος**. Μια όψη που λέει «αποσύρθηκε» ενώ η αγγελία είναι ακόμη στον χάρτη είναι
+ * το χειρότερο δυνατό ψέμα προς τον ιδιοκτήτη — και δεν υπάρχει τρόπος να το
+ * ανακαλύψει από τη δική του οθόνη.
+ */
+function LifecycleButton({ property }: { property: OwnerProperty }): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  const [state, setState] = React.useState<LifecycleState>('idle');
+
+  const next = property.lifecycle === 'listed' ? 'withdrawn' : 'listed';
+
+  async function handleClick(): Promise<void> {
+    setState('busy');
+    const outcome = await setOwnerListingLifecycle(property.id, next);
+    // Η ζωντανή ανάγνωση (`useMyOwnerProperty`) φέρνει τη νέα κατάσταση μόνη της —
+    // καμία τοπική αντιγραφή, **μία** πηγή.
+    setState(outcome.kind === 'saved' ? 'idle' : 'failed');
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={state === 'busy'}
+        className="self-start rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground disabled:opacity-50"
+      >
+        {t(next === 'withdrawn' ? `${K}.lifecycle.withdraw` : `${K}.lifecycle.restore`)}
+      </button>
+      <p className="text-sm text-muted-foreground">{t(`${K}.lifecycle.withdrawNote`)}</p>
+      {state === 'failed' && (
+        <p aria-live="polite" className="text-sm text-foreground">
+          {t(`${K}.lifecycle.failed`)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Η θέαση — περίληψη, δρόμος προς τον κόσμο, κύκλος ζωής. */
+function OwnerPropertyView({
+  property,
+  onEdit,
+}: {
+  property: OwnerProperty;
+  onEdit: () => void;
+}): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  const onMap = isPubliclyListed(projectableFromOwnerProperty(property));
+
+  return (
+    <div className="flex flex-col gap-4">
+      <OwnerPropertyCard property={property} />
+
+      {/*
+        🔴 **Ο σύνδεσμος που κλείνει τον κύκλο της Α14.** Εμφανίζεται μόνο όταν η
+        αγγελία είναι πραγματικά δημοσιευμένη — ένας σύνδεσμος προς κενή σελίδα είναι
+        χειρότερος από κανέναν.
+      */}
+      {onMap && (
+        <nav>
+          <Link
+            href={listingDetailHref(property.id)}
+            className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+          >
+            {t(`${K}.publish.view`)}
+          </Link>
+        </nav>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="button"
+          onClick={onEdit}
+          className="rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+        >
+          {t(`${K}.detail.edit`)}
+        </button>
+      </div>
+
+      <LifecycleButton property={property} />
+    </div>
+  );
+}
+
+export function OwnerPropertyDetailContent({
+  ownerPropertyId,
+}: {
+  ownerPropertyId: string;
+}): React.ReactElement {
+  const { t } = useTranslation([NS]);
+  const router = useRouter();
+  const { user } = useAuth();
+  const [editing, setEditing] = React.useState(false);
+  const lookup = useMyOwnerProperty(ownerPropertyId, user?.uid ?? null);
+
+  return (
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-6">
+      <nav>
+        <button
+          type="button"
+          onClick={() => router.push(MY_OFFERS_ROUTE)}
+          className="text-sm font-medium text-foreground underline"
+        >
+          {t(`${K}.detail.back`)}
+        </button>
+      </nav>
+
+      {lookup.state === 'loading' && (
+        <p className="text-muted-foreground">{t(`${K}.detail.loading`)}</p>
+      )}
+      {lookup.state === 'anonymous' && (
+        <p className="text-foreground">{t(`${NS}:demand.space.signInNeeded`)}</p>
+      )}
+      {lookup.state === 'absent' && (
+        <p className="text-foreground">{t(`${K}.detail.absent`)}</p>
+      )}
+      {lookup.state === 'error' && (
+        <p className="text-foreground">{t(`${K}.detail.error`)}</p>
+      )}
+
+      {lookup.state === 'found' &&
+        (editing ? (
+          /*
+            ⚠️ **Η φόρμα εδώ ΔΕΝ περνά από την πύλη της Α8, και είναι σκόπιμο.** Η
+            πύλη προστατεύει τα **bytes** της διαδρομής δημιουργίας — εκείνη είναι
+            ξεχωριστό bundle. Εδώ ο άνθρωπος βρίσκεται ήδη στη σελίδα του ακινήτου
+            του και ζητά ρητά επεξεργασία: μια άρνηση θα τον άφηνε να **βλέπει** την
+            αγγελία και να μην μπορεί να διορθώσει τυπογραφικό.
+          */
+          <OwnerPropertyFormContent
+            initialValues={ownerPropertyFormFrom(lookup.property)}
+            editingId={lookup.property.id}
+            previousOffers={lookup.property.offers}
+          />
+        ) : (
+          <OwnerPropertyView
+            property={lookup.property}
+            onEdit={() => setEditing(true)}
+          />
+        ))}
+    </main>
+  );
+}

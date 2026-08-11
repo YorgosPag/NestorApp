@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "149792db0552002198ab5c8973fac85733f0486283366d596652367a3882a030",
+    "src/i18n/generated/shell-slice.el.json": "6927501ff6561273a2acd99ff712cbfcef91e5cade981f88684394443dfe95ec",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -40,7 +40,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "1ced82d239487bf99138cbd51fde559426acb62fa04d2c310808a68be6020780",
+  "inputsSha256": "7776c5d0219eb1796b51e32c7f9c9272ec3b71ef44b00518a2e51339256f169b",
   "languages": [
     "el"
   ],
@@ -124,10 +124,10 @@
     "src/components/projects/procurement/ProjectProcurementTabs.tsx": "9fc7a77d5fc8b542183887c10158877a46fcd55ca8cc23542e05bcdc1d9ae7c1",
     "src/components/property-viewer/Logo_Pagonis.tsx": "abe960984e1f408862eae2ad7eb305b93edb6ba4f7fdcf375ef29f992c3b98ce",
     "src/components/providers/I18nProvider.tsx": "bb82ce64bdb15f688d8d20467bde1357c6e5b71afb367cf015ade7f691d841f2",
-    "src/components/public-site/PublicSiteHeader.tsx": "e1d70db3d03c6bcd9cb87f7b1d19c01f441a846b3e1bc574d1632e08a77d0355",
+    "src/components/public-site/PublicSiteHeader.tsx": "6ba818f1219c2d37951e07fc793c14c6d41051dd54ef39d18727e0d6e5da65bf",
     "src/components/search/CoverageStatement.tsx": "3a99e80c975df088c325a5e156c3a2fa949cfcd115294297d502991a8b44eb3f",
     "src/components/search/PlaceSearchBox.tsx": "1b2ebb01216debbd92e0fdd301bc0bdf7806b714ff04d311107867e3b45be661",
-    "src/components/search/SearchLandingContent.tsx": "da6d6c3d00e62567abe843a13ecc89804f8f17432205b83602688a6257c7be50",
+    "src/components/search/SearchLandingContent.tsx": "e00adf69aec3c7928b5b318cf1774cedd907a583935cee1177a0c962a5dd0a8c",
     "src/components/shared/ModuleBreadcrumb.tsx": "018703ae49a65aa2e4a34a6905373964f25cb7b4b2832e05dea6617b91a4dbc7",
     "src/components/shared/addresses/address-with-hierarchy-config.ts": "7f72a362f5c9afaab5c9fa179f39260494cc4891a945e932096dcdef702d3c62",
     "src/components/shared/files/hooks/useFileDownload.ts": "4680385f283b732c7b6cfeb4cecbec8aff682b22cb0bff96ca4cb9a08b5c094c",
@@ -321,6 +321,7 @@
     "src/lib/listings/listing-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/location/location-provenance.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/media/media-mime.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
+    "src/lib/owner-property/owner-property-routes.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/lib/properties/price-resolver.ts": "8bce354c57b171a702e82c2e934d75ef30bc5443c42a88e10d6282847e04150a",
     "src/lib/routes/accountRoutes.ts": "b82193379953e61a92c5adeb40bcb33597727241d6b6d920b57b2ae361242f01",
     "src/lib/routes/authRoutes.ts": "a529190881c7ee228e61bd46128cdad46b1933b750a05e57279222b0ad856e6d",
@@ -362,7 +363,7 @@
     "src/services/enterprise-id-convenience.ts": "8638e7a8d454b751842f9f6fc67a623e6be81979c7ff555a67e18111dbc388c9",
     "src/services/enterprise-id-deterministic.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/services/enterprise-id-parse.ts": "0fed035d018624aa6b02bbf9bca5091580adce34ab469a774a418b87cb782907",
-    "src/services/enterprise-id-prefixes.ts": "f3fab6460fa7c3af02f5a60fd4264b2d3e92d70b15ecb2b2f48cea18e561f393",
+    "src/services/enterprise-id-prefixes.ts": "bca2a3745752a603a431a3e35f08b202864f47a171c04592ffaa4cba61de70cc",
     "src/services/enterprise-id-public-registry-generators.ts": "693adeb4e52f0a5b3866fcdb8be26e2e2763e6f8638a69ede03e4caa40a97cf0",
     "src/services/enterprise-id-singleton.ts": "af633d79955de13a3b98f19e7145f0762dcf7eea2565a9d135054a12e59d5d42",
     "src/services/entity-audit.service.ts": "b90a476b3ff36884be6c05feae9ca9d35acf8a1c1f8ad2834a95b59f9f9ea523",
@@ -382,7 +383,7 @@
     "src/services/firestore/firestore-query.service.ts": "d2068547f20437c2410e7fb1664df09f4e9d444b5f2d71144a659c7f2d1379f8",
     "src/services/firestore/firestore-query.types.ts": "9ae1e268786916f0848cb198f2f671037e11407f8515a9dc5819e56146b95925",
     "src/services/firestore/super-admin-active-company.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
-    "src/services/firestore/tenant-config.ts": "c9baf80c46d135dcd439d4c34033ed6c5d7b938c572996a29f947cf19fec5c06",
+    "src/services/firestore/tenant-config.ts": "46011daa6dc9afdcc8903b5be6680bbedbb31fd0aefcae8bcd444bf4465e37ed",
     "src/services/navigation-companies.service.ts": "64e4456e2edbfa8d895814e60fa572152b573b5ec3b19ce0303e2a623b28768e",
     "src/services/notificationService.ts": "53e0251636cfda81bc8fecd825e66923b20c7597ff5ea6fb8e0be7dbc75ed540",
     "src/services/realtime/RealtimeService.ts": "74041709a532b1af4b14add0a5a5909fd1424f201144b959073bdfedba6d9501",
@@ -516,8 +517,8 @@
     "dynamicBoundaries": 18,
     "matchedKeys": 105,
     "routeBoundaries": 0,
-    "shellFiles": 434,
-    "sliceBytes": 211540
+    "shellFiles": 435,
+    "sliceBytes": 220443
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",
@@ -3534,6 +3535,8 @@
         "landing.search.searching",
         "landing.search.submit",
         "landing.title",
+        "offer.door.hint",
+        "offer.door.label",
         "site.brand",
         "site.home",
         "site.nav",

@@ -68,4 +68,18 @@ export abstract class PublicRegistryIdGenerators extends BimEntityIdGenerators {
    * (§14.4). Γι' αυτό μοιράζεται το αρχείο αλλά **όχι** τον περιορισμό.
    */
   generatePropertyDemandId(): string { return this.generateId(P.PROPERTY_DEMAND).id; }
+
+  /**
+   * ADR-777 Α14 — id μιας **ΠΡΟΣΦΟΡΑΣ ΙΔΙΩΤΗ** (`ownp_*`).
+   *
+   * 🔑 **Το κάτοπτρο του `dmnd`, με τον ίδιο ακριβώς λόγο να ΜΗΝ περιορίζεται στον
+   * διακομιστή**: είναι **επίπεδο Β** (SPEC-777A §14.2), ιδιωτικό δεδομένο **ενός
+   * ανθρώπου**. Ένα λάθος εδώ αφορά **έναν** χρήστη· ένα λάθος στο `land_*` αφορά
+   * **όλους ταυτόχρονα** (§14.4).
+   *
+   * ⚠️ Η **δημόσια προβολή** που γεννιέται από αυτό (`public_listings`) **δεν παίρνει
+   * νέα ταυτότητα** — καθρεφτίζει αυτήν εδώ, όπως ακριβώς κάνει και για τα
+   * `properties`. Δες `types/public-listing.ts`: *«ταυτότητα παραγόμενη, όχι νέα»*.
+   */
+  generateOwnerPropertyId(): string { return this.generateId(P.OWNER_PROPERTY).id; }
 }

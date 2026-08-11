@@ -26,6 +26,7 @@
 
 import type { Operation, Outcome, Reason } from './operations';
 import type { Persona } from './personas';
+import { ALL_PERSONAS } from './personas';
 import {
   adminWriteOnlyMatrix,
   attendanceEventMatrix,
@@ -199,6 +200,33 @@ export const FIRESTORE_RULES_COVERAGE: readonly CollectionCoverage[] = [
     testFile: 'tests/firestore-rules/suites/property-demands.rules.test.ts',
     rulesRange: [1032, 1043],
     matrix: authorOwnedMatrix(),
+  },
+  {
+    // ADR-777 Α14 — Η ΠΡΟΣΦΟΡΑ ΤΟΥ ΙΔΙΩΤΗ. **Το κάτοπτρο της ζήτησης στην ΑΝΑΓΝΩΣΗ,
+    // το αντίθετό της στη ΓΡΑΦΗ** — και οι δύο διαφορές είναι αποφάσεις.
+    //
+    // 🔴 Η ζήτηση γράφεται από τον ΠΕΛΑΤΗ (δεν έχει δημόσιο παράγωγο). Αυτή έχει: το
+    // `public_listings` λέει `allow write: if false` για κάθε πελάτη, οπότε αν ο
+    // πελάτης έγραφε εδώ και ΜΕΤΑ καλούσε τον διακομιστή για δημοσίευση, θα υπήρχε
+    // παράθυρο όπου το έγγραφο υπάρχει και η προβολή όχι. Με μία πράξη διακομιστή,
+    // το «κάθε καταχώρηση έχει συνεπή προβολή» γίνεται ιδιότητα της διαδρομής γραφής.
+    //
+    // ⚠️ Άρα: `authorOwnedMatrix` (ίδιο ερώτημα ανάγνωσης) με **create + update
+    // αντεστραμμένα σε deny για ΟΛΟΥΣ** — συμπεριλαμβανομένου του ίδιου του κατόχου.
+    // Ο `super_admin` ΔΕΝ εξαιρείται από την ανάγνωση, ίδιος λόγος με τη ζήτηση: το
+    // έγγραφο κουβαλά τη διεύθυνση του σπιτιού ενός ανθρώπου.
+    collection: 'owner_properties',
+    pattern: 'ownership',
+    testFile: 'tests/firestore-rules/suites/owner-properties.rules.test.ts',
+    rulesRange: [1074, 1079],
+    matrix: overrideCells(authorOwnedMatrix(), [
+      ...ALL_PERSONAS.filter((p) => p !== 'anonymous').flatMap((p) => [
+        cell(p, 'create', 'deny', 'server_only'),
+        cell(p, 'update', 'deny', 'server_only'),
+      ]),
+      cell('anonymous', 'create', 'deny', 'missing_claim'),
+      cell('anonymous', 'update', 'deny', 'missing_claim'),
+    ]),
   },
   {
     collection: 'projects',

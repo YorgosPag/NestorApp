@@ -641,6 +641,84 @@ export async function seedPropertyDemand(
   });
 }
 
+/**
+ * Σπέρνει μια **προσφορά ιδιώτη** (ADR-777 Α14) — το κάτοπτρο της ζήτησης.
+ *
+ * ⚠️ Το φορτίο κουβαλά **και** `place.label` (η διεύθυνση που πληκτρολόγησε ο
+ * άνθρωπος) **και** `media[].storagePath`: είναι ακριβώς τα δύο πεδία που κάνουν
+ * αυτό το έγγραφο **ιδιωτικό**, και μια δοκιμή που έσπερνε χωρίς αυτά θα ήταν
+ * πράσινη πάνω σε διαρροή που δεν συνέβη επειδή δεν υπήρχε τι να διαρρεύσει —
+ * το μάθημα των τεσσάρων tests του `properties.rules.test.ts`.
+ */
+export async function seedOwnerProperty(
+  env: RulesTestEnvironment,
+  ownerPropertyId: string,
+  ownerUserId: string,
+  opts?: SeedOptions,
+): Promise<void> {
+  await withSeedContext(env, async (ctx) => {
+    await ctx.firestore().collection('owner_properties').doc(ownerPropertyId).set({
+      id: ownerPropertyId,
+      ownerUserId,
+      type: 'apartment',
+      areaSqm: 92,
+      floor: 3,
+      bedrooms: 2,
+      offers: [
+        { id: 'offr_seed_sell', kind: 'sell', lifecycle: 'active', askingPrice: 210000 },
+      ],
+      place: {
+        kind: 'declared',
+        point: { lat: 40.63, lng: 22.95 },
+        label: 'Εγνατίας 147, Θεσσαλονίκη',
+        accuracy: 'exact',
+      },
+      media: [
+        {
+          storagePath: `owner_properties/${ownerUserId}/${ownerPropertyId}/katopsi.pdf`,
+          fileName: 'katopsi.pdf',
+          sizeBytes: 128_000,
+          uploadedAt: '2026-08-11T09:00:00.000Z',
+        },
+      ],
+      title: 'Διαμέρισμα 92 τ.μ.',
+      lifecycle: 'listed',
+      createdAt: '2026-08-11T09:00:00.000Z',
+      updatedAt: '2026-08-11T09:00:00.000Z',
+      ...(opts?.overrides ?? {}),
+    });
+  });
+}
+
+/**
+ * Το πλήρες σχήμα μιας **νέας** προσφοράς ιδιώτη, για δοκιμές `create`.
+ *
+ * 🔑 Υπάρχει παρότι **κανείς δεν επιτρέπεται** να κάνει `create` από τον πελάτη: η
+ * απόδειξη του «server-only» απαιτεί να δοκιμαστεί **έγκυρο** φορτίο. Ένα φορτίο που
+ * θα απορριπτόταν ούτως ή άλλως ως κακοσχηματισμένο θα έκανε τη δοκιμή πράσινη για
+ * **λάθος λόγο** — το σχήμα «0 = κανείς δεν κοίταξε».
+ */
+export function ownerPropertyCreatePayload(
+  ownerUserId: string,
+): Record<string, unknown> {
+  return {
+    ownerUserId,
+    type: 'shop',
+    areaSqm: 45,
+    floor: 0,
+    bedrooms: null,
+    offers: [
+      { id: 'offr_new_lease', kind: 'leaseOut', lifecycle: 'active', rentPrice: 800 },
+    ],
+    place: { kind: 'declined' },
+    media: [],
+    title: 'Κατάστημα 45 τ.μ.',
+    lifecycle: 'listed',
+    createdAt: '2026-08-11T09:00:00.000Z',
+    updatedAt: '2026-08-11T09:00:00.000Z',
+  };
+}
+
 /** Το πλήρες σχήμα μιας **νέας** ζήτησης, για δοκιμές `create`. */
 export function propertyDemandCreatePayload(
   authorUserId: string,
