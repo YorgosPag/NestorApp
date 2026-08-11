@@ -114,7 +114,7 @@ describe('ADR-782 §23 — πλαίσιο υποβάθρου', () => {
       latitude: THESSALONIKI.lat,
       source,
     });
-    const selection = tilesForDisplayRect(rect, zoom, projector);
+    const selection = tilesForDisplayRect(rect, zoom, projector, 0.002);
 
     expect(selection.tiles.length).toBeGreaterThan(0);
     for (const tile of selection.tiles) {

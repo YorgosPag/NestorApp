@@ -29,7 +29,7 @@
  */
 
 import { paintBasemap, SEAM_BLEED_PX } from '../basemap-painter';
-import { buildTileWarpMesh, WARP_TOLERANCE_PX } from '../basemap-warp';
+import { assessTileWarp, buildTileWarpMesh, WARP_TOLERANCE_PX } from '../basemap-warp';
 import { geographicToDisplayMm, geographicToWorldMm } from '../basemap-projection';
 import { chooseZoomLevel, tilesForDisplayRect } from '../basemap-tile-model';
 import { visibleDisplayRect } from '../../../rendering/core/visible-display-rect';
@@ -414,7 +414,7 @@ function pipelineSelection(scale: number, devicePixelRatio: number) {
     minY: centre.y - height / 2, maxY: centre.y + height / 2,
   };
   const zoom = pipelineZoom({ devicePixelRatio, scale });
-  return tilesForDisplayRect(rect, zoom, null);
+  return tilesForDisplayRect(rect, zoom, null, scale);
 }
 
 /**
@@ -485,21 +485,45 @@ describe('Ψ6 — το εσωτερικό σημείο κάτω από την υ
     expect([...new Set(nearMeridian.map((r) => r.divisions))]).toEqual([1]);
   });
 
-  it('Ψ6γ — 🔴 ΖΩΝΤΑΝΟ: σε πλήρες zoom-out ο αγωγός ζητά πλακίδια ΕΚΤΟΣ ζώνης ΕΓΣΑ\'87', () => {
-    // Το εύρημα ΔΕΝ είναι το ταβάνι υποδιαίρεσης — είναι ότι σε πλήρες zoom-out ζητούνται
-    // πλακίδια από την ΑΛΛΗ ΑΚΡΗ ΤΟΥ ΠΛΑΝΗΤΗ (μετρημένο: γ.μ. −180°, δηλαδή 204° μακριά από
-    // τον κεντρικό μεσημβρινό) και περνούν από Εγκάρσια Mercator που εκεί δεν ορίζεται. Το
-    // πλέγμα κολλάει στο ταβάνι προσπαθώντας να «ισιώσει» κάτι που δεν είναι καμπυλότητα.
-    // Καμία υποδιαίρεση δεν το λύνει: το ταβάνι ΠΡΟΣΤΑΤΕΥΕΙ από 128 τρίγωνα σε πλακίδια που
-    // δεν έπρεπε να ζητηθούν. Η θεραπεία είναι ΟΡΙΟ ΖΩΝΗΣ — απόφαση τομέα (ADR-782 §27.7).
+  it('Ψ6γ — ✅ Η ΘΕΡΑΠΕΙΑ: σε πλήρες zoom-out ό,τι ΕΠΙΣΤΡΕΦΕΤΑΙ τηρεί την υπόσχεση', () => {
+    /**
+     * 🔴 **Αυτή η άγκυρα τεκμηρίωνε ΖΩΝΤΑΝΟ ελάττωμα** (ADR-782 §27.7): σε πλήρες zoom-out ο
+     * αγωγός ζητούσε πλακίδια από την **άλλη άκρη του πλανήτη** και τα ζωγράφιζε παραμορφωμένα.
+     * Το §27.9 το έκλεισε — άρα η άγκυρα άλλαξε **ερώτημα**, όχι κατώφλι: δεν ρωτά πια «σπάει;»
+     * αλλά «**τηρείται η υπόσχεση σε ό,τι φτάνει στον ζωγράφο;**».
+     *
+     * ⚠️ Ο **παρονομαστής είναι υποχρεωτικός**: χωρίς το `droppedForFidelity > 0` μια μελλοντική
+     * αλλαγή που επιστρέφει **κενή λίστα** θα άφηνε το «κανένα δεν αθετεί» πράσινο κατά κενό
+     * αληθές — δηλαδή η άγκυρα θα επιβεβαίωνε τον εαυτό της (σχήμα CHECK 3.51).
+     */
     const selection = pipelineSelection(1e-8, 1);
-    const tile = selection.tiles[Math.floor(selection.tiles.length / 2)];
 
-    expect(selection.tiles.length).toBeGreaterThan(0);   // παρονομαστής
-    expect(meridianDistanceDeg(tile)).toBeGreaterThan(90); // η ΑΙΤΙΑ, ονομασμένη
-    const { errorPx, divisions } = cellCentreError(1e-8, tile);
-    expect(divisions).toBe(8);                             // κόλλησε στο ταβάνι
-    expect(errorPx).toBeGreaterThan(WARP_TOLERANCE_PX * 100);
+    expect(selection.droppedForFidelity).toBeGreaterThan(0); // παρονομαστής: ΟΝΤΩΣ απορρίφθηκαν
+    for (const tile of selection.tiles) {
+      expect(assessTileWarp(tile, null, 1e-8).withinTolerance).toBe(true);
+    }
+  });
+
+  it('Ψ6δ — και το ελάττωμα ΥΠΑΡΧΕΙ ακόμη: καμία υποδιαίρεση δεν σώζει το πλακίδιο', () => {
+    // Η προηγούμενη άγκυρα θα ήταν πράσινη και σε έναν κόσμο όπου η Εγκάρσια Mercator δουλεύει
+    // παντού — δηλαδή δεν αποδεικνύει ότι το φίλτρο **χρειάζεται**. Εδώ ρωτιέται ο κριτής για
+    // ΟΛΟΚΛΗΡΟ το επίπεδο 1: αν πάψει να βρίσκει σπασμένα, το φίλτρο έγινε νεκρός φρουρός
+    // (ADR-749 §5) και η `Ψ6γ` από πάνω θα το κρύβει, γιατί εκείνη ρωτά μόνο τα επιζώντα.
+    const all: readonly TileId[] = [
+      { z: 1, x: 0, y: 0 }, { z: 1, x: 1, y: 0 },
+      { z: 1, x: 0, y: 1 }, { z: 1, x: 1, y: 1 },
+    ];
+    const verdicts = all.map((tile) => assessTileWarp(tile, null, 1e-8));
+    const broken = verdicts.filter((v) => !v.withinTolerance);
+    const worst = Math.max(...verdicts.map((v) => v.residualPx));
+
+    expect(broken.length).toBeGreaterThan(0);
+    expect(broken.every((v) => v.divisions === 8)).toBe(true); // κόλλησαν στο ταβάνι
+    expect(worst).toBeGreaterThan(WARP_TOLERANCE_PX * 100);
+    // ⚠️ Ο κριτής και ο επιλογέας οφείλουν να λένε τον **ίδιο** αριθμό. Δύο μηχανές που κρίνουν
+    // το ίδιο ερώτημα και αποκλίνουν είναι το σχήμα του ADR-749 — εδώ είναι δομικά αδύνατο μόνο
+    // επειδή ο επιλογέας καλεί ΑΥΤΟΝ τον κριτή· η άγκυρα το κρατά αδύνατο.
+    expect(pipelineSelection(1e-8, 1).droppedForFidelity).toBe(broken.length);
   });
 });
 

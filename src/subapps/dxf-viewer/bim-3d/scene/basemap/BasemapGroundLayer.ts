@@ -50,6 +50,7 @@ import { getBasemapDisplayProjector } from '../../../systems/basemap/basemap-fra
 import { worldMmToGeographic } from '../../../systems/basemap/basemap-projection';
 import { chooseZoomLevel, tilesForDisplayRect } from '../../../systems/basemap/basemap-tile-model';
 import { buildTileWarpMesh } from '../../../systems/basemap/basemap-warp';
+import { reportTileFidelity } from '../../../systems/basemap/basemap-fidelity-report';
 import { getTileImage } from '../../../systems/basemap/basemap-tile-cache';
 import { buildTileGeometry, createTileMaterial } from '../../../systems/basemap/basemap-3d-geometry';
 import type { TileId } from '../../../systems/basemap/web-mercator';
@@ -136,6 +137,10 @@ export class BasemapGroundLayer {
       // χωρίς κίνηση κάμερας θα υπολόγιζε την ίδια υπογραφή, θα έβγαινε νωρίς, και ο χάρτης θα
       // έμενε άδειος μέχρι ο χρήστης να κουνήσει την προβολή.
       this.signature = '';
+      // Σβηστό υπόβαθρο δεν κρύβει πλακίδια — κρύβει τον χάρτη, που είναι άλλη πρόταση. Χωρίς
+      // αυτόν τον μηδενισμό η προειδοποίηση ζώνης θα επιβίωνε του σβησίματος, δηλαδή θα εξηγούσε
+      // μια απόκρυψη που δεν συμβαίνει πια.
+      reportTileFidelity('scene', 0);
       return [];
     }
     this.refresh();
@@ -161,7 +166,11 @@ export class BasemapGroundLayer {
     const centreDisplay = { x: (rect.minX + rect.maxX) / 2, y: (rect.minY + rect.maxY) / 2 };
     const latitude = this.latitudeAt(centreDisplay, projector);
     const zoom = chooseZoomLevel({ pixelsPerMm, devicePixelRatio: 1, latitude, source });
-    const selection = tilesForDisplayRect(rect, zoom, projector);
+    const selection = tilesForDisplayRect(rect, zoom, projector, pixelsPerMm);
+    // Η ίδια αναφορά με την κάτοψη, από **δική** της κάμερα (ADR-782 §27.9). Η αναφορά γίνεται
+    // πριν τον φραγμό υπογραφής: μια όψη που δεν άλλαξε πλακίδια δεν άλλαξε ούτε την απόκρυψη,
+    // αλλά μια όψη που άλλαξε **μόνο** απόκρυψη οφείλει να το πει — ο φραγμός δεν την ξέρει.
+    reportTileFidelity('scene', selection.droppedForFidelity);
 
     const signature = tileSetSignature(source.id, opacity, selection.tiles);
     if (signature === this.signature && !this.pendingTiles) return;

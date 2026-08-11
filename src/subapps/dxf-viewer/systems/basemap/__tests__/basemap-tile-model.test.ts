@@ -13,6 +13,17 @@ import { geographicToWorldMm } from '../basemap-projection';
 
 const OSM = BASEMAP_SOURCES['osm-standard'];
 
+/**
+ * Η κλίμακα με την οποία ρωτιέται ο επιλογέας — **υποχρεωτική** από το ADR-782 §27.9, γιατί το
+ * «χωρά αυτό το πλακίδιο στην ανοχή;» δεν απαντιέται χωρίς αυτήν.
+ *
+ * ⚠️ Παραλείποντάς την, ο επιλογέας απαντά **fail-closed** (μηδέν πλακίδια) και κάθε άγκυρα αυτού
+ * του αρχείου γίνεται κόκκινη — αυτό ακριβώς συνέβη όταν προστέθηκε η παράμετρος, και είναι ο
+ * λόγος που **δεν** έγινε προαιρετική: μια προεπιλογή θα άφηνε αυτά τα tests πράσινα ενώ ο
+ * έλεγχος πιστότητας θα ήταν ανενεργός — «0 = κανείς δεν κοίταξε».
+ */
+const PIXELS_PER_MM = 0.002;
+
 /** Ένα display ορθογώνιο πλάτους `spanMm` γύρω από την Ακρόπολη (μη γεωαναφερμένο ⇒ display = world). */
 function rectAroundAthens(spanMm: number) {
   const centre = geographicToWorldMm(37.9715, 23.7257);
@@ -58,7 +69,7 @@ describe('επιλογή επιπέδου', () => {
 
 describe('ταβάνι πλήθους πλακιδίων', () => {
   it('Τ5 — μικρή περιοχή: κρατά το ζητούμενο επίπεδο και δεν μειώνει', () => {
-    const selection = tilesForDisplayRect(rectAroundAthens(200_000), 18, null);
+    const selection = tilesForDisplayRect(rectAroundAthens(200_000), 18, null, PIXELS_PER_MM);
     expect(selection.zoom).toBe(18);
     expect(selection.reducedForBudget).toBe(false);
     expect(selection.tiles.length).toBeGreaterThan(0);
@@ -66,14 +77,14 @@ describe('ταβάνι πλήθους πλακιδίων', () => {
 
   it('Τ6 — τεράστια περιοχή: ΚΑΤΕΒΑΖΕΙ επίπεδο αντί να κόψει τη λίστα', () => {
     // 400 km πλάτος στο βαθύτερο επίπεδο = εκατομμύρια πλακίδια.
-    const selection = tilesForDisplayRect(rectAroundAthens(400_000_000), 19, null);
+    const selection = tilesForDisplayRect(rectAroundAthens(400_000_000), 19, null, PIXELS_PER_MM);
     expect(selection.reducedForBudget).toBe(true);
     expect(selection.zoom).toBeLessThan(19);
     expect(selection.tiles.length).toBeLessThanOrEqual(MAX_TILES_PER_FRAME);
   });
 
   it('Τ7 — ΚΑΝΕΝΑ επιστρεφόμενο πλακίδιο δεν είναι εκτός κόσμου', () => {
-    const selection = tilesForDisplayRect(rectAroundAthens(400_000_000), 19, null);
+    const selection = tilesForDisplayRect(rectAroundAthens(400_000_000), 19, null, PIXELS_PER_MM);
     const max = 2 ** selection.zoom;
     for (const tile of selection.tiles) {
       expect(tile.x).toBeGreaterThanOrEqual(0);

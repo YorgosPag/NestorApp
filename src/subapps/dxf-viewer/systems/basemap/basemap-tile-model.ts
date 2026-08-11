@@ -16,12 +16,25 @@
  * ⚠️ Η μείωση γίνεται στο **επίπεδο**, ποτέ με κόψιμο της λίστας. Ένα `slice(0, N)` θα άφηνε
  * τρύπες στο υπόβαθρο — μισός χάρτης ζωγραφισμένος, μισός λευκός, χωρίς κανένα σημάδι ότι κάτι
  * παραλείφθηκε. Χάρτης με τρύπες διαβάζεται ως «δεν υπάρχουν εκεί δεδομένα», που είναι ψέμα.
+ *
+ * ## 🎯 Το τρίτο ερώτημα: «**μπορεί** η προβολή να αποδώσει αυτό το πλακίδιο;» (ADR-782 §27.9)
+ * Απαντιέται **εδώ** και όχι στον ζωγράφο, γιατί ένα πλακίδιο που δεν πρόκειται να ζωγραφιστεί
+ * δεν επιτρέπεται να **κατέβει**: θα ήταν αίτημα προς εθελοντική υποδομή που ξέρουμε ότι θα πάει
+ * χαμένο. Το κριτήριο δεν γράφεται εδώ — το δανείζεται από το {@link assessTileWarp}, δηλαδή από
+ * **την ίδια** μηχανή που χτίζει το πλέγμα και **την ίδια** ανοχή που εκείνη υπόσχεται.
+ *
+ * ⚠️ Εδώ το κόψιμο της **λίστας** είναι θεμιτό, ενώ πιο πάνω απαγορεύεται — και η διαφορά είναι
+ * **μετρημένη, όχι υποτεθειμένη**: τα πλακίδια που αθετούν σχηματίζουν πάντα **περιφερειακή**
+ * ζώνη (μηδέν εγκλωβισμένες τρύπες σε 6 μετρημένες όψεις, από zoom-out επιπέδου 2 μέχρι οθόνη
+ * 8K). Ο χάρτης **συρρικνώνεται**, δεν τρυπιέται. Το `slice(0, N)` του προϋπολογισμού δεν έχει
+ * τέτοια εγγύηση — κόβει με σειρά σάρωσης, δηλαδή στη μέση.
  */
 
 import type { WorldToDisplayProjector } from '../geo-referencing/geo-transform';
 import { unprojectRectToWorld } from '../topography/topo-display-frame';
 import type { WorldRectMm } from '../topography/topo-grid-model';
 import { worldMmToGeographic } from './basemap-projection';
+import { assessTileWarp } from './basemap-warp';
 import {
   geographicToTileFraction,
   groundResolutionM,
@@ -120,6 +133,14 @@ export interface TileSelection {
   readonly tiles: readonly TileId[];
   /** `true` όταν το επίπεδο κατέβηκε για να τηρηθεί το {@link MAX_TILES_PER_FRAME}. */
   readonly reducedForBudget: boolean;
+  /**
+   * Πόσα πλακίδια απορρίφθηκαν επειδή η προβολή **δεν** τα αποδίδει εντός ανοχής.
+   *
+   * ⚠️ Είναι **μέρος της απάντησης, όχι διαγνωστικό**. Χωρίς αυτό η απόκρυψη θα ήταν σιωπηλή, και
+   * υπόβαθρο που εξαφανίζεται χωρίς λόγο διαβάζεται ως «χάλασε ο χάρτης» — το μάθημα του
+   * CHECK 3.45 αυτούσιο. Ο αριθμός ταξιδεύει μέχρι την οθόνη.
+   */
+  readonly droppedForFidelity: number;
 }
 
 /**
@@ -133,6 +154,7 @@ export function tilesForDisplayRect(
   displayRect: WorldRectMm,
   preferredZoom: number,
   projector: WorldToDisplayProjector | null,
+  pixelsPerMm: number,
 ): TileSelection {
   const worldRect = unprojectRectToWorld(displayRect, projector);
   let zoom = Math.max(MIN_ZOOM, preferredZoom);
@@ -146,11 +168,20 @@ export function tilesForDisplayRect(
   }
 
   const tiles: TileId[] = [];
+  let droppedForFidelity = 0;
   for (let y = range.minY; y <= range.maxY; y += 1) {
     for (let x = range.minX; x <= range.maxX; x += 1) {
       const tile: TileId = { z: zoom, x, y };
-      if (isTileInWorld(tile)) tiles.push(tile);
+      // Δύο **ανεξάρτητα** ερωτήματα, ποτέ ένα με «ή»: «υπάρχει το πλακίδιο;» (πλέγμα παρόχου)
+      // και «έχει νόημα εδώ η προβολή;» (ανοχή απόδοσης). Ένα ανύπαρκτο πλακίδιο δεν μετριέται
+      // ως κρυμμένο — δεν υπήρξε ποτέ, και ο χρήστης δεν έχει τι να μάθει γι' αυτό.
+      if (!isTileInWorld(tile)) continue;
+      if (!assessTileWarp(tile, projector, pixelsPerMm).withinTolerance) {
+        droppedForFidelity += 1;
+        continue;
+      }
+      tiles.push(tile);
     }
   }
-  return { zoom, tiles, reducedForBudget: reduced };
+  return { zoom, tiles, reducedForBudget: reduced, droppedForFidelity };
 }

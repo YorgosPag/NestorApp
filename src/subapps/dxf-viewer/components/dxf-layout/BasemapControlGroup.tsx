@@ -52,6 +52,10 @@ import {
 } from '../../systems/basemap/basemap-frame';
 import { ANCHOR_REFUSAL_HINT_KEY } from '../../systems/basemap/basemap-anchor-labels';
 import {
+  isBasemapTruncated,
+  subscribeTileFidelity,
+} from '../../systems/basemap/basemap-fidelity-report';
+import {
   getBasemapState,
   subscribeBasemap,
   toggleBasemapEnabled,
@@ -65,6 +69,14 @@ interface BasemapToggleState {
   readonly unavailable: boolean;
   /** Ο λόγος, έτοιμος για ανάγνωση — ονομασμένος αν υπάρχει, γενικός αν δεν υπάρχει ακόμη. */
   readonly unavailableLabel: string;
+  /**
+   * Ο χάρτης ζωγραφίζεται, αλλά **λείπουν** τμήματα που η προβολή δεν αποδίδει πιστά (§27.9).
+   *
+   * ⚠️ Είναι **τρίτη** κατάσταση, όχι απόχρωση της `unavailable`: εκεί ο χάρτης δεν υπάρχει
+   * καθόλου και η θεραπεία είναι γεωαναφορά· εδώ ο χάρτης υπάρχει και η θεραπεία είναι
+   * **μεγέθυνση**. Δύο διαφορετικές θεραπείες δεν επιτρέπεται να μοιράζονται ένα σήμα.
+   */
+  readonly truncated: boolean;
 }
 
 /**
@@ -87,12 +99,24 @@ function useBasemapToggleState(): BasemapToggleState {
     getProjectAnchorRefusal,
   );
 
+  // Εγγραφή **απευθείας** στην αναφορά πιστότητας και όχι μέσω `basemap-invalidation`: εκείνο
+  // απαριθμεί τι προκαλεί ζωγραφική, ενώ αυτό είναι αποτέλεσμά της (δες την επικεφαλίδα του
+  // `basemap-fidelity-report`). Ο ζωγράφος αναφέρει ανά καρέ· το boolean κάνει το React να
+  // ξαναρενδάρει μόνο όταν αλλάζει η **απάντηση**, όχι όταν αλλάζει το πλήθος.
+  const truncated = useSyncExternalStore(
+    subscribeTileFidelity,
+    isBasemapTruncated,
+    isBasemapTruncated,
+  );
+
   const unavailable = availability === 'unknown';
+  const active = enabled && !unavailable;
 
   return {
     availability,
     unavailable,
-    active: enabled && !unavailable,
+    active,
+    truncated: active && truncated,
     // ⚠️ Η γενική υπόδειξη μένει ως **πάτωμα**, όχι ως εναλλακτική στιλ: όσο η ανάγνωση εκκρεμεί
     // (ή απέτυχε) δεν υπάρχει διαπιστωμένος λόγος, και το να ονομάσουμε έναν θα ήταν εφεύρεση.
     unavailableLabel: refusal ? t(ANCHOR_REFUSAL_HINT_KEY[refusal]) : t('basemap.unavailableHint'),
@@ -114,18 +138,30 @@ function useBasemapToggleState(): BasemapToggleState {
 const BasemapToggle: React.FC = () => {
   const { t } = useTranslation('dxf-viewer-shell');
   const colors = useSemanticColors();
-  const { availability, active, unavailable, unavailableLabel } = useBasemapToggleState();
+  const { availability, active, unavailable, unavailableLabel, truncated } = useBasemapToggleState();
 
   const stateClass = active
     ? `${colors.bg.info} ${colors.text.inverse}`
     : `${colors.text.muted} ${PANEL_LAYOUT.INTERACTIVE.HOVER}`;
+
+  /**
+   * ⚠️ Η περικοπή μπαίνει στο **`aria-label`** και όχι μόνο στο ορατό τσιπάκι: όταν ένα κουμπί
+   * φέρει `aria-label`, ο αναγνώστης οθόνης **αγνοεί** το κείμενο των παιδιών του. Ένα badge που
+   * υπάρχει μόνο οπτικά θα ήταν απόκρυψη σιωπηλή για ακριβώς τον χρήστη που την υφίσταται
+   * περισσότερο — και το §27.9 απαιτεί το αντίθετο.
+   */
+  const ariaLabel = unavailable
+    ? unavailableLabel
+    : truncated
+      ? t('basemap.truncatedAria')
+      : t('basemap.toggleAria');
 
   return (
     <button
       type="button"
       aria-pressed={active}
       disabled={unavailable}
-      aria-label={unavailable ? unavailableLabel : t('basemap.toggleAria')}
+      aria-label={ariaLabel}
       onClick={toggleBasemapEnabled}
       className={`${CONTEXT_STRIP_CHIP_CLASS} ${stateClass} disabled:cursor-not-allowed disabled:opacity-40`}
     >
@@ -134,6 +170,14 @@ const BasemapToggle: React.FC = () => {
       {active && availability === 'approximate' && (
         <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.inverse} ${PANEL_LAYOUT.OPACITY['70']}`}>
           {t('basemap.approximateBadge')}
+        </span>
+      )}
+      {/* Δύο τσιπάκια μπορούν να συνυπάρχουν: «κατά προσέγγιση θέση» και «μερικός χάρτης» είναι
+          ανεξάρτητα γεγονότα — ένα έργο με άγκυρα από διεύθυνση σε πλήρες zoom-out έχει **και** τα
+          δύο, και το να κρύψουμε το ένα θα έκρυβε μισή αλήθεια. */}
+      {truncated && (
+        <span className={`${PANEL_LAYOUT.TYPOGRAPHY.XS} ${colors.text.inverse} ${PANEL_LAYOUT.OPACITY['70']}`}>
+          {t('basemap.truncatedBadge')}
         </span>
       )}
     </button>

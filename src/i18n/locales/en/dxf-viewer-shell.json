@@ -871,6 +871,9 @@
     "unavailableHint": "This project is not geo-referenced — its position on the map is unknown. Import a survey with coordinates, or align the drawing.",
     "approximateBadge": "approximate",
     "approximateHint": "Position derived from the project address and is approximate. For drawing accuracy, align the drawing to the survey.",
+    "truncatedBadge": "partial",
+    "truncatedHint": "At this zoom the Greek coordinate system cannot render the map faithfully, so the areas that would appear distorted are hidden. Zoom in to see the whole map.",
+    "truncatedAria": "Map shown partially: at this zoom some areas cannot be rendered faithfully. Zoom in.",
     "attributionAria": "Map data credit",
     "sources": {
       "osmStandard": "OpenStreetMap"

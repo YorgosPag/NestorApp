@@ -38,6 +38,7 @@ import { resolveBasemapPaint } from '../../systems/basemap/basemap-paint-decisio
 import { getBasemapDisplayProjector } from '../../systems/basemap/basemap-frame';
 import { worldMmToGeographic } from '../../systems/basemap/basemap-projection';
 import { chooseZoomLevel, tilesForDisplayRect } from '../../systems/basemap/basemap-tile-model';
+import { reportTileFidelity } from '../../systems/basemap/basemap-fidelity-report';
 import { paintBasemap } from '../../systems/basemap/basemap-painter';
 
 /** Πυκνότητα οθόνης, με ασφαλή τιμή εκτός browser (δοκιμές σε jsdom/node). */
@@ -88,7 +89,10 @@ export function useBasemapPainter(): OverlayDispatchPainter | null {
         latitude: lat,
         source,
       });
-      const selection = tilesForDisplayRect(rect, zoom, projector);
+      const selection = tilesForDisplayRect(rect, zoom, projector, transform.scale);
+      // Η απόκρυψη ταξιδεύει προς την οθόνη **πριν** τη ζωγραφική (ADR-782 §27.9). Το `equals` του
+      // store και το boolean που διαβάζει η ένδειξη κάνουν το καρέ που δεν άλλαξε τίποτα δωρεάν.
+      reportTileFidelity('plan', selection.droppedForFidelity);
       paintBasemap(ctx, transform, viewport, {
         source,
         tiles: selection.tiles,
