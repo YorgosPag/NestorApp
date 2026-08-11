@@ -29,13 +29,25 @@ import {
   serializeListingFilters,
 } from '@/lib/listings/listing-filters';
 import { listingMapShape, isMappedShape } from '@/lib/listings/listing-map-shape';
+import { useViewportClass } from '@/hooks/media/useViewportClass';
 import { ListingLedgerBar } from './ListingLedgerBar';
 import { ResultsList } from './ResultsList';
 import { ResultsMap } from './ResultsMap';
+import { ResultsSheet } from './ResultsSheet';
 
 export function SearchResultsContent() {
   const { t } = useTranslation(['search-results']);
   const searchParams = useSearchParams();
+
+  /**
+   * **Η ΜΙΑ ΕΡΩΤΗΣΗ ΤΗΣ ΟΘΟΝΗΣ.** Ρωτιέται εδώ, μία φορά, και ταξιδεύει προς τα κάτω.
+   *
+   * ⚠️ Οδηγεί **συμπεριφορά**, ποτέ σχήμα: στάσεις, πίσω κουμπί, κλείδωμα εσωτερικής
+   * κύλισης. Το σχήμα το απαντά το CSS στο πρώτο βάψιμο — αλλιώς το ειλικρινές `measuring`
+   * θα κόστιζε πλήρη αναδιάταξη στη μία από τις δύο μερίδες κοινού (Α19: `CLS < 0,1`).
+   * Ο λόγος γράφεται ολόκληρος στο `ResultsSheet`.
+   */
+  const viewport = useViewportClass();
   const { listings, loading, error } = usePublicListings();
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
@@ -84,11 +96,26 @@ export function SearchResultsContent() {
       </header>
 
       {/*
-        ΔΙΠΛΑ-ΔΙΠΛΑ, και τα δύο ζωντανά. Η λίστα πρώτη στη ροή ανάγνωσης: είναι το
-        μέσο που το 65% χρησιμοποιεί πραγματικά.
+        ΔΥΟ ΔΙΑΤΑΞΕΙΣ ΑΠΟ ΕΝΑ ΔΕΝΤΡΟ — και τα δύο πλαίσια ζωντανά σε **αμφότερες**.
+
+        • **Ευρεία** (`md:`): πλέγμα δύο στηλών, λίστα ‖ χάρτης.
+        • **Στενή**: ο χάρτης καταλαμβάνει **ολόκληρο** το κουτί και η λίστα κάθεται
+          **από πάνω** ως μη-αποκλειστικό φύλλο (SPEC-777D §26.2).
+
+        🔴 Αυτό που ΕΦΥΓΕ ήταν `grid-cols-1 … lg:grid-cols-[…]`, και το ελάττωμα δεν ήταν
+        ότι «δεν ρωτούσε»: ρωτούσε με CSS και **απαντούσε λάθος**. Στο στενό στοίβαζε δύο
+        σειρές μέσα σε `overflow-hidden`, δηλαδή λίστα και χάρτης **μοιράζονταν το ύψος**
+        και κανένα δεν ήταν χρήσιμο — η **τρίτη** κακή επιλογή, δίπλα στην εναλλαγή που το
+        §26.1 απορρίπτει ονομαστικά. Έφυγε επίσης το `lg` (1024), που ήταν **δεύτερος**
+        αριθμός δίπλα στο `MOBILE_BREAKPOINT` (768): το κατώφλι είναι πλέον **ένα**.
+
+        ⚠️ Η λίστα μένει **πρώτη στη ροή ανάγνωσης** — είναι το μέσο που το 65%
+        χρησιμοποιεί πραγματικά (§25.3). Γι' αυτό το φύλλο ζητά σκαλί τοπικής στρώσης
+        (`z-10`): στο στενό είναι **δεύτερο** στο βάψιμο ενώ είναι **πρώτο** στην ανάγνωση,
+        και η σειρά του DOM μόνη της θα το έθαβε κάτω από τον χάρτη.
       */}
-      <div className="grid flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(20rem,26rem)_1fr]">
-        <div className="min-h-0 border-r border-border">
+      <div className="relative min-h-0 flex-1 overflow-hidden md:grid md:grid-cols-[minmax(20rem,26rem)_1fr]">
+        <ResultsSheet viewport={viewport}>
           <ResultsList
             mapped={mapped}
             unmapped={unmapped}
@@ -96,10 +123,21 @@ export function SearchResultsContent() {
             onHover={setHighlightedId}
             filterQuery={filterQuery}
           />
-        </div>
-        <div className="min-h-0" aria-label={t('search-results:map.label')}>
+        </ResultsSheet>
+
+        {/*
+          `isolate`: ο χάρτης είναι **ξένος** κώδικας (Geo-Canvas/MapLibre) με δικά του
+          εσωτερικά επίπεδα. Ένα δικό του στρώμα δεν επιτρέπεται να αναρριχηθεί πάνω από
+          το φύλλο — και ο **περιορισμός** είναι το ανώτερο εργαλείο έναντι του δαμάσματος
+          με αριθμό (CHECK 3.50): δεν χρειάζεται να ξέρουμε τι γράφει η βιβλιοθήκη, ούτε
+          μετά από αναβάθμισή της.
+        */}
+        <section
+          aria-label={t('search-results:map.label')}
+          className="absolute inset-0 isolate md:static"
+        >
           <ResultsMap listings={mapped} highlightedId={highlightedId} onSelect={setHighlightedId} />
-        </div>
+        </section>
       </div>
     </main>
   );

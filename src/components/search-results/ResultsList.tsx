@@ -33,7 +33,17 @@ export function ResultsList({ mapped, unmapped, highlightedId, onHover, filterQu
 
   return (
     <section aria-label={t('search-results:list.label')} className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto">
+      {/*
+        `data-list-scroll`: το **φύλλο** (στενή οθόνη) κλείνει αυτή την κύλιση όσο δεν είναι
+        πλήρες, ώστε η χειρονομία να **μεγαλώνει το φύλλο** αντί να διαβάζει αγγελίες μέσα
+        σε χαραμάδα — NN/g: *«expands to take up the full page as the user scrolls down the
+        list»* (SPEC-777D §26.2).
+
+        🔑 Γνώρισμα, **όχι prop**: ο κανόνας «η λίστα κυλά μόνο όταν είμαι πλήρες» ανήκει
+        στο φύλλο, όχι στη λίστα. Ένα prop θα υποχρέωνε **κάθε** καταναλωτή της λίστας —
+        και τη στήλη του desktop, που δεν έχει στάσεις — να έχει γνώμη γι' αυτόν.
+      */}
+      <div data-list-scroll className="flex-1 overflow-y-auto">
         {isEmpty ? (
           <p className="p-4 text-sm text-muted-foreground">{t('search-results:list.empty')}</p>
         ) : (

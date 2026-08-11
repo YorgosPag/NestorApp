@@ -53,6 +53,11 @@
     "label": "Results list",
     "empty": "No property matches the filters"
   },
+  "sheet": {
+    "label": "Results list — drag for more map or more list",
+    "moreList": "Larger list",
+    "moreMap": "Larger map"
+  },
   "card": {
     "areaSqm": "{value} m²",
     "floor": "Floor {value}",
