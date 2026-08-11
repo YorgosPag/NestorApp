@@ -76,6 +76,9 @@
  */
 
 import { useCallback, type FocusEvent } from 'react';
+// 🔴 ADR-753 §28 — οι κοινές πράξεις των πεδίων της συνεδρίας. Δες γιατί ο έλεγχος τύπου
+// δεν μπορεί πια να είναι `instanceof` στοιχείου φόρμας.
+import { isTableSessionTextField, tableTextFieldSelection } from './table-text-field-ops';
 
 /**
  * Το όνομα του `data-*` γνωρίσματος, ως attribute — η **πηγή** και των δύο μορφών του.
@@ -134,14 +137,17 @@ export function activeTableCellSessionCaret(): number | null {
   if (typeof document === 'undefined') return null;
   const active = document.activeElement;
   if (!isTableCellSessionElement(active)) return null;
-  // Και τα δύο πεδία της συνεδρίας είναι πεδία κειμένου (`<textarea>` το κελί, `<input>` η
-  // γραμμή τύπων), άρα και τα δύο έχουν `selectionStart`. Ο τύπος ελέγχεται ρητά: ένα
-  // μελλοντικό **τρίτο** μέλος της συνεδρίας (π.χ. κουμπί μενού) φέρει το ίδιο σημάδι και
-  // **δεν** έχει κέρσορα — εκεί η σωστή απάντηση είναι `null`, όχι σφάλμα.
-  if (!(active instanceof HTMLTextAreaElement) && !(active instanceof HTMLInputElement)) {
-    return null;
-  }
-  return active.selectionStart;
+  // 🔴 ADR-753 §28 — ο έλεγχος ήταν `instanceof HTMLTextAreaElement || HTMLInputElement`, και
+  // ήταν σωστός όσο τα πεδία της συνεδρίας ήταν δύο **στοιχεία φόρμας**. Από τη στιγμή που ο
+  // επεξεργαστής κελιού έγινε `contenteditable`, εκείνος ο έλεγχος θα απαντούσε `null`
+  // **ακριβώς για το πεδίο που γράφει ο χρήστης** — δηλαδή η υπόδειξη κελιού (ADR-754) θα
+  // έπαυε σιωπηλά να λειτουργεί μέσα στο κελί, ενώ θα συνέχιζε στη γραμμή τύπων.
+  //
+  // Ο τύπος εξακολουθεί να ελέγχεται ρητά, με τον σωστό πλέον κριτή: ένα μελλοντικό **τρίτο**
+  // μέλος της συνεδρίας (π.χ. κουμπί μενού) φέρει το ίδιο σημάδι και **δεν** έχει κέρσορα —
+  // εκεί η σωστή απάντηση είναι `null`, όχι σφάλμα.
+  if (!isTableSessionTextField(active)) return null;
+  return tableTextFieldSelection(active).start;
 }
 
 /**

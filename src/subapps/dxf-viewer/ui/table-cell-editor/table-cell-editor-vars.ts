@@ -31,6 +31,20 @@ export const TABLE_CELL_EDITOR_VARS = {
   background: '--tce-bg',
   textAlign: '--tce-text-align',
   /**
+   * 🔴 ADR-753 §28 — το **μέγεθος** της γραμματοσειράς του κελιού σε px, ταξιδεύοντας
+   * χωριστά από το {@link font} shorthand.
+   *
+   * Δεν είναι διπλότυπο: το shorthand είναι **αδιαίρετο** αλφαριθμητικό, και ο πλούσιος
+   * επεξεργαστής χρειάζεται το μέγεθος ως **αριθμό** για να το πολλαπλασιάσει (ένα τμήμα με
+   * διπλάσιο ύψος γράφει `calc(var(--tce-em) * 2)`). Χωρίς αυτό, το μέγεθος κάθε τμήματος θα
+   * έπρεπε να γράφεται σε px από τον React — δηλαδή **νέο render σε κάθε καρέ zoom**, πάνω σε
+   * πεδίο με ενεργό δρομέα, που είναι ακριβώς ό,τι απαγορεύει ο ADR-040.
+   *
+   * Παράγεται από την **ίδια** έκφραση που χτίζει το shorthand ({@link TableCellEditorFrame.fontSizePx}),
+   * οπότε δεν μπορούν να αποκλίνουν.
+   */
+  fontSize: '--tce-em',
+  /**
    * ADR-739 Φ.Ε — υπογράμμιση. Ταξιδεύει **χωριστά** από το {@link font} επειδή το CSS
    * shorthand `font` δεν περιλαμβάνει το `text-decoration` — δεν είναι επιλογή μας.
    */
@@ -72,6 +86,7 @@ export function tableCellEditorCssVars(frame: TableCellEditorFrame): Record<stri
   const printable = frame.printablePx;
   return {
     [V.font]: frame.font,
+    [V.fontSize]: `${frame.fontSizePx}px`,
     [V.lineHeight]: `${frame.lineHeightPx}px`,
     [V.padTop]: `${frame.paddingTopPx}px`,
     [V.padRight]: `${frame.paddingRightPx}px`,
@@ -145,6 +160,26 @@ export const TABLE_CELL_EDITOR_INPUT_STYLE: React.CSSProperties = {
   outlineOffset: 0,
   outlineWidth: `var(${TABLE_CELL_EDITOR_VARS.outlineWidth}, 0px)`,
   outlineColor: `var(${TABLE_CELL_EDITOR_VARS.outline}, transparent)`,
+};
+
+/**
+ * 🔴 ADR-753 §28 — το style του **πλούσιου** πεδίου: το ίδιο κουτί, με δύο διαφορές που
+ * επιβάλλει το ίδιο το CSS και μία που επιβάλλει η σημασιολογία του `div`.
+ *
+ *  1. **`textDecoration: 'none'`** — η υπογράμμιση του γονέα περνά **από πάνω** από κάθε
+ *     παιδί και κανένα παιδί δεν μπορεί να τη σβήσει (CSS Text Decoration: «decorations
+ *     propagate to in-flow descendants»). Άρα την ζωγραφίζουν **αποκλειστικά** τα τμήματα.
+ *     Δες `spanCssDelta`: τα δύο είναι **ένα** ζεύγος και δεν αλλάζει μόνο το ένα.
+ *  2. **`whiteSpace: 'pre-wrap'`** το κρατά ήδη το κοινό style, και εδώ γίνεται κρίσιμο: ένα
+ *     `div` **συμπτύσσει** τα κενά, οπότε χωρίς αυτό δύο διαδοχικά διαστήματα του χρήστη θα
+ *     γίνονταν ένα — δηλαδή το πεδίο θα έδειχνε **άλλο κείμενο** από το πρόχειρο.
+ *  3. **`cursor: 'text'`** — ένα `textarea` το δηλώνει μόνο του, ένα `div` όχι. Χωρίς αυτό ο
+ *     δείκτης μένει βέλος πάνω σε πεδίο που δέχεται πληκτρολόγηση.
+ */
+export const TABLE_CELL_RICH_STYLE: React.CSSProperties = {
+  ...TABLE_CELL_EDITOR_INPUT_STYLE,
+  textDecoration: 'none',
+  cursor: 'text',
 };
 
 /**

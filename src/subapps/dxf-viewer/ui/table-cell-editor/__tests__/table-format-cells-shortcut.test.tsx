@@ -146,9 +146,13 @@ describe('Π — η σειρά των κλάδων στον ΕΝΑ καλούν�
     'utf8',
   );
 
-  it('Π1 — ο κλάδος `Ctrl+1` προηγείται του φύλακα `INPUT`/`TEXTAREA`', () => {
+  it('Π1 — ο κλάδος `Ctrl+1` προηγείται του φύλακα του πεδίου κειμένου', () => {
     const claim = source.indexOf('claimTableFormatCellsShortcut()');
-    const guard = source.indexOf("target.tagName === 'TEXTAREA'");
+    // ADR-753 §28.7 — ο φύλακας ήταν χειρόγραφο αντίγραφο του predicate πληκτρολόγησης και
+    // **αστοχούσε** στο `plaintext-only` του επεξεργαστή κελιού· ρωτά πλέον τον ΕΝΑ
+    // `isTextEntryTarget` (ADR-711 §5.6, ο ratchet μίκρυνε κατά έξι). Η άγκυρα κλειδώνει τη
+    // **σειρά**, όχι το κείμενο — γι' αυτό αλλάζει μαζί του αντί να τον καθηλώνει.
+    const guard = source.indexOf('isTextEntryTarget(target)');
     expect(claim).toBeGreaterThan(-1);
     expect(guard).toBeGreaterThan(-1);
     expect(claim).toBeLessThan(guard);
@@ -159,7 +163,8 @@ describe('Π — η σειρά των κλάδων στον ΕΝΑ καλούν�
   });
 
   it('Π3 — το `F11` μένει ΠΙΣΩ από τον φύλακα: δεν έχει δεύτερο ιδιοκτήτη, δεν αλλάζει', () => {
-    const guard = source.indexOf("target.tagName === 'TEXTAREA'");
+    const guard = source.indexOf('isTextEntryTarget(target)');
+    expect(guard).toBeGreaterThan(-1);
     expect(source.indexOf("e.key === 'F11'")).toBeGreaterThan(guard);
   });
 });

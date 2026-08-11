@@ -112,6 +112,15 @@ export interface TableCellEditorFrame {
   /** Πλήρες shorthand — ίδιο αλφαριθμητικό με το `ctx.font` του ζωγράφου. */
   readonly font: string;
   /**
+   * 🔴 ADR-753 §28 — το μέγεθος του {@link font} ως **αριθμός** px.
+   *
+   * Δεν εξάγεται με regex από το shorthand (θα ήταν δεύτερη ανάγνωση της ίδιας τιμής, με
+   * ευκαιρία να αποκλίνει): είναι **η ίδια έκφραση** που τροφοδοτεί το shorthand, μία γραμμή
+   * πιο πάνω. Το χρειάζεται ο πλούσιος επεξεργαστής, όπου κάθε τμήμα δηλώνει το μέγεθός του
+   * ως **λόγο** αυτού — δες `table-cell-editor-spans.ts`.
+   */
+  readonly fontSizePx: number;
+  /**
    * ADR-739 Φ.Ε — υπογράμμιση, **εκτός** του {@link font}: το CSS shorthand `font` δεν
    * περιλαμβάνει `text-decoration`, οπότε η μόνη εναλλακτική θα ήταν να μην ακολουθεί το
    * πεδίο ό,τι ζωγραφίζεται — δηλαδή η υπογράμμιση να εξαφανίζεται στο διπλό κλικ.
@@ -189,6 +198,19 @@ export function computeTableCellEditorFrame(params: {
   readonly draft?: string;
   /** Πόσο πλατύ επιτρέπεται να γίνει το κουτί (px) πριν αναδιπλώσει. Δες {@link offsetXPx}. */
   readonly maxWidthPx?: number;
+  /**
+   * 🔴 ADR-753 §28 — η γραμματοσειρά με την οποία **μετριέται** το πρόχειρο, όταν διαφέρει από
+   * εκείνη με την οποία ζωγραφίζεται το κελί.
+   *
+   * Απούσα ⇒ μετριέται με το {@link TableCellEditorFrame.font}, δηλαδή η συμπεριφορά πριν από
+   * το §28 **ακέραιη**. Δίνεται μόνο όταν το κείμενο περιέχει τμήμα μεγαλύτερο ή βαρύτερο από
+   * το κελί, και τότε είναι η **πλατύτερη** τυπογραφία που εμφανίζεται — δες
+   * `widestCellTypography` για το γιατί «το χειρότερο» είναι η σωστή απάντηση εδώ.
+   *
+   * ⚠️ Αφορά **αποκλειστικά** τη μέτρηση του κουτιού. Η γραμματοσειρά που ταξιδεύει στο DOM
+   * παραμένει του κελιού· τα τμήματα δηλώνουν μόνα τους ό,τι διαφέρει.
+   */
+  readonly measureFont?: string;
   /** Μετρητής **px του browser** — δες την κεφαλίδα του `table-cell-editor-expansion.ts`. */
   readonly resolveWidth?: (text: string, font: string) => number;
 }): TableCellEditorFrame {
@@ -206,7 +228,8 @@ export function computeTableCellEditorFrame(params: {
   // μοιράζονται το ίδιο αλφαριθμητικό, άρα κάθε πεδίο που ξεχνιέται εδώ γίνεται αναπήδηση
   // κειμένου τη στιγμή του διπλού κλικ (η υπογράμμιση ταξιδεύει ξεχωριστά — δεν είναι μέρος
   // του CSS `font` shorthand, βλ. `TABLE_CELL_EDITOR_VARS.decoration`).
-  const font = tableCellFont(style.textHeightMm * pxPerMm, style.bold, style.italic, style.fontFamily);
+  const fontSizePx = style.textHeightMm * pxPerMm;
+  const font = tableCellFont(fontSizePx, style.bold, style.italic, style.fontFamily);
   const cellWidthPx = Math.max(rectMm.w * pxPerMm, MIN_CONTENT_PX);
   const cellHeightPx = Math.max(rectMm.h * pxPerMm, MIN_CONTENT_PX);
   const vertical = verticalPadding(cellHeightPx, target.baselineFromTopMm * pxPerMm, resolveBand(font));
@@ -223,7 +246,8 @@ export function computeTableCellEditorFrame(params: {
 
   const growth = resolveGrowth({
     draft: params.draft,
-    font,
+    // ADR-753 §28 — μετράμε με το **χειρότερο**, ζωγραφίζουμε με το κανονικό. Δες το πεδίο.
+    font: params.measureFont ?? font,
     cellWidthPx,
     sidePx,
     indentPx,
@@ -251,6 +275,7 @@ export function computeTableCellEditorFrame(params: {
     // αναγεννημένο για τα κελιά που έγειρε ο χρήστης.
     rotationRad: -angleRad - (tableTextRotationDeg(style) * Math.PI) / 180,
     font,
+    fontSizePx,
     underline: style.underline,
     paddingTopPx: vertical.topPx,
     paddingRightPx: sidePx + indentRightPx,

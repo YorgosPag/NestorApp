@@ -34,6 +34,7 @@ import {
 } from '../config/units';
 import { CommandLineInput } from '../ui/command-line/CommandLineInput';
 import { DistMeasureButton } from './DistMeasureButton';
+import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
 
 export default function CadStatusBar() {
   const { osnap, grid, snap, ortho, polar, dynInput, dimHud, dirArc, listeningDim, snapStep, setSnapStep } = useCadToggles();
@@ -54,7 +55,10 @@ export default function CadStatusBar() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') return;
+      // 🔴 ADR-753 §28 — ο ΕΝΑΣ φύλακας, αντί για τέταρτο αντίγραφο του ίδιου `if`. Το ωμό
+      // `contentEditable === 'true'` ΑΣΤΟΧΟΥΣΕ στο `plaintext-only` του επεξεργαστή κελιού
+      // πίνακα — δηλαδή αυτή η συντόμευση θα πυροδοτούσε ενώ ο χρήστης πληκτρολογεί.
+      if (isTextEntryTarget(target)) return;
       // ADR-656 M11 — Shift+F7 flips the ΕΓΣΑ87 graticule (checked before F7 so the modifier wins).
       if (matchesShortcut(e, 'topoGridDisplay')) { e.preventDefault(); toggleTopoGridVisible(); return; }
       if (matchesShortcut(e, 'gridDisplay'))   { e.preventDefault(); grid.toggle();     return; }

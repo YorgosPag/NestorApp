@@ -57,6 +57,7 @@ import { enterBlockEdit, isBlockEditActive } from '../../systems/block/ActiveBlo
 // Block Editor shows the block at its world size, framed on the origin (Revit/ArchiCAD/Figma parity).
 import { computeBlockEditViewTransform } from '../../systems/block/block-edit-view-transform';
 import { collectBlockEntities } from '../../systems/block/block-selection-bounds';
+import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
 
 interface Params {
   transformRef: React.MutableRefObject<{ scale: number; offsetX: number; offsetY: number }>;
@@ -95,7 +96,10 @@ export function useCanvasSectionUI({
         return;
       }
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') return;
+      // 🔴 ADR-753 §28 — ο ΕΝΑΣ φύλακας, αντί για τέταρτο αντίγραφο του ίδιου `if`. Το ωμό
+      // `contentEditable === 'true'` ΑΣΤΟΧΟΥΣΕ στο `plaintext-only` του επεξεργαστή κελιού
+      // πίνακα — δηλαδή αυτή η συντόμευση θα πυροδοτούσε ενώ ο χρήστης πληκτρολογεί.
+      if (isTextEntryTarget(target)) return;
       if (e.key === 'F11') { e.preventDefault(); PropertiesPaletteStore.toggle(); return; }
     };
     window.addEventListener('keydown', handler, { capture: true });

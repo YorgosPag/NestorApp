@@ -18,8 +18,26 @@ import type {
 import type { TableAxisStyleOverride } from '../../../types/table';
 import type { TextHeightStepDirection } from '../../../bim/table/table-text-height-scale';
 
-/** Τα δύο πεδία κειμένου της συνεδρίας: το κελί (textarea) και η γραμμή τύπων (input). */
-export type TableTextField = HTMLTextAreaElement | HTMLInputElement;
+/**
+ * 🔴 ADR-753 §28 — **ο πλούσιος** επεξεργαστής κελιού: ένα `contenteditable` κουτί με ένα
+ * `span` ανά ομοιογενές τμήμα, ώστε η μορφοποίηση να **φαίνεται όσο γράφεις**.
+ *
+ * Δηλώνεται ως ξεχωριστό ψευδώνυμο και όχι ως σκέτο `HTMLElement` μέσα στην ένωση: το
+ * `HTMLElement` είναι υπερτύπος και των δύο άλλων, οπότε θα κατάπινε την ένωση και ο
+ * μεταγλωττιστής θα έπαυε να ξέρει ότι η γραμμή τύπων **έχει** `.value`. Δες τον φρουρό
+ * `isRichTableTextField`, που στενεύει και τα δύο σκέλη.
+ */
+export type TableRichTextField = HTMLDivElement;
+
+/**
+ * Τα πεδία κειμένου της συνεδρίας: το κελί (**πλούσιο** από το §28· ιστορικά `textarea`) και
+ * η γραμμή τύπων (`input`).
+ *
+ * ⚠️ **Κανείς δεν διαβάζει `.value` / `.selectionStart` κατευθείαν από αυτόν τον τύπο.** Οι
+ * τρεις ερωτήσεις («τι γράφει», «τι μάρκαρε», «μάρκαρε αυτό») απαντιούνται σε έναν τόπο —
+ * `ui/table-cell-editor/table-text-field-ops.ts` — γιατί το πλούσιο πεδίο τις απαντά αλλιώς.
+ */
+export type TableTextField = HTMLTextAreaElement | HTMLInputElement | TableRichTextField;
 
 /**
  * Ο στόχος, **παγωμένος στο άνοιγμα**: τι δείχνουν τα χειριστήρια, και **ποιο πεδίο** πάτησε ο

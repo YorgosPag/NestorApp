@@ -84,6 +84,48 @@
  * ⚠️ Η επέκταση είναι **αποκλειστικά κατάσταση διεπαφής**: δεν αγγίζει τη διάταξη, δεν
  * αγγίζει το `TableCell.value`. Μετά το commit ο πίνακας ξαναδείχνει κομμένο (βήμα 5).
  *
+ * ## 🔴 ADR-753 §28 — γιατί `contenteditable` και όχι πια `textarea`
+ *
+ * Το §16.5 ήταν δηλωμένο όριο: «*η μορφοποίηση δεν φαίνεται όσο γράφεις*». Η αιτία ήταν
+ * δομική — ένα `textarea` έχει **ένα** χρώμα και **μία** γραμματοσειρά για όλο το κείμενό
+ * του, οπότε δύο κόκκινα γράμματα ανάμεσα σε μαύρα δεν είναι εκφράσιμα.
+ *
+ * ### Οι τρεις δρόμοι, και γιατί κερδίζει αυτός
+ * 1. **`textarea` + «backdrop» με βαμμένα `span` από κάτω** (react-simple-code-editor,
+ *    CodeMirror 5). Δουλεύει **μόνο** για διακόσμηση που δεν αλλάζει μετρικά — η ίδια η
+ *    τεκμηρίωσή του το λέει: *το επισημασμένο κείμενο δεν επιτρέπεται να έχει άλλη
+ *    οικογένεια, βάρος ή μέγεθος, αλλιώς η στοίχιση σπάει*. Εδώ ζητούνται **ακριβώς** αυτά
+ *    (Έντονα, Πλάγια, Γραμματοσειρά, Μέγεθος), οπότε ο δρομέας θα έπεφτε δίπλα από το γράμμα.
+ * 2. **Δικός μας text engine σε καμβά** (Google Docs Kix, Figma). Απαιτεί να ξαναγραφούν
+ *    δρομέας, επιλογή, αναδίπλωση και αντιστοίχιση κλικ→χαρακτήρα — **τέσσερις** μηχανές που
+ *    ο browser ήδη δίνει σωστά, και τις επιλέγει κανείς όταν έχει **σελιδοποίηση**. Ένα κελί
+ *    δεν έχει.
+ * 3. **`contenteditable` ως στόχος απόδοσης, με το μοντέλο SSoT** — ProseMirror, Lexical,
+ *    CodeMirror **6**, TipTap. Είναι η σύγκλιση της βιομηχανίας μετά το 2021, και ακριβώς η
+ *    διατύπωση που χρειάζεται εδώ: *το `contenteditable` δεν είναι ποτέ η πηγή αλήθειας*.
+ *
+ * ⚠️ **Το ADR-753 §16.5 απαρίθμησε ως κόστος «την ιδιοκτησία πλήκτρων των 43 window
+ * listeners». Μετρήθηκε, και είναι ΨΕΥΔΕΣ:** ο δομικός φύλακας `isTextEntryTarget`
+ * (`lib/a11y/keyboard-scope.ts`) απαντά ήδη `true` για `contenteditable`, στην ίδια γραμμή
+ * με το `INPUT`/`TEXTAREA`. Δηλαδή το ακριβότερο δηλωμένο κόστος **δεν υπάρχει**, και δεν
+ * υπήρχε ποτέ. Ο viewer τρέχει άλλωστε ήδη `contenteditable` πάνω από τον ίδιο καμβά, μέσα
+ * στο **ίδιο** {@link TextEditorAnchorLayer}: ο επεξεργαστής ελεύθερου κειμένου (TipTap).
+ *
+ * ### Τι **δεν** άλλαξε, και είναι το ουσιώδες
+ * Πλήκτρα, IME/ελληνικοί τόνοι, πρόχειρο, `readOnly`, πάγωμα επιλογής, τοποθέτηση δρομέα,
+ * ζωντανό κουτί, περιστροφή, zoom: **καμία** από αυτές τις μηχανές δεν ξαναγράφτηκε. Οι
+ * τρεις ερωτήσεις που το νέο πεδίο απαντά αλλιώς («τι γράφει», «τι μάρκαρε», «μάρκαρε αυτό»)
+ * ζουν σε **έναν** τόπο — `table-text-field-ops.ts` — και οι δώδεκα καταναλωτές τους έμειναν
+ * λέξη προς λέξη ίδιοι.
+ *
+ * ### `plaintext-only` και όχι σκέτο `true`
+ * Ο πίνακας αποθηκεύει **απλό κείμενο** (`TableCell.value: string`, ADR-739 Φ.Α) και τη
+ * μορφοποίηση χωριστά (`TableCell.runs`). Με σκέτο `contenteditable` ο browser θα εισήγαγε
+ * δικά του `<b>` και `<div>` στο `Ctrl+B` και στην επικόλληση — δηλαδή **δεύτερο** σχήμα
+ * μορφοποίησης, ανταγωνιστικό των runs, μέσα στο ίδιο πεδίο. Το `plaintext-only` τα
+ * αποκλείει και ισοπεδώνει την επικόλληση **δωρεάν**, ακριβώς όπως το έκανε το `textarea`.
+ * Baseline σε όλες τις μηχανές από 03/2025 (Firefox 136).
+ *
  * @see ui/table-cell-editor/table-cell-editor-frame.ts — από sheet-mm σε px CSS
  * @see ui/table-cell-editor/table-cell-editor-vars.ts — το συμβόλαιο των custom properties
  * @see ui/table-cell-editor/table-cell-key-intent.ts — ποιο πλήκτρο τι σημαίνει
@@ -91,7 +133,7 @@
  * @see ui/inline-editor/use-inline-editor-keys.ts — ο φρουρός «μία φορά» + ο escape-bus
  */
 
-import React, { useCallback, useRef, type ClipboardEvent } from 'react';
+import React, { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useInlineEditorKeys } from '../inline-editor/use-inline-editor-keys';
@@ -99,9 +141,14 @@ import { useInlineEditorKeys } from '../inline-editor/use-inline-editor-keys';
 import { useTableCellCaret } from './use-table-cell-caret';
 import { TextEditorAnchorLayer, type TextEditorAnchor } from '../text-toolbar/TextEditorAnchorLayer';
 import {
-  TABLE_CELL_EDITOR_INPUT_STYLE,
   TABLE_CELL_EDITOR_WRITING_STYLE,
+  TABLE_CELL_RICH_STYLE,
 } from './table-cell-editor-vars';
+// 🔴 ADR-753 §28 — **τι** πρέπει να δείχνει το πεδίο, και **ποιος** το γράφει στο DOM.
+import { tableCellEditorSpans } from './table-cell-editor-spans';
+import { useTableCellRichContent } from './use-table-cell-rich-content';
+import { TABLE_CELL_RICH_MARKER } from './table-text-field-ops';
+import type { TableRichTextField } from '../components/table-text-menu/table-text-toolbar-types';
 import { useTableCellSessionKeys } from './use-table-cell-session-keys';
 // 🔴 ADR-739 §67 — το δεξί κλικ **μέσα** στο κουτί. Χωρίς αυτό ο browser δείχνει το δικό του
 // μενού: το κουτί ζει έξω από το δοχείο όπου ακούει ο δρομολογητής του καμβά (δες τη θύρα).
@@ -114,86 +161,69 @@ import {
   cancelTableCellCursorSession,
   closeTableCellCursor,
   restartTableCellCursorSession,
-  setTableCellCursorDraft,
-  setTableCellCursorMode,
-  type TableCellCursorMode,
 } from '../../state/table-cell-cursor-store';
-import type { TableCellSessionHandlers } from './table-cell-session-types';
-import type { TableColumnId, TableRowId } from '../../types/table';
-
-export interface TableCellEditorOverlayProps extends TableCellSessionHandlers {
-  readonly entityId: string;
-  /** Μαζί με το `sessionId` συνθέτουν το `key` του καλούντος — δες το store. */
-  readonly rowId: TableRowId;
-  readonly colId: TableColumnId;
-  readonly mode: TableCellCursorMode;
-  /**
-   * Το **πρόχειρο** της συνεδρίας γραφής — ζει στον δρομέα, όχι εδώ. Δες το σχόλιο του
-   * `TableCellCursorState.draft`: τοπικό `useState` χανόταν σε ασύγχρονο ξαναστήσιμο.
-   */
-  readonly draft: string;
-  /** Το **δεσμευμένο** κείμενο του κελιού, διαβασμένο από το μοντέλο τη στιγμή της απόδοσης. */
-  readonly initialText: string;
-  /**
-   * ADR-739 Φ.Δ βήμα 3 — ο χαρακτήρας στον οποίο στήνεται ο κέρσορας· `undefined` ⇒ τέλος.
-   * Το γεμίζει μόνο το διπλό κλικ (Excel: μπαίνεις εκεί που έδειξες).
-   */
-  readonly caretIndex?: number;
-  /**
-   * 🔴 ADR-754 §4 — **η αφορμή** για να ξαναμπεί ο κέρσορας στο {@link caretIndex}. Δες το
-   * σχόλιο του πεδίου στο store: η θέση μόνη της δεν αρκεί, γιατί δύο υποδείξεις στο ίδιο
-   * σημείο είναι δύο γεγονότα με ίδια θέση.
-   */
-  readonly caretRevision: number;
-  readonly anchor: TextEditorAnchor;
-  /**
-   * ADR-739 Φ.Δ βήμα 8 — τα **φυσικά** συμβάντα προχείρου του browser. Δεν είναι πλήκτρα:
-   * δες `use-table-range-actions.ts` για τους τέσσερις λόγους που το `Ctrl+C` **δεν**
-   * αναγνωρίζεται ως `keydown`, και `table-cell-session-types.ts` για το γιατί ζουν εδώ
-   * και όχι στο κοινό συμβόλαιο των δύο πεδίων.
-   */
-  readonly onCopy: (event: ClipboardEvent<HTMLElement>) => void;
-  readonly onCut: (event: ClipboardEvent<HTMLElement>) => void;
-  readonly onPaste: (event: ClipboardEvent<HTMLElement>) => void;
-  /**
-   * ADR-751 Φ8.γ — `Alt+Enter` σε **πλοήγηση**: άνοιξε τη διεύθυνση αυτού του κελιού.
-   *
-   * Ζει εδώ και όχι στο κοινό {@link TableCellSessionHandlers} επειδή η γραμμή τύπων δεν
-   * μπορεί να βρεθεί σε πλοήγηση — δες το `onOpenLink` του `use-table-cell-session-keys`.
-   */
-  readonly onOpenLink: () => void;
-  /**
-   * 🔴 ADR-767 Δ1 — **το κελί τρέφεται από πηγή**: ο επεξεργαστής ανοίγει, αλλά δεν γράφεται.
-   *
-   * Ανοίγει και δεν κλειδώνει την είσοδο, επίτηδες: ο χρήστης πρέπει να μπορεί να **δει** και
-   * να **αντιγράψει** την τιμή, όπως σε κάθε φύλλο υπολογισμού — αυτό που δεν επιτρέπεται
-   * είναι να πληκτρολογήσει κάτι που θα εξαφανιζόταν στο επόμενο refresh.
-   *
-   * ⚠️ Ο φρουρός είναι **διπλός** (N.7.2 #4): εδώ ζει η **παρουσίαση** (`readOnly` στο πεδίο),
-   * ενώ ο πραγματικός φύλακας ζει στο `buildTableCellEditCommand` και πιάνει κάθε άλλο
-   * μονοπάτι εγγραφής. Το ένα χωρίς το άλλο είναι ή ευγενική παράκληση ή μυστήριο.
-   */
-  readonly readOnly: boolean;
-}
+import type { TableCellEditorOverlayProps } from './table-cell-editor-overlay-types';
 
 /**
- * Κάθε αλλαγή γραμμής γίνεται **ένα κενό** — ποτέ δεν χάνεται λέξη.
+ * 🔴 ADR-753 §28 — **ο φύλακας της μονής γραμμής μετακόμισε** στο `table-text-field-ops.ts`,
+ * και ξαναεξάγεται από εδώ ώστε καμία υπάρχουσα εισαγωγή να μη σπάσει.
  *
- * Το `\r\n` πιάνεται ως ένα, αλλιώς κείμενο από Windows θα άφηνε διπλά κενά. Οι διαδοχικές
- * αλλαγές γραμμής επίσης συμπτύσσονται: μια κενή γραμμή στο πρωτότυπο δεν είναι περιεχόμενο.
+ * Είναι πράξη **πεδίου** («τι επιτρέπεται να φτάσει στο μοντέλο;»), όχι στοιχείου διεπαφής, και
+ * τη ρωτούν **δύο** πεδία — το κελί και η γραμμή τύπων. Όσο ζούσε μέσα σε αυτό το component, ο
+ * δεύτερος καταναλωτής έπρεπε να εισάγει από ένα `.tsx` για να πάρει μια καθαρή συνάρτηση
+ * συμβολοσειρών.
+ *
+ * ⚠️ **Ένας** ορισμός, δύο ονόματα στο ίδιο σύμβολο — ποτέ δεύτερο σώμα.
  */
-export function flattenToSingleLine(value: string): string {
-  return value.replace(/[\r\n]+/gu, ' ');
-}
+export { flattenToSingleLine } from './table-text-field-ops';
 
 export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): React.ReactElement {
   const {
-    mode, draft, initialText, caretIndex, caretRevision, anchor, readOnly,
+    mode, draft, initialText, caretIndex, caretRevision, anchor, readOnly, runs, cellStyle,
     onCommit, onMove, onClear, onHistory, onExtend, onSelectAll, onToggleAbsoluteRef,
     onCopy, onCut, onPaste, onOpenLink,
   } = props;
   const { t } = useTranslation('dxf-viewer');
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const inputRef = useRef<TableRichTextField | null>(null);
+  /**
+   * 🔴 ADR-739 Φ.Δ βήμα 8 — **όσο συνθέτει, κανείς δεν αγγίζει το δέντρο.**
+   *
+   * Οι ελληνικοί τόνοι (`΄` + φωνήεν) και κάθε IME περνούν από `compositionstart` →
+   * `compositionend`, και ενδιάμεσα ο browser κρατά **δικό του** ενδιάμεσο κείμενο μέσα στον
+   * κόμβο. Μια ξαναγραφή εκεί ακυρώνει τη σύνθεση — δηλαδή σπάει ό,τι ο ADR-739 δηλώνει
+   * «κερδισμένο δωρεάν». Ref και όχι state: αλλάζει **μέσα** στον κύκλο εισόδου, και ένα
+   * `setState` εδώ θα γεννούσε render πάνω σε πεδίο που συνθέτει.
+   */
+  const composingRef = useRef(false);
+
+  /**
+   * 🔴 ADR-753 §28 — **τα βαμμένα τμήματα του προχείρου.** Καθαρός υπολογισμός· ό,τι δείχνει
+   * ο επεξεργαστής βγαίνει από εδώ και μόνο από εδώ.
+   */
+  const spans = useMemo(
+    () => tableCellEditorSpans({ draft, committedText: initialText, runs, style: cellStyle }),
+    [draft, initialText, runs, cellStyle],
+  );
+
+  // 🔴 Η σειρά των τριών effects **είναι** συμβόλαιο, γιατί όλα είναι `useLayoutEffect` και
+  // τρέχουν με τη σειρά δήλωσης: πρώτα υπάρχει το κείμενο, μετά η εστίαση, μετά ο δρομέας.
+  // Αντίστροφα, το `setSelectionRange` θα ζητούσε χαρακτήρα σε δέντρο που δεν γράφτηκε ακόμη
+  // και θα έπεφτε στη θέση 0 — δηλαδή το διπλό κλικ θα έβαζε τον κέρσορα πάντα στην αρχή.
+  useTableCellRichContent(inputRef, spans, composingRef);
+
+  /**
+   * Η εστίαση στο στήσιμο — ο αντικαταστάτης του `autoFocus`, που **δεν υπάρχει** για κουτί
+   * `contenteditable` (είναι γνώρισμα φόρμας). Χωρίς αυτό ο δρομέας δεν θα άνοιγε ποτέ και,
+   * χειρότερα, οι 43 window listeners δεν θα παραιτούνταν: το πρώτο γράμμα θα άνοιγε τη
+   * γραμμή εντολών αντί να μπει στο κελί.
+   *
+   * Κενές εξαρτήσεις με πρόθεση: το component ξαναστήνεται με `key` ανά συνεδρία (δες τον
+   * καλούντα), άρα «στο mount» σημαίνει ακριβώς «σε νέα συνεδρία». Μια επιβολή σε κάθε
+   * render θα πάλευε με τον χρήστη που πήγε μόνος του αλλού.
+   */
+  useLayoutEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   // Είσοδος με διπλό κλικ / F2: **ποτέ** επιλογή όλου του κειμένου — μπήκες για να
   // διορθώσεις, όχι για να ξαναγράψεις (αλλιώς η κατάσταση `edit` θα ήταν λειτουργικά ίδια
@@ -251,8 +281,8 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     onPassthrough: inlineKeyDown,
   });
 
-  const handleChange = useCallback(
-    (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleInput = useCallback(
+    (event: React.FormEvent<TableRichTextField>) => {
       // 🔴 ADR-739 Φ.Δ βήμα 6 — **ο φύλακας της μονής γραμμής.**
       //
       // Το `<input>` πετούσε τις αλλαγές γραμμής μόνο του: μια **επικόλληση** πολυγραμμικού
@@ -264,9 +294,15 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
       // Η ισοπέδωση γίνεται **εδώ και όχι στο commit**: ο χρήστης πρέπει να δει αμέσως τι
       // μπήκε στο κελί του. Ένα «καθάρισμα» τη στιγμή της δέσμευσης θα άλλαζε το κείμενο
       // κάτω από τα μάτια του, αφού το είχε ήδη εγκρίνει.
-      setTableCellCursorDraft(flattenToSingleLine(event.target.value));
+      //
+      // 🔴 ADR-753 §28 — το κείμενο διαβάζεται από τις **κοινές πράξεις** και όχι από ένα
+      // `.value` που το κουτί `contenteditable` δεν έχει. Η ισοπέδωση μένει ακέραιη: το
+      // `plaintext-only` απαγορεύει στον browser να φτιάξει δικά του μπλοκ, αλλά **δεν**
+      // απαγορεύει τον χαρακτήρα αλλαγής γραμμής — μια επικόλληση πολυγραμμικού κειμένου
+      // εξακολουθεί να φτάνει εδώ με `\n` μέσα της.
+      setTableCellCursorDraft(flattenToSingleLine(tableTextFieldValue(event.currentTarget)));
       // Ο πρώτος χαρακτήρας πάνω σε επιλεγμένο κελί ανοίγει τη συνεδρία γραφής. Γίνεται
-      // εδώ και όχι στο `keydown` επίτηδες: το `change` πυροδοτεί **μόνο** όταν όντως
+      // εδώ και όχι στο `keydown` επίτηδες: το `input` πυροδοτεί **μόνο** όταν όντως
       // μπήκε κείμενο, άρα καλύπτει IME/dead keys χωρίς λίστα «εκτυπώσιμων» πλήκτρων.
       if (mode === 'nav') setTableCellCursorMode('enter');
     },
@@ -301,6 +337,46 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
    */
   const handleContextMenu = useTableTextContextMenu();
 
+  /**
+   * 🔴 ADR-767 Δ1 — **η άρνηση γραφής σε δεμένο κελί, εκφρασμένη στο `beforeinput`.**
+   *
+   * Είναι το ακριβές ισοδύναμο του `readOnly` ενός πεδίου φόρμας, και **όχι** κατά προσέγγιση:
+   * το `beforeinput` προηγείται **κάθε** μεταβολής περιεχομένου — πληκτρολόγηση, επικόλληση,
+   * αποκοπή, drag-drop, IME, undo του browser — οπότε ένα `preventDefault` εδώ τις κλείνει
+   * **όλες** με έναν κανόνα. Η επιλογή και η αντιγραφή δεν περνούν από αυτό, άρα μένουν
+   * ελεύθερες, που είναι ακριβώς η προδιαγραφή («βλέπω και αντιγράφω, δεν πληκτρολογώ»).
+   *
+   * ⚠️ Ο φρουρός παραμένει **διπλός** (N.7.2 #4): εδώ ζει η παρουσίαση, ο πραγματικός φύλακας
+   * ζει στο `buildTableCellEditCommand`. Το ένα χωρίς το άλλο είναι ή ευγενική παράκληση ή
+   * μυστήριο.
+   */
+  const handleBeforeInput = useCallback(
+    (event: React.FormEvent<TableRichTextField>) => {
+      if (readOnly) event.preventDefault();
+    },
+    [readOnly],
+  );
+
+  const handleCompositionStart = useCallback(() => {
+    composingRef.current = true;
+  }, []);
+
+  /**
+   * Το τέλος της σύνθεσης ξεκλειδώνει το δέντρο **και** ζητά συγχρονισμό.
+   *
+   * Το `input` που συνοδεύει το `compositionend` δεν είναι εγγυημένο ότι φτάνει **μετά** από
+   * αυτόν τον χειριστή σε όλες τις μηχανές, οπότε το πρόχειρο ξαναδιαβάζεται εδώ ρητά. Είναι
+   * ιδεμποτές: αν το `input` έχει ήδη γράψει την ίδια τιμή, ο γραφέας του store επιστρέφει
+   * την ίδια κατάσταση και δεν γεννιέται δεύτερο render.
+   */
+  const handleCompositionEnd = useCallback(
+    (event: React.CompositionEvent<TableRichTextField>) => {
+      composingRef.current = false;
+      setTableCellCursorDraft(flattenToSingleLine(tableTextFieldValue(event.currentTarget)));
+    },
+    [],
+  );
+
   const writing = mode !== 'nav';
 
   return (
@@ -310,32 +386,51 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
     // στόχος του `mousedown` γινόταν `DIV` αντί για `CANVAS` και ο ακροατής του πίνακα δεν
     // έβλεπε ποτέ το πάτημα. Σε γραφή το κουτί **πρέπει** να δέχεται κλικ (τοποθέτηση κέρσορα).
     <TextEditorAnchorLayer {...anchor} transparentToPointer={!writing}>
-      <textarea
+      <div
         ref={inputRef}
-        autoFocus
-        // Το ύψος το ορίζει **το κουτί** (custom properties, ένα tick): ένα `rows` εδώ θα ήταν
-        // δεύτερη πηγή αλήθειας για το ίδιο νούμερο, και θα κέρδιζε στο πρώτο καρέ πριν
-        // προλάβει ο scheduler. Το `1` δηλώνει μόνο ότι το φυσικό ελάχιστο είναι μία γραμμή.
-        rows={1}
+        // 🔴 ADR-753 §28 — δες την κεφαλίδα για το γιατί `plaintext-only` και όχι `true`:
+        // ο πίνακας έχει **δικό του** σχήμα μορφοποίησης (`TableCell.runs`) και ένα δεύτερο,
+        // παραγόμενο από τον browser, θα ήταν ανταγωνιστική αλήθεια μέσα στο ίδιο πεδίο.
+        //
+        // ⚠️ **Ποτέ `contentEditable={false}` για το `readOnly`**: ένα κουτί χωρίς
+        // `contenteditable` δεν είναι εστιάσιμο, οπότε ο `isTextEntryTarget` θα απαντούσε
+        // `false` και οι 43 window listeners θα ξυπνούσαν πάνω σε δεμένο κελί — η
+        // πληκτρολόγηση θα άνοιγε τη **γραμμή εντολών**. Η άρνηση γίνεται στο `beforeinput`,
+        // που είναι και η ακριβής σημασιολογία του `readOnly`: βλέπω, μαρκάρω, αντιγράφω,
+        // δεν γράφω (ADR-767 Δ1).
+        contentEditable="plaintext-only"
+        // Το ρητό `role` δεν είναι διακόσμηση: ένα `div` δεν έχει κανένα υπονοούμενο, οπότε
+        // χωρίς αυτό ο αναγνώστης οθόνης θα ανήγγειλλε ομάδα κειμένου αντί για πεδίο. Είναι
+        // επίσης η **δεύτερη** διαδρομή με την οποία ο `isTextEntryTarget` το αναγνωρίζει
+        // (`TEXT_ENTRY_ROLES`) — belt-and-suspenders, N.7.2 #4.
+        role="textbox"
         // Ο πίνακας είναι σχέδιο, όχι κείμενο πρόζας: κόκκινες κυματιστές γραμμές κάτω από
         // κωδικούς υλικών είναι θόρυβος. Ίδια επιλογή με κάθε φύλλο υπολογισμού.
         spellCheck={false}
-        value={draft}
+        // 🔴 Το γνώρισμα που ξεχωρίζει τον **πλούσιο** επεξεργαστή από τα δύο πεδία φόρμας
+        // της συνεδρίας. Ζει σε έναν ορισμό — δες `table-text-field-ops.ts`.
+        {...TABLE_CELL_RICH_MARKER}
         // ADR-739 Φ.Δ βήμα 3 — **κανένα placeholder**: το πεδίο ΕΙΝΑΙ πλέον το κελί, και ένα
         // γκρίζο «πληκτρολογήστε…» μέσα σε άδειο κελί είναι κείμενο που δεν υπάρχει στο
         // έγγραφο. Κανένα φύλλο υπολογισμού δεν το κάνει. Ο ρόλος δηλώνεται με `aria-label`,
         // που είναι και ο σωστός φορέας του (δεν ζωγραφίζεται).
         // 🔴 ADR-767 Δ1 — καμία πληκτρολόγηση σε δεμένο κελί· η **επιλογή και αντιγραφή**
-        // μένουν (`readOnly`, όχι `disabled`), όπως σε κάθε φύλλο υπολογισμού.
-        readOnly={readOnly}
+        // μένουν, όπως σε κάθε φύλλο υπολογισμού. Δες τον χειριστή και την κεφαλίδα του
+        // στοιχείου για το γιατί **δεν** εκφράζεται με `contentEditable={false}`.
+        aria-readonly={readOnly}
+        onBeforeInput={handleBeforeInput}
         // Ο ρόλος λέγεται, δεν μαντεύεται: ένα πεδίο που απλώς αγνοεί τα πλήκτρα είναι
         // μυστήριο για κάθε χρήστη και **αόρατο** σε αναγνώστη οθόνης.
         aria-label={t(readOnly ? 'table.cellEditor.boundCellAriaLabel' : 'table.cellEditor.cellAriaLabel')}
+        // 🔴 ADR-739 Φ.Δ βήμα 8 — οι δύο άκρες της σύνθεσης IME. Δες το `composingRef`:
+        // ενδιάμεσα **κανείς δεν ξαναγράφει το δέντρο**, αλλιώς σπάνε οι ελληνικοί τόνοι.
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={handleCompositionEnd}
         // Το σημάδι που διαβάζει το {@link useTableCellSessionBlur} για να ξεχωρίσει
         // «μετακινήθηκα μέσα στη συνεδρία» από «έφυγα από τον πίνακα». Δεν είναι στυλ —
         // είναι ταυτότητα ρόλου, και ο ορισμός του ζει σε **ένα** σημείο.
         {...TABLE_CELL_SESSION_MARKER}
-        onChange={handleChange}
+        onInput={handleInput}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         // 🔴 ADR-739 §67 — Excel parity: μενού **κειμένου** + mini toolbar, ποτέ το native του
@@ -363,12 +458,19 @@ export function TableCellEditorOverlay(props: TableCellEditorOverlayProps): Reac
             ? 'bg-clip-padding'
             // Πλοήγηση: κρατά την ΕΣΤΙΑΣΗ (άρα και τα πλήκτρα), χάνει την όψη και το
             // ποντίκι. Τον δρομέα τον ζωγραφίζει ο καμβάς — δες την κεφαλίδα.
-            : 'pointer-events-none bg-transparent text-transparent opacity-0',
+            //
+            // ⚠️ ADR-753 §28 — το `text-transparent` **δεν αρκεί πια**: τα τμήματα δηλώνουν
+            // δικό τους `color` όταν διαφέρει από το κελί, και μια κλάση του γονέα χάνει σε
+            // ειδικότητα από ένα inline style του παιδιού. Ένα βαμμένο κελί θα έδειχνε τα
+            // κόκκινα γράμματά του **μέσα από** τον διαφανή επεξεργαστή, πάνω στο κείμενο
+            // που ζωγραφίζει ο καμβάς. Το `opacity-0` είναι εκείνο που κρύβει το κουτί
+            // ολόκληρο — και είναι ήδη εδώ.
+            : 'pointer-events-none bg-transparent opacity-0',
         )}
         style={
           writing
-            ? { ...TABLE_CELL_EDITOR_INPUT_STYLE, ...TABLE_CELL_EDITOR_WRITING_STYLE }
-            : TABLE_CELL_EDITOR_INPUT_STYLE
+            ? { ...TABLE_CELL_RICH_STYLE, ...TABLE_CELL_EDITOR_WRITING_STYLE }
+            : TABLE_CELL_RICH_STYLE
         }
       />
     </TextEditorAnchorLayer>

@@ -34,6 +34,7 @@ import { useCanvasEscapeRegistrations } from './useCanvasEscapeRegistrations';
 // TYPES — extracted to ./useCanvasKeyboardShortcuts.types for file-size compliance
 // ============================================================================
 import type { UseCanvasKeyboardShortcutsParams } from './useCanvasKeyboardShortcuts.types';
+import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
 export type {
   UseCanvasKeyboardShortcutsParams,
   DxfGripInteractionLike,
@@ -167,7 +168,10 @@ export function useCanvasKeyboardShortcuts({
         const consumed = handleRotationKeyDown(e.key);
         if (consumed) { e.preventDefault(); e.stopImmediatePropagation(); return; }
       }
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+      // 🔴 ADR-753 §28 — ο ΕΝΑΣ φύλακας, αντί για τέταρτο αντίγραφο του ίδιου `if`. Το ωμό
+      // `contentEditable === 'true'` ΑΣΤΟΧΟΥΣΕ στο `plaintext-only` του επεξεργαστή κελιού
+      // πίνακα — δηλαδή αυτή η συντόμευση θα πυροδοτούσε ενώ ο χρήστης πληκτρολογεί.
+      if (isTextEntryTarget(target)) {
         return;
       }
       // ADR-348: Scale tool — intercepts before global shortcuts when active

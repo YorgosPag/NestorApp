@@ -91,16 +91,10 @@ const BY_DESIGN: ReadonlyMap<string, string> = new Map([
 const PENDING_MIGRATION: ReadonlySet<string> = new Set([
   'components/crm/calendar/useCalendarKeyboardShortcuts.ts',
   'subapps/dxf-viewer/components/dxf-layout/DistMeasureOverlayLeaf.tsx',
-  'subapps/dxf-viewer/hooks/canvas/useCanvasKeyboardShortcuts.ts',
-  'subapps/dxf-viewer/hooks/canvas/useCanvasSectionUI.ts',
-  'subapps/dxf-viewer/hooks/dimensions/useDimToolRouting.ts',
   'subapps/dxf-viewer/hooks/drawing/use-polygon-sketch-chain.ts',
   'subapps/dxf-viewer/hooks/drawing/use-wall-tool-event-listeners.ts',
   'subapps/dxf-viewer/hooks/drawing/useStairTool.ts',
   'subapps/dxf-viewer/hooks/grips/useGripSpacebarCycle.ts',
-  'subapps/dxf-viewer/hooks/useDxfToolbarShortcuts.ts',
-  'subapps/dxf-viewer/statusbar/CadStatusBar.tsx',
-  'subapps/dxf-viewer/systems/selection/use-selection-cycling.ts',
 ]);
 
 function collectSourceFiles(dir: string, acc: string[] = []): string[] {

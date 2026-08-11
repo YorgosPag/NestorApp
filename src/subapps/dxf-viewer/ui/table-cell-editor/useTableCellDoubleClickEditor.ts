@@ -63,7 +63,7 @@ import {
   useTableFormulaBarMount,
   type TableFormulaBarMount,
 } from './use-table-formula-bar-mount';
-import type { TableCellEditorOverlayProps } from './TableCellEditorOverlay';
+import type { TableCellEditorOverlayProps } from './table-cell-editor-overlay-types';
 // ADR-739 Φ.Δ βήμα 8 — οι ενέργειες περιοχής ζουν σε δικό τους module: αυτό το αρχείο
 // είναι ήδη στα όρια των 500 γραμμών (N.7.1), και ο διαχωρισμός είναι σημασιολογικός —
 // εδώ «ποιο κελί, πού, με τι όψη», εκεί «ποια κελιά και τι τους κάνω».
@@ -354,6 +354,12 @@ export function useTableCellDoubleClickEditor(
         mode,
         draft: cursor.draft,
         initialText: target.cell.text,
+        // 🔴 ADR-753 §28 — η μορφοποίηση ανά χαρακτήρα και η βάση της, **από την ίδια
+        // ανάγνωση μοντέλου** με το κείμενο. Δύο αναγνώσεις μέσα στο ίδιο render μπορούν να
+        // δουν άλλο (ή σβησμένο) κελί — ο ίδιος λόγος για τον οποίο η `liveEntity` περνά ως
+        // όρισμα παραπάνω.
+        ...(target.cell.runs !== undefined && { runs: target.cell.runs }),
+        cellStyle: target.cell.style,
         // 🔴 ADR-769 Δ7 — **ο στόχος το ξέρει ήδη**: το `resolveTableCellEditTargetById` ρωτά
         // τον ΕΝΑ κριτή (`resolveTableCellWriteRoute`). Ένας δεύτερος έλεγχος εδώ θα ήταν
         // δεύτερη απάντηση στο «γράφεται;» μέσα στην ίδια χειρονομία — και θα μπορούσε να

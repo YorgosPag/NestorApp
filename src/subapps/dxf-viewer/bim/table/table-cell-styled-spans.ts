@@ -46,12 +46,18 @@
  */
 
 import { fittingPrefixLengthByWidth } from '../text/text-fit';
-import type { TableCellTextRun, TableTextRunStyle } from '../../types/table';
+import type { TableCellTextRun } from '../../types/table';
 import type { TableTextMeasurer, TableTextStyleSpan } from './table-layout-types';
-import { clearable, inherited, type TableCellStyle } from './table-style';
-
-/** Η τυπογραφία ενός τμήματος — το {@link TableTextStyleSpan} χωρίς τη γεωμετρία του. */
-type SpanTypography = Omit<TableTextStyleSpan, 'text' | 'start' | 'end' | 'offsetMm' | 'advanceMm'>;
+import type { TableCellStyle } from './table-style';
+// 🔴 ADR-753 §28 — **η διαμέριση σε ομοιογενή τμήματα μετακόμισε**: απέκτησε δεύτερο
+// καταναλωτή (ο in-place επεξεργαστής τη ζωγραφίζει ως `span` του DOM) και η ερώτηση «ποια
+// γράμματα ανήκουν μαζί» είναι άλλη από τη «πόσο πλατύ είναι το καθένα». Δες την κεφαλίδα
+// εκείνου του module για το τι σπάει με δύο σώματα.
+import {
+  cellTypographyRanges,
+  sameSpanTypography,
+  spanTypographyOf,
+} from './table-cell-typography-ranges';
 
 export interface CellStyledSpansInput {
   /**
@@ -92,8 +98,12 @@ export function resolveCellStyledSpans(
   const { text, style, measure } = input;
   if (!text) return [];
 
-  const limit = Math.min(input.runsLimit ?? text.length, text.length);
-  const merged = mergeEqualNeighbours(styledRanges(text.length, input.runs, limit), style);
+  const merged = cellTypographyRanges({
+    textLength: text.length,
+    runs: input.runs,
+    runsLimit: input.runsLimit,
+    style,
+  });
 
   let offsetMm = 0;
   return merged.map((range) => {
@@ -193,123 +203,5 @@ export function hasStyledSpans(
 ): boolean {
   if (spans.length === 0) return false;
   if (spans.length > 1) return true;
-  return !sameTypography(spans[0], typographyOf(style, undefined));
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Εσωτερικά
-// ──────────────────────────────────────────────────────────────────────────────
-
-/** Ένα εύρος πριν μετρηθεί: δείκτες + η τυπογραφία που ισχύει μέσα του. */
-interface MergedRange {
-  start: number;
-  end: number;
-  readonly typography: SpanTypography;
-}
-
-/** Ένα εύρος με το **ωμό** run που το γέννησε (απόν στα κενά ανάμεσα στα runs). */
-interface StyledRange {
-  readonly start: number;
-  readonly end: number;
-  readonly style?: TableTextRunStyle;
-}
-
-/**
- * Τα runs σε **πλήρη κάλυψη** του κειμένου: τα κενά ανάμεσά τους γίνονται ρητά εύρη χωρίς
- * στυλ, ώστε ο επόμενος βρόχος να μη χρειάζεται να ρωτήσει ποτέ «υπάρχει τμήμα εδώ;».
- *
- * Τα runs είναι ήδη κανονικοποιημένα (ταξινομημένα, χωρίς επικαλύψεις) από το
- * `table-cell-run-ops.ts` — ο περιορισμός στο `limit` και ο `cursor` δεν το ξαναελέγχουν,
- * κόβουν μόνο ό,τι πέφτει έξω από το **ορατό** κείμενο μετά την περικοπή.
- */
-function styledRanges(
-  textLength: number,
-  runs: readonly TableCellTextRun[] | undefined,
-  limit: number,
-): readonly StyledRange[] {
-  const out: StyledRange[] = [];
-  let cursor = 0;
-  for (const run of runs ?? []) {
-    const start = Math.max(run.start, cursor);
-    const end = Math.min(run.end, limit);
-    if (end <= start) continue;
-    if (start > cursor) out.push({ start: cursor, end: start });
-    out.push({ start, end, style: run.style });
-    cursor = end;
-  }
-  if (cursor < textLength) out.push({ start: cursor, end: textLength });
-  return out;
-}
-
-/**
- * Γειτονικά εύρη με **ίδια επιλυμένη** τυπογραφία γίνονται ένα.
- *
- * 🔴 Η σύγκριση γίνεται στο **επιλυμένο** στυλ, όχι στο run: ένα run που δηλώνει
- * `bold: false` πάνω σε κελί που ήδη δεν είναι έντονο **δεν είναι** τμήμα — δεν αλλάζει
- * κανένα glyph. Αν επιβίωνε ως χωριστό τμήμα, θα κόστιζε ένα ζεύγος kerning και μια κλήση
- * σχεδίασης για μηδέν οπτική διαφορά, μόνιμα.
- */
-function mergeEqualNeighbours(
-  ranges: readonly StyledRange[],
-  style: TableCellStyle,
-): readonly MergedRange[] {
-  const out: MergedRange[] = [];
-  for (const range of ranges) {
-    const typography = typographyOf(style, range.style);
-    const last = out[out.length - 1];
-    if (last !== undefined && sameTypography(last.typography, typography)) last.end = range.end;
-    else out.push({ start: range.start, end: range.end, typography });
-  }
-  return out;
-}
-
-/**
- * Στυλ κελιού + η δήλωση του τμήματος → η τυπογραφία που ισχύει.
- *
- * Οι δύο βοηθοί έρχονται από το `table-style.ts` και **δεν** ξαναγράφονται: η δοκτρίνα
- * «`undefined` ⇒ κληρονόμησε · `null` ⇒ ρητά η προεπιλογή» έχει ένα σώμα για όλα τα επίπεδα
- * (§3.2 του ADR-753). Από τα έξι πεδία μόνο το `fontFamily` είναι καθαρίσιμο — ακριβώς εκείνα
- * που το `TableCellStyle` δηλώνει προαιρετικά.
- */
-function typographyOf(
-  base: TableCellStyle,
-  style: TableTextRunStyle | undefined,
-): SpanTypography {
-  const fontFamily = clearable([style?.fontFamily], base.fontFamily);
-  return {
-    heightMm: inherited([style?.textHeightMm], base.textHeightMm),
-    colorHex: inherited([style?.textColorHex], base.textColorHex),
-    bold: inherited([style?.bold], base.bold),
-    italic: inherited([style?.italic], base.italic),
-    underline: inherited([style?.underline], base.underline),
-    ...(fontFamily !== undefined && { fontFamily }),
-  };
-}
-
-/**
- * Ισότητα τυπογραφίας — **πεδίο προς πεδίο, ρητά**.
- *
- * ⚠️ **Δηλωμένο ρητά: κανένα test δεν διακρίνει αυτή την εκδοχή από ένα `JSON.stringify`.**
- * Και δεν μπορεί να το διακρίνει, γιατί κάθε τυπογραφία γεννιέται από **έναν** τόπο
- * ({@link typographyOf}), άρα πάντα με την ίδια σειρά κλειδιών — ακριβώς η συνθήκη υπό την
- * οποία τα δύο είναι ισοδύναμα.
- *
- * Γράφεται έτσι επειδή αυτή η ισοδυναμία είναι **σύμπτωση ενός κατασκευαστή**, όχι ιδιότητα
- * του ερωτήματος: την ημέρα που μια δεύτερη διαδρομή φτιάξει τυπογραφία (μια εισαγωγή
- * `.xlsx`, ένα υπόλειμμα από `JSON.parse`), το `stringify` θα άρχιζε να λέει «διαφορετικά»
- * για ίσα στυλ — και το σύμπτωμα θα ήταν τμήματα που δεν συγχωνεύονται ποτέ, δηλαδή χαμένο
- * kerning χωρίς κανένα κόκκινο test.
- *
- * Το ADR-753 §8 κατέγραψε ότι **ένα σχόλιο δεν είναι φύλακας**. Η συνέπεια δεν είναι να
- * επινοηθεί test που δεν μπορεί να υπάρξει — είναι να **μη διεκδικηθεί** φύλακας που λείπει.
- */
-function sameTypography(a: SpanTypography, b: SpanTypography): boolean {
-  return (
-    a.heightMm === b.heightMm &&
-    a.colorHex === b.colorHex &&
-    a.bold === b.bold &&
-    a.italic === b.italic &&
-    a.underline === b.underline &&
-    a.fontFamily === b.fontFamily
-  );
+  return !sameSpanTypography(spans[0], spanTypographyOf(style, undefined));
 }

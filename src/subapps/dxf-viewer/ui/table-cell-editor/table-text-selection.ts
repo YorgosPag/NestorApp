@@ -38,6 +38,14 @@
 
 import type { TableTextField } from '../components/table-text-menu/table-text-toolbar-types';
 import type { TableTextAnchoredRange } from '../../bim/table/table-cell-run-ops';
+// 🔴 ADR-753 §28 — οι τρεις πράξεις που κάνουν ένα πεδίο «πεδίο». Το κελί έγινε
+// `contenteditable` ώστε η μορφοποίηση να φαίνεται όσο γράφεις· **αυτό** το αρχείο δεν
+// άλλαξε σημασιολογία, μόνο ποιος απαντά τις ερωτήσεις του.
+import {
+  setTableTextFieldSelection,
+  tableTextFieldSelection,
+  tableTextFieldValue,
+} from './table-text-field-ops';
 
 /**
  * Ό,τι μάρκαρε ο χρήστης, **κανονικοποιημένο** και με τη βάση σύγκρισής του.
@@ -64,10 +72,8 @@ export type TableTextSelection = TableTextAnchoredRange;
  * ⇒ τέλος»), όχι εφευρημένο μηδέν που θα έβαφε την αρχή του κελιού.
  */
 export function readTableTextSelection(field: TableTextField): TableTextSelection {
-  const text = field.value;
-  const start = field.selectionStart ?? text.length;
-  const end = field.selectionEnd ?? text.length;
-  return { start: Math.min(start, end), end: Math.max(start, end), text };
+  const { start, end } = tableTextFieldSelection(field);
+  return { start, end, text: tableTextFieldValue(field) };
 }
 
 /** Μάρκαρε ο χρήστης **έστω έναν** χαρακτήρα; Σκέτος δρομέας ⇒ `false`. */
@@ -86,17 +92,25 @@ export function isStaleTableTextSelection(
   selection: TableTextSelection,
   field: TableTextField,
 ): boolean {
-  return field.value !== selection.text;
+  return tableTextFieldValue(field) !== selection.text;
 }
 
 /**
- * 🔴 Ξαναδηλώνει την επιλογή στο πεδίο — **belt-and-suspenders** (N.7.2 #4), όχι μηχανισμός.
+ * 🔴 Ξαναδηλώνει την επιλογή στο πεδίο.
  *
- * Οι browsers **διατηρούν** `selectionStart`/`selectionEnd` όταν ένα πεδίο χάνει την εστίαση,
- * και τα ξαναδείχνουν όταν την ξαναπάρει· άρα στη συνήθη ροή δεν χρειάζεται τίποτα και ο
- * χρήστης βλέπει τα γράμματά του ακόμη μαρκαρισμένα μετά το πάτημα, όπως στο Excel. Αυτό εδώ
- * καλύπτει ό,τι μπορεί να τα καθαρίσει ενδιάμεσα (μια ανανέωση τιμής, ένα `setSelectionRange`
- * από αλλού).
+ * ## ⚠️ ADR-753 §28 — ΑΠΟ «belt-and-suspenders» ΕΓΙΝΕ **Ο ΜΗΧΑΝΙΣΜΟΣ**
+ * Εδώ έγραφε ότι είναι δίχτυ ασφαλείας (N.7.2 #4) και **ήταν**, όσο το κελί ήταν `textarea`:
+ * οι browsers διατηρούν `selectionStart`/`selectionEnd` όταν ένα πεδίο χάνει την εστίαση και
+ * τα ξαναδείχνουν όταν την ξαναπάρει, οπότε στη συνήθη ροή δεν χρειαζόταν τίποτα.
+ *
+ * Ο **πλούσιος** επεξεργαστής δεν έχει δικά του άκρα να θυμηθεί: η επιλογή ενός
+ * `contenteditable` ζει στο **έγγραφο**, και το έγγραφο έχει μία — μόλις η γραμμή εργαλείων
+ * πάρει την εστίαση, τα γράμματα ξεμαρκάρονται. Άρα από το §28 και μετά αυτή η κλήση **είναι**
+ * ο λόγος που ο χρήστης βλέπει τα «ΩΡ» ακόμη μαρκαρισμένα μετά το τρίτο πάτημα, όπως στο Excel.
+ *
+ * Το πάγωμα του Φ4 (`selectionRef`) ήταν ήδη η σωστή απόφαση για άλλον λόγο· τώρα είναι και η
+ * **μόνη** πηγή που ξέρει τι μάρκαρε ο χρήστης. Καμία γραμμή δεν άλλαξε γι' αυτό — αλλά αν
+ * κάποιος σβήσει αυτή την κλήση «γιατί είναι περιττή», η επιλογή θα χάνεται στο πρώτο πάτημα.
  *
  * ## ⚠️ ΔΥΟ φρουροί, και ο καθένας αποτρέπει διαφορετική βλάβη
  * 1. **Εστιασμένο πεδίο ⇒ σιωπή.** Αν ο χρήστης ξαναπήρε μόνος του το πληκτρολόγιο και
@@ -113,5 +127,5 @@ export function restoreTableTextSelection(
 ): void {
   if (typeof document !== 'undefined' && document.activeElement === field) return;
   if (isStaleTableTextSelection(selection, field)) return;
-  field.setSelectionRange(selection.start, selection.end);
+  setTableTextFieldSelection(field, selection.start, selection.end);
 }

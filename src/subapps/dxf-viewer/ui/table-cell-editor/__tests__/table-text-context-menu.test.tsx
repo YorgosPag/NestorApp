@@ -45,6 +45,11 @@ import {
 import { TableCellEditorOverlay } from '../TableCellEditorOverlay';
 import { TableFormulaBar } from '../TableFormulaBar';
 import type { TextEditorAnchor } from '../../text-toolbar/TextEditorAnchorLayer';
+// 🔴 ADR-753 §28 — το στυλ του κελιού είναι πλέον **είσοδος** του επεξεργαστή: είναι η βάση
+// από την οποία κληρονομεί κάθε βαμμένο τμήμα. Χτίζεται από τον ΕΝΑ κατασκευαστή του έργου —
+// ένα χειρόγραφο αντικείμενο εδώ θα ήταν τρίτη έκφραση της προεπιλογής.
+import { baseCellStyle } from '../../../bim/table/table-style';
+import { hierarchicalTableStyle } from '../../../bim/table/__tests__/hierarchical-table-style-fixture';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // ΟΜΑΔΑ Α — Η ΑΓΚΥΡΑ: τα δύο πεδία ΖΗΤΟΥΝ τη γραμμή, με πραγματικό `contextmenu`
@@ -58,7 +63,9 @@ const ANCHOR: TextEditorAnchor = {
 
 const NOOP = (): void => {};
 
-function renderCellEditor(): HTMLTextAreaElement {
+const CELL_STYLE = baseCellStyle(hierarchicalTableStyle().rowClasses.data);
+
+function renderCellEditor(): HTMLElement {
   render(
     <TableCellEditorOverlay
       entityId="tbl-1"
@@ -67,6 +74,7 @@ function renderCellEditor(): HTMLTextAreaElement {
       mode="edit"
       draft="ΣΚΥΡΟΔΕΜΑ"
       initialText="ΣΚΥΡΟΔΕΜΑ"
+      cellStyle={CELL_STYLE}
       caretRevision={0}
       anchor={ANCHOR}
       readOnly={false}
@@ -83,7 +91,9 @@ function renderCellEditor(): HTMLTextAreaElement {
       onOpenLink={NOOP}
     />,
   );
-  const field = document.querySelector('textarea');
+  // ADR-753 §28 — ο επεξεργαστής κελιού δεν είναι πια στοιχείο φόρμας· ζητιέται από το
+  // **γνώρισμα ρόλου** του, που είναι και ο τρόπος με τον οποίο τον αναγνωρίζει ο κώδικας.
+  const field = document.querySelector<HTMLElement>('[data-table-rich-text="true"]');
   if (!field) throw new Error('ο επεξεργαστής κελιού δεν αποδόθηκε');
   return field;
 }
@@ -95,6 +105,7 @@ function renderFormulaBar(): HTMLInputElement {
       mode="edit"
       draft="ΣΚΥΡΟΔΕΜΑ"
       initialText="ΣΚΥΡΟΔΕΜΑ"
+      cellStyle={CELL_STYLE}
       caretRevision={0}
       anchor={ANCHOR}
       onCommit={NOOP}

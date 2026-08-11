@@ -28,6 +28,10 @@
 
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { tableMmToWorldLive, tablePxPerMm } from '../../bim/table/table-entity-geometry';
+// 🔴 ADR-753 §28 — ο ΕΝΑΣ κατασκευαστής του αλφαριθμητικού γραμματοσειράς, ο ίδιος που θέτει
+// ο ζωγράφος στο `ctx.font`. Καμία δεύτερη σύνθεση (δες `table-cell-text-metrics.ts`).
+import { tableCellFont } from '../../rendering/entities/table/stamp-table-layout';
+import { widestCellTypography } from './table-cell-editor-spans';
 import {
   computeTableCellEditorFrame,
   cellTextStartPx,
@@ -61,6 +65,18 @@ export function cellEditorFrameLive(
   expansion?: TableCellEditorExpansion,
 ): TableCellEditorFrame {
   const pxPerMm = tablePxPerMm(tableMmToWorldLive(), getImmediateTransform().scale);
+  // 🔴 ADR-753 §28 — όταν το κείμενο έχει τμήμα **μεγαλύτερο ή βαρύτερο** από το κελί, το
+  // κουτί πρέπει να μετρηθεί με εκείνο· αλλιώς ο επεξεργαστής θα άνοιγε στενότερος από ό,τι
+  // ζωγραφίζει και το `overflow: hidden` θα έκοβε γράμματα. Δες `widestCellTypography`:
+  // απαντά `null` όταν δεν υπάρχει τέτοιο τμήμα, οπότε η μέτρηση μένει **ακριβώς** η ίδια.
+  const widest = expansion
+    ? widestCellTypography({
+        draft: expansion.draft,
+        committedText: target.text,
+        ...(target.runs !== undefined && { runs: target.runs }),
+        style: target.style,
+      })
+    : null;
   return computeTableCellEditorFrame({
     target,
     pxPerMm,
@@ -69,6 +85,14 @@ export function cellEditorFrameLive(
     backgroundHex,
     draft: expansion?.draft,
     resolveWidth: expansion ? cellTextWidthPx : undefined,
+    ...(widest !== null && {
+      measureFont: tableCellFont(
+        widest.heightMm * pxPerMm,
+        widest.bold,
+        target.style.italic,
+        widest.fontFamily,
+      ),
+    }),
     maxWidthPx: expansion
       ? editorGrowthCeilingPx({
           anchor: expansion.anchor,

@@ -31,16 +31,22 @@
  */
 
 import { useLayoutEffect, type RefObject } from 'react';
+import {
+  setTableTextFieldSelection,
+  tableTextFieldValue,
+} from './table-text-field-ops';
+import type { TableTextField } from '../components/table-text-menu/table-text-toolbar-types';
 
 /**
- * Τα δύο πεδία της συνεδρίας: στοιχείο `textarea` το κελί, στοιχείο `input` η γραμμή τύπων.
+ * Τα πεδία της συνεδρίας: το κελί (**πλούσιο** από το ADR-753 §28· ιστορικά στοιχείο
+ * `textarea`) και η γραμμή τύπων (στοιχείο `input`).
  *
  * ⚠️ Τα ονόματα γράφονται **χωρίς γωνιώδεις αγκύλες** επίτηδες: ο σαρωτής του CHECK N.11
  * είναι regex και διαβάζει `<textarea>…` μέσα σε σχόλιο ως κείμενο JSX, οπότε το ελληνικό
  * που ακολουθεί μοιάζει με hardcoded ετικέτα οθόνης. Ο κανόνας εξαιρεί τα σχόλια· ο σαρωτής
  * δεν το ξέρει. Η αναδιατύπωση κοστίζει μηδέν και δεν ζητά χαλάρωση της πύλης.
  */
-export type TableCellSessionField = HTMLTextAreaElement | HTMLInputElement;
+export type TableCellSessionField = TableTextField;
 
 /**
  * Τοποθετεί τον κέρσορα στο `caretIndex` (ή στο **τέλος** όταν λείπει) κάθε φορά που αλλάζει
@@ -62,8 +68,12 @@ export function useTableCellCaret(
     // Το `Math.min` δεν είναι παράνοια: ο δείκτης μπορεί να υπολογίστηκε πάνω στο
     // **δεσμευμένο** κείμενο (διπλό κλικ) ενώ εδώ διαβάζεται το πρόχειρο — μια ασύγχρονη
     // ενημέρωση σκηνής ανάμεσα στα δύο δίνει δείκτη εκτός ορίων.
-    const at = caretIndex === undefined ? field.value.length : Math.min(caretIndex, field.value.length);
-    field.setSelectionRange(at, at);
+    // 🔴 ADR-753 §28 — μέσα από τις κοινές πράξεις: ο πλούσιος επεξεργαστής κελιού δεν έχει
+    // `.value` ούτε `setSelectionRange`. Η **σημασιολογία** εδώ δεν άλλαξε ούτε κατά ένα
+    // χαρακτήρα — άλλαξε μόνο ποιος απαντά.
+    const length = tableTextFieldValue(field).length;
+    const at = caretIndex === undefined ? length : Math.min(caretIndex, length);
+    setTableTextFieldSelection(field, at, at);
     // 🔴 Η **μόνη** εξάρτηση είναι η αφορμή, και είναι σκόπιμο:
     //  - το `caretIndex` **δεν** μπαίνει, γιατί δύο υποδείξεις στην ίδια θέση είναι δύο
     //    γεγονότα (δες το σχόλιο του `caretRevision` στο store)·

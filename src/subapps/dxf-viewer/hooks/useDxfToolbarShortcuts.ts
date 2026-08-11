@@ -16,6 +16,7 @@ import { useEscapeHandler, ESC_PRIORITY } from '../systems/escape-bus';
 // ADR-688 — in 3D the entity clipboard is owned by use-bim3d-entity-clipboard
 // (Ctrl+C / paste-at-pick / Ctrl+D). Guard the 2D in-place clipboard off in 3D.
 import { useViewMode3DStore, selectIs3D } from '../bim-3d/stores/ViewMode3DStore';
+import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
 
 // ADR-363 Phase 7: BIM multi-char hotkeys — AutoCAD command-line pattern.
 // Leader keys open a 350ms window; second key within window resolves to a tool.
@@ -104,7 +105,10 @@ export function useDxfToolbarShortcuts(
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+      // 🔴 ADR-753 §28 — ο ΕΝΑΣ φύλακας, αντί για τέταρτο αντίγραφο του ίδιου `if`. Το ωμό
+      // `contentEditable === 'true'` ΑΣΤΟΧΟΥΣΕ στο `plaintext-only` του επεξεργαστή κελιού
+      // πίνακα — δηλαδή αυτή η συντόμευση θα πυροδοτούσε ενώ ο χρήστης πληκτρολογεί.
+      if (isTextEntryTarget(target)) {
         return;
       }
 

@@ -29,6 +29,7 @@ import { getMainDxfCanvas } from '../../rendering/utils/main-canvas-element';
 import { setHoveredEntity } from '../hover/HoverStore';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../escape-bus';
+import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
 
 export interface UseSelectionCyclingParams {
   activeTool: string;
@@ -80,11 +81,10 @@ export function useSelectionCycling({ activeTool, onSelectEntity, resolveEntity 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.contentEditable === 'true'
-      ) return;
+      // 🔴 ADR-753 §28 — ο ΕΝΑΣ φύλακας, αντί για τέταρτο αντίγραφο του ίδιου `if`. Το ωμό
+      // `contentEditable === 'true'` ΑΣΤΟΧΟΥΣΕ στο `plaintext-only` του επεξεργαστή κελιού
+      // πίνακα — δηλαδή αυτή η συντόμευση θα πυροδοτούσε ενώ ο χρήστης πληκτρολογεί.
+      if (isTextEntryTarget(target)) return;
 
       // Shift+Space: trigger cycling or advance to next candidate.
       if (e.code === 'Space' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {

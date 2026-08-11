@@ -41,6 +41,7 @@ import { useDimensionKeyboardRouting } from './useDimensionKeyboardRouting';
 import { handleToolCompletion } from '../drawing/drawing-handler-utils';
 // ADR-364 — Escape Command Bus SSoT
 import { useEscapeHandler, ESC_PRIORITY } from '../../systems/escape-bus';
+import { isTextEntryTarget } from '@/lib/a11y/keyboard-scope';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Tool → creation-flow input mapping
@@ -165,7 +166,10 @@ export function useDimToolRouting(params: UseDimToolRoutingParams): DimToolRouti
     canHandle: () => isDimTool(activeTool),
     handle: () => {
       const el = typeof document !== 'undefined' ? document.activeElement : null;
-      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.getAttribute('contenteditable') === 'true')) {
+      // 🔴 ADR-753 §28 — ο ΕΝΑΣ φύλακας, αντί για τέταρτο αντίγραφο του ίδιου `if`. Το ωμό
+      // `contentEditable === 'true'` ΑΣΤΟΧΟΥΣΕ στο `plaintext-only` του επεξεργαστή κελιού
+      // πίνακα — δηλαδή αυτή η συντόμευση θα πυροδοτούσε ενώ ο χρήστης πληκτρολογεί.
+      if (isTextEntryTarget(el)) {
         (el as HTMLElement).blur?.();
       }
       wrappedOnKey('Escape');

@@ -28,8 +28,11 @@ import type { SceneUnits } from '../../utils/scene-units';
 import type { ICommand, ISceneManager } from '../../core/commands';
 import { UpdateEntityCommand } from '../../core/commands/entity-commands/UpdateEntityCommand';
 import type { TextAlign } from '../structural/detail-sheet/detail-sheet-types';
-import type { TableColumnId, TableRowId } from '../../types/table';
+import type { TableCellTextRun, TableColumnId, TableRowId } from '../../types/table';
 import type { TableEntity } from '../../types/table-entity';
+// 🔴 ADR-753 §28 — η **μία** αναζήτηση αποθηκευμένου κελιού· τα `runs` ταξιδεύουν με το κείμενό
+// τους (δες το πεδίο `TableCellEditTarget.runs`).
+import { findPersistedCell } from './table-cell-content';
 // 🔴 ADR-769 Δ7 — ο ΕΝΑΣ κριτής του «**πού πάει** η γραφή αυτού του κελιού;». Διαδέχεται το
 // δυαδικό `isBoundCellWritable` του ADR-767 Δ1, το οποίο **καταναλώνει** από μέσα: η Φ.Η
 // πρόσθεσε τρίτη απάντηση («γράφεται, αλλά στην οντότητα») και μια δεύτερη ανάγνωση εδώ θα
@@ -76,6 +79,19 @@ export interface TableCellEditTarget {
    * στον καμβά φαίνεται το αποτέλεσμα.
    */
   readonly text: string;
+  /**
+   * 🔴 ADR-753 §28 — η μορφοποίηση **ανά χαρακτήρα** του κελιού, σε δείκτες του {@link text}.
+   *
+   * Ταξιδεύει **δίπλα στο κείμενό της** και όχι ζητούμενη χωριστά από τον επεξεργαστή: δείκτες
+   * χωρίς τη βάση τους δεν μπορούν να πουν αν δείχνουν ακόμη στα ίδια γράμματα, και μια δεύτερη
+   * ανάγνωση του μοντέλου μέσα στο ίδιο render μπορεί να δει **άλλο** κελί (undo, ασύγχρονο
+   * ξαναστήσιμο σκηνής). Είναι ακριβώς η αρχή που κατέγραψε το §25 πληρώνοντάς την:
+   * **η βάση σύγκρισης ταξιδεύει με το αίτημα** (ADR-769).
+   *
+   * Απόντα ⇒ καμία μορφοποίηση ανά χαρακτήρα, δηλαδή ο επεξεργαστής ζωγραφίζει ό,τι ακριβώς
+   * ζωγράφιζε πριν από το §28.
+   */
+  readonly runs?: readonly TableCellTextRun[];
   /**
    * Η **πάνω-αριστερή** γωνία του κελιού σε μονάδες σκηνής — το ίδιο σημείο αγκύρωσης
    * που χρησιμοποιεί το `text-editor-anchor-2d.ts` (`createTextEditorAnchor2D`). Πάνω-
@@ -194,6 +210,7 @@ function buildEditTarget(
   clickOffsetMm?: number,
 ): TableCellEditTarget {
   const { rect, style } = cell;
+  const runs = findPersistedCell(entity.model, cell.rowId, cell.colId)?.runs;
   return {
     rowId: cell.rowId,
     colId: cell.colId,
@@ -201,6 +218,9 @@ function buildEditTarget(
     // το δείχνουν **και** ο επεξεργαστής μέσα στο κελί **και** η γραμμή τύπων (μέσω του
     // `initialText`): μία ερώτηση, μία απάντηση, καμία πιθανότητα να διαφωνήσουν.
     text: cellInputText(entity.model, cell.rowId, cell.colId),
+    // 🔴 ADR-753 §28 — διαβασμένα από το **ίδιο** μοντέλο, στην ίδια αναπνοή με το κείμενο.
+    // Δες το σχόλιο του πεδίου: χωριστή ανάγνωση σημαίνει δείκτες πάνω σε άλλο κείμενο.
+    ...(runs !== undefined && { runs }),
     anchorWorldPoint: tableFrameToWorld(entity, rect.x, rect.y, geometry.mmToWorld),
     rectMm: rect,
     style,
