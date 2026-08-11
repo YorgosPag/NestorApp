@@ -14,7 +14,10 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { API_ROUTES } from '@/config/domain-constants';
 import { GEOGRAPHIC_CONFIG } from '@/config/geographic-config';
 import { useNotifications } from '@/providers/NotificationProvider';
-import { haversineDistance, generateCircleGeoJSON } from '../map-shared/geo-math';
+import { generateCircleGeoJSON } from '../map-shared/geo-math';
+// ⚠️ Με ψευδώνυμο: το `distanceMeters` είναι ήδη **τιμή** σε αυτό το αρχείο (πεδίο του
+// συμβολαίου, γρ. 41). Η σύγκρουση είναι πραγματική — μέτρηση έναντι μετρημένου.
+import { distanceMeters as greatCircleMeters } from '@/lib/geo/geo-distance';
 import type { GeofenceApiResponse } from '../map-shared/geofence-api-types';
 import { eventTypeLabel } from '../components/live-worker-helpers';
 import type {
@@ -134,12 +137,10 @@ export function useLiveWorkerMap(
 
       if (geofence && geofence.enabled) {
         distanceMeters = Math.round(
-          haversineDistance(
-            event.coordinates.lat,
-            event.coordinates.lng,
-            geofence.latitude,
-            geofence.longitude
-          )
+          greatCircleMeters(event.coordinates, {
+            lat: geofence.latitude,
+            lng: geofence.longitude,
+          })
         );
         isInside = distanceMeters <= geofence.radiusMeters;
       }
@@ -195,12 +196,10 @@ export function useLiveWorkerMap(
 
     if (!latestEvent.coordinates) return;
 
-    const distance = haversineDistance(
-      latestEvent.coordinates.lat,
-      latestEvent.coordinates.lng,
-      geofence.latitude,
-      geofence.longitude
-    );
+    const distance = greatCircleMeters(latestEvent.coordinates, {
+      lat: geofence.latitude,
+      lng: geofence.longitude,
+    });
 
     if (distance > geofence.radiusMeters) {
       const name = workerNameMap.get(latestEvent.contactId) ?? latestEvent.contactId;
