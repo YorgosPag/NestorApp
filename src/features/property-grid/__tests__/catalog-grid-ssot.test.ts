@@ -70,6 +70,34 @@ function walkSource(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+/**
+ * Κάθε αρχείο του `src/` που **μπορεί να δηλώσει πλέγμα** — `.ts` · `.tsx` **και
+ * `.css`**.
+ *
+ * ⚠️ **Το `.css` ΔΕΝ είναι πληρότητα για την πληρότητα.** Οι τρεις διάλεκτοι
+ * (Tailwind arbitrary · CSS-in-JS · CSS module) καταλήγουν στο **ίδιο**
+ * μεταγλωττισμένο stylesheet — ο διαχωρισμός υπάρχει **μόνο στην πηγή**. Ένας
+ * σαρωτής που διαβάζει μόνο TypeScript είναι **δομικά τυφλός** στο ένα τρίτο του
+ * ερωτήματος. Το ίδιο μάθημα πληρώθηκε μετρημένα στο CHECK 3.50.
+ */
+function walkStyleSources(dir: string, out: string[] = []): string[] {
+  for (const name of readdirSync(dir)) {
+    if (name === 'node_modules' || name === '.next') continue;
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) walkStyleSources(full, out);
+    else if (/\.(?:tsx?|css)$/.test(full)) out.push(full);
+  }
+  return out;
+}
+
+/**
+ * ⚠️ **Στο CSS το `//` ΔΕΝ είναι σχόλιο.** Ο γενικός `withoutComments` κόβει και
+ * `//…` — σε `.css` αυτό ακρωτηριάζει κάθε γραμμή με `url(https://…)` και μπορεί
+ * να **εξαφανίσει** δήλωση που ακολουθεί. Δύο γλώσσες, δύο γραμματικές σχολίων.
+ */
+const stripComments = (text: string, isCss: boolean): string =>
+  isCss ? text.replace(/\/\*[\s\S]*?\*\//g, '') : withoutComments(text);
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Κ1-Κ2 — Η ΓΡΑΜΜΑΤΙΚΗ ΤΟΥ ΕΓΓΕΝΟΥΣ ΚΑΤΑΛΟΓΟΥ
 // ═══════════════════════════════════════════════════════════════════════════
@@ -307,4 +335,158 @@ describe('Κ8 · οι κλάσεις του καταλόγου ΓΙΝΟΝΤΑΙ 
       expect(rule).toMatch(/min\(100%/);
     }
   }, 30_000);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Κ9 — 🔴 Ο ΦΡΟΥΡΟΣ ΓΙΑ ΤΗΝ **ΚΛΑΣΗ**, ΟΧΙ ΓΙΑ ΤΙΣ ΤΡΕΙΣ ΣΤΑΘΕΡΕΣ
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// 🔑 **ΓΙΑΤΙ ΤΟ Κ2 ΔΕΝ ΑΡΚΟΥΣΕ.** Το Κ2 ρωτά τις **τρεις σταθερές του SSoT** — τις
+// μόνες που κανείς δεν πρόκειται να ξαναγράψει λάθος, ακριβώς επειδή τις φυλάει.
+// Το εγγενές μοτίβο όμως γράφεται **οπουδήποτε**: μετρήθηκαν **τέσσερις** ζωντανές
+// δηλώσεις χωρίς φρουρό, σε τρία αρχεία που καμία πύλη δεν κοίταζε — και το ίδιο το
+// ADR-777 §8.21.6 τις δήλωσε ανοιχτές γράφοντας «**13**», αριθμό που η μέτρηση της
+// 2026-08-11 ανέτρεψε (ADR-784 §8 #4).
+//
+// Ένας φρουρός που φυλάει τρία σημεία και αγνοεί τα υπόλοιπα **δεν είναι πύλη,
+// είναι δείγμα**. Η πέμπτη δήλωση γράφεται αύριο.
+//
+// ⚠️ **Π1 ΞΑΝΑ, ΚΑΙ ΑΥΤΗ ΤΗ ΦΟΡΑ ΥΠΕΡ ΜΑΣ**: τα μοτίβα παρακάτω είναι **regex με
+// διαφυγές** (`repeat\(` — τα ψηφία `r,e,p,e,a,t,\,(`). Στο **κείμενο** αυτού του
+// αρχείου η ακολουθία `repeat(` **δεν εμφανίζεται ποτέ**, άρα ούτε το Tailwind
+// παράγει κλάση ούτε ο ίδιος ο σαρωτής βρίσκει τον εαυτό του. Η διαφυγή είναι η
+// **αιτία** που το αρχείο δεν αυτοκαταγγέλλεται — όχι σύμπτωση.
+
+describe('Κ9 · ΚΑΘΕ εγγενής κατάλογος του src/ έχει τον φρουρό — κλειστή λογιστική', () => {
+  /**
+   * Επιστρέφει το **πρώτο όρισμα** κάθε `minmax()` που ζει μέσα σε
+   * `repeat(auto-fill|auto-fit, …)`.
+   *
+   * ⚠️ **ΔΕΝ γίνεται με σκέτο regex.** Το ίδιο το όρισμα περιέχει παρενθέσεις
+   * (`min(100%, 20rem)`), οπότε ένα `[^)]+` θα σταματούσε στην **εσωτερική**
+   * παρένθεση και θα διάβαζε τον φρουρό ως «`min(100%`» — δηλαδή η πύλη θα
+   * αποτύγχανε ακριβώς πάνω στη **σωστή** γραφή. Μετράμε βάθος.
+   */
+  const intrinsicMinima = (text: string): string[] => {
+    const opener = /repeat\(\s*auto-fi(?:ll|t)\s*,\s*minmax\(/g;
+    const minima: string[] = [];
+    let match: RegExpExecArray | null;
+
+    while ((match = opener.exec(text)) !== null) {
+      let depth = 0;
+      let arg = '';
+      for (let i = match.index + match[0].length; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '(') depth++;
+        else if (ch === ')') {
+          if (depth === 0) break;
+          depth--;
+        } else if (ch === ',' && depth === 0) break;
+        arg += ch;
+      }
+      minima.push(arg.trim());
+    }
+    return minima;
+  };
+
+  /**
+   * 🔶 **Η ΜΟΝΗ ΔΗΛΩΜΕΝΗ ΕΞΑΙΡΕΣΗ, ΜΕ ΛΟΓΟ.** Οι email clients (Outlook · Gmail)
+   * **δεν στηρίζουν τη συνάρτηση `min()`** της CSS. Ένας φρουρός εκεί δεν θα ήταν
+   * αυστηρότητα — θα ήταν κανόνας που **δεν φτάνει ποτέ στον παραλήπτη**.
+   * (ADR-777 §8.21.6.)
+   */
+  const EMAIL_EXEMPT = 'src/services/email-templates.service.ts';
+
+  /** ⛔ Ξένη περιοχή (άλλος ιδιοκτήτης) — **ονομάζεται**, δεν σιωπάται. */
+  const isForeign = (rel: string): boolean => rel.startsWith('src/subapps/');
+
+  const GUARDED = /^min\(\s*100%\s*,/;
+  /** Ελάχιστο `0` δεν μπορεί να υπερχειλίσει — δεν χρειάζεται φρουρό. */
+  const ZERO_MIN = /^0(?:px|rem|%)?$/;
+
+  type Bucket =
+    | 'guarded'
+    | 'zero-min'
+    | 'email-exempt'
+    | 'foreign-subapp'
+    | 'unguarded';
+
+  /**
+   * 🔴 **Ο ΤΑΞΙΝΟΜΗΤΗΣ ΕΠΙΣΤΡΕΦΕΙ ΟΝΟΜΑ ΚΑΤΑΣΤΑΣΗΣ, ΔΕΝ ΓΡΑΦΕΙ ΣΕ ΚΑΔΟ — ΚΑΙ
+   * ΑΥΤΟ ΜΕΤΡΗΘΗΚΕ, ΔΕΝ ΠΡΟΤΙΜΗΘΗΚΕ.** Η πρώτη γραφή είχε αλυσίδα
+   * `if / else if / else` που έσπρωχνε απευθείας στους κάδους, με το `Κ9β` να
+   * φυλάει το άθροισμα. Η μετάλλαξη «**σβήσε τον τελευταίο κλάδο**» πέρασε
+   * **ΠΡΑΣΙΝΗ**: ο κάδος `unguarded` είναι **κενός σήμερα**, οπότε το να πάψει
+   * να γεμίζει δεν μετακινεί κανένα άθροισμα — ο φρουρός της λογιστικής **δεν
+   * μπορούσε να ασκηθεί ακριβώς εκεί που είχε σημασία**. Είναι το μάθημα `Μμ7`
+   * του CHECK 3.39: *κάδος που δηλώνεται αλλά δεν ασκείται ποτέ είναι φρουρός
+   * χωρίς απόδειξη ζωής, και το «0» του διαβάζεται ως «κοίταξα»*.
+   *
+   * Με τον ταξινομητή να **επιστρέφει** `Bucket` και το `push` να γίνεται
+   * **πάντα**, η σιωπηλή απόρριψη δεν φυλάσσεται — γίνεται **δομικά αδύνατη**:
+   * κάθε μονοπάτι οφείλει να επιστρέψει όνομα, και το απαιτεί ο μεταγλωττιστής.
+   * *Ένας φρουρός που δεν μπορεί να ασκηθεί αντικαθίσταται από κατασκευή που δεν
+   * τον χρειάζεται — δεν κρατιέται για διακόσμηση.*
+   */
+  const classify = (rel: string, min: string): Bucket => {
+    if (GUARDED.test(min)) return 'guarded';
+    if (ZERO_MIN.test(min)) return 'zero-min';
+    if (rel === EMAIL_EXEMPT) return 'email-exempt';
+    if (isForeign(rel)) return 'foreign-subapp';
+    return 'unguarded';
+  };
+
+  const census = (): { total: number; buckets: Record<Bucket, string[]> } => {
+    const buckets: Record<Bucket, string[]> = {
+      guarded: [],
+      'zero-min': [],
+      'email-exempt': [],
+      'foreign-subapp': [],
+      unguarded: [],
+    };
+    let total = 0;
+
+    for (const file of walkStyleSources(SRC)) {
+      const rel = file.slice(REPO_ROOT.length + 1).replace(/\\/g, '/');
+      const text = stripComments(readFileSync(file, 'utf8'), rel.endsWith('.css'));
+
+      for (const min of intrinsicMinima(text)) {
+        total++;
+        buckets[classify(rel, min)].push(`${rel} → minmax(${min}, …)`);
+      }
+    }
+    return { total, buckets };
+  };
+
+  it('Κ9 · καμία δική μας δήλωση χωρίς τον φρουρό min(100%,…)', () => {
+    // ⚠️ Η αποτυχία ΟΝΟΜΑΖΕΙ αρχείο και ελάχιστο — μια πύλη που λέει μόνο «κόκκινο»
+    // στέλνει τον επόμενο να ψάξει, και τότε παρακάμπτεται.
+    expect(census().buckets.unguarded).toEqual([]);
+  });
+
+  it('Κ9β · η λογιστική ΚΛΕΙΝΕΙ — καμία δήλωση δεν χάνεται σιωπηλά', () => {
+    // Ένα άθροισμα που δεν κλείνει σημαίνει ότι ο ταξινομητής έχει σιωπηλή
+    // απόρριψη, δηλαδή το «0 παραβιάσεις» θα μπορούσε να σημαίνει «δεν κοίταξα».
+    const { total, buckets } = census();
+    const counted = Object.values(buckets).reduce((n, list) => n + list.length, 0);
+    expect(counted).toBe(total);
+    expect(total).toBeGreaterThan(0); // ο σαρωτής βρίσκει ΚΑΤΙ — αλλιώς είναι νεκρός
+  });
+
+  it('Κ9γ · η εξαίρεση των email ισχύει για ΕΝΑ αρχείο, ονομασμένο', () => {
+    // Μια εξαίρεση χωρίς όριο είναι ανοιχτή πόρτα: αν αύριο κάποιος επικαλεστεί
+    // «email» σε δεύτερο αρχείο, το μαθαίνουμε εδώ και όχι στην οθόνη.
+    const emails = census().buckets['email-exempt'];
+    expect(emails.length).toBeGreaterThan(0);
+    for (const entry of emails) expect(entry.startsWith(EMAIL_EXEMPT)).toBe(true);
+  });
+
+  it('Κ9δ · οι τρεις σταθερές του SSoT μετριούνται ως φρουρημένες', () => {
+    // Βαθμονόμηση: αν ο σαρωτής δεν βλέπει τις τρεις που ΞΕΡΟΥΜΕ ότι είναι σωστές,
+    // τότε το «καμία παραβίαση» του Κ9 δεν αποδεικνύει τίποτα.
+    const guarded = census().buckets.guarded.filter((entry) =>
+      entry.startsWith('src/styles/design-tokens/modules/layout.ts'),
+    );
+    expect(guarded).toHaveLength(3);
+  });
 });

@@ -389,7 +389,17 @@ export function MediaGallery({
             : 'flex flex-col gap-2'
         )}
         style={gallery.state.viewMode === 'grid' ? {
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))'
+          // ⚠️ ΔΕΝ καταναλώνει το `gridPatterns.cards.*` — ΚΑΜΙΑ από τις τρεις
+          // οικογένειες δεν είναι αυτή, και η σύμπτωση αριθμού είναι παγίδα:
+          //   · `media` (20rem) = κάρτα ακινήτου με εικόνα 192 px και δύο κουμπιά
+          //   · `tile`  (15rem) = συμπαγές πλακίδιο χωρίς εικόνα
+          //   · `chip`  (10rem) = **ίδιος αριθμός**, αλλά «ένα γλυφικό και ΜΙΑ
+          //     ετικέτα, χωρίς σειρές μεταδεδομένων» (ADR-784 §10.1) — εδώ υπάρχουν
+          //     μικρογραφία, όνομα αρχείου, μέγεθος και πλαίσιο επιλογής.
+          // Τα 160 px είναι το δάπεδο της ΙΔΙΑΣ της κάρτας: `min-h-[180px]` του
+          // μεγέθους `md` με εικόνα `aspect-[4/3]` ⇒ 120 px εικόνα + ~60 px κείμενο.
+          // Ο φρουρός `min(100%, …)` κρατά το πλέγμα μέσα στο δοχείο (ADR-777 §8.21.6).
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 160px), 1fr))'
         } : undefined}
       >
         {gallery.sortedFiles.map((file, index) => (

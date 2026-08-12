@@ -95,7 +95,9 @@ const layoutStyles = {
     width: '100%',
     padding: 'var(--spacing-4)',
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+    // Ο φρουρός `min(100%, …)` — χωρίς αυτόν, σε δοχείο στενότερο από 350 px η
+    // στήλη μένει στα 350 και το πλέγμα ξεχειλίζει οριζόντια (ADR-777 §8.21.6).
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 350px), 1fr))',
     gap: 'var(--spacing-6)'
   } as const,
 

@@ -303,7 +303,10 @@ export const canvasUI = {
       }),
       responsiveCardGrid: (minWidth: number, maxWidth: number, gap: number): React.CSSProperties => ({
         display: 'grid',
-        gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, ${maxWidth}px))`,
+        // Ο φρουρός μπαίνει στο **ελάχιστο**, όχι στο μέγιστο: το `min(100%, …)`
+        // είναι αδρανής πάνω από το δάπεδο και το καταργεί μόνο όταν το δοχείο
+        // είναι στενότερο — δηλαδή ακριβώς εκεί που αλλιώς ξεχειλίζει.
+        gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minWidth}px), ${maxWidth}px))`,
         gap: `${gap * 4}px`,
         width: '100%',
         justifyContent: 'start',

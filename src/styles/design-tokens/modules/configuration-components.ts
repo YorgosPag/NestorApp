@@ -7,6 +7,47 @@
 import { colors, spacing, typography } from './foundations';
 import { borderRadius } from './borders';
 
+// ============================================================================
+// ΚΟΙΝΑ ΘΡΑΥΣΜΑΤΑ — μία γραφή, πολλοί καταναλωτές
+// ============================================================================
+//
+// 🔴 Εξήχθησαν επειδή το **CHECK 3.28 (jscpd)** τα ονόμασε: τρεις κλώνοι ≥50
+// ψηφίων, όλοι **μέσα σε αυτό το αρχείο**. Ήταν προϋπάρχοντες — η μέτρηση με
+// παρονομαστή (ίδιο αρχείο σε `HEAD` έναντι τώρα) το επιβεβαίωσε — αλλά ένα
+// αρχείο που ακουμπιέται καθαρίζεται (N.0.2, Boy Scout).
+//
+// ⚠️ **ΔΕΝ εξήχθησαν και οι τέσσερις `header`**: οι δύο άλλες (`layout` ·
+// `configurationCard`) είναι **πραγματικά διαφορετικές** — η μία είναι διαχωριστικό
+// γραμμής, η άλλη διάταξη flex. Σύμπτυξη σε μία θα ήταν ισοπέδωση, όχι SSoT: το
+// κριτήριο είναι «*είναι το ίδιο πράγμα;*», όχι «*μοιάζουν;*».
+
+/**
+ * Επικεφαλίδα ενότητας ρυθμίσεων — τίτλος με υπογράμμιση διαχωρισμού.
+ * Κοινή σε `ruleEditor` και `notificationSettings`.
+ */
+const PANEL_HEADER = {
+  fontSize: typography.fontSize.lg,
+  fontWeight: typography.fontWeight.semibold,
+  color: colors.text.primary,
+  marginBottom: spacing.md,
+  paddingBottom: spacing.sm,
+  borderBottom: `1px solid ${colors.border.secondary}`
+};
+
+/**
+ * Η βάση κάθε πεδίου εισόδου — `input`, `select` και (με επιπλέον ύψος) `textarea`.
+ * Τα τρία **οφείλουν** να δείχνουν ίδια· γι' αυτό είναι μία δήλωση.
+ */
+const FIELD_BASE = {
+  width: '100%',
+  padding: spacing.sm,
+  border: `1px solid ${colors.border.primary}`,
+  borderRadius: borderRadius.sm,
+  fontSize: typography.fontSize.sm,
+  backgroundColor: colors.background.primary,
+  color: colors.text.primary
+};
+
 export const configurationComponents = {
   layout: {
     container: {
@@ -132,14 +173,7 @@ export const configurationComponents = {
       borderRadius: borderRadius.md,
       padding: spacing.lg
     },
-    header: {
-      fontSize: typography.fontSize.lg,
-      fontWeight: typography.fontWeight.semibold,
-      color: colors.text.primary,
-      marginBottom: spacing.md,
-      paddingBottom: spacing.sm,
-      borderBottom: `1px solid ${colors.border.secondary}`
-    },
+    header: PANEL_HEADER,
     section: {
       marginBottom: spacing.lg,
       paddingBottom: spacing.md,
@@ -152,35 +186,13 @@ export const configurationComponents = {
       marginBottom: spacing.xs,
       display: 'block'
     },
-    input: {
-      width: '100%',
-      padding: spacing.sm,
-      border: `1px solid ${colors.border.primary}`,
-      borderRadius: borderRadius.sm,
-      fontSize: typography.fontSize.sm,
-      backgroundColor: colors.background.primary,
-      color: colors.text.primary
-    },
+    input: FIELD_BASE,
     textarea: {
-      width: '100%',
-      padding: spacing.sm,
-      border: `1px solid ${colors.border.primary}`,
-      borderRadius: borderRadius.sm,
-      fontSize: typography.fontSize.sm,
-      backgroundColor: colors.background.primary,
-      color: colors.text.primary,
+      ...FIELD_BASE,
       minHeight: '100px',
       resize: 'vertical' as const // ✅ ENTERPRISE: Proper type literal
     },
-    select: {
-      width: '100%',
-      padding: spacing.sm,
-      border: `1px solid ${colors.border.primary}`,
-      borderRadius: borderRadius.sm,
-      fontSize: typography.fontSize.sm,
-      backgroundColor: colors.background.primary,
-      color: colors.text.primary
-    },
+    select: FIELD_BASE,
     gridTwoColumns: {
       display: 'grid',
       gridTemplateColumns: '1fr 1fr',
@@ -231,14 +243,7 @@ export const configurationComponents = {
       padding: spacing.lg,
       marginTop: spacing.md
     },
-    header: {
-      fontSize: typography.fontSize.lg,
-      fontWeight: typography.fontWeight.semibold,
-      color: colors.text.primary,
-      marginBottom: spacing.md,
-      paddingBottom: spacing.sm,
-      borderBottom: `1px solid ${colors.border.secondary}`
-    },
+    header: PANEL_HEADER,
     sectionTitle: {
       fontSize: typography.fontSize.base,
       fontWeight: typography.fontWeight.medium,
@@ -248,7 +253,8 @@ export const configurationComponents = {
     },
     channelsGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+      // Φρουρός `min(100%, …)` — αλλιώς υπερχείλιση σε δοχείο < 300 px (ADR-777 §8.21.6).
+      gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
       gap: spacing.md,
       marginBottom: spacing.lg
     },
@@ -330,7 +336,8 @@ export const configurationComponents = {
     },
     rulesGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+      // Φρουρός `min(100%, …)` — αλλιώς υπερχείλιση σε δοχείο < 350 px (ADR-777 §8.21.6).
+      gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 350px), 1fr))',
       gap: spacing.md,
       marginTop: spacing.md
     },

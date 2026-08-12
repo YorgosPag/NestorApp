@@ -2,6 +2,20 @@
 
 **STATUS: ACTIVE**
 
+- 🔶 **11/08 — `configurationComponents` (441 γρ.): ΜΗΔΕΝ καταναλωτές** *(βρέθηκε στο ADR-784 §11)*
+  Το `src/styles/design-tokens/modules/configuration-components.ts` **επανεξάγεται** από τα
+  `design-tokens/index.ts` και `design-tokens.ts`, αλλά `grep "configurationComponents\."` δίνει
+  **μηδέν** χρήσεις σε όλο το `src/`. Δηλαδή **ολόκληρο** το module είναι δηλωμένη αυθεντία που
+  **δεν τη ρωτά κανείς** — το σχήμα των «606 αδρανών φρουρών» (ADR-749 §5), σε μορφή style tokens.
+
+  ⚠️ **ΔΕΝ διαγράφηκε**: διαγραφή module που επανεξάγεται από δύο barrel αγγίζει το
+  `.deadcode-baseline.json` (CHECK 3.22) και το `.barrel-deadcode-baseline.json` (3.30) —
+  **απόφαση Giorgio**. Στο μεταξύ καθαρίστηκαν οι **3 κλώνοι** του (CHECK 3.28) και μπήκε ο
+  φρουρός `min(100%,…)` στα 2 πλέγματά του, ώστε να μην είναι *λάθος* όποτε ζωντανέψει.
+
+  🔑 Το ίδιο ισχύει για το `analyticsOverviewStyles.layout.container`: **δηλωμένο, χωρίς
+  καταναλωτή** — το `AnalyticsOverview.tsx` χρησιμοποιεί **μόνο** το `progressBars.*`.
+
 - 🔴 **11/08 — ADR-783: η baseline του εκτελεστή θέλει SEEDING (μία πράξη Giorgio)**
   Το `jest-suite.yml` (Tier 2) τρέχει πλέον **ολόκληρη** τη σουίτα σε κάθε PR και μπλοκάρει με
   ratchet αποτελέσματος. Η `.jest-suite-baseline.json` **δεν υπάρχει ακόμη** — και **δεν** μπορεί
