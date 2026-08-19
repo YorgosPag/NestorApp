@@ -64,6 +64,10 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       { key: 'newProperty', labelKey: 'account.notificationSettings.categories.properties.newProperty' },
       { key: 'priceChange', labelKey: 'account.notificationSettings.categories.properties.priceChange' },
       { key: 'viewingScheduled', labelKey: 'account.notificationSettings.categories.properties.viewingScheduled' },
+      // ADR-777 Ε2 — ο διακόπτης του δολώματος (§12.6). Μια ειδοποίηση που δεν σβήνει
+      // είναι ενόχληση, όχι υπηρεσία· και χωρίς γραμμή **εδώ** ο διακόπτης θα υπήρχε
+      // στον τύπο και θα ήταν **απρόσιτος** — αδρανής φρουρός (ADR-749 §5).
+      { key: 'demandInterest', labelKey: 'account.notificationSettings.categories.properties.demandInterest' },
     ],
   },
   {

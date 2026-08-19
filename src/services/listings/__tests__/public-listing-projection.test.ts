@@ -6,10 +6,14 @@
  * τα tests και θα αποτύγχανε στην παραγωγή.
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import {
   isPubliclyListed,
   resolveListingPosition,
   buildPublicListing,
+  projectListingShape,
   addressToPositionCandidate,
   type ProjectableProperty,
   type PlaceKnowledge,
@@ -351,5 +355,57 @@ describe('Κ8 — δηλωμένο offerKinds + τελική κατάσταση 
       offerKinds: ['exchange'],
     };
     expect(isPubliclyListed(live)).toBe(true);
+  });
+});
+
+// ============================================================================
+// Κ1 — Η ΠΥΛΗ ΔΗΜΟΣΙΕΥΣΗΣ ΜΕΤΑ ΤΗ ΔΙΑΣΠΑΣΗ (ADR-777 §8.22, 2026-08-12)
+// ============================================================================
+//
+// 🔴 Το `buildPublicListing` χωρίστηκε σε **πύλη** + **σχήμα** ώστε το δόλωμα του
+// §12.6 να μπορεί να κρίνει ακίνητο που ο ιδιοκτήτης **δεν έχει ανεβάσει**. Η
+// διάσπαση δημιουργεί έναν **νέο κίνδυνο με όνομα**: κάποιος να χρησιμοποιήσει το
+// ασύδοτο `projectListingShape` εκεί όπου **γράφεται** η δημόσια προβολή — δηλαδή να
+// βγάλει στον κόσμο ακίνητο που η πολιτική απαγορεύει, **χωρίς να αλλάξει η πολιτική**.
+//
+// ⚠️ Η δεύτερη άγκυρα διαβάζει **πραγματικό αρχείο πηγής**, όχι fixture: ο γραφέας
+// είναι *άλλο module*, και ένα test που τον προσομοιώνει δεν αποδεικνύει τίποτα για
+// εκείνον.
+
+describe('🔴 Κ1 — η πύλη ζει στο `buildPublicListing`· ο ΓΡΑΦΕΑΣ περνά από αυτήν', () => {
+  const HIDDEN: ProjectableProperty = {
+    id: 'prop_hidden',
+    name: 'Κλειστό κατάστημα',
+    type: 'commercial',
+    commercialStatus: 'unavailable',
+    offerKinds: [],
+  };
+
+  it('η ΠΥΛΗ αρνείται — καμία δημόσια προβολή για μη δηλωμένο ακίνητο', () => {
+    expect(isPubliclyListed(HIDDEN)).toBe(false);
+    expect(buildPublicListing(HIDDEN, NO_PLACE, AT)).toBeNull();
+  });
+
+  it('🔑 το ΣΧΗΜΑ δίνει δομή για το ΙΔΙΟ ακίνητο — αλλιώς το δόλωμα δεν έχει τι να κρίνει', () => {
+    const shape = projectListingShape(HIDDEN, NO_PLACE, AT);
+    expect(shape.id).toBe('prop_hidden');
+    expect(shape.offerKinds).toEqual([]);
+  });
+
+  it('ταυτότητα: όπου η πύλη ΠΕΡΝΑ, τα δύο μονοπάτια δίνουν ΤΟ ΙΔΙΟ έγγραφο', () => {
+    // Ο παρονομαστής της διάσπασης: «καμία αλλαγή συμπεριφοράς» είναι ισχυρισμός
+    // μέχρι να συγκριθούν τα δύο αποτελέσματα πάνω σε είσοδο που περνά.
+    expect(buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)).toEqual(
+      projectListingShape(REAL_MAISONETTE, NO_PLACE, AT)
+    );
+  });
+
+  it('⛔ ο γραφέας της προβολής ΔΕΝ εισάγει το ασύδοτο σχήμα', () => {
+    const writer = readFileSync(
+      join(__dirname, '..', 'publish-public-listing.ts'),
+      'utf8'
+    );
+    expect(writer).toContain('buildPublicListing');
+    expect(writer).not.toContain('projectListingShape');
   });
 });

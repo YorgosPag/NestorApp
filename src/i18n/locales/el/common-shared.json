@@ -749,5 +749,8 @@
     "optional": "προαιρετικό",
     "placeholder": "Γράψτε ένα μήνυμα για τον παραλήπτη...",
     "charsRemaining": "{count} χαρακτήρες"
+  },
+  "demandInterest": {
+    "notificationTitle": "{count, plural, one {# άνθρωπος ψάχνει} other {# άνθρωποι ψάχνουν}} ακίνητο σαν το «{title}»"
   }
 }

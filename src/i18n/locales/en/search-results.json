@@ -396,6 +396,18 @@
       "title": "My space",
       "checking": "Checking your identity…",
       "signInNeeded": "Sign in to see your requests."
+    },
+    "interest": {
+      "heading": "Who is looking for something like this",
+      "offered": "{count, plural, one {# person wants} other {# people want}} exactly this property.",
+      "dormant": "{count, plural, one {# person is looking} other {# people are looking}} for a property like yours, here.",
+      "dormantWhy": "You have not listed it for sale or rent, so we compared only what it is and where it is — not price or deal type.",
+      "partialWhy": "You have not stated a deal type, so the price was compared but not whether you sell or rent.",
+      "none": "Nobody is looking for something like this right now.",
+      "hidden": "We do not show a number below {minCount}.",
+      "loading": "Checking who is looking…",
+      "unavailable": "We could not read demand right now. Please try again shortly.",
+      "privacy": "You never learn who they are or exactly what they want — only how many."
     }
   },
   "offer": {

@@ -67,6 +67,8 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROPERTIES_NEW_PROPERTY: 'properties.newProperty',
   PROPERTIES_PRICE_CHANGE: 'properties.priceChange',
   PROPERTIES_VIEWING_SCHEDULED: 'properties.viewingScheduled',
+  /** ADR-777 Ε2 · SPEC-777B §12.6 — «N άνθρωποι ζητούν το ακίνητό σας». */
+  PROPERTIES_DEMAND_INTEREST: 'properties.demandInterest',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -171,6 +173,20 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_VIEWING_SCHEDULED]: {
     category: 'properties',
     settingKey: 'viewingScheduled',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  /**
+   * 🎯 **ADR-777 Ε2** — το δόλωμα του §12.6 προς τον ιδιοκτήτη.
+   *
+   * ⚠️ **`isMandatory: false`, ρητά.** Είναι εμπορική είδηση, όχι ασφάλεια: ο άνθρωπος
+   * που την έκλεισε **έχει δίκιο** και ο κώδικας οφείλει να τον ακούσει. Ένα
+   * `isMandatory: true` εδώ θα παρέκαμπτε τις ρυθμίσεις του χρήστη για να πουλήσουμε —
+   * που είναι ο ορισμός της ενόχλησης.
+   */
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST]: {
+    category: 'properties',
+    settingKey: 'demandInterest',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },

@@ -83,7 +83,8 @@
           "statusChange": "Αλλαγή κατάστασης ακινήτου",
           "newProperty": "Νέο ακίνητο",
           "priceChange": "Αλλαγή τιμής",
-          "viewingScheduled": "Προγραμματισμένη επίσκεψη"
+          "viewingScheduled": "Προγραμματισμένη επίσκεψη",
+          "demandInterest": "Κάποιος ψάχνει ακίνητο σαν το δικό μου"
         },
         "tasks": {
           "title": "Εργασίες",

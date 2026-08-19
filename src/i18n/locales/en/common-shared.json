@@ -749,5 +749,8 @@
     "optional": "optional",
     "placeholder": "Write a message for the recipient...",
     "charsRemaining": "{count} characters"
+  },
+  "demandInterest": {
+    "notificationTitle": "{count, plural, one {# person is looking} other {# people are looking}} for a property like “{title}”"
   }
 }

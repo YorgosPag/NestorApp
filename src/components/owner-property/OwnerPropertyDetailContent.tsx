@@ -42,6 +42,8 @@ import { setOwnerListingLifecycle } from '@/services/owner-property/owner-proper
 import { useMyOwnerProperty } from '@/services/realtime/hooks/useMyOwnerProperties';
 import type { OwnerProperty } from '@/types/owner-property';
 
+import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
+import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 import { OwnerPropertyFormContent } from './OwnerPropertyFormContent';
 
@@ -104,10 +106,25 @@ function OwnerPropertyView({
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const onMap = isPubliclyListed(projectableFromOwnerProperty(property));
+  // ⚠️ Στην **κορυφή** του component, ποτέ μέσα στο JSX: ένας hook που ζει σε έκφραση
+  // γνωρίσματος διαβάζεται ως υπό όρους από τον επόμενο αναγνώστη, ακόμη κι όταν δεν
+  // είναι — και η πρώτη φορά που κάποιος τον τυλίξει σε `{onMap && …}` σπάει σιωπηλά.
+  const interest = usePlaceInterest(property.id);
 
   return (
     <div className="flex flex-col gap-4">
       <OwnerPropertyCard property={property} />
+
+      {/*
+        🎯 **ΤΟ ΔΟΛΩΜΑ ΤΟΥ §12.6, ADR-777 Ε2** — «N άνθρωποι ψάχνουν κάτι σαν το δικό
+        σας». Στέκεται **πάνω** από το κουμπί επεξεργασίας και **πριν** τον σύνδεσμο
+        δημοσίευσης, επίτηδες: είναι ο **λόγος** να πατήσει κάποιο από τα δύο.
+
+        🔑 **Εμφανίζεται ΚΑΙ όταν η αγγελία δεν είναι δημοσιευμένη** — εκεί έχει τη
+        μεγαλύτερη αξία. Το §12.6 το λέει: *«πολύ ισχυρότερο κάλεσμα από “ανεβάστε
+        αγγελία”»*, δηλαδή απευθύνεται **εξ ορισμού** σε όποιον δεν έχει ανεβάσει.
+      */}
+      <PlaceInterestPanel interest={interest} />
 
       {/*
         🔴 **Ο σύνδεσμος που κλείνει τον κύκλο της Α14.** Εμφανίζεται μόνο όταν η

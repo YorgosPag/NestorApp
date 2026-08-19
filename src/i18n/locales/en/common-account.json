@@ -83,7 +83,8 @@
           "statusChange": "Property status change",
           "newProperty": "New property",
           "priceChange": "Price change",
-          "viewingScheduled": "Viewing scheduled"
+          "viewingScheduled": "Viewing scheduled",
+          "demandInterest": "Someone is looking for a property like mine"
         },
         "tasks": {
           "title": "Tasks",

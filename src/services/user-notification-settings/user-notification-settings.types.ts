@@ -60,6 +60,23 @@ export interface PropertiesNotificationSettings {
   viewingScheduled: boolean;
   /** Notify when new building is created */
   newBuilding: boolean;
+  /**
+   * 🎯 ADR-777 Ε2 (SPEC-777B §12.6) — «**N άνθρωποι ζητούν το ακίνητό σας**».
+   *
+   * Το **δόλωμα** προς τον ιδιοκτήτη: η αγορά κάνει την πρώτη κίνηση, όχι αυτός.
+   *
+   * ⚠️ **Προεπιλογή `true`, και είναι απόφαση.** Οι υπόλοιπες προεπιλογές εδώ
+   * ακολουθούν τον κανόνα «*ειδοποίησε για ό,τι ο χρήστης δεν μπορεί να δει μόνος
+   * του*» — και αυτό είναι το ακραίο παράδειγμά του: ο ιδιοκτήτης **δομικά δεν
+   * μπορεί** να μάθει ότι κάποιος τον ψάχνει (ο κανόνας Firestore δίνει `read` στις
+   * ζητήσεις **μόνο** στον συγγραφέα τους). Με προεπιλογή `false`, το χαρακτηριστικό
+   * θα υπήρχε και **δεν θα έφτανε ποτέ σε άνθρωπο** — ακριβώς η κατάσταση που το Ε2
+   * ήρθε να τερματίσει.
+   *
+   * ⚠️ **Ο χρήστης το κλείνει από τις ρυθμίσεις** (`notification-settings-config.ts`):
+   * μια ειδοποίηση που δεν σβήνει είναι ενόχληση, όχι υπηρεσία.
+   */
+  demandInterest: boolean;
 }
 
 /**
@@ -186,6 +203,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   priceChange: false,
   viewingScheduled: true,
   newBuilding: true,
+  demandInterest: true,
 };
 
 /**

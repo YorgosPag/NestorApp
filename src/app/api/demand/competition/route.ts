@@ -59,7 +59,8 @@ import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { discloseCompetition, type DemandDisclosure } from '@/lib/demand/demand-aggregate';
 import { selectSimilarDemands } from '@/lib/demand/demand-similarity';
-import { LIVE_DEMAND_LIFECYCLES, type PropertyDemand } from '@/types/property-demand';
+import { readLiveDemands } from '@/services/demand/live-demands.reader';
+import type { PropertyDemand } from '@/types/property-demand';
 
 const logger = createModuleLogger('api/demand/competition');
 
@@ -67,20 +68,6 @@ const logger = createModuleLogger('api/demand/competition');
 interface CompetitionResponse {
   readonly disclosure: DemandDisclosure;
 }
-
-/**
- * 🔴 **Το ανώτατο πλήθος εγγράφων που διαβάζονται σε μία απάντηση.**
- *
- * Το ταίριασμα ομοιότητας είναι **τομή ευρών**, δηλαδή δεν εκφράζεται ως ερώτημα
- * Firestore — απαιτεί ανάγνωση των υποψηφίων και κρίση στη μνήμη. Ένα ανοιχτό
- * `.get()` θα ήταν σωστό στις σημερινές δεκάδες ζητήσεις και **δομικά λάθος** στις
- * δεκάδες χιλιάδες: η **Α0** δεσμεύει *«μοντέλο για την τελική κλίμακα»*.
- *
- * ⚠️ Το όριο **δηλώνεται στην απάντηση** όταν αγγιχτεί (βλ. `truncated` στο ημερολόγιο):
- * ένα σιωπηλό κόψιμο θα έδινε αριθμό που φαίνεται απάντηση και είναι δείγμα — το
- * σχήμα «0 = κανείς δεν κοίταξε», με άλλο νούμερο.
- */
-const MAX_CANDIDATES = 2_000;
 
 async function handler(
   request: NextRequest,
@@ -121,28 +108,11 @@ async function discloseFor(
   db: ReturnType<typeof getAdminFirestore>,
   demand: PropertyDemand,
 ): Promise<DemandDisclosure> {
-  // tenant-scope-exempt: ΑΥΤΗ ΕΙΝΑΙ Η ΠΡΟΘΕΣΗ. Το επίπεδο Γ (SPEC-777A §14.2) ορίζεται
-  // ως «ανώνυμο άθροισμα ΠΑΝΩ ΑΠΟ ΟΛΟΥΣ τους μισθωτές» — ένα ερώτημα φιλτραρισμένο
-  // στον αιτούντα θα μετρούσε πάντα ΕΝΑΝ άνθρωπο (τον ίδιο), δηλαδή θα ήταν φρουρός
-  // που ακυρώνει το χαρακτηριστικό. Η προστασία δεν είναι το φίλτρο μισθωτή· είναι
-  // (α) το k-κατώφλι του `area-market` (5), που εφαρμόζεται ΠΡΙΝ φύγει αριθμός, και
-  // (β) ότι επιστρέφεται ΜΟΝΟ πλήθος — καμία ταυτότητα, κανένα κριτήριο (§12.7α).
-  const snapshot = await db
-    .collection(COLLECTIONS.PROPERTY_DEMANDS)
-    // Στενεύει στα ζωντανά **στον διακομιστή**: οι υπόλοιπες δεν μετράνε ποτέ στο
-    // άθροισμα (`demandExclusionReason` → `not-live`), οπότε το να ταξιδέψουν θα ήταν
-    // ανάγνωση χωρίς καταναλωτή.
-    .where('lifecycle', 'in', [...LIVE_DEMAND_LIFECYCLES])
-    .limit(MAX_CANDIDATES)
-    .get();
-
-  const candidates = snapshot.docs.map((entry) => entry.data() as PropertyDemand);
-
-  if (candidates.length === MAX_CANDIDATES) {
-    logger.warn('Το όριο υποψηφίων αγγίχθηκε — ο αριθμός είναι κάτω φράγμα', {
-      data: { limit: String(MAX_CANDIDATES) },
-    });
-  }
+  // 🔑 Η ανάγνωση ζει στον **κοινό** αναγνώστη (`live-demands.reader.ts`): την ίδια
+  // δεξαμενή τη χρειάζεται και το δόλωμα του ιδιοκτήτη (`/api/demand/interest`), και
+  // δύο αντίγραφα θα μπορούσαν να αποκλίνουν στο όριο ή στο φίλτρο κύκλου ζωής —
+  // δηλαδή να δώσουν **ασύμβατους αριθμούς** για το ίδιο επίπεδο Γ (N.18).
+  const { demands: candidates } = await readLiveDemands(db, 'demand/competition');
 
   // ⚠️ `nowIso` περνιέται **ρητά** στη μηχανή· η ανάγνωση του ρολογιού γίνεται εδώ,
   // στο σύνορο, μέσω του **SSoT** `nowISO()` (CHECK 3.7 `date-local`) — ποτέ ωμό

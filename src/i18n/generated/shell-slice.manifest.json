@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "2bd8fc4c8c2dfeb5107605be06426192ae1ed8f86e747001324f3708be2acfc9",
+    "src/i18n/generated/shell-slice.el.json": "aab88041b1ab45c71c4ae4833c0ffae1615d76e782ed7b18124c406dc5dfa8e0",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -40,7 +40,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "045e0c70ba14ffa017d15830d3550e1562e193260f8ce0c506fa73fc74af615a",
+  "inputsSha256": "0e7efc6764e57fe63720f2f7d38f266156fbf499c1a1c525b9958cf64602588b",
   "languages": [
     "el"
   ],
@@ -207,7 +207,7 @@
     "src/config/jobs-registry.ts": "030b7091aeb5191bbd6abe3ccc9e23a1aa25f586cbed3fe226c07a4b6d9086b7",
     "src/config/jobs-visibility.ts": "ab652f1d2a901b3411b15871f941beac2bb71950a0a2d15129f8bda65e4467ff",
     "src/config/navigation.ts": "9016242f8b53a5a8eb1cda81120884853f2ab46eda2e06e83f57d91fb59210bc",
-    "src/config/notification-events.ts": "9f9a48c1ff56319e5aca60cb7ee7d279d4dca400e58221d229b81c49e01aca68",
+    "src/config/notification-events.ts": "5d192d961fbb533724040a704a8d66f9b1afb3d15a330ab2a0ae3bfbecdbe6b4",
     "src/config/notification-keys.ts": "d2e8d464ddc860d07e32c60966579815c9927c966a3dc86fdf70f76d45393c7e",
     "src/config/persona-config.ts": "1abb294d59594082c369ad1d3e4513cbd9bbbfc88a8825714e9fc8b9eb7dd5eb",
     "src/config/smart-navigation-factory.ts": "e503a0c98da1ce8ae85b38d47fa37105e9c74617e2aca897c6ca6d98788c6144",
@@ -518,7 +518,7 @@
     "matchedKeys": 105,
     "routeBoundaries": 0,
     "shellFiles": 435,
-    "sliceBytes": 226260
+    "sliceBytes": 227697
   },
   "unresolvableKeys": [
     "accessDenied.ariaLabel",
