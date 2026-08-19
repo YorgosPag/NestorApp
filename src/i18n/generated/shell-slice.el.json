@@ -2795,8 +2795,34 @@
       "stepIndicator": "Βήμα {current} από {total}"
     },
     "search": {
+      "entityTypes": {
+        "building": "Κτίριο",
+        "communication": "Επικοινωνία",
+        "contact": "Επαφή",
+        "file": "Αρχείο",
+        "floor": "Όροφος",
+        "opportunity": "Ευκαιρία",
+        "parking": "Θέση Στάθμευσης",
+        "project": "Έργο",
+        "property": "Ακίνητο",
+        "storage": "Αποθήκη",
+        "task": "Εργασία"
+      },
       "globalSearch": "Παγκόσμια Αναζήτηση",
-      "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια..."
+      "hints": {
+        "escKey": "ESC",
+        "minChars": "Τουλάχιστον {count} χαρακτήρες",
+        "startTyping": "Πληκτρολογήστε για αναζήτηση..."
+      },
+      "navigate": "πλοήγηση",
+      "noResults": "Δεν βρέθηκαν αποτελέσματα",
+      "placeholder": "Αναζήτηση σε έργα, επαφές, κτίρια...",
+      "results": "Αποτελέσματα αναζήτησης",
+      "resultsCount": "{count} αποτελέσματα",
+      "resultsCount_one": "{count} αποτέλεσμα",
+      "resultsCount_other": "{count} αποτελέσματα",
+      "select": "επιλογή",
+      "tryDifferent": "Δοκιμάστε διαφορετική αναζήτηση"
     },
     "share": {
       "captionCrmContact": "Αποστολή μέσω εταιρικού καναλιού σε CRM επαφή",

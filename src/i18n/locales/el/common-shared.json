@@ -468,7 +468,10 @@
       "contact": "Επαφή",
       "file": "Αρχείο",
       "parking": "Θέση Στάθμευσης",
-      "storage": "Αποθήκη"
+      "storage": "Αποθήκη",
+      "opportunity": "Ευκαιρία",
+      "communication": "Επικοινωνία",
+      "task": "Εργασία"
     }
   },
   "ownership": {

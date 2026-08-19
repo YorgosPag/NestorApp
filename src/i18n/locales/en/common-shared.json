@@ -468,7 +468,10 @@
       "contact": "Contact",
       "file": "File",
       "parking": "Parking",
-      "storage": "Storage"
+      "storage": "Storage",
+      "opportunity": "Opportunity",
+      "communication": "Communication",
+      "task": "Task"
     }
   },
   "ownership": {
