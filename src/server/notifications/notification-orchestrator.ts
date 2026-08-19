@@ -19,7 +19,6 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import {
   EVENT_CATEGORY_MAP,
   NOTIFICATION_CHANNELS,
-  MESSAGE_PRIORITIES,
   DEFAULT_DELIVERY,
   NOTIFICATION_ENTITY_TYPES,
   FIREBASE_ERROR_CODES,
@@ -32,18 +31,17 @@ import {
   type DeploymentEnvironment,
 } from '@/config/notification-events';
 // Comms domain imports from canonical source (SSoT)
-import {
-  enqueueMessage,
-  COMMUNICATION_CHANNELS,
-  MESSAGE_CATEGORIES,
-  type EnqueueMessageParams,
-} from '@/server/comms/orchestrator';
+import type { EnqueueMessageParams } from '@/server/comms/orchestrator';
+import { queueNotificationEmail } from '@/server/notifications/notification-email-leg';
 import {
   type UserNotificationSettings,
   getDefaultNotificationSettings,
 } from '@/services/user-notification-settings/user-notification-settings.types';
 import type { Severity } from '@/types/notification';
 import { generateNotificationDedupeId } from '@/services/enterprise-id.service';
+import { createModuleLogger } from '@/lib/telemetry';
+
+const logger = createModuleLogger('NotificationOrchestrator');
 
 // ============================================================================
 // TYPES
@@ -261,31 +259,31 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
     throw error;
   }
 
-  // 8. Queue email via comms orchestrator (if enabled)
-  const emailEnabled = settings.globalEnabled &&
-    settings.emailEnabled &&
-    settings.emailFrequency !== 'disabled';
+  // 8. Queue email — απόφαση παραθύρου + διεύθυνση + ρητό αποτέλεσμα
+  //
+  // ⚠️ Ήταν δώδεκα γραμμές εδώ με **τέσσερα** ανεξάρτητα σιωπηλά σπασίματα (το
+  // `to` ήταν userId· το αποτέλεσμα πεταγόταν· κανείς δεν άδειαζε την ουρά· ο
+  // μόνος υποψήφιος αποστολέας διάβαζε άλλη συλλογή). Ζωντανή μέτρηση 19/08:
+  // **77 ειδοποιήσεις, μηδέν εξερχόμενα email.** Δες `notification-email-leg.ts`.
+  const emailOutcome = await queueNotificationEmail({
+    recipientId,
+    settings,
+    isMandatory: mapping.isMandatory,
+    subject: title,
+    content: body ?? title,
+    dedupeKey,
+    entityId,
+    entityType: entityType as EnqueueMessageParams['entityType'],
+  });
 
-  if (emailEnabled) {
-    const priority = mapping.isMandatory ? MESSAGE_PRIORITIES.URGENT : MESSAGE_PRIORITIES.NORMAL;
-
-    // Use canonical constants from comms domain SSoT (COMMUNICATION_CHANNELS, MESSAGE_CATEGORIES)
-    const emailChannel = COMMUNICATION_CHANNELS.EMAIL;
-    const notificationCategory = MESSAGE_CATEGORIES.NOTIFICATION;
-
-    const emailParams: EnqueueMessageParams = {
-      channels: [emailChannel],
-      to: recipientId,
-      subject: title,
-      content: body ?? title,
-      priority,
-      category: notificationCategory,
-      entityType: entityType as EnqueueMessageParams['entityType'],
-      entityId,
-      idempotencyKey: `email:${dedupeKey}`,
-    };
-
-    await enqueueMessage(emailParams);
+  // Η ειδοποίηση **μέσα στην εφαρμογή** έχει ήδη γραφτεί επιτυχώς· ένα σπασμένο
+  // σκέλος email δεν την ακυρώνει. Καταγράφεται όμως **ονομαστικά**, ώστε η
+  // διαφορά «ο χρήστης το έκλεισε» / «δεν βρήκαμε διεύθυνση» να μη χαθεί ξανά.
+  if (emailOutcome.kind === 'no-address' || emailOutcome.kind === 'enqueue-failed') {
+    logger.warn('Η ειδοποίηση γράφτηκε αλλά το email ΔΕΝ μπήκε στην ουρά', {
+      dedupeKey,
+      data: { outcome: emailOutcome.kind },
+    });
   }
 
   return {
@@ -303,88 +301,94 @@ export async function dispatchNotification(request: DispatchRequest): Promise<Di
 // Re-export types from central registry
 export type { NotificationEventType, NotificationEntityType };
 
-/**
- * Dispatch CRM notification
- */
-export async function dispatchCrmNotification(
-  eventType: NotificationEventType,
-  recipientId: string,
-  tenantId: string,
-  title: string,
-  eventId: string,
-  options?: {
-    body?: string;
-    entityId?: string;
-    entityType?: NotificationEntityType;
-    titleKey?: string;
-    titleParams?: Record<string, string>;
-  }
-): Promise<DispatchResult> {
-  return dispatchNotification({
-    eventType,
-    recipientId,
-    tenantId,
-    title,
-    body: options?.body,
-    source: { service: SOURCE_SERVICES.CRM, env: getCurrentEnvironment() },
-    eventId,
-    entityId: options?.entityId,
-    entityType: options?.entityType ?? NOTIFICATION_ENTITY_TYPES.LEAD,
-    titleKey: options?.titleKey,
-    titleParams: options?.titleParams,
-  });
+/** Τα προαιρετικά ενός βοηθού υπηρεσίας. */
+export interface SourcedDispatchOptions {
+  body?: string;
+  entityId?: string;
+  entityType?: NotificationEntityType;
+  titleKey?: string;
+  titleParams?: Record<string, string>;
 }
 
 /**
- * Dispatch security notification (always sent, mandatory)
+ * 🔑 **Ένα εργοστάσιο, τρεις υπηρεσίες** *(ADR-777 §8.23 · CHECK 3.28)*.
+ *
+ * Οι τρεις βοηθοί ήταν γραμμένοι **τρεις φορές** και διέφεραν σε **δύο** πράγματα:
+ * ποια υπηρεσία υπογράφει, και ποιο είναι το προεπιλεγμένο `entityType`. Ο κλώνος
+ * ήταν **προϋπάρχων** — φάνηκε μόλις το αρχείο ξαναγράφτηκε για το σκέλος email.
+ *
+ * ⚠️ **Οι υπογραφές των τριών ΔΕΝ αλλάζουν** — είναι δημόσιο API με ζωντανούς
+ * καταναλωτές. Το εργοστάσιο παράγει **ακριβώς** την ίδια συνάρτηση· ο περιορισμός
+ * ζει στον **τύπο** της κάθε σταθεράς, όχι σε `if` μέσα στο σώμα.
+ *
+ * ⚠️ **Τρεις καταναλωτές, όχι μηδέν**: ένα εργοστάσιο που δεν καλεί κανείς είναι ο
+ * αδρανής φρουρός του ADR-749 §5. Εδώ παράγει και τους τρεις εξαγόμενους βοηθούς.
  */
-export async function dispatchSecurityNotification(
+function makeSourcedDispatcher(
+  service: SourceService,
+  defaultEntityType?: NotificationEntityType,
+): (
   eventType: NotificationEventType,
   recipientId: string,
   tenantId: string,
   title: string,
   eventId: string,
-  options?: { body?: string }
-): Promise<DispatchResult> {
-  return dispatchNotification({
-    eventType,
-    recipientId,
-    tenantId,
-    title,
-    body: options?.body,
-    source: { service: SOURCE_SERVICES.SECURITY, env: getCurrentEnvironment() },
-    eventId,
-  });
+  options?: SourcedDispatchOptions,
+) => Promise<DispatchResult> {
+  return (eventType, recipientId, tenantId, title, eventId, options) =>
+    dispatchNotification({
+      eventType,
+      recipientId,
+      tenantId,
+      title,
+      body: options?.body,
+      source: { service, env: getCurrentEnvironment() },
+      eventId,
+      entityId: options?.entityId,
+      entityType: options?.entityType ?? defaultEntityType,
+      titleKey: options?.titleKey,
+      titleParams: options?.titleParams,
+    });
 }
+
+/**
+ * Dispatch CRM notification
+ */
+export const dispatchCrmNotification: (
+  eventType: NotificationEventType,
+  recipientId: string,
+  tenantId: string,
+  title: string,
+  eventId: string,
+  options?: SourcedDispatchOptions,
+) => Promise<DispatchResult> = makeSourcedDispatcher(
+  SOURCE_SERVICES.CRM,
+  NOTIFICATION_ENTITY_TYPES.LEAD,
+);
+
+/**
+ * Dispatch security notification (always sent, mandatory).
+ *
+ * ⚠️ Η **στενή** υπογραφή είναι σκόπιμη και διατηρείται κατά λέξη: μια ειδοποίηση
+ * ασφαλείας δεν κρέμεται από οντότητα τομέα, και ο τύπος το λέει αντί για σχόλιο.
+ */
+export const dispatchSecurityNotification: (
+  eventType: NotificationEventType,
+  recipientId: string,
+  tenantId: string,
+  title: string,
+  eventId: string,
+  options?: { body?: string },
+) => Promise<DispatchResult> = makeSourcedDispatcher(SOURCE_SERVICES.SECURITY);
 
 /**
  * Dispatch procurement notification (ADR-327 Phase 3 — vendor portal events).
  */
-export async function dispatchProcurementNotification(
+export const dispatchProcurementNotification: (
   eventType: NotificationEventType,
   recipientId: string,
   tenantId: string,
   title: string,
   eventId: string,
-  options?: {
-    body?: string;
-    entityId?: string;
-    entityType?: NotificationEntityType;
-    titleKey?: string;
-    titleParams?: Record<string, string>;
-  },
-): Promise<DispatchResult> {
-  return dispatchNotification({
-    eventType,
-    recipientId,
-    tenantId,
-    title,
-    body: options?.body,
-    source: { service: SOURCE_SERVICES.PROCUREMENT, env: getCurrentEnvironment() },
-    eventId,
-    entityId: options?.entityId,
-    entityType: options?.entityType,
-    titleKey: options?.titleKey,
-    titleParams: options?.titleParams,
-  });
-}
+  options?: SourcedDispatchOptions,
+) => Promise<DispatchResult> = makeSourcedDispatcher(SOURCE_SERVICES.PROCUREMENT);

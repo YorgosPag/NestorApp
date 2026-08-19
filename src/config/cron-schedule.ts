@@ -45,6 +45,8 @@
 
 import { runAiLearning } from '@/lib/cron/jobs/ai-learning.job';
 import { runBackup } from '@/lib/cron/jobs/backup.job';
+import { runDemandInterestAnnounce } from '@/lib/cron/jobs/demand-interest-announce.job';
+import { runOutboundEmailFlush } from '@/lib/cron/jobs/outbound-email-flush.job';
 import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
@@ -68,13 +70,26 @@ export const CRON_TIMEZONE = 'Europe/Athens';
  * job δεν στέλνει check-in — και όλα τα ημερήσια monitors θα χτυπήσουν με καθυστέρηση
  * έως 24 ωρών. Ο heartbeat χτυπά ωριαία και κόβει τον χρόνο ανίχνευσης σε ~1 ώρα.
  *
- * Ωριαίος και όχι λεπτού: το Sentry περιορίζει τα check-ins σε 6/λεπτό ανά monitor, και
- * 1.440 check-ins/ημέρα είναι θόρυβος χωρίς αντίκρισμα.
+ * Ανά **5 λεπτά** και όχι λεπτού: το Sentry περιορίζει τα check-ins σε 6/λεπτό ανά
+ * monitor, και 1.440 check-ins/ημέρα είναι θόρυβος χωρίς αντίκρισμα. Τα 288/ημέρα δεν
+ * είναι.
+ *
+ * ⚠️ **Ήταν ωριαίος μέχρι το ADR-777 §8.23, και έπαψε να είναι επειδή το επέβαλε
+ * άγκυρα.** Ο κανόνας «ο παλμός χτυπά **συχνότερα** από την πιο συχνή εργασία»
+ * (`cron-schedule.test.ts`) δεν είναι αισθητικός: αν ο παλμός χτυπά όσο αραιά όσο η
+ * εργασία, το «πέθανε το ρολόι» θα το μαθαίναμε **από την ίδια την εργασία** — δηλαδή ο
+ * παλμός δεν θα πρόσφερε τίποτα. Το §8.23 πρόσθεσε **ωριαία** εργασία
+ * (`demand-interest-announce`) και **δεκάλεπτη** (`outbound-email-flush`).
+ *
+ * Η διόρθωση **πύκνωσε τον παλμό αντί να αραιώσει τις εργασίες**, σκόπιμα: το να
+ * χαλάρωνε η άγκυρα θα άφηνε το ρολόι χωρίς ανιχνευτή, και το να αραίωναν οι εργασίες
+ * θα πλήρωνε την ανιχνευσιμότητα με **φρεσκάδα αγοράς**. Παράπλευρο κέρδος: ο χρόνος
+ * ανίχνευσης νεκρού ρολογιού έπεσε από ~60′ σε ~5′.
  */
 export const CRON_HEARTBEAT_SLUG = 'cron-dispatcher-heartbeat';
 
 /** Το cron του heartbeat — πρέπει να ταιριάζει με τη συχνότητα check-in του dispatcher. */
-export const CRON_HEARTBEAT_SCHEDULE = '0 * * * *';
+export const CRON_HEARTBEAT_SCHEDULE = '*/5 * * * *';
 
 /**
  * Το πρόγραμμα.
@@ -184,6 +199,60 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 15,
     leaseMinutes: 20,
     run: runOnboardingReminder,
+  },
+  {
+    slug: 'demand-interest-announce',
+    path: '/api/cron/demand-interest-announce',
+    description: 'Ειδοποίηση ιδιοκτητών: «πόσοι ψάχνουν ακίνητο σαν το δικό σας» (ADR-777 §8.23)',
+    enabled: true,
+    // 🔑 **Ωριαία, και είναι η ΜΟΝΗ εγγραφή που δεν τρέχει μία φορά τη μέρα.**
+    //
+    // Οι υπόλοιπες εργασίες είναι *συντήρηση* (αντίγραφα, εκκαθαρίσεις): η καθυστέρηση
+    // κοστίζει χώρο. Αυτή είναι *αγορά*: η καθυστέρηση κοστίζει **τη συμφωνία** — ο
+    // αγοραστής που έψαξε το πρωί μπορεί να έχει κλείσει αλλού ως το βράδυ.
+    //
+    // ⚠️ Ωριαία **δεν** σημαίνει ωριαία email. Ο ρυθμός εδώ είναι το **ανώτατο όριο
+    // φρεσκάδας**· τι φτάνει στον άνθρωπο το κρίνουν οι ζώνες (`demand-announcement.ts`)
+    // και οι **δικές του** ρυθμίσεις στον orchestrator. Ένα ακίνητο που το ψάχνουν 20
+    // άνθρωποι μέσα στη μέρα παράγει **τρεις** ειδήσεις (ζώνες 1·3·8·20), όχι 20 — και
+    // αν ο ιδιοκτήτης έχει διαλέξει ημερήσια σύνοψη, **ένα** email.
+    //
+    // Στο λεπτό 15 και όχι στο 0: η κορυφή της ώρας ανήκει στο heartbeat του dispatcher.
+    schedule: '15 * * * *',
+    timezone: CRON_TIMEZONE,
+    // Στενότερα όρια από τα ημερήσια jobs: 24 φορές τη μέρα, ένα κολλημένο πέρασμα
+    // πρέπει να ακουστεί μέσα σε ώρα, όχι μέσα σε μέρα.
+    checkinMarginMinutes: 10,
+    maxRuntimeMinutes: 5,
+    leaseMinutes: 10,
+    run: runDemandInterestAnnounce,
+  },
+  {
+    slug: 'outbound-email-flush',
+    path: '/api/cron/outbound-email-flush',
+    description: 'Παράδοση εξερχόμενων email από την ουρά μηνυμάτων (ADR-777 §8.23)',
+    enabled: true,
+    // 🔴 **Η πιο συχνή εγγραφή του προγράμματος, και ο λόγος είναι μετρημένος**:
+    // μέχρι σήμερα την ουρά εξερχομένων **δεν την άδειαζε κανείς** — 77 ειδοποιήσεις
+    // στη βάση, μηδέν απεσταλμένα email. Κάθε πέντε λεπτά είναι ο συμβιβασμός
+    // ανάμεσα στο «το επείγον φεύγει σχεδόν αμέσως» και στο «δεν χτυπάμε τη
+    // Firestore 1.440 φορές τη μέρα για μια άδεια ουρά».
+    //
+    // ⚠️ Δεν είναι αυτό που ορίζει πόσο γρήγορα ενοχλείται ο άνθρωπος: αυτό το
+    // ορίζει το `scheduledAt` κάθε μηνύματος, δηλαδή οι **δικές του** ρυθμίσεις
+    // (`email-delivery-window.ts`). Ο αγωγός απλώς δεν αργεί.
+    //
+    // ⚠️ **Δέκα και όχι πέντε λεπτά**, επειδή το επιβάλλει άγκυρα: ο παλμός
+    // οφείλει να χτυπά **συχνότερα** από κάθε εργασία, και ένας παλμός κάθε
+    // λεπτό είναι 1.440 check-ins/ημέρα — θόρυβος που το ίδιο το ADR-740
+    // απέρριψε γραπτώς. Η συνολική καθυστέρηση παραμένει κυριαρχούμενη από τον
+    // **ωριαίο** σαρωτή ζήτησης, όχι από εδώ.
+    schedule: '*/10 * * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 5,
+    maxRuntimeMinutes: 3,
+    leaseMinutes: 5,
+    run: runOutboundEmailFlush,
   },
 
   // ─── Δηλωμένα αλλά ανενεργά ────────────────────────────────────────────────

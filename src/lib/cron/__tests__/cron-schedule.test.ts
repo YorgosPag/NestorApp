@@ -18,6 +18,12 @@ import { Cron } from 'croner';
 
 jest.mock('@/lib/cron/jobs/ai-learning.job', () => ({ runAiLearning: jest.fn() }));
 jest.mock('@/lib/cron/jobs/backup.job', () => ({ runBackup: jest.fn() }));
+jest.mock('@/lib/cron/jobs/demand-interest-announce.job', () => ({
+  runDemandInterestAnnounce: jest.fn(),
+}));
+jest.mock('@/lib/cron/jobs/outbound-email-flush.job', () => ({
+  runOutboundEmailFlush: jest.fn(),
+}));
 jest.mock('@/lib/cron/jobs/email-ingestion.job', () => ({ runEmailIngestion: jest.fn() }));
 jest.mock('@/lib/cron/jobs/file-purge.job', () => ({ runFilePurge: jest.fn() }));
 jest.mock('@/lib/cron/jobs/oauth-cleanup.job', () => ({ runOAuthCleanup: jest.fn() }));
