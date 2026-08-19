@@ -22,10 +22,14 @@
 import { execFileSync } from 'node:child_process';
 
 const announceInterestToOwners = jest.fn();
+const announceInterestToCompanyStaff = jest.fn();
 const getAdminFirestore = jest.fn(() => ({ __brand: 'admin-db' }));
 
 jest.mock('@/services/demand/interest-notifier.service', () => ({
   announceInterestToOwners: (...args: unknown[]) => announceInterestToOwners(...args),
+}));
+jest.mock('@/services/demand/company-interest-notifier.service', () => ({
+  announceInterestToCompanyStaff: (...args: unknown[]) => announceInterestToCompanyStaff(...args),
 }));
 jest.mock('@/lib/firebaseAdmin', () => ({
   getAdminFirestore: () => getAdminFirestore(),
@@ -55,6 +59,8 @@ import { runDemandInterestAnnounce } from '@/lib/cron/jobs/demand-interest-annou
 import { isEnabledCronJob } from '@/types/cron-schedule';
 // eslint-disable-next-line import/first
 import type { AnnouncementReport } from '@/services/demand/interest-notifier.service';
+// eslint-disable-next-line import/first
+import type { CompanyAnnouncementReport } from '@/services/demand/company-interest-notifier.service';
 
 const SLUG = 'demand-interest-announce';
 
@@ -115,9 +121,26 @@ function report(overrides: Partial<AnnouncementReport> = {}): AnnouncementReport
   };
 }
 
+function companyReport(
+  overrides: Partial<CompanyAnnouncementReport> = {},
+): CompanyAnnouncementReport {
+  return {
+    announced: 0,
+    alreadyKnown: 0,
+    noNews: 0,
+    optedOut: 0,
+    unsigned: 0,
+    considered: 0,
+    truncated: false,
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   getAdminFirestore.mockReturnValue({ __brand: 'admin-db' });
+  announceInterestToOwners.mockResolvedValue(report());
+  announceInterestToCompanyStaff.mockResolvedValue(companyReport());
 });
 
 // =============================================================================
@@ -192,21 +215,28 @@ describe('Κ — η σκανδάλη είναι δεμένη, και η απόδ
 // =============================================================================
 
 describe('Λ — τα metrics δεν κρύβουν κάδο', () => {
-  it('Λ1 🔴 — και οι έξι κάδοι υπάρχουν όταν ΟΛΑ είναι μηδέν', async () => {
+  it('Λ1 🔴 — ΟΛΟΙ οι κάδοι υπάρχουν όταν ΟΛΑ είναι μηδέν', async () => {
     // ⚠️ Αυτό είναι η Π2 στη γραμμή του log: ένα `announced` που **λείπει** διαβάζεται
     // ως «δεν στάλθηκε τίποτα», αλλά διαβάζεται **εξίσου** ως «δεν μέτρησε κανείς».
-    announceInterestToOwners.mockResolvedValue(report());
+    //
+    // ⚠️ **Κλειστό σύνολο, όχι «περιέχει».** Ένας κάδος που προστίθεται χωρίς να
+    // περάσει από εδώ θα εμφανιζόταν στα logs χωρίς κανείς να έχει αποφασίσει τι
+    // σημαίνει — και ένας που αφαιρείται θα εξαφανιζόταν σιωπηλά.
     const result = await runDemandInterestAnnounce();
 
     expect(Object.keys(result.metrics ?? {}).sort()).toEqual([
       'alreadyKnown',
       'announced',
+      'companyConsidered',
       'considered',
       'noNews',
       'optedOut',
+      'ownerConsidered',
       'truncated',
+      'unsigned',
     ]);
     expect(result.metrics?.announced).toBe(0);
+    expect(result.metrics?.unsigned).toBe(0);
   });
 
   it('Λ2 — το `truncated` ταξιδεύει ως αριθμός, γιατί το συμβόλαιο είναι αριθμητικό', async () => {
@@ -229,6 +259,49 @@ describe('Λ — τα metrics δεν κρύβουν κάδο', () => {
     expect(result.summary).toContain('already-known 2');
     expect(result.summary).toContain('no-news 3');
     expect(result.summary).toContain('opted-out 4');
+  });
+
+  it('Λ5 🔴 — ΚΑΙ ΤΑ ΔΥΟ μονοπάτια τρέχουν σε κάθε πέρασμα', async () => {
+    // ⚠️ Πριν την απόφαση του Giorgio (2026-08-19) ειδοποιούνταν **μόνο** οι
+    // ιδιώτες· τα γραφεία έβλεπαν αριθμό μόνο αν άνοιγαν την εφαρμογή. Ένα πέρασμα
+    // που ξυπνά το ένα μονοπάτι και όχι το άλλο είναι το ακριβές σχήμα του §8.22.
+    await runDemandInterestAnnounce();
+
+    expect(announceInterestToOwners).toHaveBeenCalledTimes(1);
+    expect(announceInterestToCompanyStaff).toHaveBeenCalledTimes(1);
+    expect(announceInterestToCompanyStaff).toHaveBeenCalledWith({ __brand: 'admin-db' });
+  });
+
+  it('Λ6 — τα δύο μονοπάτια ΑΘΡΟΙΖΟΝΤΑΙ, και μετριούνται ΚΑΙ χωριστά', async () => {
+    // Ένα συνολικό «0 announced» δεν λέει **ποιο** από τα δύο σιώπησε — και τα δύο
+    // έχουν δικούς τους τρόπους να σπάσουν.
+    announceInterestToOwners.mockResolvedValue(report({ announced: 2, considered: 5 }));
+    announceInterestToCompanyStaff.mockResolvedValue(
+      companyReport({ announced: 3, considered: 8 }),
+    );
+
+    const result = await runDemandInterestAnnounce();
+
+    expect(result.metrics?.announced).toBe(5);
+    expect(result.metrics?.considered).toBe(13);
+    expect(result.metrics?.ownerConsidered).toBe(5);
+    expect(result.metrics?.companyConsidered).toBe(8);
+  });
+
+  it('Λ7 🔴 — το «χωρίς υπογραφή» ΔΕΝ κρύβεται μέσα στο «καμία είδηση»', async () => {
+    // 🔑 Οι δύο διαβάζονται εντελώς διαφορετικά: «καμία είδηση» σημαίνει *κοίταξα και
+    // δεν υπάρχει κάτι να πω*· «χωρίς υπογραφή» σημαίνει *υπάρχει κάτι να πω και ΔΕΝ
+    // ξέρω σε ποιον*. Αν αθροίζονταν, μια σιωπηλά χαμένη ειδοποίηση θα φαινόταν
+    // φυσιολογική.
+    announceInterestToCompanyStaff.mockResolvedValue(
+      companyReport({ noNews: 4, unsigned: 3, considered: 7 }),
+    );
+
+    const result = await runDemandInterestAnnounce();
+
+    expect(result.metrics?.unsigned).toBe(3);
+    expect(result.metrics?.noNews).toBe(4);
+    expect(result.summary).toContain('unsigned 3');
   });
 
   it('Λ4 🔴 — η αποτυχία ΔΕΝ καταπίνεται', async () => {

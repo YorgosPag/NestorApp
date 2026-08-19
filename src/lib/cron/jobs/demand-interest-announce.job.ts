@@ -67,6 +67,10 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import {
+  announceInterestToCompanyStaff,
+  type CompanyAnnouncementReport,
+} from '@/services/demand/company-interest-notifier.service';
+import {
   announceInterestToOwners,
   type AnnouncementReport,
 } from '@/services/demand/interest-notifier.service';
@@ -84,14 +88,26 @@ import type { CronJobResult } from '@/types/cron-schedule';
  * `metrics` είναι `Record<string, number>` — και ένα σιωπηλά παραλειπόμενο πεδίο
  * θα έκρυβε ακριβώς την περίπτωση όπου **ιδιοκτήτες δεν εξετάστηκαν ποτέ**.
  */
-function announcementMetrics(report: AnnouncementReport): Record<string, number> {
+function announcementMetrics(
+  owners: AnnouncementReport,
+  company: CompanyAnnouncementReport,
+): Record<string, number> {
   return {
-    announced: report.announced,
-    alreadyKnown: report.alreadyKnown,
-    noNews: report.noNews,
-    optedOut: report.optedOut,
-    considered: report.considered,
-    truncated: report.truncated ? 1 : 0,
+    announced: owners.announced + company.announced,
+    alreadyKnown: owners.alreadyKnown + company.alreadyKnown,
+    noNews: owners.noNews + company.noNews,
+    optedOut: owners.optedOut + company.optedOut,
+    considered: owners.considered + company.considered,
+    truncated: owners.truncated || company.truncated ? 1 : 0,
+    // 🔴 **Χωριστά, ΠΟΤΕ αθροισμένα με το `noNews`.** Ένα ακίνητο γραφείου χωρίς
+    // υπογραφή δεν είναι «καμία είδηση» — είναι «δεν ξέρουμε ποιον να ειδοποιήσουμε»,
+    // δηλαδή **σιωπηλά χαμένη** ειδοποίηση. Οι δύο διαβάζονται εντελώς διαφορετικά.
+    unsigned: company.unsigned,
+    // Οι δύο σαρωτές μετριούνται και χωριστά: ένα «0 announced» συνολικά δεν λέει
+    // ποιο από τα δύο μονοπάτια σιώπησε — και τα δύο έχουν δικούς τους τρόπους να
+    // σπάσουν.
+    ownerConsidered: owners.considered,
+    companyConsidered: company.considered,
   };
 }
 
@@ -104,13 +120,24 @@ function announcementMetrics(report: AnnouncementReport): Record<string, number>
  * πετά **επίτηδες** όταν δεν κλείνει η λογιστική του, ακριβώς για να ακουστεί.
  */
 export async function runDemandInterestAnnounce(): Promise<CronJobResult> {
-  const report = await announceInterestToOwners(getAdminFirestore());
+  const db = getAdminFirestore();
+
+  // ⚠️ **Σειριακά, και τα δύο σε ΚΑΘΕ πέρασμα.** Ο ιδιώτης και το γραφείο είναι
+  // δύο διαφορετικά μονοπάτια κατοχής με διαφορετικό παραλήπτη — αλλά **ίδια**
+  // ζήτηση και **ίδια** μηχανή. Ένα πέρασμα που έτρεχε μόνο το ένα θα ήταν το
+  // ακριβές σχήμα του §8.22: μηχανισμός γραμμένος, που δεν τον ξυπνά κανείς.
+  const owners = await announceInterestToOwners(db);
+  const company = await announceInterestToCompanyStaff(db);
+
+  const metrics = announcementMetrics(owners, company);
 
   return {
     summary:
-      `announced ${report.announced}, already-known ${report.alreadyKnown}, ` +
-      `no-news ${report.noNews}, opted-out ${report.optedOut} ` +
-      `(considered ${report.considered}${report.truncated ? ', TRUNCATED' : ''})`,
-    metrics: announcementMetrics(report),
+      `announced ${metrics.announced}, already-known ${metrics.alreadyKnown}, ` +
+      `no-news ${metrics.noNews}, opted-out ${metrics.optedOut}, ` +
+      `unsigned ${metrics.unsigned} ` +
+      `(considered ${metrics.considered} = ${owners.considered} ιδιωτών + ` +
+      `${company.considered} γραφείου${metrics.truncated === 1 ? ', TRUNCATED' : ''})`,
+    metrics,
   };
 }

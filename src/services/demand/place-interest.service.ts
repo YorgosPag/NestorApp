@@ -161,12 +161,36 @@ async function readCompanyProperty(
   // επέβαλλε για λογαριασμό μας (CHECK 3.35 κρίνει ερωτήματα, όχι αναγνώσεις εγγράφου).
   if (property === undefined || property.companyId !== companyId) return null;
 
-  const at = nowISO();
-  return toFacts(
-    { ...property, id: propertyId },
-    await collectPlaceKnowledge(db, property, at),
-    at,
-  );
+  return companyPropertyFactsOf(db, { ...property, id: propertyId }, nowISO());
+}
+
+/**
+ * **Ακίνητο γραφείου → τα γεγονότα που κρίνει η μηχανή.**
+ *
+ * Το αδελφό του {@link ownerPropertyFactsOf}, και εξάγεται για **τον ίδιο ακριβώς
+ * λόγο**: ο ειδοποιητής της εταιρείας σαρώνει πολλά ακίνητα, και η μετάφραση προς
+ * τα γεγονότα οφείλει να είναι **η ίδια** με του πάνελ. Δύο μεταφράσεις θα
+ * μπορούσαν να δείξουν **διαφορετικό αριθμό για το ίδιο ακίνητο** — η χειρότερη
+ * δυνατή απόκλιση, γιατί και οι δύο θα φαίνονταν σωστοί.
+ *
+ * ⚠️ **Ασύγχρονο, σε αντίθεση με το `ownerPropertyFactsOf`, και δεν είναι
+ * ασυνέπεια**: ο ιδιώτης **δηλώνει** ο ίδιος τον τόπο (η δήλωσή του *είναι* η
+ * γνώση), ενώ το ακίνητο του γραφείου τον κληρονομεί ανεβαίνοντας την αλυσίδα
+ * κτίριο → έργο. Άρα εδώ υπάρχει **πραγματική** ανάγνωση, και το κόστος της είναι
+ * ο λόγος που ο σαρωτής έχει όριο.
+ *
+ * ⚠️ **Η στιγμή περνιέται ως όρισμα** ώστε ένα πέρασμα πάνω σε N ακίνητα να
+ * κρίνεται με **μία** ανάγνωση ρολογιού.
+ */
+export async function companyPropertyFactsOf(
+  db: AdminFirestore,
+  property: ProjectableProperty & {
+    buildingId?: string | null;
+    projectId?: string | null;
+  },
+  at: string,
+): Promise<ListingMatchFacts> {
+  return toFacts(property, await collectPlaceKnowledge(db, property, at), at);
 }
 
 /**

@@ -24,19 +24,20 @@
  * συνέπεια: απόκλιση ⇒ διπλό email ή **κανένα**.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * 🔶 **ΔΗΛΩΜΕΝΟ ΟΡΙΟ: ΕΙΔΟΠΟΙΟΥΝΤΑΙ ΟΙ ΙΔΙΩΤΕΣ. ΤΑ ΓΡΑΦΕΙΑ ΒΛΕΠΟΥΝ ΤΟ ΠΑΝΕΛ.**
+ * ✅ **ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ ΕΙΔΟΠΟΙΕΙ ΤΟΥΣ ΙΔΙΩΤΕΣ. ΤΑ ΓΡΑΦΕΙΑ ΕΧΟΥΝ ΔΙΚΟ ΤΟΥΣ.**
  * ────────────────────────────────────────────────────────────────────────────
  *
- * Το `owner_properties` έχει **έναν, μονοσήμαντο** παραλήπτη (`ownerUserId`). Το
- * `properties` ανήκει σε **εταιρεία**, και ο παραλήπτης μιας ειδοποίησης πρέπει να
- * είναι **άνθρωπος**: ποιος από τους δέκα υπαλλήλους; Ο δημιουργός; Ο υπεύθυνος;
- * Όλοι;
+ * Το `owner_properties` έχει **έναν, μονοσήμαντο** παραλήπτη (`ownerUserId`), οπότε
+ * εδώ δεν υπάρχει ερώτημα «σε ποιον;». Το `properties` ανήκει σε **εταιρεία** και το
+ * ερώτημα εκεί ήταν πραγματικό — **απαντήθηκε από τον Giorgio (2026-08-19): αυτός που
+ * καταχώρησε το ακίνητο** (ADR-777 §8.23).
  *
- * ⚠️ **Δεν επινοήθηκε απάντηση.** Είναι **απόφαση τομέα** — και μια αυθαίρετη επιλογή
- * εδώ θα ήταν χειρότερη από την απουσία: θα έστελνε ειδοποιήσεις σε λάθος άνθρωπο και
- * θα **φαινόταν** ότι το χαρακτηριστικό δουλεύει. Η διαδρομή `/api/demand/interest`
- * απαντά **και για τα δύο** μονοπάτια (το πάνελ δουλεύει παντού)· μόνο η **ώθηση**
- * περιμένει την απόφαση. Δες ADR-777 §8.22 (ανοιχτό #1).
+ * 🔑 **Το δεύτερο μονοπάτι ζει σε ΞΕΧΩΡΙΣΤΟ αρχείο**
+ * ({@link ../company-interest-notifier.service}) και **όχι** ως δεύτερος κλάδος εδώ:
+ * διαφέρει σε **πώς** χτίζονται τα γεγονότα (ασύγχρονη αλυσίδα κτίριο → έργο) και σε
+ * **ποιον** ειδοποιεί. Ό,τι είναι κοινό — η κρίση, η ζώνη, η αποστολή, η λογιστική —
+ * ζει σε **ένα** σημείο (`announcement-pass.ts`), και το CHECK 3.28 το επέβαλε
+ * **δύο φορές** μέσα στην ίδια δουλειά.
  *
  * **Layering**: service — Admin SDK + orchestrator. Η **κρίση** ζει στο `lib/demand/`.
  */
@@ -48,12 +49,15 @@ import { nowISO, todayLocalDate } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
 import { NOTIFICATION_EVENT_TYPES, SOURCE_SERVICES, getCurrentEnvironment } from '@/config/notification-events';
 import { dispatchNotification } from '@/server/notifications/notification-orchestrator';
-import { discloseInterest } from '@/lib/demand/demand-interest';
 import {
-  announcementBand,
   announcementEventId,
   type AnnouncementBand,
 } from '@/lib/demand/demand-announcement';
+import {
+  announceIfNewsworthy,
+  createAnnouncementTally,
+  type AnnouncementCounters,
+} from '@/services/demand/announcement-pass';
 import { readLiveDemands } from '@/services/demand/live-demands.reader';
 import { ownerPropertyFactsOf } from './place-interest.service';
 import type { OwnerProperty } from '@/types/owner-property';
@@ -72,20 +76,7 @@ const logger = createModuleLogger('demand/interest-notifier');
 export const MAX_ANNOUNCE_PROPERTIES = 500;
 
 /** Τι έκανε το πέρασμα. **Κλειστή λογιστική** — κάθε ακίνητο σε έναν κάδο. */
-export interface AnnouncementReport {
-  /** Στάλθηκε **νέα** είδηση (πέρασε ζώνη που δεν του είχαμε πει). */
-  readonly announced: number;
-  /** Είχε ζώνη, **του το είχαμε ήδη πει** — το `dedupeKey` το σταμάτησε. */
-  readonly alreadyKnown: number;
-  /** Δεν υπάρχει είδηση (κάτω από την πρώτη ζώνη ή λογοκριμένο). */
-  readonly noNews: number;
-  /** Ο χρήστης έχει κλείσει αυτή την ειδοποίηση — **σεβαστό, και μετρημένο**. */
-  readonly optedOut: number;
-  /** Πόσα ακίνητα εξετάστηκαν. */
-  readonly considered: number;
-  /** `true` όταν αγγίχθηκε το {@link MAX_ANNOUNCE_PROPERTIES}. */
-  readonly truncated: boolean;
-}
+export type AnnouncementReport = AnnouncementCounters;
 
 /** Κλείνει το άθροισμα; Υπάρχει **για να αποτύχει θορυβωδώς**. */
 export function announcementReportBalances(report: AnnouncementReport): boolean {
@@ -148,39 +139,52 @@ async function tallyAnnouncements(
 ): Promise<AnnouncementReport> {
   const nowIso = nowISO();
   const todayDate = todayLocalDate();
-  let announced = 0;
-  let alreadyKnown = 0;
-  let noNews = 0;
-  let optedOut = 0;
+  const tally = createAnnouncementTally();
+
+  const moment = { nowIso, todayDate };
 
   for (const property of properties) {
-    const facts = ownerPropertyFactsOf(property, nowIso);
-    const { interest } = discloseInterest(facts, demands, nowIso, todayDate);
-    const band = announcementBand(interest.disclosure.count);
-
-    if (band === null) {
-      noNews += 1;
-      continue;
-    }
-
-    const outcome = await announceOne(property, band, interest.disclosure.count ?? 0);
-    if (outcome === 'announced') announced += 1;
-    else if (outcome === 'already-known') alreadyKnown += 1;
-    else optedOut += 1;
+    await announceIfNewsworthy(
+      tally,
+      {
+        propertyId: property.id,
+        propertyTitle: property.title,
+        recipientId: property.ownerUserId,
+        // Ο ιδιώτης **δεν έχει εταιρεία** — το επίπεδο απομόνωσής του είναι ο
+        // εαυτός του (`tenant-config.ts`, `mode: 'userId'`).
+        tenantId: property.ownerUserId,
+        facts: ownerPropertyFactsOf(property, nowIso),
+      },
+      demands,
+      moment,
+    );
   }
 
-  return {
-    announced,
-    alreadyKnown,
-    noNews,
-    optedOut,
-    considered: properties.length,
-    truncated: properties.length === MAX_ANNOUNCE_PROPERTIES,
-  };
+  return tally.snapshot(properties.length, MAX_ANNOUNCE_PROPERTIES);
 }
 
 /** Τι απέγινε **ένα** ακίνητο. Ονομασμένο, ποτέ boolean. */
-type AnnounceOutcome = 'announced' | 'already-known' | 'opted-out';
+export type AnnounceOutcome = 'announced' | 'already-known' | 'opted-out';
+
+/**
+ * Ό,τι χρειάζεται μια **μεμονωμένη** ανακοίνωση, ανεξάρτητα από το ποιος κατέχει.
+ *
+ * 🔑 **Εξάγεται ώστε ο ειδοποιητής της ΕΤΑΙΡΕΙΑΣ να μην ξαναγράψει την αποστολή.**
+ * Οι δύο σαρωτές διαφέρουν σε **ποιον** ειδοποιούν (πεδίο `ownerUserId` έναντι
+ * `createdBy`) και σε **πώς** χτίζουν τα γεγονότα (δήλωση έναντι αλυσίδας) — αλλά
+ * το «τι στέλνεται» οφείλει να είναι **ένα**. Δύο αποστολείς θα απέκλιναν στον
+ * τίτλο, στο κλειδί ή στη ζώνη, και η απόκλιση θα φαινόταν ως **διαφορετικό email
+ * για ίδιο γεγονός** — με τους δύο να μοιάζουν σωστοί (N.18 / ADR-749).
+ */
+export interface PlaceAnnouncement {
+  readonly propertyId: string;
+  /** Ο τίτλος όπως τον ξέρει ο άνθρωπος. Κενό όταν το ακίνητο δεν έχει όνομα. */
+  readonly propertyTitle: string;
+  readonly recipientId: string;
+  readonly tenantId: string;
+  readonly band: AnnouncementBand;
+  readonly count: number;
+}
 
 /**
  * Το θέμα του email — **μία** διατύπωση, σε **μία** θέση.
@@ -201,17 +205,17 @@ const EMAIL_SUBJECT = (count: number): string =>
  * αλλάξει γλώσσα (N.11). Το `title` δίνεται ως **εφεδρεία** γιατί το ίδιο πεδίο
  * γίνεται και **θέμα του email**.
  */
-async function announceOne(
-  property: OwnerProperty,
-  band: AnnouncementBand,
-  count: number,
+export async function announceOnePlace(
+  announcement: PlaceAnnouncement,
 ): Promise<AnnounceOutcome> {
+  const { propertyId, propertyTitle, recipientId, tenantId, band, count } = announcement;
+
   const result = await dispatchNotification({
     eventType: NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST,
-    recipientId: property.ownerUserId,
-    // Ο ιδιώτης **δεν έχει εταιρεία** — το επίπεδο απομόνωσής του είναι ο εαυτός του
-    // (`tenant-config.ts`, `mode: 'userId'`). Ο μισθωτής της ειδοποίησης είναι ο ίδιος.
-    tenantId: property.ownerUserId,
+    recipientId,
+    // Ο **μισθωτής** διαφέρει ανά μονοπάτι: για τον ιδιώτη είναι ο εαυτός του
+    // (`tenant-config.ts`, `mode: 'userId'`)· για το γραφείο, η εταιρεία.
+    tenantId,
     // ⚠️ **Το `titleKey` είναι η αλήθεια· το `title` είναι το ΘΕΜΑ ΤΟΥ EMAIL.** Το
     // έγγραφο ειδοποίησης ζει για πάντα και ο χρήστης μπορεί να αλλάξει γλώσσα, οπότε
     // η οθόνη αποδίδει **το κλειδί** (N.11). Το email όμως συντίθεται στον διακομιστή,
