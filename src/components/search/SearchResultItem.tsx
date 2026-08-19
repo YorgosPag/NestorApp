@@ -132,6 +132,13 @@ export function SearchResultItem({
 }: SearchResultItemProps) {
   const router = useRouter();
   const { t } = useTranslation(COMMON_NAMESPACES);
+  // 🔴 ADR-744 — ΞΕΧΩΡΙΣΤΟ HOOK, ΟΧΙ ΠΡΟΣΘΗΚΗ ΣΤΟ COMMON_NAMESPACES. Οι ετικέτες
+  // κατάστασης ζουν στο `parking` namespace (locales/*/parking.json → `status.*`) και
+  // ΔΕΝ αντιγράφονται εδώ: το namespace-bundles.ts:15-17 απαγορεύει ρητά spread/computed
+  // εγγραφές στα bundles (ο parser του CHECK 3.8 τα διαβάζει ΣΤΑΤΙΚΑ), οπότε η μόνη
+  // εναλλακτική θα ήταν δεύτερη χειρόγραφη λίστα namespaces — ακριβώς το σχήμα που είχε
+  // αποκλίνει κατά 63 στο CHECK 3.34. Πρότυπο: ParkingQuickCreateSheet.tsx:37.
+  const { t: tParking } = useTranslation('parking');
 
   // === Computed Values ===
   const navigationEntityType = SEARCH_TO_NAVIGATION_ENTITY[result.entityType];
@@ -154,8 +161,13 @@ export function SearchResultItem({
         maintenance: 'destructive',
       };
       const variant = statusVariants[result.status] || 'default';
-      // Translate status label
-      const statusLabel = t(`parking.status.${result.status}`, result.status);
+      // 🔴 ΗΤΑΝ `t('parking.status.…')` — ΠΡΟΘΕΜΑ ΚΛΕΙΔΙΟΥ ΑΝΤΙ ΓΙΑ NAMESPACE, άρα δεν
+      // λυνόταν ΠΟΤΕ: τα κλειδιά ζουν στο ns `parking` ως `status.*`, όχι στα common* ως
+      // `parking.status.*` (μετρημένο 2026-08-19: μηδέν locale το έχει με εκείνη τη
+      // διαδρομή). Επειδή το defaultValue είναι το ίδιο το `result.status`, η αστοχία δεν
+      // φαινόταν ως ωμό κλειδί αλλά ως ΑΜΕΤΑΦΡΑΣΤΗ ΤΙΜΗ enum — «available» αντί για
+      // «Διαθέσιμη» — δηλαδή έμοιαζε με σχεδιαστική επιλογή, γι' αυτό επέζησε.
+      const statusLabel = tParking(`status.${result.status}`, result.status);
       badgeList.push({ label: statusLabel, variant });
     }
 
