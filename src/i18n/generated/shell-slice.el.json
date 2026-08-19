@@ -2833,6 +2833,8 @@
       "a11y": {
         "statusRegion": "Κατάσταση κοινοποίησης"
       },
+      "close": "Κλείσιμο",
+      "errorPrefix": "Σφάλμα",
       "submitting": "Αποστολή..."
     },
     "sharing": {
@@ -3696,6 +3698,16 @@
       "email": "user@example.com",
       "name": "Nestor App",
       "title": "Χρήστης"
+    }
+  },
+  "parking": {
+    "status": {
+      "available": "Διαθέσιμη",
+      "maintenance": "Συντήρηση",
+      "occupied": "Κατειλημμένη",
+      "owner": "Ιδιοκτήτης",
+      "reserved": "Κρατημένη",
+      "sold": "Πωλημένη"
     }
   },
   "projects": {

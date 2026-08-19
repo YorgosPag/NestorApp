@@ -561,15 +561,47 @@ describe('Group 12 — the committed slice is sane', () => {
   const slicePath = path.join(REPO, 'src', 'i18n', 'generated', 'shell-slice.el.json');
   const manifestPath = path.join(REPO, 'src', 'i18n', 'generated', 'shell-slice.manifest.json');
 
+  // 🔴 ADR-744 §14.6 — ΑΥΤΟ ΤΟ TEST ΜΕΤΡΟΥΣΕ ΑΛΛΟ ΠΡΑΓΜΑ ΑΠΟ ΑΥΤΟ ΠΟΥ ΔΗΛΩΝΕ.
+  //
+  // Το σχόλιό του έλεγε — σωστά — «this ceiling exists to catch the migration ledger
+  // GROWING», αλλά το κατώφλι ήταν `bytes < 220_000` πάνω στα **ΣΥΝΟΛΙΚΑ** bytes του
+  // αρχείου. Μετρημένο 2026-08-19: το ledger είναι **179.301 bytes (78,3%)** και τα
+  // key-sliced κλειδιά **10.443**. Δηλαδή το κατώφλι κυριαρχούνταν από το ledger αλλά
+  // **κοκκίνιζε από το 10 KB** — και το key-sliced μέρος μεγαλώνει ακριβώς όταν κάποιος
+  // **διορθώνει** ωμό κλειδί. Η πύλη μπλόκαρε τη ΘΕΡΑΠΕΙΑ, το αντι-πρότυπο που τα
+  // CHECK 3.44 και 3.53 απορρίπτουν ρητά.
+  //
+  // Ήταν ήδη ΚΟΚΚΙΝΟ και κανείς δεν το έτρεχε: στο `f400ae45` το slice ήταν **227.512**
+  // bytes έναντι ορίου 220.000 (ίδιο σχήμα με τα 11 tests του ADR-587 §6.1).
+  //
+  // ⚠️ Η διόρθωση ΔΕΝ είναι «ανέβασε το νούμερο» — θα ξαναπάλιωνε στην επόμενη νόμιμη
+  // προσθήκη κλειδιού και το τρίτο νούμερο θα αντιγραφόταν σε handoff όπως το «91
+  // unprotected» του N.12. Μετριέται πλέον το **ledger**, που είναι ΛΙΣΤΑ: μεγαλώνει με
+  // **εγγραφές**, όχι με κλειδιά.
+  it('το migration ledger ΔΕΝ μεγαλώνει — μόνο συρρικνώνεται', () => {
+    const whole = JSON.parse(fs.readFileSync(
+      path.join(REPO, 'src', 'i18n', 'generated', 'shell-slice.whole.json'), 'utf8'));
+    const wholeNs = Array.isArray(whole) ? whole : Object.keys(whole);
+
+    // Ο ΚΥΡΙΟΣ φρουρός: 11η εγγραφή = ένα ακόμη ΟΛΟΚΛΗΡΟ namespace στον σύγχρονο δρόμο.
+    // Το ADR το λέει «should reach zero» — άρα κάθε νόμιμη κίνηση είναι ΠΡΟΣ ΤΑ ΚΑΤΩ.
+    expect(wholeNs.length).toBeLessThanOrEqual(10);
+
+    // Και σε bytes, για την περίπτωση που ένα ΥΠΑΡΧΟΝ whole namespace φουσκώσει.
+    const slice = JSON.parse(fs.readFileSync(slicePath, 'utf8'));
+    const ledgerBytes = wholeNs.reduce(
+      (sum, ns) => sum + (slice[ns] ? Buffer.byteLength(JSON.stringify(slice[ns]), 'utf8') : 0), 0);
+    expect(ledgerBytes).toBeLessThan(185_000);
+  });
+
   it('exists, and is materially smaller than the 295.093 bytes it replaced', () => {
-    // Not "a fraction": the nine namespaces that were synchronous before ADR-744
-    // still ship whole (173.720 of these bytes) because a PAGE paints in the same
-    // frame as the layout on a cold load — see the regression anchor in
-    // src/i18n/__tests__/shell-slice-no-raw-keys.test.ts. This ceiling exists to
-    // catch the migration ledger GROWING; per-route slices are what lower it.
+    // Η αναφορά είναι ΤΟ ΝΟΥΜΕΡΟ ΠΟΥ ΤΟ ΙΔΙΟ ΤΟ TEST ΟΝΟΜΑΖΕΙ — ο σύγχρονος bootstrap
+    // που αντικαταστάθηκε (295.093 bytes, el+en) — όχι ένα αυθαίρετο τρίτο νούμερο.
+    // Ό,τι ΠΡΕΠΕΙ να πέφτει το φυλάει το test από πάνω· εδώ φυλάγεται μόνο ότι το ADR
+    // δεν έχει ακυρωθεί συνολικά.
     const bytes = Buffer.byteLength(fs.readFileSync(slicePath, 'utf8'), 'utf8');
     expect(bytes).toBeGreaterThan(0);
-    expect(bytes).toBeLessThan(220_000);
+    expect(bytes).toBeLessThan(295_093);
   });
 
   it('its manifest signs the bytes on disk', () => {
@@ -587,5 +619,61 @@ describe('Group 12 — the committed slice is sane', () => {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     expect(Object.keys(manifest.shellFiles).length).toBeGreaterThan(100);
     expect(manifest.shellFiles['src/app/layout.tsx']).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+// ─── Group 13: aliased `t` (ADR-744 §14.5) ───────────────────────────────────
+
+describe('Group 13 — ένα aliased `t` ΜΕΤΑΦΡΑΖΕΙ, άρα μετριέται', () => {
+  it('🔴 ΑΓΚΥΡΑ — `const { t: tParking } = useTranslation(…)` συνεισφέρει κλειδιά', () => {
+    const source = `
+      const { t } = useTranslation(COMMON_NAMESPACES);
+      const { t: tParking } = useTranslation('parking');
+      const a = t('search.results');
+      const b = tParking('status.available');
+    `;
+    // Πριν από το ADR-744 §14.5 το `b` ήταν ΑΟΡΑΤΟ: ο έλεγχος ήταν `callee.text === 't'`.
+    expect(keysOf(classify(source))).toEqual(['search.results', 'status.available']);
+  });
+
+  it('το σκέτο `{ t }` εξακολουθεί να μετράει — καμία παλινδρόμηση', () => {
+    expect(keysOf(classify(`const { t } = useTranslation('x'); t('a.b');`))).toEqual(['a.b']);
+  });
+
+  it('`i18n.t(…)` εξακολουθεί να μετράει', () => {
+    expect(keysOf(classify(`i18n.t('a.b');`))).toEqual(['a.b']);
+  });
+
+  it('🔴 ΜΗΔΕΝ ΨΕΥΔΩΣ ΘΕΤΙΚΑ — `t`-πρόθεμα ΧΩΡΙΣ δέσμευση από useTranslation ΔΕΝ μετράει', () => {
+    // Ο generator ΑΡΝΕΙΤΑΙ να παράξει σε ανεπίλυτη κλήση, οπότε ένα ψευδώς θετικό εδώ
+    // δεν είναι θόρυβος — είναι ΦΡΑΓΜΟΣ. Γι' αυτό το κριτήριο είναι η ΔΕΣΜΕΥΣΗ.
+    const noise = `
+      const s = toString('a.b');
+      const r = trim('c.d');
+      const v = tSomething('e.f');
+    `;
+    expect(keysOf(classify(noise))).toEqual([]);
+  });
+
+  it('alias από ΑΛΛΟ hook (όχι useTranslation*) ΔΕΝ μετράει', () => {
+    expect(keysOf(classify(`const { t: tFake } = useSomethingElse('x'); tFake('a.b');`))).toEqual([]);
+  });
+
+  it('`useTranslationLazy` δίνει κι αυτό μεταφραστή', () => {
+    expect(keysOf(classify(`const { t: tLazy } = useTranslationLazy('x'); tLazy('a.b');`))).toEqual(['a.b']);
+  });
+
+  it('collectTranslateAliases περιέχει ΠΑΝΤΑ το `t`, ακόμα και σε κενό αρχείο', () => {
+    const { parseSource, collectTranslateAliases } = require('../lib/i18n-shell-slice/key-extract');
+    expect([...collectTranslateAliases(parseSource('/x/a.tsx', ''))]).toEqual(['t']);
+  });
+
+  it('🔴 ΑΓΚΥΡΑ ΠΡΑΓΜΑΤΙΚΟΥ ΚΩΔΙΚΑ — τα δύο `tShell()` του ShareModal ταξιδεύουν', () => {
+    // Μετρημένο 2026-08-19: το slice είχε `shareSurface.submitting` (μη-aliased κλήση)
+    // αλλά ΟΧΙ τα `close`/`errorPrefix` (aliased) — το ΙΔΙΟ αρχείο, μισό ορατό.
+    const slice = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '..', '..', 'src', 'i18n', 'generated', 'shell-slice.el.json'), 'utf8'));
+    expect(typeof slice['common-shared'].shareSurface.close).toBe('string');
+    expect(typeof slice['common-shared'].shareSurface.errorPrefix).toBe('string');
   });
 });

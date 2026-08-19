@@ -342,13 +342,67 @@ function classifyConstantAccess(arg, ctx, sink) {
   return true;
 }
 
-/** `t(...)` or `i18n.t(...)` — matches what the shared regex considers a call. */
-function isTranslateCall(node) {
-  if (!ts.isCallExpression(node) || node.arguments.length === 0) return false;
-  const callee = node.expression;
-  if (ts.isIdentifier(callee)) return callee.text === 't';
-  return ts.isPropertyAccessExpression(callee) && callee.name.text === 't';
+/**
+ * 🔴 ADR-744 §14.5 — ΤΑ ΟΝΟΜΑΤΑ ΠΟΥ ΜΕΤΑΦΡΑΖΟΥΝ ΣΕ ΑΥΤΟ ΤΟ ΑΡΧΕΙΟ.
+ *
+ * Μέχρι 2026-08-19 αυτό ήταν `callee.text === 't'` — **ακριβής σύγκριση** — οπότε ο
+ * generator ήταν **δομικά τυφλός** σε κάθε `const { t: tParking } = useTranslation(…)`.
+ * Δεν ήταν θεωρητικό: μετρημένο ότι **2 από τα 459** shell modules γράφουν έτσι, και
+ * **και τα δύο έχαναν κλειδιά** — `ShareModal.tsx:77-78` (`shareSurface.close` ·
+ * `shareSurface.errorPrefix`, ΚΥΡΙΟΛΕΚΤΙΚΑ, σε αρχείο του κελύφους) και
+ * `SearchResultItem.tsx`. Τα δύο κλειδιά του ShareModal **έλειπαν από το slice** ενώ τα
+ * αδέρφια τους `shareSurface.submitting`/`.a11y.statusRegion` ταξίδευαν, επειδή εκείνα
+ * καλούνται από το **μη**-aliased `t` — δηλαδή το ίδιο αρχείο ήταν μισό ορατό.
+ *
+ * ⚠️ **ΔΕΝ δέχεται κάθε `t<Κάτι>`** — αυτό θα έπιανε `toString` · `test` · `trim` και θα
+ * γέμιζε τον generator ψευδώς ανεπίλυτες κλήσεις (ο generator ΑΡΝΕΙΤΑΙ να παράξει σε
+ * ανεπίλυτη, άρα ένα ψευδώς θετικό δεν είναι θόρυβος: είναι **φραγμός**). Δέχεται ΜΟΝΟ
+ * ονόματα που είναι **δεσμευμένα** από destructuring πάνω σε κλήση `useTranslation*` —
+ * δηλαδή ρωτά την ίδια αυθεντία που ρωτά και το `extractNamespaces`, όχι μια σύμβαση
+ * ονοματοδοσίας.
+ *
+ * @param {ts.SourceFile} source
+ * @returns {Set<string>} πάντα περιέχει `'t'`
+ */
+function collectTranslateAliases(source) {
+  const aliases = new Set(['t']);
+  const isTranslationHook = (init) => {
+    if (!init || !ts.isCallExpression(init)) return false;
+    const callee = init.expression;
+    const name = ts.isIdentifier(callee) ? callee.text
+      : ts.isPropertyAccessExpression(callee) ? callee.name.text : null;
+    // `useTranslation` και `useTranslationLazy` — και οι δύο επιστρέφουν `{ t }`.
+    return typeof name === 'string' && name.startsWith('useTranslation');
+  };
+  const visit = (node) => {
+    if (ts.isVariableDeclaration(node) && node.name && ts.isObjectBindingPattern(node.name)
+        && isTranslationHook(node.initializer)) {
+      for (const element of node.name.elements) {
+        // `{ t: tParking }` → propertyName='t', name='tParking'. Το σκέτο `{ t }` δεν έχει
+        // propertyName και καλύπτεται ήδη από το 't' του αρχικού συνόλου.
+        if (element.propertyName && ts.isIdentifier(element.propertyName)
+            && element.propertyName.text === 't' && ts.isIdentifier(element.name)) {
+          aliases.add(element.name.text);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  ts.forEachChild(source, visit);
+  return aliases;
 }
+
+/** `t(...)`, `i18n.t(...)`, ή aliased `tParking(...)` — βλ. {@link collectTranslateAliases}. */
+function isTranslateCall(node, aliases) {
+  if (!ts.isCallExpression(node) || node.arguments.length === 0) return false;
+  const names = aliases || TRANSLATE_ONLY_T;
+  const callee = node.expression;
+  if (ts.isIdentifier(callee)) return names.has(callee.text);
+  return ts.isPropertyAccessExpression(callee) && names.has(callee.name.text);
+}
+
+/** Το προεπιλεγμένο σύνολο, για καλούντες που δεν πέρασαν aliases. */
+const TRANSLATE_ONLY_T = new Set(['t']);
 
 function recordCall(node, source, ctx, sink) {
   const local = { keys: [], prefixes: [] };
@@ -391,8 +445,11 @@ function parseSource(file, content) {
 function extractSurface(content, { file }) {
   const source = parseSource(file, content);
   const callTexts = [];
+  // Τα aliases είναι ΦΙΛΕ-LOCAL γεγονός (δεσμεύσεις μέσα σε αυτό το αρχείο), άρα ανήκουν
+  // στο fingerprint όπως και τα ίδια τα `t()` — βλ. το σχόλιο της συνάρτησης.
+  const aliases = collectTranslateAliases(source);
   const visit = (node) => {
-    if (isTranslateCall(node)) callTexts.push(node.getText(source).slice(0, 200).replace(/\s+/g, ' '));
+    if (isTranslateCall(node, aliases)) callTexts.push(node.getText(source).slice(0, 200).replace(/\s+/g, ' '));
     ts.forEachChild(node, visit);
   };
   ts.forEachChild(source, visit);
@@ -421,8 +478,9 @@ function classifyTranslateCalls(content, { file, keyConstants, propertyValues })
       ...((propertyValues && propertyValues.get(name)) || []),
     ],
   };
+  const aliases = collectTranslateAliases(source);
   const visit = (node) => {
-    if (isTranslateCall(node)) recordCall(node, source, ctx, sink);
+    if (isTranslateCall(node, aliases)) recordCall(node, source, ctx, sink);
     ts.forEachChild(node, visit);
   };
   ts.forEachChild(source, visit);
@@ -449,5 +507,6 @@ module.exports = {
   classifyBinary,
   classifyConstantAccess,
   isTranslateCall,
+  collectTranslateAliases,
   classifyTranslateCalls,
 };

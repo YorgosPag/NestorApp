@@ -1,7 +1,7 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/shell-slice.el.json": "dbfd34a280f04eb473c1d8e6ab3e985b7e794f40421d2e5dfdd5ed277cc8cba3",
+    "src/i18n/generated/shell-slice.el.json": "8fc942daa4d7196499e3c494190a9cc83689e09974f4219ba7d14900039708b4",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -40,7 +40,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "6ba3b2272e093bccb996247ed1203aca0ddbd03a062a1796f05959649e5062ca",
+  "inputsSha256": "41d34e195f9746487050b0355500ca6ded0af78037ff1b007b6ff2b1bd090473",
   "languages": [
     "el"
   ],
@@ -59,6 +59,7 @@
     "files",
     "landing",
     "navigation",
+    "parking",
     "projects",
     "search-results"
   ],
@@ -128,7 +129,7 @@
     "src/components/search/GlobalSearchDialog.tsx": "f2f938184d386db2f647a6566216185b8544c55eda4219daa7a6215be9061761",
     "src/components/search/PlaceSearchBox.tsx": "1b2ebb01216debbd92e0fdd301bc0bdf7806b714ff04d311107867e3b45be661",
     "src/components/search/SearchLandingContent.tsx": "e00adf69aec3c7928b5b318cf1774cedd907a583935cee1177a0c962a5dd0a8c",
-    "src/components/search/SearchResultItem.tsx": "78e3cc2c545b1f1731f8917560384b3011d3652ae9617a3e1af740a765134ef9",
+    "src/components/search/SearchResultItem.tsx": "c57e07a97e83965ad2b5763511f81d6fe919e49ef01449aeb0c6b7d65e8480e4",
     "src/components/search/global-search-config.ts": "098d196bbb7b3b2c493d3a6dbe47e0b818ba6ef06267665da1c90d88a561efb2",
     "src/components/shared/ModuleBreadcrumb.tsx": "018703ae49a65aa2e4a34a6905373964f25cb7b4b2832e05dea6617b91a4dbc7",
     "src/components/shared/addresses/address-with-hierarchy-config.ts": "7f72a362f5c9afaab5c9fa179f39260494cc4891a945e932096dcdef702d3c62",
@@ -147,7 +148,7 @@
     "src/components/ui/ProductTour/product-tour-constants.ts": "2e1e77cb6045688752d96ca840b0bf9bad6733e15fe40444e6f0cb09d06ac30e",
     "src/components/ui/ProductTour/product-tour-overlay.tsx": "18a46625c3a877501fc3215743fb5dd75bd2bbcb5772997efed4c5e3b80dae07",
     "src/components/ui/ShareButton.tsx": "c075fa4ea97b848303793ed5b6e826717b69fc3634970ad98d7c25f5bc6a584d",
-    "src/components/ui/ShareModal.tsx": "83fe80efc2d5766963de3184ff09eaf681e2b30e7e855977d69ae2b22d8a9e50",
+    "src/components/ui/ShareModal.tsx": "dd22e372c23b21e7417398b8b72ce5673f576252dcc2665373b872b634a3d3c1",
     "src/components/ui/avatar.tsx": "43a1021006ed542814e5ae72f17c0b5744d9d94b45e2dbf60da63d8d661929a3",
     "src/components/ui/badge.tsx": "4e7f5ac616b8f4b70fd0ebdb667c65bc1f813fc422ad11e653060b9b17ad99b3",
     "src/components/ui/button.tsx": "586d420ef21a306605f40fb559f84904a07777e63944e24c454164c8dd56d036",
@@ -540,10 +541,10 @@
   ],
   "stats": {
     "dynamicBoundaries": 18,
-    "matchedKeys": 115,
+    "matchedKeys": 118,
     "routeBoundaries": 0,
     "shellFiles": 459,
-    "sliceBytes": 228832
+    "sliceBytes": 229188
   },
   "unresolvableKeys": [
     "a11y.addFavorite",
@@ -1148,6 +1149,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -1198,7 +1201,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": true
     },
@@ -1406,6 +1410,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -1456,7 +1462,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": false
     },
@@ -1664,6 +1671,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -1714,7 +1723,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": true
     },
@@ -1922,6 +1932,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -1972,7 +1984,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": true
     },
@@ -2180,6 +2193,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -2230,7 +2245,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": true
     },
@@ -2438,6 +2454,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -2488,7 +2506,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": false
     },
@@ -2696,6 +2715,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -2746,7 +2767,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": false
     },
@@ -2962,6 +2984,8 @@
         "share.share",
         "share.shareError",
         "shareSurface.a11y.statusRegion",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "shareSurface.submitting",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
@@ -3015,7 +3039,8 @@
         "emailShare",
         "emailShare.recipientMode",
         "productTour",
-        "search.entityTypes"
+        "search.entityTypes",
+        "status"
       ],
       "whole": false
     },
@@ -3223,6 +3248,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -3273,7 +3300,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": true
     },
@@ -3481,6 +3509,8 @@
         "share.photoCopiedToClipboard",
         "share.share",
         "share.shareError",
+        "shareSurface.close",
+        "shareSurface.errorPrefix",
         "sharing.loadingPlatforms",
         "sharing.noPlatforms",
         "sharing.noPlatformsMessage",
@@ -3531,7 +3561,8 @@
         "channelShare.channels",
         "channelShare.externalIdPlaceholder",
         "emailShare",
-        "emailShare.recipientMode"
+        "emailShare.recipientMode",
+        "status"
       ],
       "whole": true
     },
@@ -3672,6 +3703,13 @@
         "tools"
       ],
       "whole": true
+    },
+    "parking": {
+      "keys": [],
+      "prefixes": [
+        "status"
+      ],
+      "whole": false
     },
     "projects": {
       "keys": [
