@@ -36,6 +36,19 @@ import type { PublishOutcome } from '@/services/listings/publish-public-listing'
 
 const logger = createModuleLogger('owner-property.service');
 
+/**
+ * Τι έγινε με το μήνυμα προς τον ιδιοκτήτη — **ονομαστικά**, ποτέ `boolean`.
+ *
+ * ⚠️ Ο τύπος ζει εδώ και **όχι** εισαγόμενος από την υπηρεσία διακομιστή: εκείνη
+ * φέρει `import 'server-only'`, και μια εισαγωγή —έστω και **μόνο τύπου**— από
+ * κώδικα πελάτη είναι εξάρτηση που κανείς δεν θέλει να μάθει ότι υπήρχε την ημέρα
+ * που θα πάψει να διαγράφεται.
+ */
+export type BrokeredNotifyOutcome =
+  | { readonly kind: 'sent'; readonly to: string }
+  | { readonly kind: 'no-address' }
+  | { readonly kind: 'failed' };
+
 /** Η ρίζα των διαδρομών — γραμμένη **μία** φορά. */
 const API_BASE = '/api/owner-properties';
 
@@ -118,6 +131,38 @@ export async function createOwnerListing(
     return { kind: 'saved', ...payload };
   } catch (cause) {
     return failureOf('Η αγγελία δεν δημιουργήθηκε', ownerPropertyId, cause);
+  }
+}
+
+/**
+ * **Νέα αγγελία ΓΙΑ ΠΕΛΑΤΗ** (§8.33) — άλλη πόρτα, γιατί άλλα πρέπει να αποδειχθούν.
+ *
+ * 🔑 **Δεν είναι παραλλαγή της παραπάνω με ένα πεδίο παραπάνω.** Η διαδρομή του
+ * ιδιώτη γράφει `mandate: 'self'` **ως συμβόλαιο**· αν δεχόταν προαιρετική εντολή, ο
+ * κάθε συνδεδεμένος χρήστης θα μπορούσε να δηλώσει ότι ενεργεί για λογαριασμό τρίτου.
+ *
+ * ⚠️ Το `notify` **ταξιδεύει πίσω** και η οθόνη οφείλει να το δείξει: «στάλθηκε στον
+ * Χ» και «η επαφή δεν έχει email» είναι δύο πολύ διαφορετικά πράγματα για τον μεσίτη
+ * που περιμένει απάντηση.
+ */
+export async function createBrokeredOwnerListing(
+  ownerPropertyId: string,
+  draft: OwnerPropertyDraft,
+  mandate: {
+    readonly clientContactId: string;
+    readonly expiresAt: string;
+    readonly via: string;
+    readonly documentPath: string | null;
+  },
+): Promise<OwnerListingResult & { readonly notify?: BrokeredNotifyOutcome }> {
+  try {
+    const payload = await apiClient.post<WriteResponse & { notify?: BrokeredNotifyOutcome }>(
+      `${API_BASE}/brokered`,
+      { id: ownerPropertyId, ...draft, mandate },
+    );
+    return { kind: 'saved', ...payload };
+  } catch (cause) {
+    return failureOf('Η αγγελία πελάτη δεν δημιουργήθηκε', ownerPropertyId, cause);
   }
 }
 

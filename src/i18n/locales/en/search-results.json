@@ -73,6 +73,11 @@
       "sell": "Sale",
       "leaseOut": "Rent",
       "exchange": "Land-for-flats"
+    },
+    "authorship": {
+      "agency": "From agency: {name}",
+      "agencyAnonymous": "From a real-estate agency",
+      "ownerDeclared": "Owner-declared"
     }
   },
   "detail": {
@@ -637,6 +642,35 @@
         "client-mismatch": "This link does not match this mandate.",
         "superseded": "There is a newer message from the agency. Please use the most recent link.",
         "write-failed": "Your answer was not recorded. Please try again."
+      }
+    },
+    "office": {
+      "newTitle": "New listing for a client",
+      "newSubtitle": "You are listing a client's property. The owner will be notified.",
+      "clientLabel": "Client",
+      "clientPlaceholder": "Search contacts…",
+      "clientHint": "The property owner, as held in your contacts.",
+      "untilLabel": "The mandate runs until",
+      "untilHint": "The law gives twelve months when no other term is agreed.",
+      "viaLabel": "How you hold the mandate",
+      "viaOwnerConsent": "Ask the owner now",
+      "viaOwnerConsentHint": "We send them a link. The listing goes live once they answer yes.",
+      "viaAgencyAttestation": "I hold a signed mandate",
+      "viaAgencyAttestationHint": "The listing goes live at once. The owner is notified and can stop it.",
+      "blocker": {
+        "mandate-client-unset": "Choose the client you are listing for.",
+        "mandate-expiry-unset": "State the date the mandate runs until."
+      },
+      "invariant": {
+        "mandate-client-missing": "The mandate does not name a client.",
+        "mandate-expiry-invalid": "The expiry date cannot be read.",
+        "mandate-expiry-past": "The expiry date is in the past.",
+        "mandate-attestation-not-confirmed": "The mandate attestation was not recorded correctly."
+      },
+      "notify": {
+        "sent": "A notice was sent to the owner ({to}).",
+        "no-address": "The contact has no email — the owner was NOT notified.",
+        "failed": "The notice to the owner was not sent."
       }
     }
   }
