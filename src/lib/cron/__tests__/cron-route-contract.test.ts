@@ -179,4 +179,55 @@ describe('συμβόλαιο cron routes (ADR-740)', () => {
       expect(code).not.toContain('.collection(');
     });
   });
+
+  // ===========================================================================
+  // 3. ΤΑΥΤΟΤΗΤΑ ΣΗΜΕΙΟΥ ΕΙΣΟΔΟΥ — ADR-777 §8.27
+  // ===========================================================================
+
+  describe('🔴 ένα σημείο εισόδου — το route τρέχει ό,τι ΑΚΡΙΒΩΣ τρέχει ο scheduler', () => {
+    /**
+     * 🔑 **ΤΟ ΤΡΙΤΟ ΑΝΑΛΛΟΙΩΤΟ, ΚΑΙ ΠΑΡΑΒΙΑΖΟΤΑΝ ΑΠΟ ΠΕΝΤΕ ROUTES.**
+     *
+     * Μετρημένο 2026-08-19: τα `file-purge` · `oauth-cleanup` ·
+     * `purge-deleted-entities` · `purge-deleted-contacts` · `onboarding-reminder`
+     * καλούσαν την **ωμή** συνάρτηση της εργασίας (`purgeFiles()`,
+     * `sendOnboardingReminders()`, …) ενώ ο χρονοπρογραμματιστής καλούσε τον
+     * **προσαρμογέα** (`runFilePurge`, `runOnboardingReminder`, …).
+     *
+     * Δηλαδή **η χειροκίνητη δοκιμή δοκίμαζε άλλη διαδρομή από την παραγωγή** — και
+     * στο `onboarding-reminder` αυτό είχε συνέπεια, όχι μόνο σχήμα: ο προσαρμογέας
+     * **πετά** όταν κάθε αποστολή απέτυχε, ώστε να το δει το Sentry monitor. Το
+     * route παρέκαμπτε τον φρουρό και ανέφερε **`ok: true` σε ολική αποτυχία**.
+     *
+     * ⚠️ Χωρίς αυτή την άγκυρα η διόρθωση θα ξαναχαλούσε σιωπηλά — το σχήμα του
+     * CHECK 3.36: *ένα anchor χωρίς gate είναι σχόλιο*.
+     */
+    function scheduledEntrypoints(): Map<string, string> {
+      const source = readScheduleSource();
+      const entries = new Map<string, string>();
+      // Το `slug:` και το `run:` ζουν στο ίδιο αντικείμενο, με πεδία ανάμεσά τους.
+      for (const match of source.matchAll(/slug:\s*'([^']+)'[\s\S]*?run:\s*(\w+)/g)) {
+        if (!entries.has(match[1])) entries.set(match[1], match[2]);
+      }
+      return entries;
+    }
+
+    it('η εξαγωγή σημείων εισόδου βρίσκει κάτι', () => {
+      // Δικλείδα για το ίδιο το test: κενός χάρτης θα έκανε κάθε `it.each` παρακάτω
+      // να περάσει κενό — πράσινο και άχρηστο.
+      expect(scheduledEntrypoints().size).toBeGreaterThanOrEqual(9);
+    });
+
+    it.each(listCronRouteSlugs())(
+      '%s καλεί το ΙΔΙΟ σημείο εισόδου με τον scheduler',
+      (slug) => {
+        const scheduled = scheduledEntrypoints().get(slug);
+        // Route χωρίς δήλωση πιάνεται από τον έλεγχο εξαντλητικότητας παραπάνω.
+        if (!scheduled) return;
+
+        const code = stripComments(readRouteSource(slug));
+        expect(code).toContain(scheduled);
+      },
+    );
+  });
 });

@@ -1,38 +1,34 @@
 /**
  * =============================================================================
- * Cron: File Purge — εκκαθάριση κάδου αρχείων + ορφανών PENDING/FAILED
+ * CRON: Εκκαθάριση κάδου αρχείων + ορφανών (ADR-191)
  * =============================================================================
  *
- * **Πυροκροτητής, όχι λογική** — οι δύο φάσεις ζουν στο
- * `lib/cron/jobs/file-purge.job.ts`. Το route μένει για χειροκίνητη εκτέλεση· η
- * προγραμματισμένη περνά από το `/api/cron/dispatch` και καλεί τη συνάρτηση απευθείας.
+ * Οι δύο φάσεις ζουν στο `lib/cron/jobs/file-purge.job.ts`.
+ *
+ * ⚠️ **Πυροκροτητής, όχι λογική.** Το wiring (εξουσιοδότηση · ρυθμός · σχήμα
+ * απάντησης · χειρισμός σφάλματος) ζει στο `lib/cron/scan-cron-route`.
+ *
+ * 🔴 **ΤΟ ROUTE ΚΑΛΟΥΣΕ ΑΛΛΗ ΣΥΝΑΡΤΗΣΗ ΑΠΟ ΤΟΝ ΧΡΟΝΟΠΡΟΓΡΑΜΜΑΤΙΣΤΗ** (§8.27):
+ * `purgeFiles()` αντί για `runFilePurge()`. Δηλαδή η χειροκίνητη εκτέλεση
+ * δοκίμαζε **άλλη διαδρομή** από αυτήν που τρέχει στην παραγωγή.
  *
  * @module api/cron/file-purge
- * @enterprise ADR-191 — Enterprise Document Management System (Phase 3.2)
+ * @see ADR-777 §8.27 — η μετανάστευση στο κοινό wiring
  * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
-import { type NextRequest, NextResponse } from 'next/server';
+import 'server-only';
 
-import { rejectUnauthorizedCron } from '@/lib/cron-auth';
-import { purgeFiles } from '@/lib/cron/jobs/file-purge.job';
-import { getErrorMessage } from '@/lib/error-utils';
+import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
+import { createScanCronRoute } from '@/lib/cron/scan-cron-route';
 import { createModuleLogger } from '@/lib/telemetry';
 
-const logger = createModuleLogger('CronFilePurge');
-
 export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  const unauthorized = rejectUnauthorizedCron(request);
-  if (unauthorized) return unauthorized;
-
-  try {
-    const { trash, orphans } = await purgeFiles();
-    return NextResponse.json({ success: true, trash, orphans });
-  } catch (err) {
-    const message = getErrorMessage(err, 'Purge cron failed');
-    logger.error(`Cron purge error: ${message}`);
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
-}
+export const { GET } = createScanCronRoute({
+  service: 'file-purge',
+  label: 'File purge',
+  logger: createModuleLogger('CronFilePurge'),
+  run: runFilePurge,
+});

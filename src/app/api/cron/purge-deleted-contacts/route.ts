@@ -1,47 +1,40 @@
 /**
- * GET /api/cron/purge-deleted-contacts
+ * =============================================================================
+ * CRON: Οριστική διαγραφή επαφών (ADR-281)
+ * =============================================================================
  *
- * ⚠️ **SUPERSEDED από το `/api/cron/purge-deleted-entities`**, που σαρώνει *όλους* τους
- * soft-deletable τύπους — και το `SOFT_DELETE_CONFIG.contact` δείχνει ήδη στην ίδια
- * `COLLECTIONS.CONTACTS`. Δηλωμένο στο `src/config/cron-schedule.ts` ως `enabled: false`
- * με `supersededBy`. **Δεν προγραμματίζεται.**
+ * ⚠️ **ΟΡΙΣΤΙΚΗ διαγραφή με cascade** — ίδιος φρουρός, ίδιος λόγος με το
+ * `purge-deleted-entities`.
  *
- * Δεν διαγράφηκε επειδή ο αντικαταστάτης δεν έχει τρέξει ποτέ σε παραγωγή (κανένα cron
- * δεν έτρεξε 2026-05-09 → 2026-07-31). Αφαίρεση route + job μόνο αφού το
- * `purge-deleted-entities` δείξει επιτυχημένα check-ins — βλ. ADR-740 §Αποφάσεις.
+ * 🔴 **ΕΛΕΙΠΕ ΑΠΟ ΤΗ ΛΙΣΤΑ ΜΕΤΑΝΑΣΤΕΥΣΗΣ** (§8.27): το handoff ονόμαζε **επτά**
+ * διαδρομές με διπλότυπο wiring· ήταν **οκτώ**. Μια χειρόγραφη λίστα που αποκλίνει
+ * από το δέντρο είναι το σχήμα του CHECK 3.34 — γι’ αυτό μετρήθηκε αντί να
+ * αντιγραφεί.
  *
- * **Πυροκροτητής, όχι λογική** — η εκκαθάριση ζει στο
- * `lib/cron/jobs/purge-deleted-contacts.job.ts`.
+ * ⚠️ **Πυροκροτητής, όχι λογική.** Το wiring (εξουσιοδότηση · ρυθμός · σχήμα
+ * απάντησης · χειρισμός σφάλματος) ζει στο `lib/cron/scan-cron-route`.
  *
- * ⚠️ Το guard προστέθηκε 2026-07-31: το route έκανε **οριστική** διαγραφή χωρίς καμία
- * ταυτοποίηση. Επιβάλλεται από test.
+ * 🔴 **ΤΟ ROUTE ΚΑΛΟΥΣΕ ΑΛΛΗ ΣΥΝΑΡΤΗΣΗ ΑΠΟ ΤΟΝ ΧΡΟΝΟΠΡΟΓΡΑΜΜΑΤΙΣΤΗ** (§8.27):
+ * `purgeDeletedContacts()` αντί για `runPurgeDeletedContacts()`. Δηλαδή η χειροκίνητη εκτέλεση
+ * δοκίμαζε **άλλη διαδρομή** από αυτήν που τρέχει στην παραγωγή.
  *
  * @module api/cron/purge-deleted-contacts
- * @enterprise ADR-191 pattern — Soft-delete lifecycle auto-purge
- * @see ADR-740
+ * @see ADR-777 §8.27 — η μετανάστευση στο κοινό wiring
+ * @see ADR-740 — το πρόγραμμα ζει στο src/config/cron-schedule.ts
  */
 
-import { type NextRequest, NextResponse } from 'next/server';
+import 'server-only';
 
-import { rejectUnauthorizedCron } from '@/lib/cron-auth';
-import { purgeDeletedContacts } from '@/lib/cron/jobs/purge-deleted-contacts.job';
-import { getErrorMessage } from '@/lib/error-utils';
+import { runPurgeDeletedContacts } from '@/lib/cron/jobs/purge-deleted-contacts.job';
+import { createScanCronRoute } from '@/lib/cron/scan-cron-route';
 import { createModuleLogger } from '@/lib/telemetry';
 
-const logger = createModuleLogger('CronPurgeDeletedContacts');
-
 export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  const unauthorized = rejectUnauthorizedCron(request);
-  if (unauthorized) return unauthorized;
-
-  try {
-    const report = await purgeDeletedContacts();
-    return NextResponse.json({ success: true, ...report });
-  } catch (error) {
-    const message = getErrorMessage(error, 'Contact purge failed');
-    logger.error(`Contact purge cron failed: ${message}`);
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
-}
+export const { GET } = createScanCronRoute({
+  service: 'purge-deleted-contacts',
+  label: 'Contact purge',
+  logger: createModuleLogger('CronPurgeDeletedContacts'),
+  run: runPurgeDeletedContacts,
+});
