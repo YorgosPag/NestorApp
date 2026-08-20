@@ -41,6 +41,19 @@ const K = `${NS}:mandate.office`;
 
 const logger = createModuleLogger('BrokeredListingPageContent');
 
+/**
+ * Πόσες επαφές κατεβαίνουν στον επιλογέα.
+ *
+ * ⚠️ **Δηλώνεται ρητά αντί να κληρονομηθεί η προεπιλογή** (`BATCH_SIZE`, **100**): ο
+ * επιλογέας είναι **αναζήτηση σε τοπική λίστα**, οπότε ό,τι δεν κατέβηκε **δεν
+ * βρίσκεται** — και ένα γραφείο με 150 επαφές θα έψαχνε τον 120ό πελάτη του χωρίς
+ * ποτέ να μάθει γιατί δεν εμφανίζεται.
+ *
+ * 🔶 **Δηλωμένο όριο**: πάνω από αυτό ο επιλογέας θέλει **αναζήτηση στον διακομιστή**
+ * (το `searchContacts` υπάρχει ήδη), όχι μεγαλύτερο νούμερο εδώ.
+ */
+const CLIENT_PICKER_LIMIT = 500;
+
 export function BrokeredListingPageContent(): React.ReactElement {
   const { t } = useTranslation([NS]);
 
@@ -55,8 +68,17 @@ export function BrokeredListingPageContent(): React.ReactElement {
 
   React.useEffect(() => {
     let alive = true;
-    void getAllContacts()
-      .then((contacts) => {
+    // 🔴 **ΤΟ `getAllContacts` ΔΕΝ ΕΠΙΣΤΡΕΦΕΙ ΠΙΝΑΚΑ** — επιστρέφει σελίδα:
+    // `{ contacts, lastDoc, nextCursor }`. Η πρώτη γραφή έκανε `.map()` πάνω στο
+    // αντικείμενο και έσκαγε με «contacts.map is not a function».
+    //
+    // ⚠️ **Το βρήκε η ΟΘΟΝΗ, όχι πύλη και όχι άγκυρα** (μάθημα Μ-Η) — και έγινε ορατό
+    // **μόνο** επειδή το `.catch()` παρακάτω **λέει** την αποτυχία. Μια σιωπηλή
+    // αποτυχία εδώ θα έδινε **κενή λίστα επαφών**, που φαίνεται ταυτόσημη με «δεν
+    // έχεις επαφές»: ο μεσίτης θα έψαχνε τον πελάτη του σε λίστα που δεν φορτώθηκε
+    // ποτέ, και θα κατηγορούσε τα δεδομένα του.
+    void getAllContacts({ limitCount: CLIENT_PICKER_LIMIT })
+      .then(({ contacts }) => {
         if (!alive) return;
         setClients(
           contacts.map((contact) => ({

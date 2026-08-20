@@ -25,6 +25,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
+import { nowISO } from '@/lib/date-local';
 import { Label } from '@/components/ui/label';
 import { SearchableCombobox } from '@/components/ui/searchable-combobox';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
@@ -59,6 +60,10 @@ export function BrokeredMandateFields({
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
 
+  // ⚠️ Το ρολόι διαβάζεται **μία φορά** στη ζωή του component: ένα `nowISO()` μέσα στο
+  // JSX θα ξαναϋπολογιζόταν σε κάθε πάτημα πλήκτρου, χωρίς κανέναν καταναλωτή.
+  const [todayISODate] = React.useState(() => nowISO().slice(0, 10));
+
   return (
     <fieldset className="flex flex-col gap-4 rounded-md border border-border p-4">
       <legend className="px-1 text-sm font-medium text-foreground">
@@ -85,9 +90,18 @@ export function BrokeredMandateFields({
 
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="mandate-until">{t(`${K}.untilLabel`)}</Label>
+        {/*
+          🔴 **`min` = ΣΗΜΕΡΑ, και είναι ΖΩΝΗ ΚΑΙ ΤΙΡΑΝΤΕΣ, όχι διακόσμηση** (N.7.2 #4).
+          Η ημερομηνία στο παρελθόν είναι **invariant του μοντέλου** (`mandate-expiry-past`)
+          και ο διακομιστής την απορρίπτει — αλλά τότε ο μεσίτης το μαθαίνει **μετά** την
+          υποβολή. Εδώ ο ίδιος ο επιλογέας του browser την κάνει **δύσκολο να διαλεχθεί**,
+          χωρίς να αντικαταστήσει τον φρουρό: αν φτάσει ούτως ή άλλως (επικόλληση,
+          παλιό πρόγραμμα περιήγησης), η πύλη γραφής **εξακολουθεί** να λέει όχι.
+        */}
         <Input
           id="mandate-until"
           type="date"
+          min={todayISODate}
           value={values.expiresOn}
           onChange={(event) => onChange({ ...values, expiresOn: event.target.value })}
         />

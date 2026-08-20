@@ -507,10 +507,16 @@
       "area-not-positive": "Enter an area greater than zero.",
       "title-missing": "Give the listing a title.",
       "bedrooms-negative": "Bedrooms cannot be negative.",
-      "exchange-requires-land": "An exchange (antiparochi) applies only to land. Choose «Plot» or «Parcel» as the property type, or remove the exchange."
+      "exchange-requires-land": "An exchange (antiparochi) applies only to land. Choose «Plot» or «Parcel» as the property type, or remove the exchange.",
+      "mandate-client-missing": "The mandate does not name a client.",
+      "mandate-expiry-invalid": "The expiry date cannot be read.",
+      "mandate-expiry-past": "The expiry date is in the past.",
+      "mandate-attestation-not-confirmed": "The mandate attestation was not recorded correctly."
     },
     "formBlocker": {
-      "place-unresolved": "Press Locate so the address resolves to a point on the map."
+      "place-unresolved": "Press Locate so the address resolves to a point on the map.",
+      "mandate-client-unset": "Choose the client you are listing for.",
+      "mandate-expiry-unset": "State the date the mandate runs until."
     },
     "lifecycle": {
       "label": "Status",
@@ -657,16 +663,6 @@
       "viaOwnerConsentHint": "We send them a link. The listing goes live once they answer yes.",
       "viaAgencyAttestation": "I hold a signed mandate",
       "viaAgencyAttestationHint": "The listing goes live at once. The owner is notified and can stop it.",
-      "blocker": {
-        "mandate-client-unset": "Choose the client you are listing for.",
-        "mandate-expiry-unset": "State the date the mandate runs until."
-      },
-      "invariant": {
-        "mandate-client-missing": "The mandate does not name a client.",
-        "mandate-expiry-invalid": "The expiry date cannot be read.",
-        "mandate-expiry-past": "The expiry date is in the past.",
-        "mandate-attestation-not-confirmed": "The mandate attestation was not recorded correctly."
-      },
       "notify": {
         "sent": "A notice was sent to the owner ({to}).",
         "no-address": "The contact has no email — the owner was NOT notified.",
