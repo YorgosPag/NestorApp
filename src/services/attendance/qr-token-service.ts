@@ -19,7 +19,13 @@
 
 import 'server-only';
 
-import { createHmac, randomBytes } from 'crypto';
+import type { SignedTokenRejection } from '@/lib/tokens/signed-token';
+import {
+  decodeSignedToken,
+  encodeSignedToken,
+  newTokenNonce,
+  requireTokenSecret,
+} from '@/lib/tokens/signed-token';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { FIELDS } from '@/config/firestore-field-constants';
@@ -39,49 +45,22 @@ const logger = createModuleLogger('QR_TOKEN_SERVICE');
 // =============================================================================
 
 /**
- * Get the HMAC signing secret from environment.
- * @throws Error if ATTENDANCE_QR_SECRET is not configured
+ * 🔑 **§8.33 — Η ΓΡΑΜΜΑΤΙΚΗ ΤΟΥ ΣΥΝΔΕΣΜΟΥ ΕΦΥΓΕ ΣΕ SSoT** (`lib/tokens/signed-token`).
+ *
+ * Οι τέσσερις βοηθητικές που ζούσαν εδώ ήταν **πανομοιότυπες** με του
+ * `vendor-portal-token-service.ts`, μαζί με το εικοσάγραμμο σκέλος επαλήθευσης
+ * υπογραφής. Η **πολιτική** (ημερήσια λήξη · ανάκληση από διαχειριστή) μένει εδώ.
  */
-function getSigningSecret(): string {
-  const secret = process.env.ATTENDANCE_QR_SECRET?.trim();
-  if (!secret) {
-    throw new Error(
-      'ATTENDANCE_QR_SECRET environment variable is required for QR token generation'
-    );
-  }
-  return secret;
-}
+const SECRET_ENV = 'ATTENDANCE_QR_SECRET';
 
-/**
- * Compute HMAC-SHA256 signature for token payload.
- */
-function computeHmac(payload: string): string {
-  const secret = getSigningSecret();
-  return createHmac('sha256', secret).update(payload).digest('hex');
-}
+/** Οι λόγοι του SSoT → το **υπάρχον** λεξιλόγιο αυτής της πύλης. */
+const REJECTION_REASON: Record<SignedTokenRejection, string> = {
+  malformed: 'malformed_token',
+  'invalid-format': 'invalid_format',
+  'invalid-signature': 'invalid_signature',
+  'server-config': 'server_config_error',
+};
 
-/**
- * Encode a token payload to base64url (URL-safe base64).
- */
-function toBase64Url(input: string): string {
-  return Buffer.from(input, 'utf-8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-/**
- * Decode a base64url string.
- */
-function fromBase64Url(input: string): string {
-  const padded = input + '==='.slice(0, (4 - (input.length % 4)) % 4);
-  return Buffer.from(padded.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
-}
-
-/**
- * Get the end-of-day ISO string for a given date (23:59:59.999 UTC).
- */
 function getEndOfDay(dateStr: string): string {
   return `${dateStr}T23:59:59.999Z`;
 }
@@ -120,10 +99,8 @@ export async function generateDailyQrToken(
   }
 
   // Generate new token
-  const nonce = randomBytes(16).toString('hex');
-  const payload = `${projectId}:${date}:${nonce}`;
-  const hmac = computeHmac(payload);
-  const token = toBase64Url(`${payload}:${hmac}`);
+  const nonce = newTokenNonce();
+  const token = encodeSignedToken(requireTokenSecret(SECRET_ENV), [projectId, date, nonce]);
   const now = nowISO();
   const expiresAt = getEndOfDay(date);
 
@@ -184,50 +161,18 @@ export async function validateQrToken(tokenString: string): Promise<QrTokenValid
     reason,
   });
 
-  // Step 1: Decode
-  let decoded: string;
+  // Steps 1-3: decode + verify signature — μία κλήση στο SSoT, καμία επαφή με βάση.
+  let secret: string;
   try {
-    decoded = fromBase64Url(tokenString);
-  } catch {
-    return invalid('malformed_token');
-  }
-
-  // Step 2: Parse format — projectId:date:nonce:hmac
-  const parts = decoded.split(':');
-  if (parts.length < 4) {
-    return invalid('invalid_format');
-  }
-
-  // Reconstruct parts (projectId may contain colons if it's a Firebase doc ID, but unlikely)
-  const hmac = parts[parts.length - 1];
-  const payload = parts.slice(0, -1).join(':');
-  const projectId = parts[0];
-  const date = parts[1];
-
-  // Step 3: Verify HMAC
-  let expectedHmac: string;
-  try {
-    expectedHmac = computeHmac(payload);
+    secret = requireTokenSecret(SECRET_ENV);
   } catch {
     return invalid('server_config_error');
   }
 
-  // Timing-safe comparison
-  if (hmac.length !== expectedHmac.length) {
-    return invalid('invalid_signature');
-  }
+  const verdict = decodeSignedToken(secret, tokenString, 3);
+  if (!verdict.ok) return invalid(REJECTION_REASON[verdict.reason]);
 
-  const hmacBuffer = Buffer.from(hmac, 'hex');
-  const expectedBuffer = Buffer.from(expectedHmac, 'hex');
-
-  if (hmacBuffer.length !== expectedBuffer.length) {
-    return invalid('invalid_signature');
-  }
-
-  const { timingSafeEqual } = await import('crypto');
-  if (!timingSafeEqual(hmacBuffer, expectedBuffer)) {
-    return invalid('invalid_signature');
-  }
+  const [projectId, date] = verdict.fields as [string, string, ...string[]];
 
   // Step 4: Check Firestore
   const db = getAdminFirestore();

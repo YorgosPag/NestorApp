@@ -24,7 +24,13 @@
 
 import 'server-only';
 
-import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
+import type { SignedTokenRejection } from '@/lib/tokens/signed-token';
+import {
+  decodeSignedToken,
+  encodeSignedToken,
+  newTokenNonce,
+  requireTokenSecret,
+} from '@/lib/tokens/signed-token';
 import type { Timestamp as ClientTimestamp } from 'firebase/firestore';
 import { getAdminFirestore, FieldValue } from '@/lib/firebaseAdmin';
 import admin from 'firebase-admin';
@@ -58,32 +64,17 @@ const DEFAULT_EXPIRY_DAYS = 7;
 // SECRET / ENCODING
 // =============================================================================
 
-function getSigningSecret(): string {
-  const secret = process.env.VENDOR_PORTAL_SECRET?.trim();
-  if (!secret) {
-    throw new Error(
-      'VENDOR_PORTAL_SECRET environment variable is required for vendor portal token operations',
-    );
-  }
-  return secret;
-}
-
-function computeHmac(payload: string): string {
-  return createHmac('sha256', getSigningSecret()).update(payload).digest('hex');
-}
-
-function toBase64Url(input: string): string {
-  return Buffer.from(input, 'utf-8')
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
-
-function fromBase64Url(input: string): string {
-  const padded = input + '==='.slice(0, (4 - (input.length % 4)) % 4);
-  return Buffer.from(padded.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
-}
+/**
+ * 🔑 **§8.33 — Η ΓΡΑΜΜΑΤΙΚΗ ΤΟΥ ΣΥΝΔΕΣΜΟΥ ΕΦΥΓΕ ΣΕ SSoT** (`lib/tokens/signed-token`).
+ *
+ * Εδώ ζούσαν τέσσερις βοηθητικές (`getSigningSecret` · `computeHmac` · `toBase64Url` ·
+ * `fromBase64Url`) **πανομοιότυπες** με του `qr-token-service.ts` — και η κεφαλίδα
+ * αυτού του αρχείου το παραδεχόταν γραπτά (*«Mirrors the pattern of…»*). Όταν η
+ * εντολή του μεσίτη χρειάστηκε **το ίδιο**, η τρίτη αντιγραφή θα ήταν το σχήμα του
+ * ADR-749. Η **πολιτική** (7 μέρες · μία χρήση · ανάκληση) μένει εδώ, γιατί είναι
+ * πραγματικά δική της.
+ */
+const SECRET_ENV = 'VENDOR_PORTAL_SECRET';
 
 // =============================================================================
 // TYPES
@@ -130,12 +121,35 @@ export function generateVendorPortalToken(
   vendorContactId: string,
   expiresInDays: number = DEFAULT_EXPIRY_DAYS,
 ): GeneratedVendorPortalToken {
-  const nonce = randomBytes(16).toString('hex');
-  const expiresAt = new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString();
-  const payload = `${rfqId}:${vendorContactId}:${nonce}:${expiresAt}`;
-  const hmac = computeHmac(payload);
-  const token = toBase64Url(`${payload}:${hmac}`);
-  return { token, rfqId, vendorContactId, nonce, expiresAt };
+  const nonce = newTokenNonce();
+  const expiresAtMs = Date.now() + expiresInDays * 24 * 60 * 60 * 1000;
+  const token = encodeSignedToken(requireTokenSecret(SECRET_ENV), [
+    rfqId,
+    vendorContactId,
+    nonce,
+    // 🔴 **ΧΙΛΙΟΣΤΑ, ΟΧΙ ISO — ΚΑΙ ΕΙΝΑΙ ΔΙΟΡΘΩΣΗ ΖΩΝΤΑΝΟΥ ΕΛΑΤΤΩΜΑΤΟΣ (§8.33).**
+    //
+    // Ο σύνδεσμος κουβαλούσε `2026-08-27T00:00:00.000Z`, δηλαδή **δύο άνω-κάτω
+    // τελείες** — τον ίδιο χαρακτήρα που χωρίζει τα πεδία. Ο επαληθευτής έσπαγε το
+    // κείμενο σε **7** τμήματα και απαιτούσε **ακριβώς 5** ⇒ `invalid_format` για
+    // ΚΑΘΕ σύνδεσμο, πάντα, από την πρώτη μέρα. Κανένας προμηθευτής δεν μπορούσε
+    // ποτέ να υποβάλει προσφορά μέσω συνδέσμου.
+    //
+    // ⚠️ Δεν το έπιασε καμία δοκιμή γιατί **καμία δεν εκτελούσε τον κύκλο
+    // γέννηση→επαλήθευση**. Το βρήκε η εξαγωγή του SSoT, όταν το
+    // `encodeSignedToken` **αρνήθηκε** να υπογράψει διφορούμενο πεδίο.
+    //
+    // ⚠️ Το `expiresAt` σε ISO **δεν χάνεται**: επιστρέφεται κανονικά παρακάτω και
+    // γράφεται στο έγγραφο της πρόσκλησης. Ο ΣΥΝΔΕΣΜΟΣ κουβαλά αριθμό.
+    String(expiresAtMs),
+  ]);
+  return {
+    token,
+    rfqId,
+    vendorContactId,
+    nonce,
+    expiresAt: new Date(expiresAtMs).toISOString(),
+  };
 }
 
 // =============================================================================
@@ -147,44 +161,60 @@ function invalid(reason: VendorPortalTokenInvalidReason): VendorPortalTokenValid
 }
 
 /**
+ * Οι ονομασμένοι λόγοι του SSoT → το **υπάρχον** λεξιλόγιο αυτής της πύλης.
+ *
+ * ⚠️ Ρητή χαρτογράφηση και όχι κοινό λεξιλόγιο: οι λόγοι αυτής της πύλης ταξιδεύουν
+ * ήδη σε οθόνη προμηθευτή και σε δοκιμές. Μια «ενοποίηση ονομάτων» εδώ θα άλλαζε
+ * συμβόλαιο που κανείς δεν ζήτησε να αλλάξει.
+ */
+const REJECTION_REASON: Record<SignedTokenRejection, VendorPortalTokenInvalidReason> = {
+  malformed: 'malformed_token',
+  'invalid-format': 'invalid_format',
+  'invalid-signature': 'invalid_signature',
+  'server-config': 'server_config_error',
+};
+
+/**
  * Validate token signature + expiry. Does NOT touch Firestore.
  * Cheap path so malformed/forged tokens are rejected without DB hits.
  */
 export function validateVendorPortalTokenSignature(
   tokenString: string,
 ): VendorPortalTokenValidation {
-  let decoded: string;
+  let secret: string;
   try {
-    decoded = fromBase64Url(tokenString);
-  } catch {
-    return invalid('malformed_token');
-  }
-
-  const parts = decoded.split(':');
-  if (parts.length !== 5) return invalid('invalid_format');
-
-  const [rfqId, vendorContactId, nonce, expiresAt, hmac] = parts;
-  if (!rfqId || !vendorContactId || !nonce || !expiresAt || !hmac) {
-    return invalid('invalid_format');
-  }
-
-  const payload = `${rfqId}:${vendorContactId}:${nonce}:${expiresAt}`;
-  let expectedHmac: string;
-  try {
-    expectedHmac = computeHmac(payload);
+    secret = requireTokenSecret(SECRET_ENV);
   } catch {
     return invalid('server_config_error');
   }
 
-  if (hmac.length !== expectedHmac.length) return invalid('invalid_signature');
-  const hmacBuffer = Buffer.from(hmac, 'hex');
-  const expectedBuffer = Buffer.from(expectedHmac, 'hex');
-  if (hmacBuffer.length !== expectedBuffer.length) return invalid('invalid_signature');
-  if (!timingSafeEqual(hmacBuffer, expectedBuffer)) return invalid('invalid_signature');
+  const verdict = decodeSignedToken(secret, tokenString, 4);
+  if (!verdict.ok) return invalid(REJECTION_REASON[verdict.reason]);
 
-  if (new Date() > new Date(expiresAt)) return invalid('token_expired');
+  // ⚠️ Ακριβώς 4 πεδία: το SSoT εγγυάται «τουλάχιστον», η **πολιτική** αυτής της πύλης
+  // είναι «ούτε ένα παραπάνω» — ένα πέμπτο πεδίο σημαίνει ότι κάποιος άλλαξε τη μορφή
+  // του συνδέσμου και αυτός ο κώδικας δεν το έμαθε.
+  if (verdict.fields.length !== 4) return invalid('invalid_format');
+  const [rfqId, vendorContactId, nonce, expiresAtMs] = verdict.fields as [
+    string,
+    string,
+    string,
+    string,
+  ];
 
-  return { valid: true, payload: { rfqId, vendorContactId, nonce, expiresAt } };
+  const expiryMs = Number(expiresAtMs);
+  if (!Number.isFinite(expiryMs)) return invalid('invalid_format');
+  if (Date.now() > expiryMs) return invalid('token_expired');
+
+  return {
+    valid: true,
+    payload: {
+      rfqId,
+      vendorContactId,
+      nonce,
+      expiresAt: new Date(expiryMs).toISOString(),
+    },
+  };
 }
 
 /**
