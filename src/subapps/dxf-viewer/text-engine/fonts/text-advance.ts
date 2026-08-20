@@ -34,7 +34,11 @@
 import { resolveEntityFont } from './font-resolver';
 import { getGlyphRun, GLYPH_REFERENCE_SIZE } from './glyph-path-cache';
 import { emSizeForTextHeight } from './text-height-scale';
-import { TEXT_METRICS_RATIOS, buildUIFont } from '../../config/text-rendering-config';
+import {
+  TEXT_METRICS_RATIOS,
+  buildUIFont,
+  cssFontFamilyToken,
+} from '../../config/text-rendering-config';
 
 const CHAR_WIDTH_MONOSPACE = TEXT_METRICS_RATIOS.CHAR_WIDTH_MONOSPACE;
 
@@ -101,7 +105,16 @@ function baseAdvanceWorld(text: string, height: number, style?: TextAdvanceStyle
   // width matches the drawn text in the no-opentype-font case too.
   const ctx = cssMeasureContext();
   if (ctx) {
-    ctx.font = buildUIFont(CSS_MEASURE_REF_PX, family, style?.bold ? 'bold' : 'normal', style?.italic);
+    // 🔴 ADR-786 — **το ίδιο αλφαριθμητικό γράφει και ο ζωγράφος.** Χωρίς τα εισαγωγικά, ένα
+    // όνομα οικογένειας που δεν είναι έγκυρο CSS identifier (ξεκινά με ψηφίο, έχει στίξη —
+    // δεδομένα χρήστη) παράγει shorthand που ο καμβάς **αγνοεί σιωπηλά**: ο μετρητής θα
+    // μετρούσε την εφεδρική γραμματοσειρά ενώ ο ζωγράφος ζωγραφίζει τη σωστή.
+    ctx.font = buildUIFont(
+      CSS_MEASURE_REF_PX,
+      cssFontFamilyToken(family),
+      style?.bold ? 'bold' : 'normal',
+      style?.italic,
+    );
     const ls = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
     const applySpacing = tracking !== 1 && 'letterSpacing' in ctx;
     const prevLs = applySpacing ? ls.letterSpacing : undefined;

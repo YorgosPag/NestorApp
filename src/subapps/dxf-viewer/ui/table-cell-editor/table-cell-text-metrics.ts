@@ -11,7 +11,7 @@
  *
  * Η λύση δεν είναι «δεύτερη, καλύτερη μέτρηση». Είναι ότι **δεν υπάρχει δεύτερη μέτρηση**:
  * εδώ μετράμε με `ctx.measureText` και **ακριβώς το ίδιο** αλφαριθμητικό γραμματοσειράς
- * ({@link tableCellFont}) που θέτει ο ζωγράφος στο `ctx.font` και το DOM στο CSS `font`.
+ * (`tableTextFont(...).css`, ADR-786) που θέτει ο ζωγράφος στο `ctx.font` και το DOM στο CSS `font`.
  * Ίδια μηχανή του browser, ίδιο μέγεθος, ίδια οικογένεια ⇒ οι δύο μετρήσεις **είναι** η
  * ίδια μέτρηση. Καμία απόκλιση δεν είναι δυνατή εξ ορισμού — όχι «απίθανη».
  *
@@ -28,7 +28,7 @@
  * `text-vertical-metrics.ts`. Ποτέ `throw`, ποτέ `NaN`.
  *
  * @module subapps/dxf-viewer/ui/table-cell-editor/table-cell-text-metrics
- * @see rendering/entities/table/stamp-table-layout.ts — `tableCellFont`, ο ζωγράφος
+ * @see bim/table/table-text-font.ts — `tableTextFont`, η ΜΙΑ απάντηση (face + em + shorthand)
  */
 
 import { TEXT_METRICS_RATIOS } from '../../config/text-rendering-config';

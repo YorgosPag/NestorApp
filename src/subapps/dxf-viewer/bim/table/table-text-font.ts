@@ -62,7 +62,10 @@ import {
   resolveEntityFont,
   type ResolvedFont,
 } from '../../text-engine/fonts';
-import { buildUIFont } from '../../config/text-rendering-config';
+// 🔴 ADR-786 — η γραμματική του CSS shorthand ζει **δίπλα στον κατασκευαστή του**, όχι εδώ:
+// τη χρειάζεται και ο **μετρητής** (`text-advance.ts`), και δεύτερο αντίγραφο θα ήταν δεύτερη
+// απάντηση στο «πώς γράφεται ένα όνομα οικογένειας ώστε να μην απορριφθεί σιωπηλά».
+import { buildUIFont, cssFontFamilyToken } from '../../config/text-rendering-config';
 
 /**
  * Η προεπιλογή απούσας οικογένειας.
@@ -78,7 +81,7 @@ const DEFAULT_FAMILY = 'arial';
  *
  * Χωρίζεται από το {@link TableTextFont} γιατί υπάρχει ένας καταναλωτής που **δεν έχει px**:
  * τα τμήματα του πλούσιου επεξεργαστή δηλώνουν το μέγεθός τους ως **λόγο** (ADR-753 §28,
- * ώστε το zoom να μη γεννά re-render), και ο λόγος αυτός χρειάζεται τα `capRatio` των **δύο**
+ * ώστε το zoom να μη γεννά re-render), και ο λόγος αυτός χρειάζεται τα `emPerCap` των **δύο**
  * face — του τμήματος και του κελιού — όχι px.
  */
 export interface TableTextFace {
@@ -153,19 +156,6 @@ export interface TableTextFont extends TableTextFace {
 }
 
 /**
- * Ένα όνομα οικογένειας ασφαλές για CSS shorthand.
- *
- * 🔴 Τα εισαγωγικά **δεν** είναι καλλωπισμός. Το όνομα φτάνει εδώ από **δεδομένα χρήστη** (το
- * `TableCellStyle.fontFamily`, ή το όνομα ενός ανεβασμένου εταιρικού αρχείου). Ένα όνομα που
- * αρχίζει με ψηφίο ή περιέχει σημείο στίξης παράγει **άκυρο** shorthand — και η ανάθεση ενός
- * άκυρου `ctx.font` **αγνοείται σιωπηλά** από τον καμβά, αφήνοντας την προηγούμενη
- * γραμματοσειρά: λάθος γράμματα, κανένα σφάλμα, πουθενά.
- */
-function cssFamilyToken(name: string): string {
-  return `"${name.replace(/["\\]/g, '')}"`;
-}
-
-/**
  * Ποιο face, ποιο όνομα CSS, ποιο `capRatio` — για δεδομένη τυπογραφία, χωρίς μέγεθος.
  */
 export function tableTextFace(
@@ -177,7 +167,7 @@ export function tableTextFace(
   const resolved = resolveEntityFont(requested, { bold, italic });
   return {
     resolved,
-    cssFamily: cssFamilyToken(resolved ? resolved.cacheName : requested),
+    cssFamily: cssFontFamilyToken(resolved ? resolved.cacheName : requested),
     cssBold: resolved ? false : bold,
     cssItalic: resolved ? false : italic,
     emPerCap: emSizeForTextHeight(1, resolved),
@@ -185,7 +175,7 @@ export function tableTextFace(
 }
 
 /**
- * Το face, το em και το CSS shorthand για κείμενο πίνακα ύψους **κεφαλαίου** `capPx`.
+ * Το face, το em και το CSS shorthand για κείμενο πίνακα ύψους **κεφαλαίου** `capHeight`.
  *
  * Στο tier CSS το {@link emSizeForTextHeight} επιστρέφει το ύψος **αμετάβλητο**, οπότε η ίδια
  * γραμμή κώδικα δίνει τη σωστή απάντηση **και στα δύο** tiers — χωρίς κλάδο, χωρίς σημαία.
@@ -238,6 +228,6 @@ export function tableCellFont(
   /** **Ωμό** όνομα οικογένειας· απόν ⇒ η προεπιλογή του μετρητή ({@link DEFAULT_FAMILY}). */
   fontFamily?: string,
 ): string {
-  const token = cssFamilyToken(fontFamily || DEFAULT_FAMILY);
+  const token = cssFontFamilyToken(fontFamily || DEFAULT_FAMILY);
   return buildUIFont(emPx, token, bold ? 'bold' : 'normal', italic);
 }

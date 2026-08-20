@@ -263,6 +263,24 @@ export const UI_FONTS = {
 /** Supported font families for buildUIFont */
 export type UIFontFamily = 'monospace' | 'Arial' | 'arial' | 'system-ui' | 'Inter, sans-serif';
 
+/**
+ * 🔴 ADR-786 — **ΕΝΑ όνομα οικογένειας, ασφαλές για CSS shorthand.**
+ *
+ * Τα εισαγωγικά δεν είναι καλλωπισμός. Το όνομα φτάνει από **δεδομένα χρήστη** (το
+ * `TableCellStyle.fontFamily`, ένα DXF STYLE, ή το όνομα ενός ανεβασμένου εταιρικού αρχείου).
+ * Ένα όνομα που αρχίζει με ψηφίο, ή περιέχει σημείο στίξης, παράγει **άκυρο** shorthand — και
+ * η ανάθεση άκυρου `ctx.font` **αγνοείται σιωπηλά** από τον καμβά, αφήνοντας την προηγούμενη
+ * γραμματοσειρά: λάθος γράμματα, κανένα σφάλμα, πουθενά.
+ *
+ * ⚠️ **Γι' αυτό ΔΕΝ το κάνει μόνο του το {@link buildUIFont}**: εκείνο δέχεται και **λίστες**
+ * (`'Inter, sans-serif'`), και ένα ζεύγος εισαγωγικών γύρω από λίστα την κάνει **ένα** ανύπαρκτο
+ * όνομα. Ο καλών που ξέρει ότι κρατά **ένα** όνομα το δηλώνει εδώ· ο καλών που κρατά λίστα δεν
+ * περνά από εδώ. Δύο περιπτώσεις, μία γραμματική, κανένα «θυμήσου να…».
+ */
+export function cssFontFamilyToken(name: string): string {
+  return `"${name.replace(/["\\]/g, '')}"`;
+}
+
 export function buildUIFont(
   size: number,
   family: UIFontFamily | string = 'monospace',

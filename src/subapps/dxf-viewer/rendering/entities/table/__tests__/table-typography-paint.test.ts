@@ -14,7 +14,9 @@
  * @see rendering/entities/table/stamp-table-layout.ts
  */
 
-import { stampTableText, tableCellFont } from '../stamp-table-layout';
+import { stampTableText } from '../stamp-table-layout';
+// 🔴 ADR-786 — η ΜΙΑ αυθεντία «ποιο face, ποιο em, ποιο shorthand», κοινή με τον επεξεργαστή.
+import { tableTextFont } from '../../../../bim/table/table-text-font';
 import {
   createPaintLog,
   createRc,
@@ -107,8 +109,12 @@ function paint(over: Partial<TableCellStyle> = {}, angleRad = 0): PaintLog {
 
 describe('🔴 Α3 — ο καμβάς σταμάτησε να ζωγραφίζει «πάντα Arial»', () => {
   it('η δηλωμένη οικογένεια φτάνει στο `ctx.font`', () => {
+    // 🔴 ADR-786 — η διασταύρωση γίνεται με το `tableTextFont`, που είναι πλέον η αυθεντία και
+    // για τον ζωγράφο και για τον επεξεργαστή. Το `tableCellFont` είναι ο **χαμηλού επιπέδου**
+    // κατασκευαστής (τον καλεί απευθείας μόνο ο δείκτης ζωνών): μια άγκυρα πάνω του θα
+    // κλείδωνε τη μορφή του αλφαριθμητικού, όχι τη **συμφωνία** των δύο επιφανειών.
     expect(paint({ fontFamily: 'verdana' }).texts[0].font).toBe(
-      tableCellFont(FONT_PX, false, false, 'verdana'),
+      tableTextFont(FONT_PX, false, false, 'verdana').css,
     );
     expect(paint({ fontFamily: 'verdana' }).texts[0].font).toContain('verdana');
   });
@@ -128,11 +134,15 @@ describe('🔴 Α3 — ο καμβάς σταμάτησε να ζωγραφίζ�
     expect(font).toContain('bold');
   });
 
-  it('🔴 το αλφαριθμητικό είναι ΤΟ ΙΔΙΟ που θα δώσει το `tableCellFont` στο `<input>`', () => {
+  it('🔴 το αλφαριθμητικό είναι ΤΟ ΙΔΙΟ που θα δώσει το `tableTextFont` στον επεξεργαστή', () => {
     // Αυτή είναι η εγγύηση «το κείμενο δεν αναπηδά στο διπλό κλικ»: μία συνάρτηση, δύο
     // καταναλωτές. Αν ο ζωγράφος αποκτήσει δικό του υπολογισμό, εδώ σπάει.
+    //
+    // ⚠️ **ΔΕΝ κρίνει τη μετατροπή ύψους→em**: εδώ δεν υπάρχει φορτωμένο face (jsdom), άρα οι
+    // δύο μονάδες συμπίπτουν. Εκείνη την κρίνει το `bim/table/__tests__/table-text-font.test.ts`,
+    // με ρητό `installStubFont()`. Δες ADR-786 §3(β).
     const over = { bold: true, italic: true, fontFamily: 'calibri' };
-    expect(paint(over).texts[0].font).toBe(tableCellFont(FONT_PX, true, true, 'calibri'));
+    expect(paint(over).texts[0].font).toBe(tableTextFont(FONT_PX, true, true, 'calibri').css);
   });
 });
 
