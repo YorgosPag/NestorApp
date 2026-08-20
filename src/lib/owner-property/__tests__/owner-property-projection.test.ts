@@ -285,3 +285,63 @@ describe('🔴 Μ — καμία αγγελία γραφείου στον κόσ
     expect(flat).not.toContain('cont_kostas');
   });
 });
+
+
+// =============================================================================
+// Υ — Η ΥΠΟΓΡΑΦΗ ΦΤΑΝΕΙ ΑΠΟ ΤΗΝ ΕΝΤΟΛΗ ΣΤΟΝ ΚΟΣΜΟ (§8.33)
+// =============================================================================
+
+/**
+ * 🔴 **ΑΥΤΕΣ ΟΙ ΑΓΚΥΡΕΣ ΓΕΝΝΗΘΗΚΑΝ ΑΠΟ ΔΥΟ ΜΕΤΑΛΛΑΞΕΙΣ ΠΟΥ ΕΠΕΖΗΣΑΝ.**
+ *
+ * Οι άγκυρες `Υ1`-`Υ3` του `public-listing-projection.test.ts` κρίνουν το
+ * `buildPublicListing` με **χειροποίητη** είσοδο — αποδεικνύουν ότι η μηχανή κουβαλά
+ * ό,τι της δώσεις. **Δεν** αποδεικνύουν ότι κάποιος της δίνει το σωστό.
+ *
+ * Μετρημένο: με `authorship: 'owner-declared'` καρφωμένο στη μετάφραση, και με το
+ * `agencyName` σβησμένο, **όλη η σουίτα έμενε πράσινη**. Δηλαδή το πεδίο μπορούσε να
+ * λέει ψέματα για κάθε αγγελία γραφείου και κανείς δεν θα το μάθαινε.
+ */
+describe('🔴 Υ — ο επισκέπτης μαθαίνει ΠΟΙΟΣ δημοσίευσε, μέσα από τη ΜΕΤΑΦΡΑΣΗ', () => {
+  it('🔑 Υ1 — αγγελία ΙΔΙΩΤΗ ⇒ `owner-declared`, καμία επωνυμία', () => {
+    const listing = publish(validOwnerProperty())!;
+    expect(listing.authorship).toBe('owner-declared');
+    expect(listing.agencyName).toBeNull();
+  });
+
+  it('🔴 Υ2 — αγγελία ΓΡΑΦΕΙΟΥ ⇒ `agency`, ΜΕΣΑ ΑΠΟ ΤΗΝ ΕΝΤΟΛΗ', () => {
+    const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
+    const projectable = projectableFromOwnerProperty(confirmed, AT, 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+
+    // Ο παρονομαστής: η **ίδια** αγγελία ως ιδιώτη δίνει την άλλη τιμή. Χωρίς αυτό,
+    // ένα καρφωμένο `'agency'` θα ήταν εξίσου πράσινο.
+    expect(projectableFromOwnerProperty(validOwnerProperty(), AT).authorship).toBe(
+      'owner-declared',
+    );
+    expect(projectable.authorship).toBe('agency');
+    expect(projectable.agencyName).toBe('ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+  });
+
+  it('🔴 Υ3 — η επωνυμία ταξιδεύει ΩΣ ΤΗ ΔΗΜΟΣΙΑ ΑΓΓΕΛΙΑ, όχι μόνο ως το ενδιάμεσο', () => {
+    const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
+    const listing = buildPublicListing(
+      projectableFromOwnerProperty(confirmed, AT, 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ'),
+      placeKnowledgeFromOwnerProperty(confirmed, AT),
+      AT,
+    );
+
+    expect(listing).not.toBeNull();
+    expect(listing?.authorship).toBe('agency');
+    expect(listing?.agencyName).toBe('ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+  });
+
+  it('🔑 Υ4 — γραφείο ΧΩΡΙΣ γνωστή επωνυμία μένει «γραφείο», δεν γίνεται «ιδιώτης»', () => {
+    // Τα δύο πεδία **δεν συμπτύσσονται**: μια αγγελία γραφείου του οποίου η επωνυμία
+    // δεν διαβάστηκε είναι **ακόμη** αγγελία γραφείου. Η οθόνη έχει τρίτο κείμενο
+    // ακριβώς γι' αυτό.
+    const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
+    const projectable = projectableFromOwnerProperty(confirmed, AT, null);
+    expect(projectable.authorship).toBe('agency');
+    expect(projectable.agencyName).toBeNull();
+  });
+});
