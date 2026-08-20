@@ -70,6 +70,7 @@ import {
 import {
   mandateInvariantViolations,
   type MandateInvariant,
+  type OwnerPropertyMandate,
 } from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('owner-property-write.service');
@@ -299,7 +300,47 @@ export async function setOwnerPropertyLifecycle(
 }
 
 // =============================================================================
-// 5. ΑΣΤΟΧΙΑ — μία διατύπωση
+// 5. Η ΕΝΤΟΛΗ — γράφεται από ΑΛΛΟΝ άνθρωπο (§8.33)
+// =============================================================================
+
+/**
+ * **Αλλαγή της εντολής** σε υπάρχουσα αγγελία, και επανασύνθεση της προβολής.
+ *
+ * 🔴 **ΔΕΝ ΠΕΡΝΑ ΑΠΟ ΤΟ {@link loadOwned}, ΚΑΙ ΕΙΝΑΙ ΣΧΕΔΙΑΣΗ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ.** Κάθε
+ * άλλη γραφή σε αυτό το αρχείο ρωτά *«είναι δική σου;»* — εδώ ο άνθρωπος που ενεργεί
+ * είναι ο **ΙΔΙΟΚΤΗΤΗΣ ΤΟΥ ΑΚΙΝΗΤΟΥ**, που **δεν είναι ο συγγραφέας** και συνήθως
+ * **δεν έχει καν λογαριασμό**. Ένας έλεγχος `authorUserId === uid` εδώ θα ήταν
+ * φρουρός που **κανείς από το ακροατήριο δεν μπορεί να ικανοποιήσει** — το ίδιο σχήμα
+ * που το `api/owner-properties/route.ts` περιγράφει για τα permissions.
+ *
+ * ⚠️ **Η εξουσιοδότηση ζει ΠΡΙΝ από εδώ**, στον υπογεγραμμένο σύνδεσμο: ο καλών
+ * οφείλει να έχει ήδη αποδείξει ότι ο σύνδεσμος ονομάζει **αυτό** το ακίνητο και
+ * **αυτόν** τον πελάτη. Γι' αυτό αυτή η συνάρτηση **δεν εξάγεται σε πελάτη** και ο
+ * μοναδικός καλών της είναι το `services/mandate/mandate-consent.service.ts`.
+ *
+ * ⚠️ **Τα invariants του ακινήτου ΔΕΝ ξανακρίνονται**, ίδιο σκεπτικό με την απόσυρση:
+ * ο ιδιοκτήτης πρέπει να μπορεί να πει «όχι» **ακόμη κι αν** η αγγελία έχει γίνει
+ * άκυρη στο μεταξύ. Μια πύλη που τον εμποδίζει να **ανακαλέσει** τον κλειδώνει έξω
+ * από την έξοδο — και εδώ η έξοδος είναι δικαίωμα πάνω στην **περιουσία του**.
+ */
+export async function setOwnerPropertyMandate(
+  adminDb: AdminFirestore,
+  ownerPropertyId: string,
+  mandate: OwnerPropertyMandate,
+): Promise<OwnerPropertyWriteResult> {
+  const snapshot = await adminDb
+    .collection(COLLECTIONS.OWNER_PROPERTIES)
+    .doc(ownerPropertyId)
+    .get();
+
+  const existing = snapshot.data() as OwnerProperty | undefined;
+  if (existing === undefined) return { kind: 'absent' };
+
+  return persist(adminDb, { ...existing, mandate, updatedAt: nowISO() }, 'overwrite');
+}
+
+// =============================================================================
+// 6. ΑΣΤΟΧΙΑ — μία διατύπωση
 // =============================================================================
 
 function failure(

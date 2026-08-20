@@ -610,5 +610,34 @@
       "outlineUnavailable": "The shape did not load — the map did not answer. Try again shortly.",
       "outlineFailed": "We cannot show the shape of this place."
     }
+  },
+  "mandate": {
+    "consent": {
+      "title": "Mandate approval",
+      "introWithAgency": "The agency “{agency}” is asking to market your property.",
+      "introNoAgency": "A real-estate agency is asking to market your property.",
+      "listingLabel": "Property",
+      "untilLabel": "The mandate will run until",
+      "explain": "If you agree, the listing will be published marked as coming from an agency. If not, it will not be published.",
+      "approve": "Yes, I grant the mandate",
+      "decline": "No, I do not grant it",
+      "sending": "Recording…",
+      "approvedTitle": "Mandate recorded",
+      "approvedBody": "Thank you. The listing can now be published.",
+      "declinedTitle": "Your refusal was recorded",
+      "declinedBody": "The listing will not be published.",
+      "changeMind": "You can change your answer at any time, from the same link.",
+      "currentlyApproved": "You have already granted the mandate.",
+      "currentlyDeclined": "You have already refused.",
+      "reason": {
+        "link-invalid": "This link is not valid.",
+        "link-expired": "This link has expired. Ask the agency for a new one.",
+        "listing-absent": "This listing no longer exists.",
+        "not-brokered": "This listing has no agency mandate.",
+        "client-mismatch": "This link does not match this mandate.",
+        "superseded": "There is a newer message from the agency. Please use the most recent link.",
+        "write-failed": "Your answer was not recorded. Please try again."
+      }
+    }
   }
 }

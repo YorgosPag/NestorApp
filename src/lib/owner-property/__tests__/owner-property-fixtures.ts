@@ -114,6 +114,7 @@ export function brokeredOwnerProperty(
       proof: { via: OWNER_CONSENT },
       decidedAt: null,
       notifiedAt: null,
+      consentNonce: null,
       expiresAt: '2027-08-11T09:00:00.000Z',
       ...mandate,
     },
