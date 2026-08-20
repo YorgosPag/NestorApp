@@ -653,13 +653,13 @@ export async function seedPropertyDemand(
 export async function seedOwnerProperty(
   env: RulesTestEnvironment,
   ownerPropertyId: string,
-  ownerUserId: string,
+  authorUserId: string,
   opts?: SeedOptions,
 ): Promise<void> {
   await withSeedContext(env, async (ctx) => {
     await ctx.firestore().collection('owner_properties').doc(ownerPropertyId).set({
       id: ownerPropertyId,
-      ownerUserId,
+      authorUserId,
       type: 'apartment',
       areaSqm: 92,
       floor: 3,
@@ -675,7 +675,7 @@ export async function seedOwnerProperty(
       },
       media: [
         {
-          storagePath: `owner_properties/${ownerUserId}/${ownerPropertyId}/katopsi.pdf`,
+          storagePath: `owner_properties/${authorUserId}/${ownerPropertyId}/katopsi.pdf`,
           fileName: 'katopsi.pdf',
           sizeBytes: 128_000,
           uploadedAt: '2026-08-11T09:00:00.000Z',
@@ -699,10 +699,10 @@ export async function seedOwnerProperty(
  * **λάθος λόγο** — το σχήμα «0 = κανείς δεν κοίταξε».
  */
 export function ownerPropertyCreatePayload(
-  ownerUserId: string,
+  authorUserId: string,
 ): Record<string, unknown> {
   return {
-    ownerUserId,
+    authorUserId,
     type: 'shop',
     areaSqm: 45,
     floor: 0,

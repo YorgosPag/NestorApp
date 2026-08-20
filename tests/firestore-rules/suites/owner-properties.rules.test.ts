@@ -2,7 +2,7 @@
  * Firestore Rules — συλλογή `owner_properties` (ADR-777 Α14)
  *
  * Σχήμα κανόνα (firestore.rules):
- *   - read/list:      `resource.data.ownerUserId == request.auth.uid`
+ *   - read/list:      `resource.data.authorUserId == request.auth.uid`
  *   - create/update:  `if false` — **γράφει μόνο ο διακομιστής** (Admin SDK)
  *   - delete:         `if false` — η απόσυρση είναι `lifecycle`, όχι διαγραφή
  *
@@ -86,7 +86,7 @@ describe('owner_properties.rules — η προσφορά ανήκει σε ΑΝ�
           // 🔑 Το φίλτρο ονομάζει το uid ΤΟΥ ΚΑΤΟΧΟΥ — επίτηδες: έτσι το κελί
           // «cross_tenant_admin × list → deny» αποδεικνύει το σκληρό, ότι δεν αρκεί
           // να ΞΕΡΕΙΣ ποιανού ζητάς.
-          listFilter: { field: 'ownerUserId', op: '==', value: OWNER_UID },
+          listFilter: { field: 'authorUserId', op: '==', value: OWNER_UID },
         };
 
         await assertCell(ctx, cell, target);
@@ -148,7 +148,7 @@ describe('owner_properties.rules — η προσφορά ανήκει σε ΑΝ�
   // ==========================================================================
 
   describe('🔴 Α2 — η αφιλτράριστη λίστα απορρίπτεται ΚΑΙ για τον κάτοχο', () => {
-    it('χωρίς `where(ownerUserId)` το ερώτημα του ίδιου του κατόχου → deny', async () => {
+    it('χωρίς `where(authorUserId)` το ερώτημα του ίδιου του κατόχου → deny', async () => {
       await seedOwnerProperty(env, DOC_ID, OWNER_UID);
       const owner = getContext(env, 'same_tenant_user');
 
@@ -168,7 +168,7 @@ describe('owner_properties.rules — η προσφορά ανήκει σε ΑΝ�
         owner
           .firestore()
           .collection('owner_properties')
-          .where('ownerUserId', '==', OWNER_UID)
+          .where('authorUserId', '==', OWNER_UID)
           .get(),
       );
 
@@ -269,7 +269,7 @@ describe('owner_properties.rules — η προσφορά ανήκει σε ΑΝ�
       // είναι σε ΠΕΔΙΑ και όχι σε πλήθος: ένα «10 πεδία» θα έσπαγε σε κάθε νόμιμη
       // προσθήκη, ενώ αυτά τα τρία ονόματα δεν επιτρέπεται να εμφανιστούν ποτέ.
       const data = listing.data() as Record<string, unknown>;
-      expect(data.ownerUserId).toBeUndefined();
+      expect(data.authorUserId).toBeUndefined();
       expect(data.media).toBeUndefined();
       expect((data.position as { label?: string }).label).toBeUndefined();
     });
