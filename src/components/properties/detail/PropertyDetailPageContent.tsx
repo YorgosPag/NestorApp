@@ -35,6 +35,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import { PlaceInterestPanel } from '@/components/demand/PlaceInterestPanel';
 import { usePlaceInterest } from '@/hooks/demand/usePlaceInterest';
@@ -54,11 +55,18 @@ const NS = 'properties-detail';
 
 export function PropertyDetailPageContent({
   propertyId,
-  initialTab,
 }: {
   readonly propertyId: string;
-  readonly initialTab?: string;
 }): React.ReactElement {
+  /**
+   * `?tab=` — **στον πελάτη**, όπως ακριβώς το διαβάζει η δεξιά στήλη (`urlTab`
+   * στο `UnitsPageContent`). Ανάγνωσή του στη σελίδα-διακομιστή κάνει τη διαδρομή
+   * δυναμική και στέλνει **ωμά κλειδιά** στο HTML (δες την κεφαλίδα του
+   * `page.tsx`, μετρημένο ζωντανά).
+   */
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') ?? undefined;
+
   const { t } = useTranslation(['properties', NS, 'properties-enums', 'properties-viewer']);
   const colors = useSemanticColors();
   const [isEditMode, setIsEditMode] = React.useState(false);

@@ -20,9 +20,25 @@
  * ρητά ώστε η εγγύηση να μην εξαρτάται από αρχείο που κανείς δεν έχει λόγο να
  * κρατήσει.
  *
- * ⚠️ **`params` και `searchParams` είναι `Promise` (Next 15)** — ίδιο ιδίωμα με
- * `buildings/[id]` και `(light)/listing/[id]`. Συγχρονισμένη ανάγνωση εδώ
- * μεταγλωττίζεται και σπάει **στην εκτέλεση**.
+ * ⚠️ **`params` είναι `Promise` (Next 15)** — ίδιο ιδίωμα με `buildings/[id]` και
+ * `(light)/listing/[id]`. Συγχρονισμένη ανάγνωση εδώ μεταγλωττίζεται και σπάει
+ * **στην εκτέλεση**.
+ *
+ * 🔴 **ΤΟ `?tab=` ΔΙΑΒΑΖΕΤΑΙ ΣΤΟΝ ΠΕΛΑΤΗ, ΚΑΙ ΤΟ ΑΠΟΦΑΣΙΣΕ ΖΩΝΤΑΝΗ ΜΕΤΡΗΣΗ.**
+ *
+ * Η πρώτη γραφή το διάβαζε εδώ, από `searchParams`. Φαινόταν καθαρότερο — και
+ * έκανε τη διαδρομή **δυναμική**, οπότε το όριο αναστολής **δεν** έπεφτε στο
+ * `fallback` και ο διακομιστής απέδιδε το περιεχόμενο. Το `properties-detail`
+ * όμως υπάρχει στο i18n shell slice με **μηδέν κλειδιά** (κομμένο σε επίπεδο
+ * κλειδιού, ADR-744), άρα το HTML που έφευγε από τον διακομιστή περιείχε **ωμά
+ * κλειδιά** — `detailPage.back`, `detailPage.absent`… Μετρημένο στο σερβιρισμένο
+ * HTML, όχι υποθετικά.
+ *
+ * Κάθε αδελφή σελίδα (`/properties`, `/spaces/properties`) μένει στο `fallback`
+ * ακριβώς επειδή **δεν** αγγίζει `searchParams` στον διακομιστή. Το ιδίωμα
+ * υπήρχε· η «βελτίωση» ήταν που το έσπασε.
+ *
+ * ⚠️ **ΜΗΝ ξαναπροσθέσεις `searchParams` εδώ** για να «περάσεις καθαρά props».
  */
 
 import React, { Suspense } from 'react';
@@ -32,24 +48,14 @@ import { StaticPageLoading } from '@/core/states';
 
 interface PropertyDetailPageProps {
   readonly params: Promise<{ readonly id: string }>;
-  readonly searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function PropertyDetailPage({
-  params,
-  searchParams,
-}: PropertyDetailPageProps) {
+export default async function PropertyDetailPage({ params }: PropertyDetailPageProps) {
   const { id } = await params;
-  const query = await searchParams;
-
-  // `?tab=` κρατά τη σύμβαση που ήδη τιμούσε η δεξιά στήλη (`urlTab`): ένας
-  // σύνδεσμος προς «τα έγγραφα του Δ3» οφείλει να ανοίγει τα έγγραφα, όχι τις
-  // πληροφορίες. Πίνακας τιμών ⇒ κρατάμε την πρώτη· μια καρτέλα είναι μία.
-  const tab = Array.isArray(query.tab) ? query.tab[0] : query.tab;
 
   return (
     <Suspense fallback={<StaticPageLoading />}>
-      <PropertyDetailPageContent propertyId={id} initialTab={tab} />
+      <PropertyDetailPageContent propertyId={id} />
     </Suspense>
   );
 }

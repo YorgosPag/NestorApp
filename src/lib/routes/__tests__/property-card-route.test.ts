@@ -66,6 +66,31 @@ describe('ADR-777 §8.30 — η καρτέλα ακινήτου έχει διε�
     expect(page).toContain('<Suspense');
   });
 
+  it('Α8 🔴 η σελίδα-διακομιστής ΔΕΝ αγγίζει `searchParams` — ωμά κλειδιά στο SSR', () => {
+    /*
+     * 🔴 **ΜΕΤΡΗΜΕΝΟ ΣΤΟ ΣΕΡΒΙΡΙΣΜΕΝΟ HTML, ΟΧΙ ΥΠΟΘΕΤΙΚΑ.** Η πρώτη γραφή
+     * διάβαζε `?tab=` από `searchParams` στη σελίδα-διακομιστή. Αυτό κάνει τη
+     * διαδρομή **δυναμική** ⇒ το όριο αναστολής **δεν** πέφτει στο `fallback` ⇒
+     * ο διακομιστής αποδίδει το περιεχόμενο. Και το `properties-detail` υπάρχει
+     * στο i18n shell slice με **ΜΗΔΕΝ κλειδιά** (κομμένο σε επίπεδο κλειδιού,
+     * ADR-744) ⇒ το HTML έφευγε με `detailPage.back`, `detailPage.absent`…
+     *
+     * ⚠️ Καμία πύλη δεν το έπιασε: το CHECK 3.51 Κ2 κρίνει την κλειστότητα των
+     * **layouts**, και μια σελίδα είναι εξ ορισμού εκτός. Το βρήκε `curl`.
+     *
+     * Κάθε αδελφή σελίδα μένει στο `fallback` **ακριβώς** επειδή δεν αγγίζει
+     * `searchParams` στον διακομιστή. Το ιδίωμα υπήρχε· η «βελτίωση» το έσπασε.
+     */
+    const page = read(PROPERTY_DETAIL_PAGE);
+    const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\*.*$/gm, '');
+    expect(code).not.toMatch(/\bsearchParams\b/);
+
+    // Και η ανάγνωση ζει στον πελάτη, αλλιώς το `?tab=` απλώς χάθηκε.
+    const content = read('src/components/properties/detail/PropertyDetailPageContent.tsx');
+    expect(content).toContain('useSearchParams');
+    expect(content).toMatch(/searchParams\.get\(['"]tab['"]\)/);
+  });
+
   // ==========================================================================
   // Α4 — ΚΑΜΙΑ ΤΡΙΤΗ ΣΥΜΒΑΣΗ
   // ==========================================================================
