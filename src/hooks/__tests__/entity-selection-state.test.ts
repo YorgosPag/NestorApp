@@ -20,6 +20,7 @@
 import {
   deriveEntitySelection,
   mayAutoSelectFirst,
+  shouldClearStaleSelection,
   type EntitySelection,
 } from '../entity-selection-state';
 
@@ -176,6 +177,44 @@ describe('ADR-777 §8.31 — deriveEntitySelection: καμία σιωπηλή κ
       fallback: { phase: 'unavailable', item: null },
     });
     expect(state.kind).toBe('not-found');
+  });
+
+  // ==========================================================================
+  // Κ14-Κ17 — 🔴 Η ΠΑΛΙΑ ΕΠΙΛΟΓΗ ΔΕΝ ΕΠΙΒΙΩΝΕΙ ΚΑΤΩ ΑΠΟ ΤΟ ΠΑΝΟ
+  // ==========================================================================
+
+  it('Κ14 🔴 δείχνω ΑΛΛΗ εγγραφή από αυτή που ζητά η διεύθυνση ⇒ σβήνει', () => {
+    /*
+     * 🔴 ΖΩΝΤΑΝΟ ΕΥΡΗΜΑ (στιγμιότυπο 2026-08-20), με 24 άγκυρες και 13 πύλες
+     * ΠΡΑΣΙΝΕΣ: το πανό «δεν οδηγεί σε εγγραφή» εμφανιζόταν σωστά — και από
+     * κάτω συνέχιζε να φαίνεται το ΠΡΟΗΓΟΥΜΕΝΟ κτίριο. Αλλαγή μόνο του
+     * ερωτήματος είναι πλοήγηση ΧΩΡΙΣ επαναστήσιμο ⇒ η παλιά επιλογή επιβιώνει.
+     * Δύο αντιφατικές δηλώσεις μαζί είναι ΧΕΙΡΟΤΕΡΕΣ από τη μία σιωπηλή.
+     */
+    expect(
+      shouldClearStaleSelection<Thing>({ kind: 'not-found', requestedId: 'bld_X' }, 'bld_A'),
+    ).toBe(true);
+    expect(
+      shouldClearStaleSelection<Thing>({ kind: 'resolving', requestedId: 'bld_X' }, 'bld_A'),
+    ).toBe(true);
+  });
+
+  it('Κ15 ΙΔΙΑ ταυτότητα ⇒ ΔΕΝ σβήνει (αλλιώς αναβοσβήνει σε κάθε ανανέωση)', () => {
+    expect(
+      shouldClearStaleSelection<Thing>({ kind: 'resolving', requestedId: 'bld_A' }, 'bld_A'),
+    ).toBe(false);
+  });
+
+  it('Κ16 χωρίς ταυτότητα στη διεύθυνση η λίστα μένει ελεύθερη', () => {
+    // Ελεύθερη περιήγηση: ο άνθρωπος διάλεξε μόνος του, κανείς δεν του το σβήνει.
+    expect(shouldClearStaleSelection<Thing>({ kind: 'none' }, 'bld_A')).toBe(false);
+  });
+
+  it('Κ17 βρεθείσα εγγραφή δεν σβήνεται ποτέ, ούτε όταν είναι στον κάδο', () => {
+    expect(shouldClearStaleSelection<Thing>({ kind: 'selected', item: A }, 'bld_A')).toBe(false);
+    expect(shouldClearStaleSelection<Thing>({ kind: 'archived', item: GONE }, 'bld_A')).toBe(false);
+    // Τίποτα επιλεγμένο ⇒ τίποτα να σβηστεί.
+    expect(shouldClearStaleSelection<Thing>({ kind: 'not-found', requestedId: 'x' }, null)).toBe(false);
   });
 
   // ==========================================================================

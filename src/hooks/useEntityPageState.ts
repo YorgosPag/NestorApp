@@ -31,6 +31,7 @@ import { createModuleLogger } from '@/lib/telemetry';
 import {
   deriveEntitySelection,
   mayAutoSelectFirst,
+  shouldClearStaleSelection,
   type EntitySelection,
 } from './entity-selection-state';
 import { useEntityFallbackResolution } from './useEntityFallbackResolution';
@@ -238,12 +239,20 @@ export function useEntityPageState<T extends IdentifiableEntity, F>(
       return;
     }
 
+    // 🔴 Η διεύθυνση ζητά ΑΛΛΗ ταυτότητα από αυτή που δείχνουμε ⇒ σβήσ' την.
+    // Χωρίς αυτό, το πανό «δεν οδηγεί σε εγγραφή» εμφανιζόταν ΠΑΝΩ από την
+    // προηγούμενη εγγραφή, που έμενε ορατή (μετρημένο ζωντανά, §8.31).
+    if (shouldClearStaleSelection(selection, selectedItem?.id)) {
+      setSelectedItemRaw(null);
+      return;
+    }
+
     // ⚠️ Ρητή ταυτότητα ⇒ ΚΑΜΙΑ αυτόματη επιλογή, σε καμία κατάσταση.
     if (mayAutoSelectFirst(selection, autoSelectFirstItem) && !selectedItem && items.length > 0) {
       setSelectedItemRaw(items[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, autoSelectFirstItem, items]);
+  }, [selection, autoSelectFirstItem, items, selectedItem?.id]);
 
   // ── Sync selected item with refreshed data ─────────────────────────
   useEffect(() => {

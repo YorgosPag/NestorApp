@@ -25,14 +25,41 @@
  */
 
 import { API_ROUTES } from '@/config/domain-constants';
+import { ApiClientError } from '@/lib/api/api-client-types';
 import { apiClient } from '@/lib/api/enterprise-api-client';
 import { isTrashed } from '@/lib/firestore/trashed-status';
 import type { Building } from '@/types/building/contracts';
 import type { Storage } from '@/types/storage/contracts';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
 
-const resolveOne = async <T>(url: string): Promise<T | null> =>
-  (await apiClient.get<T>(url)) ?? null;
+/**
+ * 🔴 **«ΔΕΝ ΥΠΑΡΧΕΙ» ΕΙΝΑΙ ΑΠΑΝΤΗΣΗ, ΟΧΙ ΣΦΑΛΜΑ.**
+ *
+ * Η πρώτη γραφή άφηνε το `404` να ανέβει ως εξαίρεση· ο καλών το κατέγραφε με
+ * `logger.error` και **το Next.js το έβγαζε κόκκινο overlay στην οθόνη** —
+ * μετρημένο ζωντανά (2026-08-20). Ένας σύνδεσμος προς ταυτότητα που δεν υπάρχει
+ * είναι **προβλεπόμενη** έκβαση: το `not-found` της οθόνης **είναι** ο χειρισμός.
+ *
+ * ⚠️ Το `403` πέφτει στην **ίδια** κατηγορία επίτηδες: ο φύλακας εταιρείας
+ * απαντά «όχι» ταυτόσημα για «δεν υπάρχει» και «δεν είναι δικό σου», ώστε να μην
+ * μπορεί κανείς να απαριθμήσει ξένες ταυτότητες. Ο πελάτης **δεν** επιτρέπεται
+ * να τα ξεχωρίσει ούτε στα logs.
+ *
+ * ⚠️ Ό,τι **δεν** είναι αυτά τα δύο (δίκτυο, 500) **ανεβαίνει** — εκεί το
+ * «δεν βρέθηκε» θα ήταν ψέμα, και η καταγραφή σφάλματος είναι σωστή.
+ */
+const ANSWERED_NO = new Set([403, 404]);
+
+const resolveOne = async <T>(url: string): Promise<T | null> => {
+  try {
+    return (await apiClient.get<T>(url)) ?? null;
+  } catch (error: unknown) {
+    if (error instanceof ApiClientError && ANSWERED_NO.has(error.statusCode)) {
+      return null;
+    }
+    throw error;
+  }
+};
 
 /** `GET /api/storages/:id` — φύλακας `requireStorageInTenant`. */
 export const resolveStorageById = (id: string): Promise<Storage | null> =>
