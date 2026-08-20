@@ -17,7 +17,6 @@ import { ShareModal, useShareModal } from '@/components/ui/ShareModal';
 import { type ShareData } from '@/lib/share-utils';
 // 🏢 ENTERPRISE: i18n - Full internationalization support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { formatCurrency } from '@/lib/intl-utils';
 import '@/lib/design-system';
 
 export interface ShareButtonProps {
@@ -118,50 +117,18 @@ export function ShareButton({
   );
 }
 
-
-// Helper functions for property sharing
-function generatePropertyShareText(property: {
-  title: string;
-  description?: string;
-  price?: number;
-  area?: number;
-  location?: string;
-}): string {
-  let text = `🏠 ${property.title}`;
-
-  if (property.location) {
-    text += `\n📍 ${property.location}`;
-  }
-
-  if (property.price) {
-    text += `\n💰 ${formatCurrency(property.price)}`;
-  }
-
-  if (property.area) {
-    text += `\n📐 ${property.area} τ.μ.`;
-  }
-
-  if (property.description) {
-    text += `\n\n${property.description}`;
-  }
-
-  const companyName = process.env.NEXT_PUBLIC_COMPANY_NAME || '';
-  if (companyName) {
-    text += `\n\n${companyName}`;
-  }
-
-  return text;
-}
-
-function generatePropertyShareUrl(propertyId: string, source: string): string {
-  const baseUrl = `/properties/${propertyId}`;
-  const params = new URLSearchParams({
-    utm_source: source,
-    utm_medium: 'social_share',
-    utm_campaign: 'property_sharing',
-    utm_content: propertyId,
-    shared: 'true'
-  });
-  
-  return `${baseUrl}?${params.toString()}`;
-}
+/*
+ * 🗑️ ΔΙΑΓΡΑΦΗΚΑΝ (ADR-777 §8.30): `generatePropertyShareText` +
+ * `generatePropertyShareUrl` — **μηδέν καλούντες**, μετρημένο σε όλο το `src/`.
+ *
+ * Δεν ήταν ακίνδυνος νεκρός κώδικας. Το σχόλιο του `/properties/[id]/page.tsx`
+ * ονόμαζε το «ShareButton» ως **ζωντανό καταναλωτή** της διαδρομής, και η
+ * ανάλυση της ανακατεύθυνσης βασίστηκε πάνω του. Ένα σχόλιο που περιγράφει
+ * κώδικα ο οποίος **δεν εκτελείται** είναι χειρότερο από κανένα σχόλιο: διαβάζεται
+ * ως μέτρηση.
+ *
+ * Η πραγματική κοινοποίηση περνά από το `UnifiedShareDialog` (σύνδεσμος με
+ * κλειδί, `/shared/<token>`), και τη διατύπωση του κειμένου την κατέχει ήδη το
+ * `SharingService.generatePropertyShareText` — που το **δηλώνει** γραπτά
+ * («REPLACES: generatePropertyShareText από ShareButton.tsx»).
+ */

@@ -17,12 +17,13 @@ interface Floor {
 export function usePropertyState() {
   // Ξ§ΟΞ·ΟƒΞΉΞΌΞΏΟ€ΞΏΞΉΞΏΟΞΌΞµ ΞΞΞΞ Ο„Ξ± Ξ΄ΞµΞ΄ΞΏΞΌΞ­Ξ½Ξ± Ξ±Ο€Ο Ο„ΞΏ SharedPropertiesProvider
   // Ξ³ΞΉΞ± Ξ½Ξ± ΞµΞ―Ξ½Ξ±ΞΉ ΟƒΟ…Ξ³Ο‡ΟΞΏΞ½ΞΉΟƒΞΌΞ­Ξ½Ξ± ΞΊΞ±ΞΉ Ο„Ξ± Ξ΄ΟΞΏ systems
-  const { 
-    properties, 
-    setProperties, 
-    floors, 
-    isLoading, 
-    forceDataRefresh 
+  const {
+    properties,
+    setProperties,
+    floors,
+    isLoading,
+    hasAnswered,
+    forceDataRefresh
   } = useSharedProperties();
   
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<string[]>([]);
@@ -54,6 +55,8 @@ export function usePropertyState() {
     setProperties,
     floors: floors || [],
     isLoading,
+    /** ADR-777 §8.30 — «απάντησε ο κατάλογος;», ΟΧΙ το `!isLoading`. */
+    hasAnswered,
     selectedPropertyIds,
     hoveredPropertyId,
     selectedFloorId,

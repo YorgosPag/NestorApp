@@ -3,7 +3,7 @@
 
 import React, { useCallback } from 'react';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { EntityDetailsHeader, createEntityAction } from '@/core/entity-headers';
+import { EntityDetailsHeader, createEntityAction, type EntityHeaderAction } from '@/core/entity-headers';
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
 import type { Property } from '@/types/property-viewer';
 import '@/lib/design-system';
@@ -25,9 +25,17 @@ interface PropertyDetailsHeaderProps {
   /** Callback for creating a new property */
   onNewProperty?: () => void;
   /** Callback for deleting the current property */
-  onDeleteProperty?: () => void;
+  onDeleteProperty?: () => void | Promise<void>;
   /** ADR-312: Callback for opening Property Showcase dialog */
   onShowcaseProperty?: () => void;
+  /**
+   * ADR-777 §8.30 — ενέργειες που ανήκουν στο **σημείο προσάρτησης**, όχι στην
+   * καρτέλα: η δεξιά στήλη προσθέτει «Άνοιγμα σε σελίδα», η σελίδα δεν έχει πού
+   * να ανοίξει. Μπαίνουν **πρώτες** ώστε η πλοήγηση να προηγείται της
+   * επεξεργασίας, και **μόνο εκτός** λειτουργίας επεξεργασίας: μια μισοτελειωμένη
+   * αλλαγή δεν πρέπει να έχει δίπλα της κουμπί που φεύγει από τη σελίδα.
+   */
+  extraActions?: readonly EntityHeaderAction[];
 }
 
 export function PropertyDetailsHeader({
@@ -39,6 +47,7 @@ export function PropertyDetailsHeader({
   onNewProperty,
   onDeleteProperty,
   onShowcaseProperty,
+  extraActions,
 }: PropertyDetailsHeaderProps) {
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
 
@@ -82,6 +91,7 @@ export function PropertyDetailsHeader({
         createEntityAction('cancel', t('buttons.cancel', { ns: 'common' }), handleHeaderCancel),
       ]
     : [
+        ...(extraActions ?? []),
         createEntityAction('edit', t('navigation.actions.edit.label'), () => onToggleEditMode?.()),
         createEntityAction('new', t('navigation.actions.newUnit.label'), () => onNewProperty?.()),
         createEntityAction('showcase', t('navigation.actions.showcase.label'), () => onShowcaseProperty?.()),

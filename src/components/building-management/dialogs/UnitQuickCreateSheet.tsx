@@ -4,9 +4,14 @@
  * UnitQuickCreateSheet — Sheet wrapping the canonical PropertiesSidebar create
  * mode, identical to the creation panel in /spaces/properties.
  *
- * SSoT: renders DetailsContainer + PropertyDetailsHeader + UniversalTabsRenderer
- * exactly as PropertiesSidebar does when isCreatingNewUnit=true, without the
- * PropertiesList (the list is not needed in a Sheet context).
+ * SSoT: αποδίδει την **ίδια** {@link PropertyDetailSurface} με τη δεξιά στήλη και
+ * με την καρτέλα ακινήτου, σε λειτουργία δημιουργίας — χωρίς τη λίστα, που δεν
+ * έχει νόημα μέσα σε συρτάρι.
+ *
+ * ⚠️ **Το σχόλιο αυτό έλεγε «renders DetailsContainer + PropertyDetailsHeader +
+ * UniversalTabsRenderer exactly as PropertiesSidebar does»** — και ήταν αληθές με
+ * τον χειρότερο τρόπο: τα έστηνε **ξεχωριστά**, «ακριβώς όπως» το άλλο αρχείο.
+ * Το «ακριβώς όπως» δεν είναι εγγύηση, είναι ευχή (ADR-777 §8.30).
  */
 
 import React, { useCallback, useMemo } from 'react';
@@ -14,13 +19,15 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { DIALOG_SCROLL } from '@/styles/design-tokens';
-import { DetailsContainer } from '@/core/containers';
-import { PropertyDetailsHeader } from '@/features/properties-sidebar/components/PropertyDetailsHeader';
-import { UniversalTabsRenderer, convertToUniversalConfig } from '@/components/generic/UniversalTabsRenderer';
-import type { PropertyTabAdditionalData, PropertyTabComponentProps, PropertyTabGlobalProps } from '@/components/generic/UniversalTabsRenderer';
-import { PROPERTIES_COMPONENT_MAPPING } from '@/components/generic/mappings/propertiesMappings';
-import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
-import { usePropertiesSidebar } from '@/features/properties-sidebar/hooks/usePropertiesSidebar';
+/**
+ * 🔑 **Το ΤΡΙΤΟ σημείο προσάρτησης της ίδιας επιφάνειας** (ADR-777 §8.30). Η
+ * δημιουργία μονάδας δείχνει **ακριβώς** τις καρτέλες που δείχνει η καρτέλα
+ * ακινήτου, πάνω σε κενό ακίνητο — άρα δεν είναι δεύτερη σύνθεση, είναι η ίδια
+ * με άλλο περιεχόμενο. Πριν το §8.30 έστηνε **η ίδια** τα ~30 σύρματα
+ * (`additionalData`, χαρτογράφηση, ρυθμιστής καρτελών): η ημέρα που ο ένας από
+ * τους τρεις θα άλλαζε, οι άλλοι δύο θα έμεναν πίσω **φαινομενικά σωστοί**.
+ */
+import { PropertyDetailSurface } from '@/features/property-detail-surface/PropertyDetailSurface';
 import type { Property } from '@/types/property-viewer';
 import type { FloorData, ViewerPassthroughProps } from '@/features/properties-sidebar/types';
 import type { Building } from '@/types/building/contracts';
@@ -35,6 +42,10 @@ export interface UnitQuickCreateSheetProps {
 }
 
 const NOOP_UPDATE = async () => {};
+/** Το συρτάρι δημιουργίας δεν έχει πάνελ ιστορικού, ούτε εναλλαγή επεξεργασίας:
+ *  γεννιέται **μέσα** στην επεξεργασία και βγαίνει μόνο κλείνοντας. */
+const NOOP_SHOW_HISTORY = () => {};
+const NOOP_TOGGLE_EDIT = () => {};
 
 export function UnitQuickCreateSheet({
   open,
@@ -87,26 +98,6 @@ export function UnitQuickCreateSheet({
     [],
   );
 
-  const { safeFloors, currentFloor, safeViewerProps, safeViewerPropsWithFloors } =
-    usePropertiesSidebar(floorData, minimalViewerProps, blankUnit);
-
-  const propertiesTabs = useMemo(() => getSortedPropertiesTabs(), []);
-
-  const additionalData = useMemo<PropertyTabAdditionalData>(() => ({
-    safeFloors,
-    currentFloor,
-    safeViewerProps,
-    safeViewerPropsWithFloors,
-    setShowHistoryPanel: () => {},
-    units: [],
-    onUpdateProperty: NOOP_UPDATE,
-    isEditMode: true,
-    onToggleEditMode: () => {},
-    onExitEditMode: handleClose,
-    isCreatingNewUnit: true,
-    onPropertyCreated: handleCreated,
-  }), [safeFloors, currentFloor, safeViewerProps, safeViewerPropsWithFloors, handleClose, handleCreated]);
-
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
       <SheetContent
@@ -117,31 +108,27 @@ export function UnitQuickCreateSheet({
         )}
       >
         <SheetTitle className="sr-only">{t('details.addUnitTitle')}</SheetTitle>
-        <DetailsContainer
-          selectedItem={blankUnit}
-          header={
-            <PropertyDetailsHeader
-              property={blankUnit}
-              isEditMode
-              isCreatingNewUnit
-              onExitEditMode={handleClose}
-            />
-          }
-          tabsRenderer={
-            open ? (
-              <UniversalTabsRenderer<Property | null, PropertyTabComponentProps, PropertyTabAdditionalData, PropertyTabGlobalProps>
-                tabs={propertiesTabs.map(convertToUniversalConfig)}
-                data={blankUnit}
-                componentMapping={PROPERTIES_COMPONENT_MAPPING}
-                defaultTab="info"
-                theme="default"
-                translationNamespace="building"
-                additionalData={additionalData}
-                globalProps={{ propertyId: '__new__' }}
-              />
-            ) : undefined
-          }
-        />
+        {/*
+          ⚠️ **Η φρουρά `open` διατηρείται αυτούσια.** Δεν είναι διακοσμητική: οι
+          έξι καρτέλες στήνουν φορτωτές εγγράφων, φωτογραφιών και ιστορικού, και
+          ένα συρτάρι που ζει κλειστό σε κάθε σελίδα κτιρίου θα τους έστηνε χωρίς
+          να τους ζητήσει κανείς.
+        */}
+        {open ? (
+          <PropertyDetailSurface
+            property={blankUnit}
+            units={[]}
+            viewerProps={minimalViewerProps}
+            floors={floorData}
+            setShowHistoryPanel={NOOP_SHOW_HISTORY}
+            isEditMode
+            onToggleEditMode={NOOP_TOGGLE_EDIT}
+            onExitEditMode={handleClose}
+            isCreatingNewUnit
+            onPropertyCreated={handleCreated}
+            defaultTab="info"
+          />
+        ) : null}
       </SheetContent>
     </Sheet>
   );

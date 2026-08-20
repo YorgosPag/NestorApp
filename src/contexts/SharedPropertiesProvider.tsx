@@ -38,6 +38,15 @@ interface SharedPropertiesContextType {
   floors: Floor[];
   setProperties: (properties: Property[], description: string) => void;
   isLoading: boolean;
+  /**
+   * **Έχει απαντήσει ο κατάλογος έστω μία φορά;** (ADR-777 §8.30)
+   *
+   * ⚠️ **ΔΕΝ είναι το `!isLoading`.** Λόγω τεμπέλικης ενεργοποίησης, το
+   * `isLoading` είναι `false` **και πριν** ρωτήσει κανείς. Ο συνδυασμός
+   * `!isLoading && properties.length === 0` σημαίνει **δύο εντελώς διαφορετικά
+   * πράγματα** χωρίς αυτό το πεδίο: «άδειο χαρτοφυλάκιο» ή «δεν ρώτησε κανείς».
+   */
+  hasAnswered: boolean;
   error: string | null;
   forceDataRefresh: () => void;
   /** 🏢 ENTERPRISE: Activate listener (called by useSharedProperties) */
@@ -58,6 +67,30 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
   const [properties, setPropertiesState] = useState<Property[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
   const [isLoading, setIsLoading] = useState(false); // 🏢 CHANGE: Start false (lazy)
+  /**
+   * 🔴 **«ΑΠΑΝΤΗΣΕ Ο ΚΑΤΑΛΟΓΟΣ;» — ΤΟ ΓΕΓΟΝΟΣ ΠΟΥ ΕΛΕΙΠΕ** (ADR-777 §8.30).
+   *
+   * Το `isLoading` ξεκινά `false` **επίτηδες** (τεμπέλικη ενεργοποίηση: ο ακροατής
+   * στήνεται μόνο όταν κάποιος καλέσει το hook, και το `activate()` ζει σε
+   * `useEffect` — άρα **ποτέ στον διακομιστή**). Συνέπεια: υπάρχει παράθυρο όπου
+   * `isLoading === false` **ΚΑΙ** `properties === []`, που δεν σημαίνει «άδειο
+   * χαρτοφυλάκιο» — σημαίνει «**κανείς δεν ρώτησε ακόμη**».
+   *
+   * Για μια λίστα αυτό είναι αθώο (δείχνει κενή για ένα καρέ). Για την **καρτέλα
+   * ενός ακινήτου** είναι ψέμα με σιγουριά: βάφει «το ακίνητο δεν βρέθηκε» για
+   * ακίνητο που υπάρχει. Το ίδιο σχήμα «0 = κανείς δεν κοίταξε», στραμμένο στον
+   * χρήστη.
+   *
+   * ⚠️ **ΚΙΝΕΙΤΑΙ ΜΑΖΙ ΜΕ ΤΟ `setIsLoading(false)`, ΠΑΝΤΟΥ.** «Σταμάτησα να
+   * φορτώνω» και «έχω απάντηση» είναι το **ίδιο** γεγονός· αν αποκλίνουν, ο
+   * καταναλωτής θα ξαναχτίσει τη διάγνωση από τα συμπτώματα.
+   *
+   * ⚠️ **Τίθεται ΠΡΙΝ τον έλεγχο ισότητας** του στιγμιότυπου: εκείνος παραλείπει
+   * **κάθε** `setState` όταν το περιεχόμενο είναι ταυτόσημο, και η πρώτη
+   * απάντηση «καμία αλλαγή» είναι ακριβώς η περίπτωση όπου το γεγονός πρέπει να
+   * καταγραφεί. (Το React αγνοεί από μόνο του `setState(true)` πάνω σε `true`.)
+   */
+  const [hasAnswered, setHasAnswered] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -117,6 +150,7 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
     if (!user?.companyId) {
       logger.warn('[SharedProperties] No authenticated user or missing companyId — skipping listener');
       setIsLoading(false);
+      setHasAnswered(true);
       return;
     }
 
@@ -131,6 +165,10 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       'PROPERTIES',
       (result) => {
         if (DEBUG_SHARED_PROPERTIES_PROVIDER) logger.info('Firestore snapshot received', { docsCount: result.size });
+
+        // ⚠️ ΠΡΙΝ τον έλεγχο ισότητας παρακάτω — εκείνος κάνει `return` και θα
+        // κατάπινε το γεγονός ακριβώς όταν η απάντηση είναι «τίποτα δεν άλλαξε».
+        setHasAnswered(true);
 
         // ADR-281: Exclude soft-deleted properties from the live SSoT snapshot.
         // Trash view uses its own endpoint (/api/properties/trash) — never this provider.
@@ -201,6 +239,9 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
         logger.error('Firestore listener error', { error: listenerError });
         setError('FIRESTORE_LISTENER_ERROR');
         setIsLoading(false);
+        // Μια αποτυχία **είναι** απάντηση: «δεν μπορούμε να μάθουμε». Χωρίς αυτό,
+        // ο καταναλωτής θα γύριζε για πάντα σε «φορτώνει» ενώ κανείς δεν φορτώνει.
+        setHasAnswered(true);
       },
     );
 
@@ -223,11 +264,12 @@ export function SharedPropertiesProvider({ children }: { children: React.ReactNo
       floors,
       setProperties,
       isLoading,
+      hasAnswered,
       error,
       forceDataRefresh,
       activate,
     }),
-    [properties, floors, setProperties, isLoading, error, forceDataRefresh, activate],
+    [properties, floors, setProperties, isLoading, hasAnswered, error, forceDataRefresh, activate],
   );
 
   return (

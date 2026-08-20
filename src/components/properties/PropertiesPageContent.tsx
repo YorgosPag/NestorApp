@@ -1,8 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // 🏢 ENTERPRISE: Import from canonical location
 import { Spinner as AnimatedSpinner } from '@/components/ui/spinner';
@@ -35,8 +36,36 @@ const PropertyFloorplanViewer = dynamic(
 );
 
 export const PropertiesPageContent = () => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const viewParam = searchParams.get('view');
+  const legacyPropertyId = searchParams.get('propertyId');
+
+  /**
+   * 🔴 **ADR-777 §8.30 — Η ΠΑΛΙΑ ΣΥΜΒΑΣΗ ΔΕΙΧΝΕΙ, ΔΕΝ ΜΕΝΕΙ ΠΑΡΑΛΛΗΛΗ.**
+   *
+   * Το `/properties?propertyId=…` ήταν ο προορισμός στον οποίο έστελνε το
+   * **κεντρικό μητρώο** διαδρομών, και αυτή η σελίδα **δεν το διάβαζε ποτέ**:
+   * διάβαζε μόνο `?view`. Ο σύνδεσμος «δούλευε» με την έννοια ότι άνοιγε σελίδα —
+   * απλώς **όχι το ακίνητο**.
+   *
+   * Οι διευθύνσεις που έχουν ήδη φύγει (σελιδοδείκτες, παλιά email, ιστορικό
+   * περιηγητή) δεν διορθώνονται αναδρομικά. Άρα δεν διαγράφεται η μορφή — γίνεται
+   * **δείκτης** προς την καρτέλα, με `replace` ώστε το «πίσω» να μην κολλά σε
+   * βρόχο ανάμεσα στις δύο διευθύνσεις.
+   *
+   * ⚠️ Δεν είναι το ίδιο με το `?propertyId=` του `/spaces/properties`: εκείνο
+   * απαντά *«ποια γραμμή είναι επιλεγμένη»* και μένει ως έχει.
+   */
+  useEffect(() => {
+    if (legacyPropertyId) {
+      router.replace(ENTITY_ROUTES.properties.withId(legacyPropertyId));
+    }
+  }, [legacyPropertyId, router]);
+
+  if (legacyPropertyId) {
+    return <LoadingComponent />;
+  }
 
   // If floorplan view is requested, show the property viewer with layers + interactive overlays
   if (viewParam === 'floorplan') {

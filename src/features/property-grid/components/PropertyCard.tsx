@@ -10,42 +10,22 @@ import { NAVIGATION_ENTITIES } from '@/components/navigation/config/navigation-e
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
-import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 // 🏢 ENTERPRISE: i18n support
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 // 🏢 ENTERPRISE: Centralized floor label formatting (Ισόγειο, Υπόγειο, κλπ.)
 import { formatFloorLabel } from '@/lib/intl-utils';
 // 🏢 SSoT: WHICH price to show is decided once, in the resolver (ADR-777 Α6)
 import { resolveDisplayPrice } from '@/lib/properties/price-resolver';
-import { MISSING_PRICE_LABEL_KEYS, buildCardPriceText } from '@/domain/cards/property/property-card-shared';
+// 🏢 SSoT: το σήμα κατάστασης ανέβηκε στο shared module όταν απέκτησε δεύτερο
+// καταναλωτή (η κεφαλίδα ταυτότητας της καρτέλας, ADR-777 §8.30).
+import {
+  MISSING_PRICE_LABEL_KEYS,
+  buildCardPriceText,
+  resolvePropertyBadge,
+} from '@/domain/cards/property/property-card-shared';
 // 🏢 ENTERPRISE: Use canonical Property type from property-viewer
 import type { Property } from '@/types/property-viewer';
-import type { PropertyStatus } from '@/core/types/BadgeTypes';
-import type { CommercialStatus } from '@/types/property';
 import '@/lib/design-system';
-
-/**
- * Maps commercialStatus / legacy status to PropertyBadge status + i18n label key
- */
-function resolvePropertyBadge(
-  commercialStatus: CommercialStatus | undefined,
-  legacyStatus: Property['status']
-): { badgeStatus: PropertyStatus; labelKey: string } {
-  const effective = commercialStatus ?? legacyStatus;
-  switch (effective) {
-    case 'for-sale':
-    case 'for-rent':
-    case 'for-sale-and-rent':
-      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
-    case 'reserved':
-      return { badgeStatus: 'reserved', labelKey: UNIFIED_STATUS_FILTER_LABELS.RESERVED };
-    case 'sold':
-    case 'rented':
-      return { badgeStatus: 'sold', labelKey: UNIFIED_STATUS_FILTER_LABELS.SOLD };
-    default:
-      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
-  }
-}
 
 export function PropertyCard({ property, onViewFloorPlan }: { property: Property; onViewFloorPlan: (id: string) => void; }) {
   const iconSizes = useIconSizes();

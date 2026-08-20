@@ -26,6 +26,7 @@ const RevertDialog = dynamic(() => import('@/components/sales/dialogs/RevertDial
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { useIsMobile } from '@/hooks/useMobile';
 import { ENTITY_TYPES } from '@/config/domain-constants';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import { MobileDetailsSlideIn } from '@/core/layouts';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -241,7 +242,10 @@ export function SalesSidebar({
                       size="sm"
                       className="w-full justify-center gap-2 text-sm"
                       onClick={() => {
-                        window.location.href = `/properties?propertyId=${selectedProperty.id}&tab=${tabId}`;
+                        // ADR-777 §8.30: το μητρώο διαδρομών, όχι ωμό πρότυπο. Ο
+                        // παλιός σύνδεσμος έδειχνε στη λίστα που **αγνοούσε** το
+                        // `propertyId` — άνοιγε πάντα την ίδια οθόνη.
+                        window.location.href = ENTITY_ROUTES.properties.withTab(selectedProperty.id, tabId);
                       }}
                     >
                       <ExternalLink className={iconSizes.sm} />

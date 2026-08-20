@@ -103,6 +103,7 @@ export function usePropertyViewer() {
     setProperties,
     floors,
     isLoading,
+    hasAnswered,
     selectedPropertyIds,
     setSelectedProperties,
     hoveredPropertyId,
@@ -190,6 +191,8 @@ export function usePropertyViewer() {
     setProperties,
     floors: floors || [],
     isLoading,
+    /** ADR-777 §8.30 — «απάντησε ο κατάλογος;». Δες `SharedPropertiesContextType`. */
+    hasAnswered,
     selectedPropertyIds: selectedPropertyIds || [],
     hoveredPropertyId: hoveredPropertyId || null,
     selectedFloorId: selectedFloorId || null,

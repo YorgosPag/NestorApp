@@ -45,6 +45,7 @@ import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import { COLOR_BRIDGE } from '@/design-system/color-bridge';
 import '@/lib/design-system';
+import { ENTITY_ROUTES } from '@/lib/routes';
 
 // Extracted modules
 import type { OwnershipTableTabProps } from '@/components/projects/tabs/ownership-table-config';
@@ -336,8 +337,9 @@ export function OwnershipTableTab({ data, projectId }: OwnershipTableTabProps) {
                         </TableCell>
                         <TableCell className={typography.special.codeId}>
                           {row.entityRef.collection === 'properties' && <NAVIGATION_ENTITIES.property.icon className={cn('inline mr-1', iconSizes.xs, NAVIGATION_ENTITIES.property.color)} />}
+                          {/* ADR-777 §8.30: ο κωδικός ακινήτου οδηγεί στην ΚΑΡΤΕΛΑ του — ταυτότητα, όχι επιλογή γραμμής σε λίστα. */}
                           {row.entityRef.collection === 'properties' ? (
-                            <button type="button" className="hover:underline cursor-pointer" onClick={() => router.push(`/spaces/properties?propertyId=${row.entityRef.id}`)}>{row.entityCode}</button>
+                            <button type="button" className="hover:underline cursor-pointer" onClick={() => router.push(ENTITY_ROUTES.properties.withId(row.entityRef.id))}>{row.entityCode}</button>
                           ) : row.entityCode}
                         </TableCell>
                         <TableCell>{row.description}</TableCell>

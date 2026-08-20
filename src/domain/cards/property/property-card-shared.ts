@@ -11,8 +11,10 @@
  */
 
 import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { UNIFIED_STATUS_FILTER_LABELS } from '@/constants/property-statuses-enterprise';
 import type { StatItem } from '@/design-system';
 import type { GridCardBadge, GridCardBadgeVariant } from '@/design-system/components/GridCard/GridCard.types';
+import type { PropertyStatus } from '@/core/types/BadgeTypes';
 import { formatCurrency } from '@/lib/intl-utils';
 import {
   resolveDisplayPrice,
@@ -20,6 +22,7 @@ import {
   type MissingPriceReason,
   type ResolvedPrice,
 } from '@/lib/properties/price-resolver';
+import type { CommercialStatus } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
 
 type TFn = (key: string, opts?: Record<string, unknown>) => string;
@@ -66,6 +69,37 @@ export function buildPropertyBadges(
   const commercial = buildCommercialBadge(property, t);
   if (commercial) result.push(commercial);
   return result;
+}
+
+/**
+ * **Εμπορική κατάσταση → σήμα + κλειδί ετικέτας.**
+ *
+ * 🔑 **Ανέβηκε εδώ από το `PropertyCard` (ADR-777 §8.30).** Ήταν τοπική συνάρτηση
+ * όσο υπήρχε **ένας** καταναλωτής· η κεφαλίδα ταυτότητας της καρτέλας ακινήτου
+ * είναι ο **δεύτερος**, και μια αντιγραφή θα σήμαινε ότι την ημέρα που
+ * προστίθεται έβδομη εμπορική κατάσταση **η μία** από τις δύο οθόνες θα την
+ * αγνοούσε σιωπηλά, δείχνοντας «διαθέσιμο» για ακίνητο που δεν είναι (N.0.2).
+ *
+ * ⚠️ **Το `commercialStatus` είναι το SSoT· το `status` είναι κάτοπτρο εγγραφής**
+ * και διαβάζεται **μόνο** ως εφεδρεία (ADR-258).
+ */
+export function resolvePropertyBadge(
+  commercialStatus: CommercialStatus | undefined,
+  legacyStatus: Property['status'],
+): { badgeStatus: PropertyStatus; labelKey: string } {
+  switch (commercialStatus ?? legacyStatus) {
+    case 'for-sale':
+    case 'for-rent':
+    case 'for-sale-and-rent':
+      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
+    case 'reserved':
+      return { badgeStatus: 'reserved', labelKey: UNIFIED_STATUS_FILTER_LABELS.RESERVED };
+    case 'sold':
+    case 'rented':
+      return { badgeStatus: 'sold', labelKey: UNIFIED_STATUS_FILTER_LABELS.SOLD };
+    default:
+      return { badgeStatus: 'available', labelKey: UNIFIED_STATUS_FILTER_LABELS.AVAILABLE };
+  }
 }
 
 /**

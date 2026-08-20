@@ -1,11 +1,9 @@
 // ?? i18n: All labels converted to i18n keys - 2026-01-18
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import type { Property } from '@/types/property-viewer';
-import { Edit, Trash2 } from 'lucide-react';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
-import { useEmptyStateMessages } from '@/hooks/useEnterpriseMessages';
+import React, { useCallback, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Edit, ExternalLink, Trash2 } from 'lucide-react';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -15,19 +13,22 @@ import { useIsMobile } from '@/hooks/useMobile';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 
 import { PropertiesList } from '@/components/properties/PropertiesList';
-import { UniversalTabsRenderer, convertToUniversalConfig, type PropertyTabAdditionalData, type PropertyTabComponentProps, type PropertyTabGlobalProps } from '@/components/generic/UniversalTabsRenderer';
-import { PROPERTIES_COMPONENT_MAPPING } from '@/components/generic/mappings/propertiesMappings';
-import { getSortedPropertiesTabs } from '@/config/properties-tabs-config';
 import { MobileDetailsSlideIn } from '@/core/layouts';
-import { DetailsContainer } from '@/core/containers';
+import { createEntityAction } from '@/core/entity-headers';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import { TRANSITION_PRESETS, INTERACTIVE_PATTERNS } from '@/components/ui/effects';
 
-import { usePropertiesSidebar } from './hooks/usePropertiesSidebar';
-import { PropertyDetailsHeader } from './components/PropertyDetailsHeader';
+/**
+ * 🔑 **Η καρτέλα ΔΕΝ συντίθεται εδώ πια** (ADR-777 §8.30). Απέκτησε **δεύτερο**
+ * σημείο προσάρτησης — τη σελίδα `/properties/[id]` — και μια δεύτερη σύνθεση θα
+ * σήμαινε ότι η έβδομη καρτέλα θα προσγειωνόταν σε **μία** από τις δύο οθόνες,
+ * με **και τις δύο** να φαίνονται σωστές. Εδώ μένει ό,τι είναι όντως της λίστας:
+ * η διάταξη δύο στηλών, η κινητή προβολή, και η **κατάσταση επεξεργασίας** — που
+ * τη μοιράζεται με το μολύβι κάθε γραμμής.
+ */
+import { PropertyDetailSurface } from '@/features/property-detail-surface/PropertyDetailSurface';
 import { BuildingSpaceWarningBanner } from '@/components/building-management/shared/BuildingSpaceWarningBanner';
 import { useBuildingsNoUnits } from '@/contexts/BuildingsNoUnitsContext';
-import { UnifiedShareDialog } from '@/components/sharing/UnifiedShareDialog';
-import { useAuth } from '@/auth/hooks/useAuth';
 import type { PropertiesSidebarProps } from './types';
 import '@/lib/design-system';
 
@@ -50,83 +51,16 @@ export function PropertiesSidebar({
   const { t } = useTranslation(['properties', 'properties-detail', 'properties-enums', 'properties-viewer']);
   const { quick } = useBorderTokens();
   const colors = useSemanticColors();
-  const emptyStateMessages = useEmptyStateMessages();
   const iconSizes = useIconSizes();
   const layout = useLayoutClasses();
   const spacing = useSpacingTokens();
   const isMobile = useIsMobile();
+  const router = useRouter();
 
-  const {
-    safeFloors,
-    currentFloor,
-    safeViewerPropsWithFloors,
-    safeViewerProps,
-    ImpactDialog,
-  } = usePropertiesSidebar(floors, viewerProps, selectedProperty);
-
-  const { user } = useAuth();
   const hasBuildingsWithNoUnits = useBuildingsNoUnits();
   const [isEditMode, setIsEditMode] = useState(false);
-  const [showcaseDialogOpen, setShowcaseDialogOpen] = useState(false);
-  const [showcasePhotos, setShowcasePhotos] = useState<string[]>([]);
   const properties = units;
 
-  // Pre-fill the channel share surface with the property's real photo URLs
-  // (ADR-312 Phase 9.17). Without this, `UnifiedShareDialog` had no gallery
-  // to feed `PhotoPickerGrid`, which forced every Telegram/WhatsApp send
-  // through the link-only fallback (Phase 9.16). Fetched on open only.
-  useEffect(() => {
-    if (!showcaseDialogOpen || !selectedProperty) {
-      setShowcasePhotos([]);
-      return;
-    }
-    const propertyId = selectedProperty.id;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(
-          `/api/properties/${encodeURIComponent(propertyId)}/photos`,
-          { method: 'GET', credentials: 'include' },
-        );
-        if (!res.ok) return;
-        const payload = await res.json().catch(() => null);
-        const photos = payload?.data?.photos ?? payload?.photos;
-        if (!cancelled && Array.isArray(photos)) {
-          const urls = photos
-            .map((p: { url?: string }) => p.url)
-            .filter((u: unknown): u is string => typeof u === 'string' && u.length > 0);
-          setShowcasePhotos(urls);
-        }
-      } catch {
-        // Non-blocking: the dialog still works in link-mode without photos.
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [showcaseDialogOpen, selectedProperty]);
-
-  const showcasePdfPreSubmit = useCallback(async () => {
-    if (!selectedProperty) throw new Error('No property selected');
-    const res = await fetch(
-      `/api/properties/${encodeURIComponent(selectedProperty.id)}/showcase/pdf`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale: 'el' }),
-      },
-    );
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(body?.error || `HTTP ${res.status}`);
-    }
-    const payload = await res.json();
-    const data = payload?.data ?? payload;
-    return {
-      showcaseMeta: {
-        pdfStoragePath: data.pdfStoragePath as string,
-        pdfRegeneratedAt: data.pdfRegeneratedAt as string,
-      },
-    };
-  }, [selectedProperty]);
   const effectiveEditMode = isEditMode || isCreatingNewUnit;
   const handleToggleEditMode = useCallback(() => setIsEditMode((prev) => !prev), []);
   const handleExitEditMode = useCallback(() => {
@@ -145,30 +79,44 @@ export function PropertiesSidebar({
     await onDeleteProperty(selectedProperty.id);
   }, [onDeleteProperty, selectedProperty]);
 
-  const propertiesTabs = getSortedPropertiesTabs();
-
-  const propertyTabAdditionalData: PropertyTabAdditionalData = {
-    safeFloors,
-    currentFloor,
-    safeViewerProps,
-    safeViewerPropsWithFloors,
-    setShowHistoryPanel,
-    units,
-    onUpdateProperty: safeViewerPropsWithFloors.handleUpdateProperty,
-    isEditMode: effectiveEditMode,
-    onToggleEditMode: handleToggleEditMode,
-    onExitEditMode: handleExitEditMode,
-    isCreatingNewUnit,
-    onPropertyCreated,
-  };
-
-  const propertyTabGlobalProps: PropertyTabGlobalProps = {
-    propertyId: selectedProperty?.id,
-  };
+  /**
+   * **«Άνοιγμα σε σελίδα»** (ADR-777 §8.30) — η δεξιά στήλη κρατά τη σειρά σου
+   * όταν κοιτάς είκοσι ακίνητα στη σειρά· η σελίδα είναι για όταν θέλεις να
+   * δουλέψεις σε **ένα**. Η ενέργεια ζει **εδώ** και όχι μέσα στην επιφάνεια:
+   * είναι ιδιότητα του **σημείου προσάρτησης** (η σελίδα δεν έχει πού να ανοίξει).
+   *
+   * ⚠️ Δεν εμφανίζεται σε λειτουργία δημιουργίας: ένα ακίνητο που δεν έχει γραφτεί
+   * ακόμη **δεν έχει διεύθυνση**, και το κουμπί θα οδηγούσε σε «δεν βρέθηκε».
+   */
+  const openInPageActions = useMemo(() => {
+    if (!selectedProperty || isCreatingNewUnit) return undefined;
+    return [
+      createEntityAction(
+        'view',
+        t('properties-detail:navigation.actions.openPage.label'),
+        () => router.push(ENTITY_ROUTES.properties.withId(selectedProperty.id)),
+        { icon: ExternalLink },
+      ),
+    ];
+  }, [isCreatingNewUnit, router, selectedProperty, t]);
 
   const detailsContent = (
-    <DetailsContainer
-      selectedItem={selectedProperty}
+    <PropertyDetailSurface
+      property={selectedProperty}
+      units={units}
+      viewerProps={viewerProps}
+      floors={floors ?? []}
+      setShowHistoryPanel={setShowHistoryPanel}
+      isEditMode={effectiveEditMode}
+      onToggleEditMode={handleToggleEditMode}
+      onExitEditMode={handleExitEditMode}
+      isCreatingNewUnit={isCreatingNewUnit}
+      onPropertyCreated={onPropertyCreated}
+      onNewProperty={onNewProperty}
+      onDeleteProperty={handleDeleteProperty}
+      defaultTab={defaultTab}
+      headerActions={openInPageActions}
+      onCreateAction={onNewProperty}
       warningBanner={hasBuildingsWithNoUnits ? (
         <BuildingSpaceWarningBanner
           title={t('warningNoBuildingUnits.title')}
@@ -177,35 +125,6 @@ export function PropertiesSidebar({
           onAdd={() => onNewProperty?.()}
         />
       ) : undefined}
-      header={(
-        <PropertyDetailsHeader
-          property={selectedProperty}
-          isEditMode={effectiveEditMode}
-          isCreatingNewUnit={isCreatingNewUnit}
-          onToggleEditMode={handleToggleEditMode}
-          onExitEditMode={handleExitEditMode}
-          onNewProperty={onNewProperty}
-          onDeleteProperty={handleDeleteProperty}
-          onShowcaseProperty={() => setShowcaseDialogOpen(true)}
-        />
-      )}
-      tabsRenderer={(
-        <UniversalTabsRenderer<Property | null, PropertyTabComponentProps, PropertyTabAdditionalData, PropertyTabGlobalProps>
-          tabs={propertiesTabs.map(convertToUniversalConfig)}
-          data={selectedProperty}
-          componentMapping={PROPERTIES_COMPONENT_MAPPING}
-          defaultTab={defaultTab || 'info'}
-          theme="default"
-          translationNamespace="building"
-          additionalData={propertyTabAdditionalData}
-          globalProps={propertyTabGlobalProps}
-        />
-      )}
-      onCreateAction={onNewProperty}
-      emptyStateProps={{
-        icon: NAVIGATION_ENTITIES.property.icon,
-        ...emptyStateMessages.unit,
-      }}
     />
   );
 
@@ -261,31 +180,14 @@ export function PropertiesSidebar({
           </>
         )}
       >
+        {/*
+          ⚠️ Το `detailsContent` αποδίδεται σε **δύο** θέσεις (επιτραπέζιο /
+          κινητό) αλλά **ποτέ ταυτόχρονα** — οι δύο κλάδοι είναι αποκλειστικοί
+          μέσω `isMobile`. Αυτό είναι που κρατά τα διαλογικά της επιφάνειας
+          (βιτρίνα · επίπτωση) σε **ένα** αντίτυπο, τώρα που ζουν μέσα της.
+        */}
         {isMobile && selectedProperty && detailsContent}
       </MobileDetailsSlideIn>
-
-      {ImpactDialog}
-
-      {selectedProperty && user?.uid && user?.companyId && (
-        <UnifiedShareDialog
-          open={showcaseDialogOpen}
-          onOpenChange={setShowcaseDialogOpen}
-          entityType="property_showcase"
-          entityId={selectedProperty.id}
-          entityTitle={t('properties-detail:showcase.title')}
-          entitySubtitle={selectedProperty.name ?? ''}
-          userId={user.uid}
-          companyId={user.companyId}
-          preSubmit={showcasePdfPreSubmit}
-          contactShareContent={{
-            title: selectedProperty.name ?? t('properties-detail:showcase.title'),
-            text: '',
-            isPhoto: showcasePhotos.length > 0,
-            photoUrl: showcasePhotos[0],
-            galleryPhotos: showcasePhotos,
-          }}
-        />
-      )}
     </>
   );
 }

@@ -15,9 +15,26 @@ const logger = createModuleLogger('usePropertiesViewerState');
 
 const noop = () => {};
 
-export function usePropertiesViewerState() {
+/**
+ * @param explicitPropertyId — **Ποιο ακίνητο είναι επιλεγμένο, όταν το ξέρει ο
+ * καλών.** Η δεξιά στήλη του `/spaces/properties` το μαθαίνει από το ερώτημα
+ * (`?propertyId=`)· η σελίδα `/properties/[id]` το ξέρει από τη **διαδρομή**, όπου
+ * δεν υπάρχει ερώτημα να διαβαστεί (ADR-777 §8.30).
+ *
+ * 🔑 **Παραμετροποιείται η ΠΗΓΗ της απάντησης, όχι η μηχανή.** Ένας δεύτερος
+ * φορτωτής ακινήτου θα ήταν **δεύτερη μετάφραση** των ίδιων εγγράφων σε `Property`
+ * — ακριβώς η αστοχία που το `place-interest.service` περιγράφει γραπτά: δύο
+ * μεταφράσεις μπορούν να δείξουν **διαφορετικά πράγματα για το ίδιο ακίνητο**, και
+ * **και οι δύο να φαίνονται σωστές**.
+ *
+ * ⚠️ Το ρητό όρισμα **νικά** το ερώτημα και δεν πέφτει πίσω σε αυτό: μια σελίδα
+ * που ξέρει ταυτότητα από τη διαδρομή της δεν επιτρέπεται να αλλάξει θέμα επειδή
+ * κάποιος κόλλησε `?propertyId=` στη διεύθυνση.
+ */
+export function usePropertiesViewerState(explicitPropertyId?: string | null) {
   const searchParams = useSearchParams();
-  const propertyIdFromUrl = searchParams.get('propertyId');
+  const queryPropertyId = searchParams.get('propertyId');
+  const propertyIdFromUrl = explicitPropertyId !== undefined ? explicitPropertyId : queryPropertyId;
 
   const {
     properties,
@@ -63,6 +80,7 @@ export function usePropertiesViewerState() {
     setFilters,
     filteredProperties,
     isLoading,
+    hasAnswered,
     forceDataRefresh,
     handlePolygonCreated,
     handlePolygonUpdated,
@@ -270,6 +288,15 @@ export function usePropertiesViewerState() {
   return {
     properties: safeProperties,
     loading: isLoading,
+    /**
+     * ADR-777 §8.30 — **«απάντησε ο κατάλογος;»**, ξεχωριστό από το `loading`.
+     *
+     * Χωρίς αυτό, ο συνδυασμός `!loading && properties.length === 0` διαβάζεται
+     * ως «δεν υπάρχει» ενώ σημαίνει «δεν ρώτησε κανείς **ακόμη**» — η τεμπέλικη
+     * ενεργοποίηση του `SharedPropertiesProvider` το κάνει **βέβαιο** στο πρώτο
+     * καρέ κάθε σελίδας.
+     */
+    hasAnswered: Boolean(hasAnswered),
     setProperties: setProperties || noop,
     selectedPropertyIds: Array.isArray(selectedPropertyIds) ? selectedPropertyIds : [],
     hoveredPropertyId: hoveredPropertyId || null,

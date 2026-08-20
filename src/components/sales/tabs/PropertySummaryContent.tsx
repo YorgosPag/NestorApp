@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
+import { ENTITY_ROUTES } from '@/lib/routes';
 import type { Property } from '@/types/property';
 import '@/lib/design-system';
 import { cn } from '@/lib/utils';
@@ -140,14 +141,14 @@ export function PropertySummaryContent({ data: unit }: PropertySummaryContentPro
             />
           </div>
 
-          {/* Link to /units page */}
+          {/* Σύνδεσμος προς την καρτέλα του ακινήτου (ADR-777 §8.30 — μητρώο, όχι ωμό πρότυπο). */}
           <div className="mt-3 pt-2 border-t">
             <Button
               variant="ghost"
               size="sm"
               className="w-full justify-center gap-2 text-sm"
               onClick={() => {
-                window.location.href = `/properties?propertyId=${unit.id}`;
+                window.location.href = ENTITY_ROUTES.properties.withId(unit.id);
               }}
             >
               <ExternalLink className={iconSizes.sm} />

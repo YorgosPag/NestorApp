@@ -256,6 +256,9 @@
       },
       "showcase": {
         "label": "Property Showcase"
+      },
+      "openPage": {
+        "label": "Open in page"
       }
     }
   },
@@ -287,5 +290,11 @@
     "errorGeneric": "Generation failed. Please try again.",
     "errorRateLimit": "Too many requests. Please wait a moment and try again.",
     "errorUnauthorized": "You do not have permission for this action."
+  },
+  "detailPage": {
+    "back": "← Back to properties",
+    "absent": "Property not found",
+    "absentHint": "It may have been deleted, or it does not belong to the company you have selected.",
+    "backToList": "See all properties"
   }
 }
