@@ -88,16 +88,40 @@ const generateDedupeKey = generateNotificationDedupeId;
 
 /**
  * Load user notification settings from Firestore
+ *
+ * 🔴 **ΤΟ ΩΜΟ `as` ΗΤΑΝ ΨΕΜΑ ΠΡΟΣ ΤΟΝ ΜΕΤΑΓΛΩΤΤΙΣΤΗ** (διορθώθηκε §8.28). Το
+ * `doc.data() as UserNotificationSettings` υπόσχεται ότι **κάθε** πεδίο του τύπου
+ * υπάρχει στο έγγραφο. Δεν υπάρχει: τα έγγραφα γράφτηκαν σε διαφορετικές εποχές του
+ * σχήματος, και κάθε νέο πεδίο έρχεται εδώ ως `undefined` **με τον τύπο να λέει ότι
+ * δεν γίνεται**.
+ *
+ * Ήταν λανθάνον, όχι θεωρητικό: το `insideQuietHours` διαβάζει `quietHours.enabled`
+ * — έγγραφο χωρίς `quietHours` θα έριχνε `TypeError` **μέσα στον αγωγό που παραδίδει
+ * αλληλογραφία για όλους**.
+ *
+ * ⚠️ **Ο ίδιος ο service έχει ήδη τη σωστή απάντηση** (`transformFromFirestore`,
+ * merge με defaults)· αυτή η διαδρομή την **παρέκαμπτε**. Εδώ γίνεται το ελάχιστο
+ * ισοδύναμο, στον διακομιστή: τα defaults **από κάτω**, το έγγραφο **από πάνω**.
  */
 async function loadUserSettings(userId: string): Promise<UserNotificationSettings> {
   const docRef = getAdminFirestore().collection(COLLECTIONS.USER_NOTIFICATION_SETTINGS).doc(userId);
   const doc = await docRef.get();
 
-  if (!doc.exists) {
-    return getDefaultNotificationSettings(userId);
-  }
+  const defaults = getDefaultNotificationSettings(userId);
+  if (!doc.exists) return defaults;
 
-  return doc.data() as UserNotificationSettings;
+  const stored = (doc.data() ?? {}) as Partial<UserNotificationSettings>;
+
+  return {
+    ...defaults,
+    ...stored,
+    // Τα ένθετα αντικείμενα θέλουν **δικό τους** merge: ένα `...stored` από πάνω
+    // αντικαθιστά ολόκληρο το `quietHours`, οπότε ένα έγγραφο που έχει μόνο
+    // `{ enabled: true }` θα έχανε τις ώρες του.
+    quietHours: { ...defaults.quietHours, ...(stored.quietHours ?? {}) },
+    categories: { ...defaults.categories, ...(stored.categories ?? {}) },
+    userId,
+  };
 }
 
 /**

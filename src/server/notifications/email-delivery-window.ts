@@ -69,23 +69,53 @@
  * @see ADR-026 — orchestrator ειδοποιήσεων
  */
 
-import type { UserNotificationSettings } from '@/services/user-notification-settings/user-notification-settings.types';
+import {
+  DEFAULT_NOTIFICATION_TIMEZONE,
+  type UserNotificationSettings,
+} from '@/services/user-notification-settings/user-notification-settings.types';
 
 /**
- * Η ζώνη ώρας στην οποία ερμηνεύονται οι `quietHours` και τα παράθυρα.
+ * ✅ **ΤΟ ΟΡΙΟ ΕΚΛΕΙΣΕ (§8.28): η ζώνη είναι πλέον ΑΝΑ ΧΡΗΣΤΗ.**
  *
- * ⚠️ **ΔΗΛΩΜΕΝΟ ΟΡΙΟ, ΟΧΙ ΠΑΡΑΛΕΙΨΗ.** Οι μεγάλες πλατφόρμες κρατούν ζώνη ώρας
- * **ανά χρήστη** (Braze/Customer.io/Knock: ιδιότητα χρήστη· OneSignal: από τη
- * συσκευή). Το `UserNotificationSettings` **δεν έχει** τέτοιο πεδίο — μετρημένο.
- * Μέχρι να αποκτήσει, το «22:00» ενός χρήστη σημαίνει 22:00 **Ελλάδας**, που
- * είναι σωστό για κάθε σημερινό χρήστη και **γραμμένο** ώστε να μη θεωρηθεί ποτέ
- * καθολική αλήθεια.
+ * Αυτή η σταθερά ήταν η **καθολική** ζώνη: το «22:00» **κάθε** χρήστη σήμαινε 22:00
+ * Ελλάδας. Παραμένει μόνο ως **προεπιλογή** — και ζει στο SSoT των ρυθμίσεων
+ * (`DEFAULT_NOTIFICATION_TIMEZONE`), όχι εδώ, ώστε να μην υπάρχουν δύο τιμές που
+ * μπορούν να αποκλίνουν.
  *
  * Είναι η **ίδια** ζώνη με το `CRON_TIMEZONE`, και σκόπιμα δηλώνεται ξεχωριστά:
  * το «πότε τρέχει ο σαρωτής» και το «πότε επιτρέπεται να ενοχλήσω άνθρωπο» είναι
  * δύο διαφορετικές αποφάσεις που σήμερα συμπίπτουν.
+ *
+ * @deprecated Χρησιμοποίησε το `settings.timezone`. Μένει εξαγόμενο για καταναλωτές
+ * που χρειάζονται την προεπιλογή ονομαστικά.
  */
-export const NOTIFICATION_TIMEZONE = 'Europe/Athens';
+export const NOTIFICATION_TIMEZONE = DEFAULT_NOTIFICATION_TIMEZONE;
+
+/**
+ * **Είναι αυτό αναγνωρίσιμη ζώνη ώρας;**
+ *
+ * ⚠️ **Fail-safe, και δεν είναι πολυτέλεια.** Το `Intl.DateTimeFormat` πετά
+ * `RangeError` σε άγνωστο identifier. Το πεδίο `timezone` έρχεται από **έγγραφο
+ * Firestore** — δηλαδή από δεδομένα, όχι από τον μεταγλωττιστή. Ένα κακογραμμένο
+ * `"Europe/Athina"` σε **έναν** χρήστη θα έριχνε την εργασία που παραδίδει
+ * αλληλογραφία για **όλους**.
+ *
+ * Ίδιο σχήμα με το `minutesOfDay`: άκυρη ρύθμιση ⇒ **αγνοείται**, ποτέ κατάρρευση.
+ */
+function isKnownTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Η ζώνη του χρήστη, ή η προεπιλογή όταν λείπει/είναι άκυρη. */
+export function resolveTimeZone(timeZone: string | undefined): string {
+  if (!timeZone || !isKnownTimeZone(timeZone)) return DEFAULT_NOTIFICATION_TIMEZONE;
+  return timeZone;
+}
 
 /** Ώρα του ημερήσιου παραθύρου — απόγευμα, αφού τελειώσει η δουλειά. */
 export const DAILY_WINDOW_HOUR = 20;
@@ -138,9 +168,9 @@ const WEEKDAY_INDEX: Readonly<Record<string, number>> = {
  * χειμώνα και 00:00–10:00 το καλοκαίρι: λάθος, **και διαφορετικά λάθος δύο φορές
  * τον χρόνο**.
  */
-function zonedParts(instant: Date): ZonedParts {
+function zonedParts(instant: Date, timeZone: string): ZonedParts {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: NOTIFICATION_TIMEZONE,
+    timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -188,14 +218,19 @@ function minutesOfDay(time: string): number | null {
  * περάσματα αρκούν: η πρώτη διόρθωση φέρνει μέσα στη σωστή μέρα, η δεύτερη
  * απορροφά την αλλαγή ζώνης αν η πρώτη πέρασε το σύνορό της.
  */
-function instantAtLocalHour(from: Date, dayOffset: number, hour: number): Date {
-  const base = zonedParts(from);
+function instantAtLocalHour(
+  from: Date,
+  dayOffset: number,
+  hour: number,
+  timeZone: string,
+): Date {
+  const base = zonedParts(from, timeZone);
   let candidate = new Date(
     Date.UTC(base.year, base.month - 1, base.day + dayOffset, hour, 0, 0, 0),
   );
 
   for (let pass = 0; pass < 2; pass += 1) {
-    const got = zonedParts(candidate);
+    const got = zonedParts(candidate, timeZone);
     const wantedMinutes = hour * 60;
     const gotMinutes = got.hour * 60 + got.minute;
     // Η διαφορά μέρας μετριέται σε λεπτά μέσω της ίδιας της υποψηφιότητας.
@@ -214,6 +249,7 @@ function instantAtLocalHour(from: Date, dayOffset: number, hour: number): Date {
 function insideQuietHours(
   instant: Date,
   quietHours: UserNotificationSettings['quietHours'],
+  timeZone: string,
 ): boolean {
   if (!quietHours.enabled) return false;
 
@@ -223,7 +259,7 @@ function insideQuietHours(
   // δεν επιτρέπεται να αποκλείσει σιωπηλά κάθε email για πάντα.
   if (start === null || end === null || start === end) return false;
 
-  const parts = zonedParts(instant);
+  const parts = zonedParts(instant, timeZone);
   const nowMinutes = parts.hour * 60 + parts.minute;
 
   // ⚠️ Το παράθυρο **συνήθως περνά τα μεσάνυχτα** (η προεπιλογή είναι 22:00→08:00).
@@ -238,15 +274,16 @@ function insideQuietHours(
 function quietHoursEnd(
   instant: Date,
   quietHours: UserNotificationSettings['quietHours'],
+  timeZone: string,
 ): Date {
   const end = minutesOfDay(quietHours.endTime) ?? 0;
   const endHour = Math.floor(end / 60);
-  const parts = zonedParts(instant);
+  const parts = zonedParts(instant, timeZone);
   const nowMinutes = parts.hour * 60 + parts.minute;
 
   // Αν η ώρα λήξης έχει ήδη περάσει σήμερα, το παράθυρο κλείνει **αύριο**.
   const sameDay = nowMinutes < end;
-  const candidate = instantAtLocalHour(instant, sameDay ? 0 : 1, endHour);
+  const candidate = instantAtLocalHour(instant, sameDay ? 0 : 1, endHour, timeZone);
 
   // Τα λεπτά της ώρας λήξης προστίθενται χωριστά: το `instantAtLocalHour` δουλεύει
   // σε ακέραιες ώρες, και μια ρύθμιση «08:30» δεν επιτρέπεται να στρογγυλοποιηθεί
@@ -255,16 +292,16 @@ function quietHoursEnd(
 }
 
 /** Η επόμενη στιγμή του ημερήσιου παραθύρου. */
-function nextDailyWindow(instant: Date): Date {
-  const parts = zonedParts(instant);
+function nextDailyWindow(instant: Date, timeZone: string): Date {
+  const parts = zonedParts(instant, timeZone);
   const passed = parts.hour > DAILY_WINDOW_HOUR ||
     (parts.hour === DAILY_WINDOW_HOUR && parts.minute > 0);
-  return instantAtLocalHour(instant, passed ? 1 : 0, DAILY_WINDOW_HOUR);
+  return instantAtLocalHour(instant, passed ? 1 : 0, DAILY_WINDOW_HOUR, timeZone);
 }
 
 /** Η επόμενη στιγμή του εβδομαδιαίου παραθύρου. */
-function nextWeeklyWindow(instant: Date): Date {
-  const parts = zonedParts(instant);
+function nextWeeklyWindow(instant: Date, timeZone: string): Date {
+  const parts = zonedParts(instant, timeZone);
   let offset = (WEEKLY_WINDOW_WEEKDAY - parts.weekday + 7) % 7;
 
   const passedToday =
@@ -273,7 +310,7 @@ function nextWeeklyWindow(instant: Date): Date {
   // Αν είναι σήμερα Δευτέρα και η ώρα πέρασε, το παράθυρο είναι την **επόμενη**.
   if (offset === 0 && passedToday) offset = 7;
 
-  return instantAtLocalHour(instant, offset, WEEKLY_WINDOW_HOUR);
+  return instantAtLocalHour(instant, offset, WEEKLY_WINDOW_HOUR, timeZone);
 }
 
 /** Τι ρωτά ο καλών. */
@@ -322,22 +359,28 @@ export function decideEmailDelivery(
     return { kind: 'suppressed', reason: 'frequency-disabled' };
   }
 
+  // 🕐 §8.28 — **η ζώνη ΤΟΥ ΧΡΗΣΤΗ**, λυμένη μία φορά και περασμένη παντού. Άκυρη ή
+  // απούσα τιμή πέφτει στην προεπιλογή αντί να ρίξει το `Intl`.
+  const timeZone = resolveTimeZone(settings.timezone);
+
   if (settings.emailFrequency === 'daily') {
     return withQuietHours(
-      { kind: 'defer', deliverAt: nextDailyWindow(context.now), reason: 'daily-window' },
+      { kind: 'defer', deliverAt: nextDailyWindow(context.now, timeZone), reason: 'daily-window' },
       settings,
+      timeZone,
     );
   }
 
   if (settings.emailFrequency === 'weekly') {
     return withQuietHours(
-      { kind: 'defer', deliverAt: nextWeeklyWindow(context.now), reason: 'weekly-window' },
+      { kind: 'defer', deliverAt: nextWeeklyWindow(context.now, timeZone), reason: 'weekly-window' },
       settings,
+      timeZone,
     );
   }
 
   // `realtime` — η μόνη περίπτωση όπου η στιγμή παράδοσης είναι το τώρα.
-  return withQuietHours({ kind: 'send-now' }, settings, context.now);
+  return withQuietHours({ kind: 'send-now' }, settings, timeZone, context.now);
 }
 
 /**
@@ -363,16 +406,17 @@ export function decideEmailDelivery(
 function withQuietHours(
   decision: EmailDeliveryDecision,
   settings: UserNotificationSettings,
+  timeZone: string,
   nowForImmediate?: Date,
 ): EmailDeliveryDecision {
   const at = decision.kind === 'defer' ? decision.deliverAt : nowForImmediate;
   if (!at) return decision;
 
-  if (!insideQuietHours(at, settings.quietHours)) return decision;
+  if (!insideQuietHours(at, settings.quietHours, timeZone)) return decision;
 
   return {
     kind: 'defer',
-    deliverAt: quietHoursEnd(at, settings.quietHours),
+    deliverAt: quietHoursEnd(at, settings.quietHours, timeZone),
     reason: 'quiet-hours',
   };
 }

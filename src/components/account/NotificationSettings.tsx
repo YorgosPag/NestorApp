@@ -17,8 +17,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { createStaleCache } from '@/lib/stale-cache';
 import {
   Bell,
-  Mail,
-  Smartphone,
   Moon,
   AlertCircle,
 } from 'lucide-react';
@@ -26,13 +24,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useSemanticColors } from '@/hooks/useSemanticColors';
 import { useBorderTokens } from '@/hooks/useBorderTokens';
@@ -47,6 +38,7 @@ import {
   NotificationCategory,
   EmailFrequency,
 } from '@/services/user-notification-settings';
+import { NotificationDeliverySection } from '@/components/account/NotificationDeliverySection';
 import { createModuleLogger } from '@/lib/telemetry';
 import '@/lib/design-system';
 import {
@@ -179,6 +171,26 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
         await userNotificationSettingsService.setEmailFrequency(userId, frequency);
       } catch (err) {
         logger.error('Failed to set email frequency', { error: err });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [userId]
+  );
+
+  /**
+   * 🕐 ADR-777 §8.28 — η ζώνη ώρας του χρήστη.
+   *
+   * Ερμηνεύει τις ώρες ησυχίας **και** τα παράθυρα παράδοσης. Πριν από αυτό, όλοι
+   * ερμηνεύονταν σε Ελλάδα.
+   */
+  const handleTimezoneChange = useCallback(
+    async (timezone: string) => {
+      setIsSaving(true);
+      try {
+        await userNotificationSettingsService.setTimezone(userId, timezone);
+      } catch (err) {
+        logger.error('Failed to set timezone', { error: err });
       } finally {
         setIsSaving(false);
       }
@@ -336,78 +348,15 @@ export function NotificationSettings({ userId, onSettingsChange }: NotificationS
           />
         </section>
 
-        {/* Delivery Methods */}
-        <section className={layout.flexColGap4}>
-          <h3 className={cn(typography.label.sm, colors.text.primary)}>
-            {t('account.notificationSettings.deliveryMethods')}
-          </h3>
-
-          {/* In-App */}
-          <div className={cn(layout.flexCenterBetween, 'py-2')}>
-            <div className={layout.flexCenterGap2}>
-              <Smartphone className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
-              <Label htmlFor="in-app" className={cn(typography.body.sm, colors.text.secondary)}>
-                {t('account.notificationSettings.inApp')}
-              </Label>
-            </div>
-            <Switch
-              id="in-app"
-              checked={settings.inAppEnabled}
-              onCheckedChange={handleInAppToggle}
-              disabled={!settings.globalEnabled || isSaving}
-              variant="status"
-            />
-          </div>
-
-          {/* Email */}
-          <div className={cn(layout.flexCenterBetween, 'py-2')}>
-            <div className={layout.flexCenterGap2}>
-              <Mail className={cn(iconSizes.sm, colors.text.muted)} aria-hidden="true" />
-              <Label htmlFor="email" className={cn(typography.body.sm, colors.text.secondary)}>
-                {t('account.notificationSettings.email')}
-              </Label>
-            </div>
-            <Switch
-              id="email"
-              checked={settings.emailEnabled}
-              onCheckedChange={handleEmailToggle}
-              disabled={!settings.globalEnabled || isSaving}
-              variant="status"
-            />
-          </div>
-
-          {/* Email Frequency */}
-          {settings.emailEnabled && settings.globalEnabled && (
-            <div className={cn(layout.flexCenterBetween, 'py-2', 'pl-8')}>
-              <Label htmlFor="email-frequency" className={cn(typography.body.sm, colors.text.secondary)}>
-                {t('account.notificationSettings.emailFrequency')}
-              </Label>
-              <Select
-                value={settings.emailFrequency}
-                onValueChange={(value) => handleEmailFrequencyChange(value as EmailFrequency)}
-                disabled={isSaving}
-              >
-                <SelectTrigger id="email-frequency" className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="realtime">
-                    {t('account.notificationSettings.frequency.realtime')}
-                  </SelectItem>
-                  <SelectItem value="daily">
-                    {t('account.notificationSettings.frequency.daily')}
-                  </SelectItem>
-                  <SelectItem value="weekly">
-                    {t('account.notificationSettings.frequency.weekly')}
-                  </SelectItem>
-                  <SelectItem value="disabled">
-                    {t('account.notificationSettings.frequency.disabled')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </section>
+        {/* Delivery Methods — ADR-777 §8.28: εξήχθη σε δικό του component (N.7.1) */}
+        <NotificationDeliverySection
+          settings={settings}
+          isSaving={isSaving}
+          onInAppToggle={handleInAppToggle}
+          onEmailToggle={handleEmailToggle}
+          onEmailFrequencyChange={handleEmailFrequencyChange}
+          onTimezoneChange={handleTimezoneChange}
+        />
 
         {/* Category Sections */}
         {settings.globalEnabled && CATEGORY_CONFIGS.map(renderCategorySection)}

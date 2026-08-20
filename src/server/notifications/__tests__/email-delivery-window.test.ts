@@ -16,6 +16,7 @@ import {
   DAILY_WINDOW_HOUR,
   WEEKLY_WINDOW_HOUR,
   decideEmailDelivery,
+  resolveTimeZone,
   type EmailDeliveryDecision,
 } from '@/server/notifications/email-delivery-window';
 import {
@@ -425,5 +426,103 @@ describe('Ω — τα παράθυρα κρατούν ΤΟΠΙΚΗ ώρα και
       ),
     );
     expect(athensHour(at)).toBe(DAILY_WINDOW_HOUR);
+  });
+});
+
+// =============================================================================
+// Ζ — ΖΩΝΗ ΩΡΑΣ ΑΝΑ ΧΡΗΣΤΗ (ADR-777 §8.28)
+// =============================================================================
+
+/** Η τοπική ώρα μιας στιγμής σε **οποιαδήποτε** ζώνη. */
+function hourIn(instant: Date, timeZone: string): number {
+  return Number(
+    new Intl.DateTimeFormat('en-US', { timeZone, hour: '2-digit', hour12: false })
+      .format(instant),
+  ) % 24;
+}
+
+describe('Ζ — το «22:00» κάθε ανθρώπου είναι το ΔΙΚΟ ΤΟΥ 22:00', () => {
+  const noQuiet = { enabled: false, startTime: '22:00', endTime: '08:00' };
+
+  it('Ζ1 🔑 — ΤΟ ΚΕΝΤΡΙΚΟ: δύο ζώνες ⇒ ΔΙΑΦΟΡΕΤΙΚΗ στιγμή παράδοσης', () => {
+    // ⚠️ Χωρίς αυτή την άγκυρα η παράμετρος ζώνης θα ήταν **αδρανής**: κάθε άλλο
+    // test περνά με μία και μόνη ζώνη, άρα θα έμενε πράσινο ακόμη κι αν η τιμή του
+    // χρήστη αγνοούνταν εντελώς.
+    const now = new Date('2026-08-19T10:00:00Z');
+
+    const athensAt = deferredAt(decideEmailDelivery(
+      settingsWith({ emailFrequency: 'daily', quietHours: noQuiet, timezone: 'Europe/Athens' }),
+      { now, ...ORDINARY },
+    ));
+    const berlinAt = deferredAt(decideEmailDelivery(
+      settingsWith({ emailFrequency: 'daily', quietHours: noQuiet, timezone: 'Europe/Berlin' }),
+      { now, ...ORDINARY },
+    ));
+
+    // Καθένας παίρνει το email στις 20:00 **της δικής του** ώρας…
+    expect(hourIn(athensAt, 'Europe/Athens')).toBe(DAILY_WINDOW_HOUR);
+    expect(hourIn(berlinAt, 'Europe/Berlin')).toBe(DAILY_WINDOW_HOUR);
+    // …και οι δύο στιγμές **δεν** συμπίπτουν: το Βερολίνο είναι μία ώρα πίσω.
+    expect(berlinAt.getTime() - athensAt.getTime()).toBe(60 * 60 * 1000);
+  });
+
+  it('Ζ2 🔑 — οι ώρες ησυχίας ερμηνεύονται στη ζώνη του χρήστη', () => {
+    // 23:30 Αθήνας = 22:30 Βερολίνου. Και οι δύο έχουν ησυχία 22:00–08:00, άρα και
+    // οι δύο αναβάλλονται — αλλά ο καθένας μέχρι το **δικό του** 08:00.
+    const now = new Date('2026-08-19T20:30:00Z'); // 23:30 Αθήνα, 22:30 Βερολίνο
+    const quiet = { enabled: true, startTime: '22:00', endTime: '08:00' };
+
+    const athensAt = deferredAt(decideEmailDelivery(
+      settingsWith({ emailFrequency: 'realtime', quietHours: quiet, timezone: 'Europe/Athens' }),
+      { now, ...ORDINARY },
+    ));
+    const berlinAt = deferredAt(decideEmailDelivery(
+      settingsWith({ emailFrequency: 'realtime', quietHours: quiet, timezone: 'Europe/Berlin' }),
+      { now, ...ORDINARY },
+    ));
+
+    expect(hourIn(athensAt, 'Europe/Athens')).toBe(8);
+    expect(hourIn(berlinAt, 'Europe/Berlin')).toBe(8);
+    expect(berlinAt.getTime()).toBeGreaterThan(athensAt.getTime());
+  });
+
+  it('Ζ3 🔴 — ζώνη ΕΚΤΟΣ Ευρώπης δεν είναι ειδική περίπτωση', () => {
+    // Το Τόκιο είναι UTC+9 **χωρίς θερινή ώρα** — δηλαδή σπάει και την υπόθεση
+    // «όλοι αλλάζουν ώρα μαζί μας», που είναι η σιωπηλή παραδοχή του παλιού κώδικα.
+    const at = deferredAt(decideEmailDelivery(
+      settingsWith({ emailFrequency: 'daily', quietHours: noQuiet, timezone: 'Asia/Tokyo' }),
+      { now: new Date('2026-08-19T10:00:00Z'), ...ORDINARY },
+    ));
+    expect(hourIn(at, 'Asia/Tokyo')).toBe(DAILY_WINDOW_HOUR);
+  });
+
+  it('Ζ4 🔴 — ΑΚΥΡΗ ζώνη ⇒ προεπιλογή, ΠΟΤΕ κατάρρευση', () => {
+    // ⚠️ Το `Intl` πετά `RangeError` σε άγνωστο identifier, και το πεδίο έρχεται από
+    // **έγγραφο Firestore**. Ένα κακογραμμένο "Europe/Athina" σε ΕΝΑΝ χρήστη θα
+    // σταματούσε την παράδοση αλληλογραφίας για **όλους**.
+    const at = deferredAt(decideEmailDelivery(
+      settingsWith({ emailFrequency: 'daily', quietHours: noQuiet, timezone: 'Europe/Athina' }),
+      { now: new Date('2026-08-19T10:00:00Z'), ...ORDINARY },
+    ));
+    expect(hourIn(at, 'Europe/Athens')).toBe(DAILY_WINDOW_HOUR);
+  });
+
+  it('Ζ5 — έγγραφο ΧΩΡΙΣ το πεδίο (προ §8.28) ⇒ προεπιλογή', () => {
+    // Τα υπάρχοντα έγγραφα δεν έχουν `timezone`. Η συμπεριφορά τους πρέπει να μείνει
+    // **ακριβώς** η προηγούμενη, αλλιώς η προσθήκη πεδίου θα ήταν σιωπηλή μετανάστευση.
+    const withoutField = settingsWith({ emailFrequency: 'daily', quietHours: noQuiet });
+    delete (withoutField as { timezone?: string }).timezone;
+
+    const at = deferredAt(decideEmailDelivery(withoutField, {
+      now: new Date('2026-08-19T10:00:00Z'), ...ORDINARY,
+    }));
+    expect(hourIn(at, 'Europe/Athens')).toBe(DAILY_WINDOW_HOUR);
+  });
+
+  it('Ζ6 — ο επιλυτής ζώνης είναι ρητός και δοκιμάσιμος', () => {
+    expect(resolveTimeZone('Europe/Berlin')).toBe('Europe/Berlin');
+    expect(resolveTimeZone('Δεν/Υπάρχει')).toBe('Europe/Athens');
+    expect(resolveTimeZone(undefined)).toBe('Europe/Athens');
+    expect(resolveTimeZone('')).toBe('Europe/Athens');
   });
 });

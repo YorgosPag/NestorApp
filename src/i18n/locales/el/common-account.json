@@ -102,7 +102,9 @@
           "twoFactorChange": "Αλλαγή 2FA",
           "suspiciousActivity": "Ύποπτη δραστηριότητα"
         }
-      }
+      },
+      "timezone": "Ζώνη ώρας",
+      "timezoneDescription": "Οι ώρες ησυχίας και τα παράθυρα παράδοσης ερμηνεύονται σε αυτή τη ζώνη."
     },
     "security": {
       "passwordTitle": "Κωδικός Πρόσβασης",

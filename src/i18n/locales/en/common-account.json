@@ -102,7 +102,9 @@
           "twoFactorChange": "2FA change",
           "suspiciousActivity": "Suspicious activity"
         }
-      }
+      },
+      "timezone": "Time zone",
+      "timezoneDescription": "Quiet hours and delivery windows are interpreted in this time zone."
     },
     "security": {
       "passwordTitle": "Password",

@@ -308,6 +308,17 @@ class UserNotificationSettingsService {
     await this.updateSettings(userId, { emailFrequency: frequency });
   }
 
+  /**
+   * Ορίζει τη **ζώνη ώρας** του χρήστη (ADR-777 §8.28).
+   *
+   * Ερμηνεύει τις ώρες ησυχίας **και** τα παράθυρα `daily`/`weekly`. Άκυρη τιμή
+   * δεν απορρίπτεται εδώ: η πολιτική παράδοσης πέφτει σιωπηλά στην προεπιλογή,
+   * ώστε μια κακή τιμή σε ένα έγγραφο να μη σταματά την αλληλογραφία όλων.
+   */
+  public async setTimezone(userId: string, timezone: string): Promise<void> {
+    await this.updateSettings(userId, { timezone });
+  }
+
   // ==========================================================================
   // QUIET HOURS
   // ==========================================================================
@@ -427,6 +438,10 @@ class UserNotificationSettingsService {
         ...defaults.quietHours,
         ...((data.quietHours as Record<string, unknown>) ?? {}),
       },
+      // ⚠️ Τα υπάρχοντα έγγραφα **δεν έχουν** το πεδίο (προστέθηκε στο §8.28). Το
+      // `??` τους δίνει την προεπιλογή χωρίς migration: κανένας δεν χάνει ρύθμιση
+      // και κανένας δεν αποκτά `undefined` που θα έριχνε το `Intl`.
+      timezone: (data.timezone as string) ?? defaults.timezone,
       createdAt: normalizeToDate(data.createdAt) ?? defaults.createdAt,
       updatedAt: normalizeToDate(data.updatedAt) ?? defaults.updatedAt,
     };
@@ -446,6 +461,7 @@ class UserNotificationSettingsService {
       pushEnabled: settings.pushEnabled,
       categories: settings.categories,
       quietHours: settings.quietHours,
+      timezone: settings.timezone,
       createdAt: Timestamp.fromDate(settings.createdAt),
       updatedAt: nowTimestamp(),
     };

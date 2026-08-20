@@ -24,6 +24,21 @@ export type NotificationCategory = 'crm' | 'properties' | 'tasks' | 'security' |
  */
 export type EmailFrequency = 'realtime' | 'daily' | 'weekly' | 'disabled';
 
+/**
+ * Η ζώνη ώρας όταν ο χρήστης δεν έχει δηλώσει δική του.
+ *
+ * ⚠️ **ΕΙΝΑΙ ΤΟ SSoT ΤΗΣ ΠΡΟΕΠΙΛΟΓΗΣ** — το `email-delivery-window.ts` το
+ * **εισάγει** αντί να έχει δικό του αντίγραφο. Μέχρι το §8.28 η τιμή ζούσε **μόνο**
+ * εκεί, ως `NOTIFICATION_TIMEZONE`, και ήταν καθολική: το «22:00» **κάθε** χρήστη
+ * σήμαινε 22:00 Ελλάδας.
+ *
+ * 🔑 **Γιατί εδώ και όχι στην πολιτική**: η προεπιλογή είναι ιδιότητα του
+ * **χρήστη** (τι υποθέτουμε γι' αυτόν όταν δεν έχει πει), όχι της παράδοσης. Αν
+ * ζούσε στην πολιτική, το `getDefaultNotificationSettings` θα έπρεπε να εισάγει από
+ * server-only module — και οι ρυθμίσεις διαβάζονται και στον browser.
+ */
+export const DEFAULT_NOTIFICATION_TIMEZONE = 'Europe/Athens';
+
 // ============================================================================
 // CATEGORY-SPECIFIC SETTINGS
 // ============================================================================
@@ -173,6 +188,25 @@ export interface UserNotificationSettings {
     endTime: string; // HH:MM format
   };
 
+  /**
+   * 🕐 ADR-777 §8.28 — **Η ζώνη ώρας ΤΟΥ ΧΡΗΣΤΗ**, ως IANA identifier
+   * (`'Europe/Athens'`, `'Europe/Berlin'`, …).
+   *
+   * Ερμηνεύει **και** τις {@link UserNotificationSettings.quietHours} **και** τα
+   * παράθυρα `daily`/`weekly`. Μέχρι το §8.28 **δεν υπήρχε**: όλοι ερμηνεύονταν σε
+   * Ελλάδα, οπότε η «ησυχία 22:00–08:00» ενός συνεργάτη στο Βερολίνο ίσχυε 21:00–07:00
+   * τοπικά — και **διαφορετικά λάθος** όποτε οι δύο χώρες άλλαζαν ώρα σε άλλη ημερομηνία.
+   *
+   * ⚠️ **Άκυρη τιμή ΔΕΝ ρίχνει τον αγωγό.** Το `Intl.DateTimeFormat` πετά `RangeError`
+   * σε άγνωστο identifier· ένα κακογραμμένο πεδίο σε **ένα** έγγραφο θα σταματούσε
+   * την παράδοση για **όλους**. Η πολιτική πέφτει σιωπηλά στο
+   * {@link DEFAULT_NOTIFICATION_TIMEZONE} — ίδιο σχήμα με τη ρύθμιση ησυχίας που
+   * έχει άκυρη μορφή ώρας.
+   *
+   * @see server/notifications/email-delivery-window
+   */
+  timezone: string;
+
   /** Metadata */
   createdAt: Date;
   updatedAt: Date;
@@ -264,6 +298,7 @@ export function getDefaultNotificationSettings(userId: string): UserNotification
       startTime: '22:00',
       endTime: '08:00',
     },
+    timezone: DEFAULT_NOTIFICATION_TIMEZONE,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
