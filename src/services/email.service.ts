@@ -1,23 +1,29 @@
 // src/services/email.service.ts
-// Enterprise Email Service with Resend + Mailgun fallback
-import { Resend } from 'resend';
+/**
+ * Enterprise Email Service — κοινοποίηση ακινήτων/φωτογραφιών.
+ *
+ * 🔴 **Η ΛΕΞΗ «FALLBACK» ΕΔΩ ΠΕΡΙΕΓΡΑΦΕ ΚΑΤΙ ΠΟΥ ΔΕΝ ΥΠΗΡΧΕ** (§8.26). Η κεφαλίδα
+ * έλεγε «Resend + Mailgun **fallback**»· ο κώδικας διάλεγε **έναν** πάροχο μία
+ * φορά — `resend ? 'resend' : mailgunAdapter ? 'mailgun' : null` — και σε αποτυχία
+ * **πετούσε**. Ο δεύτερος δεν δοκιμαζόταν **ποτέ**, σε καμία διαδρομή.
+ *
+ * Η επιλογή, η εφεδρεία και το χρονικό όριο ζουν πλέον στο SSoT
+ * `server/comms/email-provider-chain`: **μία** απάντηση για ολόκληρη την εφαρμογή,
+ * κοινή με τον αγωγό ειδοποιήσεων (ADR-749 — όχι δύο μηχανές για ένα ερώτημα).
+ *
+ * @see ADR-777 §8.26
+ */
 import { getErrorMessage } from '@/lib/error-utils';
 import { EmailTemplatesService } from './email-templates.service';
 import { buildPhotoShareEmail } from './email-templates/photo-share';
-import { EmailAdapter } from '@/server/comms/email-adapter';
+import { describeChain, sendThroughChain } from '@/server/comms/email-provider-chain';
+import { defaultEmailChain } from '@/server/comms/email-providers';
 import type { EmailTemplateType, EmailTemplateData } from '@/types/email-templates';
 
 // Environment variables
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'info@nestorconstruct.gr';
 const FROM_NAME = process.env.FROM_NAME || 'Nestor Construct';
 const NODE_ENV = process.env.NODE_ENV || 'development';
-
-// Initialize Resend (only if API key exists)
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
-// Mailgun fallback adapter
-const mailgunAdapter = MAILGUN_API_KEY ? new EmailAdapter() : null;
 
 // New enterprise interface
 export interface EmailRequest {
@@ -47,24 +53,13 @@ export interface EmailResponse {
 }
 
 
-/**
- * Race a provider call against a 20s timeout so a hanging SMTP/API server
- * fails fast instead of pinning the Next.js serverless function on the 60s
- * client budget (incident 2026-04-19: Resend hung silently → 408 in UI).
- * Centralised here so both the Resend and Mailgun paths wear the same guard.
+/*
+ * ⚠️ Ο φρουρός χρόνου **μετακόμισε** στο `email-provider-chain`
+ * (`PROVIDER_TIMEOUT_MS`). Γεννήθηκε από το συμβάν 2026-04-19 (*«Resend hung
+ * silently → 408 in UI»*) και φρουρούσε **μόνο** αυτή τη διαδρομή: ο αγωγός cron
+ * δεν τον είχε **καθόλου**, δηλαδή ο ίδιος κίνδυνος ήταν αφύλακτος στη μισή
+ * εφαρμογή. Πλέον τον φοράει **κάθε** κρίκος **κάθε** αλυσίδας, αυτόματα.
  */
-function withProviderTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
-  const timeoutMs = 20_000;
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`${label} provider timeout after ${timeoutMs}ms`)),
-        timeoutMs,
-      ),
-    ),
-  ]);
-}
 
 /**
  * Enterprise Email Service
@@ -78,7 +73,6 @@ export class EmailService {
   static async sendPropertyShareEmail(emailRequest: EmailRequest): Promise<EmailResponse> {
     console.debug('🔍 DEBUG: EmailService.sendPropertyShareEmail called');
     console.debug('🔍 DEBUG: RESEND_API_KEY exists:', !!RESEND_API_KEY);
-    console.debug('🔍 DEBUG: resend object:', !!resend);
     console.debug('🔍 DEBUG: NODE_ENV:', NODE_ENV);
 
     const {
@@ -105,10 +99,12 @@ export class EmailService {
       throw new Error('Property title is required');
     }
 
-    // Determine provider: Resend → Mailgun → Simulation
-    const provider = resend ? 'resend' : mailgunAdapter ? 'mailgun' : null;
+    // 🔑 **Αλυσίδα, όχι επιλογή.** Resend → Mailgun, με πραγματική μετάπτωση σε
+    // αποτυχία **ή σιωπή** του πρώτου. Η σειρά ζει στο `defaultEmailChain()`.
+    const chain = defaultEmailChain();
+    const status = describeChain(chain);
 
-    if (!provider) {
+    if (status.configured.length === 0) {
       console.debug('🧪 EMAIL SERVICE: No provider configured (need RESEND_API_KEY or MAILGUN_API_KEY)');
       return {
         success: true,
@@ -162,70 +158,50 @@ export class EmailService {
         subject = this.generateSubject(templateType, propertyTitle);
       }
 
-      // Send via available provider
-      if (provider === 'resend' && resend) {
-        const result = await withProviderTimeout(
-          resend.emails.send({
-            from: `${senderName || FROM_NAME} <${FROM_EMAIL}>`,
-            to: recipients,
+      // ⚠️ **ΕΝΑ email ανά παραλήπτη** — και αυτό διορθώνει υπαρκτό ελάττωμα
+      // απορρήτου: η παλιά διαδρομή Resend περνούσε ολόκληρο τον πίνακα ως `to`,
+      // δηλαδή **κάθε παραλήπτης έβλεπε τις διευθύνσεις όλων των άλλων**. Η διαδρομή
+      // Mailgun έστελνε ήδη χωριστά· οι δύο συμπεριφορές ενοποιούνται στη σωστή.
+      const fromHeader = `${senderName || FROM_NAME} <${FROM_EMAIL}>`;
+      const outcomes = await Promise.all(
+        recipients.map((to) =>
+          sendThroughChain(chain, {
+            to,
             subject,
+            text: propertyUrl ? `${propertyTitle} — ${propertyUrl}` : propertyTitle,
             html: htmlContent,
-            tags: [
-              { name: 'campaign', value: 'property_share' },
-              { name: 'template', value: templateType },
-              { name: 'environment', value: NODE_ENV }
-            ]
+            from: fromHeader,
           }),
-          'Resend',
-        );
+        ),
+      );
 
-        console.debug('✅ EMAIL SENT via Resend:', { id: result.data?.id, recipients: recipients.length });
-        return {
-          success: true,
-          message: `Email sent successfully to ${recipients.length} recipient${recipients.length > 1 ? 's' : ''}`,
-          recipients: recipients.length,
-          templateUsed: isPhoto ? 'photo-share' : templateType,
-          emailId: result.data?.id
-        };
+      const delivered = outcomes.filter((outcome) => outcome.kind === 'delivered');
+      if (delivered.length === 0) {
+        // Οι λόγοι **ονομαστικά, ανά πάροχο**: ένα σκέτο «all sends failed» δεν
+        // ξεχωρίζει το πεσμένο δίκτυο από το ληγμένο κλειδί.
+        //
+        // ⚠️ **Αγγλικά, όπως τα τέσσερα αδέλφια του αρχείου** — δεν φτάνει ποτέ σε
+        // οθόνη: ταξιδεύει σε logs και Sentry. Ελληνικό κείμενο εδώ θα ήταν και
+        // ασυνέπεια και παραβίαση του N.11 (CHECK: UI hardcoded strings).
+        throw new Error(`Email delivery failed for every recipient: ${summarizeFailures(outcomes)}`);
       }
 
-      // Mailgun path — send to each recipient
-      if (provider === 'mailgun' && mailgunAdapter) {
-        const fromHeader = `${senderName || FROM_NAME} <${FROM_EMAIL}>`;
-        const results = await withProviderTimeout(
-          Promise.all(
-            recipients.map(to =>
-              mailgunAdapter.sendEmail({
-                id: `share_${Date.now()}`,
-                to,
-                subject,
-                content: propertyUrl ? `${propertyTitle} — ${propertyUrl}` : propertyTitle,
-                html: htmlContent,
-                from: fromHeader,
-                metadata: { templateId: templateType, category: 'property_share' },
-                attempts: 0,
-                maxAttempts: 1,
-              })
-            )
-          ),
-          'Mailgun',
-        );
+      const failedOver = delivered.some((outcome) => outcome.failedOver);
+      const providers = [...new Set(delivered.map((outcome) => outcome.provider))].join(', ');
+      console.debug('✅ EMAIL SENT:', {
+        providers, failedOver, delivered: delivered.length, recipients: recipients.length,
+      });
 
-        const successCount = results.filter(r => r.success).length;
-        const firstId = results.find(r => r.messageId)?.messageId;
-        console.debug('✅ EMAIL SENT via Mailgun:', { successCount, recipients: recipients.length });
-
-        if (successCount === 0) throw new Error('All Mailgun sends failed');
-        return {
-          success: true,
-          message: `Email sent to ${successCount}/${recipients.length} recipients via Mailgun`,
-          recipients: successCount,
-          templateUsed: isPhoto ? 'photo-share' : templateType,
-          emailId: firstId,
-        };
-      }
-
-      throw new Error('No email provider available');
+      return {
+        success: true,
+        message: `Email sent to ${delivered.length}/${recipients.length} recipients via ${providers}`,
+        recipients: delivered.length,
+        templateUsed: isPhoto ? 'photo-share' : templateType,
+        emailId: delivered.find((outcome) => outcome.messageId)?.messageId,
+        // 🔑 Η μετάπτωση **φτάνει στον καλούντα**: το email έφυγε, αλλά ένας πάροχος
+        // είναι πεσμένος και αυτό δεν επιτρέπεται να είναι σιωπηλή επιτυχία.
+        ...(failedOver ? { note: `Εφεδρικός πάροχος: ${providers}` } : {}),
+      };
 
     } catch (error) {
       console.error('❌ ENTERPRISE EMAIL ERROR:', error);
@@ -251,16 +227,37 @@ export class EmailService {
 
   /**
    * Get service status
+   *
+   * ⚠️ Ανέφερε **έναν** «ενεργό πάροχο» — έννοια που δεν υπάρχει πια, και δεν
+   * υπήρχε ποτέ σωστά: ήταν απλώς ο πρώτος με κλειδί. Πλέον αναφέρει **ποιοι**
+   * είναι ρυθμισμένοι, **ποιοι λείπουν** και **αν υπάρχει καθόλου εφεδρεία** — η
+   * μόνη διατύπωση που ξεχωρίζει το «δεν λειτούργησε» από το «δεν υπήρχε».
    */
   static getStatus() {
-    const activeProvider = resend ? 'Resend' : mailgunAdapter ? 'Mailgun' : 'None';
+    const status = describeChain(defaultEmailChain());
     return {
-      configured: !!(resend || mailgunAdapter),
-      provider: activeProvider,
+      configured: status.configured.length > 0,
+      providers: status.configured,
+      missingProviders: status.missing,
+      hasFailover: status.hasFailover,
       environment: NODE_ENV,
       fromEmail: FROM_EMAIL,
       fromName: FROM_NAME
     };
   }
+}
+
+/** Οι αποτυχίες κάθε παραλήπτη, **ονομαστικά ανά πάροχο**. */
+function summarizeFailures(
+  outcomes: readonly Awaited<ReturnType<typeof sendThroughChain>>[],
+): string {
+  const reasons = outcomes.flatMap((outcome) => {
+    if (outcome.kind === 'no-provider') return ['κανένας πάροχος ρυθμισμένος'];
+    if (outcome.kind === 'all-failed') {
+      return outcome.attempts.map((attempt) => `${attempt.provider}: ${attempt.error}`);
+    }
+    return [];
+  });
+  return [...new Set(reasons)].join(' | ') || 'άγνωστος λόγος';
 }
 
