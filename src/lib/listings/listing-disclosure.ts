@@ -48,7 +48,7 @@
  */
 
 import type { PublicListing } from '@/types/public-listing';
-import { normalizePropertyType } from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 
 // ============================================================================
 // 1. ΠΩΣ ΒΛΕΠΕΙ Ο ΚΟΣΜΟΣ ΚΑΘΕ ΠΕΔΙΟ — κλειστός πίνακας

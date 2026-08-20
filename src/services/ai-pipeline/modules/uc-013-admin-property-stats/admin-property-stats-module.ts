@@ -16,7 +16,6 @@
 
 import 'server-only';
 
-import { getPropertyTypeLabelEL } from '@/constants/property-types';
 import {
   normalizeCommercialStatus,
   isListedCommercialStatus,
@@ -29,6 +28,15 @@ import { PIPELINE_PROTOCOL_CONFIG } from '@/config/ai-pipeline-config';
 import { createModuleLogger } from '@/lib/telemetry/Logger';
 import { getErrorMessage } from '@/lib/error-utils';
 import { sendChannelReply, extractChannelIds } from '../../shared/channel-reply-dispatcher';
+import {
+  formatStatsReply,
+  isValidStatsType,
+  type StatsType,
+  type ContactStats,
+  type ProjectStats,
+  type AggregatePropertyStats,
+  type ProjectPropertyBreakdown,
+} from './admin-property-stats-reply';
 import { PipelineIntentType } from '@/types/ai-pipeline';
 import type {
   IUCModule,
@@ -45,16 +53,6 @@ const logger = createModuleLogger('UC_013_ADMIN_PROPERTY_STATS');
 // TYPES
 // ============================================================================
 
-type StatsType = 'properties' | 'contacts' | 'projects' | 'all' | 'property_categories';
-
-const VALID_STATS_TYPES: ReadonlySet<string> = new Set<StatsType>([
-  'properties', 'contacts', 'projects', 'all', 'property_categories',
-]);
-
-function isValidStatsType(value: string): value is StatsType {
-  return VALID_STATS_TYPES.has(value);
-}
-
 interface BusinessStatsLookupData {
   statsType: StatsType;
   projectFilter: string | null;
@@ -63,51 +61,6 @@ interface BusinessStatsLookupData {
   contactStats: ContactStats | null;
   projectStats: ProjectStats | null;
   companyId: string;
-}
-
-interface ContactStats {
-  total: number;
-  individuals: number;
-  companies: number;
-}
-
-interface ProjectStats {
-  total: number;
-  names: string[];
-}
-
-interface AggregatePropertyStats {
-  total: number;
-  sold: number;
-  available: number;
-  reserved: number;
-  other: number;
-  /** Breakdown by property type (e.g., apartment: 5, studio: 3) */
-  byType: Record<string, number>;
-}
-
-interface ProjectPropertyBreakdown {
-  projectId: string;
-  projectName: string;
-  total: number;
-  sold: number;
-  available: number;
-  reserved: number;
-  other: number;
-}
-
-// ============================================================================
-// PROPERTY TYPE LABEL RESOLVER — ADR-287 Batch 11B
-// ============================================================================
-// Delegates σε SSoT resolver (@/constants/property-types) για canonical
-// Greek labels. Fallback για 'parking' (not a canonical PropertyType) και για
-// unknown types (επιστρέφει το raw input όπως είχε πριν).
-
-function resolvePropertyTypeLabel(typeKey: string): string {
-  const canonicalLabel = getPropertyTypeLabelEL(typeKey);
-  if (canonicalLabel !== null) return canonicalLabel;
-  if (typeKey.trim().toLowerCase() === 'parking') return 'Parking';
-  return typeKey;
 }
 
 // ============================================================================
@@ -367,96 +320,14 @@ export class AdminPropertyStatsModule implements IUCModule {
       const cStats = params.contactStats as ContactStats | null;
       const pStats = params.projectStats as ProjectStats | null;
 
-      // Format reply based on stats type
-      const lines: string[] = [];
-
-      // ── Contact stats ──
-      if (cStats && (statsType === 'contacts' || statsType === 'all')) {
-        lines.push('Στατιστικά επαφών:');
-        lines.push('');
-        lines.push(`Σύνολο: ${cStats.total}`);
-        lines.push(`  Φυσικά πρόσωπα: ${cStats.individuals}`);
-        lines.push(`  Εταιρείες: ${cStats.companies}`);
-      }
-
-      // ── Project stats ──
-      if (pStats && (statsType === 'projects' || statsType === 'all')) {
-        if (lines.length > 0) lines.push('');
-        lines.push('Στατιστικά έργων:');
-        lines.push('');
-        lines.push(`Σύνολο: ${pStats.total}`);
-        if (pStats.names.length > 0) {
-          for (const name of pStats.names) {
-            lines.push(`  • ${name}`);
-          }
-        }
-      }
-
-      // ── Property stats ──
-      if (totalStats && (statsType === 'properties' || statsType === 'all' || statsType === 'property_categories')) {
-        if (lines.length > 0) lines.push('');
-
-        if (statsType === 'property_categories') {
-          // Category/type breakdown mode
-          lines.push('Κατηγορίες ακινήτων:');
-          lines.push('');
-          lines.push(`Σύνολο: ${totalStats.total}`);
-
-          const byType = totalStats.byType as Record<string, number>;
-          const typeEntries = Object.entries(byType).sort((a, b) => b[1] - a[1]);
-
-          if (typeEntries.length > 0) {
-            lines.push('');
-            lines.push('Ανά τύπο:');
-            for (const [typeName, count] of typeEntries) {
-              const label = resolvePropertyTypeLabel(typeName);
-              lines.push(`  ${label}: ${count}`);
-            }
-          } else {
-            lines.push('');
-            lines.push('Δεν βρέθηκαν καταχωρημένοι τύποι.');
-          }
-        } else {
-          // Standard stats mode
-          if (projectFilter) {
-            lines.push(`Στατιστικά ακινήτων (φίλτρο: "${projectFilter}"):`);
-          } else {
-            lines.push('Στατιστικά ακινήτων:');
-          }
-          lines.push('');
-          lines.push(`Σύνολο: ${totalStats.total}`);
-          lines.push(`  Πωλημένα: ${totalStats.sold}`);
-          lines.push(`  Διαθέσιμα: ${totalStats.available}`);
-          if (totalStats.reserved > 0) lines.push(`  Κρατημένα: ${totalStats.reserved}`);
-          if (totalStats.other > 0) lines.push(`  Λοιπά: ${totalStats.other}`);
-
-          // Also show type breakdown if available
-          const byType = totalStats.byType as Record<string, number>;
-          const typeEntries = Object.entries(byType).sort((a, b) => b[1] - a[1]);
-          if (typeEntries.length > 1) {
-            lines.push('');
-            lines.push('Ανά τύπο:');
-            for (const [typeName, count] of typeEntries) {
-              const label = resolvePropertyTypeLabel(typeName);
-              lines.push(`  ${label}: ${count}`);
-            }
-          }
-
-          if (projectBreakdown.length > 1) {
-            lines.push('');
-            lines.push('Ανά έργο:');
-            for (const proj of projectBreakdown) {
-              lines.push(`  ${proj.projectName}: ${proj.total} (${proj.sold} πωλ., ${proj.available} διαθ.)`);
-            }
-          }
-        }
-      }
-
-      if (lines.length === 0) {
-        lines.push('Δεν βρέθηκαν στοιχεία.');
-      }
-
-      const replyText = lines.join('\n');
+      const replyText = formatStatsReply({
+        statsType,
+        projectFilter,
+        totalStats,
+        projectBreakdown,
+        contactStats: cStats,
+        projectStats: pStats,
+      });
 
       const replyResult = await sendChannelReply({
         channel: ctx.intake.channel,

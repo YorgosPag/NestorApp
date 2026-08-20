@@ -904,12 +904,22 @@
     },
     "property-types": {
       "ssotFile": "src/constants/property-types.ts",
-      "description": "Property types must import from @/constants/property-types — no inline re-declaration",
+      "description": "ΤΟ ΜΟΝΤΕΛΟ — «ποια είδη ακινήτου υπάρχουν, και τι κατηγορία είναι;». Import from @/constants/property-types — no inline re-declaration. Η ΑΝΑΓΝΩΡΙΣΗ ελεύθερου κειμένου («τι μου έγραψαν;») είναι ΑΛΛΟ ερώτημα και ζει στο module property-type-aliases (ADR-777 §8.32).",
       "forbiddenPatterns": [
-        "(PROPERTY_TYPES|PROPERTY_TYPE_ALIASES|STANDALONE_UNIT_TYPES|COMMERCIAL_PROPERTY_TYPES|RESIDENTIAL_PROPERTY_TYPES)\\s*(=|:)\\s*(\\[|\\{|Record)"
+        "(PROPERTY_TYPES|STANDALONE_UNIT_TYPES|COMMERCIAL_PROPERTY_TYPES|RESIDENTIAL_PROPERTY_TYPES|LAND_PROPERTY_TYPES|CREATABLE_PROPERTY_TYPES|PROPERTY_TYPE_CLASS|PROPERTY_CLASSES)\\s*(=|:)\\s*(\\[|\\{|Record)"
       ],
       "allowlist": [
         "src/constants/property-types.ts"
+      ]
+    },
+    "property-type-aliases": {
+      "ssotFile": "src/constants/property-type-aliases.ts",
+      "description": "Η ΑΝΑΓΝΩΡΙΣΗ — «τι μου έγραψαν;»: ελληνικά/αγγλικά ψευδώνυμα ελεύθερου κειμένου προς κανονικό είδος, και οι ελληνικές ετικέτες. Import from @/constants/property-type-aliases — no inline re-declaration. ⚠️ Χωρίστηκε από το property-types (ADR-777 §8.32) στο σημείο όπου αλλάζει η ΕΡΩΤΗΣΗ, όχι για να χωρέσει σε 500 γραμμές: το μοντέλο ταξιδεύει σε 46 αρχεία, η αναγνώριση σε 4.",
+      "forbiddenPatterns": [
+        "(PROPERTY_TYPE_ALIASES|PROPERTY_TYPE_LABELS_EL)\\s*(=|:)\\s*(\\[|\\{|Record)"
+      ],
+      "allowlist": [
+        "src/constants/property-type-aliases.ts"
       ]
     },
     "contact-types": {

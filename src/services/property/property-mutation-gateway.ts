@@ -1,6 +1,6 @@
 import type { CommercialStatus, LinkedSpace } from '@/types/property';
 import type { Property } from '@/types/property-viewer';
-import { normalizePropertyType } from '@/constants/property-types';
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import { normalizeCommercialStatus as normalizeCommercialStatusSSoT } from '@/constants/commercial-statuses';
 import {
   InvalidCommercialStatusError,

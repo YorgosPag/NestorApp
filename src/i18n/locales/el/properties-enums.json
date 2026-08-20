@@ -73,7 +73,9 @@
     "apartment_3br": "Διαμέρισμα 3 Υ/Δ",
     "hall": "Αίθουσα",
     "detached_house": "Μονοκατοικία",
-    "villa": "Βίλα"
+    "villa": "Βίλα",
+    "plot": "Οικόπεδο",
+    "parcel": "Αγροτεμάχιο"
   },
   "enhancedStatus": {
     "rentalOnly": "Μόνο για Ενοικίαση",

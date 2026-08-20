@@ -113,6 +113,35 @@ describe('ownerPropertyDraftFrom — επίπεδη φόρμα → διακρι�
     expect(draft.offers.map((o) => o.kind)).toEqual(['sell']);
   });
 
+  it('🔴 Μ2β — ΓΗ ⇒ ο όροφος και τα υπνοδωμάτια ΔΕΝ ταξιδεύουν (ADR-777 §8.32)', () => {
+    const { source } = identitySource();
+    // Ο άνθρωπος γέμισε «3ος όροφος, 2 υπνοδωμάτια» για διαμέρισμα, μετά άλλαξε το
+    // είδος σε «Οικόπεδο». Η φόρμα **δεν σβήνει ό,τι κρύβει** (Α14 §17.2), οπότε οι
+    // τιμές είναι ακόμη εκεί — και χωρίς αυτόν τον κανόνα θα αποθηκευόταν
+    // **οικόπεδο στον 3ο όροφο**, σιωπηλά.
+    const draft = ownerPropertyDraftFrom(
+      parse(formValues({ type: 'plot', floor: 3, bedrooms: 2, areaSqm: 480 })),
+      source,
+    );
+
+    expect(draft.floor).toBeNull();
+    expect(draft.bedrooms).toBeNull();
+    // Ο παρονομαστής: το **εμβαδόν** είναι το μέγεθος της γης και μένει.
+    expect(draft.areaSqm).toBe(480);
+  });
+
+  it('Μ2γ — σε ΧΤΙΣΜΕΝΗ μονάδα τα ίδια πεδία περνούν άθικτα', () => {
+    // Χωρίς αυτό, ένας μηδενισμός «για όλους» θα ήταν εξίσου πράσινος στο Μ2β και θα
+    // είχε σβήσει τον όροφο κάθε διαμερίσματος της εφαρμογής.
+    const { source } = identitySource();
+    const draft = ownerPropertyDraftFrom(
+      parse(formValues({ type: 'apartment', floor: 3, bedrooms: 2 })),
+      source,
+    );
+    expect(draft.floor).toBe(3);
+    expect(draft.bedrooms).toBe(2);
+  });
+
   it('Μ3 — οι διαθέσεις είναι ΤΑΞΙΝΟΜΗΜΕΝΕΣ (ίδιο έγγραφο ανεξάρτητα από σειρά κλικ)', () => {
     const { source } = identitySource();
     const a = ownerPropertyDraftFrom(

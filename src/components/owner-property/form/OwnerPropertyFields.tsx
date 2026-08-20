@@ -35,7 +35,7 @@ import {
   PLACE_ANSWERS,
   type OwnerPropertyFormValues,
 } from '@/lib/owner-property/owner-property-form-values';
-import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { isLandPropertyType, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 
 const NS = 'search-results';
@@ -99,10 +99,22 @@ export function OwnerIdentityFields(): React.ReactElement {
  * `bedrooms: 0` = **γκαρσονιέρα**. Γι' αυτό τα πεδία είναι ελεγχόμενα και το κενό
  * γίνεται `null` — δες {@link FormInputField}. Ένα `min={0}` στον όροφο θα ήταν
  * **λάθος**: το υπόγειο είναι `-1`.
+ *
+ * 🔴 **Η ΓΗ ΔΕΝ ΕΧΕΙ ΟΡΟΦΟ ΟΥΤΕ ΥΠΝΟΔΩΜΑΤΙΑ** (ADR-777 §8.32). Τα δύο πεδία
+ * αποσύρονται όταν το είδος είναι οικόπεδο ή αγροτεμάχιο — το εμβαδόν μένει, γιατί
+ * είναι **το** μέγεθος της γης.
+ *
+ * ⚠️ **Το κρύψιμο ΔΕΝ είναι ο κανόνας — είναι η ευγένεια.** Ο κανόνας ζει στο
+ * {@link ownerPropertyDraftFrom}, που μηδενίζει τα δύο πεδία στη μετάφραση προς το
+ * προσχέδιο. Χωρίς εκείνο, ένας άνθρωπος που έγραψε «3ος όροφος» και μετά άλλαξε το
+ * είδος σε «Οικόπεδο» θα αποθήκευε **οικόπεδο στον 3ο όροφο**: η τιμή επιβιώνει στη
+ * μνήμη της φόρμας ακριβώς επειδή η φόρμα **δεν σβήνει ό,τι κρύβει** (κανόνας Α14
+ * §17.2 — *«η φόρμα δεν τιμωρεί την εξερεύνηση»*).
  */
 export function OwnerBasicsFields(): React.ReactElement {
   const { t } = useTranslation([NS]);
-  const { control } = useOfferForm();
+  const { control, watch } = useOfferForm();
+  const isLand = isLandPropertyType(watch('type'));
 
   return (
     <FormFieldset legend={t(`${K}.form.basics`)}>
@@ -110,24 +122,28 @@ export function OwnerBasicsFields(): React.ReactElement {
         control={control}
         name="areaSqm"
         kind="number"
-        label={t(`${K}.form.areaLabel`)}
+        label={t(isLand ? `${K}.form.landAreaLabel` : `${K}.form.areaLabel`)}
         min={1}
       />
-      <FormInputField<OwnerPropertyFormValues>
-        control={control}
-        name="floor"
-        kind="number"
-        label={t(`${K}.form.floorLabel`)}
-      />
-      <p className="text-sm text-muted-foreground">{t(`${K}.form.floorHelp`)}</p>
-      <FormInputField<OwnerPropertyFormValues>
-        control={control}
-        name="bedrooms"
-        kind="number"
-        label={t(`${K}.form.bedroomsLabel`)}
-        min={0}
-      />
-      <p className="text-sm text-muted-foreground">{t(`${K}.form.bedroomsHelp`)}</p>
+      {!isLand && (
+        <>
+          <FormInputField<OwnerPropertyFormValues>
+            control={control}
+            name="floor"
+            kind="number"
+            label={t(`${K}.form.floorLabel`)}
+          />
+          <p className="text-sm text-muted-foreground">{t(`${K}.form.floorHelp`)}</p>
+          <FormInputField<OwnerPropertyFormValues>
+            control={control}
+            name="bedrooms"
+            kind="number"
+            label={t(`${K}.form.bedroomsLabel`)}
+            min={0}
+          />
+          <p className="text-sm text-muted-foreground">{t(`${K}.form.bedroomsHelp`)}</p>
+        </>
+      )}
     </FormFieldset>
   );
 }

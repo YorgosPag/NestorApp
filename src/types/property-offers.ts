@@ -117,6 +117,31 @@ export function isLiveOffer(offer: PropertyOffer): boolean {
   return (LIVE_OFFER_LIFECYCLES as readonly string[]).includes(offer.lifecycle);
 }
 
+/**
+ * Οι καταστάσεις που σημαίνουν «αυτή η διάθεση **ζητείται ακόμη**».
+ *
+ * 🔴 **ΔΕΝ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΜΕ ΤΟ {@link LIVE_OFFER_LIFECYCLES}, ΚΑΙ Η ΔΙΑΦΟΡΑ ΕΙΝΑΙ ΤΟ
+ * `closed`.** Εκείνο απαντά *«μετράει για το **τι είναι** σήμερα το ακίνητο;»* — και
+ * ένα **πουλημένο** ακίνητο μετράει (η οθόνη λέει «Πωλήθηκε»). Αυτό απαντά *«το
+ * **ζητάει** ακόμη ο κάτοχος;»* — και ένα πουλημένο **όχι**.
+ *
+ * ⚠️ **Η έννοια ΥΠΗΡΧΕ ΗΔΗ, ΧΩΡΙΣ ΟΝΟΜΑ** (ADR-777 §8.32): το `closeOffer` έγραφε
+ * `offer.lifecycle === 'active' || offer.lifecycle === 'reserved'` **στο σώμα του**.
+ * Ο δεύτερος καταναλωτής (το invariant «αντιπαροχή ⇒ γη») έφτασε να ρωτήσει την
+ * **ίδια** ερώτηση, και η εύκολη λύση ήταν να την ξαναγράψει — δηλαδή **δύο αλήθειες
+ * για το ίδιο πράγμα, και οι δύο ανώνυμες** (ADR-749). Μια τρίτη κατάσταση κύκλου
+ * ζωής αύριο θα διόρθωνε **μία** από τις δύο.
+ */
+export const OPEN_OFFER_LIFECYCLES = [
+  'active',
+  'reserved',
+] as const satisfies readonly OfferLifecycle[];
+
+/** `true` αν η διάθεση **ζητείται ακόμη** — όχι κλεισμένη, όχι αποσυρμένη. */
+export function isOpenOffer(offer: PropertyOffer): boolean {
+  return (OPEN_OFFER_LIFECYCLES as readonly string[]).includes(offer.lifecycle);
+}
+
 // =============================================================================
 // 3. Η ΔΙΑΘΕΣΗ — discriminated union στο `kind`
 // =============================================================================

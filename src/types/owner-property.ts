@@ -60,11 +60,13 @@ import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
 import type { PropertyType } from '@/types/property';
 import {
   isLiveOffer,
+  isOpenOffer,
   type OfferKind,
   type PropertyOffer,
 } from '@/types/property-offers';
 import { hasDuplicateLiveOfferKind } from '@/lib/offers/derive-commercial-status';
 import { liveOfferAmountGaps } from '@/lib/offers/offer-amount';
+import { isLandPropertyType } from '@/constants/property-types';
 
 // =============================================================================
 // 1. Η ΘΕΣΗ — «υποχρεωτικό ΕΡΩΤΗΜΑ, όχι υποχρεωτική ΑΠΑΝΤΗΣΗ»
@@ -364,6 +366,22 @@ export const OWNER_PROPERTY_INVARIANTS = [
   'offer-amount-missing',
   /** Ποσοστό αντιπαροχής εκτός `0–100` — αριθμός που δεν είναι ποσοστό. */
   'exchange-percentage-out-of-range',
+  /**
+   * **Αντιπαροχή σε κάτι που δεν είναι γη** (ADR-777 §8.32).
+   *
+   * 🔴 **Ο κανόνας του τομέα, ρητά**: *«η αντιπαροχή αφορά **ΜΟΝΟ** το οικόπεδο»*
+   * (Giorgio 2026-08-20). Μέχρι σήμερα ο κανόνας ήταν **αδύνατο να παραβιαστεί
+   * ΚΑΙ αδύνατο να τηρηθεί**, γιατί η λίστα των ειδών δεν είχε καθόλου γη: η
+   * οθόνη πρόσφερε «δώσ' το με αντιπαροχή» πάνω σε **δώδεκα χτισμένες μονάδες**.
+   * Πλέον η γη υπάρχει ({@link isLandPropertyType}) και ο κανόνας έχει νόημα.
+   *
+   * ⚠️ **Είναι invariant και όχι κρυφό φιλτράρισμα στη φόρμα.** Μια φόρμα που
+   * απλώς **κρύβει** την επιλογή αφήνει τον διακομιστή να δεχτεί ό,τι του σταλεί —
+   * και ο ίδιος έλεγχος τρέχει **και στα δύο** σημεία (`app/api/owner-properties`).
+   * Ένα όνομα εδώ σημαίνει ότι η οθόνη μπορεί να πει **ποιο** είναι το πρόβλημα
+   * αντί για «κάτι πήγε στραβά».
+   */
+  'exchange-requires-land',
   /** Το **είδος** δεν δηλώθηκε — 3ο βασικό πεδίο του §25.6. */
   'type-missing',
   /** Το **εμβαδόν** λείπει ή δεν είναι θετικό — το άλλο μισό του 3ου βασικού. */
@@ -422,6 +440,18 @@ export function ownerPropertyInvariantViolations(
   if (gaps.missing.length > 0) found.push('offer-amount-missing');
   if (gaps.percentageOutOfRange.length > 0) {
     found.push('exchange-percentage-out-of-range');
+  }
+
+  // Αντιπαροχή ⇒ γη. Κρίνονται **μόνο οι ΑΝΟΙΧΤΕΣ** (`isOpenOffer`), ποτέ οι
+  // «ζωντανές» (`isLiveOffer`).
+  //
+  // 🔴 Η διαφορά **δεν** είναι λεπτομέρεια, και την έπιασε η άγκυρα Κ17: το
+  // `LIVE_OFFER_LIFECYCLES` περιλαμβάνει το **`closed`**, γιατί απαντά *«μετράει για
+  // το τι είναι σήμερα το ακίνητο;»* — και ένα **πουλημένο** μετράει. Με εκείνο, μια
+  // **ολοκληρωμένη** αντιπαροχή θα κοκκίνιζε για πάντα και το ακίνητο θα γινόταν
+  // αδύνατο να ξαναποθηκευτεί, για πράξη που τελείωσε πριν χρόνια.
+  if (draft.offers.some((offer) => isOpenOffer(offer) && offer.kind === 'exchange')) {
+    if (!isLandPropertyType(draft.type)) found.push('exchange-requires-land');
   }
 
   if (typeof draft.type !== 'string' || draft.type.trim() === '') {

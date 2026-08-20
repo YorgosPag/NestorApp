@@ -46,7 +46,7 @@ import { z } from 'zod';
 
 import { geoPointSchema, optionalNumberSchema } from '@/lib/forms/form-primitives';
 import { GEOCODING_ACCURACIES, type GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
-import { PROPERTY_TYPES } from '@/constants/property-types';
+import { isLandPropertyType, PROPERTY_TYPES } from '@/constants/property-types';
 import { OFFER_KINDS, type OfferKind, type PropertyOffer } from '@/types/property-offers';
 import type {
   OwnerProperty,
@@ -274,12 +274,19 @@ export function ownerPropertyDraftFrom(
   values: OwnerPropertyFormParsed,
   source: OfferIdentitySource,
 ): OwnerPropertyDraft {
+  // 🔴 **Η γη δεν έχει όροφο ούτε υπνοδωμάτια** (ADR-777 §8.32), και ο κανόνας ζει
+  // **εδώ** και όχι στην οθόνη: ένα πεδίο που η φόρμα απλώς **κρύβει** εξακολουθεί
+  // να κρατά την τιμή που γράφτηκε πριν αλλάξει το είδος, και θα ταξίδευε στη βάση
+  // ως «οικόπεδο στον 3ο όροφο» — σιωπηλό ψέμα που **καμία** οθόνη δεν θα έδειχνε.
+  // Στη μετάφραση προς το προσχέδιο, ο διακομιστής παίρνει την ίδια εγγύηση δωρεάν.
+  const land = isLandPropertyType(values.type);
+
   return {
     title: values.title.trim(),
     type: values.type as OwnerPropertyDraft['type'],
     areaSqm: values.areaSqm,
-    floor: values.floor,
-    bedrooms: values.bedrooms,
+    floor: land ? null : values.floor,
+    bedrooms: land ? null : values.bedrooms,
     // ⚠️ Ταξινομημένα, όπως και το `deriveOfferKinds`: δύο ταυτόσημες αγγελίες με
     // άλλη σειρά τσεκαρίσματος πρέπει να δίνουν **ταυτόσημο** έγγραφο, αλλιώς κάθε
     // αποθήκευση φαίνεται αλλαγή και οι συγκρίσεις ταυτότητας σπάνε.

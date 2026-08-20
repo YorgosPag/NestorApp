@@ -1,9 +1,9 @@
 {
   "adr": "ADR-744",
   "artifacts": {
-    "src/i18n/generated/routes/listing__id.el.json": "fee5d529338283979b272e69487b288df357f8ee7a33f048a36242a463bfa9ce",
+    "src/i18n/generated/routes/listing__id.el.json": "520c677e6a2f2ad0b004ecfe9badf7c219ccdd49e4ec172cfe2047b43b28de47",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
-    "src/i18n/generated/shell-slice.el.json": "8fc942daa4d7196499e3c494190a9cc83689e09974f4219ba7d14900039708b4",
+    "src/i18n/generated/shell-slice.el.json": "036ef89d9836e106455412e1b3b3182b66de9833bb22efd08092f6a17b290a2a",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -42,7 +42,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "7e4e02acac4a95dd1280ba8898f5555d1fd9fdcaad244f3637fbf9d082a22e48",
+  "inputsSha256": "207d43e6ac7a804a39aee391bdc35a09eaa7eee17aee9bad8bf17ef6514ea432",
   "languages": [
     "el"
   ],
@@ -237,7 +237,7 @@
     "src/constants/project-statuses.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/project-types.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/constants/property-features-enterprise.ts": "499e36e1ed0255b145c611464c75d040a4fa2c88f514377156af9e7b7d0b1e28",
-    "src/constants/property-types.ts": "627e2f2c20b210071fe23198751496cd052d2240b5076efc285a531b9bcdaf24",
+    "src/constants/property-types.ts": "6eaf7d3b94e70689d10c534c77d1deb88c0dca3bfd00670c38dbc5b5fd109276",
     "src/constants/renovation-statuses.ts": "a7d0f86f1a699da37b5f28b3e35e5bfc4329445e2317f5f51481911a5c98d055",
     "src/contexts/ActiveJobContext.tsx": "01ebafd716777995ee88bae62da4ccb44861c71c8b51d477e62920d4c05a1b51",
     "src/contexts/BuildingsNoUnitsContext.tsx": "c226f6efed3e8a2823f588dca64cfe55a7ffe29516884139c8cd332c7277d2f1",
@@ -550,7 +550,7 @@
     "matchedKeys": 118,
     "routeBoundaries": 0,
     "shellFiles": 463,
-    "sliceBytes": 236850
+    "sliceBytes": 237238
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

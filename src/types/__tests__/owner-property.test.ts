@@ -48,15 +48,20 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
   it('🔴 Κ6 — ΑΝΤΙΠΑΡΟΧΗ χωρίς ποσοστό ⇒ επίσης `offer-amount-missing`', () => {
     // Το κενό που το παλιό λεξιλόγιο **δεν μπορούσε να δει**: το `exchange`
     // προβάλλεται σε `unavailable`, που δεν ζητά καμία τιμή.
-    const draft = validDraft({ offers: [offerOf('exchange', null)] });
+    // ⚠️ `type: 'plot'` από τις 2026-08-20 (ADR-777 §8.32): πριν, το draft ήταν
+    // `apartment` και παρήγαγε **δεύτερη** παραβίαση (`exchange-requires-land`) που
+    // το `toContain` δεν έβλεπε. Ο έλεγχος αφορά το **ποσό** — το είδος οφείλει να
+    // είναι έγκυρο, αλλιώς η άγκυρα κρίνει δύο πράγματα και ονομάζει ένα.
+    const draft = validDraft({ type: 'plot', offers: [offerOf('exchange', null)] });
     expect(ownerPropertyInvariantViolations(draft)).toContain('offer-amount-missing');
   });
 
   it('Κ7 — ποσοστό εκτός εύρους ⇒ ΞΕΧΩΡΙΣΤΟΣ κωδικός (άλλη θεραπεία)', () => {
-    const draft = validDraft({ offers: [offerOf('exchange', 250)] });
+    const draft = validDraft({ type: 'plot', offers: [offerOf('exchange', 250)] });
     const found = ownerPropertyInvariantViolations(draft);
     expect(found).toContain('exchange-percentage-out-of-range');
     expect(found).not.toContain('offer-amount-missing');
+    expect(found).not.toContain('exchange-requires-land');
   });
 
   it('Κ8 — τα τρία βασικά πεδία του §25.6 κρίνονται ονομαστικά', () => {
@@ -114,7 +119,13 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
         }),
       ),
       ...ownerPropertyInvariantViolations(validDraft({ offers: [offerOf('sell', null)] })),
-      ...ownerPropertyInvariantViolations(validDraft({ offers: [offerOf('exchange', 250)] })),
+      ...ownerPropertyInvariantViolations(
+        validDraft({ type: 'plot', offers: [offerOf('exchange', 250)] }),
+      ),
+      // Έγκυρο ποσοστό σε **διαμέρισμα**: παράγει **μόνο** το `exchange-requires-land`.
+      // Χωρίς αυτή τη γραμμή ο νέος κωδικός θα περνούσε «κατά τύχη», μαζί με το
+      // out-of-range — δηλαδή ο φρουρός θα είχε απόδειξη ζωής που δεν είναι δική του.
+      ...ownerPropertyInvariantViolations(validDraft({ offers: [offerOf('exchange', 40)] })),
       ...ownerPropertyInvariantViolations(validDraft({ type: '' })),
       ...ownerPropertyInvariantViolations(validDraft({ areaSqm: null })),
       ...ownerPropertyInvariantViolations(validDraft({ title: '' })),
@@ -124,6 +135,47 @@ describe('ownerPropertyInvariantViolations — ΟΛΕΣ, ποτέ η πρώτη'
     for (const code of OWNER_PROPERTY_INVARIANTS) {
       expect(produced.has(code)).toBe(true);
     }
+  });
+
+  // ==========================================================================
+  // ADR-777 §8.32 — Η ΑΝΤΙΠΑΡΟΧΗ ΑΦΟΡΑ ΜΟΝΟ ΤΗ ΓΗ
+  // ==========================================================================
+
+  it('🔴 Κ14 — αντιπαροχή σε ΔΙΑΜΕΡΙΣΜΑ ⇒ `exchange-requires-land`', () => {
+    // Ο κανόνας του τομέα (Giorgio 2026-08-20). Μέχρι σήμερα ήταν **αδύνατο να
+    // παραβιαστεί και αδύνατο να τηρηθεί**: η λίστα των ειδών δεν είχε γη, οπότε
+    // κάθε αντιπαροχή γραφόταν αναγκαστικά πάνω σε χτισμένη μονάδα.
+    const draft = validDraft({ type: 'apartment', offers: [offerOf('exchange', 40)] });
+    expect(ownerPropertyInvariantViolations(draft)).toContain('exchange-requires-land');
+  });
+
+  it('Κ15 — η ΙΔΙΑ αντιπαροχή σε οικόπεδο ή αγροτεμάχιο ⇒ καμία παραβίαση', () => {
+    // Ο παρονομαστής του Κ14: χωρίς αυτό, ένα invariant που κοκκινίζει **πάντα**
+    // θα ήταν εξίσου πράσινο στο Κ14 και εξίσου άχρηστο.
+    for (const land of ['plot', 'parcel'] as const) {
+      const draft = validDraft({ type: land, offers: [offerOf('exchange', 40)] });
+      expect(ownerPropertyInvariantViolations(draft)).toEqual([]);
+    }
+  });
+
+  it('Κ16 — πώληση/ενοικίαση σε διαμέρισμα ΔΕΝ αγγίζονται από τον νέο κανόνα', () => {
+    // Ο κανόνας αφορά **μόνο** την ανταλλαγή. Ένας έλεγχος που κοίταζε «είναι γη;»
+    // ανεξαρτήτως είδους διάθεσης θα απαγόρευε το 100% των σημερινών αγγελιών.
+    for (const kind of ['sell', 'leaseOut'] as const) {
+      const draft = validDraft({ type: 'apartment', offers: [offerOf(kind, 150_000)] });
+      expect(ownerPropertyInvariantViolations(draft)).toEqual([]);
+    }
+  });
+
+  it('🔴 Κ17 — ΚΛΕΙΣΜΕΝΗ αντιπαροχή σε διαμέρισμα είναι ΙΣΤΟΡΙΚΟ, όχι παραβίαση', () => {
+    // Κρίνονται μόνο οι **ζωντανές** διαθέσεις. Ένα invariant που κοκκινίζει σε
+    // ολοκληρωμένη πράξη θα κρατούσε όμηρο ένα ακίνητο για κάτι που ήδη τελείωσε —
+    // και θα έκανε αδύνατη κάθε μελλοντική επεξεργασία της αγγελίας.
+    const draft = validDraft({
+      type: 'apartment',
+      offers: [offerOf('exchange', 40, 'closed', 'offr_old'), offerOf('sell', 200_000)],
+    });
+    expect(ownerPropertyInvariantViolations(draft)).not.toContain('exchange-requires-land');
   });
 });
 

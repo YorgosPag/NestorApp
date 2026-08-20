@@ -46,6 +46,7 @@ import {
 } from '@/constants/commercial-statuses';
 import {
   isLiveOffer,
+  isOpenOffer,
   type OfferKind,
   type PropertyOffer,
 } from '@/types/property-offers';
@@ -262,8 +263,10 @@ export function closeOffer(
       return { ...offer, lifecycle: 'closed', closedDate };
     }
 
-    // Οι υπόλοιπες ΖΩΝΤΑΝΕΣ αποσύρονται. Το ιστορικό μένει άθικτο.
-    if (offer.lifecycle === 'active' || offer.lifecycle === 'reserved') {
+    // Οι υπόλοιπες ΑΝΟΙΧΤΕΣ αποσύρονται. Το ιστορικό μένει άθικτο.
+    // ⚠️ Ήταν χειρόγραφο `'active' || 'reserved'` — η ίδια ερώτηση που ρωτά και το
+    // invariant «αντιπαροχή ⇒ γη». Πλέον έχει **όνομα** (ADR-777 §8.32).
+    if (isOpenOffer(offer)) {
       return { ...offer, lifecycle: 'withdrawn', closedDate };
     }
 

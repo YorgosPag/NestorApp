@@ -8,7 +8,7 @@ import 'server-only';
 
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { COLLECTIONS } from '@/config/firestore-collections';
-import { arePropertyTypesEquivalent } from '@/constants/property-types';
+import { arePropertyTypesEquivalent } from '@/constants/property-type-aliases';
 import type { PropertySearchCriteria } from '@/services/property-search.service';
 import type { ContactMatch } from '../../shared/contact-lookup';
 

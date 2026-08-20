@@ -478,7 +478,8 @@
       "placeFailed": "Locating did not complete. Please try again shortly.",
       "placeDeclinedNote": "The property will appear in the list marked as having no stated location.",
       "placeLinkLegend": "Which building or plot?",
-      "placeLinkHelp": "Optional. If you point at it, your listing meets the people searching for THIS building — not just the area."
+      "placeLinkHelp": "Optional. If you point at it, your listing meets the people searching for THIS building — not just the area.",
+      "landAreaLabel": "Land area (m²)"
     },
     "media": {
       "label": "Photos and floor plans",
@@ -500,7 +501,8 @@
       "type-missing": "Choose a property type.",
       "area-not-positive": "Enter an area greater than zero.",
       "title-missing": "Give the listing a title.",
-      "bedrooms-negative": "Bedrooms cannot be negative."
+      "bedrooms-negative": "Bedrooms cannot be negative.",
+      "exchange-requires-land": "An exchange (antiparochi) applies only to land. Choose «Plot» or «Parcel» as the property type, or remove the exchange."
     },
     "formBlocker": {
       "place-unresolved": "Press Locate so the address resolves to a point on the map."

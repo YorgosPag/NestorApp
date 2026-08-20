@@ -73,7 +73,9 @@
     "apartment_3br": "3-Bedroom Apartment",
     "hall": "Hall",
     "detached_house": "Detached House",
-    "villa": "Villa"
+    "villa": "Villa",
+    "plot": "Plot",
+    "parcel": "Parcel"
   },
   "enhancedStatus": {
     "rentalOnly": "Rental Only",
