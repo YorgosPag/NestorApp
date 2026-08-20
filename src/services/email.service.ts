@@ -72,7 +72,6 @@ export class EmailService {
    */
   static async sendPropertyShareEmail(emailRequest: EmailRequest): Promise<EmailResponse> {
     console.debug('🔍 DEBUG: EmailService.sendPropertyShareEmail called');
-    console.debug('🔍 DEBUG: RESEND_API_KEY exists:', !!RESEND_API_KEY);
     console.debug('🔍 DEBUG: NODE_ENV:', NODE_ENV);
 
     const {
