@@ -57,6 +57,9 @@ describe('resolveTableAxisActionTarget — ο κανόνας Α22 στον άξ�
       // Ο άξονας που **πατήθηκε** μέσα στο διάστημα — τον θέλει η γραμμή μορφοποίησης, που
       // δρα ακόμη σε έναν (§27.17). Χωρίς αυτόν θα έγραφε «Μορφοποίηση στήλης A:C».
       hitIndex: 2,
+      // 🔴 §68 — η **ίδια** απάντηση, εκτεθειμένη: το δεξί κλικ τη χρειάζεται για να ξέρει αν
+      // πρέπει να μαρκάρει τον άξονα ή να αφήσει την επιλογή ήσυχη.
+      insideSelection: true,
     });
   });
 
@@ -117,7 +120,45 @@ describe('resolveTableAxisActionTarget — ο κανόνας Α22 στον άξ�
       lastIndex: 3,
       count: 3,
       hitIndex: 2,
+      insideSelection: true,
     });
+  });
+
+  /**
+   * 🔴 ADR-739 §68 — **ΤΟ `insideSelection` ΔΕΝ ΣΥΝΑΓΕΤΑΙ ΑΠΟ ΤΑ ΥΠΟΛΟΙΠΑ ΠΕΔΙΑ.**
+   *
+   * Και τα δύο σχήματα παρακάτω δίνουν `count: 1` και `firstIndex === hitIndex` — ταυτόσημα σε
+   * ό,τι μπορεί να δει ένας καλών που τα μαντεύει. Η απάντηση όμως διαφέρει, και η διαφορά
+   * είναι πράξη: στο πρώτο ο άξονας είναι **ήδη** μαρκαρισμένος (το δεξί κλικ δεν αγγίζει
+   * τίποτα), στο δεύτερο όχι (το δεξί κλικ τον μαρκάρει). Ένας καλών που το μάντευε θα
+   * μετακινούσε το ενεργό κελί στην αρχή μιας στήλης που ήταν ήδη επιλεγμένη.
+   */
+  it('🔴 §68 μία επιλεγμένη στήλη ΚΑΙ κλικ πάνω της ⇒ `insideSelection: true`', () => {
+    const target = resolveTableAxisActionTarget(
+      model(),
+      { axis: 'column', colId: 'c2' },
+      columnSelection('c2', 'c2'),
+    );
+    expect(target).toMatchObject({ count: 1, firstIndex: 2, hitIndex: 2, insideSelection: true });
+  });
+
+  it('🔴 §68 καμία επιλογή ⇒ `insideSelection: false` με ΤΑΥΤΟΣΗΜΑ υπόλοιπα πεδία', () => {
+    const target = resolveTableAxisActionTarget(model(), { axis: 'column', colId: 'c2' }, null);
+    expect(target).toMatchObject({ count: 1, firstIndex: 2, hitIndex: 2, insideSelection: false });
+  });
+
+  /**
+   * 🔴 §27.15 — το **είδος** είναι φράγμα: μαρκαρισμένες γραμμές δεν κάνουν ένα κλικ σε στήλη
+   * «μέσα». Ο χρήστης άλλαξε άξονα, και το Excel μαρκάρει τη στήλη που πάτησε.
+   */
+  it('🔴 §68 επιλογή ΓΡΑΜΜΩΝ + κλικ σε ΣΤΗΛΗ ⇒ `insideSelection: false`', () => {
+    const rows: TableSelectionSpan = {
+      from: { rowId: 'r1', colId: 'c0' },
+      to: { rowId: 'r3', colId: 'c4' },
+      kind: 'row',
+    };
+    expect(resolveTableAxisActionTarget(model(), { axis: 'column', colId: 'c2' }, rows))
+      .toMatchObject({ insideSelection: false });
   });
 
   it('μπαγιάτικη ταυτότητα (undo ενόσω το μενού ήταν ανοιχτό) ⇒ `null`, ποτέ μαντεψιά', () => {

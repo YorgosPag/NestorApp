@@ -47,13 +47,13 @@ export function tableBorderTargetBounds(
   if (!cellBounds) return null;
 
   const selected = selection ? resolveTableSelectionBounds(model, selection) : null;
-  return selected && contains(selected, cellBounds) ? selected : cellBounds;
+  return selected && tableRangeContains(selected, cellBounds) ? selected : cellBounds;
 }
 
 /**
  * Είναι **το ίδιο** ορθογώνιο; — «περιέχει και περιέχεται», χωρίς τέταρτη σύγκριση δεικτών.
  *
- * Γραμμένο πάνω στο {@link contains} και όχι με τέσσερα `===`: ο ορισμός της ισότητας ορίων
+ * Γραμμένο πάνω στο {@link tableRangeContains} και όχι με τέσσερα `===`: ο ορισμός της ισότητας ορίων
  * μένει **ένας**, και η μέρα που τα όρια αποκτήσουν πέμπτο πεδίο δεν αφήνει πίσω της μια
  * σύγκριση που το αγνοεί σιωπηλά.
  */
@@ -61,17 +61,62 @@ export function sameTableRangeBounds(
   a: TableCellRangeBounds,
   b: TableCellRangeBounds,
 ): boolean {
-  return contains(a, b) && contains(b, a);
+  return tableRangeContains(a, b) && tableRangeContains(b, a);
 }
 
 /** Περιέχει το `outer` ολόκληρο το `inner`; Σύγκριση ορθογωνίων σε δείκτες, τίποτα άλλο. */
-function contains(outer: TableCellRangeBounds, inner: TableCellRangeBounds): boolean {
+export function tableRangeContains(
+  outer: TableCellRangeBounds,
+  inner: TableCellRangeBounds,
+): boolean {
   return (
     outer.firstRow <= inner.firstRow
     && outer.lastRow >= inner.lastRow
     && outer.firstCol <= inner.firstCol
     && outer.lastCol >= inner.lastCol
   );
+}
+
+/**
+ * 🔴 ADR-739 §68 — **ΠΡΕΠΕΙ ΤΟ ΔΕΞΙ ΚΛΙΚ ΝΑ ΜΕΤΑΚΙΝΗΣΕΙ ΤΗΝ ΕΠΙΛΟΓΗ ΕΔΩ;**
+ *
+ * ```
+ * ενεργό A1, καμία περιοχή, δεξί κλικ στο B2   ⇒  true   (έξω από ό,τι ήδη ισχύει)
+ * ενεργό A1, καμία περιοχή, δεξί κλικ στο A1   ⇒  false  (είναι ήδη εκεί)
+ * επιλογή B2:D4,            δεξί κλικ στο C3   ⇒  false  (μέσα στην επιλογή — Excel)
+ * επιλογή B2:D4,            δεξί κλικ στο E5   ⇒  true
+ * ```
+ *
+ * ## 🔑 «Ό,τι ήδη ισχύει» είναι **ΔΥΟ** πεδία, όχι ένα
+ * Στο Excel το ενεργό κελί ανήκει **πάντα** στην επιλογή — μία έννοια, ένα ερώτημα. Εδώ η
+ * επιλογή είναι **έκταση** και ζει χωριστά από τη **θέση** (§27.15: «καμία επιλογή ≠ επιλογή
+ * 1×1», απόφαση του ιδιοκτήτη 02/08), οπότε η ίδια ερώτηση θέλει και τα δύο πεδία.
+ *
+ * ⚠️ **Χωρίς το σκέλος του ενεργού κελιού η συνάρτηση θα ήταν λάθος με τρόπο που δεν φαίνεται**:
+ * δεξί κλικ πάνω στο ήδη ενεργό κελί θα απαντούσε `true` ⇒ νέα εγγραφή δρομέα ⇒ **νέα στήλη
+ * αγκύρωσης** (`tableCursorAt`), δηλαδή το επόμενο `Enter` θα επέστρεφε σε άλλη στήλη από
+ * εκείνη που περίμενε ο χρήστης. Μια «αβλαβής» περιττή εγγραφή που αλλάζει σιωπηλά την πλοήγηση.
+ *
+ * 🔑 Και τα δύο σκέλη περνούν από τον **ΕΝΑ** resolver επιλογής, άρα το κούμπωμα σε συγχώνευση
+ * έρχεται δωρεάν και **στα δύο**: με ενεργό το `A1` μιας συγχώνευσης `A1:B2`, δεξί κλικ στο
+ * `B2` απαντά `false` — είναι το ίδιο κελί, όσο κι αν οι δείκτες διαφέρουν.
+ *
+ * `false` και σε μπαγιάτικο κελί (undo ανάμεσα στο πάτημα και την ερώτηση): καμία μαντεψιά.
+ */
+export function tableContextMenuMovesSelection(
+  model: TableModel,
+  cell: TableCellRef,
+  active: TableCellRef,
+  selection: TableSelectionSpan | null | undefined,
+): boolean {
+  const targetBounds = resolveTableSelectionBounds(model, { from: cell, to: cell, kind: 'range' });
+  if (!targetBounds) return false;
+
+  const current = selection
+    ? resolveTableSelectionBounds(model, selection)
+    : resolveTableSelectionBounds(model, { from: active, to: active, kind: 'range' });
+
+  return !(current && tableRangeContains(current, targetBounds));
 }
 
 /**

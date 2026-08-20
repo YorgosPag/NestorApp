@@ -74,6 +74,11 @@ import {
 // κλειδώματος. Δες την κεφαλίδα εκείνου του module: δύο αντίγραφα θα άφηναν νεκρή λωρίδα
 // στην άκρη του πίνακα, όπου ο φύλακας μπλοκάρει και ο pointer δεν δρα.
 import { tableEventWorldPoint, tablePointerHitAtWorld } from './table-cell-pointer-hit';
+// 🔴 ADR-739 §68 — ο ΕΝΑΣ γραφέας του «το δεξί κλικ εγκαθιστά τον στόχο του» (full parity Excel).
+import {
+  installTableCellMenuSelection,
+  installTableCornerMenuSelection,
+} from './table-context-menu-selection';
 import { tableRangeGrabAtWorld } from './table-range-grab';
 // 🔴 ADR-739 §36 ΦΑΣΗ 3 — η **τρίτη** χειρονομία του πίνακα: μεταφορά περιοχής από το
 // περίγραμμά της. Ίδιο σχήμα με τις δύο πρώτες, δικό της module (η γεωμετρία μένει εδώ).
@@ -301,7 +306,9 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       handleTableBandMouseDown({
         entity,
         hit: pointerHit.band,
-        selection: cursor.selection,
+        // 🔴 §68 — ο **ολόκληρος** δρομέας: το δεξί κλικ ρωτά και το `mode`. Μία ανάγνωση,
+        // τη στιγμή του συμβάντος (ADR-040 κανόνας #2) — ο `cursor` είναι ήδη αυτή.
+        cursor,
         container,
         transformRef,
         primary,
@@ -319,9 +326,13 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
       // το body-drag του ADR-560. ⚠️ §66: **δεν** είναι αυτή που εμποδίζει τη μετακίνηση εδώ —
       // το §29 σβήνει το hover, άρα το body-drag είναι ήδη δομικά αδύνατο σε λειτουργία πίνακα.
       claimTableCellPointerGesture();
-      // §27.14 — το δεξί δηλώνει και παραδίδεται· το μενού το ανοίγει ο δρομολογητής στο
-      // `contextmenu` (δες `use-table-range-menu`), που τώρα βρίσκει ζωντανό δρομέα.
-      if (!primary) return;
+      // 🔴 §68 — το δεξί **εγκαθιστά τον στόχο του** και παραδίδεται. Η πράξη ήταν ήδη εδώ, ένα
+      // στρώμα πιο πάνω (μέσα στη θύρα του μενού)· κατέβηκε ώστε **και οι τρεις** διαδρομές
+      // δεξιού κλικ να γράφουν στο ίδιο σημείο. Δες την κεφαλίδα του module.
+      if (!primary) {
+        installTableCornerMenuSelection(entity);
+        return;
+      }
       // 🔑 **ΚΑΜΙΑ δέσμευση προχείρου εδώ** — και είναι μετρημένο, όχι παράλειψη: το `Ctrl+A`
       // δεν δεσμεύει (`use-table-cell-session-keys`, `case 'selectAll'`), γιατί η επιλογή είναι
       // κατάσταση **διεπαφής** και δεν αγγίζει το μοντέλο (§6.6) — ούτε μετακινεί τον δρομέα,
@@ -363,11 +374,15 @@ export function useTableCellPointer(params: UseTableCellPointerParams): void {
     // σημαδεύει κελί.
     claimTableCellPointerGesture();
 
-    // §27.14 — ίδιος κανόνας μέσα στο πλέγμα: το δεξί κρατά τη συνεδρία ζωντανή αλλά
-    // **δεν αγγίζει τίποτα**. Το μενού οντότητας που θα ανοίξει αφορά τον πίνακα ως
-    // αντικείμενο· χωρίς τη δήλωση θα άφηνε πίσω του «επιλεγμένος πίνακας χωρίς δρομέα»,
-    // δηλαδή ακριβώς την κατάσταση-φάντασμα που κατέγραψε το §27.10.
-    if (!primary) return;
+    // 🔴 §68 — **ΤΟ ΔΕΞΙ ΚΛΙΚ ΜΕΤΑΚΙΝΕΙ ΤΗΝ ΕΠΙΛΟΓΗ** όταν το κελί είναι έξω από αυτήν (Excel).
+    // Εδώ έγραφε «το δεξί κρατά τη συνεδρία ζωντανή αλλά **δεν αγγίζει τίποτα**» (§27.14): η
+    // δήλωση από πάνω μένει ακέραιη — χωρίς αυτήν ο πίνακας έμενε «επιλεγμένος χωρίς δρομέα»
+    // (§27.10) — αλλά η ακινησία έφυγε. Ο κανόνας, ο φρουρός `nav` και το γιατί ζουν στο
+    // module· εδώ μένει μόνο η **στιγμή**.
+    if (!primary) {
+      installTableCellMenuSelection({ entity, cursor, cell: hit, commitPending: onCommitPending });
+      return;
+    }
 
     // 🔴 ADR-739 §36 ΦΑΣΗ 3 — **ΤΟ ΠΑΤΗΜΑ ΕΠΕΣΕ ΣΤΟ ΠΕΡΙΓΡΑΜΜΑ ΤΗΣ ΕΠΙΛΟΓΗΣ**: μεταφορά, όχι
     // επιλογή. Η ερώτηση είναι **η ίδια** που ήδη απάντησε ο δείκτης (`range-move`/`range-copy`)

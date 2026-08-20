@@ -38,6 +38,11 @@ import {
 } from './table-cell-session-focus';
 // ADR-739 §27.15 — ο κύκλος ζωής της σύρσης· εδώ ζει μόνο η **έναρξή** της.
 import { startTableCellDrag } from './table-cell-drag-session';
+// 🔴 ADR-739 §68 — ο ΕΝΑΣ φρουρός «επιτρέπεται στο δεξί κλικ να μετακινήσει;», και ο ΕΝΑΣ
+// ορισμός του «έπεσε μέσα στην επιλογή;» για άξονες. Κανένα από τα δύο δεν ξαναγράφεται εδώ.
+import { tableContextMenuMayMoveSelection } from './table-context-menu-selection';
+import { resolveTableAxisActionTarget } from '../../bim/table/table-axis-action-target';
+import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import {
   setTableCellCursor,
   setTableCellSelection,
@@ -49,6 +54,7 @@ import {
   type TableCellRef,
   type TableSelectionSpan,
 } from '../../bim/table/table-cell-range';
+import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
 import type { TableEntity } from '../../types/table-entity';
 import type { ViewTransform } from '../../rendering/types/Types';
 
@@ -179,25 +185,36 @@ export function extendWholeAxis(
  * body-drag του ADR-560 armάρει στα 3 px, §27.15) · `Shift` πριν από το σκέτο κλικ (η πιο
  * **ειδική** ερώτηση πρώτη) · δέσμευση προχείρου **μόνο** στον δρόμο που κουνά το ενεργό κελί.
  *
- * @param primary `true` για το αριστερό πλήκτρο· το δεξί **δηλώνει και παραδίδεται**.
+ * @param primary `true` για το αριστερό πλήκτρο· το δεξί **εγκαθιστά τον στόχο του** (§68).
  * @param commitPending Δέσμευση ό,τι γράφεται, πριν κουνηθεί ο δρομέας (§26.15).
  */
 export function handleTableBandMouseDown(params: {
   readonly entity: TableEntity;
   readonly hit: TableIndicatorHit;
-  readonly selection: TableSelectionSpan | null | undefined;
+  /**
+   * 🔴 §68 — ο **ολόκληρος** δρομέας, όχι μόνο η επιλογή: το δεξί κλικ ρωτά επιπλέον το `mode`
+   * (ο φρουρός «γράφει κάποιος τώρα;»). Δύο πεδία της ίδιας κατάστασης — και ο καλών τα
+   * διαβάζει ούτως ή άλλως μαζί, με **μία** ανάγνωση τη στιγμή του συμβάντος.
+   */
+  readonly cursor: TableCellCursorState;
   readonly container: HTMLElement;
   readonly transformRef: RefObject<ViewTransform>;
   readonly primary: boolean;
   readonly shiftKey: boolean;
   readonly commitPending: () => void;
 }): void {
-  const { entity, hit, selection, container, transformRef, primary, shiftKey } = params;
+  const { entity, hit, cursor, container, transformRef, primary, shiftKey } = params;
+  const selection: TableSelectionSpan | null = cursor.selection;
   claimTableCellSessionPointerDown();
   claimTableCellPointerGesture();
-  // §27.14 — το δεξί σταματά **εδώ**: δήλωσε και παραδώσου. Τα υπόλοιπα (άνοιγμα μενού ζώνης)
-  // τα κάνει ο δρομολογητής στο `contextmenu`, που τώρα βρίσκει ζωντανό δρομέα.
-  if (!primary) return;
+  // 🔴 §68 — **ΤΟ ΔΕΞΙ ΜΑΡΚΑΡΕΙ ΤΟΝ ΑΞΟΝΑ ΠΟΥ ΠΑΤΗΘΗΚΕ**, όταν είναι έξω από την επιλογή (Excel:
+  // με μαρκαρισμένες τις `B:D`, δεξί κλικ στο `C` τις κρατά, στο `F` μαρκάρει μόνο την `F`).
+  // Εδώ έγραφε «το δεξί σταματά εδώ: δήλωσε και παραδώσου» (§27.14) — η δήλωση από πάνω μένει,
+  // η ακινησία έφυγε. Δες `table-context-menu-selection.ts` για την αρχή και τους φρουρούς.
+  if (!primary) {
+    installAxisMenuSelection(entity, hit, cursor, params.commitPending);
+    return;
+  }
   const startDrag = (anchor: TableCellRef): void => {
     startTableCellDrag({
       anchor,
@@ -223,4 +240,37 @@ export function handleTableBandMouseDown(params: {
   // Σύρση **πάνω στα γράμματα/αριθμούς** = πολλές ολόκληρες στήλες/γραμμές (Excel).
   const axisAnchor = selectWholeAxis(entity, hit);
   if (axisAnchor) startDrag(axisAnchor);
+}
+
+/**
+ * 🔴 ADR-739 §68 — η **τρίτη** διαδρομή του «το δεξί κλικ εγκαθιστά τον στόχο του».
+ *
+ * Ζει εδώ και όχι δίπλα στις άλλες δύο επειδή ο γραφέας του άξονα ({@link selectWholeAxis})
+ * ζει εδώ: μια κλήση από το `table-context-menu-selection` θα ήταν **κύκλος εισαγωγών**. Ο
+ * κοινός *κανόνας* δεν διχάζεται παρ' όλα αυτά — ο φρουρός `nav` εισάγεται από εκεί, και το
+ * «μέσα ή έξω;» είναι το `insideSelection` του {@link resolveTableAxisActionTarget}, δηλαδή
+ * **ακριβώς** το κριτήριο που θα εφαρμόσει το μενού λίγα χιλιοστά αργότερα.
+ *
+ * ⚠️ Δύο κριτήρια εδώ θα σήμαιναν «μάρκαρα τη `C` και έσβησα τις `B:D`» ενώ ο τίτλος του μενού
+ * γράφει `B:D` — η οθόνη να λέει άλλα από την πράξη, δηλαδή το ελάττωμα του §27.17 ανάποδα.
+ *
+ * ⚠️ **Καμία σύρση**: το δεξί δεν σύρει ποτέ, και μια σύρση οπλισμένη εδώ θα περίμενε στο
+ * `document` ένα `mouseup` που ήρθε ήδη — δηλαδή θα μάρκαρε άξονες στην **επόμενη** κίνηση.
+ */
+function installAxisMenuSelection(
+  entity: TableEntity,
+  hit: TableIndicatorHit,
+  cursor: TableCellCursorState,
+  commitPending: () => void,
+): void {
+  if (!tableContextMenuMayMoveSelection(cursor)) return;
+
+  const target = resolveTableAxisActionTarget(resolveTableModel(entity.model), hit, cursor.selection);
+  // `null` ⇒ μπαγιάτικη ταυτότητα άξονα μετά από undo: καμία μαντεψιά, καμία εγγραφή.
+  if (!target || target.insideSelection) return;
+
+  // Η ζώνη μετακινεί το ενεργό κελί στην **αρχή** του άξονα, άρα ισχύει το ίδιο συμβόλαιο με το
+  // αριστερό κλικ: ό,τι γράφεται δεσμεύεται πρώτα.
+  commitPending();
+  selectWholeAxis(entity, hit);
 }
