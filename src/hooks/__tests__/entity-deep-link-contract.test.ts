@@ -45,11 +45,12 @@ const WRAPPERS = [
   'src/hooks/useProjectsPageState.ts',
 ];
 
-/** Οι οθόνες που τους μοντάρουν. */
+/** Οι τέσσερις οθόνες που τους μοντάρουν. */
 const PAGES = [
   'src/components/building-management/BuildingsPageContent.tsx',
   'src/components/space-management/StoragesPage/StoragePageContent.tsx',
   'src/components/space-management/ParkingPage/ParkingPageContent.tsx',
+  'src/components/projects/projects-page-content.tsx',
 ];
 
 describe('ADR-777 §8.31 — το κοινό εξάρτημα ρωτά, και κανείς δεν το παρακάμπτει', () => {
@@ -114,7 +115,7 @@ describe('ADR-777 §8.31 — το κοινό εξάρτημα ρωτά, και �
   // Α6 — Η ΑΠΑΝΤΗΣΗ ΦΤΑΝΕΙ ΣΤΟΝ ΑΝΘΡΩΠΟ
   // ==========================================================================
 
-  it('Α6 και οι τρεις οθόνες ανακοινώνουν το «όχι» αντί να σιωπούν', () => {
+  it('Α6 και οι τέσσερις οθόνες ανακοινώνουν το «όχι» αντί να σιωπούν', () => {
     for (const page of PAGES) {
       const source = read(page);
       // ⚠️ Η ΧΡΗΣΗ, όχι η εισαγωγή. Η πρώτη γραφή έλεγχε σκέτο «DeepLinkNotice»

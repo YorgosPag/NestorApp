@@ -6,6 +6,7 @@ import type { Project } from '@/types/project';
 import { useProjectsPageState } from '@/hooks/useProjectsPageState';
 import { useFirestoreProjects } from '@/hooks/useFirestoreProjects';
 import { AdvancedFiltersPanel, projectFiltersConfig, type FilterPanelConfig } from '@/components/core/AdvancedFilters';
+import { DeepLinkNotice } from '@/components/shared/deep-link/DeepLinkNotice';
 import { ListContainer, PageContainer } from '@/core/containers';
 import { useProjectsStats } from '@/hooks/useProjectsStats';
 // 🏢 ENTERPRISE: Navigation context for breadcrumb sync
@@ -65,6 +66,7 @@ export function ProjectsPageContent() {
     filters,
     setFilters,
     tabFromUrl,
+    selection,
   } = useProjectsPageState(firestoreProjects || [], { hasAnswered: !loading });
 
   const projectsStats = useProjectsStats(filteredProjects || []);
@@ -403,6 +405,9 @@ export function ProjectsPageContent() {
             trashCount={trashCount}
           />
         )}
+
+        {/* ADR-777 §8.31 — ο σύνδεσμος απαντά, ακόμη κι όταν η απάντηση είναι «όχι». */}
+        <DeepLinkNotice selection={selection} className="mb-2" />
 
         <ListContainer>
           <ProjectViewSwitch
