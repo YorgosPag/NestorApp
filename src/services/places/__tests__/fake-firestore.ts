@@ -30,11 +30,37 @@ function readPath(doc: Doc, path: string): unknown {
   );
 }
 
+/**
+ * 🔴 **Η ΑΝΙΣΟΤΗΤΑ ΔΕΧΕΤΑΙ ΚΑΙ ΣΥΜΒΟΛΟΣΕΙΡΕΣ — ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥΣ ΗΤΑΝ ΤΥΦΛΟ ΣΗΜΕΙΟ**
+ * (§8.33).
+ *
+ * Ο πλαστός συνέκρινε **μόνο αριθμούς**, οπότε κάθε ερώτημα εύρους πάνω σε
+ * **ημερομηνία ISO** επέστρεφε σιωπηλά **κενό** — δηλαδή μια άγκυρα «βρες ό,τι έληξε»
+ * θα ήταν πράσινη με **μηδέν** ευρήματα, για λόγο που δεν έχει καμία σχέση με τον
+ * κώδικα που δοκιμάζει. Το ακριβές σχήμα «0 = κανείς δεν κοίταξε», μέσα στο εργαλείο
+ * που υπάρχει για να το πιάνει.
+ *
+ * ⚠️ **Λεξικογραφική σύγκριση, όπως το πραγματικό Firestore.** Και είναι σωστή για ISO
+ * χρονοσφραγίδες **ακριβώς επειδή** η μορφή είναι σταθερού πλάτους σε UTC: η αλφαβητική
+ * σειρά **ταυτίζεται** με τη χρονολογική. Δεν είναι σύμπτωση — είναι ο λόγος που όλο
+ * το έργο αποθηκεύει ISO αντί για epoch.
+ *
+ * ⚠️ **Ανόμοιοι τύποι ⇒ `false`**, ποτέ σύγκριση με εξαναγκασμό: το `'5' <= 10` της
+ * JavaScript είναι `true`, και το πραγματικό Firestore **δεν** συγκρίνει ποτέ αριθμό
+ * με συμβολοσειρά.
+ */
 function matches(doc: Doc, clause: WhereClause): boolean {
   const value = readPath(doc, clause.field);
   if (clause.op === '==') return value === clause.value;
-  if (typeof value !== 'number' || typeof clause.value !== 'number') return false;
-  return clause.op === '>=' ? value >= clause.value : value <= clause.value;
+
+  const comparable =
+    (typeof value === 'number' && typeof clause.value === 'number') ||
+    (typeof value === 'string' && typeof clause.value === 'string');
+  if (!comparable) return false;
+
+  const left = value as number | string;
+  const right = clause.value as number | string;
+  return clause.op === '>=' ? left >= right : left <= right;
 }
 
 export class FakeFirestore {
@@ -115,6 +141,23 @@ export class FakeDocRef {
 
   async set(doc: Doc): Promise<void> {
     this.bucket.set(this.id, doc);
+    this.db.countWrite();
+  }
+
+  /**
+   * 🔴 **ΕΛΕΙΠΕ, ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥ ΕΚΡΥΒΕ ΜΙΣΗ ΣΥΜΠΕΡΙΦΟΡΑ** (§8.33).
+   *
+   * Ο γραφέας της δημόσιας προβολής κάνει **δύο** πράξεις: γράφει όταν η αγγελία
+   * είναι στην αγορά, και **σβήνει** όταν δεν είναι (απόσυρση · πουλημένο · εντολή
+   * χωρίς έγκριση · ληγμένη εντολή). Χωρίς `delete` εδώ, ο δεύτερος κλάδος έσκαγε με
+   * *«ref.delete is not a function»* — και επειδή ο γραφέας **δεν πετά ποτέ**, το
+   * σφάλμα γινόταν σιωπηλό `'failed'` και **κάθε** άγκυρα πάνω στο «σβήνει» θα ήταν
+   * πράσινη χωρίς να σβήσει τίποτα.
+   *
+   * ⚠️ **Idempotent**, όπως το Admin SDK: σβήσιμο ανύπαρκτου εγγράφου δεν είναι λάθος.
+   */
+  async delete(): Promise<void> {
+    this.bucket.delete(this.id);
     this.db.countWrite();
   }
 }
