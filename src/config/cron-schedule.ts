@@ -49,6 +49,7 @@ import { runDemandInterestAnnounce } from '@/lib/cron/jobs/demand-interest-annou
 import { runOutboundEmailFlush } from '@/lib/cron/jobs/outbound-email-flush.job';
 import { runEmailIngestion } from '@/lib/cron/jobs/email-ingestion.job';
 import { runFilePurge } from '@/lib/cron/jobs/file-purge.job';
+import { runMandateExpiry } from '@/lib/cron/jobs/mandate-expiry.job';
 import { runOAuthCleanup } from '@/lib/cron/jobs/oauth-cleanup.job';
 import { runOnboardingReminder } from '@/lib/cron/jobs/onboarding-reminder.job';
 import { runOverdueAlerts } from '@/lib/cron/jobs/overdue-alerts.job';
@@ -199,6 +200,30 @@ export const CRON_SCHEDULE: readonly CronJobDefinition[] = [
     maxRuntimeMinutes: 15,
     leaseMinutes: 20,
     run: runOnboardingReminder,
+  },
+  {
+    slug: 'mandate-expiry',
+    path: '/api/cron/mandate-expiry',
+    description: 'Κατέβασμα αγγελιών με ληγμένη μεσιτική εντολή (ADR-777 §8.33)',
+    enabled: true,
+    // 🔑 **Ημερήσια, και είναι σκόπιμα ΑΡΑΙΟΤΕΡΗ από τον σαρωτή της αγοράς.**
+    //
+    // Η μονάδα της εντολής είναι η **ημέρα** (`<input type="date">`, και ο νόμος
+    // μετρά σε μήνες). Μια ωριαία σάρωση θα ρωτούσε **24 φορές** την ίδια ερώτηση για
+    // να απαντήσει διαφορετικά **μία** — δηλαδή θα πλήρωνε 23 περάσματα για ακρίβεια
+    // που κανείς δεν ζήτησε.
+    //
+    // ⚠️ **Η καθυστέρηση είναι φραγμένη και δηλωμένη**: μια εντολή που λήγει τα
+    // μεσάνυχτα κατεβαίνει το πολύ **μία φορά** αργότερα, στο επόμενο πέρασμα. Και
+    // δεν είναι η μόνη διαδρομή: **κάθε** αποθήκευση ή αλλαγή της αγγελίας
+    // ξαναϋπολογίζει την προβολή με τον **ίδιο** κριτή, οπότε το πέρασμα είναι το
+    // δίχτυ για ό,τι **κανείς δεν άγγιξε**, όχι ο μοναδικός μηχανισμός.
+    schedule: '30 3 * * *',
+    timezone: CRON_TIMEZONE,
+    checkinMarginMinutes: 20,
+    maxRuntimeMinutes: 10,
+    leaseMinutes: 15,
+    run: runMandateExpiry,
   },
   {
     slug: 'demand-interest-announce',
