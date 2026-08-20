@@ -11,7 +11,7 @@
 
 import type { TFunction } from 'i18next';
 import type { PropertyType, CommercialStatus, OperationalStatus } from '@/types/property';
-import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+import { isLandPropertyType, PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
 
 // ============================================================================
 // TYPE LABELS & OPTIONS (i18n keys — resolve with t())
@@ -24,11 +24,24 @@ import { PROPERTY_TYPES, PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-ty
 export const UNIT_TYPE_LABEL_KEYS: Record<string, string> = { ...PROPERTY_TYPE_I18N_KEYS };
 
 /**
- * Full list των 14 canonical types για το Properties tab filter dropdown.
+ * Τα είδη μονάδας για το φίλτρο της καρτέλας «Ακίνητα» **ενός κτιρίου**.
  * ADR-145: Derived από canonical SSoT — fixes previous missing penthouse/loft/
  * villa/detached_house/hall (ADR-233 additions που δεν είχαν propagate εδώ).
+ *
+ * 🔴 **Η ΓΗ ΕΞΑΙΡΕΙΤΑΙ** (ADR-777 §8.32): αυτό το φίλτρο ρωτά *«τι υπάρχει **μέσα σε
+ * αυτό το κτίριο**;»*, και ένα κτίριο δεν περιέχει οικόπεδα — η σχέση είναι
+ * **αντίστροφη** (το `PublicBuilding` κληρονομεί τη θέση του **από** τη γη). Χωρίς
+ * αυτή τη γραμμή, το dropdown θα πρόσφερε δύο επιλογές που **δεν μπορούν ποτέ** να
+ * δώσουν αποτέλεσμα — φίλτρο χωρίς απόδειξη ζωής (ADR-749 §5).
+ *
+ * ⚠️ **ΔΕΝ χρησιμοποιείται το `CREATABLE_PROPERTY_TYPES`**, παρότι μοιάζει συγγενικό:
+ * εκείνο εξαιρεί **και** την `storage`, γιατί οι αποθήκες δημιουργούνται από δική
+ * τους σελίδα — αλλά **υπάρχουν** μέσα σε κτίριο, άρα το φίλτρο τις χρειάζεται.
+ * Δύο διαφορετικές ερωτήσεις με διαφορετική απάντηση.
  */
-export const UNIT_TYPES_FOR_FILTER: PropertyType[] = [...PROPERTY_TYPES];
+export const UNIT_TYPES_FOR_FILTER: PropertyType[] = PROPERTY_TYPES.filter(
+  (type) => !isLandPropertyType(type),
+);
 
 // ============================================================================
 // STATUS LABELS & OPTIONS (i18n keys — resolve with t())

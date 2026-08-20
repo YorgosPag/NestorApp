@@ -33,6 +33,7 @@ import type { OfferKind } from '@/types/property-offers';
 import { OFFER_KINDS } from '@/types/property-offers';
 import type { PublicListing } from '@/types/public-listing';
 import type { GeoPoint } from '@/types/geo/coordinates';
+import { isLandPropertyType } from '@/constants/property-types';
 import { getEffectivePrice } from '@/lib/properties/price-resolver';
 import { distanceMeters } from '@/lib/geo/geo-distance';
 
@@ -225,7 +226,19 @@ export function matchesListingFilters(listing: PublicListing, filters: ListingFi
   }
   if (!withinRange(listing.areaSqm, filters.areaMin, filters.areaMax)) return false;
 
-  if (filters.bedroomsMin !== null) {
+  // 🔴 **Η ΓΗ ΔΕΝ ΚΡΙΝΕΤΑΙ ΣΕ ΥΠΝΟΔΩΜΑΤΙΑ** (ADR-777 §8.32).
+  //
+  // Το βρήκε **η οθόνη**, όχι πύλη: η φόρμα ζήτησης έχει «Υπνοδωμάτια, τουλάχιστον»
+  // **δίπλα** στο «Οικόπεδο», και το βοηθητικό της κείμενο λέει *«το 0 σημαίνει
+  // “δέξου και γκαρσονιέρα”»* — δηλαδή ο άνθρωπος που γράφει `0` νομίζει ότι
+  // **χαλαρώνει** το φίλτρο. Ένα οικόπεδο όμως έχει `bedrooms: null` εκ κατασκευής,
+  // οπότε ο έλεγχος «`null` ⇒ έξω» **εξαφάνιζε ΚΑΘΕ οικόπεδο** — μετρημένο: `false`.
+  //
+  // ⚠️ Ο έλεγχος `null` **μένει** για τα υπόλοιπα είδη, και είναι σωστός εκεί: αν
+  // κάποιος ζητά ρητά «≥2 υπνοδωμάτια», ένα διαμέρισμα που **δεν το λέει** δεν
+  // απαντά στην ερώτηση. Η διαφορά δεν είναι η τιμή — είναι το **αν το είδος σηκώνει
+  // την ερώτηση**.
+  if (filters.bedroomsMin !== null && !isLandPropertyType(listing.type)) {
     if (listing.bedrooms === null || listing.bedrooms < filters.bedroomsMin) return false;
   }
 

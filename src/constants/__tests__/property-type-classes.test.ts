@@ -41,6 +41,7 @@ import {
   PROPERTY_TYPE_LABELS_EL,
   propertyTypesMissingSelfAlias,
 } from '@/constants/property-type-aliases';
+import { UNIT_TYPES_FOR_FILTER } from '@/components/building-management/tabs/property-tab-constants';
 
 /** Οι ελληνικές/αγγλικές ετικέτες, όπως τις βλέπει η οθόνη. */
 const EL_TYPES = (elEnums as { types: Record<string, string> }).types;
@@ -119,6 +120,18 @@ describe('ADR-777 §8.32 — Ο δεύτερος άξονας: η κατηγορ
     }
     expect(CREATABLE_PROPERTY_TYPES).not.toContain('storage');
     expect(CREATABLE_PROPERTY_TYPES).toContain('apartment');
+  });
+
+  it('🔴 Κ5β — καμία γη στο φίλτρο μονάδων ΕΝΟΣ ΚΤΙΡΙΟΥ (…αλλά η αποθήκη μένει)', () => {
+    // Ένα κτίριο δεν περιέχει οικόπεδα — η σχέση είναι αντίστροφη. Δύο επιλογές που
+    // δεν μπορούν ποτέ να δώσουν αποτέλεσμα είναι φίλτρο χωρίς απόδειξη ζωής.
+    for (const land of LAND_PROPERTY_TYPES) {
+      expect(UNIT_TYPES_FOR_FILTER).not.toContain(land);
+    }
+    // ⚠️ Ο παρονομαστής που ξεχωρίζει αυτό το φίλτρο από το `CREATABLE`: οι αποθήκες
+    // **υπάρχουν** μέσα σε κτίριο, απλώς δημιουργούνται αλλού. Μια «απλοποίηση» σε
+    // `CREATABLE_PROPERTY_TYPES` θα τις έκρυβε από το φίλτρο, σιωπηλά.
+    expect(UNIT_TYPES_FOR_FILTER).toContain('storage');
   });
 
   it('🔴 Κ6 — Η ΓΗ ΥΠΑΡΧΕΙ στον πλήρη πίνακα, που είναι ό,τι βλέπει ο ιδιοκτήτης', () => {

@@ -24,6 +24,7 @@
 
 import { listingFiltersFromDemand } from '../demand-listing-filters';
 import {
+  EMPTY_LISTING_FILTERS,
   matchesListingFilters,
   parseListingFilters,
   serializeListingFilters,
@@ -80,6 +81,30 @@ describe('ADR-777 §8.32 — ο εργολάβος ψάχνει, ο ιδιοκτ
     expect(roundTripped.types).toEqual(['plot']);
     expect(roundTripped.offerKinds).toEqual(['exchange']);
     expect(matchesListingFilters(OWNER_PLOT, roundTripped)).toBe(true);
+  });
+
+  it('🔴 Κ4β — «ΥΠΝΟΔΩΜΑΤΙΑ ΤΟΥΛΑΧΙΣΤΟΝ 0» ΔΕΝ εξαφανίζει τα οικόπεδα', () => {
+    // 🔴 **Το βρήκε ΣΤΙΓΜΙΟΤΥΠΟ, όχι πύλη** (2026-08-20): στη φόρμα ζήτησης το πεδίο
+    // «Υπνοδωμάτια, τουλάχιστον» κάθεται **δίπλα** στο «Οικόπεδο», και το βοηθητικό
+    // του κείμενο λέει *«το 0 σημαίνει “δέξου και γκαρσονιέρα”»* — δηλαδή ο άνθρωπος
+    // που γράφει 0 νομίζει ότι **χαλαρώνει**. Ένα οικόπεδο όμως έχει `bedrooms: null`
+    // εκ κατασκευής, και ο έλεγχος «null ⇒ έξω» έδινε **μηδέν αποτελέσματα**
+    // (μετρημένο `false` πριν τη διόρθωση).
+    const filters = { ...listingFiltersFromDemand(CONTRACTOR), bedroomsMin: 0 };
+    expect(matchesListingFilters(OWNER_PLOT, filters)).toBe(true);
+    // …ούτε με ρητή απαίτηση: η ερώτηση **δεν ισχύει** για γη, δεν «αποτυγχάνει».
+    expect(matchesListingFilters(OWNER_PLOT, { ...filters, bedroomsMin: 2 })).toBe(true);
+  });
+
+  it('Κ4γ — ο παρονομαστής: σε ΔΙΑΜΕΡΙΣΜΑ το ίδιο φίλτρο εξακολουθεί να κρίνει', () => {
+    // Χωρίς αυτό, μια «διόρθωση» που απλώς σβήνει τον έλεγχο του `null` θα ήταν
+    // εξίσου πράσινη στο Κ4β — και θα είχε χαλαρώσει το φίλτρο για **όλα** τα
+    // ακίνητα, δηλαδή θα έστελνε γκαρσονιέρες σε όποιον ζητά τρία υπνοδωμάτια.
+    const flat = listing({ bedrooms: null });
+    const wantsTwo = { ...EMPTY_LISTING_FILTERS, bedroomsMin: 2 };
+    expect(matchesListingFilters(flat, wantsTwo)).toBe(false);
+    expect(matchesListingFilters(listing({ bedrooms: 3 }), wantsTwo)).toBe(true);
+    expect(matchesListingFilters(listing({ bedrooms: 1 }), wantsTwo)).toBe(false);
   });
 
   it('Κ5 — ΚΑΘΕ είδος γης μπορεί να ζητηθεί και να βρεθεί (κανένα ξεχασμένο)', () => {
