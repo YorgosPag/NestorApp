@@ -53,7 +53,12 @@ import { OFFER_KINDS, type OfferKind } from '@/types/property-offers';
 import { offerKindsFromLegacyStatus } from '@/lib/offers/derive-commercial-status';
 import type { PropertyType } from '@/types/property';
 import type { GeocodingAccuracy } from '@/lib/geocoding/geocoding-types';
-import type { PublicListing, ListingPosition, UnknownPositionReason } from '@/types/public-listing';
+import type {
+  ListingAuthorship,
+  ListingPosition,
+  PublicListing,
+  UnknownPositionReason,
+} from '@/types/public-listing';
 import { outranksForLocation } from '@/lib/location/location-provenance';
 import type { PlaceRef } from '@/types/geo/public-place';
 
@@ -97,6 +102,28 @@ export interface ProjectableProperty {
    * πριν υπάρξει το ερώτημα, άρα η έλλειψη είναι **δικό μας** χρέος, όχι επιλογή τους.
    */
   readonly locationDisclosure?: 'declined' | null;
+
+  /**
+   * 🔴 **ΠΟΙΟΣ ΔΗΛΩΝΕΙ ΤΗΝ ΑΓΓΕΛΙΑ** (§8.33) — **προαιρετικό, με ΓΡΑΜΜΕΝΟ κανόνα για
+   * την απουσία**, όχι σιωπηλή προεπιλογή.
+   *
+   * Απόν ⇒ **`'agency'`**, και ο λόγος είναι μετρημένος: ο **μόνος** παραγωγός που το
+   * παραλείπει είναι η διαδρομή του `properties` (`publish-public-listing.ts` και
+   * `rebuild-public-listings`), που διαβάζει **ωμό έγγραφο Firestore** με `as
+   * ProjectableProperty`. Εκείνα τα ακίνητα ανήκουν **εξ ορισμού σε εταιρεία**: το
+   * `assertPropertyCreatePolicy` απαιτεί `projectId` **ΠΑΝΤΑ**, και κάθε έργο ανήκει
+   * σε εταιρεία. Δεν υπάρχει έγγραφο εκεί που να είναι δήλωση ιδιώτη.
+   *
+   * ⚠️ **Η προεπιλογή είναι προς την ΑΚΡΙΒΗ κατεύθυνση, όχι προς την εύκολη.** Ένα
+   * `'owner-declared'` ως προεπιλογή θα έλεγε στον επισκέπτη ότι μια αγγελία εταιρείας
+   * είναι δήλωση ιδιώτη — δηλαδή θα **αφαιρούσε** γνώση που έχουμε. Άγκυρα: `Υ3`.
+   */
+  readonly authorship?: ListingAuthorship | null;
+  /**
+   * Η επωνυμία του γραφείου, όταν υπάρχει. Δες {@link PublicListing.agencyName} για
+   * το δηλωμένο κενό των αγγελιών **έργων**.
+   */
+  readonly agencyName?: string | null;
 }
 
 /**
@@ -356,6 +383,9 @@ export function projectListingShape(
     floor: numberOrNull(property.floor),
     bedrooms: numberOrNull(property.layout?.bedrooms),
     title: (property.name ?? '').trim(),
+    // §8.33 — δες τον κανόνα της απουσίας στο `ProjectableProperty.authorship`.
+    authorship: property.authorship ?? 'agency',
+    agencyName: property.agencyName ?? null,
     projectedAt,
   };
 }

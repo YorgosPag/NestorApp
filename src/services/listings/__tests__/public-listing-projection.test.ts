@@ -156,9 +156,52 @@ describe('Κ4 — η προβολή δεν κουβαλά ΚΑΜΙΑ ταυτό�
   it('το σχήμα εξόδου είναι ΚΛΕΙΣΤΟ — ακριβώς τα δηλωμένα κλειδιά', () => {
     const listing = buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!;
     expect(Object.keys(listing).sort()).toEqual([
-      'areaSqm', 'bedrooms', 'commercial', 'commercialStatus', 'coverImage',
+      // §8.33: `agencyName` + `authorship` — **η άγκυρα κοκκίνισε τη στιγμή που
+      // μπήκαν**, και αυτό είναι η δουλειά της. Πέρασαν από απόφαση: η **κλάση**
+      // προέλευσης δεν είναι ταυτότητα, και η **επωνυμία** είναι επιχείρησης, ποτέ
+      // προσώπου (απόφαση Giorgio 2026-08-20). Δες `Υ1`-`Υ3` πιο κάτω.
+      'agencyName',
+      'areaSqm', 'authorship', 'bedrooms', 'commercial', 'commercialStatus', 'coverImage',
       'floor', 'id', 'offerKinds', 'place', 'position', 'projectedAt', 'title', 'type',
     ]);
+  });
+
+  // ===========================================================================
+  // Υ — Η ΥΠΟΓΡΑΦΗ ΤΗΣ ΑΓΓΕΛΙΑΣ (§8.33)
+  // ===========================================================================
+
+  describe('🔴 Υ — ο επισκέπτης μαθαίνει ΤΙ ΕΙΔΟΥΣ γνώση είναι αυτή η γραμμή', () => {
+    it('🔑 Υ1 — αγγελία ΓΡΑΦΕΙΟΥ κουβαλά κλάση ΚΑΙ επωνυμία', () => {
+      const listing = buildPublicListing(
+        { ...REAL_MAISONETTE, authorship: 'agency', agencyName: 'ΑΛΦΑ ΜΕΣΙΤΙΚΗ' },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.authorship).toBe('agency');
+      expect(listing.agencyName).toBe('ΑΛΦΑ ΜΕΣΙΤΙΚΗ');
+    });
+
+    it('🔴 Υ2 — αγγελία ΙΔΙΩΤΗ: καμία επωνυμία υπάρχει καν ως τιμή', () => {
+      const listing = buildPublicListing(
+        { ...REAL_MAISONETTE, authorship: 'owner-declared', agencyName: null },
+        NO_PLACE,
+        AT,
+      )!;
+      expect(listing.authorship).toBe('owner-declared');
+      expect(listing.agencyName).toBeNull();
+    });
+
+    it('🔑 Υ3 — ΑΠΟΥΣΙΑ ⇒ `agency`, γιατί ο μόνος παραγωγός που το παραλείπει είναι το `properties`', () => {
+      // Ο παρονομαστής: το `REAL_MAISONETTE` είναι **ωμό έγγραφο έργου**, ακριβώς όπως
+      // το διαβάζει το `publish-public-listing.ts` — δεν έχει `authorship`.
+      expect('authorship' in REAL_MAISONETTE).toBe(false);
+      const listing = buildPublicListing(REAL_MAISONETTE, NO_PLACE, AT)!;
+      // Και η προεπιλογή είναι προς την **ακριβή** κατεύθυνση: ένα ακίνητο έργου
+      // ΑΝΗΚΕΙ σε εταιρεία (το `assertPropertyCreatePolicy` απαιτεί `projectId`
+      // πάντα). Ένα `owner-declared` εδώ θα **αφαιρούσε** γνώση που έχουμε.
+      expect(listing.authorship).toBe('agency');
+      expect(listing.agencyName).toBeNull();
+    });
   });
 
   /**

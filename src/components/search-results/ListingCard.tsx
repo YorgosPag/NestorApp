@@ -107,6 +107,23 @@ export function ListingCard({ listing, isHighlighted, onHover, filterQuery }: Li
               </li>
             ))}
           </ul>
+
+          {/*
+            🔴 **Η ΥΠΟΓΡΑΦΗ (§8.33)** — «με ποιον μιλάω;», απαντημένο πριν κλικάρει.
+            Απόφαση Giorgio (2026-08-20): η αγγελία γραφείου φέρει την **επωνυμία**.
+
+            ⚠️ **Τρεις καταστάσεις, όχι δύο.** Το «γραφείο με επωνυμία» και το
+            «γραφείο **χωρίς** επωνυμία» δεν συμπτύσσονται: το δεύτερο συμβαίνει για
+            τις αγγελίες **έργων** (δηλωμένο κενό στο `PublicListing.agencyName`), και
+            ένα κενό «Από γραφείο: » θα διαβαζόταν ως σπασμένη οθόνη.
+          */}
+          <p className="mt-2 text-xs text-muted-foreground">
+            {listing.authorship === 'owner-declared'
+              ? t('search-results:card.authorship.ownerDeclared')
+              : listing.agencyName === null
+                ? t('search-results:card.authorship.agencyAnonymous')
+                : t('search-results:card.authorship.agency', { name: listing.agencyName })}
+          </p>
         </article>
       </Link>
     </li>

@@ -135,6 +135,10 @@ export function ownerPropertyFactsOf(
   at: string,
 ): ListingMatchFacts {
   return toFacts(
+    // ⚠️ Χωρίς επωνυμία **επίτηδες**: εδώ παράγονται γεγονότα **ταιριάσματος**, όχι
+    // δημόσια αγγελία. Η υπογραφή του γραφείου δεν είναι κριτήριο για το αν ένα
+    // ακίνητο ταιριάζει σε μια ζήτηση — και μια ανάγνωση εταιρείας ανά ακίνητο μέσα
+    // σε βρόχο ταιριάσματος θα ήταν κόστος χωρίς καταναλωτή.
     { ...projectableFromOwnerProperty(property, at), id: property.id },
     placeKnowledgeFromOwnerProperty(property, at),
     at,

@@ -48,6 +48,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
 import { createModuleLogger } from '@/lib/telemetry';
+import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
 import {
   placeKnowledgeFromOwnerProperty,
   projectableFromOwnerProperty,
@@ -133,10 +134,22 @@ async function republishOwnerListing(
   property: OwnerProperty,
 ): Promise<PublishOutcome> {
   const at = nowISO();
+
+  // 🔑 **Η επωνυμία διαβάζεται ΕΔΩ, τη στιγμή της δημοσίευσης** (§8.33) — μία ανάγνωση
+  // εγγράφου ανά **γραφή**, όχι ανά ανάγνωση αγγελίας. Ο ιδιώτης δεν πληρώνει τίποτα:
+  // το `authorCompanyId` του είναι `null` και ο αναγνώστης επιστρέφει αμέσως.
+  //
+  // ⚠️ **Απο-κανονικοποίηση, με τη συνέπειά της γραμμένη**: αν το γραφείο αλλάξει
+  // επωνυμία, οι ήδη δημοσιευμένες αγγελίες του δείχνουν την **παλιά** μέχρι την
+  // επόμενη επανασύνθεση. Είναι το ίδιο συμβόλαιο που έχει ήδη κάθε πεδίο αυτής της
+  // προβολής (`title`, `commercialStatus`): η προβολή είναι **στιγμιότυπο**, και το
+  // `projectedAt` λέει πότε τραβήχτηκε.
+  const agencyName = await readCompanyPublicName(adminDb, property.authorCompanyId);
+
   return writeListingProjection(
     adminDb,
     property.id,
-    projectableFromOwnerProperty(property, at),
+    projectableFromOwnerProperty(property, at, agencyName),
     placeKnowledgeFromOwnerProperty(property, at),
     at,
   );

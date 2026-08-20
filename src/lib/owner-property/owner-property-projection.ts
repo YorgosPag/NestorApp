@@ -39,7 +39,11 @@ import {
   type PlaceKnowledge,
   type ProjectableProperty,
 } from '@/services/listings/public-listing-projection';
-import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-property';
+import {
+  isOwnerPropertyOnTheMarket,
+  listingAuthorshipOf,
+  type OwnerProperty,
+} from '@/types/owner-property';
 
 /**
  * **Το ακίνητο του ιδιώτη, όπως το βλέπει η προβολή.**
@@ -61,6 +65,7 @@ import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-pr
 export function projectableFromOwnerProperty(
   property: OwnerProperty,
   atISO: string,
+  agencyName: string | null = null,
 ): ProjectableProperty {
   /**
    * 🔴 **Η ΑΠΟΣΥΡΣΗ ΕΚΦΡΑΖΕΤΑΙ ΩΣ «ΚΑΜΙΑ ΔΙΑΘΕΣΗ», ΟΧΙ ΩΣ ΔΕΥΤΕΡΟ ΚΡΙΤΗΡΙΟ.**
@@ -115,6 +120,25 @@ export function projectableFromOwnerProperty(
      * είναι πρόθεση και γίνεται **δεδομένο**.
      */
     locationDisclosure: property.place.kind === 'declined' ? 'declined' : null,
+
+    /**
+     * 🔴 **Η ΥΠΟΓΡΑΦΗ ΤΗΣ ΑΓΓΕΛΙΑΣ (§8.33) — ΠΑΡΑΓΩΓΟ ΤΗΣ ΕΝΤΟΛΗΣ, ΠΟΤΕ ΔΗΛΩΣΗ.**
+     *
+     * Ένα εγγράψιμο `authorship` δίπλα στο `mandate` θα ήταν **δεύτερη αλήθεια** για
+     * το ίδιο γεγονός, και θα απέκλινε την πρώτη φορά που κάποιος έγραφε το ένα
+     * χωρίς το άλλο — ίδιο σκεπτικό με το `commercialStatus` της Α20.
+     *
+     * ⚠️ **Η επωνυμία περνιέται από τον καλούντα και ΔΕΝ διαβάζεται εδώ.** Αυτό το
+     * αρχείο είναι **leaf**: καθαρές συναρτήσεις, καμία Firestore. Μια ανάγνωση
+     * εταιρείας εδώ μέσα θα το έκανε αδύνατο να δοκιμαστεί χωρίς βάση — και θα
+     * έκρυβε ένα αίτημα δικτύου μέσα σε συνάρτηση που λέγεται «μετάφραση».
+     *
+     * ⚠️ **`null` σημαίνει «δεν ξέρουμε επωνυμία», ΟΧΙ «ιδιώτης».** Το δεύτερο το
+     * λέει το `authorship`, και τα δύο πεδία **δεν** συμπτύσσονται: μια αγγελία
+     * γραφείου του οποίου η επωνυμία δεν διαβάστηκε είναι **ακόμη** αγγελία γραφείου.
+     */
+    authorship: listingAuthorshipOf(property.mandate),
+    agencyName,
   };
 }
 
