@@ -9,7 +9,7 @@
  *
  * | Πηγή | Απομόνωση | Ποιος είναι ο «κάτοχος» |
  * |---|---|---|
- * | `owner_properties` | `mode: 'userId'`, `ownerUserId` | ο **άνθρωπος** (Α14 · §8.16) |
+ * | `owner_properties` | `mode: 'userId'`, `authorUserId` | ο **άνθρωπος** (Α14 · §8.16 · §8.33) |
  * | `properties` | `mode: 'companyId'`, `companyId` | το **γραφείο** |
  *
  * ⚠️ **Δεν είναι λεπτομέρεια υλοποίησης — είναι το μισό κοινό.** Ο κ. Παπαδόπουλος με
@@ -112,7 +112,7 @@ async function readOwnerProperty(
 ): Promise<ListingMatchFacts | null> {
   const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
   const property = snap.data() as OwnerProperty | undefined;
-  if (property === undefined || property.ownerUserId !== uid) return null;
+  if (property === undefined || property.authorUserId !== uid) return null;
 
   return ownerPropertyFactsOf({ ...property, id: propertyId }, nowISO());
 }
@@ -135,7 +135,7 @@ export function ownerPropertyFactsOf(
   at: string,
 ): ListingMatchFacts {
   return toFacts(
-    { ...projectableFromOwnerProperty(property), id: property.id },
+    { ...projectableFromOwnerProperty(property, at), id: property.id },
     placeKnowledgeFromOwnerProperty(property, at),
     at,
   );

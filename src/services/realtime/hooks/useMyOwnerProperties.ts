@@ -32,7 +32,7 @@ import {
  * Πού ζει «το ακίνητό μου» — και **ποιο είναι το ερώτημα**.
  *
  * 🔑 Το `query()` ζει **εδώ**, όχι στη μηχανή: μόνο εδώ ονομάζονται στατικά και οι δύο
- * αυθεντίες (`COLLECTIONS.OWNER_PROPERTIES` · `FIELDS.OWNER_USER_ID`), άρα μόνο εδώ
+ * αυθεντίες (`COLLECTIONS.OWNER_PROPERTIES` · `FIELDS.AUTHOR_USER_ID`), άρα μόνο εδώ
  * μπορούν οι **CHECK 3.10 και 3.35** να κρίνουν την απομόνωση. Δες το σκεπτικό στο
  * {@link useOwnedDocuments}.
  *
@@ -43,7 +43,7 @@ const OWNER_PROPERTIES: OwnedCollectionSpec = {
   buildQuery: (userId) =>
     query(
       collection(db, COLLECTIONS.OWNER_PROPERTIES),
-      where(FIELDS.OWNER_USER_ID, '==', userId),
+      where(FIELDS.AUTHOR_USER_ID, '==', userId),
     ),
   label: 'τα ακίνητά μου',
 };

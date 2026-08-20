@@ -29,9 +29,9 @@ import { enterpriseIdService } from '@/services/enterprise-id.service';
 import type {
   OwnerProperty,
   OwnerPropertyDraft,
-  OwnerPropertyInvariant,
   OwnerPropertyLifecycle,
 } from '@/types/owner-property';
+import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
 
 const logger = createModuleLogger('owner-property.service');

@@ -13,6 +13,10 @@ import type {
   OwnerPropertyDraft,
   OwnerPropertyMedia,
 } from '@/types/owner-property';
+import {
+  OWNER_CONSENT,
+  type BrokeredListingMandate,
+} from '@/types/owner-property-mandate';
 import type { OfferKind, OfferLifecycle, PropertyOffer } from '@/types/property-offers';
 
 /** Μια διάθεση με ρητό ποσό — **μία** γεννήτρια για τα τρία είδη. */
@@ -77,11 +81,42 @@ export function validOwnerProperty(
 ): OwnerProperty {
   return {
     id: 'ownp_a',
-    ownerUserId: 'user-1',
+    authorUserId: 'user-1',
+    authorCompanyId: null,
+    mandate: { kind: 'self' },
     ...validDraft(),
     lifecycle: 'listed',
     createdAt: '2026-08-11T09:00:00.000Z',
     updatedAt: '2026-08-11T09:00:00.000Z',
     ...overrides,
   };
+}
+
+/**
+ * Μια αγγελία **γραφείου** — εντολή μεσίτη, με ρητή έγκριση και ρητή λήξη.
+ *
+ * ⚠️ **Οι προεπιλογές είναι η ΑΥΣΤΗΡΗ περίπτωση επίτηδες**: `pending` + μελλοντική
+ * λήξη. Μια «βολική» προεπιλογή `confirmed` θα έκανε κάθε άγκυρα που ξεχνά να δηλώσει
+ * την έγκριση να **περνά κατά λάθος**, δηλαδή θα έκρυβε ακριβώς το ελάττωμα που ο
+ * φρουρός υπάρχει για να πιάνει.
+ */
+export function brokeredOwnerProperty(
+  mandate: Partial<BrokeredListingMandate> = {},
+  overrides: Partial<OwnerProperty> = {},
+): OwnerProperty {
+  return validOwnerProperty({
+    authorCompanyId: 'comp_alfa',
+    mandate: {
+      kind: 'brokered',
+      clientContactId: 'cont_kostas',
+      confirmation: 'pending',
+      confirmedByUserId: null,
+      proof: { via: OWNER_CONSENT },
+      decidedAt: null,
+      notifiedAt: null,
+      expiresAt: '2027-08-11T09:00:00.000Z',
+      ...mandate,
+    },
+    ...overrides,
+  });
 }

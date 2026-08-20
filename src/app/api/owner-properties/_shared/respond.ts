@@ -18,7 +18,9 @@ import { NextResponse } from 'next/server';
 
 import type { OwnerPropertyWriteResult } from '@/services/owner-property/owner-property-write.service';
 import type { PublishOutcome } from '@/services/listings/publish-public-listing';
-import type { OwnerProperty, OwnerPropertyInvariant } from '@/types/owner-property';
+import type { OwnerProperty } from '@/types/owner-property';
+import type { OwnerPropertyInvariant } from '@/types/owner-property-invariants';
+import type { MandateInvariant } from '@/types/owner-property-mandate';
 
 /**
  * Ό,τι φεύγει προς τον πελάτη σε **επιτυχία**.
@@ -38,7 +40,7 @@ export interface OwnerPropertyWriteResponse {
 export interface OwnerPropertyErrorResponse {
   readonly error: string;
   /** Οι κωδικοί γίνονται **κλειδιά i18n** στην οθόνη (N.11) — ποτέ ωμό κείμενο εδώ. */
-  readonly violations?: readonly OwnerPropertyInvariant[];
+  readonly violations?: readonly OwnerPropertyInvariant[] | readonly MandateInvariant[];
   /** Μονοπάτια πεδίων που δεν διαβάστηκαν καν ως σχήμα. */
   readonly malformed?: readonly string[];
 }
@@ -55,6 +57,7 @@ export type OwnerPropertyResponse =
  * | `saved` | **200** | ...ακόμη κι όταν `publish: 'failed'` — **η δουλειά του κατόχου έγινε**· η προβολή είναι παράγωγο και το λέμε στο σώμα |
  * | `invalid` | **422** | Το αίτημα ήταν **κατανοητό** και η οντότητα άκυρη — 400 θα σήμαινε «δεν σε κατάλαβα», που είναι ψέμα και στέλνει τον πελάτη να ψάξει το JSON του |
  * | `absent` | **404** | *«Δεν υπάρχει **για σένα**»* — και το 403 απαγορεύεται: θα **επιβεβαίωνε** την ύπαρξη ξένου εγγράφου |
+ * | `invalid-mandate` | **422** | Ίδιος κωδικός, **άλλο σφάλμα**: το πρόβλημα είναι στην **εντολή** (πελάτης · λήξη · βεβαίωση), όχι στο ακίνητο. Η οθόνη το χρειάζεται ξεχωριστά για να δείξει το σωστό μέρος της φόρμας |
  * | `failed` | **500** | Δεν φτάσαμε στη βάση· ο άνθρωπος δεν έχει τι να διορθώσει |
  */
 export function respondToWrite(
@@ -66,6 +69,11 @@ export function respondToWrite(
     case 'invalid':
       return NextResponse.json(
         { error: 'INVALID_LISTING', violations: result.violations },
+        { status: 422 },
+      );
+    case 'invalid-mandate':
+      return NextResponse.json(
+        { error: 'INVALID_MANDATE', violations: result.violations },
         { status: 422 },
       );
     case 'absent':

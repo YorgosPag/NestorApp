@@ -39,7 +39,7 @@ import {
   type PlaceKnowledge,
   type ProjectableProperty,
 } from '@/services/listings/public-listing-projection';
-import { isLiveOwnerProperty, type OwnerProperty } from '@/types/owner-property';
+import { isOwnerPropertyOnTheMarket, type OwnerProperty } from '@/types/owner-property';
 
 /**
  * **Το ακίνητο του ιδιώτη, όπως το βλέπει η προβολή.**
@@ -60,6 +60,7 @@ import { isLiveOwnerProperty, type OwnerProperty } from '@/types/owner-property'
  */
 export function projectableFromOwnerProperty(
   property: OwnerProperty,
+  atISO: string,
 ): ProjectableProperty {
   /**
    * 🔴 **Η ΑΠΟΣΥΡΣΗ ΕΚΦΡΑΖΕΤΑΙ ΩΣ «ΚΑΜΙΑ ΔΙΑΘΕΣΗ», ΟΧΙ ΩΣ ΔΕΥΤΕΡΟ ΚΡΙΤΗΡΙΟ.**
@@ -75,8 +76,18 @@ export function projectableFromOwnerProperty(
    * κριτήριο βγάζει μόνο του `unavailable` + `[]` ⇒ `buildPublicListing` → `null` ⇒
    * ο γραφέας **σβήνει** την προβολή. Η απόσυρση **συμβαίνει**, χωρίς να μάθει
    * κανένας νέος κανόνας τι είναι το `owner_properties`.
+   *
+   * 🔑 **§8.33 — Η ΕΝΤΟΛΗ ΤΟΥ ΜΕΣΙΤΗ ΜΠΗΚΕ ΣΤΗΝ ΙΔΙΑ ΠΡΟΤΑΣΗ, ΟΧΙ ΔΙΠΛΑ ΤΗΣ.** Μια
+   * αγγελία γραφείου με εντολή **σε αναμονή** ή **ληγμένη** δεν έχει, ομοίως, καμία
+   * διάθεση στην αγορά. Και οι δύο ερωτήσεις ζουν πλέον σε **έναν** κριτή
+   * ({@link isOwnerPropertyOnTheMarket}) — αν είχαν γραφτεί ως δεύτερο `if` εδώ, θα
+   * ήταν ακριβώς το «δεύτερο κριτήριο δημοσίευσης» που η παραπάνω παράγραφος
+   * απαγορεύει, και θα διαφωνούσε με το `isPubliclyListed` στην πρώτη αλλαγή.
+   *
+   * ⚠️ Γι' αυτό η **λήξη δεν χρειάστηκε δικό της μηχανισμό εξαφάνισης**: την επόμενη
+   * φορά που η αγγελία συντίθεται, φεύγει μόνη της.
    */
-  const marketOffers = isLiveOwnerProperty(property) ? property.offers : [];
+  const marketOffers = isOwnerPropertyOnTheMarket(property, atISO) ? property.offers : [];
 
   return {
     id: property.id,

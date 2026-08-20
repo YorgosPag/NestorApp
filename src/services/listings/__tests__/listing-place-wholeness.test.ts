@@ -101,7 +101,7 @@ describe('🔴 Ο — ΚΑΘΕ διαδρομή αγγελίας μπορεί ν
     });
 
     const listing = buildPublicListing(
-      projectableFromOwnerProperty(property),
+      projectableFromOwnerProperty(property, AT),
       placeKnowledgeFromOwnerProperty(property, AT),
       AT,
     );
@@ -134,7 +134,7 @@ describe('🔴 Ο — ΚΑΘΕ διαδρομή αγγελίας μπορεί ν
       },
     });
     const ownerListing = buildPublicListing(
-      projectableFromOwnerProperty(owner),
+      projectableFromOwnerProperty(owner, AT),
       placeKnowledgeFromOwnerProperty(owner, AT),
       AT,
     );

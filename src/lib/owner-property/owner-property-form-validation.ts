@@ -34,11 +34,11 @@ import {
   validateDraftForm,
   type DraftFormValidation,
 } from '@/lib/forms/draft-validation';
+import type { OwnerPropertyDraft } from '@/types/owner-property';
 import {
   ownerPropertyInvariantViolations,
-  type OwnerPropertyDraft,
   type OwnerPropertyInvariant,
-} from '@/types/owner-property';
+} from '@/types/owner-property-invariants';
 import {
   ownerPropertyDraftFrom,
   ownerPropertyFormBlockers,

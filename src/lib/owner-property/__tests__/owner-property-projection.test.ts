@@ -24,14 +24,18 @@ import {
   buildPublicListing,
   isPubliclyListed,
 } from '@/services/listings/public-listing-projection';
-import { offerOf, validOwnerProperty } from './owner-property-fixtures';
+import {
+  brokeredOwnerProperty,
+  offerOf,
+  validOwnerProperty,
+} from './owner-property-fixtures';
 
 const AT = '2026-08-11T12:00:00.000Z';
 
 /** Η **πλήρης** διαδρομή, όπως την εκτελεί ο γραφέας στον διακομιστή. */
 function publish(property: Parameters<typeof projectableFromOwnerProperty>[0]) {
   return buildPublicListing(
-    projectableFromOwnerProperty(property),
+    projectableFromOwnerProperty(property, AT),
     placeKnowledgeFromOwnerProperty(property, AT),
     AT,
   );
@@ -118,7 +122,7 @@ describe('🔑 Θ — «υποχρεωτικό ΕΡΩΤΗΜΑ, όχι υποχρ
     // Ο παρονομαστής: το **παλιό** ακίνητο (χωρίς `locationDisclosure`) — η κατάσταση
     // κάθε εγγράφου που γράφτηκε πριν υπάρξει το ερώτημα.
     const neverAsked = buildPublicListing(
-      { ...projectableFromOwnerProperty(validOwnerProperty()), locationDisclosure: null },
+      { ...projectableFromOwnerProperty(validOwnerProperty(), AT), locationDisclosure: null },
       { candidates: [], ref: null },
       AT,
     );
@@ -168,7 +172,7 @@ describe('🔴 Π — πουλημένο ΔΕΝ μένει στην αγορά',
 
     // Ο παρονομαστής: το `offerKinds` **όντως** περιέχει `sell` (το `closed` είναι
     // «ζωντανό» για την παραγωγή κατάστασης) — άρα το σκέλος **δοκιμάζεται**.
-    const projectable = projectableFromOwnerProperty(sold);
+    const projectable = projectableFromOwnerProperty(sold, AT);
     expect(projectable.offerKinds).toEqual(['sell']);
     expect(projectable.commercialStatus).toBe('sold');
 
@@ -183,7 +187,7 @@ describe('🔴 Π — πουλημένο ΔΕΝ μένει στην αγορά',
 
   it('🔑 Π3 — η ΑΝΤΙΠΑΡΟΧΗ δημοσιεύεται, παρότι προβάλλεται σε `unavailable`', () => {
     const exchange = validOwnerProperty({ offers: [offerOf('exchange', 45)] });
-    const projectable = projectableFromOwnerProperty(exchange);
+    const projectable = projectableFromOwnerProperty(exchange, AT);
 
     // Το παλιό λεξιλόγιο **δεν έχει λέξη** γι' αυτήν…
     expect(projectable.commercialStatus).toBe('unavailable');
@@ -216,5 +220,68 @@ describe('🔴 Ι — το ιδιωτικό ΔΕΝ ταξιδεύει στη δ�
     // αυτά η κάρτα δεν το δείχνει. Είναι δέσμευση, όχι παράλειψη.
     expect(validOwnerProperty().media).toHaveLength(1);
     expect(publish(validOwnerProperty())?.coverImage).toBeNull();
+  });
+});
+
+
+// =============================================================================
+// Μ — Η ΕΝΤΟΛΗ ΤΟΥ ΜΕΣΙΤΗ (§8.33)
+// =============================================================================
+
+/**
+ * 🔴 **Η ΑΓΚΥΡΑ ΠΟΥ ΜΕΤΡΑΕΙ: η δημοσίευση χωρίς έγκριση είναι ΔΟΜΙΚΑ ΑΔΥΝΑΤΗ.**
+ *
+ * Δεν ελέγχεται εδώ κάποιο `boolean` — εκτελείται η **πλήρης** διαδρομή του γραφέα
+ * (`projectable → buildPublicListing`), η ίδια που τρέχει ο διακομιστής. Ένας έλεγχος
+ * πάνω στο `mandateAllowsPublication` θα ήταν πράσινος ακόμη κι αν κανείς δεν τον
+ * καλούσε — ακριβώς το «φρουρός χωρίς απόδειξη ζωής» που το §8.33 ήρθε να κλείσει.
+ */
+describe('🔴 Μ — καμία αγγελία γραφείου στον κόσμο χωρίς «ναι» του ιδιοκτήτη', () => {
+  it('🔑 Μ1 — ο ΠΑΡΟΝΟΜΑΣΤΗΣ: η ΙΔΙΑ αγγελία ως ΙΔΙΩΤΗ δημοσιεύεται', () => {
+    expect(publish(validOwnerProperty())).not.toBeNull();
+  });
+
+  it('🔴 Μ2 — εντολή σε ΑΝΑΜΟΝΗ: το `buildPublicListing` γυρίζει `null`', () => {
+    expect(publish(brokeredOwnerProperty())).toBeNull();
+  });
+
+  it('Μ3 — μόλις ο ιδιοκτήτης πει «ναι», η ΙΔΙΑ αγγελία βγαίνει στον χάρτη', () => {
+    const confirmed = brokeredOwnerProperty({
+      confirmation: 'confirmed',
+      decidedAt: AT,
+    });
+    expect(publish(confirmed)).not.toBeNull();
+  });
+
+  it('🔴 Μ4 — ΛΗΓΜΕΝΗ εντολή φεύγει από τον χάρτη ΧΩΡΙΣ κανέναν νέο μηχανισμό', () => {
+    const expired = brokeredOwnerProperty({
+      confirmation: 'confirmed',
+      decidedAt: '2026-01-01T00:00:00.000Z',
+      expiresAt: '2026-08-01T00:00:00.000Z', // πριν από το AT
+    });
+
+    // Ο παρονομαστής: η **έγκριση υπάρχει** — άρα το `null` οφείλεται στη λήξη και
+    // μόνο σε αυτήν.
+    expect(expired.mandate.kind).toBe('brokered');
+    expect(publish(expired)).toBeNull();
+
+    // ⚠️ Και το έγγραφο **δεν άλλαξε**: η αγγελία εξαφανίζεται από τον κόσμο, ο
+    // κατάλογος του γραφείου την κρατά. Είναι η υπόσχεση «λήγει, δεν σβήνει».
+    expect(expired.lifecycle).toBe('listed');
+    expect(expired.offers).toHaveLength(1);
+  });
+
+  it('Μ5 — ΑΡΝΗΣΗ του ιδιοκτήτη: εξίσου εκτός χάρτη', () => {
+    expect(
+      publish(brokeredOwnerProperty({ confirmation: 'declined', decidedAt: AT })),
+    ).toBeNull();
+  });
+
+  it('🔑 Μ6 — και ΚΑΜΙΑ ταυτότητα του γραφείου δεν διαρρέει στην προβολή', () => {
+    const confirmed = brokeredOwnerProperty({ confirmation: 'confirmed', decidedAt: AT });
+    const flat = JSON.stringify(publish(confirmed));
+
+    expect(flat).not.toContain('comp_alfa');
+    expect(flat).not.toContain('cont_kostas');
   });
 });

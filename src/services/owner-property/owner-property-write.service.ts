@@ -36,7 +36,7 @@
  *    προβολή** σβήνεται ως **συνέπεια** (`projectableFromOwnerProperty` → καμία
  *    διάθεση → `buildPublicListing` → `null` → `delete`). Το ιστορικό του κατόχου
  *    μένει δικό του.
- * 3. **Αλλαγή `ownerUserId` — ΠΟΤΕ.** Δεν υπάρχει διαδρομή που να το δέχεται: το
+ * 3. **Αλλαγή `authorUserId` — ΠΟΤΕ.** Δεν υπάρχει διαδρομή που να το δέχεται: το
  *    {@link OwnerPropertyDraft} **δεν το περιέχει**, οπότε η αποτυχία είναι στη
  *    μεταγλώττιση και όχι στο δίκτυο.
  */
@@ -58,12 +58,19 @@ import {
 } from '@/services/listings/publish-public-listing';
 import {
   newOwnerProperty,
-  ownerPropertyInvariantViolations,
   type OwnerProperty,
+  type OwnerPropertyAuthorship,
   type OwnerPropertyDraft,
-  type OwnerPropertyInvariant,
   type OwnerPropertyLifecycle,
 } from '@/types/owner-property';
+import {
+  ownerPropertyInvariantViolations,
+  type OwnerPropertyInvariant,
+} from '@/types/owner-property-invariants';
+import {
+  mandateInvariantViolations,
+  type MandateInvariant,
+} from '@/types/owner-property-mandate';
 
 const logger = createModuleLogger('owner-property-write.service');
 
@@ -91,6 +98,14 @@ const logger = createModuleLogger('owner-property-write.service');
 export type OwnerPropertyWriteResult =
   | { readonly kind: 'saved'; readonly property: OwnerProperty; readonly publish: PublishOutcome }
   | { readonly kind: 'invalid'; readonly violations: readonly OwnerPropertyInvariant[] }
+  /**
+   * 🔑 **Η ΕΝΤΟΛΗ ΑΠΟΡΡΙΠΤΕΤΑΙ ΞΕΧΩΡΙΣΤΑ ΑΠΟ ΤΟ ΑΚΙΝΗΤΟ (§8.33)**, και δεν είναι
+   * λεπτολογία: το `invalid` λέει *«η **αγγελία** σου λέει κάτι αντιφατικό»* — λάθος
+   * σε πεδίο που ο άνθρωπος βλέπει στη φόρμα του ακινήτου. Αυτό λέει *«η **εντολή**
+   * σου δεν στέκει»* — άλλο μέρος της οθόνης, άλλα πεδία, άλλη διόρθωση. Ένας κοινός
+   * κάδος θα έστελνε τον μεσίτη να ψάχνει το εμβαδόν επειδή έβαλε λήξη στο χθες.
+   */
+  | { readonly kind: 'invalid-mandate'; readonly violations: readonly MandateInvariant[] }
   | { readonly kind: 'absent' }
   | { readonly kind: 'failed'; readonly message: string };
 
@@ -106,8 +121,11 @@ export type OwnerPropertyWriteResult =
  * είναι από πού έρχεται ο τόπος — και αυτό είναι ακριβώς η παράμετρος που ο πυρήνας
  * δέχεται.
  *
- * ⚠️ **Μία ανάγνωση ρολογιού**, περασμένη και στα δύο: το `projectedAt` της αγγελίας
- * και το `locatedAt` της θέσης οφείλουν να είναι **η ίδια** στιγμή.
+ * ⚠️ **Μία ανάγνωση ρολογιού**, περασμένη σε **τρία** σημεία: το `projectedAt` της
+ * αγγελίας, το `locatedAt` της θέσης, και —από το §8.33— η κρίση **λήξης της
+ * εντολής**. Οφείλουν να είναι **η ίδια** στιγμή· ένα δεύτερο `nowISO()` μέσα στον
+ * κριτή θα έκανε το ίδιο πέρασμα να διαφωνεί με τον εαυτό του σε μια εντολή που λήγει
+ * ακριβώς τώρα.
  */
 async function republishOwnerListing(
   adminDb: AdminFirestore,
@@ -117,7 +135,7 @@ async function republishOwnerListing(
   return writeListingProjection(
     adminDb,
     property.id,
-    projectableFromOwnerProperty(property),
+    projectableFromOwnerProperty(property, at),
     placeKnowledgeFromOwnerProperty(property, at),
     at,
   );
@@ -185,13 +203,18 @@ async function persist(
  */
 export async function createOwnerProperty(
   adminDb: AdminFirestore,
-  identity: { readonly id: string; readonly ownerUserId: string },
+  authorship: OwnerPropertyAuthorship,
   draft: OwnerPropertyDraft,
 ): Promise<OwnerPropertyWriteResult> {
   const violations = ownerPropertyInvariantViolations(draft);
   if (violations.length > 0) return { kind: 'invalid', violations };
 
-  return persist(adminDb, newOwnerProperty(draft, identity), 'create');
+  const mandateViolations = mandateInvariantViolations(authorship.mandate, nowISO());
+  if (mandateViolations.length > 0) {
+    return { kind: 'invalid-mandate', violations: mandateViolations };
+  }
+
+  return persist(adminDb, newOwnerProperty(draft, authorship), 'create');
 }
 
 // =============================================================================
@@ -209,7 +232,7 @@ export async function createOwnerProperty(
 async function loadOwned(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
-  ownerUserId: string,
+  authorUserId: string,
 ): Promise<OwnerProperty | null> {
   const snapshot = await adminDb
     .collection(COLLECTIONS.OWNER_PROPERTIES)
@@ -217,7 +240,7 @@ async function loadOwned(
     .get();
 
   const property = snapshot.data() as OwnerProperty | undefined;
-  if (property === undefined || property.ownerUserId !== ownerUserId) return null;
+  if (property === undefined || property.authorUserId !== authorUserId) return null;
   return property;
 }
 
@@ -238,12 +261,12 @@ export async function updateOwnerProperty(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
   draft: OwnerPropertyDraft,
-  ownerUserId: string,
+  authorUserId: string,
 ): Promise<OwnerPropertyWriteResult> {
   const violations = ownerPropertyInvariantViolations(draft);
   if (violations.length > 0) return { kind: 'invalid', violations };
 
-  const existing = await loadOwned(adminDb, ownerPropertyId, ownerUserId);
+  const existing = await loadOwned(adminDb, ownerPropertyId, authorUserId);
   if (existing === null) return { kind: 'absent' };
 
   return persist(adminDb, { ...existing, ...draft, updatedAt: nowISO() }, 'overwrite');
@@ -267,9 +290,9 @@ export async function setOwnerPropertyLifecycle(
   adminDb: AdminFirestore,
   ownerPropertyId: string,
   lifecycle: OwnerPropertyLifecycle,
-  ownerUserId: string,
+  authorUserId: string,
 ): Promise<OwnerPropertyWriteResult> {
-  const existing = await loadOwned(adminDb, ownerPropertyId, ownerUserId);
+  const existing = await loadOwned(adminDb, ownerPropertyId, authorUserId);
   if (existing === null) return { kind: 'absent' };
 
   return persist(adminDb, { ...existing, lifecycle, updatedAt: nowISO() }, 'overwrite');
