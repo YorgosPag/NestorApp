@@ -1,0 +1,152 @@
+/**
+ * @fileoverview **ΤΙ ΔΕΝ ΕΠΙΤΡΕΠΕΤΑΙ ΝΑ ΥΠΑΡΞΕΙ** — ο κριτής της αγγελίας ιδιοκτήτη.
+ * @related ADR-777 §7 (Α14 §17.2 · Α20 · Α22) · §8.32 · §8.33 · types/owner-property.ts
+ * @module types/owner-property-invariants
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 ΓΙΑΤΙ ΧΩΡΙΣΤΟ ΑΡΧΕΙΟ — **ΔΥΟ ΕΥΘΥΝΕΣ, ΟΧΙ ΔΥΟ ΜΙΣΑ**
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το `types/owner-property.ts` απαντά *«**τι είναι** μια αγγελία»*. Εδώ απαντιέται
+ * *«**τι δεν επιτρέπεται** να υπάρξει»* — άλλη ερώτηση, με άλλους καταναλωτές: τον
+ * κριτή τον τρέχει η **φόρμα** για να δείξει, και η **πύλη γραφής** γιατί δεν
+ * εμπιστεύεται καμία φόρμα.
+ *
+ * ⚠️ **ΚΑΙ ΔΕΝ ΕΓΙΝΕ ΓΙΑ ΤΟ ΟΡΙΟ ΓΡΑΜΜΩΝ — ΜΕΤΡΗΘΗΚΕ ΟΤΙ ΔΕΝ ΙΣΧΥΕΙ.** Η πρώτη
+ * διατύπωση αυτού του σχολίου επικαλούνταν το N.7.1 («498/500 γραμμές»)· ο
+ * `scripts/check-file-sizes.js` **εξαιρεί ρητά ολόκληρο το `/types/`**
+ * (*«τύποι = χωρίς όριο, δεν έχουν λογική»*), και το επαληθεύσαμε **εκτελώντας τον**.
+ * Ένα σχόλιο που δικαιολογεί μια αλλαγή με κανόνα που δεν εφαρμόζεται είναι ακριβώς
+ * το είδος του ψεύδους που αυτό το έργο κυνηγά αλλού· η μετακόμιση στέκει στον **δικό
+ * της** λόγο — δύο ευθύνες — και σε κανέναν άλλο. Ίδια κίνηση με τη διάσπαση
+ * `property-types.ts` (μοντέλο) ⇄ `property-type-aliases.ts` (αναγνώριση) στο §8.32.
+ *
+ * **Layering**: leaf — καθαρές συναρτήσεις.
+ */
+
+import { hasDuplicateLiveOfferKind } from '@/lib/offers/derive-commercial-status';
+import { liveOfferAmountGaps } from '@/lib/offers/offer-amount';
+import { isLandPropertyType } from '@/constants/property-types';
+import { isLiveOffer, isOpenOffer } from '@/types/property-offers';
+import type { OwnerPropertyDraft } from '@/types/owner-property';
+
+
+/**
+ * Οι παραβιάσεις, ως **κλειστό σύνολο κωδικών**.
+ *
+ * 🔑 **Κωδικοί και όχι μηνύματα**, για τον ίδιο λόγο με τα `DEMAND_INVARIANTS`: το
+ * μήνυμα είναι **διεπαφή** και ζει στα locale (N.11)· ο κωδικός είναι **μοντέλο** και
+ * ζει εδώ. Ένα ελληνικό αλφαριθμητικό εδώ θα ήταν ωμό κείμενο σε `.ts` **και** θα
+ * έκανε τη λογική αμετάφραστη.
+ *
+ * ⚠️ **Η σειρά ΔΕΝ είναι προτεραιότητα** — επιστρέφονται **όλες**. Δες
+ * {@link ownerPropertyInvariantViolations}.
+ */
+export const OWNER_PROPERTY_INVARIANTS = [
+  /** Καμία διάθεση: το ακίνητο δεν λέει **τι ζητά ο κάτοχος** από την αγορά. */
+  'no-live-offer',
+  /** Δύο ζωντανές διαθέσεις **ίδιου είδους** — δύο τιμές για ένα πράγμα (Α20 §5). */
+  'duplicate-offer-kind',
+  /**
+   * Διάθεση **χωρίς το ποσό που η ίδια απαιτεί** (Α22).
+   *
+   * 🔑 Η **απόφαση Giorgio 2026-08-09** ήταν *«δεν δημοσιεύεται, αλλά **το λέμε
+   * καθαρά** στον ιδιοκτήτη»* — γι' αυτό είναι **invariant με όνομα** και όχι σιωπηλή
+   * απόρριψη στην προβολή: η οθόνη μπορεί να δείξει **ποιο** λείπει.
+   */
+  'offer-amount-missing',
+  /** Ποσοστό αντιπαροχής εκτός `0–100` — αριθμός που δεν είναι ποσοστό. */
+  'exchange-percentage-out-of-range',
+  /**
+   * **Αντιπαροχή σε κάτι που δεν είναι γη** (ADR-777 §8.32).
+   *
+   * 🔴 **Ο κανόνας του τομέα, ρητά**: *«η αντιπαροχή αφορά **ΜΟΝΟ** το οικόπεδο»*
+   * (Giorgio 2026-08-20). Μέχρι σήμερα ο κανόνας ήταν **αδύνατο να παραβιαστεί
+   * ΚΑΙ αδύνατο να τηρηθεί**, γιατί η λίστα των ειδών δεν είχε καθόλου γη: η
+   * οθόνη πρόσφερε «δώσ' το με αντιπαροχή» πάνω σε **δώδεκα χτισμένες μονάδες**.
+   * Πλέον η γη υπάρχει ({@link isLandPropertyType}) και ο κανόνας έχει νόημα.
+   *
+   * ⚠️ **Είναι invariant και όχι κρυφό φιλτράρισμα στη φόρμα.** Μια φόρμα που
+   * απλώς **κρύβει** την επιλογή αφήνει τον διακομιστή να δεχτεί ό,τι του σταλεί —
+   * και ο ίδιος έλεγχος τρέχει **και στα δύο** σημεία (`app/api/owner-properties`).
+   * Ένα όνομα εδώ σημαίνει ότι η οθόνη μπορεί να πει **ποιο** είναι το πρόβλημα
+   * αντί για «κάτι πήγε στραβά».
+   */
+  'exchange-requires-land',
+  /** Το **είδος** δεν δηλώθηκε — 3ο βασικό πεδίο του §25.6. */
+  'type-missing',
+  /** Το **εμβαδόν** λείπει ή δεν είναι θετικό — το άλλο μισό του 3ου βασικού. */
+  'area-not-positive',
+  /** Ο τίτλος είναι κενός: η κάρτα δεν έχει τι να πει. */
+  'title-missing',
+  /**
+   * Αρνητικός αριθμός υπνοδωματίων.
+   *
+   * ⚠️ Το `0` είναι **έγκυρο** (γκαρσονιέρα) — ο έλεγχος είναι `< 0`, ποτέ `<= 0`.
+   */
+  'bedrooms-negative',
+] as const;
+
+export type OwnerPropertyInvariant = (typeof OWNER_PROPERTY_INVARIANTS)[number];
+
+/** Θετικός, πεπερασμένος αριθμός. `null`/`0`/αρνητικό/`NaN` → όχι. */
+function isPositive(value: number | null | undefined): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * **Ποιοι κανόνες παραβιάζονται** — **ΟΛΟΙ**, ποτέ ο πρώτος.
+ *
+ * 🔴 **Η ίδια συνάρτηση κρίνει τη ΦΟΡΜΑ και την ΠΥΛΗ ΓΡΑΦΗΣ**, όπως ακριβώς το
+ * `demandInvariantViolations`. Δεν είναι διπλός έλεγχος — είναι **ο ίδιος** έλεγχος σε
+ * δύο σημεία, που είναι το ακριβώς αντίθετο από δύο ελέγχους: η φόρμα τον τρέχει για
+ * να **δείξει** το σφάλμα, η πύλη γιατί **δεν εμπιστεύεται καμία φόρμα**.
+ *
+ * ⚠️ **Επιστρέφει ΟΛΕΣ τις παραβιάσεις** επειδή η **Α14 §17.2** δεσμεύτηκε ότι *«η
+ * φόρμα μικραίνει όσο δίνεις περισσότερα»*: μια φόρμα που διορθώνεται ένα σφάλμα τη
+ * φορά δεν επιτρέπει στον άνθρωπο να ξέρει **πόσο κοντά είναι**.
+ *
+ * 🔑 **ΤΡΕΙΣ από τους οκτώ κανόνες ΔΕΝ γράφτηκαν εδώ** — δανείζονται από υπάρχοντα
+ * SSoT: το `duplicate-offer-kind` από το {@link hasDuplicateLiveOfferKind} (Α20 §5),
+ * και το `offer-amount-missing` + το εύρος του ποσοστού από το
+ * {@link liveOfferAmountGaps} (Α22 ανά **διάθεση**). Ένας δεύτερος κριτής για το ίδιο
+ * ερώτημα θα απέκλινε στην πρώτη αλλαγή.
+ */
+export function ownerPropertyInvariantViolations(
+  draft: OwnerPropertyDraft,
+): OwnerPropertyInvariant[] {
+  const found: OwnerPropertyInvariant[] = [];
+
+  const live = draft.offers.filter(isLiveOffer);
+  if (live.length === 0) found.push('no-live-offer');
+  if (hasDuplicateLiveOfferKind(draft.offers)) found.push('duplicate-offer-kind');
+
+  const gaps = liveOfferAmountGaps(draft.offers);
+  if (gaps.missing.length > 0) found.push('offer-amount-missing');
+  if (gaps.percentageOutOfRange.length > 0) {
+    found.push('exchange-percentage-out-of-range');
+  }
+
+  // Αντιπαροχή ⇒ γη. Κρίνονται **μόνο οι ΑΝΟΙΧΤΕΣ** (`isOpenOffer`), ποτέ οι
+  // «ζωντανές» (`isLiveOffer`).
+  //
+  // 🔴 Η διαφορά **δεν** είναι λεπτομέρεια, και την έπιασε η άγκυρα Κ17: το
+  // `LIVE_OFFER_LIFECYCLES` περιλαμβάνει το **`closed`**, γιατί απαντά *«μετράει για
+  // το τι είναι σήμερα το ακίνητο;»* — και ένα **πουλημένο** μετράει. Με εκείνο, μια
+  // **ολοκληρωμένη** αντιπαροχή θα κοκκίνιζε για πάντα και το ακίνητο θα γινόταν
+  // αδύνατο να ξαναποθηκευτεί, για πράξη που τελείωσε πριν χρόνια.
+  if (draft.offers.some((offer) => isOpenOffer(offer) && offer.kind === 'exchange')) {
+    if (!isLandPropertyType(draft.type)) found.push('exchange-requires-land');
+  }
+
+  if (typeof draft.type !== 'string' || draft.type.trim() === '') {
+    found.push('type-missing');
+  }
+  if (!isPositive(draft.areaSqm)) found.push('area-not-positive');
+  if (draft.title.trim() === '') found.push('title-missing');
+  if (typeof draft.bedrooms === 'number' && draft.bedrooms < 0) {
+    found.push('bedrooms-negative');
+  }
+
+  return found;
+}

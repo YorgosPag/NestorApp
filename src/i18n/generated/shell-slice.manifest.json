@@ -42,7 +42,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "dfe3e1d4b9baaeecdd07ed101291c349872bf9ebaf0824f04431aa0bb0769678",
+  "inputsSha256": "fe43a506fff2c2790bff13b8a12ced585c3cba17b1b85502013dd3ff32409ce8",
   "languages": [
     "el"
   ],
@@ -411,7 +411,7 @@
     "src/services/firestore/firestore-query.service.ts": "d2068547f20437c2410e7fb1664df09f4e9d444b5f2d71144a659c7f2d1379f8",
     "src/services/firestore/firestore-query.types.ts": "9ae1e268786916f0848cb198f2f671037e11407f8515a9dc5819e56146b95925",
     "src/services/firestore/super-admin-active-company.ts": "2c5fe4fc4fe3ebcac866193a97af334984eec90ef007ac44de587a7fb264d13d",
-    "src/services/firestore/tenant-config.ts": "46011daa6dc9afdcc8903b5be6680bbedbb31fd0aefcae8bcd444bf4465e37ed",
+    "src/services/firestore/tenant-config.ts": "c9baf80c46d135dcd439d4c34033ed6c5d7b938c572996a29f947cf19fec5c06",
     "src/services/navigation-companies.service.ts": "64e4456e2edbfa8d895814e60fa572152b573b5ec3b19ce0303e2a623b28768e",
     "src/services/notificationService.ts": "53e0251636cfda81bc8fecd825e66923b20c7597ff5ea6fb8e0be7dbc75ed540",
     "src/services/realtime/RealtimeService.ts": "74041709a532b1af4b14add0a5a5909fd1424f201144b959073bdfedba6d9501",

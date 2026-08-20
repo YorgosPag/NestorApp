@@ -108,6 +108,7 @@
  * @enterprise ADR-777 Α9 — η ζήτηση είναι ισότιμη με την προσφορά
  */
 
+import { isMandateAttributable, type MandateLike } from '@/types/mandate';
 import type { OfferKind } from '@/types/property-offers';
 import type { GeoOutline, GeoPoint } from '@/types/geo/coordinates';
 
@@ -342,36 +343,19 @@ export type DemandLifeContext = (typeof DEMAND_LIFE_CONTEXTS)[number];
  * Ζουν κανονικά στο επίπεδο Β του μεσίτη — *είναι* ο κατάλογός του, από την πρώτη
  * στιγμή — αλλά **δεν** μετατρέπονται σε δημόσιο αριθμό μέχρι να μιλήσει ο άνθρωπος
  * που υποτίθεται ότι ψάχνει.
- */
-export type DemandMandate =
-  /** Ο ίδιος ο άνθρωπος έγραψε τη ζήτησή του. Μετράει αμέσως. */
-  | { readonly kind: 'self' }
-  /**
-   * Επαγγελματίας κατέγραψε τη ζήτηση πελάτη του.
-   *
-   * ⚠️ Ο πελάτης δηλώνεται ως **επαφή** (`cont_*`) και **όχι** ως χρήστης: ένας
-   * αγοραστής **δεν έχει λογαριασμό** τη στιγμή που ο μεσίτης γράφει το αίτημά του,
-   * και ένα υποχρεωτικό uid θα έκανε τη ροή αδύνατη ακριβώς εκεί όπου συμβαίνει.
-   */
-  | {
-      readonly kind: 'brokered';
-      /** FK → `contacts` (`cont_*`) — ο πελάτης, όπως τον ξέρει ο επαγγελματίας. */
-      readonly clientContactId: string;
-      readonly confirmation: DemandConfirmation;
-      /** Το uid του πελάτη, **μόνο** όταν έχει επιβεβαιώσει ο ίδιος. */
-      readonly confirmedByUserId: string | null;
-    };
-
-/**
- * Κατάσταση έγκρισης από τον πελάτη.
  *
- * ⚠️ `declined` **δεν διαγράφει**: ο μεσίτης έχει δικαίωμα να κρατά το ότι μίλησε με
- * κάποιον. Απλώς η ζήτηση παύει να είναι **ισχυρισμός για τον πελάτη** — δηλαδή
- * βγαίνει από το άθροισμα, όπως και το `pending`.
+ * 🔑 **ΤΟ ΛΕΞΙΛΟΓΙΟ ΜΕΤΑΚΟΜΙΣΕ ΣΤΟ §8.33, ΚΑΙ ΔΕΝ ΗΤΑΝ ΤΑΚΤΟΠΟΙΗΣΗ.** Οι καταστάσεις
+ * έγκρισης και ο πυρήνας της εντολής ζουν πλέον στο {@link ./mandate}, γιατί η
+ * **προσφορά** γέννησε **την ίδια** ερώτηση: *«ποιανού είναι αυτό που έγραψα, και
+ * ενέκρινε;»*. Δύο τόποι που απαντούν το ίδιο ερώτημα με δικό του λεξιλόγιο ο καθένας
+ * είναι, κατά γράμμα, το σχήμα του **ADR-749** — και εδώ θα είχαν αποκλίνει στην πρώτη
+ * αλλαγή, γιατί η προσφορά χρειάστηκε αμέσως **προέλευση** και **διάρκεια**.
+ *
+ * ⚠️ **Η ζήτηση ΔΕΝ απέκτησε τα δύο αυτά**, και είναι σκόπιμο: μια αναζήτηση σπιτιού
+ * δεν εκτίθεται δημόσια ονομαστικά, οπότε δεν υπάρχει «μέχρι πότε επιτρέπεται να τη
+ * διαφημίζω». Δες τον πίνακα στο {@link ./owner-property-mandate}.
  */
-export const DEMAND_CONFIRMATIONS = ['pending', 'confirmed', 'declined'] as const;
-
-export type DemandConfirmation = (typeof DEMAND_CONFIRMATIONS)[number];
+export type DemandMandate = MandateLike;
 
 // =============================================================================
 // 7. ΚΥΚΛΟΣ ΖΩΗΣ
@@ -524,7 +508,7 @@ export function isLiveDemand(demand: PropertyDemand): boolean {
  * να μη γραφτεί δεύτερη φορά ως `mandate.kind === 'self' || …` στο σημείο χρήσης.
  */
 export function isAttributableDemand(demand: PropertyDemand): boolean {
-  return demand.mandate.kind === 'self' || demand.mandate.confirmation === 'confirmed';
+  return isMandateAttributable(demand.mandate);
 }
 
 // =============================================================================

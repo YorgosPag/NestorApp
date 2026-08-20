@@ -14,8 +14,8 @@
  * από το SPEC-777B §12.1 — όχι με αφηρημένα σχήματα που θα περνούσαν πάντα.
  */
 
+import { MANDATE_CONFIRMATIONS } from '@/types/mandate';
 import {
-  DEMAND_CONFIRMATIONS,
   DEMAND_INVARIANTS,
   DEMAND_LIFECYCLES,
   DEMAND_LIFE_CONTEXTS,
@@ -298,7 +298,7 @@ describe('🔴 Μ — ο φρουρός του Ε2: μόνο επιβεβαιω�
   });
 
   it('🔑 και οι τρεις καταστάσεις έγκρισης καλύπτονται', () => {
-    expect([...DEMAND_CONFIRMATIONS].sort()).toEqual(
+    expect([...MANDATE_CONFIRMATIONS].sort()).toEqual(
       ['confirmed', 'declined', 'pending'].sort(),
     );
   });

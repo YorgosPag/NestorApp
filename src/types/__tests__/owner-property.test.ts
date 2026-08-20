@@ -7,10 +7,12 @@ import {
   isLiveOwnerProperty,
   isOwnerPropertyLifecycle,
   newOwnerProperty,
-  ownerPropertyInvariantViolations,
   ownerPropertyOfferKinds,
-  OWNER_PROPERTY_INVARIANTS,
 } from '../owner-property';
+import {
+  ownerPropertyInvariantViolations,
+  OWNER_PROPERTY_INVARIANTS,
+} from '../owner-property-invariants';
 import {
   offerOf,
   validDraft,
@@ -183,11 +185,13 @@ describe('newOwnerProperty — τα γεγονότα του συστήματος
   it('Κ13 — γεννιέται `listed`: καμία ουρά έγκρισης (απόφαση Giorgio 2026-08-11)', () => {
     const property = newOwnerProperty(validDraft(), {
       id: 'ownp_x',
-      ownerUserId: 'user-9',
+      authorUserId: 'user-9',
+      authorCompanyId: null,
+      mandate: { kind: 'self' },
     });
     expect(property.lifecycle).toBe('listed');
     expect(property.id).toBe('ownp_x');
-    expect(property.ownerUserId).toBe('user-9');
+    expect(property.authorUserId).toBe('user-9');
     expect(property.createdAt).toBe(property.updatedAt);
   });
 });
