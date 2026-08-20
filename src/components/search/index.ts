@@ -17,7 +17,8 @@ export type { GlobalSearchDialogProps } from './GlobalSearchDialog';
 export {
   SearchResultItem,
   SearchResultGroup,
-  ENTITY_LABELS,
+  // ADR-744 §14.4(α) — το `ENTITY_LABELS` αφαιρέθηκε: ήταν κενό, `@deprecated`,
+  // και το `?? key` το έκανε να **μοιάζει** με δίχτυ που δεν έπιανε τίποτα.
   ENTITY_LABEL_KEYS,
   SEARCH_TO_NAVIGATION_ENTITY,
 } from './SearchResultItem';

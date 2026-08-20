@@ -97,11 +97,22 @@ const ENTITY_LABEL_KEYS: Record<SearchEntityType, string> = {
   [SEARCH_ENTITY_TYPES.FLOOR]: 'search.entityTypes.floor',
 };
 
-/**
- * @deprecated Use ENTITY_LABEL_KEYS with useTranslation hook instead
- * Entity type labels for accessibility and display (fallbacks).
- */
-const ENTITY_LABELS: Partial<Record<SearchEntityType, string>> = {};
+// 🔴 ADR-744 §14.4(α) — ΤΟ `ENTITY_LABELS` ΔΙΑΓΡΑΦΗΚΕ, ΚΑΙ ΔΕΝ ΗΤΑΝ «ΝΕΚΡΟΣ ΚΩΔΙΚΑΣ».
+//
+// Ήταν `Partial<Record<SearchEntityType, string>> = {}` — **κενό** — και το
+// `t(key, ENTITY_LABELS[x] ?? key)` **έμοιαζε** με δίχτυ ασφαλείας: «αν λείπει η
+// μετάφραση, δείξε την αγγλική ετικέτα». Επειδή όμως ο πίνακας ήταν πάντα κενό,
+// το `??` έδινε **πάντα το ίδιο το κλειδί** ⇒ αστοχία = **ωμό κλειδί στην οθόνη**,
+// ακριβώς η προεπιλεγμένη συμπεριφορά του i18next.
+//
+// 🔑 **Ένα δίχτυ που δεν πιάνει τίποτα είναι χειρότερο από κανένα δίχτυ**: κάνει
+// τον επόμενο να μη ψάξει. Το κενό ήταν **μετρημένο ζωντανό** (§14.4: το locale
+// είχε 8 από τους 11 τύπους· αποτέλεσμα CRM έβαφε `search.entityTypes.task`).
+// Το `ENTITY_LABEL_KEYS` από πάνω είναι πλήρες `Record` πάνω σε union, άρα ο
+// **μεταγλωττιστής** είναι το πραγματικό δίχτυ — και δεν λέει ψέματα.
+//
+// Εξαγόταν επίσης από το `search/index.ts` με **μηδέν** εξωτερικούς καταναλωτές
+// (το ομώνυμο στο `company-file-tree-builders.tsx:101` είναι **άσχετο**, δικό του).
 
 // =============================================================================
 // COMPONENT
@@ -143,7 +154,7 @@ export function SearchResultItem({
   // === Computed Values ===
   const navigationEntityType = SEARCH_TO_NAVIGATION_ENTITY[result.entityType];
   const entityLabelKey = ENTITY_LABEL_KEYS[result.entityType];
-  const entityLabel = t(entityLabelKey, ENTITY_LABELS[result.entityType] ?? entityLabelKey);
+  const entityLabel = t(entityLabelKey);
 
   // === Badges ===
   // 🏢 ENTERPRISE: Show entity type badge + status badge for parking/storage
@@ -281,7 +292,7 @@ export function SearchResultGroup({
   const iconColor = entityConfig?.color || colors.text.muted;
 
   const entityLabelKey = ENTITY_LABEL_KEYS[entityType];
-  const label = t(entityLabelKey, ENTITY_LABELS[entityType] ?? entityLabelKey);
+  const label = t(entityLabelKey);
 
   return (
     <section className={spacing.margin.bottom.sm} aria-label={label}>
@@ -311,6 +322,6 @@ export function SearchResultGroup({
 export type { SearchResultItemProps, SearchResultGroupProps };
 
 // 🏢 ENTERPRISE: Re-export mappings for other components that may need them
-export { ENTITY_LABEL_KEYS, ENTITY_LABELS, SEARCH_TO_NAVIGATION_ENTITY };
+export { ENTITY_LABEL_KEYS, SEARCH_TO_NAVIGATION_ENTITY };
 
 

@@ -17,7 +17,7 @@ import type { SearchConfig } from './types';
 export const SEARCH_CONFIG: SearchConfig = {
   debounceDelay: 300,
   maxLength: 500,
-  placeholderDefault: 'placeholders.search',
+  placeholderDefaultKey: 'placeholders.search',
   iconSize: 4,
   iconPosition: 'left-3',
   paddingLeft: 'pl-11', // Consistent με existing implementations

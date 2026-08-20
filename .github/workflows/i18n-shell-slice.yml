@@ -137,8 +137,12 @@ jobs:
       - name: 🧪 Runtime proof — no raw key can reach the shell
         run: pnpm exec jest src/i18n/__tests__/shell-slice-no-raw-keys.test.ts
 
-      - name: 🧪 Gate self-test (62 cases)
-        run: pnpm exec jest scripts/__tests__/i18n-shell-slice.test.js
+      # ADR-744 §15 (Φ4) — τα per-route slices μπαίνουν στην ΙΔΙΑ σουίτα, όχι σε
+      # δεύτερη λίστα: το `test:i18n-shell-slice` είναι η ΜΙΑ αυθεντία για το τι
+      # ελέγχεται εδώ, ώστε μια νέα άγκυρα να μη χρειάζεται δεύτερη εγγραφή που
+      # θα αποκλίνει (σχήμα CHECK 3.54).
+      - name: 🧪 Gate self-test (145 cases · shell + per-route)
+        run: pnpm run test:i18n-shell-slice
 
       - name: ✅ Summary
         if: success()

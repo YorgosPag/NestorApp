@@ -39,6 +39,22 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+
+// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ ΟΘΟΝΗΣ 3.
+//
+// 🔴 **ΓΙΑΤΙ ΕΔΩ ΚΑΙ ΟΧΙ ΣΤΟ `page.tsx`, ΟΠΩΣ ΣΤΟ /test-harness/listing-shapes.**
+// Εκείνη η σελίδα είναι `'use client'`· **αυτή** είναι Server Component (`async`,
+// `await params`). Τα Server και τα Client Components ζουν σε **ΞΕΧΩΡΙΣΤΟΥΣ
+// γράφους module**: μια εγγραφή από το `page.tsx` θα έγραφε στο **δικό του**
+// στιγμιότυπο i18next, ΟΧΙ σε αυτό που βλέπει το client δέντρο κατά το SSR.
+// Θα ήταν πράσινη κλήση που **δεν κάνει τίποτα** — το χειρότερο είδος διόρθωσης.
+// Το σύνορο πελάτη είναι **αυτό** το αρχείο, άρα εδώ ζει η εγγραφή.
+//
+// Ο χάρτης (`GeoCoordinateDisplay` ← `ResultsMap` ← `ListingPositionSection`)
+// ζητά το lazy `geo-canvas`, που στον server δεν φτάνει ΠΟΤΕ.
+import routeSlice from '@/i18n/generated/routes/listing__id.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { usePublicListing } from '@/services/realtime/hooks/usePublicListings';
 import {
@@ -52,6 +68,10 @@ import { ListingPriceBlock } from './ListingPriceBlock';
 import { ListingAttributeList } from './ListingAttributeList';
 import { ListingPositionSection } from './ListingPositionSection';
 import { ListingOpenSubjects } from './ListingOpenSubjects';
+
+// ⚠️ Εμβέλεια MODULE, όχι render και όχι effect: τρέχει **πριν** αποδοθεί
+// οτιδήποτε, στον server και στον client, χωρίς κύκλο ζωής React να το καθυστερεί.
+registerRouteSlice(routeSlice);
 
 interface ListingDetailContentProps {
   /** Η ταυτότητα από τη διεύθυνση. **Ίδια με το `propertyId`** (σχέση 1:1). */

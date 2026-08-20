@@ -36,7 +36,7 @@ import '@/lib/design-system';
 export function SearchInput({
   value,
   onChange,
-  placeholder = SEARCH_CONFIG.placeholderDefault,
+  placeholder,
   debounceMs = DEBOUNCE_PRESETS.STANDARD,
   maxLength = SEARCH_CONFIG.maxLength,
   showClearButton = true,
@@ -52,7 +52,27 @@ export function SearchInput({
   // 🚀 Enterprise debouncing implementation
   const [localValue, setLocalValue] = useState(value);
 
-  const resolvedPlaceholder = placeholder.includes('.') ? t(placeholder) : placeholder;
+  /**
+   * 🔴 ΗΤΑΝ `placeholder.includes('.') ? t(placeholder) : placeholder` — ΔΙΑΚΡΙΣΗ
+   * «ΚΛΕΙΔΙ Ή ΚΕΙΜΕΝΟ;» ΜΕ ΣΤΙΞΗ (ADR-744 §16).
+   *
+   * Δούλευε **κατά τύχη**: το μεταφρασμένο «Αναζήτηση**...**» περιέχει τελείες,
+   * άρα **περνούσε** τον έλεγχο και ξαναέμπαινε στο `t()` — και σωζόταν μόνο
+   * επειδή το i18next επιστρέφει το ίδιο string σε αστοχία. Την ημέρα που ένα
+   * μεταφρασμένο κείμενο τύχαινε να **είναι** υπαρκτό κλειδί, η οθόνη θα έδειχνε
+   * **άλλο κείμενο** — σιωπηλά.
+   *
+   * 🔑 **ΜΕΤΡΗΜΕΝΟ ΠΡΙΝ ΤΗΝ ΑΛΛΑΓΗ**: και οι **13** καλούντες του `SearchInput`
+   * περνούν **ήδη μεταφρασμένο** κείμενο (`placeholder={t('…')}`). **Κανένας**
+   * δεν περνά κλειδί. Η μόνη ζωντανή διαδρομή του ευρετικού ήταν η **προεπιλογή**
+   * — δηλαδή ο έλεγχος περιεχομένου υπήρχε για να λύσει ένα πρόβλημα που είχε
+   * **ένα** στιγμιότυπο, και το έλυνε για **όλα** τα υπόλοιπα λάθος.
+   *
+   * Πλέον το `placeholder` είναι **κείμενο, πάντα**, και το κλειδί λύνεται **στη
+   * θέση όπου δηλώνεται**. Πρότυπο των μεγάλων (Figma · Lingui): η διάκριση
+   * κλειδιού/κειμένου ανήκει στον **τύπο**, ποτέ στο **περιεχόμενο**.
+   */
+  const resolvedPlaceholder = placeholder ?? t(SEARCH_CONFIG.placeholderDefaultKey);
 
   // 📝 Debounced onChange handler
   useEffect(() => {

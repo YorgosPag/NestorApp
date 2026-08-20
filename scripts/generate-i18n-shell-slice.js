@@ -45,7 +45,12 @@ const {
   buildShellPlan,
   renderArtifacts,
   manifestPath,
+  buildManifest,
+  sliceName,
 } = require('./lib/i18n-shell-slice/plan');
+const { stableStringify } = require('./lib/i18n-shell-slice/slice-build');
+const RS = require('./lib/i18n-shell-slice/route-slices');
+const MG = require('./lib/module-graph');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const GREEN = '\x1b[0;32m';
@@ -99,7 +104,7 @@ function reportViolations(violations) {
   console.error('   }');
 }
 
-function reportPlan(plan, rendered, config, explain) {
+function reportPlan(plan, rendered, config, explain, routeUnusedPolicy = []) {
   const { stats } = rendered.manifest;
   console.log(`${GREEN}ADR-744 shell slice${NC}`);
   console.log(`  shell closure   : ${stats.shellFiles} modules  ${DIM}(cut at ${stats.dynamicBoundaries} dynamic + ${stats.routeBoundaries} route boundaries)${NC}`);
@@ -111,8 +116,13 @@ function reportPlan(plan, rendered, config, explain) {
   }
   console.log(`  ${GREEN}slice bytes     : ${stats.sliceBytes}${NC}  ${DIM}(was 295.093 synchronous, el+en)${NC}`);
 
-  if (plan.unusedPolicy.length > 0) {
-    console.log(`${YELLOW}  ⚠ dead dynamicKeyPolicy entries (no unresolved call any more): ${plan.unusedPolicy.join(', ')}${NC}`);
+  // 🔑 «Νεκρή» είναι η εγγραφή που δεν χρησιμοποιεί **ΟΥΤΕ** το κέλυφος **ΟΥΤΕ**
+  // καμία διαδρομή. Χωρίς αυτό, κάθε policy που υπηρετεί σελίδα θα καταγγελλόταν
+  // ως νεκρή — και μια ψεύτικη προειδοποίηση «νεκρού φρουρού» οδηγεί στη
+  // διαγραφή φρουρού που δουλεύει.
+  const dead = plan.unusedPolicy.filter(file => routeUnusedPolicy.every(set => set.includes(file)));
+  if (dead.length > 0) {
+    console.log(`${YELLOW}  ⚠ dead dynamicKeyPolicy entries (no unresolved call any more): ${dead.join(', ')}${NC}`);
   }
   if (!explain) return;
 
@@ -130,7 +140,11 @@ function writeArtifacts(config, rendered) {
   const outDir = path.join(PROJECT_ROOT, config.outputDir);
   fs.mkdirSync(outDir, { recursive: true });
   for (const [relPath, text] of rendered.artifacts) {
-    fs.writeFileSync(path.join(PROJECT_ROOT, relPath), text, 'utf8');
+    const target = path.join(PROJECT_ROOT, relPath);
+    // Τα route slices ζουν σε υποφάκελο (`routes/`) — δημιουργείται εδώ, ώστε
+    // η εγγραφή να είναι ΜΙΑ διαδρομή κώδικα για όλα τα artifacts.
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, text, 'utf8');
   }
   fs.writeFileSync(path.join(PROJECT_ROOT, manifestPath(config)), rendered.manifestText, 'utf8');
   console.log(`${GREEN}  ✓ wrote ${rendered.artifacts.size} artifact(s) + manifest to ${config.outputDir}/${NC}`);
@@ -159,9 +173,74 @@ function main() {
   }
 
   const rendered = renderArtifacts(PROJECT_ROOT, config, plan);
-  reportPlan(plan, rendered, config, args.explain);
-  if (!args.dryRun) writeArtifacts(config, rendered);
+
+  // ⚠️ Ο γράφος περνιέται, δεν ξαναχτίζεται: κοστίζει ~38s και είναι **ο ίδιος**.
+  // Οι διαδρομές χτίζονται ΠΡΙΝ την αναφορά, ώστε η αναφορά να ξέρει ποιες
+  // εγγραφές policy υπηρετούν σελίδα και να μην τις πει «νεκρές».
+  const routes = emitRouteSlices(config, plan, rendered, graph);
+  if (routes === null) process.exit(1);
+  reportPlan(plan, rendered, config, args.explain, routes.map(route => route.unusedPolicy));
+
+  // 🔑 ΤΑ ROUTE SLICES ΥΠΟΓΡΑΦΟΝΤΑΙ ΑΠΟ ΤΟ ΙΔΙΟ MANIFEST — καμία νέα μηχανή
+  // φρεσκάδας. Το `checkArtifactIntegrity` του CHECK 3.34 διατρέχει το
+  // `manifest.artifacts`, οπότε ένα χειρόγραφα πειραγμένο ή μισο-παραγμένο route
+  // slice μπλοκάρει **δωρεάν**. Ένα artifact που κανείς δεν υπογράφει είναι
+  // ακριβώς το σχήμα που το ADR-744 υπάρχει για να καταργήσει.
+  const merged = mergeRouteArtifacts({ rendered, routes, config, plan });
+  if (!args.dryRun) writeArtifacts(config, merged);
+  if (routes.length > 0) reportRoutes(routes, config.languages[0]);
   process.exit(0);
+}
+
+/** Το `rendered`, με τα route slices μέσα στα artifacts ΚΑΙ μέσα στο manifest. */
+function mergeRouteArtifacts({ rendered, routes, config, plan }) {
+  if (routes.length === 0) return rendered;
+  const artifacts = new Map(rendered.artifacts);
+  for (const route of routes) artifacts.set(route.artifactPath, stableStringify(route.resources));
+  const manifest = buildManifest({ config, plan, artifacts, slices: rendered.slices });
+  return { ...rendered, artifacts, manifest, manifestText: stableStringify(manifest) };
+}
+
+/**
+ * ADR-744 §8 Φ4 — τα per-route slices, με **την ίδια** μηχανή και τον **ίδιο**
+ * φρουρό: ανεπίλυτη δυναμική `t()` ⇒ **άρνηση**, ποτέ σιωπηλά μικρότερο slice.
+ * @returns {?object[]} `null` όταν κάποια διαδρομή αρνήθηκε
+ */
+function emitRouteSlices(config, plan, rendered, graph) {
+  const declared = Object.keys(config.routeSlices || {});
+  if (declared.length === 0) return [];
+
+  const [language] = config.languages;
+  const shellSlice = JSON.parse(rendered.artifacts.get(MG.toPosix(path.join(config.outputDir, sliceName(language)))) || '{}');
+  const built = RS.buildAllRouteSlices(PROJECT_ROOT, config, graph, shellSlice, wholeNamespacesOf(plan));
+
+  const refused = built.filter(route => route.violations.length > 0);
+  if (refused.length === 0) return built;
+
+  console.error(`\n${RED}❌ ${refused.length} route slice(s) ΑΡΝΗΘΗΚΑΝ — ανεπίλυτη δυναμική t()${NC}`);
+  for (const route of refused) {
+    console.error(`${RED}   ${route.url}${NC}`);
+    reportViolations(route.violations);
+  }
+  return null;
+}
+
+function reportRoutes(built, language) {
+  console.log(`\n${GREEN}  per-route slices (${language}):${NC}`);
+  for (const route of built) {
+    const namespaces = Object.keys(route.resources);
+    const bytes = Buffer.byteLength(stableStringify(route.resources), 'utf8');
+    console.log(
+      `    ${route.url.padEnd(34)} ${String(bytes).padStart(7)} bytes · ` +
+        `${namespaces.length} ns [${namespaces.join(', ')}]`
+    );
+  }
+  console.log(`${DIM}    (αφαιρεμένα όσα απαντά ήδη το κέλυφος — ένωση θα ήταν ΜΕΓΑΛΥΤΕΡΗ από σήμερα)${NC}`);
+}
+
+/** Τα namespaces που ταξιδεύουν ΟΛΟΚΛΗΡΑ στο κέλυφος — δεν τα ξαναζητά καμία διαδρομή. */
+function wholeNamespacesOf(plan) {
+  return [...plan.wants.entries()].filter(([, want]) => want.whole).map(([namespace]) => namespace);
 }
 
 module.exports = { parseArgs, printHelp, reportViolations, reportPlan, writeArtifacts, main, PROJECT_ROOT };

@@ -1,0 +1,112 @@
+{
+  "geo-canvas": {
+    "accuracy": {
+      "controls": {
+        "hideIndicators": "👁️ Απόκρυψη Δεικτών",
+        "showIndicators": "👁️ Εμφάνιση Δεικτών"
+      },
+      "legend": "Υπόμνημα Ακρίβειας",
+      "levels": {
+        "excellent": "Άριστη (≤0.5m)",
+        "fair": "Μέτρια (≤2.0m)",
+        "good": "Καλή (≤1.0m)",
+        "poor": "Κακή (≤5.0m)",
+        "veryPoor": "Πολύ Κακή (>5.0m)"
+      },
+      "statistics": "Στατιστικά ακρίβειας",
+      "stats": {
+        "avgAccuracy": "Μέση Ακρίβεια",
+        "best": "Καλύτερη",
+        "format": "±{value}m",
+        "worst": "Χειρότερη"
+      },
+      "types": {
+        "circles": "○ Κύκλοι",
+        "zones": "◊ Ζώνες"
+      },
+      "visualization": "Οπτικοποίηση:"
+    },
+    "map": {
+      "basemap": {
+        "map": "Χάρτης",
+        "satellite": "Δορυφόρος"
+      },
+      "controls": {
+        "cancelPicking": "Ακύρωση Επιλογής",
+        "coordinatePicking": "Επιλογή Συντεταγμένων",
+        "currentStyle": "Τρέχον Στυλ",
+        "darkMode": "Σκούρο Θέμα",
+        "greece": "Ελλάδα",
+        "mapControls": "Χειριστήρια χάρτη",
+        "mapStyle": "Στυλ Χάρτη",
+        "openStreetMap": "OpenStreetMap",
+        "pickGeographicPoint": "Επιλογή Γεωγραφικού Σημείου",
+        "satellite": "Δορυφορικός",
+        "selectMapStyle": "Επιλογή στυλ χάρτη",
+        "terrain": "Τοπογραφικός",
+        "toner": "Ασπρόμαυρο",
+        "watercolor": "Ζωγραφική"
+      },
+      "coordinate": {
+        "altitude": "Υψόμετρο",
+        "clickPrompt": "Κλικ για προσθήκη {mode} σημείου",
+        "currentPosition": "Τρέχουσα Θέση",
+        "displayLabel": "Εμφάνιση Συντεταγμένων",
+        "dxf": "DXF",
+        "geographic": "γεωγραφικό",
+        "latitude": "Γεωγρ. Πλάτος",
+        "loading": "Φόρτωση...",
+        "longitude": "Γεωγρ. Μήκος"
+      },
+      "status": {
+        "controlPoints": "Σημεία Ελέγχου",
+        "drawingActive": "Σχεδίαση Ενεργή",
+        "indicators": "Δείκτες Κατάστασης",
+        "mapLoaded": "Χάρτης Φορτώθηκε",
+        "mapLoading": "Φόρτωση...",
+        "points": "Σημεία",
+        "polygons": "Πολύγωνα",
+        "statusBar": "Γραμμή Κατάστασης",
+        "transformationActive": "Μετασχηματισμός Ενεργός"
+      },
+      "styleSelector": {
+        "quickSwitcher": "Γρήγορη Αλλαγή Στυλ",
+        "style": "Στυλ:"
+      }
+    },
+    "notifications": {
+      "pointsConnected": "{count} σημεία συνδέθηκαν επιτυχώς",
+      "polygonClosed": "Πολύγωνο Κλείστηκε!"
+    }
+  },
+  "geo-canvas-drawing": {
+    "mapLayers": {
+      "deletePin": "Διαγραφή πινέζας",
+      "deletePolygon": "Διαγραφή πολυγώνου",
+      "pinPreviewTitle": "Πινέζα Προεπισκόπηση - Ακτίνα: {radius}m",
+      "pinRadiusTitle": "Πινέζα - Ακτίνα: {radius}m"
+    }
+  },
+  "properties-enums": {
+    "types": {
+      "apartment": "Διαμέρισμα",
+      "apartment2br": "Διαμέρισμα 2 Υ/Δ",
+      "apartment3br": "Διαμέρισμα 3 Υ/Δ",
+      "apartment4br": "Διαμέρισμα 4 Υ/Δ",
+      "apartment_1br": "Γκαρσονιέρα",
+      "apartment_2br": "Διαμέρισμα 2 Υ/Δ",
+      "apartment_3br": "Διαμέρισμα 3 Υ/Δ",
+      "bedsit": "Γκαρσονιέρα",
+      "detached_house": "Μονοκατοικία",
+      "hall": "Αίθουσα",
+      "loft": "Σοφίτα",
+      "maisonette": "Μεζονέτα",
+      "office": "Γραφείο",
+      "penthouse": "Ρετιρέ",
+      "shop": "Κατάστημα",
+      "storage": "Αποθήκη",
+      "studio": "Στούντιο",
+      "villa": "Βίλα"
+    }
+  }
+}

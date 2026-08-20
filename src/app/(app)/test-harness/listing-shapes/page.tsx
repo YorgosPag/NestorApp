@@ -22,10 +22,27 @@
  */
 
 import React from 'react';
+
+// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE, ΣΤΑΤΙΚΑ, ΣΕ ΕΜΒΕΛΕΙΑ MODULE.
+//
+// Ο χάρτης (`GeoCoordinateDisplay`) ζητά το namespace `geo-canvas`, που είναι
+// **lazy** και δεν ανήκει στην κλειστότητα του κελύφους — άρα στον SERVER δεν
+// φτάνει ΠΟΤΕ. Μετρημένο ζωντανά 2026-08-20 με τον χρησμό (CHECK 3.51):
+// **τέσσερα** ωμά κλειδιά σε αυτή τη διαδρομή, δύο σε κείμενο και δύο σε
+// `aria-label`. Το slice παράγεται από τη στατική κλειστότητα ΑΥΤΗΣ της σελίδας
+// και ταξιδεύει **μόνο** στο chunk της — 3.425 bytes, όχι 45.406 σε 151 διαδρομές.
+//
+// ⚠️ Η εισαγωγή είναι ΣΤΑΤΙΚΗ και η κλήση σε εμβέλεια MODULE, επίτηδες: με
+// `import()` το κλειδί θα ήταν ωμό για ένα καρέ και **κρυμμένο** από το 3.51.
+import routeSlice from '@/i18n/generated/routes/test-harness__listing-shapes.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
 import { ResultsMap } from '@/components/search-results/ResultsMap';
 import { ListingLedgerBar } from '@/components/search-results/ListingLedgerBar';
 import { computeListingLedger } from '@/services/realtime/hooks/usePublicListings';
 import type { PublicListing } from '@/types/public-listing';
+
+registerRouteSlice(routeSlice);
 
 const AT = '2026-08-10T12:00:00.000Z';
 

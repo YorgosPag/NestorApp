@@ -41,7 +41,8 @@ export type SearchVariant = 'default' | 'compact' | 'enterprise';
 export interface SearchConfig {
   debounceDelay: number;
   maxLength: number;
-  placeholderDefault: string;
+  /** ⚠️ ΚΛΕΙΔΙ i18n, οχι κειμενο — το ονομα το λεει (ADR-744 §16). */
+  placeholderDefaultKey: string;
   iconSize: number;
   iconPosition: string;
   paddingLeft: string;

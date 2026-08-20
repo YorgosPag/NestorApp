@@ -1,14 +1,10 @@
 {
   "$doc": "ADR-744 — key-level i18n shell slice. Defaults (shell roots, languages, key constants) live in scripts/lib/i18n-shell-slice/config.js; this file only overrides them. Regenerate with `npm run generate:i18n-shell-slice`, verify with `npm run check:i18n-shell-slice` (CHECK 3.34).",
-
   "$extraShellRoots": "🔴 ADR-744 §4 — Η ΠΡΩΤΗ ΕΓΓΡΑΦΗ ΕΔΩ, ΚΑΙ Η ΑΠΟΔΕΙΞΗ ΗΤΑΝ ΖΩΝΤΑΝΗ. Ο μηχανισμός υπήρχε από την αρχή με γραμμένη την προϋπόθεσή του — «if evidence ever shows a lazily-chunked surface flashing a raw key, name it here» (config.js:9-12) — και έμενε ΚΕΝΟΣ. Η απόδειξη ήρθε από dev server log 2026-08-19: τέσσερα ωμά κλειδιά (`search.hints.startTyping` · `search.hints.minChars` · `search.hints.escKey` · `search.results`) με ίχνος `common-shared=shell-partial`, δηλαδή η μετάφραση ΥΠΑΡΧΕΙ (common-shared.json:447-461) και το slice την είχε κόψει. 🔑 ΤΟ ΔΥΝΑΜΙΚΟ ΟΡΙΟ ΔΕΝ ΗΤΑΝ ΟΡΙΟ ΑΠΟΔΟΣΗΣ: το `src/components/search/index.ts` είναι δηλωμένο dynamicBoundary, οπότε ο walk σταματά εκεί και τα 11 κλειδιά του διαλόγου δεν μπήκαν ΠΟΤΕ σε κανένα `wants` — αλλά το `app-header.tsx:30-33` γράφει ΚΑΤΑ ΛΕΞΗ «Using `loading: () => null` instead of `ssr: false` to avoid double TypeScript compilation overhead», άρα το component ΒΑΦΕΤΑΙ ΣΤΟΝ SERVER, στο ίδιο καρέ με το layout. Ένα `next/dynamic` ΧΩΡΙΣ `ssr: false` κόβει το bundle, ΟΧΙ την απόδοση — και ο generator το μετρούσε ως αν έκοβε και τα δύο. Ο AppHeader είναι κέλυφος: βάφει σε ΚΑΘΕ διαδρομή του `(app)`, οπότε τα τέσσερα κλειδιά ήταν ωμά παντού. ⚠️ ΜΗΝ το λύσεις βάζοντας `ssr: false` — μετακινεί το ωμό κλειδί από το SSR HTML στο πρώτο client καρέ και το κρύβει από το CHECK 3.51, χωρίς να το διορθώσει. ⚠️ ΜΗΝ κάνεις τον walk να ακολουθεί κάθε dynamic ακμή: μετρημένο 7.492 αρχεία / 2,93 MB = όλη η εφαρμογή (config.js:11-12).",
-
   "extraShellRoots": [
     "src/components/search/GlobalSearchDialog.tsx"
   ],
-
   "$guaranteedNamespaces": "THE NINE NAMESPACES THAT WERE 100% SYNCHRONOUS BEFORE ADR-744 (src/i18n/config.ts:41-44), kept whole. This is not caution — it is the correction of a measured regression. The first cut of this ADR key-sliced them down to what the SHELL asks for, which silently dropped every key a PAGE asks for: `/dxf/viewer` painted the raw key `dxfViewer.checkingPermissions` (src/app/dxf/viewer/page.tsx:43) because that key lives in common.json, which had gone from 34.201 bytes to 5.076. A page is a route boundary and therefore outside the shell closure by design — but on a COLD LOAD the page renders in the SAME FRAME as the layout, with no transition to hide behind. Until per-route slices exist (ADR-744 §8, Φ4), whole is the only answer that is provably no worse than before. Cost: 173.720 bytes (el) against 295.093 (el+en) — still −41%, and the 63-namespace shell drift stays fixed. Each entry below states what it costs and what would let it go.",
-
   "guaranteedNamespaces": {
     "common": "67.761 bytes — the big one. Reachable from essentially every page; `src/app/dxf/viewer/page.tsx:43` alone needs `dxfViewer.checkingPermissions`, `dxfViewer.loading`, `dxfViewer.accessDeniedAriaLabel`, none of which the shell closure sees. Releases when the route that uses each key carries its own slice.",
     "admin": "70.689 bytes — the other big one, and the one this ADR originally set out to delete from the synchronous path. `src/app/admin/layout.tsx` IS a shell root, so the admin chrome is key-sliced correctly; the admin PAGES underneath it are not. Releases with per-route slices for /admin/*.",
@@ -21,24 +17,24 @@
     "landing": "4.269 bytes. Measured: its only consumer (src/components/landing/LandingPage.tsx) is reachable solely through a dynamic import in src/utils/lazyRoutes.tsx, so this one probably IS droppable — it is kept only because 'probably' is not the standard this ADR is held to, and 4 KB is not worth being wrong about. Cheapest entry to retire first.",
     "search-results": "~1.6 KB — ADR-777 Α3, η ΔΗΜΟΣΙΑ οθόνη 2 (/search/results). ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-10: χωρίς αυτή την εγγραφή το SSR βάφει `page.title` ωμό, με `bundles: [search-results=absent]` — δηλαδή ακριβώς η κλάση ελαττώματος της CHECK 3.51, σε σελίδα που είναι Η ΠΡΩΤΗ ΕΠΑΦΗ ανώνυμου επισκέπτη. Ο λόγος που ΔΕΝ λύνεται με πύλη φόρτωσης είναι γραμμένος αλλού και δεσμεύει: ADR-777 Α19 κανόνας 30 — «κάτι ΑΛΗΘΙΝΟ ζωγραφίζεται στο πρώτο καρέ· κενό με spinner ΔΕΝ είναι πρώτος καρές», και ένα ωμό κλειδί είναι ΧΕΙΡΟΤΕΡΟ από spinner: δεν είναι κενό, είναι ψέμα. Είναι επίσης route boundary εξ ορισμού (σελίδα, όχι layout), άρα δομικά εκτός shell closure. Απελευθερώνεται με per-route slices (§8, Φ4) — αυτή η διαδρομή είναι από τις ΚΑΘΑΡΟΤΕΡΕΣ υποψήφιες, γιατί το namespace έχει ΕΝΑΝ καταναλωτή."
   },
-
   "$dynamicKeyPolicy": "Every entry below answers ONE unresolvable `t(...)` call site in a shell module. The generator REFUSES to emit a slice while any such call is unclassified — that refusal is the guarantee. Each `reason` states a fact measured on 2026-07-31, not an assumption; re-verify it when you touch the file.",
-
   "dynamicKeyPolicy": {
     "src/components/search/CoverageStatement.tsx": {
-      "prefixes": ["search-results:landing.coverage"],
+      "prefixes": [
+        "search-results:landing.coverage"
+      ],
       "reason": "ADR-777 §8.13 — έγινε ορατό στον generator όταν η ΨΥΧΡΗ ΕΙΣΟΔΟΣ μετακόμισε σε src/app/(light)/page.tsx (η δημόσια οθόνη 1). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ, όχι πρόζα: η μόνη δυναμική κλήση είναι t(coverageKey(coverage), …) και το coverageKey είναι switch ΧΩΡΙΣ default πάνω στο ListingCoverage['state'] — τρεις κλάδοι, τρία ΚΥΡΙΟΛΕΚΤΙΚΑ κλειδιά, όλα κάτω από ΑΥΤΟ το πρόθεμα: landing.coverage.noSupply · .noLocation · .partial. Το αδέρφι τους .heading/.loading/.error είναι ήδη κυριολεκτικά στο ίδιο αρχείο, οπότε το πρόθεμα ταξιδεύει ούτως ή άλλως. ⚠️ Τέταρτη κατάσταση στο CoverageState ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ εκεί (switch χωρίς default πάνω σε union) — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά, που είναι ακριβώς ο λόγος που το πρόθεμα είναι ασφαλές. Ξαναεπαλήθευσέ το αν αγγίξεις το coverageKey.",
       "$note": "Το namespace search-results ταξιδεύει ούτως ή άλλως ΟΛΟΚΛΗΡΟ (guaranteedNamespaces), οπότε σήμερα το κόστος είναι μηδέν· η εγγραφή υπάρχει για τη μέρα που θα αποσυρθεί εκείνη — αλλιώς τα τρία κλειδιά θα εξαφανίζονταν ΣΙΩΠΗΛΑ, ίδιο σχήμα με τα 71 του sidebar."
     },
     "src/components/search/SearchResultItem.tsx": {
-      "prefixes": ["common-shared:search.entityTypes"],
+      "prefixes": [
+        "common-shared:search.entityTypes"
+      ],
       "reason": "ADR-744 §4 — μπήκε στην κλειστότητα με το extraShellRoots (2026-08-19). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: και οι δύο κλήσεις (γρ. 139 και 272) είναι `t(ENTITY_LABEL_KEYS[<τύπος>], …)` και το ENTITY_LABEL_KEYS (γρ. 86-98) είναι `Record<SearchEntityType, string>` — ΟΧΙ Partial — με 11 ΚΥΡΙΟΛΕΚΤΙΚΕΣ τιμές, όλες κάτω από ΑΥΤΟ το πρόθεμα. Επειδή ο τύπος είναι πλήρες Record πάνω σε union, νέος SearchEntityType ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά, που είναι ακριβώς ο λόγος που το πρόθεμα είναι ασφαλές (ίδιο επιχείρημα με το CoverageStatement.tsx παραπάνω). 🔴 ΤΟ ΔΕΥΤΕΡΟ ΟΡΙΣΜΑ ΔΕΝ ΕΙΝΑΙ ΔΙΧΤΥ: το `ENTITY_LABELS[…] ?? entityLabelKey` μοιάζει με fallback, αλλά το ENTITY_LABELS (γρ. 104) είναι `= {}` — ΚΕΝΟ και @deprecated — άρα το defaultValue είναι ΠΑΝΤΑ το ίδιο το κλειδί, δηλαδή αστοχία ⇒ ωμό κλειδί στην οθόνη, όχι αγγλικό fallback. Αυτό το κενό ήταν ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΟ την ίδια μέρα: το locale είχε 8 από τους 11 τύπους (έλειπαν opportunity · communication · task), οπότε αποτέλεσμα CRM θα έβαφε `search.entityTypes.task`. Προστέθηκαν σε el+en. ⚠️ Αν προσθέσεις SearchEntityType, το locale ΔΕΝ σε σταματά — μόνο ο μεταγλωττιστής σε στέλνει στο ENTITY_LABEL_KEYS· βάλε ΚΑΙ το κλειδί."
     },
-
     "src/components/ui/search/SearchInput.tsx": {
       "reason": "ADR-744 §4 — μπήκε στην κλειστότητα με το extraShellRoots (2026-08-19). ΜΗΔΕΝ κλειδιά, και ο λόγος είναι μετρημένος, όχι υποθετικός: το `t(placeholder)` (γρ. 55) διαβάζει PROP, άρα τα κλειδιά θα ζούσαν στους καλούντες — και ο ΜΟΝΟΣ καλών μέσα σε αυτή την κλειστότητα είναι το GlobalSearchDialog.tsx:387, που περνά `t('search.placeholder')`, δηλαδή ΗΔΗ ΜΕΤΑΦΡΑΣΜΕΝΗ συμβολοσειρά — όχι κλειδί. Επαληθεύτηκε ότι κανένας από τους 13 άλλους καλούντες του SearchInput δεν ανήκει στο shell (κανένα από SearchInput · TableHeaderSearch · GenericListHeader · CompactToolbar δεν υπήρχε στα 435 shellFiles πριν από αυτή την εγγραφή)· φτάνουν όλοι από σελίδες, δηλαδή route boundaries. ⚠️ ΞΑΝΑΕΠΑΛΗΘΕΥΣΕ ΑΝ ΜΠΕΙ ΔΕΥΤΕΡΟΣ ΚΑΛΩΝ ΣΤΟ ΚΕΛΥΦΟΣ που περνά ΚΛΕΙΔΙ αντί για κείμενο. 🔶 ΠΑΡΑΤΗΡΗΘΗΚΕ ΑΛΛΑ ΔΕΝ ΘΕΡΑΠΕΥΤΗΚΕ ΕΔΩ (χωριστό ερώτημα, όχι i18n slice): ο φρουρός είναι `placeholder.includes('.')`, οπότε το μεταφρασμένο «Αναζήτηση...» ΠΕΡΝΑΕΙ τον έλεγχο και ξαναπερνά από `t()` — δουλεύει μόνο επειδή το i18next επιστρέφει το ίδιο string σε αστοχία. Είναι διάκριση «κλειδί ή κείμενο;» βασισμένη σε ΣΤΙΞΗ."
     },
-
     "src/providers/NotificationProvider.tsx": {
       "reason": "resolveI18nMessage() calls i18n.exists(...) before every i18n.t(...) and its final statement is `return message`. A key that has not loaded fails exists(), so the function returns the original string — it is structurally incapable of painting a raw key, and there is nothing to slice."
     },
@@ -57,11 +53,49 @@
       "reason": "🔴 THIS ENTRY PREVIOUSLY CLAIMED THE OPPOSITE, AND THE CLAIM WAS FALSE. It read: 'the titles come from MODAL_SELECT_MAIN_NAVIGATION_LABELS, whose values are literal Greek strings with no dot, so t() is never reached today' — i.e. it declared ZERO key contribution. Measured 2026-08-09: the titles reaching translateTitle() come from src/config/smart-navigation-factory.ts, which supplies 71 distinct DOTTED values ('pages.home', 'sidebar.spaces', 'tools.legal', …) under exactly the 9 roots listed above, and all 71 resolve to a string in locales/el/navigation.json. The constant the old reason named lives in src/subapps/dxf-viewer/config/modal-select.ts and never reaches this component. Consequence of the false claim: the sidebar's keys were in NO namespace's `wants`, so they survived in the slice only because the `navigation` migration ledger entry ships that namespace WHOLE — the moment ADR-744 §8 retires that entry, all 71 would have vanished silently from every route. (A second, independent bug made this invisible for longer: `scripts/lib/i18n-namespace-extract.js` matches /useTranslation\\(/, which `useTranslationLazy(` does not match, so the generator could not see this file at all until the hook was migrated.) THE PREFIXES ABOVE ARE A FALSIFIABLE CLAIM, unlike prose: every dotted value in smart-navigation-factory.ts must start with one of these 9 roots — re-verify when you touch either file."
     },
     "src/components/ui/ProductTour/product-tour-overlay.tsx": {
-      "prefixes": ["common-shared:productTour"],
+      "prefixes": [
+        "common-shared:productTour"
+      ],
       "reason": "step.titleKey / step.descriptionKey come from TourConfig objects built by createButtonStep(), so the literals live in another file. The only tour registered in the tree is createErrorDialogTourConfig() (src/components/ui/ErrorBoundary/errorDialogTour.ts), whose steps use 'productTour.errorDialog.*'. That subtree is 1.298 bytes in common-shared, so the whole prefix travels rather than 14 individually-listed keys."
     },
     "src/core/badges/UnifiedBadgeSystem.tsx": {
       "reason": "CommonBadge only calls t() when badgeConfig.label starts with 'common.' — and no badge configuration in the tree defines such a label (grep for `label: 'common.` across src/, 0 hits on 2026-07-31). The branch is unreachable defensive code. If a 'common.'-prefixed badge label is ever introduced, its keys must be added here."
+    },
+    "src/components/listing-detail/ListingAttributeList.tsx": {
+      "prefixes": [
+        "properties-enums:types"
+      ],
+      "reason": "ADR-744 §15 — μπήκε στην κλειστότητα με το per-route slice του /listing/[id] (2026-08-20). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: η μόνη δυναμική κλήση είναι `t(`properties-enums:${PROPERTY_TYPE_I18N_KEYS[canonical]}`)` (γρ. 58) και το PROPERTY_TYPE_I18N_KEYS (src/constants/property-types.ts:130-143) είναι `Record<PropertyTypeCanonical, string>` — ΟΧΙ Partial — με 12 ΚΥΡΙΟΛΕΚΤΙΚΕΣ τιμές, ΟΛΕΣ κάτω από `types.`. Επειδή ο τύπος είναι πλήρες Record πάνω σε union, νέο κανονικό είδος ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά (ίδιο επιχείρημα με το SearchResultItem.tsx). ⚠️ Το `canonical` προκύπτει από `normalizePropertyType` και η κλήση φρουρείται με `canonical === null ? '' : …`, οπότε ΔΕΝ υπάρχει διαδρομή που να δεικτοδοτεί με μη-κανονικό είδος."
+    },
+    "src/components/listing-detail/ListingDetailContent.tsx": {
+      "prefixes": [
+        "search-results:detail.absent",
+        "search-results:detail.error"
+      ],
+      "reason": "ADR-744 §15 — τρεις δυναμικές κλήσεις, ΔΥΟ ΔΙΑΦΟΡΕΤΙΚΕΣ ΑΙΤΙΕΣ. (α) `t(titleKey)`/`t(bodyKey)` (γρ. 80-81) διαβάζουν PROPS ενός τοπικού component· οι ΜΟΝΟΙ καλούντες ζουν στο ΙΔΙΟ αρχείο (γρ. 152-153 και 162-163) και περνούν ΤΕΣΣΕΡΑ ΚΥΡΙΟΛΕΚΤΙΚΑ: `search-results:detail.absent.title|.body` και `search-results:detail.error.title|.body` — εξ ου τα δύο προθέματα. 🔶 (β) `t(listing.coverImage.altKey)` (γρ. 119) διαβάζει ΔΕΔΟΜΕΝΑ, όχι κώδικα — ΜΗΔΕΝ κλειδιά σήμερα, ΜΕΤΡΗΜΕΝΟ: ο ΜΟΝΟΣ παραγωγός του `coverImage` είναι το `src/services/listings/public-listing-projection.ts:342`, που γράφει ΠΑΝΤΑ `coverImage: null` ⇒ ο κλάδος ΔΕΝ ΕΚΤΕΛΕΙΤΑΙ. ⚠️ ΤΗ ΜΕΡΑ ΠΟΥ Η ΠΡΟΒΟΛΗ ΑΡΧΙΣΕΙ ΝΑ ΕΚΠΕΜΠΕΙ ΕΙΚΟΝΑ, το πρόθεμα του `altKey` ΠΡΕΠΕΙ να δηλωθεί εδώ — αλλιώς το `alt` της εικόνας θα βγει ΩΜΟ ΚΛΕΙΔΙ, δηλαδή ακριβώς στην επιφάνεια που ο χρησμός (CHECK 3.51) σαρώνει και που είναι η ΜΟΝΗ περιγραφή για αναγνώστη οθόνης."
+    },
+    "src/components/listing-detail/ListingPositionSection.tsx": {
+      "prefixes": [
+        "search-results:map.shape",
+        "search-results:detail.position.meaning"
+      ],
+      "reason": "ADR-744 §15 — δύο δυναμικές κλήσεις, δύο πλήρη Record πάνω στο ίδιο union `ListingMapShape` (src/lib/listings/listing-shape-keys.ts). `SHAPE_LABEL_KEY` (γρ. 34-41) = 6 ΚΥΡΙΟΛΕΚΤΙΚΑ κάτω από `map.shape.`· `shapeMeaningKey()` (γρ. 69-71) επιστρέφει από το `SHAPE_MEANING_KEY` (γρ. 52-61) = 5 κυριολεκτικά κάτω από `detail.position.meaning.` — ΠΕΝΤΕ και όχι έξι, γιατί ο τύπος είναι `Exclude<…, 'none'>` και η συνάρτηση επιστρέφει `null` για το `none`, το οποίο η γραμμή 87 ελέγχει ρητά. Νέο σχήμα ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ και στα δύο Record, άρα οι λίστες δεν αποκλίνουν σιωπηλά. ⚠️ Το `REASON_KEY` του ίδιου αρχείου (γρ. 44) ΔΕΝ χρειάζεται πρόθεμα: δεικτοδοτείται και περνά στο `t()` ως ΚΥΡΙΟΛΕΚΤΙΚΟ αποτέλεσμα σε άλλη θέση που η σκάλα επιλύει μόνη της."
+    },
+    "src/components/listing-detail/ListingPriceBlock.tsx": {
+      "prefixes": [
+        "search-results:detail.price.role",
+        "search-results:card.priceMissing"
+      ],
+      "reason": "ADR-744 §15 — δύο δυναμικές κλήσεις, δύο πλήρη Record στο `src/lib/listings/listing-price-keys.ts`: `PRICE_ROLE_KEY` (4 κυριολεκτικά κάτω από `detail.price.role.`) και `MISSING_PRICE_KEY` (3 κυριολεκτικά κάτω από `card.priceMissing.`). Και τα δύο είναι πλήρη Record πάνω σε union (`ResolvedPrice['source']` · `MissingPriceReason`), άρα νέα πηγή ή νέα αιτία ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή. 🔑 Τα δύο προθέματα ζουν σε ΔΙΑΦΟΡΕΤΙΚΑ υποδέντρα (`detail.` έναντι `card.`) επίτηδες: το ίδιο λεξιλόγιο απουσίας τιμής χρησιμοποιείται ΚΑΙ στην κάρτα ΚΑΙ στη λεπτομέρεια, και η κάρτα το είχε πρώτη — μια αντιγραφή κάτω από `detail.` θα ήταν δεύτερη αλήθεια (ADR-749)."
+    }
+  },
+  "$routeSlices": "ADR-744 §8 Φ4 — PER-ROUTE SLICES. Κλειστό σύνολο δηλώσεων: κάθε εγγραφή είναι διαδρομή που ζητά κλειδιά τα οποία το ΚΕΛΥΦΟΣ δεν έχει, και το artifact της οφείλει να μένει φρέσκο. 🏆 ΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΟΥΣ ΜΕΓΑΛΟΥΣ: το next-i18next ζητά `serverSideTranslations(locale, [...])` και το next-intl `pick(messages, [...])` — ΧΕΙΡΟΓΡΑΦΗ λίστα ανά σελίδα σε κάθε περίπτωση· το πειραματικό `useExtracted` του next-intl εξάγει αυτόματα αλλά δηλώνει ρητά ότι ΔΕΝ υποστηρίζει `t(variable)` ούτε `t` περασμένο σε άλλη συνάρτηση, δηλαδή σιωπά ακριβώς εκεί που αυτό το repo έχει 131 τέτοιες κλήσεις. Εδώ ΚΑΝΕΙΣ ΔΕΝ ΓΡΑΦΕΙ ΛΙΣΤΑ: το σύνολο παράγεται από τη στατική κλειστότητα εισαγωγών της σελίδας, και ο generator ΑΡΝΕΙΤΑΙ να εκπέμψει όσο υπάρχει ανεπίλυτη δυναμική κλήση. ⚠️ Η αυτόματη σάρωση «όλες οι σελίδες» απορρίφθηκε ΜΕ ΜΕΤΡΗΣΗ: η ένωσή τους δίνει 131 ανεπίλυτες `t()` που θα έπρεπε να δικαιολογηθούν μία-μία. ⚠️ ΤΟ ROUTE SLICE ΕΙΝΑΙ ΑΦΑΙΡΕΣΗ, ΟΧΙ ΕΝΩΣΗ: κρατά μόνο ό,τι το κέλυφος δεν απαντά ήδη — αλλιώς κάθε σελίδα θα ξανακουβαλούσε τα κοινά κλειδιά και το «per-route» θα ήταν ΜΕΓΑΛΥΤΕΡΟ από το σημερινό. ⚠️ ΚΑΝΕΝΑ guaranteedNamespaces σε route slice: το μητρώο μετανάστευσης είναι του ΚΕΛΥΦΟΥΣ και οφείλει να φτάσει στο μηδέν.",
+  "routeSlices": {
+    "src/app/(app)/test-harness/listing-shapes/page.tsx": {
+      "reason": "ADR-744 §15 — ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΑ 2026-08-20 με τον χρησμό (CHECK 3.51) σε production build: τέσσερα ωμά κλειδιά, `map.basemap.map` · `map.basemap.satellite` σε ΚΕΙΜΕΝΟ και `map.coordinate.displayLabel` · `map.styleSelector.quickSwitcher` σε aria-label. Ίχνος: `geo-canvas=absent`. Η αλυσίδα είναι GeoCoordinateDisplay.tsx:155 (`useTranslation('geo-canvas')`) ← InteractiveMapContainer ← ResultsMap ← αυτή η σελίδα. Το wiring είναι ΣΩΣΤΟ (namespace-loaders.ts έχει case σε el+en, άρα ΔΕΝ είναι CHECK 3.36): το bundle απλώς δεν είχε φτάσει τη στιγμή του render, και στον SERVER δεν φτάνει ΠΟΤΕ. ⚠️ ΓΙΑΤΙ ΟΧΙ extraShellRoots: ένα component ΣΕΛΙΔΑΣ είναι route boundary εξ ορισμού· βάζοντάς το στο κέλυφος τα κλειδιά του χάρτη θα ταξίδευαν σε 141 διαδρομές ΧΩΡΙΣ χάρτη. ⚠️ ΓΙΑΤΙ ΟΧΙ guaranteedNamespaces: το geo-canvas.json είναι 45.406 bytes σε ΚΑΘΕ διαδρομή, και θα έσπαγε ΔΥΟ φρουρούς του Group 12 (ledger 10→11 ΚΑΙ bytes 179k→225k > 185k). Μετρημένο κόστος per-route: geo-canvas 54 κλειδιά / 2.372 bytes — δεκαεννιά φορές μικρότερο, και ΜΟΝΟ εδώ."
+    },
+    "src/app/(light)/listing/[id]/page.tsx": {
+      "reason": "ADR-744 §15 — Η ΠΡΑΓΜΑΤΙΚΗ ΔΗΜΟΣΙΑ ΣΕΛΙΔΑ ΠΡΟΪΟΝΤΟΣ (ADR-777 Α3, οθόνη 3). Δείχνει τον ΙΔΙΟ χάρτη με το /test-harness/listing-shapes (ResultsMap ← InteractiveMapContainer ← GeoCoordinateDisplay, που ζητά το lazy namespace `geo-canvas`), άρα κουβαλά ΤΟ ΙΔΙΟ ελάττωμα — με τη διαφορά ότι εδώ το βλέπει ΑΝΩΝΥΜΟΣ ΕΠΙΣΚΕΠΤΗΣ του nestorconstruct.gr, όχι εσωτερικός πάγκος δοκιμών. ⚠️ Ο χρησμός ΔΕΝ το επιβεβαίωσε ζωντανά και ο λόγος είναι δομικός, όχι παράλειψη: η διαδρομή είναι ΔΥΝΑΜΙΚΗ και ο χρησμός χτυπά συνθετικό τμήμα, οπότε παίρνει την οθόνη «δεν βρέθηκε» — ο χάρτης δεν ζωγραφίζεται καν. Η στατική κλειστότητα όμως τον βλέπει, και το per-route slice τον καλύπτει. Απαίτησε ΤΕΣΣΕΡΙΣ νέες εγγραφές dynamicKeyPolicy (8 ανεπίλυτες `t()` σε 4 αρχεία) — αυτό ΔΕΝ είναι κόστος, είναι ο μηχανισμός: ο generator αρνήθηκε μέχρι να απαντηθούν."
     }
   }
 }
