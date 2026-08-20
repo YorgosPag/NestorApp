@@ -24,6 +24,10 @@ import type { TableCellEditTarget } from '../../../bim/table/table-cell-edit-ses
 import type { TableCellStyle } from '../../../bim/table/table-style';
 import type { TableCellAlign } from '../../../types/table';
 import type { TextAlign } from '../../../bim/structural/detail-sheet/detail-sheet-types';
+// 🔴 ADR-786 §4 — η ΜΙΑ απάντηση «ποιο face, ποιο em, ποιο shorthand», και το stub face που
+// κάνει τη διαφορά ύψους/em ορατή στο jsdom (χωρίς αυτό η μετατροπή είναι ταυτοτική).
+import { tableTextFont } from '../../../bim/table/table-text-font';
+import { installStubFont, stubEmSize } from '../../../text-engine/fonts/__tests__/_stub-font';
 import type { TableColumnId, TableRowId } from '../../../types/table';
 
 const CANVAS_BG = '#101010';
@@ -187,5 +191,47 @@ describe('cellTextStartPx — πού ξεκινά το κείμενο (για τ
 
   it('κέντρο ⇒ αγνοεί τα περιθώρια, όπως και ο καμβάς (`anchorXMm` = rect.x + w/2)', () => {
     expect(cellTextStartPx(withAlign('center'), 40)).toBe((W - 40) / 2);
+  });
+});
+
+// ── 🔴 ADR-786 §4 — Η ΑΝΑΛΛΟΙΩΤΗ Α2: καμβάς ≡ επεξεργαστής ──────────────────
+//
+// ⚠️ **Οι δύο άγκυρες παραπάνω (`tableCellFont(40,…)` / `tableCellFont(20,…)`) ΔΕΝ κρίνουν
+// αυτό το ερώτημα, και είναι σημαντικό να ειπωθεί**: στο jsdom δεν υπάρχει φορτωμένη
+// γραμματοσειρά, οπότε «ύψος κεφαλαίου» και «em» είναι ο ίδιος αριθμός και το `40` περνά είτε
+// ο κώδικας κάνει τη μετατροπή είτε όχι. Έμειναν πράσινες σε ολόκληρη τη διάρκεια του
+// ελαττώματος. Ό,τι ακολουθεί εγκαθιστά ρητά face με cap/em = 0,8, ώστε οι δύο αριθμοί να
+// **χωρίσουν** και η ερώτηση να αποκτήσει απάντηση.
+
+describe('🔴 ADR-786 Α2 — ο επεξεργαστής ανοίγει με ΤΗΝ ΙΔΙΑ γραμματοσειρά που ζωγραφίζει ο καμβάς', () => {
+  /** 4 mm × 5 px/mm = 20 px ύψος **κεφαλαίου** — η είσοδος της διάταξης. */
+  const CAP_PX = 20;
+
+  describe('με φορτωμένο face', () => {
+    let restore: () => void;
+    beforeAll(() => { restore = installStubFont(0.6, 'arial'); });
+    afterAll(() => restore());
+
+    it('το shorthand είναι ΑΥΤΟΥΣΙΟ αυτό που θέτει ο ζωγράφος στο `ctx.font`', () => {
+      expect(frameOf({}, 5).font).toBe(tableTextFont(CAP_PX, false, false).css);
+    });
+
+    it('🔴 το `--tce-em` κουβαλά **em**, όχι ύψος κεφαλαίου', () => {
+      const frame = frameOf({}, 5);
+      expect(frame.fontSizePx).toBeCloseTo(stubEmSize(CAP_PX), 9);
+      // Ο παρονομαστής: με τον σπασμένο κώδικα εδώ έβγαινε ακριβώς το ύψος κεφαλαίου, δηλαδή
+      // γράμματα ~29% μικρότερα από τον καμβά — η αναπήδηση στο διπλό κλικ (§4, `190357`).
+      expect(frame.fontSizePx).not.toBeCloseTo(CAP_PX, 6);
+    });
+
+    it('η αναλλοίωτη επιβιώνει του zoom: διπλάσιο `pxPerMm` ⇒ διπλάσιο em, ίδιο face', () => {
+      expect(frameOf({}, 10).fontSizePx).toBeCloseTo(frameOf({}, 5).fontSizePx * 2, 9);
+      expect(frameOf({}, 10).font).toBe(tableTextFont(CAP_PX * 2, false, false).css);
+    });
+  });
+
+  it('ΤΟ ΟΡΓΑΝΟ — χωρίς face η ίδια άγκυρα είναι πράσινη με ΚΑΘΕ κώδικα', () => {
+    // Γραμμένο ρητά ώστε ο επόμενος να μη «διορθώσει» τα `installStubFont` ως περιττά.
+    expect(frameOf({}, 5).fontSizePx).toBe(CAP_PX);
   });
 });

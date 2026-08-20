@@ -28,9 +28,9 @@
 
 import { getImmediateTransform } from '../../systems/cursor/ImmediateTransformStore';
 import { tableMmToWorldLive, tablePxPerMm } from '../../bim/table/table-entity-geometry';
-// 🔴 ADR-753 §28 — ο ΕΝΑΣ κατασκευαστής του αλφαριθμητικού γραμματοσειράς, ο ίδιος που θέτει
-// ο ζωγράφος στο `ctx.font`. Καμία δεύτερη σύνθεση (δες `table-cell-text-metrics.ts`).
-import { tableCellFont } from '../../rendering/entities/table/stamp-table-layout';
+// 🔴 ADR-753 §28 / ADR-786 §4 — η ΜΙΑ απάντηση «ποιο face, ποιο em, ποιο shorthand», η ίδια
+// που θέτει ο ζωγράφος στο `ctx.font`. Καμία δεύτερη σύνθεση (δες `table-cell-text-metrics.ts`).
+import { tableTextFont } from '../../bim/table/table-text-font';
 import { widestCellTypography } from './table-cell-editor-spans';
 import {
   computeTableCellEditorFrame,
@@ -86,12 +86,16 @@ export function cellEditorFrameLive(
     draft: expansion?.draft,
     resolveWidth: expansion ? cellTextWidthPx : undefined,
     ...(widest !== null && {
-      measureFont: tableCellFont(
+      // 🔴 ADR-786 §4 (β) — **ύψος κεφαλαίου** μπαίνει, **em** βγαίνει. Το `widest.heightMm`
+      // είναι η ίδια σύμβαση με το `style.textHeightMm`· αν έμπαινε ωμό εδώ, το κουτί θα
+      // μετριόταν με γραμματοσειρά μικρότερη από αυτήν που ζωγραφίζεται και το
+      // `overflow: hidden` θα έκοβε γράμματα — ακριβώς η βλάβη που το §28 υπάρχει να λείπει.
+      measureFont: tableTextFont(
         widest.heightMm * pxPerMm,
         widest.bold,
         target.style.italic,
         widest.fontFamily,
-      ),
+      ).css,
     }),
     maxWidthPx: expansion
       ? editorGrowthCeilingPx({

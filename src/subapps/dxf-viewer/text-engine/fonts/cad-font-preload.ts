@@ -14,6 +14,7 @@
 
 import { loadFont } from './font-loader';
 import { fontCache } from './font-cache';
+import { whenCssFontFacesReady } from './css-font-registry';
 import { bumpFontReady } from './font-ready-store';
 import { createModuleLogger } from '@/lib/telemetry';
 
@@ -62,5 +63,10 @@ export async function preloadCadSubstituteFonts(): Promise<void> {
     }
   }
 
+  // 🔴 ADR-786 §4 — **πρώτα έτοιμη η CSS όψη, μετά το σήμα.** Το `bumpFontReady()` ξυπνά
+  // καταναλωτές που μετρούν (και **απομνημονεύουν**) με το όνομα της γραμματοσειράς· αν το
+  // `document.fonts` δεν την έχει ακόμη, ο browser απαντά για την εφεδρική και η λάθος
+  // απάντηση κλειδώνεται για όλη τη συνεδρία. Δες `whenCssFontFacesReady`.
+  await whenCssFontFacesReady();
   if (loadedAny) bumpFontReady();
 }

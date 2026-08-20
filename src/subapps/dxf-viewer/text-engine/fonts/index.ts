@@ -48,6 +48,15 @@ export { subscribeFontReady, bumpFontReady, getFontReadyVersion } from './font-r
 export { preloadCadSubstituteFonts, CAD_SUBSTITUTE_FONTS } from './cad-font-preload';
 export type { CadSubstituteFont } from './cad-font-preload';
 
+// 🔴 ADR-786 §4 — η ίδια γραμματοσειρά, δηλωμένη ΚΑΙ στο CSS σύστημα του εγγράφου από τα ίδια
+// bytes, ώστε ο in-cell επεξεργαστής (DOM) να ζωγραφίζει τα ίδια περιγράμματα με τον καμβά.
+export {
+  registerCssFontFace,
+  whenCssFontFacesReady,
+  isCssFontFaceRegistered,
+  __resetCssFontRegistryForTests,
+} from './css-font-registry';
+
 export {
   subscribeMissingFontReport,
   getMissingFontReport,

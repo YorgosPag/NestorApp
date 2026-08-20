@@ -48,7 +48,17 @@ import {
   type TableTextPiece,
   type TableTextStripMm,
 } from '../../../bim/table/table-text-pieces';
-import { buildUIFont } from '../../../config/text-rendering-config';
+// 🔴 ADR-786 — ο ΕΝΑΣ ζωγράφος γραμμής, ο ίδιος που ήδη χρησιμοποιούν τα DXF TEXT, ο 3D atlas
+// και οι σύνθετοι τύποι γραμμής. Καταναλώνει το **shaped run** αντί να ξαναμετρά με άλλο
+// όργανο (πρότυπο HarfBuzz/Skia) — και είναι ο λόγος που η ζωγραφική πέφτει πλέον **πάνω**
+// στη μέτρηση της διάταξης, ανά tier, χωρίς κανέναν κλάδο.
+import { paintTextRun } from '../../../text-engine/fonts';
+import type { HorizontalTextAnchor } from '../../../text-engine/fonts/text-horizontal-anchor';
+import { tableTextFont, type TableTextFont } from '../../../bim/table/table-text-font';
+// 🔴 ADR-786 — **επανεξαγωγή**: ο κατασκευαστής του αλφαριθμητικού μετακόμισε δίπλα στο face
+// και στο em, γιατί οι τρεις απαντήσεις εξαρτώνται η μία από την άλλη (δες εκεί). Η διαδρομή
+// εισαγωγής μένει η ίδια — ο δείκτης ζωνών και οι άγκυρες δεν αγγίζονται.
+export { tableCellFont } from '../../../bim/table/table-text-font';
 import { TABLE_CELL_LINK } from '../../../config/color-config';
 // 🔴 Η ερώτηση «είναι ΟΛΟ το κελί σύνδεσμος;» απαντιέται σε ΕΝΑ σημείο — δες εκεί γιατί
 // (το CHECK 3.28 έπιασε τα δύο σώματα μέσα στο ίδιο commit).
@@ -68,42 +78,6 @@ export const MIN_CELL_TEXT_SCREEN_PX = 5;
  */
 const LINK_CLIP_ABOVE_EM = 1.3;
 const LINK_CLIP_BELOW_EM = 0.6;
-
-/**
- * 🔴 ADR-739 Φ.Δ βήμα 3 — **Η ΜΙΑ γραμματοσειρά του κειμένου κελιού**, ως αλφαριθμητικό
- * που δέχονται **και** το `ctx.font` του καμβά **και** το CSS `font` shorthand του DOM.
- *
- * Ο in-cell επεξεργαστής είναι ένα `<input>` πάνω ακριβώς από το κελί. Αν χρησιμοποιούσε
- * *δική του* γραμματοσειρά, το κείμενο θα **αναπηδούσε** τη στιγμή του διπλού κλικ και ο
- * κέρσορας θα έπεφτε σε άλλο γράμμα από αυτό που δείχνει ο χρήστης — γιατί ο υπολογισμός
- * πλάτους θα γινόταν σε δύο διαφορετικές γραμματοσειρές. Με **κοινό** αλφαριθμητικό, οι
- * δύο μετρήσεις είναι κυριολεκτικά η **ίδια** μέτρηση της ίδιας μηχανής του browser.
- *
- * ## ✅ ADR-739 Φ.Ε (Α3) — το χρέος «πάντα Arial» ΕΚΛΕΙΣΕ
- * Μέχρι τη Φ.Ε το `'arial'` ήταν καρφωμένο εδώ ενώ ο **μετρητής** διάβαζε το
- * `TableCellStyle.fontFamily`: δύο απαντήσεις στην ίδια ερώτηση, με σύμπτωμα κείμενο που
- * κόβεται ή αφήνει κενό — ορατό μόνο σε όποιον δήλωνε άλλη οικογένεια, δηλαδή σε κανέναν,
- * μέχρι να βγει το χειριστήριο γραμματοσειράς. Τώρα η οικογένεια ταξιδεύει στο
- * `TableTextRun` και τη διαβάζουν και οι δύο.
- *
- * 🔴 **Γιατί ΟΧΙ το `paintTextRun` του text-engine** (η προφανής «κεντρικοποίηση» που θα
- * ήταν λάθος): εκείνο ζωγραφίζει **περιγράμματα glyph** μέσω opentype όταν βρει φορτωμένη
- * γραμματοσειρά CAD. Ο in-cell επεξεργαστής είναι `<input>` — **δεν μπορεί** να ζωγραφίσει
- * περιγράμματα. Θα ξαναγεννούσαμε ακριβώς την ασυμφωνία που αυτή η συνάρτηση υπάρχει για να
- * λείπει, μόνο που τώρα ανάμεσα σε καμβά και πεδίο. Το κοινό αλφαριθμητικό είναι η
- * **προϋπόθεση**, όχι η ευκολία — και το `measureTextAdvanceWorld` πέφτει στην ίδια
- * `buildUIFont` στη 2η βαθμίδα του, άρα μέτρηση και ζωγραφική μένουν η ίδια μηχανή.
- */
-export function tableCellFont(
-  fontPx: number,
-  bold: boolean,
-  italic = false,
-  fontFamily?: string,
-): string {
-  // Το ίδιο default με το `baseAdvanceWorld` του text-engine (`style?.fontFamily || 'arial'`):
-  // απούσα οικογένεια πρέπει να δίνει **μία** προεπιλογή, όχι μία εδώ και μία εκεί.
-  return buildUIFont(fontPx, fontFamily || 'arial', bold ? 'bold' : 'normal', italic);
-}
 
 /**
  * 🔴 ADR-739 Φ.Δ βήμα 8 — **Ο ΕΝΑΣ ΣΤΑΜΠΑΔΟΡΟΣ ΚΕΙΜΕΝΟΥ ΤΟΥ ΠΙΝΑΚΑ**, γερμένος όπως ο
@@ -151,6 +125,19 @@ export function stampFrameText(
    * ποτέ δική τους γωνία, δεν αλλάζουν ούτε κατά ένα pixel).
    */
   angleRad: number = rc.textAngleRad,
+  /**
+   * 🔴 ADR-786 — **το face και το em με τα οποία μετρήθηκε αυτό το κείμενο.**
+   *
+   * Παρόν ⇒ η γραμμή ζωγραφίζεται από το `paintTextRun`, δηλαδή από το **ίδιο** shaped run που
+   * έδωσε το `advanceMm` της διάταξης· η ζωγραφική πέφτει πάνω στη μέτρηση **δομικά**.
+   *
+   * ⚠️ **Απόν σημαίνει κάτι ρητό, όχι «ξεχάστηκε»**: ο καλών δουλεύει ήδη σε px οθόνης και δεν
+   * έχει ύψος κειμένου DXF να μετατρέψει — οι ετικέτες ζωνών `A B C` / `1 2 3`
+   * (`stamp-table-indicator.ts`) είναι διακόσμηση διεπαφής, όχι κείμενο του σχεδίου, και το
+   * μέγεθός τους δεν είναι ύψος κεφαλαίου. Εκεί ο δρόμος CSS **είναι** ο σωστός, και μένει
+   * byte-για-byte ο σημερινός.
+   */
+  draw?: { readonly font: TableTextFont; readonly align: HorizontalTextAnchor },
 ): void {
   const { ctx } = rc;
   // Μετάθεση **πρώτα**, στροφή **μετά**: η στροφή γίνεται γύρω από την άγκυρα του κειμένου
@@ -161,7 +148,23 @@ export function stampFrameText(
   // Το `textAlign` / `textBaseline` που έθεσε ο καλών ισχύουν πλέον στο **στραμμένο**
   // σύστημα — δηλαδή «δεξιά στοίχιση» σημαίνει «δεξιά μέσα στο κελί», που είναι ακριβώς η
   // σημασία που ήδη ταξιδεύει στο DXF ως `halign` (μετρήθηκε: 0/1/2 για left/center/right).
-  ctx.fillText(text, 0, 0);
+  //
+  // 🔴 ADR-786 — η στοίχιση περνά **ρητά** στο `paintTextRun` και δεν διαβάζεται από το `ctx`:
+  // στο tier των glyph paths δεν υπάρχει `ctx.textAlign` να τιμηθεί (ζωγραφίζεται `Path2D`),
+  // οπότε ο κανόνας θα ίσχυε στο ένα tier και θα σιωπούσε στο άλλο — κάθε κεντραρισμένο κελί
+  // θα κολλούσε αριστερά μόλις φόρτωνε η γραμματοσειρά, δηλαδή **μετά** το πρώτο καρέ.
+  if (draw) {
+    paintTextRun(ctx, text, {
+      originX: 0,
+      originY: 0,
+      emSize: draw.font.em,
+      align: draw.align,
+      baseline: 'alphabetic',
+      resolved: draw.font.resolved,
+    });
+  } else {
+    ctx.fillText(text, 0, 0);
+  }
   // ADR-739 Φ.Ε — η υπογράμμιση ζωγραφίζεται **μέσα στην ίδια στροφή**: έξω από αυτήν θα
   // έμενε οριζόντια κάτω από γερμένο κείμενο, δηλαδή το ίδιο ελάττωμα που το βήμα 8 έκλεισε
   // για τα ίδια τα γράμματα.
@@ -219,12 +222,12 @@ export function stampTableText(
     // έχει ακριβώς μία, οπότε ο βρόχος είναι η σημερινή πράξη· με αναδίπλωση είναι ο **μόνος**
     // τρόπος να μη χαθεί σιωπηλά ό,τι ο χρήστης ζήτησε να φανεί.
     for (const run of cell.texts) {
-      const fontPx = run.heightMm * rc.pxPerMm;
+      const capPx = run.heightMm * rc.pxPerMm;
       // Το LOD κρίνεται **ανά γραμμή** επειδή η σμίκρυνση (§58 Γ1) μπορεί να δώσει άλλο ύψος
       // ανά κελί — και ένα κοινό κατώφλι ανά κελί θα ζωγράφιζε μουτζούρα στο ένα και τίποτα
       // στο άλλο, με το ίδιο zoom.
-      if (fontPx < MIN_CELL_TEXT_SCREEN_PX) continue;
-      stampRun(ctx, rc, run, fontPx);
+      if (capPx < MIN_CELL_TEXT_SCREEN_PX) continue;
+      stampRun(ctx, rc, run, capPx);
       drewAny = true;
     }
   }
@@ -250,7 +253,8 @@ function stampRun(
   ctx: CanvasRenderingContext2D,
   rc: StampTableContext,
   run: TableTextRun,
-  fontPx: number,
+  /** Ύψος **κεφαλαίου** σε px — το ίδιο μέγεθος που έκρινε το κατώφλι LOD (ADR-786). */
+  capPx: number,
 ): void {
   const anchor = rc.toScreen(run.position.x, run.position.y);
   // 🔴 ADR-739 §59 Δ1 — **η γωνία του κελιού ΠΡΟΣΤΙΘΕΤΑΙ σε αυτήν του πίνακα, με αντίθετο
@@ -264,7 +268,7 @@ function stampRun(
   // το κελί έχει μορφοποίηση ανά χαρακτήρα. Ο βρόχος είναι ο ίδιος και στις δύο περιπτώσεις:
   // η γενική μορφή **εκφυλίζεται** στη σημερινή, δεν συνυπάρχει μαζί της.
   for (const piece of tableTextPieces(run)) {
-    stampPiece(ctx, rc, run, piece, anchor, fontPx, angleRad);
+    stampPiece(ctx, rc, run, piece, anchor, capPx, angleRad);
   }
 }
 
@@ -273,7 +277,7 @@ function stampRun(
  * υπογράμμιση, και μετά οι λωρίδες συνδέσμων που πέφτουν μέσα του.
  *
  * ## Το ύψος του κομματιού, όχι του run
- * Το `fontPx` του καλούντος είναι το ύψος του **κελιού**· ένα τμήμα μπορεί να έχει άλλο
+ * Το `capPx` του καλούντος είναι το ύψος **κεφαλαίου** του **κελιού**· ένα τμήμα μπορεί να έχει άλλο
  * (`A↑`/`A↓` του §16.5). Ξαναϋπολογίζεται από το `piece.heightMm` ώστε γραμματοσειρά,
  * υπογράμμιση και λωρίδα αποκοπής να μιλούν όλες για το **ίδιο** em. Με ένα κομμάτι είναι
  * κυριολεκτικά ο ίδιος αριθμός (`piece.heightMm === run.heightMm`).
@@ -289,11 +293,16 @@ function stampPiece(
   run: TableTextRun,
   piece: TableTextPiece,
   anchor: Point2D,
-  runFontPx: number,
+  runCapPx: number,
   /** §59 Δ1 — γωνία **πίνακα + κελιού**, ήδη σε συντεταγμένες οθόνης. */
   angleRad: number,
 ): void {
-  const fontPx = piece.whole ? runFontPx : piece.heightMm * rc.pxPerMm;
+  // 🔴 ADR-786 — **ύψος ΚΕΦΑΛΑΙΟΥ**, όχι em. Το παλιό όνομα (`fontPx`) έλεγε «μέγεθος
+  // γραμματοσειράς» για έναν αριθμό που ήταν ύψος κεφαλαίου, και ακριβώς γι' αυτό πέρασε ωμό
+  // στο `buildUIFont` χωρίς να ξενίσει κανέναν επί μήνες. Η μετατροπή γίνεται **μία** φορά,
+  // αμέσως από κάτω, με την ίδια συνάρτηση που καλεί ο μετρητής.
+  const capPx = piece.whole ? runCapPx : piece.heightMm * rc.pxPerMm;
+  const font = tableTextFont(capPx, piece.bold, piece.italic, piece.fontFamily);
   const inkHex = tablePieceInkHex(run, piece, TABLE_CELL_LINK.colorHex);
   const alreadyBlue = inkHex !== piece.colorHex;
 
@@ -301,7 +310,11 @@ function stampPiece(
   // ADR-751 / ADR-753 Φ3 — όταν ΟΛΟ το κελί είναι ο σύνδεσμος, το μελάνι ξεκινά μπλε και δεν
   // χρειάζεται κανένα δεύτερο πέρασμα: ίδιος αριθμός `fillText` με πριν, ίδια ακριβώς glyph.
   ctx.fillStyle = inkHex;
-  ctx.font = tableCellFont(fontPx, piece.bold, piece.italic, piece.fontFamily);
+  // ⚠️ ADR-786 — το `ctx.font` παίρνει **em**, όχι ύψος κεφαλαίου, και το **όνομα του face που
+  // πράγματι ζωγραφίζει** (το υποκατάστατο, όχι το αιτούμενο). Και τα δύο ήδη απαντήθηκαν από
+  // το `tableTextFont` μια γραμμή πιο πάνω: εδώ **δεν ξαναρωτιέται τίποτα**, αλλιώς το κελί θα
+  // είχε δύο απαντήσεις για το ίδιο ερώτημα, έτοιμες να αποκλίνουν.
+  ctx.font = font.css;
   ctx.textAlign = piece.align;
   ctx.textBaseline = 'alphabetic';
   // ADR-739 Φ.Δ βήμα 8 — γερμένο όπως ο πίνακας, όπως ήδη γέρνουν το DXF, το PDF και ο
@@ -314,12 +327,13 @@ function stampPiece(
   // γράμματά του. Με τη γωνία μόνο του πίνακα, τα τμήματα ενός γερμένου κελιού θα απλώνονταν
   // κατά μήκος **άλλης** ευθείας από αυτήν που τα ζωγραφίζει — ορατό σε κάθε έντονη λέξη.
   stampFrameText(rc, offsetAnchor(anchor, piece.offsetMm * rc.pxPerMm, angleRad),
-    piece.text, underlineOf(run, piece, fontPx, rc.pxPerMm), angleRad);
+    piece.text, underlineOf(run, piece, font.em, rc.pxPerMm), angleRad,
+    { font, align: piece.align });
   ctx.restore();
 
   // Μικτό κείμενο: οι σύνδεσμοι χρειάζονται δικό τους πέρασμα με αποκοπή. Δες την κεφαλίδα.
   if (!alreadyBlue) {
-    stampLinkStrips(rc, anchor, piece, fontPx, tablePieceLinkStrips(run, piece), angleRad);
+    stampLinkStrips(rc, anchor, piece, font, tablePieceLinkStrips(run, piece), angleRad);
   }
 }
 
@@ -356,16 +370,17 @@ function offsetAnchor(anchor: Point2D, xPx: number, angleRad: number): Point2D {
 function underlineOf(
   run: TableTextRun,
   piece: TableTextPiece,
-  fontPx: number,
+  /** 🔴 ADR-786 — **em** σε px: η γεωμετρία της υπογράμμισης είναι μετρική γραμματοσειράς. */
+  emPx: number,
   pxPerMm: number,
 ): TableUnderlineGeometry | null {
   if (piece.underline && piece.advanceMm !== undefined) {
-    return tableUnderlineGeometry(fontPx, piece.advanceMm * pxPerMm, piece.align);
+    return tableUnderlineGeometry(emPx, piece.advanceMm * pxPerMm, piece.align);
   }
   // Ο σύνδεσμος που καλύπτει ολόκληρο το run — μόνο για το μονό κομμάτι, όπου το `wholeRunLink`
   // είναι ορισμένο. Στα τμήματα η γραμμή έρχεται από τις λωρίδες ({@link stampLinkStrips}).
   const whole = piece.whole ? wholeRunLink(run) : null;
-  if (whole) return tableUnderlineGeometry(fontPx, whole.advanceMm * pxPerMm, piece.align);
+  if (whole) return tableUnderlineGeometry(emPx, whole.advanceMm * pxPerMm, piece.align);
   return null;
 }
 
@@ -387,7 +402,13 @@ function stampLinkStrips(
   rc: StampTableContext,
   anchorScreen: Point2D,
   piece: TableTextPiece,
-  fontPx: number,
+  /**
+   * 🔴 ADR-786 — **το ίδιο** face/em με το πρώτο πέρασμα, περασμένο και όχι ξαναϋπολογισμένο.
+   * Το τέχνασμα της αποκοπής στηρίζεται σε **ταυτόσημες θέσεις glyph** στα δύο περάσματα· μια
+   * δεύτερη κλήση `tableTextFont` εδώ θα ήταν δεύτερη απάντηση στην ίδια ερώτηση, έτοιμη να
+   * αποκλίνει την ημέρα που η ανάλυση face αποκτήσει οποιαδήποτε κατάσταση (memo, cache, LOD).
+   */
+  font: TableTextFont,
   strips: readonly TableTextStripMm[],
   /** §59 Δ1 — γωνία **πίνακα + κελιού**: το δεύτερο πέρασμα οφείλει να πέσει πάνω στο πρώτο. */
   angleRad: number,
@@ -399,7 +420,7 @@ function stampLinkStrips(
   ctx.translate(anchorScreen.x, anchorScreen.y);
   ctx.rotate(angleRad);
   ctx.fillStyle = TABLE_CELL_LINK.colorHex;
-  ctx.font = tableCellFont(fontPx, piece.bold, piece.italic, piece.fontFamily);
+  ctx.font = font.css;
   ctx.textAlign = piece.align;
   ctx.textBaseline = 'alphabetic';
 
@@ -414,14 +435,26 @@ function stampLinkStrips(
 
     ctx.save();
     ctx.beginPath();
-    ctx.rect(xPx, -fontPx * LINK_CLIP_ABOVE_EM, widthPx, fontPx * (LINK_CLIP_ABOVE_EM + LINK_CLIP_BELOW_EM));
+    ctx.rect(xPx, -font.em * LINK_CLIP_ABOVE_EM, widthPx,
+      font.em * (LINK_CLIP_ABOVE_EM + LINK_CLIP_BELOW_EM));
     ctx.clip();
-    ctx.fillText(piece.text, pieceXPx, 0);
+    // 🔴 ADR-786 — **ο ίδιος ζωγράφος με το πρώτο πέρασμα.** Όσο εδώ ζούσε ωμό `fillText` και
+    // από πάνω `paintTextRun`, τα δύο περάσματα θα ζωγράφιζαν με **διαφορετική** μηχανή: το
+    // μπλε θα έπεφτε δίπλα από τα γράμματα που υποτίθεται ότι βάφει, ακριβώς η βλάβη που
+    // αυτό το ADR κλείνει, ξαναγεννημένη μέσα στη διόρθωσή της.
+    paintTextRun(ctx, piece.text, {
+      originX: pieceXPx,
+      originY: 0,
+      emSize: font.em,
+      align: piece.align,
+      baseline: 'alphabetic',
+      resolved: font.resolved,
+    });
     ctx.restore();
 
     // Η γραμμή ζητιέται με `'left'` — το `x` της στοίχισης το έχει ήδη λύσει το `offsetMm` —
     // και μετατοπίζεται εκεί. Ίδιο SSoT γεωμετρίας, ίδιος ζωγράφος, καμία δεύτερη απόφαση.
-    const geometry = tableUnderlineGeometry(fontPx, widthPx, 'left');
+    const geometry = tableUnderlineGeometry(font.em, widthPx, 'left');
     stampUnderline(ctx, { ...geometry, x: geometry.x + xPx });
   }
 

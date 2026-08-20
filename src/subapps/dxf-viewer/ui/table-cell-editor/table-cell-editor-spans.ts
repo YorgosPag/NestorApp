@@ -42,6 +42,10 @@ import {
   type TableSpanTypography,
 } from '../../bim/table/table-cell-typography-ranges';
 import { remapCellTextRuns } from '../../bim/table/table-cell-run-ops';
+// 🔴 ADR-786 §4 (γ) — «ποιο face ζωγραφίζει πράγματι αυτή η τυπογραφία;». Το τμήμα οφείλει να
+// ρωτήσει το **ίδιο** που ρωτά ο καμβάς: η υποκατάσταση (`arial → Liberation Sans`) και η
+// πτώση στο tier CSS (έντονα/πλάγια) αλλάζουν **και** το όνομα οικογένειας **και** το em.
+import { tableTextFace, type TableTextFace } from '../../bim/table/table-text-font';
 import type { TableCellStyle } from '../../bim/table/table-style';
 import type { TableCellTextRun } from '../../types/table';
 import { TABLE_CELL_EDITOR_VARS } from './table-cell-editor-vars';
@@ -131,14 +135,20 @@ function spanCssDelta(
     textDecoration: typography.underline ? 'underline' : 'none',
   };
   if (typography.colorHex !== cell.textColorHex) css.color = typography.colorHex;
-  if (typography.bold !== cell.bold) css.fontWeight = typography.bold ? 'bold' : 'normal';
-  if (typography.italic !== cell.italic) css.fontStyle = typography.italic ? 'italic' : 'normal';
-  if (typography.fontFamily !== cell.fontFamily) {
-    // Απούσα οικογένεια ⇒ πίσω στην κληρονομιά του κουτιού, που **είναι** η οικογένεια του
-    // κελιού. Ένα `'arial'` εδώ θα ήταν δεύτερη έκφραση της προεπιλογής του `tableCellFont`.
-    css.fontFamily = typography.fontFamily ?? 'inherit';
-  }
-  const ratio = fontSizeRatio(typography.heightMm, cell.textHeightMm);
+
+  // 🔴 ADR-786 §4 (γ) — **η σύγκριση γίνεται στο face που ΘΑ ΖΩΓΡΑΦΙΣΤΕΙ, όχι στο αιτούμενο.**
+  // Δύο τμήματα που ζητούν `arial` και `verdana` καταλήγουν και τα δύο στο ίδιο υποκατάστατο
+  // (catch-all `'*' → Liberation Sans`), οπότε μια σύγκριση ωμών ονομάτων θα δήλωνε διαφορά που
+  // ο καμβάς **δεν** ζωγραφίζει. Και αντίστροφα: ένα **έντονο** τμήμα πέφτει στο tier CSS
+  // (δεν υπάρχει bundled bold face), άρα ζωγραφίζεται με **άλλη οικογένεια** από το κελί δίπλα
+  // του χωρίς να έχει αλλάξει καμία οικογένεια — διαφορά αόρατη στα ωμά ονόματα.
+  const span = tableTextFace(typography.bold, typography.italic, typography.fontFamily);
+  const base = tableTextFace(cell.bold, cell.italic, cell.fontFamily);
+  if (span.cssFamily !== base.cssFamily) css.fontFamily = span.cssFamily;
+  if (span.cssBold !== base.cssBold) css.fontWeight = span.cssBold ? 'bold' : 'normal';
+  if (span.cssItalic !== base.cssItalic) css.fontStyle = span.cssItalic ? 'italic' : 'normal';
+
+  const ratio = fontSizeRatio(typography.heightMm, cell.textHeightMm, span, base);
   if (ratio !== null) css.fontSize = `calc(var(${TABLE_CELL_EDITOR_VARS.fontSize}) * ${ratio})`;
   return css;
 }
@@ -202,15 +212,35 @@ export function widestCellTypography(
 }
 
 /**
- * Ο λόγος μεγέθους ως προς το κελί· `null` όταν δεν χρειάζεται δήλωση.
+ * Ο λόγος **em τμήματος ÷ em κελιού**· `null` όταν δεν χρειάζεται δήλωση.
+ *
+ * 🔴 **ADR-786 §4 (γ) — ΔΕΝ είναι ο λόγος των υψών.** Η custom property `--tce-em` κουβαλά
+ * πλέον **em** (όχι ύψος κεφαλαίου), και το em ενός ύψους εξαρτάται από το **face**:
+ *
+ * ```
+ *   em = ύψος κεφαλαίου × emPerCap(face)
+ *   λόγος = (h_τμήματος × emPerCap_τμήματος) ÷ (h_κελιού × emPerCap_κελιού)
+ * ```
+ *
+ * Με **ίδιο** face οι δύο συντελεστές απλοποιούνται και μένει ο σκέτος λόγος υψών — δηλαδή η
+ * σημερινή συμπεριφορά, ακέραιη, για κάθε τμήμα που αλλάζει μόνο μέγεθος. Όταν όμως το τμήμα
+ * αλλάζει **tier** (ένα έντονο τμήμα μέσα σε κανονικό κελί πέφτει στο CSS ενώ το κελί
+ * ζωγραφίζεται με opentype), οι συντελεστές διαφέρουν κατά ~1,4 και ο σκέτος λόγος υψών θα
+ * έδινε γράμματα **40% λάθος** — ορατά, στο ίδιο κουτί με τα σωστά.
  *
  * ⚠️ Ο έλεγχος `> 0` στο ύψος του κελιού δεν είναι ευλάβεια: ένα αποθηκευμένο αρχείο από
  * χέρι, ή ένα preset υπό κατασκευή, μπορεί να δώσει μηδέν — και μια διαίρεση εκεί θα έδινε
  * `Infinity` μέσα σε `calc()`, δηλαδή τμήμα **χωρίς μέγεθος** που ο browser αγνοεί σιωπηλά.
  * Πέφτοντας στην κληρονομιά, το χειρότερο που συμβαίνει είναι «το μέγεθος του κελιού».
  */
-function fontSizeRatio(spanHeightMm: number, cellHeightMm: number): number | null {
-  if (!(cellHeightMm > 0) || !Number.isFinite(spanHeightMm)) return null;
-  if (spanHeightMm === cellHeightMm) return null;
-  return spanHeightMm / cellHeightMm;
+function fontSizeRatio(
+  spanHeightMm: number,
+  cellHeightMm: number,
+  span: TableTextFace,
+  base: TableTextFace,
+): number | null {
+  const denominator = cellHeightMm * base.emPerCap;
+  if (!(denominator > 0) || !Number.isFinite(spanHeightMm)) return null;
+  const ratio = (spanHeightMm * span.emPerCap) / denominator;
+  return ratio === 1 ? null : ratio;
 }

@@ -59,7 +59,11 @@ import { tableCellBackdrop } from '../../bim/table/table-ink';
 // παρέκαμπτε το κόψιμο στα όρια, δηλαδή ένα εκτός εμβέλειας αποθηκευμένο αρχείο θα έγερνε το
 // πεδίο αλλιώς από τον καμβά — και το σύμπτωμα θα ήταν ακριβώς η αναπήδηση που λύνει το βήμα 3.
 import { tableTextRotationDeg } from '../../bim/table/table-rotation-ops';
-import { tableCellFont } from '../../rendering/entities/table/stamp-table-layout';
+// 🔴 ADR-786 §4 — **η ίδια απάντηση με τον καμβά**: ποιο face, ποιο em, ποιο CSS shorthand.
+// Εισάγεται από το ίδιο το module της απάντησης και όχι από τον `stamp-table-layout`: εκείνο
+// είναι ο **ζωγράφος** (ολόκληρος ο renderer πίνακα) και δεν έχει καμία δουλειά στο γράφο
+// εξαρτήσεων ενός καθαρού υπολογισμού κουτιού.
+import { tableTextFont } from '../../bim/table/table-text-font';
 import type { CellFontBandPx } from './table-cell-text-metrics';
 import {
   computeCellEditorExpansion,
@@ -118,6 +122,10 @@ export interface TableCellEditorFrame {
    * ευκαιρία να αποκλίνει): είναι **η ίδια έκφραση** που τροφοδοτεί το shorthand, μία γραμμή
    * πιο πάνω. Το χρειάζεται ο πλούσιος επεξεργαστής, όπου κάθε τμήμα δηλώνει το μέγεθός του
    * ως **λόγο** αυτού — δες `table-cell-editor-spans.ts`.
+   *
+   * ⚠️ **ADR-786 — είναι το `em`, ΟΧΙ το `textHeightMm × pxPerMm`.** Η custom property που
+   * γεννά (`--tce-em`) ονομαζόταν ήδη έτσι· η τιμή της όμως ήταν ύψος **κεφαλαίου**, δηλαδή
+   * το όνομα έλεγε την αλήθεια και ο αριθμός όχι.
    */
   readonly fontSizePx: number;
   /**
@@ -228,11 +236,24 @@ export function computeTableCellEditorFrame(params: {
   // μοιράζονται το ίδιο αλφαριθμητικό, άρα κάθε πεδίο που ξεχνιέται εδώ γίνεται αναπήδηση
   // κειμένου τη στιγμή του διπλού κλικ (η υπογράμμιση ταξιδεύει ξεχωριστά — δεν είναι μέρος
   // του CSS `font` shorthand, βλ. `TABLE_CELL_EDITOR_VARS.decoration`).
-  const fontSizePx = style.textHeightMm * pxPerMm;
-  const font = tableCellFont(fontSizePx, style.bold, style.italic, style.fontFamily);
+  // 🔴 ADR-786 §4 (β) — το `textHeightMm` είναι ύψος **ΚΕΦΑΛΑΙΟΥ** (σύμβαση DXF group 40), όχι
+  // em. Μέχρι εδώ περνούσε ωμό ως CSS `font-size`, δηλαδή ο επεξεργαστής άνοιγε με γράμματα
+  // ~29% μικρότερα από τον καμβά από κάτω του — η αναπήδηση στο διπλό κλικ που μετρήθηκε στα
+  // στιγμιότυπα `190343` vs `190357`. Η μετατροπή **δεν γράφεται εδώ**: τη ζητά από την ίδια
+  // συνάρτηση που απαντά και στον ζωγράφο, ώστε τα δύο να μη μπορούν να αποκλίνουν.
+  const typeface = tableTextFont(
+    style.textHeightMm * pxPerMm,
+    style.bold,
+    style.italic,
+    style.fontFamily,
+  );
   const cellWidthPx = Math.max(rectMm.w * pxPerMm, MIN_CONTENT_PX);
   const cellHeightPx = Math.max(rectMm.h * pxPerMm, MIN_CONTENT_PX);
-  const vertical = verticalPadding(cellHeightPx, target.baselineFromTopMm * pxPerMm, resolveBand(font));
+  const vertical = verticalPadding(
+    cellHeightPx,
+    target.baselineFromTopMm * pxPerMm,
+    resolveBand(typeface.css),
+  );
   const sidePx = horizontalPadding(cellWidthPx, style.margins.hMm * pxPerMm);
   // 🔴 ADR-739 §59 Δ2 — η **εσοχή** μπαίνει μόνο στην πλευρά στην οποία είναι στοιχισμένο το
   // κείμενο, ακριβώς όπως το `anchorXMm` της διάταξης, από την άλλη μεριά της ίδιας εξίσωσης.
@@ -247,7 +268,7 @@ export function computeTableCellEditorFrame(params: {
   const growth = resolveGrowth({
     draft: params.draft,
     // ADR-753 §28 — μετράμε με το **χειρότερο**, ζωγραφίζουμε με το κανονικό. Δες το πεδίο.
-    font: params.measureFont ?? font,
+    font: params.measureFont ?? typeface.css,
     cellWidthPx,
     sidePx,
     indentPx,
@@ -274,8 +295,8 @@ export function computeTableCellEditorFrame(params: {
     // ακριβές ελάττωμα «το κείμενο αναπηδά στο διπλό κλικ» που το βήμα 3 υπάρχει για να λύσει,
     // αναγεννημένο για τα κελιά που έγειρε ο χρήστης.
     rotationRad: -angleRad - (tableTextRotationDeg(style) * Math.PI) / 180,
-    font,
-    fontSizePx,
+    font: typeface.css,
+    fontSizePx: typeface.em,
     underline: style.underline,
     paddingTopPx: vertical.topPx,
     paddingRightPx: sidePx + indentRightPx,

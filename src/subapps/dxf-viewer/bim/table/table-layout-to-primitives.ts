@@ -37,6 +37,10 @@ import type {
   TableTextRun,
 } from './table-layout-types';
 import { tableUnderlineGeometry } from './table-text-decoration';
+// 🔴 ADR-786 — η ΜΙΑ μετατροπή «ύψος κεφαλαίου → em», κοινή με τον ζωγράφο του καμβά και με
+// τον in-cell επεξεργαστή. Τρεις επιφάνειες, μία απάντηση — αλλιώς η υπογράμμιση της οθόνης
+// και η υπογράμμιση του χαρτιού κάθονται σε διαφορετικό ύψος.
+import { tableTextFont } from './table-text-font';
 // 🔴 Η ΙΔΙΑ ερώτηση με τον ζωγράφο του καμβά, από το ΙΔΙΟ σημείο: αν οθόνη και χαρτί
 // απαντούσαν χωριστά «είναι ΟΛΟ το κελί σύνδεσμος;», θα μπορούσαν κάποτε να διαφωνήσουν.
 import { wholeRunLink } from './table-cell-link-spans';
@@ -242,7 +246,14 @@ function underlineLine(
   offsetMm: number,
   colorHex: string,
 ): DetailPrimitive | null {
-  const g = tableUnderlineGeometry(piece.heightMm, advanceMm, hAlign);
+  // 🔴 ADR-786 §5 — το `tableUnderlineGeometry` δέχεται **em**, και το `piece.heightMm` είναι
+  // ύψος **κεφαλαίου**. Μέχρι εδώ περνούσε ωμό — λάθος που ήταν **αόρατο** όσο ο ζωγράφος του
+  // καμβά έκανε το ίδιο λάθος: οι δύο συμφωνούσαν, άρα καμία άγκυρα parity δεν είχε τι να
+  // δείξει. Τη στιγμή που ο καμβάς διορθώθηκε, αυτή η γραμμή έγινε **η** απόκλιση οθόνης ↔
+  // χαρτιού (~29% ψηλότερη και λεπτότερη γραμμή στο τυπωμένο). Η μετατροπή ζητιέται από την
+  // ίδια συνάρτηση με τον ζωγράφο· το `em` βγαίνει σε **sheet-mm** επειδή σε mm μπήκε.
+  const em = tableTextFont(piece.heightMm, piece.bold, piece.italic, piece.fontFamily).em;
+  const g = tableUnderlineGeometry(em, advanceMm, hAlign);
   if (!(g.width > 0)) return null;
   const p = translate(run.position, origin);
   const y = p.y + g.y;

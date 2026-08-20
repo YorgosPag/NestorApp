@@ -11,6 +11,10 @@
 import * as opentype from 'opentype.js';
 import type { Font } from 'opentype.js';
 import { fontCache } from './font-cache';
+// 🔴 ADR-786 §4 — η ΙΔΙΑ γραμματοσειρά δηλώνεται ταυτόχρονα στο CSS σύστημα του εγγράφου, από
+// τα ΙΔΙΑ bytes. Εδώ και όχι σε stylesheet: ένας κανόνας `@font-face` θα ήταν δεύτερος
+// κατάλογος «όνομα → αρχείο» που κανείς δεν συγκρίνει με τον πρώτο (σχήμα CHECK 3.34).
+import { registerCssFontFace } from './css-font-registry';
 import { lookupSubstitute } from './font-substitution-table';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { db, storage } from '@/lib/firebase';
@@ -56,6 +60,10 @@ export function loadFontFromBuffer(buffer: ArrayBuffer, cacheName?: string): Fon
   const font = opentype.parse(buffer);
   if (cacheName) {
     fontCache.set(cacheName, font, buffer);
+    // ADR-786 §4 — μία γραμμή πιο κάτω από το `fontCache.set`, επίτηδες: η αναλλοίωτη «ό,τι
+    // μπορεί να ζωγραφίσει ο καμβάς μπορεί να ζωγραφίσει και το DOM» δεν συντηρείται από
+    // κανέναν — ισχύει επειδή τα δύο μητρώα γεμίζουν στο ίδιο σημείο, από το ίδιο buffer.
+    registerCssFontFace(cacheName, buffer);
   }
   return font;
 }

@@ -28,6 +28,10 @@ import {
   tableTextPieces,
 } from '../table-text-pieces';
 import { tableUnderlineGeometry } from '../table-text-decoration';
+// 🔴 ADR-786 §5 — η ΜΙΑ μετατροπή «ύψος κεφαλαίου → em», και το stub face που την κάνει
+// ορατή στο jsdom (χωρίς αυτό ο λόγος cap/em είναι 1 και η άγκυρα δεν κρίνει τίποτα).
+import { tableTextFont } from '../table-text-font';
+import { installStubFont } from '../../../text-engine/fonts/__tests__/_stub-font';
 import { BUILTIN_TABLE_STYLES, BUILTIN_TABLE_STYLE_IDS } from '../table-style-presets';
 import type { TableStyle } from '../table-style';
 import type { TableTextMeasurer, TableTextRun } from '../table-layout-types';
@@ -301,6 +305,35 @@ describe('🔴 υπογράμμιση ανά τμήμα — δικό της πλ
     const middle = tableTextPieces(run)[1];
     const [line] = underlineLines('center');
     expect(line.a.x - run.position.x).toBeCloseTo(middle.offsetMm, 10);
+  });
+
+  /**
+   * 🔴 ADR-786 §5 — **Η ΕΞΑΓΩΓΗ ΕΔΙΝΕ ΥΨΟΣ ΚΕΦΑΛΑΙΟΥ ΕΚΕΙ ΠΟΥ ΠΕΡΙΜΕΝΕΤΑΙ em.**
+   *
+   * Το λάθος ήταν **αόρατο** όσο ο ζωγράφος του καμβά έκανε το **ίδιο** λάθος: οι δύο
+   * συμφωνούσαν, άρα καμία άγκυρα parity δεν είχε τι να δείξει — και οι δοκιμές παραπάνω
+   * μένουν πράσινες με **κάθε** εκδοχή, γιατί χωρίς φορτωμένο face το `em` **είναι** το ύψος
+   * κεφαλαίου. Εδώ εγκαθίσταται face με cap/em = 0,8 ώστε οι δύο αριθμοί να χωρίσουν.
+   */
+  describe('🔴 ADR-786 — με φορτωμένο face, η γραμμή μετριέται σε em (όπως στον καμβά)', () => {
+    let restore: () => void;
+    beforeAll(() => { restore = installStubFont(0.6, 'arial'); });
+    afterAll(() => restore());
+
+    it('πάχος και θέση προκύπτουν από το **em** του τμήματος, όχι από το ύψος κεφαλαίου του', () => {
+      const run = runOf({ value: 'AABBCC', runs: [TALL_UNDERLINE] });
+      const middle = tableTextPieces(run)[1];
+      const [line] = underlineLines('left');
+
+      const em = tableTextFont(middle.heightMm, middle.bold, middle.italic, middle.fontFamily).em;
+      const fromEm = tableUnderlineGeometry(em, middle.advanceMm!, 'left');
+      // Ο παρονομαστής: η **παλιά** (σπασμένη) απάντηση, που πρέπει να έχει πάψει να ισχύει.
+      const fromCap = tableUnderlineGeometry(middle.heightMm, middle.advanceMm!, 'left');
+
+      expect(line.stroke.widthMm).toBeCloseTo(fromEm.thickness, 10);
+      expect(line.stroke.widthMm).not.toBeCloseTo(fromCap.thickness, 10);
+      expect(line.a.y - run.position.y).toBeCloseTo(fromEm.y, 10);
+    });
   });
 });
 
