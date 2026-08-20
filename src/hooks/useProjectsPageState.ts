@@ -12,7 +12,11 @@
 import { useCallback } from 'react';
 import type { Project } from '@/types/project';
 import { defaultProjectFilters, type ProjectFilterState } from '@/components/core/AdvancedFilters';
-import { useEntityPageState, type EntityPageStateConfig } from './useEntityPageState';
+import {
+  useEntityPageState,
+  type EntityPageStateConfig,
+  type EntityPageStateOptions,
+} from './useEntityPageState';
 
 // ---------------------------------------------------------------------------
 // Filter function (extracted from former inline useMemo)
@@ -87,7 +91,10 @@ function filterProjects(projects: Project[], filters: ProjectFilterState): Proje
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useProjectsPageState(initialProjects: Project[]) {
+export function useProjectsPageState(
+  initialProjects: Project[],
+  options: EntityPageStateOptions<Project>,
+) {
   const stableFilterFn = useCallback(filterProjects, []);
 
   const config: EntityPageStateConfig<Project, ProjectFilterState> = {
@@ -95,6 +102,8 @@ export function useProjectsPageState(initialProjects: Project[]) {
     loggerName: 'useProjectsPageState',
     defaultFilters: defaultProjectFilters,
     filterFn: stableFilterFn,
+    // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
+    ...options,
     extraUrlParams: ['tab'],
     syncCompareFields: ['name', 'title', 'status'],
     // Avoid mounting the full project details/tab graph on initial page load.
@@ -112,6 +121,7 @@ export function useProjectsPageState(initialProjects: Project[]) {
     filters,
     setFilters,
     extraParams,
+    selection,
   } = useEntityPageState(initialProjects, config);
 
   return {
@@ -125,5 +135,7 @@ export function useProjectsPageState(initialProjects: Project[]) {
     filters,
     setFilters,
     tabFromUrl: extraParams.tab,
+    /** ADR-777 §8.31 — τι ζήτησε η διεύθυνση και τι βρέθηκε (ρητά). */
+    selection,
   };
 }

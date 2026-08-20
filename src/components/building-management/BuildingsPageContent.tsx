@@ -10,6 +10,7 @@ import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 // [ENTERPRISE] Import from canonical location
 import { PageLoadingState, PageErrorState } from '@/core/states';
 import { BuildingsList } from './BuildingsList';
+import { DeepLinkNotice } from '@/components/shared/deep-link/DeepLinkNotice';
 import { BuildingDetails } from './BuildingDetails';
 import { BuildingsHeader } from './BuildingsPage/BuildingsHeader';
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
@@ -75,7 +76,8 @@ export function BuildingsPageContent() {
     filters,
     setFilters,
     focusFloorId,
-  } = useBuildingsPageState(buildingsData);
+    selection,
+  } = useBuildingsPageState(buildingsData, { hasAnswered: !buildingsLoading });
 
   // Mobile-only filter toggle state
   const [showFilters, setShowFilters] = React.useState(false);
@@ -379,6 +381,10 @@ export function BuildingsPageContent() {
             trashCount={trashCount}
           />
         )}
+
+        {/* ADR-777 §8.31 — ο σύνδεσμος απαντά, ακόμη κι όταν η απάντηση είναι «όχι».
+            Εκτός του ListContainer, όπως και η μπάρα κάδου: πιάνει όλο το πλάτος. */}
+        <DeepLinkNotice selection={selection} className="mb-2" />
 
         <ListContainer>
           {viewMode === 'list' ? (

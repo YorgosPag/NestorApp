@@ -21,6 +21,54 @@ interface BuildingDeleteResponse {
  * Deletes a building using Admin SDK (bypasses Firestore rules).
  * Includes tenant isolation and audit logging.
  */
+/**
+ * 🏢 **GET /api/buildings/[buildingId]** — ADR-777 §8.31
+ *
+ * Ένα **μόνο** κτίριο, με τον ίδιο φύλακα ιδιοκτησίας που χρησιμοποιεί το
+ * `DELETE`. Υπήρχε **μόνο** το `DELETE` σε αυτό το μονοπάτι: μπορούσες να
+ * σβήσεις ένα κτίριο με ταυτότητα, αλλά **δεν μπορούσες να το δεις**.
+ *
+ * Γιατί χρειάστηκε: όταν ένας σύνδεσμος `?buildingId=…` δείχνει σε κτίριο που
+ * **δεν είναι** στη φορτωμένη λίστα (φιλτραρισμένο, ή στον κάδο), η οθόνη
+ * χρειάζεται πηγή για να απαντήσει *«υπάρχει;»* — αλλιώς σιωπά, ή, χειρότερα,
+ * δείχνει **άλλο** κτίριο (το ζωντανό ελάττωμα του §8.31).
+ *
+ * ⚠️ **Το «δεν βρέθηκε» και το «δεν είναι δικό σου» είναι ΤΟ ΙΔΙΟ σφάλμα** —
+ * βγαίνουν και τα δύο από το `loadOwnedBuilding`. Η διάκριση θα επέτρεπε
+ * απαρίθμηση ξένων ταυτοτήτων ρωτώντας τη μία μετά την άλλη.
+ *
+ * ⚠️ **Επιστρέφει και τα αρχειοθετημένα** (`status === 'deleted'`), επίτηδες:
+ * ο καλών τα χρειάζεται για να δείξει **πανό επαναφοράς** αντί για κενό. Το
+ * φιλτράρισμα των λιστών ζει αλλού (`useFirestoreBuildings`).
+ */
+export const GET = withStandardRateLimit(
+  withAuth<ApiSuccessResponse<Record<string, unknown>>>(
+    async (request: NextRequest, ctx: AuthContext, _cache: PermissionCache) => {
+      const adminDb = requireAdminFirestore();
+
+      const url = new URL(request.url);
+      const buildingId = url.pathname.split('/').pop();
+
+      if (!buildingId) {
+        throw new ApiError(400, 'Building ID is required');
+      }
+
+      const { data } = await loadOwnedBuilding({
+        buildingId,
+        caller: ctx,
+        action: 'view',
+        db: adminDb,
+      });
+
+      return apiSuccess<Record<string, unknown>>(
+        { id: buildingId, ...data },
+        'Building loaded',
+      );
+    },
+    { permissions: 'buildings:buildings:view' }
+  )
+);
+
 export const DELETE = withStandardRateLimit(
   withAuth<ApiSuccessResponse<BuildingDeleteResponse>>(
     async (

@@ -11,7 +11,12 @@
 import { useCallback } from 'react';
 import type { Building } from '@/components/building-management/BuildingsPageContent';
 import { defaultBuildingFilters, type BuildingFilterState } from '@/components/core/AdvancedFilters';
-import { useEntityPageState, type EntityPageStateConfig } from './useEntityPageState';
+import { resolveBuildingById, isArchivedEntity } from './entity-deep-link-sources';
+import {
+  useEntityPageState,
+  type EntityPageStateConfig,
+  type EntityPageStateOptions,
+} from './useEntityPageState';
 
 // ---------------------------------------------------------------------------
 // Filter function
@@ -82,7 +87,10 @@ function filterBuildings(buildings: Building[], filters: BuildingFilterState): B
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useBuildingsPageState(initialBuildings: Building[]) {
+export function useBuildingsPageState(
+  initialBuildings: Building[],
+  options: EntityPageStateOptions<Building>,
+) {
   const stableFilterFn = useCallback(filterBuildings, []);
 
   const config: EntityPageStateConfig<Building, BuildingFilterState> = {
@@ -90,6 +98,13 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
     loggerName: 'useBuildingsPageState',
     defaultFilters: defaultBuildingFilters,
     filterFn: stableFilterFn,
+    // ADR-777 §8.31 — προεπιλεγμένη πηγή για ταυτότητα ΕΚΤΟΣ φορτωμένης
+    // λίστας (φιλτραρισμένη ή στον κάδο). Ο καλών μπορεί να την
+    // παρακάμψει· το `...options` έρχεται ΜΕΤΑ επίτηδες.
+    resolveById: resolveBuildingById,
+    isArchived: isArchivedEntity,
+    // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
+    ...options,
     // BUG #5 deep-link: floor search results carry `?floor=<floorId>` so the
     // building page can focus the matching floor (see FloorsTabContent).
     extraUrlParams: ['floor'],
@@ -106,6 +121,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
     filters,
     setFilters,
     extraParams,
+    selection,
   } = useEntityPageState(initialBuildings, config);
 
   return {
@@ -120,5 +136,7 @@ export function useBuildingsPageState(initialBuildings: Building[]) {
     setFilters,
     /** Floor id to focus from a `?floor=` deep-link (BUG #5). */
     focusFloorId: extraParams.floor,
+    /** ADR-777 §8.31 — τι ζήτησε η διεύθυνση και τι βρέθηκε (ρητά). */
+    selection,
   };
 }

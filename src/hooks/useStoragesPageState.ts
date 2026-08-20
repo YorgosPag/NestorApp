@@ -11,7 +11,12 @@
 import { useCallback } from 'react';
 import type { Storage } from '@/types/storage/contracts';
 import { defaultStorageFilters, type StorageFilterState } from '@/components/core/AdvancedFilters/configs/storageFiltersConfig';
-import { useEntityPageState, type EntityPageStateConfig } from './useEntityPageState';
+import { resolveStorageById, isArchivedEntity } from './entity-deep-link-sources';
+import {
+  useEntityPageState,
+  type EntityPageStateConfig,
+  type EntityPageStateOptions,
+} from './useEntityPageState';
 
 // ---------------------------------------------------------------------------
 // Filter function
@@ -73,7 +78,10 @@ function filterStorages(storages: Storage[], filters: StorageFilterState): Stora
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useStoragesPageState(initialStorages: Storage[]) {
+export function useStoragesPageState(
+  initialStorages: Storage[],
+  options: EntityPageStateOptions<Storage>,
+) {
   const stableFilterFn = useCallback(filterStorages, []);
 
   const config: EntityPageStateConfig<Storage, StorageFilterState> = {
@@ -81,6 +89,13 @@ export function useStoragesPageState(initialStorages: Storage[]) {
     loggerName: 'useStoragesPageState',
     defaultFilters: defaultStorageFilters,
     filterFn: stableFilterFn,
+    // ADR-777 §8.31 — προεπιλεγμένη πηγή για ταυτότητα ΕΚΤΟΣ φορτωμένης
+    // λίστας (φιλτραρισμένη ή στον κάδο). Ο καλών μπορεί να την
+    // παρακάμψει· το `...options` έρχεται ΜΕΤΑ επίτηδες.
+    resolveById: resolveStorageById,
+    isArchived: isArchivedEntity,
+    // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
+    ...options,
     autoSelectFirstItem: false,
   };
 
@@ -94,6 +109,7 @@ export function useStoragesPageState(initialStorages: Storage[]) {
     filteredItems,
     filters,
     setFilters,
+    selection,
   } = useEntityPageState(initialStorages, config);
 
   return {
@@ -106,5 +122,7 @@ export function useStoragesPageState(initialStorages: Storage[]) {
     filteredStorages: filteredItems,
     filters,
     setFilters,
+    /** ADR-777 §8.31 — τι ζήτησε η διεύθυνση και τι βρέθηκε (ρητά). */
+    selection,
   };
 }

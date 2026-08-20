@@ -12,6 +12,7 @@ import { ParkingsHeader } from '@/components/space-management/ParkingPage/Parkin
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { DistributionCard } from '@/components/property-management/dashboard/DistributionCard';
 import { ParkingsList } from '@/components/space-management/ParkingPage/ParkingsList';
+import { DeepLinkNotice } from '@/components/shared/deep-link/DeepLinkNotice';
 import { ParkingDetails } from '@/components/space-management/ParkingPage/ParkingDetails';
 import { ParkingGridView } from '@/components/space-management/ParkingPage/ParkingGridView';
 import { ParkingGeneralTab } from '@/components/space-management/ParkingPage/ParkingDetails/tabs/ParkingGeneralTab';
@@ -92,7 +93,8 @@ export function ParkingPageContent() {
     filteredParkingSpots,
     filters,
     setFilters,
-  } = useParkingPageState(parkingSpots);
+    selection,
+  } = useParkingPageState(parkingSpots, { hasAnswered: !loading });
 
   const stats = useParkingStats(filteredParkingSpots);
 
@@ -285,6 +287,9 @@ export function ParkingPageContent() {
         )}
 
         {/* Content */}
+        {/* ADR-777 §8.31 — ο σύνδεσμος απαντά, ακόμη κι όταν η απάντηση είναι «όχι». */}
+        <DeepLinkNotice selection={selection} className="mb-2" />
+
         <ListContainer>
           {viewMode === 'grid' ? (
             /* ENTERPRISE: Full-width Grid View */

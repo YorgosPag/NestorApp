@@ -65,7 +65,7 @@ export function ProjectsPageContent() {
     filters,
     setFilters,
     tabFromUrl,
-  } = useProjectsPageState(firestoreProjects || []);
+  } = useProjectsPageState(firestoreProjects || [], { hasAnswered: !loading });
 
   const projectsStats = useProjectsStats(filteredProjects || []);
 

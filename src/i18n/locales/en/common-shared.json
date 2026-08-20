@@ -755,5 +755,12 @@
   },
   "demandInterest": {
     "notificationTitle": "{count, plural, one {# person is looking} other {# people are looking}} for a property like “{title}”"
+  },
+  "deepLink": {
+    "title": "This link does not lead to a record",
+    "body": "The requested record no longer exists, or it is not available to you.",
+    "archivedTitle": "This record is in the trash",
+    "archivedBody": "You can see it because the link points to it. Restore it to make it active again.",
+    "restore": "Restore"
   }
 }

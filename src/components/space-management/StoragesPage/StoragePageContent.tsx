@@ -10,6 +10,7 @@ import { StoragesHeader } from '@/components/space-management/StoragesPage/Stora
 import { UnifiedDashboard, type DashboardStat } from '@/components/property-management/dashboard/UnifiedDashboard';
 import { DistributionCard } from '@/components/property-management/dashboard/DistributionCard';
 import { StoragesList } from '@/components/space-management/StoragesPage/StoragesList';
+import { DeepLinkNotice } from '@/components/shared/deep-link/DeepLinkNotice';
 import { StorageDetails } from '@/components/space-management/StoragesPage/StorageDetails';
 import { StorageGridView } from '@/components/space-management/StoragesPage/StorageGridView';
 import { StorageGeneralTab } from '@/components/space-management/StoragesPage/StorageDetails/tabs/StorageGeneralTab';
@@ -88,7 +89,8 @@ export function StoragePageContent() {
     filteredStorages,
     filters,
     setFilters,
-  } = useStoragesPageState(storages);
+    selection,
+  } = useStoragesPageState(storages, { hasAnswered: !loading });
 
   const stats = useStorageStats(filteredStorages);
 
@@ -278,6 +280,9 @@ export function StoragePageContent() {
         )}
 
         {/* Content */}
+        {/* ADR-777 §8.31 — ο σύνδεσμος απαντά, ακόμη κι όταν η απάντηση είναι «όχι». */}
+        <DeepLinkNotice selection={selection} className="mb-2" />
+
         <ListContainer>
           {viewMode === 'grid' ? (
             /* 🏢 ENTERPRISE: Full-width Grid View */

@@ -2,6 +2,18 @@
 
 **STATUS: ACTIVE**
 
+- 🔶 **20/08 — `useContactsState` (321 γρ.): ΝΕΚΡΟ, και με παραπλανητικό όνομα** *(ADR-777 §8.31)*
+  Το `src/hooks/useContactsState.ts` διαβάζει σωστά `searchParams.get('contactId')` και έχει
+  **μηδέν καλούντες**. Ο ζωντανός είναι ο **σχεδόν ομώνυμος** `useContactsPageState`
+  (`src/components/contacts/page/`). Η ομοιότητα δεν είναι ακίνδυνη: **με παραπλάνησε ζωντανά**
+  στη διάγνωση του §8.31 — είδα τον νεκρό αναγνώστη, συμπέρανα «κανείς δεν διαβάζει την
+  παράμετρο», και ανέφερα στον Giorgio **τέσσερις σπασμένες διαδρομές** που δεν ήταν σπασμένες.
+
+  ⚠️ **ΔΕΝ διαγράφηκε**: εξάγει `ViewMode = 'list' | 'grid'` που το **ζωντανό**
+  `ContactsHeader.tsx` εισάγει ως τύπο. Το κοινό SSoT (`useEntityPageState`) ορίζει **τέσσερις**
+  τιμές, όχι δύο — άρα δεν είναι σκέτη αντικατάσταση εισαγωγής, είναι **απόφαση** για το πού ζει
+  το λεξιλόγιο προβολής των επαφών. **Απόφαση Giorgio.**
+
 - 🔶 **11/08 — `configurationComponents` (441 γρ.): ΜΗΔΕΝ καταναλωτές** *(βρέθηκε στο ADR-784 §11)*
   Το `src/styles/design-tokens/modules/configuration-components.ts` **επανεξάγεται** από τα
   `design-tokens/index.ts` και `design-tokens.ts`, αλλά `grep "configurationComponents\."` δίνει

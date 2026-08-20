@@ -11,7 +11,12 @@
 import { useCallback } from 'react';
 import type { ParkingSpot } from './useFirestoreParkingSpots';
 import { defaultParkingFilters, type ParkingFilterState } from '@/components/core/AdvancedFilters/configs/parkingFiltersConfig';
-import { useEntityPageState, type EntityPageStateConfig } from './useEntityPageState';
+import { resolveParkingById, isArchivedEntity } from './entity-deep-link-sources';
+import {
+  useEntityPageState,
+  type EntityPageStateConfig,
+  type EntityPageStateOptions,
+} from './useEntityPageState';
 
 // ---------------------------------------------------------------------------
 // Filter function
@@ -57,7 +62,10 @@ function filterParkingSpots(parkingSpots: ParkingSpot[], filters: ParkingFilterS
 // Hook
 // ---------------------------------------------------------------------------
 
-export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
+export function useParkingPageState(
+  initialParkingSpots: ParkingSpot[],
+  options: EntityPageStateOptions<ParkingSpot>,
+) {
   const stableFilterFn = useCallback(filterParkingSpots, []);
 
   const config: EntityPageStateConfig<ParkingSpot, ParkingFilterState> = {
@@ -65,6 +73,13 @@ export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
     loggerName: 'useParkingPageState',
     defaultFilters: defaultParkingFilters,
     filterFn: stableFilterFn,
+    // ADR-777 §8.31 — προεπιλεγμένη πηγή για ταυτότητα ΕΚΤΟΣ φορτωμένης
+    // λίστας (φιλτραρισμένη ή στον κάδο). Ο καλών μπορεί να την
+    // παρακάμψει· το `...options` έρχεται ΜΕΤΑ επίτηδες.
+    resolveById: resolveParkingById,
+    isArchived: isArchivedEntity,
+    // ADR-777 §8.31 — η ζωντανή κατάσταση της πηγής ταξιδεύει από τον καλούντα.
+    ...options,
     autoSelectFirstItem: false,
   };
 
@@ -78,6 +93,7 @@ export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
     filteredItems,
     filters,
     setFilters,
+    selection,
   } = useEntityPageState(initialParkingSpots, config);
 
   return {
@@ -90,5 +106,7 @@ export function useParkingPageState(initialParkingSpots: ParkingSpot[]) {
     filteredParkingSpots: filteredItems,
     filters,
     setFilters,
+    /** ADR-777 §8.31 — τι ζήτησε η διεύθυνση και τι βρέθηκε (ρητά). */
+    selection,
   };
 }

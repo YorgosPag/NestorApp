@@ -13,8 +13,14 @@ import "server-only";
 import { COLLECTIONS } from "@/config/firestore-collections";
 import type { SoftDeletableEntityType } from "@/types/soft-deletable";
 
-/** The single status value that means "in the trash". */
-export const TRASHED_STATUS = "deleted";
+/**
+ * The single status value that means "in the trash".
+ *
+ * ⚠️ **Ξαναεξάγεται, δεν ορίζεται εδώ** (ADR-777 §8.31): αυτό το αρχείο είναι
+ * `server-only`, οπότε ο πελάτης δεν μπορούσε να το δει και ξανάγραφε το
+ * `'deleted'` ωμά σε επτά σημεία. Η μία αλήθεια ζει στο `./trashed-status`.
+ */
+export { TRASHED_STATUS } from "./trashed-status";
 
 /**
  * What the `GET /api/{entity}/trash` endpoint needs on top of the lifecycle
