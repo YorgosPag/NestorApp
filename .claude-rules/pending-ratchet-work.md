@@ -1882,3 +1882,18 @@ Closed via `hostWall.params.sceneUnits ?? 'mm'` frozen-context pattern σε **4 
   **Fix:** αντικατάσταση με `PointHashGrid` (`core/spatial/PointHashGrid.ts`) — ίδια ερώτηση
   («υπάρχει σημείο μέσα σε τ;»), ήδη δοκιμασμένη. Εκτίμηση: μικρό, 1 αρχείο· θέλει τα snapping tests.
   ⚠️ Αγγίζει shared snapping — να μη γίνει ενώ τρέχουν άλλοι agents στο ίδιο δέντρο.
+
+- [ ] **`primaryEmailOf` — πέντε αντίγραφα δείχνουν αλλού** (ADR-777 §8.33, N.0.2)
+  - **Τι**: η ερώτηση «σε ποιο email μιλάμε σε αυτή την επαφή;» είναι γραμμένη
+    τουλάχιστον **πέντε** φορές — και **δεν λένε όλα το ίδιο**: άλλα κάνουν
+    `emails.find(isPrimary)?.email ?? emails[0]?.email`, άλλα σκέτο `emails[0].email`,
+    δηλαδή **στέλνουν στο λάθος email** όταν το κύριο δεν είναι πρώτο στη λίστα.
+  - **Πού**: `services/ai-pipeline/tools/handlers/messaging-handler.ts` ·
+    `services/ai-pipeline/tools/handlers/org-structure-handler-utils.ts` (**δύο** σημεία) ·
+    `services/ai-pipeline/shared/contact-lookup-search.ts` ·
+    `services/contact-recognition/contact-linker.ts`
+  - **Ο κανονικός τόπος υπάρχει ήδη**: `src/lib/contacts/primary-email.ts` (§8.33).
+    Δεν είναι έκτο αντίγραφο — είναι το SSoT όπου θα δείξουν τα πέντε.
+  - **Γιατί ΔΕΝ έγινε τότε**: τέσσερα από τα πέντε ζουν κάτω από
+    `services/ai-pipeline/`, όπου **κάθε** άγγιγμα ενεργοποιεί τον **N.10**
+    (`npm run test:ai-pipeline:all`, 77 σουίτες). Σχήμα «μεγάλο διπλότυπο» του N.0.2.
