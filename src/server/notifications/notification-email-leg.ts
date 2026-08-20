@@ -41,6 +41,7 @@
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { MESSAGE_PRIORITIES } from '@/config/notification-events';
+import { resolveHumanLanguage } from '@/i18n/languages';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
 import {
@@ -153,6 +154,12 @@ export async function queueNotificationEmail(
     // 🔑 Εδώ γίνεται πράξη η απόφαση συχνότητας/ησυχίας. Το πεδίο **υπήρχε ήδη**
     // στο συμβόλαιο της ουράς και δεν το έθετε κανείς.
     ...(decision.kind === 'defer' ? { scheduledAt: decision.deliverAt } : {}),
+    // 🌐 §8.29 — **η μόνη θέση στον αγωγό όπου συνυπάρχουν παραλήπτης και
+    // ρυθμίσεις του.** Δύο γραμμές πιο πάνω το `request.settings` έκρινε *πότε*
+    // φεύγει· εδώ κρίνει *σε ποια γλώσσα*. Ο αποστολέας, δέκα λεπτά αργότερα,
+    // βλέπει μόνο διευθύνσεις — γι' αυτό η γλώσσα ταξιδεύει **μαζί** με το μήνυμα
+    // αντί να αναζητείται ξανά.
+    language: resolveHumanLanguage(request.settings.language),
   };
 
   const result = await enqueueMessage(params);

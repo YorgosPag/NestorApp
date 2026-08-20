@@ -10,7 +10,13 @@
 
 import type { PostProcessorModule } from 'i18next';
 
-export const PSEUDO_LANGUAGE = 'pseudo';
+// ⚠️ ADR-777 §8.29: ο **ορισμός** μετακόμισε στο `./languages`, γιατί εκεί γίνεται η
+// αφαίρεση «γλώσσες i18next − pseudo = γλώσσες ανθρώπου». Επανεξάγεται από εδώ για
+// τους υπάρχοντες καταναλωτές. Δύο ορισμοί θα σήμαιναν ότι μια μετονομασία αφήνει
+// την αφαίρεση σιωπηλά ανενεργή — δηλαδή `pseudo` μέσα σε email.
+export { PSEUDO_LANGUAGE } from './languages';
+
+import { PSEUDO_LANGUAGE } from './languages';
 
 /** Το wrapper προσθέτει ~40% πλάτος — το heuristic text-expansion της Microsoft. */
 const MIN_TILDES = 2;

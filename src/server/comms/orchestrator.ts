@@ -4,6 +4,8 @@ import { isFirebaseAvailable } from '../../app/api/communications/webhooks/teleg
 import { getFirestoreHelpers, type FirestoreHelpers } from '../../app/api/communications/webhooks/telegram/firebase/helpers-lazy';
 import { safeDbOperation } from '../../app/api/communications/webhooks/telegram/firebase/safe-op';
 import { COLLECTIONS } from '@/config/firestore-collections';
+import { type HumanLanguage } from '@/i18n/languages';
+import { emailTextsFor } from '@/server/comms/email-texts';
 import { generateMessageId } from '@/services/enterprise-id.service';
 import { createModuleLogger } from '@/lib/telemetry';
 const logger = createModuleLogger('CommsOrchestrator');
@@ -93,6 +95,28 @@ export interface EnqueueMessageParams {
   priority?: MessagePriority;
   category?: MessageCategory;
   scheduledAt?: Date;
+
+  /**
+   * 🌐 ADR-777 §8.29 — **η γλώσσα του παραλήπτη**, σφραγισμένη στο μήνυμα.
+   *
+   * 🔑 **Γιατί εδώ και όχι στον αποστολέα.** Ο αγωγός που αδειάζει την ουρά
+   * (`outbound-email-flush`) γνωρίζει **διευθύνσεις**, όχι χρήστες: το πεδίο `to`
+   * είναι email, και μια αναζήτηση «διεύθυνση → χρήστης → ρυθμίσεις» θα ήταν ένα
+   * επιπλέον ερώτημα ανά μήνυμα για κάτι που ο **παραγωγός ήδη κρατά στο χέρι** —
+   * ο `notification-email-leg` έχει ολόκληρο το `UserNotificationSettings` για να
+   * αποφασίσει το `scheduledAt`.
+   *
+   * Είναι το **ίδιο σχήμα με το `scheduledAt`**: η πολιτική λύνεται τη στιγμή της
+   * εγγραφής, ο αγωγός απλώς εκτελεί. Και έχει την ίδια συνέπεια, δηλωμένη: αν ο
+   * χρήστης αλλάξει γλώσσα **αφού** μπει το μήνυμα στην ουρά, εκείνο το μήνυμα
+   * φεύγει στην παλιά — όπως ένα `daily` που προγραμματίστηκε για τις 20:00 δεν
+   * μετακινείται όταν αλλάξει η ζώνη ώρας.
+   *
+   * ⚠️ **Προαιρετικό, και μένει προαιρετικό.** Τα μηνύματα των άλλων καναλιών
+   * (Telegram/WhatsApp) και όσα γράφτηκαν πριν το §8.29 δεν το έχουν· η ανάγνωση
+   * πέφτει στην προεπιλογή.
+   */
+  language?: HumanLanguage;
   
   // Deduplication and tracking
   idempotencyKey?: string;
@@ -237,12 +261,19 @@ async function enqueueMessageForChannel(
         priority: params.priority || 'normal',
         campaignId: params.campaignId,
         variables: params.variables,
+        // 🌐 ADR-777 §8.29 — δίπλα στα `priority`/`category`, τα άλλα δύο πεδία που
+        // διαβάζει ο σχεδιαστής συνάθροισης. `?? null` και όχι `undefined`: η
+        // Firestore **απορρίπτει** το `undefined` σε εγγραφή, οπότε ένα μήνυμα
+        // χωρίς γλώσσα θα έριχνε ολόκληρη την ουρά αντί να πέσει στην προεπιλογή.
+        language: params.language ?? null,
         ...getChannelSpecificMetadata(channel, params)
       },
-      
+
       // Email-specific fields
       ...(channel === 'email' && {
-        subject: params.subject || 'Ειδοποίηση'
+        // 🌐 §8.29: ήταν σκληρογραμμένο `'Ειδοποίηση'` — ένα από **τρία** αντίγραφα
+        // της ίδιας εφεδρείας. Τώρα ακολουθεί τη γλώσσα του παραλήπτη.
+        subject: params.subject || emailTextsFor(params.language).fallbackSubject
       }),
       
       // Scheduling and retry

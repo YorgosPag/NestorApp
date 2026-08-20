@@ -22,10 +22,9 @@ import {
   getDoc,
   setDoc,
   updateDoc,
-  Timestamp,
   Firestore,
 } from 'firebase/firestore';
-import { normalizeToDate } from '@/lib/date-local';
+import { type HumanLanguage } from '@/i18n/languages';
 import { nowTimestamp } from '@/lib/firestore-now';
 
 import {
@@ -35,6 +34,10 @@ import {
   NotificationCategory,
   getDefaultNotificationSettings,
 } from './user-notification-settings.types';
+import {
+  transformSettingsFromFirestore,
+  transformSettingsToFirestore,
+} from './user-notification-settings.mapper';
 import { COLLECTIONS } from '@/config/firestore-collections';
 // 🏢 ENTERPRISE: Centralized real-time service for cross-page sync (event bus)
 import { RealtimeService } from '@/services/realtime';
@@ -319,6 +322,24 @@ class UserNotificationSettingsService {
     await this.updateSettings(userId, { timezone });
   }
 
+  /**
+   * Ορίζει τη **γλώσσα** στην οποία απευθυνόμαστε στον χρήστη (ADR-777 §8.29).
+   *
+   * ⚠️ **Ο τύπος είναι `HumanLanguage`, όχι `string`** — και αυτό είναι ο φρουρός.
+   * Ο επιλογέας της κεφαλίδας προσφέρει `pseudo` σε περιβάλλον ανάπτυξης· ένα
+   * `setLanguage(uid, 'pseudo')` θα ήταν έγκυρη κλήση με `string` και θα έστελνε
+   * email τυλιγμένο σε `[[~~ … ~~]]`. Ο μεταγλωττιστής το κάνει **αδύνατο** αντί να
+   * το φυλάει έλεγχος που μπορεί να ξεχαστεί.
+   *
+   * 🔑 **Δεν το καλείς απευθείας από component.** Ένας επιλογέας που γράφει *μόνο*
+   * εδώ αλλάζει τη γλώσσα του email και **όχι** της οθόνης· ένας που γράφει μόνο
+   * στο i18next κάνει το αντίστροφο — και αυτή ακριβώς η μισή σύνδεση ήταν το
+   * ελάττωμα του §8.29. Πέρνα από το `useLanguagePreference`, που κάνει και τα τρία.
+   */
+  public async setLanguage(userId: string, language: HumanLanguage): Promise<void> {
+    await this.updateSettings(userId, { language });
+  }
+
   // ==========================================================================
   // QUIET HOURS
   // ==========================================================================
@@ -393,78 +414,24 @@ class UserNotificationSettingsService {
   // ==========================================================================
   // DATA TRANSFORMATION
   // ==========================================================================
+  //
+  // 🔑 **Ο μεταφραστής σχήματος ζει στο `user-notification-settings.mapper`**
+  // (N.7.1). Ήταν δύο `private` μέθοδοι εδώ — **καθαρές**, χωρίς `this` και χωρίς
+  // Firestore — δηλαδή απαντούσαν *«τι σχήμα έχει το έγγραφο;»* μέσα σε μια κλάση
+  // που απαντά *«ποιος διαβάζει και γράφει;»*. Οι δύο μέθοδοι παρακάτω κρατούν
+  // τα **ίδια ονόματα**, ώστε καμία κλήση μέσα στην κλάση να μην αλλάξει.
 
-  /**
-   * Transform Firestore data to UserNotificationSettings
-   */
   private transformFromFirestore(
     data: Record<string, unknown>,
     userId: string
   ): UserNotificationSettings {
-    const defaults = getDefaultNotificationSettings(userId);
-
-    return {
-      userId,
-      globalEnabled: (data.globalEnabled as boolean) ?? defaults.globalEnabled,
-      inAppEnabled: (data.inAppEnabled as boolean) ?? defaults.inAppEnabled,
-      emailEnabled: (data.emailEnabled as boolean) ?? defaults.emailEnabled,
-      emailFrequency:
-        (data.emailFrequency as UserNotificationSettings['emailFrequency']) ??
-        defaults.emailFrequency,
-      pushEnabled: (data.pushEnabled as boolean) ?? defaults.pushEnabled,
-      categories: {
-        crm: {
-          ...defaults.categories.crm,
-          ...((data.categories as Record<string, unknown>)?.crm as Record<string, boolean>),
-        },
-        properties: {
-          ...defaults.categories.properties,
-          ...((data.categories as Record<string, unknown>)?.properties as Record<string, boolean>),
-        },
-        tasks: {
-          ...defaults.categories.tasks,
-          ...((data.categories as Record<string, unknown>)?.tasks as Record<string, boolean>),
-        },
-        security: {
-          ...defaults.categories.security,
-          ...((data.categories as Record<string, unknown>)?.security as Record<string, boolean>),
-        },
-        procurement: {
-          ...defaults.categories.procurement,
-          ...((data.categories as Record<string, unknown>)?.procurement as Record<string, boolean>),
-        },
-      },
-      quietHours: {
-        ...defaults.quietHours,
-        ...((data.quietHours as Record<string, unknown>) ?? {}),
-      },
-      // ⚠️ Τα υπάρχοντα έγγραφα **δεν έχουν** το πεδίο (προστέθηκε στο §8.28). Το
-      // `??` τους δίνει την προεπιλογή χωρίς migration: κανένας δεν χάνει ρύθμιση
-      // και κανένας δεν αποκτά `undefined` που θα έριχνε το `Intl`.
-      timezone: (data.timezone as string) ?? defaults.timezone,
-      createdAt: normalizeToDate(data.createdAt) ?? defaults.createdAt,
-      updatedAt: normalizeToDate(data.updatedAt) ?? defaults.updatedAt,
-    };
+    return transformSettingsFromFirestore(data, userId);
   }
 
-  /**
-   * Transform UserNotificationSettings to Firestore data
-   */
   private transformToFirestore(
     settings: UserNotificationSettings
   ): Record<string, unknown> {
-    return {
-      globalEnabled: settings.globalEnabled,
-      inAppEnabled: settings.inAppEnabled,
-      emailEnabled: settings.emailEnabled,
-      emailFrequency: settings.emailFrequency,
-      pushEnabled: settings.pushEnabled,
-      categories: settings.categories,
-      quietHours: settings.quietHours,
-      timezone: settings.timezone,
-      createdAt: Timestamp.fromDate(settings.createdAt),
-      updatedAt: nowTimestamp(),
-    };
+    return transformSettingsToFirestore(settings);
   }
 }
 

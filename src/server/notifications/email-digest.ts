@@ -51,6 +51,8 @@
 // ⚠️ **Τοπικό αντίγραφο δεν επιτρέπεται** — το `escapeHtml` έρχεται από το SSoT των
 // προτύπων email. Ήδη υπάρχουν **δύο** υλοποιήσεις στο repo (`email-templates` και
 // `telegram/admin/format`)· μια τρίτη θα ήταν η γνωστή απόκλιση.
+import { resolveHumanLanguage, type HumanLanguage } from '@/i18n/languages';
+import { emailTextsFor } from '@/server/comms/email-texts';
 import { escapeHtml } from '@/services/email-templates/base-email-template';
 import { MESSAGE_CATEGORIES, MESSAGE_PRIORITIES } from '@/types/communications';
 
@@ -70,6 +72,17 @@ export interface PendingEmail {
   readonly priority: string;
   /** `metadata.category` του εγγράφου. */
   readonly category: string;
+  /**
+   * 🌐 §8.29 — `metadata.language` του εγγράφου: **η γλώσσα του παραλήπτη, όπως
+   * ήταν τη στιγμή που γεννήθηκε το μήνυμα**.
+   *
+   * ⚠️ **Τύπος `string`, όχι `HumanLanguage`** — και είναι σκόπιμο. Το πεδίο έρχεται
+   * από έγγραφο Firestore: μπορεί να λείπει (κάθε μήνυμα γραμμένο **πριν** το
+   * §8.29), να είναι `'pseudo'`, ή ό,τι άλλο. Ένας αυστηρός τύπος εδώ θα ήταν
+   * **ψέμα προς τον μεταγλωττιστή**. Η στένωση γίνεται μία φορά, στο
+   * {@link languageOf}.
+   */
+  readonly language?: string;
 }
 
 /** Γιατί αυτό το μήνυμα φεύγει μόνο του. **Ονομασμένο, ποτέ boolean.** */
@@ -83,6 +96,14 @@ export type DeliveryPlanEntry =
   | {
       readonly kind: 'digest';
       readonly to: string;
+      /**
+       * 🌐 §8.29 — η γλώσσα **ολόκληρης** της σύνοψης, ήδη λυμένη.
+       *
+       * Δηλώνεται στο πλάνο (αντί να ξαναπαράγεται από τα μέλη) γιατί είναι μέρος
+       * της **ταυτότητας** της ομάδας: δύο συνόψεις προς την ίδια διεύθυνση
+       * ξεχωρίζουν **μόνο** από αυτήν.
+       */
+      readonly language: HumanLanguage;
       readonly members: readonly PendingEmail[];
       readonly subject: string;
       readonly content: string;
@@ -90,25 +111,31 @@ export type DeliveryPlanEntry =
     };
 
 /**
- * Τα κείμενα της σύνοψης.
+ * ✅ **ΤΟ ΟΡΙΟ ΕΚΛΕΙΣΕ (§8.29): η σύνοψη γράφεται στη γλώσσα ΤΟΥ ΠΑΡΑΛΗΠΤΗ.**
  *
- * ⚠️ Σταθερό αντικείμενο, όχι `t()`: είναι **αποκλειστικά διακομιστής**, τρέχει σε
- * cron χωρίς αίτημα χρήστη, άρα **δεν υπάρχει** ενεργή γλώσσα να ρωτηθεί. Ίδιο
- * σχήμα με το `REMINDER_TEXTS` του `onboarding-reminder.job.ts`.
+ * Εδώ ζούσε το `DIGEST_TEXTS`, σταθερό ελληνικό αντικείμενο, με το όριο **γραμμένο**
+ * από κάτω: *«μονόγλωσσο· θα γίνει ανά παραλήπτη όταν το `UserNotificationSettings`
+ * αποκτήσει γλώσσα»*. Το πεδίο υπάρχει πλέον, οπότε τα κείμενα ήρθαν στο
+ * {@link emailTextsFor} — μαζί με το θέμα-εφεδρεία που ήταν γραμμένο **τρεις φορές**.
  *
- * 🔶 **Δηλωμένο όριο**: μονόγλωσσο (ελληνικά). Θα γίνει ανά παραλήπτη όταν το
- * `UserNotificationSettings` αποκτήσει γλώσσα — το **ίδιο** πεδίο που λείπει και για
- * τη ζώνη ώρας, άρα μία απόφαση, όχι δύο.
+ * ⚠️ Παραμένει σταθερός πίνακας, **όχι `t()`**: ο λόγος δεν ήταν ποτέ ότι δεν
+ * ξέραμε τη γλώσσα — ήταν ότι σε cron **δεν υπάρχει** ενεργό i18next να ρωτηθεί, και
+ * αυτό δεν άλλαξε. Άλλαξε μόνο ότι η γλώσσα είναι πλέον **παράμετρος**.
  */
-const DIGEST_TEXTS = {
-  /** ⚠️ **Πάντα πληθυντικός**: η σύνοψη είναι εξ ορισμού ≥2 (βλ. `alone`). */
-  subject: (count: number) => `${count} νέες ειδοποιήσεις`,
-  intro: (count: number) => `Έχετε ${count} νέες ειδοποιήσεις:`,
-  footer: 'Αυτό το μήνυμα στάλθηκε αυτόματα από το Nestor.',
-} as const;
 
 /** Κάτω από αυτό το πλήθος, η σύνοψη **χάνει** από το πρωτότυπο. */
 export const MIN_DIGEST_SIZE = 2;
+
+/**
+ * Η γλώσσα ενός μηνύματος — **μία** στένωση, στην είσοδο.
+ *
+ * Μήνυμα γραμμένο πριν το §8.29 δεν έχει καθόλου πεδίο· πέφτει στην προεπιλογή,
+ * δηλαδή συμπεριφέρεται **ακριβώς όπως πριν**. Καμία migration, ίδιο σχήμα με το
+ * `??` της ζώνης ώρας (§8.28).
+ */
+function languageOf(message: PendingEmail): HumanLanguage {
+  return resolveHumanLanguage(message.language);
+}
 
 /**
  * Μπορεί αυτό το μήνυμα να μπει σε σύνοψη;
@@ -130,11 +157,30 @@ function soloReasonOf(message: PendingEmail): Exclude<SoloReason, 'alone'> | nul
  * **χρονολογικά**. Ένα `Map` κρατά σειρά εισαγωγής· ένα απλό αντικείμενο **όχι**
  * (αριθμητικά κλειδιά ταξινομούνται πρώτα) — και οι διευθύνσεις email δεν είναι
  * αριθμοί σήμερα, αλλά η εγγύηση δεν πρέπει να εξαρτάται από αυτό.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🌐 §8.29 — ΤΟ ΚΛΕΙΔΙ ΕΙΝΑΙ **ΔΙΕΥΘΥΝΣΗ + ΓΛΩΣΣΑ**, ΟΧΙ ΜΟΝΟ ΔΙΕΥΘΥΝΣΗ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * 🔑 **Ένα email έχει ΕΝΑ θέμα.** Τη στιγμή που τα κείμενα απέκτησαν γλώσσα, το
+ * «ομαδοποίησε κατά παραλήπτη» έγινε **ανεπαρκές**: αν ο χρήστης άλλαξε γλώσσα μέσα
+ * στη μέρα, η ουρά του κρατά μηνύματα σφραγισμένα και με τις δύο. Ένα κοινό κλειδί
+ * θα τα ένωνε και **κάποιος θα αποφάσιζε σιωπηλά** ποια γλώσσα κερδίζει — «η πρώτη»
+ * ή «η τελευταία», δηλαδή απάντηση που εξαρτάται από τη σειρά της ουράς.
+ *
+ * Με σύνθετο κλειδί δεν χρειάζεται να αποφασίσει κανείς: γίνονται **δύο** συνόψεις,
+ * η καθεμία **εσωτερικά συνεπής**. Το κόστος είναι ένα επιπλέον email σε μια
+ * σπάνια περίπτωση· το όφελος είναι ότι **δεν υπάρχει** περίπτωση όπου ο παραλήπτης
+ * βλέπει αγγλικό θέμα πάνω από ελληνικές γραμμές.
+ *
+ * ⚠️ **Η κλειστή λογιστική δεν κουνιέται**: το {@link planCoversEveryMessage} μετρά
+ * **μηνύματα**, όχι ομάδες. Ένα μήνυμα εξακολουθεί να προσγειώνεται σε ακριβώς μία
+ * εγγραφή, όποιο κι αν είναι το κλειδί.
  */
 export function planEmailDelivery(
   messages: readonly PendingEmail[],
 ): readonly DeliveryPlanEntry[] {
-  const groups = new Map<string, PendingEmail[]>();
+  const groups = new Map<string, { to: string; language: HumanLanguage; members: PendingEmail[] }>();
   const solos: DeliveryPlanEntry[] = [];
 
   for (const message of messages) {
@@ -143,25 +189,32 @@ export function planEmailDelivery(
       solos.push({ kind: 'solo', message, reason });
       continue;
     }
-    const existing = groups.get(message.to);
-    if (existing) existing.push(message);
-    else groups.set(message.to, [message]);
+    const language = languageOf(message);
+    // ⚠️ Ο διαχωριστής `\n` είναι **αδύνατος** μέσα σε διεύθυνση email (RFC 5321) και
+    // μέσα σε αναγνωριστικό γλώσσας. Ένα `:` ή `|` θα ήταν εξίσου απίθανο αλλά όχι
+    // αδύνατο, και μια σύγκρουση κλειδιού εδώ θα ένωνε **ξένους παραλήπτες**.
+    const key = `${message.to}\n${language}`;
+    const existing = groups.get(key);
+    if (existing) existing.members.push(message);
+    else groups.set(key, { to: message.to, language, members: [message] });
   }
 
   const plan: DeliveryPlanEntry[] = [];
 
-  for (const [to, members] of groups) {
+  for (const { to, language, members } of groups.values()) {
     if (members.length < MIN_DIGEST_SIZE) {
       plan.push({ kind: 'solo', message: members[0], reason: 'alone' });
       continue;
     }
+    const texts = emailTextsFor(language);
     plan.push({
       kind: 'digest',
       to,
+      language,
       members,
-      subject: DIGEST_TEXTS.subject(members.length),
-      content: digestText(members),
-      html: digestHtml(members),
+      subject: texts.digest.subject(members.length),
+      content: digestText(members, language),
+      html: digestHtml(members, language),
     });
   }
 
@@ -196,8 +249,9 @@ export function planCoversEveryMessage(
 }
 
 /** Το σώμα της σύνοψης σε **απλό κείμενο** — ο αναγνώστης χωρίς HTML. */
-function digestText(members: readonly PendingEmail[]): string {
-  const lines: string[] = [DIGEST_TEXTS.intro(members.length), ''];
+function digestText(members: readonly PendingEmail[], language: HumanLanguage): string {
+  const texts = emailTextsFor(language);
+  const lines: string[] = [texts.digest.intro(members.length), ''];
 
   members.forEach((member, index) => {
     lines.push(`${index + 1}. ${member.subject}`);
@@ -205,7 +259,7 @@ function digestText(members: readonly PendingEmail[]): string {
     lines.push('');
   });
 
-  lines.push('—', DIGEST_TEXTS.footer);
+  lines.push('—', texts.digest.footer);
   return lines.join('\n');
 }
 
@@ -221,7 +275,8 @@ function digestText(members: readonly PendingEmail[]): string {
  * ίδια διαδρομή που ο `EmailAdapter` στέλνει και τις υπενθυμίσεις onboarding. Δύο
  * διαφορετικά πρότυπα για δύο διαφορετικά κοινά, όχι ένα από αμέλεια.
  */
-function digestHtml(members: readonly PendingEmail[]): string {
+function digestHtml(members: readonly PendingEmail[], language: HumanLanguage): string {
+  const texts = emailTextsFor(language);
   const items = members
     .map((member) => {
       const body =
@@ -233,10 +288,10 @@ function digestHtml(members: readonly PendingEmail[]): string {
     .join('\n');
 
   return [
-    `<p>${escapeHtml(DIGEST_TEXTS.intro(members.length))}</p>`,
+    `<p>${escapeHtml(texts.digest.intro(members.length))}</p>`,
     `<ol style="padding-left:20px">`,
     items,
     `</ol>`,
-    `<p style="color:#888;font-size:12px">${escapeHtml(DIGEST_TEXTS.footer)}</p>`,
+    `<p style="color:#888;font-size:12px">${escapeHtml(texts.digest.footer)}</p>`,
   ].join('\n');
 }

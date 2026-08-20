@@ -246,3 +246,161 @@ describe('Κ — το πλάνο καλύπτει τα πάντα, ακριβώ�
     expect(planCoversEveryMessage(plan, messages)).toBe(true);
   });
 });
+
+// =============================================================================
+// Γ — Η ΓΛΩΣΣΑ ΤΟΥ ΠΑΡΑΛΗΠΤΗ (ADR-777 §8.29)
+// =============================================================================
+
+describe('Γ — η σύνοψη γράφεται στη γλώσσα του παραλήπτη', () => {
+  /** Ελληνικοί χαρακτήρες — το κριτήριο «είναι όντως ελληνικό;». */
+  const GREEK = /[Ͱ-Ͽ]/;
+
+  function digestFor(messages: readonly PendingEmail[]) {
+    const digests = digestsOf(planEmailDelivery(messages));
+    expect(digests).toHaveLength(1);
+    return digests[0] as Extract<DeliveryPlanEntry, { kind: 'digest' }>;
+  }
+
+  /** Μέλος με **ουδέτερο** κείμενο, ώστε να κρίνεται μόνο το περιτύλιγμα. */
+  function neutral(overrides: Partial<PendingEmail> = {}): PendingEmail {
+    return msg({ subject: 'ABC-123', content: '', ...overrides });
+  }
+
+  it('Γ0 🔴🔴 — ΜΕΤΑΛΛΑΞΗ ΕΙΣΟΔΟΥ: `el` → `en` ΓΥΡΙΖΕΙ την ετυμηγορία', () => {
+    // ⚠️ **Η άγκυρα που κάνει το §8.29 μη-διακοσμητικό.** Ένα test που ελέγχει
+    // μόνο ελληνικά περνά ακόμη κι αν η γλώσσα αγνοείται εντελώς. Εδώ αλλάζει
+    // **ένα** πεδίο της εισόδου και απαιτείται να αλλάξει ΟΛΟ το περιτύλιγμα.
+    const greek = digestFor([
+      neutral({ id: 'a', language: 'el' }),
+      neutral({ id: 'b', language: 'el' }),
+    ]);
+    const english = digestFor([
+      neutral({ id: 'a', language: 'en' }),
+      neutral({ id: 'b', language: 'en' }),
+    ]);
+
+    expect(greek.subject).not.toBe(english.subject);
+    expect(GREEK.test(greek.subject)).toBe(true);
+    expect(GREEK.test(english.subject)).toBe(false);
+
+    // Και στα **τρία** προϊόντα, όχι μόνο στο θέμα: το σώμα κειμένου και το HTML
+    // παράγονται από χωριστές συναρτήσεις, άρα μπορούν να ξεχάσουν τη γλώσσα
+    // ανεξάρτητα — και ο παραλήπτης θα έβλεπε αγγλικό θέμα με ελληνικό σώμα.
+    expect(GREEK.test(english.content)).toBe(false);
+    expect(GREEK.test(english.html)).toBe(false);
+    expect(GREEK.test(greek.content)).toBe(true);
+    expect(GREEK.test(greek.html)).toBe(true);
+  });
+
+  it('Γ0β 🔶 ΔΗΛΩΜΕΝΟ ΟΡΙΟ — το ΠΕΡΙΤΥΛΙΓΜΑ μεταφράζεται· οι ΤΙΤΛΟΙ των ειδοποιήσεων ΟΧΙ', () => {
+    // 🔴 **Αυτή η άγκυρα υπάρχει για να μη διαβαστεί το §8.29 ως κάτι μεγαλύτερο
+    // απ' ό,τι είναι.** Η σύνοψη είναι φάκελος γύρω από N ειδοποιήσεις: ο φάκελος
+    // ακολουθεί τη γλώσσα του παραλήπτη, αλλά τα `subject`/`content` του κάθε
+    // μέλους παράγονται **αλλού** — στον καλούντα του `dispatchNotification`, ανά
+    // συμβάν, και είναι σήμερα ελληνικά για όλα τα 29 συμβάντα.
+    //
+    // Άρα ένας Άγγλος παραλήπτης βλέπει **αγγλικό «You have 2 new notifications»
+    // πάνω από ελληνικές γραμμές**. Είναι βελτίωση έναντι του «όλα ελληνικά», και
+    // **δεν** είναι ολοκληρωμένη μετάφραση. Όποιος κλείσει το υπόλοιπο θα πρέπει
+    // να σβήσει αυτή την άγκυρα — και τότε θα το κάνει **εν γνώσει του**, όχι
+    // ανακαλύπτοντας εκ των υστέρων ότι το είχαμε δηλώσει κλειστό.
+    const english = digestFor([
+      msg({ id: 'a', subject: 'Νέα ζήτηση', language: 'en' }),
+      msg({ id: 'b', subject: 'Νέο ακίνητο', language: 'en' }),
+    ]);
+
+    // Το περιτύλιγμα: αγγλικό.
+    expect(GREEK.test(english.subject)).toBe(false);
+    // Τα μέλη: **αυτούσια**, όπως γεννήθηκαν.
+    expect(english.content).toContain('Νέα ζήτηση');
+    expect(english.html).toContain('Νέο ακίνητο');
+  });
+
+  it('Γ1 🔑 — ΔΥΟ ΓΛΩΣΣΕΣ, ΙΔΙΑ ΔΙΕΥΘΥΝΣΗ ⇒ ΔΥΟ συνόψεις, όχι μία ανάμεικτη', () => {
+    // Ο χρήστης άλλαξε γλώσσα μέσα στη μέρα· η ουρά του κρατά και τα δύο.
+    // Ένα email έχει **ένα** θέμα: αν ενώνονταν, κάποιος θα αποφάσιζε σιωπηλά
+    // ποια γλώσσα κερδίζει — απάντηση που θα εξαρτιόταν από τη σειρά της ουράς.
+    const messages = [
+      msg({ id: 'a', to: 'ίδιος@x.gr', language: 'el' }),
+      msg({ id: 'b', to: 'ίδιος@x.gr', language: 'el' }),
+      msg({ id: 'c', to: 'ίδιος@x.gr', language: 'en' }),
+      msg({ id: 'd', to: 'ίδιος@x.gr', language: 'en' }),
+    ];
+
+    const digests = digestsOf(planEmailDelivery(messages));
+    expect(digests).toHaveLength(2);
+
+    for (const digest of digests) {
+      const entry = digest as Extract<DeliveryPlanEntry, { kind: 'digest' }>;
+      expect(entry.to).toBe('ίδιος@x.gr');
+      // **Εσωτερικά συνεπής**: κάθε μέλος έχει τη γλώσσα της ομάδας του.
+      for (const member of entry.members) {
+        expect(member.language).toBe(entry.language);
+      }
+      // Και το θέμα ακολουθεί τη γλώσσα της ομάδας, όχι της πρώτης εισόδου.
+      expect(GREEK.test(entry.subject)).toBe(entry.language === 'el');
+    }
+  });
+
+  it('Γ2 🔴 — η κλειστή λογιστική ΔΕΝ κουνιέται από τη νέα διάσταση', () => {
+    // Το κλειδί ομαδοποίησης έγινε σύνθετο· ο φρουρός μετρά **μηνύματα**, όχι
+    // ομάδες. Ένα μήνυμα εξακολουθεί να προσγειώνεται σε ακριβώς μία εγγραφή.
+    const messages: PendingEmail[] = [];
+    const recipients = ['a@x.gr', 'b@x.gr'];
+    const languages = ['el', 'en', undefined, 'pseudo', 'el-GR'];
+    for (let index = 0; index < 40; index += 1) {
+      messages.push(msg({
+        id: `m${index}`,
+        to: recipients[index % 2],
+        language: languages[index % languages.length],
+        priority: index % 7 === 0 ? 'urgent' : 'normal',
+        category: index % 5 === 0 ? 'transactional' : 'notification',
+      }));
+    }
+
+    const plan = planEmailDelivery(messages);
+    expect(planCoversEveryMessage(plan, messages)).toBe(true);
+  });
+
+  it('Γ3 🔑 — μήνυμα ΧΩΡΙΣ γλώσσα συμπεριφέρεται ΑΚΡΙΒΩΣ όπως πριν το §8.29', () => {
+    // Καμία migration: κάθε έγγραφο γραμμένο πριν σήμερα δεν έχει το πεδίο.
+    // Αν αυτό αλλάξει συμπεριφορά, η αλλαγή δεν είναι προσθετική.
+    const withoutField = digestFor([msg({ id: 'a' }), msg({ id: 'b' })]);
+    const explicitGreek = digestFor([
+      msg({ id: 'a', language: 'el' }),
+      msg({ id: 'b', language: 'el' }),
+    ]);
+
+    expect(withoutField.subject).toBe(explicitGreek.subject);
+    expect(withoutField.content).toBe(explicitGreek.content);
+    expect(withoutField.html).toBe(explicitGreek.html);
+    expect(withoutField.language).toBe('el');
+  });
+
+  it('Γ4 🔴 — το `pseudo` ΔΕΝ φτάνει ΠΟΤΕ σε email', () => {
+    // Ο επιλογέας της κεφαλίδας το προσφέρει σε περιβάλλον ανάπτυξης. Αν διέρρεε
+    // στο έγγραφο, ο παραλήπτης θα έπαιρνε κείμενο τυλιγμένο σε `[[~~ … ~~]]`.
+    const digest = digestFor([
+      msg({ id: 'a', language: 'pseudo' }),
+      msg({ id: 'b', language: 'pseudo' }),
+    ]);
+
+    expect(digest.language).toBe('el');
+    expect(digest.subject).not.toContain('~~');
+    expect(digest.html).not.toContain('~~');
+  });
+
+  it('Γ5 — ίδια γλώσσα, ΔΥΟ διευθύνσεις ⇒ παραμένουν χωριστές', () => {
+    // Ο διαχωριστής του σύνθετου κλειδιού δεν επιτρέπεται να ενώσει ξένους
+    // παραλήπτες. Η αντίστροφη κατεύθυνση της Γ1.
+    const digests = digestsOf(planEmailDelivery([
+      msg({ id: 'a', to: 'a@x.gr', language: 'en' }),
+      msg({ id: 'b', to: 'a@x.gr', language: 'en' }),
+      msg({ id: 'c', to: 'b@x.gr', language: 'en' }),
+      msg({ id: 'd', to: 'b@x.gr', language: 'en' }),
+    ]));
+
+    expect(digests).toHaveLength(2);
+    expect(new Set(digests.map((d) => (d as Extract<DeliveryPlanEntry, { kind: 'digest' }>).to)).size).toBe(2);
+  });
+});

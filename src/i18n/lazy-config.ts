@@ -14,11 +14,25 @@ const logger = createModuleLogger('i18n-lazy-config');
  */
 
 // Available languages
-export const SUPPORTED_LANGUAGES = ['el', 'en', 'pseudo'] as const;
-export type Language = typeof SUPPORTED_LANGUAGES[number];
+//
+// ⚠️ ADR-777 §8.29: το λεξιλόγιο **μετακόμισε** στο `./languages` και επανεξάγεται
+// από εδώ ώστε οι υπάρχοντες καταναλωτές να μην αλλάξουν. Ο λόγος δεν είναι
+// καθαριότητα: αυτό το αρχείο εκτελεί `import i18n from 'i18next'` στην κορυφή,
+// άρα ο διακομιστής (cron, χωρίς browser) **δεν μπορούσε** να ρωτήσει «ποιες
+// γλώσσες υπάρχουν;» — και θα ξανάγραφε τη λίστα. Δύο χειρόγραφες λίστες που
+// κανείς δεν συγκρίνει είναι το σχήμα που απέκλινε κατά 63 στο CHECK 3.34.
+export {
+  SUPPORTED_LANGUAGES,
+  DEFAULT_LANGUAGE,
+  HUMAN_LANGUAGES,
+  PSEUDO_LANGUAGE,
+  isHumanLanguage,
+  resolveHumanLanguage,
+  type Language,
+  type HumanLanguage,
+} from './languages';
 
-// Default language (SSoT)
-export const DEFAULT_LANGUAGE: Language = 'el';
+import { DEFAULT_LANGUAGE, type Language } from './languages';
 
 // Available namespaces
 export const SUPPORTED_NAMESPACES = [
@@ -202,7 +216,9 @@ async function loadTranslations(language: Language, namespace: Namespace, forceR
  * γράφει `el:ns` ενώ το bundle μπαίνει σε `en:ns`.
  */
 export async function loadNamespace(namespace: Namespace, language?: Language, forceReload = false) {
-  const currentLanguage = (language || i18n.language || 'el') as Language;
+  // 🧹 ADR-777 §8.29: ήταν σκέτο `'el'` — δεύτερη προεπιλογή δίπλα στο
+  // `DEFAULT_LANGUAGE`, ελεύθερη να αποκλίνει από αυτό χωρίς να το μάθει κανείς.
+  const currentLanguage = (language || i18n.language || DEFAULT_LANGUAGE) as Language;
 
   if (!forceReload && isBundleComplete(currentLanguage, namespace)) {
     return;
@@ -343,7 +359,7 @@ export const CRITICAL_NAMESPACES: readonly Namespace[] = [
  * Preload critical namespaces
  * 🏢 ENTERPRISE: These namespaces are loaded at app startup for instant availability
  */
-export async function preloadCriticalNamespaces(language: Language = 'el') {
+export async function preloadCriticalNamespaces(language: Language = DEFAULT_LANGUAGE) {
   await Promise.all(
     CRITICAL_NAMESPACES.map(namespace => loadNamespace(namespace, language))
   );

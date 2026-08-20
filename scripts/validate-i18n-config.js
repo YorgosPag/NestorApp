@@ -14,6 +14,20 @@ const {
 } = require('./_shared/i18n-governance');
 
 const lazyConfigPath = path.join(__dirname, '..', 'src', 'i18n', 'lazy-config.ts');
+/**
+ * 🔴 **ΤΟ `SUPPORTED_LANGUAGES` ΜΕΤΑΚΟΜΙΣΕ** (ADR-777 §8.29) — και ο έλεγχος έπρεπε
+ * να μετακομίσει μαζί του.
+ *
+ * Ο `parseConstArray` είναι **regex, όχι AST**: διαβάζει τον *ορισμό* μιας σταθεράς
+ * μέσα σε **ένα** αρχείο και **δεν ακολουθεί re-export**. Το `lazy-config.ts` πλέον
+ * επανεξάγει τη σταθερά αντί να τη δηλώνει, οπότε ο parser έβρισκε **κενό σύνολο**
+ * και η πύλη ανέφερε «Missing: el, en, pseudo» — δηλαδή ότι λείπουν **όλες** οι
+ * γλώσσες, τη στιγμή που δεν έλειπε καμία.
+ *
+ * ⚠️ Το `SUPPORTED_NAMESPACES` **δεν** μετακόμισε και εξακολουθεί να δηλώνεται στο
+ * `lazy-config.ts` — γι' αυτό τα δύο μονοπάτια είναι ξεχωριστά αντί για ένα.
+ */
+const languagesPath = path.join(__dirname, '..', 'src', 'i18n', 'languages.ts');
 const namespaceLoadersPath = path.join(__dirname, '..', 'src', 'i18n', 'namespace-loaders.ts');
 const runtimeConfigPath = path.join(__dirname, '..', 'src', 'i18n', 'config.ts');
 const generatedTypesPath = path.join(__dirname, '..', 'src', 'types', 'i18n.ts');
@@ -117,7 +131,7 @@ function main() {
     // όχι locales-με-αρχεία. Σύγκριση με SUPPORTED_LANGUAGES, όχι SUPPORTED_LOCALES.
     ...driftError(
       'SUPPORTED_LANGUAGES drift',
-      compareSets(SUPPORTED_LANGUAGES, parseConstArray(lazyConfigPath, 'SUPPORTED_LANGUAGES'))
+      compareSets(SUPPORTED_LANGUAGES, parseConstArray(languagesPath, 'SUPPORTED_LANGUAGES'))
     ),
     ...driftError(
       `SUPPORTED_NAMESPACES drift vs ${LOCALES_DIR}\\el`,

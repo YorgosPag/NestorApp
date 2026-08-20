@@ -8,7 +8,9 @@ import { remapLegacyTranslationKey, getCompatNamespaces, getExplicitNamespace } 
 import { getBundleState, isBundleComplete } from '../bundle-registry';
 
 import { createModuleLogger } from '@/lib/telemetry';
-import { safeSetItem, STORAGE_KEYS } from '@/lib/storage';
+// ⚠️ ADR-777 §8.29 (Π9): διαγράφοντας το `changeLanguage` έφυγε και ο **μοναδικός**
+// καταναλωτής του `safeSetItem` εδώ. Η εγγραφή στο `localStorage` ζει πλέον
+// αποκλειστικά στο `useLanguagePreference` — ένα σημείο, όχι δύο.
 const logger = createModuleLogger('useTranslation');
 
 /**
@@ -240,21 +242,20 @@ export const useTranslation = (namespace?: string | readonly string[]) => {
     translate: (key: string, options?: TOptions) => t(key, options),
     // Current language
     currentLanguage: i18n.language,
-    // Change language function with namespace loading
-    changeLanguage: async (lng: string) => {
-      try {
-        if (allNamespacesToLoad.length > 0) {
-          await Promise.all(
-            allNamespacesToLoad.map((ns) => loadNamespace(ns as Namespace, lng as Language))
-          );
-        }
-
-        await i18n.changeLanguage(lng);
-        safeSetItem(STORAGE_KEYS.PREFERRED_LANGUAGE, lng);
-      } catch (error) {
-        logger.error('Failed to change language', { error });
-      }
-    },
+    // 🌐 ADR-777 §8.29 — **το `changeLanguage` ΔΙΑΓΡΑΦΗΚΕ από εδώ. Χρησιμοποίησε
+    //    το `useLanguagePreference`.**
+    //
+    // Έκανε προφόρτωση namespaces → `i18n.changeLanguage` → `localStorage`, και
+    // **σταματούσε εκεί**: η επιλογή δεν έφτανε ποτέ στη βάση, άρα ο διακομιστής
+    // (cron) έγραφε τα αυτόματα email πάντα στα ελληνικά. Μετά τη μεταφορά του
+    // μοναδικού καλούντα (`PreferencesPageContent`) στον ιδιοκτήτη, έμεινε με
+    // **μηδέν καλούντες** — μετρημένο.
+    //
+    // ⚠️ **Δεν διαγράφηκε επειδή ήταν νεκρό· διαγράφηκε επειδή ήταν ΛΑΘΟΣ και
+    // βολικό.** Ένας νεκρός δρόμος που φαίνεται σωστός είναι χειρότερος από
+    // απουσία: ο επόμενος θα το έβρισκε με συμπλήρωση κώδικα, θα το καλούσε, και
+    // θα ξαναγεννούσε το ίδιο μισό ελάττωμα — με όλα τα tests πράσινα, γιατί η
+    // οθόνη **όντως** αλλάζει γλώσσα.
     // 🏢 ENTERPRISE: Loading state for this specific namespace (not just ready)
     // This ensures re-render when lazy-loaded namespace becomes available
     isNamespaceReady: ready && namespaceLoaded,

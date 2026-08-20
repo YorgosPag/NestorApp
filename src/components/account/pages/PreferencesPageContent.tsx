@@ -33,10 +33,20 @@ import { useLayoutClasses } from '@/hooks/useLayoutClasses';
 import { useIconSizes } from '@/hooks/useIconSizes';
 import { useTypography } from '@/hooks/useTypography';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
-import { SUPPORTED_LANGUAGES, type Language } from '@/i18n/lazy-config';
+import { useLanguagePreference } from '@/i18n/hooks/useLanguagePreference';
+import {
+  HUMAN_LANGUAGES,
+  DEFAULT_LANGUAGE,
+  isHumanLanguage,
+  type Language,
+} from '@/i18n/languages';
 
 export function PreferencesPageContent() {
-  const { t, i18n, changeLanguage } = useTranslation(COMMON_NAMESPACES);
+  const { t, i18n } = useTranslation(COMMON_NAMESPACES);
+  // 🌐 ADR-777 §8.29 — ο επιλογέας γράφει πλέον **και στη βάση**. Πριν, η επιλογή
+  // ζούσε μόνο στο πρόγραμμα περιήγησης και ο διακομιστής (cron) δεν μπορούσε να τη
+  // μάθει· τα αυτόματα email έφευγαν πάντα ελληνικά.
+  const { setLanguage } = useLanguagePreference(COMMON_NAMESPACES);
   const { theme, setTheme } = useTheme();
   const colors = useSemanticColors();
   const borders = useBorderTokens();
@@ -45,7 +55,7 @@ export function PreferencesPageContent() {
   const typography = useTypography();
 
   const handleLanguageChange = async (value: string) => {
-    await changeLanguage(value as Language);
+    await setLanguage(value as Language);
   };
 
   return (
@@ -68,14 +78,21 @@ export function PreferencesPageContent() {
             {t('account.preferences.language')}
           </Label>
           <Select
-            value={i18n.language}
+            // ⚠️ Το `i18n.language` μπορεί να είναι `pseudo` (επιλογέας κεφαλίδας σε
+            // περιβάλλον ανάπτυξης) — τιμή που **δεν** υπάρχει στη λίστα από κάτω. Το
+            // Radix Select με τιμή εκτός συνόλου δείχνει **κενό πλαίσιο**, δηλαδή ο
+            // χρήστης δεν βλέπει σε ποια γλώσσα βρίσκεται. Πέφτουμε στην προεπιλογή.
+            value={isHumanLanguage(i18n.language) ? i18n.language : DEFAULT_LANGUAGE}
             onValueChange={handleLanguageChange}
           >
             <SelectTrigger id="language" className="w-full sm:w-64">
               <SelectValue placeholder={t('account.preferences.selectLanguage')} />
             </SelectTrigger>
             <SelectContent>
-              {SUPPORTED_LANGUAGES.filter(lang => lang !== 'pseudo').map((lang) => (
+              {/* 🌐 §8.29: **παραγόμενη** λίστα — ήταν `SUPPORTED_LANGUAGES.filter(≠'pseudo')`,
+                  δηλαδή η αφαίρεση γραμμένη εδώ. Τώρα ζει μία φορά στο `i18n/languages`
+                  και τη μοιράζονται οθόνη και διακομιστής. */}
+              {HUMAN_LANGUAGES.map((lang) => (
                 <SelectItem key={lang} value={lang}>
                   {lang === 'el' ? t('account.preferences.languageGreek') : 'English'}
                 </SelectItem>

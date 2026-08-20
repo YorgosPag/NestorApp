@@ -53,6 +53,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { createModuleLogger } from '@/lib/telemetry';
+import { emailTextsFor } from '@/server/comms/email-texts';
 import {
   sendThroughChain,
   type ChainOutcome,
@@ -144,13 +145,21 @@ function asString(value: unknown): string | null {
  * χωρίς `category` **δεν** είναι ειδοποίηση (αλλιώς ξένα μηνύματα με δικό τους HTML
  * θα κατέληγαν μέσα σε σύνοψη και το πρότυπό τους θα πεταγόταν).
  */
-function queueMetadata(data: QueuedEmail): { priority: string; category: string } {
+function queueMetadata(
+  data: QueuedEmail,
+): { priority: string; category: string; language: string | undefined } {
   const raw = typeof data.metadata === 'object' && data.metadata !== null
     ? (data.metadata as Record<string, unknown>)
     : {};
   return {
     priority: asString(raw.priority) ?? MESSAGE_PRIORITIES.NORMAL,
     category: asString(raw.category) ?? MESSAGE_CATEGORIES.TRANSACTIONAL,
+    // 🌐 §8.29 — **καμία προεπιλογή εδώ, επίτηδες.** Τα δύο από πάνω παίρνουν
+    // προεπιλογή γιατί κρίνουν *αν* συναθροίζεται το μήνυμα· η γλώσσα κρίνει *τι
+    // λέει*, και η στένωση ανήκει σε **ένα** σημείο (`resolveHumanLanguage` στον
+    // σχεδιαστή). Μια δεύτερη προεπιλογή εδώ θα ήταν σιωπηλή ευκαιρία απόκλισης:
+    // αρκεί κάποιος να τη γράψει `'en'` και ο αγωγός θα διαφωνούσε με τον σχεδιαστή.
+    language: asString(raw.language) ?? undefined,
   };
 }
 
@@ -289,10 +298,13 @@ function toPendingEmail(doc: FlushableDoc): PendingEmail {
   return {
     id: doc.id,
     to: asString(data.to) ?? '',
-    subject: asString(data.subject) ?? 'Ειδοποίηση',
+    // 🌐 §8.29: ήταν σκληρογραμμένο `'Ειδοποίηση'`. Ακολουθεί τη γλώσσα του
+    // **ίδιου** του μηνύματος, όχι μια καθολική επιλογή.
+    subject: asString(data.subject) ?? emailTextsFor(meta.language).fallbackSubject,
     content: asString(data.content) ?? '',
     priority: meta.priority,
     category: meta.category,
+    language: meta.language,
   };
 }
 
@@ -350,6 +362,11 @@ async function deliverDigest(
         // το «γιατί δεν έλαβα ξεχωριστό email;» δεν απαντιέται από τη βάση.
         digestOf: entry.to,
         digestSize: docs.length,
+        // 🌐 §8.29 — **η διεύθυνση δεν αρκεί πια για ταυτότητα σύνοψης.** Ο ίδιος
+        // παραλήπτης μπορεί να λάβει δύο συνόψεις στο ίδιο πέρασμα αν άλλαξε γλώσσα
+        // μέσα στη μέρα· χωρίς αυτό το πεδίο, τα έγγραφα των δύο ομάδων είναι
+        // δυσδιάκριτα στη βάση και το «γιατί δύο;» δεν απαντιέται.
+        digestLanguage: entry.language,
       }),
     ),
   );
@@ -450,7 +467,8 @@ async function deliverOne(
 
   const outcome = await sendThroughChain(chain, {
     to,
-    subject: asString(data.subject) ?? 'Ειδοποίηση',
+    // 🌐 §8.29: **τρίτο** αντίγραφο της ίδιας ελληνικής εφεδρείας, τώρα από το SSoT.
+    subject: asString(data.subject) ?? emailTextsFor(queueMetadata(data).language).fallbackSubject,
     text: asString(data.content) ?? '',
     from: asString(data.from) ?? undefined,
   });
