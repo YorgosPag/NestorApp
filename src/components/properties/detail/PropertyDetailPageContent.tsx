@@ -43,8 +43,7 @@ import { PropertyDetailSurface } from '@/features/property-detail-surface/Proper
 import { usePropertiesViewerState } from '@/hooks/usePropertiesViewerState';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { ENTITY_ROUTES } from '@/lib/routes';
-import { PageLoadingState } from '@/core/states';
-import { NAVIGATION_ENTITIES } from '@/components/navigation/config';
+import { StaticPageLoading } from '@/core/states';
 import { useSemanticColors } from '@/ui-adapters/react/useSemanticColors';
 import '@/lib/design-system';
 
@@ -116,21 +115,40 @@ export function PropertyDetailPageContent({
 
   return (
     <main className="flex min-h-0 flex-1 flex-col gap-4 p-4">
-      <nav>
-        <Link
-          href={ENTITY_ROUTES.properties.list}
-          className={`inline-flex items-center gap-1 text-sm font-medium ${colors.text.muted} hover:text-foreground`}
-        >
-          {t(`${NS}:detailPage.back`)}
-        </Link>
-      </nav>
+      {/*
+        🔴 **ΟΣΟ ΔΕΝ ΞΕΡΟΥΜΕ, Η ΣΕΛΙΔΑ ΔΕΝ ΛΕΕΙ ΤΙΠΟΤΑ — ΚΑΙ ΕΙΝΑΙ ΜΕΤΡΗΣΗ.**
 
-      {state.kind === 'loading' && (
-        <PageLoadingState
-          icon={NAVIGATION_ENTITIES.property.icon}
-          message={t('properties:page.loading')}
-          layout="contained"
-        />
+        Το `/properties/[id]` έχει **δυναμικό τμήμα**, άρα δεν προαποδίδεται και
+        το όριο αναστολής **δεν** πέφτει στο `fallback`: ο διακομιστής αποδίδει
+        αυτό εδώ. Τα `properties`/`properties-detail` όμως υπάρχουν στο i18n shell
+        slice **κομμένα** (το `properties-detail` με **μηδέν** κλειδιά, ADR-744),
+        άρα κάθε `t()` που τρέχει σε αυτό το καρέ φεύγει **ωμό** στο HTML.
+
+        Μετρημένο στο σερβιρισμένο HTML: `detailPage.back` · `page.loading`.
+
+        🔑 **Το `/listing/[id]` είναι ΕΠΙΣΗΣ δυναμικό και ΕΙΝΑΙ καθαρό** — επειδή
+        το `search-results` είναι **ΟΛΟΚΛΗΡΟ** στο slice. Η ίδια θεραπεία εδώ
+        (`properties` + `properties-detail` ολόκληρα) μετρήθηκε: **+75.482 bytes,
+        +33%** στο slice **κάθε** διαδρομής — ακριβώς αντίθετη από τον λόγο ύπαρξης
+        του ADR-744 (−37%). Απορρίφθηκε με αριθμό, όχι με γούστο.
+
+        Άρα το πρώτο καρέ δείχνει το **ίδιο** `StaticPageLoading` που μόλις έδειχνε
+        το όριο αναστολής: μηδέν `t()`, μηδέν ωμά κλειδιά, και **καμία οπτική
+        μετάβαση** — ο άνθρωπος δεν βλέπει καν ότι άλλαξε component. Ο σύνδεσμος
+        επιστροφής εμφανίζεται **μαζί** με το περιεχόμενο, γιατί πριν από αυτό δεν
+        υπάρχει τίποτα από το οποίο να επιστρέψεις.
+      */}
+      {state.kind === 'loading' && <StaticPageLoading />}
+
+      {state.kind !== 'loading' && (
+        <nav>
+          <Link
+            href={ENTITY_ROUTES.properties.list}
+            className={`inline-flex items-center gap-1 text-sm font-medium ${colors.text.muted} hover:text-foreground`}
+          >
+            {t(`${NS}:detailPage.back`)}
+          </Link>
+        </nav>
       )}
 
       {state.kind === 'absent' && (
