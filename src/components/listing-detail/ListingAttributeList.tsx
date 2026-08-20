@@ -32,10 +32,13 @@ import {
   listingAttributeLedger,
   type ListingAttributeKey,
 } from '@/lib/listings/listing-disclosure';
-import {
-  PROPERTY_TYPE_I18N_KEYS,
-  normalizePropertyType,
-} from '@/constants/property-types';
+import { PROPERTY_TYPE_I18N_KEYS } from '@/constants/property-types';
+// 🔴 **§8.33: ο δείκτης έδειχνε σε ΑΝΥΠΑΡΚΤΗ εξαγωγή.** Η διάσπαση του §8.32
+// (`property-types.ts` = μοντέλο ⇄ `property-type-aliases.ts` = **αναγνώριση**)
+// μετακίνησε τον `normalizePropertyType`, και αυτή η εισαγωγή έμεινε πίσω. Δεν ήταν
+// σφάλμα χρόνου εκτέλεσης: το module **δεν μεταγλωττιζόταν**, οπότε ολόκληρη η
+// **δημόσια** σελίδα `/listing/[id]` απαντούσε **500** — επαληθευμένο ζωντανά.
+import { normalizePropertyType } from '@/constants/property-type-aliases';
 import type { PublicListing } from '@/types/public-listing';
 
 interface ListingAttributeListProps {
