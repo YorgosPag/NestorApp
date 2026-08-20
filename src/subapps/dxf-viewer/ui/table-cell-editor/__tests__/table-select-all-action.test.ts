@@ -9,7 +9,7 @@
  * @see ui/table-cell-editor/table-select-all-action.ts — η κεφαλίδα με το σκεπτικό
  */
 
-import { selectWholeTable } from '../table-select-all-action';
+import { selectWholeTable, selectWholeTableFromCorner } from '../table-select-all-action';
 import {
   __resetTableCellCursorStoreForTests,
   getTableCellCursor,
@@ -21,9 +21,10 @@ import {
   isTableWholeGridRange,
   resolveTableSelectionBounds,
 } from '../../../bim/table/table-cell-range';
-import type { PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
+import type { CellSpan, PersistedTableModel, TableColumn, TableRow } from '../../../types/table';
+import type { TableEntity } from '../../../types/table-entity';
 
-function buildModel(rowCount: number, colCount: number) {
+function buildModel(rowCount: number, colCount: number, merges: readonly CellSpan[] = []) {
   const columns: TableColumn[] = Array.from({ length: colCount }, (_, c) => ({
     id: `c${c + 1}`,
     sizing: { kind: 'fixed', widthMm: 10 },
@@ -35,8 +36,17 @@ function buildModel(rowCount: number, colCount: number) {
     rowClass: 'data',
     heightMm: 6,
   }));
-  const persisted: PersistedTableModel = { columns, rows, cells: [], merges: [] };
+  const persisted: PersistedTableModel = { columns, rows, cells: [], merges };
   return resolveTableModel(persisted);
+}
+
+/**
+ * Το ελάχιστο δοχείο που ζητά ο γραφέας **χειρονομίας**: ταυτότητα + μοντέλο. Ό,τι άλλο κουβαλά
+ * μια `TableEntity` (γεωμετρία, στυλ, επίπεδο) δεν το ρωτά ποτέ — και ένα πλήρες στήσιμο θα
+ * έκρυβε ακριβώς αυτό.
+ */
+function buildEntity(rowCount: number, colCount: number, merges: readonly CellSpan[] = []) {
+  return { id: 'tbl-1', model: buildModel(rowCount, colCount, merges) } as unknown as TableEntity;
 }
 
 beforeEach(() => {
@@ -59,8 +69,13 @@ describe('selectWholeTable', () => {
   /**
    * 🔴 Μετρημένο στο Excel (04/08): με ενεργό το `A9`, μετά την «επιλογή όλων» το πλαίσιο
    * ονόματος γράφει ακόμα **`A9`**. Το `Ctrl+A` επιλέγει, δεν πλοηγεί.
+   *
+   * ⚠️ **§68.9 — αυτή η άγκυρα ΔΕΝ ακυρώθηκε, οριοθετήθηκε.** Ισχύει για την **εντολή**· η
+   * **χειρονομία** (πάτημα στη γωνία) κάνει το αντίθετο, και το φυλάει το describe από κάτω.
+   * Οι δύο μαζί είναι ο λόγος που οι γραφείς είναι δύο: μια «απλοποίηση» σε έναν θα έσπαγε
+   * **σιωπηλά** τη μία από τις δύο συμπεριφορές.
    */
-  it('🔴 ΔΕΝ μετακινεί το ενεργό κελί', () => {
+  it('🔴 ΔΕΝ μετακινεί το ενεργό κελί (η ΕΝΤΟΛΗ — `Ctrl+A`)', () => {
     setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
     const before = getTableCellCursor()?.position;
 
@@ -93,5 +108,72 @@ describe('selectWholeTable', () => {
     expect(selectWholeTable(buildModel(0, 3))).toBeNull();
     expect(selectWholeTable(buildModel(3, 0))).toBeNull();
     expect(getTableCellCursor()?.selection).toBeFalsy();
+  });
+});
+
+/**
+ * 🔴 ADR-739 §68.9 — **Ο ΓΡΑΦΕΑΣ ΤΗΣ ΧΕΙΡΟΝΟΜΙΑΣ**: όλα τα κελιά **και** ενεργό κελί στο `A1`.
+ *
+ * Ο ιδιοκτήτης το μέτρησε στο Excel (20/08, δύο στιγμιότυπα). Η μέτρηση του §43 («το ενεργό
+ * κελί δεν μετακινείται») ήταν σωστή **για το `Ctrl+A`** και γενικεύτηκε στο πάτημα επειδή οι
+ * πόρτες μοιράζονταν γραφέα — δες την κεφαλίδα του module.
+ */
+describe('🔴 §68.9 selectWholeTableFromCorner — η ΧΕΙΡΟΝΟΜΙΑ', () => {
+  it('🔴 μετακινεί το ενεργό κελί στο A1 (Excel: το Name Box γράφει A1)', () => {
+    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+
+    selectWholeTableFromCorner(buildEntity(4, 3));
+
+    const position = getTableCellCursor()?.position;
+    expect(position?.rowId).toBe('r1');
+    expect(position?.colId).toBe('c1');
+  });
+
+  /**
+   * 🔴 **Η ΣΕΙΡΑ ΕΙΝΑΙ ΤΟ ΣΥΜΒΟΛΑΙΟ.** Το `setTableCellCursor` **διαλύει** κάθε επιλογή
+   * (τεκμηριωμένο στο store), άρα η επιλογή γράφεται **μετά**. Ανάποδα, θα έσβηνε τη στιγμή που
+   * γεννιέται — και το test θα έβλεπε ενεργό κελί σωστό με **καμία** επιλογή, δηλαδή ένα κουμπί
+   * «επιλογή όλων» που δεν επιλέγει τίποτα.
+   */
+  it('🔴 η επιλογή ΕΠΙΒΙΩΝΕΙ της μετακίνησης του δρομέα (σειρά: δρομέας → επιλογή)', () => {
+    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+    const model = buildModel(4, 3);
+
+    const written = selectWholeTableFromCorner(buildEntity(4, 3));
+
+    expect(written).toEqual({ firstRow: 0, lastRow: 3, firstCol: 0, lastCol: 2 });
+    const selection = getTableCellCursor()?.selection;
+    expect(selection).toBeTruthy();
+    expect(isTableWholeGridRange(model, resolveTableSelectionBounds(model, selection!)!)).toBe(true);
+  });
+
+  /**
+   * 🔴 **§29.15 σε μικρογραφία, και γιατί ΔΕΝ ξανασυμβαίνει εδώ.**
+   *
+   * Εκείνο πλήρωσε ότι το `selectWholeAxis` έβαλε δρομέα στο `B1`, **καλυμμένο** από συγχωνευμένο
+   * τίτλο ⇒ `overlay` → `null` ⇒ ο φύλακας του κλειδώματος αποπροσαρτήθηκε μέσα στο ίδιο commit.
+   * Το `A1` **δεν μπορεί** να είναι καλυμμένο: καμία συγχώνευση δεν ξεκινά πριν από το
+   * πάνω-αριστερό κελί. Εδώ ο τίτλος απλώνεται σε **όλες** τις στήλες — ακριβώς το σχήμα του
+   * §29.15 — και ο δρομέας προσγειώνεται στην **άγκυρα**, όχι σε καλυμμένο κελί.
+   */
+  it('🔴 συγχωνευμένος τίτλος A1:C1 ⇒ ο δρομέας πάει στην ΑΓΚΥΡΑ, ποτέ σε καλυμμένο κελί', () => {
+    setTableCellCursor('tbl-1', tableCursorAt('r3', 'c2'), 'nav');
+    const merges: readonly CellSpan[] = [
+      { anchorRowId: 'r1', anchorColId: 'c1', rowSpan: 1, colSpan: 3 },
+    ];
+
+    selectWholeTableFromCorner(buildEntity(4, 3, merges));
+
+    expect(getTableCellCursor()?.position).toMatchObject({ rowId: 'r1', colId: 'c1' });
+  });
+
+  it('εκφυλισμένο μοντέλο ⇒ `null`, ΚΑΜΙΑ επιλογή και ΚΑΜΙΑ μετακίνηση', () => {
+    setTableCellCursor('tbl-1', tableCursorAt('r1', 'c1'), 'nav');
+    const before = getTableCellCursor()?.position;
+
+    expect(selectWholeTableFromCorner(buildEntity(0, 3))).toBeNull();
+
+    expect(getTableCellCursor()?.selection).toBeFalsy();
+    expect(getTableCellCursor()?.position).toEqual(before);
   });
 });

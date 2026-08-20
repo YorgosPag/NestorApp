@@ -61,7 +61,7 @@
 import { resolveTableModel } from '../../bim/table/table-model-helpers';
 import { tableCursorAt } from '../../bim/table/table-cell-navigation';
 import { setTableCellCursor } from '../../state/table-cell-cursor-store';
-import { selectWholeTable } from './table-select-all-action';
+import { selectWholeTableFromCorner } from './table-select-all-action';
 import { tableContextMenuMovesSelection } from './table-range-menu-target';
 import type { TableCellRef } from '../../bim/table/table-cell-range';
 import type { TableCellCursorState } from '../../state/table-cell-cursor-store';
@@ -145,11 +145,17 @@ export function installTableCellMenuSelection(
  * «ήταν ήδη έτσι» που να δικαιολογεί σιωπή — το `Ctrl+A` δεν ρωτά ούτε αυτό. Και το ίδιο το
  * §43 το μέτρησε στο Excel: το δεξί κλικ εκεί **χάνει** την επιλογή σου, ό,τι κι αν ήταν.
  *
- * ⚠️ **Καμία δέσμευση προχείρου**, και είναι μετρημένο: το `Ctrl+A` δεν δεσμεύει, γιατί η
- * επιλογή όλων **δεν μετακινεί το ενεργό κελί** (δες {@link selectWholeTable}) — άρα το
- * πρόχειρο μένει έγκυρο εκεί που το άφησε ο χρήστης. Μια δέσμευση εδώ θα έκανε τη γωνία να
- * συμπεριφέρεται **αλλιώς από το ίδιο της το πλήκτρο**.
+ * ## 🔴 §68.9 — ΤΟ ΕΝΕΡΓΟ ΚΕΛΙ ΠΑΕΙ ΣΤΟ `A1`, ΚΑΙ ΤΟ ΠΛΗΚΤΡΟ ΔΕΝ ΤΟ ΚΑΝΕΙ
+ * Ο γραφέας είναι πλέον το {@link selectWholeTableFromCorner}, όχι το `selectWholeTable`: το
+ * πάτημα είναι **χειρονομία** και ορίζει άγκυρα, ενώ το `Ctrl+A` είναι **εντολή** και δεν
+ * πλοηγεί. Το σκεπτικό — και η απόδειξη από τον διπλανό κλάδο των ζωνών — ζει εκεί.
+ *
+ * ⚠️ **Καμία δέσμευση προχείρου παρ' όλα αυτά.** Θα φαινόταν αντίφαση τώρα που το ενεργό κελί
+ * **όντως** κουνιέται, αλλά δεν είναι: όσο υπάρχει ζωντανή γραφή, το `<textarea>` σκεπάζει το
+ * κελί του και το πάτημα στη **γωνία** πέφτει έξω από αυτό — ο δρομέας μετακινείται, το
+ * πρόχειρο **σβήνεται μαζί** από το `setTableCellCursor`. Το ίδιο ισχύει για την **εντολή** και
+ * για το **αριστερό** κλικ, οπότε οι τρεις πόρτες συμφωνούν· δες §68.9 για το ανοιχτό σημείο.
  */
 export function installTableCornerMenuSelection(entity: TableEntity): void {
-  selectWholeTable(resolveTableModel(entity.model));
+  selectWholeTableFromCorner(entity);
 }

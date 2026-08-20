@@ -20,6 +20,8 @@
  * @see ui/table-cell-editor/table-select-all-action.ts — ο ΕΝΑΣ γραφέας
  */
 
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import React, { useRef } from 'react';
 import { act, render } from '@testing-library/react';
 import { buildTableEntity } from '../../../bim/table/build-table-entity';
@@ -37,7 +39,7 @@ import {
   useTableCellCursor,
 } from '../../../state/table-cell-cursor-store';
 import { useTableCellPointer } from '../use-table-cell-pointer';
-import { selectWholeTable } from '../table-select-all-action';
+import { selectWholeTable, selectWholeTableFromCorner } from '../table-select-all-action';
 import { resolveTableModel } from '../../../bim/table/table-model-helpers';
 import {
   isTableWholeGridRange,
@@ -59,16 +61,17 @@ function CornerHarness({ entity }: { readonly entity: TableEntity }): React.Reac
     containerRef,
     transformRef,
     onSelectTo: jest.fn(),
-    // 🔑 **Η ΙΔΙΑ γραμμή με την παραγωγή.** Το `useTableRangeActions.selectAll` κάνει ακριβώς
-    // αυτό (μετά τον φύλακα «υπάρχει δρομέας;», που εδώ ισχύει εξ ορισμού). Δεν είναι δεύτερη
-    // υλοποίηση: ο ΕΝΑΣ γραφέας είναι το `selectWholeTable` και τον καλούν και οι δύο.
+    // 🔑 **Η ΙΔΙΑ γραμμή με την παραγωγή** — δες το σχόλιο μέσα στον χειριστή.
     //
     // 🔴 §66 — το πάτημα στη γωνία **οπλίζει και τη μετακίνηση**. Εδώ δεν στήνεται, επίτηδες:
     // αυτό το αρχείο φυλάει ότι το κλικ φτάνει στην **επιλογή**, και η μετακίνηση έχει το δικό
     // της δίχτυ (`table-move-drag`). Ένα harness που έκανε και τα δύο θα άφηνε ασαφές ποιο από
     // τα δύο έσπασε όταν κοκκινίσει.
     onCornerPress: () => {
-      selectWholeTable(resolveTableModel(entity.model));
+      // 🔴 §68.9 — **η ίδια γραμμή με την παραγωγή**: το `onCornerPress` του
+      // `useTableCellDoubleClickEditor` καλεί ακριβώς αυτό. Ήταν `selectWholeTable` όσο η γωνία
+      // κληρονομούσε τον κανόνα του `Ctrl+A`· δες την κεφαλίδα του γραφέα.
+      selectWholeTableFromCorner(entity);
     },
     onCommitPending: jest.fn(),
   });
@@ -126,14 +129,40 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
   });
 
   /**
-   * 🔴 Η **μισή προδιαγραφή**, μετρημένη στο Excel (04/08): με ενεργό το `A9`, μετά την
-   * «επιλογή όλων» το πλαίσιο ονόματος εξακολουθεί να γράφει **`A9`**. Το `Ctrl+A` επιλέγει,
-   * δεν πλοηγεί — και η γωνία είναι η ίδια εντολή, άρα οφείλει την ίδια συμπεριφορά.
+   * 🔴 **§68.9 (20/08) — Η ΑΓΚΥΡΑ ΑΝΤΙΣΤΡΑΦΗΚΕ: Η ΜΕΤΡΗΣΗ ΗΤΑΝ ΤΟΥ ΛΑΘΟΥΣ ΧΕΙΡΟΝΟΜΙΑΣ.**
+   *
+   * Έλεγε «*το ΕΝΕΡΓΟ ΚΕΛΙ δεν μετακινείται (Excel: το Name Box μένει στο A9)*», επικαλούμενη
+   * μέτρηση της 04/08. Η μέτρηση ήταν **σωστή** — αλλά αφορούσε το **`Ctrl+A`**, και μετά
+   * γενικεύτηκε στο πάτημα επειδή οι δύο πόρτες μοιράζονταν γραφέα. Ο ιδιοκτήτης το μέτρησε
+   * ξανά στο Excel (20/08, δύο στιγμιότυπα): το πάτημα στο τετραγωνάκι αφήνει το πλαίσιο
+   * ονόματος στο **`A1`**.
+   *
+   * 🔑 Και η απόδειξη ήταν ήδη **μέσα στο σύστημα**: ο διπλανός κλάδος του ίδιου `mousedown`
+   * (`selectWholeAxis`) μετακινεί το ενεργό κελί στην αρχή του άξονα, με γραμμένη αιτιολογία
+   * «όπως στο Excel». Η γωνία είναι η ίδια κλάση χειρονομίας — απλώς στα δύο άκρα μαζί.
    */
-  it('🔴 το ΕΝΕΡΓΟ ΚΕΛΙ δεν μετακινείται (Excel: το Name Box μένει στο A9)', () => {
-    const before = getTableCellCursor()?.position;
+  it('🔴 §68.9 το ΕΝΕΡΓΟ ΚΕΛΙ πάει στο A1 (Excel: το Name Box γράφει A1)', () => {
+    // `beforeEach`: ενεργό το κελί (γραμμή 3, στήλη B) — ρητά **όχι** το A1.
+    expect(getTableCellCursor()?.position.rowId).not.toBe(entity.model.rows[0].id);
 
     pressAt(tableIndicatorCornerScreenPoint(entity));
+
+    const position = getTableCellCursor()?.position;
+    expect(position?.rowId).toBe(entity.model.rows[0].id);
+    expect(position?.colId).toBe(entity.model.columns[0].id);
+  });
+
+  /**
+   * 🔴 **Η ΑΛΛΗ ΜΙΣΗ ΠΡΟΔΙΑΓΡΑΦΗ, ΚΑΙ Ο ΛΟΓΟΣ ΠΟΥ ΟΙ ΔΥΟ ΓΡΑΦΕΙΣ ΕΙΝΑΙ ΔΥΟ.**
+   *
+   * Η μέτρηση της 04/08 **δεν ακυρώθηκε** — μετακόμισε εκεί που ισχύει. Το `Ctrl+A` εξακολουθεί
+   * να επιλέγει χωρίς να πλοηγεί, και αυτό το φυλάει το `table-select-all-action.test.ts`. Αν
+   * κάποιος «απλοποιήσει» τους δύο γραφείς σε έναν, **ένα από τα δύο** θα σπάσει σιωπηλά.
+   */
+  it('🔴 §68.9 η ΕΝΤΟΛΗ (Ctrl+A) δεν ακολουθεί: ο γραφέας της αφήνει το ενεργό κελί ήσυχο', () => {
+    const before = getTableCellCursor()?.position;
+
+    selectWholeTable(resolveTableModel(entity.model));
 
     expect(getTableCellCursor()?.position).toEqual(before);
   });
@@ -186,14 +215,77 @@ describe('🔴 ADR-739 §43 — το τετραγωνάκι της γωνίας 
   });
 
   /**
-   * 🔴 §43 — **η μισή προδιαγραφή ισχύει και για το δεξί**: η «επιλογή όλων» δεν πλοηγεί. Το
-   * ενεργό κελί μένει εκεί που ήταν (`beforeEach`: γραμμή 3, στήλη B), όπως ακριβώς μετρήθηκε
-   * στο Excel για το `Ctrl+A`. Χωρίς αυτό, η γωνία θα ήταν η μόνη διαδρομή που μετακινεί
-   * **και** το ενεργό κελί, δηλαδή θα διαφωνούσε με το ίδιο της το πλήκτρο.
+   * 🔴 §68.9 — **τα δύο πλήκτρα δεν επιτρέπεται να διαφωνήσουν πάνω στο ίδιο κουμπί.** Το δεξί
+   * περνά από τον **ίδιο** γραφέα χειρονομίας με το αριστερό, άρα το ενεργό κελί πάει κι εδώ
+   * στο `A1`. Μια διαφορά εδώ θα σήμαινε ότι το ίδιο pixel κάνει δύο πράγματα ανάλογα με το
+   * πλήκτρο — ακριβώς η ασυμφωνία που το §68 ήρθε να καταργήσει.
    */
-  it('🔴 §68 δεξί κλικ στη γωνία ⇒ το ενεργό κελί ΔΕΝ μετακινείται', () => {
-    const before = getTableCellCursor()?.position;
+  it('🔴 §68.9 δεξί κλικ στη γωνία ⇒ το ενεργό κελί πάει ΚΙ ΕΔΩ στο A1', () => {
     pressAt(tableIndicatorCornerScreenPoint(entity), 2);
-    expect(getTableCellCursor()?.position).toEqual(before);
+
+    const position = getTableCellCursor()?.position;
+    expect(position?.rowId).toBe(entity.model.rows[0].id);
+    expect(position?.colId).toBe(entity.model.columns[0].id);
+  });
+});
+
+/**
+ * 🔴 ADR-739 §68.9 — **Η ΑΓΚΥΡΑ ΠΟΥ ΕΛΕΙΠΕ: ΠΟΙΟΣ ΦΥΛΑΕΙ ΤΟΝ ΠΑΡΑΓΩΓΙΚΟ `onCornerPress`;**
+ *
+ * ## Γιατί υπάρχει: μια μετάλλαξη ΕΠΕΖΗΣΕ
+ * Ο harness από πάνω δηλώνει **δικό του** `onCornerPress` — αναγκαστικά, γιατί ο παραγωγικός ζει
+ * μέσα στο `useTableCellDoubleClickEditor`, που θέλει `LevelManager`, δίαυλο εντολών και σκηνή.
+ * Το σχόλιό του λέει «*η ΙΔΙΑ γραμμή με την παραγωγή*», δηλαδή **σύμβαση που πρέπει να θυμάται
+ * κανείς**. Μετρήθηκε (20/08) ότι δεν φυλάσσεται: αποσυνδέοντας τον παραγωγικό χειριστή, **και
+ * τα 28** tests των τριών σουιτών έμειναν **πράσινα**.
+ *
+ * Είναι ακριβώς το «νεκρό καλώδιο» που η κεφαλίδα αυτού του αρχείου υπάρχει για να κυνηγά —
+ * ένα επίπεδο πιο πάνω από εκεί που κοίταζε.
+ *
+ * ## ⚠️ ΤΙ ΕΙΝΑΙ ΚΑΙ ΤΙ ΔΕΝ ΕΙΝΑΙ, ΡΗΤΑ
+ * Είναι **στατική** άγκυρα: διαβάζει την πηγή, δεν εκτελεί τον χειριστή. Δεν αποδεικνύει ότι ο
+ * χειριστής **καλείται** — αυτό το κάνουν τα tests χειρονομίας από πάνω, μέσω του harness.
+ * Αποδεικνύει ότι **ποιον γραφέα ονομάζει** ο παραγωγικός κώδικας, που είναι ακριβώς το σημείο
+ * όπου η σύμβαση του harness μπορεί να αποκλίνει σιωπηλά.
+ *
+ * Η εναλλακτική —πλήρες στήσιμο του `useTableCellDoubleClickEditor`— θα δοκίμαζε δέκα άσχετα
+ * πράγματα για να απαντήσει ένα, και θα κοκκίνιζε για λόγους που δεν αφορούν τη γωνία.
+ */
+describe('🔴 §68.9 ο ΠΑΡΑΓΩΓΙΚΟΣ χειριστής της γωνίας δείχνει στον γραφέα ΧΕΙΡΟΝΟΜΙΑΣ', () => {
+  /** Το σώμα του `onCornerPress`, από την πραγματική πηγή — ποτέ αντίγραφο. */
+  function cornerPressBody(): string {
+    const source = readFileSync(
+      join(__dirname, '..', 'useTableCellDoubleClickEditor.ts'),
+      'utf8',
+    );
+    const start = source.indexOf('const onCornerPress = useEventCallback(');
+    // Το κενό ⇒ σκάει ρητά: ένα «δεν βρέθηκε» που γίνεται κενή συμβολοσειρά θα περνούσε κάθε
+    // έλεγχο «δεν περιέχει…» — πράσινο που σημαίνει «δεν κοίταξα».
+    expect(start).toBeGreaterThan(-1);
+    const end = source.indexOf(`
+  });`, start);
+    expect(end).toBeGreaterThan(start);
+    // 🔴 **ΧΩΡΙΣ ΣΧΟΛΙΑ.** Ο χειριστής τεκμηριώνει ρητά ποιον γραφέα **δεν** καλεί πια, οπότε η
+    // λέξη `selectAll` υπάρχει εκεί ως **ιστορία**. Χωρίς αυτή τη γραμμή η άγκυρα θα κοκκίνιζε
+    // πάνω στο ίδιο το σχόλιο που εξηγεί τη διόρθωση — δηλαδή θα απαγόρευε την τεκμηρίωση.
+    // Ίδιο μάθημα με το `Κ7β` του CHECK 3.50: σχόλιο που περιγράφει παλιό λεξιλόγιο δεν
+    // μετριέται ως ζωντανό.
+    return source
+      .slice(start, end)
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*/g, '');
+  }
+
+  it('🔴 καλεί το `selectWholeTableFromCorner` — τη ΧΕΙΡΟΝΟΜΙΑ', () => {
+    expect(cornerPressBody()).toContain('selectWholeTableFromCorner(liveEntity)');
+  });
+
+  /**
+   * 🔴 **Ο δεύτερος μισός κανόνας.** Μέχρι το §68.9 ο χειριστής καλούσε `rangeActions.selectAll()`
+   * — τον γραφέα της **εντολής** (`Ctrl+A`), που επιλέγει χωρίς να πλοηγεί. Αυτό ήταν όλο το
+   * ελάττωμα. Μια επιστροφή εκεί δεν θα φαινόταν σε κανένα test συμπεριφοράς του harness.
+   */
+  it('🔴 ΔΕΝ καλεί το `selectAll` της εντολής (εκεί ζούσε το ελάττωμα)', () => {
+    expect(cornerPressBody()).not.toContain('selectAll');
   });
 });
