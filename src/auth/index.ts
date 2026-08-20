@@ -51,6 +51,13 @@ export {
   ProtectedRoute
 } from './components/ProtectedRoute';
 
+// ADR-785 — το περιεχόμενο του `/auth/action`. Ζει εδώ και όχι στο `page.tsx`
+// γιατί καλεί `useSearchParams()`: το αρχείο διαδρομής πρέπει να μείνει
+// **σκέτο όριο `<Suspense>`**, αλλιώς η προαπόδοση ρίχνει ΟΛΟ το build.
+export {
+  AuthActionContent
+} from './components/AuthActionContent';
+
 // =============================================================================
 // HOOKS
 // =============================================================================

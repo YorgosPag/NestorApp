@@ -1,7 +1,7 @@
 {
   "adr": "ADR-757",
   "check": "3.37",
-  "updated": "2026-08-08",
+  "updated": "2026-08-20",
   "doc": "docs/centralized-systems/reference/adrs/ADR-757-ci-gate-tiers.md",
   "namePrefix": "T{tier} ",
   "aggregator": {
@@ -218,6 +218,12 @@
       "name": "T2 🎨 UI Contrast Ratchet (ADR-770)",
       "tier": 2,
       "why": "Κόκκινο = νέο στοιχείο UI που ΔΕΝ φαίνεται στο προεπιλεγμένο θέμα (το --primary είναι ταυτόσημο με το --card ⇒ 1,00:1). Ορθότητα, όχι τάση: η σκληρή αποτυχία είναι σε παλινδρόμηση, όχι στο μέγεθος του χρέους. Tier 2 και όχι 3 επειδή το a11y-ratchet μετρά ΚΑΛΥΨΗ τεστ (τάση) ενώ αυτό μετρά την ίδια τη βλάβη."
+    },
+    {
+      "file": "prerender-integrity.yml",
+      "name": "T2 🏗️ Prerender Integrity (CHECK 3.55)",
+      "tier": 2,
+      "why": "Ρίζα που δεν προαποδίδεται ρίχνει ΟΛΟ το next build — 8 μέρες χωρίς deploy (ADR-785)."
     }
   ]
 }

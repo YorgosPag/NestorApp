@@ -1,0 +1,117 @@
+name: T2 🏗️ Prerender Integrity (CHECK 3.55)
+
+# =============================================================================
+# Layer 2 της CHECK 3.55 — ADR-785.
+#
+# ΤΙ ΡΩΤΑ
+# -------
+# «Μπορεί **κάθε** ρίζα του `src/app` να προαποδοθεί, ή θα ρίξει το `next build`;»
+#
+# ΓΙΑΤΙ ΥΠΑΡΧΕΙ — ΜΕΤΡΗΜΕΝΟ ΠΕΡΙΣΤΑΤΙΚΟ, ΟΧΙ ΠΡΟΛΗΨΗ ΣΤΑ ΤΥΦΛΑ
+# --------------------------------------------------------------
+# Το `docker-build.yml` (Tier 1) ήταν **κόκκινο από 2026-08-11**: `useSearchParams()`
+# χωρίς όριο `<Suspense>` στο `/auth/action` ⇒ `Export encountered an error,
+# exiting the build`. **Οκτώ μέρες χωρίς deploy στο Netcup**, και **καμία** άλλη
+# πύλη δεν ρωτούσε το ερώτημα — γιατί ο μόνος ανιχνευτής σε ΟΛΟ το οικοσύστημα
+# του Next.js είναι το ίδιο το build (ο επίσημος πίνακας κανόνων του
+# `@next/eslint-plugin-next` έχει 21 κανόνες, **κανέναν** γι' αυτό).
+#
+# ΓΙΑΤΙ TIER 2 ΚΑΙ ΟΧΙ TIER 1
+# ---------------------------
+# Tier 1 σημαίνει «το nestorconstruct.gr **ΔΕΝ ενημερώνεται τώρα**» — αυτό το λέει
+# ήδη το `docker-build.yml`, και **δύο** ειδοποιήσεις για το ίδιο γεγονός είναι
+# ακριβώς η κόπωση συναγερμού που γέννησε το ADR-757. Αυτή η πύλη τρέχει σε **PR**,
+# όπου η παραγωγή **δεν** έχει σταματήσει ακόμη: υπάρχει για να μη **χρειαστεί**
+# ποτέ να χτυπήσει το Tier 1.
+#
+# ΓΙΑΤΙ ΧΩΡΙΣ `paths:` ΦΙΛΤΡΟ
+# ----------------------------
+# Το ερώτημα αφορά την **κλειστότητα απόδοσης**, όχι ένα αρχείο: ένα component
+# βαθιά στο `src/components` που αρχίζει να ζωγραφίζει άλλο, εχθρικό component
+# σπάει διαδρομή που κανείς δεν άγγιξε. Ένα φίλτρο μονοπατιών εδώ θα ήταν το
+# `blocking-path-filtered` της CHECK 3.54 — πύλη που υπάρχει και δεν τρέχει.
+# Κόστος: ~10s ανάλυσης. Δεν χτίζει, δεν κάνει type-check (N.17): ο περίπατος
+# χρησιμοποιεί `ts.createSourceFile` (parse-only), ποτέ `ts.Program`.
+#
+# ΔΕΝ ΕΙΝΑΙ RATCHET — καμία baseline, ποτέ.
+# Δεν υπάρχει «λιγότερες μη-προαποδόσιμες σελίδες από χθες»: **μία** αρκεί για να
+# μη φύγει τίποτα στην παραγωγή.
+#
+# ΟΤΑΝ ΚΟΚΚΙΝΙΣΕΙ
+# ---------------
+#   npm run prerender:report      → ποιες ρίζες, ποιο API, σε ποιο αρχείο
+# Θεραπεία: τύλιξε το **μικρότερο** υποδέντρο που καλεί το hook σε `<Suspense>`
+# (πρότυπο: `src/app/(auth)/oauth/consent/page.tsx`). ΜΗΝ βάλεις `force-dynamic`
+# για να «περάσει» — πετά τη στατική απόδοση ΟΛΗΣ της διαδρομής.
+# =============================================================================
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prerender-integrity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prerender:
+    name: 🏗️ Κάθε ρίζα του src/app προαποδίδεται
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # typescript μόνο — parse-only walk, καμία δημιουργία Program (N.17).
+      - name: 📦 Install dependencies (TypeScript parser)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: 🏗️ CHECK 3.55 — προαποδοσιμότητα κάθε ρίζας
+        run: node scripts/check-prerender-bailout.js --all
+
+      - name: 🧪 Gate self-test (33 cases · 6/6 μεταλλάξεις)
+        run: pnpm exec jest scripts/__tests__/check-prerender-bailout.test.js
+
+      - name: 📊 Απογραφή (πάντα, ακόμη και στο πράσινο)
+        if: always()
+        run: node scripts/check-prerender-bailout.js --report
+
+      - name: 🧭 Πώς λύνεται
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.55 — μια διαδρομή ΔΕΝ μπορεί να προαποδοθεί"
+            echo ""
+            echo "Αυτό ΔΕΝ είναι προειδοποίηση: το \`next build\` σταματά εκεί και"
+            echo "**τίποτα δεν φεύγει στο Netcup** — για όλο το repo, όχι μόνο γι' αυτή τη σελίδα."
+            echo ""
+            echo "**Θεραπεία** (αυτή που συστήνει το Next):"
+            echo "τύλιξε το ΜΙΚΡΟΤΕΡΟ υποδέντρο που καλεί το hook σε \`<Suspense>\`."
+            echo '```tsx'
+            echo "function Body() { const p = useSearchParams(); /* … */ }"
+            echo "export default function Page() {"
+            echo "  return <Suspense fallback={<StaticPageLoading />}><Body /></Suspense>;"
+            echo "}"
+            echo '```'
+            echo "Πρότυπο στο δέντρο: \`src/app/(auth)/oauth/consent/page.tsx\`."
+            echo ""
+            echo "⚠️ ΜΗΝ βάλεις \`export const dynamic = 'force-dynamic'\` για να περάσει:"
+            echo "δεν είναι λάθος, αλλά πετά τη στατική απόδοση ΟΛΗΣ της διαδρομής."
+          } >> "$GITHUB_STEP_SUMMARY"

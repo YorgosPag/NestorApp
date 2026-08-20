@@ -25,6 +25,7 @@
  *   SSOT_DISCOVER_FULL             '1' = run full ssot-discover scan
  *   SKIP_NATIVE_TOOLTIP / SKIP_TABS_IMPORT / SKIP_NO_FLASH  bypass specific checks
  *   SKIP_EMPTY_SELECT_ITEM                                  bypass CHECK 3.48
+ *   SKIP_PRERENDER_BAILOUT                                  bypass CHECK 3.55
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
@@ -115,6 +116,14 @@ if (tsFiles.length > 0) {
   // δηλαδή αφού προσγειωθεί. Ίδιος σκελετός AST με το 3.23 — καμία νέα μηχανή. ZERO-TOL.
   if (!process.env.SKIP_EMPTY_SELECT_ITEM)
     addThread('3.48', 'Empty SelectItem',       'scripts/check-empty-select-item.js',          tsFiles);
+  // CHECK 3.55 (ADR-785) — προαποδοσιμότητα. Το `docker-build.yml` (Tier 1) ήταν κόκκινο ΟΚΤΩ
+  // ΜΕΡΕΣ επειδή μια σελίδα καλούσε `useSearchParams()` χωρίς όριο `<Suspense>`: το `next build`
+  // σταματά στον ΠΡΩΤΟ παραβάτη, άρα δεν μπορεί καν να πει πόσοι είναι. Ο μόνος άλλος ανιχνευτής
+  // στο οικοσύστημα του Next είναι το ίδιο το build (21 κανόνες eslint, κανένας γι' αυτό).
+  // Η σκανδάλη ζει ΜΕΣΑ στην πύλη — η ανάλυση είναι πάντα ΠΛΗΡΗΣ όταν πυροδοτεί (~8s),
+  // γιατί το ερώτημα αφορά την κλειστότητα απόδοσης, όχι ένα αρχείο. ZERO-TOL, καμία baseline.
+  if (!process.env.SKIP_PRERENDER_BAILOUT)
+    addThread('3.55', 'Prerender integrity',    'scripts/check-prerender-bailout.js',          tsFiles);
   if (!skipTabs)
     addThread('3.24', 'Tabs import ratchet',    'scripts/check-tabs-import-ratchet.js',        tsFiles);
   if (!skipFlash)
