@@ -153,7 +153,7 @@ export function OwnerPropertyFormContent({
       <OwnerOffersField />
       <OwnerPropertyPlaceField />
       <OwnerPropertyMediaField
-        ownerUserId={user?.uid ?? null}
+        authorUserId={user?.uid ?? null}
         ownerPropertyId={draftId}
       />
     </DraftFormShell>

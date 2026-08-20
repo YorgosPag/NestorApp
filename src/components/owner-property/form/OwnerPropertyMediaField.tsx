@@ -43,16 +43,16 @@ const NS = 'search-results';
 const K = `${NS}:offer.media`;
 
 export function OwnerPropertyMediaField({
-  ownerUserId,
+  authorUserId,
   ownerPropertyId,
 }: {
-  ownerUserId: string | null;
+  authorUserId: string | null;
   ownerPropertyId: string;
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
   const form = useFormContext<OwnerPropertyFormValues>();
   const inputId = React.useId();
-  const { state, upload } = useOwnerPropertyMedia(ownerUserId, ownerPropertyId);
+  const { state, upload } = useOwnerPropertyMedia(authorUserId, ownerPropertyId);
 
   const media = form.watch('media') ?? [];
 

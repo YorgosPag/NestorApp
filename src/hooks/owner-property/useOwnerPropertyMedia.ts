@@ -59,11 +59,11 @@ const logger = createModuleLogger('useOwnerPropertyMedia');
  * helpers που αφαιρέθηκαν από το `storage.rules` το 2026-07-26 για latency.
  */
 export function ownerPropertyMediaPath(
-  ownerUserId: string,
+  authorUserId: string,
   ownerPropertyId: string,
   fileName: string,
 ): string {
-  return `owner_properties/${ownerUserId}/${ownerPropertyId}/${fileName}`;
+  return `owner_properties/${authorUserId}/${ownerPropertyId}/${fileName}`;
 }
 
 /**
@@ -102,7 +102,7 @@ export interface OwnerPropertyMediaActions {
  * του Storage** μένει η αυθεντία για το τι προσγειώνεται.
  */
 export function useOwnerPropertyMedia(
-  ownerUserId: string | null,
+  authorUserId: string | null,
   ownerPropertyId: string,
 ): OwnerPropertyMediaActions {
   const [state, setState] = useState<MediaUploadState>({ state: 'idle' });
@@ -111,7 +111,7 @@ export function useOwnerPropertyMedia(
 
   const upload = useCallback(
     async (file: File): Promise<OwnerPropertyMedia | null> => {
-      if (ownerUserId === null) {
+      if (authorUserId === null) {
         setState({ state: 'failed', fileName: file.name, message: 'NO_IDENTITY' });
         return null;
       }
@@ -129,7 +129,7 @@ export function useOwnerPropertyMedia(
       }
 
       const storagePath = ownerPropertyMediaPath(
-        ownerUserId,
+        authorUserId,
         ownerPropertyId,
         safeFileName(file.name),
       );
@@ -177,7 +177,7 @@ export function useOwnerPropertyMedia(
         return null;
       }
     },
-    [ownerUserId, ownerPropertyId],
+    [authorUserId, ownerPropertyId],
   );
 
   return { state, upload, clear };

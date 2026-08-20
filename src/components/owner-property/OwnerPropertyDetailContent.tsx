@@ -34,6 +34,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/auth/hooks/useAuth';
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { listingDetailHref } from '@/lib/listings/listing-routes';
+import { nowISO } from '@/lib/date-local';
 import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
 import { ownerPropertyFormFrom } from '@/lib/owner-property/owner-property-form-values';
 import { MY_OFFERS_ROUTE } from '@/lib/owner-property/owner-property-routes';
@@ -105,7 +106,7 @@ function OwnerPropertyView({
   onEdit: () => void;
 }): React.ReactElement {
   const { t } = useTranslation([NS]);
-  const onMap = isPubliclyListed(projectableFromOwnerProperty(property));
+  const onMap = isPubliclyListed(projectableFromOwnerProperty(property, nowISO()));
   // ⚠️ Στην **κορυφή** του component, ποτέ μέσα στο JSX: ένας hook που ζει σε έκφραση
   // γνωρίσματος διαβάζεται ως υπό όρους από τον επόμενο αναγνώστη, ακόμη κι όταν δεν
   // είναι — και η πρώτη φορά που κάποιος τον τυλίξει σε `{onMap && …}` σπάει σιωπηλά.

@@ -32,6 +32,7 @@ import Link from 'next/link';
 
 import { useTranslation } from '@/i18n/hooks/useTranslation';
 import { PROPERTY_TYPE_I18N_KEYS, isCanonicalPropertyType } from '@/constants/property-types';
+import { nowISO } from '@/lib/date-local';
 import { projectableFromOwnerProperty } from '@/lib/owner-property/owner-property-projection';
 import { offerDetailHref } from '@/lib/owner-property/owner-property-routes';
 import { isPubliclyListed } from '@/services/listings/public-listing-projection';
@@ -48,7 +49,9 @@ export function OwnerPropertyCard({
   const { t } = useTranslation([NS, 'properties-enums']);
 
   // 🔴 Ο **ίδιος** κριτής με τον διακομιστή. Δες την επικεφαλίδα του αρχείου.
-  const onMap = isPubliclyListed(projectableFromOwnerProperty(property));
+  // ⚠️ **Μία ανάγνωση ρολογιού ανά απόδοση** (§8.33): η λήξη της εντολής κρίνεται με
+  // την ίδια στιγμή για κάθε κάρτα της λίστας.
+  const onMap = isPubliclyListed(projectableFromOwnerProperty(property, nowISO()));
   const kinds = ownerPropertyOfferKinds(property);
 
   return (
