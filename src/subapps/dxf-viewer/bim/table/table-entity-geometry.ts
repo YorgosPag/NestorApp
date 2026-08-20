@@ -44,6 +44,9 @@ import type {
   TableFramePoint,
 } from '../../types/table-entity';
 import type { TableLayout } from './table-layout-types';
+// 🔴 ADR-786 §9 — ο ΙΔΙΟΣ μετρητής έκδοσης που ακυρώνει το bitmap cache του καμβά. Η διάταξη
+// εξαρτάται από τη **βαθμίδα** του μετρητή κειμένου, άρα οφείλει να ακυρώνεται από το ίδιο σήμα.
+import { getFontReadyVersion } from '../../text-engine/fonts';
 import { layoutTable } from './table-layout';
 import { DELIVERABLE_PAPER_SURFACE, liveTableSurface, type TableSurface } from './table-ink';
 import { resolveTableModel } from './table-model-helpers';
@@ -152,6 +155,29 @@ export function tableWorldToFrame(
  * ⚠️ Το bitmap cache **δεν** είναι το πρόβλημα εδώ: εκείνο ακυρώνεται σωστά σε αλλαγή φόντου
  * (`useDxfCanvasCacheInvalidation`, ADR-608). Θα ξαναζωγράφιζε λοιπόν πιστά — τα **μπαγιάτικα**
  * χρώματα. Δύο μνήμες, μία μόνο ακυρωνόταν.
+ *
+ * ## 🔴 ADR-786 §9 — Η ΤΡΙΤΗ ΕΙΣΟΔΟΣ ΠΟΥ ΕΛΕΙΠΕ: **η ετοιμότητα της γραμματοσειράς**
+ *
+ * Ο μετρητής της διάταξης (`measureTextAdvanceWorld`) έχει **βαθμίδες**: με φορτωμένο face
+ * μετρά περιγράμματα opentype σε **em**, χωρίς face πέφτει στο CSS και μετρά σε **ύψος
+ * κεφαλαίου** — τιμές που διαφέρουν κατά **~41%**. Η γραμματοσειρά όμως φορτώνεται
+ * **ασύγχρονα** (`preloadCadSubstituteFonts`), δηλαδή ο πρώτος υπολογισμός διάταξης συχνά
+ * προλαβαίνει να γίνει στη **λάθος** βαθμίδα — και έμενε στη μνήμη για όλη τη ζωή του μοντέλου.
+ *
+ * Μέχρι το ADR-786 αυτό ήταν **ακίνδυνο**: ο ζωγράφος ζωγράφιζε **πάντα** σε ύψος κεφαλαίου,
+ * άρα δεν ακολουθούσε καμία βαθμίδα και η μπαγιάτικη μέτρηση φαινόταν μόνο ως ελαφρώς
+ * φαρδύτερες στήλες. Από τη στιγμή που ο ζωγράφος **ακολουθεί τη βαθμίδα**, μια διάταξη
+ * μετρημένη στο CSS tier και ζωγραφισμένη στο tier 1 βάζει τα τμήματα **29% πιο αριστερά**
+ * απ' όσο πρέπει: το δεύτερο βαμμένο κομμάτι **πέφτει πάνω** στο πρώτο (Giorgio, 2026-08-20 —
+ * το κόκκινο «Σ» πάνω στο λευκό «Ε»).
+ *
+ * ⚠️ Είναι **race**, γι' αυτό δεν φαίνεται πάντα: με ζεστή HTTP cache η γραμματοσειρά
+ * προλαβαίνει και η μνήμη γεννιέται ήδη σωστή. Ένα «δεν το αναπαράγω» εδώ **δεν** σημαίνει
+ * τίποτα — γι' αυτό η άγκυρα ελέγχει τις **δύο** καταστάσεις ρητά, όχι την τύχη.
+ *
+ * 🔑 Το `bumpFontReady()` **δεν αρκεί από μόνο του**: ακυρώνει το bitmap cache, δηλαδή λέει
+ * «ξαναζωγράφισε» — και ο ζωγράφος ξαναζωγραφίζει **πιστά τις μπαγιάτικες θέσεις**. Είναι
+ * κυριολεκτικά το ίδιο σχήμα με το `surfaceHex` παραπάνω: *δύο μνήμες, μία μόνο ακυρωνόταν.*
  */
 const LAYOUT_CACHE = new WeakMap<TableModel, Map<string, TableLayout>>();
 
@@ -174,7 +200,10 @@ export function resolveTableLayout(
     byKey = new Map<string, TableLayout>();
     LAYOUT_CACHE.set(model, byKey);
   }
-  const key = `${style.id}|${surfaceHex}`;
+  // 🔴 ADR-786 §9 — η **βαθμίδα του μετρητή** είναι είσοδος της διάταξης, άρα ανήκει στο κλειδί.
+  // Ο αριθμός έκδοσης δεν επινοείται εδώ: είναι ο **ίδιος** που σημαίνει ο ζωγράφος για να
+  // ακυρώσει το bitmap cache (`subscribeFontReady`) — μία πηγή, δύο μνήμες, καμία να ξεμείνει.
+  const key = `${style.id}|${surfaceHex}|${getFontReadyVersion()}`;
   const cached = byKey.get(key);
   if (cached) return cached;
   const layout = layoutTable(model, style, { surfaceHex });
