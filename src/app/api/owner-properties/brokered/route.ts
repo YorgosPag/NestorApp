@@ -40,6 +40,11 @@ import {
   OWNER_CONSENT_PROOF,
   type NotifyOutcome,
 } from '@/services/mandate/brokered-listing.service';
+import {
+  readMandateCatalog,
+  type MandateCatalog,
+} from '@/services/mandate/mandate-catalog.service';
+import { nowISO } from '@/lib/date-local';
 import { AGENCY_ATTESTATION } from '@/types/owner-property-mandate';
 
 import {
@@ -112,3 +117,33 @@ async function handler(
 }
 
 export const POST = withStandardRateLimit(withAuth(handler));
+
+// =============================================================================
+// Ο ΚΑΤΑΛΟΓΟΣ — η άλλη μισή πόρτα (ADR-777 §8.34)
+// =============================================================================
+
+/**
+ * **Τι έχει στα χέρια του το γραφείο.**
+ *
+ * 🔑 **ΙΔΙΑ ΔΙΑΔΡΟΜΗ, ΑΛΛΟ ΡΗΜΑ — και δεν είναι οικονομία αρχείων.** Το
+ * `/api/owner-properties/brokered` **είναι** «οι εντολές αυτού του γραφείου»: το
+ * `POST` γεννά μία, το `GET` τις απαριθμεί. Μια ξεχωριστή διεύθυνση θα σήμαινε δύο
+ * τόποι που πρέπει να συμφωνούν για το **ποιος** είναι το γραφείο — και η απάντηση
+ * ζει ήδη σε **μία** γραμμή, εδώ: `ctx.companyId`.
+ *
+ * ⚠️ **Καμία παράμετρος από το δίκτυο δεν αγγίζει την εμβέλεια.** Δεν υπάρχει
+ * `?companyId=`, δεν υπάρχει φίλτρο κατάστασης στο ερώτημα: η **κατάσταση είναι
+ * υπολογισμένη** (`mandateStandingOf`), άρα ένα φίλτρο διακομιστή θα ήταν δεύτερος
+ * ταξινομητής που θα απέκλινε από τον πρώτο. Η οθόνη φιλτράρει ό,τι ήδη κρίθηκε.
+ *
+ * ⚠️ **Ένα ρολόι για όλες τις γραμμές** — δες `mandateStandingOf`.
+ */
+async function catalogHandler(
+  _request: NextRequest,
+  ctx: AuthContext,
+): Promise<NextResponse<MandateCatalog | { error: string }>> {
+  const catalog = await readMandateCatalog(getAdminFirestore(), ctx.companyId, nowISO());
+  return NextResponse.json(catalog);
+}
+
+export const GET = withStandardRateLimit(withAuth(catalogHandler));

@@ -35,7 +35,10 @@ import { MandateConsentContent } from '@/components/mandate/MandateConsentConten
 import { MandateConsentRefusal } from '@/components/mandate/MandateConsentRefusal';
 import { getAdminFirestore } from '@/lib/firebaseAdmin';
 import { readCompanyPublicName } from '@/services/company/company-public-name.reader';
-import { readMandateConsentRequest } from '@/services/mandate/mandate-consent.service';
+import {
+  markMandateViewed,
+  readMandateConsentRequest,
+} from '@/services/mandate/mandate-consent.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,6 +61,17 @@ export default async function MandateConsentPage({
   // Κώστα «δεν υπάρχει» και για τον ληγμένο σύνδεσμο και για τον αντικαταστημένο — δύο
   // καταστάσεις όπου **οφείλει να κάνει κάτι**, και μία όπου δεν οφείλει τίποτα.
   if (!lookup.ok) return <MandateConsentRefusal reason={lookup.reason} />;
+
+  // 🔑 **Η ΣΦΡΑΓΙΔΑ «ΤΟ ΕΙΔΕ» ΜΠΑΙΝΕΙ ΕΔΩ, ΚΑΙ ΜΟΝΟ ΕΔΩ** (ADR-777 §8.34). Είναι το
+  // σημείο —το μοναδικό σε όλο το σύστημα— όπου γνωρίζουμε ότι **άνθρωπος** άνοιξε τη
+  // σελίδα της εντολής του. Μπαίνει **μετά** την άρνηση: ένας ληγμένος ή
+  // αντικαταστημένος σύνδεσμος δεν είναι «το είδε», είναι «χτύπησε σε τοίχο».
+  //
+  // ⚠️ Δεν αναμένεται με `await` πριν την απόδοση για λόγο ταχύτητας; **Όχι** — η
+  // αναμονή είναι σκόπιμη: fire-and-forget σε serverless σημαίνει ότι η εγγραφή
+  // μπορεί να **μην ολοκληρωθεί ποτέ** όταν η συνάρτηση παγώσει μετά την απάντηση.
+  // Το κόστος είναι μία ανάγνωση που κάνει το `null` έλεγχο και σταματά.
+  await markMandateViewed(adminDb, lookup.request.ownerPropertyId);
 
   const agencyName = await readCompanyPublicName(adminDb, lookup.request.authorCompanyId);
 
