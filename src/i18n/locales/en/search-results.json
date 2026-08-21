@@ -435,6 +435,7 @@
       "title": "Office mandates",
       "lead": "Every property you listed on behalf of a client, and what became of their approval. The ones waiting on you come first.",
       "create": "New listing for a client",
+      "backToCatalog": "← All mandates",
       "loading": "Loading your mandates",
       "error": "The mandates could not be loaded. Please try again shortly.",
       "retry": "Try again",

@@ -3,7 +3,7 @@
   "artifacts": {
     "src/i18n/generated/routes/listing__id.el.json": "520c677e6a2f2ad0b004ecfe9badf7c219ccdd49e4ec172cfe2047b43b28de47",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
-    "src/i18n/generated/shell-slice.el.json": "4cf9219898ef7d611d4d36f0ccc99ec4e5473ef78970319fa04e5cd79bfcc9f9",
+    "src/i18n/generated/shell-slice.el.json": "a2921fe24d415b51a0386d014e9b569510a087d154e173e1e7e1d76d2f2e3772",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -42,7 +42,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "870ed680d6456ec7a73af990ae0379201a702c98519184fe9666ffb92be9f8f6",
+  "inputsSha256": "944a84c772751a5aaee0acaa402ee6cd8cf0d5d82273111267f0692ccfebe700",
   "languages": [
     "el"
   ],
@@ -550,7 +550,7 @@
     "matchedKeys": 118,
     "routeBoundaries": 0,
     "shellFiles": 463,
-    "sliceBytes": 248329
+    "sliceBytes": 248390
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

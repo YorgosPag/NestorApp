@@ -19,12 +19,14 @@
  */
 
 import React from 'react';
+import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 import { BrokeredMandateFields } from '@/components/mandate/BrokeredMandateFields';
 import { OwnerPropertyFormContent } from '@/components/owner-property/OwnerPropertyFormContent';
 import type { ComboboxOption } from '@/components/ui/searchable-combobox';
 import { nowISO } from '@/lib/date-local';
+import { MANDATE_CATALOG_ROUTE } from '@/lib/mandate/mandate-routes';
 import {
   emptyMandateForm,
   mandateFormBlockers,
@@ -102,6 +104,19 @@ export function BrokeredListingPageContent(): React.ReactElement {
 
   return (
     <section className="flex flex-col gap-4">
+      {/*
+        🔴 **Ο ΔΙΑΔΡΟΜΟΣ ΠΑΕΙ ΚΑΙ ΠΡΟΣ ΤΑ ΠΙΣΩ** (ADR-777 §8.34). Μέχρι τις 2026-08-21
+        αυτή η σελίδα ήταν **ορφανή**: κανένα μενού δεν οδηγούσε σε αυτήν και, αφού ο
+        μεσίτης καταχωρούσε, **δεν υπήρχε πουθενά να πάει** — έμενε σε φόρμα που μόλις
+        υπέβαλε. Ο κατάλογος είναι η οθόνη όπου θα δει τι απέγινε η εντολή που μόλις
+        έστειλε, οπότε ο σύνδεσμος **είναι** η συνέχεια της πράξης, όχι διακόσμηση.
+      */}
+      <nav>
+        <Link href={MANDATE_CATALOG_ROUTE} className="text-sm text-muted-foreground">
+          {t('search-results:offer.mandates.backToCatalog')}
+        </Link>
+      </nav>
+
       <header className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold text-foreground">{t(`${K}.newTitle`)}</h1>
         <p className="text-sm text-muted-foreground">{t(`${K}.newSubtitle`)}</p>
