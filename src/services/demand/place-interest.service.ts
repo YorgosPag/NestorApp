@@ -38,6 +38,7 @@ import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { nowISO } from '@/lib/date-local';
+import { custodyOf, mayAdminister } from '@/lib/owner-property/listing-custody';
 import {
   projectListingShape,
   type PlaceKnowledge,
@@ -93,7 +94,7 @@ export async function lookupOwnedPlace(
   uid: string,
   companyId: string,
 ): Promise<PlaceLookup> {
-  const personal = await readOwnerProperty(db, propertyId, uid);
+  const personal = await readOwnerProperty(db, propertyId, { uid, companyId });
   if (personal !== null) {
     return { kind: 'found', source: 'owner-property', facts: personal };
   }
@@ -108,11 +109,25 @@ export async function lookupOwnedPlace(
 async function readOwnerProperty(
   db: AdminFirestore,
   propertyId: string,
-  uid: string,
+  actor: { readonly uid: string; readonly companyId: string | null },
 ): Promise<ListingMatchFacts | null> {
   const snap = await db.collection(COLLECTIONS.OWNER_PROPERTIES).doc(propertyId).get();
   const property = snap.data() as OwnerProperty | undefined;
-  if (property === undefined || property.authorUserId !== uid) return null;
+  // 🔴 ΗΤΑΝ `property.authorUserId !== uid` — ΤΡΙΤΗ ΕΜΦΑΝΙΣΗ ΤΟΥ §8.39 (ADR-777 §8.42).
+  //
+  // Η ερώτηση εδώ είναι «**επιτρέπεται σε αυτόν τον άνθρωπο**;», δηλαδή ΑΚΡΙΒΩΣ αυτή
+  // που κατέχει το `listing-custody.ts` — και απαντιόταν με κριτήριο **κατά χρήστη**
+  // πάνω σε πόρο που μπορεί να ζει σε **εταιρικό** χώρο (`authorCompanyId !== null`).
+  // Συνέπεια: αγγελία που διαχειρίζεται το γραφείο ήταν `absent` για **κάθε** άλλον
+  // υπάλληλό του, ενώ το `readCompanyProperty` διαβάζει **άλλη συλλογή** και δεν
+  // μπορούσε να τη βρει ποτέ.
+  //
+  // ⚠️ Ο ΙΔΙΩΤΙΚΟΣ ΧΩΡΟΣ ΔΕΝ ΔΙΕΥΡΥΝΕΤΑΙ: για `kind: 'personal'` το `mayAdminister`
+  // κρίνει `userId === uid`, δηλαδή **ταυτόσημα** με πριν. Προστίθεται μόνο ο
+  // εταιρικός κλάδος, και εκείνος απαιτεί `hasTenant` και στις δύο πλευρές — άρα
+  // είναι **αυστηρότερος** από μια ωμή `===` που θα ταίριαζε δύο κενές τιμές.
+  if (property === undefined) return null;
+  if (!mayAdminister(custodyOf(property), actor)) return null;
 
   return ownerPropertyFactsOf({ ...property, id: propertyId }, nowISO());
 }
