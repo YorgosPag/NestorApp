@@ -33,6 +33,23 @@ import { useMyOwnerProperties } from '@/services/realtime/hooks/useMyOwnerProper
 
 import { OwnerPropertyCard } from './OwnerPropertyCard';
 
+// 🧩 ADR-744 §15 (Φ4) — PER-ROUTE SLICE ΤΗΣ `/offers` (ADR-777 §8.39).
+//
+// Το `property-market` έπαψε να ταξιδεύει ΟΛΟΚΛΗΡΟ σε 141 διαδρομές (§8.38). Χωρίς
+// αυτή τη γραμμή, αυτή η οθόνη θα έβαφε **ωμά κλειδιά στο πρώτο καρέ** — η μία κλάση
+// ελαττώματος ανταλλαγμένη με άλλη, που το ADR-744 §8 απαγορεύει ρητά.
+//
+// 🔴 **ΕΔΩ, ΚΑΙ ΟΧΙ ΣΤΟ `page.tsx`**: εκείνο είναι Server Component, και τα Server/Client
+// δέντρα έχουν **ΞΕΧΩΡΙΣΤΟΥΣ γράφους module** — εγγραφή από εκεί θα έγραφε σε **άλλο**
+// στιγμιότυπο i18next: πράσινη κλήση που δεν κάνει τίποτα.
+//
+// ⚠️ **Στατική εισαγωγή, εμβέλεια MODULE** — με `import()` το ωμό κλειδί απλώς
+// μετακομίζει σε «ένα καρέ» και κρύβεται από το CHECK 3.51.
+import routeSlice from '@/i18n/generated/routes/offers.el.json';
+import { registerRouteSlice } from '@/i18n/route-slice';
+
+registerRouteSlice(routeSlice);
+
 const NS = 'property-market';
 const K = `${NS}:offer.list`;
 

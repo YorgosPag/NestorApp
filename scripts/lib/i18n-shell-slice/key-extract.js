@@ -50,12 +50,7 @@ const ts = require('typescript');
 
 // ADR-777 §8.37 — η **επίλυση τιμών** ζει δίπλα, ως ξεχωριστή ευθύνη (N.7.1).
 const {
-  foldObjectLiteral,
-  loadKeyConstants,
-  resolveAccessChain,
   forEachModuleConstant,
-  collectLocalConstants,
-  lookupTable,
   isScopeNode,
   readConstantDeclaration,
   collectScopeDeclarations,
@@ -64,9 +59,16 @@ const {
   expandTemplate,
   spanValues,
   expandTemplateKeys,
+} = require('./constant-resolution');
+const {
+  foldObjectLiteral,
+  loadKeyConstants,
+  resolveAccessChain,
+  collectLocalConstants,
+  lookupTable,
   harvestPropertyValues,
   leavesUnder,
-} = require('./constant-resolution');
+} = require('./key-tables');
 
 /** `ns:key` — i18next's explicit-namespace form. */
 const EXPLICIT_NS = /^([a-zA-Z0-9_-]+):(.+)$/;

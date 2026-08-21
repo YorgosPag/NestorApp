@@ -944,3 +944,146 @@ describe('Group 14 — `t(`${K}.x`)` όπου K είναι σταθερά ΔΕΝ
     }
   });
 });
+
+// ─── Group 15: τα τρία σκαλιά του §8.39 ──────────────────────────────────────
+//
+// 🔴 ΤΙ ΑΠΟΔΕΙΚΝΥΕΙ. Η μετακόμιση του `property-market` (§8.38) έβγαλε 35 KB από τη
+// σύγχρονη διαδρομή — και θα άφηνε **επτά** οθόνες να βάφουν ωμά κλειδιά, αν ο
+// generator δεν μπορούσε να τους δώσει route slice. Τον εμπόδιζαν **τρία** κενά, και
+// κανένα δεν ήταν «δυναμική κλήση»:
+//
+//   1. πίνακας σταθερών σε **ΑΛΛΟ module**   (`t(CATALOG_KEYS.empty)`) — 37 κλήσεις
+//   2. τιμές **template** μέσα στον πίνακα   (`{ title: `${K}.title` }`)
+//   3. **ενδιάμεση μεταβλητή**               (`const key = …; t(key)`)
+//
+// ⚠️ Το `Σ4` είναι ο ΠΑΡΟΝΟΜΑΣΤΗΣ: ό,τι δεν είναι λεξιλόγιο **δεν** ινδεξοδοτείται.
+
+describe('Group 15 — πίνακες άλλου module · template σε πίνακα · ενδιάμεση μεταβλητή', () => {
+  const L = (...lines) => lines.join('\n');
+  const parse = (src) => parseSource('/x/File.ts', src);
+  const { collectExportedTables, looksLikeKeyTable } = require(path.join(LIB, 'key-tables'));
+  const REPO = path.resolve(__dirname, '..', '..');
+
+  const tablesOf = (src) => collectExportedTables(parse(src));
+
+  it('Σ1 — εξαγόμενος πίνακας διαβάζεται, ιδιωτικός ΟΧΙ', () => {
+    const tables = tablesOf(L(
+      "export const PUBLIC_KEYS = { a: 'ns:root.a' };",
+      "const PRIVATE_KEYS = { b: 'ns:root.b' };",
+    ));
+    expect([...tables.keys()]).toEqual(['PUBLIC_KEYS']);
+  });
+
+  it('Σ2 — τιμές TEMPLATE μέσα στον πίνακα λύνονται από τη σταθερά του module', () => {
+    const tables = tablesOf(L(
+      "const K = 'property-market:offer.mandates';",
+      'export const CATALOG = { empty: `${K}.empty`, deep: { x: `${K}.deep.x` } };',
+    ));
+    const table = tables.get('CATALOG');
+    expect(table.get('empty')).toBe('property-market:offer.mandates.empty');
+    expect(table.get('deep.x')).toBe('property-market:offer.mandates.deep.x');
+  });
+
+  it('Σ3 — μισή τιμή ΔΕΝ καταγράφεται (το `${x}` δεν λύνεται)', () => {
+    const tables = tablesOf('export const T = { a: `ns:root.${x}` };');
+    expect(tables.has('T')).toBe(false);
+  });
+
+  // 🔴 Ο ΠΑΡΟΝΟΜΑΣΤΗΣ, ΜΕ ΠΡΑΓΜΑΤΙΚΟ ΠΕΡΙΣΤΑΤΙΚΟ: το `config/jobs-registry.ts` εξάγει
+  // `JOBS = { site: { id: 'site' } }` και το φύλλο `'site'` έφτασε στα κλειδιά του
+  // κελύφους — το έπιασε το `shell-slice-no-raw-keys` («το μήνυμα αποτυχίας ΕΙΝΑΙ η
+  // συμβολοσειρά που θα έβλεπε ο χρήστης»).
+  it('Σ4 — πίνακας που ΔΕΝ είναι λεξιλόγιο i18n αγνοείται', () => {
+    expect(looksLikeKeyTable(new Map([['id', 'site']]))).toBe(false);
+    expect(looksLikeKeyTable(new Map([['a', 'ns:x.y'], ['b', 'x.y']]))).toBe(true);
+    // ⚠️ ΟΛΑ τα φύλλα, όχι «μερικά»: μισός πίνακας αναγνωριστικών είναι αναγνωριστικά.
+    expect(looksLikeKeyTable(new Map([['a', 'x.y'], ['b', 'site']]))).toBe(false);
+    expect(tablesOf("export const JOBS = { site: { id: 'site' } };").has('JOBS')).toBe(false);
+  });
+
+  it('Σ5 — `t(key)` με ενδιάμεση μεταβλητή δίνει ΤΟ ΙΔΙΟ με την ενσωματωμένη έκφραση', () => {
+    const viaVariable = classifyTranslateCalls(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        'export function C({ x }) {',
+        "  const { t } = useTranslation('n');",
+        '  const key = `property-market:demand.concession.amount.${x}`;',
+        '  return t(key, { value: 1 });',
+        '}',
+      ),
+      { file: '/x/C.tsx', keyConstants: new Map(), propertyValues: null },
+    );
+    const inline = classifyTranslateCalls(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        'export function C({ x }) {',
+        "  const { t } = useTranslation('n');",
+        '  return t(`property-market:demand.concession.amount.${x}`, { value: 1 });',
+        '}',
+      ),
+      { file: '/x/C.tsx', keyConstants: new Map(), propertyValues: null },
+    );
+    expect(viaVariable.unresolved).toHaveLength(0);
+    expect(viaVariable.prefixes).toEqual(inline.prefixes);
+  });
+
+  it('Σ6 — και ΜΕΣΑ σε template: `const key = TABLE[x]` δίνει ΟΛΕΣ τις τιμές', () => {
+    const sink = classifyTranslateCalls(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        "const TYPES = { a: 'types.a', b: 'types.b' };",
+        'export function C({ x }) {',
+        "  const { t } = useTranslation('n');",
+        '  const key = TYPES[x];',
+        '  return t(`properties-enums:${key}`);',
+        '}',
+      ),
+      { file: '/x/C.tsx', keyConstants: new Map(), propertyValues: null },
+    );
+    expect(sink.unresolved).toHaveLength(0);
+    expect(sink.keys.map((k) => `${k.ns}:${k.key}`).sort()).toEqual([
+      'properties-enums:types.a',
+      'properties-enums:types.b',
+    ]);
+  });
+
+  it('Σ7 — κύκλος μεταβλητών ΣΤΑΜΑΤΑ, δεν κρεμάει', () => {
+    const sink = classifyTranslateCalls(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        'export function C() {',
+        "  const { t } = useTranslation('n');",
+        '  const a = b;',
+        '  const b = a;',
+        '  return t(a);',
+        '}',
+      ),
+      { file: '/x/C.tsx', keyConstants: new Map(), propertyValues: null },
+    );
+    expect(sink.unresolved).toHaveLength(1);
+  });
+
+  it('Σ8 — 🔴 ΑΓΚΥΡΑ ΠΡΑΓΜΑΤΙΚΟΥ ΚΩΔΙΚΑ: ο κατάλογος εντολών έχει ΟΛΕΣ του τις λέξεις', () => {
+    // Πριν το §8.39 αυτή η σελίδα είχε **37** ανεπίλυτες κλήσεις και **μηδέν** bytes.
+    const slice = JSON.parse(fs.readFileSync(
+      path.join(REPO, 'src', 'i18n', 'generated', 'routes', 'listings__mandates.el.json'), 'utf8'));
+    const mandates = slice['property-market'].offer.mandates;
+    for (const key of ['title', 'lead', 'empty', 'emptyHint', 'retry', 'truncated']) {
+      expect(typeof mandates[key]).toBe('string');
+    }
+    // …και οι δύο πράξεις παρουσίας που πρόσθεσε το §8.39.
+    expect(typeof mandates.presence.withdraw).toBe('string');
+    expect(typeof mandates.presenceDone.withdraw).toBe('string');
+  });
+
+  it('Σ9 — 🔴 και οι ΕΠΤΑ οθόνες του λεξιλογίου έχουν artifact', () => {
+    // Ο παρονομαστής της μετακόμισης: χωρίς αυτά, το §8.38 θα είχε ανταλλάξει μια
+    // κλάση ωμού κλειδιού με άλλη.
+    for (const route of ['offers', 'offers__offerId', 'demands', 'demands__demandId',
+      'mandate__token', 'listings__mandates', 'listings__mandates__new']) {
+      const file = path.join(REPO, 'src', 'i18n', 'generated', 'routes', `${route}.el.json`);
+      expect(fs.existsSync(file)).toBe(true);
+      expect(JSON.parse(fs.readFileSync(file, 'utf8'))['property-market']).toBeDefined();
+    }
+  });
+});
