@@ -50,6 +50,7 @@ import {
   requireTokenSecret,
   type SignedTokenRejection,
 } from '@/lib/tokens/signed-token';
+import { announceMandateDecision } from '@/services/mandate/mandate-decision-notifier.service';
 import { setOwnerPropertyMandate } from '@/services/owner-property/owner-property-write.service';
 import type { OwnerProperty } from '@/types/owner-property';
 import type { BrokeredListingMandate } from '@/types/owner-property-mandate';
@@ -276,10 +277,13 @@ export async function recordMandateDecision(
     return { ok: false, reason: 'listing-absent' };
   }
 
+  const previous = property.mandate.confirmation;
+  const decidedAt = nowISO();
+
   const next: BrokeredListingMandate = {
     ...property.mandate,
     confirmation: decision,
-    decidedAt: nowISO(),
+    decidedAt,
   };
 
   const result = await setOwnerPropertyMandate(
@@ -288,7 +292,78 @@ export async function recordMandateDecision(
     next,
   );
 
-  if (result.kind === 'saved') return { ok: true, decision };
+  if (result.kind === 'saved') {
+    // 🔴 **ΜΕΤΑ τη γραφή, ΠΟΤΕ πριν** (ADR-777 §8.34). Η απόφαση του ιδιοκτήτη είναι
+    // η πράξη· η ειδοποίηση του γραφείου είναι **παρακολούθημα**. Μια αποστολή πριν
+    // την επιτυχή γραφή θα έλεγε στον μεσίτη «ενέκρινε» για έγκριση που **δεν
+    // αποθηκεύτηκε** — και ο μεσίτης θα έψαχνε αγγελία που δεν βγήκε ποτέ.
+    //
+    // ⚠️ Αναμένεται με `await` και **δεν** μπορεί να αποτύχει το αίτημα: ο
+    // ειδοποιητής δεν πετά ποτέ. Fire-and-forget θα σήμαινε ότι σε serverless η
+    // ειδοποίηση **μπορεί να μη φύγει ποτέ** όταν παγώσει η συνάρτηση.
+    await announceMandateDecision(adminDb, {
+      ownerPropertyId: lookup.request.ownerPropertyId,
+      listingTitle: property.title,
+      clientContactId: property.mandate.clientContactId,
+      recipientUserId: property.authorUserId,
+      tenantId: property.authorCompanyId,
+      previous,
+      next: decision,
+      decidedAt,
+    });
+
+    return { ok: true, decision };
+  }
   if (result.kind === 'absent') return { ok: false, reason: 'listing-absent' };
   return { ok: false, reason: 'write-failed' };
+}
+
+// =============================================================================
+// 4. «ΤΟ ΕΙΔΕ» — το `Delivered` του DocuSign
+// =============================================================================
+
+/**
+ * **Ο ιδιοκτήτης άνοιξε τον σύνδεσμο.** Σφραγίζει το `viewedAt` — **μία** φορά.
+ *
+ * 🔴 **ΓΙΑΤΙ ΔΕΝ ΜΠΗΚΕ ΜΕΣΑ ΣΤΟ {@link readMandateConsentRequest}.** Εκείνο είναι
+ * **ανάγνωση**, και το καλεί και ο έλεγχος πριν από κάθε απόφαση
+ * ({@link recordMandateDecision}). Μια εγγραφή κρυμμένη εκεί θα σήμαινε ότι κάθε
+ * κλήση του API αποφάσεων «βλέπει» τη σελίδα — δηλαδή το πεδίο θα γέμιζε **και όταν
+ * δεν την είδε άνθρωπος**, και θα το έκανε με ημερομηνία, δηλαδή πειστικά. Η σφραγίδα
+ * ζει εκεί που όντως αποδίδεται σελίδα: `(auth)/mandate/[token]/page.tsx`.
+ *
+ * 🔑 **Ιδεμποτέντ εκ σχεδιασμού, ΟΧΙ με κλείδωμα.** Γράφει **μόνο** όταν το `viewedAt`
+ * είναι `null` ⇒ δεύτερη κλήση δεν αλλάζει τίποτα. Έτσι η διπλή απόδοση της React,
+ * ένα refresh ή μια προανάκτηση είναι **αβλαβή** — και δεν χρειάστηκε ούτε κλείδωμα
+ * ούτε δεύτερο βιβλίο. Η **πρώτη** ματιά είναι το γεγονός· η δέκατη δεν αλλάζει
+ * καμία απόφαση του γραφείου και θα έκανε κάθε φόρτωση σελίδας εγγραφή στη βάση.
+ *
+ * ⚠️ **Δεν επιστρέφει τίποτα και δεν πετά ποτέ.** Είναι **παρατήρηση**, όχι πράξη του
+ * ανθρώπου: μια αποτυχία εδώ δεν επιτρέπεται να εμποδίσει τον ιδιοκτήτη να δει και να
+ * απαντήσει στην εντολή του. Καταγράφεται και προσπερνιέται.
+ */
+export async function markMandateViewed(
+  adminDb: AdminFirestore,
+  ownerPropertyId: string,
+): Promise<void> {
+  try {
+    const snapshot = await adminDb
+      .collection(COLLECTIONS.OWNER_PROPERTIES)
+      .doc(ownerPropertyId)
+      .get();
+
+    const property = snapshot.data() as OwnerProperty | undefined;
+    if (property === undefined || property.mandate.kind !== 'brokered') return;
+    if (property.mandate.viewedAt !== null) return;
+
+    await setOwnerPropertyMandate(adminDb, ownerPropertyId, {
+      ...property.mandate,
+      viewedAt: nowISO(),
+    });
+  } catch (error) {
+    logger.error('Η σφραγίδα «το είδε» δεν γράφτηκε', {
+      data: { ownerPropertyId },
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }

@@ -36,15 +36,12 @@ import 'server-only';
 
 import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 
-import { COLLECTIONS } from '@/config/firestore-collections';
-import { primaryEmailOf } from '@/lib/contacts/primary-email';
 import { nowISO } from '@/lib/date-local';
-import { formatDate } from '@/lib/intl-formatting';
-import { createModuleLogger } from '@/lib/telemetry';
-import { enqueueMessage } from '@/server/comms/orchestrator';
-import { MESSAGE_PRIORITIES } from '@/types/communications';
-import { mandateTextsFor, type MandateMessageKind } from '@/services/mandate/mandate-email-texts';
 import { issueMandateConsentLink } from '@/services/mandate/mandate-consent.service';
+import {
+  sendMandateInvitation,
+  type NotifyOutcome,
+} from '@/services/mandate/mandate-invitation.service';
 import {
   createOwnerProperty,
   setOwnerPropertyMandate,
@@ -59,20 +56,6 @@ import {
   type MandateProof,
 } from '@/types/owner-property-mandate';
 
-const logger = createModuleLogger('brokered-listing.service');
-
-/**
- * ⚠️ **Η προεπιλογή ΔΕΝ είναι το νεκρό `nestor-app.vercel.app`** που κουβαλούν πέντε
- * άλλες διαδρομές του έργου. Το CLAUDE.md δηλώνει ρητά ότι εκείνο το URL είναι
- * *«dead/legacy»* και η παραγωγή ζει στο **nestorconstruct.gr** (Netcup). Ένας
- * σύνδεσμος συγκατάθεσης προς νεκρό τομέα είναι χειρότερος από κανέναν: ο ιδιοκτήτης
- * νομίζει ότι απάντησε.
- */
-function consentUrl(token: string): string {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://nestorconstruct.gr';
-  return `${base.replace(/\/+$/, '')}/mandate/${encodeURIComponent(token)}`;
-}
-
 // =============================================================================
 // 1. ΤΟ ΑΙΤΗΜΑ ΤΟΥ ΜΕΣΙΤΗ
 // =============================================================================
@@ -84,94 +67,17 @@ export interface BrokeredMandateRequest {
   readonly proof: MandateProof;
 }
 
-/** Πώς πήγε η αποστολή — **ρητά**, γιατί το γραφείο πρέπει να το μάθει. */
-export type NotifyOutcome =
-  | { readonly kind: 'sent'; readonly to: string }
-  /** Η επαφή **δεν έχει email**. Δεν είναι σφάλμα — είναι κατάσταση του κόσμου. */
-  | { readonly kind: 'no-address' }
-  | { readonly kind: 'failed' };
+/**
+ * ⚠️ **Επανεξάγεται εδώ επίτηδες.** Το αποτέλεσμα της αποστολής είναι μέρος του
+ * **συμβολαίου της καταχώρησης** ({@link BrokeredCreateResult}), οπότε ο καλών της
+ * πόρτας δεν πρέπει να ξέρει ότι η μηχανή αποστολής μετακόμισε. Η **μία** υλοποίηση
+ * ζει στο `mandate-invitation.service.ts` — αυτό εδώ είναι όνομα, όχι δεύτερος τύπος.
+ */
+export type { NotifyOutcome };
 
 export interface BrokeredCreateResult {
   readonly write: OwnerPropertyWriteResult;
   readonly notify: NotifyOutcome;
-}
-
-// =============================================================================
-// 2. Η ΕΙΔΟΠΟΙΗΣΗ
-// =============================================================================
-
-/** Η διεύθυνση και η γλώσσα του πελάτη, από την **επαφή** του γραφείου. */
-async function readClientChannel(
-  adminDb: AdminFirestore,
-  clientContactId: string,
-): Promise<{ email: string | null; language: unknown }> {
-  const snapshot = await adminDb
-    .collection(COLLECTIONS.CONTACTS)
-    .doc(clientContactId)
-    .get();
-
-  const data = snapshot.data() as
-    | { emails?: unknown; preferredLanguage?: unknown }
-    | undefined;
-
-  return {
-    email: primaryEmailOf(data?.emails as never),
-    language: data?.preferredLanguage,
-  };
-}
-
-/**
- * **Στέλνει το μήνυμα** — και δεν πετά ποτέ.
- *
- * ⚠️ **Η αποτυχία της ειδοποίησης ΔΕΝ ακυρώνει την καταχώρηση**, ίδιο συμβόλαιο με
- * τον γραφέα της δημόσιας προβολής: η δουλειά του μεσίτη έγινε. Ό,τι έγινε λέγεται
- * **ονομαστικά** στο αποτέλεσμα, ώστε η οθόνη να μπορεί να πει «στάλθηκε στον Χ» ή
- * «η επαφή δεν έχει email» — δύο πολύ διαφορετικά πράγματα για το γραφείο.
- */
-async function notifyClient(
-  adminDb: AdminFirestore,
-  kind: MandateMessageKind,
-  params: {
-    readonly clientContactId: string;
-    readonly agencyName: string;
-    readonly listingTitle: string;
-    readonly expiresAt: string;
-    readonly token: string;
-    readonly idempotencyKey: string;
-  },
-): Promise<NotifyOutcome> {
-  const channel = await readClientChannel(adminDb, params.clientContactId);
-  if (channel.email === null) return { kind: 'no-address' };
-
-  const wording = mandateTextsFor(kind, channel.language);
-  const url = consentUrl(params.token);
-
-  try {
-    const result = await enqueueMessage({
-      channels: ['email'],
-      to: channel.email,
-      subject: wording.subject(params.agencyName, params.listingTitle),
-      content: wording.body(
-        params.agencyName,
-        params.listingTitle,
-        formatDate(params.expiresAt),
-        url,
-      ),
-      priority: MESSAGE_PRIORITIES.HIGH,
-      // 🔑 **Ντετερμινιστικό κλειδί** — ο ίδιος αντι-spam φρουρός που χρησιμοποιεί ο
-      // αγγελιοφόρος της ζήτησης: δύο κλήσεις για την **ίδια** πρόσκληση δεν
-      // γεννούν δύο email. Δεν γράφτηκε καμία ουρά, κανένα «last notified at».
-      idempotencyKey: params.idempotencyKey,
-    });
-
-    return result.success ? { kind: 'sent', to: channel.email } : { kind: 'failed' };
-  } catch (error) {
-    logger.error('Το μήνυμα προς τον ιδιοκτήτη δεν μπήκε στην ουρά', {
-      data: { clientContactId: params.clientContactId },
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return { kind: 'failed' };
-  }
 }
 
 // =============================================================================
@@ -207,6 +113,7 @@ export async function createBrokeredListing(
     proof: request.proof,
     decidedAt: null,
     notifiedAt: null,
+    viewedAt: null,
     consentNonce: link.nonce,
     expiresAt: request.expiresAt,
   };
@@ -224,7 +131,7 @@ export async function createBrokeredListing(
 
   if (write.kind !== 'saved') return { write, notify: { kind: 'failed' } };
 
-  const notify = await notifyClient(
+  const notify = await sendMandateInvitation(
     adminDb,
     request.proof.via === AGENCY_ATTESTATION ? 'attestation-notice' : 'consent-request',
     {
