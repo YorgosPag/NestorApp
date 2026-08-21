@@ -48,12 +48,36 @@ paths = [
   '''(^|/)\.env\.example$''',                                  # placeholder env template
   '''Sharing Debugger - Meta for Developers\.html$''',         # saved 3rd-party Meta page (short-lived FB tokens)
   '''(^|/)local_3\.txt$''',                                    # junk debug dump (Firebase Auth UID, not a credential)
+
+  # --- G12 triage 2026-08-21: ADR-744 i18n shell-slice manifest ---
+  # ΜΗΧΑΝΙΚΗ ΕΞΟΔΟΣ, κατάστιχο ακεραιότητας: τα `inputsSha256`, `artifacts.*` και
+  # `shellFiles.*` κρατούν 468 συμβολοσειρές ΑΚΡΙΒΩΣ 64 hex — SHA-256 fingerprints,
+  # όχι κλειδιά. Ο `generic-api-key` βλέπει hex υψηλής εντροπίας και τις κατήγγειλε:
+  # μετρημένο, **37 από τα 42** ευρήματα ολόκληρου του ιστορικού (88%) ήταν ΑΥΤΕΣ.
+  #
+  # ΓΙΑΤΙ ΕΙΝΑΙ ΑΣΦΑΛΕΣ ΩΣ path[] ΚΑΙ ΟΧΙ ΜΟΝΟ ΩΣ value: το αρχείο ΠΑΡΑΓΕΤΑΙ
+  # (ADR-744: «Never hand-edit those files — they are machine output») και η
+  # ακεραιότητά του φυλάσσεται ΗΔΗ από το CHECK 3.34, που ξαναχτίζει τον γράφο και
+  # συγκρίνει τα ίδια αυτά hashes· ένα χειρόγραφο secret εκεί θα εμφανιζόταν ως
+  # drift και θα ΜΠΛΟΚΑΡΕ. Ίδια κατηγορία με τα build artifacts παραπάνω.
+  #
+  # ⚠️ ΓΙΑΤΙ ΔΕΝ ΕΓΙΝΕ ΤΟ «ΑΥΣΤΗΡΟΤΕΡΟ»: δοκιμάστηκε `[[allowlists]] condition="AND"`
+  # (μόνο 64-hex ΚΑΙ μόνο σε αυτό το path) — ΑΠΑΙΤΕΙ gitleaks >= 8.21, και η
+  # αναβάθμιση μετρήθηκε ΧΕΙΡΟΤΕΡΗ: οι νέοι κανόνες της 8.30.1 προσθέτουν 5 ψευδώς
+  # θετικά ⇒ θόρυβος 20% → 67%. Το «πιο σύγχρονο εργαλείο» δεν είναι αυτομάτως
+  # καλύτερη πύλη· ο λόγος σήματος/θορύβου είναι το κριτήριο. Δες το σχόλιο στο
+  # .github/workflows/gitleaks-scan.yml.
+  '''(^|/)src/i18n/generated/shell-slice\.manifest\.json$''',
 ]
 
 regexes = [
   # --- G12 triage 2026-07-08: value-scoped structural false positives ---
   # token-charset constant (src/services/sharing/unified-sharing.service.ts)
   '''ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789''',
+  # localStorage key, ΟΧΙ διαπιστευτήριο (scripts/lib/golden-triage/sheet-script.js:15).
+  # Ο κανόνας πυροδοτεί στο όνομα `KEY`· η τιμή είναι το ονοματοδοτικό κλειδί κάτω
+  # από το οποίο η σελίδα διαλογής θυμάται τις αποφάσεις της (ADR-775).
+  '''adr775-golden-decisions-v1''',
   # doc/source PLACEHOLDERS (not real keys)
   '''\.\.\.private key data\.\.\.''',                          # DockerOrchestrator.ts (×2 paths)
   '''YOUR_PRIVATE_KEY_HERE''',                                 # ENV_SETUP_INSTRUCTIONS.md
@@ -69,3 +93,39 @@ regexes = [
   '''AIzaSyAXnmBhlPvUX89FmbYqvJdh7VLNKVBwx0Y''',               # data scripts / audit report
   '''AIzaSyCcOlFWq8lWQqZjjf9EfebWKZVfV3jzuoc''',               # data scripts
 ]
+
+# =============================================================================
+# ADR-744 — SHA-256 fingerprints of the generated i18n shell-slice manifest.
+#
+# ΤΟ ΠΡΟΒΛΗΜΑ ΠΟΥ ΛΥΝΕΙ: το shell-slice.manifest.json ΕΙΝΑΙ ένα κατάστιχο
+# ακεραιότητας — `inputsSha256`, `artifacts.*`, `shellFiles.*` κρατούν 468
+# συμβολοσειρές μήκους ΑΚΡΙΒΩΣ 64 hex. Ο κανόνας `generic-api-key` βλέπει
+# hex υψηλής εντροπίας και τις καταγγέλλει ως κλειδιά: μετρημένο 2026-08-21,
+# 37 από τα 42 ευρήματα ολόκληρου του ιστορικού (88%) ήταν ΑΥΤΕΣ.
+#
+# ΓΙΑΤΙ ΕΧΕΙ ΣΗΜΑΣΙΑ: ο πήχης για ΜΠΛΟΚΑΡΟΥΣΑ πύλη είναι <10% ψευδώς θετικά.
+# Στο 88% η πύλη σταματά να είναι όργανο και γίνεται θόρυβος — και τα 5
+# ΠΡΑΓΜΑΤΙΚΑ ευρήματα κρύβονταν μέσα στα 37. Η εξαίρεση ΔΕΝ χαλαρώνει την
+# ασφάλεια· την ΑΠΟΚΑΘΙΣΤΑ, κάνοντας ξανά αναγνώσιμο το κόκκινο.
+#
+# ⚠️ ΓΙΑΤΙ `condition = "AND"` ΚΑΙ ΟΧΙ path-allowlist: ένα σκέτο paths[] θα
+# τύφλωνε ΟΛΟΚΛΗΡΟ το αρχείο, οπότε ένα πραγματικό κλειδί που θα προσγειωνόταν
+# εκεί αύριο θα περνούσε αθόρυβα. Με AND σιγούν ΜΟΝΟ οι 64-hex ΜΟΝΟ σε αυτό
+# το ένα μονοπάτι. Αποδεδειγμένο με μέτρηση (gitleaks 8.30.1, 2026-08-21):
+#   • πραγματικό manifest ΧΩΡΙΣ την εξαίρεση ....... 27 ευρήματα
+#   • πραγματικό manifest ΜΕ την εξαίρεση .......... 0
+#   • κλειδί `AIzaSy…` στον ΙΔΙΟ φάκελο ............ πιάνεται (δεν τυφλώθηκε)
+#   • ΤΟ ΙΔΙΟ 64-hex σε άλλο μονοπάτι .............. πιάνεται (δεν τυφλώθηκε)
+# Ο παρονομαστής είναι μέρος της απόδειξης: χωρίς αυτόν, το «0 ευρήματα» θα
+# σήμαινε «κανείς δεν κοίταξε» αντί για «κοίταξα και είναι καθαρά».
+#
+# ⚠️ ΑΠΑΙΤΕΙ gitleaks >= 8.21.0 (εκεί προστέθηκαν τα [[allowlists]] + condition).
+# Το workflow είναι καρφωμένο· αν κατέβει κάτω από 8.21 αυτό το μπλοκ αγνοείται
+# ΣΙΩΠΗΛΑ και επιστρέφουν τα 37 ψευδώς θετικά.
+# =============================================================================
+[[allowlists]]
+description = "ADR-744 — SHA-256 fingerprints inside the generated i18n shell-slice manifest"
+condition = "AND"
+regexTarget = "match"
+regexes = ['''\b[a-f0-9]{64}\b''']
+paths = ['''(^|/)src/i18n/generated/shell-slice\.manifest\.json$''']
