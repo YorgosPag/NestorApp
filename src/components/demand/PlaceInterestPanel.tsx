@@ -62,15 +62,36 @@ export function PlaceInterestPanel({
 }: {
   interest: PlaceInterestState;
 }): React.ReactElement | null {
-  const { t } = useTranslation(['property-market']);
+  const { t, isNamespaceReady } = useTranslation(['property-market']);
 
   // ⚠️ **Η αποτυχία δεν ζωγραφίζει «0».** Δες {@link PlaceInterestState}: μια πεσμένη
   // κλήση δεν είναι μέτρηση της αγοράς. Η φόρτωση λέει ότι φορτώνει· η αποτυχία λέει
   // ότι απέτυχε. Καμία από τις δύο δεν λέει «κανείς δεν σε ψάχνει».
-  if (interest.state === 'loading') {
+  //
+  // 🔴 ADR-777 §8.39/§8.40 — **«ΦΟΡΤΩΝΕΙ» ΣΗΜΑΙΝΕΙ ΔΥΟ ΠΡΑΓΜΑΤΑ, ΚΑΙ ΤΑ ΔΥΟ ΕΙΝΑΙ ΦΟΡΤΩΣΗ.**
+  //
+  // Η οθόνη `/properties/[id]` είναι η **μόνη** από τις επτά καταναλώτριες που δεν
+  // μπορεί να πάρει route slice: η κλειστότητά της έχει **112** ανεπίλυτες δυναμικές
+  // `t()` σε άσχετα υποσυστήματα (επαφές · συσχετίσεις · αποθήκευση), και ο generator
+  // **αρνείται** — σωστά. Άρα εκεί το `property-market` φορτώνεται **ασύγχρονα**, και η
+  // γραμμή «Κοιτάμε ποιος ψάχνει…» θα έβγαινε **ωμό κλειδί** όσο κρατούσε η φόρτωση.
+  //
+  // 🔑 **Λείπουν τα δεδομένα ή λείπουν οι λέξεις — και στις δύο περιπτώσεις το πανέλ δεν
+  // έχει τίποτα να πει ακόμη.** Γι' αυτό είναι **μία** συνθήκη, όχι δύο. Και γι' αυτό δεν
+  // επιστρέφει `null`: όσο δεν ξέρουμε τις λέξεις κρατάμε τη **θέση** με σκελετό, ώστε να
+  // μη ζωγραφιστεί ούτε ωμό κλειδί (CHECK 3.51) ούτε κενό που θα αναπηδούσε αμέσως μετά
+  // (`no-navigation-flash`, ADR-267/300 — η **ίδια** βλάβη από την ανάποδη).
+  //
+  // ⚠️ Η ετοιμότητα έρχεται από το **hook** και κρίνεται στο **render** — όχι σε
+  // `useEffect`, που θα ήταν ακριβώς η κλάση Κ1 που απαγορεύει το CHECK 3.51.
+  if (!isNamespaceReady || interest.state === 'loading') {
     return (
       <p className="text-sm text-muted-foreground">
-        {t('property-market:demand.interest.loading')}
+        {isNamespaceReady ? (
+          t('property-market:demand.interest.loading')
+        ) : (
+          <span className="block h-4 w-48 animate-pulse rounded bg-muted" aria-hidden />
+        )}
       </p>
     );
   }
