@@ -431,6 +431,81 @@
       "open": "Open",
       "countLabel": "{count, plural, one {# property} other {# properties}}"
     },
+    "mandates": {
+      "title": "Office mandates",
+      "lead": "Every property you listed on behalf of a client, and what became of their approval. The ones waiting on you come first.",
+      "create": "New listing for a client",
+      "loading": "Loading your mandates",
+      "error": "The mandates could not be loaded. Please try again shortly.",
+      "retry": "Try again",
+      "empty": "You have not yet listed a property on behalf of a client.",
+      "emptyHint": "When you list a client property we send them a link to approve it. Here you will see who answered, who never even opened the message, and which mandate is close to expiring.",
+      "truncated": "Showing the first {count} mandates. There are more.",
+      "clientUnknown": "Contact not found",
+      "clientLabel": "Client",
+      "expiresIn": "{count, plural, one {Expires in # day} other {Expires in # days}}",
+      "expiredLabel": "Expired",
+      "onTheMarket": "On the map",
+      "offTheMarket": "Off the map",
+      "notifiedNever": "No message ever sent",
+      "viewedNever": "Not opened",
+      "group": {
+        "needs-us": "Waiting on you",
+        "waiting-client": "Waiting on the client",
+        "expiring": "Expiring soon",
+        "settled": "Active",
+        "closed": "Closed"
+      },
+      "groupCount": "{count, plural, one {# mandate} other {# mandates}}",
+      "standing": {
+        "unannounced-live": "Published without notice",
+        "never-notified": "Never sent",
+        "link-revoked": "Link revoked",
+        "expiring-soon": "Expiring soon",
+        "awaiting-decision": "Read, no answer",
+        "awaiting-view": "Not opened yet",
+        "declined": "Owner declined",
+        "expired": "Expired",
+        "expired-unanswered": "Expired unanswered",
+        "live": "Active"
+      },
+      "standingHint": {
+        "unannounced-live": "The listing is already on the map, but the owner has never received a notice. Send it to them.",
+        "never-notified": "The contact had no email address when the listing was created. Add one and send again.",
+        "link-revoked": "You revoked the link, so the client can no longer answer. Send a new one if you want them to continue.",
+        "expiring-soon": "The agreement is ending. Renewal needs a new written mandate, not an extension.",
+        "awaiting-decision": "They opened the link and have not decided yet. A phone call usually does it.",
+        "awaiting-view": "The message was sent and has not been opened. Check whether it landed in spam.",
+        "declined": "The listing is not published. The owner can change their mind from the same link.",
+        "expired": "The mandate ended and the listing came off the map. A new agreement is needed.",
+        "expired-unanswered": "The deadline passed without the owner ever answering.",
+        "live": "All good. The listing is on the map."
+      },
+      "proof": {
+        "owner-consent": "Owner approval",
+        "agency-attestation": "Office attestation"
+      },
+      "action": {
+        "resend": "Resend the link",
+        "revoke": "Revoke the link",
+        "working": "Please wait…"
+      },
+      "actionDone": {
+        "resend": "The message was sent to {to}.",
+        "revoke": "The link was revoked. The client can no longer answer."
+      },
+      "reject": {
+        "absent": "The mandate was not found.",
+        "not-brokered": "This listing was not made on behalf of a client.",
+        "declined": "The owner has already declined.",
+        "expired": "The mandate has expired. A new agreement is needed.",
+        "not-pending": "Revoking is only possible while the owner answer is pending.",
+        "already-revoked": "The link is already revoked.",
+        "no-address": "The contact has no email address. Add one on their record and try again.",
+        "write-failed": "It did not go through. Please try again shortly.",
+        "network": "No answer received. Check your connection and try again."
+      }
+    },
     "desktopOnly": {
       "title": "Listing a property is done on a computer",
       "body": "The form asks about type, area, location and what you want to do with the property, all together. On a narrow screen it would be half a form — and a property without fields is found by no one.",

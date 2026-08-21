@@ -3,7 +3,7 @@
   "artifacts": {
     "src/i18n/generated/routes/listing__id.el.json": "520c677e6a2f2ad0b004ecfe9badf7c219ccdd49e4ec172cfe2047b43b28de47",
     "src/i18n/generated/routes/test-harness__listing-shapes.el.json": "9b6aaaa831492e24807a1c83e0b505dc865c03afbd5638abf8ea2b990422b037",
-    "src/i18n/generated/shell-slice.el.json": "fa64123097323ecc350e471ca77c4e32010b657076d563970dfa3791947107e1",
+    "src/i18n/generated/shell-slice.el.json": "4cf9219898ef7d611d4d36f0ccc99ec4e5473ef78970319fa04e5cd79bfcc9f9",
     "src/i18n/generated/shell-slice.whole.json": "71d5fc675e12854a92fff0afd679457a5eb4a079b39e207276873dc5fe6b439d"
   },
   "boundaries": {
@@ -42,7 +42,7 @@
     "navigation",
     "search-results"
   ],
-  "inputsSha256": "59f733918678664c9e81760d82dc3b4ab3785559af03463a1846d8b2b6634c19",
+  "inputsSha256": "870ed680d6456ec7a73af990ae0379201a702c98519184fe9666ffb92be9f8f6",
   "languages": [
     "el"
   ],
@@ -216,10 +216,10 @@
     "src/config/jobs-registry.ts": "030b7091aeb5191bbd6abe3ccc9e23a1aa25f586cbed3fe226c07a4b6d9086b7",
     "src/config/jobs-visibility.ts": "ab652f1d2a901b3411b15871f941beac2bb71950a0a2d15129f8bda65e4467ff",
     "src/config/navigation.ts": "9016242f8b53a5a8eb1cda81120884853f2ab46eda2e06e83f57d91fb59210bc",
-    "src/config/notification-events.ts": "5d192d961fbb533724040a704a8d66f9b1afb3d15a330ab2a0ae3bfbecdbe6b4",
+    "src/config/notification-events.ts": "6c363f1a922d4088abc2ec62f0ab5cc1786496cdbe87083cc0e556af812b56b9",
     "src/config/notification-keys.ts": "d2e8d464ddc860d07e32c60966579815c9927c966a3dc86fdf70f76d45393c7e",
     "src/config/persona-config.ts": "1abb294d59594082c369ad1d3e4513cbd9bbbfc88a8825714e9fc8b9eb7dd5eb",
-    "src/config/smart-navigation-factory.ts": "e503a0c98da1ce8ae85b38d47fa37105e9c74617e2aca897c6ca6d98788c6144",
+    "src/config/smart-navigation-factory.ts": "231a0379e92cf5c38e8e27d0ad8098538ff897ad6053ba759395bdbde8664036",
     "src/config/study-groups-config.ts": "41192820acc6d25d54956ba341ce18882fe953806049ef129e8c08674404baef",
     "src/config/upload-entry-points/entries-studies.ts": "cedfad81cd497f6cd1a557ae8a648765d20ca9f96c3f46c292e45986d13e866c",
     "src/config/upload-entry-points/types.ts": "e2390571a6776657d666000c4dd92c24dc50c960998d4ebec5ee4bcb9bf0e2d1",
@@ -550,7 +550,7 @@
     "matchedKeys": 118,
     "routeBoundaries": 0,
     "shellFiles": 463,
-    "sliceBytes": 242072
+    "sliceBytes": 248329
   },
   "unresolvableKeys": [
     "a11y.addFavorite",

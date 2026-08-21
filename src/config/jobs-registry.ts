@@ -235,7 +235,11 @@ export const JOBS: Readonly<Record<JobId, JobDefinition>> = {
       'comm:messages:delete',
       'listings:listings:publish',
     ],
-    sidebar: ['/spaces', '/sales', '/crm', '/contacts'],
+    // ADR-777 §8.34 — ο κατάλογος εντολών ανήκει στη δουλειά **των πελατών**: η
+    // εντολή είναι σχέση με άνθρωπο (ποιος ενέκρινε, ποιος δεν απάντησε), όχι
+    // διαχείριση κτίσματος. Χωρίς αυτή τη γραμμή η διαδρομή θα ήταν **αταξινόμητη**
+    // και η άγκυρα Μ-5 (πύλη Υ-4) θα κοκκίνιζε — σωστά.
+    sidebar: ['/spaces', '/sales', '/crm', '/contacts', '/listings/mandates'],
     dashboardTiles: ['contacts', 'crm', 'sales', 'spaces'],
     ownsDxfViewer: false,
   },

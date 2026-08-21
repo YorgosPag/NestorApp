@@ -26,6 +26,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
+  FileSignature,
   Home,
   Settings,
   Users,
@@ -83,6 +84,8 @@ const NAVIGATION_LABELS = {
   home: 'pages.home',
   properties_index: 'pages.properties',
   contacts: 'pages.contacts',
+  // ADR-777 §8.34 — ο κατάλογος εντολών του μεσιτικού γραφείου.
+  mandates: 'sidebar.mandates',
   projects: 'pages.projects',
   buildings: 'pages.buildings',
   spaces: 'sidebar.spaces',
@@ -400,6 +403,26 @@ function getBaseConfigForMenu(menuType: NavigationMenuType): NavigationMenuConfi
               priority: 'high',
               displayOrder: 20,  // ENTERPRISE: First after Properties
               analyticsKey: 'nav_contacts'
+            }
+          },
+          {
+            // 🔴 ADR-777 §8.34 — **Η ΠΟΡΤΑ ΠΟΥ ΔΕΝ ΕΙΧΕ ΔΙΑΔΡΟΜΟ.** Μετρημένο 2026-08-21:
+            // το `/listings/mandates/new` υπήρχε από το §8.33 και **καμία γραμμή του
+            // δέντρου δεν έδειχνε σε αυτό** — το έβρισκες μόνο πληκτρολογώντας τη
+            // διεύθυνση. Η γραμμή δείχνει στον **κατάλογο**, όχι στη φόρμα: ο κατάλογος
+            // είναι η οθόνη που ρωτά «τι πρέπει να κάνω τώρα;», και από εκεί φεύγει ο
+            // σύνδεσμος προς τη νέα καταχώρηση.
+            //
+            // ⚠️ Δίπλα στις «Επαφές» και ΟΧΙ κάτω από τα «Ακίνητα»: τα «Ακίνητα»
+            // (`/properties`) είναι τα **δικά μας** — αυτά είναι **τρίτων**, και η
+            // δουλειά εδώ είναι η **σχέση με τον πελάτη**, όχι το ίδιο το κτίσμα.
+            icon: FileSignature,
+            href: "/listings/mandates",
+            badge: null,
+            smartConfig: {
+              priority: 'high',
+              displayOrder: 25,
+              analyticsKey: 'nav_mandates'
             }
           },
           {
@@ -748,6 +771,7 @@ function getLabelKeyForPath(path: string): string {
     '': 'home',
     'properties': 'properties_index',
     'contacts': 'contacts',
+    'listings/mandates': 'mandates',
     'projects': 'projects',
     'buildings': 'buildings',
     'construction/portfolio': 'construction_portfolio',

@@ -756,6 +756,10 @@
   "demandInterest": {
     "notificationTitle": "{count, plural, one {# άνθρωπος ψάχνει} other {# άνθρωποι ψάχνουν}} ακίνητο σαν το «{title}»"
   },
+  "mandateDecision": {
+    "confirmedTitle": "Ο/Η {client} ενέκρινε την εντολή για «{title}»",
+    "declinedTitle": "Ο/Η {client} αρνήθηκε την εντολή για «{title}»"
+  },
   "deepLink": {
     "title": "Ο σύνδεσμος δεν οδηγεί σε εγγραφή",
     "body": "Η εγγραφή που ζητήθηκε δεν υπάρχει πια ή δεν είναι διαθέσιμη σε εσένα.",

@@ -756,6 +756,10 @@
   "demandInterest": {
     "notificationTitle": "{count, plural, one {# person is looking} other {# people are looking}} for a property like “{title}”"
   },
+  "mandateDecision": {
+    "confirmedTitle": "{client} approved the mandate for “{title}”",
+    "declinedTitle": "{client} declined the mandate for “{title}”"
+  },
   "deepLink": {
     "title": "This link does not lead to a record",
     "body": "The requested record no longer exists, or it is not available to you.",

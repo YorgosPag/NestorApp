@@ -68,6 +68,9 @@ export const CATEGORY_CONFIGS: CategoryConfig[] = [
       // είναι ενόχληση, όχι υπηρεσία· και χωρίς γραμμή **εδώ** ο διακόπτης θα υπήρχε
       // στον τύπο και θα ήταν **απρόσιτος** — αδρανής φρουρός (ADR-749 §5).
       { key: 'demandInterest', labelKey: 'account.notificationSettings.categories.properties.demandInterest' },
+      // ADR-777 §8.34 — «ο πελάτης απάντησε στην εντολή». Ίδιος λόγος με το από πάνω:
+      // διακόπτης χωρίς γραμμή εδώ είναι διακόπτης που **κανείς δεν μπορεί να γυρίσει**.
+      { key: 'mandateDecided', labelKey: 'account.notificationSettings.categories.properties.mandateDecided' },
     ],
   },
   {

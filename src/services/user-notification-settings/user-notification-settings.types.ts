@@ -111,6 +111,17 @@ export interface PropertiesNotificationSettings {
    * μια ειδοποίηση που δεν σβήνει είναι ενόχληση, όχι υπηρεσία.
    */
   demandInterest: boolean;
+  /**
+   * 🎯 ADR-777 §8.34 — «**ο Κώστας ενέκρινε**» / «**ο Κώστας αρνήθηκε**».
+   *
+   * ⚠️ **Προεπιλογή `true`, με τον ίδιο κανόνα**: ειδοποίησε για ό,τι ο χρήστης
+   * **δεν μπορεί να δει μόνος του**. Ο ιδιοκτήτης απαντά από σύνδεσμο σε email,
+   * στην ώρα του — μπορεί να είναι έντεκα το βράδυ Κυριακής. Χωρίς ειδοποίηση, η
+   * μόνη οδός είναι να **θυμηθεί κάποιος** να ανοίξει τον κατάλογο· και η άρνηση
+   * **κατεβάζει σιωπηλά** την αγγελία από τον χάρτη, δηλαδή το γραφείο θα έψαχνε
+   * μια αγγελία που εξαφανίστηκε χωρίς να ξέρει γιατί.
+   */
+  mandateDecided: boolean;
 }
 
 /**
@@ -296,6 +307,7 @@ export const DEFAULT_PROPERTIES_SETTINGS: PropertiesNotificationSettings = {
   viewingScheduled: true,
   newBuilding: true,
   demandInterest: true,
+  mandateDecided: true,
 };
 
 /**

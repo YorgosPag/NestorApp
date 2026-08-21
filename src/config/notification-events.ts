@@ -69,6 +69,15 @@ export const NOTIFICATION_EVENT_TYPES = {
   PROPERTIES_VIEWING_SCHEDULED: 'properties.viewingScheduled',
   /** ADR-777 Ε2 · SPEC-777B §12.6 — «N άνθρωποι ζητούν το ακίνητό σας». */
   PROPERTIES_DEMAND_INTEREST: 'properties.demandInterest',
+  /**
+   * ADR-777 §8.34 — **ο ιδιοκτήτης απάντησε στην εντολή**, ναι ή όχι.
+   *
+   * 🔑 **Ένα γεγονός για τις δύο απαντήσεις, ΟΧΙ δύο.** Ο διακόπτης προτίμησης
+   * ρωτά *«θες να μαθαίνεις τι απάντησε ο πελάτης σου;»* — και ένα γραφείο που
+   * απενεργοποιεί το «ναι» αλλά κρατά το «όχι» δεν είναι σενάριο που υπάρχει.
+   * Το **ποια** απάντηση το λέει το κλειδί τίτλου.
+   */
+  PROPERTIES_MANDATE_DECIDED: 'properties.mandateDecided',
   // Tasks Events
   TASKS_DUE_TODAY: 'tasks.dueToday',
   TASKS_OVERDUE: 'tasks.overdue',
@@ -187,6 +196,12 @@ export const EVENT_CATEGORY_MAP: Record<NotificationEventType, EventCategoryMapp
   [NOTIFICATION_EVENT_TYPES.PROPERTIES_DEMAND_INTEREST]: {
     category: 'properties',
     settingKey: 'demandInterest',
+    isMandatory: false,
+    defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
+  },
+  [NOTIFICATION_EVENT_TYPES.PROPERTIES_MANDATE_DECIDED]: {
+    category: 'properties',
+    settingKey: 'mandateDecided',
     isMandatory: false,
     defaultSeverity: NOTIFICATION_SEVERITIES.INFO,
   },
