@@ -58,8 +58,11 @@ export function mmToSceneUnits(units: SceneUnits): number {
  * `?? 'mm'` legacy-default fallback so the `mmToSceneUnits(p.sceneUnits ?? 'mm')`
  * idiom lives in ONE place. `valueMm * mmScaleFor(params)` → canvas units.
  *
- * SSoT for the 14+ BIM call-sites that previously inlined the fallback (see
- * `.claude-rules/pending-ratchet-work.md` migrate-on-touch entry).
+ * SSoT for the BIM call-sites that previously inlined the fallback.
+ *
+ * ⚠️ **ΜΗΝ το εφαρμόσεις στο `bim/stairs/stair-floor-link.ts` ούτε στο `stair-auto-fix.ts`**:
+ * εκεί το `1 / mmToSceneUnits(inferSceneUnitsFromWidth(width))` αντλεί τις μονάδες από
+ * **ευρετική πλάτους**, όχι από το `params.sceneUnits` — άλλη πηγή, άρα λάθος αφαίρεση.
  */
 export function mmScaleFor(params: { readonly sceneUnits?: SceneUnits | null }): number {
   return mmToSceneUnits(params.sceneUnits ?? 'mm');
