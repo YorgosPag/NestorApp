@@ -67,7 +67,7 @@ describe('Κ — το ratchet κρίνει ΑΝΑ ΚΑΔΟ', () => {
 // οι δύο υλοποιήσεις έμοιαζαν αρκετά ώστε ένας άνθρωπος να τις προσπεράσει.
 
 describe('Π — plural-aware, σε ΜΙΑ θέση', () => {
-  const { keyExists } = require('../lib/i18n-missing-keys-ratchet');
+  const { keyExists, I18NEXT_PLURAL_SUFFIXES } = require('../lib/i18n-missing-keys-ratchet');
 
   it('Π1 — κλειδί ορισμένο ΜΟΝΟ ως πληθυντικός CLDR μετράει υπαρκτό', () => {
     expect(keyExists({ items_other: 'x' }, 'items')).toBe(true);
@@ -87,6 +87,24 @@ describe('Π — plural-aware, σε ΜΙΑ θέση', () => {
   // ⚠️ Ο ΠΡΑΓΜΑΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: το `MissingFontBanner.tsx` έφυγε από τη baseline
   // ακριβώς επειδή το κλειδί του ζει σε πληθυντική μορφή. Αν χαθεί η plural
   // επίγνωση, το αρχείο ξαναεμφανίζεται — και ο αριθμός ξαναγίνεται 25.
+  // 🔑 Ο ΙΣΧΥΡΟΤΕΡΟΣ ΠΑΡΟΝΟΜΑΣΤΗΣ — ΠΡΑΓΜΑΤΙΚΟ locale, όχι fixture. Χωρίς αυτό, το
+  // Π1 θα μπορούσε να είναι πράσινο επειδή το `keyExists` λέει «ναι» σε οτιδήποτε.
+  // Εδώ το ΣΚΕΤΟ κλειδί όντως ΔΕΝ υπάρχει στο δέντρο, και **μόνο** ο πληθυντικός το
+  // κάνει υπαρκτό — δηλαδή αυτή είναι η ίδια η θεραπεία του 25/8 → 24/7.
+  it('Π5 — ο μάρτυρας: `textFonts.missingBanner.title` υπάρχει ΜΟΝΟ ως πληθυντικός', () => {
+    const locale = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '..', '..', 'src', 'i18n', 'locales', 'el', 'textFonts.json'), 'utf8'));
+    expect(locale.missingBanner.title).toBeUndefined();
+    expect(locale.missingBanner.title_other).toBeDefined();
+    expect(keyExists(locale, 'missingBanner.title')).toBe(true);
+  });
+
+  it('Π6 — η λίστα καλύπτει όλες τις κατηγορίες CLDR που εκπέμπει το i18next', () => {
+    for (const sfx of ['_zero', '_one', '_two', '_few', '_many', '_other']) {
+      expect(I18NEXT_PLURAL_SUFFIXES).toContain(sfx);
+    }
+  });
+
   it('Π4 — το αρχείο που θεράπευσε η ενοποίηση ΔΕΝ είναι στη baseline', () => {
     const b = JSON.parse(fs.readFileSync(
       path.join(__dirname, '..', '..', '.i18n-missing-keys-baseline.json'), 'utf8'));
