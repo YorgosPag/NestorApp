@@ -37,7 +37,11 @@ on:
       - 'src/app/**/service-config.ts'
       - 'src/app/**/individual-config.ts'
       - 'src/types/i18n.ts'
+      - 'src/**'
       - 'scripts/check-i18n-*.js'
+      - 'scripts/generate-i18n-keys-baseline.js'
+      - 'scripts/lib/i18n-missing-keys-ratchet.js'
+      - 'scripts/lib/i18n-namespace-extract.js'
       - 'scripts/generate-i18n-types.js'
       - 'scripts/check-audit-value-catalogs.js'
       - 'scripts/validate-translations.js'
@@ -51,7 +55,11 @@ on:
       - 'src/components/generic/i18n/**'
       - 'src/config/**'
       - 'src/types/i18n.ts'
+      - 'src/**'
       - 'scripts/check-i18n-*.js'
+      - 'scripts/generate-i18n-keys-baseline.js'
+      - 'scripts/lib/i18n-missing-keys-ratchet.js'
+      - 'scripts/lib/i18n-namespace-extract.js'
       - 'scripts/generate-i18n-types.js'
       - 'scripts/check-audit-value-catalogs.js'
       - 'scripts/validate-translations.js'
@@ -128,12 +136,20 @@ jobs:
       - name: 🔍 CHECK 3.36 — i18n namespace reachability (ADR-752)
         run: node scripts/validate-i18n-config.js
 
-      # Note: CHECK 3.8 (missing i18n keys) and CHECK 3.12 (option-label
-      # integrity) are per-file scanners driven by staged filenames; they do
-      # not support a repo-wide --all mode and have legacy baselines that the
-      # pre-commit hook enforces ratchet-style. Running them in CI without a
-      # file list would be a no-op, so they are intentionally omitted here
-      # and enforced solely by Layer 1 (tracked pre-commit hook).
+      # 🔴 CHECK 3.8 — Layer 2 (ADR-777 §8.41). Αυτό το σχόλιο έλεγε μέχρι τις
+      # 2026-08-21 ότι η 3.8 «does not support a repo-wide --all mode ... would
+      # be a no-op, so they are intentionally omitted here». Ο ΠΛΗΡΗΣ ΣΑΡΩΤΗΣ
+      # ΗΤΑΝ ΗΔΗ ΕΔΩ — απλώς ΕΓΡΑΦΕ τη baseline αντί να την ΚΡΙΝΕΙ. Συνέπεια:
+      # παραβίαση σε αρχείο που κανείς δεν σταδιοποιεί δεν φαινόταν ΠΟΤΕ, και η
+      # baseline έμεινε μπαγιάτικη 3 μήνες (11/4 έναντι 25/8 πραγματικών).
+      # ⚠️ ΜΗΝ το ξαναγυρίσεις σε «μόνο Layer 1»: το Layer 1 βλέπει staged αρχεία,
+      # και αυτή ακριβώς η τυφλότητα είναι που άφησε την απόκλιση να ζήσει.
+      - name: 🔍 CHECK 3.8 — missing i18n keys (full src/ scan vs baseline)
+        run: npm run i18n:keys-check
+
+      # Note: CHECK 3.12 (option-label integrity) is a per-file scanner driven by
+      # staged filenames with a legacy baseline that the pre-commit hook enforces
+      # ratchet-style; it has no repo-wide mode yet, so it stays Layer 1 only.
 
       - name: ✅ Summary
         if: success()
@@ -144,3 +160,4 @@ jobs:
           echo "CHECK 3.14 (audit catalogs parity): PASS"
           echo "validate:i18n (EL/EN completeness): PASS"
           echo "CHECK 3.36 (namespace reachability): PASS"
+          echo "CHECK 3.8 (missing i18n keys, full scan): PASS"

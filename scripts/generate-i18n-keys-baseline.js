@@ -25,7 +25,7 @@ const {
   extractTCalls,
   extractExplicitTCalls,
 } = require('./lib/i18n-namespace-extract');
-const { collectMissingKeys } = require('./lib/i18n-missing-keys-ratchet');
+const { collectMissingKeys, judgeAgainstBaseline } = require('./lib/i18n-missing-keys-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SRC_DIR = path.join(REPO_ROOT, 'src');
@@ -119,6 +119,45 @@ const baseline = {
   },
   files: violations
 };
+
+// ── LAYER 2 (--check): to IDIO perasma, alla KRINEI anti na grafei ───────────
+//
+// GIATI YPARXEI. Mexri 2026-08-21 i CHECK 3.8 eixe MONO Layer 1 (staged arxeia).
+// To i18n-governance.yml to eixe grammeno os aitiologia: «do not support a
+// repo-wide --all mode ... would be a no-op, so they are intentionally omitted».
+// Omos o PLIRIS sarwtis ITAN IDI EDW - aplws EGRAFE anti na KRINEI. Synepeia:
+// kamia paraviasi se arxeio pou kaneis den stage-arei den fanike POTE, kai i
+// baseline emeine mpagiatiki 3 mines (11/4 enanti 25/8 pragmatikon).
+if (process.argv.includes('--check')) {
+  const committed = JSON.parse(fs.readFileSync(BASELINE_FILE, 'utf8')).files || {};
+  const offenders = [];
+  const healed = [];
+  const seen = new Set();
+  for (const [file, v] of Object.entries(violations)) {
+    seen.add(file);
+    const fake = [
+      ...Array.from({ length: v.bare }, () => ({ bucket: 'bare' })),
+      ...Array.from({ length: v.explicit }, () => ({ bucket: 'explicit' })),
+    ];
+    const verdict = judgeAgainstBaseline(fake, committed[file] || 0);
+    if (verdict.blocked) offenders.push({ file, allow: verdict.allow, current: verdict.current });
+    else if (verdict.current.bare + verdict.current.explicit < verdict.allow.bare + verdict.allow.explicit) healed.push(file);
+  }
+  // Arxeio pou EFYGE apo ta violations alla yparxei sti baseline = therapeftike.
+  for (const file of Object.keys(committed)) if (!seen.has(file)) healed.push(file);
+
+  for (const h of healed) console.log('  [DOWN] ' + h + ' - therapeftike, i baseline mporei na sfixei');
+  if (offenders.length === 0) {
+    console.log('  [OK] CHECK 3.8 Layer 2: kamia paravasi pano apo ti baseline se olo to src/');
+    process.exit(0);
+  }
+  for (const o of offenders) {
+    console.log('  [BLOCK] ' + o.file + ': bare ' + o.current.bare + '/' + o.allow.bare
+      + ' | explicit ' + o.current.explicit + '/' + o.allow.explicit);
+  }
+  console.log('  Diorthosi: prosthese ta kleidia sta locale JSON, i tekmiriose me `npm run i18n:keys-baseline`.');
+  process.exit(1);
+}
 
 fs.writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + '\n');
 console.log(`i18n keys baseline: ${total} missing keys in ${Object.keys(violations).length} files`);
