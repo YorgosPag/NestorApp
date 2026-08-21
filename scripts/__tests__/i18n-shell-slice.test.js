@@ -41,6 +41,8 @@ const {
   leftmostStringLiteral,
   resolveAccessChain,
   collectLocalConstants,
+  collectStringConstants,
+  expandTemplate,
   harvestPropertyValues,
   loadKeyConstants,
   hasDefaultValue,
@@ -675,5 +677,109 @@ describe('Group 13 — ένα aliased `t` ΜΕΤΑΦΡΑΖΕΙ, άρα μετρ�
       path.join(__dirname, '..', '..', 'src', 'i18n', 'generated', 'shell-slice.el.json'), 'utf8'));
     expect(typeof slice['common-shared'].shareSurface.close).toBe('string');
     expect(typeof slice['common-shared'].shareSurface.errorPrefix).toBe('string');
+  });
+});
+
+// ─── Group 14: η αλυσίδα σταθερών (ADR-777 §8.36) ────────────────────────────
+//
+// 🔴 ΤΙ ΑΠΟΔΕΙΚΝΥΕΙ ΑΥΤΗ Η ΟΜΑΔΑ. Και οι **76** ανεπίλυτες κλήσεις που έκαναν τον
+// generator να αρνηθεί route slice στις τρεις φόρμες ακινήτου είχαν ΕΝΑ σχήμα:
+// `const NS = '…'; const K = \`${NS}:…\`; … t(\`${K}.suffix\`)`. Καμία δεν είναι
+// δυναμική — απλώς κανείς δεν ακολουθούσε την αλυσίδα. Μετρημένο: **76 → 10**.
+//
+// ⚠️ Το Γ8 είναι ο ΠΑΡΟΝΟΜΑΣΤΗΣ: ό,τι ήταν πραγματικά άλυτο ΜΕΝΕΙ άλυτο. Χωρίς αυτό,
+// μια «βελτίωση» που μαντεύει θα έστελνε λάθος κλειδιά — σιωπηλά.
+
+describe('Group 14 — `t(`${K}.x`)` όπου K είναι σταθερά ΔΕΝ είναι δυναμική κλήση', () => {
+  const L = (...lines) => lines.join('\n');
+  const parse = (src) => parseSource('/x/File.tsx', src);
+  const classify = (src) =>
+    classifyTranslateCalls(src, { file: '/x/C.tsx', keyConstants: new Map(), propertyValues: null });
+
+  it('Γ1 — σκέτη σταθερά string', () => {
+    expect(collectStringConstants(parse("const NS = 'search-results';")).get('NS')).toBe(
+      'search-results',
+    );
+  });
+
+  it('Γ2 — αλυσίδα: το K χτίζεται από το NS', () => {
+    const c = collectStringConstants(
+      parse(L("const NS = 'search-results';", 'const K = `${NS}:mandate.office`;')),
+    );
+    expect(c.get('K')).toBe('search-results:mandate.office');
+  });
+
+  // ⚠️ Η ΣΕΙΡΑ ΔΗΛΩΣΗΣ ΔΕΝ ΕΙΝΑΙ ΕΓΓΥΗΣΗ. Μονό πέρασμα θα απαντούσε «άλυτο» εδώ.
+  it('Γ3 — λύνει ΚΑΙ όταν η εξάρτηση δηλώνεται παρακάτω', () => {
+    const c = collectStringConstants(
+      parse(L('const K = `${NS}:mandate.office`;', "const NS = 'search-results';")),
+    );
+    expect(c.get('K')).toBe('search-results:mandate.office');
+  });
+
+  it('Γ4 — κύκλος σταματά, δεν κρεμάει', () => {
+    const c = collectStringConstants(parse(L('const A = `${B}.x`;', 'const B = `${A}.y`;')));
+    expect(c.has('A')).toBe(false);
+    expect(c.has('B')).toBe(false);
+  });
+
+  // ⚠️ ΜΙΣΗ ΤΙΜΗ ΕΙΝΑΙ ΜΑΝΤΕΨΙΑ — και μια μαντεψιά εδώ στέλνει λάθος κλειδιά.
+  it('Γ5 — σταθερά με άγνωστο μέρος ΔΕΝ καταγράφεται', () => {
+    expect(collectStringConstants(parse('const K = `${runtimeThing}.x`;')).has('K')).toBe(false);
+  });
+
+  it('Γ6 — η κλήση λύνεται σε ΑΚΡΙΒΕΣ κλειδί, όχι σε πρόθεμα', () => {
+    const sink = classify(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        "const NS = 'search-results';",
+        'const K = `${NS}:mandate.office`;',
+        'export function C() {',
+        '  const { t } = useTranslation(NS);',
+        '  return t(`${K}.newTitle`);',
+        '}',
+      ),
+    );
+    expect(sink.unresolved).toHaveLength(0);
+    expect(sink.keys).toContainEqual({ ns: 'search-results', key: 'mandate.office.newTitle' });
+  });
+
+  // 🔑 ΜΕΡΙΚΗ ΕΠΙΛΥΣΗ ΕΙΝΑΙ ΚΕΡΔΟΣ: το ωμό `head` εδώ είναι ΚΕΝΟ, άρα πριν η κλήση
+  // έπεφτε σε `unresolved`. Τώρα δίνει το πρόθεμα που όντως γνωρίζουμε.
+  it('Γ7 — σταθερά + πραγματικά δυναμικό μέρος ⇒ ΠΡΟΘΕΜΑ', () => {
+    const sink = classify(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        "const K = 'search-results:mandate.office';",
+        'export function C({ kind }) {',
+        "  const { t } = useTranslation('search-results');",
+        '  return t(`${K}.notify.${kind}`);',
+        '}',
+      ),
+    );
+    expect(sink.unresolved).toHaveLength(0);
+    expect(sink.prefixes).toContainEqual(
+      expect.objectContaining({ ns: 'search-results', key: 'mandate.office.notify' }),
+    );
+  });
+
+  it('Γ8 — άγνωστη μεταβλητή ΧΩΡΙΣ στατικό πρόθεμα ΜΕΝΕΙ άλυτη', () => {
+    const sink = classify(
+      L(
+        "import { useTranslation } from 'react-i18next';",
+        'export function C({ step }) {',
+        "  const { t } = useTranslation('common');",
+        '  return t(`${step.titleKey}`);',
+        '}',
+      ),
+    );
+    expect(sink.unresolved).toHaveLength(1);
+  });
+
+  it('Γ9 — το `expandTemplate` λέει ΡΗΤΑ αν ολοκλήρωσε', () => {
+    const tpl = parse('const K = `${A}.x`;').statements[0].declarationList.declarations[0]
+      .initializer;
+    expect(expandTemplate(tpl, new Map())).toEqual({ text: '', complete: false });
+    expect(expandTemplate(tpl, new Map([['A', 'a.b']]))).toEqual({ text: 'a.b.x', complete: true });
   });
 });

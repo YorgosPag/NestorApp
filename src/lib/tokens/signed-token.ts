@@ -42,6 +42,8 @@ import 'server-only';
 
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 
+import { readConfiguredValue } from '@/lib/environment/environment-audit';
+
 // =============================================================================
 // 1. ΤΟ ΜΥΣΤΙΚΟ
 // =============================================================================
@@ -52,10 +54,16 @@ import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
  * ⚠️ **Το όνομα στο μήνυμα δεν είναι ευγένεια — είναι η διαφορά ανάμεσα σε λεπτά και
  * ώρες** όταν κάποιος αναπτύσσει σε νέο περιβάλλον: κάθε καταναλωτής έχει **δικό του**
  * μυστικό, οπότε ένα γενικό «λείπει το μυστικό» δεν λέει **ποιο**.
+ *
+ * ⚠️ **Το «υπάρχει;» το απαντά το `readConfiguredValue`, ΟΧΙ αυτή η συνάρτηση** (ADR-777
+ * §8.35). Ήταν εδώ ως `process.env[x]?.trim()`, και η αναφορά ετοιμότητας
+ * (`/api/health/config`) θα χρειαζόταν **το ίδιο** κριτήριο. Δύο γραφές του ίδιου
+ * κατηγορήματος σημαίνει ότι μπορούν να διαφωνήσουν: η αναφορά «ρυθμισμένο», η πύλη
+ * «άκυρος σύνδεσμος», **ταυτόχρονα** — το σχήμα του ADR-749.
  */
 export function requireTokenSecret(envVar: string): string {
-  const secret = process.env[envVar]?.trim();
-  if (!secret) {
+  const secret = readConfiguredValue(process.env, envVar);
+  if (secret === null) {
     throw new Error(`${envVar} environment variable is required for signed link operations`);
   }
   return secret;

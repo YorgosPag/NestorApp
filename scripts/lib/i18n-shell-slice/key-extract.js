@@ -150,19 +150,109 @@ function resolveAccessChain(node) {
  * that sending it to the manual escape hatch would make the hatch the norm. The
  * table is right there in the AST — read it.
  */
-function collectLocalConstants(source) {
-  const tables = new Map();
+/**
+ * `visit(name, initializer)` for every module-level `const NAME = …`, with `as const`
+ * already unwrapped.
+ *
+ * Εξήχθη γιατί το **CHECK 3.28 το έπιασε ως κλώνο μέσα στο ίδιο commit** (ADR-777
+ * §8.36): οι δύο συλλέκτες σταθερών έγραφαν το ίδιο επτάγραμμο πρόλογο. Ίδια
+ * ερώτηση («ποιες είναι οι σταθερές αυτού του module;»), μία απάντηση.
+ */
+function forEachModuleConstant(source, visit) {
   for (const statement of source.statements) {
     if (!ts.isVariableStatement(statement)) continue;
     for (const decl of statement.declarationList.declarations) {
       if (!ts.isIdentifier(decl.name) || !decl.initializer) continue;
       const init = ts.isAsExpression(decl.initializer) ? decl.initializer.expression : decl.initializer;
-      if (!ts.isObjectLiteralExpression(init)) continue;
-      const folded = foldObjectLiteral(init, '', new Map());
-      if (folded.size > 0) tables.set(decl.name.text, folded);
+      visit(decl.name.text, init);
     }
   }
+}
+
+function collectLocalConstants(source) {
+  const tables = new Map();
+  forEachModuleConstant(source, (name, init) => {
+    if (!ts.isObjectLiteralExpression(init)) return;
+    const folded = foldObjectLiteral(init, '', new Map());
+    if (folded.size > 0) tables.set(name, folded);
+  });
   return tables;
+}
+
+/**
+ * Module-level `const NAME = 'literal'` **and** `` const NAME = `${OTHER}:suffix` ``,
+ * resolved TRANSITIVELY.
+ *
+ * 🔴 WHY — MEASURED, ADR-777 §8.36. All **76** unresolved calls that made the
+ * generator refuse a route slice for the three property forms had ONE shape:
+ *
+ *     const NS = 'search-results';
+ *     const K  = `${NS}:mandate.office`;
+ *     …t(`${K}.newTitle`)
+ *
+ * Not one of them is dynamic. Every part is a module constant with a literal at
+ * the bottom — the call `t(\`${K}.newTitle\`)` denotes exactly
+ * `search-results:mandate.office.newTitle` and nothing else. The generator called
+ * them "unresolved" only because it never followed the chain, and the cost of
+ * that gap was three screens painting raw keys on first frame plus a namespace
+ * shipping WHOLE to 141 routes.
+ *
+ * ⚠️ **Bottom-up by fixpoint, not one pass**: `K` cannot resolve before `NS`
+ * does, and source order is no guarantee (hoisting, reordering). The loop runs
+ * until nothing new resolves — so a chain of any depth works, and a cycle simply
+ * stops resolving instead of hanging.
+ *
+ * ⚠️ **A constant that does not fully resolve is NOT recorded.** Half a value is
+ * a guess, and a guess here ships the wrong keys — silently.
+ */
+function collectStringConstants(source) {
+  const pending = new Map();
+  forEachModuleConstant(source, (name, init) => {
+    if (ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init)) {
+      pending.set(name, { literal: init.text });
+    } else if (ts.isTemplateExpression(init)) {
+      pending.set(name, { template: init });
+    }
+  });
+
+  const resolved = new Map();
+  for (const [name, entry] of pending) {
+    if (entry.literal !== undefined) resolved.set(name, entry.literal);
+  }
+
+  let progressed = true;
+  while (progressed) {
+    progressed = false;
+    for (const [name, entry] of pending) {
+      if (resolved.has(name) || entry.template === undefined) continue;
+      const value = expandTemplate(entry.template, resolved);
+      if (value.complete) {
+        resolved.set(name, value.text);
+        progressed = true;
+      }
+    }
+  }
+  return resolved;
+}
+
+/**
+ * Rebuilds a template literal from a constant table.
+ *
+ * Returns `{ text, complete }`: `complete` is true only when EVERY `${…}` was a
+ * known constant. When it is false, `text` is the statically knowable head —
+ * everything up to the first hole — which is still strictly more than the raw
+ * `head` the caller had before (for `` `${K}.notify.${kind}` `` the raw head is
+ * the empty string, i.e. nothing at all).
+ */
+function expandTemplate(node, constants) {
+  let text = node.head.text;
+  for (const span of node.templateSpans) {
+    const name = ts.isIdentifier(span.expression) ? span.expression.text : null;
+    const value = name === null ? undefined : constants.get(name);
+    if (value === undefined) return { text, complete: false };
+    text += value + span.literal.text;
+  }
+  return { text, complete: true };
 }
 
 /**
@@ -290,7 +380,20 @@ function classifyArgument(arg, ctx, sink) {
     return classifyArgument(arg.whenFalse, ctx, sink) && whenTrue;
   }
   if (ts.isTemplateExpression(arg)) {
-    const prefix = staticPrefixOf(arg.head.text);
+    // 🔴 ADR-777 §8.36 — TRY THE CONSTANT CHAIN FIRST. `` t(`${K}.newTitle`) `` where
+    // `K` is a module constant denotes ONE key; treating it as dynamic was the sole
+    // reason the generator refused route slices for the three property forms.
+    //
+    // ⚠️ STRICTLY ADDITIVE, and that is load-bearing: the raw `head` of such a call
+    // is the EMPTY string, so `staticPrefixOf` returned null and the call fell through
+    // to `unresolved`. Nothing that resolved before resolves more narrowly now — the
+    // only movement is unresolved → prefix → exact key.
+    const expanded = expandTemplate(arg, ctx.stringConstants || new Map());
+    if (expanded.complete) {
+      sink.keys.push(splitKey(expanded.text));
+      return true;
+    }
+    const prefix = staticPrefixOf(expanded.text);
     if (prefix === null) return false;
     sink.prefixes.push(splitKey(prefix));
     return true;
@@ -473,6 +576,7 @@ function classifyTranslateCalls(content, { file, keyConstants, propertyValues })
   const ctx = {
     keyConstants: keyConstants || new Map(),
     localConstants: collectLocalConstants(source),
+    stringConstants: collectStringConstants(source),
     lookupProperty: (name) => [
       ...(local.get(name) || []),
       ...((propertyValues && propertyValues.get(name)) || []),
@@ -494,6 +598,8 @@ module.exports = {
   loadKeyConstants,
   resolveAccessChain,
   collectLocalConstants,
+  collectStringConstants,
+  expandTemplate,
   harvestPropertyValues,
   leavesUnder,
   staticPrefixOf,

@@ -20,6 +20,12 @@
  *    Sentry έδειχνε γεγονότα, άρα η σιωπή του server ήταν **αόρατη**: κοιτούσες ένα
  *    ζωντανό dashboard και συμπέραινες ότι η τηλεμετρία δουλεύει. Μην αφαιρέσεις το
  *    import — ο dead-man's switch του ADR-740 κρέμεται από αυτό.
+ *
+ * 3. **Επαλήθευση του συμβολαίου περιβάλλοντος** (ADR-777 §8.35). Είναι ο **μόνος**
+ *    τόπος που τρέχει μία φορά, στο boot, **πριν** σερβιριστεί οποιοδήποτε αίτημα —
+ *    δηλαδή πριν προλάβει άνθρωπος να δει «άκυρος σύνδεσμος» επειδή λείπει μια
+ *    μεταβλητή. Δες `config/environment-contract.ts` για το γιατί ΔΕΝ πετά σε κάθε
+ *    απουσία.
  */
 export async function register(): Promise<void> {
   const origRepeat = String.prototype.repeat;
@@ -30,6 +36,12 @@ export async function register(): Promise<void> {
 
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     await import('./sentry.server.config');
+
+    // ⚠️ ΜΕΤΑ το Sentry, επίτηδες: αν το συμβόλαιο βρει `fatal` απουσία και πετάξει, το
+    // ίδιο το γεγονός της κατάρρευσης πρέπει να **φτάσει** στην τηλεμετρία. Με
+    // αντίστροφη σειρά, η μόνη απόδειξη θα ήταν ένα container που «απλώς δεν ανεβαίνει».
+    const { assertEnvironmentContract } = await import('./src/lib/environment/environment-startup');
+    assertEnvironmentContract(process.env);
   }
 
   if (process.env.NEXT_RUNTIME === 'edge') {
