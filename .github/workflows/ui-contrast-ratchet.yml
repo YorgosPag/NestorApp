@@ -55,7 +55,13 @@ on:
       - 'src/styles/design-tokens/modules/**'
       - '.theme-pairing-baseline.json'
       - 'scripts/check-runtime-contrast-ratchet.js'
-      - 'src/app/test-harness/contrast-matrix/**'
+      # ⚠️ `src/app/**/…` ΚΑΙ ΟΧΙ `src/app/test-harness/…`: το harness ζει μέσα σε
+      # route group (`(bare)`), και ένα route group ΕΙΝΑΙ ΦΑΚΕΛΟΣ — δεν φαίνεται
+      # στο URL, αλλά φαίνεται στο μονοπάτι. Το παλιό glob έδειχνε στη διαδρομή
+      # ΠΡΙΝ τη μετακόμιση σε groups, άρα δεν πυροδοτούσε ΠΟΤΕ: αλλαγή στο harness
+      # δεν ξυπνούσε την πύλη που το κρίνει. Με το `**` επιβιώνει κάθε μελλοντική
+      # μετακίνηση group (ίδιο μάθημα με CHECK 3.52).
+      - 'src/app/**/test-harness/contrast-matrix/**'
       - '.runtime-contrast-baseline.json'
       # CHECK 3.41 (ADR-771 Φ.1) — τα δύο αρχεία που ΟΡΙΖΟΥΝ τα σημάδια ζωντάνιας.
       # Το `scripts/lib/contrast/**` παραπάνω καλύπτει ήδη `cvd.js` + `state-marks.js`.
@@ -97,7 +103,13 @@ on:
       - 'src/styles/design-tokens/modules/**'
       - '.theme-pairing-baseline.json'
       - 'scripts/check-runtime-contrast-ratchet.js'
-      - 'src/app/test-harness/contrast-matrix/**'
+      # ⚠️ `src/app/**/…` ΚΑΙ ΟΧΙ `src/app/test-harness/…`: το harness ζει μέσα σε
+      # route group (`(bare)`), και ένα route group ΕΙΝΑΙ ΦΑΚΕΛΟΣ — δεν φαίνεται
+      # στο URL, αλλά φαίνεται στο μονοπάτι. Το παλιό glob έδειχνε στη διαδρομή
+      # ΠΡΙΝ τη μετακόμιση σε groups, άρα δεν πυροδοτούσε ΠΟΤΕ: αλλαγή στο harness
+      # δεν ξυπνούσε την πύλη που το κρίνει. Με το `**` επιβιώνει κάθε μελλοντική
+      # μετακίνηση group (ίδιο μάθημα με CHECK 3.52).
+      - 'src/app/**/test-harness/contrast-matrix/**'
       - '.runtime-contrast-baseline.json'
       # CHECK 3.41 (ADR-771 Φ.1) — τα δύο αρχεία που ΟΡΙΖΟΥΝ τα σημάδια ζωντάνιας.
       # Το `scripts/lib/contrast/**` παραπάνω καλύπτει ήδη `cvd.js` + `state-marks.js`.

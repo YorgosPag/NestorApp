@@ -26,7 +26,7 @@ const {
 } = require('../lib/contrast/runtime-matrix');
 const { violationId, declarationIds } = require('../check-runtime-contrast-ratchet');
 const { compareSets } = require('../lib/ratchet-baseline');
-const { collectColorLeaves, isColorShaped } = require('../../src/app/(app)/test-harness/contrast-matrix/token-color-leaves');
+const { collectColorLeaves, isColorShaped } = require('../../src/app/(bare)/test-harness/contrast-matrix/token-color-leaves');
 
 const REPO = path.resolve(__dirname, '..', '..');
 const themes = readThemes(REPO);

@@ -718,10 +718,10 @@ ratchets ζει **μία φορά**. Το υπάρχον `runRatchetCli` **δε�
 
 **Νέα**
 ```
-src/app/test-harness/contrast-matrix/page.tsx                    φρουρός έκθεσης (SSoT)
-src/app/test-harness/contrast-matrix/ContrastMatrixHarness.tsx   η αριθμομηχανή
-src/app/test-harness/contrast-matrix/token-color-leaves.ts        walker του ΕΚΤΕΛΕΣΜΕΝΟΥ δέντρου
-src/app/test-harness/contrast-matrix/contrast-matrix.module.css   δομή + τα ΔΥΟ sentinels
+src/app/(bare)/test-harness/contrast-matrix/page.tsx                    φρουρός έκθεσης (SSoT)
+src/app/(bare)/test-harness/contrast-matrix/ContrastMatrixHarness.tsx   η αριθμομηχανή
+src/app/(bare)/test-harness/contrast-matrix/token-color-leaves.ts        walker του ΕΚΤΕΛΕΣΜΕΝΟΥ δέντρου
+src/app/(bare)/test-harness/contrast-matrix/contrast-matrix.module.css   δομή + τα ΔΥΟ sentinels
 scripts/lib/contrast/runtime-matrix.js                            ο κριτής (νέα πηγή, ίδια μηχανή)
 scripts/lib/contrast/matrix-snapshot.js                           ο driver (μόνο μεταφορά)
 scripts/check-runtime-contrast-ratchet.js                         η πύλη

@@ -66,6 +66,20 @@ jobs:
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
+        with:
+          # ⚠️ ΠΛΗΡΕΣ ΙΣΤΟΡΙΚΟ — ΤΟ ΑΠΑΙΤΕΙ ΤΟ SELF-TEST, ΟΧΙ Η ΠΥΛΗ.
+          # Το `Π1` βαθμονομεί σε ΠΡΑΓΜΑΤΙΚΟ ιστορικό κώδικα (`git show 90b4c13e:`)
+          # — καρφωμένο commit, ποτέ `HEAD`, ώστε να μην αυτοακυρωθεί σιωπηλά. Με
+          # shallow clone (η προεπιλογή του checkout) ο commit ΔΕΝ ΥΠΑΡΧΕΙ και το
+          # test πέφτει με `fatal: invalid object name '90b4c13e'` — δηλαδή η πύλη
+          # ανέφερε αποτυχία ενώ ΤΟ ΙΔΙΟ ΤΟ ΕΡΩΤΗΜΑ ΤΗΣ ΗΤΑΝ ΠΡΑΣΙΝΟ (το βήμα
+          # «CHECK 3.55» πέρασε· έπεσε μόνο ο αυτοέλεγχος). Ακριβώς αυτό συνέβη
+          # στην πρώτη κιόλας εκτέλεση της πύλης, 21/08.
+          # Οι υπόλοιπες git-based πύλες (ui-contrast · ssot-discover ·
+          # e2e-executability · jest-suite · i18n-shell-slice · gitleaks) το έχουν
+          # ήδη· εδώ ξεχάστηκε επειδή είναι η νεότερη — επαληθευμένο σαρώνοντας
+          # ΟΛΑ τα workflows, αυτό ήταν το μόνο shallow με git-based self-test.
+          fetch-depth: 0
 
       - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
