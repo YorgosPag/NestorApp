@@ -148,7 +148,18 @@ export async function announceMandateDecision(
         ? 'mandateDecision.confirmedTitle'
         : 'mandateDecision.declinedTitle',
       titleParams: { client, title: event.listingTitle },
-      eventId: `mandate-decision:${event.ownerPropertyId}:${event.decidedAt}`,
+      // 🔴 **Η ΤΑΥΤΟΤΗΤΑ ΤΟΥ ΓΕΓΟΝΟΤΟΣ ΕΙΝΑΙ Η ΜΕΤΑΒΑΣΗ, ΟΧΙ Η ΩΡΑ — και το βρήκε
+      // ΑΓΚΥΡΑ, όχι σκέψη.** Η πρώτη γραφή ήταν `…:${decidedAt}` και **κοκκίνιζε δύο
+      // στις τέσσερις εκτελέσεις**: δύο αποφάσεις μέσα στο **ίδιο χιλιοστό** παίρνουν
+      // ταυτόσημο κλειδί, οπότε το idempotency του αγωγού καταπίνει τη **δεύτερη** —
+      // δηλαδή το γραφείο **δεν μαθαίνει ποτέ** ότι ο πελάτης άλλαξε γνώμη. Ένα
+      // «σπάνιο» σιωπηλό χάσιμο είναι ακριβώς το είδος βλάβης που κυνηγά όλο το §8.34.
+      //
+      // 🔑 Με τη **μετάβαση** μέσα στο κλειδί η σύγκρουση γίνεται **δομικά αδύνατη**:
+      // ο φρουρός αλλαγής εγγυάται `previous !== next`, άρα μετά από κάθε ειδοποίηση
+      // το `previous` της επόμενης **είναι** το `next` της προηγούμενης. Δύο
+      // ταυτόσημες μεταβάσεις στο ίδιο χιλιοστό δεν μπορούν να υπάρξουν.
+      eventId: `mandate-decision:${event.ownerPropertyId}:${event.previous}>${event.next}:${event.decidedAt}`,
       entityId: event.ownerPropertyId,
       entityType: NOTIFICATION_ENTITY_TYPES.PROPERTY,
       source: {

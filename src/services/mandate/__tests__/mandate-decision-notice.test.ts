@@ -32,6 +32,10 @@ jest.mock('@/server/notifications/notification-orchestrator', () => ({
 const { issueMandateConsentLink, markMandateViewed, recordMandateDecision } =
   require('@/services/mandate/mandate-consent.service') as typeof import('@/services/mandate/mandate-consent.service');
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { announceMandateDecision } =
+  require('@/services/mandate/mandate-decision-notifier.service') as typeof import('@/services/mandate/mandate-decision-notifier.service');
+
 const NOW = '2026-08-21T10:00:00.000Z';
 const LISTING = 'ownp_a';
 const CLIENT = 'cont_kostas';
@@ -204,6 +208,54 @@ describe('🔴 Ε — «ο Κώστας απάντησε»', () => {
     await recordMandateDecision(db, link.token, 'declined');
 
     expect(dispatched[0]?.eventId).not.toBe(dispatched[1]?.eventId);
+  });
+
+  it('🔴 Ε5β — ΤΟ ΙΔΙΟ ΧΙΛΙΟΣΤΟ: δύο μεταβάσεις, δύο κλειδιά — ΝΤΕΤΕΡΜΙΝΙΣΤΙΚΑ', async () => {
+    // 🔴 **Αυτή η άγκυρα γεννήθηκε από ΑΣΤΑΘΕΙΑ, και η αστάθεια ήταν ΕΛΑΤΤΩΜΑ.** Το
+    // `Ε5` κοκκίνιζε **δύο στις τέσσερις** εκτελέσεις: όταν οι δύο αποφάσεις έπεφταν
+    // στο ίδιο χιλιοστό, το κλειδί γεγονότος —που κουβαλούσε **μόνο** το `decidedAt`—
+    // ήταν ταυτόσημο, και το idempotency του αγωγού κατάπινε τη **δεύτερη**
+    // ειδοποίηση. Το γραφείο **δεν θα μάθαινε ποτέ** ότι ο πελάτης άλλαξε γνώμη.
+    //
+    // Εδώ ο χρόνος είναι **καρφωμένος και ίδιος**, ώστε η περίπτωση να δοκιμάζεται
+    // **πάντα** — όχι όταν τύχει να προλάβει το ρολόι.
+    const db = world('nonce-1');
+    const SAME_MS = '2026-08-21T10:00:00.000Z';
+
+    const base = {
+      ownerPropertyId: LISTING,
+      listingTitle: 'Οικόπεδο Κώστα',
+      clientContactId: CLIENT,
+      recipientUserId: 'user_maria',
+      tenantId: 'comp_alfa',
+      decidedAt: SAME_MS,
+    } as const;
+
+    await announceMandateDecision(db, { ...base, previous: 'pending', next: 'confirmed' });
+    await announceMandateDecision(db, { ...base, previous: 'confirmed', next: 'declined' });
+
+    expect(dispatched).toHaveLength(2);
+    expect(dispatched[0]?.eventId).not.toBe(dispatched[1]?.eventId);
+  });
+
+  it('Ε5γ — και ο φρουρός αλλαγής κάνει την ΤΑΥΤΟΣΗΜΗ μετάβαση αδύνατη', async () => {
+    // Η άλλη μισή απόδειξη: το κλειδί δεν χρειάζεται να είναι μοναδικό για **κάθε**
+    // ζεύγος (μετάβαση, χρόνος) — αρκεί να είναι, γιατί η ίδια μετάβαση δεν μπορεί να
+    // ειδοποιήσει δύο φορές στη σειρά.
+    const db = world('nonce-1');
+    const event = {
+      ownerPropertyId: LISTING,
+      listingTitle: 'Οικόπεδο Κώστα',
+      clientContactId: CLIENT,
+      recipientUserId: 'user_maria',
+      tenantId: 'comp_alfa',
+      decidedAt: '2026-08-21T10:00:00.000Z',
+      previous: 'confirmed',
+      next: 'confirmed',
+    } as const;
+
+    expect(await announceMandateDecision(db, event)).toBe(false);
+    expect(dispatched).toHaveLength(0);
   });
 
   it('Ε6 — αγγελία ΧΩΡΙΣ εταιρεία δεν στέλνει τίποτα, και δεν σκάει', async () => {
