@@ -17,17 +17,10 @@
  */
 
 import { nowISO } from '@/lib/date-local';
+import { bytesToHex, sha256HexOfText } from '@/lib/hash/sha256';
 
 const LS_SALT_KEY = 'bim3d.telemetry.dailySalt';
 const LS_SALT_DATE_KEY = 'bim3d.telemetry.saltRotatedAt';
-
-function bytesToHex(bytes: Uint8Array): string {
-  let out = '';
-  for (let i = 0; i < bytes.length; i++) {
-    out += bytes[i].toString(16).padStart(2, '0');
-  }
-  return out;
-}
 
 function todayUtcKey(): string {
   return nowISO().slice(0, 10);
@@ -68,9 +61,7 @@ export function getOrRotateDailySalt(): string {
  */
 export async function computeAnonymousSessionId(userId: string): Promise<string> {
   const salt = getOrRotateDailySalt();
-  const payload = new TextEncoder().encode(`${salt}:${userId}`);
-  const digest = await crypto.subtle.digest('SHA-256', payload);
-  return bytesToHex(new Uint8Array(digest));
+  return sha256HexOfText(`${salt}:${userId}`);
 }
 
 /**

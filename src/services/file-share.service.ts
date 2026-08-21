@@ -21,11 +21,13 @@ import {
   where,
   serverTimestamp,
 } from 'firebase/firestore';
+import type { DocumentData } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { FileAuditService } from '@/services/file-audit.service';
 import { safeFireAndForget } from '@/lib/safe-fire-and-forget';
+import { sha256HexOfText } from '@/lib/hash/sha256';
 
 const logger = createModuleLogger('FileShareService');
 
@@ -70,6 +72,36 @@ export interface FileShareRecord {
   pdfRegeneratedAt?: Date | string;
 }
 
+/**
+ * Firestore doc → {@link FileShareRecord} — **τα πεδία που δικαιούται ΚΑΘΕ καλών**.
+ *
+ * 🔴 **Το `passwordHash` ΔΕΝ μπαίνει εδώ, και αυτό είναι απόφαση ασφαλείας.** Ο
+ * κατάλογος συνδέσμων (`getSharesForFile`) δεν έχει καμία δουλειά να κουβαλά τον
+ * hash· μόνο η επαλήθευση (`validateShareToken`) τον χρειάζεται, και τον ζητά
+ * **ρητά**. Πριν την ένωση η ασυμμετρία υπήρχε ήδη — αλλά ως **παράλειψη μέσα σε
+ * αντιγραμμένο literal**, δηλαδή κάτι που η επόμενη αντιγραφή θα εξαφάνιζε σιωπηλά.
+ *
+ * ⚠️ Το ίδιο ισχύει για τα `showcase*` / `pdfStoragePath`: ο κατάλογος δεν τα
+ * επέστρεφε ποτέ. **Διατηρείται ως έχει** — αν πρέπει να τα επιστρέφει, αυτό είναι
+ * απόφαση προϊόντος, όχι παρενέργεια μιας κεντρικοποίησης.
+ */
+function toShareRecord(id: string, data: DocumentData): FileShareRecord {
+  return {
+    id,
+    fileId: data.fileId,
+    token: data.token,
+    createdBy: data.createdBy,
+    createdAt: data.createdAt?.toDate?.() ?? data.createdAt ?? '',
+    expiresAt: data.expiresAt,
+    isActive: data.isActive,
+    requiresPassword: data.requiresPassword ?? false,
+    downloadCount: data.downloadCount ?? 0,
+    maxDownloads: data.maxDownloads ?? 0,
+    note: data.note,
+    companyId: data.companyId,
+  };
+}
+
 /** Input for creating a share link */
 export interface CreateShareInput {
   fileId: string;
@@ -112,12 +144,7 @@ function generateToken(length = 32): string {
 
 /** Simple hash for password (client-side — not bcrypt) */
 async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+  return sha256HexOfText(password);
 }
 
 // ============================================================================
@@ -209,20 +236,10 @@ export class FileShareService {
     const docSnap = snap.docs[0];
     const data = docSnap.data();
 
+    // Η επαλήθευση ζητά ΡΗΤΑ ό,τι ο κατάλογος δεν δικαιούται (δες `toShareRecord`).
     const share: FileShareRecord = {
-      id: docSnap.id,
-      fileId: data.fileId,
-      token: data.token,
-      createdBy: data.createdBy,
-      createdAt: data.createdAt?.toDate?.() ?? data.createdAt ?? '',
-      expiresAt: data.expiresAt,
-      isActive: data.isActive,
+      ...toShareRecord(docSnap.id, data),
       passwordHash: data.passwordHash,
-      requiresPassword: data.requiresPassword ?? false,
-      downloadCount: data.downloadCount ?? 0,
-      maxDownloads: data.maxDownloads ?? 0,
-      note: data.note,
-      companyId: data.companyId,
       showcasePropertyId: data.showcasePropertyId,
       showcaseMode: data.showcaseMode,
       pdfStoragePath: data.pdfStoragePath,
@@ -279,22 +296,6 @@ export class FileShareService {
     const q = query(colRef, where('companyId', '==', companyId), where('fileId', '==', fileId), where('isActive', '==', true));
     const snap = await getDocs(q);
 
-    return snap.docs.map((d) => {
-      const data = d.data();
-      return {
-        id: d.id,
-        fileId: data.fileId,
-        token: data.token,
-        createdBy: data.createdBy,
-        createdAt: data.createdAt?.toDate?.() ?? data.createdAt ?? '',
-        expiresAt: data.expiresAt,
-        isActive: data.isActive,
-        requiresPassword: data.requiresPassword ?? false,
-        downloadCount: data.downloadCount ?? 0,
-        maxDownloads: data.maxDownloads ?? 0,
-        note: data.note,
-        companyId: data.companyId,
-      } as FileShareRecord;
-    });
+    return snap.docs.map((d) => toShareRecord(d.id, d.data()));
   }
 }

@@ -40,6 +40,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { generateShareId } from '@/services/enterprise-id-convenience';
 import { ShareEntityRegistry } from '@/services/sharing/share-entity-registry';
+import { sha256HexOfText } from '@/lib/hash/sha256';
 import type {
   CreateShareInput,
   CreateShareResult,
@@ -71,11 +72,7 @@ function generateToken(length = TOKEN_LENGTH): string {
  * migrates to server-side bcrypt via Cloud Function.
  */
 async function hashPasswordLegacy(password: string): Promise<string> {
-  const data = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
+  return sha256HexOfText(password);
 }
 
 // ============================================================================

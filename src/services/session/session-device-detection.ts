@@ -9,6 +9,7 @@
  * @gdpr-compliant true
  */
 
+import { isWebCryptoAvailable, sha256HexOfText } from '@/lib/hash/sha256';
 import type {
   SessionDeviceInfo,
   SessionLocation,
@@ -128,16 +129,13 @@ export function getDeviceInfo(): SessionDeviceInfo {
 
 /** Hash IP address for GDPR compliance (SHA-256, first 8 chars) */
 async function hashIP(ip: string): Promise<string> {
-  if (typeof crypto === 'undefined' || !crypto.subtle) {
+  // Υποβάθμιση αντί για σφάλμα: μια μασκαρισμένη διεύθυνση εξυπηρετεί το GDPR
+  // εξίσου καλά, ενώ μια εξαίρεση θα έριχνε τον εντοπισμό συσκευής ολόκληρο.
+  if (!isWebCryptoAvailable()) {
     return ip.split('.').slice(0, 2).join('.') + '.x.x';
   }
 
-  const encoder = new TextEncoder();
-  const data = encoder.encode(ip + 'enterprise-salt-2024');
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
+  const hashHex = await sha256HexOfText(ip + 'enterprise-salt-2024');
   return hashHex.substring(0, 8);
 }
 

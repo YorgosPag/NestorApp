@@ -5445,6 +5445,17 @@
         "src/lib/location/location-provenance.ts"
       ],
       "tier": 3
+    },
+    "browser-sha256": {
+      "ssotFile": "src/lib/hash/sha256.ts",
+      "tier": 2,
+      "description": "ADR-749 - SHA-256 sto browser (async Web Crypto) zei MIA fora sto src/lib/hash/sha256.ts: sha256Hex(BufferSource) / sha256HexOfText(string) / bytesToHex / isWebCryptoAvailable. Itan grammeno EXI fores me tria idiotika bytesToHex kai dyo asymvates symperifores otan leipei to Web Crypto. DEN kalyptei to Node createHash (sync, allo perivallon: vqe/hashing.ts, server/lib/id-generation.ts, lib/middleware/with-rate-limit.ts, services/backup/*) oute to hex XROMATOS (color-math.ts, rgb-unit-hex.ts, run-color.ts) - alli erotisi.",
+      "forbiddenPatterns": [
+        "subtle\\.digest\\(\\s*['\"]SHA-256['\"]"
+      ],
+      "allowlist": [
+        "src/lib/hash/sha256.ts"
+      ]
     }
   }
 }

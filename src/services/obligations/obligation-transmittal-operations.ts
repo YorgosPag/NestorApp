@@ -14,6 +14,7 @@ import { COLLECTIONS } from '@/config/firestore-collections';
 import { validateObligationStatusTransition } from './workflow-rules';
 import { exportObligationToPDF } from '@/services/pdf';
 import { createAuditEvent, toDeliveryProofEntry } from './obligation-normalizers';
+import { sha256Hex } from '@/lib/hash/sha256';
 import type {
   ObligationDocument,
   ObligationIssueRequest,
@@ -27,26 +28,6 @@ import type {
 } from '@/types/obligations';
 
 const logger = createModuleLogger('ObligationTransmittalOperations');
-
-// ── Crypto helpers ──
-
-const bytesToHex = (bytes: Uint8Array): string =>
-  Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-
-const sha256Hex = async (payload: Uint8Array): Promise<string> => {
-  if (!globalThis.crypto || !globalThis.crypto.subtle) {
-    throw new Error('CRYPTO_ERROR: Web Crypto API is not available for issue proof generation');
-  }
-
-  const digestBuffer =
-    payload.byteOffset === 0 && payload.byteLength === payload.buffer.byteLength
-      ? payload.buffer
-      : payload.slice().buffer;
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', digestBuffer as ArrayBuffer);
-  return bytesToHex(new Uint8Array(digest));
-};
 
 // ── PDF filename builder ──
 

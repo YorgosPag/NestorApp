@@ -24,6 +24,7 @@ import { auth } from '@/lib/firebase';
 import { COLLECTIONS } from '@/config/firestore-collections';
 import { createModuleLogger } from '@/lib/telemetry';
 import { getErrorMessage } from '@/lib/error-utils';
+import { sha256HexOfText } from '@/lib/hash/sha256';
 import type {
   BackupCode,
   BackupCodesCollection,
@@ -63,12 +64,7 @@ export function generateBackupCodes(): string[] {
 
 /** Hash a backup code for secure storage */
 export async function hashBackupCode(code: string): Promise<string> {
-  const normalizedCode = code.replace(/-/g, '').toUpperCase();
-  const encoder = new TextEncoder();
-  const data = encoder.encode(normalizedCode);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return sha256HexOfText(code.replace(/-/g, '').toUpperCase());
 }
 
 // =============================================================================
