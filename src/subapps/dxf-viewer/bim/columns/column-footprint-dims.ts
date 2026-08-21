@@ -22,7 +22,11 @@
 
 import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnParams } from '../types/column-types';
+import { bboxOf } from '../geometry/shared/xy-bounds';
+import type { CentredAnchorFrame } from '../grips/centred-anchor-frame';
+import { mmScaleFor } from '../../utils/scene-units';
 import {
+  ANCHOR_OFFSETS,
   DEFAULT_POLYGON_SIDES,
   MAX_POLYGON_SIDES,
   MIN_POLYGON_SIDES,
@@ -46,22 +50,16 @@ export function polygonBboxMm(
   if (r === 0) return { dimX: 0, dimY: 0 };
   const rawSides = sides ?? DEFAULT_POLYGON_SIDES;
   const n = Math.max(MIN_POLYGON_SIDES, Math.min(MAX_POLYGON_SIDES, Math.round(rawSides)));
-  let minX = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
   const startAngle = Math.PI / 2;
   const step = (2 * Math.PI) / n;
+  // Οι κορυφές υλοποιούνται και μετά ρωτιέται ο ΕΝΑΣ βρόχος min/max (`shared/xy-bounds`).
+  // n ≤ MAX_POLYGON_SIDES (12) — η δέσμευση είναι αμελητέα, η δεύτερη αλήθεια δεν ήταν.
+  const verts: Point2D[] = [];
   for (let i = 0; i < n; i++) {
     const a = startAngle + i * step;
-    const x = r * Math.cos(a);
-    const y = r * Math.sin(a);
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
+    verts.push({ x: r * Math.cos(a), y: r * Math.sin(a) });
   }
-  return { dimX: maxX - minX, dimY: maxY - minY };
+  return polygonBackedBboxMm(verts);
 }
 
 /**
@@ -73,14 +71,7 @@ export function polygonBboxMm(
 export function polygonBackedBboxMm(
   poly: readonly Point2D[],
 ): { dimX: number; dimY: number } {
-  let minX = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
-  for (const p of poly) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
+  const { minX, maxX, minY, maxY } = bboxOf(poly);
   return { dimX: maxX - minX, dimY: maxY - minY };
 }
 
@@ -99,4 +90,26 @@ export function columnFootprintDims(params: ColumnParams): { dimX: number; dimY:
   if (uPoly && uPoly.length >= 3) return polygonBackedBboxMm(uPoly);
   if (cPoly && cPoly.length >= 3) return polygonBackedBboxMm(cPoly);
   return { dimX: params.width, dimY: params.depth };
+}
+
+/**
+ * Κολόνα → κοινό {@link CentredAnchorFrame}. **ΕΝΑΣ** τόπος για την ερώτηση «πού
+ * κάθεται και πώς στρίβει αυτή η κολόνα»: τον καταναλώνουν και η γεωμετρία
+ * (`column-geometry`) και οι λαβές (`column-grip-utils`) — render == handles.
+ *
+ * Το circular παρακάμπτει τη μετατόπιση άγκυρας (περιστροφικά συμμετρικό, centroid
+ * = `position`) μέσω μηδενικού offset· τα υπόλοιπα είδη περνούν από τα
+ * `ANCHOR_OFFSETS` + {@link columnFootprintDims}. Η ίδια η γεωμετρία της
+ * περιστροφής/κλίμακας ζει στο `centred-anchor-frame` SSoT (κοινό με το πέδιλο).
+ *
+ * ⚠️ **ΜΗΝ ξαναχτίσεις το literal** `{ position, rotationDeg, scale, anchorOffset,
+ * dimX, dimY }` σε καλούντα — ήταν γραμμένο τρεις φορές και το CHECK 3.28 το πιάνει.
+ */
+export function columnAnchorFrame(params: ColumnParams): CentredAnchorFrame {
+  const scale = mmScaleFor(params);
+  const position = { x: params.position.x, y: params.position.y };
+  if (params.kind === 'circular') {
+    return { position, rotationDeg: params.rotation, scale, anchorOffset: { dx: 0, dy: 0 }, dimX: 0, dimY: 0 };
+  }
+  return { position, rotationDeg: params.rotation, scale, anchorOffset: ANCHOR_OFFSETS[params.anchor], ...columnFootprintDims(params) };
 }

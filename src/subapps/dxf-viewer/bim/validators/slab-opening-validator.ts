@@ -36,7 +36,7 @@ import {
   polygonArea,
 } from '../geometry/shared/polygon-utils';
 import { getSlabOpeningMinDimensionMm } from '../geometry/slab-opening-geometry';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { mmScaleFor } from '../../utils/scene-units';
 
 /** Result of a slab-opening validation pass — hard errors non-empty when invalid. */
 export interface SlabOpeningValidationResult {
@@ -93,7 +93,7 @@ function validateOutline(params: SlabOpeningParams, hardErrors: string[]): void 
   }
   // `polygonArea` returns area σε vertex units². Όταν το scene δουλεύει σε
   // m/cm/in/ft, ανάγουμε στη μονάδα του threshold (mm²) πριν τη σύγκριση.
-  const mmFactor = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const mmFactor = mmScaleFor(params);
   const canvasToMm2 = 1 / (mmFactor * mmFactor);
   const areaMm2 = polygonArea(verts) * canvasToMm2;
   if (areaMm2 < MIN_SLAB_OPENING_AREA_MM2) {

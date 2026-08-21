@@ -24,10 +24,12 @@ import type { Point3D, Polyline3D, BoundingBox3D } from '../types/bim-base';
 import type { WallParams, WallGeometry, WallKind } from '../types/wall-types';
 import type { WallTopProfile } from './wall-top-profile';
 import type { WallBaseProfile } from './wall-base-profile';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { mmScaleFor } from '../../utils/scene-units';
 import { offsetPolyline, projectPointTo2D } from './shared/polygon-utils';
 import { subdivideQuadraticBezier, tessellateArcAxis } from './shared/curve-tessellation';
 import { BULGE_STRAIGHT_EPS } from '../../rendering/entities/shared/geometry-bulge-utils';
+import { bboxOfAll } from './shared/xy-bounds';
+import { polylineLength } from './shared/polyline-frame';
 
 const MM_TO_M = 1 / 1000;
 /** mm² → m² (1e6). ADR-395 G6 opening face area conversion. */
@@ -90,7 +92,7 @@ export function computeWallGeometry(
 ): WallGeometry {
   // s converts mm scalar params → canvas world units (matches start/end coordinate space).
   // height and thickness are always stored in mm (SSOT); start/end are canvas world coords.
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const s = mmScaleFor(params);
 
   const rawVertices = pickAxisVertices(params, kind);
   const vertices = applyAxisBevels(rawVertices, params.startBevel ?? 0, params.endBevel ?? 0, s);
@@ -414,17 +416,7 @@ function computeBbox(
   heightMm: number,
   baseOffsetMm: number = 0,
 ): BoundingBox3D {
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-  const fold = (p: Point3D): void => {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  };
-  for (const p of axis) fold(p);
-  for (const p of outer) fold(p);
-  for (const p of inner) fold(p);
+  const { minX, maxX, minY, maxY } = bboxOfAll(axis, outer, inner);
   const baseM = baseOffsetMm / 1000;
   return {
     min: { x: minX, y: minY, z: baseM },
@@ -439,17 +431,11 @@ function computeBbox(
  */
 export function getWallAxisVertices(params: WallParams, kind: WallKind): readonly Point3D[] {
   const raw = pickAxisVertices(params, kind);
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const s = mmScaleFor(params);
   return applyAxisBevels(raw, params.startBevel ?? 0, params.endBevel ?? 0, s);
 }
 
 /** Polyline length in mm (sum of segment lengths). Exported for coordinators. */
 export function computePolylineLengthMm(vertices: readonly Point3D[]): number {
-  let len = 0;
-  for (let i = 1; i < vertices.length; i++) {
-    const a = vertices[i - 1];
-    const b = vertices[i];
-    len += Math.hypot(b.x - a.x, b.y - a.y);
-  }
-  return len;
+  return polylineLength(vertices);
 }

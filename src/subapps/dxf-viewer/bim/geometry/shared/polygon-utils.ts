@@ -19,6 +19,7 @@ import type { PlanarPoint } from './polygon-point-location';
 import { segmentsIntersect } from '../../../utils/geometry/GeometryUtils';
 import { angleBetweenVectors } from '../../../rendering/entities/shared/geometry-vector-utils';
 import { radToDeg } from '../../../rendering/entities/shared/geometry-angle-utils';
+import { bboxOfAll } from './xy-bounds';
 
 /**
  * Compute signed polygon area via the shoelace (Gauss) formula.
@@ -142,13 +143,8 @@ export function polygonBbox(vertices: readonly Point3D[]): BoundingBox3D {
   if (vertices.length === 0) {
     return { min: { x: 0, y: 0, z: 0 }, max: { x: 0, y: 0, z: 0 } };
   }
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const v of vertices) {
-    if (v.x < minX) minX = v.x;
-    if (v.y < minY) minY = v.y;
-    if (v.x > maxX) maxX = v.x;
-    if (v.y > maxY) maxY = v.y;
-  }
+  // Ο βρόχος min/max ζει ΜΙΑ φορά, στο `./xy-bounds` (ADR-583 / CHECK 3.28).
+  const { minX, minY, maxX, maxY } = bboxOfAll(vertices);
   return {
     min: { x: minX, y: minY, z: 0 },
     max: { x: maxX, y: maxY, z: 0 },

@@ -17,6 +17,7 @@ import { computeFinishedOutline } from './structural-finish-horizontal';
 import type { Pt2 } from '../geometry/shared/segment-polygon-coverage';
 import { dilatePolygonOutward } from '../geometry/shared/polygon-dilate';
 import { toPt2 } from './structural-finish-scene';
+import { bboxOf, bboxOverlap, type Bbox } from '../geometry/shared/xy-bounds';
 
 /** Κατακόρυφη έκταση [zBot, zTop] σε building-relative mm. */
 export interface ZExtent {
@@ -24,13 +25,8 @@ export interface ZExtent {
   readonly zTopMm: number;
 }
 
-/** Axis-aligned plan bounding box (canvas units). */
-export interface Bbox {
-  readonly minX: number;
-  readonly maxX: number;
-  readonly minY: number;
-  readonly maxY: number;
-}
+/** Axis-aligned plan bounding box (canvas units) — SSoT: `../geometry/shared/xy-bounds`. */
+export { bboxOf, bboxOverlap, type Bbox };
 
 /** Footprint (plan) + z-span ενός εμποδίου κάλυψης / finished outline μέλους. */
 export interface PlanObstacle extends ZExtent {
@@ -45,23 +41,7 @@ export interface PlanObstacle extends ZExtent {
   readonly id?: string;
 }
 
-export function bboxOf(pts: readonly { x: number; y: number }[]): Bbox {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const p of pts) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, maxX, minY, maxY };
-}
 
-export function bboxOverlap(a: Bbox, b: Bbox): boolean {
-  return a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
-}
 
 /** `true` όταν η κατακόρυφη έκταση [zBot,zTop] φτάνει το επίπεδο `planeZ` (± tol). */
 export function spanReachesPlane(ext: ZExtent, planeZmm: number, tolMm: number): boolean {

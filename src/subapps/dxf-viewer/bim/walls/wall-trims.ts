@@ -37,7 +37,7 @@ import type { WallEntity, WallParams } from '../types/wall-types';
 import type { AnySceneEntity } from '../../types/entities';
 import type { Point2D } from '../../rendering/types/Types';
 import { computeWallGeometry } from '../geometry/wall-geometry';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { mmScaleFor } from '../../utils/scene-units';
 import { computeWallColumnEndMiter } from '../columns/wall-column-end-miter';
 import {
   lineLineIntersect,
@@ -225,8 +225,8 @@ function classifyPair(
   // not a hardcoded "1". In a metres-scene drawing "1" means 1 METRE, which wrongly
   // skipped every sub-metre wall → those walls never got junction-trimmed and
   // overshot into their neighbours (the region-fill overshoot bug). ADR-363 Phase 1L.
-  const sA = mmToSceneUnits(a.params.sceneUnits ?? 'mm');
-  const sB = mmToSceneUnits(b.params.sceneUnits ?? 'mm');
+  const sA = mmScaleFor(a.params);
+  const sB = mmScaleFor(b.params);
   if (lenA < sA || lenB < sB) return;
 
   const isect = lineLineIntersect(a1x, a1y, a2x, a2y, b1x, b1y, b2x, b2y);

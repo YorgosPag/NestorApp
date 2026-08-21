@@ -34,7 +34,6 @@ import type {
   ColumnUshapeParams,
 } from '../types/column-types';
 import {
-  ANCHOR_OFFSETS,
   CIRCULAR_COLUMN_SEGMENTS,
   DEFAULT_POLYGON_SIDES,
   MAX_POLYGON_SIDES,
@@ -46,9 +45,10 @@ import type { ColumnTopProfile, ColumnBaseProfile } from './column-vertical-prof
 import { polygonArea, polygonBbox } from './shared/polygon-utils';
 import { translatePoints } from '../../rendering/entities/shared/geometry-vector-utils';
 import { buildIShapeProfile } from './shared/i-shape-profile';
-import { mmToSceneUnits } from '../../utils/scene-units';
-import { columnFootprintDims } from '../columns/column-footprint-dims';
-import { centredLocalToWorld, centredPolyToWorld, type CentredAnchorFrame } from '../grips/centred-anchor-frame';
+import { mmScaleFor } from '../../utils/scene-units';
+import { columnAnchorFrame, columnFootprintDims } from '../columns/column-footprint-dims';
+import { centredLocalToWorld, centredPolyToWorld } from '../grips/centred-anchor-frame';
+import { bboxOf } from './shared/xy-bounds';
 
 const MM_TO_M = 1 / 1000;
 
@@ -97,9 +97,9 @@ export function computeColumnGeometry(
   // s: canvas units per 1 mm. Shape builders emit local vertices in canvas
   // units (mm × s) so anchor-offset + rotation stay in the same space as
   // `params.position` (always canvas units from user click).
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const s = mmScaleFor(params);
   const localVerts = buildLocalFootprint(params, s);
-  const transformed = transformFootprint(localVerts, params, s);
+  const transformed = transformFootprint(localVerts, params);
 
   const bbox = polygonBbox(transformed);
   // Polygon vertices are in canvas units → convert area to m².
@@ -360,19 +360,11 @@ function buildCompositeLocal(s: number, composite?: ColumnCompositeParams): Poin
  * center, μηδέν rotation (όπως ο `transformFootprint`).
  */
 export function columnLocalMmToWorld(params: ColumnParams, localMm: readonly Point2D[]): Point2D[] {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const s = mmScaleFor(params);
   if (params.kind === 'circular') {
     return localMm.map((p) => ({ x: params.position.x + p.x * s, y: params.position.y + p.y * s }));
   }
-  const { dimX, dimY } = columnFootprintDims(params);
-  const frame: CentredAnchorFrame = {
-    position: params.position,
-    rotationDeg: params.rotation,
-    scale: s,
-    anchorOffset: ANCHOR_OFFSETS[params.anchor],
-    dimX,
-    dimY,
-  };
+  const frame = columnAnchorFrame(params);
   return localMm.map((p) => centredLocalToWorld(frame, p));
 }
 
@@ -390,25 +382,13 @@ export function columnLocalMmToWorld(params: ColumnParams, localMm: readonly Poi
  * per-engine raw cos/sin. The local vertices are already canvas units (mm × s);
  * only `dimX`/`dimY` (mm) get scaled internally for the anchor shift.
  */
-function transformFootprint(
-  local: readonly Point3D[],
-  params: ColumnParams,
-  s: number,
-): Point3D[] {
+function transformFootprint(local: readonly Point3D[], params: ColumnParams): Point3D[] {
   if (params.kind === 'circular') {
     // Circular: κάθε local vertex (z=0 από τους builders) μετατοπίζεται κατά `position`.
     // `translatePoints` (SSoT) διατηρεί το z=0 του source — byte-identical με το πρώην `z: 0`.
     return translatePoints(local, params.position);
   }
-  const { dimX, dimY } = columnFootprintDims(params);
-  const frame: CentredAnchorFrame = {
-    position: params.position,
-    rotationDeg: params.rotation,
-    scale: s,
-    anchorOffset: ANCHOR_OFFSETS[params.anchor],
-    dimX,
-    dimY,
-  };
+  const frame = columnAnchorFrame(params);
   return centredPolyToWorld(frame, local).map((p) => ({ x: p.x, y: p.y, z: 0 }));
 }
 
@@ -438,15 +418,9 @@ export function getColumnSlenderness(params: ColumnParams): number {
  * `geometry.footprint.vertices` (ίδιο `buildLocalFootprint` + order-preserving transform).
  */
 export function materializeColumnLocalPolygonMm(params: ColumnParams): Point2D[] {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const s = mmScaleFor(params);
   const mm = buildLocalFootprint(params, s).map((v) => ({ x: v.x / s, y: v.y / s }));
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const p of mm) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
+  const { minX, maxX, minY, maxY } = bboxOf(mm);
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
   return mm.map((p) => ({ x: p.x - cx, y: p.y - cy }));

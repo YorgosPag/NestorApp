@@ -13,7 +13,7 @@ import type { Point2D } from '../../rendering/types/Types';
 import type { ColumnEntity, ColumnParams } from '../types/column-types';
 import type { GripInfo } from '../../hooks/useGripMovement';
 import { ANCHOR_OFFSETS } from '../types/column-types';
-import { columnFootprintDims, polygonBboxMm } from './column-footprint-dims';
+import { columnAnchorFrame, polygonBboxMm } from './column-footprint-dims';
 import { mmScaleFor } from '../../utils/scene-units';
 import { translatePoint } from '../../rendering/entities/shared/geometry-vector-utils';
 // ADR-397 §D3 — local-frame rotation primitives are shared SSoT (grip-math →
@@ -24,7 +24,6 @@ import { rotationHandlePerpOffset, rotationHandleMidwayOffset } from '../grips/r
 import {
   centredCentroidWorld,
   centredLocalToWorld,
-  type CentredAnchorFrame,
 } from '../grips/centred-anchor-frame';
 
 export const DEG_TO_RAD = Math.PI / 180;
@@ -62,20 +61,6 @@ export function projectDeltaToLocal(
  */
 export { polygonBackedBboxMm } from './column-footprint-dims';
 
-/**
- * Column footprint → shared `CentredAnchorFrame`. Circular bypasses the anchor
- * shift (rotationally symmetric, centroid = `position`) via a zero anchor offset;
- * other kinds use `ANCHOR_OFFSETS` + `columnFootprintDims`. The rotate/scale/shift
- * geometry itself lives in the `centred-anchor-frame` SSoT (shared with the pad).
- */
-function columnAnchorFrame(params: ColumnParams): CentredAnchorFrame {
-  const scale = mmScaleFor(params);
-  const position = { x: params.position.x, y: params.position.y };
-  if (params.kind === 'circular') {
-    return { position, rotationDeg: params.rotation, scale, anchorOffset: { dx: 0, dy: 0 }, dimX: 0, dimY: 0 };
-  }
-  return { position, rotationDeg: params.rotation, scale, anchorOffset: ANCHOR_OFFSETS[params.anchor], ...columnFootprintDims(params) };
-}
 
 /**
  * Compute the centroid (bbox centre) of the column footprint σε world coords —

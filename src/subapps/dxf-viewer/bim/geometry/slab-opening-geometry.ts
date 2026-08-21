@@ -28,7 +28,7 @@ import {
   polygonBbox,
   polygonPerimeter,
 } from './shared/polygon-utils';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { canvasToMmScaleFor } from '../../utils/scene-units';
 
 const MM_TO_M = 1 / 1000;
 
@@ -39,8 +39,7 @@ const MM_TO_M = 1 / 1000;
 export function computeSlabOpeningGeometry(
   params: SlabOpeningParams,
 ): SlabOpeningGeometry {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const canvasToM = (1 / s) * MM_TO_M;
+  const canvasToM = canvasToMmScaleFor(params) * MM_TO_M;
 
   const vertices = params.outline.vertices;
   const bbox = polygonBbox(vertices);
@@ -62,7 +61,7 @@ export function computeSlabOpeningGeometry(
 export function getSlabOpeningMaxDimensionMm(
   params: SlabOpeningParams,
 ): number {
-  const canvasToMm = 1 / mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const canvasToMm = canvasToMmScaleFor(params);
   const bb = polygonBbox(params.outline.vertices);
   return Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y) * canvasToMm;
 }
@@ -74,7 +73,7 @@ export function getSlabOpeningMaxDimensionMm(
 export function getSlabOpeningMinDimensionMm(
   params: SlabOpeningParams,
 ): number {
-  const canvasToMm = 1 / mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const canvasToMm = canvasToMmScaleFor(params);
   const bb = polygonBbox(params.outline.vertices);
   return Math.min(bb.max.x - bb.min.x, bb.max.y - bb.min.y) * canvasToMm;
 }

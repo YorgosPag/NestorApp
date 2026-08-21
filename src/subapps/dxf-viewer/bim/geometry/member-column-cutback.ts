@@ -27,34 +27,17 @@ import { safeDifference } from './shared/safe-polygon-boolean';
 import { multiPolygonArea } from './shared/polygon-utils';
 import type { Pt2 } from './shared/segment-polygon-coverage';
 import { clamp01 } from '../../utils/scalar-math';
+import { bboxOf, bboxOverlap, type Bbox } from './shared/xy-bounds';
 
 /** Σχετικό εμβαδικό όριο: αν αφαιρεθεί λιγότερο από αυτό → «μηδέν τομή» (identity). */
 export const AREA_EPS_REL = 1e-6;
 
-export interface Bbox {
-  minX: number;
-  maxX: number;
-  minY: number;
-  maxY: number;
-}
-
-export function bboxOf(pts: readonly Pt2[]): Bbox {
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const p of pts) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  }
-  return { minX, maxX, minY, maxY };
-}
-
-export function bboxOverlap(a: Bbox, b: Bbox): boolean {
-  return a.minX <= b.maxX && b.minX <= a.maxX && a.minY <= b.maxY && b.minY <= a.maxY;
-}
+/**
+ * Το όριο στο XY ζει στο `./shared/xy-bounds`. Re-export ώστε οι υπάρχουσες διαδρομές
+ * import (`beam-column-cutback`, `wall-covering-strip-geometry`, tests) να μείνουν
+ * ακέραιες — **μία** υλοποίηση, όσα ονόματα διαδρομής χρειάζεται η ιστορία.
+ */
+export { bboxOf, bboxOverlap, type Bbox };
 
 /** Polygon → polygon-clipping single-ring `Polygon` (outer ring only). */
 function toClipPolygon(pts: readonly Pt2[]): Polygon {

@@ -25,11 +25,13 @@
 import type { Point3D, Polyline3D, Polygon3D, BoundingBox3D } from '../types/bim-base';
 import type { BeamGeometry, BeamParams } from '../types/beam-types';
 import { CURVED_BEAM_SUBDIVISIONS } from '../types/beam-types';
-import { mmToSceneUnits } from '../../utils/scene-units';
+import { mmScaleFor } from '../../utils/scene-units';
 import { offsetPolyline } from './shared/polygon-utils';
 import { subdivideQuadraticBezier } from './shared/curve-tessellation';
 import { iShapeCrossSectionAreaMm2 } from './shared/i-shape-profile';
 import { justifyAxisPoints } from '../grid/axis-justify';
+import { bboxOfAll } from './shared/xy-bounds';
+import { polylineLength } from './shared/polyline-frame';
 
 const MM_TO_M = 1 / 1000;
 const MM2_TO_M2 = 1e-6;
@@ -41,7 +43,7 @@ const MM2_TO_M2 = 1e-6;
 export function computeBeamGeometry(params: BeamParams): BeamGeometry {
   // s: canvas units per 1 mm. Used to convert mm scalars → canvas-unit offsets
   // for the 2D plan-view outline. Axis vertices are always in canvas units.
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const s = mmScaleFor(params);
   const axisVertices = pickAxisVertices(params);
   const axisPolyline: Polyline3D = { points: axisVertices, closed: false };
 
@@ -50,7 +52,7 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
 
   // BOQ: axis length is in canvas units → convert to m via (1/s) * MM_TO_M.
   // width/depth are always mm → convert directly with MM_TO_M.
-  const lengthCanvas = computePolylineLengthMm(axisVertices);
+  const lengthCanvas = polylineLength(axisVertices);
   const lengthM = lengthCanvas * (1 / s) * MM_TO_M;
   const widthM = params.width * MM_TO_M;
   const depthM = params.depth * MM_TO_M;
@@ -98,9 +100,9 @@ export function computeBeamGeometry(params: BeamParams): BeamGeometry {
  */
 export function getBeamSpanDepthRatio(params: BeamParams): number {
   if (params.depth <= 0) return Number.POSITIVE_INFINITY;
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
+  const s = mmScaleFor(params);
   const verts = pickAxisVertices(params);
-  const lengthM = computePolylineLengthMm(verts) * (1 / s) * MM_TO_M;
+  const lengthM = polylineLength(verts) * (1 / s) * MM_TO_M;
   const depthM = params.depth * MM_TO_M;
   return lengthM / depthM;
 }
@@ -165,17 +167,6 @@ function buildOutlineRect(axis: readonly Point3D[], widthMm: number, s: number):
   return polygon;
 }
 
-/** Polyline length in mm (sum of segment lengths). */
-function computePolylineLengthMm(vertices: readonly Point3D[]): number {
-  let len = 0;
-  for (let i = 1; i < vertices.length; i++) {
-    const a = vertices[i - 1];
-    const b = vertices[i];
-    len += Math.hypot(b.x - a.x, b.y - a.y);
-  }
-  return len;
-}
-
 /**
  * Axis-aligned 3D bounding box. Phase B: z in metres (ADR-369 §2.2 Phase B).
  * top = (topMaxMm + zOffset) / 1000 m, bottom = (topMinMm + zOffset − depth) / 1000 m.
@@ -189,16 +180,7 @@ function computeBbox(
   zOffsetMm: number,
   depthMm: number,
 ): BoundingBox3D {
-  let minX = Infinity, minY = Infinity;
-  let maxX = -Infinity, maxY = -Infinity;
-  const fold = (p: Point3D): void => {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  };
-  for (const p of axis) fold(p);
-  for (const p of outline) fold(p);
+  const { minX, maxX, minY, maxY } = bboxOfAll(axis, outline);
   const topFaceM = (topMaxMm + zOffsetMm) / 1000;
   const botFaceM = (topMinMm + zOffsetMm - depthMm) / 1000;
   return {

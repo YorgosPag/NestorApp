@@ -25,7 +25,7 @@ import {
   polygonPerimeter,
   polygonIntersectionAreaMm2,
 } from './shared/polygon-utils';
-import { mmToSceneUnits, type SceneUnits } from '../../utils/scene-units';
+import { canvasToMmScaleFor, type SceneUnits } from '../../utils/scene-units';
 
 // ─── Beam deduction input (Phase 5.5i+) ──────────────────────────────────────
 
@@ -80,9 +80,8 @@ export function computeSlabGeometry(
   wallFootprints?: readonly WallFootprintForSpan[],
 ): SlabGeometry {
   // Outline vertices are in canvas units (from user clicks). Convert to m via
-  // (1/s) * MM_TO_M. thickness/elevation are always mm → convert with MM_TO_M.
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const canvasToM = (1 / s) * MM_TO_M;
+  // canvas→mm × MM_TO_M. thickness/elevation are always mm → convert with MM_TO_M.
+  const canvasToM = canvasToMmScaleFor(params) * MM_TO_M;
 
   const vertices = params.outline.vertices;
   const xyBbox = polygonBbox(vertices);
@@ -144,8 +143,7 @@ function sumSlabOpeningAreasM2(
  * direction, so min(w,h) is the structurally relevant dimension).
  */
 export function getSlabMaxBboxDimensionM(params: SlabParams): number {
-  const s = mmToSceneUnits(params.sceneUnits ?? 'mm');
-  const canvasToM = (1 / s) * MM_TO_M;
+  const canvasToM = canvasToMmScaleFor(params) * MM_TO_M;
   const bb = polygonBbox(params.outline.vertices);
   const dx = bb.max.x - bb.min.x;
   const dy = bb.max.y - bb.min.y;
@@ -205,7 +203,7 @@ export function computeSlabMaxFreeSpanM(
   supportOutlines: readonly Polygon3D[],
   sceneUnits: SceneUnits = 'mm',
 ): number {
-  const canvasToM = (1 / mmToSceneUnits(sceneUnits)) * MM_TO_M;
+  const canvasToM = canvasToMmScaleFor({ sceneUnits }) * MM_TO_M;
   const bb = polygonBbox(slabVertices);
   const dx = bb.max.x - bb.min.x;
   const dy = bb.max.y - bb.min.y;
