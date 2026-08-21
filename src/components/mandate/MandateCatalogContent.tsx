@@ -172,7 +172,25 @@ export function MandateCatalogContent(): React.ReactElement {
   const { view, reload, act } = useMandateCatalog();
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-6">
+    // 🔴 **`section`, ΟΧΙ `main` — και `w-full`, ΟΧΙ κεντραρισμένη στήλη.** Και τα δύο
+    // ήταν λάθος στην πρώτη γραφή, και τα δύο τα οδήγησε το **στιγμιότυπο**:
+    //
+    // 1. Το κέλυφος του `(app)` αποδίδει **ήδη** `<main className="flex-1
+    //    overflow-y-auto … w-full max-w-full">` (`MainContentBridge`). Ένα δεύτερο
+    //    `<main>` μέσα του είναι **άκυρο HTML** και δύο ορόσημα «κύριο περιεχόμενο»
+    //    στην ίδια σελίδα — που για αναγνώστη οθόνης σημαίνει «ποιο από τα δύο;».
+    // 2. Το `mx-auto max-w-3xl` είναι το ιδίωμα του **`(me)`**, του **ιδιώτη**:
+    //    στενή, εστιασμένη στήλη. Οι σελίδες του `(app)` είναι **`w-full`**
+    //    (μετρημένο: `ContactsPageContent` · `BuildingsPageContent`). Ο κατάλογος
+    //    τριάζ σαρώνεται καθημερινά σε οθόνη γραφείου· μια στήλη 896px στη μέση των
+    //    1920 πετάει ακριβώς τον χώρο που χρειάζεται.
+    //
+    // ⚠️ **ΔΕΝ χρησιμοποιείται το `PageContainer`**, και είναι μετρημένη απόφαση: είναι
+    // `h-full overflow-hidden` — φτιαγμένο για σελίδες που κυλούν **εσωτερικά**
+    // (εικονικοποιημένες λίστες). Εδώ η κύλιση ανήκει στο κέλυφος· ένα δεύτερο δοχείο
+    // κύλισης θα έδινε **δύο μπάρες** και θα **έκοβε** τη λίστα όταν οι γραμμές
+    // ξεπερνούσαν το ύψος — βλάβη που ένας **άδειος** κατάλογος δεν θα έδειχνε ποτέ.
+    <section className="flex w-full flex-col gap-6 p-6">
       <header className="flex flex-col gap-2">
         <h1 className="m-0 text-2xl font-semibold text-foreground">
           {t(CATALOG_KEYS.title)}
@@ -197,6 +215,6 @@ export function MandateCatalogContent(): React.ReactElement {
       </nav>
 
       <CatalogBody view={view} reload={reload} act={act} />
-    </main>
+    </section>
   );
 }
