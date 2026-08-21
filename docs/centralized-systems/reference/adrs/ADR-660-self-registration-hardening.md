@@ -1,6 +1,6 @@
 # ADR-660 — Self-registration hardening (pending / admin-approval)
 
-**Status**: Accepted · **Ημερομηνία**: 2026-07-15 · **Σχετικά**: ADR-657 §3.5 (fail-closed auth — root cause), ADR-439 Phase 3 (tenant provisioning), ADR-244 (Role Management console), ADR-063 (company isolation via claims), ADR-316 (workspace bootstrap at login)
+**Status**: Accepted · **Ημερομηνία**: 2026-07-15 · **Σχετικά**: 🔴 **ADR-787 (η πολυ-οργανισμική πλατφόρμα — ⚠️ η pending-έγκριση αυτού του ADR ΜΕΝΕΙ ακέραιη· η «αυτο-δημιουργία ΔΙΚΟΥ ΤΟΥ χώρου» είναι ΑΛΛΗ πράξη, δες ADR-787 §2.2: ο χρήστης ΠΟΤΕ δεν δηλώνει ρόλο σε ξένο χώρο)**, ADR-657 §3.5 (fail-closed auth — root cause), ADR-439 Phase 3 (tenant provisioning), ADR-244 (Role Management console), ADR-063 (company isolation via claims), ADR-316 (workspace bootstrap at login)
 
 ---
 

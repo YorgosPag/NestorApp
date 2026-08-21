@@ -7,7 +7,7 @@
 | **Category** | Security & Auth |
 | **Planned Location** | `src/app/admin/role-management/page.tsx` |
 | **Author** | Γιώργος Παγώνης + Claude Code (Anthropic AI) |
-| **Related ADRs** | ADR-020 (Centralized Auth), ADR-024 (Environment Security), ADR-063 (Company Isolation), ADR-068 (Rate Limiting) |
+| **Related ADRs** | 🔴 **ADR-787 (πολυ-οργανισμική πλατφόρμα — το `MemberDoc` θα δεχθεί μέλος από ΑΛΛΟ χώρο· σήμερα το `companyId: ctx.companyId` το κάνει αδύνατο, δες ADR-787 §2.3 + κενό Κ-3)**, ADR-020 (Centralized Auth), ADR-024 (Environment Security), ADR-063 (Company Isolation), ADR-068 (Rate Limiting) |
 
 ---
 

@@ -29,6 +29,7 @@ Backward-compatible: όλα τα νέα fields optional, υπάρχοντα αρ
 
 | ADR | Σχέση | Πώς συνδέονται |
 |-----|-------|----------------|
+| 🔴 **ADR-787** Πολυ-οργανισμική πλατφόρμα | **Καταναλωτής — ΔΙΑΒΑΣΕ ΠΡΙΝ ΑΓΓΙΞΕΙΣ ΤΟ `cdeState`** | Το `cdeState` είναι **σήμερα μεταδεδομένο και ΔΕΝ φρουρεί τίποτα** (μετρημένο 2026-08-21: μόνο AI enricher · οθόνη μεταδεδομένων · κατασκευαστής δέντρου · backfill — **καμία** χρήση σε έλεγχο πρόσβασης). Το ADR-787 (αρχή **Α5**, κενό **Κ-4**) αποφασίζει ότι **γίνεται φρουρός**: `WIP` = μόνο η ομάδα που το φτιάχνει· `SHARED` = όλες οι ομάδες του έργου. ⚠️ **ΜΗΝ αλλάξεις το λεξιλόγιο των τεσσάρων καταστάσεων** — είναι το ISO 19650 και το ADR-787 στηρίζεται πάνω του αυτούσιο. |
 | **ADR-191** Enterprise Document Management | **Parent** | Master FileRecord model — αυτό το ADR επεκτείνει το schema |
 | **ADR-018** Unified Upload Service | Foundation | Gateway/Strategy pattern — αμετάβλητο |
 | **ADR-054** Enterprise Upload Consolidation | Foundation | `buildStoragePath()` SSoT — αμετάβλητο |

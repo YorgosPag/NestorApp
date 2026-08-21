@@ -5,7 +5,7 @@
 - **Authors**: Opus (recognition + architecture + implementation), Giorgio (product owner)
 - **Domain**: Identity / Multi-tenancy / Accounting
 - **Επόμενο ελεύθερο ADR μετά**: ADR-440
-- **Σχετικά ADR**: ADR-210 (enterprise ID standardization + company document materialization), ADR-017 (enterprise IDs), ADR-312 (company name resolver SSoT), ADR-195 (entity audit trail), ADR-326 (org structure), ADR-ACC-000 (accounting company profile)
+- **Σχετικά ADR**: 🔴 **ADR-787 (η πολυ-οργανισμική πλατφόρμα — η ΦΑΣΗ 3 αυτού του ADR είναι το κενό «Κ-1: δημιουργία χώρου από τον ίδιο τον χρήστη»· ⚠️ μην τη σχεδιάσεις για ΕΝΑΝ μισθωτή, δες τις αρχές Α1/Α2)**, ADR-210 (enterprise ID standardization + company document materialization), ADR-017 (enterprise IDs), ADR-312 (company name resolver SSoT), ADR-195 (entity audit trail), ADR-326 (org structure), ADR-ACC-000 (accounting company profile)
 
 ---
 
