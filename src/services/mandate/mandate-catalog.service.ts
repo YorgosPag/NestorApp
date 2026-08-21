@@ -179,17 +179,23 @@ async function readClientNames(
   return names;
 }
 
+/** Ό,τι διάβασε η μία σάρωση: οι εντολές του γραφείου, και αν κόπηκαν. */
+interface OfficeMandates {
+  readonly properties: readonly OwnerProperty[];
+  readonly truncated: boolean;
+}
+
 /**
- * **Ο κατάλογος εντολών του γραφείου**, ταξινομημένος κατά επείγον.
+ * **Η μία σάρωση** — και ο μοναδικός τόπος όπου ονομάζεται η εμβέλεια.
  *
- * @param companyId — **από το `ctx.companyId`**, ποτέ από το σώμα του αιτήματος
- * @param nowISOValue — **ένα** ρολόι για όλες τις γραμμές (δες `mandateStandingOf`)
+ * 🔑 Εξήχθη **κατά ευθύνη** (N.7.1): εδώ ζει το *«ποια έγγραφα με αφορούν;»*. Η κρίση
+ * («πού στέκεται;») και η σύνθεση («τι δείχνει η γραμμή;») είναι άλλα δύο ερωτήματα,
+ * και ζουν χωριστά.
  */
-export async function readMandateCatalog(
+async function readOfficeMandates(
   adminDb: AdminFirestore,
   companyId: string,
-  nowISOValue: string,
-): Promise<MandateCatalog> {
+): Promise<OfficeMandates> {
   // tenant-scope-exempt: το ερώτημα ΕΙΝΑΙ περιορισμένο — απλώς όχι στο δηλωμένο πεδίο
   // απομόνωσης. Το `tenant-config.ts` ορίζει το `owner_properties` ως `mode: 'userId'`
   // (`authorUserId`), άρα η CHECK 3.35 ζητά **εκείνο**· εδώ όμως το ερώτημα είναι
@@ -227,50 +233,83 @@ export async function readMandateCatalog(
     // εταιρικό `self` θα περνούσε). Ο κατάλογος μιλά **μόνο** για εντολές.
     .filter((property) => property.mandate.kind === 'brokered');
 
-  const names = await readClientNames(
-    adminDb,
-    [...new Set(properties.map((p) => (p.mandate as BrokeredListingMandate).clientContactId))],
-  );
+  return { properties, truncated };
+}
+
+/** **Μία γραμμή** — η σύνθεση, χωρίς καμία απόφαση δικής της. */
+function toCatalogRow(
+  property: OwnerProperty,
+  clientNames: ReadonlyMap<string, string>,
+  nowISOValue: string,
+): MandateCatalogRow {
+  const mandate = property.mandate as BrokeredListingMandate;
+  const standing = mandateStandingOf(mandate, nowISOValue);
+
+  return {
+    ownerPropertyId: property.id,
+    listingTitle: property.title,
+    clientName: clientNames.get(mandate.clientContactId) ?? null,
+    clientContactId: mandate.clientContactId,
+    standing,
+    group: groupOfStanding(standing),
+    daysLeft: daysUntilExpiry(mandate, nowISOValue),
+    expiresAt: mandate.expiresAt,
+    notifiedAt: mandate.notifiedAt,
+    viewedAt: mandate.viewedAt,
+    decidedAt: mandate.decidedAt,
+    proofVia: mandate.proof.via,
+    // 🔴 **Ο ΕΝΑΣ ΚΡΙΤΗΣ, ΠΟΤΕ ΔΕΥΤΕΡΟΣ.** Η πρώτη γραφή αυτού του πεδίου ήταν
+    // `lifecycle === 'listed' && confirmation === 'confirmed' && !έληξε` — δηλαδή
+    // **ξαναγραμμένος στο χέρι** ο κανόνας που ζει ήδη ολόκληρος στο
+    // {@link isOwnerPropertyOnTheMarket}. Θα «δούλευε» σήμερα και θα απέκλινε στην
+    // πρώτη αλλαγή του κύκλου ζωής, λέγοντας στο γραφείο «είναι στον χάρτη» για
+    // αγγελία που δεν είναι (ADR-749, κατά γράμμα).
+    onTheMarket: isOwnerPropertyOnTheMarket(property, nowISOValue),
+  };
+}
+
+/**
+ * **Η σειρά επείγοντος** — και μέσα στην ίδια κατάσταση, ό,τι λήγει πρώτο.
+ *
+ * ⚠️ Οι ληγμένες (`daysLeft === null`) πάνε **τέλος** μέσα στην ομάδα τους: δεν έχουν
+ * αντίστροφη μέτρηση να συγκριθεί, και μια σύγκριση `null` θα έδινε **αυθαίρετη** σειρά.
+ */
+function byUrgencyThenExpiry(left: MandateCatalogRow, right: MandateCatalogRow): number {
+  const byUrgency =
+    (URGENCY_RANK.get(left.standing) ?? 0) - (URGENCY_RANK.get(right.standing) ?? 0);
+  if (byUrgency !== 0) return byUrgency;
+  if (left.daysLeft === null) return right.daysLeft === null ? 0 : 1;
+  if (right.daysLeft === null) return -1;
+  return left.daysLeft - right.daysLeft;
+}
+
+/**
+ * **Ο κατάλογος εντολών του γραφείου**, ταξινομημένος κατά επείγον.
+ *
+ * @param companyId — **από το `ctx.companyId`**, ποτέ από το σώμα του αιτήματος
+ * @param nowISOValue — **ένα** ρολόι για όλες τις γραμμές (δες `mandateStandingOf`)
+ */
+export async function readMandateCatalog(
+  adminDb: AdminFirestore,
+  companyId: string,
+  nowISOValue: string,
+): Promise<MandateCatalog> {
+  const { properties, truncated } = await readOfficeMandates(adminDb, companyId);
+
+  const clientNames = await readClientNames(adminDb, [
+    ...new Set(
+      properties.map((p) => (p.mandate as BrokeredListingMandate).clientContactId),
+    ),
+  ]);
 
   const tally = emptyTally();
-  const rows = properties.map((property): MandateCatalogRow => {
-    const mandate = property.mandate as BrokeredListingMandate;
-    const standing = mandateStandingOf(mandate, nowISOValue);
-    tally[standing] += 1;
-
-    return {
-      ownerPropertyId: property.id,
-      listingTitle: property.title,
-      clientName: names.get(mandate.clientContactId) ?? null,
-      clientContactId: mandate.clientContactId,
-      standing,
-      group: groupOfStanding(standing),
-      daysLeft: daysUntilExpiry(mandate, nowISOValue),
-      expiresAt: mandate.expiresAt,
-      notifiedAt: mandate.notifiedAt,
-      viewedAt: mandate.viewedAt,
-      decidedAt: mandate.decidedAt,
-      proofVia: mandate.proof.via,
-      // 🔴 **Ο ΕΝΑΣ ΚΡΙΤΗΣ, ΠΟΤΕ ΔΕΥΤΕΡΟΣ.** Η πρώτη γραφή αυτού του πεδίου ήταν
-      // `lifecycle === 'listed' && confirmation === 'confirmed' && !έληξε` — δηλαδή
-      // **ξαναγραμμένος στο χέρι** ο κανόνας που ζει ήδη ολόκληρος στο
-      // {@link isOwnerPropertyOnTheMarket}. Θα «δούλευε» σήμερα και θα απέκλινε στην
-      // πρώτη αλλαγή του κύκλου ζωής, λέγοντας στο γραφείο «είναι στον χάρτη» για
-      // αγγελία που δεν είναι (ADR-749, κατά γράμμα).
-      onTheMarket: isOwnerPropertyOnTheMarket(property, nowISOValue),
-    };
+  const rows = properties.map((property) => {
+    const row = toCatalogRow(property, clientNames, nowISOValue);
+    tally[row.standing] += 1;
+    return row;
   });
 
-  rows.sort((left, right) => {
-    const byUrgency =
-      (URGENCY_RANK.get(left.standing) ?? 0) - (URGENCY_RANK.get(right.standing) ?? 0);
-    if (byUrgency !== 0) return byUrgency;
-    // Μέσα στην ίδια κατάσταση: **ό,τι λήγει πρώτο, πρώτο**. Οι ληγμένες (`null`)
-    // πάνε τέλος — δεν έχουν αντίστροφη μέτρηση να συγκριθεί.
-    if (left.daysLeft === null) return right.daysLeft === null ? 0 : 1;
-    if (right.daysLeft === null) return -1;
-    return left.daysLeft - right.daysLeft;
-  });
+  rows.sort(byUrgencyThenExpiry);
 
   return { rows, tally, truncated };
 }
