@@ -1600,14 +1600,6 @@ Discovered 2026-05-19 (hover audit follow-up). ADR: `docs/centralized-systems/re
 
 ---
 
-### 🧹 GRIP TYPES SSoT — canvas-mouse-types duplicate (priorità bassa, ~30min)
-
-Discovered 2026-05-19 (N.0.2 Boy Scout durante ADR-183 Phase C cleanup, deprecated hook deletion).
-
-- [ ] **`hooks/canvas/canvas-mouse-types.ts:19-89` duplicate grip types** — Local re-definitions of `VertexHoverInfo`, `EdgeHoverInfo`, `SelectedGrip`, `DraggingVertexState`, `DraggingEdgeMidpointState`, `DraggingOverlayBodyState`, `GripHoverThrottle`. Canonical SSoT lives in `hooks/grips/unified-grip-types.ts` (ADR-183). Fix: replace inline `export interface` blocks with `export type { … } from '../grips/unified-grip-types'`. Verify consumers (`useCanvasMouse.ts`, `useCanvasEffects.ts`, `useOverlayInteraction.ts`, `useLayerCanvasMouseMove.ts`, `canvas-mouse-drag-handlers.ts`, `hooks/canvas/index.ts`) still compile (`npx tsc --noEmit`). Side benefit: stale `(from useGripSystem)` JSDoc comments in `useLayerCanvasMouseMove.ts:44-62` + `canvas-mouse-types.ts:87,161-168` should be retargeted to `unified-grip-types`.
-
----
-
 ### 🧭 ADR-3XX (TBD) — AUTO-INFER ALIGNMENT GUIDES (priorità bassa, ~3h, discovered 2026-05-19 via SPEC-3D-004C)
 
 **Discovered**: 2026-05-19 κατά τη διερεύνηση SPEC-3D-004C (GenArc Utils/Snap/Picking). Το GenArc `resolveSnapV2.ts:61-104` έχει αυτόματη "smart guides" λογική (Revit/AutoCAD-style) που το Nestor **δεν έχει**.

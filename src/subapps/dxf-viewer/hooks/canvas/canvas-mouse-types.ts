@@ -21,6 +21,7 @@ import type {
   DraggingVertexState,
   DraggingEdgeMidpointState,
   DraggingOverlayBodyState,
+  GripHoverThrottle,
 } from '../grips/unified-grip-types';
 
 // ============================================================================
@@ -34,6 +35,7 @@ export type {
   DraggingVertexState,
   DraggingEdgeMidpointState,
   DraggingOverlayBodyState,
+  GripHoverThrottle,
 } from '../grips/unified-grip-types';
 
 // ============================================================================
@@ -52,15 +54,6 @@ export interface DraggingGuideState {
   // XZ: original endpoints
   originalStartPoint?: Point2D;
   originalEndPoint?: Point2D;
-}
-
-/**
- * Grip hover throttle ref type for performance optimization
- * SHARED TYPE: Same as in useGripSystem - refs are injected, NOT created here
- */
-export interface GripHoverThrottle {
-  lastCheckTime: number;
-  lastWorldPoint: Point2D | null;
 }
 
 /**
