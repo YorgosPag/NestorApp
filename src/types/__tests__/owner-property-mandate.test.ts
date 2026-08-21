@@ -49,6 +49,7 @@ function brokered(over: Partial<BrokeredListingMandate> = {}): BrokeredListingMa
     proof: { via: OWNER_CONSENT },
     decidedAt: null,
     notifiedAt: null,
+    viewedAt: null,
     consentNonce: null,
     expiresAt: FUTURE,
     ...over,
