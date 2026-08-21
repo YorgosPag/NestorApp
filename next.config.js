@@ -172,10 +172,30 @@ const nextConfig = {
     // [TEST-HARNESS] Replace heavy DxfCanvasHarness with empty stub in production.
     // Prevents the entire DXF viewer tree from entering the production bundle.
     // In dev (Turbopack), the real file is used normally — no impact on dev server.
+    //
+    // ⚠️ Ο ΚΛΕΙΔΙ ΕΝΟΣ webpack alias ΕΙΝΑΙ ΑΠΟΛΥΤΟ ΜΟΝΟΠΑΤΙ: αν δεν δείχνει σε
+    // υπαρκτό αρχείο, ΔΕΝ ταιριάζει ποτέ και το stub ΔΕΝ εφαρμόζεται — σιωπηλά.
+    // Συνέβη: το harness μετακόμισε στο route group `(bare)` (ADR-777 §8.12) και
+    // αυτές οι δύο γραμμές έμειναν στην παλιά διαδρομή ⇒ ΟΛΟ το DXF viewer tree
+    // έμπαινε στο production bundle με το σχόλιο από πάνω να λέει το αντίθετο
+    // (μετρημένο: bundle 42,79 → 45,13 MB). Γι' αυτό η απουσία ΣΚΑΕΙ εδώ:
+    // ένα alias που αστοχεί χωρίς να το πει είναι το «0 = κανείς δεν κοίταξε».
     const path = require('path');
-    config.resolve.alias[
-      path.resolve(__dirname, 'src/app/test-harness/dxf-canvas/DxfCanvasHarness.tsx')
-    ] = path.resolve(__dirname, 'src/app/test-harness/dxf-canvas/DxfCanvasHarness.prod.ts');
+    const fs = require('fs');
+    const harnessDir = path.resolve(__dirname, 'src/app/(bare)/test-harness/dxf-canvas');
+    const harnessSrc = path.join(harnessDir, 'DxfCanvasHarness.tsx');
+    const harnessStub = path.join(harnessDir, 'DxfCanvasHarness.prod.ts');
+    for (const target of [harnessSrc, harnessStub]) {
+      if (!fs.existsSync(target)) {
+        throw new Error(
+          `[TEST-HARNESS] Το alias του DxfCanvasHarness δείχνει σε ανύπαρκτο αρχείο:\n` +
+          `  ${target}\n` +
+          `Αν το harness μετακινήθηκε, ενημέρωσε ΕΔΩ τη διαδρομή. Χωρίς αυτό το alias ` +
+          `αστοχεί σιωπηλά και ολόκληρο το DXF viewer tree μπαίνει στο production bundle.`
+        );
+      }
+    }
+    config.resolve.alias[harnessSrc] = harnessStub;
 
     // [COOLIFY] Sequential compilation to prevent OOM on VPS (8GB RAM).
     // Next.js spawns N workers (N = CPU count = 4 on Netcup VPS 1000 G12).
