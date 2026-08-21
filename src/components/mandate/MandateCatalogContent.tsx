@@ -1,0 +1,202 @@
+'use client';
+
+/**
+ * @fileoverview **Ο ΚΑΤΑΛΟΓΟΣ ΕΝΤΟΛΩΝ** — η άλλη μισή πόρτα του §8.33.
+ * @related ADR-777 §8.34 · hooks/mandate/useMandateCatalog.ts · lib/mandate/mandate-standing.ts
+ * @module components/mandate/MandateCatalogContent
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * 🔴 Η ΣΕΙΡΑ ΕΙΝΑΙ ΤΟ ΠΡΟΪΟΝ, ΟΧΙ Η ΛΙΣΤΑ
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * Το γραφείο δεν ρωτά *«τι έχω;»* — ρωτά *«τι πρέπει να κάνω τώρα;»*. Άρα οι ομάδες
+ * μπαίνουν με **σειρά επείγοντος** και όχι αλφαβητικά ή χρονολογικά, και η πρώτη είναι
+ * πάντα *«περιμένουν εσάς»*: οι εντολές όπου ο πελάτης **δεν μπορεί** να προχωρήσει
+ * μέχρι να κουνηθεί κάποιος εδώ.
+ *
+ * 🏆 Το DocuSign έχει τους ίδιους κάδους (*Action Required · Waiting for Others ·
+ * Expiring Soon · Completed*) και **δεν μπορεί** να έχει τον πρώτο μας: φάκελος χωρίς
+ * διεύθυνση παραλήπτη δεν γεννιέται. Το MLS δεν έχει κανέναν, γιατί δεν παρακολουθεί
+ * καθόλου την έγκριση του ιδιοκτήτη.
+ *
+ * ⚠️ **Οι άδειες ομάδες ΔΕΝ ζωγραφίζονται.** Πέντε επικεφαλίδες με μηδενικά είναι
+ * θόρυβος σε οθόνη τριάζ — ενώ η **λογιστική** των μηδενικών ζει στο `tally` του
+ * διακομιστή, όπου έχει νόημα.
+ */
+
+import React from 'react';
+import Link from 'next/link';
+
+import { MandateCatalogRow } from '@/components/mandate/catalog/MandateCatalogRow';
+import {
+  CATALOG_KEYS,
+  CATALOG_NS,
+  GROUP_LABEL_KEYS,
+} from '@/components/mandate/catalog/mandate-catalog-labels';
+import { Button } from '@/components/ui/button';
+import { useMandateCatalog, type MandateCatalogState } from '@/hooks/mandate/useMandateCatalog';
+import { useTranslation } from '@/i18n/hooks/useTranslation';
+import {
+  MANDATE_STANDING_GROUPS,
+  type MandateStandingGroup,
+} from '@/lib/mandate/mandate-standing';
+import { NEW_BROKERED_LISTING_ROUTE } from '@/lib/mandate/mandate-routes';
+import type { MandateCatalogRow as CatalogRow } from '@/services/mandate/mandate-catalog.service';
+
+/** Η κενή κατάσταση — **εξηγεί τι θα δει εδώ**, όχι μόνο ότι είναι άδειο. */
+function EmptyState(): React.ReactElement {
+  const { t } = useTranslation([CATALOG_NS]);
+  return (
+    <div className="rounded-md border border-border bg-card p-4">
+      <p className="m-0 font-medium text-foreground">{t(CATALOG_KEYS.empty)}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t(CATALOG_KEYS.emptyHint)}</p>
+    </div>
+  );
+}
+
+/**
+ * ⚠️ **Οι τύποι της γραμμής διαβάζονται ΑΠΟ τη γραμμή** (`React.ComponentProps`), όχι
+ * ξαναγραμμένοι εδώ: μια αλλαγή στην υπογραφή του `MandateCatalogRow` πρέπει να
+ * **σπάει** αυτό το αρχείο, όχι να το αφήνει να περνά ένα σχεδόν-σωστό αντικείμενο.
+ */
+type RowFeedback = React.ComponentProps<typeof MandateCatalogRow>['feedback'];
+type RowAct = React.ComponentProps<typeof MandateCatalogRow>['onAct'];
+
+interface GroupSectionProps {
+  readonly group: MandateStandingGroup;
+  readonly rows: readonly CatalogRow[];
+  readonly busyId: string | null;
+  readonly feedbackFor: (ownerPropertyId: string) => RowFeedback;
+  readonly onAct: RowAct;
+}
+
+function GroupSection({
+  group,
+  rows,
+  busyId,
+  feedbackFor,
+  onAct,
+}: GroupSectionProps): React.ReactElement {
+  const { t } = useTranslation([CATALOG_NS]);
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="m-0 text-lg font-semibold text-foreground">
+        {t(GROUP_LABEL_KEYS[group])}{' '}
+        <span className="text-sm font-normal text-muted-foreground">
+          {t(CATALOG_KEYS.groupCount, { count: rows.length })}
+        </span>
+      </h2>
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
+        {rows.map((row) => (
+          <li key={row.ownerPropertyId}>
+            <MandateCatalogRow
+              row={row}
+              busy={busyId === row.ownerPropertyId}
+              feedback={feedbackFor(row.ownerPropertyId)}
+              onAct={onAct}
+            />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Το σώμα: **τρεις** καταστάσεις φόρτωσης, ρητά και χωρίς `default`.
+ *
+ * ⚠️ Η αποτυχία δίνει **κουμπί**, όχι μόνο μήνυμα: ένας κατάλογος που λέει «δοκιμάστε
+ * ξανά» και δεν προσφέρει τρόπο να δοκιμάσεις είναι οδηγία, όχι διέξοδος.
+ */
+function CatalogBody({
+  view,
+  reload,
+  act,
+}: {
+  readonly view: MandateCatalogState;
+  readonly reload: () => void;
+  readonly act: RowAct;
+}): React.ReactElement {
+  const { t } = useTranslation([CATALOG_NS]);
+
+  if (view.state === 'loading') {
+    return <p className="text-muted-foreground">{t(CATALOG_KEYS.loading)}</p>;
+  }
+
+  if (view.state === 'failed') {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <p className="m-0 text-foreground">{t(CATALOG_KEYS.error)}</p>
+        <Button type="button" size="sm" variant="secondary" onClick={reload}>
+          {t(CATALOG_KEYS.retry)}
+        </Button>
+      </div>
+    );
+  }
+
+  const { catalog, busyId, feedback } = view;
+  if (catalog.rows.length === 0) return <EmptyState />;
+
+  const feedbackFor = (ownerPropertyId: string): RowFeedback =>
+    feedback !== null && feedback.ownerPropertyId === ownerPropertyId ? feedback : null;
+
+  return (
+    <>
+      {catalog.truncated ? (
+        <p className="m-0 text-sm text-muted-foreground">
+          {t(CATALOG_KEYS.truncated, { count: catalog.rows.length })}
+        </p>
+      ) : null}
+
+      {MANDATE_STANDING_GROUPS.map((group) => {
+        const rows = catalog.rows.filter((row) => row.group === group);
+        if (rows.length === 0) return null;
+        return (
+          <GroupSection
+            key={group}
+            group={group}
+            rows={rows}
+            busyId={busyId}
+            feedbackFor={feedbackFor}
+            onAct={act}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+export function MandateCatalogContent(): React.ReactElement {
+  const { t } = useTranslation([CATALOG_NS]);
+  const { view, reload, act } = useMandateCatalog();
+
+  return (
+    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="m-0 text-2xl font-semibold text-foreground">
+          {t(CATALOG_KEYS.title)}
+        </h1>
+        <p className="m-0 text-sm text-muted-foreground">{t(CATALOG_KEYS.lead)}</p>
+      </header>
+
+      {/*
+        🔴 **Η ΠΟΡΤΑ ΚΑΤΑΧΩΡΗΣΗΣ ΑΠΟΚΤΑ ΕΠΙΤΕΛΟΥΣ ΣΥΝΔΕΣΜΟ.** Μετρήθηκε στις 2026-08-21:
+        το `/listings/mandates/new` υπήρχε από το §8.33 και **καμία γραμμή του δέντρου
+        δεν έδειχνε σε αυτό** — το έβρισκες μόνο πληκτρολογώντας τη διεύθυνση. Πόρτα
+        χωρίς διάδρομο είναι το ίδιο σχήμα με τον μηχανισμό που «ήταν χτισμένος και δεν
+        τον καλούσε κανείς».
+      */}
+      <nav>
+        <Link
+          href={NEW_BROKERED_LISTING_ROUTE}
+          className="inline-block rounded-md border border-border bg-card px-4 py-2 font-medium text-foreground"
+        >
+          {t(CATALOG_KEYS.create)}
+        </Link>
+      </nav>
+
+      <CatalogBody view={view} reload={reload} act={act} />
+    </main>
+  );
+}
