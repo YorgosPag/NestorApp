@@ -8,10 +8,12 @@
  *   - sorted-key equivalence for objects (JSON stability)
  *   - partial-update semantics (untouched fields produce no diff)
  *
+ * ⚠️ jest globals (describe/it/expect injected) — ΟΧΙ `import from 'vitest'`
+ * (το repo είναι jest· το vitest import σπάει σιωπηλά το suite — P4 παγίδα).
+ *
  * @module lib/audit/__tests__/audit-diff.test.ts
  */
 
-import { describe, it, expect } from 'vitest';
 import {
   serializeScalar,
   sortKeys,
