@@ -52,7 +52,15 @@ const {
 const { stableStringify } = require('./lib/i18n-shell-slice/slice-build');
 const RS = require('./lib/i18n-shell-slice/route-slices');
 const MG = require('./lib/module-graph');
-const { auditLedger, describeFailures } = require('./lib/i18n-shell-slice/ledger');
+const {
+  auditLedger,
+  describeFailures,
+  auditRouteLedger,
+  describeRouteFailures,
+  ROUTE_PRESENCE,
+  ROUTE_BUDGET,
+  ROUTE_SHAPE,
+} = require('./lib/i18n-shell-slice/ledger');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const GREEN = '\x1b[0;32m';
@@ -216,9 +224,24 @@ function main() {
     process.exit(1);
   }
 
+  // 🔴 ADR-777 §8.43 — ΤΟ ΔΕΥΤΕΡΟ ΚΑΤΑΣΤΙΧΟ, ΚΑΙ ΠΑΛΙ ΠΡΙΝ ΓΡΑΦΤΕΙ ΤΙΠΟΤΑ. Το Κ1
+  // (δομική αντιστροφή) και το Κ2 (δηλωμένο ταβάνι) κρίνονται ΧΩΡΙΣΤΑ. Ο παρονομαστής
+  // είναι το ΙΔΙΟ κέλυφος που μόλις χτίστηκε — όχι ο δίσκος, που μπορεί να είναι παλιός.
+  const shellBytes = Buffer.byteLength(
+    JSON.stringify(rendered.slices.resources[config.languages[0]] || {}), 'utf8',
+  );
+  const routeLedger = auditRouteLedger(config.routeSlices, observeRouteArtifacts(config, routes), shellBytes);
+  if (routeLedger.failures.length > 0) {
+    console.error(`\n${RED}❌ Το κατάστιχο των διαδρομών:${NC}`);
+    console.error(`${RED}   ${describeRouteFailures(routeLedger.failures, shellBytes)}${NC}`);
+    console.error(`${DIM}   Κ1: ένα slice ≥ κέλυφος ΔΕΝ είναι αφαίρεση — η θεραπεία είναι όριο στην κλειστότητα.${NC}`);
+    console.error(`${DIM}   Κ2: το ταβάνι είναι δηλωμένο· ΜΗΝ το ανεβάσεις για να γίνει πράσινο.${NC}`);
+    process.exit(1);
+  }
+
   const merged = mergeRouteArtifacts({ rendered, routes, config, plan });
   if (!args.dryRun) writeArtifacts(config, merged);
-  if (routes.length > 0) reportRoutes(routes, config.languages[0]);
+  if (routes.length > 0) reportRoutes(routes, config.languages[0], routeLedger);
   process.exit(0);
 }
 
@@ -255,16 +278,64 @@ function emitRouteSlices(config, plan, rendered, graph) {
   return null;
 }
 
-function reportRoutes(built, language) {
-  console.log(`\n${GREEN}  per-route slices (${language}):${NC}`);
+/** Compact UTF-8 bytes — η **ίδια** μονάδα με το πρώτο κατάστιχο, ώστε τα δύο να συγκρίνονται. */
+function compactBytes(tree) {
+  return Buffer.byteLength(JSON.stringify(tree), 'utf8');
+}
+
+/**
+ * Ό,τι **υπάρχει** ως route slice: τα φρεσκοχτισμένα ΚΑΙ ό,τι κάθεται ήδη στον δίσκο.
+ *
+ * 🔴 Ο ΔΙΣΚΟΣ ΔΕΝ ΕΙΝΑΙ ΠΟΛΥΤΕΛΕΙΑ: το `writeArtifacts` **γράφει, δεν κλαδεύει**. Χωρίς
+ * αυτή τη σάρωση η κατάσταση `orphan-artifact` θα ήταν **αδύνατο να πυροδοτήσει** εδώ —
+ * φρουρός χωρίς απόδειξη ζωής (ADR-749 §5). Η θεραπεία είναι **άρνηση**, όχι σιωπηλή
+ * διαγραφή: το αρχείο μπορεί να έχει ζωντανό `import` που θα έσπαγε το build.
+ */
+function observeRouteArtifacts(config, built) {
+  const [language] = config.languages;
+  const suffix = `.${language}.json`;
+  const dir = path.join(PROJECT_ROOT, config.outputDir, RS.ROUTES_DIR);
+  const seen = new Map(built.map(route => [
+    route.id,
+    { id: route.id, page: route.page, actual: compactBytes(route.resources) },
+  ]));
+  if (!fs.existsSync(dir)) return [...seen.values()];
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.endsWith(suffix)) continue;
+    const id = name.slice(0, -suffix.length);
+    if (seen.has(id)) continue;
+    seen.set(id, { id, page: null, actual: compactBytes(JSON.parse(fs.readFileSync(path.join(dir, name), 'utf8'))) });
+  }
+  return [...seen.values()];
+}
+
+/**
+ * Η αναφορά των διαδρομών — **με τη λογιστική ολόκληρη**.
+ *
+ * ⚠️ ΤΥΠΩΝΟΝΤΑΙ ΚΑΙ ΟΙ ΚΑΔΟΙ ΠΟΥ ΔΕΝ ΜΠΛΟΚΑΡΟΥΝ. Στο §8.42 αυτό ήταν το **μόνο** που
+ * αποκάλυψε πύλη γεννημένη μονίμως πράσινη: ένας κάδος που πρέπει να είναι μη-μηδενικός
+ * και τυπώνεται «0» ουρλιάζει· ένας κάδος που δεν τυπώνεται καθόλου διαβάζεται ως
+ * «δεν υπάρχει τέτοιος έλεγχος».
+ */
+function reportRoutes(built, language, audit) {
+  console.log(`\n${GREEN}  per-route slices (${language}) — κέλυφος: ${audit.shellBytes} bytes:${NC}`);
+  const marks = { [ROUTE_BUDGET.OVER]: '🔴', [ROUTE_SHAPE.SECOND_SHELL]: '⛔' };
   for (const route of built) {
+    const entry = audit.entries.find(candidate => candidate.page === route.page);
     const namespaces = Object.keys(route.resources);
-    const bytes = Buffer.byteLength(stableStringify(route.resources), 'utf8');
+    const mark = marks[entry.shapeVerdict] || marks[entry.budgetVerdict] || ' ';
     console.log(
-      `    ${route.url.padEnd(34)} ${String(bytes).padStart(7)} bytes · ` +
-        `${namespaces.length} ns [${namespaces.join(', ')}]`
+      `   ${mark} ${route.url.padEnd(32)} ${String(entry.actual).padStart(7)} / ${String(entry.budget).padStart(6)} bytes · `
+      + `${((100 * entry.actual) / audit.shellBytes).toFixed(1).padStart(5)}% κελ. · ${namespaces.length} ns [${namespaces.join(', ')}]`
     );
   }
+  const tally = state => audit.entries.filter(entry => entry.presence === state).length;
+  const axis = verdict => audit.entries.filter(entry => entry.budgetVerdict === verdict || entry.shapeVerdict === verdict).length;
+  console.log(
+    `${DIM}    λογιστική: ${tally(ROUTE_PRESENCE.PRESENT)} παρόντα · ${tally(ROUTE_PRESENCE.ABSENT)} απόντα · `
+    + `${tally(ROUTE_PRESENCE.ORPHAN)} ορφανά │ Κ2 ${axis(ROUTE_BUDGET.WITHIN)} εντός / ${axis(ROUTE_BUDGET.OVER)} εκτός │ `
+    + `Κ1 ${axis(ROUTE_SHAPE.PAGE)} σελίδες / ${axis(ROUTE_SHAPE.SECOND_SHELL)} δεύτερα κελύφη${NC}`
+  );
   console.log(`${DIM}    (αφαιρεμένα όσα απαντά ήδη το κέλυφος — ένωση θα ήταν ΜΕΓΑΛΥΤΕΡΗ από σήμερα)${NC}`);
 }
 

@@ -72,7 +72,8 @@ const {
 const { buildSlices, stableStringify, sha256, fingerprintShellFile } = require('./lib/i18n-shell-slice/slice-build');
 const { loadNamespaceBundles } = require('./lib/i18n-namespace-extract');
 const { loadKeyConstants } = require('./lib/i18n-shell-slice/key-extract');
-const { auditLedger, describeFailures } = require('./lib/i18n-shell-slice/ledger');
+const { auditLedger, describeFailures, auditRouteLedger, describeRouteFailures } = require('./lib/i18n-shell-slice/ledger');
+const { ROUTES_DIR, routeIdFor } = require('./lib/i18n-shell-slice/route-slices');
 const { parseModule } = require('./lib/module-graph/parse-module');
 const { readTsPathAliases, resolveSpecifier, toPosix } = require('./lib/module-graph/resolve-specifier');
 
@@ -179,6 +180,52 @@ function checkLedgerBudget(config, manifest) {
   return `migration ledger over budget — ${describeFailures(audit.failures)}`;
 }
 
+/**
+ * B2. ADR-777 §8.43 — **«σελίδα, ή δεύτερο κέλυφος;»** για κάθε δηλωμένη διαδρομή.
+ *
+ * Διαβάζει τα **δεσμευμένα** artifacts, οπότε δουλεύει στο Layer 1 χωρίς γράφο. Δύο
+ * ανεξάρτητοι κανόνες (Κ1 δομικός · Κ2 δηλωμένο ταβάνι) — ποτέ ένας με «ή».
+ *
+ * 🔑 ΕΔΩ — ΚΑΙ ΜΟΝΟ ΕΔΩ — ΤΟ `orphan-artifact` ΕΧΕΙ ΝΟΗΜΑ ΩΣ ΠΥΛΗ ΣΕ ΚΑΘΕ COMMIT: το
+ * `writeArtifacts` δεν κλαδεύει, άρα μια σβησμένη δήλωση αφήνει πίσω αρχείο που
+ * εξακολουθεί να το εισάγει στατικά κάποιο client boundary και να ταξιδεύει **παγωμένο**.
+ * Το `checkArtifactIntegrity` δεν το βλέπει: διατρέχει το `manifest.artifacts`, όπου η
+ * σβησμένη διαδρομή **δεν υπάρχει πια**.
+ */
+function checkRouteLedger(config, manifest) {
+  const [language] = manifest.languages;
+  const shellFile = path.join(PROJECT_ROOT, toPosix(path.join(config.outputDir, `shell-slice.${language}.json`)));
+  if (!fs.existsSync(shellFile)) return null;   // το checkArtifactIntegrity το λέει καλύτερα
+  const bytesOf = file => Buffer.byteLength(JSON.stringify(JSON.parse(fs.readFileSync(file, 'utf8'))), 'utf8');
+
+  let shellBytes;
+  try {
+    shellBytes = bytesOf(shellFile);
+  } catch {
+    return `shell-slice.${language}.json is not valid JSON.`;
+  }
+
+  const suffix = `.${language}.json`;
+  const dir = path.join(PROJECT_ROOT, config.outputDir, ROUTES_DIR);
+  const pageById = new Map(Object.keys(config.routeSlices).map(page => [routeIdFor(page), page]));
+  const observed = [];
+  if (fs.existsSync(dir)) {
+    for (const name of fs.readdirSync(dir)) {
+      if (!name.endsWith(suffix)) continue;
+      const id = name.slice(0, -suffix.length);
+      try {
+        observed.push({ id, page: pageById.get(id) || null, actual: bytesOf(path.join(dir, name)) });
+      } catch {
+        return `${ROUTES_DIR}/${name} is not valid JSON.`;
+      }
+    }
+  }
+
+  const audit = auditRouteLedger(config.routeSlices, observed, shellBytes);
+  if (audit.failures.length === 0) return null;
+  return `route ledger — ${describeRouteFailures(audit.failures, shellBytes)}`;
+}
+
 /** C. a staged shell module whose i18n surface or import edges moved. */
 function checkStagedShellFiles(config, manifest, stagedFiles) {
   const context = {
@@ -233,6 +280,7 @@ function runLayerOne(config, stagedFiles) {
   const reason =
     checkArtifactIntegrity(manifest) ||
     checkLedgerBudget(config, manifest) ||
+    checkRouteLedger(config, manifest) ||
     checkLocaleDrift(config, manifest) ||
     checkStagedShellFiles(config, manifest, stagedFiles) ||
     checkNewlyResolvableSpecs(manifest, stagedFiles);
@@ -334,6 +382,7 @@ module.exports = {
   readManifest,
   checkArtifactIntegrity,
   checkLedgerBudget,
+  checkRouteLedger,
   checkLocaleDrift,
   checkStagedShellFiles,
   checkNewlyResolvableSpecs,

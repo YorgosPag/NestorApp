@@ -121,3 +121,196 @@ describe('Π — τα πραγματικά artifacts στο δέντρο', () =>
     expect(sliceBytes).toBeLessThan(localeBytes / 5);
   });
 });
+
+/**
+ * =============================================================================
+ * Λ — ΤΟ ΚΑΤΑΣΤΙΧΟ ΤΩΝ ΔΙΑΔΡΟΜΩΝ (ADR-777 §8.43)
+ * =============================================================================
+ *
+ * «Είναι αυτή η δηλωμένη διαδρομή **ΣΕΛΙΔΑ**, ή **ΔΕΥΤΕΡΟ ΚΕΛΥΦΟΣ**;»
+ *
+ * Οι αριθμοί εδώ **δεν είναι fixtures** — είναι η μέτρηση της 2026-08-21 στο πραγματικό
+ * δέντρο, με τον ίδιο `buildShellPlan` και ρίζα τη σελίδα. Αν αλλάξουν, κάτι πραγματικό
+ * κουνήθηκε και θέλει ματιά, όχι σιωπηλή ενημέρωση του αριθμού.
+ * =============================================================================
+ */
+describe('Λ — το κατάστιχο των διαδρομών (§8.43)', () => {
+  const L = require('../lib/i18n-shell-slice/ledger');
+  const config = JSON.parse(fs.readFileSync(path.join(REPO, '.i18n-shell-slice.json'), 'utf8'));
+  const bytesOf = tree => Buffer.byteLength(JSON.stringify(tree), 'utf8');
+  const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
+
+  const SHELL_BYTES = bytesOf(readJson(path.join(REPO, 'src/i18n/generated/shell-slice.el.json')));
+  /** ΜΕΤΡΗΜΕΝΟ 2026-08-21: το `/properties/[id]` θα κόστιζε τόσα, σε 48 namespaces. */
+  const PROPERTIES_ID_BYTES = 240521;
+  const ok = { budget: 10_000, reason: 'άγκυρα' };
+
+  const observe = () => Object.keys(config.routeSlices).map(page => ({
+    id: RS.routeIdFor(page),
+    page,
+    actual: bytesOf(readJson(path.join(REPO, `src/i18n/generated/routes/${RS.routeIdFor(page)}.el.json`))),
+  }));
+
+  it('Λ1: σκέτο `reason` ΑΠΟΡΡΙΠΤΕΤΑΙ — πρόζα δεν είναι προϋπολογισμός (§8.38 στον αδελφό)', () => {
+    expect(() => L.auditRouteLedger({ p: { reason: 'μόνο λόγια' } }, [], 1000))
+      .toThrow(/budget/);
+    // …και το μήνυμα ΟΝΟΜΑΖΕΙ το σωστό κατάστιχο, αλλιώς ο αναγνώστης ψάχνει αλλού.
+    expect(() => L.auditRouteLedger({ p: 'κάποτε ήταν συμβολοσειρά' }, [], 1000))
+      .toThrow(/routeSlices\.p/);
+  });
+
+  it('Λ2: το ΠΡΑΓΜΑΤΙΚΟ δέντρο κλείνει — 11 παρόντα, 0 απόντα, 0 ορφανά, 0 αποτυχίες', () => {
+    const audit = L.auditRouteLedger(config.routeSlices, observe(), SHELL_BYTES);
+    const count = state => audit.entries.filter(entry => entry.presence === state).length;
+    expect(count(L.ROUTE_PRESENCE.PRESENT)).toBe(Object.keys(config.routeSlices).length);
+    expect(count(L.ROUTE_PRESENCE.ABSENT)).toBe(0);
+    expect(count(L.ROUTE_PRESENCE.ORPHAN)).toBe(0);
+    expect(L.describeRouteFailures(audit.failures, SHELL_BYTES)).toBe('');
+    // ⚠️ Ο ΠΑΡΟΝΟΜΑΣΤΗΣ: κάθε παρούσα εγγραφή ΚΡΙΘΗΚΕ και στους δύο άξονες. Χωρίς αυτό,
+    // «0 αποτυχίες» θα μπορούσε να σημαίνει «κανείς δεν κοίταξε».
+    expect(audit.entries.every(entry => entry.budgetVerdict !== null && entry.shapeVerdict !== null)).toBe(true);
+  });
+
+  it('Λ3: ΒΑΘΜΟΝΟΜΗΣΗ — το /properties/[id] είναι ΔΕΥΤΕΡΟ ΚΕΛΥΦΟΣ (240.521 έναντι κελύφους)', () => {
+    // Το εύρημα του §8.43, κλειδωμένο: 145,2% του κελύφους. Ένα route slice μεγαλύτερο
+    // από το κέλυφος ΔΕΝ είναι αφαίρεση. Δηλώνεται με γενναιόδωρο ταβάνι επίτηδες —
+    // η απόδειξη είναι ότι το Κ1 μιλά ΑΚΟΜΑ ΚΑΙ ΟΤΑΝ το Κ2 σιωπά.
+    expect(PROPERTIES_ID_BYTES).toBeGreaterThan(SHELL_BYTES);
+    const audit = L.auditRouteLedger(
+      { 'src/app/(app)/properties/[id]/page.tsx': { budget: 999_999, reason: 'υποθετικό' } },
+      [{ id: 'properties__id', page: 'src/app/(app)/properties/[id]/page.tsx', actual: PROPERTIES_ID_BYTES }],
+      SHELL_BYTES,
+    );
+    expect(audit.entries[0].shapeVerdict).toBe(L.ROUTE_SHAPE.SECOND_SHELL);
+    expect(audit.entries[0].budgetVerdict).toBe(L.ROUTE_BUDGET.WITHIN);
+    expect(L.describeRouteFailures(audit.failures, SHELL_BYTES)).toMatch(/ΔΕΥΤΕΡΟ ΚΕΛΥΦΟΣ/);
+  });
+
+  it('Λ4: Κ1 και Κ2 είναι ΑΝΕΞΑΡΤΗΤΑ — ένας κανόνας με «ή» θα έπεφτε και στις δύο φορές', () => {
+    // (α) εντός ταβανιού, αλλά ≥ κέλυφος ⇒ μόνο το Κ1 μιλά.
+    const k1 = L.auditRouteLedger({ p: { budget: 999_999, reason: 'r' } },
+      [{ id: 'p', page: 'p', actual: SHELL_BYTES }], SHELL_BYTES);
+    expect(k1.entries[0].budgetVerdict).toBe(L.ROUTE_BUDGET.WITHIN);
+    expect(k1.entries[0].shapeVerdict).toBe(L.ROUTE_SHAPE.SECOND_SHELL);
+    expect(k1.failures).toHaveLength(1);
+
+    // (β) μικροσκοπικό σε σχέση με το κέλυφος, αλλά πάνω από το ταβάνι ⇒ μόνο το Κ2.
+    const k2 = L.auditRouteLedger({ p: { budget: 1_000, reason: 'r' } },
+      [{ id: 'p', page: 'p', actual: 5_000 }], SHELL_BYTES);
+    expect(k2.entries[0].budgetVerdict).toBe(L.ROUTE_BUDGET.OVER);
+    expect(k2.entries[0].shapeVerdict).toBe(L.ROUTE_SHAPE.PAGE);
+    expect(k2.failures).toHaveLength(1);
+  });
+
+  it('Λ5: `orphan-artifact` — artifact ΧΩΡΙΣ δήλωση μπλοκάρει (το writeArtifacts δεν κλαδεύει)', () => {
+    const audit = L.auditRouteLedger({ p: ok },
+      [{ id: 'p', page: 'p', actual: 10 }, { id: 'ξεχασμένο', page: null, actual: 4_242 }], SHELL_BYTES);
+    expect(audit.failures).toHaveLength(1);
+    expect(L.describeRouteFailures(audit.failures, SHELL_BYTES)).toMatch(/ξεχασμένο.*ΧΩΡΙΣ δήλωση/);
+  });
+
+  it('Λ6: `declared-but-absent` — δήλωση χωρίς artifact μπλοκάρει', () => {
+    const audit = L.auditRouteLedger({ p: ok }, [], SHELL_BYTES);
+    expect(audit.entries[0].presence).toBe(L.ROUTE_PRESENCE.ABSENT);
+    expect(L.describeRouteFailures(audit.failures, SHELL_BYTES)).toMatch(/ΔΕΝ παρήχθη artifact/);
+  });
+
+  it('Λ7: fail-closed — χωρίς παρονομαστή το Κ1 ΔΕΝ απαντά «καθαρό», σκάει με όνομα', () => {
+    for (const bad of [0, -1, undefined, null, 1.5, '165649']) {
+      expect(() => L.auditRouteLedger({}, [], bad)).toThrow(/κέλυφος|shellBytes|άγνωστο/);
+    }
+  });
+
+  it('Λ8: ΚΑΝΕΝΑΣ ΑΡΙΘΜΟΣ ΔΕΝ ΣΙΩΠΑ ΤΟ Κ1 — το κατώφλι είναι παραγόμενο, όχι δηλωμένο', () => {
+    // Η μετάλλαξη που θα «διόρθωνε» ένα κόκκινο Κ2 — ανέβασμα του ταβανιού — αφήνει το
+    // Κ1 κόκκινο. Αυτός είναι όλος ο λόγος που οι δύο κανόνες δεν είναι ένας.
+    for (const budget of [1, 1_000, 240_521, 10_000_000]) {
+      const audit = L.auditRouteLedger({ p: { budget, reason: 'r' } },
+        [{ id: 'p', page: 'p', actual: PROPERTIES_ID_BYTES }], SHELL_BYTES);
+      expect(audit.entries[0].shapeVerdict).toBe(L.ROUTE_SHAPE.SECOND_SHELL);
+      expect(audit.failures.length).toBeGreaterThan(0);
+    }
+  });
+
+  /**
+   * ⚠️ ΔΥΟ ΦΡΟΥΡΟΙ, ΚΑΙ Ο ΠΡΩΙΜΟΣ ΧΡΕΙΑΖΕΤΑΙ ΔΙΚΗ ΤΟΥ ΑΓΚΥΡΑ. Το `parseDeclaration`
+   * καλείται ΚΑΙ από το `auditRouteLedger` (αργά — αφού χτιστεί ο γράφος, ~40s) ΚΑΙ από το
+   * `loadConfig` (νωρίς, σε ΚΑΘΕ καταναλωτή). Τα Λ1-Λ9 ασκούν μόνο τον δεύτερο: σβήνοντας
+   * τον πρώιμο, όλα έμεναν ΠΡΑΣΙΝΑ — μετρημένο, ήταν αδρανής φρουρός μέχρι αυτή τη γραμμή.
+   */
+  it('Λ10: το σχήμα απορρίπτεται ΣΤΗ ΦΟΡΤΩΣΗ, πριν χτιστεί γράφος', () => {
+    const os = require('node:os');
+    const { loadConfig } = require('../lib/i18n-shell-slice/config');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'route-ledger-'));
+    try {
+      const write = routeSlices => fs.writeFileSync(
+        path.join(dir, '.i18n-shell-slice.json'), JSON.stringify({ routeSlices }), 'utf8',
+      );
+      write({ 'src/app/x/page.tsx': { budget: 1000, reason: 'ok' } });
+      expect(() => loadConfig(dir)).not.toThrow();          // ο παρονομαστής
+      write({ 'src/app/x/page.tsx': { reason: 'μόνο πρόζα' } });
+      expect(() => loadConfig(dir)).toThrow(/routeSlices.*budget/s);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('Λ9: η λογιστική που ΔΕΝ κλείνει σκάει με ΟΝΟΜΑ — δεν επιστρέφει σιωπηλά', () => {
+    // Διπλή παρατήρηση της ίδιας δήλωσης: το `byPage` κρατά μία, οπότε το άθροισμα
+    // observed (2) δεν μπορεί να ταιριάξει. Αυτό είναι το fail-closed του οργάνου.
+    expect(() => L.auditRouteLedger({ p: ok },
+      [{ id: 'p', page: 'p', actual: 1 }, { id: 'p', page: 'p', actual: 2 }], SHELL_BYTES))
+      .toThrow(/ΔΕΝ κλείνει/);
+  });
+});
+
+/**
+ * Ν — Η ΠΥΛΗ, ΟΧΙ Η ΜΗΧΑΝΗ. Το Λ αποδεικνύει ότι το κατάστιχο κρίνει σωστά· εδώ
+ * αποδεικνύεται ότι **κάποιος το τρέχει**. Χωρίς αυτό, το §8.43 θα ήταν ένα anchor χωρίς
+ * πύλη — δηλαδή σχόλιο (μάθημα CHECK 3.36).
+ */
+describe('Ν — το ορφανό artifact μπλοκάρει ΤΗΝ ΠΥΛΗ, στον πραγματικό δίσκο', () => {
+  const ROUTES = path.join(REPO, 'src/i18n/generated/routes');
+  const PROBE = path.join(ROUTES, 'zz-orphan-probe.el.json');
+  const gate = require('../check-i18n-shell-slice');
+  const config = JSON.parse(fs.readFileSync(path.join(REPO, '.i18n-shell-slice.json'), 'utf8'));
+  const manifest = JSON.parse(fs.readFileSync(path.join(REPO, 'src/i18n/generated/shell-slice.manifest.json'), 'utf8'));
+  const fullConfig = { ...config, outputDir: 'src/i18n/generated' };
+
+  afterEach(() => { if (fs.existsSync(PROBE)) fs.unlinkSync(PROBE); });
+
+  it('Ν0: ΧΩΡΙΣ το ορφανό η πύλη είναι πράσινη — ο παρονομαστής, αλλιώς το Ν1 δεν λέει τίποτα', () => {
+    expect(fs.existsSync(PROBE)).toBe(false);
+    expect(gate.checkRouteLedger(fullConfig, manifest)).toBeNull();
+  });
+
+  it('Ν1: ΜΕ το ορφανό η πύλη ΚΟΚΚΙΝΙΖΕΙ και το ΟΝΟΜΑΖΕΙ', () => {
+    fs.writeFileSync(PROBE, JSON.stringify({ ns: { k: 'ξεχασμένο' } }), 'utf8');
+    expect(gate.checkRouteLedger(fullConfig, manifest)).toMatch(/zz-orphan-probe.*ΧΩΡΙΣ δήλωση/);
+  });
+
+  it('Ν2: το checkArtifactIntegrity ΗΤΑΝ ΤΥΦΛΟ σε αυτό — γι’ αυτό χρειάστηκε νέος κανόνας', () => {
+    fs.writeFileSync(PROBE, JSON.stringify({ ns: { k: 'ξεχασμένο' } }), 'utf8');
+    // Διατρέχει το `manifest.artifacts`, όπου το ορφανό ΔΕΝ υπάρχει ⇒ δεν το βλέπει ποτέ.
+    expect(gate.checkArtifactIntegrity(manifest)).toBeNull();
+  });
+
+  /**
+   * ⚠️ ΤΑ Ν0-Ν2 ΚΑΛΟΥΝ ΤΗ ΣΥΝΑΡΤΗΣΗ ΑΠΕΥΘΕΙΑΣ — δηλαδή αποδεικνύουν ότι **κρίνει**
+   * σωστά, όχι ότι **κάποιος τη ρωτά**. Αν κάποιος τη βγάλει από την αλυσίδα του
+   * `runLayerOne`, τα Ν0-Ν2 μένουν ΠΡΑΣΙΝΑ και η πύλη γίνεται διακοσμητική. Γι' αυτό
+   * εδώ τρέχει το ΠΡΑΓΜΑΤΙΚΟ CLI και κρίνεται ο κωδικός εξόδου του.
+   */
+  it('Ν3: το ΠΡΑΓΜΑΤΙΚΟ CLI της CHECK 3.34 βγαίνει 1 με το ορφανό, 0 χωρίς αυτό', () => {
+    const { spawnSync } = require('node:child_process');
+    const run = () => spawnSync(process.execPath, [path.join(REPO, 'scripts/check-i18n-shell-slice.js')], {
+      cwd: REPO, encoding: 'utf8',
+    });
+
+    expect(run().status).toBe(0);                                   // ο παρονομαστής
+    fs.writeFileSync(PROBE, JSON.stringify({ ns: { k: 'ξεχασμένο' } }), 'utf8');
+    const red = run();
+    expect(red.status).toBe(1);
+    expect(`${red.stdout}${red.stderr}`).toMatch(/zz-orphan-probe/);
+  }, 30_000);
+});

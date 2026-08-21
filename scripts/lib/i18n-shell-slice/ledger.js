@@ -63,22 +63,23 @@ const VERDICTS = Object.freeze({
  * απορρίπτεται **θορυβωδώς**: ήταν ακριβώς η μορφή που επέτρεψε στο «~1,6 KB» να είναι
  * ψέμα για έντεκα μέρες. Πρόζα δεν είναι προϋπολογισμός.
  */
-function parseDeclaration(namespace, value) {
+function parseDeclaration(namespace, value, ledgerName = 'guaranteedNamespaces') {
+  const at = `${ledgerName}.${namespace}`;
   if (typeof value === 'string') {
     throw new Error(
-      `guaranteedNamespaces.${namespace}: η δήλωση είναι συμβολοσειρά. ` +
+      `${at}: η δήλωση είναι συμβολοσειρά. ` +
       'Απαιτείται { "budget": <bytes>, "reason": "…" } — πρόζα δεν είναι προϋπολογισμός ' +
       '(ADR-777 §8.38: το «~1,6 KB» έγινε 47.837 χωρίς να το δει κανείς).',
     );
   }
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`guaranteedNamespaces.${namespace}: άγνωστο σχήμα δήλωσης.`);
+    throw new Error(`${at}: άγνωστο σχήμα δήλωσης.`);
   }
   if (!Number.isInteger(value.budget) || value.budget <= 0) {
-    throw new Error(`guaranteedNamespaces.${namespace}: το \`budget\` πρέπει να είναι θετικός ακέραιος (bytes).`);
+    throw new Error(`${at}: το \`budget\` πρέπει να είναι θετικός ακέραιος (bytes).`);
   }
   if (typeof value.reason !== 'string' || value.reason.trim() === '') {
-    throw new Error(`guaranteedNamespaces.${namespace}: λείπει ο \`reason\` — μια εγγραφή χωρίς λόγο δεν αποσύρεται ποτέ.`);
+    throw new Error(`${at}: λείπει ο \`reason\` — μια εγγραφή χωρίς λόγο δεν αποσύρεται ποτέ.`);
   }
   return { namespace, budget: value.budget, reason: value.reason };
 }
@@ -144,4 +145,196 @@ function describeFailures(failures) {
   }).join(' · ');
 }
 
-module.exports = { LEDGER_LIMIT_BYTES, VERDICTS, parseDeclaration, auditLedger, describeFailures };
+/* =============================================================================
+ * ADR-777 §8.43 — ΤΟ ΔΕΥΤΕΡΟ ΚΑΤΑΣΤΙΧΟ: «ΣΕΛΙΔΑ, Ή ΔΕΥΤΕΡΟ ΚΕΛΥΦΟΣ;»
+ * =============================================================================
+ *
+ * 🔴 ΓΙΑΤΙ ΥΠΑΡΧΕΙ, ΜΕΤΡΗΜΕΝΟ. Το §8.38 δίδαξε ότι «πρόζα δεν είναι προϋπολογισμός»
+ * και έβαλε `{budget, reason}` στο `guaranteedNamespaces`. Ο **αδελφός** του, στο ΙΔΙΟ
+ * αρχείο ρύθμισης — το `routeSlices` — έμεινε με **σκέτο `reason`**: έντεκα διαδρομές,
+ * καμία δήλωση κόστους, κανένας φρουρός. Ο μόνος έλεγχος που υπήρχε ήταν η **άρνηση**
+ * του generator σε ανεπίλυτη δυναμική `t()` — δηλαδή φυλάει το «**δεν ξέρω** τα κλειδιά»,
+ * ποτέ το «τα ξέρω, και είναι **240 KB**».
+ *
+ * Μετρημένο 2026-08-21 στο πραγματικό δέντρο (UTF-8 bytes, compact):
+ *   · κέλυφος                            165.649
+ *   · τα 11 δηλωμένα route slices          1.842 – 14.911   (μέγιστο = 9,0% του κελύφους)
+ *   · `/properties/[id]`, αν δηλωνόταν   240.521 / 48 ns = **145,2% του κελύφους**
+ *
+ * Ένα «per-route slice» μεγαλύτερο από το κέλυφος **δεν είναι αφαίρεση** — είναι δεύτερο
+ * κέλυφος με άλλο όνομα, και αντιστρέφει τον μηχανισμό που το ADR-744 §15 περιγράφει
+ * ΚΑΤΑ ΛΕΞΗ ως αφαίρεση («ένωση θα ήταν ΜΕΓΑΛΥΤΕΡΗ από το σημερινό»).
+ *
+ * 🏆 ΠΟΥ ΞΕΠΕΡΝΑΜΕ ΤΗΝ ΠΡΑΚΤΙΚΗ — ΕΡΕΥΝΗΜΕΝΟ, ΟΧΙ ΥΠΟΘΕΤΙΚΟ. Τα per-path budgets
+ * **υπάρχουν** στον κόσμο του bundling: Lighthouse `budget.json` ανά μονοπάτι, Lighthouse
+ * CI `assertMatrix` ανά URL, το RFC #3216 του webpack ανά chunk. **Όλα** όμως εκφράζουν
+ * το όριο ως **ΑΠΟΛΥΤΟ ΑΡΙΘΜΟ** — και ένας απόλυτος αριθμός είναι ακριβώς αυτό που
+ * ανεβαίνει για να γίνει πράσινο. Κανένα δεν εκφράζει το όριο ως **ΣΧΕΣΗ** με το κοινό
+ * chunk. Εδώ υπάρχουν **ΔΥΟ ΑΝΕΞΑΡΤΗΤΟΙ ΚΑΝΟΝΕΣ, ΠΟΤΕ ΕΝΑΣ ΜΕ «Ή»** (μάθημα CHECK 3.41):
+ *
+ *   **Κ1 — ΔΟΜΙΚΗ ΑΝΤΙΣΤΡΟΦΗ** (⛔ zero-tolerance). `actual >= shellBytes`. Το κατώφλι
+ *   **δεν επιλέχθηκε** — **παράγεται** από τον ίδιο τον μηχανισμό, άρα **κανένας αριθμός
+ *   δεν μπορεί να το σιωπήσει**: για να γίνει πράσινο πρέπει το slice να μικρύνει ή το
+ *   κέλυφος να μεγαλώσει, και το δεύτερο το φυλάει ήδη το `LEDGER_LIMIT_BYTES`.
+ *
+ *   **Κ2 — ΔΗΛΩΜΕΝΟ ΤΑΒΑΝΙ ΑΝΑ ΕΓΓΡΑΦΗ** (🔴). Η πρακτική των μεγάλων, εφαρμοσμένη στον
+ *   αδελφό που την είχε χάσει. Πιάνει τη **σιωπηλή διόγκωση** πολύ πριν φτάσει στο Κ1 —
+ *   το `search-results` πήγε 1,6 KB → 47,8 KB **χωρίς** ποτέ να πλησιάσει το κέλυφος.
+ *
+ * Ένας κανόνας με «ή» θα έμενε **πράσινος πάνω στο ελάττωμα**: slice 100 KB κάτω από
+ * δηλωμένο ταβάνι 120 KB περνά το Κ2 ενώ είναι 60% του κελύφους (το Κ1 το πιάνει)· slice
+ * 9 KB που δήλωσε 1,6 KB περνά το Κ1 (5% του κελύφους) ενώ έχει πενταπλασιαστεί (Κ2).
+ *
+ * ⚠️ Η ΑΛΛΗ ΚΑΤΕΥΘΥΝΣΗ, ΚΑΙ ΕΙΝΑΙ ΖΩΝΤΑΝΗ: το `writeArtifacts` **γράφει, δεν κλαδεύει**.
+ * Σβήνοντας μια δήλωση, το `routes/<id>.el.json` **μένει στον δίσκο** — και το
+ * `import routeSlice from '@/i18n/generated/routes/X.el.json'` εξακολουθεί να
+ * μεταγλωττίζεται και να **ταξιδεύει παγωμένο για πάντα**, αόρατο στο
+ * `checkArtifactIntegrity` (που διατρέχει το `manifest.artifacts`, όπου πλέον **δεν**
+ * υπάρχει). Γι' αυτό η κατάσταση `orphan-artifact` — ίδιο σκεπτικό με το
+ * `whole-but-undeclared` του πρώτου καταστίχου.
+ * ============================================================================= */
+
+/** Οι ρητές καταστάσεις **παρουσίας**. Κάθε δήλωση ΚΑΙ κάθε artifact μετριέται ΜΙΑ φορά. */
+const ROUTE_PRESENCE = Object.freeze({
+  PRESENT: 'present',
+  ABSENT: 'declared-but-absent',
+  ORPHAN: 'orphan-artifact',
+});
+
+/** Άξονας Κ2 — το δηλωμένο ταβάνι. */
+const ROUTE_BUDGET = Object.freeze({
+  WITHIN: 'within-budget',
+  OVER: 'over-budget',
+});
+
+/** Άξονας Κ1 — η δομική ερώτηση. */
+const ROUTE_SHAPE = Object.freeze({
+  PAGE: 'page-shaped',
+  SECOND_SHELL: 'second-shell',
+});
+
+/**
+ * Fail-closed: **κάθε** εγγραφή έχει ρητή κατάσταση, το άθροισμα κλείνει, και οι δύο
+ * άξονες υπάρχουν **ακριβώς** όταν πρέπει. Άγνωστη κατάσταση ⇒ `throw` **με όνομα**.
+ */
+function assertRouteLedgerClosed(entries, declaredCount, observedCount) {
+  for (const entry of entries) {
+    if (!Object.values(ROUTE_PRESENCE).includes(entry.presence)) {
+      throw new Error(`routeLedger: άγνωστη κατάσταση παρουσίας «${entry.presence}» για το ${entry.page || entry.id}`);
+    }
+    const judged = entry.presence === ROUTE_PRESENCE.PRESENT;
+    if (judged !== Object.values(ROUTE_BUDGET).includes(entry.budgetVerdict)
+      || judged !== Object.values(ROUTE_SHAPE).includes(entry.shapeVerdict)) {
+      throw new Error(
+        `routeLedger: το ${entry.page || entry.id} είναι «${entry.presence}» αλλά οι άξονες λένε άλλα `
+        + `(Κ2=${entry.budgetVerdict}, Κ1=${entry.shapeVerdict})`,
+      );
+    }
+  }
+  const count = state => entries.filter(entry => entry.presence === state).length;
+  const present = count(ROUTE_PRESENCE.PRESENT);
+  if (present + count(ROUTE_PRESENCE.ABSENT) !== declaredCount
+    || present + count(ROUTE_PRESENCE.ORPHAN) !== observedCount) {
+    throw new Error(
+      `routeLedger: η λογιστική ΔΕΝ κλείνει — ${present} παρόντα, `
+      + `${count(ROUTE_PRESENCE.ABSENT)} απόντα, ${count(ROUTE_PRESENCE.ORPHAN)} ορφανά `
+      + `έναντι ${declaredCount} δηλώσεων / ${observedCount} artifacts`,
+    );
+  }
+}
+
+/**
+ * Εγγραφή που **δεν κρίνεται** στους δύο άξονες, γιατί δεν υπάρχει ζεύγος δήλωσης+artifact.
+ * Οι δύο ετυμηγορίες μένουν ρητά `null` — και το `assertRouteLedgerClosed` απαιτεί ακριβώς
+ * αυτό, ώστε ένα «δεν κρίθηκε» να μην μπορεί ποτέ να διαβαστεί ως «κρίθηκε και πέρασε».
+ */
+function unjudged(presence, { page, id, actual }, declaration = null) {
+  return {
+    page, id, actual,
+    budget: declaration ? declaration.budget : 0,
+    reason: declaration ? declaration.reason : '',
+    presence, budgetVerdict: null, shapeVerdict: null,
+  };
+}
+
+/** Η κρίση μιας παρούσας διαδρομής στους **δύο** άξονες — ποτέ «ο πρώτος που ταιριάζει». */
+function judgeRoute(page, item, declaration, shellBytes) {
+  return {
+    page,
+    id: item.id,
+    actual: item.actual,
+    budget: declaration.budget,
+    reason: declaration.reason,
+    presence: ROUTE_PRESENCE.PRESENT,
+    budgetVerdict: item.actual > declaration.budget ? ROUTE_BUDGET.OVER : ROUTE_BUDGET.WITHIN,
+    shapeVerdict: item.actual >= shellBytes ? ROUTE_SHAPE.SECOND_SHELL : ROUTE_SHAPE.PAGE,
+  };
+}
+
+/**
+ * Η **κλειστή λογιστική** των per-route slices.
+ *
+ * @param {object}   declarations  `config.routeSlices` — `{ [pageFile]: {budget, reason} }`
+ * @param {object[]} observed      `[{ id, page, actual }]`· `page` κενό ⇒ artifact χωρίς δήλωση
+ * @param {number}   shellBytes    το μέγεθος του κελύφους, στην ΙΔΙΑ μονάδα (UTF-8 bytes)
+ * @returns {{entries: object[], shellBytes: number, failures: object[]}}
+ */
+function auditRouteLedger(declarations, observed, shellBytes) {
+  if (!Number.isInteger(shellBytes) || shellBytes <= 0) {
+    // Fail-closed: χωρίς παρονομαστή το Κ1 δεν έχει γνώμη — και μια πύλη που δεν έχει
+    // γνώμη ΔΕΝ επιτρέπεται να απαντήσει «καθαρό» (το σχήμα «0 = κανείς δεν κοίταξε»).
+    throw new Error('routeLedger: το μέγεθος του κελύφους είναι άγνωστο — το Κ1 δεν κρίνεται.');
+  }
+  const declared = new Map(
+    Object.entries(declarations).map(([page, value]) => [page, parseDeclaration(page, value, 'routeSlices')]),
+  );
+  const byPage = new Map();
+  const entries = [];
+
+  for (const item of observed) {
+    if (item.page && declared.has(item.page)) byPage.set(item.page, item);
+    else entries.push(unjudged(ROUTE_PRESENCE.ORPHAN, { page: item.page || null, id: item.id, actual: item.actual }));
+  }
+
+  for (const [page, declaration] of declared) {
+    const item = byPage.get(page);
+    if (item === undefined) entries.push(unjudged(ROUTE_PRESENCE.ABSENT, { page, id: null, actual: 0 }, declaration));
+    else entries.push(judgeRoute(page, item, declaration, shellBytes));
+  }
+
+  assertRouteLedgerClosed(entries, declared.size, observed.length);
+  const failures = entries.filter(entry => entry.presence !== ROUTE_PRESENCE.PRESENT
+    || entry.budgetVerdict === ROUTE_BUDGET.OVER
+    || entry.shapeVerdict === ROUTE_SHAPE.SECOND_SHELL);
+  return { entries: entries.sort((a, b) => b.actual - a.actual), shellBytes, failures };
+}
+
+/** Ένα μήνυμα που **ονομάζει τη διαδρομή και τον κανόνα**, ποτέ σκέτο «over budget». */
+function describeRouteFailures(failures, shellBytes) {
+  return failures.map(failure => {
+    if (failure.presence === ROUTE_PRESENCE.ORPHAN) {
+      return `${failure.id}: artifact ΧΩΡΙΣ δήλωση στο routeSlices — ταξιδεύει παγωμένο και κανείς δεν το υπογράφει`;
+    }
+    if (failure.presence === ROUTE_PRESENCE.ABSENT) {
+      return `${failure.page}: δηλωμένο στο routeSlices αλλά ΔΕΝ παρήχθη artifact`;
+    }
+    if (failure.shapeVerdict === ROUTE_SHAPE.SECOND_SHELL) {
+      return `${failure.page}: ${failure.actual} bytes = ${((100 * failure.actual) / shellBytes).toFixed(1)}% `
+        + `του κελύφους (${shellBytes}) — ΔΕΥΤΕΡΟ ΚΕΛΥΦΟΣ, όχι αφαίρεση (Κ1)`;
+    }
+    return `${failure.page}: ${failure.actual} bytes > προϋπολογισμός ${failure.budget} (Κ2)`;
+  }).join(' · ');
+}
+
+module.exports = {
+  LEDGER_LIMIT_BYTES,
+  VERDICTS,
+  ROUTE_PRESENCE,
+  ROUTE_BUDGET,
+  ROUTE_SHAPE,
+  parseDeclaration,
+  auditLedger,
+  auditRouteLedger,
+  describeFailures,
+  describeRouteFailures,
+};

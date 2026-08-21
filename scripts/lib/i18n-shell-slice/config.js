@@ -155,6 +155,12 @@ function loadConfig(projectRoot) {
   for (const [namespace, value] of Object.entries(config.guaranteedNamespaces)) {
     parseDeclaration(namespace, value);
   }
+  // ⚠️ ADR-777 §8.43 — ΤΟ ΙΔΙΟ ΓΙΑ ΤΟΝ ΑΔΕΛΦΟ. Το `routeSlices` δήλωνε μόνο `reason` ενώ
+  // ο μηχανισμός του είναι ΑΦΑΙΡΕΣΗ: ένα slice που ξεπερνά το κέλυφος δεν είναι σελίδα,
+  // είναι δεύτερο κέλυφος. Μετρημένο: το `/properties/[id]` θα ήταν 145,2% του κελύφους.
+  for (const [page, value] of Object.entries(config.routeSlices)) {
+    parseDeclaration(page, value, 'routeSlices');
+  }
   return config;
 }
 
