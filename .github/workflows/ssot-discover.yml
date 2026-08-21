@@ -48,6 +48,8 @@ on:
       # είναι είσοδοι: αλλαγή στο κριτήριο ή στο κλειστό σύνολο των route groups πρέπει να
       # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
       - 'scripts/check-shell-boundary.js'
+      - 'scripts/check-listing-custody.js'
+      - 'src/lib/owner-property/listing-custody.ts'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
       # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
@@ -93,6 +95,8 @@ on:
       # είναι είσοδοι: αλλαγή στο κριτήριο ή στο κλειστό σύνολο των route groups πρέπει να
       # ξανακρίνει ΟΛΟ το δέντρο, αλλιώς το job μένει πράσινο πάνω στην αλλαγή του.
       - 'scripts/check-shell-boundary.js'
+      - 'scripts/check-listing-custody.js'
+      - 'src/lib/owner-property/listing-custody.ts'
       - 'scripts/lib/shell-boundary/**'
       - '.shell-boundary.json'
       # CHECK 3.53 (ADR-739 §0.3 / ADR-777 §0.4) — ταυτότητα ενοτήτων ADR. Τα ίδια τα
@@ -473,6 +477,53 @@ jobs:
             echo ""
             echo "Απογραφή: \`npm run zindex-scale:report\`"
             echo "Reseed ΜΟΝΟ μετά από νόμιμο καθάρισμα: \`npm run zindex-scale:baseline\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  listing-custody:
+    name: 🔐 Listing Custody Gate (CHECK 3.56)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.0
+          run_install: false
+
+      - name: 📦 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: 📦 Install dependencies (jest για τις άγκυρες)
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Layer 2 — ΑΝΕΥ ΟΡΩΝ και ΠΛΗΡΕΣ, όπως και το Layer 1: η ερώτηση «αποφασίζει
+      # κάποιος θεματοφυλακή μόνος του;» δεν έχει τοπική απάντηση — μια νέα σύγκριση
+      # προσγειώνεται σε ΟΠΟΙΟΔΗΠΟΤΕ αρχείο του `src/`.
+      - name: 🔐 CHECK 3.56 — καμία δεύτερη αυθεντία εξουσιοδότησης
+        run: pnpm run listing-custody:check
+
+      - name: "🧪 Σουίτα μετάλλαξης — CHECK 3.56 (15 tests· 8/8 μεταλλάξεις κόκκινες)"
+        run: pnpm run test:listing-custody
+
+      - name: 🧭 How to resolve
+        if: failure()
+        run: |
+          {
+            echo "### CHECK 3.56 — ADR-777 §8.42 (θεματοφυλακή αγγελίας)"
+            echo "Η ερώτηση «επιτρέπεται σε αυτόν τον άνθρωπο;» έχει **ΕΝΑ** σπίτι:"
+            echo '`src/lib/owner-property/listing-custody.ts`.'
+            echo ""
+            echo "Θεραπεία: \`mayAdminister(custodyOf(property), { uid, companyId })\`"
+            echo "Αν είναι σκόπιμο: \`// custody-exempt: <λόγος>\` — ο λόγος ΥΠΟΧΡΕΩΤΙΚΟΣ."
+            echo ""
+            echo "⚠️ ΜΗΝ λύσεις κόκκινο επιστρέφοντας σε \`authorUserId === uid\`:"
+            echo "είναι η **απομόνωση** (ποιος βλέπει), όχι ο **χώρος** (ποιος διαχειρίζεται)."
           } >> "$GITHUB_STEP_SUMMARY"
 
   shell-boundary:

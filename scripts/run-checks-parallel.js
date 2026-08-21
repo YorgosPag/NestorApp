@@ -26,6 +26,7 @@
  *   SKIP_NATIVE_TOOLTIP / SKIP_TABS_IMPORT / SKIP_NO_FLASH  bypass specific checks
  *   SKIP_EMPTY_SELECT_ITEM                                  bypass CHECK 3.48
  *   SKIP_PRERENDER_BAILOUT                                  bypass CHECK 3.55
+ *   SKIP_LISTING_CUSTODY                                    bypass CHECK 3.56
  *   SKIP_I18N_TYPES                '1' = bypass CHECK 3.33 (generated-types freshness)
  *   SKIP_I18N_SHELL_SLICE          '1' = bypass CHECK 3.34 (i18n shell-slice freshness)
  *   SKIP_I18N_NAMESPACE_WIRING     '1' = bypass CHECK 3.36 (i18n namespace reachability)
@@ -449,6 +450,20 @@ if (!process.env.SKIP_SHELL_BOUNDARY && allFiles.length > 0)
 // οποιοδήποτε ADR/SPEC, άρα λίστα μονοπατιών εδώ θα απέκλινε σιωπηλά (σχήμα 3.34/3.37).
 if (!process.env.SKIP_ADR_SECTION_REFS && allFiles.length > 0)
   addThread('3.53', 'ADR section refs', 'scripts/check-adr-section-refs.js', allFiles);
+
+// CHECK 3.56 (ADR-777 §8.42) — «αποφασίζει κάποιος ΠΟΙΟΣ ΔΙΑΧΕΙΡΙΖΕΤΑΙ μια αγγελία έξω
+// από το SSoT;». Το §8.39 ένωσε την ερώτηση σε `lib/owner-property/listing-custody.ts` και
+// ΔΕΝ ΑΦΗΣΕ ΦΡΟΥΡΟ ΠΙΣΩ ΤΗΣ: το §8.42 βρήκε ΤΡΙΤΗ υλοποίηση (`place-interest.service.ts`),
+// που έκρινε `authorUserId !== uid` πάνω σε πόρο που μπορεί να ζει σε ΕΤΑΙΡΙΚΟ χώρο ⇒
+// αγγελία του γραφείου ήταν `absent` για κάθε άλλον υπάλληλό του.
+// 🔑 ΞΕΧΩΡΙΣΤΗ ΑΠΟ ΤΗΝ 3.35, ΚΑΙ ΤΟ ΛΕΕΙ ΤΟ ΙΔΙΟ ΤΟ SSoT: εκείνη ρωτά ΑΠΟΜΟΝΩΣΗ («ποιος
+// ΒΛΕΠΕΙ;»), αυτή ΕΞΟΥΣΙΟΔΟΤΗΣΗ («ποιος ΔΙΑΧΕΙΡΙΖΕΤΑΙ;»). Ένωση θα ανέφερε αποτυχία
+// θεματοφυλακής ως αποτυχία tenant scope (το λάθος που απορρίπτει ρητά το ADR-775).
+// ⚠️ ΤΑ ΣΧΟΛΙΑ ΚΟΒΟΝΤΑΙ: 8 από τις 10 εμφανίσεις στο δέντρο ΕΙΝΑΙ σχόλια που τεκμηριώνουν
+// τη βλάβη — πύλη χωρίς `stripComments` κοκκινίζει πάνω στην τεκμηρίωση της θεραπείας (3.50).
+// ⚠️ ZERO-TOL, ΚΑΜΙΑ baseline: δεν υπάρχει «λιγότερες αυθεντίες εξουσιοδότησης από χθες».
+if (!process.env.SKIP_LISTING_CUSTODY && allFiles.length > 0)
+  addThread('3.56', 'Listing custody', 'scripts/check-listing-custody.js', allFiles);
 
 // CHECK 3.54 — πύλη εκτέλεσης των αγκυρών (ADR-783). «Μπορεί αυτό το test να κοκκινίσει
 // κάτι;» — το επόμενο ερώτημα μετά το 3.47, με άλλη απάντηση: μετρημένο 11/08, **3.289 από
