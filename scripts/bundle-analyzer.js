@@ -12,6 +12,28 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 
+/**
+ * 📂 Ο κατάλογος build που ΠΡΑΓΜΑΤΙ γράφτηκε — ρωτώντας την αυθεντία.
+ *
+ * Το `next.config.js` λύνει το `distDir` από το `NEXT_DIST_DIR` (γεννήθηκε για το μοιρασμένο
+ * working tree: δύο `next dev`/`next build` στον ίδιο φάκελο ξαναγράφουν ο ένας τα chunks του
+ * άλλου). Ο analyzer όμως διάβαζε **σκληρά** `.next` ⇒ ένα build με `NEXT_DIST_DIR` άφηνε τη
+ * μέτρηση να διαβάσει **άλλον** φάκελο: είτε ανύπαρκτο (σφάλμα με λάθος αιτία), είτε — χειρότερα —
+ * ένα **παλιό** `.next` από προηγούμενο build, δηλαδή αριθμό που δεν αντιστοιχεί σε τίποτα που
+ * μόλις χτίστηκε, χωρίς να το πει. Το σχήμα «0 = κανείς δεν κοίταξε», σε μορφή bytes.
+ *
+ * Ρωτάμε το ίδιο το config αντί να αντιγράψουμε τον κανόνα: αντίγραφο θα ήταν **δεύτερη αλήθεια**
+ * που αποκλίνει σιωπηλά (ADR-749) — και ο φρουρός ονομάτων του config (`/^\.next…/`, υπάρχει
+ * επειδή το Next **καθαρίζει** τον κατάλογο) ισχύει έτσι δωρεάν, σε ένα σημείο.
+ *
+ * Χωρίς `NEXT_DIST_DIR` η συμπεριφορά είναι **αμετάβλητη** (`.next`) — CI/Docker ανέπαφα.
+ */
+function resolveBuildDir() {
+  // Lazy: μόνο όταν πράγματι μετράμε build (το require φορτώνει @sentry/nextjs, ~1,4s).
+  const { distDir } = require(path.join(__dirname, '..', 'next.config.js'));
+  return path.join(process.cwd(), distDir || '.next');
+}
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
@@ -93,10 +115,10 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
 function analyzeNextBuild() {
   console.log('🔍 Analyzing Next.js build output...');
 
-  const buildDir = path.join(process.cwd(), '.next');
+  const buildDir = resolveBuildDir();
 
   if (!fs.existsSync(buildDir)) {
-    throw new Error('❌ No .next build directory found. Run "npm run build" first.');
+    throw new Error(`❌ No build directory found at ${buildDir}. Run "npm run build" first.`);
   }
 
   const staticDir = path.join(buildDir, 'static');
@@ -339,8 +361,8 @@ async function main() {
   try {
     console.log('🚀 Starting Enterprise Bundle Analysis...\n');
 
-    // Check if build exists
-    const buildExists = fs.existsSync('.next');
+    // Check if build exists (ίδιος κατάλογος με αυτόν που θα μετρηθεί — όχι σκληρό `.next`)
+    const buildExists = fs.existsSync(resolveBuildDir());
     if (!buildExists) {
       console.log('📦 No build found. Running production build...');
       execSync('npm run build', { stdio: 'inherit' });
