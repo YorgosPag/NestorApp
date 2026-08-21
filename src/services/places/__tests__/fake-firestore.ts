@@ -106,6 +106,25 @@ export class FakeFirestore {
     return new FakeBatch(this);
   }
 
+  /**
+   * 🔴 **ΕΛΕΙΠΕ, ΚΑΙ Η ΑΠΟΥΣΙΑ ΤΟΥ ΕΙΝΑΙ ΤΟ ΙΔΙΟ ΣΧΗΜΑ ΜΕ ΤΟ `delete`** (§8.34).
+   *
+   * Το Admin SDK το εκθέτει **στη ρίζα** (`db.getAll(...refs)`) και είναι ο κανονικός
+   * τρόπος να διαβαστούν N έγγραφα σε **ένα** ταξίδι — ό,τι κάνει ο κατάλογος εντολών
+   * για τα ονόματα των πελατών. Χωρίς αυτό εδώ, η κλήση έσκαγε με *«db.getAll is not
+   * a function»*, δηλαδή **καμία** άγκυρα δεν μπορούσε να ελέγξει τη μισή γραμμή του
+   * καταλόγου.
+   *
+   * ⚠️ Επιστρέφει snapshot **και για τα ανύπαρκτα** (`exists: false`), όπως το
+   * αληθινό: η σειρά αντιστοιχεί ένα προς ένα στις αναφορές που δόθηκαν, αλλιώς ο
+   * καλών δεν μπορεί να ζευγαρώσει αποτέλεσμα με αίτημα.
+   */
+  public async getAll(
+    ...refs: readonly FakeDocRef[]
+  ): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }[]> {
+    return Promise.all(refs.map((ref) => ref.get()));
+  }
+
   public countWrite(): void {
     this.writes += 1;
   }
@@ -125,10 +144,15 @@ export class FakeDocRef {
    * τον καταναλωτή να ρωτήσει αλλιώς **μέσα στο test** απ' ό,τι στην παραγωγή — δηλαδή
    * θα δοκίμαζε κώδικα που κανείς δεν εκτελεί.
    */
-  async get(): Promise<{ exists: boolean; data: () => Doc | undefined }> {
+  async get(): Promise<{ id: string; exists: boolean; data: () => Doc | undefined }> {
     if (this.db.failReads) throw new Error('FAKE_FIRESTORE_UNAVAILABLE');
     const found = this.bucket.get(this.id);
-    return { exists: found !== undefined, data: () => found };
+    // 🔴 **Το `id` ΕΙΝΑΙ μέρος του συμβολαίου** (§8.34). Το Admin SDK το εκθέτει σε
+    // **κάθε** snapshot, και ο κώδικας που ανασυνθέτει οντότητα γράφει
+    // `{ ...snapshot.data(), id: snapshot.id }` — αλλιώς το `id` του εγγράφου χάνεται.
+    // Χωρίς αυτό εδώ, η ανασύνθεση έδινε `id: undefined` **μέσα στο test** και το
+    // πέρασμα ήταν πράσινο για κώδικα που στην παραγωγή δείχνει σε κενό αναγνωριστικό.
+    return { id: this.id, exists: found !== undefined, data: () => found };
   }
 
   async create(doc: Doc): Promise<void> {
@@ -177,12 +201,21 @@ export class FakeQuery {
     return new FakeQuery(this.bucket, this.clauses, n);
   }
 
-  async get(): Promise<{ docs: { data: () => Doc }[]; size: number }> {
-    const hits = [...this.bucket.values()]
-      .filter((doc) => this.clauses.every((clause) => matches(doc, clause)))
+  /**
+   * 🔴 **Τα `id` ταξιδεύουν** (§8.34) — γι' αυτό διασχίζονται `entries()` και όχι
+   * `values()`. Ένας κατάλογος που χτίζει γραμμές από ερώτημα χρειάζεται το κλειδί
+   * κάθε εγγράφου για να τις ξεχωρίσει και να στείλει πράξη στη σωστή· χωρίς αυτό,
+   * κάθε γραμμή θα είχε `undefined` κλειδί και το test θα ήταν πράσινο.
+   */
+  async get(): Promise<{ docs: { id: string; data: () => Doc }[]; size: number }> {
+    const hits = [...this.bucket.entries()]
+      .filter(([, doc]) => this.clauses.every((clause) => matches(doc, clause)))
       .slice(0, this.cap);
 
-    return { docs: hits.map((doc) => ({ data: () => doc })), size: hits.length };
+    return {
+      docs: hits.map(([id, doc]) => ({ id, data: () => doc })),
+      size: hits.length,
+    };
   }
 }
 
