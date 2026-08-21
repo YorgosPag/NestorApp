@@ -62,9 +62,6 @@
       ],
       "reason": "ADR-744 §4 — μπήκε στην κλειστότητα με το extraShellRoots (2026-08-19). ΕΠΑΛΗΘΕΥΣΙΜΟΣ ΙΣΧΥΡΙΣΜΟΣ: και οι δύο κλήσεις (γρ. 139 και 272) είναι `t(ENTITY_LABEL_KEYS[<τύπος>], …)` και το ENTITY_LABEL_KEYS (γρ. 86-98) είναι `Record<SearchEntityType, string>` — ΟΧΙ Partial — με 11 ΚΥΡΙΟΛΕΚΤΙΚΕΣ τιμές, όλες κάτω από ΑΥΤΟ το πρόθεμα. Επειδή ο τύπος είναι πλήρες Record πάνω σε union, νέος SearchEntityType ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή — άρα η λίστα δεν μπορεί να αποκλίνει σιωπηλά, που είναι ακριβώς ο λόγος που το πρόθεμα είναι ασφαλές (ίδιο επιχείρημα με το CoverageStatement.tsx παραπάνω). 🔴 ΤΟ ΔΕΥΤΕΡΟ ΟΡΙΣΜΑ ΔΕΝ ΕΙΝΑΙ ΔΙΧΤΥ: το `ENTITY_LABELS[…] ?? entityLabelKey` μοιάζει με fallback, αλλά το ENTITY_LABELS (γρ. 104) είναι `= {}` — ΚΕΝΟ και @deprecated — άρα το defaultValue είναι ΠΑΝΤΑ το ίδιο το κλειδί, δηλαδή αστοχία ⇒ ωμό κλειδί στην οθόνη, όχι αγγλικό fallback. Αυτό το κενό ήταν ΜΕΤΡΗΜΕΝΟ ΖΩΝΤΑΝΟ την ίδια μέρα: το locale είχε 8 από τους 11 τύπους (έλειπαν opportunity · communication · task), οπότε αποτέλεσμα CRM θα έβαφε `search.entityTypes.task`. Προστέθηκαν σε el+en. ⚠️ Αν προσθέσεις SearchEntityType, το locale ΔΕΝ σε σταματά — μόνο ο μεταγλωττιστής σε στέλνει στο ENTITY_LABEL_KEYS· βάλε ΚΑΙ το κλειδί."
     },
-    "src/components/ui/search/SearchInput.tsx": {
-      "reason": "ADR-744 §4 — μπήκε στην κλειστότητα με το extraShellRoots (2026-08-19). ΜΗΔΕΝ κλειδιά, και ο λόγος είναι μετρημένος, όχι υποθετικός: το `t(placeholder)` (γρ. 55) διαβάζει PROP, άρα τα κλειδιά θα ζούσαν στους καλούντες — και ο ΜΟΝΟΣ καλών μέσα σε αυτή την κλειστότητα είναι το GlobalSearchDialog.tsx:387, που περνά `t('search.placeholder')`, δηλαδή ΗΔΗ ΜΕΤΑΦΡΑΣΜΕΝΗ συμβολοσειρά — όχι κλειδί. Επαληθεύτηκε ότι κανένας από τους 13 άλλους καλούντες του SearchInput δεν ανήκει στο shell (κανένα από SearchInput · TableHeaderSearch · GenericListHeader · CompactToolbar δεν υπήρχε στα 435 shellFiles πριν από αυτή την εγγραφή)· φτάνουν όλοι από σελίδες, δηλαδή route boundaries. ⚠️ ΞΑΝΑΕΠΑΛΗΘΕΥΣΕ ΑΝ ΜΠΕΙ ΔΕΥΤΕΡΟΣ ΚΑΛΩΝ ΣΤΟ ΚΕΛΥΦΟΣ που περνά ΚΛΕΙΔΙ αντί για κείμενο. 🔶 ΠΑΡΑΤΗΡΗΘΗΚΕ ΑΛΛΑ ΔΕΝ ΘΕΡΑΠΕΥΤΗΚΕ ΕΔΩ (χωριστό ερώτημα, όχι i18n slice): ο φρουρός είναι `placeholder.includes('.')`, οπότε το μεταφρασμένο «Αναζήτηση...» ΠΕΡΝΑΕΙ τον έλεγχο και ξαναπερνά από `t()` — δουλεύει μόνο επειδή το i18next επιστρέφει το ίδιο string σε αστοχία. Είναι διάκριση «κλειδί ή κείμενο;» βασισμένη σε ΣΤΙΞΗ."
-    },
     "src/providers/NotificationProvider.tsx": {
       "reason": "resolveI18nMessage() calls i18n.exists(...) before every i18n.t(...) and its final statement is `return message`. A key that has not loaded fails exists(), so the function returns the original string — it is structurally incapable of painting a raw key, and there is nothing to slice."
     },
@@ -104,13 +101,6 @@
         "search-results:detail.position.meaning"
       ],
       "reason": "ADR-744 §15 — δύο δυναμικές κλήσεις, δύο πλήρη Record πάνω στο ίδιο union `ListingMapShape` (src/lib/listings/listing-shape-keys.ts). `SHAPE_LABEL_KEY` (γρ. 34-41) = 6 ΚΥΡΙΟΛΕΚΤΙΚΑ κάτω από `map.shape.`· `shapeMeaningKey()` (γρ. 69-71) επιστρέφει από το `SHAPE_MEANING_KEY` (γρ. 52-61) = 5 κυριολεκτικά κάτω από `detail.position.meaning.` — ΠΕΝΤΕ και όχι έξι, γιατί ο τύπος είναι `Exclude<…, 'none'>` και η συνάρτηση επιστρέφει `null` για το `none`, το οποίο η γραμμή 87 ελέγχει ρητά. Νέο σχήμα ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ και στα δύο Record, άρα οι λίστες δεν αποκλίνουν σιωπηλά. ⚠️ Το `REASON_KEY` του ίδιου αρχείου (γρ. 44) ΔΕΝ χρειάζεται πρόθεμα: δεικτοδοτείται και περνά στο `t()` ως ΚΥΡΙΟΛΕΚΤΙΚΟ αποτέλεσμα σε άλλη θέση που η σκάλα επιλύει μόνη της."
-    },
-    "src/components/listing-detail/ListingPriceBlock.tsx": {
-      "prefixes": [
-        "search-results:detail.price.role",
-        "search-results:card.priceMissing"
-      ],
-      "reason": "ADR-744 §15 — δύο δυναμικές κλήσεις, δύο πλήρη Record στο `src/lib/listings/listing-price-keys.ts`: `PRICE_ROLE_KEY` (4 κυριολεκτικά κάτω από `detail.price.role.`) και `MISSING_PRICE_KEY` (3 κυριολεκτικά κάτω από `card.priceMissing.`). Και τα δύο είναι πλήρη Record πάνω σε union (`ResolvedPrice['source']` · `MissingPriceReason`), άρα νέα πηγή ή νέα αιτία ΣΠΑΕΙ ΤΗ ΜΕΤΑΓΛΩΤΤΙΣΗ αν δεν πάρει γραμμή. 🔑 Τα δύο προθέματα ζουν σε ΔΙΑΦΟΡΕΤΙΚΑ υποδέντρα (`detail.` έναντι `card.`) επίτηδες: το ίδιο λεξιλόγιο απουσίας τιμής χρησιμοποιείται ΚΑΙ στην κάρτα ΚΑΙ στη λεπτομέρεια, και η κάρτα το είχε πρώτη — μια αντιγραφή κάτω από `detail.` θα ήταν δεύτερη αλήθεια (ADR-749)."
     },
     "src/components/shared/forms/DraftFormShell.tsx": {
       "prefixes": [

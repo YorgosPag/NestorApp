@@ -43,6 +43,7 @@ const { bootstrap } = require('./lib/i18n-shell-slice/cli');
 const {
   buildModuleGraph,
   buildShellPlan,
+  deadPolicyEntries,
   renderArtifacts,
   manifestPath,
   buildManifest,
@@ -132,11 +133,9 @@ function reportPlan(plan, rendered, config, explain, routeUnusedPolicy = []) {
   }
   console.log(`  ${GREEN}slice bytes     : ${stats.sliceBytes}${NC}  ${DIM}(was 295.093 synchronous, el+en)${NC}`);
 
-  // 🔑 «Νεκρή» είναι η εγγραφή που δεν χρησιμοποιεί **ΟΥΤΕ** το κέλυφος **ΟΥΤΕ**
-  // καμία διαδρομή. Χωρίς αυτό, κάθε policy που υπηρετεί σελίδα θα καταγγελλόταν
-  // ως νεκρή — και μια ψεύτικη προειδοποίηση «νεκρού φρουρού» οδηγεί στη
-  // διαγραφή φρουρού που δουλεύει.
-  const dead = plan.unusedPolicy.filter(file => routeUnusedPolicy.every(set => set.includes(file)));
+  // 🔑 Η τομή κελύφους × διαδρομών ζει πλέον στο `plan.js` — είναι **κρίση**, όχι
+  // εκτύπωση, και μέχρι σήμερα δεν την έλεγχε καμία άγκυρα (Group 16).
+  const dead = deadPolicyEntries(plan.unusedPolicy, routeUnusedPolicy);
   if (dead.length > 0) {
     console.log(`${YELLOW}  ⚠ dead dynamicKeyPolicy entries (no unresolved call any more): ${dead.join(', ')}${NC}`);
   }
