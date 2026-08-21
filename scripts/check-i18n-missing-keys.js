@@ -32,6 +32,7 @@ const {
   extractTCalls,
   extractExplicitTCalls,
 } = require('./lib/i18n-namespace-extract');
+const { judgeAgainstBaseline } = require('./lib/i18n-missing-keys-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const LOCALE_DIR = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
@@ -126,27 +127,6 @@ if (fs.existsSync(BASELINE_FILE)) {
 
 // Process files
 const files = process.argv.slice(2);
-/**
- * I KRISI TOU RATCHET, KATA KADO (ADR-777 8.41).
- *
- * Dexetai kai to PALIO sxima (sketos arithmos = epitrepomena SKETA, rita apo miden).
- * Epistrefei kai to `overflow`, dhladi ta kleidia TOU KADOU pou palindromise: to
- * palio `slice(-newCount)` mporouse na onomasei kleidi pou DEN eftaie.
- *
- * @param {Array<{key:string,line:number,bucket:'bare'|'explicit'}>} missingKeys
- * @param {number|{bare:number,explicit:number}} rawBaseline
- */
-function judgeAgainstBaseline(missingKeys, rawBaseline) {
-  const allow = typeof rawBaseline === 'number'
-    ? { bare: rawBaseline, explicit: 0 }
-    : { bare: (rawBaseline && rawBaseline.bare) || 0, explicit: (rawBaseline && rawBaseline.explicit) || 0 };
-  const of = (b) => missingKeys.filter(k => k.bucket === b);
-  const current = { bare: of('bare').length, explicit: of('explicit').length };
-  const blocked = current.bare > allow.bare || current.explicit > allow.explicit;
-  const overflow = [...of('bare').slice(allow.bare), ...of('explicit').slice(allow.explicit)];
-  return { allow, current, blocked, overflow };
-}
-
 let hasBlock = false;
 const allMissing = [];
 
@@ -246,5 +226,3 @@ if (hasBlock) {
 
 console.log(`${GREEN}  ✅ i18n keys: all t() calls have matching locale entries${NC}`);
 process.exit(0);
-
-module.exports = { judgeAgainstBaseline };
