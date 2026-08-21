@@ -17,61 +17,18 @@
  */
 const fs = require('fs');
 const path = require('path');
-const {
-  loadNamespaceBundles,
-  loadCompatNamespaces,
-  withCompatNamespaces,
-  extractNamespaces,
-  extractTCalls,
-  extractExplicitTCalls,
-} = require('./lib/i18n-namespace-extract');
-const { collectMissingKeys, judgeAgainstBaseline } = require('./lib/i18n-missing-keys-ratchet');
+const extract = require('./lib/i18n-namespace-extract');
+const { collectMissingKeys, judgeAgainstBaseline, makeDeps } = require('./lib/i18n-missing-keys-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
 const SRC_DIR = path.join(REPO_ROOT, 'src');
-const LOCALE_DIR = path.join(SRC_DIR, 'i18n', 'locales', 'el');
 const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-missing-keys-baseline.json');
+const DEPS = makeDeps(REPO_ROOT, extract);
 
 // Resolve shared namespace bundles (e.g. COMMON_NAMESPACES) once, so
 // useTranslation(<CONST>) call sites are scanned, not silently skipped.
-const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
-const COMPAT_NAMESPACES = loadCompatNamespaces(REPO_ROOT);
 
 // MIA MHXANH: i idia synartisi metraei kai gia tin pyli kai gia ti baseline.
-const DEPS = {
-  bundles: NAMESPACE_BUNDLES,
-  compat: COMPAT_NAMESPACES,
-  loadLocale: (ns) => loadLocaleJson(ns),
-  extractNamespaces,
-  extractTCalls,
-  extractExplicitTCalls,
-  withCompatNamespaces,
-  keyExists,
-};
-
-const jsonCache = new Map();
-
-function loadLocaleJson(namespace) {
-  if (jsonCache.has(namespace)) return jsonCache.get(namespace);
-  const filePath = path.join(LOCALE_DIR, `${namespace}.json`);
-  if (!fs.existsSync(filePath)) { jsonCache.set(namespace, null); return null; }
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    jsonCache.set(namespace, data);
-    return data;
-  } catch { jsonCache.set(namespace, null); return null; }
-}
-
-function keyExists(obj, dottedKey) {
-  if (!obj) return false;
-  const parts = dottedKey.split('.');
-  let current = obj;
-  for (const part of parts) {
-    if (!current || typeof current !== 'object' || !(part in current)) return false;
-    current = current[part];
-  }
-  return true;
-}
 
 // Recursively find all .ts/.tsx files
 function findFiles(dir) {

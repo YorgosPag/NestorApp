@@ -58,6 +58,43 @@ describe('Κ — το ratchet κρίνει ΑΝΑ ΚΑΔΟ', () => {
   });
 });
 
+// ─── Π: «υπάρχει το κλειδί;» — ΕΝΑ κριτήριο ────────────────────────────────────
+//
+// 🔴 ΗΤΑΝ ΔΥΟ, ΚΑΙ ΔΙΕΦΕΡΑΝ ΣΤΟ ΚΡΙΤΗΡΙΟ, ΟΧΙ ΣΤΗ ΜΟΡΦΗ. Η πύλη ήταν plural-aware,
+// ο γεννήτορας της baseline όχι ⇒ κλειδί ορισμένο μόνο ως `foo_other` μετριόταν
+// **υπαρκτό** από τη μία και **λείπον** από την άλλη. Μετρημένη επίπτωση: η baseline
+// έπεσε **25/8 → 24/7** μόλις ενοποιήθηκαν. Το βρήκε ο **N.18 (jscpd)**, όχι σκέψη:
+// οι δύο υλοποιήσεις έμοιαζαν αρκετά ώστε ένας άνθρωπος να τις προσπεράσει.
+
+describe('Π — plural-aware, σε ΜΙΑ θέση', () => {
+  const { keyExists } = require('../lib/i18n-missing-keys-ratchet');
+
+  it('Π1 — κλειδί ορισμένο ΜΟΝΟ ως πληθυντικός CLDR μετράει υπαρκτό', () => {
+    expect(keyExists({ items_other: 'x' }, 'items')).toBe(true);
+    expect(keyExists({ items_one: 'x' }, 'items')).toBe(true);
+  });
+
+  it('Π2 — και ο παρονομαστής: ανύπαρκτο παραμένει ανύπαρκτο', () => {
+    expect(keyExists({ items_other: 'x' }, 'other')).toBe(false);
+    expect(keyExists({}, 'items')).toBe(false);
+  });
+
+  it('Π3 — εμφωλευμένη διαδρομή, με τον πληθυντικό στο ΤΕΛΕΥΤΑΙΟ τμήμα', () => {
+    expect(keyExists({ a: { b: { c_other: 'x' } } }, 'a.b.c')).toBe(true);
+    expect(keyExists({ a: { b: 'leaf' } }, 'a.b.c')).toBe(false);
+  });
+
+  // ⚠️ Ο ΠΡΑΓΜΑΤΙΚΟΣ ΜΑΡΤΥΡΑΣ: το `MissingFontBanner.tsx` έφυγε από τη baseline
+  // ακριβώς επειδή το κλειδί του ζει σε πληθυντική μορφή. Αν χαθεί η plural
+  // επίγνωση, το αρχείο ξαναεμφανίζεται — και ο αριθμός ξαναγίνεται 25.
+  it('Π4 — το αρχείο που θεράπευσε η ενοποίηση ΔΕΝ είναι στη baseline', () => {
+    const b = JSON.parse(fs.readFileSync(
+      path.join(__dirname, '..', '..', '.i18n-missing-keys-baseline.json'), 'utf8'));
+    expect(b.files['src/subapps/dxf-viewer/ui/text-toolbar/MissingFontBanner.tsx']).toBeUndefined();
+    expect(b._meta.totalViolations).toBe(24);
+  });
+});
+
 describe('Β — ΜΙΑ μηχανή μετράει, όχι δύο', () => {
   const REPO = path.join(__dirname, '..', '..');
   const { collectMissingKeys } = require('../lib/i18n-missing-keys-ratchet');
@@ -132,3 +169,4 @@ describe('Β — ΜΙΑ μηχανή μετράει, όχι δύο', () => {
     }
   });
 });
+

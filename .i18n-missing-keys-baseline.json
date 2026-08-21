@@ -1,9 +1,9 @@
 {
   "_meta": {
     "description": "Missing i18n keys baseline — t() calls without matching locale entry",
-    "generated": "2026-08-21T19:16:33Z",
-    "totalViolations": 25,
-    "totalFiles": 8,
+    "generated": "2026-08-21T19:25:28Z",
+    "totalViolations": 24,
+    "totalFiles": 7,
     "rule": "Counts can only decrease, PER BUCKET. New files = zero tolerance."
   },
   "files": {
@@ -32,10 +32,6 @@
       "explicit": 0
     },
     "src/subapps/dxf-viewer/ui/ribbon/components/RibbonAnnotationScaleWidget.tsx": {
-      "bare": 0,
-      "explicit": 1
-    },
-    "src/subapps/dxf-viewer/ui/text-toolbar/MissingFontBanner.tsx": {
       "bare": 0,
       "explicit": 1
     }

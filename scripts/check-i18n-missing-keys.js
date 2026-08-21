@@ -24,23 +24,15 @@
  */
 const fs = require('fs');
 const path = require('path');
-const {
-  loadNamespaceBundles,
-  loadCompatNamespaces,
-  withCompatNamespaces,
-  extractNamespaces,
-  extractTCalls,
-  extractExplicitTCalls,
-} = require('./lib/i18n-namespace-extract');
-const { judgeAgainstBaseline, collectMissingKeys } = require('./lib/i18n-missing-keys-ratchet');
+const extract = require('./lib/i18n-namespace-extract');
+const { judgeAgainstBaseline, collectMissingKeys, makeDeps } = require('./lib/i18n-missing-keys-ratchet');
 
 const REPO_ROOT = path.join(__dirname, '..');
-const LOCALE_DIR = path.join(REPO_ROOT, 'src', 'i18n', 'locales', 'el');
 const BASELINE_FILE = path.join(REPO_ROOT, '.i18n-missing-keys-baseline.json');
+const DEPS = makeDeps(REPO_ROOT, extract);
 
 // Resolve shared namespace bundles (e.g. COMMON_NAMESPACES) once, so
 // useTranslation(<CONST>) call sites are checked, not silently skipped.
-const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
 
 // ADR-280 compat splits: the runtime hook loads `declared + splits` and searches
 // the key in ALL of them (useTranslation.ts → resolveAllNamespaces /
@@ -48,72 +40,12 @@ const NAMESPACE_BUNDLES = loadNamespaceBundles(REPO_ROOT);
 // "missing" for keys the app resolves — and the only way to satisfy it would be to
 // COPY the keys back into the parent namespace, undoing the ADR-280 split. See
 // scripts/lib/i18n-namespace-extract.js → loadCompatNamespaces (ADR-744 §12).
-const COMPAT_NAMESPACES = loadCompatNamespaces(REPO_ROOT);
-
-const DEPS = {
-  bundles: NAMESPACE_BUNDLES,
-  compat: COMPAT_NAMESPACES,
-  loadLocale: (ns) => loadLocaleJson(ns),
-  extractNamespaces,
-  extractTCalls,
-  extractExplicitTCalls,
-  withCompatNamespaces,
-  keyExists,
-};
 
 // Colors
 const RED = '\x1b[0;31m';
 const GREEN = '\x1b[0;32m';
 const YELLOW = '\x1b[1;33m';
 const NC = '\x1b[0m';
-
-// Cache loaded JSON files
-const jsonCache = new Map();
-
-function loadLocaleJson(namespace) {
-  if (jsonCache.has(namespace)) return jsonCache.get(namespace);
-  const filePath = path.join(LOCALE_DIR, `${namespace}.json`);
-  if (!fs.existsSync(filePath)) {
-    jsonCache.set(namespace, null);
-    return null;
-  }
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    jsonCache.set(namespace, data);
-    return data;
-  } catch {
-    jsonCache.set(namespace, null);
-    return null;
-  }
-}
-
-// i18next CLDR plural suffixes: a key referenced as t('foo', { count }) is
-// defined in the locale JSON as foo_one / foo_other (etc.), NOT as a bare `foo`.
-// The static checker must accept such a key as existing when any plural form is
-// present — otherwise legitimate pluralized strings read as "missing".
-const I18NEXT_PLURAL_SUFFIXES = ['_zero', '_one', '_two', '_few', '_many', '_other', '_plural'];
-
-/**
- * Check if a dotted key exists in a nested JSON object
- * e.g. 'share.close' → obj.share.close
- *
- * Plural-aware: if the final segment is absent as a bare key, the key still
- * counts as existing when a CLDR plural variant (foo_one/foo_other/…) is present.
- */
-function keyExists(obj, dottedKey) {
-  if (!obj) return false;
-  const parts = dottedKey.split('.');
-  const last = parts.pop();
-  let current = obj;
-  for (const part of parts) {
-    if (current === null || current === undefined || typeof current !== 'object') return false;
-    if (!(part in current)) return false;
-    current = current[part];
-  }
-  if (current === null || current === undefined || typeof current !== 'object') return false;
-  if (last in current) return true;
-  return I18NEXT_PLURAL_SUFFIXES.some((sfx) => `${last}${sfx}` in current);
-}
 
 // `extractTCalls` moved to ./lib/i18n-namespace-extract (ADR-744) so the
 // shell-slice generator can share it instead of cloning it. Behaviour unchanged.

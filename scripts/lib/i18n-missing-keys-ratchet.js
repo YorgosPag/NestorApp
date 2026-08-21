@@ -1,4 +1,87 @@
 #!/usr/bin/env node
+const fs = require('node:fs');
+const path = require('node:path');
+
+/**
+ * i18next CLDR plural suffixes: ένα κλειδί που καλείται ως `t('foo', { count })`
+ * ορίζεται στο locale ως `foo_one` / `foo_other` (κ.λπ.), **ΟΧΙ** ως σκέτο `foo`.
+ */
+const I18NEXT_PLURAL_SUFFIXES = ['_zero', '_one', '_two', '_few', '_many', '_other', '_plural'];
+
+/**
+ * Υπάρχει το κλειδί; — **Η ΜΟΝΗ ΑΠΑΝΤΗΣΗ** (ADR-777 §8.41).
+ *
+ * 🔴 ΗΤΑΝ ΔΥΟ, ΚΑΙ ΔΕΝ ΔΙΑΦΩΝΟΥΣΑΝ ΣΤΗ ΜΟΡΦΗ ΑΛΛΑ ΣΤΟ ΚΡΙΤΗΡΙΟ: η πύλη ήταν
+ * plural-aware, ο γεννήτορας της baseline **όχι**. Ένα κλειδί ορισμένο μόνο ως
+ * `foo_other` μετριόταν **υπαρκτό** από τη μία μηχανή και **λείπον** από την άλλη
+ * ⇒ φουσκωμένη baseline ⇒ σιωπηλή χαλάρωση του ratchet, στην ίδια κατεύθυνση με
+ * το compat. Το έπιασε ο **N.18 / jscpd** — όχι σκέψη: οι δύο υλοποιήσεις έμοιαζαν
+ * αρκετά ώστε ένας άνθρωπος να τις προσπεράσει, και **αρκετά διαφορετικές ώστε να
+ * δίνουν άλλο αριθμό**.
+ */
+function keyExists(obj, dottedKey) {
+  if (!obj) return false;
+  const parts = String(dottedKey).split('.');
+  const last = parts.pop();
+  let current = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined || typeof current !== 'object') return false;
+    if (!(part in current)) return false;
+    current = current[part];
+  }
+  if (current === null || current === undefined || typeof current !== 'object') return false;
+  if (last in current) return true;
+  return I18NEXT_PLURAL_SUFFIXES.some((sfx) => `${last}${sfx}` in current);
+}
+
+/** Φορτωτής locale με cache — ένας, ώστε οι δύο καταναλωτές να διαβάζουν το ίδιο. */
+function makeLocaleReader(localeDir) {
+  const cache = new Map();
+  return function loadLocaleJson(namespace) {
+    if (cache.has(namespace)) return cache.get(namespace);
+    const filePath = path.join(localeDir, `${namespace}.json`);
+    let data = null;
+    try {
+      if (fs.existsSync(filePath)) data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch {
+      data = null;
+    }
+    cache.set(namespace, data);
+    return data;
+  };
+}
+
+/**
+ * Η ΚΑΛΩΔΙΩΣΗ, ΜΙΑ ΦΟΡΑ.
+ *
+ * 🔑 Ο τελευταίος κλώνος που έμεινε μετά την ενοποίηση της μέτρησης ήταν το **στήσιμο**
+ * — ίδιο `DEPS` γραμμένο σε δύο αρχεία. Το έπιασε ο N.18 (jscpd), και δεν είναι
+ * αισθητική: αν αύριο η πύλη μάθει νέα πηγή (π.χ. δεύτερη γλώσσα) και ο γεννήτορας
+ * όχι, η baseline ξαναγίνεται «άλλη μηχανή» — **τρίτη φορά το ίδιο σχήμα** στο ίδιο
+ * commit (compat · plural · καλωδίωση).
+ *
+ * ⚠️ Το ADR-280 compat ΔΕΝ είναι λεπτομέρεια: το runtime hook φορτώνει
+ * `declared + splits` και ψάχνει το κλειδί σε ΟΛΑ (`useTranslation.ts`). Πύλη που
+ * δεν ρωτά το ίδιο, αναφέρει «λείπει» για κλειδιά που η εφαρμογή **λύνει** — και ο
+ * μόνος τρόπος να την ικανοποιήσεις θα ήταν να ΑΝΤΙΓΡΑΨΕΙΣ τα κλειδιά πίσω στο
+ * γονικό namespace, ακυρώνοντας τη διάσπαση του ADR-280.
+ *
+ * @param {string} repoRoot
+ * @param {object} extract  το `scripts/lib/i18n-namespace-extract` SSoT
+ */
+function makeDeps(repoRoot, extract) {
+  return {
+    bundles: extract.loadNamespaceBundles(repoRoot),
+    compat: extract.loadCompatNamespaces(repoRoot),
+    loadLocale: makeLocaleReader(path.join(repoRoot, 'src', 'i18n', 'locales', 'el')),
+    extractNamespaces: extract.extractNamespaces,
+    extractTCalls: extract.extractTCalls,
+    extractExplicitTCalls: extract.extractExplicitTCalls,
+    withCompatNamespaces: extract.withCompatNamespaces,
+    keyExists,
+  };
+}
+
 /**
  * Η κρίση του ratchet της CHECK 3.8, **κατά κάδο** (ADR-777 §8.41).
  *
@@ -83,4 +166,11 @@ function collectMissingKeys(content, deps) {
   return { missingKeys, namespaces };
 }
 
-module.exports = { judgeAgainstBaseline, collectMissingKeys };
+module.exports = {
+  judgeAgainstBaseline,
+  collectMissingKeys,
+  makeDeps,
+  keyExists,
+  makeLocaleReader,
+  I18NEXT_PLURAL_SUFFIXES,
+};
